@@ -235,7 +235,7 @@ template <typename S, typename T = void> struct ZuBox_IsCharPtr :
 
 template <typename T_>
 struct ZuBox_Unbox { typedef T_ T; };
-template <typename T_, typename Cmp>
+template <typename T_, class Cmp>
 struct ZuBox_Unbox<ZuBox<T_, Cmp> > { typedef T_ T; };
 
 template <typename T_, class Cmp_ = ZuCmp<typename ZuBox_Unbox<T_>::T> >
@@ -338,14 +338,14 @@ public:
   }
   ZuInline bool equals(const ZuBox &b) const { return equals_(m_val, b.m_val); }
 
-  template <typename Cmp__ = Cmp>
+  template <class Cmp__ = Cmp>
   ZuInline typename ZuIfT<!ZuConversion<Cmp__, ZuCmp0<T> >::Same, int>::T
   cmp_(const ZuBox &b) const {
     if (Cmp::null(b.m_val)) return Cmp::null(m_val) ? 0 : 1;
     if (Cmp::null(m_val)) return -1;
     return Cmp::cmp(m_val, b.m_val);
   }
-  template <typename Cmp__ = Cmp>
+  template <class Cmp__ = Cmp>
   ZuInline typename ZuIfT<ZuConversion<Cmp__, ZuCmp0<T> >::Same, int>::T
   cmp_(const ZuBox &b) const {
     return Cmp::cmp(m_val, b.m_val);
@@ -392,7 +392,7 @@ public:
     fmt.ptr(this);
     return fmt;
   }
-  template <typename Fmt>
+  template <class Fmt>
   ZuInline typename ZuIs<ZuBoxVFmt_, Fmt, const Fmt &>::T vfmt(Fmt &fmt) const {
     fmt.ptr(this);
     return fmt;
@@ -580,14 +580,14 @@ private:
 #define ZuBox_1(T) ZuBox<T, ZuCmp_1<T> >
 #define ZuBoxN(T, N) ZuBox<T, ZuCmpN<T, N> >
 
-template <typename T_, typename Cmp>
+template <typename T_, class Cmp>
 struct ZuTraits<ZuBox<T_, Cmp> > : public ZuTraits<T_> {
   typedef ZuBox<T_, Cmp> T;
   enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1, IsBoxed = 1 };
 };
 
 // ZuCmp has to be specialized since null() is otherwise !t (instead of !*t)
-template <typename T_, typename Cmp>
+template <typename T_, class Cmp>
 struct ZuCmp<ZuBox<T_, Cmp> > {
   typedef ZuBox<T_, Cmp> T;
   ZuInline static int cmp(const T &t1, const T &t2) { return t1.cmp(t2); }
@@ -605,12 +605,18 @@ template <typename B> struct ZuBoxPrint : public ZuPrintBuffer<B> {
     return b.print(buf);
   }
 };
-template <typename T, typename Cmp>
+template <typename T, class Cmp>
 struct ZuPrint<ZuBox<T, Cmp> > : public ZuBoxPrint<ZuBox<T, Cmp> > { };
-template <typename T, typename Fmt>
+template <typename T, class Fmt>
 struct ZuPrint<ZuBoxFmt<T, Fmt> > : public ZuBoxPrint<ZuBoxFmt<T, Fmt> > { };
 template <typename T>
 struct ZuPrint<ZuBoxVFmt<T> > : public ZuBoxPrint<ZuBoxVFmt<T> > { };
+
+// ZuBoxT<T>::T is T if T is not already boxed, ZuBox<T> otherwise
+template <typename T_>
+struct ZuBoxT { typedef ZuBox<T_> T; };
+template <typename T_, class Cmp_>
+struct ZuBoxT<ZuBox<T_, Cmp_> > { typedef ZuBox<T_, Cmp_> T; };
 
 // ZuBoxed(t) is a convenience function to cast primitives to boxed
 template <typename T>

@@ -124,7 +124,7 @@ ZvCSVWriteFn ZvCSV::writeFile(const char *fileName,
   else if (!(file = fopen(fileName, "w")))
     throw FileIOError(fileName, ZeLastError);
 
-  ColArray colArray = this->columns(columns);
+  CColArray colArray = this->columns(columns);
 
   ZtArray<char> *row = new ZtArray<char>(RowBufSize);
 
@@ -146,7 +146,7 @@ ZvCSVWriteFn ZvCSV::writeFile(const char *fileName,
 }
 
 void ZvCSV::writeFile_(
-    ColArray colArray, ZtArray<char> *row, FILE *file, ZuAnyPOD *pod)
+    CColArray colArray, ZtArray<char> *row, FILE *file, ZuAnyPOD *pod)
 {
   if (ZuUnlikely(!pod)) {
     delete row;
@@ -166,7 +166,7 @@ void ZvCSV::writeFile_(
 ZvCSVWriteFn ZvCSV::writeData(
     ZtArray<char> &data, const ZtArray<ZtString> &columns)
 {
-  ColArray colArray = this->columns(columns);
+  CColArray colArray = this->columns(columns);
 
   ZtArray<char> *row = new ZtArray<char>(RowBufSize);
 
@@ -185,7 +185,7 @@ ZvCSVWriteFn ZvCSV::writeData(
 }
 
 void ZvCSV::writeData_(
-    ColArray colArray, ZtArray<char> *row, ZtArray<char> &data, ZuAnyPOD *pod)
+    CColArray colArray, ZtArray<char> *row, ZtArray<char> &data, ZuAnyPOD *pod)
 {
   if (ZuUnlikely(!pod)) {
     delete row;

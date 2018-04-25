@@ -69,7 +69,7 @@ struct ZvCSVColType {
   };
 };
 
-class ZvCSVColumn_ : public ZmObject {
+class ZvCSVColumn_ : public ZuObject {
 public:
   struct IDAccessor : public ZuAccessor<ZvCSVColumn_ *, const ZtString &> {
     inline static const ZtString &value(const ZvCSVColumn_ *c) {
@@ -88,15 +88,15 @@ public:
 
   inline void index(int i) { m_index = i; }
 
-  virtual void parse(ZuString value, ZuAnyPOD *pod) = 0;
-  virtual void place(ZtArray<char> &row, ZuAnyPOD *pod) = 0;
+  virtual void parse(ZuString value, ZuAnyPOD *pod) const = 0;
+  virtual void place(ZtArray<char> &row, ZuAnyPOD *pod) const = 0;
 
-  void quote(ZtArray<char> &row, const char *s, unsigned n) {
+  static void quote(ZtArray<char> &row, const char *s, unsigned n) {
     row << '"';
     quote2(row, s, n);
     row << '"';
   }
-  void quote2(ZtArray<char> &row, const char *s, unsigned n) {
+  static void quote2(ZtArray<char> &row, const char *s, unsigned n) {
     for (unsigned i = 0; i < n; i++) {
       char ch = s[i];
       row << ch;
@@ -124,10 +124,10 @@ public:
   inline ZvCSVColumn(ID &&id, int offset) :
     ZvCSVColumn_(ZuFwd<ID>(id), offset) { }
 
-  void parse(ZuString value, ZuAnyPOD *pod) {
+  void parse(ZuString value, ZuAnyPOD *pod) const {
     *((T *)((char *)pod->ptr() + this->m_offset)) = value;
   }
-  void place(ZtArray<char> &row, ZuAnyPOD *pod) {
+  void place(ZtArray<char> &row, ZuAnyPOD *pod) const {
     ZuString s(*((const T *)((char *)pod->ptr() + this->m_offset)));
     this->quote(row, s.data(), s.length());
   }
@@ -137,32 +137,35 @@ template <typename T_>
 class ZvCSVColumn<ZvCSVColType::Int, T_> : public ZvCSVColumn_ {
 public:
   typedef T_ T;
+  typedef typename ZuBoxT<T>::T Box;
+  typedef typename Box::Cmp Cmp;
   enum { ColType = ZvCSVColType::Int };
 
   template <typename ID>
   inline ZvCSVColumn(ID &&id, int offset, int width = -1,
-      T deflt = ZuCmp<T>::null()) :
+      T deflt = Cmp::null()) :
       ZvCSVColumn_(ZuFwd<ID>(id), offset), m_deflt(deflt) {
     if (width >= 0) m_fmt.right(width, '0');
   }
 
   inline ZvCSVColumn &deflt(T value) { m_deflt = value; return *this; }
 
-  void parse(ZuString value, ZuAnyPOD *pod) {
+  void parse(ZuString value, ZuAnyPOD *pod) const {
     T *ptr = (T *)((char *)pod->ptr() + this->m_offset);
     if (!value)
       *ptr = m_deflt;
     else
-      *ptr = ZuBox<T>(value);
+      *ptr = Box(value);
   }
-  void place(ZtArray<char> &row, ZuAnyPOD *pod) {
-    row << ZuBoxed(*((T *)((char *)pod->ptr() + this->m_offset))).vfmt(m_fmt);
+  void place(ZtArray<char> &row, ZuAnyPOD *pod) const {
+    const Box &v = *(const Box *)((const char *)pod->ptr() + this->m_offset);
+    if (*v) row << v.vfmt(m_fmt);
   }
 
 private:
-  typedef ZuBoxVFmt<typename ZuIf<T, ZuBox<T>, ZuTraits<T>::IsBoxed>::T> Fmt;
+  typedef ZuBoxVFmt<Box> Fmt;
 
-  Fmt		m_fmt;
+  mutable Fmt	m_fmt;
   T		m_deflt;
 };
 
@@ -170,23 +173,24 @@ template <typename T_>
 class ZvCSVColumn<ZvCSVColType::Bool, T_> : public ZvCSVColumn_ {
 public:
   typedef T_ T;
+  typedef typename ZuBoxT<T>::T Box;
+  typedef typename Box::Cmp Cmp;
   enum { ColType = ZvCSVColType::Bool };
 
   template <typename ID>
   inline ZvCSVColumn(ID &&id, int offset) :
     ZvCSVColumn_(ZuFwd<ID>(id), offset) { }
 
-  void parse(ZuString value, ZuAnyPOD *pod) {
+  void parse(ZuString value, ZuAnyPOD *pod) const {
     void *ptr = (char *)pod->ptr() + this->m_offset;
     if (!value)
-      *(T *)ptr = ZuCmp<T>::null();
+      *(T *)ptr = Cmp::null();
     else
       *(T *)ptr = value.length() == 1 && value[0] == 'Y';
   }
-  void place(ZtArray<char> &row, ZuAnyPOD *pod) {
-    void *ptr = (char *)pod->ptr() + this->m_offset;
-    if (!ZuCmp<T>::null(*(T *)ptr))
-      row << (*(T *)ptr ? 'Y' : 'N');
+  void place(ZtArray<char> &row, ZuAnyPOD *pod) const {
+    const Box &v = *(const Box *)((const char *)pod->ptr() + this->m_offset);
+    if (*v) row << (v ? 'Y' : 'N');
   }
 };
 
@@ -194,6 +198,8 @@ template <typename T_>
 class ZvCSVColumn<ZvCSVColType::Float, T_> : public ZvCSVColumn_ {
 public:
   typedef T_ T;
+  typedef typename ZuBoxT<T>::T Box;
+  typedef typename Box::Cmp Cmp;
   enum { ColType = ZvCSVColType::Float };
 
   template <typename ID>
@@ -202,41 +208,44 @@ public:
     if (width >= 0) m_fmt.right(width, '0');
   }
 
-  void parse(ZuString value, ZuAnyPOD *pod) {
-    *((T *)((char *)pod->ptr() + this->m_offset)) = ZuBox<T>(value);
+  void parse(ZuString value, ZuAnyPOD *pod) const {
+    *((T *)((char *)pod->ptr() + this->m_offset)) = Box(value);
   }
-  void place(ZtArray<char> &row, ZuAnyPOD *pod) {
-    row << ZuBoxed(*((T *)((char *)pod->ptr() + this->m_offset))).vfmt(m_fmt);
+  void place(ZtArray<char> &row, ZuAnyPOD *pod) const {
+    const Box &v = *(const Box *)((const char *)pod->ptr() + this->m_offset);
+    if (*v) row << v.vfmt(m_fmt);
   }
 
 private:
-  typedef ZuBoxVFmt<typename ZuIf<T, ZuBox<T>, ZuTraits<T>::IsBoxed>::T> Fmt;
+  typedef ZuBoxVFmt<Box> Fmt;
 
-  Fmt		m_fmt;
+  mutable Fmt	m_fmt;
 };
 
 template <typename T_, typename Map_>
 class ZvCSVEnumColumn : public ZvCSVColumn_ {
 public:
   typedef T_ T;
+  typedef typename ZuBoxT<T>::T Box;
+  typedef typename Box::Cmp Cmp;
   typedef Map_ Map;
   enum { ColType = ZvCSVColType::Enum };
 
   template <typename ID>
-  inline ZvCSVEnumColumn(ID &&id, int offset, T deflt = ZuCmp<T>::null()) :
+  inline ZvCSVEnumColumn(ID &&id, int offset, T deflt = Cmp::null()) :
     ZvCSVColumn_(ZuFwd<ID>(id), offset),
     m_map(ZvEnum<Map>::instance()), m_deflt(deflt) { }
 
   inline ZvCSVEnumColumn &deflt(T value) { m_deflt = value; return *this; }
 
-  void parse(ZuString value, ZuAnyPOD *pod) {
+  void parse(ZuString value, ZuAnyPOD *pod) const {
     void *ptr = (char *)pod->ptr() + this->m_offset;
     *(T *)ptr = m_map->s2v(id(), value, m_deflt);
   }
-  void place(ZtArray<char> &row, ZuAnyPOD *pod) {
-    void *ptr = (char *)pod->ptr() + this->m_offset;
+  void place(ZtArray<char> &row, ZuAnyPOD *pod) const {
+    const Box &v = *(const Box *)((const char *)pod->ptr() + this->m_offset);
     try {
-      ZtZArray<char> s = m_map->v2s(id(), *(T *)ptr);
+      ZtZArray<char> s = m_map->v2s(id(), v);
       this->quote(row, s.data(), s.length());
     } catch (...) { }
   }
@@ -268,7 +277,7 @@ public:
 	typename ZuIsString<TZ, Private>::T *_ = 0) :
       ZvCSVColumn_(id, offset), m_tzOffset(0), m_tz(ZuFwd<TZ>(tz)) { }
 
-  void parse(ZuString value, ZuAnyPOD *pod) {
+  void parse(ZuString value, ZuAnyPOD *pod) const {
     void *ptr = (char *)pod->ptr() + this->m_offset;
     if (!value) { *(T *)ptr = ZtDate(); return; }
     ZtDate v;
@@ -279,18 +288,17 @@ public:
     if (!v) throw ZvDateError(value);
     *(T *)ptr = v;
   }
-  void place(ZtArray<char> &row, ZuAnyPOD *pod) {
-    void *ptr = (char *)pod->ptr() + this->m_offset;
-    ZtDate d = *(T *)ptr;
+  void place(ZtArray<char> &row, ZuAnyPOD *pod) const {
+    ZtDate d = *(const T *)((const char *)pod->ptr() + this->m_offset);
     if (!d) return;
     if (m_tz) m_fmt.offset(d.offset(m_tz));
     row << d.csv(m_fmt);
   }
 
 private:
-  int	  		m_tzOffset;
-  ZtString		m_tz;
-  ZtDateFmt::CSV	m_fmt;
+  int	  			m_tzOffset;
+  ZtString			m_tz;
+  mutable ZtDateFmt::CSV	m_fmt;
 };
 
 template <typename T_, typename Map_>
@@ -301,23 +309,20 @@ public:
   enum { ColType = ZvCSVColType::Flags };
 
   template <typename ID>
-  inline ZvCSVFlagsColumn(
-      ID &&id, int offset, T deflt = ZuCmp<T>::null()) :
+  inline ZvCSVFlagsColumn(ID &&id, int offset, T deflt = 0) :
     ZvCSVColumn_(ZuFwd<ID>(id), offset),
     m_map(ZvFlags<Map>::instance()), m_deflt(deflt) { }
 
-  void parse(ZuString value, ZuAnyPOD *pod) {
+  void parse(ZuString value, ZuAnyPOD *pod) const {
     void *ptr = (char *)pod->ptr() + this->m_offset;
     if (!value) { *(T *)ptr = m_deflt; return; }
     *(T *)ptr = m_map->template scan<T>(id(), value);
   }
-  void place(ZtArray<char> &row, ZuAnyPOD *pod) {
-    void *ptr = (char *)pod->ptr() + this->m_offset;
-    if (ZuCmp<T>::null(*(T *)ptr)) return;
-    T i = *(T *)(ptr);
-    if (!i) return;
+  void place(ZtArray<char> &row, ZuAnyPOD *pod) const {
+    const T &v = *(const T *)((const char *)pod->ptr() + this->m_offset);
+    if (!v) return;
     ZtZArray<char> s;
-    m_map->print(id(), s, i);
+    m_map->print(id(), s, v);
     this->quote(row, s.data(), s.length());
   }
 
@@ -342,13 +347,13 @@ public:
     ZmAssert(!!m_parseFn && !!m_placeFn);
   }
 
-  void parse(ZuString value, ZuAnyPOD *pod) {
+  void parse(ZuString value, ZuAnyPOD *pod) const {
     void *ptr = (char *)pod->ptr() + this->m_offset;
     m_parseFn((T *)ptr, value);
   }
-  void place(ZtArray<char> &row, ZuAnyPOD *pod) {
-    void *ptr = (char *)pod->ptr() + this->m_offset;
-    m_placeFn(row, (T *)ptr);
+  void place(ZtArray<char> &row, ZuAnyPOD *pod) const {
+    const void *ptr = (const char *)pod->ptr() + this->m_offset;
+    m_placeFn(row, (const T *)ptr);
   }
 
 private:
@@ -369,13 +374,14 @@ class ZvAPI ZvCSV {
   ZvCSV(const ZvCSV &);
   ZvCSV &operator =(const ZvCSV &);	// prevent mis-use
 
+  typedef ZtArray<const ZvCSVColumn_ *> CColArray;
   typedef ZtArray<ZvCSVColumn_ *> ColArray;
   typedef ZtArray<int> ColIndex;
 
   struct ColTree_HeapID {
     inline static const char *id() { return "ZvCSV.ColTree"; }
   };
-  typedef ZmRBTree<ZmRef<ZvCSVColumn_>,
+  typedef ZmRBTree<ZuRef<ZvCSVColumn_>,
 	    ZmRBTreeIndex<ZvCSVColumn_::IDAccessor,
 	      ZmRBTreeObject<ZuNull,
 		ZmRBTreeLock<ZmNoLock,
@@ -385,18 +391,18 @@ public:
   inline ZvCSV() { }
   virtual ~ZvCSV();
 
-  inline void add(ZvCSVColumn_ *c) {
+  inline void add(const ZuRef<ZvCSVColumn_> &c) {
     c->index(m_colArray.length());
     m_colArray.push(c);
-    m_colTree.add(ZmRef<ZvCSVColumn_>(c));
+    m_colTree.add(c);
   }
 
   template <typename ID>
-  inline ZmRef<ZvCSVColumn_> find(ID &&id) {
+  inline const ZvCSVColumn_ *find(ID &&id) const {
     return m_colTree.findKey(ZuFwd<ID>(id));
   }
 
-  inline ZmRef<ZvCSVColumn_> column(int i) {
+  inline const ZvCSVColumn_ *column(int i) const {
     int n = m_colArray.length();
     if (i < 0 || i >= n) return 0;
     return m_colArray[i];
@@ -414,7 +420,7 @@ private:
     for (unsigned i = 0; i < n; i++) colIndex[i] = -1;
     n = a.length();
     for (unsigned i = 0; i < n; i++)
-      if (ZmRef<ZvCSVColumn_> col = find(a[i]))
+      if (const ZvCSVColumn_ *col = find(a[i]))
 	colIndex[col->index()] = i;
   }
 
@@ -434,14 +440,14 @@ private:
     }
   }
 
-  ColArray columns(const ZtArray<ZtString> &names) {
+  CColArray columns(const ZtArray<ZtString> &names) const {
     if (!names.length() || (names.length() == 1 && names[0] == "*"))
       return m_colArray;
-    ColArray colArray;
+    CColArray colArray;
     unsigned n = names.length();
     colArray.size(n);
     for (unsigned i = 0; i < n; i++)
-      if (ZmRef<ZvCSVColumn_> col = find(names[i])) colArray.push(col);
+      if (const ZvCSVColumn_ *col = find(names[i])) colArray.push(col);
     return colArray;
   }
 
@@ -479,9 +485,11 @@ public:
 
 private:
   void writeFile_(
-      ColArray colArray, ZtArray<char> *row, FILE *file, ZuAnyPOD *pod);
+      CColArray colArray, ZtArray<char> *row,
+      FILE *file, ZuAnyPOD *pod);
   void writeData_(
-      ColArray colArray, ZtArray<char> *row, ZtArray<char> &data, ZuAnyPOD *pod);
+      CColArray colArray, ZtArray<char> *row,
+      ZtArray<char> &data, ZuAnyPOD *pod);
 
   ColArray	m_colArray;
   ColTree	m_colTree;

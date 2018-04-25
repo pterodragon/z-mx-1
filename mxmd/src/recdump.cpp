@@ -415,7 +415,7 @@ public:
     MxEnum		session;
     MxMDL1Data		l1Data;
     L2Data		l2Data;
-    uint8_t		updateL1;
+    MxBool		updateL1;
   };
   typedef ZuPOD<Data> POD;
 

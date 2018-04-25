@@ -695,7 +695,7 @@ public:
     fmt.fracPrint(s, m_nsec);
   }
 
-  ZuInline const CSVFmt &csv(CSVFmt &fmt) const {
+  ZuInline const CSVFmt &csv(CSVFmt &fmt) {
     fmt.ptr(this);
     return fmt;
   }

@@ -1,0 +1,411 @@
+//  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
+//  vi: noet ts=8 sw=2
+
+/*
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
+
+// platform-specific
+
+#include <ZmSingleton.hpp>
+#include <ZmLock.hpp>
+#include <ZmGuard.hpp>
+#include <ZtPlatform.hpp>
+#include <ZtString.hpp>
+#include <ZtRegex.hpp>
+
+#include <ZePlatform.hpp>
+
+ZuString ZePlatform::severity(unsigned i)
+{
+  static const char * const name[] = {
+    "DEBUG", "INFO", "WARNING", "ERROR", "FATAL"
+  };
+  static constexpr unsigned namelen[] = { 5, 4, 7, 5, 5 };
+
+  return i > 4 ? ZuString("UNKNOWN", 7) : ZuString(name[i], namelen[i]);
+}
+
+ZuString ZePlatform::filename(ZuString s)
+{
+  ZtRegex::Captures c;
+#ifndef _WIN32
+  static ZtRegex r("([^/]*)$", PCRE_UTF8);
+#else
+  static ZtRegex r("([^:/\\\\]*)$", PCRE_UTF8);
+#endif
+  if (r.m(s, c) < 2) return s;
+  return c[2];
+}
+
+ZuString ZePlatform::function(ZuString s)
+{
+  ZtRegex::Captures c;
+  static ZtRegex r("([a-zA-Z_][a-zA-Z_0-9:]*)\\(", PCRE_UTF8);
+  if (r.m(s, c) < 2) return s;
+  return c[2];
+}
+
+#ifndef _WIN32
+
+struct ZePlatform_Syslog;
+template <> struct ZmCleanup<ZePlatform_Syslog> {
+  enum { Level = ZmCleanupLevel::Platform };
+};
+struct ZePlatform_Syslog {
+public:
+  ZePlatform_Syslog() { openlog("", 0, LOG_USER); }
+  ~ZePlatform_Syslog() { closelog(); }
+
+  void init(const char *program, int facility = LOG_USER);
+
+  inline int facility() { return m_facility; }
+
+private:
+  ZmLock	m_lock;
+  int		m_facility;
+};
+
+void ZePlatform_Syslog::init(const char *program, int facility)
+{
+  ZmGuard<ZmLock> guard(m_lock);
+
+  closelog();
+  openlog(program, 0, m_facility = facility);
+}
+
+static ZePlatform_Syslog *syslogger() {
+  return ZmSingleton<ZePlatform_Syslog>::instance();
+}
+
+static int sysloglevel(int i) {
+  static const int levels[] = {
+    LOG_DEBUG,		// Debug
+    LOG_INFO,		// Info
+    LOG_WARNING,	// Warning
+    LOG_ERR,		// Error
+    LOG_CRIT		// Fatal
+  };
+
+  return (i < 0 || i > 4) ? LOG_ERR : levels[i];
+}
+
+void ZePlatform::sysloginit(const char *program, const char *facility)
+{
+  static const char * const names[] = {
+    "daemon",
+    "local0", "local1", "local2", "local3",
+    "local4", "local5", "local6", "local7", 0
+  };
+  static const int values[] = {
+    LOG_DAEMON,
+    LOG_LOCAL0, LOG_LOCAL1, LOG_LOCAL2, LOG_LOCAL3,
+    LOG_LOCAL4, LOG_LOCAL5, LOG_LOCAL6, LOG_LOCAL7
+  };
+  const char *name;
+
+  if (facility)
+    for (int i = 0; name = names[i]; i++) {
+      if (!strcmp(facility, name)) {
+	syslogger()->init(program, values[i]);
+	return;
+      }
+    }
+  syslogger()->init(program, LOG_USER);
+}
+
+struct ZePlatform_SyslogBuf;
+template <> struct ZmCleanup<ZePlatform_SyslogBuf> {
+  enum { Level = ZmCleanupLevel::Platform };
+};
+struct ZePlatform_SyslogBuf : public ZmObject {
+  ZuStringN<ZeLog_BUFSIZ>	s;
+};
+static ZePlatform_SyslogBuf *syslogBuf()
+{
+  ZePlatform_SyslogBuf *buf = ZmSpecific<ZePlatform_SyslogBuf>::instance();
+  buf->s.null();
+  return buf;
+}
+
+void ZePlatform::syslog(ZeEvent *e)
+{
+  ZePlatform_SyslogBuf *buf = syslogBuf();
+
+  buf->s << ZuBoxed(e->tid()) << " - ";
+  if (e->severity() == Ze::Debug || e->severity() == Ze::Fatal)
+    buf->s <<
+      '\"' << ZePlatform::filename(e->filename()) << "\":" <<
+      ZuBoxed(e->lineNumber()) << ' ';
+  buf->s <<
+    ZePlatform::function(e->function()) << ' ' <<
+    e->message();
+
+  ::syslog(syslogger()->facility() | sysloglevel(e->severity()),
+      "%.*s", buf->s.length(), buf->s.data());
+}
+
+#else
+
+static int eventlogtype(int i) {
+  static const int types[] = {
+    EVENTLOG_SUCCESS,		// Debug
+    EVENTLOG_INFORMATION_TYPE,	// Info
+    EVENTLOG_WARNING_TYPE,	// Warning
+    EVENTLOG_ERROR_TYPE,	// Error
+    EVENTLOG_ERROR_TYPE		// Fatal
+  };
+
+  return (i < 0 || i > 4) ? EVENTLOG_WARNING_TYPE : types[i];
+}
+
+#define Ze_NTFS_MAX_PATH	32768	// MAX_PATH is 260 and deprecated
+
+struct ZePlatform_EventLogger;
+template <> struct ZmCleanup<ZePlatform_EventLogger> {
+  enum { Level = ZmCleanupLevel::Platform };
+};
+struct ZePlatform_EventLogger {
+  ZePlatform_EventLogger() {
+    handle = RegisterEventSource(0, L"EventSystem");
+
+    ZtWString path_;
+
+    path_.size(Ze_NTFS_MAX_PATH);
+    GetModuleFileName(0, path_.data(), Ze_NTFS_MAX_PATH);
+    path_[Ze_NTFS_MAX_PATH - 1] = 0;
+    path_.calcLength();
+
+    ZtString path(path_);
+
+    program = "Application";
+    try {
+      ZtRegex::Captures c;
+      static ZtRegex r("[^\\\\]*$", PCRE_UTF8);
+      if (r.m(path, c, 0)) program = c[1];
+    } catch (...) { }
+  }
+  ~ZePlatform_EventLogger() {
+    DeregisterEventSource(handle);
+  }
+
+  HANDLE	handle;
+  ZtString	program;
+};
+static ZePlatform_EventLogger *eventLogger()
+{
+  return ZmSingleton<ZePlatform_EventLogger>::instance();
+}
+
+void ZePlatform::sysloginit(const char *program, const char *facility)
+{
+  eventLogger()->program = program;
+}
+
+struct ZePlatform_SyslogBuf;
+template <> struct ZmCleanup<ZePlatform_SyslogBuf> {
+  enum { Level = ZmCleanupLevel::Platform };
+};
+struct ZePlatform_SyslogBuf : public ZmObject {
+  ZuWStringN<ZeLog_BUFSIZ / 2>	w;
+  ZuStringN<ZeLog_BUFSIZ>	s;
+};
+static ZePlatform_SyslogBuf *syslogBuf()
+{
+  ZePlatform_SyslogBuf *buf = ZmSpecific<ZePlatform_SyslogBuf>::instance();
+  buf->w.null();
+  buf->s.null();
+  return buf;
+}
+
+void ZePlatform::syslog(ZeEvent *e)
+{
+  ZePlatform_EventLogger *logger = eventLogger();
+  ZePlatform_SyslogBuf *buf = syslogBuf();
+
+  buf->s <<
+    logger->program << ' ' <<
+    ZuBoxed(e->tid()) << " - ";
+  if (e->severity() == Ze::Debug || e->severity() == Ze::Fatal)
+    buf->s <<
+      '\"' << ZePlatform::filename(e->filename()) << "\":" <<
+      ZuBoxed(e->lineNumber()) << ' ';
+  buf->s <<
+    ZePlatform::function(e->function()) << ' ' <<
+    e->message();
+
+  ZtIconvDefault<wchar_t, char>::instance()->convert(buf->w, buf->s);
+
+  const wchar_t *w = buf->w.data();
+
+  ReportEvent(
+    logger->handle, eventlogtype(e->severity()), 0, 512, 0, 1, 0, &w, 0);
+}
+
+static constexpr const struct {
+  ZePlatform::ErrNo	code;
+  const char		*msg;
+} ZePlatform_WSAErrors_[] = {
+{ WSAEINTR,		  "Interrupted system call" },
+{ WSAEBADF,		  "Bad file number" },
+{ WSAEACCES,		  "Permission denied" },
+{ WSAEFAULT,		  "Bad address" },
+{ WSAEINVAL,		  "Invalid argument" },
+{ WSAEMFILE,		  "Too many open sockets" },
+{ WSAEWOULDBLOCK,	  "Operation would block" },
+{ WSAEINPROGRESS,	  "Operation now in progress" },
+{ WSAEALREADY,		  "Operation already in progress" },
+{ WSAENOTSOCK,		  "Socket operation on non-socket" },
+{ WSAEDESTADDRREQ,	  "Destination address required" },
+{ WSAEMSGSIZE,		  "Message too long" },
+{ WSAEPROTOTYPE,	  "Protocol wrong type for socket" },
+{ WSAENOPROTOOPT,	  "Bad protocol option" },
+{ WSAEPROTONOSUPPORT,	  "Protocol not supported" },
+{ WSAESOCKTNOSUPPORT,	  "Socket type not supported" },
+{ WSAEOPNOTSUPP,	  "Operation not supported on socket" },
+{ WSAEPFNOSUPPORT,	  "Protocol family not supported" },
+{ WSAEAFNOSUPPORT,	  "Address family not supported" },
+{ WSAEADDRINUSE,	  "Address already in use" },
+{ WSAEADDRNOTAVAIL,	  "Can't assign requested address" },
+{ WSAENETDOWN,		  "Network is down" },
+{ WSAENETUNREACH,	  "Network is unreachable" },
+{ WSAENETRESET,		  "Net connection reset" },
+{ WSAECONNABORTED,	  "Software caused connection abort" },
+{ WSAECONNRESET,	  "Connection reset by peer" },
+{ WSAENOBUFS,		  "No buffer space available" },
+{ WSAEISCONN,		  "Socket is already connected" },
+{ WSAENOTCONN,		  "Socket is not connected" },
+{ WSAESHUTDOWN,		  "Can't send after socket shutdown" },
+{ WSAETOOMANYREFS,	  "Too many references, can't splice" },
+{ WSAETIMEDOUT,		  "Connection timed out" },
+{ WSAECONNREFUSED,	  "Connection refused" },
+{ WSAELOOP,		  "Too many levels of symbolic links" },
+{ WSAENAMETOOLONG,	  "File name too long" },
+{ WSAEHOSTDOWN,		  "Host is down" },
+{ WSAEHOSTUNREACH,	  "No route to host" },
+{ WSAENOTEMPTY,		  "Directory not empty" },
+{ WSAEPROCLIM,		  "Too many processes" },
+{ WSAEUSERS,		  "Too many users" },
+{ WSAEDQUOT,		  "Disc quota exceeded" },
+{ WSAESTALE,		  "Stale NFS file handle" },
+{ WSAEREMOTE,		  "Too many levels of remote in path" },
+{ WSASYSNOTREADY,	  "Network system is unavailable" },
+{ WSAVERNOTSUPPORTED,	  "Winsock version out of range" },
+{ WSANOTINITIALISED,	  "WSAStartup not yet called" },
+{ WSAEDISCON,		  "Graceful shutdown in progress" },
+{ WSAHOST_NOT_FOUND,	  "Host not found" },
+{ WSANO_DATA,		  "No host data of that type was found" },
+{ WSAENOMORE,		  "No more results" },
+{ WSAECANCELLED,	  "Call cancelled" },
+{ WSAEINVALIDPROCTABLE,	  "Invalid procedure call table" },
+{ WSAEINVALIDPROVIDER,	  "Invalid requested service provider" },
+{ WSAEPROVIDERFAILEDINIT, "Could not load or initialize service provider" },
+{ WSASYSCALLFAILURE,	  "Critical system call failure" },
+{ WSASERVICE_NOT_FOUND,	  "No such service known" },
+{ WSATYPE_NOT_FOUND,	  "Class not found" },
+{ WSA_E_NO_MORE,	  "No more results" },
+{ WSA_E_CANCELLED,	  "Call cancelled" },
+{ WSAEREFUSED,		  "Database query refused" },
+{ WSATRY_AGAIN,		  "Transient error - retry" },
+{ WSANO_RECOVERY,	  "Unrecoverable database query error" },
+{ 0,			  NULL }
+};
+class ZePlatform_WSAErrors {
+public:
+  typedef ZmLHash<DWORD,
+	    ZmLHashVal<const char *,
+	      ZmLHashStatic<6,
+		ZmLHashLock<ZmNoLock> > > > Hash;
+
+  ZePlatform_WSAErrors() {
+    const char *msg;
+    for (unsigned i = 0; msg = ZePlatform_WSAErrors_[i].msg; i++)
+      m_hash.add(ZePlatform_WSAErrors_[i].code, msg);
+  }
+  ZuInline const char *lookup(DWORD i) {
+    return m_hash.findVal(i);
+  }
+
+private:
+  Hash	m_hash;
+};
+
+struct ZePlatform_FMBuf;
+template <> struct ZmCleanup<ZePlatform_FMBuf> {
+  enum { Level = ZmCleanupLevel::Platform };
+};
+struct ZePlatform_FMBuf : public ZmObject {
+  ZuWStringN<ZeLog_BUFSIZ / 2>	w;
+  ZuStringN<ZeLog_BUFSIZ>	s;
+};
+static ZePlatform_FMBuf *fmBuf()
+{
+  ZePlatform_FMBuf *buf = ZmSpecific<ZePlatform_FMBuf>::instance();
+  buf->w.null();
+  buf->s.null();
+  return buf;
+}
+const char *ZePlatform_::strerror(ErrNo e)
+{
+  const char *msg;
+
+  if (msg = ZmSingleton<ZePlatform_WSAErrors>::instance()->lookup(e))
+    return msg;
+
+  if (e == ERROR_DUP_NAME)
+    return "Duplicate network name or too many network end-points";
+
+  ZePlatform_FMBuf *buf = fmBuf();
+
+  DWORD n = FormatMessage(
+	FORMAT_MESSAGE_IGNORE_INSERTS |
+	FORMAT_MESSAGE_FROM_SYSTEM,
+	0, e, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+	buf->w.data(), buf->w.size(), 0);
+
+  if (!n || !buf->w[0]) return "";
+
+  buf->w.length(n);
+
+  ZtIconvDefault<char, wchar_t>::instance()->convert(buf->s, buf->w);
+
+  // FormatMessage() often returns verbose junk; clean it up
+  {
+    char *ptr = buf->s.data();
+    char *end = ptr + buf->s.length();
+    int c;
+    while (ptr < end) {
+      if (ZuUnlikely(
+	    (c = *ptr++) == ' ' || c == '\t' || c == '\r' || c == '\n')) {
+	char *ws = --ptr;
+	while (ZuLikely(ws < end) && ZuUnlikely(
+	      (c = *++ws) == ' ' || c == '\t' || c == '\r' || c == '\n'));
+	*ptr++ = ' ';
+	if (ZuUnlikely(ws > ptr)) {
+	  memmove(ptr, ws, end - ws);
+	  end -= (ws - ptr);
+	}
+      }
+    }
+    while (ZuUnlikely(
+	(c = *--end) == ' ' || c == '\t' || c == '\r' || c == '\n' ||
+	c == '.'));
+    buf->s.length(++end - buf->s.data());
+  }
+
+  return buf->s.data();
+}
+
+#endif /* _WIN32 */

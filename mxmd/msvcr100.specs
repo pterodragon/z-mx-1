@@ -1,0 +1,12 @@
+%rename cpp msvcrXX_cpp
+
+%rename cc1plus msvcrXX_cc1plus
+
+*cpp:
+%(msvcrXX_cpp) -D__MSVCRT_VERSION__=0x1000
+
+*cc1plus:
+%(msvcrXX_cc1plus) -D__MSVCRT_VERSION__=0x1000
+
+*libgcc:
+%{mthreads:-lmingwthrd} -lmingw32 %{static|static-libgcc:-lgcc -lgcc_eh} %{!static: %{!static-libgcc: %{!shared: %{!shared-libgcc:-lgcc -lgcc_eh} %{shared-libgcc:-lgcc_s -lgcc} } %{shared:-lgcc_s -lgcc} } } -lmoldname -lmingwex -lmsvcr100

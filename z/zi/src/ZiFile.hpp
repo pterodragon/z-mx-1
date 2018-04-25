@@ -1,0 +1,241 @@
+//  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
+//  vi: noet ts=8 sw=2
+
+/*
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
+
+// file I/O
+
+#ifndef ZiFile_HPP
+#define ZiFile_HPP
+
+#ifdef _MSC_VER
+#pragma once
+#endif
+
+#ifndef ZiLib_HPP
+#include <ZiLib.hpp>
+#endif
+
+#include <ZmLock.hpp>
+#include <ZmGuard.hpp>
+
+#include <ZePlatform.hpp>
+
+#include <ZiPlatform.hpp>
+
+#ifndef _WIN32
+#include <sys/mman.h>
+#endif
+
+#ifndef _WIN32
+#include <alloca.h>
+
+#define ZiENOMEM ENOMEM
+#else
+#define ZiENOMEM ERROR_NOT_ENOUGH_MEMORY
+#endif
+
+class ZiAPI ZiFile {
+  ZiFile(const ZiFile &);
+  ZiFile &operator =(const ZiFile &);	// prevent mis-use
+
+public:
+  typedef ZiPlatform::Handle Handle;
+  typedef ZiPlatform::Path Path;
+  typedef ZiPlatform::ZPath ZPath;
+  typedef ZiPlatform::Offset Offset;
+  typedef ZiPlatform::MMapPtr MMapPtr;
+
+  typedef ZmLock Lock;
+  typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
+
+  enum Flags {
+    ReadOnly	= 0x0001,
+    WriteOnly	= 0x0002,
+    Create	= 0x0004,
+    Exclusive	= 0x0008,
+    Truncate	= 0x0010,
+    Append	= 0x0020,
+    Direct	= 0x0040,// O_DIRECT (Unix) / FILE_FLAG_NO_BUFFERING  (Windows)
+    Sync	= 0x0080,// O_DSYNC  (Unix) / FILE_FLAG_WRITE_THROUGH (Windows)
+    GC		= 0x0100,// close() handle in destructor
+    MMap	= 0x0200,// memory-mapped file (set internally by mmap())
+    Shm		= 0x0400,// global named shared memory, not a real file
+    ShmGC	= 0x0800,// remove shared memory on close()
+    ShmDbl	= 0x1000,// map two adjacent copies of the same memory
+    MMPopulate	= 0x2000 // MAP_POPULATE
+  };
+
+  // Note: Direct requires caller align all reads/writes to blkSize()
+
+  inline ZiFile() :
+      m_handle(ZiPlatform::nullHandle()), m_flags(0),
+      m_offset(0), m_blkSize(0), m_addr(0), m_mmapLength(0)
+#ifdef _WIN32
+      , m_mmapHandle(ZiPlatform::nullHandle())
+#endif
+  { }
+
+  inline ~ZiFile() { final(); }
+
+  inline Handle handle() { return m_handle; }
+  inline void *addr() const { return m_addr; }
+  inline Offset mmapLength() const { return m_mmapLength; }
+
+  inline unsigned flags() { return m_flags; }
+  inline void setFlags(int f) { Guard guard(m_lock); m_flags |= f; }
+  inline void clrFlags(int f) { Guard guard(m_lock); m_flags &= ~f; }
+
+  int init(Handle handle, unsigned flags, ZeError *e = 0);
+  inline void final() {
+    Guard guard(m_lock);
+
+    if (m_flags & GC) {
+      close();
+    } else {
+      m_handle = ZiPlatform::nullHandle();
+#ifdef _WIN32
+      m_mmapHandle = ZiPlatform::nullHandle();
+#endif
+    }
+  }
+
+  inline operator bool() {
+    ReadGuard guard(m_lock);
+    return !ZiPlatform::nullHandle(m_handle);
+  }
+
+  inline bool operator !() {
+    ReadGuard guard(m_lock);
+    return ZiPlatform::nullHandle(m_handle);
+  }
+
+  int open(const Path &name,
+      unsigned flags, unsigned mode = 0777, ZeError *e = 0);
+  int open(const Path &name,
+      unsigned flags, unsigned mode, Offset length, ZeError *e = 0);
+  int mmap(const Path &name,
+      unsigned flags, Offset length, bool shared = true,
+      int mmapFlags = 0, unsigned mode = 0777, ZeError *e = 0);
+  void close();
+
+  Offset size();
+  inline int blkSize() { return m_blkSize; }
+
+  inline Offset offset() { ReadGuard guard(m_lock); return m_offset; }
+  inline void seek(Offset offset) { Guard guard(m_lock); m_offset = offset; }
+
+  int sync(ZeError *e = 0);
+  int msync(void *addr = 0, Offset length = 0, ZeError *e = 0);
+
+  int read(void *ptr, unsigned len, ZeError *e = 0);
+  int readv(const ZiVec *vecs, unsigned nVecs, ZeError *e = 0);
+
+  int write(const void *ptr, unsigned len, ZeError *e = 0);
+  int writev(const ZiVec *vecs, unsigned nVecs, ZeError *e = 0);
+
+  int pread(Offset offset, void *ptr, unsigned len, ZeError *e = 0);
+  int preadv(Offset offset, const ZiVec *vecs, unsigned nVecs, ZeError *e = 0);
+
+  int pwrite(Offset offset, const void *ptr, unsigned len, ZeError *e = 0);
+  int pwritev(Offset offset, const ZiVec *vecs, unsigned nVecs, ZeError *e = 0);
+
+  // Note: unbuffered!
+  template <typename V> inline ZiFile &operator <<(V &&v) {
+    append(ZuFwd<V>(v));
+    return *this;
+  }
+
+  static ZmTime mtime(const Path &name, ZeError *e = 0);
+
+  static int remove(const Path &name, ZeError *e = 0);
+  static int rename(const Path &oldName, const Path &newName, ZeError *e = 0);
+  static int copy(const Path &oldName, const Path &newName, ZeError *e = 0);
+  static int mkdir(const Path &name, ZeError *e = 0);
+  static int rmdir(const Path &name, ZeError *e = 0);
+
+  static Path cwd();
+
+  static bool absolute(const Path &name);
+
+  static Path leafname(const Path &name);
+  static Path dirname(const Path &name);
+  static Path append(const Path &dir, const Path &name);
+
+  static void age(const Path &name, unsigned max);
+
+  inline Lock &lock() { return m_lock; }
+
+private:
+  void init_(Handle handle, unsigned flags, int blkSize, Offset mmapLength = 0);
+
+  template <typename U, typename R = void,
+	   bool B = ZuPrint<U>::Delegate && !ZuTraits<U>::IsString>
+  struct FromPDelegate;
+  template <typename U, typename R>
+  struct FromPDelegate<U, R, 1> { typedef R T; };
+  template <typename U, typename R = void,
+	   bool B = ZuPrint<U>::Buffer && !ZuTraits<U>::IsString>
+  struct FromPBuffer;
+  template <typename U, typename R>
+  struct FromPBuffer<U, R, 1> { typedef R T; };
+
+  template <typename S> inline typename ZuIsString<S>::T append(S &&s_) {
+    ZuString s(ZuFwd<S>(s_));
+    if (ZuUnlikely(!s)) return;
+    ZeError e;
+    if (ZuUnlikely(write(s.data(), s.length(), &e) != Zi::OK))
+      throw e;
+  }
+  template <typename P> inline typename FromPDelegate<P>::T append(P &&p) {
+    ZuPrint<P>::print(*this, ZuFwd<P>(p));
+  }
+  template <typename P> inline typename FromPBuffer<P>::T append(const P &p) {
+    unsigned len = ZuPrint<P>::length(p);
+    char *buf;
+#ifdef _MSC_VER
+    __try {
+      buf = (char *)_alloca(len);
+    } __except(GetExceptionCode() == STATUS_STACK_OVERFLOW) {
+      _resetstkoflw();
+      buf = 0;
+    }
+#else
+    buf = (char *)alloca(len);
+#endif
+    if (ZuUnlikely(!buf)) throw ZeError(ZiENOMEM);
+    ZeError e;
+    if (ZuUnlikely(write(buf, ZuPrint<P>::print(buf, len, p), e) != Zi::OK))
+      throw e;
+  }
+
+  Lock		m_lock;
+    Handle	  m_handle;
+    unsigned	  m_flags;
+    Offset	  m_offset;
+    int		  m_blkSize;
+    void	  *m_addr;
+    Offset	  m_mmapLength;
+#ifndef _WIN32
+    ZtString	  m_shmName;
+#else
+    Handle	  m_mmapHandle;
+#endif
+};
+
+#endif /* ZiFile_HPP */

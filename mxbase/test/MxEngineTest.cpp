@@ -1,0 +1,170 @@
+#include <MxEngine.hpp>
+
+// MxEngine connectivity framework unit smoke test
+
+class App : public MxEngineApp {
+public:
+  inline App() { }
+  inline void final() { }
+
+  // Engine Management
+  void addEngine(MxEngine *) { }
+  void delEngine(MxEngine *) { }
+  void engineState(MxEngine *, MxEnum) { }
+
+  // Link Management
+  void updateLink(MxAnyLink *) { }
+  void delLink(MxAnyLink *) { }
+  void linkState(MxAnyLink *, MxEnum, ZuString txt) { }
+
+  // Pool Management
+  void updateTxPool(MxAnyTxPool *) { }
+  void delTxPool(MxAnyTxPool *) { }
+
+  // Queue Management
+  void addQueue(MxID id, bool tx, MxQueue *) { }
+  void delQueue(MxID id, bool tx) { }
+
+  // Exception handling
+  void exception(ZeEvent *e) { ZeLog::log(e); }
+
+  // Rx
+  ZuInline void process_(MxAnyLink *, MxQMsg *) { }
+  ProcessFn processFn() {
+    return [](MxEngineApp *self, MxAnyLink *link, MxQMsg *msg) {
+      static_cast<App *>(self)->process_(link, msg);
+    };
+  }
+
+  // Tx
+  void sent(MxAnyLink *, MxQMsg *) { }
+  void aborted(MxAnyLink *, MxQMsg *) { }
+  void archive(MxAnyLink *, MxQMsg *) { }
+  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
+
+  // Traffic Logging
+  void log(MxMsgID, MxTraffic) { }
+};
+
+class Engine : public MxEngine {
+public:
+  inline Engine(App *app) : MxEngine(app) { }
+
+  void init(Mx *mx, ZvCf *cf);
+
+  void up() { std::cerr << "up\n"; }
+  void down() { std::cerr << "down\n"; }
+
+  ZmTime reconnectInterval() { return ZmTime(m_reconnectInterval); }
+  ZmTime reRequestInterval() { return ZmTime(m_reRequestInterval); }
+
+  void connected() { m_connected.post(); }
+  void waitConnected() { m_connected.wait(); }
+  void disconnected() { m_disconnected.post(); }
+  void waitDisconnected() { m_disconnected.wait(); }
+
+private:
+  ZuBox<double>	m_reconnectInterval;
+  ZuBox<double>	m_reRequestInterval;
+  
+  ZmSemaphore	m_connected;
+  ZmSemaphore	m_disconnected;
+};
+
+class Link : public MxLink<Link> {
+public:
+  Link(MxEngine &engine, MxID id) : MxLink<Link>(engine, id) { }
+
+  ZuInline Engine &engine() {
+    return static_cast<Engine &>(MxAnyLink::engine()); // actually MxAnyTx
+  }
+
+  ZmTime reconnectInterval(unsigned) { return engine().reconnectInterval(); }
+  ZmTime reRequestInterval() { return engine().reRequestInterval(); }
+
+  void update(ZvCf *cf) { }
+  void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) { }
+
+#define LinkInfo(code) \
+    engine().appException(ZeEVENT(Info, \
+      ([=, id = id()](const ZeEvent &, ZmStream &out) { code; })))
+  void connect() {
+    LinkInfo(out << "connect(): " << id);
+    connected();
+    engine().connected();
+  }
+  void disconnect() {
+    LinkInfo(out << "disconnect(): " << id);
+    disconnected();
+    engine().disconnected();
+  }
+
+  // Rx
+  void request(const MxQueue::Gap &prev, const MxQueue::Gap &now) { }
+  void reRequest(const MxQueue::Gap &now) { }
+
+  // Tx
+  bool send_(MxQMsg *msg, bool more) { return true; }
+  bool resend_(MxQMsg *msg, bool more) { return true; }
+  void abort_(MxQMsg *msg) { }
+
+  bool sendGap_(const MxQueue::Gap &gap, bool more) { return true; }
+  bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }
+};
+
+void Engine::init(Mx *mx, ZvCf *cf)
+{
+  MxEngine::init(mx, cf);
+  m_reconnectInterval = cf->getDbl("reconnectInterval", 0, 3600, false, 1);
+  m_reRequestInterval = cf->getDbl("reRequestInterval", 0, 3600, false, 1);
+  if (ZmRef<ZvCf> linksCf = cf->subset("links", false)) {
+    ZvCf::Iterator i(linksCf);
+    ZtZString id;
+    while (ZmRef<ZvCf> linkCf = i.subset(id))
+      MxEngine::updateLink<Link>(id, linkCf);
+  }
+}
+
+int main()
+{
+  ZeLog::init("MxEngineTest");
+  ZeLog::level(0);
+  ZeLog::add(ZeLog::fileSink("&2"));
+  ZeLog::start();
+
+  ZmRef<ZvCf> cf = new ZvCf();
+  cf->fromString(
+      "id Engine\n"
+      "mx {\n"
+	"nThreads 4\n"		// thread IDs are 1-based
+	"rxThread 1\n"		// I/O Rx
+	"txThread 2\n"		// I/O Tx
+	"isolation 1-3\n"	// leave thread 4 for general purpose
+      "}\n"
+      "rxThread 3\n"		// App Rx
+      "txThread 2\n"		// App Tx
+      "links { link1 { } }\n",
+      false);
+
+  ZmRef<App> app = new App();
+  ZmRef<Engine> engine = new Engine(app);
+
+  ZmRef<MxMultiplex> mx = new MxMultiplex("mx", cf->subset("mx", true));
+
+  engine->init(mx, cf);
+
+  mx->start();
+  engine->start();
+
+  engine->waitConnected();
+
+  engine->stop();
+
+  engine->waitDisconnected();
+
+  mx->stop(true);
+
+  engine = 0;
+  app->final();
+  app = 0;
+}

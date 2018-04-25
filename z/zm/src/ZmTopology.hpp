@@ -1,0 +1,80 @@
+//  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
+//  vi: noet ts=8 sw=2
+
+/*
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
+
+// hwloc topology
+
+#ifndef ZmTopology_HPP
+#define ZmTopology_HPP
+
+#ifdef _MSC_VER
+#pragma once
+#pragma warning(push)
+#pragma warning(disable:4996)
+#endif
+
+#ifndef ZmLib_HPP
+#include <ZmLib.hpp>
+#endif
+
+#include <hwloc.h>
+
+#include <ZmPLock.hpp>
+#include <ZmAtomic.hpp>
+#include <ZmCleanup.hpp>
+
+class ZmTopology;
+
+template <> struct ZmCleanup<ZmTopology> {
+  enum { Level = ZmCleanupLevel::Thread };
+};
+
+template <typename, bool> class ZmSingleton;
+
+class ZmAPI ZmTopology {
+  ZmTopology(const ZmTopology &) = delete;
+  ZmTopology &operator =(const ZmTopology &) = delete;
+
+friend class ZmSingleton<ZmTopology, 1>;
+
+  ZmTopology();
+
+public:
+  ~ZmTopology();
+
+private:
+  static ZmTopology *instance();
+
+public:
+  inline static hwloc_topology_t hwloc() { return instance()->m_hwloc; }
+
+  typedef void (*ErrorFn)(int);
+  static void errorFn(ErrorFn fn);
+  static void error(int errNo);
+
+private:
+  ZmPLock_		m_lock;
+  hwloc_topology_t	m_hwloc;
+  ZmAtomic<ErrorFn>	m_errorFn;
+};
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
+#endif /* ZmTopology_HPP */

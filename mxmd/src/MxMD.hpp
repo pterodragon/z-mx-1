@@ -235,15 +235,14 @@ public:
   void reset();
   void addTickSize(MxFloat minPrice, MxFloat maxPrice, MxFloat tickSize);
   inline MxFloat tickSize(MxFloat price) {
-    TickSizes::Node *node =
-      m_tickSizes.find(price, TickSizes::GreaterEqual);
+    TickSizes::Node *node = m_tickSizes.find(price, TickSizes::GreaterEqual);
     if (!node) return MxFloat();
     return node->key().tickSize();
   }
   template <typename L> // (const MxMDTickSize &) -> uintptr_t
   uintptr_t allTickSizes(L l) const {
     TickSizes::ReadIterator i(m_tickSizes);
-    while (TickSizes::Node *node = i.iterate())
+    while (const TickSizes::Node *node = i.iterate())
       if (uintptr_t v = l(node->key())) return v;
     return 0;
   }
@@ -593,8 +592,8 @@ public:
   template <typename L> // (MxMDOrder *) -> uintptr_t
   uintptr_t allOrders(L l) const {
     typename Orders::ReadIterator i(m_orders);
-    while (typename Orders::Node *node = i.iterate())
-      if (uintptr_t v = l(node->key().ptr())) return v;
+    while (const ZuRef<Order> &order = i.iterateKey())
+      if (uintptr_t v = l(order)) return v;
     return 0;
   }
 
@@ -603,8 +602,8 @@ private:
       const ZmFn<Order *, MxDateTime> *canceledOrderFn) {
     if (canceledOrderFn) {
       typename Orders::ReadIterator i(m_orders);
-      while (typename Orders::Node *node = i.iterate())
-	(*canceledOrderFn)(node->key().ptr(), transactTime);
+      while (const ZuRef<Order> &order = i.iterateKey())
+	(*canceledOrderFn)(order, transactTime);
     }
     m_orders.clean();
     m_data.transactTime = transactTime;
@@ -805,8 +804,8 @@ public:
   inline uintptr_t allPxLevels(L l) const {
     PxLevels::ReadIterator i(m_pxLevels,
 	m_side == MxSide::Sell ? PxLevels::GreaterEqual : PxLevels::LessEqual);
-    while (PxLevels::Node *node = i.iterate())
-      if (uintptr_t v = l(node->key().ptr())) return v;
+    while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey())
+      if (uintptr_t v = l(pxLevel)) return v;
     return 0;
   }
 

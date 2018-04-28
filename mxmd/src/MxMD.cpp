@@ -1012,16 +1012,16 @@ uintptr_t MxMDLib::allOrderBooks(ZmFn<MxMDOrderBook *> fn) const
 uintptr_t MxMDLib::allFeeds(ZmFn<MxMDFeed *> fn) const
 {
   Feeds::ReadIterator i(m_feeds);
-  while (const Feeds::Node *node = i.iterate())
-    if (uintptr_t v = fn(node->key().ptr())) return v;
+  while (const ZmRef<MxMDFeed> &feed = i.iterateKey())
+    if (uintptr_t v = fn(feed)) return v;
   return 0;
 }
 
 uintptr_t MxMDLib::allVenues(ZmFn<MxMDVenue *> fn) const
 {
   Venues::ReadIterator i(m_venues);
-  while (const Venues::Node *node = i.iterate())
-    if (uintptr_t v = fn(node->key().ptr())) return v;
+  while (const ZmRef<MxMDVenue> venue = i.iterateKey())
+    if (uintptr_t v = fn(venue)) return v;
   return 0;
 }
 
@@ -1124,7 +1124,7 @@ void MxMDTickSizeTbl::addTickSize_(
   {
     TickSizes::Iterator i(
 	m_tickSizes, minPrice, MxMDTickSizeTbl::TickSizes::GreaterEqual);
-    while (TickSizes::Node *node = i.iterate())
+    while (const TickSizes::Node *node = i.iterate())
       if (node->key().minPrice() <= ~maxPrice)
 	i.del();
       else

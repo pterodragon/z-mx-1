@@ -885,12 +885,6 @@ friend class MxMDOBSide;
     MxMDTickSizeTbl *tickSizeTbl,
     const MxMDLotSizes &lotSizes);
 
-  template <typename T = MxMDFeedOB>
-  ZuInline typename ZuIs<MxMDFeedOB, T, ZmRef<T> &>::T feedOB() {
-    ZmRef<T> *ZuMayAlias(ptr) = (ZmRef<T> *)&m_feedOB;
-    return *ptr;
-  }
-
 public:
   MxMDLib *md() const;
 
@@ -957,6 +951,12 @@ public:
   void unsubscribe();
 
   ZuInline const ZmRef<MxMDSecHandler> &handler() const { return m_handler; }
+
+  template <typename T = MxMDFeedOB>
+  ZuInline typename ZuIs<MxMDFeedOB, T, ZmRef<T> &>::T feedOB() {
+    ZmRef<T> *ZuMayAlias(ptr) = (ZmRef<T> *)&m_feedOB;
+    return *ptr;
+  }
 
 private:
   ZuInline static uint64_t venueSegment(MxID venue, MxID segment) {
@@ -1199,7 +1199,7 @@ friend class MxMDSecurity;
 friend class MxMDOrderBook;
 
 public:
-  MxMDFeed(MxID id, MxMDLib *md);
+  MxMDFeed(MxMDLib *md, MxID id);
 
   virtual ~MxMDFeed() { }
 
@@ -1208,7 +1208,6 @@ public:
   };
 
   inline MxMDLib *md() const { return m_md; }
-
   inline const MxID &id() const { return m_id; }
 
   virtual bool isConnected() const { return true; }
@@ -1224,8 +1223,8 @@ protected:
   virtual void addOrderBook(MxMDOrderBook *);
   virtual void delOrderBook(MxMDOrderBook *);
 
-  MxID		m_id;
   MxMDLib	*m_md;
+  MxID		m_id;
 };
 
 // venues
@@ -1322,7 +1321,7 @@ friend class MxMDOrderBook;
 		  ZmHashHeapID<MxMDOrders_HeapID> > > > > Orders;
 
 public:
-  MxMDVenue(MxID id, MxMDFeed *feed, MxMDLib *md);
+  MxMDVenue(MxMDLib *md, MxMDFeed *feed, MxID id);
 
   virtual ~MxMDVenue() { }
 
@@ -1330,10 +1329,9 @@ public:
     inline static MxID value(const MxMDVenue *v) { return v->id(); }
   };
 
-  ZuInline MxID id() const { return m_id; }
-
-  ZuInline MxMDFeed *feed() const { return m_feed; }
   ZuInline MxMDLib *md() const { return m_md; }
+  ZuInline MxMDFeed *feed() const { return m_feed; }
+  ZuInline MxID id() const { return m_id; }
 
 private:
   ZuInline void loaded_(bool b) { m_loaded = b; }
@@ -1387,9 +1385,9 @@ private:
   ZuInline unsigned nShards() const { return m_shards.length(); }
   ZuInline MxMDVenueShard *shard(unsigned i) const { return m_shards[i]; }
 
-  MxID			m_id;
-  MxMDFeed		*m_feed;
   MxMDLib		*m_md;
+  MxMDFeed		*m_feed;
+  MxID			m_id;
   Shards		m_shards;
 
   TickSizeTbls	 	m_tickSizeTbls;

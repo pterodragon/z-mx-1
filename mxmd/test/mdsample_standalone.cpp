@@ -205,16 +205,14 @@ int initFeed()
 
     // add a synthetic feed to generate market data events
    
-    ZmRef<MxMDFeed> feed = new MxMDFeed(
-      "XTKS",		// Tokyo Stock Exchange
-      md);
+    ZmRef<MxMDFeed> feed = new MxMDFeed(md,
+      "XTKS");		// Tokyo Stock Exchange
     md->addFeed(feed);
 
     // add the venue
 
-    ZmRef<MxMDVenue> venue = new MxMDVenue(
-      "XTKS",		// Tokyo Stock Exchange
-      feed, md);
+    ZmRef<MxMDVenue> venue = new MxMDVenue(md, feed,
+      "XTKS");		// Tokyo Stock Exchange
     md->addVenue(venue);
 
     // add a tick size table

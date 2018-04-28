@@ -301,7 +301,7 @@ MxMDLib *MxMDLib::init(const char *cf_)
       md = new MxMDCore(ZuMv(mx), cf);
     }
 
-    md->m_localFeed = new MxMDFeed("_LCL", md);
+    md->m_localFeed = new MxMDFeed(md, "_LCL");
     md->addFeed(md->m_localFeed);
 
     if (ZmRef<ZvCf> feedsCf = cf->subset("feeds", false)) {
@@ -313,7 +313,7 @@ MxMDLib *MxMDLib::init(const char *cf_)
 	  ZvCf::Iterator j(feedCf);
 	  ZtZString id;
 	  while (ZmRef<ZvCf> venueCf = j.subset(id))
-	    md->addVenue(new MxMDVenue(id, md->m_localFeed, md));
+	    md->addVenue(new MxMDVenue(md, md->m_localFeed, id));
 	  continue;
 	}
 	ZtZString e;
@@ -698,7 +698,7 @@ ZtZString MxMDCmd::lookupSyntax()
 ZtZString MxMDCmd::lookupOptions()
 {
   return
-    "    -r --ric\t- symbol is RIC\n"
+    "    -S --src=SRC\t- symbol ID source is SRC (CUSIP|SEDOL|QUIK|ISIN|RIC|EXCH|CTA|BSYM|BBGID|FXP|CFXP)\n"
     "    -m --market=MIC\t - market MIC, e.g. XTKS\n"
     "    -s --segment=SEGMENT\t- market segment SEGMENT\n";
 }
@@ -1496,7 +1496,7 @@ ZmRef<MxMDVenue> MxMDCore::venue(MxID id)
 {
   ZmRef<MxMDVenue> venue;
   if (ZuLikely(venue = m_venues.findKey(id))) return venue;
-  venue = new MxMDVenue(id, m_localFeed, this);
+  venue = new MxMDVenue(this, m_localFeed, id);
   addVenue(venue);
   return venue;
 }

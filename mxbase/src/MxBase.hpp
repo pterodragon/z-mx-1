@@ -218,13 +218,15 @@ typedef MxString<MxTxtSize> MxTxtString;
 // application types
 
 struct MxSecIDSrc {
-  MxEnumValues(CUSIP, SEDOL, QUIK, ISIN, RIC, EXCH, CTA, BSYM, BBGID);
+  MxEnumValues(CUSIP, SEDOL, QUIK, ISIN, RIC, EXCH, CTA, BSYM, BBGID,
+      FXP, CFXP); // FIXME ?
   MxEnumNames(
-      "CUSIP", "SEDOL", "QUIK", "ISIN", "RIC", "EXCH", "CTA", "BSYM", "BBGID");
+      "CUSIP", "SEDOL", "QUIK", "ISIN", "RIC", "EXCH", "CTA", "BSYM", "BBGID",
+      "FXP", "CFXP"); // FIXME ?
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "1", CUSIP, "2", SEDOL, "3", QUIK, "4", ISIN, "5", RIC, "8", EXCH,
-      "9", CTA, "A", BSYM, "S", BBGID);
+      "9", CTA, "A", BSYM, "S", BBGID /* FIXME */);
 };
 
 struct MxPutCall {

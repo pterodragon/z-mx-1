@@ -1003,7 +1003,7 @@ struct App : public ZmPQRx<App, Queue> {
 };
 #endif
 
-template <class App, class Queue, class Lock_> class ZmPQRx {
+template <class App, class Queue, class Lock_ = ZmNoLock> class ZmPQRx {
 public:
   typedef typename Queue::Node Msg;
   typedef typename Queue::Key Key;
@@ -1175,7 +1175,7 @@ struct App : public ZmPQTx<App, Queue> {
 };
 #endif
 
-template <class App, class Queue, class Lock_> class ZmPQTx {
+template <class App, class Queue, class Lock_ = ZmNoLock> class ZmPQTx {
 public:
   typedef typename Queue::Node Msg;
   typedef typename Queue::Fn Fn;

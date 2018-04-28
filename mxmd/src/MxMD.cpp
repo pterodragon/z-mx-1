@@ -871,8 +871,8 @@ MxMDVenueShard::MxMDVenueShard(MxMDVenue *venue, MxMDShard *shard) :
 {
 }
 
-MxMDVenue::MxMDVenue(MxID id, MxMDFeed *feed, MxMDLib *md) :
-    m_id(id), m_feed(feed), m_md(md),
+MxMDVenue::MxMDVenue(MxMDLib *md, MxMDFeed *feed, MxID id) :
+    m_md(md), m_feed(feed), m_id(id),
     m_shards(md->nShards()),
     m_segments(ZmHashParams().bits(2).init(
 	  ZuStringN<ZmHeapIDSize>() << "MxMDVenue." << id << ".Segments")),
@@ -943,8 +943,9 @@ void MxMDVenue::delCombination(MxID segment, ZuString id)
   md()->delCombination(this, segment, id);
 }
 
-MxMDFeed::MxMDFeed(MxID id, MxMDLib *md) :
-  m_id(id), m_md(md)
+MxMDFeed::MxMDFeed(MxMDLib *md, MxID id) :
+  m_md(md),
+  m_id(id)
 {
 }
 

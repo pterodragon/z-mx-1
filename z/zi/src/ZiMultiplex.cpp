@@ -1124,16 +1124,7 @@ void ZiConnection::connected()
 
 void ZiConnection::recv(ZiIOFn fn)
 {
-  if (ZuLikely(ZmPlatform::getTID() == m_mx->rxTID())) {
-    recv_(ZuMv(fn));
-    return;
-  }
-  m_mx->ZmScheduler::run(m_mx->rxThread(), [this, fn = ZuMv(fn)]() {
-      this->recv_(fn); });
-  // rx() is scheduled separately so that 'this' can go out of scope
-  m_mx->ZmScheduler::run(m_mx->rxThread(),
-      ZmFn<>::Member<&ZiMultiplex::rx>::fn(m_mx));
-  m_mx->wake();
+  m_mx->rxInvoke([this, fn = ZuMv(fn)]() { this->recv_(fn); });
 }
 
 void ZiConnection::recv_(ZiIOFn fn)
@@ -1774,12 +1765,7 @@ void ZiConnection::disconnect_1()
 
   ZiMultiplex *mx = m_mx;
 
-  mx->ZmScheduler::run(mx->rxThread(),
-      ZmFn<>::Member<&ZiConnection::disconnect_2>::fn(this));
-  // rx() is scheduled separately so that 'this' can go out of scope
-  mx->ZmScheduler::run(mx->rxThread(),
-      ZmFn<>::Member<&ZiMultiplex::rx>::fn(mx));
-  mx->wake();
+  mx->rxInvoke(ZmFn<>([](ZiConnection *self) { self->disconnect_2(); }, this));
 }
 
 void ZiConnection::disconnect_2()
@@ -1888,12 +1874,7 @@ void ZiConnection::close_1()
 
   ZiMultiplex *mx = m_mx;
 
-  mx->ZmScheduler::run(mx->rxThread(),
-      ZmFn<>::Member<&ZiConnection::close_2>::fn(this));
-  // rx() is scheduled separately so that 'this' can go out of scope
-  mx->ZmScheduler::run(mx->rxThread(),
-      ZmFn<>::Member<&ZiMultiplex::rx>::fn(mx));
-  mx->wake();
+  mx->rxInvoke(ZmFn<>([](ZiConnection *self) { self->close_2(); }, this));
 }
 
 void ZiConnection::close_2()
@@ -2046,14 +2027,12 @@ void ZiMultiplex::stop(bool drain)
 
   if (m_stopping) return;
 
-  ZmSemaphore stopping;
+  thread_local ZmSemaphore stopping;
 
   m_stopping = &stopping;
   m_drain = drain;
 
-  ZmScheduler::run(rxThread(), ZmFn<>::Member<&ZiMultiplex::stop_1>::fn(this));
-  ZmScheduler::run(rxThread(), ZmFn<>::Member<&ZiMultiplex::rx>::fn(this));
-  wake();
+  rxInvoke(ZmFn<>([](ZiMultiplex *self) { self->stop_1(); }, this));
 
   stopping.wait();
   wake();

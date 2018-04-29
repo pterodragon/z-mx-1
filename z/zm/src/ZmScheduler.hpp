@@ -334,8 +334,11 @@ public:
   ZuInline void add(ZmFn<> fn, ZmTime timeout, int mode, Timer *ptr)
     { run(0, ZuMv(fn), timeout, mode, ptr); }
 
-  void run(unsigned tid, ZmFn<> fn, ZmTime timeout,
-      int mode = Update, Timer * = 0);
+  ZuInline void run(unsigned tid, ZmFn<> fn, ZmTime timeout)
+    { run(tid, ZuMv(fn), Update, 0); }
+  ZuInline void run(unsigned tid, ZmFn<> fn, ZmTime timeout, Timer *ptr)
+    { run(tid, ZuMv(fn), Update, ptr); }
+  void run(unsigned tid, ZmFn<> fn, ZmTime timeout, int mode, Timer *ptr);
 
   void del(Timer *);				// cancel job
 

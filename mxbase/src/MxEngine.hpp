@@ -537,9 +537,7 @@ public:
   ZuInline void scheduleDequeue() {
     if (!m_dequeuing.xch(1)) rescheduleDequeue();
   }
-  ZuInline void rescheduleDequeue() {
-    rxRun([](Rx *rx) { rx->dequeue(); });
-  }
+  ZuInline void rescheduleDequeue() { rxRun([](Rx *rx) { rx->dequeue(); }); }
   ZuInline void idleDequeue() { m_dequeuing = 0; }
 
   typedef ZmPLock RRLock;
@@ -559,9 +557,7 @@ public:
     m_rrTime.now();
     ZmTime rrTime = (m_rrTime += interval);
     guard.unlock();
-    this->mx()->add(
-      ZmFn<>::Member<&MxLink::runReRequest>::fn(this),
-      rrTime, &m_rrTimer);
+    rxRun(ZmFn<>::Member<&MxLink::reRequest>::fn(this), rrTime, &m_rrTimer);
   }
   ZuInline void cancelReRequest() {
     this->mx()->del(&m_rrTimer);

@@ -922,6 +922,7 @@ static void writeTickSizes(
     md->allVenues(venueFn);
   else
     if (ZmRef<MxMDVenue> venue = md->venue(venueID)) venueFn(venue);
+  fn((ZuAnyPOD *)0);
 }
 
 void MxMDCore::dumpTickSizes(ZuString path, MxID venueID)
@@ -955,6 +956,7 @@ static void writeSecurities(
     }
     return 0;
   });
+  fn((ZuAnyPOD *)0);
 }
 
 void MxMDCore::dumpSecurities(ZuString path, MxID venueID, MxID segment)
@@ -999,6 +1001,7 @@ static void writeOrderBooks(
     }
     return 0;
   });
+  fn((ZuAnyPOD *)0);
 }
 
 void MxMDCore::dumpOrderBooks(ZuString path, MxID venueID, MxID segment)

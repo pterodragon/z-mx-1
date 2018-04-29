@@ -98,10 +98,12 @@ struct ZmAPI ZmThreadMgr {
 
   static void info(InfoFn fn);
 
-  template <typename S> static S &csv(S &stream) {
+  // FIXME - this, info(), etc. should all be moved into ZmThread since
+  // info() uses ZmSpecific<ZmThreadContext>::all to iterate over all threads
+  // regardless of mgr
+  template <typename S> static void csv(S &stream) {
     CSV<S> csv(stream);
     ZmThreadMgr::info(InfoFn::Member<&CSV<S>::print>::fn(&csv));
-    return stream;
   }
 
   virtual void threadName(ZmThreadName &, unsigned tid) = 0;

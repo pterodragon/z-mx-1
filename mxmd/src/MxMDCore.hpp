@@ -108,8 +108,8 @@ private:
 public:
   virtual ~MxMDCore() { }
 
-  ZuInline ZmRef<Mx> mx() { return m_mx; }
-  ZuInline ZmRef<ZvCf> cf() { return m_cf; }
+  ZuInline Mx *mx() { return m_mx.ptr(); }
+  ZuInline ZvCf *cf() { return m_cf.ptr(); }
 
   virtual void start();
   virtual void stop();
@@ -163,7 +163,6 @@ private:
 
   void feeds(const CmdArgs &, ZtArray<char> &);
   void venues(const CmdArgs &, ZtArray<char> &);
-  void futricroots(const CmdArgs &, ZtArray<char> &);
 #endif
 
   void addTickSize_(ZuAnyPOD *);
@@ -419,7 +418,6 @@ friend class Snapper;
     typedef ZmList<ZiRingParams,
 	      ZmListLock<ZmPLock> > Snapshots;
 
-    // FIXME - migrate to ZmScheduler / ZiMultiplex
     void run() {
       for (;;) {
 	m_sem.wait();

@@ -85,16 +85,16 @@ public:
   void update(ZvCf *cf) { }
   void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) { }
 
-#define LinkInfo(code) \
+#define linkINFO(code) \
     engine().appException(ZeEVENT(Info, \
-      ([=, id = id()](const ZeEvent &, ZmStream &out) { code; })))
+      ([=, id = id()](const ZeEvent &, ZmStream &out) { out << code; })))
   void connect() {
-    LinkInfo(out << "connect(): " << id);
+    linkINFO("connect(): " << id);
     connected();
     engine().connected();
   }
   void disconnect() {
-    LinkInfo(out << "disconnect(): " << id);
+    linkINFO("disconnect(): " << id);
     disconnected();
     engine().disconnected();
   }
@@ -104,7 +104,11 @@ public:
   void reRequest(const MxQueue::Gap &now) { }
 
   // Tx
-  bool send_(MxQMsg *msg, bool more) { return true; }
+  bool send_(MxQMsg *msg, bool more) {
+    this->sent_(msg);
+    return true;
+    // could also call aborted_() and return false
+  }
   bool resend_(MxQMsg *msg, bool more) { return true; }
   void abort_(MxQMsg *msg) { }
 
@@ -142,7 +146,7 @@ int main()
 	"isolation 1-3\n"	// leave thread 4 for general purpose
       "}\n"
       "rxThread 3\n"		// App Rx
-      "txThread 2\n"		// App Tx
+      "txThread 2\n"		// App Tx (same as I/O Tx)
       "links { link1 { } }\n",
       false);
 

@@ -151,6 +151,7 @@ template <typename T_>
 struct ZuDeref<const volatile T_ &> { typedef const volatile T_ T; };
 template <typename T_>
 struct ZuDeref<T_ &&> { typedef T_ T; };
+
 // shorthand constexpr std::forward without STL cruft
 template <typename T>
 constexpr T &&ZuFwd(typename ZuDeref<T>::T &t) noexcept { // fwd lvalue
@@ -160,7 +161,7 @@ template <typename T>
 constexpr T &&ZuFwd(typename ZuDeref<T>::T &&t) noexcept { // fwd rvalue
   return static_cast<T &&>(t);
 }
-// use to forward auto &&x parameters
+// use to forward auto &&x parameters (GNU extension)
 #define ZuAutoFwd(x) ZuFwd<decltype(x)>(x)
 // shorthand constexpr std::move without STL cruft
 template <typename T>

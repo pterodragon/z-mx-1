@@ -516,22 +516,18 @@ void MxMDCore::start()
 {
   Guard guard(m_stateLock);
 
-  if (m_mx) {
-    raise(ZeEVENT(Info, "starting multiplexer..."));
-    if (m_mx->start() != Zi::OK) {
-      raise(ZeEVENT(Fatal, "multiplexer start failed"));
-      return;
-    }
-    if (m_cmd) {
-      raise(ZeEVENT(Info, "starting cmd server..."));
-      m_cmd->start();
-    }
+  raise(ZeEVENT(Info, "starting multiplexer..."));
+  if (m_mx->start() != Zi::OK) {
+    raise(ZeEVENT(Fatal, "multiplexer start failed"));
+    return;
+  }
+  if (m_cmd) {
+    raise(ZeEVENT(Info, "starting cmd server..."));
+    m_cmd->start();
   }
 
-  if (m_mx) {
-    { if (!!m_recordCfPath) record(m_recordCfPath); }
-    { if (!!m_replayCfPath) replay(m_replayCfPath); }
-  }
+  if (m_recordCfPath) record(m_recordCfPath);
+  if (m_replayCfPath) replay(m_replayCfPath);
 
   raise(ZeEVENT(Info, "starting feeds..."));
   allFeeds([](MxMDFeed *feed) { try { feed->start(); } catch (...) { } });

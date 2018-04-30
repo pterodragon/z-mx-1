@@ -226,17 +226,15 @@ void MxMDOBSide::pxLevel_(
   const MxMDPxLevelFn *&pxLevelFn,
   ZuRef<MxMDPxLevel> &pxLevel)
 {
-  pxLevelFn = 0;
   if (ZuUnlikely(!*price)) {
     if (!m_mktLevel) {
       if (qty.fne(0.0)) {
 	d_qty = qty, d_nOrders = nOrders;
 	pxLevel = m_mktLevel = new MxMDPxLevel(
 	    this, m_side, transactTime, MxFloat(), qty, nOrders, flags);
-	pxLevelFn = &handler->addMktLevel;
+	if (handler) pxLevelFn = &handler->addMktLevel;
       } else {
 	pxLevel = 0;
-	pxLevelFn = 0;
 	d_qty = 0, d_nOrders = 0;
       }
     } else {
@@ -244,10 +242,10 @@ void MxMDOBSide::pxLevel_(
       m_mktLevel->update(
 	  transactTime, delta, qty, nOrders, flags, d_qty, d_nOrders);
       if (m_mktLevel->data().qty.fne(0.0))
-	pxLevelFn = &handler->updatedMktLevel;
+	if (handler) pxLevelFn = &handler->updatedMktLevel;
       else {
 	m_mktLevel = 0;
-	pxLevelFn = &handler->deletedMktLevel;
+	if (handler) pxLevelFn = &handler->deletedMktLevel;
       }
     }
     if (d_qty.fne(0.0)) m_data.qty += d_qty;
@@ -259,20 +257,19 @@ void MxMDOBSide::pxLevel_(
       d_qty = qty, d_nOrders = nOrders;
       pxLevel = new MxMDPxLevel(
 	  this, m_side, transactTime, price, qty, nOrders, flags);
-      pxLevelFn = &handler->addPxLevel;
+      if (handler) pxLevelFn = &handler->addPxLevel;
       m_pxLevels.add(pxLevel);
     } else {
       pxLevel = 0;
-      pxLevelFn = 0;
       d_qty = 0, d_nOrders = 0;
     }
   } else {
     pxLevel->update(
 	transactTime, delta, qty, nOrders, flags, d_qty, d_nOrders);
     if (pxLevel->data().qty.fne(0.0))
-      pxLevelFn = &handler->updatedPxLevel;
+      if (handler) pxLevelFn = &handler->updatedPxLevel;
     else {
-      pxLevelFn = &handler->deletedPxLevel;
+      if (handler) pxLevelFn = &handler->deletedPxLevel;
       m_pxLevels.delVal(price);
     }
   }
@@ -336,12 +333,12 @@ void MxMDOBSide::addOrder_(
   const MxMDOrderData &orderData = order->data();
   if (!*orderData.price) {
     if (!m_mktLevel) {
-      pxLevelFn = &handler->addMktLevel;
+      if (handler) pxLevelFn = &handler->addMktLevel;
       pxLevel = m_mktLevel = new MxMDPxLevel(this,
 	  orderData.side, transactTime,
 	  MxFloat(), orderData.qty, 1, 0);
     } else {
-      pxLevelFn = &handler->updatedMktLevel;
+      if (handler) pxLevelFn = &handler->updatedMktLevel;
       pxLevel = m_mktLevel;
       m_mktLevel->updateDelta(transactTime, orderData.qty, 1, 0);
     }
@@ -352,13 +349,13 @@ void MxMDOBSide::addOrder_(
   }
   pxLevel = m_pxLevels.findKey(orderData.price);
   if (!pxLevel) {
-    pxLevelFn = &handler->addPxLevel;
+    if (handler) pxLevelFn = &handler->addPxLevel;
     pxLevel = new MxMDPxLevel(this,
       orderData.side, transactTime,
       orderData.price, orderData.qty, 1, 0);
     m_pxLevels.add(pxLevel);
   } else {
-    pxLevelFn = &handler->updatedPxLevel;
+    if (handler) pxLevelFn = &handler->updatedPxLevel;
     pxLevel->updateDelta(transactTime, orderData.qty, 1, 0);
   }
   order->pxLevel(pxLevel);
@@ -394,10 +391,10 @@ void MxMDOBSide::delOrder_(
     m_mktLevel->delOrder(orderData.rank);
     pxLevel = m_mktLevel;
     if (m_mktLevel->data().qty.feq(0.0)) {
-      pxLevelFn = &handler->deletedMktLevel;
+      if (handler) pxLevelFn = &handler->deletedMktLevel;
       m_mktLevel = 0;
     } else
-      pxLevelFn = &handler->updatedMktLevel;
+      if (handler) pxLevelFn = &handler->updatedMktLevel;
     m_data.qty -= orderData.qty;
     return;
   }
@@ -409,10 +406,10 @@ void MxMDOBSide::delOrder_(
   pxLevel->updateDelta(transactTime, -orderData.qty, -1, 0);
   pxLevel->delOrder(orderData.rank);
   if (pxLevel->data().qty.feq(0.0)) {
-    pxLevelFn = &handler->deletedPxLevel;
+    if (handler) pxLevelFn = &handler->deletedPxLevel;
     m_pxLevels.delVal(pxLevel->price());
   } else {
-    pxLevelFn = &handler->updatedPxLevel;
+    if (handler) pxLevelFn = &handler->updatedPxLevel;
   }
   order->pxLevel(0);
   m_data.nv -= orderData.price * orderData.qty;
@@ -882,7 +879,7 @@ MxMDVenue::MxMDVenue(MxMDLib *md, MxMDFeed *feed, MxID id) :
   unsigned n = md->nShards();
   m_shards.length(n);
   for (unsigned i = 0; i < n; i++)
-    m_shards[i] = new MxMDVenueShard(this, md->shard(i));
+    m_shards[i] = new MxMDVenueShard(this, md->shard_(i));
 }
 
 uintptr_t MxMDVenue::allTickSizeTbls(ZmFn<MxMDTickSizeTbl *> fn) const
@@ -957,7 +954,13 @@ void MxMDFeed::final() { }
 void MxMDFeed::addOrderBook(MxMDOrderBook *) { }
 void MxMDFeed::delOrderBook(MxMDOrderBook *) { }
 
-uintptr_t MxMDShard::allSecurities_(ZmFn<MxMDSecurity *> fn) const
+ZmRef<MxMDSecurity> MxMDShard::addSecurity(
+  MxID venue, MxID segment, ZuString id, const MxMDSecRefData &refData)
+{
+  return md()->addSecurity(venue, segment, id, this->id(), refData);
+}
+
+uintptr_t MxMDShard::allSecurities(ZmFn<MxMDSecurity *> fn) const
 {
   Securities::ReadIterator i(m_securities);
   while (MxMDSecurity *security = i.iterateKey())
@@ -965,7 +968,7 @@ uintptr_t MxMDShard::allSecurities_(ZmFn<MxMDSecurity *> fn) const
   return 0;
 }
 
-uintptr_t MxMDShard::allOrderBooks_(ZmFn<MxMDOrderBook *> fn) const
+uintptr_t MxMDShard::allOrderBooks(ZmFn<MxMDOrderBook *> fn) const
 {
   OrderBooks::ReadIterator i(m_orderBooks);
   while (MxMDOrderBook *ob = i.iterateKey())
@@ -973,39 +976,29 @@ uintptr_t MxMDShard::allOrderBooks_(ZmFn<MxMDOrderBook *> fn) const
   return 0;
 }
 
-uintptr_t MxMDShard::allSecurities(ZmFn<MxMDSecurity *> fn) const
-{
-  uintptr_t v;
-  thread_local ZmSemaphore sem;
-  this->run([this, &v, sem = &sem, fn = ZuMv(fn)]() {
-      v = allSecurities_(ZuMv(fn)); sem->post(); });
-  sem.wait();
-  return v;
-}
-
-uintptr_t MxMDShard::allOrderBooks(ZmFn<MxMDOrderBook *> fn) const
-{
-  uintptr_t v;
-  thread_local ZmSemaphore sem;
-  this->run([this, &v, sem = &sem, fn = ZuMv(fn)]() {
-      v = allOrderBooks_(ZuMv(fn)); sem->post(); });
-  sem.wait();
-  return v;
-}
-
 uintptr_t MxMDLib::allSecurities(ZmFn<MxMDSecurity *> fn) const
 {
-  for (unsigned i = 0, n = m_shards.length(); i < n; i++)
-    if (uintptr_t v = m_shards[i]->allSecurities(fn))
-      return v;
+  thread_local ZmSemaphore sem;
+  for (unsigned i = 0, n = m_shards.length(); i < n; i++) {
+    uintptr_t v;
+    m_shards[i]->run([shard = m_shards[i], sem = &sem, &v, fn]() {
+	v = shard->allSecurities(ZuMv(fn)); sem->post(); });
+    sem.wait();
+    if (v) return v;
+  }
   return 0;
 }
 
 uintptr_t MxMDLib::allOrderBooks(ZmFn<MxMDOrderBook *> fn) const
 {
-  for (unsigned i = 0, n = m_shards.length(); i < n; i++)
-    if (uintptr_t v = m_shards[i]->allOrderBooks(fn))
-      return v;
+  thread_local ZmSemaphore sem;
+  for (unsigned i = 0, n = m_shards.length(); i < n; i++) {
+    uintptr_t v;
+    m_shards[i]->run([shard = m_shards[i], sem = &sem, &v, fn]() {
+	v = shard->allOrderBooks(ZuMv(fn)); sem->post(); });
+    sem.wait();
+    if (v) return v;
+  }
   return 0;
 }
 

@@ -24,6 +24,14 @@ extern "C" { void sigint(int); };
 void sigint(int sig) { sem.post(); }	// CTRL-C signal handler
 
 int initFeed();		// initialize synthetic feed
+int startFeed(MxMDLib *md, MxMDFeed *feed);
+
+bool startFailed = 0;
+
+struct Feed : public MxMDFeed {
+  inline Feed(MxMDLib *md, MxID id) : MxMDFeed(md, id) { }
+  void start() { if (startFeed(md(), this)) startFailed = 1; }
+};
 
 void publish();		// publisher thread - generates random ticks
 
@@ -48,7 +56,7 @@ int main(int argc, char **argv)
       return 1;
     }
 
-    if (subscribe() < 0) {		// subscribe to events
+    if (subscribe() < 0) {		// subscribe to library events
       md->final();
       return 1;
     }
@@ -56,6 +64,8 @@ int main(int argc, char **argv)
     md->record("foo");
 
     md->start();			// start all feeds
+
+    if (startFailed) { md->stop(); return 1; }
 
     md->startTimer();
 
@@ -146,6 +156,41 @@ void timer(MxDateTime now, MxDateTime &next)
   next = now + ZmTime(1);
 }
 
+void loaded(MxMDVenue *venue)
+{
+  MxMDLib *md = venue->md();
+
+  ZmRef<MxMDSecHandler> secHandler = new MxMDSecHandler();
+  secHandler->
+    l1Fn(MxMDLevel1Fn::Ptr<&l1>::fn()).
+    addMktLevelFn(MxMDPxLevelFn::Ptr<&addPxLevel>::fn()).
+    updatedMktLevelFn(MxMDPxLevelFn::Ptr<&updatedPxLevel>::fn()).
+    deletedMktLevelFn(MxMDPxLevelFn::Ptr<&deletedPxLevel>::fn()).
+    addPxLevelFn(MxMDPxLevelFn::Ptr<&addPxLevel>::fn()).
+    updatedPxLevelFn(MxMDPxLevelFn::Ptr<&updatedPxLevel>::fn()).
+    deletedPxLevelFn(MxMDPxLevelFn::Ptr<&deletedPxLevel>::fn()).
+    l2Fn(MxMDLevel2Fn::Ptr<&l2>::fn()).
+    addOrderFn(MxMDOrderFn::Ptr<&addOrder>::fn()).
+    canceledOrderFn(MxMDOrderFn::Ptr<&canceledOrder>::fn());
+
+  // iterate through all tickers subscribing to market data updates
+
+  for (const char **ticker = tickers; *ticker; ticker++) {
+
+    // look up security
+
+    md->security(MxSecKey{"XTKS", MxID(), *ticker},
+	[secHandler, ticker](MxMDSecurity *sec) {
+      if (!sec) {
+	ZeLOG(Error, ZtZString() <<
+	    "security \"" << *ticker << "\" not found");
+	return;
+      }
+      sec->subscribe(secHandler); // subscribe to L1/L2 data
+    });
+  }
+}
+
 int subscribe()
 {
   try {
@@ -154,37 +199,8 @@ int subscribe()
 
     md->subscribe(&((new MxMDLibHandler())->
 	  exceptionFn(MxMDExceptionFn::Ptr<&exception>::fn()).
-	  timerFn(MxMDTimerFn::Ptr<&timer>::fn())));
-
-    ZmRef<MxMDSecHandler> secHandler = new MxMDSecHandler();
-    secHandler->
-      l1Fn(MxMDLevel1Fn::Ptr<&l1>::fn()).
-      addMktLevelFn(MxMDPxLevelFn::Ptr<&addPxLevel>::fn()).
-      updatedMktLevelFn(MxMDPxLevelFn::Ptr<&updatedPxLevel>::fn()).
-      deletedMktLevelFn(MxMDPxLevelFn::Ptr<&deletedPxLevel>::fn()).
-      addPxLevelFn(MxMDPxLevelFn::Ptr<&addPxLevel>::fn()).
-      updatedPxLevelFn(MxMDPxLevelFn::Ptr<&updatedPxLevel>::fn()).
-      deletedPxLevelFn(MxMDPxLevelFn::Ptr<&deletedPxLevel>::fn()).
-      l2Fn(MxMDLevel2Fn::Ptr<&l2>::fn()).
-      addOrderFn(MxMDOrderFn::Ptr<&addOrder>::fn()).
-      canceledOrderFn(MxMDOrderFn::Ptr<&canceledOrder>::fn());
-
-    // iterate through all tickers subscribing to market data updates
-
-    for (const char **ticker = tickers; *ticker; ticker++) {
-
-      // look up security
-
-      md->security(MxSecKey{"XTKS", MxID(), *ticker},
-	  [secHandler, ticker](MxMDSecurity *sec) {
-	if (!sec) {
-	  ZeLOG(Error, ZtZString() <<
-	      "security \"" << *ticker << "\" not found");
-	  return;
-	}
-	sec->subscribe(secHandler); // subscribe to L1/L2 data
-      });
-    }
+	  timerFn(MxMDTimerFn::Ptr<&timer>::fn()).
+	  refDataLoadedFn(MxMDVenueFn::Ptr<&loaded>::fn())));
   } catch (const ZtString &s) {
     ZeLOG(Error, ZtZString() << "error: " << s);
     return -1;
@@ -205,10 +221,24 @@ int initFeed()
 
     // add a synthetic feed to generate market data events
    
-    ZmRef<MxMDFeed> feed = new MxMDFeed(md,
+    ZmRef<MxMDFeed> feed = new Feed(md,
       "XTKS");		// Tokyo Stock Exchange
     md->addFeed(feed);
 
+  } catch (const ZtString &s) {
+    ZeLOG(Error, ZtZString() << "error: " << s);
+    return -1;
+  } catch (...) {
+    ZeLOG(Error, "unknown exception");
+    return -1;
+  }
+
+  return 0;
+}
+
+int startFeed(MxMDLib *md, MxMDFeed *feed)
+{
+  try {
     // add the venue
 
     ZmRef<MxMDVenue> venue = new MxMDVenue(md, feed,
@@ -216,7 +246,7 @@ int initFeed()
     md->addVenue(venue);
 
     // add a tick size table
- 
+
     ZmRef<MxMDTickSizeTbl> tickSizeTbl = venue->addTickSizeTbl("1");
     if (!tickSizeTbl) throw ZtZString("MxMDVenue::addTickSizeTbl() failed");
     // tick size 1 from 0 to infinity
@@ -240,23 +270,44 @@ int initFeed()
 
       // add the security
 
-      ZmRef<MxMDSecurity> security = md->addSecurity(
-	"XTKS",				// Tokyo Stock Exchange
-	MxID(),				// null segment (segment not used)
-	*ticker,			// internal ID
-	0,				// shard
-	refData);
-      if (!security) throw ZtZString("MxMDLib::addSecurity() failed");
+      thread_local ZmSemaphore sem;
+      ZtZString error;
+      md->shard(0, [sem = &sem, &error,
+	  ticker, &refData, &tickSizeTbl, &lotSizes](
+	    MxMDShard *shard) {
+	// this runs inside shard 0
 
-      // add the order book
+	ZmRef<MxMDSecurity> sec = shard->addSecurity(
+	    "XTKS",			// Tokyo Stock Exchange
+	    MxID(),			// null segment (segment not used)
+	    *ticker,			// internal ID
+	    refData); 
 
-      ZmRef<MxMDOrderBook> orderBook = security->addOrderBook(
-	"XTKS",				// Tokyo Stock Exchange
-	MxID(),				// null segment (segment not used)
-	*ticker,			// internal ID
-	tickSizeTbl,			// tick sizes
-	lotSizes);			// lot sizes
-      if (!orderBook) throw ZtZString("MxMDSecurity::addOrderBook() failed");
+	if (ZuUnlikely(!sec)) {
+	  error = "MxMDLib::addSecurity() failed";
+	  sem->post();
+	  return;
+	}
+
+	// add the order book
+
+	ZmRef<MxMDOrderBook> orderBook = sec->addOrderBook(
+	  "XTKS",			// Tokyo Stock Exchange
+	  MxID(),			// null segment (segment not used)
+	  *ticker,			// internal ID
+	  tickSizeTbl,			// tick sizes
+	  lotSizes);			// lot sizes
+	if (ZuUnlikely(!orderBook)) {
+	  error = "MxMDSecurity::addOrderBook() failed";
+	  sem->post();
+	  return;
+	}
+	sem->post();
+      });
+      sem.wait();
+      if (ZuUnlikely(error)) throw error;
+
+      md->loaded(venue);
     }
   } catch (const ZtString &s) {
     ZeLOG(Error, ZtZString() << "error: " << s);
@@ -265,7 +316,6 @@ int initFeed()
     ZeLOG(Error, "unknown exception");
     return -1;
   }
-
   return 0;
 }
 

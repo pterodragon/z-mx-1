@@ -345,15 +345,12 @@ public:
   template <typename Fn>
   ZuInline void run(unsigned tid, Fn &&fn) {
     ZmAssert(tid && tid <= m_nThreads);
-    if (ZuUnlikely(!run_(&m_threads[tid - 1], ZuFwd<Fn>(fn))))
-      run(tid, ZuFwd<Fn>(fn), ZmTimeNow(), Update, 0);
+    run_(&m_threads[tid - 1], ZuFwd<Fn>(fn));
   }
   template <typename Fn, typename O>
   ZuInline void run(unsigned tid, Fn &&fn, O &&o) {
     ZmAssert(tid && tid <= m_nThreads);
-    if (ZuUnlikely(!run_(&m_threads[tid - 1],
-	    ZmFn<>(ZuFwd<Fn>(fn), ZuFwd<O>(o)))))
-      run(tid, ZmFn<>(ZuFwd<Fn>(fn), ZuFwd<O>(o)), ZmTimeNow(), Update, 0);
+    run_(&m_threads[tid - 1], ZmFn<>(ZuFwd<Fn>(fn), ZuFwd<O>(o)));
   }
 
   template <typename Fn>
@@ -361,8 +358,7 @@ public:
     ZmAssert(tid && tid <= m_nThreads);
     Thread *thread = &m_threads[tid - 1];
     if (ZuLikely(ZmPlatform::getTID() == thread->tid)) { fn(); return; }
-    if (ZuUnlikely(!run_(thread, ZuFwd<Fn>(fn))))
-      run(tid, ZuFwd<Fn>(fn), ZmTimeNow(), Update, 0);
+    run_(thread, ZuFwd<Fn>(fn));
   }
   template <typename Fn, typename O>
   ZuInline void invoke(unsigned tid, Fn &&fn, O &&o) {
@@ -372,8 +368,7 @@ public:
       fn(ZuFwd<O>(o));
       return;
     }
-    if (ZuUnlikely(!run_(thread, ZuFwd<Fn>(fn), ZuFwd<O>(o))))
-      run(tid, ZmFn<>(ZuFwd<Fn>(fn), ZuFwd<O>(o)), ZmTimeNow(), Update, 0);
+    run_(thread, ZuFwd<Fn>(fn), ZuFwd<O>(o));
   }
 
   ZuInline void initThreadFn(ZmFn<> fn) { m_initThreadFn = ZuMv(fn); }
@@ -439,7 +434,17 @@ private:
   bool add_(ZmFn<> &fn);
 
   template <typename ...Args>
-  ZuInline bool run_(Thread *thread, Args &&... args) {
+  ZuInline void run_(Thread *thread, Args &&... args) {
+    ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
+    void *ptr;
+    if (ZuLikely(ptr = thread->ring.push())) {
+      new (ptr) ZmFn<>(ZuFwd<Args>(args)...);
+      thread->ring.push2(ptr);
+    } else
+      run(thread->tid, ZmFn<>(ZuFwd<Args>(args)...), ZmTimeNow(), Update, 0);
+  }
+  template <typename ...Args>
+  ZuInline bool run__(Thread *thread, Args &&... args) {
     ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
     void *ptr;
     if (ZuLikely(ptr = thread->ring.push())) {

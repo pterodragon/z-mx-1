@@ -163,8 +163,8 @@ void ZmScheduler::drain()
   }
 
   for (unsigned i = 0; i < m_nThreads; i++)
-    while (ZuUnlikely(!run_(&m_threads[i],
-	    ZmFn<>::Member<&ZmScheduler::drained>::fn(this))))
+    while (ZuUnlikely(!run__(
+	    &m_threads[i], ZmFn<>::Member<&ZmScheduler::drained>::fn(this))))
       ZmPlatform::yield();
 
   {
@@ -334,8 +334,8 @@ bool ZmScheduler::add_(ZmFn<> &fn)
   return 0;
 }
 
-void ZmScheduler::run(unsigned tid, ZmFn<> fn, ZmTime timeout,
-    int mode, Timer *ptr)
+void ZmScheduler::run(
+    unsigned tid, ZmFn<> fn, ZmTime timeout, int mode, Timer *ptr)
 {
   ZmAssert(tid <= m_nThreads);
 
@@ -367,7 +367,7 @@ void ZmScheduler::run(unsigned tid, ZmFn<> fn, ZmTime timeout,
 
     if (ZuUnlikely(timeout <= ZmTimeNow())) {
       if (ZuLikely(tid)) {
-	if (ZuLikely(run_(&m_threads[tid - 1], fn))) return;
+	if (ZuLikely(run__(&m_threads[tid - 1], fn))) return;
       } else {
 	if (ZuLikely(add_(fn))) return;
       }

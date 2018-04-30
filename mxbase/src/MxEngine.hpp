@@ -557,7 +557,8 @@ public:
     m_rrTime.now();
     ZmTime rrTime = (m_rrTime += interval);
     guard.unlock();
-    rxRun(ZmFn<>::Member<&MxLink::reRequest>::fn(this), rrTime, &m_rrTimer);
+    this->mx()->add(
+	ZmFn<>::Member<&MxLink::runReRequest>::fn(this), rrTime, &m_rrTimer);
   }
   ZuInline void cancelReRequest() {
     this->mx()->del(&m_rrTimer);
@@ -566,6 +567,7 @@ public:
       m_rrTime = ZmTime();
     }
   }
+  ZuInline void runReRequest() { rxRun([](Rx *rx) { rx->reRequest(); }); }
 
   // Impl/MxQueueTx callbacks (send_() must call sent_()/aborted_())
   ZuInline void sent_(MxQMsg *msg) // tx sent (persistent)

@@ -163,9 +163,7 @@ void ZmScheduler::drain()
   }
 
   for (unsigned i = 0; i < m_nThreads; i++)
-    while (ZuUnlikely(!run__(
-	    &m_threads[i], ZmFn<>::Member<&ZmScheduler::drained>::fn(this))))
-      ZmPlatform::yield();
+    run_(&m_threads[i], ZmFn<>::Member<&ZmScheduler::drained>::fn(this));
 
   {
     ZmGuard<ZmLock> stateGuard(m_stateLock);
@@ -297,7 +295,13 @@ void ZmScheduler::timer()
 	    Timer *ptr = (Timer *)timer->val().ptr;
 	    if (ZuLikely(ptr)) *ptr = 0;
 	  }
-	  if (ZuUnlikely(!add_(timer->val().fn))) {
+	  bool pushOK;
+	  unsigned tid = timer->val().tid;
+	  if (ZuLikely(tid))
+	    pushOK = run__(&m_threads[tid - 1], timer->val().fn);
+	  else
+	    pushOK = add__(timer->val().fn);
+	  if (ZuUnlikely(!pushOK)) {
 	    scheduleGuard.unlock();
 	    m_schedule.add(timer);
 	    ZmPlatform::sleep(m_quantum);
@@ -312,11 +316,23 @@ void ZmScheduler::timer()
 void ZmScheduler::add(ZmFn<> fn)
 {
   if (ZuUnlikely(!fn)) return;
-  if (ZuUnlikely(!add_(fn)))
-    run(0, ZuMv(fn), ZmTimeNow(), Update, 0);
+  if (ZuUnlikely(!m_nWorkers)) return;
+  unsigned first = m_next++;
+  unsigned next = first;
+  do {
+    Thread *thread = m_workers[next % m_nWorkers];
+    ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
+    void *ptr;
+    if (ZuLikely(ptr = thread->ring.tryPush())) {
+      new (ptr) ZmFn<>(ZuMv(fn));
+      thread->ring.push2(ptr);
+      return;
+    }
+  } while (((next = m_next++) - first) < m_nWorkers);
+  run_(m_workers[first], ZuMv(fn));
 }
 
-bool ZmScheduler::add_(ZmFn<> &fn)
+bool ZmScheduler::add__(ZmFn<> &fn)
 {
   if (ZuUnlikely(!m_nWorkers)) return 0;
   unsigned first = m_next++;
@@ -325,12 +341,24 @@ bool ZmScheduler::add_(ZmFn<> &fn)
     Thread *thread = m_workers[next % m_nWorkers];
     ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
     void *ptr;
-    if (ZuLikely(ptr = thread->ring.push())) {
+    if (ZuLikely(ptr = thread->ring.tryPush())) {
       new (ptr) ZmFn<>(ZuMv(fn));
       thread->ring.push2(ptr);
       return 1;
     }
   } while (((next = m_next++) - first) < m_nWorkers);
+  return 0;
+}
+
+bool ZmScheduler::run__(Thread *thread, ZmFn<> &fn)
+{
+  ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
+  void *ptr;
+  if (ZuLikely(ptr = thread->ring.tryPush())) {
+    new (ptr) ZmFn<>(ZuMv(fn));
+    thread->ring.push2(ptr);
+    return 1;
+  }
   return 0;
 }
 
@@ -369,7 +397,7 @@ void ZmScheduler::run(
       if (ZuLikely(tid)) {
 	if (ZuLikely(run__(&m_threads[tid - 1], fn))) return;
       } else {
-	if (ZuLikely(add_(fn))) return;
+	if (ZuLikely(add__(fn))) return;
       }
     }
 

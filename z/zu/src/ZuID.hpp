@@ -94,6 +94,8 @@ public:
     return (71U - __builtin_ctzl(m_val))>>3U;
 #endif
   }
+
+  ZuInline operator ZuString() const { return ZuString(data(), length()); }
   ZuInline ZuString string() const { return ZuString(data(), length()); }
 
   template <typename S> ZuInline void print(S &s) const { s << string(); }

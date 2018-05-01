@@ -278,9 +278,10 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 	// this runs inside shard 0
 
 	ZmRef<MxMDSecurity> sec = shard->addSecurity(
-	    "XTKS",			// Tokyo Stock Exchange
-	    MxID(),			// null segment (segment not used)
-	    *ticker,			// internal ID
+	    MxSecKey{
+	      "XTKS",			// Tokyo Stock Exchange
+	      MxID(),			// null segment (segment not used)
+	      *ticker},			// internal ID
 	    refData); 
 
 	if (ZuUnlikely(!sec)) {
@@ -292,9 +293,10 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 	// add the order book
 
 	ZmRef<MxMDOrderBook> orderBook = sec->addOrderBook(
-	  "XTKS",			// Tokyo Stock Exchange
-	  MxID(),			// null segment (segment not used)
-	  *ticker,			// internal ID
+	  MxSecKey{
+	    "XTKS",			// Tokyo Stock Exchange
+	    MxID(),			// null segment (segment not used)
+	    *ticker},			// internal ID
 	  tickSizeTbl,			// tick sizes
 	  lotSizes);			// lot sizes
 	if (ZuUnlikely(!orderBook)) {

@@ -469,13 +469,26 @@ private:
 
   template <typename O, typename L, typename R, class HeapID>
   struct LBoundInvoker_<O *, L, R, HeapID, 0> {
-    ZuInline static ZmFn fn(L l, O *o) {
-      return Lambda<HeapID>::fn([l = ZuMv(l), o] (Args... args) {
-	  l(o, ZuFwd<Args>(args)...); });
+    template <typename L_>
+    ZuInline static typename ZuNotMutable<L_, ZmFn>::T fn(L_ l, O *o) {
+      return Lambda<HeapID>::fn([l = ZuMv(l), o](Args... args) {
+	l(o, ZuFwd<Args>(args)...); });
     }
-    ZuInline static ZmFn fn(L l, ZmRef<O> o) {
-      return Lambda<HeapID>::fn([l = ZuMv(l), o = ZuMv(o)] (Args... args) {
-	  l(o, ZuFwd<Args>(args)...); });
+    template <typename L_>
+    ZuInline static typename ZuIsMutable<L_, ZmFn>::T fn(L_ l, O *o) {
+      return Lambda<HeapID>::fn([l = ZuMv(l), o](Args... args) mutable {
+	l(o, ZuFwd<Args>(args)...); });
+    }
+    template <typename L_>
+    ZuInline static typename ZuNotMutable<L_, ZmFn>::T fn(L_ l, ZmRef<O> o) {
+      return Lambda<HeapID>::fn([l = ZuMv(l), o = ZuMv(o)](Args... args) {
+	l(o, ZuFwd<Args>(args)...); });
+    }
+    template <typename L_>
+    ZuInline static typename ZuIsMutable<L_, ZmFn>::T fn(L_ l, ZmRef<O> o) {
+      return Lambda<HeapID>::fn(
+	  [l = ZuMv(l), o = ZuMv(o)](Args... args) mutable {
+	l(o, ZuFwd<Args>(args)...); });
     }
   };
 

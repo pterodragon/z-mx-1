@@ -30,8 +30,6 @@
 #include <ZmLib.hpp>
 #endif
 
-#include <ZmScheduler.hpp>
-
 template <class Mgr_> class ZmShard {
 public:
   typedef Mgr_ Mgr;

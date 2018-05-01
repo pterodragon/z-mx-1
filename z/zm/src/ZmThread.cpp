@@ -275,18 +275,12 @@ int ZmThread::join(void **status)
 #pragma warning(pop)
 #endif
 
-struct ZmThreadMgr_Info {
-  inline ZmThreadMgr_Info(ZmThreadMgr::InfoFn fn) : m_fn(fn) { }
-
-  void info(ZmThreadContext *c) { c->info(m_info); m_fn(m_info); }
-
-  ZmThreadMgr::InfoFn	m_fn;
-  ZmThreadInfo		m_info;
-};
-
-void ZmThreadMgr::info(InfoFn fn)
+void ZmThread::info(InfoFn fn)
 {
-  ZmThreadMgr_Info i(fn);
   ZmSpecific<ZmThreadContext>::all(
-      ZmFn<ZmThreadContext *>::Member<&ZmThreadMgr_Info::info>::fn(&i));
+      [fn = ZuMv(fn)](ZmThreadContext *c) {
+    ZmThreadInfo info;
+    c->info(info);
+    fn(info);
+  });
 }

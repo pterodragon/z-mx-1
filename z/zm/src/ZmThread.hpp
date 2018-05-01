@@ -73,39 +73,6 @@ struct ZmThreadInfo {
 };
 
 struct ZmAPI ZmThreadMgr {
-  template <class S> struct CSV {
-    CSV(S &stream) : m_stream(stream) { 
-      m_stream << "name,id,tid,main,detached,stackSize,priority,cpuset\n";
-    }
-    void print(const ZmThreadInfo &info) {
-      m_stream <<
-	info.name << ',' <<
-	info.id << ',' <<
-	info.tid << ',' <<
-	info.main << ',' <<
-	info.detached << ',' <<
-	info.stackSize << ',' <<
-	info.priority << ',' <<
-	info.cpuset << '\n';
-    }
-    S &stream() { return m_stream; }
-
-  private:
-    S	&m_stream;
-  };
-
-  typedef ZmFn<const ZmThreadInfo &> InfoFn;
-
-  static void info(InfoFn fn);
-
-  // FIXME - this, info(), etc. should all be moved into ZmThread since
-  // info() uses ZmSpecific<ZmThreadContext>::all to iterate over all threads
-  // regardless of mgr
-  template <typename S> static void csv(S &stream) {
-    CSV<S> csv(stream);
-    ZmThreadMgr::info(InfoFn::Member<&CSV<S>::print>::fn(&csv));
-  }
-
   virtual void threadName(ZmThreadName &, unsigned tid) = 0;
 };
 
@@ -384,6 +351,34 @@ public:
   inline uint32_t hash() { return ZuHash<ID>::hash(tid()); }
 
   inline bool operator !() { return !m_context; }
+
+  typedef ZmFn<const ZmThreadInfo &> InfoFn;
+  static void info(InfoFn fn);
+
+  template <class S> struct CSV {
+    CSV(S &stream) : m_stream(stream) { 
+      m_stream << "name,id,tid,main,detached,stackSize,priority,cpuset\n";
+    }
+    void print(const ZmThreadInfo &info) {
+      m_stream <<
+	info.name << ',' <<
+	info.id << ',' <<
+	info.tid << ',' <<
+	info.main << ',' <<
+	info.detached << ',' <<
+	info.stackSize << ',' <<
+	info.priority << ',' <<
+	info.cpuset << '\n';
+    }
+    S &stream() { return m_stream; }
+
+  private:
+    S	&m_stream;
+  };
+  template <typename S> static void csv(S &stream) {
+    CSV<S> csv(stream);
+    ZmThread::info(InfoFn::Member<&CSV<S>::print>::fn(&csv));
+  }
 
 private:
   ZmRef<Context>	m_context;

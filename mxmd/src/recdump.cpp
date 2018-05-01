@@ -28,7 +28,7 @@ typedef MxFloatCol FloatCol;
 template <typename Map> using EnumCol = MxEnumCol<Map>;
 template <typename Map> using FlagsCol_ = MxFlagsCol<Map>;
 typedef MxSymStringCol SymCol;
-typedef MxIDStringCol IDStringCol;
+typedef MxIDStringCol IDStrCol;
 
 class IDCol : public ZvCSVColumn<ZvCSVColType::Func, MxID>  {
   typedef ZvCSVColumn<ZvCSVColType::Func, MxID> Base;
@@ -145,7 +145,7 @@ public:
 #endif
 #define Offset(x) offsetof(Data, x)
     add(new IDCol("venue", Offset(venue)));
-    add(new IDStringCol("id", Offset(id)));
+    add(new IDStrCol("id", Offset(id)));
     add(new EnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
     add(new FloatCol("minPrice", Offset(minPrice), app->ndp()));
     add(new FloatCol("maxPrice", Offset(maxPrice), app->ndp()));
@@ -192,7 +192,7 @@ public:
   struct Data {
     MxID		venue;
     MxID		segment;
-    MxSymString		id;
+    MxIDString		id;
     MxEnum		event;
     MxUInt		shard;
     MxMDSecRefData	refData;
@@ -208,7 +208,7 @@ public:
 #define Offset(x) offsetof(Data, x)
     add(new IDCol("venue", Offset(venue)));
     add(new IDCol("segment", Offset(segment)));
-    add(new SymCol("id", Offset(id)));
+    add(new IDStrCol("id", Offset(id)));
     add(new EnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
     add(new UIntCol("shard", Offset(shard)));
 #undef Offset
@@ -220,7 +220,7 @@ public:
     add(new SymCol("altSymbol", Offset(altSymbol)));
     add(new IDCol("underVenue", Offset(underVenue)));
     add(new IDCol("underSegment", Offset(underSegment)));
-    add(new SymCol("underlying", Offset(underlying)));
+    add(new IDStrCol("underlying", Offset(underlying)));
     add(new UIntCol("mat", Offset(mat)));
     add(new EnumCol<MxPutCall::CSVMap>("putCall", Offset(putCall)));
     add(new IntCol("strike", Offset(strike)));
@@ -273,12 +273,12 @@ public:
   struct Data {
     MxID		venue;
     MxID		segment;
-    MxSymString		id;
+    MxIDString		id;
     MxEnum		event;
     MxUInt		legs;
     MxID		secVenues[MxMDNLegs];
     MxID		secSegments[MxMDNLegs];
-    MxSymString		securities[MxMDNLegs];
+    MxIDString		securities[MxMDNLegs];
     MxEnum		sides[MxMDNLegs];
     MxFloat		ratios[MxMDNLegs];
     MxIDString		tickSizeTbl;
@@ -295,7 +295,7 @@ public:
 #define Offset(x) offsetof(Data, x)
     add(new IDCol("venue", Offset(venue)));
     add(new IDCol("segment", Offset(segment)));
-    add(new SymCol("id", Offset(id)));
+    add(new IDStrCol("id", Offset(id)));
     add(new EnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
     add(new UIntCol("legs", Offset(legs)));
     for (unsigned i = 0; i < MxMDNLegs; i++) {
@@ -306,13 +306,14 @@ public:
       ZuStringN<8> ratio = "ratio"; ratio << ZuBoxed(i);
       add(new IDCol(secVenue, Offset(secVenues) + (i * sizeof(MxID))));
       add(new IDCol(secSegment, Offset(secSegments) + (i * sizeof(MxID))));
-      add(new SymCol(security, Offset(securities) + (i * sizeof(MxSymString))));
+      add(new IDStrCol(security,
+	    Offset(securities) + (i * sizeof(MxSymString))));
       add(new EnumCol<MxSide::CSVMap>(side,
 	    Offset(sides) + (i * sizeof(MxEnum))));
       add(new FloatCol(ratio,
 	    Offset(ratios) + (i * sizeof(MxFloat)), app->ndp()));
     }
-    add(new IDStringCol("tickSizeTbl", Offset(tickSizeTbl)));
+    add(new IDStrCol("tickSizeTbl", Offset(tickSizeTbl)));
 #undef Offset
 #define Offset(x) offsetof(Data, lotSizes) + offsetof(MxMDLotSizes, x)
     add(new FloatCol("oddLotSize", Offset(oddLotSize), app->ndp()));
@@ -428,7 +429,7 @@ public:
 #define Offset(x) offsetof(Data, x)
     add(new IDCol("venue", Offset(venue)));
     add(new IDCol("segment", Offset(segment)));
-    add(new SymCol("id", Offset(id)));
+    add(new IDStrCol("id", Offset(id)));
     add(new EnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
     add(new EnumCol<MxTradingSession::CSVMap>("session", Offset(session)));
 #undef Offset
@@ -466,7 +467,7 @@ public:
 	  Offset(flags), offsetof(Data, venue)));
 #undef Offset
 #define Offset(x) offsetof(Data, l2Data) + offsetof(L2Data, x)
-    add(new IDStringCol("orderID", Offset(orderID)));
+    add(new IDStrCol("orderID", Offset(orderID)));
     add(new EnumCol<MxMDOrderIDScope::CSVMap>("orderIDScope",
 	  Offset(orderIDScope)));
     add(new EnumCol<MxSide::CSVMap>("side", Offset(side)));

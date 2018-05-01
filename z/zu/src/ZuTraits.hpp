@@ -504,4 +504,16 @@ struct ZuTraits<std::initializer_list<Elem_> > :
   }
 };
 
+template <typename L> struct ZuLambdaTraits :
+  public ZuLambdaTraits<decltype(&L::operator())> { };
+template <typename R, typename T, typename ...Args>
+struct ZuLambdaTraits<R (T::*)(Args...) const> { enum { IsMutable = 0 }; };
+template <typename R, typename T, typename ...Args>
+struct ZuLambdaTraits<R (T::*)(Args...)> { enum { IsMutable = 1 }; };
+
+template <typename L, typename T = void>
+struct ZuIsMutable : public ZuIfT<ZuLambdaTraits<L>::IsMutable, T> { };
+template <typename L, typename T = void>
+struct ZuNotMutable : public ZuIfT<!ZuLambdaTraits<L>::IsMutable, T> { };
+
 #endif /* ZuTraits_HPP */

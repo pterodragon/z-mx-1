@@ -58,7 +58,7 @@ struct MxMDSecRefData {	// security reference data ("static data")
   MxSymString	altSymbol;	// alternative symbol
   MxID		underVenue;	// underlying venue (null if no underlying)
   MxID		underSegment;	// underlying segment (can be null)
-  MxSymString	underlying;	// underlying ID (null if no underlying)
+  MxIDString	underlying;	// underlying ID (null if no underlying)
   MxUInt	mat;		// maturity (null if not future/option)
   MxInt		strike;		// strike (null if not option) (Note: INTEGER)
   MxFloat	strikeMultiplier;  // strike multiplier

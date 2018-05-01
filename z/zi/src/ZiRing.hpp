@@ -411,7 +411,9 @@ public:
 
   // writer
 
-  inline void *push(unsigned size = sizeof(T)) {
+  ZuInline void *push(unsigned size = sizeof(T)) { return push_<1>(size); }
+  ZuInline void *tryPush(unsigned size = sizeof(T)) { return push_<0>(size); }
+  template <bool Wait> inline void *push_(unsigned size) {
     ZmAssert(m_ctrl.addr());
     ZmAssert(m_flags & Write);
 
@@ -432,6 +434,7 @@ public:
       int j = gc();
       if (ZuUnlikely(j < 0)) return 0;
       if (ZuUnlikely(j > 0)) goto retry;
+      if constexpr (!Wait) return 0;
       if (ZuUnlikely(!config().ll()))
 	if (ZiRing_wait(Tail, this->tail(), tail) != Zi::OK) return 0;
       goto retry;

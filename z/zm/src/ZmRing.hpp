@@ -138,10 +138,10 @@ private:
 #endif
 };
 
-typedef ZuBox<int> ZmRingError_Data;
-template <typename T> struct ZmRingError_Fn : public T {
+struct ZmRingError {
+  ZuInline ZmRingError(int code_) : code(code_) { }
   template <typename S> inline void print(S &s) const {
-    switch (static_cast<int>(*this)) {
+    switch (code) {
       case ZmRing_::OK:		s << "OK"; break;
       case ZmRing_::EndOfFile:	s << "EndOfFile"; break;
       case ZmRing_::Error:	s << "Error"; break;
@@ -149,8 +149,8 @@ template <typename T> struct ZmRingError_Fn : public T {
       default:			s << "Unknown"; break;
     }
   }
+  int code;
 };
-typedef ZuMixin<ZmRingError_Data, ZmRingError_Fn> ZmRingError;
 template <> struct ZuPrint<ZmRingError> : public ZuPrintFn { };
 
 // uses NTP (named template parameters):
@@ -290,7 +290,9 @@ public:
 
   // writer
 
-  inline void *push() {
+  ZuInline void *push() { return push_<1>(); }
+  ZuInline void *tryPush() { return push_<0>(); }
+  template <bool Wait> inline void *push_() {
     ZmAssert(m_ctrl);
     ZmAssert(m_flags & Write);
 
@@ -301,8 +303,9 @@ public:
     uint32_t tail = this->tail() & ~Mask; // acquire
     if (ZuUnlikely((head ^ tail) == Wrapped)) {
       ++m_full;
+      if constexpr (!Wait) return 0;
       if (ZuUnlikely(!config().ll()))
-	if (ZmRing_wait(Tail, this->tail(), tail) != OK) return 0;
+	if (this->ZmRing_wait(Tail, this->tail(), tail) != OK) return 0;
       goto retry;
     }
 
@@ -380,7 +383,7 @@ public:
     uint32_t header = *ptr; // acquire
     if (!(header &~ Waiting)) {
       if (ZuUnlikely(!config().ll()))
-	if (ZmRing_wait(Head, *ptr, 0) != OK) return 0;
+	if (this->ZmRing_wait(Head, *ptr, 0) != OK) return 0;
       goto retry;
     }
 

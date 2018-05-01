@@ -350,7 +350,7 @@ public:
   template <typename Fn, typename O>
   ZuInline void run(unsigned tid, Fn &&fn, O &&o) {
     ZmAssert(tid && tid <= m_nThreads);
-    run_(&m_threads[tid - 1], ZmFn<>(ZuFwd<Fn>(fn), ZuFwd<O>(o)));
+    run_(&m_threads[tid - 1], ZuFwd<Fn>(fn), ZuFwd<O>(o));
   }
 
   template <typename Fn>
@@ -431,8 +431,6 @@ private:
 
   void threadName(ZmThreadName &s, unsigned tid);
 
-  bool add_(ZmFn<> &fn);
-
   template <typename ...Args>
   ZuInline void run_(Thread *thread, Args &&... args) {
     ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
@@ -440,20 +438,24 @@ private:
     if (ZuLikely(ptr = thread->ring.push())) {
       new (ptr) ZmFn<>(ZuFwd<Args>(args)...);
       thread->ring.push2(ptr);
-    } else
-      run(thread->tid, ZmFn<>(ZuFwd<Args>(args)...), ZmTimeNow(), Update, 0);
-  }
-  template <typename ...Args>
-  ZuInline bool run__(Thread *thread, Args &&... args) {
-    ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
-    void *ptr;
-    if (ZuLikely(ptr = thread->ring.push())) {
-      new (ptr) ZmFn<>(ZuFwd<Args>(args)...);
-      thread->ring.push2(ptr);
-      return 1;
+    } else {
+      guard.unlock();
+      // should never happen - the enqueuing thread will normally
+      // be forced to wait for the dequeuing thread to drain the ring
+      int status = thread->ring.writeStatus();
+      ZuStringN<120> s;
+      s << "FATAL - ITC - ZmScheduler::run_() - ZmRing::push() failed: ";
+      if (status <= 0)
+	s << ZmRingError(status);
+      else
+	s << ZuBoxed(status) << " bytes remaining";
+      s << '\n';
+      std::cerr << s; // yuck
     }
-    return 0;
   }
+
+  bool add__(ZmFn<> &fn);
+  bool run__(Thread *thread, ZmFn<> &fn);
 
   ID				m_id;
   unsigned			m_nThreads;

@@ -709,6 +709,7 @@ friend class Recorder;
   void replay2();
 
   ZmRef<MxMDVenue> venue(MxID id);
+  ZmRef<MxMDTickSizeTbl> tickSizeTbl(MxMDVenue *venue, ZuString id);
 
   void timer();
 

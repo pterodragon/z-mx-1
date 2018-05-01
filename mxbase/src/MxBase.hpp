@@ -219,14 +219,14 @@ typedef MxString<MxTxtSize> MxTxtString;
 
 struct MxSecIDSrc {
   MxEnumValues(CUSIP, SEDOL, QUIK, ISIN, RIC, EXCH, CTA, BSYM, BBGID,
-      FXP, CFXP); // FIXME ?
+      FX, CRYPTO);
   MxEnumNames(
       "CUSIP", "SEDOL", "QUIK", "ISIN", "RIC", "EXCH", "CTA", "BSYM", "BBGID",
-      "FXP", "CFXP"); // FIXME ?
+      "FX", "CRYPTO");
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "1", CUSIP, "2", SEDOL, "3", QUIK, "4", ISIN, "5", RIC, "8", EXCH,
-      "9", CTA, "A", BSYM, "S", BBGID /* FIXME */);
+      "9", CTA, "A", BSYM, "S", BBGID, "X", FX, "Y", CRYPTO);
 };
 
 struct MxPutCall {
@@ -313,7 +313,7 @@ struct MxSide {
       "8", Cross);
 };
 
-typedef ZuTuple<MxID, MxID, MxSymString> MxSecKey_;
+typedef ZuTuple<MxID, MxID, MxIDString> MxSecKey_;
 template <typename T> struct MxSecKey_Fn : public T {
   ZuInline const MxID &venue() const { return T::ptr()->p1(); }
   ZuInline MxID &venue() { return T::ptr()->p1(); }
@@ -321,8 +321,12 @@ template <typename T> struct MxSecKey_Fn : public T {
   ZuInline MxID &segment() { return T::ptr()->p2(); }
   ZuInline const MxSymString &id() const { return T::ptr()->p3(); }
   ZuInline MxSymString &id() { return T::ptr()->p3(); }
+  template <typename S> inline void print(S &s) const {
+    s << venue() << '|' << segment() << '|' << id();
+  }
 };
 typedef ZuMixin<MxSecKey_, MxSecKey_Fn> MxSecKey;
+template <> struct ZuPrint<MxSecKey> : public ZuPrintFn { };
 
 typedef ZuPair<MxEnum, MxSymString> MxSecSymKey_;
 template <typename T> struct MxSecSymKey_Fn : public T {
@@ -330,8 +334,12 @@ template <typename T> struct MxSecSymKey_Fn : public T {
   ZuInline MxEnum &src() { return T::ptr()->p1(); }
   ZuInline const MxSymString &id() const { return T::ptr()->p2(); }
   ZuInline MxSymString &id() { return T::ptr()->p2(); }
+  template <typename S> inline void print(S &s) const {
+    s << MxSecIDSrc::name(src()) << '|' << id();
+  }
 };
 typedef ZuMixin<MxSecSymKey_, MxSecSymKey_Fn> MxSecSymKey;
+template <> struct ZuPrint<MxSecSymKey> : public ZuPrintFn { };
 
 typedef MxUInt MxFutKey;	// mat
 

@@ -261,6 +261,13 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
     for (const char **ticker = tickers; *ticker; ticker++) {
       MxMDSecRefData refData;
 
+      // primary security key (venue, segment and ID)
+ 
+      MxSecKey secKey{
+	      "XTKS",			// Tokyo Stock Exchange
+	      MxID(),			// null segment (segment not used)
+	      *ticker};			// ID (same as symbol in this case)
+
       // minimal reference data (just the native symbol and RIC)
 
       refData.idSrc = MxSecIDSrc::EXCH;
@@ -270,20 +277,17 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 
       // add the security
 
+      MxMDSecHandle sec = md->security(secKey, 0); // default to shard 0
+
       thread_local ZmSemaphore sem;
       ZtZString error;
-      md->shard(0, [sem = &sem, &error,
-	  ticker, &refData, &tickSizeTbl, &lotSizes](
-	    MxMDShard *shard) {
+      sec.invokeMv([sem = &sem, &error,
+	  secKey, &refData, &tickSizeTbl, &lotSizes](
+	    MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
+
 	// this runs inside shard 0
 
-	ZmRef<MxMDSecurity> sec = shard->addSecurity(
-	    0,
-	    MxSecKey{
-	      "XTKS",			// Tokyo Stock Exchange
-	      MxID(),			// null segment (segment not used)
-	      *ticker},			// internal ID
-	    refData); 
+	sec = shard->addSecurity(ZuMv(sec), secKey, refData); 
 
 	if (ZuUnlikely(!sec)) {
 	  error = "MxMDLib::addSecurity() failed";
@@ -294,10 +298,7 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 	// add the order book
 
 	ZmRef<MxMDOrderBook> orderBook = sec->addOrderBook(
-	  MxSecKey{
-	    "XTKS",			// Tokyo Stock Exchange
-	    MxID(),			// null segment (segment not used)
-	    *ticker},			// internal ID
+	  secKey,			// primary key for order book
 	  tickSizeTbl,			// tick sizes
 	  lotSizes);			// lot sizes
 	if (ZuUnlikely(!orderBook)) {
@@ -309,9 +310,8 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
       });
       sem.wait();
       if (ZuUnlikely(error)) throw error;
-
-      md->loaded(venue);
     }
+    md->loaded(venue);
   } catch (const ZtString &s) {
     ZeLOG(Error, ZtZString() << "error: " << s);
     return -1;

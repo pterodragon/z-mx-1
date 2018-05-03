@@ -57,13 +57,69 @@ public:
 
   ZuInline Shard *shard() const { return m_shard; }
 
-  template <typename ...Args> ZuInline void run(Args &&... args) const
-    { m_shard->run(ZuFwd<Args>(args)...); }
-  template <typename ...Args> ZuInline void invoke(Args &&... args) const
-    { m_shard->invoke(ZuFwd<Args>(args)...); }
-
 private:
   Shard		*m_shard;
+};
+
+template <typename T> class ZmHandle {
+public:
+  typedef typename T::Shard Shard;
+
+  ZuInline ZmHandle() { }
+  ZuInline ZmHandle(Shard *shard) : m_shard(shard) { }
+  ZuInline ZmHandle(T *o) : m_shard(o->shard()), m_object(o) { }
+
+  ZuInline ZmHandle(const ZmHandle &h) :
+    m_shard(h.m_shard), m_object(h.m_object) { }
+  ZuInline ZmHandle(ZmHandle &&h) :
+    m_shard(h.m_shard), m_object(ZuMv(h.m_object)) { }
+  ZuInline ZmHandle &operator =(const ZmHandle &h) {
+    if (ZuUnlikely(this == &h)) return *this;
+    m_shard = h.m_shard;
+    m_object = h.m_object;
+    return *this;
+  }
+  ZuInline ZmHandle &operator =(ZmHandle &&h) {
+    m_shard = h.m_shard;
+    m_object = ZuMv(h.m_object);
+    return *this;
+  }
+
+  ZuInline operator bool() const { return m_object; }
+
+  ZuInline int shardID() const { return m_shard ? (int)m_shard->id() : -1; }
+
+  ZuInline ZmRef<T> &object(Shard *shard) {
+    if (ZuLikely(shard == m_shard)) return object;
+    static ZmRef<T> null;
+    return null;
+  }
+
+  template <typename L>
+  ZuInline void invokeMv(L l) {
+    m_shard->invoke(
+	[l = ZuMv(l), shard = m_shard, o = ZuMv(m_object)]() mutable {
+      l(shard, ZuMv(o));
+    });
+  }
+  template <typename L>
+  ZuInline typename ZuNotMutable<L>::T invoke(L l) const {
+    m_shard->invoke(
+	[l = ZuMv(l), shard = m_shard, o = m_object.ptr()]() {
+      l(shard, o);
+    });
+  }
+  template <typename L>
+  ZuInline typename ZuIsMutable<L>::T invoke(L l) const {
+    m_shard->invoke(
+	[l = ZuMv(l), shard = m_shard, o = m_object.ptr()]() mutable {
+      l(shard, o);
+    });
+  }
+
+private:
+  Shard		*m_shard = 0;
+  ZmRef<T>	m_object;
 };
 
 #endif /* ZmShard_HPP */

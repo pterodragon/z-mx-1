@@ -147,7 +147,7 @@ private:
   void l1(const CmdArgs &, ZtArray<char> &);
   void l2(const CmdArgs &, ZtArray<char> &);
   void l2_side(MxMDOBSide *, ZtArray<char> &);
-  void security(const CmdArgs &, ZtArray<char> &);
+  void security_(const CmdArgs &, ZtArray<char> &);
 
   void ticksizes(const CmdArgs &, ZtArray<char> &);
   void securities(const CmdArgs &, ZtArray<char> &);

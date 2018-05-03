@@ -220,7 +220,7 @@ void MxMDCore::addSecurity_(ZuAnyPOD *pod)
 {
   MxMDSecurityCSV::Data *data = (MxMDSecurityCSV::Data *)(pod->ptr());
   MxSecKey key{data->venue, data->segment, data->id};
-  MxMDSecHandle secHandle = MxMDLib::security(key, data->shard);
+  MxMDSecHandle secHandle = security(key, data->shard);
   secHandle.invokeMv([key, refData = data->refData](
 	MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
     shard->addSecurity(ZuMv(sec), key, refData);
@@ -232,7 +232,7 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
   MxMDOrderBookCSV::Data *data = (MxMDOrderBookCSV::Data *)(pod->ptr());
   MxSecKey secKey{
     data->secVenues[0], data->secSegments[0], data->securities[0]};
-  MxMDSecHandle secHandle = MxMDLib::security(secKey);
+  MxMDSecHandle secHandle = security(secKey);
   if (!secHandle) throw ZtZString() << "unknown security: " << secKey;
   ZmRef<MxMDVenue> venue = this->venue(data->venue);
   ZmRef<MxMDTickSizeTbl> tbl = tickSizeTbl(venue, data->tickSizeTbl);
@@ -442,7 +442,7 @@ void MxMDCore::initCmds()
 	lookupOptions());
   addCmd(
       "security", lookupSyntax(),
-      CmdFn::Member<&MxMDCore::security>::fn(this),
+      CmdFn::Member<&MxMDCore::security_>::fn(this),
       "dump security reference data",
       ZtZString("usage: security OPTIONS SYMBOL\n"
 	"Display security reference data (\"static data\") for SYMBOL\n"
@@ -834,7 +834,7 @@ void MxMDCore::l2_side(MxMDOBSide *side, ZtArray<char> &out)
   });
 }
 
-void MxMDCore::security(const CmdArgs &args, ZtArray<char> &out)
+void MxMDCore::security_(const CmdArgs &args, ZtArray<char> &out)
 {
   ZuBox<int> argc = args.get("#");
   if (argc != 2) throw CmdUsage();
@@ -1296,10 +1296,10 @@ void MxMDCore::apply(Frame *frame)
     case Type::AddSecurity:
       {
 	const AddSecurity &obj = frame->as<AddSecurity>();
-	MxMDSecHandle secHandle = MxMDLib::security(obj.key, obj.shard);
+	MxMDSecHandle secHandle = security(obj.key, obj.shard);
 	secHandle.invokeMv([key = obj.key, refData = obj.refData](
 	      MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
-	  shard->addSecurity(sec, key, refData);
+	  shard->addSecurity(ZuMv(sec), key, refData);
 	});
       }
       break;
@@ -1336,7 +1336,7 @@ void MxMDCore::apply(Frame *frame)
     case Type::AddCombination:
       {
 	const AddCombination &obj = frame->as<AddCombination>();
-	MxMDSecHandle secHandle = MxMDLib::security(obj.securities[0]);
+	MxMDSecHandle secHandle = security(obj.securities[0]);
 	if (secHandle)
 	  if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
 	    if (ZmRef<MxMDTickSizeTbl> tbl =

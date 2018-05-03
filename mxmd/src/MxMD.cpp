@@ -498,7 +498,7 @@ void MxMDVenue::modifyOrder(
     md()->raise(ZeEVENT(Error, MxMDOrderNotFound("modifyOrder", orderID)));
     return;
   }
-  order->orderBook()->run(
+  order->orderBook()->shard()->run(
       [=, ob = order->orderBook(), order = ZuMv(order)]() {
 	ob->modifyOrder_(order, transactTime, side, rank, price, qty, flags);
 	fn(order); });
@@ -568,7 +568,7 @@ void MxMDVenue::reduceOrder(
     return;
   }
   if (ZuUnlikely(order->data().qty <= ~reduceQty)) delOrder(orderID);
-  order->orderBook()->run(
+  order->orderBook()->shard()->run(
       [=, ob = order->orderBook(), order = ZuMv(order)]() {
 	ob->reduceOrder_(order, transactTime, reduceQty);
 	fn(order); });
@@ -631,7 +631,7 @@ void MxMDVenue::cancelOrder(
 {
   ZmRef<MxMDOrder> order = delOrder(orderID);
   if (ZuUnlikely(!order)) return;
-  order->orderBook()->run(
+  order->orderBook()->shard()->run(
       [=, ob = order->orderBook(), order = ZuMv(order)]() {
 	ob->cancelOrder_(order, transactTime);
 	fn(order); });
@@ -950,9 +950,10 @@ void MxMDFeed::addOrderBook(MxMDOrderBook *) { }
 void MxMDFeed::delOrderBook(MxMDOrderBook *) { }
 
 ZmRef<MxMDSecurity> MxMDShard::addSecurity(
+    ZmRef<MxMDSecurity> sec,
     const MxSecKey &key, const MxMDSecRefData &refData)
 {
-  return md()->addSecurity(this, key, refData);
+  return md()->addSecurity(this, ZuMv(sec), key, refData);
 }
 
 uintptr_t MxMDShard::allSecurities(ZmFn<MxMDSecurity *> fn) const
@@ -1159,26 +1160,26 @@ void MxMDLib::addTickSize(MxMDTickSizeTbl *tbl,
 }
 
 ZmRef<MxMDSecurity> MxMDLib::addSecurity(
-    MxMDShard *shard, const MxSecKey &key, const MxMDSecRefData &refData)
+    MxMDShard *shard, ZmRef<MxMDSecurity> sec,
+    const MxSecKey &key, const MxMDSecRefData &refData)
 {
-  ZmRef<MxMDSecurity> security;
   {
     Guard guard(m_refDataLock);
-    if (security = m_allSecurities.findKey(key)) {
+    if (sec) {
       guard.unlock();
-      security->update(refData);
-      return security;
+      sec->update(refData);
+      return sec;
     }
-    security = new MxMDSecurity(shard, key, refData);
-    m_allSecurities.add(security);
-    addSecIndices(security, refData);
-    shard->addSecurity(security);
+    sec = new MxMDSecurity(shard, key, refData);
+    m_allSecurities.add(sec);
+    addSecIndices(sec, refData);
+    shard->addSecurity(sec);
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::addSecurity(core->broadcast(), key, shard->id(), refData);
   }
-  handler()->addSecurity(security);
-  return security;
+  handler()->addSecurity(sec);
+  return sec;
 }
 
 void MxMDSecurity::update_(const MxMDSecRefData &refData)

@@ -179,7 +179,7 @@ void loaded(MxMDVenue *venue)
 
     // look up security
 
-    md->security(MxSecKey{"XTKS", MxID(), *ticker},
+    md->secInvoke(MxSecKey{"XTKS", MxID(), *ticker},
 	[secHandler, ticker](MxMDSecurity *sec) {
       if (!sec) {
 	ZeLOG(Error, ZtZString() <<
@@ -278,6 +278,7 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 	// this runs inside shard 0
 
 	ZmRef<MxMDSecurity> sec = shard->addSecurity(
+	    0,
 	    MxSecKey{
 	      "XTKS",			// Tokyo Stock Exchange
 	      MxID(),			// null segment (segment not used)
@@ -335,7 +336,7 @@ void publish()
 
 	// look up security
 
-	md->security(MxSecKey{"XTKS", MxID(), *ticker},
+	md->secInvoke(MxSecKey{"XTKS", MxID(), *ticker},
 	    [ticker](MxMDSecurity *sec) {
 	  if (!sec) {
 	    ZeLOG(Error, ZtZString() <<

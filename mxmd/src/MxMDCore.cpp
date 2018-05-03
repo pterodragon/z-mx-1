@@ -220,10 +220,10 @@ void MxMDCore::addSecurity_(ZuAnyPOD *pod)
 {
   MxMDSecurityCSV::Data *data = (MxMDSecurityCSV::Data *)(pod->ptr());
   MxSecKey key{data->venue, data->segment, data->id};
-  int shardID = secShardID(key);
-  if (shardID < 0) shardID = data->shard % nShards();
-  shard(shardID, [key, refData = data->refData](MxMDShard *shard) {
-    shard->addSecurity(key, refData);
+  MxMDSecHandle secHandle = MxMDLib::security(key, data->shard);
+  secHandle.invokeMv([key, refData = data->refData](
+	MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
+    shard->addSecurity(ZuMv(sec), key, refData);
   });
 }
 
@@ -232,16 +232,13 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
   MxMDOrderBookCSV::Data *data = (MxMDOrderBookCSV::Data *)(pod->ptr());
   MxSecKey secKey{
     data->secVenues[0], data->secSegments[0], data->securities[0]};
-  int shardID = secShardID(secKey);
-  if (shardID < 0) {
-    throw ZtZString() << "unknown security: " << secKey;
-  }
+  MxMDSecHandle secHandle = MxMDLib::security(secKey);
+  if (!secHandle) throw ZtZString() << "unknown security: " << secKey;
   ZmRef<MxMDVenue> venue = this->venue(data->venue);
   ZmRef<MxMDTickSizeTbl> tbl = tickSizeTbl(venue, data->tickSizeTbl);
-  shard(shardID, [
-      data = *data,
-      venue = ZuMv(venue),
-      tbl = ZuMv(tbl)](MxMDShard *shard) {
+  secHandle.invokeMv(
+      [data = *data, venue = ZuMv(venue), tbl = ZuMv(tbl)](
+	MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
     if (data.legs == 1) {
       MxID venueID = data.secVenues[0];
       if (!*venueID) venueID = data.venue;
@@ -249,10 +246,8 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
       if (!*segment) segment = data.segment;
       MxIDString id = data.securities[0];
       if (!id) id = data.id;
-      if (ZmRef<MxMDSecurity> sec =
-	  shard->security(MxSecKey{venueID, segment, id}))
-	sec->addOrderBook(
-	    MxSecKey{data.venue, data.segment, data.id}, tbl, data.lotSizes);
+      sec->addOrderBook(
+	  MxSecKey{data.venue, data.segment, data.id}, tbl, data.lotSizes);
     } else {
       ZmRef<MxMDSecurity> securities[MxMDNLegs];
       MxEnum sides[MxMDNLegs];
@@ -264,8 +259,12 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
 	if (!*segment) segment = data.segment;
 	MxIDString id = data.securities[i];
 	if (!id) return;
-	securities[i] = shard->security(MxSecKey{venueID, segment, id});
-	if (!securities[i]) return;
+	if (!i)
+	  securities[i] = ZuMv(sec);
+	else {
+	  securities[i] = shard->security(MxSecKey{venueID, segment, id});
+	  if (!securities[i]) return;
+	}
 	sides[i] = data.sides[i];
 	ratios[i] = data.ratios[i];
       }
@@ -697,11 +696,8 @@ void MxMDCmd::lookupSecurity(
   if (ZtZString src_ = args.get("src")) {
     MxEnum src = MxSecIDSrc::lookup(src_);
     MxSecSymKey key{src, symbol};
-    md->security(key, [
-	secRequired,
-	sem = &sem,
-	&notFound,
-	fn = ZuMv(fn)](MxMDSecurity *sec) {
+    md->secInvoke(key,
+	[secRequired, sem = &sem, &notFound, fn = ZuMv(fn)](MxMDSecurity *sec) {
       if (secRequired && ZuUnlikely(!sec))
 	notFound = 1;
       else
@@ -714,11 +710,8 @@ void MxMDCmd::lookupSecurity(
   } else {
     if (!*venue) throw MxMDCmd::CmdUsage();
     MxSecKey key{venue, segment, symbol};
-    md->security(key, [
-	secRequired,
-	sem = &sem,
-	&notFound,
-	fn = ZuMv(fn)](MxMDSecurity *sec) {
+    md->secInvoke(key,
+	[secRequired, sem = &sem, &notFound, fn = ZuMv(fn)](MxMDSecurity *sec) {
       if (secRequired && ZuUnlikely(!sec))
 	notFound = 1;
       else
@@ -1303,16 +1296,17 @@ void MxMDCore::apply(Frame *frame)
     case Type::AddSecurity:
       {
 	const AddSecurity &obj = frame->as<AddSecurity>();
-	shard(obj.shard % nShards(), [
-	    key = obj.key, refData = obj.refData](MxMDShard *shard) {
-	  shard->addSecurity(key, refData);
+	MxMDSecHandle secHandle = MxMDLib::security(obj.key, obj.shard);
+	secHandle.invokeMv([key = obj.key, refData = obj.refData](
+	      MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
+	  shard->addSecurity(sec, key, refData);
 	});
       }
       break;
     case Type::UpdateSecurity:
       {
 	const UpdateSecurity &obj = frame->as<UpdateSecurity>();
-	MxMDLib::security(obj.key, [refData = obj.refData](MxMDSecurity *sec) {
+	MxMDLib::secInvoke(obj.key, [refData = obj.refData](MxMDSecurity *sec) {
 	  if (sec) sec->update(refData);
 	});
       }
@@ -1323,7 +1317,7 @@ void MxMDCore::apply(Frame *frame)
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
 	  if (ZmRef<MxMDTickSizeTbl> tbl =
 		  venue->tickSizeTbl(obj.tickSizeTbl))
-	    MxMDLib::security(obj.security, [
+	    MxMDLib::secInvoke(obj.security, [
 		key = obj.key,
 		tbl = ZuMv(tbl),
 		lotSizes = obj.lotSizes](MxMDSecurity *sec) {
@@ -1334,7 +1328,7 @@ void MxMDCore::apply(Frame *frame)
     case Type::DelOrderBook:
       {
 	const DelOrderBook &obj = frame->as<DelOrderBook>();
-	orderBook(obj.key, [](MxMDOrderBook *ob) {
+	obInvoke(obj.key, [](MxMDOrderBook *ob) {
 	  if (ob) ob->security()->delOrderBook(ob->venueID(), ob->segment());
 	});
       }
@@ -1342,19 +1336,23 @@ void MxMDCore::apply(Frame *frame)
     case Type::AddCombination:
       {
 	const AddCombination &obj = frame->as<AddCombination>();
-	int shardID = secShardID(obj.securities[0]);
-	if (shardID >= 0)
+	MxMDSecHandle secHandle = MxMDLib::security(obj.securities[0]);
+	if (secHandle)
 	  if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
 	    if (ZmRef<MxMDTickSizeTbl> tbl =
 		venue->tickSizeTbl(obj.tickSizeTbl))
-	      shard(shardID, [
-		  obj = obj,
-		  venue = ZuMv(venue),
-		  tbl = ZuMv(tbl)](MxMDShard *shard) {
+	      secHandle.invokeMv(
+		  [obj = obj, venue = ZuMv(venue), tbl = ZuMv(tbl)](
+		    MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
 		ZmRef<MxMDSecurity> securities[MxMDNLegs];
-		for (unsigned i = 0; i < obj.legs; i++)
-		  if (!(securities[i] = shard->security(obj.securities[i])))
+		for (unsigned i = 0; i < obj.legs; i++) {
+		  if (!i)
+		    securities[i] = ZuMv(sec);
+		  else {
+		    if (!(securities[i] = shard->security(obj.securities[i])))
 		    return;
+		  }
+		}
 		venue->shard(shard)->addCombination(
 			  obj.key.segment(), obj.key.id(),
 			  obj.legs, securities, obj.sides, obj.ratios,
@@ -1366,7 +1364,7 @@ void MxMDCore::apply(Frame *frame)
       {
 	const DelCombination &obj = frame->as<DelCombination>();
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
-	orderBook(obj.key, [venue = ZuMv(venue)](MxMDOrderBook *ob) {
+	obInvoke(obj.key, [venue = ZuMv(venue)](MxMDOrderBook *ob) {
 	  if (ob)
 	    venue->shard(ob->shard())->delCombination(ob->segment(), ob->id());
 	});
@@ -1377,7 +1375,7 @@ void MxMDCore::apply(Frame *frame)
 	const UpdateOrderBook &obj = frame->as<UpdateOrderBook>();
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
 	  if (ZmRef<MxMDTickSizeTbl> tbl = venue->tickSizeTbl(obj.tickSizeTbl))
-	    orderBook(obj.key, [
+	    obInvoke(obj.key, [
 		lotSizes = obj.lotSizes,
 		tbl = ZuMv(tbl)](MxMDOrderBook *ob) {
 	      ob->update(tbl, lotSizes);
@@ -1395,7 +1393,7 @@ void MxMDCore::apply(Frame *frame)
     case Type::L1:
       {
 	const L1 &obj = frame->as<L1>();
-	orderBook(obj.key, [
+	obInvoke(obj.key, [
 	    data = obj.data,
 	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
 	  if (ob && (!replayFilter || ob->handler())) ob->l1(data);
@@ -1405,7 +1403,7 @@ void MxMDCore::apply(Frame *frame)
     case Type::PxLevel:
       {
 	const PxLevel &obj = frame->as<PxLevel>();
-	orderBook(obj.key, [
+	obInvoke(obj.key, [
 	    side = obj.side,
 	    transactTime = obj.transactTime,
 	    delta = obj.delta,
@@ -1422,7 +1420,7 @@ void MxMDCore::apply(Frame *frame)
     case Type::L2:
       {
 	const L2 &obj = frame->as<L2>();
-	orderBook(obj.key, [
+	obInvoke(obj.key, [
 	    stamp = obj.stamp,
 	    updateL1 = obj.updateL1,
 	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
@@ -1434,7 +1432,7 @@ void MxMDCore::apply(Frame *frame)
     case Type::AddOrder:
       {
 	const AddOrder &obj = frame->as<AddOrder>();
-	orderBook(obj.key, [
+	obInvoke(obj.key, [
 	    orderID = obj.orderID,
 	    orderIDScope = obj.orderIDScope,
 	    transactTime = obj.transactTime,
@@ -1454,7 +1452,7 @@ void MxMDCore::apply(Frame *frame)
     case Type::ModifyOrder:
       {
 	const ModifyOrder &obj = frame->as<ModifyOrder>();
-	orderBook(obj.key, [
+	obInvoke(obj.key, [
 	    orderID = obj.orderID,
 	    orderIDScope = obj.orderIDScope,
 	    transactTime = obj.transactTime,
@@ -1474,7 +1472,7 @@ void MxMDCore::apply(Frame *frame)
     case Type::CancelOrder:
       {
 	const CancelOrder &obj = frame->as<CancelOrder>();
-	orderBook(obj.key, [
+	obInvoke(obj.key, [
 	    orderID = obj.orderID,
 	    orderIDScope = obj.orderIDScope,
 	    transactTime = obj.transactTime,
@@ -1488,7 +1486,7 @@ void MxMDCore::apply(Frame *frame)
     case Type::ResetOB:
       {
 	const ResetOB &obj = frame->as<ResetOB>();
-	orderBook(obj.key, [
+	obInvoke(obj.key, [
 	    transactTime = obj.transactTime,
 	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
 	  if (ob && (!replayFilter || ob->handler()))
@@ -1499,7 +1497,7 @@ void MxMDCore::apply(Frame *frame)
     case Type::AddTrade:
       {
 	const AddTrade &obj = frame->as<AddTrade>();
-	orderBook(obj.key, [
+	obInvoke(obj.key, [
 	    tradeID = obj.tradeID,
 	    transactTime = obj.transactTime,
 	    price = obj.price,
@@ -1513,7 +1511,7 @@ void MxMDCore::apply(Frame *frame)
     case Type::CorrectTrade:
       {
 	const CorrectTrade &obj = frame->as<CorrectTrade>();
-	orderBook(obj.key, [
+	obInvoke(obj.key, [
 	    tradeID = obj.tradeID,
 	    transactTime = obj.transactTime,
 	    price = obj.price,
@@ -1527,7 +1525,7 @@ void MxMDCore::apply(Frame *frame)
     case Type::CancelTrade:
       {
 	const CancelTrade &obj = frame->as<CancelTrade>();
-	orderBook(obj.key, [
+	obInvoke(obj.key, [
 	    tradeID = obj.tradeID,
 	    transactTime = obj.transactTime,
 	    price = obj.price,
@@ -1552,7 +1550,7 @@ void MxMDCore::apply(Frame *frame)
 ZmRef<MxMDVenue> MxMDCore::venue(MxID id)
 {
   ZmRef<MxMDVenue> venue;
-  if (ZuLikely(venue = this->MxMDLib::venue(id))) return venue;
+  if (ZuLikely(venue = MxMDLib::venue(id))) return venue;
   venue = new MxMDVenue(this, m_localFeed, id);
   addVenue(venue);
   return venue;

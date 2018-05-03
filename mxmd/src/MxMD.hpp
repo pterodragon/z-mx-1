@@ -1452,8 +1452,8 @@ public:
     return m_securities.findKey(key);
   }
   uintptr_t allSecurities(ZmFn<MxMDSecurity *>) const;
-  ZmRef<MxMDSecurity> addSecurity(const MxSecKey &key,
-      const MxMDSecRefData &refData);
+  ZmRef<MxMDSecurity> addSecurity(ZmRef<MxMDSecurity> sec,
+      const MxSecKey &key, const MxMDSecRefData &refData);
 
   ZuInline ZmRef<MxMDOrderBook> orderBook(const MxSecKey &key) const {
     return m_orderBooks.findKey(key);
@@ -1501,6 +1501,9 @@ ZuInline MxMDLib *MxMDOrderBook::md() const { return shard()->mgr(); }
 ZuInline MxMDLib *MxMDSecurity::md() const { return shard()->mgr(); }
 
 ZuInline unsigned MxMDVenueShard::id() const { return m_shard->id(); }
+
+typedef ZmHandle<MxMDSecurity> MxMDSecHandle;
+typedef ZmHandle<MxMDOrderBook> MxMDOBHandle;
 
 // library
 
@@ -1603,7 +1606,8 @@ template <typename> friend class ZmShard;
   ZuInline MxMDShard *shard_(unsigned i) const { return m_shards[i]; }
 
   ZmRef<MxMDSecurity> addSecurity(
-      MxMDShard *shard, const MxSecKey &key, const MxMDSecRefData &refData);
+      MxMDShard *shard, ZmRef<MxMDSecurity> sec,
+      const MxSecKey &key, const MxMDSecRefData &refData);
 
   ZmRef<MxMDTickSizeTbl> addTickSizeTbl(MxMDVenue *venue, ZuString id);
   void resetTickSizeTbl(MxMDTickSizeTbl *tbl);
@@ -1710,57 +1714,70 @@ template <typename> friend class ZmShard;
 		  ZmHashHeapID<Venues_HeapID> > > > > Venues;
 
 public:
-  ZuInline int secShardID(const MxSecKey &key) const {
+  ZuInline MxMDSecHandle security(const MxSecKey &key) const {
     if (ZmRef<MxMDSecurity> sec = m_allSecurities.findKey(key))
-      return sec->shard()->id();
-    return -1;
+      return MxMDSecHandle{sec};
+    return MxMDSecHandle{};
   }
-  template <typename L> ZuInline typename ZuNotMutable<L>::T security(
+  ZuInline MxMDSecHandle security(
+      const MxSecKey &key, unsigned shardID) const {
+    if (ZmRef<MxMDSecurity> sec = m_allSecurities.findKey(key))
+      return MxMDSecHandle{sec};
+    return MxMDSecHandle{m_shards[shardID % m_shards.length()]};
+  }
+  template <typename L> ZuInline typename ZuNotMutable<L>::T secInvoke(
       const MxSecKey &key, L l) const {
     if (ZmRef<MxMDSecurity> sec = m_allSecurities.findKey(key))
-      sec->invoke([l = ZuMv(l), sec = ZuMv(sec)]() { l(sec); });
+      sec->shard()->invoke([l = ZuMv(l), sec = ZuMv(sec)]() { l(sec); });
     else
       l((MxMDSecurity *)0);
   }
-  template <typename L> ZuInline typename ZuIsMutable<L>::T security(
+  template <typename L> ZuInline typename ZuIsMutable<L>::T secInvoke(
       const MxSecKey &key, L l) const {
     if (ZmRef<MxMDSecurity> sec = m_allSecurities.findKey(key))
-      sec->invoke([l = ZuMv(l), sec = ZuMv(sec)]() mutable { l(sec); });
+      sec->shard()->invoke(
+	  [l = ZuMv(l), sec = ZuMv(sec)]() mutable { l(sec); });
     else
       l((MxMDSecurity *)0);
   }
-  template <typename L> ZuInline typename ZuNotMutable<L>::T security(
+  template <typename L> ZuInline typename ZuNotMutable<L>::T secInvoke(
       const MxSecSymKey &key, L l) const {
     if (ZmRef<MxMDSecurity> sec = m_securities.findVal(key))
-      sec->invoke([l = ZuMv(l), sec = ZuMv(sec)]() { l(sec); });
+      sec->shard()->invoke([l = ZuMv(l), sec = ZuMv(sec)]() { l(sec); });
     else
       l((MxMDSecurity *)0);
   }
-  template <typename L> ZuInline typename ZuIsMutable<L>::T security(
+  template <typename L> ZuInline typename ZuIsMutable<L>::T secInvoke(
       const MxSecSymKey &key, L l) const {
     if (ZmRef<MxMDSecurity> sec = m_securities.findVal(key))
-      sec->invoke([l = ZuMv(l), sec = ZuMv(sec)]() mutable { l(sec); });
+      sec->shard()->invoke(
+	  [l = ZuMv(l), sec = ZuMv(sec)]() mutable { l(sec); });
     else
       l((MxMDSecurity *)0);
   }
   uintptr_t allSecurities(ZmFn<MxMDSecurity *>) const;
 
-  ZuInline int obShardID(const MxSecKey &key) const {
+  ZuInline MxMDOBHandle orderBook(const MxSecKey &key) const {
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks.findKey(key))
-      return ob->shard()->id();
-    return -1;
+      return MxMDOBHandle{ob};
+    return MxMDOBHandle{};
   }
-  template <typename L> ZuInline typename ZuNotMutable<L>::T orderBook(
+  ZuInline MxMDOBHandle orderBook(const MxSecKey &key, unsigned shardID) const {
+    if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks.findKey(key))
+      return MxMDOBHandle{ob};
+    return MxMDOBHandle{m_shards[shardID % m_shards.length()]};
+  }
+  template <typename L> ZuInline typename ZuNotMutable<L>::T obInvoke(
       const MxSecKey &key, L l) const {
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks.findKey(key))
-      ob->invoke([l = ZuMv(l), ob = ZuMv(ob)]() { l(ob); });
+      ob->shard()->invoke([l = ZuMv(l), ob = ZuMv(ob)]() { l(ob); });
     else
       l((MxMDOrderBook *)0);
   }
-  template <typename L> ZuInline typename ZuIsMutable<L>::T orderBook(
+  template <typename L> ZuInline typename ZuIsMutable<L>::T obInvoke(
       const MxSecKey &key, L l) const {
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks.findKey(key))
-      ob->invoke([l = ZuMv(l), ob = ZuMv(ob)]() mutable { l(ob); });
+      ob->shard()->invoke([l = ZuMv(l), ob = ZuMv(ob)]() mutable { l(ob); });
     else
       l((MxMDOrderBook *)0);
   }

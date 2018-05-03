@@ -90,7 +90,7 @@ public:
   ZuInline int shardID() const { return m_shard ? (int)m_shard->id() : -1; }
 
   ZuInline ZmRef<T> &object(Shard *shard) {
-    if (ZuLikely(shard == m_shard)) return object;
+    if (ZuLikely(shard == m_shard)) return m_object;
     static ZmRef<T> null;
     return null;
   }

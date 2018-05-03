@@ -514,9 +514,9 @@ template <typename T> struct ZuCmp_1 : public ZuCmp<T> {
 
 // same as ZuCmp<T> but with N as the null value
 
-template <typename T, int N> struct ZuCmpN : public ZuCmp<T> {
-  ZuInline static bool null(T v) { return v == (T)N; }
-  inline static const T &null() { static const T v = (T)N; return v; }
+template <typename T, T N> struct ZuCmpN : public ZuCmp<T> {
+  ZuInline static bool null(T v) { return v == N; }
+  inline static const T &null() { static const T v = N; return v; }
 };
 
 #ifdef _MSC_VER

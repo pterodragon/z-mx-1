@@ -800,7 +800,7 @@ public:
     return (MxMDPxLevel *)0;
   }
   template <typename L> // (MxMDPxLevel *) -> uintptr_t
-  inline uintptr_t allPxLevels(L l) const {
+  uintptr_t allPxLevels(L l) const {
     PxLevels::ReadIterator i(m_pxLevels,
 	m_side == MxSide::Sell ? PxLevels::GreaterEqual : PxLevels::LessEqual);
     while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey())

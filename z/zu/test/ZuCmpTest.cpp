@@ -272,12 +272,6 @@ int main()
     s += "lo ";
     s << ZuStringN<6>("world");
     CHECK(s == "hello wor");
-    s = ZuBox<unsigned>(42);
-    s << ' ';
-    s += ZuBox<unsigned>(42);
-    s += ' ';
-    s << "world";
-    CHECK(s == "42 42 wor");
   }
 
   {

@@ -347,10 +347,6 @@ private:
     bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct FromPrint;
   template <typename U, typename R>
   struct FromPrint<U, R, true> { typedef R T; };
-  template <typename U, typename R = void,
-    bool B = ZuTraits<U>::IsBoxed> struct FromBoxed;
-  template <typename U, typename R>
-  struct FromBoxed<U, R, true> { typedef R T; };
 
   template <typename U, typename R = void,
     bool S = ZuTraits<U>::IsString &&
@@ -441,7 +437,7 @@ public:
     return *this;
   }
 
-  // boxed types
+  // printable types
   template <typename P>
   ZuInline ZuStringN(const P &p, typename FromPrint<P, Private>::T *_ = 0) :
       Base(Base::Nop) {
@@ -461,16 +457,6 @@ public:
   template <typename P>
   ZuInline typename FromPrint<P, ZuStringN &>::T operator <<(const P &p) {
     this->append(p);
-    return *this;
-  }
-  template <typename B>
-  ZuInline typename FromBoxed<B, ZuStringN &>::T
-      print(const B &b, int precision = -1, int comma = 0, int pad = -1) {
-    unsigned length = b.length(precision, comma);
-    if (this->m_length + length >= this->m_size) return;
-    this->data()[this->m_length +=
-      b.print(this->data() + this->m_length,
-	  length, precision, comma, pad)] = 0;
     return *this;
   }
 

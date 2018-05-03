@@ -483,7 +483,7 @@ public:
 
   ZtZString get(ZuString key, bool required, ZuString def);
   inline ZtZString get(ZuString key, bool required = false)
-    { return get(key, required, ZtZString()); }
+    { return get(key, required, ZuString()); }
   typedef const ZtArray<ZtString> Multiple;
   const ZtArray<ZtString> *getMultiple(ZuString key,
       unsigned minimum, unsigned maximum, bool required = false);

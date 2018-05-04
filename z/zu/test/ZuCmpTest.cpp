@@ -25,7 +25,6 @@
   CHECK(!ZuCmp<t>::cmp(0, 0)), \
   CHECK(!ZuCmp<t>::cmp(1, 1)), \
   CHECK(ZuCmp<t>::null(ZuCmp<t>::null())), \
-  CHECK(!ZuCmp<t>::null((t)0)), \
   CHECK(!ZuCmp<t>::null((t)1))
 
 template <typename T> struct A : public T {

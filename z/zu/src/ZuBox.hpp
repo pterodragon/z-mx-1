@@ -517,22 +517,32 @@ public:
   ZuInline bool feq(const T &r) const {
     if (Cmp::null(m_val)) return Cmp::null(r);
     if (Cmp::null(r)) return false;
+    return feq_(r);
+  }
+  ZuInline bool feq_(const T &r) const {
     if (m_val == r) return true;
-    if (m_val > r) return m_val - r <= Cmp::epsilon(m_val);
-    return r - m_val <= Cmp::epsilon(r);
+    if (m_val < 0) {
+      if (r > 0) return false;
+      T val = -m_val;
+      T r_ = -r;
+      if (val > r_) return val - r_ <= Cmp::epsilon(val);
+      return r_ - val <= Cmp::epsilon(r_);
+    } else {
+      if (r < 0) return false;
+      if (m_val > r) return m_val - r <= Cmp::epsilon(m_val);
+      return r - m_val <= Cmp::epsilon(r);
+    }
   }
   ZuInline bool fne(const T &r) const { return !feq(r); }
   ZuInline bool fge(const T &r) const {
     if (Cmp::null(m_val)) return Cmp::null(r);
     if (Cmp::null(r)) return false;
-    if (m_val >= r) return true;
-    return r - m_val <= Cmp::epsilon(r);
+    return (m_val > r || feq_(r));
   }
   ZuInline bool fle(const T &r) const {
     if (Cmp::null(m_val)) return Cmp::null(r);
     if (Cmp::null(r)) return false;
-    if (m_val <= r) return true;
-    return m_val - r <= Cmp::epsilon(m_val);
+    return (m_val < r || feq_(r));
   }
   ZuInline bool fgt(const T &r) const { return !fle(r); }
   ZuInline bool flt(const T &r) const { return !fge(r); }
@@ -540,10 +550,7 @@ public:
   ZuInline int fcmp(const T &r) const {
     if (Cmp::null(r)) return Cmp::null(m_val) ? 0 : 1;
     if (Cmp::null(m_val)) return -1;
-    if (m_val == r ||
-	(m_val > r && m_val - r <= Cmp::epsilon(m_val)) ||
-	(m_val < r && r - m_val <= Cmp::epsilon(r)))
-      return 0;
+    if (feq_(r)) return 0;
     return m_val > r ? 1 : -1;
   }
 

@@ -110,7 +110,7 @@ struct ZuFP<T, 2U> : public ZuFP_<ZuFP<T, 2U>, T> { // 10+5
     T e = v > 0 ? v : -v;
     T b = e;
     uint16_t *ZuMayAlias(e_) = (uint16_t *)&e;
-    *e_ += 4;
+    *e_ += 3;
     return e - b;
   }
 };
@@ -127,7 +127,7 @@ struct ZuFP<T, 4U> : public ZuFP_<ZuFP<T, 4U>, T> { // 23+8
     T e = v > 0 ? v : -v;
     T b = e;
     uint32_t *ZuMayAlias(e_) = (uint32_t *)&e;
-    *e_ += 4;
+    *e_ += 3;
     return e - b;
   }
 };
@@ -144,7 +144,7 @@ struct ZuFP<T, 8U> : public ZuFP_<ZuFP<T, 8U>, T> { // 52+11
     T e = v > 0 ? v : -v;
     T b = e;
     uint64_t *ZuMayAlias(e_) = (uint64_t *)&e;
-    *e_ += 4;
+    *e_ += 3;
     return e - b;
   }
 };
@@ -154,8 +154,7 @@ struct ZuFP_64 : public ZuFP_<ZuFP, T> { // 64+15
 #pragma pack(push, 1)
   struct I_ {
     uint64_t mantissa;
-    unsigned int exponent:15;
-    unsigned int sign:1;
+    uint16_t exponent; // actually 15bits, sign bit is MSB
     inline void inc() {
       if (ZuUnlikely(!++mantissa)) mantissa = (1ULL<<63U), ++exponent;
     }
@@ -165,7 +164,7 @@ struct ZuFP_64 : public ZuFP_<ZuFP, T> { // 64+15
     T e = v > 0 ? v : -v;
     T b = e;
     I_ *ZuMayAlias(e_) = (I_ *)&e;
-    e_->inc(), e_->inc(), e_->inc(), e_->inc();
+    e_->inc(), e_->inc(), e_->inc();
     return e - b;
   }
 };

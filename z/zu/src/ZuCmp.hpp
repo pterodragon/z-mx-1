@@ -57,15 +57,12 @@
 // Type			Null	Notes
 // ----			----	-----
 // UDT			T()	result of default constructor
-// bool			*	cast of minimum of same-sized signed int type
+// bool			0	false
 // char			0	ASCII NUL
 // signed integer	MIN	minimum representable value
 // unsigned integer	MAX	maximum representable value
 // floating point	NaN	IEEE 754 NaN
 // pointer, C string	0	aka NULL
-//
-// Note: (*) bool has no portably distinguishable null value, this is a hack;
-//	 furthermore, ZuCmp<bool>::null(true) will probably evaluate as true
 //
 // Note: int8_t  is a typedef for signed char
 //	 uint8_t is a typedef for unsigned char
@@ -474,15 +471,8 @@ template <> struct ZuCmp<bool> {
   ZuInline static int cmp(bool b1, bool b2)
     { return (b1 && !b2) ? 1 : (!b1 && b2) ? -1 : 0; }
   ZuInline static bool equals(bool b1, bool b2) { return b1 == b2; }
-  ZuInline static bool null(bool b) {
-    const I *ZuMayAlias(b_) = (const I *)&b;
-    return ZuCmp<I>::null(*b_);
-  }
-  inline static const bool &null() {
-    static const I i = ZuCmp<I>::null();
-    const bool *ZuMayAlias(i_) = (const bool *)&i;
-    return *i_;
-  }
+  ZuInline static bool null(bool b) { return !b; }
+  ZuInline static const bool &null() { static const bool b = 0; return b; }
 };
 
 // comparison of char (null value should be '\0')

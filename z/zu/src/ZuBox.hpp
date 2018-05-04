@@ -520,18 +520,17 @@ public:
     return feq_(r);
   }
   ZuInline bool feq_(const T &r) const {
-    if (m_val == r) return true;
-    if (m_val < 0) {
-      if (r > 0) return false;
-      T val = -m_val;
-      T r_ = -r;
-      if (val > r_) return val - r_ <= Cmp::epsilon(val);
-      return r_ - val <= Cmp::epsilon(r_);
-    } else {
+    if (ZuLikely(m_val == r)) return true;
+    if (ZuLikely(m_val >= 0.0)) {
       if (r < 0) return false;
       if (m_val > r) return m_val - r <= Cmp::epsilon(m_val);
       return r - m_val <= Cmp::epsilon(r);
     }
+    if (r > 0) return false;
+    T val = -m_val;
+    T r_ = -r;
+    if (val > r_) return val - r_ <= Cmp::epsilon(val);
+    return r_ - val <= Cmp::epsilon(r_);
   }
   ZuInline bool fne(const T &r) const { return !feq(r); }
   ZuInline bool fge(const T &r) const {

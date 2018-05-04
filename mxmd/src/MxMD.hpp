@@ -768,7 +768,7 @@ template <class Heap> friend class MxMDPxLevel_;
   typedef ZmRBTree<ZuRef<MxMDPxLevel>,
 	    ZmRBTreeIndex<MxMDPxLevel::PxAccessor,
 	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmPRWLock,
+		ZmRBTreeLock<ZmNoLock,
 		  ZmRBTreeHeapID<PxLevels_HeapID> > > > > PxLevels;
 
 public:

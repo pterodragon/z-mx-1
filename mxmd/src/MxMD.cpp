@@ -115,18 +115,18 @@ void MxMDOrderBook::l1(MxMDL1Data &l1Data)
   if (*l1Data.last) {
     if (!*m_l1Data.last)
       m_l1Data.tickDir = l1Data.tickDir = MxEnum();
-    else if (l1Data.last.feq(m_l1Data.last)) {
+    else if (l1Data.last = ~m_l1Data.last) {
       if (m_l1Data.tickDir == MxTickDir::Up)
 	m_l1Data.tickDir = l1Data.tickDir = MxTickDir::LevelUp;
       else if (m_l1Data.tickDir == MxTickDir::Down)
 	m_l1Data.tickDir = l1Data.tickDir = MxTickDir::LevelDown;
-    } else if (l1Data.last.fgt(m_l1Data.last))
+    } else if (l1Data.last > m_l1Data.last)
       m_l1Data.tickDir = l1Data.tickDir = MxTickDir::Up;
-    else if (l1Data.last.flt(m_l1Data.last))
+    else if (l1Data.last < m_l1Data.last)
       m_l1Data.tickDir = l1Data.tickDir = MxTickDir::Down;
-    if (!*m_l1Data.high || m_l1Data.high.flt(l1Data.last))
+    if (!*m_l1Data.high || m_l1Data.high < l1Data.last)
       m_l1Data.high = l1Data.high = l1Data.last;
-    if (!*m_l1Data.low || m_l1Data.low.fgt(l1Data.last))
+    if (!*m_l1Data.low || m_l1Data.low > l1Data.last)
       m_l1Data.low = l1Data.low = l1Data.last;
   }
   m_l1Data.last.update(l1Data.last, -MxFloat::inf());
@@ -472,7 +472,7 @@ ZmRef<MxMDOrder> MxMDOrderBook::modifyOrder(
   if (ZuUnlikely(!m_venueShard)) return (MxMDOrder *)0;
 
   ZmRef<MxMDOrder> order;
-  if (ZuUnlikely(qty.feq(0)))
+  if (ZuUnlikely(qty.feq(0.0)))
     order = m_venueShard->delOrder(key(), side, orderID, orderIDScope);
   else
     order = m_venueShard->findOrder(key(), side, orderID, orderIDScope);
@@ -490,7 +490,7 @@ void MxMDVenue::modifyOrder(
   ZmFn<MxMDOrder *> fn)
 {
   ZmRef<MxMDOrder> order;
-  if (ZuUnlikely(qty.feq(0)))
+  if (ZuUnlikely(qty.feq(0.0)))
     order = delOrder(orderID);
   else
     order = findOrder(orderID);
@@ -583,7 +583,7 @@ void MxMDOrderBook::reduceOrder_(MxMDOrder *order,
 
   MxFloat oldQty = order->data().qty;
   MxFloat qty = oldQty - reduceQty;
-  if (qty.feq(0) || (ZuUnlikely(qty < 0 || !*qty))) qty = 0;
+  if (qty.feq(0.0) || (ZuUnlikely(qty < 0 || !*qty))) qty = 0;
   order->updateQty_(qty);
 
   if (ZuLikely(qty.fne(0)))

@@ -458,7 +458,9 @@ friend class ReadIterator;
   inline Item shift() {
     NodeRef node = shiftNode();
     if (ZuUnlikely(!node)) return Cmp::null();
-    return ZuMv(node->Node::item());
+    Item item = ZuMv(node->Node::item());
+    nodeDelete(node);
+    return item;
   }
   inline NodeRef rshiftNode() {
     Guard guard(m_lock);
@@ -480,7 +482,9 @@ friend class ReadIterator;
   inline Item rshift() {
     NodeRef node = rshiftNode();
     if (ZuUnlikely(!node)) return Cmp::null();
-    return ZuMv(node->Node::item());
+    Item item = ZuMv(node->Node::item());
+    nodeDelete(node);
+    return item;
   }
 
   inline Item head() const {

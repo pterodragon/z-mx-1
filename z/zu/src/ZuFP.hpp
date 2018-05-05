@@ -68,12 +68,14 @@ template <> struct ZuFP__<float> {
   ZuInline static float log10_(float f) { return log10f(f); }
   ZuInline static float frexp_(float f, int *n) { return frexpf(f, n); }
   ZuInline static float ldexp_(float f, int n) { return ldexpf(f, n); }
+  ZuInline static float fabs_(float f) { return fabsf(f); }
 };
 template <> struct ZuFP__<double> {
   ZuInline static double floor_(double f) { return floor(f); }
   ZuInline static double log10_(double f) { return log10(f); }
   ZuInline static double frexp_(double f, int *n) { return frexp(f, n); }
   ZuInline static double ldexp_(double f, int n) { return ldexp(f, n); }
+  ZuInline static double fabs_(double f) { return fabs(f); }
 };
 template <> struct ZuFP__<long double> {
   ZuInline static long double floor_(long double f) { return floorl(f); }
@@ -82,6 +84,7 @@ template <> struct ZuFP__<long double> {
     { return frexpl(f, n); }
   ZuInline static long double ldexp_(long double f, int n)
     { return ldexpl(f, n); }
+  ZuInline static long double fabs_(long double f) { return fabsl(f); }
 };
 
 // CRTP mixin
@@ -106,12 +109,12 @@ struct ZuFP<T, 2U> : public ZuFP_<ZuFP<T, 2U>, T> { // 10+5
     return *i_;
   }
   ZuInline static bool nan(T v) { return isnan((double)v); }
-  ZuInline static T epsilon_(const T &v) {
-    T e = v > 0 ? v : -v;
-    T b = e;
-    uint16_t *ZuMayAlias(e_) = (uint16_t *)&e;
-    *e_ += 3;
-    return e - b;
+  ZuInline static T epsilon_(T v) {
+    v = ZuFP::fabs_(v);
+    T b = v;
+    uint16_t *ZuMayAlias(v_) = (uint16_t *)&v;
+    *v_ += 3;
+    return v - b;
   }
 };
 template <typename T>
@@ -123,12 +126,12 @@ struct ZuFP<T, 4U> : public ZuFP_<ZuFP<T, 4U>, T> { // 23+8
     return *i_;
   }
   ZuInline static bool nan(T v) { return isnan((double)v); }
-  ZuInline static T epsilon_(const T &v) {
-    T e = v > 0 ? v : -v;
-    T b = e;
-    uint32_t *ZuMayAlias(e_) = (uint32_t *)&e;
-    *e_ += 3;
-    return e - b;
+  ZuInline static T epsilon_(T v) {
+    v = ZuFP::fabs_(v);
+    T b = v;
+    uint32_t *ZuMayAlias(v_) = (uint32_t *)&v;
+    *v_ += 3;
+    return v - b;
   }
 };
 template <typename T>
@@ -140,12 +143,12 @@ struct ZuFP<T, 8U> : public ZuFP_<ZuFP<T, 8U>, T> { // 52+11
     return *i_;
   }
   ZuInline static bool nan(T v) { return isnan((double)v); }
-  ZuInline static T epsilon_(const T &v) {
-    T e = v > 0 ? v : -v;
-    T b = e;
-    uint64_t *ZuMayAlias(e_) = (uint64_t *)&e;
-    *e_ += 3;
-    return e - b;
+  ZuInline static T epsilon_(T v) {
+    v = ZuFP::fabs_(v);
+    T b = v;
+    uint64_t *ZuMayAlias(v_) = (uint64_t *)&v;
+    *v_ += 3;
+    return v - b;
   }
 };
 template <class ZuFP, typename T>
@@ -155,17 +158,19 @@ struct ZuFP_64 : public ZuFP_<ZuFP, T> { // 64+15
   struct I_ {
     uint64_t mantissa;
     uint16_t exponent; // actually 15bits, sign bit is MSB
-    inline void inc() {
-      if (ZuUnlikely(!++mantissa)) mantissa = (1ULL<<63U), ++exponent;
+    ZuInline void inc() {
+      uint64_t prev = mantissa;
+      if (ZuUnlikely((mantissa += 3) < prev))
+	(mantissa |= (1ULL<<63U)), ++exponent;
     }
   };
 #pragma pack(pop)
-  ZuInline static T epsilon_(const T &v) {
-    T e = v > 0 ? v : -v;
-    T b = e;
-    I_ *ZuMayAlias(e_) = (I_ *)&e;
-    e_->inc(), e_->inc(), e_->inc();
-    return e - b;
+  ZuInline static T epsilon_(T v) {
+    v = ZuFP::fabs_(v);
+    T b = v;
+    I_ *ZuMayAlias(v_) = (I_ *)&v;
+    v_->inc();
+    return v - b;
   }
 };
 template <typename T>

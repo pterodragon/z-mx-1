@@ -189,9 +189,11 @@ struct ZuBox_Approx_ { };
 template <typename T, class Cmp>
 struct ZuBox_Approx : public ZuBox<T, Cmp>, public ZuBox_Approx_ {
   inline ZuBox_Approx() { }
-  inline ZuBox_Approx(const ZuBox_Approx &v) : ZuBox<T, Cmp>(v) { }
+  inline ZuBox_Approx(const ZuBox_Approx &v) :
+    ZuBox<T, Cmp>(static_cast<const ZuBox<T, Cmp> &>(v)) { }
   inline ZuBox_Approx &operator =(const ZuBox_Approx &v) {
-    if (this != &v) ZuBox<T, Cmp>::operator =(v);
+    if (this != &v)
+      ZuBox<T, Cmp>::operator =(static_cast<const ZuBox<T, Cmp> &>(v));
     return *this;
   }
   template <typename P> inline ZuBox_Approx(const P &p) : ZuBox<T, Cmp>(p) { }
@@ -522,26 +524,26 @@ public:
   ZuInline bool feq_(const T &r) const {
     if (ZuLikely(m_val == r)) return true;
     if (ZuLikely(m_val >= 0.0)) {
-      if (r < 0) return false;
-      if (m_val > r) return m_val - r <= Cmp::epsilon(m_val);
-      return r - m_val <= Cmp::epsilon(r);
+      if (r < 0.0) return false;
+      if (m_val > r) return m_val - r < Cmp::epsilon(m_val);
+      return r - m_val < Cmp::epsilon(r);
     }
-    if (r > 0) return false;
+    if (r > 0.0) return false;
     T val = -m_val;
     T r_ = -r;
-    if (val > r_) return val - r_ <= Cmp::epsilon(val);
-    return r_ - val <= Cmp::epsilon(r_);
+    if (val > r_) return val - r_ < Cmp::epsilon(val);
+    return r_ - val < Cmp::epsilon(r_);
   }
   ZuInline bool fne(const T &r) const { return !feq(r); }
   ZuInline bool fge(const T &r) const {
     if (Cmp::null(m_val)) return Cmp::null(r);
     if (Cmp::null(r)) return false;
-    return (m_val > r || feq_(r));
+    return m_val > r || feq_(r);
   }
   ZuInline bool fle(const T &r) const {
     if (Cmp::null(m_val)) return Cmp::null(r);
     if (Cmp::null(r)) return false;
-    return (m_val < r || feq_(r));
+    return m_val < r || feq_(r);
   }
   ZuInline bool fgt(const T &r) const { return !fle(r); }
   ZuInline bool flt(const T &r) const { return !fge(r); }

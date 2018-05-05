@@ -292,7 +292,7 @@ int main()
     CHECK(!strcmp(buf, "0"));
   }
 
-  // 7 SD
+  // 7-8 SD
   testf<float, ZuFmt::FP<-2> >("float", (float)16777216, "16,777,216");
   testf<float, ZuFmt::FP<2> >("float", (float)16777216, "16,777,216.00");
   testf<float, ZuFmt::FP<> >("float", 0.0F, "0");
@@ -319,7 +319,7 @@ int main()
   testf<float, ZuFmt::FP<> >("float", 100.0001F, "100.0001");
   testf<float, ZuFmt::FP<> >("float", 1100.101F, "1,100.101");
   testf<float, ZuFmt::FP<0, '0'> >("float", 4200100.0F, "4,200,100", 1.0F);
-  // 15 SD
+  // 16 SD
   testf<double, ZuFmt::FP<> >("double", 0.0, "0");
   testf<double, ZuFmt::FP<> >("double", 42.0, "42");
   testf<double, ZuFmt::FP<-2> >("double", 42.0, "42");
@@ -349,7 +349,7 @@ int main()
   testf<double, ZuFmt::FP<-2> >("double", 99.999, "100", 100 - 99.999);
   testf<double, ZuFmt::FP<> >("double", 0.437464744, "0.437464744");
   testf<double, ZuFmt::FP<9> >("double", 12.673215776-12.061490938, "0.611724838", .0000000001);
-  // 19 SD
+  // 20 SD
   testf<long double, ZuFmt::FP<> >("long double", 0.0L, "0");
   testf<long double, ZuFmt::FP<> >("long double", 42.0L, "42");
   testf<long double, ZuFmt::FP<-2> >("long double", 42.0L, "42");
@@ -369,7 +369,7 @@ int main()
   testf<long double, ZuFmt::FP<-6> >("long double", 1100.1000001L, "1,100.1", 1100.1000001L - 1100.1L);
   testf<long double, ZuFmt::FP<6, '0'> >("long double", 100.0000001L, "100.000000", 100.0000001L - 100.0L);
   testf<long double, ZuFmt::FP<6, '0'> >("long double", 1100.1000001L, "1,100.100000", 1100.1000001L - 1100.1L);
-  testf<long double, ZuFmt::FP<> >("long double", 100.0000000000001L, "100.0000000000001");
+  testf<long double, ZuFmt::FP<> >("long double", 100.00000000000000001L, "100.00000000000000001");
   testf<long double, ZuFmt::FP<> >("long double", 1100.100000000001L, "1,100.100000000001");
   testf<long double, ZuFmt::FP<-6> >("long double", 42000100.0000001L, "42,000,100", 42000100.0000001L - 42000100.0L);
 

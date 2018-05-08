@@ -69,7 +69,7 @@ int main()
       ZmRef<ZvCf> cf = new ZvCf();
 
       cf->fromFile("out.cf", false);
-      out = cf->toString();
+      out << *cf;
       ZiFile::remove("out.cf");
       bool caught = false;
       try {
@@ -92,7 +92,9 @@ int main()
       ZmRef<ZvCf> cf = new ZvCf();
 
       cf->fromFile("out2.cf", false);
-      if (out != cf->toString()) ZeLOG(Error, "out.cf and out2.cf differ");
+      ZtString out2;
+      out2 << *cf;
+      if (out != out2) ZeLOG(Error, "out.cf and out2.cf differ");
     }
     {
       ZmRef<ZvCf> cf = new ZvCf();
@@ -150,7 +152,9 @@ int main()
 
 	cf->fromArgs(opts, sizeof(argv) / sizeof(argv[0]) - 1, (char **)argv);
 	cf->toFile("out3.cf");
-	if (out != cf->toString()) ZeLOG(Error, "out.cf and out3.cf differ");
+	ZtString out3;
+	out3 << *cf;
+	if (out != out3) ZeLOG(Error, "out.cf and out3.cf differ");
       }
       {
 	ZmRef<ZvCf> cf = new ZvCf();
@@ -167,7 +171,9 @@ int main()
 	  "--key7:foo=bar "
 	  "Arg1");
 	cf->toFile("out4.cf");
-	if (out != cf->toString()) ZeLOG(Error, "out.cf and out4.cf differ");
+	ZtString out4;
+	out4 << *cf;
+	if (out != out4) ZeLOG(Error, "out.cf and out4.cf differ");
       }
     }
     {
@@ -192,7 +198,9 @@ int main()
 
       cf->fromEnv("CFTEST", false);
       cf->toFile("out5.cf");
-      if (out != cf->toString()) ZeLOG(Error, "out.cf and out5.cf differ");
+      ZtString out5;
+      out5 << *cf;
+      if (out != out5) ZeLOG(Error, "out.cf and out5.cf differ");
     }
 
     try {
@@ -203,14 +211,13 @@ int main()
 	ZeLOG(Error, "getInt() default failed");
       try {
 	cf->getInt("j", 1, 100, true);
-      }
-      catch (const ZvCf::Required &e) {
-	printf("OK: %s\n", e.message().data());
+      } catch (const ZvError &e) {
+	std::cout << "OK: " << e << '\n';
       }
       cf->getInt("i", 1, 100, false, 42);
       ZeLOG(Error, "getInt() range failed");
-    } catch (const ZvCf::RangeInt &e) {
-      printf("OK: %s\n", e.message().data());
+    } catch (const ZvError &e) {
+      std::cout << "OK: " << e << '\n';
     }
 
     try {
@@ -221,14 +228,13 @@ int main()
 	ZeLOG(Error, "getDbl() default failed");
       try {
 	cf->getDbl("j", .1, 100, true);
-      }
-      catch (const ZvCf::Required &e) {
-	printf("OK: %s\n", e.message().data());
+      } catch (const ZvError &e) {
+	std::cout << "OK: " << e << '\n';
       }
       cf->getDbl("i", .1, 100, false, .42);
       ZeLOG(Error, "getDbl() range failed");
-    } catch (const ZvCf::RangeDbl &e) {
-      printf("OK: %s\n", e.message().data());
+    } catch (const ZvError &e) {
+      std::cout << "OK: " << e << '\n';
     }
 
     try {
@@ -238,8 +244,8 @@ int main()
 	ZeLOG(Error, "getEnum() default failed");
       cf->getEnum<Values::Map>("i", false, 0);
       ZeLOG(Error, "getEnum() invalid failed");
-    } catch (const ZvInvalidEnum &e) {
-      printf("OK: %s\n", e.message().data());
+    } catch (const ZvError &e) {
+      std::cout << "OK: " << e << '\n';
     }
 
     {
@@ -252,19 +258,21 @@ int main()
       cf3->merge(cf2);
       cf4->merge(cf2);
       cf4->merge(cf1);
-      if (cf3->toString() != cf4->toString())
+      ZtString out3, out4;
+      out3 << *cf3;
+      out4 << *cf4;
+      if (out3 != out4)
 	ZeLOG(Error, "merge() results inconsistent");
     }
 
     {
       ZmRef<ZvCf> cf = new ZvCf();
       cf->fromString("=A value", false);
-      printf("OK: %s\n", cf->get("=A", true).data());
+      std::cout << "OK: " << cf->get("=A", 1) << '\n';
     }
 
   } catch (const ZvError &e) {
-    fputs(e.message().data(), stderr);
-    fputc('\n', stderr);
+    std::cerr << e << '\n';
     exit(1);
   } catch (const ZeError &e) {
     fputs(e.message(), stderr);

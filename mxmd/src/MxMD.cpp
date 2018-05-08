@@ -1034,7 +1034,7 @@ MxMDLib::MxMDLib(ZmScheduler *scheduler, void *cf_) :
     ZeLOG(Info, "MxMDLib - configuring shards...");
     m_shards.length(shardsCf->count());
     ZvCf::Iterator i(shardsCf);
-    ZtZString key;
+    ZuString key;
     while (ZmRef<ZvCf> shardCf = i.subset(key)) {
       ZuBox<unsigned> id = key;
       if (id >= m_shards.length())

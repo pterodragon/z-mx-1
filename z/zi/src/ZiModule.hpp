@@ -65,12 +65,12 @@ public:
   struct Error {
 #ifdef _WIN32
     inline static void clear() { }
-    inline static ZtZString last() {
+    inline static ZtString last() {
       return ZePlatform_::strerror(GetLastError());
     }
 #else
     inline static void clear() { dlerror(); }
-    inline static ZtZString last() { return dlerror(); }
+    inline static ZtString last() { return dlerror(); }
 #endif
   };
 
@@ -83,7 +83,7 @@ public:
   inline void setFlags(int f) { Guard guard(m_lock); m_flags |= f; }
   inline void clrFlags(int f) { Guard guard(m_lock); m_flags &= ~f; }
 
-  int init(Handle handle, int flags, ZtZString *e = 0) {
+  int init(Handle handle, int flags, ZtString *e = 0) {
     Guard guard(m_lock);
 
     if (m_flags & GC) unload();
@@ -101,10 +101,10 @@ public:
       m_handle = 0;
   }
 
-  int load(const Path &name, int flags, ZtZString *e = 0);
-  int unload(ZtZString *e = 0);
+  int load(const Path &name, int flags, ZtString *e = 0);
+  int unload(ZtString *e = 0);
 
-  void *resolve(const char *symbol, ZtZString *e = 0);
+  void *resolve(const char *symbol, ZtString *e = 0);
 
 private:
   ZmLock	m_lock;

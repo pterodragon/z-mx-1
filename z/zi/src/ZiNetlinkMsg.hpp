@@ -54,18 +54,16 @@ public:
 
   inline struct nlmsghdr *hdr() { return &m_n; }
 
-  inline ZtZString toString() const { 
-    ZtZString stream;
-    stream << "ZiNetlinkHdr [[len = " << m_n.nlmsg_len
-  	   << "] [type = " << m_n.nlmsg_type
-  	   << "] [flags = " << m_n.nlmsg_flags
-  	   << "] [seqNo = " << m_n.nlmsg_seq
-  	   << "] [pid = " << m_n.nlmsg_pid
-	   << "] [hdrSize = " << hdrSize()
-  	   << "] [dataLen = " << dataLen()
-  	   << "] [size = " << hdrSize()
-  	   << "]]";
-    return stream;
+  template <typename S> inline void print(S &s) const {
+    s << "ZiNetlinkHdr [[len = " << m_n.nlmsg_len
+      << "] [type = " << m_n.nlmsg_type
+      << "] [flags = " << m_n.nlmsg_flags
+      << "] [seqNo = " << m_n.nlmsg_seq
+      << "] [pid = " << m_n.nlmsg_pid
+      << "] [hdrSize = " << hdrSize()
+      << "] [dataLen = " << dataLen()
+      << "] [size = " << hdrSize()
+      << "]]";
   }
 
 protected:
@@ -79,6 +77,7 @@ private:
   struct nlmsghdr		m_n;
   char				m_pad[PADDING];
 };
+template <> struct ZuPrint<ZiNetlinkHdr> : public ZuPrintFn { };
 
 class ZiGenericNetlinkHdr : public ZiNetlinkHdr {
   ZiGenericNetlinkHdr(const ZiGenericNetlinkHdr &);
@@ -102,15 +101,13 @@ public:
     return GENL_HDRLEN + ZiNetlinkHdr::hdrSize(); 
   }
 
-  inline ZtZString toString() const { 
-    ZtZString stream;
-    stream << "ZiGenericNetlinkHdr [" << ZiNetlinkHdr::toString()
-	   << " [cmd = " << m_g.cmd
-  	   << "] [version = " << m_g.version
-  	   << "] [reserved = " << m_g.reserved
-  	   << "] [size = " << hdrSize()
-  	   << "]]";
-    return stream;
+  template <typename S> inline void print(S &s) const {
+    s << "ZiGenericNetlinkHdr [" << static_cast<const ZiNetlinkHdr &>(*this)
+      << " [cmd = " << m_g.cmd
+      << "] [version = " << m_g.version
+      << "] [reserved = " << m_g.reserved
+      << "] [size = " << hdrSize()
+      << "]]";
   }
 
 private:
@@ -118,6 +115,7 @@ private:
   char			m_pad[PADDING];
 };
 #define ZiGenericNetlinkHdr2Vec(x) (void *)&(x), x.hdrSize()
+template <> struct ZuPrint<ZiGenericNetlinkHdr> : public ZuPrintFn { };
 
 // Netlink Attributes
 
@@ -156,15 +154,13 @@ public:
     return (ZiNetlinkAttr *)((char *)&m_na + size());
   }
 
-  inline ZtZString toString() const { 
-    ZtZString stream;
-    stream << "ZiNetlinkAttr [[len = " << m_na.nla_len
-  	   << "] [type = " << m_na.nla_type
-  	   << "] [hdrLen = " << hdrLen()
-  	   << "] [dataLen = " << dataLen()
-  	   << "] [size = " << size()
-  	   << "]]";
-    return stream;
+  template <typename S> inline void print(S &s) const {
+    s << "ZiNetlinkAttr [[len = " << m_na.nla_len
+      << "] [type = " << m_na.nla_type
+      << "] [hdrLen = " << hdrLen()
+      << "] [dataLen = " << dataLen()
+      << "] [size = " << size()
+      << "]]";
   }
 		
 protected:	   
@@ -175,6 +171,7 @@ private:
   struct nlattr		m_na;
   char			m_pad[PADDING];
 };
+template <> struct ZuPrint<ZiNetlinkHdr> : public ZuPrintFn { };
 
 class ZiNetlinkFamilyName : public ZiNetlinkAttr {
   enum _ { PADDING = NLA_ALIGN(GENL_NAMSIZ) - GENL_NAMSIZ };
@@ -188,17 +185,16 @@ public:
     m_familyName[len] = 0;
   }
 
-  inline ZtZString toString() const {
-    ZtZString stream;
-    stream << "ZiNetlinkFamilyName [" << ZiNetlinkAttr::toString()
-	   << " [familyName = " << m_familyName << "]]";
-    return stream;
+  template <typename S> inline void print(S &s) const {
+    s << "ZiNetlinkFamilyName [" << static_cast<const ZiNetlinkAttr &>(*this)
+      << " [familyName = " << m_familyName << "]]";
   }
 
 private:
   char m_familyName[GENL_NAMSIZ];
   char m_pad[PADDING];
 };
+template <> struct ZuPrint<ZiNetlinkFamilyName> : public ZuPrintFn { };
 
 class ZiNetlinkDataAttr : public ZiNetlinkAttr {
 public:

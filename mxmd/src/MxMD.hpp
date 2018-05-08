@@ -453,11 +453,19 @@ struct MxMDOrders_HeapID : public ZmHeapSharded {
 // price levels
 
 struct MxMDPxLvlData {
+  inline MxMDPxLvlData &operator +=(const MxMDPxLvlData &data) {
+    if (transactTime < data.transactTime) transactTime = data.transactTime;
+    qty += data.qty;
+    nOrders += data.nOrders;
+    return *this;
+  }
+
   MxDateTime		transactTime;
   MxFloat		qty;
   MxUInt		nOrders;
   MxFlags		flags;		// MxMDL2Flags
 };
+
 
 struct MxMDL2Flags : public MxMDFlags<MxMDL2Flags> {
   // FIXME - XASX
@@ -790,15 +798,53 @@ public:
   ZuInline MxFloat vwap() const { return m_data.nv / m_data.qty; }
 
   ZuInline ZuRef<MxMDPxLevel> mktLevel() { return m_mktLevel; }
-  inline ZuRef<MxMDPxLevel> pxLevel(MxFloat price, MxFloat tickSize) {
-    tickSize /= 2.0;
-    PxLevels::ReadIterator i(m_pxLevels, price - tickSize, PxLevels::Greater);
-    price += tickSize;
-    if (ZuRef<MxMDPxLevel> pxLevel = i.iterateKey()) {
-      if (pxLevel->price() < price) return pxLevel;
+
+  // aggregate price levels in range
+  void pxLevels(MxFloat minPrice, MxFloat maxPrice, MxMDPxLvlData &total) {
+    total = MxMDPxLvlData{ {}, 0.0, 0, 0 };
+    if (m_side == MxSide::Sell) {
+      minPrice -= minPrice.epsilon();
+      maxPrice -= maxPrice.epsilon();
+      PxLevels::ReadIterator i(m_pxLevels, minPrice, PxLevels::Greater);
+      while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey()) {
+	if (pxLevel->price() > maxPrice) break;
+	total += pxLevel->data();
+      }
+    } else {
+      minPrice += minPrice.epsilon();
+      maxPrice += maxPrice.epsilon();
+      PxLevels::ReadIterator i(m_pxLevels, maxPrice, PxLevels::Less);
+      while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey()) {
+	if (pxLevel->price() < minPrice) break;
+	total += pxLevel->data();
+      }
     }
-    return (MxMDPxLevel *)0;
   }
+
+  // iterate over price levels in range
+  template <typename L> // (MxMDPxLevel *) -> uintptr_t
+  uintptr_t pxLevels(MxFloat minPrice, MxFloat maxPrice, L l) {
+    if (m_side == MxSide::Sell) {
+      minPrice -= minPrice.epsilon();
+      maxPrice -= maxPrice.epsilon();
+      PxLevels::ReadIterator i(m_pxLevels, minPrice, PxLevels::Greater);
+      while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey()) {
+	if (pxLevel->price() > maxPrice) break;
+	if (uintptr_t v = l(pxLevel)) return v;
+      }
+    } else {
+      minPrice += minPrice.epsilon();
+      maxPrice += maxPrice.epsilon();
+      PxLevels::ReadIterator i(m_pxLevels, maxPrice, PxLevels::Less);
+      while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey()) {
+	if (pxLevel->price() < minPrice) break;
+	if (uintptr_t v = l(pxLevel)) return v;
+      }
+    }
+    return 0;
+  }
+
+  // iterate over all price levels
   template <typename L> // (MxMDPxLevel *) -> uintptr_t
   uintptr_t allPxLevels(L l) const {
     PxLevels::ReadIterator i(m_pxLevels,

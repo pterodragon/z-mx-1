@@ -25,8 +25,6 @@
 
 template class ZtString_<char, wchar_t>;
 template class ZtString_<wchar_t, char>;
-template class ZtZString_<char, wchar_t>;
-template class ZtZString_<wchar_t, char>;
 
 #ifdef _MSC_VER
 #pragma warning(push)

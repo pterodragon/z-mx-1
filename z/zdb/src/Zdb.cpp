@@ -78,7 +78,7 @@ void ZdbEnv::init(const ZdbEnvConfig &config, ZiMultiplex *mx,
       config.writeThread > mx->nThreads() ||
       config.writeThread == mx->rxThread() ||
       config.writeThread == mx->txThread()) {
-    ZeLOG(Fatal, ZtZString() <<
+    ZeLOG(Fatal, ZtString() <<
 	"Zdb writeThread misconfigured: " << config.writeThread);
     return;
   }
@@ -90,7 +90,7 @@ void ZdbEnv::init(const ZdbEnvConfig &config, ZiMultiplex *mx,
     m_hosts.add(ZmRef<Zdb_Host>(new Zdb_Host(this, &m_config.hostCfs[i])));
   m_self = m_hosts.findKey(m_config.hostID).ptr();
   if (!m_self) {
-    ZeLOG(Fatal, ZtZString() <<
+    ZeLOG(Fatal, ZtString() <<
 	"Zdb own host ID " << m_config.hostID << "not in hosts table");
     return;
   }
@@ -124,12 +124,12 @@ void ZdbEnv::add(Zdb_ *db)
   Guard guard(m_lock);
   ZdbID id = db->id();
   if (state() != Zdb_Host::Initialized) {
-    ZeLOG(Fatal, ZtZString() <<
+    ZeLOG(Fatal, ZtString() <<
 	"ZdbEnv::add called out of order for DBID " << id);
     return;
   }
   if (id >= (ZdbID)m_dbs.length()) {
-    ZeLOG(Fatal, ZtZString() <<
+    ZeLOG(Fatal, ZtString() <<
 	"ZdbEnv::add called with invalid DBID " << id <<
 	" (dbCount = " << m_dbs.length() << ')');
     return;
@@ -141,7 +141,7 @@ void ZdbEnv::add(Zdb_ *db)
       m_dbs[id] = db;
       return;
     }
-  ZeLOG(Fatal, ZtZString() <<
+  ZeLOG(Fatal, ZtString() <<
       "ZdbEnv::add called with invalid DBID " << id);
 }
 
@@ -330,20 +330,21 @@ void ZdbEnv::listen()
 
 void ZdbEnv::listening(const ZiListenInfo &)
 {
-  ZeLOG(Info, ZtZString() << "Zdb listening on (" <<
+  ZeLOG(Info, ZtString() << "Zdb listening on (" <<
       m_self->ip() << ':' << m_self->port() << ')');
 }
 
 void ZdbEnv::listenFailed(bool transient)
 {
-  ZtZString warning = ZtZString() << "Zdb listen failed on (" <<
+  ZtString warning;
+  warning << "Zdb listen failed on (" <<
       m_self->ip() << ':' << m_self->port() << ')';
   if (transient && running()) {
     warning << " - retrying...";
     m_mx->add(ZmFn<>::Member<&ZdbEnv::listen>::fn(this),
       ZmTimeNow((int)m_config.reconnectFreq));
   }
-  ZeLOG(Warning, warning);
+  ZeLOG(Warning, ZuMv(warning));
 }
 
 void ZdbEnv::stopListening()
@@ -383,9 +384,9 @@ void ZdbEnv::holdElection()
   if (won) {
     if (!appActive) {
       ZeLOG(Info, "Zdb ACTIVE");
-      if (ZtZString cmd = m_self->config().up) {
+      if (ZtString cmd = m_self->config().up) {
 	if (oldMaster) cmd << ' ' << oldMaster->config().ip;
-	ZeLOG(Info, ZtZString() << "Zdb invoking \"" << cmd << '\"');
+	ZeLOG(Info, ZtString() << "Zdb invoking \"" << cmd << '\"');
 	::system(cmd.data());
       }
       if (m_activeFn) m_activeFn();
@@ -393,8 +394,8 @@ void ZdbEnv::holdElection()
   } else {
     if (appActive) {
       ZeLOG(Info, "Zdb INACTIVE");
-      if (ZtZString cmd = m_self->config().down) {
-	ZeLOG(Info, ZtZString() << "Zdb invoking \"" << cmd << '\"');
+      if (ZuString cmd = m_self->config().down) {
+	ZeLOG(Info, ZtString() << "Zdb invoking \"" << cmd << '\"');
 	::system(cmd.data());
       }
       if (m_inactiveFn) m_inactiveFn();
@@ -445,8 +446,8 @@ retry:
 
   if (appActive) {
     ZeLOG(Info, "Zdb INACTIVE");
-    if (ZtZString cmd = m_self->config().down) {
-      ZeLOG(Info, ZtZString() << "Zdb invoking \"" << cmd << '\"');
+    if (ZuString cmd = m_self->config().down) {
+      ZeLOG(Info, ZtString() << "Zdb invoking \"" << cmd << '\"');
       ::system(cmd.data());
     }
     if (m_inactiveFn) m_inactiveFn();
@@ -470,9 +471,9 @@ void ZdbEnv::reactivate(Zdb_Host *host)
 {
   if (ZmRef<Zdb_Cxn> cxn = host->cxn()) cxn->hbSend();
   ZeLOG(Info, "Zdb dual active detected, remaining master");
-  if (ZtZString cmd = m_self->config().up) {
+  if (ZtString cmd = m_self->config().up) {
     cmd << ' ' << host->config().ip;
-    ZeLOG(Info, ZtZString() << "Zdb invoking \'" << cmd << '\'');
+    ZeLOG(Info, ZtString() << "Zdb invoking \'" << cmd << '\'');
     ::system(cmd.data());
   }
 }
@@ -491,7 +492,7 @@ void Zdb_Host::connect()
 {
   if (!m_env->running() || m_cxn) return;
 
-  ZeLOG(Info, ZtZString() << "Zdb connecting to host " << id() <<
+  ZeLOG(Info, ZtString() << "Zdb connecting to host " << id() <<
       " (" << m_config->ip << ':' << m_config->port << ')');
 
   m_mx->connect(
@@ -502,19 +503,19 @@ void Zdb_Host::connect()
 
 void Zdb_Host::connectFailed(bool transient)
 {
-  ZtZString warning = ZtZString() <<
-      "Zdb failed to connect to host " << id() <<
+  ZtString warning;
+  warning << "Zdb failed to connect to host " << id() <<
       " (" << m_config->ip << ':' << m_config->port << ')';
   if (transient && m_env->running()) {
     warning << " - retrying...";
     reconnect();
   }
-  ZeLOG(Warning, warning);
+  ZeLOG(Warning, ZuMv(warning));
 }
 
 ZiConnection *Zdb_Host::connected(const ZiCxnInfo &ci)
 {
-  ZeLOG(Info, ZtZString() <<
+  ZeLOG(Info, ZtString() <<
       "Zdb connected to host " << id() <<
       " (" << ci.remoteIP << ':' << ci.remotePort << "): " <<
       ci.localIP << ':' << ci.localPort);
@@ -526,7 +527,7 @@ ZiConnection *Zdb_Host::connected(const ZiCxnInfo &ci)
 
 ZiConnection *ZdbEnv::accepted(const ZiCxnInfo &ci)
 {
-  ZeLOG(Info, ZtZString() << "Zdb accepted cxn on (" <<
+  ZeLOG(Info, ZtString() << "Zdb accepted cxn on (" <<
       ci.localIP << ':' << ci.localPort << "): " <<
       ci.remoteIP << ':' << ci.remotePort);
 
@@ -576,14 +577,14 @@ void ZdbEnv::associate(Zdb_Cxn *cxn, int hostID)
   Zdb_Host *host = m_hosts.findKey(hostID);
 
   if (!host) {
-    ZeLOG(Error, ZtZString() <<
+    ZeLOG(Error, ZtString() <<
 	"Zdb cannot associate incoming cxn: host ID " << hostID <<
 	" not found");
     return;
   }
 
   if (host == m_self) {
-    ZeLOG(Error, ZtZString() <<
+    ZeLOG(Error, ZtString() <<
 	"Zdb cannot associate incoming cxn: host ID " << hostID <<
 	" is same as self");
     return;
@@ -596,7 +597,7 @@ void ZdbEnv::associate(Zdb_Cxn *cxn, int hostID)
 
 void ZdbEnv::associate(Zdb_Cxn *cxn, Zdb_Host *host)
 {
-  ZeLOG(Info, ZtZString() << "Zdb host " << host->id() << " CONNECTED");
+  ZeLOG(Info, ZtString() << "Zdb host " << host->id() << " CONNECTED");
 
   cxn->host(host);
 
@@ -635,7 +636,7 @@ void Zdb_Host::cancelConnect()
 
 void Zdb_Cxn::hbTimeout()
 {
-  ZeLOG(Info, ZtZString() << "Zdb heartbeat timeout on host " <<
+  ZeLOG(Info, ZtString() << "Zdb heartbeat timeout on host " <<
       ZuBoxed(m_host ? (int)m_host->id() : -1) << " (" <<
       info().remoteIP << ':' << info().remotePort << ')');
   disconnect();
@@ -643,7 +644,7 @@ void Zdb_Cxn::hbTimeout()
 
 void Zdb_Cxn::disconnected()
 {
-  ZeLOG(Info, ZtZString() << "Zdb disconnected from host " <<
+  ZeLOG(Info, ZtString() << "Zdb disconnected from host " <<
       ZuBoxed(m_host ? (int)m_host->id() : -1) << " (" <<
       info().remoteIP << ':' << info().remotePort << ')');
   m_mx->del(&m_hbTimer);
@@ -670,7 +671,7 @@ void ZdbEnv::disconnected(Zdb_Cxn *cxn)
   }
 
   host->disconnected();
-  ZeLOG(Info, ZtZString() << "Zdb host " << host->id() << " DISCONNECTED");
+  ZeLOG(Info, ZtString() << "Zdb host " << host->id() << " DISCONNECTED");
 
   {
     Guard guard(m_lock);
@@ -728,7 +729,7 @@ Zdb_Host *ZdbEnv::setMaster()
     HostTree::ReadIterator i(m_hosts);
     ZmRef<Zdb_Host> host;
 
-    ZdbDEBUG(this, ZtZString() << "setMaster()\n" << 
+    ZdbDEBUG(this, ZtString() << "setMaster()\n" << 
 	"  self" << m_self << '\n' <<
 	"  prev" << m_prev << '\n' <<
 	"  next" << m_next << '\n' <<
@@ -738,12 +739,12 @@ Zdb_Host *ZdbEnv::setMaster()
 	if (host != m_self) ++m_nPeers;
 	if (!m_master || host->cmp(m_master) > 0) m_master = host;
       }
-      ZdbDEBUG(this, ZtZString() <<
+      ZdbDEBUG(this, ZtString() <<
 	  "  host" << *host << '\n' <<
 	  "  master" << m_master);
     }
   }
-  ZeLOG(Info, ZtZString() << "Zdb host " << m_master->id() << " is master");
+  ZeLOG(Info, ZtString() << "Zdb host " << m_master->id() << " is master");
   return oldMaster;
 }
 
@@ -760,7 +761,7 @@ void ZdbEnv::setNext()
   m_next = 0;
   {
     HostTree::ReadIterator i(m_hosts);
-    ZdbDEBUG(this, ZtZString() << "setNext()\n" <<
+    ZdbDEBUG(this, ZtString() << "setNext()\n" <<
 	"  self" << m_self << '\n' <<
 	"  master" << m_master << '\n' <<
 	"  prev" << m_prev << '\n' <<
@@ -770,7 +771,7 @@ void ZdbEnv::setNext()
       if (host != m_self && host != m_prev && host->voted() &&
 	  host->cmp(m_self) < 0 && (!m_next || host->cmp(m_next) > 0))
 	m_next = host;
-      ZdbDEBUG(this, ZtZString() <<
+      ZdbDEBUG(this, ZtString() <<
 	  "  host" << host << '\n' <<
 	  "  next" << m_next);
     }
@@ -782,11 +783,11 @@ void ZdbEnv::setNext()
 
 void ZdbEnv::startReplication()
 {
-  ZeLOG(Info, ZtZString() <<
+  ZeLOG(Info, ZtString() <<
 	"Zdb host " << m_next->id() << " is next in line");
   m_nextCxn = m_next->m_cxn;	// starts replication
   dbStateRefresh_();		// must be called after m_nextCxn assignment
-  ZdbDEBUG(this, ZtZString() << "startReplication()\n" <<
+  ZdbDEBUG(this, ZtString() << "startReplication()\n" <<
       "  self" << m_self << '\n' <<
       "  master" << m_master << '\n' <<
       "  prev" << m_prev << '\n' <<
@@ -831,7 +832,7 @@ void Zdb_Cxn::msgRcvd(ZiIOContext &io)
     case Zdb_Msg::Rep:	repRcvd(io); break;
     case Zdb_Msg::Rec:	repRcvd(io); break;
     default:
-      ZeLOG(Error, ZtZString() <<
+      ZeLOG(Error, ZtString() <<
 	  "Zdb received garbled message from host " <<
 	  ZuBoxed(m_host ? (int)m_host->id() : -1));
       io.disconnect();
@@ -848,7 +849,7 @@ void Zdb_Cxn::hbRcvd(ZiIOContext &io)
   unsigned dbCount = m_env->dbCount();
 
   if (dbCount != hb.dbCount) {
-    ZeLOG(Fatal, ZtZString() <<
+    ZeLOG(Fatal, ZtString() <<
 	"Zdb inconsistent remote configuration detected (local dbCount " <<
 	dbCount << " != host " << hb.hostID << " dbCount " << hb.dbCount <<
 	')');
@@ -892,7 +893,7 @@ void ZdbEnv::hbDataRcvd(Zdb_Host *host, const Zdb_Msg_HB &hb, ZdbRN *dbState)
 {
   Guard guard(m_lock);
 
-  ZdbDEBUG(this, ZtZString() << "hbDataRcvd()\n" << 
+  ZdbDEBUG(this, ZtString() << "hbDataRcvd()\n" << 
 	"  host" << host << '\n' <<
 	"  self" << m_self << '\n' <<
 	"  master" << m_master << '\n' <<
@@ -968,7 +969,7 @@ void ZdbEnv::recSend()
   if (!m_nextCxn || !m_recovering) return;
   unsigned i, n = m_dbs.length();
   if (n != m_recover.length() || n != m_recoverEnd.length()) {
-    ZeLOG(Fatal, ZtZString() <<
+    ZeLOG(Fatal, ZtString() <<
 	"ZdbEnv::recSend encountered inconsistent dbCount (local dbCount " <<
 	n << " != one of " <<
 	m_recover.length() << ", "  << m_recoverEnd.length() << ')');
@@ -1014,7 +1015,7 @@ void Zdb_Cxn::repSend(
 void ZdbAnyPOD_Send__::init(
     int type, ZdbRange range, bool update, bool compress)
 {
-  ZdbDEBUG(m_pod->db()->env(), ZtZString() << "ZdbAnyPOD__::init(" <<
+  ZdbDEBUG(m_pod->db()->env(), ZtString() << "ZdbAnyPOD__::init(" <<
       type << ", " << range << ", " <<
       (int)update << "< " << (int)compress << ')');
   m_hdr.type = type;
@@ -1137,7 +1138,7 @@ void Zdb_Cxn::hbSend_(ZiIOContext &io)
   ZiVec_len(m_hbSendVecs[1]) = self->dbState().length() * sizeof(ZdbRN);
   io.init(ZiIOFn::Member<&Zdb_Cxn::hbSent>::fn(this),
       ZiVec_ptr(m_hbSendVecs[0]), ZiVec_len(m_hbSendVecs[0]), 0);
-  ZdbDEBUG(m_env, ZtZString() << "hbSend()\n" <<
+  ZdbDEBUG(m_env, ZtString() << "hbSend()\n" <<
 	"  self[ID:" << hb.hostID << " S:" << hb.state <<
 	" N:" << hb.dbCount << "] " << self->dbState());
 }
@@ -1192,7 +1193,7 @@ void Zdb_Cxn::repRcvd(ZiIOContext &io)
   Zdb_ *db = m_env->db(rep.db);
 
   if (!db) {
-    ZeLOG(Fatal, ZtZString() <<
+    ZeLOG(Fatal, ZtString() <<
 	"Zdb unknown remote DBID " << rep.db << " received");
     io.disconnect();
     return;
@@ -1229,7 +1230,7 @@ void Zdb_Cxn::repDataRcvd(ZiIOContext &io)
     int n = LZ4_uncompress(
 	m_readData2.data(), m_readData.data(), db->recSize());
     if (ZuUnlikely(n < 0)) {
-      ZeLOG(Fatal, ZtHexDump(ZtZString() << 
+      ZeLOG(Fatal, ZtHexDump(ZtString() << 
 	    "decompress failed with rcode " << n << " (RN: " << rep.rn <<
 	    ") RecSize: " << db->recSize() << " CLen " << rep.clen <<
 	    "Data:\n", m_readData.data(), db->recSize()));
@@ -1250,12 +1251,12 @@ void ZdbEnv::repDataRcvd(Zdb_Host *host,
     Zdb_Cxn *cxn, int type, const Zdb_Msg_Rep &rep, void *ptr)
 {
   ZdbRange range(rep.range);
-  ZdbDEBUG(this, ZtHexDump(ZtZString() << "DBID:" << rep.db <<
+  ZdbDEBUG(this, ZtHexDump(ZtString() << "DBID:" << rep.db <<
 	" RN:" << rep.rn << " R:" << range << " FROM:" << host,
 	ptr, range.len()));
   Zdb_ *db = this->db(rep.db);
   if (ZuUnlikely(!db)) {
-    ZeLOG(Error, ZtZString() << 
+    ZeLOG(Error, ZtString() << 
 	  "Zdb bad incoming replication data from host " << host->id() <<
 	  " - unknown DBID " << rep.db);
     return;
@@ -1264,7 +1265,7 @@ void ZdbEnv::repDataRcvd(Zdb_Host *host,
     Guard guard(m_lock);
     Zdb_DBState &dbState = host->dbState();
     if (ZuUnlikely(rep.db >= (ZdbID)dbState.length())) {
-      ZeLOG(Fatal, ZtZString() <<
+      ZeLOG(Fatal, ZtString() <<
 	  "ZdbEnv::repDataRcvd encountered inconsistent DBID "
 	  "(ID " << rep.db << " >= " << dbState.length() << ')');
       return;
@@ -1273,7 +1274,7 @@ void ZdbEnv::repDataRcvd(Zdb_Host *host,
     if (rep.rn >= dbState[rep.db]) dbState[rep.db] = rep.rn + 1;
     if (!m_prev) {
       m_prev = host;
-      ZeLOG(Info, ZtZString() <<
+      ZeLOG(Info, ZtString() <<
 	  "Zdb host " << m_prev->id() << " is previous in line");
     }
   }
@@ -1332,20 +1333,20 @@ Zdb_::Zdb_(ZdbEnv *env, ZdbID id, ZdbAllocFn allocFn, ZdbRecoverFn recoverFn,
   m_allocRN(0), m_fileRN(0), m_cacheSize(0)
 {
   if (!m_recSize) {
-    ZeLOG(Fatal, ZtZString() <<
+    ZeLOG(Fatal, ZtString() <<
 	"Zdb misconfiguration for DBID " << m_id << " - record size is 0");
     m_fileRecs = 0;
     return;
   }
   m_env->add(this);
   if (!m_config) {
-    ZeLOG(Fatal, ZtZString() <<
+    ZeLOG(Fatal, ZtString() <<
 	"Zdb misconfiguration for DBID " << m_id << " - ZdbEnv::add() failed");
     m_fileRecs = 0;
     return;
   }
   if (m_config->fileSize < ((uint64_t)m_recSize<<3)) {
-    ZeLOG(Warning, ZtZString() <<
+    ZeLOG(Warning, ZtString() <<
 	"Zdb misconfiguration for DBID " << m_id <<
 	" - file size " << m_config->fileSize <<
 	" < 8x record size " << recSize);
@@ -1391,7 +1392,7 @@ void Zdb_::recover(Zdb_File *file)
       case ZdbCommitted:
       case ZdbArchived:
 	if (rn != pod->rn()) {
-	  ZeLOG(Error, ZtZString() <<
+	  ZeLOG(Error, ZtString() <<
 	      "Zdb recovered corrupt record from \"" <<
 	      fileName(file->index()) << "\" at offset " << (j * m_recSize));
 	} else {
@@ -1456,7 +1457,7 @@ ZmRef<ZdbAnyPOD> Zdb_::push()
 {
   if (!m_fileRecs) return 0;
   if (!m_env->active()) {
-    ZeLOG(Error, ZtZString() <<
+    ZeLOG(Error, ZtString() <<
 	"Zdb inactive application attempted push on DBID " << m_id);
     return 0;
   }
@@ -1472,7 +1473,7 @@ ZuPair<ZmRef<ZdbAnyPOD>, ZdbGuard> Zdb_::pushLocked()
   {
     if (!m_fileRecs) goto fail;
     if (!m_env->active()) {
-      ZeLOG(Error, ZtZString() <<
+      ZeLOG(Error, ZtString() <<
 	  "Zdb inactive application attempted push on DBID " << m_id);
       goto fail;
     }
@@ -1573,7 +1574,7 @@ ZmRef<ZdbAnyPOD> Zdb_::push(ZdbRN head, bool modify)
 {
   if (ZuUnlikely(!m_fileRecs)) return 0;
   if (ZuUnlikely(!m_env->active())) {
-    ZeLOG(Error, ZtZString() <<
+    ZeLOG(Error, ZtString() <<
 	"Zdb inactive application attempted push on DBID " << m_id);
     return 0;
   }
@@ -1595,7 +1596,7 @@ ZuPair<ZmRef<ZdbAnyPOD>, ZdbGuard> Zdb_::pushLocked(ZdbRN head, bool modify)
   {
     if (ZuUnlikely(!m_fileRecs)) goto fail;
     if (ZuUnlikely(!m_env->active())) {
-      ZeLOG(Error, ZtZString() <<
+      ZeLOG(Error, ZtString() <<
 	  "Zdb inactive application attempted push on DBID " << m_id);
       goto fail;
     }
@@ -1636,7 +1637,7 @@ ZmRef<ZdbAnyPOD> Zdb_::push(ZdbAnyPOD *prev, bool modify)
 {
   if (ZuUnlikely(!m_fileRecs)) return 0;
   if (ZuUnlikely(!m_env->active())) {
-    ZeLOG(Error, ZtZString() <<
+    ZeLOG(Error, ZtString() <<
 	"Zdb inactive application attempted push on DBID " << m_id);
     return 0;
   }
@@ -1668,7 +1669,7 @@ void Zdb_::put(ZdbAnyPOD *pod, ZdbRange range, bool copy)
 {
   if (ZuUnlikely(!m_fileRecs)) return;
   if (ZuUnlikely(!m_env->active())) {
-    ZeLOG(Error, ZtZString() <<
+    ZeLOG(Error, ZtString() <<
 	"Zdb inactive application attempted put on DBID " << m_id);
     return;
   }
@@ -1732,7 +1733,7 @@ Zdb_FileRec Zdb_::rn2file(ZdbRN rn, bool write)
   unsigned index = rn / (ZdbRN)m_fileRecs;
   Zdb_File *file = getFile(index, write, false);
   if (!file) {
-    ZeLOG(Fatal, ZtZString() << "Zdb could not open file for RN " << rn);
+    ZeLOG(Fatal, ZtString() << "Zdb could not open file for RN " << rn);
     return Zdb_FileRec();
   }
   ZiFile::Offset offset = (rn % m_fileRecs) * m_recSize;
@@ -1760,7 +1761,7 @@ Zdb_File *Zdb_::getFile(unsigned i, bool create, bool recover)
 
 Zdb_File *Zdb_::openFile(unsigned index, bool create, bool recover)
 {
-  ZtZString name = fileName(index);
+  ZtString name = fileName(index);
   Zdb_File *file = new Zdb_File(index);
   if (file->open(name, ZiFile::GC, 0666, m_config->fileSize, 0) == Zi::OK) {
     if (recover) this->recover(file);
@@ -1770,7 +1771,7 @@ Zdb_File *Zdb_::openFile(unsigned index, bool create, bool recover)
   ZeError e;
   if (file->open(name, ZiFile::Create | ZiFile::GC,
 	0666, m_config->fileSize, &e) != Zi::OK) {
-    ZeLOG(Fatal, ZtZString() <<
+    ZeLOG(Fatal, ZtString() <<
 	"Zdb could not open or create \"" << name << "\": " << e);
     delete file;
     return 0;
@@ -1787,11 +1788,11 @@ ZmRef<ZdbAnyPOD> Zdb_::read_(const Zdb_FileRec &rec)
   if ((r = rec.file()->pread(
 	  rec.off(), pod->ptr(), m_recSize)) < (int)m_recSize) {
     if (r < 0) {
-      ZeLOG(Error, ZtZString() <<
+      ZeLOG(Error, ZtString() <<
 	  "Zdb pread() failed on \"" << fileName(rec.file()->index()) <<
 	  "\" at offset " << rec.off() <<  ": " << e);
     } else {
-      ZeLOG(Error, ZtZString() <<
+      ZeLOG(Error, ZtString() <<
 	  "Zdb pread() truncated on \"" <<
 	  fileName(rec.file()->index()) << "\" at offset " << rec.off());
     }
@@ -1814,7 +1815,7 @@ void Zdb_::write_(ZdbRN rn, void *ptr, ZdbRange range)
     ZeError e;
     if ((r = rec.file()->pwrite(rec.off() + m_recSize - sizeof(ZdbTrailer),
 	&trailer, sizeof(ZdbTrailer), &e)) != Zi::OK) {
-      ZeLOG(Error, ZtZString() <<
+      ZeLOG(Error, ZtString() <<
 	  "Zdb pwrite() failed on \"" << fileName(rec.file()->index()) <<
 	  "\" at offset " << rec.off() <<  ": " << e);
     }
@@ -1826,7 +1827,7 @@ void Zdb_::write_(ZdbRN rn, void *ptr, ZdbRange range)
   ZeError e;
   if ((r = rec.file()->pwrite(
 	  rec.off() + range.off(), ptr, range.len(), &e)) != Zi::OK) {
-    ZeLOG(Error, ZtZString() <<
+    ZeLOG(Error, ZtString() <<
 	"Zdb pwrite() failed on \"" << fileName(rec.file()->index()) <<
 	"\" at offset " << rec.off() <<  ": " << e);
   }

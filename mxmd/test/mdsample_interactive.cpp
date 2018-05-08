@@ -120,7 +120,7 @@ void addSecurity(MxMDSecurity *security)
 void subscribe(const MxMDCmd::CmdArgs &args, ZtArray<char> &out)
 {
   MxMDLib *md = MxMDLib::instance();
-  if (!md) throw ZtZString("MxMDLib::instance() failed");
+  if (!md) throw ZtString("MxMDLib::instance() failed");
   ZmRef<MxMDSecurity> security;
   unsigned argc = ZuBox<unsigned>(args.get("#"));
   if (argc < 2) throw MxMDCmd::CmdUsage();
@@ -174,7 +174,7 @@ int main(int argc, char **argv)
 	cmd->lookupSyntax(),
 	MxMDCmd::CmdFn::Ptr<&subscribe>::fn(),
 	"subscribe",
-	ZtZString("usage: subscribe OPTIONS symbol\n\nOptions:\n") << 
+	ZtString() << "usage: subscribe OPTIONS symbol\n\nOptions:\n" <<
 	  cmd->lookupOptions());
 
     md->subscribe(&((new MxMDLibHandler())->

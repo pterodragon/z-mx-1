@@ -139,23 +139,20 @@ static ZeLog_Buf *logBuf()
   return buf;
 }
 
-void ZeLog::FileSink::init(int age, int offset)
+void ZeLog::FileSink::init(unsigned age, int tzOffset)
 {
-  m_offset = offset;
+  m_tzOffset = tzOffset;
 
   if (!m_filename) m_filename << ZeLog::program() << ".log";
 
   if (m_filename != "&2") {
     // age log files
-    int size = m_filename.size() + ZuBox<int>(age).length() + 1;
-    for (int i = age; i > 0; i--) {
-      ZtZString oldName(size);
-      oldName += m_filename;
-      if (i > 1) {
-	oldName += ".";
-	oldName += ZuBox<int>(i - 1);
-      }
-      ZtZString newName(size);
+    unsigned size = m_filename.size() + ZuBoxed(age).length() + 1;
+    for (unsigned i = age; i > 0; i--) {
+      ZtString oldName(size);
+      oldName << m_filename;
+      if (i > 1) oldName << '.' << ZuBoxed(i - 1);
+      ZtString newName(size);
       newName << m_filename << '.' << ZuBoxed(i);
       if (i == age) ::remove(newName);
       ::rename(oldName, newName);
@@ -189,7 +186,7 @@ void ZeLog::FileSink::log_(FILE *f, ZeEvent *e)
 {
   ZeLog_Buf *buf = logBuf();
 
-  buf->dateFmt.offset(m_offset);
+  buf->dateFmt.offset(m_tzOffset);
   buf->s.null();
 
   ZtDate d{e->time()};

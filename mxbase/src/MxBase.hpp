@@ -51,6 +51,10 @@
 
 // vocabulary types
 
+#ifndef MxBase_LongDouble
+#define MxBase_LongDouble 1	// MxFloat is long double instead of double
+#endif
+
 typedef ZuBox0(char) MxChar;
 typedef ZuBox<int8_t> MxBool;
 typedef ZuBox<uint8_t> MxUInt8;
@@ -58,7 +62,11 @@ typedef ZuBox<int32_t> MxInt;
 typedef ZuBox<uint32_t> MxUInt;
 typedef ZuBox<int64_t> MxInt64;
 typedef ZuBox<uint64_t> MxUInt64;
+#if MxBase_LongDouble
+typedef ZuBox<long double> MxFloat;
+#else
 typedef ZuBox<double> MxFloat;
+#endif
 typedef ZtDate MxDateTime;
 typedef ZmTime MxDeltaTime;
 typedef ZtEnum MxEnum;

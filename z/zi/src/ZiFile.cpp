@@ -140,7 +140,7 @@ void ZiFile_WindowsDrives::refresh()
   ZtWString drive;
   drive += L" :\\";
   ZtWString pathBuf(ZiPlatform::PathMax + 1);
-  ZtZWString path;
+  ZtWString path;
   int dl;
   do {
     dl = buf[i];
@@ -154,7 +154,7 @@ void ZiFile_WindowsDrives::refresh()
       else
 	path = pathBuf;
       m_driveLetters.add(path, dl);
-      if (!path.cmp(L"\\Device\\Harddisk", 16)) {
+      if (!path.icmp(L"\\Device\\Harddisk", 16)) {
 	drive[2] = '\\';
 	{
 	  DWORD sectorsPerCluster, bytesPerSector, d2, d3;
@@ -199,8 +199,8 @@ void ZiFile_WindowsDrives::dump_()
 
 int ZiFile_WindowsDrives::blkSize_path(const ZtWString &path_)
 {
-  ZtZWString path =
-    !path_.cmp(L"\\\\?\\", 4) ? path_.splice(4) : (ZtZWString)path_;
+  ZtWString path =
+    !path_.cmp(L"\\\\?\\", 4) ? path_.splice(4) : (ZtWString)path_;
 
   int dl = 0;
   if (path[1] == ':')
@@ -1021,19 +1021,14 @@ error:
 
 void ZiFile::age(const Path &name_, unsigned max)
 {
-  ZtZString name = name_;
+  ZtString name = name_;
   unsigned size = name.size() + ZuBoxed(max).length() + 1;
   for (unsigned i = max; i > 0; --i) {
-    ZtZString oldName(size);
-    oldName += name;
-    if (i > 1) {
-      oldName += ".";
-      oldName += ZuBoxed(i - 1);
-    }
-    ZtZString newName(size);
-    newName += name;
-    newName += ".";
-    newName += ZuBoxed(i);
+    ZtString oldName(size);
+    oldName << name;
+    if (i > 1) oldName << '.' << ZuBoxed(i - 1);
+    ZtString newName(size);
+    newName << name << '.' << ZuBoxed(i);
     if (i == max) remove(newName);
     rename(oldName, newName);
   }
@@ -1041,7 +1036,7 @@ void ZiFile::age(const Path &name_, unsigned max)
 
 ZiFile::Path ZiFile::cwd()
 {
-  ZPath ret(ZiPlatform::PathMax + 1);
+  Path ret(ZiPlatform::PathMax + 1);
 
 #ifndef _WIN32
   if (!getcwd(ret.data(), ZiPlatform::PathMax + 1))
@@ -1106,14 +1101,14 @@ ZiFile::Path ZiFile::dirname(const Path &name)
 
 ZiFile::Path ZiFile::append(const Path &dir, const Path &name)
 {
-  ZPath ret(dir.length() + 1 + name.length() + 1);
+  Path ret(dir.length() + 1 + name.length() + 1);
 
-  ret += dir;
+  ret << dir;
 #ifndef _WIN32
-  ret += "/";
+  ret << "/";
 #else
-  ret += L"\\";
+  ret << L"\\";
 #endif
-  ret += name;
+  ret << name;
   return ret;
 }

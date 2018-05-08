@@ -91,13 +91,13 @@ public:
   virtual void parse(ZuString value, ZuAnyPOD *pod) const = 0;
   virtual void place(ZtArray<char> &row, ZuAnyPOD *pod) const = 0;
 
-  static void quote(ZtArray<char> &row, const char *s, unsigned n) {
+  static void quote(ZtArray<char> &row, ZuString s) {
     row << '"';
-    quote2(row, s, n);
+    quote2(row, s);
     row << '"';
   }
-  static void quote2(ZtArray<char> &row, const char *s, unsigned n) {
-    for (unsigned i = 0; i < n; i++) {
+  static void quote2(ZtArray<char> &row, ZuString s) {
+    for (unsigned i = 0, n = s.length(); i < n; i++) {
       char ch = s[i];
       row << ch;
       if (ZuUnlikely(ch == '"')) row << '"'; // double-up quotes within quotes
@@ -129,7 +129,7 @@ public:
   }
   void place(ZtArray<char> &row, ZuAnyPOD *pod) const {
     ZuString s(*((const T *)((char *)pod->ptr() + this->m_offset)));
-    this->quote(row, s.data(), s.length());
+    this->quote(row, s);
   }
 };
 
@@ -245,8 +245,7 @@ public:
   void place(ZtArray<char> &row, ZuAnyPOD *pod) const {
     const Box &v = *(const Box *)((const char *)pod->ptr() + this->m_offset);
     try {
-      ZtZArray<char> s = m_map->v2s(id(), v);
-      this->quote(row, s.data(), s.length());
+      this->quote(row, m_map->v2s(id(), v));
     } catch (...) { }
   }
 
@@ -321,9 +320,9 @@ public:
   void place(ZtArray<char> &row, ZuAnyPOD *pod) const {
     const T &v = *(const T *)((const char *)pod->ptr() + this->m_offset);
     if (!v) return;
-    ZtZArray<char> s;
+    ZtString s;
     m_map->print(id(), s, v);
-    this->quote(row, s.data(), s.length());
+    this->quote(row, s);
   }
 
 private:
@@ -374,6 +373,7 @@ class ZvAPI ZvCSV {
   ZvCSV(const ZvCSV &);
   ZvCSV &operator =(const ZvCSV &);	// prevent mis-use
 
+  typedef ZtArray<ZuString> ColNames;
   typedef ZtArray<const ZvCSVColumn_ *> CColArray;
   typedef ZtArray<ZvCSVColumn_ *> ColArray;
   typedef ZtArray<int> ColIndex;
@@ -409,10 +409,10 @@ public:
   }
 
 private:
-  void split(ZuString row, ZtArray<ZtZArray<char> > &a);
+  void split(ZuString row, ZtArray<ZtArray<char> > &a);
 
   void header(ColIndex &colIndex, ZuString hdr) {
-    ZtArray<ZtZArray<char> > a;
+    ZtArray<ZtArray<char> > a;
     split(hdr, a);
     unsigned n = m_colArray.length();
     colIndex.null();
@@ -425,13 +425,13 @@ private:
   }
 
   void parse(const ColIndex &colIndex, ZuString row, ZuAnyPOD *pod) {
-    ZtArray<ZtZArray<char>> a;
+    ZtArray<ZtArray<char> > a;
     split(row, a);
     unsigned n = colIndex.length();
     for (unsigned i = 0; i < n; i++) {
       int j;
       if ((j = colIndex[i]) < 0 || j >= (int)a.length())
-        m_colArray[i]->parse(ZtZArray<char>(), pod);
+        m_colArray[i]->parse(ZtArray<char>(), pod);
     }
     for (unsigned i = 0; i < n; i++) {
       int j;
@@ -453,16 +453,18 @@ private:
 
 public:
   class ZvAPI FileIOError : public ZvError {
-    public:
-      template <typename FileName>
-      FileIOError(const FileName &fileName, ZeError e) :
-	m_fileName(fileName), m_err(e) { }
-      ZtZString message() const {
-	return ZtSprintf("\"%s\" %s", m_fileName.data(), m_err.message());
-      }
-    private:
-      ZtString	m_fileName;
-      ZeError   m_err;
+  public:
+    template <typename FileName>
+    FileIOError(const FileName &fileName, ZeError e) :
+      m_fileName(fileName), m_error(e) { }
+
+    void print_(ZmStream &s) const {
+      s << "\"" << m_fileName << "\" " << m_error;
+    }
+
+  private:
+    ZtString	m_fileName;
+    ZeError	m_error;
   };
 
   void readFile(const char *fileName,
@@ -470,18 +472,16 @@ public:
   void readData(ZuString data,
       ZvCSVAllocFn allocFn, ZvCSVReadFn readFn = ZvCSVReadFn());
 
-  ZvCSVWriteFn writeFile(const char *fileName,
-      const ZtArray<ZtString> &columns);
+  ZvCSVWriteFn writeFile(const char *fileName, const ColNames &columns);
   inline ZvCSVWriteFn writeFile(const char *fileName) {
-    return writeFile(fileName, ZtArray<ZtString>());
+    return writeFile(fileName, ColNames());
   }
-  ZvCSVWriteFn writeData(ZtArray<char> &data,
-      const ZtArray<ZtString> &columns);
+  ZvCSVWriteFn writeData(ZtArray<char> &data, const ColNames &columns);
   inline ZvCSVWriteFn writeData(ZtArray<char> &data) {
-    return writeData(data, ZtArray<ZtString>());
+    return writeData(data, ColNames());
   }
 
-  void writeHeaders(ZtArray<ZtZString> &headers);
+  void writeHeaders(ColNames &headers);
 
 private:
   void writeFile_(

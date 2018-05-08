@@ -23,7 +23,7 @@
 
 #ifdef _WIN32
 
-int ZiModule::load(const Path &name, int flags, ZtZString *e)
+int ZiModule::load(const Path &name, int flags, ZtString *e)
 {
   Guard guard(m_lock);
 
@@ -34,7 +34,7 @@ int ZiModule::load(const Path &name, int flags, ZtZString *e)
   return Zi::IOError;
 }
 
-int ZiModule::unload(ZtZString *e)
+int ZiModule::unload(ZtString *e)
 {
   Guard guard(m_lock);
 
@@ -48,7 +48,7 @@ int ZiModule::unload(ZtZString *e)
   return Zi::IOError;
 }
 
-void *ZiModule::resolve(const char *symbol, ZtZString *e)
+void *ZiModule::resolve(const char *symbol, ZtString *e)
 {
   Guard guard(m_lock);
   void *ptr;
@@ -62,7 +62,7 @@ void *ZiModule::resolve(const char *symbol, ZtZString *e)
 
 #include <dlfcn.h>
 
-int ZiModule::load(const Path &name, int flags, ZtZString *e)
+int ZiModule::load(const Path &name, int flags, ZtString *e)
 {
   Guard guard(m_lock);
 
@@ -75,7 +75,7 @@ int ZiModule::load(const Path &name, int flags, ZtZString *e)
   return Zi::IOError;
 }
 
-int ZiModule::unload(ZtZString *e)
+int ZiModule::unload(ZtString *e)
 {
   Guard guard(m_lock);
 
@@ -89,7 +89,7 @@ int ZiModule::unload(ZtZString *e)
   return Zi::IOError;
 }
 
-void *ZiModule::resolve(const char *symbol, ZtZString *e)
+void *ZiModule::resolve(const char *symbol, ZtString *e)
 {
   Guard guard(m_lock);
   void *ptr;

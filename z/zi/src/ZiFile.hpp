@@ -56,7 +56,6 @@ class ZiAPI ZiFile {
 public:
   typedef ZiPlatform::Handle Handle;
   typedef ZiPlatform::Path Path;
-  typedef ZiPlatform::ZPath ZPath;
   typedef ZiPlatform::Offset Offset;
   typedef ZiPlatform::MMapPtr MMapPtr;
 

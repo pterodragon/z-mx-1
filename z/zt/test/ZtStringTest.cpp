@@ -23,19 +23,22 @@ void foo(const ZtString &s, ZtString t)
 
 void bar(bool b, ZtString &s)
 {
-  ZtZString baz = b ? ZtZString(s) : "bah";
-
+  ZtString baz;
+  if (b)
+    baz = s;
+  else
+    baz = "bah";
   puts(baz);
 }
 
 int main()
 {
-  ZtZString s1, s2, s3, s4;
+  ZtString s1, s2, s3, s4;
 
   s1 = (char *)0;
   s2 = "hello";
   s3 = "world";
-  s4 = s3.dup();
+  s4 = s3;
 
   puts(s2 + s1);
   puts(s3 + s1);
@@ -101,54 +104,54 @@ int main()
   puts(s1);
 
   {
-    ZtZString s;
+    ZtString s;
 
     s.sprintf("%s %.1d %.2d %.3d %s", "hello", 1, 2, 3, "world");
     puts(s);
   }
   {
     ZtString s =
-      ZtZString().sprintf("%s %.1d %.2d %.3d %s", "goodbye", 1, 2, 3, "world");
+      ZtString().sprintf("%s %.1d %.2d %.3d %s", "goodbye", 1, 2, 3, "world");
 
     puts(s);
   }
   {
-    ZtZWString w;
+    ZtWString w;
 
     w.sprintf(L"%ls %.1d %.2d %.3d %ls", L"hello", 1, 2, 3, L"world");
 
-    ZtZString s = ZtZString(w);
+    ZtString s = w;
 
     puts(s);
   }
   {
-    ZtZWString w =
-      ZtZWString().sprintf(L"%ls %.1d %.2d %.3d %ls",
+    ZtWString w =
+      ZtWString().sprintf(L"%ls %.1d %.2d %.3d %ls",
 			   L"goodbye", 1, 2, 3, L"world");
-    ZtString s = ZtZString(w);
+    ZtString s = ZtString(w);
 
     puts(s);
   }
 
   {
-    ZtZString s1, s2, s3;
-    ZtZWString w1, w2, w3;
+    ZtString s1, s2, s3;
+    ZtWString w1, w2, w3;
 
     s1 += "Hello";
-    w1 += ZtZWString(s1);
+    w1 += ZtWString(s1);
     w1 += L" ";
-    s1 += ZtZString(w2 = L" ");
+    s1 += ZtString(w2 = L" ");
     s3 = "World";
     w3 = L"World";
     s1 += s3;
     w1 += w3;
-    if (s1 != ZtZString(w1)) {
+    if (s1 != ZtString(w1)) {
       s2 = w1;
       w2 = s1;
       printf("1.1 \"%S\" != \"%S\"\n", w2.data(), w1.data());
       printf("1.2 \"%s\" != \"%s\"\n", s1.data(), s2.data());
     }
-    if (w1 != ZtZWString(s1)) {
+    if (w1 != ZtWString(s1)) {
       s2 = w1;
       w2 = s1;
       printf("2.1 \"%S\" != \"%S\"\n", w1.data(), w2.data());
@@ -278,9 +281,9 @@ int main()
     s += ZuStringN<4>("foo");
     if (s == "foo") puts("ZuStringN appending to std::string ok");
     else puts("ZuStringN appending to std::string FAILED");
-    s += ZtZString(" bar");
-    if (s == "foo bar") puts("ZtZString appending to std::string ok");
-    else puts("ZtZString appending to std::string FAILED");
+    s += ZtString(" bar");
+    if (s == "foo bar") puts("ZtString appending to std::string ok");
+    else puts("ZtString appending to std::string FAILED");
   }
   {
     std::stringstream s;
@@ -289,16 +292,16 @@ int main()
     buf[s.rdbuf()->sgetn(buf, 63)] = 0;
     if (!strcmp(buf, "foo")) puts("ZuStringN writing to std::ostream ok");
     else puts("ZuStringN writing to std::ostream FAILED");
-    s << ZuStringN<4>("foo") << ' ' << ZtZString("bar");
+    s << ZuStringN<4>("foo") << ' ' << ZtString("bar");
     buf[s.rdbuf()->sgetn(buf, 63)] = 0;
-    if (!strcmp(buf, "foo bar")) puts("ZtZString writing to std::ostream ok");
-    else puts("ZtZString writing to std::ostream FAILED");
+    if (!strcmp(buf, "foo bar")) puts("ZtString writing to std::ostream ok");
+    else puts("ZtString writing to std::ostream FAILED");
   }
 
-  puts(ZtZString() << "hello " << "world");
+  puts(ZtString() << "hello " << "world");
 
   {
-    ZtZString j = ZtJoin(",", { "x", "y" });
+    ZtString j = ZtJoin(",", { "x", "y" });
     if (j != "x,y") puts("ZtJoin FAILED");
   }
 

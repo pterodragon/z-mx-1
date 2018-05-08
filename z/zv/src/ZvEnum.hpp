@@ -45,25 +45,30 @@
 
 template <typename T> class ZvEnum;
 
-struct ZvInvalidEnum : public ZvError {
+class ZvAPI ZvInvalidEnum : public ZvError {
 public:
-  inline ZvInvalidEnum() { }
-
+  // inline ZvInvalidEnum() { }
   template <typename Key, typename Value>
   inline ZvInvalidEnum(Key &&key, Value &&value) :
     m_key(ZuFwd<Key>(key)), m_value(ZuFwd<Value>(value)) { }
 
+#if 0
   inline ZvInvalidEnum(const ZvInvalidEnum &i) :
     m_key(i.m_key), m_value(i.m_value) { }
-
   inline ZvInvalidEnum &operator =(const ZvInvalidEnum &i) {
-    if (this != &i)
-      m_key = i.m_key, m_value = i.m_value;
+    if (this != &i) m_key = i.m_key, m_value = i.m_value;
     return *this;
   }
+  inline ZvInvalidEnum(ZvInvalidEnum &&i) :
+    m_key(ZuMv(i.m_key)), m_value(ZuMv(i.m_value)) { }
+  inline ZvInvalidEnum &operator =(ZvInvalidEnum &&i) {
+    m_key = ZuMv(i.m_key), m_value = ZuMv(i.m_value);
+    return *this;
+  }
+#endif
 
-  inline ZtZString key() const { return m_key; }
-  inline ZtZString value() const { return m_value; }
+  inline const ZtString &key() const { return m_key; }
+  inline const ZtString &value() const { return m_value; }
 
 private:
   ZtString			m_key;
@@ -71,25 +76,14 @@ private:
 };
 template <typename T> class ZvInvalidEnumT : public ZvInvalidEnum {
 public:
-  inline ZvInvalidEnumT() { }
-
   template <typename Key, typename Value>
   inline ZvInvalidEnumT(
       Key &&key, Value &&value, const ZvEnum<T> *enum_) :
     ZvInvalidEnum(ZuFwd<Key>(key), ZuFwd<Value>(value)), m_enum(enum_) { }
 
-  inline ZvInvalidEnumT(const ZvInvalidEnumT &i) :
-    ZvInvalidEnum(i), m_enum(i.m_enum) { }
+  void print_(ZmStream &s) const;
 
-  inline ZvInvalidEnumT &operator =(const ZvInvalidEnumT &i) {
-    if (this != &i)
-      ZvInvalidEnum::operator =(i), m_enum = i.m_enum;
-    return *this;
-  }
-
-  ZtZString message() const;
-
-  inline const ZvEnum<T> *enum_() const { return m_enum; }
+  // inline const ZvEnum<T> *enum_() const { return m_enum; }
 
 private:
   const ZvEnum<T>	*m_enum;
@@ -131,10 +125,8 @@ friend class Iterator;
   };
 
 private:
-
   template <typename Key, typename Value>
-  inline ZtZString errorMessage(Key &&key, Value &&value) const {
-    ZtZString s;
+  inline void errorMessage(ZmStream &s, Key &&key, Value &&value) const {
     s << ZuFwd<Key>(key) << ": \"" << ZuFwd<Value>(value) <<
       "\" did not match { ";
     {
@@ -149,14 +141,13 @@ private:
       }
     }
     s << " }";
-    return s;
   }
 };
 
 template <typename T>
-ZtZString ZvInvalidEnumT<T>::message() const
+void ZvInvalidEnumT<T>::print_(ZmStream &s) const
 {
-  return m_enum->errorMessage(this->key(), this->value());
+  m_enum->errorMessage(s, this->key(), this->value());
 }
 
 template <typename T> class ZvFlags : public ZvEnum<T> {

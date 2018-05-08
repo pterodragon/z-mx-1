@@ -123,7 +123,7 @@ void Engine::init(Mx *mx, ZvCf *cf)
   m_reRequestInterval = cf->getDbl("reRequestInterval", 0, 3600, false, 1);
   if (ZmRef<ZvCf> linksCf = cf->subset("links", false)) {
     ZvCf::Iterator i(linksCf);
-    ZtZString id;
+    ZuString id;
     while (ZmRef<ZvCf> linkCf = i.subset(id))
       MxEngine::updateLink<Link>(id, linkCf);
   }

@@ -29,7 +29,7 @@ ZiPlatform::Username ZiPlatform::username(ZeError *e)
   struct passwd *result = 0;
   char *pwdBuf = 0;
   ssize_t bufSize = 0;
-  ZiPlatform::ZUsername name;
+  ZiPlatform::Username name;
 
   bufSize = sysconf(_SC_GETPW_R_SIZE_MAX);
   if (bufSize < 0) bufSize = (1<<14);
@@ -48,7 +48,7 @@ ZiPlatform::Username ZiPlatform::username(ZeError *e)
 
 ZiPlatform::Hostname ZiPlatform::hostname(ZeError *e)
 {
-  ZiPlatform::ZHostname name;
+  ZiPlatform::Hostname name;
   name.size(HOST_NAME_MAX + 1);
   int s = gethostname(name.data(), HOST_NAME_MAX);
   if (s < 0) { name.null(); return name; }

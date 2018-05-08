@@ -32,9 +32,9 @@ struct LocalDT {
     l.hmsn(m_h, m_m, m_s, m_n);
     ZmAssert(d == ZtDate(m_Y, m_M, m_D, m_h, m_m, m_s, m_n, ""));
   }
-  inline ZtZString dump() {
+  inline ZtString dump() {
     return ZtSprintf("Lcl %.4d/%.2d/%.2d %.2d:%.2d:%.2d.%.6d",
-                     m_Y, m_M, m_D, m_h, m_m, m_s, m_n / 1000);
+	m_Y, m_M, m_D, m_h, m_m, m_s, m_n / 1000);
   }
   int m_Y, m_M, m_D, m_h, m_m, m_s, m_n;
 };
@@ -45,9 +45,9 @@ struct GMTDT {
     d.hmsn(m_h, m_m, m_s, m_n);
     ZmAssert(d == ZtDate(m_Y, m_M, m_D, m_h, m_m, m_s, m_n, 0));
   }
-  inline ZtZString dump() {
+  inline ZtString dump() {
     return ZtSprintf("GMT %.4d/%.2d/%.2d %.2d:%.2d:%.2d.%.6d",
-                     m_Y, m_M, m_D, m_h, m_m, m_s, m_n / 1000);
+	m_Y, m_M, m_D, m_h, m_m, m_s, m_n / 1000);
   }
   int m_Y, m_M, m_D, m_h, m_m, m_s, m_n;
 };
@@ -59,10 +59,7 @@ void weekDate(ZtDate d, int year, int weekChk, int wkDayChk)
   int days = d.days(year, 1, 1);
   d.ywd(year, days, week, wkDay);
   printf("%s: %d+%d %d+%d.%dW %d %d\n",
-         isoStr(d).data(),
-	 year, days,
-	 year, days / 7, days % 7,
-	 week, wkDay);
+      isoStr(d).data(), year, days, year, days / 7, days % 7, week, wkDay);
   CHECK(week == weekChk);
   CHECK(wkDay == wkDayChk);
 }
@@ -74,10 +71,7 @@ void weekDateSun(ZtDate d, int year, int weekChk, int wkDayChk)
   int days = d.days(year, 1, 1);
   d.ywdSun(year, days, week, wkDay);
   printf("%s: %d+%d %d+%d.%dW %d %d\n",
-         isoStr(d).data(),
-	 year, days,
-	 year, days / 7, days % 7,
-	 week, wkDay);
+      isoStr(d).data(), year, days, year, days / 7, days % 7, week, wkDay);
   CHECK(week == weekChk);
   CHECK(wkDay == wkDayChk);
 }
@@ -89,10 +83,8 @@ void weekDateISO(ZtDate d, int year, int yearChk, int weekChk, int wkDayChk)
   int days = d.days(year, 1, 1);
   d.ywdISO(year, days, yearISO, weekISO, wkDay);
   printf("%s: %d+%d %d+%d.%dW %d %d %d\n",
-         isoStr(d).data(),
-	 year, days,
-	 year, days / 7, days % 7,
-	 yearISO, weekISO, wkDay);
+      isoStr(d).data(), year, days, year, days / 7, days % 7,
+      yearISO, weekISO, wkDay);
   CHECK(yearISO == yearChk);
   CHECK(weekISO == weekChk);
   CHECK(wkDay == wkDayChk);

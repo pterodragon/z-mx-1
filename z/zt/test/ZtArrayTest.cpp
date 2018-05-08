@@ -50,8 +50,8 @@ int main()
   {
     E e[8];
     ZtArray<E> a;
-    a = ZtZArray<E>(e, 8);
-    ZtZArray<E> b;
+    a = ZtArray<E>(e, 8);
+    ZtArray<E> b;
 
     validate(a, 8);
     a.splice(0, 0, e, 4);
@@ -77,7 +77,7 @@ int main()
 
   {
     std::vector<const char *> v = { { "hello", "world" } };
-    ZtArray<ZtZString> b = v;
+    ZtArray<ZuString> b = v;
     puts(b[0]);
     puts(b[1]);
   }

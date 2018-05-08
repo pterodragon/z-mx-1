@@ -51,20 +51,23 @@ ZvCf::~ZvCf()
 
 int ZvCf::fromCLI(ZvCf *syntax, ZuString line)
 {
-  ZtZArray<ZtString> args = parseCLI(line);
+  ZtArray<ZtString> args;
+  parseCLI(line, args);
   if (!args.length()) return 0;
   return fromArgs(syntax->subset(args[0], false), args);
 }
 
 int ZvCf::fromCLI(const ZvOpt *opts, ZuString line)
 {
-  return fromArgs(opts, parseCLI(line));
+  ZtArray<ZtString> args;
+  parseCLI(line, args);
+  if (!args.length()) return 0;
+  return fromArgs(opts, args);
 }
 
-ZtZArray<ZtString> ZvCf::parseCLI(ZuString line)
+void ZvCf::parseCLI(ZuString line, ZtArray<ZtString> &args)
 {
-  ZtZArray<ZtString> args;
-
+  args.length(0);
   try {
     ZtString val;
     static ZtRegex cliValue("\\G[^\"'`\\s]+", PCRE_UTF8);	// \G[^"'`\s]+
@@ -130,19 +133,17 @@ ZtZArray<ZtString> ZvCf::parseCLI(ZuString line)
       }
       if (cliWhiteSpace.m(line, c, pos)) {
 	pos += c[1].length();
-	args.push(val.move());
-	if (val) val.null();
+	args.push(ZuMv(val));
+	val.null();
 	continue;
       }
       ZmAssert(false);	// should not get here
       break;
     }
-    if (val) args.push(val.move());
+    if (val) args.push(ZuMv(val));
   } catch (const ZtRegex::Error &e) {
     throw ZvRegexError(e);
   }
-
-  return args;
 }
 
 #ifdef _MSC_VER
@@ -152,9 +153,9 @@ ZtZArray<ZtString> ZvCf::parseCLI(ZuString line)
 
 int ZvCf::fromArgs(const ZvOpt *opts, int argc, char **argv)
 {
-  ZtZArray<ZtString> args(argc);
-
-  for (int i = 0; i < argc; i++) args.push(argv[i]);
+  if (ZuUnlikely(argc < 0)) return 0;
+  ZtArray<ZtString> args(argc);
+  for (unsigned i = 0; i < (unsigned)argc; i++) args.push(argv[i]);
   return fromArgs(opts, args);
 }
 
@@ -162,26 +163,7 @@ int ZvCf::fromArgs(const ZvOpt *opts, int argc, char **argv)
 #pragma warning(pop)
 #endif
 
-int ZvCf::fromArgs(const ZvOpt *opts, const ZtZArray<ZtString> &args)
-{
-  ZmRef<ZvCf> options = new ZvCf();
-
-  for (int i = 0; opts[i].m_long; i++) {
-    ZmRef<ZvCf> option = new ZvCf();
-    static const char *types[] = { "flag", "scalar", "multi" };
-    if (opts[i].m_type < 0 ||
-	opts[i].m_type >= (int)(sizeof(types) / sizeof(types[0])))
-      throw Usage(opts[i].m_long);
-    option->set("type", types[opts[i].m_type]);
-    if (opts[i].m_default) option->set("default", opts[i].m_default);
-    options->subset(opts[i].m_long, option);
-    if (opts[i].m_short) options->set(opts[i].m_short, opts[i].m_long);
-  }
-
-  return fromArgs(options, args);
-}
-
-int ZvCf::fromArgs(ZvCf *options, const ZtZArray<ZtString> &args)
+int ZvCf::fromArgs(ZvCf *options, const ZtArray<ZtString> &args)
 {
   try {
     int i, j, n, l, p;
@@ -199,7 +181,7 @@ int ZvCf::fromArgs(ZvCf *options, const ZtZArray<ZtString> &args)
 	int m = c[2].length();
 	for (j = 0; j < m; j++) {
 	  ZtString shortOpt(ZtString::Copy, c[2].data() + j, 1);
-	  ZtZString longOpt;
+	  ZuString longOpt;
 	  if (!options ||
 	      !(longOpt = options->get(shortOpt)) ||
 	      !(option = options->subset(longOpt, false)))
@@ -208,7 +190,7 @@ int ZvCf::fromArgs(ZvCf *options, const ZtZArray<ZtString> &args)
 	  if (type == ZvOptFlag) {
 	    fromArg(longOpt, ZvOptFlag, "1");
 	  } else {
-	    ZtZString deflt = option->get("default");
+	    ZuString deflt = option->get("default");
 	    if (deflt) {
 	      if (n < l && args[n][0] != '-') {
 		fromArg(longOpt, type,
@@ -236,7 +218,7 @@ int ZvCf::fromArgs(ZvCf *options, const ZtZArray<ZtString> &args)
 	if (type == ZvOptFlag) {
 	  fromArg(longOpt, ZvOptFlag, "1");
 	} else {
-	  ZtZString deflt = option->get("default");
+	  ZuString deflt = option->get("default");
 	  if (!deflt) throw Usage(longOpt);
 	  fromArg(longOpt, type, deflt);
 	}
@@ -263,30 +245,43 @@ int ZvCf::fromArgs(ZvCf *options, const ZtZArray<ZtString> &args)
   }
 }
 
-// suppress security warning about strtok()
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4996)
-#endif
+int ZvCf::fromArgs(const ZvOpt *opts, const ZtArray<ZtString> &args)
+{
+  ZmRef<ZvCf> options = new ZvCf();
 
-ZmRef<ZvCf> ZvCf::scope(ZtString &fullKey, ZtZString &key, bool create)
+  for (int i = 0; opts[i].m_long; i++) {
+    ZmRef<ZvCf> option = new ZvCf();
+    static const char *types[] = { "flag", "scalar", "multi" };
+    if (opts[i].m_type < 0 ||
+	opts[i].m_type >= (int)(sizeof(types) / sizeof(types[0])))
+      throw Usage(opts[i].m_long);
+    option->set("type", types[opts[i].m_type]);
+    if (opts[i].m_default) option->set("default", opts[i].m_default);
+    options->subset(opts[i].m_long, option);
+    if (opts[i].m_short) options->set(opts[i].m_short, opts[i].m_long);
+  }
+
+  return fromArgs(options, args);
+}
+
+static ZuString scope_(ZuString &key)
+{
+  if (!key) return key;
+  unsigned i = 0, n = key.length();
+  for (; i < n && key[i] != ':'; ++i);
+  ZuString s{key.data(), i};
+  key.offset(i + (i < n));
+  return s;
+}
+
+ZmRef<ZvCf> ZvCf::scope(ZuString fullKey, ZuString &key, bool create)
 {
   ZmRef<ZvCf> self = this;
-#ifdef _WIN32
-  char *scope = strtok(fullKey, ":"), *nscope = 0;
-#else
-  char *strtokContext = 0;
-  char *scope = strtok_r(fullKey, ":", &strtokContext), *nscope = 0;
-#endif
-
-  while (scope) {
-    if (nscope =
-#ifdef _WIN32
-	strtok(0, ":")
-#else
-	strtok_r(0, ":", &strtokContext)
-#endif
-	) {
+  ZuString scope = scope_(fullKey);
+  ZuString nscope;
+  if (scope)
+    for (;;) {
+      if (!(nscope = scope_(fullKey))) break;
       NodeRef node = self->m_tree.findVal(scope);
       if (!node) {
 	if (!create) return 0;
@@ -297,28 +292,21 @@ ZmRef<ZvCf> ZvCf::scope(ZtString &fullKey, ZtZString &key, bool create)
 	node->m_cf = new ZvCf(self);
       }
       self = node->m_cf;
-    } else {
-      key = scope;
+      scope = nscope;
     }
-    scope = nscope;
-  }
+  key = scope;
   return self;
 }
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 static bool flagValue(const ZtString &s)
 {
   return s == "1" || ZtICmp::equals(s, "y") || ZtICmp::equals(s, "yes");
 }
 
-void ZvCf::fromArg(ZuString fullKey_, int type, ZuString argVal)
+void ZvCf::fromArg(ZuString fullKey, int type, ZuString argVal)
 {
-  ZtString fullKey = fullKey_;
-  ZtZString key;
-  ZmRef<ZvCf> self = scope(fullKey, key, true);
+  ZuString key;
+  ZmRef<ZvCf> self = scope(fullKey, key, 1);
   NodeRef node = self->m_tree.findVal(key);
   if (!node) self->m_tree.add(key, node = new Node());
   node->m_values.null();
@@ -358,7 +346,7 @@ append:
     multi = true;
   }
 
-  node->m_values.push(val.move());
+  node->m_values.push(ZuMv(val));
   if (multi) goto val;
 }
 
@@ -416,7 +404,7 @@ key:
       return;
     }
     pos += c[1].length();
-    ZtString key = c[1];
+    ZuString key = c[1];
     NodeRef node;
     if (key[0] != '%') {
       if (!(node = self->m_tree.findVal(key))) {
@@ -424,7 +412,7 @@ key:
 	self->m_tree.add(key, node = new Node());
       }
     }
-    ZtZArray<ZtString> values;
+    ZtArray<ZtString> values;
 
 val:
     while (fileSkip.m(in, c, pos))
@@ -445,7 +433,7 @@ append:
     }
     if (fileValueVar.m(in, c, pos)) {
       pos += c[1].length();
-      ZtZString d = defines->findVal(c[2]);
+      ZuString d = defines->findVal(c[2]);
       if (!d) d = getenv(c[2]);
       if (!!d) val += d;
       goto append;
@@ -466,14 +454,17 @@ quoted:
 	pos++;
 	goto append;
       }
-      values.push(val.move());
-      node->m_values = values;
+      values.push(ZuMv(val));
+      node->m_values = ZuMv(values);
       return;
     }
     if (fileBeginScope.m(in, c, pos)) {
       pos += c[1].length();
-      if (val) values.push(val.move());
-      if (node && values.length()) node->m_values = values;
+      if (val) values.push(ZuMv(val));
+      if (node && values.length()) {
+	node->m_values = ZuMv(values);
+	values.length(0);
+      }
       if (node && !node->m_cf) {
 	if (validate) throw Invalid(key, fileName);
 	node->m_cf = new ZvCf(self);
@@ -486,11 +477,12 @@ quoted:
       multi = true;
     }
 
-    values.push(val.move());
+    values.push(ZuMv(val));
     if (multi) goto val;
-    if (node)
-      node->m_values = values;
-    else {
+    if (node) {
+      node->m_values = ZuMv(values);
+      values.length(0);
+    } else {
       if (key == "%include") {
 	unsigned n = values.length();
 	for (unsigned i = 0; i < n; i++) {
@@ -524,7 +516,7 @@ quoted:
 void ZvCf::fromEnv(const char *name, bool validate)
 {
   try {
-    ZtZString data = getenv(name);
+    ZuString data = getenv(name);
     unsigned n = data.length();
 
     if (!data) return;
@@ -569,13 +561,13 @@ key:
 
     first = false;
 
-    ZtString key = c[1];
+    ZuString key = c[1];
     NodeRef node = self->m_tree.findVal(key);
     if (!node) {
       if (validate) throw Invalid(key, 0);
       self->m_tree.add(key, node = new Node());
     }
-    ZtZArray<ZtString> values;
+    ZtArray<ZtString> values;
 
 val:
     if (!values.length()) {
@@ -613,14 +605,17 @@ quoted:
 	pos++;
 	goto append;
       }
-      values.push(val.move());
-      node->m_values = values;
+      values.push(ZuMv(val));
+      node->m_values = ZuMv(values);
       return;
     }
     if (envBeginScope.m(data, c, pos)) {
       pos += c[1].length();
-      if (val) values.push(val.move());
-      if (values.length()) node->m_values = values;
+      if (val) values.push(ZuMv(val));
+      if (values.length()) {
+	node->m_values = ZuMv(values);
+	values.length(0);
+      }
       if (!node->m_cf) {
 	if (validate) throw Invalid(key, 0);
 	node->m_cf = new ZvCf(self);
@@ -634,9 +629,10 @@ quoted:
       multi = true;
     }
 
-    values.push(val.move());
+    values.push(ZuMv(val));
     if (multi) goto val;
-    node->m_values = values;
+    node->m_values = ZuMv(values);
+    values.length(0);
     goto key;
   } catch (const ZtRegex::Error &e) {
     throw ZvRegexError(e);
@@ -678,53 +674,46 @@ void ZvCf::toArgs(ZtArray<ZtString> &args, ZuString prefix)
       if (n) {
 	ZtString arg;
 	if (ZuBox<int>().scan(node_->key()) != node_->key().length())
-	  arg = ZtSprintf("--%s%s=", prefix.data(), node_->key().data());
+	  arg << "--" << prefix << node_->key() << '=';
 	for (int i = 0; i < n; i++) {
-	  arg += quoteArgValue(node->m_values[i]);
-	  if (i < n - 1) arg += ',';
+	  arg << quoteArgValue(node->m_values[i]);
+	  if (i < n - 1) arg << ',';
 	}
-	args.push(arg.move());
+	args.push(ZuMv(arg));
       }
     }
     if (node->m_cf)
-      node->m_cf->toArgs(args, ZtSprintf("%s%s:",
-	    prefix.data(), node_->key().data()));
+      node->m_cf->toArgs(args, ZtString() << prefix << node_->key() << ':');
   }
 }
 
-ZtZString ZvCf::quoteArgValue(ZuString val_)
+ZtString ZvCf::quoteArgValue(ZuString in)
 {
-  if (!val_) return "\"\"";
+  if (!in) return "\"\"";
 
-  ZtString val = val_;
+  ZtString out = in;
 
   try {
     static ZtRegex argQuote("[`,]", PCRE_UTF8);	// [`,]
     ZtRegex::Captures c;
     unsigned pos = 0;
 
-    while (pos < val.length() && argQuote.m(val, c, pos)) {
+    while (pos < out.length() && argQuote.m(out, c, pos)) {
       pos = c[0].length();
-      val.splice(pos, 0, "`", 1);
+      out.splice(pos, 0, "`", 1);
       pos += c[1].length() + 1;
       pos++;
     }
-    return val.move();
   } catch (const ZtRegex::Error &e) {
     throw ZvRegexError(e);
   }
+
+  return out;
 }
 
-ZtZString ZvCf::toString()
+void ZvCf::print(ZmStream &s, ZtString prefix) const
 {
-  ZtString out;
-  toString(out, "");
-  return out.move();
-}
-
-void ZvCf::toString(ZtString &out, ZuString prefix)
-{
-  Tree::Iterator i(m_tree);
+  Tree::ReadIterator i(m_tree);
   Tree::NodeRef node_;
   NodeRef node;
 
@@ -733,29 +722,29 @@ void ZvCf::toString(ZtString &out, ZuString prefix)
     {
       int n = node->m_values.length();
       if (n) {
-	out << prefix << node_->key() << ' ';
+	s << prefix << node_->key() << ' ';
 	for (int i = 0; i < n; i++) {
-	  out << quoteValue(node->m_values[i]);
+	  s << quoteValue(node->m_values[i]);
 	  if (i < n - 1)
-	    out << ", ";
+	    s << ", ";
 	  else
-	    out << '\n';
+	    s << '\n';
 	}
       }
     }
     if (node->m_cf) {
-      out << prefix << node_->key() << " {\n";
-      node->m_cf->toString(out, ZtZString() << "  " << prefix);
-      out << prefix << "}\n";
+      s << prefix << node_->key() << " {\n" <<
+	node->m_cf->prefixed(ZtString() << "  " << prefix) <<
+	prefix << "}\n";
     }
   }
 }
 
-ZtZString ZvCf::quoteValue(ZuString val_)
+ZtString ZvCf::quoteValue(ZuString in)
 {
-  if (!val_) return "\"\"";
+  if (!in) return "\"\"";
 
-  ZtString val = val_;
+  ZtString out = in;
 
   try {
     static ZtRegex quote1("[#`\"{},\\s]", PCRE_UTF8);	  // [#`"{},\s]
@@ -766,48 +755,47 @@ ZtZString ZvCf::quoteValue(ZuString val_)
     bool doubleQuote = false;
     unsigned pos = 0;
 
-    if (quote1.m(val, c, pos)) {
+    if (quote1.m(out, c, pos)) {
       pos = c[0].length() + c[1].length();
-      if (quote2.m(val, c, pos))
+      if (quote2.m(out, c, pos))
 	doubleQuote = true;
     }
 
     pos = 0;
     if (doubleQuote) {
-      while (quoteValueDbl.m(val, c, pos)) {
+      while (quoteValueDbl.m(out, c, pos)) {
 	pos = c[0].length();
-	val.splice(pos, 0, "`", 1);
+	out.splice(pos, 0, "`", 1);
 	pos += c[1].length() + 1;
       }
-      val.splice(0, 0, "\"", 1);
-      val.splice(val.length(), 0, "\"", 1);
-      return val.move();
+      out.splice(0, 0, "\"", 1);
+      out.splice(out.length(), 0, "\"", 1);
     } else {
-      while (quoteValue.m(val, c, pos)) {
+      while (quoteValue.m(out, c, pos)) {
 	pos = c[0].length();
-	val.splice(pos, 0, "`", 1);
+	out.splice(pos, 0, "`", 1);
 	pos += c[1].length() + 1;
       }
-      return val.move();
     }
   } catch (const ZtRegex::Error &e) {
     throw ZvRegexError(e);
   }
+
+  return out;
 }
 
 void ZvCf::toFile_(ZiFile &file)
 {
-  ZtZString out = toString();
+  ZtString out;
+  out << *this;
   ZeError e;
   if (file.write(out.data(), out.length(), &e) != Zi::OK) throw e;
 }
 
-ZtZString ZvCf::get(
-    ZuString fullKey_, bool required, ZuString def)
+ZuString ZvCf::get(ZuString fullKey, bool required, ZuString def)
 {
-  ZtString fullKey = fullKey_;
-  ZtZString key;
-  ZmRef<ZvCf> self = scope(fullKey, key, false);
+  ZuString key;
+  ZmRef<ZvCf> self = scope(fullKey, key, 1);
   if (!self) {
     if (required) throw Required(fullKey);
     return def;
@@ -820,12 +808,11 @@ ZtZString ZvCf::get(
   return node->m_values[0];
 }
 
-const ZtArray<ZtString> *ZvCf::getMultiple(ZuString fullKey_,
+const ZtArray<ZtString> *ZvCf::getMultiple(ZuString fullKey,
     unsigned minimum, unsigned maximum, bool required)
 {
-  ZtString fullKey = fullKey_;
-  ZtZString key;
-  ZmRef<ZvCf> self = scope(fullKey, key, false);
+  ZuString key;
+  ZmRef<ZvCf> self = scope(fullKey, key, 1);
   if (!self) {
     if (required) throw Required(fullKey);
     return 0;
@@ -840,46 +827,30 @@ const ZtArray<ZtString> *ZvCf::getMultiple(ZuString fullKey_,
   return &node->m_values;
 }
 
-void ZvCf::set(ZuString fullKey_, ZuString val)
+void ZvCf::set(ZuString fullKey, ZuString val)
 {
-  ZtString fullKey = fullKey_;
-  ZtZString key;
-  ZmRef<ZvCf> self = scope(fullKey, key, true);
+  ZuString key;
+  ZmRef<ZvCf> self = scope(fullKey, key, 1);
   NodeRef node = self->m_tree.findVal(key);
   if (!node) self->m_tree.add(key, node = new Node());
   node->m_values.length(1, true);
   node->m_values[0] = val;
 }
 
-ZtArray<ZtString> *ZvCf::setMultiple(ZuString fullKey_)
+ZtArray<ZtString> *ZvCf::setMultiple(ZuString fullKey)
 {
-  ZtString fullKey = fullKey_;
-  ZtZString key;
+  ZuString key;
   ZmRef<ZvCf> self = scope(fullKey, key, true);
   NodeRef node = self->m_tree.findVal(key);
   if (!node) self->m_tree.add(key, node = new Node());
   return &node->m_values;
 }
 
-// suppress security warning about strtok()
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4996)
-#endif
-
-ZmRef<ZvCf> ZvCf::subset(ZuString key_, bool create, bool required)
+ZmRef<ZvCf> ZvCf::subset(ZuString key, bool create, bool required)
 {
-  ZtString key = key_;
   ZmRef<ZvCf> self = this;
-#ifdef _WIN32
-  char *scope = strtok(key, ":");
-#else
-  char *strtokContext = 0;
-  char *scope = strtok_r(key, ":", &strtokContext);
-#endif
-  NodeRef node;
-  while (scope) {
-    node = self->m_tree.findVal(scope);
+  while (ZuString scope = scope_(key)) {
+    NodeRef node = self->m_tree.findVal(scope);
     if (!node) {
       if (!create) {
 	if (required) throw Required(key);
@@ -887,11 +858,6 @@ ZmRef<ZvCf> ZvCf::subset(ZuString key_, bool create, bool required)
       }
       self->m_tree.add(scope, node = new Node());
     }
-#ifdef _WIN32
-    scope = strtok(0, ":");
-#else
-    scope = strtok_r(0, ":", &strtokContext);
-#endif
     if (!node->m_cf) {
       if (!create) {
 	if (required) throw Required(key);
@@ -904,35 +870,22 @@ ZmRef<ZvCf> ZvCf::subset(ZuString key_, bool create, bool required)
   return self;
 }
 
-void ZvCf::subset(ZuString key_, ZvCf *cf)
+void ZvCf::subset(ZuString key, ZvCf *cf)
 {
-  ZtString key = key_;
   ZmRef<ZvCf> self = this;
-#ifdef _WIN32
-  char *scope = strtok(key, ":");
-#else
-  char *strtokContext = 0;
-  char *scope = strtok_r(key, ":", &strtokContext);
-#endif
-  if (!scope) return;
-  NodeRef node;
-  for (;;) {
-    node = self->m_tree.findVal(scope);
-    if (!node)
-      self->m_tree.add(scope, node = new Node());
-    if (!(scope =
-#ifdef _WIN32
-	  strtok(0, ":")
-#else
-	  strtok_r(0, ":", &strtokContext)
-#endif
-	  )) break;
-    if (!node->m_cf)
-      node->m_cf = new ZvCf(self);
-    self = node->m_cf;
+  ZuString scope = scope_(key);
+  if (scope) {
+    NodeRef node;
+    for (;;) {
+      node = self->m_tree.findVal(scope);
+      if (!node) self->m_tree.add(scope, node = new Node());
+      if (!(scope = scope_(key))) break;
+      if (!node->m_cf) node->m_cf = new ZvCf(self);
+      self = node->m_cf;
+    }
+    if (cf) cf->m_parent = self;
+    node->m_cf = cf;
   }
-  if (cf) cf->m_parent = self;
-  node->m_cf = cf;
 }
 
 void ZvCf::merge(ZvCf *cf)
@@ -962,23 +915,19 @@ void ZvCf::merge(ZvCf *cf)
   }
 }
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-
 ZvCf::Iterator::~Iterator()
 {
 }
 
-ZtZString ZvCf::Iterator::get(ZtZString &key)
+ZuString ZvCf::Iterator::get(ZuString &key)
 {
   Tree::NodeRef node;
 
   do {
     node = m_iterator.iterate();
     if (!node) {
-      key = ZtZString();
-      return ZtZString();
+      key = ZuString();
+      return ZuString();
     }
   } while (!node->val()->m_values);
 
@@ -986,15 +935,15 @@ ZtZString ZvCf::Iterator::get(ZtZString &key)
   return node->val()->m_values[0];
 }
 
-const ZtArray<ZtString> *ZvCf::Iterator::getMultiple(ZtZString &key,
-    unsigned minimum, unsigned maximum)
+const ZtArray<ZtString> *ZvCf::Iterator::getMultiple(
+    ZuString &key, unsigned minimum, unsigned maximum)
 {
   Tree::NodeRef node;
 
   do {
     node = m_iterator.iterate();
     if (!node) {
-      key = ZtZString();
+      key = ZuString();
       return 0;
     }
   } while (!node->val()->m_values);
@@ -1006,14 +955,14 @@ const ZtArray<ZtString> *ZvCf::Iterator::getMultiple(ZtZString &key,
   return &node->val()->m_values;
 }
 
-ZmRef<ZvCf> ZvCf::Iterator::subset(ZtZString &key)
+ZmRef<ZvCf> ZvCf::Iterator::subset(ZuString &key)
 {
   Tree::NodeRef node;
 
   do {
     node = m_iterator.iterate();
     if (!node) {
-      key = ZtZString();
+      key = ZuString();
       return 0;
     }
   } while (!node->val()->m_cf);

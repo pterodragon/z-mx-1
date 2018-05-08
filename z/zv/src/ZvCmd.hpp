@@ -29,6 +29,7 @@
 #endif
 
 #include <ZuString.hpp>
+#include <ZuByteSwap.hpp>
 
 #include <ZmObject.hpp>
 #include <ZmRef.hpp>
@@ -41,7 +42,6 @@
 
 #include <ZeLog.hpp>
 
-#include <ZvError.hpp>
 #include <ZvRegexError.hpp>
 #include <ZvMultiplexCf.hpp>
 
@@ -55,75 +55,58 @@ class ZvCmdLine;
 class ZvCmd_Msg : public ZmPolymorph {
 friend class ZvCmdLine;
 
-  struct Header {
-    Header() : m_msgLen(htonl(sizeof(Header))), m_dataLen(0), 
-	       m_flags(0), m_seqNo(0) { }
+  typedef typename ZuBigEndian<int32_t>::T Int32N;
 
-    inline void msgLen(int len) { m_msgLen = htonl(ntohl(m_msgLen) + len); }
-    inline int msgLen() { return ntohl(m_msgLen); }
+  struct HdrData {
+    Int32N	msgLen;
+    Int32N	dataLen;
+    Int32N	flags;
+    Int32N	seqNo;
+  };
 
-    inline void dataLen(int len) { m_dataLen = htonl(len);  msgLen(len); }
-    inline int dataLen() { return ntohl(m_dataLen); }
+  struct Header : public HdrData {
+    Header() : HdrData{sizeof(Header), 0, 0, 0} { }
 
-    inline void flags(int code) { m_flags = htonl(code); }
-    inline int flags() { return ntohl(m_flags); }
-
-    inline void seqNo(uint32_t v) { m_seqNo = htonl(v); }
-    inline uint32_t seqNo() { return ntohl(m_seqNo); }
-
-    inline int cmdLen() {
-      return ntohl(m_msgLen) - ntohl(m_dataLen) - sizeof(Header);
-    }
-    
-  private:
-    int32_t	m_msgLen; // cmd length is msgLen - dataLen - sizeof(Header)
-    int32_t	m_dataLen;
-    int32_t	m_flags;
-    uint32_t	m_seqNo;
+    inline int cmdLen() { return msgLen - dataLen - sizeof(Header); }
   };
 
   struct Body : public Header {
     Body() { }
 
-    template <typename T>
-    inline void cmd(const T &t) {
-      int l = t.length();
-      m_cmd.length(l);
-      memcpy(m_cmd.data(), t.data(), l);
-      Header::msgLen(l);
+    inline void cmd(ZtArray<char> s) {
+      m_cmd = s;
+      msgLen += s.length();
     }
 
-    template <typename T>
-    inline void data(const T &t) {
-      int l = t.length();
-      m_data.length(l);
-      memcpy(m_data.data(), t.data(), l);
-      Header::dataLen(l);
+    inline void data(ZtArray<char> s) {
+      m_data = s;
+      unsigned n = s.length();
+      dataLen = n;
+      msgLen += n;
     }
 
     inline void extend() {
       m_cmd.length(cmdLen());
-      m_data.length(dataLen());
+      m_data.length(dataLen);
     }
 
-    ZtString m_cmd;
-    ZtArray<char>   m_data;
+    ZtArray<char>	m_cmd;
+    ZtArray<char>	m_data;
   };
 
 public:
   // recv messages
   ZvCmd_Msg(ZvCmdLine *line) : m_line(line) { }
 
-  ZvCmd_Msg(int32_t flags, uint32_t seqNo,
-	    ZuString msg, ZuString data) {
-    m_payload.flags(flags);
-    m_payload.seqNo(seqNo);
+  ZvCmd_Msg(int32_t flags, uint32_t seqNo, ZuString msg, ZuString data) {
+    m_payload.flags = flags;
+    m_payload.seqNo = seqNo;
     m_payload.cmd(msg);
     m_payload.data(data);
   }
 
   ZvCmd_Msg(uint32_t seqNo, ZuString cmd, ZuString data) {
-    m_payload.seqNo(seqNo);
+    m_payload.seqNo = seqNo;
     m_payload.cmd(cmd);
     m_payload.data(data);
   }
@@ -133,18 +116,18 @@ public:
   inline void *header() { return (void *)&m_payload; }
   inline int headerLen() { return sizeof(Header); }
 
-  inline int dataLen() { return m_payload.dataLen(); }
+  inline int dataLen() { return m_payload.dataLen; }
   inline int cmdLen() { return m_payload.cmdLen(); }
-  inline int msgLen() { return m_payload.msgLen(); }
-  inline uint32_t seqNo() { return m_payload.seqNo(); }
+  inline int msgLen() { return m_payload.msgLen; }
+  inline uint32_t seqNo() { return m_payload.seqNo; }
   inline void extend() { m_payload.extend(); }
 
   inline void *cmdPtr() { return m_payload.m_cmd.data(); }
   inline void *dataPtr() { return m_payload.m_data.data(); }
 
-  inline const ZtString &cmd() const { return m_payload.m_cmd; }
+  inline const ZtArray<char> &cmd() const { return m_payload.m_cmd; }
   inline const ZtArray<char> &data() const { return m_payload.m_data; }
-  inline int flags() { return m_payload.flags(); }
+  inline int flags() { return m_payload.flags; }
 
   void recv(ZiIOContext &io);
   void send();
@@ -168,17 +151,17 @@ private:
 };
 
 struct ZvInvocation {
-  ZvInvocation(uint32_t seqNo, ZuString cmd, ZuString data) :
-      m_seqNo(seqNo), m_cmd(cmd), m_data(data.data(), data.length()) { }
+  ZuInline ZvInvocation(uint32_t seqNo, ZuString cmd, ZuString data) :
+      m_seqNo(seqNo), m_cmd(cmd), m_data(data) { }
 
-  uint32_t seqNo() const { return m_seqNo; }
-  const ZtString &cmd() const { return m_cmd; }
-  const ZtArray<char> &data() const { return m_data; }
+  ZuInline uint32_t seqNo() const { return m_seqNo; }
+  ZuInline const ZtString &cmd() const { return m_cmd; }
+  ZuInline const ZtArray<char> &data() const { return m_data; }
 
 private:
-  uint32_t m_seqNo;
-  ZtString m_cmd;
-  ZtArray<char>   m_data;
+  uint32_t		m_seqNo;
+  ZtString		m_cmd;
+  ZtArray<char>		m_data;
 };
 
 struct ZvCmd {
@@ -214,7 +197,7 @@ struct ZvAnswer {
       Message &&message, Data &&data) :
     m_flags(flags), m_seqNo(seqNo),
     m_event(ZeEVENT(Info, ZuFwd<Message>(message))),
-    m_blob(ZuFwd<Data>(data)) { }
+    m_data(ZuFwd<Data>(data)) { }
 
   inline ZvAnswer(uint32_t seqNo) : m_flags(0), m_seqNo(seqNo) { }
 
@@ -238,23 +221,29 @@ struct ZvAnswer {
   inline typename ZuIsString<Data, void>::T
   make(ZvCmdFlags flags, const Data &data) {
     m_flags = flags;
-    m_blob = data;
+    m_data = data;
   }
 
   inline ZvCmdFlags flags() const { return m_flags; }
   inline uint32_t seqNo() const { return m_seqNo; }
-  inline ZtZString message() const {
-    if (ZuLikely(m_event)) return m_event->message();
-    return "";
-  }
-  inline const ZtArray<char> &data() const { return m_blob; }
+  struct Message;
+friend struct Message;
+  struct Message {
+    template <typename S> ZuInline void print(S &s) const {
+      if (ZuLikely(a.m_event)) s << a.m_event->message();
+    }
+    const ZvAnswer	&a;
+  };
+  ZuInline Message message() const { return Message{*this}; }
   inline ZmRef<ZeEvent> event() const { return m_event; }
+  inline const ZtArray<char> &data() const { return m_data; }
 
   ZvCmdFlags		m_flags;
   uint32_t		m_seqNo;
   ZmRef<ZeEvent>	m_event;
-  ZtArray<char>		m_blob;
+  ZtArray<char>		m_data;
 };
+template <> struct ZuPrint<ZvAnswer::Message> : public ZuPrintFn { };
 
 #define ZvAnswerArgs __FILE__, __LINE__, ZuFnName
 
@@ -335,7 +324,7 @@ public:
   void send(ZuString s, uint32_t seqNo = 0);
 
   template <typename S>
-  void stdinData(const S &s) { m_stdinData = s; }
+  void stdinData(S &&s) { m_stdinData = ZuFwd<S>(s); }
 
 private:
 
@@ -474,12 +463,13 @@ friend struct CmdOption;
     // sort options by short then long name.  called by cmd object on init
     void sort();
     
-    void wordWrap(ZtString &dst, const char *src, int srcLen,
-		  int lineLen = 78, int used = 0, int indent = 0);
+    void wordWrap(
+	ZtString &dst, const char *src, int srcLen,
+	int lineLen = 78, int used = 0, int indent = 0);
 
     // generate usage string. 
     // format taken from http://www.gnu.org/software/help2man
-    ZtZString toGNUString(const char *name);
+    ZtString toGNUString(ZuString name);
 
     void clean();
 

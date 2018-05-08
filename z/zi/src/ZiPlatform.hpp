@@ -77,12 +77,9 @@ struct ZiAPI ZiPlatform {
   inline static void closeSocket(Socket s) { ::close(s); }
   typedef void *MMapPtr;
   typedef ZtString Path;
-  typedef ZtZString ZPath;
   typedef off_t Offset;
   typedef ZtString Hostname;
-  typedef ZtZString ZHostname;
   typedef ZtString Username;
-  typedef ZtZString ZUsername;
   enum {
     PathMax = PATH_MAX,
     NameMax = NAME_MAX,
@@ -102,12 +99,9 @@ struct ZiAPI ZiPlatform {
   inline static void closeSocket(Socket s) { ::closesocket(s); }
   typedef LPVOID MMapPtr;
   typedef ZtWString Path;
-  typedef ZtZWString ZPath;
   typedef int64_t Offset;		// 2x DWORD
   typedef ZtWString Hostname;
-  typedef ZtZWString ZHostname;
   typedef ZtWString Username;
-  typedef ZtZWString ZUsername;
   enum {
     PathMax = 32767,	// NTFS limit (MAX_PATH is 260 for FAT)
     NameMax = 255,	// NTFS & FAT limit

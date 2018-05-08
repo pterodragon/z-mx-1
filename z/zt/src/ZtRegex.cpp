@@ -28,7 +28,7 @@ ZtRegex::ZtRegex(const char *pattern, int options) : m_extra(0)
   Error error;
 
   m_regex = pcre_compile2(
-    pattern, options, &error.m_code, &error.m_error, &error.m_offset, 0);
+    pattern, options, &error.code, &error.message, &error.offset, 0);
 
   if (!m_regex) throw error;
 
@@ -48,12 +48,12 @@ void ZtRegex::study()
 {
   Error error;
 
-  error.m_offset = -1;
-  error.m_code = -1;
+  error.offset = -1;
+  error.code = -1;
 
-  m_extra = pcre_study(m_regex, PCRE_STUDY_JIT_COMPILE, &error.m_error);
+  m_extra = pcre_study(m_regex, PCRE_STUDY_JIT_COMPILE, &error.message);
 
-  if (error.m_error) {
+  if (error.message) {
     if (m_extra) (pcre_free)(m_extra);
     m_extra = 0;
     throw error;

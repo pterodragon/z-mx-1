@@ -39,23 +39,30 @@
 #pragma warning(disable:4800)
 #endif
 
-class ZvInvalidMulticastIP : public ZvError {
+class ZvAPI ZvInvalidMulticastIP : public ZvError {
 public:
   inline ZvInvalidMulticastIP(ZuString s) : m_addr(s) { }
+#if 0
   inline ZvInvalidMulticastIP(const ZvInvalidMulticastIP &e) :
     m_addr(e.m_addr) { }
   inline ZvInvalidMulticastIP &operator =(const ZvInvalidMulticastIP &e) {
     if (this != &e) m_addr = e.m_addr;
     return *this;
   }
-  virtual ~ZvInvalidMulticastIP() { }
+  inline ZvInvalidMulticastIP(ZvInvalidMulticastIP &&e) :
+    m_addr(ZuMv(e.m_addr)) { }
+  inline ZvInvalidMulticastIP &operator =(ZvInvalidMulticastIP &&e) {
+    m_addr = ZuMv(e.m_addr);
+    return *this;
+  }
+#endif
 
-  ZtZString message() const {
-    return ZtSprintf("invalid multicast IP \"%s\"", m_addr.data());
+  void print_(ZmStream &s) const {
+    s << "invalid multicast IP \"" << m_addr << '"';
   }
 
 private:
-  ZtZString	m_addr;
+  ZtString	m_addr;
 };
 
 struct ZvCxnOptions : public ZiCxnOptions {
@@ -76,8 +83,6 @@ struct ZvCxnOptions : public ZiCxnOptions {
     if (!cf) return;
 
     flags(cf->getFlags<ZiCxnOptions::Flags>("options", false, 0));
-    ZtZString s;
-    int i;
 
     // multicastInterface is the IP address of the interface used for sending
     // multicastTTL is the TTL (number of hops) used for sending
@@ -88,11 +93,11 @@ struct ZvCxnOptions : public ZiCxnOptions {
     //   can be 0.0.0.0 to subscribe on all interfaces
     // Example: multicastGroups { 239.193.2.51 192.168.1.99 }
     if (multicast()) {
-      if (s = cf->get("multicastInterface", false)) mif(s);
+      if (ZuString s = cf->get("multicastInterface", false)) mif(s);
       ttl(cf->getInt("multicastTTL", 0, INT_MAX, false, ttl()));
       if (ZmRef<ZvCf> groups = cf->subset("multicastGroups", false)) {
 	ZvCf::Iterator i(groups);
-	ZtZString addr_, mif_;
+	ZuString addr_, mif_;
 	while (mif_ = i.get(addr_)) {
 	  ZiIP addr(addr_), mif(mif_);
 	  if (!addr || !addr.multicast()) throw ZvInvalidMulticastIP(addr_);
@@ -100,12 +105,12 @@ struct ZvCxnOptions : public ZiCxnOptions {
 	}
       }
     }
-    if (netlink()) {
+    if (netlink())
       familyName(cf->get("familyName", true));
-    }
-    if (netmap()) {
-      if (s = cf->get("netmapInterface", true)) nif(s);
-    }
+#if 0
+    if (netmap())
+      if (ZuString s = cf->get("netmapInterface", true)) nif(s);
+#endif
   }
 };
 

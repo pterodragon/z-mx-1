@@ -59,10 +59,8 @@
 #endif
 
 template <typename T, class Cmp> class ZtArray;
-template <typename T, class Cmp> class ZtZArray;
 
 template <typename T> struct ZtArray_ { };
-template <typename T> struct ZtZArray_ { };
 
 template <typename T_> struct ZtArray_Char2 { typedef ZuNull T; };
 template <> struct ZtArray_Char2<char> { typedef wchar_t T; };
@@ -85,16 +83,9 @@ protected:
   typedef T Char;
   typedef typename ZtArray_Char2<T>::T Char2;
 
-  // from same type ZtZArray
-  template <typename U, typename R = void, typename V = T,
-    bool A = ZuConversion<ZtZArray_<V>, U>::Base> struct FromZtZArray;
-  template <typename U, typename R>
-    struct FromZtZArray<U, R, T, true> { typedef R T; };
-
   // from same type ZtArray
   template <typename U, typename R = void, typename V = T,
-    bool A = ZuConversion<ZtArray_<V>, U>::Base &&
-      !ZuConversion<ZtZArray_<V>, U>::Base> struct FromZtArray;
+    bool A = ZuConversion<ZtArray_<V>, U>::Base> struct FromZtArray;
   template <typename U, typename R>
     struct FromZtArray<U, R, T, true> { typedef R T; };
 
@@ -126,21 +117,37 @@ protected:
   template <typename U, typename R>
     struct FromDiffArray<U, R, T, true> { typedef R T; };
 
-  // from some other string with same char (potentially non-null-terminated)
-  template <typename U, typename R = void, typename V = Char,
-    bool A = !ZuConversion<ZtArray_<V>, U>::Base &&
+  // from string literal with same char
+  template <typename U, typename V = Char> struct IsStrLiteral {
+    enum { OK = ZuTraits<U>::IsCString &&
+      ZuTraits<U>::IsArray && ZuTraits<U>::IsPrimitive &&
+      ZuConversion<typename ZuTraits<U>::Elem, const V>::Same };
+  };
+  template <typename U, typename R = void>
+  struct FromStrLiteral : public ZuIfT<IsStrLiteral<U>::OK, R> { };
+
+  // from some other string with same char (other than a string literal)
+  template <typename U, typename V = Char> struct IsString_ {
+    enum { OK = !ZuConversion<ZtArray_<V>, U>::Base &&
+      !IsStrLiteral<U>::OK && ZuTraits<U>::IsString &&
+      ZuConversion<typename ZuTraits<U>::Elem, const V>::Same };
+  };
+  template <typename U, typename R = void>
+  struct FromString : public ZuIfT<IsString_<U>::OK, R> { };
+
+  // from some other string with same char (including string literals)
+  template <typename U, typename V = Char> struct IsAnyString {
+    enum { OK = !ZuConversion<ZtArray_<V>, U>::Base &&
       ZuTraits<U>::IsString &&
-      ((!ZuTraits<U>::IsWString && ZuConversion<char, V>::Same) ||
-       (ZuTraits<U>::IsWString && ZuConversion<wchar_t, V>::Same))>
-      struct FromString;
-  template <typename U, typename R>
-    struct FromString<U, R, Char, true> { typedef R T; };
+      ZuConversion<typename ZuTraits<U>::Elem, const V>::Same };
+  };
+  template <typename U, typename R = void>
+  struct FromAnyString : public ZuIfT<IsAnyString<U>::OK, R> { };
 
   // from char2 string (requires conversion)
   template <typename U, typename R = void, typename V = Char2,
     bool A = !ZuConversion<ZuNull, V>::Same && ZuTraits<U>::IsString &&
-      ((!ZuTraits<U>::IsWString && ZuConversion<char, V>::Same) ||
-       (ZuTraits<U>::IsWString && ZuConversion<wchar_t, V>::Same))
+      ZuConversion<typename ZuTraits<U>::Elem, const V>::Same
     > struct FromChar2String;
   template <typename U, typename R>
     struct FromChar2String<U, R, Char2, true> { typedef R T; };
@@ -243,11 +250,11 @@ protected:
 public:
   ZuInline ZtArray(const ZtArray &a) { ctor(a); }
   ZuInline ZtArray(ZtArray &&a) noexcept {
-    if (!a.m_owned)
-      shadow_(a.m_data, a.m_length);
+    if (!a.owned())
+      shadow_(a.m_data, a.length());
     else {
-      own_(a.m_data, a.m_length, a.m_size, a.m_mallocd);
-      a.m_owned = false;
+      own_(a.m_data, a.length(), a.size(), a.mallocd());
+      a.owned(false);
     }
   }
   ZuInline ZtArray(std::initializer_list<T> a) {
@@ -258,18 +265,14 @@ public:
 
 protected:
   template <typename A> ZuInline typename FromZtArray<A>::T ctor(const A &a)
-    { copy_(a.m_data, a.m_length); }
-  template <typename A> ZuInline typename FromZtZArray<A>::T ctor(const A &a) {
-    if (!a.m_owned) { copy_(a.m_data, a.m_length); return; }
-    own_(a.m_data, a.m_length, a.m_size, a.m_mallocd);
-    const_cast<ZtZArray<T, Cmp_> &>(a).m_mallocd =
-      const_cast<ZtZArray<T, Cmp_> &>(a).m_owned = false;
-  }
+    { copy_(a.m_data, a.length()); }
   template <typename A> ZuInline typename FromArray<A>::T ctor(A &&a_) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     copy_(a.data(), a.length());
   }
 
+  template <typename S> ZuInline typename FromStrLiteral<S>::T ctor(S &&s_)
+    { ZuArrayT<S> s(ZuFwd<S>(s_)); shadow_(s.data(), s.length()); }
   template <typename S> ZuInline typename FromString<S>::T ctor(S &&s_)
     { ZuArrayT<S> s(ZuFwd<S>(s_)); copy_(s.data(), s.length()); }
 
@@ -285,23 +288,22 @@ protected:
   template <typename P> ZuInline typename FromPDelegate<P>::T ctor(const P &p)
     { null_(); ZuPrint<P>::print(*this, p); }
   template <typename P> ZuInline typename FromPBuffer<P>::T ctor(const P &p) {
-    unsigned n = ZuPrint<P>::length(p);
-    if (!n) { null_(); return; }
-    alloc_(n);
-    m_length = ZuPrint<P>::print(m_data, n, p);
+    unsigned o = ZuPrint<P>::length(p);
+    if (!o) { null_(); return; }
+    alloc_(o, ZuPrint<P>::print(m_data, o, p));
   }
 
   template <typename V> ZuInline typename CtorSize<V>::T ctor(V size) {
     if (!size) { null_(); return; }
-    alloc_(size);
-    m_length = 0;
+    alloc_(size, 0);
   }
 
   template <typename R> ZuInline typename CtorElem<R>::T ctor(R &&r) {
-    m_size = grow(0, m_length = 1);
-    m_data = (T *)::malloc(m_size * sizeof(T));
+    unsigned z = grow(0, 1);
+    m_data = (T *)::malloc(z * sizeof(T));
+    size_owned(z, 1);
+    length_mallocd(1, 1);
     this->initItem(m_data, ZuFwd<R>(r));
-    m_owned = m_mallocd = true;
   }
 
 public:
@@ -310,16 +312,14 @@ public:
 
 protected:
   template <typename A> inline typename FromZtArray<A>::T copy(const A &a)
-    { copy_(a.m_data, a.m_length); }
-  template <typename A> inline typename FromZtZArray<A>::T copy(const A &a)
-    { copy_(a.m_data, a.m_length); }
+    { copy_(a.m_data, a.length()); }
   template <typename A> inline typename FromArray<A>::T copy(A &&a_) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     copy_(a.data(), a.length());
   }
 
   template <typename S>
-  ZuInline typename FromString<S>::T copy(S &&s) { ctor(ZuFwd<S>(s)); }
+  ZuInline typename FromAnyString<S>::T copy(S &&s) { ctor(ZuFwd<S>(s)); }
   template <typename S>
   ZuInline typename FromChar2String<S>::T copy(S &&s) { ctor(ZuFwd<S>(s)); }
   template <typename C>
@@ -347,36 +347,27 @@ public:
 protected:
   template <typename A> inline typename FromZtArray<A>::T assign(const A &a) {
     if (this == &a) return;
-    int oldLength = 0;
+    uint32_t oldLength = 0;
     T *oldData = free_1(oldLength);
-    copy_(a.m_data, a.m_length);
-    free_2(oldData, oldLength);
-  }
-  template <typename A> inline typename FromZtZArray<A>::T assign(const A &a) {
-    if (this == (const ZtArray *)&a) return;
-    int oldLength = 0;
-    T *oldData = free_1(oldLength);
-    if (!a.m_owned) {
-      copy_(a.m_data, a.m_length);
-      free_2(oldData, oldLength);
-      return;
-    }
-    own_(a.m_data, a.m_length, a.m_size, a.m_mallocd);
-    const_cast<ZtZArray<T, Cmp> &>(a).m_owned = false;
-    const_cast<ZtZArray<T, Cmp> &>(a).m_mallocd = false;
+    copy_(a.m_data, a.length());
     free_2(oldData, oldLength);
   }
   template <typename A> inline typename FromArray<A>::T assign(A &&a_) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
-    int oldLength = 0;
+    uint32_t oldLength = 0;
     T *oldData = free_1(oldLength);
     copy_(a.data(), a.length());
     free_2(oldData, oldLength);
   }
 
+  template <typename S> inline typename FromStrLiteral<S>::T assign(S &&s_) {
+    ZuArrayT<S> s(ZuFwd<S>(s_));
+    free_();
+    shadow_(s.data(), s.length());
+  }
   template <typename S> inline typename FromString<S>::T assign(S &&s_) {
     ZuArrayT<S> s(ZuFwd<S>(s_));
-    int oldLength = 0;
+    uint32_t oldLength = 0;
     T *oldData = free_1(oldLength);
     copy_(s.data(), s.length());
     free_2(oldData, oldLength);
@@ -384,14 +375,14 @@ protected:
 
   template <typename S> inline typename FromChar2String<S>::T assign(S &&s_) {
     ZuArray<Char2> s(ZuFwd<S>(s_));
-    int oldLength = 0;
+    uint32_t oldLength = 0;
     Char *oldData = free_1(oldLength);
     convert_(s, ZtIconvDefault<Char, Char2>::instance());
     free_2(oldData, oldLength);
   }
   template <typename C> inline typename FromChar2<C>::T assign(C c) {
     ZuArray<Char2> s{&c, 1};
-    int oldLength = 0;
+    uint32_t oldLength = 0;
     Char *oldData = free_1(oldLength);
     convert_(s, ZtIconvDefault<Char, Char2>::instance());
     free_2(oldData, oldLength);
@@ -400,9 +391,10 @@ protected:
   template <typename P> ZuInline typename FromPDelegate<P>::T assign(const P &p)
     { ZuPrint<P>::print(*this, p); }
   template <typename P> ZuInline typename FromPBuffer<P>::T assign(const P &p) {
-    unsigned n = ZuPrint<P>::length(p);
-    if (m_size < n) size(n);
-    m_length = ZuPrint<P>::print(m_data, n, p);
+    unsigned o = ZuPrint<P>::length(p);
+    if (!o) { null(); return; }
+    if (!owned() || size() < o) size(o);
+    length_(ZuPrint<P>::print(m_data, o, p));
   }
 
   template <typename R> ZuInline typename FromReal<R>::T assign(R &&r)
@@ -421,12 +413,7 @@ protected:
   template <typename A> inline typename FromZtArray<A>::T shadow(const A &a) {
     if (this == &a) return;
     free_();
-    shadow_(a.m_data, a.m_length);
-  }
-  template <typename A> inline typename FromZtZArray<A>::T shadow(const A &a) {
-    if (this == (const ZtArray *)&a) return;
-    free_();
-    shadow_(a.m_data, a.m_length);
+    shadow_(a.m_data, a.length());
   }
   template <typename A>
   inline typename FromSameArray<A>::T shadow(A &&a_) {
@@ -451,13 +438,11 @@ public:
     convert_(s, iconv);
   }
 
-  inline ZtArray(
-      unsigned length, unsigned size,
+  inline ZtArray(unsigned length, unsigned size,
       bool initItems = !ZuTraits<T>::IsPrimitive) {
     if (!size) { null_(); return; }
-    alloc_(size);
-    m_length = length;
-    if (initItems) this->initItems(m_data, m_length);
+    alloc_(size, length);
+    if (initItems) this->initItems(m_data, length);
   }
   inline explicit ZtArray(const T *data, unsigned length) {
     if (!length) { null_(); return; }
@@ -490,20 +475,19 @@ public:
   inline void init(
       unsigned length, unsigned size,
       bool initItems = !ZuTraits<T>::IsPrimitive) {
-    if (m_size < size || initItems) {
+    if (this->size() < size || initItems) {
       free_();
-      alloc_(size);
-    }
-    m_length = length;
-    if (initItems) this->initItems(m_data, m_length);
+      alloc_(size, length);
+    } else
+      length_(length);
+    if (initItems) this->initItems(m_data, length);
   }
   inline void init_(
       unsigned length, unsigned size,
       bool initItems = !ZuTraits<T>::IsPrimitive) {
     if (!size) { null_(); return; }
-    alloc_(size);
-    m_length = length;
-    if (initItems) this->initItems(m_data, m_length);
+    alloc_(size, length);
+    if (initItems) this->initItems(m_data, length);
   }
   inline void init(const T *data, unsigned length) {
     free_();
@@ -514,7 +498,7 @@ public:
     shadow_(data, length);
   }
   inline void init(Copy_ _, const T *data, unsigned length) {
-    int oldLength = 0;
+    uint32_t oldLength = 0;
     T *oldData = free_1(oldLength);
     init_(_, data, length);
     free_2(oldData, oldLength);
@@ -547,8 +531,8 @@ public:
 protected:
   inline void null_() {
     m_data = 0;
-    m_length = m_size = 0;
-    m_owned = m_mallocd = false;
+    size_owned(0, 0);
+    length_mallocd(0, 0);
   }
 
   inline void own_(
@@ -559,76 +543,66 @@ protected:
       null_();
       return;
     }
-    m_length = length;
-    m_size = size;
     m_data = (T *)data;
-    m_owned = true, m_mallocd = mallocd;
+    size_owned(size, 1);
+    length_mallocd(length, mallocd);
   }
 
   inline void shadow_(const T *data, unsigned length) {
     if (!length) { null_(); return; }
-    m_length = m_size = length;
     m_data = (T *)data;
-    m_owned = m_mallocd = false;
+    size_owned(length, 0);
+    length_mallocd(length, 0);
   }
 
-  inline void alloc_(unsigned size) {
+  inline void alloc_(unsigned size, unsigned length) {
     if (!size) { null_(); return; }
-    m_size = size;
-    m_data = (T *)::malloc(m_size * sizeof(T));
-    m_owned = m_mallocd = true;
+    m_data = (T *)::malloc(size * sizeof(T));
+    size_owned(size, 1);
+    length_mallocd(length, 1);
   }
 
   template <typename S> inline void copy_(const S *data, unsigned length) {
     if (!data || !length) { null_(); return; }
-    m_length = m_size = length;
-    m_data = (T *)::malloc(m_size * sizeof(T));
+    m_data = (T *)::malloc(length * sizeof(T));
     if (length) this->copyItems(m_data, data, length);
-    m_owned = m_mallocd = true;
+    size_owned(length, 1);
+    length_mallocd(length, 1);
   }
 
   template <typename S> void convert_(const S &s, ZtIconv *iconv);
 
   inline void free_() {
-    if (m_data && m_owned) {
-      this->destroyItems(m_data, m_length);
-      if (m_mallocd) ::free(m_data);
+    if (m_data && owned()) {
+      this->destroyItems(m_data, length());
+      if (mallocd()) ::free(m_data);
     }
   }
-  inline T *free_1(int &length) {
-    if (!m_data || !m_owned) return 0;
-    length = m_mallocd ? (int)m_length : -(int)m_length;
+  inline T *free_1(uint32_t &length_mallocd) {
+    if (!m_data || !owned()) return 0;
+    length_mallocd = m_length_mallocd;
     return m_data;
   }
-  inline void free_2(T *data, int length) {
+  inline void free_2(T *data, uint32_t length_mallocd) {
     if (data) {
-      this->destroyItems(data, length > 0 ? length : -length);
-      if (length > 0) ::free(data);
+      this->destroyItems(data, length_mallocd & ~(1U<<31U));
+      if (length_mallocd>>31U) ::free(data);
     }
   }
 
-// duplication
-
 public:
-  inline ZtZArray<T, Cmp> dup() const {
-    return ZtZArray<T, Cmp>(ZtZArray<T, Cmp>::Copy, m_data, m_length);
-  }
-
-  inline ZtZArray<T, Cmp> move() {
-    bool mallocd = m_mallocd;
-    m_owned = m_mallocd = false;
-    return ZtZArray<T, Cmp>(m_data, m_length, m_size, mallocd);
-  }
-
 // truncation (to minimum size)
 
   inline void truncate() {
-    if (!m_data || m_size <= m_length) return;
-    T *newData = (T *)::malloc((m_size = m_length) * sizeof(T));
-    this->copyItems(newData, m_data, m_size);
+    size(length());
+    unsigned n = length();
+    if (!m_data || size() <= n) return;
+    T *newData = (T *)::malloc(n * sizeof(T));
+    this->copyItems(newData, m_data, n);
     free_();
     m_data = newData;
-    m_owned = true;
+    mallocd(1);
+    size_owned(length(), 1);
   }
 
 // array / ptr operators
@@ -646,14 +620,36 @@ public:
 
   ZuInline T *data() { return m_data; }
   ZuInline const T *data() const { return m_data; }
-  ZuInline unsigned length() const { return m_length; }
-  ZuInline unsigned size() const { return m_size; }
 
-  ZuInline bool owned() const { return m_owned; }
-  ZuInline bool mallocd() const { return m_mallocd; }
+  ZuInline unsigned length() const { return m_length_mallocd & ~(1U<<31U); }
+  ZuInline unsigned size() const { return m_size_owned & ~(1U<<31U); }
 
+  ZuInline bool mallocd() const { return m_length_mallocd>>31U; }
+  ZuInline bool owned() const { return m_size_owned>>31U; }
+
+private:
+  ZuInline void length_(unsigned v) {
+    m_length_mallocd = (m_length_mallocd & (1U<<31U)) | (uint32_t)v;
+  }
+  ZuInline void mallocd(bool v) {
+    m_length_mallocd = (m_length_mallocd & ~(1U<<31U)) | (((uint32_t)v)<<31U);
+  }
+  ZuInline void length_mallocd(unsigned l, bool m) {
+    m_length_mallocd = l | (((uint32_t)m)<<31U);
+  }
+  ZuInline void size_(unsigned v) {
+    m_size_owned = (m_size_owned & (1U<<31U)) | (uint32_t)v;
+  }
+  ZuInline void owned(bool v) {
+    m_size_owned = (m_size_owned & ~(1U<<31U)) | (((uint32_t)v)<<31U);
+  }
+  ZuInline void size_owned(unsigned z, bool o) {
+    m_size_owned = z | (((uint32_t)o)<<31U);
+  }
+
+public:
   ZuInline T *data(bool move) {
-    if (move) m_owned = false;
+    if (move) owned(0);
     return m_data;
   }
 
@@ -670,55 +666,49 @@ public:
     this->length(length, !ZuTraits<T>::IsPrimitive);
   }
   inline void length(unsigned length, bool initItems) {
-    if (!m_owned || length > m_size) size(length);
+    if (!owned() || length > size()) size(length);
     if (initItems) {
-      if (length > m_length) {
-	this->initItems(m_data + m_length, length - m_length);
-      } else if (length < m_length) {
-	this->destroyItems(m_data + length, m_length - length);
+      unsigned n = this->length();
+      if (length > n) {
+	this->initItems(m_data + n, length - n);
+      } else if (length < n) {
+	this->destroyItems(m_data + length, n - length);
       }
     }
-    m_length = length;
+    length_(length);
   }
 
 // set size
 
-  inline void size(unsigned size) {
-    if (!size) { null(); return; }
-    if (!m_owned || size != m_size) {
-      T *newData = (T *)::malloc(size * sizeof(T));
-      if (m_data) {
-	if (m_length) {
-	  int n = size;
-	  if (n > (int)m_length) n = m_length;
-	  this->copyItems(newData, m_data, n);
-	}
-	free_();
-      }
-      m_size = size;
-      m_data = newData;
-      m_owned = m_mallocd = true;
-      if ((int)m_length > size) m_length = size;
-    }
+  inline T *size(unsigned z) {
+    if (!z) { null(); return 0; }
+    if (owned() && z == size()) return m_data;
+    T *newData = (T *)::malloc(z * sizeof(T));
+    unsigned n = z;
+    if (n > length()) n = length();
+    if (m_data) {
+      if (n) this->copyItems(newData, m_data, n);
+      free_();
+    } else
+      n = 0;
+    m_data = newData;
+    size_owned(z, 1);
+    length_mallocd(n, 1);
+    return newData;
   }
 
 // hash()
 
-  ZuInline uint32_t hash() const { return Ops::hash(m_data, m_length); }
+  ZuInline uint32_t hash() const { return Ops::hash(m_data, length()); }
 
 // comparison
 
-  ZuInline bool operator !() const { return !m_data || !m_length; }
+  ZuInline bool operator !() const { return !m_data || !length(); }
 
   template <typename A>
   ZuInline typename FromZtArray<A, int>::T cmp(const A &a) const {
     if (this == &a) return 0;
-    return cmp(a.m_data, a.m_length);
-  }
-  template <typename A>
-  ZuInline typename FromZtZArray<A, int>::T cmp(const A &a) const {
-    if (this == (const ZtArray *)&a) return 0;
-    return cmp(a.m_data, a.m_length);
+    return cmp(a.m_data, a.length());
   }
   template <typename A>
   ZuInline typename FromArray<A, int>::T cmp(A &&a_) const {
@@ -726,7 +716,7 @@ public:
     return cmp(a.data(), a.length());
   }
   template <typename S>
-  ZuInline typename FromString<S, int>::T cmp(S &&s_) const {
+  ZuInline typename FromAnyString<S, int>::T cmp(S &&s_) const {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     return cmp(s.data(), s.length());
   }
@@ -738,23 +728,15 @@ public:
   inline int cmp(const T *a, unsigned n) const {
     if (!a) return !!m_data;
     if (!m_data) return -1;
-
-    unsigned l = m_length <= n ? m_length : n;
-    int i;
-
-    if (i = Ops::cmp(m_data, a, l)) return i;
-    return m_length - n;
+    unsigned l = length();
+    if (int i = Ops::cmp(m_data, a, l < n ? l : n)) return i;
+    return l - n;
   }
 
   template <typename A>
   ZuInline typename FromZtArray<A, bool>::T equals(const A &a) const {
     if (this == &a) return true;
-    return equals(a.m_data, a.m_length);
-  }
-  template <typename A>
-  ZuInline typename FromZtZArray<A, bool>::T equals(const A &a) const {
-    if (this == (const ZtArray *)&a) return true;
-    return equals(a.m_data, a.m_length);
+    return equals(a.m_data, a.length());
   }
   template <typename A>
   ZuInline typename FromArray<A, bool>::T equals(A &&a_) const {
@@ -762,7 +744,7 @@ public:
     return equals(a.data(), a.length());
   }
   template <typename S>
-  ZuInline typename FromString<S, bool>::T equals(S &&s_) const {
+  ZuInline typename FromAnyString<S, bool>::T equals(S &&s_) const {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     return equals(s.data(), s.length());
   }
@@ -774,8 +756,8 @@ public:
   ZuInline bool equals(const T *a, unsigned n) const {
     if (!a) return !m_data;
     if (!m_data) return false;
-    if (m_length != n) return false;
-    return Ops::equals(m_data, a, m_length);
+    if (length() != n) return false;
+    return Ops::equals(m_data, a, n);
   }
 
   template <typename A>
@@ -794,57 +776,52 @@ public:
 // +, += operators
 
   template <typename A>
-  ZuInline ZtZArray<T, Cmp> operator +(const A &a) const { return add(a); }
+  ZuInline ZtArray<T, Cmp> operator +(const A &a) const { return add(a); }
 
 protected:
   template <typename A>
-  ZuInline typename FromZtArray<A, ZtZArray<T, Cmp> >::T
-    add(const A &a) const { return add(a.m_data, a.m_length); }
+  ZuInline typename FromZtArray<A, ZtArray<T, Cmp> >::T
+    add(const A &a) const { return add(a.m_data, a.length()); }
   template <typename A>
-  ZuInline typename FromZtZArray<A, ZtZArray<T, Cmp> >::T
-    add(const A &a) const { return add(a.m_data, a.m_length); }
-  template <typename A>
-  ZuInline typename FromArray<A, ZtZArray<T, Cmp> >::T add(A &&a_) const {
+  ZuInline typename FromArray<A, ZtArray<T, Cmp> >::T add(A &&a_) const {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     return add(a.data(), a.length());
   }
   template <typename S>
-  ZuInline typename FromString<S, ZtZArray<T, Cmp> >::T add(S &&s_) const
+  ZuInline typename FromAnyString<S, ZtArray<T, Cmp> >::T add(S &&s_) const
     { ZuArrayT<S> s(ZuFwd<S>(s_)); return add(s.data(), s.length()); }
   template <typename S>
-  ZuInline typename FromChar2String<S, ZtZArray<T, Cmp> >::T add(S &&s) const
+  ZuInline typename FromChar2String<S, ZtArray<T, Cmp> >::T add(S &&s) const
     { return add(ZtArray(ZuFwd<S>(s))); }
   template <typename C>
-  ZuInline typename FromChar2<C, ZtZArray<T, Cmp> >::T add(C c) const
+  ZuInline typename FromChar2<C, ZtArray<T, Cmp> >::T add(C c) const
     { return add(ZtArray(c)); }
 
   template <typename P>
-  ZuInline typename FromPDelegate<P, ZtZArray<T, Cmp> >::T add(P &&p) const
+  ZuInline typename FromPDelegate<P, ZtArray<T, Cmp> >::T add(P &&p) const
     { return add(ZtArray(ZuFwd<P>(p))); }
   template <typename P>
-  ZuInline typename FromPBuffer<P, ZtZArray<T, Cmp> >::T add(P &&p) const
+  ZuInline typename FromPBuffer<P, ZtArray<T, Cmp> >::T add(P &&p) const
     { return add(ZtArray(ZuFwd<P>(p))); }
 
   template <typename R>
-  ZuInline typename FromElem<R, ZtZArray<T, Cmp> >::T add(R &&r) const {
-    unsigned newSize = grow(m_length, m_length + 1);
-    T *newData = (T *)::malloc(newSize * sizeof(T));
-    if (m_length) this->copyItems(newData, m_data, m_length);
-    this->initItem(newData + m_length, ZuFwd<R>(r));
-    return ZtZArray<T, Cmp>(newData, m_length + 1, newSize);
+  ZuInline typename FromElem<R, ZtArray<T, Cmp> >::T add(R &&r) const {
+    unsigned n = length();
+    unsigned z = grow(n, n + 1);
+    T *newData = (T *)::malloc(z * sizeof(T));
+    if (n) this->copyItems(newData, m_data, n);
+    this->initItem(newData + n, ZuFwd<R>(r));
+    return ZtArray<T, Cmp>(newData, n + 1, z);
   }
 
-  inline ZtZArray<T, Cmp> add(const T *data, unsigned length) const {
-    unsigned newLength = m_length + length;
-
-    if (ZuUnlikely(!newLength)) return ZtZArray<T, Cmp>();
-
-    T *newData = (T *)::malloc(newLength * sizeof(T));
-
-    if (m_length) this->copyItems(newData, m_data, m_length);
-    if (length) this->copyItems(newData + m_length, data, length);
-
-    return ZtZArray<T, Cmp>(newData, newLength, newLength);
+  inline ZtArray<T, Cmp> add(const T *data, unsigned length) const {
+    unsigned n = this->length();
+    unsigned z = n + length;
+    if (ZuUnlikely(!z)) return ZtArray<T, Cmp>();
+    T *newData = (T *)::malloc(z * sizeof(T));
+    if (n) this->copyItems(newData, m_data, n);
+    if (length) this->copyItems(newData + n, data, length);
+    return ZtArray<T, Cmp>(newData, z, z);
   }
 
 public:
@@ -858,26 +835,18 @@ protected:
   inline typename FromZtArray<A>::T append_(const A &a) {
     if (this == &a) {
       ZtArray a_ = a;
-      splice__(0, m_length, 0, a_.m_data, a_.m_length);
+      splice__(0, length(), 0, a_.m_data, a_.length());
     } else
-      splice__(0, m_length, 0, a.m_data, a.m_length);
-  }
-  template <typename A>
-  inline typename FromZtZArray<A>::T append_(const A &a) {
-    if (this == (const ZtArray *)&a) {
-      ZtArray a_ = a;
-      splice__(0, m_length, 0, a_.m_data, a_.m_length);
-    } else
-      splice__(0, m_length, 0, a.m_data, a.m_length);
+      splice__(0, length(), 0, a.m_data, a.length());
   }
   template <typename A> ZuInline typename FromArray<A>::T append_(A &&a_) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
-    splice__(0, m_length, 0, a.data(), a.length());
+    splice__(0, length(), 0, a.data(), a.length());
   }
 
-  template <typename S> ZuInline typename FromString<S>::T append_(S &&s_) {
+  template <typename S> ZuInline typename FromAnyString<S>::T append_(S &&s_) {
     ZuArrayT<S> s(ZuFwd<S>(s_));
-    splice__(0, m_length, 0, s.data(), s.length());
+    splice__(0, length(), 0, s.data(), s.length());
   }
 
   template <typename S>
@@ -893,9 +862,10 @@ protected:
   }
   template <typename P>
   inline typename FromPBuffer<P>::T append_(const P &p) {
-    int n = ZuPrint<P>::length(p);
-    if (!m_owned || (int)m_size < (int)m_length + n) size(m_length + n);
-    m_length += ZuPrint<P>::print(m_data + m_length, n, p);
+    unsigned n = length();
+    unsigned o = ZuPrint<P>::length(p);
+    if (!owned() || size() < n + o) size(n + o);
+    length(n + ZuPrint<P>::print(m_data + n, o, p));
   }
 
   template <typename R> ZuInline typename FromReal<R>::T append_(R &&r)
@@ -906,7 +876,7 @@ protected:
 
 public:
   ZuInline void append(const T *data, unsigned length) {
-    if (data) splice__(0, m_length, 0, data, length);
+    if (data) splice__(0, this->length(), 0, data, length);
   }
 
 // splice()
@@ -937,18 +907,9 @@ protected:
       ZtArray *removed, int offset, int length, const A &a) {
     if (this == &a) {
       ZtArray a_ = a;
-      splice__(removed, offset, length, a_.m_data, a_.m_length);
+      splice__(removed, offset, length, a_.m_data, a_.length());
     } else
-      splice__(removed, offset, length, a.m_data, a.m_length);
-  }
-  template <typename A>
-  inline typename FromZtZArray<A>::T splice_(
-      ZtArray *removed, int offset, int length, const A &a) {
-    if (this == (const ZtArray *)&a) {
-      ZtArray a_ = a;
-      splice__(removed, offset, length, a_.m_data, a_.m_length);
-    } else
-      splice__(removed, offset, length, a.m_data, a.m_length);
+      splice__(removed, offset, length, a.m_data, a.length());
   }
   template <typename A>
   ZuInline typename FromArray<A>::T splice_(
@@ -958,7 +919,7 @@ protected:
   }
 
   template <typename S>
-  ZuInline typename FromString<S>::T splice_(
+  ZuInline typename FromAnyString<S>::T splice_(
       ZtArray *removed, int offset, int length, S &&s_) {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     splice__(removed, offset, length, s.data(), s.length());
@@ -995,56 +956,75 @@ public:
   }
 
   template <typename A> ZuInline typename FromZtArray<A>::T push(A &&a)
-    { splice(m_length, 0, ZuFwd<A>(a)); }
-  template <typename A> ZuInline typename FromZtZArray<A>::T push(A &&a)
-    { splice(m_length, 0, ZuFwd<A>(a)); }
+    { splice(length(), 0, ZuFwd<A>(a)); }
   template <typename A> ZuInline typename FromArray<A>::T push(A &&a)
-    { splice(m_length, 0, ZuFwd<A>(a)); }
+    { splice(length(), 0, ZuFwd<A>(a)); }
   inline void *push() {
-    if (!m_owned || m_length + 1 > m_size) {
-      m_size = grow(m_size, m_length + 1);
-      T *newData = (T *)::malloc(m_size * sizeof(T));
-      this->copyItems(newData, m_data, m_length);
+    unsigned n = length();
+    unsigned z = size();
+    if (!owned() || n + 1 > z) {
+      z = grow(z, n + 1);
+      T *newData = (T *)::malloc(z * sizeof(T));
+      this->copyItems(newData, m_data, n);
       free_();
       m_data = newData;
-      m_owned = m_mallocd = true;
-    }
-    return (void *)(m_data + m_length++);
+      size_owned(z, 1);
+      length_mallocd(n + 1, 1);
+    } else
+      length_(n + 1);
+    return (void *)(m_data + n);
   }
   template <typename I> ZuInline void push(I &&i) {
     this->initItem(push(), ZuFwd<I>(i));
   }
   inline T pop() {
-    if ((int)m_length <= 0) return ZuCmp<T>::null();
-    T t = ZuMv(m_data[--m_length]);
-    this->destroyItem(m_data + m_length);
-    return t;
+    unsigned n = length();
+    if (!n) return ZuCmp<T>::null();
+    T v;
+    if (ZuUnlikely(!owned())) {
+      v = m_data[--n];
+    } else {
+      v = ZuMv(m_data[--n]);
+      this->destroyItem(m_data + n);
+    }
+    length_(n);
+    return v;
   }
   inline T shift() {
-    if ((int)m_length <= 0) return ZuCmp<T>::null();
-    T t = ZuMv(m_data[0]);
-    this->destroyItem(m_data);
-    this->moveItems(m_data, m_data + 1, --m_length);
-    return t;
+    unsigned n = length();
+    if (!n) return ZuCmp<T>::null();
+    T v;
+    if (ZuUnlikely(!owned())) {
+      v = m_data[0];
+      ++m_data;
+      --n;
+    } else {
+      v = ZuMv(m_data[0]);
+      this->destroyItem(m_data);
+      this->moveItems(m_data, m_data + 1, --n);
+    }
+    length_(n);
+    return v;
   }
   template <typename A> inline typename FromZtArray<A>::T unshift(A &&a)
-    { splice(0, 0, ZuFwd<A>(a)); }
-  template <typename A> inline typename FromZtZArray<A>::T unshift(A &&a)
     { splice(0, 0, ZuFwd<A>(a)); }
   template <typename A> inline typename FromArray<A>::T unshift(A &&a)
     { splice(0, 0, ZuFwd<A>(a)); }
   inline void *unshift() {
-    if (!m_owned || m_length + 1 > m_size) {
-      m_size = grow(m_size, m_length + 1);
-      T *newData = (T *)::malloc(m_size * sizeof(T));
-      this->copyItems(newData + 1, m_data, m_length);
+    unsigned n = length();
+    unsigned z = size();
+    if (!owned() || n + 1 > z) {
+      z = grow(z, n + 1);
+      T *newData = (T *)::malloc(z * sizeof(T));
+      this->copyItems(newData + 1, m_data, n);
       free_();
       m_data = newData;
-      m_owned = m_mallocd = true;
+      size_owned(z, 1);
+      length_mallocd(n + 1, 1);
     } else {
-      this->moveItems(m_data + 1, m_data, m_length);
+      this->moveItems(m_data + 1, m_data, n);
+      length_(n + 1);
     }
-    ++m_length;
     return (void *)m_data;
   }
   template <typename I> inline void unshift(I &&i) {
@@ -1058,74 +1038,73 @@ protected:
       int length,
       const T *replace,
       unsigned rlength) {
-    if (offset < 0) { if ((offset += m_length) < 0) offset = 0; }
-    if (length < 0) { if ((length += (m_length - offset)) < 0) length = 0; }
+    unsigned n = this->length();
+    unsigned z = size();
+    if (offset < 0) { if ((offset += n) < 0) offset = 0; }
+    if (length < 0) { if ((length += (n - offset)) < 0) length = 0; }
 
-    if (offset > (int)m_length) {
-      if (!m_owned || offset + rlength > (int)m_size) {
-	m_size = grow(m_size, offset + rlength);
-	T *newData = (T *)::malloc(m_size * sizeof(T));
-	this->copyItems(newData, m_data, m_length);
-	this->initItems(newData + m_length, offset - m_length);
-	if (replace) this->copyItems(newData + offset, replace, rlength);
-	if (removed) removed->null();
-	free_();
-	m_data = newData;
-	m_length = offset + rlength;
-	m_owned = m_mallocd = true;
-	return;
-      }
+    if (offset > (int)n) {
       if (removed) removed->null();
-      this->initItems(m_data + m_length, offset - m_length);
-      if (replace) this->copyItems(m_data + offset, replace, rlength);
-      m_length = offset + rlength;
+      if (!owned() || offset + (int)rlength > (int)z) {
+	z = grow(z, offset + rlength);
+	size(z);
+      }
+      this->initItems(m_data + n, offset - n);
+      if (rlength) this->copyItems(m_data + offset, replace, rlength);
+      length_(offset + rlength);
       return;
     }
 
-    if (offset + length > (int)m_length) length = m_length - offset;
+    if (offset + length > (int)n) length = n - offset;
 
-    unsigned int newLength = m_length + rlength - length;
+    int l = n + rlength - length;
 
-    if (!m_owned || newLength > m_size) {
-      m_size = grow(m_size, newLength);
-      T *newData = (T *)::malloc(m_size * sizeof(T));
-      this->copyItems(newData, m_data, offset);
-      if (replace) this->copyItems(newData + offset, replace, rlength);
-      this->copyItems(newData + offset + rlength,
-		      m_data + offset + length,
-		      m_length - (offset + length));
+    if (l > 0 && (!owned() || l > (int)z)) {
+      z = grow(z, l);
       if (removed) removed->init(Copy, m_data + offset, length);
+      T *newData = (T *)::malloc(z * sizeof(T));
+      if (offset) this->copyItems(newData, m_data, offset);
+      if (rlength) this->copyItems(newData + offset, replace, rlength);
+      if ((int)rlength != length && offset + length < (int)n)
+	this->copyItems(
+	    newData + offset + rlength,
+	    m_data + offset + length,
+	    n - (offset + length));
       free_();
       m_data = newData;
-      m_length = newLength;
-      m_owned = m_mallocd = true;
+      size_owned(z, 1);
+      length_mallocd(l, 1);
       return;
     }
 
     if (removed) removed->init(Copy, m_data + offset, length);
     this->destroyItems(m_data + offset, length);
-    if ((int)rlength != length)
-      this->moveItems(
-	  m_data + offset + rlength,
-	  m_data + offset + length,
-	  m_length - (offset + length));
-    if (replace) this->copyItems(m_data + offset, replace, rlength);
-    m_length = newLength;
+    if (l > 0) {
+      if ((int)rlength != length && offset + length < (int)n)
+	this->moveItems(
+	    m_data + offset + rlength,
+	    m_data + offset + length,
+	    n - (offset + length));
+      if (rlength) this->copyItems(m_data + offset, replace, rlength);
+    }
+    length_(l);
   }
 
 // iterate
 
 public:
   template <typename Fn> inline void iterate(Fn fn) {
-    for (unsigned i = 0; i < m_length; i++) fn(m_data[i]);
+    unsigned n = length();
+    for (unsigned i = 0; i < n; i++) fn(m_data[i]);
   }
 
 // grep
 
   template <typename Fn> T grep(
       Fn fn, unsigned &i, unsigned end, bool del = false) {
+    unsigned n = length();
     do {
-      if (i >= m_length) i = 0;
+      if (i >= n) i = 0;
       if (fn(m_data[i])) {
 	if (del) {
 	  T t = ZuMv(m_data[i]);
@@ -1148,192 +1127,14 @@ public:
  
   template <typename S>
   ZuInline typename ToString<S, S>::T as() const {
-    return ZuTraits<S>::make(m_data, m_length);
+    return ZuTraits<S>::make(m_data, length());
   }
 
 protected:
 
-  unsigned		m_size:31,	// allocated size of buffer
-			m_owned:1;	// owned
-  unsigned		m_length:31,	// initialized length
-			m_mallocd:1;	// malloc'd (implies owned)
+  uint32_t		m_size_owned;	// allocated size and owned flag
+  uint32_t		m_length_mallocd;// initialized length and malloc'd flag
   T			*m_data;	// data buffer
-};
-
-template <typename T_, class Cmp_ = ZuCmp<T_> >
-class ZtZArray : public ZtZArray_<T_>, public ZtArray<T_, Cmp_> {
-  struct Private { };
-
-public:
-  typedef T_ T;
-  typedef Cmp_ Cmp;
-
-private:
-  typedef ZtArray<T_, Cmp_> Base;
-  typedef typename Base::Char Char;
-  typedef typename Base::Char2 Char2;
-
-public:
-  ZuInline ZtZArray() { this->null_(); }
-
-  ZuInline ZtZArray(const ZtZArray &a) : Base(Base::NoInit) { ctor(a); }
-  inline ZtZArray(ZtZArray &&a) noexcept : Base(Base::NoInit) {
-    if (!a.m_owned) { this->shadow_(a.m_data, a.m_length); return; }
-    this->own_(a.m_data, a.m_length, a.m_size, a.m_mallocd);
-    a.m_owned = false;
-  }
-  ZuInline ZtZArray(std::initializer_list<T> a) {
-    this->shadow_(a.begin(), a.size());
-  }
-
-  template <typename A>
-  ZuInline ZtZArray(A &&a) : Base(Base::NoInit) { ctor(ZuFwd<A>(a)); }
-
-private:
-  template <typename A>
-  ZuInline typename Base::template FromZtArray<A>::T ctor(const A &a)
-    { this->shadow_(a.data(), a.length()); }
-  template <typename A>
-  ZuInline typename Base::template FromZtZArray<A>::T ctor(const A &a) {
-    if (!a.m_owned) { this->shadow_(a.m_data, a.m_length); return; }
-    this->own_(a.m_data, a.m_length, a.m_size, a.m_mallocd);
-    const_cast<ZtZArray &>(a).m_owned = false;
-  }
-  template <typename A>
-  ZuInline typename Base::template FromSameArray<A>::T ctor(A &&a_) {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
-    this->shadow_(a.data(), a.length());
-  }
-  template <typename A>
-  ZuInline typename Base::template FromDiffArray<A>::T ctor(A &&a_) {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
-    this->copy_(a.data(), a.length());
-  }
-
-  template <typename S>
-  ZuInline typename Base::template FromString<S>::T ctor(S &&s_) {
-    ZuArrayT<S> s(ZuFwd<S>(s_));
-    this->shadow_(s.data(), s.length());
-  }
-
-  template <typename S> ZuInline typename Base::template FromChar2String<S>::T
-    ctor(const S &s) { Base::ctor(s); }
-  template <typename C> ZuInline typename Base::template FromChar2<C>::T
-    ctor(C c) { Base::ctor(c); }
-
-  template <typename P> ZuInline typename Base::template FromPDelegate<P>::T
-    ctor(const P &p) { Base::ctor(p); }
-  template <typename P> ZuInline typename Base::template FromPBuffer<P>::T
-    ctor(const P &p) { Base::ctor(p); }
-
-  template <typename V> ZuInline typename Base::template CtorSize<V>::T
-    ctor(V size) { Base::ctor(size); }
-
-  template <typename R> ZuInline typename Base::template CtorElem<R>::T
-    ctor(R &&r) { Base::ctor(ZuFwd<R>(r)); }
-
-public:
-  enum Copy_ { Copy };
-  template <typename A>
-  ZuInline ZtZArray(Copy_ _, const A &a) { this->copy(a); }
-
-  ZuInline ZtZArray &operator =(const ZtZArray &a)
-    { assign(a); return *this; }
-  ZuInline ZtZArray &operator =(ZtZArray &&a) noexcept {
-    this->free_();
-    new (this) ZtZArray(ZuMv(a));
-    return *this;
-  }
-
-  template <typename A> ZuInline ZtZArray &operator =(const A &a)
-    { assign(a); return *this; }
-
-private:
-  template <typename A>
-  inline typename Base::template FromZtArray<A>::T assign(const A &a) {
-    if (this == &a) return;
-    this->free_();
-    this->shadow_(a.data(), a.length());
-  }
-  template <typename A>
-  inline typename Base::template FromZtZArray<A>::T assign(const A &a) {
-    if ((Base *)this == (const Base *)&a) return;
-    this->free_();
-    if (!a.m_owned)
-      this->shadow_(a.m_data, a.m_length);
-    else {
-      this->own_(a.m_data, a.m_length, a.m_size, a.m_mallocd);
-      const_cast<ZtZArray &>(a).m_owned = false;
-    }
-  }
-  template <typename A>
-  inline typename Base::template FromArray<A>::T assign(A &&a_) {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
-    this->free_();
-    this->shadow_(a.data(), a.length());
-  }
-
-  template <typename S>
-  inline typename Base::template FromString<S>::T assign(S &&s_) {
-    ZuArrayT<S> s(ZuFwd<S>(s_));
-    this->free_();
-    this->shadow_(s.data(), s.length());
-  }
-
-  template <typename S> ZuInline typename Base::template FromChar2String<S>::T
-    assign(const S &s) { Base::assign(s); }
-  template <typename C> ZuInline typename Base::template FromChar2<C>::T
-    assign(C c) { Base::assign(c); }
-
-  template <typename P> ZuInline typename Base::template FromPDelegate<P>::T
-    assign(const P &p) { Base::assign(p); }
-  template <typename P> ZuInline typename Base::template FromPBuffer<P>::T
-    assign(const P &p) { Base::assign(p); }
-
-  template <typename R> ZuInline typename Base::template FromReal<R>::T
-    assign(R &&r) { Base::assign(ZuFwd<R>(r)); }
-
-  template <typename R> ZuInline typename Base::template FromElem<R>::T
-    assign(R &&r) { Base::assign(ZuFwd<R>(r)); }
-
-public:
-  template <typename A> ZuInline ZtZArray &operator -=(const A &a)
-    { *(Base *)this -= a; return *this; }
-
-  template <typename S>
-  inline ZtZArray(S &&s_, ZtIconv *iconv,
-      typename ZuIsString<S, Private>::T *_ = 0) {
-    ZuArrayT<S> s(ZuFwd<S>(s_));
-    this->convert_(s, iconv);
-  }
-  inline ZtZArray(const Char *data, unsigned length, ZtIconv *iconv) {
-    ZuArray<Char> s(data, length);
-    this->convert_(s, iconv);
-  }
-  inline ZtZArray(const Char2 *data, unsigned length, ZtIconv *iconv) {
-    ZuArray<Char2> s(data, length);
-    this->convert_(s, iconv);
-  }
-
-public:
-  ZuInline ZtZArray(
-	unsigned length, unsigned size,
-	bool initItems = !ZuTraits<T>::IsPrimitive) :
-      Base(length, size, initItems) { }
-  ZuInline explicit ZtZArray(const T *data, unsigned length) :
-      Base(data, length) { }
-  ZuInline explicit ZtZArray(Copy_ _, const T *data, unsigned length) :
-      Base(Base::Copy, data, length) { }
-  ZuInline explicit ZtZArray(const T *data, unsigned length, unsigned size) :
-      Base(data, length, size) { }
-  ZuInline explicit ZtZArray(
-	const T *data, unsigned length, unsigned size, bool mallocd) :
-      Base(data, length, size, mallocd) { }
-
-  template <typename A> ZuInline ZtZArray &operator +=(const A &a)
-    { *(Base *)this += a; return *this; }
-  template <typename A> ZuInline ZtZArray &operator <<(const A &a)
-    { *(Base *)this << a; return *this; }
 };
 
 template <typename T, class Cmp>
@@ -1369,16 +1170,9 @@ struct ZuTraits<ZtArray<Elem_, Cmp> > :
   inline static const Elem *data(const T &a) { return a.data(); }
   inline static unsigned length(const T &a) { return a.length(); }
 };
-template <typename T, class Cmp>
-struct ZuTraits<ZtZArray<T, Cmp> > : public ZuTraits<ZtArray<T, Cmp> > {
-  inline static ZtZArray<T, Cmp> make(const char *data, unsigned length)
-    { return ZtZArray<T, Cmp>(data, length); }
-};
 
 // generic printing
 template <class Cmp> struct ZuPrint<ZtArray<char, Cmp> > :
   public ZuPrintString<ZtArray<char, Cmp> > { };
-template <class Cmp> struct ZuPrint<ZtZArray<char, Cmp> > :
-  public ZuPrintString<ZtZArray<char, Cmp> > { };
 
 #endif /* ZtArray_HPP */

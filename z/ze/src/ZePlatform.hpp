@@ -160,7 +160,8 @@ public:
 private:
   template <typename U> struct IsLiteral {
     enum { OK = ZuTraits<U>::IsArray &&
-      ZuTraits<U>::IsPrimitive && ZuTraits<U>::IsCString };
+      ZuTraits<U>::IsPrimitive && ZuTraits<U>::IsCString &&
+      ZuConversion<typename ZuTraits<U>::Elem, const char>::Same };
   };
   template <typename U, typename R = void>
   struct MatchLiteral : public ZuIfT<IsLiteral<U>::OK, R> { };
@@ -224,20 +225,14 @@ public:
   ZuInline MessageFn messageFn() const { return m_messageFn; }
 
   struct Message {
-    ZuInline Message(const ZeEvent_ &e) : m_event(e) { }
-    ZuInline void print(ZmStream &s) const {
-      m_event.messageFn()(m_event, s);
-    }
-    template <typename S>
-    ZuInline void print(S &s_) const {
+    ZuInline void print(ZmStream &s) const { e.messageFn()(e, s); }
+    template <typename S> ZuInline void print(S &s_) const {
       ZmStream s(s_);
-      m_event.messageFn()(m_event, s);
+      e.messageFn()(e, s);
     }
-  private:
-    const ZeEvent_	&m_event;
+    const ZeEvent_	&e;
   };
-
-  ZuInline Message message() const { return Message(*this); }
+  ZuInline Message message() const { return Message{*this}; }
 
 private:
   ZmTime	m_time;

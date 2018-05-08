@@ -46,7 +46,6 @@ class ZiAPI ZiIP : public in_addr {
 
 public:
   typedef ZiPlatform::Hostname Hostname;
-  typedef ZiPlatform::ZHostname ZHostname;
 
   enum Result {
     OK		= Zi::OK,
@@ -88,11 +87,6 @@ public:
   inline bool operator !() const { return !s_addr; }
   inline uint32_t hash() const { return *(uint32_t *)&s_addr; }
 
-  inline ZtZString string() const {
-    ZtZString s(16);
-    print(s);
-    return s;
-  }
   template <typename S> void print(S &s) const {
     uint32_t addr = (uint32_t)ntohl(s_addr);
     s <<

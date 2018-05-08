@@ -131,17 +131,13 @@ int main()
       }
     }
   } catch (const ZvError &e) {
-    fputs("zverror: ", stderr);
-    fputs(e.message().data(), stderr);
-    fputc('\n', stderr);
+    std::cerr << "ZvError: " << e << '\n';
     exit(1);
   } catch (const ZeError &e) {
-    fputs("zeerror: ", stderr);
-    fputs(e.message(), stderr);
-    fputc('\n', stderr);
+    std::cerr << "ZeError: " << e << '\n';
     exit(1);
   } catch (...) {
-    fputs("unknown exception\n", stderr);
+    std::cerr << "unknown exception\n";
     exit(1);
   }
   return 0;

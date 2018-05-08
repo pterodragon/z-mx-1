@@ -61,13 +61,10 @@ int main(int argc, char **argv) {
     0x82, 0xf0, 0x82, 0xb2, 0x97, 0x97, 0x82, 0xad, 0x82, 0xbe,
     0x82, 0xb3, 0x82, 0xa2, 0x81, 0x42, 0 };
 
-  ZtZString title(ZuArray<char>((char *)title_, sizeof(title_)), &conv);
-  ZtZString body(ZuArray<char>((char *)body_, sizeof(body_)), &conv);
+  ZtString title(ZuArray<char>((char *)title_, sizeof(title_)), &conv);
+  ZtString body(ZuArray<char>((char *)body_, sizeof(body_)), &conv);
 
-  ZtZString info = ZtSprintf(
-      "Title: (%s)\n" "Body : (%s)\n", title.data(), body.data());
-
-  std::cout << info << std::endl;
+  std::cout << "Title: (" << title << ")\nBody : (" << body << ")\n";
 
   return 0;
 }

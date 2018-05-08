@@ -297,9 +297,10 @@ void Connection::recvComplete(ZiIOContext &io)
     return;
   }
 
-  std::cout << ZtHexDump(ZtSprintf("%s:%u\n%.*s",
-	  io.addr.ip().string().data(), (unsigned)io.addr.port(),
-	  io.length, m_msg.data()), m_msg.data(), io.length);
+  std::cout << ZtHexDump(
+      ZtString() << io.addr.ip() << ':' << ZuBoxed(io.addr.port()) <<
+      ZuString(m_msg.data(), io.length), m_msg.data(), io.length);
+
   fflush(stdout);
 
   unsigned nMessages = mx()->nMessages();

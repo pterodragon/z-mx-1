@@ -85,14 +85,14 @@ public:
 
     m_interactive = isatty(fileno(stdin));
     if (!m_interactive && m_solo.length() != 0) {
-      ZtZArray<char> data;
+      ZtArray<char> data;
       ZuArrayN<char, BUFSIZ> buf;
       size_t length;
       while ((length = fread(buf.data(), 1, BUFSIZ, stdin)) > 0) {
 	buf.length(length);
 	data += buf;
       }
-      stdinData(data);
+      stdinData(ZuMv(data));
     }
   }
   void final() {
@@ -143,7 +143,7 @@ private:
   }
 
   void prompt() {
-    ZtZString s;
+    ZtString s;
     do {
       if (m_interactive) {
 	try {
@@ -162,7 +162,7 @@ private:
 	s.chomp();
       }
     } while (!s);
-    send(s);
+    send(ZuMv(s));
   }
 
   void disconnected(ZvCmdLine *line) {
@@ -204,7 +204,7 @@ int main(int argc, char **argv)
       }
     }
 
-    if (mx->start() != Zi::OK) throw ZtZString("multiplexer start failed");
+    if (mx->start() != Zi::OK) throw ZtString("multiplexer start failed");
 
     if (argc > 2) {
       ZtString solo;
@@ -231,7 +231,7 @@ int main(int argc, char **argv)
     fputc('\n', stderr);
     ZeLog::stop();
     exit(1);
-  } catch (const ZtZString &s) {
+  } catch (const ZtString &s) {
     fputs(s.data(), stderr);
     fputc('\n', stderr);
     ZeLog::stop();

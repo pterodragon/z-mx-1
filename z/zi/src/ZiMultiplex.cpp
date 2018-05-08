@@ -1373,7 +1373,7 @@ void ZiConnection::executedRecv(unsigned n)
 {
   ZiDEBUG(m_mx, "executedRecv()");
 
-  if (m_rxContext.completed()) { *(int *)0 = 0; }
+  ZmAssert(!m_rxContext.completed());
 
 #ifdef ZiMultiplex_IOCP
   ZiDEBUG(m_mx, ZtHexDump(ZtSprintf(

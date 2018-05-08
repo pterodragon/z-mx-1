@@ -723,8 +723,8 @@ private:
   // get a new or existing record, adding it to the cache
   ZmRef<ZdbAnyPOD> replicated_(ZdbRN rn);
 
-  inline ZtZString fileName(unsigned i) {
-    ZtZString name(m_config->path.length() + 16);
+  inline ZtString fileName(unsigned i) {
+    ZtString name(m_config->path.length() + 16);
     name << m_config->path << '_' << i;
     return name;
   }
@@ -999,7 +999,7 @@ struct ZdbEnvConfig {
     writeThread = cf->getInt("writeThread", 1, INT_MAX, true);
     {
       ZvCf::Iterator i(cf->subset("dbs", false, true));
-      ZtZString key;
+      ZuString key;
       while (ZmRef<ZvCf> dbCf = i.subset(key)) {
 	ZdbConfig db(key, dbCf); // might throw, do not push() here
 	new (dbCfs.push()) ZdbConfig(db);
@@ -1008,7 +1008,7 @@ struct ZdbEnvConfig {
     hostID = cf->getInt("hostID", 0, 1<<30, true);
     {
       ZvCf::Iterator i(cf->subset("hosts", false, true));
-      ZtZString key;
+      ZuString key;
       while (ZmRef<ZvCf> hostCf = i.subset(key)) {
 	ZdbHostConfig host(key, hostCf); // might throw, do not push() here
 	new (hostCfs.push()) ZdbHostConfig(host);

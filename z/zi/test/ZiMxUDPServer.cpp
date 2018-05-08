@@ -20,7 +20,7 @@
 
 void error(ZiConnection *, const char *op, int result, ZeError e)
 {
-  ZeLOG(Error, ZtZString() << op << ' ' << Zi::resultName(result) << ' ' << e);
+  ZeLOG(Error, ZtString() << op << ' ' << Zi::resultName(result) << ' ' << e);
 }
 
 class Mx;
@@ -110,9 +110,9 @@ void Connection::recvComplete(ZiIOContext &io)
 {
   m_msg.length(io.offset + io.length);
 
-  std::cout << ZtHexDump(ZtSprintf("%s:%u\n%.*s",
-	  io.addr.ip().string().data(), (unsigned)io.addr.port(),
-	  io.length, m_msg.data()), m_msg.data(), io.length);
+  std::cout << ZtHexDump(
+      ZtString() << io.addr.ip() << ':' << ZuBoxed(io.addr.port()) <<
+      ZuString(m_msg.data(), io.length), m_msg.data(), io.length);
   fflush(stdout);
 
   m_echo = !m_dest ? io.addr : m_dest;

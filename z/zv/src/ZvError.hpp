@@ -37,9 +37,9 @@
 class ZvAPI ZvError {
 public:
   virtual ~ZvError() { }
-  virtual ZtZString message() const = 0;
+  virtual void print_(ZmStream &) const = 0;
   template <typename S>
-  ZuInline void print(S &s) const { s << message(); }
+  ZuInline void print(S &s_) const { ZmStream s(s_); print_(s); }
 };
 template <> struct ZuPrint<ZvError> : public ZuPrintFn { };
 

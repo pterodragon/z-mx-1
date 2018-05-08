@@ -44,6 +44,7 @@ class ZvAPI ZvDateError : public ZvError {
 public:
   template <typename S> inline ZvDateError(S &&s) : m_value(ZuFwd<S>(s)) { }
 
+#if 0
   inline ZvDateError(const ZvDateError &e) : m_value(e.m_value) { }
   inline ZvDateError &operator =(const ZvDateError &e) {
     if (this != &e) m_value = e.m_value;
@@ -55,14 +56,14 @@ public:
     m_value = ZuMv(e.m_value);
     return *this;
   }
+#endif
 
-  ZtZString message() const {
-    return ZtSprintf("invalid CSV date/time \"%.*s\"",
-	m_value.length(), m_value.data());
+  void print_(ZmStream &s) const {
+    s << "invalid CSV date/time \"" << m_value << '"';
   }
 
 private:
-  ZtArray<char>	m_value;
+  ZtArray<char>		m_value;
 };
 
 #ifdef _MSC_VER

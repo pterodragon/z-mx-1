@@ -102,22 +102,22 @@ friend struct ZmCleanup<ZeLog>;
   public:
     inline FileSink() : m_file(0) { init(8, 0); }
     template <typename Name>
-    inline FileSink(Name &&name, int age = 8, int offset = 0) :
-	m_filename(ZuFwd<Name>(name)), m_file(0) { init(age, offset); }
+    inline FileSink(Name &&name, unsigned age = 8, int tzOffset = 0) :
+	m_filename(ZuFwd<Name>(name)), m_file(0) { init(age, tzOffset); }
 
     virtual ~FileSink();
 
     void log(ZeEvent *e);
 
   private:
-    void init(int age, int offset);
+    void init(unsigned age, int tzOffset);
 
     void log_(FILE *f, ZeEvent *e);
 
     Lock		m_lock;
     ZtString		m_filename;
     FILE *		m_file;
-    int			m_offset;	// timezone offset
+    int			m_tzOffset;	// timezone offset
   };
 
   class ZeAPI DebugSink : public ZmPolymorph {
@@ -175,7 +175,7 @@ public:
     instance()->init_(ZuFwd<Args>(args)...);
   }
 
-  inline static ZtZString program() { return instance()->program_(); }
+  inline static ZuString program() { return instance()->program_(); }
 
   inline static int level() { return instance()->level_(); }
   inline static void level(int l) { instance()->level_(l); }
@@ -203,9 +203,9 @@ private:
     ZePlatform::sysloginit(m_program, ZuFwd<Facility>(facility));
   }
 
-  inline ZtZString program_() { return m_program; }
+  inline ZuString program_() const { return m_program; }
 
-  inline int level_() { return m_level; }
+  inline int level_() const { return m_level; }
   inline void level_(int l) { m_level = l; }
 
   void add_(ZeSinkFn sink);

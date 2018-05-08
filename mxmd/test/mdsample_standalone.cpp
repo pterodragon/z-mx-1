@@ -182,7 +182,7 @@ void loaded(MxMDVenue *venue)
     md->secInvoke(MxSecKey{"XTKS", MxID(), *ticker},
 	[secHandler, ticker](MxMDSecurity *sec) {
       if (!sec) {
-	ZeLOG(Error, ZtZString() <<
+	ZeLOG(Error, ZtString() <<
 	    "security \"" << *ticker << "\" not found");
 	return;
       }
@@ -195,14 +195,14 @@ int subscribe()
 {
   try {
     MxMDLib *md = MxMDLib::instance();
-    if (!md) throw ZtZString("MxMDLib::instance() failed");
+    if (!md) throw ZtString("MxMDLib::instance() failed");
 
     md->subscribe(&((new MxMDLibHandler())->
 	  exceptionFn(MxMDExceptionFn::Ptr<&exception>::fn()).
 	  timerFn(MxMDTimerFn::Ptr<&timer>::fn()).
 	  refDataLoadedFn(MxMDVenueFn::Ptr<&loaded>::fn())));
   } catch (const ZtString &s) {
-    ZeLOG(Error, ZtZString() << "error: " << s);
+    ZeLOG(Error, ZtString() << "error: " << s);
     return -1;
   } catch (...) {
     ZeLOG(Error, "unknown exception");
@@ -226,7 +226,7 @@ int initFeed()
     md->addFeed(feed);
 
   } catch (const ZtString &s) {
-    ZeLOG(Error, ZtZString() << "error: " << s);
+    ZeLOG(Error, ZtString() << "error: " << s);
     return -1;
   } catch (...) {
     ZeLOG(Error, "unknown exception");
@@ -248,7 +248,7 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
     // add a tick size table
 
     ZmRef<MxMDTickSizeTbl> tickSizeTbl = venue->addTickSizeTbl("1");
-    if (!tickSizeTbl) throw ZtZString("MxMDVenue::addTickSizeTbl() failed");
+    if (!tickSizeTbl) throw ZtString("MxMDVenue::addTickSizeTbl() failed");
     // tick size 1 from 0 to infinity
     tickSizeTbl->addTickSize(0, MxFloat::inf(), 1);
 
@@ -280,7 +280,7 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
       MxMDSecHandle sec = md->security(secKey, 0); // default to shard 0
 
       thread_local ZmSemaphore sem;
-      ZtZString error;
+      ZtString error;
       sec.invokeMv([sem = &sem, &error,
 	  secKey, &refData, &tickSizeTbl, &lotSizes](
 	    MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
@@ -313,7 +313,7 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
     }
     md->loaded(venue);
   } catch (const ZtString &s) {
-    ZeLOG(Error, ZtZString() << "error: " << s);
+    ZeLOG(Error, ZtString() << "error: " << s);
     return -1;
   } catch (...) {
     ZeLOG(Error, "unknown exception");
@@ -326,7 +326,7 @@ void publish()
 {
   try {
     MxMDLib *md = MxMDLib::instance();
-    if (!md) throw ZtZString("MxMDLib::instance() failed");
+    if (!md) throw ZtString("MxMDLib::instance() failed");
 
     do {
 
@@ -339,7 +339,7 @@ void publish()
 	md->secInvoke(MxSecKey{"XTKS", MxID(), *ticker},
 	    [ticker](MxMDSecurity *sec) {
 	  if (!sec) {
-	    ZeLOG(Error, ZtZString() <<
+	    ZeLOG(Error, ZtString() <<
 		"security \"" << *ticker << "\" not found");
 	    return;
 	  }
@@ -348,7 +348,7 @@ void publish()
 
 	  ZmRef<MxMDOrderBook> ob = sec->orderBook("XTKS", MxID());
 	  if (!ob) {
-	    ZeLOG(Error, ZtZString() <<
+	    ZeLOG(Error, ZtString() <<
 		"XTKS order book for \"" << *ticker << "\" not found");
 	    return;
 	  }
@@ -389,7 +389,7 @@ void publish()
     } while (sem.timedwait(ZmTime(ZmTime::Now, 1)) < 0);
 
   } catch (const ZtString &s) {
-    ZeLOG(Error, ZtZString() << "error: " << s);
+    ZeLOG(Error, ZtString() << "error: " << s);
   } catch (...) {
     ZeLOG(Error, "unknown exception");
   }

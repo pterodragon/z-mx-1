@@ -84,7 +84,7 @@ public:
 private:
   template <typename U> struct IsStrLiteral {
     enum { OK = ZuTraits<U>::IsArray && ZuTraits<U>::IsPrimitive &&
-      ZuConversion<typename ZuTraits<U>::Elem, T>::Same };
+      ZuConversion<typename ZuTraits<U>::Elem, const T>::Same };
   };
   template <typename U> struct IsCString {
     typedef typename ZuTraits<U>::Elem Char;
@@ -150,15 +150,15 @@ public:
     return *this;
   }
 
-  inline ZuArray(const T *data, unsigned length) :
+  ZuInline ZuArray(const T *data, unsigned length) :
       m_data(data), m_length(length) { }
 
-  inline const T *data() const { return m_data; }
-  inline unsigned length() const { return length_<T>(); }
+  ZuInline const T *data() const { return m_data; }
+  ZuInline unsigned length() const { return length_<T>(); }
 
 private:
   template <typename Char>
-  inline typename ZuIfT<
+  ZuInline typename ZuIfT<
     ZuConversion<Char, char>::Same ||
     ZuConversion<Char, wchar_t>::Same, unsigned>::T length_() const {
     if (ZuUnlikely(m_length < 0))
@@ -167,58 +167,58 @@ private:
     return m_length;
   }
   template <typename Char>
-  inline typename ZuIfT<
+  ZuInline typename ZuIfT<
     !ZuConversion<Char, char>::Same &&
     !ZuConversion<Char, wchar_t>::Same, unsigned>::T length_() const {
     return m_length;
   }
 
 public:
-  inline const T &operator [](int i) const { return m_data[i]; }
+  ZuInline const T &operator [](int i) const { return m_data[i]; }
 
   // operator T *() must return 0 if the string is empty, oherwise
   // these usages stop working:
   // if (ZuString s = "") { } else { puts("ok"); }
   // if (ZuString s = 0) { } else { puts("ok"); }
-  inline operator const T *() const {
+  ZuInline operator const T *() const {
     return !length_<T>() ? (const T *)0 : m_data;
   }
 
-  inline bool operator !() const { return !length_<T>(); }
+  ZuInline bool operator !() const { return !length_<T>(); }
 
-  inline void offset(unsigned n) {
+  ZuInline void offset(unsigned n) {
     if (!n) return;
     if (n <= length_<T>()) m_data += n, m_length -= n;
   }
 
 protected:
-  inline bool same(const ZuArray &v) const { return this == &v; }
-  template <typename V> inline bool same(const V &v) const { return false; }
+  ZuInline bool same(const ZuArray &v) const { return this == &v; }
+  template <typename V> ZuInline bool same(const V &v) const { return false; }
 
 public:
-  template <typename V> inline int cmp(const V &v) const {
+  template <typename V> ZuInline int cmp(const V &v) const {
     if (same(v)) return 0;
     return ZuCmp<ZuArray>::cmp(*this, v);
   }
-  template <typename V> inline bool equals(const V &v) const {
+  template <typename V> ZuInline bool equals(const V &v) const {
     if (same(v)) return true;
     return ZuCmp<ZuArray>::equals(*this, v);
   }
 
   template <typename V>
-  inline bool operator ==(const V &v) const { return equals(v); }
+  ZuInline bool operator ==(const V &v) const { return equals(v); }
   template <typename V>
-  inline bool operator !=(const V &v) const { return !equals(v); }
+  ZuInline bool operator !=(const V &v) const { return !equals(v); }
   template <typename V>
-  inline bool operator >(const V &v) const { return cmp(v) > 0; }
+  ZuInline bool operator >(const V &v) const { return cmp(v) > 0; }
   template <typename V>
-  inline bool operator >=(const V &v) const { return cmp(v) >= 0; }
+  ZuInline bool operator >=(const V &v) const { return cmp(v) >= 0; }
   template <typename V>
-  inline bool operator <(const V &v) const { return cmp(v) < 0; }
+  ZuInline bool operator <(const V &v) const { return cmp(v) < 0; }
   template <typename V>
-  inline bool operator <=(const V &v) const { return cmp(v) <= 0; }
+  ZuInline bool operator <=(const V &v) const { return cmp(v) <= 0; }
 
-  inline uint32_t hash() const { return ZuHash<ZuArray>::hash(*this); }
+  ZuInline uint32_t hash() const { return ZuHash<ZuArray>::hash(*this); }
 
 private:
   const T	*m_data;
@@ -226,14 +226,14 @@ private:
 };
 
 template <typename T> class ZuArray_Null {
-  inline const T *data() const { return 0; }
-  inline unsigned length() const { return 0; }
+  ZuInline const T *data() const { return 0; }
+  ZuInline unsigned length() const { return 0; }
 
-  inline T operator [](int i) const { return ZuCmp<T>::null(); }
+  ZuInline T operator [](int i) const { return ZuCmp<T>::null(); }
 
-  inline bool operator !() const { return true; }
+  ZuInline bool operator !() const { return true; }
 
-  inline void offset(unsigned n) { }
+  ZuInline void offset(unsigned n) { }
 };
 
 template <typename Cmp>
@@ -243,19 +243,19 @@ class ZuArray<ZuNull, Cmp> : public ZuArray_Null<ZuNull> {
 public:
   typedef ZuNull Elem;
 
-  inline ZuArray() { }
-  inline ZuArray(const ZuArray &a) { }
-  inline ZuArray &operator =(const ZuArray &a) { }
+  ZuInline ZuArray() { }
+  ZuInline ZuArray(const ZuArray &a) { }
+  ZuInline ZuArray &operator =(const ZuArray &a) { }
 
-  template <typename A> inline ZuArray(const A &a, typename ZuIfT<
+  template <typename A> ZuInline ZuArray(const A &a, typename ZuIfT<
     ZuTraits<A>::IsArray && ZuConversion<
       typename ZuTraits<A>::Elem, ZuNull>::Exists, Private>::T *_ = 0) { }
-  template <typename A> inline typename ZuIfT<
+  template <typename A> ZuInline typename ZuIfT<
     ZuTraits<A>::IsArray &&
     ZuConversion<typename ZuTraits<A>::Elem, ZuNull>::Exists, ZuArray &>::T
       operator =(const A &a) { return *this; }
 
-  inline ZuArray(const ZuNull *data, unsigned length) { }
+  ZuInline ZuArray(const ZuNull *data, unsigned length) { }
 };
 
 template <typename Cmp>
@@ -265,19 +265,19 @@ class ZuArray<void, Cmp> : public ZuArray_Null<void> {
 public:
   typedef void Elem;
 
-  inline ZuArray() { }
-  inline ZuArray(const ZuArray &a) { }
-  inline ZuArray &operator =(const ZuArray &a) { }
+  ZuInline ZuArray() { }
+  ZuInline ZuArray(const ZuArray &a) { }
+  ZuInline ZuArray &operator =(const ZuArray &a) { }
 
-  template <typename A> inline ZuArray(const A &a, typename ZuIfT<
+  template <typename A> ZuInline ZuArray(const A &a, typename ZuIfT<
     ZuTraits<A>::IsArray && ZuConversion<
       typename ZuTraits<A>::Elem, void>::Exists, Private>::T *_ = 0) { }
-  template <typename A> inline typename ZuIfT<
+  template <typename A> ZuInline typename ZuIfT<
     ZuTraits<A>::IsArray &&
     ZuConversion<typename ZuTraits<A>::Elem, void>::Exists, ZuArray &>::T
       operator =(const A &a) { return *this; }
 
-  inline ZuArray(const void *data, unsigned length) { }
+  ZuInline ZuArray(const void *data, unsigned length) { }
 };
 
 template <typename Elem_>

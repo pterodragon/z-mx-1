@@ -58,7 +58,7 @@ ZiDir::Path ZiDir::read(ZeError *e)
   if (m_handle == INVALID_HANDLE_VALUE) {
     if (!m_match) {
       if (e) *e = ZeError(EBADF);
-      return ZPath();
+      return Path();
     }
     m_handle = FindFirstFileEx(m_match, FindExInfoStandard, &wfd,
 			       FindExSearchNameMatch, 0, 0);
@@ -66,7 +66,7 @@ ZiDir::Path ZiDir::read(ZeError *e)
   } else {
     if (!FindNextFile(m_handle, &wfd)) goto error;
   }
-  return ZPath(ZPath::Copy, wfd.cFileName);
+  return Path(Path::Copy, wfd.cFileName);
 
 error:
   DWORD errNo;
@@ -80,26 +80,26 @@ error:
       break;
   }
   close();
-  return ZPath();
+  return Path();
 
 #else /* _WIN32 */
 
   if (!m_dir) {
     if (e) *e = ZeError(EBADF);
-    return ZPath();
+    return Path();
   }
 
   struct dirent d, *r;
   int i;
 
   if (i = readdir_r(m_dir, &d, &r)) goto error;
-  if (!r) return ZPath();
-  return ZPath(ZPath::Copy, d.d_name);
+  if (!r) return Path();
+  return Path(Path::Copy, d.d_name);
 
 error:
   if (e) *e = ZeError(errno);
   close();
-  return ZPath();
+  return Path();
 
 #endif /* _WIN32 */
 }
@@ -109,7 +109,7 @@ void ZiDir::close()
   Guard guard(m_lock);
 
 #ifdef _WIN32
-  m_match = ZPath();
+  m_match = Path();
   if (m_handle != INVALID_HANDLE_VALUE) {
     FindClose(m_handle);
     m_handle = INVALID_HANDLE_VALUE;

@@ -205,53 +205,52 @@ extern "C" void dispatch_cb(u_char *userarg, const pcap_pkthdr *pkthdr,
   ((ZpHandle::DrainBounce *)userarg)->bounce(userarg, pkthdr, packet);
 }
 
-ZtZString Zp_Pcap::toString() const
+void Zp_Pcap::print(ZmStream &s) const
 {
-  ZtZString stream;
   ZpError err;
 
-  stream << "pcap [handle = ";
+  s << "pcap [handle = ";
   if (!m_pcap) {
-    stream << "null]";
+    s << "null]";
   } else {
-    stream << pcap_fileno(m_pcap) << "]";
+    s << pcap_fileno(m_pcap) << "]";
   }
 
-  stream << " [snaplen = ";
+  s << " [snaplen = ";
   if (!m_pcap) {
-    stream << "0]";
+    s << "0]";
   } else {
-    stream << pcap_snapshot(m_pcap) << "]";
+    s << pcap_snapshot(m_pcap) << "]";
   }
 
   int nonBlock = pcap_getnonblock(m_pcap, err.data());
-  stream << " [nonblock = ";
+  s << " [nonblock = ";
   if (nonBlock < 0) {
-    stream << err.data() << "]";
+    s << err.data() << "]";
   } else {
-    stream << nonBlock << "]";
+    s << nonBlock << "]";
   }
 
   pcap_if_t *devices = 0;
   err.null();
-  stream << " [devices = [";
+  s << " [devices = [";
   if (pcap_findalldevs(&devices, err.data()) < 0) {
-    stream << err.data() << "]";
+    s << err.data() << "]";
   } else {
     pcap_if_t *tmp = devices;
     do {
-      stream << "[name = " << tmp->name
+      s << "[name = " << tmp->name
 	     << "] [description = " << tmp->description
 	     << "] [flags = " << tmp->flags
 	     << "] [addresses = [";
       pcap_addr_t *a = tmp->addresses;
       while (a) {
-	stream << "[addr = ";
+	s << "[addr = ";
 	switch (a->addr->sa_family) {
 	case AF_INET:
 	  {
 	    ZiIP ip(((sockaddr_in *)a->addr)->sin_addr);
-	    stream << ip.string() << "]";
+	    s << ip << "]";
 	  }
 	  break;
 	case AF_INET6:
@@ -259,66 +258,57 @@ ZtZString Zp_Pcap::toString() const
 	    char str[INET6_ADDRSTRLEN];
 	    if (!getnameinfo(a->addr, sizeof(struct sockaddr_in6),
 		  str, INET6_ADDRSTRLEN, 0, 0, NI_NUMERICHOST)) {
-	      stream << str << "]";
+	      s << str << "]";
 	    } else {
-	      stream << "error]";
+	      s << "error]";
 	    }
 	  }
 	  break;
 	default:
-	  stream << "unsupported]";
+	  s << "unsupported]";
 	  break;
 	}
 	a = a->next;
       }
-      stream << "] ";
+      s << "] ";
     } while (tmp = tmp->next);
-    stream << "]";
+    s << "]";
     pcap_freealldevs(devices);
   }
-  stream << "]";
-  return stream;
+  s << "]";
 }
 
-ZtZString ZpHandleInfo::toString() const
+void ZpHandleInfo::print(ZmStream &s) const
 {
-  ZtZString stream;
-  
-  stream << "ZpHandleInfo [iface = " << m_iface
-	 << "] [filter = " << m_filter
-	 << "] [priority = " << m_priority
-	 << "] [promisc = " << m_promisc
-	 << "] [snaplen = " << m_snaplen
-	 << "] [timeout = " << m_timeout
-	 << "] [bufferSize = " << m_bufferSize
-	 << "] [nonBlocking = " << m_nonBlocking
-	 << "] [asFile = " << m_asFile
-	 << "]";
-  return stream;
+  s << "ZpHandleInfo [iface = " << m_iface
+    << "] [filter = " << m_filter
+    << "] [priority = " << m_priority
+    << "] [promisc = " << m_promisc
+    << "] [snaplen = " << m_snaplen
+    << "] [timeout = " << m_timeout
+    << "] [bufferSize = " << m_bufferSize
+    << "] [nonBlocking = " << m_nonBlocking
+    << "] [asFile = " << m_asFile
+    << "]";
 }
 
-ZtZString ZpHandleInfo::stats()
+void ZpHandleInfo::stats_(ZmStream &s) const
 {
-  if (!m_pcap) return "";
-  return m_pcap->stats();
+  if (!m_pcap) return;
+  s << m_pcap->stats();
 }
 
-ZtZString ZpHandle::stats()
+void ZpHandle::stats_(ZmStream &s) const
 {
-  ZtZString stream;
-  stream << m_info.toString()
-	 << " " << m_info.stats();
-  return stream;
+  s << m_info << ' ' << m_info.stats();
 }
 
-ZtZString ZpPcap::stats()
+void ZpPcap::stats_(ZmStream &s) const
 {
   HandleHash::ReadIterator i(m_handles);
-  ZtZString stream;
-  stream << "ZpPcapStats [";
+  s << "ZpPcapStats [";
   while (ZmRef<ZpHandle> h = i.iterateKey()) {
-    stream << h->stats() << " ";
+    s << h->stats() << " ";
   }
-  stream << "]";
-  return stream;
+  s << "]";
 }

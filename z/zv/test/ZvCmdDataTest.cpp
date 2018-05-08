@@ -75,44 +75,44 @@ struct TestCmdEx : public ZvCmdObject {
   TestCmdEx() : ZvCmdObject("exceptions") {
     try {
       data().option("", "work", "", "BREAK", "");
-    } catch (const ZvError &err) {
-      printf ("OK %s\n", err.message().data());
+    } catch (const ZvError &e) {
+      std::cout << "OK " << e << '\n';
     } catch (...) {
-      printf ("ERROR unhandled 0\n");
+      std::cout << "ERROR unhandled 0\n";
     }
 
     try {
       data().option("a", "work", "", "", "");
-    } catch (const ZvError &err) {
-      printf ("ERROR %s\n", err.message().data());
-    } catch (ZtZString &err2) {
-      printf ("OK %s\n", err2.data());
+    } catch (const ZvError &e) {
+      std::cout << "ERROR " << e << '\n';
+    } catch (const ZtString &e) {
+      std::cout << "OK " << e << '\n';
     } catch (...) {
-      printf ("ERROR unhandled 1\n");
+      std::cout << "ERROR unhandled 1\n";
     }
 
     try {
       data().option("", "long", "", "flag", "");
-    } catch (ZtZString &err) {
-      printf ("OK %s\n", err.data());    
+    } catch (const ZtString &e) {
+      std::cout << "OK " << e << '\n';
     } catch (...) {
-      printf ("ERROR unhandled 2\n");
+      std::cout << "ERROR unhandled 2\n";
     }
 
     try {
       data().option("", "", "", "flag", "");
-    } catch (ZtZString &err) {
-      printf ("OK %s\n", err.data());    
+    } catch (const ZtString &e) {
+      std::cout << "OK " << e << '\n';
     } catch (...) {
-      printf ("ERROR unhandled 3\n");
+      std::cout << "ERROR unhandled 3\n";
     }
 
     try {
       data().option("ab", "", "", "flag", "");
-    } catch (ZtZString &err) {
-      printf ("OK %s\n", err.data());    
+    } catch (const ZtString &e) {
+      std::cout << "OK " << e << '\n';
     } catch (...) {
-      printf ("ERROR unhandled 4\n");
+      std::cout << "ERROR unhandled 4\n";
     }
     compile();
   }
@@ -138,10 +138,10 @@ int main(int argc, char **argv)
     printf("--------------------------\n");
     printf("%s\n", cmd4->syntax().data());
 
-  } catch (const ZvError &err) {
-    printf ("ERROR %s\n", err.message().data());
-  } catch (ZtZString &err2) {
-    printf ("ERROR %s\n", err2.data());    
+  } catch (const ZvError &e) {
+    std::cout << "ERROR " << e << '\n';
+  } catch (const ZtString &e) {
+    std::cout << "ERROR " << e << '\n';
   } catch (...) {
     printf ("ERROR unhandled 0\n");
   }

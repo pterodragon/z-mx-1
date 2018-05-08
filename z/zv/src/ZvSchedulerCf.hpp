@@ -73,9 +73,9 @@ struct ZvSchedulerParams : public ZmSchedulerParams {
     priority(cf->getEnum<ZvSchedulerPriorities::Map>(
 	  "priority", false, ZmThreadPriority::Normal));
     partition(cf->getInt("partition", 0, ncpu - 1, false, 0));
-    if (ZtZString s = cf->get("affinity")) affinity(s);
-    if (ZtZString s = cf->get("isolation")) isolation(s);
-    if (ZtZString s = cf->get("quantum")) quantum((double)ZuBox<double>(s));
+    if (ZuString s = cf->get("affinity")) affinity(s);
+    if (ZuString s = cf->get("isolation")) isolation(s);
+    if (ZuString s = cf->get("quantum")) quantum((double)ZuBox<double>(s));
     queueSize(cf->getInt("queueSize", 8192, (1U<<30U), false, queueSize()));
     ll(cf->getInt("ll", 0, 1, false, ll()));
     spin(cf->getInt("spin", 0, INT_MAX, false, spin()));

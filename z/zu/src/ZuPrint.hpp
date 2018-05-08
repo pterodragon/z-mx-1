@@ -78,7 +78,9 @@ template <typename S> struct ZuStdStream__ {
   enum { Is = 1 };
   template <typename P> inline static typename ZuIfT<ZuPrint<P>::String>::T
       print(S &s, const P &p) {
-    ZuStdStream<S>::append(s, ZuTraits<P>::data(p), ZuTraits<P>::length(p));
+    const typename ZuTraits<P>::Elem *ptr = ZuTraits<P>::data(p);
+    if (ZuLikely(ptr))
+      ZuStdStream<S>::append(s, ptr, ZuTraits<P>::length(p));
   }
   template <typename P> inline static typename ZuIfT<ZuPrint<P>::Delegate>::T
       print(S &s, const P &p) {

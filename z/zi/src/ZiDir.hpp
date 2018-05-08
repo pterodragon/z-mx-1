@@ -48,7 +48,6 @@ class ZiAPI ZiDir {
 
 public:
   typedef ZiPlatform::Path Path;
-  typedef ZiPlatform::ZPath ZPath;
 
   typedef ZmGuard<ZmLock> Guard;
 

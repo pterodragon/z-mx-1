@@ -694,7 +694,7 @@ public:
   void start() {
     ZeError e;
     if (m_file.open(m_path, ZiFile::ReadOnly, 0, &e) < 0) {
-      ZeLOG(Error, ZtZString() << '"' << m_path << "\": " << e);
+      ZeLOG(Error, ZtString() << '"' << m_path << "\": " << e);
       exit(1);
     }
     if (m_outPath) {
@@ -702,7 +702,7 @@ public:
       if (m_outFile.open(m_outPath,
 	    ZiFile::WriteOnly | ZiFile::Append | ZiFile::Create,
 	    0666, &e) != Zi::OK) {
-	ZeLOG(Error, ZtZString() << '"' << m_outPath << "\": " << e);
+	ZeLOG(Error, ZtString() << '"' << m_outPath << "\": " << e);
 	exit(1);
       }
       MxMDStream::FileHdr hdr("RMD",
@@ -710,7 +710,7 @@ public:
 	  MXMD_VMINOR(MXMD_VERSION));
       if (m_outFile.write(&hdr, sizeof(MxMDStream::FileHdr), &e) != Zi::OK) {
 	m_outFile.close();
-	ZeLOG(Error, ZtZString() << '"' << m_outPath << "\": " << e);
+	ZeLOG(Error, ZtString() << '"' << m_outPath << "\": " << e);
 	exit(1);
       }
     }
@@ -776,7 +776,7 @@ void App::read()
   } catch (const FileHdr::IOError &) {
     goto error;
   } catch (const FileHdr::InvalidFmt &) {
-    ZeLOG(Error, ZtZString() << '"' << m_path << "\": invalid format");
+    ZeLOG(Error, ZtString() << '"' << m_path << "\": invalid format");
     return;
   }
 
@@ -916,24 +916,24 @@ void App::read()
       ZiVec_len(vec[1]) = frame->len;
       ZeError e;
       if (m_outFile.writev(vec, 2, &e) != Zi::OK) {
-	ZeLOG(Error, ZtZString() << '"' << m_outPath << "\": " << e);
+	ZeLOG(Error, ZtString() << '"' << m_outPath << "\": " << e);
 	return;
       }
     }
   }
 
 dataerror:
-  ZeLOG(Error, ZtZString() << '"' << m_path << "\": corrupt data error " <<
+  ZeLOG(Error, ZtString() << '"' << m_path << "\": corrupt data error " <<
       ZuBoxed(n) << " at offset " << ZuBoxed(o));
   return;
 
 lenerror:
-  ZeLOG(Error, ZtZString() << '"' << m_path << "\": message length >" <<
+  ZeLOG(Error, ZtString() << '"' << m_path << "\": message length >" <<
       ZuBoxed(sizeof(MxMDStream::Buf)) << " at offset " << ZuBoxed(o));
   return;
 
 error:
-  ZeLOG(Error, ZtZString() << '"' << m_path << "\": " << e);
+  ZeLOG(Error, ZtString() << '"' << m_path << "\": " << e);
 }
 
 void usage()

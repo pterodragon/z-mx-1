@@ -76,7 +76,7 @@ private:
   friend class MxMDCmd;
   friend class MxMDCore;
 
-    typedef ZmRBTree<ZtZString,
+    typedef ZmRBTree<ZtString,
 	      ZmRBTreeVal<ZuTuple<CmdFn, ZtString, ZtString>,
 		ZmRBTreeLock<ZmNoLock> > > Cmds;
 
@@ -453,8 +453,9 @@ friend class Recorder;
     };
   public:
     typedef ZmList<ZmRef<Msg>,
-	      ZmListLock<ZmNoLock,
-		ZmListHeapID<SnapQueue_HeapID> > > SnapQueue;
+	      ZmListObject<ZuNull,
+		ZmListLock<ZmNoLock,
+		  ZmListHeapID<SnapQueue_HeapID> > > > SnapQueue;
 
     inline Recorder(MxMDCore *core) : m_core(core) { }
 

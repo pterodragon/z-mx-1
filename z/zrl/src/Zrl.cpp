@@ -84,7 +84,7 @@ struct Zrl_ {
     m_completions.null();
     {
       ZvCf::Iterator i(m_cf, prefix);
-      ZtZString key;
+      ZuString key;
 
       while (i.subset(key)) {
 	if (key.length() < n || !key.equals(prefix, n)) break;
@@ -93,26 +93,26 @@ struct Zrl_ {
     }
   }
 
-  ZtZString complete(char *prefix, int state) {
+  ZuString complete(char *prefix, int state) {
     if (!state) match(prefix);
     return m_completions.shift();
   }
 
   inline ZmRef<ZvCf> cf() { return m_cf; }
 
-  ZtZString readline_(const char *prompt) {
+  ZtString readline_(const char *prompt) {
     Guard guard(m_lock);
     char *line = ::readline(prompt);
     if (!line) throw Zrl::EndOfFile();
-    if (!line[0]) { free(line); return ZtZString(); }
+    if (!line[0]) { free(line); return ZtString(); }
     add_history(line);
     int length = strlen(line);
-    return ZtZString(line, length, length + 1);	// takes ownership
+    return ZtString(line, length, length + 1);	// takes ownership
   }
 
   ZmRef<ZvCf> readline(const char *prompt) {
     Guard guard(m_lock);
-    ZtZString line = readline_(prompt);
+    ZtString line = readline_(prompt);
     if (!line) return 0;
     ZmRef<ZvCf> cf = new ZvCf();
     cf->fromCLI(m_cf, line);
@@ -121,17 +121,16 @@ struct Zrl_ {
 
   ZmLock		m_lock;
   ZmRef<ZvCf>		m_cf;
-  ZtArray<ZtZString>	m_completions;
+  ZtArray<ZuString>	m_completions;
 };
 
 Zrl_ *Zrl_::instance() { return ZmSingleton<Zrl_>::instance(); }
 
 ZrlExtern char *Zrl_complete(char *prefix, int state)
 {
-  ZtZString match =
-    ZtZString(ZtZString::Copy, Zrl_::instance()->complete(prefix, state));
+  ZuString match = Zrl_::instance()->complete(prefix, state);
   if (!match) return 0;
-  return match.data(true);
+  return ZtString(match).data(1);
 }
 
 ZrlExtern char **Zrl_completions(char *text, int start, int end)
@@ -155,7 +154,7 @@ void Zrl::stop()
   Zrl_::instance()->stop();
 }
 
-ZtZString Zrl::readline_(const char *prompt)
+ZtString Zrl::readline_(const char *prompt)
 {
   return Zrl_::instance()->readline_(prompt);
 }

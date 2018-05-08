@@ -47,30 +47,24 @@ public:
   void post() { m_done.post(); }
 
 private:
-  void cmdRcvd(ZvCmdLine *line,
-      const ZvInvocation &inv, ZvAnswer &ans) {
-    const ZtZString &cmd = inv.cmd();
-    printf("%s:%d cmd: %s\n",
-	line->info().remoteIP.string().data(),
-	(int)line->info().remotePort, cmd.data());
-    std::cout << ZtHexDump(ZtSprintf("%s:%d data:",
-	  line->info().remoteIP.string().data(),
-	  (int)line->info().remotePort),
-	inv.data().data(), inv.data().length());
-    if (cmd == "ackme") {
+  void cmdRcvd(ZvCmdLine *line, const ZvInvocation &inv, ZvAnswer &ans) {
+    std::cout << line->info().remoteIP << ':' << 
+      ZuBoxed(line->info().remotePort) << " cmd: " << inv.cmd() << '\n';
+    std::cout << ZtHexDump("data:", inv.data().data(), inv.data().length());
+    if (inv.cmd() == "ackme") {
       ans.make(ZvCmd::Success, Ze::Info, ZvAnswerArgs, "this is an ack");
-    } else if (cmd == "nakme") {
+    } else if (inv.cmd() == "nakme") {
       ans.make(ZvCmd::Fail, Ze::Info, ZvAnswerArgs, "this is a nak");
     } else {
       ans.make(ZvCmd::Success, Ze::Info, ZvAnswerArgs,
-	  ZtZString() << "code 1 " << cmd);
+	  ZtString() << "code 1 " << inv.cmd());
     }
   }
 
   void disconnected(ZvCmdLine *line) {
-    printf("%s:%d disconnected\n",
-	   line->info().remoteIP.string().data(),
-	   (int)line->info().remotePort);
+    std::cout << line->info().remoteIP << ':' << 
+      ZuBoxed(line->info().remotePort) <<
+      " disconnected\n";
   }
 
   ZmSemaphore m_done;

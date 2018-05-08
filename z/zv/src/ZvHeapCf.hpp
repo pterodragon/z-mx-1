@@ -100,13 +100,13 @@ struct ZvHeapMgrCf {
   inline static void init(ZvCf *cf) {
     if (!cf) return;
 
-    if (ZtZString file = cf->get("file")) CSV().read(file);
+    if (ZuString file = cf->get("file")) CSV().read(file);
 
     {
       ZvCf::Iterator i(cf);
-      ZtZString id;
+      ZuString id;
       while (ZmRef<ZvCf> heapCf = i.subset(id)) {
-	ZtZString partition;
+	ZuString partition;
 	ZvCf::Iterator j(heapCf);
 	while (ZmRef<ZvCf> partitionCf = j.subset(partition))
 	  ZmHeapMgr::init(

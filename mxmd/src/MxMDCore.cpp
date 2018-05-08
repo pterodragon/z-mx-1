@@ -233,7 +233,7 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
   MxSecKey secKey{
     data->secVenues[0], data->secSegments[0], data->securities[0]};
   MxMDSecHandle secHandle = security(secKey);
-  if (!secHandle) throw ZtZString() << "unknown security: " << secKey;
+  if (!secHandle) throw ZtString() << "unknown security: " << secKey;
   ZmRef<MxMDVenue> venue = this->venue(data->venue);
   ZmRef<MxMDTickSizeTbl> tbl = tickSizeTbl(venue, data->tickSizeTbl);
   secHandle.invokeMv(
@@ -315,29 +315,29 @@ MxMDLib *MxMDLib::init(const char *cf_)
     if (ZmRef<ZvCf> feedsCf = cf->subset("feeds", false)) {
       ZeLOG(Info, "MxMDLib - configuring feeds...");
       ZvCf::Iterator i(feedsCf);
-      ZtZString key;
+      ZuString key;
       while (ZmRef<ZvCf> feedCf = i.subset(key)) {
 	if (key == "_LCL") {
 	  ZvCf::Iterator j(feedCf);
-	  ZtZString id;
+	  ZuString id;
 	  while (ZmRef<ZvCf> venueCf = j.subset(id))
 	    md->addVenue(new MxMDVenue(md, md->m_localFeed, id));
 	  continue;
 	}
-	ZtZString e;
+	ZtString e;
 	ZiModule module;
 	ZiModule::Path name = feedCf->get("module", true);
 	int preload = feedCf->getInt("preload", 0, 1, false, 0);
 	if (preload) preload = ZiModule::Pre;
 	if (module.load(name, preload, &e) < 0)
-	  throw ZtZString() << "failed to load \"" << name << "\": " << e;
+	  throw ZtString() << "failed to load \"" << name << "\": " << ZuMv(e);
 	MxMDFeedPluginFn pluginFn =
 	  (MxMDFeedPluginFn)module.resolve("MxMDFeed_plugin", &e);
 	if (!pluginFn) {
 	  module.unload();
-	  throw ZtZString() <<
+	  throw ZtString() <<
 	    "failed to resolve \"MxMDFeed_plugin\" in \"" <<
-	    name << "\": " << e;
+	    name << "\": " << ZuMv(e);
 	}
 	(*pluginFn)(md, feedCf);
       }
@@ -387,13 +387,13 @@ MxMDLib *MxMDLib::init(const char *cf_)
     ZeLOG(Info, "MxMDLib - initialized...");
 
   } catch (const ZvError &e) {
-    ZeLOG(Fatal, ZtZString() << "MxMDLib - configuration error: " << e);
+    ZeLOG(Fatal, ZtString() << "MxMDLib - configuration error: " << e);
     return md = 0;
   } catch (const ZtString &e) {
-    ZeLOG(Fatal, ZtZString() << "MxMDLib - error: " << e);
+    ZeLOG(Fatal, ZtString() << "MxMDLib - error: " << e);
     return md = 0;
   } catch (const ZeError &e) {
-    ZeLOG(Fatal, ZtZString() << "MxMDLib - error: " << e);
+    ZeLOG(Fatal, ZtString() << "MxMDLib - error: " << e);
     return md = 0;
   } catch (...) {
     ZeLOG(Fatal, "MxMDLib - unknown exception during init");
@@ -426,10 +426,10 @@ MxMDCore::MxMDCore(ZmRef<Mx> mx, ZvCf *cf) :
 void MxMDCore::initCmds()
 {
   addCmd(
-      "l1", ZtZString("c csv csv { type flag }\n") + lookupSyntax(),
+      "l1", ZtString("c csv csv { type flag }\n") + lookupSyntax(),
       CmdFn::Member<&MxMDCore::l1>::fn(this),
       "dump L1 data",
-      ZtZString("usage: l1 OPTIONS SYMBOL [SYMBOL...]\n"
+      ZtString("usage: l1 OPTIONS SYMBOL [SYMBOL...]\n"
 	"Display level 1 market data for SYMBOL(s)\n\nOptions:\n"
 	"-c, --csv\toutput CSV format\n") +
 	lookupOptions());
@@ -437,14 +437,14 @@ void MxMDCore::initCmds()
       "l2", lookupSyntax(),
       CmdFn::Member<&MxMDCore::l2>::fn(this),
       "dump L2 data",
-      ZtZString("usage: l2 OPTIONS SYMBOL\n"
+      ZtString("usage: l2 OPTIONS SYMBOL\n"
 	"Display level 2 market data for SYMBOL\n\nOptions:\n") +
 	lookupOptions());
   addCmd(
       "security", lookupSyntax(),
       CmdFn::Member<&MxMDCore::security_>::fn(this),
       "dump security reference data",
-      ZtZString("usage: security OPTIONS SYMBOL\n"
+      ZtString("usage: security OPTIONS SYMBOL\n"
 	"Display security reference data (\"static data\") for SYMBOL\n"
 	"\nOptions:\n") + lookupOptions());
   addCmd(
@@ -561,7 +561,7 @@ void MxMDCore::CmdServer::init(ZvCf *cf)
   // Assumption: DST transitions do not occur while market is open
   {
     ZtDate now(ZtDate::Now);
-    ZtZString timezone = cf->get("timezone"); // default to system tz
+    ZuString timezone = cf->get("timezone"); // default to system tz
     now.sec() = 0, now.nsec() = 0; // midnight GMT (start of today)
     now += ZmTime((time_t)(now.offset(timezone) + 43200)); // midday local time
     m_tzOffset = now.offset(timezone);
@@ -583,8 +583,8 @@ MxMDCmd *MxMDCmd::instance(MxMDLib *md)
   return static_cast<MxMDCmd *>(static_cast<MxMDCore *>(md));
 }
 
-void MxMDCmd::addCmd(ZuString name, ZuString syntax, CmdFn fn,
-  ZuString brief, ZuString usage)
+void MxMDCmd::addCmd(ZuString name, ZuString syntax,
+    CmdFn fn, ZtString brief, ZtString usage)
 {
   MxMDCore::CmdServer *server = static_cast<MxMDCore *>(this)->m_cmd;
   if (!server) return;
@@ -594,22 +594,22 @@ void MxMDCmd::addCmd(ZuString name, ZuString syntax, CmdFn fn,
     cf->set("help:type", "flag");
   }
   if (MxMDCore::CmdServer::Cmds::NodeRef cmd = server->m_cmds.find(name))
-    cmd->val() = ZuMkTuple(fn, brief, usage);
+    cmd->val() = ZuMkTuple(ZuMv(fn), ZuMv(brief), ZuMv(usage));
   else
-    server->m_cmds.add(name, ZuMkTuple(fn, brief, usage));
+    server->m_cmds.add(name, ZuMkTuple(ZuMv(fn), ZuMv(brief), ZuMv(usage)));
 }
 
 void MxMDCore::CmdServer::rcvd(
   ZvCmdLine *line, const ZvInvocation &inv, ZvAnswer &ans)
 {
   ZmRef<ZvCf> cf = new ZvCf();
-  ZtZString name;
+  ZuString name;
   Cmds::NodeRef cmd;
   try {
     cf->fromCLI(m_syntax, inv.cmd());
     name = cf->get("0");
     cmd = m_cmds.find(name);
-    if (!cmd) throw ZtZString("unknown command");
+    if (!cmd) throw ZtString("unknown command");
     if (cf->getInt("help", 0, 1, false, 0))
       ans.make(ZvCmd::Success, Ze::Info,
 	       ZvAnswerArgs, cmd->val().p3());
@@ -617,11 +617,11 @@ void MxMDCore::CmdServer::rcvd(
       CmdArgs args;
       ZvCf::Iterator i(cf);
       {
-	ZtZString arg;
+	ZuString arg;
 	const ZtArray<ZtString> *values;
 	while (values = i.getMultiple(arg, 0, INT_MAX)) args.add(arg, values);
       }
-      ZtZArray<char> out;
+      ZtArray<char> out;
       (cmd->val().p1())(args, out);
       ans.make(ZvCmd::Success, out);
     }
@@ -629,19 +629,19 @@ void MxMDCore::CmdServer::rcvd(
     ans.make(ZvCmd::Fail, Ze::Warning, ZvAnswerArgs, cmd->val().p3().data());
   } catch (const ZvError &e) {
     ans.make(ZvCmd::Fail | ZvCmd::Log, Ze::Error, ZvAnswerArgs,
-	ZtZString() << '"' << name << "\": " << e);
+	ZtString() << '"' << name << "\": " << e);
   } catch (const ZeError &e) {
     ans.make(ZvCmd::Fail | ZvCmd::Log, Ze::Error, ZvAnswerArgs,
-	ZtZString() << '"' << name << "\": " << e);
+	ZtString() << '"' << name << "\": " << e);
   } catch (const ZtString &s) {
     ans.make(ZvCmd::Fail | ZvCmd::Log, Ze::Error, ZvAnswerArgs,
-	ZtZString() << '"' << name << "\": " << s);
+	ZtString() << '"' << name << "\": " << s);
   } catch (const ZtArray<char> &s) {
     ans.make(ZvCmd::Fail | ZvCmd::Log, Ze::Error, ZvAnswerArgs,
-	ZtZString() << '"' << name << "\": " << s);
+	ZtString() << '"' << name << "\": " << s);
   } catch (...) {
     ans.make(ZvCmd::Fail | ZvCmd::Log, Ze::Error, ZvAnswerArgs,
-	ZtZString() << '"' << name << "\": unknown exception");
+	ZtString() << '"' << name << "\": unknown exception");
   }
 }
 
@@ -668,7 +668,7 @@ void MxMDCore::CmdServer::help(const CmdArgs &args, ZtArray<char> &help)
   }
 }
 
-ZtZString MxMDCmd::lookupSyntax()
+ZtString MxMDCmd::lookupSyntax()
 {
   return 
     "S src src { type scalar } "
@@ -676,10 +676,11 @@ ZtZString MxMDCmd::lookupSyntax()
     "s segment segment { type scalar }";
 }
 
-ZtZString MxMDCmd::lookupOptions()
+ZtString MxMDCmd::lookupOptions()
 {
   return
-    "    -S --src=SRC\t- symbol ID source is SRC (CUSIP|SEDOL|QUIK|ISIN|RIC|EXCH|CTA|BSYM|BBGID|FX|CRYPTO)\n"
+    "    -S --src=SRC\t- symbol ID source is SRC\n"
+    "\t(CUSIP|SEDOL|QUIK|ISIN|RIC|EXCH|CTA|BSYM|BBGID|FX|CRYPTO)\n"
     "    -m --market=MIC\t - market MIC, e.g. XTKS\n"
     "    -s --segment=SEGMENT\t- market segment SEGMENT\n";
 }
@@ -688,12 +689,12 @@ void MxMDCmd::lookupSecurity(
     MxMDLib *md, const MxMDCmd::CmdArgs &args, unsigned index,
     bool secRequired, ZmFn<MxMDSecurity *> fn)
 {
-  ZtZString symbol = args.get(ZuStringN<16>(ZuBoxed(index)));
+  ZuString symbol = args.get(ZuStringN<16>(ZuBoxed(index)));
   MxID venue = args.get("market");
   MxID segment = args.get("segment");
   thread_local ZmSemaphore sem;
   bool notFound = 0;
-  if (ZtZString src_ = args.get("src")) {
+  if (ZuString src_ = args.get("src")) {
     MxEnum src = MxSecIDSrc::lookup(src_);
     MxSecSymKey key{src, symbol};
     md->secInvoke(key,
@@ -706,7 +707,7 @@ void MxMDCmd::lookupSecurity(
     });
     sem.wait();
     if (ZuUnlikely(notFound))
-      throw ZtZString() << "security " << key << " not found";
+      throw ZtString() << "security " << key << " not found";
   } else {
     if (!*venue) throw MxMDCmd::CmdUsage();
     MxSecKey key{venue, segment, symbol};
@@ -720,7 +721,7 @@ void MxMDCmd::lookupSecurity(
     });
     sem.wait();
     if (ZuUnlikely(notFound))
-      throw ZtZString() << "security " << key << " not found";
+      throw ZtString() << "security " << key << " not found";
   }
 }
 
@@ -745,7 +746,7 @@ void MxMDCmd::lookupOrderBook(
   });
   sem.wait();
   if (ZuUnlikely(notFound))
-    throw ZtZString() << "order book " <<
+    throw ZtString() << "order book " <<
 	MxSecKey{venue, segment, args.get(ZuStringN<16>(ZuBoxed(index)))} <<
 	" not found";
 }
@@ -1068,7 +1069,7 @@ void MxMDCore::threadName(ZmThreadName &name, unsigned id)
 void MxMDCore::subscribeCmd(const CmdArgs &args, ZtArray<char> &out)
 {
   ZuBox<int> argc = args.get("#");
-  if (ZtZString id_ = args.get("stop")) {
+  if (ZuString id_ = args.get("stop")) {
     ZuBox<int> id = ZvCf::toInt("spin", id_, 0, 63);
     m_broadcast.reqDetach(id);
     m_broadcast.close();
@@ -1077,12 +1078,12 @@ void MxMDCore::subscribeCmd(const CmdArgs &args, ZtArray<char> &out)
   }
   if (argc != 2) throw CmdUsage();
   ZiRingParams ringParams(args.get("1"), m_broadcast.config());
-  if (ZtZString spin = args.get("spin"))
+  if (ZuString spin = args.get("spin"))
     ringParams.spin(ZvCf::toInt("spin", spin, 0, INT_MAX));
-  if (ZtZString timeout = args.get("timeout"))
+  if (ZuString timeout = args.get("timeout"))
     ringParams.timeout(ZvCf::toInt("timeout", timeout, 0, 3600));
   if (!m_broadcast.open())
-    throw ZtZString() << '"' << m_broadcast.config().name() <<
+    throw ZtString() << '"' << m_broadcast.config().name() <<
 	"\": failed to open IPC shared memory ring buffer";
   m_snapper.snap(ringParams);
 }
@@ -1100,7 +1101,7 @@ void MxMDCore::replayCmd(const CmdArgs &args, ZtArray<char> &out)
     return;
   }
   if (argc != 2) throw CmdUsage();
-  ZtZString path = args.get("1");
+  ZuString path = args.get("1");
   ReplayGuard guard(m_replayLock);
   if (m_replayPath != path) {
     if (!!m_replayFile) {

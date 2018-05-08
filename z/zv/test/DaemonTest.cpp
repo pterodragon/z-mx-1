@@ -42,7 +42,7 @@ int main(int argc, char **argv)
   };
 
   ZmRef<ZvCf> cf = new ZvCf();
-  ZtZString username, password;
+  ZtString username, password;
   bool daemonize;
 
   ZeLog::init("DaemonTest");
@@ -67,7 +67,8 @@ int main(int argc, char **argv)
     exit(1);
   }
 
-  int r = ZvDaemon::init(username, password, 0, daemonize, "DaemonTest.pid");
+  int r = ZvDaemon::init(
+      username, password, 0, daemonize, "DaemonTest.pid");
 
   ZeLog::start();
 

@@ -22,8 +22,8 @@
 #include <ZtRegex.hpp>
 
 namespace {
-  static void preprocess(ZuString msg, ZtString &cmd, ZtArray<char> &data)
-  {
+  static void preprocess(ZuString msg,
+      ZtArray<char> &cmd, ZtArray<char> &data) {
     static ZtRegex cmdRedirect("<\\s*", PCRE_UTF8);
     ZtRegex::Captures c;
     unsigned pos = 0, n = 0;
@@ -48,7 +48,7 @@ namespace {
 
 void ZvCmdClient::send(ZuString s, uint32_t seqNo)
 {
-  ZtString cmd;
+  ZtArray<char> cmd;
   ZtArray<char> data;
 
   preprocess(s, cmd, data);
@@ -158,18 +158,20 @@ void ZvCmdLine::disconnected() { if (m_discFn) m_discFn(this); }
 
 void ZvCmdLine::send(ZuString msg_, uint32_t seqNo)
 {
-  ZtString cmd;
+  ZtArray<char> cmd;
   ZtArray<char> data;
   preprocess(msg_, cmd, data);
-  ZmRef<ZvCmd_Msg> msg = new ZvCmd_Msg(seqNo, cmd, data);
+  ZmRef<ZvCmd_Msg> msg = new ZvCmd_Msg(seqNo, ZuMv(cmd), ZuMv(data));
   msg->line(this);
   msg->send();
 }
 
 void ZvCmdLine::send(const ZvAnswer &ans)
 {
+  ZtArray<char> event;
+  event << ans.message();
   ZmRef<ZvCmd_Msg> msg = new ZvCmd_Msg(
-      ans.flags(), ans.seqNo(), ans.message(), ans.data());
+      ans.flags(), ans.seqNo(), ZuMv(event), ZuMv(ans.data()));
   msg->line(this);
   msg->send();
 }
@@ -291,9 +293,9 @@ void ZvCmdClient::failed(bool transient)
 
 void ZvCmdClient::connect()
 {
-  ZeLOG(Info, ZtSprintf("connect(%s:%d -> %s:%d)",
-			m_localIP.string().data(), m_localPort, 
-			m_remoteIP.string().data(), m_remotePort));
+  ZeLOG(Info, ZtString() << "connect(" <<
+      m_localIP << ':' << ZuBoxed(m_localPort) << " -> " <<
+      m_remoteIP << ':' << ZuBoxed(m_remotePort) << ')');
   m_mx->connect(
       ZiConnectFn::Member<&ZvCmdClient::connected>::fn(this),
       ZiFailFn::Member<&ZvCmdClient::failed>::fn(this),
@@ -485,12 +487,12 @@ void ZvCmdObject::CmdData::sort()
 #define ZvUsageLong(opt) \
   do { \
     if (opt->m_longName) { \
-      tmp += ZtSprintf(" --%s", opt->m_longName.data()); \
+      tmp << ZtSprintf(" --%s", opt->m_longName.data()); \
       if (opt->m_longType) { \
-	tmp += ZtSprintf("=%s", opt->m_longType.data()); \
+	tmp << ZtSprintf("=%s", opt->m_longType.data()); \
       } \
     } else { \
-      tmp += ZtSprintf("%21.21s", " "); \
+      tmp << ZtSprintf("%21.21s", " "); \
     } \
   } while (0)
 
@@ -506,36 +508,36 @@ void ZvCmdObject::CmdData::wordWrap(ZtString &dst,
       while (wlen_ && src[wlen_ - 1] && src[wlen_ - 1] != ' ') --wlen_;
       if (!wlen_) wlen_ = wlen;
     }
-    dst += ZtSprintf("%-*.*s", wlen_, wlen_, src);
+    dst << ZtSprintf("%-*.*s", wlen_, wlen_, src);
     src += wlen_;
     bytesWrote += wlen_;
     bytesLeft -= wlen_;
     wlen = lineLen;
-    if (bytesLeft > 0 && indent) dst += ZtSprintf("\n%*.*s",
-						  indent, indent, " ");
-    else if (bytesLeft > 0) dst += "\n";
+    if (bytesLeft > 0 && indent)
+      dst << ZtSprintf("\n%*.*s", indent, indent, " ");
+    else if (bytesLeft > 0) dst << "\n";
   } while (bytesLeft > 0);
 }
 
-ZtZString ZvCmdObject::CmdData::toGNUString(const char *name)
+ZtString ZvCmdObject::CmdData::toGNUString(ZuString name)
 {
   ZmAssert(name);
   this->sort();
 
-  ZtZString usage;
+  ZtString usage;
   // generate usage string. 
   // format taken from http://www.gnu.org/software/help2man
   if (m_usages.length()) {
-    usage = ZtSprintf("Usage: %s %s", name, m_usages[0].data());
+    usage << "Usage: " << name << ' ' << m_usages[0];
     unsigned len = m_usages.length();
     for (unsigned i = 1; i < len; i++)
-      usage += ZtSprintf("\n  or:  %s %s", name, m_usages[i].data());
+      usage << "\n  or:  " << name << ' ' << m_usages[i];
   } else {
-    usage = ZtSprintf("Usage: %s [OPTION]...", name);
+    usage << "Usage: " << name << " [OPTION]...";
   }
 
   // add short description
-  if (m_brief) { usage += ZtSprintf("\n%s", m_brief.data()); }
+  if (m_brief) usage << "\n" << m_brief;
 
   unsigned optGrps = m_optGrps.length();
   for (unsigned x = 0; x < optGrps; x++) {
@@ -543,62 +545,59 @@ ZtZString ZvCmdObject::CmdData::toGNUString(const char *name)
     ZtArray<ZmRef<CmdOption> > &options = group->m_options;
     unsigned optLen = options.length();
     if (optLen) {
-      usage += "\n";
-      if (group->m_header) {
-	usage += "\n";
-	usage += group->m_header;
-	usage += ":";
-      }
+      usage << "\n";
+      if (group->m_header)
+	usage << "\n" << group->m_header << ":";
       // add option descriptions
       ZtString tmp;
       for (unsigned i = 0; i < optLen; i++) {
-	usage += "\n";
+	usage << "\n";
 	tmp.init(0U, 256);
 	ZvUsageShort(options[i]);
 	ZvUsageLong(options[i]);
 	if (!options[i]->m_description) {
-	  usage += tmp;
+	  usage << tmp;
 	  continue;
 	}
 	// pad the string with spaces until length is 28
 	// but at least two spaces if it is larger
-	tmp += "  ";
-	while (tmp.length() < 28) tmp += " ";
+	tmp << "  ";
+	while (tmp.length() < 28) tmp << ' ';
 	
-	wordWrap(tmp, options[i]->m_description.data(), 
-		 options[i]->m_description.length(), 
-		 50, 50 - (78 - tmp.length()), 30);
-	usage += tmp;
+	wordWrap(tmp, options[i]->m_description.data(),
+	    options[i]->m_description.length(),
+	    50, 50 - (78 - tmp.length()), 30);
+	usage << tmp;
       }
     }
   }
 
   // always add a break for the help option even if no brief or other
   // options are given
-  if (!m_optGrps[0]->m_options.length()) usage += "\n";
+  if (!m_optGrps[0]->m_options.length()) usage << "\n";
 
   {
     // if more that the default option group add an extra break before
     // the help option to distinguish it from the last group
-    if (optGrps > 1) usage += "\n";
-    usage += "\n";
+    if (optGrps > 1) usage << "\n";
+    usage << "\n";
     ZtString tmp(0U, 80);
     ZvUsageShort(ZvCmdObject::HelpOption);
     ZvUsageLong(ZvCmdObject::HelpOption);
-    tmp += "  ";
-    while (tmp.length() < 28) tmp += " ";
+    tmp << "  ";
+    while (tmp.length() < 28) tmp << ' ';
       
     wordWrap(tmp, ZvCmdObject::HelpOption->m_description.data(), 
 	     ZvCmdObject::HelpOption->m_description.length(), 
 	     50, 50 - (78 - tmp.length()), 30);
-    usage += tmp;
+    usage << tmp;
   }
 
   // add long description(s)
   unsigned n = m_manuscripts.length();
   for (unsigned i = 0; i < n; i++) {
     if (m_manuscripts[i]) {
-      usage += "\n\n";
+      usage << "\n\n";
       wordWrap(usage, m_manuscripts[i].data(), m_manuscripts[i].length());
     }
   }
@@ -617,9 +616,9 @@ void ZvCmdObject::CmdData::clean()
 #define ZvCheckOpt(s, l, o) \
     do { \
       if (l.length() > 0) { \
-	m_syntax += ZtSprintf("%s { type %s }\n", l.data(), o.data());	\
+	m_syntax << ZtSprintf("%s { type %s }\n", l.data(), o.data());	\
 	if (s.length() > 0) { \
-	  m_syntax += ZtSprintf("%s %s\n", s.data(), l.data()); \
+	  m_syntax << ZtSprintf("%s %s\n", s.data(), l.data()); \
 	} \
       } \
     } while (0)
@@ -629,23 +628,21 @@ void ZvCmdObject::compile()
   ZmHash<const char *, ZmHashLock<ZmNoLock> > uniqueHash;
 
   // setup syntax
-  int optGrps = m_data.m_optGrps.length();
-  for (int x = 0; x < optGrps; x++) {
-    ZmRef<OptionGroup> group = m_data.m_optGrps[x];
-    int optLen = group->m_options.length();
-    for (int i = 0;  i < optLen; i++) {
-      if (!uniqueHash.findKey(group->m_options[i]->m_shortName.data()) &&
-	  !uniqueHash.findKey(group->m_options[i]->m_longName.data())) {
-	uniqueHash.add(group->m_options[i]->m_shortName.data());
-	uniqueHash.add(group->m_options[i]->m_longName.data());
-      } else { continue; }
-      ZvCheckOpt(group->m_options[i]->m_shortName,
-		 group->m_options[i]->m_longName,
-		 group->m_options[i]->m_optName);
+  for (unsigned i = 0, n = m_data.m_optGrps.length(); i < n; i++) {
+    ZmRef<OptionGroup> group = m_data.m_optGrps[i];
+    for (unsigned j = 0, m = group->m_options.length(); j < m; j++) {
+      if (uniqueHash.findKey(group->m_options[j]->m_shortName.data()) ||
+	  uniqueHash.findKey(group->m_options[j]->m_longName.data()))
+	continue;
+      uniqueHash.add(group->m_options[j]->m_shortName);
+      uniqueHash.add(group->m_options[j]->m_longName);
+      ZvCheckOpt(group->m_options[j]->m_shortName,
+		 group->m_options[j]->m_longName,
+		 group->m_options[j]->m_optName);
     }
   }
-  m_syntax += "help { type flag }\n}"; // trailing bracket to close namespace
-  m_usage = m_data.toGNUString(m_name.data()); // options sorted as side effect
+  m_syntax << "help { type flag }\n}"; // trailing bracket to close namespace
+  m_usage = m_data.toGNUString(m_name); // options sorted as side effect
   m_data.clean();
 }
 

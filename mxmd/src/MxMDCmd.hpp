@@ -38,13 +38,13 @@
 #include <ZtString.hpp>
 
 struct MxMDAPI MxMDCmd {
-  typedef ZmRBTree<ZtZString,
+  typedef ZmRBTree<ZtString,
 	    ZmRBTreeVal<const ZtArray<ZtString> *,
 	      ZmRBTreeLock<ZmNoLock> > > CmdArgs_;
   struct CmdArgs : public CmdArgs_ {
-    inline ZtZString get(ZuString arg) const {
+    inline ZuString get(ZuString arg) const {
       const ZtArray<ZtString> *values = findVal(arg);
-      if (!values) return ZtZString();
+      if (!values) return ZtString();
       return (*values)[0];
     }
     inline const ZtArray<ZtString> *getMultiple(ZuString arg) const {
@@ -62,8 +62,8 @@ struct MxMDAPI MxMDCmd {
       ZuString brief, ZuString usage);
 
   // single security / order book lookup
-  static ZtZString lookupSyntax();
-  static ZtZString lookupOptions();
+  static ZtString lookupSyntax();
+  static ZtString lookupOptions();
   static void lookupSecurity(
       MxMDLib *md, const MxMDCmd::CmdArgs &args, unsigned index,
       bool secRequired, ZmFn<MxMDSecurity *> fn);

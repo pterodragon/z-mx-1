@@ -85,11 +85,11 @@ struct ZvHashMgrCf {
   inline static void init(ZvCf *cf) {
     if (!cf) return;
 
-    if (ZtZString file = cf->get("file")) CSV().read(file);
+    if (ZuString file = cf->get("file")) CSV().read(file);
 
     {
       ZvCf::Iterator i(cf);
-      ZtZString id;
+      ZuString id;
       while (ZmRef<ZvCf> hashCf = i.subset(id))
 	ZmHashMgr::init(id, ZvHashParams(hashCf));
     }

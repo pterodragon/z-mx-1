@@ -100,50 +100,33 @@ public:
   class ZvAPI Usage : public ZvError {
   public:
     template <typename Option>
-    inline Usage(const Option &option) : m_option(option) { }
-    inline Usage(const Usage &u) : m_option(u.m_option) { }
-    inline Usage &operator =(const Usage &u) {
-      if (this != &u) m_option = u.m_option;
-      return *this;
+    inline Usage(Option &&option) : m_option(ZuFwd<Option>(option)) { }
+    void print_(ZmStream &s) const {
+      s << "invalid option \"" << m_option << '"';
     }
-    virtual ~Usage() { }
-    ZtZString message() const {
-      return ZtZString() << "invalid option \"" << m_option << '"';
-    }
-    inline ZtZString option() const { return m_option; }
   private:
     ZtString	m_option;
   };
 
-  static ZtZArray<ZtString> parseCLI(ZuString line);
+  void parseCLI(ZuString line, ZtArray<ZtString> &args);
   // fromCLI() and fromArgs() return the number of positional arguments
   int fromCLI(ZvCf *syntax, ZuString line);
-  int fromArgs(ZvCf *options, const ZtZArray<ZtString> &args);
+  int fromArgs(ZvCf *options, const ZtArray<ZtString> &args);
   int fromArgs(const ZvOpt *opts, int argc, char **argv);
   int fromCLI(const ZvOpt *opts, ZuString line); // deprecated
-  int fromArgs(const ZvOpt *opts, const ZtZArray<ZtString> &args); // deprecated
+  int fromArgs(const ZvOpt *opts, const ZtArray<ZtString> &args); // deprecated
 
   // thrown by fromString() and fromFile() for an invalid key
   class ZvAPI Invalid : public ZvError {
   public:
     template <typename Key, typename FileName>
-    inline Invalid(const Key &key, const FileName &fileName) :
-	m_key(key), m_fileName(fileName) { }
-    inline Invalid(const Invalid &i) :
-	m_key(i.m_key), m_fileName(i.m_fileName) { }
-    inline Invalid &operator =(const Invalid &i) {
-      if (this != &i) m_key = i.m_key, m_fileName = i.m_fileName;
-      return *this;
-    }
-    virtual ~Invalid() { }
-    ZtZString message() const {
-      ZtZString s;
-      if (m_fileName) s << '"' << m_fileName << "\" ";
+    inline Invalid(Key &&key, FileName &&fileName) :
+	m_key(ZuFwd<Key>(key)), m_fileName(ZuFwd<FileName>(fileName)) { }
+    void print_(ZmStream &s) const {
+      if (m_fileName) s << '"' << m_fileName << "\": ";
       s << "invalid key \"" << m_key << '"';
-      return s;
     }
-    inline ZtZString key() const { return m_key; }
-    inline ZtZString fileName() const { return m_fileName; }
+    ZuInline const ZtString &key() const { return m_key; }
   private:
     ZtString	m_key;
     ZtString	m_fileName;
@@ -153,18 +136,9 @@ public:
   class ZvAPI Syntax : public ZvError {
   public:
     template <typename FileName>
-    inline Syntax(int line, char ch, const FileName &fileName) :
-      m_line(line), m_ch(ch), m_fileName(fileName) { }
-    inline Syntax(const Syntax &s) :
-      m_line(s.m_line), m_ch(s.m_ch), m_fileName(s.m_fileName) { }
-    inline Syntax &operator =(const Syntax &s) {
-      if (this != &s)
-	m_line = s.m_line, m_ch = s.m_ch, m_fileName = s.m_fileName;
-      return *this;
-    }
-    virtual ~Syntax() { }
-    ZtZString message() const {
-      ZtZString s;
+    inline Syntax(int line, char ch, FileName &&fileName) :
+      m_line(line), m_ch(ch), m_fileName(ZuFwd<FileName>(fileName)) { }
+    void print_(ZmStream &s) const {
       if (m_fileName)
 	s << '"' << m_fileName << "\":" << ZuBoxed(m_line) << " syntax error";
       else
@@ -176,11 +150,7 @@ public:
 	s << '\\' << ZuBoxed((unsigned)m_ch & 0xff).fmt(
 	    ZuFmt::Hex<0, ZuFmt::Alt<ZuFmt::Right<2> > >());
       s << '\'';
-      return s;
     }
-    inline int line() const { return m_line; }
-    inline int ch() const { return m_ch; }
-    inline ZtZString fileName() const { return m_fileName; }
   private:
     int		m_line;
     char	m_ch;
@@ -190,23 +160,12 @@ public:
   class ZvAPI BadDefine : public ZvError {
   public:
     template <typename Define, typename FileName>
-    inline BadDefine(const Define &define, const FileName &fileName) :
-      m_define(define), m_fileName(fileName) { }
-    inline BadDefine(const BadDefine &d) :
-      m_define(d.m_define), m_fileName(d.m_fileName) { }
-    inline BadDefine &operator =(const BadDefine &d) {
-      if (this != &d) m_define = d.m_define, m_fileName = d.m_fileName;
-      return *this;
-    }
-    virtual ~BadDefine() { }
-    ZtZString message() const {
-      ZtZString s;
+    inline BadDefine(Define &&define, FileName &&fileName) :
+      m_define(ZuFwd<Define>(define)), m_fileName(ZuFwd<FileName>(fileName)) { }
+    void print_(ZmStream &s) const {
       if (m_fileName) s << '"' << m_fileName << "\": ";
       s << "bad %%define \"" << m_define << '"';
-      return s;
     }
-    inline ZtZString define() const { return m_define; }
-    inline ZtZString fileName() const { return m_fileName; }
   private:
     ZtString	m_define;
     ZtString	m_fileName;
@@ -220,44 +179,39 @@ public:
   inline void fromString(
       ZuString in, bool validate,
       ZmRef<Defines> defines = new Defines()) {
-    fromString(in, validate, ZtZString(), defines);
+    fromString(in, validate, ZuString(), defines);
   }
 
   // thrown by fromFile() on error
   class ZvAPI File2Big : public ZvError {
   public:
     template <typename FileName>
-    inline File2Big(const FileName &fileName) : m_fileName(fileName) { }
-    inline File2Big(const File2Big &f) : m_fileName(f.m_fileName) { }
-    inline File2Big &operator =(const File2Big &f) {
-      if (this != &f) m_fileName = f.m_fileName;
-      return *this;
-    }
-    virtual ~File2Big() { }
-    ZtZString message() const {
-      return ZtZString() << '"' << m_fileName << " file too big";
+    inline File2Big(FileName &&fileName) :
+      m_fileName(ZuFwd<FileName>(fileName)) { }
+    void print_(ZmStream &s) const {
+      s << '"' << m_fileName << " file too big";
     };
-    inline ZtZString fileName() const { return m_fileName; }
   private:
     ZtString	m_fileName;
   };
 
   class ZvAPI FileOpenError : public ZvError {
-    public:
-      template <typename FileName>
-      FileOpenError(const FileName &fileName, ZeError e) :
-	m_fileName(fileName), m_err(e) { }
-      ZtZString message() const {
-	return ZtZString() << '"' << m_fileName << "\" " << m_err;
-      }
-    private:
-      ZtString	m_fileName;
-      ZeError   m_err;
+  public:
+    template <typename FileName>
+    FileOpenError(FileName &&fileName, ZeError e) :
+      m_fileName(ZuFwd<FileName>(fileName)), m_err(e) { }
+
+    void print_(ZmStream &s) const {
+      s << '"' << m_fileName << "\" " << m_err;
+    }
+
+  private:
+    ZtString	m_fileName;
+    ZeError   m_err;
   };
 
   template <typename FileName>
-  inline void fromFile(
-      const FileName &fileName, bool validate,
+  inline void fromFile(const FileName &fileName, bool validate,
       ZmRef<Defines> defines = new Defines()) {
     ZtString in;
     {
@@ -285,14 +239,7 @@ public:
   class ZvAPI EnvSyntax : public ZvError {
   public:
     inline EnvSyntax(int pos, char ch) : m_pos(pos), m_ch(ch) { }
-    inline EnvSyntax(const EnvSyntax &s) : m_pos(s.m_pos), m_ch(s.m_ch) { }
-    inline EnvSyntax &operator =(const EnvSyntax &s) {
-      if (this != &s) m_pos = s.m_pos, m_ch = s.m_ch;
-      return *this;
-    }
-    virtual ~EnvSyntax() { }
-    ZtZString message() const {
-      ZtZString s;
+    void print_(ZmStream &s) const {
       s << "syntax error at position " << ZuBoxed(m_pos) << " near '";
       if (m_ch >= 0x20 && m_ch < 0x7f)
 	s << m_ch;
@@ -300,10 +247,7 @@ public:
 	s << '\\' << ZuBoxed((unsigned)m_ch & 0xff).fmt(
 	    ZuFmt::Hex<0, ZuFmt::Alt<ZuFmt::Right<2> > >());
       s << '\'';
-      return s;
     }
-    inline int pos() const { return m_pos; }
-    inline int ch() const { return m_ch; }
   private:
     int		m_pos;
     char	m_ch;
@@ -315,7 +259,29 @@ public:
   void toArgs(int &argc, char **&argv);
   static void freeArgs(int argc, char **argv);
 
-  ZtZString toString();
+  void print(ZmStream &s, ZtString prefix) const;
+
+  inline void print(ZmStream &s) const { print(s, ""); }
+  template <typename S> inline void print(S &s_) const {
+    ZmStream s(s_);
+    print(s, "");
+  }
+
+  struct Prefixed {
+    inline void print(ZmStream &s) const {
+      cf.print(s, ZuMv(prefix));
+    }
+    template <typename S> void print(S &s_) const {
+      ZmStream s(s_);
+      print(s);
+    }
+    const ZvCf		&cf;
+    mutable ZtString	prefix;
+  };
+  template <typename Prefix>
+  inline Prefixed prefixed(Prefix &&prefix) {
+    return Prefixed{*this, ZuFwd<Prefix>(prefix)};
+  }
 
   // toFile() will throw ZeError on I/O error
   template <typename FileName>
@@ -326,30 +292,19 @@ public:
       throw e;
     toFile_(file);
   }
+
 private:
   void toFile_(ZiFile &file);
-
-  static void unstrtok(ZtString &key) {
-    int i, n = key.length();
-
-    for (i = 0; i < n; i++) if (!key[i]) key[i] = ':';
-  }
 
 public:
   // thrown by all get methods for missing values when required is true
   class ZvAPI Required : public ZvError {
   public:
     template <typename Key>
-    inline Required(const Key &key) : m_key(key) { unstrtok(m_key); }
-    inline Required(const Required &r) : m_key(r.m_key) { }
-    inline Required &operator =(const Required &r) {
-      if (this != &r) m_key = r.m_key;
-      return *this;
+    inline Required(const Key &key) : m_key(key) { }
+    void print_(ZmStream &s) const {
+      s << m_key << " missing";
     }
-    ZtZString message() const {
-      return ZtZString() << m_key << " missing";
-    }
-    inline ZtZString key() const { return m_key; }
   private:
     ZtString	m_key;
   };
@@ -359,23 +314,11 @@ public:
   public:
     template <typename Key>
     inline Range_(T minimum, T maximum, T value, const Key &key) :
-	m_minimum(minimum), m_maximum(maximum), m_value(value), m_key(key) {
-      unstrtok(m_key);
-    }
-    inline Range_(const Range_ &r) :
-	m_minimum(r.m_minimum), m_maximum(r.m_maximum),
-	m_value(r.m_value), m_key(r.m_key) { }
-    inline Range_ &operator =(const Range_ &r) {
-      if (this != &r)
-	m_minimum = r.m_minimum, m_maximum = r.m_maximum,
-	m_value = r.m_value, m_key = r.m_key;
-      return *this;
-    }
-    virtual ~Range_() { }
+	m_minimum(minimum), m_maximum(maximum), m_value(value), m_key(key) { }
     inline T minimum() const { return m_minimum; }
     inline T maximum() const { return m_maximum; }
     inline T value() const { return m_value; }
-    inline ZtZString key() const { return m_key; }
+    inline const ZtString &key() const { return m_key; }
   protected:
     T		m_minimum;
     T		m_maximum;
@@ -383,41 +326,27 @@ public:
     ZtString	m_key;
   };
   // thrown by getMultiple() on number of values error
-  class ZvAPI NValues : public Range_<int> {
+  class ZvAPI NValues : public Range_<Int> {
   public:
     template <typename Key>
-    inline NValues(int minimum, int maximum, int value, const Key &key) :
-	Range_<int>(minimum, maximum, value, key) { }
-    inline NValues(const NValues &r) : Range_<int>(r) { }
-    inline NValues &operator =(const NValues &r) {
-      Range_<int>::operator =(r);
-      return *this;
-    }
-    virtual ~NValues() { }
-    ZtZString message() const {
-      return ZtZString() << m_key << " invalid number of values "
-	"min(" << ZuBoxed(m_minimum) << ") <= " <<
-	ZuBoxed(m_value) <<
-	" <= max(" << ZuBoxed(m_maximum) << ")";
+    inline NValues(Int minimum, Int maximum, Int value, Key &&key) :
+	Range_<Int>(minimum, maximum, value, ZuFwd<Key>(key)) { }
+    void print_(ZmStream &s) const {
+      s << m_key << " invalid number of values "
+	"min(" << m_minimum << ") <= " << m_value <<
+	" <= max(" << m_maximum << ")";
     }
   };
   // thrown by getInt() on range error
-  class ZvAPI RangeInt : public Range_<int> {
+  class ZvAPI RangeInt : public Range_<Int> {
   public:
     template <typename Key>
-    inline RangeInt(int minimum, int maximum, int value, const Key &key) :
-	Range_<int>(minimum, maximum, value, key) { }
-    inline RangeInt(const RangeInt &r) : Range_<int>(r) { }
-    inline RangeInt &operator =(const RangeInt &r) {
-      Range_<int>::operator =(r);
-      return *this;
-    }
-    virtual ~RangeInt() { }
-    ZtZString message() const {
-      return ZtZString() << m_key <<
-	" out of range min(" << m_minimum <<
-	") <= value(" << m_value <<
-	") <= max(" << m_maximum << ")";
+    inline RangeInt(Int minimum, Int maximum, Int value, Key &&key) :
+	Range_<Int>(minimum, maximum, value, ZuFwd<Key>(key)) { }
+    void print_(ZmStream &s) const {
+      s << m_key << " out of range "
+	"min(" << m_minimum << ") <= " << m_value <<
+	" <= max(" << m_maximum << ")";
     }
   };
   // thrown by getInt64() on range error
@@ -425,19 +354,12 @@ public:
   public:
     template <typename Key>
     inline RangeInt64(
-	Int64 minimum, Int64 maximum, Int64 value, const Key &key) :
-	Range_<Int64>(minimum, maximum, value, key) { }
-    inline RangeInt64(const RangeInt64 &r) : Range_<Int64>(r) { }
-    inline RangeInt64 &operator =(const RangeInt64 &r) {
-      Range_<Int64>::operator =(r);
-      return *this;
-    }
-    virtual ~RangeInt64() { }
-    ZtZString message() const {
-      return ZtZString() << m_key <<
-	" out of range min(" << m_minimum <<
-	") <= value(" << m_value <<
-	") <= max(" << m_maximum << ")";
+	Int64 minimum, Int64 maximum, Int64 value, Key &&key) :
+	Range_<Int64>(minimum, maximum, value, ZuFwd<Key>(key)) { }
+    void print_(ZmStream &s) const {
+      s << m_key << " out of range "
+	"min(" << m_minimum << ") <= " << m_value <<
+	" <= max(" << m_maximum << ")";
     }
   };
   // thrown by getDbl() on range error
@@ -445,19 +367,12 @@ public:
   public:
     template <typename Key>
     inline RangeDbl(
-	Double minimum, Double maximum, Double value, const Key &key) :
-      Range_<Double>(minimum, maximum, value, key) { }
-    inline RangeDbl(const RangeDbl &r) : Range_<Double>(r) { }
-    inline RangeDbl &operator =(const RangeDbl &r) {
-      Range_<Double>::operator =(r);
-      return *this;
-    }
-    virtual ~RangeDbl() { }
-    ZtZString message() const {
-      return ZtZString() << m_key <<
-	" out of range min(" << m_minimum <<
-	") <= value(" << m_value <<
-	") <= max(" << m_maximum << ")";
+	Double minimum, Double maximum, Double value, Key &&key) :
+      Range_<Double>(minimum, maximum, value, ZuFwd<Key>(key)) { }
+    void print_(ZmStream &s) const {
+      s << m_key << " out of range "
+	"min(" << m_minimum << ") <= " << m_value <<
+	" <= max(" << m_maximum << ")";
     }
   };
 
@@ -466,25 +381,17 @@ public:
     template <typename Value, typename Fmt>
     inline BadFmt(Value &&value, Fmt &&fmt) :
 	m_value(ZuFwd<Value>(value)), m_fmt(ZuFwd<Fmt>(fmt)) { }
-    inline BadFmt &operator =(const BadFmt &e) {
-      if (this != &e) m_value = e.m_value, m_fmt = e.m_fmt;
-      return *this;
+    void print_(ZmStream &s) const {
+      s << '"' << m_value << "\" not format " << m_fmt;
     }
-    virtual ~BadFmt() { }
-    ZtZString message() const {
-      return ZtZString() << '"' << m_value << "\" not format " << m_fmt;
-    }
-    inline ZtZString value() const { return m_value; }
-    inline ZtZString fmt() const { return m_fmt; }
   private:
-    ZtString	m_value;
-    ZtString	m_fmt;
+    ZtString		m_value;
+    ZtString		m_fmt;
   };
 
-  ZtZString get(ZuString key, bool required, ZuString def);
-  inline ZtZString get(ZuString key, bool required = false)
+  ZuString get(ZuString key, bool required, ZuString def);
+  inline ZuString get(ZuString key, bool required = false)
     { return get(key, required, ZuString()); }
-  typedef const ZtArray<ZtString> Multiple;
   const ZtArray<ZtString> *getMultiple(ZuString key,
       unsigned minimum, unsigned maximum, bool required = false);
   void set(ZuString key, ZuString val);
@@ -495,28 +402,28 @@ public:
   void merge(ZvCf *cf);
 
   template <typename Key>
-  inline static Int toInt(const Key &key, const char *value,
+  inline static Int toInt(const Key &key, ZuString value,
       Int minimum, Int maximum, Int def = Int()) {
     if (!value) return def;
-    ZuBox<int> i; i.scan(value);
+    Int i(value);
     if (i < minimum || i > maximum) throw RangeInt(minimum, maximum, i, key);
     return i;
   }
 
   template <typename Key>
-  inline static Int64 toInt64(const Key &key, const char *value,
+  inline static Int64 toInt64(const Key &key, ZuString value,
       Int64 minimum, Int64 maximum, Int64 def = Int64()) {
     if (!value) return def;
-    ZuBox<Int64> i; i.scan(value);
+    Int64 i(value);
     if (i < minimum || i > maximum) throw RangeInt64(minimum, maximum, i, key);
     return i;
   }
 
   template <typename Key>
-  inline static Double toDbl(const Key &key, const char *value,
+  inline static Double toDbl(const Key &key, ZuString value,
       Double minimum, Double maximum, Double def = Double()) {
     if (!value) return def;
-    ZuBox<Double> d; d.scan(value);
+    ZuBox<Double> d(value);
     if (d < minimum || d > maximum) throw RangeDbl(minimum, maximum, d, key);
     return d;
   }
@@ -603,24 +510,24 @@ friend class Iterator;
 	m_iterator(cf->m_tree, prefix) { }
     ~Iterator();
 
-    ZtZString get(ZtZString &key);
-    const ZtArray<ZtString> *getMultiple(ZtZString &key,
+    ZuString get(ZuString &key);
+    const ZtArray<ZtString> *getMultiple(ZuString &key,
 	unsigned minimum, unsigned maximum);
-    ZmRef<ZvCf> subset(ZtZString &key);
-    inline Int getInt(ZtZString &key, Int minimum, Int maximum,
+    ZmRef<ZvCf> subset(ZuString &key);
+    inline Int getInt(ZuString &key, Int minimum, Int maximum,
 	Int def = Int()) {
       return toInt(key, get(key), minimum, maximum, def);
     }
-    inline Int64 getInt64(ZtZString &key, Int64 minimum, Int64 maximum,
+    inline Int64 getInt64(ZuString &key, Int64 minimum, Int64 maximum,
 	Int64 def = Int64()) {
       return toInt64(key, get(key), minimum, maximum, def);
     }
-    inline Double getDbl(ZtZString &key, Double minimum, Double maximum,
+    inline Double getDbl(ZuString &key, Double minimum, Double maximum,
 	Double def = Double()) {
       return toDbl(key, get(key), minimum, maximum, def);
     }
     template <typename Map>
-    inline Enum getEnum(ZtZString &key, Enum def = Enum()) {
+    inline Enum getEnum(ZuString &key, Enum def = Enum()) {
       return toEnum<Map>(key, get(key), def);
     }
 
@@ -629,21 +536,22 @@ friend class Iterator;
   };
 
 private:
-  ZmRef<ZvCf> scope(ZtString &fullKey, ZtZString &key, bool create);
+  ZmRef<ZvCf> scope(ZuString fullKey, ZuString &key, bool create);
 
   void fromArg(ZuString fullKey, int type, ZuString argVal);
   void fromString(ZuString in, bool validate,
       ZuString fileName, ZmRef<Defines> defines);
 
   void toArgs(ZtArray<ZtString> &args, ZuString prefix);
-  void toString(ZtString &out, ZuString prefix);
 
-  static ZtZString quoteArgValue(ZuString value);
-  static ZtZString quoteValue(ZuString value);
+  static ZtString quoteArgValue(ZuString value);
+  static ZtString quoteValue(ZuString value);
 
   Tree		m_tree;
   ZvCf		*m_parent;
 };
+template <> struct ZuPrint<ZvCf> : public ZuPrintFn { };
+template <> struct ZuPrint<ZvCf::Prefixed> : public ZuPrintFn { };
 
 #ifdef _MSC_VER
 #pragma warning(pop)

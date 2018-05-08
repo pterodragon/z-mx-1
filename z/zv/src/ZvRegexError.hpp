@@ -34,19 +34,25 @@
 
 #include <ZvError.hpp>
 
-class ZvAPI ZvRegexError : public ZtRegex::Error, public ZvError {
+class ZvAPI ZvRegexError : public ZvError {
 public:
-  inline ZvRegexError(const ZtRegex::Error &e) : ZtRegex::Error(e) { }
-  inline ZvRegexError(const ZvRegexError &e) : ZtRegex::Error(e) { }
+  inline ZvRegexError(const ZtRegex::Error &e) : m_error(e) { }
+#if 0
+  inline ZvRegexError(const ZvRegexError &e) : m_error(e.m_error) { }
   inline ZvRegexError &operator =(const ZvRegexError &e) {
-    if (this != &e) *(ZtRegex::Error *)this = e;
+    if (this != &e) m_error = e.m_error;
     return *this;
   }
-  virtual ~ZvRegexError() { }
+#endif
 
-  ZtZString message() const {
-    return ZtSprintf("regular expression error \"%s\"", m_error);
+  void print_(ZmStream &s) const {
+    s << "regular expression error \"" << m_error.message <<
+      "\" code: " << ZuBoxed(m_error.code) <<
+      " offset: " << ZuBoxed(m_error.offset);
   }
+
+private:
+  ZtRegex::Error	m_error;
 };
 
 #endif /* ZvRegexError_HPP */

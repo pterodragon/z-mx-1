@@ -26,7 +26,7 @@ struct Order {
   int		m_price;
   int		m_quantity;
   // char	m_pad[1500];
-  ZtZString dump() {
+  ZtString dump() {
     return ZtSprintf("Side: %s Symbol: %s Price: %d Qty: %d\n",
 		     m_side == Buy ? "Buy" : "Sell", m_symbol,
 		     m_price, m_quantity);
@@ -226,7 +226,7 @@ int main(int argc, char **argv)
   };
 
   ZmRef<ZvCf> cf;
-  ZtZString hashOut;
+  ZuString hashOut;
 
   try {
     cf = inlineCf(
@@ -280,7 +280,7 @@ int main(int argc, char **argv)
     }
 
     appMx->start();
-    if (dbMx->start() != Zi::OK) throw ZtZString("multiplexer start failed");
+    if (dbMx->start() != Zi::OK) throw ZtString("multiplexer start failed");
 
     ZmRef<ZdbEnv> env = new ZdbEnv(0);
 
@@ -318,7 +318,7 @@ int main(int argc, char **argv)
     fputc('\n', stderr);
     ZeLog::stop();
     exit(1);
-  } catch (const ZtZString &s) {
+  } catch (const ZtString &s) {
     fputs(s.data(), stderr);
     fputc('\n', stderr);
     ZeLog::stop();

@@ -242,7 +242,7 @@ friend struct SrcPortAccessor;
   inline ZmRef<Connection> in() { return m_in; }
   inline ZmRef<Connection> out() { return m_out; }
 
-  inline ZtZString tag() const { return m_tag; }
+  inline ZuString tag() const { return m_tag; }
 
   void connected(Connection *connection);
   void connect2();
@@ -250,7 +250,20 @@ friend struct SrcPortAccessor;
   void failed2(bool transient);
   void disconnected(Connection *connection);
 
-  ZtZString status();
+private:
+  void status_(ZmStream &) const;
+  template <typename S> inline void status_(S &s_) const {
+    ZmStream s(s_);
+    status_(s);
+  }
+public:
+  struct Status;
+friend struct Status;
+  struct Status {
+    template <typename S> inline void print(S &s) const { p.status_(s); }
+    const Proxy &p;
+  };
+  inline Status status() const { return Status{*this}; }
 
 private:
   ZiMultiplex		*m_mx;
@@ -258,8 +271,9 @@ private:
   ZmRef<Listener>	m_listener;
   ZmRef<Connection>	m_in;
   ZmRef<Connection>	m_out;
-  ZtZString		m_tag;
+  ZuString		m_tag;
 };
+template <> struct ZuPrint<Proxy::Status> : public ZuPrintFn { };
 
 template <typename S> inline void Connection::print(S &s) const
 {
@@ -293,7 +307,7 @@ friend struct LocalPortAccessor;
   Listener(App *app, uint32_t cxnFlags,
       double cxnLatency, uint32_t cxnFrag, uint32_t cxnPack, double cxnDelay,
       ZiIP localIP, unsigned localPort, ZiIP remoteIP, unsigned remotePort,
-      ZiIP srcIP, unsigned srcPort, ZtZString tag, unsigned reconnectFreq);
+      ZiIP srcIP, unsigned srcPort, ZuString tag, unsigned reconnectFreq);
   virtual ~Listener() { }
 
   void add(Proxy *proxy) { m_proxies.add(proxy); }
@@ -313,7 +327,7 @@ friend struct LocalPortAccessor;
   inline ZiIP srcIP() const { return m_srcIP; }
   inline unsigned srcPort() const { return m_srcPort; }
   inline bool listening() const { return m_listening; }
-  inline ZtZString tag() const { return m_tag; }
+  inline ZuString tag() const { return m_tag; }
   inline unsigned reconnectFreq() const { return m_reconnectFreq; }
 
   int start();
@@ -321,7 +335,20 @@ friend struct LocalPortAccessor;
 
   ZiConnection *accepted(const ZiCxnInfo &ci);
 
-  ZtZString status();
+private:
+  void status_(ZmStream &) const;
+  template <typename S> inline void status_(S &s_) const {
+    ZmStream s(s_);
+    status_(s);
+  }
+public:
+  struct Status;
+friend struct Status;
+  struct Status {
+    template <typename S> inline void print(S &s) const { l.status_(s); }
+    const Listener &l;
+  };
+  inline Status status() const { return Status{*this}; }
 
   template <typename S> inline void print(S &s) const {
     s << (m_listening ? "LISTEN " : "STOPPED") << " (" << m_tag << ") " <<
@@ -329,6 +356,7 @@ friend struct LocalPortAccessor;
       m_srcIP << ':' << m_srcPort << " -> " <<
       m_remoteIP << ':' << m_remotePort;
   }
+
   ListenerPrintIn printIn() const;
   ListenerPrintOut printOut() const;
 
@@ -366,6 +394,7 @@ friend struct ListenerPrintOut;
   ZtString		m_tag;
   unsigned		m_reconnectFreq;
 };
+template <> struct ZuPrint<Listener::Status> : public ZuPrintFn { };
 
 template <> struct ZuPrint<Listener> : public ZuPrintFn { };
 struct ListenerPrintIn {
@@ -426,7 +455,7 @@ class App : public ZvCmdServer {
 
   typedef ZmFn<ZvCf *, ZtString &> CmdFn;
 
-  typedef ZmHash<ZtZString,
+  typedef ZmHash<ZuString,
 	    ZmHashVal<CmdFn,
 	      ZmHashObject<ZuNull,
 		ZmHashLock<ZmNoLock> > > > CmdHash;
@@ -577,7 +606,7 @@ public:
   bool proxy(ZvCf *args, ZtString &out) {
     ZmRef<Listener> listener;
     ZiIP localIP, remoteIP, srcIP;
-    ZtZString tag;
+    ZuString tag;
     unsigned localPort, remotePort, srcPort;
     uint32_t cxnFlags = 0;
     double cxnLatency = 0;
@@ -636,12 +665,12 @@ public:
 	reconnectFreq);
     if (listener->start() == Zi::OK)
       m_listeners.add(listener);
-    out = listener->status();
+    out << listener->status();
     return true;
   }
 
   bool stopListening(ZvCf *args, ZtString &out) {
-    ZtZString tag;
+    ZuString tag;
     ZmRef<Listener> listener;
     unsigned localPort;
     bool isTag;
@@ -662,7 +691,7 @@ public:
           continue;
         listener->stop();
         delete m_listeners.del(listener->localPort());
-        out = listener->status();
+        out << listener->status();
         status(args, out);
       }
     } else {
@@ -672,7 +701,7 @@ public:
 	return false;
       }
       listener->stop();
-      out = listener->status();
+      out << listener->status();
       delete m_listeners.del(localPort);
     }
     return true;
@@ -682,7 +711,7 @@ public:
     unsigned srcPort;
     int side;
     bool allProxies = false, isTag = false;
-    ZtZString tag;
+    ZuString tag;
     try {
       tag = args->get("1");
       if (validateTag(tag))
@@ -723,13 +752,13 @@ public:
       if ((side == Side::Out || side == Side::Both) &&
 	  (connection = proxy->out()))
 	connection->hold();
-      out = proxy->status();
+      out << proxy->status();
     }
     return true;
   }
 
   bool release(ZvCf *args, ZtString &out) {
-    ZtZString tag;
+    ZuString tag;
     unsigned srcPort;
     int side;
     bool isTag = false, allProxies = false;
@@ -773,13 +802,13 @@ public:
       if ((side == Side::Out || side == Side::Both) &&
 	  (connection = proxy->out()))
 	connection->release();
-      out = proxy->status();
+      out << proxy->status();
     }
     return true;
   }
 
   bool disc(ZvCf *args, ZtString &out) {
-    ZtZString tag;
+    ZuString tag;
     unsigned srcPort;
     bool isTag = false, allProxies = false;
     try {
@@ -813,13 +842,13 @@ public:
       ZmRef<Connection> connection;
       if (connection = proxy->in()) connection->disconnect();
       if (connection = proxy->out()) connection->disconnect();
-      out = proxy->status();
+      out << proxy->status();
     }
     return true;
   }
 
   bool suspend(ZvCf *args, ZtString &out) {
-    ZtZString tag;
+    ZuString tag;
     unsigned srcPort;
     int side, op;
     bool isTag, allProxies = false;
@@ -876,13 +905,13 @@ public:
 	if (op == IOOp::Send || op == IOOp::Both) connection->suspSend();
 	if (op == IOOp::Recv || op == IOOp::Both) connection->suspRecv();
       }
-      out = proxy->status();
+      out << proxy->status();
     }
     return true;
   }
 
   bool resume(ZvCf *args, ZtString &out) {
-    ZtZString tag;
+    ZuString tag;
     unsigned srcPort;
     int side, op;
     bool isTag = false, allProxies = false;
@@ -935,13 +964,13 @@ public:
 	if (op == IOOp::Send || op == IOOp::Both) connection->resSend();
 	if (op == IOOp::Recv || op == IOOp::Both) connection->resRecv();
       }
-      out = proxy->status();
+      out << proxy->status();
     }
     return true;
   }
 
   bool trace(ZvCf *args, ZtString &out) {
-    ZtZString tag;
+    ZuString tag;
     unsigned srcPort;
     int side;
     bool on;
@@ -987,13 +1016,13 @@ public:
       if ((side == Side::Out || side == Side::Both) &&
 	  (connection = proxy->out()))
 	connection->trace(on);
-      out = proxy->status();
+      out << proxy->status();
     }
     return true;
   }
 
   bool drop(ZvCf *args, ZtString &out) {
-    ZtZString tag;
+    ZuString tag;
     unsigned srcPort;
     int side;
     bool on;
@@ -1039,7 +1068,7 @@ public:
       if ((side == Side::Out || side == Side::Both) &&
 	  (connection = proxy->out()))
 	connection->drop(on);
-      out = proxy->status();
+      out << proxy->status();
     }
     return true;
   }
@@ -1058,7 +1087,7 @@ public:
   }
 
   bool status(ZvCf *args, ZtString &out) {
-    ZtZString tag;
+    ZuString tag;
     bool isTag = false;
     try {
       tag = args->get("1");
@@ -1099,27 +1128,26 @@ public:
   }
 
 private:
-  void cmdRcvd(ZvCmdLine *line,
-      const ZvInvocation &inv, ZvAnswer &ans) {
+  void cmdRcvd(ZvCmdLine *line, const ZvInvocation &inv, ZvAnswer &ans) {
     ZtString out;
     ZmRef<ZvCf> args = new ZvCf();
     if (!m_syntax) {
       ans.make(ZvCmd::Fail, Ze::Error, ZvAnswerArgs,
-	       "Internal error - bad syntax.");
+	  "Internal error - bad syntax");
     } else {
       try {
 	args->fromCLI(m_syntax, inv.cmd());
 	CmdFn cmdFn = m_cmds.findVal(args->get("0"));
 	if (!cmdFn) {
-	  ans.make(ZvCmd::Fail, Ze::Error, ZvAnswerArgs, "Unimplemented.");
+	  ans.make(ZvCmd::Fail, Ze::Error, ZvAnswerArgs, "Unimplemented");
 	} else {
 	  ans.make((cmdFn(args, out) ? ZvCmd::Success : ZvCmd::Fail), 
 		   Ze::Info, ZvAnswerArgs, out);
 	}
-      } catch(const ZvCf::Usage usage) {
-	ans.make(ZvCmd::Fail, Ze::Error, ZvAnswerArgs, usage.message());
-      } catch(...) {
-	ans.make(ZvCmd::Fail, Ze::Error, ZvAnswerArgs, "Unknown error.");
+      } catch (const ZvError &e) {
+	ans.make(ZvCmd::Fail, Ze::Error, ZvAnswerArgs, ZtString() << e);
+      } catch (...) {
+	ans.make(ZvCmd::Fail, Ze::Error, ZvAnswerArgs, "Unknown error");
       }
     }
   }
@@ -1230,7 +1258,7 @@ void Connection::recv(ZiIOContext *io)
 void Connection::recv_(ZmRef<IOBuf> ioBuf, ZiIOContext &io)
 {
   if (m_flags & Trace) {
-    ZeLOG(Info, ZtHexDump(ZtZString() << *this,
+    ZeLOG(Info, ZtHexDump(ZtString() << *this,
 	  ioBuf->data(), ioBuf->length()));
   }
 
@@ -1318,7 +1346,7 @@ void Connection::send(Guard &guard, ZiIOContext *io)
 void Connection::send_(IOBuf *ioBuf, ZiIOContext &io)
 {
   if (m_flags & Trace) {
-    ZeLOG(Info, ZtHexDump(ZtZString() << *this,
+    ZeLOG(Info, ZtHexDump(ZtString() << *this,
 	  ioBuf->data(), ioBuf->length()));
   }
 
@@ -1418,9 +1446,8 @@ void Proxy::disconnected(Connection *connection)
   }
 }
 
-ZtZString Proxy::status()
+void Proxy::status_(ZmStream &s) const
 {
-  ZtZString s(160);
   if (ZmRef<Connection> cxn = m_in) {
     s << *cxn;
     if (ZuBoxed(cxn->latency()).fgt(0))
@@ -1450,13 +1477,12 @@ ZtZString Proxy::status()
     else
       s << "NC:NC !> NC:NC (" << m_tag << ')';
   }
-  return s;
 }
 
 Listener::Listener(App *app, uint32_t cxnFlags,
     double cxnLatency, uint32_t cxnFrag, uint32_t cxnPack, double cxnDelay,
     ZiIP localIP, unsigned localPort, ZiIP remoteIP, unsigned remotePort,
-    ZiIP srcIP, unsigned srcPort, ZtZString tag, unsigned reconnectFreq) :
+    ZiIP srcIP, unsigned srcPort, ZuString tag, unsigned reconnectFreq) :
   m_mx(app->mx()), m_app(app),
   m_cxnFlags(cxnFlags), m_cxnLatency(cxnLatency),
   m_cxnFrag(cxnFrag), m_cxnPack(cxnPack), m_cxnDelay(cxnDelay),
@@ -1505,16 +1531,12 @@ ZiConnection *Listener::accepted(const ZiCxnInfo &ci)
       m_cxnLatency, m_cxnFrag, m_cxnPack, m_cxnDelay, ci);
 }
 
-ZtZString Listener::status()
+void Listener::status_(ZmStream &s) const
 {
-  ZtZString s(80 + 160 * (m_proxies.count() + 1));
   s << *this;
   ProxyHash::ReadIterator i(m_proxies);
-  while (ZmRef<Proxy> proxy = i.iterateKey()) {
-    s += "\n";
-    s += proxy->status();
-  }
-  return s;
+  while (ZmRef<Proxy> proxy = i.iterateKey())
+    s << "\n" << proxy->status();
 }
 
 int main(int argc, char **argv)

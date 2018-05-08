@@ -45,7 +45,7 @@ struct ZrlAPI Zrl {
   static void stop();
 
   static ZmRef<ZvCf> readline(const char *prompt);
-  static ZtZString readline_(const char *prompt);
+  static ZtString readline_(const char *prompt);
 };
 
 #endif /* Zrl_HPP */

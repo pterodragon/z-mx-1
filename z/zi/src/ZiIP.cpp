@@ -237,7 +237,7 @@ ZiIP::Hostname ZiIP::name(ZeError *e)
 {
   ZiIP_InitOnce();
 
-  ZHostname ret;
+  Hostname ret;
   struct sockaddr_in sai;
   memset(&sai, 0, sizeof(struct sockaddr_in));
   sai.sin_family = AF_INET;

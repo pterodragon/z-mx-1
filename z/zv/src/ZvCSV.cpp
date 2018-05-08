@@ -112,8 +112,7 @@ void ZvCSV::readData(ZuString data, ZvCSVAllocFn allocFn, ZvCSVReadFn readFn)
   }
 }
 
-ZvCSVWriteFn ZvCSV::writeFile(const char *fileName,
-    const ZtArray<ZtString> &columns)
+ZvCSVWriteFn ZvCSV::writeFile(const char *fileName, const ColNames &columns)
 {
   FILE *file;
 
@@ -163,8 +162,7 @@ void ZvCSV::writeFile_(
   fwrite(row->data(), 1, row->length(), file);
 }
 
-ZvCSVWriteFn ZvCSV::writeData(
-    ZtArray<char> &data, const ZtArray<ZtString> &columns)
+ZvCSVWriteFn ZvCSV::writeData(ZtArray<char> &data, const ColNames &columns)
 {
   CColArray colArray = this->columns(columns);
 
@@ -201,7 +199,7 @@ void ZvCSV::writeData_(
   data << *row;
 }
 
-void ZvCSV::split(ZuString row, ZtArray<ZtZArray<char> > &values)
+void ZvCSV::split(ZuString row, ZtArray<ZtArray<char> > &values)
 {
   enum { Value = 0, Quoted, Quoted2, EOV, EOL };
   int state;
@@ -245,9 +243,9 @@ void ZvCSV::split(ZuString row, ZtArray<ZtZArray<char> > &values)
       next = -1;
 
     if (simple) {
-      new (values.push()) ZtZArray<char>(row.data() + start, end - start);
+      new (values.push()) ZtArray<char>(row.data() + start, end - start);
     } else {
-      ZtZArray<char> value;
+      ZtArray<char> value;
       value.size(end - start);
       state = Value;
       offset = start;
@@ -269,7 +267,7 @@ void ZvCSV::split(ZuString row, ZtArray<ZtZArray<char> > &values)
 	    break;
 	}
       }
-      values.push(value);
+      values.push(ZuMv(value));
     }
 
     if (next < 0) break;
@@ -277,9 +275,9 @@ void ZvCSV::split(ZuString row, ZtArray<ZtZArray<char> > &values)
   }
 }
 
-void ZvCSV::writeHeaders(ZtArray<ZtZString> &headers)
+void ZvCSV::writeHeaders(ZtArray<ZuString> &headers)
 {
-  int n = m_colArray.length();
+  unsigned n = m_colArray.length();
   headers.size(n);
-  for (int i = 0; i < n; i++) headers.push(m_colArray[i]->id());
+  for (unsigned i = 0; i < n; i++) headers.push(m_colArray[i]->id());
 }

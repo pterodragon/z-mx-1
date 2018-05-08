@@ -75,113 +75,168 @@ class Zp_Pcap : public ZmObject {
 
   Zp_Pcap() : m_pcap(0) { memset(&m_program, 0, sizeof(bpf_program)); }
 
-  bool create(ZuString iface, ZpError *err) {
-    m_pcap = pcap_create(iface.data(), (err ? err->data() : (char *)0));
-    return !!m_pcap;
-  }
-  
-  bool activate(ZpError *err) {
-    if (!m_pcap) {
-      *err = "invalid pcap_t for activation";
-      return false;
-    }
-    if (pcap_activate(m_pcap) != 0) {
-      *err = error();
-      return false;
-    }
-    return true;
-  }
-  
-  bool openFile(ZuString fname, ZpError *err) {
-    m_pcap = pcap_open_offline(fname.data(), (err ? err->data() : (char *)0));
-    return !!m_pcap;
-  }
-  bool compile(ZuString filter, ZpError *err, int optimize = 1) {
-    int rc = pcap_compile(m_pcap, &m_program, filter.data(), optimize, 0);
-    if (rc < 0 || pcap_setfilter(m_pcap, &m_program) != 0) {
-      *err = error();
-      return false;
-    }
-    return true;
-  }
-  bool nonblock(int b, ZpError *err) {
-    if (b < 0) return true;
-    return pcap_setnonblock(m_pcap, b, (err ? err->data() : (char *)0)) >= 0;
-  }
-  int nonblock(ZpError *err) {
-    return pcap_getnonblock(m_pcap, (err ? err->data() : (char *)0));
-  }
-  bool bufferSize(int b, ZpError *err) {
-    if (b < 0) return true;
-    if (pcap_set_buffer_size(m_pcap, b) != 0) {
-      *err = "failed to set buffer size";
-      return false;
-    }
-    return true;
-  }
-  bool snaplen(int b, ZpError *err) {
-    if (b < 0) return true;
-    if (pcap_set_snaplen(m_pcap, b) != 0) {
-      *err = "failed to set snaplen";
-      return false;
-    }
-    return true;
-  }
-  bool timeout(int b, ZpError *err) {
-    if (b < 0) return true;
-    if (pcap_set_timeout(m_pcap, b) != 0) {
-      *err = "failed to set timeout";
-      return false;
-    }
-    return true;
-  }
-  bool promisc(int b, ZpError *err) {
-    if (b < 0) return true;
-    if (pcap_set_promisc(m_pcap, b) != 0) {
-      *err = "failed to set promisc";
-      return false;
-    }
-    return true;
-  }
+  bool create(ZuString iface, ZpError *e);
+  bool activate(ZpError *e);
+  bool openFile(ZuString fname, ZpError *e);
+  bool compile(ZuString filter, ZpError *e, int optimize = 1);
+  bool nonblock(int b, ZpError *e);
+  int nonblock(ZpError *e);
+  bool bufferSize(int b, ZpError *e);
+  bool snaplen(int b, ZpError *e);
+  bool timeout(int b, ZpError *e);
+  bool promisc(int b, ZpError *e);
 
   void stop() { 
     pcap_breakloop(m_pcap); 
     m_pcapSem.wait();
   }
+
   int dispatch(u_char *userdata, int count);
+
   int fileno() { return pcap_fileno(m_pcap); }
 
   void post() { m_pcapSem.post(); }
   void finalize() { pcap_freecode(&m_program); }
   void close() { if (m_pcap) pcap_close(m_pcap); }
+
   int datalink();
 
-  bool operator !() const { return !m_pcap; }
+  ZuInline bool operator !() const { return !m_pcap; }
 
-  inline ZtZString error() const {
-    if (ZuUnlikely(!m_pcap)) return "";
-    return ZtZString(pcap_geterr(m_pcap));
+  void print(ZmStream &s) const;
+  template <typename S> inline void print(S &s_) const {
+    ZmStream s(s_);
+    print(s);
   }
-
-  ZtZString toString() const;
-
-  ZtZString stats() const {
-    struct pcap_stat s; memset(&s, 0, sizeof(struct pcap_stat));
-    if (0 != pcap_stats(m_pcap, &s))  {
-      return error();
+  struct Error;
+friend struct Error;
+  struct Error {
+    template <typename S> inline void print(S &s) const {
+      if (ZuUnlikely(!p.m_pcap)) return;
+      s << pcap_geterr(p.m_pcap);
     }
-    ZtZString stream;
-    stream << "[rcvdPkts = " << s.ps_recv
-	   << "] [dropPktsOS = " << s.ps_drop
-	   << "] [dropPktsEth = " << s.ps_ifdrop
-	   << "]";
-    return stream;
-  }
+    const Zp_Pcap &p;
+  };
+  inline Error error() const { return Error{*this}; }
+  struct Stats;
+friend struct Stats;
+  struct Stats {
+    template <typename S> void print(S &s) const;
+    const Zp_Pcap &p;
+  };
+  inline Stats stats() const { return Stats{*this}; }
 
+private:
   pcap_t                *m_pcap; // each instance has an associated file handle
   bpf_program           m_program;
   ZmSemaphore           m_pcapSem; // used to break pcap loop on stop
 };
+template <> struct ZuPrint<Zp_Pcap> : public ZuPrintFn { };
+template <> struct ZuPrint<Zp_Pcap::Error> : public ZuPrintFn { };
+template <> struct ZuPrint<Zp_Pcap::Stats> : public ZuPrintFn { };
+
+inline bool Zp_Pcap::create(ZuString iface, ZpError *e)
+{
+  m_pcap = pcap_create(iface, e ? e->data() : (char *)0);
+  if (!m_pcap) {
+    if (e) e->calcLength();
+    return 0;
+  }
+  return 1;
+}
+
+inline bool Zp_Pcap::activate(ZpError *e)
+{
+  if (!m_pcap) {
+    if (e) *e << "invalid pcap_t for activation";
+    return 0;
+  }
+  if (pcap_activate(m_pcap)) {
+    if (e) *e << error();
+    return 0;
+  }
+  return 1;
+}
+
+inline bool Zp_Pcap::openFile(ZuString fname, ZpError *e)
+{
+  m_pcap = pcap_open_offline(fname, e ? e->data() : (char *)0);
+  if (!m_pcap) {
+    if (e) e->calcLength();
+    return 0;
+  }
+  return 1;
+}
+inline bool Zp_Pcap::compile(ZuString filter, ZpError *e, int optimize)
+{
+  int rc = pcap_compile(m_pcap, &m_program, filter, optimize, 0);
+  if (rc < 0 || pcap_setfilter(m_pcap, &m_program)) {
+    if (e) *e << error();
+    return 0;
+  }
+  return 1;
+}
+inline bool Zp_Pcap::nonblock(int b, ZpError *e)
+{
+  if (b < 0) return 1;
+  if (pcap_setnonblock(m_pcap, b, e ? e->data() : (char *)0) < 0) {
+    if (e) e->calcLength();
+    return 0;
+  }
+  return 1;
+}
+int Zp_Pcap::nonblock(ZpError *e) {
+  int b = pcap_getnonblock(m_pcap, e ? e->data() : (char *)0);
+  if (b < 0 && e) e->calcLength();
+  return b;
+}
+inline bool Zp_Pcap::bufferSize(int b, ZpError *e)
+{
+  if (b < 0) return 1;
+  if (pcap_set_buffer_size(m_pcap, b)) {
+    if (e) *e << "failed to set buffer size";
+    return 0;
+  }
+  return 1;
+}
+inline bool Zp_Pcap::snaplen(int b, ZpError *e)
+{
+  if (b < 0) return 1;
+  if (pcap_set_snaplen(m_pcap, b)) {
+    if (e) *e << "failed to set snaplen";
+    return 0;
+  }
+  return 1;
+}
+inline bool Zp_Pcap::timeout(int b, ZpError *e)
+{
+  if (b < 0) return 1;
+  if (pcap_set_timeout(m_pcap, b)) {
+    if (e) *e << "failed to set timeout";
+    return 0;
+  }
+  return 1;
+}
+inline bool Zp_Pcap::promisc(int b, ZpError *e)
+{
+  if (b < 0) return 1;
+  if (pcap_set_promisc(m_pcap, b)) {
+    if (e) *e << "failed to set promisc";
+    return 0;
+  }
+  return 1;
+}
+
+template <typename S> inline void Zp_Pcap::Stats::print(S &s) const
+{
+  struct pcap_stat st;
+  memset(&st, 0, sizeof(struct pcap_stat));
+  if (pcap_stats(p.m_pcap, &st)) { s << p.error(); return; }
+  s << "[rcvdPkts = " << st.ps_recv
+    << "] [dropPktsOS = " << st.ps_drop
+    << "] [dropPktsEth = " << st.ps_ifdrop
+    << "]";
+}
 
 class ZpAPI ZpHandleInfo {
   friend class ZpHandle;
@@ -238,8 +293,26 @@ public:
   inline bool nonBlocking() const { return m_nonBlocking; }
   inline bool asFile() const { return m_asFile; }
 
-  ZtZString toString() const;
-  ZtZString stats();
+  void print(ZmStream &s) const;
+  template <typename S> inline void print(S &s_) const {
+    ZmStream s(s_);
+    print(s);
+  }
+
+private:
+  void stats_(ZmStream &s) const;
+public:
+  struct Stats;
+friend struct Stats;
+  struct Stats {
+    inline void print(ZmStream &s) const { p.stats_(s); }
+    template <typename S> inline void print(S &s_) const {
+      ZmStream s(s_);
+      p.stats_(s);
+    }
+    const ZpHandleInfo &p;
+  };
+  inline Stats stats() const { return Stats{*this}; }
 
 private:
   ZmRef<Zp_Pcap>        m_pcap;
@@ -253,6 +326,8 @@ private:
   bool			m_nonBlocking;
   bool			m_asFile;
 };
+template <> struct ZuPrint<ZpHandleInfo> : public ZuPrintFn { };
+template <> struct ZuPrint<ZpHandleInfo::Stats> : public ZuPrintFn { };
 
 class ZpAPI ZpHandle : public ZmPolymorph {
   ZpHandle(const ZpHandle &);
@@ -314,7 +389,20 @@ public:
 
   const ZpHandleInfo &info() const { return m_info; }
 
-  ZtZString stats();
+private:
+  void stats_(ZmStream &s) const;
+public:
+  struct Stats;
+friend struct Stats;
+  struct Stats {
+    inline void print(ZmStream &s) const { h.stats_(s); }
+    template <typename S> inline void print(S &s_) const {
+      ZmStream s(s_);
+      h.stats_(s);
+    }
+    const ZpHandle &h;
+  };
+  inline Stats stats() const { return Stats{*this}; }
 
 private:
   void dispatch();
@@ -333,6 +421,7 @@ private:
   ZpDrain               m_debugDrain;
 #endif
 };
+template <> struct ZuPrint<ZpHandle::Stats> : public ZuPrintFn { };
 
 class ZpAPI ZpPcap : public ZmObject {
   ZpPcap(const ZpPcap&);
@@ -354,7 +443,19 @@ class ZpAPI ZpPcap : public ZmObject {
   inline ZiMultiplex *mx() { return m_mx; }
   inline int maxCapture() const { return m_maxCapture; }
 
-  ZtZString stats();
+private:
+  void stats_(ZmStream &s) const;
+public:
+  struct Stats;
+friend struct Stats;
+  struct Stats {
+    template <typename S> inline void print(S &s_) const {
+      ZmStream s(s_);
+      p.stats_(s);
+    }
+    const ZpPcap &p;
+  };
+  inline Stats stats() const { return Stats{*this}; }
 
 #ifdef ZpPcap_DEBUG
   inline bool debug() { return m_debug; }
@@ -369,6 +470,7 @@ private:
   bool                        m_debug;
 #endif
 };
+template <> struct ZuPrint<ZpPcap::Stats> : public ZuPrintFn { };
 
 #ifdef _MSC_VER
 #pragma warning(pop)

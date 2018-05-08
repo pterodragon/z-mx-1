@@ -35,7 +35,7 @@ public:
   void open() {
     ZeError e;
     if (m_file.open(m_path, ZiFile::ReadOnly, 0, &e) != Zi::OK) {
-      ZeLOG(Error, ZtZString() << '"' << m_path << "\": " << e);
+      ZeLOG(Error, ZtString() << '"' << m_path << "\": " << e);
       exit(1);
     }
   }
@@ -44,7 +44,7 @@ public:
     ZeError e;
     int i;
     if ((i = m_file.read(&m_frame, sizeof(MxMDFrame), &e)) == Zi::IOError) {
-      ZeLOG(Error, ZtZString() << '"' << m_path << "\": " << e);
+      ZeLOG(Error, ZtString() << '"' << m_path << "\": " << e);
       exit(1);
     }
     if (i == Zi::EndOfFile || (unsigned)i < sizeof(MxMDFrame)) {
@@ -52,12 +52,12 @@ public:
       return ZmTime();
     }
     if (m_frame.len > MsgSize) {
-      ZeLOG(Error, ZtZString() << "message length >" << ZuBoxed(MsgSize) <<
+      ZeLOG(Error, ZtString() << "message length >" << ZuBoxed(MsgSize) <<
 	  " at offset " << ZuBoxed(m_file.offset() - sizeof(MxMDFrame)));
       exit(1);
     }
     if ((i = m_file.read(m_buf, m_frame.len, &e)) == Zi::IOError) {
-      ZeLOG(Error, ZtZString() << '"' << m_path << "\": " << e);
+      ZeLOG(Error, ZtString() << '"' << m_path << "\": " << e);
       exit(1);
     }
     if (i == Zi::EndOfFile || (unsigned)i < m_frame.len) {
@@ -87,10 +87,10 @@ typedef ZmRBTree<ZmTime,
 int main(int argc, const char *argv[])
 {
   Files files;
-  ZtZString outPath;
+  ZuString outPath;
 
   {
-    ZtArray<ZtZString> paths;
+    ZtArray<ZuString> paths;
 
     for (int i = 1; i < argc; i++) {
       if (argv[i][0] != '-') {
@@ -123,7 +123,7 @@ int main(int argc, const char *argv[])
   ZeError e;
 
   if (out.open(outPath, ZiFile::Create | ZiFile::Append, 0666, &e) < 0) {
-    ZeLOG(Error, ZtZString() << '"' << outPath << "\": " << e);
+    ZeLOG(Error, ZtString() << '"' << outPath << "\": " << e);
     exit(1);
   }
 
@@ -135,7 +135,7 @@ int main(int argc, const char *argv[])
     }
     if (!file) break;
     if (file->write(&out, &e) != Zi::OK) {
-      ZeLOG(Error, ZtZString() << '"' << outPath << "\": " << e);
+      ZeLOG(Error, ZtString() << '"' << outPath << "\": " << e);
       exit(1);
     }
     ZmTime t = file->read();

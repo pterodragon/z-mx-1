@@ -49,9 +49,9 @@ public:
   typedef ZtArray<Capture> Captures;
 
   struct Error {
-    const char	*m_error;
-    int		m_code;
-    int		m_offset;
+    const char	*message;
+    int		code;
+    int		offset;
   };
 
   ZtRegex(const char *pattern, int options = 0); // pcre_compile() options
@@ -183,13 +183,7 @@ private:
 
     if (c == PCRE_ERROR_NOMATCH) return 0;
 
-    ZtRegex::Error error;
-
-    error.m_offset = -1;
-    error.m_code = c;
-    error.m_error = "pcre_exec() failed";
-
-    throw error;
+    throw ZtRegex::Error{"pcre_exec() failed", c, -1};
   }
   template <typename S> void capture(
       const S &s, const ZtArray<int> &ovector, Captures &captures) const {

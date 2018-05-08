@@ -270,7 +270,7 @@ void App::write(const MxMDFrame *frame, const char *buf)
   return;
 
 error:
-  ZeLOG(Error, ZtZString() << '"' << m_path << "\": " << e);
+  ZeLOG(Error, ZtString() << '"' << m_path << "\": " << e);
 }
 
 App::App(ZvCf *cf) :
@@ -290,7 +290,7 @@ int App::start()
     ZeError e;
     if (m_file.open(
 	  m_path, ZiFile::Create | ZiFile::Append, 0666, &e) != Zi::OK) {
-      ZeLOG(Fatal, ZtZString() << '"' << m_path << "\": " << e);
+      ZeLOG(Fatal, ZtString() << '"' << m_path << "\": " << e);
       goto error;
     }
     if (m_mx->start() != Zi::OK ||

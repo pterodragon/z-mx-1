@@ -22,7 +22,7 @@ int main()
   memset(count, 0, sizeof(count));
   while (fgets(buf, 512, f)) {
     buf[511] = 0;
-    ZtZString s(buf);
+    ZtString s; s -= buf;
     int n = s.length();
     if (n <= 1) continue;
     s.length(n - 1);

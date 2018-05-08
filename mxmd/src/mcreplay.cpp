@@ -293,11 +293,11 @@ int Msg_<Heap>::read(ZiFile *file)
   return Zi::OK;
 
 eof:
-  ZeLOG(Info, ZtZString() << '"' << m_app->replay() << "\": EOF");
+  ZeLOG(Info, ZtString() << '"' << m_app->replay() << "\": EOF");
   return Zi::EndOfFile;
 
 error:
-  ZeLOG(Error, ZtZString() << '"' << m_app->replay() << "\": read() - " <<
+  ZeLOG(Error, ZtString() << '"' << m_app->replay() << "\": read() - " <<
       Zi::resultName(n) << " - " << e);
   return Zi::IOError;
 
@@ -305,7 +305,7 @@ lenerror:
   {
     uint64_t offset = file->offset();
     offset -= sizeof(MxMDFrame);
-    ZeLOG(Error, ZtZString() << '"' << m_app->replay() << "\": "
+    ZeLOG(Error, ZtString() << '"' << m_app->replay() << "\": "
 	"message length >" << ZuBoxed(Size) <<
 	" at offset " << ZuBoxed(offset));
   }
@@ -348,7 +348,7 @@ int App::start()
   try {
     ZeError e;
     if (m_file.open(m_replay, ZiFile::ReadOnly, 0666, &e) != Zi::OK) {
-      ZeLOG(Fatal, ZtZString() << '"' << m_replay << "\": " << e);
+      ZeLOG(Fatal, ZtString() << '"' << m_replay << "\": " << e);
       goto error;
     }
     if (m_mx->start() != Zi::OK) {

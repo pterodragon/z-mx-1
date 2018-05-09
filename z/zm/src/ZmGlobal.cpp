@@ -49,7 +49,6 @@ static ZmGlobalPtr ZmGlobal_list[ZmCleanupLevel::N] = { 0 };
 // atexit handler
 ZmExtern void ZmGlobal_atexit()
 {
-  // puts("ZmGlobal_atexit()"); fflush(stdout);
   lock();
   ZmGlobal_atexit_ = 0;
   unsigned n = 0;
@@ -81,7 +80,7 @@ ZmExtern void ZmGlobal_atexit()
   // do not call dtor with lock held
   for (unsigned i = 0; i < n; i++) {
     ZmGlobal *g = globals[i];
-    // printf("ZmGlobal_atexit() deleting %s %p\n", g->m_name, g); fflush(stdout);
+    // std::cerr << "ZmGlobal_atexit() deleting " << g->m_name << ' ' << ZuBoxPtr(g).hex() << '\n' << std::flush;
     delete g;
   }
 }

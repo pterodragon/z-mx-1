@@ -328,31 +328,21 @@ void App::stop()
 
 void usage()
 {
-  fputs("usage: mcap [OPTION]... CONFIG\n"
-        "  capture IP multicast data as specified in the CONFIG file\n\n"
-        "Options:\n", stderr);
+  std::cerr <<
+    "usage: mcap [OPTION]... CONFIG\n"
+    "  capture IP multicast data as specified in the CONFIG file\n\n"
+    "Options:\n"
+    << std::flush;
   exit(1);
 }
 
 #if 0
-static void printHeapStats_(const ZmHeapStats *s)
-{
-  printf("%s,%u,%d,%llu,%llu,%llu,%llu,%lld,%lld\n",
-	 s->id(), (unsigned int)s->size(), (int)s->partition(),
-	 (unsigned long long)s->cacheSize(),
-	 (unsigned long long)s->cacheAllocs(),
-	 (unsigned long long)s->heapAllocs(),
-	 (unsigned long long)s->frees(),
-	 (long long)s->allocated(),
-	 (long long)s->maxAllocated());
-}
 static void printHeapStats()
 {
-  puts("\nHeap Statistics\n"
-	 "===============");
-  puts("ID,size,partition,cacheSize,cacheAllocs,heapAllocs,frees,allocated,maxAllocated");
-  ZmHeapMgr::stats([](const ZmHeapStats &s) { printHeapStats_(s); });
-  fflush(stdout);
+  std::cout <<
+    "\nHeap Statistics\n"
+      "===============\n" <<
+    ZmHeapMgr::csv() << std::flush;
 }
 #endif
 

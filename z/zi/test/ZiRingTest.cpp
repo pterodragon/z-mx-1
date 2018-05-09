@@ -19,7 +19,7 @@ public:
   inline void wait() { m_reached.wait(); }
   inline void proceed() { m_proceed.post(); }
   inline void reached(const char *name) {
-    fputs("\t       ", stdout); puts(name); fflush(stdout);
+    std::cout << "\t       " << name << std::flush;
     if (!m_enabled) return;
     if (m_oneshot) m_enabled = false;
     m_reached.post();
@@ -305,10 +305,10 @@ void cleanup()
 
 void usage()
 {
-  fputs(
-"usage: ZiRingTest [SIZE]\n"
-"\tSIZE - optional requested size of ring buffer\n"
-    , stderr);
+  std::cerr <<
+    "usage: ZiRingTest [SIZE]\n"
+    "\tSIZE - optional requested size of ring buffer\n"
+    << std::flush;
   exit(1);
 }
 

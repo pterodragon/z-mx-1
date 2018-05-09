@@ -130,25 +130,27 @@ void Connection::sendComplete(ZiIOContext &io)
 
 void usage()
 {
-  fputs("usage: ZiMxUDPServer [OPTION]...\n\n"
-        "Options:\n"
-	"  -t N\t\t- use N threads (default: 3 - Rx + Tx + Worker)\n"
-	"  -n N\t\t- exit after N messages (default: infinite)\n"
-	"  -f N\t\t- fragment I/O into N fragments\n"
-	"  -y\t\t- yield (context switch) on every lock acquisition\n"
-	"  -v\t\t- enable ZiMultiplex debug\n"
-	"  -m N\t\t- epoll - N is max number of file descriptors (default: 8)\n"
-	"  -q N\t\t- epoll - N is epoll_wait() quantum (default: 8)\n"
-	"  -b [HOST:]PORT- bind to HOST:PORT (HOST defaults to INADDR_ANY)\n"
-	"  -d HOST:PORT\t- send to HOST:PORT\n"
-	"  -c\t\t- connect() - filter packets received from other sources\n"
-	"  -M\t\t- use multicast\n"
-	"  -L\t\t- use multicast loopback\n"
-	"  -D IP\t\t- multicast to interface IP\n"
-	"  -T N\t\t- multicast with TTL N\n"
-	"  -G IP[/IF]\t- multicast subscribe to group IP on interface IF\n"
-	"\t\t  IF is an IP address that defaults to 0.0.0.0\n"
-	"\t\t  -G can be specified multiple times\n", stderr);
+  std::cerr <<
+    "usage: ZiMxUDPServer [OPTION]...\n\n"
+    "Options:\n"
+    "  -t N\t\t- use N threads (default: 3 - Rx + Tx + Worker)\n"
+    "  -n N\t\t- exit after N messages (default: infinite)\n"
+    "  -f N\t\t- fragment I/O into N fragments\n"
+    "  -y\t\t- yield (context switch) on every lock acquisition\n"
+    "  -v\t\t- enable ZiMultiplex debug\n"
+    "  -m N\t\t- epoll - N is max number of file descriptors (default: 8)\n"
+    "  -q N\t\t- epoll - N is epoll_wait() quantum (default: 8)\n"
+    "  -b [HOST:]PORT- bind to HOST:PORT (HOST defaults to INADDR_ANY)\n"
+    "  -d HOST:PORT\t- send to HOST:PORT\n"
+    "  -c\t\t- connect() - filter packets received from other sources\n"
+    "  -M\t\t- use multicast\n"
+    "  -L\t\t- use multicast loopback\n"
+    "  -D IP\t\t- multicast to interface IP\n"
+    "  -T N\t\t- multicast with TTL N\n"
+    "  -G IP[/IF]\t- multicast subscribe to group IP on interface IF\n"
+    "\t\t  IF is an IP address that defaults to 0.0.0.0\n"
+    "\t\t  -G can be specified multiple times\n"
+    << std::flush;
   exit(1);
 }
 

@@ -229,20 +229,21 @@ void Connection::read2(Message *msg, int flags, int status,
 
 void usage()
 {
-  fputs("usage: ZiMxClient [OPTION]...\n"
-        "Options:\n"
-	"  -h\t- Display this information\n"
-	"  -t N\t- use N threads (default: 1)\n"
-	"  -c N\t- exit after N connections (default: 1)\n"
-	"  -r N\t- run N connections concurrently (default: 1)\n"
-	"  -d N\t- disconnect early after receiving N bytes\n"
-	"  -f N\t- fragment I/O into N fragments\n"
-	"  -y\t- yield (context switch) on every lock acquisition\n"
-	"  -v\t- enable ZiMultiplex debug\n"
-	"  -m N\t- epoll - N is max number of file descriptors (default: 8)\n"
-	"  -q N\t- epoll - N is epoll_wait() quantum (default: 8)\n"
-	"  -a S\t- netlink - S is familyID (default: MxRGW.00)\n",
-	stderr);
+  std::cerr <<
+    "usage: ZiMxClient [OPTION]...\n"
+    "Options:\n"
+    "  -h\t- Display this information\n"
+    "  -t N\t- use N threads (default: 1)\n"
+    "  -c N\t- exit after N connections (default: 1)\n"
+    "  -r N\t- run N connections concurrently (default: 1)\n"
+    "  -d N\t- disconnect early after receiving N bytes\n"
+    "  -f N\t- fragment I/O into N fragments\n"
+    "  -y\t- yield (context switch) on every lock acquisition\n"
+    "  -v\t- enable ZiMultiplex debug\n"
+    "  -m N\t- epoll - N is max number of file descriptors (default: 8)\n"
+    "  -q N\t- epoll - N is epoll_wait() quantum (default: 8)\n"
+    "  -a S\t- netlink - S is familyID (default: MxRGW.00)\n"
+    << std::flush;
   exit(1);
 }
 

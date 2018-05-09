@@ -938,30 +938,30 @@ error:
 
 void usage()
 {
-  fputs(
-"usage: recdump [OPTION]... RECFILE\n"
-"\tRECFILE\t- market data recording file\n\n"
-"Options:\n"
-"  -r\t\t- include reference data in output\n"
-"  -1\t\t- include Level 1 data in output\n"
-"  -2\t\t- include Level 2 data in output\n"
-"  -n\t\t- CSV time stamps as HHMMSS instead of Excel format\n"
-"  -V\t\t- dump message frames to standard output\n"
-"  -d YYYYMMDD\t- CSV time stamps use date YYYYMMDD\n"
-"  -z ZONE\t- CSV time stamps in local time ZONE (defaults to GMT)\n"
-"  -p NDP\t- CSV values with NDP precision (-ve to suppress trailing 0s)\n"
-"  -v MIC\t- select venue MIC for following securities\n"
-"\t\t\t(may be specified multiple times)\n"
-"  -s SEGMENT\t- select SEGMENT for following securities\n"
-"\t\t\t(may be specified multiple times)\n"
-"  -i ID\t\t- filter for security ID\n"
-"\t\t\t(may be specified multiple times)\n"
-"  -o OUT\t- record filtered output in file OUT\n"
-"  -T CSV\t- dump tick size messages to CSV\n"
-"  -S CSV\t- dump security messages to CSV\n"
-"  -O CSV\t- dump order book messages to CSV\n"
-"  -R CSV\t- dump real-time messages to CSV\n"
-    , stderr);
+  std::cerr <<
+    "usage: recdump [OPTION]... RECFILE\n"
+    "\tRECFILE\t- market data recording file\n\n"
+    "Options:\n"
+    "  -r\t\t- include reference data in output\n"
+    "  -1\t\t- include Level 1 data in output\n"
+    "  -2\t\t- include Level 2 data in output\n"
+    "  -n\t\t- CSV time stamps as HHMMSS instead of Excel format\n"
+    "  -V\t\t- dump message frames to standard output\n"
+    "  -d YYYYMMDD\t- CSV time stamps use date YYYYMMDD\n"
+    "  -z ZONE\t- CSV time stamps in local time ZONE (defaults to GMT)\n"
+    "  -p NDP\t- CSV values with NDP precision (-ve to suppress trailing 0s)\n"
+    "  -v MIC\t- select venue MIC for following securities\n"
+    "\t\t\t(may be specified multiple times)\n"
+    "  -s SEGMENT\t- select SEGMENT for following securities\n"
+    "\t\t\t(may be specified multiple times)\n"
+    "  -i ID\t\t- filter for security ID\n"
+    "\t\t\t(may be specified multiple times)\n"
+    "  -o OUT\t- record filtered output in file OUT\n"
+    "  -T CSV\t- dump tick size messages to CSV\n"
+    "  -S CSV\t- dump security messages to CSV\n"
+    "  -O CSV\t- dump order book messages to CSV\n"
+    "  -R CSV\t- dump real-time messages to CSV\n"
+    << std::flush;
   exit(1);
 }
 

@@ -10,25 +10,25 @@
 
 void usage()
 {
-  fputs(
-"usage: ZiRingTest2 [OPTION]... NAME\n"
-"  test read/write ring buffer in shared memory\n"
-"\tNAME\t- name of shared memory segment\n\n"
-"Options:\n"
-"  -r\t\t- read from buffer\n"
-"  -w\t\t- write to buffer (default)\n"
-"  -x\t\t- read and write in same process\n"
-"  -l N\t\t- loop N times\n"
-"  -g\t\t- test GC / attach / detach contention\n"
-"  -b BUFSIZE\t- set buffer size to BUFSIZE (default: 8192)\n"
-"  -m MSGSIZE\t- set message size to MSGSIZE (default: 1024)\n"
-"  -n COUNT\t- set number of messages to COUNT (default: 1)\n"
-"  -i INTERVAL\t- set delay between messages in seconds (default: 0)\n"
-"  -L\t\t- low-latency (readers spin indefinitely and do not yield)\n"
-"  -s SPIN\t- set spin count to SPIN (default: 1000)\n"
-"  -S\t\t- slow reader (sleep INTERVAL seconds in between reads)\n"
-"  -c CPUSET\t- bind memory to CPUSET\n"
-    , stderr);
+  std::cerr <<
+    "usage: ZiRingTest2 [OPTION]... NAME\n"
+    "  test read/write ring buffer in shared memory\n"
+    "\tNAME\t- name of shared memory segment\n\n"
+    "Options:\n"
+    "  -r\t\t- read from buffer\n"
+    "  -w\t\t- write to buffer (default)\n"
+    "  -x\t\t- read and write in same process\n"
+    "  -l N\t\t- loop N times\n"
+    "  -g\t\t- test GC / attach / detach contention\n"
+    "  -b BUFSIZE\t- set buffer size to BUFSIZE (default: 8192)\n"
+    "  -m MSGSIZE\t- set message size to MSGSIZE (default: 1024)\n"
+    "  -n COUNT\t- set number of messages to COUNT (default: 1)\n"
+    "  -i INTERVAL\t- set delay between messages in seconds (default: 0)\n"
+    "  -L\t\t- low-latency (readers spin indefinitely and do not yield)\n"
+    "  -s SPIN\t- set spin count to SPIN (default: 1000)\n"
+    "  -S\t\t- slow reader (sleep INTERVAL seconds in between reads)\n"
+    "  -c CPUSET\t- bind memory to CPUSET\n"
+    << std::flush;
   exit(1);
 }
 
@@ -137,7 +137,7 @@ int App::main(int argc, char **argv)
       ZeError e;
 
       if (ring->open(flags, &e) != Zi::OK) {
-	fputs(e.message(), stderr); fputc('\n', stderr); fflush(stderr);
+	std::cerr << e << '\n' << std::flush;
 	exit(1);
       }
     }

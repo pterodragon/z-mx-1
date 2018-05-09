@@ -50,7 +50,7 @@ ZdbRN maxRN;
 
 void sigint()
 {
-  fputs("SIGINT\n", stderr);
+  std::cerr << "SIGINT\n" << std::flush;
   done.post();
 }
 
@@ -175,7 +175,7 @@ void usage()
     "  --cxnHash:loadFactor=N\t- load factor for cxn hash table\n"
     "  --cxnHash:cBits=N\t\t- concurrency bits for cxn hash table\n";
 
-  fputs(help, stderr);
+  std::cerr << help << std::flush;
   exit(1);
 }
 

@@ -563,7 +563,7 @@ protected:
   }
 
   template <typename S> inline void copy_(const S *data, unsigned length) {
-    if (!data || !length) { null_(); return; }
+    if (!length) { null_(); return; }
     m_data = (T *)::malloc(length * sizeof(T));
     if (length) this->copyItems(m_data, data, length);
     size_owned(length, 1);
@@ -703,7 +703,7 @@ public:
 
 // comparison
 
-  ZuInline bool operator !() const { return !m_data || !length(); }
+  ZuInline bool operator !() const { return !length(); }
 
   template <typename A>
   ZuInline typename FromZtArray<A, int>::T cmp(const A &a) const {

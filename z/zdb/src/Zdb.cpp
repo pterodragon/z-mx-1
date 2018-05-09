@@ -387,7 +387,7 @@ void ZdbEnv::holdElection()
       if (ZtString cmd = m_self->config().up) {
 	if (oldMaster) cmd << ' ' << oldMaster->config().ip;
 	ZeLOG(Info, ZtString() << "Zdb invoking \"" << cmd << '\"');
-	::system(cmd.data());
+	::system(cmd);
       }
       if (m_activeFn) m_activeFn();
     }
@@ -396,7 +396,7 @@ void ZdbEnv::holdElection()
       ZeLOG(Info, "Zdb INACTIVE");
       if (ZuString cmd = m_self->config().down) {
 	ZeLOG(Info, ZtString() << "Zdb invoking \"" << cmd << '\"');
-	::system(cmd.data());
+	::system(cmd);
       }
       if (m_inactiveFn) m_inactiveFn();
     }
@@ -448,7 +448,7 @@ retry:
     ZeLOG(Info, "Zdb INACTIVE");
     if (ZuString cmd = m_self->config().down) {
       ZeLOG(Info, ZtString() << "Zdb invoking \"" << cmd << '\"');
-      ::system(cmd.data());
+      ::system(cmd);
     }
     if (m_inactiveFn) m_inactiveFn();
   }
@@ -474,7 +474,7 @@ void ZdbEnv::reactivate(Zdb_Host *host)
   if (ZtString cmd = m_self->config().up) {
     cmd << ' ' << host->config().ip;
     ZeLOG(Info, ZtString() << "Zdb invoking \'" << cmd << '\'');
-    ::system(cmd.data());
+    ::system(cmd);
   }
 }
 

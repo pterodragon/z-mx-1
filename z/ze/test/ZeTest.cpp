@@ -16,7 +16,7 @@
 int main(int argc, char **argv)
 {
   if (argc < 1 || argc > 2 || (argc == 2 && strcmp(argv[1], "-s"))) {
-    fputs("usage: ZeTest [-s]\n", stderr);
+    std::cerr << "usage: ZeTest [-s]\n" << std::flush;
     exit(1);
   }
 

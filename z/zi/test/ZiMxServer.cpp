@@ -185,21 +185,22 @@ void dumpTimers()
 
 void usage()
 {
-  fputs("usage: ZiMxServer [OPTION]... IP PORT\n"
-        "\nOptions:\n"
-	"  -t N\t- use N threads (default: 3 - Rx + Tx + Worker)\n"
-	"  -c N\t- exit after N connections (default: 1)\n"
-	"  -l N\t- use N listener accept queue length (default: 1)\n"
-	"  -d N\t- disconnect early after sending N bytes\n"
-	"  -i N\t- rebind with interval N secs (default: 1, <=0 disables)\n"
-	"  -f\t- fragment I/O\n"
-	"  -y\t- yield (context switch) on every lock acquisition\n"
-	"  -v\t- enable ZiMultiplex debug\n"
-	"  -m N\t- epoll - N is max number of file descriptors (default: 8)\n"
-	"  -q N\t- epoll - N is epoll_wait() quantum (default: 8)\n"
-	"  -R N\t- receive buffer size (default: OS setting)\n"
-	"  -S N\t- send buffer size (default: OS setting)\n"
-	, stderr);
+  std::cerr <<
+    "usage: ZiMxServer [OPTION]... IP PORT\n"
+    "\nOptions:\n"
+    "  -t N\t- use N threads (default: 3 - Rx + Tx + Worker)\n"
+    "  -c N\t- exit after N connections (default: 1)\n"
+    "  -l N\t- use N listener accept queue length (default: 1)\n"
+    "  -d N\t- disconnect early after sending N bytes\n"
+    "  -i N\t- rebind with interval N secs (default: 1, <=0 disables)\n"
+    "  -f\t- fragment I/O\n"
+    "  -y\t- yield (context switch) on every lock acquisition\n"
+    "  -v\t- enable ZiMultiplex debug\n"
+    "  -m N\t- epoll - N is max number of file descriptors (default: 8)\n"
+    "  -q N\t- epoll - N is epoll_wait() quantum (default: 8)\n"
+    "  -R N\t- receive buffer size (default: OS setting)\n"
+    "  -S N\t- send buffer size (default: OS setting)\n"
+    << std::flush;
   exit(1);
 }
 

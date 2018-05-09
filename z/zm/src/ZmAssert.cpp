@@ -19,6 +19,9 @@
 
 // assertions
 
+#include <ZuBox.hpp>
+#include <ZuStringN.hpp>
+
 #include <ZmAssert.hpp>
 
 #include <ZmPlatform.hpp>
@@ -46,21 +49,20 @@ void ZmAssert_failed()
 #pragma warning(disable:4996)
 #endif
 
-void ZmAssert_fail(const char *expr, const char *file,
-		  int line, const char *fn)
+void ZmAssert_fail(
+    const char *expr, const char *file, unsigned line, const char *fn)
 {
-  char buf[512];
+  ZuStringN<512> buf;
 
   if (fn)
-    snprintf(buf, 511, "\"%s\":%d %s Assertion '%s' failed.\n",
-	     file, line, fn, expr);
+    buf << '"' << file << "\":" << ZuBoxed(line) <<
+      ' ' << fn << " Assertion '" << expr << "' failed.";
   else
-    snprintf(buf, 511, "\"%s\":%d Assertion '%s' failed.\n", file, line, expr);
-
-  buf[511] = 0;
+    buf << '"' << file << "\":" << ZuBoxed(line) <<
+      " Assertion '" << expr << "' failed.";
 
 #ifndef _WIN32
-  fputs(buf, stderr); fflush(stderr);
+  std::cerr << buf << std::flush;
 #else
   MessageBoxA(0, buf, "Assertion Failure", MB_ICONEXCLAMATION);
 #endif

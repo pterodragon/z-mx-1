@@ -37,10 +37,11 @@ extern "C" { void sigint(int); };
 void sigint(int sig) { stop.post(); }	// CTRL-C signal handler
 
 void usage() {
-  fputs("usage: mdsample_symlist CONFIG RICS\n"
+  std::cerr <<
+    "usage: mdsample_symlist CONFIG RICS\n"
     "    CONFIG - configuration file\n"
     "    RICS - file containing RICs to subscribe to\n"
-    , stderr);
+    << std::flush;
   exit(1);
 }
 

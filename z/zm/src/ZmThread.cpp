@@ -137,9 +137,9 @@ void ZmThreadContext::prioritize()
     s.sched_priority = !!m_cpuset ? p.fifo : p.rr;
     int r = pthread_setschedparam(m_pthread, policy, &s);
     if (r) {
-      fprintf(stderr,
-	"pthread_setschedparam() failed: %d %s\n", r, strerror(r));
-      fflush(stderr);
+      std::cerr << 
+	"pthread_setschedparam() failed: " << ZuBoxed(r) << ' ' <<
+	strerror(r) << '\n' << std::flush;
     }
   }
 }
@@ -170,13 +170,11 @@ void ZmThreadContext::bind()
   if (!m_cpuset) return;
   if (hwloc_set_cpubind(
 	ZmTopology::hwloc(), m_cpuset, HWLOC_CPUBIND_THREAD) < 0) {
-    char *s;
-    hwloc_bitmap_asprintf(&s, m_cpuset);
-    fprintf(stderr, "bind %d to cpuset %s failed: %s\n",
-	(int)tid(), s, strerror(errno));
-    fflush(stderr);
-    ::free(s);
-    ZmTopology::error(errno);
+    int errno_ = errno;
+    std::cerr << 
+      "bind " << ZuBoxed(tid()) << " to cpuset " << m_cpuset <<
+      " failed: " << strerror(errno_) << '\n' << std::flush;
+    ZmTopology::error(errno_);
   }
 }
 

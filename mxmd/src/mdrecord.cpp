@@ -37,11 +37,12 @@ extern "C" { void sigint(int); };
 void sigint(int sig) { stop.post(); }	// CTRL-C signal handler
 
 void usage() {
-  fputs("usage: mdrecord CONFIG RECFILE [SYMBOLS]\n"
+  std::cerr <<
+    "usage: mdrecord CONFIG RECFILE [SYMBOLS]\n"
     "    CONFIG\t- configuration file\n"
     "    RECFILE\t- recording file\n"
     "    SYMBOLS\t- optional file containing symbols to subscribe to\n"
-    , stderr);
+    << std::flush;
   exit(1);
 }
 

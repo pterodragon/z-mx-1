@@ -1570,12 +1570,12 @@ int main(int argc, char **argv)
 
   try {
     if (args->fromArgs(opts, argc, argv) != 1) {
-      fputs(usage, stderr);
+      std::cerr << usage << std::flush;
       return 1;
     }
     app->init(args);
   } catch (...) {
-    fputs(usage, stderr);
+    std::cerr << usage << std::flush;
     return 1;
   }
 

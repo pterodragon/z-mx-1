@@ -1100,7 +1100,8 @@ public:
   }
   inline void state(int n) {
     if (!m_self) {
-      ZeLOG(Fatal, ZtSprintf("ZdbEnv::state(%d) called out of order", n));
+      ZeLOG(Fatal, ZtString() <<
+	  "ZdbEnv::state(" << ZuBoxed(n) << ") called out of order");
       return;
     }
     m_self->state(n);

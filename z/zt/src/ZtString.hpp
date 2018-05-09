@@ -509,7 +509,7 @@ protected:
 
   ZuInline void null_() {
     m_data[0] = 0;
-    size_owned_null(BuiltinSize, 1, 0);
+    size_owned_null(BuiltinSize, 1, 1);
     length_mallocd_builtin(0, 0, 1);
   }
 
@@ -547,7 +547,7 @@ protected:
   }
 
   inline void copy_(const Char *copyData, unsigned length) {
-    if (!copyData || !length) { null_(); return; }
+    if (!length) { null_(); return; }
     if (length < (unsigned)BuiltinSize) {
       memcpy((Char *)m_data, copyData, length * sizeof(Char));
       ((Char *)m_data)[length] = 0;

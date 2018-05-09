@@ -57,7 +57,7 @@ public:
 	ParseFn::Ptr<&MxIPCol::parse>::fn(),
 	PlaceFn::Ptr<&MxIPCol::place>::fn()) { }
   static void parse(ZiIP *i, ZuString b) { *i = b; }
-  static void place(ZtArray<char> &b, const ZiIP *i) { b = i->string(); }
+  static void place(ZtArray<char> &b, const ZiIP *i) { b << *i; }
 };
 
 #endif /* MxCSV_HPP */

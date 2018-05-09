@@ -359,13 +359,13 @@ int App::start()
     csv.read(m_groups, ZvCSVReadFn::Member<&App::connect>::fn(this));
     m_mx->add(ZmFn<>::Member<&App::read>::fn(this));
   } catch (const ZvError &e) {
-    ZeLOG(Fatal, e.message());
+    ZeLOG(Fatal, ZtString() << e);
     goto error;
   } catch (const ZeError &e) {
-    ZeLOG(Fatal, e);
+    ZeLOG(Fatal, ZtString() << e);
     goto error;
   } catch (...) {
-    ZeLOG(Fatal, "unknown exception");
+    ZeLOG(Fatal, "Unknown Exception");
     goto error;
   }
   return Zi::OK;
@@ -431,13 +431,13 @@ int main(int argc, const char *argv[])
       app = new App(cf);
 
     } catch (const ZvError &e) {
-      ZeLOG(Fatal, e.message());
+      ZeLOG(Fatal, ZtString() << e);
       goto error;
     } catch (const ZeError &e) {
-      ZeLOG(Fatal, e);
+      ZeLOG(Fatal, ZtString() << e);
       goto error;
     } catch (...) {
-      ZeLOG(Fatal, "unknown exception");
+      ZeLOG(Fatal, "Unknown Exception");
       goto error;
     }
 

@@ -461,10 +461,9 @@ friend class Recorder;
 
     inline ~Recorder() { m_file.close(); }
 
-    inline ZiFile::ZPath path() const {
+    inline ZiFile::Path path() const {
       ReadGuard guard(m_ioLock);
-      ZiFile::Path path(m_path);
-      return path.move();
+      return m_path;
     }
 
     inline bool running() const {

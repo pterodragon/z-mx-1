@@ -59,7 +59,7 @@ struct MxMDAPI MxMDCmd {
 
   // add command
   void addCmd(ZuString cmd, ZuString syntax, CmdFn fn,
-      ZuString brief, ZuString usage);
+      ZtString brief, ZtString usage);
 
   // single security / order book lookup
   static ZtString lookupSyntax();

@@ -323,12 +323,9 @@ struct MxSide {
 
 typedef ZuTuple<MxID, MxID, MxIDString> MxSecKey_;
 template <typename T> struct MxSecKey_Fn : public T {
-  ZuInline const MxID &venue() const { return T::ptr()->p1(); }
-  ZuInline MxID &venue() { return T::ptr()->p1(); }
-  ZuInline const MxID &segment() const { return T::ptr()->p2(); }
-  ZuInline MxID &segment() { return T::ptr()->p2(); }
-  ZuInline const MxSymString &id() const { return T::ptr()->p3(); }
-  ZuInline MxSymString &id() { return T::ptr()->p3(); }
+  ZuMixinAlias(T, venue, p1)
+  ZuMixinAlias(T, segment, p2)
+  ZuMixinAlias(T, id, p3)
   template <typename S> inline void print(S &s) const {
     s << venue() << '|' << segment() << '|' << id();
   }
@@ -338,10 +335,8 @@ template <> struct ZuPrint<MxSecKey> : public ZuPrintFn { };
 
 typedef ZuPair<MxEnum, MxSymString> MxSecSymKey_;
 template <typename T> struct MxSecSymKey_Fn : public T {
-  ZuInline const MxEnum &src() const { return T::ptr()->p1(); }
-  ZuInline MxEnum &src() { return T::ptr()->p1(); }
-  ZuInline const MxSymString &id() const { return T::ptr()->p2(); }
-  ZuInline MxSymString &id() { return T::ptr()->p2(); }
+  ZuMixinAlias(T, src, p1)
+  ZuMixinAlias(T, id, p2)
   template <typename S> inline void print(S &s) const {
     s << MxSecIDSrc::name(src()) << '|' << id();
   }
@@ -353,12 +348,9 @@ typedef MxUInt MxFutKey;	// mat
 
 typedef ZuTuple<MxUInt, MxEnum, MxInt> MxOptKey_;
 template <typename T> struct MxOptKey_Fn : public T {
-  ZuInline const MxUInt &mat() const { return T::ptr()->p1(); }
-  ZuInline MxUInt &mat() { return T::ptr()->p1(); }
-  ZuInline const MxEnum &putCall() const { return T::ptr()->p2(); }
-  ZuInline MxEnum &putCall() { return T::ptr()->p2(); }
-  ZuInline const MxInt &strike() const { return T::ptr()->p3(); }
-  ZuInline MxInt &strike() { return T::ptr()->p3(); }
+  ZuMixinAlias(T, mat, p1)
+  ZuMixinAlias(T, putCall, p2)
+  ZuMixinAlias(T, strike, p3)
 };
 typedef ZuMixin<MxOptKey_, MxOptKey_Fn> MxOptKey;
 

@@ -607,7 +607,7 @@ namespace Zu_ntoa {
 	return 3U;
       }
       bool negative = 0;
-      if (v < 0) negative = 1, v = -v, *buf++ = '-';
+      if (ZuUnlikely(v < 0)) negative = 1, v = -v, *buf++ = '-';
       if (ZuUnlikely(v > Zu_ntoa::ftoa_max<T>())) {// (T)(~0ULL)
 	*buf++ = 'i', *buf++ = 'n', *buf = 'f';
 	return negative + 3U;
@@ -615,7 +615,7 @@ namespace Zu_ntoa {
       uint64_t iv = (uint64_t)v;
       int f = NDP;
       unsigned i;
-      if (!Fixed) {
+      if constexpr (!Fixed) {
 	i = Log10FP::log(iv, FP::Bits);
 	unsigned j = i & 0xffU;
 	if ((unsigned)(f = -f) > j) f = j;
@@ -623,7 +623,7 @@ namespace Zu_ntoa {
       } else
 	i = Log10<8>::log(iv);
       uint64_t fv = frac(v, iv, i, f);
-      if (ZuLikely(!Comma)) {
+      if constexpr (!Comma) {
 	Base10_print(iv, i, buf);
       } else {
 	i += ((i - 1U)/3U);
@@ -632,11 +632,11 @@ namespace Zu_ntoa {
       if (!f || (!fv && !Fixed)) return negative + i;
       buf += i;
       *buf++ = '.';
-      if (Fixed) {
+      if constexpr (Fixed) {
 	Base10_print(fv, f, buf); 
 	return negative + i + 1 + f;
       }
-      if (!Trim)
+      if constexpr (!Trim)
 	return negative + i + 1 +
 	  Base10_print_frac_truncate(fv, f, buf);
       Base10_print_frac(fv, f, Trim, buf);
@@ -693,7 +693,7 @@ struct Zu_nprint {
   inline static constexpr unsigned ilen(T) { return MaxLen<1, T>::N; }
   template <typename T>
   static unsigned itoa(T v, char *buf) {
-    if (v < 0) {
+    if (ZuUnlikely(v < 0)) {
       int64_t v_ = v;
       return NPrint::print(-v_, Log<T>::log(-v_), buf);
     }

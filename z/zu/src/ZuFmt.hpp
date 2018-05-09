@@ -191,9 +191,9 @@ struct ZuVFmt {
 
 private:
   int8_t	m_justification;
-  unsigned	m_hex:1,
-		m_upper:1,
-		m_alt:1;
+  bool		m_hex;
+  bool		m_upper;
+  bool		m_alt;
   char		m_comma;
   uint8_t	m_width;
   int8_t	m_pad;

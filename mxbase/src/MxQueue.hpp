@@ -37,6 +37,7 @@
 
 #include <ZmPQueue.hpp>
 #include <ZmFn.hpp>
+#include <ZmRBTree.hpp>
 
 #include <MxMsgID.hpp>
 
@@ -329,9 +330,10 @@ class MxQueueTxPool : public MxQueueTx<App, Lock_> {
   typedef ZmGuard<Lock> Guard;
 
   typedef ZmRBTree<ZmTime,
-	    ZmRBTreeLock<ZmNoLock,
-	      ZmRBTreeVal<ZmRef<Tx>,
-		ZmRBTreeHeapID<Queues_HeapID> > > > Queues;
+	    ZmRBTreeVal<ZmRef<Tx>,
+	      ZmRBTreeObject<ZuNull,
+		ZmRBTreeLock<ZmNoLock,
+		  ZmRBTreeHeapID<Queues_HeapID> > > > > Queues;
 
 public:
   bool send_(MxQMsg *msg, bool more) {
@@ -357,8 +359,9 @@ public:
 
   void ready_(Tx *queue, ZmTime prev, ZmTime next) {
     Guard guard(this->lock());
-    typename Queues::NodeRef node;
+    typename Queues::Node *node = 0;
     if (!prev || !(node = m_queues.del(prev, queue))) {
+      if (node) delete node;
       m_queues.add(next, queue);
       if (m_queues.count() == 1) {
 	Tx::ready_(next);
@@ -375,8 +378,9 @@ public:
 
   void unready_(Tx *queue, ZmTime prev) {
     Guard guard(this->lock());
-    typename Queues::NodeRef node;
+    typename Queues::Node *node = 0;
     if (!prev || !(node = m_queues.del(prev, queue))) return;
+    delete node;
     if (!m_queues.count()) Tx::unready_();
   }
 

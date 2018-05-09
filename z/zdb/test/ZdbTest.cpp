@@ -246,12 +246,10 @@ int main(int argc, char **argv)
     hashOut = cf->get("hashOut");
 
   } catch (const ZvError &e) {
-    fputs(e.message().data(), stderr);
-    fputc('\n', stderr);
+    std::cerr << e << '\n' << std::flush;
     usage();
   } catch (const ZeError &e) {
-    fputs(e.message(), stderr);
-    fputc('\n', stderr);
+    std::cerr << e << '\n' << std::flush;
     usage();
   } catch (...) {
     usage();
@@ -309,22 +307,19 @@ int main(int argc, char **argv)
     env->final();
 
   } catch (const ZvError &e) {
-    fputs(e.message().data(), stderr);
-    fputc('\n', stderr);
+    std::cerr << e << '\n' << std::flush;
     ZeLog::stop();
     exit(1);
   } catch (const ZeError &e) {
-    fputs(e.message(), stderr);
-    fputc('\n', stderr);
+    std::cerr << e << '\n' << std::flush;
     ZeLog::stop();
     exit(1);
   } catch (const ZtString &s) {
-    fputs(s.data(), stderr);
-    fputc('\n', stderr);
+    std::cerr << s << '\n' << std::flush;
     ZeLog::stop();
     exit(1);
   } catch (...) {
-    fputs("Unknown Exception\n", stderr);
+    std::cerr << "Unknown Exception\n" << std::flush;
     ZeLog::stop();
     exit(1);
   }

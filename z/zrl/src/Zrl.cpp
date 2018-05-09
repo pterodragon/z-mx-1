@@ -87,7 +87,8 @@ struct Zrl_ {
       ZuString key;
 
       while (i.subset(key)) {
-	if (key.length() < n || !key.equals(prefix, n)) break;
+	if (key.length() < n ||
+	    ZuString(key.data(), n) != ZuString(prefix, n)) break;
 	m_completions.push(key);
       }
     }

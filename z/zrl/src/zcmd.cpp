@@ -54,8 +54,7 @@ static void usage()
     "\tCMD\t- command to send to target\n"
     "\t\t  (reads commands from standard input if none specified)\n"
     "\tARGS\t- command arguments\n";
-
-  fputs(usage, stderr);
+  std::cerr << usage << std::flush;
   ZeLog::stop();
   exit(1);
 }
@@ -114,16 +113,12 @@ public:
 private:
   void ackRcvd(ZvCmdLine *line, const ZvAnswer &ans) {
     m_status = 0;
-    if (!!ans.message()) {
-      puts(ans.message().data());
-      fflush(stdout);
-    }
+    std::cout << ans.message() << std::flush;
 
     if (ans.flags() & (ZvCmd::Fail | ZvCmd::Error)) {
       m_status = 1;
-    } else if (ans.data().length()) {
-      fwrite(ans.data().data(), 1, ans.data().length(), stdout);
-      fflush(stdout);
+    } else {
+      std::cout << ans.data() << std::flush;
     }
 
     if (m_solo)
@@ -136,8 +131,9 @@ private:
     if (m_solo)
       send(m_solo);
     else {
-      fprintf(stderr, "For a list of valid commands: help\n"
-	      "For help on a particular command: COMMAND --help\n");
+      std::cerr <<
+	"For a list of valid commands: help\n"
+	"For help on a particular command: COMMAND --help\n" << std::flush;
       prompt();
     }
   }
@@ -227,17 +223,15 @@ int main(int argc, char **argv)
   } catch (const ZtRegex::Error &) {
     usage();
   } catch (const ZeError &e) {
-    fputs(e.message(), stderr);
-    fputc('\n', stderr);
+    std::cerr << e << '\n' << std::flush;
     ZeLog::stop();
     exit(1);
   } catch (const ZtString &s) {
-    fputs(s.data(), stderr);
-    fputc('\n', stderr);
+    std::cerr << s << '\n' << std::flush;
     ZeLog::stop();
     exit(1);
   } catch (...) {
-    fputs("Unknown Exception\n", stderr);
+    std::cerr << "Unknown Exception\n" << std::flush;
     ZeLog::stop();
     exit(1);
   }
@@ -246,7 +240,7 @@ int main(int argc, char **argv)
 
   if (client->interactive()) {
     Zrl::stop();
-    fflush(stdout);
+    std::cout << std::flush;
   }
 
   client->stop();

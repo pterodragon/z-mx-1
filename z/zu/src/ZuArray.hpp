@@ -302,6 +302,12 @@ struct ZuTraits<ZuArray<Elem_> > : public ZuGenericTraits<ZuArray<Elem_> > {
 
 template <> struct ZuPrint<ZuArray<char> > :
   public ZuPrintString<ZuArray<char> > { };
+template <> struct ZuPrint<ZuArray<const char> > :
+  public ZuPrintString<ZuArray<const char> > { };
+template <> struct ZuPrint<ZuArray<volatile char> > :
+  public ZuPrintString<ZuArray<volatile char> > { };
+template <> struct ZuPrint<ZuArray<const volatile char> > :
+  public ZuPrintString<ZuArray<const volatile char> > { };
 
 template <typename T> using ZuArrayT = ZuArray<typename ZuTraits<T>::Elem>;
 

@@ -24,12 +24,12 @@ int main()
     try {
       ZmRef<ZvCf> line = Zrl::readline("prompt> ");
       if (!line) exit(0);
-      fputs(line->toString().data(), stdout);
+      std::cout << *line << std::flush;
       if (line->get("0") == "exit") exit(0);
     } catch (const Zrl::EndOfFile &) {
       exit(0);
     } catch (ZvError &e) {
-      puts(e.message().data());
+      std::cerr << e << '\n' << std::flush;
     }
   }
 }

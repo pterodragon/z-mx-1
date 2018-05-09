@@ -132,7 +132,7 @@ struct ZuStdStream<std::basic_string<char, T, A> > :
 
 template <typename S, typename P>
 inline typename ZuIfT<ZuStdStream<S>::Is && ZuPrint<P>::OK, S &>::T
-operator <<(S &s, const P &p) { ZuStdStream<S>::print(s, p); return s; }
+operator <<(S &s, const P &p) { puts("GOT HERE 1"); ZuStdStream<S>::print(s, p); return s; }
 
 template <typename S, typename P>
 inline typename ZuIfT<ZuStdStream<S>::Is && ZuPrint<P>::OK, S &>::T

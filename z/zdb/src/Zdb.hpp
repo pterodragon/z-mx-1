@@ -105,10 +105,9 @@ struct Zdb_Msg_Hdr {	// header
 
 class ZdbEnv;				// database environment
 class Zdb_;				// individual database (generic)
-template <typename, class> class Zdb;	// individual database (type-specific)
+template <typename> class Zdb;		// individual database (type-specific)
 class ZdbAnyPOD;			// in-memory record (generic)
 class ZdbGuard;				// record sequence guard
-template <typename, class> class ZdbPOD; // in-memory record (type-specific)
 class Zdb_Host;				// host
 class Zdb_Cxn;				// cxn
 
@@ -456,9 +455,13 @@ struct ZdbAnyPOD_Write_HeapID {
 typedef ZdbAnyPOD_Write_<ZmHeap<ZdbAnyPOD_Write_HeapID,
 	sizeof(ZdbAnyPOD_Write_<ZuNull>)> > ZdbAnyPOD_Write;
 
+// AllocFn - called to allocate/initialize new record from memory
 typedef ZmFn<Zdb_ *, ZmRef<ZdbAnyPOD> &> ZdbAllocFn;
+// RecoverFn(pod) - (optional) called when record is recovered
 typedef ZmFn<ZdbAnyPOD *> ZdbRecoverFn;
+// ReplicateFn(pod, ptr, range, update) - (optional) called when replicated
 typedef ZmFn<ZdbAnyPOD *, void *, ZdbRange, bool> ZdbReplicateFn;
+// CopyFn(pod, range, update) - (optional) called for app drop copy
 typedef ZmFn<ZdbAnyPOD *, ZdbRange, bool> ZdbCopyFn;
 
 struct ZdbPOD_HeapID {
@@ -469,20 +472,16 @@ template <typename T> struct ZdbPOD_Compressed_HeapID {
   inline static const char *id() { return "ZdbPOD_Compressed"; }
 };
 
-template <typename T_,
-	    class Heap = ZmHeap<ZdbPOD_HeapID, sizeof(ZdbPOD<T_, ZuNull>)> >
-class ZdbPOD : public ZdbAnyPOD, public Heap {
-friend class Zdb<T_, Heap>;
+template <typename T_, class Heap>
+class ZdbPOD_ : public Heap, public ZdbAnyPOD {
+friend class Zdb<T_>;
 friend class ZdbAnyPOD_Send__;
 
 public:
   typedef T_ T;
 
 private:
-  struct Data : public T, public ZdbTrailer {
-    inline Data() { }
-    template <typename P> inline Data(const P &p) : T(p) { }
-  };
+  struct Data : public T, public ZdbTrailer { };
 
   template <class Heap_>
   class Compressed_ : public ZdbAnyPOD_Compressed, public Heap_ {
@@ -499,7 +498,7 @@ private:
   ZmRef<ZdbAnyPOD_Compressed> compress() { return new Compressed(); }
 
 public:
-  inline ZdbPOD(Zdb_ *db) :
+  inline ZdbPOD_(Zdb_ *db) :
     ZdbAnyPOD(&m_data, sizeof(Data), db) { }
 
   inline const T *ptr() const {
@@ -517,10 +516,13 @@ public:
 private:
   char	m_data[sizeof(Data)];
 };
-template <typename T, class Heap>
-struct ZuPrint<ZdbPOD<T, Heap> > : public ZuPrintDelegate<ZdbPOD<T, Heap> > {
+template <typename T, class HeapID = ZdbPOD_HeapID>
+using ZdbPOD = ZdbPOD_<T, ZmHeap<HeapID, sizeof(ZdbPOD_<T, ZuNull>)> >;
+template <typename T, class HeapID>
+struct ZuPrint<ZdbPOD<T, HeapID> > :
+    public ZuPrintDelegate<ZdbPOD<T, HeapID> > {
   template <typename S>
-  inline static void print(S &s, const ZdbPOD<T, Heap> &v) { s << v.data(); }
+  inline static void print(S &s, const ZdbPOD<T, HeapID> &v) { s << v.data(); }
 };
 
 class ZdbGuard {
@@ -685,7 +687,7 @@ public:
 private:
   // application call handlers
   inline void alloc(ZmRef<ZdbAnyPOD> &pod) { m_allocFn(this, pod); }
-  inline void recover(ZdbAnyPOD *pod) { if (m_recoverFn) m_recoverFn(pod); }
+  inline void recover(ZdbAnyPOD *pod) { m_recoverFn(pod); }
   inline void replicate(ZdbAnyPOD *pod,
       void *ptr, ZdbRange range, bool update) {
 #ifdef ZdbRep_DEBUG
@@ -698,7 +700,7 @@ private:
       memcpy((char*)pod->ptr() + range.off(), ptr, range.len());
   }
   inline void copy(ZdbAnyPOD *pod, ZdbRange range, bool update) {
-    if (m_copyFn) m_copyFn(pod, range, update);
+    m_copyFn(pod, range, update);
   }
 
   // lock record sequence
@@ -766,8 +768,7 @@ private:
   ZmRef<IndexHash>		m_index;	// headRN -> tailRN
 };
 
-template <typename T_,
-	 class Heap = ZmHeap<ZdbPOD_HeapID, sizeof(ZdbPOD<T_, ZuNull>)> >
+template <typename T_>
 class Zdb : public Zdb_ {
 public:
   typedef T_ T;
@@ -777,7 +778,7 @@ public:
       ZdbReplicateFn replicateFn, ZdbCopyFn copyFn,
       bool noIndex = false, bool noLock = false) :
     Zdb_(env, id, allocFn, recoverFn, replicateFn, copyFn, noIndex, noLock,
-	sizeof(typename ZdbPOD<T, Heap>::Data)) { }
+	sizeof(typename ZdbPOD<T, ZuNull>::Data)) { }
 };
 
 template <class Base>

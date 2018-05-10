@@ -129,18 +129,18 @@ public:
   }
   template <typename S>
   inline static typename ZuSame<T, S>::T copyItem(T *dst, const S &src) {
-    memcpy(dst, &src, sizeof(T));
+    memcpy((void *)dst, &src, sizeof(T));
   }
   template <typename S>
   inline static typename ZuSame<T, S>::T copyItems(
       T *dst, const S *src, unsigned length) {
-    memcpy(dst, src, length * sizeof(T));
+    memcpy((void *)dst, src, length * sizeof(T));
   }
   inline static void moveItem(T *dst, T *src) {
-    memmove(dst, src, sizeof(T));
+    memmove((void *)dst, src, sizeof(T));
   }
   inline static void moveItems(T *dst, const T *src, unsigned length) {
-    memmove(dst, src, length * sizeof(T));
+    memmove((void *)dst, src, length * sizeof(T));
   }
 };
 

@@ -228,7 +228,6 @@ public:
 
   // plain function pointer
   template <auto Fn> struct Ptr;
-  template <auto> friend struct Ptr;
   template <typename R, R (*Fn)(Args...)> struct Ptr<Fn> {
     ZuInline static ZmFn fn() {
       return ZmFn(ZmFn::Pass(),
@@ -239,7 +238,6 @@ public:
 
   // bound function pointer
   template <auto Fn> struct Bound;
-  template <auto> friend struct Bound;
   template <typename C, typename R, R (*Fn)(C *, Args...)>
   struct Bound<Fn> {
     template <typename O> ZuInline static ZmFn fn(O *o) {
@@ -255,7 +253,6 @@ public:
 
   // member function
   template <auto Fn> struct Member;
-  template <auto> friend struct Member;
   template <typename C, typename R, R (C::*Fn)(Args...)>
   struct Member<Fn> {
     template <typename O> ZuInline static ZmFn fn(O *o) {

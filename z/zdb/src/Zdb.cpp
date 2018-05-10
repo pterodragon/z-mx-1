@@ -389,7 +389,7 @@ void ZdbEnv::holdElection()
 	ZeLOG(Info, ZtString() << "Zdb invoking \"" << cmd << '\"');
 	::system(cmd);
       }
-      if (m_activeFn) m_activeFn();
+      m_activeFn();
     }
   } else {
     if (appActive) {
@@ -398,7 +398,7 @@ void ZdbEnv::holdElection()
 	ZeLOG(Info, ZtString() << "Zdb invoking \"" << cmd << '\"');
 	::system(cmd);
       }
-      if (m_inactiveFn) m_inactiveFn();
+      m_inactiveFn();
     }
   }
 
@@ -450,7 +450,7 @@ retry:
       ZeLOG(Info, ZtString() << "Zdb invoking \"" << cmd << '\"');
       ::system(cmd);
     }
-    if (m_inactiveFn) m_inactiveFn();
+    m_inactiveFn();
   }
 
   {
@@ -902,7 +902,8 @@ void ZdbEnv::hbDataRcvd(Zdb_Host *host, const Zdb_Msg_HB &hb, ZdbRN *dbState)
 	"  recovering " << m_recovering << " replicating " << !!m_nextCxn);
 
   host->state(hb.state);
-  memcpy(host->dbState().data(), dbState, m_dbs.length() * sizeof(ZdbRN));
+  memcpy((void *)(host->dbState().data()), dbState,
+      m_dbs.length() * sizeof(ZdbRN));
 
   int state = this->state();
 

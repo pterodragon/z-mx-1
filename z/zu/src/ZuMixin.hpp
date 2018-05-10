@@ -126,24 +126,6 @@ struct ZuCmp<ZuMixin<T_, M_> > : public ZuCmp<T_> {
   }
 };
 
-#define ZuMixinAlias(T, fn, oldFn) \
-  template <typename ...Args> \
-  ZuInline auto fn(Args &&... args) { \
-    return T::ptr()->oldFn(ZuFwd<Args>(args)...); \
-  } \
-  template <typename ...Args> \
-  ZuInline auto fn(Args &&... args) const { \
-    return T::ptr()->oldFn(ZuFwd<Args>(args)...); \
-  } \
-  template <typename ...Args> \
-  ZuInline auto fn(Args &&... args) volatile { \
-    return T::ptr()->oldFn(ZuFwd<Args>(args)...); \
-  } \
-  template <typename ...Args> \
-  ZuInline auto fn(Args &&... args) const volatile { \
-    return T::ptr()->oldFn(ZuFwd<Args>(args)...); \
-  }
-
 template <typename T> struct ZuHash;
 template <class T_, template <class> class M_>
 struct ZuHash<ZuMixin<T_, M_> > : public ZuHash<T_> { };

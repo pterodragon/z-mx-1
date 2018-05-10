@@ -321,11 +321,15 @@ struct MxSide {
       "8", Cross);
 };
 
+#define Mx_TupleField(Type, Fn, N) \
+  ZuInline const Type &Fn() const { return T::ptr()->p ## N(); } \
+  ZuInline Type &Fn() { return T::ptr()->p ## N(); }
+
 typedef ZuTuple<MxID, MxID, MxIDString> MxSecKey_;
 template <typename T> struct MxSecKey_Fn : public T {
-  ZuMixinAlias(T, venue, p1)
-  ZuMixinAlias(T, segment, p2)
-  ZuMixinAlias(T, id, p3)
+  Mx_TupleField(MxID, venue, 1)
+  Mx_TupleField(MxID, segment, 2)
+  Mx_TupleField(MxIDString, id, 3)
   template <typename S> inline void print(S &s) const {
     s << venue() << '|' << segment() << '|' << id();
   }
@@ -335,8 +339,8 @@ template <> struct ZuPrint<MxSecKey> : public ZuPrintFn { };
 
 typedef ZuPair<MxEnum, MxSymString> MxSecSymKey_;
 template <typename T> struct MxSecSymKey_Fn : public T {
-  ZuMixinAlias(T, src, p1)
-  ZuMixinAlias(T, id, p2)
+  Mx_TupleField(MxEnum, src, 1)
+  Mx_TupleField(MxSymString, id, 2)
   template <typename S> inline void print(S &s) const {
     s << MxSecIDSrc::name(src()) << '|' << id();
   }
@@ -348,10 +352,12 @@ typedef MxUInt MxFutKey;	// mat
 
 typedef ZuTuple<MxUInt, MxEnum, MxInt> MxOptKey_;
 template <typename T> struct MxOptKey_Fn : public T {
-  ZuMixinAlias(T, mat, p1)
-  ZuMixinAlias(T, putCall, p2)
-  ZuMixinAlias(T, strike, p3)
+  Mx_TupleField(MxUInt, mat, 1)
+  Mx_TupleField(MxEnum, putCall, 2)
+  Mx_TupleField(MxInt, strike, 3)
 };
 typedef ZuMixin<MxOptKey_, MxOptKey_Fn> MxOptKey;
+
+#undef Mx_TupleField
 
 #endif /* MxBase_HPP */

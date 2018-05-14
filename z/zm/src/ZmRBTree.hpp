@@ -561,13 +561,17 @@ public:
   inline Key delKey(const Index_ &index) {
     NodeRef node = del(index);
     if (ZuUnlikely(!node)) return Cmp::null();
-    return ZuMv(node->Node::key());
+    Key key = ZuMv(node->Node::key());
+    nodeDelete(node);
+    return key;
   }
   template <typename Index_>
   inline Val delVal(const Index_ &index) {
     NodeRef node = del(index);
     if (ZuUnlikely(!node)) return ValCmp::null();
-    return ZuMv(node->Node::val());
+    Val val = ZuMv(node->Node::val());
+    nodeDelete(node);
+    return val;
   }
 
   template <typename Index_, typename Val_>

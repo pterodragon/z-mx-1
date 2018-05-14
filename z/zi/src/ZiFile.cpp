@@ -464,13 +464,15 @@ void ZiFile::close()
 #endif
   }
 
+  if (m_handle != ZiPlatform::nullHandle()) {
 #ifndef _WIN32
-  ::close(m_handle);
+    ::close(m_handle);
 #else
-  CloseHandle(m_handle);
+    CloseHandle(m_handle);
 #endif
+    m_handle = ZiPlatform::nullHandle();
+  }
 
-  m_handle = ZiPlatform::nullHandle();
   m_flags = 0;
   m_offset = 0;
   m_addr = 0;

@@ -101,12 +101,14 @@ void ZeLog::work_()
   }
 }
 
-void ZeLog::log_(ZeEvent *e)
+void ZeLog::log_(ZmRef<ZeEvent> e)
 {
   if (!e) return;
   if ((int)e->severity() < m_level) return;
-  ZmGuard<ZmLock> guard(m_lock);
-  m_queue.push(e);
+  {
+    ZmGuard<ZmLock> guard(m_lock);
+    m_queue.push(ZuMv(e));
+  }
   m_work.post();
 }
 

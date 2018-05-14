@@ -88,12 +88,14 @@ friend struct ZmCleanup<ZeLog>;
   };
 
   typedef ZmList<ZmRef<ZeEvent>,
-	    ZmListLock<ZmNoLock,
-	      ZmListHeapID<EventQueueID> > > EventQueue;
+	    ZmListObject<ZuNull,
+	      ZmListLock<ZmNoLock,
+		ZmListHeapID<EventQueueID> > > > EventQueue;
 
   typedef ZmList<ZeSinkFn,
-	    ZmListLock<ZmRWLock,
-	      ZmListHeapID<SinkListID> > > SinkList;
+	    ZmListObject<ZuNull,
+	      ZmListLock<ZmRWLock,
+		ZmListHeapID<SinkListID> > > > SinkList;
 
   class ZeAPI FileSink : public ZmPolymorph {
     typedef ZmLock Lock;
@@ -187,7 +189,7 @@ public:
   inline static void stop() { instance()->stop_(); }
   inline static void forked() { instance()->forked_(); }
 
-  inline static void log(ZeEvent *e) { instance()->log_(e); }
+  inline static void log(ZmRef<ZeEvent> e) { instance()->log_(ZuMv(e)); }
 
 private:
   static ZeLog *instance();
@@ -217,7 +219,7 @@ private:
   void forked_();
 
   void work_();
-  void log_(ZeEvent *e);
+  void log_(ZmRef<ZeEvent> e);
   void log__(ZeEvent *e);
 
   void threadName(ZmThreadName &s, unsigned) { s = "log"; }

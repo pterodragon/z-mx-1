@@ -157,7 +157,7 @@ struct MxEngineApp : public ZmPolymorph {
   virtual void delQueue(MxID id, bool tx) = 0;
 
   // Exception handling
-  virtual void exception(ZeEvent *e) { ZeLog::log(e); }
+  virtual void exception(ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 
   // Rx (called from engine's rx thread)
   typedef void (*ProcessFn)(MxEngineApp *, MxAnyLink *, MxQMsg *);

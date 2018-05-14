@@ -26,7 +26,7 @@ public:
   void delQueue(MxID id, bool tx) { }
 
   // Exception handling
-  void exception(ZeEvent *e) { ZeLog::log(e); }
+  void exception(ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 
   // Rx
   ZuInline void process_(MxAnyLink *, MxQMsg *) { }

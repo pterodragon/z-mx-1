@@ -91,8 +91,8 @@ namespace MxMDStream {
 	magic(Magic), vmajor(vmajor_), vminor(vminor_) {
       unsigned n = id_.length();
       if (n >= sizeof(id)) n = sizeof(id) - 1;
-      id[n] = 0;
       memcpy(id, id_.data(), n);
+      memset(&id[n], 0, sizeof(id) - n);
     }
 
     struct IOError { };
@@ -253,7 +253,6 @@ namespace MxMDStream {
     enum { Code = Type::AddOrder };
     Key			key;
     MxIDString		orderID;
-    MxEnum		orderIDScope;
     MxDateTime		transactTime;
     MxEnum		side;
     MxInt		rank;
@@ -266,7 +265,6 @@ namespace MxMDStream {
     enum { Code = Type::ModifyOrder };
     Key			key;
     MxIDString		orderID;
-    MxEnum		orderIDScope;
     MxDateTime		transactTime;
     MxEnum		side;
     MxInt		rank;
@@ -279,7 +277,6 @@ namespace MxMDStream {
     enum { Code = Type::CancelOrder };
     Key			key;
     MxIDString		orderID;
-    MxEnum		orderIDScope;
     MxDateTime		transactTime;
     MxEnum		side;
   };
@@ -327,7 +324,10 @@ namespace MxMDStream {
     MxUInt		id;
   };
 
-  struct EndOfSnapshot { enum { Code = Type::EndOfSnapshot }; };
+  struct EndOfSnapshot {
+    enum { Code = Type::EndOfSnapshot };
+    uint8_t		pad_0 = 0;
+  };
 
   typedef ZuLargest<
       AddTickSizeTbl,

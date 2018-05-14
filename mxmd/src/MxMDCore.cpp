@@ -306,85 +306,10 @@ MxMDLib *MxMDLib::init(const char *cf_)
       else
 	mx = new MxMDCore::Mx("mx");
 
-      md = new MxMDCore(ZuMv(mx), cf);
+      md = new MxMDCore(ZuMv(mx));
     }
 
-    md->m_localFeed = new MxMDFeed(md, "_LCL");
-    md->addFeed(md->m_localFeed);
-
-    if (ZmRef<ZvCf> feedsCf = cf->subset("feeds", false)) {
-      ZeLOG(Info, "MxMDLib - configuring feeds...");
-      ZvCf::Iterator i(feedsCf);
-      ZuString key;
-      while (ZmRef<ZvCf> feedCf = i.subset(key)) {
-	if (key == "_LCL") {
-	  ZvCf::Iterator j(feedCf);
-	  ZuString id;
-	  while (ZmRef<ZvCf> venueCf = j.subset(id))
-	    md->addVenue(new MxMDVenue(md, md->m_localFeed, id));
-	  continue;
-	}
-	ZtString e;
-	ZiModule module;
-	ZiModule::Path name = feedCf->get("module", true);
-	int preload = feedCf->getInt("preload", 0, 1, false, 0);
-	if (preload) preload = ZiModule::Pre;
-	if (module.load(name, preload, &e) < 0)
-	  throw ZtString() << "failed to load \"" << name << "\": " << ZuMv(e);
-	MxMDFeedPluginFn pluginFn =
-	  (MxMDFeedPluginFn)module.resolve("MxMDFeed_plugin", &e);
-	if (!pluginFn) {
-	  module.unload();
-	  throw ZtString() <<
-	    "failed to resolve \"MxMDFeed_plugin\" in \"" <<
-	    name << "\": " << ZuMv(e);
-	}
-	(*pluginFn)(md, feedCf);
-      }
-    }
-
-    if (const ZtArray<ZtString> *tickSizes =
-	  cf->getMultiple("tickSizes", 0, INT_MAX)) {
-      ZeLOG(Info, "MxMDLib - reading tick size data...");
-      MxMDTickSizeCSV csv;
-      for (unsigned i = 0, n = tickSizes->length(); i < n; i++)
-	csv.read((*tickSizes)[i],
-	    ZvCSVReadFn::Member<&MxMDCore::addTickSize_>::fn(md));
-    }
-    if (const ZtArray<ZtString> *securities =
-	  cf->getMultiple("securities", 0, INT_MAX)) {
-      ZeLOG(Info, "MxMDLib - reading security reference data...");
-      MxMDSecurityCSV csv;
-      for (unsigned i = 0, n = securities->length(); i < n; i++)
-	csv.read((*securities)[i],
-	    ZvCSVReadFn::Member<&MxMDCore::addSecurity_>::fn(md));
-    }
-    if (const ZtArray<ZtString> *orderBooks =
-	  cf->getMultiple("orderBooks", 0, INT_MAX)) {
-      ZeLOG(Info, "MxMDLib - reading order book reference data...");
-      MxMDOrderBookCSV csv;
-      for (unsigned i = 0, n = orderBooks->length(); i < n; i++)
-	csv.read((*orderBooks)[i],
-	    ZvCSVReadFn::Member<&MxMDCore::addOrderBook_>::fn(md));
-    }
-
-    md->m_recordCfPath = cf->get("record");
-
-    if (ZmRef<ZvCf> ringCf = cf->subset("ring", false))
-      md->m_broadcast.init(ringCf);
-
-    if (ZmRef<ZvCf> threadsCf = cf->subset("threads", false)) {
-      if (ZmRef<ZvCf> threadCf = threadsCf->subset("recReceiver", false))
-	md->m_recReceiverParams.init(threadCf);
-      if (ZmRef<ZvCf> threadCf = threadsCf->subset("recSnapper", false))
-	md->m_recSnapperParams.init(threadCf);
-      if (ZmRef<ZvCf> threadCf = threadsCf->subset("snapper", false))
-	md->m_snapperParams.init(threadCf);
-    }
-
-    md->m_replayCfPath = cf->get("replay");
-
-    ZeLOG(Info, "MxMDLib - initialized...");
+    md->init_(cf);
 
   } catch (const ZvError &e) {
     ZeLOG(Fatal, ZtString() << "MxMDLib - configuration error: " << e);
@@ -408,19 +333,105 @@ MxMDLib *MxMDLib::instance()
   return ZmSingleton<MxMDCore, 0>::instance();
 }
 
-MxMDCore::MxMDCore(ZmRef<Mx> mx, ZvCf *cf) :
-  MxMDLib(mx, cf),
+MxMDCore::MxMDCore(ZmRef<Mx> mx) :
+  MxMDLib(mx),
   m_mx(ZuMv(mx)),
-  m_cf(cf),
   m_broadcast(this),
   m_snapper(this),
   m_recorder(this)
 {
+}
+
+void MxMDCore::init_(ZvCf *cf)
+{
+  m_cf = cf;
+
+  MxMDLib::init_(cf);
+
+  m_localFeed = new MxMDFeed(this, "_LCL");
+  addFeed(m_localFeed);
+
+  if (ZmRef<ZvCf> feedsCf = cf->subset("feeds", false)) {
+    ZeLOG(Info, "MxMDLib - configuring feeds...");
+    ZvCf::Iterator i(feedsCf);
+    ZuString key;
+    while (ZmRef<ZvCf> feedCf = i.subset(key)) {
+      if (key == "_LCL") {
+	ZvCf::Iterator j(feedCf);
+	ZuString id;
+	while (ZmRef<ZvCf> venueCf = j.subset(id))
+	  addVenue(new MxMDVenue(this, m_localFeed, id,
+	      venueCf->getEnum<MxMDOrderIDScope::Map>("orderIDScope", false),
+	      venueCf->getFlags<MxMDVenueFlags::Flags>("flags", false, 0)));
+	continue;
+      }
+      ZtString e;
+      ZiModule module;
+      ZiModule::Path name = feedCf->get("module", true);
+      int preload = feedCf->getInt("preload", 0, 1, false, 0);
+      if (preload) preload = ZiModule::Pre;
+      if (module.load(name, preload, &e) < 0)
+	throw ZtString() << "failed to load \"" << name << "\": " << ZuMv(e);
+      MxMDFeedPluginFn pluginFn =
+	(MxMDFeedPluginFn)module.resolve("MxMDFeed_plugin", &e);
+      if (!pluginFn) {
+	module.unload();
+	throw ZtString() <<
+	  "failed to resolve \"MxMDFeed_plugin\" in \"" <<
+	  name << "\": " << ZuMv(e);
+      }
+      (*pluginFn)(this, feedCf);
+    }
+  }
+
+  if (const ZtArray<ZtString> *tickSizes =
+	cf->getMultiple("tickSizes", 0, INT_MAX)) {
+    ZeLOG(Info, "MxMDLib - reading tick size data...");
+    MxMDTickSizeCSV csv;
+    for (unsigned i = 0, n = tickSizes->length(); i < n; i++)
+      csv.read((*tickSizes)[i],
+	  ZvCSVReadFn::Member<&MxMDCore::addTickSize_>::fn(this));
+  }
+  if (const ZtArray<ZtString> *securities =
+	cf->getMultiple("securities", 0, INT_MAX)) {
+    ZeLOG(Info, "MxMDLib - reading security reference data...");
+    MxMDSecurityCSV csv;
+    for (unsigned i = 0, n = securities->length(); i < n; i++)
+      csv.read((*securities)[i],
+	  ZvCSVReadFn::Member<&MxMDCore::addSecurity_>::fn(this));
+  }
+  if (const ZtArray<ZtString> *orderBooks =
+	cf->getMultiple("orderBooks", 0, INT_MAX)) {
+    ZeLOG(Info, "MxMDLib - reading order book reference data...");
+    MxMDOrderBookCSV csv;
+    for (unsigned i = 0, n = orderBooks->length(); i < n; i++)
+      csv.read((*orderBooks)[i],
+	  ZvCSVReadFn::Member<&MxMDCore::addOrderBook_>::fn(this));
+  }
+
+  m_recordCfPath = cf->get("record");
+
+  if (ZmRef<ZvCf> ringCf = cf->subset("ring", false))
+    m_broadcast.init(ringCf);
+
+  if (ZmRef<ZvCf> threadsCf = cf->subset("threads", false)) {
+    if (ZmRef<ZvCf> threadCf = threadsCf->subset("recReceiver", false))
+      m_recReceiverParams.init(threadCf);
+    if (ZmRef<ZvCf> threadCf = threadsCf->subset("recSnapper", false))
+      m_recSnapperParams.init(threadCf);
+    if (ZmRef<ZvCf> threadCf = threadsCf->subset("snapper", false))
+      m_snapperParams.init(threadCf);
+  }
+
+  m_replayCfPath = cf->get("replay");
+
   if (ZmRef<ZvCf> cmdCf = cf->subset("cmd", false)) {
     m_cmd = new MxMDCore::CmdServer(this);
     m_cmd->init(cmdCf);
     initCmds();
   }
+
+  ZeLOG(Info, "MxMDLib - initialized...");
 }
 
 void MxMDCore::initCmds()
@@ -526,9 +537,9 @@ void MxMDCore::stop()
   allFeeds([](MxMDFeed *feed) { try { feed->stop(); } catch (...) { } });
 
   if (m_mx) {
+    stopReplaying();
     stopRecording();
     stopStreaming();
-    stopReplaying();
   }
 
   if (m_cmd) {
@@ -1052,7 +1063,6 @@ void MxMDCore::stopRecording()
 void MxMDCore::stopStreaming()
 {
   m_snapper.stop();
-  m_recorder.stop();
   m_broadcast.eof();
 }
 
@@ -1435,7 +1445,6 @@ void MxMDCore::apply(Frame *frame)
 	const AddOrder &obj = frame->as<AddOrder>();
 	obInvoke(obj.key, [
 	    orderID = obj.orderID,
-	    orderIDScope = obj.orderIDScope,
 	    transactTime = obj.transactTime,
 	    side = obj.side,
 	    rank = obj.rank,
@@ -1445,7 +1454,7 @@ void MxMDCore::apply(Frame *frame)
 	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
 	  if (ob && (!replayFilter || ob->handler()))
 	    ob->addOrder(
-		orderID, orderIDScope, transactTime,
+		orderID, transactTime,
 		side, rank, price, qty, flags);
 	});
       }
@@ -1455,7 +1464,6 @@ void MxMDCore::apply(Frame *frame)
 	const ModifyOrder &obj = frame->as<ModifyOrder>();
 	obInvoke(obj.key, [
 	    orderID = obj.orderID,
-	    orderIDScope = obj.orderIDScope,
 	    transactTime = obj.transactTime,
 	    side = obj.side,
 	    rank = obj.rank,
@@ -1465,7 +1473,7 @@ void MxMDCore::apply(Frame *frame)
 	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
 	  if (ob && (!replayFilter || ob->handler()))
 	    ob->modifyOrder(
-		orderID, orderIDScope, transactTime,
+		orderID, transactTime,
 		side, rank, price, qty, flags);
 	});
       }
@@ -1475,12 +1483,11 @@ void MxMDCore::apply(Frame *frame)
 	const CancelOrder &obj = frame->as<CancelOrder>();
 	obInvoke(obj.key, [
 	    orderID = obj.orderID,
-	    orderIDScope = obj.orderIDScope,
 	    transactTime = obj.transactTime,
 	    side = obj.side,
 	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
 	  if (ob && (!replayFilter || ob->handler()))
-	    ob->cancelOrder(orderID, orderIDScope, transactTime, side);
+	    ob->cancelOrder(orderID, transactTime, side);
 	});
       }
       break;

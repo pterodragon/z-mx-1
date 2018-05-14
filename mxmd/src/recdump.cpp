@@ -398,7 +398,6 @@ class RealTimeCSV : public ZmObject, public ZvCSV {
 public:
   struct L2Data {
     MxIDString		orderID;
-    MxEnum		orderIDScope;
     MxEnum		side;
     MxInt		rank;
     uint8_t		delta;
@@ -468,8 +467,6 @@ public:
 #undef Offset
 #define Offset(x) offsetof(Data, l2Data) + offsetof(L2Data, x)
     add(new IDStrCol("orderID", Offset(orderID)));
-    add(new EnumCol<MxMDOrderIDScope::CSVMap>("orderIDScope",
-	  Offset(orderIDScope)));
     add(new EnumCol<MxSide::CSVMap>("side", Offset(side)));
     add(new IntCol("rank", Offset(rank)));
     add(new BoolCol("delta", Offset(delta)));
@@ -527,7 +524,6 @@ public:
 	    data->event = frame->type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l2Data.orderID = obj.orderID;
-	    data->l2Data.orderIDScope = obj.orderIDScope;
 	    data->l2Data.side = obj.side;
 	    data->l2Data.rank = obj.rank;
 	    data->l2Data.price = obj.price;
@@ -544,7 +540,6 @@ public:
 	    data->event = frame->type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l2Data.orderID = obj.orderID;
-	    data->l2Data.orderIDScope = obj.orderIDScope;
 	    data->l2Data.side = obj.side;
 	  }
 	  break;

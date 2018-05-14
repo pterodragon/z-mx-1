@@ -103,7 +103,9 @@ private:
     int		m_tzOffset = 0;
   };
 
-  MxMDCore(ZmRef<Mx> mx, ZvCf *cf);
+  MxMDCore(ZmRef<Mx> mx);
+
+  void init_(ZvCf *cf);
 
 public:
   virtual ~MxMDCore() { }
@@ -300,7 +302,7 @@ private:
     MxMDCore			*m_core;
     ZvRingParams		m_config;
     Lock			m_lock;
-    ZmAtomic<unsigned>		  m_openCount;
+    unsigned			  m_openCount = 0;
     ZmRef<MxMDStream::Ring>	  m_ring;
   };
 
@@ -374,7 +376,7 @@ private:
       ++orderCount;
       const MxMDOrderData &data = order->data();
       return !MxMDStream::addOrder(snapshot,
-	  order->orderBook()->key(), order->id(), order->idScope(),
+	  order->orderBook()->key(), order->id(),
 	  data.transactTime, data.side, data.rank,
 	  data.price, data.qty, data.flags);
     })) return false;
@@ -626,12 +628,15 @@ friend class Recorder;
     }
 
     int write(const Frame *frame, ZeError *e) {
+#if 0
       ZiVec vec[2];
       ZiVec_ptr(vec[0]) = const_cast<void *>((const void *)frame);
       ZiVec_len(vec[0]) = sizeof(Frame);
       ZiVec_ptr(vec[1]) = const_cast<void *>((const void *)frame->ptr());
       ZiVec_len(vec[1]) = frame->len;
       return m_file.writev(vec, 2, e);
+#endif
+      return m_file.write((const void *)frame, sizeof(Frame) + frame->len, e);
     }
 
     void snap() {
@@ -718,8 +723,6 @@ friend class Recorder;
   ZmRef<Mx>		m_mx;
   ZmRef<ZvCf>		m_cf;
   ZmRef<CmdServer>	m_cmd;
-
-  // ZmAtomic<uint32_t>	m_streamFlags;
 
   ZtString		m_recordCfPath;
   ZtString		m_replayCfPath;

@@ -51,12 +51,12 @@ int main(int argc, char **argv)
     MxMDLib *md = MxMDLib::init(0);	// initialize market data library
     if (!md) return 1;
 
-    if (initFeed() < 0) {		// initialize synthetic feed
+    if (subscribe() < 0) {		// subscribe to library events
       md->final();
       return 1;
     }
 
-    if (subscribe() < 0) {		// subscribe to library events
+    if (initFeed() < 0) {		// initialize synthetic feed
       md->final();
       return 1;
     }
@@ -147,7 +147,7 @@ void deletedPxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
       (double)pxLevel->data().qty);
 }
 
-void exception(MxMDLib *, ZeEvent *e) { std::cerr << *e << '\n'; }
+void exception(MxMDLib *, ZmRef<ZeEvent> e) { std::cerr << *e << '\n'; }
 
 void timer(MxDateTime now, MxDateTime &next)
 {
@@ -226,10 +226,10 @@ int initFeed()
     md->addFeed(feed);
 
   } catch (const ZtString &s) {
-    ZeLOG(Error, ZtString() << "error: " << s);
+    ZeLOG(Error, s);
     return -1;
   } catch (...) {
-    ZeLOG(Error, "unknown exception");
+    ZeLOG(Error, "Unknown Exception");
     return -1;
   }
 
@@ -242,7 +242,9 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
     // add the venue
 
     ZmRef<MxMDVenue> venue = new MxMDVenue(md, feed,
-      "XTKS");		// Tokyo Stock Exchange
+      "XTKS",				// Tokyo Stock Exchange
+      MxMDOrderIDScope::OBSide,		// order IDs unique within OB side
+      0);
     md->addVenue(venue);
 
     // add a tick size table
@@ -313,10 +315,10 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
     }
     md->loaded(venue);
   } catch (const ZtString &s) {
-    ZeLOG(Error, ZtString() << "error: " << s);
+    ZeLOG(Error, s);
     return -1;
   } catch (...) {
-    ZeLOG(Error, "unknown exception");
+    ZeLOG(Error, "Unknown Exception");
     return -1;
   }
   return 0;
@@ -362,25 +364,25 @@ void publish()
 	  ob->l1(l1Data);
 
 	  ob->addOrder("foo",
-	      MxMDOrderIDScope::OBSide, l1Data.stamp, MxSide::Sell,
+	      l1Data.stamp, MxSide::Sell,
 	      1, 100, 100, 0);
 	  ob->modifyOrder("foo",
-	      MxMDOrderIDScope::OBSide, l1Data.stamp, MxSide::Sell,
+	      l1Data.stamp, MxSide::Sell,
 	      1, 50, 50, 0);
 	  ob->addOrder("bar",
-	      MxMDOrderIDScope::OBSide, l1Data.stamp, MxSide::Sell,
+	      l1Data.stamp, MxSide::Sell,
 	      1, 50, 50, 0);
 	  ob->reduceOrder("foo",
-	      MxMDOrderIDScope::OBSide, l1Data.stamp, MxSide::Sell, 50);
+	      l1Data.stamp, MxSide::Sell, 50);
 	  ob->cancelOrder("bar",
-	      MxMDOrderIDScope::OBSide, l1Data.stamp, MxSide::Sell);
+	      l1Data.stamp, MxSide::Sell);
 	  ob->addOrder("foo",
-	      MxMDOrderIDScope::OBSide, l1Data.stamp, MxSide::Sell,
+	      l1Data.stamp, MxSide::Sell,
 	      1, 100, 100, 0);
 	  ob->reduceOrder("foo",
-	      MxMDOrderIDScope::OBSide, l1Data.stamp, MxSide::Sell, 50);
+	      l1Data.stamp, MxSide::Sell, 50);
 	  ob->modifyOrder("foo",
-	      MxMDOrderIDScope::OBSide, l1Data.stamp, MxSide::Sell,
+	      l1Data.stamp, MxSide::Sell,
 	      1, 50, 0, 0);
 	});
       }
@@ -389,8 +391,8 @@ void publish()
     } while (sem.timedwait(ZmTime(ZmTime::Now, 1)) < 0);
 
   } catch (const ZtString &s) {
-    ZeLOG(Error, ZtString() << "error: " << s);
+    ZeLOG(Error, s);
   } catch (...) {
-    ZeLOG(Error, "unknown exception");
+    ZeLOG(Error, "Unknown Exception");
   }
 }

@@ -46,7 +46,7 @@ void usage() {
   exit(1);
 }
 
-void exception(MxMDLib *, ZeEvent *e) { std::cerr << *e << '\n'; }
+void exception(MxMDLib *, ZmRef<ZeEvent> e) { std::cerr << *e << '\n'; }
 
 void l1(MxMDOrderBook *, const MxMDL1Data &) { }
 void l2(MxMDOrderBook *, MxDateTime) { }

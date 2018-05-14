@@ -99,7 +99,7 @@ void l2(MxMDOrderBook *ob, MxDateTime stamp)
   std::cout << "L2 updated\n";
 }
 
-void exception(MxMDLib *, ZeEvent *e) { std::cerr << *e << '\n'; }
+void exception(MxMDLib *, ZmRef<ZeEvent> e) { std::cerr << *e << '\n'; }
 
 typedef ZmLHash<MxSymString> Syms; // hash table of syms
 static Syms *syms = 0;

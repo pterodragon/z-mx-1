@@ -429,7 +429,7 @@ void MxMDOrderBook::delOrder_(
 }
 
 ZmRef<MxMDOrder> MxMDOrderBook::addOrder(
-  ZuString orderID, MxEnum orderIDScope, MxDateTime transactTime,
+  ZuString orderID, MxDateTime transactTime,
   MxEnum side, MxUInt rank, MxFloat price, MxFloat qty, MxFlags flags)
 {
   if (ZuUnlikely(!m_venueShard)) return (MxMDOrder *)0;
@@ -438,19 +438,18 @@ ZmRef<MxMDOrder> MxMDOrderBook::addOrder(
   const MxMDPxLevelFn *pxLevelFn = 0;
   ZuRef<MxMDPxLevel> pxLevel;
 
-  if (ZmRef<MxMDOrder> order = m_venueShard->findOrder(
-	key(), side, orderID, orderIDScope))
+  if (ZmRef<MxMDOrder> order = m_venueShard->findOrder(key(), side, orderID))
     return modifyOrder(
-	orderID, orderIDScope, transactTime, side, rank, price, qty, flags);
+	orderID, transactTime, side, rank, price, qty, flags);
 
   order = new MxMDOrder(this,
-    orderID, orderIDScope, transactTime, side, rank, price, qty, flags);
+    orderID, transactTime, side, rank, price, qty, flags);
 
   m_venueShard->addOrder(order);
 
   addOrder_(order, transactTime, m_handler, pxLevelFn, pxLevel);
 
-  md()->addOrder(this, orderID, orderIDScope,
+  md()->addOrder(this, orderID,
       transactTime, side, rank, price, qty, flags);
 
   if (MxMDOrderBook *consolidated = this->consolidated())
@@ -466,16 +465,17 @@ ZmRef<MxMDOrder> MxMDOrderBook::addOrder(
 }
 
 ZmRef<MxMDOrder> MxMDOrderBook::modifyOrder(
-  ZuString orderID, MxEnum orderIDScope, MxDateTime transactTime,
+  ZuString orderID, MxDateTime transactTime,
   MxEnum side, MxUInt rank, MxFloat price, MxFloat qty, MxFlags flags)
 {
   if (ZuUnlikely(!m_venueShard)) return (MxMDOrder *)0;
 
   ZmRef<MxMDOrder> order;
+
   if (ZuUnlikely(qty.feq(0.0)))
-    order = m_venueShard->delOrder(key(), side, orderID, orderIDScope);
+    order = m_venueShard->delOrder(key(), side, orderID);
   else
-    order = m_venueShard->findOrder(key(), side, orderID, orderIDScope);
+    order = m_venueShard->findOrder(key(), side, orderID);
   if (ZuUnlikely(!order)) {
     md()->raise(ZeEVENT(Error, MxMDOrderNotFound("modifyOrder", orderID)));
     return 0;
@@ -517,10 +517,10 @@ void MxMDOrderBook::modifyOrder_(MxMDOrder *order, MxDateTime transactTime,
   if (ZuLikely(qty.fne(0)))
     addOrder_(order, transactTime, m_handler, pxLevelFn[1], pxLevel[1]);
   else
-    m_venueShard->delOrder(key(), side, order->id(), order->idScope());
+    m_venueShard->delOrder(key(), side, order->id());
 
   md()->modifyOrder(
-      this, order->id(), order->idScope(), transactTime, side,
+      this, order->id(), transactTime, side,
       rank, price, qty, flags);
 
   if (MxMDOrderBook *consolidated = this->consolidated()) {
@@ -541,19 +541,18 @@ void MxMDOrderBook::modifyOrder_(MxMDOrder *order, MxDateTime transactTime,
 }
 
 ZmRef<MxMDOrder> MxMDOrderBook::reduceOrder(
-  ZuString orderID, MxEnum orderIDScope, MxDateTime transactTime,
+  ZuString orderID, MxDateTime transactTime,
   MxEnum side, MxFloat reduceQty)
 {
   if (ZuUnlikely(!m_venueShard)) return (MxMDOrder *)0;
 
-  ZmRef<MxMDOrder> order =
-    m_venueShard->findOrder(key(), side, orderID, orderIDScope);
+  ZmRef<MxMDOrder> order = m_venueShard->findOrder(key(), side, orderID);
   if (ZuUnlikely(!order)) {
     md()->raise(ZeEVENT(Error, MxMDOrderNotFound("reduceOrder", orderID)));
     return 0;
   }
   if (ZuUnlikely(order->data().qty <= ~reduceQty))
-    m_venueShard->delOrder(key(), side, orderID, orderIDScope);
+    m_venueShard->delOrder(key(), side, orderID);
   reduceOrder_(order, transactTime, reduceQty);
   return order;
 }
@@ -589,11 +588,10 @@ void MxMDOrderBook::reduceOrder_(MxMDOrder *order,
   if (ZuLikely(qty.fne(0)))
     addOrder_(order, transactTime, m_handler, pxLevelFn[1], pxLevel[1]);
   else
-    m_venueShard->delOrder(
-	key(), order->data().side, order->id(), order->idScope());
+    m_venueShard->delOrder(key(), order->data().side, order->id());
 
   md()->modifyOrder(
-      this, order->id(), order->idScope(), transactTime, order->data().side,
+      this, order->id(), transactTime, order->data().side,
       MxUInt(), MxFloat(), qty, MxFlags());
 
   if (MxMDOrderBook *consolidated = this->consolidated()) {
@@ -614,12 +612,12 @@ void MxMDOrderBook::reduceOrder_(MxMDOrder *order,
 }
 
 ZmRef<MxMDOrder> MxMDOrderBook::cancelOrder(
-  ZuString orderID, MxEnum orderIDScope, MxDateTime transactTime,
+  ZuString orderID, MxDateTime transactTime,
   MxEnum side)
 {
   if (ZuUnlikely(!m_venueShard)) return (MxMDOrder *)0;
-  ZmRef<MxMDOrder> order =
-    m_venueShard->delOrder(key(), side, orderID, orderIDScope);
+
+  ZmRef<MxMDOrder> order = m_venueShard->delOrder(key(), side, orderID);
   if (ZuUnlikely(!order)) return 0;
   cancelOrder_(order, transactTime);
   return order;
@@ -646,7 +644,7 @@ void MxMDOrderBook::cancelOrder_(MxMDOrder *order, MxDateTime transactTime)
   delOrder_(order, transactTime, m_handler, pxLevelFn, pxLevel);
 
   md()->cancelOrder(this,
-      order->id(), order->idScope(), transactTime, order->data().side);
+      order->id(), transactTime, order->data().side);
 
   if (MxMDOrderBook *consolidated = this->consolidated())
     consolidated->pxLevel_(
@@ -853,7 +851,7 @@ void MxMDSecurity::update(const MxMDSecRefData &refData)
 }
 
 MxMDVenueShard::MxMDVenueShard(MxMDVenue *venue, MxMDShard *shard) :
-    m_venue(venue), m_shard(shard),
+    m_venue(venue), m_shard(shard), m_orderIDScope(venue->orderIDScope()),
     m_orders2(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
       init(ZuStringN<ZmHeapIDSize>() <<
 	"MxMDVenueShard." << venue->id() << ".Orders2")),
@@ -863,13 +861,15 @@ MxMDVenueShard::MxMDVenueShard(MxMDVenue *venue, MxMDShard *shard) :
 {
 }
 
-MxMDVenue::MxMDVenue(MxMDLib *md, MxMDFeed *feed, MxID id) :
-    m_md(md), m_feed(feed), m_id(id),
-    m_shards(md->nShards()),
-    m_segments(ZmHashParams().bits(2).init(
-	  ZuStringN<ZmHeapIDSize>() << "MxMDVenue." << id << ".Segments")),
-    m_orders(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
-      init(ZuStringN<ZmHeapIDSize>() << "MxMDVenue." << id << ".Orders"))
+MxMDVenue::MxMDVenue(MxMDLib *md, MxMDFeed *feed, MxID id,
+    MxEnum orderIDScope, MxFlags flags) :
+  m_md(md), m_feed(feed), m_id(id),
+  m_orderIDScope(orderIDScope), m_flags(flags),
+  m_shards(md->nShards()),
+  m_segments(ZmHashParams().bits(2).init(
+	ZuStringN<ZmHeapIDSize>() << "MxMDVenue." << id << ".Segments")),
+  m_orders(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
+    init(ZuStringN<ZmHeapIDSize>() << "MxMDVenue." << id << ".Orders"))
 {
   unsigned n = md->nShards();
   m_shards.length(n);
@@ -1014,7 +1014,9 @@ uintptr_t MxMDLib::allVenues(ZmFn<MxMDVenue *> fn) const
   return 0;
 }
 
-MxMDLib::MxMDLib(ZmScheduler *scheduler, void *cf_) :
+static void exception(MxMDLib *, ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
+
+MxMDLib::MxMDLib(ZmScheduler *scheduler) :
   m_scheduler(scheduler),
   m_allSecurities(ZmHashParams().bits(12).loadFactor(1.0).cBits(4).
     init("MxMDLib.AllSecurities")),
@@ -1027,6 +1029,11 @@ MxMDLib::MxMDLib(ZmScheduler *scheduler, void *cf_) :
   m_venues(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
     init("MxMDLib.Venues")),
   m_handler(new MxMDLibHandler())
+{
+  m_handler->exception = MxMDExceptionFn::Ptr<&exception>::fn();
+}
+
+void MxMDLib::init_(void *cf_)
 {
   ZvCf *cf = (ZvCf *)cf_;
   ZiMultiplex *mx = static_cast<ZiMultiplex *>(m_scheduler);
@@ -1053,8 +1060,6 @@ MxMDLib::MxMDLib(ZmScheduler *scheduler, void *cf_) :
   }
 }
 
-static void exception(MxMDLib *, ZeEvent *e) { ZeLog::log(e); }
-
 void MxMDLib::subscribe(MxMDLibHandler *handler)
 {
   SubGuard guard(m_subLock);
@@ -1070,9 +1075,9 @@ void MxMDLib::unsubscribe()
   m_handler->exception = MxMDExceptionFn::Ptr<&exception>::fn();
 }
 
-void MxMDLib::raise(ZeEvent *e)
+void MxMDLib::raise(ZmRef<ZeEvent> e)
 {
-  handler()->exception(this, e);
+  handler()->exception(this, ZuMv(e));
 }
 
 void MxMDLib::addFeed(MxMDFeed *feed)
@@ -1483,33 +1488,33 @@ void MxMDLib::l2(const MxMDOrderBook *ob, MxDateTime stamp, bool updateL1)
 }
 
 void MxMDLib::addOrder(const MxMDOrderBook *ob,
-    ZuString orderID, MxEnum orderIDScope, MxDateTime transactTime,
+    ZuString orderID, MxDateTime transactTime,
     MxEnum side, MxUInt rank, MxFloat price, MxFloat qty, MxFlags flags)
 {
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::addOrder(core->broadcast(),
-	ob->key(), orderID, orderIDScope,
+	ob->key(), orderID,
 	transactTime, side, rank, price, qty, flags);
 }
 void MxMDLib::modifyOrder(const MxMDOrderBook *ob,
-    ZuString orderID, MxEnum orderIDScope, MxDateTime transactTime,
+    ZuString orderID, MxDateTime transactTime,
     MxEnum side, MxUInt rank, MxFloat price, MxFloat qty, MxFlags flags)
 {
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::modifyOrder(core->broadcast(),
-	ob->key(), orderID, orderIDScope,
+	ob->key(), orderID,
 	transactTime, side, rank, price, qty, flags);
 }
 void MxMDLib::cancelOrder(const MxMDOrderBook *ob,
-    ZuString orderID, MxEnum orderIDScope,
+    ZuString orderID,
     MxDateTime transactTime, MxEnum side)
 {
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::cancelOrder(core->broadcast(),
-	ob->key(), orderID, orderIDScope, transactTime, side);
+	ob->key(), orderID, transactTime, side);
 }
 
 void MxMDLib::resetOB(const MxMDOrderBook *ob,

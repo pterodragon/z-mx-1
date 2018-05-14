@@ -461,14 +461,14 @@ public:
   inline static Flags toFlags(
       const Key &key, const Value &value, Flags def = 0) {
     if (!value) return def;
-    return ZvFlags<Map>::instance()->template scan<Flags>(value);
+    return ZvFlags<Map>::instance()->template scan<Flags>(key, value);
   }
 
   template <typename Map, typename Key, typename Value>
   inline static Flags64 toFlags64(
       const Key &key, const Value &value, Flags64 def = 0) {
     if (!value) return def;
-    return ZvFlags<Map>::instance()->template scan<Flags64>(value);
+    return ZvFlags<Map>::instance()->template scan<Flags64>(key, value);
   }
 
   template <typename Flags_, typename Key>

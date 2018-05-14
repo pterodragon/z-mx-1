@@ -108,7 +108,8 @@ protected:
   inline void init(const Char *s, unsigned length) {
     if (ZuUnlikely(length >= m_size)) length = m_size - 1;
     if (ZuLikely(s && length)) memcpy(data(), s, length * sizeof(Char));
-    data()[m_length = length] = 0;
+    memset(data() + (m_length = length), 0, (m_size - length) * sizeof(Char));
+    // data()[m_length = length] = 0;
   }
 
   template <typename P> inline typename FromPDelegate<P>::T init(const P &p) {

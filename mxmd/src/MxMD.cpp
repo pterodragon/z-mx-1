@@ -33,6 +33,87 @@ void MxMDTickSizeTbl::addTickSize(
   m_venue->md()->addTickSize(this, minPrice, maxPrice, tickSize);
 }
 
+void MxMDPxLevel_::updateAbs(
+    MxDateTime transactTime, MxFloat qty, MxFloat nOrders, MxFlags flags,
+    MxFloat &d_qty, MxFloat &d_nOrders)
+{
+  m_data.transactTime = transactTime;
+  updateAbs_(qty, nOrders, flags, d_qty, d_nOrders);
+  if (m_data.qty.feq(0.0))
+    m_data.qty = m_data.nOrders = 0;
+}
+
+void MxMDPxLevel_::updateAbs_(
+    MxFloat qty, MxFloat nOrders, MxFlags flags,
+    MxFloat &d_qty, MxFloat &d_nOrders)
+{
+  d_qty = qty - m_data.qty;
+  m_data.qty = qty;
+  d_nOrders = nOrders - m_data.nOrders;
+  m_data.nOrders = nOrders;
+  m_data.flags = flags;
+}
+
+void MxMDPxLevel_::updateDelta(
+    MxDateTime transactTime, MxFloat qty, MxFloat nOrders, MxFlags flags)
+{
+  m_data.transactTime = transactTime;
+  updateDelta_(qty, nOrders, flags);
+  if (m_data.qty.feq(0.0))
+    m_data.qty = m_data.nOrders = 0;
+}
+
+void MxMDPxLevel_::updateDelta_(MxFloat qty, MxFloat nOrders, MxFlags flags)
+{
+  m_data.qty += qty;
+  m_data.nOrders += nOrders;
+  if (qty.fgt(0.0))
+    m_data.flags |= flags;
+  else
+    m_data.flags &= ~flags;
+}
+
+void MxMDPxLevel_::update(
+    MxDateTime transactTime, bool delta,
+    MxFloat qty, MxFloat nOrders, MxFlags flags,
+    MxFloat &d_qty, MxFloat &d_nOrders)
+{
+  m_data.transactTime = transactTime;
+  if (!delta)
+    updateAbs_(qty, nOrders, flags, d_qty, d_nOrders);
+  else {
+    d_qty = qty, d_nOrders = nOrders;
+    updateDelta_(qty, nOrders, flags);
+  }
+  if (m_data.qty.feq(0.0))
+    m_data.qty = m_data.nOrders = 0;
+}
+
+void MxMDPxLevel_::addOrder(MxMDOrder *order)
+{
+  if (obSide()->orderBook()->venue()->flags() &
+      (1U<<MxMDVenueFlags::ContigOrderRanks)) {
+    MxUInt rank = order->m_data.rank;
+    typename Orders::Iterator i(m_orders, rank, Orders::GreaterEqual);
+    typename Orders::Node *node;
+    while ((node = i.iterate()) && node->key()->m_data.rank == rank)
+      rank = ++node->key()->m_data.rank;
+  }
+  m_orders.add(order);
+}
+
+void MxMDPxLevel_::delOrder(MxUInt rank)
+{
+  m_orders.delVal(rank);
+  if (obSide()->orderBook()->venue()->flags() &
+      (1U<<MxMDVenueFlags::ContigOrderRanks)) {
+    typename Orders::Iterator i(m_orders, rank++, Orders::GreaterEqual);
+    typename Orders::Node *node;
+    while ((node = i.iterate()) && node->key()->m_data.rank == rank++)
+      --node->key()->m_data.rank;
+  }
+}
+
 MxMDOrderBook::MxMDOrderBook( // single leg
   MxMDShard *shard, 
   MxMDVenue *venue,
@@ -398,7 +479,7 @@ void MxMDOBSide::delOrder_(
     m_data.qty -= orderData.qty;
     return;
   }
-  pxLevel = order->pxLevel();
+  pxLevel = static_cast<MxMDPxLevel *>(order->pxLevel());
   if (ZuUnlikely(!pxLevel)) {
     m_orderBook->md()->raise(ZeEVENT(Error, MxMDNoPxLevel("delOrder")));
     return;

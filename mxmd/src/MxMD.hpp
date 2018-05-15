@@ -156,6 +156,8 @@ class MxMDVenueShard;
 class MxMDSecurity;
 class MxMDOrderBook;
 class MxMDOBSide;
+class MxMDPxLevel_;
+class MxMDOrder_;
 
 typedef ZmSharded<MxMDShard> MxMDSharded;
 
@@ -365,11 +367,7 @@ typedef ZuTuple<
 typedef ZuTuple<MxSecKey, MxIDString> MxMDOrderID2_;
 typedef ZuTuple<const MxSecKey &, const MxIDString &> MxMDOrderID2Ref;
 
-struct MxMDOrder_HeapID {
-  inline static const char *id() { return "MxMDOrder"; }
-};
-template <class Heap, class PxLevel>
-class MxMDOrder_ : public Heap, public ZmObject {
+class MxMDAPI MxMDOrder_ {
   MxMDOrder_(const MxMDOrder_ &) = delete;
   MxMDOrder_ &operator =(const MxMDOrder_ &) = delete;
 
@@ -377,25 +375,25 @@ friend class MxMDVenue;
 friend class MxMDVenueShard;
 friend class MxMDOrderBook;
 friend class MxMDOBSide;
-template <class> friend class MxMDPxLevel_;
+friend class MxMDPxLevel_;
 
 private:
   static MxMDOBSide *bids_(MxMDOrderBook *);
   static MxMDOBSide *asks_(MxMDOrderBook *);
 
-  template <typename OrderID>
+protected:
+  template <typename ID>
   inline MxMDOrder_(MxMDOrderBook *ob,
-    const OrderID &id,
-    MxDateTime transactTime, MxEnum side,
+    ID &&id, MxDateTime transactTime, MxEnum side,
     MxUInt rank, MxFloat price, MxFloat qty, MxFlags flags) :
       m_orderBook(ob),
       m_obSide(side == MxSide::Buy ? bids_(ob) : asks_(ob)),
       m_pxLevel(0),
-      m_id(id),
+      m_id(ZuFwd<ID>(id)),
       m_data{transactTime, side, rank, price, qty, flags} { }
 
 public:
-  ~MxMDOrder_() { }
+  inline ~MxMDOrder_() { }
 
 private:
   struct OrderID3Accessor;
@@ -426,7 +424,7 @@ friend struct RankAccessor;
 public:
   ZuInline MxMDOrderBook *orderBook() const { return m_orderBook; }
   ZuInline MxMDOBSide *obSide() const { return m_obSide; }
-  ZuInline PxLevel *pxLevel() const { return m_pxLevel; }
+  ZuInline MxMDPxLevel_ *pxLevel() const { return m_pxLevel; }
 
   ZuInline const MxIDString &id() const { return m_id; }
   ZuInline const MxMDOrderData &data() const { return m_data; }
@@ -442,17 +440,36 @@ private:
     if (*qty) m_data.qty = qty;
   }
 
-  ZuInline void pxLevel(PxLevel *l) { m_pxLevel = l; }
+  ZuInline void pxLevel(MxMDPxLevel_ *l) { m_pxLevel = l; }
 
   MxMDOrderBook		*m_orderBook;
   MxMDOBSide		*m_obSide;
-  PxLevel		*m_pxLevel;
+  MxMDPxLevel_		*m_pxLevel;
 
   MxIDString		m_id;
   MxMDOrderData		m_data;
 };
-typedef ZmHeap<MxMDOrder_HeapID,
-	       sizeof(MxMDOrder_<ZuNull, ZuObject>)> MxMDOrder_Heap;
+
+struct MxMDOrder_HeapID {
+  inline static const char *id() { return "MxMDOrder"; }
+};
+template <class Heap>
+class MxMDOrder__ : public Heap, public ZmObject, public MxMDOrder_ {
+  MxMDOrder__(const MxMDOrder__ &) = delete;
+  MxMDOrder__ &operator =(const MxMDOrder__ &) = delete;
+
+template <typename, typename> friend class ZuConversionFriend;
+
+friend class MxMDOrderBook;
+
+  template <typename ...Args>
+  inline MxMDOrder__(Args &&... args) : MxMDOrder_(ZuFwd<Args>(args)...) { }
+
+public:
+  inline ~MxMDOrder__() { }
+};
+typedef ZmHeap<MxMDOrder_HeapID, sizeof(MxMDOrder__<ZuNull>)> MxMDOrder_Heap;
+typedef MxMDOrder__<MxMDOrder_Heap> MxMDOrder;
 
 struct MxMDOrders_HeapID : public ZmHeapSharded {
   inline static const char *id() { return "MxMDLib.Orders"; }
@@ -565,24 +582,20 @@ struct MxMDL2Flags : public MxMDFlags<MxMDL2Flags> {
   typedef Liffe XTKD;
 };
 
-struct MxMDPxLevel_HeapID : public ZmHeapSharded {
-  inline static const char *id() { return "MxMDPxLevel"; }
-};
-template <class Heap> class MxMDPxLevel_ : public Heap, public ZuObject {
-  MxMDPxLevel_(const MxMDPxLevel_ &);
-  MxMDPxLevel_ &operator =(const MxMDPxLevel_ &);
+class MxMDAPI MxMDPxLevel_ {
+  MxMDPxLevel_(const MxMDPxLevel_ &) = delete;
+  MxMDPxLevel_ &operator =(const MxMDPxLevel_ &) = delete;
 
 friend class MxMDOrderBook;
 friend class MxMDOBSide;
 
-  typedef MxMDOrder_<MxMDOrder_Heap, MxMDPxLevel_> Order;
-
-  typedef ZmRBTree<ZuRef<Order>,
-	    ZmRBTreeIndex<typename Order::RankAccessor,
+  typedef ZmRBTree<ZmRef<MxMDOrder>,
+	    ZmRBTreeIndex<typename MxMDOrder_::RankAccessor,
 	      ZmRBTreeObject<ZuNull,
 		ZmRBTreeLock<ZmNoLock,
 		  ZmRBTreeHeapID<MxMDOrders_HeapID> > > > > Orders;
 
+protected:
   inline MxMDPxLevel_(MxMDOBSide *obSide,
     MxEnum side, MxDateTime transactTime, MxFloat price, MxFloat qty,
     MxUInt nOrders, MxFlags flags) : m_obSide(obSide),
@@ -590,7 +603,7 @@ friend class MxMDOBSide;
       m_data{transactTime, qty, nOrders, flags} { }
 
 public:
-  ~MxMDPxLevel_() { }
+  inline ~MxMDPxLevel_() { }
 
   struct PxAccessor : public ZuAccessor<MxMDPxLevel_ *, MxFloat> {
     typedef MxFloat::FCmp Cmp;
@@ -607,17 +620,17 @@ public:
   template <typename L> // (MxMDOrder *) -> uintptr_t
   uintptr_t allOrders(L l) const {
     typename Orders::ReadIterator i(m_orders);
-    while (const ZuRef<Order> &order = i.iterateKey())
+    while (const ZmRef<MxMDOrder> &order = i.iterateKey())
       if (uintptr_t v = l(order)) return v;
     return 0;
   }
 
 private:
   void reset(MxDateTime transactTime,
-      const ZmFn<Order *, MxDateTime> *canceledOrderFn) {
+      const ZmFn<MxMDOrder *, MxDateTime> *canceledOrderFn) {
     if (canceledOrderFn) {
       typename Orders::ReadIterator i(m_orders);
-      while (const ZuRef<Order> &order = i.iterateKey())
+      while (const ZmRef<MxMDOrder> &order = i.iterateKey())
 	(*canceledOrderFn)(order, transactTime);
     }
     m_orders.clean();
@@ -628,50 +641,17 @@ private:
 
   void updateAbs(
       MxDateTime transactTime, MxFloat qty, MxFloat nOrders, MxFlags flags,
-      MxFloat &d_qty, MxFloat &d_nOrders) {
-    m_data.transactTime = transactTime;
-    updateAbs_(qty, nOrders, flags, d_qty, d_nOrders);
-    if (m_data.qty.feq(0.0))
-      m_data.qty = m_data.nOrders = 0;
-  }
+      MxFloat &d_qty, MxFloat &d_nOrders);
   void updateAbs_(MxFloat qty, MxFloat nOrders, MxFlags flags,
-      MxFloat &d_qty, MxFloat &d_nOrders) {
-    d_qty = qty - m_data.qty;
-    m_data.qty = qty;
-    d_nOrders = nOrders - m_data.nOrders;
-    m_data.nOrders = nOrders;
-    m_data.flags = flags;
-  }
+      MxFloat &d_qty, MxFloat &d_nOrders);
   void updateDelta(
-      MxDateTime transactTime, MxFloat qty, MxFloat nOrders, MxFlags flags) {
-    m_data.transactTime = transactTime;
-    updateDelta_(qty, nOrders, flags);
-    if (m_data.qty.feq(0.0))
-      m_data.qty = m_data.nOrders = 0;
-  }
-  void updateDelta_(MxFloat qty, MxFloat nOrders, MxFlags flags) {
-    m_data.qty += qty;
-    m_data.nOrders += nOrders;
-    if (qty.fgt(0.0))
-      m_data.flags |= flags;
-    else
-      m_data.flags &= ~flags;
-  }
+      MxDateTime transactTime, MxFloat qty, MxFloat nOrders, MxFlags flags);
+  void updateDelta_(MxFloat qty, MxFloat nOrders, MxFlags flags);
   void update(MxDateTime transactTime, bool delta,
       MxFloat qty, MxFloat nOrders, MxFlags flags,
-      MxFloat &d_qty, MxFloat &d_nOrders) {
-    m_data.transactTime = transactTime;
-    if (!delta)
-      updateAbs_(qty, nOrders, flags, d_qty, d_nOrders);
-    else {
-      d_qty = qty, d_nOrders = nOrders;
-      updateDelta_(qty, nOrders, flags);
-    }
-    if (m_data.qty.feq(0.0))
-      m_data.qty = m_data.nOrders = 0;
-  }
+      MxFloat &d_qty, MxFloat &d_nOrders);
 
-  void addOrder(Order *order);
+  void addOrder(MxMDOrder *order);
   void delOrder(MxUInt rank);
 
   MxMDOBSide		*m_obSide;
@@ -680,11 +660,42 @@ private:
   MxMDPxLvlData	  	m_data;
   Orders		m_orders;
 };
-typedef ZmHeap<MxMDPxLevel_HeapID,
-	  sizeof(MxMDPxLevel_<ZuNull>)> MxMDPxLevel_Heap;
-typedef MxMDPxLevel_<MxMDPxLevel_Heap> MxMDPxLevel;
 
-typedef MxMDOrder_<MxMDOrder_Heap, MxMDPxLevel> MxMDOrder;
+// FIXME - add match(order) function to orderbook
+// - IOC and FOK/AON as options
+// - takes lambda for fills (maker order, taker order, px, qty)
+// - whatever is left over is added unless FOK/IOC
+// - for external liquidity (consolidated book), match first against
+// internal venue's OB, then against consolidated OB since internal
+// matches are processed immediately and should be prioritized; external
+// matches need to lock the taker while the child IOC orders are executed
+// - return value from lambda indicates whether this match succeeded (
+// if unsuccessful no further matching is attempted)
+// - when matching a L2 feed venue, match entire px levels
+// - when matching consolidated OB, ensure levels are broken up by venue
+// and that venue is available in lambda
+
+struct MxMDPxLevel_HeapID : public ZmHeapSharded {
+  inline static const char *id() { return "MxMDPxLevel"; }
+};
+template <class Heap>
+class MxMDPxLevel__ : public Heap, public ZuObject, public MxMDPxLevel_ {
+  MxMDPxLevel__(const MxMDPxLevel__ &) = delete;
+  MxMDPxLevel__ &operator =(const MxMDPxLevel__ &) = delete;
+
+template <typename, typename> friend class ZuConversionFriend;
+
+friend class MxMDOBSide;
+
+  template <typename ...Args>
+  inline MxMDPxLevel__(Args &&... args) : MxMDPxLevel_(ZuFwd<Args>(args)...) { }
+
+public:
+  inline ~MxMDPxLevel__() { }
+};
+typedef ZmHeap<MxMDPxLevel_HeapID,
+	  sizeof(MxMDPxLevel__<ZuNull>)> MxMDPxLevel_Heap;
+typedef MxMDPxLevel__<MxMDPxLevel_Heap> MxMDPxLevel;
 
 // event handlers (callbacks)
 
@@ -776,7 +787,7 @@ class MxMDAPI MxMDOBSide : public ZuObject {
   MxMDOBSide &operator =(const MxMDOBSide &) = delete;
 
 friend class MxMDOrderBook;
-template <class Heap> friend class MxMDPxLevel_;
+friend class MxMDPxLevel_;
 
   struct PxLevels_HeapID : public ZmHeapSharded {
     inline static const char *id() { return "MxMDOBSide.PxLevels"; }
@@ -1062,26 +1073,22 @@ private:
   ZmRef<MxMDSecHandler>		m_handler;
 };
 
-template <class Heap, class PxLevel>
-ZuInline MxMDOBSide *MxMDOrder_<Heap, PxLevel>::bids_(MxMDOrderBook *ob)
+ZuInline MxMDOBSide *MxMDOrder_::bids_(MxMDOrderBook *ob)
 {
   return ob ? ob->bids() : (MxMDOBSide *)0;
 }
-template <class Heap, class PxLevel>
-ZuInline MxMDOBSide *MxMDOrder_<Heap, PxLevel>::asks_(MxMDOrderBook *ob)
+ZuInline MxMDOBSide *MxMDOrder_::asks_(MxMDOrderBook *ob)
 {
   return ob ? ob->asks() : (MxMDOBSide *)0;
 }
 
-template <class Heap, class PxLevel>
-ZuInline MxMDOrderID2Ref MxMDOrder_<Heap, PxLevel>::OrderID2Accessor::value(
-  const MxMDOrder_<Heap, PxLevel> *o)
+ZuInline MxMDOrderID2Ref MxMDOrder_::OrderID2Accessor::value(
+  const MxMDOrder_ *o)
 {
   return MxMDOrderID2Ref(o->m_orderBook->key(), o->m_id);
 }
-template <class Heap, class PxLevel>
-ZuInline MxMDOrderID3Ref MxMDOrder_<Heap, PxLevel>::OrderID3Accessor::value(
-  const MxMDOrder_<Heap, PxLevel> *o)
+ZuInline MxMDOrderID3Ref MxMDOrder_::OrderID3Accessor::value(
+  const MxMDOrder_ *o)
 {
   return MxMDOrderID3Ref(o->m_orderBook->key(), o->m_obSide->side(), o->m_id);
 }
@@ -1880,32 +1887,6 @@ ZuInline MxMDVenueShard *MxMDVenue::shard(const MxMDShard *shard) const {
 
 ZuInline MxMDLib *MxMDVenueShard::md() const {
   return m_venue->md();
-}
-
-template <class Heap>
-inline void MxMDPxLevel_<Heap>::addOrder(Order *order)
-{
-  if (obSide()->orderBook()->venue()->flags() &
-      (1U<<MxMDVenueFlags::ContigOrderRanks)) {
-    MxUInt rank = order->m_data.rank;
-    typename Orders::Iterator i(m_orders, rank, Orders::GreaterEqual);
-    typename Orders::Node *node;
-    while ((node = i.iterate()) && node->key()->m_data.rank == rank)
-      rank = ++node->key()->m_data.rank;
-  }
-  m_orders.add(order);
-}
-template <class Heap>
-inline void MxMDPxLevel_<Heap>::delOrder(MxUInt rank)
-{
-  m_orders.delVal(rank);
-  if (obSide()->orderBook()->venue()->flags() &
-      (1U<<MxMDVenueFlags::ContigOrderRanks)) {
-    typename Orders::Iterator i(m_orders, rank++, Orders::GreaterEqual);
-    typename Orders::Node *node;
-    while ((node = i.iterate()) && node->key()->m_data.rank == rank++)
-      --node->key()->m_data.rank;
-  }
 }
 
 #endif /* MxMD_HPP */

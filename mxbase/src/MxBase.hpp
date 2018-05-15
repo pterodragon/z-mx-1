@@ -202,9 +202,6 @@ template <typename U> struct MxType :
 #ifndef MxSymSize
 #define MxSymSize 32	// security symbol size (including null terminator)
 #endif
-#ifndef MxCcySize
-#define MxCcySize 4	// currency symbol size
-#endif
 #ifndef MxIDStrSize
 #define MxIDStrSize 32	// ID size (order IDs, trade IDs, etc.)
 #endif
@@ -213,7 +210,6 @@ template <typename U> struct MxType :
 #endif
 
 typedef MxString<MxSymSize> MxSymString;
-typedef MxString<MxCcySize> MxCcyString;
 typedef MxString<MxIDStrSize> MxIDString;
 typedef MxString<MxTxtSize> MxTxtString;
 

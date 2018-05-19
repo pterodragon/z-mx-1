@@ -88,66 +88,66 @@ typedef ZuID MxID; // Note: different than MxIDString
 // MxMatch*<> - SFINAE templates used in declaring overloaded templated
 // functions that need to unambiguously specialize for the various Mx
 // vocabulary types
-template <typename T> struct MxMatchChar_ { enum { OK =
+template <typename T> struct MxIsChar { enum { OK =
   ZuConversion<char, T>::Same }; };
-template <typename T, typename R = void, bool A = MxMatchChar_<T>::OK>
+template <typename T, typename R = void, bool A = MxIsChar<T>::OK>
   struct MxMatchChar;
 template <typename U, typename R>
   struct MxMatchChar<U, R, true> { typedef R T; };
 
-template <typename T> struct MxMatchBool_ { enum { OK =
+template <typename T> struct MxIsBool { enum { OK =
   ZuConversion<bool, T>::Same ||
   ZuConversion<MxBool, T>::Is }; };
-template <typename T, typename R = void, bool A = MxMatchBool_<T>::OK>
+template <typename T, typename R = void, bool A = MxIsBool<T>::OK>
   struct MxMatchBool;
 template <typename U, typename R>
   struct MxMatchBool<U, R, true> { typedef R T; };
 
-template <typename T> struct MxMatchEnum_ { enum { OK =
+template <typename T> struct MxIsEnum { enum { OK =
   ZuConversion<MxEnum, T>::Is }; };
-template <typename T, typename R = void, bool A = MxMatchEnum_<T>::OK>
+template <typename T, typename R = void, bool A = MxIsEnum<T>::OK>
   struct MxMatchEnum;
 template <typename U, typename R>
   struct MxMatchEnum<U, R, true> { typedef R T; };
 
-template <typename T> struct MxMatchFlags_ { enum { OK =
+template <typename T> struct MxIsFlags { enum { OK =
   ZuConversion<MxFlags, T>::Is ||
   ZuConversion<MxFlags64, T>::Is }; };
-template <typename T, typename R = void, bool A = MxMatchFlags_<T>::OK>
+template <typename T, typename R = void, bool A = MxIsFlags<T>::OK>
   struct MxMatchFlags;
 template <typename U, typename R>
   struct MxMatchFlags<U, R, true> { typedef R T; };
 
-template <typename T> struct MxMatchInt_ { enum { OK =
+template <typename T> struct MxIsInt { enum { OK =
   ZuTraits<T>::IsReal &&
   ZuTraits<T>::IsIntegral &&
-  !MxMatchChar_<T>::OK &&
-  !MxMatchBool_<T>::OK &&
-  !MxMatchEnum_<T>::OK &&
-  !MxMatchFlags_<T>::OK }; };
-template <typename T, typename R = void, bool A = MxMatchInt_<T>::OK>
+  !MxIsChar<T>::OK &&
+  !MxIsBool<T>::OK &&
+  !MxIsEnum<T>::OK &&
+  !MxIsFlags<T>::OK }; };
+template <typename T, typename R = void, bool A = MxIsInt<T>::OK>
   struct MxMatchInt;
 template <typename U, typename R>
   struct MxMatchInt<U, R, true> { typedef R T; };
 
-template <typename T> struct MxMatchFloat_ { enum { OK =
+template <typename T> struct MxIsFloat { enum { OK =
   ZuTraits<T>::IsFloatingPoint }; };
-template <typename T, typename R = void, bool A = MxMatchFloat_<T>::OK>
+template <typename T, typename R = void, bool A = MxIsFloat<T>::OK>
   struct MxMatchFloat;
 template <typename U, typename R>
   struct MxMatchFloat<U, R, true> { typedef R T; };
 
-template <typename T> struct MxMatchString_ { enum { OK =
+template <typename T> struct MxIsString { enum { OK =
   ZuConversion<ZuStringN__, T>::Base &&
   !ZuTraits<T>::IsWString }; };
-template <typename T, typename R = void, bool A = MxMatchString_<T>::OK>
+template <typename T, typename R = void, bool A = MxIsString<T>::OK>
   struct MxMatchString;
 template <typename U, typename R>
   struct MxMatchString<U, R, true> { typedef R T; };
 
-template <typename T> struct MxMatchTime_ { enum { OK =
+template <typename T> struct MxIsTime { enum { OK =
   ZuConversion<MxDateTime, T>::Is }; };
-template <typename T, typename R = void, bool A = MxMatchTime_<T>::OK>
+template <typename T, typename R = void, bool A = MxIsTime<T>::OK>
   struct MxMatchTime;
 template <typename U, typename R>
   struct MxMatchTime<U, R, true> { typedef R T; };
@@ -160,11 +160,11 @@ template <typename U, bool OK> struct MxType_Time { };
 template <typename U> struct MxType_Time<U, true> { typedef MxDateTime T; };
 
 template <typename U, bool OK> struct MxType_String :
-  public MxType_Time<U, MxMatchTime_<U>::OK> { };
+  public MxType_Time<U, MxIsTime<U>::OK> { };
 template <typename U> struct MxType_String<U, true> { typedef U T; };
 
 template <typename U, bool OK> struct MxType_Float :
-  public MxType_String<U, MxMatchString_<U>::OK> { };
+  public MxType_String<U, MxIsString<U>::OK> { };
 template <typename U> struct MxType_Float<U, true> { typedef MxFloat T; };
 
 template <bool, bool> struct MxType_Int_;
@@ -173,29 +173,29 @@ template <> struct MxType_Int_<0, 1> { typedef MxInt T; };
 template <> struct MxType_Int_<1, 0> { typedef MxUInt64 T; };
 template <> struct MxType_Int_<1, 1> { typedef MxInt64 T; };
 template <typename U, bool OK> struct MxType_Int :
-  public MxType_Float<U, MxMatchFloat_<U>::OK> { };
+  public MxType_Float<U, MxIsFloat<U>::OK> { };
 template <typename U> struct MxType_Int<U, true> {
   typedef typename MxType_Int_<sizeof(U) <= 4, ZuTraits<U>::IsSigned>::T T;
 };
 
 template <typename U, bool OK> struct MxType_Flags :
-  public MxType_Int<U, MxMatchInt_<U>::OK> { };
+  public MxType_Int<U, MxIsInt<U>::OK> { };
 template <typename U> struct MxType_Flags<U, true> { typedef U T; };
 
 template <typename U, bool OK> struct MxType_Enum :
-  public MxType_Flags<U, MxMatchFlags_<U>::OK> { };
+  public MxType_Flags<U, MxIsFlags<U>::OK> { };
 template <typename U> struct MxType_Enum<U, true> { typedef U T; };
 
 template <typename U, bool OK> struct MxType_Bool :
-  public MxType_Enum<U, MxMatchEnum_<U>::OK> { };
+  public MxType_Enum<U, MxIsEnum<U>::OK> { };
 template <typename U> struct MxType_Bool<U, true> { typedef MxBool T; };
 
 template <typename U, bool OK> struct MxType_Char :
-  public MxType_Bool<U, MxMatchBool_<U>::OK> { };
+  public MxType_Bool<U, MxIsBool<U>::OK> { };
 template <typename U> struct MxType_Char<U, true> { typedef MxChar T; };
 
 template <typename U> struct MxType :
-    public MxType_Char<U, MxMatchChar_<U>::OK> { };
+    public MxType_Char<U, MxIsChar<U>::OK> { };
 
 #define MxDateTimeNow ZtDateNow
 

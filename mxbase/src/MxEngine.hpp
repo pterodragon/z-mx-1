@@ -41,8 +41,8 @@
 
 struct MxEngineState {
   MxEnumValues(Stopped, Starting, Running, Stopping,
-      StartPending,	// started while stopping
-      StopPending);	// stopped while starting
+      StartPending,		// started while stopping
+      StopPending);		// stopped while starting
   MxEnumNames("Stopped", "Starting", "Running", "Stopping",
       "StartPending", "StopPending");
 };

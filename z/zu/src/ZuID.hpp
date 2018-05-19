@@ -17,7 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// "boxed" primitive types (concept terminology from C#)
+// Union of a 64bit integer and a human-readable string
+// (8-byte left-aligned zero-padded)
 
 #ifndef ZuID_HPP
 #define ZuID_HPP
@@ -136,6 +137,7 @@ template <> struct ZuTraits<ZuID> : public ZuTraits<uint64_t> {
 };
 template <> struct ZuCmp<ZuID> : public ZuCmp0<uint64_t> {
   inline static const ZuID &null() { static const ZuID v; return v; }
+  ZuInline static bool null(uint64_t id) { return !id; }
 };
 template <> struct ZuPrint<ZuID> : public ZuPrintFn { };
 

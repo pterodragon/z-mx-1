@@ -68,13 +68,13 @@ public:
 
 private:
   template <typename U, typename R = void, typename V = Char,
-    bool B = ZuPrint<U>::Delegate> struct FromPDelegate;
+    bool B = ZuPrint<U>::Delegate> struct MatchPDelegate;
   template <typename U, typename R>
-  struct FromPDelegate<U, R, char, true> { typedef R T; };
+  struct MatchPDelegate<U, R, char, true> { typedef R T; };
   template <typename U, typename R = void, typename V = Char,
-    bool B = ZuPrint<U>::Buffer> struct FromPBuffer;
+    bool B = ZuPrint<U>::Buffer> struct MatchPBuffer;
   template <typename U, typename R>
-  struct FromPBuffer<U, R, char, true> { typedef R T; };
+  struct MatchPBuffer<U, R, char, true> { typedef R T; };
 
   template <typename U, typename R = void, typename V = Char,
     bool S = ZuTraits<U>::IsString,
@@ -112,10 +112,10 @@ protected:
     // data()[m_length = length] = 0;
   }
 
-  template <typename P> inline typename FromPDelegate<P>::T init(const P &p) {
+  template <typename P> inline typename MatchPDelegate<P>::T init(const P &p) {
     ZuPrint<P>::print(*static_cast<StringN *>(this), p);
   }
-  template <typename P> inline typename FromPBuffer<P>::T init(const P &p) {
+  template <typename P> inline typename MatchPBuffer<P>::T init(const P &p) {
     unsigned length = ZuPrint<P>::length(p);
     if (length >= m_size)
       data()[m_length = 0] = 0;
@@ -129,10 +129,12 @@ protected:
     data()[m_length += length] = 0;
   }
 
-  template <typename P> inline typename FromPDelegate<P>::T append(const P &p) {
+  template <typename P>
+  inline typename MatchPDelegate<P>::T append(const P &p) {
     ZuPrint<P>::print(*static_cast<StringN *>(this), p);
   }
-  template <typename P> inline typename FromPBuffer<P>::T append(const P &p) {
+  template <typename P>
+  inline typename MatchPBuffer<P>::T append(const P &p) {
     unsigned length = ZuPrint<P>::length(p);
     if (m_length + length >= m_size) return;
     data()[m_length += ZuPrint<P>::print(data() + m_length, length, p)] = 0;
@@ -345,17 +347,17 @@ public:
 
 private:
   template <typename U, typename R = void,
-    bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct FromPrint;
+    bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct MatchPrint;
   template <typename U, typename R>
-  struct FromPrint<U, R, true> { typedef R T; };
+  struct MatchPrint<U, R, true> { typedef R T; };
 
   template <typename U, typename R = void,
     bool S = ZuTraits<U>::IsString &&
 	     !ZuTraits<U>::IsWString &&
 	     !ZuTraits<U>::IsPrimitive
-    > struct FromString;
+    > struct MatchString;
   template <typename U, typename R>
-  struct FromString<U, R, true> { typedef R T; };
+  struct MatchString<U, R, true> { typedef R T; };
 
   template <typename U, typename R = Private,
     bool E = ZuConversion<U, unsigned>::Same ||
@@ -379,32 +381,32 @@ public:
 
   // string types
   template <typename S>
-  ZuInline ZuStringN(S &&s_, typename FromString<S, Private>::T *_ = 0) :
+  ZuInline ZuStringN(S &&s_, typename MatchString<S, Private>::T *_ = 0) :
       Base(Base::Nop) {
     ZuString s(ZuFwd<S>(s_));
     this->m_size = N;
     this->init(s.data(), s.length());
   }
   template <typename S>
-  ZuInline typename FromString<S, ZuStringN &>::T operator =(S &&s_) {
+  ZuInline typename MatchString<S, ZuStringN &>::T operator =(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     this->init(s.data(), s.length());
     return *this;
   }
   template <typename S>
-  ZuInline typename FromString<S, ZuStringN &>::T operator +=(S &&s_) {
+  ZuInline typename MatchString<S, ZuStringN &>::T operator +=(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     this->append(s.data(), s.length());
     return *this;
   }
   template <typename S>
-  ZuInline typename FromString<S, ZuStringN &>::T operator <<(S &&s_) {
+  ZuInline typename MatchString<S, ZuStringN &>::T operator <<(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     this->append(s.data(), s.length());
     return *this;
   }
   template <typename S>
-  ZuInline typename FromString<S, ZuStringN &>::T update(S &&s_) {
+  ZuInline typename MatchString<S, ZuStringN &>::T update(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     if (s.length()) this->init(s.data(), s.length());
     return *this;
@@ -440,23 +442,23 @@ public:
 
   // printable types
   template <typename P>
-  ZuInline ZuStringN(const P &p, typename FromPrint<P, Private>::T *_ = 0) :
+  ZuInline ZuStringN(const P &p, typename MatchPrint<P, Private>::T *_ = 0) :
       Base(Base::Nop) {
     this->m_size = N;
     this->init(p);
   }
   template <typename P>
-  ZuInline typename FromPrint<P, ZuStringN &>::T operator =(const P &p) {
+  ZuInline typename MatchPrint<P, ZuStringN &>::T operator =(const P &p) {
     this->init(p);
     return *this;
   }
   template <typename P>
-  ZuInline typename FromPrint<P, ZuStringN &>::T operator +=(const P &p) {
+  ZuInline typename MatchPrint<P, ZuStringN &>::T operator +=(const P &p) {
     this->append(p);
     return *this;
   }
   template <typename P>
-  ZuInline typename FromPrint<P, ZuStringN &>::T operator <<(const P &p) {
+  ZuInline typename MatchPrint<P, ZuStringN &>::T operator <<(const P &p) {
     this->append(p);
     return *this;
   }
@@ -507,9 +509,9 @@ private:
     bool S = ZuTraits<U>::IsString &&
 	     ZuTraits<U>::IsWString &&
 	     !ZuTraits<U>::IsPrimitive
-    > struct FromString;
+    > struct MatchString;
   template <typename U, typename R>
-  struct FromString<U, R, true> { typedef R T; };
+  struct MatchString<U, R, true> { typedef R T; };
 
   template <typename U, typename R = Private,
     bool E = ZuConversion<U, unsigned>::Same ||
@@ -533,32 +535,32 @@ public:
 
   // string types
   template <typename S>
-  ZuInline ZuWStringN(S &&s_, typename FromString<S, Private>::T *_ = 0) :
+  ZuInline ZuWStringN(S &&s_, typename MatchString<S, Private>::T *_ = 0) :
       Base(Base::Nop) {
     ZuWString s(ZuFwd<S>(s_));
     this->m_size = N;
     this->init(s.data(), s.length());
   }
   template <typename S>
-  ZuInline typename FromString<S, ZuWStringN &>::T operator =(S &&s_) {
+  ZuInline typename MatchString<S, ZuWStringN &>::T operator =(S &&s_) {
     ZuWString s(ZuFwd<S>(s_));
     this->init(s.data(), s.length());
     return *this;
   }
   template <typename S>
-  ZuInline typename FromString<S, ZuWStringN &>::T operator +=(S &&s_) {
+  ZuInline typename MatchString<S, ZuWStringN &>::T operator +=(S &&s_) {
     ZuWString s(ZuFwd<S>(s_));
     this->append(s.data(), s.length());
     return *this;
   }
   template <typename S>
-  ZuInline typename FromString<S, ZuWStringN &>::T operator <<(S &&s_) {
+  ZuInline typename MatchString<S, ZuWStringN &>::T operator <<(S &&s_) {
     ZuWString s(ZuFwd<S>(s_));
     this->append(s.data(), s.length());
     return *this;
   }
   template <typename S>
-  ZuInline typename FromString<S, ZuWStringN &>::T update(S &&s_) {
+  ZuInline typename MatchString<S, ZuWStringN &>::T update(S &&s_) {
     ZuWString s(ZuFwd<S>(s_));
     if (s.length()) this->init(s.data(), s.length());
     return *this;

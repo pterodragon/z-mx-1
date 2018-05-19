@@ -185,14 +185,14 @@ private:
 
   template <typename U, typename R = void,
 	   bool B = ZuPrint<U>::Delegate && !ZuTraits<U>::IsString>
-  struct FromPDelegate;
+  struct MatchPDelegate;
   template <typename U, typename R>
-  struct FromPDelegate<U, R, 1> { typedef R T; };
+  struct MatchPDelegate<U, R, 1> { typedef R T; };
   template <typename U, typename R = void,
 	   bool B = ZuPrint<U>::Buffer && !ZuTraits<U>::IsString>
-  struct FromPBuffer;
+  struct MatchPBuffer;
   template <typename U, typename R>
-  struct FromPBuffer<U, R, 1> { typedef R T; };
+  struct MatchPBuffer<U, R, 1> { typedef R T; };
 
   template <typename S> inline typename ZuIsString<S>::T append(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
@@ -201,10 +201,10 @@ private:
     if (ZuUnlikely(write(s.data(), s.length(), &e) != Zi::OK))
       throw e;
   }
-  template <typename P> inline typename FromPDelegate<P>::T append(P &&p) {
+  template <typename P> inline typename MatchPDelegate<P>::T append(P &&p) {
     ZuPrint<P>::print(*this, ZuFwd<P>(p));
   }
-  template <typename P> inline typename FromPBuffer<P>::T append(const P &p) {
+  template <typename P> inline typename MatchPBuffer<P>::T append(const P &p) {
     unsigned len = ZuPrint<P>::length(p);
     char *buf;
 #ifdef _MSC_VER

@@ -99,27 +99,27 @@ private:
   };
 
   template <typename U, typename R = void, bool OK = IsStrLiteral<U>::OK>
-  struct FromStrLiteral;
+  struct MatchStrLiteral;
   template <typename U, typename R>
-  struct FromStrLiteral<U, R, 1> { typedef R T; };
+  struct MatchStrLiteral<U, R, 1> { typedef R T; };
   template <typename U, typename R = void, bool OK = IsCString<U>::OK>
-  struct FromCString;
+  struct MatchCString;
   template <typename U, typename R>
-  struct FromCString<U, R, 1> { typedef R T; };
+  struct MatchCString<U, R, 1> { typedef R T; };
   template <typename U, typename R = void, bool OK = IsOtherArray<U>::OK>
-  struct FromOtherArray;
+  struct MatchOtherArray;
   template <typename U, typename R>
-  struct FromOtherArray<U, R, 1> { typedef R T; };
+  struct MatchOtherArray<U, R, 1> { typedef R T; };
 
 public:
   // compile-time length from primitive array / string literal
   template <typename A>
-  ZuInline ZuArray(A &&a, typename FromStrLiteral<A, Private>::T *_ = 0) :
+  ZuInline ZuArray(A &&a, typename MatchStrLiteral<A, Private>::T *_ = 0) :
     m_data(&a[0]),
     m_length((ZuUnlikely(!(sizeof(a) / sizeof(a[0])) || !a[0])) ? 0U :
       (sizeof(a) / sizeof(a[0])) - 1U) { }
   template <typename A>
-  ZuInline typename FromStrLiteral<A, ZuArray &>::T operator =(A &&a) {
+  ZuInline typename MatchStrLiteral<A, ZuArray &>::T operator =(A &&a) {
     m_data = &a[0];
     m_length = !sizeof(a) ? 0U : !a[0] ? 0U : (sizeof(a) / sizeof(a[0])) - 1U;
     m_length = (ZuUnlikely(!(sizeof(a) / sizeof(a[0])) || !a[0])) ? 0U :
@@ -129,10 +129,10 @@ public:
 
   // length from deferred strlen
   template <typename A>
-  ZuInline ZuArray(A &&a, typename FromCString<A, Private>::T *_ = 0) :
+  ZuInline ZuArray(A &&a, typename MatchCString<A, Private>::T *_ = 0) :
 	m_data(a), m_length(!a ? 0 : -1) { }
   template <typename A>
-  ZuInline typename FromCString<A, ZuArray &>::T operator =(A &&a) {
+  ZuInline typename MatchCString<A, ZuArray &>::T operator =(A &&a) {
     m_data = a;
     m_length = !a ? 0 : -1;
     return *this;
@@ -140,11 +140,11 @@ public:
 
   // length from passed type
   template <typename A>
-  ZuInline ZuArray(A &&a, typename FromOtherArray<A, Private>::T *_ = 0) :
+  ZuInline ZuArray(A &&a, typename MatchOtherArray<A, Private>::T *_ = 0) :
 	m_data(ZuTraits<A>::data(a)),
 	m_length(!m_data ? 0 : (int)ZuTraits<A>::length(a)) { }
   template <typename A>
-  ZuInline typename FromOtherArray<A, ZuArray &>::T operator =(A &&a) {
+  ZuInline typename MatchOtherArray<A, ZuArray &>::T operator =(A &&a) {
     m_data = ZuTraits<A>::data(a);
     m_length = !m_data ? 0 : (int)ZuTraits<A>::length(a);
     return *this;

@@ -171,9 +171,9 @@ template <typename ...Args> class ZmFn : public ZmAnyFn {
     enum { OK = !ZuConversion<ZmAnyFn, T>::Is && IsFunctor_<F>::OK };
   };
   template <typename T, typename R = void, bool OK = IsFunctor<T>::OK>
-  struct FromFunctor;
+  struct MatchFunctor;
   template <typename T_, typename R>
-  struct FromFunctor<T_, R, 1> { typedef R T; };
+  struct MatchFunctor<T_, R, 1> { typedef R T; };
 
 public:
   inline ZmFn() : ZmAnyFn() { }
@@ -193,10 +193,10 @@ private:
 public:
   // syntactic sugar for lambdas
   template <typename L>
-  ZuInline ZmFn(L &&l, typename FromFunctor<L, Private>::T *_ = 0) :
+  ZuInline ZmFn(L &&l, typename MatchFunctor<L, Private>::T *_ = 0) :
     ZmAnyFn(lambdaFn(ZuFwd<L>(l))) { }
   template <typename L, typename O>
-  ZuInline ZmFn(L &&l, O &&o, typename FromFunctor<L, Private>::T *_ = 0) :
+  ZuInline ZmFn(L &&l, O &&o, typename MatchFunctor<L, Private>::T *_ = 0) :
     ZmAnyFn(lambdaFn(ZuFwd<L>(l), ZuFwd<O>(o))) { }
 
   inline ZmFn &operator =(const ZmFn &fn) {

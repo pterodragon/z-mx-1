@@ -98,13 +98,13 @@ public:
 
 private:
   template <typename U, typename R = void, typename V = T,
-    bool B = ZuPrint<U>::Delegate> struct FromPDelegate;
+    bool B = ZuPrint<U>::Delegate> struct MatchPDelegate;
   template <typename U, typename R>
-  struct FromPDelegate<U, R, char, true> { typedef R T; };
+  struct MatchPDelegate<U, R, char, true> { typedef R T; };
   template <typename U, typename R = void, typename V = T,
-    bool B = ZuPrint<U>::Buffer> struct FromPBuffer;
+    bool B = ZuPrint<U>::Buffer> struct MatchPBuffer;
   template <typename U, typename R>
-  struct FromPBuffer<U, R, char, true> { typedef R T; };
+  struct MatchPBuffer<U, R, char, true> { typedef R T; };
 
   template <typename U, typename R = void,
     typename V = T,
@@ -146,10 +146,10 @@ protected:
     Base::m_length = 1;
   }
 
-  template <typename P> inline typename FromPDelegate<P>::T init(const P &p) {
+  template <typename P> inline typename MatchPDelegate<P>::T init(const P &p) {
     ZuPrint<P>::print(*static_cast<ArrayN *>(this), p);
   }
-  template <typename P> inline typename FromPBuffer<P>::T init(const P &p) {
+  template <typename P> inline typename MatchPBuffer<P>::T init(const P &p) {
     unsigned length = ZuPrint<P>::length(p);
     if (length > Base::m_size)
       Base::m_length = 0;
@@ -172,11 +172,11 @@ protected:
   }
 
   template <typename P>
-  inline typename FromPDelegate<P>::T append_(const P &p) {
+  inline typename MatchPDelegate<P>::T append_(const P &p) {
     ZuPrint<P>::print(*static_cast<ArrayN *>(this), p);
   }
   template <typename P>
-  inline typename FromPBuffer<P>::T append_(const P &p) {
+  inline typename MatchPBuffer<P>::T append_(const P &p) {
     unsigned length = ZuPrint<P>::length(p);
     if (Base::m_length + length > Base::m_size) return;
     Base::m_length += ZuPrint<P>::print(data() + Base::m_length, length, p);
@@ -371,44 +371,44 @@ public:
 
 private:
   template <typename U, typename R = void, typename V = T,
-    bool A = ZuConversion<ZuArrayN___, U>::Base> struct FromArrayN;
+    bool A = ZuConversion<ZuArrayN___, U>::Base> struct MatchArrayN;
   template <typename U, typename R>
-  struct FromArrayN<U, R, T, true> { typedef R T; };
+  struct MatchArrayN<U, R, T, true> { typedef R T; };
 
   template <typename U, typename R = void, typename V = T,
     bool A = !ZuConversion<ZuArrayN___, U>::Base &&
       (!ZuTraits<U>::IsString || ZuTraits<U>::IsWString) &&
-      ZuTraits<U>::IsArray> struct FromArray;
+      ZuTraits<U>::IsArray> struct MatchArray;
   template <typename U, typename R>
-  struct FromArray<U, R, T, true> { typedef R T; };
+  struct MatchArray<U, R, T, true> { typedef R T; };
 
   template <typename U, typename R = void, typename V = T,
-    bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct FromPrint;
+    bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct MatchPrint;
   template <typename U, typename R>
-  struct FromPrint<U, R, char, true> { typedef R T; };
+  struct MatchPrint<U, R, char, true> { typedef R T; };
   template <typename U, typename R = void, typename V = T,
-    bool B = ZuTraits<U>::IsBoxed> struct FromBoxed { };
+    bool B = ZuTraits<U>::IsBoxed> struct MatchBoxed { };
   template <typename U, typename R>
-  struct FromBoxed<U, R, char, true> { typedef R T; };
+  struct MatchBoxed<U, R, char, true> { typedef R T; };
 
   template <typename U, typename R = void, typename V = T,
     bool S = ZuTraits<U>::IsString && !ZuTraits<U>::IsWString
-    > struct FromString;
+    > struct MatchString;
   template <typename U, typename R>
-  struct FromString<U, R, char, true> { typedef R T; };
+  struct MatchString<U, R, char, true> { typedef R T; };
 
   template <typename U, typename R = void, typename V = T,
     bool E =
       (!ZuConversion<char, V>::Same ||
-       ((!ZuPrint<U>::OK || // avoid FromPrint ambiguity
+       ((!ZuPrint<U>::OK || // avoid MatchPrint ambiguity
 	 ZuPrint<U>::String) &&
-	(!ZuTraits<U>::IsString || // avoid FromString ambiguity
+	(!ZuTraits<U>::IsString || // avoid MatchString ambiguity
 	 ZuTraits<U>::IsWString))) &&
-      !ZuTraits<U>::IsArray && // avoid FromArray ambiguity
+      !ZuTraits<U>::IsArray && // avoid MatchArray ambiguity
       ZuConversion<U, V>::Exists
-    > struct FromElem;
+    > struct MatchElem;
   template <typename U, typename R>
-  struct FromElem<U, R, T, true> { typedef R T; };
+  struct MatchElem<U, R, T, true> { typedef R T; };
 
   template <typename U, typename R = Private, typename V = T,
     bool E = ZuConversion<U, unsigned>::Same ||
@@ -421,11 +421,11 @@ private:
   template <typename U, typename R = Private, typename V = T,
     bool E =
       (!ZuConversion<char, V>::Same ||
-       ((!ZuPrint<U>::OK || // avoid FromPrint ambiguity
+       ((!ZuPrint<U>::OK || // avoid MatchPrint ambiguity
 	 ZuPrint<U>::String) &&
-	(!ZuTraits<U>::IsString || // avoid FromString ambiguity
+	(!ZuTraits<U>::IsString || // avoid MatchString ambiguity
 	 ZuTraits<U>::IsWString))) &&
-      !ZuTraits<U>::IsArray && // avoid FromArray ambiguity
+      !ZuTraits<U>::IsArray && // avoid MatchArray ambiguity
       !ZuConversion<U, unsigned>::Same && // avoid CtorLength ambiguity
       !ZuConversion<U, int>::Same &&      // ''
       !ZuConversion<U, size_t>::Same &&   // ''
@@ -453,49 +453,49 @@ public:
 
   // ZuArrayN types
   template <typename A>
-  ZuInline ZuArrayN(const A &a, typename FromArrayN<A, Private>::T *_ = 0) :
+  ZuInline ZuArrayN(const A &a, typename MatchArrayN<A, Private>::T *_ = 0) :
       Base(Base::Nop) {
     Base::m_size = N;
     this->init(a.data(), a.length());
   }
   template <typename A>
-  ZuInline typename FromArrayN<A, ZuArrayN &>::T operator =(const A &a) {
+  ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator =(const A &a) {
     this->init(a.data(), a.length());
     return *this;
   }
   template <typename A>
-  ZuInline typename FromArrayN<A, ZuArrayN &>::T operator +=(const A &a) {
+  ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator +=(const A &a) {
     this->append_(a.data(), a.length());
     return *this;
   }
   template <typename A>
-  ZuInline typename FromArrayN<A, ZuArrayN &>::T operator <<(const A &a) {
+  ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator <<(const A &a) {
     this->append_(a.data(), a.length());
     return *this;
   }
 
   // array types (other than ZuArrayN<>)
   template <typename A>
-  ZuInline ZuArrayN(A &&a_, typename FromArray<A, Private>::T *_ = 0) :
+  ZuInline ZuArrayN(A &&a_, typename MatchArray<A, Private>::T *_ = 0) :
       Base(Base::Nop) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     Base::m_size = N;
     this->init(a.data(), a.length());
   }
   template <typename A>
-  ZuInline typename FromArray<A, ZuArrayN &>::T operator =(A &&a_) {
+  ZuInline typename MatchArray<A, ZuArrayN &>::T operator =(A &&a_) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     this->init(a.data(), a.length());
     return *this;
   }
   template <typename A>
-  ZuInline typename FromArray<A, ZuArrayN &>::T operator +=(A &&a_) {
+  ZuInline typename MatchArray<A, ZuArrayN &>::T operator +=(A &&a_) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     this->append_(a.data(), a.length());
     return *this;
   }
   template <typename A>
-  ZuInline typename FromArray<A, ZuArrayN &>::T operator <<(A &&a_) {
+  ZuInline typename MatchArray<A, ZuArrayN &>::T operator <<(A &&a_) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     this->append_(a.data(), a.length());
     return *this;
@@ -503,28 +503,28 @@ public:
 
   // printable types (if this is a char array)
   template <typename P>
-  ZuInline ZuArrayN(const P &p, typename FromPrint<P, Private>::T *_ = 0) :
+  ZuInline ZuArrayN(const P &p, typename MatchPrint<P, Private>::T *_ = 0) :
       Base(Base::Nop) {
     Base::m_size = N;
     this->init(p);
   }
   template <typename P>
-  ZuInline typename FromPrint<P, ZuArrayN &>::T operator =(const P &p) {
+  ZuInline typename MatchPrint<P, ZuArrayN &>::T operator =(const P &p) {
     this->init(p);
     return *this;
   }
   template <typename P>
-  ZuInline typename FromPrint<P, ZuArrayN &>::T operator +=(const P &p) {
+  ZuInline typename MatchPrint<P, ZuArrayN &>::T operator +=(const P &p) {
     this->append_(p);
     return *this;
   }
   template <typename P>
-  ZuInline typename FromPrint<P, ZuArrayN &>::T operator <<(const P &p) {
+  ZuInline typename MatchPrint<P, ZuArrayN &>::T operator <<(const P &p) {
     this->append_(p);
     return *this;
   }
   template <typename B>
-  ZuInline typename FromBoxed<B, ZuArrayN &>::T
+  ZuInline typename MatchBoxed<B, ZuArrayN &>::T
       print(const B &b, int precision = -1, int comma = 0, int pad = -1) {
     unsigned length = b.length(precision, comma);
     if (Base::m_length + length > Base::m_size) return;
@@ -535,26 +535,26 @@ public:
 
   // string types (if this is a char array)
   template <typename S>
-  ZuInline ZuArrayN(S &&s_, typename FromString<S, Private>::T *_ = 0) :
+  ZuInline ZuArrayN(S &&s_, typename MatchString<S, Private>::T *_ = 0) :
       Base(Base::Nop) {
     ZuString s(ZuFwd<S>(s_));
     Base::m_size = N;
     this->init(s.data(), s.length());
   }
   template <typename S>
-  ZuInline typename FromString<S, ZuArrayN &>::T operator =(S &&s_) {
+  ZuInline typename MatchString<S, ZuArrayN &>::T operator =(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     this->init(s.data(), s.length());
     return *this;
   }
   template <typename S>
-  ZuInline typename FromString<S, ZuArrayN &>::T operator +=(S &&s_) {
+  ZuInline typename MatchString<S, ZuArrayN &>::T operator +=(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     this->append_(s.data(), s.length());
     return *this;
   }
   template <typename S>
-  ZuInline typename FromString<S, ZuArrayN &>::T operator <<(S &&s_) {
+  ZuInline typename MatchString<S, ZuArrayN &>::T operator <<(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     this->append_(s.data(), s.length());
     return *this;
@@ -581,17 +581,17 @@ public:
     this->init(ZuFwd<E>(e));
   }
   template <typename E>
-  ZuInline typename FromElem<E, ZuArrayN &>::T operator =(E &&e) {
+  ZuInline typename MatchElem<E, ZuArrayN &>::T operator =(E &&e) {
     this->init(ZuFwd<E>(e));
     return *this;
   }
   template <typename E>
-  ZuInline typename FromElem<E, ZuArrayN &>::T operator +=(E &&e) {
+  ZuInline typename MatchElem<E, ZuArrayN &>::T operator +=(E &&e) {
     this->append_(ZuFwd<E>(e));
     return *this;
   }
   template <typename E>
-  ZuInline typename FromElem<E, ZuArrayN &>::T operator <<(E &&e) {
+  ZuInline typename MatchElem<E, ZuArrayN &>::T operator <<(E &&e) {
     this->append_(ZuFwd<E>(e));
     return *this;
   }

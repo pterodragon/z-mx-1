@@ -94,21 +94,23 @@ public:
     return *this;
   }
 
+private:
   template <typename U, typename R = void,
     bool S = ZuTraits<U>::IsString &&
 	     !ZuTraits<U>::IsWString &&
-	     !ZuConversion<ZuString, U>::Is> struct FromString;
+	     !ZuConversion<ZuString, U>::Is> struct MatchString;
   template <typename U, typename R>
-  struct FromString<U, R, true> { typedef R T; };
+  struct MatchString<U, R, true> { typedef R T; };
   template <typename U, typename R = void,
-    bool B = ZuPrint<U>::Delegate> struct FromPDelegate;
+    bool B = ZuPrint<U>::Delegate> struct MatchPDelegate;
   template <typename U, typename R>
-  struct FromPDelegate<U, R, true> { typedef R T; };
+  struct MatchPDelegate<U, R, true> { typedef R T; };
   template <typename U, typename R = void,
-    bool B = ZuPrint<U>::Buffer> struct FromPBuffer;
+    bool B = ZuPrint<U>::Buffer> struct MatchPBuffer;
   template <typename U, typename R>
-  struct FromPBuffer<U, R, true> { typedef R T; };
+  struct MatchPBuffer<U, R, true> { typedef R T; };
 
+public:
   ZuInline ZmStream &operator <<(char c) {
     m_strFn(ZuString(&c, 1));
     return *this;
@@ -118,17 +120,17 @@ public:
     return *this;
   }
   template <typename S>
-  ZuInline typename FromString<S, ZmStream &>::T operator <<(S &&s_) {
+  ZuInline typename MatchString<S, ZmStream &>::T operator <<(S &&s_) {
     m_strFn(ZuString(ZuFwd<S>(s_)));
     return *this;
   }
   template <typename P>
-  ZuInline typename FromPDelegate<P, ZmStream &>::T operator <<(const P &p) {
+  ZuInline typename MatchPDelegate<P, ZmStream &>::T operator <<(const P &p) {
     ZuPrint<P>::print(*this, p);
     return *this;
   }
   template <typename P>
-  ZuInline typename FromPBuffer<P, ZmStream &>::T operator <<(const P &p) {
+  ZuInline typename MatchPBuffer<P, ZmStream &>::T operator <<(const P &p) {
     m_bufFn(ZmStreamBuf(p));
     return *this;
   }

@@ -46,6 +46,7 @@
 #include <ZvThreadCf.hpp>
 #include <ZvCmd.hpp>
 
+#include <MxEngine.hpp>
 #include <MxMultiplex.hpp>
 
 inline auto MxMDFileDiag(ZuString path, ZeError e) {
@@ -443,7 +444,8 @@ friend class Snapper;
 
   class Recorder;
 friend class Recorder;
-  class Recorder {
+  class Recorder : public MxEngineApp, public MxEngine, public MxLink<Recorder>
+  {
   public:
     typedef ZmPLock Lock;
     typedef ZmGuard<Lock> Guard;
@@ -454,14 +456,93 @@ friend class Recorder;
       inline static const char *id() { return "MxMD.SnapQueue"; }
     };
   public:
-    typedef ZmList<ZmRef<Msg>,
+    typedef ZmList<ZmRef<MxMDStream::Msg>,
 	      ZmListObject<ZuNull,
 		ZmListLock<ZmNoLock,
 		  ZmListHeapID<SnapQueue_HeapID> > > > SnapQueue;
 
-    inline Recorder(MxMDCore *core) : m_core(core) { }
+    inline Recorder(MxMDCore *core)
+        :
+            MxEngine(this),
+            MxLink<Recorder>(*this, "recorder"),
+            m_core(core)
+    {
+        appUpdateLink(this);
+    }
 
     inline ~Recorder() { m_file.close(); }
+
+    MxID id() const { return MxAnyTx::id(); }
+
+    // Engine Management
+    virtual void addEngine(MxEngine *){}
+    virtual void delEngine(MxEngine *){}
+    virtual void engineState(MxEngine *, MxEnum){}
+
+    // Link Management
+    virtual void updateLink(MxAnyLink *){}
+    virtual void delLink(MxAnyLink *){}
+    virtual void linkState(MxAnyLink *, MxEnum, ZuString txt){}
+
+    // Pool Management
+    virtual void updateTxPool(MxAnyTxPool *){}
+    virtual void delTxPool(MxAnyTxPool *){}
+
+    // Queue Management
+    virtual void addQueue(MxID id, bool tx, MxQueue *){}
+    virtual void delQueue(MxID id, bool tx){}
+
+    // Rx (called from engine's rx thread)
+    virtual MxEngineApp::ProcessFn processFn(){ return {}; }
+
+    // Tx (called from engine's tx thread)
+    virtual void sent(MxAnyLink *, MxQMsg *){}
+    virtual void aborted(MxAnyLink *, MxQMsg *){}
+    virtual void archive(MxAnyLink *, MxQMsg *){}
+    virtual ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo){ return 0; }
+
+    // Traffic Logging (logThread)
+    /* Example usage:
+    app.log(id, MxTraffic([](const Msg *msg, ZmTime &stamp, ZuString &data) {
+      stamp = msg->stamp();
+      data = msg->buf();
+    }, msg)); */
+    virtual void log(MxMsgID, MxTraffic){}
+
+    ZmTime reconnectInterval(unsigned reconnects){ return ZmTime{1}; }
+    ZmTime reRequestInterval(){ return ZmTime{1}; }
+
+    // Rx
+    void request(const MxQueue::Gap &prev, const MxQueue::Gap &now){}
+    void reRequest(const MxQueue::Gap &now){}
+
+    // Tx
+    bool send_(MxQMsg *msg, bool more)
+    {
+        ZeError e;
+        write(static_cast<const Frame*>(msg->payload->ptr()), &e);
+
+        sent_(msg);
+        return true;
+    }
+
+    bool resend_(MxQMsg *msg, bool more){ return true; }
+
+    bool sendGap_(const MxQueue::Gap &gap, bool more){ return true; }
+    bool resendGap_(const MxQueue::Gap &gap, bool more){ return true; }
+
+    virtual void update(ZvCf *cf){}
+    virtual void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo){}
+
+    virtual void connect()
+    {
+        MxAnyLink::connected();
+    }
+
+    virtual void disconnect()
+    {
+        MxAnyLink::disconnected();
+    }
 
     inline ZiFile::Path path() const {
       ReadGuard guard(m_ioLock);
@@ -593,7 +674,7 @@ friend class Recorder;
 	{
 	  Guard guard(m_ioLock);
 	  if (m_snapQueuing) {
-	    ZmRef<Msg> msg = new Msg();
+	    ZmRef<MxMDStream::Msg> msg = new MxMDStream::Msg();
 	    if (frame->len > sizeof(Buf)) {
 	      broadcast.shift2();
 	      guard.unlock();
@@ -610,15 +691,10 @@ friend class Recorder;
 	    memcpy(msg->frame(), frame, sizeof(Frame) + frame->len);
 	    m_snapQueue.push(msg);
 	  } else {
-	    ZeError e;
-	    if (ZuUnlikely(write(frame, &e) != Zi::OK)) {
-	      broadcast.shift2();
-	      ZiFile::Path path = m_path;
-	      guard.unlock();
-	      snapStop();
-	      m_core->raise(ZeEVENT(Error, MxMDFileDiag(path, e)));
-	      break;
-	    }
+        ZuPOD<const Frame*> pod;
+        pod.data() = frame;
+        MxQMsg msg(MxFlags{}, ZmTime{}, ZuRef<ZuAnyPOD>{&pod});
+        send(&msg);////////////////////////////////////////////////////////
 	  }
 	}
 	broadcast.shift2();
@@ -642,7 +718,7 @@ friend class Recorder;
     void snap() {
       {
 	Guard guard(m_ioLock);
-	m_snapMsg = new Msg();
+	m_snapMsg = new MxMDStream::Msg();
       }
       bool failed = !m_core->snapshot(*this);
       {
@@ -653,7 +729,7 @@ friend class Recorder;
 	  recvStop();
 	  return;
 	}
-	while (ZmRef<Msg> msg = m_snapQueue.shift()) {
+	while (ZmRef<MxMDStream::Msg> msg = m_snapQueue.shift()) {
 	  ZeError e;
 	  if (ZuUnlikely(write(msg->frame(), &e)) != Zi::OK) {
 	    ZiFile::Path path = m_path;
@@ -698,7 +774,7 @@ friend class Recorder;
     Lock		m_ioLock;
     ZiFile::Path	  m_path;
     ZiFile		  m_file;
-    ZmRef<Msg>		  m_snapMsg;
+    ZmRef<MxMDStream::Msg>		  m_snapMsg;
     bool		  m_snapQueuing;
     SnapQueue		  m_snapQueue;
   };

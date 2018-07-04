@@ -450,13 +450,14 @@ friend class Recorder;
     typedef ZmPLock Lock;
     typedef ZmGuard<Lock> Guard;
     typedef ZmReadGuard<Lock> ReadGuard;
+    typedef MxMDStream::Msg Msg;
 
   private:
     struct SnapQueue_HeapID {
       inline static const char *id() { return "MxMD.SnapQueue"; }
     };
   public:
-    typedef ZmList<ZmRef<MxMDStream::Msg>,
+    typedef ZmList<ZmRef<Msg>,
 	      ZmListObject<ZuNull,
 		ZmListLock<ZmNoLock,
 		  ZmListHeapID<SnapQueue_HeapID> > > > SnapQueue;
@@ -520,7 +521,7 @@ friend class Recorder;
     bool send_(MxQMsg *msg, bool more)
     {
         ZeError e;
-        write(static_cast<const Frame*>(msg->payload->ptr()), &e);
+        write(msg->payload->template as<MxMDStream::Msg_>().frame(), &e);
 
         sent_(msg);
         return true;
@@ -674,7 +675,7 @@ friend class Recorder;
 	{
 	  Guard guard(m_ioLock);
 	  if (m_snapQueuing) {
-	    ZmRef<MxMDStream::Msg> msg = new MxMDStream::Msg();
+	    ZmRef<Msg> msg = new Msg();
 	    if (frame->len > sizeof(Buf)) {
 	      broadcast.shift2();
 	      guard.unlock();
@@ -688,13 +689,12 @@ friend class Recorder;
 		  })));
 	      break;
 	    }
-	    memcpy(msg->frame(), frame, sizeof(Frame) + frame->len);
+	    memcpy(msg->data().frame(), frame, sizeof(Frame) + frame->len);
 	    m_snapQueue.push(msg);
 	  } else {
-        ZuPOD<const Frame*> pod;
-        pod.data() = frame;
-        MxQMsg msg(MxFlags{}, ZmTime{}, ZuRef<ZuAnyPOD>{&pod});
-        send(&msg);////////////////////////////////////////////////////////
+        MsgRef msg = new Msg();
+        ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
+        send(qmsg);
 	  }
 	}
 	broadcast.shift2();
@@ -718,7 +718,7 @@ friend class Recorder;
     void snap() {
       {
 	Guard guard(m_ioLock);
-	m_snapMsg = new MxMDStream::Msg();
+	m_snapMsg = new Msg();
       }
       bool failed = !m_core->snapshot(*this);
       {
@@ -729,9 +729,9 @@ friend class Recorder;
 	  recvStop();
 	  return;
 	}
-	while (ZmRef<MxMDStream::Msg> msg = m_snapQueue.shift()) {
+	while (ZmRef<Msg> msg = m_snapQueue.shift()) {
 	  ZeError e;
-	  if (ZuUnlikely(write(msg->frame(), &e)) != Zi::OK) {
+	  if (ZuUnlikely(write(msg->data().frame(), &e)) != Zi::OK) {
 	    ZiFile::Path path = m_path;
 	    m_file.close();
 	    guard.unlock();
@@ -750,12 +750,12 @@ friend class Recorder;
 	m_ioLock.unlock();
 	return 0;
       }
-      return m_snapMsg->frame();
+      return m_snapMsg->data().frame();
     }
     inline void push2() {
       if (ZuUnlikely(!m_snapMsg)) { m_ioLock.unlock(); return; }
       ZeError e;
-      if (ZuUnlikely(write(m_snapMsg->frame(), &e) != Zi::OK)) {
+      if (ZuUnlikely(write(m_snapMsg->data().frame(), &e) != Zi::OK)) {
 	m_snapMsg = 0;
 	ZiFile::Path path = m_path;
 	m_ioLock.unlock();
@@ -774,7 +774,7 @@ friend class Recorder;
     Lock		m_ioLock;
     ZiFile::Path	  m_path;
     ZiFile		  m_file;
-    ZmRef<MxMDStream::Msg>		  m_snapMsg;
+    ZmRef<Msg>		  m_snapMsg;
     bool		  m_snapQueuing;
     SnapQueue		  m_snapQueue;
   };

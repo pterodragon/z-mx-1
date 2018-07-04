@@ -158,7 +158,7 @@ public:
 
     {
       using namespace MxMDStream;
-      const Frame *frame = msg->frame();
+      const Frame *frame = msg->data().frame();
       switch ((int)frame->type) {
 	case Type::AddTickSizeTbl:
 	case Type::ResetTickSizeTbl:
@@ -237,7 +237,7 @@ public:
 
     {
       using namespace MxMDStream;
-      const Frame *frame = msg->frame();
+      const Frame *frame = msg->data().frame();
       switch ((int)frame->type) {
 	case Type::AddSecurity:
 	  {
@@ -327,7 +327,7 @@ public:
 
     {
       using namespace MxMDStream;
-      const Frame *frame = msg->frame();
+      const Frame *frame = msg->data().frame();
       switch ((int)frame->type) {
 	case Type::AddOrderBook:
 	  {
@@ -486,7 +486,7 @@ public:
 
     {
       using namespace MxMDStream;
-      const Frame *frame = msg->frame();
+      const Frame *frame = msg->data().frame();
       switch ((int)frame->type) {
 	case Type::TradingSession:
 	  {
@@ -777,7 +777,7 @@ void App::read()
 
   for (;;) {
     ZmRef<Msg> msg = new Msg();
-    Frame *frame = msg->frame();
+    Frame *frame = msg->data().frame();
     o = m_file.offset();
     n = m_file.read(frame, sizeof(Frame), &e);
     if (n == Zi::IOError) goto error;

@@ -1195,7 +1195,7 @@ void MxMDCore::replay2()
       ReplayGuard guard(m_replayLock);
       if (!m_replayFile) return;
       msg = m_replayMsg;
-      Frame *frame = msg->frame();
+      Frame *frame = msg->data().frame();
   // retry:
       int n = m_replayFile.read(frame, sizeof(Frame), &e);
       if (n == Zi::IOError) goto error;
@@ -1218,8 +1218,8 @@ void MxMDCore::replay2()
       }
     }
 
-    pad(msg->frame());
-    apply(msg->frame());
+    pad(msg->data().frame());
+    apply(msg->data().frame());
     m_mx->add(ZmFn<>::Member<&MxMDCore::replay2>::fn(this));
   }
 

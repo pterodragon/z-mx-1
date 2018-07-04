@@ -31,6 +31,7 @@
 #endif
 
 #include <ZuLargest.hpp>
+#include <ZuPOD.hpp>
 
 #include <ZmFn.hpp>
 
@@ -357,11 +358,8 @@ namespace MxMDStream {
     char	data[sizeof(Largest)];
   };
 
-  struct Msg_HeapID {
-    inline static const char *id() { return "MxMDStream.Msg"; }
-  };
-  template <typename Heap>
-  struct Msg_ : public Heap, public ZmObject {
+  struct Msg_
+  {
     Msg_(const Msg_ &);
     Msg_ &operator =(const Msg_ &);	// prevent mis-use
 
@@ -376,16 +374,16 @@ namespace MxMDStream {
 
   private:
     inline void init_(int len, int type) {
-      m_frame.len(len);
-      m_frame.type(type);
-      m_frame.sec(0);
-      m_frame.nsec(0);
+      m_frame.len = len;
+      m_frame.type = type;
+      m_frame.sec = 0;
+      m_frame.nsec= 0;
     }
     inline void init_(int len, int type, ZmTime stamp) {
-      m_frame.len(len);
-      m_frame.type(type);
-      m_frame.sec(stamp.sec());
-      m_frame.nsec(stamp.nsec());
+      m_frame.len = len;
+      m_frame.type = type;
+      m_frame.sec = stamp.sec();
+      m_frame.nsec = stamp.nsec();
     }
 
   public:
@@ -396,7 +394,9 @@ namespace MxMDStream {
     Frame	m_frame;
     Buf		m_buf;
   };
-  typedef Msg_<ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> > Msg;
+
+  typedef ZuPOD<Msg_> Msg;
+  typedef ZuRef<Msg> MsgRef;
 
   template <typename App>
   ZmRef<Msg> shift(App &app) {
@@ -404,8 +404,8 @@ namespace MxMDStream {
     if (ZuUnlikely(!frame)) return 0;
     if (frame->len > sizeof(Buf)) { app.shift2(); return 0; }
     ZmRef<Msg> msg = new Msg();
-    memcpy(msg->frame(), frame, sizeof(Frame));
-    memcpy(msg->frame()->ptr(), frame->ptr(), frame->len);
+    memcpy(msg->data().frame(), frame, sizeof(Frame));
+    memcpy(msg->data().frame()->ptr(), frame->ptr(), frame->len);
     app.shift2();
     return msg;
   }

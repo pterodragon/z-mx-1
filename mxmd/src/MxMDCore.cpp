@@ -277,14 +277,19 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
 
 MxMDLib *MxMDLib::init(const char *cf_)
 {
+    ZmRef<ZvCf> cf = new ZvCf();
+    if (cf_) cf->fromFile(cf_, false);
+    return init(ZuMv(cf));
+}
+
+MxMDLib *MxMDLib::init(ZvCf *cf_)
+{
   ZeLog::start(); // ensure error reporting works
 
-  ZmRef<ZvCf> cf = new ZvCf();
+  ZmRef<ZvCf> cf = cf_;
   ZmRef<MxMDCore> md;
 
   try {
-    if (cf_) cf->fromFile(cf_, false);
-
     if (ZmRef<ZvCf> logCf = cf->subset("log", false)) {
       ZeLog::init("MxMD");
       ZeLog::level(logCf->getInt("level", 0, 5, false, 0));
@@ -430,6 +435,8 @@ void MxMDCore::init_(ZvCf *cf)
     m_cmd->init(cmdCf);
     initCmds();
   }
+
+  m_recorder.init();
 
   ZeLOG(Info, "MxMDLib - initialized...");
 }

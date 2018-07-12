@@ -2,11 +2,8 @@
 
 // MxEngine connectivity framework unit smoke test
 
-class App : public MxEngineApp {
+class Mgr : public MxEngineMgr {
 public:
-  inline App() { }
-  inline void final() { }
-
   // Engine Management
   void addEngine(MxEngine *) { }
   void delEngine(MxEngine *) { }
@@ -28,6 +25,15 @@ public:
   // Exception handling
   void exception(ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 
+  // Traffic Logging
+  void log(MxMsgID, MxTraffic) { }
+};
+
+class App : public MxEngineApp {
+public:
+  inline App() { }
+  inline void final() { }
+
   // Rx
   ZuInline void process_(MxAnyLink *, MxQMsg *) { }
   ProcessFn processFn() {
@@ -41,16 +47,13 @@ public:
   void aborted(MxAnyLink *, MxQMsg *) { }
   void archive(MxAnyLink *, MxQMsg *) { }
   ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
-
-  // Traffic Logging
-  void log(MxMsgID, MxTraffic) { }
 };
 
 class Engine : public MxEngine {
 public:
-  inline Engine(App *app) : MxEngine(app) { }
+  inline Engine(){}
 
-  void init(Mx *mx, ZvCf *cf);
+  void init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf);
 
   void up() { std::cerr << "up\n"; }
   void down() { std::cerr << "down\n"; }
@@ -116,9 +119,9 @@ public:
   bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }
 };
 
-void Engine::init(Mx *mx, ZvCf *cf)
+void Engine::init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf)
 {
-  MxEngine::init(mx, cf);
+  MxEngine::init(mgr, app, mx, cf);
   m_reconnectInterval = cf->getDbl("reconnectInterval", 0, 3600, false, 1);
   m_reRequestInterval = cf->getDbl("reRequestInterval", 0, 3600, false, 1);
   if (ZmRef<ZvCf> linksCf = cf->subset("links", false)) {
@@ -150,12 +153,13 @@ int main()
       "links { link1 { } }\n",
       false);
 
-  ZmRef<App> app = new App();
-  ZmRef<Engine> engine = new Engine(app);
+  App* app = new App();
+  Mgr* mgr = new Mgr();
+  ZmRef<Engine> engine = new Engine();
 
   ZmRef<MxMultiplex> mx = new MxMultiplex("mx", cf->subset("mx", true));
 
-  engine->init(mx, cf);
+  engine->init(mgr, app, mx, cf);
 
   mx->start();
   engine->start();
@@ -170,5 +174,4 @@ int main()
 
   engine = 0;
   app->final();
-  app = 0;
 }

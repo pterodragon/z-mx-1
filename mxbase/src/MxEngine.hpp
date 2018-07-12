@@ -136,8 +136,7 @@ private:
 // Traffic Logging (timestamp, payload)
 typedef ZmFn<ZmTime &, ZuString &> MxTraffic;
 
-// Callbacks to the application from the engine implementation
-struct MxEngineApp : public ZmPolymorph {
+struct MxEngineMgr {
   // Engine Management
   virtual void addEngine(MxEngine *) = 0;
   virtual void delEngine(MxEngine *) = 0;
@@ -158,7 +157,18 @@ struct MxEngineApp : public ZmPolymorph {
 
   // Exception handling
   virtual void exception(ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
+  
+  // Traffic Logging (logThread)
+  /* Example usage:
+  app.log(id, MxTraffic([](const Msg *msg, ZmTime &stamp, ZuString &data) {
+      stamp = msg->stamp();
+      data = msg->buf();
+    }, msg)); */
+  virtual void log(MxMsgID, MxTraffic) = 0;
+};
 
+// Callbacks to the application from the engine implementation
+struct MxEngineApp{
   // Rx (called from engine's rx thread)
   typedef void (*ProcessFn)(MxEngineApp *, MxAnyLink *, MxQMsg *);
   virtual ProcessFn processFn() = 0;	// stashed in engine for performance
@@ -168,14 +178,6 @@ struct MxEngineApp : public ZmPolymorph {
   virtual void aborted(MxAnyLink *, MxQMsg *) = 0;	// tx aborted
   virtual void archive(MxAnyLink *, MxQMsg *) = 0;	// tx archive
   virtual ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) = 0; // tx retrieve
-
-  // Traffic Logging (logThread)
-  /* Example usage:
-  app.log(id, MxTraffic([](const Msg *msg, ZmTime &stamp, ZuString &data) {
-      stamp = msg->stamp();
-      data = msg->buf();
-    }, msg)); */
-  virtual void log(MxMsgID, MxTraffic) = 0;
 };
 
 // Note: When event/flow steering, referenced objects must remain
@@ -215,16 +217,21 @@ public:
 
   typedef MxScheduler Sched;
   typedef MxMultiplex Mx;
+  typedef MxEngineMgr Mgr;
   typedef MxEngineApp App;
   typedef App::ProcessFn ProcessFn;
 
-  inline MxEngine(App *app) :
-    m_app(app), 
-    m_processFn(app->processFn()),
+  inline MxEngine() :
+    m_mgr(nullptr),
+    m_app(nullptr), 
+    m_processFn(nullptr),
     m_rxThread(0), m_txThread(0),
     m_state(MxEngineState::Stopped), m_running(0) { }
-  
-  void init(Mx *mx, ZvCf *cf) {
+
+  void init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf) {
+    m_mgr = mgr,
+    m_app = app;
+    m_processFn = app->processFn();
     m_id = cf->get("id", true);
     m_mx = mx;
     m_rxThread = cf->getInt("rxThread", 1, mx->nThreads() + 1, true);
@@ -232,7 +239,8 @@ public:
   }
   void final();
 
-  ZuInline MxEngineApp &app() const { return *m_app; }
+  ZuInline MxEngineMgr *mgr() const { return m_mgr; }
+  ZuInline MxEngineApp *app() const { return m_app; }
   ZuInline MxID id() const { return m_id; }
   ZuInline Mx &mx() const { return *m_mx; }
   ZuInline unsigned rxThread() const { return m_rxThread; }
@@ -250,23 +258,23 @@ public:
   template <typename ...Args> ZuInline void txInvoke(Args &&... args)
     { m_mx->invoke(m_txThread, ZuFwd<Args>(args)...); }
 
-  ZuInline void appAddEngine() { app().addEngine(this); }
-  ZuInline void appDelEngine() { app().delEngine(this); }
-  ZuInline void appEngineState(MxEnum state) { app().engineState(this, state); }
+  ZuInline void appAddEngine() { mgr()->addEngine(this); }
+  ZuInline void appDelEngine() { mgr()->delEngine(this); }
+  ZuInline void appEngineState(MxEnum state) { mgr()->engineState(this, state); }
 
-  ZuInline void appUpdateLink(MxAnyLink *link) { app().updateLink(link); }
-  ZuInline void appDelLink(MxAnyLink *link) { app().delLink(link); }
+  ZuInline void appUpdateLink(MxAnyLink *link) { mgr()->updateLink(link); }
+  ZuInline void appDelLink(MxAnyLink *link) { mgr()->delLink(link); }
   ZuInline void appLinkState(MxAnyLink *link, MxEnum state, ZuString txt)
-    { app().linkState(link, state, txt); }
+    { mgr()->linkState(link, state, txt); }
 
-  ZuInline void appUpdateTxPool(MxAnyTxPool *pool) { app().updateTxPool(pool); }
-  ZuInline void appDelTxPool(MxAnyTxPool *pool) { app().delTxPool(pool); }
+  ZuInline void appUpdateTxPool(MxAnyTxPool *pool) { mgr()->updateTxPool(pool); }
+  ZuInline void appDelTxPool(MxAnyTxPool *pool) { mgr()->delTxPool(pool); }
 
   // Note: MxQueues are contained in Link and TxPool
   ZuInline void appAddQueue(MxID id, bool tx, MxQueue *queue)
-    { app().addQueue(id, tx, queue); }
+    { mgr()->addQueue(id, tx, queue); }
   ZuInline void appDelQueue(MxID id, bool tx)
-    { app().delQueue(id, tx); }
+    { mgr()->delQueue(id, tx); }
 
   // generic O.S. error logging
   inline auto osError(const char *op, int result, ZeError e) {
@@ -275,12 +283,12 @@ public:
     };
   }
 
-  ZuInline void appException(ZeEvent *e) { app().exception(e); }
+  ZuInline void appException(ZeEvent *e) { mgr()->exception(e); }
 
   ZuInline void process(MxAnyLink *link, MxQMsg *msg)
-    { (*m_processFn)(&app(), link, msg); }
+    { (*m_processFn)(app(), link, msg); }
 
-  ZuInline void log(MxMsgID id, MxTraffic traffic) { app().log(id, traffic); }
+  ZuInline void log(MxMsgID id, MxTraffic traffic) { mgr()->log(id, traffic); }
 
 private:
   typedef ZmRWLock Lock;
@@ -379,7 +387,8 @@ private:
 
 private:
   MxID				m_id;
-  ZmRef<App>			m_app;
+  Mgr				*m_mgr;
+  App				*m_app;
   ProcessFn			m_processFn;
   ZmRef<Mx>			m_mx;
   unsigned			m_rxThread;
@@ -557,11 +566,11 @@ public:
     m_rrTime.now();
     ZmTime rrTime = (m_rrTime += interval);
     guard.unlock();
-    this->mx()->add(
+    this->mx().add(
 	ZmFn<>::Member<&MxLink::runReRequest>::fn(this), rrTime, &m_rrTimer);
   }
   ZuInline void cancelReRequest() {
-    this->mx()->del(&m_rrTimer);
+    this->mx().del(&m_rrTimer);
     {
       RRGuard guard(m_rrLock);
       m_rrTime = ZmTime();
@@ -571,9 +580,9 @@ public:
 
   // Impl/MxQueueTx callbacks (send_() must call sent_()/aborted_())
   ZuInline void sent_(MxQMsg *msg) // tx sent (persistent)
-    { this->engine().app().sent(this, msg); }
+    { this->engine().app()->sent(this, msg); }
   ZuInline void aborted_(MxQMsg *msg) // tx aborted
-    { this->engine().app().aborted(this, msg); }
+    { this->engine().app()->aborted(this, msg); }
 
   // MxQueueTx/ZmPQTx callbacks
   ZuInline void archive_(MxQMsg *msg) // tx archive - app calls archived()

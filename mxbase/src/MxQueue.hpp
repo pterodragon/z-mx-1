@@ -96,12 +96,17 @@ private:
 };
 
 struct MxQueue_HeapID { inline static const char *id() { return "MxQueue"; } };
+
+struct MxQueue_ { MxID id; };	// queue ID
+
 typedef ZmPQueue<MxQMsg_,
 	  ZmPQueueNodeIsItem<true,
 	    ZmPQueueObject<ZuObject,
 	      ZmPQueueFn<MxQFn,
 		ZmPQueueLock<ZmNoLock,
-		  ZmPQueueHeapID<MxQueue_HeapID> > > > > > MxQueue;
+          ZmPQueueBase<MxQueue_,
+		    ZmPQueueHeapID<MxQueue_HeapID> > > > > > > MxQueue;
+
 typedef MxQueue::Node MxQMsg;
 typedef MxQueue::Gap MxQGap;
 

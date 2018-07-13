@@ -748,19 +748,19 @@ friend class Recorder;
 	return;
       }
     }
-    
+
     Frame *push(unsigned size) {
       m_ioLock.lock();
       if (ZuUnlikely(!m_snapMsg)) {
 	m_ioLock.unlock();
 	return 0;
       }
-      return m_snapMsg->data().frame();
+      return m_snapMsg->frame();
     }
     inline void push2() {
       if (ZuUnlikely(!m_snapMsg)) { m_ioLock.unlock(); return; }
       ZeError e;
-      if (ZuUnlikely(write(m_snapMsg->data().frame(), &e) != Zi::OK)) {
+      if (ZuUnlikely(write(m_snapMsg->frame(), &e) != Zi::OK)) {
 	m_snapMsg = 0;
 	ZiFile::Path path = m_path;
 	m_ioLock.unlock();

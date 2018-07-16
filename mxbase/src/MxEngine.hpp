@@ -285,7 +285,7 @@ public:
 
   ZuInline void appException(ZeEvent *e) { mgr()->exception(e); }
 
-  ZuInline void process(MxAnyLink *link, MxQMsg *msg)
+  ZuInline void appProcess(MxAnyLink *link, MxQMsg *msg)
     { (*m_processFn)(app(), link, msg); }
 
   ZuInline void log(MxMsgID id, MxTraffic traffic) { mgr()->log(id, traffic); }
@@ -540,7 +540,7 @@ public:
       Base(engine, id), Rx(rxSeqNo), Tx(txSeqNo) { }
 
   ZuInline void process(MxQMsg *msg) {
-    this->engine().process(this, msg);
+    this->engine().appProcess(this, msg);
   }
 
   ZuInline void scheduleDequeue() {

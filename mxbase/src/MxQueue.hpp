@@ -66,6 +66,13 @@ struct MxQMsgData {
   MxFlags		flags;		// see MxQFlags
   ZmTime		deadline;
   ZuRef<ZuAnyPOD>	payload;
+
+  template <typename T> inline const T &as() const {
+    return *static_cast<const T *>(payload.ptr());
+  }
+  template <typename T> inline T &as() {
+    return *static_cast<T *>(payload.ptr());
+  }
 };
 
 class MxQMsg_ : public MxQMsgData {
@@ -104,7 +111,7 @@ typedef ZmPQueue<MxQMsg_,
 	    ZmPQueueObject<ZuObject,
 	      ZmPQueueFn<MxQFn,
 		ZmPQueueLock<ZmNoLock,
-          ZmPQueueBase<MxQueue_,
+		  ZmPQueueBase<MxQueue_,
 		    ZmPQueueHeapID<MxQueue_HeapID> > > > > > > MxQueue;
 
 typedef MxQueue::Node MxQMsg;

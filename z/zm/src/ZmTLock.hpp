@@ -97,11 +97,12 @@ struct ZmTLockParams {
 template <typename ID, typename TID> class ZmTLock;
 
 struct ZmTLock_Held {
-  inline ZmTLock_Held() : m_thread(0) { }
-  inline ZmTLock_Held(void *thread, int lockCount) :
+  ZuInline ZmTLock_Held() : m_thread(0) { }
+  ZuInline ZmTLock_Held(void *thread, int lockCount) :
     m_thread(thread), m_lockCount(lockCount) { }
 
-  inline bool operator !() { return !m_thread; }
+  ZuInline bool operator !() { return !m_thread; }
+  ZuOpBool
 
   void		*m_thread;
   int		m_lockCount;

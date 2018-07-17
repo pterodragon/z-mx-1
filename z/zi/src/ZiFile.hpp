@@ -114,15 +114,11 @@ public:
     }
   }
 
-  inline operator bool() {
-    ReadGuard guard(m_lock);
-    return !ZiPlatform::nullHandle(m_handle);
-  }
-
-  inline bool operator !() {
+  ZuInline bool operator !() {
     ReadGuard guard(m_lock);
     return ZiPlatform::nullHandle(m_handle);
   }
+  ZuOpBool
 
   int open(const Path &name,
       unsigned flags, unsigned mode = 0777, ZeError *e = 0);

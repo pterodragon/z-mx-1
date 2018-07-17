@@ -53,6 +53,7 @@
 
 #include <ZuNew.hpp>
 #include <ZuIfT.hpp>
+#include <ZuCan.hpp>
 #include <ZuTraits.hpp>
 #include <ZuLargest.hpp>
 #include <ZuNull.hpp>
@@ -62,32 +63,66 @@
 #include <ZuTuple.hpp>
 #include <ZuPP.hpp>
 
-template <typename T, bool IsPrimitive> class ZuUnion_Ops_;
-template <typename T> class ZuUnion_Ops_<T, false> {
-public:
-  inline static void ctor(void *dst) { new (dst) T(ZuCmp<T>::null()); }
-  template <typename P>
-  inline static void ctor(void *dst, const P &p) { new (dst) T(p); }
-  inline static void dtor(void *dst) { ((T *)dst)->~T(); }
+template <typename T, bool CanStar> class ZuUnion_OpStar;
+template <typename T> class ZuUnion_OpStar<T, 1> {
+  ZuInline static bool star(const void *t) { return *(*(const T *)t); }
 };
-template <typename T> class ZuUnion_Ops_<T, true> {
+template <typename T> class ZuUnion_OpStar<T, 0> {
+  ZuInline static bool star(const void *t) {
+    return !ZuCmp<T>::null(*(const T *)t);
+  }
+};
+template <typename T, bool CanBang> class ZuUnion_OpBang;
+template <typename T> class ZuUnion_OpBang<T, 1> {
+  ZuInline static bool bang(const void *t) { return !(*(const T *)t); }
+};
+template <typename T> class ZuUnion_OpBang<T, 0> {
+  ZuInline static bool bang(const void *t) {
+    return ZuCmp<T>::null(*(const T *)t);
+  }
+};
+template <typename T, bool IsPrimitive, bool IsPointer> class ZuUnion_Ops_;
+ZuCan(operator *, ZuUnion_CanStar);
+ZuCan(operator !, ZuUnion_CanBang);
+template <typename T> class ZuUnion_Ops_<T, 0, 0> :
+  public ZuUnion_OpStar<T, ZuUnion_CanStar<T, bool (T::*)() const>::OK>,
+  public ZuUnion_OpBang<T, ZuUnion_CanBang<T, bool (T::*)() const>::OK> {
 public:
-  inline static void ctor(void *dst) { *(T *)dst = ZuCmp<T>::null(); }
+  ZuInline static void ctor(void *dst) { new (dst) T(ZuCmp<T>::null()); }
   template <typename P>
-  inline static void ctor(void *dst, const P &p) { *(T *)dst = p; }
-  inline static void dtor(void *dst) { }
+  ZuInline static void ctor(void *dst, const P &p) { new (dst) T(p); }
+  ZuInline static void dtor(void *dst) { ((T *)dst)->~T(); }
+};
+template <typename T> class ZuUnion_Ops_<T, 1, 0> {
+public:
+  ZuInline static void ctor(void *dst) { *(T *)dst = ZuCmp<T>::null(); }
+  template <typename P>
+  ZuInline static void ctor(void *dst, const P &p) { *(T *)dst = p; }
+  ZuInline static void dtor(void *dst) { }
+  ZuInline static bool star(const void *t) {
+    return !ZuCmp<T>::null(*(const T *)t);
+  }
+  ZuInline static bool bang(const void *t) { return !(*(const T *)t); }
+};
+template <typename T> class ZuUnion_Ops_<T, 1, 1> {
+public:
+  ZuInline static void ctor(void *dst) { *(T *)dst = ZuCmp<T>::null(); }
+  template <typename P>
+  ZuInline static void ctor(void *dst, const P &p) { *(T *)dst = p; }
+  ZuInline static void dtor(void *dst) { }
+  ZuInline static bool star(const void *t) { return (bool)(*(const T *)t); }
+  ZuInline static bool bang(const void *t) { return !(*(const T *)t); }
 };
 template <typename T>
-struct ZuUnion_Ops : public ZuUnion_Ops_<T, ZuTraits<T>::IsPrimitive> {
-  template <typename P> inline static void assign(void *dst, const P &p)
+struct ZuUnion_Ops :
+    public ZuUnion_Ops_<T, ZuTraits<T>::IsPrimitive, ZuTraits<T>::IsPointer> {
+  template <typename P> ZuInline static void assign(void *dst, const P &p)
     { *(T *)dst = p; }
-  template <typename P> inline static bool equals(const void *t, const P &p)
+  template <typename P> ZuInline static bool equals(const void *t, const P &p)
     { return ZuCmp<T>::equals(*(const T *)t, p); }
-  template <typename P> inline static int cmp(const void *t, const P &p)
+  template <typename P> ZuInline static int cmp(const void *t, const P &p)
     { return ZuCmp<T>::cmp(*(const T *)t, p); }
-  inline static bool null(const void *t)
-    { return ZuCmp<T>::null(*(const T *)t); }
-  inline static uint32_t hash(const void *t)
+  ZuInline static uint32_t hash(const void *t)
     { return ZuHash<T>::hash(*(const T *)t); }
 };
 
@@ -132,8 +167,10 @@ struct ZuTraits<ZuUnion<ZuPP_CList(ZuUnion_TemplateArg, ZuPP_N)> > :
       }
 #define ZuUnion_Cmp2(I, _) \
       case I: return ZuUnion_Ops<T##I>::cmp(m_u, p);
-#define ZuUnion_Null(I, _) \
-      case I: return ZuUnion_Ops<T##I>::null(m_u);
+#define ZuUnion_Star(I, _) \
+      case I: return ZuUnion_Ops<T##I>::star(m_u);
+#define ZuUnion_Bang(I, _) \
+      case I: return ZuUnion_Ops<T##I>::bang(m_u);
 #define ZuUnion_Hash(I, _) \
       case I: return ZuHash<uint8_t>::hash(this->type()) ^ ZuUnion_Ops<T##I>::hash(m_u);
 #define ZuUnion_ConstFn(I, _) \
@@ -395,10 +432,17 @@ ZuPP_List1(ZuUnion_Typedef, _, N) \
     } \
   } \
  \
+  inline bool operator *() const { \
+    switch ((int)this->type()) { \
+      default: return true; \
+      ZuPP_List1(ZuUnion_Star, _, N) \
+    } \
+  } \
+ \
   inline bool operator !() const { \
     switch ((int)this->type()) { \
       default: return true; \
-      ZuPP_List1(ZuUnion_Null, _, N) \
+      ZuPP_List1(ZuUnion_Bang, _, N) \
     } \
   } \
  \

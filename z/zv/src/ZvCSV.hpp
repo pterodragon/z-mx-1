@@ -163,10 +163,8 @@ public:
   }
 
 private:
-  typedef ZuBoxVFmt<Box> Fmt;
-
-  mutable Fmt	m_fmt;
-  T		m_deflt;
+  mutable ZuVFmt	m_fmt;
+  T			m_deflt;
 };
 
 template <typename T_>
@@ -217,9 +215,7 @@ public:
   }
 
 private:
-  typedef ZuBoxVFmt<Box> Fmt;
-
-  mutable Fmt	m_fmt;
+  mutable ZuVFmt	m_fmt;
 };
 
 template <typename T_, typename Map_>

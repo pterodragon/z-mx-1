@@ -159,6 +159,7 @@ template <typename H> void iter(H &h, int check, int del = -1)
     total += j;
     if (j == del) i.del();
   }
+  printf("%d %d\n", total, check);
   CHECK(total == check);
 }
 

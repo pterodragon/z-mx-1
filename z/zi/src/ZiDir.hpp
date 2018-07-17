@@ -69,6 +69,7 @@ public:
       !m_dir;
 #endif
   }
+  ZuOpBool
 
   int open(const Path &name, ZeError *e = 0);
   Path read(ZeError *e = 0);

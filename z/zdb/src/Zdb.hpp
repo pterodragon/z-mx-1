@@ -193,16 +193,15 @@ struct Zdb_File_IndexAccessor : public ZuAccessor<Zdb_File *, unsigned> {
 
 class Zdb_FileRec {
 public:
-  inline Zdb_FileRec() : m_file(0), m_off(0) { }
-  inline Zdb_FileRec(Zdb_File *file, ZiFile::Offset off) :
+  ZuInline Zdb_FileRec() : m_file(0), m_off(0) { }
+  ZuInline Zdb_FileRec(Zdb_File *file, ZiFile::Offset off) :
     m_file(file), m_off(off) { }
 
-  inline bool operator !() const { return !m_file; }
+  ZuInline bool operator !() const { return !m_file; }
+  ZuOpBool
 
-  inline operator bool() const { return m_file; }
-
-  inline Zdb_File *file() const { return m_file; }
-  inline const ZiFile::Offset &off() const { return m_off; }
+  ZuInline Zdb_File *file() const { return m_file; }
+  ZuInline const ZiFile::Offset &off() const { return m_off; }
 
 private:
   Zdb_File		*m_file;

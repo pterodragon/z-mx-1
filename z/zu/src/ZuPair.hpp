@@ -173,9 +173,8 @@ public:
     return ZuCmp<T2>::cmp(m_p2, p.p2());
   }
 
-  ZuInline bool operator !() const {
-    return ZuCmp<T1>::null(m_p1) || ZuCmp<T2>::null(m_p2);
-  }
+  ZuInline bool operator !() const { return !m_p1 || !m_p2; }
+  ZuOpBool
 
   ZuInline uint32_t hash() const {
     return ZuHash<T1>::hash(m_p1) ^ ZuHash<T2>::hash(m_p2);

@@ -244,29 +244,25 @@ template <class, typename, class, unsigned> friend class ZmLHash_;
   };
 
 public:
-  ZuInline ZmLHash_Node() : m_null(1), m_head(0), m_tail(0), m_next(0) { }
-  ZuInline ~ZmLHash_Node() { if (!m_null) data().~Data(); }
+  ZuInline ZmLHash_Node() { }
+  ZuInline ~ZmLHash_Node() { if (m_u) data().~Data(); }
 
   ZuInline ZmLHash_Node(const ZmLHash_Node &n) {
-    m_null = n.m_null, m_head = n.m_head, m_tail = n.m_tail, m_next = n.m_next;
-    if (!m_null) new (m_data) Data(n.data());
+    if (m_u = n.m_u) new (m_data) Data(n.data());
   }
   ZuInline ZmLHash_Node &operator =(const ZmLHash_Node &n) {
     if (this == &n) return *this;
-    if (!m_null) data().~Data();
-    m_null = n.m_null, m_head = n.m_head, m_tail = n.m_tail, m_next = n.m_next;
-    if (!m_null) new (m_data) Data(n.data());
+    if (m_u) data().~Data();
+    if (m_u = n.m_u) new (m_data) Data(n.data());
     return *this;
   }
 
   ZuInline ZmLHash_Node(ZmLHash_Node &&n) {
-    m_null = n.m_null, m_head = n.m_head, m_tail = n.m_tail, m_next = n.m_next;
-    if (!m_null) new (m_data) Data(ZuMv(n.data()));
+    if (m_u = n.m_u) new (m_data) Data(ZuMv(n.data()));
   }
   ZuInline ZmLHash_Node &operator =(ZmLHash_Node &&n) {
-    if (!m_null) data().~Data();
-    m_null = n.m_null, m_head = n.m_head, m_tail = n.m_tail, m_next = n.m_next;
-    if (!m_null) new (m_data) Data(ZuMv(n.data()));
+    if (m_u) data().~Data();
+    if (m_u = n.m_u) new (m_data) Data(ZuMv(n.data()));
     return *this;
   }
 
@@ -274,32 +270,30 @@ private:
   template <typename Key_, typename Val_>
   inline void init(
       bool head, bool tail, unsigned next, Key_ &&key, Val_ &&value) {
-    if (!m_null) {
-      m_head = head, m_tail = tail, m_next = next;
-      data().key() = ZuFwd<Key_>(key), data().value() = ZuFwd<Val_>(value);
-    } else {
-      m_null = 0; m_head = head, m_tail = tail, m_next = next;
+    if (!m_u)
       new (m_data) Data(ZuFwd<Key_>(key), ZuFwd<Val_>(value));
-    }
+    else
+      data().key() = ZuFwd<Key_>(key), data().value() = ZuFwd<Val_>(value);
+    m_u = (next<<3U) | (head<<2U) | (tail<<1U) | 1U;
   }
   inline void null() {
-    if (!m_null) {
+    if (m_u) {
       data().~Data();
-      m_null = 1;
+      m_u = 0;
     }
   }
 
 public:
-  inline bool operator !() const { return m_null; }
+  ZuInline bool operator !() const { return !m_u; }
 
   inline int cmp(const ZmLHash_Node &n) const {
-    if (n.m_null) return m_null ? 0 : 1;
-    if (m_null) return -1;
+    if (!n.m_u) return !m_u ? 0 : 1;
+    if (!m_u) return -1;
     return data().cmp(n.data());
   }
   inline bool equals(const ZmLHash_Node &n) const {
-    if (n.m_null) return m_null;
-    if (m_null) return false;
+    if (!n.m_u) return !m_u;
+    if (!m_u) return false;
     return data().equals(n.data());
   }
   inline bool operator ==(const ZmLHash_Node &n) const { return equals(n); }
@@ -310,20 +304,22 @@ public:
   inline bool operator <=(const ZmLHash_Node &n) const { return cmp(n) <= 0; }
 
 private:
-  inline bool head() const { return m_head; }
-  inline void head(bool b) { m_head = b; }
-  inline bool tail() const { return m_tail; }
-  inline void tail(bool b) { m_tail = b; }
-  inline unsigned next() const { return m_next; }
-  inline void next(unsigned n) { m_next = n; }
+  ZuInline bool head() const { return m_u & 4U; }
+  ZuInline void setHead() { m_u |= 4U; }
+  ZuInline void clrHead() { m_u &= ~4U; }
+  ZuInline bool tail() const { return m_u & 2U; }
+  ZuInline void setTail() { m_u |= 2U; }
+  ZuInline void clrTail() { m_u &= ~2U; }
+  ZuInline unsigned next() const { return m_u>>3U; }
+  ZuInline void next(unsigned n) { m_u = (n<<3U) | (m_u & 7U); }
 
   inline const Data &data() const {
-    ZmAssert(!m_null);
+    ZmAssert(m_u);
     const Data *ZuMayAlias(data_) = (const Data *)m_data;
     return *data_;
   }
   inline Data &data() {
-    ZmAssert(!m_null);
+    ZmAssert(m_u);
     Data *ZuMayAlias(data_) = (Data *)m_data;
     return *data_;
   }
@@ -333,10 +329,7 @@ private:
   inline const Val &value() const { return data().value(); }
   inline Val &value() { return data().value(); }
 
-  unsigned	m_null:1,
-		m_head:1,
-		m_tail:1,
-		m_next:29;
+  uint32_t	m_u = 0;
   char		m_data[sizeof(Data)];
 };
 
@@ -628,7 +621,7 @@ public:
   template <typename ...Args>
   inline ZmLHash(
     ZmHashParams params = ZmHashParams(ID::id()), Args &&... args) :
-      NTP::Base(ZuFwd<Args>(args)...),
+      NTP::Base{ZuFwd<Args>(args)...},
       Base(params) {
     init();
   }
@@ -701,7 +694,7 @@ private:
     if (move < 0) return -1;
 
     if (table()[slot].head()) {
-      (table()[move] = table()[slot]).head(0);
+      (table()[move] = table()[slot]).clrHead();
       table()[slot].init(1, 0, move, ZuFwd<Key__>(key), ZuFwd<Val_>(val));
       return slot;
     }
@@ -963,14 +956,14 @@ private:
 	return;
       }
       unsigned next = table()[slot].next();
-      (table()[slot] = table()[next]).head(1);
+      (table()[slot] = table()[next]).setHead();
       table()[next].null();
       return;
     }
 
     if (table()[slot].tail()) {
       ZmAssert(prev >= 0);
-      if (prev >= 0) table()[prev].tail(1);
+      if (prev >= 0) table()[prev].setTail();
       table()[slot].null();
       return;
     }

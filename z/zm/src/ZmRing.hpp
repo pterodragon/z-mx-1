@@ -67,13 +67,11 @@ public:
   inline ZmRingParams &timeout(unsigned n) { m_timeout = n; return *this; }
   inline ZmRingParams &cpuset(const ZmBitmap &b) { m_cpuset = b; return *this; }
 
-  inline unsigned size() const { return m_size; }
-  inline bool ll() const { return m_ll; }
-  inline unsigned spin() const { return m_spin; }
-  inline unsigned timeout() const { return m_timeout; }
-  inline const ZmBitmap &cpuset() const { return m_cpuset; }
-
-  inline bool operator !() const { return !m_size; }
+  ZuInline unsigned size() const { return m_size; }
+  ZuInline bool ll() const { return m_ll; }
+  ZuInline unsigned spin() const { return m_spin; }
+  ZuInline unsigned timeout() const { return m_timeout; }
+  ZuInline const ZmBitmap &cpuset() const { return m_cpuset; }
 
 private:
   unsigned	m_size;
@@ -190,7 +188,7 @@ public:
 
   template <typename ...Args>
   inline ZmRing(ZmRingParams params = ZmRingParams(0), Args &&... args) :
-      NTP::Base(ZuFwd<Args>(args)...),
+      NTP::Base{ZuFwd<Args>(args)...},
       ZmRing_(params),
       m_flags(0), m_ctrl(0), m_data(0), m_full(0) { }
 

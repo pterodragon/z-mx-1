@@ -142,47 +142,27 @@ private:
 };
 
 // run-time formatting
-struct ZuBoxVFmt_ { };
-template <class Boxed>
-class ZuBoxVFmt : public ZuBoxVFmt_, public ZuVFmt {
+template <class Boxed, bool Ref = 0>
+class ZuBoxVFmt : public ZuVFmtWrapper<ZuBoxVFmt<Boxed, Ref>, Ref> {
 template <typename, class> friend class ZuBox;
 
   typedef ZuBox_VPrint<typename Boxed::T> Print;
 
 public:
-  ZuInline ZuBoxVFmt() : m_ptr(0) { }
-
-  ZuInline ZuBoxVFmt &reset()
-    { ZuVFmt::reset(); return *this; }
-  ZuInline ZuBoxVFmt &left(unsigned width, char pad = '\0')
-    { ZuVFmt::left(width, pad); return *this; }
-  ZuInline ZuBoxVFmt &right(unsigned width, char pad = '0')
-    { ZuVFmt::right(width, pad); return *this; }
-  ZuInline ZuBoxVFmt &frac(unsigned ndp, char trim = '\0')
-    { ZuVFmt::frac(ndp, trim); return *this; }
-  ZuInline ZuBoxVFmt &hex(bool upper = 0)
-    { ZuVFmt::hex(upper); return *this; }
-  ZuInline ZuBoxVFmt &comma(char comma_ = ',')
-    { ZuVFmt::comma(comma_); return *this; }
-  ZuInline ZuBoxVFmt &alt()
-    { ZuVFmt::alt(); return *this; }
-  ZuInline ZuBoxVFmt &fp(int ndp = -ZuFmt::MaxNDP, char trim = '\0')
-    { ZuVFmt::fp(ndp, trim); return *this; }
-
-  // associate with value
-  ZuInline void ptr(const Boxed *p) { m_ptr = p; }
-  ZuInline const Boxed *ptr() const { return m_ptr; }
+  ZuInline ZuBoxVFmt(const Boxed &v) : m_value(v) { }
+  ZuInline ZuBoxVFmt(const Boxed &v, ZuVFmt &fmt_) :
+    ZuVFmtWrapper<ZuBoxVFmt, Ref>{fmt_}, m_value{v} { }
 
   // print
   ZuInline unsigned length() const {
-    return Print::length(*this, *m_ptr);
+    return Print::length(this->fmt, m_value);
   }
   ZuInline unsigned print(char *buf) const {
-    return Print::print(*this, *m_ptr, buf);
+    return Print::print(this->fmt, m_value, buf);
   }
 
 private:
-  const Boxed	*m_ptr;
+  const Boxed	&m_value;
 };
 
 struct ZuBox_Approx_ { };
@@ -243,8 +223,8 @@ struct ZuBox_Unbox<ZuBox<T_, Cmp> > { typedef T_ T; };
 template <typename T_, class Cmp_ = ZuCmp<typename ZuBox_Unbox<T_>::T> >
 class ZuBox {
 template <typename, class> friend class ZuBox;
-template <class> friend class ZuBoxVFmt;
 template <class, class> friend class ZuBoxFmt;
+template <class, bool> friend class ZuBoxVFmt;
   struct Private { };
 
 public:
@@ -390,14 +370,10 @@ public:
   }
   // run-time formatting
   ZuInline ZuBoxVFmt<ZuBox> vfmt() const {
-    ZuBoxVFmt<ZuBox> fmt;
-    fmt.ptr(this);
-    return fmt;
+    return ZuBoxVFmt<ZuBox>{*this};
   }
-  template <class Fmt>
-  ZuInline typename ZuIs<ZuBoxVFmt_, Fmt, const Fmt &>::T vfmt(Fmt &fmt) const {
-    fmt.ptr(this);
-    return fmt;
+  ZuInline ZuBoxVFmt<ZuBox, 1> vfmt(ZuVFmt &fmt) const {
+    return ZuBoxVFmt<ZuBox, 1>{*this, fmt};
   }
 
   template <typename S>
@@ -521,7 +497,7 @@ public:
     if (Cmp::null(r)) return false;
     return feq_(r);
   }
-  ZuInline bool feq_(const T &r) const {
+  ZuInline bool feq_(T r) const {
     if (ZuLikely(m_val == r)) return true;
     if (ZuLikely(m_val >= 0.0)) {
       if (r < 0.0) return false;
@@ -530,25 +506,25 @@ public:
     }
     if (r > 0.0) return false;
     T val = -m_val;
-    T r_ = -r;
-    if (val > r_) return val - r_ < Cmp::epsilon(val);
-    return r_ - val < Cmp::epsilon(r_);
+    r = -r;
+    if (val > r) return val - r < Cmp::epsilon(val);
+    return r - val < Cmp::epsilon(r);
   }
-  ZuInline bool fne(const T &r) const { return !feq(r); }
-  ZuInline bool fge(const T &r) const {
+  ZuInline bool fne(T r) const { return !feq(r); }
+  ZuInline bool fge(T r) const {
     if (Cmp::null(m_val)) return Cmp::null(r);
     if (Cmp::null(r)) return false;
     return m_val > r || feq_(r);
   }
-  ZuInline bool fle(const T &r) const {
+  ZuInline bool fle(T r) const {
     if (Cmp::null(m_val)) return Cmp::null(r);
     if (Cmp::null(r)) return false;
     return m_val < r || feq_(r);
   }
-  ZuInline bool fgt(const T &r) const { return !fle(r); }
-  ZuInline bool flt(const T &r) const { return !fge(r); }
+  ZuInline bool fgt(T r) const { return !fle(r); }
+  ZuInline bool flt(T r) const { return !fge(r); }
 
-  ZuInline int fcmp(const T &r) const {
+  ZuInline int fcmp(T r) const {
     if (Cmp::null(r)) return Cmp::null(m_val) ? 0 : 1;
     if (Cmp::null(m_val)) return -1;
     if (feq_(r)) return 0;
@@ -617,10 +593,10 @@ template <typename T, class Cmp>
 struct ZuPrint<ZuBox<T, Cmp> > : public ZuBoxPrint<ZuBox<T, Cmp> > { };
 template <typename T, class Fmt>
 struct ZuPrint<ZuBoxFmt<T, Fmt> > : public ZuBoxPrint<ZuBoxFmt<T, Fmt> > { };
-template <typename T>
-struct ZuPrint<ZuBoxVFmt<T> > : public ZuBoxPrint<ZuBoxVFmt<T> > { };
+template <typename T, bool Ref>
+struct ZuPrint<ZuBoxVFmt<T, Ref> > : public ZuBoxPrint<ZuBoxVFmt<T, Ref> > { };
 
-// ZuBoxT<T>::T is T if T is not already boxed, ZuBox<T> otherwise
+// ZuBoxT<T>::T is T if T is already boxed, ZuBox<T> otherwise
 template <typename T_>
 struct ZuBoxT { typedef ZuBox<T_> T; };
 template <typename T_, class Cmp_>
@@ -628,20 +604,20 @@ struct ZuBoxT<ZuBox<T_, Cmp_> > { typedef ZuBox<T_, Cmp_> T; };
 
 // ZuBoxed(t) is a convenience function to cast primitives to boxed
 template <typename T>
-inline const typename ZuIsBoxed<T, T>::T &ZuBoxed(const T &t) { return t; }
+ZuInline const typename ZuIsBoxed<T, T>::T &ZuBoxed(const T &t) { return t; }
 template <typename T>
-inline typename ZuIsBoxed<T, T>::T &ZuBoxed(T &t) { return t; }
+ZuInline typename ZuIsBoxed<T, T>::T &ZuBoxed(T &t) { return t; }
 
 // ZuBoxPtr(t) - convenience function to box pointers as uintptr_t
 #define ZuBoxPtr(x) (ZuBox<uintptr_t, ZuCmp0<uintptr_t> >{(uintptr_t)(x)})
 
 template <typename T>
-inline const typename ZuNotBoxed<T, ZuBox<T> >::T &ZuBoxed(const T &t) {
+ZuInline const typename ZuNotBoxed<T, ZuBox<T> >::T &ZuBoxed(const T &t) {
   const ZuBox<T> *ZuMayAlias(t_) = (const ZuBox<T> *)&t;
   return *t_;
 }
 template <typename T>
-inline typename ZuNotBoxed<T, ZuBox<T> >::T &ZuBoxed(T &t) {
+ZuInline typename ZuNotBoxed<T, ZuBox<T> >::T &ZuBoxed(T &t) {
   ZuBox<T> *ZuMayAlias(t_) = (ZuBox<T> *)&t;
   return *t_;
 }

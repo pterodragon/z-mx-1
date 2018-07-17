@@ -202,7 +202,10 @@ public:
   }
   ZuInline bool operator ==(const ZiMReq &m) const { return equals(m); }
   ZuInline bool operator !=(const ZiMReq &m) const { return !equals(m); }
+
   ZuInline bool operator !() const { return !addr() && !mif(); }
+  ZuOpBool
+
   ZuInline uint32_t hash() const {
     return addr().hash() ^ mif().hash();
   }
@@ -435,6 +438,7 @@ struct ZiCxnType {
 
 struct ZiCxnInfo { // pure aggregate, no ctor
   ZuInline bool operator !() const { return !*type; }
+  ZuOpBool
 
   template <typename S> inline void print(S &s) const {
     s << "type=" << ZiCxnType::name(type) <<

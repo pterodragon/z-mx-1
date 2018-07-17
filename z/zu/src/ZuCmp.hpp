@@ -110,13 +110,18 @@ template <typename T> struct ZuCmp_IntNull<T, 2, false>
 template <typename T> struct ZuCmp_IntNull<T, 2, true>
   { ZuInline static constexpr const T null() { return (T)-0x8000; } };
 template <typename T> struct ZuCmp_IntNull<T, 4, false>
-  { ZuInline static constexpr const T null() { return (T)~0; } };
+  { ZuInline static constexpr const T null() { return ~(T)0; } };
 template <typename T> struct ZuCmp_IntNull<T, 4, true>
   { ZuInline static constexpr const T null() { return (T)-0x80000000; } };
 template <typename T> struct ZuCmp_IntNull<T, 8, false>
-  { ZuInline static constexpr const T null() { return (T)~0ULL; } };
+  { ZuInline static constexpr const T null() { return ~(T)0; } };
 template <typename T> struct ZuCmp_IntNull<T, 8, true> {
   ZuInline static constexpr const T null() { return (T)-0x8000000000000000LL; }
+};
+template <typename T> struct ZuCmp_IntNull<T, 16, false>
+  { ZuInline static constexpr const T null() { return ~(T)0; } };
+template <typename T> struct ZuCmp_IntNull<T, 16, true> {
+  ZuInline static constexpr const T null() { return ((T)1)<<127U; }
 };
 
 // comparison of larger-sized (>= sizeof(int)) integral types

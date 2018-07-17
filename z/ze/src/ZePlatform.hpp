@@ -115,6 +115,7 @@ public:
   }
 
   ZuInline bool operator !() { return m_errNo == OK; }
+  ZuOpBool
 
   template <typename S> ZuInline void print(S &s) const { s << message(); }
 

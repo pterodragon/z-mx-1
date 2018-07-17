@@ -165,7 +165,7 @@ public:
 
   template <typename ...Args>
   inline ZmDRing(ZmDRingParams params = ZmDRingParams(), Args &&... args) :
-      NTP::Base(ZuFwd<Args>(args)...),
+      NTP::Base{ZuFwd<Args>(args)...},
       m_data(0), m_offset(0), m_size(0), m_length(0), m_count(0),
       m_initial(params.initial()), m_increment(params.increment()),
       m_defrag(1.0 - (double)params.maxFrag() / 100.0) { }

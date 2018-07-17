@@ -46,12 +46,14 @@ friend class ZmHashMgr;
 
   typedef ZmRBTree<IDString,
 	    ZmRBTreeVal<ZmHashParams,
-	      ZmRBTreeHeapID<HeapID,
-		ZmRBTreeLock<ZmNoLock> > > > ID2Params;
+	      ZmRBTreeObject<ZuNull,
+		ZmRBTreeHeapID<HeapID,
+		  ZmRBTreeLock<ZmNoLock> > > > > ID2Params;
   typedef ZmRBTree<void *,
 	    ZmRBTreeVal<ReportFn,
-	      ZmRBTreeHeapID<HeapID,
-		ZmRBTreeLock<ZmNoLock> > > > Ptr2ReportFn;
+	      ZmRBTreeObject<ZuNull,
+		ZmRBTreeHeapID<HeapID,
+		  ZmRBTreeLock<ZmNoLock> > > > > Ptr2ReportFn;
 
   ZmHashMgr_() { }
 
@@ -61,14 +63,16 @@ friend class ZmHashMgr;
 
   void init(ZuString id, const ZmHashParams &params) {
     ZmGuard<ZmPLock> guard(m_lock);
-    m_params.del(id);
-    m_params.add(id, params);
+    if (ID2Params::Node *node = m_params.find(id))
+      node->val() = params;
+    else
+      m_params.add(id, params);
   }
   ZmHashParams &params(ZuString id, ZmHashParams &in) {
     {
       ZmGuard<ZmPLock> guard(m_lock);
-      ZmRef<ID2Params::Node> node = m_params.find(id);
-      if (node) in = node->val();
+      if (ID2Params::Node *node = m_params.find(id))
+	in = node->val();
     }
     return in;
   }

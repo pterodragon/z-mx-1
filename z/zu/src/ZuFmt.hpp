@@ -30,9 +30,11 @@
 #pragma once
 #endif
 
+#include <ZuIf.hpp>
+
 // compile-time formatting
 namespace ZuFmt {
-  enum { MaxWidth = 26 };
+  enum { MaxWidth = 54 };
   enum { MaxNDP = 19 };
 
   // NTP (named template parameters)
@@ -126,21 +128,21 @@ struct ZuVFmt {
   ZuInline ZuVFmt &left(unsigned width, char pad = '\0') {
     using namespace ZuFmt;
     m_justification = Just::Left;
-    m_width = width > MaxWidth ? MaxWidth : width;
+    m_width = ZuUnlikely(width > MaxWidth) ? MaxWidth : width;
     m_pad = pad;
     return *this;
   }
   ZuInline ZuVFmt &right(unsigned width, char pad = '0') {
     using namespace ZuFmt;
     m_justification = Just::Right;
-    m_width = width > MaxWidth ? MaxWidth : width;
+    m_width = ZuUnlikely(width > MaxWidth) ? MaxWidth : width;
     m_pad = pad;
     return *this;
   }
   ZuInline ZuVFmt &frac(unsigned ndp, char trim = '\0') {
     using namespace ZuFmt;
     m_justification = Just::Frac;
-    m_ndp = ndp > MaxNDP ? MaxNDP : ndp;
+    m_ndp = ZuUnlikely(ndp > MaxNDP) ? MaxNDP : ndp;
     m_trim = trim;
     return *this;
   }
@@ -173,7 +175,9 @@ struct ZuVFmt {
   }
   ZuInline ZuVFmt &fp(int ndp = -ZuFmt::MaxNDP, char trim = '\0') {
     using namespace ZuFmt;
-    m_ndp = ndp < -MaxNDP ? -MaxNDP : ndp > MaxNDP ? MaxNDP : ndp;
+    m_ndp =
+      ZuUnlikely(ndp < -MaxNDP) ? -MaxNDP :
+      ZuUnlikely(ndp > MaxNDP) ? MaxNDP : ndp;
     m_trim = trim;
     return *this;
   }
@@ -199,6 +203,56 @@ private:
   int8_t	m_pad;
   int8_t	m_ndp;
   char		m_trim;
+};
+template <typename T, bool Ref = 0> struct ZuVFmtWrapper {
+  typedef typename ZuIf<ZuVFmt &, ZuVFmt, Ref>::T Fmt;
+
+  ZuInline T &reset() {
+    fmt.reset();
+    return *static_cast<T *>(this);
+  }
+  ZuInline T &left(unsigned width, char pad = '\0') {
+    fmt.left(width, pad);
+    return *static_cast<T *>(this);
+  }
+  ZuInline T &right(unsigned width, char pad = '0') {
+    fmt.right(width, pad);
+    return *static_cast<T *>(this);
+  }
+  ZuInline T &frac(unsigned ndp, char trim = '\0') {
+    fmt.frac(ndp, trim);
+    return *static_cast<T *>(this);
+  }
+  ZuInline T &hex() {
+    fmt.hex();
+    return *static_cast<T *>(this);
+  }
+  ZuInline T &hex(bool upper) {
+    fmt.hex(upper);
+    return *static_cast<T *>(this);
+  }
+  ZuInline T &hex(bool hex_, bool upper) {
+    fmt.hex(hex_, upper);
+    return *static_cast<T *>(this);
+  }
+  ZuInline T &comma(char comma_ = ',') {
+    fmt.comma(comma_);
+    return *static_cast<T *>(this);
+  }
+  ZuInline T &alt() {
+    fmt.alt();
+    return *static_cast<T *>(this);
+  }
+  ZuInline T &alt(bool alt_) {
+    fmt.alt(alt_);
+    return *static_cast<T *>(this);
+  }
+  ZuInline T &fp(int ndp = -ZuFmt::MaxNDP, char trim = '\0') {
+    fmt.fp(ndp, trim);
+    return *static_cast<T *>(this);
+  }
+
+  Fmt		fmt;
 };
 
 #endif /* ZuFmt_HPP */

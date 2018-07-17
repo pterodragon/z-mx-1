@@ -52,16 +52,16 @@ public:
     IOError	= Zi::IOError
   };
 
-  inline ZiIP() { s_addr = 0; }
+  ZuInline ZiIP() { s_addr = 0; }
 
-  inline ZiIP(const ZiIP &a) { s_addr = a.s_addr; }
-  inline ZiIP &operator =(const ZiIP &a) {
-    if (this != &a) s_addr = a.s_addr;
+  ZuInline ZiIP(const ZiIP &a) { s_addr = a.s_addr; }
+  ZuInline ZiIP &operator =(const ZiIP &a) {
+    s_addr = a.s_addr;
     return *this;
   }
 
-  inline explicit ZiIP(struct in_addr ia) { s_addr = ia.s_addr; }
-  inline ZiIP &operator =(struct in_addr ia) {
+  ZuInline explicit ZiIP(struct in_addr ia) { s_addr = ia.s_addr; }
+  ZuInline ZiIP &operator =(struct in_addr ia) {
     s_addr = ia.s_addr;
     return *this;
   }
@@ -78,14 +78,17 @@ public:
     return *this;
   }
 
-  inline bool equals(const ZiIP &a) const { return s_addr == a.s_addr; }
-  inline int cmp(const ZiIP &a) const {
+  ZuInline bool equals(const ZiIP &a) const { return s_addr == a.s_addr; }
+  ZuInline int cmp(const ZiIP &a) const {
     return ZuCmp<uint32_t>::cmp(s_addr, a.s_addr);
   }
-  inline bool operator ==(const ZiIP &a) const { return s_addr == a.s_addr; }
-  inline bool operator !=(const ZiIP &a) const { return s_addr != a.s_addr; }
-  inline bool operator !() const { return !s_addr; }
-  inline uint32_t hash() const { return *(uint32_t *)&s_addr; }
+  ZuInline bool operator ==(const ZiIP &a) const { return s_addr == a.s_addr; }
+  ZuInline bool operator !=(const ZiIP &a) const { return s_addr != a.s_addr; }
+
+  ZuInline bool operator !() const { return !s_addr; }
+  ZuOpBool
+
+  ZuInline uint32_t hash() const { return *(uint32_t *)&s_addr; }
 
   template <typename S> void print(S &s) const {
     uint32_t addr = (uint32_t)ntohl(s_addr);
@@ -96,7 +99,7 @@ public:
       ZuBoxed((((uint32_t)addr)    ) & 0xff);
   }
 
-  inline bool multicast() const {
+  ZuInline bool multicast() const {
     unsigned i = (((uint32_t)ntohl(s_addr))>>24) & 0xff;
      return i >= 224 && i < 240;
   }
@@ -123,10 +126,10 @@ template <> struct ZuPrint<ZiIP> : public ZuPrintFn { };
 
 class ZiSockAddr {
 public:
-  inline ZiSockAddr() { null(); }
+  ZuInline ZiSockAddr() { null(); }
   inline ZiSockAddr(ZiIP ip, uint16_t port) { init(ip, port); }
 
-  inline void null() { m_sin.sin_family = AF_UNSPEC; }
+  ZuInline void null() { m_sin.sin_family = AF_UNSPEC; }
   inline void init(ZiIP ip, uint16_t port) {
     m_sin.sin_family = AF_INET;
     m_sin.sin_port = htons(port);
@@ -134,13 +137,14 @@ public:
     memset(&m_sin.sin_zero, 0, sizeof(m_sin.sin_zero));
   }
 
-  inline ZiIP ip() const { return ZiIP(m_sin.sin_addr); }
-  inline uint16_t port() const { return ntohs(m_sin.sin_port); }
+  ZuInline ZiIP ip() const { return ZiIP(m_sin.sin_addr); }
+  ZuInline uint16_t port() const { return ntohs(m_sin.sin_port); }
 
-  inline struct sockaddr *sa() { return (struct sockaddr *)&m_sin; }
-  inline int len() const { return sizeof(struct sockaddr_in); }
+  ZuInline struct sockaddr *sa() { return (struct sockaddr *)&m_sin; }
+  ZuInline int len() const { return sizeof(struct sockaddr_in); }
 
-  inline bool operator !() const { return m_sin.sin_family == AF_UNSPEC; }
+  ZuInline bool operator !() const { return m_sin.sin_family == AF_UNSPEC; }
+  ZuOpBool
 
   struct sockaddr_in	m_sin;
 };

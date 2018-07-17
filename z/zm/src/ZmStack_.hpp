@@ -167,7 +167,7 @@ public:
 
   template <typename ...Args>
   inline ZmStack(ZmStackParams params = ZmStackParams(), Args &&... args) :
-      NTP::Base(ZuFwd<Args>(args)...),
+      NTP::Base{ZuFwd<Args>(args)...},
       m_data(0), m_size(0), m_length(0), m_count(0),
       m_initial(params.initial()),
       m_increment(params.increment()),

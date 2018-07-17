@@ -152,18 +152,18 @@ public:
     return *this;
   }
 
-  inline operator T *() const { return m_object; }
-  inline T *operator ->() const { return m_object; }
+  ZuInline operator T *() const { return m_object; }
+  ZuInline T *operator ->() const { return m_object; }
 
   template <typename O>
-  inline typename MatchOtherRef<ZuRef<O>, O *>::T as() const {
+  ZuInline typename MatchOtherRef<ZuRef<O>, O *>::T as() const {
     return static_cast<O *>(m_object);
   }
 
-  inline T *ptr() const { return m_object; }
+  ZuInline T *ptr() const { return m_object; }
   T *ptr_() const { return m_object; }
 
-  inline bool operator !() const { return !m_object; }
+  ZuInline bool operator !() const { return !m_object; }
 
 protected:
   T		*m_object;

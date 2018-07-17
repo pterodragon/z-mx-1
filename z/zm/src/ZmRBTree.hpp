@@ -222,13 +222,13 @@ public:
     inline Node *right() const { return m_right; }
     inline Node *left() const { return m_left; }
     inline Node *dup() const { return m_dup; }
-    inline Node *parent() const { return (Node *)(m_parent & ~1); }
+    inline Node *parent() const { return (Node *)(m_parent & ~1U); }
 
     inline void right(Node *n) { m_right = n; }
     inline void left(Node *n) { m_left = n; }
     inline void dup(Node *n) { m_dup = n; }
     inline void parent(Node *n) {
-      m_parent = (m_parent & 1) | (uintptr_t)n;
+      m_parent = (uintptr_t)n | (m_parent & 1U);
     }
 
     Node		*m_right;
@@ -359,7 +359,7 @@ public:
 
   template <typename ...Args>
   ZmRBTree(Args &&... args) :
-      NTP::Base(ZuFwd<Args>(args)...),
+      NTP::Base{ZuFwd<Args>(args)...},
       m_root(0), m_minimum(0), m_maximum(0), m_count(0) { };
 
   ~ZmRBTree() { clean_(); }

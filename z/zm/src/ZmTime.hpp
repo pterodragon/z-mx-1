@@ -281,9 +281,11 @@ public:
   ZuInline int operator <=(const ZmTime &t) const {
     return tv_sec < t.tv_sec || (tv_sec == t.tv_sec && tv_nsec <= t.tv_nsec);
   }
+
   ZuInline int operator !() const {
     return !(tv_sec || tv_nsec);
   }
+  ZuOpBool
 
   ZuInline time_t sec() const { return tv_sec; }
   ZuInline time_t &sec() { return tv_sec; }

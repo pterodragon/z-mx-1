@@ -19,8 +19,8 @@
 
 // log10 lookup tables
 
-#ifndef ZuLog10_HPP
-#define ZuLog10_HPP
+#ifndef ZuDecimal_HPP
+#define ZuDecimal_HPP
 
 #ifndef ZuLib_HPP
 #include <ZuLib.hpp>
@@ -71,6 +71,15 @@ namespace ZuDecimal {
       10000000000000000000ULL
     };
     return pow10[i];
+  }
+
+  ZuInline const uint128_t pow10_128(unsigned i) {
+    uint128_t v;
+    if (ZuLikely(i < 20U))
+      v = pow10_64(i);
+    else
+      v = (uint128_t)pow10_64(i - 19U) * (uint128_t)10000000000000000000ULL;
+    return v;
   }
 
   template <unsigned I> struct Pow10 { };
@@ -137,6 +146,33 @@ namespace ZuDecimal {
     ZuInline static constexpr uint64_t pow10()
       { return 10000000000000000000ULL; }
   };
+  template <unsigned I> struct Pow10_128 {
+    ZuInline static constexpr uint128_t pow10() {
+      return
+	(uint128_t)Pow10<I - 19U>::pow10() *
+	(uint128_t)10000000000000000000ULL;
+    }
+  };
+  template <> struct Pow10<20U> : public Pow10_128<20U> { };
+  template <> struct Pow10<21U> : public Pow10_128<21U> { };
+  template <> struct Pow10<22U> : public Pow10_128<22U> { };
+  template <> struct Pow10<23U> : public Pow10_128<23U> { };
+  template <> struct Pow10<24U> : public Pow10_128<24U> { };
+  template <> struct Pow10<25U> : public Pow10_128<25U> { };
+  template <> struct Pow10<26U> : public Pow10_128<26U> { };
+  template <> struct Pow10<27U> : public Pow10_128<27U> { };
+  template <> struct Pow10<28U> : public Pow10_128<28U> { };
+  template <> struct Pow10<29U> : public Pow10_128<29U> { };
+  template <> struct Pow10<30U> : public Pow10_128<30U> { };
+  template <> struct Pow10<31U> : public Pow10_128<31U> { };
+  template <> struct Pow10<32U> : public Pow10_128<32U> { };
+  template <> struct Pow10<33U> : public Pow10_128<33U> { };
+  template <> struct Pow10<34U> : public Pow10_128<34U> { };
+  template <> struct Pow10<35U> : public Pow10_128<35U> { };
+  template <> struct Pow10<36U> : public Pow10_128<36U> { };
+  template <> struct Pow10<37U> : public Pow10_128<37U> { };
+  template <> struct Pow10<38U> : public Pow10_128<38U> { };
+  template <> struct Pow10<39U> : public Pow10_128<39U> { };
 }
 
-#endif /* ZuLog10_HPP */
+#endif /* ZuDecimal_HPP */

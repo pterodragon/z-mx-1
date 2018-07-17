@@ -132,9 +132,8 @@ public:
     return ZuCmp<uintptr_t>::cmp(m_object, fn.m_object);
   }
 
-  ZuInline operator bool() const { return !!m_invoker; }
-
   ZuInline bool operator !() const { return !m_invoker; }
+  ZuOpBool
 
   ZuInline uint32_t hash() const {
     return

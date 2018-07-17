@@ -76,30 +76,30 @@ private:
 
 class Link : public MxLink<Link> {
 public:
-  Link(MxEngine &engine, MxID id) : MxLink<Link>(engine, id) { }
+  Link(MxID id) : MxLink<Link>(id) { }
 
-  ZuInline Engine &engine() {
-    return static_cast<Engine &>(MxAnyLink::engine()); // actually MxAnyTx
+  ZuInline Engine *engine() {
+    return static_cast<Engine *>(MxAnyLink::engine()); // actually MxAnyTx
   }
 
-  ZmTime reconnectInterval(unsigned) { return engine().reconnectInterval(); }
-  ZmTime reRequestInterval() { return engine().reRequestInterval(); }
+  ZmTime reconnectInterval(unsigned) { return engine()->reconnectInterval(); }
+  ZmTime reRequestInterval() { return engine()->reRequestInterval(); }
 
   void update(ZvCf *cf) { }
   void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) { }
 
 #define linkINFO(code) \
-    engine().appException(ZeEVENT(Info, \
+    engine()->appException(ZeEVENT(Info, \
       ([=, id = id()](const ZeEvent &, ZmStream &out) { out << code; })))
   void connect() {
     linkINFO("connect(): " << id);
     connected();
-    engine().connected();
+    engine()->connected();
   }
   void disconnect() {
     linkINFO("disconnect(): " << id);
     disconnected();
-    engine().disconnected();
+    engine()->disconnected();
   }
 
   // Rx

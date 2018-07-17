@@ -473,7 +473,7 @@ friend class Snapper;
   class Recorder;
 friend class Recorder;
   class Recorder :
-    public MxEngineApp, public MxEngine, public MxLink<Recorder> {
+    public MxEngineApp, public MxEngine {
   public:
     typedef ZmPLock Lock;
     typedef ZmGuard<Lock> Guard;
@@ -494,6 +494,10 @@ friend class Recorder;
     virtual void archive(MxAnyLink *, MxQMsg *) {}
     virtual ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
 
+    class Link : public MxLink<Link> {
+      // FIXME move MxLink CRTP interface implementation into here
+    };
+
   private:
     struct SnapQueue_HeapID {
       inline static const char *id() { return "MxMD.SnapQueue"; }
@@ -505,11 +509,12 @@ friend class Recorder;
 		  ZmListHeapID<SnapQueue_HeapID> > > > SnapQueue;
 
     inline Recorder(MxMDCore *core) :
-      MxLink<Recorder>(*this, "recorder"), m_core(core) { }
+      MxLink<Recorder>("recorder"), m_core(core) { }
 
     void init() {
-        MxEngine::init(m_core, this, m_core->mx(), m_core->cf());
-        appUpdateLink(this);
+      MxEngine::init(m_core, this, m_core->mx(), m_core->cf());
+      ZmRef<MxLink<Link> > link =
+	MxEngine::updateLink<Link>("recorder", m_core->cf()); // FIXME - cf paraeter is a bit bogus here
     }
 
     inline ~Recorder() { m_file.close(); }

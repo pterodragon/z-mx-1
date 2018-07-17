@@ -165,13 +165,17 @@ void MxEngine::final()
 
 // connection state management
 
-MxAnyTx::MxAnyTx(MxEngine &engine, MxID id) :
-  m_engine(engine), m_id(id), m_mx(engine.mx())
+MxAnyTx::MxAnyTx(MxID id) : m_id(id)
 {
 }
 
-MxAnyLink::MxAnyLink(MxEngine &engine, MxID id) :
-  MxAnyTx(engine, id),
+void MxAnyTx::init(MxEngine *engine) :
+  m_engine(engine), m_mx(engine->mx())
+{
+}
+
+MxAnyLink::MxAnyLink(MxID id) :
+  MxAnyTx(id),
   m_state(MxLinkState::Down),
   m_reconnects(0)
 {
@@ -182,7 +186,7 @@ void MxAnyLink::up()
   bool connect = false;
 
   // cancel reconnect
-  mx().del(&m_reconnectTimer);
+  mx()->del(&m_reconnectTimer);
 
   {
     ZmGuard<ZmLock> stateGuard(m_stateLock);
@@ -204,7 +208,7 @@ void MxAnyLink::up()
   }
 
   if (connect)
-    mx().add(ZmFn<>::Member<&MxAnyLink::connect>::fn(this));
+    mx()->add(ZmFn<>::Member<&MxAnyLink::connect>::fn(this));
 }
 
 void MxAnyLink::down()
@@ -212,7 +216,7 @@ void MxAnyLink::down()
   bool disconnect = false;
 
   // cancel reconnect
-  mx().del(&m_reconnectTimer);
+  mx()->del(&m_reconnectTimer);
 
   {
     ZmGuard<ZmLock> stateGuard(m_stateLock);
@@ -234,7 +238,7 @@ void MxAnyLink::down()
   }
 
   if (disconnect)
-    mx().add(ZmFn<>::Member<&MxAnyLink::disconnect>::fn(this));
+    mx()->add(ZmFn<>::Member<&MxAnyLink::disconnect>::fn(this));
 }
 
 void MxAnyLink::reconnect()
@@ -244,7 +248,7 @@ void MxAnyLink::reconnect()
   ZmGuard<ZmLock> stateGuard(m_stateLock);
 
   // cancel reconnect
-  mx().del(&m_reconnectTimer);
+  mx()->del(&m_reconnectTimer);
 
   // state machine
   switch ((int)m_state) {
@@ -261,7 +265,7 @@ void MxAnyLink::reconnect()
     m_reconnectTime.now(reconnectInterval(m_reconnects));
     ZmTime reconnectTime = m_reconnectTime;
     stateGuard.unlock();
-    mx().add(ZmFn<>::Member<&MxAnyLink::connect>::fn(this),
+    mx()->add(ZmFn<>::Member<&MxAnyLink::connect>::fn(this),
 	reconnectTime, &m_reconnectTimer);
   }
 }
@@ -290,9 +294,9 @@ void MxAnyLink::connected()
     if (disconnect) m_reconnects = 0;
   }
 
-  if (linkUp) engine().linkUp(this);
+  if (linkUp) engine()->linkUp(this);
   if (disconnect) 
-    mx().add(ZmFn<>::Member<&MxAnyLink::disconnect>::fn(this));
+    mx()->add(ZmFn<>::Member<&MxAnyLink::disconnect>::fn(this));
 }
 
 void MxAnyLink::disconnected()
@@ -319,7 +323,7 @@ void MxAnyLink::disconnected()
     if (connect) m_reconnects = 0;
   }
 
-  if (linkDown) engine().linkDown(this);
+  if (linkDown) engine()->linkDown(this);
   if (connect)
-    mx().add(ZmFn<>::Member<&MxAnyLink::connect>::fn(this));
+    mx()->add(ZmFn<>::Member<&MxAnyLink::connect>::fn(this));
 }

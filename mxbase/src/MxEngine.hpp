@@ -62,7 +62,9 @@ class MxAnyTx : public ZmPolymorph {
   MxAnyTx &operator =(const MxAnyTx &);
 
 protected:
-  MxAnyTx(MxEngine &engine, MxID id);
+  MxAnyTx(MxID id);
+  
+  void init(MxEngine *engine);
 
 public:
   typedef MxMultiplex Mx;
@@ -72,18 +74,18 @@ public:
     inline static MxID value(const MxAnyTx *t) { return t->id(); }
   };
 
-  ZuInline MxEngine &engine() const { return m_engine; }
+  ZuInline MxEngine *engine() const { return m_engine; }
   ZuInline MxID id() const { return m_id; }
-  ZuInline Mx &mx() const { return m_mx; }
+  ZuInline Mx *mx() const { return m_mx; }
 
   virtual void send(MxQMsg *) = 0;
   virtual void abort(MxSeqNo) = 0;
   virtual void archived(MxSeqNo) = 0;
 
 private:
-  MxEngine		&m_engine;
   MxID			m_id;
-  Mx			&m_mx;
+  MxEngine		*m_engine = 0;
+  Mx			*m_mx = 0;
 };
 
 class MxAnyTxPool : public MxAnyTx {
@@ -91,7 +93,7 @@ class MxAnyTxPool : public MxAnyTx {
   MxAnyTxPool &operator =(const MxAnyTxPool &) = delete;
 
 protected:
-  inline MxAnyTxPool(MxEngine &engine, MxID id) : MxAnyTx(engine, id) { }
+  inline MxAnyTxPool(MxID id) : MxAnyTx(id) { }
 
 public:
   virtual MxQueue *txQueuePtr() = 0;
@@ -102,7 +104,7 @@ class MxAnyLink : public MxAnyTx {
   MxAnyLink &operator =(const MxAnyLink &) = delete;
 
 protected:
-  MxAnyLink(MxEngine &engine, MxID id);
+  MxAnyLink(MxID id);
 
 public:
   void up();
@@ -260,7 +262,9 @@ public:
 
   ZuInline void appAddEngine() { mgr()->addEngine(this); }
   ZuInline void appDelEngine() { mgr()->delEngine(this); }
-  ZuInline void appEngineState(MxEnum state) { mgr()->engineState(this, state); }
+  ZuInline void appEngineState(MxEnum state) {
+    mgr()->engineState(this, state);
+  }
 
   ZuInline void appUpdateLink(MxAnyLink *link) { mgr()->updateLink(link); }
   ZuInline void appDelLink(MxAnyLink *link) { mgr()->delLink(link); }
@@ -354,7 +358,8 @@ public:
       appAddQueue(id, 1, link->txQueuePtr());
       return link;
     }
-    link = new Link(*this, id);
+    link = new Link(id);
+    link->init(this);
     link->update(cf);
     m_links.add(link);
     guard.unlock();
@@ -412,7 +417,9 @@ public:
   typedef MxQueue::Gap Gap;
   typedef MxAnyTx::AbortFn AbortFn;
 
-  inline MxTx(MxEngine &engine, MxID id) : Base(engine, id) { }
+  inline MxTx(MxID id) : Base(id) { }
+  
+  inline void init(MxEngine *engine) { Base::init(engine); }
 
   ZuInline const Impl &impl() const { return static_cast<const Impl &>(*this); }
   ZuInline Impl &impl() { return static_cast<Impl &>(*this); }
@@ -432,13 +439,13 @@ public:
   ZuInline void idleArchive() { m_archiving = 0; }
 
   template <typename L> ZuInline void txRun(L l)
-    { this->engine().txRun(ZuMv(l), impl().tx()); }
+    { this->engine()->txRun(ZuMv(l), impl().tx()); }
   template <typename L> ZuInline void txRun(L l) const
-    { this->engine().txRun(ZuMv(l), impl().tx()); }
+    { this->engine()->txRun(ZuMv(l), impl().tx()); }
   template <typename L> ZuInline void txInvoke(L l)
-    { this->engine().txInvoke(ZuMv(l), impl().tx()); }
+    { this->engine()->txInvoke(ZuMv(l), impl().tx()); }
   template <typename L> ZuInline void txInvoke(L l) const
-    { this->engine().txInvoke(ZuMv(l), impl().tx()); }
+    { this->engine()->txInvoke(ZuMv(l), impl().tx()); }
 
 private:
   ZmAtomic<unsigned>	m_sending;
@@ -462,7 +469,7 @@ public:
   typedef ZmPQTx<Impl, MxQueue, ZmNoLock> Tx_;
   typedef MxQueueTxPool<Impl> Tx;
 
-  inline MxTxPool(MxEngine &engine, MxID id) : Base(engine, id) { }
+  inline MxTxPool(MxID id) : Base(id) { }
 
   ZuInline const Tx *tx() const { return static_cast<const Tx *>(this); }
   ZuInline Tx *tx() { return static_cast<Tx *>(this); }
@@ -535,12 +542,17 @@ public:
   ZuInline const Tx *tx() const { return static_cast<const Tx *>(this); }
   ZuInline Tx *tx() { return static_cast<Tx *>(this); }
 
-  inline MxLink(MxEngine &engine, MxID id,
-    MxSeqNo rxSeqNo = MxSeqNo(), MxSeqNo txSeqNo = MxSeqNo()) :
-      Base(engine, id), Rx(rxSeqNo), Tx(txSeqNo) { }
+  inline MxLink(MxID id) : Base(id) { }
+
+  inline void init(MxEngine *engine,
+      MxSeqNo rxSeqNo = MxSeqNo(), MxSeqNo txSeqNo = MxSeqNo()) {
+    Base::init(engine);
+    Rx::init(rxSeqNo);
+    Tx::init(txSeqNo);
+  }
 
   ZuInline void process(MxQMsg *msg) {
-    this->engine().appProcess(this, msg);
+    this->engine()->appProcess(this, msg);
   }
 
   ZuInline void scheduleDequeue() {
@@ -566,11 +578,11 @@ public:
     m_rrTime.now();
     ZmTime rrTime = (m_rrTime += interval);
     guard.unlock();
-    this->mx().add(
+    this->mx()->add(
 	ZmFn<>::Member<&MxLink::runReRequest>::fn(this), rrTime, &m_rrTimer);
   }
   ZuInline void cancelReRequest() {
-    this->mx().del(&m_rrTimer);
+    this->mx()->del(&m_rrTimer);
     {
       RRGuard guard(m_rrLock);
       m_rrTime = ZmTime();
@@ -580,27 +592,27 @@ public:
 
   // Impl/MxQueueTx callbacks (send_() must call sent_()/aborted_())
   ZuInline void sent_(MxQMsg *msg) // tx sent (persistent)
-    { this->engine().app()->sent(this, msg); }
+    { this->engine()->app()->sent(this, msg); }
   ZuInline void aborted_(MxQMsg *msg) // tx aborted
-    { this->engine().app()->aborted(this, msg); }
+    { this->engine()->app()->aborted(this, msg); }
 
   // MxQueueTx/ZmPQTx callbacks
   ZuInline void archive_(MxQMsg *msg) // tx archive - app calls archived()
-    { this->engine().app().archive(this, msg); }
+    { this->engine()->app().archive(this, msg); }
   ZuInline ZmRef<MxQMsg> retrieve_(MxSeqNo seqNo) // tx retrieve
-    { return this->engine().app().retrieve(this, seqNo); }
+    { return this->engine()->app().retrieve(this, seqNo); }
 
   MxQueue *rxQueuePtr() { return &(this->rxQueue()); }
   MxQueue *txQueuePtr() { return &(this->txQueue()); }
 
   template <typename L> ZuInline void rxRun(L l)
-    { this->engine().rxRun(ZuMv(l), rx()); }
+    { this->engine()->rxRun(ZuMv(l), rx()); }
   template <typename L> ZuInline void rxRun(L l) const
-    { this->engine().rxRun(ZuMv(l), rx()); }
+    { this->engine()->rxRun(ZuMv(l), rx()); }
   template <typename L> ZuInline void rxInvoke(L l)
-    { this->engine().rxInvoke(ZuMv(l), rx()); }
+    { this->engine()->rxInvoke(ZuMv(l), rx()); }
   template <typename L> ZuInline void rxInvoke(L l) const
-    { this->engine().rxInvoke(ZuMv(l), rx()); }
+    { this->engine()->rxInvoke(ZuMv(l), rx()); }
 
   void send(MxQMsg *msg)
     { this->txInvoke([msg = ZmMkRef(msg)](Tx *tx) { tx->send(msg); }); }
@@ -640,7 +652,7 @@ private:
   RRLock		m_rrLock;
     ZmTime		  m_rrTime;
 
-  ZmAtomic<unsigned>	m_dequeuing;
+  ZmAtomic<unsigned>	m_dequeuing = 0;
 };
 
 #endif /* MxEngine_HPP */

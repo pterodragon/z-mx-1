@@ -144,7 +144,9 @@ public:
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
 
-  ZuInline MxQueueRx(MxSeqNo seqNo = MxSeqNo()) : m_queue(seqNo) { }
+  ZuInline MxQueueRx() : m_queue(MxSeqNo()) { }
+  
+  ZuInline void init(MxSeqNo seqNo) { m_queue.head(seqNo) }
 
   ZuInline const App &app() const { return static_cast<const App *>(*this); }
   ZuInline App &app() { return static_cast<App *>(*this); }
@@ -239,8 +241,12 @@ protected:
   ZuInline Lock &lock() { return m_lock; }
 
 public:
-  ZuInline MxQueueTx(MxSeqNo seqNo = MxSeqNo()) :
-    m_seqNo(seqNo), m_queue(seqNo), m_poolOffset(0) { }
+  ZuInline MxQueueTx() : m_queue(MxSeqNo()) { }
+
+  ZuInline void init(MxSeqNo seqNo) {
+    m_seqNo = seqNo;
+    m_queue.head(seqNo);
+  }
 
   ZuInline const App &app() const { return static_cast<const App &>(*this); }
   ZuInline App &app() { return static_cast<App &>(*this); }
@@ -325,7 +331,7 @@ private:
 
   Lock		m_lock;
     Pools	  m_pools;
-    unsigned	  m_poolOffset;
+    unsigned	  m_poolOffset = 0;
     ZmTime	  m_ready;
 };
 

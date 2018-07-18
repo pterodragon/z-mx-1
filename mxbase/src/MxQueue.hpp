@@ -66,6 +66,13 @@ struct MxQMsgData {
   MxFlags		flags;		// see MxQFlags
   ZmTime		deadline;
   ZuRef<ZuAnyPOD>	payload;
+
+  template <typename T> inline const T &as() const {
+    return *static_cast<const T *>(payload.ptr());
+  }
+  template <typename T> inline T &as() {
+    return *static_cast<T *>(payload.ptr());
+  }
 };
 
 class MxQMsg_ : public MxQMsgData {
@@ -96,12 +103,14 @@ private:
 };
 
 struct MxQueue_HeapID { inline static const char *id() { return "MxQueue"; } };
+struct MxQueue_ { MxID id; };	// queue ID
 typedef ZmPQueue<MxQMsg_,
 	  ZmPQueueNodeIsItem<true,
 	    ZmPQueueObject<ZuObject,
 	      ZmPQueueFn<MxQFn,
 		ZmPQueueLock<ZmNoLock,
-		  ZmPQueueHeapID<MxQueue_HeapID> > > > > > MxQueue;
+		  ZmPQueueBase<MxQueue_,
+		    ZmPQueueHeapID<MxQueue_HeapID> > > > > > > MxQueue;
 typedef MxQueue::Node MxQMsg;
 typedef MxQueue::Gap MxQGap;
 
@@ -132,7 +141,9 @@ public:
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
 
-  ZuInline MxQueueRx(MxSeqNo seqNo = MxSeqNo()) : m_queue(seqNo) { }
+  ZuInline MxQueueRx() : m_queue(MxSeqNo()) { }
+  
+  ZuInline void init(MxSeqNo seqNo) { m_queue.head(seqNo); }
 
   ZuInline const App &app() const { return static_cast<const App *>(*this); }
   ZuInline App &app() { return static_cast<App *>(*this); }
@@ -227,8 +238,12 @@ protected:
   ZuInline Lock &lock() { return m_lock; }
 
 public:
-  ZuInline MxQueueTx(MxSeqNo seqNo = MxSeqNo()) :
-    m_seqNo(seqNo), m_queue(seqNo), m_poolOffset(0) { }
+  ZuInline MxQueueTx() : m_queue(MxSeqNo()) { }
+
+  ZuInline void init(MxSeqNo seqNo) {
+    m_seqNo = seqNo;
+    m_queue.head(seqNo);
+  }
 
   ZuInline const App &app() const { return static_cast<const App &>(*this); }
   ZuInline App &app() { return static_cast<App &>(*this); }
@@ -313,7 +328,7 @@ private:
 
   Lock		m_lock;
     Pools	  m_pools;
-    unsigned	  m_poolOffset;
+    unsigned	  m_poolOffset = 0;
     ZmTime	  m_ready;
 };
 

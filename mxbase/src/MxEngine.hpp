@@ -62,7 +62,9 @@ class MxAnyTx : public ZmPolymorph {
   MxAnyTx &operator =(const MxAnyTx &);
 
 protected:
-  MxAnyTx(MxEngine &engine, MxID id);
+  MxAnyTx(MxID id);
+  
+  void init(MxEngine *engine);
 
 public:
   typedef MxMultiplex Mx;
@@ -72,18 +74,18 @@ public:
     inline static MxID value(const MxAnyTx *t) { return t->id(); }
   };
 
-  ZuInline MxEngine &engine() const { return m_engine; }
+  ZuInline MxEngine *engine() const { return m_engine; }
   ZuInline MxID id() const { return m_id; }
-  ZuInline Mx &mx() const { return m_mx; }
+  ZuInline Mx *mx() const { return m_mx; }
 
   virtual void send(MxQMsg *) = 0;
   virtual void abort(MxSeqNo) = 0;
   virtual void archived(MxSeqNo) = 0;
 
 private:
-  MxEngine		&m_engine;
   MxID			m_id;
-  Mx			&m_mx;
+  MxEngine		*m_engine = 0;
+  Mx			*m_mx = 0;
 };
 
 class MxAnyTxPool : public MxAnyTx {
@@ -91,7 +93,7 @@ class MxAnyTxPool : public MxAnyTx {
   MxAnyTxPool &operator =(const MxAnyTxPool &) = delete;
 
 protected:
-  inline MxAnyTxPool(MxEngine &engine, MxID id) : MxAnyTx(engine, id) { }
+  inline MxAnyTxPool(MxID id) : MxAnyTx(id) { }
 
 public:
   virtual MxQueue *txQueuePtr() = 0;
@@ -102,7 +104,7 @@ class MxAnyLink : public MxAnyTx {
   MxAnyLink &operator =(const MxAnyLink &) = delete;
 
 protected:
-  MxAnyLink(MxEngine &engine, MxID id);
+  MxAnyLink(MxID id);
 
 public:
   void up();
@@ -136,8 +138,7 @@ private:
 // Traffic Logging (timestamp, payload)
 typedef ZmFn<ZmTime &, ZuString &> MxTraffic;
 
-// Callbacks to the application from the engine implementation
-struct MxEngineApp : public ZmPolymorph {
+struct MxEngineMgr {
   // Engine Management
   virtual void addEngine(MxEngine *) = 0;
   virtual void delEngine(MxEngine *) = 0;
@@ -159,6 +160,17 @@ struct MxEngineApp : public ZmPolymorph {
   // Exception handling
   virtual void exception(ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 
+  // Traffic Logging (logThread)
+  /* Example usage:
+  app.log(id, MxTraffic([](const Msg *msg, ZmTime &stamp, ZuString &data) {
+      stamp = msg->stamp();
+      data = msg->buf();
+    }, msg)); */
+  virtual void log(MxMsgID, MxTraffic) = 0;
+};
+
+// Callbacks to the application from the engine implementation
+struct MxEngineApp{
   // Rx (called from engine's rx thread)
   typedef void (*ProcessFn)(MxEngineApp *, MxAnyLink *, MxQMsg *);
   virtual ProcessFn processFn() = 0;	// stashed in engine for performance
@@ -168,14 +180,6 @@ struct MxEngineApp : public ZmPolymorph {
   virtual void aborted(MxAnyLink *, MxQMsg *) = 0;	// tx aborted
   virtual void archive(MxAnyLink *, MxQMsg *) = 0;	// tx archive
   virtual ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) = 0; // tx retrieve
-
-  // Traffic Logging (logThread)
-  /* Example usage:
-  app.log(id, MxTraffic([](const Msg *msg, ZmTime &stamp, ZuString &data) {
-      stamp = msg->stamp();
-      data = msg->buf();
-    }, msg)); */
-  virtual void log(MxMsgID, MxTraffic) = 0;
 };
 
 // Note: When event/flow steering, referenced objects must remain
@@ -215,16 +219,21 @@ public:
 
   typedef MxScheduler Sched;
   typedef MxMultiplex Mx;
+  typedef MxEngineMgr Mgr;
   typedef MxEngineApp App;
   typedef App::ProcessFn ProcessFn;
 
-  inline MxEngine(App *app) :
-    m_app(app), 
-    m_processFn(app->processFn()),
+  inline MxEngine() :
+    m_mgr(nullptr),
+    m_app(nullptr), 
+    m_processFn(nullptr),
     m_rxThread(0), m_txThread(0),
     m_state(MxEngineState::Stopped), m_running(0) { }
-  
-  void init(Mx *mx, ZvCf *cf) {
+
+  void init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf) {
+    m_mgr = mgr,
+    m_app = app;
+    m_processFn = app->processFn();
     m_id = cf->get("id", true);
     m_mx = mx;
     m_rxThread = cf->getInt("rxThread", 1, mx->nThreads() + 1, true);
@@ -232,9 +241,10 @@ public:
   }
   void final();
 
-  ZuInline MxEngineApp &app() const { return *m_app; }
+  ZuInline MxEngineMgr *mgr() const { return m_mgr; }
+  ZuInline MxEngineApp *app() const { return m_app; }
   ZuInline MxID id() const { return m_id; }
-  ZuInline Mx &mx() const { return *m_mx; }
+  ZuInline Mx *mx() const { return m_mx; }
   ZuInline unsigned rxThread() const { return m_rxThread; }
   ZuInline unsigned txThread() const { return m_txThread; }
 
@@ -250,23 +260,25 @@ public:
   template <typename ...Args> ZuInline void txInvoke(Args &&... args)
     { m_mx->invoke(m_txThread, ZuFwd<Args>(args)...); }
 
-  ZuInline void appAddEngine() { app().addEngine(this); }
-  ZuInline void appDelEngine() { app().delEngine(this); }
-  ZuInline void appEngineState(MxEnum state) { app().engineState(this, state); }
+  ZuInline void appAddEngine() { mgr()->addEngine(this); }
+  ZuInline void appDelEngine() { mgr()->delEngine(this); }
+  ZuInline void appEngineState(MxEnum state) {
+    mgr()->engineState(this, state);
+  }
 
-  ZuInline void appUpdateLink(MxAnyLink *link) { app().updateLink(link); }
-  ZuInline void appDelLink(MxAnyLink *link) { app().delLink(link); }
+  ZuInline void appUpdateLink(MxAnyLink *link) { mgr()->updateLink(link); }
+  ZuInline void appDelLink(MxAnyLink *link) { mgr()->delLink(link); }
   ZuInline void appLinkState(MxAnyLink *link, MxEnum state, ZuString txt)
-    { app().linkState(link, state, txt); }
+    { mgr()->linkState(link, state, txt); }
 
-  ZuInline void appUpdateTxPool(MxAnyTxPool *pool) { app().updateTxPool(pool); }
-  ZuInline void appDelTxPool(MxAnyTxPool *pool) { app().delTxPool(pool); }
+  ZuInline void appUpdateTxPool(MxAnyTxPool *pool) { mgr()->updateTxPool(pool); }
+  ZuInline void appDelTxPool(MxAnyTxPool *pool) { mgr()->delTxPool(pool); }
 
   // Note: MxQueues are contained in Link and TxPool
   ZuInline void appAddQueue(MxID id, bool tx, MxQueue *queue)
-    { app().addQueue(id, tx, queue); }
+    { mgr()->addQueue(id, tx, queue); }
   ZuInline void appDelQueue(MxID id, bool tx)
-    { app().delQueue(id, tx); }
+    { mgr()->delQueue(id, tx); }
 
   // generic O.S. error logging
   inline auto osError(const char *op, int result, ZeError e) {
@@ -275,12 +287,12 @@ public:
     };
   }
 
-  ZuInline void appException(ZeEvent *e) { app().exception(e); }
+  ZuInline void appException(ZeEvent *e) { mgr()->exception(e); }
 
-  ZuInline void process(MxAnyLink *link, MxQMsg *msg)
-    { (*m_processFn)(&app(), link, msg); }
+  ZuInline void appProcess(MxAnyLink *link, MxQMsg *msg)
+    { (*m_processFn)(app(), link, msg); }
 
-  ZuInline void log(MxMsgID id, MxTraffic traffic) { app().log(id, traffic); }
+  ZuInline void log(MxMsgID id, MxTraffic traffic) { mgr()->log(id, traffic); }
 
 private:
   typedef ZmRWLock Lock;
@@ -346,7 +358,8 @@ public:
       appAddQueue(id, 1, link->txQueuePtr());
       return link;
     }
-    link = new Link(*this, id);
+    link = new Link(id);
+    link->init(this);
     link->update(cf);
     m_links.add(link);
     guard.unlock();
@@ -379,7 +392,8 @@ private:
 
 private:
   MxID				m_id;
-  ZmRef<App>			m_app;
+  Mgr				*m_mgr;
+  App				*m_app;
   ProcessFn			m_processFn;
   ZmRef<Mx>			m_mx;
   unsigned			m_rxThread;
@@ -403,7 +417,9 @@ public:
   typedef MxQueue::Gap Gap;
   typedef MxAnyTx::AbortFn AbortFn;
 
-  inline MxTx(MxEngine &engine, MxID id) : Base(engine, id) { }
+  inline MxTx(MxID id) : Base(id) { }
+  
+  inline void init(MxEngine *engine) { Base::init(engine); }
 
   ZuInline const Impl &impl() const { return static_cast<const Impl &>(*this); }
   ZuInline Impl &impl() { return static_cast<Impl &>(*this); }
@@ -423,13 +439,13 @@ public:
   ZuInline void idleArchive() { m_archiving = 0; }
 
   template <typename L> ZuInline void txRun(L l)
-    { this->engine().txRun(ZuMv(l), impl().tx()); }
+    { this->engine()->txRun(ZuMv(l), impl().tx()); }
   template <typename L> ZuInline void txRun(L l) const
-    { this->engine().txRun(ZuMv(l), impl().tx()); }
+    { this->engine()->txRun(ZuMv(l), impl().tx()); }
   template <typename L> ZuInline void txInvoke(L l)
-    { this->engine().txInvoke(ZuMv(l), impl().tx()); }
+    { this->engine()->txInvoke(ZuMv(l), impl().tx()); }
   template <typename L> ZuInline void txInvoke(L l) const
-    { this->engine().txInvoke(ZuMv(l), impl().tx()); }
+    { this->engine()->txInvoke(ZuMv(l), impl().tx()); }
 
 private:
   ZmAtomic<unsigned>	m_sending;
@@ -453,7 +469,7 @@ public:
   typedef ZmPQTx<Impl, MxQueue, ZmNoLock> Tx_;
   typedef MxQueueTxPool<Impl> Tx;
 
-  inline MxTxPool(MxEngine &engine, MxID id) : Base(engine, id) { }
+  inline MxTxPool(MxID id) : Base(id) { }
 
   ZuInline const Tx *tx() const { return static_cast<const Tx *>(this); }
   ZuInline Tx *tx() { return static_cast<Tx *>(this); }
@@ -526,12 +542,17 @@ public:
   ZuInline const Tx *tx() const { return static_cast<const Tx *>(this); }
   ZuInline Tx *tx() { return static_cast<Tx *>(this); }
 
-  inline MxLink(MxEngine &engine, MxID id,
-    MxSeqNo rxSeqNo = MxSeqNo(), MxSeqNo txSeqNo = MxSeqNo()) :
-      Base(engine, id), Rx(rxSeqNo), Tx(txSeqNo) { }
+  inline MxLink(MxID id) : Base(id) { }
+
+  inline void init(MxEngine *engine,
+      MxSeqNo rxSeqNo = MxSeqNo(), MxSeqNo txSeqNo = MxSeqNo()) {
+    Base::init(engine);
+    Rx::init(rxSeqNo);
+    Tx::init(txSeqNo);
+  }
 
   ZuInline void process(MxQMsg *msg) {
-    this->engine().process(this, msg);
+    this->engine()->appProcess(this, msg);
   }
 
   ZuInline void scheduleDequeue() {
@@ -571,27 +592,27 @@ public:
 
   // Impl/MxQueueTx callbacks (send_() must call sent_()/aborted_())
   ZuInline void sent_(MxQMsg *msg) // tx sent (persistent)
-    { this->engine().app().sent(this, msg); }
+    { this->engine()->app()->sent(this, msg); }
   ZuInline void aborted_(MxQMsg *msg) // tx aborted
-    { this->engine().app().aborted(this, msg); }
+    { this->engine()->app()->aborted(this, msg); }
 
   // MxQueueTx/ZmPQTx callbacks
   ZuInline void archive_(MxQMsg *msg) // tx archive - app calls archived()
-    { this->engine().app().archive(this, msg); }
+    { this->engine()->app()->archive(this, msg); }
   ZuInline ZmRef<MxQMsg> retrieve_(MxSeqNo seqNo) // tx retrieve
-    { return this->engine().app().retrieve(this, seqNo); }
+    { return this->engine()->app()->retrieve(this, seqNo); }
 
   MxQueue *rxQueuePtr() { return &(this->rxQueue()); }
   MxQueue *txQueuePtr() { return &(this->txQueue()); }
 
   template <typename L> ZuInline void rxRun(L l)
-    { this->engine().rxRun(ZuMv(l), rx()); }
+    { this->engine()->rxRun(ZuMv(l), rx()); }
   template <typename L> ZuInline void rxRun(L l) const
-    { this->engine().rxRun(ZuMv(l), rx()); }
+    { this->engine()->rxRun(ZuMv(l), rx()); }
   template <typename L> ZuInline void rxInvoke(L l)
-    { this->engine().rxInvoke(ZuMv(l), rx()); }
+    { this->engine()->rxInvoke(ZuMv(l), rx()); }
   template <typename L> ZuInline void rxInvoke(L l) const
-    { this->engine().rxInvoke(ZuMv(l), rx()); }
+    { this->engine()->rxInvoke(ZuMv(l), rx()); }
 
   void send(MxQMsg *msg)
     { this->txInvoke([msg = ZmMkRef(msg)](Tx *tx) { tx->send(msg); }); }
@@ -631,7 +652,7 @@ private:
   RRLock		m_rrLock;
     ZmTime		  m_rrTime;
 
-  ZmAtomic<unsigned>	m_dequeuing;
+  ZmAtomic<unsigned>	m_dequeuing = 0;
 };
 
 #endif /* MxEngine_HPP */

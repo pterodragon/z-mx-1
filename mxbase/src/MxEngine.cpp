@@ -169,9 +169,10 @@ MxAnyTx::MxAnyTx(MxID id) : m_id(id)
 {
 }
 
-void MxAnyTx::init(MxEngine *engine) :
-  m_engine(engine), m_mx(engine->mx())
+void MxAnyTx::init(MxEngine *engine)
 {
+  m_engine = engine;
+  m_mx = &engine->mx();
 }
 
 MxAnyLink::MxAnyLink(MxID id) :

@@ -495,7 +495,38 @@ friend class Recorder;
     virtual ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
 
     class Link : public MxLink<Link> {
-      // FIXME move MxLink CRTP interface implementation into here
+    public:
+      Link(MxID id) :
+        MxLink<Link>{id} {}
+
+      void init(MxEngine *engine)
+      {
+	std::cout << "Link init" << std::endl;////////////////////////
+
+        MxLink<Link>::init(engine);
+      }
+
+      ZmTime reconnectInterval(unsigned reconnects) { return ZmTime{1}; }
+      ZmTime reRequestInterval() { return ZmTime{1}; }
+
+      // Rx
+      void request(const MxQueue::Gap &prev, const MxQueue::Gap &now){}
+      void reRequest(const MxQueue::Gap &now){}
+
+      // Tx
+      bool send_(MxQMsg *msg, bool more) { return true; }
+      bool resend_(MxQMsg *msg, bool more){ return true; }
+
+      bool sendGap_(const MxQueue::Gap &gap, bool more){ return true; }
+      bool resendGap_(const MxQueue::Gap &gap, bool more){ return true; }
+
+      MxID id() const { return MxAnyTx::id(); }
+
+      virtual void update(ZvCf *cf){}
+      virtual void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo){}
+
+      virtual void connect() { MxAnyLink::connected(); }
+      virtual void disconnect() { MxAnyLink::disconnected(); }
     };
 
   private:
@@ -509,37 +540,22 @@ friend class Recorder;
 		  ZmListHeapID<SnapQueue_HeapID> > > > SnapQueue;
 
     inline Recorder(MxMDCore *core) :
-      MxLink<Recorder>("recorder"), m_core(core) { }
+      m_core(core) { }
 
     void init() {
       MxEngine::init(m_core, this, m_core->mx(), m_core->cf());
-      ZmRef<MxLink<Link> > link =
-	MxEngine::updateLink<Link>("recorder", m_core->cf()); // FIXME - cf paraeter is a bit bogus here
+      m_link = MxEngine::updateLink<Link>("recorder", nullptr);
+      m_link->init(this);
+      
+      
+      
+      //////////
+      std::cout << "^^^^^^^^^^^^ " << m_link->id() << std::endl;
+      std::cout << "^^^ " << m_link->Rx::rxQueue().id << std::endl;////////
+      
     }
 
     inline ~Recorder() { m_file.close(); }
-
-    MxID id() const { return MxAnyTx::id(); }
-
-    ZmTime reconnectInterval(unsigned reconnects) { return ZmTime{1}; }
-    ZmTime reRequestInterval() { return ZmTime{1}; }
-
-    // Rx
-    void request(const MxQueue::Gap &prev, const MxQueue::Gap &now){}
-    void reRequest(const MxQueue::Gap &now){}
-
-    // Tx
-    bool send_(MxQMsg *msg, bool more) { return true; }
-    bool resend_(MxQMsg *msg, bool more){ return true; }
-
-    bool sendGap_(const MxQueue::Gap &gap, bool more){ return true; }
-    bool resendGap_(const MxQueue::Gap &gap, bool more){ return true; }
-
-    virtual void update(ZvCf *cf){}
-    virtual void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo){}
-
-    virtual void connect() { MxAnyLink::connected(); }
-    virtual void disconnect() { MxAnyLink::disconnected(); }
 
     inline ZiFile::Path path() const {
       ReadGuard guard(m_ioLock);
@@ -600,7 +616,7 @@ friend class Recorder;
       Guard guard(m_threadLock);
       if (!!m_recvThread) return;
       std::cout << "===============Rx::startQueuing" << std::endl;///////////////////
-      Rx::startQueuing();
+      m_link->Rx::startQueuing();
       m_recvThread = ZmThread(m_core, ThreadID::RecReceiver,
 	  ZmFn<>::Member<&Recorder::recv>::fn(this),
 	  m_core->m_recReceiverParams);
@@ -690,9 +706,16 @@ friend class Recorder;
 	      qmsg->template as<Msg>().frame(),
 	      qmsg->template as<Msg>().frame()->len);
 	  fflush(stdout);
-	  qmsg->load(Rx::rxQueue().id, ++m_msgSeqNo);
+	  
+	  
+	  std::cout << "---- " << m_link->Rx::rxQueue().id << ", "
+	            << m_msgSeqNo << std::endl;////////
+	  
+	  
+	  qmsg->load(m_link->Rx::rxQueue().id, ++m_msgSeqNo);
+	  
 
-	  Rx::received(qmsg);
+	  m_link->Rx::received(qmsg);
 	}
 	broadcast.shift2();
       }
@@ -731,10 +754,10 @@ friend class Recorder;
 	  return;
 	}
       }
-  
+
       std::cout << "==============Rx::stopQueuing" << std::endl;///////////////////
-      
-      Rx::stopQueuing(0);
+
+      m_link->Rx::stopQueuing(1);
     }
 
   public:
@@ -794,6 +817,7 @@ friend class Recorder;
     ZiFile::Path	  m_path;
     ZiFile		  m_file;
     ZmRef<Msg>		m_snapMsg;
+    ZmRef<MxLink<Link>>	m_link;
   };
 
   typedef ZmPLock Lock;

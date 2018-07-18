@@ -146,7 +146,7 @@ public:
 
   ZuInline MxQueueRx() : m_queue(MxSeqNo()) { }
   
-  ZuInline void init(MxSeqNo seqNo) { m_queue.head(seqNo) }
+  ZuInline void init(MxSeqNo seqNo) { m_queue.head(seqNo); }
 
   ZuInline const App &app() const { return static_cast<const App *>(*this); }
   ZuInline App &app() { return static_cast<App *>(*this); }

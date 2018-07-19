@@ -31,6 +31,7 @@
 #endif
 
 #include <ZuLargest.hpp>
+#include <ZuPOD.hpp>
 
 #include <ZmFn.hpp>
 
@@ -357,53 +358,61 @@ namespace MxMDStream {
     char	data[sizeof(Largest)];
   };
 
-  struct Msg_HeapID {
-    inline static const char *id() { return "MxMDStream.Msg"; }
-  };
-  template <typename Heap>
-  struct Msg_ : public Heap, public ZmObject {
-    Msg_(const Msg_ &);
-    Msg_ &operator =(const Msg_ &);	// prevent mis-use
-
+  struct MsgData {
   public:
-    inline Msg_() { }
-    inline Msg_(int len, int type) {
+    inline MsgData() { }
+    inline MsgData(unsigned len, unsigned type) {
       init_(len, type);
     }
-    inline Msg_(int len, int type, ZmTime stamp) {
+    inline MsgData(unsigned len, unsigned type, ZmTime stamp) {
       init_(len, type, stamp);
     }
 
   private:
-    inline void init_(int len, int type) {
-      m_frame.len(len);
-      m_frame.type(type);
-      m_frame.sec(0);
-      m_frame.nsec(0);
+    inline void init_(unsigned len, unsigned type) {
+      m_frame.len = len;
+      m_frame.type = type;
+      m_frame.sec = 0;
+      m_frame.nsec = 0;
     }
-    inline void init_(int len, int type, ZmTime stamp) {
-      m_frame.len(len);
-      m_frame.type(type);
-      m_frame.sec(stamp.sec());
-      m_frame.nsec(stamp.nsec());
+    inline void init_(unsigned len, unsigned type, ZmTime stamp) {
+      m_frame.len = len;
+      m_frame.type = type;
+      m_frame.sec = stamp.sec();
+      m_frame.nsec = stamp.nsec();
     }
 
   public:
-    inline const Frame *frame() const { return &m_frame; }
-    inline Frame *frame() { return &m_frame; }
+    ZuInline const Frame *frame() const { return &m_frame; }
+    ZuInline Frame *frame() { return &m_frame; }
 
   private:
     Frame	m_frame;
     Buf		m_buf;
   };
+  
+  struct Msg_HeapID {
+    ZuInline static const char *id() { return "MxMDStream.Msg"; }
+  };
+  
+  template <typename Heap>
+  struct Msg_ : public Heap, public ZuPOD<MsgData> {
+    template <typename ...Args> ZuInline Msg_(Args &&... args) {
+      new (this->ptr()) MsgData(ZuFwd<Args>(args)...);
+    }
+    ZuInline const Frame *frame() const { return this->data().frame(); }
+    ZuInline Frame *frame() { return this->data().frame(); }
+  };
+  
   typedef Msg_<ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> > Msg;
-
+  typedef ZuRef<Msg> MsgRef;
+  
   template <typename App>
-  ZmRef<Msg> shift(App &app) {
+  MsgRef shift(App &app) {
     const Frame *frame = app.shift();
     if (ZuUnlikely(!frame)) return 0;
     if (frame->len > sizeof(Buf)) { app.shift2(); return 0; }
-    ZmRef<Msg> msg = new Msg();
+    MsgRef msg = new Msg();
     memcpy(msg->frame(), frame, sizeof(Frame));
     memcpy(msg->frame()->ptr(), frame->ptr(), frame->len);
     app.shift2();

@@ -280,11 +280,12 @@ MxMDLib *MxMDLib::init(const char *cf_)
   ZeLog::start(); // ensure error reporting works
 
   ZmRef<ZvCf> cf = new ZvCf();
+
+  if (cf_) cf->fromFile(cf_, false);
+
   ZmRef<MxMDCore> md;
 
   try {
-    if (cf_) cf->fromFile(cf_, false);
-
     if (ZmRef<ZvCf> logCf = cf->subset("log", false)) {
       ZeLog::init("MxMD");
       ZeLog::level(logCf->getInt("level", 0, 5, false, 0));
@@ -430,6 +431,8 @@ void MxMDCore::init_(ZvCf *cf)
     m_cmd->init(cmdCf);
     initCmds();
   }
+
+  m_recorder.init();
 
   ZeLOG(Info, "MxMDLib - initialized...");
 }
@@ -1195,7 +1198,7 @@ void MxMDCore::replay2()
       ReplayGuard guard(m_replayLock);
       if (!m_replayFile) return;
       msg = m_replayMsg;
-      Frame *frame = msg->frame();
+      Frame *frame = msg->data().frame();
   // retry:
       int n = m_replayFile.read(frame, sizeof(Frame), &e);
       if (n == Zi::IOError) goto error;
@@ -1218,8 +1221,8 @@ void MxMDCore::replay2()
       }
     }
 
-    pad(msg->frame());
-    apply(msg->frame());
+    pad(msg->data().frame());
+    apply(msg->data().frame());
     m_mx->add(ZmFn<>::Member<&MxMDCore::replay2>::fn(this));
   }
 

@@ -782,18 +782,9 @@ void App::read()
     n = m_file.read(frame, sizeof(Frame), &e);
     if (n == Zi::IOError) goto error;
     if (n == Zi::EndOfFile || (unsigned)n < sizeof(Frame)) return;
-    
-    
-    std::cout << frame->len << ", " << sizeof(Buf) << std::endl;//////////////
-    
+
     if (frame->len > sizeof(Buf))
     {
-        
-        
-        
-        std::cout << frame->type << std::endl;//////////////
-
-
         goto lenerror;
     }
     n = m_file.read(frame->ptr(), frame->len, &e);

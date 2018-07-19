@@ -484,13 +484,6 @@ friend class Recorder;
     virtual MxEngineApp::ProcessFn processFn() {
       return static_cast<MxEngineApp::ProcessFn>(
 	  [](MxEngineApp *app, MxAnyLink *, MxQMsg *msg) {
-		  
-		  
-		  ///////
-		  std::cout << "processFn" << std::endl;
-		  
-		  
-		  
 	static_cast<Recorder *>(app)->writeMsg(msg);
       });
     }
@@ -508,8 +501,6 @@ friend class Recorder;
 
       void init(MxEngine *engine)
       {
-	std::cout << "Link init" << std::endl;////////////////////////
-
         MxLink<Link>::init(engine);
       }
 
@@ -553,13 +544,6 @@ friend class Recorder;
       MxEngine::init(m_core, this, m_core->mx(), m_core->cf());
       m_link = MxEngine::updateLink<Link>("recorder", nullptr);
       m_link->init(this);
-      
-      
-      
-      //////////
-      std::cout << "^^^^^^^^^^^^ " << m_link->id() << std::endl;
-      std::cout << "^^^ " << m_link->Rx::rxQueue().id << std::endl;////////
-      
     }
 
     inline ~Recorder() { m_file.close(); }
@@ -622,7 +606,6 @@ friend class Recorder;
     void recvStart() {
       Guard guard(m_threadLock);
       if (!!m_recvThread) return;
-      std::cout << "===============Rx::startQueuing" << std::endl;///////////////////
       m_link->Rx::startQueuing();
       m_recvThread = ZmThread(m_core, ThreadID::RecReceiver,
 	  ZmFn<>::Member<&Recorder::recv>::fn(this),
@@ -706,22 +689,8 @@ friend class Recorder;
 	    break;
 	  }
 	  memcpy(msg->frame(), frame, sizeof(Frame) + frame->len);
-
-	  //////////////
 	  ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
-	  printf("---- recv %p %d\n",
-	      qmsg->template as<Msg>().frame(),
-	      qmsg->template as<Msg>().frame()->len);
-	  fflush(stdout);
-	  
-	  
-	  std::cout << "---- " << m_link->Rx::rxQueue().id << ", "
-	            << m_msgSeqNo << std::endl;////////
-	  
-	  
 	  qmsg->load(m_link->Rx::rxQueue().id, ++m_msgSeqNo);
-	  
-
 	  m_link->Rx::received(qmsg);
 	}
 	broadcast.shift2();
@@ -739,9 +708,6 @@ friend class Recorder;
       ZiVec_len(vec[1]) = frame->len;
       return m_file.writev(vec, 2, e);
 #endif
-
-      //////////////////////
-      std::cout << "***************write: " << frame->len << std::endl;
 
       return m_file.write((const void *)frame, sizeof(Frame) + frame->len, e);
     }
@@ -761,9 +727,6 @@ friend class Recorder;
 	  return;
 	}
       }
-
-      std::cout << "==============Rx::stopQueuing" << std::endl;///////////////////
-
       m_link->Rx::stopQueuing(1);
     }
 
@@ -771,11 +734,7 @@ friend class Recorder;
     void writeMsg(MxQMsg *qmsg) {
       ZeError e;
       Guard guard(m_ioLock);
-      
-      /////////////////////////////////
-      printf("**** process %p %d\n", static_cast<Msg *>(qmsg->payload.ptr())->frame(), static_cast<Msg *>(qmsg->payload.ptr())->frame()->len);
-      fflush(stdout);
-      
+
       if (ZuUnlikely(write(static_cast<Msg *>(qmsg->payload.ptr())->frame(), &e)) != Zi::OK) {
 	ZiFile::Path path = m_path;
 	m_file.close();
@@ -792,17 +751,13 @@ friend class Recorder;
 	m_ioLock.unlock();
 	return 0;
       }
-      
-      std::cout << "+++++*****   push   " << std::endl;//////////////////////////
-      
+
       return m_snapMsg->frame();
     }
     inline void push2() {
       if (ZuUnlikely(!m_snapMsg)) { m_ioLock.unlock(); return; }
       ZeError e;
-      
-      std::cout << "++++++++++++++push2" << std::endl;//////////////////////////
-      
+
       if (ZuUnlikely(write(m_snapMsg->frame(), &e) != Zi::OK)) {
 	m_snapMsg = 0;
 	ZiFile::Path path = m_path;

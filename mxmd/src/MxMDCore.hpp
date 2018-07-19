@@ -484,6 +484,13 @@ friend class Recorder;
     virtual MxEngineApp::ProcessFn processFn() {
       return static_cast<MxEngineApp::ProcessFn>(
 	  [](MxEngineApp *app, MxAnyLink *, MxQMsg *msg) {
+		  
+		  
+		  ///////
+		  std::cout << "processFn" << std::endl;
+		  
+		  
+		  
 	static_cast<Recorder *>(app)->writeMsg(msg);
       });
     }

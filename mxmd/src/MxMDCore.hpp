@@ -30,11 +30,6 @@
 #include <MxMDLib.hpp>
 #endif
 
-#include <MxMD.hpp>
-#include <MxMDCmd.hpp>
-//#include <MxMDMsg.hpp>
-#include <MxMDStream.hpp>
-
 #include <ZmObject.hpp>
 #include <ZmRef.hpp>
 #include <ZmThread.hpp>
@@ -47,8 +42,12 @@
 #include <ZvThreadCf.hpp>
 #include <ZvCmd.hpp>
 
-#include <MxEngine.hpp>
 #include <MxMultiplex.hpp>
+#include <MxEngine.hpp>
+
+#include <MxMD.hpp>
+#include <MxMDCmd.hpp>
+#include <MxMDStream.hpp>
 
 inline auto MxMDFileDiag(ZuString path, ZeError e) {
   return [path = MxTxtString(path), e](const ZeEvent &, ZmStream &s) {
@@ -170,6 +169,7 @@ private:
   void venues(const CmdArgs &, ZtArray<char> &);
 #endif
 
+  void addVenueMap_(ZuAnyPOD *);
   void addTickSize_(ZuAnyPOD *);
   void addSecurity_(ZuAnyPOD *);
   void addOrderBook_(ZuAnyPOD *);
@@ -367,14 +367,15 @@ private:
       } else {
 	MxSecKey securityKeys[MxMDNLegs];
 	MxEnum sides[MxMDNLegs];
-	MxFloat ratios[MxMDNLegs];
+	MxRatio ratios[MxMDNLegs];
 	for (unsigned i = 0, n = ob->legs(); i < n; i++) {
 	  securityKeys[i] = ob->security(i)->key();
 	  sides[i] = ob->side(i);
 	  ratios[i] = ob->ratio(i);
 	}
 	return !MxMDStream::addCombination(snapshot,
-	    ob->key(), ob->legs(), securityKeys, sides, ratios,
+	    ob->key(), ob->pxNDP(), ob->qtyNDP(),
+	    ob->legs(), securityKeys, sides, ratios,
 	    ob->tickSizeTbl()->id(), ob->lotSizes());
       }
     }) || allVenues([&snapshot](MxMDVenue *venue) -> uintptr_t {
@@ -786,7 +787,8 @@ friend class Recorder;
   void replay2();
 
   ZmRef<MxMDVenue> venue(MxID id);
-  ZmRef<MxMDTickSizeTbl> tickSizeTbl(MxMDVenue *venue, ZuString id);
+  ZmRef<MxMDTickSizeTbl> tickSizeTbl(
+      MxMDVenue *venue, ZuString id, MxNDP pxNDP);
 
   void timer();
 

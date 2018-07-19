@@ -14,387 +14,14 @@
 #include <ZiFile.hpp>
 
 #include <MxBase.hpp>
-#include <MxCSV.hpp>
 
 #include <MxMDStream.hpp>
+#include <MxMDCSV.hpp>
 #include <MxMD.hpp>
 
 #include <version.h>
 
-typedef MxBoolCol BoolCol;
-typedef MxIntCol IntCol;
-typedef MxUIntCol UIntCol;
-typedef MxFloatCol FloatCol;
-template <typename Map> using EnumCol = MxEnumCol<Map>;
-template <typename Map> using FlagsCol_ = MxFlagsCol<Map>;
-typedef MxSymStringCol SymCol;
-typedef MxIDStringCol IDStrCol;
-
-class IDCol : public ZvCSVColumn<ZvCSVColType::Func, MxID>  {
-  typedef ZvCSVColumn<ZvCSVColType::Func, MxID> Base;
-  typedef Base::ParseFn ParseFn;
-  typedef Base::PlaceFn PlaceFn;
-public:
-  template <typename ID>
-  inline IDCol(const ID &id, int offset) :
-      Base(id, offset,
-	   ParseFn::Ptr<&IDCol::parse>::fn(),
-	   PlaceFn::Ptr<&IDCol::place>::fn()) { }
-  static void parse(MxID *i, ZuString b) { *i = b; }
-  static void place(ZtArray<char> &b, const MxID *i) { b << *i; }
-};
-
-class HHMMSSCol : public ZvCSVColumn<ZvCSVColType::Func, MxDateTime>  {
-  typedef ZvCSVColumn<ZvCSVColType::Func, MxDateTime> Base;
-  typedef Base::ParseFn ParseFn;
-  typedef Base::PlaceFn PlaceFn;
-public:
-  template <typename ID>
-  inline HHMMSSCol(const ID &id, int offset, unsigned yyyymmdd, int tzOffset) :
-    Base(id, offset,
-	ParseFn::Member<&HHMMSSCol::parse>::fn(this),
-	PlaceFn::Member<&HHMMSSCol::place>::fn(this)),
-      m_yyyymmdd(yyyymmdd), m_tzOffset(tzOffset) { }
-  virtual ~HHMMSSCol() { }
-
-  void parse(MxDateTime *t, ZuString b) {
-    new (t) MxDateTime(
-	MxDateTime::YYYYMMDD, m_yyyymmdd, MxDateTime::HHMMSS, MxUInt(b));
-    *t -= ZmTime(m_tzOffset);
-  }
-  void place(ZtArray<char> &b, const MxDateTime *t) {
-    MxDateTime l = *t + m_tzOffset;
-    b << MxUInt(l.hhmmss()).fmt(ZuFmt::Right<6>());
-  }
-
-  ZtString	m_tz;
-  unsigned	m_yyyymmdd;
-  int		m_tzOffset;
-};
-class NSecCol : public ZvCSVColumn<ZvCSVColType::Func, MxDateTime> {
-  typedef ZvCSVColumn<ZvCSVColType::Func, MxDateTime> Base;
-  typedef Base::ParseFn ParseFn;
-  typedef Base::PlaceFn PlaceFn;
-public:
-  template <typename ID>
-  inline NSecCol(const ID &id, int offset) :
-    Base(id, offset,
-	ParseFn::Ptr<&NSecCol::parse>::fn(),
-	PlaceFn::Ptr<&NSecCol::place>::fn()) { }
-  virtual ~NSecCol() { }
-  static void parse(MxDateTime *t, ZuString b) {
-    t->nsec() = MxUInt(b);
-  }
-  static void place(ZtArray<char> &b, const MxDateTime *t) {
-    b << MxUInt(t->nsec()).fmt(ZuFmt::Right<9>());
-  }
-};
-
-template <typename Flags>
-class FlagsCol : public ZvCSVColumn<ZvCSVColType::Func, MxFlags> {
-  typedef ZvCSVColumn<ZvCSVColType::Func, MxFlags> Base;
-  typedef Base::ParseFn ParseFn;
-  typedef Base::PlaceFn PlaceFn;
-public:
-  template <typename ID>
-  inline FlagsCol(const ID &id, int offset, int venueOffset) :
-    Base(id, offset,
-	ParseFn::Member<&FlagsCol::parse>::fn(this),
-	PlaceFn::Member<&FlagsCol::place>::fn(this)),
-    m_venueOffset(venueOffset - offset) { }
-  virtual ~FlagsCol() { }
-  void parse(MxFlags *f, ZuString b) {
-    if (b.length() < 5 || b[4] != ':') { *f = 0; return; }
-    MxID venue = ZuString(&b[0], 4);
-    *(MxID *)((char *)(void *)f + m_venueOffset) = venue;
-    MxMDFlagsStr in = ZuString(&b[5], b.length() - 5);
-    Flags::scan(in, venue, *f);
-  }
-  void place(ZtArray<char> &b, const MxFlags *f) {
-    if (!*f) return;
-    MxID venue =
-      *(const MxID *)((const char *)(const void *)f + m_venueOffset);
-    MxMDFlagsStr out;
-    Flags::print(out, venue, *f);
-    if (!out) return;
-    { unsigned n = b.length() + 8; if (b.size() < n) b.size(n); }
-    b << venue << ':' << out;
-  }
-
-  int	m_venueOffset;
-};
-
-template <class Writer>
-class TickSizeCSV : public ZmObject, public ZvCSV {
-public:
-  struct Data {
-    MxID		venue;
-    MxIDString		id;
-    MxEnum		event;
-    MxFloat		minPrice;
-    MxFloat		maxPrice;
-    MxFloat		tickSize;
-  };
-  typedef ZuPOD<Data> POD;
-
-  template <typename App>
-  TickSizeCSV(App *app) {
-    new ((m_pod = new POD())->ptr()) Data();
-#ifdef Offset
-#undef Offset
-#endif
-#define Offset(x) offsetof(Data, x)
-    add(new IDCol("venue", Offset(venue)));
-    add(new IDStrCol("id", Offset(id)));
-    add(new EnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
-    add(new FloatCol("minPrice", Offset(minPrice), app->ndp()));
-    add(new FloatCol("maxPrice", Offset(maxPrice), app->ndp()));
-    add(new FloatCol("tickSize", Offset(tickSize), app->ndp()));
-#undef Offset
-  }
-
-  ZuAnyPOD *row(const MxMDStream::Msg *msg) {
-    Data *data = m_pod->ptr();
-
-    {
-      using namespace MxMDStream;
-      const Frame *frame = msg->data().frame();
-      switch ((int)frame->type) {
-	case Type::AddTickSizeTbl:
-	case Type::ResetTickSizeTbl:
-	  {
-	    const AddTickSizeTbl &obj = frame->as<AddTickSizeTbl>();
-	    new (data) Data{obj.venue, obj.id, frame->type};
-	  }
-	  break;
-	case Type::AddTickSize:
-	  {
-	    const AddTickSize &obj = frame->as<AddTickSize>();
-	    new (data) Data{obj.venue, obj.id, frame->type,
-	      obj.minPrice, obj.maxPrice, obj.tickSize};
-	  }
-	  break;
-	default:
-	  return 0;
-      }
-    }
-
-    return m_pod.ptr();
-  }
-
-private:
-  ZuRef<POD>	m_pod;
-};
-
-template <class Writer>
-class SecurityCSV : public ZmObject, public ZvCSV {
-public:
-  struct Data {
-    MxID		venue;
-    MxID		segment;
-    MxIDString		id;
-    MxEnum		event;
-    MxUInt		shard;
-    MxMDSecRefData	refData;
-  };
-  typedef ZuPOD<Data> POD;
-
-  template <typename App>
-  SecurityCSV(App *app) {
-    new ((m_pod = new POD())->ptr()) Data();
-#ifdef Offset
-#undef Offset
-#endif
-#define Offset(x) offsetof(Data, x)
-    add(new IDCol("venue", Offset(venue)));
-    add(new IDCol("segment", Offset(segment)));
-    add(new IDStrCol("id", Offset(id)));
-    add(new EnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
-    add(new UIntCol("shard", Offset(shard)));
-#undef Offset
-#define Offset(x) offsetof(Data, refData) + offsetof(MxMDSecRefData, x)
-    add(new BoolCol("tradeable", Offset(tradeable)));
-    add(new EnumCol<MxSecIDSrc::CSVMap>("idSrc", Offset(idSrc)));
-    add(new SymCol("symbol", Offset(symbol)));
-    add(new EnumCol<MxSecIDSrc::CSVMap>("altIDSrc", Offset(altIDSrc)));
-    add(new SymCol("altSymbol", Offset(altSymbol)));
-    add(new IDCol("underVenue", Offset(underVenue)));
-    add(new IDCol("underSegment", Offset(underSegment)));
-    add(new IDStrCol("underlying", Offset(underlying)));
-    add(new UIntCol("mat", Offset(mat)));
-    add(new EnumCol<MxPutCall::CSVMap>("putCall", Offset(putCall)));
-    add(new IntCol("strike", Offset(strike)));
-    add(new FloatCol("strikeMultiplier",
-	Offset(strikeMultiplier), app->ndp()));
-    add(new FloatCol("outstandingShares",
-	Offset(outstandingShares), app->ndp()));
-    add(new FloatCol("adv", Offset(adv), app->ndp()));
-#undef Offset
-  }
-
-  ZuAnyPOD *row(const MxMDStream::Msg *msg) {
-    Data *data = m_pod->ptr();
-
-    {
-      using namespace MxMDStream;
-      const Frame *frame = msg->data().frame();
-      switch ((int)frame->type) {
-	case Type::AddSecurity:
-	  {
-	    const AddSecurity &obj = frame->as<AddSecurity>();
-	    new (data) Data{
-	      obj.key.venue(), obj.key.segment(), obj.key.id(),
-	      frame->type, obj.shard, obj.refData};
-	  }
-	  break;
-	case Type::UpdateSecurity:
-	  {
-	    const UpdateSecurity &obj = frame->as<UpdateSecurity>();
-	    new (data) Data{
-	      obj.key.venue(), obj.key.segment(), obj.key.id(),
-	      frame->type, {}, obj.refData};
-	  }
-	  break;
-	default:
-	  return 0;
-      }
-    }
-
-    return m_pod.ptr();
-  }
-
-private:
-  ZuRef<POD>	m_pod;
-};
-
-template <class Writer>
-class OrderBookCSV : public ZmObject, public ZvCSV {
-public:
-  struct Data {
-    MxID		venue;
-    MxID		segment;
-    MxIDString		id;
-    MxEnum		event;
-    MxUInt		legs;
-    MxID		secVenues[MxMDNLegs];
-    MxID		secSegments[MxMDNLegs];
-    MxIDString		securities[MxMDNLegs];
-    MxEnum		sides[MxMDNLegs];
-    MxFloat		ratios[MxMDNLegs];
-    MxIDString		tickSizeTbl;
-    MxMDLotSizes	lotSizes;
-  };
-  typedef ZuPOD<Data> POD;
-
-  template <typename App>
-  OrderBookCSV(App *app) {
-    new ((m_pod = new POD())->ptr()) Data();
-#ifdef Offset
-#undef Offset
-#endif
-#define Offset(x) offsetof(Data, x)
-    add(new IDCol("venue", Offset(venue)));
-    add(new IDCol("segment", Offset(segment)));
-    add(new IDStrCol("id", Offset(id)));
-    add(new EnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
-    add(new UIntCol("legs", Offset(legs)));
-    for (unsigned i = 0; i < MxMDNLegs; i++) {
-      ZuStringN<16> secVenue = "secVenue"; secVenue << ZuBoxed(i);
-      ZuStringN<16> secSegment = "secSegment"; secSegment << ZuBoxed(i);
-      ZuStringN<16> security = "security"; security << ZuBoxed(i);
-      ZuStringN<8> side = "side"; side << ZuBoxed(i);
-      ZuStringN<8> ratio = "ratio"; ratio << ZuBoxed(i);
-      add(new IDCol(secVenue, Offset(secVenues) + (i * sizeof(MxID))));
-      add(new IDCol(secSegment, Offset(secSegments) + (i * sizeof(MxID))));
-      add(new IDStrCol(security,
-	    Offset(securities) + (i * sizeof(MxSymString))));
-      add(new EnumCol<MxSide::CSVMap>(side,
-	    Offset(sides) + (i * sizeof(MxEnum))));
-      add(new FloatCol(ratio,
-	    Offset(ratios) + (i * sizeof(MxFloat)), app->ndp()));
-    }
-    add(new IDStrCol("tickSizeTbl", Offset(tickSizeTbl)));
-#undef Offset
-#define Offset(x) offsetof(Data, lotSizes) + offsetof(MxMDLotSizes, x)
-    add(new FloatCol("oddLotSize", Offset(oddLotSize), app->ndp()));
-    add(new FloatCol("lotSize", Offset(lotSize), app->ndp()));
-    add(new FloatCol("blockLotSize", Offset(blockLotSize), app->ndp()));
-#undef Offset
-  }
-
-  ZuAnyPOD *row(const MxMDStream::Msg *msg) {
-    Data *data = m_pod->ptr();
-
-    {
-      using namespace MxMDStream;
-      const Frame *frame = msg->data().frame();
-      switch ((int)frame->type) {
-	case Type::AddOrderBook:
-	  {
-	    const AddOrderBook &obj = frame->as<AddOrderBook>();
-	    new (data) Data{
-	      obj.key.venue(), obj.key.segment(), obj.key.id(),
-	      frame->type, 1,
-	      { obj.security.venue() },
-	      { obj.security.segment() },
-	      { obj.security.id() },
-	      {}, {},
-	      obj.tickSizeTbl, obj.lotSizes};
-	  }
-	  break;
-	case Type::DelOrderBook:
-	  {
-	    const DelOrderBook &obj = frame->as<DelOrderBook>();
-	    new (data) Data{
-	      obj.key.venue(), obj.key.segment(), obj.key.id(), frame->type};
-	  }
-	  break;
-	case Type::AddCombination:
-	  {
-	    const AddCombination &obj = frame->as<AddCombination>();
-	    new (data) Data{
-	      obj.key.venue(), obj.key.segment(), obj.key.id(), frame->type,
-	      obj.legs, {}, {}, {}, {}, {},
-	      obj.tickSizeTbl, obj.lotSizes};
-	    for (unsigned i = 0, n = obj.legs; i < n; i++) {
-	      data->secVenues[i] = obj.securities[i].venue();
-	      data->secSegments[i] = obj.securities[i].segment();
-	      data->securities[i] = obj.securities[i].id();
-	      data->sides[i] = obj.sides[i];
-	      data->ratios[i] = obj.ratios[i];
-	    }
-	  }
-	  break;
-	case Type::DelCombination:
-	  {
-	    const DelCombination &obj = frame->as<DelCombination>();
-	    new (data) Data{
-	      obj.key.venue(), obj.key.segment(), obj.key.id(), frame->type};
-	  }
-	  break;
-	case Type::UpdateOrderBook:
-	  {
-	    const UpdateOrderBook &obj = frame->as<UpdateOrderBook>();
-	    new (data) Data{
-	      obj.key.venue(), obj.key.segment(), obj.key.id(), frame->type,
-	      MxUInt(), {}, {}, {}, {}, {},
-	      obj.tickSizeTbl, obj.lotSizes};
-	  }
-	  break;
-	default:
-	  return 0;
-      }
-    }
-
-    return m_pod.ptr();
-  }
-
-private:
-  ZuRef<POD>	m_pod;
-};
-
-template <class Writer>
-class RealTimeCSV : public ZmObject, public ZvCSV {
+class RealTimeCSV : public ZvCSV {
 public:
   struct L2Data {
     MxIDString		orderID;
@@ -482,11 +109,11 @@ public:
   }
 
   ZuAnyPOD *row(const MxMDStream::Msg *msg) {
-    Data *data = m_pod->ptr();
+    Data *data = ptr();
 
     {
       using namespace MxMDStream;
-      const Frame *frame = msg->data().frame();
+      const Frame *frame = msg->frame();
       switch ((int)frame->type) {
 	case Type::TradingSession:
 	  {
@@ -575,30 +202,30 @@ public:
 	  return 0;
       }
     }
-    return m_pod.ptr();
+    return pod();
   }
+
+  ZuInline POD *pod() { return m_pod.ptr(); }
+  ZuInline Data *ptr() { return m_pod->ptr(); }
 
 private:
   ZuRef<POD>	m_pod;
 };
 
-typedef ZmList<ZmRef<MxMDStream::Msg>, ZmListNodeIsItem<true> > MsgQueue;
-
-template <template <class> class CSV>
-class CSVWriter : public CSV<CSVWriter<CSV> > {
+template <class CSV>
+class CSVWriter : public ZuObject, public CSV {
 public:
-  typedef CSV<CSVWriter<CSV> > Base;
   typedef MxMDStream::Msg Msg;
 
   template <typename Path, typename App>
-  CSVWriter(const Path &path, App *app) : Base(app), m_path(path) { }
+  CSVWriter(const Path &path, App *app) : CSV(app), m_path(path) { }
 
   void start() { m_fn = this->writeFile(m_path); }
 
   void stop() { m_fn((ZuAnyPOD *)0); }
 
   inline void enqueue(Msg *msg) {
-    ZuAnyPOD *pod = Base::row(msg);
+    ZuAnyPOD *pod = CSV::row(msg);
     if (ZuLikely(pod)) m_fn(pod);
   }
 
@@ -669,15 +296,15 @@ public:
 
   template <typename Path>
   inline void tickSizeCSV(const Path &path) {
-    m_tickSizeCSV = new CSVWriter<TickSizeCSV>(path, this);
+    m_tickSizeCSV = new CSVWriter<MxMDTickSizeCSV>(path, this);
   }
   template <typename Path>
   inline void securityCSV(const Path &path) {
-    m_securityCSV = new CSVWriter<SecurityCSV>(path, this);
+    m_securityCSV = new CSVWriter<MxMDSecurityCSV>(path, this);
   }
   template <typename Path>
   inline void orderBookCSV(const Path &path) {
-    m_orderBookCSV = new CSVWriter<OrderBookCSV>(path, this);
+    m_orderBookCSV = new CSVWriter<MxMDOrderBookCSV>(path, this);
   }
   template <typename Path>
   inline void realTimeCSV(const Path &path) {
@@ -746,10 +373,10 @@ private:
   ZtString			m_outPath;
   ZiFile			m_outFile;
 
-  ZmRef<CSVWriter<TickSizeCSV> >	m_tickSizeCSV;
-  ZmRef<CSVWriter<SecurityCSV> >	m_securityCSV;
-  ZmRef<CSVWriter<OrderBookCSV> >	m_orderBookCSV;
-  ZmRef<CSVWriter<RealTimeCSV> >	m_realTimeCSV;
+  ZuRef<CSVWriter<MxMDTickSizeCSV> >	m_tickSizeCSV;
+  ZuRef<CSVWriter<MxMDSecurityCSV> >	m_securityCSV;
+  ZuRef<CSVWriter<MxMDOrderBookCSV> >	m_orderBookCSV;
+  ZuRef<CSVWriter<RealTimeCSV> >	m_realTimeCSV;
 };
 
 void App::read()
@@ -777,16 +404,12 @@ void App::read()
 
   for (;;) {
     ZmRef<Msg> msg = new Msg();
-    Frame *frame = msg->data().frame();
+    Frame *frame = msg->frame();
     o = m_file.offset();
     n = m_file.read(frame, sizeof(Frame), &e);
     if (n == Zi::IOError) goto error;
     if (n == Zi::EndOfFile || (unsigned)n < sizeof(Frame)) return;
-
-    if (frame->len > sizeof(Buf))
-    {
-        goto lenerror;
-    }
+    if (frame->len > sizeof(Buf)) goto lenerror;
     n = m_file.read(frame->ptr(), frame->len, &e);
     if (n == Zi::IOError) goto error;
     if (n == Zi::EndOfFile || (unsigned)n < frame->len) return;

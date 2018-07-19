@@ -163,9 +163,9 @@ namespace MxMDStream {
     enum { Code = Type::AddTickSize };
     MxID		venue;
     MxIDString		id;
-    MxFloat		minPrice;
-    MxFloat		maxPrice;
-    MxFloat		tickSize;
+    MxFixed		minPrice;
+    MxFixed		maxPrice;
+    MxFixed		tickSize;
   };
 
   struct AddSecurity {
@@ -197,10 +197,12 @@ namespace MxMDStream {
   struct AddCombination {
     enum { Code = Type::AddCombination };
     Key			key;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
     MxUInt		legs;
     Key			securities[MxMDNLegs];
     MxEnum		sides[MxMDNLegs];
-    MxFloat		ratios[MxMDNLegs];
+    MxRatio		ratios[MxMDNLegs];
     MxIDString		tickSizeTbl;
     MxMDLotSizes	lotSizes;
   };
@@ -237,9 +239,9 @@ namespace MxMDStream {
     MxEnum		side;
     MxDateTime		transactTime;
     uint8_t		delta;
-    MxFloat		price;
-    MxFloat		qty;
-    MxFloat		nOrders;
+    MxFixed		price;
+    MxFixed		qty;
+    MxUInt		nOrders;
     MxFlags		flags;
   };
 
@@ -257,8 +259,8 @@ namespace MxMDStream {
     MxDateTime		transactTime;
     MxEnum		side;
     MxInt		rank;
-    MxFloat		price;
-    MxFloat		qty;
+    MxFixed		price;
+    MxFixed		qty;
     MxFlags		flags;
   };
 
@@ -269,8 +271,8 @@ namespace MxMDStream {
     MxDateTime		transactTime;
     MxEnum		side;
     MxInt		rank;
-    MxFloat		price;
-    MxFloat		qty;
+    MxFixed		price;
+    MxFixed		qty;
     MxFlags		flags;
   };
 
@@ -293,8 +295,8 @@ namespace MxMDStream {
     Key			key;
     MxIDString		tradeID;
     MxDateTime		transactTime;
-    MxFloat		price;
-    MxFloat		qty;
+    MxFixed		price;
+    MxFixed		qty;
   };
 
   struct CorrectTrade {
@@ -302,8 +304,8 @@ namespace MxMDStream {
     Key			key;
     MxIDString		tradeID;
     MxDateTime		transactTime;
-    MxFloat		price;
-    MxFloat		qty;
+    MxFixed		price;
+    MxFixed		qty;
   };
 
   struct CancelTrade {
@@ -311,8 +313,8 @@ namespace MxMDStream {
     Key			key;
     MxIDString		tradeID;
     MxDateTime		transactTime;
-    MxFloat		price;
-    MxFloat		qty;
+    MxFixed		price;
+    MxFixed		qty;
   };
 
   struct RefDataLoaded {
@@ -390,11 +392,10 @@ namespace MxMDStream {
     Frame	m_frame;
     Buf		m_buf;
   };
-  
+
   struct Msg_HeapID {
     ZuInline static const char *id() { return "MxMDStream.Msg"; }
   };
-  
   template <typename Heap>
   struct Msg_ : public Heap, public ZuPOD<MsgData> {
     template <typename ...Args> ZuInline Msg_(Args &&... args) {
@@ -403,10 +404,9 @@ namespace MxMDStream {
     ZuInline const Frame *frame() const { return this->data().frame(); }
     ZuInline Frame *frame() { return this->data().frame(); }
   };
-  
   typedef Msg_<ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> > Msg;
   typedef ZuRef<Msg> MsgRef;
-  
+
   template <typename App>
   MsgRef shift(App &app) {
     const Frame *frame = app.shift();
@@ -459,13 +459,13 @@ namespace MxMDStream {
   template <typename App,
 	   typename Key_, typename Security, typename TickSizeTbl>
   inline bool addCombination(App &app,
-      const Key_ &key, unsigned legs,
-      const Security *securities, const MxEnum *sides, const MxFloat *ratios,
+      const Key_ &key, MxNDP pxNDP, MxNDP qtyNDP, unsigned legs,
+      const Security *securities, const MxEnum *sides, const MxRatio *ratios,
       const TickSizeTbl &tickSizeTbl, const MxMDLotSizes &lotSizes) {
     Frame *frame = push<App, AddCombination>(app);
     if (ZuUnlikely(!frame)) return false;
     AddCombination *data = new (frame->ptr()) AddCombination{
-	key, legs, {}, {}, {}, tickSizeTbl, lotSizes};
+	key, pxNDP, qtyNDP, legs, {}, {}, {}, tickSizeTbl, lotSizes};
     for (unsigned i = 0; i < legs; i++) {
       data->securities[i] = securities[i];
       data->sides[i] = sides[i];

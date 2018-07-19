@@ -37,16 +37,25 @@
 #define MxMDNSessions 3	// no market has >3 continuous trading sessions per day
 #endif
 
-typedef ZuTuple<MxFloat, MxFloat, MxFloat> MxMDTickSize_;
+struct MxMDSegment { // venue segment
+  MxID		id;
+  MxEnum	session;	// MxTradingSession
+  MxDateTime	stamp;		// session start time stamp
+
+  ZuInline bool operator !() const { return !id; }
+  ZuOpBool
+};
+
+typedef ZuTuple<MxPx, MxPx, MxPx> MxMDTickSize_;
 template <typename T> struct MxMDTickSize_Fn : public T {
-  inline const MxFloat &minPrice() const { return T::ptr()->p1(); }
-  inline const MxFloat &maxPrice() const { return T::ptr()->p2(); }
-  inline const MxFloat &tickSize() const { return T::ptr()->p3(); }
+  Mx_TupleField(MxFixed, minPrice, 1);
+  Mx_TupleField(MxFixed, maxPrice, 2);
+  Mx_TupleField(MxFixed, tickSize, 3);
 };
 typedef ZuMixin<MxMDTickSize_, MxMDTickSize_Fn> MxMDTickSize;
 struct MxMDTickSize_MinPxAccessor :
     public ZuAccessor<MxMDTickSize, MxFloat> {
-  inline static MxFloat value(const MxMDTickSize &t) { return t.minPrice(); }
+  inline static MxPx value(const MxMDTickSize &t) { return t.minPrice(); }
 };
 
 struct MxMDSecRefData {	// security reference data ("static data")
@@ -60,38 +69,43 @@ struct MxMDSecRefData {	// security reference data ("static data")
   MxID		underSegment;	// underlying segment (can be null)
   MxIDString	underlying;	// underlying ID (null if no underlying)
   MxUInt	mat;		// maturity (null if not future/option)
-  MxInt		strike;		// strike (null if not option) (Note: INTEGER)
-  MxFloat	strikeMultiplier;  // strike multiplier
-  MxFloat	outstandingShares; // (null if not stock)
-  MxFloat	adv;		// average daily volume
+  MxNDP		pxNDP;		// price NDP
+  MxNDP		qtyNDP;		// qty NDP
+  MxFixed	strike;		// strike (null if not option)
+  MxUInt	outstandingShares; // (null if not stock)
+  MxFixed	adv;		// average daily volume
 };
 
 struct MxMDLotSizes {
-  MxFloat	oddLotSize;
-  MxFloat	lotSize;
-  MxFloat	blockLotSize;
+  MxFixed	oddLotSize;
+  MxFixed	lotSize;
+  MxFixed	blockLotSize;
+
+  ZuInline bool operator !() const { return !*lotSize; }
+  ZuOpBool
 };
 
 struct MxMDL1Data {
   MxDateTime	stamp;
   MxEnum	status;			// MxTradingStatus
-  MxFloat	base;			// aka adjusted previous day's close
-  MxFloat	open[MxMDNSessions];	// [0] is open of first session
-  MxFloat	close[MxMDNSessions];	// [0] is close of first session
-  MxFloat	last;
-  MxFloat	lastQty;
-  MxFloat	bid;			// best bid
-  MxFloat	bidQty;
-  MxFloat	ask;			// best ask
-  MxFloat	askQty;
-  MxEnum	tickDir;
-  MxFloat	high;
-  MxFloat	low;
+  MxEnum	tickDir;		// MxTickDir
+  // Note: all px/qty are integers scaled by 10^ndp
+  MxFixed	base;			// aka adjusted previous day's close
+  MxFixed	open[MxMDNSessions];	// [0] is open of first session
+  MxFixed	close[MxMDNSessions];	// [0] is close of first session
+  MxFixed	last;
+  MxFixed	lastQty;
+  MxFixed	bid;			// best bid
+  MxFixed	bidQty;
+  MxFixed	ask;			// best ask
+  MxFixed	askQty;
+  MxFixed	high;
+  MxFixed	low;
   MxFloat	accVol;
-  MxFloat	accVolQty;	// VWAP = accVol / accVolQty
-  MxFloat	match;		// auction - indicative match/IAP/equilibrium
-  MxFloat	matchQty;	// auction - indicative match volume
-  MxFloat	surplusQty;	// auction - surplus volume
+  MxFixed	accVolQty;	// VWAP = accVol / accVolQty
+  MxFixed	match;		// auction - indicative match/IAP/equilibrium
+  MxFixed	matchQty;	// auction - indicative match volume
+  MxFixed	surplusQty;	// auction - surplus volume
   MxFlags	flags;
 };
 

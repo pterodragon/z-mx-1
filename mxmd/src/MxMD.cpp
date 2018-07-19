@@ -28,7 +28,7 @@ void MxMDTickSizeTbl::reset()
 }
 
 void MxMDTickSizeTbl::addTickSize(
-  MxFloat minPrice, MxFloat maxPrice, MxFloat tickSize)
+    MxFixed minPrice, MxFixed maxPrice, MxFixed tickSize)
 {
   m_venue->md()->addTickSize(this, minPrice, maxPrice, tickSize);
 }
@@ -92,7 +92,7 @@ void MxMDPxLevel_::update(
 void MxMDPxLevel_::addOrder(MxMDOrder *order)
 {
   if (obSide()->orderBook()->venue()->flags() &
-      (1U<<MxMDVenueFlags::ContigOrderRanks)) {
+      (1U<<MxMDVenueFlags::UniformRanks)) {
     MxUInt rank = order->m_data.rank;
     typename Orders::Iterator i(m_orders, rank, Orders::GreaterEqual);
     typename Orders::Node *node;
@@ -106,7 +106,7 @@ void MxMDPxLevel_::delOrder(MxUInt rank)
 {
   m_orders.delVal(rank);
   if (obSide()->orderBook()->venue()->flags() &
-      (1U<<MxMDVenueFlags::ContigOrderRanks)) {
+      (1U<<MxMDVenueFlags::UniformRanks)) {
     typename Orders::Iterator i(m_orders, rank++, Orders::GreaterEqual);
     typename Orders::Node *node;
     while ((node = i.iterate()) && node->key()->m_data.rank == rank++)
@@ -117,7 +117,6 @@ void MxMDPxLevel_::delOrder(MxUInt rank)
 MxMDOrderBook::MxMDOrderBook( // single leg
   MxMDShard *shard, 
   MxMDVenue *venue,
-  MxMDOrderBook *consolidated,
   MxID segment, ZuString id,
   MxMDSecurity *security,
   MxMDTickSizeTbl *tickSizeTbl,
@@ -126,7 +125,6 @@ MxMDOrderBook::MxMDOrderBook( // single leg
     MxMDSharded(shard),
     m_venue(venue),
     m_venueShard(venue ? venue->shard_(shard->id()) : (MxMDVenueShard *)0),
-    m_consolidated(consolidated),
     m_key(venue ? venue->id() : MxID(), segment, id),
     m_legs(1),
     m_tickSizeTbl(tickSizeTbl),
@@ -136,7 +134,7 @@ MxMDOrderBook::MxMDOrderBook( // single leg
     m_handler(handler)
 {
   m_sides[0] = MxEnum();
-  m_ratios[0] = MxFloat();
+  m_ratios[0] = MxRatio();
   m_securities[0] = security;
 }
 
@@ -145,12 +143,11 @@ MxMDOrderBook::MxMDOrderBook( // multi-leg
   MxMDVenue *venue,
   MxID segment, ZuString id,
   MxUInt legs, const ZmRef<MxMDSecurity> *securities,
-  const MxEnum *sides, const MxFloat *ratios,
+  const MxEnum *sides, const MxRatio *ratios,
   MxMDTickSizeTbl *tickSizeTbl,
   const MxMDLotSizes &lotSizes) :
     MxMDSharded(shard),
     m_venue(venue),
-    m_consolidated(0),
     m_key(venue->id(), segment, id),
     m_legs(legs),
     m_tickSizeTbl(tickSizeTbl),
@@ -294,8 +291,8 @@ void MxMDOrderBook::pxLevel(
   MxFloat d_qty, d_nOrders;
   pxLevel_(side, transactTime, delta, price, qty, nOrders, flags, false,
       &d_qty, &d_nOrders);
-  if (MxMDOrderBook *consolidated = this->consolidated())
-    consolidated->pxLevel_(
+  if (MxMDOrderBook *out = this->out())
+    out->pxLevel_(
 	side, transactTime, true, price, d_qty, d_nOrders, flags, true, 0, 0);
 }
 
@@ -363,7 +360,7 @@ void MxMDOBSide::pxLevel_(
 void MxMDOrderBook::pxLevel_(
   MxEnum side, MxDateTime transactTime, bool delta,
   MxFloat price, MxFloat qty, MxFloat nOrders, MxFlags flags,
-  bool consolidated, MxFloat *d_qty_, MxFloat *d_nOrders_)
+  MxFloat *d_qty_, MxFloat *d_nOrders_)
 {
   MxFloat d_qty, d_nOrders;
   const MxMDPxLevelFn *pxLevelFn;
@@ -374,7 +371,7 @@ void MxMDOrderBook::pxLevel_(
     obSide->pxLevel_(
 	transactTime, delta, price, qty, nOrders, flags, m_handler,
 	d_qty, d_nOrders, pxLevelFn, pxLevel);
-    if (!consolidated)
+    if (!m_venue->flags() & (1<<MxMDVenueFlags::Dark))
       md()->pxLevel(
 	  this, side, transactTime, delta, price, qty, nOrders, flags);
   }
@@ -533,8 +530,8 @@ ZmRef<MxMDOrder> MxMDOrderBook::addOrder(
   md()->addOrder(this, orderID,
       transactTime, side, rank, price, qty, flags);
 
-  if (MxMDOrderBook *consolidated = this->consolidated())
-    consolidated->pxLevel_(
+  if (MxMDOrderBook *out = this->out())
+    out->pxLevel_(
       pxLevel->side(), transactTime, true,
       pxLevel->price(), qty, 1, flags, true, 0, 0);
 
@@ -604,12 +601,12 @@ void MxMDOrderBook::modifyOrder_(MxMDOrder *order, MxDateTime transactTime,
       this, order->id(), transactTime, side,
       rank, price, qty, flags);
 
-  if (MxMDOrderBook *consolidated = this->consolidated()) {
-    consolidated->pxLevel_(
+  if (MxMDOrderBook *out = this->out()) {
+    out->pxLevel_(
       pxLevel[0]->side(), transactTime, true,
       pxLevel[0]->price(), -oldQty, -1, 0, true, 0, 0);
     if (ZuLikely(qty.fne(0)))
-      consolidated->pxLevel_(
+      out->pxLevel_(
 	pxLevel[1]->side(), transactTime, true,
 	pxLevel[1]->price(), qty, 1, 0, true, 0, 0);
   }
@@ -675,12 +672,12 @@ void MxMDOrderBook::reduceOrder_(MxMDOrder *order,
       this, order->id(), transactTime, order->data().side,
       MxUInt(), MxFloat(), qty, MxFlags());
 
-  if (MxMDOrderBook *consolidated = this->consolidated()) {
-    consolidated->pxLevel_(
+  if (MxMDOrderBook *out = this->out()) {
+    out->pxLevel_(
       pxLevel[0]->side(), transactTime, true,
       pxLevel[0]->price(), -oldQty, -1, 0, true, 0, 0);
     if (ZuLikely(qty.fne(0)))
-      consolidated->pxLevel_(
+      out->pxLevel_(
 	pxLevel[1]->side(), transactTime, true,
 	pxLevel[1]->price(), qty, 1, 0, true, 0, 0);
   }
@@ -727,8 +724,8 @@ void MxMDOrderBook::cancelOrder_(MxMDOrder *order, MxDateTime transactTime)
   md()->cancelOrder(this,
       order->id(), transactTime, order->data().side);
 
-  if (MxMDOrderBook *consolidated = this->consolidated())
-    consolidated->pxLevel_(
+  if (MxMDOrderBook *out = this->out())
+    out->pxLevel_(
       pxLevel->side(), transactTime, true,
       pxLevel->price(), -qty, -1, 0, true, 0, 0);
 
@@ -752,8 +749,8 @@ void MxMDOBSide::reset(MxDateTime transactTime, const MxMDSecHandler *handler)
       MxFloat d_nOrders = -pxLevel->data().nOrders;
       pxLevel->reset(transactTime, canceledOrder);
       if (handler) handler->deletedPxLevel(pxLevel, transactTime);
-      if (MxMDOrderBook *consolidated = m_orderBook->consolidated())
-	consolidated->pxLevel_(
+      if (MxMDOrderBook *out = m_orderBook->out())
+	out->pxLevel_(
 	  m_side, transactTime, true,
 	  pxLevel->price(), d_qty, d_nOrders, 0, true, 0, 0);
     }
@@ -843,6 +840,37 @@ void MxMDOrderBook::update(
   if (m_handler) m_handler->updatedOrderBook(this);
 }
 
+void MxMDOrderBook::map(unsigned inRank, MxMDOrderBook *outOB)
+{
+  if (ZuUnlikely(m_out)) {
+    MxMDOrderBook *inOB, *prevOB = 0;
+    for (inOB = m_out->m_in; inOB; prevOB = inOB, inOB = inOB->m_next)
+      if (inOB == this) {
+	if (!prevOB)
+	  m_out->m_in = m_next;
+	else
+	  prevOB->m_next = m_next;
+	break;
+      }
+    m_next = 0;
+  }
+  m_rank = inRank;
+  m_out = outOB;
+  if (!outOB->m_in) {
+    m_next = 0;
+    outOB->m_in = this;
+  } else {
+    MxMDOrderBook *inOB, *prevOB = 0;
+    for (inOB = outOB->m_in; inOB; prevOB = inOB, inOB = inOB->m_next)
+      if (inRank < inOB->m_rank) break;
+    m_next = inOB;
+    if (!prevOB)
+      outOB->m_in = this;
+    else
+      prevOB->m_next = this;
+  }
+}
+
 MxMDSecurity::MxMDSecurity(MxMDShard *shard,
     const MxSecKey &key, const MxMDSecRefData &refData) :
   MxMDSharded(shard), m_key(key), m_refData(refData)
@@ -878,25 +906,6 @@ ZmRef<MxMDOrderBook> MxMDSecurity::addOrderBook(const MxSecKey &key,
 
 void MxMDSecurity::addOrderBook_(MxMDOrderBook *ob)
 {
-  switch (m_orderBooks.count()) {
-    case 0:
-      break;
-    case 1:
-      {
-	ZmRef<MxMDOrderBook> ob2 = m_orderBooks.minimumKey();
-	ZmRef<MxMDOrderBook> consolidated = new MxMDOrderBook(
-	  shard(), 0, 0,
-	  MxID(), m_refData.symbol, this, 0, MxMDLotSizes(), 0);
-	ob->consolidated(consolidated);
-	ob2->consolidated(consolidated);
-	m_orderBooks.add(consolidated);
-      }
-      break;
-    default:
-      ob->consolidated(m_orderBooks.findKey(
-	    MxMDOrderBook::venueSegment(MxID(), MxID())));
-      break;
-  }
   m_orderBooks.add(ob);
 }
 
@@ -907,22 +916,7 @@ void MxMDSecurity::delOrderBook(MxID venue, MxID segment)
 
 ZmRef<MxMDOrderBook> MxMDSecurity::delOrderBook_(MxID venue, MxID segment)
 {
-  ZmRef<MxMDOrderBook> ob;
-  switch (m_orderBooks.count()) {
-    case 0:
-      break;
-    case 3:
-      ob = m_orderBooks.delKey(MxMDOrderBook::venueSegment(venue, segment));
-      if (ZuUnlikely(!ob)) break;
-      m_orderBooks.delKey(MxMDOrderBook::venueSegment(MxID(), MxID()));
-      m_orderBooks.minimumKey()->consolidated(0);
-      ob->consolidated(0);
-      break;
-    default:
-      ob = m_orderBooks.delKey(MxMDOrderBook::venueSegment(venue, segment));
-      break;
-  }
-  return ob;
+  return m_orderBooks.delKey(MxMDOrderBook::venueSegment(venue, segment));
 }
 
 void MxMDSecurity::update(const MxMDSecRefData &refData)
@@ -947,8 +941,8 @@ MxMDVenue::MxMDVenue(MxMDLib *md, MxMDFeed *feed, MxID id,
   m_md(md), m_feed(feed), m_id(id),
   m_orderIDScope(orderIDScope), m_flags(flags),
   m_shards(md->nShards()),
-  m_segments(ZmHashParams().bits(2).init(
-	ZuStringN<ZmHeapIDSize>() << "MxMDVenue." << id << ".Segments")),
+  m_sessions(ZmHashParams().bits(2).init(
+	ZuStringN<ZmHeapIDSize>() << "MxMDVenue." << id << ".Sessions")),
   m_orders(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
     init(ZuStringN<ZmHeapIDSize>() << "MxMDVenue." << id << ".Orders"))
 {
@@ -971,16 +965,16 @@ ZmRef<MxMDTickSizeTbl> MxMDVenue::findTickSizeTbl_(ZuString id)
   return m_tickSizeTbls.findKey(id);
 }
 
-ZmRef<MxMDTickSizeTbl> MxMDVenue::addTickSizeTbl_(ZuString id)
+ZmRef<MxMDTickSizeTbl> MxMDVenue::addTickSizeTbl_(ZuString id, MxNDP pxNDP)
 {
-  ZmRef<MxMDTickSizeTbl> tbl = new MxMDTickSizeTbl(this, id);
+  ZmRef<MxMDTickSizeTbl> tbl = new MxMDTickSizeTbl(this, id, pxNDP);
   m_tickSizeTbls.add(tbl);
   return tbl;
 }
 
-ZmRef<MxMDTickSizeTbl> MxMDVenue::addTickSizeTbl(ZuString id)
+ZmRef<MxMDTickSizeTbl> MxMDVenue::addTickSizeTbl(ZuString id, MxNDP pxNDP)
 {
-  return md()->addTickSizeTbl(this, id);
+  return md()->addTickSizeTbl(this, id, pxNDP);
 }
 
 uintptr_t MxMDVenue::allSegments(ZmFn<MxID, MxEnum, MxDateTime> fn) const
@@ -995,19 +989,19 @@ uintptr_t MxMDVenue::allSegments(ZmFn<MxID, MxEnum, MxDateTime> fn) const
   return v;
 }
 
-void MxMDVenue::tradingSession(MxID segment, MxEnum session, MxDateTime stamp)
+void MxMDVenue::tradingSession(MxMDSegment segment)
 {
-  md()->tradingSession(this, segment, session, stamp);
+  md()->tradingSession(this, segment);
 }
 
 ZmRef<MxMDOrderBook> MxMDVenueShard::addCombination(
-  MxID segment, ZuString id,
+  MxID segment, ZuString id, MxNDP pxNDP, MxNDP qtyNDP,
   MxUInt legs, const ZmRef<MxMDSecurity> *securities,
-  const MxEnum *sides, const MxFloat *ratios,
+  const MxEnum *sides, const MxRatio *ratios,
   MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes)
 {
   return md()->addCombination(
-      this, segment, id,
+      this, segment, id, pxNDP, qtyNDP,
       legs, securities, sides, ratios, tickSizeTbl, lotSizes);
 }
 
@@ -1182,14 +1176,24 @@ void MxMDLib::loaded(MxMDVenue *venue)
   }
 }
 
+void MxMDLib::addVenueMap(VenueMapKey key, VenueMapping map)
+{
+  m_venueMap-add(key, map);
+}
+
+VenueMapping MxMDLib::venueMap(VenueMapKey key)
+{
+  return m_venueMap.findVal(key);
+}
+
 ZmRef<MxMDTickSizeTbl> MxMDLib::addTickSizeTbl(
-    MxMDVenue *venue, ZuString id)
+    MxMDVenue *venue, ZuString id, MxNDP pxNDP)
 {
   ZmRef<MxMDTickSizeTbl> tbl;
   {
     Guard guard(m_refDataLock);
     if (tbl = venue->findTickSizeTbl_(id)) return tbl;
-    tbl = venue->addTickSizeTbl_(id);
+    tbl = venue->addTickSizeTbl_(id, pxNDP);
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::addTickSizeTbl(core->broadcast(), venue->id(), id);
@@ -1390,8 +1394,8 @@ uintptr_t MxMDDerivatives::allOptions(ZmFn<MxMDSecurity *> fn) const
 }
 
 ZmRef<MxMDOrderBook> MxMDLib::addOrderBook(
-    MxMDSecurity *security, const MxSecKey &key,
-    MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes)
+    MxMDSecurity *security, MxSecKey key,
+    MxMDTickSizeTbl *tickSizeTbl, MxMDLotSizes lotSizes)
 {
   if (ZuUnlikely(!*key.venue())) {
     raise(ZeEVENT(Error,
@@ -1400,14 +1404,15 @@ ZmRef<MxMDOrderBook> MxMDLib::addOrderBook(
       })));
     return 0;
   }
-  ZmRef<MxMDOrderBook> ob;
-  ZmRef<MxMDFeed> feed;
+  ZmRef<MxMDOrderBook> newOB, inOB, ob;
+  unsigned inRank = 0;
+loop:
   {
     Guard guard(m_refDataLock);
     if (ob = security->findOrderBook_(key.venue(), key.segment())) {
       guard.unlock();
-      ob->update(tickSizeTbl, lotSizes);
-      return ob;
+      if (!newOB) ob->update(tickSizeTbl, lotSizes);
+      goto added;
     }
     ZmRef<MxMDVenue> venue = m_venues.findKey(key.venue());
     if (ZuUnlikely(!venue)) {
@@ -1415,29 +1420,48 @@ ZmRef<MxMDOrderBook> MxMDLib::addOrderBook(
 	([venueID = key.venue(), id = key.id()](const ZeEvent &, ZmStream &s) {
 	  s << "addOrderBook - no such venue for \"" << id << "\" " << venueID;
 	})));
-      return 0;
+      return newOB;
     }
     ob = new MxMDOrderBook(
       security->shard(), venue, 0,
       key.segment(), key.id(), security, tickSizeTbl, lotSizes,
       security->handler());
-    security->addOrderBook_(ob);
     m_allOrderBooks.add(ob);
     ob->shard()->addOrderBook(ob);
-    venue->feed()->addOrderBook(ob);
+    ob->security()->addOrderBook_(ob);
+    ob->venue()->feed()->addOrderBook(ob);
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::addOrderBook(core->broadcast(),
 	    key, security->key(), tickSizeTbl->id(), ob->lotSizes());
+
   }
   handler()->addOrderBook(ob);
-  return ob;
+added:
+  if (!newOB)
+    newOB = ob;
+  else {
+    if (inOB) inOB->map(inRank, ob);
+  }
+  if (MxMDVenueMapping mapping =
+      venueMapping(MxMDVenueMapKey(key.venue(), key.segment()))) {
+    key.id() = security->id();
+    key.venue() = mapping.venue;
+    key.segment() = mapping.segment;
+    tickSizeTbl = 0;
+    lotSizes = MxMDLotSizes();
+    inOB = ob;
+    inRank = mapping.rank;
+    goto loop;
+  }
+  return newOB;
 }
 
 ZmRef<MxMDOrderBook> MxMDLib::addCombination(
   MxMDVenueShard *venueShard, MxID segment, ZuString id,
+  MxNDP pxNDP, MxNDP qtyNDP,
   MxUInt legs, const ZmRef<MxMDSecurity> *securities,
-  const MxEnum *sides, const MxFloat *ratios,
+  const MxEnum *sides, const MxRatio *ratios,
   MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes)
 {
   MxMDShard *shard = venueShard->shard();
@@ -1462,7 +1486,7 @@ ZmRef<MxMDOrderBook> MxMDLib::addCombination(
       for (unsigned i = 0; i < legs; i++)
 	securityKeys[i] = securities[i]->key();
       MxMDStream::addCombination(core->broadcast(),
-	    ob->key(), legs, securityKeys, sides, ratios,
+	    ob->key(), pxNDP, qtyNDP, legs, securityKeys, sides, ratios,
 	    tickSizeTbl->id(), lotSizes);
     }
   }
@@ -1522,25 +1546,17 @@ void MxMDLib::delCombination(
   handler()->deletedOrderBook(ob);
 }
 
-void MxMDVenue::tradingSession_(
-    MxID segment, MxEnum session, MxDateTime stamp)
-{
-  m_segments.delKey(segment);
-  m_segments.add(segment, ZuMkPair(session, stamp));
-}
-
-void MxMDLib::tradingSession(MxMDVenue *venue,
-    MxID segment, MxEnum session, MxDateTime stamp)
+void MxMDLib::tradingSession(MxMDVenue *venue, MxMDSegment segment)
 {
   {
     Guard guard(m_refDataLock);
-    venue->tradingSession_(segment, session, stamp);
+    venue->tradingSession_(segment);
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::tradingSession(core->broadcast(),
-	    venue->id(), segment, session, stamp);
+	    venue->id(), segment.id, segment.session, segment.stamp);
   }
-  handler()->tradingSession(venue, segment, session, stamp);
+  handler()->tradingSession(venue, segment);
 }
 
 void MxMDLib::l1(const MxMDOrderBook *ob, const MxMDL1Data &l1Data)

@@ -31,45 +31,31 @@
 
 #include <ZvHeapCf.hpp>
 
-#include <MxCSV.hpp>
+#include <MxMDCSV.hpp>
 
 #include <version.h>
 
 unsigned MxMDCore::vmajor() { return MXMD_VMAJOR(MXMD_VERSION); }
 unsigned MxMDCore::vminor() { return MXMD_VMINOR(MXMD_VERSION); }
 
-class MxIDCol : public ZvCSVColumn<ZvCSVColType::Func, MxID>  {
-  typedef ZvCSVColumn<ZvCSVColType::Func, MxID> Base;
-  typedef Base::ParseFn ParseFn;
-  typedef Base::PlaceFn PlaceFn;
-public:
-  template <typename ID>
-  inline MxIDCol(const ID &id, int offset) :
-      Base(id, offset,
-	   ParseFn::Ptr<&MxIDCol::parse>::fn(),
-	   PlaceFn::Ptr<&MxIDCol::place>::fn()) { }
-  static void parse(MxID *i, ZuString b) { *i = b; }
-  static void place(ZtArray<char> &b, const MxID *i) { b << *i; }
-};
-
-class MxMDTickSizeCSV : public ZvCSV {
+class MxMDVenueMapCSV : public ZvCSV {
 public:
   struct Data {
-    MxID		venue;
-    MxIDString		id;
-    MxFloat		minPrice;
-    MxFloat		maxPrice;
-    MxFloat		tickSize;
+    MxID		inVenue;
+    MxID		inSegment;
+    MxUInt		inRank;
+    MxID		outVenue;
+    MxID		outSegment;
   };
   typedef ZuPOD<Data> POD;
 
-  MxMDTickSizeCSV() {
+  MxMDVenueMapCSV() {
     new ((m_pod = new POD())->ptr()) Data{};
-    add(new MxIDCol("venue", offsetof(Data, venue)));
-    add(new MxIDStringCol("id", offsetof(Data, id)));
-    add(new MxFloatCol("minPrice", offsetof(Data, minPrice)));
-    add(new MxFloatCol("maxPrice", offsetof(Data, maxPrice)));
-    add(new MxFloatCol("tickSize", offsetof(Data, tickSize)));
+    add(new MxIDCol("inVenue", offsetof(Data, inVenue)));
+    add(new MxIDCol("inSegment", offsetof(Data, inSegment)));
+    add(new MxUIntCol("inRank", offsetof(Data, inRank)));
+    add(new MxIDCol("outVenue", offsetof(Data, outVenue)));
+    add(new MxIDCol("outSegment", offsetof(Data, outSegment)));
   }
 
   void alloc(ZuRef<ZuAnyPOD> &pod) { pod = m_pod; }
@@ -77,7 +63,7 @@ public:
   template <typename File>
   void read(const File &file, ZvCSVReadFn fn) {
     ZvCSV::readFile(file,
-	ZvCSVAllocFn::Member<&MxMDTickSizeCSV::alloc>::fn(this), fn);
+	ZvCSVAllocFn::Member<&MxMDVenueMapCSV::alloc>::fn(this), fn);
   }
 
   ZuInline POD *pod() { return m_pod.ptr(); }
@@ -87,132 +73,19 @@ private:
   ZuRef<POD>	m_pod;
 };
 
-class MxMDSecurityCSV : public ZvCSV {
-public:
-  struct Data {
-    MxID		venue;
-    MxID		segment;
-    MxIDString		id;
-    MxUInt		shard;
-    MxMDSecRefData	refData;
-  };
-  typedef ZuPOD<Data> POD;
-
-  MxMDSecurityCSV() {
-    new ((m_pod = new POD())->ptr()) Data();
-#ifdef Offset
-#undef Offset
-#endif
-#define Offset(x) offsetof(Data, x)
-    add(new MxIDCol("venue", Offset(venue)));
-    add(new MxIDCol("segment", Offset(segment)));
-    add(new MxIDStringCol("id", Offset(id)));
-    add(new MxUIntCol("shard", Offset(shard)));
-#undef Offset
-#define Offset(x) offsetof(Data, refData) + offsetof(MxMDSecRefData, x)
-    add(new MxBoolCol("tradeable", Offset(tradeable)));
-    add(new MxEnumCol<MxSecIDSrc::CSVMap>("idSrc", Offset(idSrc)));
-    add(new MxSymStringCol("symbol", Offset(symbol)));
-    add(new MxEnumCol<MxSecIDSrc::CSVMap>("altIDSrc", Offset(altIDSrc)));
-    add(new MxSymStringCol("altSymbol", Offset(altSymbol)));
-    add(new MxIDCol("underVenue", Offset(underVenue)));
-    add(new MxIDCol("underSegment", Offset(underSegment)));
-    add(new MxIDStringCol("underlying", Offset(underlying)));
-    add(new MxUIntCol("mat", Offset(mat)));
-    add(new MxEnumCol<MxPutCall::CSVMap>("putCall", Offset(putCall)));
-    add(new MxIntCol("strike", Offset(strike)));
-    add(new MxFloatCol("strikeMultiplier", Offset(strikeMultiplier)));
-    add(new MxFloatCol("outstandingShares", Offset(outstandingShares)));
-    add(new MxFloatCol("adv", Offset(adv)));
-#undef Offset
-  }
-
-  void alloc(ZuRef<ZuAnyPOD> &pod) { pod = m_pod; }
-
-  template <typename File>
-  void read(const File &file, ZvCSVReadFn fn) {
-    ZvCSV::readFile(file,
-	ZvCSVAllocFn::Member<&MxMDSecurityCSV::alloc>::fn(this), fn);
-  }
-
-  ZuInline POD *pod() { return m_pod.ptr(); }
-  ZuInline Data *ptr() { return m_pod->ptr(); }
-
-private:
-  ZuRef<POD>	m_pod;
-};
-
-class MxMDOrderBookCSV : public ZvCSV {
-public:
-  struct Data {
-    MxID		venue;
-    MxID		segment;
-    MxIDString		id;
-    MxUInt		legs;
-    MxIDString		tickSizeTbl;
-    MxMDLotSizes	lotSizes;
-    MxID		secVenues[MxMDNLegs];
-    MxID		secSegments[MxMDNLegs];
-    MxIDString		securities[MxMDNLegs];
-    MxEnum		sides[MxMDNLegs];
-    MxFloat		ratios[MxMDNLegs];
-  };
-  typedef ZuPOD<Data> POD;
-
-  MxMDOrderBookCSV() {
-    new ((m_pod = new POD())->ptr()) Data();
-#ifdef Offset
-#undef Offset
-#endif
-#define Offset(x) offsetof(Data, x)
-    add(new MxIDCol("venue", Offset(venue)));
-    add(new MxIDCol("segment", Offset(segment)));
-    add(new MxIDStringCol("id", Offset(id)));
-    add(new MxUIntCol("legs", Offset(legs)));
-    for (unsigned i = 0; i < MxMDNLegs; i++) {
-      ZuStringN<16> secVenue = "secVenue"; secVenue << ZuBoxed(i);
-      ZuStringN<16> secSegment = "secSegment"; secSegment << ZuBoxed(i);
-      ZuStringN<16> security = "security"; security << ZuBoxed(i);
-      ZuStringN<8> side = "side"; side << ZuBoxed(i);
-      ZuStringN<8> ratio = "ratio"; ratio << ZuBoxed(i);
-      add(new MxIDCol(secVenue, Offset(secVenues) + (i * sizeof(MxID))));
-      add(new MxIDCol(secSegment, Offset(secSegments) + (i * sizeof(MxID))));
-      add(new MxIDStringCol(security,
-	    Offset(securities) + (i * sizeof(MxSymString))));
-      add(new MxEnumCol<MxSide::CSVMap>(side,
-	    Offset(sides) + (i * sizeof(MxEnum))));
-      add(new MxFloatCol(ratio,
-	    Offset(ratios) + (i * sizeof(MxFloat))));
-    }
-    add(new MxIDStringCol("tickSizeTbl", Offset(tickSizeTbl)));
-#undef Offset
-#define Offset(x) offsetof(Data, lotSizes) + offsetof(MxMDLotSizes, x)
-    add(new MxFloatCol("oddLotSize", Offset(oddLotSize)));
-    add(new MxFloatCol("lotSize", Offset(lotSize)));
-    add(new MxFloatCol("blockLotSize", Offset(blockLotSize)));
-#undef Offset
-  }
-
-  void alloc(ZuRef<ZuAnyPOD> &pod) { pod = m_pod; }
-
-  template <typename File>
-  void read(const File &file, ZvCSVReadFn fn) {
-    ZvCSV::readFile(file,
-	ZvCSVAllocFn::Member<&MxMDOrderBookCSV::alloc>::fn(this), fn);
-  }
-
-  ZuInline POD *pod() { return m_pod.ptr(); }
-  ZuInline Data *ptr() { return m_pod->ptr(); }
-
-private:
-  ZuRef<POD>	m_pod;
-};
+void MxMDCore::addVenueMap_(ZuAnyPOD *pod)
+{
+  auto data = (MxMDVenueMapCSV::Data *)(pod->ptr());
+  addVenueMap(MxMDVenueMapKey(data->inVenue, data->inSegment),
+      MxMDVenueMapping(data->outVenue, data->outSegment, data->inRank));
+}
 
 void MxMDCore::addTickSize_(ZuAnyPOD *pod)
 {
   MxMDTickSizeCSV::Data *data = (MxMDTickSizeCSV::Data *)(pod->ptr());
   ZmRef<MxMDVenue> venue = this->venue(data->venue);
-  ZmRef<MxMDTickSizeTbl> tbl = this->tickSizeTbl(venue, data->id);
+  ZmRef<MxMDTickSizeTbl> tbl =
+    this->tickSizeTbl(venue, data->id, data->pxNDP);
   tbl->addTickSize(data->minPrice, data->maxPrice, data->tickSize);
 }
 
@@ -235,7 +108,8 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
   MxMDSecHandle secHandle = security(secKey);
   if (!secHandle) throw ZtString() << "unknown security: " << secKey;
   ZmRef<MxMDVenue> venue = this->venue(data->venue);
-  ZmRef<MxMDTickSizeTbl> tbl = tickSizeTbl(venue, data->tickSizeTbl);
+  ZmRef<MxMDTickSizeTbl> tbl =
+    tickSizeTbl(venue, data->tickSizeTbl, data->pxNDP);
   secHandle.invokeMv(
       [data = *data, venue = ZuMv(venue), tbl = ZuMv(tbl)](
 	MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
@@ -251,7 +125,7 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
     } else {
       ZmRef<MxMDSecurity> securities[MxMDNLegs];
       MxEnum sides[MxMDNLegs];
-      MxFloat ratios[MxMDNLegs];
+      MxRatio ratios[MxMDNLegs];
       for (unsigned i = 0, n = data.legs; i < n; i++) {
 	MxID venueID = data.secVenues[i];
 	if (!*venueID) venueID = data.venue;
@@ -269,8 +143,8 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
 	ratios[i] = data.ratios[i];
       }
       venue->shard(shard)->addCombination(
-	  data.segment, data.id, data.legs,
-	  securities, sides, ratios, tbl, data.lotSizes);
+	  data.segment, data.id, data.pxNDP, data.qtyNDP,
+	  data.legs, securities, sides, ratios, tbl, data.lotSizes);
     }
   });
 }
@@ -349,7 +223,7 @@ void MxMDCore::init_(ZvCf *cf)
 
   MxMDLib::init_(cf);
 
-  m_localFeed = new MxMDFeed(this, "_LCL");
+  m_localFeed = new MxMDFeed(this, "_LOCAL");
   addFeed(m_localFeed);
 
   if (ZmRef<ZvCf> feedsCf = cf->subset("feeds", false)) {
@@ -357,7 +231,7 @@ void MxMDCore::init_(ZvCf *cf)
     ZvCf::Iterator i(feedsCf);
     ZuString key;
     while (ZmRef<ZvCf> feedCf = i.subset(key)) {
-      if (key == "_LCL") {
+      if (key == "_LOCAL") {
 	ZvCf::Iterator j(feedCf);
 	ZuString id;
 	while (ZmRef<ZvCf> venueCf = j.subset(id))
@@ -383,6 +257,12 @@ void MxMDCore::init_(ZvCf *cf)
       }
       (*pluginFn)(this, feedCf);
     }
+  }
+
+  if (ZtString venueMap = cf->get("venueMap")) {
+    MxMDVenueMapCSV csv;
+    csv.read(venueMap,
+	ZvCSVReadFn::Member<&MxMDCore::addVenueMapp_>::fn(this));
   }
 
   if (const ZtArray<ZtString> *tickSizes =
@@ -775,45 +655,48 @@ void MxMDCore::l1(const CmdArgs &args, ZtArray<char> &out)
       "high,low,accVol,accVolQty,match,matchQty,surplusQty,flags\n";
   for (unsigned i = 1; i < argc; i++)
     lookupOrderBook(this, args, i, 1, 1,
-	[this, &out, csv](MxMDSecurity *, MxMDOrderBook *ob) {
+	[this, &out, csv](MxMDSecurity *sec, MxMDOrderBook *ob) {
       const MxMDL1Data &l1Data = ob->l1Data();
+      const MxMDSecRefData &secRefData = sec->refData();
+      MxNDP pxNDP = secRefData.pxNDP;
+      MxNDP qtyNDP = secRefData.qtyNDP;
       MxMDFlagsStr flags;
       MxMDL1Flags::print(flags, ob->venueID(), l1Data.flags);
       if (csv) out <<
 	m_cmd->timeFmt(l1Data.stamp) << ',' <<
 	MxTradingStatus::name(l1Data.status) << ',' <<
-	l1Data.last << ',' <<
-	l1Data.lastQty << ',' <<
-	l1Data.bid << ',' <<
-	l1Data.bidQty << ',' <<
-	l1Data.ask << ',' <<
-	l1Data.askQty << ',' <<
+	MxFixedNDP(l1Data.last, pxNDP) << ',' <<
+	MxFixedNDP(l1Data.lastQty, qtyNDP) << ',' <<
+	MxFixedNDP(l1Data.bid, pxNDP) << ',' <<
+	MxFixedNDP(l1Data.bidQty, qtyNDP) << ',' <<
+	MxFixedNDP(l1Data.ask, pxNDP) << ',' <<
+	MxFixedNDP(l1Data.askQty, qtyNDP) << ',' <<
 	MxTickDir::name(l1Data.tickDir) << ',' <<
-	l1Data.high << ',' <<
-	l1Data.low << ',' <<
-	l1Data.accVol << ',' <<
-	l1Data.accVolQty << ',' <<
-	l1Data.match << ',' <<
-	l1Data.matchQty << ',' <<
-	l1Data.surplusQty << ',' <<
+	MxFixedNDP(l1Data.high, pxNDP) << ',' <<
+	MxFixedNDP(l1Data.low, pxNDP) << ',' <<
+	MxFixedNDP(l1Data.accVol, pxNDP) << ',' <<
+	MxFixedNDP(l1Data.accVolQty, qtyNDP) << ',' <<
+	MxFixedNDP(l1Data.match, pxNDP) << ',' <<
+	MxFixedNDP(l1Data.matchQty, qtyNDP) << ',' <<
+	MxFixedNDP(l1Data.surplusQty, qtyNDP) << ',' <<
 	flags << '\n';
       else out <<
 	"stamp: " << m_cmd->timeFmt(l1Data.stamp) <<
 	"\nstatus: " << MxTradingStatus::name(l1Data.status) <<
-	"\nlast: " << l1Data.last <<
-	"\nlastQty: " << l1Data.lastQty <<
-	"\nbid: " << l1Data.bid <<
-	"\nbidQty: " << l1Data.bidQty <<
-	"\nask: " << l1Data.ask <<
-	"\naskQty: " << l1Data.askQty <<
+	"\nlast: " << MxFixedNDP(l1Data.last, pxNDP) <<
+	"\nlastQty: " << MxFixedNDP(l1Data.lastQty, qtyNDP) <<
+	"\nbid: " << MxFixedNDP(l1Data.bid, pxNDP) <<
+	"\nbidQty: " << MxFixedNDP(l1Data.bidQty, qtyNDP) <<
+	"\nask: " << MxFixedNDP(l1Data.ask, pxNDP) <<
+	"\naskQty: " << MxFixedNDP(l1Data.askQty, qtyNDP) <<
 	"\ntickDir: " << MxTickDir::name(l1Data.tickDir) <<
-	"\nhigh: " << l1Data.high <<
-	"\nlow: " << l1Data.low <<
-	"\naccVol: " << l1Data.accVol <<
-	"\naccVolQty: " << l1Data.accVolQty <<
-	"\nmatch: " << l1Data.match <<
-	"\nmatchQty: " << l1Data.matchQty <<
-	"\nsurplusQty: " << l1Data.surplusQty <<
+	"\nhigh: " << MxFixedNDP(l1Data.high, pxNDP) <<
+	"\nlow: " << MxFixedNDP(l1Data.low, pxNDP) <<
+	"\naccVol: " << MxFixedNDP(l1Data.accVol, pxNDP) <<
+	"\naccVolQty: " << MxFixedNDP(l1Data.accVolQty, qtyNDP) <<
+	"\nmatch: " << MxFixedNDP(l1Data.match, pxNDP) <<
+	"\nmatchQty: " << MxFixedNDP(l1Data.matchQty, qtyNDP) <<
+	"\nsurplusQty: " << MxFixedNDP(l1Data.surplusQty, qtyNDP) <<
 	"\nflags: " << flags << '\n';
     });
 }
@@ -838,10 +721,13 @@ void MxMDCore::l2_side(MxMDOBSide *side, ZtArray<char> &out)
   MxID venueID = side->orderBook()->venueID();
   side->allPxLevels([this, venueID, &out](MxMDPxLevel *pxLevel) -> uintptr_t {
     const MxMDPxLvlData &pxLvlData = pxLevel->data();
+    const MxMDSecRefData &secRefData = side->orderBook()->security()->refData();
+    MxNDP pxNDP = secRefData.pxNDP;
+    MxNDP qtyNDP = secRefData.qtyNDP;
     MxMDFlagsStr flags;
     MxMDL2Flags::print(flags, venueID, pxLvlData.flags);
-    out << "\n    price: " << pxLevel->price() <<
-      " qty: " << pxLvlData.qty <<
+    out << "\n    price: " << MxFixedNDP(pxLevel->price(), pxNDP) <<
+      " qty: " << MxFixedNDP(pxLvlData.qty, qtyNDP) <<
       " nOrders: " << pxLvlData.nOrders;
     if (flags) out << " flags: " << flags;
     out << " transactTime: " << m_cmd->timeFmt(pxLvlData.transactTime);
@@ -868,12 +754,13 @@ void MxMDCore::security_(const CmdArgs &args, ZtArray<char> &out)
       out << "\nmat: " << refData.mat;
       if (*refData.putCall) out <<
 	  "\nputCall: " << MxPutCall::name(refData.putCall) <<
-	  "\nstrike: " << refData.strike;
+	  "\nstrike: " << MxFixedNDP(refData.strike, refData.pxNDP);
     }
     if (*refData.outstandingShares)
-      out << "\noutstandingShares: " << refData.outstandingShares;
+      out << "\noutstandingShares: " <<
+	MxFixedNDP(refData.outstandingShares, refData.qtyNDP);
     if (*refData.adv)
-      out << "\nADV: " << refData.adv;
+      out << "\nADV: " << MxFixedNDP(refData.adv, refData.pxNDP);
     if (ob) {
       const MxMDLotSizes &lotSizes = ob->lotSizes();
       out <<
@@ -881,14 +768,16 @@ void MxMDCore::security_(const CmdArgs &args, ZtArray<char> &out)
 	"\nsegment: " << ob->segment() <<
 	"\nID: " << ob->id() <<
 	"\nlot sizes: " <<
-	  lotSizes.oddLotSize << ',' <<
-	  lotSizes.lotSize << ',' <<
-	  lotSizes.blockLotSize <<
+	  MxFixedNDP(lotSizes.oddLotSize, refData.qtyNDP) << ',' <<
+	  MxFixedNDP(lotSizes.lotSize, refData.qtyNDP) << ',' <<
+	  MxFixedNDP(lotSizes.blockLotSize, refData.qtyNDP) <<
 	"\ntick sizes:";
       ob->tickSizeTbl()->allTickSizes(
 	  [&out](const MxMDTickSize &ts) -> uintptr_t {
-	out << "\n  " << ts.minPrice() << '-' << ts.maxPrice() << ' ' <<
-	  ts.tickSize();
+	out << "\n  " <<
+	  MxFixedNDP(ts.minPrice(), refData.pxNDP) << '-' <<
+	  MxFixedNDP(ts.maxPrice(), refData.pxNDP) << ' ' <<
+	  MxFixedNDP(ts.tickSize(), refData.pxNDP);
 	return 0;
       });
     }
@@ -906,7 +795,8 @@ static void writeTickSizes(
       return tbl->allTickSizes(
 	  [&csv, &fn, venue, tbl](const MxMDTickSize &ts) -> uintptr_t {
 	new (csv.ptr()) MxMDTickSizeCSV::Data{
-	    venue->id(), tbl->id(),
+	    MxEnum(),
+	    venue->id(), tbl->id(), tbl->pxNDP(),
 	    ts.minPrice(), ts.maxPrice(), ts.tickSize()};
 	fn(csv.pod());
 	return 0;
@@ -980,9 +870,12 @@ static void writeOrderBooks(
     if ((!*venueID || venueID == ob->venueID()) &&
 	(!*segment || segment == ob->segment())) {
       MxMDOrderBookCSV::Data *data = new (csv.ptr()) MxMDOrderBookCSV::Data{
+	MxEnum(),
 	ob->venueID(), ob->segment(),
 	ob->id(), ob->legs(),
-	ob->tickSizeTbl()->id(), ob->lotSizes()};
+	ob->tickSizeTbl()->id(),
+	ob->qtyNDP(),
+	ob->lotSizes()};
       for (unsigned i = 0, n = ob->legs(); i < n; i++) {
 	MxMDSecurity *sec;
 	if (!(sec = ob->security(i))) break;
@@ -1369,6 +1262,7 @@ void MxMDCore::apply(Frame *frame)
 		}
 		venue->shard(shard)->addCombination(
 			  obj.key.segment(), obj.key.id(),
+			  obj.pxNDP, obj.qtyNDP,
 			  obj.legs, securities, obj.sides, obj.ratios,
 			  tbl, obj.lotSizes);
 	      });
@@ -1567,11 +1461,12 @@ ZmRef<MxMDVenue> MxMDCore::venue(MxID id)
   return venue;
 }
 
-ZmRef<MxMDTickSizeTbl> MxMDCore::tickSizeTbl(MxMDVenue *venue, ZuString id)
+ZmRef<MxMDTickSizeTbl> MxMDCore::tickSizeTbl(
+    MxMDVenue *venue, ZuString id, MxNDP pxNDP)
 {
   ZmRef<MxMDTickSizeTbl> tbl;
   if (ZuLikely(tbl = venue->tickSizeTbl(id))) return tbl;
-  return venue->addTickSizeTbl(id);
+  return venue->addTickSizeTbl(id, pxNDP);
 }
 
 void MxMDCore::startTimer(MxDateTime begin)

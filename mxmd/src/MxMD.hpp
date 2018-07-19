@@ -87,7 +87,6 @@ template <class T> struct MxMDFlags {
       out << flags.hex(ZuFmt::Right<8>());
     }
     static void scan(const MxMDFlagsStr &in, MxFlags &flags) {
-      if (in.length() < 8) return;
       flags.scan(ZuFmt::Hex<0, ZuFmt::Right<8> >(), in);
     }
   };
@@ -165,11 +164,17 @@ typedef ZmSharded<MxMDShard> MxMDSharded;
 
 struct MxMDVenueFlags {
   MxEnumValues(
-      ContigOrderRanks);	// order ranks are contiguous
+      UniformRanks,		// order ranks are uniformly distributed
+      Dark,			// lit if not dark
+      Synthetic);		// synthetic (aggregated from input venues)
   MxEnumNames(
-      "ContigOrderRanks");
+      "UniformRanks",
+      "Dark",
+      "Synthetic");
   MxEnumFlags(Flags,
-      "ContigOrderRanks", ContigOrderRanks);
+      "UniformRanks", UniformRanks,
+      "Dark", Dark,
+      "Synthetic", Synthetic);
 };
 
 // L1 flags
@@ -202,14 +207,26 @@ struct MxMDL1Flags : public MxMDFlags<MxMDL1Flags> {
       if (auction(flags)) out << 'A';
       if (printable(flags)) out << 'P';
     }
-    static void scan(const MxMDFlagsStr &out, MxFlags &flags) {
+    static void scan(const MxMDFlagsStr &in, MxFlags &flags) {
       flags = 0;
-      for (unsigned i = 0; i < out.length(); i++) {
-	if (out[i] == 'A') auction(flags, true);
-	if (out[i] == 'P') printable(flags, true);
+      for (unsigned i = 0; i < in.length(); i++) {
+	if (in[i] == 'A') auction(flags, true);
+	if (in[i] == 'P') printable(flags, true);
       }
     }
   };
+};
+
+// venue mapping
+
+typedef ZuTuple<MxID, MxID> MxMDVenueMapKey; // venue, segment
+struct MxMDVenueMapping {
+  MxID		venue;
+  MxID		segment;
+  unsigned	rank;
+
+  ZuInline bool operator !() const { return !venue; }
+  ZuOpBool
 };
 
 // tick size table
@@ -237,20 +254,21 @@ friend class MxMDVenue;
   };
 
   template <typename ID>
-  MxMDTickSizeTbl(MxMDVenue *venue, const ID &id) :
-    m_venue(venue), m_id(id) { }
+  MxMDTickSizeTbl(MxMDVenue *venue, const ID &id, MxNDP pxNDP) :
+    m_venue(venue), m_id(id), m_pxNDP(pxNDP) { }
 
 public:
   ~MxMDTickSizeTbl() { }
 
   ZuInline MxMDVenue *venue() const { return m_venue; }
   ZuInline const MxIDString &id() const { return m_id; }
+  ZuInline MxFixed pxNDP() const { return m_pxNDP; }
 
   void reset();
-  void addTickSize(MxFloat minPrice, MxFloat maxPrice, MxFloat tickSize);
-  inline MxFloat tickSize(MxFloat price) {
+  void addTickSize(MxFixed minPrice, MxFixed maxPrice, MxFixed tickSize);
+  inline MxFixed tickSize(MxFixed price) {
     TickSizes::Node *node = m_tickSizes.find(price, TickSizes::GreaterEqual);
-    if (!node) return MxFloat();
+    if (!node) return MxFixed();
     return node->key().tickSize();
   }
   template <typename L> // (const MxMDTickSize &) -> uintptr_t
@@ -263,10 +281,11 @@ public:
 
 private:
   void reset_();
-  void addTickSize_(MxFloat minPrice, MxFloat maxPrice, MxFloat tickSize);
+  void addTickSize_(MxFixed minPrice, MxFixed maxPrice, MxFixed tickSize);
 
   MxMDVenue	*m_venue;
   MxIDString	m_id;
+  MxNDP		m_pxNDP;
   TickSizes	m_tickSizes;
 };
 
@@ -275,8 +294,8 @@ private:
 struct MxMDTradeData {
   MxIDString	tradeID;
   MxDateTime	transactTime;
-  MxFloat	price;
-  MxFloat	qty;
+  MxFixed	price;
+  MxFixed	qty;
 };
 
 struct MxMDTrade_HeapID {
@@ -292,7 +311,7 @@ friend class MxMDLib;
   template <typename TradeID>
   inline MxMDTrade_(MxMDSecurity *security, MxMDOrderBook *ob,
 	const TradeID &tradeID, MxDateTime transactTime,
-	MxFloat price, MxFloat qty) :
+	MxFixed price, MxFixed qty) :
       m_security(security), m_orderBook(ob),
       m_data{tradeID, transactTime, price, qty} { }
 
@@ -335,12 +354,12 @@ struct MxMDOrderFlags : public MxMDFlags<MxMDOrderFlags> {
 };
 
 struct MxMDOrderData {
-  MxDateTime		transactTime;
-  MxEnum		side;
-  MxUInt		rank;
-  MxFloat		price;
-  MxFloat		qty;
-  MxFlags		flags;		// MxMDOrderFlags
+  MxDateTime	transactTime;
+  MxEnum	side;
+  MxUInt	rank;
+  MxFixed	price;
+  MxFixed	qty;
+  MxFlags	flags;		// MxMDOrderFlags
 };
 
 struct MxMDOrderIDScope {
@@ -385,9 +404,7 @@ protected:
   template <typename ID>
   inline MxMDOrder_(MxMDOrderBook *ob,
     ID &&id, MxDateTime transactTime, MxEnum side,
-    MxUInt rank, MxFloat price, MxFloat qty, MxFlags flags) :
-      m_orderBook(ob),
-      m_obSide(side == MxSide::Buy ? bids_(ob) : asks_(ob)),
+    MxUInt rank, MxFixed price, MxFixed qty, MxFlags flags) :
       m_pxLevel(0),
       m_id(ZuFwd<ID>(id)),
       m_data{transactTime, side, rank, price, qty, flags} { }
@@ -422,28 +439,30 @@ friend struct RankAccessor;
   };
 
 public:
-  ZuInline MxMDOrderBook *orderBook() const { return m_orderBook; }
-  ZuInline MxMDOBSide *obSide() const { return m_obSide; }
+  ZuInline MxMDOrderBook *orderBook() const {
+    return m_pxLevel->obSide()->orderBook();
+  }
+  ZuInline MxMDOBSide *obSide() const {
+    return m_pxLevel->obSide();
+  }
   ZuInline MxMDPxLevel_ *pxLevel() const { return m_pxLevel; }
 
   ZuInline const MxIDString &id() const { return m_id; }
   ZuInline const MxMDOrderData &data() const { return m_data; }
 
 private:
-  inline void update_(MxUInt rank, MxFloat price, MxFloat qty, MxFlags flags) {
+  inline void update_(MxUInt rank, MxFixed price, MxFixed qty, MxFlags flags) {
     if (*rank) m_data.rank = rank;
     if (*price) m_data.price = price;
     if (*qty) m_data.qty = qty;
     m_data.flags = flags;
   }
-  void updateQty_(MxFloat qty) {
+  void updateQty_(MxFixed qty) {
     if (*qty) m_data.qty = qty;
   }
 
   ZuInline void pxLevel(MxMDPxLevel_ *l) { m_pxLevel = l; }
 
-  MxMDOrderBook		*m_orderBook;
-  MxMDOBSide		*m_obSide;
   MxMDPxLevel_		*m_pxLevel;
 
   MxIDString		m_id;
@@ -486,7 +505,7 @@ struct MxMDPxLvlData {
   }
 
   MxDateTime		transactTime;
-  MxFloat		qty;
+  MxFixed		qty;
   MxUInt		nOrders;
   MxFlags		flags;		// MxMDL2Flags
 };
@@ -597,7 +616,7 @@ friend class MxMDOBSide;
 
 protected:
   inline MxMDPxLevel_(MxMDOBSide *obSide,
-    MxEnum side, MxDateTime transactTime, MxFloat price, MxFloat qty,
+    MxEnum side, MxDateTime transactTime, MxFixed price, MxFixed qty,
     MxUInt nOrders, MxFlags flags) : m_obSide(obSide),
       m_side(side), m_price(price),
       m_data{transactTime, qty, nOrders, flags} { }
@@ -605,16 +624,15 @@ protected:
 public:
   inline ~MxMDPxLevel_() { }
 
-  struct PxAccessor : public ZuAccessor<MxMDPxLevel_ *, MxFloat> {
-    typedef MxFloat::FCmp Cmp;
-    ZuInline static const MxFloat &value(const MxMDPxLevel_ *p) {
+  struct PxAccessor : public ZuAccessor<MxMDPxLevel_ *, MxFixed> {
+    ZuInline static MxFixed value(const MxMDPxLevel_ *p) {
       return p->price();
     }
   };
 
   ZuInline MxMDOBSide *obSide() const { return m_obSide; }
-  ZuInline const MxEnum &side() const { return m_side; }
-  ZuInline const MxFloat &price() const { return m_price; }
+  ZuInline MxEnum side() const { return m_obSide->side(); }
+  ZuInline MxFixed price() const { return m_price; }
   ZuInline const MxMDPxLvlData &data() const { return m_data; }
 
   template <typename L> // (MxMDOrder *) -> uintptr_t
@@ -640,30 +658,55 @@ private:
   }
 
   void updateAbs(
-      MxDateTime transactTime, MxFloat qty, MxFloat nOrders, MxFlags flags,
-      MxFloat &d_qty, MxFloat &d_nOrders);
-  void updateAbs_(MxFloat qty, MxFloat nOrders, MxFlags flags,
-      MxFloat &d_qty, MxFloat &d_nOrders);
+      MxDateTime transactTime, MxFixed qty, MxUInt nOrders, MxFlags flags,
+      MxFixed &d_qty, MxUInt &d_nOrders);
+  void updateAbs_(MxFixed qty, MxUInt nOrders, MxFlags flags,
+      MxFixed &d_qty, MxUInt &d_nOrders);
   void updateDelta(
-      MxDateTime transactTime, MxFloat qty, MxFloat nOrders, MxFlags flags);
-  void updateDelta_(MxFloat qty, MxFloat nOrders, MxFlags flags);
+      MxDateTime transactTime, MxFixed qty, MxUInt nOrders, MxFlags flags);
+  void updateDelta_(MxFixed qty, MxUInt nOrders, MxFlags flags);
   void update(MxDateTime transactTime, bool delta,
-      MxFloat qty, MxFloat nOrders, MxFlags flags,
-      MxFloat &d_qty, MxFloat &d_nOrders);
+      MxFixed qty, MxUInt nOrders, MxFlags flags,
+      MxFixed &d_qty, MxUInt &d_nOrders);
 
   void addOrder(MxMDOrder *order);
   void delOrder(MxUInt rank);
 
+  template <typename Fill>
+  uintptr_t match(
+      MxFixed &qty, MxFixed &cumQty, MxFixed &grossTradeAmt, Fill &&fill) {
+    typename MxMDPxLevel_::Orders::Iterator i(m_orders);
+    while (MxMDPxLevel_::Orders::Node *node = i.iterate()) {
+      const ZmRef<MxMDOrder> &contra = node->key();
+      MxFixed cQty = contra->data().qty;
+      if (cQty <= qty + qty.epsilon()) {
+	if (uintptr_t v = fill(
+	      qty, cumQty, grossTradeAmt, m_price, cQty, contra))
+	  return v;
+	cumQty += cQty;
+	grossTradeAmt += (cQty * m_price);
+	i.del();
+	qty -= cQty;
+	if (qty <= qty.epsilon()) { qty = 0.0; return 0; }
+      } else {
+	if (uintptr_t v = fill(
+	      qty, cumQty, grossTradeAmt, m_price, qty, contra))
+	  return v;
+	cumQty += qty;
+	grossTradeAmt += (qty * m_price);
+	qty = 0.0;
+	return 0;
+      }
+    }
+    return 0;
+  }
+
   MxMDOBSide		*m_obSide;
-  MxEnum		m_side;
-  MxFloat		m_price;
+  MxFixed		m_price;
   MxMDPxLvlData	  	m_data;
   Orders		m_orders;
 };
 
-// FIXME - add match(order) function to orderbook
-// - IOC and FOK/AON as options
-// - takes lambda for fills (maker order, taker order, px, qty)
 // - whatever is left over is added unless FOK/IOC
 // - for external liquidity (consolidated book), match first against
 // internal venue's OB, then against consolidated OB since internal
@@ -674,6 +717,9 @@ private:
 // - when matching a L2 feed venue, match entire px levels
 // - when matching consolidated OB, ensure levels are broken up by venue
 // and that venue is available in lambda
+
+// FIXME - make PxLevel intrusively contained by MxMDPxLevels
+// (i.e. MxMDPxLevels::Node)
 
 struct MxMDPxLevel_HeapID : public ZmHeapSharded {
   inline static const char *id() { return "MxMDPxLevel"; }
@@ -707,9 +753,8 @@ typedef ZmFn<MxMDVenue *> MxMDVenueFn;
 typedef ZmFn<MxMDTickSizeTbl *> MxMDTickSizeTblFn;
 typedef ZmFn<MxMDTickSizeTbl *, const MxMDTickSize &> MxMDTickSizeFn;
 
-// venue, segment, trading session, time stamp
-typedef ZmFn<MxMDVenue *, MxID, MxEnum, MxDateTime>
-  MxMDTradingSessionFn;
+// venue, segment data
+typedef ZmFn<MxMDVenue *, MxMDSegment> MxMDTradingSessionFn;
 
 typedef ZmFn<MxMDSecurity *> MxMDSecurityFn;
 typedef ZmFn<MxMDOrderBook *> MxMDOrderBookFn;
@@ -800,8 +845,8 @@ friend class MxMDPxLevel_;
 
 public:
   struct Data {
-    MxFloat		nv;
-    MxFloat		qty;
+    MxFixed	nv;
+    MxFixed	qty;
   };
 
 private:
@@ -814,56 +859,34 @@ public:
   ZuInline MxEnum side() const { return m_side; }
 
   ZuInline const Data &data() const { return m_data; }
-  ZuInline MxFloat vwap() const { return m_data.nv / m_data.qty; }
+  ZuInline MxFixed vwap() const { return m_data.nv / m_data.qty; }
 
   ZuInline ZuRef<MxMDPxLevel> mktLevel() { return m_mktLevel; }
 
-  // aggregate price levels in range
-  void pxLevels(MxFloat minPrice, MxFloat maxPrice, MxMDPxLvlData &total) {
-    total = MxMDPxLvlData{ {}, 0.0, 0, 0 };
-    if (m_side == MxSide::Sell) {
-      minPrice -= minPrice.epsilon();
-      maxPrice -= maxPrice.epsilon();
-      PxLevels::ReadIterator i(m_pxLevels, minPrice, PxLevels::Greater);
-      while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey()) {
-	if (pxLevel->price() > maxPrice) break;
-	total += pxLevel->data();
-      }
-    } else {
-      minPrice += minPrice.epsilon();
-      maxPrice += maxPrice.epsilon();
-      PxLevels::ReadIterator i(m_pxLevels, maxPrice, PxLevels::Less);
-      while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey()) {
-	if (pxLevel->price() < minPrice) break;
-	total += pxLevel->data();
-      }
-    }
-  }
-
-  // iterate over price levels in range
+  // FIXME - move RBTree Iterator direction (Compare enum) to compile-time
+  // FIXME - move side-dependent path to compile-time
+  // iterate over price levels in range, best -> worst
   template <typename L> // (MxMDPxLevel *) -> uintptr_t
-  uintptr_t pxLevels(MxFloat minPrice, MxFloat maxPrice, L l) {
+  uintptr_t pxLevels(MxFixed minPrice, MxFixed maxPrice, L l) {
     if (m_side == MxSide::Sell) {
-      minPrice -= minPrice.epsilon();
-      maxPrice -= maxPrice.epsilon();
-      PxLevels::ReadIterator i(m_pxLevels, minPrice, PxLevels::Greater);
+      PxLevels::ReadIterator i(m_pxLevels, minPrice, PxLevels::GreaterEqual);
       while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey()) {
-	if (pxLevel->price() > maxPrice) break;
+	if (pxLevel->price() >= maxPrice) break;
 	if (uintptr_t v = l(pxLevel)) return v;
       }
     } else {
-      minPrice += minPrice.epsilon();
-      maxPrice += maxPrice.epsilon();
-      PxLevels::ReadIterator i(m_pxLevels, maxPrice, PxLevels::Less);
+      PxLevels::ReadIterator i(m_pxLevels, maxPrice, PxLevels::LessEqual);
       while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey()) {
-	if (pxLevel->price() < minPrice) break;
+	if (pxLevel->price() <= minPrice) break;
 	if (uintptr_t v = l(pxLevel)) return v;
       }
     }
     return 0;
   }
 
-  // iterate over all price levels
+  // FIXME - move RBTree Iterator direction (Compare enum) to compile-time
+  // FIXME - move side-dependent path to compile-time
+  // iterate over all price levels, best -> worst
   template <typename L> // (MxMDPxLevel *) -> uintptr_t
   uintptr_t allPxLevels(L l) const {
     PxLevels::ReadIterator i(m_pxLevels,
@@ -871,6 +894,69 @@ public:
     while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey())
       if (uintptr_t v = l(pxLevel)) return v;
     return 0;
+  }
+
+  // FIXME - move RBTree Iterator direction (Compare enum) to compile-time
+  // FIXME - move side-dependent path to compile-time
+  // returns qty available for matching at limit price or better
+  MxFloat matchQty(MxFloat px) {
+    MxFloat qty = 0.0;
+    PxLevels::ReadIterator i(m_pxLevels, m_side == MxSide::Buy ?
+	PxLevels::LessEqual : PxLevels::GreaterEqual);
+    while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey()) {
+      MxFloat cPx = pxLevel->price();
+      if (m_side == MxSide::Buy ?
+	  (px > cPx + cPx.epsilon()) : (px + px.epsilon() < cPx))
+	break;
+      qty += pxLevel->data().qty;
+    }
+    return qty;
+  }
+
+  // FIXME - to run a match on an aggregated order book, need to
+  // pre-iterate over input order books in rank order, recursively, until
+  // they are no longer aggregated (aggregated order books have no individual
+  // orders in them), then match each in sequence; external order books
+  // will abort matching since order will be locked while external liquidity
+  // is accessed
+  // FIXME - need to enrich local orders with MxTNewOrder
+
+  // fill(leavesQty, cumQty, grossTradeAmt, px, qty, MxMDOrder *contra)
+  //   /* fill(...) is called repeatedly for each contra order */
+  // leaves(leavesQty, cumQty, grossTradeAmt) /* called on completion */
+
+  // match market order
+  template <typename Fill, typename Leaves>
+  uintptr_t matchMkt(MxFloat qty, Fill &&fill, Leaves &&leaves) {
+    MxFloat cumQty = 0.0;
+    MxFloat grossTradeAmt = 0.0;
+    PxLevels::ReadIterator i(m_pxLevels, m_side == MxSide::Buy ?
+	PxLevels::LessEqual : PxLevels::GreaterEqual);
+    while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey()) {
+      if (uintptr_t v = pxLevel->match(qty, cumQty, grossTradeAmt, fill))
+	return v;
+      if (qty == 0.0) break;
+    }
+    leaves(qty, cumQty, grossTradeAmt);
+  }
+
+  // match limit order
+  template <typename Fill, typename Leaves>
+  uintptr_t matchLimit(MxFloat px, MxFloat qty, Fill &&fill, Leaves &&leaves) {
+    MxFloat cumQty = 0.0;
+    MxFloat grossTradeAmt = 0.0;
+    PxLevels::ReadIterator i(m_pxLevels, m_side == MxSide::Buy ?
+	PxLevels::LessEqual : PxLevels::GreaterEqual);
+    while (const ZuRef<MxMDPxLevel> &pxLevel = i.iterateKey()) {
+      MxFloat cPx = pxLevel->price();
+      if (m_side == MxSide::Buy ?
+	  (px > cPx + cPx.epsilon()) : (px + px.epsilon() < cPx))
+	break;
+      if (uintptr_t v = pxLevel->match(qty, cumQty, grossTradeAmt, fill))
+	return v;
+      if (qty == 0.0) break;
+    }
+    leaves(qty, cumQty, grossTradeAmt); 
   }
 
 private:
@@ -942,9 +1028,9 @@ friend class MxMDOBSide;
   MxMDOrderBook( // multi-leg
     MxMDShard *shard, 
     MxMDVenue *venue,
-    MxID segment, ZuString id,
+    MxID segment, ZuString id, MxNDP pxNDP, MxNDP qtyNDP,
     MxUInt legs, const ZmRef<MxMDSecurity> *securities,
-    const MxEnum *sides, const MxFloat *ratios,
+    const MxEnum *sides, const MxRatio *ratios,
     MxMDTickSizeTbl *tickSizeTbl,
     const MxMDLotSizes &lotSizes);
 
@@ -959,7 +1045,7 @@ public:
     return m_securities[leg];
   }
 
-  ZuInline MxMDOrderBook *consolidated() const { return m_consolidated; };
+  ZuInline MxMDOrderBook *out() const { return m_out; };
 
   ZuInline const MxID &venueID() const { return m_key.venue(); }
   ZuInline const MxID &segment() const { return m_key.segment(); }
@@ -967,8 +1053,11 @@ public:
   ZuInline const MxSecKey &key() const { return m_key; }
 
   ZuInline const MxUInt &legs() const { return m_legs; };
-  ZuInline const MxEnum &side(MxUInt leg) const { return m_sides[leg]; }
-  ZuInline const MxFloat &ratio(MxUInt leg) const { return m_ratios[leg]; }
+  ZuInline const MxEnum &side(unsigned leg) const { return m_sides[leg]; }
+  ZuInline const MxRatio &ratio(unsigned leg) const { return m_ratios[leg]; }
+
+  ZuInline const MxNDP pxNDP() const { return m_pxNDP; }
+  ZuInline const MxNDP qtyNDP() const { return m_qtyNDP; }
 
   ZuInline MxMDTickSizeTbl *tickSizeTbl() const { return m_tickSizeTbl; }
 
@@ -1021,11 +1110,9 @@ public:
   }
 
 private:
-  ZuInline static uint64_t venueSegment(MxID venue, MxID segment) {
-    return (((uint128_t)venue)<<64) | (uint128_t)segment;
+  ZuInline static uint128_t venueSegment(MxID venue, MxID segment) {
+    return (((uint128_t)venue)<<64U) | (uint128_t)segment;
   }
-
-  ZuInline void consolidated(MxMDOrderBook *ob) { m_consolidated = ob; }
 
   void pxLevel_(
       MxEnum side, MxDateTime transactTime, bool delta,
@@ -1049,16 +1136,24 @@ private:
 
   void reset_(MxMDPxLevel *pxLevel, MxDateTime transactTime);
 
+  void map(unsigned inRank, MxMDOrderBook *outOB);
+
   MxMDVenue			*m_venue;
   MxMDVenueShard		*m_venueShard;
 
-  MxMDOrderBook			*m_consolidated;
+  MxMDOrderBook			*m_in = 0;	// head of input list
+  unsigned			m_rank = 0;	// rank in output list
+  MxMDOrderBook			*m_next = 0;	// next in output list
+  MxMDOrderBook			*m_out = 0;	// output order book
 
   MxSecKey			m_key;
   MxUInt			m_legs;
   MxMDSecurity			*m_securities[MxMDNLegs];
   MxEnum			m_sides[MxMDNLegs];
-  MxFloat			m_ratios[MxMDNLegs];
+  MxUInt			m_ratios[MxMDNLegs];
+
+  MxNDP				m_pxNDP;
+  MxNDP				m_qtyNDP;
 
   ZmRef<MxMDFeedOB>		m_feedOB;
 
@@ -1182,19 +1277,6 @@ public:
 
   ZuInline const ZmRef<MxMDSecHandler> &handler() const { return m_handler; }
 
-  ZuInline ZmRef<MxMDOrderBook> consolidated() const {
-    return m_orderBooks.findKey(MxMDOrderBook::venueSegment(MxID(), MxID()));
-  }
-  ZuInline ZmRef<MxMDOrderBook> orderBook() const {
-    // find consolidated book if it exists
-    if (ZmRef<MxMDOrderBook> ob = m_orderBooks.findKey(
-	  MxMDOrderBook::venueSegment(MxID(), MxID())))
-      return ob;
-    // no consolidated book implies only one order book available
-    if (ZmRef<MxMDOrderBook> ob = m_orderBooks.minimumKey())
-      return ob;
-    return (MxMDOrderBook *)0;
-  }
   ZuInline ZmRef<MxMDOrderBook> orderBook(MxID venue) const {
     if (ZmRef<MxMDOrderBook> ob = OrderBooks::ReadIterator(m_orderBooks,
 	  MxMDOrderBook::venueSegment(venue, MxID())).iterateKey())
@@ -1203,7 +1285,7 @@ public:
   }
   ZuInline ZmRef<MxMDOrderBook> orderBook(MxID venue, MxID segment) const {
     if (ZmRef<MxMDOrderBook> ob = m_orderBooks.findKey(
-	  MxMDOrderBook::venueSegment(MxID(), MxID())))
+	  MxMDOrderBook::venueSegment(venue, segment)))
       return ob;
     return (MxMDOrderBook *)0;
   }
@@ -1214,7 +1296,7 @@ public:
   void delOrderBook(MxID venue, MxID segment);
 
 private:
-  void addOrderBook_(MxMDOrderBook *);
+  void addOrderBook_(MxMDOrderBook *, MxID outID);
   ZmRef<MxMDOrderBook> findOrderBook_(MxID venue, MxID segment);
   ZmRef<MxMDOrderBook> delOrderBook_(MxID venue, MxID segment);
 
@@ -1252,18 +1334,17 @@ friend class MxMDCore;
 friend class MxMDLib;
 
 public:
-  MxMDFeed(MxMDLib *md, MxID id);
+  MxMDFeed(MxMDLib *md, MxID id, unsigned level);
 
   virtual ~MxMDFeed() { }
 
   struct IDAccessor : public ZuAccessor<MxMDFeed *, MxID> {
-    inline static const MxID &value(const MxMDFeed *f) { return f->id(); }
+    inline static MxID value(const MxMDFeed *f) { return f->id(); }
   };
 
-  inline MxMDLib *md() const { return m_md; }
-  inline const MxID &id() const { return m_id; }
-
-  virtual bool isConnected() const { return true; }
+  ZuInline MxMDLib *md() const { return m_md; }
+  ZuInline MxID id() const { return m_id; }
+  ZuInline unsigned level() const { return m_level; }
 
   void connected();
   void disconnected();
@@ -1279,6 +1360,7 @@ protected:
 private:
   MxMDLib	*m_md;
   MxID		m_id;
+  uint8_t	m_level;	// 1, 2 or 3
 };
 
 // venues
@@ -1310,8 +1392,9 @@ public:
 
   ZmRef<MxMDOrderBook> addCombination(
       MxID segment, ZuString orderBookID,
+      MxNDP pxNDP, MxNDP qtyNDP,
       MxUInt legs, const ZmRef<MxMDSecurity> *securities,
-      const MxEnum *sides, const MxFloat *ratios,
+      const MxEnum *sides, const MxRatio *ratios,
       MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes);
   void delCombination(MxID segment, ZuString orderBookID);
 
@@ -1359,25 +1442,31 @@ friend class MxMDLib;
 friend class MxMDVenueShard;
 friend class MxMDOrderBook;
 
-  typedef ZuPair<MxEnum, MxDateTime> Session; // MxTradingSession, stamp
-
   typedef ZtArray<ZuRef<MxMDVenueShard> > Shards;
 
   struct TickSizeTbls_HeapID {
     inline static const char *id() { return "MxMDVenue.TickSizeTbls"; }
-  };
-  struct Segments_ID {
-    inline static const char *id() { return "MxMDVenue.Segments"; }
   };
   typedef ZmRBTree<ZmRef<MxMDTickSizeTbl>,
 	    ZmRBTreeIndex<MxMDTickSizeTbl::IDAccessor,
 	      ZmRBTreeObject<ZuNull,
 		ZmRBTreeLock<ZmPRWLock,
 		  ZmRBTreeHeapID<TickSizeTbls_HeapID> > > > > TickSizeTbls;
-  typedef ZmLHash<MxID,
-	    ZmLHashVal<Session,
-	      ZmLHashLock<ZmPRWLock,
-		ZmLHashID<Segments_ID> > > > Segments;
+  struct Segment_IDAccessor : public ZuAccessor<MxMDSegment, MxID> {
+    inline static MxID value(const MxMDSegment &s) { return s.id; }
+  };
+  struct Segments_ID {
+    inline static const char *id() { return "MxMDVenue.Segments"; }
+  };
+  typedef ZmHash<MxMDSegment,
+	    ZmHashIndex<Segment_IDAccessor,
+	      ZmHashObject<ZuNull,
+		ZmHashLock<ZmNoLock,
+		  ZmHashID<Segments_ID> > > > > Segments;
+  typedef ZmPLock SegmentsLock;
+  typedef ZmGuard<SegmentsLock> SegmentsGuard;
+  typedef ZmReadGuard<SegmentsLock> SegmentsReadGuard;
+
   typedef ZmHash<ZmRef<MxMDOrder>,
 	    ZmHashIndex<MxMDOrder::OrderIDAccessor,
 	      ZmHashObject<ZuNull,
@@ -1407,19 +1496,22 @@ private:
 public:
   ZuInline bool loaded() const { return m_loaded; }
 
-  ZmRef<MxMDTickSizeTbl> addTickSizeTbl(ZuString id);
+  ZmRef<MxMDTickSizeTbl> addTickSizeTbl(ZuString id, MxNDP pxNDP);
   template <typename ID>
   ZuInline ZmRef<MxMDTickSizeTbl> tickSizeTbl(const ID &id) const {
     return m_tickSizeTbls.findKey(id);
   }
   uintptr_t allTickSizeTbls(ZmFn<MxMDTickSizeTbl *>) const;
 
-  uintptr_t allSegments(ZmFn<MxID, MxEnum, MxDateTime>) const;
+  uintptr_t allSegments(ZmFn<const MxMDSegment &>) const;
 
-  ZuInline MxMDVenue::Session tradingSession(MxID segment = MxID()) const {
-    return m_segments.findVal(segment);
+  inline MxMDSegment tradingSession(MxID segmentID = MxID()) const {
+    SegmentsReadGuard guard(m_segmentsLock);
+    Segments::Node *node = m_segments.find(segmentID);
+    if (!node) return MxMDSegment();
+    return node->key();
   }
-  void tradingSession(MxID segment, MxEnum session, MxDateTime stamp);
+  void tradingSession(MxMDSegment segment);
 
   void modifyOrder(ZuString orderID, MxDateTime transactTime,
       MxEnum side, MxUInt rank, MxFloat price, MxFloat qty, MxFlags flags,
@@ -1432,9 +1524,17 @@ public:
 
 private:
   ZmRef<MxMDTickSizeTbl> findTickSizeTbl_(ZuString id);
-  ZmRef<MxMDTickSizeTbl> addTickSizeTbl_(ZuString id);
+  ZmRef<MxMDTickSizeTbl> addTickSizeTbl_(ZuString id, MxNDP pxNDP);
 
-  void tradingSession_(MxID segment, MxEnum session, MxDateTime stamp);
+  inline void tradingSession_(const MxMDSegment &segment) {
+    SegmentsGuard guard(m_segmentsLock);
+    Segments::Node *node = m_segments.find(segment.id);
+    if (!node) {
+      m_segments.add(segment);
+      return;
+    }
+    node->key() = segment;
+  }
 
   ZuInline void addOrder(MxMDOrder *order) { m_orders.add(order); }
   template <typename OrderID>
@@ -1456,7 +1556,8 @@ private:
   Shards		m_shards;
 
   TickSizeTbls	 	m_tickSizeTbls;
-  Segments		m_segments;
+  SegmentsLock		m_segmentsLock;
+    Segments		  m_segments;
   ZmAtomic<unsigned>	m_loaded = 0;
 
   Orders		m_orders;
@@ -1527,11 +1628,11 @@ private:
   struct Securities_HeapID : public ZmHeapSharded {
     ZuInline static const char *id() { return "MxMDShard.Securities"; }
   };
-  typedef ZmRBTree<MxMDSecurity *,
-	    ZmRBTreeIndex<MxMDSecurity::KeyAccessor,
-	      ZmRBTreeObject<ZuObject,
-		ZmRBTreeLock<ZmNoLock,
-		  ZmRBTreeHeapID<Securities_HeapID> > > > > Securities;
+  typedef ZmHash<MxMDSecurity *,
+	    ZmHashIndex<MxMDSecurity::KeyAccessor,
+	      ZmHashObject<ZuObject,
+		ZmHashLock<ZmNoLock,
+		  ZmHashHeapID<Securities_HeapID> > > > > Securities;
   ZuInline void addSecurity(MxMDSecurity *security) {
     m_securities.add(security);
   }
@@ -1542,11 +1643,11 @@ private:
   struct OrderBooks_HeapID : public ZmHeapSharded {
     ZuInline static const char *id() { return "MxMDShard.OrderBooks"; }
   };
-  typedef ZmRBTree<MxMDOrderBook *,
-	    ZmRBTreeIndex<MxMDOrderBook::KeyAccessor,
-	      ZmRBTreeObject<ZuObject,
-		ZmRBTreeLock<ZmNoLock,
-		    ZmRBTreeHeapID<OrderBooks_HeapID> > > > > OrderBooks;
+  typedef ZmHash<MxMDOrderBook *,
+	    ZmHashIndex<MxMDOrderBook::KeyAccessor,
+	      ZmHashObject<ZuObject,
+		ZmHashLock<ZmNoLock,
+		  ZmHashHeapID<OrderBooks_HeapID> > > > > OrderBooks;
   ZuInline void addOrderBook(MxMDOrderBook *ob) {
     m_orderBooks.add(ob);
   }
@@ -1640,6 +1741,10 @@ public:
   void addFeed(MxMDFeed *feed);
   void addVenue(MxMDVenue *venue);
 
+  void aggregate(MxID inVenue, MxID inSegment,
+      MxID outVenue, MxID outSegment, unsigned rank);
+  void segregate(MxID inVenue, MxID inSegment, MxID outVenue, MxID outSegment);
+
   void loaded(MxMDVenue *venue);
 
   void subscribe(MxMDLibHandler *);
@@ -1674,7 +1779,11 @@ template <typename> friend class ZmShard;
       MxMDShard *shard, ZmRef<MxMDSecurity> sec,
       const MxSecKey &key, const MxMDSecRefData &refData);
 
-  ZmRef<MxMDTickSizeTbl> addTickSizeTbl(MxMDVenue *venue, ZuString id);
+  void addVenueMapping(MxMDVenueMapKey key, MxMDVenueMapping map);
+  MxMDVenueMapping venueMapping(MxMDVenueMapKey key);
+
+  ZmRef<MxMDTickSizeTbl> addTickSizeTbl(
+      MxMDVenue *venue, ZuString id, MxNDP pxNDP);
   void resetTickSizeTbl(MxMDTickSizeTbl *tbl);
   void addTickSize(MxMDTickSizeTbl *tickSizeTbl,
       MxFloat minPrice, MxFloat maxPrice, MxFloat tickSize);
@@ -1684,13 +1793,14 @@ template <typename> friend class ZmShard;
   void delSecIndices(MxMDSecurity *, const MxMDSecRefData &);
 
   ZmRef<MxMDOrderBook> addOrderBook(
-      MxMDSecurity *security, const MxSecKey &key,
-      MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes);
+      MxMDSecurity *security, MxSecKey key,
+      MxMDTickSizeTbl *tickSizeTbl, MxMDLotSizes lotSizes);
       
   ZmRef<MxMDOrderBook> addCombination(
       MxMDVenueShard *venueShard, MxID segment, ZuString id,
+      MxNDP pxNDP, MxNDP qtyNDP,
       MxUInt legs, const ZmRef<MxMDSecurity> *securities,
-      const MxEnum *sides, const MxFloat *ratios,
+      const MxEnum *sides, const MxRatio *ratios,
       MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes);
 
   void updateOrderBook(MxMDOrderBook *ob,
@@ -1699,8 +1809,7 @@ template <typename> friend class ZmShard;
   void delOrderBook(MxMDSecurity *security, MxID venue, MxID segment);
   void delCombination(MxMDVenueShard *venueShard, MxID segment, ZuString id);
 
-  void tradingSession(
-      MxMDVenue *venue, MxID segment, MxEnum session, MxDateTime stamp);
+  void tradingSession(MxMDVenue *venue, MxMDSegment segment);
 
   void l1(const MxMDOrderBook *ob, const MxMDL1Data &l1Data);
 
@@ -1735,7 +1844,7 @@ template <typename> friend class ZmShard;
   typedef ZmHash<ZmRef<MxMDSecurity>,
 	    ZmHashIndex<MxMDSecurity::KeyAccessor,
 	      ZmHashObject<ZuNull,
-		ZmHashLock<RWLock,
+		ZmHashLock<ZmPLock,
 		  ZmHashHeapID<AllSecurities_HeapID> > > > > AllSecurities;
 
   struct AllOrderBooks_HeapID {
@@ -1744,7 +1853,7 @@ template <typename> friend class ZmShard;
   typedef ZmHash<ZmRef<MxMDOrderBook>,
 	    ZmHashIndex<MxMDOrderBook::KeyAccessor,
 	      ZmHashObject<ZuNull,
-		ZmHashLock<RWLock,
+		ZmHashLock<ZmPLock,
 		  ZmHashHeapID<AllOrderBooks_HeapID> > > > > AllOrderBooks;
 
   // secondary indices
@@ -1755,7 +1864,7 @@ template <typename> friend class ZmShard;
   typedef ZmHash<MxSecSymKey,
 	    ZmHashVal<MxMDSecurity *,
 	      ZmHashObject<ZuNull,
-		ZmHashLock<RWLock,
+		ZmHashLock<ZmPLock,
 		  ZmHashHeapID<Securities_HeapID> > > > > Securities;
 
   // feeds, venues
@@ -1763,20 +1872,29 @@ template <typename> friend class ZmShard;
   struct Feeds_HeapID {
     ZuInline static const char *id() { return "MxMDLib.Feeds"; }
   };
-  typedef ZmHash<ZmRef<MxMDFeed>,
-	    ZmHashIndex<MxMDFeed::IDAccessor,
-	      ZmHashObject<ZuNull,
-		ZmHashLock<RWLock,
-		  ZmHashHeapID<Feeds_HeapID> > > > > Feeds;
+  typedef ZmRBTree<ZmRef<MxMDFeed>,
+	    ZmRBTreeIndex<MxMDFeed::IDAccessor,
+	      ZmRBTreeObject<ZuNull,
+		ZmRBTreeLock<ZmPLock,
+		  ZmRBTreeHeapID<Feeds_HeapID> > > > > Feeds;
 
   struct Venues_HeapID {
     ZuInline static const char *id() { return "MxMDLib.Venues"; }
   };
-  typedef ZmHash<ZmRef<MxMDVenue>,
-	    ZmHashIndex<MxMDVenue::IDAccessor,
-	      ZmHashObject<ZuNull,
-		ZmHashLock<RWLock,
-		  ZmHashHeapID<Venues_HeapID> > > > > Venues;
+  typedef ZmRBTree<ZmRef<MxMDVenue>,
+	    ZmRBTreeIndex<MxMDVenue::IDAccessor,
+	      ZmRBTreeObject<ZuNull,
+		ZmRBTreeLock<ZmPLock,
+		  ZmRBTreeHeapID<Venues_HeapID> > > > > Venues;
+
+  struct VenueMap_HeapID {
+    ZuInline static const char *id() { return "MxMDLib.VenueMap"; }
+  };
+  typedef ZmRBTree<MxMDVenueMapKey,
+	    ZmRBTreeVal<MxMDVenueMapping,
+	      ZmRBTreeObject<ZuNull,
+		ZmRBTreeLock<ZmPLock,
+		  ZmRBTreeHeapID<VenueMap_HeapID> > > > > VenueMap;
 
 public:
   ZuInline MxMDSecHandle security(const MxSecKey &key) const {
@@ -1867,6 +1985,7 @@ private:
   Securities		m_securities;
   Feeds			m_feeds;
   Venues		m_venues;
+  VenueMap		m_venueMap;
 
   RWLock		m_refDataLock;	// serializes updates to containers
 

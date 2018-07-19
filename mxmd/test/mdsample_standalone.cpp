@@ -29,7 +29,7 @@ int startFeed(MxMDLib *md, MxMDFeed *feed);
 bool startFailed = 0;
 
 struct Feed : public MxMDFeed {
-  inline Feed(MxMDLib *md, MxID id) : MxMDFeed(md, id) { }
+  inline Feed(MxMDLib *md, MxID id) : MxMDFeed(md, id, 3) { }
   void start() { if (startFeed(md(), this)) startFailed = 1; }
 };
 

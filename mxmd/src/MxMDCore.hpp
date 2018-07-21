@@ -115,27 +115,27 @@ public:
   ZuInline Mx *mx() { return m_mx.ptr(); }
   ZuInline ZvCf *cf() { return m_cf.ptr(); }
 
-  virtual void start();
-  virtual void stop();
-  virtual void final();
+  void start();
+  void stop();
+  void final();
 
-  virtual void record(ZuString path);
-  virtual void stopRecording();
-  virtual void stopStreaming();
+  void record(ZuString path);
+  void stopRecording();
+  void stopStreaming();
 
-  virtual void replay(
+  void replay(
     ZuString path,
     MxDateTime begin = MxDateTime(),
     bool filter = true);
-  virtual void stopReplaying();
+  void stopReplaying();
 
-  virtual void startTimer(MxDateTime begin = MxDateTime());
-  virtual void stopTimer();
+  void startTimer(MxDateTime begin = MxDateTime());
+  void stopTimer();
 
-  virtual void dumpTickSizes(ZuString path, MxID venue = MxID());
-  virtual void dumpSecurities(
+  void dumpTickSizes(ZuString path, MxID venue = MxID());
+  void dumpSecurities(
       ZuString path, MxID venue = MxID(), MxID segment = MxID());
-  virtual void dumpOrderBooks(
+  void dumpOrderBooks(
       ZuString path, MxID venue = MxID(), MxID segment = MxID());
 
 private:
@@ -516,11 +516,11 @@ friend class Recorder;
 
       MxID id() const { return MxAnyTx::id(); }
 
-      virtual void update(ZvCf *cf) { }
-      virtual void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) { }
+      void update(ZvCf *cf) { }
+      void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) { }
 
-      virtual void connect() { MxAnyLink::connected(); }
-      virtual void disconnect() { MxAnyLink::disconnected(); }
+      void connect() { MxAnyLink::connected(); }
+      void disconnect() { MxAnyLink::disconnected(); }
     };
 
   private:
@@ -528,6 +528,7 @@ friend class Recorder;
       inline static const char *id() { return "MxMD.SnapQueue"; }
     };
   public:
+    typedef MxQueueRx<Link> Rx;
     typedef ZmList<ZmRef<Msg>,
 	      ZmListObject<ZuNull,
 		ZmListLock<ZmNoLock,
@@ -536,7 +537,15 @@ friend class Recorder;
     inline Recorder(MxMDCore *core) : m_core(core) { }
 
     void init() {
-      MxEngine::init(m_core, this, m_core->mx(), m_core->cf());
+      ZmRef<ZvCf> cf = m_core->cf()->subset("recorder", false);
+      if (!cf) {
+	cf = new ZvCf();
+	cf->set("id", "Recorder");
+	ZuStringN<16> tid{ZuBoxed(m_core->mx()->txThread())};
+	cf->set("rxThread", tid);
+	cf->set("txThread", tid);
+      }
+      MxEngine::init(m_core, this, m_core->mx(), cf);
       m_link = MxEngine::updateLink<Link>("recorder", nullptr);
       m_link->init(this);
     }
@@ -556,6 +565,7 @@ friend class Recorder;
     template <typename Path> bool start(Path &&path) {
       if (!fileOpen(ZuFwd<Path>(path))) return false;
       if (!m_core->broadcast().open()) return false;
+      MxEngine::start();
       recvStart();
       snapStart();
       return true;
@@ -564,6 +574,7 @@ friend class Recorder;
     void stop() {
       snapStop();
       recvStop();
+      MxEngine::stop();
       m_core->broadcast().close();
       fileClose();
     }
@@ -604,7 +615,10 @@ friend class Recorder;
 	if (m_recvRunning) return;
 	m_recvRunning = 1;
       }
-      rxInvoke([](Recorder *self, Rx *rx) { self->recv(rx); }, this);
+      m_link->rxInvoke([](Rx *rx) {
+	static_cast<Recorder *>(
+	    static_cast<Link *>(rx)->engine())->recv(rx);
+      });
       m_attachSem.wait();
     }
     void recvStop() {
@@ -639,12 +653,9 @@ friend class Recorder;
     void recv(Rx *rx) {
       rx->startQueuing();
       using namespace MxMDStream;
-      const Frame *frame;
 
       Broadcast &broadcast = m_core->broadcast();
-      // if (!broadcast.open()) return;
       if (broadcast.attach() != Zi::OK) {
-	// broadcast.close();
 	m_attachSem.post();
 	Guard guard(m_threadLock);
 	m_recvRunning = 0;
@@ -652,11 +663,16 @@ friend class Recorder;
       }
 
       m_attachSem.post();
-
-      rxRun([](Recorder *self, Rx *rx) { self->recvMsg(rx); }, this);
+      m_link->rxRun([](Rx *rx) {
+	static_cast<Recorder *>(
+	    static_cast<Link *>(rx)->engine())->recvMsg(rx);
+      });
     }
 
     void recvMsg(Rx *rx) {
+      using namespace MxMDStream;
+      const Frame *frame;
+      Broadcast &broadcast = m_core->broadcast();
       if (ZuUnlikely(!(frame = broadcast.shift()))) {
 	if (ZuLikely(broadcast.readStatus() == Zi::EndOfFile)) goto end;
 	goto next;
@@ -671,12 +687,10 @@ friend class Recorder;
 	goto next;
       }
       {
-	// Guard guard(m_ioLock);
 	MsgRef msg = new Msg();
 
 	if (frame->len > sizeof(Buf)) {
 	  broadcast.shift2();
-	  // guard.unlock();
 	  snapStop();
 	  m_core->raise(ZeEVENT(Error,
 	      ([name = MxTxtString(broadcast.config().name())](
@@ -695,13 +709,13 @@ friend class Recorder;
       broadcast.shift2();
 
     next:
-      rxRun([](Recorder *self, Rx *rx) { self->recvMsg(rx); }, this);
+      m_link->rxRun([](Rx *rx) {
+	      static_cast<Recorder *>(static_cast<Link *>(rx)->engine())->recvMsg(rx); });
       return;
 
     end:
       broadcast.detach();
       m_detachSem.post();
-      // broadcast.close();
     }
 
     int write(const Frame *frame, ZeError *e) {
@@ -723,7 +737,7 @@ friend class Recorder;
 	  return;
 	}
       }
-      rxInvoke([](Rx *rx) { rx->stopQueuing(1); });
+      m_link->rxInvoke([](Rx *rx) { rx->stopQueuing(1); });
     }
 
   public:
@@ -747,6 +761,7 @@ friend class Recorder;
 	m_ioLock.unlock();
 	return 0;
       }
+
       return m_snapMsg->frame();
     }
     void push2() {

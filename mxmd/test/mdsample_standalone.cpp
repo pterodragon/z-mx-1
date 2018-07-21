@@ -47,24 +47,7 @@ int main(int argc, char **argv)
   signal(SIGINT, &sigint);		// handle CTRL-C
 
   try {
-    ZmRef<ZvCf> cf = new ZvCf();
-    cf->fromString(
-      "mx {\n"
-	"nThreads 4\n"		// thread IDs are 1-based
-	"rxThread 1\n"		// I/O Rx
-	"txThread 2\n"		// I/O Tx
-	"isolation 1-3\n"	// leave thread 4 for general purpose
-      "}\n"
-#if 0
-      "recorder {\n"
-        "id Recorder\n"
-	"rxThread 3\n"
-	"txThread 2\n"
-      "}\n"
-#endif
-      , false);
-
-    MxMDLib *md = MxMDLib::init(ZuMv(cf));	// initialize market data library
+    MxMDLib *md = MxMDLib::init(0);	// initialize market data library
 
     if (!md) return 1;
 

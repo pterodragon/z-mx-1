@@ -116,27 +116,27 @@ public:
   ZuInline Mx *mx() { return m_mx.ptr(); }
   ZuInline ZvCf *cf() { return m_cf.ptr(); }
 
-  virtual void start();
-  virtual void stop();
-  virtual void final();
+  void start();
+  void stop();
+  void final();
 
-  virtual void record(ZuString path);
-  virtual void stopRecording();
-  virtual void stopStreaming();
+  void record(ZuString path);
+  void stopRecording();
+  void stopStreaming();
 
-  virtual void replay(
+  void replay(
     ZuString path,
     MxDateTime begin = MxDateTime(),
     bool filter = true);
-  virtual void stopReplaying();
+  void stopReplaying();
 
-  virtual void startTimer(MxDateTime begin = MxDateTime());
-  virtual void stopTimer();
+  void startTimer(MxDateTime begin = MxDateTime());
+  void stopTimer();
 
-  virtual void dumpTickSizes(ZuString path, MxID venue = MxID());
-  virtual void dumpSecurities(
+  void dumpTickSizes(ZuString path, MxID venue = MxID());
+  void dumpSecurities(
       ZuString path, MxID venue = MxID(), MxID segment = MxID());
-  virtual void dumpOrderBooks(
+  void dumpOrderBooks(
       ZuString path, MxID venue = MxID(), MxID segment = MxID());
 
 private:
@@ -175,22 +175,22 @@ private:
   void addOrderBook_(ZuAnyPOD *);
 
   // Engine Management
-  virtual void addEngine(MxEngine *){}
-  virtual void delEngine(MxEngine *){}
-  virtual void engineState(MxEngine *, MxEnum){}
+  void addEngine(MxEngine *) { }
+  void delEngine(MxEngine *) { }
+  void engineState(MxEngine *, MxEnum) { }
 
   // Link Management
-  virtual void updateLink(MxAnyLink *){}
-  virtual void delLink(MxAnyLink *){}
-  virtual void linkState(MxAnyLink *, MxEnum, ZuString txt){}
+  void updateLink(MxAnyLink *) { }
+  void delLink(MxAnyLink *) { }
+  void linkState(MxAnyLink *, MxEnum, ZuString txt) { }
 
   // Pool Management
-  virtual void updateTxPool(MxAnyTxPool *){}
-  virtual void delTxPool(MxAnyTxPool *){}
+  void updateTxPool(MxAnyTxPool *) { }
+  void delTxPool(MxAnyTxPool *) { }
 
   // Queue Management
-  virtual void addQueue(MxID id, bool tx, MxQueue *){}
-  virtual void delQueue(MxID id, bool tx){}
+  void addQueue(MxID id, bool tx, MxQueue *) { }
+  void delQueue(MxID id, bool tx) { }
 
   // Traffic Logging (logThread)
   /* Example usage:
@@ -198,7 +198,7 @@ private:
     stamp = msg->stamp();
     data = msg->buf();
   }, msg)); */
-  virtual void log(MxMsgID, MxTraffic){}
+  void log(MxMsgID, MxTraffic) { }
 
   struct ThreadID {
     enum {
@@ -536,7 +536,15 @@ friend class Recorder;
     inline Recorder(MxMDCore *core) : m_core(core) { }
 
     void init() {
-      MxEngine::init(m_core, this, m_core->mx(), m_core->cf());
+      ZmRef<ZvCf> cf = m_core->cf()->subset("recorder", false);
+      if (!cf) {
+	cf = new ZvCf();
+	cf->set("id", "Recorder");
+	ZuStringN<16> tid{ZuBoxed(m_core->mx()->txThread())};
+	cf->set("rxThread", tid);
+	cf->set("txThread", tid);
+      }
+      MxEngine::init(m_core, this, m_core->mx(), cf);
       m_link = MxEngine::updateLink<Link>("recorder", nullptr);
       m_link->init(this);
     }
@@ -556,6 +564,7 @@ friend class Recorder;
     template <typename Path> bool start(Path &&path) {
       if (!fileOpen(ZuFwd<Path>(path))) return false;
       if (!m_core->broadcast().open()) return false;
+      MxEngine::start();
       recvStart();
       snapStart();
       return true;
@@ -564,6 +573,7 @@ friend class Recorder;
     void stop() {
       snapStop();
       recvStop();
+      MxEngine::stop();
       m_core->broadcast().close();
       fileClose();
     }
@@ -605,7 +615,9 @@ friend class Recorder;
 	m_recvRunning = 1;
       }
       m_link->rxInvoke([](Rx *rx) {
-	      static_cast<Recorder *>(static_cast<Link *>(rx)->engine())->recv(rx); });
+	static_cast<Recorder *>(
+	    static_cast<Link *>(rx)->engine())->recv(rx);
+      });
       m_attachSem.wait();
     }
     void recvStop() {
@@ -651,7 +663,9 @@ friend class Recorder;
 
       m_attachSem.post();
       m_link->rxRun([](Rx *rx) {
-	      static_cast<Recorder *>(static_cast<Link *>(rx)->engine())->recvMsg(rx); });
+	static_cast<Recorder *>(
+	    static_cast<Link *>(rx)->engine())->recvMsg(rx);
+      });
     }
 
     void recvMsg(Rx *rx) {
@@ -746,6 +760,7 @@ friend class Recorder;
 	m_ioLock.unlock();
 	return 0;
       }
+
       return m_snapMsg->frame();
     }
     void push2() {

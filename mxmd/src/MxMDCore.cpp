@@ -277,16 +277,12 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
 
 MxMDLib *MxMDLib::init(const char *cf_)
 {
-    ZmRef<ZvCf> cf = new ZvCf();
-    if (cf_) cf->fromFile(cf_, false);
-    return init(ZuMv(cf));
-}
-
-MxMDLib *MxMDLib::init(ZvCf *cf_)
-{
   ZeLog::start(); // ensure error reporting works
 
-  ZmRef<ZvCf> cf = cf_;
+  ZmRef<ZvCf> cf = new ZvCf();
+
+  if (cf_) cf->fromFile(cf_, false);
+
   ZmRef<MxMDCore> md;
 
   try {
@@ -353,7 +349,7 @@ void MxMDCore::init_(ZvCf *cf)
 
   MxMDLib::init_(cf);
 
-  m_localFeed = new MxMDFeed(this, "_LCL");
+  m_localFeed = new MxMDFeed(this, "_LOCAL");
   addFeed(m_localFeed);
 
   if (ZmRef<ZvCf> feedsCf = cf->subset("feeds", false)) {
@@ -361,7 +357,7 @@ void MxMDCore::init_(ZvCf *cf)
     ZvCf::Iterator i(feedsCf);
     ZuString key;
     while (ZmRef<ZvCf> feedCf = i.subset(key)) {
-      if (key == "_LCL") {
+      if (key == "_LOCAL") {
 	ZvCf::Iterator j(feedCf);
 	ZuString id;
 	while (ZmRef<ZvCf> venueCf = j.subset(id))

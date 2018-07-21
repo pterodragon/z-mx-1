@@ -57,8 +57,7 @@ int main(int argc, char **argv)
 	    "isolation 1-3\n"	// leave thread 4 for general purpose
       "}\n"
       "rxThread 3\n"		// App Rx
-      "txThread 2\n"		// App Tx (same as I/O Tx)
-      "links { link1 { } }\n",
+      "txThread 2\n",		// App Tx (same as I/O Tx)
       false);
 
     MxMDLib *md = MxMDLib::init(ZuMv(cf));	// initialize market data library

@@ -185,7 +185,7 @@ constexpr typename ZuDeref<T>::T &&ZuMv(T &&t) noexcept {
 
 // safe bool idiom
 #define ZuOpBool \
-  ZuInline operator const void *() const { \
+  inline operator const void *() const { \
     return !*this ? (const void *)0 : (const void *)this; \
   }
 

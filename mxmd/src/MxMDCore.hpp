@@ -550,7 +550,7 @@ friend class Recorder;
 
     inline bool running() const {
       ReadGuard guard(m_threadLock);
-      return m_snapThread || m_recvThread;
+      return m_snapThread || m_recvRunning;
     }
 
     template <typename Path> bool start(Path &&path) {
@@ -599,21 +599,21 @@ friend class Recorder;
     }
 
     void recvStart() {
-      Guard guard(m_threadLock);
-      if (!!m_recvThread) return;
-      m_link->startQueuing();
-      m_recvThread = ZmThread(m_core, ThreadID::RecReceiver,
-	  ZmFn<>::Member<&Recorder::recv>::fn(this),
-	  m_core->m_recReceiverParams);
+      {
+	Guard guard(m_threadLock);
+	if (m_recvRunning) return;
+	m_recvRunning = 1;
+      }
+      rxInvoke([](Recorder *self, Rx *rx) { self->recv(rx); }, this);
       m_attachSem.wait();
     }
     void recvStop() {
       Guard guard(m_threadLock);
-      if (!m_recvThread) return;
+      if (!m_recvRunning) return;
       using namespace MxMDStream;
       m_core->broadcast().reqDetach();
-      m_recvThread.join();
-      m_recvThread = ZmThread();
+      m_detachSem.wait();
+      m_recvRunning = 0;
     }
 
     void snapStart() {
@@ -632,11 +632,12 @@ friend class Recorder;
 
     inline bool active() {
       Guard guard(m_threadLock);
-      return !!m_recvThread;
+      return m_recvRunning;
     }
 
   private:
-    void recv() {
+    void recv(Rx *rx) {
+      rx->startQueuing();
       using namespace MxMDStream;
       const Frame *frame;
 
@@ -646,64 +647,64 @@ friend class Recorder;
 	// broadcast.close();
 	m_attachSem.post();
 	Guard guard(m_threadLock);
-	m_recvThread = ZmThread();
+	m_recvRunning = 0;
 	return;
       }
 
       m_attachSem.post();
 
-      for (;;) {
-	if (ZuUnlikely(!(frame = broadcast.shift()))) {
-	  if (ZuLikely(broadcast.readStatus() == Zi::EndOfFile)) break;
-	  continue;
-	}
-	if (ZuUnlikely(frame->type == Type::Detach)) {
-	  const Detach &detach = frame->as<Detach>();
-	  if (ZuUnlikely(detach.id == broadcast.id())) {
-	    broadcast.shift2();
-	    break;
-	  }
-	  broadcast.shift2();
-	  continue;
-	}
-	{
-	  // Guard guard(m_ioLock);
-	  MsgRef msg = new Msg();
+      rxRun([](Recorder *self, Rx *rx) { self->recvMsg(rx); }, this);
+    }
 
-	  if (frame->len > sizeof(Buf)) {
-	    broadcast.shift2();
-	    // guard.unlock();
-	    snapStop();
-	    m_core->raise(ZeEVENT(Error,
-		([name = MxTxtString(broadcast.config().name())](
-		    const ZeEvent &, ZmStream &s) {
-		  s << '"' << name << "\": "
-		  "IPC shared memory ring buffer read error - "
-		  "message too big";
-		})));
-	    break;
-	  }
-	  memcpy(msg->frame(), frame, sizeof(Frame) + frame->len);
-	  ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
-	  qmsg->load(m_link->Rx::rxQueue().id, ++m_msgSeqNo);
-	  m_link->received(qmsg);
+    void recvMsg(Rx *rx) {
+      if (ZuUnlikely(!(frame = broadcast.shift()))) {
+	if (ZuLikely(broadcast.readStatus() == Zi::EndOfFile)) goto end;
+	goto next;
+      }
+      if (ZuUnlikely(frame->type == Type::Detach)) {
+	const Detach &detach = frame->as<Detach>();
+	if (ZuUnlikely(detach.id == broadcast.id())) {
+	  broadcast.shift2();
+	  goto end;
 	}
 	broadcast.shift2();
+	goto next;
       }
+      {
+	// Guard guard(m_ioLock);
+	MsgRef msg = new Msg();
+
+	if (frame->len > sizeof(Buf)) {
+	  broadcast.shift2();
+	  // guard.unlock();
+	  snapStop();
+	  m_core->raise(ZeEVENT(Error,
+	      ([name = MxTxtString(broadcast.config().name())](
+		  const ZeEvent &, ZmStream &s) {
+		s << '"' << name << "\": "
+		"IPC shared memory ring buffer read error - "
+		"message too big";
+	      })));
+	  goto end;
+	}
+	memcpy(msg->frame(), frame, sizeof(Frame) + frame->len);
+	ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
+	qmsg->load(rx->rxQueue().id, ++m_msgSeqNo);
+	rx->received(qmsg);
+      }
+      broadcast.shift2();
+
+    next:
+      rxRun([](Recorder *self, Rx *rx) { self->recvMsg(rx); }, this);
+      return;
+
+    end:
       broadcast.detach();
+      m_detachSem.post();
       // broadcast.close();
     }
 
     int write(const Frame *frame, ZeError *e) {
-#if 0
-      ZiVec vec[2];
-      ZiVec_ptr(vec[0]) = const_cast<void *>((const void *)frame);
-      ZiVec_len(vec[0]) = sizeof(Frame);
-      ZiVec_ptr(vec[1]) = const_cast<void *>((const void *)frame->ptr());
-      ZiVec_len(vec[1]) = frame->len;
-      return m_file.writev(vec, 2, e);
-#endif
-
       return m_file.write((const void *)frame, sizeof(Frame) + frame->len, e);
     }
 
@@ -722,7 +723,7 @@ friend class Recorder;
 	  return;
 	}
       }
-      m_link->stopQueuing(1);
+      rxInvoke([](Rx *rx) { rx->stopQueuing(1); });
     }
 
   public:
@@ -766,9 +767,10 @@ friend class Recorder;
     MxSeqNo			m_msgSeqNo = 0;
     MxMDCore			*m_core;
     ZmSemaphore			m_attachSem;
+    ZmSemaphore			m_detachSem;
     Lock			m_threadLock;
     ZmThread			  m_snapThread;
-    ZmThread			  m_recvThread;
+    bool			  m_recvRunning;
     Lock			m_ioLock;
     ZiFile::Path		  m_path;
     ZiFile			  m_file;

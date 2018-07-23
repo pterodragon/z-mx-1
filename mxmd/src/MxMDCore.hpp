@@ -537,23 +537,6 @@ friend class Recorder;
 
     void init() {
       ZmRef<ZvCf> cf = m_core->cf();
-
-      if (!cf) {
-        cf->fromString(
-          "id Engine\n"
-          "mx {\n"
-	    "nThreads 4\n"		// thread IDs are 1-based
-	    "rxThread 1\n"		// I/O Rx
-	    "txThread 2\n"		// I/O Tx
-	    "isolation 1-3\n"	        // leave thread 4 for general purpose
-          "}\n"
-	  "recorder {\n"
-	    "rxThread 3\n"
-	    "txThread 3\n"
-	  "}\n",
-          false);
-      }
-
       MxEngine::init(m_core, this, m_core->mx(), cf);
       m_link = MxEngine::updateLink<Link>("recorder", nullptr);
       m_link->init(this);

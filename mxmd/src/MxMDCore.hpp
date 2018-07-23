@@ -537,7 +537,7 @@ friend class Recorder;
 
     void init() {
       ZmRef<ZvCf> cf = m_core->cf();
-      MxEngine::init(m_core, this, m_core->mx(), cf);
+      MxEngine::init(m_core, this, m_core->mx(), cf->subset("recorder", false, true));
       m_link = MxEngine::updateLink<Link>("recorder", nullptr);
       m_link->init(this);
     }

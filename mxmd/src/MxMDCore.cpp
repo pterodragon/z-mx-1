@@ -285,7 +285,6 @@ MxMDLib *MxMDLib::init(const char *cf_)
     cf->fromFile(cf_, false);
   } else {
     cf->fromString(
-      "id Engine\n"
       "mx {\n"
 	"nThreads 4\n"		// thread IDs are 1-based
 	"rxThread 1\n"		// I/O Rx
@@ -293,11 +292,10 @@ MxMDLib *MxMDLib::init(const char *cf_)
 	"isolation 1-3\n"	// leave thread 4 for general purpose
       "}\n"
       "recorder {\n"
+        "id recorder\n"
 	"rxThread 3\n"
 	"txThread 3\n"
-      "}\n"
-      "rxThread 3\n"		// App Rx
-      "txThread 2\n",		// App Tx (same as I/O Tx)
+      "}\n",
       false);
   }
 

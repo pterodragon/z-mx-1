@@ -540,7 +540,7 @@ friend class Recorder;
       if (!cf) {
 	cf = new ZvCf();
 	cf->set("id", "Recorder");
-	ZuStringN<16> tid{ZuBoxed(m_core->mx()->txThread())};
+	ZuStringN<16> tid{ZuBoxed(3)}; // FIXME - use dedicated recorder thread
 	cf->set("rxThread", tid);
 	cf->set("txThread", tid);
       }
@@ -709,7 +709,8 @@ friend class Recorder;
 
     next:
       m_link->rxRun([](Rx *rx) {
-	      static_cast<Recorder *>(static_cast<Link *>(rx)->engine())->recvMsg(rx); });
+	static_cast<Recorder *>(
+	    static_cast<Link *>(rx)->engine())->recvMsg(rx); });
       return;
 
     end:

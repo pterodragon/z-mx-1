@@ -306,6 +306,7 @@ MxMDLib *MxMDLib::init(const char *cf_)
 	mx = new MxMDCore::Mx("mx", mxCf);
       else
 	mx = new MxMDCore::Mx("mx");
+      //FIXME - ensure recorder thread is provided in mx config
 
       md = new MxMDCore(ZuMv(mx));
     }

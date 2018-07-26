@@ -156,10 +156,119 @@ struct ZmRBTreeBase : public NTP {
   typedef Base_ Base;
 };
 
+enum {
+  ZmRBTreeEqual = 0,
+  ZmRBTreeGreaterEqual = 1,
+  ZmRBTreeLessEqual = -1,
+  ZmRBTreeGreater = 2,
+  ZmRBTreeLess = -2
+};
+
+template <typename Tree_, int Direction_>
+class ZmRBTreeIterator_ { // red/black tree iterator
+friend Tree_;
+
+public:
+  typedef Tree_ Tree;
+  enum { Direction = Direction_ };
+  typedef typename Tree::Key Key;
+  typedef typename Tree::Val Val;
+  typedef typename Tree::Cmp Cmp;
+  typedef typename Tree::ValCmp ValCmp;
+  typedef typename Tree::Node Node;
+  typedef typename Tree::NodeRef NodeRef;
+
+protected:
+  inline ZmRBTreeIterator_(Tree &tree) : m_tree(tree) {
+    tree.startIterate(*this);
+  }
+  template <typename Index>
+  inline ZmRBTreeIterator_(
+      Tree &tree, const Index &index,
+      int compare = Tree::GreaterEqual) :
+    m_tree(tree) {
+    tree.startIterate(*this, index, compare);
+  }
+
+public:
+  inline void reset() {
+    m_tree.startIterate(*this);
+  }
+  template <typename Index>
+  inline void reset(
+      const Index &index,
+      int compare = Tree::GreaterEqual) {
+    m_tree.startIterate(*this, index, compare);
+  }
+
+  inline NodeRef iterate() { return m_tree.iterate(*this); }
+
+  inline const Key &iterateKey() {
+    Node *node = m_tree.iterate(*this);
+    if (ZuLikely(node)) return node->Node::key();
+    return Cmp::null();
+  }
+  inline const Val &iterateVal() {
+    Node *node = m_tree.iterate(*this);
+    if (ZuLikely(node)) return node->Node::val();
+    return ValCmp::null();
+  }
+
+protected:
+  Tree	&m_tree;
+  Node	*m_node;
+  Node	*m_last;
+};
+
+template <typename Tree_, int Direction_ = ZmRBTreeGreaterEqual>
+class ZmRBTreeIterator :
+  public Tree_::Guard,
+  public ZmRBTreeIterator_<Tree_, Direction_> {
+  typedef Tree_ Tree;
+  enum { Direction = Direction_ };
+  typedef typename Tree::Guard Guard;
+
+public:
+  inline ZmRBTreeIterator(Tree &tree) :
+    Guard(tree.lock()),
+    ZmRBTreeIterator_<Tree, Direction>(tree) { }
+  template <typename Index_>
+  inline ZmRBTreeIterator(Tree &tree, const Index_ &index,
+      int compare = Direction) :
+    Guard(tree.lock()),
+    ZmRBTreeIterator_<Tree, Direction>(tree, index, compare) { }
+
+  void del() { this->m_tree.delIterate(*this); }
+};
+
+template <typename Tree_, int Direction_ = ZmRBTreeGreaterEqual>
+class ZmRBTreeReadIterator :
+  public Tree_::ReadGuard,
+  public ZmRBTreeIterator_<Tree_, Direction_> {
+  typedef Tree_ Tree;
+  enum { Direction = Direction_ };
+  typedef typename Tree::ReadGuard ReadGuard;
+
+public:
+  inline ZmRBTreeReadIterator(const Tree &tree) :
+    ReadGuard(const_cast<Tree &>(tree).lock()),
+    ZmRBTreeIterator_<Tree, Direction>(
+	const_cast<Tree &>(tree)) { }
+  template <typename Index_>
+  inline ZmRBTreeReadIterator(const Tree &tree, const Index_ &index,
+      int compare = Direction) :
+    ReadGuard(const_cast<Tree &>(tree).lock()),
+    ZmRBTreeIterator_<Tree, Direction>(
+	const_cast<Tree &>(tree), index, compare) { }
+};
+
 template <typename Key_, class NTP = ZmRBTree_Defaults>
 class ZmRBTree : public NTP::Base {
   ZmRBTree(const ZmRBTree &);
   ZmRBTree &operator =(const ZmRBTree &);	// prevent mis-use
+
+  template <typename, int> friend class ZmRBTreeIterator_;
+  template <typename, int> friend class ZmRBTreeIterator;
 
 public:
   typedef Key_ Key;
@@ -177,18 +286,10 @@ public:
   typedef ZmGuard<Lock> Guard;
   typedef ZmReadGuard<Lock> ReadGuard;
 
-protected:
-  class Iterator_;
-friend class Iterator_;
-
-public:
-  enum Compare {
-    Equal = 0,
-    GreaterEqual = 1,
-    LessEqual = -1,
-    Greater = 2,
-    Less = -2
-  };
+  template <int Direction = ZmRBTreeGreaterEqual>
+  using Iterator = ZmRBTreeIterator<ZmRBTree, Direction>;
+  template <int Direction = ZmRBTreeGreaterEqual>
+  using ReadIterator = ZmRBTreeReadIterator<ZmRBTree, Direction>;
 
   // node in a red/black tree
 
@@ -203,8 +304,7 @@ public:
     NodeFn(const NodeFn &);
     NodeFn &operator =(const NodeFn &);	// prevent mis-use
 
-  friend class ZmRBTree<Key, NTP>;
-  friend class ZmRBTree<Key, NTP>::Iterator_;
+  template <typename, typename> friend class ZmRBTree;
 
   protected:
     inline NodeFn() : m_right(0), m_left(0), m_dup(0), m_parent(0) { }
@@ -271,92 +371,7 @@ private:
   ZuInline typename ZuNotObject<O>::T nodeDelete(const O *o) { delete o; }
 
 protected:
-  class Iterator_ {			// red/black tree iterator
-    typedef ZmRBTree<Key, NTP> Tree;
-  friend class ZmRBTree<Key, NTP>;
-
-  protected:
-    inline Iterator_(
-	Tree &tree, typename Tree::Compare compare = Tree::GreaterEqual) :
-	  m_tree(tree) {
-      tree.startIterate(*this, compare);
-    }
-    template <typename Index_>
-    inline Iterator_(
-	Tree &tree, const Index_ &index,
-	typename Tree::Compare compare = Tree::GreaterEqual) :
-	  m_tree(tree) {
-      tree.startIterate(*this, index, compare);
-    }
-
-  public:
-    inline void reset(typename Tree::Compare compare = Tree::GreaterEqual) {
-      m_tree.startIterate(*this, compare);
-    }
-    template <typename Index_>
-    inline void reset(
-	const Index_ &index,
-	typename Tree::Compare compare = Tree::GreaterEqual) {
-      m_tree.startIterate(*this, index, compare);
-    }
-
-    inline NodeRef iterate() { return m_tree.iterate(*this); }
-
-    inline const Key &iterateKey() {
-      Node *node = m_tree.iterate(*this);
-      if (ZuLikely(node)) return node->Node::key();
-      return Cmp::null();
-    }
-    inline const Val &iterateVal() {
-      Node *node = m_tree.iterate(*this);
-      if (ZuLikely(node)) return node->Node::val();
-      return ValCmp::null();
-    }
-
-  protected:
-    Tree			&m_tree;
-    int				m_direction;
-    typename Tree::Node		*m_node;
-    typename Tree::Node		*m_last;
-  };
-
 public:
-  class Iterator : public Guard, public Iterator_ {
-    Iterator(const Iterator &);
-    Iterator &operator =(const Iterator &);	// prevent mis-use
-
-    typedef ZmRBTree<Key, NTP> Tree;
-
-  public:
-    inline Iterator(Tree &tree,
-		    typename Tree::Compare compare = Tree::GreaterEqual) :
-	Guard(tree.lock()), Iterator_(tree, compare) { }
-    template <typename Index_>
-    inline Iterator(Tree &tree, const Index_ &index,
-		    typename Tree::Compare compare = Tree::GreaterEqual) :
-	Guard(tree.lock()), Iterator_(tree, index, compare) { }
-
-    void del() { this->m_tree.delIterate(*this); }
-  };
-
-  class ReadIterator : public ReadGuard, public Iterator_ {
-    ReadIterator(const ReadIterator &);
-    ReadIterator &operator =(const ReadIterator &);	// prevent mis-use
-
-    typedef ZmRBTree<Key, NTP> Tree;
-
-  public:
-    inline ReadIterator(const Tree &tree,
-			typename Tree::Compare compare = Tree::GreaterEqual) :
-      ReadGuard(const_cast<Tree &>(tree).lock()),
-      Iterator_(const_cast<Tree &>(tree), compare) { }
-    template <typename Index_>
-    inline ReadIterator(const Tree &tree, const Index_ &index,
-			typename Tree::Compare compare = Tree::GreaterEqual) :
-      ReadGuard(const_cast<Tree &>(tree).lock()),
-      Iterator_(const_cast<Tree &>(tree), index, compare) { }
-  };
-
   template <typename ...Args>
   ZmRBTree(Args &&... args) :
       NTP::Base{ZuFwd<Args>(args)...},
@@ -439,21 +454,19 @@ public:
   }
 
   template <typename Index_>
-  inline NodeRef find(const Index_ &index, Compare compare = Equal) const {
+  inline NodeRef find(const Index_ &index) const {
     ReadGuard guard(m_lock);
-    return find_(index, compare);
+    return find_(index);
   }
   template <typename Index_>
-  inline const Key &findKey(
-      const Index_ &index, Compare compare = Equal) const {
-    NodeRef node = find(index, compare);
+  inline const Key &findKey(const Index_ &index) const {
+    NodeRef node = find(index);
     if (ZuUnlikely(!node)) return Cmp::null();
     return node->Node::key();
   }
   template <typename Index_>
-  inline const Val &findVal(
-      const Index_ &index, Compare compare = Equal) const {
-    NodeRef node = find(index, compare);
+  inline const Val &findVal(const Index_ &index) const {
+    NodeRef node = find(index);
     if (ZuUnlikely(!node)) return ValCmp::null();
     return node->Node::val();
   }
@@ -644,6 +657,21 @@ public:
     return ZuMv(*reinterpret_cast<NodeRef *>(&node));
   }
 
+  template <int Direction = ZmRBTreeGreaterEqual> auto iterator() {
+    return Iterator<Direction>(*this);
+  }
+  template <int Direction, typename Index_>
+  auto iterator(const Index_ &index) {
+    return Iterator<Direction>(*this, index);
+  }
+  template <int Direction = ZmRBTreeGreaterEqual> auto readIterator() const {
+    return ReadIterator<Direction>(*this);
+  }
+  template <int Direction, typename Index_>
+  auto readIterator(const Index_ &index) const {
+    return ReadIterator<Direction>(*this, index);
+  }
+
   void clean() {
     Guard guard(m_lock);
 
@@ -652,8 +680,27 @@ public:
 
 protected:
   template <typename Index_>
-  inline Node *find_(const Index_ &index, Compare compare) const {
-    if (compare == Equal) {
+  inline Node *find_(const Index_ &index) const {
+    Node *node;
+
+    if (!(node = m_root)) return 0;
+
+    int c;
+
+    for (;;) {
+      if (!node) return 0;
+
+      if (!(c = ICmp::cmp(node->Node::key(), index))) return node;
+
+      if (c > 0)
+	node = node->Fn::left();
+      else
+	node = node->Fn::right();
+    }
+  }
+  template <typename Index_>
+  inline Node *find_(const Index_ &index, int compare) const {
+    if (compare == ZmRBTreeEqual) {
       Node *node;
 
       if (!(node = m_root)) return 0;
@@ -672,9 +719,12 @@ protected:
       }
     } else {
       Node *node, *foundNode = 0;
-      bool equal = (compare == GreaterEqual || compare == LessEqual);
-      bool greater = (compare == GreaterEqual || compare == Greater);
-      bool less = (compare == LessEqual || compare == Less);
+      bool equal =
+	(compare == ZmRBTreeGreaterEqual || compare == ZmRBTreeLessEqual);
+      bool greater =
+	(compare == ZmRBTreeGreaterEqual || compare == ZmRBTreeGreater);
+      bool less =
+	(compare == ZmRBTreeLessEqual || compare == ZmRBTreeLess);
 
       if (!(node = m_root)) return 0;
 
@@ -1004,49 +1054,55 @@ protected:
 
 // iterator functions
 
-  void startIterate(Iterator_ &iterator, Compare compare) {
-    iterator.m_direction = compare;
-    switch (compare) {
-      case LessEqual:
-	iterator.m_node = m_maximum;
-	break;
-      case Equal:
-      case GreaterEqual:
-	iterator.m_node = m_minimum;
-	break;
-      case Less:
-	iterator.m_node = prev(m_maximum);
-	break;
-      case Greater:
-	iterator.m_node = next(m_minimum);
-	break;
-    }
+  template <int Direction>
+  using Iterator_ = ZmRBTreeIterator_<ZmRBTree, Direction>;
+
+  template <int Direction>
+  inline typename ZuIfT<(Direction >= 0)>::T startIterate(
+      Iterator_<Direction> &iterator) {
+    iterator.m_node = m_minimum;
     iterator.m_last = 0;
   }
-  template <typename Index_>
+  template <int Direction>
+  inline typename ZuIfT<(Direction < 0)>::T startIterate(
+      Iterator_<Direction> &iterator) {
+    iterator.m_node = m_maximum;
+    iterator.m_last = 0;
+  }
+  template <int Direction, typename Index_>
   inline void startIterate(
-      Iterator_ &iterator, const Index_ &index, Compare compare) {
-    iterator.m_direction = compare;
+      Iterator_<Direction> &iterator, const Index_ &index, int compare) {
     iterator.m_node = find_(index, compare);
     iterator.m_last = 0;
   }
 
-  Node *iterate(Iterator_ &iterator) {
+  template <int Direction>
+  inline typename ZuIfT<(Direction > 0), Node *>::T iterate(
+      Iterator_<Direction> &iterator) {
     Node *node = iterator.m_node;
-
     if (!node) return 0;
-
-    if (iterator.m_direction > 0)
-      iterator.m_node = next(node);
-    else if (!iterator.m_direction)
-      iterator.m_node = node->Fn::dup();
-    else
-      iterator.m_node = prev(node);
-
+    iterator.m_node = next(node);
+    return iterator.m_last = node;
+  }
+  template <int Direction>
+  inline typename ZuIfT<(!Direction), Node *>::T iterate(
+      Iterator_<Direction> &iterator) {
+    Node *node = iterator.m_node;
+    if (!node) return 0;
+    iterator.m_node = node->Fn::dup();
+    return iterator.m_last = node;
+  }
+  template <int Direction>
+  inline typename ZuIfT<(Direction < 0), Node *>::T iterate(
+      Iterator_<Direction> &iterator) {
+    Node *node = iterator.m_node;
+    if (!node) return 0;
+    iterator.m_node = prev(node);
     return iterator.m_last = node;
   }
 
-  void delIterate(Iterator_ &iterator) {
+  template <int Direction>
+  void delIterate(Iterator_<Direction> &iterator) {
     if (!m_count) return;
 
     Node *node = iterator.m_last;

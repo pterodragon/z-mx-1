@@ -90,7 +90,7 @@ friend class ZmHashMgr;
   void stats(StatsFn fn) {
     ZmHashStats stats;
     ZmGuard<ZmPLock> guard(m_lock);
-    Ptr2ReportFn::ReadIterator i(m_tables);
+    auto i = m_tables.readIterator();
     while (ReportFn rfn = i.iterateVal()) { rfn(stats); fn(stats); }
   }
 

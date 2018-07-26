@@ -286,7 +286,7 @@ void ZmScheduler::timer()
 	ZmTime now(ZmTime::Now);
 	now += m_quantum;
 	ZmGuard<ZmPLock> scheduleGuard(m_scheduleLock);
-	ScheduleTree::Iterator i(m_schedule, now, ScheduleTree::LessEqual);
+	auto i = m_schedule.iterator<ZmRBTreeLessEqual>(now);
 	Timer timer;
 
 	while (timer = i.iterate()) {

@@ -532,7 +532,7 @@ friend class Iterator;
     }
 
   private:
-    Tree::ReadIterator	m_iterator;
+    Tree::ReadIterator<>	m_iterator;
   };
 
 private:

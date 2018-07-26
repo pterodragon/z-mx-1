@@ -44,7 +44,7 @@ void ZmObject_Debug::debug() const
 void ZmObject_Debug::dump(void *context, DumpFn fn) const
 {
   if (!m_debug) return;
-  DebugTree::ReadIterator i(*(DebugTree *)(void *)m_debug);
+  auto i = ((DebugTree *)(void *)m_debug)->readIterator();
   DebugTree::NodeRef n;
   while (n = i.iterate()) (*fn)(context, n->key(), n->val());
 }

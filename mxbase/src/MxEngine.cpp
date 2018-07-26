@@ -27,13 +27,8 @@ void MxEngine::start_()
 
   appException(ZeEVENT(Info, "START"));
 
-  if (m_mx->start() != Zi::OK) {
-    appException(ZeEVENT(Error, "multiplexer start failed"));
-    return;
-  }
-
   up();
-  Links::ReadIterator i(m_links);
+  auto i = m_links.readIterator();
   while (ZmRef<MxAnyLink> link = i.iterateKey())
     m_mx->add(ZmFn<>::Member<&MxAnyLink::up>::fn(link));
 }
@@ -42,7 +37,7 @@ void MxEngine::stop_()
 {
   appException(ZeEVENT(Info, "STOP"));
 
-  Links::ReadIterator i(m_links);
+  auto i = m_links.readIterator();
   while (ZmRef<MxAnyLink> link = i.iterateKey())
     m_mx->add(ZmFn<>::Member<&MxAnyLink::down>::fn(link));
   down();
@@ -52,7 +47,6 @@ void MxEngine::stop_()
 
 void MxEngine::stopped_()
 {
-  m_mx->stop(false);
 }
 
 void MxEngine::start()

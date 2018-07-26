@@ -80,7 +80,7 @@ public:
     // printf("~ZmHeapMgr_() %p\n", this); fflush(stdout);
     m_caches2.clean();
     m_caches3.clean();
-    ID2Cache::Iterator i(m_caches);
+    auto i = m_caches.iterator();
     while (ZmHeapCache *c = i.iterateKey()) {
       i.del();
       ZmDEREF(c);
@@ -97,7 +97,7 @@ private:
     m_configs.del(ZuMkPair(id, partition));
     m_configs.add(ZuMkPair(id, partition), config);
     {
-      ID2Cache::ReadIterator i(m_caches, id, ID2Cache::Equal);
+      auto i = m_caches.readIterator<ZmRBTreeEqual>(id);
       while (ZmHeapCache *c = i.iterateKey())
 	if (c->info().partition == partition) c->init(config);
     }
@@ -105,7 +105,7 @@ private:
 
   void stats(StatsFn fn) {
     ReadGuard guard(m_lock);
-    IDPartSize2Cache::ReadIterator i(m_caches3);
+    auto i = m_caches3.readIterator();
     while (ZmHeapCache *c = i.iterateKey()) {
       c->allStats();
       fn(c->info(), c->stats());
@@ -114,7 +114,7 @@ private:
 
 #ifdef ZmHeap_DEBUG
   void trace(const char *id, TraceFn allocFn, TraceFn freeFn) {
-    ID2Cache::ReadIterator i(m_caches, id, ID2Cache::Equal);
+    auto i = m_caches.readIterator<ZmRBTreeEqual>(id);
     while (ZmHeapCache *c = i.iterateKey()) {
       c->m_traceAllocFn = allocFn;
       c->m_traceFreeFn = freeFn;

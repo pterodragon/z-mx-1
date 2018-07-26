@@ -85,7 +85,8 @@ public:
     return *this;
   }
 
-  ZuInline operator bool() const { return m_object; }
+  ZuInline bool operator !() const { return !m_object; }
+  ZuOpBool
 
   ZuInline int shardID() const { return m_shard ? (int)m_shard->id() : -1; }
 

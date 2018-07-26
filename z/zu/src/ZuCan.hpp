@@ -24,10 +24,10 @@
 // ZuCan(toString, CanToString); // defines CanToString template
 // ...
 // template <typename U> inline static typename
-//   ZuIfT<CanToString<U, std::string (U::*)()>::OK, std::string>::T
+//   ZuIfT<CanToString<U, std::string (U::*)() const>::OK, std::string>::T
 //     toString(U *u) { return u->toString(); } // can
 // template <typename U> inline static typename
-//   ZuIfT<!CanToString<U, std::string (U::*)()>::OK, std::string>::T
+//   ZuIfT<!CanToString<U, std::string (U::*)() const>::OK, std::string>::T
 //     toString(U *) { return ""; } // cannot
 // ...
 // T *t;

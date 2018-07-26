@@ -329,7 +329,7 @@ void ZmScheduler::add(ZmFn<> fn)
       return;
     }
   } while (((next = m_next++) - first) < m_nWorkers);
-  run_(m_workers[first], ZuMv(fn));
+  run_(m_workers[first % m_nWorkers], ZuMv(fn));
 }
 
 bool ZmScheduler::add__(ZmFn<> &fn)

@@ -75,23 +75,23 @@ public:
   // Key is the type of the key (sequence number)
   typedef uint32_t Key;
 
-  inline ZmPQueueDefaultFn(Item &item) : m_item(item) { }
+  ZuInline ZmPQueueDefaultFn(Item &item) : m_item(item) { }
 
   // key() returns the key for the first element in the item
-  inline Key key() const { return m_item.key(); }
+  ZuInline Key key() const { return m_item.key(); }
 
   // length() returns the length of the item in units
-  inline unsigned length() const { return m_item.length(); }
+  ZuInline unsigned length() const { return m_item.length(); }
 
   // clipHead()/clipTail() remove elements from the item's head or tail
   // clipHead()/clipTail() can just return 1 if item length is always 1,
   // or do nothing and return the unchanged length if items are guaranteed
   // never to overlap; these functions return the length remaining in the item
-  inline unsigned clipHead(unsigned n) { return m_item.clipHead(n); }
-  inline unsigned clipTail(unsigned n) { return m_item.clipTail(n); }
+  ZuInline unsigned clipHead(unsigned n) { return m_item.clipHead(n); }
+  ZuInline unsigned clipTail(unsigned n) { return m_item.clipTail(n); }
 
   // write() overwrites overlapping data from item
-  inline void write(const ZmPQueueDefaultFn &item) {
+  ZuInline void write(const ZmPQueueDefaultFn &item) {
     m_item.write(item.m_item);
   }
 
@@ -271,7 +271,7 @@ private:
 public:
   template <typename ...Args>
   ZmPQueue(Key head, Args &&... args) :
-      NTP::Base(ZuFwd<Args>(args)...),
+      NTP::Base{ZuFwd<Args>(args)...},
       m_headKey(head), m_tailKey(head),
       m_length(0), m_count(0), m_addSeqNo(0) {
     memset(m_head, 0, sizeof(Node *) * Levels);

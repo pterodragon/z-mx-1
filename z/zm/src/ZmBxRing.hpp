@@ -85,7 +85,7 @@ public:
 
   template <typename ...Args>
   inline ZmBxRing(ZmRingParams params = ZmRingParams(0), Args &&... args) :
-      NTP::Base(ZuFwd<Args>(args)...),
+      NTP::Base{ZuFwd<Args>(args)...},
       ZmRing_(params),
       m_flags(0), m_id(-1), m_ctrl(0), m_data(0),
       m_tail(0), m_size(0), m_full(0) { }

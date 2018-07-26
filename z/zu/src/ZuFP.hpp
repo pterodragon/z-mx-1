@@ -113,7 +113,7 @@ struct ZuFP<T, 2U> : public ZuFP_<ZuFP<T, 2U>, T> { // 10+5
     v = ZuFP::fabs_(v);
     T b = v;
     uint16_t *ZuMayAlias(v_) = (uint16_t *)&v;
-    *v_ += 3;
+    *v_ += 5;
     return v - b;
   }
 };
@@ -130,7 +130,7 @@ struct ZuFP<T, 4U> : public ZuFP_<ZuFP<T, 4U>, T> { // 23+8
     v = ZuFP::fabs_(v);
     T b = v;
     uint32_t *ZuMayAlias(v_) = (uint32_t *)&v;
-    *v_ += 3;
+    *v_ += 5;
     return v - b;
   }
 };
@@ -147,7 +147,7 @@ struct ZuFP<T, 8U> : public ZuFP_<ZuFP<T, 8U>, T> { // 52+11
     v = ZuFP::fabs_(v);
     T b = v;
     uint64_t *ZuMayAlias(v_) = (uint64_t *)&v;
-    *v_ += 3;
+    *v_ += 5;
     return v - b;
   }
 };
@@ -160,7 +160,7 @@ struct ZuFP_64 : public ZuFP_<ZuFP, T> { // 64+15
     uint16_t exponent; // actually 15bits, sign bit is MSB
     ZuInline void inc() {
       uint64_t prev = mantissa;
-      if (ZuUnlikely((mantissa += 3) < prev))
+      if (ZuUnlikely((mantissa += 5) < prev))
 	(mantissa |= (1ULL<<63U)), ++exponent;
     }
   };

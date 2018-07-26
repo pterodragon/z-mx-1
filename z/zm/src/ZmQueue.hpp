@@ -166,7 +166,7 @@ public:
 
   template <typename ...Args>
   inline ZmQueue(ID initialID, const ZmHashParams &params, Args &&... args) :
-      NTP::Base(ZuFwd<Args>(args)...),
+      NTP::Base{ZuFwd<Args>(args)...},
       m_head(initialID), m_tail(initialID),
       m_key2id(params), m_id2key(params) { }
 

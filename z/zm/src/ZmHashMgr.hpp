@@ -48,9 +48,9 @@ public:
   inline ZmHashParams &loadFactor(double v) { m_loadFactor = v; return *this; }
   inline ZmHashParams &cBits(unsigned v) { m_cBits = v; return *this; }
 
-  inline unsigned bits() const { return m_bits; }
-  inline double loadFactor() const { return m_loadFactor; }
-  inline unsigned cBits() const { return m_cBits; }
+  ZuInline unsigned bits() const { return m_bits; }
+  ZuInline double loadFactor() const { return m_loadFactor; }
+  ZuInline unsigned cBits() const { return m_cBits; }
 
 private:
   unsigned	m_bits;

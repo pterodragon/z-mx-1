@@ -68,19 +68,21 @@ public:
     return *this;
   }
 
-  template <typename T> struct MatchInt_ {
+private:
+  template <typename T> struct IsInt {
     enum { OK =
       ZuConversion<int, T>::Same ||
       ZuConversion<unsigned, T>::Same ||
       ZuConversion<long, T>::Same ||
       ZuConversion<time_t, T>::Same };
   };
-  template <typename T, typename R = void, bool OK = MatchInt_<T>::OK>
+  template <typename T, typename R = void, bool OK = IsInt<T>::OK>
   struct MatchInt;
   template <typename T_, typename R> struct MatchInt<T_, R, 1> {
     typedef T_ T;
   };
 
+public:
   ZuInline ZmTime(Now_) { now(); }
   template <typename T>
   ZuInline ZmTime(Now_, T i, typename MatchInt<T, Private>::T *_ = 0) {
@@ -279,9 +281,11 @@ public:
   ZuInline int operator <=(const ZmTime &t) const {
     return tv_sec < t.tv_sec || (tv_sec == t.tv_sec && tv_nsec <= t.tv_nsec);
   }
+
   ZuInline int operator !() const {
     return !(tv_sec || tv_nsec);
   }
+  ZuOpBool
 
   ZuInline time_t sec() const { return tv_sec; }
   ZuInline time_t &sec() { return tv_sec; }

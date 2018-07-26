@@ -544,7 +544,7 @@ public:
     template <typename Index_>
     ZuInline IndexIterator(Hash &hash, Index_ &&index) :
 	Base(hash, ZuFwd<Index_>(index)) {
-      hash.startIterate(*this);
+      hash.startIndexIterate(*this);
     }
     ZuInline ~IndexIterator() { this->m_hash.endIterate(*this); }
     ZuInline void del() { this->m_hash.delIterate(*this); }
@@ -565,7 +565,7 @@ public:
     template <typename Index_>
     ZuInline ReadIndexIterator(const Hash &hash, Index_ &&index) :
 	Base(const_cast<Hash &>(hash), ZuFwd<Index_>(index)) {
-      const_cast<Hash &>(hash).startIterate(*this);
+      const_cast<Hash &>(hash).startIndexIterate(*this);
     }
     ZuInline ~ReadIndexIterator() { this->m_hash.endIterate(*this); }
   };
@@ -586,7 +586,7 @@ private:
 public:
   template <typename ...Args>
   inline ZmHash(ZmHashParams params = ZmHashParams(ID::id()), Args &&... args) :
-      NTP::Base(ZuFwd<Args>(args)...),
+      NTP::Base{ZuFwd<Args>(args)...},
       ZmHash_LockMgr<Lock>(params),
       m_count(0), m_resized(0) {
     init(params);

@@ -61,6 +61,8 @@ public:
   ZuInline bool operator !=(const ZmBackTrace &t) { return !equals(t); }
   ZuInline bool operator ==(const ZmBackTrace &t) { return equals(t); }
 
+  ZuInline bool operator !() const { return !m_frames[0]; }
+
   void capture() { capture(0); }
   void capture(unsigned skip);
 #ifdef _WIN32

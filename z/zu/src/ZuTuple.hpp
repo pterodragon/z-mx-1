@@ -118,6 +118,7 @@ public:
   ZuInline int cmp(T &&t) const { return P::cmp(ZuFwd<T>(t)); }
 
   ZuInline bool operator !() const { return P::operator !(); }
+  ZuOpBool
 
   ZuInline uint32_t hash() const { return P::hash(); }
 
@@ -234,5 +235,7 @@ template <typename ...Args>
 auto ZuInline ZuMkTuple(Args &&... args) {
   return ZuTuple<decltype(ZuFwd<Args>(args))...>(ZuFwd<Args>(args)...);
 }
+
+template <typename... Args> ZuTuple(Args...) -> ZuTuple<Args...>;
 
 #endif /* ZuTuple_HPP */

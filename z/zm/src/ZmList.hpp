@@ -277,7 +277,7 @@ friend class ReadIterator;
 
   template <typename ...Args>
   ZmList(Args &&... args) :
-      NTP::Base(ZuFwd<Args>(args)...),
+      NTP::Base{ZuFwd<Args>(args)...},
       m_count(0), m_head(0), m_tail(0) { }
 
   ~ZmList() { clean_(); }

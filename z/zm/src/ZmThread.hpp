@@ -315,15 +315,14 @@ public:
     run(mgr, id, ZuFwd<Fn>(fn), params); // sets m_context
   }
 
-  inline ZmThread(const ZmThread &t) : m_context(t.m_context) { }
-  inline ZmThread &operator =(const ZmThread &t) {
-    if (this == &t) return *this;
+  ZuInline ZmThread(const ZmThread &t) : m_context(t.m_context) { }
+  ZuInline ZmThread &operator =(const ZmThread &t) {
     m_context = t.m_context;
     return *this;
   }
 
-  inline ZmThread(Context *context) : m_context(context) { }
-  inline ZmThread &operator =(Context *context) {
+  ZuInline ZmThread(Context *context) : m_context(context) { }
+  ZuInline ZmThread &operator =(Context *context) {
     m_context = context;
     return *this;
   }
@@ -335,22 +334,22 @@ public:
 
   inline ZmRef<Context> context() { return m_context; }
 
-  inline operator ID() const { return tid(); }
+  ZuInline operator ID() const { return tid(); }
 
-  inline ID tid() const {
+  ZuInline ID tid() const {
     if (!m_context) return 0;
     return m_context->tid();
   }
 
-  inline bool operator ==(const ZmThread &t) {
+  ZuInline bool operator ==(const ZmThread &t) {
     return tid() == t.tid();
   }
-  inline int cmp(const ZmThread &t) const {
+  ZuInline int cmp(const ZmThread &t) const {
     return ZuCmp<ID>::cmp(tid(), t.tid());
   }
-  inline uint32_t hash() { return ZuHash<ID>::hash(tid()); }
+  ZuInline uint32_t hash() { return ZuHash<ID>::hash(tid()); }
 
-  inline bool operator !() { return !m_context; }
+  ZuInline bool operator !() { return !m_context; }
 
   typedef ZmFn<const ZmThreadInfo &> InfoFn;
   static void info(InfoFn fn);

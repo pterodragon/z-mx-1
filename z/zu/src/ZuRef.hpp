@@ -53,46 +53,46 @@ public:
 
 private:
   // matches ZuRef<U> where U is not T, but is in the same type hierarchy as T
-  template <typename U> struct MatchOtherRef2_ {
+  template <typename U> struct IsOtherRef2 {
     enum { OK =
       (ZuConversion<T, typename U::T>::Base ||
        ZuConversion<typename U::T, T>::Base) };
   };
-  template <typename U, typename R = void, bool OK = MatchOtherRef2_<U>::OK>
+  template <typename U, typename R = void, bool OK = IsOtherRef2<U>::OK>
   struct MatchOtherRef2 { };
   template <typename U, typename R>
   struct MatchOtherRef2<U, R, true> { typedef R T; };
-  template <typename U> struct MatchOtherRef1_ {
+  template <typename U> struct IsOtherRef1 {
     enum { OK = ZuConversion<ZuRef_, U>::Base };
   };
-  template <typename U, typename R = void, bool OK = MatchOtherRef1_<U>::OK>
+  template <typename U, typename R = void, bool OK = IsOtherRef1<U>::OK>
   struct MatchOtherRef;
   template <typename U, typename R>
   struct MatchOtherRef<U, R, true> : public MatchOtherRef2<U, R> { };
 
   // matches ZuRef<U> where U is either T or in the same type hierarchy as T
-  template <typename U> struct MatchRef2_ {
+  template <typename U> struct IsRef2 {
     enum { OK =
       (ZuConversion<T, typename U::T>::Is ||
        ZuConversion<typename U::T, T>::Is) };
   };
-  template <typename U, typename R = void, bool OK = MatchRef2_<U>::OK>
+  template <typename U, typename R = void, bool OK = IsRef2<U>::OK>
   struct MatchRef2 { };
   template <typename U, typename R>
   struct MatchRef2<U, R, true> { typedef R T; };
-  template <typename U> struct MatchRef1_ {
+  template <typename U> struct IsRef1 {
     enum { OK = ZuConversion<ZuRef_, U>::Base };
   };
-  template <typename U, typename R = void, bool OK = MatchRef1_<U>::OK>
+  template <typename U, typename R = void, bool OK = IsRef1<U>::OK>
   struct MatchRef;
   template <typename U, typename R>
   struct MatchRef<U, R, true> : public MatchRef2<U, R> { };
 
   // matches U * where U is either T or in the same type hierarchy as T
-  template <typename U> struct MatchPtr_ {
+  template <typename U> struct IsPtr {
     enum { OK = (ZuConversion<T, U>::Is || ZuConversion<U, T>::Is) };
   };
-  template <typename U, typename R = void, bool OK = MatchPtr_<U>::OK>
+  template <typename U, typename R = void, bool OK = IsPtr<U>::OK>
   struct MatchPtr;
   template <typename U, typename R>
   struct MatchPtr<U, R, true> { typedef R T; };
@@ -152,18 +152,18 @@ public:
     return *this;
   }
 
-  inline operator T *() const { return m_object; }
-  inline T *operator ->() const { return m_object; }
+  ZuInline operator T *() const { return m_object; }
+  ZuInline T *operator ->() const { return m_object; }
 
   template <typename O>
-  inline typename MatchOtherRef<ZuRef<O>, O *>::T as() const {
+  ZuInline typename MatchOtherRef<ZuRef<O>, O *>::T as() const {
     return static_cast<O *>(m_object);
   }
 
-  inline T *ptr() const { return m_object; }
+  ZuInline T *ptr() const { return m_object; }
   T *ptr_() const { return m_object; }
 
-  inline bool operator !() const { return !m_object; }
+  ZuInline bool operator !() const { return !m_object; }
 
 protected:
   T		*m_object;

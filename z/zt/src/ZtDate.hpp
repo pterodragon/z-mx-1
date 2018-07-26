@@ -1040,9 +1040,10 @@ public:
       (m_sec == date.m_sec && m_nsec <= date.m_nsec)));
   }
 
-  inline int operator !() const {
+  inline bool operator !() const {
     return (int)m_julian == (int)ZtDate_NullJulian;
   }
+  ZuOpBool
 
 // utility functions
 
@@ -1175,7 +1176,7 @@ template <> struct ZuPrint<ZtDateFmt::Strftime> :
     public ZuPrintDelegate<ZtDateFmt::Strftime> {
 private:
   template <typename Boxed>
-  inline static const ZuBoxVFmt<Boxed> &vfmt(ZuBoxVFmt<Boxed> &fmt,
+  inline static auto vfmt(ZuVFmt &fmt,
       const Boxed &boxed, unsigned width, bool alt) {
     if (alt)
       fmt.reset();
@@ -1184,7 +1185,7 @@ private:
     return boxed.vfmt(fmt);
   }
   template <typename Boxed>
-  inline static const ZuBoxVFmt<Boxed> &vfmt(ZuBoxVFmt<Boxed> &fmt,
+  inline static auto vfmt(ZuVFmt &fmt,
       const Boxed &boxed, ZuBox<unsigned> width, int deflt, bool alt) {
     if (alt)
       fmt.reset();
@@ -1195,7 +1196,7 @@ private:
     return boxed.vfmt(fmt);
   }
   template <typename Boxed>
-  inline static const ZuBoxVFmt<Boxed> &vfmt(ZuBoxVFmt<Boxed> &fmt,
+  inline static auto vfmt(ZuVFmt &fmt,
       const Boxed &boxed, ZuBox<unsigned> width, int deflt, bool alt,
       char pad) {
     if (alt)
@@ -1229,7 +1230,7 @@ public:
     // (GNU) - glibc (not all glibc-specific extensions are supported)
     // (TZ) - Arthur Olson's timezone library
    
-    ZuBoxVFmt<ZuBox<int> > fmt;
+    ZuVFmt fmt;
 
     while (char c = *format++) {
       if (c != '%') { s << c; continue; }

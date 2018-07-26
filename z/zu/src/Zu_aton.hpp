@@ -43,13 +43,18 @@
 namespace Zu_aton {
   using namespace ZuFmt;
 
+  template <typename T_, unsigned Size = sizeof(T_)> struct Unsigned {
+    typedef uint64_t T;
+  };
+  template <typename T_> struct Unsigned<T_, 16> { typedef uint128_t T; };
+
   template <class Fmt,
     char Skip = Fmt::Comma_,
     int Justification = Fmt::Justification_>
   struct Base10 {
-    inline static unsigned scan(
-	uint64_t &v_, int c, const char *buf, unsigned n) {
-      uint64_t v;
+    template <typename T>
+    inline static unsigned scan(T &v_, int c, const char *buf, unsigned n) {
+      T v;
       if (ZuLikely(c >= '0' && c <= '9'))
 	v = c - '0';
       else if (ZuLikely(c == Skip))
@@ -71,10 +76,10 @@ namespace Zu_aton {
   };
   template <class Fmt, int Justification>
   struct Base10<Fmt, '\0', Justification> {
-    inline static unsigned scan(
-	uint64_t &v_, int c, const char *buf, unsigned n) {
+    template <typename T>
+    inline static unsigned scan(T &v_, int c, const char *buf, unsigned n) {
       if (ZuUnlikely(c < '0' || c > '9')) return 0;
-      uint64_t v = c - '0';
+      T v = c - '0';
       unsigned o = 1;
       if (n > Fmt::Width_) n = Fmt::Width_;
       while (ZuLikely(o < n && (c = buf[o]) >= '0' && c <= '9')) {
@@ -87,9 +92,9 @@ namespace Zu_aton {
   };
   template <class Fmt, char Skip>
   struct Base10<Fmt, Skip, Just::None> {
-    inline static unsigned scan(
-	uint64_t &v_, int c, const char *buf, unsigned n) {
-      uint64_t v;
+    template <typename T>
+    inline static unsigned scan(T &v_, int c, const char *buf, unsigned n) {
+      T v;
       if (ZuLikely(c >= '0' && c <= '9'))
 	v = c - '0';
       else if (ZuLikely(c == Skip))
@@ -110,10 +115,10 @@ namespace Zu_aton {
   };
   template <class Fmt>
   struct Base10<Fmt, '\0', Just::None> {
-    inline static unsigned scan(
-	uint64_t &v_, int c, const char *buf, unsigned n) {
+    template <typename T>
+    inline static unsigned scan(T &v_, int c, const char *buf, unsigned n) {
       if (ZuUnlikely(c < '0' || c > '9')) return 0;
-      uint64_t v = c - '0';
+      T v = c - '0';
       unsigned o = 1;
       while (ZuLikely(o < n && (c = buf[o]) >= '0' && c <= '9')) {
 	v = v * 10U + (c - '0');
@@ -125,10 +130,10 @@ namespace Zu_aton {
   };
   template <class Fmt>
   struct Base10<Fmt, '\0', Just::Frac> {
-    inline static unsigned scan(
-	uint64_t &v_, int c, const char *buf, unsigned n) {
+    template <typename T>
+    inline static unsigned scan(T &v_, int c, const char *buf, unsigned n) {
       if (ZuUnlikely(c < '0' || c > '9')) return 0;
-      uint64_t v = c - '0';
+      T v = c - '0';
       unsigned o = 1;
       if (n > Fmt::NDP_) n = Fmt::NDP_;
       while (ZuLikely(o < n && (c = buf[o]) >= '0' && c <= '9')) {
@@ -153,11 +158,11 @@ namespace Zu_aton {
       return -1;
     }
 
-    inline static unsigned scan(uint64_t &v_,
-	int i, const char *buf, unsigned n) {
+    template <typename T>
+    inline static unsigned scan(T &v_, int i, const char *buf, unsigned n) {
       i = hexDigit(i);
       if (ZuUnlikely(i < 0)) return 0;
-      uint64_t v = i;
+      T v = i;
       if (ZuUnlikely(n == 1)) { v_ = v; return 1; }
       unsigned o = 1;
       i = buf[1];
@@ -192,33 +197,37 @@ template <class Fmt> struct Zu_nscan_ {
     Fmt::Justification_ != ZuFmt::Just::None,
     Fmt::Justification_ != ZuFmt::Just::Frac ? Fmt::Width_ : Fmt::NDP_> Len;
 
-  inline static unsigned atou_(uint64_t &v, const char *buf, unsigned n) {
+  template <typename T>
+  inline static unsigned atou_(T &v, const char *buf, unsigned n) {
     using namespace Zu_aton;
     return BaseN<Fmt>::scan(v, *buf, buf, n);
   }
-  inline static unsigned atou(uint64_t &v, const char *buf, unsigned n) {
+  template <typename T>
+  inline static unsigned atou(T &v, const char *buf, unsigned n) {
     n = Len::len(n);
     if (ZuUnlikely(!buf || !n)) return 0;
     return atou_(v, buf, n);
   }
 
-  inline static unsigned atoi_(int64_t &v_, const char *buf, unsigned n) {
+  template <typename T>
+  inline static unsigned atoi_(T &v_, const char *buf, unsigned n) {
     using namespace Zu_aton;
-    uint64_t v = 0;
+    typename Unsigned<T>::T v = 0;
     unsigned o;
     int c = *buf;
     if (c == '-') {
       if (ZuUnlikely(n == 1)) { v_ = 0; return 1; }
       o = BaseN<Fmt>::scan(v, buf[1], buf + 1, n - 1);
       if (ZuUnlikely(!o)) return 0;
-      v_ = -(int64_t)v;
+      v_ = -((T)v);
       return o + 1;
     }
     o = BaseN<Fmt>::scan(v, c, buf, n);
     v_ = v;
     return o;
   }
-  inline static unsigned atoi(int64_t &v_, const char *buf, unsigned n) {
+  template <typename T>
+  inline static unsigned atoi(T &v_, const char *buf, unsigned n) {
     n = Len::len(n);
     if (ZuUnlikely(!buf || !n)) return 0;
     return atoi_(v_, buf, n);
@@ -309,14 +318,16 @@ struct Zu_nscan : public Zu_nscan_<Fmt> {
     while (ZuLikely(o < n && buf[o] == Skip)) ++o;
     return o;
   }
-  static unsigned atou(uint64_t &v, const char *buf, unsigned n) {
+  template <typename T>
+  static unsigned atou(T &v, const char *buf, unsigned n) {
     n = Len::len(n);
     if (ZuUnlikely(!buf || !n)) return 0;
     unsigned o = skip(buf, n);
     if (ZuUnlikely(o >= n)) return 0;
     return Zu_nscan_<Fmt>::atou_(v, buf + o, n - o) + o;
   }
-  static unsigned atoi(int64_t &v, const char *buf, unsigned n) {
+  template <typename T>
+  static unsigned atoi(T &v, const char *buf, unsigned n) {
     n = Len::len(n);
     if (ZuUnlikely(!buf || !n)) return 0;
     unsigned o = skip(buf, n);
@@ -334,14 +345,16 @@ struct Zu_nscan : public Zu_nscan_<Fmt> {
 };
 template <class Fmt> struct Zu_nscan<Fmt, -1> : public Zu_nscan_<Fmt> { };
 
-ZuInline unsigned Zu_atou(uint64_t &v, const char *buf, unsigned n) {
+template <typename T>
+ZuInline unsigned Zu_atou(T &v, const char *buf, unsigned n) {
   return Zu_nscan<>::atou(v, buf, n);
 }
-ZuInline unsigned Zu_atoi(int64_t &v, const char *buf, unsigned n) {
+template <typename T>
+ZuInline unsigned Zu_atoi(T &v, const char *buf, unsigned n) {
   return Zu_nscan<>::atoi(v, buf, n);
 }
 template <typename T>
-ZuInline static unsigned Zu_atof(T &v, const char *buf, unsigned n) {
+ZuInline unsigned Zu_atof(T &v, const char *buf, unsigned n) {
   return Zu_nscan<>::atof(v, buf, n);
 }
 

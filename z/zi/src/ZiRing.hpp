@@ -157,16 +157,14 @@ public:
   inline ZiRingParams &killWait(unsigned n) { m_killWait = n; return *this; }
   inline ZiRingParams &coredump(bool b) { m_coredump = b; return *this; }
 
-  inline const ZtString &name() const { return m_name; }
-  inline unsigned size() const { return m_size; }
-  inline bool ll() const { return m_ll; }
-  inline unsigned spin() const { return m_spin; }
-  inline unsigned timeout() const { return m_timeout; }
-  inline const ZmBitmap &cpuset() const { return m_cpuset; }
-  inline unsigned killWait() const { return m_killWait; }
-  inline bool coredump() const { return m_coredump; }
-
-  inline bool operator !() const { return !m_name; }
+  ZuInline const ZtString &name() const { return m_name; }
+  ZuInline unsigned size() const { return m_size; }
+  ZuInline bool ll() const { return m_ll; }
+  ZuInline unsigned spin() const { return m_spin; }
+  ZuInline unsigned timeout() const { return m_timeout; }
+  ZuInline const ZmBitmap &cpuset() const { return m_cpuset; }
+  ZuInline unsigned killWait() const { return m_killWait; }
+  ZuInline bool coredump() const { return m_coredump; }
 
 private:
   ZtString	m_name;
@@ -268,7 +266,7 @@ public:
 
   template <typename ...Args>
   ZiRing(const ZiRingParams &params, Args &&... args) :
-      NTP::Base(ZuFwd<Args>(args)...),
+      NTP::Base{ZuFwd<Args>(args)...},
       ZiRing_(params), m_flags(0), m_id(-1), m_tail(0) { }
 
   ~ZiRing() { close(); }

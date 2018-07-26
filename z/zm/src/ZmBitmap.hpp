@@ -219,11 +219,8 @@ public:
     int			m_i;
   };
 
-  inline operator hwloc_bitmap_t() {
-    lazy();
-    return m_map;
-  }
-  inline operator const hwloc_bitmap_t &() const {
+  // hwloc_bitmap_t is a pointer
+  inline operator hwloc_bitmap_t() const {
     lazy();
     return m_map;
   }

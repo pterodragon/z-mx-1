@@ -27,7 +27,7 @@ template <typename M> void fail(const char *s, const M &m)
 #define CHECK2(x, m) ((x) ? (void)0 : (void)fail(#x, m))
 
 template <class Fmt, class Boxed> struct VFmt_ {
-  inline static void _(ZuBoxVFmt<Boxed> &fmt) {
+  inline static void _(ZuVFmt &fmt) {
     if (Fmt::Alt_ == 1) fmt.alt();
     if (Fmt::Comma_ != '\0') fmt.comma(Fmt::Comma_);
     if (Fmt::Hex_ == 1) fmt.hex(Fmt::Upper_);
@@ -36,32 +36,32 @@ template <class Fmt, class Boxed> struct VFmt_ {
 template <class Fmt, class Boxed,
   int Justification = Fmt::Justification_> struct VFmt;
 template <class Fmt, class Boxed> struct VFmt<Fmt, Boxed, ZuFmt::Just::None> {
-  inline static ZuBoxVFmt<Boxed> _() {
-    ZuBoxVFmt<Boxed> fmt;
+  inline static ZuVFmt _() {
+    ZuVFmt fmt;
     fmt.fp(Fmt::NDP_, Fmt::Trim_);
     VFmt_<Fmt, Boxed>::_(fmt);
     return fmt;
   }
 };
 template <class Fmt, class Boxed> struct VFmt<Fmt, Boxed, ZuFmt::Just::Left> {
-  inline static ZuBoxVFmt<Boxed> _() {
-    ZuBoxVFmt<Boxed> fmt;
+  inline static ZuVFmt _() {
+    ZuVFmt fmt;
     fmt.left(Fmt::Width_, Fmt::Pad_);
     VFmt_<Fmt, Boxed>::_(fmt);
     return fmt;
   }
 };
 template <class Fmt, class Boxed> struct VFmt<Fmt, Boxed, ZuFmt::Just::Right> {
-  inline static ZuBoxVFmt<Boxed> _() {
-    ZuBoxVFmt<Boxed> fmt;
+  inline static ZuVFmt _() {
+    ZuVFmt fmt;
     fmt.right(Fmt::Width_, Fmt::Pad_);
     VFmt_<Fmt, Boxed>::_(fmt);
     return fmt;
   }
 };
 template <class Fmt, class Boxed> struct VFmt<Fmt, Boxed, ZuFmt::Just::Frac> {
-  inline static ZuBoxVFmt<Boxed> _() {
-    ZuBoxVFmt<Boxed> fmt;
+  inline static ZuVFmt _() {
+    ZuVFmt fmt;
     fmt.frac(Fmt::NDP_, Fmt::Trim_);
     VFmt_<Fmt, Boxed>::_(fmt);
     return fmt;
@@ -81,7 +81,7 @@ template <typename T, class Fmt, typename S>
 void test_std_string1(const char *type, T v, const char *s_)
 {
   ZuBox<T> b = v;
-  ZuBoxVFmt<ZuBox<T> > vfmt = VFmt<Fmt, ZuBox<T> >::_();
+  ZuVFmt vfmt = VFmt<Fmt, ZuBox<T> >::_();
   { S s; s += b.fmt(Fmt()); test_std_string2<Fmt, S>(type, s, s_); }
   { S s; s += b.vfmt(vfmt); test_std_string2<Fmt, S>(type, s, s_); }
 }
@@ -100,7 +100,7 @@ template <typename T, class Fmt, typename S>
 void test_std_stream1(const char *type, T v, const char *s_)
 {
   ZuBox<T> b = v;
-  ZuBoxVFmt<ZuBox<T> > vfmt = VFmt<Fmt, ZuBox<T> >::_();
+  ZuVFmt vfmt = VFmt<Fmt, ZuBox<T> >::_();
   { S s; s << b.fmt(Fmt()); test_std_stream2<Fmt, S>(type, s, s_); }
   { S s; s << b.vfmt(vfmt); test_std_stream2<Fmt, S>(type, s, s_); }
 }
@@ -125,7 +125,7 @@ void test(const char *type, T v, const char *s)
   CHECK(i > ZuBox<T>());
   CHECK(ZuBox<T>((T)-i) > ZuBox<T>());
   CHECK(i > (v - 1));
-  ZuBoxVFmt<ZuBox<T> > vfmt = VFmt<Fmt, ZuBox<T> >::_();
+  ZuVFmt vfmt = VFmt<Fmt, ZuBox<T> >::_();
   char buf[64], buf2[64];
   printf("%d %d %d\n", (int)strlen(s),
       (int)i.fmt(Fmt()).length(),
@@ -514,7 +514,7 @@ int main()
     }
 
     {
-      ZuBoxVFmt<ZuBox<int> > fmt;
+      ZuVFmt fmt;
       ZuStringN<30> buf;
       for (int i = INT_MIN; i < INT_MAX - 420; i += 420) {
 	buf << ZuBoxed(i).vfmt(fmt);
@@ -590,7 +590,7 @@ int main()
     }
 
     {
-      ZuBoxVFmt<ZuBox<double> > fmt;
+      ZuVFmt fmt;
       ZuStringN<30> buf;
       for (double d = INT_MIN; d < INT_MAX - 4201; d += 4200.000420) {
 	buf << ZuBoxed(d).vfmt(fmt);

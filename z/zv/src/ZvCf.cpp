@@ -663,8 +663,7 @@ void ZvCf::freeArgs(int argc, char **argv)
 
 void ZvCf::toArgs(ZtArray<ZtString> &args, ZuString prefix)
 {
-  // Tree::ReadIterator<> i(m_tree);
-  auto i = m_tree.readIterator(); // FIXME from here
+  auto i = m_tree.readIterator();
   Tree::NodeRef node_;
   NodeRef node;
 

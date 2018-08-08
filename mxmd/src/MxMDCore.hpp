@@ -32,7 +32,8 @@
 
 #include <MxMD.hpp>
 #include <MxMDCmd.hpp>
-//#include <MxMDMsg.hpp>
+#include <MxMDMsg.hpp>
+#include <MxMDPubSub.hpp>
 #include <MxMDStream.hpp>
 
 #include <ZmObject.hpp>
@@ -122,6 +123,8 @@ public:
 
   void record(ZuString path);
   void stopRecording();
+  void publish();
+  void stopPublish();
   void stopStreaming();
 
   void replay(
@@ -786,6 +789,346 @@ friend class Recorder;
     ZmRef<MxLink<Link>>		m_link;
   };
 
+  class Publisher;
+friend class Publisher;
+  class Publisher : public MxEngineApp, public MxEngine {
+
+    class TCP;
+  friend class TCP;
+    class TCP : public ZiConnection {
+    public:
+      TCP(Publisher *publisher, const ZiCxnInfo &ci);
+
+      ZuInline Publisher *publisher() const { return m_publisher; }
+
+      void connected(ZiIOContext &);
+      void disconnected() {}
+
+      void send(const Frame *frame);
+
+      template <typename MsgType>
+      void send_(const Frame *frame)
+      {
+        using namespace MxMDPubSub::TCP;
+        ZmRef<OutMsg> msg = new OutMsg();
+        memcpy(msg->out<MsgType>(), frame, sizeof(Frame) + frame->len);
+        msg->send(this);
+      }
+
+      void process(MxMDPubSub::TCP::InMsg *, ZiIOContext &);
+      void disconnect();
+
+    private:
+      Publisher				*m_publisher;
+      ZmRef<MxMDPubSub::TCP::InMsg>	m_in;
+    };
+
+    class UDP;
+  friend class UDP;
+    class UDP : public ZiConnection {
+    public:
+      UDP(Publisher *publisher, const ZiCxnInfo &ci);
+
+      ZuInline Publisher *publisher() const { return m_publisher; }
+
+      void connected(ZiIOContext &io);
+      void disconnected() {}
+
+      void send(const Frame *frame);
+
+      template <typename MsgType>
+      void send_(const Frame *frame)
+      {
+        using namespace MxMDPubSub::UDP;
+        ZmRef<OutMsg> msg = new OutMsg();
+        memcpy(msg->out<MsgType>(++m_seqNo), frame, sizeof(Frame) + frame->len);
+        msg->send(this, m_remoteAddr);
+      }
+
+      void disconnect();
+
+    private:
+      Publisher		*m_publisher;
+      uint64_t		m_seqNo = 0;
+      ZiSockAddr	m_remoteAddr;
+  };
+
+  public:
+    typedef ZmPLock Lock;
+    typedef ZmGuard<Lock> Guard;
+    typedef ZmReadGuard<Lock> ReadGuard;
+    typedef MxMDStream::Msg Msg;
+
+    // Rx (called from engine's rx thread)
+    MxEngineApp::ProcessFn processFn() {
+      return static_cast<MxEngineApp::ProcessFn>(
+	  [](MxEngineApp *app, MxAnyLink *, MxQMsg *msg) {
+	static_cast<Publisher *>(app)->sendMsg(msg);
+      });
+    }
+
+    // Tx (called from engine's tx thread)
+    void sent(MxAnyLink *, MxQMsg *) { }
+    void aborted(MxAnyLink *, MxQMsg *) { }
+    void archive(MxAnyLink *, MxQMsg *) { }
+    ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
+
+    class Link : public MxLink<Link> {
+    public:
+      Link(MxID id) : MxLink<Link>{id} { }
+
+      void init(MxEngine *engine) { MxLink<Link>::init(engine); }
+
+      ZmTime reconnectInterval(unsigned reconnects) { return ZmTime{1}; }
+      ZmTime reRequestInterval() { return ZmTime{1}; }
+
+      // Rx
+      void request(const MxQueue::Gap &prev, const MxQueue::Gap &now) { }
+      void reRequest(const MxQueue::Gap &now) { }
+
+      // Tx
+      bool send_(MxQMsg *msg, bool more) { return true; }
+      bool resend_(MxQMsg *msg, bool more){ return true; }
+
+      bool sendGap_(const MxQueue::Gap &gap, bool more){ return true; }
+      bool resendGap_(const MxQueue::Gap &gap, bool more){ return true; }
+
+      MxID id() const { return MxAnyTx::id(); }
+
+      void update(ZvCf *cf) { }
+      void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) { }
+
+      void connect() { MxAnyLink::connected(); }
+      void disconnect() { MxAnyLink::disconnected(); }
+    };
+
+  private:
+    struct SnapQueue_HeapID {
+      inline static const char *id() { return "MxMD.SnapQueue"; }
+    };
+  public:
+    typedef MxQueueRx<Link> Rx;
+    typedef ZmList<ZmRef<Msg>,
+	      ZmListObject<ZuNull,
+		ZmListLock<ZmNoLock,
+		  ZmListHeapID<SnapQueue_HeapID> > > > SnapQueue;
+
+    inline Publisher(MxMDCore *core) : m_core(core) { }
+
+    void init() {
+      ZmRef<ZvCf> cf = m_core->cf();
+      MxEngine::init(m_core, this, m_core->mx(), cf->subset("publisher", false, true));
+      m_link = MxEngine::updateLink<Link>("publisher", nullptr);
+      m_link->init(this);
+    }
+
+    inline ~Publisher() = default;
+
+    void tcpListen(const ZiListenInfo &) { }
+    void tcpListenFailed(bool) {}
+    ZiConnection *tcpConnected(const ZiCxnInfo &ci);
+    void tcpConnected2(TCP *);
+
+    void udpConnect();
+    void udpConnectFailed(bool transient) {}
+    ZiConnection *udpConnected(const ZiCxnInfo &ci);
+    void udpConnected2(Publisher::UDP *udp, ZiIOContext &io);
+
+    inline bool running() const {
+      ReadGuard guard(m_threadLock);
+      return m_snapThread || m_recvRunning;
+    }
+
+    bool start() {
+      if (!m_core->broadcast().open()) return false;
+      MxEngine::start();
+      recvStart();
+      ZmRef<ZvCf> cf = m_core->cf()->subset("publisher", false, true);
+      auto port = static_cast<uint16_t>(strtoul(cf->get("localTcpPort", true).data(), nullptr, 10));
+
+      m_core->mx()->listen(
+        ZiListenFn::Member<&Publisher::tcpListen>::fn(this),
+        ZiFailFn::Member<&Publisher::tcpListenFailed>::fn(this),
+	ZiConnectFn::Member<&Publisher::tcpConnected>::fn(this),
+        ZiIP(), port, m_nAccepts);
+
+      m_core->mx()->add(ZmFn<>::Member<&Publisher::udpConnect>::fn(this));
+      return true;
+    }
+
+    void stop() {
+      recvStop();
+      MxEngine::stop();
+      m_core->broadcast().close();
+    }
+
+    void recvStart() {
+      {
+	Guard guard(m_threadLock);
+	if (m_recvRunning) return;
+	m_recvRunning = 1;
+      }
+      m_link->rxInvoke([](Rx *rx) {
+	static_cast<Publisher *>(
+	    static_cast<Link *>(rx)->engine())->recv(rx);
+      });
+      m_attachSem.wait();
+    }
+    void recvStop() {
+      Guard guard(m_threadLock);
+      if (!m_recvRunning) return;
+      using namespace MxMDStream;
+      m_core->broadcast().reqDetach();
+      m_detachSem.wait();
+      m_recvRunning = 0;
+    }
+
+    void snapStart() {
+      Guard guard(m_threadLock);
+      if (!!m_snapThread) return;
+      m_snapThread = ZmThread(m_core, ThreadID::RecSnapper,
+	  ZmFn<>::Member<&Publisher::snap>::fn(this),
+	  m_core->m_recSnapperParams);
+    }
+    void snapStop() {
+      Guard guard(m_threadLock);
+      if (m_snapThread) return;
+      m_snapThread.join();
+      m_snapThread = ZmThread();
+    }
+
+    inline bool active() {
+      Guard guard(m_threadLock);
+      return m_recvRunning;
+    }
+
+  private:
+    void recv(Rx *rx) {
+      rx->startQueuing();
+      using namespace MxMDStream;
+
+      Broadcast &broadcast = m_core->broadcast();
+      if (broadcast.attach() != Zi::OK) {
+	m_attachSem.post();
+	Guard guard(m_threadLock);
+	m_recvRunning = 0;
+	return;
+      }
+
+      m_attachSem.post();
+      m_link->rxRun([](Rx *rx) {
+	static_cast<Publisher *>(
+	    static_cast<Link *>(rx)->engine())->recvMsg(rx);
+      });
+    }
+
+    void recvMsg(Rx *rx) {
+      using namespace MxMDStream;
+      const Frame *frame;
+      Broadcast &broadcast = m_core->broadcast();
+      if (ZuUnlikely(!(frame = broadcast.shift()))) {
+	if (ZuLikely(broadcast.readStatus() == Zi::EndOfFile)) goto end;
+	goto next;
+      }
+      if (ZuUnlikely(frame->type == Type::Detach)) {
+	const Detach &detach = frame->as<Detach>();
+	if (ZuUnlikely(detach.id == broadcast.id())) {
+	  broadcast.shift2();
+	  goto end;
+	}
+	broadcast.shift2();
+	goto next;
+      }
+      {
+	MsgRef msg = new Msg();
+
+	if (frame->len > sizeof(Buf)) {
+	  broadcast.shift2();
+	  snapStop();
+	  m_core->raise(ZeEVENT(Error,
+	      ([name = MxTxtString(broadcast.config().name())](
+		  const ZeEvent &, ZmStream &s) {
+		s << '"' << name << "\": "
+		"IPC shared memory ring buffer read error - "
+		"message too big";
+	      })));
+	  goto end;
+	}
+	memcpy(msg->frame(), frame, sizeof(Frame) + frame->len);
+	ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
+	qmsg->load(rx->rxQueue().id, ++m_msgSeqNo);
+	rx->received(qmsg);
+      }
+      broadcast.shift2();
+
+    next:
+      m_link->rxRun([](Rx *rx) {
+	static_cast<Publisher *>(
+	    static_cast<Link *>(rx)->engine())->recvMsg(rx); });
+      return;
+
+    end:
+      broadcast.detach();
+      m_detachSem.post();
+    }
+
+    void snap() {
+      {
+	Guard guard(m_ioLock);
+	m_snapMsg = new Msg();
+      }
+      bool failed = !m_core->snapshot(*this);
+      {
+	Guard guard(m_ioLock);
+	if (failed || !m_snapMsg) {
+	  guard.unlock();
+	  recvStop();
+	  return;
+	}
+      }
+      m_link->rxInvoke([](Rx *rx) { rx->stopQueuing(1); });
+
+      snapStop();
+    }
+
+  public:
+    void sendMsg(MxQMsg *qmsg) {
+      Guard guard(m_ioLock);
+      m_udp->send(qmsg->template as<Msg>().frame());
+    }
+
+    Frame *push(unsigned size) {
+      m_ioLock.lock();
+      if (ZuUnlikely(!m_snapMsg)) {
+	m_ioLock.unlock();
+	return 0;
+      }
+
+      return m_snapMsg->frame();
+    }
+    void push2() {
+      if (ZuUnlikely(!m_snapMsg)) { m_ioLock.unlock(); return; }
+      m_tcp->send(m_snapMsg->frame());
+      m_ioLock.unlock();
+    }
+
+  private:
+    MxSeqNo			m_msgSeqNo = 0;
+    MxMDCore			*m_core;
+    ZmSemaphore			m_attachSem;
+    ZmSemaphore			m_detachSem;
+    Lock			m_threadLock;
+    ZmThread			  m_snapThread;
+    bool			  m_recvRunning;
+    Lock			m_ioLock;
+    ZmRef<Msg>			  m_snapMsg;
+    ZmRef<MxLink<Link>>		m_link;
+    ZmLock			m_stateLock;
+    ZmRef<TCP>			  m_tcp;
+    ZmRef<UDP>			  m_udp;
+    unsigned			m_nAccepts = 10;
+  };
+
   typedef ZmPLock Lock;
   typedef ZmGuard<Lock> Guard;
 
@@ -817,6 +1160,7 @@ friend class Recorder;
   Broadcast		m_broadcast;	// broadcasts updates
   Snapper		m_snapper;	// unicasts snapshots
   Recorder		m_recorder;	// records to file
+  Publisher		m_publisher;
 
   ZmRef<MxMDFeed>	m_localFeed;
 

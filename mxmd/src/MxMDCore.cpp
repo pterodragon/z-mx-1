@@ -356,7 +356,8 @@ MxMDCore::MxMDCore(ZmRef<Mx> mx) :
   m_mx(ZuMv(mx)),
   m_broadcast(this),
   m_snapper(this),
-  m_recorder(this)
+  m_recorder(this),
+  m_publisher(this)
 {
 }
 
@@ -450,6 +451,7 @@ void MxMDCore::init_(ZvCf *cf)
   }
 
   m_recorder.init();
+  m_publisher.init();
 
   ZeLOG(Info, "MxMDLib - initialized...");
 }
@@ -544,6 +546,7 @@ void MxMDCore::start()
 
   if (m_recordCfPath) record(m_recordCfPath);
   if (m_replayCfPath) replay(m_replayCfPath);
+  if (cf()->get("multicastAddr")) publish();
 
   raise(ZeEVENT(Info, "starting feeds..."));
   allFeeds([](MxMDFeed *feed) { try { feed->start(); } catch (...) { } });
@@ -560,6 +563,7 @@ void MxMDCore::stop()
     stopReplaying();
     stopRecording();
     stopStreaming();
+    stopPublish();
   }
 
   if (m_cmd) {
@@ -1078,6 +1082,18 @@ void MxMDCore::stopRecording()
 {
   m_recorder.stop();
   raise(ZeEVENT(Info, "stopped recording"));
+}
+
+void MxMDCore::publish()
+{
+  m_publisher.start();
+  raise(ZeEVENT(Info, "start publishing"));
+}
+
+void MxMDCore::stopPublish()
+{
+  m_publisher.stop();
+  raise(ZeEVENT(Info, "stopped publishing"));
 }
 
 void MxMDCore::stopStreaming()
@@ -1625,4 +1641,175 @@ void MxMDCore::timer()
   else
     m_mx->add(ZmFn<>::Member<&MxMDCore::timer>::fn(this),
 	next.zmTime(), &m_timer);
+}
+
+MxMDCore::Publisher::TCP::TCP(MxMDCore::Publisher *publisher, const ZiCxnInfo &ci) :
+    ZiConnection(publisher->m_core->mx(), ci), m_publisher(publisher)
+{
+  using namespace MxMDPubSub::TCP;
+  m_in = new InMsg();
+}
+
+void MxMDCore::Publisher::TCP::connected(ZiIOContext &io)
+{
+  using namespace MxMDPubSub::TCP;
+  m_publisher->tcpConnected2(this);
+  m_in->fn() = InMsg::Fn::Member<&MxMDCore::Publisher::TCP::process>::fn(this);
+  m_in->recv(io);
+}
+
+void MxMDCore::Publisher::tcpConnected2(MxMDCore::Publisher::TCP *tcp)
+{
+  {
+    ZiIP ip = tcp->info().remoteIP;
+    uint16_t port = tcp->info().remotePort;
+    m_core->raise(ZeEVENT(Info,
+	      ([ip, port](const ZeEvent &, ZmStream &s) {
+		s << "TCP connected "
+		  << ip << ':' << ZuBoxed(port);
+	      })));
+  }
+  {
+    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    m_tcp = tcp;
+  }
+}
+
+void MxMDCore::Publisher::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &io)
+{
+  using namespace MxMDPubSub::TCP;
+
+  MxMDPubSub::TCPHdr &hdr = m_in->as<MxMDPubSub::TCPHdr>();
+
+  switch ((int)hdr.type) {
+    case MsgType::Login: {
+      //const Login &data = hdr.as<Login>();
+      //// process login.....
+
+      m_publisher->snapStart();
+
+      break;
+    }
+    default:
+      m_publisher->m_core->raise(ZeEVENT(Error,
+          [type = (char)hdr.type](const ZeEvent &, ZmStream &s) {
+	    s << "unexpected message type '" << type << '\'';
+	  }));
+  }
+  m_in->recv(io);
+}
+
+void MxMDCore::Publisher::TCP::send(const Frame *frame)
+{
+  using namespace MxMDStream;
+
+  switch ((int)frame->type) {
+    case Type::AddTickSizeTbl:	send_<AddTickSizeTbl>(frame); break;
+    case Type::ResetTickSizeTbl: send_<ResetTickSizeTbl>(frame); break;
+    case Type::AddTickSize:	send_<AddTickSize>(frame); break;
+    case Type::AddSecurity:	send_<AddSecurity>(frame); break;
+    case Type::UpdateSecurity:	send_<UpdateSecurity>(frame); break;
+    case Type::AddOrderBook:	send_<AddOrderBook>(frame); break;
+    case Type::DelOrderBook:	send_<DelOrderBook>(frame); break;
+    case Type::AddCombination:	send_<AddCombination>(frame); break;
+    case Type::DelCombination:	send_<DelCombination>(frame); break;
+    case Type::UpdateOrderBook:	send_<UpdateOrderBook>(frame); break;
+    case Type::TradingSession:	send_<TradingSession>(frame); break;
+    case Type::L1:		send_<L1>(frame); break;
+    case Type::PxLevel:		send_<PxLevel>(frame); break;
+    case Type::L2:		send_<L2>(frame); break;
+    case Type::AddOrder:	send_<AddOrder>(frame); break;
+    case Type::ModifyOrder:	send_<ModifyOrder>(frame); break;
+    case Type::CancelOrder:	send_<CancelOrder>(frame); break;
+    case Type::ResetOB:		send_<ResetOB>(frame); break;
+    case Type::AddTrade:	send_<AddTrade>(frame); break;
+    case Type::CorrectTrade:	send_<CorrectTrade>(frame); break;
+    case Type::CancelTrade:	send_<CancelTrade>(frame); break;
+    case Type::RefDataLoaded:	send_<RefDataLoaded>(frame); break;
+    default: break;
+  }
+}
+
+void MxMDCore::Publisher::TCP::disconnect()
+{
+  ZiConnection::disconnect();
+}
+
+MxMDCore::Publisher::UDP::UDP(MxMDCore::Publisher *publisher, const ZiCxnInfo &ci) :
+    ZiConnection(publisher->m_core->mx(), ci),
+    m_publisher(publisher),
+    m_remoteAddr(ci.remoteIP, ci.remotePort) { }
+
+void MxMDCore::Publisher::UDP::connected(ZiIOContext &io)
+{
+  m_publisher->udpConnected2(this, io);
+}
+
+void MxMDCore::Publisher::UDP::disconnect()
+{
+  ZiConnection::disconnect();
+}
+
+ZiConnection *MxMDCore::Publisher::tcpConnected(const ZiCxnInfo &ci)
+{
+  return new TCP(this, ci);
+}
+
+void MxMDCore::Publisher::udpConnect()
+{
+  ZmRef<ZvCf> cf = m_core->cf()->subset("publisher", false, true);
+
+  ZiIP ip = cf->get("multicastAddr", true).data();
+  auto port = static_cast<uint16_t>(strtoul(cf->get("multicastPort", true).data(), nullptr, 10));
+
+  ZiCxnOptions options;
+  options.udp(true);
+  options.multicast(true);
+
+  m_core->mx()->udp(
+    ZiConnectFn::Member<&MxMDCore::Publisher::udpConnected>::fn(this),
+    ZiFailFn::Member<&MxMDCore::Publisher::udpConnectFailed>::fn(this),
+    ZiIP(), 0, ip, port, options);
+}
+
+ZiConnection *MxMDCore::Publisher::udpConnected(const ZiCxnInfo &ci)
+{
+  return new UDP(this, ci);
+}
+
+void MxMDCore::Publisher::udpConnected2(MxMDCore::Publisher::UDP *udp, ZiIOContext &io)
+{
+  ZmGuard<ZmLock> stateGuard(m_stateLock);
+  m_udp = udp;
+}
+
+void MxMDCore::Publisher::UDP::send(const Frame *frame)
+{
+  using namespace MxMDStream;
+
+  switch ((int)frame->type) {
+    case Type::AddTickSizeTbl:	send_<AddTickSizeTbl>(frame); break;
+    case Type::ResetTickSizeTbl: send_<ResetTickSizeTbl>(frame); break;
+    case Type::AddTickSize:	send_<AddTickSize>(frame); break;
+    case Type::AddSecurity:	send_<AddSecurity>(frame); break;
+    case Type::UpdateSecurity:	send_<UpdateSecurity>(frame); break;
+    case Type::AddOrderBook:	send_<AddOrderBook>(frame); break;
+    case Type::DelOrderBook:	send_<DelOrderBook>(frame); break;
+    case Type::AddCombination:	send_<AddCombination>(frame); break;
+    case Type::DelCombination:	send_<DelCombination>(frame); break;
+    case Type::UpdateOrderBook:	send_<UpdateOrderBook>(frame); break;
+    case Type::TradingSession:	send_<TradingSession>(frame); break;
+    case Type::L1:		send_<L1>(frame); break;
+    case Type::PxLevel:		send_<PxLevel>(frame); break;
+    case Type::L2:		send_<L2>(frame); break;
+    case Type::AddOrder:	send_<AddOrder>(frame); break;
+    case Type::ModifyOrder:	send_<ModifyOrder>(frame); break;
+    case Type::CancelOrder:	send_<CancelOrder>(frame); break;
+    case Type::ResetOB:		send_<ResetOB>(frame); break;
+    case Type::AddTrade:	send_<AddTrade>(frame); break;
+    case Type::CorrectTrade:	send_<CorrectTrade>(frame); break;
+    case Type::CancelTrade:	send_<CancelTrade>(frame); break;
+    case Type::RefDataLoaded:	send_<RefDataLoaded>(frame); break;
+    default: break;
+  }
 }

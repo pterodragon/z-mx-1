@@ -68,8 +68,6 @@ struct ZuTraits<ZuPair<T1, T2> > : public ZuGenericTraits<ZuPair<T1, T2> > {
 };
 
 template <typename T1_, typename T2_> class ZuPair : public ZuPair_ {
-  struct Private { };
-
 public:
   typedef T1_ T1;
   typedef T2_ T2;
@@ -94,10 +92,10 @@ public:
   }
 
   template <typename T> ZuInline ZuPair(const T &t,
-      typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK, Private>::T *_ = 0) :
+      typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK>::T *_ = 0) :
     m_p1(t.m_p1), m_p2(t.m_p2) { }
   template <typename T> ZuInline ZuPair(T &&t,
-      typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK, Private>::T *_ = 0) noexcept :
+      typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK>::T *_ = 0) noexcept :
     m_p1(ZuFwd<decltype(t.m_p1)>(t.m_p1)),
     m_p2(ZuFwd<decltype(t.m_p2)>(t.m_p2)) { }
   template <typename T> ZuInline ZuPair(T &&t,
@@ -105,7 +103,7 @@ public:
 	!ZuPair_Cvt<T, ZuPair>::OK &&
 	  (!ZuTraits<T1>::IsReference ||
 	    ZuConversion<typename ZuTraits<U1>::T,
-			 typename ZuTraits<T>::T>::Is), Private>::T *_ = 0) :
+			 typename ZuTraits<T>::T>::Is)>::T *_ = 0) :
     m_p1(ZuFwd<T>(t)), m_p2(ZuCmp<U2>::null()) { }
 
 private:
@@ -122,7 +120,7 @@ private:
 	!ZuPair_Cvt<T, ZuPair>::OK &&
 	  (!ZuTraits<T1>::IsReference ||
 	    ZuConversion<typename ZuTraits<U1>::T,
-			 typename ZuTraits<T>::T>::Is), Private
+			 typename ZuTraits<T>::T>::Is)
       >::T assign(T &&t) { m_p1 = ZuFwd<T>(t), m_p2 = ZuCmp<U2>::null(); }
 
 public:
@@ -139,7 +137,7 @@ public:
 		       typename ZuTraits<P1>::T>::Is) && 
 	(!ZuTraits<T2>::IsReference ||
 	  ZuConversion<typename ZuTraits<U2>::T,
-		       typename ZuTraits<P2>::T>::Is), Private>::T *_ = 0) :
+		       typename ZuTraits<P2>::T>::Is)>::T *_ = 0) :
     m_p1(ZuFwd<P1>(p1)), m_p2(ZuFwd<P2>(p2)) { }
 
   template <typename P1, typename P2>

@@ -58,8 +58,6 @@
 #endif
 
 class ZmAffinity {
-  struct Private { };
-
 public:
   enum Varargs_ { Varargs };
   enum { Next = -1, End = -2 };
@@ -136,7 +134,7 @@ protected:
 public:
   template <typename S>
   inline ZmAffinity(const S &s,
-      typename ZuIsCharString<S, Private>::T *_ = 0) {
+      typename ZuIsCharString<S>::T *_ = 0) {
     init_();
     scan(s);
   }

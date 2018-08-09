@@ -53,8 +53,6 @@ struct timespec {
 #endif
 
 class ZmAPI ZmTime : public timespec {
-  struct Private { };
-
 public:
   enum Now_ { Now };		// disambiguator
   enum Nano_ { Nano };		// ''
@@ -85,13 +83,13 @@ private:
 public:
   ZuInline ZmTime(Now_) { now(); }
   template <typename T>
-  ZuInline ZmTime(Now_, T i, typename MatchInt<T, Private>::T *_ = 0) {
+  ZuInline ZmTime(Now_, T i, typename MatchInt<T>::T *_ = 0) {
     now(i);
   }
   ZuInline ZmTime(Now_, double d) { now(d); }
 
   template <typename T>
-  ZuInline ZmTime(T v, typename MatchInt<T, Private>::T *_ = 0) :
+  ZuInline ZmTime(T v, typename MatchInt<T>::T *_ = 0) :
     timespec{v, 0} { }
   ZuInline ZmTime(time_t t, long n) : timespec{t, n} { }
 

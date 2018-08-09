@@ -265,7 +265,6 @@ template <> struct ZuTraits<ZtDate> : public ZuGenericTraits<ZtDate> {
 };
 
 class ZtAPI ZtDate {
-  struct Private { };
   typedef ZtDate_time_t<sizeof(time_t)> Native;
 
 public:
@@ -299,7 +298,7 @@ public:
   // ZmTime
 
   template <typename T>
-  inline ZtDate(const T &t, typename ZuSame<ZmTime, T, Private>::T *_ = 0) {
+  inline ZtDate(const T &t, typename ZuSame<ZmTime, T>::T *_ = 0) {
     init(t.sec()), m_nsec = t.nsec();
   }
   template <typename T>
@@ -312,7 +311,7 @@ public:
   // time_t
 
   template <typename T>
-  inline ZtDate(const T &t, typename ZuSame<time_t, T, Private>::T *_ = 0) {
+  inline ZtDate(const T &t, typename ZuSame<time_t, T>::T *_ = 0) {
     init(t), m_nsec = 0;
   }
   template <typename T>
@@ -325,7 +324,7 @@ public:
   // double
 
   template <typename T>
-  inline ZtDate(T d, typename ZuSame<double, T, Private>::T *_ = 0) {
+  inline ZtDate(T d, typename ZuSame<double, T>::T *_ = 0) {
     time_t t = (time_t)d;
     init(t);
     m_nsec = (int)((d - (double)t) * (double)1000000000);
@@ -453,12 +452,12 @@ public:
   // parameter passed in by the caller
 
   template <typename S>
-  inline ZtDate(const S &s, typename ZuIsString<S, Private>::T *_ = 0) {
+  inline ZtDate(const S &s, typename ZuIsString<S>::T *_ = 0) {
     ctorISO(s, 0);
   }
   template <typename S, typename TZ>
   inline ZtDate(const S &s, const TZ &tz, typename ZuIfT<
-      ZuTraits<S>::IsString && ZuTraits<TZ>::IsCString, Private>::T *_ = 0) {
+      ZuTraits<S>::IsString && ZuTraits<TZ>::IsCString>::T *_ = 0) {
     ctorISO(s, tz);
   }
 

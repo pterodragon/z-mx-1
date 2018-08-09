@@ -57,8 +57,6 @@
 struct ZuArray_ { };
 template <typename T_, class Cmp = ZuCmp<T_> >
 class ZuArray : public ZuArray_ {
-  struct Private { };
-
 public:
   typedef T_ T;
   typedef T Elem;
@@ -114,7 +112,7 @@ private:
 public:
   // compile-time length from primitive array / string literal
   template <typename A>
-  ZuInline ZuArray(A &&a, typename MatchStrLiteral<A, Private>::T *_ = 0) :
+  ZuInline ZuArray(A &&a, typename MatchStrLiteral<A>::T *_ = 0) :
     m_data(&a[0]),
     m_length((ZuUnlikely(!(sizeof(a) / sizeof(a[0])) || !a[0])) ? 0U :
       (sizeof(a) / sizeof(a[0])) - 1U) { }
@@ -129,7 +127,7 @@ public:
 
   // length from deferred strlen
   template <typename A>
-  ZuInline ZuArray(A &&a, typename MatchCString<A, Private>::T *_ = 0) :
+  ZuInline ZuArray(A &&a, typename MatchCString<A>::T *_ = 0) :
 	m_data(a), m_length(!a ? 0 : -1) { }
   template <typename A>
   ZuInline typename MatchCString<A, ZuArray &>::T operator =(A &&a) {
@@ -140,7 +138,7 @@ public:
 
   // length from passed type
   template <typename A>
-  ZuInline ZuArray(A &&a, typename MatchOtherArray<A, Private>::T *_ = 0) :
+  ZuInline ZuArray(A &&a, typename MatchOtherArray<A>::T *_ = 0) :
 	m_data(ZuTraits<A>::data(a)),
 	m_length(!m_data ? 0 : (int)ZuTraits<A>::length(a)) { }
   template <typename A>
@@ -238,8 +236,6 @@ template <typename T> class ZuArray_Null {
 
 template <typename Cmp>
 class ZuArray<ZuNull, Cmp> : public ZuArray_Null<ZuNull> {
-  struct Private { };
-
 public:
   typedef ZuNull Elem;
 
@@ -249,7 +245,7 @@ public:
 
   template <typename A> ZuInline ZuArray(const A &a, typename ZuIfT<
     ZuTraits<A>::IsArray && ZuConversion<
-      typename ZuTraits<A>::Elem, ZuNull>::Exists, Private>::T *_ = 0) { }
+      typename ZuTraits<A>::Elem, ZuNull>::Exists>::T *_ = 0) { }
   template <typename A> ZuInline typename ZuIfT<
     ZuTraits<A>::IsArray &&
     ZuConversion<typename ZuTraits<A>::Elem, ZuNull>::Exists, ZuArray &>::T
@@ -260,8 +256,6 @@ public:
 
 template <typename Cmp>
 class ZuArray<void, Cmp> : public ZuArray_Null<void> {
-  struct Private { };
-
 public:
   typedef void Elem;
 
@@ -271,7 +265,7 @@ public:
 
   template <typename A> ZuInline ZuArray(const A &a, typename ZuIfT<
     ZuTraits<A>::IsArray && ZuConversion<
-      typename ZuTraits<A>::Elem, void>::Exists, Private>::T *_ = 0) { }
+      typename ZuTraits<A>::Elem, void>::Exists>::T *_ = 0) { }
   template <typename A> ZuInline typename ZuIfT<
     ZuTraits<A>::IsArray &&
     ZuConversion<typename ZuTraits<A>::Elem, void>::Exists, ZuArray &>::T

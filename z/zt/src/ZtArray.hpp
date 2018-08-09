@@ -68,8 +68,6 @@ template <> struct ZtArray_Char2<wchar_t> { typedef char T; };
 
 template <typename T_, class Cmp_ = ZuCmp<T_> >
 class ZtArray : public ZtArray_<T_>, public ZuArrayFn<T_, Cmp_> {
-  struct Private { };
-
 public:
   typedef T_ T;
   typedef Cmp_ Cmp;
@@ -425,7 +423,7 @@ private:
 public:
   template <typename S>
   inline ZtArray(S &&s_, ZtIconv *iconv,
-      typename ZuIsString<S, Private>::T *_ = 0) {
+      typename ZuIsString<S>::T *_ = 0) {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     convert_(s, iconv);
   }

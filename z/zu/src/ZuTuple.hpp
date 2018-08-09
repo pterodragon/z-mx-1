@@ -85,12 +85,8 @@ ZuPP_List1(ZuTuple_Typedef, _, ZuPP_N)
     return *this;
   }
 
-private:
-  struct Private { };
-
-public:
   template <typename T>
-  ZuInline ZuTuple_(T &&t, typename ZuNotSame<ZuTuple_, T, Private>::T *_ = 0) :
+  ZuInline ZuTuple_(T &&t, typename ZuNotSame<ZuTuple_, T>::T *_ = 0) :
     P(ZuFwd<T>(t)) { }
   template <typename T>
   ZuInline typename ZuNotSame<ZuTuple_, T, ZuTuple_ &>::T operator =(T &&t) {

@@ -434,19 +434,20 @@ private:
   ZuInline typename ZuNotObject<O>::T nodeDelete(const O *o) { delete o; }
 
 protected:
-#define ZmHash_ITERATE_KEY_VAL \
-    inline const Key &iterateKey() { \
-      NodeRef node = iterate(); \
-      if (ZuLikely(node)) return node->Node::key(); \
-      return Cmp::null(); \
-    } \
-    inline const Val &iterateVal() { \
-      NodeRef node = iterate(); \
-      if (ZuLikely(node)) return node->Node::val(); \
-      return ValCmp::null(); \
+  template <typename I> struct Iterator__ {
+    inline const Key &iterateKey() {
+      NodeRef node = static_cast<I *>(this)->iterate();
+      if (ZuLikely(node)) return node->Node::key();
+      return Cmp::null();
     }
+    inline const Val &iterateVal() {
+      NodeRef node = static_cast<I *>(this)->iterate();
+      if (ZuLikely(node)) return node->Node::val();
+      return ValCmp::null();
+    }
+  };
 
-  template <typename I> class Iterator_ {
+  template <typename I> class Iterator_ : public Iterator__<I> {
     typedef ZmHash<Key, NTP> Hash;
   friend class ZmHash<Key, NTP>;
 
@@ -461,8 +462,6 @@ protected:
       return m_hash.iterate(static_cast<I &>(*this));
     }
 
-    ZmHash_ITERATE_KEY_VAL
-
   protected:
     Hash			&m_hash;
     int				m_slot;
@@ -470,7 +469,7 @@ protected:
     typename Hash::NodeRef	m_prev;
   };
 
-  template <typename I> class IndexIterator_ : protected Iterator_<I> {
+  template <typename I> class IndexIterator_ : public Iterator_<I> {
     typedef ZmHash<Key, NTP> Hash;
   friend class ZmHash<Key, NTP>;
 
@@ -486,8 +485,6 @@ protected:
     ZuInline NodeRef iterate() {
       return this->m_hash.indexIterate(static_cast<I &>(*this));
     }
-
-    ZmHash_ITERATE_KEY_VAL
 
   protected:
     Index			m_index;
@@ -569,8 +566,6 @@ public:
     }
     ZuInline ~ReadIndexIterator() { this->m_hash.endIterate(*this); }
   };
-
-#undef ZmHash_ITERATE_KEY_VAL
 
 private:
   inline void init(const ZmHashParams &params) {
@@ -853,42 +848,16 @@ private:
   }
 
 public:
-  void clean() {
-    this->lockAll();
-
-    for (unsigned i = 0, n = (1U<<this->bits()); i < n; i++) {
-      Node *node, *prevNode;
-
-      node = m_table[i];
-
-      while (prevNode = node) {
-	node = prevNode->Fn::next();
-	nodeDeref(prevNode);
-	nodeDelete(prevNode);
-      }
-
-      m_table[i] = 0;
-    }
-    m_count = 0;
-
-    this->unlockAll();
-  }
-
+  auto iterator() { return Iterator(*this); }
   template <typename Index_>
-  inline Lock &lock(Index_ &&index) {
-    return lockCode(IHashFn::hash(ZuFwd<Index_>(index)));
+  auto iterator(Index_ &&index) {
+    return IndexIterator(*this, ZuFwd<Index_>(index));
   }
 
-  void report(ZmHashStats &s) {
-    s.id = ID::id();
-    s.linear = false;
-    s.nodeSize = sizeof(Node);
-    s.bits = this->bits();
-    s.loadFactor = ((double)m_loadFactor) / 16.0;
-    s.cBits = this->cBits();
-    s.count = m_count; // deliberately unsafe
-    s.effLoadFactor = ((double)s.count) / ((double)(1<<s.bits));
-    s.resized = m_resized; // deliberately unsafe
+  auto readIterator() const { return ReadIterator(*this); }
+  template <typename Index_>
+  auto readIterator(Index_ &&index) const {
+    return ReadIndexIterator(*this, ZuFwd<Index_>(index));
   }
 
 private:
@@ -992,6 +961,46 @@ private:
     --m_count;
   }
 
+public:
+  void clean() {
+    this->lockAll();
+
+    for (unsigned i = 0, n = (1U<<this->bits()); i < n; i++) {
+      Node *node, *prevNode;
+
+      node = m_table[i];
+
+      while (prevNode = node) {
+	node = prevNode->Fn::next();
+	nodeDeref(prevNode);
+	nodeDelete(prevNode);
+      }
+
+      m_table[i] = 0;
+    }
+    m_count = 0;
+
+    this->unlockAll();
+  }
+
+  template <typename Index_>
+  inline Lock &lock(Index_ &&index) {
+    return lockCode(IHashFn::hash(ZuFwd<Index_>(index)));
+  }
+
+  void report(ZmHashStats &s) {
+    s.id = ID::id();
+    s.linear = false;
+    s.nodeSize = sizeof(Node);
+    s.bits = this->bits();
+    s.loadFactor = ((double)m_loadFactor) / 16.0;
+    s.cBits = this->cBits();
+    s.count = m_count; // deliberately unsafe
+    s.effLoadFactor = ((double)s.count) / ((double)(1<<s.bits));
+    s.resized = m_resized; // deliberately unsafe
+  }
+
+private:
   void resize(unsigned bits) {
     if (this->lockAllResize(bits)) return;
 

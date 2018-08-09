@@ -361,7 +361,6 @@ public:
 template <typename T_, unsigned N_ = 1, class Cmp_ = ZuCmp<T_> >
 class ZuArrayN : public ZuArrayN_<T_, Cmp_, ZuArrayN<T_, N_, Cmp_> > {
   ZuAssert(N_ < (1U<<16) - 1U);
-  struct Private { };
 
 public:
   typedef T_ T;
@@ -410,7 +409,7 @@ private:
   template <typename U, typename R>
   struct MatchElem<U, R, T, true> { typedef R T; };
 
-  template <typename U, typename R = Private, typename V = T,
+  template <typename U, typename R = void, typename V = T,
     bool E = ZuConversion<U, unsigned>::Same ||
 	     ZuConversion<U, int>::Same ||
 	     ZuConversion<U, size_t>::Same
@@ -418,7 +417,7 @@ private:
   template <typename U, typename R>
   struct CtorLength<U, R, T, true> { typedef R T; };
 
-  template <typename U, typename R = Private, typename V = T,
+  template <typename U, typename R = void, typename V = T,
     bool E =
       (!ZuConversion<char, V>::Same ||
        ((!ZuPrint<U>::OK || // avoid MatchPrint ambiguity
@@ -453,7 +452,7 @@ public:
 
   // ZuArrayN types
   template <typename A>
-  ZuInline ZuArrayN(const A &a, typename MatchArrayN<A, Private>::T *_ = 0) :
+  ZuInline ZuArrayN(const A &a, typename MatchArrayN<A>::T *_ = 0) :
       Base(Base::Nop) {
     Base::m_size = N;
     this->init(a.data(), a.length());
@@ -476,7 +475,7 @@ public:
 
   // array types (other than ZuArrayN<>)
   template <typename A>
-  ZuInline ZuArrayN(A &&a_, typename MatchArray<A, Private>::T *_ = 0) :
+  ZuInline ZuArrayN(A &&a_, typename MatchArray<A>::T *_ = 0) :
       Base(Base::Nop) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     Base::m_size = N;
@@ -503,7 +502,7 @@ public:
 
   // printable types (if this is a char array)
   template <typename P>
-  ZuInline ZuArrayN(const P &p, typename MatchPrint<P, Private>::T *_ = 0) :
+  ZuInline ZuArrayN(const P &p, typename MatchPrint<P>::T *_ = 0) :
       Base(Base::Nop) {
     Base::m_size = N;
     this->init(p);
@@ -535,7 +534,7 @@ public:
 
   // string types (if this is a char array)
   template <typename S>
-  ZuInline ZuArrayN(S &&s_, typename MatchString<S, Private>::T *_ = 0) :
+  ZuInline ZuArrayN(S &&s_, typename MatchString<S>::T *_ = 0) :
       Base(Base::Nop) {
     ZuString s(ZuFwd<S>(s_));
     Base::m_size = N;
@@ -599,7 +598,7 @@ public:
   // arrays as ptr, length
   template <typename A>
   ZuInline ZuArrayN(const A *a, unsigned length,
-    typename ZuConvertible<A, T, Private>::T *_ = 0) :
+    typename ZuConvertible<A, T>::T *_ = 0) :
       Base(Base::Nop) {
     Base::m_size = N;
     this->init(a, length);

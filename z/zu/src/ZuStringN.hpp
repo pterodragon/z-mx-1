@@ -338,7 +338,6 @@ struct ZuStringN_Traits : public ZuGenericTraits<T_> {
 template <unsigned N_ = 1>
 class ZuStringN : public ZuStringN_<char, ZuStringN<N_> > {
   ZuAssert(N_ < (1U<<16) - 1U);
-  struct Private { };
 
 public:
   typedef char Char;
@@ -359,7 +358,7 @@ private:
   template <typename U, typename R>
   struct MatchString<U, R, true> { typedef R T; };
 
-  template <typename U, typename R = Private,
+  template <typename U, typename R = void,
     bool E = ZuConversion<U, unsigned>::Same ||
 	     ZuConversion<U, int>::Same ||
 	     ZuConversion<U, size_t>::Same
@@ -381,7 +380,7 @@ public:
 
   // string types
   template <typename S>
-  ZuInline ZuStringN(S &&s_, typename MatchString<S, Private>::T *_ = 0) :
+  ZuInline ZuStringN(S &&s_, typename MatchString<S>::T *_ = 0) :
       Base(Base::Nop) {
     ZuString s(ZuFwd<S>(s_));
     this->m_size = N;
@@ -442,7 +441,7 @@ public:
 
   // printable types
   template <typename P>
-  ZuInline ZuStringN(const P &p, typename MatchPrint<P, Private>::T *_ = 0) :
+  ZuInline ZuStringN(const P &p, typename MatchPrint<P>::T *_ = 0) :
       Base(Base::Nop) {
     this->m_size = N;
     this->init(p);
@@ -497,7 +496,6 @@ template <unsigned N> struct ZuPrint<ZuStringN<N> > :
 template <unsigned N_ = 1>
 class ZuWStringN : public ZuStringN_<wchar_t, ZuWStringN<N_> > {
   ZuAssert(N_ < (1U<<15) - 1U);
-  struct Private { };
 
 public:
   typedef wchar_t Char;
@@ -513,7 +511,7 @@ private:
   template <typename U, typename R>
   struct MatchString<U, R, true> { typedef R T; };
 
-  template <typename U, typename R = Private,
+  template <typename U, typename R = void,
     bool E = ZuConversion<U, unsigned>::Same ||
 	     ZuConversion<U, int>::Same ||
 	     ZuConversion<U, size_t>::Same
@@ -535,7 +533,7 @@ public:
 
   // string types
   template <typename S>
-  ZuInline ZuWStringN(S &&s_, typename MatchString<S, Private>::T *_ = 0) :
+  ZuInline ZuWStringN(S &&s_, typename MatchString<S>::T *_ = 0) :
       Base(Base::Nop) {
     ZuWString s(ZuFwd<S>(s_));
     this->m_size = N;

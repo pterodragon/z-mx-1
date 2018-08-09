@@ -94,8 +94,6 @@ struct ZmRef__ {
 
 template <typename T_> class ZmRef : public ZuRef_, public ZmRef_ {
 template <typename> friend class ZmRef;
-  struct Private { };
-
 public:
   typedef T_ T;
 
@@ -157,7 +155,7 @@ public:
 #endif
   }
   template <typename R>
-  inline ZmRef(const R &r, typename MatchOtherRef<R, Private>::T *_ = 0) :
+  inline ZmRef(const R &r, typename MatchOtherRef<R>::T *_ = 0) :
       m_object(static_cast<T *>(const_cast<typename R::T *>(r.m_object))) {
     if (T *o = m_object) ZmREF(o);
   }
@@ -165,7 +163,7 @@ public:
     if (o) ZmREF(o);
   }
   template <typename O>
-  inline ZmRef(O *o, typename MatchPtr<O, Private>::T *_ = 0) :
+  inline ZmRef(O *o, typename MatchPtr<O>::T *_ = 0) :
       m_object(static_cast<T *>(o)) {
     if (o) ZmREF(o);
   }

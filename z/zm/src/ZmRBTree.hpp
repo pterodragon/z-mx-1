@@ -661,15 +661,15 @@ public:
     return Iterator<Direction>(*this);
   }
   template <int Direction, typename Index_>
-  auto iterator(const Index_ &index) {
-    return Iterator<Direction>(*this, index);
+  auto iterator(Index_ &&index) {
+    return Iterator<Direction>(*this, ZuFwd<Index_>(index));
   }
   template <int Direction = ZmRBTreeGreaterEqual> auto readIterator() const {
     return ReadIterator<Direction>(*this);
   }
   template <int Direction, typename Index_>
-  auto readIterator(const Index_ &index) const {
-    return ReadIterator<Direction>(*this, index);
+  auto readIterator(Index_ &&index) const {
+    return ReadIterator<Direction>(*this, ZuFwd<Index_>(index));
   }
 
   void clean() {

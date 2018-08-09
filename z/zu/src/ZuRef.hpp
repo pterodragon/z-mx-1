@@ -46,8 +46,6 @@ struct ZuRef_ { }; // compile-time tag
 
 template <typename T_> class ZuRef : public ZuRef_ {
 template <typename> friend class ZuRef;
-  struct Private { };
-
 public:
   typedef T_ T;
 
@@ -106,7 +104,7 @@ public:
     r.m_object = 0;
   }
   template <typename R>
-  inline ZuRef(const R &r, typename MatchOtherRef<R, Private>::T *_ = 0) :
+  inline ZuRef(const R &r, typename MatchOtherRef<R>::T *_ = 0) :
       m_object(static_cast<T *>(const_cast<typename R::T *>(r.m_object))) {
     if (T *o = m_object) o->ref();
   }
@@ -114,7 +112,7 @@ public:
     if (o) o->ref();
   }
   template <typename O>
-  inline ZuRef(O *o, typename MatchPtr<O, Private>::T *_ = 0) :
+  inline ZuRef(O *o, typename MatchPtr<O>::T *_ = 0) :
       m_object(static_cast<T *>(o)) {
     if (o) o->ref();
   }

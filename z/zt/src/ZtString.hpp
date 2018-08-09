@@ -86,8 +86,6 @@ template <typename Char, typename Char2> class ZtString_;
 
 template <typename Char_, typename Char2_>
 class ZtString_ : public ZtString__<Char_> {
-  struct Private { };
-
 public:
   typedef Char_ Char;
   typedef Char2_ Char2;
@@ -400,7 +398,7 @@ private:
 public:
   template <typename S>
   inline ZtString_(S &&s_, ZtIconv *iconv,
-      typename ZuIsString<S, Private>::T *_ = 0) {
+      typename ZuIsString<S>::T *_ = 0) {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     convert_(s, iconv);
   }

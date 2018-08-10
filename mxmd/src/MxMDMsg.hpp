@@ -20,6 +20,7 @@
 #include <MxMD.hpp>
 
 #include <MxMDPubSub.hpp>
+#include <MxMDStream.hpp>
 
 namespace MxMDPubSub {
   // == Message Buffers ==
@@ -67,18 +68,19 @@ namespace MxMDPubSub {
     public:
       typedef typename MxMDPubSub::Msg<Derived, Size> Base;
       typedef typename Base::Fn Fn;
+      typedef MxMDStream::Frame Frame;
 
       inline Msg() { }
 
       template <typename T> inline void *out(uint64_t seqNo) {
-        unsigned length = sizeof(UDPPktHdr) + sizeof(UDPHdr) + sizeof(T);
+	unsigned length = sizeof(UDPPktHdr) + sizeof(Frame) + sizeof(T);
         if (length >= Size) return nullptr;
         this->length(length);
         new (this->ptr()) UDPPktHdr{{}, seqNo, 1};
-        UDPHdr *hdr = (UDPHdr *)(this->data() + sizeof(UDPPktHdr));
-	hdr->length = sizeof(T) + 1;
-	hdr->type = T::Code;
-        return (void *)&hdr[1];
+	Frame *frame = (Frame *)(this->data() + sizeof(UDPPktHdr));
+	frame->len = sizeof(T);
+	frame->type = T::Code;
+        return (void *)&frame[1];
       }
 
       void resendReq(ZuString session, uint64_t seqNo, uint16_t count) {
@@ -122,8 +124,8 @@ namespace MxMDPubSub {
 	char *ptr = (char *)pktHdr.ptr();
 	unsigned n = pktHdr.count;
 	for (unsigned i = 0; i < n; i++) {
-	  unsigned length = ((UDPHdr *)ptr)->length;
-	  ptr += sizeof(UDPHdr) + length - 1;
+	  unsigned length = ((Frame *)ptr)->len;
+	  ptr += sizeof(Frame) + length;
 	  if (ptr > end) { n = i; ptr = end; break; }
 	  if (ptr == end) { n = i + 1; break; }
 	}
@@ -157,8 +159,8 @@ namespace MxMDPubSub {
 	char *end = this->data() + this->length();
 	char *ptr = (char *)pktHdr.ptr();
 	for (unsigned i = 0; i < n; i++) {
-	  unsigned length = ((UDPHdr *)ptr)->length;
-	  ptr += sizeof(UDPHdr) + length - 1;
+	  unsigned length = ((Frame *)ptr)->len;
+	  ptr += sizeof(Frame) + length;
 	  if (ZuUnlikely(ptr > end)) {
 	    this->length(0);
 	    return pktHdr.count = 0;
@@ -181,8 +183,8 @@ namespace MxMDPubSub {
 	char *ptr = (char *)pktHdr.ptr();
 	n = count - n;
 	for (unsigned i = 0; i < n; i++) {
-	  unsigned length = ((UDPHdr *)ptr)->length;
-	  ptr += sizeof(UDPHdr) + length - 1;
+	  unsigned length = ((Frame *)ptr)->len;
+	  ptr += sizeof(Frame) + length;
 	  if (ZuUnlikely(ptr > end)) {
 	    this->length(0);
 	    return pktHdr.count = 0;
@@ -219,12 +221,12 @@ namespace MxMDPubSub {
 	  m_msg(i.m_msg), m_ptr(i.m_ptr) { }
 	inline ~Iterator() { }
 
-	inline const UDPHdr *iterate() {
+	inline const Frame *iterate() {
 	  const char *end = m_msg.data() + m_msg.length();
 	  if (m_ptr >= end) return 0;
-	  const UDPHdr *hdr = (const UDPHdr *)m_ptr;
-	  m_ptr += sizeof(UDPHdr) + hdr->length - 1;
-	  return hdr;
+	  const Frame *frame = (const Frame *)m_ptr;
+	  m_ptr += sizeof(Frame) + frame->len;
+	  return frame;
 	}
 
       private:
@@ -289,15 +291,16 @@ namespace MxMDPubSub {
     public:
       typedef typename MxMDPubSub::Msg<Derived, Size> Base;
       typedef typename Base::Fn Fn;
+      typedef MxMDStream::Frame Frame;
 
       inline Msg() { }
 
       template <typename T> inline void *out() {
-	unsigned length = sizeof(TCPHdr) + sizeof(T);
-	if (length >= Size) return 0;
+	unsigned length = sizeof(Frame) + sizeof(T);
+	if (length >= Size) return nullptr;
 	this->length(length);
-	TCPHdr *hdr = new (this->ptr()) TCPHdr{sizeof(T) + 1, T::Code};
-	return (void *)&hdr[1];
+	Frame *frame = new (this->ptr()) Frame{sizeof(T), T::Code};
+	return (void *)&frame[1];
       }
 
     private:
@@ -317,9 +320,9 @@ namespace MxMDPubSub {
     private:
       void rcvd_(ZiIOContext &io) {
 	this->length(io.offset += io.length);
-	while (this->length() >= sizeof(TCPHdr)) {
-	  TCPHdr &hdr = this->template as<TCPHdr>();
-	  unsigned msgLen = sizeof(TCPHdr) + hdr.length - 1;
+	while (this->length() >= sizeof(Frame)) {
+	  Frame &frame = this->template as<Frame>();
+	  unsigned msgLen = sizeof(Frame) + frame.len;
 	  if (ZuUnlikely(msgLen > Size)) {
 	    ZeLOG(Error, "received corrupt TCP message");
 	    io.disconnect();

@@ -42,7 +42,7 @@ typedef ZvCSVColumn<ZvCSVColType::Int, MxUInt> MxUIntCol;
 typedef ZvCSVColumn<ZvCSVColType::Float, MxFloat> MxFloatCol;
 typedef ZvCSVColumn<ZvCSVColType::Int, MxNDP> MxNDPCol;
 typedef ZvCSVColumn<ZvCSVColType::Int, MxRatio> MxRatioCol;
-typedef ZvCSVColumn<ZvCSVColType::Time, MxDateTime> TimeCol;
+typedef ZvCSVColumn<ZvCSVColType::Time, MxDateTime> MxTimeCol;
 typedef ZvCSVColumn<ZvCSVColType::String, MxSymString> MxSymStrCol;
 typedef ZvCSVColumn<ZvCSVColType::String, MxIDString> MxIDStrCol;
 template <typename Map> using MxEnumCol = ZvCSVEnumColumn<MxEnum, Map>;
@@ -124,28 +124,28 @@ public:
   }
 };
 
-class MxFixedCol : public ZvCSVColumn<ZvCSVColType::Func, MxFixed> {
-  typedef ZvCSVColumn<ZvCSVColType::Func, MxFixed> Base;
+class MxValueCol : public ZvCSVColumn<ZvCSVColType::Func, MxValue> {
+  typedef ZvCSVColumn<ZvCSVColType::Func, MxValue> Base;
   typedef typename Base::ParseFn ParseFn;
   typedef typename Base::PlaceFn PlaceFn;
 public:
   template <typename ID>
-  inline MxFixedCol(const ID &id, int offset, int ndpOffset) :
+  inline MxValueCol(const ID &id, int offset, int ndpOffset) :
     Base(id, offset,
-	ParseFn::Member<&MxFixedCol::parse>::fn(this),
-	PlaceFn::Member<&MxFixedCol::place>::fn(this)),
+	ParseFn::Member<&MxValueCol::parse>::fn(this),
+	PlaceFn::Member<&MxValueCol::place>::fn(this)),
     m_ndpOffset(ndpOffset - offset) { }
-  virtual ~MxFixedCol() { }
+  virtual ~MxValueCol() { }
 
-  void parse(MxFixed *f, ZuString b) {
-    *f = MxFixedNDP{b, ndp(f)}.value;
+  void parse(MxValue *f, ZuString b) {
+    *f = MxValNDP{b, ndp(f)}.value;
   }
-  void place(ZtArray<char> &b, const MxFixed *f) {
-    b << MxFixedNDP{*f, ndp(f)};
+  void place(ZtArray<char> &b, const MxValue *f) {
+    b << MxValNDP{*f, ndp(f)};
   }
 
 private:
-  ZuInline MxNDP ndp(const MxFixed *f) {
+  ZuInline MxNDP ndp(const MxValue *f) {
     return *(const MxNDP *)((const char *)(const void *)f + m_ndpOffset);
   }
 

@@ -90,59 +90,60 @@ typedef ZuBox<uint64_t, MxSeqNoCmp> MxSeqNo;
 
 typedef ZuID MxID; // Note: different than MxIDString
 
-// MxFixed value range is +/- 10^18
-typedef MxInt64 MxFixed;	// fixed point value (numerator)
+// MxValue value range is +/- 10^18
+typedef MxInt64 MxValue;	// fixed point value (numerator)
 typedef MxUInt8 MxNDP;		// number of decimal places (log10(denominator))
 typedef MxUInt8 MxRatio;	// ratio numerator (orders w/ multiple legs)
 				// (denominator is sum of individual ratios)
-// MxFixedReset is the sentinel value used to reset values to null
-#define MxFixedReset (MxFixed{(int64_t)-1000000000000000000ULL})
+// MxValueReset is the sentinel value used to reset values to null
+#define MxValueReset (MxValue{(int64_t)-1000000000000000000ULL})
 
 // combination of value and ndp, used as a temporary for conversions & IO
 // constructors / scanning:
-//   MxFixedNDP(<integer>, ndp)			// {1042, 2} -> 10.42
-//   MxFixedNDP(<floating point>, ndp)		// {10.42, 2} -> 10.42
-//   MxFixedNDP(<string>, ndp)			// {"10.42", 2} -> 10.42
-//   MxFixed x = MxFixedNDP{"42.42", 2}.value	// x == 4242
-//   MxFixedNDP xn{x, 2}; xn *= MxFixedNDP{2000, 3}; x = xn.value // x == 8484
+//   MxValNDP(<integer>, ndp)			// {1042, 2} -> 10.42
+//   MxValNDP(<floating point>, ndp)		// {10.42, 2} -> 10.42
+//   MxValNDP(<string>, ndp)			// {"10.42", 2} -> 10.42
+//   MxValue x = MxValNDP{"42.42", 2}.value	// x == 4242
+//   MxValNDP xn{x, 2}; xn *= MxValNDP{2000, 3}; x = xn.value // x == 8484
 // printing:
-//   s << MxFixedNDP{...}		// print (default)
-//   s << MxFixedNDP{...}.fmt(ZuFmt...)	// print (compile-time formatted)
-//   s << MxFixedNDP{...}.vfmt(ZuVFmt...)// print (variable run-time formatted)
-//   s << MxFixedNDP(x, 2)				// s << "42.42"
-//   x = 4200042;					// 42000.42
-//   s << MxFixedNDP(x, 2).fmt(ZuFmt::Comma<>())	// s << "42,000.42"
+//   s << MxValNDP{...}			// print (default)
+//   s << MxValNDP{...}.fmt(ZuFmt...)	// print (compile-time formatted)
+//   s << MxValNDP{...}.vfmt(ZuVFmt...)	// print (variable run-time formatted)
+//   s << MxValNDP(x, 2)			// s << "42.42"
+//   x = 4200042;				// 42000.42
+//   s << MxValNDP(x, 2).fmt(ZuFmt::Comma<>())	// s << "42,000.42"
 
-template <typename Fmt> struct MxFixedNDPFmt;
-template <bool Ref = 0> struct MxFixedNDPVFmt;
-struct MxFixedNDP {
-  MxFixed	value;
+template <typename Fmt> struct MxValNDPFmt;	// internal
+template <bool Ref = 0> struct MxValNDPVFmt;	// internal
+
+struct MxValNDP {
+  MxValue	value;
   MxNDP		ndp;
 
   template <typename V>
-  ZuInline MxFixedNDP(V value_, MxNDP ndp_,
+  ZuInline MxValNDP(V value_, MxNDP ndp_,
       typename ZuIsIntegral<V>::T *_ = 0) :
     value(value_), ndp(ndp_) { }
 
   template <typename V>
-  ZuInline MxFixedNDP(V value_, MxNDP ndp_,
+  ZuInline MxValNDP(V value_, MxNDP ndp_,
       typename ZuIsFloatingPoint<V>::T *_ = 0) :
     value((MxFloat)value_ * ZuDecimal::pow10_64(ndp_)), ndp(ndp_) { }
 
   // multiply: NDP of result is taken from the LHS
   // a 128bit integer intermediary is used to avoid overflow
-  inline MxFixedNDP operator *(const MxFixedNDP &v) const {
-    int128_t i = (typename MxFixed::T)value;
-    i *= (typename MxFixed::T)v.value;
+  inline MxValNDP operator *(const MxValNDP &v) const {
+    int128_t i = (typename MxValue::T)value;
+    i *= (typename MxValue::T)v.value;
     i /= ZuDecimal::pow10_64(v.ndp);
     if (ZuUnlikely(i >= 1000000000000000000ULL))
-      return MxFixedNDP{MxFixed(), ndp};
-    return MxFixedNDP{(int64_t)i, ndp};
+      return MxValNDP{MxValue(), ndp};
+    return MxValNDP{(int64_t)i, ndp};
   }
 
   // scan from string, given NDP
   template <typename S>
-  inline MxFixedNDP(const S &s_, MxNDP ndp_,
+  inline MxValNDP(const S &s_, MxNDP ndp_,
       typename ZuIsString<S>::T *_ = 0) : ndp(ndp_) {
     ZuString s(s_);
     if (ZuUnlikely(!s || ndp > 18)) goto null;
@@ -173,12 +174,12 @@ struct MxFixedNDP {
     }
     return;
   null:
-    value = MxFixed();
+    value = MxValue();
     return;
   }
 
   // convert to floating point (MxFloat)
-  ZuInline MxFloat floating() const {
+  ZuInline MxFloat fp() const {
     return (MxFloat)value / (MxFloat)ZuDecimal::pow10_64(ndp);
   }
 
@@ -188,64 +189,64 @@ struct MxFixedNDP {
 
   template <typename S> void print(S &s) const;
 
-  template <typename Fmt> MxFixedNDPFmt<Fmt> fmt(Fmt) const;
-  MxFixedNDPVFmt<> vfmt() const;
-  MxFixedNDPVFmt<1> vfmt(ZuVFmt &) const;
+  template <typename Fmt> MxValNDPFmt<Fmt> fmt(Fmt) const;
+  MxValNDPVFmt<> vfmt() const;
+  MxValNDPVFmt<1> vfmt(ZuVFmt &) const;
 };
-template <typename Fmt> struct MxFixedNDPFmt {
-  const MxFixedNDP	&fixedNDP;
+template <typename Fmt> struct MxValNDPFmt {
+  const MxValNDP	&fixedNDP;
 
   template <typename S> inline void print(S &s) const {
-    MxFixed iv = fixedNDP.value;
+    MxValue iv = fixedNDP.value;
     if (ZuUnlikely(iv < 0)) { s << '-'; iv = -iv; }
     uint64_t factor = ZuDecimal::pow10_64(fixedNDP.ndp);
-    MxFixed fv = iv % factor;
+    MxValue fv = iv % factor;
     iv /= factor;
     s << ZuBoxed(iv).fmt(Fmt());
     if (fv) s << '.' << ZuBoxed(fv).vfmt().frac(fixedNDP.ndp);
   }
 };
 template <typename Fmt>
-struct ZuPrint<MxFixedNDPFmt<Fmt> > : public ZuPrintFn { };
+struct ZuPrint<MxValNDPFmt<Fmt> > : public ZuPrintFn { };
 template <class Fmt>
-ZuInline MxFixedNDPFmt<Fmt> MxFixedNDP::fmt(Fmt) const
+ZuInline MxValNDPFmt<Fmt> MxValNDP::fmt(Fmt) const
 {
-  return MxFixedNDPFmt<Fmt>{*this};
+  return MxValNDPFmt<Fmt>{*this};
 }
-template <typename S> inline void MxFixedNDP::print(S &s) const
+template <typename S> inline void MxValNDP::print(S &s) const
 {
-  s << MxFixedNDPFmt<ZuFmt::Default>{*this};
+  s << MxValNDPFmt<ZuFmt::Default>{*this};
 }
-template <> struct ZuPrint<MxFixedNDP> : public ZuPrintFn { };
+template <> struct ZuPrint<MxValNDP> : public ZuPrintFn { };
 template <bool Ref>
-struct MxFixedNDPVFmt : public ZuVFmtWrapper<MxFixedNDPVFmt<Ref>, Ref> {
-  const MxFixedNDP	&fixedNDP;
+struct MxValNDPVFmt : public ZuVFmtWrapper<MxValNDPVFmt<Ref>, Ref> {
+  const MxValNDP	&fixedNDP;
 
-  ZuInline MxFixedNDPVFmt(const MxFixedNDP &fixedNDP_) :
+  ZuInline MxValNDPVFmt(const MxValNDP &fixedNDP_) :
     fixedNDP{fixedNDP_} { }
-  ZuInline MxFixedNDPVFmt(const MxFixedNDP &fixedNDP_, ZuVFmt &fmt_) :
-    ZuVFmtWrapper<MxFixedNDPVFmt, Ref>{fmt_}, fixedNDP{fixedNDP_} { }
+  ZuInline MxValNDPVFmt(const MxValNDP &fixedNDP_, ZuVFmt &fmt_) :
+    ZuVFmtWrapper<MxValNDPVFmt, Ref>{fmt_}, fixedNDP{fixedNDP_} { }
 
   template <typename S> inline void print(S &s) const {
-    MxFixed iv = fixedNDP.value;
+    MxValue iv = fixedNDP.value;
     if (ZuUnlikely(iv < 0)) { s << '-'; iv = -iv; }
     uint64_t factor = ZuDecimal::pow10_64(fixedNDP.ndp);
-    MxFixed fv = iv % factor;
+    MxValue fv = iv % factor;
     iv /= factor;
     s << ZuBoxed(iv).vfmt(this->fmt);
     if (fv) s << '.' << ZuBoxed(fv).vfmt().frac(fixedNDP.ndp);
   }
 };
-ZuInline MxFixedNDPVFmt<> MxFixedNDP::vfmt() const
+ZuInline MxValNDPVFmt<> MxValNDP::vfmt() const
 {
-  return MxFixedNDPVFmt<>{*this};
+  return MxValNDPVFmt<>{*this};
 }
-ZuInline MxFixedNDPVFmt<1> MxFixedNDP::vfmt(ZuVFmt &fmt) const
+ZuInline MxValNDPVFmt<1> MxValNDP::vfmt(ZuVFmt &fmt) const
 {
-  return MxFixedNDPVFmt<1>{*this, fmt};
+  return MxValNDPVFmt<1>{*this, fmt};
 }
 template <bool Ref>
-struct ZuPrint<MxFixedNDPVFmt<Ref> > : public ZuPrintFn { };
+struct ZuPrint<MxValNDPVFmt<Ref> > : public ZuPrintFn { };
 
 // MxMatch*<> - SFINAE templates used in declaring overloaded templated
 // functions that need to unambiguously specialize for the various Mx
@@ -515,7 +516,5 @@ template <typename T> struct MxOptKey_Fn : public T {
   Mx_TupleField(MxInt, strike, 3)
 };
 typedef ZuMixin<MxOptKey_, MxOptKey_Fn> MxOptKey;
-
-#undef Mx_TupleField
 
 #endif /* MxBase_HPP */

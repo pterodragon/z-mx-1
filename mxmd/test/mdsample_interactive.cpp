@@ -111,7 +111,7 @@ void refDataLoaded(MxMDVenue *venue)
 
 static ZmRef<MxMDSecHandler> secHandler;
 
-void addSecurity(MxMDSecurity *security)
+void addSecurity(MxMDSecurity *security, MxDateTime)
 {
   if (!syms) return;
   if (!syms->findKey(security->refData().symbol)) return;

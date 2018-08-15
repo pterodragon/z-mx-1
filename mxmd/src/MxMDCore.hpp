@@ -169,7 +169,7 @@ private:
   void venues(const CmdArgs &, ZtArray<char> &);
 #endif
 
-  void addVenueMap_(ZuAnyPOD *);
+  void addVenueMapping_(ZuAnyPOD *);
   void addTickSize_(ZuAnyPOD *);
   void addSecurity_(ZuAnyPOD *);
   void addOrderBook_(ZuAnyPOD *);
@@ -356,12 +356,12 @@ private:
 	});
       });
     }) || allSecurities([&snapshot](MxMDSecurity *security) -> uintptr_t {
-      return !MxMDStream::addSecurity(snapshot,
+      return !MxMDStream::addSecurity(snapshot, MxDateTime(),
 	  security->key(), security->shard()->id(),
 	  security->refData());
     }) || allOrderBooks([&snapshot](MxMDOrderBook *ob) -> uintptr_t {
       if (ob->legs() == 1) {
-	return !MxMDStream::addOrderBook(snapshot,
+	return !MxMDStream::addOrderBook(snapshot, MxDateTime(),
 	    ob->key(), ob->security()->key(),
 	    ob->tickSizeTbl()->id(), ob->lotSizes());
       } else {
@@ -373,16 +373,16 @@ private:
 	  sides[i] = ob->side(i);
 	  ratios[i] = ob->ratio(i);
 	}
-	return !MxMDStream::addCombination(snapshot,
+	return !MxMDStream::addCombination(snapshot, MxDateTime(),
 	    ob->key(), ob->pxNDP(), ob->qtyNDP(),
 	    ob->legs(), securityKeys, sides, ratios,
 	    ob->tickSizeTbl()->id(), ob->lotSizes());
       }
     }) || allVenues([&snapshot](MxMDVenue *venue) -> uintptr_t {
       return venue->allSegments([&snapshot, venue](
-	    MxID segment, MxEnum session, MxDateTime stamp) -> uintptr_t {
-	return !MxMDStream::tradingSession(snapshot,
-	    venue->id(), segment, session, stamp);
+	    const MxMDSegment &segment) -> uintptr_t {
+	return !MxMDStream::tradingSession(snapshot, segment.stamp,
+	    venue->id(), segment.id, segment.session);
       });
     }) || allOrderBooks([&snapshot](MxMDOrderBook *ob) -> uintptr_t {
       return !MxMDStream::l1(snapshot, ob->key(), ob->l1Data()) ||
@@ -405,17 +405,15 @@ private:
 	  [&snapshot, &orderCount](MxMDOrder *order) -> uintptr_t {
       ++orderCount;
       const MxMDOrderData &data = order->data();
-      return !MxMDStream::addOrder(snapshot,
+      return !MxMDStream::addOrder(snapshot, data.transactTime,
 	  order->orderBook()->key(), order->id(),
-	  data.transactTime, data.side, data.rank,
-	  data.price, data.qty, data.flags);
+	  data.side, data.rank, data.price, data.qty, data.flags);
     })) return false;
     if (orderCount) return true;
     const MxMDPxLvlData &data = pxLevel->data();
-    return MxMDStream::pxLevel(snapshot,
+    return MxMDStream::pxLevel(snapshot, data.transactTime,
 	pxLevel->obSide()->orderBook()->key(), pxLevel->side(),
-	data.transactTime, false,
-	pxLevel->price(), data.qty, data.nOrders, data.flags);
+	false, pxLevel->price(), data.qty, data.nOrders, data.flags);
   }
 
   class Snapper;
@@ -537,14 +535,7 @@ friend class Recorder;
     inline Recorder(MxMDCore *core) : m_core(core) { }
 
     void init() {
-      ZmRef<ZvCf> cf = m_core->cf()->subset("recorder", false);
-      if (!cf) {
-	cf = new ZvCf();
-	cf->set("id", "Recorder");
-	ZuStringN<16> tid{ZuBoxed(m_core->mx()->txThread())};
-	cf->set("rxThread", tid);
-	cf->set("txThread", tid);
-      }
+      ZmRef<ZvCf> cf = m_core->cf()->subset("recorder", false, true);
       MxEngine::init(m_core, this, m_core->mx(), cf);
       m_link = MxEngine::updateLink<Link>("recorder", nullptr);
       m_link->init(this);
@@ -710,7 +701,9 @@ friend class Recorder;
 
     next:
       m_link->rxRun([](Rx *rx) {
-	      static_cast<Recorder *>(static_cast<Link *>(rx)->engine())->recvMsg(rx); });
+	static_cast<Recorder *>(
+	  static_cast<Link *>(rx)->engine())->recvMsg(rx);
+      });
       return;
 
     end:
@@ -804,8 +797,6 @@ friend class Recorder;
   void replay2();
 
   ZmRef<MxMDVenue> venue(MxID id);
-  ZmRef<MxMDTickSizeTbl> tickSizeTbl(
-      MxMDVenue *venue, ZuString id, MxNDP pxNDP);
 
   void timer();
 

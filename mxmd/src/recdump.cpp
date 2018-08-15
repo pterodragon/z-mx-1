@@ -53,59 +53,60 @@ public:
 #undef Offset
 #endif
 #define Offset(x) offsetof(Data, x)
-    add(new IDCol("venue", Offset(venue)));
-    add(new IDCol("segment", Offset(segment)));
-    add(new IDStrCol("id", Offset(id)));
-    add(new EnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
-    add(new EnumCol<MxTradingSession::CSVMap>("session", Offset(session)));
+    add(new MxIDCol("venue", Offset(venue)));
+    add(new MxIDCol("segment", Offset(segment)));
+    add(new MxIDStrCol("id", Offset(id)));
+    add(new MxEnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
+    add(new MxEnumCol<MxTradingSession::CSVMap>("session", Offset(session)));
 #undef Offset
 #define Offset(x) offsetof(Data, l1Data) + offsetof(MxMDL1Data, x)
-    if (app->hhmmss())
-      add(new HHMMSSCol("stamp", Offset(stamp),
+    if (app && app->hhmmss())
+      add(new MxHHMMSSCol("stamp", Offset(stamp),
 	    app->yyyymmdd(), app->tzOffset()));
     else
-      add(new TimeCol("stamp", Offset(stamp), app->tzOffset()));
-    add(new EnumCol<MxTradingStatus::CSVMap>("status", Offset(status)));
-    add(new FloatCol("base", Offset(base), app->ndp()));
+      add(new MxTimeCol("stamp", Offset(stamp),
+	    app ? app->tzOffset() : 0));
+    add(new MxEnumCol<MxTradingStatus::CSVMap>("status", Offset(status)));
+    add(new MxFloatCol("base", Offset(base), app->ndp()));
     for (unsigned i = 0; i < MxMDNSessions; i++) {
       ZuStringN<8> open = "open"; open << ZuBoxed(i);
       ZuStringN<8> close = "close"; close << ZuBoxed(i);
-      add(new FloatCol(open,
+      add(new MxFloatCol(open,
 	    Offset(open) + (i * sizeof(MxFloat)), app->ndp()));
-      add(new FloatCol(close,
+      add(new MxFloatCol(close,
 	    Offset(close) + (i * sizeof(MxFloat)), app->ndp()));
     }
-    add(new FloatCol("last", Offset(last), app->ndp()));
-    add(new FloatCol("lastQty", Offset(lastQty), app->ndp()));
-    add(new FloatCol("bid", Offset(bid), app->ndp()));
-    add(new FloatCol("bidQty", Offset(bidQty), app->ndp()));
-    add(new FloatCol("ask", Offset(ask), app->ndp()));
-    add(new FloatCol("askQty", Offset(askQty), app->ndp()));
-    add(new EnumCol<MxTickDir::CSVMap>("tickDir", Offset(tickDir)));
-    add(new FloatCol("high", Offset(high), app->ndp()));
-    add(new FloatCol("low", Offset(low), app->ndp()));
-    add(new FloatCol("accVol", Offset(accVol), app->ndp()));
-    add(new FloatCol("accVolQty", Offset(accVolQty), app->ndp()));
-    add(new FloatCol("match", Offset(match), app->ndp()));
-    add(new FloatCol("matchQty", Offset(matchQty), app->ndp()));
-    add(new FloatCol("surplusQty", Offset(surplusQty), app->ndp()));
-    add(new FlagsCol<MxMDL1Flags>("l1Flags",
+    add(new MxFloatCol("last", Offset(last), app->ndp()));
+    add(new MxFloatCol("lastQty", Offset(lastQty), app->ndp()));
+    add(new MxFloatCol("bid", Offset(bid), app->ndp()));
+    add(new MxFloatCol("bidQty", Offset(bidQty), app->ndp()));
+    add(new MxFloatCol("ask", Offset(ask), app->ndp()));
+    add(new MxFloatCol("askQty", Offset(askQty), app->ndp()));
+    add(new MxEnumCol<MxTickDir::CSVMap>("tickDir", Offset(tickDir)));
+    add(new MxFloatCol("high", Offset(high), app->ndp()));
+    add(new MxFloatCol("low", Offset(low), app->ndp()));
+    add(new MxFloatCol("accVol", Offset(accVol), app->ndp()));
+    add(new MxFloatCol("accVolQty", Offset(accVolQty), app->ndp()));
+    add(new MxFloatCol("match", Offset(match), app->ndp()));
+    add(new MxFloatCol("matchQty", Offset(matchQty), app->ndp()));
+    add(new MxFloatCol("surplusQty", Offset(surplusQty), app->ndp()));
+    add(new MxMDVenueFlagsCol<MxMDL1Flags>("l1Flags",
 	  Offset(flags), offsetof(Data, venue)));
 #undef Offset
 #define Offset(x) offsetof(Data, l2Data) + offsetof(L2Data, x)
-    add(new IDStrCol("orderID", Offset(orderID)));
-    add(new EnumCol<MxSide::CSVMap>("side", Offset(side)));
-    add(new IntCol("rank", Offset(rank)));
-    add(new BoolCol("delta", Offset(delta)));
-    add(new FloatCol("price", Offset(price), app->ndp()));
-    add(new FloatCol("qty", Offset(qty), app->ndp()));
-    add(new FloatCol("nOrders", Offset(nOrders), app->ndp()));
-    add(new FlagsCol<MxMDL2Flags>("l2Flags",
+    add(new MxIDStrCol("orderID", Offset(orderID)));
+    add(new MxEnumCol<MxSide::CSVMap>("side", Offset(side)));
+    add(new MxIntCol("rank", Offset(rank)));
+    add(new MxBoolCol("delta", Offset(delta)));
+    add(new MxFloatCol("price", Offset(price), app->ndp()));
+    add(new MxFloatCol("qty", Offset(qty), app->ndp()));
+    add(new MxFloatCol("nOrders", Offset(nOrders), app->ndp()));
+    add(new MxMDVenueFlagsCol<MxMDL2Flags>("l2Flags",
 	  Offset(flags), offsetof(Data, venue)));
-    add(new FlagsCol<MxMDOrderFlags>("orderFlags",
+    add(new MxMDVenueFlagsCol<MxMDOrderFlags>("orderFlags",
 	  Offset(orderFlags), offsetof(Data, venue)));
 #undef Offset
-    add(new BoolCol("updateL1", offsetof(Data, updateL1)));
+    add(new MxBoolCol("updateL1", offsetof(Data, updateL1)));
   }
 
   ZuAnyPOD *row(const MxMDStream::Msg *msg) {
@@ -217,8 +218,8 @@ class CSVWriter : public ZuObject, public CSV {
 public:
   typedef MxMDStream::Msg Msg;
 
-  template <typename Path, typename App>
-  CSVWriter(const Path &path, App *app) : CSV(app), m_path(path) { }
+  template <typename App, typename Path>
+  CSVWriter(App *app, const Path &path) : CSV(app), m_path(path) { }
 
   void start() { m_fn = this->writeFile(m_path); }
 
@@ -296,19 +297,19 @@ public:
 
   template <typename Path>
   inline void tickSizeCSV(const Path &path) {
-    m_tickSizeCSV = new CSVWriter<MxMDTickSizeCSV>(path, this);
+    m_tickSizeCSV = new CSVWriter<MxMDTickSizeCSV>(this, path);
   }
   template <typename Path>
   inline void securityCSV(const Path &path) {
-    m_securityCSV = new CSVWriter<MxMDSecurityCSV>(path, this);
+    m_securityCSV = new CSVWriter<MxMDSecurityCSV>(this, path);
   }
   template <typename Path>
   inline void orderBookCSV(const Path &path) {
-    m_orderBookCSV = new CSVWriter<MxMDOrderBookCSV>(path, this);
+    m_orderBookCSV = new CSVWriter<MxMDOrderBookCSV>(this, path);
   }
   template <typename Path>
   inline void realTimeCSV(const Path &path) {
-    m_realTimeCSV = new CSVWriter<RealTimeCSV>(path, this);
+    m_realTimeCSV = new CSVWriter<RealTimeCSV>(this, path);
   }
 
   // application control

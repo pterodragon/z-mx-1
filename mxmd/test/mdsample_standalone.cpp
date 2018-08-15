@@ -86,44 +86,47 @@ int main(int argc, char **argv)
 
 // subscriber
 
-void l1(MxMDOrderBook *orderBook, const MxMDL1Data &l1Data)
+void l1(MxMDOrderBook *ob, const MxMDL1Data &l1Data)
 {
   // if last traded price changed, print it
   if (!!*l1Data.last)
     printf("tick %s -> %f\n",
-	   orderBook->id().data(),
-	   (double)l1Data.last);
+	   ob->id().data(),
+	   (double)MxValNDP{l1Data.last, ob->pxNDP()}.fp());
 }
 
-void l2(MxMDOrderBook *orderBook, MxDateTime stamp)
+void l2(MxMDOrderBook *ob, MxDateTime stamp)
 {
-  printf("L2 updated %s\n", orderBook->id().data());
+  printf("L2 updated %s\n", ob->id().data());
 }
 
 void addOrder(MxMDOrder *order, MxDateTime stamp)
 {
+  MxMDOrderBook *ob = order->orderBook();
   printf("add order %s %s %s px=%f qty=%f\n",
-      order->orderBook()->id().data(),
+      ob->id().data(),
       order->id().data(),
       MxSide::name(order->data().side),
-      (double)order->data().price,
-      (double)order->data().qty);
+      (double)MxValNDP{order->data().price, ob->pxNDP()}.fp(),
+      (double)MxValNDP{order->data().qty, ob->pxNDP()}.fp());
 }
 
 void canceledOrder(MxMDOrder *order, MxDateTime stamp)
 {
+  MxMDOrderBook *ob = order->orderBook();
   printf("canceled order %s %s %s px=%f qty=%f\n",
-      order->orderBook()->id().data(),
+      ob->id().data(),
       order->id().data(),
       MxSide::name(order->data().side),
-      (double)order->data().price,
-      (double)order->data().qty);
+      (double)MxValNDP{order->data().price, ob->pxNDP()}.fp(),
+      (double)MxValNDP{order->data().qty, ob->pxNDP()}.fp());
 }
 
 void addPxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
 {
+  MxMDOrderBook *ob = pxLevel->obSide()->orderBook();
   printf("add px level %s %s px=%f qty=%f\n",
-      pxLevel->obSide()->orderBook()->id().data(),
+      ob->id().data(),
       MxSide::name(pxLevel->side()),
       (double)pxLevel->price(),
       (double)pxLevel->data().qty);
@@ -131,8 +134,9 @@ void addPxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
 
 void updatedPxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
 {
+  MxMDOrderBook *ob = pxLevel->obSide()->orderBook();
   printf("updated px level %s %s px=%f qty=%f\n",
-      pxLevel->obSide()->orderBook()->id().data(),
+      ob->id().data(),
       MxSide::name(pxLevel->side()),
       (double)pxLevel->price(),
       (double)pxLevel->data().qty);
@@ -140,8 +144,9 @@ void updatedPxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
 
 void deletedPxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
 {
+  MxMDOrderBook *ob = pxLevel->obSide()->orderBook();
   printf("deleted px level %s %s px=%f qty=%f\n",
-      pxLevel->obSide()->orderBook()->id().data(),
+      ob->id().data(),
       MxSide::name(pxLevel->side()),
       (double)pxLevel->price(),
       (double)pxLevel->data().qty);
@@ -249,7 +254,7 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 
     // add a tick size table
 
-    ZmRef<MxMDTickSizeTbl> tickSizeTbl = venue->addTickSizeTbl("1");
+    ZmRef<MxMDTickSizeTbl> tickSizeTbl = venue->addTickSizeTbl("1", 0);
     if (!tickSizeTbl) throw ZtString("MxMDVenue::addTickSizeTbl() failed");
     // tick size 1 from 0 to infinity
     tickSizeTbl->addTickSize(0, MxFloat::inf(), 1);
@@ -276,6 +281,8 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
       refData.symbol = *ticker;
       refData.altIDSrc = MxSecIDSrc::RIC;
       refData.altSymbol = *ticker; refData.altSymbol += ".T";
+      refData.pxNDP = 2;
+      refData.qtyNDP = 2;
 
       // add the security
 
@@ -289,7 +296,7 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 
 	// this runs inside shard 0
 
-	sec = shard->addSecurity(ZuMv(sec), secKey, refData); 
+	sec = shard->addSecurity(ZuMv(sec), secKey, refData, MxDateTime()); 
 
 	if (ZuUnlikely(!sec)) {
 	  error = "MxMDLib::addSecurity() failed";
@@ -302,7 +309,8 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 	ZmRef<MxMDOrderBook> orderBook = sec->addOrderBook(
 	  secKey,			// primary key for order book
 	  tickSizeTbl,			// tick sizes
-	  lotSizes);			// lot sizes
+	  lotSizes,			// lot sizes
+	  MxDateTime());
 	if (ZuUnlikely(!orderBook)) {
 	  error = "MxMDSecurity::addOrderBook() failed";
 	  sem->post();
@@ -359,10 +367,10 @@ void publish()
 
 	  MxMDL1Data l1Data;
 	  l1Data.stamp = MxDateTime(MxDateTime::Now);
-	  l1Data.last = MxFloat(ZmRand::randExc(90) + 10); // 10-100
-
+	  l1Data.last = MxValNDP{ZmRand::randExc(90) + 10, 2}.value; // 10-100
 	  ob->l1(l1Data);
 
+#if 0
 	  ob->addOrder("foo",
 	      l1Data.stamp, MxSide::Sell,
 	      1, 100, 100, 0);
@@ -384,6 +392,7 @@ void publish()
 	  ob->modifyOrder("foo",
 	      l1Data.stamp, MxSide::Sell,
 	      1, 50, 0, 0);
+#endif
 	});
       }
 

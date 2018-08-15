@@ -37,20 +37,28 @@
 #include <MxBase.hpp>
 #include <MxCSV.hpp>
 
+#include <MxMDTypes.hpp>
 #include <MxMDStream.hpp>
 
-class MxVenueFlagsCol : public ZvCSVColumn<ZvCSVColType::Func, MxFlags> {
+struct MxMDDefaultCSVApp {
+  inline bool hhmmss() { return false; }
+  inline unsigned yyyymmdd() { return 0; }
+  inline int tzOffset() { return 0; }
+};
+
+template <typename Flags>
+class MxMDVenueFlagsCol : public ZvCSVColumn<ZvCSVColType::Func, MxFlags> {
   typedef ZvCSVColumn<ZvCSVColType::Func, MxFlags> Base;
   typedef typename Base::ParseFn ParseFn;
   typedef typename Base::PlaceFn PlaceFn;
 public:
   template <typename ID>
-  inline MxVenueFlagsCol(const ID &id, int offset, int venueOffset) :
+  inline MxMDVenueFlagsCol(const ID &id, int offset, int venueOffset) :
     Base(id, offset,
-	ParseFn::Member<&MxVenueFlagsCol::parse>::fn(this),
-	PlaceFn::Member<&MxVenueFlagsCol::place>::fn(this)),
+	ParseFn::Member<&MxMDVenueFlagsCol::parse>::fn(this),
+	PlaceFn::Member<&MxMDVenueFlagsCol::place>::fn(this)),
     m_venueOffset(venueOffset - offset) { }
-  virtual ~MxVenueFlagsCol() { }
+  virtual ~MxMDVenueFlagsCol() { }
 
   void parse(MxFlags *f, ZuString b) {
     unsigned i, n = b.length(); if (n > 9) n = 9;
@@ -84,14 +92,14 @@ public:
     MxID		venue;
     MxIDString		id;
     MxNDP		pxNDP;
-    MxFixed		minPrice;
-    MxFixed		maxPrice;
-    MxFixed		tickSize;
+    MxValue		minPrice;
+    MxValue		maxPrice;
+    MxValue		tickSize;
   };
   typedef ZuPOD<Data> POD;
 
-  template <typename App>
-  TickSizeCSV(App *app) {
+  template <typename App = MxMDDefaultCSVApp>
+  MxMDTickSizeCSV(App *app = 0) {
     new ((m_pod = new POD())->ptr()) Data{};
 #ifdef Offset
 #undef Offset
@@ -100,10 +108,10 @@ public:
     add(new MxEnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
     add(new MxIDCol("venue", Offset(venue)));
     add(new MxIDStrCol("id", Offset(id)));
-    add(new MxNDPCol("pxNDP", Offset(pxNDP));
-    add(new MxFixedCol("minPrice", Offset(minPrice), Offset(pxNDP));
-    add(new MxFixedCol("maxPrice", Offset(maxPrice), Offset(pxNDP));
-    add(new MxFixedCol("tickSize", Offset(tickSize), Offset(pxNDP));
+    add(new MxNDPCol("pxNDP", Offset(pxNDP)));
+    add(new MxValueCol("minPrice", Offset(minPrice), Offset(pxNDP)));
+    add(new MxValueCol("maxPrice", Offset(maxPrice), Offset(pxNDP)));
+    add(new MxValueCol("tickSize", Offset(tickSize), Offset(pxNDP)));
 #undef Offset
   }
 
@@ -126,14 +134,14 @@ public:
 	case Type::ResetTickSizeTbl:
 	  {
 	    const AddTickSizeTbl &obj = frame->as<AddTickSizeTbl>();
-	    new (data) Data{frame->type, obj.venue, obj.id};
+	    new (data) Data{frame->type, obj.venue, obj.id, obj.pxNDP};
 	  }
 	  break;
 	case Type::AddTickSize:
 	  {
 	    const AddTickSize &obj = frame->as<AddTickSize>();
-	    new (data) Data{frame->type, obj.venue, obj.id,
-	      obj.minPrice, obj.maxPrice, obj.tickSize};
+	    new (data) Data{frame->type,
+	      obj.venue, obj.id, obj.minPrice, obj.maxPrice, obj.tickSize};
 	  }
 	  break;
 	default:
@@ -155,6 +163,7 @@ class MxMDSecurityCSV : public ZvCSV {
 public:
   struct Data {
     MxEnum		event;
+    MxDateTime		transactTime;
     MxID		venue;
     MxID		segment;
     MxIDString		id;
@@ -163,13 +172,20 @@ public:
   };
   typedef ZuPOD<Data> POD;
 
-  MxMDSecurityCSV() {
+  template <typename App = MxMDDefaultCSVApp>
+  MxMDSecurityCSV(App *app = 0) {
     new ((m_pod = new POD())->ptr()) Data{};
 #ifdef Offset
 #undef Offset
 #endif
 #define Offset(x) offsetof(Data, x)
     add(new MxEnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
+    if (app && app->hhmmss())
+      add(new MxHHMMSSCol("transactTime", Offset(transactTime),
+	    app->yyyymmdd(), app->tzOffset()));
+    else
+      add(new MxTimeCol("transactTime", Offset(transactTime),
+	    app ? app->tzOffset() : 0));
     add(new MxIDCol("venue", Offset(venue)));
     add(new MxIDCol("segment", Offset(segment)));
     add(new MxIDStrCol("id", Offset(id)));
@@ -188,9 +204,9 @@ public:
     add(new MxEnumCol<MxPutCall::CSVMap>("putCall", Offset(putCall)));
     add(new MxNDPCol("pxNDP", Offset(pxNDP)));
     add(new MxNDPCol("qtyNDP", Offset(qtyNDP)));
-    add(new MxFixedCol("strike", Offset(strike), Offset(pxNDP)));
+    add(new MxValueCol("strike", Offset(strike), Offset(pxNDP)));
     add(new MxUIntCol("outstandingShares", Offset(outstandingShares)));
-    add(new MxFixedCol("adv", Offset(adv), Offset(pxNDP)));
+    add(new MxValueCol("adv", Offset(adv), Offset(pxNDP)));
 #undef Offset
   }
 
@@ -212,17 +228,17 @@ public:
 	case Type::AddSecurity:
 	  {
 	    const AddSecurity &obj = frame->as<AddSecurity>();
-	    new (data) Data{
+	    new (data) Data{frame->type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
-	      frame->type, obj.shard, obj.refData};
+	      obj.shard, obj.refData};
 	  }
 	  break;
 	case Type::UpdateSecurity:
 	  {
 	    const UpdateSecurity &obj = frame->as<UpdateSecurity>();
-	    new (data) Data{
+	    new (data) Data{frame->type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
-	      frame->type, {}, obj.refData};
+	      {}, obj.refData};
 	  }
 	  break;
 	default:
@@ -244,6 +260,7 @@ class MxMDOrderBookCSV : public ZvCSV {
 public:
   struct Data {
     MxEnum		event;
+    MxDateTime		transactTime;
     MxID		venue;
     MxID		segment;
     MxIDString		id;
@@ -260,13 +277,20 @@ public:
   };
   typedef ZuPOD<Data> POD;
 
-  MxMDOrderBookCSV() {
+  template <typename App = MxMDDefaultCSVApp>
+  MxMDOrderBookCSV(App *app = 0) {
     new ((m_pod = new POD())->ptr()) Data{};
 #ifdef Offset
 #undef Offset
 #endif
 #define Offset(x) offsetof(Data, x)
     add(new MxEnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
+    if (app && app->hhmmss())
+      add(new MxHHMMSSCol("transactTime", Offset(transactTime),
+	    app->yyyymmdd(), app->tzOffset()));
+    else
+      add(new MxTimeCol("transactTime", Offset(transactTime),
+	    app ? app->tzOffset() : 0));
     add(new MxIDCol("venue", Offset(venue)));
     add(new MxIDCol("segment", Offset(segment)));
     add(new MxIDStrCol("id", Offset(id)));
@@ -292,9 +316,9 @@ public:
     int offsetQtyNDP = Offset(qtyNDP);
 #undef Offset
 #define Offset(x) offsetof(Data, lotSizes) + offsetof(MxMDLotSizes, x)
-    add(new MxFixedCol("oddLotSize", Offset(oddLotSize), offsetQtyNDP));
-    add(new MxFixedCol("lotSize", Offset(lotSize), offsetQtyNDP));
-    add(new MxFixedCol("blockLotSize", Offset(blockLotSize), offsetQtyNDP));
+    add(new MxValueCol("oddLotSize", Offset(oddLotSize), offsetQtyNDP));
+    add(new MxValueCol("lotSize", Offset(lotSize), offsetQtyNDP));
+    add(new MxValueCol("blockLotSize", Offset(blockLotSize), offsetQtyNDP));
 #undef Offset
   }
 
@@ -316,33 +340,30 @@ public:
 	case Type::AddOrderBook:
 	  {
 	    const AddOrderBook &obj = frame->as<AddOrderBook>();
-	    new (data) Data{
-	      frame->type,
+	    new (data) Data{frame->type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
-	      {}, {}, 1,
+	      {}, {}, 1, obj.tickSizeTbl, obj.lotSizes,
 	      { obj.security.venue() },
 	      { obj.security.segment() },
 	      { obj.security.id() },
-	      {}, {},
-	      obj.tickSizeTbl, obj.lotSizes};
+	      {}, {} };
 	  }
 	  break;
 	case Type::DelOrderBook:
 	  {
 	    const DelOrderBook &obj = frame->as<DelOrderBook>();
-	    new (data) Data{
-	      frame->type, obj.key.venue(), obj.key.segment(), obj.key.id()};
+	    new (data) Data{frame->type, obj.transactTime,
+	      obj.key.venue(), obj.key.segment(), obj.key.id()};
 	  }
 	  break;
 	case Type::AddCombination:
 	  {
 	    const AddCombination &obj = frame->as<AddCombination>();
-	    new (data) Data{
-	      frame->type,
+	    new (data) Data{frame->type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
-	      obj.pxNDP, obj.qtyNDP,
-	      obj.legs, {}, {}, {}, {}, {},
-	      obj.tickSizeTbl, obj.lotSizes};
+	      obj.pxNDP, obj.qtyNDP, obj.legs,
+	      obj.tickSizeTbl, obj.lotSizes,
+	      {}, {}, {}, {}, {} };
 	    for (unsigned i = 0, n = obj.legs; i < n; i++) {
 	      data->secVenues[i] = obj.securities[i].venue();
 	      data->secSegments[i] = obj.securities[i].segment();
@@ -355,17 +376,17 @@ public:
 	case Type::DelCombination:
 	  {
 	    const DelCombination &obj = frame->as<DelCombination>();
-	    new (data) Data{
-	      frame->type, obj.key.venue(), obj.key.segment(), obj.key.id() };
+	    new (data) Data{frame->type, obj.transactTime,
+	      obj.key.venue(), obj.key.segment(), obj.key.id() };
 	  }
 	  break;
 	case Type::UpdateOrderBook:
 	  {
 	    const UpdateOrderBook &obj = frame->as<UpdateOrderBook>();
-	    new (data) Data{
-	      frame->type, obj.key.venue(), obj.key.segment(), obj.key.id(),
-	      {}, {}, MxUInt(), {}, {}, {}, {}, {},
-	      obj.tickSizeTbl, obj.lotSizes};
+	    new (data) Data{frame->type, obj.transactTime,
+	      obj.key.venue(), obj.key.segment(), obj.key.id(),
+	      {}, {}, MxUInt(), obj.tickSizeTbl, obj.lotSizes,
+	      {}, {}, {}, {}, {} };
 	  }
 	  break;
 	default:

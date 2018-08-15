@@ -131,7 +131,7 @@ int main(int argc, const char *argv[])
   for (;;) {
     ZmRef<File> file;
     {
-      Files::Iterator i(files, Files::GreaterEqual);
+      auto i = files.iterator<ZmRBTreeGreaterEqual>();
       if (file = i.iterateVal()) i.del();
     }
     if (!file) break;

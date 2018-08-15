@@ -30,6 +30,8 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <MxBase.hpp>
+
 #ifndef MxMDNLegs
 #define MxMDNLegs 4	// up to MxNLegs legs per order
 #endif
@@ -46,17 +48,19 @@ struct MxMDSegment { // venue segment
   ZuOpBool
 };
 
-typedef ZuTuple<MxPx, MxPx, MxPx> MxMDTickSize_;
+typedef ZuTuple<MxValue, MxValue, MxValue> MxMDTickSize_;
 template <typename T> struct MxMDTickSize_Fn : public T {
-  Mx_TupleField(MxFixed, minPrice, 1);
-  Mx_TupleField(MxFixed, maxPrice, 2);
-  Mx_TupleField(MxFixed, tickSize, 3);
+  Mx_TupleField(MxValue, minPrice, 1);
+  Mx_TupleField(MxValue, maxPrice, 2);
+  Mx_TupleField(MxValue, tickSize, 3);
 };
 typedef ZuMixin<MxMDTickSize_, MxMDTickSize_Fn> MxMDTickSize;
 struct MxMDTickSize_MinPxAccessor :
     public ZuAccessor<MxMDTickSize, MxFloat> {
-  inline static MxPx value(const MxMDTickSize &t) { return t.minPrice(); }
+  inline static MxValue value(const MxMDTickSize &t) { return t.minPrice(); }
 };
+
+#pragma pack(push, 4)
 
 struct MxMDSecRefData {	// security reference data ("static data")
   MxBool	tradeable;	// usually true, is false e.g. for an index
@@ -71,15 +75,15 @@ struct MxMDSecRefData {	// security reference data ("static data")
   MxUInt	mat;		// maturity (null if not future/option)
   MxNDP		pxNDP;		// price NDP
   MxNDP		qtyNDP;		// qty NDP
-  MxFixed	strike;		// strike (null if not option)
+  MxValue	strike;		// strike (null if not option)
   MxUInt	outstandingShares; // (null if not stock)
-  MxFixed	adv;		// average daily volume
+  MxValue	adv;		// average daily volume
 };
 
 struct MxMDLotSizes {
-  MxFixed	oddLotSize;
-  MxFixed	lotSize;
-  MxFixed	blockLotSize;
+  MxValue	oddLotSize;
+  MxValue	lotSize;
+  MxValue	blockLotSize;
 
   ZuInline bool operator !() const { return !*lotSize; }
   ZuOpBool
@@ -90,23 +94,27 @@ struct MxMDL1Data {
   MxEnum	status;			// MxTradingStatus
   MxEnum	tickDir;		// MxTickDir
   // Note: all px/qty are integers scaled by 10^ndp
-  MxFixed	base;			// aka adjusted previous day's close
-  MxFixed	open[MxMDNSessions];	// [0] is open of first session
-  MxFixed	close[MxMDNSessions];	// [0] is close of first session
-  MxFixed	last;
-  MxFixed	lastQty;
-  MxFixed	bid;			// best bid
-  MxFixed	bidQty;
-  MxFixed	ask;			// best ask
-  MxFixed	askQty;
-  MxFixed	high;
-  MxFixed	low;
-  MxFloat	accVol;
-  MxFixed	accVolQty;	// VWAP = accVol / accVolQty
-  MxFixed	match;		// auction - indicative match/IAP/equilibrium
-  MxFixed	matchQty;	// auction - indicative match volume
-  MxFixed	surplusQty;	// auction - surplus volume
+  MxValue	base;			// aka adjusted previous day's close
+  MxValue	open[MxMDNSessions];	// [0] is open of first session
+  MxValue	close[MxMDNSessions];	// [0] is close of first session
+  MxValue	last;
+  MxValue	lastQty;
+  MxValue	bid;			// best bid
+  MxValue	bidQty;
+  MxValue	ask;			// best ask
+  MxValue	askQty;
+  MxValue	high;
+  MxValue	low;
+  MxValue	accVol;
+  MxValue	accVolQty;	// VWAP = accVol / accVolQty
+  MxValue	match;		// auction - indicative match/IAP/equilibrium
+  MxValue	matchQty;	// auction - indicative match volume
+  MxValue	surplusQty;	// auction - surplus volume
   MxFlags	flags;
 };
+
+typedef MxString<12> MxMDFlagsStr;
+
+#pragma pack(pop)
 
 #endif /* MxMDTypes_HPP */

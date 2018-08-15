@@ -298,6 +298,12 @@ public:
     return m_state;
   }
 
+  template <typename L>
+  inline auto stateLocked(L &&l) const {
+    ZmReadGuard<ZmLock> stateGuard(m_stateLock);
+    return l(m_state);
+  }
+
 public:
   enum { Update = 0, Advance, Defer };
 
@@ -448,7 +454,11 @@ private:
       else
 	s << ZuBoxed(status) << " bytes remaining";
       s << '\n';
-      std::cerr << s; // yuck
+#ifndef _WIN32
+      std::cerr << s << std::flush;
+#else
+      MessageBoxA(0, s, "Thread Dispatch Failure", MB_ICONEXCLAMATION);
+#endif
     }
   }
 

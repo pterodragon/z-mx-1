@@ -673,11 +673,10 @@ void MxMDCore::l1(const CmdArgs &args, ZtArray<char> &out)
       "high,low,accVol,accVolQty,match,matchQty,surplusQty,flags\n";
   for (unsigned i = 1; i < argc; i++)
     lookupOrderBook(this, args, i, 1, 1,
-	[this, &out, csv](MxMDSecurity *sec, MxMDOrderBook *ob) {
+	[this, &out, csv](MxMDSecurity *, MxMDOrderBook *ob) {
       const MxMDL1Data &l1Data = ob->l1Data();
-      const MxMDSecRefData &secRefData = sec->refData();
-      MxNDP pxNDP = secRefData.pxNDP;
-      MxNDP qtyNDP = secRefData.qtyNDP;
+      MxNDP pxNDP = l1Data.pxNDP;
+      MxNDP qtyNDP = l1Data.qtyNDP;
       MxMDFlagsStr flags;
       MxMDL1Flags::print(flags, ob->venueID(), l1Data.flags);
       if (csv) out <<
@@ -736,10 +735,10 @@ void MxMDCore::l2(const CmdArgs &args, ZtArray<char> &out)
 void MxMDCore::l2_side(MxMDOBSide *side, ZtArray<char> &out)
 {
   out << "  vwap: " << side->vwap();
-  MxID venueID = side->orderBook()->venueID();
-  const MxMDSecRefData &secRefData = side->orderBook()->security()->refData();
+  MxMDOrderBook *ob = side->orderBook();
+  MxID venueID = ob->venueID();
   side->allPxLevels([this, venueID,
-      pxNDP = secRefData.pxNDP, qtyNDP = secRefData.qtyNDP, &out](
+      pxNDP = ob->pxNDP(), qtyNDP = ob->qtyNDP(), &out](
 	MxMDPxLevel *pxLevel) -> uintptr_t {
     const MxMDPxLvlData &pxLvlData = pxLevel->data();
     MxMDFlagsStr flags;
@@ -892,9 +891,7 @@ static void writeOrderBooks(
 	  MxMDStream::Type::AddOrderBook, MxDateTime(),
 	  ob->venueID(), ob->segment(), ob->id(),
 	  ob->pxNDP(), ob->qtyNDP(),
-	  ob->legs(),
-	  ob->tickSizeTbl()->id(),
-	  ob->lotSizes() };
+	  ob->legs(), ob->tickSizeTbl()->id(), ob->lotSizes() };
       for (unsigned i = 0, n = ob->legs(); i < n; i++) {
 	MxMDSecurity *sec;
 	if (!(sec = ob->security(i))) break;
@@ -963,16 +960,21 @@ void MxMDCore::recordCmd(const CmdArgs &args, ZtArray<char> &out)
 
 void MxMDCore::record(ZuString path)
 {
-  if (!m_mx->stateLocked([this, path](int state) {
+  switch (m_mx->stateLocked([this, path](int state) {
     if (state != ZmScheduler::Running && state != ZmScheduler::Starting) {
       m_recordCfPath = path;
-      return true;
+      return 0;
     }
-    return m_recorder.start(path);
-  }))
-    fileERROR(path, "failed to start recording");
-  else
-    fileINFO(path, "started recording");
+    if (!m_recorder.start(path)) return -1;
+    return 1;
+  })) {
+    case -1:
+      fileERROR(path, "failed to start recording");
+      break;
+    case 1:
+      fileINFO(path, "started recording");
+      break;
+  }
 }
 
 void MxMDCore::stopRecording()
@@ -1220,8 +1222,21 @@ void MxMDCore::apply(Frame *frame)
       {
 	const AddTickSize &obj = frame->as<AddTickSize>();
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.venue))
-	  if (ZmRef<MxMDTickSizeTbl> tbl = venue->tickSizeTbl(obj.id))
-	    tbl->addTickSize(obj.minPrice, obj.maxPrice, obj.tickSize);
+	  if (ZmRef<MxMDTickSizeTbl> tbl = venue->tickSizeTbl(obj.id)) {
+	    if (ZuUnlikely(tbl->pxNDP() != obj.pxNDP)) {
+	      MxNDP oldNDP = obj.pxNDP, newNDP = tbl->pxNDP();
+#ifdef adjustNDP
+#undef adjustNDP
+#endif
+#define adjustNDP(v) (MxValNDP{v, oldNDP}.adjust(newNDP))
+	      tbl->addTickSize(
+		adjustNDP(obj.minPrice),
+		adjustNDP(obj.maxPrice),
+		adjustNDP(obj.tickSize));
+#undef adjustNDP
+	    } else
+	      tbl->addTickSize(obj.minPrice, obj.maxPrice, obj.tickSize);
+	  }
       }
       break;
     case Type::AddSecurity:
@@ -1252,9 +1267,24 @@ void MxMDCore::apply(Frame *frame)
 		  venue->tickSizeTbl(obj.tickSizeTbl))
 	    MxMDLib::secInvoke(obj.security, [
 		key = obj.key, tbl = ZuMv(tbl),
-		lotSizes = obj.lotSizes, transactTime = obj.transactTime](
-		  MxMDSecurity *sec) {
-	      if (sec) sec->addOrderBook(key, tbl, lotSizes, transactTime);
+		qtyNDP = obj.qtyNDP, lotSizes = obj.lotSizes,
+		transactTime = obj.transactTime](
+		  MxMDSecurity *sec) mutable {
+	      if (sec) {
+		if (ZuUnlikely(sec->refData().qtyNDP != qtyNDP)) {
+		  MxNDP newNDP = sec->refData().qtyNDP;
+#ifdef adjustNDP
+#undef adjustNDP
+#endif
+#define adjustNDP(v) v = MxValNDP{v, qtyNDP}.adjust(newNDP)
+		  adjustNDP(lotSizes.oddLotSize);
+		  adjustNDP(lotSizes.lotSize);
+		  adjustNDP(lotSizes.blockLotSize);
+#undef adjustNDP
+		  qtyNDP = newNDP;
+		}
+		sec->addOrderBook(key, tbl, lotSizes, transactTime);
+	      }
 	    });
       }
       break;
@@ -1292,8 +1322,7 @@ void MxMDCore::apply(Frame *frame)
 		    obj.key.segment(), obj.key.id(),
 		    obj.pxNDP, obj.qtyNDP,
 		    obj.legs, securities, obj.sides, obj.ratios,
-		    tbl, obj.lotSizes,
-		    obj.transactTime);
+		    tbl, obj.lotSizes, obj.transactTime);
 	      });
       }
       break;
@@ -1335,6 +1364,7 @@ void MxMDCore::apply(Frame *frame)
 	obInvoke(obj.key, [
 	    data = obj.data,
 	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
+	  // inconsistent NDP handled within MxMDOrderBook::l1()
 	  if (ob && (!replayFilter || ob->handler())) ob->l1(data);
 	});
       }
@@ -1344,11 +1374,17 @@ void MxMDCore::apply(Frame *frame)
 	const PxLevel &obj = frame->as<PxLevel>();
 	obInvoke(obj.key, [
 	    side = obj.side, transactTime = obj.transactTime,
-	    delta = obj.delta, price = obj.price, qty = obj.qty,
+	    delta = obj.delta, pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
+	    price = obj.price, qty = obj.qty,
 	    nOrders = obj.nOrders, flags = obj.flags,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
-	  if (ob && (!replayFilter || ob->handler()))
+	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
+	  if (ob && (!replayFilter || ob->handler())) {
+	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
+	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
+	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
+	      qty = MxValNDP{qty, qtyNDP}.adjust(ob->qtyNDP());
 	    ob->pxLevel(side, transactTime, delta, price, qty, nOrders, flags);
+	  }
 	});
       }
       break;
@@ -1368,13 +1404,19 @@ void MxMDCore::apply(Frame *frame)
 	const AddOrder &obj = frame->as<AddOrder>();
 	obInvoke(obj.key, [
 	    orderID = obj.orderID, transactTime = obj.transactTime,
-	    side = obj.side, rank = obj.rank, price = obj.price, qty = obj.qty,
-	    flags = obj.flags,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
-	  if (ob && (!replayFilter || ob->handler()))
+	    side = obj.side, rank = obj.rank,
+	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
+	    price = obj.price, qty = obj.qty, flags = obj.flags,
+	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
+	  if (ob && (!replayFilter || ob->handler())) {
+	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
+	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
+	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
+	      qty = MxValNDP{qty, qtyNDP}.adjust(ob->qtyNDP());
 	    ob->addOrder(
 		orderID, transactTime,
 		side, rank, price, qty, flags);
+	  }
 	});
       }
       break;
@@ -1383,13 +1425,19 @@ void MxMDCore::apply(Frame *frame)
 	const ModifyOrder &obj = frame->as<ModifyOrder>();
 	obInvoke(obj.key, [
 	    orderID = obj.orderID, transactTime = obj.transactTime,
-	    side = obj.side, rank = obj.rank, price = obj.price, qty = obj.qty,
-	    flags = obj.flags,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
-	  if (ob && (!replayFilter || ob->handler()))
+	    side = obj.side, rank = obj.rank,
+	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
+	    price = obj.price, qty = obj.qty, flags = obj.flags,
+	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
+	  if (ob && (!replayFilter || ob->handler())) {
+	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
+	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
+	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
+	      qty = MxValNDP{qty, qtyNDP}.adjust(ob->qtyNDP());
 	    ob->modifyOrder(
 		orderID, transactTime,
 		side, rank, price, qty, flags);
+	  }
 	});
       }
       break;
@@ -1422,10 +1470,16 @@ void MxMDCore::apply(Frame *frame)
 	const AddTrade &obj = frame->as<AddTrade>();
 	obInvoke(obj.key, [
 	    tradeID = obj.tradeID, transactTime = obj.transactTime,
+	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
 	    price = obj.price, qty = obj.qty,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
-	  if (ob && (!replayFilter || ob->handler()))
+	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
+	  if (ob && (!replayFilter || ob->handler())) {
+	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
+	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
+	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
+	      qty = MxValNDP{qty, qtyNDP}.adjust(ob->qtyNDP());
 	    ob->addTrade(tradeID, transactTime, price, qty);
+	  }
 	});
       }
       break;
@@ -1434,10 +1488,16 @@ void MxMDCore::apply(Frame *frame)
 	const CorrectTrade &obj = frame->as<CorrectTrade>();
 	obInvoke(obj.key, [
 	    tradeID = obj.tradeID, transactTime = obj.transactTime,
+	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
 	    price = obj.price, qty = obj.qty,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
-	  if (ob && (!replayFilter || ob->handler()))
+	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
+	  if (ob && (!replayFilter || ob->handler())) {
+	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
+	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
+	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
+	      qty = MxValNDP{qty, qtyNDP}.adjust(ob->qtyNDP());
 	    ob->correctTrade(tradeID, transactTime, price, qty);
+	  }
 	});
       }
       break;
@@ -1446,10 +1506,16 @@ void MxMDCore::apply(Frame *frame)
 	const CancelTrade &obj = frame->as<CancelTrade>();
 	obInvoke(obj.key, [
 	    tradeID = obj.tradeID, transactTime = obj.transactTime,
+	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
 	    price = obj.price, qty = obj.qty,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
-	  if (ob && (!replayFilter || ob->handler()))
+	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
+	  if (ob && (!replayFilter || ob->handler())) {
+	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
+	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
+	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
+	      qty = MxValNDP{qty, qtyNDP}.adjust(ob->qtyNDP());
 	    ob->cancelTrade(tradeID, transactTime, price, qty);
+	  }
 	});
       }
       break;

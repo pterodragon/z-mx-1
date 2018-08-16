@@ -124,8 +124,6 @@ MxMDOrderBook::MxMDOrderBook( // single leg
     m_venueShard(venue ? venue->shard_(shard->id()) : (MxMDVenueShard *)0),
     m_key(venue ? venue->id() : MxID(), segment, id),
     m_legs(1),
-    m_pxNDP(security->refData().pxNDP),
-    m_qtyNDP(security->refData().qtyNDP),
     m_tickSizeTbl(tickSizeTbl),
     m_lotSizes(lotSizes),
     m_bids(new MxMDOBSide(this, MxSide::Buy)),
@@ -135,6 +133,8 @@ MxMDOrderBook::MxMDOrderBook( // single leg
   m_sides[0] = MxEnum();
   m_ratios[0] = MxRatio();
   m_securities[0] = security;
+  m_l1Data.pxNDP = security->refData().pxNDP;
+  m_l1Data.qtyNDP = security->refData().qtyNDP;
 }
 
 MxMDOrderBook::MxMDOrderBook( // multi-leg
@@ -149,8 +149,6 @@ MxMDOrderBook::MxMDOrderBook( // multi-leg
     m_venue(venue),
     m_key(venue->id(), segment, id),
     m_legs(legs),
-    m_pxNDP(pxNDP),
-    m_qtyNDP(qtyNDP),
     m_tickSizeTbl(tickSizeTbl),
     m_lotSizes(lotSizes),
     m_bids(new MxMDOBSide(this, MxSide::Buy)),
@@ -161,6 +159,8 @@ MxMDOrderBook::MxMDOrderBook( // multi-leg
     m_sides[i] = sides[i];
     m_ratios[i] = ratios[i];
   }
+  m_l1Data.pxNDP = pxNDP;
+  m_l1Data.qtyNDP = qtyNDP;
 }
 
 void MxMDOrderBook::subscribe(MxMDSecHandler *handler)
@@ -179,10 +179,49 @@ void MxMDOrderBook::unsubscribe()
 
 void MxMDOrderBook::l1(MxMDL1Data &l1Data)
 {
+  if (!*l1Data.pxNDP) { l1Data.pxNDP = m_l1Data.pxNDP; goto fixed; }
+  if (!*l1Data.qtyNDP) { l1Data.qtyNDP = m_l1Data.qtyNDP; goto fixed; }
+  if (ZuUnlikely(m_l1Data.pxNDP != l1Data.pxNDP)) {
+#ifdef adjustNDP
+#undef adjustNDP
+#endif
+#define adjustNDP(v) if (*l1Data.v) l1Data.v = \
+    MxValNDP{l1Data.v, l1Data.pxNDP}.adjust(m_l1Data.pxNDP)
+    adjustNDP(base);
+    for (unsigned i = 0; i < MxMDNSessions; i++) {
+      adjustNDP(open[i]);
+      adjustNDP(close[i]);
+    }
+    adjustNDP(last);
+    adjustNDP(bid);
+    adjustNDP(ask);
+    adjustNDP(high);
+    adjustNDP(low);
+    adjustNDP(accVol);
+    adjustNDP(match);
+#undef adjustNDP
+    l1Data.pxNDP = m_l1Data.pxNDP;
+  }
+  if (ZuUnlikely(m_l1Data.qtyNDP != l1Data.qtyNDP)) {
+#ifdef adjustNDP
+#undef adjustNDP
+#endif
+#define adjustNDP(v) if (*l1Data.v) l1Data.v = \
+    MxValNDP{l1Data.v, l1Data.qtyNDP}.adjust(m_l1Data.qtyNDP)
+    adjustNDP(lastQty);
+    adjustNDP(bidQty);
+    adjustNDP(askQty);
+    adjustNDP(accVolQty);
+    adjustNDP(matchQty);
+    adjustNDP(surplusQty);
+#undef adjustNDP
+    l1Data.qtyNDP = m_l1Data.qtyNDP;
+  }
+fixed:
   m_l1Data.stamp = l1Data.stamp;
   m_l1Data.status.update(l1Data.status);
   m_l1Data.base.update(l1Data.base, MxValueReset);
-  for (int i = 0; i < MxMDNSessions; i++) {
+  for (unsigned i = 0; i < MxMDNSessions; i++) {
     m_l1Data.open[i].update(l1Data.open[i], MxValueReset);
     m_l1Data.close[i].update(l1Data.close[i], MxValueReset);
   }
@@ -267,7 +306,7 @@ bool MxMDOBSide::updateL1Ask(MxMDL1Data &l1Data, MxMDL1Data &delta)
 
 void MxMDOrderBook::l2(MxDateTime stamp, bool updateL1)
 {
-  MxMDL1Data delta;
+  MxMDL1Data delta{ {}, m_l1Data.pxNDP, m_l1Data.qtyNDP };
   bool l1Updated = false;
 
   if (updateL1) {
@@ -309,7 +348,8 @@ void MxMDOBSide::pxLevel_(
       if (qty) {
 	d_qty = qty, d_nOrders = nOrders;
 	pxLevel = m_mktLevel = new MxMDPxLevel(
-	    this, transactTime, MxValue(), qty, nOrders, flags);
+	    this, transactTime, m_orderBook->pxNDP(), m_orderBook->qtyNDP(),
+	    MxValue(), qty, nOrders, flags);
 	if (handler) pxLevelFn = &handler->addMktLevel;
       } else {
 	pxLevel = 0;
@@ -334,7 +374,8 @@ void MxMDOBSide::pxLevel_(
     if (qty) {
       d_qty = qty, d_nOrders = nOrders;
       pxLevel = new MxMDPxLevel(
-	  this, transactTime, price, qty, nOrders, flags);
+	  this, transactTime, m_orderBook->pxNDP(), m_orderBook->qtyNDP(),
+	  price, qty, nOrders, flags);
       if (handler) pxLevelFn = &handler->addPxLevel;
       m_pxLevels.add(pxLevel);
     } else {
@@ -413,8 +454,9 @@ void MxMDOBSide::addOrder_(
   if (!*orderData.price) {
     if (!m_mktLevel) {
       if (handler) pxLevelFn = &handler->addMktLevel;
-      pxLevel = m_mktLevel = new MxMDPxLevel(this, transactTime,
-	  MxFloat(), orderData.qty, 1, 0);
+      pxLevel = m_mktLevel = new MxMDPxLevel(
+	  this, transactTime, m_orderBook->pxNDP(), m_orderBook->qtyNDP(),
+	  MxValue(), orderData.qty, 1, 0);
     } else {
       if (handler) pxLevelFn = &handler->updatedMktLevel;
       pxLevel = m_mktLevel;
@@ -428,8 +470,9 @@ void MxMDOBSide::addOrder_(
   pxLevel = m_pxLevels.find(orderData.price);
   if (!pxLevel) {
     if (handler) pxLevelFn = &handler->addPxLevel;
-    pxLevel = new MxMDPxLevel(this, transactTime,
-      orderData.price, orderData.qty, 1, 0);
+    pxLevel = new MxMDPxLevel(
+	this, transactTime, m_orderBook->pxNDP(), m_orderBook->qtyNDP(),
+	orderData.price, orderData.qty, 1, 0);
     m_pxLevels.add(pxLevel);
   } else {
     if (handler) pxLevelFn = &handler->updatedPxLevel;
@@ -760,7 +803,7 @@ void MxMDOBSide::reset(MxDateTime transactTime, const MxMDSecHandler *handler)
 
 void MxMDOrderBook::reset(MxDateTime transactTime)
 {
-  MxMDL1Data delta;
+  MxMDL1Data delta{ {}, m_l1Data.pxNDP, m_l1Data.qtyNDP };
   bool l1Updated = false;
 
   if (*m_l1Data.bid) {
@@ -1249,7 +1292,8 @@ void MxMDLib::addTickSize(MxMDTickSizeTbl *tbl,
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::addTickSize(core->broadcast(),
-	    tbl->venue()->id(), tbl->id(), minPrice, maxPrice, tickSize);
+	    tbl->venue()->id(), tbl->id(), tbl->pxNDP(),
+	    minPrice, maxPrice, tickSize);
   }
   handler()->addTickSize(tbl, MxMDTickSize{minPrice, maxPrice, tickSize});
 }
@@ -1300,26 +1344,33 @@ void MxMDSecurity::update_(
 	transactTime](
 	  MxMDOrderBook *ob) -> uintptr_t {
       MxMDL1Data &l1 = ob->m_l1Data;
-#ifdef fixNDP
-#undef fixNDP
+#ifdef adjustNDP
+#undef adjustNDP
 #endif
-#define fixNDP(v, n) if (*v) (v = \
-    (MxValNDP{1.0, new ## n ## NDP} * MxValNDP{v, old ## n ## NDP}).value)
-      fixNDP(l1.base, Px);
-      for (unsigned i = 0; i < MxMDNSessions; i++) fixNDP(l1.open[i], Px);
-      for (unsigned i = 0; i < MxMDNSessions; i++) fixNDP(l1.close[i], Px);
-      fixNDP(l1.last, Px); fixNDP(l1.lastQty, Qty);
-      fixNDP(l1.bid, Px); fixNDP(l1.bidQty, Qty);
-      fixNDP(l1.ask, Px); fixNDP(l1.askQty, Qty);
-      fixNDP(l1.high, Px);
-      fixNDP(l1.low, Px);
-      fixNDP(l1.accVol, Px); fixNDP(l1.accVolQty, Qty);
-      fixNDP(l1.match, Px); fixNDP(l1.matchQty, Qty);
-      fixNDP(l1.surplusQty, Qty);
+#define adjustNDP(v, n) if (*v) v = \
+    MxValNDP{v, old ## n ## NDP}.adjust(new ## n ## NDP)
+      adjustNDP(l1.base, Px);
+      for (unsigned i = 0; i < MxMDNSessions; i++) adjustNDP(l1.open[i], Px);
+      for (unsigned i = 0; i < MxMDNSessions; i++) adjustNDP(l1.close[i], Px);
+      adjustNDP(l1.last, Px); adjustNDP(l1.lastQty, Qty);
+      adjustNDP(l1.bid, Px); adjustNDP(l1.bidQty, Qty);
+      adjustNDP(l1.ask, Px); adjustNDP(l1.askQty, Qty);
+      adjustNDP(l1.high, Px);
+      adjustNDP(l1.low, Px);
+      adjustNDP(l1.accVol, Px); adjustNDP(l1.accVolQty, Qty);
+      adjustNDP(l1.match, Px); adjustNDP(l1.matchQty, Qty);
+      adjustNDP(l1.surplusQty, Qty);
+#undef adjustNDP
+      l1.pxNDP = newPxNDP;
+      l1.qtyNDP = newQtyNDP;
       ob->reset(transactTime);
       return 0;
     });
-#undef fixNDP
+#define adjustNDP(v, n) if (*m_refData.v && !*refData.v) m_refData.v = \
+    MxValNDP{m_refData.v, m_refData.n ## NDP}.adjust(refData.n ## NDP)
+    adjustNDP(strike, px);
+    adjustNDP(outstandingShares, qty);
+    adjustNDP(adv, px);
     m_refData.pxNDP = refData.pxNDP;
     m_refData.qtyNDP = refData.qtyNDP;
   }
@@ -1474,8 +1525,8 @@ loop:
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::addOrderBook(core->broadcast(), transactTime,
-	    key, security->key(), tickSizeTbl->id(), ob->lotSizes());
-
+	    key, security->key(), tickSizeTbl->id(),
+	    ob->qtyNDP(), ob->lotSizes());
   }
   handler()->addOrderBook(ob, transactTime);
 added:
@@ -1619,7 +1670,8 @@ void MxMDLib::pxLevel(
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::pxLevel(core->broadcast(), transactTime,
-	  ob->key(), side, delta, price, qty, nOrders, flags);
+	  ob->key(), side, delta, ob->pxNDP(), ob->qtyNDP(),
+	  price, qty, nOrders, flags);
 }
 
 void MxMDLib::l2(const MxMDOrderBook *ob, MxDateTime stamp, bool updateL1)
@@ -1636,7 +1688,8 @@ void MxMDLib::addOrder(const MxMDOrderBook *ob,
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::addOrder(core->broadcast(), transactTime,
-	ob->key(), orderID, side, rank, price, qty, flags);
+	ob->key(), orderID, side, ob->pxNDP(), ob->qtyNDP(),
+	rank, price, qty, flags);
 }
 void MxMDLib::modifyOrder(const MxMDOrderBook *ob,
     ZuString orderID, MxDateTime transactTime,
@@ -1645,7 +1698,8 @@ void MxMDLib::modifyOrder(const MxMDOrderBook *ob,
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::modifyOrder(core->broadcast(), transactTime,
-	ob->key(), orderID, side, rank, price, qty, flags);
+	ob->key(), orderID, side, ob->pxNDP(), ob->qtyNDP(),
+	rank, price, qty, flags);
 }
 void MxMDLib::cancelOrder(const MxMDOrderBook *ob,
     ZuString orderID,
@@ -1671,7 +1725,7 @@ void MxMDLib::addTrade(const MxMDOrderBook *ob,
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::addTrade(core->broadcast(), transactTime,
-	ob->key(), tradeID, price, qty);
+	ob->key(), tradeID, ob->pxNDP(), ob->qtyNDP(), price, qty);
 }
 void MxMDLib::correctTrade(const MxMDOrderBook *ob,
     ZuString tradeID, MxDateTime transactTime, MxValue price, MxValue qty)
@@ -1679,7 +1733,7 @@ void MxMDLib::correctTrade(const MxMDOrderBook *ob,
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::correctTrade(core->broadcast(), transactTime,
-	ob->key(), tradeID, price, qty);
+	ob->key(), tradeID, ob->pxNDP(), ob->qtyNDP(), price, qty);
 }
 void MxMDLib::cancelTrade(const MxMDOrderBook *ob,
     ZuString tradeID, MxDateTime transactTime, MxValue price, MxValue qty)
@@ -1687,5 +1741,5 @@ void MxMDLib::cancelTrade(const MxMDOrderBook *ob,
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::cancelTrade(core->broadcast(), transactTime,
-	ob->key(), tradeID, price, qty);
+	ob->key(), tradeID, ob->pxNDP(), ob->qtyNDP(), price, qty);
 }

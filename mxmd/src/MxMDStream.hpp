@@ -164,6 +164,7 @@ namespace MxMDStream {
     enum { Code = Type::AddTickSize };
     MxID		venue;
     MxIDString		id;
+    MxNDP		pxNDP;
     MxValue		minPrice;
     MxValue		maxPrice;
     MxValue		tickSize;
@@ -190,6 +191,7 @@ namespace MxMDStream {
     Key			key;
     Key			security;
     MxIDString		tickSizeTbl;
+    MxNDP		qtyNDP;
     MxMDLotSizes	lotSizes;
   };
 
@@ -247,6 +249,8 @@ namespace MxMDStream {
     Key			key;
     MxEnum		side;
     uint8_t		delta;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
     MxValue		price;
     MxValue		qty;
     MxUInt		nOrders;
@@ -266,6 +270,8 @@ namespace MxMDStream {
     Key			key;
     MxIDString		orderID;
     MxEnum		side;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
     MxInt		rank;
     MxValue		price;
     MxValue		qty;
@@ -278,6 +284,8 @@ namespace MxMDStream {
     Key			key;
     MxIDString		orderID;
     MxEnum		side;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
     MxInt		rank;
     MxValue		price;
     MxValue		qty;
@@ -303,6 +311,8 @@ namespace MxMDStream {
     MxDateTime		transactTime;
     Key			key;
     MxIDString		tradeID;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
     MxValue		price;
     MxValue		qty;
   };
@@ -312,6 +322,8 @@ namespace MxMDStream {
     MxDateTime		transactTime;
     Key			key;
     MxIDString		tradeID;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
     MxValue		price;
     MxValue		qty;
   };
@@ -321,6 +333,8 @@ namespace MxMDStream {
     MxDateTime		transactTime;
     Key			key;
     MxIDString		tradeID;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
     MxValue		price;
     MxValue		qty;
   };

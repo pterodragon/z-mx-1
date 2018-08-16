@@ -91,6 +91,8 @@ struct MxMDLotSizes {
 
 struct MxMDL1Data {
   MxDateTime	stamp;
+  MxNDP		pxNDP;			// price NDP
+  MxNDP		qtyNDP;			// qty NDP
   MxEnum	status;			// MxTradingStatus
   MxEnum	tickDir;		// MxTickDir
   // Note: all px/qty are integers scaled by 10^ndp

@@ -351,7 +351,7 @@ private:
 	  tbl->allTickSizes(
 	      [&snapshot, venue, tbl](const MxMDTickSize &ts) -> uintptr_t {
 	  return !MxMDStream::addTickSize(snapshot,
-	      venue->id(), tbl->id(),
+	      venue->id(), tbl->id(), tbl->pxNDP(),
 	      ts.minPrice(), ts.maxPrice(), ts.tickSize());
 	});
       });
@@ -362,8 +362,8 @@ private:
     }) || allOrderBooks([&snapshot](MxMDOrderBook *ob) -> uintptr_t {
       if (ob->legs() == 1) {
 	return !MxMDStream::addOrderBook(snapshot, MxDateTime(),
-	    ob->key(), ob->security()->key(),
-	    ob->tickSizeTbl()->id(), ob->lotSizes());
+	    ob->key(), ob->security()->key(), ob->tickSizeTbl()->id(),
+	    ob->qtyNDP(), ob->lotSizes());
       } else {
 	MxSecKey securityKeys[MxMDNLegs];
 	MxEnum sides[MxMDNLegs];
@@ -405,15 +405,17 @@ private:
 	  [&snapshot, &orderCount](MxMDOrder *order) -> uintptr_t {
       ++orderCount;
       const MxMDOrderData &data = order->data();
+      MxMDOrderBook *ob = order->orderBook();
       return !MxMDStream::addOrder(snapshot, data.transactTime,
-	  order->orderBook()->key(), order->id(),
-	  data.side, data.rank, data.price, data.qty, data.flags);
+	  ob->key(), order->id(), data.side, ob->pxNDP(), ob->qtyNDP(),
+	  data.rank, data.price, data.qty, data.flags);
     })) return false;
     if (orderCount) return true;
     const MxMDPxLvlData &data = pxLevel->data();
+    MxMDOrderBook *ob = pxLevel->obSide()->orderBook();
     return MxMDStream::pxLevel(snapshot, data.transactTime,
-	pxLevel->obSide()->orderBook()->key(), pxLevel->side(),
-	false, pxLevel->price(), data.qty, data.nOrders, data.flags);
+	ob->key(), pxLevel->side(), false, ob->pxNDP(), ob->qtyNDP(),
+	pxLevel->price(), data.qty, data.nOrders, data.flags);
   }
 
   class Snapper;

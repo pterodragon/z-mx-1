@@ -128,8 +128,8 @@ void addPxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
   printf("add px level %s %s px=%f qty=%f\n",
       ob->id().data(),
       MxSide::name(pxLevel->side()),
-      (double)pxLevel->price(),
-      (double)pxLevel->data().qty);
+      (double)MxValNDP{pxLevel->price(), pxLevel->pxNDP()}.fp(),
+      (double)MxValNDP{pxLevel->data().qty, pxLevel->qtyNDP()}.fp());
 }
 
 void updatedPxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
@@ -138,8 +138,8 @@ void updatedPxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
   printf("updated px level %s %s px=%f qty=%f\n",
       ob->id().data(),
       MxSide::name(pxLevel->side()),
-      (double)pxLevel->price(),
-      (double)pxLevel->data().qty);
+      (double)MxValNDP{pxLevel->price(), pxLevel->pxNDP()}.fp(),
+      (double)MxValNDP{pxLevel->data().qty, pxLevel->qtyNDP()}.fp());
 }
 
 void deletedPxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
@@ -148,8 +148,8 @@ void deletedPxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
   printf("deleted px level %s %s px=%f qty=%f\n",
       ob->id().data(),
       MxSide::name(pxLevel->side()),
-      (double)pxLevel->price(),
-      (double)pxLevel->data().qty);
+      (double)MxValNDP{pxLevel->price(), pxLevel->pxNDP()}.fp(),
+      (double)MxValNDP{pxLevel->data().qty, pxLevel->qtyNDP()}.fp());
 }
 
 void exception(MxMDLib *, ZmRef<ZeEvent> e) { std::cerr << *e << '\n'; }
@@ -257,11 +257,11 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
     ZmRef<MxMDTickSizeTbl> tickSizeTbl = venue->addTickSizeTbl("1", 0);
     if (!tickSizeTbl) throw ZtString("MxMDVenue::addTickSizeTbl() failed");
     // tick size 1 from 0 to infinity
-    tickSizeTbl->addTickSize(0, MxFloat::inf(), 1);
+    tickSizeTbl->addTickSize(0, MxValueMax, 1);
 
     // configure lot sizes
 
-    MxMDLotSizes lotSizes{1, 1, 1};	// odd, round, block
+    MxMDLotSizes lotSizes{100, 100, 100}; // odd, round, block
 
     // add securities
 
@@ -370,29 +370,27 @@ void publish()
 	  l1Data.last = MxValNDP{ZmRand::randExc(90) + 10, 2}.value; // 10-100
 	  ob->l1(l1Data);
 
-#if 0
 	  ob->addOrder("foo",
 	      l1Data.stamp, MxSide::Sell,
-	      1, 100, 100, 0);
+	      1, MxValNDP{100.0, 2}.value, MxValNDP{100.0, 2}.value, 0);
 	  ob->modifyOrder("foo",
 	      l1Data.stamp, MxSide::Sell,
-	      1, 50, 50, 0);
+	      1, MxValNDP{50.0, 2}.value, MxValNDP{50.0, 2}.value, 0);
 	  ob->addOrder("bar",
 	      l1Data.stamp, MxSide::Sell,
-	      1, 50, 50, 0);
+	      1, MxValNDP{50.0, 2}.value, MxValNDP{50.0, 2}.value, 0);
 	  ob->reduceOrder("foo",
-	      l1Data.stamp, MxSide::Sell, 50);
+	      l1Data.stamp, MxSide::Sell, MxValNDP{50.0, 2}.value);
 	  ob->cancelOrder("bar",
 	      l1Data.stamp, MxSide::Sell);
 	  ob->addOrder("foo",
 	      l1Data.stamp, MxSide::Sell,
-	      1, 100, 100, 0);
+	      1, MxValNDP{100.0, 2}.value, MxValNDP{100.0, 2}.value, 0);
 	  ob->reduceOrder("foo",
-	      l1Data.stamp, MxSide::Sell, 50);
+	      l1Data.stamp, MxSide::Sell, MxValNDP{50.0, 2}.value);
 	  ob->modifyOrder("foo",
 	      l1Data.stamp, MxSide::Sell,
-	      1, 50, 0, 0);
-#endif
+	      1, MxValNDP{50.0, 2}.value, 0, 0);
 	});
       }
 

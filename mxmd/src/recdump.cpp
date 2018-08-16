@@ -28,9 +28,9 @@ public:
     MxEnum		side;
     MxInt		rank;
     uint8_t		delta;
-    MxFloat		price;
-    MxFloat		qty;
-    MxFloat		nOrders;
+    MxValue		price;
+    MxValue		qty;
+    MxValue		nOrders;
     MxFlags		flags;
     MxFlags		orderFlags;
   };
@@ -60,36 +60,40 @@ public:
     add(new MxEnumCol<MxTradingSession::CSVMap>("session", Offset(session)));
 #undef Offset
 #define Offset(x) offsetof(Data, l1Data) + offsetof(MxMDL1Data, x)
+    int pxNDP = Offset(pxNDP);
+    int qtyNDP = Offset(qtyNDP);
     if (app && app->hhmmss())
       add(new MxHHMMSSCol("stamp", Offset(stamp),
 	    app->yyyymmdd(), app->tzOffset()));
     else
       add(new MxTimeCol("stamp", Offset(stamp),
 	    app ? app->tzOffset() : 0));
+    add(new MxNDPCol("pxNDP", pxNDP));
+    add(new MxNDPCol("qtyNDP", qtyNDP));
     add(new MxEnumCol<MxTradingStatus::CSVMap>("status", Offset(status)));
-    add(new MxFloatCol("base", Offset(base), app->ndp()));
+    add(new MxValueCol("base", Offset(base), pxNDP));
     for (unsigned i = 0; i < MxMDNSessions; i++) {
       ZuStringN<8> open = "open"; open << ZuBoxed(i);
       ZuStringN<8> close = "close"; close << ZuBoxed(i);
-      add(new MxFloatCol(open,
-	    Offset(open) + (i * sizeof(MxFloat)), app->ndp()));
-      add(new MxFloatCol(close,
-	    Offset(close) + (i * sizeof(MxFloat)), app->ndp()));
+      add(new MxValueCol(open,
+	    Offset(open) + (i * sizeof(MxValue)), pxNDP));
+      add(new MxValueCol(close,
+	    Offset(close) + (i * sizeof(MxValue)), pxNDP));
     }
-    add(new MxFloatCol("last", Offset(last), app->ndp()));
-    add(new MxFloatCol("lastQty", Offset(lastQty), app->ndp()));
-    add(new MxFloatCol("bid", Offset(bid), app->ndp()));
-    add(new MxFloatCol("bidQty", Offset(bidQty), app->ndp()));
-    add(new MxFloatCol("ask", Offset(ask), app->ndp()));
-    add(new MxFloatCol("askQty", Offset(askQty), app->ndp()));
+    add(new MxValueCol("last", Offset(last), pxNDP));
+    add(new MxValueCol("lastQty", Offset(lastQty), qtyNDP));
+    add(new MxValueCol("bid", Offset(bid), pxNDP));
+    add(new MxValueCol("bidQty", Offset(bidQty), qtyNDP));
+    add(new MxValueCol("ask", Offset(ask), pxNDP));
+    add(new MxValueCol("askQty", Offset(askQty), qtyNDP));
     add(new MxEnumCol<MxTickDir::CSVMap>("tickDir", Offset(tickDir)));
-    add(new MxFloatCol("high", Offset(high), app->ndp()));
-    add(new MxFloatCol("low", Offset(low), app->ndp()));
-    add(new MxFloatCol("accVol", Offset(accVol), app->ndp()));
-    add(new MxFloatCol("accVolQty", Offset(accVolQty), app->ndp()));
-    add(new MxFloatCol("match", Offset(match), app->ndp()));
-    add(new MxFloatCol("matchQty", Offset(matchQty), app->ndp()));
-    add(new MxFloatCol("surplusQty", Offset(surplusQty), app->ndp()));
+    add(new MxValueCol("high", Offset(high), pxNDP));
+    add(new MxValueCol("low", Offset(low), pxNDP));
+    add(new MxValueCol("accVol", Offset(accVol), pxNDP));
+    add(new MxValueCol("accVolQty", Offset(accVolQty), qtyNDP));
+    add(new MxValueCol("match", Offset(match), pxNDP));
+    add(new MxValueCol("matchQty", Offset(matchQty), qtyNDP));
+    add(new MxValueCol("surplusQty", Offset(surplusQty), qtyNDP));
     add(new MxMDVenueFlagsCol<MxMDL1Flags>("l1Flags",
 	  Offset(flags), offsetof(Data, venue)));
 #undef Offset
@@ -98,9 +102,9 @@ public:
     add(new MxEnumCol<MxSide::CSVMap>("side", Offset(side)));
     add(new MxIntCol("rank", Offset(rank)));
     add(new MxBoolCol("delta", Offset(delta)));
-    add(new MxFloatCol("price", Offset(price), app->ndp()));
-    add(new MxFloatCol("qty", Offset(qty), app->ndp()));
-    add(new MxFloatCol("nOrders", Offset(nOrders), app->ndp()));
+    add(new MxValueCol("price", Offset(price), pxNDP));
+    add(new MxValueCol("qty", Offset(qty), qtyNDP));
+    add(new MxValueCol("nOrders", Offset(nOrders), qtyNDP));
     add(new MxMDVenueFlagsCol<MxMDL2Flags>("l2Flags",
 	  Offset(flags), offsetof(Data, venue)));
     add(new MxMDVenueFlagsCol<MxMDOrderFlags>("orderFlags",
@@ -137,7 +141,7 @@ public:
 	    const PxLevel &obj = frame->as<PxLevel>();
 	    new (data) Data{
 	      obj.key.venue(), obj.key.segment(), obj.key.id(), frame->type,
-	      {}, { obj.transactTime },
+	      {}, { obj.transactTime, obj.pxNDP, obj.qtyNDP },
 	      { {}, {}, obj.side, {}, obj.delta, obj.price, obj.qty,
 		obj.nOrders, obj.flags } };
 	  }
@@ -151,6 +155,8 @@ public:
 	    data->id = obj.key.id();
 	    data->event = frame->type;
 	    data->l1Data.stamp = obj.transactTime;
+	    data->l1Data.pxNDP = obj.pxNDP;
+	    data->l1Data.qtyNDP = obj.qtyNDP;
 	    data->l2Data.orderID = obj.orderID;
 	    data->l2Data.side = obj.side;
 	    data->l2Data.rank = obj.rank;
@@ -241,8 +247,7 @@ class App {
 public:
   App() :
     m_refData(0), m_l1(0), m_l2(0), m_hhmmss(0), m_verbose(0),
-    m_yyyymmdd(ZtDateNow().yyyymmdd()), m_tzOffset(0),
-    m_ndp(-5) { }
+    m_yyyymmdd(ZtDateNow().yyyymmdd()), m_tzOffset(0) { }
 
   // dump options
 
@@ -251,9 +256,8 @@ public:
   // CSV formatting
 
   inline bool hhmmss() const { return m_hhmmss; }
-  inline const unsigned &yyyymmdd() const { return m_yyyymmdd; }
-  inline const int &tzOffset() const { return m_tzOffset; }
-  inline const int &ndp() const { return m_ndp; }
+  inline unsigned yyyymmdd() const { return m_yyyymmdd; }
+  inline int tzOffset() const { return m_tzOffset; }
 
   inline void hhmmss(bool b) { m_hhmmss = b; }
   inline void yyyymmdd(unsigned n) { m_yyyymmdd = n; }
@@ -262,7 +266,6 @@ public:
     m_tzOffset = now.offset(tz);
     m_isoFmt.offset(m_tzOffset);
   }
-  inline void ndp(int n) { m_ndp = n; }
 
   // filters
 
@@ -362,7 +365,6 @@ private:
 				m_verbose:1;
   unsigned			m_yyyymmdd;
   int				m_tzOffset;
-  int				m_ndp;
 
   ZtDateFmt::ISO		m_isoFmt;
 
@@ -427,7 +429,7 @@ void App::read()
 	  "  stamp: (null)\n";
       }
     }
-      
+ 
     {
       switch ((int)frame->type) {
 	case Type::AddTickSizeTbl:
@@ -572,7 +574,6 @@ void usage()
     "  -V\t\t- dump message frames to standard output\n"
     "  -d YYYYMMDD\t- CSV time stamps use date YYYYMMDD\n"
     "  -z ZONE\t- CSV time stamps in local time ZONE (defaults to GMT)\n"
-    "  -p NDP\t- CSV values with NDP precision (-ve to suppress trailing 0s)\n"
     "  -v MIC\t- select venue MIC for following securities\n"
     "\t\t\t(may be specified multiple times)\n"
     "  -s SEGMENT\t- select SEGMENT for following securities\n"
@@ -624,10 +625,6 @@ int main(int argc, const char *argv[])
       case 'z':
 	if (++i >= argc) usage();
 	app.tz(argv[i]);
-	break;
-      case 'p':
-	if (++i >= argc) usage();
-	app.ndp(atoi(argv[i]));
 	break;
       case 'v':
 	if (++i >= argc) usage();

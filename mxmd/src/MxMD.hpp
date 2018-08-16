@@ -627,16 +627,18 @@ friend class MxMDOBSide;
 
 protected:
   inline MxMDPxLevel_(MxMDOBSide *obSide,
-      MxDateTime transactTime, MxValue price, MxValue qty,
-      MxUInt nOrders, MxFlags flags) :
-    m_obSide(obSide), m_price(price),
-    m_data{transactTime, qty, nOrders, flags} { }
+      MxDateTime transactTime, MxNDP pxNDP, MxNDP qtyNDP,
+      MxValue price, MxValue qty, MxUInt nOrders, MxFlags flags) :
+    m_obSide(obSide), m_pxNDP(pxNDP), m_qtyNDP(qtyNDP),
+    m_price(price), m_data{transactTime, qty, nOrders, flags} { }
 
 public:
   inline ~MxMDPxLevel_() { }
 
   ZuInline MxMDOBSide *obSide() const { return m_obSide; }
   MxEnum side() const;
+  ZuInline MxNDP pxNDP() const { return m_pxNDP; }
+  ZuInline MxNDP qtyNDP() const { return m_qtyNDP; }
   ZuInline MxValue price() const { return m_price; }
   ZuInline const MxMDPxLvlData &data() const { return m_data; }
 
@@ -679,8 +681,7 @@ private:
 
   template <typename Fill>
   uintptr_t match(
-      MxValue &qty, MxNDP pxNDP, MxNDP qtyNDP,
-      MxValue &cumQty, MxValue &grossTradeAmt, Fill &&fill) {
+      MxValue &qty, MxValue &cumQty, MxValue &grossTradeAmt, Fill &&fill) {
     auto i = this->m_orders.iterator();
     while (MxMDPxLevel_::Orders::Node *node = i.iterate()) {
       const ZmRef<MxMDOrder> &contra = node->key();
@@ -691,7 +692,7 @@ private:
 	  return v;
 	cumQty += cQty;
 	grossTradeAmt +=
-	  (MxValNDP{m_price, pxNDP} * MxValNDP{cQty, qtyNDP}).value;
+	  (MxValNDP{m_price, m_pxNDP} * MxValNDP{cQty, m_qtyNDP}).value;
 	i.del();
 	--m_data.nOrders;
 	m_data.qty -= cQty;
@@ -703,7 +704,7 @@ private:
 	  return v;
 	cumQty += qty;
 	grossTradeAmt +=
-	  (MxValNDP{m_price, pxNDP} * MxValNDP{qty, qtyNDP}).value;
+	  (MxValNDP{m_price, m_pxNDP} * MxValNDP{qty, m_qtyNDP}).value;
 	cQty -= qty;
 	m_data.qty -= qty;
 	qty = 0;
@@ -714,6 +715,8 @@ private:
   }
 
   MxMDOBSide		*m_obSide;
+  MxNDP			m_pxNDP;
+  MxNDP			m_qtyNDP;
   MxValue		m_price;
   MxMDPxLvlData	  	m_data;
   Orders		m_orders;
@@ -917,13 +920,12 @@ public:
 private:
   template <int Direction, typename Fill, typename Limit>
   uintptr_t match(
-      MxValue px, MxValue qty, MxNDP pxNDP, MxNDP qtyNDP,
+      MxValue px, MxValue qty,
       MxValue &cumQty, MxValue &grossTradeAmt, Fill &&fill, Limit &&limit) {
     auto i = m_pxLevels.readIterator<Direction>();
     while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate()) {
       if (!limit(px, pxLevel->price())) break;
-      if (uintptr_t v = pxLevel->match(
-	    qty, pxNDP, qtyNDP, cumQty, grossTradeAmt, fill))
+      if (uintptr_t v = pxLevel->match(qty, cumQty, grossTradeAmt, fill))
 	return v;
       if (!qty) break;
     }
@@ -1032,8 +1034,8 @@ public:
   ZuInline MxEnum side(unsigned leg) const { return m_sides[leg]; }
   ZuInline MxRatio ratio(unsigned leg) const { return m_ratios[leg]; }
 
-  ZuInline MxNDP pxNDP() const { return m_pxNDP; }
-  ZuInline MxNDP qtyNDP() const { return m_qtyNDP; }
+  ZuInline MxNDP pxNDP() const { return m_l1Data.pxNDP; }
+  ZuInline MxNDP qtyNDP() const { return m_l1Data.qtyNDP; }
 
   ZuInline MxMDTickSizeTbl *tickSizeTbl() const { return m_tickSizeTbl; }
 
@@ -1097,8 +1099,7 @@ private:
 	auto &recurse, MxMDOrderBook *ob) mutable -> uintptr_t {
       if (ZuLikely(!ob->m_in))
 	return side()->template match<Direction>(
-	    px, qty, ob->m_pxNDP, ob->m_qtyNDP,
-	    cumQty, grossTradeAmt, fill, limit);
+	    px, qty, cumQty, grossTradeAmt, fill, limit);
       for (MxMDOrderBook *inOB = ob->m_in; inOB; inOB = inOB->m_next) {
 	if (uintptr_t v = recurse(inOB)) return v;
 	if (!qty) break;
@@ -1183,10 +1184,7 @@ private:
   MxUInt			m_legs;
   MxMDSecurity			*m_securities[MxMDNLegs];
   MxEnum			m_sides[MxMDNLegs];
-  MxUInt			m_ratios[MxMDNLegs];
-
-  MxNDP				m_pxNDP;
-  MxNDP				m_qtyNDP;
+  MxRatio			m_ratios[MxMDNLegs];
 
   ZmRef<MxMDFeedOB>		m_feedOB;
 

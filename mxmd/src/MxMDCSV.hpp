@@ -40,10 +40,10 @@
 #include <MxMDTypes.hpp>
 #include <MxMDStream.hpp>
 
-struct MxMDDefaultCSVApp {
-  inline bool hhmmss() { return false; }
-  inline unsigned yyyymmdd() { return 0; }
-  inline int tzOffset() { return 0; }
+struct MxMDCSVApp {
+  inline static bool hhmmss() { return false; }
+  inline static unsigned yyyymmdd() { return 0; }
+  inline static int tzOffset() { return 0; }
 };
 
 template <typename Flags>
@@ -98,7 +98,7 @@ public:
   };
   typedef ZuPOD<Data> POD;
 
-  template <typename App = MxMDDefaultCSVApp>
+  template <typename App = MxMDCSVApp>
   MxMDTickSizeCSV(App *app = 0) {
     new ((m_pod = new POD())->ptr()) Data{};
 #ifdef Offset
@@ -141,7 +141,8 @@ public:
 	  {
 	    const AddTickSize &obj = frame->as<AddTickSize>();
 	    new (data) Data{frame->type,
-	      obj.venue, obj.id, obj.minPrice, obj.maxPrice, obj.tickSize};
+	      obj.venue, obj.id, obj.pxNDP,
+	      obj.minPrice, obj.maxPrice, obj.tickSize};
 	  }
 	  break;
 	default:
@@ -172,7 +173,7 @@ public:
   };
   typedef ZuPOD<Data> POD;
 
-  template <typename App = MxMDDefaultCSVApp>
+  template <typename App = MxMDCSVApp>
   MxMDSecurityCSV(App *app = 0) {
     new ((m_pod = new POD())->ptr()) Data{};
 #ifdef Offset
@@ -277,7 +278,7 @@ public:
   };
   typedef ZuPOD<Data> POD;
 
-  template <typename App = MxMDDefaultCSVApp>
+  template <typename App = MxMDCSVApp>
   MxMDOrderBookCSV(App *app = 0) {
     new ((m_pod = new POD())->ptr()) Data{};
 #ifdef Offset
@@ -295,7 +296,8 @@ public:
     add(new MxIDCol("segment", Offset(segment)));
     add(new MxIDStrCol("id", Offset(id)));
     add(new MxNDPCol("pxNDP", Offset(pxNDP)));
-    add(new MxNDPCol("qtyNDP", Offset(qtyNDP)));
+    int qtyNDP = Offset(qtyNDP);
+    add(new MxNDPCol("qtyNDP", qtyNDP));
     add(new MxUIntCol("legs", Offset(legs)));
     for (unsigned i = 0; i < MxMDNLegs; i++) {
       ZuStringN<16> secVenue = "secVenue"; secVenue << ZuBoxed(i);
@@ -310,15 +312,14 @@ public:
       add(new MxEnumCol<MxSide::CSVMap>(side,
 	    Offset(sides) + (i * sizeof(MxEnum))));
       add(new MxRatioCol(ratio,
-	    Offset(ratios) + (i * sizeof(MxFloat))));
+	    Offset(ratios) + (i * sizeof(MxRatio))));
     }
     add(new MxIDStrCol("tickSizeTbl", Offset(tickSizeTbl)));
-    int offsetQtyNDP = Offset(qtyNDP);
 #undef Offset
 #define Offset(x) offsetof(Data, lotSizes) + offsetof(MxMDLotSizes, x)
-    add(new MxValueCol("oddLotSize", Offset(oddLotSize), offsetQtyNDP));
-    add(new MxValueCol("lotSize", Offset(lotSize), offsetQtyNDP));
-    add(new MxValueCol("blockLotSize", Offset(blockLotSize), offsetQtyNDP));
+    add(new MxValueCol("oddLotSize", Offset(oddLotSize), qtyNDP));
+    add(new MxValueCol("lotSize", Offset(lotSize), qtyNDP));
+    add(new MxValueCol("blockLotSize", Offset(blockLotSize), qtyNDP));
 #undef Offset
   }
 
@@ -342,7 +343,7 @@ public:
 	    const AddOrderBook &obj = frame->as<AddOrderBook>();
 	    new (data) Data{frame->type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
-	      {}, {}, 1, obj.tickSizeTbl, obj.lotSizes,
+	      {}, obj.qtyNDP, 1, obj.tickSizeTbl, obj.lotSizes,
 	      { obj.security.venue() },
 	      { obj.security.segment() },
 	      { obj.security.id() },
@@ -361,8 +362,7 @@ public:
 	    const AddCombination &obj = frame->as<AddCombination>();
 	    new (data) Data{frame->type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
-	      obj.pxNDP, obj.qtyNDP, obj.legs,
-	      obj.tickSizeTbl, obj.lotSizes,
+	      obj.pxNDP, obj.qtyNDP, obj.legs, obj.tickSizeTbl, obj.lotSizes,
 	      {}, {}, {}, {}, {} };
 	    for (unsigned i = 0, n = obj.legs; i < n; i++) {
 	      data->secVenues[i] = obj.securities[i].venue();

@@ -861,10 +861,7 @@ friend class Publisher;
 
     // Rx (called from engine's rx thread)
     MxEngineApp::ProcessFn processFn() {
-      return static_cast<MxEngineApp::ProcessFn>(
-	  [](MxEngineApp *app, MxAnyLink *, MxQMsg *msg) {
-	static_cast<Publisher *>(app)->sendMsg(msg);
-      });
+      return {};
     }
 
     // Tx (called from engine's tx thread)
@@ -887,7 +884,12 @@ friend class Publisher;
       void reRequest(const MxQueue::Gap &now) { }
 
       // Tx
-      bool send_(MxQMsg *msg, bool more) { return true; }
+      bool send_(MxQMsg *msg, bool more) {
+        static_cast<Publisher *>(engine())->sendMsg(msg);
+	sent_(msg);
+        return true;
+      }
+
       bool resend_(MxQMsg *msg, bool more){ return true; }
 
       bool sendGap_(const MxQueue::Gap &gap, bool more){ return true; }
@@ -907,7 +909,7 @@ friend class Publisher;
       inline static const char *id() { return "MxMD.SnapQueue"; }
     };
   public:
-    typedef MxQueueRx<Link> Rx;
+    typedef MxQueueTx<Link> Tx;
     typedef ZmList<ZmRef<Msg>,
 	      ZmListObject<ZuNull,
 		ZmListLock<ZmNoLock,
@@ -968,10 +970,12 @@ friend class Publisher;
 	if (m_recvRunning) return;
 	m_recvRunning = 1;
       }
-      m_link->rxInvoke([](Rx *rx) {
+
+      m_link->txInvoke([](Tx *tx) {
 	static_cast<Publisher *>(
-	    static_cast<Link *>(rx)->engine())->recv(rx);
+	    static_cast<Link *>(tx)->engine())->recv(tx);
       });
+
       m_attachSem.wait();
     }
     void recvStop() {
@@ -1003,8 +1007,7 @@ friend class Publisher;
     }
 
   private:
-    void recv(Rx *rx) {
-      rx->startQueuing();
+    void recv(Tx *tx) {
       using namespace MxMDStream;
 
       Broadcast &broadcast = m_core->broadcast();
@@ -1016,13 +1019,13 @@ friend class Publisher;
       }
 
       m_attachSem.post();
-      m_link->rxRun([](Rx *rx) {
+      m_link->txRun([](Tx *tx) {
 	static_cast<Publisher *>(
-	    static_cast<Link *>(rx)->engine())->recvMsg(rx);
+	    static_cast<Link *>(tx)->engine())->recvMsg(tx);
       });
     }
 
-    void recvMsg(Rx *rx) {
+    void recvMsg(Tx *tx) {
       using namespace MxMDStream;
       const Frame *frame;
       Broadcast &broadcast = m_core->broadcast();
@@ -1056,15 +1059,15 @@ friend class Publisher;
 	}
 	memcpy(msg->frame(), frame, sizeof(Frame) + frame->len);
 	ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
-	qmsg->load(rx->rxQueue().id, ++m_msgSeqNo);
-	rx->received(qmsg);
+	qmsg->load(tx->txQueue().id, ++m_msgSeqNo);
+	tx->send(qmsg);
       }
       broadcast.shift2();
 
     next:
-      m_link->rxRun([](Rx *rx) {
+      m_link->txRun([](Tx *tx) {
 	static_cast<Publisher *>(
-	    static_cast<Link *>(rx)->engine())->recvMsg(rx); });
+	    static_cast<Link *>(tx)->engine())->recvMsg(tx); });
       return;
 
     end:
@@ -1086,7 +1089,6 @@ friend class Publisher;
 	  return;
 	}
       }
-      m_link->rxInvoke([](Rx *rx) { rx->stopQueuing(1); });
 
       snapStop();
     }

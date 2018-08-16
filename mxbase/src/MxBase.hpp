@@ -185,6 +185,11 @@ struct MxValNDP {
     return (MxFloat)value / (MxFloat)ZuDecimal::pow10_64(ndp);
   }
 
+  // adjust to another NDP
+  ZuInline MxValue adjust(MxNDP ndp) {
+    return (MxValNDP{1.0, ndp} * (*this)).value;
+  }
+
   // ! is null, unary * is !null
   ZuInline bool operator !() const { return !*value; }
   ZuInline bool operator *() const { return *value; }

@@ -95,8 +95,10 @@ typedef MxInt64 MxValue;	// fixed point value (numerator)
 typedef MxUInt8 MxNDP;		// number of decimal places (log10(denominator))
 typedef MxUInt8 MxRatio;	// ratio numerator (orders w/ multiple legs)
 				// (denominator is sum of individual ratios)
-// MxValueReset is the sentinel value used to reset values to null
-#define MxValueReset (MxValue{(int64_t)-1000000000000000000ULL})
+#define MxValueMin (MxValue{(int64_t)-999999999999999999LL})
+#define MxValueMax (MxValue{(int64_t)999999999999999999LL})
+// MxValueReset is the distinct sentinel value used to reset values to null
+#define MxValueReset (MxValue{(int64_t)-1000000000000000000LL})
 
 // combination of value and ndp, used as a temporary for conversions & IO
 // constructors / scanning:

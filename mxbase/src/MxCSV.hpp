@@ -141,12 +141,12 @@ public:
     *f = MxValNDP{b, ndp(f)}.value;
   }
   void place(ZtArray<char> &b, const MxValue *f) {
-    b << MxValNDP{*f, ndp(f)};
+    if (**f) b << MxValNDP{*f, ndp(f)};
   }
 
 private:
   ZuInline MxNDP ndp(const MxValue *f) {
-    return *(const MxNDP *)((const char *)(const void *)f + m_ndpOffset);
+    return *(MxNDP *)((const char *)(const void *)f + m_ndpOffset);
   }
 
   int	m_ndpOffset;

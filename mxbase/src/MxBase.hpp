@@ -400,7 +400,7 @@ struct MxSecIDSrc {
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "1", CUSIP, "2", SEDOL, "3", QUIK, "4", ISIN, "5", RIC, "8", EXCH,
-      "9", CTA, "A", BSYM, "S", BBGID, "X", FX, "Y", CRYPTO);
+      "9", CTA, "A", BSYM, "S", BBGID, "X", FX, "C", CRYPTO);
 };
 
 struct MxPutCall {

@@ -190,6 +190,7 @@ public:
 
 // accessors
 
+  ZuInline unsigned size() const { return Base::m_size; }
   ZuInline unsigned length() const { return Base::m_length; }
 
 // reset to null string

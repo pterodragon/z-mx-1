@@ -19,9 +19,12 @@
 
 // platform-specific
 
+#include <ZuUTF.hpp>
+
 #include <ZmSingleton.hpp>
 #include <ZmLock.hpp>
 #include <ZmGuard.hpp>
+
 #include <ZtPlatform.hpp>
 #include <ZtString.hpp>
 #include <ZtRegex.hpp>
@@ -246,7 +249,8 @@ void ZePlatform::syslog(ZeEvent *e)
     ZePlatform::function(e->function()) << ' ' <<
     e->message();
 
-  ZtIconvDefault<wchar_t, char>::instance()->convert(buf->w, buf->s);
+  buf->w.length(ZuUTF<wchar_t, char>::cvt(
+	ZuArray<wchar_t>(buf->w.data(), buf->w.size() - 1), buf->s));
 
   const wchar_t *w = buf->w.data();
 
@@ -379,7 +383,8 @@ const char *ZePlatform_::strerror(ErrNo e)
 
   buf->w.length(n);
 
-  ZtIconvDefault<char, wchar_t>::instance()->convert(buf->s, buf->w);
+  buf->s.length(ZuUTF<char, wchar_t>::cvt(
+	ZuArray<char>(buf->s.data(), buf->s.size() - 1), buf->w));
 
   // FormatMessage() often returns verbose junk; clean it up
   {

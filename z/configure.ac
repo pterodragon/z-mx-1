@@ -83,6 +83,8 @@ AX_PATH_LIB_READLINE(, [AC_MSG_ERROR([libreadline required])])
 CPPFLAGS="$READLINE_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$READLINE_LDFLAGS $LDFLAGS"
 
+AX_PATH_JNI
+
 Z_CPPFLAGS="-D_REENTRANT -D_GNU_SOURCE"
 
 AM_CONDITIONAL([GXX], [test ".$GXX" = ".yes"])
@@ -108,6 +110,8 @@ AC_SUBST(READLINE_CPPFLAGS)
 AC_SUBST(READLINE_LIBS)
 AC_SUBST(READLINE_LDFLAGS)
 
+AC_SUBST(JNI_CPPFLAGS)
+
 AC_SUBST(Z_CPPFLAGS)
 AC_SUBST(Z_CXXFLAGS)
 AC_SUBST(Z_LDFLAGS)
@@ -120,6 +124,7 @@ AC_SUBST(Z_ZP_LIBS)
 AC_OUTPUT(Makefile \
 	zu/Makefile zu/src/Makefile zu/test/Makefile \
 	zm/Makefile zm/src/Makefile zm/test/Makefile \
+	zjni/Makefile zjni/src/Makefile \
 	zt/Makefile zt/src/Makefile zt/test/Makefile \
 	ze/Makefile ze/src/Makefile ze/test/Makefile \
 	zi/Makefile zi/src/Makefile zi/test/Makefile \

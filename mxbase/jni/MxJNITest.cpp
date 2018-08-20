@@ -30,7 +30,7 @@
 
 #include <ZtString.hpp>
 
-#include <MxBaseJNI.hpp>
+#include <ZJNI.hpp>
 
 extern "C" {
   extern jint JNI_OnLoad(JavaVM *, void *);
@@ -40,27 +40,26 @@ struct Msg {
   inline Msg() { }
   inline Msg(JNIEnv *env, jobject obj, jstring text) :
     m_obj(env->NewGlobalRef(obj)) {
-    m_text = MxBaseJNI::j2c(env, text,
+    m_text = ZJNI::j2c(env, text,
 	[](unsigned n) { return ZtString(n + 1); },
-	[](ZtString &s) { return s.data(); },
-	[](const ZtString &s) { return s.size() - 1; },
+	[](ZtString &s) { return ZuArray<char>(s.data(), s.size() - 1); },
 	[](ZtString &s, unsigned n) { s.length(n); });
   }
   inline ~Msg() {
-    if (m_obj) MxBaseJNI::env()->DeleteGlobalRef(m_obj);
+    if (m_obj) ZJNI::env()->DeleteGlobalRef(m_obj);
   }
   inline Msg(Msg &&msg) : m_obj(msg.m_obj), m_text(ZuMv(msg.m_text)) {
     msg.m_obj = 0;
   }
   inline Msg &operator =(Msg &&msg) {
-    if (m_obj) MxBaseJNI::env()->DeleteGlobalRef(m_obj);
+    if (m_obj) ZJNI::env()->DeleteGlobalRef(m_obj);
     m_obj = msg.m_obj; msg.m_obj = 0;
     m_text = ZuMv(msg.m_text);
     return *this;
   }
 
   inline void operator ()(JNIEnv *env, jmethodID mid) {
-    jstring text = MxBaseJNI::c2j(env, m_text);
+    jstring text = ZJNI::c2j(env, m_text);
     env->CallVoidMethod(m_obj, mid, text);
     env->DeleteLocalRef(text);
   }
@@ -76,8 +75,8 @@ static ZmRef<Ring> ring;
 
 void loop()
 {
-  if (MxBaseJNI::attach("loop") < 0) return;
-  JNIEnv *env = MxBaseJNI::env();
+  if (ZJNI::attach("loop") < 0) return;
+  JNIEnv *env = ZJNI::env();
   jclass c = env->FindClass("com/shardmx/mxbase/MxJNITestObject");
   jmethodID mid = env->GetMethodID(c, "helloWorld_", "(Ljava/lang/String;)V");
   for (;;) {
@@ -88,7 +87,7 @@ void loop()
     msg(env, mid);
   }
   ring->close();
-  MxBaseJNI::detach();
+  ZJNI::detach();
 }
 
 int init(JNIEnv *, jobject)
@@ -115,7 +114,7 @@ static void dtor_(JNIEnv *, jobject)
 
 static void helloWorld(JNIEnv *env, jobject obj, jstring text)
 {
-  MxBaseJNI::env(env);
+  ZJNI::env(env);
   thread_local jfieldID fid = 0;
   if (!fid) fid = env->GetFieldID(env->GetObjectClass(obj), "ptr", "J");
   if (void *ptr = ring->push()) {
@@ -134,7 +133,7 @@ int MxJNITest_bind(JNIEnv *env)
     { "init", "()I", (void *)&init }
   };
 #pragma GCC diagnostic pop
-  return MxBaseJNI::bind(env, "com/shardmx/mxbase/MxJNITest",
+  return ZJNI::bind(env, "com/shardmx/mxbase/MxJNITest",
       methods, sizeof(methods) / sizeof(methods[0]));
 }
 
@@ -148,7 +147,7 @@ int MxJNITestObject_bind(JNIEnv *env)
     { "helloWorld", "(Ljava/lang/String;)V", (void *)&helloWorld }
   };
 #pragma GCC diagnostic pop
-  return MxBaseJNI::bind(env, "com/shardmx/mxbase/MxJNITestObject",
+  return ZJNI::bind(env, "com/shardmx/mxbase/MxJNITestObject",
       methods, sizeof(methods) / sizeof(methods[0]));
 }
 
@@ -156,10 +155,10 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
 {
   std::cout << "JNI_OnLoad()\n" << std::flush;
 
-  jint v = MxBaseJNI::onload(jvm);
+  jint v = ZJNI::onload(jvm);
 
-  if (MxJNITest_bind(MxBaseJNI::env()) < 0) return -1;
-  if (MxJNITestObject_bind(MxBaseJNI::env()) < 0) return -1;
+  if (MxJNITest_bind(ZJNI::env()) < 0) return -1;
+  if (MxJNITestObject_bind(ZJNI::env()) < 0) return -1;
 
   return v;
 }

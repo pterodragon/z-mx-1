@@ -17,9 +17,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// MxBase JNI library
+// Z JNI library
 
-#include <MxBaseJNI.hpp>
+#include <ZJNI.hpp>
 
 #include <jni.h>
 
@@ -30,11 +30,11 @@ extern "C" {
 static JavaVM *jvm = 0;
 static thread_local JNIEnv *jenv = 0;
 
-JavaVM *MxBaseJNI::vm() { return jvm; }
-JNIEnv *MxBaseJNI::env() { return jenv; }
-void MxBaseJNI::env(JNIEnv *env) { jenv = env; }
+JavaVM *ZJNI::vm() { return jvm; }
+JNIEnv *ZJNI::env() { return jenv; }
+void ZJNI::env(JNIEnv *env) { jenv = env; }
 
-int MxBaseJNI::attach(const char *name)
+int ZJNI::attach(const char *name)
 {
   JavaVMAttachArgs args{ JNI_VERSION_1_4, const_cast<char *>(name), 0 };
   JNIEnv *env = 0;
@@ -43,12 +43,12 @@ int MxBaseJNI::attach(const char *name)
   return 0;
 }
 
-void MxBaseJNI::detach()
+void ZJNI::detach()
 {
   jvm->DetachCurrentThread();
 }
 
-int MxBaseJNI::bind(
+int ZJNI::bind(
     JNIEnv *env, const char *cname, JNINativeMethod *methods, unsigned n)
 {
   jclass c = env->FindClass(cname);
@@ -60,7 +60,7 @@ int MxBaseJNI::bind(
   return 0;
 }
 
-jint MxBaseJNI::onload(JavaVM *jvm_)
+jint ZJNI::onload(JavaVM *jvm_)
 {
   jvm = jvm_;
 

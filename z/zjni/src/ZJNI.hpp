@@ -17,17 +17,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// MxBase JNI library
+// Z JNI library
 
-#ifndef MxBaseJNI_HPP
-#define MxBaseJNI_HPP
+#ifndef ZJNI_HPP
+#define ZJNI_HPP
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#ifndef ZJNILib_HPP
+#include <ZJNILib.hpp>
 #endif
 
 #ifndef _WIN32
@@ -36,16 +36,19 @@
 
 #include <jni.h>
 
-#include <MxBase.hpp>
+#include <ZuArray.hpp>
+#include <ZuString.hpp>
+#include <ZuUTF.hpp>
+#include <ZuStringN.hpp>
 
-class MxBaseAPI MxBaseJNI {
+class ZJNIAPI ZJNI {
 public:
   // called from JNI_OnLoad(JavaVM *, void *)
   static jint onload(JavaVM *);
 
   static JavaVM *vm();
-  static JNIEnv *env();
-  static void env(JNIEnv *);
+  static JNIEnv *env();		// retrieves the env from TLS
+  static void env(JNIEnv *);	// stores the env in TLS
 
   // bind C++ native methods to Java class - returns -ve on error
   static int bind(
@@ -76,15 +79,15 @@ public:
   }
 
   // Java string -> C++ string
-  template <typename Alloc, typename Buf, typename GetSize, typename SetLen>
+  template <typename Alloc, typename Buf, typename SetLen>
   inline static auto j2c(JNIEnv *env, jstring s_,
-      Alloc &&alloc, Buf &&buf, GetSize &&getSize, SetLen &&setLen) {
+      Alloc &&alloc, Buf &&buf, SetLen &&setLen) {
     if (ZuUnlikely(!s_)) return alloc(0);
     unsigned n = env->GetStringLength(s_);
     if (ZuUnlikely(!n)) return alloc(0);
     ZuArray<const jchar> s(env->GetStringCritical(s_, 0), n);
     auto o = alloc(ZuUTF<char, jchar>::len(s));
-    setLen(o, ZuUTF<char, jchar>::cvt(ZuArray<char>(buf(o), getSize(o)), s));
+    setLen(o, ZuUTF<char, jchar>::cvt(buf(o), s));
     env->ReleaseStringCritical(s_, s.data()); // should be nop
     return o;
   }
@@ -93,10 +96,9 @@ public:
   ZuInline static ZuStringN<N> j2n(JNIEnv *env, jstring s) {
     return j2c(env, s,
 	[](unsigned) { return ZuStringN<N>(); },
-	[](ZuStringN<N> &s) { return s.data(); },
-	[](const ZuStringN<N> &s) { return N - 1; },
+	[](ZuStringN<N> &s) { return ZuArray<char>(s.data(), N - 1); },
 	[](ZuStringN<N> &s, unsigned n) { s.length(n); });
   }
 };
 
-#endif /* MxBaseJNI_HPP */
+#endif /* ZJNI_HPP */

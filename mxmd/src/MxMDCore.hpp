@@ -1131,6 +1131,182 @@ friend class Publisher;
     unsigned			m_nAccepts = 10;
   };
 
+  class Subscriber;
+friend class Subscriber;
+  class Subscriber : public MxEngineApp, public MxEngine {
+
+    class TCP;
+  friend class TCP;
+    class TCP : public ZiConnection {
+    public:
+      TCP(Subscriber *subscriber, const ZiCxnInfo &ci);
+
+      ZuInline Subscriber *subscriber() const { return m_subscriber; }
+
+      void connected(ZiIOContext &);
+      void disconnect();
+      void disconnected() {}
+
+      void sendLogin();
+
+      void process(MxMDPubSub::TCP::InMsg *, ZiIOContext &);
+
+    private:
+      Subscriber			*m_subscriber;
+      ZmRef<MxMDPubSub::TCP::InMsg>	m_in;
+  };
+
+    class UDP;
+  friend class UDP;
+    class UDP : public ZiConnection {
+    public:
+      UDP(Subscriber *subscriber, const ZiCxnInfo &ci);
+
+      ZuInline Subscriber *subscriber() const { return m_subscriber; }
+
+      void connected(ZiIOContext &io);
+      void disconnect();
+      void disconnected() {}
+
+      void recv(ZiIOContext &);
+      void process(MxMDPubSub::UDP::InMsg *, ZiIOContext &);
+
+    private:
+      Subscriber		*m_subscriber;
+    };
+
+  public:
+    typedef ZmPLock Lock;
+    typedef ZmGuard<Lock> Guard;
+    typedef ZmReadGuard<Lock> ReadGuard;
+    typedef MxMDStream::Msg Msg;
+
+    struct State {
+      enum _ {
+        Stopped = 0,
+        Starting,
+        Running,
+        Stopping,
+        Mask		= 0x0003,
+
+        PendingStart	= 0x0004,	// started while stopping
+        PendingStop	= 0x0008,	// stopped while starting
+      };
+    };
+
+    // Rx (called from engine's rx thread)   
+    MxEngineApp::ProcessFn processFn() {
+      return static_cast<MxEngineApp::ProcessFn>(
+	  [](MxEngineApp *app, MxAnyLink *, MxQMsg *msg) {
+	      static_cast<Subscriber *>(app)->pushMsg(msg);
+      });
+    }
+
+    // Tx (called from engine's tx thread)
+    void sent(MxAnyLink *, MxQMsg *) { }
+    void aborted(MxAnyLink *, MxQMsg *) { }
+    void archive(MxAnyLink *, MxQMsg *) { }
+    ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
+
+    class Link : public MxLink<Link> {
+    public:
+      Link(MxID id) : MxLink<Link>{id} { }
+
+      void init(MxEngine *engine) { MxLink<Link>::init(engine); }
+
+      ZmTime reconnectInterval(unsigned reconnects) { return ZmTime{1}; }
+      ZmTime reRequestInterval() { return ZmTime{1}; }
+
+      // Rx
+      void request(const MxQueue::Gap &prev, const MxQueue::Gap &now) { }
+      void reRequest(const MxQueue::Gap &now) { }
+
+      // Tx
+      bool send_(MxQMsg *msg, bool more) { return true; }
+      bool resend_(MxQMsg *msg, bool more){ return true; }
+
+      bool sendGap_(const MxQueue::Gap &gap, bool more){ return true; }
+      bool resendGap_(const MxQueue::Gap &gap, bool more){ return true; }
+
+      MxID id() const { return MxAnyTx::id(); }
+
+      void update(ZvCf *cf) { }
+      void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) { }
+
+      void connect() { MxAnyLink::connected(); }
+      void disconnect() { MxAnyLink::disconnected(); }
+    };
+
+    typedef MxQueueRx<Link> Rx;
+
+    Subscriber(MxMDCore *core) : m_core(core) { }
+
+    void init() {
+      ZmRef<ZvCf> cf = m_core->cf();
+      MxEngine::init(m_core, this, m_core->mx(), cf->subset("subscriber", false, true));
+      m_link = MxEngine::updateLink<Link>("subscriber", nullptr);
+      m_link->init(this);
+    }
+
+    inline ~Subscriber() = default;
+
+    void start();
+    void stop();
+
+  private:
+    void recv(Rx *rx, ZiIOContext &io);
+    void pushMsg(MxQMsg *qmsg);
+
+    void running();
+    void stopped();
+
+    bool pendingStart();
+    bool pendingStop();
+
+    bool pendingStart_();	// state lock held by caller
+    bool pendingStop_();	// state lock held by caller
+
+    void start_();
+    void restart();
+    void restart_();	// state lock held by caller
+
+    void stop_();
+
+    bool tcpError(TCP *tcp, ZiIOContext *io);
+    bool udpError(UDP *udp, ZiIOContext *io);
+
+    void tcpConnect();
+    ZiConnection *tcpConnected(const ZiCxnInfo &ci);
+    void tcpConnectFailed(bool transient);
+    void tcpConnected2(TCP *);
+
+    void loginReq(MxMDStream::Login *login);
+
+    void udpConnect();
+    ZiConnection *udpConnected(const ZiCxnInfo &ci);
+    void udpConnectFailed(bool transient);
+    void udpConnected2(UDP *, ZiIOContext &);
+    void udpReceived(MxMDPubSub::UDP::InQMsg *msg);
+    void udpReceived_(MxMDPubSub::UDP::InQMsg *msg);
+
+    void disconnect();
+
+  private:
+    MxMDCore			*m_core;
+
+    ZmScheduler::Timer		m_restartTimer;
+
+    ZmLock			m_stateLock;
+    unsigned			  m_state;
+    unsigned			  m_reconnects;
+    ZmRef<TCP>			  m_tcp;
+    ZmRef<UDP>			  m_udp;
+
+    ZmRef<MxLink<Link>>		m_link;
+    Rx 				*m_rx = nullptr;
+    uint64_t			m_seqNo;
+  };
+
   typedef ZmPLock Lock;
   typedef ZmGuard<Lock> Guard;
 

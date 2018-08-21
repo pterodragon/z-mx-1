@@ -29,6 +29,7 @@
 
 #include <ZiModule.hpp>
 
+#include <ZvCf.hpp>
 #include <ZvHeapCf.hpp>
 
 #include <MxCSV.hpp>
@@ -1679,7 +1680,7 @@ void MxMDCore::Publisher::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &io
 {
   using namespace MxMDPubSub::TCP;
 
-  MxMDPubSub::TCPHdr &hdr = m_in->as<MxMDPubSub::TCPHdr>();
+  Frame &hdr = m_in->as<Frame>();
 
   switch ((int)hdr.type) {
     case MsgType::Login: {
@@ -1812,4 +1813,401 @@ void MxMDCore::Publisher::UDP::send(const Frame *frame)
     case Type::RefDataLoaded:	send_<RefDataLoaded>(frame); break;
     default: break;
   }
+}
+
+MxMDCore::Subscriber::TCP::TCP(MxMDCore::Subscriber *subscriber, const ZiCxnInfo &ci) :
+    ZiConnection(subscriber->m_core->mx(), ci), m_subscriber(subscriber)
+{
+  using namespace MxMDPubSub::TCP;
+  m_in = new InMsg();
+}
+
+void MxMDCore::Subscriber::TCP::connected(ZiIOContext &io)
+{
+  using namespace MxMDPubSub::TCP;
+  m_subscriber->tcpConnected2(this);
+
+  m_in->fn() = InMsg::Fn::Member<&MxMDCore::Subscriber::TCP::process>::fn(this);
+  m_in->recv(io);
+}
+
+void MxMDCore::Subscriber::TCP::sendLogin()
+{
+  using namespace MxMDStream;
+  ZmRef<MxMDPubSub::TCP::OutMsg> msg = new MxMDPubSub::TCP::OutMsg();
+  m_subscriber->loginReq(new (msg->out<Login>()) Login());
+  msg->send(this);
+}
+
+void MxMDCore::Subscriber::loginReq(MxMDStream::Login *login)
+{
+  ZmRef<ZvCf> cf = m_core->cf()->subset("subscriber", false, true);
+  login->username = cf->get("username", true).data();
+  login->password = cf->get("password", true).data();
+}
+
+void MxMDCore::Subscriber::TCP::disconnect()
+{
+  ZiConnection::disconnect();
+}
+
+void MxMDCore::Subscriber::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &io)
+{
+  using namespace MxMDPubSub::TCP;
+  using namespace MxMDStream;
+
+  Frame &hdr = m_in->as<Frame>();
+
+  switch ((int)hdr.type) {
+    case Type::EndOfSnapshot:
+      m_subscriber->running();
+      m_subscriber->m_link->rxInvoke(
+        [subscriber = m_subscriber](Rx *rx) { rx->stopQueuing(subscriber->m_seqNo); });
+
+      disconnect();
+      return;
+    default:
+      m_subscriber->m_core->apply(&hdr);
+  }
+
+  m_in->recv(io);
+}
+
+MxMDCore::Subscriber::UDP::UDP(Subscriber *subscriber, const ZiCxnInfo &ci) :
+    ZiConnection(subscriber->m_core->mx(), ci), m_subscriber(subscriber) { }
+
+void MxMDCore::Subscriber::UDP::connected(ZiIOContext &io)
+{
+  m_subscriber->udpConnected2(this, io);
+}
+
+void MxMDCore::Subscriber::udpConnected2(Subscriber::UDP *udp, ZiIOContext &io)
+{
+  ZmRef<TCP> tcp;
+  {
+    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    if (!(tcp = m_tcp)) { // paranoia
+      stateGuard.unlock();
+      udp->disconnect();
+      return;
+    }
+    m_udp = udp;
+  }
+
+  m_link->rxInvoke([&io](Rx *rx) {
+	static_cast<Subscriber *>(
+	    static_cast<Link *>(rx)->engine())->recv(rx, io);
+      });
+
+  tcp->sendLogin();
+}
+
+void MxMDCore::Subscriber::recv(Rx *rx, ZiIOContext &io) {
+  rx->startQueuing();
+
+  m_rx = rx;
+
+  m_udp->recv(io);
+}
+
+void MxMDCore::Subscriber::UDP::recv(ZiIOContext &io)
+{
+  using namespace MxMDPubSub::UDP;
+  ZmRef<InQMsg> msg = new InQMsg();
+  msg->fn() = InMsg::Fn::Member<&MxMDCore::Subscriber::UDP::process>::fn(this);
+  msg->recv(io);
+}
+
+void MxMDCore::Subscriber::UDP::process(MxMDPubSub::UDP::InMsg *inMsg, ZiIOContext &io)
+{
+  using namespace MxMDPubSub;
+  using namespace MxMDPubSub::UDP;
+  using namespace MxMDStream;
+
+  if (ZuUnlikely(inMsg->scan())) {
+    ZtHexDump msg_{"truncated UDP message", inMsg->data(), inMsg->length()};
+    m_subscriber->m_core->raise(ZeEVENT(Warning,
+      ([msg_ = ZuMv(msg_)](const ZeEvent &, ZmStream &s) {
+	  s << "UDP " << msg_; })));
+  }
+
+  UDPPktHdr &hdr = inMsg->as<UDPPktHdr>();
+
+  MsgRef msg = new Msg();
+
+  Frame *frame = &hdr.as<Frame>();
+
+  memcpy(msg->frame(), frame, sizeof(Frame) + frame->len);
+
+  ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
+  qmsg->load(m_subscriber->m_rx->rxQueue().id, hdr.seqNo);
+
+  m_subscriber->m_seqNo = hdr.seqNo;
+
+  m_subscriber->m_rx->received(qmsg);
+
+  recv(io);
+}
+
+void MxMDCore::Subscriber::pushMsg(MxQMsg *qmsg) {
+  m_core->apply(qmsg->template as<Msg>().frame());
+}
+
+void MxMDCore::Subscriber::UDP::disconnect()
+{
+  ZiConnection::disconnect();
+}
+
+void MxMDCore::Subscriber::start()
+{
+  // cancel restart
+  m_core->mx()->del(&m_restartTimer);
+
+  {
+    ZmGuard<ZmLock> stateGuard(m_stateLock);
+
+    // state machine
+    int state = m_state & State::Mask;
+    switch (state) {
+      case State::Starting:
+	m_state &= ~State::PendingStop;
+	return;
+      case State::Running:
+	return;
+      case State::Stopping:
+	m_state |= State::PendingStart;
+	return;
+      default:
+	break;
+    }
+
+    // starting...
+    m_reconnects = 0;
+    m_state =
+      (m_state & ~(State::Mask | State::PendingStart)) | State::Starting;
+  }
+
+  m_core->mx()->add(ZmFn<>::Member<&MxMDCore::Subscriber::start_>::fn(this));
+}
+
+void MxMDCore::Subscriber::start_()
+{
+  tcpConnect();
+}
+
+void MxMDCore::Subscriber::tcpConnect()
+{
+  {
+    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    ++m_reconnects;
+  }
+
+  ZmRef<ZvCf> cf = m_core->cf()->subset("subscriber", false, true);
+
+  ZiIP ip{cf->get("remoteIP", true).data()};
+  auto port = static_cast<uint16_t>(strtoul(cf->get("remoteTcpPort", true).data(), nullptr, 10));
+
+  m_core->mx()->connect(
+      ZiConnectFn::Member<&MxMDCore::Subscriber::tcpConnected>::fn(this),
+      ZiFailFn::Member<&MxMDCore::Subscriber::tcpConnectFailed>::fn(this),
+      ZiIP(), 0, ip, port);
+}
+
+ZiConnection *MxMDCore::Subscriber::tcpConnected(const ZiCxnInfo &ci)
+{
+  if (pendingStop()) return 0;
+  return new TCP(this, ci);
+}
+
+void MxMDCore::Subscriber::tcpConnectFailed(bool transient)
+{
+  if (transient) restart();
+}
+
+void MxMDCore::Subscriber::restart()
+{
+  ZmGuard<ZmLock> stateGuard(m_stateLock);
+  restart_();
+}
+
+void MxMDCore::Subscriber::restart_()
+{
+  bool stop = m_state & State::PendingStop;
+  m_state = (m_state & ~(State::Mask | State::PendingStop)) | State::Running;
+  if (stop)
+    m_core->mx()->add(ZmFn<>::Member<&MxMDCore::Subscriber::stop_>::fn(this));
+  else {
+    ZmRef<ZvCf> cf = m_core->cf()->subset("subscriber", false, true);
+    auto reconnectInterval = static_cast<int>(strtoul(cf->get("reconnectInterval", true).data(), nullptr, 10));
+
+    m_core->mx()->add(ZmFn<>::Member<&MxMDCore::Subscriber::start_>::fn(this),
+	ZmTimeNow(reconnectInterval), ZmScheduler::Advance, &m_restartTimer);
+  }
+}
+
+void MxMDCore::Subscriber::stop_()
+{
+  disconnect();
+  stopped();
+}
+
+void MxMDCore::Subscriber::disconnect()
+{
+  ZmRef<TCP> tcp;
+  ZmRef<UDP> udp;
+  {
+    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    tcp = ZuMv(m_tcp);
+    udp = ZuMv(m_udp);
+  }
+  if (tcp) tcp->disconnect();
+  if (udp) udp->disconnect();
+}
+
+void MxMDCore::Subscriber::stopped()
+{
+  ZmGuard<ZmLock> stateGuard(m_stateLock);
+  if (pendingStart_()) return;
+  m_state = (m_state & ~(State::Mask | State::PendingStart)) | State::Stopped;
+}
+
+void MxMDCore::Subscriber::stop()
+{
+  // cancel restart
+  m_core->mx()->del(&m_restartTimer);
+
+  {
+    ZmGuard<ZmLock> stateGuard(m_stateLock);
+
+    // state machine
+    int state = m_state & State::Mask;
+    switch (state) {
+      case State::Stopping:
+	m_state &= ~State::PendingStart;
+	return;
+      case State::Stopped:
+	return;
+      case State::Starting:
+	m_state |= State::PendingStop;
+	return;
+      default:
+	break;
+    }
+
+    // stopping...
+    m_state =
+      (m_state & ~(State::Mask | State::PendingStop)) | State::Stopping;
+  }
+
+  m_core->mx()->add(ZmFn<>::Member<&MxMDCore::Subscriber::stop_>::fn(this));
+}
+
+void MxMDCore::Subscriber::running()
+{
+  ZmGuard<ZmLock> stateGuard(m_stateLock);
+  if (pendingStop_()) return;
+  m_state = (m_state & ~State::Mask) | State::Running;
+}
+
+bool MxMDCore::Subscriber::pendingStart()
+{
+  ZmGuard<ZmLock> stateGuard(m_stateLock);
+  return pendingStart_();
+}
+
+bool MxMDCore::Subscriber::pendingStart_()
+{
+  if (!(m_state & State::PendingStart)) return false;
+  m_state =
+    (m_state & ~(State::Mask | State::PendingStart)) | State::Starting;
+  m_core->mx()->add(ZmFn<>::Member<&MxMDCore::Subscriber::start_>::fn(this));
+  return true;
+}
+
+bool MxMDCore::Subscriber::pendingStop()
+{
+  ZmGuard<ZmLock> stateGuard(m_stateLock);
+  return pendingStop_();
+}
+
+bool MxMDCore::Subscriber::pendingStop_()
+{
+  if (!(m_state & State::PendingStop)) return false;
+  m_state =
+    (m_state & ~(State::Mask | State::PendingStop)) | State::Stopping;
+  m_core->mx()->add(ZmFn<>::Member<&MxMDCore::Subscriber::stop_>::fn(this));
+  return true;
+}
+
+bool MxMDCore::Subscriber::tcpError(TCP *tcp, ZiIOContext *io)
+{
+  ZmGuard<ZmLock> stateGuard(m_stateLock);
+  if (io)
+    io->disconnect();
+  else if (tcp)
+    m_core->mx()->add(ZmFn<>::Member<&MxMDCore::Subscriber::TCP::disconnect>::fn(tcp));
+  if (tcp && tcp != m_tcp) return false;
+  restart_();
+  return true;
+}
+
+bool MxMDCore::Subscriber::udpError(UDP *udp, ZiIOContext *io)
+{
+  ZmGuard<ZmLock> stateGuard(m_stateLock);
+  if (io)
+    io->disconnect();
+  else if (udp)
+    m_core->mx()->add(ZmFn<>::Member<&MxMDCore::Subscriber::UDP::disconnect>::fn(udp));
+  if (udp && udp != m_udp) return false;
+  restart_();
+  return true;
+}
+
+void MxMDCore::Subscriber::tcpConnected2(MxMDCore::Subscriber::TCP *tcp)
+{
+  {
+    ZiIP ip = tcp->info().remoteIP;
+    uint16_t port = tcp->info().remotePort;
+    m_core->raise(ZeEVENT(Info,
+	      ([ip, port](const ZeEvent &, ZmStream &s) {
+		s << "TCP connected "
+		  << ip << ':' << ZuBoxed(port);
+	      })));
+  }
+  {
+    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    m_tcp = tcp;
+  }
+  m_core->mx()->add(ZmFn<>::Member<&MxMDCore::Subscriber::udpConnect>::fn(this));
+
+  // TCP sendLogin() is called once UDP is receiving/queuing
+}
+
+void MxMDCore::Subscriber::udpConnect()
+{
+  ZmRef<ZvCf> cf = m_core->cf()->subset("subscriber", false, true);
+
+  ZiIP ip{cf->get("remoteIP", true).data()};
+  auto port = static_cast<uint16_t>(strtoul(cf->get("remoteUdpPort", true).data(), nullptr, 10));
+
+  ZiCxnOptions options;
+  options.udp(true);
+  options.multicast(true);
+  options.mreq(ZiMReq(ip, {}));
+
+  m_core->mx()->udp(
+    ZiConnectFn::Member<&MxMDCore::Subscriber::udpConnected>::fn(this),
+    ZiFailFn::Member<&MxMDCore::Subscriber::udpConnectFailed>::fn(this),
+    ZiIP(), 0, ip, port, options);
+}
+
+ZiConnection *MxMDCore::Subscriber::udpConnected(const ZiCxnInfo &ci)
+{
+  if (pendingStop()) return 0;
+  return new UDP(this, ci);
+}
+
+void MxMDCore::Subscriber::udpConnectFailed(bool transient)
+{
+  if (transient) restart();
 }

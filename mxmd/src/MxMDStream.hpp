@@ -61,6 +61,7 @@ namespace MxMDStream {
 	ResetOB,
 	AddTrade, CorrectTrade, CancelTrade,
 	RefDataLoaded,
+	Login,
 
 	// control events follow
 	Detach, EndOfSnapshot);
@@ -77,6 +78,7 @@ namespace MxMDStream {
 	"ResetOB",
 	"AddTrade", "CorrectTrade", "CancelTrade",
 	"RefDataLoaded",
+	"Login",
 
 	"Detach", "EndOfSnapshot");
 
@@ -320,6 +322,12 @@ namespace MxMDStream {
     MxID		venue;
   };
 
+  struct Login {
+    enum { Code = Type::Login };
+    MxIDString		username;
+    MxIDString		password;
+  };
+  
   struct Detach {
     enum { Code = Type::Detach };
     MxUInt		id;
@@ -352,7 +360,8 @@ namespace MxMDStream {
       AddTrade,
       CorrectTrade,
       CancelTrade,
-      RefDataLoaded>::T Largest;
+      RefDataLoaded,
+      Login>::T Largest;
 
   struct Buf {
     char	data[sizeof(Largest)];
@@ -489,6 +498,7 @@ namespace MxMDStream {
   FnDeclare(correctTrade, CorrectTrade)
   FnDeclare(cancelTrade, CancelTrade)
   FnDeclare(refDataLoaded, RefDataLoaded)
+  FnDeclare(login, Login)
   FnDeclare(detach, Detach)
   FnDeclare(endOfSnapshot, EndOfSnapshot)
 

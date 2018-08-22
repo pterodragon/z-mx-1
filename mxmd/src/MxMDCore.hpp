@@ -950,6 +950,8 @@ friend class Publisher;
       ZmRef<ZvCf> cf = m_core->cf()->subset("publisher", false, true);
       auto port = static_cast<uint16_t>(strtoul(cf->get("localTcpPort", true).data(), nullptr, 10));
 
+      m_core->raise(ZeEVENT(Info, "Publisher listen"));
+
       m_core->mx()->listen(
         ZiListenFn::Member<&Publisher::tcpListen>::fn(this),
         ZiFailFn::Member<&Publisher::tcpListenFailed>::fn(this),

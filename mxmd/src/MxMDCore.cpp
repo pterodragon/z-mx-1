@@ -301,6 +301,10 @@ MxMDLib *MxMDLib::init(const char *cf_)
         "id publisher\n"
 	"rxThread 3\n"
 	"txThread 3\n"
+	"txThread 3\n"
+	"multicastAddr 239.255.90.105\n"
+	"multicastPort 27413\n"
+	"localTcpPort 9394\n"
       "}\n"
       "subscriber {\n"
         "id subscriber\n"
@@ -1102,8 +1106,8 @@ void MxMDCore::stopRecording()
 
 void MxMDCore::publish()
 {
-  m_publisher.start();
   raise(ZeEVENT(Info, "start publishing"));
+  m_publisher.start();
 }
 
 void MxMDCore::stopPublish()
@@ -1114,8 +1118,8 @@ void MxMDCore::stopPublish()
 
 void MxMDCore::subscribe()
 {
-  m_subscriber.start();
   raise(ZeEVENT(Info, "start subscribing"));
+  m_subscriber.start();
 }
 
 void MxMDCore::stopSubscribe()
@@ -1794,6 +1798,8 @@ void MxMDCore::Publisher::udpConnect()
   options.udp(true);
   options.multicast(true);
 
+  m_core->raise(ZeEVENT(Info, "Publisher udpConnect"));
+
   m_core->mx()->udp(
     ZiConnectFn::Member<&MxMDCore::Publisher::udpConnected>::fn(this),
     ZiFailFn::Member<&MxMDCore::Publisher::udpConnectFailed>::fn(this),
@@ -1802,6 +1808,7 @@ void MxMDCore::Publisher::udpConnect()
 
 ZiConnection *MxMDCore::Publisher::udpConnected(const ZiCxnInfo &ci)
 {
+  m_core->raise(ZeEVENT(Info, "Publisher udpConnected"));
   return new UDP(this, ci);
 }
 
@@ -1977,7 +1984,8 @@ void MxMDCore::Subscriber::UDP::process(MxMDPubSub::UDP::InMsg *inMsg, ZiIOConte
 }
 
 void MxMDCore::Subscriber::pushMsg(MxQMsg *qmsg) {
-  m_core->apply(qmsg->template as<Msg>().frame());
+  auto frame = qmsg->template as<Msg>().frame();
+  m_core->apply(frame);
 }
 
 void MxMDCore::Subscriber::UDP::disconnect()
@@ -2214,8 +2222,8 @@ void MxMDCore::Subscriber::udpConnect()
 {
   ZmRef<ZvCf> cf = m_core->cf()->subset("subscriber", false, true);
 
-  ZiIP ip{cf->get("remoteIP", true).data()};
-  auto port = static_cast<uint16_t>(strtoul(cf->get("remoteUdpPort", true).data(), nullptr, 10));
+  ZiIP ip{cf->get("multicastAddr", true).data()};
+  auto port = static_cast<uint16_t>(strtoul(cf->get("multicastPort", true).data(), nullptr, 10));
 
   ZiCxnOptions options;
   options.udp(true);

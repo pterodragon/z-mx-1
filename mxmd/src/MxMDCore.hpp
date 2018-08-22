@@ -125,6 +125,8 @@ public:
   void stopRecording();
   void publish();
   void stopPublish();
+  void subscribe();
+  void stopSubscribe();
   void stopStreaming();
 
   void replay(
@@ -1339,6 +1341,7 @@ friend class Subscriber;
   Snapper		m_snapper;	// unicasts snapshots
   Recorder		m_recorder;	// records to file
   Publisher		m_publisher;
+  Subscriber		m_subscriber;
 
   ZmRef<MxMDFeed>	m_localFeed;
 

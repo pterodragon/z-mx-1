@@ -296,6 +296,16 @@ MxMDLib *MxMDLib::init(const char *cf_)
         "id recorder\n"
 	"rxThread 3\n"
 	"txThread 3\n"
+      "}\n"
+      "publisher {\n"
+        "id publisher\n"
+	"rxThread 3\n"
+	"txThread 3\n"
+      "}\n"
+      "subscriber {\n"
+        "id subscriber\n"
+	"rxThread 3\n"
+	"txThread 3\n"
       "}\n",
       false);
   }
@@ -358,7 +368,8 @@ MxMDCore::MxMDCore(ZmRef<Mx> mx) :
   m_broadcast(this),
   m_snapper(this),
   m_recorder(this),
-  m_publisher(this)
+  m_publisher(this),
+  m_subscriber(this)
 {
 }
 
@@ -453,6 +464,7 @@ void MxMDCore::init_(ZvCf *cf)
 
   m_recorder.init();
   m_publisher.init();
+  m_subscriber.init();
 
   ZeLOG(Info, "MxMDLib - initialized...");
 }
@@ -547,7 +559,9 @@ void MxMDCore::start()
 
   if (m_recordCfPath) record(m_recordCfPath);
   if (m_replayCfPath) replay(m_replayCfPath);
-  if (cf()->get("multicastAddr")) publish();
+
+  if (cf()->subset("publisher", false, true)->get("multicastAddr")) publish();
+  if (cf()->subset("subscriber", false, true)->get("username")) subscribe();
 
   raise(ZeEVENT(Info, "starting feeds..."));
   allFeeds([](MxMDFeed *feed) { try { feed->start(); } catch (...) { } });
@@ -565,6 +579,7 @@ void MxMDCore::stop()
     stopRecording();
     stopStreaming();
     stopPublish();
+    stopSubscribe();
   }
 
   if (m_cmd) {
@@ -1095,6 +1110,18 @@ void MxMDCore::stopPublish()
 {
   m_publisher.stop();
   raise(ZeEVENT(Info, "stopped publishing"));
+}
+
+void MxMDCore::subscribe()
+{
+  m_subscriber.start();
+  raise(ZeEVENT(Info, "start subscribing"));
+}
+
+void MxMDCore::stopSubscribe()
+{
+  m_subscriber.stop();
+  raise(ZeEVENT(Info, "stopped subscribing"));
 }
 
 void MxMDCore::stopStreaming()

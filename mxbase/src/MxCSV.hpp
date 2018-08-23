@@ -56,10 +56,10 @@ class MxIPCol : public ZvCSVColumn<ZvCSVColType::Func, ZiIP> {
 public:
   template <typename ID> inline MxIPCol(ID &&id, int offset) :
     Base(ZuFwd<ID>(id), offset,
-	ParseFn::Ptr<&MxIPCol::parse>::fn(),
-	PlaceFn::Ptr<&MxIPCol::place>::fn()) { }
-  static void parse(ZiIP *i, ZuString b) { *i = b; }
-  static void place(ZtArray<char> &b, const ZiIP *i) { b << *i; }
+	ParseFn::Ptr<&MxIPCol::parse_>::fn(),
+	PlaceFn::Ptr<&MxIPCol::place_>::fn()) { }
+  static void parse_(ZiIP *i, ZuString b) { *i = b; }
+  static void place_(ZtArray<char> &b, const ZiIP *i) { b << *i; }
 };
 
 class MxIDCol : public ZvCSVColumn<ZvCSVColType::Func, MxID>  {
@@ -70,10 +70,10 @@ public:
   template <typename ID>
   inline MxIDCol(const ID &id, int offset) :
       Base(id, offset,
-	   ParseFn::Ptr<&MxIDCol::parse>::fn(),
-	   PlaceFn::Ptr<&MxIDCol::place>::fn()) { }
-  static void parse(MxID *i, ZuString b) { *i = b; }
-  static void place(ZtArray<char> &b, const MxID *i) { b << *i; }
+	   ParseFn::Ptr<&MxIDCol::parse_>::fn(),
+	   PlaceFn::Ptr<&MxIDCol::place_>::fn()) { }
+  static void parse_(MxID *i, ZuString b) { *i = b; }
+  static void place_(ZtArray<char> &b, const MxID *i) { b << *i; }
 };
 
 class MxHHMMSSCol : public ZvCSVColumn<ZvCSVColType::Func, MxDateTime>  {
@@ -85,17 +85,17 @@ public:
   inline MxHHMMSSCol(
       const ID &id, int offset, unsigned yyyymmdd, int tzOffset) :
     Base(id, offset,
-	ParseFn::Member<&MxHHMMSSCol::parse>::fn(this),
-	PlaceFn::Member<&MxHHMMSSCol::place>::fn(this)),
+	ParseFn::Member<&MxHHMMSSCol::parse_>::fn(this),
+	PlaceFn::Member<&MxHHMMSSCol::place_>::fn(this)),
       m_yyyymmdd(yyyymmdd), m_tzOffset(tzOffset) { }
   virtual ~MxHHMMSSCol() { }
 
-  void parse(MxDateTime *t, ZuString b) {
+  void parse_(MxDateTime *t, ZuString b) {
     new (t) MxDateTime(
 	MxDateTime::YYYYMMDD, m_yyyymmdd, MxDateTime::HHMMSS, MxUInt(b));
     *t -= ZmTime(m_tzOffset);
   }
-  void place(ZtArray<char> &b, const MxDateTime *t) {
+  void place_(ZtArray<char> &b, const MxDateTime *t) {
     MxDateTime l = *t + m_tzOffset;
     b << MxUInt(l.hhmmss()).fmt(ZuFmt::Right<6>());
   }
@@ -113,13 +113,13 @@ public:
   template <typename ID>
   inline MxNSecCol(const ID &id, int offset) :
     Base(id, offset,
-	ParseFn::Ptr<&MxNSecCol::parse>::fn(),
-	PlaceFn::Ptr<&MxNSecCol::place>::fn()) { }
+	ParseFn::Ptr<&MxNSecCol::parse_>::fn(),
+	PlaceFn::Ptr<&MxNSecCol::place_>::fn()) { }
 
-  static void parse(MxDateTime *t, ZuString b) {
+  static void parse_(MxDateTime *t, ZuString b) {
     t->nsec() = MxUInt(b);
   }
-  static void place(ZtArray<char> &b, const MxDateTime *t) {
+  static void place_(ZtArray<char> &b, const MxDateTime *t) {
     b << MxUInt(t->nsec()).fmt(ZuFmt::Right<9>());
   }
 };
@@ -132,15 +132,15 @@ public:
   template <typename ID>
   inline MxValueCol(const ID &id, int offset, int ndpOffset) :
     Base(id, offset,
-	ParseFn::Member<&MxValueCol::parse>::fn(this),
-	PlaceFn::Member<&MxValueCol::place>::fn(this)),
+	ParseFn::Member<&MxValueCol::parse_>::fn(this),
+	PlaceFn::Member<&MxValueCol::place_>::fn(this)),
     m_ndpOffset(ndpOffset - offset) { }
   virtual ~MxValueCol() { }
 
-  void parse(MxValue *f, ZuString b) {
+  void parse_(MxValue *f, ZuString b) {
     *f = MxValNDP{b, ndp(f)}.value;
   }
-  void place(ZtArray<char> &b, const MxValue *f) {
+  void place_(ZtArray<char> &b, const MxValue *f) {
     if (**f) b << MxValNDP{*f, ndp(f)};
   }
 

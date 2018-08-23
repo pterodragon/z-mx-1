@@ -55,12 +55,12 @@ public:
   template <typename ID>
   inline MxMDVenueFlagsCol(const ID &id, int offset, int venueOffset) :
     Base(id, offset,
-	ParseFn::Member<&MxMDVenueFlagsCol::parse>::fn(this),
-	PlaceFn::Member<&MxMDVenueFlagsCol::place>::fn(this)),
+	ParseFn::Member<&MxMDVenueFlagsCol::parse_>::fn(this),
+	PlaceFn::Member<&MxMDVenueFlagsCol::place_>::fn(this)),
     m_venueOffset(venueOffset - offset) { }
   virtual ~MxMDVenueFlagsCol() { }
 
-  void parse(MxFlags *f, ZuString b) {
+  void parse_(MxFlags *f, ZuString b) {
     unsigned i, n = b.length(); if (n > 9) n = 9;
     for (i = 0;; i++) {
       if (ZuUnlikely(i == n)) { *f = 0; return; }
@@ -71,7 +71,7 @@ public:
     MxMDFlagsStr in = ZuString(&b[i], b.length() - i);
     Flags::scan(in, venue, *f);
   }
-  void place(ZtArray<char> &b, const MxFlags *f) {
+  void place_(ZtArray<char> &b, const MxFlags *f) {
     if (!*f) return;
     MxID venue =
       *(const MxID *)((const char *)(const void *)f + m_venueOffset);
@@ -300,11 +300,11 @@ public:
     add(new MxNDPCol("qtyNDP", qtyNDP));
     add(new MxUIntCol("legs", Offset(legs)));
     for (unsigned i = 0; i < MxMDNLegs; i++) {
-      ZuStringN<16> secVenue = "secVenue"; secVenue << ZuBoxed(i);
-      ZuStringN<16> secSegment = "secSegment"; secSegment << ZuBoxed(i);
-      ZuStringN<16> security = "security"; security << ZuBoxed(i);
-      ZuStringN<8> side = "side"; side << ZuBoxed(i);
-      ZuStringN<8> ratio = "ratio"; ratio << ZuBoxed(i);
+      ZuStringN<32> secVenue = "secVenue"; secVenue << ZuBoxed(i);
+      ZuStringN<32> secSegment = "secSegment"; secSegment << ZuBoxed(i);
+      ZuStringN<32> security = "security"; security << ZuBoxed(i);
+      ZuStringN<32> side = "side"; side << ZuBoxed(i);
+      ZuStringN<32> ratio = "ratio"; ratio << ZuBoxed(i);
       add(new MxIDCol(secVenue, Offset(secVenues) + (i * sizeof(MxID))));
       add(new MxIDCol(secSegment, Offset(secSegments) + (i * sizeof(MxID))));
       add(new MxIDStrCol(security,

@@ -479,7 +479,7 @@ class MxMDOrder__ : public Heap, public ZmObject, public MxMDOrder_ {
   MxMDOrder__(const MxMDOrder__ &) = delete;
   MxMDOrder__ &operator =(const MxMDOrder__ &) = delete;
 
-template <typename, typename> friend class ZuConversionFriend;
+template <typename, typename> friend struct ZuConversionFriend;
 
 friend class MxMDOrderBook;
 
@@ -686,7 +686,7 @@ private:
     auto i = this->m_orders.iterator();
     while (MxMDPxLevel_::Orders::Node *node = i.iterate()) {
       const ZmRef<MxMDOrder> &contra = node->key();
-      MxValue &cQty = contra->data().qty;
+      MxValue cQty = contra->data().qty;
       if (cQty <= qty) {
 	if (uintptr_t v = fill(
 	      qty, cumQty, grossTradeAmt, m_price, cQty, contra))
@@ -706,7 +706,7 @@ private:
 	cumQty += qty;
 	grossTradeAmt +=
 	  (MxValNDP{m_price, m_pxNDP} * MxValNDP{qty, m_qtyNDP}).value;
-	cQty -= qty;
+	contra->updateQty_(cQty - qty);
 	m_data.qty -= qty;
 	qty = 0;
 	return 0;

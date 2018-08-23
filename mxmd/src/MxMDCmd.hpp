@@ -37,7 +37,8 @@
 #include <ZtArray.hpp>
 #include <ZtString.hpp>
 
-struct MxMDAPI MxMDCmd {
+class MxMDAPI MxMDCmd {
+public:
   typedef ZmRBTree<ZtString,
 	    ZmRBTreeVal<const ZtArray<ZtString> *,
 	      ZmRBTreeLock<ZmNoLock> > > CmdArgs_;

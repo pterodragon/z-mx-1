@@ -41,9 +41,7 @@
 #include <ZuUTF.hpp>
 #include <ZuStringN.hpp>
 
-// FIXME - add LocalDeleteRef and GlobalDeleteRef RAI wrappers for
-// jclass, jobject, jstring, etc.
-// FIXME - jfieldID, jmethodID
+#include <ZtString.hpp>
 
 namespace ZJNI {
   // called from JNI_OnLoad(JavaVM *, void *)
@@ -76,7 +74,7 @@ namespace ZJNI {
   template <typename T> class GlobalRef {
   public:
     ZuInline GlobalRef(JNIEnv *env, T o) :
-      m_env(env), m_o(o) { env->NewGlobalRef(obj); }
+      m_env(env), m_o(o) { env->NewGlobalRef(o); }
     ZuInline ~GlobalRef() { m_env->DeleteGlobalRef(m_o); }
   private:
     JNIEnv	*m_env;
@@ -121,13 +119,20 @@ namespace ZJNI {
     env->ReleaseStringCritical(s_, s.data()); // should be nop
     return o;
   }
-  // usual fixed-width case - Java -> ZuStringN<N>
+  // Java -> ZuStringN<N>
   template <unsigned N>
   ZuInline ZuStringN<N> j2n(JNIEnv *env, jstring s) {
     return j2c(env, s,
 	[](unsigned) { return ZuStringN<N>(); },
 	[](ZuStringN<N> &s) { return ZuArray<char>(s.data(), N - 1); },
 	[](ZuStringN<N> &s, unsigned n) { s.length(n); });
+  }
+  // Java -> ZtString
+  ZuInline ZtString j2t(JNIEnv *env, jstring s) {
+    return j2c(env, s,
+	[](unsigned n) { return ZtString(n + 1); },
+	[](ZtString &s) { return ZuArray<char>(s.data(), s.size() - 1); },
+	[](ZtString &s, unsigned n) { s.length(n); });
   }
 };
 

@@ -151,7 +151,7 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
   });
 }
 
-MxMDLib *MxMDLib::init(const char *cf_)
+MxMDLib *MxMDLib::init(ZuString cf_)
 {
   ZeLog::start(); // ensure error reporting works
 

@@ -44,7 +44,7 @@ extern "C" {
 
 jint JNI_OnLoad(JavaVM *jvm, void *)
 {
-  std::cout << "JNI_OnLoad()\n" << std::flush;
+  // std::cout << "JNI_OnLoad()\n" << std::flush;
 
   jint v = ZJNI::onload(jvm);
 

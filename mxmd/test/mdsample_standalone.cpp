@@ -47,7 +47,7 @@ int main(int argc, char **argv)
   signal(SIGINT, &sigint);		// handle CTRL-C
 
   try {
-    MxMDLib *md = MxMDLib::init(0);	// initialize market data library
+    MxMDLib *md = MxMDLib::init("");	// initialize market data library
 
     if (!md) return 1;
 

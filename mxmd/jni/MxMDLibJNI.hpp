@@ -35,11 +35,12 @@ namespace MxMDLibJNI {
   void ctor_(JNIEnv *env, jobject obj);
   // () -> void
   void dtor_(JNIEnv *env, jobject obj);
+
   // () -> MxMDLib
-  jobject instance(JNIEnv *env, jobject obj);
+  jobject instance(JNIEnv *env, jclass c);
 
   // (String) -> MxMDLib
-  jobject init(JNIEnv *env, jobject obj, jstring);
+  jobject init(JNIEnv *env, jclass c, jstring);
 
   // () -> void
   void start(JNIEnv *env, jobject obj);
@@ -53,8 +54,8 @@ namespace MxMDLibJNI {
   // () -> void
   void stopStreaming(JNIEnv *env, jobject obj);
 
-  // (String, String, String) -> void
-  void replay(JNIEnv *env, jobject obj, jstring, jstring, jstring);
+  // (String, Instant, boolean) -> void
+  void replay(JNIEnv *env, jobject obj, jstring, jobject, jboolean);
   // () -> void
   void stopReplaying(JNIEnv *env, jobject obj);
 
@@ -70,12 +71,12 @@ namespace MxMDLibJNI {
   // () -> MxMDLibHandler
   jobject handler(JNIEnv *env, jobject obj);
 
-  // (MxSecKey, MxSecKey) -> void
+  // (MxSecKey, MxMDSecurityFn) -> void
   void security(JNIEnv *env, jobject obj, jobject, jobject);
   // (MxMDAllSecuritiesFn) -> long
   jlong allSecurities(JNIEnv *env, jobject obj, jobject);
 
-  // (MxSecKey, MxSecKey) -> void
+  // (MxSecKey, MxMDOrderBookFn) -> void
   void orderBook(JNIEnv *env, jobject obj, jobject, jobject);
   // (MxMDAllOrderBooksFn) -> long
   jlong allOrderBooks(JNIEnv *env, jobject obj, jobject);

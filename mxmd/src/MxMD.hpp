@@ -1738,7 +1738,7 @@ public:
 
   static MxMDLib *instance();
 
-  static MxMDLib *init(const char *cf);
+  static MxMDLib *init(ZuString cf);
 
   virtual void start() = 0;
   virtual void stop() = 0;

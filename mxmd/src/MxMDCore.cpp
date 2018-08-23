@@ -310,6 +310,12 @@ MxMDLib *MxMDLib::init(const char *cf_)
         "id subscriber\n"
 	"rxThread 3\n"
 	"txThread 3\n"
+	"username fakename\n"
+	"password 123456\n"
+	"remoteIP 127.0.0.1\n"
+	"remoteTcpPort 9394\n"
+	"multicastAddr 239.255.90.105\n"
+	"multicastPort 27413\n"
       "}\n",
       false);
   }
@@ -1684,6 +1690,8 @@ MxMDCore::Publisher::TCP::TCP(MxMDCore::Publisher *publisher, const ZiCxnInfo &c
 
 void MxMDCore::Publisher::TCP::connected(ZiIOContext &io)
 {
+  m_publisher->m_core->raise(ZeEVENT(Info, "Publisher TCP connected"));
+
   using namespace MxMDPubSub::TCP;
   m_publisher->tcpConnected2(this);
   m_in->fn() = InMsg::Fn::Member<&MxMDCore::Publisher::TCP::process>::fn(this);
@@ -1715,6 +1723,8 @@ void MxMDCore::Publisher::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &io
 
   switch ((int)hdr.type) {
     case MsgType::Login: {
+      m_publisher->m_core->raise(ZeEVENT(Info, "Publisher TCP Login recv"));
+
       //const Login &data = hdr.as<Login>();
       //// process login.....
 
@@ -1784,6 +1794,7 @@ void MxMDCore::Publisher::UDP::disconnect()
 
 ZiConnection *MxMDCore::Publisher::tcpConnected(const ZiCxnInfo &ci)
 {
+  m_core->raise(ZeEVENT(Info, "Publisher tcpConnected"));
   return new TCP(this, ci);
 }
 
@@ -1814,12 +1825,15 @@ ZiConnection *MxMDCore::Publisher::udpConnected(const ZiCxnInfo &ci)
 
 void MxMDCore::Publisher::udpConnected2(MxMDCore::Publisher::UDP *udp, ZiIOContext &io)
 {
+  m_core->raise(ZeEVENT(Info, "Publisher udpConnected2"));
   ZmGuard<ZmLock> stateGuard(m_stateLock);
   m_udp = udp;
 }
 
 void MxMDCore::Publisher::UDP::send(const Frame *frame)
 {
+  m_publisher->m_core->raise(ZeEVENT(Info, "Publisher UDP send"));
+
   using namespace MxMDStream;
 
   switch ((int)frame->type) {
@@ -1860,6 +1874,8 @@ void MxMDCore::Subscriber::TCP::connected(ZiIOContext &io)
 {
   using namespace MxMDPubSub::TCP;
   m_subscriber->tcpConnected2(this);
+  
+  m_subscriber->m_core->raise(ZeEVENT(Info, "Subscriber TCP connected"));
 
   m_in->fn() = InMsg::Fn::Member<&MxMDCore::Subscriber::TCP::process>::fn(this);
   m_in->recv(io);
@@ -1928,6 +1944,8 @@ void MxMDCore::Subscriber::udpConnected2(Subscriber::UDP *udp, ZiIOContext &io)
     m_udp = udp;
   }
 
+  m_core->raise(ZeEVENT(Info, "Subscriber udpConnected2"));
+  
   m_link->rxInvoke([&io](Rx *rx) {
 	static_cast<Subscriber *>(
 	    static_cast<Link *>(rx)->engine())->recv(rx, io);
@@ -2041,6 +2059,8 @@ void MxMDCore::Subscriber::tcpConnect()
 
   ZiIP ip{cf->get("remoteIP", true).data()};
   auto port = static_cast<uint16_t>(strtoul(cf->get("remoteTcpPort", true).data(), nullptr, 10));
+  
+  m_core->raise(ZeEVENT(Info, "Subscriber tcpConnect"));
 
   m_core->mx()->connect(
       ZiConnectFn::Member<&MxMDCore::Subscriber::tcpConnected>::fn(this),
@@ -2051,6 +2071,9 @@ void MxMDCore::Subscriber::tcpConnect()
 ZiConnection *MxMDCore::Subscriber::tcpConnected(const ZiCxnInfo &ci)
 {
   if (pendingStop()) return 0;
+  
+  m_core->raise(ZeEVENT(Info, "Subscriber tcpConnected"));
+  
   return new TCP(this, ci);
 }
 
@@ -2229,6 +2252,8 @@ void MxMDCore::Subscriber::udpConnect()
   options.udp(true);
   options.multicast(true);
   options.mreq(ZiMReq(ip, {}));
+  
+  m_core->raise(ZeEVENT(Info, "Subscriber udpConnect"));
 
   m_core->mx()->udp(
     ZiConnectFn::Member<&MxMDCore::Subscriber::udpConnected>::fn(this),
@@ -2239,6 +2264,7 @@ void MxMDCore::Subscriber::udpConnect()
 ZiConnection *MxMDCore::Subscriber::udpConnected(const ZiCxnInfo &ci)
 {
   if (pendingStop()) return 0;
+  m_core->raise(ZeEVENT(Info, "Subscriber udpConnected"));
   return new UDP(this, ci);
 }
 

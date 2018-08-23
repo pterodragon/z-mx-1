@@ -17,10 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// MxMD JNI
+// MxMD test JNI
 
-#ifndef MxMDTradeJNI_HPP
-#define MxMDTradeJNI_HPP
+#ifndef MxMDJNITest_HPP
+#define MxMDJNITest_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -30,22 +30,11 @@
 #include <MxMDLib.hpp>
 #endif
 
-namespace MxMDTradeJNI {
-  // () -> void
-  void ctor_(JNIEnv *, jobject);
-  // () -> void
-  void dtor_(JNIEnv *, jobject);
-
-  // () -> MxMDSecurity
-  jobject security(JNIEnv *, jobject);
-
-  // () -> MxMDOrderBook
-  jobject orderBook(JNIEnv *, jobject);
-
-  // () -> MxMDTradeData
-  jobject data(JNIEnv *, jobject);
+namespace MxMDJNITest {
+  // (MxMDLib) -> void
+  void init(JNIEnv *, jobject, jobject);
 
   int bind(JNIEnv *);
 }
 
-#endif /* MxMDTradeJNI_HPP */
+#endif /* MxMDJNITest_HPP */

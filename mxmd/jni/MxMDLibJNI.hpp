@@ -32,66 +32,66 @@
 
 namespace MxMDLibJNI {
   // () -> void
-  void ctor_(JNIEnv *env, jobject obj);
+  void ctor_(JNIEnv *, jobject);
   // () -> void
-  void dtor_(JNIEnv *env, jobject obj);
+  void dtor_(JNIEnv *, jobject);
 
   // () -> MxMDLib
-  jobject instance(JNIEnv *env, jclass c);
+  jobject instance(JNIEnv *, jclass);
 
   // (String) -> MxMDLib
-  jobject init(JNIEnv *env, jclass c, jstring);
+  jobject init(JNIEnv *, jclass, jstring);
 
   // () -> void
-  void start(JNIEnv *env, jobject obj);
+  void start(JNIEnv *, jobject);
   // () -> void
-  void stop(JNIEnv *env, jobject obj);
+  void stop(JNIEnv *, jobject);
 
   // (String) -> void
-  void record(JNIEnv *env, jobject obj, jstring);
+  void record(JNIEnv *, jobject, jstring);
   // () -> void
-  void stopRecording(JNIEnv *env, jobject obj);
+  void stopRecording(JNIEnv *, jobject);
   // () -> void
-  void stopStreaming(JNIEnv *env, jobject obj);
+  void stopStreaming(JNIEnv *, jobject);
 
   // (String, Instant, boolean) -> void
-  void replay(JNIEnv *env, jobject obj, jstring, jobject, jboolean);
+  void replay(JNIEnv *, jobject, jstring, jobject, jboolean);
   // () -> void
-  void stopReplaying(JNIEnv *env, jobject obj);
+  void stopReplaying(JNIEnv *, jobject);
 
   // (Instant) -> void
-  void startTimer(JNIEnv *env, jobject obj, jobject);
+  void startTimer(JNIEnv *, jobject, jobject);
   // () -> void
-  void stopTimer(JNIEnv *env, jobject obj);
+  void stopTimer(JNIEnv *, jobject);
 
   // (MxMDLibHandler) -> void
-  void subscribe(JNIEnv *env, jobject obj, jobject);
+  void subscribe(JNIEnv *, jobject, jobject);
   // () -> void
-  void unsubscribe(JNIEnv *env, jobject obj);
+  void unsubscribe(JNIEnv *, jobject);
   // () -> MxMDLibHandler
-  jobject handler(JNIEnv *env, jobject obj);
+  jobject handler(JNIEnv *, jobject);
 
   // (MxSecKey, MxMDSecurityFn) -> void
-  void security(JNIEnv *env, jobject obj, jobject, jobject);
+  void security(JNIEnv *, jobject, jobject, jobject);
   // (MxMDAllSecuritiesFn) -> long
-  jlong allSecurities(JNIEnv *env, jobject obj, jobject);
+  jlong allSecurities(JNIEnv *, jobject, jobject);
 
   // (MxSecKey, MxMDOrderBookFn) -> void
-  void orderBook(JNIEnv *env, jobject obj, jobject, jobject);
+  void orderBook(JNIEnv *, jobject, jobject, jobject);
   // (MxMDAllOrderBooksFn) -> long
-  jlong allOrderBooks(JNIEnv *env, jobject obj, jobject);
+  jlong allOrderBooks(JNIEnv *, jobject, jobject);
 
   // (String) -> MxMDFeed
-  jobject feed(JNIEnv *env, jobject obj, jstring);
+  jobject feed(JNIEnv *, jobject, jstring);
   // (MxMDAllFeedsFn) -> long
-  jlong allFeeds(JNIEnv *env, jobject obj, jobject);
+  jlong allFeeds(JNIEnv *, jobject, jobject);
 
   // (String) -> MxMDVenue
-  jobject venue(JNIEnv *env, jobject obj, jstring);
+  jobject venue(JNIEnv *, jobject, jstring);
   // (MxMDAllVenuesFn) -> long
-  jlong allVenues(JNIEnv *env, jobject obj, jobject);
+  jlong allVenues(JNIEnv *, jobject, jobject);
 
-  int bind(JNIEnv *env);
+  int bind(JNIEnv *);
 }
 
 #endif /* MxMDLibJNI_HPP */

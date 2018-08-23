@@ -32,66 +32,66 @@
 
 namespace MxMDOrderBookJNI {
   // () -> void
-  void ctor_(JNIEnv *env, jobject obj);
+  void ctor_(JNIEnv *, jobject);
   // () -> void
-  void dtor_(JNIEnv *env, jobject obj);
+  void dtor_(JNIEnv *, jobject);
 
   // () -> MxMDLib
-  jobject md(JNIEnv *env, jobject obj);
+  jobject md(JNIEnv *, jobject);
   // () -> MxMDVenue
-  jobject venue(JNIEnv *env, jobject obj);
+  jobject venue(JNIEnv *, jobject);
 
   // () -> MxMDSecurity
-  jobject security(JNIEnv *env, jobject obj);
+  jobject security(JNIEnv *, jobject);
   // (int) -> MxMDSecurity
-  jobject security(JNIEnv *env, jobject obj, jint);
+  jobject security(JNIEnv *, jobject, jint);
 
   // () -> MxMDOrderBook
-  jobject out(JNIEnv *env, jobject obj);
+  jobject out(JNIEnv *, jobject);
 
   // () -> String
-  jstring venueID(JNIEnv *env, jobject obj);
+  jstring venueID(JNIEnv *, jobject);
   // () -> String
-  jstring segment(JNIEnv *env, jobject obj);
+  jstring segment(JNIEnv *, jobject);
   // () -> String
-  jstring id(JNIEnv *env, jobject obj);
+  jstring id(JNIEnv *, jobject);
   // () -> MxSecKey
-  jobject key(JNIEnv *env, jobject obj);
+  jobject key(JNIEnv *, jobject);
 
   // () -> int
-  jint legs(JNIEnv *env, jobject obj);
+  jint legs(JNIEnv *, jobject);
   // () -> MxSide
-  jobject side(JNIEnv *env, jobject obj);
+  jobject side(JNIEnv *, jobject);
   // (int) -> int
-  jint ratio(JNIEnv *env, jobject obj, jint);
+  jint ratio(JNIEnv *, jobject, jint);
 
   // () -> int
-  jint pxNDP(JNIEnv *env, jobject obj);
+  jint pxNDP(JNIEnv *, jobject);
   // () -> int
-  jint qtyNDP(JNIEnv *env, jobject obj);
+  jint qtyNDP(JNIEnv *, jobject);
 
   // () -> MxMDTickSizeTbl
-  jobject tickSizeTbl(JNIEnv *env, jobject obj);
+  jobject tickSizeTbl(JNIEnv *, jobject);
 
   // () -> MxMDLotSizes
-  jobject lotSizes(JNIEnv *env, jobject obj);
+  jobject lotSizes(JNIEnv *, jobject);
 
   // () -> MxMDL1Data
-  jobject l1Data(JNIEnv *env, jobject obj);
+  jobject l1Data(JNIEnv *, jobject);
 
   // () -> MxMDOBSide
-  jobject bids(JNIEnv *env, jobject obj);
+  jobject bids(JNIEnv *, jobject);
   // () -> MxMDOBSide
-  jobject asks(JNIEnv *env, jobject obj);
+  jobject asks(JNIEnv *, jobject);
 
   // (MxMDSecHandler) -> void
-  void subscribe(JNIEnv *env, jobject obj, jobject);
+  void subscribe(JNIEnv *, jobject, jobject);
   // () -> void
-  void unsubscribe(JNIEnv *env, jobject obj);
+  void unsubscribe(JNIEnv *, jobject);
   // () -> MxMDSecHandler
-  jobject handler(JNIEnv *env, jobject obj);
+  jobject handler(JNIEnv *, jobject);
 
-  int bind(JNIEnv *env);
+  int bind(JNIEnv *);
 }
 
 #endif /* MxMDOrderBookJNI_HPP */

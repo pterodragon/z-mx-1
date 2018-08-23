@@ -32,26 +32,26 @@
 
 namespace MxMDOrderJNI {
   // () -> void
-  void ctor_(JNIEnv *env, jobject obj);
+  void ctor_(JNIEnv *, jobject);
   // () -> void
-  void dtor_(JNIEnv *env, jobject obj);
+  void dtor_(JNIEnv *, jobject);
 
   // () -> MxMDOrderBook
-  jobject orderBook(JNIEnv *env, jobject obj);
+  jobject orderBook(JNIEnv *, jobject);
 
   // () -> MxMDOBSide
-  jobject obSide(JNIEnv *env, jobject obj);
+  jobject obSide(JNIEnv *, jobject);
 
   // () -> MxMDPxLevel
-  jobject pxLevel(JNIEnv *env, jobject obj);
+  jobject pxLevel(JNIEnv *, jobject);
 
   // () -> String
-  jstring id(JNIEnv *env, jobject obj);
+  jstring id(JNIEnv *, jobject);
 
   // () -> MxMDOrderData
-  jobject data(JNIEnv *env, jobject obj);
+  jobject data(JNIEnv *, jobject);
 
-  int bind(JNIEnv *env);
+  int bind(JNIEnv *);
 }
 
 #endif /* MxMDOrderJNI_HPP */

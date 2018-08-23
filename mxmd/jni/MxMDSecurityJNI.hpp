@@ -32,51 +32,51 @@
 
 namespace MxMDSecurityJNI {
   // () -> void
-  void ctor_(JNIEnv *env, jobject obj);
+  void ctor_(JNIEnv *, jobject);
   // () -> void
-  void dtor_(JNIEnv *env, jobject obj);
+  void dtor_(JNIEnv *, jobject);
 
   // () -> MxMDLib
-  jobject md(JNIEnv *env, jobject obj);
+  jobject md(JNIEnv *, jobject);
 
   // () -> String
-  jstring primaryVenue(JNIEnv *env, jobject obj);
+  jstring primaryVenue(JNIEnv *, jobject);
 
   // () -> String
-  jstring primarySegment(JNIEnv *env, jobject obj);
+  jstring primarySegment(JNIEnv *, jobject);
 
   // () -> String
-  jstring id(JNIEnv *env, jobject obj);
+  jstring id(JNIEnv *, jobject);
 
   // () -> MxSecKey
-  jobject key(JNIEnv *env, jobject obj);
+  jobject key(JNIEnv *, jobject);
 
   // () -> MxMDSecRefData
-  jobject refData(JNIEnv *env, jobject obj);
+  jobject refData(JNIEnv *, jobject);
 
   // () -> MxMDSecurity
-  jobject underlying(JNIEnv *env, jobject obj);
+  jobject underlying(JNIEnv *, jobject);
 
   // () -> MxMDDerivatives
-  jobject derivatives(JNIEnv *env, jobject obj);
+  jobject derivatives(JNIEnv *, jobject);
 
   // (MxMDSecHandler) -> void
-  void subscribe(JNIEnv *env, jobject obj, jobject);
+  void subscribe(JNIEnv *, jobject, jobject);
   // () -> void
-  void unsubscribe(JNIEnv *env, jobject obj);
+  void unsubscribe(JNIEnv *, jobject);
   // () -> MxMDSecHandler
-  jobject handler(JNIEnv *env, jobject obj);
+  jobject handler(JNIEnv *, jobject);
 
   // (String) -> MxMDOrderBook
-  jobject orderBook(JNIEnv *env, jobject obj, jstring);
+  jobject orderBook(JNIEnv *, jobject, jstring);
 
   // (String, String) -> MxMDOrderBook
-  jobject orderBook(JNIEnv *env, jobject obj, jstring, jstring);
+  jobject orderBook(JNIEnv *, jobject, jstring, jstring);
 
   // (MxMDAllOrderBooksFn) -> long
-  jlong allOrderBooks(JNIEnv *env, jobject obj, jobject);
+  jlong allOrderBooks(JNIEnv *, jobject, jobject);
 
-  int bind(JNIEnv *env);
+  int bind(JNIEnv *);
 }
 
 #endif /* MxMDSecurityJNI_HPP */

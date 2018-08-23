@@ -32,26 +32,26 @@
 
 namespace MxMDTickSizeTblJNI {
   // () -> void
-  void ctor_(JNIEnv *env, jobject obj);
+  void ctor_(JNIEnv *, jobject);
   // () -> void
-  void dtor_(JNIEnv *env, jobject obj);
+  void dtor_(JNIEnv *, jobject);
 
   // () -> MxMDVenue
-  jobject venue(JNIEnv *env, jobject obj);
+  jobject venue(JNIEnv *, jobject);
 
   // () -> String
-  jstring id(JNIEnv *env, jobject obj);
+  jstring id(JNIEnv *, jobject);
 
   // () -> int
-  jint pxNDP(JNIEnv *env, jobject obj);
+  jint pxNDP(JNIEnv *, jobject);
 
   // (long) -> long
-  jlong tickSize(JNIEnv *env, jobject obj, jlong);
+  jlong tickSize(JNIEnv *, jobject, jlong);
 
   // (MxMDAllTickSizesFn) -> long
-  jlong allTickSizes(JNIEnv *env, jobject obj, jobject);
+  jlong allTickSizes(JNIEnv *, jobject, jobject);
 
-  int bind(JNIEnv *env);
+  int bind(JNIEnv *);
 }
 
 #endif /* MxMDTickSizeTblJNI_HPP */

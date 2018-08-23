@@ -32,31 +32,31 @@
 
 namespace MxMDPxLevelJNI {
   // () -> void
-  void ctor_(JNIEnv *env, jobject obj);
+  void ctor_(JNIEnv *, jobject);
   // () -> void
-  void dtor_(JNIEnv *env, jobject obj);
+  void dtor_(JNIEnv *, jobject);
   // () -> MxMDOBSide
-  jobject obSide(JNIEnv *env, jobject obj);
+  jobject obSide(JNIEnv *, jobject);
 
   // () -> MxSide
-  jobject side(JNIEnv *env, jobject obj);
+  jobject side(JNIEnv *, jobject);
 
   // () -> int
-  jint pxNDP(JNIEnv *env, jobject obj);
+  jint pxNDP(JNIEnv *, jobject);
 
   // () -> int
-  jint qtyNDP(JNIEnv *env, jobject obj);
+  jint qtyNDP(JNIEnv *, jobject);
 
   // () -> long
-  jlong price(JNIEnv *env, jobject obj);
+  jlong price(JNIEnv *, jobject);
 
   // () -> MxMDPxLvlData
-  jobject data(JNIEnv *env, jobject obj);
+  jobject data(JNIEnv *, jobject);
 
   // (MxMDAllOrdersFn) -> long
-  jlong allOrders(JNIEnv *env, jobject obj, jobject);
+  jlong allOrders(JNIEnv *, jobject, jobject);
 
-  int bind(JNIEnv *env);
+  int bind(JNIEnv *);
 }
 
 #endif /* MxMDPxLevelJNI_HPP */

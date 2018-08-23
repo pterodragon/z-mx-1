@@ -32,19 +32,19 @@
 
 namespace MxMDFeedJNI {
   // () -> void
-  void ctor_(JNIEnv *env, jobject obj);
+  void ctor_(JNIEnv *, jobject);
   // () -> void
-  void dtor_(JNIEnv *env, jobject obj);
+  void dtor_(JNIEnv *, jobject);
   // () -> MxMDLib
-  jobject md(JNIEnv *env, jobject obj);
+  jobject md(JNIEnv *, jobject);
 
   // () -> String
-  jstring id(JNIEnv *env, jobject obj);
+  jstring id(JNIEnv *, jobject);
 
   // () -> int
-  jint level(JNIEnv *env, jobject obj);
+  jint level(JNIEnv *, jobject);
 
-  int bind(JNIEnv *env);
+  int bind(JNIEnv *);
 }
 
 #endif /* MxMDFeedJNI_HPP */

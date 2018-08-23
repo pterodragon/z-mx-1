@@ -32,23 +32,23 @@
 
 namespace MxMDDerivativesJNI {
   // () -> void
-  void ctor_(JNIEnv *env, jobject obj);
+  void ctor_(JNIEnv *, jobject);
   // () -> void
-  void dtor_(JNIEnv *env, jobject obj);
+  void dtor_(JNIEnv *, jobject);
 
   // (MxFutKey) -> MxMDSecurity
-  jobject future(JNIEnv *env, jobject obj, jobject);
+  jobject future(JNIEnv *, jobject, jobject);
 
   // (MxMDAllSecuritiesFn) -> long
-  jlong allFutures(JNIEnv *env, jobject obj, jobject);
+  jlong allFutures(JNIEnv *, jobject, jobject);
 
   // (MxOptKey) -> MxMDSecurity
-  jobject option(JNIEnv *env, jobject obj, jobject);
+  jobject option(JNIEnv *, jobject, jobject);
 
   // (MxMDAllSecuritiesFn) -> long
-  jlong allOptions(JNIEnv *env, jobject obj, jobject);
+  jlong allOptions(JNIEnv *, jobject, jobject);
 
-  int bind(JNIEnv *env);
+  int bind(JNIEnv *);
 }
 
 #endif /* MxMDDerivativesJNI_HPP */

@@ -32,35 +32,35 @@
 
 namespace MxMDVenueJNI {
   // () -> void
-  void ctor_(JNIEnv *env, jobject obj);
+  void ctor_(JNIEnv *, jobject);
   // () -> void
-  void dtor_(JNIEnv *env, jobject obj);
+  void dtor_(JNIEnv *, jobject);
   // () -> MxMDLib
-  jobject md(JNIEnv *env, jobject obj);
+  jobject md(JNIEnv *, jobject);
   // () -> MxMDFeed
-  jobject feed(JNIEnv *env, jobject obj);
+  jobject feed(JNIEnv *, jobject);
 
   // () -> String
-  jstring id(JNIEnv *env, jobject obj);
+  jstring id(JNIEnv *, jobject);
 
   // () -> MxMDOrderIDScope
-  jobject orderIDScope(JNIEnv *env, jobject obj);
+  jobject orderIDScope(JNIEnv *, jobject);
 
   // () -> long
-  jlong flags(JNIEnv *env, jobject obj);
+  jlong flags(JNIEnv *, jobject);
 
   // (String) -> MxMDTickSizeTbl
-  jobject tickSizeTbl(JNIEnv *env, jobject obj, jstring);
+  jobject tickSizeTbl(JNIEnv *, jobject, jstring);
   // (MxMDAllTickSizeTblsFn) -> long
-  jlong allTickSizeTbls(JNIEnv *env, jobject obj, jobject);
+  jlong allTickSizeTbls(JNIEnv *, jobject, jobject);
 
   // (MxMDAllSegmentsFn) -> void
-  void allSegments(JNIEnv *env, jobject obj, jobject);
+  void allSegments(JNIEnv *, jobject, jobject);
 
   // (String) -> MxMDSegment
-  jobject tradingSession(JNIEnv *env, jobject obj, jstring);
+  jobject tradingSession(JNIEnv *, jobject, jstring);
 
-  int bind(JNIEnv *env);
+  int bind(JNIEnv *);
 }
 
 #endif /* MxMDVenueJNI_HPP */

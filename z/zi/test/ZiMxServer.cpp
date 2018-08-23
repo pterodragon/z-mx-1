@@ -75,7 +75,7 @@ public:
     if (len >= 12)
       memcpy(m_content.data() + len - 12, " G'bye World", 12);
     else
-      memcpy(m_content.data(), " G'bye World" + (12 - len), len);
+      memcpy(m_content.data(), (const char *)" G'bye World" + (12 - len), len);
     m_content.length(len);
     return len;
   }

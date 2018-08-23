@@ -66,7 +66,6 @@ public:
     return *this;
   }
 
-private:
   template <typename T> struct IsInt {
     enum { OK =
       ZuConversion<int, T>::Same ||
@@ -80,7 +79,6 @@ private:
     typedef T_ T;
   };
 
-public:
   ZuInline ZmTime(Now_) { now(); }
   template <typename T>
   ZuInline ZmTime(Now_, T i, typename MatchInt<T>::T *_ = 0) {
@@ -94,7 +92,7 @@ public:
   ZuInline ZmTime(time_t t, long n) : timespec{t, n} { }
 
   ZuInline ZmTime(double d) :
-    timespec{(time_t)d, (long)((d - tv_sec) * 1000000000)} { }
+    timespec{(time_t)d, (long)((d - (double)(time_t)d) * 1000000000)} { }
 
   ZuInline ZmTime(Nano_, int64_t nano) : 
     timespec{(time_t)(nano / 1000000000), (long)(nano % 1000000000)} { }

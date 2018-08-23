@@ -105,13 +105,13 @@ typedef ZuBox_1(int8_t) ZtEnum;
 #define ZtEnumFlags(Map, ...) \
   struct Map : public Map_<Map> { \
     Map() { this->init(__VA_ARGS__, (const char *)0); } \
-    template <typename S, typename Flags> \
-    inline unsigned print(S &s, const Flags &v, char delim = '|') const { \
+    template <typename S, typename Flags_> \
+    inline unsigned print(S &s, const Flags_ &v, char delim = '|') const { \
       if (!v) return 0; \
       bool first = true; \
       unsigned n = 0; \
       for (unsigned i = 0; i < N; i++) { \
-	if (v & (((Flags)1U)<<i)) { \
+	if (v & (((Flags_)1U)<<i)) { \
 	  if (ZuString s_ = this->v2s(i)) { \
 	    if (!first) s << delim; \
 	    s << s_; \
@@ -122,10 +122,10 @@ typedef ZuBox_1(int8_t) ZtEnum;
       } \
       return n; \
     } \
-    template <typename Flags> \
-    inline Flags scan(ZuString s, char delim = '|') const { \
+    template <typename Flags_> \
+    inline Flags_ scan(ZuString s, char delim = '|') const { \
       if (!s) return 0; \
-      Flags v = 0; \
+      Flags_ v = 0; \
       bool end = false; \
       unsigned len = 0, clen = 0; \
       const char *cstr = s.data(), *next; \
@@ -137,7 +137,7 @@ typedef ZuBox_1(int8_t) ZtEnum;
 	if (len > s.length() || c == 0) end = true; \
 	ZtEnum i = this->s2v(ZuString(cstr, clen)); \
 	if (ZuUnlikely(!*i)) return 0; \
-	v |= (((Flags)1U)<<(unsigned)i); \
+	v |= (((Flags_)1U)<<(unsigned)i); \
 	cstr = ++next; \
 	clen = 0; \
       } while (!end); \

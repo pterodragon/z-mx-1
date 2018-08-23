@@ -339,9 +339,9 @@ public:
     { run(0, ZuMv(fn), timeout, mode, ptr); }
 
   ZuInline void run(unsigned tid, ZmFn<> fn, ZmTime timeout)
-    { run(tid, ZuMv(fn), Update, 0); }
+    { run(tid, ZuMv(fn), timeout, Update, 0); }
   ZuInline void run(unsigned tid, ZmFn<> fn, ZmTime timeout, Timer *ptr)
-    { run(tid, ZuMv(fn), Update, ptr); }
+    { run(tid, ZuMv(fn), timeout, Update, ptr); }
   void run(unsigned tid, ZmFn<> fn, ZmTime timeout, int mode, Timer *ptr);
 
   void del(Timer *);				// cancel job

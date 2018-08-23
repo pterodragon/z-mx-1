@@ -392,7 +392,7 @@ private:
 };
 
 class ZvAPI ZvCmdObject : public ZmObject {
-template <typename, typename> friend class ZuConversionFriend;
+template <typename, typename> friend struct ZuConversionFriend;
 
   ZvCmdObject();
   ZvCmdObject &operator=(const ZvCmdObject &);

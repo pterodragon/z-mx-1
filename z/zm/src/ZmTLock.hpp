@@ -101,7 +101,7 @@ struct ZmTLock_Held {
   ZuInline ZmTLock_Held(void *thread, int lockCount) :
     m_thread(thread), m_lockCount(lockCount) { }
 
-  ZuInline bool operator !() { return !m_thread; }
+  ZuInline bool operator !() const { return !m_thread; }
   ZuOpBool
 
   void		*m_thread;

@@ -95,7 +95,7 @@ class ZiConnection;
 class ZiMultiplex;
 
 class ZiCxnOptions;
-class ZiCxnInfo;
+struct ZiCxnInfo;
 
 // legacy compatibility
 #define ZiOptions ZiCxnOptions

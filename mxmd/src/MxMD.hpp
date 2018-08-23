@@ -260,7 +260,7 @@ public:
 
   ZuInline MxMDVenue *venue() const { return m_venue; }
   ZuInline const MxIDString &id() const { return m_id; }
-  ZuInline MxValue pxNDP() const { return m_pxNDP; }
+  ZuInline MxNDP pxNDP() const { return m_pxNDP; }
 
   void reset();
   void addTickSize(MxValue minPrice, MxValue maxPrice, MxValue tickSize);
@@ -319,6 +319,7 @@ public:
 
   inline MxMDSecurity *security() const { return m_security; }
   inline MxMDOrderBook *orderBook() const { return m_orderBook; }
+
   inline const MxMDTradeData &data() const { return m_data; }
 
 private:
@@ -850,6 +851,21 @@ public:
 
   ZuInline ZmRef<MxMDPxLevel> mktLevel() { return m_mktLevel; }
 
+  // iterate over all price levels, best -> worst
+  template <typename L> // (MxMDPxLevel *) -> uintptr_t
+  uintptr_t allPxLevels(L l) const {
+    if (m_side == MxSide::Buy) {
+      auto i = m_pxLevels.readIterator<ZmRBTreeLessEqual>();
+      while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate())
+	if (uintptr_t v = l(pxLevel)) return v;
+    } else {
+      auto i = m_pxLevels.readIterator<ZmRBTreeGreaterEqual>();
+      while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate())
+	if (uintptr_t v = l(pxLevel)) return v;
+    }
+    return 0;
+  }
+
   // iterate over price levels in range, best -> worst
   template <typename L> // (MxMDPxLevel *) -> uintptr_t
   uintptr_t pxLevels(MxValue minPrice, MxValue maxPrice, L l) {
@@ -865,21 +881,6 @@ public:
 	if (pxLevel->price() >= maxPrice) break;
 	if (uintptr_t v = l(pxLevel)) return v;
       }
-    }
-    return 0;
-  }
-
-  // iterate over all price levels, best -> worst
-  template <typename L> // (MxMDPxLevel *) -> uintptr_t
-  uintptr_t allPxLevels(L l) const {
-    if (m_side == MxSide::Buy) {
-      auto i = m_pxLevels.readIterator<ZmRBTreeLessEqual>();
-      while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate())
-	if (uintptr_t v = l(pxLevel)) return v;
-    } else {
-      auto i = m_pxLevels.readIterator<ZmRBTreeGreaterEqual>();
-      while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate())
-	if (uintptr_t v = l(pxLevel)) return v;
     }
     return 0;
   }
@@ -1253,13 +1254,13 @@ friend class MxMDSecurity;
   ZuInline MxMDDerivatives() { }
 
 public:
-  uintptr_t allFutures(ZmFn<MxMDSecurity *>) const;
   ZuInline MxMDSecurity *future(const MxFutKey &key) const
     { return m_futures.findVal(key); }
+  uintptr_t allFutures(ZmFn<MxMDSecurity *>) const;
 
-  uintptr_t allOptions(ZmFn<MxMDSecurity *>) const;
   ZuInline MxMDSecurity *option(const MxOptKey &key) const
     { return m_options.findVal(key); }
+  uintptr_t allOptions(ZmFn<MxMDSecurity *>) const;
 
 private:
   void add(MxMDSecurity *);

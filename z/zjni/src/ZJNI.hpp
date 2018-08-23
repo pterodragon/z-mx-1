@@ -41,24 +41,54 @@
 #include <ZuUTF.hpp>
 #include <ZuStringN.hpp>
 
-class ZJNIAPI ZJNI {
-public:
-  // called from JNI_OnLoad(JavaVM *, void *)
-  static jint onload(JavaVM *);
+// FIXME - add LocalDeleteRef and GlobalDeleteRef RAI wrappers for
+// jclass, jobject, jstring, etc.
+// FIXME - jfieldID, jmethodID
 
-  static JavaVM *vm();
-  static JNIEnv *env();		// retrieves the env from TLS
-  static void env(JNIEnv *);	// stores the env in TLS
+namespace ZJNI {
+  // called from JNI_OnLoad(JavaVM *, void *)
+  jint onload(JavaVM *);
+
+  JavaVM *vm();
+  JNIEnv *env();		// retrieves the env from TLS
+  void env(JNIEnv *);	// stores the env in TLS
 
   // bind C++ native methods to Java class - returns -ve on error
-  static int bind(
+  int bind(
       JNIEnv *, const char *cname, JNINativeMethod *methods, unsigned n);
 
-  static int attach(const char *name);	// attach thread - returns -ve on error
-  static void detach();			// detach thread
+  int attach(const char *name);	// attach thread - returns -ve on error
+  void detach();			// detach thread
+
+  // RAI for local/global references to Java (jobject/jstring/jclass/...)
+  template <typename T> class LocalRef {
+  public:
+    ZuInline LocalRef(JNIEnv *env, T o) : m_env(env), m_o(o) { }
+    ZuInline ~LocalRef() { m_env->DeleteLocalRef(m_o); }
+  private:
+    JNIEnv	*m_env;
+    T		m_o;
+  };
+  template <typename T>
+  ZuInline LocalRef<T> localRef(JNIEnv *env, T o) {
+    return LocalRef<T>(env, o);
+  }
+  template <typename T> class GlobalRef {
+  public:
+    ZuInline GlobalRef(JNIEnv *env, T o) :
+      m_env(env), m_o(o) { env->NewGlobalRef(obj); }
+    ZuInline ~GlobalRef() { m_env->DeleteGlobalRef(m_o); }
+  private:
+    JNIEnv	*m_env;
+    T		m_o;
+  };
+  template <typename T>
+  ZuInline GlobalRef<T> globalRef(JNIEnv *env, T o) {
+    return GlobalRef<T>(env, o);
+  }
 
   // C++ string -> Java string
-  inline static jstring c2j(JNIEnv *env, ZuString s) {
+  inline jstring c2j(JNIEnv *env, ZuString s) {
     if (ZuUnlikely(!s)) return env->NewStringUTF("");
     unsigned n = ZuUTF<jchar, char>::len(s);
     if (ZuUnlikely(!n)) return env->NewStringUTF("");
@@ -80,7 +110,7 @@ public:
 
   // Java string -> C++ string
   template <typename Alloc, typename Buf, typename SetLen>
-  inline static auto j2c(JNIEnv *env, jstring s_,
+  inline auto j2c(JNIEnv *env, jstring s_,
       Alloc &&alloc, Buf &&buf, SetLen &&setLen) {
     if (ZuUnlikely(!s_)) return alloc(0);
     unsigned n = env->GetStringLength(s_);
@@ -93,7 +123,7 @@ public:
   }
   // usual fixed-width case - Java -> ZuStringN<N>
   template <unsigned N>
-  ZuInline static ZuStringN<N> j2n(JNIEnv *env, jstring s) {
+  ZuInline ZuStringN<N> j2n(JNIEnv *env, jstring s) {
     return j2c(env, s,
 	[](unsigned) { return ZuStringN<N>(); },
 	[](ZuStringN<N> &s) { return ZuArray<char>(s.data(), N - 1); },

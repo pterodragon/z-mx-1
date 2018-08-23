@@ -79,6 +79,7 @@ void loop()
   JNIEnv *env = ZJNI::env();
   jclass c = env->FindClass("com/shardmx/mxbase/MxJNITestObject");
   jmethodID mid = env->GetMethodID(c, "helloWorld_", "(Ljava/lang/String;)V");
+  env->DeleteLocalRef(c);
   for (;;) {
     Msg *msg_ = ring->shift();
     if (!msg_) break;

@@ -41,22 +41,26 @@
 #include <ZuUTF.hpp>
 #include <ZuStringN.hpp>
 
+#include <ZtDate.hpp>
 #include <ZtString.hpp>
 
 namespace ZJNI {
   // called from JNI_OnLoad(JavaVM *, void *)
-  jint onload(JavaVM *);
+  ZJNIExtern jint load(JavaVM *);
+  ZJNIExtern JNIEnv *unload(JavaVM *);
 
-  JavaVM *vm();
-  JNIEnv *env();		// retrieves the env from TLS
-  void env(JNIEnv *);	// stores the env in TLS
+  ZJNIExtern JavaVM *vm();
+  ZJNIExtern JNIEnv *env();		// retrieves the env from TLS
+  ZJNIExtern void env(JNIEnv *);	// stores the env in TLS
 
   // bind C++ native methods to Java class - returns -ve on error
-  int bind(
+  ZJNIExtern int bind(
       JNIEnv *, const char *cname, JNINativeMethod *methods, unsigned n);
 
-  int attach(const char *name);	// attach thread - returns -ve on error
-  void detach();			// detach thread
+  ZJNIExtern int attach(const char *name);	// attach thread - -ve on error
+  ZJNIExtern void detach();			// detach thread
+
+  ZJNIExtern void throwNPE(JNIEnv *, ZuString);	// throw NullPointerException
 
   // RAI for local/global references to Java (jobject/jstring/jclass/...)
   template <typename T> class LocalRef {
@@ -85,8 +89,8 @@ namespace ZJNI {
     return GlobalRef<T>(env, o);
   }
 
-  // C++ string -> Java string
-  inline jstring c2j(JNIEnv *env, ZuString s) {
+  // C++ any string -> Java String
+  inline jstring s2j(JNIEnv *env, ZuString s) {
     if (ZuUnlikely(!s)) return env->NewStringUTF("");
     unsigned n = ZuUTF<jchar, char>::len(s);
     if (ZuUnlikely(!n)) return env->NewStringUTF("");
@@ -106,9 +110,9 @@ namespace ZJNI {
     return env->NewString(buf, n);
   }
 
-  // Java string -> C++ string
+  // Java String -> C++ any string
   template <typename Alloc, typename Buf, typename SetLen>
-  inline auto j2c(JNIEnv *env, jstring s_,
+  inline auto j2s(JNIEnv *env, jstring s_,
       Alloc &&alloc, Buf &&buf, SetLen &&setLen) {
     if (ZuUnlikely(!s_)) return alloc(0);
     unsigned n = env->GetStringLength(s_);
@@ -119,21 +123,26 @@ namespace ZJNI {
     env->ReleaseStringCritical(s_, s.data()); // should be nop
     return o;
   }
-  // Java -> ZuStringN<N>
+  // Java String -> ZuStringN<N>
   template <unsigned N>
-  ZuInline ZuStringN<N> j2n(JNIEnv *env, jstring s) {
-    return j2c(env, s,
+  ZuInline ZuStringN<N> j2s_ZuStringN(JNIEnv *env, jstring s) {
+    return j2s(env, s,
 	[](unsigned) { return ZuStringN<N>(); },
 	[](ZuStringN<N> &s) { return ZuArray<char>(s.data(), N - 1); },
 	[](ZuStringN<N> &s, unsigned n) { s.length(n); });
   }
-  // Java -> ZtString
-  ZuInline ZtString j2t(JNIEnv *env, jstring s) {
-    return j2c(env, s,
+  // Java String -> ZtString
+  ZuInline ZtString j2s_ZtString(JNIEnv *env, jstring s) {
+    return j2s(env, s,
 	[](unsigned n) { return ZtString(n + 1); },
 	[](ZtString &s) { return ZuArray<char>(s.data(), s.size() - 1); },
 	[](ZtString &s, unsigned n) { s.length(n); });
   }
+
+  // Java Instant -> ZtDate
+  ZJNIExtern ZtDate j2t(JNIEnv *env, jobject obj);
+  // ZtDate -> Java Instant
+  ZJNIExtern jobject t2j(JNIEnv *env, const ZtDate &t);
 };
 
 #endif /* ZJNI_HPP */

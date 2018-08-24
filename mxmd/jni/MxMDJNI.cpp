@@ -39,14 +39,15 @@
 #include <MxMDTradeJNI.hpp>
 
 extern "C" {
-  extern jint JNI_OnLoad(JavaVM *, void *);
+  MxMDExtern jint JNI_OnLoad(JavaVM *, void *);
+  MxMDExtern void JNI_OnUnload(JavaVM *, void *);
 }
 
 jint JNI_OnLoad(JavaVM *jvm, void *)
 {
   // std::cout << "JNI_OnLoad()\n" << std::flush;
 
-  jint v = ZJNI::onload(jvm);
+  jint v = ZJNI::load(jvm);
 
   JNIEnv *env = ZJNI::env();
 
@@ -66,4 +67,10 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
   if (MxMDTradeJNI::bind(env) < 0) return -1;
 
   return v;
+}
+
+void JNI_OnUnload(JavaVM *jvm, void *)
+{
+  JNIEnv *env = ZJNI::unload(jvm);
+  MxMDLibJNI::final(env);
 }

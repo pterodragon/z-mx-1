@@ -26,6 +26,7 @@
 #include <MxMDLibJNI.hpp>
 
 #include <MxMD.hpp>
+#include <MxMDCore.hpp>
 
 namespace MxMDLibJNI {
   ZmLock	lock;
@@ -33,110 +34,115 @@ namespace MxMDLibJNI {
     jmethodID	  ctor_mid = 0;
     jobject	  global_obj = 0;
 
-  void init_(JNIEnv *env, jclass c) {
-    if (!ptr_fid) {
-      ZJNI::env(env);
-      ptr_fid = env->GetFieldID(c, "ptr", "J");
-      ctor_mid = env->GetMethodID(c, "<init>", "(J)V");
-    }
-  }
-
   MxMDLib *ptr_(JNIEnv *env, jobject obj) {
-    return (MxMDLib *)(void *)(uintptr_t)env->GetLongField(obj, ptr_fid);
+    uintptr_t md = env->GetLongField(obj, ptr_fid);
+    if (ZuUnlikely(!md)) {
+      ZJNI::throwNPE(env, "MxMDLib.init() not called");
+      return 0;
+    }
+    return (MxMDLib *)(void *)md;
   }
 }
 
-void MxMDLibJNI::ctor_(JNIEnv *env, jobject obj)
-{
-  // () -> void
+void MxMDLibJNI::ctor_(JNIEnv *env, jobject obj) { }
 
-}
-
-void MxMDLibJNI::dtor_(JNIEnv *env, jobject obj)
-{
-  // () -> void
-
-}
+void MxMDLibJNI::dtor_(JNIEnv *env, jobject obj) { }
 
 jobject MxMDLibJNI::instance(JNIEnv *env, jclass c)
 {
   // () -> MxMDLib
-  using namespace MxMDLibJNI;
-
   ZmGuard<ZmLock> guard(lock);
 
-  if (ZuLikely(global_obj)) return global_obj;
-
-  init_(env, c);
-
-  if (MxMDLib *md = MxMDLib::instance()) {
-    jobject obj = env->NewObject(c, ctor_mid, (jlong)(uintptr_t)(void *)md);
-    global_obj = env->NewGlobalRef(obj);
-    env->DeleteLocalRef(obj);
-    return global_obj;
-  }
-
-  return 0;
+  return global_obj;
 }
 
 jobject MxMDLibJNI::init(JNIEnv *env, jclass c, jstring cf)
 {
   // (String) -> MxMDLib
-  using namespace MxMDLibJNI;
-
   ZmGuard<ZmLock> guard(lock);
 
-  init_(env, c);
+  if (ZuUnlikely(global_obj)) return global_obj;
 
-  MxMDLib *md = MxMDLib::init(ZJNI::j2t(env, cf));
-  if (ZuUnlikely(!md)) return 0; // FIXME
+  ZJNI::env(env);
+  ptr_fid = env->GetFieldID(c, "ptr", "J");
+  ctor_mid = env->GetMethodID(c, "<init>", "(J)V");
+
+  MxMDLib *md = MxMDLib::init(ZJNI::j2s_ZtString(env, cf));
+  if (ZuUnlikely(!md)) {
+    ZJNI::throwNPE(env, "MxMDLib.init() failed");
+    return 0;
+  }
+
+  {
+    MxMDCore *core = static_cast<MxMDCore *>(md);
+
+    core->mx()->threadInit([]() {
+	  ZmThreadName name;
+	  ZmThreadContext::self()->name(name);
+	  ZJNI::attach(name.data());
+	});
+    core->mx()->threadFinal([]() { ZJNI::detach(); });
+  }
 
   jobject obj = env->NewObject(c, ctor_mid, (jlong)(uintptr_t)(void *)md);
   global_obj = env->NewGlobalRef(obj);
   env->DeleteLocalRef(obj);
+
   return global_obj;
+}
+
+void MxMDLibJNI::final(JNIEnv *env)
+{
+  env->DeleteGlobalRef(global_obj); global_obj = 0;
 }
 
 void MxMDLibJNI::start(JNIEnv *env, jobject obj)
 {
   // () -> void
-  using namespace MxMDLibJNI;
   MxMDLib *md = ptr_(env, obj);
-  if (ZuUnlikely(!md)) return; // FIXME
+  if (ZuUnlikely(!md)) return;
   md->start();
 }
 
 void MxMDLibJNI::stop(JNIEnv *env, jobject obj)
 {
   // () -> void
-  using namespace MxMDLibJNI;
   MxMDLib *md = ptr_(env, obj);
-  if (ZuUnlikely(!md)) return; // FIXME
+  if (ZuUnlikely(!md)) return;
   md->stop();
 }
 
-void MxMDLibJNI::record(JNIEnv *env, jobject obj, jstring)
+void MxMDLibJNI::record(JNIEnv *env, jobject obj, jstring path)
 {
   // (String) -> void
-
+  MxMDLib *md = ptr_(env, obj);
+  if (ZuUnlikely(!md)) return;
+  md->record(ZJNI::j2s_ZtString(env, path));
 }
 
 void MxMDLibJNI::stopRecording(JNIEnv *env, jobject obj)
 {
   // () -> void
-
+  MxMDLib *md = ptr_(env, obj);
+  if (ZuUnlikely(!md)) return;
+  md->stopRecording();
 }
 
 void MxMDLibJNI::stopStreaming(JNIEnv *env, jobject obj)
 {
   // () -> void
-
+  MxMDLib *md = ptr_(env, obj);
+  if (ZuUnlikely(!md)) return;
+  md->stopStreaming();
 }
 
-void MxMDLibJNI::replay(JNIEnv *env, jobject obj, jstring, jobject, jboolean)
+void MxMDLibJNI::replay(JNIEnv *env, jobject obj,
+    jstring path, jobject begin, jboolean filter)
 {
   // (String, Instant, boolean) -> void
-
+  MxMDLib *md = ptr_(env, obj);
+  if (ZuUnlikely(!md)) return;
+  md->replay(ZJNI::j2s_ZtString(env, path), ZJNI::j2t(env, begin), filter);
 }
 
 void MxMDLibJNI::stopReplaying(JNIEnv *env, jobject obj)

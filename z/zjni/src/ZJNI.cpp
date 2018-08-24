@@ -23,12 +23,16 @@
 
 #include <jni.h>
 
-extern "C" {
-  extern jint JNI_OnLoad(JavaVM *, void *);
-}
-
 static JavaVM *jvm = 0;
 static thread_local JNIEnv *jenv = 0;
+
+static jclass nullptrex_class = 0;
+static jmethodID nullptrex_ctor = 0;
+
+static jclass instant_class = 0;
+static jmethodID instant_ofEpochSecond = 0;
+static jmethodID instant_getEpochSecond = 0;
+static jmethodID instant_getNano = 0;
 
 JavaVM *ZJNI::vm() { return jvm; }
 JNIEnv *ZJNI::env() { return jenv; }
@@ -48,6 +52,12 @@ void ZJNI::detach()
   jvm->DetachCurrentThread();
 }
 
+void ZJNI::throwNPE(JNIEnv *env, ZuString s)
+{
+  env->Throw((jthrowable)env->NewObject(
+	nullptrex_class, nullptrex_ctor, ZJNI::s2j(env, s)));
+}
+
 int ZJNI::bind(
     JNIEnv *env, const char *cname, JNINativeMethod *methods, unsigned n)
 {
@@ -60,7 +70,7 @@ int ZJNI::bind(
   return 0;
 }
 
-jint ZJNI::onload(JavaVM *jvm_)
+jint ZJNI::load(JavaVM *jvm_)
 {
   jvm = jvm_;
 
@@ -71,5 +81,57 @@ jint ZJNI::onload(JavaVM *jvm_)
 
   jenv = env;
 
+  {
+    jclass c = env->FindClass("java/lang/NullPointerException");
+    nullptrex_class = (jclass)env->NewGlobalRef(c);
+    env->DeleteLocalRef(c);
+    nullptrex_ctor = env->GetMethodID(nullptrex_class,
+	"<init>", "(Ljava/lang/String;)V");
+  }
+
+  {
+    jclass c = env->FindClass("java/time/Instant");
+    instant_class = (jclass)env->NewGlobalRef(c);
+    env->DeleteLocalRef(c);
+    instant_ofEpochSecond =
+      env->GetStaticMethodID(instant_class,
+	  "ofEpochSecond", "(JJ)Ljava/time/Instant;");
+    instant_getEpochSecond =
+      env->GetMethodID(instant_class, "getEpochSecond", "()J");
+    instant_getNano =
+      env->GetMethodID(instant_class, "getNano", "()I");
+  }
+
   return JNI_VERSION_1_4;
+}
+
+JNIEnv *ZJNI::unload(JavaVM *vm)
+{
+  JNIEnv *env = jenv;
+
+  if (!env) {
+    if (vm->GetEnv((void **)&env, JNI_VERSION_1_4) != JNI_OK || !env)
+      return 0;
+    jenv = env;
+  }
+
+  if (nullptrex_class) env->DeleteGlobalRef(nullptrex_class);
+  if (instant_class) env->DeleteGlobalRef(instant_class);
+
+  return env;
+}
+
+// Java Instant -> ZtDate
+ZJNIExtern ZtDate ZJNI::j2t(JNIEnv *env, jobject obj)
+{
+  return ZtDate(
+      (time_t)env->CallLongMethod(obj, instant_getEpochSecond),
+      (int)env->CallIntMethod(obj, instant_getNano));
+}
+
+// ZtDate -> Java Instant
+ZJNIExtern jobject ZJNI::t2j(JNIEnv *env, const ZtDate &t)
+{
+  return env->CallStaticObjectMethod(instant_class,
+      instant_ofEpochSecond, (jlong)t.time(), (jint)t.nsec());
 }

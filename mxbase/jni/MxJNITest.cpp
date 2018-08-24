@@ -19,6 +19,10 @@
 
 // MxBase JNI test
 
+#ifndef MxBaseLib_HPP
+#include <MxBaseLib.hpp>
+#endif
+
 #include <iostream>
 
 #include <jni.h>
@@ -33,17 +37,15 @@
 #include <ZJNI.hpp>
 
 extern "C" {
-  extern jint JNI_OnLoad(JavaVM *, void *);
+  MxBaseExtern jint JNI_OnLoad(JavaVM *, void *);
+  MxBaseExtern void JNI_OnUnload(JavaVM *, void *);
 }
 
 struct Msg {
   inline Msg() { }
   inline Msg(JNIEnv *env, jobject obj, jstring text) :
     m_obj(env->NewGlobalRef(obj)) {
-    m_text = ZJNI::j2c(env, text,
-	[](unsigned n) { return ZtString(n + 1); },
-	[](ZtString &s) { return ZuArray<char>(s.data(), s.size() - 1); },
-	[](ZtString &s, unsigned n) { s.length(n); });
+    m_text = ZJNI::j2s_ZtString(env, text);
   }
   inline ~Msg() {
     if (m_obj) ZJNI::env()->DeleteGlobalRef(m_obj);
@@ -59,7 +61,7 @@ struct Msg {
   }
 
   inline void operator ()(JNIEnv *env, jmethodID mid) {
-    jstring text = ZJNI::c2j(env, m_text);
+    jstring text = ZJNI::s2j(env, m_text);
     env->CallVoidMethod(m_obj, mid, text);
     env->DeleteLocalRef(text);
   }
@@ -156,10 +158,17 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
 {
   std::cout << "JNI_OnLoad()\n" << std::flush;
 
-  jint v = ZJNI::onload(jvm);
+  jint v = ZJNI::load(jvm);
 
   if (MxJNITest_bind(ZJNI::env()) < 0) return -1;
   if (MxJNITestObject_bind(ZJNI::env()) < 0) return -1;
 
   return v;
+}
+
+void JNI_OnUnload(JavaVM *jvm, void *)
+{
+  std::cout << "JNI_OnUnload()\n" << std::flush;
+
+  ZJNI::unload(jvm);
 }

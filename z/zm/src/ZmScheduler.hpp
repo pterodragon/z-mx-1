@@ -375,7 +375,8 @@ public:
     run_(thread, ZuFwd<Fn>(fn), ZuFwd<O>(o));
   }
 
-  ZuInline void initThreadFn(ZmFn<> fn) { m_initThreadFn = ZuMv(fn); }
+  ZuInline void threadInit(ZmFn<> fn) { m_threadInitFn = ZuMv(fn); }
+  ZuInline void threadFinal(ZmFn<> fn) { m_threadFinalFn = ZuMv(fn); }
 
   ZuInline const char *id() const { return m_id; }
   ZuInline unsigned nThreads() const { return m_nThreads; }
@@ -409,9 +410,6 @@ public:
     { return m_threads[0].ring.config().timeout(); }
 
 protected:
-  virtual void threadInit(unsigned tid);
-  virtual void threadFinal(unsigned tid);
-
   void runThreads();
 
   void busy();
@@ -494,7 +492,8 @@ private:
 
   ZmSemaphore			m_stopped;
 
-  ZmFn<>			m_initThreadFn;
+  ZmFn<>			m_threadInitFn;
+  ZmFn<>			m_threadFinalFn;
 };
 
 #ifdef _MSC_VER

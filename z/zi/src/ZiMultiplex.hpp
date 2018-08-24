@@ -1017,9 +1017,6 @@ private:
   ZuInline void busy() { ZmScheduler::busy(); }
   ZuInline void idle() { ZmScheduler::idle(); }
 
-  void threadInit(unsigned tid);
-  void threadFinal(unsigned tid);
-
   void rxStart();
   void rx();			// handle I/O completions (IOCP) or
   				// readiness notifications (epoll, ports, etc.)

@@ -19,6 +19,8 @@
 
 // MxMD Test JNI
 
+#include <iostream>
+
 #include <jni.h>
 
 #include <ZJNI.hpp>
@@ -29,8 +31,8 @@ void MxMDJNITest::init(JNIEnv *env, jobject obj, jobject)
 {
   // (MxMDLib) -> void
 
-  // FIXME - need to ensure thread init/final of all MxMD shards
-  // and mx threads run ZJNI::attach/detach
+  std::cout << "MxMDJNITest::init()\n" << std::flush;
+  // FIXME - test publisher goes here (refer to mdsample_standalone)
 }
 
 int MxMDJNITest::bind(JNIEnv *env)
@@ -49,18 +51,26 @@ int MxMDJNITest::bind(JNIEnv *env)
 }
 
 extern "C" {
-  extern jint JNI_OnLoad(JavaVM *, void *);
+  MxMDExtern jint JNI_OnLoad(JavaVM *, void *);
+  MxMDExtern void JNI_OnUnload(JavaVM *, void *);
 }
 
 jint JNI_OnLoad(JavaVM *jvm, void *)
 {
   // std::cout << "JNI_OnLoad()\n" << std::flush;
 
-  jint v = ZJNI::onload(jvm);
+  jint v = ZJNI::load(jvm);
 
   JNIEnv *env = ZJNI::env();
 
   if (MxMDJNITest::bind(env) < 0) return -1;
 
   return v;
+}
+
+void JNI_OnUnload(JavaVM *jvm, void *)
+{
+  // FIXME - finalize md
+ 
+  ZJNI::unload(jvm);
 }

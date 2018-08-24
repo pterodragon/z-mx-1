@@ -42,6 +42,9 @@ namespace MxMDLibJNI {
   // (String) -> MxMDLib
   jobject init(JNIEnv *, jclass, jstring);
 
+  // called from JNI_OnUnload()
+  void final(JNIEnv *);
+
   // () -> void
   void start(JNIEnv *, jobject);
   // () -> void

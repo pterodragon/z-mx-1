@@ -31,10 +31,10 @@
 #endif
 
 namespace MxMDTickSizeTblJNI {
-  // () -> void
-  void ctor_(JNIEnv *, jobject);
-  // () -> void
-  void dtor_(JNIEnv *, jobject);
+  // (long) -> void
+  void ctor_(JNIEnv *, jobject, jlong);
+  // (long) -> void
+  void dtor_(JNIEnv *, jobject, jlong);
 
   // () -> MxMDVenue
   jobject venue(JNIEnv *, jobject);
@@ -51,7 +51,9 @@ namespace MxMDTickSizeTblJNI {
   // (MxMDAllTickSizesFn) -> long
   jlong allTickSizes(JNIEnv *, jobject, jobject);
 
+  jobject ctor(JNIEnv *, jlong ptr);
   int bind(JNIEnv *);
+  void final(JNIEnv *);
 }
 
 #endif /* MxMDTickSizeTblJNI_HPP */

@@ -205,7 +205,7 @@ namespace ZtDateFmt {
   struct CSV {
   friend class ::ZtDate;
   public:
-    ZuInline CSV() : m_ptr(0), m_offset(0), m_julian(0), m_sec(0) {
+    ZuInline CSV() : m_ptr(0), m_offset(0), m_pad(0), m_julian(0), m_sec(0) {
       memcpy(m_yyyymmdd, "0001/01/01", 10);
       memcpy(m_hhmmss, "00:00:00", 8);
     }
@@ -216,9 +216,13 @@ namespace ZtDateFmt {
     ZuInline void offset(int o) { m_offset = o; }
     ZuInline int offset() const { return m_offset; }
 
+    ZuInline void pad(char c) { m_pad = c; }
+    ZuInline char pad() const { return m_pad; }
+
   private:
     const ZtDate	*m_ptr;
     int			m_offset;
+    char		m_pad;
 
     mutable int		m_julian;
     mutable int		m_sec;
@@ -732,8 +736,13 @@ public:
     s << ZuString(fmt.m_hhmmss, 8);
     if (unsigned N = date.m_nsec) {
       char buf[9];
-      N = Zu_ntoa::Base10_print_frac_truncate(N, 9, buf);
-      if (N) s << '.' << ZuString(buf, N);
+      if (fmt.m_pad) {
+	Zu_ntoa::Base10_print_frac(N, 9, fmt.m_pad, buf);
+	s << '.' << ZuString(buf, 9);
+      } else {
+	if (N = Zu_ntoa::Base10_print_frac_truncate(N, 9, buf))
+	  s << '.' << ZuString(buf, N);
+      }
     }
   }
 

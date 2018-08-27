@@ -23,18 +23,33 @@
 
 #include <ZJNI.hpp>
 
+#include <MxMD.hpp>
+
 #include <MxMDFeedJNI.hpp>
 
-void MxMDFeedJNI::ctor_(JNIEnv *env, jobject obj)
-{
-  // () -> void
+namespace MxMDFeedJNI {
+  jclass	class_;
 
+  ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
+  ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
+
+  MxMDFeed *ptr_(JNIEnv *env, jobject obj) {
+    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr)) return nullptr;
+    return (MxMDFeed *)(void *)ptr;
+  }
 }
 
-void MxMDFeedJNI::dtor_(JNIEnv *env, jobject obj)
+void MxMDFeedJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
 {
-  // () -> void
+  // (long) -> void
+  if (ptr) ((MxMDFeed *)(void *)(uintptr_t)ptr)->ref();
+}
 
+void MxMDFeedJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
+{
+  // (long) -> void
+  if (ptr) ((MxMDFeed *)(void *)(uintptr_t)ptr)->deref();
 }
 
 jobject MxMDFeedJNI::md(JNIEnv *env, jobject obj)
@@ -58,16 +73,21 @@ jint MxMDFeedJNI::level(JNIEnv *env, jobject obj)
   return 0;
 }
 
+jobject MxMDFeedJNI::ctor(JNIEnv *env, jlong ptr)
+{
+  return env->NewObject(class_, ctorMethod[0].mid, ptr);
+}
+
 int MxMDFeedJNI::bind(JNIEnv *env)
 {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
     { "ctor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDFeedJNI::ctor_ },
     { "dtor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDFeedJNI::dtor_ },
     { "md",
       "()Lcom/shardmx/mxmd/MxMDLib;",
@@ -81,6 +101,24 @@ int MxMDFeedJNI::bind(JNIEnv *env)
   };
 #pragma GCC diagnostic pop
 
-  return ZJNI::bind(env, "com/shardmx/mxmd/MxMDFeed",
-        methods, sizeof(methods) / sizeof(methods[0]));
+  {
+    jclass c = env->FindClass("com/shardmx/mxmd/MxMDFeed");
+    if (!c) return -1;
+    class_ = (jclass)env->NewGlobalRef((jobject)c);
+    env->DeleteLocalRef((jobject)c);
+    if (!class_) return -1;
+  }
+
+  if (ZJNI::bind(env, class_,
+	methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
+
+  if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
+  if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
+
+  return 0;
+}
+
+void MxMDFeedJNI::final(JNIEnv *env)
+{
+  if (class_) env->DeleteGlobalRef(class_);
 }

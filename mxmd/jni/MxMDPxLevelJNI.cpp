@@ -27,15 +27,15 @@
 
 #include <MxMDPxLevelJNI.hpp>
 
-void MxMDPxLevelJNI::ctor_(JNIEnv *env, jobject obj)
+void MxMDPxLevelJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
-  // () -> void
+  // (long) -> void
 
 }
 
-void MxMDPxLevelJNI::dtor_(JNIEnv *env, jobject obj)
+void MxMDPxLevelJNI::dtor_(JNIEnv *env, jobject obj, jlong)
 {
-  // () -> void
+  // (long) -> void
 
 }
 
@@ -94,10 +94,10 @@ int MxMDPxLevelJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
     { "ctor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDPxLevelJNI::ctor_ },
     { "dtor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDPxLevelJNI::dtor_ },
     { "obSide",
       "()Lcom/shardmx/mxmd/MxMDOBSide;",

@@ -38,7 +38,6 @@
 
 extern "C" {
   MxBaseExtern jint JNI_OnLoad(JavaVM *, void *);
-  MxBaseExtern void JNI_OnUnload(JavaVM *, void *);
 }
 
 struct Msg {
@@ -107,17 +106,20 @@ int init(JNIEnv *, jobject)
   return 0;
 }
 
-static void ctor_(JNIEnv *, jobject)
-{
-}
+static void ctor_(JNIEnv *, jobject) { }
 
-static void dtor_(JNIEnv *, jobject)
-{
-}
+static void dtor_(JNIEnv *, jobject) { }
 
-static void helloWorld(JNIEnv *env, jobject obj, jstring text)
+static jboolean helloWorld(JNIEnv *env, jobject obj, jstring text)
 {
   ZJNI::env(env);
+
+  {
+    ZtDate t(ZtDate::Now);
+    if (t != ZJNI::j2t(env, ZJNI::t2j(env, t))) return false;
+    std::cout << "ZtDate / Instant conversion ok\n" << std::flush;
+  }
+
   thread_local jfieldID fid = 0;
   if (!fid) fid = env->GetFieldID(env->GetObjectClass(obj), "ptr", "J");
   if (void *ptr = ring->push()) {
@@ -126,6 +128,7 @@ static void helloWorld(JNIEnv *env, jobject obj, jstring text)
     if (ZuLikely(fid)) env->SetLongField(obj, fid, (uintptr_t)ptr);
   }
   ring->eof();
+  return true;
 }
 
 int MxJNITest_bind(JNIEnv *env)
@@ -147,7 +150,7 @@ int MxJNITestObject_bind(JNIEnv *env)
   static JNINativeMethod methods[] = {
     { "ctor_", "()V", (void *)&ctor_ },
     { "dtor_", "()V", (void *)&dtor_ },
-    { "helloWorld", "(Ljava/lang/String;)V", (void *)&helloWorld }
+    { "helloWorld", "(Ljava/lang/String;)Z", (void *)&helloWorld }
   };
 #pragma GCC diagnostic pop
   return ZJNI::bind(env, "com/shardmx/mxbase/MxJNITestObject",
@@ -164,11 +167,4 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
   if (MxJNITestObject_bind(ZJNI::env()) < 0) return -1;
 
   return v;
-}
-
-void JNI_OnUnload(JavaVM *jvm, void *)
-{
-  std::cout << "JNI_OnUnload()\n" << std::flush;
-
-  ZJNI::unload(jvm);
 }

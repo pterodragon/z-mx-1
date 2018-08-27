@@ -47,15 +47,34 @@
 namespace ZJNI {
   // called from JNI_OnLoad(JavaVM *, void *)
   ZJNIExtern jint load(JavaVM *);
-  ZJNIExtern JNIEnv *unload(JavaVM *);
+  ZJNIExtern void final(JNIEnv *);
 
   ZJNIExtern JavaVM *vm();
   ZJNIExtern JNIEnv *env();		// retrieves the env from TLS
   ZJNIExtern void env(JNIEnv *);	// stores the env in TLS
 
-  // bind C++ native methods to Java class - returns -ve on error
-  ZJNIExtern int bind(
-      JNIEnv *, const char *cname, JNINativeMethod *methods, unsigned n);
+  // bind C++ methods to Java (wrapper of RegisterNatives)
+  ZJNIExtern int bind(JNIEnv *, jclass, const JNINativeMethod *, unsigned n);
+  ZJNIExtern int bind(JNIEnv *, const char *cname,
+      const JNINativeMethod *, unsigned n);
+
+  // bind Java methods to C++ (reverse of RegisterNatives)
+  struct JavaMethod {
+    const char	*name;
+    const char	*signature;
+    jmethodID	mid = 0;
+  };
+  ZJNIExtern int bind(JNIEnv *, jclass, JavaMethod *, unsigned n);
+  ZJNIExtern int bind(JNIEnv *, const char *cname, JavaMethod *, unsigned n);
+ 
+  // bind Java fields to C++
+  struct JavaField {
+    const char	*name;
+    const char	*type;
+    jfieldID	fid = 0;
+  };
+  ZJNIExtern int bind(JNIEnv *, jclass, JavaField *, unsigned n);
+  ZJNIExtern int bind(JNIEnv *, const char *cname, JavaField *, unsigned n);
 
   ZJNIExtern int attach(const char *name);	// attach thread - -ve on error
   ZJNIExtern void detach();			// detach thread
@@ -64,29 +83,74 @@ namespace ZJNI {
 
   // RAI for local/global references to Java (jobject/jstring/jclass/...)
   template <typename T> class LocalRef {
+    LocalRef(const LocalRef &r) = delete;
+    LocalRef &operator =(const LocalRef &r) = delete;
   public:
-    ZuInline LocalRef(JNIEnv *env, T o) : m_env(env), m_o(o) { }
-    ZuInline ~LocalRef() { m_env->DeleteLocalRef(m_o); }
+    ZuInline LocalRef(JNIEnv *env, T obj) : m_env(env), m_obj(obj) { }
+    ZuInline ~LocalRef() { if (m_obj) m_env->DeleteLocalRef((jobject)m_obj); }
+    ZuInline LocalRef(LocalRef &&r) : m_env(r.m_env), m_obj(r.m_obj) {
+      r.m_obj = 0;
+    }
+    ZuInline LocalRef &operator =(LocalRef &&r) {
+      if (m_obj) m_env->DeleteLocalRef((jobject)m_obj);
+      m_env = r.m_env;
+      m_obj = r.m_obj;
+      r.m_obj = 0;
+      return *this;
+    }
+    ZuInline void null() {
+      if (m_obj) {
+	m_env->DeleteLocalRef((jobject)m_obj);
+	m_obj = 0;
+      }
+    }
+    ZuInline operator T() const { return m_obj; }
+    ZuInline bool operator !() const { return !m_obj; }
   private:
     JNIEnv	*m_env;
-    T		m_o;
+    T		m_obj;
   };
   template <typename T>
-  ZuInline LocalRef<T> localRef(JNIEnv *env, T o) {
-    return LocalRef<T>(env, o);
+  ZuInline LocalRef<T> localRef(JNIEnv *env, T obj) {
+    return LocalRef<T>(env, obj);
   }
   template <typename T> class GlobalRef {
+    GlobalRef(const GlobalRef &r) = delete;
+    GlobalRef &operator =(const GlobalRef &r) = delete;
   public:
-    ZuInline GlobalRef(JNIEnv *env, T o) :
-      m_env(env), m_o(o) { env->NewGlobalRef(o); }
-    ZuInline ~GlobalRef() { m_env->DeleteGlobalRef(m_o); }
+    ZuInline GlobalRef() : m_obj(0) { }
+    ZuInline GlobalRef(JNIEnv *env, T obj) :
+      m_obj(env->NewGlobalRef(obj)) { }
+    ZuInline ~GlobalRef() {
+      if (m_obj) ZJNI::env()->DeleteGlobalRef((jobject)m_obj);
+    }
+    ZuInline GlobalRef(GlobalRef &&r) : m_obj(r.m_obj) {
+      r.m_obj = 0;
+    }
+    ZuInline GlobalRef &operator =(GlobalRef &&r) {
+      if (m_obj) ZJNI::env()->DeleteGlobalRef((jobject)m_obj);
+      m_obj = r.m_obj;
+      r.m_obj = 0;
+      return *this;
+    }
+    ZuInline void null() {
+      if (m_obj) {
+	ZJNI::env()->DeleteGlobalRef((jobject)m_obj);
+	m_obj = 0;
+      }
+    }
+    ZuInline operator T() const { return m_obj; }
+    ZuInline bool operator !() const { return !m_obj; }
   private:
-    JNIEnv	*m_env;
-    T		m_o;
+    T		m_obj;
   };
   template <typename T>
-  ZuInline GlobalRef<T> globalRef(JNIEnv *env, T o) {
-    return GlobalRef<T>(env, o);
+  ZuInline GlobalRef<T> globalRef(JNIEnv *env, T obj) {
+    return GlobalRef<T>(env, obj);
+  }
+  template <typename T>
+  ZuInline GlobalRef<T> globalRef(JNIEnv *env, const LocalRef<T> &obj) {
+    return GlobalRef<T>(env, (T)obj);
   }
 
   // C++ any string -> Java String

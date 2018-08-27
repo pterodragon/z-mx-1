@@ -58,15 +58,47 @@ void ZJNI::throwNPE(JNIEnv *env, ZuString s)
 	nullptrex_class, nullptrex_ctor, ZJNI::s2j(env, s)));
 }
 
-int ZJNI::bind(
-    JNIEnv *env, const char *cname, JNINativeMethod *methods, unsigned n)
+int ZJNI::bind(JNIEnv *env, const char *cname,
+    const JNINativeMethod *methods, unsigned n)
 {
   jclass c = env->FindClass(cname);
-
   if (!c) return -1;
+  return bind(env, c, methods, n);
+}
 
-  if (env->RegisterNatives(c, methods, n) < 0) return -1;
+int ZJNI::bind(JNIEnv *env, jclass c,
+    const JNINativeMethod *methods, unsigned n)
+{
+  return env->RegisterNatives(c, methods, n);
+}
 
+int ZJNI::bind(JNIEnv *env, const char *cname, JavaMethod *methods, unsigned n)
+{
+  jclass c = env->FindClass(cname);
+  if (!c) return -1;
+  return bind(env, c, methods, n);
+}
+
+int ZJNI::bind(JNIEnv *env, jclass c, JavaMethod *methods, unsigned n)
+{
+  for (unsigned i = 0; i < n; i++)
+    if (!(methods[i].mid = env->GetMethodID(
+	    c, methods[i].name, methods[i].signature))) return -1;
+  return 0;
+}
+
+int ZJNI::bind(JNIEnv *env, const char *cname, JavaField *fields, unsigned n)
+{
+  jclass c = env->FindClass(cname);
+  if (!c) return -1;
+  return bind(env, c, fields, n);
+}
+
+int ZJNI::bind(JNIEnv *env, jclass c, JavaField *fields, unsigned n)
+{
+  for (unsigned i = 0; i < n; i++)
+    if (!(fields[i].fid = env->GetFieldID(
+	    c, fields[i].name, fields[i].type))) return -1;
   return 0;
 }
 
@@ -105,20 +137,10 @@ jint ZJNI::load(JavaVM *jvm_)
   return JNI_VERSION_1_4;
 }
 
-JNIEnv *ZJNI::unload(JavaVM *vm)
+void ZJNI::final(JNIEnv *env)
 {
-  JNIEnv *env = jenv;
-
-  if (!env) {
-    if (vm->GetEnv((void **)&env, JNI_VERSION_1_4) != JNI_OK || !env)
-      return 0;
-    jenv = env;
-  }
-
   if (nullptrex_class) env->DeleteGlobalRef(nullptrex_class);
   if (instant_class) env->DeleteGlobalRef(instant_class);
-
-  return env;
 }
 
 // Java Instant -> ZtDate

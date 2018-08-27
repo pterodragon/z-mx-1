@@ -151,7 +151,7 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
   });
 }
 
-MxMDLib *MxMDLib::init(ZuString cf_)
+MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
 {
   ZeLog::start(); // ensure error reporting works
 
@@ -198,6 +198,14 @@ MxMDLib *MxMDLib::init(ZuString cf_)
 	mx = new MxMDCore::Mx("mx", mxCf);
       else
 	mx = new MxMDCore::Mx("mx");
+
+      if (schedInitFn) schedInitFn(mx);
+
+      ZeLOG(Info, "starting multiplexer...");
+      if (mx->start() != Zi::OK) {
+	ZeLOG(Fatal, "multiplexer start failed");
+	return md = 0;
+      }
 
       md = new MxMDCore(ZuMv(mx));
     }
@@ -413,11 +421,6 @@ void MxMDCore::start()
 {
   Guard guard(m_stateLock);
 
-  raise(ZeEVENT(Info, "starting multiplexer..."));
-  if (m_mx->start() != Zi::OK) {
-    raise(ZeEVENT(Fatal, "multiplexer start failed"));
-    return;
-  }
   if (m_cmd) {
     raise(ZeEVENT(Info, "starting cmd server..."));
     m_cmd->start();
@@ -448,7 +451,7 @@ void MxMDCore::stop()
     m_cmd->stop();
   }
 
-  raise(ZeEVENT(Info, "stopping primary multiplexer..."));
+  raise(ZeEVENT(Info, "stopping multiplexer..."));
   m_mx->stop(false);
 }
 

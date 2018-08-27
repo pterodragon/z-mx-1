@@ -23,17 +23,32 @@
 
 #include <ZJNI.hpp>
 
+#include <MxMD.hpp>
+
 #include <MxMDVenueJNI.hpp>
 
-void MxMDVenueJNI::ctor_(JNIEnv *env, jobject obj)
+namespace MxMDVenueJNI {
+  jclass	class_;
+
+  ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
+  ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
+
+  MxMDVenue *ptr_(JNIEnv *env, jobject obj) {
+    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr)) return nullptr;
+    return (MxMDVenue *)(void *)ptr;
+  }
+}
+
+void MxMDVenueJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
-  // () -> void
+  // (long) -> void
 
 }
 
-void MxMDVenueJNI::dtor_(JNIEnv *env, jobject obj)
+void MxMDVenueJNI::dtor_(JNIEnv *env, jobject obj, jlong)
 {
-  // () -> void
+  // (long) -> void
 
 }
 
@@ -99,16 +114,21 @@ jobject MxMDVenueJNI::tradingSession(JNIEnv *env, jobject obj, jstring)
   return 0;
 }
 
+jobject MxMDVenueJNI::ctor(JNIEnv *env, jlong ptr)
+{
+  return env->NewObject(class_, ctorMethod[0].mid, ptr);
+}
+
 int MxMDVenueJNI::bind(JNIEnv *env)
 {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
     { "ctor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDVenueJNI::ctor_ },
     { "dtor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDVenueJNI::dtor_ },
     { "md",
       "()Lcom/shardmx/mxmd/MxMDLib;",
@@ -140,6 +160,24 @@ int MxMDVenueJNI::bind(JNIEnv *env)
   };
 #pragma GCC diagnostic pop
 
-  return ZJNI::bind(env, "com/shardmx/mxmd/MxMDVenue",
-        methods, sizeof(methods) / sizeof(methods[0]));
+  {
+    jclass c = env->FindClass("com/shardmx/mxmd/MxMDVenue");
+    if (!c) return -1;
+    class_ = (jclass)env->NewGlobalRef((jobject)c);
+    env->DeleteLocalRef((jobject)c);
+    if (!class_) return -1;
+  }
+
+  if (ZJNI::bind(env, class_,
+        methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
+
+  if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
+  if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
+
+  return 0;
+}
+
+void MxMDVenueJNI::final(JNIEnv *env)
+{
+  if (class_) env->DeleteGlobalRef(class_);
 }

@@ -1341,6 +1341,9 @@ public:
     MxDateTime transactTime);
   void delOrderBook(MxID venue, MxID segment, MxDateTime transactTime);
 
+  ZuInline uintptr_t appData() const { return m_appData; }
+  ZuInline void appData(uintptr_t v) { m_appData = v; }
+
 private:
   void addOrderBook_(MxMDOrderBook *);
   ZmRef<MxMDOrderBook> findOrderBook_(MxID venue, MxID segment);
@@ -1368,6 +1371,8 @@ private:
   OrderBooks			m_orderBooks;
 
   ZmRef<MxMDSecHandler>	  	m_handler;
+
+  uintptr_t			m_appData = 0;
 };
 
 // feeds
@@ -1716,6 +1721,7 @@ typedef ZmHandle<MxMDOrderBook> MxMDOBHandle;
 
 // library
 
+class MxMDLib_JNI;
 class MxMDAPI MxMDLib {
   MxMDLib(const MxMDLib &) = delete;
   MxMDLib &operator =(const MxMDLib &) = delete;
@@ -1728,17 +1734,23 @@ friend class MxMDVenue;
 friend class MxMDVenueShard;
 friend class MxMDShard;
 
+friend class MxMDLib_JNI;
+
 protected:
   MxMDLib(ZmScheduler *);
 
   void init_(void *);
+
+  static MxMDLib *init(ZuString cf, ZmFn<ZmScheduler *> schedInitFn);
 
 public:
   virtual ~MxMDLib() { }
 
   static MxMDLib *instance();
 
-  static MxMDLib *init(ZuString cf);
+  static inline MxMDLib *init(ZuString cf) {
+    return init(cf, ZmFn<ZmScheduler *>());
+  }
 
   virtual void start() = 0;
   virtual void stop() = 0;
@@ -2027,6 +2039,9 @@ public:
   }
   uintptr_t allVenues(ZmFn<MxMDVenue *>) const;
 
+  ZuInline uintptr_t appData() const { return m_appData; }
+  ZuInline void appData(uintptr_t v) { m_appData = v; }
+
 private:
   ZmScheduler		*m_scheduler = 0;
   Shards		m_shards;
@@ -2042,6 +2057,8 @@ private:
 
   SubLock		m_subLock;
     ZmRef<MxMDLibHandler> m_handler;
+
+  uintptr_t		m_appData;
 };
 
 inline void MxMDFeed::connected() {

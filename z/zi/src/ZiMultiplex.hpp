@@ -972,6 +972,11 @@ public:
 
   ZuInline unsigned txThread() const { return m_txThread; }
 
+  template <typename L> ZuInline void rxRun(L l) {
+    run(m_rxThread, ZuMv(l));
+    run(m_rxThread, ZmFn<>::Member<&ZiMultiplex::rx>::fn(this));
+    wake();
+  }
   template <typename L> ZuInline void rxInvoke(L l) {
     if (ZuLikely(ZmPlatform::getTID() == m_rxTID)) { l(); return; }
     run(m_rxThread, ZuMv(l));

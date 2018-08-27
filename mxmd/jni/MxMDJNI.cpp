@@ -38,9 +38,12 @@
 
 #include <MxMDTradeJNI.hpp>
 
+#include <MxMDTickSizeJNI.hpp>
+
+#include <MxMDJNI.hpp>
+
 extern "C" {
   MxMDExtern jint JNI_OnLoad(JavaVM *, void *);
-  MxMDExtern void JNI_OnUnload(JavaVM *, void *);
 }
 
 jint JNI_OnLoad(JavaVM *jvm, void *)
@@ -65,12 +68,28 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
   if (MxMDOrderJNI::bind(env) < 0) return -1;
 
   if (MxMDTradeJNI::bind(env) < 0) return -1;
+  
+  // FIXME - oher JNI adapters
 
   return v;
 }
 
-void JNI_OnUnload(JavaVM *jvm, void *)
+void MxMDJNI::final(JNIEnv *env)
 {
-  JNIEnv *env = ZJNI::unload(jvm);
+  // FIXME - reverse order of binding
+
+  MxMDFeedJNI::final(env);
+  MxMDVenueJNI::final(env);
+  MxMDTickSizeTblJNI::final(env);
+  // MxMDSecurityJNI::final();
+  // MxMDOrderBookJNI::final();
+
+  MxMDTickSizeJNI::final(env);
+  // MxMDSegmentJNI::final();
+
+  // FIXME - oher JNI adapters
+
   MxMDLibJNI::final(env);
+
+  ZJNI::final(env);
 }

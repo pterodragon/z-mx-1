@@ -27,15 +27,15 @@
 
 #include <MxMDDerivativesJNI.hpp>
 
-void MxMDDerivativesJNI::ctor_(JNIEnv *env, jobject obj)
+void MxMDDerivativesJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
-  // () -> void
+  // (long) -> void
 
 }
 
-void MxMDDerivativesJNI::dtor_(JNIEnv *env, jobject obj)
+void MxMDDerivativesJNI::dtor_(JNIEnv *env, jobject obj, jlong)
 {
-  // () -> void
+  // (long) -> void
 
 }
 
@@ -73,10 +73,10 @@ int MxMDDerivativesJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
     { "ctor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDDerivativesJNI::ctor_ },
     { "dtor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDDerivativesJNI::dtor_ },
     { "future",
       "(Lcom/shardmx/mxbase/MxFutKey;)Lcom/shardmx/mxmd/MxMDSecurity;",

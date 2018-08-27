@@ -31,10 +31,10 @@
 #endif
 
 namespace MxMDDerivativesJNI {
-  // () -> void
-  void ctor_(JNIEnv *, jobject);
-  // () -> void
-  void dtor_(JNIEnv *, jobject);
+  // (long) -> void
+  void ctor_(JNIEnv *, jobject, jlong);
+  // (long) -> void
+  void dtor_(JNIEnv *, jobject, jlong);
 
   // (MxFutKey) -> MxMDSecurity
   jobject future(JNIEnv *, jobject, jobject);

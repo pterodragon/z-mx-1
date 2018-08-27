@@ -43,6 +43,20 @@ ZeLog *ZeLog::instance()
   return ZmSingleton<ZeLog>::instance();
 }
 
+#ifdef linux
+extern "C" {
+  extern char *program_invocation_short_name;
+}
+#endif
+
+ZuString ZeLog::program_() {
+#ifdef linux
+  if (ZuUnlikely(!m_program))
+    m_program = program_invocation_short_name;
+#endif
+  return m_program;
+}
+
 void ZeLog::add_(ZeSinkFn fn)
 {
   {
@@ -131,6 +145,8 @@ template <> struct ZmCleanup<ZeLog_Buf> {
   enum { Level = ZmCleanupLevel::Platform };
 };
 struct ZeLog_Buf : public ZmObject {
+  inline ZeLog_Buf() { dateFmt.pad(' '); }
+
   ZuStringN<ZeLog_BUFSIZ>	s;
   ZtDate::CSVFmt		dateFmt;
 };
@@ -138,6 +154,13 @@ static ZeLog_Buf *logBuf()
 {
   ZeLog_Buf *buf = ZmSpecific<ZeLog_Buf>::instance();
   buf->s.null();
+  return buf;
+}
+static ZeLog_Buf *logBuf(int tzOffset)
+{
+  ZeLog_Buf *buf = ZmSpecific<ZeLog_Buf>::instance();
+  buf->s.null();
+  buf->dateFmt.offset(tzOffset);
   return buf;
 }
 
@@ -186,10 +209,7 @@ void ZeLog::FileSink::log(ZeEvent *e)
 
 void ZeLog::FileSink::log_(FILE *f, ZeEvent *e)
 {
-  ZeLog_Buf *buf = logBuf();
-
-  buf->dateFmt.offset(m_tzOffset);
-  buf->s.null();
+  ZeLog_Buf *buf = logBuf(m_tzOffset);
 
   ZtDate d{e->time()};
 
@@ -248,8 +268,6 @@ void ZeLog::DebugSink::log(ZeEvent *e)
 void ZeLog::DebugSink::log_(FILE *f, ZeEvent *e)
 {
   ZeLog_Buf *buf = logBuf();
-
-  buf->s.null();
 
   ZmTime d = e->time() - m_started;
 

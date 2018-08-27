@@ -31,10 +31,10 @@
 #endif
 
 namespace MxMDFeedJNI {
-  // () -> void
-  void ctor_(JNIEnv *, jobject);
-  // () -> void
-  void dtor_(JNIEnv *, jobject);
+  // (long) -> void
+  void ctor_(JNIEnv *, jobject, jlong);
+  // (long) -> void
+  void dtor_(JNIEnv *, jobject, jlong);
   // () -> MxMDLib
   jobject md(JNIEnv *, jobject);
 
@@ -44,7 +44,9 @@ namespace MxMDFeedJNI {
   // () -> int
   jint level(JNIEnv *, jobject);
 
+  jobject ctor(JNIEnv *, jlong ptr);
   int bind(JNIEnv *);
+  void final(JNIEnv *);
 }
 
 #endif /* MxMDFeedJNI_HPP */

@@ -23,77 +23,182 @@
 
 #include <ZJNI.hpp>
 
-#include <MxMDLibJNI.hpp>
-
 #include <MxMD.hpp>
 #include <MxMDCore.hpp>
 
+#include <MxMDJNI.hpp>
+
+#include <MxMDFeedJNI.hpp>
+#include <MxMDVenueJNI.hpp>
+#include <MxMDTickSizeTblJNI.hpp>
+
+#include <MxMDTickSizeJNI.hpp>
+
+#include <MxMDLibJNI.hpp>
+
 namespace MxMDLibJNI {
-  ZmLock	lock;
-    jfieldID	  ptr_fid = 0;
-    jmethodID	  ctor_mid = 0;
-    jobject	  global_obj = 0;
+  ZmLock	lock; // only used to serialize initialization
+    jobject	  obj_;
+    bool	  running = false;
+
+  ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
+  ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
   MxMDLib *ptr_(JNIEnv *env, jobject obj) {
-    uintptr_t md = env->GetLongField(obj, ptr_fid);
-    if (ZuUnlikely(!md)) {
+    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr)) {
       ZJNI::throwNPE(env, "MxMDLib.init() not called");
-      return 0;
+      return nullptr;
     }
-    return (MxMDLib *)(void *)md;
+    return (MxMDLib *)(void *)ptr;
+  }
+
+  // MxMDLibHandler bindings
+  ZJNI::JavaMethod exceptionFn[] = {
+    { "exception", "()Lcom/shardmx/mxmd/MxMDExceptionFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDLib;Ljava/lang/String;)V" }
+  };
+  ZJNI::JavaMethod connectedFn[] = {
+    { "connected", "()Lcom/shardmx/mxmd/MxMDFeedFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDFeed;)V" }
+  };
+  ZJNI::JavaMethod disconnectedFn[] = {
+    { "disconnected", "()Lcom/shardmx/mxmd/MxMDFeedFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDFeed;)V" }
+  };
+  ZJNI::JavaMethod eofFn[] = {
+    { "eof", "()Lcom/shardmx/mxmd/MxMDLibFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDLib;)V" }
+  };
+  ZJNI::JavaMethod refDataLoadedFn[] = {
+    { "refDataLoaded", "()Lcom/shardmx/mxmd/MxMDVenueFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDVenue;)V" }
+  };
+  ZJNI::JavaMethod addTickSizeTblFn[] = {
+    { "addTickSizeTbl", "()Lcom/shardmx/mxmd/MxMDTickSizeTblFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDTickSizeTbl;)V" }
+  };
+  ZJNI::JavaMethod resetTickSizeTblFn[] = {
+    { "resetTickSizeTbl", "()Lcom/shardmx/mxmd/MxMDTickSizeTblFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDTickSizeTbl;)V" }
+  };
+  ZJNI::JavaMethod addTickSizeFn[] = {
+    { "addTickSize", "()Lcom/shardmx/mxmd/MxMDTickSizeFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDTickSizeTbl;"
+	"Lcom/shardmx/mxmd/MxMDTickSize;)V" }
+  };
+  ZJNI::JavaMethod addSecurityFn[] = {
+    { "addSecurity", "()Lcom/shardmx/mxmd/MxMDSecEventFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;Ljava/time/Instant;)V" }
+  };
+  ZJNI::JavaMethod updatedSecurityFn[] = {
+    { "updatedSecurity", "()Lcom/shardmx/mxmd/MxMDSecEventFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;Ljava/time/Instant;)V" }
+  };
+  ZJNI::JavaMethod addOrderBookFn[] = {
+    { "addOrderBook", "()Lcom/shardmx/mxmd/MxMDOBEventFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook;Ljava/time/Instant;)V" }
+  };
+  ZJNI::JavaMethod updatedOrderBookFn[] = {
+    { "updatedOrderBook", "()Lcom/shardmx/mxmd/MxMDOBEventFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook;Ljava/time/Instant;)V" }
+  };
+  ZJNI::JavaMethod deletedOrderBookFn[] = {
+    { "deletedOrderBook", "()Lcom/shardmx/mxmd/MxMDOBEventFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook;Ljava/time/Instant;)V" }
+  };
+  ZJNI::JavaMethod tradingSessionFn[] = {
+    { "tradingSession", "()Lcom/shardmx/mxmd/MxMDTradingSessionFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDVenue;Lcom/shardmx/mxmd/MxMDSegment;)V" }
+  };
+  ZJNI::JavaMethod timerFn[] = {
+    { "timer", "()Lcom/shardmx/mxmd/MxMDTimerFn;" },
+    { "fn", "(Ljava/time/Instant;)Ljava/time/Instant;" }
+  };
+  int bindHandlerFn(JNIEnv *env, jclass c, ZJNI::JavaMethod *fn) {
+    if (ZJNI::bind(env, c, fn, 1) < 0) return -1;
+    ZuStringN<80> fn_c =
+      ZuString(&fn[0].signature[3], strlen(fn[0].signature) - 4);
+    return ZJNI::bind(env, fn_c, &fn[1], 1);
+  }
+  int bindHandler(JNIEnv *env) {
+    jclass c;
+    if (!(c = env->FindClass("com/shardmx/mxmd/MxMDLibHandler"))) return -1;
+    if (bindHandlerFn(env, c, exceptionFn) < 0) return -1;
+    if (bindHandlerFn(env, c, connectedFn) < 0) return -1;
+    if (bindHandlerFn(env, c, disconnectedFn) < 0) return -1;
+    if (bindHandlerFn(env, c, eofFn) < 0) return -1;
+    if (bindHandlerFn(env, c, refDataLoadedFn) < 0) return -1;
+    if (bindHandlerFn(env, c, addTickSizeTblFn) < 0) return -1;
+    if (bindHandlerFn(env, c, resetTickSizeTblFn) < 0) return -1;
+    if (bindHandlerFn(env, c, addTickSizeFn) < 0) return -1;
+    if (bindHandlerFn(env, c, addSecurityFn) < 0) return -1;
+    if (bindHandlerFn(env, c, updatedSecurityFn) < 0) return -1;
+    if (bindHandlerFn(env, c, addOrderBookFn) < 0) return -1;
+    if (bindHandlerFn(env, c, updatedOrderBookFn) < 0) return -1;
+    if (bindHandlerFn(env, c, deletedOrderBookFn) < 0) return -1;
+    if (bindHandlerFn(env, c, tradingSessionFn) < 0) return -1;
+    if (bindHandlerFn(env, c, timerFn) < 0) return -1;
+    env->DeleteLocalRef((jobject)c);
+    return 0;
   }
 }
 
-void MxMDLibJNI::ctor_(JNIEnv *env, jobject obj) { }
+void MxMDLibJNI::ctor_(JNIEnv *env, jobject, jlong) { }
 
-void MxMDLibJNI::dtor_(JNIEnv *env, jobject obj) { }
+void MxMDLibJNI::dtor_(JNIEnv *env, jobject, jlong)
+{
+  // called from Java close()
+  MxMDJNI::final(env);
+}
 
 jobject MxMDLibJNI::instance(JNIEnv *env, jclass c)
 {
   // () -> MxMDLib
-  ZmGuard<ZmLock> guard(lock);
+  ZmReadGuard<ZmLock> guard(lock);
 
-  return global_obj;
+  return obj_;
 }
+
+class MxMDLib_JNI {
+public:
+  ZuInline static MxMDLib *init(ZuString cf, ZmFn<ZmScheduler *> schedInitFn) {
+    return MxMDLib::init(cf, ZuMv(schedInitFn));
+  }
+};
 
 jobject MxMDLibJNI::init(JNIEnv *env, jclass c, jstring cf)
 {
   // (String) -> MxMDLib
   ZmGuard<ZmLock> guard(lock);
 
-  if (ZuUnlikely(global_obj)) return global_obj;
+  if (ZuUnlikely(obj_)) return obj_;
 
   ZJNI::env(env);
-  ptr_fid = env->GetFieldID(c, "ptr", "J");
-  ctor_mid = env->GetMethodID(c, "<init>", "(J)V");
 
-  MxMDLib *md = MxMDLib::init(ZJNI::j2s_ZtString(env, cf));
+  MxMDLib *md = MxMDLib_JNI::init(ZJNI::j2s_ZtString(env, cf),
+      [](ZmScheduler *mx) {
+    mx->threadInit([]() {
+      ZmThreadName name;
+      ZmThreadContext::self()->name(name);
+      ZJNI::attach(name.data());
+    });
+    mx->threadFinal([]() { ZJNI::detach(); });
+  });
   if (ZuUnlikely(!md)) {
     ZJNI::throwNPE(env, "MxMDLib.init() failed");
     return 0;
   }
 
   {
-    MxMDCore *core = static_cast<MxMDCore *>(md);
-
-    core->mx()->threadInit([]() {
-	  ZmThreadName name;
-	  ZmThreadContext::self()->name(name);
-	  ZJNI::attach(name.data());
-	});
-    core->mx()->threadFinal([]() { ZJNI::detach(); });
+    jobject obj = env->NewObject(c, ctorMethod[0].mid,
+	(jlong)(uintptr_t)(void *)md);
+    if (!obj) return 0;
+    obj_ = env->NewGlobalRef(obj);
+    env->DeleteLocalRef(obj);
   }
 
-  jobject obj = env->NewObject(c, ctor_mid, (jlong)(uintptr_t)(void *)md);
-  global_obj = env->NewGlobalRef(obj);
-  env->DeleteLocalRef(obj);
-
-  return global_obj;
-}
-
-void MxMDLibJNI::final(JNIEnv *env)
-{
-  env->DeleteGlobalRef(global_obj); global_obj = 0;
+  return obj_;
 }
 
 void MxMDLibJNI::start(JNIEnv *env, jobject obj)
@@ -101,7 +206,12 @@ void MxMDLibJNI::start(JNIEnv *env, jobject obj)
   // () -> void
   MxMDLib *md = ptr_(env, obj);
   if (ZuUnlikely(!md)) return;
-  md->start();
+  {
+    ZmGuard<ZmLock> guard(lock);
+    if (running) return;
+    running = true;
+    md->start();
+  }
 }
 
 void MxMDLibJNI::stop(JNIEnv *env, jobject obj)
@@ -109,7 +219,14 @@ void MxMDLibJNI::stop(JNIEnv *env, jobject obj)
   // () -> void
   MxMDLib *md = ptr_(env, obj);
   if (ZuUnlikely(!md)) return;
-  md->stop();
+  {
+    ZmGuard<ZmLock> guard(lock);
+    if (!running) return;
+    running = false;
+    md->allSecurities([](MxMDSecurity *sec) { sec->unsubscribe(); });
+    md->stop();
+    md->unsubscribe();
+  }
 }
 
 void MxMDLibJNI::record(JNIEnv *env, jobject obj, jstring path)
@@ -148,25 +265,132 @@ void MxMDLibJNI::replay(JNIEnv *env, jobject obj,
 void MxMDLibJNI::stopReplaying(JNIEnv *env, jobject obj)
 {
   // () -> void
-
+  MxMDLib *md = ptr_(env, obj);
+  if (ZuUnlikely(!md)) return;
+  md->stopReplaying();
 }
 
-void MxMDLibJNI::startTimer(JNIEnv *env, jobject obj, jobject)
+void MxMDLibJNI::startTimer(JNIEnv *env, jobject obj, jobject begin)
 {
   // (Instant) -> void
-
+  MxMDLib *md = ptr_(env, obj);
+  if (ZuUnlikely(!md)) return;
+  md->startTimer(ZJNI::j2t(env, begin));
 }
 
 void MxMDLibJNI::stopTimer(JNIEnv *env, jobject obj)
 {
   // () -> void
-
+  MxMDLib *md = ptr_(env, obj);
+  if (ZuUnlikely(!md)) return;
+  md->stopTimer();
 }
 
-void MxMDLibJNI::subscribe(JNIEnv *env, jobject obj, jobject)
+
+void MxMDLibJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
 {
   // (MxMDLibHandler) -> void
+  MxMDLib *md = ptr_(env, obj);
+  if (ZuUnlikely(!md)) return;
 
+  ZmRef<MxMDLibHandler> handler = new MxMDLibHandler();
+
+#ifdef handle1
+#undef handle1
+#endif
+#ifdef handle2
+#undef handle2
+#endif
+#define handle1(method, arg1, ...) \
+  if (auto fn = ZJNI::localRef( \
+	env, env->CallObjectMethod(handler_, method ## Fn[0].mid))) \
+    handler->method ## Fn( \
+	[fn = ZJNI::globalRef(env, fn)](arg1) { \
+      if (JNIEnv *env = ZJNI::env()) \
+	env->CallVoidMethod(fn, method ## Fn[1].mid, __VA_ARGS__); })
+#define handle2(method, arg1, arg2, ...) \
+  if (auto fn = ZJNI::localRef( \
+	env, env->CallObjectMethod(handler_, method ## Fn[0].mid))) \
+    handler->method ## Fn( \
+	[fn = ZJNI::globalRef(env, fn)](arg1, arg2) { \
+      if (JNIEnv *env = ZJNI::env()) \
+	env->CallVoidMethod(fn, method ## Fn[1].mid, __VA_ARGS__); })
+
+  // FIXME - change ctor args to be MD-native C++ types, i.e. migrate
+  // casting/decomposition into ctor() functions and out of here -
+  // ctor() will only ever be called to convert from MD to JNI anyway
+
+  handle2(exception,
+      MxMDLib *md, ZmRef<ZeEvent> e,
+      obj_, ZJNI::s2j(env, ZuStringN<512>() << e->message()));
+  handle1(connected,
+      MxMDFeed *feed,
+      MxMDFeedJNI::ctor(env, (uintptr_t)(void *)feed));
+  handle1(disconnected,
+      MxMDFeed *feed,
+      MxMDFeedJNI::ctor(env, (uintptr_t)(void *)feed));
+  handle1(eof,
+      MxMDLib *md,
+      obj_);
+  handle1(refDataLoaded,
+      MxMDVenue *venue,
+      MxMDVenueJNI::ctor(env, (uintptr_t)(void *)venue));
+  handle1(addTickSizeTbl,
+      MxMDTickSizeTbl *tbl,
+      MxMDTickSizeTblJNI::ctor(env, (uintptr_t)(void *)tbl));
+  handle1(resetTickSizeTbl,
+      MxMDTickSizeTbl *tbl,
+      MxMDTickSizeTblJNI::ctor(env, (uintptr_t)(void *)tbl));
+  handle2(addTickSize,
+      MxMDTickSizeTbl *tbl, const MxMDTickSize &ts,
+      MxMDTickSizeTblJNI::ctor(env, (uintptr_t)(void *)tbl),
+      MxMDTickSizeJNI::ctor(env, ts.minPrice(), ts.maxPrice(), ts.tickSize()));
+  handle1(addSecurity,
+      MxMDSecurity *sec,
+      MxMDSecurityJNI::ctor(env, (uintptr_t)(void *)sec));
+  handle1(updatedSecurity,
+      MxMDSecurity *sec,
+      MxMDSecurityJNI::ctor(env, (uintptr_t)(void *)sec));
+  handle1(addOrderBook,
+      MxMDOrderBook *ob,
+      MxMDOrderBookJNI::ctor(env, (uintptr_t)(void *)ob));
+  handle1(updatedOrderBook,
+      MxMDOrderBook *ob,
+      MxMDOrderBookJNI::ctor(env, (uintptr_t)(void *)ob));
+  handle1(deletedOrderBook,
+      MxMDOrderBook *ob,
+      MxMDOrderBookJNI::ctor(env, (uintptr_t)(void *)ob));
+  handle2(tradingSession,
+      MxMDVenue *venue, MxMDSegment segment,
+      MxMDVenueJNI::ctor(env, (uintptr_t)(void *)venue),
+      MxMDSegmentJNI::ctor(env, segment.id, segment.session, segment.stamp));
+
+#undef handle1
+#undef handle2
+
+  if (auto fn = ZJNI::localRef(
+	env, env->CallObjectMethod(handler_, timerFn[0].mid)))
+    handler->timerFn(
+	[fn = ZJNI::globalRef(env, fn)](MxDateTime stamp, MxDateTime &next_) {
+      if (JNIEnv *env = ZJNI::env()) {
+	jobject next = env->CallObjectMethod(
+	    fn, timerFn[1].mid, ZJNI::t2j(env, stamp));
+	if (!next)
+	  next_ = MxDateTime();
+	else
+	  next_ = ZJNI::j2t(next);
+      });
+
+#if 0
+  if (jobject fn = env->CallObjectMethod(handler_, exceptionFn[0].mid))
+    handler->exceptionFn(
+	[fn = ZJNI::globalRef(env, fn)](MxMDLib *md, ZmRef<ZeEvent> e) {
+      if (JNIEnv *env = ZJNI::env())
+	env->CallVoidMethod(fn, exceptionFn[1].mid, obj_,
+	    ZJNI::s2j(env, ZuStringN<512>() << e->message())); });
+#endif
+
+  md->subscribe(handler);
 }
 
 void MxMDLibJNI::unsubscribe(JNIEnv *env, jobject obj)
@@ -242,10 +466,10 @@ int MxMDLibJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
     { "ctor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDLibJNI::ctor_ },
     { "dtor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDLibJNI::dtor_ },
     { "instance",
       "()Lcom/shardmx/mxmd/MxMDLib;",
@@ -316,6 +540,32 @@ int MxMDLibJNI::bind(JNIEnv *env)
   };
 #pragma GCC diagnostic pop
 
-  return ZJNI::bind(env, "com/shardmx/mxmd/MxMDLib",
-        methods, sizeof(methods) / sizeof(methods[0]));
+  jclass c = env->FindClass("com/shardmx/mxmd/MxMDLib");
+
+  if (ZJNI::bind(env, c,
+	methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
+
+  if (ZJNI::bind(env, c, ctorMethod, 1) < 0) return -1;
+  if (ZJNI::bind(env, c, ptrField, 1) < 0) return -1;
+
+  env->DeleteLocalRef((jobject)c);
+
+  return bindHandler(env);
+}
+
+void MxMDLibJNI::final(JNIEnv *env)
+{
+  ZmGuard<ZmLock> guard(lock);
+
+  env->DeleteGlobalRef(obj_); obj_ = 0;
+
+  if (MxMDLib *md = MxMDLib::instance()) {
+    if (running) {
+      running = false;
+      md->allSecurities([](MxMDSecurity *sec) { sec->unsubscribe(); });
+      md->stop();
+      md->unsubscribe();
+    }
+    md->final();
+  }
 }

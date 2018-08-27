@@ -31,19 +31,16 @@
 #endif
 
 namespace MxMDLibJNI {
-  // () -> void
-  void ctor_(JNIEnv *, jobject);
-  // () -> void
-  void dtor_(JNIEnv *, jobject);
+  // (long) -> void
+  void ctor_(JNIEnv *, jobject, jlong);
+  // (long) -> void
+  void dtor_(JNIEnv *, jobject, jlong);
 
   // () -> MxMDLib
   jobject instance(JNIEnv *, jclass);
 
   // (String) -> MxMDLib
   jobject init(JNIEnv *, jclass, jstring);
-
-  // called from JNI_OnUnload()
-  void final(JNIEnv *);
 
   // () -> void
   void start(JNIEnv *, jobject);
@@ -95,6 +92,7 @@ namespace MxMDLibJNI {
   jlong allVenues(JNIEnv *, jobject, jobject);
 
   int bind(JNIEnv *);
+  void final(JNIEnv *);
 }
 
 #endif /* MxMDLibJNI_HPP */

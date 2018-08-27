@@ -25,17 +25,32 @@
 
 #include <ZJNI.hpp>
 
+#include <MxMD.hpp>
+
 #include <MxMDTickSizeTblJNI.hpp>
 
-void MxMDTickSizeTblJNI::ctor_(JNIEnv *env, jobject obj)
+namespace MxMDTickSizeTblJNI {
+  jclass	class_;
+
+  ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
+  ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
+
+  MxMDTickSizeTbl *ptr_(JNIEnv *env, jobject obj) {
+    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr)) return nullptr;
+    return (MxMDTickSizeTbl *)(void *)ptr;
+  }
+}
+
+void MxMDTickSizeTblJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
-  // () -> void
+  // (long) -> void
 
 }
 
-void MxMDTickSizeTblJNI::dtor_(JNIEnv *env, jobject obj)
+void MxMDTickSizeTblJNI::dtor_(JNIEnv *env, jobject obj, jlong)
 {
-  // () -> void
+  // (long) -> void
 
 }
 
@@ -74,16 +89,21 @@ jlong MxMDTickSizeTblJNI::allTickSizes(JNIEnv *env, jobject obj, jobject)
   return 0;
 }
 
+jobject MxMDTickSizeTblJNI::ctor(JNIEnv *env, jlong ptr)
+{
+  return env->NewObject(class_, ctorMethod[0].mid, ptr);
+}
+
 int MxMDTickSizeTblJNI::bind(JNIEnv *env)
 {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
     { "ctor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDTickSizeTblJNI::ctor_ },
     { "dtor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDTickSizeTblJNI::dtor_ },
     { "venue",
       "()Lcom/shardmx/mxmd/MxMDVenue;",
@@ -103,6 +123,24 @@ int MxMDTickSizeTblJNI::bind(JNIEnv *env)
   };
 #pragma GCC diagnostic pop
 
-  return ZJNI::bind(env, "com/shardmx/mxmd/MxMDTickSizeTbl",
-        methods, sizeof(methods) / sizeof(methods[0]));
+  {
+    jclass c = env->FindClass("com/shardmx/mxmd/MxMDTickSizeTbl");
+    if (!c) return -1;
+    class_ = (jclass)env->NewGlobalRef((jobject)c);
+    env->DeleteLocalRef((jobject)c);
+    if (!class_) return -1;
+  }
+
+  if (ZJNI::bind(env, class_,
+        methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
+
+  if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
+  if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
+
+  return 0;
+}
+
+void MxMDTickSizeTblJNI::final(JNIEnv *env)
+{
+  if (class_) env->DeleteGlobalRef(class_);
 }

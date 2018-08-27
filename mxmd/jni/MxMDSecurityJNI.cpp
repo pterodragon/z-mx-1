@@ -27,15 +27,15 @@
 
 #include <MxMDSecurityJNI.hpp>
 
-void MxMDSecurityJNI::ctor_(JNIEnv *env, jobject obj)
+void MxMDSecurityJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
-  // () -> void
+  // (long) -> void
 
 }
 
-void MxMDSecurityJNI::dtor_(JNIEnv *env, jobject obj)
+void MxMDSecurityJNI::dtor_(JNIEnv *env, jobject obj, jlong)
 {
-  // () -> void
+  // (long) -> void
 
 }
 
@@ -141,10 +141,10 @@ int MxMDSecurityJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
     { "ctor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDSecurityJNI::ctor_ },
     { "dtor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDSecurityJNI::dtor_ },
     { "md",
       "()Lcom/shardmx/mxmd/MxMDLib;",

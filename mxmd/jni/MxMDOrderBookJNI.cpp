@@ -27,15 +27,15 @@
 
 #include <MxMDOrderBookJNI.hpp>
 
-void MxMDOrderBookJNI::ctor_(JNIEnv *env, jobject obj)
+void MxMDOrderBookJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
-  // () -> void
+  // (long) -> void
 
 }
 
-void MxMDOrderBookJNI::dtor_(JNIEnv *env, jobject obj)
+void MxMDOrderBookJNI::dtor_(JNIEnv *env, jobject obj, jlong)
 {
-  // () -> void
+  // (long) -> void
 
 }
 
@@ -197,10 +197,10 @@ int MxMDOrderBookJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
     { "ctor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDOrderBookJNI::ctor_ },
     { "dtor_",
-      "()V",
+      "(J)V",
       (void *)&MxMDOrderBookJNI::dtor_ },
     { "md",
       "()Lcom/shardmx/mxmd/MxMDLib;",

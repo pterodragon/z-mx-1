@@ -25,6 +25,8 @@
 
 #include <ZJNI.hpp>
 
+#include <MxMD.hpp>
+
 #include <MxMDJNITest.hpp>
 
 void MxMDJNITest::init(JNIEnv *env, jobject obj, jobject)
@@ -32,7 +34,9 @@ void MxMDJNITest::init(JNIEnv *env, jobject obj, jobject)
   // (MxMDLib) -> void
 
   std::cout << "MxMDJNITest::init()\n" << std::flush;
-  // FIXME - test publisher goes here (refer to mdsample_standalone)
+
+  if (MxMDLib *md = MxMDLib::instance())
+    md->raise(ZeEVENT(Info, "Hello World"));
 }
 
 int MxMDJNITest::bind(JNIEnv *env)
@@ -52,25 +56,17 @@ int MxMDJNITest::bind(JNIEnv *env)
 
 extern "C" {
   MxMDExtern jint JNI_OnLoad(JavaVM *, void *);
-  MxMDExtern void JNI_OnUnload(JavaVM *, void *);
 }
 
 jint JNI_OnLoad(JavaVM *jvm, void *)
 {
-  // std::cout << "JNI_OnLoad()\n" << std::flush;
-
   jint v = ZJNI::load(jvm);
+
+  if (v < 0) return -1;
 
   JNIEnv *env = ZJNI::env();
 
   if (MxMDJNITest::bind(env) < 0) return -1;
 
   return v;
-}
-
-void JNI_OnUnload(JavaVM *jvm, void *)
-{
-  // FIXME - finalize md
- 
-  ZJNI::unload(jvm);
 }

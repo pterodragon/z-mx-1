@@ -54,8 +54,9 @@ namespace ZJNI {
   ZJNIExtern void env(JNIEnv *);	// stores the env in TLS
 
   // bind C++ methods to Java (wrapper of RegisterNatives)
-  ZJNIExtern int bind(JNIEnv *, jclass, const JNINativeMethod *, unsigned n);
   ZJNIExtern int bind(JNIEnv *, const char *cname,
+      const JNINativeMethod *, unsigned n);
+  ZJNIExtern int bind(JNIEnv *, jclass,
       const JNINativeMethod *, unsigned n);
 
   // bind Java methods to C++ (reverse of RegisterNatives)
@@ -64,8 +65,14 @@ namespace ZJNI {
     const char	*signature;
     jmethodID	mid = 0;
   };
-  ZJNIExtern int bind(JNIEnv *, jclass, JavaMethod *, unsigned n);
-  ZJNIExtern int bind(JNIEnv *, const char *cname, JavaMethod *, unsigned n);
+  ZJNIExtern int bind(JNIEnv *, jclass,
+      JavaMethod *, unsigned n);
+  ZJNIExtern int bind(JNIEnv *, const char *cname,
+      JavaMethod *, unsigned n);
+  ZJNIExtern int bindStatic(JNIEnv *, jclass,
+      JavaMethod *, unsigned n);
+  ZJNIExtern int bindStatic(JNIEnv *, const char *cname,
+      JavaMethod *, unsigned n);
  
   // bind Java fields to C++
   struct JavaField {
@@ -73,8 +80,14 @@ namespace ZJNI {
     const char	*type;
     jfieldID	fid = 0;
   };
-  ZJNIExtern int bind(JNIEnv *, jclass, JavaField *, unsigned n);
-  ZJNIExtern int bind(JNIEnv *, const char *cname, JavaField *, unsigned n);
+  ZJNIExtern int bind(JNIEnv *, const char *cname,
+      JavaField *, unsigned n);
+  ZJNIExtern int bind(JNIEnv *, jclass,
+      JavaField *, unsigned n);
+  ZJNIExtern int bindStatic(JNIEnv *, const char *cname,
+      JavaField *, unsigned n);
+  ZJNIExtern int bindStatic(JNIEnv *, jclass,
+      JavaField *, unsigned n);
 
   ZJNIExtern int attach(const char *name);	// attach thread - -ve on error
   ZJNIExtern void detach();			// detach thread

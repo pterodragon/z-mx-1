@@ -30,19 +30,55 @@
 namespace MxMDTickSizeJNI {
   jclass	class_;
 
-  ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(JJJ)V" } };
+  // MxMDTickSizeTuple named constructor
+  ZJNI::JavaMethod ctorMethod[] = {
+    { "of", "(JJJ)Lcom/shardmx/mxmd/MxMDTickSizeTuple;" }
+  };
+
+#if 0
+  // MxMDTickSize accessors
+  ZJNI::JavaMethod methods[] {
+    { "minPrice", "()J" },
+    { "maxPrice", "()J" },
+    { "tickSize", "()J" },
+  };
+#endif
 }
+
+#if 0
+MxMDTickSize MxMDTickSizeJNI::j2c(JNIEnv *env, jobject obj)
+{
+  return MxMDTickSize{
+    env->CallLongMethod(obj, methods[0].mid),
+    env->CallLongMethod(obj, methods[1].mid),
+    env->CallLongMethod(obj, methods[2].mid)};
+}
+#endif
 
 jobject MxMDTickSizeJNI::ctor(JNIEnv *env, const MxMDTickSize &ts)
 {
-  return env->NewObject(class_, ctorMethod[0].mid,
+  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
       ts.minPrice(), ts.maxPrice(), ts.tickSize());
 }
 
 int MxMDTickSizeJNI::bind(JNIEnv *env)
 {
-  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDTickSize");
-  return ZJNI::bind(env, class_, ctorMethod, 1);
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDTickSizeTuple");
+  if (!class_) return -1;
+
+  if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
+
+#if 0
+  {
+    jclass c = env->FindClass("com/shardmx/mxbase/MxMDTickSize");
+    if (!c) return -1;
+    if (ZJNI::bind(env, c, methods, sizeof(methods) / sizeof(methods[0])) < 0)
+      return -1;
+    env->DeleteLocalRef((jobject)c);
+  }
+#endif
+
+  return 0;
 }
 
 void MxMDTickSizeJNI::final(JNIEnv *env)

@@ -23,6 +23,8 @@
 
 #include <ZJNI.hpp>
 
+#include <MxBaseJNI.hpp>
+
 #include <MxMDLibJNI.hpp>
 #include <MxMDFeedJNI.hpp>
 #include <MxMDVenueJNI.hpp>
@@ -55,6 +57,15 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
 
   JNIEnv *env = ZJNI::env();
 
+  if (!env || MxMDJNI::bind(env) < 0) return -1;
+
+  return v;
+}
+
+int MxMDJNI::bind(JNIEnv *env)
+{
+  if (MxBaseJNI::bind(env) < 0) return -1;
+
   if (MxMDLibJNI::bind(env) < 0) return -1;
   if (MxMDFeedJNI::bind(env) < 0) return -1;
   if (MxMDVenueJNI::bind(env) < 0) return -1;
@@ -75,7 +86,7 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
   
   // FIXME - other adapters
 
-  return v;
+  return 0;
 }
 
 void MxMDJNI::final(JNIEnv *env)
@@ -99,6 +110,8 @@ void MxMDJNI::final(JNIEnv *env)
   MxMDSegmentJNI::final(env);
   
   // FIXME - other adapters
+
+  MxBaseJNI::final(env);
 
   ZJNI::final(env);
 }

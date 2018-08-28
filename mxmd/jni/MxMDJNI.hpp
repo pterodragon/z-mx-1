@@ -33,7 +33,8 @@
 #include <jni.h>
 
 namespace MxMDJNI {
-  void final(JNIEnv *);
+  MxMDExtern int bind(JNIEnv *);
+  MxMDExtern void final(JNIEnv *);
 }
 
 #endif /* MxMDJNI_HPP */

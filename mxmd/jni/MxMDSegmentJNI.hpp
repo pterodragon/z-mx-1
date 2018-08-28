@@ -30,8 +30,10 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <MxMD.hpp>
+
 namespace MxMDSegmentJNI {
-  jobject ctor(JNIEnv *, MxMDSegment segment);
+  jobject ctor(JNIEnv *, const MxMDSegment &segment);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

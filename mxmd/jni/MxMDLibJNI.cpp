@@ -61,22 +61,22 @@ namespace MxMDLibJNI {
 
   // query callbacks
   ZJNI::JavaMethod securityFn[] = {
-    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity)V" }
+    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;)V" }
   };
   ZJNI::JavaMethod allSecuritiesFn[] = {
-    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity)J" }
+    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;)J" }
   };
   ZJNI::JavaMethod orderBookFn[] = {
-    { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook)V" }
+    { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook;)V" }
   };
   ZJNI::JavaMethod allOrderBooksFn[] = {
-    { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook)J" }
+    { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook;)J" }
   };
   ZJNI::JavaMethod allFeedsFn[] = {
-    { "fn", "(Lcom/shardmx/mxmd/MxMDFeed)J" }
+    { "fn", "(Lcom/shardmx/mxmd/MxMDFeed;)J" }
   };
   ZJNI::JavaMethod allVenuesFn[] = {
-    { "fn", "(Lcom/shardmx/mxmd/MxMDVenue)J" }
+    { "fn", "(Lcom/shardmx/mxmd/MxMDVenue;)J" }
   };
 
   // event handlers

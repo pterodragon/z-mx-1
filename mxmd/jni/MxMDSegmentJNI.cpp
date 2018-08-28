@@ -30,33 +30,43 @@
 namespace MxMDSegmentJNI {
   jclass	class_;
 
-  ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(JJJ)V" } };
+  // MxMDSegmentTuple named constructor
+  ZJNI::JavaMethod ctorMethod[] = {
+    { "of",
+      "(Ljava/lang/String;"
+      "Lcom/shardmx/mxbase/MxTradingSession;"
+      "Ljava/time/Instant;)"
+      "Lcom/shardmx/mxmd/MxMDSegmentTuple;" }
+  };
 
   jclass	tsClass;
 
-  ZJNI::JavaMethod tsMethod = {
+  // MxTradingSession named constructor
+  ZJNI::JavaMethod tsMethod[] = {
     { "value", "(I)Lcom/shardmx/mxbase/MxTradingSession;" }
   };
 }
 
-jobject MxMDSegmentJNI::ctor(JNIEnv *env, MxMDSegment segment)
+jobject MxMDSegmentJNI::ctor(JNIEnv *env, const MxMDSegment &segment)
 {
-  return env->NewObject(class_, ctorMethod[0].mid,
-      ZJNI::s2j(segment.id),
+  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
+      ZJNI::s2j(env, segment.id),
       env->CallStaticObjectMethod(tsClass, tsMethod[1].mid,
 	(jint)segment.session),
-      ZJNI::t2j(segment.stamp));
+      ZJNI::t2j(env, segment.stamp));
 }
 
 int MxMDSegmentJNI::bind(JNIEnv *env)
 {
-  class_ = ZJNI::globalClassRef("com/shardmx/mxmd/MxMDSegment");
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDSegmentTuple");
   if (!class_) return -1;
-  if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
 
-  tsClass = ZJNI::globalClassRef("com/shardmx/mxbase/MxTradingSession");
+  if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
+
+  tsClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxTradingSession");
   if (!tsClass) return -1;
-  return ZJNI::bind(env, tsClass, tradingSessionMethod, 1);
+
+  return ZJNI::bindStatic(env, tsClass, tsMethod, 1);
 }
 
 void MxMDSegmentJNI::final(JNIEnv *env)

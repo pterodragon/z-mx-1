@@ -87,6 +87,22 @@ int ZJNI::bind(JNIEnv *env, jclass c, JavaMethod *methods, unsigned n)
   return 0;
 }
 
+int ZJNI::bindStatic(
+    JNIEnv *env, const char *cname, JavaMethod *methods, unsigned n)
+{
+  jclass c = env->FindClass(cname);
+  if (!c) return -1;
+  return bindStatic(env, c, methods, n);
+}
+
+int ZJNI::bindStatic(JNIEnv *env, jclass c, JavaMethod *methods, unsigned n)
+{
+  for (unsigned i = 0; i < n; i++)
+    if (!(methods[i].mid = env->GetStaticMethodID(
+	    c, methods[i].name, methods[i].signature))) return -1;
+  return 0;
+}
+
 int ZJNI::bind(JNIEnv *env, const char *cname, JavaField *fields, unsigned n)
 {
   jclass c = env->FindClass(cname);
@@ -98,6 +114,22 @@ int ZJNI::bind(JNIEnv *env, jclass c, JavaField *fields, unsigned n)
 {
   for (unsigned i = 0; i < n; i++)
     if (!(fields[i].fid = env->GetFieldID(
+	    c, fields[i].name, fields[i].type))) return -1;
+  return 0;
+}
+
+int ZJNI::bindStatic(
+    JNIEnv *env, const char *cname, JavaField *fields, unsigned n)
+{
+  jclass c = env->FindClass(cname);
+  if (!c) return -1;
+  return bindStatic(env, c, fields, n);
+}
+
+int ZJNI::bindStatic(JNIEnv *env, jclass c, JavaField *fields, unsigned n)
+{
+  for (unsigned i = 0; i < n; i++)
+    if (!(fields[i].fid = env->GetStaticFieldID(
 	    c, fields[i].name, fields[i].type))) return -1;
   return 0;
 }

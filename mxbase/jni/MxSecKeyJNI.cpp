@@ -32,9 +32,11 @@
 namespace MxSecKeyJNI {
   jclass	class_; // MxSecKeyTuple
 
-  // MxSecKeyTuple constructor
+  // MxSecKeyTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V" }
+    { "of",
+      "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)"
+      "Lcom/shardmx/mxbase/MxSecKeyTuple;" }
   };
 
   // MxSecKey accessors
@@ -65,7 +67,7 @@ MxSecKey MxSecKeyJNI::j2c(JNIEnv *env, jobject obj)
 
 jobject MxSecKeyJNI::ctor(JNIEnv *env, const MxSecKey &key)
 {
-  return env->NewObject(class_, ctorMethod[0].mid,
+  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
       ZJNI::s2j(env, key.venue()),
       ZJNI::s2j(env, key.segment()),
       ZJNI::s2j(env, key.id()));
@@ -74,8 +76,9 @@ jobject MxSecKeyJNI::ctor(JNIEnv *env, const MxSecKey &key)
 int MxSecKeyJNI::bind(JNIEnv *env)
 {
   class_ = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxSecKeyTuple");
+  if (!class_) return -1;
 
-  if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
+  if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
 
   {
     jclass c = env->FindClass("com/shardmx/mxbase/MxSecKey");

@@ -39,12 +39,19 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
 
   JNIEnv *env = ZJNI::env();
 
-  if (MxSecKeyJNI::bind(env) < 0) return -1;
-  
-  // FIXME - other adapters
+  if (!env || MxBaseJNI::bind(env) < 0) return -1;
 
   return v;
 }
+
+int MxBaseJNI::bind(JNIEnv *env)
+{
+  if (MxSecKeyJNI::bind(env) < 0) return -1;
+
+  // FIXME - other adapters
+
+  return 0;
+}  
 
 void MxBaseJNI::final(JNIEnv *env)
 {

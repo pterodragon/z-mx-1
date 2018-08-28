@@ -17,7 +17,7 @@ libMxMDJNI_la_SOURCES = MxMDJNI.cpp \
 	MxMDTradeJNI.cpp MxMDVenueJNI.cpp \
 	MxMDTickSizeJNI.cpp
 libMxMDJNI_la_LIBADD = $(top_builddir)/src/libMxMD.la \
-	@MXBASE_LIBS@ -lZJNI @Z_LIBS@ @MXMD_XLIBS@
+	-lMxBaseJNI @MXBASE_LIBS@ -lZJNI @Z_LIBS@ @MXMD_XLIBS@
 libMxMDJNITest_la_SOURCES = MxMDJNITest.hpp MxMDJNITest.cpp
 libMxMDJNITest_la_LIBADD = $(top_builddir)/src/libMxMD.la \
 	@MXBASE_LIBS@ -lZJNI @Z_LIBS@ @MXMD_XLIBS@

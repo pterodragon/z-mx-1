@@ -51,7 +51,9 @@ namespace MxMDOrderJNI {
   // () -> MxMDOrderData
   jobject data(JNIEnv *, jobject);
 
+  jobject ctor(JNIEnv *, void *ptr);
   int bind(JNIEnv *);
+  void final(JNIEnv *);
 }
 
 #endif /* MxMDOrderJNI_HPP */

@@ -25,27 +25,42 @@
 
 #include <ZJNI.hpp>
 
-#include <MxMDTickSizeJNI.hpp>
+#include <MxMDSegmentJNI.hpp>
 
-namespace MxMDTickSizeJNI {
+namespace MxMDSegmentJNI {
   jclass	class_;
 
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(JJJ)V" } };
+
+  jclass	tsClass;
+
+  ZJNI::JavaMethod tsMethod = {
+    { "value", "(I)Lcom/shardmx/mxbase/MxTradingSession;" }
+  };
 }
 
-jobject MxMDTickSizeJNI::ctor(JNIEnv *env, const MxMDTickSize &ts)
+jobject MxMDSegmentJNI::ctor(JNIEnv *env, MxMDSegment segment)
 {
   return env->NewObject(class_, ctorMethod[0].mid,
-      ts.minPrice(), ts.maxPrice(), ts.tickSize());
+      ZJNI::s2j(segment.id),
+      env->CallStaticObjectMethod(tsClass, tsMethod[1].mid,
+	(jint)segment.session),
+      ZJNI::t2j(segment.stamp));
 }
 
-int MxMDTickSizeJNI::bind(JNIEnv *env)
+int MxMDSegmentJNI::bind(JNIEnv *env)
 {
-  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDTickSize");
-  return ZJNI::bind(env, class_, ctorMethod, 1);
+  class_ = ZJNI::globalClassRef("com/shardmx/mxmd/MxMDSegment");
+  if (!class_) return -1;
+  if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
+
+  tsClass = ZJNI::globalClassRef("com/shardmx/mxbase/MxTradingSession");
+  if (!tsClass) return -1;
+  return ZJNI::bind(env, tsClass, tradingSessionMethod, 1);
 }
 
-void MxMDTickSizeJNI::final(JNIEnv *env)
+void MxMDSegmentJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
+  if (tsClass) env->DeleteGlobalRef(tsClass);
 }

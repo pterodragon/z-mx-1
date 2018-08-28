@@ -76,7 +76,9 @@ namespace MxMDSecurityJNI {
   // (MxMDAllOrderBooksFn) -> long
   jlong allOrderBooks(JNIEnv *, jobject, jobject);
 
+  jobject ctor(JNIEnv *, void *ptr);
   int bind(JNIEnv *);
+  void final(JNIEnv *);
 }
 
 #endif /* MxMDSecurityJNI_HPP */

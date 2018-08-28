@@ -48,7 +48,9 @@ namespace MxMDDerivativesJNI {
   // (MxMDAllSecuritiesFn) -> long
   jlong allOptions(JNIEnv *, jobject, jobject);
 
+  jobject ctor(JNIEnv *, void *ptr);
   int bind(JNIEnv *);
+  void final(JNIEnv *);
 }
 
 #endif /* MxMDDerivativesJNI_HPP */

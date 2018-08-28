@@ -114,9 +114,9 @@ jobject MxMDVenueJNI::tradingSession(JNIEnv *env, jobject obj, jstring)
   return 0;
 }
 
-jobject MxMDVenueJNI::ctor(JNIEnv *env, jlong ptr)
+jobject MxMDVenueJNI::ctor(JNIEnv *env, void *ptr)
 {
-  return env->NewObject(class_, ctorMethod[0].mid, ptr);
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)(uintptr_t)ptr);
 }
 
 int MxMDVenueJNI::bind(JNIEnv *env)
@@ -160,14 +160,7 @@ int MxMDVenueJNI::bind(JNIEnv *env)
   };
 #pragma GCC diagnostic pop
 
-  {
-    jclass c = env->FindClass("com/shardmx/mxmd/MxMDVenue");
-    if (!c) return -1;
-    class_ = (jclass)env->NewGlobalRef((jobject)c);
-    env->DeleteLocalRef((jobject)c);
-    if (!class_) return -1;
-  }
-
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDVenue");
   if (ZJNI::bind(env, class_,
         methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
 

@@ -45,7 +45,9 @@ namespace MxMDTradeJNI {
   // () -> MxMDTradeData
   jobject data(JNIEnv *, jobject);
 
+  jobject ctor(JNIEnv *, void *ptr);
   int bind(JNIEnv *);
+  void final(JNIEnv *);
 }
 
 #endif /* MxMDTradeJNI_HPP */

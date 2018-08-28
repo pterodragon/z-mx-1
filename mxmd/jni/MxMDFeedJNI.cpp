@@ -73,9 +73,9 @@ jint MxMDFeedJNI::level(JNIEnv *env, jobject obj)
   return 0;
 }
 
-jobject MxMDFeedJNI::ctor(JNIEnv *env, jlong ptr)
+jobject MxMDFeedJNI::ctor(JNIEnv *env, void *ptr)
 {
-  return env->NewObject(class_, ctorMethod[0].mid, ptr);
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)(uintptr_t)ptr);
 }
 
 int MxMDFeedJNI::bind(JNIEnv *env)

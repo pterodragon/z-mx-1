@@ -91,7 +91,9 @@ namespace MxMDOrderBookJNI {
   // () -> MxMDSecHandler
   jobject handler(JNIEnv *, jobject);
 
+  jobject ctor(JNIEnv *, void *ptr);
   int bind(JNIEnv *);
+  void final(JNIEnv *);
 }
 
 #endif /* MxMDOrderBookJNI_HPP */

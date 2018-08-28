@@ -32,7 +32,11 @@
 #include <MxMDVenueJNI.hpp>
 #include <MxMDTickSizeTblJNI.hpp>
 
+#include <MxMDSecurityJNI.hpp>
+#include <MxMDOrderBookJNI.hpp>
+
 #include <MxMDTickSizeJNI.hpp>
+#include <MxMDSegmentJNI.hpp>
 
 #include <MxMDLibJNI.hpp>
 
@@ -316,54 +320,50 @@ void MxMDLibJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
       if (JNIEnv *env = ZJNI::env()) \
 	env->CallVoidMethod(fn, method ## Fn[1].mid, __VA_ARGS__); })
 
-  // FIXME - change ctor args to be MD-native C++ types, i.e. migrate
-  // casting/decomposition into ctor() functions and out of here -
-  // ctor() will only ever be called to convert from MD to JNI anyway
-
   handle2(exception,
       MxMDLib *md, ZmRef<ZeEvent> e,
       obj_, ZJNI::s2j(env, ZuStringN<512>() << e->message()));
   handle1(connected,
       MxMDFeed *feed,
-      MxMDFeedJNI::ctor(env, (uintptr_t)(void *)feed));
+      MxMDFeedJNI::ctor(env, feed));
   handle1(disconnected,
       MxMDFeed *feed,
-      MxMDFeedJNI::ctor(env, (uintptr_t)(void *)feed));
+      MxMDFeedJNI::ctor(env, feed));
   handle1(eof,
       MxMDLib *md,
       obj_);
   handle1(refDataLoaded,
       MxMDVenue *venue,
-      MxMDVenueJNI::ctor(env, (uintptr_t)(void *)venue));
+      MxMDVenueJNI::ctor(env, venue));
   handle1(addTickSizeTbl,
       MxMDTickSizeTbl *tbl,
-      MxMDTickSizeTblJNI::ctor(env, (uintptr_t)(void *)tbl));
+      MxMDTickSizeTblJNI::ctor(env, tbl));
   handle1(resetTickSizeTbl,
       MxMDTickSizeTbl *tbl,
-      MxMDTickSizeTblJNI::ctor(env, (uintptr_t)(void *)tbl));
+      MxMDTickSizeTblJNI::ctor(env, tbl));
   handle2(addTickSize,
       MxMDTickSizeTbl *tbl, const MxMDTickSize &ts,
-      MxMDTickSizeTblJNI::ctor(env, (uintptr_t)(void *)tbl),
-      MxMDTickSizeJNI::ctor(env, ts.minPrice(), ts.maxPrice(), ts.tickSize()));
-  handle1(addSecurity,
-      MxMDSecurity *sec,
-      MxMDSecurityJNI::ctor(env, (uintptr_t)(void *)sec));
-  handle1(updatedSecurity,
-      MxMDSecurity *sec,
-      MxMDSecurityJNI::ctor(env, (uintptr_t)(void *)sec));
-  handle1(addOrderBook,
-      MxMDOrderBook *ob,
-      MxMDOrderBookJNI::ctor(env, (uintptr_t)(void *)ob));
-  handle1(updatedOrderBook,
-      MxMDOrderBook *ob,
-      MxMDOrderBookJNI::ctor(env, (uintptr_t)(void *)ob));
-  handle1(deletedOrderBook,
-      MxMDOrderBook *ob,
-      MxMDOrderBookJNI::ctor(env, (uintptr_t)(void *)ob));
+      MxMDTickSizeTblJNI::ctor(env, tbl),
+      MxMDTickSizeJNI::ctor(env, ts));
+  handle2(addSecurity,
+      MxMDSecurity *sec, MxDateTime stamp,
+      MxMDSecurityJNI::ctor(env, sec), ZJNI::t2j(env, stamp));
+  handle2(updatedSecurity,
+      MxMDSecurity *sec, MxDateTime stamp,
+      MxMDSecurityJNI::ctor(env, sec), ZJNI::t2j(env, stamp));
+  handle2(addOrderBook,
+      MxMDOrderBook *ob, MxDateTime stamp,
+      MxMDOrderBookJNI::ctor(env, ob), ZJNI::t2j(env, stamp));
+  handle2(updatedOrderBook,
+      MxMDOrderBook *ob, MxDateTime stamp,
+      MxMDOrderBookJNI::ctor(env, ob), ZJNI::t2j(env, stamp));
+  handle2(deletedOrderBook,
+      MxMDOrderBook *ob, MxDateTime stamp,
+      MxMDOrderBookJNI::ctor(env, ob), ZJNI::t2j(env, stamp));
   handle2(tradingSession,
       MxMDVenue *venue, MxMDSegment segment,
-      MxMDVenueJNI::ctor(env, (uintptr_t)(void *)venue),
-      MxMDSegmentJNI::ctor(env, segment.id, segment.session, segment.stamp));
+      MxMDVenueJNI::ctor(env, venue),
+      MxMDSegmentJNI::ctor(env, segment));
 
 #undef handle1
 #undef handle2
@@ -378,8 +378,9 @@ void MxMDLibJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
 	if (!next)
 	  next_ = MxDateTime();
 	else
-	  next_ = ZJNI::j2t(next);
-      });
+	  next_ = ZJNI::j2t(env, next);
+      }
+    });
 
 #if 0
   if (jobject fn = env->CallObjectMethod(handler_, exceptionFn[0].mid))

@@ -25,7 +25,22 @@
 
 #include <ZJNI.hpp>
 
+#include <MxMD.hpp>
+
 #include <MxMDOrderBookJNI.hpp>
+
+namespace MxMDOrderBookJNI {
+  jclass	class_;
+
+  ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
+  ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
+
+  MxMDOrderBook *ptr_(JNIEnv *env, jobject obj) {
+    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr)) return nullptr;
+    return (MxMDOrderBook *)(void *)ptr;
+  }
+}
 
 void MxMDOrderBookJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
@@ -273,6 +288,17 @@ int MxMDOrderBookJNI::bind(JNIEnv *env)
   };
 #pragma GCC diagnostic pop
 
-  return ZJNI::bind(env, "com/shardmx/mxmd/MxMDOrderBook",
-        methods, sizeof(methods) / sizeof(methods[0]));
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDOrderBook");
+  if (ZJNI::bind(env, class_,
+        methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
+
+  if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
+  if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
+
+  return 0;
+}
+
+void MxMDOrderBookJNI::final(JNIEnv *env)
+{
+  if (class_) env->DeleteGlobalRef(class_);
 }

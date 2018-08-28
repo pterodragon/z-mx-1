@@ -30,8 +30,10 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <MxMD.hpp>
+
 namespace MxMDTickSizeJNI {
-  jobject ctor(JNIEnv *, jlong minPrice, jlong maxPrice, jlong tickSize);
+  jobject ctor(JNIEnv *, const MxMDTickSize &ts);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

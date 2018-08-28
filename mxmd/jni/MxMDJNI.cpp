@@ -39,6 +39,7 @@
 #include <MxMDTradeJNI.hpp>
 
 #include <MxMDTickSizeJNI.hpp>
+#include <MxMDSegmentJNI.hpp>
 
 #include <MxMDJNI.hpp>
 
@@ -68,28 +69,36 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
   if (MxMDOrderJNI::bind(env) < 0) return -1;
 
   if (MxMDTradeJNI::bind(env) < 0) return -1;
+
+  if (MxMDTickSizeJNI::bind(env) < 0) return -1;
+  if (MxMDSegmentJNI::bind(env) < 0) return -1;
   
-  // FIXME - oher JNI adapters
+  // FIXME - other adapters
 
   return v;
 }
 
 void MxMDJNI::final(JNIEnv *env)
 {
-  // FIXME - reverse order of binding
-
+  MxMDLibJNI::final(env);
   MxMDFeedJNI::final(env);
   MxMDVenueJNI::final(env);
   MxMDTickSizeTblJNI::final(env);
-  // MxMDSecurityJNI::final();
-  // MxMDOrderBookJNI::final();
+
+  MxMDSecurityJNI::final(env);
+  MxMDDerivativesJNI::final(env);
+
+  MxMDOrderBookJNI::final(env);
+  MxMDOBSideJNI::final(env);
+  MxMDPxLevelJNI::final(env);
+  MxMDOrderJNI::final(env);
+
+  MxMDTradeJNI::final(env);
 
   MxMDTickSizeJNI::final(env);
-  // MxMDSegmentJNI::final();
-
-  // FIXME - oher JNI adapters
-
-  MxMDLibJNI::final(env);
+  MxMDSegmentJNI::final(env);
+  
+  // FIXME - other adapters
 
   ZJNI::final(env);
 }

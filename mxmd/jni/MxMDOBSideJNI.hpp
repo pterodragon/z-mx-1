@@ -53,7 +53,9 @@ namespace MxMDOBSideJNI {
   // (MxMDAllPxLevelsFn) -> long
   jlong allPxLevels(JNIEnv *, jobject, jobject);
 
+  jobject ctor(JNIEnv *, void *ptr);
   int bind(JNIEnv *);
+  void final(JNIEnv *);
 }
 
 #endif /* MxMDOBSideJNI_HPP */

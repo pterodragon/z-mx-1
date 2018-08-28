@@ -19,8 +19,8 @@
 
 // MxMD JNI
 
-#ifndef MxMDFeedJNI_HPP
-#define MxMDFeedJNI_HPP
+#ifndef MxMDSegmentJNI_HPP
+#define MxMDSegmentJNI_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -30,23 +30,10 @@
 #include <MxMDLib.hpp>
 #endif
 
-namespace MxMDFeedJNI {
-  // (long) -> void
-  void ctor_(JNIEnv *, jobject, jlong);
-  // (long) -> void
-  void dtor_(JNIEnv *, jobject, jlong);
-  // () -> MxMDLib
-  jobject md(JNIEnv *, jobject);
-
-  // () -> String
-  jstring id(JNIEnv *, jobject);
-
-  // () -> int
-  jint level(JNIEnv *, jobject);
-
-  jobject ctor(JNIEnv *, void *ptr);
+namespace MxMDSegmentJNI {
+  jobject ctor(JNIEnv *, MxMDSegment segment);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }
 
-#endif /* MxMDFeedJNI_HPP */
+#endif /* MxMDSegmentJNI_HPP */

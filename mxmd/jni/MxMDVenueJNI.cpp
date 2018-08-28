@@ -38,80 +38,136 @@ namespace MxMDVenueJNI {
     if (ZuUnlikely(!ptr)) return nullptr;
     return (MxMDVenue *)(void *)ptr;
   }
+
+  jclass	oisClass;
+
+  // MxOrderIDScope named constructor
+  ZJNI::JavaMethod oisMethod[] = {
+    { "value", "(I)Lcom/shardmx/mxmd/MxMDOrderIDScope;" }
+  };
+
+  // query callbacks
+  ZJNI::JavaMethod allTickSizeTblsFn[] = {
+    { "fn", "(Lcom/shardmx/mxmd/MxMDTickSizeTbl;)J" }
+  };
+  ZJNI::JavaMethod allSegmentsFn[] = {
+    { "fn", "(Lcom/shardmx/mxmd/MxMDSegment;)J" }
+  };
 }
 
-void MxMDVenueJNI::ctor_(JNIEnv *env, jobject obj, jlong)
+void MxMDVenueJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDVenue *)(void *)(uintptr_t)ptr)->ref();
 }
 
-void MxMDVenueJNI::dtor_(JNIEnv *env, jobject obj, jlong)
+void MxMDVenueJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDVenue *)(void *)(uintptr_t)ptr)->deref();
 }
 
 jobject MxMDVenueJNI::md(JNIEnv *env, jobject obj)
 {
   // () -> MxMDLib
-
-  return 0;
+  return MxMDLibJNI::instance_();
 }
 
 jobject MxMDVenueJNI::feed(JNIEnv *env, jobject obj)
 {
   // () -> MxMDFeed
 
-  return 0;
+  MxMDVenue *venue = ptr_(env, obj);
+  if (ZuUnlikely(!venue)) return 0;
+  return MxMDFeedJNI::ctor(env, venue->feed());
 }
 
 jstring MxMDVenueJNI::id(JNIEnv *env, jobject obj)
 {
   // () -> String
 
-  return 0;
+  MxMDVenue *venue = ptr_(env, obj);
+  if (ZuUnlikely(!venue)) return 0;
+  return ZJNI::s2j(venue->id());
 }
 
 jobject MxMDVenueJNI::orderIDScope(JNIEnv *env, jobject obj)
 {
   // () -> MxMDOrderIDScope
 
-  return 0;
+  MxMDVenue *venue = ptr_(env, obj);
+  if (ZuUnlikely(!venue)) return 0;
+  return env->CallStaticObjectMethod(oisClass, oisMethod[0].mid,
+      (jint)(int)venue->orderIDScope());
 }
 
 jlong MxMDVenueJNI::flags(JNIEnv *env, jobject obj)
 {
   // () -> long
 
-  return 0;
+  MxMDVenue *venue = ptr_(env, obj);
+  if (ZuUnlikely(!venue)) return 0;
+  return (unsigned)venue->flags();
 }
 
-jobject MxMDVenueJNI::tickSizeTbl(JNIEnv *env, jobject obj, jstring)
+jboolean MxMDVenueJNI::loaded(JNIEnv *env, jobject obj)
+{
+  // () -> boolean
+
+  MxMDVenue *venue = ptr_(env, obj);
+  if (ZuUnlikely(!venue)) return 0;
+  return venue->loaded();
+}
+
+jobject MxMDVenueJNI::tickSizeTbl(JNIEnv *env, jobject obj, jstring id)
 {
   // (String) -> MxMDTickSizeTbl
 
-  return 0;
+  MxMDVenue *venue = ptr_(env, obj);
+  if (ZuUnlikely(!venue || !id)) return 0;
+  ZmRef<MxMDTickSizeTbl> tbl = venue->tickSizeTbl(ZJNI::j2s_ZuStringN<8>(id));
+  if (!tbl) return 0;
+  return MxMDTickSizeTblJNI::ctor(env, tbl);
 }
 
-jlong MxMDVenueJNI::allTickSizeTbls(JNIEnv *env, jobject obj, jobject)
+jlong MxMDVenueJNI::allTickSizeTbls(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllTickSizeTblsFn) -> long
 
-  return 0;
+  MxMDVenue *venue = ptr_(env, obj);
+  if (ZuUnlikely(!venue || !fn)) return 0;
+  return md->allTickSizeTbls(
+      [fn = ZJNI::globalRef(env, fn)](MxMDTickSizeTbl *tbl) -> uintptr_t {
+    if (JNIEnv *env = ZJNI::env())
+      return env->CallLongMethod(fn, allTickSizeTblsFn[0].mid,
+	  MxMDTickSizeTblJNI::ctor(env, tbl));
+    return 0;
+  });
 }
 
-void MxMDVenueJNI::allSegments(JNIEnv *env, jobject obj, jobject)
+void MxMDVenueJNI::allSegments(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllSegmentsFn) -> void
 
+  MxMDVenue *venue = ptr_(env, obj);
+  if (ZuUnlikely(!venue || !fn)) return 0;
+  return md->allSegments(
+      [fn = ZJNI::globalRef(env, fn)](const MxMDSegment &seg) -> uintptr_t {
+    if (JNIEnv *env = ZJNI::env())
+      return env->CallLongMethod(fn, allSegmentsFn[0].mid,
+	  MxMDSegmentJNI::ctor(env, seg));
+    return 0;
+  });
 }
 
-jobject MxMDVenueJNI::tradingSession(JNIEnv *env, jobject obj, jstring)
+jobject MxMDVenueJNI::tradingSession(JNIEnv *env, jobject obj, jstring id)
 {
   // (String) -> MxMDSegment
 
-  return 0;
+  MxMDVenue *venue = ptr_(env, obj);
+  if (ZuUnlikely(!venue || !id)) return 0;
+  MxMDSegment seg = venue->tradingSession(ZJNI::j2s_ZuStringN<8>(id));
+  return MxMDSegmentJNI::ctor(env, seg);
 }
 
 jobject MxMDVenueJNI::ctor(JNIEnv *env, void *ptr)
@@ -145,6 +201,9 @@ int MxMDVenueJNI::bind(JNIEnv *env)
     { "flags",
       "()J",
       (void *)&MxMDVenueJNI::flags },
+    { "loaded",
+      "()Z",
+      (void *)&MxMDVenueJNI::loaded },
     { "tickSizeTbl",
       "(Ljava/lang/String;)Lcom/shardmx/mxmd/MxMDTickSizeTbl;",
       (void *)&MxMDVenueJNI::tickSizeTbl },
@@ -167,10 +226,20 @@ int MxMDVenueJNI::bind(JNIEnv *env)
   if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
   if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
 
+  oisClass = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDOrderIDScope");
+  if (!oisClass) return -1;
+  if (ZJNI::bindStatic(env, oisClass, oisMethod, 1) < 0) return -1;
+
+  if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDAllTickSizeTblsFn",
+	allTickSizeTblsFn, 1) < 0) return -1;
+  if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDAllSegmentsFn",
+	allSegmentsFn, 1) < 0) return -1;
+
   return 0;
 }
 
 void MxMDVenueJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
+  if (oisClass) env->DeleteGlobalRef(oisClass);
 }

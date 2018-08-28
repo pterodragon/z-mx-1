@@ -45,13 +45,13 @@ namespace MxMDSecurityJNI {
 void MxMDSecurityJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDSecurity *)(void *)(uintptr_t)ptr)->ref();
 }
 
 void MxMDSecurityJNI::dtor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDSecurity *)(void *)(uintptr_t)ptr)->deref();
 }
 
 jobject MxMDSecurityJNI::md(JNIEnv *env, jobject obj)

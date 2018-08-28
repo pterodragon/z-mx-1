@@ -181,7 +181,7 @@ void MxMDLibJNI::dtor_(JNIEnv *env, jobject, jlong)
 jobject MxMDLibJNI::instance(JNIEnv *env, jclass c)
 {
   // () -> MxMDLib
-  ZmReadGuard<ZmLock> guard(lock);
+  // ZmReadGuard<ZmLock> guard(lock);
 
   return obj_;
 }
@@ -534,6 +534,8 @@ jlong MxMDLibJNI::allVenues(JNIEnv *env, jobject obj, jobject fn)
     return 0;
   });
 }
+
+jobject MxMDLibJNI::instance_() { return obj_; }
 
 int MxMDLibJNI::bind(JNIEnv *env)
 {

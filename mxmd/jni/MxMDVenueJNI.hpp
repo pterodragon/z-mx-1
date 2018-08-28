@@ -50,6 +50,9 @@ namespace MxMDVenueJNI {
   // () -> long
   jlong flags(JNIEnv *, jobject);
 
+  // () -> boolean
+  jboolean loaded(JNIEnv *, jobject);
+
   // (String) -> MxMDTickSizeTbl
   jobject tickSizeTbl(JNIEnv *, jobject, jstring);
   // (MxMDAllTickSizeTblsFn) -> long

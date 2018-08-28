@@ -51,7 +51,7 @@ jobject MxMDSegmentJNI::ctor(JNIEnv *env, const MxMDSegment &segment)
 {
   return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
       ZJNI::s2j(env, segment.id),
-      env->CallStaticObjectMethod(tsClass, tsMethod[1].mid,
+      env->CallStaticObjectMethod(tsClass, tsMethod[0].mid,
 	(jint)segment.session),
       ZJNI::t2j(env, segment.stamp));
 }
@@ -60,12 +60,10 @@ int MxMDSegmentJNI::bind(JNIEnv *env)
 {
   class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDSegmentTuple");
   if (!class_) return -1;
-
   if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
 
   tsClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxTradingSession");
   if (!tsClass) return -1;
-
   return ZJNI::bindStatic(env, tsClass, tsMethod, 1);
 }
 

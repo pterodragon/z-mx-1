@@ -45,13 +45,13 @@ namespace MxMDTickSizeTblJNI {
 void MxMDTickSizeTblJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDTickSizeTbl *)(void *)(uintptr_t)ptr)->ref();
 }
 
 void MxMDTickSizeTblJNI::dtor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDTickSizeTbl *)(void *)(uintptr_t)ptr)->deref();
 }
 
 jobject MxMDTickSizeTblJNI::venue(JNIEnv *env, jobject obj)

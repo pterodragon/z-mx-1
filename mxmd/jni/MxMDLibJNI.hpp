@@ -91,6 +91,7 @@ namespace MxMDLibJNI {
   // (MxMDAllVenuesFn) -> long
   jlong allVenues(JNIEnv *, jobject, jobject);
 
+  jobject instance_();
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

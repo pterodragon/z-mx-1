@@ -25,6 +25,8 @@
 
 #include <MxMD.hpp>
 
+#include <MxMDLibJNI.hpp>
+
 #include <MxMDFeedJNI.hpp>
 
 namespace MxMDFeedJNI {
@@ -55,22 +57,25 @@ void MxMDFeedJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 jobject MxMDFeedJNI::md(JNIEnv *env, jobject obj)
 {
   // () -> MxMDLib
-
-  return 0;
+  return MxMDLibJNI::instance_();
 }
 
 jstring MxMDFeedJNI::id(JNIEnv *env, jobject obj)
 {
   // () -> String
 
-  return 0;
+  MxMDFeed *feed = ptr_(env, obj);
+  if (ZuUnlikely(!feed)) return;
+  return ZJNI::s2j(feed->id());
 }
 
 jint MxMDFeedJNI::level(JNIEnv *env, jobject obj)
 {
   // () -> int
 
-  return 0;
+  MxMDFeed *feed = ptr_(env, obj);
+  if (ZuUnlikely(!feed)) return;
+  return feed->level();
 }
 
 jobject MxMDFeedJNI::ctor(JNIEnv *env, void *ptr)

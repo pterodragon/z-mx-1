@@ -45,13 +45,13 @@ namespace MxMDDerivativesJNI {
 void MxMDDerivativesJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDDerivatives *)(void *)(uintptr_t)ptr)->ref();
 }
 
 void MxMDDerivativesJNI::dtor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDDerivatives *)(void *)(uintptr_t)ptr)->deref();
 }
 
 jobject MxMDDerivativesJNI::future(JNIEnv *env, jobject obj, jobject)

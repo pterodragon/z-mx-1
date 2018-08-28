@@ -45,13 +45,13 @@ namespace MxMDTradeJNI {
 void MxMDTradeJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDTrade *)(void *)(uintptr_t)ptr)->ref();
 }
 
 void MxMDTradeJNI::dtor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDTrade *)(void *)(uintptr_t)ptr)->deref();
 }
 
 jobject MxMDTradeJNI::security(JNIEnv *env, jobject obj)

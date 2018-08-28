@@ -43,13 +43,13 @@ namespace MxMDOBSideJNI {
 void MxMDOBSideJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDOBSideJNI *)(void *)(uintptr_t)ptr)->ref();
 }
 
 void MxMDOBSideJNI::dtor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDOBSideJNI *)(void *)(uintptr_t)ptr)->deref();
 }
 
 jobject MxMDOBSideJNI::orderBook(JNIEnv *env, jobject obj)

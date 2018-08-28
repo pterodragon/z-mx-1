@@ -45,13 +45,13 @@ namespace MxMDOrderBookJNI {
 void MxMDOrderBookJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDOrderBook *)(void *)(uintptr_t)ptr)->ref();
 }
 
 void MxMDOrderBookJNI::dtor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-
+  if (ptr) ((MxMDOrderBook *)(void *)(uintptr_t)ptr)->deref();
 }
 
 jobject MxMDOrderBookJNI::md(JNIEnv *env, jobject obj)

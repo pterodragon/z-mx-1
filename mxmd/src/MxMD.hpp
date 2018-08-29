@@ -761,8 +761,6 @@ typedef ZmFn<MxMDOrderBook *, MxDateTime> MxMDOrderBookFn;
 typedef ZmFn<MxMDOrderBook *, const MxMDL1Data &> MxMDLevel1Fn;
 // price level, time stamp
 typedef ZmFn<MxMDPxLevel *, MxDateTime> MxMDPxLevelFn;
-// order book, time stamp
-typedef ZmFn<MxMDOrderBook *, MxDateTime> MxMDLevel2Fn;
 // order, time stamp
 typedef ZmFn<MxMDOrder *, MxDateTime> MxMDOrderFn;
 // trade, time stamp
@@ -813,7 +811,7 @@ struct MxMDSecHandler : public ZuObject {
   MxMDSecurity_Fn(MxMDPxLevelFn,	addPxLevel);
   MxMDSecurity_Fn(MxMDPxLevelFn,	updatedPxLevel);
   MxMDSecurity_Fn(MxMDPxLevelFn,	deletedPxLevel);
-  MxMDSecurity_Fn(MxMDLevel2Fn,		l2);
+  MxMDSecurity_Fn(MxMDOrderBookFn,	l2);
   MxMDSecurity_Fn(MxMDOrderFn,		addOrder);
   MxMDSecurity_Fn(MxMDOrderFn,		modifiedOrder);
   MxMDSecurity_Fn(MxMDOrderFn,		canceledOrder);

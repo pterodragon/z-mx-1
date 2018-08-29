@@ -30,6 +30,8 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <jni.h>
+
 namespace MxMDPxLevelJNI {
   // (long) -> void
   void ctor_(JNIEnv *, jobject, jlong);

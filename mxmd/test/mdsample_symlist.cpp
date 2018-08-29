@@ -132,7 +132,7 @@ int main(int argc, char **argv)
     addPxLevelFn(MxMDPxLevelFn::Ptr<&pxLevel>::fn()).
     updatedPxLevelFn(MxMDPxLevelFn::Ptr<&pxLevel>::fn()).
     deletedPxLevelFn(MxMDPxLevelFn::Ptr<&deletedPxLevel>::fn()).
-    l2Fn(MxMDLevel2Fn::Ptr<&l2>::fn());
+    l2Fn(MxMDOrderBookFn::Ptr<&l2>::fn());
 
   // read rics from file into hash table
   {

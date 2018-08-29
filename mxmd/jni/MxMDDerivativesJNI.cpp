@@ -42,13 +42,13 @@ namespace MxMDDerivativesJNI {
   }
 }
 
-void MxMDDerivativesJNI::ctor_(JNIEnv *env, jobject obj, jlong)
+void MxMDDerivativesJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
   if (ptr) ((MxMDDerivatives *)(void *)(uintptr_t)ptr)->ref();
 }
 
-void MxMDDerivativesJNI::dtor_(JNIEnv *env, jobject obj, jlong)
+void MxMDDerivativesJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
   if (ptr) ((MxMDDerivatives *)(void *)(uintptr_t)ptr)->deref();
@@ -80,6 +80,11 @@ jlong MxMDDerivativesJNI::allOptions(JNIEnv *env, jobject obj, jobject)
   // (MxMDAllSecuritiesFn) -> long
 
   return 0;
+}
+
+jobject MxMDDerivativesJNI::ctor(JNIEnv *env, void *ptr)
+{
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)(uintptr_t)ptr);
 }
 
 int MxMDDerivativesJNI::bind(JNIEnv *env)

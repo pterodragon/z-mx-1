@@ -30,6 +30,8 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <jni.h>
+
 namespace MxMDJNITest {
   // (MxMDLib) -> void
   void init(JNIEnv *, jobject, jobject);

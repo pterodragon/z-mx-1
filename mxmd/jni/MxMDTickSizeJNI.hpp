@@ -30,6 +30,8 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <jni.h>
+
 #include <MxMD.hpp>
 
 namespace MxMDTickSizeJNI {

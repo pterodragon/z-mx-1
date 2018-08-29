@@ -40,6 +40,8 @@
 #include <MxMDTickSizeJNI.hpp>
 #include <MxMDSegmentJNI.hpp>
 
+#include <MxMDLibHandlerJNI.hpp>
+
 #include <MxMDLibJNI.hpp>
 
 namespace MxMDLibJNI {
@@ -78,96 +80,6 @@ namespace MxMDLibJNI {
   ZJNI::JavaMethod allVenuesFn[] = {
     { "fn", "(Lcom/shardmx/mxmd/MxMDVenue;)J" }
   };
-
-  // event handlers
-  ZJNI::JavaMethod exceptionFn[] = {
-    { "exception", "()Lcom/shardmx/mxmd/MxMDExceptionFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDLib;Ljava/lang/String;)V" }
-  };
-  ZJNI::JavaMethod connectedFn[] = {
-    { "connected", "()Lcom/shardmx/mxmd/MxMDFeedFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDFeed;)V" }
-  };
-  ZJNI::JavaMethod disconnectedFn[] = {
-    { "disconnected", "()Lcom/shardmx/mxmd/MxMDFeedFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDFeed;)V" }
-  };
-  ZJNI::JavaMethod eofFn[] = {
-    { "eof", "()Lcom/shardmx/mxmd/MxMDLibFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDLib;)V" }
-  };
-  ZJNI::JavaMethod refDataLoadedFn[] = {
-    { "refDataLoaded", "()Lcom/shardmx/mxmd/MxMDVenueFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDVenue;)V" }
-  };
-  ZJNI::JavaMethod addTickSizeTblFn[] = {
-    { "addTickSizeTbl", "()Lcom/shardmx/mxmd/MxMDTickSizeTblFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDTickSizeTbl;)V" }
-  };
-  ZJNI::JavaMethod resetTickSizeTblFn[] = {
-    { "resetTickSizeTbl", "()Lcom/shardmx/mxmd/MxMDTickSizeTblFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDTickSizeTbl;)V" }
-  };
-  ZJNI::JavaMethod addTickSizeFn[] = {
-    { "addTickSize", "()Lcom/shardmx/mxmd/MxMDTickSizeFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDTickSizeTbl;"
-	"Lcom/shardmx/mxmd/MxMDTickSize;)V" }
-  };
-  ZJNI::JavaMethod addSecurityFn[] = {
-    { "addSecurity", "()Lcom/shardmx/mxmd/MxMDSecEventFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;Ljava/time/Instant;)V" }
-  };
-  ZJNI::JavaMethod updatedSecurityFn[] = {
-    { "updatedSecurity", "()Lcom/shardmx/mxmd/MxMDSecEventFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;Ljava/time/Instant;)V" }
-  };
-  ZJNI::JavaMethod addOrderBookFn[] = {
-    { "addOrderBook", "()Lcom/shardmx/mxmd/MxMDOBEventFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook;Ljava/time/Instant;)V" }
-  };
-  ZJNI::JavaMethod updatedOrderBookFn[] = {
-    { "updatedOrderBook", "()Lcom/shardmx/mxmd/MxMDOBEventFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook;Ljava/time/Instant;)V" }
-  };
-  ZJNI::JavaMethod deletedOrderBookFn[] = {
-    { "deletedOrderBook", "()Lcom/shardmx/mxmd/MxMDOBEventFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook;Ljava/time/Instant;)V" }
-  };
-  ZJNI::JavaMethod tradingSessionFn[] = {
-    { "tradingSession", "()Lcom/shardmx/mxmd/MxMDTradingSessionFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDVenue;Lcom/shardmx/mxmd/MxMDSegment;)V" }
-  };
-  ZJNI::JavaMethod timerFn[] = {
-    { "timer", "()Lcom/shardmx/mxmd/MxMDTimerFn;" },
-    { "fn", "(Ljava/time/Instant;)Ljava/time/Instant;" }
-  };
-  int bindHandlerFn(JNIEnv *env, jclass c, ZJNI::JavaMethod *fn) {
-    if (ZJNI::bind(env, c, fn, 1) < 0) return -1;
-    ZuStringN<80> fn_c =
-      ZuString(&fn[0].signature[3], strlen(fn[0].signature) - 4);
-    return ZJNI::bind(env, fn_c, &fn[1], 1);
-  }
-  int bindHandler(JNIEnv *env) {
-    jclass c;
-    if (!(c = env->FindClass("com/shardmx/mxmd/MxMDLibHandler"))) return -1;
-    if (bindHandlerFn(env, c, exceptionFn) < 0) return -1;
-    if (bindHandlerFn(env, c, connectedFn) < 0) return -1;
-    if (bindHandlerFn(env, c, disconnectedFn) < 0) return -1;
-    if (bindHandlerFn(env, c, eofFn) < 0) return -1;
-    if (bindHandlerFn(env, c, refDataLoadedFn) < 0) return -1;
-    if (bindHandlerFn(env, c, addTickSizeTblFn) < 0) return -1;
-    if (bindHandlerFn(env, c, resetTickSizeTblFn) < 0) return -1;
-    if (bindHandlerFn(env, c, addTickSizeFn) < 0) return -1;
-    if (bindHandlerFn(env, c, addSecurityFn) < 0) return -1;
-    if (bindHandlerFn(env, c, updatedSecurityFn) < 0) return -1;
-    if (bindHandlerFn(env, c, addOrderBookFn) < 0) return -1;
-    if (bindHandlerFn(env, c, updatedOrderBookFn) < 0) return -1;
-    if (bindHandlerFn(env, c, deletedOrderBookFn) < 0) return -1;
-    if (bindHandlerFn(env, c, tradingSessionFn) < 0) return -1;
-    if (bindHandlerFn(env, c, timerFn) < 0) return -1;
-    env->DeleteLocalRef((jobject)c);
-    return 0;
-  }
 }
 
 void MxMDLibJNI::ctor_(JNIEnv *env, jobject, jlong) { }
@@ -317,98 +229,13 @@ void MxMDLibJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
   // (MxMDLibHandler) -> void
   MxMDLib *md = ptr_(env, obj);
   if (ZuUnlikely(!md)) return;
-
-  ZmRef<MxMDLibHandler> handler = new MxMDLibHandler();
-
-#ifdef subscribe1
-#undef subscribe1
-#endif
-#ifdef subscribe2
-#undef subscribe2
-#endif
-#define subscribe1(method, arg1, ...) \
-  if (auto fn = ZJNI::localRef( \
-	env, env->CallObjectMethod(handler_, method ## Fn[0].mid))) \
-    handler->method ## Fn( \
-	[fn = ZJNI::globalRef(env, fn)](arg1) { \
-      if (JNIEnv *env = ZJNI::env()) \
-	env->CallVoidMethod(fn, method ## Fn[1].mid, __VA_ARGS__); })
-#define subscribe2(method, arg1, arg2, ...) \
-  if (auto fn = ZJNI::localRef( \
-	env, env->CallObjectMethod(handler_, method ## Fn[0].mid))) \
-    handler->method ## Fn( \
-	[fn = ZJNI::globalRef(env, fn)](arg1, arg2) { \
-      if (JNIEnv *env = ZJNI::env()) \
-	env->CallVoidMethod(fn, method ## Fn[1].mid, __VA_ARGS__); })
-
-  subscribe2(exception,
-      MxMDLib *md, ZmRef<ZeEvent> e,
-      obj_, ZJNI::s2j(env, ZuStringN<512>() << e->message()));
-  subscribe1(connected,
-      MxMDFeed *feed,
-      MxMDFeedJNI::ctor(env, feed));
-  subscribe1(disconnected,
-      MxMDFeed *feed,
-      MxMDFeedJNI::ctor(env, feed));
-  subscribe1(eof, MxMDLib *md, obj_);
-  subscribe1(refDataLoaded,
-      MxMDVenue *venue,
-      MxMDVenueJNI::ctor(env, venue));
-  subscribe1(addTickSizeTbl,
-      MxMDTickSizeTbl *tbl,
-      MxMDTickSizeTblJNI::ctor(env, tbl));
-  subscribe1(resetTickSizeTbl,
-      MxMDTickSizeTbl *tbl,
-      MxMDTickSizeTblJNI::ctor(env, tbl));
-  subscribe2(addTickSize,
-      MxMDTickSizeTbl *tbl, const MxMDTickSize &ts,
-      MxMDTickSizeTblJNI::ctor(env, tbl),
-      MxMDTickSizeJNI::ctor(env, ts));
-  subscribe2(addSecurity,
-      MxMDSecurity *sec, MxDateTime stamp,
-      MxMDSecurityJNI::ctor(env, sec), ZJNI::t2j(env, stamp));
-  subscribe2(updatedSecurity,
-      MxMDSecurity *sec, MxDateTime stamp,
-      MxMDSecurityJNI::ctor(env, sec), ZJNI::t2j(env, stamp));
-  subscribe2(addOrderBook,
-      MxMDOrderBook *ob, MxDateTime stamp,
-      MxMDOrderBookJNI::ctor(env, ob), ZJNI::t2j(env, stamp));
-  subscribe2(updatedOrderBook,
-      MxMDOrderBook *ob, MxDateTime stamp,
-      MxMDOrderBookJNI::ctor(env, ob), ZJNI::t2j(env, stamp));
-  subscribe2(deletedOrderBook,
-      MxMDOrderBook *ob, MxDateTime stamp,
-      MxMDOrderBookJNI::ctor(env, ob), ZJNI::t2j(env, stamp));
-  subscribe2(tradingSession,
-      MxMDVenue *venue, MxMDSegment segment,
-      MxMDVenueJNI::ctor(env, venue),
-      MxMDSegmentJNI::ctor(env, segment));
-
-#undef subscribe1
-#undef subscribe2
-
-  if (auto fn = ZJNI::localRef(
-	env, env->CallObjectMethod(handler_, timerFn[0].mid)))
-    handler->timerFn(
-	[fn = ZJNI::globalRef(env, fn)](MxDateTime stamp, MxDateTime &next_) {
-      if (JNIEnv *env = ZJNI::env()) {
-	jobject next = env->CallObjectMethod(
-	    fn, timerFn[1].mid, ZJNI::t2j(env, stamp));
-	if (!next)
-	  next_ = MxDateTime();
-	else
-	  next_ = ZJNI::j2t(env, next);
-      }
-    });
-
-  md->subscribe(handler);
+  md->subscribe(MxMDLibHandlerJNI::j2c(env, handler_));
   md->appData((uintptr_t)(void *)(env->NewGlobalRef(handler_)));
 }
 
 void MxMDLibJNI::unsubscribe(JNIEnv *env, jobject obj)
 {
   // () -> void
-
   MxMDLib *md = ptr_(env, obj);
   if (ZuUnlikely(!md)) return;
   md->unsubscribe();
@@ -419,7 +246,6 @@ void MxMDLibJNI::unsubscribe(JNIEnv *env, jobject obj)
 jobject MxMDLibJNI::handler(JNIEnv *env, jobject obj)
 {
   // () -> MxMDLibHandler
-
   MxMDLib *md = ptr_(env, obj);
   if (ZuUnlikely(!md)) return 0;
   return (jobject)(void *)(md->appData());
@@ -428,7 +254,6 @@ jobject MxMDLibJNI::handler(JNIEnv *env, jobject obj)
 void MxMDLibJNI::security(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 {
   // (MxSecKey, MxMDSecurityFn) -> void
-
   MxMDLib *md = ptr_(env, obj);
   if (ZuUnlikely(!md || !fn)) return;
   md->secInvoke(MxSecKeyJNI::j2c(env, key_),
@@ -442,7 +267,6 @@ void MxMDLibJNI::security(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 jlong MxMDLibJNI::allSecurities(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllSecuritiesFn) -> long
-
   MxMDLib *md = ptr_(env, obj);
   if (ZuUnlikely(!md || !fn)) return 0;
   return md->allSecurities(
@@ -457,7 +281,6 @@ jlong MxMDLibJNI::allSecurities(JNIEnv *env, jobject obj, jobject fn)
 void MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 {
   // (MxSecKey, MxMDOrderBookFn) -> void
-
   MxMDLib *md = ptr_(env, obj);
   if (ZuUnlikely(!md || !fn)) return;
   md->obInvoke(MxSecKeyJNI::j2c(env, key_),
@@ -471,7 +294,6 @@ void MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 jlong MxMDLibJNI::allOrderBooks(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllOrderBooksFn) -> long
-
   MxMDLib *md = ptr_(env, obj);
   if (ZuUnlikely(!md || !fn)) return 0;
   return md->allOrderBooks(
@@ -486,7 +308,6 @@ jlong MxMDLibJNI::allOrderBooks(JNIEnv *env, jobject obj, jobject fn)
 jobject MxMDLibJNI::feed(JNIEnv *env, jobject obj, jstring id)
 {
   // (String) -> MxMDFeed
-
   MxMDLib *md = ptr_(env, obj);
   if (ZuUnlikely(!md || !id)) return 0;
   if (ZmRef<MxMDFeed> feed = md->feed(ZJNI::j2s_ZuStringN<8>(env, id)))
@@ -497,7 +318,6 @@ jobject MxMDLibJNI::feed(JNIEnv *env, jobject obj, jstring id)
 jlong MxMDLibJNI::allFeeds(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllFeedsFn) -> long
-
   MxMDLib *md = ptr_(env, obj);
   if (ZuUnlikely(!md || !fn)) return 0;
   return md->allFeeds(
@@ -512,7 +332,6 @@ jlong MxMDLibJNI::allFeeds(JNIEnv *env, jobject obj, jobject fn)
 jobject MxMDLibJNI::venue(JNIEnv *env, jobject obj, jstring id)
 {
   // (String) -> MxMDVenue
-
   MxMDLib *md = ptr_(env, obj);
   if (ZuUnlikely(!md || !id)) return 0;
   if (ZmRef<MxMDVenue> venue = md->venue(ZJNI::j2s_ZuStringN<8>(env, id)))
@@ -523,7 +342,6 @@ jobject MxMDLibJNI::venue(JNIEnv *env, jobject obj, jstring id)
 jlong MxMDLibJNI::allVenues(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllVenuesFn) -> long
-
   MxMDLib *md = ptr_(env, obj);
   if (ZuUnlikely(!md || !fn)) return 0;
   return md->allVenues(
@@ -626,8 +444,6 @@ int MxMDLibJNI::bind(JNIEnv *env)
   if (ZJNI::bind(env, c, ptrField, 1) < 0) return -1;
 
   env->DeleteLocalRef((jobject)c);
-
-  if (bindHandler(env) < 0) return -1;
 
   if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDSecurityFn",
 	securityFn, 1) < 0) return -1;

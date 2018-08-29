@@ -63,18 +63,16 @@ jobject MxMDFeedJNI::md(JNIEnv *env, jobject obj)
 jstring MxMDFeedJNI::id(JNIEnv *env, jobject obj)
 {
   // () -> String
-
   MxMDFeed *feed = ptr_(env, obj);
-  if (ZuUnlikely(!feed)) return;
-  return ZJNI::s2j(feed->id());
+  if (ZuUnlikely(!feed)) return 0;
+  return ZJNI::s2j(env, feed->id());
 }
 
 jint MxMDFeedJNI::level(JNIEnv *env, jobject obj)
 {
   // () -> int
-
   MxMDFeed *feed = ptr_(env, obj);
-  if (ZuUnlikely(!feed)) return;
+  if (ZuUnlikely(!feed)) return 0;
   return feed->level();
 }
 

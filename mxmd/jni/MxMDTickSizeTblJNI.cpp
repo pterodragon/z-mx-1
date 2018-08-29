@@ -42,13 +42,13 @@ namespace MxMDTickSizeTblJNI {
   }
 }
 
-void MxMDTickSizeTblJNI::ctor_(JNIEnv *env, jobject obj, jlong)
+void MxMDTickSizeTblJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
   if (ptr) ((MxMDTickSizeTbl *)(void *)(uintptr_t)ptr)->ref();
 }
 
-void MxMDTickSizeTblJNI::dtor_(JNIEnv *env, jobject obj, jlong)
+void MxMDTickSizeTblJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
   if (ptr) ((MxMDTickSizeTbl *)(void *)(uintptr_t)ptr)->deref();

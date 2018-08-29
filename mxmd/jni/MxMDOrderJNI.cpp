@@ -42,13 +42,13 @@ namespace MxMDOrderJNI {
   }
 }
 
-void MxMDOrderJNI::ctor_(JNIEnv *env, jobject obj, jlong)
+void MxMDOrderJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
   if (ptr) ((MxMDOrder *)(void *)(uintptr_t)ptr)->ref();
 }
 
-void MxMDOrderJNI::dtor_(JNIEnv *env, jobject obj, jlong)
+void MxMDOrderJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
   if (ptr) ((MxMDOrder *)(void *)(uintptr_t)ptr)->deref();

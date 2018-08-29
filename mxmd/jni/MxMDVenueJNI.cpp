@@ -25,6 +25,12 @@
 
 #include <MxMD.hpp>
 
+#include <MxMDLibJNI.hpp>
+#include <MxMDFeedJNI.hpp>
+#include <MxMDTickSizeTblJNI.hpp>
+
+#include <MxMDSegmentJNI.hpp>
+
 #include <MxMDVenueJNI.hpp>
 
 namespace MxMDVenueJNI {
@@ -88,7 +94,7 @@ jstring MxMDVenueJNI::id(JNIEnv *env, jobject obj)
 
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue)) return 0;
-  return ZJNI::s2j(venue->id());
+  return ZJNI::s2j(env, venue->id());
 }
 
 jobject MxMDVenueJNI::orderIDScope(JNIEnv *env, jobject obj)
@@ -125,7 +131,8 @@ jobject MxMDVenueJNI::tickSizeTbl(JNIEnv *env, jobject obj, jstring id)
 
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue || !id)) return 0;
-  ZmRef<MxMDTickSizeTbl> tbl = venue->tickSizeTbl(ZJNI::j2s_ZuStringN<8>(id));
+  ZmRef<MxMDTickSizeTbl> tbl =
+    venue->tickSizeTbl(ZJNI::j2s_ZuStringN<8>(env, id));
   if (!tbl) return 0;
   return MxMDTickSizeTblJNI::ctor(env, tbl);
 }
@@ -136,7 +143,7 @@ jlong MxMDVenueJNI::allTickSizeTbls(JNIEnv *env, jobject obj, jobject fn)
 
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue || !fn)) return 0;
-  return md->allTickSizeTbls(
+  return venue->allTickSizeTbls(
       [fn = ZJNI::globalRef(env, fn)](MxMDTickSizeTbl *tbl) -> uintptr_t {
     if (JNIEnv *env = ZJNI::env())
       return env->CallLongMethod(fn, allTickSizeTblsFn[0].mid,
@@ -145,13 +152,13 @@ jlong MxMDVenueJNI::allTickSizeTbls(JNIEnv *env, jobject obj, jobject fn)
   });
 }
 
-void MxMDVenueJNI::allSegments(JNIEnv *env, jobject obj, jobject fn)
+jlong MxMDVenueJNI::allSegments(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllSegmentsFn) -> void
 
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue || !fn)) return 0;
-  return md->allSegments(
+  return venue->allSegments(
       [fn = ZJNI::globalRef(env, fn)](const MxMDSegment &seg) -> uintptr_t {
     if (JNIEnv *env = ZJNI::env())
       return env->CallLongMethod(fn, allSegmentsFn[0].mid,
@@ -166,7 +173,8 @@ jobject MxMDVenueJNI::tradingSession(JNIEnv *env, jobject obj, jstring id)
 
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue || !id)) return 0;
-  MxMDSegment seg = venue->tradingSession(ZJNI::j2s_ZuStringN<8>(id));
+  MxMDSegment seg =
+    venue->tradingSession(ZJNI::j2s_ZuStringN<8>(env, id));
   return MxMDSegmentJNI::ctor(env, seg);
 }
 
@@ -211,7 +219,7 @@ int MxMDVenueJNI::bind(JNIEnv *env)
       "(Lcom/shardmx/mxmd/MxMDAllTickSizeTblsFn;)J",
       (void *)&MxMDVenueJNI::allTickSizeTbls },
     { "allSegments",
-      "(Lcom/shardmx/mxmd/MxMDAllSegmentsFn;)V",
+      "(Lcom/shardmx/mxmd/MxMDAllSegmentsFn;)J",
       (void *)&MxMDVenueJNI::allSegments },
     { "tradingSession",
       "(Ljava/lang/String;)Lcom/shardmx/mxmd/MxMDSegment;",

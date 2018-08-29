@@ -26,11 +26,13 @@
 #include <MxBaseJNI.hpp>
 
 #include <MxMDLibJNI.hpp>
+#include <MxMDLibHandlerJNI.hpp>
 #include <MxMDFeedJNI.hpp>
 #include <MxMDVenueJNI.hpp>
 #include <MxMDTickSizeTblJNI.hpp>
 
 #include <MxMDSecurityJNI.hpp>
+#include <MxMDSecHandlerJNI.hpp>
 #include <MxMDDerivativesJNI.hpp>
 
 #include <MxMDOrderBookJNI.hpp>
@@ -42,6 +44,8 @@
 
 #include <MxMDTickSizeJNI.hpp>
 #include <MxMDSegmentJNI.hpp>
+#include <MxMDL1DataJNI.hpp>
+#include <MxMDSecRefDataJNI.hpp>
 
 #include <MxMDJNI.hpp>
 
@@ -67,11 +71,13 @@ int MxMDJNI::bind(JNIEnv *env)
   if (MxBaseJNI::bind(env) < 0) return -1;
 
   if (MxMDLibJNI::bind(env) < 0) return -1;
+  if (MxMDLibHandlerJNI::bind(env) < 0) return -1;
   if (MxMDFeedJNI::bind(env) < 0) return -1;
   if (MxMDVenueJNI::bind(env) < 0) return -1;
   if (MxMDTickSizeTblJNI::bind(env) < 0) return -1;
 
   if (MxMDSecurityJNI::bind(env) < 0) return -1;
+  if (MxMDSecHandlerJNI::bind(env) < 0) return -1;
   if (MxMDDerivativesJNI::bind(env) < 0) return -1;
 
   if (MxMDOrderBookJNI::bind(env) < 0) return -1;
@@ -84,7 +90,8 @@ int MxMDJNI::bind(JNIEnv *env)
   if (MxMDTickSizeJNI::bind(env) < 0) return -1;
   if (MxMDSegmentJNI::bind(env) < 0) return -1;
   
-  // FIXME - other adapters
+  if (MxMDL1DataJNI::bind(env) < 0) return -1;
+  if (MxMDSecRefDataJNI::bind(env) < 0) return -1;
 
   return 0;
 }
@@ -92,11 +99,13 @@ int MxMDJNI::bind(JNIEnv *env)
 void MxMDJNI::final(JNIEnv *env)
 {
   MxMDLibJNI::final(env);
+  MxMDLibHandlerJNI::final(env);
   MxMDFeedJNI::final(env);
   MxMDVenueJNI::final(env);
   MxMDTickSizeTblJNI::final(env);
 
   MxMDSecurityJNI::final(env);
+  MxMDSecHandlerJNI::final(env);
   MxMDDerivativesJNI::final(env);
 
   MxMDOrderBookJNI::final(env);
@@ -108,8 +117,9 @@ void MxMDJNI::final(JNIEnv *env)
 
   MxMDTickSizeJNI::final(env);
   MxMDSegmentJNI::final(env);
-  
-  // FIXME - other adapters
+
+  MxMDL1DataJNI::final(env);
+  MxMDSecRefDataJNI::final(env);
 
   MxBaseJNI::final(env);
 

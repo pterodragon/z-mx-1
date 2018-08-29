@@ -30,6 +30,8 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <jni.h>
+
 namespace MxMDFeedJNI {
   // (long) -> void
   void ctor_(JNIEnv *, jobject, jlong);

@@ -30,6 +30,8 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <jni.h>
+
 namespace MxMDVenueJNI {
   // (long) -> void
   void ctor_(JNIEnv *, jobject, jlong);
@@ -59,7 +61,7 @@ namespace MxMDVenueJNI {
   jlong allTickSizeTbls(JNIEnv *, jobject, jobject);
 
   // (MxMDAllSegmentsFn) -> void
-  void allSegments(JNIEnv *, jobject, jobject);
+  jlong allSegments(JNIEnv *, jobject, jobject);
 
   // (String) -> MxMDSegment
   jobject tradingSession(JNIEnv *, jobject, jstring);

@@ -40,16 +40,16 @@ namespace MxMDOBSideJNI {
   }
 }
 
-void MxMDOBSideJNI::ctor_(JNIEnv *env, jobject obj, jlong)
+void MxMDOBSideJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
-  if (ptr) ((MxMDOBSideJNI *)(void *)(uintptr_t)ptr)->ref();
+  if (ptr) ((MxMDOBSide *)(void *)(uintptr_t)ptr)->ref();
 }
 
-void MxMDOBSideJNI::dtor_(JNIEnv *env, jobject obj, jlong)
+void MxMDOBSideJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
-  if (ptr) ((MxMDOBSideJNI *)(void *)(uintptr_t)ptr)->deref();
+  if (ptr) ((MxMDOBSide *)(void *)(uintptr_t)ptr)->deref();
 }
 
 jobject MxMDOBSideJNI::orderBook(JNIEnv *env, jobject obj)

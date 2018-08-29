@@ -42,13 +42,13 @@ namespace MxMDPxLevelJNI {
   }
 }
 
-void MxMDPxLevelJNI::ctor_(JNIEnv *env, jobject obj, jlong)
+void MxMDPxLevelJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
   if (ptr) ((MxMDPxLevel *)(void *)(uintptr_t)ptr)->ref();
 }
 
-void MxMDPxLevelJNI::dtor_(JNIEnv *env, jobject obj, jlong)
+void MxMDPxLevelJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
   if (ptr) ((MxMDPxLevel *)(void *)(uintptr_t)ptr)->deref();

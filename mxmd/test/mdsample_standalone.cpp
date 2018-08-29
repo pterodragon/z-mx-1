@@ -174,7 +174,7 @@ void loaded(MxMDVenue *venue)
     addPxLevelFn(MxMDPxLevelFn::Ptr<&addPxLevel>::fn()).
     updatedPxLevelFn(MxMDPxLevelFn::Ptr<&updatedPxLevel>::fn()).
     deletedPxLevelFn(MxMDPxLevelFn::Ptr<&deletedPxLevel>::fn()).
-    l2Fn(MxMDLevel2Fn::Ptr<&l2>::fn()).
+    l2Fn(MxMDOrderBookFn::Ptr<&l2>::fn()).
     addOrderFn(MxMDOrderFn::Ptr<&addOrder>::fn()).
     canceledOrderFn(MxMDOrderFn::Ptr<&canceledOrder>::fn());
 

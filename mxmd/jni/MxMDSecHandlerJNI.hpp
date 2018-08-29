@@ -19,8 +19,8 @@
 
 // MxMD JNI
 
-#ifndef MxMDOBSideJNI_HPP
-#define MxMDOBSideJNI_HPP
+#ifndef MxMDSecHandlerJNI_HPP
+#define MxMDSecHandlerJNI_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -32,32 +32,12 @@
 
 #include <jni.h>
 
-namespace MxMDOBSideJNI {
-  // (long) -> void
-  void ctor_(JNIEnv *, jobject, jlong);
-  // (long) -> void
-  void dtor_(JNIEnv *, jobject, jlong);
+#include <MxMD.hpp>
 
-  // () -> MxMDOrderBook
-  jobject orderBook(JNIEnv *, jobject);
-
-  // () -> MxSide
-  jobject side(JNIEnv *, jobject);
-
-  // () -> MxMDOBSideData
-  jobject data(JNIEnv *, jobject);
-
-  // () -> long
-  jlong vwap(JNIEnv *, jobject);
-
-  // () -> MxMDPxLevel
-  jobject mktLevel(JNIEnv *, jobject);
-  // (MxMDAllPxLevelsFn) -> long
-  jlong allPxLevels(JNIEnv *, jobject, jobject);
-
-  jobject ctor(JNIEnv *, void *ptr);
+namespace MxMDSecHandlerJNI {
+  ZmRef<MxMDSecHandler> j2c(JNIEnv *env, jobject handler);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }
 
-#endif /* MxMDOBSideJNI_HPP */
+#endif /* MxMDSecHandlerJNI_HPP */

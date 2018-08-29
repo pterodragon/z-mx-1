@@ -4,18 +4,22 @@ AM_CPPFLAGS = -I$(top_srcdir)/src \
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @MXMD_LDFLAGS@ @MXMD_SO_LDFLAGS@ @MXBASE_LDFLAGS@ @Z_LDFLAGS@
 include_HEADERS = MxMDJNI.hpp \
-	MxMDDerivativesJNI.hpp MxMDFeedJNI.hpp MxMDLibJNI.hpp \
-	MxMDOBSideJNI.hpp MxMDOrderBookJNI.hpp MxMDOrderJNI.hpp \
-	MxMDPxLevelJNI.hpp MxMDSecurityJNI.hpp MxMDTickSizeTblJNI.hpp \
-	MxMDTradeJNI.hpp MxMDVenueJNI.hpp \
-	MxMDTickSizeJNI.hpp MxMDSegmentJNI.hpp
+	MxMDLibJNI.hpp MxMDLibHandlerJNI.hpp \
+	MxMDFeedJNI.hpp MxMDVenueJNI.hpp MxMDTickSizeTblJNI.hpp \
+	MxMDSecurityJNI.hpp MxMDDerivativesJNI.hpp \
+	MxMDOrderBookJNI.hpp MxMDOBSideJNI.hpp MxMDPxLevelJNI.hpp \
+	MxMDOrderJNI.hpp MxMDTradeJNI.hpp \
+	MxMDTickSizeJNI.hpp MxMDSegmentJNI.hpp \
+	MxMDL1DataJNI.hpp MxMDSecRefDataJNI.hpp
 lib_LTLIBRARIES = libMxMDJNI.la libMxMDJNITest.la
 libMxMDJNI_la_SOURCES = MxMDJNI.cpp \
-	MxMDDerivativesJNI.cpp MxMDFeedJNI.cpp MxMDLibJNI.cpp \
-	MxMDOBSideJNI.cpp MxMDOrderBookJNI.cpp MxMDOrderJNI.cpp \
-	MxMDPxLevelJNI.cpp MxMDSecurityJNI.cpp MxMDTickSizeTblJNI.cpp \
-	MxMDTradeJNI.cpp MxMDVenueJNI.cpp \
-	MxMDTickSizeJNI.cpp MxMDSegmentJNI.cpp
+	MxMDLibJNI.cpp MxMDLibHandlerJNI.cpp \
+	MxMDFeedJNI.cpp MxMDVenueJNI.cpp MxMDTickSizeTblJNI.cpp \
+	MxMDSecurityJNI.cpp MxMDDerivativesJNI.cpp \
+	MxMDOrderBookJNI.cpp MxMDOBSideJNI.cpp MxMDPxLevelJNI.cpp \
+	MxMDOrderJNI.cpp MxMDTradeJNI.cpp \
+	MxMDTickSizeJNI.cpp MxMDSegmentJNI.cpp \
+	MxMDL1DataJNI.cpp MxMDSecRefDataJNI.cpp
 libMxMDJNI_la_LIBADD = $(top_builddir)/src/libMxMD.la \
 	-lMxBaseJNI @MXBASE_LIBS@ -lZJNI @Z_LIBS@ @MXMD_XLIBS@
 libMxMDJNITest_la_SOURCES = MxMDJNITest.hpp MxMDJNITest.cpp

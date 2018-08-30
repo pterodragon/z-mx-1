@@ -17,49 +17,26 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Mx JNI
+// MxMD JNI
 
-#include <jni.h>
+#ifndef MxOptKeyJNI_HPP
+#define MxOptKeyJNI_HPP
 
-#include <ZJNI.hpp>
+#ifdef _MSC_VER
+#pragma once
+#endif
 
-#include <MxSecKeyJNI.hpp>
-#include <MxFutKeyJNI.hpp>
-#include <MxOptKeyJNI.hpp>
+#ifndef MxMDLib_HPP
+#include <MxMDLib.hpp>
+#endif
 
-#include <MxBaseJNI.hpp>
+#include <MxBase.hpp>
 
-extern "C" {
-  MxBaseExtern jint JNI_OnLoad(JavaVM *, void *);
+namespace MxOptKeyJNI {
+  MxOptKey j2c(JNIEnv *, jobject);
+  jobject ctor(JNIEnv *, const MxOptKey &key);
+  int bind(JNIEnv *);
+  void final(JNIEnv *);
 }
 
-jint JNI_OnLoad(JavaVM *jvm, void *)
-{
-  // std::cout << "JNI_OnLoad()\n" << std::flush;
-
-  jint v = ZJNI::load(jvm);
-
-  JNIEnv *env = ZJNI::env();
-
-  if (!env || MxBaseJNI::bind(env) < 0) return -1;
-
-  return v;
-}
-
-int MxBaseJNI::bind(JNIEnv *env)
-{
-  if (MxSecKeyJNI::bind(env) < 0) return -1;
-  if (MxFutKeyJNI::bind(env) < 0) return -1;
-  if (MxOptKeyJNI::bind(env) < 0) return -1;
-
-  return 0;
-}  
-
-void MxBaseJNI::final(JNIEnv *env)
-{
-  MxSecKeyJNI::final(env);
-  MxFutKeyJNI::final(env);
-  MxOptKeyJNI::final(env);
-  
-  ZJNI::final(env);
-}
+#endif /* MxOptKeyJNI_HPP */

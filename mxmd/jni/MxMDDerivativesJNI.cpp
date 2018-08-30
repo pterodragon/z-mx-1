@@ -27,6 +27,11 @@
 
 #include <MxMD.hpp>
 
+#include <MxFutKeyJNI.hpp>
+#include <MxOptKeyJNI.hpp>
+
+#include <MxMDSecurityJNI.hpp>
+
 #include <MxMDDerivativesJNI.hpp>
 
 namespace MxMDDerivativesJNI {
@@ -40,6 +45,11 @@ namespace MxMDDerivativesJNI {
     if (ZuUnlikely(!ptr)) return nullptr;
     return (MxMDDerivatives *)(void *)ptr;
   }
+
+  // query callbacks
+  ZJNI::JavaMethod allSecuritiesFn[] = {
+    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;)J" }
+  };
 }
 
 void MxMDDerivativesJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
@@ -54,32 +64,48 @@ void MxMDDerivativesJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
   if (ptr) ((MxMDDerivatives *)(void *)(uintptr_t)ptr)->deref();
 }
 
-jobject MxMDDerivativesJNI::future(JNIEnv *env, jobject obj, jobject)
+jobject MxMDDerivativesJNI::future(JNIEnv *env, jobject obj, jobject key)
 {
   // (MxFutKey) -> MxMDSecurity
-
-  return 0;
+  MxMDDerivatives *der = ptr_(env, obj);
+  if (ZuUnlikely(!der)) return 0;
+  return MxMDSecurityJNI::ctor(env, der->future(MxFutKeyJNI::j2c(env, key)));
 }
 
-jlong MxMDDerivativesJNI::allFutures(JNIEnv *env, jobject obj, jobject)
+jlong MxMDDerivativesJNI::allFutures(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllSecuritiesFn) -> long
-
-  return 0;
+  MxMDDerivatives *der = ptr_(env, obj);
+  if (ZuUnlikely(!der || !fn)) return 0;
+  return der->allFutures(
+      [fn = ZJNI::globalRef(env, fn)](MxMDSecurity *sec) -> uintptr_t {
+    if (JNIEnv *env = ZJNI::env())
+      return env->CallLongMethod(fn, allSecuritiesFn[0].mid,
+	  MxMDSecurityJNI::ctor(env, sec));
+    return 0;
+  });
 }
 
-jobject MxMDDerivativesJNI::option(JNIEnv *env, jobject obj, jobject)
+jobject MxMDDerivativesJNI::option(JNIEnv *env, jobject obj, jobject key)
 {
   // (MxOptKey) -> MxMDSecurity
-
-  return 0;
+  MxMDDerivatives *der = ptr_(env, obj);
+  if (ZuUnlikely(!der)) return 0;
+  return MxMDSecurityJNI::ctor(env, der->option(MxOptKeyJNI::j2c(env, key)));
 }
 
-jlong MxMDDerivativesJNI::allOptions(JNIEnv *env, jobject obj, jobject)
+jlong MxMDDerivativesJNI::allOptions(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllSecuritiesFn) -> long
-
-  return 0;
+  MxMDDerivatives *der = ptr_(env, obj);
+  if (ZuUnlikely(!der || !fn)) return 0;
+  return der->allOptions(
+      [fn = ZJNI::globalRef(env, fn)](MxMDSecurity *sec) -> uintptr_t {
+    if (JNIEnv *env = ZJNI::env())
+      return env->CallLongMethod(fn, allSecuritiesFn[0].mid,
+	  MxMDSecurityJNI::ctor(env, sec));
+    return 0;
+  });
 }
 
 jobject MxMDDerivativesJNI::ctor(JNIEnv *env, void *ptr)
@@ -119,6 +145,9 @@ int MxMDDerivativesJNI::bind(JNIEnv *env)
 
   if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
   if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
+
+  if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDAllSecuritiesFn",
+	allSecuritiesFn, 1) < 0) return -1;
 
   return 0;
 }

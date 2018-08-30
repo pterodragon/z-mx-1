@@ -97,11 +97,13 @@ int MxMDSecRefDataJNI::bind(JNIEnv *env)
 
   sisClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxSecIDSrc");
   if (!sisClass) return -1;
-  return ZJNI::bindStatic(env, sisClass, sisMethod, 1);
+  if (ZJNI::bindStatic(env, sisClass, sisMethod, 1) < 0) return -1;
 
   pcClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxPutCall");
   if (!pcClass) return -1;
-  return ZJNI::bindStatic(env, pcClass, pcMethod, 1);
+  if (ZJNI::bindStatic(env, pcClass, pcMethod, 1) < 0) return -1;
+
+  return 0;
 }
 
 void MxMDSecRefDataJNI::final(JNIEnv *env)

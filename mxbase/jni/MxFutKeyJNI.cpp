@@ -25,52 +25,53 @@
 
 #include <ZJNI.hpp>
 
-#include <MxMDSegmentJNI.hpp>
+#include <MxBase.hpp>
 
-namespace MxMDSegmentJNI {
-  jclass	class_;
+#include <MxFutKeyJNI.hpp>
 
-  // MxMDSegmentTuple named constructor
+namespace MxFutKeyJNI {
+  jclass	class_; // MxFutKeyTuple
+
+  // MxFutKeyTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "of",
-      "(Ljava/lang/String;"
-      "Lcom/shardmx/mxbase/MxTradingSession;"
-      "Ljava/time/Instant;)"
-      "Lcom/shardmx/mxmd/MxMDSegmentTuple;" }
+    { "of", "(I)Lcom/shardmx/mxbase/MxFutKeyTuple;" }
   };
 
-  jclass	tsClass;
-
-  // MxTradingSession named constructor
-  ZJNI::JavaMethod tsMethod[] = {
-    { "value", "(I)Lcom/shardmx/mxbase/MxTradingSession;" }
+  // MxFutKey accessors
+  ZJNI::JavaMethod methods[] {
+    { "mat", "()I" }
   };
 }
 
-jobject MxMDSegmentJNI::ctor(JNIEnv *env, const MxMDSegment &segment)
+MxFutKey MxFutKeyJNI::j2c(JNIEnv *env, jobject obj)
 {
-  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
-      ZJNI::s2j(env, segment.id),
-      env->CallStaticObjectMethod(tsClass, tsMethod[0].mid,
-	(jint)segment.session),
-      ZJNI::t2j(env, segment.stamp));
+  return MxFutKey{env->CallIntMethod(obj, methods[0].mid)};
 }
 
-int MxMDSegmentJNI::bind(JNIEnv *env)
+jobject MxFutKeyJNI::ctor(JNIEnv *env, const MxFutKey &key)
 {
-  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDSegmentTuple");
+  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid, (jint)key);
+}
+
+int MxFutKeyJNI::bind(JNIEnv *env)
+{
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxFutKeyTuple");
   if (!class_) return -1;
+
   if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
 
-  tsClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxTradingSession");
-  if (!tsClass) return -1;
-  if (ZJNI::bindStatic(env, tsClass, tsMethod, 1) < 0) return -1;
+  {
+    jclass c = env->FindClass("com/shardmx/mxbase/MxFutKey");
+    if (!c) return -1;
+    if (ZJNI::bind(env, c, methods, sizeof(methods) / sizeof(methods[0])) < 0)
+      return -1;
+    env->DeleteLocalRef((jobject)c);
+  }
 
   return 0;
 }
 
-void MxMDSegmentJNI::final(JNIEnv *env)
+void MxFutKeyJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
-  if (tsClass) env->DeleteGlobalRef(tsClass);
 }

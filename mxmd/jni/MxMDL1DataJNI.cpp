@@ -100,7 +100,9 @@ int MxMDL1DataJNI::bind(JNIEnv *env)
 
   tdClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxTickDir");
   if (!tdClass) return -1;
-  return ZJNI::bindStatic(env, tdClass, tdMethod, 1);
+  if (ZJNI::bindStatic(env, tdClass, tdMethod, 1) < 0) return -1;
+
+  return 0;
 }
 
 void MxMDL1DataJNI::final(JNIEnv *env)

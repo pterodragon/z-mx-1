@@ -63,7 +63,7 @@ namespace MxMDOrderBookJNI {
   // () -> int
   jint legs(JNIEnv *, jobject);
   // () -> MxSide
-  jobject side(JNIEnv *, jobject);
+  jobject side(JNIEnv *, jobject, jint);
   // (int) -> int
   jint ratio(JNIEnv *, jobject, jint);
 

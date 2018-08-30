@@ -82,7 +82,6 @@ jobject MxMDVenueJNI::md(JNIEnv *env, jobject obj)
 jobject MxMDVenueJNI::feed(JNIEnv *env, jobject obj)
 {
   // () -> MxMDFeed
-
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue)) return 0;
   return MxMDFeedJNI::ctor(env, venue->feed());
@@ -100,7 +99,6 @@ jstring MxMDVenueJNI::id(JNIEnv *env, jobject obj)
 jobject MxMDVenueJNI::orderIDScope(JNIEnv *env, jobject obj)
 {
   // () -> MxMDOrderIDScope
-
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue)) return 0;
   return env->CallStaticObjectMethod(oisClass, oisMethod[0].mid,
@@ -110,7 +108,6 @@ jobject MxMDVenueJNI::orderIDScope(JNIEnv *env, jobject obj)
 jlong MxMDVenueJNI::flags(JNIEnv *env, jobject obj)
 {
   // () -> long
-
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue)) return 0;
   return (unsigned)venue->flags();
@@ -119,7 +116,6 @@ jlong MxMDVenueJNI::flags(JNIEnv *env, jobject obj)
 jboolean MxMDVenueJNI::loaded(JNIEnv *env, jobject obj)
 {
   // () -> boolean
-
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue)) return 0;
   return venue->loaded();
@@ -128,7 +124,6 @@ jboolean MxMDVenueJNI::loaded(JNIEnv *env, jobject obj)
 jobject MxMDVenueJNI::tickSizeTbl(JNIEnv *env, jobject obj, jstring id)
 {
   // (String) -> MxMDTickSizeTbl
-
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue || !id)) return 0;
   ZmRef<MxMDTickSizeTbl> tbl =
@@ -140,7 +135,6 @@ jobject MxMDVenueJNI::tickSizeTbl(JNIEnv *env, jobject obj, jstring id)
 jlong MxMDVenueJNI::allTickSizeTbls(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllTickSizeTblsFn) -> long
-
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue || !fn)) return 0;
   return venue->allTickSizeTbls(
@@ -155,7 +149,6 @@ jlong MxMDVenueJNI::allTickSizeTbls(JNIEnv *env, jobject obj, jobject fn)
 jlong MxMDVenueJNI::allSegments(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllSegmentsFn) -> void
-
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue || !fn)) return 0;
   return venue->allSegments(
@@ -170,7 +163,6 @@ jlong MxMDVenueJNI::allSegments(JNIEnv *env, jobject obj, jobject fn)
 jobject MxMDVenueJNI::tradingSession(JNIEnv *env, jobject obj, jstring id)
 {
   // (String) -> MxMDSegment
-
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue || !id)) return 0;
   MxMDSegment seg =

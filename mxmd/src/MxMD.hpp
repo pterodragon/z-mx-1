@@ -823,18 +823,17 @@ struct MxMDSecHandler : public ZuObject {
 
 // order books
 
+struct MxMDOBSideData {
+  MxValue	nv;
+  MxValue	qty;
+};
+
 class MxMDAPI MxMDOBSide : public ZuObject {
   MxMDOBSide(const MxMDOBSide &) = delete;
   MxMDOBSide &operator =(const MxMDOBSide &) = delete;
 
 friend class MxMDOrderBook;
 friend class MxMDPxLevel_;
-
-public:
-  struct Data {
-    MxValue	nv;
-    MxValue	qty;
-  };
 
 private:
   inline MxMDOBSide(MxMDOrderBook *ob, MxEnum side) :
@@ -844,7 +843,7 @@ public:
   ZuInline MxMDOrderBook *orderBook() const { return m_orderBook; }
   ZuInline MxEnum side() const { return m_side; }
 
-  ZuInline const Data &data() const { return m_data; }
+  ZuInline const MxMDOBSideData &data() const { return m_data; }
   ZuInline MxValue vwap() const { return m_data.nv / m_data.qty; }
 
   ZuInline ZmRef<MxMDPxLevel> mktLevel() { return m_mktLevel; }
@@ -955,7 +954,7 @@ private:
 
   MxMDOrderBook		*m_orderBook;
   MxEnum		m_side;
-  Data			m_data;
+  MxMDOBSideData	m_data;
   ZmRef<MxMDPxLevel>	m_mktLevel;
   MxMDPxLevels		m_pxLevels;
 };
@@ -1081,6 +1080,9 @@ public:
 
   ZuInline const ZmRef<MxMDSecHandler> &handler() const { return m_handler; }
 
+  ZuInline uintptr_t appData() const { return m_appData; }
+  ZuInline void appData(uintptr_t v) { m_appData = v; }
+
   template <typename T = MxMDFeedOB>
   ZuInline typename ZuIs<MxMDFeedOB, T, ZmRef<T> &>::T feedOB() {
     ZmRef<T> *ZuMayAlias(ptr) = (ZmRef<T> *)&m_feedOB;
@@ -1196,6 +1198,8 @@ private:
   ZuRef<MxMDOBSide>		m_asks;
 
   ZmRef<MxMDSecHandler>		m_handler;
+
+  uintptr_t			m_appData = 0;
 };
 
 ZuInline MxMDOBSide *MxMDOrder_::bids_(const MxMDOrderBook *ob)

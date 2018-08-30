@@ -27,6 +27,11 @@
 
 #include <MxMD.hpp>
 
+#include <MxMDOBSideJNI.hpp>
+
+#include <MxMDPxLvlDataJNI.hpp>
+#include <MxMDOrderJNI.hpp>
+
 #include <MxMDPxLevelJNI.hpp>
 
 namespace MxMDPxLevelJNI {
@@ -40,6 +45,18 @@ namespace MxMDPxLevelJNI {
     if (ZuUnlikely(!ptr)) return nullptr;
     return (MxMDPxLevel *)(void *)ptr;
   }
+
+  jclass	sideClass;
+
+  // MxSide named constructor
+  ZJNI::JavaMethod sideMethod[] = {
+    { "value", "(I)Lcom/shardmx/mxbase/MxSide;" }
+  };
+
+  // query callbacks
+  ZJNI::JavaMethod allOrdersFn[] = {
+    { "fn", "(Lcom/shardmx/mxmd/MxMDOrder;)J" }
+  };
 }
 
 void MxMDPxLevelJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
@@ -57,50 +74,64 @@ void MxMDPxLevelJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 jobject MxMDPxLevelJNI::obSide(JNIEnv *env, jobject obj)
 {
   // () -> MxMDOBSide
-
-  return 0;
+  MxMDPxLevel *pxLevel = ptr_(env, obj);
+  if (ZuUnlikely(!pxLevel)) return 0;
+  return MxMDOBSideJNI::ctor(env, pxLevel->obSide());
 }
 
 jobject MxMDPxLevelJNI::side(JNIEnv *env, jobject obj)
 {
   // () -> MxSide
-
-  return 0;
+  MxMDPxLevel *pxLevel = ptr_(env, obj);
+  if (ZuUnlikely(!pxLevel)) return 0;
+  return env->CallStaticObjectMethod(sideClass, sideMethod[0].mid,
+      (jint)pxLevel->side());
 }
 
 jint MxMDPxLevelJNI::pxNDP(JNIEnv *env, jobject obj)
 {
   // () -> int
-
-  return 0;
+  MxMDPxLevel *pxLevel = ptr_(env, obj);
+  if (ZuUnlikely(!pxLevel)) return ZuCmp<jint>::null();
+  return pxLevel->pxNDP();
 }
 
 jint MxMDPxLevelJNI::qtyNDP(JNIEnv *env, jobject obj)
 {
   // () -> int
-
-  return 0;
+  MxMDPxLevel *pxLevel = ptr_(env, obj);
+  if (ZuUnlikely(!pxLevel)) return ZuCmp<jint>::null();
+  return pxLevel->qtyNDP();
 }
 
 jlong MxMDPxLevelJNI::price(JNIEnv *env, jobject obj)
 {
   // () -> long
-
-  return 0;
+  MxMDPxLevel *pxLevel = ptr_(env, obj);
+  if (ZuUnlikely(!pxLevel)) return ZuCmp<jlong>::null();
+  return pxLevel->price();
 }
 
 jobject MxMDPxLevelJNI::data(JNIEnv *env, jobject obj)
 {
   // () -> MxMDPxLvlData
-
-  return 0;
+  MxMDPxLevel *pxLevel = ptr_(env, obj);
+  if (ZuUnlikely(!pxLevel)) return 0;
+  return MxMDPxLvlDataJNI::ctor(env, pxLevel->data());
 }
 
-jlong MxMDPxLevelJNI::allOrders(JNIEnv *env, jobject obj, jobject)
+jlong MxMDPxLevelJNI::allOrders(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllOrdersFn) -> long
-
-  return 0;
+  MxMDPxLevel *pxLevel = ptr_(env, obj);
+  if (ZuUnlikely(!pxLevel || !fn)) return 0;
+  return pxLevel->allOrders(
+      [fn = ZJNI::globalRef(env, fn)](MxMDOrder *order) -> uintptr_t {
+    if (JNIEnv *env = ZJNI::env())
+      return env->CallLongMethod(fn, allOrdersFn[0].mid,
+	  MxMDOrderJNI::ctor(env, order));
+    return 0;
+  });
 }
 
 int MxMDPxLevelJNI::bind(JNIEnv *env)
@@ -145,10 +176,18 @@ int MxMDPxLevelJNI::bind(JNIEnv *env)
   if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
   if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
 
+  sideClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxSide");
+  if (!sideClass) return -1;
+  if (ZJNI::bindStatic(env, sideClass, sideMethod, 1) < 0) return -1;
+
+  if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDAllOrdersFn",
+	allOrdersFn, 1) < 0) return -1;
+
   return 0;
 }
 
 void MxMDPxLevelJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
+  if (sideClass) env->DeleteGlobalRef(sideClass);
 }

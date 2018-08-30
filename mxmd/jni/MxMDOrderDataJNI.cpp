@@ -25,63 +25,50 @@
 
 #include <ZJNI.hpp>
 
-#include <MxMDTickSizeJNI.hpp>
+#include <MxMDOrderDataJNI.hpp>
 
-namespace MxMDTickSizeJNI {
+namespace MxMDOrderDataJNI {
   jclass	class_;
 
-  // MxMDTickSizeTuple named constructor
+  // MxMDOrderDataTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "of", "(JJJ)Lcom/shardmx/mxmd/MxMDTickSizeTuple;" }
+    { "of",
+      "(Ljava/time/Instant;Lcom/shardmx/mxbase/MxSide;IJJJ)"
+      "Lcom/shardmx/mxmd/MxMDOrderDataTuple;" }
   };
 
-#if 0
-  // MxMDTickSize accessors
-  ZJNI::JavaMethod methods[] {
-    { "minPrice", "()J" },
-    { "maxPrice", "()J" },
-    { "tickSize", "()J" },
+  jclass	sideClass;
+
+  // MxSide named constructor
+  ZJNI::JavaMethod sideMethod[] = {
+    { "value", "(I)Lcom/shardmx/mxbase/MxSide;" }
   };
-#endif
 }
 
-#if 0
-MxMDTickSize MxMDTickSizeJNI::j2c(JNIEnv *env, jobject obj)
-{
-  return MxMDTickSize{
-    env->CallLongMethod(obj, methods[0].mid),
-    env->CallLongMethod(obj, methods[1].mid),
-    env->CallLongMethod(obj, methods[2].mid)};
-}
-#endif
-
-jobject MxMDTickSizeJNI::ctor(JNIEnv *env, const MxMDTickSize &ts)
+jobject MxMDOrderDataJNI::ctor(JNIEnv *env, const MxMDOrderData &data)
 {
   return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
-      (jlong)ts.minPrice(), (jlong)ts.maxPrice(), (jlong)ts.tickSize());
+      ZJNI::t2j(env, data.transactTime),
+      env->CallStaticObjectMethod(sideClass, sideMethod[0].mid,
+	(jint)data.side),
+      (jint)data.rank, (jlong)data.price, (jlong)data.qty, (jlong)data.flags);
 }
 
-int MxMDTickSizeJNI::bind(JNIEnv *env)
+int MxMDOrderDataJNI::bind(JNIEnv *env)
 {
-  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDTickSizeTuple");
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDOrderDataTuple");
   if (!class_) return -1;
-
   if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
 
-#if 0
-  {
-    jclass c = env->FindClass("com/shardmx/mxbase/MxMDTickSize");
-    if (!c) return -1;
-    if (ZJNI::bind(env, c, methods, sizeof(methods) / sizeof(methods[0])) < 0)
-      return -1;
-    env->DeleteLocalRef((jobject)c);
-  }
-#endif
+  sideClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxSide");
+  if (!sideClass) return -1;
+  if (ZJNI::bindStatic(env, sideClass, sideMethod, 1) < 0) return -1;
 
   return 0;
 }
 
-void MxMDTickSizeJNI::final(JNIEnv *env)
+void MxMDOrderDataJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
+  if (sideClass) env->DeleteGlobalRef(sideClass);
 }

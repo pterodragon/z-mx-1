@@ -164,7 +164,7 @@ ZmRef<MxMDSecHandler> MxMDSecHandlerJNI::j2c(JNIEnv *env, jobject handler_)
   lambda2(modifiedOrder,
       MxMDOrder *order, MxDateTime stamp,
       MxMDOrderJNI::ctor(env, order), ZJNI::t2j(env, stamp));
-  lambda2(deletedOrder,
+  lambda2(canceledOrder,
       MxMDOrder *order, MxDateTime stamp,
       MxMDOrderJNI::ctor(env, order), ZJNI::t2j(env, stamp));
   lambda2(addTrade,

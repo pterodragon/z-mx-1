@@ -27,6 +27,19 @@
 
 #include <MxMD.hpp>
 
+#include <MxSecKeyJNI.hpp>
+
+#include <MxMDLibJNI.hpp>
+#include <MxMDVenueJNI.hpp>
+#include <MxMDTickSizeTblJNI.hpp>
+#include <MxMDSecurityJNI.hpp>
+#include <MxMDOBSideJNI.hpp>
+
+#include <MxMDLotSizesJNI.hpp>
+#include <MxMDL1DataJNI.hpp>
+
+#include <MxMDSecHandlerJNI.hpp>
+
 #include <MxMDOrderBookJNI.hpp>
 
 namespace MxMDOrderBookJNI {
@@ -40,6 +53,13 @@ namespace MxMDOrderBookJNI {
     if (ZuUnlikely(!ptr)) return nullptr;
     return (MxMDOrderBook *)(void *)ptr;
   }
+
+  jclass	sideClass;
+
+  // MxSide named constructor
+  ZJNI::JavaMethod sideMethod[] = {
+    { "value", "(I)Lcom/shardmx/mxbase/MxSide;" }
+  };
 }
 
 void MxMDOrderBookJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
@@ -57,153 +77,185 @@ void MxMDOrderBookJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 jobject MxMDOrderBookJNI::md(JNIEnv *env, jobject obj)
 {
   // () -> MxMDLib
-
-  return 0;
+  return MxMDLibJNI::instance_();
 }
 
 jobject MxMDOrderBookJNI::venue(JNIEnv *env, jobject obj)
 {
   // () -> MxMDVenue
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return MxMDVenueJNI::ctor(env, ob->venue());
 }
 
 jobject MxMDOrderBookJNI::security(JNIEnv *env, jobject obj)
 {
   // () -> MxMDSecurity
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return MxMDSecurityJNI::ctor(env, ob->security());
 }
 
-jobject MxMDOrderBookJNI::security(JNIEnv *env, jobject obj, jint)
+jobject MxMDOrderBookJNI::security(JNIEnv *env, jobject obj, jint leg)
 {
   // (int) -> MxMDSecurity
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return MxMDSecurityJNI::ctor(env, ob->security(leg));
 }
 
 jobject MxMDOrderBookJNI::out(JNIEnv *env, jobject obj)
 {
   // () -> MxMDOrderBook
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return MxMDOrderBookJNI::ctor(env, ob->out());
 }
 
 jstring MxMDOrderBookJNI::venueID(JNIEnv *env, jobject obj)
 {
   // () -> String
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return ZJNI::s2j(env, ob->venueID());
 }
 
 jstring MxMDOrderBookJNI::segment(JNIEnv *env, jobject obj)
 {
   // () -> String
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return ZJNI::s2j(env, ob->segment());
 }
 
 jstring MxMDOrderBookJNI::id(JNIEnv *env, jobject obj)
 {
   // () -> String
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return ZJNI::s2j(env, ob->id());
 }
 
 jobject MxMDOrderBookJNI::key(JNIEnv *env, jobject obj)
 {
   // () -> MxSecKey
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return MxSecKeyJNI::ctor(env, ob->key());
 }
 
 jint MxMDOrderBookJNI::legs(JNIEnv *env, jobject obj)
 {
   // () -> int
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return ob->legs();
 }
 
-jobject MxMDOrderBookJNI::side(JNIEnv *env, jobject obj)
+jobject MxMDOrderBookJNI::side(JNIEnv *env, jobject obj, jint leg)
 {
-  // () -> MxSide
-
-  return 0;
+  // (int) -> MxSide
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return env->CallStaticObjectMethod(sideClass, sideMethod[0].mid,
+      (jint)ob->side(leg));
 }
 
-jint MxMDOrderBookJNI::ratio(JNIEnv *env, jobject obj, jint)
+jint MxMDOrderBookJNI::ratio(JNIEnv *env, jobject obj, jint leg)
 {
   // (int) -> int
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return ob->ratio(leg);
 }
 
 jint MxMDOrderBookJNI::pxNDP(JNIEnv *env, jobject obj)
 {
   // () -> int
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return ob->pxNDP();
 }
 
 jint MxMDOrderBookJNI::qtyNDP(JNIEnv *env, jobject obj)
 {
   // () -> int
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return ob->qtyNDP();
 }
 
 jobject MxMDOrderBookJNI::tickSizeTbl(JNIEnv *env, jobject obj)
 {
   // () -> MxMDTickSizeTbl
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return MxMDTickSizeTblJNI::ctor(env, ob->tickSizeTbl());
 }
 
 jobject MxMDOrderBookJNI::lotSizes(JNIEnv *env, jobject obj)
 {
   // () -> MxMDLotSizes
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return MxMDLotSizesJNI::ctor(env, ob->lotSizes());
 }
 
 jobject MxMDOrderBookJNI::l1Data(JNIEnv *env, jobject obj)
 {
   // () -> MxMDL1Data
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return MxMDL1DataJNI::ctor(env, ob->l1Data());
 }
 
 jobject MxMDOrderBookJNI::bids(JNIEnv *env, jobject obj)
 {
   // () -> MxMDOBSide
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return MxMDOBSideJNI::ctor(env, ob->bids());
 }
 
 jobject MxMDOrderBookJNI::asks(JNIEnv *env, jobject obj)
 {
   // () -> MxMDOBSide
-
-  return 0;
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return MxMDOBSideJNI::ctor(env, ob->asks());
 }
 
-void MxMDOrderBookJNI::subscribe(JNIEnv *env, jobject obj, jobject)
+void MxMDOrderBookJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
 {
   // (MxMDSecHandler) -> void
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return;
+  ob->subscribe(MxMDSecHandlerJNI::j2c(env, handler_));
+  ob->appData((uintptr_t)(void *)(env->NewGlobalRef(handler_)));
 
 }
 
 void MxMDOrderBookJNI::unsubscribe(JNIEnv *env, jobject obj)
 {
   // () -> void
-
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return;
+  ob->unsubscribe();
+  env->DeleteGlobalRef((jobject)(void *)(ob->appData()));
+  ob->appData(0);
 }
 
 jobject MxMDOrderBookJNI::handler(JNIEnv *env, jobject obj)
 {
   // () -> MxMDSecHandler
+  MxMDOrderBook *ob = ptr_(env, obj);
+  if (ZuUnlikely(!ob)) return 0;
+  return (jobject)(void *)(ob->appData());
+}
 
-  return 0;
+jobject MxMDOrderBookJNI::ctor(JNIEnv *env, void *ptr)
+{
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)(uintptr_t)ptr);
 }
 
 int MxMDOrderBookJNI::bind(JNIEnv *env)
@@ -250,7 +302,7 @@ int MxMDOrderBookJNI::bind(JNIEnv *env)
       "()I",
       (void *)&MxMDOrderBookJNI::legs },
     { "side",
-      "()Lcom/shardmx/mxbase/MxSide;",
+      "(I)Lcom/shardmx/mxbase/MxSide;",
       (void *)&MxMDOrderBookJNI::side },
     { "ratio",
       "(I)I",
@@ -295,10 +347,15 @@ int MxMDOrderBookJNI::bind(JNIEnv *env)
   if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
   if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
 
+  sideClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxSide");
+  if (!sideClass) return -1;
+  if (ZJNI::bindStatic(env, sideClass, sideMethod, 1) < 0) return -1;
+
   return 0;
 }
 
 void MxMDOrderBookJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
+  if (sideClass) env->DeleteGlobalRef(sideClass);
 }

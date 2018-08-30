@@ -27,6 +27,10 @@
 
 #include <MxMD.hpp>
 
+#include <MxMDSecurityJNI.hpp>
+#include <MxMDOrderBookJNI.hpp>
+#include <MxMDTradeDataJNI.hpp>
+
 #include <MxMDTradeJNI.hpp>
 
 namespace MxMDTradeJNI {
@@ -57,22 +61,25 @@ void MxMDTradeJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 jobject MxMDTradeJNI::security(JNIEnv *env, jobject obj)
 {
   // () -> MxMDSecurity
-
-  return 0;
+  MxMDTrade *trade = ptr_(env, obj);
+  if (ZuUnlikely(!trade)) return 0;
+  return MxMDSecurityJNI::ctor(env, trade->security());
 }
 
 jobject MxMDTradeJNI::orderBook(JNIEnv *env, jobject obj)
 {
   // () -> MxMDOrderBook
-
-  return 0;
+  MxMDTrade *trade = ptr_(env, obj);
+  if (ZuUnlikely(!trade)) return 0;
+  return MxMDOrderBookJNI::ctor(env, trade->orderBook());
 }
 
 jobject MxMDTradeJNI::data(JNIEnv *env, jobject obj)
 {
   // () -> MxMDTradeData
-
-  return 0;
+  MxMDTrade *trade = ptr_(env, obj);
+  if (ZuUnlikely(!trade)) return 0;
+  return MxMDTradeDataJNI::ctor(env, trade->data());
 }
 
 int MxMDTradeJNI::bind(JNIEnv *env)

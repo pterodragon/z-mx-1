@@ -48,7 +48,8 @@ namespace MxMDSecRefDataJNI {
       "J"				// strike
       "J"				// outstandingShares
       "J"				// adv
-      ")com/shardmx/mxmd/MxMDSecRefDataTuple;" }
+      ")Lcom/shardmx/mxmd/MxMDSecRefDataTuple;"
+    }
   };
 
   jclass	sisClass;

@@ -27,6 +27,12 @@
 
 #include <MxMD.hpp>
 
+#include <MxMDOrderBookJNI.hpp>
+#include <MxMDOBSideJNI.hpp>
+#include <MxMDPxLevelJNI.hpp>
+
+#include <MxMDOrderDataJNI.hpp>
+
 #include <MxMDOrderJNI.hpp>
 
 namespace MxMDOrderJNI {
@@ -56,37 +62,42 @@ void MxMDOrderJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 
 jobject MxMDOrderJNI::orderBook(JNIEnv *env, jobject obj)
 {
-  // () -> MxMDOrderBook
-
-  return 0;
+  // () -> MxMDOrder
+  MxMDOrder *order = ptr_(env, obj);
+  if (ZuUnlikely(!order)) return 0;
+  return MxMDOrderBookJNI::ctor(env, order->orderBook());
 }
 
 jobject MxMDOrderJNI::obSide(JNIEnv *env, jobject obj)
 {
   // () -> MxMDOBSide
-
-  return 0;
+  MxMDOrder *order = ptr_(env, obj);
+  if (ZuUnlikely(!order)) return 0;
+  return MxMDOBSideJNI::ctor(env, order->obSide());
 }
 
 jobject MxMDOrderJNI::pxLevel(JNIEnv *env, jobject obj)
 {
   // () -> MxMDPxLevel
-
-  return 0;
+  MxMDOrder *order = ptr_(env, obj);
+  if (ZuUnlikely(!order)) return 0;
+  return MxMDPxLevelJNI::ctor(env, order->pxLevel());
 }
 
 jstring MxMDOrderJNI::id(JNIEnv *env, jobject obj)
 {
   // () -> String
-
-  return 0;
+  MxMDOrder *order = ptr_(env, obj);
+  if (ZuUnlikely(!order)) return 0;
+  return ZJNI::s2j(env, order->id());
 }
 
 jobject MxMDOrderJNI::data(JNIEnv *env, jobject obj)
 {
   // () -> MxMDOrderData
-
-  return 0;
+  MxMDOrder *order = ptr_(env, obj);
+  if (ZuUnlikely(!order)) return 0;
+  return MxMDOrderDataJNI::ctor(env, order->data());
 }
 
 int MxMDOrderJNI::bind(JNIEnv *env)

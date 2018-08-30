@@ -56,6 +56,7 @@ void MxMDTradeJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
   if (ptr) ((MxMDTrade *)(void *)(uintptr_t)ptr)->deref();
+  env->SetLongField(obj, ptrField[0].fid, (jlong)0);
 }
 
 jobject MxMDTradeJNI::security(JNIEnv *env, jobject obj)

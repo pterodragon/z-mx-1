@@ -34,7 +34,8 @@
 
 namespace MxMDJNITest {
   // (MxMDLib) -> void
-  void init(JNIEnv *, jobject, jobject);
+  void init(JNIEnv *, jobject);
+  void publish(JNIEnv *, jobject);
 
   int bind(JNIEnv *);
 }

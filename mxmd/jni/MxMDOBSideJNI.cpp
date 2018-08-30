@@ -67,6 +67,7 @@ void MxMDOBSideJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
   if (ptr) ((MxMDOBSide *)(void *)(uintptr_t)ptr)->deref();
+  env->SetLongField(obj, ptrField[0].fid, (jlong)0);
 }
 
 jobject MxMDOBSideJNI::orderBook(JNIEnv *env, jobject obj)

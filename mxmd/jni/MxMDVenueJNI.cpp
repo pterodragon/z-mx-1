@@ -71,6 +71,7 @@ void MxMDVenueJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 {
   // (long) -> void
   if (ptr) ((MxMDVenue *)(void *)(uintptr_t)ptr)->deref();
+  env->SetLongField(obj, ptrField[0].fid, (jlong)0);
 }
 
 jobject MxMDVenueJNI::md(JNIEnv *env, jobject obj)

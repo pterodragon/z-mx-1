@@ -9,6 +9,7 @@ include_HEADERS = MxMDJNI.hpp \
 	MxMDOrderBookJNI.hpp MxMDOBSideJNI.hpp MxMDPxLevelJNI.hpp \
 	MxMDOrderJNI.hpp MxMDTradeJNI.hpp \
 	MxMDLibHandlerJNI.hpp MxMDSecHandlerJNI.hpp \
+	MxMDSecHandleJNI.hpp MxMDOBHandleJNI.hpp \
 	MxMDTickSizeJNI.hpp MxMDSegmentJNI.hpp \
 	MxMDSecRefDataJNI.hpp MxMDLotSizesJNI.hpp \
 	MxMDL1DataJNI.hpp MxMDOBSideDataJNI.hpp MxMDPxLvlDataJNI.hpp \
@@ -20,6 +21,7 @@ libMxMDJNI_la_SOURCES = MxMDJNI.cpp \
 	MxMDOrderBookJNI.cpp MxMDOBSideJNI.cpp MxMDPxLevelJNI.cpp \
 	MxMDOrderJNI.cpp MxMDTradeJNI.cpp \
 	MxMDLibHandlerJNI.cpp MxMDSecHandlerJNI.cpp \
+	MxMDSecHandleJNI.cpp MxMDOBHandleJNI.cpp \
 	MxMDTickSizeJNI.cpp MxMDSegmentJNI.cpp \
 	MxMDSecRefDataJNI.cpp MxMDLotSizesJNI.cpp \
 	MxMDL1DataJNI.cpp MxMDOBSideDataJNI.cpp MxMDPxLvlDataJNI.cpp \

@@ -4,12 +4,9 @@ import com.shardmx.mxbase.*;
 
 import java.time.Instant;
 
-public class MxMDLib implements AutoCloseable {
-  public MxMDLib(long ptr) { ctor_(this.ptr = ptr); }
-  public void close() { dtor_(this.ptr); }
-
-  private native void ctor_(long ptr);
-  private native void dtor_(long ptr);
+public class MxMDLib {
+  private MxMDLib() { }
+  public native void close();
 
   // methods
 
@@ -37,9 +34,11 @@ public class MxMDLib implements AutoCloseable {
   public native void unsubscribe();
   public native MxMDLibHandler handler();
 
+  public native MxMDSecHandle security(MxSecKey key);
   public native void security(MxSecKey key, MxMDSecurityFn fn);
   public native long allSecurities(MxMDAllSecuritiesFn fn);
 
+  public native MxMDOBHandle orderBook(MxSecKey key);
   public native void orderBook(MxSecKey key, MxMDOrderBookFn fn);
   public native long allOrderBooks(MxMDAllOrderBooksFn fn);
 
@@ -48,8 +47,4 @@ public class MxMDLib implements AutoCloseable {
 
   public native MxMDVenue venue(String id);
   public native long allVenues(MxMDAllVenuesFn fn);
-
-  // data members
-
-  private long ptr;
 }

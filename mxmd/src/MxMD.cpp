@@ -405,7 +405,7 @@ void MxMDOrderBook::pxLevel_(
 {
   MxValue d_qty;
   MxUInt d_nOrders;
-  const MxMDPxLevelFn *pxLevelFn;
+  const MxMDPxLevelFn *pxLevelFn = 0;
   ZmRef<MxMDPxLevel> pxLevel;
 
   {

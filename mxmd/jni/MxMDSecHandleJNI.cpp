@@ -19,8 +19,6 @@
 
 // MxMD JNI
 
-#include <iostream>
-
 #include <jni.h>
 
 #include <ZJNI.hpp>
@@ -28,76 +26,89 @@
 #include <MxMD.hpp>
 
 #include <MxMDSecurityJNI.hpp>
-#include <MxMDOrderBookJNI.hpp>
-#include <MxMDTradeDataJNI.hpp>
 
-#include <MxMDTradeJNI.hpp>
+#include <MxMDSecHandleJNI.hpp>
 
-namespace MxMDTradeJNI {
+namespace MxMDSecHandleJNI {
   jclass	class_;
 
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
-  MxMDTrade *ptr_(JNIEnv *env, jobject obj) {
+  MxMDSecurity *ptr_(JNIEnv *env, jobject obj) {
     uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
     if (ZuUnlikely(!ptr)) return nullptr;
-    return (MxMDTrade *)(void *)ptr;
+    return (MxMDSecurity *)(void *)ptr;
   }
+
+  // invoke fn
+  ZJNI::JavaMethod securityFn[] = {
+    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;)V" }
+  };
 }
 
-jobject MxMDTradeJNI::security(JNIEnv *env, jobject obj)
+void MxMDSecHandleJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
 {
-  // () -> MxMDSecurity
-  MxMDTrade *trade = ptr_(env, obj);
-  if (ZuUnlikely(!trade)) return 0;
-  return MxMDSecurityJNI::ctor(env, trade->security());
+  // (long) -> void
+  if (ptr) ((MxMDSecurity *)(void *)(uintptr_t)ptr)->ref();
 }
 
-jobject MxMDTradeJNI::orderBook(JNIEnv *env, jobject obj)
+void MxMDSecHandleJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 {
-  // () -> MxMDOrderBook
-  MxMDTrade *trade = ptr_(env, obj);
-  if (ZuUnlikely(!trade)) return 0;
-  return MxMDOrderBookJNI::ctor(env, trade->orderBook());
+  // (long) -> void
+  if (ptr) ((MxMDSecurity *)(void *)(uintptr_t)ptr)->deref();
 }
 
-jobject MxMDTradeJNI::data(JNIEnv *env, jobject obj)
+void MxMDSecHandleJNI::invoke(JNIEnv *env, jobject obj, jobject fn)
 {
-  // () -> MxMDTradeData
-  MxMDTrade *trade = ptr_(env, obj);
-  if (ZuUnlikely(!trade)) return 0;
-  return MxMDTradeDataJNI::ctor(env, trade->data());
+  // (MxMDSecurityFn) -> void
+  MxMDSecurity *sec = ptr_(env, obj);
+  if (ZuUnlikely(!sec || !fn)) return;
+  MxMDSecHandle handle(sec);
+  handle.invoke([fn = ZJNI::globalRef(env, fn)](
+	MxMDShard *, MxMDSecurity *sec) {
+    if (JNIEnv *env = ZJNI::env())
+      env->CallVoidMethod(fn, securityFn[0].mid,
+	  MxMDSecurityJNI::ctor(env, sec));
+  });
 }
 
-int MxMDTradeJNI::bind(JNIEnv *env)
+jobject MxMDSecHandleJNI::ctor(JNIEnv *env, void *ptr)
+{
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)(uintptr_t)ptr);
+}
+
+int MxMDSecHandleJNI::bind(JNIEnv *env)
 {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
-    { "security",
-      "()Lcom/shardmx/mxmd/MxMDSecurity;",
-      (void *)&MxMDTradeJNI::security },
-    { "orderBook",
-      "()Lcom/shardmx/mxmd/MxMDOrderBook;",
-      (void *)&MxMDTradeJNI::orderBook },
-    { "data",
-      "()Lcom/shardmx/mxmd/MxMDTradeData;",
-      (void *)&MxMDTradeJNI::data },
+    { "ctor_",
+      "(J)V",
+      (void *)&MxMDSecHandleJNI::ctor_ },
+    { "dtor_",
+      "(J)V",
+      (void *)&MxMDSecHandleJNI::dtor_ },
+    { "invoke",
+      "(Lcom/shardmx/mxmd/MxMDSecurityFn;)V",
+      (void *)&MxMDSecHandleJNI::invoke }
   };
 #pragma GCC diagnostic pop
 
-  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDTrade");
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDSecHandle");
   if (ZJNI::bind(env, class_,
         methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
 
   if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
   if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
 
+  if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDSecurityFn",
+	securityFn, 1) < 0) return -1;
+
   return 0;
 }
 
-void MxMDTradeJNI::final(JNIEnv *env)
+void MxMDSecHandleJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
 }

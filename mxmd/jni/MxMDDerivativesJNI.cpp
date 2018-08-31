@@ -52,19 +52,6 @@ namespace MxMDDerivativesJNI {
   };
 }
 
-void MxMDDerivativesJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
-{
-  // (long) -> void
-  if (ptr) ((MxMDDerivatives *)(void *)(uintptr_t)ptr)->ref();
-}
-
-void MxMDDerivativesJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
-{
-  // (long) -> void
-  if (ptr) ((MxMDDerivatives *)(void *)(uintptr_t)ptr)->deref();
-  env->SetLongField(obj, ptrField[0].fid, (jlong)0);
-}
-
 jobject MxMDDerivativesJNI::future(JNIEnv *env, jobject obj, jobject key)
 {
   // (MxFutKey) -> MxMDSecurity
@@ -119,12 +106,6 @@ int MxMDDerivativesJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
-    { "ctor_",
-      "(J)V",
-      (void *)&MxMDDerivativesJNI::ctor_ },
-    { "dtor_",
-      "(J)V",
-      (void *)&MxMDDerivativesJNI::dtor_ },
     { "future",
       "(Lcom/shardmx/mxbase/MxFutKey;)Lcom/shardmx/mxmd/MxMDSecurity;",
       (void *)&MxMDDerivativesJNI::future },

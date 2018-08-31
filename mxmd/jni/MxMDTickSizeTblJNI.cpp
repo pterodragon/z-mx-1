@@ -27,6 +27,10 @@
 
 #include <MxMD.hpp>
 
+#include <MxMDVenueJNI.hpp>
+
+#include <MxMDTickSizeJNI.hpp>
+
 #include <MxMDTickSizeTblJNI.hpp>
 
 namespace MxMDTickSizeTblJNI {
@@ -40,6 +44,11 @@ namespace MxMDTickSizeTblJNI {
     if (ZuUnlikely(!ptr)) return nullptr;
     return (MxMDTickSizeTbl *)(void *)ptr;
   }
+
+  // query callbacks
+  ZJNI::JavaMethod allTickSizesFn[] = {
+    { "fn", "(Lcom/shardmx/mxmd/MxMDTickSize;)J" }
+  };
 }
 
 void MxMDTickSizeTblJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
@@ -58,36 +67,47 @@ void MxMDTickSizeTblJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
 jobject MxMDTickSizeTblJNI::venue(JNIEnv *env, jobject obj)
 {
   // () -> MxMDVenue
-
-  return 0;
+  MxMDTickSizeTbl *tbl = ptr_(env, obj);
+  if (ZuUnlikely(!tbl)) return 0;
+  return MxMDVenueJNI::ctor(env, tbl->venue());
 }
 
 jstring MxMDTickSizeTblJNI::id(JNIEnv *env, jobject obj)
 {
   // () -> String
-
-  return 0;
+  MxMDTickSizeTbl *tbl = ptr_(env, obj);
+  if (ZuUnlikely(!tbl)) return 0;
+  return ZJNI::s2j(env, tbl->id());
 }
 
 jint MxMDTickSizeTblJNI::pxNDP(JNIEnv *env, jobject obj)
 {
   // () -> int
-
-  return 0;
+  MxMDTickSizeTbl *tbl = ptr_(env, obj);
+  if (ZuUnlikely(!tbl)) return 0;
+  return tbl->pxNDP();
 }
 
-jlong MxMDTickSizeTblJNI::tickSize(JNIEnv *env, jobject obj, jlong)
+jlong MxMDTickSizeTblJNI::tickSize(JNIEnv *env, jobject obj, jlong price)
 {
   // (long) -> long
-
-  return 0;
+  MxMDTickSizeTbl *tbl = ptr_(env, obj);
+  if (ZuUnlikely(!tbl)) return 0;
+  return tbl->tickSize(price);
 }
 
-jlong MxMDTickSizeTblJNI::allTickSizes(JNIEnv *env, jobject obj, jobject)
+jlong MxMDTickSizeTblJNI::allTickSizes(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllTickSizesFn) -> long
-
-  return 0;
+  MxMDTickSizeTbl *tbl = ptr_(env, obj);
+  if (ZuUnlikely(!tbl || !fn)) return 0;
+  return tbl->allTickSizes(
+      [fn = ZJNI::globalRef(env, fn)](const MxMDTickSize &ts) -> uintptr_t {
+    if (JNIEnv *env = ZJNI::env())
+      return env->CallLongMethod(fn, allTickSizesFn[0].mid,
+	  MxMDTickSizeJNI::ctor(env, ts));
+    return 0;
+  });
 }
 
 jobject MxMDTickSizeTblJNI::ctor(JNIEnv *env, void *ptr)
@@ -130,6 +150,9 @@ int MxMDTickSizeTblJNI::bind(JNIEnv *env)
 
   if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
   if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
+
+  if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDAllTickSizesFn",
+	allTickSizesFn, 1) < 0) return -1;
 
   return 0;
 }

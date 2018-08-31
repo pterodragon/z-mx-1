@@ -37,10 +37,13 @@
 #include <MxMDSecurityJNI.hpp>
 #include <MxMDOrderBookJNI.hpp>
 
+#include <MxMDLibHandlerJNI.hpp>
+
+#include <MxMDSecHandleJNI.hpp>
+#include <MxMDOBHandleJNI.hpp>
+
 #include <MxMDTickSizeJNI.hpp>
 #include <MxMDSegmentJNI.hpp>
-
-#include <MxMDLibHandlerJNI.hpp>
 
 #include <MxMDLibJNI.hpp>
 
@@ -49,17 +52,7 @@ namespace MxMDLibJNI {
     jobject	  obj_;
     bool	  running = false;
 
-  ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
-  ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
-
-  MxMDLib *ptr_(JNIEnv *env, jobject obj) {
-    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
-    if (ZuUnlikely(!ptr)) {
-      ZJNI::throwNPE(env, "MxMDLib.init() not called");
-      return nullptr;
-    }
-    return (MxMDLib *)(void *)ptr;
-  }
+  ZJNI::JavaMethod ctorMethod[] = { { "<init>", "()V" } };
 
   // query callbacks
   ZJNI::JavaMethod securityFn[] = {
@@ -82,28 +75,27 @@ namespace MxMDLibJNI {
   };
 }
 
-void MxMDLibJNI::ctor_(JNIEnv *env, jobject, jlong) { }
-
-void MxMDLibJNI::dtor_(JNIEnv *env, jobject, jlong)
-{
-  // called from Java close()
-  MxMDJNI::final(env);
-}
-
-jobject MxMDLibJNI::instance(JNIEnv *env, jclass c)
-{
-  // () -> MxMDLib
-  // ZmReadGuard<ZmLock> guard(lock);
-
-  return obj_;
-}
-
 class MxMDLib_JNI {
 public:
   ZuInline static MxMDLib *init(ZuString cf, ZmFn<ZmScheduler *> schedInitFn) {
     return MxMDLib::init(cf, ZuMv(schedInitFn));
   }
+  ZuInline static ZmRef<MxMDSecurity> security_(
+      const MxMDLib *md, const MxSecKey &key) {
+    return md->m_allSecurities.findKey(key);
+  }
+  ZuInline static ZmRef<MxMDOrderBook> orderBook_(
+      const MxMDLib *md, const MxSecKey &key) {
+    return md->m_allOrderBooks.findKey(key);
+  }
 };
+
+jobject MxMDLibJNI::instance(JNIEnv *env, jclass c)
+{
+  // () -> MxMDLib
+  // ZmReadGuard<ZmLock> guard(lock);
+  return obj_;
+}
 
 jobject MxMDLibJNI::init(JNIEnv *env, jclass c, jstring cf)
 {
@@ -129,8 +121,7 @@ jobject MxMDLibJNI::init(JNIEnv *env, jclass c, jstring cf)
   }
 
   {
-    jobject obj = env->NewObject(c, ctorMethod[0].mid,
-	(jlong)(uintptr_t)(void *)md);
+    jobject obj = env->NewObject(c, ctorMethod[0].mid);
     if (!obj) return 0;
     obj_ = env->NewGlobalRef(obj);
     env->DeleteLocalRef(obj);
@@ -139,10 +130,15 @@ jobject MxMDLibJNI::init(JNIEnv *env, jclass c, jstring cf)
   return obj_;
 }
 
+void MxMDLibJNI::close(JNIEnv *env, jobject)
+{
+  MxMDJNI::final(env);
+}
+
 void MxMDLibJNI::start(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md)) return;
   {
     ZmGuard<ZmLock> guard(lock);
@@ -155,7 +151,7 @@ void MxMDLibJNI::start(JNIEnv *env, jobject obj)
 void MxMDLibJNI::stop(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md)) return;
   {
     ZmGuard<ZmLock> guard(lock);
@@ -170,7 +166,7 @@ void MxMDLibJNI::stop(JNIEnv *env, jobject obj)
 void MxMDLibJNI::record(JNIEnv *env, jobject obj, jstring path)
 {
   // (String) -> void
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md)) return;
   md->record(ZJNI::j2s_ZtString(env, path));
 }
@@ -178,7 +174,7 @@ void MxMDLibJNI::record(JNIEnv *env, jobject obj, jstring path)
 void MxMDLibJNI::stopRecording(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md)) return;
   md->stopRecording();
 }
@@ -186,7 +182,7 @@ void MxMDLibJNI::stopRecording(JNIEnv *env, jobject obj)
 void MxMDLibJNI::stopStreaming(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md)) return;
   md->stopStreaming();
 }
@@ -195,7 +191,7 @@ void MxMDLibJNI::replay(JNIEnv *env, jobject obj,
     jstring path, jobject begin, jboolean filter)
 {
   // (String, Instant, boolean) -> void
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md)) return;
   md->replay(ZJNI::j2s_ZtString(env, path), ZJNI::j2t(env, begin), filter);
 }
@@ -203,7 +199,7 @@ void MxMDLibJNI::replay(JNIEnv *env, jobject obj,
 void MxMDLibJNI::stopReplaying(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md)) return;
   md->stopReplaying();
 }
@@ -211,7 +207,7 @@ void MxMDLibJNI::stopReplaying(JNIEnv *env, jobject obj)
 void MxMDLibJNI::startTimer(JNIEnv *env, jobject obj, jobject begin)
 {
   // (Instant) -> void
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md)) return;
   md->startTimer(ZJNI::j2t(env, begin));
 }
@@ -219,7 +215,7 @@ void MxMDLibJNI::startTimer(JNIEnv *env, jobject obj, jobject begin)
 void MxMDLibJNI::stopTimer(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md)) return;
   md->stopTimer();
 }
@@ -227,7 +223,7 @@ void MxMDLibJNI::stopTimer(JNIEnv *env, jobject obj)
 void MxMDLibJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
 {
   // (MxMDLibHandler) -> void
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md)) return;
   md->subscribe(MxMDLibHandlerJNI::j2c(env, handler_));
   md->appData((uintptr_t)(void *)(env->NewGlobalRef(handler_)));
@@ -236,7 +232,7 @@ void MxMDLibJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
 void MxMDLibJNI::unsubscribe(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md)) return;
   md->unsubscribe();
   env->DeleteGlobalRef((jobject)(void *)(md->appData()));
@@ -246,15 +242,25 @@ void MxMDLibJNI::unsubscribe(JNIEnv *env, jobject obj)
 jobject MxMDLibJNI::handler(JNIEnv *env, jobject obj)
 {
   // () -> MxMDLibHandler
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md)) return 0;
   return (jobject)(void *)(md->appData());
+}
+
+jobject MxMDLibJNI::security(JNIEnv *env, jobject obj, jobject key_)
+{
+  MxMDLib *md = MxMDLib::instance();
+  if (ZuUnlikely(!md)) return 0;
+  if (ZmRef<MxMDSecurity> sec =
+      MxMDLib_JNI::security_(md, MxSecKeyJNI::j2c(env, key_)))
+    return MxMDSecHandleJNI::ctor(env, sec); // FIXME - optimize ref/deref
+  return 0;
 }
 
 void MxMDLibJNI::security(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 {
   // (MxSecKey, MxMDSecurityFn) -> void
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md || !fn)) return;
   md->secInvoke(MxSecKeyJNI::j2c(env, key_),
       [fn = ZJNI::globalRef(env, fn)](MxMDSecurity *sec) {
@@ -267,7 +273,7 @@ void MxMDLibJNI::security(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 jlong MxMDLibJNI::allSecurities(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllSecuritiesFn) -> long
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md || !fn)) return 0;
   return md->allSecurities(
       [fn = ZJNI::globalRef(env, fn)](MxMDSecurity *sec) -> uintptr_t {
@@ -278,10 +284,20 @@ jlong MxMDLibJNI::allSecurities(JNIEnv *env, jobject obj, jobject fn)
   });
 }
 
+jobject MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_)
+{
+  MxMDLib *md = MxMDLib::instance();
+  if (ZuUnlikely(!md)) return 0;
+  if (ZmRef<MxMDOrderBook> ob =
+      MxMDLib_JNI::orderBook_(md, MxSecKeyJNI::j2c(env, key_)))
+    return MxMDOBHandleJNI::ctor(env, ob); // FIXME - optimize ref/deref
+  return 0;
+}
+
 void MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 {
   // (MxSecKey, MxMDOrderBookFn) -> void
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md || !fn)) return;
   md->obInvoke(MxSecKeyJNI::j2c(env, key_),
       [fn = ZJNI::globalRef(env, fn)](MxMDOrderBook *ob) {
@@ -294,7 +310,7 @@ void MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 jlong MxMDLibJNI::allOrderBooks(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllOrderBooksFn) -> long
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md || !fn)) return 0;
   return md->allOrderBooks(
       [fn = ZJNI::globalRef(env, fn)](MxMDOrderBook *ob) -> uintptr_t {
@@ -308,17 +324,17 @@ jlong MxMDLibJNI::allOrderBooks(JNIEnv *env, jobject obj, jobject fn)
 jobject MxMDLibJNI::feed(JNIEnv *env, jobject obj, jstring id)
 {
   // (String) -> MxMDFeed
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md || !id)) return 0;
   if (ZmRef<MxMDFeed> feed = md->feed(ZJNI::j2s_ZuStringN<8>(env, id)))
-    return MxMDFeedJNI::ctor(env, feed);
+    return MxMDFeedJNI::ctor(env, feed); // FIXME - optimize ref/deref
   return 0;
 }
 
 jlong MxMDLibJNI::allFeeds(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllFeedsFn) -> long
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md || !fn)) return 0;
   return md->allFeeds(
       [fn = ZJNI::globalRef(env, fn)](MxMDFeed *feed) -> uintptr_t {
@@ -332,17 +348,17 @@ jlong MxMDLibJNI::allFeeds(JNIEnv *env, jobject obj, jobject fn)
 jobject MxMDLibJNI::venue(JNIEnv *env, jobject obj, jstring id)
 {
   // (String) -> MxMDVenue
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md || !id)) return 0;
   if (ZmRef<MxMDVenue> venue = md->venue(ZJNI::j2s_ZuStringN<8>(env, id)))
-    return MxMDVenueJNI::ctor(env, venue);
+    return MxMDVenueJNI::ctor(env, venue); // FIXME - optimize ref/deref
   return 0;
 }
 
 jlong MxMDLibJNI::allVenues(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllVenuesFn) -> long
-  MxMDLib *md = ptr_(env, obj);
+  MxMDLib *md = MxMDLib::instance();
   if (ZuUnlikely(!md || !fn)) return 0;
   return md->allVenues(
       [fn = ZJNI::globalRef(env, fn)](MxMDVenue *venue) -> uintptr_t {
@@ -360,18 +376,15 @@ int MxMDLibJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
-    { "ctor_",
-      "(J)V",
-      (void *)&MxMDLibJNI::ctor_ },
-    { "dtor_",
-      "(J)V",
-      (void *)&MxMDLibJNI::dtor_ },
     { "instance",
       "()Lcom/shardmx/mxmd/MxMDLib;",
       (void *)&MxMDLibJNI::instance },
     { "init",
       "(Ljava/lang/String;)Lcom/shardmx/mxmd/MxMDLib;",
       (void *)&MxMDLibJNI::init },
+    { "close",
+      "()V",
+      (void *)&MxMDLibJNI::close },
     { "start",
       "()V",
       (void *)&MxMDLibJNI::start },
@@ -409,14 +422,24 @@ int MxMDLibJNI::bind(JNIEnv *env)
       "()Lcom/shardmx/mxmd/MxMDLibHandler;",
       (void *)&MxMDLibJNI::handler },
     { "security",
+      "(Lcom/shardmx/mxbase/MxSecKey;)Lcom/shardmx/mxmd/MxMDSecHandle;",
+      (void *)static_cast<jobject (*)(JNIEnv *, jobject, jobject)>(
+	  MxMDLibJNI::security) },
+    { "security",
       "(Lcom/shardmx/mxbase/MxSecKey;Lcom/shardmx/mxmd/MxMDSecurityFn;)V",
-      (void *)&MxMDLibJNI::security },
+      (void *)static_cast<void (*)(JNIEnv *, jobject, jobject, jobject)>(
+	  MxMDLibJNI::security) },
     { "allSecurities",
       "(Lcom/shardmx/mxmd/MxMDAllSecuritiesFn;)J",
       (void *)&MxMDLibJNI::allSecurities },
     { "orderBook",
+      "(Lcom/shardmx/mxbase/MxSecKey;)Lcom/shardmx/mxmd/MxMDOBHandle;",
+      (void *)static_cast<jobject (*)(JNIEnv *, jobject, jobject)>(
+	  MxMDLibJNI::orderBook) },
+    { "orderBook",
       "(Lcom/shardmx/mxbase/MxSecKey;Lcom/shardmx/mxmd/MxMDOrderBookFn;)V",
-      (void *)&MxMDLibJNI::orderBook },
+      (void *)static_cast<void (*)(JNIEnv *, jobject, jobject, jobject)>(
+	  MxMDLibJNI::orderBook) },
     { "allOrderBooks",
       "(Lcom/shardmx/mxmd/MxMDAllOrderBooksFn;)J",
       (void *)&MxMDLibJNI::allOrderBooks },
@@ -441,7 +464,6 @@ int MxMDLibJNI::bind(JNIEnv *env)
 	methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
 
   if (ZJNI::bind(env, c, ctorMethod, 1) < 0) return -1;
-  if (ZJNI::bind(env, c, ptrField, 1) < 0) return -1;
 
   env->DeleteLocalRef((jobject)c);
 

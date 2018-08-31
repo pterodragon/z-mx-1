@@ -19,8 +19,8 @@
 
 // MxMD JNI
 
-#ifndef MxMDTradeJNI_HPP
-#define MxMDTradeJNI_HPP
+#ifndef MxMDOBHandleJNI_HPP
+#define MxMDOBHandleJNI_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -32,19 +32,18 @@
 
 #include <jni.h>
 
-namespace MxMDTradeJNI {
-  // () -> MxMDSecurity
-  jobject security(JNIEnv *, jobject);
+namespace MxMDOBHandleJNI {
+  // (long) -> void
+  void ctor_(JNIEnv *, jobject, jlong);
+  // (long) -> void
+  void dtor_(JNIEnv *, jobject, jlong);
 
-  // () -> MxMDOrderBook
-  jobject orderBook(JNIEnv *, jobject);
-
-  // () -> MxMDTradeData
-  jobject data(JNIEnv *, jobject);
+  // (MxMDOrderBookFn) -> void
+  void invoke(JNIEnv *, jobject, jobject);
 
   jobject ctor(JNIEnv *, void *ptr);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }
 
-#endif /* MxMDTradeJNI_HPP */
+#endif /* MxMDOBHandleJNI_HPP */

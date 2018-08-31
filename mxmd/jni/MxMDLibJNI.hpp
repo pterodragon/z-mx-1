@@ -33,16 +33,14 @@
 #include <jni.h>
 
 namespace MxMDLibJNI {
-  // (long) -> void
-  void ctor_(JNIEnv *, jobject, jlong);
-  // (long) -> void
-  void dtor_(JNIEnv *, jobject, jlong);
-
   // () -> MxMDLib
   jobject instance(JNIEnv *, jclass);
 
   // (String) -> MxMDLib
   jobject init(JNIEnv *, jclass, jstring);
+
+  // () -> void
+  void close(JNIEnv *, jobject);
 
   // () -> void
   void start(JNIEnv *, jobject);
@@ -73,11 +71,15 @@ namespace MxMDLibJNI {
   // () -> MxMDLibHandler
   jobject handler(JNIEnv *, jobject);
 
+  // (MxSecKey) -> MxMDSecHandle
+  jobject security(JNIEnv *, jobject, jobject);
   // (MxSecKey, MxMDSecurityFn) -> void
   void security(JNIEnv *, jobject, jobject, jobject);
   // (MxMDAllSecuritiesFn) -> long
   jlong allSecurities(JNIEnv *, jobject, jobject);
 
+  // (MxSecKey) -> MxMDOBHandle
+  jobject orderBook(JNIEnv *, jobject, jobject);
   // (MxSecKey, MxMDOrderBookFn) -> void
   void orderBook(JNIEnv *, jobject, jobject, jobject);
   // (MxMDAllOrderBooksFn) -> long

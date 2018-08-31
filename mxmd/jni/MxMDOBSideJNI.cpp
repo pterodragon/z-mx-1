@@ -57,19 +57,6 @@ namespace MxMDOBSideJNI {
   };
 }
 
-void MxMDOBSideJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
-{
-  // (long) -> void
-  if (ptr) ((MxMDOBSide *)(void *)(uintptr_t)ptr)->ref();
-}
-
-void MxMDOBSideJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
-{
-  // (long) -> void
-  if (ptr) ((MxMDOBSide *)(void *)(uintptr_t)ptr)->deref();
-  env->SetLongField(obj, ptrField[0].fid, (jlong)0);
-}
-
 jobject MxMDOBSideJNI::orderBook(JNIEnv *env, jobject obj)
 {
   // () -> MxMDOrderBook
@@ -130,12 +117,6 @@ int MxMDOBSideJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
-    { "ctor_",
-      "(J)V",
-      (void *)&MxMDOBSideJNI::ctor_ },
-    { "dtor_",
-      "(J)V",
-      (void *)&MxMDOBSideJNI::dtor_ },
     { "orderBook",
       "()Lcom/shardmx/mxmd/MxMDOrderBook;",
       (void *)&MxMDOBSideJNI::orderBook },

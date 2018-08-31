@@ -33,11 +33,6 @@
 #include <jni.h>
 
 namespace MxMDOBSideJNI {
-  // (long) -> void
-  void ctor_(JNIEnv *, jobject, jlong);
-  // (long) -> void
-  void dtor_(JNIEnv *, jobject, jlong);
-
   // () -> MxMDOrderBook
   jobject orderBook(JNIEnv *, jobject);
 

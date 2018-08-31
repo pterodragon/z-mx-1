@@ -59,19 +59,6 @@ namespace MxMDPxLevelJNI {
   };
 }
 
-void MxMDPxLevelJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
-{
-  // (long) -> void
-  if (ptr) ((MxMDPxLevel *)(void *)(uintptr_t)ptr)->ref();
-}
-
-void MxMDPxLevelJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
-{
-  // (long) -> void
-  if (ptr) ((MxMDPxLevel *)(void *)(uintptr_t)ptr)->deref();
-  env->SetLongField(obj, ptrField[0].fid, (jlong)0);
-}
-
 jobject MxMDPxLevelJNI::obSide(JNIEnv *env, jobject obj)
 {
   // () -> MxMDOBSide
@@ -140,12 +127,6 @@ int MxMDPxLevelJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
-    { "ctor_",
-      "(J)V",
-      (void *)&MxMDPxLevelJNI::ctor_ },
-    { "dtor_",
-      "(J)V",
-      (void *)&MxMDPxLevelJNI::dtor_ },
     { "obSide",
       "()Lcom/shardmx/mxmd/MxMDOBSide;",
       (void *)&MxMDPxLevelJNI::obSide },

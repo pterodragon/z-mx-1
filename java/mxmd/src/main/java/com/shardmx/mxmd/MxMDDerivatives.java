@@ -2,9 +2,8 @@ package com.shardmx.mxmd;
 
 import com.shardmx.mxbase.*;
 
-public class MxMDDerivatives implements AutoCloseable {
-  public MxMDDerivatives(long ptr) { ctor_(this.ptr = ptr); }
-  public void close() { dtor_(this.ptr); }
+public class MxMDDerivatives {
+  private MxMDDerivatives(long ptr) { this.ptr = ptr; }
 
   private native void ctor_(long ptr);
   private native void dtor_(long ptr);

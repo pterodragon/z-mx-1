@@ -2,12 +2,8 @@ package com.shardmx.mxmd;
 
 import com.shardmx.mxbase.*;
 
-public class MxMDOrderBook implements AutoCloseable {
-  public MxMDOrderBook(long ptr) { ctor_(this.ptr = ptr); }
-  public void close() { dtor_(this.ptr); }
-
-  private native void ctor_(long ptr);
-  private native void dtor_(long ptr);
+public class MxMDOrderBook {
+  public MxMDOrderBook(long ptr) { this.ptr = ptr; }
 
   // methods
 

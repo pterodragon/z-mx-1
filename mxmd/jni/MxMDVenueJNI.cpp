@@ -127,10 +127,10 @@ jobject MxMDVenueJNI::tickSizeTbl(JNIEnv *env, jobject obj, jstring id)
   // (String) -> MxMDTickSizeTbl
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue || !id)) return 0;
-  ZmRef<MxMDTickSizeTbl> tbl =
-    venue->tickSizeTbl(ZJNI::j2s_ZuStringN<8>(env, id));
-  if (!tbl) return 0;
-  return MxMDTickSizeTblJNI::ctor(env, tbl);
+  if (ZmRef<MxMDTickSizeTbl> tbl =
+      venue->tickSizeTbl(ZJNI::j2s_ZuStringN<8>(env, id)))
+    return MxMDTickSizeTblJNI::ctor(env, tbl); // FIXME - optimize ref/deref
+  return 0;
 }
 
 jlong MxMDVenueJNI::allTickSizeTbls(JNIEnv *env, jobject obj, jobject fn)

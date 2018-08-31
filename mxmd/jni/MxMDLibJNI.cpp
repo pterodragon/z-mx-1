@@ -50,6 +50,7 @@
 namespace MxMDLibJNI {
   ZmLock	lock; // only used to serialize initialization
     jobject	  obj_;
+    MxMDLib	  *md_;
     bool	  running = false;
 
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "()V" } };
@@ -127,6 +128,8 @@ jobject MxMDLibJNI::init(JNIEnv *env, jclass c, jstring cf)
     env->DeleteLocalRef(obj);
   }
 
+  md_ = md;
+
   return obj_;
 }
 
@@ -138,7 +141,7 @@ void MxMDLibJNI::close(JNIEnv *env, jobject)
 void MxMDLibJNI::start(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   {
     ZmGuard<ZmLock> guard(lock);
@@ -151,7 +154,7 @@ void MxMDLibJNI::start(JNIEnv *env, jobject obj)
 void MxMDLibJNI::stop(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   {
     ZmGuard<ZmLock> guard(lock);
@@ -166,7 +169,7 @@ void MxMDLibJNI::stop(JNIEnv *env, jobject obj)
 void MxMDLibJNI::record(JNIEnv *env, jobject obj, jstring path)
 {
   // (String) -> void
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   md->record(ZJNI::j2s_ZtString(env, path));
 }
@@ -174,7 +177,7 @@ void MxMDLibJNI::record(JNIEnv *env, jobject obj, jstring path)
 void MxMDLibJNI::stopRecording(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   md->stopRecording();
 }
@@ -182,7 +185,7 @@ void MxMDLibJNI::stopRecording(JNIEnv *env, jobject obj)
 void MxMDLibJNI::stopStreaming(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   md->stopStreaming();
 }
@@ -191,7 +194,7 @@ void MxMDLibJNI::replay(JNIEnv *env, jobject obj,
     jstring path, jobject begin, jboolean filter)
 {
   // (String, Instant, boolean) -> void
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   md->replay(ZJNI::j2s_ZtString(env, path), ZJNI::j2t(env, begin), filter);
 }
@@ -199,7 +202,7 @@ void MxMDLibJNI::replay(JNIEnv *env, jobject obj,
 void MxMDLibJNI::stopReplaying(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   md->stopReplaying();
 }
@@ -207,7 +210,7 @@ void MxMDLibJNI::stopReplaying(JNIEnv *env, jobject obj)
 void MxMDLibJNI::startTimer(JNIEnv *env, jobject obj, jobject begin)
 {
   // (Instant) -> void
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   md->startTimer(ZJNI::j2t(env, begin));
 }
@@ -215,7 +218,7 @@ void MxMDLibJNI::startTimer(JNIEnv *env, jobject obj, jobject begin)
 void MxMDLibJNI::stopTimer(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   md->stopTimer();
 }
@@ -223,7 +226,7 @@ void MxMDLibJNI::stopTimer(JNIEnv *env, jobject obj)
 void MxMDLibJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
 {
   // (MxMDLibHandler) -> void
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   md->subscribe(MxMDLibHandlerJNI::j2c(env, handler_));
   md->appData((uintptr_t)(void *)(env->NewGlobalRef(handler_)));
@@ -232,7 +235,7 @@ void MxMDLibJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
 void MxMDLibJNI::unsubscribe(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   md->unsubscribe();
   env->DeleteGlobalRef((jobject)(void *)(md->appData()));
@@ -242,14 +245,14 @@ void MxMDLibJNI::unsubscribe(JNIEnv *env, jobject obj)
 jobject MxMDLibJNI::handler(JNIEnv *env, jobject obj)
 {
   // () -> MxMDLibHandler
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
   return (jobject)(void *)(md->appData());
 }
 
 jobject MxMDLibJNI::security(JNIEnv *env, jobject obj, jobject key_)
 {
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
   if (ZmRef<MxMDSecurity> sec =
       MxMDLib_JNI::security_(md, MxSecKeyJNI::j2c(env, key_)))
@@ -260,7 +263,7 @@ jobject MxMDLibJNI::security(JNIEnv *env, jobject obj, jobject key_)
 void MxMDLibJNI::security(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 {
   // (MxSecKey, MxMDSecurityFn) -> void
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md || !fn)) return;
   md->secInvoke(MxSecKeyJNI::j2c(env, key_),
       [fn = ZJNI::globalRef(env, fn)](MxMDSecurity *sec) {
@@ -273,7 +276,7 @@ void MxMDLibJNI::security(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 jlong MxMDLibJNI::allSecurities(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllSecuritiesFn) -> long
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md || !fn)) return 0;
   return md->allSecurities(
       [fn = ZJNI::globalRef(env, fn)](MxMDSecurity *sec) -> uintptr_t {
@@ -286,7 +289,7 @@ jlong MxMDLibJNI::allSecurities(JNIEnv *env, jobject obj, jobject fn)
 
 jobject MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_)
 {
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
   if (ZmRef<MxMDOrderBook> ob =
       MxMDLib_JNI::orderBook_(md, MxSecKeyJNI::j2c(env, key_)))
@@ -297,7 +300,7 @@ jobject MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_)
 void MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 {
   // (MxSecKey, MxMDOrderBookFn) -> void
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md || !fn)) return;
   md->obInvoke(MxSecKeyJNI::j2c(env, key_),
       [fn = ZJNI::globalRef(env, fn)](MxMDOrderBook *ob) {
@@ -310,7 +313,7 @@ void MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 jlong MxMDLibJNI::allOrderBooks(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllOrderBooksFn) -> long
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md || !fn)) return 0;
   return md->allOrderBooks(
       [fn = ZJNI::globalRef(env, fn)](MxMDOrderBook *ob) -> uintptr_t {
@@ -324,7 +327,7 @@ jlong MxMDLibJNI::allOrderBooks(JNIEnv *env, jobject obj, jobject fn)
 jobject MxMDLibJNI::feed(JNIEnv *env, jobject obj, jstring id)
 {
   // (String) -> MxMDFeed
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md || !id)) return 0;
   if (ZmRef<MxMDFeed> feed = md->feed(ZJNI::j2s_ZuStringN<8>(env, id)))
     return MxMDFeedJNI::ctor(env, feed); // FIXME - optimize ref/deref
@@ -334,7 +337,7 @@ jobject MxMDLibJNI::feed(JNIEnv *env, jobject obj, jstring id)
 jlong MxMDLibJNI::allFeeds(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllFeedsFn) -> long
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md || !fn)) return 0;
   return md->allFeeds(
       [fn = ZJNI::globalRef(env, fn)](MxMDFeed *feed) -> uintptr_t {
@@ -348,7 +351,7 @@ jlong MxMDLibJNI::allFeeds(JNIEnv *env, jobject obj, jobject fn)
 jobject MxMDLibJNI::venue(JNIEnv *env, jobject obj, jstring id)
 {
   // (String) -> MxMDVenue
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md || !id)) return 0;
   if (ZmRef<MxMDVenue> venue = md->venue(ZJNI::j2s_ZuStringN<8>(env, id)))
     return MxMDVenueJNI::ctor(env, venue); // FIXME - optimize ref/deref
@@ -358,7 +361,7 @@ jobject MxMDLibJNI::venue(JNIEnv *env, jobject obj, jstring id)
 jlong MxMDLibJNI::allVenues(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDAllVenuesFn) -> long
-  MxMDLib *md = MxMDLib::instance();
+  MxMDLib *md = md_;
   if (ZuUnlikely(!md || !fn)) return 0;
   return md->allVenues(
       [fn = ZJNI::globalRef(env, fn)](MxMDVenue *venue) -> uintptr_t {
@@ -487,9 +490,12 @@ void MxMDLibJNI::final(JNIEnv *env)
 {
   ZmGuard<ZmLock> guard(lock);
 
+  if (!obj_) return;
+
   env->DeleteGlobalRef(obj_); obj_ = 0;
 
-  if (MxMDLib *md = MxMDLib::instance()) {
+  if (MxMDLib *md = md_) {
+    md_ = 0;
     if (running) {
       running = false;
       md->allSecurities([](MxMDSecurity *sec) { sec->unsubscribe(); });

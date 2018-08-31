@@ -598,9 +598,9 @@ public:
 
   // MxQueueTx/ZmPQTx callbacks
   ZuInline void archive_(MxQMsg *msg) // tx archive - app calls archived()
-    { this->engine()->app().archive(this, msg); }
+    { this->engine()->app()->archive(this, msg); }
   ZuInline ZmRef<MxQMsg> retrieve_(MxSeqNo seqNo) // tx retrieve
-    { return this->engine()->app().retrieve(this, seqNo); }
+    { return this->engine()->app()->retrieve(this, seqNo); }
 
   MxQueue *rxQueuePtr() { return &(this->rxQueue()); }
   MxQueue *txQueuePtr() { return &(this->txQueue()); }

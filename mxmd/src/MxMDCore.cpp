@@ -1269,7 +1269,7 @@ void MxMDCore::replay2()
       ReplayGuard guard(m_replayLock);
       if (!m_replayFile) return;
       msg = m_replayMsg;
-      Frame *frame = msg->data().frame();
+      Frame *frame = msg->frame();
   // retry:
       int n = m_replayFile.read(frame, sizeof(Frame), &e);
       if (n == Zi::IOError) goto error;
@@ -1292,8 +1292,8 @@ void MxMDCore::replay2()
       }
     }
 
-    pad(msg->data().frame());
-    apply(msg->data().frame());
+    pad(msg->frame());
+    apply(msg->frame());
     m_mx->add(ZmFn<>::Member<&MxMDCore::replay2>::fn(this));
   }
 
@@ -1625,6 +1625,9 @@ void MxMDCore::apply(Frame *frame)
 	  this->loaded(venue);
       }
     default:
+      raise(ZeEVENT(Info, "MxMDCore apply default"));
+      
+      
       break;
   }
 }
@@ -1717,12 +1720,13 @@ void MxMDCore::Publisher::tcpConnected2(MxMDCore::Publisher::TCP *tcp)
 
 void MxMDCore::Publisher::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &io)
 {
-  using namespace MxMDPubSub::TCP;
+  //using namespace MxMDPubSub::TCP;
+  using namespace MxMDStream;
 
   Frame &hdr = m_in->as<Frame>();
 
   switch ((int)hdr.type) {
-    case MsgType::Login: {
+    case Type::Login: {
       m_publisher->m_core->raise(ZeEVENT(Info, "Publisher TCP Login recv"));
 
       //const Login &data = hdr.as<Login>();
@@ -1734,7 +1738,7 @@ void MxMDCore::Publisher::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &io
     }
     default:
       m_publisher->m_core->raise(ZeEVENT(Error,
-          [type = (char)hdr.type](const ZeEvent &, ZmStream &s) {
+          [type = (int)hdr.type](const ZeEvent &, ZmStream &s) {
 	    s << "unexpected message type '" << type << '\'';
 	  }));
   }
@@ -1743,6 +1747,8 @@ void MxMDCore::Publisher::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &io
 
 void MxMDCore::Publisher::TCP::send(const Frame *frame)
 {
+  m_publisher->m_core->raise(ZeEVENT(Info, "Publisher TCP send"));
+	
   using namespace MxMDStream;
 
   switch ((int)frame->type) {
@@ -1768,7 +1774,16 @@ void MxMDCore::Publisher::TCP::send(const Frame *frame)
     case Type::CorrectTrade:	send_<CorrectTrade>(frame); break;
     case Type::CancelTrade:	send_<CancelTrade>(frame); break;
     case Type::RefDataLoaded:	send_<RefDataLoaded>(frame); break;
-    default: break;
+    
+    case Type::EndOfSnapshot:
+      send_<EndOfSnapshot>(frame);
+      std::cout << "Publisher TCP send EndOfSnapshot +++++++" << std::endl;
+      break;
+    
+    default:
+      m_publisher->m_core->raise(ZeEVENT(Info, "Publisher TCP send default"));
+    
+      break;
   }
 }
 
@@ -1777,10 +1792,10 @@ void MxMDCore::Publisher::TCP::disconnect()
   ZiConnection::disconnect();
 }
 
-MxMDCore::Publisher::UDP::UDP(MxMDCore::Publisher *publisher, const ZiCxnInfo &ci) :
+MxMDCore::Publisher::UDP::UDP(MxMDCore::Publisher *publisher, const ZiCxnInfo &ci, const ZiSockAddr &dest) :
     ZiConnection(publisher->m_core->mx(), ci),
     m_publisher(publisher),
-    m_remoteAddr(ci.remoteIP, ci.remotePort) { }
+    m_remoteAddr(dest) { }
 
 void MxMDCore::Publisher::UDP::connected(ZiIOContext &io)
 {
@@ -1808,19 +1823,29 @@ void MxMDCore::Publisher::udpConnect()
   ZiCxnOptions options;
   options.udp(true);
   options.multicast(true);
+  
+  options.mreq(ZiMReq(ip, "127.0.0.1"));
+
+  ZiIP mif("127.0.0.1");
+  options.mif(mif);
+  
+  
+  m_dest = ZiSockAddr("127.0.0.1", port);
+  
+  
 
   m_core->raise(ZeEVENT(Info, "Publisher udpConnect"));
 
   m_core->mx()->udp(
     ZiConnectFn::Member<&MxMDCore::Publisher::udpConnected>::fn(this),
     ZiFailFn::Member<&MxMDCore::Publisher::udpConnectFailed>::fn(this),
-    ZiIP(), 0, ip, port, options);
+    ZiIP(), 27412, ZiIP(), 0, options);
 }
 
 ZiConnection *MxMDCore::Publisher::udpConnected(const ZiCxnInfo &ci)
 {
   m_core->raise(ZeEVENT(Info, "Publisher udpConnected"));
-  return new UDP(this, ci);
+  return new UDP(this, ci, m_dest);
 }
 
 void MxMDCore::Publisher::udpConnected2(MxMDCore::Publisher::UDP *udp, ZiIOContext &io)
@@ -1828,11 +1853,19 @@ void MxMDCore::Publisher::udpConnected2(MxMDCore::Publisher::UDP *udp, ZiIOConte
   m_core->raise(ZeEVENT(Info, "Publisher udpConnected2"));
   ZmGuard<ZmLock> stateGuard(m_stateLock);
   m_udp = udp;
+  
+  
+  
+  m_link->txInvoke([](Tx *tx) {//////////////////////////////////////////////
+	tx->start();
+	
+      });
+  
 }
 
 void MxMDCore::Publisher::UDP::send(const Frame *frame)
 {
-  m_publisher->m_core->raise(ZeEVENT(Info, "Publisher UDP send"));
+  //m_publisher->m_core->raise(ZeEVENT(Info, "Publisher UDP send"));
 
   using namespace MxMDStream;
 
@@ -1859,7 +1892,12 @@ void MxMDCore::Publisher::UDP::send(const Frame *frame)
     case Type::CorrectTrade:	send_<CorrectTrade>(frame); break;
     case Type::CancelTrade:	send_<CancelTrade>(frame); break;
     case Type::RefDataLoaded:	send_<RefDataLoaded>(frame); break;
-    default: break;
+    default: 
+      m_publisher->m_core->raise(ZeEVENT(Info, "Publisher UDP send default"));
+      
+      std::cout << "**** " << (int)frame->type << std::endl;
+      
+      break;
   }
 }
 
@@ -1887,6 +1925,8 @@ void MxMDCore::Subscriber::TCP::sendLogin()
   ZmRef<MxMDPubSub::TCP::OutMsg> msg = new MxMDPubSub::TCP::OutMsg();
   m_subscriber->loginReq(new (msg->out<Login>()) Login());
   msg->send(this);
+  
+  m_subscriber->m_core->raise(ZeEVENT(Info, "Subscriber TCP login sent"));
 }
 
 void MxMDCore::Subscriber::loginReq(MxMDStream::Login *login)
@@ -1903,6 +1943,8 @@ void MxMDCore::Subscriber::TCP::disconnect()
 
 void MxMDCore::Subscriber::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &io)
 {
+  m_subscriber->m_core->raise(ZeEVENT(Info, "Subscriber TCP process"));
+	
   using namespace MxMDPubSub::TCP;
   using namespace MxMDStream;
 
@@ -1910,6 +1952,9 @@ void MxMDCore::Subscriber::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &i
 
   switch ((int)hdr.type) {
     case Type::EndOfSnapshot:
+      m_subscriber->m_core->raise(ZeEVENT(Info, "Subscriber TCP EndOfSnapshot+++"));
+      std::cout << m_subscriber->m_seqNo << " +++++" << std::endl;
+    
       m_subscriber->running();
       m_subscriber->m_link->rxInvoke(
         [subscriber = m_subscriber](Rx *rx) { rx->stopQueuing(subscriber->m_seqNo); });
@@ -1917,6 +1962,12 @@ void MxMDCore::Subscriber::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &i
       disconnect();
       return;
     default:
+      m_subscriber->m_core->raise(ZeEVENT(Info, "Subscriber TCP apply"));
+      
+      
+      std::cout << hdr.seqNo << " +++++ apply" << std::endl;
+      
+    
       m_subscriber->m_core->apply(&hdr);
   }
 
@@ -1928,6 +1979,8 @@ MxMDCore::Subscriber::UDP::UDP(Subscriber *subscriber, const ZiCxnInfo &ci) :
 
 void MxMDCore::Subscriber::UDP::connected(ZiIOContext &io)
 {
+  std::cout << "Subscriber UDP connected" << std::endl;
+	
   m_subscriber->udpConnected2(this, io);
 }
 
@@ -1955,6 +2008,11 @@ void MxMDCore::Subscriber::udpConnected2(Subscriber::UDP *udp, ZiIOContext &io)
 }
 
 void MxMDCore::Subscriber::recv(Rx *rx, ZiIOContext &io) {
+	
+	
+  std::cout << "Subscriber recv" << std::endl;
+	
+	
   rx->startQueuing();
 
   m_rx = rx;
@@ -1964,41 +2022,20 @@ void MxMDCore::Subscriber::recv(Rx *rx, ZiIOContext &io) {
 
 void MxMDCore::Subscriber::UDP::recv(ZiIOContext &io)
 {
+  std::cout << "Subscriber UDP recv" << std::endl;
+	
+	
   using namespace MxMDPubSub::UDP;
-  ZmRef<InQMsg> msg = new InQMsg();
+  ZmRef<InMsg> msg = new InMsg();
   msg->fn() = InMsg::Fn::Member<&MxMDCore::Subscriber::UDP::process>::fn(this);
-  msg->recv(io);
-}
 
-void MxMDCore::Subscriber::UDP::process(MxMDPubSub::UDP::InMsg *inMsg, ZiIOContext &io)
-{
-  using namespace MxMDPubSub;
-  using namespace MxMDPubSub::UDP;
-  using namespace MxMDStream;
-
-  if (ZuUnlikely(inMsg->scan())) {
-    ZtHexDump msg_{"truncated UDP message", inMsg->data(), inMsg->length()};
-    m_subscriber->m_core->raise(ZeEVENT(Warning,
-      ([msg_ = ZuMv(msg_)](const ZeEvent &, ZmStream &s) {
-	  s << "UDP " << msg_; })));
-  }
-
-  UDPPktHdr &hdr = inMsg->as<UDPPktHdr>();
-
-  MsgRef msg = new Msg();
-
-  Frame *frame = &hdr.as<Frame>();
-
-  memcpy(msg->frame(), frame, sizeof(Frame) + frame->len);
-
-  ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
-  qmsg->load(m_subscriber->m_rx->rxQueue().id, hdr.seqNo);
-
-  m_subscriber->m_seqNo = hdr.seqNo;
-
-  m_subscriber->m_rx->received(qmsg);
-
-  recv(io);
+  
+  
+  //ZiSockAddr addr;///////////
+  //addr.init({"239.255.90.105"}, 27413);//////////////
+  
+  
+  msg->recv(io);///////////////////////////////
 }
 
 void MxMDCore::Subscriber::pushMsg(MxQMsg *qmsg) {
@@ -2245,20 +2282,25 @@ void MxMDCore::Subscriber::udpConnect()
 {
   ZmRef<ZvCf> cf = m_core->cf()->subset("subscriber", false, true);
 
-  ZiIP ip{cf->get("multicastAddr", true).data()};
+  //ZiIP ip{cf->get("multicastAddr", true).data()};
   auto port = static_cast<uint16_t>(strtoul(cf->get("multicastPort", true).data(), nullptr, 10));
 
   ZiCxnOptions options;
   options.udp(true);
   options.multicast(true);
-  options.mreq(ZiMReq(ip, {}));
+  //options.mreq(ZiMReq(ip, "127.0.0.1"));
+  
+  ZiIP mif("127.0.0.1");
+  options.mif(mif);
+  
+  
   
   m_core->raise(ZeEVENT(Info, "Subscriber udpConnect"));
 
   m_core->mx()->udp(
     ZiConnectFn::Member<&MxMDCore::Subscriber::udpConnected>::fn(this),
     ZiFailFn::Member<&MxMDCore::Subscriber::udpConnectFailed>::fn(this),
-    ZiIP(), 0, ip, port, options);
+    ZiIP(), port, ZiIP(), 0, options);
 }
 
 ZiConnection *MxMDCore::Subscriber::udpConnected(const ZiCxnInfo &ci)

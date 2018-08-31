@@ -328,6 +328,11 @@ namespace MxMDStream {
     MxIDString		password;
   };
   
+  struct ResendReq {
+    uint64_t		seqNo;
+    uint32_t		count;
+  };
+  
   struct Detach {
     enum { Code = Type::Detach };
     MxUInt		id;
@@ -361,7 +366,10 @@ namespace MxMDStream {
       CorrectTrade,
       CancelTrade,
       RefDataLoaded,
-      Login>::T Largest;
+      Login,
+      ResendReq,
+      Detach,
+      EndOfSnapshot>::T Largest;
 
   struct Buf {
     char	data[sizeof(Largest)];
@@ -395,24 +403,32 @@ namespace MxMDStream {
     ZuInline const Frame *frame() const { return &m_frame; }
     ZuInline Frame *frame() { return &m_frame; }
 
+    ZuInline const Buf *buf() const { return &m_buf; }
+    ZuInline Buf *buf() { return &m_buf; }
+
+    ZuInline unsigned length() { return sizeof(Frame) + m_frame.len; }
+    
   private:
     Frame	m_frame;
     Buf		m_buf;
   };
-  
+
   struct Msg_HeapID {
     ZuInline static const char *id() { return "MxMDStream.Msg"; }
   };
-  
+
   template <typename Heap>
   struct Msg_ : public Heap, public ZuPOD<MsgData> {
-    template <typename ...Args> ZuInline Msg_(Args &&... args) {
+    template <typename ...Args> ZuInline Msg_(Args &&... args)
+      //MsgData(ZuFwd<Args>(args)...) { }
+    {
       new (this->ptr()) MsgData(ZuFwd<Args>(args)...);
     }
+
     ZuInline const Frame *frame() const { return this->data().frame(); }
     ZuInline Frame *frame() { return this->data().frame(); }
-  };
-  
+ };
+
   typedef Msg_<ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> > Msg;
   typedef ZuRef<Msg> MsgRef;
   
@@ -422,8 +438,8 @@ namespace MxMDStream {
     if (ZuUnlikely(!frame)) return 0;
     if (frame->len > sizeof(Buf)) { app.shift2(); return 0; }
     MsgRef msg = new Msg();
-    memcpy(msg->frame(), frame, sizeof(Frame));
-    memcpy(msg->frame()->ptr(), frame->ptr(), frame->len);
+    memcpy(msg->data().frame(), frame, sizeof(Frame));
+    memcpy(msg->data().frame()->ptr(), frame->ptr(), frame->len);
     app.shift2();
     return msg;
   }
@@ -498,7 +514,6 @@ namespace MxMDStream {
   FnDeclare(correctTrade, CorrectTrade)
   FnDeclare(cancelTrade, CancelTrade)
   FnDeclare(refDataLoaded, RefDataLoaded)
-  FnDeclare(login, Login)
   FnDeclare(detach, Detach)
   FnDeclare(endOfSnapshot, EndOfSnapshot)
 

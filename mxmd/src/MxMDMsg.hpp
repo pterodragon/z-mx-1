@@ -18,78 +18,94 @@
 
 #include <MxBase.hpp>
 #include <MxMD.hpp>
+#include <MxQueue.hpp>
 
-#include <MxMDPubSub.hpp>
 #include <MxMDStream.hpp>
 
 namespace MxMDPubSub {
-  // == Message Buffers ==
+  using namespace MxMDStream;
 
-  template <class Derived, int Size_> class Msg : public ZmPolymorph {
-    Msg(const Msg &);
-    Msg &operator =(const Msg &); // prevent mis-use
+  // == Message Buffers ==
+  template <class Derived>
+  class Msg {
+    Msg(const Msg &) = delete;
+    Msg &operator =(const Msg &) = delete; // prevent mis-use
 
   public:
-    enum { Size = Size_ };
-
     typedef ZmFn<Derived *, ZiIOContext &> Fn;
+    typedef MxMDStream::Frame Frame;
 
-    inline Msg() : m_length(0) { }
+    inline Msg() :
+      m_msg(new MxQMsg(MxFlags{}, ZmTime{}, new ZuPOD<MxMDStream::MsgData>)) { }
 
     inline const Fn &fn() const { return m_fn; }
     inline Fn &fn() { return m_fn; }
 
-    inline unsigned length() const { return m_length; }
-    inline void length(unsigned i) { m_length = i; }
-    inline const char *data() const { return &m_buf[0]; }
-    inline char *data() { return &m_buf[0]; }
+      template <typename T> inline void *out() {
+	MsgData &data = m_msg->payload->as<MsgData>();
+	Frame *frame = data.frame();
+	//Frame *frame = this->frame();
 
-    inline const void *ptr() const { return (const void *)&m_buf[0]; }
-    inline void *ptr() { return (void *)&m_buf[0]; }
+	frame->len = sizeof(T);
+	frame->type = T::Code;
+
+        //return (void *)this->buf();
+	return (void *)data.buf();
+      }
+
+      void resendReq(uint64_t seqNo, uint32_t count) {
+	auto rr = new (this->template out<MxMDStream::ResendReq>())
+	  MxMDStream::ResendReq{seqNo, count};
+      }
+
+    inline const char *data() const {
+      //return (const char *)(this->frame());
+      return (const char *)(m_msg->payload->as<MsgData>().frame());
+    }
+    inline char *data() {
+      //return (char *)(this->frame());
+      return (char *)(m_msg->payload->as<MsgData>().frame());
+    }
+
+    inline const void *ptr() const {
+      //return (const void *)(this->frame());
+      return (const void *)(m_msg->payload->as<MsgData>().frame());
+    }
+    inline void *ptr() {
+      //return (void *)(this->frame());
+      return (void *)(m_msg->payload->as<MsgData>().frame());
+    }
+
+    inline unsigned length() {
+      return m_msg->payload->as<MsgData>().length();
+    }
 
     template <typename T> inline const T &as() const {
-      const T *ZuMayAlias(ptr) = (const T *)&m_buf[0];
+      //const T *ZuMayAlias(ptr) = (const T *)(this->frame());
+      const T *ZuMayAlias(ptr) = (const T *)(m_msg->payload->as<MsgData>().frame());
       return *ptr;
     }
     template <typename T> inline T &as() {
-      T *ZuMayAlias(ptr) = (T *)&m_buf[0];
+      //T *ZuMayAlias(ptr) = (T *)(this->frame());
+      T *ZuMayAlias(ptr) = (T *)(m_msg->payload->as<MsgData>().frame());
       return *ptr;
     }
 
   protected:
-    Fn		m_fn;
-    unsigned	m_length;
-    char	m_buf[Size];
+    Fn			m_fn;
+    ZmRef<MxQMsg>	m_msg;
   };
 
   namespace UDP {
-    template <class Derived, unsigned Size = 1472>
-    class Msg : public MxMDPubSub::Msg<Derived, Size> {
+    using namespace MxMDStream;
+
+    template <class Derived>
+    class Msg : public MxMDPubSub::Msg<Derived>, public ZmPolymorph {
     public:
-      typedef typename MxMDPubSub::Msg<Derived, Size> Base;
-      typedef typename Base::Fn Fn;
+      typedef MxMDPubSub::Msg<Derived> Base;
       typedef MxMDStream::Frame Frame;
 
       inline Msg() { }
-
-      template <typename T> inline void *out(uint64_t seqNo) {
-	unsigned length = sizeof(UDPPktHdr) + sizeof(Frame) + sizeof(T);
-        if (length >= Size) return nullptr;
-        this->length(length);
-        new (this->ptr()) UDPPktHdr{{}, seqNo, 1};
-	Frame *frame = (Frame *)(this->data() + sizeof(UDPPktHdr));
-	frame->len = sizeof(T);
-	frame->type = T::Code;
-        return (void *)&frame[1];
-      }
-
-      void resendReq(ZuString session, uint64_t seqNo, uint16_t count) {
-	this->length(sizeof(UDPResendReq));
-	UDPResendReq &req = this->template as<UDPResendReq>();
-	req.session = session;
-	req.seqNo = seqNo;
-	req.count = count;
-      }
 
     private:
       void send_(ZiIOContext &io) {
@@ -108,133 +124,23 @@ namespace MxMDPubSub {
 
     private:
       void rcvd_(ZiIOContext &io) {
-	this->length(io.offset + io.length);
+	      
+	std::cout << "Msg rcvd_ -----------------" << std::endl;
+	      
+	      
+	//this->length(io.offset + io.length);
 	this->m_fn(static_cast<Derived *>(this), io);
       }
 
     public:
       void recv(ZiIOContext &io) {
 	io.init(ZiIOFn::Member<&Msg::rcvd_>::fn(ZmMkRef(this)),
-	    this->data(), Size, 0);
+	    this->data(), sizeof(Frame) + sizeof(MxMDStream::Buf), 0);
       }
 
-      bool scan() {
-	UDPPktHdr &pktHdr = this->template as<UDPPktHdr>();
-	char *end = this->data() + Size;
-	char *ptr = (char *)pktHdr.ptr();
-	unsigned n = pktHdr.count;
-	for (unsigned i = 0; i < n; i++) {
-	  unsigned length = ((Frame *)ptr)->len;
-	  ptr += sizeof(Frame) + length;
-	  if (ptr > end) { n = i; ptr = end; break; }
-	  if (ptr == end) { n = i + 1; break; }
-	}
-	this->length(ptr - this->data());
-	if (pktHdr.count > n) {
-	  pktHdr.count = n;
-	  return true;
-	}
-	return false;
-      }
+      bool scan() { /* FIXME - sanity check frame() and buf() */ return true; }
 
-      inline const StringL<10> &session() const {
-	return this->template as<UDPPktHdr>().session;
-      }
-
-      inline uint64_t seqNo() const {
-	return this->template as<UDPPktHdr>().seqNo;
-      }
-      inline uint16_t count() const {
-	return this->template as<UDPPktHdr>().count;
-      }
-
-      inline unsigned clipHead(unsigned n) {
-	UDPPktHdr &pktHdr = this->template as<UDPPktHdr>();
-	unsigned count = pktHdr.count;
-	if (ZuUnlikely(!n)) return count;
-	if (ZuUnlikely(count < n)) {
-	  this->length(0);
-	  return pktHdr.count = 0;
-	}
-	char *end = this->data() + this->length();
-	char *ptr = (char *)pktHdr.ptr();
-	for (unsigned i = 0; i < n; i++) {
-	  unsigned length = ((Frame *)ptr)->len;
-	  ptr += sizeof(Frame) + length;
-	  if (ZuUnlikely(ptr > end)) {
-	    this->length(0);
-	    return pktHdr.count = 0;
-	  }
-	}
-	if (end > ptr) memmove(pktHdr.ptr(), ptr, end - ptr);
-	this->length(sizeof(UDPPktHdr) + end - ptr);
-	pktHdr.seqNo += n;
-	return pktHdr.count -= n;
-      }
-      inline unsigned clipTail(unsigned n) {
-	UDPPktHdr &pktHdr = this->template as<UDPPktHdr>();
-	unsigned count = pktHdr.count;
-	if (ZuUnlikely(!n)) return count;
-	if (ZuUnlikely(count < n)) {
-	  this->length(0);
-	  return pktHdr.count = 0;
-	}
-	char *end = this->data() + this->length();
-	char *ptr = (char *)pktHdr.ptr();
-	n = count - n;
-	for (unsigned i = 0; i < n; i++) {
-	  unsigned length = ((Frame *)ptr)->len;
-	  ptr += sizeof(Frame) + length;
-	  if (ZuUnlikely(ptr > end)) {
-	    this->length(0);
-	    return pktHdr.count = 0;
-	  }
-	}
-	this->length(ptr - this->data());
-	return pktHdr.count = n;
-      }
-
-      inline void write(const Msg &msg) {
-	UDPPktHdr &pktHdr = this->template as<UDPPktHdr>();
-	uint64_t seqNo = pktHdr.seqNo;
-	unsigned count = pktHdr.count;
-	char *ptr = (char *)pktHdr.ptr();
-
-	const UDPPktHdr &pktHdr_ = msg.template as<UDPPktHdr>();
-	uint64_t seqNo_ = pktHdr_.seqNo;
-	unsigned count_ = pktHdr_.count;
-	char *ptr_ = (char *)pktHdr_.ptr();
-
-	if (seqNo_ < seqNo) return;
-	if ((seqNo_ - seqNo) + count_ > count) return;
-	memcpy(ptr + (seqNo_ - seqNo), ptr_, count_);
-      }
-
-      class Iterator;
-    friend class Iterator;
-      class Iterator {
-      public:
-        inline Iterator(const Msg &msg) :
-	    m_msg(msg), m_ptr(m_msg.data() + sizeof(UDPPktHdr)) { }
-
-	inline Iterator(const Iterator &i) :
-	  m_msg(i.m_msg), m_ptr(i.m_ptr) { }
-	inline ~Iterator() { }
-
-	inline const Frame *iterate() {
-	  const char *end = m_msg.data() + m_msg.length();
-	  if (m_ptr >= end) return 0;
-	  const Frame *frame = (const Frame *)m_ptr;
-	  m_ptr += sizeof(Frame) + frame->len;
-	  return frame;
-	}
-
-      private:
-        const Msg	&m_msg;
-	const char	*m_ptr;
-      };
-
-    public:
+   public:
       inline const ZiSockAddr &addr() const { return m_addr; }
       inline ZiSockAddr &addr() { return m_addr; }
 
@@ -245,10 +151,10 @@ namespace MxMDPubSub {
     struct OutMsg_HeapID {
       inline static const char *id() { return "MxMDPubSub.UDP.OutMsg"; }
     };
-    template <class Derived, class Heap>
-    struct OutMsg_ : public Msg<Derived>, public Heap { };
-    typedef ZmHeap<OutMsg_HeapID, sizeof(OutMsg_<ZuNull, ZuNull>)> OutMsg_Heap;
-    struct OutMsg : public OutMsg_<OutMsg, OutMsg_Heap> { };
+    template <typename Heap>
+    struct OutMsg_ : public Heap, public Msg<OutMsg_<Heap>> { };    
+    typedef ZmHeap<OutMsg_HeapID, sizeof(OutMsg_<ZuNull>)> OutMsg_Heap;    
+    struct OutMsg : public OutMsg_<OutMsg_Heap> { };
 
     struct InMsg : public Msg<InMsg> {
     public:
@@ -258,50 +164,17 @@ namespace MxMDPubSub {
     private:
       void	*m_owner = 0;
     };
-
-    struct InQueueFn {
-      typedef uint64_t Key;
-      inline InQueueFn(const InMsg &msg) : m_msg(const_cast<InMsg &>(msg)) { }
-
-      inline Key key() const { return m_msg.seqNo(); }
-      inline unsigned length() const { return m_msg.count(); }
-      inline unsigned clipHead(unsigned n) { return m_msg.clipHead(n); }
-      inline unsigned clipTail(unsigned n) { return m_msg.clipTail(n); }
-      inline void write(const InQueueFn &msg) { m_msg.write(msg.m_msg); }
-
-    private:
-      InMsg	&m_msg;
-    };
-    struct InQueue_HeapID {
-      inline static const char *id() { return "MxMDPubSub.UDP.InQueue"; }
-    };
-    typedef ZmPQueue<InMsg,
-	      ZmPQueueFn<InQueueFn,
-		ZmPQueueNodeIsItem<true,
-		  ZmPQueueObject<ZmPolymorph,
-		    ZmPQueueLock<ZmNoLock,
-		      ZmPQueueHeapID<InQueue_HeapID> > > > > > InQueue;
-    typedef InQueue::Node InQMsg;
-    typedef InQueue::Gap Gap;
   };
 
   namespace TCP {
-    template <class Derived, unsigned Size = (1<<16)>
-    class Msg : public MxMDPubSub::Msg<Derived, Size> {
+    template <class Derived>
+    class Msg : public MxMDPubSub::Msg<Derived>, public ZmPolymorph {
     public:
-      typedef typename MxMDPubSub::Msg<Derived, Size> Base;
-      typedef typename Base::Fn Fn;
+      typedef typename MxMDPubSub::Msg<Derived> Base;
+      //typedef typename Base::Fn Fn;
       typedef MxMDStream::Frame Frame;
 
       inline Msg() { }
-
-      template <typename T> inline void *out() {
-	unsigned length = sizeof(Frame) + sizeof(T);
-	if (length >= Size) return nullptr;
-	this->length(length);
-	Frame *frame = new (this->ptr()) Frame{sizeof(T), T::Code};
-	return (void *)&frame[1];
-      }
 
     private:
       void send_(ZiIOContext &io) {
@@ -319,40 +192,46 @@ namespace MxMDPubSub {
 
     private:
       void rcvd_(ZiIOContext &io) {
-	this->length(io.offset += io.length);
-	while (this->length() >= sizeof(Frame)) {
+	//this->length(io.offset += io.length);
+	auto len = io.offset += io.length;
+
+	//while (this->length() >= sizeof(Frame)) {
+	while (len >= sizeof(Frame)) {
 	  Frame &frame = this->template as<Frame>();
 	  unsigned msgLen = sizeof(Frame) + frame.len;
-	  if (ZuUnlikely(msgLen > Size)) {
+	  if (ZuUnlikely(msgLen > (sizeof(Frame) + sizeof(MxMDStream::Buf)))) {
 	    ZeLOG(Error, "received corrupt TCP message");
 	    io.disconnect();
 	    return;
 	  }
-	  if (ZuLikely(this->length() < msgLen)) return;
+	  //if (ZuLikely(this->length() < msgLen)) return;
+	  if (ZuLikely(len < msgLen)) return;
 	  this->m_fn(static_cast<Derived *>(this), io);
 	  if (ZuUnlikely(io.completed())) return;
-	  if (io.offset = this->length() - msgLen)
+	  //if (io.offset = this->length() - msgLen)
+	  if (io.offset = len - msgLen)
 	    memmove(this->data(), this->data() + msgLen, io.offset);
-	  this->length(io.offset);
+	  //this->length(io.offset);
+	  len = io.offset;
 	}
       }
 
     public:
       void recv(ZiIOContext &io) {
 	io.init(ZiIOFn::Member<&Msg::rcvd_>::fn(ZmMkRef(this)),
-	    this->data(), Size, 0);
+	    this->data(), sizeof(Frame) + sizeof(MxMDStream::Buf), 0);
       }
     };
 
     struct OutMsg_HeapID {
       inline static const char *id() { return "MxMDPubSub.TCP.OutMsg"; }
     };
-    template <class Derived, class Heap>
-    struct OutMsg_ : public Msg<Derived>, public Heap { };
-    typedef ZmHeap<OutMsg_HeapID, sizeof(OutMsg_<ZuNull, ZuNull>)> OutMsg_Heap;
-    struct OutMsg : public OutMsg_<OutMsg, OutMsg_Heap> { };
+    template <class Derived>
+    struct OutMsg_ : public Msg<Derived> { };
+    //typedef ZmHeap<OutMsg_HeapID, sizeof(OutMsg_<ZuNull, ZuNull>)> OutMsg_Heap;
+    struct OutMsg : public OutMsg_<OutMsg> { };
 
-    struct OutHBMsg : public Msg<OutHBMsg, sizeof(TCPHdr)> { };
+    //struct OutHBMsg : public Msg<OutHBMsg, sizeof(TCPHdr)> { };
 
     struct InMsg : public Msg<InMsg> { };
   };

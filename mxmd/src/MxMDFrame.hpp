@@ -36,6 +36,7 @@
 
 // used for capture/replay of messages
 struct MxMDFrame {
+  uint64_t  	seqNo = 0;
   uint16_t	len = 0;	// exclusive of MxMDFrame
   uint8_t	type = 0;
   uint8_t	pad_0 = 0;

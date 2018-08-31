@@ -33,7 +33,6 @@
 #include <MxMD.hpp>
 #include <MxMDCmd.hpp>
 #include <MxMDMsg.hpp>
-#include <MxMDPubSub.hpp>
 #include <MxMDStream.hpp>
 
 #include <ZmObject.hpp>
@@ -648,6 +647,8 @@ friend class Recorder;
 
   private:
     void recv(Rx *rx) {
+      m_core->raise(ZeEVENT(Info, "Recorder recv"));
+
       rx->startQueuing();
       using namespace MxMDStream;
 
@@ -698,7 +699,7 @@ friend class Recorder;
 	      })));
 	  goto end;
 	}
-	memcpy(msg->frame(), frame, sizeof(Frame) + frame->len);
+	memcpy(msg->data().frame(), frame, sizeof(Frame) + frame->len);
 	ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
 	qmsg->load(rx->rxQueue().id, ++m_msgSeqNo);
 	rx->received(qmsg);
@@ -743,7 +744,8 @@ friend class Recorder;
       ZeError e;
       Guard guard(m_ioLock);
 
-      if (ZuUnlikely(write(qmsg->template as<Msg>().frame(), &e)) != Zi::OK) {
+      //if (ZuUnlikely(write(qmsg->template as<Msg>().frame(), &e)) != Zi::OK) {
+      if (ZuUnlikely(write(qmsg->template as<ZuAnyPOD>().template as<Msg>().frame(), &e)) != Zi::OK) {
 	ZiFile::Path path = m_path;
 	m_file.close();
 	guard.unlock();
@@ -815,6 +817,8 @@ friend class Publisher;
         ZmRef<OutMsg> msg = new OutMsg();
         memcpy(msg->out<MsgType>(), frame, sizeof(Frame) + frame->len);
         msg->send(this);
+	
+	m_publisher->m_core->raise(ZeEVENT(Info, "Publisher TCP send_"));
       }
 
       void process(MxMDPubSub::TCP::InMsg *, ZiIOContext &);
@@ -829,7 +833,7 @@ friend class Publisher;
   friend class UDP;
     class UDP : public ZiConnection {
     public:
-      UDP(Publisher *publisher, const ZiCxnInfo &ci);
+      UDP(Publisher *publisher, const ZiCxnInfo &ci, const ZiSockAddr &dest);
 
       ZuInline Publisher *publisher() const { return m_publisher; }
 
@@ -843,15 +847,17 @@ friend class Publisher;
       {
         using namespace MxMDPubSub::UDP;
         ZmRef<OutMsg> msg = new OutMsg();
-        memcpy(msg->out<MsgType>(++m_seqNo), frame, sizeof(Frame) + frame->len);
+        memcpy(msg->out<MsgType>(), frame, sizeof(Frame) + frame->len);
         msg->send(this, m_remoteAddr);
+	
+	m_publisher->m_core->raise(ZeEVENT(Info, "Publisher UDP send_"));
       }
 
       void disconnect();
 
     private:
       Publisher		*m_publisher;
-      uint64_t		m_seqNo = 0;
+      //uint64_t		m_seqNo = 0;
       ZiSockAddr	m_remoteAddr;
   };
 
@@ -887,6 +893,11 @@ friend class Publisher;
 
       // Tx
       bool send_(MxQMsg *msg, bool more) {
+	      
+	      
+        std::cout << "Publisher link send_" << std::endl;
+	      
+	      
         static_cast<Publisher *>(engine())->sendMsg(msg);
 	sent_(msg);
         return true;
@@ -1012,16 +1023,22 @@ friend class Publisher;
 
   private:
     void recv(Tx *tx) {
+      m_core->raise(ZeEVENT(Info, "Publisher recv"));
+
       using namespace MxMDStream;
 
       Broadcast &broadcast = m_core->broadcast();
       if (broadcast.attach() != Zi::OK) {
+        m_core->raise(ZeEVENT(Info, "Publisher recv 3"));
+
 	m_attachSem.post();
 	Guard guard(m_threadLock);
 	m_recvRunning = 0;
 	return;
       }
 
+      m_core->raise(ZeEVENT(Info, "Publisher recv 2"));
+      
       m_attachSem.post();
       m_link->txRun([](Tx *tx) {
 	static_cast<Publisher *>(
@@ -1030,6 +1047,8 @@ friend class Publisher;
     }
 
     void recvMsg(Tx *tx) {
+      m_core->raise(ZeEVENT(Info, "Publisher recvMsg"));
+
       using namespace MxMDStream;
       const Frame *frame;
       Broadcast &broadcast = m_core->broadcast();
@@ -1061,10 +1080,23 @@ friend class Publisher;
 	      })));
 	  goto end;
 	}
+
+	std::cout << "---- " << (int)(frame->type) << std::endl;
+
+	auto seqNo = ++m_msgSeqNo;
 	memcpy(msg->frame(), frame, sizeof(Frame) + frame->len);
+	msg->frame()->seqNo = seqNo;
+
+	//std::cout << "---- " << (int)(msg->frame()->type) << std::endl;
+
 	ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
-	qmsg->load(tx->txQueue().id, ++m_msgSeqNo);
+
+	//std::cout << "==== " << (int)(qmsg->payload->template as<MsgData>().frame()->type) << std::endl;
+
+	qmsg->load(tx->txQueue().id, seqNo);
 	tx->send(qmsg);
+	
+	m_core->raise(ZeEVENT(Info, "Publisher tx send"));
       }
       broadcast.shift2();
 
@@ -1099,8 +1131,11 @@ friend class Publisher;
 
   public:
     void sendMsg(MxQMsg *qmsg) {
+      using namespace MxMDStream;
+
       Guard guard(m_ioLock);
-      m_udp->send(qmsg->template as<Msg>().frame());
+      //m_udp->send(qmsg->template as<Msg>().frame());
+      m_udp->send(qmsg->payload->template as<MsgData>().frame());
     }
 
     Frame *push(unsigned size) {
@@ -1119,6 +1154,7 @@ friend class Publisher;
     }
 
   private:
+    //uint64_t		m_seqNo = 0;
     MxSeqNo			m_msgSeqNo = 0;
     MxMDCore			*m_core;
     ZmSemaphore			m_attachSem;
@@ -1133,6 +1169,7 @@ friend class Publisher;
     ZmRef<TCP>			  m_tcp;
     ZmRef<UDP>			  m_udp;
     unsigned			m_nAccepts = 10;
+    ZiSockAddr			m_dest;
   };
 
   class Subscriber;
@@ -1173,7 +1210,42 @@ friend class Subscriber;
       void disconnected() {}
 
       void recv(ZiIOContext &);
-      void process(MxMDPubSub::UDP::InMsg *, ZiIOContext &);
+      
+      
+      void process(MxMDPubSub::UDP::InMsg *inMsg, ZiIOContext &io)
+      {
+        m_subscriber->m_core->raise(ZeEVENT(Info, "Subscriber UDP process"));
+
+        using namespace MxMDPubSub;
+        using namespace MxMDPubSub::UDP;
+        using namespace MxMDStream;
+
+        if (ZuUnlikely(inMsg->scan())) {
+          ZtHexDump msg_{"truncated UDP message", inMsg->data(), inMsg->length()};
+          m_subscriber->m_core->raise(ZeEVENT(Warning,
+            ([msg_ = ZuMv(msg_)](const ZeEvent &, ZmStream &s) {
+	        s << "UDP " << msg_; })));
+        }
+
+        Frame &frame = inMsg->template as<Frame>();
+
+        MsgRef msg = new Msg();
+
+        //Frame *frame = &hdr.as<Frame>();
+
+        memcpy(msg->frame(), &frame, sizeof(Frame) + frame.len);
+
+        ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
+        qmsg->load(m_subscriber->m_rx->rxQueue().id, frame.seqNo);
+
+        m_subscriber->m_seqNo = frame.seqNo;
+	
+	std::cout << "++++++ " << m_subscriber->m_seqNo << std::endl;
+
+        m_subscriber->m_rx->received(qmsg);
+
+        recv(io);
+      }
 
     private:
       Subscriber		*m_subscriber;
@@ -1290,8 +1362,8 @@ friend class Subscriber;
     ZiConnection *udpConnected(const ZiCxnInfo &ci);
     void udpConnectFailed(bool transient);
     void udpConnected2(UDP *, ZiIOContext &);
-    void udpReceived(MxMDPubSub::UDP::InQMsg *msg);
-    void udpReceived_(MxMDPubSub::UDP::InQMsg *msg);
+    void udpReceived(MxQMsg *msg);
+    void udpReceived_(MxQMsg *msg);
 
     void disconnect();
 

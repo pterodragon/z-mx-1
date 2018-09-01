@@ -18,7 +18,7 @@ case $build_os in
 		AC_MSG_RESULT([-lpthread -lrt])
 		MXMD_LDFLAGS="-rdynamic"
 		MXMD_SO_LDFLAGS="-release $MXMD_VERSION"
-		MXMD_XLIBS="-ldl -lpthread -lrt"
+		MXMD_XLIBS="-lhwloc -ldl -lpthread -lrt"
 		;;
 	mingw*)
 		AC_MSG_RESULT([mingw])
@@ -42,7 +42,7 @@ AC_SUBST(Z_CXXFLAGS)
 AC_SUBST(Z_LDFLAGS)
 AC_SUBST(Z_LIBS)
 
-AX_PATH_JNI
+AX_PATH_JNI(, [AC_MSG_ERROR([JNI required])])
 
 AC_SUBST(JNI_CPPFLAGS)
 

@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// MxMD JNI
+// MxBase JNI
 
 #ifndef MxSecKeyJNI_HPP
 #define MxSecKeyJNI_HPP
@@ -26,8 +26,8 @@
 #pragma once
 #endif
 
-#ifndef MxMDLib_HPP
-#include <MxMDLib.hpp>
+#ifndef MxBaseLib_HPP
+#include <MxBaseLib.hpp>
 #endif
 
 #include <MxBase.hpp>

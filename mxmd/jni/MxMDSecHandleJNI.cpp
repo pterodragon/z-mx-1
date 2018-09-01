@@ -19,6 +19,8 @@
 
 // MxMD JNI
 
+#include <new>
+
 #include <jni.h>
 
 #include <ZJNI.hpp>
@@ -35,47 +37,44 @@ namespace MxMDSecHandleJNI {
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
-  MxMDSecurity *ptr_(JNIEnv *env, jobject obj) {
-    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
-    if (ZuUnlikely(!ptr)) return nullptr;
-    return (MxMDSecurity *)(void *)ptr;
-  }
-
   // invoke fn
   ZJNI::JavaMethod securityFn[] = {
     { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;)V" }
   };
 }
 
-void MxMDSecHandleJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
+void MxMDSecHandleJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-  if (ptr) ((MxMDSecurity *)(void *)(uintptr_t)ptr)->ref();
 }
 
-void MxMDSecHandleJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
+void MxMDSecHandleJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
-  if (ptr) ((MxMDSecurity *)(void *)(uintptr_t)ptr)->deref();
+  MxMDSecHandle *ZuMayAlias(ptr) = (MxMDSecHandle *)&ptr_;
+  ptr->~MxMDSecHandle();
 }
 
 void MxMDSecHandleJNI::invoke(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDSecurityFn) -> void
-  MxMDSecurity *sec = ptr_(env, obj);
-  if (ZuUnlikely(!sec || !fn)) return;
-  MxMDSecHandle handle(sec);
-  handle.invoke([fn = ZJNI::globalRef(env, fn)](
-	MxMDShard *, MxMDSecurity *sec) {
+  if (!fn) return;
+  uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
+  MxMDSecHandle *ZuMayAlias(ptr) = (MxMDSecHandle *)&ptr_;
+  ptr->invoke(
+      [fn = ZJNI::globalRef(env, fn)](MxMDShard *, MxMDSecurity *sec) {
     if (JNIEnv *env = ZJNI::env())
       env->CallVoidMethod(fn, securityFn[0].mid,
 	  MxMDSecurityJNI::ctor(env, sec));
   });
 }
 
-jobject MxMDSecHandleJNI::ctor(JNIEnv *env, void *ptr)
+jobject MxMDSecHandleJNI::ctor(JNIEnv *env, MxMDSecHandle handle)
 {
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)(uintptr_t)ptr);
+  uintptr_t ptr_;
+  MxMDSecHandle *ZuMayAlias(ptr) = (MxMDSecHandle *)&ptr_;
+  new (ptr) MxMDSecHandle(ZuMv(handle));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
 }
 
 int MxMDSecHandleJNI::bind(JNIEnv *env)

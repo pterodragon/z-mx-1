@@ -19,6 +19,8 @@
 
 // MxMD JNI
 
+#include <new>
+
 #include <jni.h>
 
 #include <ZJNI.hpp>
@@ -254,9 +256,8 @@ jobject MxMDLibJNI::security(JNIEnv *env, jobject obj, jobject key_)
 {
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
-  if (ZmRef<MxMDSecurity> sec =
-      MxMDLib_JNI::security_(md, MxSecKeyJNI::j2c(env, key_)))
-    return MxMDSecHandleJNI::ctor(env, sec); // FIXME - optimize ref/deref
+  if (MxMDSecHandle sec = md->security(MxSecKeyJNI::j2c(env, key_)))
+    return MxMDSecHandleJNI::ctor(env, ZuMv(sec));
   return 0;
 }
 
@@ -291,9 +292,8 @@ jobject MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_)
 {
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
-  if (ZmRef<MxMDOrderBook> ob =
-      MxMDLib_JNI::orderBook_(md, MxSecKeyJNI::j2c(env, key_)))
-    return MxMDOBHandleJNI::ctor(env, ob); // FIXME - optimize ref/deref
+  if (MxMDOBHandle ob = md->orderBook(MxSecKeyJNI::j2c(env, key_)))
+    return MxMDOBHandleJNI::ctor(env, ZuMv(ob));
   return 0;
 }
 
@@ -330,7 +330,7 @@ jobject MxMDLibJNI::feed(JNIEnv *env, jobject obj, jstring id)
   MxMDLib *md = md_;
   if (ZuUnlikely(!md || !id)) return 0;
   if (ZmRef<MxMDFeed> feed = md->feed(ZJNI::j2s_ZuStringN<8>(env, id)))
-    return MxMDFeedJNI::ctor(env, feed); // FIXME - optimize ref/deref
+    return MxMDFeedJNI::ctor(env, ZuMv(feed));
   return 0;
 }
 
@@ -354,7 +354,7 @@ jobject MxMDLibJNI::venue(JNIEnv *env, jobject obj, jstring id)
   MxMDLib *md = md_;
   if (ZuUnlikely(!md || !id)) return 0;
   if (ZmRef<MxMDVenue> venue = md->venue(ZJNI::j2s_ZuStringN<8>(env, id)))
-    return MxMDVenueJNI::ctor(env, venue); // FIXME - optimize ref/deref
+    return MxMDVenueJNI::ctor(env, ZuMv(venue));
   return 0;
 }
 

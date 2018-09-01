@@ -19,7 +19,7 @@
 
 // MxMD JNI
 
-#include <iostream>
+#include <new>
 
 #include <jni.h>
 
@@ -46,15 +46,28 @@ namespace MxMDSecurityJNI {
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
   MxMDSecurity *ptr_(JNIEnv *env, jobject obj) {
-    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
-    if (ZuUnlikely(!ptr)) return nullptr;
-    return (MxMDSecurity *)(void *)ptr;
+    uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr_)) return nullptr;
+    ZmRef<MxMDSecurity> *ZuMayAlias(ptr) = (ZmRef<MxMDSecurity> *)&ptr_;
+    return ptr->ptr();
   }
 
   // query callbacks
   ZJNI::JavaMethod allOrderBooksFn[] = {
     { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook;)J" }
   };
+}
+
+void MxMDSecurityJNI::ctor_(JNIEnv *env, jobject obj, jlong)
+{
+  // (long) -> void
+}
+
+void MxMDSecurityJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
+{
+  // (long) -> void
+  ZmRef<MxMDSecurity> *ZuMayAlias(ptr) = (ZmRef<MxMDSecurity> *)&ptr_;
+  ptr->~ZmRef<MxMDSecurity>();
 }
 
 jobject MxMDSecurityJNI::md(JNIEnv *env, jobject obj)
@@ -180,9 +193,12 @@ jlong MxMDSecurityJNI::allOrderBooks(JNIEnv *env, jobject obj, jobject fn)
   });
 }
 
-jobject MxMDSecurityJNI::ctor(JNIEnv *env, void *ptr)
+jobject MxMDSecurityJNI::ctor(JNIEnv *env, ZmRef<MxMDSecurity> sec)
 {
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)(uintptr_t)ptr);
+  uintptr_t ptr_;
+  ZmRef<MxMDSecurity> *ZuMayAlias(ptr) = (ZmRef<MxMDSecurity> *)&ptr_;
+  new (ptr) ZmRef<MxMDSecurity>(ZuMv(sec));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
 }
 
 int MxMDSecurityJNI::bind(JNIEnv *env)

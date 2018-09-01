@@ -19,6 +19,8 @@
 
 // MxMD JNI
 
+#include <new>
+
 #include <jni.h>
 
 #include <ZJNI.hpp>
@@ -35,47 +37,44 @@ namespace MxMDOBHandleJNI {
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
-  MxMDOrderBook *ptr_(JNIEnv *env, jobject obj) {
-    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
-    if (ZuUnlikely(!ptr)) return nullptr;
-    return (MxMDOrderBook *)(void *)ptr;
-  }
-
   // invoke fn
   ZJNI::JavaMethod orderBookFn[] = {
     { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook;)V" }
   };
 }
 
-void MxMDOBHandleJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
+void MxMDOBHandleJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-  if (ptr) ((MxMDOrderBook *)(void *)(uintptr_t)ptr)->ref();
 }
 
-void MxMDOBHandleJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
+void MxMDOBHandleJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
-  if (ptr) ((MxMDOrderBook *)(void *)(uintptr_t)ptr)->deref();
+  MxMDOBHandle *ZuMayAlias(ptr) = (MxMDOBHandle *)&ptr_;
+  ptr->~MxMDOBHandle();
 }
 
 void MxMDOBHandleJNI::invoke(JNIEnv *env, jobject obj, jobject fn)
 {
   // (MxMDOrderBookFn) -> void
-  MxMDOrderBook *ob = ptr_(env, obj);
-  if (ZuUnlikely(!ob || !fn)) return;
-  MxMDOBHandle handle(ob);
-  handle.invoke([fn = ZJNI::globalRef(env, fn)](
-	MxMDShard *, MxMDOrderBook *ob) {
+  if (!fn) return;
+  uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
+  MxMDOBHandle *ZuMayAlias(ptr) = (MxMDOBHandle *)&ptr_;
+  ptr->invoke(
+      [fn = ZJNI::globalRef(env, fn)](MxMDShard *, MxMDOrderBook *ob) {
     if (JNIEnv *env = ZJNI::env())
       env->CallVoidMethod(fn, orderBookFn[0].mid,
 	  MxMDOrderBookJNI::ctor(env, ob));
   });
 }
 
-jobject MxMDOBHandleJNI::ctor(JNIEnv *env, void *ptr)
+jobject MxMDOBHandleJNI::ctor(JNIEnv *env, MxMDOBHandle handle)
 {
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)(uintptr_t)ptr);
+  uintptr_t ptr_;
+  MxMDOBHandle *ZuMayAlias(ptr) = (MxMDOBHandle *)&ptr_;
+  new (ptr) MxMDOBHandle(ZuMv(handle));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
 }
 
 int MxMDOBHandleJNI::bind(JNIEnv *env)

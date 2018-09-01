@@ -66,61 +66,95 @@ public:
   typedef typename T::Shard Shard;
 
   ZuInline ZmHandle() { }
-  ZuInline ZmHandle(Shard *shard) : m_shard(shard) { }
-  ZuInline ZmHandle(T *o) : m_shard(o->shard()), m_object(o) { }
+  ZuInline ZmHandle(Shard *shard) :
+    m_ptr((uintptr_t)(void *)shard | (uintptr_t)1) { }
+  ZuInline ZmHandle(T *o) : m_ptr((uintptr_t)(void *)o) { o->ref(); }
+  ZuInline ~ZmHandle() {
+    if (m_ptr && !(m_ptr & 1)) ((T *)(void *)m_ptr)->deref();
+  }
 
-  ZuInline ZmHandle(const ZmHandle &h) :
-    m_shard(h.m_shard), m_object(h.m_object) { }
-  ZuInline ZmHandle(ZmHandle &&h) :
-    m_shard(h.m_shard), m_object(ZuMv(h.m_object)) { }
+  ZuInline Shard *shard() const {
+    if (!m_ptr) return 0;
+    if (m_ptr & 1) return (Shard *)(void *)(m_ptr & ~(uintptr_t)1);
+    return ((T *)(void *)m_ptr)->shard();
+  }
+  ZuInline int shardID() const {
+    Shard *shard = this->shard();
+    return shard ? (int)shard->id() : -1;
+  }
+  ZuInline T *object() const {
+    if (!m_ptr || (m_ptr & 1)) return 0;
+    return (T *)(void *)m_ptr;
+  }
+
+  ZuInline ZmHandle(const ZmHandle &h) : m_ptr(h.m_ptr) {
+    if (m_ptr && !(m_ptr & 1)) ((T *)(void *)m_ptr)->ref();
+  }
+  ZuInline ZmHandle(ZmHandle &&h) {
+    m_ptr = h.m_ptr;
+    if (m_ptr && !(m_ptr & 1)) h.m_ptr = 0;
+  }
   ZuInline ZmHandle &operator =(const ZmHandle &h) {
     if (ZuUnlikely(this == &h)) return *this;
-    m_shard = h.m_shard;
-    m_object = h.m_object;
+    T *o = object();
+    m_ptr = h.m_ptr;
+    if (m_ptr && !(m_ptr & 1)) ((T *)(void *)m_ptr)->ref();
+    if (o) o->deref();
     return *this;
   }
   ZuInline ZmHandle &operator =(ZmHandle &&h) {
-    m_shard = h.m_shard;
-    m_object = ZuMv(h.m_object);
+    if (m_ptr && !(m_ptr & 1)) ((T *)(void *)m_ptr)->deref();
+    m_ptr = h.m_ptr;
+    if (m_ptr && !(m_ptr & 1)) h.m_ptr = 0;
     return *this;
   }
 
-  ZuInline bool operator !() const { return !m_object; }
+  ZuInline bool operator !() const { return !m_ptr || (m_ptr & 1); }
   ZuOpBool
 
-  ZuInline int shardID() const { return m_shard ? (int)m_shard->id() : -1; }
-
-  ZuInline ZmRef<T> &object(Shard *shard) {
-    if (ZuLikely(shard == m_shard)) return m_object;
-    static ZmRef<T> null;
-    return null;
+private:
+  ZuInline void shardObject(Shard *&shard, T *&o) const {
+    if (!m_ptr) {
+      shard = 0;
+      o = 0;
+    } else if (m_ptr & 1) {
+      shard = (Shard *)(void *)(m_ptr & ~(uintptr_t)1);
+      o = 0;
+    } else {
+      o = (T *)(void *)m_ptr;
+      shard = o->shard();
+    }
   }
 
+public:
   template <typename L>
   ZuInline void invokeMv(L l) {
-    m_shard->invoke(
-	[l = ZuMv(l), shard = m_shard, o = ZuMv(m_object)]() mutable {
+    Shard *shard;
+    T *o;
+    shardObject(shard, o);
+    shard->invoke(
+	[l = ZuMv(l), shard,
+	  o = ZuMv(*reinterpret_cast<ZmRef<T> *>(&o))]() mutable {
       l(shard, ZuMv(o));
     });
   }
   template <typename L>
   ZuInline typename ZuNotMutable<L>::T invoke(L l) const {
-    m_shard->invoke(
-	[l = ZuMv(l), shard = m_shard, o = m_object.ptr()]() {
-      l(shard, o);
-    });
+    Shard *shard;
+    T *o;
+    shardObject(shard, o);
+    shard->invoke([l = ZuMv(l), shard, o]() { l(shard, o); });
   }
   template <typename L>
   ZuInline typename ZuIsMutable<L>::T invoke(L l) const {
-    m_shard->invoke(
-	[l = ZuMv(l), shard = m_shard, o = m_object.ptr()]() mutable {
-      l(shard, o);
-    });
+    Shard *shard;
+    T *o;
+    shardObject(shard, o);
+    shard->invoke([l = ZuMv(l), shard, o]() mutable { l(shard, o); });
   }
 
 private:
-  Shard		*m_shard = 0;
-  ZmRef<T>	m_object;
+  uintptr_t	m_ptr;
 };
 
 #endif /* ZmShard_HPP */

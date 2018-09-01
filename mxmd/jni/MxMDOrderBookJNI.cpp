@@ -19,7 +19,7 @@
 
 // MxMD JNI
 
-#include <iostream>
+#include <new>
 
 #include <jni.h>
 
@@ -49,9 +49,10 @@ namespace MxMDOrderBookJNI {
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
   MxMDOrderBook *ptr_(JNIEnv *env, jobject obj) {
-    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
-    if (ZuUnlikely(!ptr)) return nullptr;
-    return (MxMDOrderBook *)(void *)ptr;
+    uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr_)) return nullptr;
+    ZmRef<MxMDOrderBook> *ZuMayAlias(ptr) = (ZmRef<MxMDOrderBook> *)&ptr_;
+    return ptr->ptr();
   }
 
   jclass	sideClass;
@@ -60,6 +61,18 @@ namespace MxMDOrderBookJNI {
   ZJNI::JavaMethod sideMethod[] = {
     { "value", "(I)Lcom/shardmx/mxbase/MxSide;" }
   };
+}
+
+void MxMDOrderBookJNI::ctor_(JNIEnv *env, jobject obj, jlong)
+{
+  // (long) -> void
+}
+
+void MxMDOrderBookJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
+{
+  // (long) -> void
+  ZmRef<MxMDOrderBook> *ZuMayAlias(ptr) = (ZmRef<MxMDOrderBook> *)&ptr_;
+  ptr->~ZmRef<MxMDOrderBook>();
 }
 
 jobject MxMDOrderBookJNI::md(JNIEnv *env, jobject obj)
@@ -241,9 +254,12 @@ jobject MxMDOrderBookJNI::handler(JNIEnv *env, jobject obj)
   return (jobject)(void *)(ob->appData());
 }
 
-jobject MxMDOrderBookJNI::ctor(JNIEnv *env, void *ptr)
+jobject MxMDOrderBookJNI::ctor(JNIEnv *env, ZmRef<MxMDOrderBook> ob)
 {
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)(uintptr_t)ptr);
+  uintptr_t ptr_;
+  ZmRef<MxMDOrderBook> *ZuMayAlias(ptr) = (ZmRef<MxMDOrderBook> *)&ptr_;
+  new (ptr) ZmRef<MxMDOrderBook>(ZuMv(ob));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
 }
 
 int MxMDOrderBookJNI::bind(JNIEnv *env)

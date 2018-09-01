@@ -36,23 +36,23 @@ namespace MxMDFeedJNI {
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
   MxMDFeed *ptr_(JNIEnv *env, jobject obj) {
-    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
-    if (ZuUnlikely(!ptr)) return nullptr;
-    return (MxMDFeed *)(void *)ptr;
+    uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr_)) return nullptr;
+    ZmRef<MxMDFeed> *ZuMayAlias(ptr) = (ZmRef<MxMDFeed> *)&ptr_;
+    return ptr->ptr();
   }
 }
 
-void MxMDFeedJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
+void MxMDFeedJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-  if (ptr) ((MxMDFeed *)(void *)(uintptr_t)ptr)->ref();
 }
 
-void MxMDFeedJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
+void MxMDFeedJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
-  if (ptr) ((MxMDFeed *)(void *)(uintptr_t)ptr)->deref();
-  env->SetLongField(obj, ptrField[0].fid, (jlong)0);
+  ZmRef<MxMDFeed> *ZuMayAlias(ptr) = (ZmRef<MxMDFeed> *)&ptr_;
+  ptr->~ZmRef<MxMDFeed>();
 }
 
 jobject MxMDFeedJNI::md(JNIEnv *env, jobject obj)
@@ -77,9 +77,12 @@ jint MxMDFeedJNI::level(JNIEnv *env, jobject obj)
   return feed->level();
 }
 
-jobject MxMDFeedJNI::ctor(JNIEnv *env, void *ptr)
+jobject MxMDFeedJNI::ctor(JNIEnv *env, ZmRef<MxMDFeed> feed)
 {
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)(uintptr_t)ptr);
+  uintptr_t ptr_;
+  ZmRef<MxMDFeed> *ZuMayAlias(ptr) = (ZmRef<MxMDFeed> *)&ptr_;
+  new (ptr) ZmRef<MxMDFeed>(ZuMv(feed));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
 }
 
 int MxMDFeedJNI::bind(JNIEnv *env)

@@ -32,6 +32,8 @@
 
 #include <jni.h>
 
+#include <MxMD.hpp>
+
 namespace MxMDFeedJNI {
   // (long) -> void
   void ctor_(JNIEnv *, jobject, jlong);
@@ -46,7 +48,7 @@ namespace MxMDFeedJNI {
   // () -> int
   jint level(JNIEnv *, jobject);
 
-  jobject ctor(JNIEnv *, void *ptr);
+  jobject ctor(JNIEnv *, ZmRef<MxMDFeed>);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

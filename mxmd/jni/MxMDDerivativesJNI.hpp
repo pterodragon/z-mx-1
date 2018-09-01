@@ -32,7 +32,14 @@
 
 #include <jni.h>
 
+#include <MxMD.hpp>
+
 namespace MxMDDerivativesJNI {
+  // (long) -> void
+  void ctor_(JNIEnv *, jobject, jlong);
+  // (long) -> void
+  void dtor_(JNIEnv *, jobject, jlong);
+
   // (MxFutKey) -> MxMDSecurity
   jobject future(JNIEnv *, jobject, jobject);
 
@@ -45,7 +52,7 @@ namespace MxMDDerivativesJNI {
   // (MxMDAllSecuritiesFn) -> long
   jlong allOptions(JNIEnv *, jobject, jobject);
 
-  jobject ctor(JNIEnv *, void *ptr);
+  jobject ctor(JNIEnv *, ZmRef<MxMDDerivatives>);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

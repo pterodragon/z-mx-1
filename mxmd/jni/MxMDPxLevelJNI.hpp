@@ -32,7 +32,14 @@
 
 #include <jni.h>
 
+#include <MxMD.hpp>
+
 namespace MxMDPxLevelJNI {
+  // (long) -> void
+  void ctor_(JNIEnv *, jobject, jlong);
+  // (long) -> void
+  void dtor_(JNIEnv *, jobject, jlong);
+
   // () -> MxMDOBSide
   jobject obSide(JNIEnv *, jobject);
 
@@ -54,7 +61,7 @@ namespace MxMDPxLevelJNI {
   // (MxMDAllOrdersFn) -> long
   jlong allOrders(JNIEnv *, jobject, jobject);
 
-  jobject ctor(JNIEnv *, void *ptr);
+  jobject ctor(JNIEnv *, ZmRef<MxMDPxLevel>);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

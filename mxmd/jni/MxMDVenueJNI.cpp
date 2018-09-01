@@ -40,9 +40,10 @@ namespace MxMDVenueJNI {
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
   MxMDVenue *ptr_(JNIEnv *env, jobject obj) {
-    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
-    if (ZuUnlikely(!ptr)) return nullptr;
-    return (MxMDVenue *)(void *)ptr;
+    uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr_)) return nullptr;
+    ZmRef<MxMDVenue> *ZuMayAlias(ptr) = (ZmRef<MxMDVenue> *)&ptr_;
+    return ptr->ptr();
   }
 
   jclass	oisClass;
@@ -61,17 +62,16 @@ namespace MxMDVenueJNI {
   };
 }
 
-void MxMDVenueJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
+void MxMDVenueJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-  if (ptr) ((MxMDVenue *)(void *)(uintptr_t)ptr)->ref();
 }
 
-void MxMDVenueJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
+void MxMDVenueJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
-  if (ptr) ((MxMDVenue *)(void *)(uintptr_t)ptr)->deref();
-  env->SetLongField(obj, ptrField[0].fid, (jlong)0);
+  ZmRef<MxMDVenue> *ZuMayAlias(ptr) = (ZmRef<MxMDVenue> *)&ptr_;
+  ptr->~ZmRef<MxMDVenue>();
 }
 
 jobject MxMDVenueJNI::md(JNIEnv *env, jobject obj)
@@ -129,7 +129,7 @@ jobject MxMDVenueJNI::tickSizeTbl(JNIEnv *env, jobject obj, jstring id)
   if (ZuUnlikely(!venue || !id)) return 0;
   if (ZmRef<MxMDTickSizeTbl> tbl =
       venue->tickSizeTbl(ZJNI::j2s_ZuStringN<8>(env, id)))
-    return MxMDTickSizeTblJNI::ctor(env, tbl); // FIXME - optimize ref/deref
+    return MxMDTickSizeTblJNI::ctor(env, tbl);
   return 0;
 }
 
@@ -171,9 +171,12 @@ jobject MxMDVenueJNI::tradingSession(JNIEnv *env, jobject obj, jstring id)
   return MxMDSegmentJNI::ctor(env, seg);
 }
 
-jobject MxMDVenueJNI::ctor(JNIEnv *env, void *ptr)
+jobject MxMDVenueJNI::ctor(JNIEnv *env, ZmRef<MxMDVenue> venue)
 {
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)(uintptr_t)ptr);
+  uintptr_t ptr_;
+  ZmRef<MxMDVenue> *ZuMayAlias(ptr) = (ZmRef<MxMDVenue> *)&ptr_;
+  new (ptr) ZmRef<MxMDVenue>(ZuMv(venue));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
 }
 
 int MxMDVenueJNI::bind(JNIEnv *env)

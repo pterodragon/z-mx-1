@@ -32,6 +32,8 @@
 
 #include <jni.h>
 
+#include <MxMD.hpp>
+
 namespace MxMDVenueJNI {
   // (long) -> void
   void ctor_(JNIEnv *, jobject, jlong);
@@ -66,7 +68,7 @@ namespace MxMDVenueJNI {
   // (String) -> MxMDSegment
   jobject tradingSession(JNIEnv *, jobject, jstring);
 
-  jobject ctor(JNIEnv *, void *ptr);
+  jobject ctor(JNIEnv *, ZmRef<MxMDVenue>);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

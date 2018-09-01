@@ -19,7 +19,7 @@
 
 // MxMD JNI
 
-#include <iostream>
+#include <new>
 
 #include <jni.h>
 
@@ -41,15 +41,28 @@ namespace MxMDDerivativesJNI {
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
   MxMDDerivatives *ptr_(JNIEnv *env, jobject obj) {
-    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
-    if (ZuUnlikely(!ptr)) return nullptr;
-    return (MxMDDerivatives *)(void *)ptr;
+    uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr_)) return nullptr;
+    ZmRef<MxMDDerivatives> *ZuMayAlias(ptr) = (ZmRef<MxMDDerivatives> *)&ptr_;
+    return ptr->ptr();
   }
 
   // query callbacks
   ZJNI::JavaMethod allSecuritiesFn[] = {
     { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;)J" }
   };
+}
+
+void MxMDDerivativesJNI::ctor_(JNIEnv *env, jobject obj, jlong)
+{
+  // (long) -> void
+}
+
+void MxMDDerivativesJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
+{
+  // (long) -> void
+  ZmRef<MxMDDerivatives> *ZuMayAlias(ptr) = (ZmRef<MxMDDerivatives> *)&ptr_;
+  ptr->~ZmRef<MxMDDerivatives>();
 }
 
 jobject MxMDDerivativesJNI::future(JNIEnv *env, jobject obj, jobject key)
@@ -96,9 +109,12 @@ jlong MxMDDerivativesJNI::allOptions(JNIEnv *env, jobject obj, jobject fn)
   });
 }
 
-jobject MxMDDerivativesJNI::ctor(JNIEnv *env, void *ptr)
+jobject MxMDDerivativesJNI::ctor(JNIEnv *env, ZmRef<MxMDDerivatives> der)
 {
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)(uintptr_t)ptr);
+  uintptr_t ptr_;
+  ZmRef<MxMDDerivatives> *ZuMayAlias(ptr) = (ZmRef<MxMDDerivatives> *)&ptr_;
+  new (ptr) ZmRef<MxMDDerivatives>(ZuMv(der));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
 }
 
 int MxMDDerivativesJNI::bind(JNIEnv *env)

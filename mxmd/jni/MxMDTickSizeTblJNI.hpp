@@ -32,6 +32,8 @@
 
 #include <jni.h>
 
+#include <MxMD.hpp>
+
 namespace MxMDTickSizeTblJNI {
   // (long) -> void
   void ctor_(JNIEnv *, jobject, jlong);
@@ -53,7 +55,7 @@ namespace MxMDTickSizeTblJNI {
   // (MxMDAllTickSizesFn) -> long
   jlong allTickSizes(JNIEnv *, jobject, jobject);
 
-  jobject ctor(JNIEnv *, void *ptr);
+  jobject ctor(JNIEnv *, ZmRef<MxMDTickSizeTbl>);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

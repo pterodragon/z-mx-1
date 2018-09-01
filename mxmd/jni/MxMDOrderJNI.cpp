@@ -19,7 +19,7 @@
 
 // MxMD JNI
 
-#include <iostream>
+#include <new>
 
 #include <jni.h>
 
@@ -42,10 +42,23 @@ namespace MxMDOrderJNI {
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
   MxMDOrder *ptr_(JNIEnv *env, jobject obj) {
-    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
-    if (ZuUnlikely(!ptr)) return nullptr;
-    return (MxMDOrder *)(void *)ptr;
+    uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr_)) return nullptr;
+    ZmRef<MxMDOrder> *ZuMayAlias(ptr) = (ZmRef<MxMDOrder> *)&ptr_;
+    return ptr->ptr();
   }
+}
+
+void MxMDOrderJNI::ctor_(JNIEnv *env, jobject obj, jlong)
+{
+  // (long) -> void
+}
+
+void MxMDOrderJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
+{
+  // (long) -> void
+  ZmRef<MxMDOrder> *ZuMayAlias(ptr) = (ZmRef<MxMDOrder> *)&ptr_;
+  ptr->~ZmRef<MxMDOrder>();
 }
 
 jobject MxMDOrderJNI::orderBook(JNIEnv *env, jobject obj)
@@ -86,6 +99,14 @@ jobject MxMDOrderJNI::data(JNIEnv *env, jobject obj)
   MxMDOrder *order = ptr_(env, obj);
   if (ZuUnlikely(!order)) return 0;
   return MxMDOrderDataJNI::ctor(env, order->data());
+}
+
+jobject MxMDOrderJNI::ctor(JNIEnv *env, ZmRef<MxMDOrder> order)
+{
+  uintptr_t ptr_;
+  ZmRef<MxMDOrder> *ZuMayAlias(ptr) = (ZmRef<MxMDOrder> *)&ptr_;
+  new (ptr) ZmRef<MxMDOrder>(ZuMv(order));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
 }
 
 int MxMDOrderJNI::bind(JNIEnv *env)

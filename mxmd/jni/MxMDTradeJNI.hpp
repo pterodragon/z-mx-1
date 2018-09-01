@@ -32,7 +32,14 @@
 
 #include <jni.h>
 
+#include <MxMD.hpp>
+
 namespace MxMDTradeJNI {
+  // (long) -> void
+  void ctor_(JNIEnv *, jobject, jlong);
+  // (long) -> void
+  void dtor_(JNIEnv *, jobject, jlong);
+
   // () -> MxMDSecurity
   jobject security(JNIEnv *, jobject);
 
@@ -42,7 +49,7 @@ namespace MxMDTradeJNI {
   // () -> MxMDTradeData
   jobject data(JNIEnv *, jobject);
 
-  jobject ctor(JNIEnv *, void *ptr);
+  jobject ctor(JNIEnv *, ZmRef<MxMDTrade>);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

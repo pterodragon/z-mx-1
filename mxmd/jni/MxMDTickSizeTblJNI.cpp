@@ -19,7 +19,7 @@
 
 // MxMD JNI
 
-#include <iostream>
+#include <new>
 
 #include <jni.h>
 
@@ -40,9 +40,10 @@ namespace MxMDTickSizeTblJNI {
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
   MxMDTickSizeTbl *ptr_(JNIEnv *env, jobject obj) {
-    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
-    if (ZuUnlikely(!ptr)) return nullptr;
-    return (MxMDTickSizeTbl *)(void *)ptr;
+    uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr_)) return nullptr;
+    ZmRef<MxMDTickSizeTbl> *ZuMayAlias(ptr) = (ZmRef<MxMDTickSizeTbl> *)&ptr_;
+    return ptr->ptr();
   }
 
   // query callbacks
@@ -51,17 +52,16 @@ namespace MxMDTickSizeTblJNI {
   };
 }
 
-void MxMDTickSizeTblJNI::ctor_(JNIEnv *env, jobject obj, jlong ptr)
+void MxMDTickSizeTblJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
-  if (ptr) ((MxMDTickSizeTbl *)(void *)(uintptr_t)ptr)->ref();
 }
 
-void MxMDTickSizeTblJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr)
+void MxMDTickSizeTblJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
-  if (ptr) ((MxMDTickSizeTbl *)(void *)(uintptr_t)ptr)->deref();
-  env->SetLongField(obj, ptrField[0].fid, (jlong)0);
+  ZmRef<MxMDTickSizeTbl> *ZuMayAlias(ptr) = (ZmRef<MxMDTickSizeTbl> *)&ptr_;
+  ptr->~ZmRef<MxMDTickSizeTbl>();
 }
 
 jobject MxMDTickSizeTblJNI::venue(JNIEnv *env, jobject obj)
@@ -110,9 +110,12 @@ jlong MxMDTickSizeTblJNI::allTickSizes(JNIEnv *env, jobject obj, jobject fn)
   });
 }
 
-jobject MxMDTickSizeTblJNI::ctor(JNIEnv *env, void *ptr)
+jobject MxMDTickSizeTblJNI::ctor(JNIEnv *env, ZmRef<MxMDTickSizeTbl> tbl)
 {
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)(uintptr_t)ptr);
+  uintptr_t ptr_;
+  ZmRef<MxMDTickSizeTbl> *ZuMayAlias(ptr) = (ZmRef<MxMDTickSizeTbl> *)&ptr_;
+  new (ptr) ZmRef<MxMDTickSizeTbl>(ZuMv(tbl));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
 }
 
 int MxMDTickSizeTblJNI::bind(JNIEnv *env)

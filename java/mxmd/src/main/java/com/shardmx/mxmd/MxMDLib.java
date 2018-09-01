@@ -6,7 +6,6 @@ import java.time.Instant;
 
 public class MxMDLib {
   private MxMDLib() { }
-  public native void close();
 
   // methods
 
@@ -16,6 +15,8 @@ public class MxMDLib {
 
   public native void start();
   public native void stop();
+
+  public native void close();
 
   public native void record(String path);
   public native void stopRecording();

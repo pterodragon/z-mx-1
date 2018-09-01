@@ -19,7 +19,7 @@
 
 // MxMD JNI
 
-#include <iostream>
+#include <new>
 
 #include <jni.h>
 
@@ -40,10 +40,23 @@ namespace MxMDTradeJNI {
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
   MxMDTrade *ptr_(JNIEnv *env, jobject obj) {
-    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
-    if (ZuUnlikely(!ptr)) return nullptr;
-    return (MxMDTrade *)(void *)ptr;
+    uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr_)) return nullptr;
+    ZmRef<MxMDTrade> *ZuMayAlias(ptr) = (ZmRef<MxMDTrade> *)&ptr_;
+    return ptr->ptr();
   }
+}
+
+void MxMDTradeJNI::ctor_(JNIEnv *env, jobject obj, jlong)
+{
+  // (long) -> void
+}
+
+void MxMDTradeJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
+{
+  // (long) -> void
+  ZmRef<MxMDTrade> *ZuMayAlias(ptr) = (ZmRef<MxMDTrade> *)&ptr_;
+  ptr->~ZmRef<MxMDTrade>();
 }
 
 jobject MxMDTradeJNI::security(JNIEnv *env, jobject obj)
@@ -68,6 +81,14 @@ jobject MxMDTradeJNI::data(JNIEnv *env, jobject obj)
   MxMDTrade *trade = ptr_(env, obj);
   if (ZuUnlikely(!trade)) return 0;
   return MxMDTradeDataJNI::ctor(env, trade->data());
+}
+
+jobject MxMDTradeJNI::ctor(JNIEnv *env, ZmRef<MxMDTrade> trade)
+{
+  uintptr_t ptr_;
+  ZmRef<MxMDTrade> *ZuMayAlias(ptr) = (ZmRef<MxMDTrade> *)&ptr_;
+  new (ptr) ZmRef<MxMDTrade>(ZuMv(trade));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
 }
 
 int MxMDTradeJNI::bind(JNIEnv *env)

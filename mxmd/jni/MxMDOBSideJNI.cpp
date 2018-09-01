@@ -19,6 +19,8 @@
 
 // MxMD JNI
 
+#include <new>
+
 #include <jni.h>
 
 #include <ZJNI.hpp>
@@ -39,9 +41,10 @@ namespace MxMDOBSideJNI {
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
   MxMDOBSide *ptr_(JNIEnv *env, jobject obj) {
-    uintptr_t ptr = env->GetLongField(obj, ptrField[0].fid);
-    if (ZuUnlikely(!ptr)) return nullptr;
-    return (MxMDOBSide *)(void *)ptr;
+    uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
+    if (ZuUnlikely(!ptr_)) return nullptr;
+    ZuRef<MxMDOBSide> *ZuMayAlias(ptr) = (ZuRef<MxMDOBSide> *)&ptr_;
+    return ptr->ptr();
   }
 
   jclass	sideClass;
@@ -55,6 +58,18 @@ namespace MxMDOBSideJNI {
   ZJNI::JavaMethod allPxLevelsFn[] = {
     { "fn", "(Lcom/shardmx/mxmd/MxMDPxLevel;)J" }
   };
+}
+
+void MxMDOBSideJNI::ctor_(JNIEnv *env, jobject obj, jlong)
+{
+  // (long) -> void
+}
+
+void MxMDOBSideJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
+{
+  // (long) -> void
+  ZuRef<MxMDOBSide> *ZuMayAlias(ptr) = (ZuRef<MxMDOBSide> *)&ptr_;
+  ptr->~ZuRef<MxMDOBSide>();
 }
 
 jobject MxMDOBSideJNI::orderBook(JNIEnv *env, jobject obj)
@@ -110,6 +125,14 @@ jlong MxMDOBSideJNI::allPxLevels(JNIEnv *env, jobject obj, jobject fn)
 	  MxMDPxLevelJNI::ctor(env, pxLevel));
     return 0;
   });
+}
+
+jobject MxMDOBSideJNI::ctor(JNIEnv *env, ZuRef<MxMDOBSide> obs)
+{
+  uintptr_t ptr_;
+  ZuRef<MxMDOBSide> *ZuMayAlias(ptr) = (ZuRef<MxMDOBSide> *)&ptr_;
+  new (ptr) ZuRef<MxMDOBSide>(ZuMv(obs));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
 }
 
 int MxMDOBSideJNI::bind(JNIEnv *env)

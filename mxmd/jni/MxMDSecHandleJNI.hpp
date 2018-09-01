@@ -32,6 +32,8 @@
 
 #include <jni.h>
 
+#include <MxMD.hpp>
+
 namespace MxMDSecHandleJNI {
   // (long) -> void
   void ctor_(JNIEnv *, jobject, jlong);
@@ -41,7 +43,7 @@ namespace MxMDSecHandleJNI {
   // (MxMDSecurityFn) -> void
   void invoke(JNIEnv *, jobject, jobject);
 
-  jobject ctor(JNIEnv *, void *ptr);
+  jobject ctor(JNIEnv *, MxMDSecHandle);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

@@ -1,0 +1,2 @@
+Debian / Ubuntu setup:
+apt install autoconf automake libtool gcc g++ clang gdb valgrind libhwloc-dev libpcre3-dev openjdk-8-jdk maven

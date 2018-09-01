@@ -397,8 +397,8 @@ friend class MxMDOBSide;
 friend class MxMDPxLevel_;
 
 private:
-  static ZuRef<MxMDOBSide> bids_(const MxMDOrderBook *);
-  static ZuRef<MxMDOBSide> asks_(const MxMDOrderBook *);
+  static ZmRef<MxMDOBSide> bids_(const MxMDOrderBook *);
+  static ZmRef<MxMDOBSide> asks_(const MxMDOrderBook *);
 
 protected:
   template <typename ID>
@@ -1041,8 +1041,8 @@ public:
 
   ZuInline const MxMDL1Data &l1Data() const { return m_l1Data; }
 
-  ZuInline ZuRef<MxMDOBSide> bids() const { return m_bids; };
-  ZuInline ZuRef<MxMDOBSide> asks() const { return m_asks; };
+  ZuInline ZmRef<MxMDOBSide> bids() const { return m_bids; };
+  ZuInline ZmRef<MxMDOBSide> asks() const { return m_asks; };
 
   void l1(MxMDL1Data &data);
   void pxLevel(MxEnum side, MxDateTime transactTime,
@@ -1194,20 +1194,20 @@ private:
 
   MxMDL1Data			m_l1Data;
 
-  ZuRef<MxMDOBSide>		m_bids;
-  ZuRef<MxMDOBSide>		m_asks;
+  ZmRef<MxMDOBSide>		m_bids;
+  ZmRef<MxMDOBSide>		m_asks;
 
   ZmRef<MxMDSecHandler>		m_handler;
 
   uintptr_t			m_appData = 0;
 };
 
-ZuInline ZuRef<MxMDOBSide> MxMDOrder_::bids_(const MxMDOrderBook *ob)
+ZuInline ZmRef<MxMDOBSide> MxMDOrder_::bids_(const MxMDOrderBook *ob)
 {
   if (ZuLikely(ob)) return ob->bids();
   return 0;
 }
-ZuInline ZuRef<MxMDOBSide> MxMDOrder_::asks_(const MxMDOrderBook *ob)
+ZuInline ZmRef<MxMDOBSide> MxMDOrder_::asks_(const MxMDOrderBook *ob)
 {
   if (ZuLikely(ob)) return ob->asks();
   return 0;

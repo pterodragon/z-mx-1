@@ -43,7 +43,7 @@ namespace MxMDOBSideJNI {
   MxMDOBSide *ptr_(JNIEnv *env, jobject obj) {
     uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
     if (ZuUnlikely(!ptr_)) return nullptr;
-    ZuRef<MxMDOBSide> *ZuMayAlias(ptr) = (ZuRef<MxMDOBSide> *)&ptr_;
+    ZmRef<MxMDOBSide> *ZuMayAlias(ptr) = (ZmRef<MxMDOBSide> *)&ptr_;
     return ptr->ptr();
   }
 
@@ -68,8 +68,8 @@ void MxMDOBSideJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 void MxMDOBSideJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
-  ZuRef<MxMDOBSide> *ZuMayAlias(ptr) = (ZuRef<MxMDOBSide> *)&ptr_;
-  ptr->~ZuRef<MxMDOBSide>();
+  ZmRef<MxMDOBSide> *ZuMayAlias(ptr) = (ZmRef<MxMDOBSide> *)&ptr_;
+  ptr->~ZmRef<MxMDOBSide>();
 }
 
 jobject MxMDOBSideJNI::orderBook(JNIEnv *env, jobject obj)
@@ -127,11 +127,11 @@ jlong MxMDOBSideJNI::allPxLevels(JNIEnv *env, jobject obj, jobject fn)
   });
 }
 
-jobject MxMDOBSideJNI::ctor(JNIEnv *env, ZuRef<MxMDOBSide> obs)
+jobject MxMDOBSideJNI::ctor(JNIEnv *env, ZmRef<MxMDOBSide> obs)
 {
   uintptr_t ptr_;
-  ZuRef<MxMDOBSide> *ZuMayAlias(ptr) = (ZuRef<MxMDOBSide> *)&ptr_;
-  new (ptr) ZuRef<MxMDOBSide>(ZuMv(obs));
+  ZmRef<MxMDOBSide> *ZuMayAlias(ptr) = (ZmRef<MxMDOBSide> *)&ptr_;
+  new (ptr) ZmRef<MxMDOBSide>(ZuMv(obs));
   return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
 }
 

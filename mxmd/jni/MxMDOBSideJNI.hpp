@@ -57,7 +57,7 @@ namespace MxMDOBSideJNI {
   // (MxMDAllPxLevelsFn) -> long
   jlong allPxLevels(JNIEnv *, jobject, jobject);
 
-  jobject ctor(JNIEnv *, ZuRef<MxMDOBSide>);
+  jobject ctor(JNIEnv *, ZmRef<MxMDOBSide>);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

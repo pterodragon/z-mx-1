@@ -1834,7 +1834,10 @@ void MxMDCore::Publisher::udpConnect()
   
   
 
-  m_core->raise(ZeEVENT(Info, "Publisher udpConnect"));
+  m_core->raise(ZeEVENT(Info, "************ Publisher udpConnect ************"));
+  options.print(std::cout);
+  
+  
 
   m_core->mx()->udp(
     ZiConnectFn::Member<&MxMDCore::Publisher::udpConnected>::fn(this),
@@ -1998,7 +2001,7 @@ void MxMDCore::Subscriber::udpConnected2(Subscriber::UDP *udp, ZiIOContext &io)
   }
 
   m_core->raise(ZeEVENT(Info, "Subscriber udpConnected2"));
-  
+
   m_link->rxInvoke([&io](Rx *rx) {
 	static_cast<Subscriber *>(
 	    static_cast<Link *>(rx)->engine())->recv(rx, io);
@@ -2282,20 +2285,23 @@ void MxMDCore::Subscriber::udpConnect()
 {
   ZmRef<ZvCf> cf = m_core->cf()->subset("subscriber", false, true);
 
-  //ZiIP ip{cf->get("multicastAddr", true).data()};
+  ZiIP ip{cf->get("multicastAddr", true).data()};
   auto port = static_cast<uint16_t>(strtoul(cf->get("multicastPort", true).data(), nullptr, 10));
 
   ZiCxnOptions options;
   options.udp(true);
   options.multicast(true);
-  //options.mreq(ZiMReq(ip, "127.0.0.1"));
+  options.mreq(ZiMReq(ip, "127.0.0.1"));
   
   ZiIP mif("127.0.0.1");
   options.mif(mif);
   
   
   
-  m_core->raise(ZeEVENT(Info, "Subscriber udpConnect"));
+  m_core->raise(ZeEVENT(Info, "***************** Subscriber udpConnect ********"));
+  options.print(std::cout);
+  
+  
 
   m_core->mx()->udp(
     ZiConnectFn::Member<&MxMDCore::Subscriber::udpConnected>::fn(this),

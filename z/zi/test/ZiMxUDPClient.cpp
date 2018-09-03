@@ -92,6 +92,11 @@ public:
     unsigned remotePort = m_remotePort;
     m_dest = ZiSockAddr(remoteIP, remotePort);
     if (!m_connect) remoteIP = ZiIP(), remotePort = 0;
+
+
+//	m_options.print(std::cout);
+
+
     ZiMultiplex::udp(
 	ZiConnectFn::Member<&Mx::connected>::fn(this),
 	ZiFailFn::Member<&Mx::failed>::fn(this),

@@ -192,6 +192,11 @@ namespace MxMDPubSub {
 
     private:
       void rcvd_(ZiIOContext &io) {
+	      
+	      
+	 //std::cout << "****** rcvd_ **************" << std::endl;
+	      
+	      
 	//this->length(io.offset += io.length);
 	auto len = io.offset += io.length;
 

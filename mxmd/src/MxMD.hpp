@@ -613,7 +613,7 @@ struct MxMDL2Flags : public MxMDFlags<MxMDL2Flags> {
 // - when matching consolidated OB, ensure levels are broken up by venue
 // and that venue is available in lambda
 
-class MxMDPxLevel_ : public ZuObject {
+class MxMDPxLevel_ : public ZmObject {
   MxMDPxLevel_(const MxMDPxLevel_ &) = delete;
   MxMDPxLevel_ &operator =(const MxMDPxLevel_ &) = delete;
 
@@ -732,7 +732,7 @@ struct MxMDPxLevel_PxAccessor : public ZuAccessor<MxMDPxLevel_, MxValue> {
 };
 
 typedef ZmRBTree<MxMDPxLevel_,
-	  ZmRBTreeObject<ZuObject,
+	  ZmRBTreeObject<ZmObject,
 	    ZmRBTreeNodeIsKey<true,
 	      ZmRBTreeIndex<MxMDPxLevel_PxAccessor,
 		ZmRBTreeHeapID<MxMDPxLevels_HeapID,
@@ -828,7 +828,7 @@ struct MxMDOBSideData {
   MxValue	qty;
 };
 
-class MxMDAPI MxMDOBSide : public ZuObject {
+class MxMDAPI MxMDOBSide : public ZmObject {
   MxMDOBSide(const MxMDOBSide &) = delete;
   MxMDOBSide &operator =(const MxMDOBSide &) = delete;
 

@@ -114,11 +114,7 @@ public:
     }
   }
 
-<<<<<<< working copy
-  ZuInline bool operator !() {
-=======
   ZuInline bool operator !() const {
->>>>>>> merge rev
     ReadGuard guard(m_lock);
     return ZiPlatform::nullHandle(m_handle);
   }

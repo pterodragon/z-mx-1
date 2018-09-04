@@ -225,11 +225,6 @@ class ZuBox {
 template <typename, class> friend class ZuBox;
 template <class, class> friend class ZuBoxFmt;
 template <class, bool> friend class ZuBoxVFmt;
-<<<<<<< working copy
-  struct Private { };
-
-=======
->>>>>>> merge rev
 public:
   typedef typename ZuBox_Unbox<T_>::T T;
   typedef Cmp_ Cmp;

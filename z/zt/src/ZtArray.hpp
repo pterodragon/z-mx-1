@@ -276,28 +276,18 @@ private:
     { ZuArrayT<S> s(ZuFwd<S>(s_)); copy_(s.data(), s.length()); }
 
   template <typename S> ZuInline typename MatchChar2String<S>::T ctor(S &&s_) {
-<<<<<<< working copy
-    ZuArray<Char2> s(ZuFwd<S>(s_));
-    convert_(s, ZtIconvDefault<Char, Char2>::instance());
-=======
     ZuArray<const Char2> s(ZuFwd<S>(s_));
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null_(); return; }
     alloc_(o, 0);
     length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(m_data, o), s));
->>>>>>> merge rev
   }
   template <typename C> inline typename MatchChar2<C>::T ctor(C c) {
-<<<<<<< working copy
-    ZuArray<Char2> s{&c, 1};
-    convert_(s, ZtIconvDefault<Char, Char2>::instance());
-=======
     ZuArray<const Char2> s{&c, 1};
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null_(); return; }
     alloc_(o, 0);
     length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(m_data, o), s));
->>>>>>> merge rev
   }
 
   template <typename P> ZuInline typename MatchPDelegate<P>::T ctor(const P &p)
@@ -404,18 +394,12 @@ private:
     length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(m_data, o), s));
   }
 
-<<<<<<< working copy
-  template <typename P> ZuInline typename MatchPDelegate<P>::T assign(const P &p)
-    { ZuPrint<P>::print(*this, p); }
-  template <typename P> ZuInline typename MatchPBuffer<P>::T assign(const P &p) {
-=======
   template <typename P>
   ZuInline typename MatchPDelegate<P>::T assign(const P &p) {
     ZuPrint<P>::print(*this, p);
   }
   template <typename P>
   ZuInline typename MatchPBuffer<P>::T assign(const P &p) {
->>>>>>> merge rev
     unsigned o = ZuPrint<P>::length(p);
     if (!o) { null(); return; }
     if (!owned() || size() < o) size(o);

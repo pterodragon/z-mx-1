@@ -30,14 +30,8 @@
 #include <MxMDLib.hpp>
 #endif
 
-<<<<<<< working copy
-#include <MxMD.hpp>
-#include <MxMDCmd.hpp>
 #include <MxMDMsg.hpp>
-#include <MxMDStream.hpp>
 
-=======
->>>>>>> merge rev
 #include <ZmObject.hpp>
 #include <ZmRef.hpp>
 #include <ZmThread.hpp>
@@ -549,13 +543,8 @@ friend class Recorder;
     inline Recorder(MxMDCore *core) : m_core(core) { }
 
     void init() {
-<<<<<<< working copy
-      ZmRef<ZvCf> cf = m_core->cf();
-      MxEngine::init(m_core, this, m_core->mx(), cf->subset("recorder", false, true));
-=======
       ZmRef<ZvCf> cf = m_core->cf()->subset("recorder", false, true);
       MxEngine::init(m_core, this, m_core->mx(), cf);
->>>>>>> merge rev
       m_link = MxEngine::updateLink<Link>("recorder", nullptr);
       m_link->init(this);
     }
@@ -723,12 +712,8 @@ friend class Recorder;
     next:
       m_link->rxRun([](Rx *rx) {
 	static_cast<Recorder *>(
-<<<<<<< working copy
-	    static_cast<Link *>(rx)->engine())->recvMsg(rx); });
-=======
 	  static_cast<Link *>(rx)->engine())->recvMsg(rx);
       });
->>>>>>> merge rev
       return;
 
     end:

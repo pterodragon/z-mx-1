@@ -112,11 +112,7 @@ private:
 public:
   // compile-time length from primitive array / string literal
   template <typename A>
-<<<<<<< working copy
-  ZuInline ZuArray(A &&a, typename MatchStrLiteral<A, Private>::T *_ = 0) :
-=======
   ZuInline ZuArray(A &&a, typename MatchStrLiteral<A>::T *_ = 0) :
->>>>>>> merge rev
     m_data(&a[0]),
     m_length((ZuUnlikely(!(sizeof(a) / sizeof(a[0])) || !a[0])) ? 0U :
       (sizeof(a) / sizeof(a[0])) - 1U) { }
@@ -131,11 +127,7 @@ public:
 
   // length from deferred strlen
   template <typename A>
-<<<<<<< working copy
-  ZuInline ZuArray(A &&a, typename MatchCString<A, Private>::T *_ = 0) :
-=======
   ZuInline ZuArray(A &&a, typename MatchCString<A>::T *_ = 0) :
->>>>>>> merge rev
 	m_data(a), m_length(!a ? 0 : -1) { }
   template <typename A>
   ZuInline typename MatchCString<A, ZuArray &>::T operator =(A &&a) {
@@ -146,11 +138,7 @@ public:
 
   // length from passed type
   template <typename A>
-<<<<<<< working copy
-  ZuInline ZuArray(A &&a, typename MatchOtherArray<A, Private>::T *_ = 0) :
-=======
   ZuInline ZuArray(A &&a, typename MatchOtherArray<A>::T *_ = 0) :
->>>>>>> merge rev
 	m_data(ZuTraits<A>::data(a)),
 	m_length(!m_data ? 0 : (int)ZuTraits<A>::length(a)) { }
   template <typename A>

@@ -190,18 +190,10 @@ private:
 public:
   // syntactic sugar for lambdas
   template <typename L>
-<<<<<<< working copy
-  ZuInline ZmFn(L &&l, typename MatchFunctor<L, Private>::T *_ = 0) :
-=======
   ZuInline ZmFn(L &&l, typename MatchFunctor<L>::T *_ = 0) :
->>>>>>> merge rev
     ZmAnyFn(lambdaFn(ZuFwd<L>(l))) { }
   template <typename L, typename O>
-<<<<<<< working copy
-  ZuInline ZmFn(L &&l, O &&o, typename MatchFunctor<L, Private>::T *_ = 0) :
-=======
   ZuInline ZmFn(L &&l, O &&o, typename MatchFunctor<L>::T *_ = 0) :
->>>>>>> merge rev
     ZmAnyFn(lambdaFn(ZuFwd<L>(l), ZuFwd<O>(o))) { }
 
   inline ZmFn &operator =(const ZmFn &fn) {

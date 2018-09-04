@@ -440,10 +440,7 @@ namespace MxMDStream {
   struct Msg_HeapID {
     ZuInline static const char *id() { return "MxMDStream.Msg"; }
   };
-<<<<<<< working copy
 
-=======
->>>>>>> merge rev
   template <typename Heap>
   struct Msg_ : public Heap, public ZuPOD<MsgData> {
     template <typename ...Args> ZuInline Msg_(Args &&... args)
@@ -454,12 +451,8 @@ namespace MxMDStream {
 
     ZuInline const Frame *frame() const { return this->data().frame(); }
     ZuInline Frame *frame() { return this->data().frame(); }
-<<<<<<< working copy
- };
-
-=======
   };
->>>>>>> merge rev
+
   typedef Msg_<ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> > Msg;
   typedef ZuRef<Msg> MsgRef;
 

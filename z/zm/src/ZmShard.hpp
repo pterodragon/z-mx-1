@@ -109,15 +109,8 @@ public:
     return *this;
   }
 
-<<<<<<< working copy
-  ZuInline bool operator !() const { return !m_object; }
-  ZuOpBool
-
-  ZuInline int shardID() const { return m_shard ? (int)m_shard->id() : -1; }
-=======
   ZuInline bool operator !() const { return !m_ptr || (m_ptr & 1); }
   ZuOpBool
->>>>>>> merge rev
 
 private:
   ZuInline void shardObject(Shard *&shard, T *&o) const {

@@ -158,10 +158,9 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
 
   ZmRef<ZvCf> cf = new ZvCf();
 
-<<<<<<< working copy
-  if (cf_) {
+  if (cf_)
     cf->fromFile(cf_, false);
-  } else {
+  else {
     cf->fromString(
       "mx {\n"
 	"nThreads 4\n"		// thread IDs are 1-based
@@ -193,22 +192,6 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
 	"remoteTcpPort 9394\n"
 	"multicastAddr 239.255.90.105\n"
 	"multicastPort 27413\n"
-=======
-  if (cf_)
-    cf->fromFile(cf_, false);
-  else {
-    cf->fromString(
-      "mx {\n"
-	"nThreads 4\n"		// thread IDs are 1-based
-	"rxThread 1\n"		// I/O Rx
-	"txThread 2\n"		// I/O Tx
-	"isolation 1-3\n"	// leave thread 4 for general purpose
-      "}\n"
-      "recorder {\n"
-	"id recorder\n"
-	"rxThread 3\n"
-	"txThread 3\n"
->>>>>>> merge rev
       "}\n",
       false);
   }

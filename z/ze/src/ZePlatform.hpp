@@ -114,11 +114,7 @@ public:
     return ZePlatform_::strerror(m_errNo);
   }
 
-<<<<<<< working copy
-  ZuInline bool operator !() { return m_errNo == OK; }
-=======
   ZuInline bool operator !() const { return m_errNo == OK; }
->>>>>>> merge rev
   ZuOpBool
 
   template <typename S> ZuInline void print(S &s) const { s << message(); }

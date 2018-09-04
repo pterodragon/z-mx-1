@@ -380,11 +380,7 @@ public:
 
   // string types
   template <typename S>
-<<<<<<< working copy
-  ZuInline ZuStringN(S &&s_, typename MatchString<S, Private>::T *_ = 0) :
-=======
   ZuInline ZuStringN(S &&s_, typename MatchString<S>::T *_ = 0) :
->>>>>>> merge rev
       Base(Base::Nop) {
     ZuString s(ZuFwd<S>(s_));
     this->m_size = N;
@@ -445,11 +441,7 @@ public:
 
   // printable types
   template <typename P>
-<<<<<<< working copy
-  ZuInline ZuStringN(const P &p, typename MatchPrint<P, Private>::T *_ = 0) :
-=======
   ZuInline ZuStringN(const P &p, typename MatchPrint<P>::T *_ = 0) :
->>>>>>> merge rev
       Base(Base::Nop) {
     this->m_size = N;
     this->init(p);
@@ -541,11 +533,7 @@ public:
 
   // string types
   template <typename S>
-<<<<<<< working copy
-  ZuInline ZuWStringN(S &&s_, typename MatchString<S, Private>::T *_ = 0) :
-=======
   ZuInline ZuWStringN(S &&s_, typename MatchString<S>::T *_ = 0) :
->>>>>>> merge rev
       Base(Base::Nop) {
     ZuWString s(ZuFwd<S>(s_));
     this->m_size = N;

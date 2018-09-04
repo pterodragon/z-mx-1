@@ -66,10 +66,6 @@ public:
     return *this;
   }
 
-<<<<<<< working copy
-private:
-=======
->>>>>>> merge rev
   template <typename T> struct IsInt {
     enum { OK =
       ZuConversion<int, T>::Same ||

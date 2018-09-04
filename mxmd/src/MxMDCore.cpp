@@ -1829,6 +1829,8 @@ void MxMDCore::Publisher::udpConnect()
   ZiIP mif("127.0.0.1");
   options.mif(mif);
   
+  options.loopBack(true);
+  
   
   m_dest = ZiSockAddr("127.0.0.1", port);
   
@@ -1836,6 +1838,7 @@ void MxMDCore::Publisher::udpConnect()
 
   m_core->raise(ZeEVENT(Info, "************ Publisher udpConnect ************"));
   options.print(std::cout);
+  std::cout << std::endl;
   
   
 
@@ -1957,10 +1960,14 @@ void MxMDCore::Subscriber::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &i
     case Type::EndOfSnapshot:
       m_subscriber->m_core->raise(ZeEVENT(Info, "Subscriber TCP EndOfSnapshot+++"));
       std::cout << m_subscriber->m_seqNo << " +++++" << std::endl;
-    
+
       m_subscriber->running();
       m_subscriber->m_link->rxInvoke(
-        [subscriber = m_subscriber](Rx *rx) { rx->stopQueuing(subscriber->m_seqNo); });
+        [subscriber = m_subscriber](Rx *rx) {
+		
+	  std::cout << "$$$$$$ rx stopQueuing $$$$$$$$$$$$$$$$$" << std::endl;
+		
+	  rx->stopQueuing(subscriber->m_seqNo); });
 
       disconnect();
       return;
@@ -2020,7 +2027,17 @@ void MxMDCore::Subscriber::recv(Rx *rx, ZiIOContext &io) {
 
   m_rx = rx;
 
+  
   m_udp->recv(io);
+  /*m_link->rxRun([&io](Rx *rx) {
+	static_cast<Subscriber *>(
+	    static_cast<Link *>(rx)->engine())->m_udp->recv(io);
+      });*/
+  
+  
+  
+  std::cout << "$$$$$$$ Subscriber recv end $$$$$$$$$$$$$$$" << std::endl;
+  
 }
 
 void MxMDCore::Subscriber::UDP::recv(ZiIOContext &io)
@@ -2039,6 +2056,19 @@ void MxMDCore::Subscriber::UDP::recv(ZiIOContext &io)
   
   
   msg->recv(io);///////////////////////////////
+  /*m_subscriber->m_link->rxRun([&io, msg](Rx *) {
+	  
+	  msg->recv(io);
+	  
+	
+      });*/
+  
+  
+  
+  
+  std::cout << "$$$$$$$$$$ Subscriber UDP recv end $$$$$$$$$$$$$$$" << std::endl;
+  
+  
 }
 
 void MxMDCore::Subscriber::pushMsg(MxQMsg *qmsg) {
@@ -2285,13 +2315,15 @@ void MxMDCore::Subscriber::udpConnect()
 {
   ZmRef<ZvCf> cf = m_core->cf()->subset("subscriber", false, true);
 
-  ZiIP ip{cf->get("multicastAddr", true).data()};
+  //ZiIP ip{cf->get("multicastAddr", true).data()};
   auto port = static_cast<uint16_t>(strtoul(cf->get("multicastPort", true).data(), nullptr, 10));
 
   ZiCxnOptions options;
   options.udp(true);
   options.multicast(true);
-  options.mreq(ZiMReq(ip, "127.0.0.1"));
+  //options.mreq(ZiMReq(ip, "127.0.0.1"));
+  
+  options.loopBack(true);
   
   ZiIP mif("127.0.0.1");
   options.mif(mif);
@@ -2300,6 +2332,7 @@ void MxMDCore::Subscriber::udpConnect()
   
   m_core->raise(ZeEVENT(Info, "***************** Subscriber udpConnect ********"));
   options.print(std::cout);
+  std::cout << std::endl;
   
   
 

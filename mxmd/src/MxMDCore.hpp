@@ -1214,7 +1214,7 @@ friend class Subscriber;
       
       void process(MxMDPubSub::UDP::InMsg *inMsg, ZiIOContext &io)
       {
-        m_subscriber->m_core->raise(ZeEVENT(Info, "Subscriber UDP process"));
+        m_subscriber->m_core->raise(ZeEVENT(Info, "##### Subscriber UDP process"));
 
         using namespace MxMDPubSub;
         using namespace MxMDPubSub::UDP;

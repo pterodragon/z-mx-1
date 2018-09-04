@@ -53,8 +53,6 @@ struct timespec {
 #endif
 
 class ZmAPI ZmTime : public timespec {
-  struct Private { };
-
 public:
   enum Now_ { Now };		// disambiguator
   enum Nano_ { Nano };		// ''
@@ -68,7 +66,10 @@ public:
     return *this;
   }
 
+<<<<<<< working copy
 private:
+=======
+>>>>>>> merge rev
   template <typename T> struct IsInt {
     enum { OK =
       ZuConversion<int, T>::Same ||
@@ -85,18 +86,18 @@ private:
 public:
   ZuInline ZmTime(Now_) { now(); }
   template <typename T>
-  ZuInline ZmTime(Now_, T i, typename MatchInt<T, Private>::T *_ = 0) {
+  ZuInline ZmTime(Now_, T i, typename MatchInt<T>::T *_ = 0) {
     now(i);
   }
   ZuInline ZmTime(Now_, double d) { now(d); }
 
   template <typename T>
-  ZuInline ZmTime(T v, typename MatchInt<T, Private>::T *_ = 0) :
+  ZuInline ZmTime(T v, typename MatchInt<T>::T *_ = 0) :
     timespec{v, 0} { }
   ZuInline ZmTime(time_t t, long n) : timespec{t, n} { }
 
   ZuInline ZmTime(double d) :
-    timespec{(time_t)d, (long)((d - tv_sec) * 1000000000)} { }
+    timespec{(time_t)d, (long)((d - (double)(time_t)d) * 1000000000)} { }
 
   ZuInline ZmTime(Nano_, int64_t nano) : 
     timespec{(time_t)(nano / 1000000000), (long)(nano % 1000000000)} { }

@@ -2114,10 +2114,6 @@ void ZiMultiplex::stop_3()
 #endif
 }
 
-void ZiMultiplex::threadInit(unsigned tid) { }
-
-void ZiMultiplex::threadFinal(unsigned tid) { }
-
 void ZiMultiplex::rxStart()
 {
   m_rxTID = ZmPlatform::getTID();

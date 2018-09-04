@@ -236,7 +236,7 @@ retry:
   listen();
 
   {
-    HostTree::ReadIterator i(m_hosts, m_config.hostID, HostTree::Less);
+    auto i = m_hosts.readIterator<ZmRBTreeLess>(m_config.hostID);
     while (Zdb_Host *host = i.iterateKey()) host->connect();
   }
 }
@@ -279,7 +279,7 @@ retry:
 
   // cancel reconnects
   {
-    HostTree::ReadIterator i(m_hosts, m_config.hostID, HostTree::Less);
+    auto i = m_hosts.readIterator<ZmRBTreeLess>(m_config.hostID);
     while (Zdb_Host *host = i.iterateKey()) host->cancelConnect();
   }
 
@@ -726,7 +726,7 @@ Zdb_Host *ZdbEnv::setMaster()
   m_master = 0;
   m_nPeers = 0;
   {
-    HostTree::ReadIterator i(m_hosts);
+    auto i = m_hosts.readIterator();
     ZmRef<Zdb_Host> host;
 
     ZdbDEBUG(this, ZtString() << "setMaster()\n" << 
@@ -760,7 +760,7 @@ void ZdbEnv::setNext()
 {
   m_next = 0;
   {
-    HostTree::ReadIterator i(m_hosts);
+    auto i = m_hosts.readIterator();
     ZdbDEBUG(this, ZtString() << "setNext()\n" <<
 	"  self" << m_self << '\n' <<
 	"  master" << m_master << '\n' <<
@@ -810,7 +810,7 @@ void ZdbEnv::stopReplication()
   m_recovering = 0;
   m_nextCxn = 0;
   {
-    HostTree::ReadIterator i(m_hosts);
+    auto i = m_hosts.readIterator();
     while (Zdb_Host *host = i.iterateKey()) host->voted(false);
   }
   m_self->voted(true);

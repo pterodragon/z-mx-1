@@ -53,7 +53,7 @@ template <> struct ZuTraits<Z> {
 typedef ZmRBTree<ZmRef<Z>, ZmRBTreeCmp<ZCmp> > Tree;
 
 static void delptr(Tree *tree, Z *z) {
-  Tree::Iterator iter(*tree, z, Tree::Equal);
+  auto iter = tree->iterator<ZmRBTreeEqual>(z);
   Tree::NodeRef node;
 
   while (node = iter.iterate()) if (z == node->key()) { iter.del(); return; }
@@ -69,7 +69,7 @@ int main()
 
   fputs("0 to 19: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -83,7 +83,7 @@ int main()
 
   fputs("17 to 1, odd: ", stdout);
   {
-    Tree::Iterator iter(tree, Tree::Less);
+    auto iter = tree.iterator<ZmRBTreeLess>();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -98,7 +98,7 @@ int main()
   fputs("7 to 19, odd: ", stdout);
   {
     ZmRef<Z> iz = new Z(i);
-    Tree::Iterator iter(tree, iz, Tree::Greater);
+    auto iter = tree.iterator<ZmRBTreeGreater>(iz);
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -113,7 +113,7 @@ int main()
   fputs("1 to 7, odd: ", stdout);
   {
     ZmRef<Z> iz = new Z(i);
-    Tree::Iterator iter(tree, iz, Tree::LessEqual);
+    auto iter = tree.iterator<ZmRBTreeLessEqual>(iz);
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -130,7 +130,7 @@ int main()
 
   fputs("20 to 39 #1: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -145,7 +145,7 @@ int main()
 
   fputs("0 to 19 #1: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -160,7 +160,7 @@ int main()
 
   fputs("20 to 39 #2: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -175,7 +175,7 @@ int main()
 
   fputs("0 to 19 #2: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -191,7 +191,7 @@ int main()
 
   fputs("20 to 39 #3: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -207,7 +207,7 @@ int main()
 
   fputs("0 to 19 #3: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -223,7 +223,7 @@ int main()
 
   fputs("20 to 39 #4: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -239,7 +239,7 @@ int main()
 
   fputs("0 to 19 #4: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -256,7 +256,7 @@ int main()
 
   fputs("20 to 39 #5: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -273,7 +273,7 @@ int main()
 
   fputs("0 to 19 #5: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -290,7 +290,7 @@ int main()
 
   fputs("20 to 39 #6: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -307,7 +307,7 @@ int main()
 
   fputs("0 to 19 #6: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -325,7 +325,7 @@ int main()
 
     fputs("0 to 9 with 4 duplicates: ", stdout);
     {
-      Tree::Iterator iter(tree);
+      auto iter = tree.iterator();
       Tree::NodeRef node;
 
       while (node = iter.iterate())
@@ -337,7 +337,7 @@ int main()
 
     fputs("0 to 9 with 3 duplicates: ", stdout);
     {
-      Tree::Iterator iter(tree);
+      auto iter = tree.iterator();
       Tree::NodeRef node;
 
       while (node = iter.iterate())
@@ -349,7 +349,7 @@ int main()
 
     fputs("0 to 9 with 2 duplicates: ", stdout);
     {
-      Tree::Iterator iter(tree);
+      auto iter = tree.iterator();
       Tree::NodeRef node;
 
       while (node = iter.iterate())
@@ -361,7 +361,7 @@ int main()
 
     fputs("0 to 9 with 1 duplicate: ", stdout);
     {
-      Tree::Iterator iter(tree);
+      auto iter = tree.iterator();
       Tree::NodeRef node;
 
       while (node = iter.iterate())
@@ -373,7 +373,7 @@ int main()
 
     fputs("empty: ", stdout);
     {
-      Tree::Iterator iter(tree);
+      auto iter = tree.iterator();
       Tree::NodeRef node;
 
       while (node = iter.iterate())
@@ -390,7 +390,7 @@ int main()
 
     fputs("0 to 9 with 4 duplicates: ", stdout);
     {
-      Tree::Iterator iter(tree);
+      auto iter = tree.iterator();
       Tree::NodeRef node;
 
       while (node = iter.iterate())
@@ -405,7 +405,7 @@ int main()
 
     fputs("0 to 9, odd, with 3 duplicates: ", stdout);
     {
-      Tree::Iterator iter(tree);
+      auto iter = tree.iterator();
       Tree::NodeRef node;
 
       while (node = iter.iterate())
@@ -418,7 +418,7 @@ int main()
     fputs("5 to 9, odd, with 3 duplicates: ", stdout);
     {
       ZmRef<Z> iz = new Z(i);
-      Tree::Iterator iter(tree, iz, Tree::Greater);
+      auto iter = tree.iterator<ZmRBTreeGreater>(iz);
       Tree::NodeRef node;
 
       while (node = iter.iterate())
@@ -430,7 +430,7 @@ int main()
 
     fputs("0 to 9, odd, with 2 duplicates: ", stdout);
     {
-      Tree::Iterator iter(tree);
+      auto iter = tree.iterator();
       Tree::NodeRef node;
 
       while (node = iter.iterate())
@@ -442,7 +442,7 @@ int main()
 
     fputs("0 to 9, odd, with 1 duplicate: ", stdout);
     {
-      Tree::Iterator iter(tree);
+      auto iter = tree.iterator();
       Tree::NodeRef node;
 
       while (node = iter.iterate())
@@ -454,7 +454,7 @@ int main()
 
     fputs("empty: ", stdout);
     {
-      Tree::Iterator iter(tree);
+      auto iter = tree.iterator();
       Tree::NodeRef node;
 
       while (node = iter.iterate())
@@ -507,7 +507,7 @@ int main()
 
   fputs("0 to 19, deleting all elements: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate()) {
@@ -523,7 +523,7 @@ int main()
 
   fputs("0 to 19, deleting odd elements: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate()) {
@@ -535,7 +535,7 @@ int main()
 
   fputs("0 to 18, even: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -551,7 +551,7 @@ int main()
 
   fputs("0 to 19 with 3 duplicates, deleting every fourth element: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
     int j = 0;
 
@@ -568,7 +568,7 @@ int main()
   fputs("0 to 19 reverse order, remaining duplicates: ", stdout);
   {
     ZmRef<Z> iz = new Z(i);
-    Tree::Iterator iter(tree, iz, Tree::Less);
+    auto iter = tree.iterator<ZmRBTreeLess>(iz);
     Tree::NodeRef node;
 
     while (node = iter.iterate())
@@ -587,7 +587,7 @@ int main()
   fputs("0 to 19 with 3 duplicates reverse order, deleting every fourth element: ", stdout);
   {
     ZmRef<Z> iz = new Z(i);
-    Tree::Iterator iter(tree, iz, Tree::Less);
+    auto iter = tree.iterator<ZmRBTreeLess>(iz);
     Tree::NodeRef node;
     int j = 0;
 
@@ -601,7 +601,7 @@ int main()
 
   fputs("0 to 19, remaining duplicates: ", stdout);
   {
-    Tree::Iterator iter(tree);
+    auto iter = tree.iterator();
     Tree::NodeRef node;
 
     while (node = iter.iterate())

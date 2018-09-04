@@ -50,6 +50,7 @@
 #include <ZuCmp.hpp>
 #include <ZuHash.hpp>
 #include <ZuStringFn.hpp>
+#include <ZuUTF.hpp>
 #include <ZuPrint.hpp>
 #include <ZuBox.hpp>
 
@@ -86,8 +87,6 @@ template <typename Char, typename Char2> class ZtString_;
 
 template <typename Char_, typename Char2_>
 class ZtString_ : public ZtString__<Char_> {
-  struct Private { };
-
 public:
   typedef Char_ Char;
   typedef Char2_ Char2;
@@ -253,12 +252,16 @@ private:
 
   template <typename S> ZuInline typename MatchChar2String<S>::T ctor(S &&s_) {
     ZuArray<Char2> s(ZuFwd<S>(s_));
-    convert_(s, ZtIconvDefault<Char, Char2>::instance());
+    unsigned o = ZuUTF<Char, Char2>::len(s);
+    if (!o) { null_(); return; }
+    length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(alloc_(o + 1, 0), o), s));
   }
 
   template <typename C> ZuInline typename MatchChar2<C>::T ctor(C c) {
     ZuArray<Char2> s{&c, 1};
-    convert_(s, ZtIconvDefault<Char, Char2>::instance());
+    unsigned o = ZuUTF<Char, Char2>::len(s);
+    if (!o) { null_(); return; }
+    length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(alloc_(o + 1, 0), o), s));
   }
 
   template <typename P> ZuInline typename MatchPDelegate<P>::T ctor(const P &p)
@@ -293,12 +296,28 @@ private:
 
   template <typename S> ZuInline typename MatchChar2String<S>::T copy(S &&s_) {
     ZuArray<Char2> s(ZuFwd<S>(s_));
-    convert_(s, ZtIconvDefault<Char, Char2>::instance());
+    unsigned o = ZuUTF<Char, Char2>::len(s);
+    if (ZuUnlikely(!o)) { length_(0); return; }
+    unsigned z = size();
+    Char *data;
+    if (!owned() || o >= z)
+      data = size(o + 1);
+    else
+      data = data_();
+    length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(data, o), s));
   }
 	  
   template <typename C> ZuInline typename MatchChar2<C>::T copy(C c) {
     ZuArray<Char2> s{&c, 1};
-    convert_(s, ZtIconvDefault<Char, Char2>::instance());
+    unsigned o = ZuUTF<Char, Char2>::len(s);
+    if (ZuUnlikely(!o)) { length_(0); return; }
+    unsigned z = size();
+    Char *data;
+    if (!owned() || o >= z)
+      data = size(o + 1);
+    else
+      data = data_();
+    length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(data, o), s));
   }
 
 public:
@@ -351,23 +370,35 @@ private:
   template <typename S>
   inline typename MatchChar2String<S>::T assign(S &&s_) {
     ZuArray<Char2> s(ZuFwd<S>(s_));
-    Char *oldData = free_1();
-    convert_(s, ZtIconvDefault<Char, Char2>::instance());
-    free_2(oldData);
+    unsigned o = ZuUTF<Char, Char2>::len(s);
+    unsigned z = size();
+    if (ZuUnlikely(!o)) { length_(0); return; }
+    Char *data;
+    if (!owned() || o >= z)
+      data = size(o + 1);
+    else
+      data = data_();
+    length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(data, o), s));
   }
   template <typename C> inline typename MatchChar2<C>::T assign(C c) {
     ZuArray<Char2> s{&c, 1};
-    Char *oldData = free_1();
-    convert_(s, ZtIconvDefault<Char, Char2>::instance());
-    free_2(oldData);
+    unsigned o = ZuUTF<Char, Char2>::len(s);
+    unsigned z = size();
+    if (ZuUnlikely(!o)) { length_(0); return; }
+    Char *data;
+    if (!owned() || o >= z)
+      data = size(o + 1);
+    else
+      data = data_();
+    length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(data, o), s));
   }
 
   template <typename P> inline typename MatchPDelegate<P>::T assign(const P &p)
     { ZuPrint<P>::print(*this, p); }
   template <typename P> inline typename MatchPBuffer<P>::T assign(const P &p) {
     unsigned o = ZuPrint<P>::length(p);
-    unsigned z = size();
     if (ZuUnlikely(!o)) { length_(0); return; }
+    unsigned z = size();
     Char *data;
     if (!owned() || o >= z)
       data = size(o + 1);
@@ -399,8 +430,7 @@ private:
 
 public:
   template <typename S>
-  inline ZtString_(S &&s_, ZtIconv *iconv,
-      typename ZuIsString<S, Private>::T *_ = 0) {
+  inline ZtString_(S &&s_, ZtIconv *iconv, typename ZuIsString<S>::T *_ = 0) {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     convert_(s, iconv);
   }

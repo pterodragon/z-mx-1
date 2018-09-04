@@ -252,8 +252,6 @@ private:
 
 template <typename T_>
 class ZvCSVColumn<ZvCSVColType::Time, T_> : public ZvCSVColumn_ {
-  struct Private { };
-
 public:
   typedef T_ T;
   enum { ColType = ZvCSVColType::Time };
@@ -261,7 +259,7 @@ public:
   // provide a constant (fixed) TZ offset
   template <typename ID, typename TZ>
   inline ZvCSVColumn(ID &&id, int offset, TZ tzOffset,
-	typename ZuSame<int, TZ, Private>::T *_ = 0) :
+	typename ZuSame<int, TZ>::T *_ = 0) :
       ZvCSVColumn_(ZuFwd<ID>(id), offset), m_tzOffset(tzOffset), m_tz(0) {
     m_fmt.offset(tzOffset);
   }
@@ -269,7 +267,7 @@ public:
   // provide a TZ name (variable offset since dates may differ in DST)
   template <typename ID, typename TZ>
   inline ZvCSVColumn(ID &&id, int offset, TZ &&tz,
-	typename ZuIsString<TZ, Private>::T *_ = 0) :
+	typename ZuIsString<TZ>::T *_ = 0) :
       ZvCSVColumn_(id, offset), m_tzOffset(0), m_tz(ZuFwd<TZ>(tz)) { }
 
   void parse(ZuString value, ZuAnyPOD *pod) const {

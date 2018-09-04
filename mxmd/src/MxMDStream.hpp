@@ -153,6 +153,7 @@ namespace MxMDStream {
     enum { Code = Type::AddTickSizeTbl };
     MxID		venue;
     MxIDString		id;
+    MxNDP		pxNDP;
   };
 
   struct ResetTickSizeTbl {
@@ -165,13 +166,15 @@ namespace MxMDStream {
     enum { Code = Type::AddTickSize };
     MxID		venue;
     MxIDString		id;
-    MxFloat		minPrice;
-    MxFloat		maxPrice;
-    MxFloat		tickSize;
+    MxNDP		pxNDP;
+    MxValue		minPrice;
+    MxValue		maxPrice;
+    MxValue		tickSize;
   };
 
   struct AddSecurity {
     enum { Code = Type::AddSecurity };
+    MxDateTime		transactTime;
     Key			key;
     MxUInt		shard;
     MxMDSecRefData	refData;
@@ -179,41 +182,50 @@ namespace MxMDStream {
 
   struct UpdateSecurity {
     enum { Code = Type::UpdateSecurity };
+    MxDateTime		transactTime;
     Key			key;
     MxMDSecRefData	refData;
   };
 
   struct AddOrderBook {
     enum { Code = Type::AddOrderBook };
+    MxDateTime		transactTime;
     Key			key;
     Key			security;
     MxIDString		tickSizeTbl;
+    MxNDP		qtyNDP;
     MxMDLotSizes	lotSizes;
   };
 
   struct DelOrderBook {
     enum { Code = Type::DelOrderBook };
+    MxDateTime		transactTime;
     Key			key;
   };
 
   struct AddCombination {
     enum { Code = Type::AddCombination };
+    MxDateTime		transactTime;
     Key			key;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
     MxUInt		legs;
     Key			securities[MxMDNLegs];
     MxEnum		sides[MxMDNLegs];
-    MxFloat		ratios[MxMDNLegs];
+    MxRatio		ratios[MxMDNLegs];
     MxIDString		tickSizeTbl;
     MxMDLotSizes	lotSizes;
   };
 
   struct DelCombination {
     enum { Code = Type::DelCombination };
+    MxDateTime		transactTime;
     Key			key;
   };
 
   struct UpdateOrderBook {
     enum { Code = Type::UpdateOrderBook };
+    MxDateTime		transactTime;
     Key			key;
     MxIDString		tickSizeTbl;
     MxMDLotSizes	lotSizes;
@@ -221,10 +233,10 @@ namespace MxMDStream {
 
   struct TradingSession {
     enum { Code = Type::TradingSession };
+    MxDateTime		stamp;
     MxID		venue;
     MxID		segment;
     MxEnum		session;
-    MxDateTime		stamp;
   };
 
   struct L1 {
@@ -235,86 +247,98 @@ namespace MxMDStream {
 
   struct PxLevel {
     enum { Code = Type::PxLevel };
+    MxDateTime		transactTime;
     Key			key;
     MxEnum		side;
-    MxDateTime		transactTime;
     uint8_t		delta;
-    MxFloat		price;
-    MxFloat		qty;
-    MxFloat		nOrders;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
+    MxValue		price;
+    MxValue		qty;
+    MxUInt		nOrders;
     MxFlags		flags;
   };
 
   struct L2 {
     enum { Code = Type::L2 };
-    Key			key;
     MxDateTime		stamp;
+    Key			key;
     uint8_t		updateL1;
   };
 
   struct AddOrder {
     enum { Code = Type::AddOrder };
+    MxDateTime		transactTime;
     Key			key;
     MxIDString		orderID;
-    MxDateTime		transactTime;
     MxEnum		side;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
     MxInt		rank;
-    MxFloat		price;
-    MxFloat		qty;
+    MxValue		price;
+    MxValue		qty;
     MxFlags		flags;
   };
 
   struct ModifyOrder {
     enum { Code = Type::ModifyOrder };
+    MxDateTime		transactTime;
     Key			key;
     MxIDString		orderID;
-    MxDateTime		transactTime;
     MxEnum		side;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
     MxInt		rank;
-    MxFloat		price;
-    MxFloat		qty;
+    MxValue		price;
+    MxValue		qty;
     MxFlags		flags;
   };
 
   struct CancelOrder {
     enum { Code = Type::CancelOrder };
+    MxDateTime		transactTime;
     Key			key;
     MxIDString		orderID;
-    MxDateTime		transactTime;
     MxEnum		side;
   };
 
   struct ResetOB {
     enum { Code = Type::ResetOB };
-    Key			key;
     MxDateTime		transactTime;
+    Key			key;
   };
 
   struct AddTrade {
     enum { Code = Type::AddTrade };
+    MxDateTime		transactTime;
     Key			key;
     MxIDString		tradeID;
-    MxDateTime		transactTime;
-    MxFloat		price;
-    MxFloat		qty;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
+    MxValue		price;
+    MxValue		qty;
   };
 
   struct CorrectTrade {
     enum { Code = Type::CorrectTrade };
+    MxDateTime		transactTime;
     Key			key;
     MxIDString		tradeID;
-    MxDateTime		transactTime;
-    MxFloat		price;
-    MxFloat		qty;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
+    MxValue		price;
+    MxValue		qty;
   };
 
   struct CancelTrade {
     enum { Code = Type::CancelTrade };
+    MxDateTime		transactTime;
     Key			key;
     MxIDString		tradeID;
-    MxDateTime		transactTime;
-    MxFloat		price;
-    MxFloat		qty;
+    MxNDP		pxNDP;
+    MxNDP		qtyNDP;
+    MxValue		price;
+    MxValue		qty;
   };
 
   struct RefDataLoaded {
@@ -416,7 +440,10 @@ namespace MxMDStream {
   struct Msg_HeapID {
     ZuInline static const char *id() { return "MxMDStream.Msg"; }
   };
+<<<<<<< working copy
 
+=======
+>>>>>>> merge rev
   template <typename Heap>
   struct Msg_ : public Heap, public ZuPOD<MsgData> {
     template <typename ...Args> ZuInline Msg_(Args &&... args)
@@ -427,11 +454,15 @@ namespace MxMDStream {
 
     ZuInline const Frame *frame() const { return this->data().frame(); }
     ZuInline Frame *frame() { return this->data().frame(); }
+<<<<<<< working copy
  };
 
+=======
+  };
+>>>>>>> merge rev
   typedef Msg_<ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> > Msg;
   typedef ZuRef<Msg> MsgRef;
-  
+
   template <typename App>
   MsgRef shift(App &app) {
     const Frame *frame = app.shift();
@@ -483,14 +514,14 @@ namespace MxMDStream {
   // AddCombination needs special handling due to securities/sides/ratios fields
   template <typename App,
 	   typename Key_, typename Security, typename TickSizeTbl>
-  inline bool addCombination(App &app,
-      const Key_ &key, unsigned legs,
-      const Security *securities, const MxEnum *sides, const MxFloat *ratios,
+  inline bool addCombination(App &app, MxDateTime transactTime,
+      const Key_ &key, MxNDP pxNDP, MxNDP qtyNDP, unsigned legs,
+      const Security *securities, const MxEnum *sides, const MxRatio *ratios,
       const TickSizeTbl &tickSizeTbl, const MxMDLotSizes &lotSizes) {
     Frame *frame = push<App, AddCombination>(app);
     if (ZuUnlikely(!frame)) return false;
-    AddCombination *data = new (frame->ptr()) AddCombination{
-	key, legs, {}, {}, {}, tickSizeTbl, lotSizes};
+    AddCombination *data = new (frame->ptr()) AddCombination{transactTime,
+      key, pxNDP, qtyNDP, legs, {}, {}, {}, tickSizeTbl, lotSizes};
     for (unsigned i = 0; i < legs; i++) {
       data->securities[i] = securities[i];
       data->sides[i] = sides[i];

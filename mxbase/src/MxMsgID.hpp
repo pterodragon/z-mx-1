@@ -37,17 +37,11 @@
 
 // generic message ID
 
-#define Mx_TupleField(Type, Fn, N) \
-  ZuInline const Type &Fn() const { return T::ptr()->p ## N(); } \
-  ZuInline Type &Fn() { return T::ptr()->p ## N(); }
-
 typedef ZuPair<MxID, MxSeqNo> MxMsgID_;
 template <typename T> struct MxMsgID_Fn : public T {
   Mx_TupleField(MxID, queueID, 1)
   Mx_TupleField(MxSeqNo, seqNo, 2)
 };
 typedef ZuMixin<MxMsgID_, MxMsgID_Fn> MxMsgID;
-
-#undef Mx_TupleField
 
 #endif /* MxMsgID_HPP */

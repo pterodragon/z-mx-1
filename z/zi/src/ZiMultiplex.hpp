@@ -95,7 +95,7 @@ class ZiConnection;
 class ZiMultiplex;
 
 class ZiCxnOptions;
-class ZiCxnInfo;
+struct ZiCxnInfo;
 
 // legacy compatibility
 #define ZiOptions ZiCxnOptions
@@ -972,6 +972,11 @@ public:
 
   ZuInline unsigned txThread() const { return m_txThread; }
 
+  template <typename L> ZuInline void rxRun(L l) {
+    run(m_rxThread, ZuMv(l));
+    run(m_rxThread, ZmFn<>::Member<&ZiMultiplex::rx>::fn(this));
+    wake();
+  }
   template <typename L> ZuInline void rxInvoke(L l) {
     if (ZuLikely(ZmPlatform::getTID() == m_rxTID)) { l(); return; }
     run(m_rxThread, ZuMv(l));
@@ -1016,9 +1021,6 @@ private:
 
   ZuInline void busy() { ZmScheduler::busy(); }
   ZuInline void idle() { ZmScheduler::idle(); }
-
-  void threadInit(unsigned tid);
-  void threadFinal(unsigned tid);
 
   void rxStart();
   void rx();			// handle I/O completions (IOCP) or

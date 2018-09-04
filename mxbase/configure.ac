@@ -18,7 +18,7 @@ case $build_os in
 		AC_MSG_RESULT([-lpthread -lrt])
 		MXBASE_LDFLAGS="-rdynamic"
 		MXBASE_SO_LDFLAGS="-release $MXBASE_VERSION"
-		MXBASE_XLIBS="-ldl -lpthread -lrt"
+		MXBASE_XLIBS="-lhwloc -ldl -lpthread -lrt"
 		;;
 	mingw*)
 		AC_MSG_RESULT([mingw])
@@ -42,6 +42,10 @@ AC_SUBST(Z_CXXFLAGS)
 AC_SUBST(Z_LDFLAGS)
 AC_SUBST(Z_LIBS)
 
+AX_PATH_JNI(, [AC_MSG_ERROR([JNI required])])
+
+AC_SUBST(JNI_CPPFLAGS)
+
 MXBASE_CPPFLAGS=""
 
 AC_SUBST(MXBASE_CPPFLAGS)
@@ -49,4 +53,4 @@ AC_SUBST(MXBASE_LDFLAGS)
 AC_SUBST(MXBASE_SO_LDFLAGS)
 AC_SUBST(MXBASE_XLIBS)
 
-AC_OUTPUT(Makefile src/Makefile test/Makefile)
+AC_OUTPUT(Makefile src/Makefile test/Makefile jni/Makefile)

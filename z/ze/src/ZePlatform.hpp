@@ -114,7 +114,11 @@ public:
     return ZePlatform_::strerror(m_errNo);
   }
 
+<<<<<<< working copy
   ZuInline bool operator !() { return m_errNo == OK; }
+=======
+  ZuInline bool operator !() const { return m_errNo == OK; }
+>>>>>>> merge rev
   ZuOpBool
 
   template <typename S> ZuInline void print(S &s) const { s << message(); }
@@ -140,8 +144,6 @@ template <> struct ZuPrint<ZeError> : public ZuPrintFn { };
 
 template <typename Event>
 class ZeMessageFn_ : public ZmFn<const Event &, ZmStream &> {
-  struct Private { };
-
 public:
   typedef ZmFn<const Event &, ZmStream &> Fn;
 
@@ -180,17 +182,17 @@ private:
 public:
   // from string literal
   template <typename P>
-  ZuInline ZeMessageFn_(P &&p, typename MatchLiteral<P, Private>::T *_ = 0) :
+  ZuInline ZeMessageFn_(P &&p, typename MatchLiteral<P>::T *_ = 0) :
     Fn([p = ZuString(p)](const Event &, ZmStream &s) { s << p; }) { }
 
   // from something printable (that's not a string literal)
   template <typename P>
-  ZuInline ZeMessageFn_(P &&p, typename MatchPrint<P, Private>::T *_ = 0) :
+  ZuInline ZeMessageFn_(P &&p, typename MatchPrint<P>::T *_ = 0) :
     Fn([p = ZuFwd<P>(p)](const Event &, ZmStream &s) { s << p; }) { }
 
   // fwd anything else to ZmFn
   template <typename P>
-  ZuInline ZeMessageFn_(P &&p, typename MatchFn<P, Private>::T *_ = 0) :
+  ZuInline ZeMessageFn_(P &&p, typename MatchFn<P>::T *_ = 0) :
     Fn(ZuFwd<P>(p)) { }
   template <typename P1, typename P2, typename ...Args>
   ZuInline ZeMessageFn_(P1 &&p1, P2 &&p2, Args &&... args) :
@@ -200,8 +202,6 @@ public:
 template <typename Heap> class ZeEvent_ : public ZmObject, public Heap {
   ZeEvent_(const ZeEvent_ &) = delete;
   ZeEvent_ &operator =(const ZeEvent_ &) = delete;
-
-  struct Private { };
 
   typedef ZmPlatform::ThreadID ThreadID;
 

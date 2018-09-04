@@ -9,7 +9,7 @@ include_HEADERS = \
 	ZtRegex.hpp ZtString.hpp
 lib_LTLIBRARIES = libZt.la
 libZt_la_SOURCES = \
-	ZtDate.cpp ZtIconv.cpp ZtLib.cpp ZtRegex.cpp ZtString.cpp
+	ZtDate.cpp ZtLib.cpp ZtRegex.cpp ZtString.cpp
 libZt_la_LIBADD = $(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la \
 	@Z_ZT_LIBS@ @Z_MT_LIBS@

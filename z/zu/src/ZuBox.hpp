@@ -225,8 +225,11 @@ class ZuBox {
 template <typename, class> friend class ZuBox;
 template <class, class> friend class ZuBoxFmt;
 template <class, bool> friend class ZuBoxVFmt;
+<<<<<<< working copy
   struct Private { };
 
+=======
+>>>>>>> merge rev
 public:
   typedef typename ZuBox_Unbox<T_>::T T;
   typedef Cmp_ Cmp;
@@ -244,11 +247,11 @@ public:
   ZuInline ZuBox &operator =(const ZuBox &b) { m_val = b.m_val; return *this; }
 
   template <typename R>
-  ZuInline ZuBox(R r, typename ZuBox_IsReal<R, T, Private>::T *_ = 0) :
+  ZuInline ZuBox(R r, typename ZuBox_IsReal<R, T>::T *_ = 0) :
     m_val(r) { }
 
   template <typename B>
-  ZuInline ZuBox(B b, typename ZuIsBoxed<B, Private>::T *_ = 0) :
+  ZuInline ZuBox(B b, typename ZuIsBoxed<B>::T *_ = 0) :
     m_val(!*b ? (T)Cmp::null() : (T)b.m_val) { }
 
   template <typename S>
@@ -260,7 +263,7 @@ public:
       m_val = val;
   }
   template <class Fmt, typename S>
-  ZuInline ZuBox(Fmt, S &&s_, typename ZuIsCharString<S, Private>::T *_ = 0) :
+  ZuInline ZuBox(Fmt, S &&s_, typename ZuIsCharString<S>::T *_ = 0) :
       m_val(Cmp::null()) {
     ZuString s(ZuFwd<S>(s_));
     typename Scan<Fmt>::T val = 0;
@@ -270,14 +273,14 @@ public:
 
   template <typename S>
   ZuInline ZuBox(S s, unsigned len,
-      typename ZuBox_IsCharPtr<S, Private>::T *_ = 0) : m_val(Cmp::null()) {
+      typename ZuBox_IsCharPtr<S>::T *_ = 0) : m_val(Cmp::null()) {
     typename Scan<>::T val = 0;
     if (ZuLikely(s && Scan<>::scan(val, s, len)))
       m_val = val;
   }
   template <class Fmt, typename S>
   ZuInline ZuBox(Fmt, S s, unsigned len,
-      typename ZuBox_IsCharPtr<S, Private>::T *_ = 0) : m_val(Cmp::null()) {
+      typename ZuBox_IsCharPtr<S>::T *_ = 0) : m_val(Cmp::null()) {
     typename Scan<Fmt>::T val = 0;
     if (ZuLikely(s && Scan<Fmt>::scan(val, s, len)))
       m_val = val;

@@ -48,8 +48,6 @@
 // the implementation assumes the architecture supports misaligned 64bit loads
 
 class ZuID {
-  struct Private { };
-
 public:
   ZuInline ZuID() : m_val(0) { }
 
@@ -57,7 +55,7 @@ public:
   ZuInline ZuID &operator =(const ZuID &b) { m_val = b.m_val; return *this; }
 
   template <typename S>
-  ZuInline ZuID(S &&s, typename ZuIsString<S, Private>::T *_ = 0) {
+  ZuInline ZuID(S &&s, typename ZuIsString<S>::T *_ = 0) {
     init(ZuFwd<S>(s));
   }
   template <typename S>

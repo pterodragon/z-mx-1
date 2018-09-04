@@ -286,7 +286,7 @@ void ZmScheduler::timer()
 	ZmTime now(ZmTime::Now);
 	now += m_quantum;
 	ZmGuard<ZmPLock> scheduleGuard(m_scheduleLock);
-	ScheduleTree::Iterator i(m_schedule, now, ScheduleTree::LessEqual);
+	auto i = m_schedule.iterator<ZmRBTreeLessEqual>(now);
 	Timer timer;
 
 	while (timer = i.iterate()) {
@@ -424,7 +424,7 @@ void ZmScheduler::work()
 
   thread->tid = ZmPlatform::getTID();
 
-  threadInit(id);
+  m_threadInitFn();
 
   for (;;) {
     if (ZmFn<> *ptr = thread->ring.shift()) {
@@ -437,7 +437,7 @@ void ZmScheduler::work()
     }
   }
 
-  threadFinal(id);
+  m_threadFinalFn();
 
   --m_runThreads;
 
@@ -448,9 +448,6 @@ void ZmScheduler::threadName(ZmThreadName &s, unsigned tid)
 {
   s << m_id << ':' << ZuBoxed(tid);
 }
-
-void ZmScheduler::threadInit(unsigned) { }
-void ZmScheduler::threadFinal(unsigned) { }
 
 #ifdef _MSC_VER
 #pragma warning(pop)

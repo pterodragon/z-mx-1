@@ -262,7 +262,7 @@ struct ZdbTrailer {
 #pragma pack(pop)
 
 class ZdbAnyPOD_ : public ZmPolymorph {
-template <typename, typename> friend class ZuConversionFriend;
+template <typename, typename> friend struct ZuConversionFriend;
 
 protected:
   template <typename P>
@@ -819,7 +819,7 @@ struct ZdbHostConfig {
 class Zdb_Host : public ZmPolymorph {
 friend class ZdbEnv;
 friend class Zdb_Cxn;
-template <typename> friend class ZuPrint;
+template <typename> friend struct ZuPrint;
 
   typedef ZmPLock Lock;
   typedef ZmGuard<Lock> Guard;

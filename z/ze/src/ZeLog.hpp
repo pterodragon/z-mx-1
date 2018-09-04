@@ -205,7 +205,7 @@ private:
     ZePlatform::sysloginit(m_program, ZuFwd<Facility>(facility));
   }
 
-  inline ZuString program_() const { return m_program; }
+  ZuString program_();
 
   inline int level_() const { return m_level; }
   inline void level_(int l) { m_level = l; }

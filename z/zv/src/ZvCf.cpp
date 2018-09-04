@@ -663,7 +663,7 @@ void ZvCf::freeArgs(int argc, char **argv)
 
 void ZvCf::toArgs(ZtArray<ZtString> &args, ZuString prefix)
 {
-  Tree::ReadIterator i(m_tree);
+  auto i = m_tree.readIterator();
   Tree::NodeRef node_;
   NodeRef node;
 
@@ -713,7 +713,7 @@ ZtString ZvCf::quoteArgValue(ZuString in)
 
 void ZvCf::print(ZmStream &s, ZtString prefix) const
 {
-  Tree::ReadIterator i(m_tree);
+  auto i = m_tree.readIterator();
   Tree::NodeRef node_;
   NodeRef node;
 
@@ -890,7 +890,7 @@ void ZvCf::subset(ZuString key, ZvCf *cf)
 
 void ZvCf::merge(ZvCf *cf)
 {
-  Tree::Iterator i(cf->m_tree);
+  auto i = cf->m_tree.readIterator();
   Tree::NodeRef srcNode_;
   NodeRef srcNode;
 

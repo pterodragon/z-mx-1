@@ -46,8 +46,6 @@ template <> struct ZuTraits<ZmBitmap> : public ZuGenericTraits<ZmBitmap> {
 };
 
 class ZmBitmap {
-  struct Private { };
-
 public:
   ZuInline ZmBitmap() : m_map(0) { }
   ZuInline ZmBitmap(const ZmBitmap &b) :
@@ -116,7 +114,7 @@ public:
   template <typename T> inline ZmBitmap(const T &t,
     typename ZuIfT<
       ZuConversion<T, int>::Same ||
-      ZuConversion<T, Range>::Same, Private>::T *_ = 0) :
+      ZuConversion<T, Range>::Same>::T *_ = 0) :
     m_map(hwloc_bitmap_alloc()) { operator <<(t); }
 
   inline bool operator &&(int i) const {
@@ -226,7 +224,7 @@ public:
   }
 
   template <typename S>
-  inline ZmBitmap(const S &s, typename ZuIsCharString<S, Private>::T *_ = 0) :
+  inline ZmBitmap(const S &s, typename ZuIsCharString<S>::T *_ = 0) :
       m_map(hwloc_bitmap_alloc()) { scan(s); }
   template <typename S>
   inline typename ZuIsCharString<S, ZmBitmap &>::T operator =(const S &s) {

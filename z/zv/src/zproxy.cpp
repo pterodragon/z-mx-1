@@ -673,12 +673,12 @@ public:
     ZuString tag;
     ZmRef<Listener> listener;
     unsigned localPort;
-    bool isTag;
+    bool isTag = false;
     try {
       tag = args->get("1");
       if (validateTag(tag))
         isTag = true;
-      else 
+      else
         localPort = args->getInt("1", 1, 65535, true);
     } catch (...) {
       out = "Usage: stop #TAG|LOCALPORT";

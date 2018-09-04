@@ -41,8 +41,8 @@
 
 struct MxEngineState {
   MxEnumValues(Stopped, Starting, Running, Stopping,
-      StartPending,	// started while stopping
-      StopPending);	// stopped while starting
+      StartPending,		// started while stopping
+      StopPending);		// stopped while starting
   MxEnumNames("Stopped", "Starting", "Running", "Stopping",
       "StartPending", "StopPending");
 };
@@ -159,7 +159,7 @@ struct MxEngineMgr {
 
   // Exception handling
   virtual void exception(ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
-  
+
   // Traffic Logging (logThread)
   /* Example usage:
   app.log(id, MxTraffic([](const Msg *msg, ZmTime &stamp, ZuString &data) {
@@ -244,7 +244,7 @@ public:
   ZuInline MxEngineMgr *mgr() const { return m_mgr; }
   ZuInline MxEngineApp *app() const { return m_app; }
   ZuInline MxID id() const { return m_id; }
-  ZuInline Mx &mx() const { return *m_mx; }
+  ZuInline Mx *mx() const { return m_mx; }
   ZuInline unsigned rxThread() const { return m_rxThread; }
   ZuInline unsigned txThread() const { return m_txThread; }
 

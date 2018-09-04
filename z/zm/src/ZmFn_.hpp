@@ -151,8 +151,6 @@ struct ZmLambda_HeapID {
 template <typename L, class HeapID> struct ZmLambda;
 
 template <typename ...Args> class ZmFn : public ZmAnyFn {
-  struct Private { };
-
   typedef uintptr_t (*Invoker)(uintptr_t, Args...);
   template <bool VoidRet, auto> struct FnInvoker;
   template <typename, bool VoidRet, auto> struct BoundInvoker;
@@ -192,10 +190,18 @@ private:
 public:
   // syntactic sugar for lambdas
   template <typename L>
+<<<<<<< working copy
   ZuInline ZmFn(L &&l, typename MatchFunctor<L, Private>::T *_ = 0) :
+=======
+  ZuInline ZmFn(L &&l, typename MatchFunctor<L>::T *_ = 0) :
+>>>>>>> merge rev
     ZmAnyFn(lambdaFn(ZuFwd<L>(l))) { }
   template <typename L, typename O>
+<<<<<<< working copy
   ZuInline ZmFn(L &&l, O &&o, typename MatchFunctor<L, Private>::T *_ = 0) :
+=======
+  ZuInline ZmFn(L &&l, O &&o, typename MatchFunctor<L>::T *_ = 0) :
+>>>>>>> merge rev
     ZmAnyFn(lambdaFn(ZuFwd<L>(l), ZuFwd<O>(o))) { }
 
   inline ZmFn &operator =(const ZmFn &fn) {

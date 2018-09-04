@@ -205,7 +205,7 @@ namespace ZtDateFmt {
   struct CSV {
   friend class ::ZtDate;
   public:
-    ZuInline CSV() : m_ptr(0), m_offset(0), m_julian(0), m_sec(0) {
+    ZuInline CSV() : m_ptr(0), m_offset(0), m_pad(0), m_julian(0), m_sec(0) {
       memcpy(m_yyyymmdd, "0001/01/01", 10);
       memcpy(m_hhmmss, "00:00:00", 8);
     }
@@ -216,9 +216,13 @@ namespace ZtDateFmt {
     ZuInline void offset(int o) { m_offset = o; }
     ZuInline int offset() const { return m_offset; }
 
+    ZuInline void pad(char c) { m_pad = c; }
+    ZuInline char pad() const { return m_pad; }
+
   private:
     const ZtDate	*m_ptr;
     int			m_offset;
+    char		m_pad;
 
     mutable int		m_julian;
     mutable int		m_sec;
@@ -265,7 +269,6 @@ template <> struct ZuTraits<ZtDate> : public ZuGenericTraits<ZtDate> {
 };
 
 class ZtAPI ZtDate {
-  struct Private { };
   typedef ZtDate_time_t<sizeof(time_t)> Native;
 
 public:
@@ -299,7 +302,7 @@ public:
   // ZmTime
 
   template <typename T>
-  inline ZtDate(const T &t, typename ZuSame<ZmTime, T, Private>::T *_ = 0) {
+  inline ZtDate(const T &t, typename ZuSame<ZmTime, T>::T *_ = 0) {
     init(t.sec()), m_nsec = t.nsec();
   }
   template <typename T>
@@ -312,7 +315,7 @@ public:
   // time_t
 
   template <typename T>
-  inline ZtDate(const T &t, typename ZuSame<time_t, T, Private>::T *_ = 0) {
+  inline ZtDate(const T &t, typename ZuSame<time_t, T>::T *_ = 0) {
     init(t), m_nsec = 0;
   }
   template <typename T>
@@ -325,7 +328,7 @@ public:
   // double
 
   template <typename T>
-  inline ZtDate(T d, typename ZuSame<double, T, Private>::T *_ = 0) {
+  inline ZtDate(T d, typename ZuSame<double, T>::T *_ = 0) {
     time_t t = (time_t)d;
     init(t);
     m_nsec = (int)((d - (double)t) * (double)1000000000);
@@ -453,12 +456,12 @@ public:
   // parameter passed in by the caller
 
   template <typename S>
-  inline ZtDate(const S &s, typename ZuIsString<S, Private>::T *_ = 0) {
+  inline ZtDate(const S &s, typename ZuIsString<S>::T *_ = 0) {
     ctorISO(s, 0);
   }
   template <typename S, typename TZ>
   inline ZtDate(const S &s, const TZ &tz, typename ZuIfT<
-      ZuTraits<S>::IsString && ZuTraits<TZ>::IsCString, Private>::T *_ = 0) {
+      ZuTraits<S>::IsString && ZuTraits<TZ>::IsCString>::T *_ = 0) {
     ctorISO(s, tz);
   }
 
@@ -733,8 +736,13 @@ public:
     s << ZuString(fmt.m_hhmmss, 8);
     if (unsigned N = date.m_nsec) {
       char buf[9];
-      N = Zu_ntoa::Base10_print_frac_truncate(N, 9, buf);
-      if (N) s << '.' << ZuString(buf, N);
+      if (fmt.m_pad) {
+	Zu_ntoa::Base10_print_frac(N, 9, fmt.m_pad, buf);
+	s << '.' << ZuString(buf, 9);
+      } else {
+	if (N = Zu_ntoa::Base10_print_frac_truncate(N, 9, buf))
+	  s << '.' << ZuString(buf, N);
+      }
     }
   }
 

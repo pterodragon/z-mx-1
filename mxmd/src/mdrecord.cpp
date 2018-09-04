@@ -64,7 +64,7 @@ void refDataLoaded(MxMDVenue *venue)
 
 static ZmRef<MxMDSecHandler> secHandler;
 
-void addSecurity(MxMDSecurity *security)
+void addSecurity(MxMDSecurity *security, MxDateTime)
 {
   if (!syms) return;
   if (!syms->findKey(security->refData().symbol)) return;
@@ -79,7 +79,7 @@ int main(int argc, char **argv)
   syms = new Syms();
   (secHandler = new MxMDSecHandler())->
     l1Fn(MxMDLevel1Fn::Ptr<&l1>::fn()).
-    l2Fn(MxMDLevel2Fn::Ptr<&l2>::fn());
+    l2Fn(MxMDOrderBookFn::Ptr<&l2>::fn());
 
   if (argc > 3) { // read symbols from file
     FILE *f = fopen(argv[2], "r");

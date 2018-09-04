@@ -59,10 +59,10 @@ struct ZvHeapMgrCf {
     template <typename ID>
     inline BitmapCol(const ID &id, int offset) :
 	Base(id, offset,
-	     ParseFn::Ptr<&BitmapCol::parse>::fn(),
-	     PlaceFn::Ptr<&BitmapCol::place>::fn()) { }
-    static void parse(ZmBitmap *i, ZuString b) { *i = ZmBitmap(b); }
-    static void place(ZtArray<char> &b, const ZmBitmap *i) { b << *i; }
+	     ParseFn::Ptr<&BitmapCol::parse_>::fn(),
+	     PlaceFn::Ptr<&BitmapCol::place_>::fn()) { }
+    static void parse_(ZmBitmap *i, ZuString b) { *i = ZmBitmap(b); }
+    static void place_(ZtArray<char> &b, const ZmBitmap *i) { b << *i; }
   };
 
   struct CSV : public ZvCSV {

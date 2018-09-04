@@ -40,7 +40,7 @@ template <typename Heap> struct S_ : public Heap {
   inline ~S_() { m_i = -1; }
   inline void doit() {
     if (verbose) { printf("hello world %d\n", m_i); fflush(stdout); }
-    if (m_i < 0) *(int *)(uintptr_t)0 = 42;
+    if (m_i < 0) __builtin_trap();
   }
   int m_i;
 };

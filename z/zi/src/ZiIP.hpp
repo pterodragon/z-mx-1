@@ -42,8 +42,6 @@
 #include <ZiPlatform.hpp>
 
 class ZiAPI ZiIP : public in_addr {
-  struct Private { };
-
 public:
   typedef ZiPlatform::Hostname Hostname;
 
@@ -67,7 +65,7 @@ public:
   }
 
   template <typename S>
-  inline ZiIP(S &&s, typename ZuIsString<S, Private>::T *_ = 0) {
+  inline ZiIP(S &&s, typename ZuIsString<S>::T *_ = 0) {
     ZeError e;
     if (resolve(ZuFwd<S>(s), &e) != OK) throw e;
   }

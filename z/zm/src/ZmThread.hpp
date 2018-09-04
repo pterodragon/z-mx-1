@@ -349,7 +349,12 @@ public:
   }
   ZuInline uint32_t hash() { return ZuHash<ID>::hash(tid()); }
 
+<<<<<<< working copy
   ZuInline bool operator !() { return !m_context; }
+=======
+  ZuInline bool operator !() const { return !m_context; }
+  ZuOpBool
+>>>>>>> merge rev
 
   typedef ZmFn<const ZmThreadInfo &> InfoFn;
   static void info(InfoFn fn);

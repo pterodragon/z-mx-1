@@ -58,8 +58,6 @@
 #endif
 
 class ZmAffinity {
-  struct Private { };
-
 public:
   enum Varargs_ { Varargs };
   enum { Next = -1, End = -2 };
@@ -136,7 +134,7 @@ protected:
 public:
   template <typename S>
   inline ZmAffinity(const S &s,
-      typename ZuIsCharString<S, Private>::T *_ = 0) {
+      typename ZuIsCharString<S>::T *_ = 0) {
     init_();
     scan(s);
   }
@@ -300,6 +298,12 @@ public:
     return m_state;
   }
 
+  template <typename L>
+  inline auto stateLocked(L &&l) const {
+    ZmReadGuard<ZmLock> stateGuard(m_stateLock);
+    return l(m_state);
+  }
+
 public:
   enum { Update = 0, Advance, Defer };
 
@@ -335,9 +339,9 @@ public:
     { run(0, ZuMv(fn), timeout, mode, ptr); }
 
   ZuInline void run(unsigned tid, ZmFn<> fn, ZmTime timeout)
-    { run(tid, ZuMv(fn), Update, 0); }
+    { run(tid, ZuMv(fn), timeout, Update, 0); }
   ZuInline void run(unsigned tid, ZmFn<> fn, ZmTime timeout, Timer *ptr)
-    { run(tid, ZuMv(fn), Update, ptr); }
+    { run(tid, ZuMv(fn), timeout, Update, ptr); }
   void run(unsigned tid, ZmFn<> fn, ZmTime timeout, int mode, Timer *ptr);
 
   void del(Timer *);				// cancel job
@@ -371,7 +375,8 @@ public:
     run_(thread, ZuFwd<Fn>(fn), ZuFwd<O>(o));
   }
 
-  ZuInline void initThreadFn(ZmFn<> fn) { m_initThreadFn = ZuMv(fn); }
+  ZuInline void threadInit(ZmFn<> fn) { m_threadInitFn = ZuMv(fn); }
+  ZuInline void threadFinal(ZmFn<> fn) { m_threadFinalFn = ZuMv(fn); }
 
   ZuInline const char *id() const { return m_id; }
   ZuInline unsigned nThreads() const { return m_nThreads; }
@@ -405,9 +410,6 @@ public:
     { return m_threads[0].ring.config().timeout(); }
 
 protected:
-  virtual void threadInit(unsigned tid);
-  virtual void threadFinal(unsigned tid);
-
   void runThreads();
 
   void busy();
@@ -450,7 +452,11 @@ private:
       else
 	s << ZuBoxed(status) << " bytes remaining";
       s << '\n';
-      std::cerr << s; // yuck
+#ifndef _WIN32
+      std::cerr << s << std::flush;
+#else
+      MessageBoxA(0, s, "Thread Dispatch Failure", MB_ICONEXCLAMATION);
+#endif
     }
   }
 
@@ -486,7 +492,8 @@ private:
 
   ZmSemaphore			m_stopped;
 
-  ZmFn<>			m_initThreadFn;
+  ZmFn<>			m_threadInitFn;
+  ZmFn<>			m_threadFinalFn;
 };
 
 #ifdef _MSC_VER

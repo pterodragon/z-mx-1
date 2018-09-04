@@ -61,7 +61,7 @@ public:
 
   inline ~ZiDir() { close(); }
 
-  inline bool operator !() {
+  inline bool operator !() const {
     return
 #ifdef _WIN32
       m_handle == INVALID_HANDLE_VALUE;

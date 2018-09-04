@@ -57,16 +57,19 @@ void l1(MxMDOrderBook *ob, const MxMDL1Data &)
 	ZuBox<unsigned>(l1.stamp.nsec()).fmt(Right<9>()) <<
     ' ' << MxTradingStatus::name(l1.status) <<
     ' ' << MxTickDir::name(l1.tickDir) <<
-    " last: " << l1.last.fmt(FP<-3>()) << '/' << l1.lastQty.fmt(FP<-3>()) <<
-    " bid: " << l1.bid.fmt(FP<-3>()) << '/' << l1.bidQty.fmt(FP<-3>()) <<
-    " ask: " << l1.ask.fmt(FP<-3>()) << '/' << l1.askQty.fmt(FP<-3>()) <<
-    " high: " << l1.high.fmt(FP<-3>()) <<
-    " low: " << l1.low.fmt(FP<-3>()) <<
-    " accVol: " << l1.accVol.fmt(FP<-3>()) << '/' <<
-      l1.accVolQty.fmt(FP<-3>()) <<
-    " match: " << l1.match.fmt(FP<-3>()) << '/' <<
-      l1.matchQty.fmt(FP<-3>()) <<
-    " surplusQty: " << l1.surplusQty.fmt(FP<-3>()) <<
+    " last: " << MxValNDP{l1.last, l1.pxNDP}.fmt(FP<-3>()) << '/' <<
+      MxValNDP{l1.lastQty, l1.qtyNDP}.fmt(FP<-3>()) <<
+    " bid: " << MxValNDP{l1.bid, l1.pxNDP}.fmt(FP<-3>()) << '/' <<
+      MxValNDP{l1.bidQty, l1.qtyNDP}.fmt(FP<-3>()) <<
+    " ask: " << MxValNDP{l1.ask, l1.pxNDP}.fmt(FP<-3>()) << '/' <<
+      MxValNDP{l1.askQty, l1.qtyNDP}.fmt(FP<-3>()) <<
+    " high: " << MxValNDP{l1.high, l1.pxNDP}.fmt(FP<-3>()) <<
+    " low: " << MxValNDP{l1.low, l1.pxNDP}.fmt(FP<-3>()) <<
+    " accVol: " << MxValNDP{l1.accVol, l1.pxNDP}.fmt(FP<-3>()) << '/' <<
+      MxValNDP{l1.accVolQty, l1.qtyNDP}.fmt(FP<-3>()) <<
+    " match: " << MxValNDP{l1.match, l1.pxNDP}.fmt(FP<-3>()) << '/' <<
+      MxValNDP{l1.matchQty, l1.qtyNDP}.fmt(FP<-3>()) <<
+    " surplusQty: " << MxValNDP{l1.surplusQty, l1.qtyNDP}.fmt(FP<-3>()) <<
     " flags: " << flags << '\n';
 }
 
@@ -78,8 +81,8 @@ void pxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
     ZuBox<unsigned>(stamp.hhmmss()).fmt(Right<6>()) << '.' <<
       ZuBox<unsigned>(stamp.nsec()).fmt(Right<9>()) <<
     (pxLevel->side() == MxSide::Buy ? " bid" : " ask") <<
-    " price: " << pxLevel->price().fmt(FP<-3>()) <<
-    " qty: " << pxLvlData.qty.fmt(FP<-3>()) <<
+    " price: " << MxValNDP{pxLevel->price(), pxLevel->pxNDP()}.fmt(FP<-3>()) <<
+    " qty: " << MxValNDP{pxLvlData.qty, pxLevel->qtyNDP()}.fmt(FP<-3>()) <<
     " nOrders: " << pxLvlData.nOrders.fmt(FP<-3>()) << '\n';
 }
 
@@ -91,7 +94,8 @@ void deletedPxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
     ZuBox<unsigned>(stamp.hhmmss()).fmt(Right<6>()) << '.' <<
       ZuBox<unsigned>(stamp.nsec()).fmt(Right<9>()) <<
     (pxLevel->side() == MxSide::Buy ? " bid" : " ask") <<
-    " price: " << pxLevel->price().fmt(FP<-3>()) << " DELETED" << '\n';
+    " price: " << MxValNDP{pxLevel->price(), pxLevel->pxNDP()}.fmt(FP<-3>()) <<
+    " DELETED" << '\n';
 }
 
 void l2(MxMDOrderBook *ob, MxDateTime stamp)
@@ -111,7 +115,7 @@ void refDataLoaded(MxMDVenue *venue)
 
 static ZmRef<MxMDSecHandler> secHandler;
 
-void addSecurity(MxMDSecurity *security)
+void addSecurity(MxMDSecurity *security, MxDateTime)
 {
   if (!syms) return;
   if (!syms->findKey(security->refData().symbol)) return;
@@ -143,7 +147,7 @@ int main(int argc, char **argv)
     addPxLevelFn(MxMDPxLevelFn::Ptr<&pxLevel>::fn()).
     updatedPxLevelFn(MxMDPxLevelFn::Ptr<&pxLevel>::fn()).
     deletedPxLevelFn(MxMDPxLevelFn::Ptr<&deletedPxLevel>::fn()).
-    l2Fn(MxMDLevel2Fn::Ptr<&l2>::fn());
+    l2Fn(MxMDOrderBookFn::Ptr<&l2>::fn());
 
   // read rics from file into hash table
   {

@@ -123,24 +123,4 @@ private:
   iconv_t	m_cd;
 };
 
-struct ZtAPI ZtIconv_wchar2char { static ZtIconv *instance(); };
-struct ZtAPI ZtIconv_char2wchar { static ZtIconv *instance(); };
-
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4800)
-#endif
-
-template <typename To, typename From> struct ZtIconvDefault;
-template <> struct ZtIconvDefault<char, wchar_t> {
-  inline static ZtIconv *instance() { return ZtIconv_wchar2char::instance(); }
-};
-template <> struct ZtIconvDefault<wchar_t, char> {
-  inline static ZtIconv *instance() { return ZtIconv_char2wchar::instance(); }
-};
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-
 #endif /* ZtIconv_HPP */

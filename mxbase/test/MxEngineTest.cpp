@@ -4,6 +4,8 @@
 
 class Mgr : public MxEngineMgr {
 public:
+  virtual ~Mgr() { }
+
   // Engine Management
   void addEngine(MxEngine *) { }
   void delEngine(MxEngine *) { }
@@ -32,6 +34,8 @@ public:
 class App : public MxEngineApp {
 public:
   inline App() { }
+  virtual ~App() { }
+
   inline void final() { }
 
   // Rx
@@ -174,4 +178,6 @@ int main()
 
   engine = 0;
   app->final();
+  delete mgr;
+  delete app;
 }

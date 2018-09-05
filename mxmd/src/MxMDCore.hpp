@@ -1213,7 +1213,7 @@ friend class Subscriber;
       void disconnect();
       void disconnected() {}
 
-      void recv(ZiIOContext &);
+      //void recv();
       
       
       void process(MxMDPubSub::UDP::InMsg *inMsg, ZiIOContext &io)
@@ -1248,11 +1248,13 @@ friend class Subscriber;
 
         m_subscriber->m_rx->received(qmsg);
 
-        recv(io);
+        //recv(io);
+	m_in->recv(io);
       }
 
     private:
       Subscriber		*m_subscriber;
+      ZmRef<MxMDPubSub::UDP::InMsg>	m_in;
     };
 
   public:
@@ -1334,7 +1336,7 @@ friend class Subscriber;
     void stop();
 
   private:
-    void recv(Rx *rx, ZiIOContext &io);
+    void recv(Rx *rx);
     void pushMsg(MxQMsg *qmsg);
 
     void running();
@@ -1365,7 +1367,7 @@ friend class Subscriber;
     void udpConnect();
     ZiConnection *udpConnected(const ZiCxnInfo &ci);
     void udpConnectFailed(bool transient);
-    void udpConnected2(UDP *, ZiIOContext &);
+    void udpConnected2(UDP *);
     void udpReceived(MxQMsg *msg);
     void udpReceived_(MxQMsg *msg);
 

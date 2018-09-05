@@ -138,7 +138,7 @@ namespace MxMDPubSub {
 	    this->data(), sizeof(Frame) + sizeof(MxMDStream::Buf), 0);
       }
 
-      bool scan() { /* FIXME - sanity check frame() and buf() */ return true; }
+      bool scan() { /* FIXME - sanity check frame() and buf() */ return false; }
 
    public:
       inline const ZiSockAddr &addr() const { return m_addr; }

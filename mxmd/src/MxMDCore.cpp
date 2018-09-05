@@ -1937,16 +1937,34 @@ void MxMDCore::Subscriber::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &i
 }
 
 MxMDCore::Subscriber::UDP::UDP(Subscriber *subscriber, const ZiCxnInfo &ci) :
-    ZiConnection(subscriber->m_core->mx(), ci), m_subscriber(subscriber) { }
+    ZiConnection(subscriber->m_core->mx(), ci), m_subscriber(subscriber)
+{
+  using namespace MxMDPubSub::UDP;
+  m_in = new InMsg();
+}
 
 void MxMDCore::Subscriber::UDP::connected(ZiIOContext &io)
 {
   std::cout << "Subscriber UDP connected" << std::endl;
 	
-  m_subscriber->udpConnected2(this, io);
+  m_subscriber->udpConnected2(this);
+  
+  
+  
+  
+  using namespace MxMDPubSub::UDP;
+  
+  
+  
+  
+  //ZmRef<InMsg> msg = new InMsg();
+  m_in->fn() = InMsg::Fn::Member<&MxMDCore::Subscriber::UDP::process>::fn(this);
+  
+  m_in->recv(io);
+  
 }
 
-void MxMDCore::Subscriber::udpConnected2(Subscriber::UDP *udp, ZiIOContext &io)
+void MxMDCore::Subscriber::udpConnected2(Subscriber::UDP *udp)
 {
   ZmRef<TCP> tcp;
   {
@@ -1961,15 +1979,29 @@ void MxMDCore::Subscriber::udpConnected2(Subscriber::UDP *udp, ZiIOContext &io)
 
   m_core->raise(ZeEVENT(Info, "Subscriber udpConnected2"));
 
-  m_link->rxInvoke([&io](Rx *rx) {
+  
+  
+  
+  
+  
+  m_link->rxInvoke([](Rx *rx) {
 	static_cast<Subscriber *>(
-	    static_cast<Link *>(rx)->engine())->recv(rx, io);
-      });
+	    static_cast<Link *>(rx)->engine())->recv(rx);
+      });////////////////////////////////////
 
+  //recv(rx, io);
+      
+      
+      
+      
+      
+      
+      
+      
   tcp->sendLogin();
 }
 
-void MxMDCore::Subscriber::recv(Rx *rx, ZiIOContext &io) {
+void MxMDCore::Subscriber::recv(Rx *rx) {
 	
 	
   std::cout << "Subscriber recv" << std::endl;
@@ -1980,7 +2012,7 @@ void MxMDCore::Subscriber::recv(Rx *rx, ZiIOContext &io) {
   m_rx = rx;
 
   
-  m_udp->recv(io);
+  //m_udp->recv();
   /*m_link->rxRun([&io](Rx *rx) {
 	static_cast<Subscriber *>(
 	    static_cast<Link *>(rx)->engine())->m_udp->recv(io);
@@ -1992,23 +2024,23 @@ void MxMDCore::Subscriber::recv(Rx *rx, ZiIOContext &io) {
   
 }
 
-void MxMDCore::Subscriber::UDP::recv(ZiIOContext &io)
-{
-  std::cout << "Subscriber UDP recv" << std::endl;
+//void MxMDCore::Subscriber::UDP::recv()
+//{
+ // std::cout << "Subscriber UDP recv" << std::endl;
 	
-	
+	/*
   using namespace MxMDPubSub::UDP;
   ZmRef<InMsg> msg = new InMsg();
-  msg->fn() = InMsg::Fn::Member<&MxMDCore::Subscriber::UDP::process>::fn(this);
+  msg->fn() = InMsg::Fn::Member<&MxMDCore::Subscriber::UDP::process>::fn(this);*/
 
   
   
   //ZiSockAddr addr;///////////
   //addr.init({"239.255.90.105"}, 27413);//////////////
   
-  
+  /*
   msg->recv(io);///////////////////////////////
-  /*m_subscriber->m_link->rxRun([&io, msg](Rx *) {
+  m_subscriber->m_link->rxInvoke([&io, msg](Rx *) {
 	  
 	  msg->recv(io);
 	  
@@ -2018,10 +2050,10 @@ void MxMDCore::Subscriber::UDP::recv(ZiIOContext &io)
   
   
   
-  std::cout << "$$$$$$$$$$ Subscriber UDP recv end $$$$$$$$$$$$$$$" << std::endl;
+//  std::cout << "$$$$$$$$$$ Subscriber UDP recv end $$$$$$$$$$$$$$$" << std::endl;
   
   
-}
+//}
 
 void MxMDCore::Subscriber::pushMsg(MxQMsg *qmsg) {
   auto frame = qmsg->template as<Msg>().frame();

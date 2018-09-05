@@ -7,7 +7,8 @@ AM_LDFLAGS = @MXMD_LDFLAGS@ @MXMD_SO_LDFLAGS@ \
 	@MXBASE_LDFLAGS@ @Z_LDFLAGS@
 include_HEADERS = \
 	MxMD.hpp MxMDLib.hpp MxMDVersion.hpp MxMDTypes.hpp \
-	MxMDCore.hpp MxMDCmd.hpp MxMDCSV.hpp MxMDFrame.hpp MxMDStream.hpp
+	MxMDCore.hpp MxMDCmd.hpp MxMDCSV.hpp MxMDFrame.hpp MxMDStream.hpp \
+	MxMDMsg.hpp
 lib_LTLIBRARIES = libMxMD.la
 libMxMD_la_SOURCES = \
 	MxMD.cpp MxMDLib.cpp MxMDVersion.cpp MxMDCore.cpp

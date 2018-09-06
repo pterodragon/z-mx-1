@@ -38,7 +38,7 @@ void publish();		// publisher thread - generates random ticks
 int main(int argc, char **argv)
 {
   // configure and start logging
-  ZeLog::init("mdsample");		// program name
+  ZeLog::init("mdsample publisher");		// program name
   ZeLog::add(ZeLog::fileSink("&2"));	// log errors to stderr
   ZeLog::start();			// start logger thread
 
@@ -47,15 +47,7 @@ int main(int argc, char **argv)
   try {
     MxMDLib *md = MxMDLib::init("pub.cf");
 
-      
-      std::cout << "0000" << std::endl;
-      
     if (!md) return 1;
-    
-    
-    
-    std::cout << "111" << std::endl;
-    
 
     if (initFeed() < 0) {		// initialize synthetic feed
       md->final();
@@ -260,8 +252,8 @@ void publish()
 	});
       }
 
-    // wait two second between ticks
-    } while (sem.timedwait(ZmTime(ZmTime::Now, 2)) < 0);
+    // wait three second between ticks
+    } while (sem.timedwait(ZmTime(ZmTime::Now, 3)) < 0);
 
   } catch (const ZtString &s) {
     ZeLOG(Error, s);

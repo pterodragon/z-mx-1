@@ -13,12 +13,15 @@ publisher {
   id publisher
   rxThread 3
   txThread 3
-  multicastAddr 239.255.90.105
-  multicastPort 27413
-  localTcpPort 9394
 }
 subscriber {
   id subscriber
   rxThread 3
   txThread 3
+  username fakename
+  password 123456
+  remoteIP 127.0.0.1
+  remoteTcpPort 9394
+  multicastAddr 239.255.90.105
+  multicastPort 27413
 }

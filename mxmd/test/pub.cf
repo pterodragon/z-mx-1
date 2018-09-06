@@ -1,0 +1,25 @@
+mx {
+  nThreads 4
+  rxThread 1
+  txThread 2
+  isolation 1-3
+}
+recorder {
+  id recorder
+  rxThread 3
+  txThread 3
+}
+publisher {
+  id publisher
+  rxThread 3
+  txThread 3
+  txThread 3
+  multicastAddr 239.255.90.105
+  multicastPort 27413
+  localTcpPort 9394
+}
+subscriber {
+  id subscriber
+  rxThread 3
+  txThread 3
+}

@@ -994,6 +994,9 @@ void MxMDCore::recordCmd(const CmdArgs &args, ZtArray<char> &out)
 
 void MxMDCore::record(ZuString path)
 {
+  std::cout << "start recording" << std::endl;
+	
+	
   switch (m_mx->stateLocked([this, path](int state) {
     if (state != ZmScheduler::Running && state != ZmScheduler::Starting) {
       m_recordCfPath = path;

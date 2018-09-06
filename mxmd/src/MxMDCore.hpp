@@ -722,6 +722,15 @@ friend class Recorder;
     }
 
     int write(const Frame *frame, ZeError *e) {
+	    
+	    
+	    std::cout << "seqNo: " << frame->seqNo << std::endl;
+	    std::cout << "len: " << frame->len << std::endl;
+	    std::cout << "type: " << (int)frame->type << std::endl;
+	    
+	    
+	    
+	    
       return m_file.write((const void *)frame, sizeof(Frame) + frame->len, e);
     }
 
@@ -741,6 +750,14 @@ friend class Recorder;
 	}
       }
       m_link->rxInvoke([](Rx *rx) { rx->stopQueuing(1); });
+      
+      
+      
+      
+      std::cout << "************ stopQueuing ***************"  << std::endl;
+      
+      
+      
     }
 
   public:
@@ -748,8 +765,8 @@ friend class Recorder;
       ZeError e;
       Guard guard(m_ioLock);
 
-      //if (ZuUnlikely(write(qmsg->template as<Msg>().frame(), &e)) != Zi::OK) {
-      if (ZuUnlikely(write(qmsg->template as<ZuAnyPOD>().template as<Msg>().frame(), &e)) != Zi::OK) {
+      if (ZuUnlikely(write(qmsg->template as<Msg>().frame(), &e)) != Zi::OK) {
+      //if (ZuUnlikely(write(qmsg->template as<ZuAnyPOD>().template as<Msg>().frame(), &e)) != Zi::OK) {
 	ZiFile::Path path = m_path;
 	m_file.close();
 	guard.unlock();

@@ -61,7 +61,7 @@ int main(int argc, char **argv)
       return 1;
     }
 
-//    md->record("foo");
+    md->record("foo");
 
     md->start();			// start all feeds
 

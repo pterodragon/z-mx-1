@@ -177,20 +177,11 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
         "id publisher\n"
 	"rxThread 3\n"
 	"txThread 3\n"
-	"multicastAddr 239.255.90.105\n"
-	"multicastPort 27413\n"
-	"localTcpPort 9394\n"
       "}\n"
       "subscriber {\n"
         "id subscriber\n"
 	"rxThread 3\n"
 	"txThread 3\n"
-	"username fakename\n"
-	"password 123456\n"
-	"remoteIP 127.0.0.1\n"
-	"remoteTcpPort 9394\n"
-	"multicastAddr 239.255.90.105\n"
-	"multicastPort 27413\n"
       "}\n",
       false);
   }

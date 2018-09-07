@@ -702,9 +702,12 @@ friend class Recorder;
 	      })));
 	  goto end;
 	}
+	MxSeqNo seqNo = ++m_msgSeqNo;
 	memcpy(msg->data().frame(), frame, sizeof(Frame) + frame->len);
+	msg->data().frame()->seqNo = seqNo;
+
 	ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
-	qmsg->load(rx->rxQueue().id, ++m_msgSeqNo);
+	qmsg->load(rx->rxQueue().id, seqNo);
 	rx->received(qmsg);
       }
       broadcast.shift2();
@@ -836,7 +839,11 @@ friend class Publisher;
       {
         using namespace MxMDPubSub::TCP;
         ZmRef<OutMsg> msg = new OutMsg();
-        memcpy(msg->out<MsgType>(), frame, sizeof(Frame) + frame->len);
+        
+	//memcpy(msg->out<MsgType>(), frame, sizeof(Frame) + frame->len);
+	memcpy(msg->data(), frame, sizeof(Frame) + frame->len);
+	
+	
         msg->send(this);
 	
 	m_publisher->m_core->raise(ZeEVENT(Info, "Publisher TCP send_"));
@@ -866,11 +873,20 @@ friend class Publisher;
       template <typename MsgType>
       void send_(const Frame *frame)
       {
+	      
+	      
+	
+      std::cout << "udp seqNo: " << frame->seqNo << std::endl;
+      std::cout << "udp len: " << frame->len << std::endl;
+      std::cout << "udp type: " << (int)frame->type << std::endl;
+	      
+	      
         using namespace MxMDPubSub::UDP;
         ZmRef<OutMsg> msg = new OutMsg();
-        memcpy(msg->out<MsgType>(), frame, sizeof(Frame) + frame->len);
+        //memcpy(msg->out<MsgType>(), frame + sizeof(Frame), frame->len);
+	memcpy(msg->data(), frame, sizeof(Frame) + frame->len);
         msg->send(this, m_remoteAddr);
-	
+
 	m_publisher->m_core->raise(ZeEVENT(Info, "Publisher UDP send_"));
       }
 
@@ -1153,6 +1169,16 @@ friend class Publisher;
   public:
     void sendMsg(MxQMsg *qmsg) {
       using namespace MxMDStream;
+      
+      
+      /*
+      auto frame = qmsg->payload->template as<MsgData>().frame();
+      std::cout << "udp seqNo: " << frame->seqNo << std::endl;
+      std::cout << "udp len: " << frame->len << std::endl;
+      std::cout << "udp type: " << (int)frame->type << std::endl;*/
+      
+      
+      
 
       Guard guard(m_ioLock);
       //m_udp->send(qmsg->template as<Msg>().frame());
@@ -1170,6 +1196,17 @@ friend class Publisher;
     }
     void push2() {
       if (ZuUnlikely(!m_snapMsg)) { m_ioLock.unlock(); return; }
+      
+      
+      
+      auto frame = m_snapMsg->frame();
+      std::cout << "tcp seqNo: " << frame->seqNo << std::endl;
+      std::cout << "tcp len: " << frame->len << std::endl;
+      std::cout << "tcp type: " << (int)frame->type << std::endl;
+      
+      
+      
+      
       m_tcp->send(m_snapMsg->frame());
       m_ioLock.unlock();
     }
@@ -1249,6 +1286,18 @@ friend class Subscriber;
         }
 
         Frame &frame = inMsg->template as<Frame>();
+	
+	
+	
+	
+	
+      std::cout << "udp seqNo: " << frame.seqNo << std::endl;
+      std::cout << "udp len: " << frame.len << std::endl;
+      std::cout << "udp type: " << (int)frame.type << std::endl;
+	
+	
+	
+	
 
         MsgRef msg = new Msg();
 

@@ -1674,7 +1674,10 @@ void MxMDCore::Publisher::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &io
     case Type::Login: {
       m_publisher->m_core->raise(ZeEVENT(Info, "Publisher TCP Login recv"));
 
-      //const Login &data = hdr.as<Login>();
+      const Login &data = hdr.as<Login>();
+      std::cout << "username: " << data.username << std::endl;
+      std::cout << "password: " << data.password << std::endl;
+      
       //// process login.....
 
       m_publisher->snapStart();
@@ -1900,6 +1903,17 @@ void MxMDCore::Subscriber::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &i
   using namespace MxMDStream;
 
   Frame &hdr = m_in->as<Frame>();
+  
+  
+  
+  std::cout << "tcp seqNo: " << hdr.seqNo << std::endl;
+      std::cout << "tcp len: " << hdr.len << std::endl;
+      std::cout << "tcp type: " << (int)hdr.type << std::endl;
+  
+  
+  
+  
+  
 
   switch ((int)hdr.type) {
     case Type::EndOfSnapshot:

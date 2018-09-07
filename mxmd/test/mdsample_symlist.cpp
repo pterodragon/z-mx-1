@@ -140,8 +140,9 @@ int main(int argc, char **argv)
     if (f) {
       int i = 0;
       do {
-	MxSymString sym;
-	if (!fgets(sym, MxSymString::N - 1, f)) break;
+	char s[MxSymString::N];
+	if (!fgets(s, MxSymString::N - 1, f)) break;
+	MxSymString sym(s);
 	sym.calcLength();
 	sym.chomp();
 	syms->add(sym);

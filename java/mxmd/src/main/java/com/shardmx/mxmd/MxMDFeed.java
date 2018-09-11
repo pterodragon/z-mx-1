@@ -3,7 +3,7 @@ package com.shardmx.mxmd;
 import com.shardmx.mxbase.*;
 
 public class MxMDFeed implements AutoCloseable {
-  public MxMDFeed(long ptr) { ctor_(this.ptr = ptr); }
+  private MxMDFeed(long ptr) { ctor_(this.ptr = ptr); }
   public void finalize() { close(); }
   public void close() { dtor_(this.ptr); this.ptr = 0; }
 

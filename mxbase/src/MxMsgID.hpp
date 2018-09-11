@@ -37,11 +37,9 @@
 
 // generic message ID
 
-typedef ZuPair<MxID, MxSeqNo> MxMsgID_;
-template <typename T> struct MxMsgID_Fn : public T {
-  Mx_TupleField(MxID, queueID, 1)
-  Mx_TupleField(MxSeqNo, seqNo, 2)
+struct MxMsgID {
+  MxID		queueID;
+  MxSeqNo	seqNo;
 };
-typedef ZuMixin<MxMsgID_, MxMsgID_Fn> MxMsgID;
 
 #endif /* MxMsgID_HPP */

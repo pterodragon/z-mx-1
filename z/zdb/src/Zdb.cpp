@@ -1016,7 +1016,7 @@ void Zdb_Cxn::repSend(
 void ZdbAnyPOD_Send__::init(
     int type, ZdbRange range, bool update, bool compress)
 {
-  ZdbDEBUG(m_pod->db()->env(), ZtString() << "ZdbAnyPOD__::init(" <<
+  ZdbDEBUG(m_pod->db()->env(), ZtString() << "ZdbAnyPOD_Send__::init(" <<
       type << ", " << range << ", " <<
       (int)update << "< " << (int)compress << ')');
   m_hdr.type = type;

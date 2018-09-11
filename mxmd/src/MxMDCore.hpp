@@ -694,8 +694,9 @@ friend class Recorder;
 	      })));
 	  goto end;
 	}
-	memcpy(msg->frame(), frame, sizeof(Frame) + frame->len);
-	ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
+	unsigned length = sizeof(Frame) + frame->len;
+	memcpy(msg->frame(), frame, length);
+	ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, length, msg);
 	qmsg->load(rx->rxQueue().id, ++m_msgSeqNo);
 	rx->received(qmsg);
       }

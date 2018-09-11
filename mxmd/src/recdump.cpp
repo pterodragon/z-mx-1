@@ -21,7 +21,7 @@
 
 #include <version.h>
 
-class RealTimeCSV : public ZvCSV {
+class RealTimeCSV : public ZvCSV, public MxMDCSV<RealTimeCSV> {
 public:
   struct L2Data {
     MxIDString		orderID;
@@ -71,29 +71,27 @@ public:
     add(new MxNDPCol("pxNDP", pxNDP));
     add(new MxNDPCol("qtyNDP", qtyNDP));
     add(new MxEnumCol<MxTradingStatus::CSVMap>("status", Offset(status)));
-    add(new MxValueCol("base", Offset(base), pxNDP));
+    this->addValCol(app, "base", Offset(base), pxNDP);
     for (unsigned i = 0; i < MxMDNSessions; i++) {
       ZuStringN<8> open = "open"; open << ZuBoxed(i);
       ZuStringN<8> close = "close"; close << ZuBoxed(i);
-      add(new MxValueCol(open,
-	    Offset(open) + (i * sizeof(MxValue)), pxNDP));
-      add(new MxValueCol(close,
-	    Offset(close) + (i * sizeof(MxValue)), pxNDP));
+      this->addValCol(app, open, Offset(open) + (i * sizeof(MxValue)), pxNDP);
+      this->addValCol(app, close, Offset(close) + (i * sizeof(MxValue)), pxNDP);
     }
-    add(new MxValueCol("last", Offset(last), pxNDP));
-    add(new MxValueCol("lastQty", Offset(lastQty), qtyNDP));
-    add(new MxValueCol("bid", Offset(bid), pxNDP));
-    add(new MxValueCol("bidQty", Offset(bidQty), qtyNDP));
-    add(new MxValueCol("ask", Offset(ask), pxNDP));
-    add(new MxValueCol("askQty", Offset(askQty), qtyNDP));
+    this->addValCol(app, "last", Offset(last), pxNDP);
+    this->addValCol(app, "lastQty", Offset(lastQty), qtyNDP);
+    this->addValCol(app, "bid", Offset(bid), pxNDP);
+    this->addValCol(app, "bidQty", Offset(bidQty), qtyNDP);
+    this->addValCol(app, "ask", Offset(ask), pxNDP);
+    this->addValCol(app, "askQty", Offset(askQty), qtyNDP);
     add(new MxEnumCol<MxTickDir::CSVMap>("tickDir", Offset(tickDir)));
-    add(new MxValueCol("high", Offset(high), pxNDP));
-    add(new MxValueCol("low", Offset(low), pxNDP));
-    add(new MxValueCol("accVol", Offset(accVol), pxNDP));
-    add(new MxValueCol("accVolQty", Offset(accVolQty), qtyNDP));
-    add(new MxValueCol("match", Offset(match), pxNDP));
-    add(new MxValueCol("matchQty", Offset(matchQty), qtyNDP));
-    add(new MxValueCol("surplusQty", Offset(surplusQty), qtyNDP));
+    this->addValCol(app, "high", Offset(high), pxNDP);
+    this->addValCol(app, "low", Offset(low), pxNDP);
+    this->addValCol(app, "accVol", Offset(accVol), pxNDP);
+    this->addValCol(app, "accVolQty", Offset(accVolQty), qtyNDP);
+    this->addValCol(app, "match", Offset(match), pxNDP);
+    this->addValCol(app, "matchQty", Offset(matchQty), qtyNDP);
+    this->addValCol(app, "surplusQty", Offset(surplusQty), qtyNDP);
     add(new MxMDVenueFlagsCol<MxMDL1Flags>("l1Flags",
 	  Offset(flags), offsetof(Data, venue)));
 #undef Offset
@@ -102,9 +100,9 @@ public:
     add(new MxEnumCol<MxSide::CSVMap>("side", Offset(side)));
     add(new MxIntCol("rank", Offset(rank)));
     add(new MxBoolCol("delta", Offset(delta)));
-    add(new MxValueCol("price", Offset(price), pxNDP));
-    add(new MxValueCol("qty", Offset(qty), qtyNDP));
-    add(new MxValueCol("nOrders", Offset(nOrders), qtyNDP));
+    this->addValCol(app, "price", Offset(price), pxNDP);
+    this->addValCol(app, "qty", Offset(qty), qtyNDP);
+    this->addValCol(app, "nOrders", Offset(nOrders), qtyNDP);
     add(new MxMDVenueFlagsCol<MxMDL2Flags>("l2Flags",
 	  Offset(flags), offsetof(Data, venue)));
     add(new MxMDVenueFlagsCol<MxMDOrderFlags>("orderFlags",
@@ -245,9 +243,7 @@ class App {
   typedef ZmLHash<MxSecKey> SecIDHash;
 
 public:
-  App() :
-    m_refData(0), m_l1(0), m_l2(0), m_hhmmss(0), m_verbose(0),
-    m_yyyymmdd(ZtDateNow().yyyymmdd()), m_tzOffset(0) { }
+  App() : m_yyyymmdd(ZtDateNow().yyyymmdd()) { }
 
   // dump options
 
@@ -266,6 +262,9 @@ public:
     m_tzOffset = now.offset(tz);
     m_isoFmt.offset(m_tzOffset);
   }
+
+  inline bool raw() const { return m_raw; }
+  inline void raw(bool b) { m_raw = b; }
 
   // filters
 
@@ -358,13 +357,16 @@ public:
   void read();
 
 private:
-  unsigned			m_refData:1,
-				m_l1:1,
-				m_l2:1,
-				m_hhmmss:1,
-				m_verbose:1;
-  unsigned			m_yyyymmdd;
-  int				m_tzOffset;
+  bool				m_refData = 0;
+  bool				m_l1 = 0;
+  bool				m_l2 = 0;
+
+  bool				m_hhmmss = 0;
+  unsigned			m_yyyymmdd = 0;
+  int				m_tzOffset = 0;
+
+  bool				m_verbose = 0;
+  bool				m_raw = 0;
 
   ZtDateFmt::ISO		m_isoFmt;
 
@@ -570,8 +572,13 @@ void usage()
     "  -r\t\t- include reference data in output\n"
     "  -1\t\t- include Level 1 data in output\n"
     "  -2\t\t- include Level 2 data in output\n"
+    "  -R CSV\t- dump real-time messages to CSV\n"
+    "  -O CSV\t- dump order book messages to CSV\n"
+    "  -S CSV\t- dump security messages to CSV\n"
+    "  -T CSV\t- dump tick size messages to CSV\n"
     "  -n\t\t- CSV time stamps as HHMMSS instead of Excel format\n"
-    "  -V\t\t- dump message frames to standard output\n"
+    "  -V\t\t- verbose - dump message frames to standard output\n"
+    "  -N\t\t- raw - output raw fixed-point values (without decimal point)\n"
     "  -d YYYYMMDD\t- CSV time stamps use date YYYYMMDD\n"
     "  -z ZONE\t- CSV time stamps in local time ZONE (defaults to GMT)\n"
     "  -v MIC\t- select venue MIC for following securities\n"
@@ -581,10 +588,6 @@ void usage()
     "  -i ID\t\t- filter for security ID\n"
     "\t\t\t(may be specified multiple times)\n"
     "  -o OUT\t- record filtered output in file OUT\n"
-    "  -T CSV\t- dump tick size messages to CSV\n"
-    "  -S CSV\t- dump security messages to CSV\n"
-    "  -O CSV\t- dump order book messages to CSV\n"
-    "  -R CSV\t- dump real-time messages to CSV\n"
     << std::flush;
   exit(1);
 }
@@ -665,6 +668,9 @@ int main(int argc, const char *argv[])
 	break;
       case 'V':
 	app.verbose(true);
+	break;
+      case 'N':
+	app.raw(true);
 	break;
       default:
 	usage();

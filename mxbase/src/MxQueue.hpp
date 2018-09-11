@@ -61,17 +61,20 @@ struct MxQFlags {
       "PossResend", PossResend);
 };
 
+// the payload may well be run-time polymorphic, so actual length may well
+// be shorter than payload->size() which would be sizeof(ZuLargest<T, ...>)
 struct MxQMsgData {
   MxMsgID		id;
   MxFlags		flags;		// see MxQFlags
   ZmTime		deadline;
+  unsigned		length;		// see comment above
   ZuRef<ZuAnyPOD>	payload;
 
   template <typename T> inline const T &as() const {
-    return *static_cast<const T *>(payload.ptr());
+    return *static_cast<const T *>(payload->ptr());
   }
   template <typename T> inline T &as() {
-    return *static_cast<T *>(payload.ptr());
+    return *static_cast<T *>(payload->ptr());
   }
 };
 
@@ -79,20 +82,20 @@ class MxQMsg_ : public MxQMsgData {
 public:
   template <typename ...Args>
   inline MxQMsg_(Args &&... args) :
-    MxQMsgData{MxMsgID(), ZuFwd<Args>(args)...} { }
+    MxQMsgData{MxMsgID{}, ZuFwd<Args>(args)...} { }
 
   ZuInline void load(MxID queueID, MxSeqNo seqNo) {
-    id.queueID() = queueID;
-    id.seqNo() = seqNo;
+    id.queueID = queueID;
+    id.seqNo = seqNo;
   }
-  ZuInline void unload() { id = MxMsgID(); }
+  ZuInline void unload() { id = MxMsgID{}; }
 };
 
 class MxQFn {
 public:
   typedef MxSeqNo Key;
   inline MxQFn(MxQMsg_ &item) : m_item(item) { }
-  inline MxSeqNo key() const { return m_item.id.seqNo(); }
+  inline MxSeqNo key() const { return m_item.id.seqNo; }
   inline unsigned length() const { return 1; }
   inline unsigned clipHead(unsigned n) { return 1; }
   inline unsigned clipTail(unsigned n) { return 1; }
@@ -363,8 +366,8 @@ public:
   ZuInline bool sendGap_(const Gap &, bool) { return true; } // unused
   ZuInline bool resendGap_(const Gap &, bool) { return true; } // unused
 
-  ZuInline void sent_(MxQMsg *msg) { Tx::ackd(msg->id.seqNo() + 1); }
-  ZuInline void archive_(MxQMsg *msg) { Tx::archived(msg->id.seqNo() + 1); }
+  ZuInline void sent_(MxQMsg *msg) { Tx::ackd(msg->id.seqNo + 1); }
+  ZuInline void archive_(MxQMsg *msg) { Tx::archived(msg->id.seqNo + 1); }
   ZuInline ZmRef<MxQMsg> retrieve_(MxSeqNo) { return 0; } // unused
 
   inline ZmRef<Tx> next_() {

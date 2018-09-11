@@ -392,7 +392,7 @@ class ZdbAnyPOD_Send__ : public ZmPolymorph {
 public:
   inline ZdbAnyPOD_Send__(ZdbAnyPOD *pod,
     int type, ZdbRange range, bool update, bool compress, ZmFn<> fn) :
-      m_pod(pod), m_continuation(fn), m_vec(0) {
+      m_continuation(fn), m_pod(pod), m_vec(0) {
     init(type, range, update, compress);
   }
 
@@ -405,8 +405,8 @@ private:
   void sent(ZiIOContext &io);
 
   ZmRef<Zdb_Cxn>		m_cxn;
-  ZmRef<ZdbAnyPOD>		m_pod;
   ZmFn<>			m_continuation;
+  ZmRef<ZdbAnyPOD>		m_pod;
   ZmRef<ZdbAnyPOD_Compressed>	m_compressed;
   unsigned			m_vec;
   ZiVec				m_vecs[2];

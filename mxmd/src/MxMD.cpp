@@ -179,9 +179,9 @@ void MxMDOrderBook::unsubscribe()
 
 void MxMDOrderBook::l1(MxMDL1Data &l1Data)
 {
-  if (!*l1Data.pxNDP) { l1Data.pxNDP = m_l1Data.pxNDP; goto fixed; }
-  if (!*l1Data.qtyNDP) { l1Data.qtyNDP = m_l1Data.qtyNDP; goto fixed; }
-  if (ZuUnlikely(m_l1Data.pxNDP != l1Data.pxNDP)) {
+  if (!*l1Data.pxNDP) {
+    l1Data.pxNDP = m_l1Data.pxNDP;
+  } else if (ZuUnlikely(m_l1Data.pxNDP != l1Data.pxNDP)) {
 #ifdef adjustNDP
 #undef adjustNDP
 #endif
@@ -202,7 +202,9 @@ void MxMDOrderBook::l1(MxMDL1Data &l1Data)
 #undef adjustNDP
     l1Data.pxNDP = m_l1Data.pxNDP;
   }
-  if (ZuUnlikely(m_l1Data.qtyNDP != l1Data.qtyNDP)) {
+  if (!*l1Data.qtyNDP) {
+    l1Data.qtyNDP = m_l1Data.qtyNDP;
+  } else if (ZuUnlikely(m_l1Data.qtyNDP != l1Data.qtyNDP)) {
 #ifdef adjustNDP
 #undef adjustNDP
 #endif
@@ -217,7 +219,6 @@ void MxMDOrderBook::l1(MxMDL1Data &l1Data)
 #undef adjustNDP
     l1Data.qtyNDP = m_l1Data.qtyNDP;
   }
-fixed:
   m_l1Data.stamp = l1Data.stamp;
   m_l1Data.status.update(l1Data.status);
   m_l1Data.base.update(l1Data.base, MxValueReset);

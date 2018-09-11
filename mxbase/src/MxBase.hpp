@@ -151,25 +151,27 @@ struct MxValNDP {
     if (ZuUnlikely(!s || ndp > 18)) goto null;
     {
       bool negative = s[0] == '-';
-      if (ZuUnlikely(negative)) s.offset(1);
-      uint64_t iv = 0, fv = 0;
-      if (ZuUnlikely(s[0] == '.')) goto frac;
-      {
-	unsigned n = Zu_atou(iv, s.data(), s.length());
-	if (ZuUnlikely(!n)) goto null;
-	s.offset(n);
-	if (ZuUnlikely(iv >= ZuDecimal::pow10_64(18 - ndp))) // overflow
-	  goto null;
+      if (ZuUnlikely(negative)) {
+	s.offset(1);
+	if (ZuUnlikely(!s)) goto null;
       }
-      if (s[0] == '.') {
+      uint64_t iv = 0, fv = 0;
+      unsigned n = s.length();
+      if (ZuUnlikely(s[0] == '.')) {
+	if (ZuUnlikely(n == 1)) goto null;
+	goto frac;
+      }
+      n = Zu_atou(iv, s.data(), n);
+      if (ZuUnlikely(!n)) goto null;
+      s.offset(n);
+      if (ZuUnlikely(iv >= ZuDecimal::pow10_64(18 - ndp))) // overflow
+	goto null;
+      if ((n = s.length()) > 1 && s[0] == '.') {
   frac:
-	unsigned n = s.length();
-	if (ZuLikely(n > 1)) {
-	  if (--n > ndp) n = ndp;
-	  n = Zu_atou(fv, &s[1], n);
-	  if (fv && ndp > n)
-	    fv *= ZuDecimal::pow10_64(ndp - n);
-	}
+	if (--n > ndp) n = ndp;
+	n = Zu_atou(fv, &s[1], n);
+	if (fv && ndp > n)
+	  fv *= ZuDecimal::pow10_64(ndp - n);
       }
       value = iv * ZuDecimal::pow10_64(ndp) + fv;
       if (ZuUnlikely(negative)) value = -value;

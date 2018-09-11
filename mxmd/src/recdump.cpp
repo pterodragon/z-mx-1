@@ -120,6 +120,21 @@ public:
       using namespace MxMDStream;
       const Frame *frame = msg->frame();
       switch ((int)frame->type) {
+	case Type::AddTrade:
+	  {
+	    const AddTrade &obj = frame->as<AddTrade>();
+	    data->venue = obj.key.venue();
+	    data->segment = obj.key.segment();
+	    data->id = obj.key.id();
+	    data->event = frame->type;
+	    data->l1Data.stamp = obj.transactTime;
+	    data->l1Data.pxNDP = obj.pxNDP;
+	    data->l1Data.qtyNDP = obj.qtyNDP;
+	    data->l2Data.orderID = obj.tradeID;
+	    data->l2Data.price = obj.price;
+	    data->l2Data.qty = obj.qty;
+	  }
+	  break;
 	case Type::TradingSession:
 	  {
 	    const TradingSession &obj = frame->as<TradingSession>();
@@ -272,6 +287,7 @@ public:
   inline void refData(bool b) { m_refData = b; }
   inline void l1(bool b) { m_l1 = b; }
   inline void l2(bool b) { m_l2 = b; }
+  inline void trades(bool b) { m_trades = b; }
 
   inline void secID(const MxSecKey &key) { m_secIDs.add(key); }
   inline bool filterID(MxSecKey key) {
@@ -362,7 +378,8 @@ private:
 				m_l1:1,
 				m_l2:1,
 				m_hhmmss:1,
-				m_verbose:1;
+				m_verbose:1,
+				m_trades:1;
   unsigned			m_yyyymmdd;
   int				m_tzOffset;
 
@@ -432,6 +449,10 @@ void App::read()
  
     {
       switch ((int)frame->type) {
+	case Type::AddTrade:
+	  if (!m_trades) continue;
+	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
+	  break;
 	case Type::AddTickSizeTbl:
 	case Type::ResetTickSizeTbl:
 	  if (n != (int)sizeof(AddTickSizeTbl)) goto dataerror;
@@ -570,6 +591,7 @@ void usage()
     "  -r\t\t- include reference data in output\n"
     "  -1\t\t- include Level 1 data in output\n"
     "  -2\t\t- include Level 2 data in output\n"
+    " -t\t\t- include trades in output\n"
     "  -n\t\t- CSV time stamps as HHMMSS instead of Excel format\n"
     "  -V\t\t- dump message frames to standard output\n"
     "  -d YYYYMMDD\t- CSV time stamps use date YYYYMMDD\n"
@@ -606,6 +628,9 @@ int main(int argc, const char *argv[])
       continue;
     }
     switch (argv[i][1]) {
+      case 't':
+	app.trades(true);
+	break;
       case 'r':
 	app.refData(true);
 	break;

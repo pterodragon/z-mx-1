@@ -1308,7 +1308,8 @@ friend class Subscriber;
         ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
         qmsg->load(m_subscriber->m_rx->rxQueue().id, frame.seqNo);
 
-        m_subscriber->m_seqNo = frame.seqNo;
+	if (!m_subscriber->m_seqNo)
+	  m_subscriber->m_seqNo = frame.seqNo;
 	
 	std::cout << "++++++ " << m_subscriber->m_seqNo << std::endl;
 
@@ -1452,7 +1453,7 @@ friend class Subscriber;
 
     ZmRef<MxLink<Link>>		m_link;
     Rx 				*m_rx = nullptr;
-    uint64_t			m_seqNo;
+    uint64_t			m_seqNo = 0;
   };
 
   typedef ZmPLock Lock;

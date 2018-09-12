@@ -1927,6 +1927,7 @@ void MxMDCore::Subscriber::TCP::process(MxMDPubSub::TCP::InMsg *, ZiIOContext &i
 	  std::cout << "$$$$$$ rx stopQueuing $$$$$$$$$$$$$$$$$" << std::endl;
 		
 	  rx->stopQueuing(subscriber->m_seqNo); });
+	  
 
       disconnect();
       return;
@@ -2064,6 +2065,10 @@ void MxMDCore::Subscriber::recv(Rx *rx) {
 
 void MxMDCore::Subscriber::pushMsg(MxQMsg *qmsg) {
   auto frame = qmsg->template as<Msg>().frame();
+  
+  
+  std::cout << "----- Subscriber apply seqNo: " << frame->seqNo << std::endl;
+  
   m_core->apply(frame);
 }
 

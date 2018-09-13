@@ -462,9 +462,16 @@ void MxMDCore::stop()
   if (m_mx) {
     stopReplaying();
     stopRecording();
-    stopStreaming();
     stopPublish();
     stopSubscribe();
+    stopStreaming();
+    broadcast().close();
+    
+    
+    std::cout << "after stopPublish" << std::endl;
+    
+    
+    
   }
 
   if (m_cmd) {

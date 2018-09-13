@@ -72,6 +72,12 @@ int main(int argc, char **argv)
 
   } catch (...) { std::cout << "exception in main" << std::endl; }
 
+  
+  
+  std::cout << "after final" << std::endl;
+  
+  
+  
   return 0;
 }
 

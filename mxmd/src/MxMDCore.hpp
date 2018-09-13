@@ -574,7 +574,7 @@ friend class Recorder;
       snapStop();
       recvStop();
       MxEngine::stop();
-      m_core->broadcast().close();
+      //m_core->broadcast().close();//////////////////////////
       fileClose();
     }
 
@@ -1013,7 +1013,7 @@ friend class Publisher;
     void stop() {
       recvStop();
       MxEngine::stop();
-      m_core->broadcast().close();
+      //m_core->broadcast().close();///////////////////////
     }
 
     void recvStart() {

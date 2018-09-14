@@ -119,6 +119,9 @@ public:
   bool resend_(MxQMsg *msg, bool more) { return true; }
   void abort_(MxQMsg *msg) { }
 
+  // void loaded_(MxQMsg *msg) { }
+  // void unloaded_(MxQMsg *msg) { }
+
   bool sendGap_(const MxQueue::Gap &gap, bool more) { return true; }
   bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }
 };

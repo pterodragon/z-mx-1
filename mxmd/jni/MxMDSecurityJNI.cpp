@@ -45,7 +45,7 @@ namespace MxMDSecurityJNI {
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
-  MxMDSecurity *ptr_(JNIEnv *env, jobject obj) {
+  ZuInline MxMDSecurity *ptr_(JNIEnv *env, jobject obj) {
     uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
     if (ZuUnlikely(!ptr_)) return nullptr;
     ZmRef<MxMDSecurity> *ZuMayAlias(ptr) = (ZmRef<MxMDSecurity> *)&ptr_;

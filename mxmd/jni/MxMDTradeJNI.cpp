@@ -39,7 +39,7 @@ namespace MxMDTradeJNI {
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
-  MxMDTrade *ptr_(JNIEnv *env, jobject obj) {
+  ZuInline MxMDTrade *ptr_(JNIEnv *env, jobject obj) {
     uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
     if (ZuUnlikely(!ptr_)) return nullptr;
     ZmRef<MxMDTrade> *ZuMayAlias(ptr) = (ZmRef<MxMDTrade> *)&ptr_;

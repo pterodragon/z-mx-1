@@ -40,7 +40,7 @@ namespace MxMDDerivativesJNI {
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
-  MxMDDerivatives *ptr_(JNIEnv *env, jobject obj) {
+  ZuInline MxMDDerivatives *ptr_(JNIEnv *env, jobject obj) {
     uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
     if (ZuUnlikely(!ptr_)) return nullptr;
     ZmRef<MxMDDerivatives> *ZuMayAlias(ptr) = (ZmRef<MxMDDerivatives> *)&ptr_;

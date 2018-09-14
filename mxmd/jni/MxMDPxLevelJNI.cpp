@@ -40,7 +40,7 @@ namespace MxMDPxLevelJNI {
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
-  MxMDPxLevel *ptr_(JNIEnv *env, jobject obj) {
+  ZuInline MxMDPxLevel *ptr_(JNIEnv *env, jobject obj) {
     uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
     if (ZuUnlikely(!ptr_)) return nullptr;
     ZmRef<MxMDPxLevel> *ZuMayAlias(ptr) = (ZmRef<MxMDPxLevel> *)&ptr_;

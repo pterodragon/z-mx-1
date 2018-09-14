@@ -39,7 +39,7 @@ namespace MxMDVenueJNI {
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
-  MxMDVenue *ptr_(JNIEnv *env, jobject obj) {
+  ZuInline MxMDVenue *ptr_(JNIEnv *env, jobject obj) {
     uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
     if (ZuUnlikely(!ptr_)) return nullptr;
     ZmRef<MxMDVenue> *ZuMayAlias(ptr) = (ZmRef<MxMDVenue> *)&ptr_;

@@ -41,7 +41,7 @@ namespace MxMDOrderJNI {
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
-  MxMDOrder *ptr_(JNIEnv *env, jobject obj) {
+  ZuInline MxMDOrder *ptr_(JNIEnv *env, jobject obj) {
     uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
     if (ZuUnlikely(!ptr_)) return nullptr;
     ZmRef<MxMDOrder> *ZuMayAlias(ptr) = (ZmRef<MxMDOrder> *)&ptr_;

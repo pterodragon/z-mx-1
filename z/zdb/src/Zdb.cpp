@@ -1325,11 +1325,9 @@ ZmRef<ZdbAnyPOD> Zdb_::replicated_(ZdbRN rn)
   return pod;
 }
 
-Zdb_::Zdb_(ZdbEnv *env, ZdbID id, ZdbAllocFn allocFn, ZdbRecoverFn recoverFn,
-    ZdbReplicateFn replicateFn, ZdbCopyFn copyFn,
+Zdb_::Zdb_(ZdbEnv *env, ZdbID id, ZdbHandler handler,
     bool noIndex, bool noLock, unsigned recSize) :
-  m_env(env), m_id(id), m_allocFn(allocFn), m_recoverFn(recoverFn),
-  m_replicateFn(replicateFn), m_copyFn(copyFn),
+  m_env(env), m_id(id), m_handler(ZuMv(handler)),
   m_noIndex(noIndex), m_noLock(noLock), m_recSize(recSize),
   m_allocRN(0), m_fileRN(0), m_cacheSize(0)
 {
@@ -1378,9 +1376,7 @@ void Zdb_::init(ZdbConfig *config)
 
 void Zdb_::final()
 {
-  m_recoverFn = ZdbRecoverFn();
-  m_replicateFn = ZdbReplicateFn();
-  m_copyFn = ZdbCopyFn();
+  m_handler = ZdbHandler{};
 }
 
 void Zdb_::recover(Zdb_File *file)

@@ -207,6 +207,7 @@ template <typename Fmt> struct MxValNDPFmt {
 
   template <typename S> inline void print(S &s) const {
     MxValue iv = fixedNDP.value;
+    if (ZuUnlikely(!*iv)) return;
     if (ZuUnlikely(iv < 0)) { s << '-'; iv = -iv; }
     uint64_t factor = ZuDecimal::pow10_64(fixedNDP.ndp);
     MxValue fv = iv % factor;

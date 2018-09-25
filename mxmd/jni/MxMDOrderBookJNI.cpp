@@ -48,7 +48,7 @@ namespace MxMDOrderBookJNI {
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
-  MxMDOrderBook *ptr_(JNIEnv *env, jobject obj) {
+  ZuInline MxMDOrderBook *ptr_(JNIEnv *env, jobject obj) {
     uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
     if (ZuUnlikely(!ptr_)) return nullptr;
     ZmRef<MxMDOrderBook> *ZuMayAlias(ptr) = (ZmRef<MxMDOrderBook> *)&ptr_;

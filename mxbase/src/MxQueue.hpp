@@ -39,6 +39,9 @@
 #include <ZmFn.hpp>
 #include <ZmRBTree.hpp>
 
+#include <ZiIP.hpp>
+#include <ZiMultiplex.hpp>
+
 #include <MxMsgID.hpp>
 
 struct MxQFlags {
@@ -61,38 +64,46 @@ struct MxQFlags {
       "PossResend", PossResend);
 };
 
+struct MxQMsg;
+
+typedef ZmFn<MxQMsg *, ZiIOContext &> MxQMsgFn;
+
 struct MxQMsgData {
   MxMsgID		id;
+  unsigned		length = 0;
+  ZuRef<ZuAnyPOD>	payload;
+  MxQMsgFn		fn;
   MxFlags		flags;		// see MxQFlags
   ZmTime		deadline;
-  ZuRef<ZuAnyPOD>	payload;
+  void			*appData = 0;
+  ZiSockAddr		addr;
 
   template <typename T> inline const T &as() const {
-    return *static_cast<const T *>(payload.ptr());
+    return *static_cast<const T *>(payload->ptr());
   }
   template <typename T> inline T &as() {
-    return *static_cast<T *>(payload.ptr());
+    return *static_cast<T *>(payload->ptr());
   }
 };
 
 class MxQMsg_ : public MxQMsgData {
 public:
   template <typename ...Args>
-  inline MxQMsg_(Args &&... args) :
-    MxQMsgData{MxMsgID(), ZuFwd<Args>(args)...} { }
+  ZuInline MxQMsg_(Args &&... args) :
+    MxQMsgData{ZuFwd<Args>(args)...} { }
 
-  ZuInline void load(MxID queueID, MxSeqNo seqNo) {
-    id.queueID() = queueID;
-    id.seqNo() = seqNo;
+  ZuInline void load(MxID linkID, MxSeqNo seqNo) {
+    id.linkID = linkID;
+    id.seqNo = seqNo;
   }
-  ZuInline void unload() { id = MxMsgID(); }
+  ZuInline void unload() { id = MxMsgID{}; }
 };
 
 class MxQFn {
 public:
   typedef MxSeqNo Key;
   inline MxQFn(MxQMsg_ &item) : m_item(item) { }
-  inline MxSeqNo key() const { return m_item.id.seqNo(); }
+  inline MxSeqNo key() const { return m_item.id.seqNo; }
   inline unsigned length() const { return 1; }
   inline unsigned clipHead(unsigned n) { return 1; }
   inline unsigned clipTail(unsigned n) { return 1; }
@@ -111,7 +122,11 @@ typedef ZmPQueue<MxQMsg_,
 		ZmPQueueLock<ZmNoLock,
 		  ZmPQueueBase<MxQueue_,
 		    ZmPQueueHeapID<MxQueue_HeapID> > > > > > > MxQueue;
-typedef MxQueue::Node MxQMsg;
+struct MxQMsg : public MxQueue::Node {
+  template <typename ...Args>
+  ZuInline MxQMsg(Args &&... args) :
+    MxQueue::Node(ZuFwd<Args>(args)...) { }
+};
 typedef MxQueue::Gap MxQGap;
 
 // MxQueueRx - receive queue
@@ -363,8 +378,8 @@ public:
   ZuInline bool sendGap_(const Gap &, bool) { return true; } // unused
   ZuInline bool resendGap_(const Gap &, bool) { return true; } // unused
 
-  ZuInline void sent_(MxQMsg *msg) { Tx::ackd(msg->id.seqNo() + 1); }
-  ZuInline void archive_(MxQMsg *msg) { Tx::archived(msg->id.seqNo() + 1); }
+  ZuInline void sent_(MxQMsg *msg) { Tx::ackd(msg->id.seqNo + 1); }
+  ZuInline void archive_(MxQMsg *msg) { Tx::archived(msg->id.seqNo + 1); }
   ZuInline ZmRef<MxQMsg> retrieve_(MxSeqNo) { return 0; } // unused
 
   inline ZmRef<Tx> next_() {

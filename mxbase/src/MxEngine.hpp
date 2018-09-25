@@ -126,6 +126,12 @@ public:
   void connected();
   void disconnected();
 
+  template <typename Impl, typename L>
+  inline auto stateLocked(L &&l) {
+    ZmGuard<ZmLock> guard(m_stateLock);
+    return l(static_cast<Impl *>(this), m_state);
+  }
+
 private:
   ZmScheduler::Timer	m_reconnectTimer;
 
@@ -287,7 +293,7 @@ public:
     };
   }
 
-  ZuInline void appException(ZeEvent *e) { mgr()->exception(e); }
+  ZuInline void appException(ZmRef<ZeEvent> e) { mgr()->exception(ZuMv(e)); }
 
   ZuInline void appProcess(MxAnyLink *link, MxQMsg *msg)
     { (*m_processFn)(app(), link, msg); }
@@ -321,7 +327,6 @@ public:
       guard.unlock();
       pool->update(cf);
       appUpdateTxPool(pool);
-      appAddQueue(id, 1, pool->txQueuePtr());
       return pool;
     }
     pool = new TxPool(*this, id);
@@ -329,6 +334,7 @@ public:
     guard.unlock();
     pool->update(cf);
     appUpdateTxPool(pool);
+    appAddQueue(id, 1, pool->txQueuePtr());
     return pool;
   }
   ZmRef<MxAnyTxPool> delTxPool(MxID id) {
@@ -354,8 +360,6 @@ public:
       guard.unlock();
       link->update(cf);
       appUpdateLink(link);
-      appAddQueue(id, 0, link->rxQueuePtr());
-      appAddQueue(id, 1, link->txQueuePtr());
       return link;
     }
     link = new Link(id);
@@ -364,6 +368,8 @@ public:
     m_links.add(link);
     guard.unlock();
     appUpdateLink(link);
+    appAddQueue(id, 0, link->rxQueuePtr());
+    appAddQueue(id, 1, link->txQueuePtr());
     return link;
   }
   ZmRef<MxAnyLink> delLink(MxID id) {

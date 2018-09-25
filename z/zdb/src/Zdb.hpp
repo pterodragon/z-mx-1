@@ -392,7 +392,7 @@ class ZdbAnyPOD_Send__ : public ZmPolymorph {
 public:
   inline ZdbAnyPOD_Send__(ZdbAnyPOD *pod,
     int type, ZdbRange range, bool update, bool compress, ZmFn<> fn) :
-      m_pod(pod), m_continuation(fn), m_vec(0) {
+      m_continuation(fn), m_pod(pod), m_vec(0) {
     init(type, range, update, compress);
   }
 
@@ -405,8 +405,8 @@ private:
   void sent(ZiIOContext &io);
 
   ZmRef<Zdb_Cxn>		m_cxn;
-  ZmRef<ZdbAnyPOD>		m_pod;
   ZmFn<>			m_continuation;
+  ZmRef<ZdbAnyPOD>		m_pod;
   ZmRef<ZdbAnyPOD_Compressed>	m_compressed;
   unsigned			m_vec;
   ZiVec				m_vecs[2];
@@ -574,6 +574,13 @@ struct ZdbConfig {
   ZmHashParams		lockHash;
 };
 
+struct ZdbHandler {
+  ZdbAllocFn		allocFn;
+  ZdbRecoverFn		recoverFn;
+  ZdbReplicateFn	replicateFn;
+  ZdbCopyFn		copyFn;
+};
+
 class ZdbAPI Zdb_ : public ZmPolymorph {
 friend class ZdbEnv;
 friend class ZdbAnyPOD_Write__;
@@ -621,8 +628,7 @@ protected:
   typedef ZmLock FSLock;
   typedef ZmGuard<FSLock> FSGuard;
 
-  Zdb_(ZdbEnv *env, ZdbID id, ZdbAllocFn allocFn, ZdbRecoverFn recoverFn,
-      ZdbReplicateFn replicateFn, ZdbCopyFn copyFn,
+  Zdb_(ZdbEnv *env, ZdbID id, ZdbHandler handler,
       bool noIndex, bool noLock, unsigned recSize);
 
 public:
@@ -685,21 +691,21 @@ public:
 
 private:
   // application call handlers
-  inline void alloc(ZmRef<ZdbAnyPOD> &pod) { m_allocFn(this, pod); }
-  inline void recover(ZdbAnyPOD *pod) { m_recoverFn(pod); }
+  inline void alloc(ZmRef<ZdbAnyPOD> &pod) { m_handler.allocFn(this, pod); }
+  inline void recover(ZdbAnyPOD *pod) { m_handler.recoverFn(pod); }
   inline void replicate(ZdbAnyPOD *pod,
       void *ptr, ZdbRange range, bool update) {
 #ifdef ZdbRep_DEBUG
     ZmAssert(range.len() > 0);
     ZmAssert((range.off() + range.len()) <= pod->size());
 #endif
-    if (m_replicateFn)
-      m_replicateFn(pod, ptr, range, update);
+    if (m_handler.replicateFn)
+      m_handler.replicateFn(pod, ptr, range, update);
     else
       memcpy((char*)pod->ptr() + range.off(), ptr, range.len());
   }
   inline void copy(ZdbAnyPOD *pod, ZdbRange range, bool update) {
-    m_copyFn(pod, range, update);
+    m_handler.copyFn(pod, range, update);
   }
 
   // lock record sequence
@@ -746,10 +752,7 @@ private:
   ZdbEnv			*m_env;
   ZdbConfig			*m_config;
   ZdbID				m_id;
-  ZdbAllocFn			m_allocFn;
-  ZdbRecoverFn			m_recoverFn;
-  ZdbReplicateFn		m_replicateFn;
-  ZdbCopyFn			m_copyFn;
+  ZdbHandler			m_handler;
   bool				m_noIndex;
   bool				m_noLock;
   unsigned			m_recSize;
@@ -772,11 +775,10 @@ class Zdb : public Zdb_ {
 public:
   typedef T_ T;
 
-  inline Zdb(
-      ZdbEnv *env, ZdbID id, ZdbAllocFn allocFn, ZdbRecoverFn recoverFn,
-      ZdbReplicateFn replicateFn, ZdbCopyFn copyFn,
+  template <typename Handler>
+  inline Zdb(ZdbEnv *env, ZdbID id, Handler &&handler,
       bool noIndex = false, bool noLock = false) :
-    Zdb_(env, id, allocFn, recoverFn, replicateFn, copyFn, noIndex, noLock,
+    Zdb_(env, id, ZuFwd<Handler>(handler), noIndex, noLock,
 	sizeof(typename ZdbPOD<T, ZuNull>::Data)) { }
 };
 

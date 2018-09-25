@@ -72,7 +72,7 @@ class ZtArray : public ZtArray_<T_>, public ZuArrayFn<T_, Cmp_> {
 public:
   typedef T_ T;
   typedef Cmp_ Cmp;
-  typedef ZuArrayFn<T, Cmp_> Ops;
+  typedef ZuArrayFn<T, Cmp> Ops;
   enum {
     IsString = ZuConversion<T, char>::Same || ZuConversion<T, wchar_t>::Same,
     IsWString = ZuConversion<T, wchar_t>::Same
@@ -733,10 +733,10 @@ public:
     return cmp(ZtArray(s));
   }
 
-  inline int cmp(const T *a, unsigned n) const {
+  inline int cmp(const T *a, int64_t n) const {
     if (!a) return !!m_data;
     if (!m_data) return -1;
-    unsigned l = length();
+    int64_t l = length();
     if (int i = Ops::cmp(m_data, a, l < n ? l : n)) return i;
     return l - n;
   }

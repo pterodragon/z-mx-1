@@ -316,13 +316,13 @@ public:
   template <typename A>
   ZuInline int cmp(const A &a) const {
     if (same(a)) return 0;
-    return ZuCmp<ArrayN>::cmp(*static_cast<const ArrayN *>(this), a);
+    return ZuArray{data(), length()}.equals(a);
   }
 
   template <typename A>
   ZuInline bool equals(const A &a) const {
     if (same(a)) return true;
-    return ZuCmp<ArrayN>::equals(*static_cast<const ArrayN *>(this), a);
+    return ZuArray{data(), length()}.equals(a);
   }
 
   template <typename A>

@@ -21,10 +21,10 @@
 
 #include <version.h>
 
-class RealTimeCSV : public ZvCSV {
+class RealTimeCSV : public ZvCSV, public MxMDCSV<RealTimeCSV> {
 public:
   struct L2Data {
-    MxIDString		orderID;
+    MxIDString		objectID;
     MxEnum		side;
     MxInt		rank;
     uint8_t		delta;
@@ -71,46 +71,46 @@ public:
     add(new MxNDPCol("pxNDP", pxNDP));
     add(new MxNDPCol("qtyNDP", qtyNDP));
     add(new MxEnumCol<MxTradingStatus::CSVMap>("status", Offset(status)));
-    add(new MxValueCol("base", Offset(base), pxNDP));
+    this->addValCol(app, "base", Offset(base), pxNDP);
     for (unsigned i = 0; i < MxMDNSessions; i++) {
       ZuStringN<8> open = "open"; open << ZuBoxed(i);
       ZuStringN<8> close = "close"; close << ZuBoxed(i);
-      add(new MxValueCol(open,
-	    Offset(open) + (i * sizeof(MxValue)), pxNDP));
-      add(new MxValueCol(close,
-	    Offset(close) + (i * sizeof(MxValue)), pxNDP));
+      this->addValCol(app, open, Offset(open) + (i * sizeof(MxValue)), pxNDP);
+      this->addValCol(app, close, Offset(close) + (i * sizeof(MxValue)), pxNDP);
     }
-    add(new MxValueCol("last", Offset(last), pxNDP));
-    add(new MxValueCol("lastQty", Offset(lastQty), qtyNDP));
-    add(new MxValueCol("bid", Offset(bid), pxNDP));
-    add(new MxValueCol("bidQty", Offset(bidQty), qtyNDP));
-    add(new MxValueCol("ask", Offset(ask), pxNDP));
-    add(new MxValueCol("askQty", Offset(askQty), qtyNDP));
+    this->addValCol(app, "last", Offset(last), pxNDP);
+    this->addValCol(app, "lastQty", Offset(lastQty), qtyNDP);
+    this->addValCol(app, "bid", Offset(bid), pxNDP);
+    this->addValCol(app, "bidQty", Offset(bidQty), qtyNDP);
+    this->addValCol(app, "ask", Offset(ask), pxNDP);
+    this->addValCol(app, "askQty", Offset(askQty), qtyNDP);
     add(new MxEnumCol<MxTickDir::CSVMap>("tickDir", Offset(tickDir)));
-    add(new MxValueCol("high", Offset(high), pxNDP));
-    add(new MxValueCol("low", Offset(low), pxNDP));
-    add(new MxValueCol("accVol", Offset(accVol), pxNDP));
-    add(new MxValueCol("accVolQty", Offset(accVolQty), qtyNDP));
-    add(new MxValueCol("match", Offset(match), pxNDP));
-    add(new MxValueCol("matchQty", Offset(matchQty), qtyNDP));
-    add(new MxValueCol("surplusQty", Offset(surplusQty), qtyNDP));
+    this->addValCol(app, "high", Offset(high), pxNDP);
+    this->addValCol(app, "low", Offset(low), pxNDP);
+    this->addValCol(app, "accVol", Offset(accVol), pxNDP);
+    this->addValCol(app, "accVolQty", Offset(accVolQty), qtyNDP);
+    this->addValCol(app, "match", Offset(match), pxNDP);
+    this->addValCol(app, "matchQty", Offset(matchQty), qtyNDP);
+    this->addValCol(app, "surplusQty", Offset(surplusQty), qtyNDP);
     add(new MxMDVenueFlagsCol<MxMDL1Flags>("l1Flags",
 	  Offset(flags), offsetof(Data, venue)));
 #undef Offset
 #define Offset(x) offsetof(Data, l2Data) + offsetof(L2Data, x)
-    add(new MxIDStrCol("orderID", Offset(orderID)));
+    add(new MxIDStrCol("objectID", Offset(objectID)));
     add(new MxEnumCol<MxSide::CSVMap>("side", Offset(side)));
     add(new MxIntCol("rank", Offset(rank)));
     add(new MxBoolCol("delta", Offset(delta)));
-    add(new MxValueCol("price", Offset(price), pxNDP));
-    add(new MxValueCol("qty", Offset(qty), qtyNDP));
-    add(new MxValueCol("nOrders", Offset(nOrders), qtyNDP));
+    this->addValCol(app, "price", Offset(price), pxNDP);
+    this->addValCol(app, "qty", Offset(qty), qtyNDP);
+    this->addValCol(app, "nOrders", Offset(nOrders), qtyNDP);
     add(new MxMDVenueFlagsCol<MxMDL2Flags>("l2Flags",
 	  Offset(flags), offsetof(Data, venue)));
     add(new MxMDVenueFlagsCol<MxMDOrderFlags>("orderFlags",
 	  Offset(orderFlags), offsetof(Data, venue)));
 #undef Offset
-    add(new MxBoolCol("updateL1", offsetof(Data, updateL1)));
+#define Offset(x) offsetof(Data, x)
+    add(new MxBoolCol("updateL1", Offset(updateL1)));
+#undef Offset
   }
 
   ZuAnyPOD *row(const MxMDStream::Msg *msg) {
@@ -120,21 +120,6 @@ public:
       using namespace MxMDStream;
       const Frame *frame = msg->frame();
       switch ((int)frame->type) {
-	case Type::AddTrade:
-	  {
-	    const AddTrade &obj = frame->as<AddTrade>();
-	    data->venue = obj.key.venue();
-	    data->segment = obj.key.segment();
-	    data->id = obj.key.id();
-	    data->event = frame->type;
-	    data->l1Data.stamp = obj.transactTime;
-	    data->l1Data.pxNDP = obj.pxNDP;
-	    data->l1Data.qtyNDP = obj.qtyNDP;
-	    data->l2Data.orderID = obj.tradeID;
-	    data->l2Data.price = obj.price;
-	    data->l2Data.qty = obj.qty;
-	  }
-	  break;
 	case Type::TradingSession:
 	  {
 	    const TradingSession &obj = frame->as<TradingSession>();
@@ -162,7 +147,6 @@ public:
 	  }
 	  break;
 	case Type::AddOrder:
-	case Type::ModifyOrder:
 	  {
 	    const AddOrder &obj = frame->as<AddOrder>();
 	    data->venue = obj.key.venue();
@@ -172,7 +156,25 @@ public:
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
-	    data->l2Data.orderID = obj.orderID;
+	    data->l2Data.objectID = obj.orderID;
+	    data->l2Data.side = obj.side;
+	    data->l2Data.rank = obj.rank;
+	    data->l2Data.price = obj.price;
+	    data->l2Data.qty = obj.qty;
+	    data->l2Data.orderFlags = obj.flags;
+	  }
+	  break;
+	case Type::ModifyOrder:
+	  {
+	    const ModifyOrder &obj = frame->as<ModifyOrder>();
+	    data->venue = obj.key.venue();
+	    data->segment = obj.key.segment();
+	    data->id = obj.key.id();
+	    data->event = frame->type;
+	    data->l1Data.stamp = obj.transactTime;
+	    data->l1Data.pxNDP = obj.pxNDP;
+	    data->l1Data.qtyNDP = obj.qtyNDP;
+	    data->l2Data.objectID = obj.orderID;
 	    data->l2Data.side = obj.side;
 	    data->l2Data.rank = obj.rank;
 	    data->l2Data.price = obj.price;
@@ -188,7 +190,7 @@ public:
 	    data->id = obj.key.id();
 	    data->event = frame->type;
 	    data->l1Data.stamp = obj.transactTime;
-	    data->l2Data.orderID = obj.orderID;
+	    data->l2Data.objectID = obj.orderID;
 	    data->l2Data.side = obj.side;
 	  }
 	  break;
@@ -211,6 +213,51 @@ public:
 	    data->id = obj.key.id();
 	    data->event = frame->type;
 	    data->l1Data.stamp = obj.transactTime;
+	  }
+	  break;
+	case Type::AddTrade:
+	  {
+	    const AddTrade &obj = frame->as<AddTrade>();
+	    data->venue = obj.key.venue();
+	    data->segment = obj.key.segment();
+	    data->id = obj.key.id();
+	    data->event = frame->type;
+	    data->l1Data.stamp = obj.transactTime;
+	    data->l1Data.pxNDP = obj.pxNDP;
+	    data->l1Data.qtyNDP = obj.qtyNDP;
+	    data->l2Data.objectID = obj.tradeID;
+	    data->l2Data.price = obj.price;
+	    data->l2Data.qty = obj.qty;
+	  }
+	  break;
+	case Type::CorrectTrade:
+	  {
+	    const CorrectTrade &obj = frame->as<CorrectTrade>();
+	    data->venue = obj.key.venue();
+	    data->segment = obj.key.segment();
+	    data->id = obj.key.id();
+	    data->event = frame->type;
+	    data->l1Data.stamp = obj.transactTime;
+	    data->l1Data.pxNDP = obj.pxNDP;
+	    data->l1Data.qtyNDP = obj.qtyNDP;
+	    data->l2Data.objectID = obj.tradeID;
+	    data->l2Data.price = obj.price;
+	    data->l2Data.qty = obj.qty;
+	  }
+	  break;
+	case Type::CancelTrade:
+	  {
+	    const CancelTrade &obj = frame->as<CancelTrade>();
+	    data->venue = obj.key.venue();
+	    data->segment = obj.key.segment();
+	    data->id = obj.key.id();
+	    data->event = frame->type;
+	    data->l1Data.stamp = obj.transactTime;
+	    data->l1Data.pxNDP = obj.pxNDP;
+	    data->l1Data.qtyNDP = obj.qtyNDP;
+	    data->l2Data.objectID = obj.tradeID;
+	    data->l2Data.price = obj.price;
+	    data->l2Data.qty = obj.qty;
 	  }
 	  break;
 	case Type::RefDataLoaded:
@@ -260,9 +307,7 @@ class App {
   typedef ZmLHash<MxSecKey> SecIDHash;
 
 public:
-  App() :
-    m_refData(0), m_l1(0), m_l2(0), m_hhmmss(0), m_verbose(0),
-    m_yyyymmdd(ZtDateNow().yyyymmdd()), m_tzOffset(0) { }
+  App() : m_yyyymmdd(ZtDateNow().yyyymmdd()) { }
 
   // dump options
 
@@ -281,6 +326,9 @@ public:
     m_tzOffset = now.offset(tz);
     m_isoFmt.offset(m_tzOffset);
   }
+
+  inline bool raw() const { return m_raw; }
+  inline void raw(bool b) { m_raw = b; }
 
   // filters
 
@@ -374,14 +422,17 @@ public:
   void read();
 
 private:
-  unsigned			m_refData:1,
-				m_l1:1,
-				m_l2:1,
-				m_hhmmss:1,
-				m_verbose:1,
-				m_trades:1;
-  unsigned			m_yyyymmdd;
-  int				m_tzOffset;
+  bool				m_refData = 0;
+  bool				m_l1 = 0;
+  bool				m_l2 = 0;
+  bool				m_trades = 0;
+
+  bool				m_hhmmss = 0;
+  unsigned			m_yyyymmdd = 0;
+  int				m_tzOffset = 0;
+
+  bool				m_verbose = 0;
+  bool				m_raw = 0;
 
   ZtDateFmt::ISO		m_isoFmt;
 
@@ -449,10 +500,6 @@ void App::read()
  
     {
       switch ((int)frame->type) {
-	case Type::AddTrade:
-	  if (!m_trades) continue;
-	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
-	  break;
 	case Type::AddTickSizeTbl:
 	case Type::ResetTickSizeTbl:
 	  if (n != (int)sizeof(AddTickSizeTbl)) goto dataerror;
@@ -549,6 +596,23 @@ void App::read()
 	  if (filterID(frame->as<ResetOB>().key)) continue;
 	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
 	  break;
+
+	case Type::AddTrade:
+	  if (n != (int)sizeof(AddTrade)) goto dataerror;
+	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
+	  if (!m_trades) continue;
+	  break;
+	case Type::CorrectTrade:
+	  if (n != (int)sizeof(CorrectTrade)) goto dataerror;
+	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
+	  if (!m_trades) continue;
+	  break;
+	case Type::CancelTrade:
+	  if (n != (int)sizeof(CancelTrade)) goto dataerror;
+	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
+	  if (!m_trades) continue;
+	  break;
+
 	default:
 	  continue;
       }
@@ -591,9 +655,14 @@ void usage()
     "  -r\t\t- include reference data in output\n"
     "  -1\t\t- include Level 1 data in output\n"
     "  -2\t\t- include Level 2 data in output\n"
-    " -t\t\t- include trades in output\n"
+    "  -t\t\t- include trade data in output\n"
+    "  -R CSV\t- dump real-time messages to CSV\n"
+    "  -O CSV\t- dump order book messages to CSV\n"
+    "  -S CSV\t- dump security messages to CSV\n"
+    "  -T CSV\t- dump tick size messages to CSV\n"
     "  -n\t\t- CSV time stamps as HHMMSS instead of Excel format\n"
-    "  -V\t\t- dump message frames to standard output\n"
+    "  -V\t\t- verbose - dump message frames to standard output\n"
+    "  -N\t\t- raw - output raw fixed-point values (without decimal point)\n"
     "  -d YYYYMMDD\t- CSV time stamps use date YYYYMMDD\n"
     "  -z ZONE\t- CSV time stamps in local time ZONE (defaults to GMT)\n"
     "  -v MIC\t- select venue MIC for following securities\n"
@@ -603,10 +672,6 @@ void usage()
     "  -i ID\t\t- filter for security ID\n"
     "\t\t\t(may be specified multiple times)\n"
     "  -o OUT\t- record filtered output in file OUT\n"
-    "  -T CSV\t- dump tick size messages to CSV\n"
-    "  -S CSV\t- dump security messages to CSV\n"
-    "  -O CSV\t- dump order book messages to CSV\n"
-    "  -R CSV\t- dump real-time messages to CSV\n"
     << std::flush;
   exit(1);
 }
@@ -628,9 +693,6 @@ int main(int argc, const char *argv[])
       continue;
     }
     switch (argv[i][1]) {
-      case 't':
-	app.trades(true);
-	break;
       case 'r':
 	app.refData(true);
 	break;
@@ -639,6 +701,9 @@ int main(int argc, const char *argv[])
 	break;
       case '2':
 	app.l2(true);
+	break;
+      case 't':
+	app.trades(true);
 	break;
       case 'n':
 	app.hhmmss(true);
@@ -690,6 +755,9 @@ int main(int argc, const char *argv[])
 	break;
       case 'V':
 	app.verbose(true);
+	break;
+      case 'N':
+	app.raw(true);
 	break;
       default:
 	usage();

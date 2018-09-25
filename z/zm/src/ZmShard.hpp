@@ -65,12 +65,15 @@ template <typename T> class ZmHandle {
 public:
   typedef typename T::Shard Shard;
 
-  ZuInline ZmHandle() { }
+  ZuInline ZmHandle() : m_ptr(0) { }
   ZuInline ZmHandle(Shard *shard) :
     m_ptr((uintptr_t)(void *)shard | (uintptr_t)1) { }
-  ZuInline ZmHandle(T *o) : m_ptr((uintptr_t)(void *)o) { o->ref(); }
+  ZuInline ZmHandle(ZmRef<T> o) { new (&m_ptr) ZmRef<T>(ZuMv(o)); }
   ZuInline ~ZmHandle() {
-    if (m_ptr && !(m_ptr & 1)) ((T *)(void *)m_ptr)->deref();
+    if (m_ptr && !(m_ptr & 1)) {
+      ZmRef<T> *ZuMayAlias(ptr) = (ZmRef<T> *)&m_ptr;
+      ptr->~ZmRef<T>();
+    }
   }
 
   ZuInline Shard *shard() const {
@@ -132,9 +135,9 @@ public:
     Shard *shard;
     T *o;
     shardObject(shard, o);
-    shard->invoke(
-	[l = ZuMv(l), shard,
-	  o = ZuMv(*reinterpret_cast<ZmRef<T> *>(&o))]() mutable {
+    m_ptr = 0;
+    ZmRef<T> *ZuMayAlias(ptr) = (ZmRef<T> *)&o;
+    shard->invoke([l = ZuMv(l), shard, o = ZuMv(*ptr)]() mutable {
       l(shard, ZuMv(o));
     });
   }

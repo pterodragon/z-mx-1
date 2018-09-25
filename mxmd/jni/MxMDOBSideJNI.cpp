@@ -40,7 +40,7 @@ namespace MxMDOBSideJNI {
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
-  MxMDOBSide *ptr_(JNIEnv *env, jobject obj) {
+  ZuInline MxMDOBSide *ptr_(JNIEnv *env, jobject obj) {
     uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
     if (ZuUnlikely(!ptr_)) return nullptr;
     ZmRef<MxMDOBSide> *ZuMayAlias(ptr) = (ZmRef<MxMDOBSide> *)&ptr_;

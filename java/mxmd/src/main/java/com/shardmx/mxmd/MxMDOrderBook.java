@@ -3,7 +3,7 @@ package com.shardmx.mxmd;
 import com.shardmx.mxbase.*;
 
 public class MxMDOrderBook implements AutoCloseable {
-  public MxMDOrderBook(long ptr) { this.ptr = ptr; }
+  private MxMDOrderBook(long ptr) { this.ptr = ptr; }
   public void finalize() { close(); }
   public void close() { dtor_(this.ptr); this.ptr = 0; }
 

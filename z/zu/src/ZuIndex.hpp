@@ -19,13 +19,13 @@
 
 // indexing of structs/classes by member (field)
 //
-// struct Point { int m_x, m_y; };
+// struct Point { int x, y; };
 //
 // Point p;
 //
 // ...
 // struct PointYAccessor : public ZuAccessor<Point, int> {
-//   inline static int value(const Point &p) { return p.m_y; }
+//   inline static int value(const Point &p) { return p.y; }
 // }
 // ...
 //

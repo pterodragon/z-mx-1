@@ -106,29 +106,6 @@ void active() {
 
 void inactive() { puts("INACTIVE"); }
 
-void alloc(Zdb_ *db, ZmRef<ZdbAnyPOD> &pod)
-{
-  pod = new ZdbPOD<Order>(db);
-  // new (pod->ptr()) Order();
-}
-
-void replicated(ZdbAnyPOD *pod, void *ptr, ZdbRange range, bool update)
-{
-  dump("replicated", pod->headRN(), pod->rn(), (Order *)ptr);
-  memcpy((char*)pod->ptr() + range.off(), ptr, range.len());
-}
-
-void recover(ZdbAnyPOD *pod)
-{
-  dump("recovered", pod->headRN(), pod->rn(), (Order *)pod->ptr());
-}
-
-void copy(ZdbAnyPOD *pod, ZdbRange, bool)
-{
-  dump(ZtSprintf("DC TID=%d", (int)ZmPlatform::getTID()).data(),
-       pod->headRN(), pod->rn(), (Order *)pod->ptr());
-}
-
 void usage()
 {
   static const char *help =
@@ -285,11 +262,23 @@ int main(int argc, char **argv)
     env->init(ZdbEnvConfig(cf),
       dbMx, ZmFn<>::Ptr<&active>::fn(), ZmFn<>::Ptr<&inactive>::fn());
 
-    orders = new OrderDB(env, 0,
-	ZdbAllocFn::Ptr<&alloc>::fn(),
-	ZdbRecoverFn::Ptr<&recover>::fn(),
-	ZdbReplicateFn::Ptr<&replicated>::fn(),
-	ZdbCopyFn::Ptr<&copy>::fn());
+    orders = new OrderDB(env, 0, ZdbHandler{
+	  [](Zdb_ *db, ZmRef<ZdbAnyPOD> &pod) {
+	    pod = new ZdbPOD<Order>(db);
+	    // new (pod->ptr()) Order();
+	  },
+	  [](ZdbAnyPOD *pod) {
+	    dump("recovered", pod->headRN(), pod->rn(), (Order *)pod->ptr());
+	  },
+	  [](ZdbAnyPOD *pod, void *ptr, ZdbRange range, bool update) {
+	    dump("replicated", pod->headRN(), pod->rn(), (Order *)ptr);
+	    memcpy((char*)pod->ptr() + range.off(), ptr, range.len());
+	  },
+	  [](ZdbAnyPOD *pod, ZdbRange, bool) {
+	    dump(ZtSprintf("DC TID=%d", (int)ZmPlatform::getTID()).data(),
+		 pod->headRN(), pod->rn(), (Order *)pod->ptr());
+	  }
+	});
 
     env->open();
     env->start();

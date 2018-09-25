@@ -62,14 +62,16 @@ public:
   static void place_(ZtArray<char> &b, const ZiIP *i) { b << *i; }
 };
 
+typedef ZvCSVColumn<ZvCSVColType::Int, uint16_t> MxPortCol;
+
 class MxIDCol : public ZvCSVColumn<ZvCSVColType::Func, MxID>  {
   typedef ZvCSVColumn<ZvCSVColType::Func, MxID> Base;
   typedef typename Base::ParseFn ParseFn;
   typedef typename Base::PlaceFn PlaceFn;
 public:
   template <typename ID>
-  inline MxIDCol(const ID &id, int offset) :
-      Base(id, offset,
+  inline MxIDCol(ID &&id, int offset) :
+      Base(ZuFwd<ID>(id), offset,
 	   ParseFn::Ptr<&MxIDCol::parse_>::fn(),
 	   PlaceFn::Ptr<&MxIDCol::place_>::fn()) { }
   static void parse_(MxID *i, ZuString b) { *i = b; }
@@ -82,9 +84,8 @@ class MxHHMMSSCol : public ZvCSVColumn<ZvCSVColType::Func, MxDateTime>  {
   typedef typename Base::PlaceFn PlaceFn;
 public:
   template <typename ID>
-  inline MxHHMMSSCol(
-      const ID &id, int offset, unsigned yyyymmdd, int tzOffset) :
-    Base(id, offset,
+  inline MxHHMMSSCol(ID &&id, int offset, unsigned yyyymmdd, int tzOffset) :
+    Base(ZuFwd<ID>(id), offset,
 	ParseFn::Member<&MxHHMMSSCol::parse_>::fn(this),
 	PlaceFn::Member<&MxHHMMSSCol::place_>::fn(this)),
       m_yyyymmdd(yyyymmdd), m_tzOffset(tzOffset) { }
@@ -111,8 +112,8 @@ class MxNSecCol : public ZvCSVColumn<ZvCSVColType::Func, MxDateTime> {
   typedef typename Base::PlaceFn PlaceFn;
 public:
   template <typename ID>
-  inline MxNSecCol(const ID &id, int offset) :
-    Base(id, offset,
+  inline MxNSecCol(ID &&id, int offset) :
+    Base(ZuFwd<ID>(id), offset,
 	ParseFn::Ptr<&MxNSecCol::parse_>::fn(),
 	PlaceFn::Ptr<&MxNSecCol::place_>::fn()) { }
 
@@ -130,8 +131,8 @@ class MxValueCol : public ZvCSVColumn<ZvCSVColType::Func, MxValue> {
   typedef typename Base::PlaceFn PlaceFn;
 public:
   template <typename ID>
-  inline MxValueCol(const ID &id, int offset, int ndpOffset) :
-    Base(id, offset,
+  inline MxValueCol(ID &&id, int offset, int ndpOffset) :
+    Base(ZuFwd<ID>(id), offset,
 	ParseFn::Member<&MxValueCol::parse_>::fn(this),
 	PlaceFn::Member<&MxValueCol::place_>::fn(this)),
     m_ndpOffset(ndpOffset - offset) { }

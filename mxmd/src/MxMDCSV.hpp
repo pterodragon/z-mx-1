@@ -44,6 +44,8 @@ struct MxMDCSVApp {
   inline static bool hhmmss() { return false; }
   inline static unsigned yyyymmdd() { return 0; }
   inline static int tzOffset() { return 0; }
+
+  inline static bool raw() { return false; }
 };
 
 template <typename Flags>
@@ -53,8 +55,8 @@ class MxMDVenueFlagsCol : public ZvCSVColumn<ZvCSVColType::Func, MxFlags> {
   typedef typename Base::PlaceFn PlaceFn;
 public:
   template <typename ID>
-  inline MxMDVenueFlagsCol(const ID &id, int offset, int venueOffset) :
-    Base(id, offset,
+  inline MxMDVenueFlagsCol(ID &&id, int offset, int venueOffset) :
+    Base(ZuFwd<ID>(id), offset,
 	ParseFn::Member<&MxMDVenueFlagsCol::parse_>::fn(this),
 	PlaceFn::Member<&MxMDVenueFlagsCol::place_>::fn(this)),
     m_venueOffset(venueOffset - offset) { }
@@ -85,7 +87,19 @@ private:
   int	m_venueOffset;
 };
 
-class MxMDTickSizeCSV : public ZvCSV {
+template <typename CSV> struct MxMDCSV {
+  template <typename App, typename ID>
+  void addValCol(App *app, ID &&id, int offset, int ndpOffset) {
+    if (app && app->raw())
+      static_cast<CSV *>(this)->add(
+	  new ZvCSVColumn<ZvCSVColType::Int, MxValue>(ZuFwd<ID>(id), offset));
+    else
+      static_cast<CSV *>(this)->add(
+	  new MxValueCol(ZuFwd<ID>(id), offset, ndpOffset));
+  }
+};
+
+class MxMDTickSizeCSV : public ZvCSV, public MxMDCSV<MxMDTickSizeCSV> {
 public:
   struct Data {
     MxEnum		event;
@@ -109,9 +123,9 @@ public:
     add(new MxIDCol("venue", Offset(venue)));
     add(new MxIDStrCol("id", Offset(id)));
     add(new MxNDPCol("pxNDP", Offset(pxNDP)));
-    add(new MxValueCol("minPrice", Offset(minPrice), Offset(pxNDP)));
-    add(new MxValueCol("maxPrice", Offset(maxPrice), Offset(pxNDP)));
-    add(new MxValueCol("tickSize", Offset(tickSize), Offset(pxNDP)));
+    this->addValCol(app, "minPrice", Offset(minPrice), Offset(pxNDP));
+    this->addValCol(app, "maxPrice", Offset(maxPrice), Offset(pxNDP));
+    this->addValCol(app, "tickSize", Offset(tickSize), Offset(pxNDP));
 #undef Offset
   }
 
@@ -160,7 +174,7 @@ private:
   ZuRef<POD>	m_pod;
 };
 
-class MxMDSecurityCSV : public ZvCSV {
+class MxMDSecurityCSV : public ZvCSV, public MxMDCSV<MxMDSecurityCSV> {
 public:
   struct Data {
     MxEnum		event;
@@ -205,9 +219,9 @@ public:
     add(new MxEnumCol<MxPutCall::CSVMap>("putCall", Offset(putCall)));
     add(new MxNDPCol("pxNDP", Offset(pxNDP)));
     add(new MxNDPCol("qtyNDP", Offset(qtyNDP)));
-    add(new MxValueCol("strike", Offset(strike), Offset(pxNDP)));
+    this->addValCol(app, "strike", Offset(strike), Offset(pxNDP));
     add(new MxUIntCol("outstandingShares", Offset(outstandingShares)));
-    add(new MxValueCol("adv", Offset(adv), Offset(pxNDP)));
+    this->addValCol(app, "adv", Offset(adv), Offset(pxNDP));
 #undef Offset
   }
 
@@ -257,7 +271,7 @@ private:
   ZuRef<POD>	m_pod;
 };
 
-class MxMDOrderBookCSV : public ZvCSV {
+class MxMDOrderBookCSV : public ZvCSV, public MxMDCSV<MxMDOrderBookCSV> {
 public:
   struct Data {
     MxEnum		event;
@@ -317,9 +331,9 @@ public:
     add(new MxIDStrCol("tickSizeTbl", Offset(tickSizeTbl)));
 #undef Offset
 #define Offset(x) offsetof(Data, lotSizes) + offsetof(MxMDLotSizes, x)
-    add(new MxValueCol("oddLotSize", Offset(oddLotSize), qtyNDP));
-    add(new MxValueCol("lotSize", Offset(lotSize), qtyNDP));
-    add(new MxValueCol("blockLotSize", Offset(blockLotSize), qtyNDP));
+    this->addValCol(app, "oddLotSize", Offset(oddLotSize), qtyNDP);
+    this->addValCol(app, "lotSize", Offset(lotSize), qtyNDP);
+    this->addValCol(app, "blockLotSize", Offset(blockLotSize), qtyNDP);
 #undef Offset
   }
 

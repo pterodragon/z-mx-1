@@ -55,7 +55,7 @@ public:
 
 class Engine : public MxEngine {
 public:
-  inline Engine(){}
+  // inline Engine() { }
 
   void init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf);
 
@@ -112,12 +112,15 @@ public:
 
   // Tx
   bool send_(MxQMsg *msg, bool more) {
+    // if a msg deadline has passed, could call aborted_() and return false
     this->sent_(msg);
     return true;
-    // could also call aborted_() and return false
   }
   bool resend_(MxQMsg *msg, bool more) { return true; }
   void abort_(MxQMsg *msg) { }
+
+  // void loaded_(MxQMsg *msg) { }
+  // void unloaded_(MxQMsg *msg) { }
 
   bool sendGap_(const MxQueue::Gap &gap, bool more) { return true; }
   bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }

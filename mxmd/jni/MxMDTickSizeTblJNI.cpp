@@ -39,7 +39,7 @@ namespace MxMDTickSizeTblJNI {
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
-  MxMDTickSizeTbl *ptr_(JNIEnv *env, jobject obj) {
+  ZuInline MxMDTickSizeTbl *ptr_(JNIEnv *env, jobject obj) {
     uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
     if (ZuUnlikely(!ptr_)) return nullptr;
     ZmRef<MxMDTickSizeTbl> *ZuMayAlias(ptr) = (ZmRef<MxMDTickSizeTbl> *)&ptr_;

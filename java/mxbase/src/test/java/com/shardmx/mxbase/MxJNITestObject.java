@@ -1,7 +1,7 @@
 package com.shardmx.mxbase;
 
 public class MxJNITestObject implements AutoCloseable {
-  public MxJNITestObject() { ptr = 0L; ctor_(); }
+  private MxJNITestObject() { ptr = 0L; ctor_(); }
   public void close() { dtor_(); }
 
   private native void ctor_();

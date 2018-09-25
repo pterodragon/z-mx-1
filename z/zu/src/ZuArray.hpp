@@ -48,6 +48,7 @@
 #include <ZuHash.hpp>
 #include <ZuConversion.hpp>
 #include <ZuPrint.hpp>
+#include <ZuArrayFn.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -55,11 +56,13 @@
 #endif
 
 struct ZuArray_ { };
-template <typename T_, class Cmp = ZuCmp<T_> >
+template <typename T_, class Cmp_ = ZuCmp<T_> >
 class ZuArray : public ZuArray_ {
 public:
   typedef T_ T;
+  typedef Cmp_ Cmp;
   typedef T Elem;
+  typedef ZuArrayFn<T, Cmp> Ops;
 
   inline ZuArray() : m_data(0), m_length(0) { }
   inline ZuArray(const ZuArray &a) :
@@ -80,26 +83,45 @@ public:
   }
 
 private:
+  template <typename U> struct IsPrimitiveArray_ {
+    typedef typename ZuTraits<U>::Elem Elem;
+    enum { OK = ZuConversion<Elem, T>::Same &&
+      ZuTraits<U>::IsArray && ZuTraits<U>::IsPrimitive };
+  };
+  template <typename U> struct IsCharElem_ {
+    typedef typename ZuTraits<U>::Elem Elem;
+    enum { OK = 
+      (ZuConversion<char, Elem>::Same || ZuConversion<wchar_t, Elem>::Same) };
+  };
   template <typename U> struct IsStrLiteral {
-    enum { OK = ZuTraits<U>::IsArray && ZuTraits<U>::IsPrimitive &&
-      ZuConversion<typename ZuTraits<U>::Elem, const T>::Same };
+    typedef typename ZuTraits<U>::Elem Elem;
+    enum { OK = IsPrimitiveArray_<U>::OK && IsCharElem_<U>::OK };
+  };
+  template <typename U> struct IsPrimitiveArray {
+    typedef typename ZuTraits<U>::Elem Elem;
+    enum { OK = IsPrimitiveArray_<U>::OK && !IsCharElem_<U>::OK };
   };
   template <typename U> struct IsCString {
-    typedef typename ZuTraits<U>::Elem Char;
-    enum { OK = !IsStrLiteral<U>::OK &&
-      ZuTraits<U>::IsPointer && ZuConversion<Char, T>::Same &&
-      (ZuConversion<char, Char>::Same || ZuConversion<wchar_t, Char>::Same) };
+    typedef typename ZuTraits<U>::Elem Elem;
+    enum { OK = !IsPrimitiveArray_<U>::OK && ZuTraits<U>::IsPointer &&
+      IsCharElem_<U>::OK };
   };
   template <typename U> struct IsOtherArray {
-    enum { OK = !IsStrLiteral<U>::OK && !IsCString<U>::OK &&
+    typedef typename ZuTraits<U>::Elem Elem;
+    enum { OK =
+      !IsPrimitiveArray_<U>::OK && !IsCString<U>::OK &&
       (ZuTraits<U>::IsArray || ZuTraits<U>::IsString) &&
-      ZuConversion<typename ZuTraits<U>::Elem, T>::Exists };
+      ZuConversion<Elem, T>::Exists };
   };
 
   template <typename U, typename R = void, bool OK = IsStrLiteral<U>::OK>
   struct MatchStrLiteral;
   template <typename U, typename R>
   struct MatchStrLiteral<U, R, 1> { typedef R T; };
+  template <typename U, typename R = void, bool OK = IsPrimitiveArray<U>::OK>
+  struct MatchPrimitiveArray;
+  template <typename U, typename R>
+  struct MatchPrimitiveArray<U, R, 1> { typedef R T; };
   template <typename U, typename R = void, bool OK = IsCString<U>::OK>
   struct MatchCString;
   template <typename U, typename R>
@@ -110,7 +132,7 @@ private:
   struct MatchOtherArray<U, R, 1> { typedef R T; };
 
 public:
-  // compile-time length from primitive array / string literal
+  // compile-time length from string literal (null-terminated)
   template <typename A>
   ZuInline ZuArray(A &&a, typename MatchStrLiteral<A>::T *_ = 0) :
     m_data(&a[0]),
@@ -122,6 +144,21 @@ public:
     m_length = !sizeof(a) ? 0U : !a[0] ? 0U : (sizeof(a) / sizeof(a[0])) - 1U;
     m_length = (ZuUnlikely(!(sizeof(a) / sizeof(a[0])) || !a[0])) ? 0U :
       (sizeof(a) / sizeof(a[0])) - 1U;
+    return *this;
+  }
+
+  // compile-time length from primitive array
+  template <typename A>
+  ZuInline ZuArray(A &&a, typename MatchPrimitiveArray<A>::T *_ = 0) :
+    m_data(&a[0]),
+    m_length((ZuUnlikely(!(sizeof(a) / sizeof(a[0])) || !a[0])) ? 0U :
+      sizeof(a) / sizeof(a[0])) { }
+  template <typename A>
+  ZuInline typename MatchPrimitiveArray<A, ZuArray &>::T operator =(A &&a) {
+    m_data = &a[0];
+    m_length = !sizeof(a) ? 0U : !a[0] ? 0U : (sizeof(a) / sizeof(a[0])) - 1U;
+    m_length = (ZuUnlikely(!(sizeof(a) / sizeof(a[0])) || !a[0])) ? 0U :
+      sizeof(a) / sizeof(a[0]);
     return *this;
   }
 
@@ -179,14 +216,14 @@ public:
   // if (ZuString s = "") { } else { puts("ok"); }
   // if (ZuString s = 0) { } else { puts("ok"); }
   ZuInline operator const T *() const {
-    return !length_<T>() ? (const T *)0 : m_data;
+    return !length() ? (const T *)0 : m_data;
   }
 
-  ZuInline bool operator !() const { return !length_<T>(); }
+  ZuInline bool operator !() const { return !length(); }
 
   ZuInline void offset(unsigned n) {
     if (!n) return;
-    if (n <= length_<T>()) m_data += n, m_length -= n;
+    if (n <= length()) m_data += n, m_length -= n;
   }
 
 protected:
@@ -194,13 +231,22 @@ protected:
   template <typename V> ZuInline bool same(const V &v) const { return false; }
 
 public:
-  template <typename V> ZuInline int cmp(const V &v) const {
-    if (same(v)) return 0;
-    return ZuCmp<ZuArray>::cmp(*this, v);
+  template <typename V> ZuInline int cmp(const V &v_) const {
+    if (same(v_)) return 0;
+    ZuArray v{v_};
+    int64_t l = length();
+    int64_t n = v.length();
+    unsigned m = (l > n) ? n : l;
+    if (int i = Ops::cmp(data(), v.data(), m)) return i;
+    return l - n;
   }
-  template <typename V> ZuInline bool equals(const V &v) const {
-    if (same(v)) return true;
-    return ZuCmp<ZuArray>::equals(*this, v);
+  template <typename V> ZuInline bool equals(const V &v_) const {
+    if (same(v_)) return true;
+    ZuArray v{v_};
+    unsigned l = length();
+    unsigned n = v.length();
+    if (l != n) return false;
+    return Ops::equals(data(), v.data(), l);
   }
 
   template <typename V>

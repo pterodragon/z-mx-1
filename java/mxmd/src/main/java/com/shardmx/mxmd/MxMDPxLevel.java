@@ -3,7 +3,7 @@ package com.shardmx.mxmd;
 import com.shardmx.mxbase.*;
 
 public class MxMDPxLevel implements AutoCloseable {
-  public MxMDPxLevel(long ptr) { this.ptr = ptr; }
+  private MxMDPxLevel(long ptr) { this.ptr = ptr; }
   public void finalize() { close(); }
   public void close() { dtor_(this.ptr); this.ptr = 0; }
 

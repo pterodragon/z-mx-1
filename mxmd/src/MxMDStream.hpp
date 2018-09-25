@@ -37,10 +37,12 @@
 
 #include <ZiFile.hpp>
 #include <ZiRing.hpp>
+#include <ZiMultiplex.hpp>
 
 #include <lz4.h>
 
 #include <MxBase.hpp>
+#include <MxQueue.hpp>
 #include <MxMDFrame.hpp>
 #include <MxMDTypes.hpp>
 
@@ -402,28 +404,7 @@ namespace MxMDStream {
   struct MsgData {
   public:
     inline MsgData() { }
-    inline MsgData(unsigned len, unsigned type) {
-      init_(len, type);
-    }
-    inline MsgData(unsigned len, unsigned type, ZmTime stamp) {
-      init_(len, type, stamp);
-    }
 
-  private:
-    inline void init_(unsigned len, unsigned type) {
-      m_frame.len = len;
-      m_frame.type = type;
-      m_frame.sec = 0;
-      m_frame.nsec = 0;
-    }
-    inline void init_(unsigned len, unsigned type, ZmTime stamp) {
-      m_frame.len = len;
-      m_frame.type = type;
-      m_frame.sec = stamp.sec();
-      m_frame.nsec = stamp.nsec();
-    }
-
-  public:
     ZuInline const Frame *frame() const { return &m_frame; }
     ZuInline Frame *frame() { return &m_frame; }
 
@@ -431,7 +412,7 @@ namespace MxMDStream {
     ZuInline Buf *buf() { return &m_buf; }
 
     ZuInline unsigned length() { return sizeof(Frame) + m_frame.len; }
-    
+
   private:
     Frame	m_frame;
     Buf		m_buf;
@@ -443,14 +424,27 @@ namespace MxMDStream {
 
   template <typename Heap>
   struct Msg_ : public Heap, public ZuPOD<MsgData> {
-    template <typename ...Args> ZuInline Msg_(Args &&... args)
-      //MsgData(ZuFwd<Args>(args)...) { }
-    {
-      new (this->ptr()) MsgData(ZuFwd<Args>(args)...);
-    }
+    ZuInline Msg_() { new (this->ptr()) MsgData(); }
 
     ZuInline const Frame *frame() const { return this->data().frame(); }
     ZuInline Frame *frame() { return this->data().frame(); }
+
+    ZuInline const Buf *buf() const { return this->data().buf(); }
+    ZuInline Buf *buf() { return return this->data().buf(); }
+
+    ZuInline unsigned length() { return this->data().length(); }
+
+    template <typename T>
+    ZuInline void *out(uint64_t linkID, unsigned seqNo, ZmTime stamp) {
+      Frame *frame = this->frame();
+      frame->len = sizeof(T);
+      frame->type = T::Code;
+      frame->linkID = link;
+      frame->seqNo = seqNo;
+      frame->sec = stamp.sec();
+      frame->nsec = stamp.nsec();
+      return (void *)this->buf();
+    }
   };
 
   typedef Msg_<ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> > Msg;
@@ -545,5 +539,62 @@ namespace MxMDStream {
 }
 
 #pragma pack(pop)
+
+namespace MxMDStream {
+  namespace UDP {
+    void send(MxQMsg *msg, ZiConnection *cxn, const ZiSockAddr &addr) {
+      msg->addr = addr;
+      cxn->send(ZiIOFn([](MxQMsg *msg, ZiIOContext &io) {
+	  io.init(ZiIOFn([](MxQMsg *msg, ZiIOContext &io) {
+	      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	      msg->fn(msg, io);
+	    }, ZmMkRef(msg)),
+	    msg->payload->ptr(), msg->length, 0, msg->addr);
+	}, ZmMkRef(msg)));
+    }
+
+    void recv(MxQMsg *msg, ZiIOContext &io) {
+      io.init(ZiIOFn([](MxQMsg *msg, ZiIOContext &io) {
+	  msg->addr = io.addr;
+	  msg->fn(msg, io);
+	}, ZmMkRef(msg)),
+	msg->payload->ptr(), msg->payload->size(), 0);
+    }
+  }
+
+  namespace TCP {
+    void send(MxQMsg *msg, ZiConnection *cxn) {
+      cxn->send(ZiIOFn([](MxQMsg *msg, ZiIOContext &io) {
+	  io.init(ZiIOFn([](MxQMsg *msg, ZiIOContext &io) {
+	      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	      msg->fn(msg, io);
+	    }, ZmMkRef(msg)),
+	    msg->payload->ptr(), msg->length, 0);
+	}, ZmMkRef(msg)));
+    }
+
+    void recv(MxQMsg *msg, ZiIOContext &io) {
+      io.init(ZiIOFn([](MxQMsg *msg, ZiIOContext &io) {
+	  unsigned len = io.offset += io.length;
+	  while (len >= sizeof(Frame)) {
+	    Frame &frame = msg->as<Frame>();
+	    unsigned msgLen = sizeof(Frame) + frame.len;
+	    if (ZuUnlikely(msgLen > msg->payload->size())) {
+	      ZeLOG(Error, "received corrupt TCP message");
+	      io.disconnect();
+	      return;
+	    }
+	    if (ZuLikely(len < msgLen)) return;
+	    msg->fn(msg, io);
+	    if (ZuUnlikely(io.completed())) return;
+	    if (io.offset = len - msgLen)
+	      memmove(io.ptr, io.ptr + msgLen, io.offset);
+	    len = io.offset;
+	  }
+	}, ZmMkRef(msg)),
+	msg->payload->ptr(), msg->payload->size(), 0);
+    }
+  }
+}
 
 #endif /* MxMDStream_HPP */

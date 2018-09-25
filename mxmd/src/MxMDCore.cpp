@@ -76,9 +76,9 @@ private:
 
 void MxMDCore::addVenueMapping_(ZuAnyPOD *pod)
 {
-  auto data = (MxMDVenueMapCSV::Data *)(pod->ptr());
-  addVenueMapping(MxMDVenueMapKey(data->inVenue, data->inSegment),
-      MxMDVenueMapping{data->outVenue, data->outSegment, data->inRank});
+  auto data = pod->as<MxMDVenueMapCSV::Data>();
+  addVenueMapping(MxMDVenueMapKey(data.inVenue, data.inSegment),
+      MxMDVenueMapping{data.outVenue, data.outSegment, data.inRank});
 }
 
 void MxMDCore::addTickSize_(ZuAnyPOD *pod)
@@ -209,7 +209,6 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
 	mx = new MxMDCore::Mx("mx", mxCf);
       else
 	mx = new MxMDCore::Mx("mx");
-      //FIXME - ensure recorder thread is provided in mx config
 
       if (schedInitFn) schedInitFn(mx);
 
@@ -1862,10 +1861,10 @@ void MxMDCore::Publisher::UDP::send(const Frame *frame)
   }
 }
 
-MxMDCore::Subscriber::TCP::TCP(MxMDCore::Subscriber *subscriber, const ZiCxnInfo &ci) :
-    ZiConnection(subscriber->m_core->mx(), ci), m_subscriber(subscriber)
+MxMDCore::Subscriber::TCP::TCP(Subscriber *subscriber, const ZiCxnInfo &ci) :
+  ZiConnection(subscriber->m_core->mx(), ci), m_subscriber(subscriber)
 {
-  using namespace MxMDPubSub::TCP;
+  using namespace MxMDStream::TCP;
   m_in = new InMsg();
 }
 
@@ -2084,39 +2083,7 @@ void MxMDCore::Subscriber::UDP::disconnect()
   ZiConnection::disconnect();
 }
 
-void MxMDCore::Subscriber::start()
-{
-  // cancel restart
-  m_core->mx()->del(&m_restartTimer);
-
-  {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
-
-    // state machine
-    int state = m_state & State::Mask;
-    switch (state) {
-      case State::Starting:
-	m_state &= ~State::PendingStop;
-	return;
-      case State::Running:
-	return;
-      case State::Stopping:
-	m_state |= State::PendingStart;
-	return;
-      default:
-	break;
-    }
-
-    // starting...
-    m_reconnects = 0;
-    m_state =
-      (m_state & ~(State::Mask | State::PendingStart)) | State::Starting;
-  }
-
-  m_core->mx()->add(ZmFn<>::Member<&MxMDCore::Subscriber::start_>::fn(this));
-}
-
-void MxMDCore::Subscriber::start_()
+void MxMDCore::Subscriber::up()
 {
   tcpConnect();
 }

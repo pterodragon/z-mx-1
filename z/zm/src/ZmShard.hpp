@@ -117,10 +117,10 @@ public:
 
 private:
   ZuInline void shardObject(Shard *&shard, T *&o) const {
-    if (!m_ptr) {
+    if (ZuUnlikely(!m_ptr)) {
       shard = 0;
       o = 0;
-    } else if (m_ptr & 1) {
+    } else if (ZuUnlikely(m_ptr & 1)) {
       shard = (Shard *)(void *)(m_ptr & ~(uintptr_t)1);
       o = 0;
     } else {

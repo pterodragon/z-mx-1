@@ -1255,7 +1255,7 @@ void MxMDCore::pad(Frame *frame)
   }
 }
 
-void MxMDCore::apply(Frame *frame)
+void MxMDCore::apply(const Frame *frame)
 {
   using namespace MxMDStream;
 
@@ -1583,9 +1583,7 @@ void MxMDCore::apply(Frame *frame)
 	  this->loaded(venue);
       }
     default:
-      raise(ZeEVENT(Info, "MxMDCore apply default"));
-      
-      
+      raise(ZeEVENT(Error, "MxMDLib - unknown message type"));
       break;
   }
 }

@@ -66,22 +66,24 @@ struct MxQFlags {
 
 struct MxQMsg;
 
-typedef ZmFn<MxQMsg *, ZiIOContext &> MxQMsgFn;
+typedef ZmFn<MxQMsg *, ZiIOContext *> MxQMsgFn;
 
 struct MxQMsgData {
-  MxMsgID		id;
-  unsigned		length = 0;
   ZuRef<ZuAnyPOD>	payload;
   MxQMsgFn		fn;
+  unsigned		length = 0;
+  MxMsgID		id;
   MxFlags		flags;		// see MxQFlags
   ZmTime		deadline;
-  void			*appData = 0;
   ZiSockAddr		addr;
 
-  template <typename T> inline const T &as() const {
+  ZuInline void *ptr() { return payload->ptr(); }
+  ZuInline const void *ptr() const { return payload->ptr(); }
+
+  template <typename T> ZuInline const T &as() const {
     return *static_cast<const T *>(payload->ptr());
   }
-  template <typename T> inline T &as() {
+  template <typename T> ZuInline T &as() {
     return *static_cast<T *>(payload->ptr());
   }
 };

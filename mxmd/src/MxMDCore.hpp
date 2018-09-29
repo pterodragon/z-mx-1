@@ -147,7 +147,7 @@ private:
   typedef MxMDStream::Msg Msg;
 
   void pad(Frame *);
-  void apply(Frame *);
+  void apply(const Frame *);
 
   void startCmdServer();
   void initCmds();
@@ -224,9 +224,10 @@ private:
 
     inline Channel(MxMDCore *core) : m_core(core) {
       m_config.name("RMD").size(131072); // 131072 is ~100mics at 1Gbit/s
+      m_linkID = "RMD";
     }
     inline Channel(MxMDCore *core, const ZiRingParams &config) :
-      m_core(core), m_config(config) { }
+      m_core(core), m_config(config), m_linkID(config.name()) { }
 
     inline ~Channel() { close_(); }
 
@@ -234,10 +235,14 @@ private:
 
     inline const ZiRingParams &config() const { return m_config; }
 
+    ZuInline MxID linkID() const { return m_linkID; } 
+    ZuInline MxSeqNo seqNo() { return ++m_seqNo; }
+
     bool open() {
       Guard guard(m_lock);
       ++m_openCount;
       if (m_ring) return true;
+      m_seqNo = 0;
       m_ring = new Ring(m_config);
       ZeError e;
       if (m_ring->open(Ring::Create | Ring::Read | Ring::Write, &e) < 0) {
@@ -337,9 +342,11 @@ private:
   protected:
     MxMDCore			*m_core;
     ZvRingParams		m_config;
+    MxID			m_linkID;
     Lock			m_lock;
     unsigned			  m_openCount = 0;
     ZmRef<MxMDStream::Ring>	  m_ring;
+    MxSeqNo			  m_seqNo = 0;
   };
 
   typedef Channel<ZmPLock> Broadcast;
@@ -690,8 +697,6 @@ friend class Recorder;
 	goto next;
       }
       {
-	MsgRef msg = new Msg();
-
 	if (frame->len > sizeof(Buf)) {
 	  broadcast.shift2();
 	  snapStop();
@@ -705,13 +710,10 @@ friend class Recorder;
 	  goto end;
 	}
 	unsigned length = sizeof(Frame) + frame->len;
+	ZmRef<Msg> msg = new Msg();
 	memcpy(msg->frame(), frame, length);
-	MxSeqNo seqNo = ++m_msgSeqNo;
-	msg->frame()->seqNo = seqNo;
-	ZmRef<MxQMsg> qmsg = new MxQMsg();
-	qmsg->id = MxMsgID{rx->rxQueue().id, seqNo};
-	qmsg->length = length;
-	qmsg->payload = msg;
+	ZmRef<MxQMsg> qmsg = new MxQMsg(
+	    msg, MxQMsgFn(), length, MxMsgID{rx->rxQueue().id, ++m_seqNo});
 	rx->received(qmsg);
       }
       broadcast.shift2();
@@ -789,7 +791,7 @@ friend class Recorder;
     }
 
   private:
-    MxSeqNo			m_msgSeqNo = 0;
+    MxSeqNo			m_seqNo = 0;
     MxMDCore			*m_core;
     ZmSemaphore			m_attachSem;
     ZmSemaphore			m_detachSem;
@@ -1108,6 +1110,7 @@ friend class Publisher;
 
 	//std::cout << "---- " << (int)(msg->frame()->type) << std::endl;
 
+	// FIXME
 	ZmRef<MxQMsg> qmsg = new MxQMsg(MxFlags{}, ZmTime{}, msg);
 
 	//std::cout << "==== " << (int)(qmsg->payload->template as<MsgData>().frame()->type) << std::endl;

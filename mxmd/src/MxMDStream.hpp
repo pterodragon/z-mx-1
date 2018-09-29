@@ -63,10 +63,9 @@ namespace MxMDStream {
 	ResetOB,
 	AddTrade, CorrectTrade, CancelTrade,
 	RefDataLoaded,
-	Login,
 
 	// control events follow
-	Detach, EndOfSnapshot);
+	Login, Detach, EndOfSnapshot);
 
     MxEnumNames(
 	"AddTickSizeTbl", "ResetTickSizeTbl", "AddTickSize",
@@ -80,9 +79,8 @@ namespace MxMDStream {
 	"ResetOB",
 	"AddTrade", "CorrectTrade", "CancelTrade",
 	"RefDataLoaded",
-	"Login",
 
-	"Detach", "EndOfSnapshot");
+	"Login", "Detach", "EndOfSnapshot");
 
     MxEnumMapAlias(Map, CSVMap);
   };
@@ -121,21 +119,36 @@ namespace MxMDStream {
   };
 
   struct Frame : public MxMDFrame {
-    inline void *ptr() { return (void *)&this[1]; }
-    inline const void *ptr() const { return (const void *)&this[1]; }
+    template <typename ...Args>
+    ZuInline Frame(Args &&... args) : MxMDFrame{ZuFwd<Args>(args)...} { }
 
-    template <typename T> inline T &as() {
+    ZuInline void *ptr() { return (void *)&this[1]; }
+    ZuInline const void *ptr() const { return (const void *)&this[1]; }
+
+    template <typename T> ZuInline T &as() {
       T *ZuMayAlias(ptr) = (T *)&this[1];
       return *ptr;
     }
-    template <typename T> inline const T &as() const {
+    template <typename T> ZuInline const T &as() const {
       const T *ZuMayAlias(ptr) = (const T *)&this[1];
       return *ptr;
     }
 
-    template <typename T> inline void pad() {
+    template <typename T>
+    ZuInline static void *out(
+	void *ptr, uint64_t linkID, unsigned seqNo, ZmTime stamp) {
+      Frame *frame = new (ptr)
+	Frame(sizeof(T), T::Code, linkID, seqNo, stamp.sec(), stamp.nsec());
+      return frame->ptr();
+    }
+
+    template <typename T> ZuInline void pad() {
       if (ZuUnlikely(len < sizeof(T)))
 	memset(((char *)&this[1]) + len, 0, sizeof(T) - len);
+    }
+
+    bool scan(unsigned length) {
+      if (len + sizeof(Frame) > length) return true;
     }
   };
 
@@ -408,9 +421,6 @@ namespace MxMDStream {
     ZuInline const Frame *frame() const { return &m_frame; }
     ZuInline Frame *frame() { return &m_frame; }
 
-    ZuInline const Buf *buf() const { return &m_buf; }
-    ZuInline Buf *buf() { return &m_buf; }
-
     ZuInline unsigned length() { return sizeof(Frame) + m_frame.len; }
 
   private:
@@ -429,52 +439,34 @@ namespace MxMDStream {
     ZuInline const Frame *frame() const { return this->data().frame(); }
     ZuInline Frame *frame() { return this->data().frame(); }
 
-    ZuInline const Buf *buf() const { return this->data().buf(); }
-    ZuInline Buf *buf() { return return this->data().buf(); }
+    template <typename T, typename ...Args>
+    ZuInline void *out(Args &&... args) {
+      return Frame::out<T>(frame(), ZuFwd<Args>(args)...);
+    }
 
     ZuInline unsigned length() { return this->data().length(); }
-
-    template <typename T>
-    ZuInline void *out(uint64_t linkID, unsigned seqNo, ZmTime stamp) {
-      Frame *frame = this->frame();
-      frame->len = sizeof(T);
-      frame->type = T::Code;
-      frame->linkID = link;
-      frame->seqNo = seqNo;
-      frame->sec = stamp.sec();
-      frame->nsec = stamp.nsec();
-      return (void *)this->buf();
-    }
   };
 
   typedef Msg_<ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> > Msg;
   typedef ZuRef<Msg> MsgRef;
 
   template <typename App>
-  MsgRef shift(App &app) {
+  ZmRef<Msg> shift(App &app) {
     const Frame *frame = app.shift();
     if (ZuUnlikely(!frame)) return 0;
     if (frame->len > sizeof(Buf)) { app.shift2(); return 0; }
-    MsgRef msg = new Msg();
-    memcpy(msg->data().frame(), frame, sizeof(Frame));
-    memcpy(msg->data().frame()->ptr(), frame->ptr(), frame->len);
+    ZmRef<Msg> msg = new Msg();
+    memcpy(msg->frame(), frame, sizeof(Frame));
+    memcpy(msg->frame()->ptr(), frame->ptr(), frame->len);
     app.shift2();
     return msg;
   }
 
-  template <typename App, typename T>
-  inline Frame *push(App &app) {
+  template <typename T, typename App>
+  inline void *push(App &app) {
     void *ptr = app.push(sizeof(Frame) + sizeof(T));
     if (ZuUnlikely(!ptr)) return 0;
-    Frame *frame = new (ptr) Frame();
-    frame->len = sizeof(T);
-    frame->type = T::Code;
-    {
-      ZmTime now(ZmTime::Now);
-      frame->sec = now.sec();
-      frame->nsec = now.nsec();
-    }
-    return frame;
+    return Frame::out<T>(ptr, app.linkID(), app.seqNo(), ZmTimeNow());
   }
 
 #ifdef FnDeclare
@@ -483,9 +475,9 @@ namespace MxMDStream {
 #define FnDeclare(Fn, Type) \
   template <typename App, typename ...Args> \
   inline bool Fn(App &app, Args &&... args) { \
-    Frame *frame = push<App, Type>(app); \
-    if (ZuUnlikely(!frame)) return false; \
-    new (frame->ptr()) Type{ZuFwd<Args>(args)...}; \
+    void *ptr = push<Type>(app); \
+    if (ZuUnlikely(!ptr)) return false; \
+    new (ptr) Type{ZuFwd<Args>(args)...}; \
     app.push2(); \
     return true; \
   }
@@ -498,16 +490,16 @@ namespace MxMDStream {
   FnDeclare(addOrderBook, AddOrderBook)
   FnDeclare(delOrderBook, DelOrderBook)
 
-  // AddCombination needs special handling due to securities/sides/ratios fields
+  // special processing for AddCombination's securities/sides/ratios fields
   template <typename App,
 	   typename Key_, typename Security, typename TickSizeTbl>
   inline bool addCombination(App &app, MxDateTime transactTime,
       const Key_ &key, MxNDP pxNDP, MxNDP qtyNDP, unsigned legs,
       const Security *securities, const MxEnum *sides, const MxRatio *ratios,
       const TickSizeTbl &tickSizeTbl, const MxMDLotSizes &lotSizes) {
-    Frame *frame = push<App, AddCombination>(app);
-    if (ZuUnlikely(!frame)) return false;
-    AddCombination *data = new (frame->ptr()) AddCombination{transactTime,
+    void *ptr = push<AddCombination>(app);
+    if (ZuUnlikely(!ptr)) return false;
+    AddCombination *data = new (ptr) AddCombination{transactTime,
       key, pxNDP, qtyNDP, legs, {}, {}, {}, tickSizeTbl, lotSizes};
     for (unsigned i = 0; i < legs; i++) {
       data->securities[i] = securities[i];
@@ -547,7 +539,7 @@ namespace MxMDStream {
       cxn->send(ZiIOFn([](MxQMsg *msg, ZiIOContext &io) {
 	  io.init(ZiIOFn([](MxQMsg *msg, ZiIOContext &io) {
 	      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	      msg->fn(msg, io);
+	      msg->fn(msg, &io);
 	    }, ZmMkRef(msg)),
 	    msg->payload->ptr(), msg->length, 0, msg->addr);
 	}, ZmMkRef(msg)));
@@ -556,7 +548,7 @@ namespace MxMDStream {
     void recv(MxQMsg *msg, ZiIOContext &io) {
       io.init(ZiIOFn([](MxQMsg *msg, ZiIOContext &io) {
 	  msg->addr = io.addr;
-	  msg->fn(msg, io);
+	  msg->fn(msg, &io);
 	}, ZmMkRef(msg)),
 	msg->payload->ptr(), msg->payload->size(), 0);
     }
@@ -567,7 +559,7 @@ namespace MxMDStream {
       cxn->send(ZiIOFn([](MxQMsg *msg, ZiIOContext &io) {
 	  io.init(ZiIOFn([](MxQMsg *msg, ZiIOContext &io) {
 	      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	      msg->fn(msg, io);
+	      msg->fn(msg, &io);
 	    }, ZmMkRef(msg)),
 	    msg->payload->ptr(), msg->length, 0);
 	}, ZmMkRef(msg)));
@@ -585,7 +577,7 @@ namespace MxMDStream {
 	      return;
 	    }
 	    if (ZuLikely(len < msgLen)) return;
-	    msg->fn(msg, io);
+	    msg->fn(msg, &io);
 	    if (ZuUnlikely(io.completed())) return;
 	    if (io.offset = len - msgLen)
 	      memmove(io.ptr, io.ptr + msgLen, io.offset);

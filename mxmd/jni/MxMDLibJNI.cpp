@@ -254,6 +254,7 @@ jobject MxMDLibJNI::handler(JNIEnv *env, jobject obj)
 
 jobject MxMDLibJNI::security(JNIEnv *env, jobject obj, jobject key_)
 {
+  // (MxSecKey) -> MxMDSecHandle
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
   if (MxMDSecHandle sec = md->security(MxSecKeyJNI::j2c(env, key_)))
@@ -290,6 +291,7 @@ jlong MxMDLibJNI::allSecurities(JNIEnv *env, jobject obj, jobject fn)
 
 jobject MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_)
 {
+  // (MxSecKey) -> MxMDOBHandle
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
   if (MxMDOBHandle ob = md->orderBook(MxSecKeyJNI::j2c(env, key_)))

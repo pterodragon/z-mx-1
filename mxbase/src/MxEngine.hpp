@@ -107,6 +107,12 @@ protected:
   MxAnyLink(MxID id);
 
 public:
+  ZuInline int state(unsigned *reconnects = 0) const {
+    ZmReadGuard<ZmLock> guard(m_stateLock);
+    if (reconnects) *reconnects = m_reconnects;
+    return m_state;
+  }
+
   void up();
   void down();
 
@@ -254,6 +260,11 @@ public:
   ZuInline unsigned rxThread() const { return m_rxThread; }
   ZuInline unsigned txThread() const { return m_txThread; }
 
+  ZuInline int state() const {
+    ZmReadGuard<ZmLock> guard(m_stateLock);
+    return m_state;
+  }
+
   void start();
   void stop();
 
@@ -277,7 +288,8 @@ public:
   ZuInline void appLinkState(MxAnyLink *link, MxEnum state, ZuString txt)
     { mgr()->linkState(link, state, txt); }
 
-  ZuInline void appUpdateTxPool(MxAnyTxPool *pool) { mgr()->updateTxPool(pool); }
+  ZuInline void appUpdateTxPool(MxAnyTxPool *pool)
+    { mgr()->updateTxPool(pool); }
   ZuInline void appDelTxPool(MxAnyTxPool *pool) { mgr()->delTxPool(pool); }
 
   // Note: MxQueues are contained in Link and TxPool
@@ -382,6 +394,13 @@ public:
       appDelLink(link);
     }
     return link;
+  }
+  ZuInline unsigned nLinks() const { return m_links.count(); }
+  template <typename L> uintptr_t allLinks(L &&l) {
+    auto i = m_links.readIterator();
+    while (MxAnyLink *link = i.iterateKey())
+      if (uintptr_t v = l(link)) return v;
+    return 0;
   }
 
 protected:

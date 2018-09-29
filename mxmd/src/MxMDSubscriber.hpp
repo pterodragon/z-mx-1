@@ -48,7 +48,7 @@ public:
 
   inline MxMDCore *core() const { return static_cast<MxMDCore *>(mgr()); }
 
-  void init(MxMultiplex *mx, ZvCf *cf);
+  void init(MxMDCore *core);
   void final();
 
   void up();
@@ -58,15 +58,20 @@ public:
   MxEngineApp::ProcessFn processFn() {
     return static_cast<MxEngineApp::ProcessFn>(
 	[](MxEngineApp *app, MxAnyLink *link, MxQMsg *msg) {
-	    static_cast<Subscriber *>(app)->process_(link, msg);
+	    static_cast<MxMDSubscriber *>(app)->process_(
+		static_cast<MxMDSubLink *>(link), msg);
     });
   }
 
-  // Tx (called from engine's tx thread)
+  // Tx (called from engine's tx thread) (unused)
   void sent(MxAnyLink *, MxQMsg *) { }
   void aborted(MxAnyLink *, MxQMsg *) { }
   void archive(MxAnyLink *, MxQMsg *) { }
   ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
+
+  // commands
+  void status(const MxMDCmd::CmdArgs &args, ZtArray<char> &out);
+  void resend(const MxMDCmd::CmdArgs &args, ZtArray<char> &out);
 
 private:
   inline const ZiIP &interface() const { return m_interface; }
@@ -75,19 +80,7 @@ private:
   ZmTime reconnectInterval() const { return ZmTime(m_reconnectInterval); }
   ZmTime reRequestInterval() const { return ZmTime(m_reRequestInterval); }
 
-  void recv(MxMDSubLink *link);
-  void process_(MxQMsg *qmsg);
-
-  void tcpConnected(TCP *);
-
-  void loginReq(MxMDStream::Login *login);
-
-  void udpConnect();
-  ZiConnection *udpConnected(const ZiCxnInfo &ci);
-  void udpConnectFailed(bool transient);
-  void udpConnected2(UDP *);
-  void udpReceived(MxQMsg *msg);
-  void udpReceived_(MxQMsg *msg);
+  void process_(MxMDSubLink *link, MxQMsg *qmsg);
 
   template <typename L>
   ZuInline void partition(MxID id, L &&l) const {
@@ -97,9 +90,10 @@ private:
       l(nullptr);
   }
 
-private:
-  MxMDCore		*m_core;
+  bool failover() const { return m_failover; }
+  void failover(bool v) { m_failover = v; }
 
+private:
   ZiIP			m_interface;
   unsigned		m_maxQueueSize = 0;
   double		m_loginTimeout = 0.0;
@@ -117,6 +111,8 @@ private:
   typedef Partitions::Node Partition;
 
   Partitions		m_partitions;
+
+  bool			m_failover = false;
 };
 
 class MxMDAPI MxMDSubLink : public MxLink<MxMDSubLink> {
@@ -127,7 +123,7 @@ friend class TCP;
     struct State {
       enum _ {
 	Login = 0,
-	Load,
+	Receiving,
 	Disconnect
       };
     };
@@ -142,17 +138,12 @@ friend class TCP;
     ZuInline MxMDSubLink *link() const { return m_link; }
 
     void connected(ZiIOContext &);
+    void disconnect();
     void disconnected();
 
     void sendLogin();
-    void recvLoginAck(MxITCH::TCP::OutMsg *, ZiIOContext &);
-    void loginTimeout();
-    void processLoginAck(MxITCH::TCP::InMsg *, ZiIOContext &);
-    void loginAckd(ZiIOContext &, bool load);
-
-    void process(MxMDStream::TCP::InMsg *, ZiIOContext &);
-
-    void disconnect();
+    void processLoginAck(ZiIOContext &);
+    void process(ZiIOContext &);
 
   private:
     MxMDSubLink		*m_link;
@@ -186,12 +177,11 @@ friend class UDP;
     }
 
     void connected(ZiIOContext &io);
+    void disconnect();
     void disconnected();
 
     void recv(ZiIOContext &);
-    void process(MxMDStream::UDP::InMsg *, ZiIOContext &);
-
-    void disconnect();
+    void process(MxQMsg *, ZiIOContext *);
 
   private:
     MxMDSubLink		*m_link;
@@ -202,6 +192,7 @@ friend class UDP;
     ZmRef<MxQMsg>	m_in;
   };
 
+public:
   MxMDSubLink(MxID id) : MxLink<MxMDSubLink>(id) { }
 
   typedef MxMDSubscriber Engine;
@@ -224,16 +215,20 @@ friend class UDP;
   void request(const MxQueue::Gap &prev, const MxQueue::Gap &now);
   void reRequest(const MxQueue::Gap &now);
 
-  // Tx
-  bool send_(MxQMsg *msg, bool more);
-  bool resend_(MxQMsg *msg, bool more);
+  // Tx (unused - TCP login bypasses Tx queue)
+  bool send_(MxQMsg *msg, bool more) { return true; }
+  bool resend_(MxQMsg *msg, bool more) { return true; }
 
-  bool sendGap_(const MxQueue::Gap &gap, bool more);
-  bool resendGap_(const MxQueue::Gap &gap, bool more);
+  bool sendGap_(const MxQueue::Gap &gap, bool more) { return true; }
+  bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }
+
+  // commands
+  void status(ZtArray<char> &out);
+  ZmRef<MxQMsg> resend(MxSeqNo seqNo, unsigned count);
 
 private:
-  bool tcpError(TCP *tcp, ZiIOContext *io);
-  bool udpError(UDP *udp, ZiIOContext *io);
+  void tcpError(TCP *tcp, ZiIOContext *io);
+  void udpError(UDP *udp, ZiIOContext *io);
 
 private:
   const MxMDPartition	*m_partition = 0;
@@ -245,12 +240,10 @@ private:
     ZmRef<TCP>		  m_tcp;
     ZmRef<UDP>		  m_udp;
 
-#if 0
-  ZmSemaphore			m_resendSem;	// test resend semaphore
-  ZmLock			m_resendLock;
-    MxQueue::Gap		  m_resendGap;
-    ZmRef<MxQMsg>		  m_resendMsg;
-#endif
+  ZmSemaphore		m_resendSem;	// test resend semaphore
+  ZmLock		m_resendLock;
+    MxQueue::Gap	  m_resendGap;
+    ZmRef<MxQMsg>	  m_resendMsg;
 };
 
 #endif /* MxMDSubscriber_HPP */

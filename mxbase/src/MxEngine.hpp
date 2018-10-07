@@ -127,7 +127,7 @@ public:
   virtual void connect() = 0;
   virtual void disconnect() = 0;
 
-  virtual ZmTime reconnectInterval(unsigned reconnects) { return ZmTime{1}; }
+  virtual ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
 
   void connected();
   void disconnected();
@@ -139,12 +139,12 @@ public:
   }
 
 private:
-  ZmScheduler::Timer	m_reconnectTimer;
+  ZmScheduler::Timer	m_reconnTimer;
 
   ZmLock		m_stateLock;
     int			  m_state;
     unsigned		  m_reconnects;
-    ZmTime		  m_reconnectTime;
+    ZmTime		  m_reconnTime;
 };
 
 // Traffic Logging (timestamp, payload)
@@ -481,8 +481,7 @@ private:
 // CRTP - implementation must conform to the following interface:
 #if 0
 struct TxPoolImpl : public MxTxPool<TxPoolImpl> {
-  ZmTime reconnectInterval(unsigned reconnects); // optional - defaults to 1sec
-  ZmTime reRequestInterval(); // resend request interval
+  ZmTime reconnInterval(unsigned reconnects); // optional - defaults to 1sec
 };
 #endif
 
@@ -531,10 +530,10 @@ private:
 // (Note: can be derived from TxPoolImpl above)
 #if 0
 struct LinkImpl : public MxLink<LinkImpl> {
-  ZmTime reconnectInterval(unsigned reconnects); // optional - defaults to 1sec
-  ZmTime reRequestInterval(); // resend request interval
+  ZmTime reconnInterval(unsigned reconnects); // optional - defaults to 1sec
 
   // Rx
+  ZmTime reReqInterval(); // resend request interval
   void request(const MxQueue::Gap &prev, const MxQueue::Gap &now);
   void reRequest(const MxQueue::Gap &now);
 
@@ -598,7 +597,7 @@ public:
     scheduleReRequest_(guard);
   }
   ZuInline void scheduleReRequest_(RRGuard &guard) {
-    ZmTime interval = impl().reRequestInterval();
+    ZmTime interval = impl().reReqInterval();
     if (!interval) return;
     m_rrTime.now();
     ZmTime rrTime = (m_rrTime += interval);

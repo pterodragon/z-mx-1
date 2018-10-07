@@ -138,11 +138,11 @@ friend class Connection;
 public:
   Mx(ZiIP ip, unsigned port, const ZiCxnOptions &options,
       unsigned nConnections, unsigned nConcurrent,
-      unsigned maxRecv, int reconnectInterval,
+      unsigned maxRecv, int reconnInterval,
       const ZiMultiplexParams &params) :
     ZiMultiplex(params), m_ip(ip), m_port(port), m_options(options),
     m_nConnections(nConnections), m_nConcurrent(nConcurrent),
-    m_maxRecv(maxRecv), m_reconnectInterval(reconnectInterval),
+    m_maxRecv(maxRecv), m_reconnInterval(reconnInterval),
     m_nDisconnects(0) { }
   ~Mx() { }
 
@@ -159,11 +159,11 @@ public:
   }
 
   void failed(bool transient) {
-    if (transient && m_reconnectInterval > 0) {
+    if (transient && m_reconnInterval > 0) {
       std::cerr << "connect to " << m_ip << ':' << ZuBoxed(m_port) <<
 	" failed, retrying...\n";
       add(ZmFn<>::Member<&Mx::connect>::fn(this),
-	  ZmTimeNow(m_reconnectInterval));
+	  ZmTimeNow(m_reconnInterval));
     } else if (++m_nDisconnects >= m_nConnections) {
       std::cerr << "connect failed\n";
       Global::post();
@@ -186,7 +186,7 @@ private:
   unsigned		m_nConnections;
   unsigned		m_nConcurrent;
   unsigned		m_maxRecv;
-  int			m_reconnectInterval;
+  int			m_reconnInterval;
   ZmAtomic<unsigned>	m_nDisconnects;
 };
 
@@ -232,7 +232,7 @@ int main(int argc, char **argv)
   int nConnections = 1;
   int nConcurrent = 1;
   int maxRecv = 0;
-  int reconnectInterval = 1;
+  int reconnInterval = 1;
   ZiMultiplexParams params;
 
   for (int i = 1; i < argc; i++) {
@@ -268,7 +268,7 @@ int main(int argc, char **argv)
 	if ((maxRecv = atoi(argv[++i])) <= 0) usage();
 	break;
       case 'i':
-	reconnectInterval = atoi(argv[++i]);
+	reconnInterval = atoi(argv[++i]);
 	break;
 #ifdef ZiMultiplex_DEBUG
       case 'f':
@@ -326,7 +326,7 @@ int main(int argc, char **argv)
   ZeLog::start();
 
   Mx mx(ip, port, options, nConnections, nConcurrent, maxRecv,
-      reconnectInterval, params);
+      reconnInterval, params);
 
   ZmTrap::sigintFn(ZmFn<>::Ptr<&Global::post>::fn());
   ZmTrap::trap();

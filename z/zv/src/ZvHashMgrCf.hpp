@@ -35,7 +35,6 @@
 #include <ZmHeap.hpp>
 #include <ZmHash.hpp>
 
-#include <ZvCf.hpp>
 #include <ZvCSV.hpp>
 
 struct ZvHashMgrCf {
@@ -65,8 +64,7 @@ struct ZvHashMgrCf {
 
     void alloc(ZuRef<ZuAnyPOD> &pod) { pod = m_pod; }
 
-    template <typename File>
-    void read(const File &file) {
+    void read(ZuString file) {
       ZvCSV::read(file,
 	  ZvCSVAllocFn::Member<&CSV::alloc>::fn(this),
 	  ZvCSVReadFn::Member<&CSV::row>::fn(this));
@@ -82,17 +80,8 @@ struct ZvHashMgrCf {
     ZuRef<POD>	m_pod;
   };
 
-  inline static void init(ZvCf *cf) {
-    if (!cf) return;
-
-    if (ZuString file = cf->get("file")) CSV().read(file);
-
-    {
-      ZvCf::Iterator i(cf);
-      ZuString id;
-      while (ZmRef<ZvCf> hashCf = i.subset(id))
-	ZmHashMgr::init(id, ZvHashParams(hashCf));
-    }
+  static void init(ZuString file) {
+    if (file) CSV().read(ZuMv(file));
   }
 };
 

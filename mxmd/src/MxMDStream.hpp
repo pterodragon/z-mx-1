@@ -46,6 +46,27 @@
 #include <MxMDFrame.hpp>
 #include <MxMDTypes.hpp>
 
+// App must conform to the following interface:
+#if 0
+struct App {
+  // Rx
+
+  // begin message shift - return ptr to message buffer
+  const Frame *shift();
+  // complete message shift
+  void shift2();
+
+  // Tx
+
+  // begin message push - allocate message buffer
+  void *push(unsigned size);
+  // fill message header with MxMDFrame, return ptr to body
+  void *out(void *ptr, unsigned length, unsigned type, ZmTime stamp);
+  // complete message push
+  void push2();
+};
+#endif
+
 #pragma pack(push, 1)
 
 namespace MxMDStream {
@@ -65,7 +86,9 @@ namespace MxMDStream {
 	RefDataLoaded,
 
 	// control events follow
-	Login, Detach, EndOfSnapshot);
+	Detach,			// ITC detach
+	Login, EndOfSnapshot,	// TCP login, end of snapshot
+	ResendReq);		// UDP resend request
 
     MxEnumNames(
 	"AddTickSizeTbl", "ResetTickSizeTbl", "AddTickSize",
@@ -80,7 +103,9 @@ namespace MxMDStream {
 	"AddTrade", "CorrectTrade", "CancelTrade",
 	"RefDataLoaded",
 
-	"Login", "Detach", "EndOfSnapshot");
+	"Detach",
+	"Login", "EndOfSnapshot",
+	"ResendReq");
 
     MxEnumMapAlias(Map, CSVMap);
   };
@@ -132,14 +157,6 @@ namespace MxMDStream {
     template <typename T> ZuInline const T &as() const {
       const T *ZuMayAlias(ptr) = (const T *)&this[1];
       return *ptr;
-    }
-
-    template <typename T>
-    ZuInline static void *out(
-	void *ptr, uint64_t linkID, unsigned seqNo, ZmTime stamp) {
-      Frame *frame = new (ptr)
-	Frame(sizeof(T), T::Code, linkID, seqNo, stamp.sec(), stamp.nsec());
-      return frame->ptr();
     }
 
     template <typename T> ZuInline void pad() {
@@ -361,27 +378,30 @@ namespace MxMDStream {
     MxID		venue;
   };
 
-  struct Login {
+  // transport / session control messages follow
+
+  struct Detach { // ITC detach
+    enum { Code = Type::Detach };
+    MxUInt		id;
+  };
+
+  struct Login { // TCP login
     enum { Code = Type::Login };
     MxIDString		username;
     MxIDString		password;
   };
   
-  struct ResendReq {
-    uint64_t		seqNo;
-    uint32_t		count;
+  struct EndOfSnapshot { // TCP end of snapshot
+    enum { Code = Type::EndOfSnapshot };
+    MxSeqNo		seqNo;
+  };
+
+  struct ResendReq { // UDP resend request
+    enum { Code = Type::ResendReq };
+    MxSeqNo		seqNo;
+    MxUInt		count;
   };
   
-  struct Detach {
-    enum { Code = Type::Detach };
-    MxUInt		id;
-  };
-
-  struct EndOfSnapshot {
-    enum { Code = Type::EndOfSnapshot };
-    uint8_t		pad_0 = 0;
-  };
-
   typedef ZuLargest<
       AddTickSizeTbl,
       AddTickSize,
@@ -405,10 +425,10 @@ namespace MxMDStream {
       CorrectTrade,
       CancelTrade,
       RefDataLoaded,
-      Login,
-      ResendReq,
       Detach,
-      EndOfSnapshot>::T Largest;
+      Login,
+      EndOfSnapshot,
+      ResendReq>::T Largest;
 
   struct Buf {
     char	data[sizeof(Largest)];
@@ -439,11 +459,6 @@ namespace MxMDStream {
     ZuInline const Frame *frame() const { return this->data().frame(); }
     ZuInline Frame *frame() { return this->data().frame(); }
 
-    template <typename T, typename ...Args>
-    ZuInline void *out(Args &&... args) {
-      return Frame::out<T>(frame(), ZuFwd<Args>(args)...);
-    }
-
     ZuInline unsigned length() { return this->data().length(); }
   };
 
@@ -466,7 +481,7 @@ namespace MxMDStream {
   inline void *push(App &app) {
     void *ptr = app.push(sizeof(Frame) + sizeof(T));
     if (ZuUnlikely(!ptr)) return 0;
-    return Frame::out<T>(ptr, app.linkID(), app.seqNo(), ZmTimeNow());
+    return app.out(ptr, sizeof(T), T::Code, ZmTimeNow());
   }
 
 #ifdef FnDeclare

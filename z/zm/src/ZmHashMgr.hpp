@@ -30,7 +30,7 @@
 #include <ZmLib.hpp>
 #endif
 
-#include <ZuMixin.hpp>
+#include <ZuPrint.hpp>
 
 #include <ZmFn.hpp>
 
@@ -77,8 +77,8 @@ friend class ZmHashParams;
 template <typename, class> friend class ZmHash; 
 template <typename, class> friend class ZmLHash; 
 
-  template <class S> struct CSV {
-    CSV(S &stream) : m_stream(stream) {
+  template <class S> struct CSV_ {
+    CSV_(S &stream) : m_stream(stream) {
       m_stream <<
 	"id,linear,nodeSize,bits,cBits,"
 	"loadFactor,count,effLoadFactor,resized\n";
@@ -108,11 +108,15 @@ public:
 
   static void stats(StatsFn fn);
 
-  template <typename S> static S &csv(S &stream) {
-    CSV<S> csv(stream);
-    ZmHashMgr::stats(StatsFn::Member<&CSV<S>::print>::fn(&csv));
-    return stream;
-  }
+  struct CSV;
+friend struct CSV;
+  struct CSV {
+    template <typename S> ZuInline void print(S &s) const {
+      ZmHashMgr::CSV_<S> csv(s);
+      ZmHashMgr::stats(StatsFn::Member<&ZmHashMgr::CSV_<S>::print>::fn(&csv));
+    }
+  };
+  static CSV csv() { return CSV(); }
 
 private:
   static ZmHashParams &params(ZuString id, ZmHashParams &in);
@@ -121,6 +125,8 @@ private:
   static void add(void *ptr, ReportFn fn);
   static void del(void *ptr);
 };
+
+template <> struct ZuPrint<ZmHashMgr::CSV> : public ZuPrintFn { };
 
 inline const ZmHashParams &ZmHashParams::init(ZuString id)
 {

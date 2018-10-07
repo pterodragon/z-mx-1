@@ -32,7 +32,6 @@
 
 #include <ZuNew.hpp>
 #include <ZuTuple.hpp>
-#include <ZuMixin.hpp>
 #include <ZuPrint.hpp>
 
 #include <ZmPlatform.hpp>
@@ -237,8 +236,6 @@ public:
 
   static void stats(StatsFn fn);
 
-  struct CSV;
-friend struct CSV;
   struct CSV {
     template <typename S> ZuInline void print(S &s) const {
       ZmHeapMgr::CSV_<S>(s).print();

@@ -17,10 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// MxMD TCP/UDP subscriber
+// MxMD TCP/UDP publisher
 
-#ifndef MxMDSubscriber_HPP
-#define MxMDSubscriber_HPP
+#ifndef MxMDPublisher_HPP
+#define MxMDPublisher_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -40,12 +40,12 @@
 #include <MxMDPartition.hpp>
 
 class MxMDCore;
-class MxMDSubLink;
+class MxMDPubLink;
 
-class MxMDAPI MxMDSubscriber : public MxEngineApp, public MxEngine {
+class MxMDAPI MxMDPublisher : public MxEngineApp, public MxEngine {
 public:
-  inline MxMDSubscriber() { }
-  ~MxMDSubscriber() { }
+  inline MxMDPublisher() { }
+  ~MxMDPublisher() { }
 
   inline MxMDCore *core() const { return static_cast<MxMDCore *>(mgr()); }
 
@@ -55,34 +55,26 @@ public:
   void up();
   void down();
 
-  // Rx (called from engine's rx thread)
-  MxEngineApp::ProcessFn processFn() {
-    return static_cast<MxEngineApp::ProcessFn>(
-	[](MxEngineApp *app, MxAnyLink *link, MxQMsg *msg) {
-	    static_cast<MxMDSubscriber *>(app)->process_(
-		static_cast<MxMDSubLink *>(link), msg);
-    });
-  }
+  // Rx (called from engine's rx thread) (unused)
+  MxEngineApp::ProcessFn processFn() { return 0; }
 
-  // Tx (called from engine's tx thread) (unused)
-  void sent(MxAnyLink *, MxQMsg *) { }
-  void aborted(MxAnyLink *, MxQMsg *) { }
-  void archive(MxAnyLink *, MxQMsg *) { }
-  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
+  // Tx (called from engine's tx thread)
+  void sent(MxAnyLink *, MxQMsg *);
+  void aborted(MxAnyLink *, MxQMsg *);
+  void archive(MxAnyLink *, MxQMsg *);
+  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo);
 
   // commands
   void statusCmd(const MxMDCmd::CmdArgs &args, ZtArray<char> &out);
-  void resendCmd(const MxMDCmd::CmdArgs &args, ZtArray<char> &out);
 
 private:
   ZuInline const ZiIP &interface() const { return m_interface; }
   ZuInline unsigned maxQueueSize() const { return m_maxQueueSize; }
   ZuInline ZmTime loginTimeout() const { return ZmTime(m_loginTimeout); }
-  ZuInline ZmTime reconnInterval() const { return ZmTime(m_reconnInterval); }
-  ZuInline ZmTime reReqInterval() const { return ZmTime(m_reReqInterval); }
   ZuInline unsigned reReqMaxGap() const { return m_reReqMaxGap; }
-
-  void process_(MxMDSubLink *link, MxQMsg *qmsg);
+  ZuInline unsigned nAccepts() const { return m_nAccepts; }
+  ZuInline unsigned ttl() const { return m_ttl; }
+  ZuInline bool loopBack() const { return m_loopBack; }
 
   template <typename L>
   ZuInline void partition(MxID id, L &&l) const {
@@ -102,6 +94,9 @@ private:
   double		m_reconnInterval = 0.0;
   double		m_reReqInterval = 0.0;
   unsigned		m_reReqMaxGap = 10;
+  unsigned		m_nAccepts = 8;
+  unsigned		m_ttl = 1;
+  bool			m_loopBack = false;
 
   struct PartitionIDAccessor : public ZuAccessor<MxMDPartition, MxID> {
     inline static MxID value(const MxMDPartition &partition) {
@@ -118,46 +113,66 @@ private:
   bool			m_failover = false;
 };
 
-class MxMDAPI MxMDSubLink : public MxLink<MxMDSubLink> {
+class MxMDAPI MxMDPubLink : public MxLink<MxMDPubLink> {
   class TCP;
 friend class TCP;
   class TCP : public ZiConnection {
+    // FIXME - implement push(), push2(), linkID, seqNo() so this can be
+    // used as a snapshot
   public:
+    struct SocketAccessor : public ZuAccessor<TCP *, ZiPlatform::Socket> {
+      inline static ZiPlatform::Socket value(const TCP *tcp) {
+	return tcp->info().socket;
+      }
+    };
+
     struct State {
       enum _ {
 	Login = 0,
-	Receiving,
+	Sending,
 	Disconnect
       };
     };
 
-    TCP(MxMDSubLink *link, const ZiCxnInfo &ci);
+    TCP(MxMDPubLink *link, const ZiCxnInfo &ci);
 
     inline unsigned state() const {
       ZmReadGuard<ZmLock> guard(m_stateLock);
       return m_state;
     }
 
-    ZuInline MxMDSubLink *link() const { return m_link; }
+    ZuInline MxMDPubLink *link() const { return m_link; }
 
     void connected(ZiIOContext &);
     void disconnect();
     void disconnected();
 
-    void sendLogin();
-    void processLoginAck(ZiIOContext &);
+    void processLogin(ZiIOContext &);
     void process(ZiIOContext &);
 
+    inline void snapshotSeqNo(MxSeqNo seqNo) { m_snapshotSeqNo = seqNo; }
+    inline MxSeqNo snapshotSeqNo() { return m_snapshotSeqNo; }
+
   private:
-    MxMDSubLink		*m_link;
+    MxMDPubLink		*m_link;
 
     ZmScheduler::Timer	m_loginTimer;
 
     ZmLock		m_stateLock;
       unsigned		  m_state;
 
-    ZmRef<MxQMsg>	m_in;
+    MxSeqNo		m_snapshotSeqNo;
   };
+
+  struct TCP_HeapID {
+    ZuInline static const char *id() { return "MxMDPublisher.TCP"; }
+  };
+  typedef ZmHash<TCP *,
+	    ZmHashIndex<TCP::SocketAccessor,
+	      ZmHashLock<ZmNoLock,
+		ZmHashObject<ZuObject,
+		  ZmHashHeapID<TCP_HeapID,
+		    ZmHashBase<ZmObject> > > > > > TCPTbl;
 
   class UDP;
 friend class UDP;
@@ -170,9 +185,9 @@ friend class UDP;
       };
     };
 
-    UDP(MxMDSubLink *link, const ZiCxnInfo &ci);
+    UDP(MxMDPubLink *link, const ZiCxnInfo &ci);
 
-    ZuInline MxMDSubLink *link() const { return m_link; }
+    ZuInline MxMDPubLink *link() const { return m_link; }
 
     inline unsigned state() const {
       ZmReadGuard<ZmLock> guard(m_stateLock);
@@ -187,7 +202,7 @@ friend class UDP;
     static void process(MxQMsg *, ZiIOContext &);
 
   private:
-    MxMDSubLink		*m_link;
+    MxMDPubLink		*m_link;
 
     ZmLock		m_stateLock;
       unsigned		  m_state;
@@ -196,9 +211,9 @@ friend class UDP;
   };
 
 public:
-  MxMDSubLink(MxID id) : MxLink<MxMDSubLink>(id) { }
+  MxMDPubLink(MxID id) : MxLink<MxMDPubLink>(id) { }
 
-  typedef MxMDSubscriber Engine;
+  typedef MxMDPublisher Engine;
 
   ZuInline Engine *engine() {
     return static_cast<Engine *>(MxAnyLink::engine()); // actually MxAnyTx
@@ -213,29 +228,30 @@ public:
   void connect();
   void disconnect();
 
-  // MxLink CTRP
-  ZmTime reconnInterval(unsigned) { return engine()->reconnInterval(); }
+  // MxLink CRTP (unused)
+  ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
 
-  // MxLink Rx CRTP
-  ZmTime reReqInterval() { return engine()->reReqInterval(); }
-  void request(const MxQueue::Gap &prev, const MxQueue::Gap &now);
-  void reRequest(const MxQueue::Gap &now);
+  // MxLink Rx CRTP (unused)
+  ZmTime reReqInterval() { return ZmTime{1}; }
+  void request(const MxQueue::Gap &prev, const MxQueue::Gap &now) { }
+  void reRequest(const MxQueue::Gap &now) { }
 
-  // MxLink Tx CRTP (unused - TCP login bypasses Tx queue)
-  bool send_(MxQMsg *msg, bool more) { return true; }
-  bool resend_(MxQMsg *msg, bool more) { return true; }
+  // MxLink Tx CRTP
+  bool send_(MxQMsg *msg, bool more);
+  bool resend_(MxQMsg *msg, bool more);
 
-  bool sendGap_(const MxQueue::Gap &gap, bool more) { return true; }
-  bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }
+  bool sendGap_(const MxQueue::Gap &gap, bool more);
+  bool resendGap_(const MxQueue::Gap &gap, bool more);
 
   // command support
   void status(ZtArray<char> &out);
-  ZmRef<MxQMsg> resend(MxSeqNo seqNo, unsigned count);
 
   // connection management
-  void tcpConnect();
+  void tcpListen();
+  void tcpListening(const ZiListenInfo &);
   void tcpConnected(TCP *tcp);
-  void tcpLoginAck();
+  void tcpDisconnected(TCP *tcp);
+  bool tcpLogin(MxMDStream::Login &);
   void udpConnect();
   void udpConnected(UDP *udp, ZiIOContext &io)
   void udpReceived(MxQMsg *);
@@ -243,29 +259,13 @@ public:
   void tcpError(TCP *tcp, ZiIOContext *io);
   void udpError(UDP *udp, ZiIOContext *io);
 
-  inline void snapshotSeqNo(MxSeqNo seqNo) {
-    ZmGuard<ZmLock> connGuard(m_connLock);
-    m_snapshotSeqNo = seqNo;
-  }
-  inline MxSeqNo snapshotSeqNo() {
-    ZmGuard<ZmLock> connGuard(m_connLock);
-    return m_snapshotSeqNo;
-  }
-
 private:
   const MxMDPartition	*m_partition = 0;
 
-  ZiSockAddr		m_udpResendAddr;
-
   ZmLock		m_connLock;
-    MxSeqNo		  m_snapshotSeqNo;
-    ZmRef<TCP>		  m_tcp;
+    ZiListenInfo	  m_listenInfo;
+    ZmRef<TCPTbl>	  m_tcpTbl;
     ZmRef<UDP>		  m_udp;
-
-  ZmSemaphore		m_resendSem;	// test resend semaphore
-  ZmLock		m_resendLock;
-    MxQueue::Gap	  m_resendGap;
-    ZmRef<MxQMsg>	  m_resendMsg;
 };
 
-#endif /* MxMDSubscriber_HPP */
+#endif /* MxMDPublisher_HPP */

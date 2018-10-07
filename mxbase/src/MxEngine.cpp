@@ -181,7 +181,7 @@ void MxAnyLink::up()
   bool connect = false;
 
   // cancel reconnect
-  mx()->del(&m_reconnectTimer);
+  mx()->del(&m_reconnTimer);
 
   {
     ZmGuard<ZmLock> stateGuard(m_stateLock);
@@ -211,7 +211,7 @@ void MxAnyLink::down()
   bool disconnect = false;
 
   // cancel reconnect
-  mx()->del(&m_reconnectTimer);
+  mx()->del(&m_reconnTimer);
 
   {
     ZmGuard<ZmLock> stateGuard(m_stateLock);
@@ -243,7 +243,7 @@ void MxAnyLink::reconnect()
   ZmGuard<ZmLock> stateGuard(m_stateLock);
 
   // cancel reconnect
-  mx()->del(&m_reconnectTimer);
+  mx()->del(&m_reconnTimer);
 
   // state machine
   switch ((int)m_state) {
@@ -257,11 +257,11 @@ void MxAnyLink::reconnect()
 
   if (reconnect) {
     ++m_reconnects;
-    m_reconnectTime.now(reconnectInterval(m_reconnects));
-    ZmTime reconnectTime = m_reconnectTime;
+    m_reconnTime.now(reconnInterval(m_reconnects));
+    ZmTime reconnTime = m_reconnTime;
     stateGuard.unlock();
     mx()->add(ZmFn<>::Member<&MxAnyLink::connect>::fn(this),
-	reconnectTime, &m_reconnectTimer);
+	reconnTime, &m_reconnTimer);
   }
 }
 

@@ -119,30 +119,30 @@ friend class Connection;
 
 public:
   Mx(ZiIP ip, unsigned port, unsigned nAccepts, const ZiCxnOptions &options,
-      unsigned nConnections, unsigned maxSend, int reconnectInterval,
+      unsigned nConnections, unsigned maxSend, int reconnInterval,
       const ZiMultiplexParams &params) :
     ZiMultiplex(params), m_ip(ip), m_port(port),
     m_nAccepts(nAccepts), m_options(options),
     m_maxDisconnects(nConnections), m_maxSend(maxSend),
-    m_reconnectInterval(reconnectInterval), m_nDisconnects(0) { }
+    m_reconnInterval(reconnInterval), m_nDisconnects(0) { }
   ~Mx() { }
 
   ZiConnection *connected(const ZiCxnInfo &ci) {
     return new Connection(this, ci, ZmTimeNow());
   }
 
-  void disconnected(Connection *connection) {
+  void disconnected(Connection *) {
     if (++m_nDisconnects >= m_maxDisconnects) Global::post();
   }
 
   void listening(const ZiListenInfo &) { std::cerr << "listening\n"; }
 
   void failed(bool transient) {
-    if (transient && m_reconnectInterval > 0) {
+    if (transient && m_reconnInterval > 0) {
       std::cerr << "bind to " << m_ip << ':' << ZuBoxed(m_port) <<
 	" failed, retrying...\n";
       add(ZmFn<>::Member<&Mx::listen>::fn(this),
-	  ZmTimeNow(m_reconnectInterval));
+	  ZmTimeNow(m_reconnInterval));
     } else {
       std::cerr << "listen failed\n";
       Global::post();
@@ -166,7 +166,7 @@ private:
   ZiCxnOptions		m_options;
   unsigned		m_maxDisconnects;
   unsigned		m_maxSend;
-  int			m_reconnectInterval;
+  int			m_reconnInterval;
   ZmAtomic<unsigned>	m_nDisconnects;
 };
 
@@ -212,7 +212,7 @@ int main(int argc, char **argv)
   int nConnections = 1;
   int nAccepts = 1;
   int maxSend = 0;
-  int reconnectInterval = 1;
+  int reconnInterval = 1;
   ZiMultiplexParams params;
 
   for (int i = 1; i < argc; i++) {
@@ -248,7 +248,7 @@ int main(int argc, char **argv)
 	if ((maxSend = atoi(argv[++i])) <= 0) usage();
 	break;
       case 'i':
-	reconnectInterval = atoi(argv[++i]);
+	reconnInterval = atoi(argv[++i]);
 	break;
 #ifdef ZiMultiplex_DEBUG
       case 'f':
@@ -306,7 +306,7 @@ int main(int argc, char **argv)
   ZeLog::start();
 
   Mx mx(ip, port, nAccepts, options, nConnections, maxSend,
-      reconnectInterval, params);
+      reconnInterval, params);
 
   ZmTrap::sigintFn(ZmFn<>::Ptr<&Global::post>::fn());
   ZmTrap::trap();

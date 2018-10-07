@@ -62,8 +62,8 @@ public:
   void up() { std::cerr << "up\n"; }
   void down() { std::cerr << "down\n"; }
 
-  ZmTime reconnectInterval() { return ZmTime(m_reconnectInterval); }
-  ZmTime reRequestInterval() { return ZmTime(m_reRequestInterval); }
+  ZmTime reconnInterval() { return ZmTime(m_reconnInterval); }
+  ZmTime reReqInterval() { return ZmTime(m_reReqInterval); }
 
   void connected() { m_connected.post(); }
   void waitConnected() { m_connected.wait(); }
@@ -71,8 +71,8 @@ public:
   void waitDisconnected() { m_disconnected.wait(); }
 
 private:
-  ZuBox<double>	m_reconnectInterval;
-  ZuBox<double>	m_reRequestInterval;
+  ZuBox<double>	m_reconnInterval;
+  ZuBox<double>	m_reReqInterval;
   
   ZmSemaphore	m_connected;
   ZmSemaphore	m_disconnected;
@@ -86,9 +86,10 @@ public:
     return static_cast<Engine *>(MxAnyLink::engine()); // actually MxAnyTx
   }
 
-  ZmTime reconnectInterval(unsigned) { return engine()->reconnectInterval(); }
-  ZmTime reRequestInterval() { return engine()->reRequestInterval(); }
+  // MxLink CTRP
+  ZmTime reconnInterval(unsigned) { return engine()->reconnInterval(); }
 
+  // MxAnyLink virtual
   void update(ZvCf *cf) { }
   void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) { }
 
@@ -106,11 +107,12 @@ public:
     engine()->disconnected();
   }
 
-  // Rx
+  // MxLink Rx CRTP
+  ZmTime reReqInterval() { return engine()->reReqInterval(); }
   void request(const MxQueue::Gap &prev, const MxQueue::Gap &now) { }
   void reRequest(const MxQueue::Gap &now) { }
 
-  // Tx
+  // MxLink Tx CRTP
   bool send_(MxQMsg *msg, bool more) {
     // if a msg deadline has passed, could call aborted_() and return false
     this->sent_(msg);
@@ -129,8 +131,8 @@ public:
 void Engine::init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf)
 {
   MxEngine::init(mgr, app, mx, cf);
-  m_reconnectInterval = cf->getDbl("reconnectInterval", 0, 3600, false, 1);
-  m_reRequestInterval = cf->getDbl("reRequestInterval", 0, 3600, false, 1);
+  m_reconnInterval = cf->getDbl("reconnInterval", 0, 3600, false, 1);
+  m_reReqInterval = cf->getDbl("reReqInterval", 0, 3600, false, 1);
   if (ZmRef<ZvCf> linksCf = cf->subset("links", false)) {
     ZvCf::Iterator i(linksCf);
     ZuString id;

@@ -63,6 +63,8 @@ public:
   ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
 };
 
+enum { Connected, Disconnected, Reconnect };
+
 class Engine : public MxEngine {
 public:
   // inline Engine() { }
@@ -75,17 +77,25 @@ public:
   ZmTime reconnInterval() { return ZmTime(m_reconnInterval); }
   ZmTime reReqInterval() { return ZmTime(m_reReqInterval); }
 
+  int action() const { return m_action; }
+  void action(int v) { m_action = v; }
+
   void connected() { m_connected.post(); }
   void waitConnected() { m_connected.wait(); }
   void disconnected() { m_disconnected.post(); }
   void waitDisconnected() { m_disconnected.wait(); }
+  void reconnect() { m_reconnect.post(); }
+  void waitReconnect() { m_reconnect.wait(); }
 
 private:
   ZuBox<double>	m_reconnInterval;
   ZuBox<double>	m_reReqInterval;
   
+  int		m_action = Connected;
+
   ZmSemaphore	m_connected;
   ZmSemaphore	m_disconnected;
+  ZmSemaphore	m_reconnect;
 };
 
 class Link : public MxLink<Link> {
@@ -108,8 +118,20 @@ public:
       ([=, id = id()](const ZeEvent &, ZmStream &out) { out << code; })))
   void connect() {
     linkINFO("connect(): " << id);
-    connected();
-    engine()->connected();
+    switch (engine()->action()) {
+      case Connected:
+	connected();
+	engine()->connected();
+	break;
+      case Disconnected:
+	disconnected();
+	engine()->disconnected();
+	break;
+      case Reconnect:
+	reconnect();
+	engine()->reconnect();
+	break;
+    }
   }
   void disconnect() {
     linkINFO("disconnect(): " << id);
@@ -181,13 +203,22 @@ int main()
   engine->init(mgr, app, mx, cf);
 
   mx->start();
+
   engine->start();
-
   engine->waitConnected();
-
   engine->stop();
-
   engine->waitDisconnected();
+
+  engine->action(Reconnect);
+  engine->start();
+  engine->waitReconnect();
+  engine->stop();
+  engine->waitDisconnected();
+
+  engine->action(Disconnected);
+  engine->start();
+  engine->waitDisconnected();
+  engine->stop();
 
   mx->stop(true);
 

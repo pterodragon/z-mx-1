@@ -81,12 +81,12 @@ typedef ZuBox_1(int8_t) ZtEnum;
     V2S		m_v2s; \
   }
 #define ZtEnumNames(...) \
-  inline static ZuPair<const char *const *const, unsigned> names() { \
+  inline ZuPair<const char *const *const, unsigned> names() { \
     static const char *names[] = { __VA_ARGS__ }; \
     return ZuPair<const char *const *const, unsigned>( \
 	names, sizeof(names) / sizeof(names[0])); \
   } \
-  inline static const char *name(const ZtEnum &i) { \
+  inline const char *name(const ZtEnum &i) { \
     ZuPair<const char *const *const, unsigned> names_ = names(); \
     if (!*i || i >= (int)names_.p2()) return "Unknown"; \
     if (i < 0) return "Invalid"; \
@@ -95,7 +95,7 @@ typedef ZuBox_1(int8_t) ZtEnum;
   struct Map : public Map_<Map> { \
     Map() { for (unsigned i = 0; i < N; i++) this->add(name(i), i); } \
   }; \
-  template <typename S> inline static ZtEnum lookup(const S &s) { \
+  template <typename S> inline ZtEnum lookup(const S &s) { \
     return Map::instance()->s2v(s); \
   }
 #define ZtEnumMap(Map, ...) \

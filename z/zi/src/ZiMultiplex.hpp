@@ -229,13 +229,7 @@ template <> struct ZuTraits<ZiMReq> : public ZuGenericTraits<ZiMReq> {
 #endif
 
 // protocol/socket options
-class ZiCxnOptions {
-  typedef ZuArrayN<ZiMReq, ZiCxnOptions_NMReq> MReqs;
-#ifdef ZiMultiplex_Netlink
-  typedef ZuStringN<GENL_NAMSIZ> FamilyName;
-#endif
-
-public:
+namespace ZiCxnFlags {
   ZtEnumValues(
     UDP = 0,		// U - create UDP socket (default TCP)
     Multicast,          // M - combine with U for multicast server socket
@@ -249,7 +243,14 @@ public:
   ZtEnumFlags(Flags,
       "U", UDP, "M", Multicast, "L", LoopBack, "L", KeepAlive, "N", NetLink,
       "D", Nagle);
+}
+class ZiCxnOptions {
+  typedef ZuArrayN<ZiMReq, ZiCxnOptions_NMReq> MReqs;
+#ifdef ZiMultiplex_Netlink
+  typedef ZuStringN<GENL_NAMSIZ> FamilyName;
+#endif
 
+public:
   ZuInline ZiCxnOptions() : m_flags(0), m_ttl(0) { } // Default is TCP
 
   ZuInline ZiCxnOptions(const ZiCxnOptions &o) :
@@ -300,23 +301,39 @@ public:
     m_flags = flags;
     return *this;
   }
-  ZuInline bool udp() const { return m_flags & (1<<UDP); }
+  ZuInline bool udp() const {
+    using namespace ZiCxnFlags;
+    return m_flags & (1<<UDP);
+  }
   ZuInline ZiCxnOptions &udp(bool b) {
+    using namespace ZiCxnFlags;
     b ? (m_flags |= (1<<UDP)) : (m_flags &= ~(1<<UDP));
     return *this;
   }
-  ZuInline bool multicast() const { return m_flags & (1<<Multicast); }
+  ZuInline bool multicast() const {
+    using namespace ZiCxnFlags;
+    return m_flags & (1<<Multicast);
+  }
   ZuInline ZiCxnOptions &multicast(bool b) {
+    using namespace ZiCxnFlags;
     b ? (m_flags |= (1<<Multicast)) : (m_flags &= ~(1<<Multicast));
     return *this;
   }
-  ZuInline bool loopBack() const { return m_flags & (1<<LoopBack); }
+  ZuInline bool loopBack() const {
+    using namespace ZiCxnFlags;
+    return m_flags & (1<<LoopBack);
+  }
   ZuInline ZiCxnOptions &loopBack(bool b) {
+    using namespace ZiCxnFlags;
     b ? (m_flags |= (1<<LoopBack)) : (m_flags &= ~(1<<LoopBack));
     return *this;
   }
-  ZuInline bool keepAlive() const { return m_flags & (1<<KeepAlive); }
+  ZuInline bool keepAlive() const {
+    using namespace ZiCxnFlags;
+    return m_flags & (1<<KeepAlive);
+  }
   ZuInline ZiCxnOptions &keepAlive(bool b) {
+    using namespace ZiCxnFlags;
     b ? (m_flags |= (1<<KeepAlive)) : (m_flags &= ~(1<<KeepAlive));
     return *this;
   }
@@ -335,8 +352,12 @@ public:
     return *this;
   }
 #ifdef ZiMultiplex_Netlink
-  ZuInline bool netlink() const { return m_flags & (1<<NetLink); }
+  ZuInline bool netlink() const {
+    using namespace ZiCxnFlags;
+    return m_flags & (1<<NetLink);
+  }
   ZuInline ZiCxnOptions &netlink(bool b) {
+    using namespace ZiCxnFlags;
     b ? (m_flags |= (1<<NetLink)) : (m_flags &= ~(1<<NetLink));
     return *this;
   }
@@ -349,13 +370,18 @@ public:
   ZuInline bool netlink() const { return false; }
   ZuInline ZiCxnOptions &netlink(bool) { return *this; }
 #endif
-  ZuInline bool nagle() const { return m_flags & (1<<Nagle); }
+  ZuInline bool nagle() const {
+    using namespace ZiCxnFlags;
+    return m_flags & (1<<Nagle);
+  }
   ZuInline ZiCxnOptions &nagle(bool b) {
+    using namespace ZiCxnFlags;
     b ? (m_flags |= (1<<Nagle)) : (m_flags &= ~(1<<Nagle));
     return *this;
   }
 
   ZuInline bool equals(const ZiCxnOptions &o) const {
+    using namespace ZiCxnFlags;
     if (m_flags != o.m_flags) return false;
 #ifdef ZiMultiplex_Netlink
     if ((m_flags & (1<<NetLink))) return m_familyName == o.m_familyName;
@@ -365,6 +391,7 @@ public:
   }
 
   inline int cmp(const ZiCxnOptions &o) const {
+    using namespace ZiCxnFlags;
     int i;
     if (i = ZuCmp<uint32_t>::cmp(m_flags, o.m_flags)) return i;
 #ifdef ZiMultiplex_Netlink
@@ -377,6 +404,7 @@ public:
   }
 
   inline uint32_t hash() const {
+    using namespace ZiCxnFlags;
     uint32_t code = ZuHash<uint32_t>::hash(m_flags);
 #ifdef ZiMultiplex_Netlink
     if (m_flags & (1<<NetLink)) return code ^ m_familyName.hash();
@@ -388,7 +416,8 @@ public:
   ZuInline bool operator ==(const ZiCxnOptions &o) const { return equals(o); }
 
   template <typename S> inline void print(S &s) const {
-    s << "flags=" << ZiCxnOptions::Flags::instance()->print(s, m_flags);
+    using namespace ZiCxnFlags;
+    s << "flags=" << Flags::instance()->print(s, m_flags);
     if (m_flags & (1<<Multicast)) {
       s << " mreqs={";
       for (unsigned i = 0; i < m_mreqs.length(); i++) {
@@ -431,10 +460,10 @@ struct ZiListenInfo {
 template <> struct ZuPrint<ZiListenInfo> : public ZuPrintFn { };
 
 // cxn information (direction, socket, local & remote IP/port, options)
-struct ZiCxnType {
+namespace ZiCxnType {
   ZtEnumValues(TCPIn, TCPOut, UDP);
   ZtEnumNames("TCPIn", "TCPOut", "UDP");
-};
+}
 
 struct ZiCxnInfo { // pure aggregate, no ctor
   ZuInline bool operator !() const { return !*type; }

@@ -445,6 +445,16 @@ void parseAddr(const S &s, ZiIP &ip, unsigned &port) {
 #pragma warning(disable:4800)
 #endif
 
+namespace Side {
+  ZtEnumValues(In, Out, Both);
+  ZtEnumNames("in", "out", "*");
+}
+
+namespace IOOp {
+  ZtEnumValues(Send, Recv, Both);
+  ZtEnumNames("send", "recv", "*");
+}
+
 class App : public ZvCmdServer {
 
   class Mx : public ZuPolymorph, public ZiMultiplex {
@@ -525,16 +535,6 @@ class App : public ZvCmdServer {
       "quit { }\n"
       "help { }";
   }
-
-  struct Side {
-    ZtEnumValues(In, Out, Both);
-    ZtEnumNames("in", "out", "*");
-  };
-
-  struct IOOp {
-    ZtEnumValues(Send, Recv, Both);
-    ZtEnumNames("send", "recv", "*");
-  };
 
 public:
   inline App() :

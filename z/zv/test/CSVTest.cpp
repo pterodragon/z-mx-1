@@ -50,16 +50,16 @@ struct RowSet {
   ZmList<ZuRef<ZuPOD<Row> > >	m_rows;
 };
 
-struct Enums {
+namespace Enums {
   ZtEnumValues(Sasha = 1, Grey, Girlfriend = 43, Experience, __);
   ZtEnumMap(Map,
       "sasha", 1, "grey", 42, "\"girlfriend", 43, "experience\"", 44, "", 45);
-};
+}
 
-struct DaFlags {
+namespace DaFlags {
   ZtEnumValues(Flag1, Flag2, P, SUP);
   ZtEnumFlags(Map, "Flag1", 0, "Flag2", 1, "P", 2, "SUP", 3);
-};
+}
 
 int main()
 {

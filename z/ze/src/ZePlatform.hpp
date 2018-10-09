@@ -70,10 +70,10 @@
 
 #define ZeLog_BUFSIZ (32<<10)	// caps individual log message size to 32k
 
-struct Ze {
+namespace Ze {
   ZtEnumValues(Debug, Info, Warning, Error, Fatal);
   ZtEnumNames("Debug", "Info", "Warning", "Error", "Fatal");
-};
+}
 
 struct ZeAPI ZePlatform_ {
 #ifndef _WIN32

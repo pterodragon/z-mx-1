@@ -186,7 +186,7 @@ int ZvCf::fromArgs(ZvCf *options, const ZtArray<ZtString> &args)
 	      !(longOpt = options->get(shortOpt)) ||
 	      !(option = options->subset(longOpt, false)))
 	    throw Usage(shortOpt);
-	  int type = option->getEnum<OptTypes::Map>("type", true);
+	  int type = option->getEnum<ZvOptTypes::Map>("type", true);
 	  if (type == ZvOptFlag) {
 	    fromArg(longOpt, ZvOptFlag, "1");
 	  } else {
@@ -214,7 +214,7 @@ int ZvCf::fromArgs(ZvCf *options, const ZtArray<ZtString> &args)
 	if (!options ||
 	    !(option = options->subset(longOpt, false)))
 	  throw Usage(longOpt);
-	int type = option->getEnum<OptTypes::Map>("type", true);
+	int type = option->getEnum<ZvOptTypes::Map>("type", true);
 	if (type == ZvOptFlag) {
 	  fromArg(longOpt, ZvOptFlag, "1");
 	} else {
@@ -228,7 +228,7 @@ int ZvCf::fromArgs(ZvCf *options, const ZtArray<ZtString> &args)
 	    !(option = options->subset(longOpt, false)))
 	  throw Usage(longOpt);
 	fromArg(longOpt,
-	    option->getEnum<OptTypes::Map>("type", false, ZvOptScalar), c[3]);
+	    option->getEnum<ZvOptTypes::Map>("type", false, ZvOptScalar), c[3]);
       } else {
 	fromArg(ZtString(ZuBox<int>(p++)), ZvOptScalar, args[i]);
       }

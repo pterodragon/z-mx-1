@@ -34,7 +34,7 @@
 
 #include <ZvCf.hpp>
 
-struct ZvSchedulerPriorities {
+namespace ZvSchedulerPriorities {
   ZtEnumValues(
       RealTime = ZmThreadPriority::RealTime,
       High = ZmThreadPriority::High,
@@ -45,7 +45,7 @@ struct ZvSchedulerPriorities {
       "High", High,
       "Normal", Normal,
       "Low", Low);
-};
+}
 
 struct ZvSchedulerParams : public ZmSchedulerParams {
   inline ZvSchedulerParams() { }

@@ -38,18 +38,18 @@ struct CSVWrite {
 #pragma warning(disable:4800)
 #endif
 
-struct Snafus {
+namespace Snafus {
   ZtEnumValues(
       Sasha = 1, Grey = 42, Girlfriend = 43, Experience = 44, TigerWoods = 45);
   ZtEnumMap(Map,
       "sasha", 1, "grey", 42, "girlfriend", 43, "experience", 44,
       "tiger-woods", 45);
-};
+}
 
-struct DaFlags {
+namespace DaFlags {
   ZtEnumValues(S, A, P, SUP, HI);
   ZtEnumFlags(Map, "S", S, "A", A, "P", P, "SUP", SUP, "HI", HI);
-};
+}
 
 int main()
 {

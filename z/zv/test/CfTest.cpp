@@ -36,10 +36,10 @@ static const char *testdata =
 "%define FAT=artma\n"
 "key7 { foo bar{ bah 1 } } key8 C${FAT}n\n";
 
-struct Values {
+namespace Values {
   ZtEnumValues(High, Low, Normal);
   ZtEnumNames("High", "Low", "Normal");
-};
+}
 
 int main()
 {

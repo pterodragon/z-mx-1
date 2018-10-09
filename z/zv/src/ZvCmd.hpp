@@ -432,7 +432,7 @@ friend struct CmdOption;
     // throws ZvInvalidEnum if optName is not one of "flag", "scalar", "multi"
     void option(ZuString shortName, ZuString longName,
 	ZuString longType, ZuString optName, ZuString description) {
-      int v = ZvEnum<ZvCf::OptTypes::Map>::instance()->s2v(
+      int v = ZvEnum<ZvOptTypes::Map>::instance()->s2v(
 	  "ZvCmdData::option", optName, -1);
       if (v < 0) throw ZtSprintf("ZvCmdData::option - option type is not set");
       

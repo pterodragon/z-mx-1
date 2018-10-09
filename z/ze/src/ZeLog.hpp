@@ -254,7 +254,7 @@ auto ZuInline Ze_BackTrace_fn(ZmBackTrace bt, Msg &&msg) {
   do { \
     ZmBackTrace bt__; \
     bt__.capture(0); \
-    ZeLog::log(ZeEVENT(sev, Ze_BackTrace_fn(bt__, msg))); \
+    ZeLog::log(ZeEVENT_(sev, Ze_BackTrace_fn(bt__, msg))); \
   } while (0)
 
 #ifndef ZDEBUG

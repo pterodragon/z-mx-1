@@ -72,6 +72,11 @@ extern "C" {
 #pragma warning(disable:4251)
 #endif
 
+namespace ZvOptTypes {
+  ZtEnumValues(Flag = ZvOptFlag, Scalar = ZvOptScalar, Multi = ZvOptMulti);
+  ZtEnumNames("flag", "scalar", "multi");
+}
+
 class ZvAPI ZvCf : public ZuObject {
   ZvCf(const ZvCf &);
   ZvCf &operator =(const ZvCf &);	// prevent mis-use
@@ -89,12 +94,6 @@ public:
   typedef ZtEnum Enum;
   typedef ZuBox<uint32_t> Flags;
   typedef ZuBox<uint64_t> Flags64;
-
-  // fromArgs option types
-  struct OptTypes {
-    ZtEnumValues(Flag = ZvOptFlag, Scalar = ZvOptScalar, Multi = ZvOptMulti);
-    ZtEnumNames("flag", "scalar", "multi");
-  };
 
   // thrown by fromArgs() on error
   class ZvAPI Usage : public ZvError {

@@ -48,11 +48,26 @@ struct MxEngineState {
 };
 
 struct MxLinkState {
-  MxEnumValues(Down, Connecting, Up, Disconnecting,
+  MxEnumValues(
+      Down,			// down (engine not started)
+      Disabled,			// intentionally down (admin/ops disabled)
+      Connecting,		// connecting (being brought up)
+      Up,			// up/running
+      Reconnecting,		// reconnecting following transient failure
+      Failed,			// failed (non-transient)
+      Disconnecting,		// disconnecting (being brought down)
       ConnectPending,		// brought up while disconnecting
       DisconnectPending);	// brought down while connecting
-  MxEnumNames("Down", "Connecting", "Up", "Disconnecting",
-      "ConnectPending", "DisconnectPending");
+  MxEnumNames(
+      "Down",
+      "Disabled",
+      "Connecting",
+      "Up",
+      "Reconnecting",
+      "Failed",
+      "Disconnecting",
+      "ConnectPending",
+      "DisconnectPending");
 };
 
 class MxEngine;
@@ -103,6 +118,8 @@ class MxAnyLink : public MxAnyTx {
   MxAnyLink(const MxAnyLink &) = delete;
   MxAnyLink &operator =(const MxAnyLink &) = delete;
 
+friend class MxEngine;
+
 protected:
   MxAnyLink(MxID id);
 
@@ -113,24 +130,28 @@ public:
     return m_state;
   }
 
-  void up();
-  void down();
+  inline void up() { up_(true); }
+  inline void down() { down_(true); }
 
   virtual void update(ZvCf *cf) = 0;
   virtual void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) = 0;
 
+protected:
   virtual MxQueue *rxQueuePtr() = 0;
   virtual MxQueue *txQueuePtr() = 0;
-
-  void reconnect();
 
   virtual void connect() = 0;
   virtual void disconnect() = 0;
 
-  virtual ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
-
   void connected();
   void disconnected();
+  void reconnect();
+
+  virtual ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
+
+private:
+  void up_(bool enable = false);
+  void down_(bool disable = false);
 
   template <typename Impl, typename L>
   inline auto stateLocked(L &&l) {
@@ -142,9 +163,9 @@ private:
   ZmScheduler::Timer	m_reconnTimer;
 
   ZmLock		m_stateLock;
-    int			  m_state;
+    int			  m_state = MxLinkState::Down;
     unsigned		  m_reconnects;
-    ZmTime		  m_reconnTime;
+    bool		  m_enabled = true;
 };
 
 // Traffic Logging (timestamp, payload)
@@ -154,12 +175,12 @@ struct MxEngineMgr {
   // Engine Management
   virtual void addEngine(MxEngine *) = 0;
   virtual void delEngine(MxEngine *) = 0;
-  virtual void engineState(MxEngine *, MxEnum) = 0; // MxEngineState
+  virtual void engineState(MxEngine *, MxEnum, MxEnum) = 0; // MxEngineState
 
   // Link Management
   virtual void updateLink(MxAnyLink *) = 0;
   virtual void delLink(MxAnyLink *) = 0;
-  virtual void linkState(MxAnyLink *, MxEnum, ZuString txt) = 0; // MxLinkState
+  virtual void linkState(MxAnyLink *, MxEnum, MxEnum) = 0; // MxLinkState
 
   // Pool Management
   virtual void updateTxPool(MxAnyTxPool *) = 0;
@@ -235,12 +256,7 @@ public:
   typedef MxEngineApp App;
   typedef App::ProcessFn ProcessFn;
 
-  inline MxEngine() :
-    m_mgr(nullptr),
-    m_app(nullptr), 
-    m_processFn(nullptr),
-    m_rxThread(0), m_txThread(0),
-    m_state(MxEngineState::Stopped), m_running(0) { }
+  inline MxEngine() : m_state(MxEngineState::Stopped) { }
 
   void init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf) {
     m_mgr = mgr,
@@ -279,14 +295,14 @@ public:
 
   ZuInline void appAddEngine() { mgr()->addEngine(this); }
   ZuInline void appDelEngine() { mgr()->delEngine(this); }
-  ZuInline void appEngineState(MxEnum state) {
-    mgr()->engineState(this, state);
+  ZuInline void appEngineState(MxEnum prev, MxEnum next) {
+    mgr()->engineState(this, prev, next);
   }
 
   ZuInline void appUpdateLink(MxAnyLink *link) { mgr()->updateLink(link); }
   ZuInline void appDelLink(MxAnyLink *link) { mgr()->delLink(link); }
-  ZuInline void appLinkState(MxAnyLink *link, MxEnum state, ZuString txt)
-    { mgr()->linkState(link, state, txt); }
+  ZuInline void appLinkState(MxAnyLink *link, MxEnum prev, MxEnum next)
+    { mgr()->linkState(link, prev, next); }
 
   ZuInline void appUpdateTxPool(MxAnyTxPool *pool)
     { mgr()->updateTxPool(pool); }
@@ -379,6 +395,7 @@ public:
     link->update(cf);
     m_links.add(link);
     guard.unlock();
+    linkState(link, -1, link->state());
     appUpdateLink(link);
     appAddQueue(id, 0, link->rxQueuePtr());
     appAddQueue(id, 1, link->txQueuePtr());
@@ -408,8 +425,7 @@ protected:
   virtual void down() { }	// called after bringing links down
 
 private:
-  void linkUp(MxAnyLink *);
-  void linkDown(MxAnyLink *);
+  void linkState(MxAnyLink *, int prev, int next);
 
   void start_();
   void stop_();
@@ -417,12 +433,12 @@ private:
 
 private:
   MxID				m_id;
-  Mgr				*m_mgr;
-  App				*m_app;
-  ProcessFn			m_processFn;
+  Mgr				*m_mgr = 0;
+  App				*m_app = 0;
+  ProcessFn			m_processFn = 0;
   ZmRef<Mx>			m_mx;
-  unsigned			m_rxThread;
-  unsigned			m_txThread;
+  unsigned			m_rxThread = 0;
+  unsigned			m_txThread = 0;
 
   Lock				m_lock;
     TxPools			  m_txPools;	// from csv
@@ -430,7 +446,12 @@ private:
 
   ZmLock			m_stateLock;
     int				  m_state;
-    unsigned			  m_running;	// #links running
+    unsigned			  m_down = 0;		// #links down
+    unsigned			  m_disabled = 0;	// #links disabled
+    unsigned			  m_transient = 0;	// #links transient
+    unsigned			  m_up = 0;		// #links up
+    unsigned			  m_reconn = 0;		// #links reconnecting
+    unsigned			  m_failed = 0;		// #links failed
 };
 
 template <typename Impl, typename Base>

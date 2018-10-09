@@ -9,12 +9,22 @@ public:
   // Engine Management
   void addEngine(MxEngine *) { }
   void delEngine(MxEngine *) { }
-  void engineState(MxEngine *, MxEnum) { }
+  void engineState(MxEngine *engine, MxEnum prev, MxEnum next) {
+    exception(ZeEVENT(Info,
+      ([id = engine->id(), prev, next](const ZeEvent &, ZmStream &s) {
+	s << "engine " << id << ' ' <<
+	MxEngineState::name(prev) << "->" << MxEngineState::name(next); })));
+  }
 
   // Link Management
   void updateLink(MxAnyLink *) { }
   void delLink(MxAnyLink *) { }
-  void linkState(MxAnyLink *, MxEnum, ZuString txt) { }
+  void linkState(MxAnyLink *link, MxEnum prev, MxEnum next) {
+    exception(ZeEVENT(Info,
+      ([id = link->id(), prev, next](const ZeEvent &, ZmStream &s) {
+	s << "link " << id << ' ' <<
+	MxLinkState::name(prev) << "->" << MxLinkState::name(next); })));
+  }
 
   // Pool Management
   void updateTxPool(MxAnyTxPool *) { }
@@ -59,8 +69,8 @@ public:
 
   void init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf);
 
-  void up() { std::cerr << "up\n"; }
-  void down() { std::cerr << "down\n"; }
+  void up() { ZeLOG(Info, "UP"); }
+  void down() { ZeLOG(Info, "DOWN"); }
 
   ZmTime reconnInterval() { return ZmTime(m_reconnInterval); }
   ZmTime reReqInterval() { return ZmTime(m_reReqInterval); }

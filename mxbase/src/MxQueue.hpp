@@ -64,13 +64,11 @@ struct MxQFlags {
       "PossResend", PossResend);
 };
 
-struct MxQMsg;
-
-typedef ZmFn<MxQMsg *, ZiIOContext *> MxQMsgFn;
-
 struct MxQMsgData {
+  typedef ZmFn<MxQMsgData *, ZiIOContext *> Fn;
+
   ZuRef<ZuAnyPOD>	payload;
-  MxQMsgFn		fn;
+  Fn			fn;
   unsigned		length = 0;
   MxMsgID		id;
   MxFlags		flags;		// see MxQFlags
@@ -86,25 +84,21 @@ struct MxQMsgData {
   template <typename T> ZuInline T &as() {
     return *static_cast<T *>(payload->ptr());
   }
-};
-
-class MxQMsg_ : public MxQMsgData {
-public:
-  template <typename ...Args>
-  ZuInline MxQMsg_(Args &&... args) :
-    MxQMsgData{ZuFwd<Args>(args)...} { }
 
   ZuInline void load(MxID linkID, MxSeqNo seqNo) {
     id.linkID = linkID;
     id.seqNo = seqNo;
   }
+
   ZuInline void unload() { id = MxMsgID{}; }
 };
+
+typedef MxQMsgData::Fn MxQMsgFn;
 
 class MxQFn {
 public:
   typedef MxSeqNo Key;
-  inline MxQFn(MxQMsg_ &item) : m_item(item) { }
+  inline MxQFn(MxQMsgData &item) : m_item(item) { }
   inline MxSeqNo key() const { return m_item.id.seqNo; }
   inline unsigned length() const { return 1; }
   inline unsigned clipHead(unsigned n) { return 1; }
@@ -112,21 +106,17 @@ public:
   inline void write(const MxQFn &) { }
 
 private:
-  MxQMsg_	&m_item;
+  MxQMsgData	&m_item;
 };
 
 struct MxQueue_HeapID { inline static const char *id() { return "MxQueue"; } };
-typedef ZmPQueue<MxQMsg_,
+typedef ZmPQueue<MxQMsgData,
 	  ZmPQueueNodeIsItem<true,
 	    ZmPQueueObject<ZuObject,
 	      ZmPQueueFn<MxQFn,
 		ZmPQueueLock<ZmNoLock,
 		  ZmPQueueHeapID<MxQueue_HeapID> > > > > > MxQueue;
-struct MxQMsg : public MxQueue::Node {
-  template <typename ...Args>
-  ZuInline MxQMsg(Args &&... args) :
-    MxQueue::Node(ZuFwd<Args>(args)...) { }
-};
+typedef MxQueue::Node MxQMsg;
 typedef MxQueue::Gap MxQGap;
 
 // MxQueueRx - receive queue

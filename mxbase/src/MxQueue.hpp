@@ -44,7 +44,7 @@
 
 #include <MxMsgID.hpp>
 
-struct MxQFlags {
+namespace MxQFlags {
   MxEnumValues(
       SessionLvl,	// session level
       NoQueue,		// no queuing (no throttling)
@@ -62,7 +62,7 @@ struct MxQFlags {
       "CxlOnDisc", CxlOnDisc,
       "PossDup", PossDup,
       "PossResend", PossResend);
-};
+}
 
 struct MxQMsgData {
   typedef ZmFn<MxQMsgData *, ZiIOContext *> Fn;

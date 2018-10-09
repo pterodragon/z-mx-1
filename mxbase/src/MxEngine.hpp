@@ -39,15 +39,22 @@
 #include <MxScheduler.hpp>
 #include <MxMultiplex.hpp>
 
-struct MxEngineState {
+namespace MxEngineState {
   MxEnumValues(Stopped, Starting, Running, Stopping,
       StartPending,		// started while stopping
       StopPending);		// stopped while starting
   MxEnumNames("Stopped", "Starting", "Running", "Stopping",
       "StartPending", "StopPending");
-};
 
-struct MxLinkState {
+  inline int rag(int i) {
+    using namespace MxRAG;
+    if (i < 0 || i >= N) return Off;
+    static const int values[N] = { Red, Amber, Green, Amber, Amber, Amber };
+    return values[i];
+  }
+}
+
+namespace MxLinkState {
   MxEnumValues(
       Down,			// down (engine not started)
       Disabled,			// intentionally down (admin/ops disabled)
@@ -68,7 +75,15 @@ struct MxLinkState {
       "Disconnecting",
       "ConnectPending",
       "DisconnectPending");
-};
+
+  inline int rag(int i) {
+    using namespace MxRAG;
+    if (i < 0 || i >= N) return Off;
+    static const int values[N] =
+      { Red, Off, Amber, Green, Amber, Red, Amber, Amber, Amber };
+    return values[i];
+  }
+}
 
 class MxEngine;
 

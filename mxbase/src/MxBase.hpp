@@ -394,7 +394,11 @@ typedef MxString<MxTxtSize> MxTxtString;
 
 // application types
 
-struct MxSecIDSrc {
+namespace MxRAG {
+  MxEnumValues(Off, Red, Amber, Green);
+}
+
+namespace MxSecIDSrc {
   MxEnumValues(CUSIP, SEDOL, QUIK, ISIN, RIC, EXCH, CTA, BSYM, BBGID,
       FX, CRYPTO);
   MxEnumNames(
@@ -404,18 +408,18 @@ struct MxSecIDSrc {
   MxEnumMap(FixMap,
       "1", CUSIP, "2", SEDOL, "3", QUIK, "4", ISIN, "5", RIC, "8", EXCH,
       "9", CTA, "A", BSYM, "S", BBGID, "X", FX, "C", CRYPTO);
-};
+}
 
-struct MxPutCall {
+namespace MxPutCall {
   MxEnumValues(PUT, CALL);
   MxEnumNames("PUT", "CALL");
   MxEnumMap(CSVMap,
       "P", PUT, "PUT", PUT, "Put", PUT, "0", PUT,
       "C", CALL, "CALL", CALL, "Call", CALL, "1", CALL);
   MxEnumMap(FixMap, "0", PUT, "1", CALL);
-};
+}
 
-struct MxTickDir {
+namespace MxTickDir {
   MxEnumValues(Up, LevelUp, Down, LevelDown, NoTick);
   MxEnumNames("Up", "LevelUp", "Down", "LevelDown", "NoTick");
   MxEnumMap(CSVMap,
@@ -424,9 +428,9 @@ struct MxTickDir {
       "D", Down, "2", Down,
       "DL", LevelDown, "3", LevelDown);
   MxEnumMap(FixMap, "0", Up, "1", LevelUp, "2", Down, "3", LevelDown);
-};
+}
 
-struct MxTradingStatus {
+namespace MxTradingStatus {
   MxEnumValues(
       Open, Closed, PreOpen, Auction,
       Halted, Resumed, NotTraded, Unwinding, Unknown);
@@ -446,9 +450,9 @@ struct MxTradingStatus {
   MxEnumMap(FixMap,
       "17", Open, "18", Closed, "21", PreOpen, "5", Auction,
       "2", Halted, "3", Resumed, "19", NotTraded, "20", Unknown);
-};
+}
 
-struct MxTradingSession {
+namespace MxTradingSession {
   MxEnumValues(
       PreTrading, Opening, Continuous, Closing, PostTrading,
       IntradayAuction, Quiescent);
@@ -471,9 +475,9 @@ struct MxTradingSession {
       "5", PostTrading,
       "6", IntradayAuction,
       "7", Quiescent);
-};
+}
 
-struct MxSide {
+namespace MxSide {
   MxEnumValues(Buy, Sell, SellShort, SellShortExempt, Cross);
   MxEnumNames("Buy", "Sell", "SellShort", "SellShortExempt", "Cross");
   MxEnumMap(CSVMap,
@@ -488,7 +492,7 @@ struct MxSide {
       "5", SellShort,
       "6", SellShortExempt,
       "8", Cross);
-};
+}
 
 #define Mx_TupleField(Type, Fn, N) \
   ZuInline const Type &Fn() const { return T::ptr()->p ## N(); } \

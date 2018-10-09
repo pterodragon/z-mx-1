@@ -319,13 +319,14 @@ int main(int argc, char **argv)
   ZeLog::stop();
 
   if (hashOut) {
-    ZtString csv;
-    ZmHashMgr::csv(csv);
     FILE *f = fopen(hashOut, "w");
     if (!f)
       perror(hashOut);
-    else
+    else {
+      ZtString csv;
+      csv << ZmHashMgr::csv();
       fwrite(csv.data(), 1, csv.length(), f);
+    }
     fclose(f);
   }
 

@@ -49,6 +49,7 @@
 #include <ZuPair.hpp>
 #include <ZuBox.hpp>
 #include <ZuUnion.hpp>
+#include <ZuMixin.hpp>
 
 #include <ZmLock.hpp>
 #include <ZmGuard.hpp>

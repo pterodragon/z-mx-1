@@ -163,25 +163,20 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
   else {
     cf->fromString(
       "mx {\n"
-	"nThreads 4\n"		// thread IDs are 1-based
+	"nThreads 5\n"		// thread IDs are 1-based
 	"rxThread 1\n"		// I/O Rx
 	"txThread 2\n"		// I/O Tx
-	"isolation 1-3\n"	// leave thread 4 for general purpose
+	"isolation 1-4\n"	// leave thread 5 for general purpose
       "}\n"
-      "recorder {\n"
-        "id recorder\n"
+      "record {\n"
+        "id record\n"
 	"rxThread 3\n"
-	"txThread 3\n"
+	"txThread 4\n"
+	"snapThread 5\n"
       "}\n"
-      "publisher {\n"
-        "id publisher\n"
-	"rxThread 3\n"
-	"txThread 3\n"
-      "}\n"
-      "subscriber {\n"
-        "id subscriber\n"
-	"rxThread 3\n"
-	"txThread 3\n"
+      "replay {\n"
+        "id replay\n"
+	"rxThread 4\n"
       "}\n",
       false);
   }
@@ -329,23 +324,8 @@ void MxMDCore::init_(ZvCf *cf)
 	  ZvCSVReadFn::Member<&MxMDCore::addOrderBook_>::fn(this));
   }
 
-  m_recordCfPath = cf->get("record");
-
-  if (ZmRef<ZvCf> ringCf = cf->subset("ring", false))
+  if (ZmRef<ZvCf> ringCf = cf->subset("broadcast", false))
     m_broadcast.init(ringCf);
-
-  if (ZmRef<ZvCf> threadsCf = cf->subset("threads", false)) {
-    if (ZmRef<ZvCf> threadCf = threadsCf->subset("recorder", false))
-      m_recorderParams.init(threadCf);
-#if 0
-    if (ZmRef<ZvCf> threadCf = threadsCf->subset("recSnapper", false))
-      m_recSnapperParams.init(threadCf);
-#endif
-    if (ZmRef<ZvCf> threadCf = threadsCf->subset("snapper", false))
-      m_snapperParams.init(threadCf);
-  }
-
-  m_replayCfPath = cf->get("replay");
 
   if (ZmRef<ZvCf> cmdCf = cf->subset("cmd", false)) {
     m_cmd = new MxMDCore::CmdServer(this);
@@ -353,9 +333,10 @@ void MxMDCore::init_(ZvCf *cf)
     initCmds();
   }
 
-  m_recorder.init();
-  m_publisher.init();
-  m_subscriber.init();
+  m_record.init(this);
+  m_replay.init(this);
+  m_publisher.init(this);
+  m_subscriber.init(this);
 
   ZeLOG(Info, "MxMDLib - initialized...");
 }
@@ -445,10 +426,9 @@ void MxMDCore::start()
     m_cmd->start();
   }
 
-  if (m_recordCfPath) record(m_recordCfPath);
-  if (m_replayCfPath) replay(m_replayCfPath);
+  m_record.start();
+  m_replay.start();
 
-  // FIXME
   if (cf()->subset("publisher", false, true)->get("multicastAddr")) publish();
   if (cf()->subset("subscriber", false, true)->get("username")) subscribe();
 
@@ -463,12 +443,15 @@ void MxMDCore::stop()
   raise(ZeEVENT(Info, "stopping feeds..."));
   allFeeds([](MxMDFeed *feed) { try { feed->stop(); } catch (...) { } });
 
-  if (m_mx) {
+  if (m_mx) { // FIXME
     stopReplaying();
-    stopRecording();
+    m_record.stop();
+
     stopPublish();
     stopSubscribe();
+
     stopStreaming();
+
     broadcast().close();
   }
 
@@ -960,22 +943,17 @@ void MxMDCore::recordCmd(const CmdArgs &args, ZtArray<char> &out)
   if (argc < 1 || argc > 2) throw CmdUsage();
   if (!!args.get("stop")) {
     if (argc == 2) throw CmdUsage();
-    ZiFile::Path path = m_recorder.path();
-    m_recorder.stop();
-    if (m_recorder.running())
-      out << "failed to stop";
-    else
-      out << "stopped";
-    out << " recording to \"" << path << "\"\n";
+    if (ZtString path = stopRecording())
+      out << "stopped recording to \"" << path << "\"\n";
     return;
   }
   if (argc != 2) throw CmdUsage();
-  ZiFile::Path path = args.get("1");
-  if (!m_recorder.start(path))
-    out << "failed to start";
+  ZuString path = args.get("1");
+  if (!path) CmdUsage();
+  if (record(path))
+    out << "started recording to \"" << path << "\"\n";
   else
-    out << "started";
-  out << " recording to \"" << path << "\"\n";
+    out << "failed to record to \"" << path << "\"\n";
 }
 
 #define fileERROR(path__, code) \
@@ -987,29 +965,23 @@ void MxMDCore::recordCmd(const CmdArgs &args, ZtArray<char> &out)
     ([=, path = MxTxtString(path__)](const ZeEvent &, ZmStream &s) { \
       s << "MxMD \"" << path << "\": " << code; })))
 
-void MxMDCore::record(ZuString path)
+bool MxMDCore::record(ZuString path)
 {
-  switch (m_mx->stateLocked([this, path](int state) {
-    if (state != ZmScheduler::Running && state != ZmScheduler::Starting) {
-      m_recordCfPath = path;
-      return 0;
-    }
-    if (!m_recorder.start(path)) return -1;
-    return 1;
-  })) {
-    case -1:
-      fileERROR(path, "failed to start recording");
-      break;
-    case 1:
-      fileINFO(path, "started recording");
-      break;
-  }
+  return m_record.record(path);
+}
+ZtString MxMDCore::stopRecording()
+{
+  return ZuMv(m_record.stopRecording());
 }
 
-void MxMDCore::stopRecording()
+bool MxMDCore::replay(ZuString path, MxDateTime begin, bool filter)
 {
-  m_recorder.stop();
-  raise(ZeEVENT(Info, "stopped recording"));
+  m_mx->del(&m_timer);
+  return m_replay.replay(path, begin, filter);
+}
+ZtString MxMDCore::stopReplaying()
+{
+  return ZuMv(m_replay.stopReplaying());
 }
 
 void MxMDCore::publish()
@@ -1058,19 +1030,19 @@ void MxMDCore::subscribeCmd(const CmdArgs &args, ZtArray<char> &out)
   ZuBox<int> argc = args.get("#");
   if (ZuString id_ = args.get("stop")) {
     ZuBox<int> id = ZvCf::toInt("spin", id_, 0, 63);
-    m_broadcast.reqDetach(id);
+    MxMDStream::detach(m_broadcast, m_broadcast.id());
     m_broadcast.close();
     out << "detached " << id << "\n";
     return;
   }
   if (argc != 2) throw CmdUsage();
-  ZiRingParams ringParams(args.get("1"), m_broadcast.config());
+  ZiRingParams ringParams(args.get("1"), m_broadcast.params());
   if (ZuString spin = args.get("spin"))
     ringParams.spin(ZvCf::toInt("spin", spin, 0, INT_MAX));
   if (ZuString timeout = args.get("timeout"))
     ringParams.timeout(ZvCf::toInt("timeout", timeout, 0, 3600));
   if (!m_broadcast.open())
-    throw ZtString() << '"' << m_broadcast.config().name() <<
+    throw ZtString() << '"' << m_broadcast.params().name() <<
 	"\": failed to open IPC shared memory ring buffer";
   m_snapper.snap(ringParams);
 }
@@ -1081,35 +1053,17 @@ void MxMDCore::replayCmd(const CmdArgs &args, ZtArray<char> &out)
   ZuBox<int> argc = args.get("#");
   if (argc < 1 || argc > 2) throw CmdUsage();
   if (!!args.get("stop")) {
-    ZtString path = m_replay.path();
-    if (path) {
-      m_replay.stop();
+    if (ZtString path = stopReplaying())
       out << "stopped replaying to \"" << path << "\"\n";
-    }
     return;
   }
   if (argc != 2) throw CmdUsage();
   ZuString path = args.get("1");
-  ReplayGuard guard(m_replayLock);
-  if (m_replayPath != path) {
-    if (!!m_replayFile) {
-      m_replayFile.close();
-      out << "stopped replaying to \"" << m_replayPath << "\"";
-    }
-  }
-  if (!replayStart(guard, path)) {
-    if (out) out << "; ";
-    out << "failed to start replaying from \"" << path << "\"";
-    throw out;
-  }
-  if (out) out << "\n";
-  out << "started replaying from \"" << path << "\"\n";
-}
-
-void MxMDCore::replay(ZuString path, MxDateTime begin, bool filter)
-{
-  m_mx->del(&m_timer);
-  m_replay.start(path, begin, filter);
+  if (!path) CmdUsage();
+  if (replay(path))
+    out << "started replaying from \"" << path << "\"\n";
+  else
+    out << "failed to replay from \"" << path << "\"\n";
 }
 
 void MxMDCore::pad(Frame *frame)
@@ -1143,7 +1097,7 @@ void MxMDCore::pad(Frame *frame)
   }
 }
 
-void MxMDCore::apply(const Frame *frame)
+void MxMDCore::apply(const Frame *frame, bool filter)
 {
   using namespace MxMDStream;
 
@@ -1210,9 +1164,8 @@ void MxMDCore::apply(const Frame *frame)
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
 	  if (ZmRef<MxMDTickSizeTbl> tbl =
 		  venue->tickSizeTbl(obj.tickSizeTbl))
-	    MxMDLib::secInvoke(obj.security, [
-		key = obj.key, tbl = ZuMv(tbl),
-		qtyNDP = obj.qtyNDP, lotSizes = obj.lotSizes,
+	    MxMDLib::secInvoke(obj.security, [key = obj.key,
+		tbl = ZuMv(tbl), qtyNDP = obj.qtyNDP, lotSizes = obj.lotSizes,
 		transactTime = obj.transactTime](
 		  MxMDSecurity *sec) mutable {
 	      if (sec) {
@@ -1306,11 +1259,9 @@ void MxMDCore::apply(const Frame *frame)
     case Type::L1:
       {
 	const L1 &obj = frame->as<L1>();
-	obInvoke(obj.key, [
-	    data = obj.data,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
+	obInvoke(obj.key, [data = obj.data, filter](MxMDOrderBook *ob) mutable {
 	  // inconsistent NDP handled within MxMDOrderBook::l1()
-	  if (ob && (!replayFilter || ob->handler())) ob->l1(data);
+	  if (ob && (!filter || ob->handler())) ob->l1(data);
 	});
       }
       break;
@@ -1321,9 +1272,9 @@ void MxMDCore::apply(const Frame *frame)
 	    side = obj.side, transactTime = obj.transactTime,
 	    delta = obj.delta, pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
 	    price = obj.price, qty = obj.qty,
-	    nOrders = obj.nOrders, flags = obj.flags,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
-	  if (ob && (!replayFilter || ob->handler())) {
+	    nOrders = obj.nOrders, flags = obj.flags, filter](
+	      MxMDOrderBook *ob) mutable {
+	  if (ob && (!filter || ob->handler())) {
 	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
 	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
 	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
@@ -1337,10 +1288,9 @@ void MxMDCore::apply(const Frame *frame)
       {
 	const L2 &obj = frame->as<L2>();
 	obInvoke(obj.key, [
-	    stamp = obj.stamp, updateL1 = obj.updateL1,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
-	  if (ob && (!replayFilter || ob->handler()))
-	    ob->l2(stamp, updateL1);
+	    stamp = obj.stamp, updateL1 = obj.updateL1, filter](
+	      MxMDOrderBook *ob) {
+	  if (ob && (!filter || ob->handler())) ob->l2(stamp, updateL1);
 	});
       }
       break;
@@ -1351,9 +1301,9 @@ void MxMDCore::apply(const Frame *frame)
 	    orderID = obj.orderID, transactTime = obj.transactTime,
 	    side = obj.side, rank = obj.rank,
 	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
-	    price = obj.price, qty = obj.qty, flags = obj.flags,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
-	  if (ob && (!replayFilter || ob->handler())) {
+	    price = obj.price, qty = obj.qty, flags = obj.flags, filter](
+	      MxMDOrderBook *ob) mutable {
+	  if (ob && (!filter || ob->handler())) {
 	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
 	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
 	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
@@ -1372,9 +1322,9 @@ void MxMDCore::apply(const Frame *frame)
 	    orderID = obj.orderID, transactTime = obj.transactTime,
 	    side = obj.side, rank = obj.rank,
 	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
-	    price = obj.price, qty = obj.qty, flags = obj.flags,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
-	  if (ob && (!replayFilter || ob->handler())) {
+	    price = obj.price, qty = obj.qty, flags = obj.flags, filter](
+	      MxMDOrderBook *ob) mutable {
+	  if (ob && (!filter || ob->handler())) {
 	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
 	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
 	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
@@ -1392,9 +1342,8 @@ void MxMDCore::apply(const Frame *frame)
 	obInvoke(obj.key, [
 	    orderID = obj.orderID,
 	    transactTime = obj.transactTime,
-	    side = obj.side,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
-	  if (ob && (!replayFilter || ob->handler()))
+	    side = obj.side, filter](MxMDOrderBook *ob) {
+	  if (ob && (!filter || ob->handler()))
 	    ob->cancelOrder(orderID, transactTime, side);
 	});
       }
@@ -1402,10 +1351,9 @@ void MxMDCore::apply(const Frame *frame)
     case Type::ResetOB:
       {
 	const ResetOB &obj = frame->as<ResetOB>();
-	obInvoke(obj.key, [
-	    transactTime = obj.transactTime,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) {
-	  if (ob && (!replayFilter || ob->handler()))
+	obInvoke(obj.key, [transactTime = obj.transactTime, filter](
+	      MxMDOrderBook *ob) {
+	  if (ob && (!filter || ob->handler()))
 	    ob->reset(transactTime);
 	});
       }
@@ -1416,9 +1364,9 @@ void MxMDCore::apply(const Frame *frame)
 	obInvoke(obj.key, [
 	    tradeID = obj.tradeID, transactTime = obj.transactTime,
 	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
-	    price = obj.price, qty = obj.qty,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
-	  if (ob && (!replayFilter || ob->handler())) {
+	    price = obj.price, qty = obj.qty, filter](
+	      MxMDOrderBook *ob) mutable {
+	  if (ob && (!filter || ob->handler())) {
 	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
 	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
 	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
@@ -1434,9 +1382,9 @@ void MxMDCore::apply(const Frame *frame)
 	obInvoke(obj.key, [
 	    tradeID = obj.tradeID, transactTime = obj.transactTime,
 	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
-	    price = obj.price, qty = obj.qty,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
-	  if (ob && (!replayFilter || ob->handler())) {
+	    price = obj.price, qty = obj.qty, filter](
+	      MxMDOrderBook *ob) mutable {
+	  if (ob && (!filter || ob->handler())) {
 	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
 	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
 	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
@@ -1452,9 +1400,9 @@ void MxMDCore::apply(const Frame *frame)
 	obInvoke(obj.key, [
 	    tradeID = obj.tradeID, transactTime = obj.transactTime,
 	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
-	    price = obj.price, qty = obj.qty,
-	    replayFilter = m_replayFilter](MxMDOrderBook *ob) mutable {
-	  if (ob && (!replayFilter || ob->handler())) {
+	    price = obj.price, qty = obj.qty, filter](
+	      MxMDOrderBook *ob) mutable {
+	  if (ob && (!filter || ob->handler())) {
 	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
 	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
 	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
@@ -1489,7 +1437,7 @@ void MxMDCore::startTimer(MxDateTime begin)
 {
   ZmTime next = !begin ? ZmTimeNow() : begin.zmTime();
   {
-    ReplayGuard guard(m_replayLock);
+    Guard guard(m_timerLock);
     m_timerNext = next;
   }
   m_mx->add(ZmFn<>::Member<&MxMDCore::timer>::fn(this), next, &m_timer);
@@ -1498,7 +1446,7 @@ void MxMDCore::startTimer(MxDateTime begin)
 void MxMDCore::stopTimer()
 {
   m_mx->del(&m_timer);
-  ReplayGuard guard(m_replayLock);
+  Guard guard(m_timerLock);
   m_timerNext = ZmTime();
 }
 
@@ -1506,12 +1454,12 @@ void MxMDCore::timer()
 {
   MxDateTime now, next;
   {
-    ReplayGuard guard(m_replayLock);
+    Guard guard(m_timerLock);
     now = m_timerNext;
   }
   this->handler()->timer(now, next);
   {
-    ReplayGuard guard(m_replayLock);
+    Guard guard(m_timerLock);
     m_timerNext = !next ? ZmTime() : next.zmTime();
   }
   if (!next)

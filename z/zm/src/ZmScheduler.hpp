@@ -189,6 +189,9 @@ private:
   ZmBitmap	*m_cpusets;
 };
 
+// FIXME - rethink thread naming, permit apps to esclusively reserve & name a
+// thread (needed for e.g. ZiRing Rx, or for perf reasons)
+
 // generic printing
 template <> struct ZuPrint<ZmAffinity> : public ZuPrintFn { };
 
@@ -346,15 +349,9 @@ public:
 
   void del(Timer *);				// cancel job
 
-  template <typename Fn>
-  ZuInline void run(unsigned tid, Fn &&fn) {
+  ZuInline void run(unsigned tid, ZmFn<> fn) {
     ZmAssert(tid && tid <= m_nThreads);
-    run_(&m_threads[tid - 1], ZuFwd<Fn>(fn));
-  }
-  template <typename Fn, typename O>
-  ZuInline void run(unsigned tid, Fn &&fn, O &&o) {
-    ZmAssert(tid && tid <= m_nThreads);
-    run_(&m_threads[tid - 1], ZuFwd<Fn>(fn), ZuFwd<O>(o));
+    run_(&m_threads[tid - 1], ZuMv(fn));
   }
 
   template <typename Fn>
@@ -362,7 +359,7 @@ public:
     ZmAssert(tid && tid <= m_nThreads);
     Thread *thread = &m_threads[tid - 1];
     if (ZuLikely(ZmPlatform::getTID() == thread->tid)) { fn(); return; }
-    run_(thread, ZuFwd<Fn>(fn));
+    run_(thread, ZmFn{ZuFwd<Fn>(fn)});
   }
   template <typename Fn, typename O>
   ZuInline void invoke(unsigned tid, Fn &&fn, O &&o) {
@@ -372,7 +369,14 @@ public:
       fn(ZuFwd<O>(o));
       return;
     }
-    run_(thread, ZuFwd<Fn>(fn), ZuFwd<O>(o));
+    run_(thread, ZmFn{ZuFwd<Fn>(fn), ZuFwd<O>(o)});
+  }
+
+  ZuInline int runningTID() {
+    int tid = -1;
+    ZmThreadContext *context = ZmThread::self();
+    if (context->mgr() == this) tid = context->id();
+    return tid;
   }
 
   ZuInline void threadInit(ZmFn<> fn) { m_threadInitFn = ZuMv(fn); }
@@ -404,10 +408,10 @@ public:
     return m_threads[tid].ring.count();
   }
 
-  inline bool ll() const { return m_threads[0].ring.config().ll(); }
-  inline unsigned spin() const { return m_threads[0].ring.config().spin(); }
+  inline bool ll() const { return m_threads[0].ring.params().ll(); }
+  inline unsigned spin() const { return m_threads[0].ring.params().spin(); }
   inline unsigned timeout() const
-    { return m_threads[0].ring.config().timeout(); }
+    { return m_threads[0].ring.params().timeout(); }
 
 protected:
   void runThreads();
@@ -426,42 +430,16 @@ private:
   };
 
   void timer();
+  bool timerAdd(ZmFn<> &fn);
+  bool timerRun(Thread *thread, ZmFn<> &fn);
+
+  void run_(Thread *thread, ZmFn<> fn);
 
   void work();
 
   void drained();
 
   void threadName(ZmThreadName &s, unsigned tid);
-
-  template <typename ...Args>
-  ZuInline void run_(Thread *thread, Args &&... args) {
-    ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
-    void *ptr;
-    if (ZuLikely(ptr = thread->ring.push())) {
-      new (ptr) ZmFn<>(ZuFwd<Args>(args)...);
-      thread->ring.push2(ptr);
-    } else {
-      guard.unlock();
-      // should never happen - the enqueuing thread will normally
-      // be forced to wait for the dequeuing thread to drain the ring
-      int status = thread->ring.writeStatus();
-      ZuStringN<120> s;
-      s << "FATAL - ITC - ZmScheduler::run_() - ZmRing::push() failed: ";
-      if (status <= 0)
-	s << ZmRingError(status);
-      else
-	s << ZuBoxed(status) << " bytes remaining";
-      s << '\n';
-#ifndef _WIN32
-      std::cerr << s << std::flush;
-#else
-      MessageBoxA(0, s, "Thread Dispatch Failure", MB_ICONEXCLAMATION);
-#endif
-    }
-  }
-
-  bool add__(ZmFn<> &fn);
-  bool run__(Thread *thread, ZmFn<> &fn);
 
   ID				m_id;
   unsigned			m_nThreads;

@@ -460,21 +460,10 @@ template <typename T> struct ZuCmp :
   public ZuCmp_<typename ZuTraits<T>::T,
     ZuTraits<T>::IsCString || ZuTraits<T>::IsString> { };
 
-// equivalent signed integral types for various possible sizes of bool
-
-template <int Size> struct ZuCmp_BoolInt;
-template <> struct ZuCmp_BoolInt<1> { typedef int8_t T; };
-template <> struct ZuCmp_BoolInt<2> { typedef int16_t T; };
-template <> struct ZuCmp_BoolInt<4> { typedef int32_t T; };
-template <> struct ZuCmp_BoolInt<8> { typedef int64_t T; };
-
 // comparison of bool
 
 template <> struct ZuCmp<bool> {
-  typedef ZuCmp_BoolInt<sizeof(bool)>::T I;
-
-  ZuInline static int cmp(bool b1, bool b2)
-    { return (b1 && !b2) ? 1 : (!b1 && b2) ? -1 : 0; }
+  ZuInline static int cmp(bool b1, bool b2) { return (int)b1 - (int)b2; }
   ZuInline static bool equals(bool b1, bool b2) { return b1 == b2; }
   ZuInline static bool null(bool b) { return !b; }
   ZuInline static const bool &null() { static const bool b = 0; return b; }

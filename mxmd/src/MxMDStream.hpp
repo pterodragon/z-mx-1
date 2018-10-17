@@ -36,7 +36,6 @@
 #include <ZmFn.hpp>
 
 #include <ZiFile.hpp>
-#include <ZiRing.hpp>
 #include <ZiMultiplex.hpp>
 
 #include <lz4.h>
@@ -61,7 +60,8 @@ struct App {
   // begin message push - allocate message buffer
   void *push(unsigned size);
   // fill message header with MxMDFrame, return ptr to body
-  void *out(void *ptr, unsigned length, unsigned type, ZmTime stamp);
+  void *out(void *ptr, unsigned length, unsigned type,
+      MxID linkID, ZmTime stamp);
   // complete message push
   void push2();
 };
@@ -71,14 +71,14 @@ struct App {
 
 namespace MxMDStream {
 
-  struct Type {
+  namespace Type {
     MxEnumValues(
 	AddTickSizeTbl, ResetTickSizeTbl, AddTickSize,
+	TradingSession,
 	AddSecurity, UpdateSecurity,
 	AddOrderBook, DelOrderBook,
 	AddCombination, DelCombination,
 	UpdateOrderBook,
-	TradingSession,
 	L1, PxLevel, L2,
 	AddOrder, ModifyOrder, CancelOrder,
 	ResetOB,
@@ -86,29 +86,31 @@ namespace MxMDStream {
 	RefDataLoaded,
 
 	// control events follow
+	EndOfSnapshot,		// end of snapshot
 	Detach,			// ITC detach
-	Login, EndOfSnapshot,	// TCP login, end of snapshot
+	Login,			// TCP login
 	ResendReq);		// UDP resend request
 
     MxEnumNames(
 	"AddTickSizeTbl", "ResetTickSizeTbl", "AddTickSize",
+	"TradingSession",
 	"AddSecurity", "UpdateSecurity",
 	"AddOrderBook", "DelOrderBook",
 	"AddCombination", "DelCombination",
 	"UpdateOrderBook",
-	"TradingSession",
 	"L1", "PxLevel", "L2",
 	"AddOrder", "ModifyOrder", "CancelOrder",
 	"ResetOB",
 	"AddTrade", "CorrectTrade", "CancelTrade",
 	"RefDataLoaded",
 
+	"EndOfSnapshot",
 	"Detach",
-	"Login", "EndOfSnapshot",
+	"Login",
 	"ResendReq");
 
     MxEnumMapAlias(Map, CSVMap);
-  };
+  }
 
   struct FileHdr {
     enum {
@@ -169,16 +171,6 @@ namespace MxMDStream {
     }
   };
 
-}
-template <> struct ZiRingTraits<MxMDStream::Frame> {
-  inline static unsigned size(const MxMDStream::Frame &hdr) {
-    return sizeof(MxMDStream::Frame) + hdr.len;
-  }
-};
-namespace MxMDStream {
-
-  typedef ZiRing<Frame, ZiRingBase<ZmObject> > Ring;
-
   typedef MxSecKey Key;
 
   struct AddTickSizeTbl {
@@ -202,6 +194,14 @@ namespace MxMDStream {
     MxValue		minPrice;
     MxValue		maxPrice;
     MxValue		tickSize;
+  };
+
+  struct TradingSession {
+    enum { Code = Type::TradingSession };
+    MxDateTime		stamp;
+    MxID		venue;
+    MxID		segment;
+    MxEnum		session;
   };
 
   struct AddSecurity {
@@ -261,14 +261,6 @@ namespace MxMDStream {
     Key			key;
     MxIDString		tickSizeTbl;
     MxMDLotSizes	lotSizes;
-  };
-
-  struct TradingSession {
-    enum { Code = Type::TradingSession };
-    MxDateTime		stamp;
-    MxID		venue;
-    MxID		segment;
-    MxEnum		session;
   };
 
   struct L1 {
@@ -380,6 +372,12 @@ namespace MxMDStream {
 
   // transport / session control messages follow
 
+  struct EndOfSnapshot { // end of snapshot
+    enum { Code = Type::EndOfSnapshot };
+    MxUInt		id;
+    MxSeqNo		seqNo; // 0 if snapshot failed
+  };
+
   struct Detach { // ITC detach
     enum { Code = Type::Detach };
     MxUInt		id;
@@ -391,11 +389,6 @@ namespace MxMDStream {
     MxIDString		password;
   };
   
-  struct EndOfSnapshot { // TCP end of snapshot
-    enum { Code = Type::EndOfSnapshot };
-    MxSeqNo		seqNo;
-  };
-
   struct ResendReq { // UDP resend request
     enum { Code = Type::ResendReq };
     MxSeqNo		seqNo;
@@ -406,6 +399,7 @@ namespace MxMDStream {
       AddTickSizeTbl,
       AddTickSize,
       ResetTickSizeTbl,
+      TradingSession,
       AddSecurity,
       UpdateSecurity,
       AddOrderBook,
@@ -413,7 +407,6 @@ namespace MxMDStream {
       AddCombination,
       DelCombination,
       UpdateOrderBook,
-      TradingSession,
       L1,
       PxLevel,
       L2,
@@ -478,10 +471,10 @@ namespace MxMDStream {
   }
 
   template <typename T, typename App>
-  inline void *push(App &app) {
+  inline void *push(App &app, int shardID) {
     void *ptr = app.push(sizeof(Frame) + sizeof(T));
     if (ZuUnlikely(!ptr)) return 0;
-    return app.out(ptr, sizeof(T), T::Code, ZmTimeNow());
+    return app.out(ptr, sizeof(T), T::Code, shardID, ZmTimeNow());
   }
 
 #ifdef FnDeclare
@@ -490,7 +483,7 @@ namespace MxMDStream {
 #define FnDeclare(Fn, Type) \
   template <typename App, typename ...Args> \
   inline bool Fn(App &app, Args &&... args) { \
-    void *ptr = push<Type>(app); \
+    void *ptr = push<Type>(app, -1); \
     if (ZuUnlikely(!ptr)) return false; \
     new (ptr) Type{ZuFwd<Args>(args)...}; \
     app.push2(); \
@@ -500,6 +493,29 @@ namespace MxMDStream {
   FnDeclare(addTickSizeTbl, AddTickSizeTbl)
   FnDeclare(resetTickSizeTbl, ResetTickSizeTbl)
   FnDeclare(addTickSize, AddTickSize)
+
+  FnDeclare(tradingSession, TradingSession)
+
+  FnDeclare(addTrade, AddTrade)
+  FnDeclare(correctTrade, CorrectTrade)
+  FnDeclare(cancelTrade, CancelTrade)
+
+  FnDeclare(refDataLoaded, RefDataLoaded)
+
+  FnDeclare(detach, Detach)
+  FnDeclare(endOfSnapshot, EndOfSnapshot)
+
+#undef FnDeclare
+#define FnDeclare(Fn, Type) \
+  template <typename App, typename ...Args> \
+  inline bool Fn(App &app, int shardID, Args &&... args) { \
+    void *ptr = push<Type>(app, shardID); \
+    if (ZuUnlikely(!ptr)) return false; \
+    new (ptr) Type{ZuFwd<Args>(args)...}; \
+    app.push2(); \
+    return true; \
+  }
+
   FnDeclare(addSecurity, AddSecurity)
   FnDeclare(updateSecurity, UpdateSecurity)
   FnDeclare(addOrderBook, AddOrderBook)
@@ -508,11 +524,11 @@ namespace MxMDStream {
   // special processing for AddCombination's securities/sides/ratios fields
   template <typename App,
 	   typename Key_, typename Security, typename TickSizeTbl>
-  inline bool addCombination(App &app, MxDateTime transactTime,
+  inline bool addCombination(App &app, int shardID, MxDateTime transactTime,
       const Key_ &key, MxNDP pxNDP, MxNDP qtyNDP, unsigned legs,
       const Security *securities, const MxEnum *sides, const MxRatio *ratios,
       const TickSizeTbl &tickSizeTbl, const MxMDLotSizes &lotSizes) {
-    void *ptr = push<AddCombination>(app);
+    void *ptr = push<AddCombination>(app, shardID);
     if (ZuUnlikely(!ptr)) return false;
     AddCombination *data = new (ptr) AddCombination{transactTime,
       key, pxNDP, qtyNDP, legs, {}, {}, {}, tickSizeTbl, lotSizes};
@@ -527,7 +543,6 @@ namespace MxMDStream {
 
   FnDeclare(delCombination, DelCombination)
   FnDeclare(updateOrderBook, UpdateOrderBook)
-  FnDeclare(tradingSession, TradingSession)
   FnDeclare(l1, L1)
   FnDeclare(pxLevel, PxLevel)
   FnDeclare(l2, L2)
@@ -535,12 +550,6 @@ namespace MxMDStream {
   FnDeclare(modifyOrder, ModifyOrder)
   FnDeclare(cancelOrder, CancelOrder)
   FnDeclare(resetOB, ResetOB)
-  FnDeclare(addTrade, AddTrade)
-  FnDeclare(correctTrade, CorrectTrade)
-  FnDeclare(cancelTrade, CancelTrade)
-  FnDeclare(refDataLoaded, RefDataLoaded)
-  FnDeclare(detach, Detach)
-  FnDeclare(endOfSnapshot, EndOfSnapshot)
 
 #undef FnDeclare
 }

@@ -48,6 +48,8 @@ public:
 
   inline void final() { }
 
+  ZmRef<MxAnyLink> createLink(MxID id);
+
   // Rx
   ZuInline void process_(MxAnyLink *, MxQMsg *) { }
   ProcessFn processFn() {
@@ -160,6 +162,8 @@ public:
   bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }
 };
 
+ZmRef<MxAnyLink> App::createLink(MxID id) { return new Link(id); }
+
 void Engine::init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf)
 {
   MxEngine::init(mgr, app, mx, cf);
@@ -169,7 +173,7 @@ void Engine::init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf)
     ZvCf::Iterator i(linksCf);
     ZuString id;
     while (ZmRef<ZvCf> linkCf = i.subset(id))
-      MxEngine::updateLink<Link>(id, linkCf);
+      MxEngine::updateLink(id, linkCf);
   }
 }
 

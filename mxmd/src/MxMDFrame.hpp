@@ -38,7 +38,7 @@
 struct MxMDFrame {
   uint16_t	len = 0;	// exclusive of MxMDFrame
   uint16_t	type = 0;
-  uint64_t	linkID = 0;
+  uint64_t	linkID = 0;	// shard ID when used for ITC/IPC
   uint64_t  	seqNo = 0;
   int32_t	sec = 0;
   uint32_t	nsec = 0;

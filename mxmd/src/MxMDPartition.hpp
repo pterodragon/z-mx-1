@@ -30,8 +30,19 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <ZuInt.hpp>
+#include <ZuBox.hpp>
+
+#include <ZiIP.hpp>
+
+#include <MxTypes.hpp>
+
+#include <MxMDCSV.hpp>
+
 struct MxMDPartition {
   MxID		id;
+  MxBool	enabled;
+  MxInt		shardID;
   ZiIP		tcpIP, tcpIP2;
   uint16_t	tcpPort, tcpPort2;
   MxIDString	tcpUsername, tcpPassword;
@@ -54,20 +65,22 @@ public:
 #endif
 #define Offset(x) offsetof(Data, x)
     add(new MxIDCol("id", Offset(id)));
-    add(new MxIPCol("tcpIP", offsetof(Partition, tcpIP)));
-    add(new MxPortCol("tcpPort", offsetof(Partition, tcpPort)));
-    add(new MxIPCol("tcpIP2", offsetof(Partition, tcpIP2)));
-    add(new MxPortCol("tcpPort2", offsetof(Partition, tcpPort2)));
+    add(new MxBoolCol("enabled", Offset(enabled), -1, 1));
+    add(new MxIntCol("shardID", Offset(shardID), -1, -1));
+    add(new MxIPCol("tcpIP", Offset(tcpIP)));
+    add(new MxPortCol("tcpPort", Offset(tcpPort)));
+    add(new MxIPCol("tcpIP2", Offset(tcpIP2)));
+    add(new MxPortCol("tcpPort2", offsetof(tcpPort2)));
     add(new MxIDStrCol("tcpUsername", Offset(tcpUsername)));
     add(new MxIDStrCol("tcpPassword", Offset(tcpPassword)));
-    add(new MxIPCol("udpIP", offsetof(Partition, udpIP)));
-    add(new MxPortCol("udpPort", offsetof(Partition, udpPort)));
-    add(new MxIPCol("udpIP2", offsetof(Partition, udpIP2)));
-    add(new MxPortCol("udpPort2", offsetof(Partition, udpPort2)));
-    add(new MxIPCol("resendIP", offsetof(Partition, resendIP)));
-    add(new MxPortCol("resendPort", offsetof(Partition, resendPort)));
-    add(new MxIPCol("resendIP2", offsetof(Partition, resendIP2)));
-    add(new MxPortCol("resendPort2", offsetof(Partition, resendPort2)));
+    add(new MxIPCol("udpIP", Offset(udpIP)));
+    add(new MxPortCol("udpPort", Offset(udpPort)));
+    add(new MxIPCol("udpIP2", Offset(udpIP2)));
+    add(new MxPortCol("udpPort2", Offset(udpPort2)));
+    add(new MxIPCol("resendIP", Offset(resendIP)));
+    add(new MxPortCol("resendPort", Offset(resendPort)));
+    add(new MxIPCol("resendIP2", Offset(resendIP2)));
+    add(new MxPortCol("resendPort2", Offset(resendPort2)));
 #undef Offset
   }
 

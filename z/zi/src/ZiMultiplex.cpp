@@ -31,14 +31,12 @@
 #define ZiEINVAL EINVAL
 #define ZiENOTCONN ENOTCONN
 #define ZiECONNRESET ECONNRESET
-#define ZiEALREADY EALREADY
 #define ZiEINPROGRESS EINPROGRESS
 #define ZiENOBUFS ENOBUFS
 #else
 #define ZiEINVAL WSAEINVAL
 #define ZiENOTCONN WSAEDISCON
 #define ZiECONNRESET WSAECONNRESET
-#define ZiEALREADY WSAELREADY
 #ifdef ZiMultiplex_IOCP
 #define ZiEINPROGRESS WSA_IO_PENDING
 #else
@@ -293,7 +291,7 @@ void ZiMultiplex::udp(ZiConnectFn fn, ZiFailFn failFn,
 	localIP, localPort, remoteIP, remotePort, ZuMv(options));
     return;
   }
-  ZmScheduler::run(rxThread(),
+  run(rxThread(),
       [this, fn = ZuMv(fn), failFn = ZuMv(failFn),
 	  localIP, localPort, remoteIP, remotePort, options = ZuMv(options)]() {
 	this->udp_(fn, failFn,
@@ -559,7 +557,7 @@ void ZiMultiplex::connect(
 	localIP, localPort, remoteIP, remotePort, ZuMv(options));
     return;
   }
-  ZmScheduler::run(rxThread(),
+  run(rxThread(),
       [this, fn = ZuMv(fn), failFn = ZuMv(failFn),
 	  localIP, localPort, remoteIP, remotePort, options = ZuMv(options)]() {
 	this->connect_(fn, failFn,
@@ -808,7 +806,7 @@ void ZiMultiplex::listen(
 	localIP, localPort, nAccepts, ZuMv(options));
     return;
   }
-  ZmScheduler::run(rxThread(),
+  run(rxThread(),
       [this, listenFn = ZuMv(listenFn),
 	  failFn = ZuMv(failFn), acceptFn = ZuMv(acceptFn),
 	  localIP, localPort, nAccepts, options = ZuMv(options)]() {
@@ -960,7 +958,7 @@ void ZiMultiplex::stopListening(ZiIP localIP, uint16_t localPort)
     this->stopListening_(localIP, localPort);
     return;
   }
-  ZmScheduler::run(rxThread(),
+  run(rxThread(),
       [this, localIP, localPort]() {
 	this->stopListening_(localIP, localPort);
 	this->rx();
@@ -1765,7 +1763,7 @@ void ZiConnection::disconnect_1()
 
   ZiMultiplex *mx = m_mx;
 
-  mx->rxInvoke(ZmFn<>([](ZiConnection *self) { self->disconnect_2(); }, this));
+  mx->rxRun(ZmFn<>([](ZiConnection *self) { self->disconnect_2(); }, this));
 }
 
 void ZiConnection::disconnect_2()
@@ -2002,7 +2000,7 @@ int ZiMultiplex::start()
   }
 #endif
 
-  ZmScheduler::run(rxThread(),
+  run(rxThread(),
       ZmFn<>::Member<&ZiMultiplex::rxStart>::fn(this));
   ZmScheduler::start();
   return Zi::OK;

@@ -207,7 +207,7 @@ public:
     add(new MxUIntCol("shard", Offset(shard)));
 #undef Offset
 #define Offset(x) offsetof(Data, refData) + offsetof(MxMDSecRefData, x)
-    add(new MxBoolCol("tradeable", Offset(tradeable)));
+    add(new MxBoolCol("tradeable", Offset(tradeable), -1, 1));
     add(new MxEnumCol<MxSecIDSrc::CSVMap>("idSrc", Offset(idSrc)));
     add(new MxSymStrCol("symbol", Offset(symbol)));
     add(new MxEnumCol<MxSecIDSrc::CSVMap>("altIDSrc", Offset(altIDSrc)));

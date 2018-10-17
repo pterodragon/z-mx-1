@@ -30,9 +30,8 @@
 #include <MxMDLib.hpp>
 #endif
 
-#include <ZiMultiplex.hpp>
+#include <ZiFile.hpp>
 
-#include <MxMultiplex.hpp>
 #include <MxEngine.hpp>
 
 #include <MxMDTypes.hpp>
@@ -41,21 +40,19 @@ class MxMDCore;
 
 class MxMDRecord : public MxEngineApp, public MxEngine {
 public:
-  typedef ZmPLock Lock;
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  MxMDRecord() { }
+  ~MxMDRecord() { }
 
-public:
-  MxMDRecord(MxMDCore *core);
-  ~MxMDRecord();
+  inline MxMDCore *core() const { return static_cast<MxMDCore *>(mgr()); }
 
-  void init();
+  void init(MxMDCore *core);
+  void final();
 
-  bool start(ZtString path);
-  ZtString stop();
+  bool record(ZtString path);
+  ZtString stopRecording();
 
-  ZtString path() const;
-  bool running() const;
+protected:
+  ZmRef<MxAnyLink> createLink(MxID id);
 
   // Rx (called from engine's rx thread)
   MxEngineApp::ProcessFn processFn();
@@ -65,54 +62,50 @@ public:
   void aborted(MxAnyLink *, MxQMsg *) { }
   void archive(MxAnyLink *, MxQMsg *) { }
   ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
+};
 
-  // FIXME - move file, etc. into link
-  class Link : public MxLink<Link> { // dummy Link for recorder (mostly unused)
-  public:
-    Link(MxID id) : MxLink<Link>{id} { }
+class MxMDAPI MxMDRecLink : public MxLink<MxMDRecLink> {
+public:
+  MxMDRecLink(MxID id) : MxLink<MxMDRecLink>{id} { }
 
-    void init(MxEngine *engine) { MxLink<Link>::init(engine); }
+  inline MxMDCore *core() const {
+    return static_cast<MxMDCore *>(engine()->mgr());
+  }
 
-    ZuInline MxMDRecord *recorder() {
-      return static_cast<MxMDRecord *>(this->engine());
-    }
+  bool record(ZtString path);
+  ZtString stopRecording();
 
-    // MxAnyLink virtual (unused)
-    void update(ZvCf *) { }
-    void reset(MxSeqNo, MxSeqNo) { }
+  // MxAnyLink virtual (mostly unused)
+  void update(ZvCf *);
+  void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo);
 
-    void connect() { MxAnyLink::connected(); }
-    void disconnect() { MxAnyLink::disconnected(); }
+  void connect();
+  void disconnect();
 
-    // MxLink CRTP (unused)
-    ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
+  // MxLink CRTP (unused)
+  ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
 
-    // MxLink Rx CRTP (unused)
-    ZmTime reReqInterval() { return ZmTime{1}; }
-    void request(const MxQueue::Gap &prev, const MxQueue::Gap &now) { }
-    void reRequest(const MxQueue::Gap &now) { }
+  // MxLink Rx CRTP (unused)
+  ZmTime reReqInterval() { return ZmTime{1}; }
+  void request(const MxQueue::Gap &prev, const MxQueue::Gap &now) { }
+  void reRequest(const MxQueue::Gap &now) { }
 
-    // MxLink Tx CRTP (unused)
-    bool send_(MxQMsg *, bool) { return true; }
-    bool resend_(MxQMsg *, bool) { return true; }
+  // MxLink Tx CRTP (unused)
+  bool send_(MxQMsg *, bool) { return true; }
+  bool resend_(MxQMsg *, bool) { return true; }
 
-    bool sendGap_(const MxQueue::Gap &, bool) { return true; }
-    bool resendGap_(const MxQueue::Gap &, bool) { return true; }
-  };
+  bool sendGap_(const MxQueue::Gap &, bool) { return true; }
+  bool resendGap_(const MxQueue::Gap &, bool) { return true; }
 
 private:
-  typedef MxQueueRx<Link> Rx;
+  typedef ZmPLock Lock;
+  typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
+
+  typedef MxQueueRx<MxMDRecLink> Rx;
   typedef MxMDStream::MsgData MsgData;
 
-  bool fileOpen(ZtString path);
-  ZtString fileClose();
   int write(const Frame *frame, ZeError *e);
-
-  void recvStart();
-  void recvStop();
-
-  void snapStart();
-  void snapStop();
 
   void recv(Rx *rx);
   void recvMsg(Rx *rx);
@@ -122,24 +115,18 @@ private:
   Frame *push(unsigned size);
   void *out(void *ptr, unsigned length, unsigned type, ZmTime stamp);
   void push2();
-  MxSeqNo snapshotSeqNo();
 
 private:
-  MxMDCore		*m_core;
-  ZmRef<MxLink<Link> >	m_link;
   int			m_snapThread = -1;
 
   ZmSemaphore		m_attachSem;
   ZmSemaphore		m_detachSem;
 
-  Lock			m_stateLock;
-    bool		  m_running = false;
-
-  Lock			m_ioLock;
+  // FIXME ZiFile is internally locked, so we are double-locking...
+  Lock			m_lock;
     ZtString		  m_path;
-    ZiFile		  m_file;
+    ZiFile		  m_file;	// FIXME - shard?
     ZmRef<MsgData>	  m_snapMsg;
-    MxSeqNo		  m_snapshotSeqNo = 0;
 };
 
 #endif /* MxMDRecord_HPP */

@@ -160,7 +160,7 @@ typedef ZmSharded<MxMDShard> MxMDSharded;
 
 // venue flags
 
-struct MxMDVenueFlags {
+namespace MxMDVenueFlags {
   MxEnumValues(
       UniformRanks,		// order ranks are uniformly distributed
       Dark,			// lit if not dark
@@ -173,7 +173,7 @@ struct MxMDVenueFlags {
       "UniformRanks", UniformRanks,
       "Dark", Dark,
       "Synthetic", Synthetic);
-};
+}
 
 // L1 flags
 
@@ -362,11 +362,11 @@ struct MxMDOrderData {
   MxFlags	flags;		// MxMDOrderFlags
 };
 
-struct MxMDOrderIDScope {
+namespace MxMDOrderIDScope {
   MxEnumValues(Venue, OrderBook, OBSide, Default = Venue);
   MxEnumNames("Venue", "OrderBook", "OBSide");
   MxEnumMapAlias(Map, CSVMap);
-};
+}
 
 typedef ZuTuple<MxSecKey, MxIDString> MxMDOrderID2_;
 template <typename T> struct MxMDOrderID2_Fn : public T {

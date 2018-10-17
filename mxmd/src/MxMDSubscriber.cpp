@@ -32,20 +32,15 @@ void MxMDSubscriber::init(MxMDCore *core)
   MxEngine::init(core, this, core->mx(), cf);
 
   if (ZuString ip = cf->get("interface")) m_interface = ip;
+  m_filter = cf->getInt("filter", 0, 1, false, 0);
   m_maxQueueSize = cf->getInt("maxQueueSize", 1000, 1000000, false, 100000);
   m_loginTimeout = cf->getDbl("loginTimeout", 0, 3600, false, 10);
   m_reconnInterval = cf->getDbl("reconnInterval", 0, 3600, false, 10);
   m_reReqInterval = cf->getDbl("reReqInterval", 0, 3600, false, 1);
   m_reReqMaxGap = cf->getInt("reReqMaxGap", 0, 1000, false, 10);
 
-  if (ZuString partitions = cf->get("partitions")) {
-    MxMDPartitionCSV csv;
-    csv.read(partitions, [](MxMDSubscriber *sub, ZuAnyPOD *pod) {
-	sub->m_partitions.add(pod->as<MxMDPartition>());
-	sub->MxEngine::updateLink<MxMDSubLink>(
-	    pod->as<MxMDPartition>().id, nullptr);
-      }, this);
-  }
+  if (ZuString partitions = cf->get("partitions"))
+    updateLinks(partitions);
 
   core->addCmd(
       "subscriber.status", "",
@@ -72,20 +67,30 @@ void MxMDSubscriber::final()
   engineINFO("MxMDSubscriber::final()");
 }
 
-void MxMDSubscriber::up()
+void MxMDSubscriber::updateLinks(ZuString partitions)
 {
-  engineINFO("MxMDSubscriber::up()");
+  MxMDPartitionCSV csv;
+  csv.read(partitions, [](MxMDSubscriber *sub, ZuAnyPOD *pod) {
+      const MxMDPartition &partition = pod->as<MxMDPartition>();
+      sub->m_partitions.del(partition.id);
+      sub->m_partitions.add(partition);
+      sub->updateLink(partition.id, nullptr);
+    }, this);
 }
 
-void MxMDSubscriber::down()
+MxEngineApp::ProcessFn MxMDPublisher::processFn()
 {
-  engineINFO("MxMDSubscriber::down()");
+  return static_cast<MxEngineApp::ProcessFn>(
+      [](MxEngineApp *app, MxAnyLink *link, MxQMsg *msg) {
+	  static_cast<MxMDSubscriber *>(app)->process_(
+	      static_cast<MxMDSubLink *>(link), msg);
+  });
 }
 
 void MxMDSubscriber::process_(MxMDSubLink *link, MxQMsg *msg)
 {
   const Frame &frame = m_in->as<Frame>();
-  core()->apply(&frame);
+  core()->apply(&frame, m_filter);
 }
 
 #define linkINFO(code) \
@@ -98,6 +103,10 @@ void MxMDSubLink::update(ZvCf *)
       if (ZuUnlikely(!partition)) throw ZvCf::Required(id());
       m_partition = partition;
     });
+  if (m_partition && m_partition->enabled)
+    up();
+  else
+    down();
 }
 
 void MxMDSubLink::reset(MxSeqNo rxSeqNo, MxSeqNo)
@@ -131,21 +140,21 @@ void MxMDSubLink::reset(MxSeqNo rxSeqNo, MxSeqNo)
 
 void MxMDSubLink::tcpError(TCP *tcp, ZiIOContext *io)
 {
-  ZmGuard<ZmLock> connGuard(m_connLock);
   if (io)
     io->disconnect();
   else if (tcp)
     tcp->close();
+  ZmGuard<ZmLock> connGuard(m_connLock);
   if (!tcp || tcp == m_tcp) reconnect();
 }
 
 void MxMDSubLink::udpError(UDP *udp, ZiIOContext *io)
 {
-  ZmGuard<ZmLock> connGuard(m_connLock);
   if (io)
     io->disconnect();
   else if (udp)
     udp->close();
+  ZmGuard<ZmLock> connGuard(m_connLock);
   if (!udp || udp == m_udp) reconnect();
 }
 
@@ -167,6 +176,8 @@ void MxMDSubLink::disconnect()
     ZmGuard<ZmLock> connGuard(m_connLock);
     tcp = ZuMv(m_tcp);
     udp = ZuMv(m_udp);
+    m_tcp = nullptr;
+    m_udp = nullptr;
   }
 
   if (tcp) tcp->disconnect();
@@ -200,7 +211,10 @@ void MxMDSubLink::tcpConnect()
 	  return new TCP(link, ci);
 	}, this),
       ZiFailFn([](MxMDSubLink *link, bool transient) {
-	  if (transient) link->reconnect();
+	  if (transient)
+	    link->reconnect();
+	  else
+	    link->disconnected();
 	}, this),
       ZiIP(), 0, ip, port);
 }
@@ -357,7 +371,10 @@ void MxMDSubLink::udpConnect()
 	  return new UDP(link, ci);
 	}, this),
       ZiFailFn([](MxMDSubLink *link, bool transient) {
-	  if (transient) link->reconnect();
+	  if (transient)
+	    link->reconnect();
+	  else
+	    link->disconnected();
 	}, this),
       ZiIP(), port, ZiIP(), 0, options);
 }

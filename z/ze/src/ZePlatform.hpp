@@ -101,11 +101,16 @@ public:
   static const ErrNo OK = ZePlatform_::OK;
 
   ZuInline ZeError() : m_errNo(OK) { }
-  ZuInline ZeError(ErrNo e) : m_errNo(e) { }
 
   ZuInline ZeError(const ZeError &e) : m_errNo(e.m_errNo) { }
   ZuInline ZeError &operator =(const ZeError &e) {
     if (this != &e) m_errNo = e.m_errNo;
+    return *this;
+  }
+
+  ZuInline ZeError(ErrNo e) : m_errNo(e) { }
+  ZuInline ZeError &operator =(ErrNo e) {
+    m_errNo = e;
     return *this;
   }
 

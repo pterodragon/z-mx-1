@@ -35,9 +35,9 @@ int ZmRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
   // fprintf(stderr, "WAIT addr: %#.8x (%#.8x) val: %#.8x\n", (unsigned)(uintptr_t)(void *)&addr, (unsigned)addr.load_(), (unsigned)val);
   if (addr.cmpXch(val | Waiting, val) != val) return OK;
   val |= Waiting;
-  if (ZuUnlikely(config().timeout())) {
-    ZmTime out(ZmTime::Now, (int)config().timeout());
-    unsigned i = 0, n = config().spin();
+  if (ZuUnlikely(params().timeout())) {
+    ZmTime out(ZmTime::Now, (int)params().timeout());
+    unsigned i = 0, n = params().spin();
     do {
       if (ZuUnlikely(i >= n)) {
 	if (syscall(SYS_futex, (volatile int *)&addr,
@@ -54,7 +54,7 @@ int ZmRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
 	++i;
     } while (addr == val);
   } else {
-    unsigned i = 0, n = config().spin();
+    unsigned i = 0, n = params().spin();
     do {
       if (ZuUnlikely(i >= n)) {
 	if (syscall(SYS_futex, (volatile int *)&addr,
@@ -112,8 +112,8 @@ int ZmRing_::wait(unsigned index, ZmAtomic<uint32_t> &addr, uint32_t val)
 {
   if (addr.cmpXch(val | Waiting, val) != val) return OK;
   val |= Waiting;
-  DWORD timeout = config().timeout() ? config().timeout() * 1000 : INFINITE;
-  unsigned i = 0, n = config().spin();
+  DWORD timeout = params().timeout() ? params().timeout() * 1000 : INFINITE;
+  unsigned i = 0, n = params().spin();
   do {
     if (ZuUnlikely(i >= n)) {
       DWORD r = WaitForSingleObject(m_sem[index], timeout);

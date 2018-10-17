@@ -298,9 +298,9 @@ void ZmScheduler::timer()
 	  bool pushOK;
 	  unsigned tid = timer->val().tid;
 	  if (ZuLikely(tid))
-	    pushOK = run__(&m_threads[tid - 1], timer->val().fn);
+	    pushOK = timerRun(&m_threads[tid - 1], timer->val().fn);
 	  else
-	    pushOK = add__(timer->val().fn);
+	    pushOK = timerAdd(timer->val().fn);
 	  if (ZuUnlikely(!pushOK)) {
 	    scheduleGuard.unlock();
 	    m_schedule.add(timer);
@@ -312,27 +312,7 @@ void ZmScheduler::timer()
     }
   }
 }
-
-void ZmScheduler::add(ZmFn<> fn)
-{
-  if (ZuUnlikely(!fn)) return;
-  if (ZuUnlikely(!m_nWorkers)) return;
-  unsigned first = m_next++;
-  unsigned next = first;
-  do {
-    Thread *thread = m_workers[next % m_nWorkers];
-    ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
-    void *ptr;
-    if (ZuLikely(ptr = thread->ring.tryPush())) {
-      new (ptr) ZmFn<>(ZuMv(fn));
-      thread->ring.push2(ptr);
-      return;
-    }
-  } while (((next = m_next++) - first) < m_nWorkers);
-  run_(m_workers[first % m_nWorkers], ZuMv(fn));
-}
-
-bool ZmScheduler::add__(ZmFn<> &fn)
+bool ZmScheduler::timerAdd(ZmFn<> &fn)
 {
   if (ZuUnlikely(!m_nWorkers)) return 0;
   unsigned first = m_next++;
@@ -349,8 +329,7 @@ bool ZmScheduler::add__(ZmFn<> &fn)
   } while (((next = m_next++) - first) < m_nWorkers);
   return 0;
 }
-
-bool ZmScheduler::run__(Thread *thread, ZmFn<> &fn)
+bool ZmScheduler::timerRun(Thread *thread, ZmFn<> &fn)
 {
   ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
   void *ptr;
@@ -395,9 +374,9 @@ void ZmScheduler::run(
 
     if (ZuUnlikely(timeout <= ZmTimeNow())) {
       if (ZuLikely(tid)) {
-	if (ZuLikely(run__(&m_threads[tid - 1], fn))) return;
+	if (ZuLikely(timerRun(&m_threads[tid - 1], fn))) return;
       } else {
-	if (ZuLikely(add__(fn))) return;
+	if (ZuLikely(timerAdd(fn))) return;
       }
     }
 
@@ -415,6 +394,53 @@ void ZmScheduler::del(Timer *ptr)
   if (ZuUnlikely(!ptr)) return;
   ZmGuard<ZmPLock> scheduleGuard(m_scheduleLock);
   if (ZuLikely(*ptr)) { m_schedule.del(*ptr); *ptr = 0; }
+}
+
+void ZmScheduler::add(ZmFn<> fn)
+{
+  if (ZuUnlikely(!fn)) return;
+  if (ZuUnlikely(!m_nWorkers)) return;
+  unsigned first = m_next++;
+  unsigned next = first;
+  do {
+    Thread *thread = m_workers[next % m_nWorkers];
+    ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
+    void *ptr;
+    if (ZuLikely(ptr = thread->ring.tryPush())) {
+      new (ptr) ZmFn<>(ZuMv(fn));
+      thread->ring.push2(ptr);
+      return;
+    }
+  } while (((next = m_next++) - first) < m_nWorkers);
+  run_(m_workers[first % m_nWorkers], ZuMv(fn));
+}
+
+void ZmScheduler::run_(Thread *thread, ZmFn<> fn)
+{
+  {
+    ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
+    void *ptr;
+    if (ZuLikely(ptr = thread->ring.push())) {
+      new (ptr) ZmFn<>(ZuMv(fn));
+      thread->ring.push2(ptr);
+      return;
+    }
+  }
+  // should never happen - the enqueuing thread will normally
+  // be forced to wait for the dequeuing thread to drain the ring
+  int status = thread->ring.writeStatus();
+  ZuStringN<120> s;
+  s << "FATAL - Thread Dispatch Failure - push() failed: ";
+  if (status <= 0)
+    s << ZmRingError(status);
+  else
+    s << ZuBoxed(status) << " bytes remaining";
+  s << '\n';
+#ifndef _WIN32
+  std::cerr << s << std::flush;
+#else
+  MessageBoxA(0, s, "Thread Dispatch Failure", MB_ICONEXCLAMATION);
+#endif
 }
 
 void ZmScheduler::work()

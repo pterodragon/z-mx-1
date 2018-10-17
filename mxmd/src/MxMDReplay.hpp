@@ -32,40 +32,83 @@
 
 class MxMDCore;
 
-class MxMDAPI MxMDReplay {
-  typedef ZmPLock Lock;
-  typedef ZmGuard<ZmPLock> Guard;
+class MxMDAPI MxMDReplay : public MxEngineApp, public MxEngine {
+public:
+  MxMDReplay() { }
+  ~MxMDReplay() { }
+
+  ZuInline MxMDCore *core() const { return static_cast<MxMDCore *>(mgr()); }
+
+  void init(MxMDCore *core);
+  void final();
+
+  bool replay(ZtString path, MxDateTime begin, bool filter);
+  ZtString stopReplaying();
+
+protected:
+  ZmRef<MxAnyLink> createLink(MxID id);
+
+  // Rx (called from engine's rx thread) (unused)
+  MxEngineApp::ProcessFn processFn();
+
+  // Tx (called from engine's tx thread) (unused)
+  void sent(MxAnyLink *, MxQMsg *) { }
+  void aborted(MxAnyLink *, MxQMsg *) { }
+  void archive(MxAnyLink *, MxQMsg *) { }
+  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
+};
+
+class MxMDAPI MxMDReplayLink : public MxLink<MxMDReplayLink> {
+public:
+  MxMDReplayLink(MxID id) : MxLink<MxMDReplayLink>{id} { }
+
+  ZuInline MxMDCore *core() const {
+    return static_cast<MxMDCore *>(engine()->mgr());
+  }
+
+  bool replay(ZtString path, MxDateTime begin, bool filter);
+  ZtString stopReplaying();
+
+  // MxAnyLink virtual
+  void update(ZvCf *);
+  void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo);	 // unused
+
+  void connect();
+  void disconnect();
+
+  // MxLink CRTP (unused)
+  ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
+
+  // MxLink Rx CRTP (unused)
+  ZmTime reReqInterval() { return ZmTime{1}; }
+  void request(const MxQueue::Gap &prev, const MxQueue::Gap &now) { }
+  void reRequest(const MxQueue::Gap &now) { }
+
+  // MxLink Tx CRTP (unused)
+  bool send_(MxQMsg *, bool) { return true; }
+  bool resend_(MxQMsg *, bool) { return true; }
+
+  bool sendGap_(const MxQueue::Gap &, bool) { return true; }
+  bool resendGap_(const MxQueue::Gap &, bool) { return true; }
+
+private:
+  typedef ZmLock Lock;
+  typedef ZmGuard<ZmLock> Guard;
+
+  typedef MxMDStream::MsgData MsgData;
+
   typedef ZuPair<ZuBox0(uint16_t), ZuBox0(uint16_t)> Version;
 
-  MxMDReplay(MxMDCore *core);
-  ~MxMDReplay();
-
-  void start(
-      ZtString path,
-      MxDateTime begin = MxDateTime(),
-      bool filter = true);
-  void stop();
-
-  inline ZtString path() const {
-    Guard guard(m_lock);
-    return m_path;
-  }
-  bool running() const { /* FIXME */ }
+  void read();
 
 private:
-  bool start_(Guard &guard, ZtString path);
-
-  void replay();
-
-private:
-  MxMDCore	*m_core;
-  Lock		m_lock;
-    ZtString	  m_path;
-    ZiFile	  m_file;
-    ZmRef<Msg>	  m_msg;
-    bool	  m_filter = 0;
-    Version	  m_version;
-    ZmTime	  m_timerNext;		// time of next timer event
+  ZmLock		m_lock;	// serializes replay/stopReplaying
+  ZtString		m_path;
+  ZiFile		m_file;
+  ZmRef<MsgData>	m_msg;
+  ZmTime		m_replayNext;
+  bool			m_filter = false;
+  Version		m_version;
 };
 
 #endif /* MxMDReplay_HPP */

@@ -36,7 +36,7 @@
 
 #include <MxBase.hpp>
 
-typedef ZvCSVColumn<ZvCSVColType::Bool, MxBool> MxBoolCol;
+typedef ZvCSVColumn<ZvCSVColType::Int, MxBool> MxBoolCol;
 typedef ZvCSVColumn<ZvCSVColType::Int, MxInt> MxIntCol;
 typedef ZvCSVColumn<ZvCSVColType::Int, MxUInt> MxUIntCol;
 typedef ZvCSVColumn<ZvCSVColType::Float, MxFloat> MxFloatCol;

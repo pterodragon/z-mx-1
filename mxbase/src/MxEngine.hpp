@@ -105,8 +105,8 @@ public:
   };
 
   ZuInline MxEngine *engine() const { return m_engine; }
-  ZuInline MxID id() const { return m_id; }
   ZuInline Mx *mx() const { return m_mx; }
+  ZuInline MxID id() const { return m_id; }
 
   virtual void send(MxQMsg *) = 0;
   virtual void abort(MxSeqNo) = 0;
@@ -165,8 +165,8 @@ protected:
   virtual ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
 
 private:
-  void up_(bool enable = false);
-  void down_(bool disable = false);
+  void up_(bool enable);
+  void down_(bool disable);
 
   template <typename Impl, typename L>
   inline auto stateLocked(L &&l) {
@@ -218,7 +218,9 @@ struct MxEngineMgr {
 };
 
 // Callbacks to the application from the engine implementation
-struct MxEngineApp{
+struct MxEngineApp {
+  virtual ZmRef<MxAnyLink> createLink(MxID) = 0;
+
   // Rx (called from engine's rx thread)
   typedef void (*ProcessFn)(MxEngineApp *, MxAnyLink *, MxQMsg *);
   virtual ProcessFn processFn() = 0;	// stashed in engine for performance
@@ -308,12 +310,18 @@ public:
   template <typename ...Args> ZuInline void txInvoke(Args &&... args)
     { m_mx->invoke(m_txThread, ZuFwd<Args>(args)...); }
 
+  bool isRx() { return m_mx->runningTID() == (int)m_rxThread; }
+  bool isTx() { return m_mx->runningTID() == (int)m_txThread; }
+
   ZuInline void appAddEngine() { mgr()->addEngine(this); }
   ZuInline void appDelEngine() { mgr()->delEngine(this); }
   ZuInline void appEngineState(MxEnum prev, MxEnum next) {
     mgr()->engineState(this, prev, next);
   }
 
+  ZuInline ZmRef<MxAnyLink> appCreateLink(MxID id) {
+    return app()->createLink(id);
+  }
   ZuInline void appUpdateLink(MxAnyLink *link) { mgr()->updateLink(link); }
   ZuInline void appDelLink(MxAnyLink *link) { mgr()->delLink(link); }
   ZuInline void appLinkState(MxAnyLink *link, MxEnum prev, MxEnum next)
@@ -395,17 +403,16 @@ public:
     ReadGuard guard(m_lock);
     return m_links.findKey(id);
   }
-  template <typename Link>
   ZmRef<MxAnyLink> updateLink(MxID id, ZvCf *cf) {
     Guard guard(m_lock);
-    ZmRef<Link> link;
+    ZmRef<MxAnyLink> link;
     if (link = m_links.findKey(id)) {
       guard.unlock();
       link->update(cf);
       appUpdateLink(link);
       return link;
     }
-    link = new Link(id);
+    link = appCreateLink(id);
     link->init(this);
     link->update(cf);
     m_links.add(link);
@@ -435,16 +442,11 @@ public:
     return 0;
   }
 
-protected:
-  virtual void up() { }		// called before bringing links up
-  virtual void down() { }	// called after bringing links down
-
 private:
   void linkState(MxAnyLink *, int prev, int next);
 
   void start_();
   void stop_();
-  void stopped_();
 
 private:
   MxID				m_id;
@@ -499,14 +501,14 @@ public:
   ZuInline void rescheduleArchive() { txRun([](Tx *tx) { tx->archive(); }); }
   ZuInline void idleArchive() { m_archiving = 0; }
 
-  template <typename L> ZuInline void txRun(L l)
-    { this->engine()->txRun(ZuMv(l), impl().tx()); }
-  template <typename L> ZuInline void txRun(L l) const
-    { this->engine()->txRun(ZuMv(l), impl().tx()); }
-  template <typename L> ZuInline void txInvoke(L l)
-    { this->engine()->txInvoke(ZuMv(l), impl().tx()); }
-  template <typename L> ZuInline void txInvoke(L l) const
-    { this->engine()->txInvoke(ZuMv(l), impl().tx()); }
+  template <typename L> ZuInline void txRun(L &&l)
+    { this->engine()->txRun(ZmFn{ZuFwd<L>(l), impl().tx()}); }
+  template <typename L> ZuInline void txRun(L &&l) const
+    { this->engine()->txRun(ZmFn{ZuFwd<L>(l), impl().tx()}); }
+  template <typename L> ZuInline void txInvoke(L &&l)
+    { this->engine()->txInvoke(ZuFwd<L>(l), impl().tx()); }
+  template <typename L> ZuInline void txInvoke(L &&l) const
+    { this->engine()->txInvoke(ZuFwd<L>(l), impl().tx()); }
 
 private:
   ZmAtomic<unsigned>	m_sending;
@@ -536,10 +538,12 @@ public:
 
   MxQueue *txQueuePtr() { return &(this->txQueue()); }
 
+#if 0
   void send(MxQMsg *msg)
     { this->txInvoke([msg = ZmMkRef(msg)](Tx *tx) { tx->send(msg); }); }
   void abort(MxSeqNo seqNo)
     { this->txInvoke([seqNo](Tx *tx) { tx->abort(seqNo); }); }
+#endif
 
 private:
   // prevent direct call from Impl - must be called via txRun/txInvoke
@@ -638,8 +642,7 @@ public:
     m_rrTime.now();
     ZmTime rrTime = (m_rrTime += interval);
     guard.unlock();
-    this->mx()->add(
-	ZmFn<>::Member<&MxLink::runReRequest>::fn(this), rrTime, &m_rrTimer);
+    rxRun([](Rx *rx) { rx->reRequest(); }, rrTime, &m_rrTimer);
   }
   ZuInline void cancelReRequest() {
     this->mx()->del(&m_rrTimer);
@@ -648,7 +651,6 @@ public:
       m_rrTime = ZmTime();
     }
   }
-  ZuInline void runReRequest() { rxRun([](Rx *rx) { rx->reRequest(); }); }
 
   // Impl/MxQueueTx callbacks (send_() must call sent_()/aborted_())
   ZuInline void sent_(MxQMsg *msg) // tx sent (persistent)
@@ -665,21 +667,25 @@ public:
   MxQueue *rxQueuePtr() { return &(this->rxQueue()); }
   MxQueue *txQueuePtr() { return &(this->txQueue()); }
 
-  template <typename L> ZuInline void rxRun(L l)
-    { this->engine()->rxRun(ZuMv(l), rx()); }
-  template <typename L> ZuInline void rxRun(L l) const
-    { this->engine()->rxRun(ZuMv(l), rx()); }
-  template <typename L> ZuInline void rxInvoke(L l)
-    { this->engine()->rxInvoke(ZuMv(l), rx()); }
-  template <typename L> ZuInline void rxInvoke(L l) const
-    { this->engine()->rxInvoke(ZuMv(l), rx()); }
+  template <typename L, typename ...Args>
+  ZuInline void rxRun(L &&l, Args &&... args)
+    { this->engine()->rxRun(ZmFn{ZuFwd<L>(l), rx()}, ZuFwd<Args>(args)...); }
+  template <typename L, typename ...Args>
+  ZuInline void rxRun(L &&l, Args &&... args) const
+    { this->engine()->rxRun(ZmFn{ZuFwd<L>(l), rx()}, ZuFwd<Args>(args)...); }
+  template <typename L> ZuInline void rxInvoke(L &&l)
+    { this->engine()->rxInvoke(ZuFwd<L>(l), rx()); }
+  template <typename L> ZuInline void rxInvoke(L &&l) const
+    { this->engine()->rxInvoke(ZuFwd<L>(l), rx()); }
 
+#if 0
   void send(MxQMsg *msg)
     { this->txInvoke([msg = ZmMkRef(msg)](Tx *tx) { tx->send(msg); }); }
   void abort(MxSeqNo seqNo)
     { this->txInvoke([seqNo](Tx *tx) { tx->abort(seqNo); }); }
   void archived(MxSeqNo seqNo)
     { this->txInvoke([seqNo](Tx *tx) { tx->archived(seqNo); }); }
+#endif
 
 private:
   // prevent direct call from Impl - must be called via rx/tx Run/Invoke

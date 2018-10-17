@@ -23,6 +23,9 @@
 
 #include <MxMDPublisher.hpp>
 
+// FIXME - validate rxThread, txThread, snapThread are distinct, and
+// there is at least one other worker thread
+
 void MxMDPublisher::init(MxMDCore *core)
 {
   ZmRef<ZvCf> cf = core->cf()->subset("publisher", false, true);
@@ -31,6 +34,7 @@ void MxMDPublisher::init(MxMDCore *core)
 
   MxEngine::init(core, this, core->mx(), cf);
 
+  m_snapThread = cf->getInt("snapThread", 1, mx->nThreads() + 1, true);
   if (ZuString ip = cf->get("interface")) m_interface = ip;
   m_maxQueueSize = cf->getInt("maxQueueSize", 1000, 1000000, false, 100000);
   m_loginTimeout = cf->getDbl("loginTimeout", 0, 3600, false, 10);
@@ -41,14 +45,8 @@ void MxMDPublisher::init(MxMDCore *core)
   m_nAccepts = cf->getInt("nAccepts", 1, INT_MAX, false, 8);
   m_loopBack = cf->getInt("loopBack", 0, 1, false, 0);
 
-  if (ZuString partitions = cf->get("partitions")) {
-    MxMDPartitionCSV csv;
-    csv.read(partitions, [](MxMDPublisher *sub, ZuAnyPOD *pod) {
-	sub->m_partitions.add(pod->as<MxMDPartition>());
-	sub->MxEngine::updateLink<MxMDPubLink>(
-	    pod->as<MxMDPartition>().id, nullptr);
-      }, this);
-  }
+  if (ZuString partitions = cf->get("partitions"))
+    updateLinks(partitions);
 
   core->addCmd(
       "publisher.status", "",
@@ -66,14 +64,15 @@ void MxMDPublisher::final()
   engineINFO("MxMDPublisher::final()");
 }
 
-void MxMDPublisher::up()
+void MxMDPublisher::updateLinks(ZuString partitions)
 {
-  engineINFO("MxMDPublisher::up()");
-}
-
-void MxMDPublisher::down()
-{
-  engineINFO("MxMDPublisher::down()");
+  MxMDPartitionCSV csv;
+  csv.read(partitions, [](MxMDPublisher *pub, ZuAnyPOD *pod) {
+      const MxMDPartition &partition = pod->as<MxMDPartition>();
+      pub->m_partitions.del(partition.id);
+      pub->m_partitions.add(partition);
+      pub->updateLink(partition.id, nullptr);
+    }, this);
 }
 
 #define linkINFO(code) \
@@ -86,10 +85,15 @@ void MxMDPubLink::update(ZvCf *)
       if (ZuUnlikely(!partition)) throw ZvCf::Required(id());
       m_partition = partition;
     });
+  if (m_partition && m_partition->enabled)
+    up();
+  else
+    down();
 }
 
 void MxMDPubLink::reset(MxSeqNo, MxSeqNo txSeqNo)
 {
+  rxRun([rxSeqNo](Rx *rx) { rx->rxReset(rxSeqNo); });
   txRun([txSeqNo](Tx *tx) { tx->txReset(txSeqNo); });
 }
 
@@ -119,7 +123,6 @@ void MxMDPubLink::reset(MxSeqNo, MxSeqNo txSeqNo)
 
 void MxMDPubLink::tcpError(TCP *tcp, ZiIOContext *io)
 {
-  ZmGuard<ZmLock> connGuard(m_connLock);
   if (io)
     io->disconnect();
   else if (tcp)
@@ -128,11 +131,11 @@ void MxMDPubLink::tcpError(TCP *tcp, ZiIOContext *io)
 
 void MxMDPubLink::udpError(UDP *udp, ZiIOContext *io)
 {
-  ZmGuard<ZmLock> connGuard(m_connLock);
   if (io)
     io->disconnect();
   else if (udp)
     udp->close();
+  ZmGuard<ZmLock> connGuard(m_connLock);
   if (!udp || udp == m_udp) reconnect();
 }
 
@@ -157,6 +160,17 @@ void MxMDPubLink::disconnect()
 {
   linkINFO("MxMDPubLink::disconnect(" << id << ')');
 
+  // FIXME - move ring like udp, close if non-null
+  // FIXME - what if broadcast hasn't been opened/attached yet?
+  // (it's deferred until UDP connected)
+  MxMDRing &broadcast = core()->broadcast();
+  // FIXME - use shadow
+
+  MxMDStream::detach(broadcast, broadcast.id());
+  m_detachSem.wait();
+
+  broadcast.close();
+
   ZiListenInfo listenInfo;
   ZmRef<TCPTbl> tcpTbl;
   ZmRef<UDP> udp;
@@ -167,6 +181,8 @@ void MxMDPubLink::disconnect()
     m_listenInfo = ZiListenInfo();
     tcpTbl = ZuMv(m_tcpTbl);
     udp = ZuMv(m_udp);
+    m_tcpTbl = nullptr;
+    m_udp = nullptr;
   }
 
   if (listenInfo.port) mx()->stopListening(listenInfo.ip, listenInfo.port);
@@ -202,7 +218,10 @@ void MxMDPubLink::tcpListen()
 	  link->tcpListening(info);
 	}, this),
       ZiFailFn([](MxMDPubLink *link, bool transient) {
-	  if (transient) link->reconnect();
+	  if (transient)
+	    link->reconnect();
+	  else
+	    link->disconnected();
 	}, this),
       ZiConnectFn([](MxMDPubLink *link, const ZiCxnInfo &ci) {
 	  if (link->stateLocked([](MxMDPubLink *, int state) -> bool {
@@ -324,10 +343,12 @@ void MxMDPubLink::TCP::processLogin(ZiIOContext &io)
     }
     m_state = State::Sending;
   }
-  m_link->tcpLogin();
-  // FIXME - remember snapshotSeqNo
-  // FIXME - send snapshot!
-  // FIXME - end snapshot with snapshotSeqNo
+
+  if (!m_link->tcpLogin()) { io.disconnect(); return; }
+
+  mx()->run(m_snapThread,
+      [](MxMDPubLink::TCP *tcp) { tcp->snap(); }, ZmMkRef(this));
+
   m_in->fn = MxQMsgFn([](MxMDPubLink::TCP *tcp, MxQMsg *, ZiIOContext *io) {
       tcp->process(*io); }, this);
 }
@@ -341,6 +362,30 @@ bool MxMDPubLink::tcpLogin(const MxMDStream::Login &login)
 void MxMDPubLink::TCP::process(ZiIOContext &io)
 {
   tcpERROR(this, &io, "TCP unexpected message");
+  io.disconnect();
+}
+void MxMDPubLink::TCP::snap()
+{
+  m_snapMsg = new MsgData();
+  if (!core()->snapshot(*this, broadcast.id())) disconnect();
+  m_snapMsg = nullptr;
+}
+Frame *MxMDPubLink::TCP::push(unsigned size)
+{
+  if (ZuUnlikely(state() != MxLinkState::Up)) return 0;
+  return m_snapMsg->frame();
+}
+void *MxMDPubLink::TCP::out(void *ptr, unsigned length, unsigned type,
+    int shardID, ZmTime stamp)
+{
+  Frame *frame = new (ptr) Frame(
+      length, type, shardID, 0, stamp.sec(), stamp.nsec());
+  return frame->ptr();
+}
+void MxMDPubLink::TCP::push2()
+{
+  Frame *frame = m_snapMsg->frame();
+  // FIXME - TCP send
 }
 
 // UDP connect
@@ -381,7 +426,10 @@ void MxMDPubLink::udpConnect()
 	  return new UDP(link, ci);
 	}, this),
       ZiFailFn([](MxMDPubLink *link, bool transient) {
-	  if (transient) link->reconnect();
+	  if (transient)
+	    link->reconnect();
+	  else
+	    link->disconnected();
 	}, this),
       resendIP, resendPort, ZiIP(), 0, options);
 }
@@ -403,7 +451,126 @@ void MxMDPubLink::udpConnected(MxMDPubLink::UDP *udp, ZiIOContext &io)
 
   udp->recv(io); // begin receiving UDP packets (resend requests)
 
-  // FIXME - begin broadcasting R/T data
+  rxInvoke([](Rx *rx) { rx->app().recv(rx)); });
+  m_attachSem.wait();
+
+  connected();
+}
+
+void MxMDPubLink::recv(Rx *rx)
+{
+  using namespace MxMDStream;
+  MxMDRing &broadcast = core()->broadcast();
+  // FIXME - connLock? or shard m_ring in rxThread
+  if (!(m_ring = broadcast.shadow()) || m_ring->attach() != Zi::OK) {
+    disconnect();
+    m_attachSem.post();
+    return;
+  }
+  m_attachSem.post();
+  rxRun([](Rx *rx) { rx->app().recvMsg(rx); });
+}
+
+void MxMDPubLink::recvMsg(Rx *rx)
+{
+  using namespace MxMDStream;
+  const Frame *frame;
+  // FIXME - connLock
+  if (ZuUnlikely(!(frame = broadcast.shift()))) {
+    if (ZuLikely(broadcast.readStatus() == Zi::EndOfFile)) {
+      broadcast.detach();
+      broadcast.close();
+      { Guard guard(m_lock); m_file.close(); }
+      disconnected();
+      return;
+    }
+    rxRun([](Rx *rx) { rx->app().recvMsg(rx); });
+    return;
+  }
+  if (frame->len > sizeof(Buf)) {
+    broadcast.shift2();
+    broadcast.detach();
+    broadcast.close();
+    { Guard guard(m_lock); m_file.close(); }
+    disconnected();
+    core()->raise(ZeEVENT(Error,
+	([name = ZtString(broadcast.params().name())](
+	    const ZeEvent &, ZmStream &s) {
+	  s << '"' << name << "\": "
+	  "IPC shared memory ring buffer read error - "
+	  "message too big";
+	})));
+    return;
+  }
+  // FIXME - advance both rx and tx to seqNo of this message if this is
+  // the first msg
+  switch ((int)frame->type) {
+    case Type::EndOfSnapshot:
+      {
+	const EndOfSnapshot &eos = frame->as<EndOfSnapshot>();
+	if (ZuUnlikely(eos.id == broadcast.id())) {
+	  MxSeqNo seqNo = eos.seqNo;
+	  broadcast.shift2();
+	  // snapshot failure (!seqNo) is handled in snap()
+	  if (seqNo) rx->stopQueuing(seqNo);
+	} else
+	  broadcast.shift2();
+      }
+      break;
+    case Type::Detach:
+      {
+	const Detach &detach = frame->as<Detach>();
+	if (ZuUnlikely(detach.id == broadcast.id())) {
+	  broadcast.shift2();
+	  broadcast.detach();
+	  m_detachSem.post();
+	  return;
+	}
+	broadcast.shift2();
+      }
+      break;
+    default:
+      {
+	unsigned length = sizeof(Frame) + frame->len;
+	ZmRef<Msg> msg = new Msg();
+	Frame *msgFrame = msg->frame();
+	memcpy(msgFrame, frame, length);
+	broadcast.shift2();
+	ZmRef<MxQMsg> qmsg = new MxQMsg(
+	    msg, 0, length, MxMsgID{id(), msgFrame->seqNo});
+	rx->received(qmsg);
+      }
+      break;
+  }
+  rxRun([](Rx *rx) { rx->app().recvMsg(rx); });
+}
+
+MxEngineApp::ProcessFn MxMDRecord::processFn()
+{
+  return static_cast<MxEngineApp::ProcessFn>(
+      [](MxEngineApp *, MxAnyLink *link, MxQMsg *msg) {
+    static_cast<Link *>(link)->txRun([](Tx *tx) { tx->send(msg); });
+  });
+}
+
+bool MxMDPubLink::send_(MxQMsg *msg, bool more)
+{
+  // FIXME - low level send to UDP; fail if udp not connected
+}
+
+bool MxMDPubLink::resend_(MxQMsg *msg, bool more)
+{
+  return send_(msg, more);
+}
+
+bool MxMDPubLink::sendGap_(const MxQueue::Gap &gap, bool more)
+{
+  return true;
+}
+
+bool MxMDPubLink::resendGap_(const MxQueue::Gap &gap, bool more)
+{
+  return true;
 }
 
 // UDP disconnect
@@ -464,6 +631,10 @@ void MxMDPubLink::UDP::process(MxQMsg *msg, ZiIOContext *io)
 void MxMDPubLink::udpReceived(MxQMsg *msg)
 {
   // FIXME - process incoming resend request, error if not a Resend
+
+  Gap gap{/* FIXME */};
+
+  txRun([gap](Tx *tx) { tx->resend(gap); });
 }
 
 // commands
@@ -577,7 +748,7 @@ void MxMDPublisher::TCP::send(const Frame *frame)
       break;
     
     default:
-      m_publisher->m_core->raise(ZeEVENT(Info, "Publisher TCP send default"));
+      m_publisher->core()->raise(ZeEVENT(Info, "Publisher TCP send default"));
     
       break;
   }
@@ -611,7 +782,7 @@ void MxMDPublisher::UDP::send(const Frame *frame)
     case Type::CancelTrade:	send_<CancelTrade>(frame); break;
     case Type::RefDataLoaded:	send_<RefDataLoaded>(frame); break;
     default: 
-      m_publisher->m_core->raise(ZeEVENT(Info, "Publisher UDP send default"));
+      m_publisher->core()->raise(ZeEVENT(Info, "Publisher UDP send default"));
       break;
   }
 }

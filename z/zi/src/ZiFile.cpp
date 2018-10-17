@@ -263,13 +263,30 @@ int ZiFile_WindowsDrives::blkSize_handle(HANDLE handle)
 
 int ZiFile::open(const Path &name, unsigned flags, unsigned mode, ZeError *e)
 {
-  return open(name, flags, mode, 0, e);
+  Guard guard(m_lock);
+
+  return open_(name, flags, mode, 0, e);
 }
 
 int ZiFile::open(
     const Path &name, unsigned flags, unsigned mode, Offset length, ZeError *e)
 {
   Guard guard(m_lock);
+
+  return open_(name, flags, mode, length, e);
+}
+
+int ZiFile::open_(
+    const Path &name, unsigned flags, unsigned mode, Offset length, ZeError *e)
+{
+  if (m_handle != ZiPlatform::nullHandle()) {
+#ifndef _WIN32
+    if (e) *e = EINVAL;
+#else
+    if (e) *e = ERROR_INVALID_PARAMETER;
+#endif
+    return Zi::IOError;
+  }
 
   Handle h;
   unsigned blkSize;
@@ -342,7 +359,7 @@ int ZiFile::open(
   }
 #endif
 
-  init_(h, flags | GC, blkSize, (flags & (MMap|Shm)) ? length : (Offset)0);
+  init_(h, flags | GC, blkSize, (flags & (MMap | Shm)) ? length : (Offset)0);
   return Zi::OK;
 
 error:
@@ -370,11 +387,12 @@ int ZiFile::mmap(
 #endif
     return Zi::IOError;
   }
-  int r;
-  ZeError e_;
-  if ((r = open(name, flags | MMap, mode, length, e)) != Zi::OK) return r;
 
   Guard guard(m_lock);
+
+  int r;
+
+  if ((r = open_(name, flags | MMap, mode, length, e)) != Zi::OK) return r;
 
 #ifndef _WIN32
   int prot = ((flags & ReadOnly) ? PROT_READ :
@@ -443,9 +461,34 @@ error:
   return Zi::IOError;
 }
 
+int ZiFile::shadow(const ZiFile &file)
+{
+  Guard guard(m_lock);
+
+  if (m_handle != ZiPlatform::nullHandle()) return Zi::IOError;
+
+  m_handle = file.m_handle;
+  m_flags = file.m_flags | Shadow;
+  m_offset = file.m_offset;
+  m_blkSize = file.m_blkSize;
+  m_addr = file.m_addr;
+  m_mmapLength = file.m_mmapLength;
+#ifndef _WIN32
+  m_shmName = file.m_shmName;
+#else
+  m_mmapHandle = file.m_mmapHandle;
+#endif
+
+  return Zi::OK;
+}
+
 void ZiFile::close()
 {
   Guard guard(m_lock);
+
+  if (m_handle == ZiPlatform::nullHandle()) return;
+
+  if (m_flags & Shadow) goto closed;
 
   if (m_addr) {
 #ifndef _WIN32
@@ -464,19 +507,23 @@ void ZiFile::close()
 #endif
   }
 
-  if (m_handle != ZiPlatform::nullHandle()) {
 #ifndef _WIN32
-    ::close(m_handle);
+  ::close(m_handle);
 #else
-    CloseHandle(m_handle);
+  CloseHandle(m_handle);
 #endif
-    m_handle = ZiPlatform::nullHandle();
-  }
 
+closed:
+  m_handle = ZiPlatform::nullHandle();
   m_flags = 0;
   m_offset = 0;
   m_addr = 0;
   m_mmapLength = 0;
+#ifndef _WIN32
+  m_shmName.null();
+#else
+  m_mmapHandle = ZiPlatform::nullHandle();
+#endif
 }
 
 int ZiFile::init(Handle handle, unsigned flags, ZeError *e)
@@ -961,7 +1008,8 @@ int ZiFile::copy(const Path &oldName, const Path &newName, ZeError *e_)
   {
     ZiFile oldHandle, newHandle;
     if (oldHandle.open(oldName, ReadOnly, 0777, &e) != Zi::OK) goto error;
-    if (newHandle.open(newName, WriteOnly|Create|Truncate, 0777, &e) != Zi::OK)
+    if (newHandle.open(
+	  newName, WriteOnly | Create | Truncate, 0777, &e) != Zi::OK)
       goto error;
     unsigned oldBlkSize = oldHandle.blkSize();
     unsigned newBlkSize = newHandle.blkSize();

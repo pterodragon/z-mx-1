@@ -49,7 +49,7 @@
 #include <MxMDCmd.hpp>
 #include <MxMDStream.hpp>
 
-#include <MxMDRing.hpp>
+#include <MxMDBroadcast.hpp>
 #include <MxMDThread.hpp>
 
 #include <MxMDRecord.hpp>
@@ -65,8 +65,7 @@ extern "C" {
 };
 
 class MxMDAPI MxMDCore :
-  public ZmPolymorph, public MxMDLib, public MxMDCmd,
-  public ZmThreadMgr, public MxEngineMgr {
+  public ZmPolymorph, public MxMDLib, public MxMDCmd, public MxEngineMgr {
 friend class MxMDLib;
 friend class MxMDCmd;
 
@@ -123,8 +122,13 @@ public:
   void stop();
   void final();
 
-  void record(ZuString path);
-  void stopRecording();
+  bool record(ZuString path);
+  ZtString stopRecording();
+
+  bool replay(ZuString path,
+      MxDateTime begin = MxDateTime(),
+      bool filter = true);
+  ZtString stopReplaying();
 
   void publish();
   void stopPublish();
@@ -154,7 +158,7 @@ private:
   typedef MxMDStream::Msg Msg;
 
   void pad(Frame *);
-  void apply(const Frame *);
+  void apply(const Frame *, bool filter);
 
   void startCmdServer();
   void initCmds();
@@ -214,23 +218,14 @@ private:
   }, msg)); */
   void log(MxMsgID, MxTraffic) { }
 
-  struct ThreadID {
-    enum {
-      Recorder = 0,
-      Snapper
-    };
-  };
-
-  void threadName(ZmThreadName &, unsigned id);
-
-  inline MxMDRing &broadcast() { return m_broadcast; }
+  inline MxMDBroadcast &broadcast() { return m_broadcast; }
 
   inline bool streaming() { return m_broadcast.active(); }
 
   template <typename Snapshot>
-  bool snapshot(Snapshot &snapshot) {
+  bool snapshot(Snapshot &snapshot, unsigned id) {
     MxSeqNo seqNo = m_broadcast.seqNo();
-    return !(allVenues([&snapshot](MxMDVenue *venue) -> uintptr_t {
+    bool ok = !(allVenues([&snapshot](MxMDVenue *venue) -> uintptr_t {
       return venue->allTickSizeTbls(
 	    [&snapshot, venue](MxMDTickSizeTbl *tbl) -> uintptr_t {
 	return !MxMDStream::addTickSizeTbl(snapshot, venue->id(), tbl->id()) ||
@@ -242,14 +237,14 @@ private:
 	});
       });
     }) || allSecurities([&snapshot](MxMDSecurity *security) -> uintptr_t {
-      return !MxMDStream::addSecurity(snapshot, MxDateTime(),
-	  security->key(), security->shard()->id(),
+      return !MxMDStream::addSecurity(snapshot, security->shard()->id(),
+	  MxDateTime(), security->key(), security->shard()->id(),
 	  security->refData());
     }) || allOrderBooks([&snapshot](MxMDOrderBook *ob) -> uintptr_t {
       if (ob->legs() == 1) {
-	return !MxMDStream::addOrderBook(snapshot, MxDateTime(),
-	    ob->key(), ob->security()->key(), ob->tickSizeTbl()->id(),
-	    ob->qtyNDP(), ob->lotSizes());
+	return !MxMDStream::addOrderBook(snapshot, ob->shard()->id(),
+	    MxDateTime(), ob->key(), ob->security()->key(),
+	    ob->tickSizeTbl()->id(), ob->qtyNDP(), ob->lotSizes());
       } else {
 	MxSecKey securityKeys[MxMDNLegs];
 	MxEnum sides[MxMDNLegs];
@@ -259,8 +254,8 @@ private:
 	  sides[i] = ob->side(i);
 	  ratios[i] = ob->ratio(i);
 	}
-	return !MxMDStream::addCombination(snapshot, MxDateTime(),
-	    ob->key(), ob->pxNDP(), ob->qtyNDP(),
+	return !MxMDStream::addCombination(snapshot, ob->shard()->id(),
+	    MxDateTime(), ob->key(), ob->pxNDP(), ob->qtyNDP(),
 	    ob->legs(), securityKeys, sides, ratios,
 	    ob->tickSizeTbl()->id(), ob->lotSizes());
       }
@@ -271,10 +266,14 @@ private:
 	    venue->id(), segment.id, segment.session);
       });
     }) || allOrderBooks([&snapshot](MxMDOrderBook *ob) -> uintptr_t {
-      return !MxMDStream::l1(snapshot, ob->key(), ob->l1Data()) ||
+      return !MxMDStream::l1(snapshot, ob->shard()->id(),
+	  ob->key(), ob->l1Data()) ||
 	!snapshotL2Side(snapshot, ob->bids()) ||
 	!snapshotL2Side(snapshot, ob->asks());
-    }) || !MxMDStream::endOfSnapshot(snapshot, seqNo));
+    }) || !MxMDStream::endOfSnapshot(snapshot, id, seqNo));
+    if (!ok) seqNo = 0;
+    MxMDStream::endOfSnapshot(m_broadcast, id, seqNo);
+    return ok;
   }
   template <class Snapshot>
   static bool snapshotL2Side(Snapshot &snapshot, MxMDOBSide *side) {
@@ -292,25 +291,20 @@ private:
       ++orderCount;
       const MxMDOrderData &data = order->data();
       MxMDOrderBook *ob = order->orderBook();
-      return !MxMDStream::addOrder(snapshot, data.transactTime,
-	  ob->key(), order->id(), data.side, ob->pxNDP(), ob->qtyNDP(),
+      return !MxMDStream::addOrder(snapshot, ob->shard()->id(),
+	  data.transactTime, ob->key(), order->id(), data.side,
+	  ob->pxNDP(), ob->qtyNDP(),
 	  data.rank, data.price, data.qty, data.flags);
     })) return false;
     if (orderCount) return true;
     const MxMDPxLvlData &data = pxLevel->data();
     MxMDOrderBook *ob = pxLevel->obSide()->orderBook();
-    return MxMDStream::pxLevel(snapshot, data.transactTime,
-	ob->key(), pxLevel->side(), false, ob->pxNDP(), ob->qtyNDP(),
+    return MxMDStream::pxLevel(snapshot, ob->shard()->id(),
+	data.transactTime, ob->key(), pxLevel->side(), false,
+	ob->pxNDP(), ob->qtyNDP(),
 	pxLevel->price(), data.qty, data.nOrders, data.flags);
   }
 
-  // FIXME - refactor so void *push(size) and push2() are run-time ZmFn
-  // associated with each snapshot, i.e. snapshot list is of ZmFn pairs,
-  // not of ZiRingParams;
-  // - remove dedicated thread; move to using thread specified in
-  // "snapper" section of cf, per recorder/subscriber/publisher;
-  // move to MxMDSnapper
-  // FIXME - rework to use MxMDSnapper, not own built-in snapshot thread;
   typedef ZmPLock Lock;
   typedef ZmGuard<Lock> Guard;
 
@@ -324,13 +318,7 @@ private:
   ZmRef<ZvCf>		m_cf;
   ZmRef<CmdServer>	m_cmd;
 
-  ZtString		m_recordCfPath;
-  ZtString		m_replayCfPath;
-
-  MxMDThread		m_recorderThread;
-  MxMDThread		m_snapperThread;
-
-  MxMDRing		m_broadcast;	// broadcasts updates
+  MxMDBroadcast		m_broadcast;	// broadcasts updates
 
   MxMDRecord		m_record;	// records to file
   MxMDReplay		m_replay;	// replays from file
@@ -341,6 +329,8 @@ private:
   ZmRef<MxMDFeed>	m_localFeed;
 
   ZmScheduler::Timer	m_timer;
+  Lock			m_timerLock;
+    ZmTime		  m_timerNext;	// time of next timer event
 };
 
 #endif /* MxMDCore_HPP */

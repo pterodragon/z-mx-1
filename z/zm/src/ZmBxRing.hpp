@@ -68,7 +68,8 @@ struct ZmBxRingBase : public NTP {
 
 template <typename T_, class NTP = ZmBxRing_Defaults>
 class ZmBxRing : public NTP::Base, public ZmRing_ {
-  ZmBxRing &operator =(const ZmBxRing &);	// prevent mis-use
+  ZmBxRing(const ZmBxRing &) = delete;
+  ZmBxRing &operator =(const ZmBxRing &) = delete;
 
 public:
   enum { CacheLineSize = ZmPlatform::CacheLineSize };
@@ -89,11 +90,6 @@ public:
       ZmRing_(params),
       m_flags(0), m_id(-1), m_ctrl(0), m_data(0),
       m_tail(0), m_size(0), m_full(0) { }
-
-  inline ZmBxRing(const ZmBxRing &ring) :
-      ZmRing_(ring.m_params), m_flags(Shadow),
-      m_id(-1), m_ctrl(ring.m_ctrl), m_data(ring.m_data),
-      m_tail(0), m_full(0) { }
 
   inline ~ZmBxRing() { close(); }
 
@@ -126,43 +122,58 @@ private:
   ZuInline ZmAtomic<uint64_t> &attSeqNo() { return ctrl()->attSeqNo; }
  
 public:
-  ZuInline void *data() { return m_data; }
+  ZuInline bool operator !() const { return !m_ctrl; }
+  ZuOpBool;
+
+  ZuInline void *data() const { return m_data; }
 
   ZuInline unsigned full() const { return m_full; }
 
   int open(unsigned flags) {
     if (m_ctrl) return OK;
-    if (!config().size()) return Error;
+    if (!params().size()) return Error;
     flags &= (Read | Write);
-    m_size = ((config().size() + Size - 1) / Size) * Size;
+    m_size = ((params().size() + Size - 1) / Size) * Size;
     if (m_flags & Shadow) {
       m_flags |= flags;
       goto ret;
     }
     m_flags = flags;
-    if (!config().ll() && ZmRing_::open() != OK) return Error;
-    if (!config().cpuset())
+    if (!params().ll() && ZmRing_::open() != OK) return Error;
+    if (!params().cpuset())
       m_ctrl = hwloc_alloc(ZmTopology::hwloc(), sizeof(Ctrl));
     else
       m_ctrl = hwloc_alloc_membind(
 	  ZmTopology::hwloc(), sizeof(Ctrl),
-	  config().cpuset(), HWLOC_MEMBIND_BIND, 0);
-    if (!m_ctrl) { if (!config().ll()) ZmRing_::close(); return Error; }
+	  params().cpuset(), HWLOC_MEMBIND_BIND, 0);
+    if (!m_ctrl) { if (!params().ll()) ZmRing_::close(); return Error; }
     memset(m_ctrl, 0, sizeof(Ctrl));
-    if (!config().cpuset())
+    if (!params().cpuset())
       m_data = hwloc_alloc(ZmTopology::hwloc(), size());
     else
       m_data = hwloc_alloc_membind(
 	  ZmTopology::hwloc(), size(),
-	  config().cpuset(), HWLOC_MEMBIND_BIND, 0);
+	  params().cpuset(), HWLOC_MEMBIND_BIND, 0);
     if (!m_data) {
       hwloc_free(ZmTopology::hwloc(), m_ctrl, sizeof(Ctrl));
       m_ctrl = 0;
-      if (!config().ll()) ZmRing_::close();
+      if (!params().ll()) ZmRing_::close();
       return Error;
     }
   ret:
     if (flags & Read) ++rdrCount();
+    return OK;
+  }
+
+  int shadow(const ZmBxRing &ring) {
+    if (m_ctrl || !ring.m_ctrl) return Error;
+    m_params = ring.m_params;
+    m_flags = Read | Shadow;
+    m_id = -1;
+    m_ctrl = ring.m_ctrl;
+    m_data = ring.m_data;
+    m_tail = 0;
+    m_full = 0;
     return OK;
   }
 
@@ -176,7 +187,7 @@ public:
     hwloc_free(ZmTopology::hwloc(), m_ctrl, sizeof(Ctrl));
     hwloc_free(ZmTopology::hwloc(), m_data, size());
     m_ctrl = m_data = 0;
-    if (!config().ll()) ZmRing_::close();
+    if (!params().ll()) ZmRing_::close();
   }
 
   int reset() {
@@ -221,7 +232,7 @@ public:
     if (ZuUnlikely((head ^ tail) == Wrapped)) {
       ++m_full;
       if constexpr (!Wait) return 0;
-      if (ZuUnlikely(!config().ll()))
+      if (ZuUnlikely(!params().ll()))
 	if (this->ZmRing_wait(Tail, this->tail(), tail) != OK) return 0;
       goto retry;
     }
@@ -238,7 +249,7 @@ public:
     head += Size;
     if ((head & ~(Wrapped | Mask)) >= size()) head = (head ^ Wrapped) - size();
 
-    if (ZuUnlikely(!config().ll())) {
+    if (ZuUnlikely(!params().ll())) {
       if (ZuUnlikely(this->head().xch(head & ~Waiting) & Waiting))
 	this->ZmRing_wake(Head, this->head(), rdrCount().load_());
     } else
@@ -255,7 +266,7 @@ public:
     else
       head &= ~EndOfFile_;
 
-    if (ZuUnlikely(!config().ll())) {
+    if (ZuUnlikely(!params().ll())) {
       if (ZuUnlikely(this->head().xch(head & ~Waiting) & Waiting))
 	this->ZmRing_wake(Head, this->head(), rdrCount().load_());
     } else
@@ -356,7 +367,7 @@ public:
 	if ((tail & ~Wrapped) >= size()) tail = (tail ^ Wrapped) - size();
 	if (*(ZmAtomic<uint64_t> *)ptr &= ~(1ULL<<m_id)) continue;
 
-	if (ZuUnlikely(!config().ll())) {
+	if (ZuUnlikely(!params().ll())) {
 	  if (ZuUnlikely(this->tail().xch(tail) & Waiting))
 	    this->ZmRing_wake(Tail, this->tail(), 1);
 	} else
@@ -387,7 +398,7 @@ public:
     head = this->head(); // acquire
     if (tail == (head & ~Mask)) {
       if (ZuUnlikely(head & EndOfFile_)) return 0;
-      if (ZuUnlikely(!config().ll()))
+      if (ZuUnlikely(!params().ll()))
 	if (this->ZmRing_wait(Head, this->head(), head) != OK) return 0;
       goto retry;
     }
@@ -406,7 +417,7 @@ public:
     if ((tail & ~Wrapped) >= size()) tail = (tail ^ Wrapped) - size();
     m_tail = tail;
     if (*(ZmAtomic<uint64_t> *)ptr &= ~(1ULL<<m_id)) return;
-    if (ZuUnlikely(!config().ll())) {
+    if (ZuUnlikely(!params().ll())) {
       if (ZuUnlikely(this->tail().xch(tail) & Waiting))
 	this->ZmRing_wake(Tail, this->tail(), 1);
     } else

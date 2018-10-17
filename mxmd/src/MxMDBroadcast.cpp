@@ -17,41 +17,45 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// MxMD in-memory Rx/Tx
+// MxMD in-memory broadcast
 
-#include <MxMDRing.hpp>
+#include <MxMDBroadcast.hpp>
 
 #include <MxMDCore.hpp>
 
-MxMDRing(MxMDCore *core) : m_core(core), m_linkID("RMD"), m_seqNo(0)
+MxMDBroadcast(MxMDCore *core) : m_core(core), m_seqNo(0)
 {
-  m_config.name("RMD").size(131072); // 131072 is ~100mics at 1Gbit/s
+  m_params.name("RMD").size(131072); // 131072 is ~100mics at 1Gbit/s
 }
 
-~MxMDRing()
+~MxMDBroadcast()
 {
-  close_();
+  close__();
 }
 
-void init(ZvCf *cf)
+void MxMDBroadcast::init(ZvCf *cf)
 {
-  // FIXME - linkID
   m_config.init(cf);
 }
 
-bool open()
+bool MxMDBroadcast::open()
 {
   Guard guard(m_lock);
+  return open_();
+}
+
+bool MxMDBroadcast::open_()
+{
   ++m_openCount;
   if (m_ring) return true;
-  m_ring = new Ring(m_config);
+  m_ring = new Ring(m_params);
   ZeError e;
   if (m_ring->open(Ring::Create | Ring::Read | Ring::Write, &e) < 0) {
     m_openCount = 0;
     m_ring = 0;
     guard.unlock();
     m_core->raise(ZeEVENT(Error,
-      ([name = MxTxtString(m_config.name()), e](
+      ([name = MxTxtString(m_params.name()), e](
 	const ZeEvent &, ZmStream &s) {
 	  s << '"' << name << "\": "
 	  "failed to open IPC shared memory ring buffer: " << e;
@@ -61,14 +65,43 @@ bool open()
   return true;
 }
 
-void close()
+ZmRef<Ring> MxMDBroadcast::shadow()
 {
   Guard guard(m_lock);
-  if (!m_openCount) return;
-  if (!--m_openCount) close_();
+  if (!open_()) return false;
+  ZmRef<Ring> ring = new Ring();
+  if (ring->shadow(*m_ring) < 0) { close_(); return false; }
+  return true;
 }
 
-inline void eof()
+void MxMDBroadcast::close(ZmRef<Ring> ring)
+{
+  Guard guard(m_lock);
+  ring->close();
+  close_();
+}
+
+void MxMDBroadcast::close()
+{
+  Guard guard(m_lock);
+  close_();
+}
+
+void MxMDBroadcast::close_()
+{
+  if (!m_openCount) return;
+  if (!--m_openCount) close__();
+}
+
+void MxMDBroadcast::close__()
+{
+  if (ZuLikely(m_ring)) {
+    m_ring->close();
+    m_ring = 0;
+  }
+}
+
+void MxMDBroadcast::eof()
 {
   Guard guard(m_lock);
   if (ZuUnlikely(!m_ring)) return;
@@ -78,7 +111,7 @@ inline void eof()
   m_ring = 0;
 }
 
-void *push(unsigned size)
+void *MxMDBroadcast::push(unsigned size)
 {
   m_lock.lock();
   if (ZuUnlikely(!m_ring)) { m_lock.unlock(); return 0; }
@@ -96,7 +129,7 @@ retry:
   m_lock.unlock();
   if (i != Zi::NotReady)
     m_core->raise(ZeEVENT(Error,
-      ([name = MxTxtString(m_config.name())](
+      ([name = MxTxtString(m_params.name())](
 	  const ZeEvent &, ZmStream &s) {
 	s << '"' << name << "\": "
 	"IPC shared memory ring buffer overflow";
@@ -104,9 +137,16 @@ retry:
   return 0;
 }
 
-void *out(void *ptr, unsigned length, unsigned type, ZmTime stamp)
+void *MxMDBroadcast::out(void *ptr, unsigned length, unsigned type,
+    int shardID, ZmTime stamp)
 {
   Frame *frame = new (ptr) Frame(
-      length, type, m_linkID, ++m_seqNo, stamp.sec(), stamp.nsec());
+      length, type, shardID, ++m_seqNo, stamp.sec(), stamp.nsec());
   return frame->ptr();
+}
+
+void MxMDBroadcast::push2()
+{
+  if (ZuLikely(m_ring)) m_ring->push2();
+  m_lock.unlock();
 }

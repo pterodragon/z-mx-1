@@ -23,270 +23,291 @@
 
 #include <MxMDRecord.hpp>
 
-MxMDRecord::MxMDRecord(MxMDCore *core) : m_core(core) { }
-
-MxMDRecord::~MxMDRecord() { m_file.close(); }
-
 #define fileERROR(path__, code) \
-  m_core->raise(ZeEVENT(Error, \
+  core()->raise(ZeEVENT(Error, \
     ([=, path = path__](const ZeEvent &, ZmStream &s) { \
       s << "MxMD \"" << path << "\": " << code; })))
 #define fileINFO(path__, code) \
-  m_core->raise(ZeEVENT(Info, \
+  core()->raise(ZeEVENT(Info, \
     ([=, path = path__](const ZeEvent &, ZmStream &s) { \
       s << "MxMD \"" << path << "\": " << code; })))
 
-void MxMDRecord::init()
+void MxMDRecord::init(MxMDCore *core)
 {
-  Mx *mx = m_core->mx();
-  ZmRef<ZvCf> cf = m_core->cf()->subset("record", false, true);
-  MxEngine::init(m_core, this, mx, cf);
+  ZmRef<ZvCf> cf = core->cf()->subset("record", false, true);
+
+  Mx *mx = core->mx();
+
+  MxEngine::init(core, this, mx, cf);
+
   m_snapThread = cf->getInt("snapThread", 1, mx->nThreads() + 1, true);
-  m_link = MxEngine::updateLink<Link>("record", nullptr);
-  m_link->init(this);
+  updateLink("record", cf);
 }
 
-ZtString MxMDRecord::path() const
+void MxMDRecord::final() { }
+
+bool MxMDRecord::record(ZtString path)
 {
-  ReadGuard guard(m_ioLock);
-  return m_path;
+  return m_link->record(ZuMv(path));
 }
 
-bool MxMDRecord::running() const
+ZtString MxMDRecord::stopRecording()
 {
-  ReadGuard guard(m_stateLock);
-  return m_running;
+  return m_link->stopRecording();
 }
 
-bool MxMDRecord::start(ZtString path)
+bool MxMDRecLink::record(ZtString path)
 {
+  down();
+  { Guard guard(m_lock); if (!(m_path = ZuMv(path))) return true; }
+  int state;
+  thread_local ZmSemaphore sem;
+  up([&state, &sem](int state_) { state = state_; sem.post(); });
+  sem.wait();
+  return state != MxLinkState::Failed;
+}
+
+ZtString MxMDRecLink::stopRecording()
+{
+  ZtString path;
+  { Guard guard(m_lock); path = ZuMv(m_path); }
+  down();
+  return path;
+}
+
+void MxMDRecLink::update(ZvCf *cf)
+{
+  record(cf->get("path"));
+}
+
+void MxMDRecLink::reset(MxSeqNo rxSeqNo, MxSeqNo)
+{
+  rxRun([rxSeqNo](Rx *rx) { rx->rxReset(rxSeqNo); });
+}
+
+void MxMDRecLink::connect()
+{
+  ZtString path;
+
   {
-    Guard guard(m_stateLock);
-    if (m_running) {
-      // FIXME - stop first
-    }
-    m_running = true;
-  }
-  if (!fileOpen(ZuMv(path))) return false;
-  if (!m_core->broadcast().open()) {
-    fileClose();
-    return false;
-  }
-  MxEngine::start();
-  m_link->rxInvoke([](Rx *rx) { rx->app().recorder()->recv(rx)); });
-  m_attachSem.wait();
-  {
-    Guard guard(m_ioLock);
-    m_snapMsg = new MsgData();
-  }
-  mx()->run(m_snapThread, [](MxMDRecord *self) { self->snap(); }, this);
-  return true;
-}
+    Guard guard(m_lock);
 
-ZtString MxMDRecord::stop()
-{
-  {
-    Guard guard(m_stateLock);
-    if (!m_running) return;
-    m_running = false;
+    if (!m_path) { guard.unlock(); disconnected(); return; }
 
-  {
-    Guard guard(m_ioLock);
-    m_snapMsg = nullptr;
-  }
-
-  using namespace MxMDStream;
-  m_core->broadcast().reqDetach();
-  m_detachSem.wait();
-  m_running = false;
-
-  MxEngine::stop();
-
-  m_core->broadcast().close();
-  return ZuMv(fileClose());
-}
-
-bool MxMDRecord::fileOpen(ZtString path)
-{
-  Guard guard(m_ioLock);
-  if (!!m_file && m_path == path) return true;
-  if (!!m_file) { m_file.close(); m_path.null(); }
-  ZeError e;
-  if (m_file.open(path,
-	ZiFile::WriteOnly | ZiFile::Append | ZiFile::Create,
-	0666, &e) != Zi::OK) {
-    guard.unlock();
-    fileERROR(ZuMv(path), e);
-    return false;
-  }
-  if (!m_file.offset()) {
-    using namespace MxMDStream;
-    FileHdr hdr("RMD", MxMDCore::vmajor(), MxMDCore::vminor());
-    if (m_file.write(&hdr, sizeof(FileHdr), &e) != Zi::OK) {
-      m_file.close();;
+    if (m_file) m_file.close();
+    ZeError e;
+    if (m_file.open(m_path,
+	  ZiFile::WriteOnly | ZiFile::Append | ZiFile::Create,
+	  0666, &e) != Zi::OK) {
+error:
+      path = m_path;
       guard.unlock();
+      disconnected();
       fileERROR(ZuMv(path), e);
-      return false;
+      return;
     }
+    if (!m_file.offset()) {
+      using namespace MxMDStream;
+      FileHdr hdr("RMD", MxMDCore::vmajor(), MxMDCore::vminor());
+      if (m_file.write(&hdr, sizeof(FileHdr), &e) != Zi::OK) {
+	m_file.close();
+	goto error;
+      }
+    }
+
+    if (!core()->broadcast().open()) {
+      m_file.close();
+      guard.unlock();
+      disconnected();
+      return;
+    }
+
+    path = m_path;
   }
-  m_path = ZuMv(path);
-  return true;
+
+  if (path) fileINFO(ZuMv(path), "started recording");
+
+  rxInvoke([](Rx *rx) { rx->app().recv(rx)); });
+  m_attachSem.wait();
+
+  bool snap = state() == MxLinkState::Connecting;
+
+  connected();
+
+  if (snap)
+    mx()->run(m_snapThread, [](MxMDRecLink *link) { link->snap(); }, this);
 }
 
-ZtString MxMDRecord::fileClose()
+void MxMDRecLink::disconnect()
 {
-  Guard guard(m_ioLock);
-  m_file.close();
-  return ZuMv(m_path);
+  MxMDRing &broadcast = core()->broadcast();
+
+  MxMDStream::detach(broadcast, broadcast.id());
+  m_detachSem.wait();
+
+  broadcast.close();
+
+  ZtString path;
+
+  {
+    Guard guard(m_lock);
+
+    path = ZuMv(m_path);
+
+    m_file.close();
+  }
+
+  if (path) fileINFO(ZuMv(path), "stopped recording");
+
+  disconnected();
 }
 
-int MxMDRecord::write(const Frame *frame, ZeError *e)
+int MxMDRecLink::write(const Frame *frame, ZeError *e)
 {
   return m_file.write((const void *)frame, sizeof(Frame) + frame->len, e);
 }
 
-
-void MxMDRecord::recv(Rx *rx)
+void MxMDRecLink::recv(Rx *rx)
 {
   rx->startQueuing();
   using namespace MxMDStream;
-  MxMDRing &broadcast = m_core->broadcast();
+  MxMDRing &broadcast = core()->broadcast();
   if (broadcast.attach() != Zi::OK) {
+    disconnect();
     m_attachSem.post();
-    Guard guard(m_stateLock);
-    m_running = false;
     return;
   }
   m_attachSem.post();
-  m_link->rxRun([](Rx *rx) { rx->app().recorder()->recvMsg(rx); });
+  rxRun([](Rx *rx) { rx->app().recvMsg(rx); });
 }
 
-void MxMDRecord::recvMsg(Rx *rx)
+void MxMDRecLink::recvMsg(Rx *rx)
 {
   using namespace MxMDStream;
   const Frame *frame;
-  MxMDRing &broadcast = m_core->broadcast();
+  MxMDRing &broadcast = core()->broadcast();
   if (ZuUnlikely(!(frame = broadcast.shift()))) {
-    if (ZuLikely(broadcast.readStatus() == Zi::EndOfFile)) goto end;
-    goto next;
-  }
-  if (ZuUnlikely(frame->type == Type::Detach)) {
-    const Detach &detach = frame->as<Detach>();
-    if (ZuUnlikely(detach.id == broadcast.id())) {
-      broadcast.shift2();
-      goto end;
+    if (ZuLikely(broadcast.readStatus() == Zi::EndOfFile)) {
+      broadcast.detach();
+      broadcast.close();
+      { Guard guard(m_lock); m_file.close(); }
+      disconnected();
+      return;
     }
+    rxRun([](Rx *rx) { rx->app().recvMsg(rx); });
+    return;
+  }
+  if (frame->len > sizeof(Buf)) {
     broadcast.shift2();
-    goto next;
+    broadcast.detach();
+    broadcast.close();
+    { Guard guard(m_lock); m_file.close(); }
+    disconnected();
+    core()->raise(ZeEVENT(Error,
+	([name = ZtString(broadcast.params().name())](
+	    const ZeEvent &, ZmStream &s) {
+	  s << '"' << name << "\": "
+	  "IPC shared memory ring buffer read error - "
+	  "message too big";
+	})));
+    return;
   }
-  {
-    if (frame->len > sizeof(Buf)) {
-      broadcast.shift2();
-      snapStop();
-      m_core->raise(ZeEVENT(Error,
-	  ([name = MxTxtString(broadcast.config().name())](
-	      const ZeEvent &, ZmStream &s) {
-	    s << '"' << name << "\": "
-	    "IPC shared memory ring buffer read error - "
-	    "message too big";
-	  })));
-      goto end;
-    }
-    unsigned length = sizeof(Frame) + frame->len;
-    ZmRef<Msg> msg = new Msg();
-    Frame *msgFrame = msg->frame();
-    memcpy(msgFrame, frame, length);
-    msgFrame->linkID = m_link->id();
-    ZmRef<MxQMsg> qmsg = new MxQMsg(
-	msg, 0, length, MxMsgID{msgFrame->linkID, msgFrame->seqNo});
-    rx->received(qmsg);
+  switch ((int)frame->type) {
+    case Type::EndOfSnapshot:
+      {
+	const EndOfSnapshot &eos = frame->as<EndOfSnapshot>();
+	if (ZuUnlikely(eos.id == broadcast.id())) {
+	  MxSeqNo seqNo = eos.seqNo;
+	  broadcast.shift2();
+	  // snapshot failure (!seqNo) is handled in snap()
+	  if (seqNo) rx->stopQueuing(seqNo);
+	} else
+	  broadcast.shift2();
+      }
+      break;
+    case Type::Detach:
+      {
+	const Detach &detach = frame->as<Detach>();
+	if (ZuUnlikely(detach.id == broadcast.id())) {
+	  broadcast.shift2();
+	  broadcast.detach();
+	  m_detachSem.post();
+	  return;
+	}
+	broadcast.shift2();
+      }
+      break;
+    default:
+      {
+	unsigned length = sizeof(Frame) + frame->len;
+	ZmRef<Msg> msg = new Msg();
+	Frame *msgFrame = msg->frame();
+	memcpy(msgFrame, frame, length);
+	broadcast.shift2();
+	ZmRef<MxQMsg> qmsg = new MxQMsg(
+	    msg, 0, length, MxMsgID{id(), msgFrame->seqNo});
+	rx->received(qmsg);
+      }
+      break;
   }
-  broadcast.shift2();
+  rxRun([](Rx *rx) { rx->app().recvMsg(rx); });
+}
 
-next:
-  m_link->rxRun([](Rx *rx) { rx->app().recorder()->recvMsg(rx); });
-  return;
-
-end:
-  broadcast.detach();
-  m_detachSem.post();
+ZmRef<MxAnyLink> MxMDRecord::createLink(MxID id)
+{
+  return new MxMDRecLink(id);
 }
 
 MxEngineApp::ProcessFn MxMDRecord::processFn()
 {
   return static_cast<MxEngineApp::ProcessFn>(
-      [](MxEngineApp *app, MxAnyLink *, MxQMsg *msg) {
-    static_cast<MxMDRecord *>(app)->writeMsg(msg);
+      [](MxEngineApp *, MxAnyLink *link, MxQMsg *msg) {
+    static_cast<Link *>(link)->writeMsg(msg);
   });
 }
 
-void MxMDRecord::writeMsg(MxQMsg *qmsg)
+void MxMDRecLink::writeMsg(MxQMsg *qmsg)
 {
   ZeError e;
-  Guard guard(m_ioLock);
+  Guard guard(m_lock);
   if (ZuUnlikely(write(qmsg->as<MsgData>().frame(), &e)) != Zi::OK) {
     ZtString path = m_path;
-    m_file.close();
     guard.unlock();
-    recvStop();
+    disconnect();
     fileERROR(ZuMv(path), e);
     return;
   }
 }
 
-void MxMDRecord::snap()
+void MxMDRecLink::snap()
 {
-  bool failed = !m_core->snapshot(*this);
-  {
-    Guard guard(m_ioLock);
-    if (failed) {
-      m_file.close();
-      guard.unlock();
-      recvStop();
-      return;
-    }
-  }
+  m_snapMsg = new MsgData();
+  if (!core()->snapshot(*this, broadcast.id())) disconnect();
+  m_snapMsg = nullptr;
 }
-
-Frame *MxMDRecord::push(unsigned size)
+Frame *MxMDRecLink::push(unsigned size)
 {
-  m_ioLock.lock();
-  if (ZuUnlikely(!m_snapMsg)) {
-    m_ioLock.unlock();
-    return 0;
-  }
+  m_lock.lock();
+  if (ZuUnlikely(state() != MxLinkState::Up)) { m_lock.unlock(); return 0; }
   return m_snapMsg->frame();
 }
-void *MxMDRecord::out(void *ptr, unsigned length, unsigned type, ZmTime stamp)
+void *MxMDRecLink::out(void *ptr, unsigned length, unsigned type,
+    int shardID, ZmTime stamp)
 {
   Frame *frame = new (ptr) Frame(
-      length, type, m_link->id(), 0, stamp.sec(), stamp.nsec());
+      length, type, shardID, 0, stamp.sec(), stamp.nsec());
   return frame->ptr();
 }
-void MxMDRecord::push2()
+void MxMDRecLink::push2()
 {
-  if (ZuUnlikely(!m_snapMsg)) { m_ioLock.unlock(); return; }
   Frame *frame = m_snapMsg->frame();
   ZeError e;
   if (ZuUnlikely(write(frame, &e) != Zi::OK)) {
-    m_snapMsg = nullptr;
     ZtString path = m_path;
-    m_ioLock.unlock();
-    m_core->raise(ZeEVENT(Error, MxMDFileDiag(ZuMv(path), e)));
+    m_lock.unlock();
+    disconnect();
+    fileERROR(ZuMv(path), e);
     return;
   }
-  if (ZuUnlikely(frame->type == Type::EndOfSnapshot)) {
-    m_snapshotSeqNo = frame->as<EndOfSnapshot>().seqNo;
-    m_snapMsg = nullptr;
-    m_ioLock.unlock();
-    m_link->rxInvoke([](Rx *rx) {
-	rx->stopQueuing(rx->app().recorder()->snapshotSeqNo()); });
-    return;
-  }
-  m_ioLock.unlock();
-}
-MxSeqNo MxMDRecord::snapshotSeqNo()
-{
-  Guard guard(m_ioLock);
-  return m_snapshotSeqNo;
+  m_lock.unlock();
 }

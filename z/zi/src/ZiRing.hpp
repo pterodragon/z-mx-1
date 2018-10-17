@@ -54,8 +54,6 @@
 #include <ZmPlatform.hpp>
 #include <ZmBitmap.hpp>
 #include <ZmTopology.hpp>
-#include <ZmLock.hpp>
-#include <ZmGuard.hpp>
 #include <ZmAtomic.hpp>
 
 #include <ZePlatform.hpp>
@@ -126,26 +124,8 @@ public:
     m_killWait(p.m_killWait),
     m_coredump(p.m_coredump) { }
 
-  inline ZiRingParams(const ZiRingParams &p) :
-    m_name(p.m_name), m_size(p.m_size),
-    m_ll(p.m_ll), m_spin(p.m_spin),
-    m_timeout(p.m_timeout),
-    m_cpuset(p.m_cpuset),
-    m_killWait(p.m_killWait),
-    m_coredump(p.m_coredump) { }
-  inline ZiRingParams &operator =(const ZiRingParams &p) {
-    if (this != &p) {
-      m_name = p.m_name;
-      m_size = p.m_size;
-      m_ll = p.m_ll;
-      m_spin = p.m_spin;
-      m_timeout = p.m_timeout;
-      m_cpuset = p.m_cpuset;
-      m_killWait = p.m_killWait;
-      m_coredump = p.m_coredump;
-    }
-    return *this;
-  }
+  inline ZiRingParams(const ZiRingParams &p) = default;
+  inline ZiRingParams &operator =(const ZiRingParams &p) = default;
 
   template <typename Name>
   inline ZiRingParams &name(const Name &s) { m_name = s; return *this; }
@@ -188,7 +168,7 @@ protected:
 
   enum { Head = 0, Tail };
 
-  ZiRing_(const ZiRingParams &params) : m_config(params)
+  ZiRing_(const ZiRingParams &params) : m_params(params)
 #ifdef _WIN32
     , m_sem{0, 0}
 #endif
@@ -220,11 +200,11 @@ protected:
   static bool kill(uint32_t pid, bool coredump);
 
 public:
-  ZuInline const ZiRingParams &config() const { return m_config; }
-  ZuInline ZiRingParams &config() { return m_config; }
+  ZuInline const ZiRingParams &params() const { return m_params; }
+  ZuInline ZiRingParams &params() { return m_params; }
 
 private:
-  ZiRingParams		m_config;
+  ZiRingParams		m_params;
 #ifdef _WIN32
   HANDLE		m_sem[2];
 #endif
@@ -246,11 +226,10 @@ struct ZiRingBase : public NTP {
   typedef Base_ Base;
 };
 
-// ring buffer
 template <typename T_, class NTP = ZiRing_Defaults>
 class ZiRing : public NTP::Base, public ZiRing_ {
-  ZiRing(const ZiRing &);
-  ZiRing &operator =(const ZiRing &);	// prevent mis-use
+  ZiRing(const ZiRing &) = delete;
+  ZiRing &operator =(const ZiRing &) = delete;	// prevent mis-use
 
 public:
   enum { CacheLineSize = ZmPlatform::CacheLineSize };
@@ -258,7 +237,8 @@ public:
   enum { // open() flags
     Create	= 0x00000001,
     Read	= 0x00000002,
-    Write	= 0x00000004
+    Write	= 0x00000004,
+    Shadow	= 0x00000008
   };
 
   typedef T_ T;
@@ -312,21 +292,25 @@ private:
   ZuInline ZmTime *rdrTime() { return ctrl()->rdrTime; }
  
 public:
-  ZuInline void *data() { return m_data.addr(); }
+  ZuInline bool operator !() const { return !m_ctrl.addr(); }
+  ZuOpBool;
+
+  ZuInline void *data() const { return m_data.addr(); }
 
   int open(unsigned flags, ZeError *e) {
-    if (!config().name()) goto einval;
+    if (m_ctrl.addr()) goto einval;
+    if (!params().name()) goto einval;
     m_flags = flags;
-    if (!config().ll() && ZiRing_::open(e) != Zi::OK) return Zi::IOError;
+    if (!params().ll() && ZiRing_::open(e) != Zi::OK) return Zi::IOError;
     {
       unsigned mmapFlags = ZiFile::Shm;
       if (flags & Create) mmapFlags |= ZiFile::Create;
       int r;
-      if ((r = m_ctrl.mmap(config().name() + ".ctrl",
+      if ((r = m_ctrl.mmap(params().name() + ".ctrl",
 	      mmapFlags, sizeof(Ctrl), true, 0, 0777, e)) != Zi::OK)
 	return r;
-      if (config().size()) {
-	uint32_t reqSize = (uint32_t)config().size() | (uint32_t)config().ll();
+      if (params().size()) {
+	uint32_t reqSize = (uint32_t)params().size() | (uint32_t)params().ll();
 	// check that requested sizes and latency are consistent
 	if (uint32_t openSize = this->openSize().cmpXch(reqSize, 0))
 	  if (openSize != reqSize) {
@@ -339,27 +323,27 @@ public:
 	  m_ctrl.close();
 	  goto einval;
 	}
-	config().size(openSize & ~1);
-	config().ll(openSize & 1);
+	params().size(openSize & ~1);
+	params().ll(openSize & 1);
       }
       mmapFlags |= ZiFile::ShmDbl;
-      if ((r = m_data.mmap(config().name() + ".data",
-	      mmapFlags, config().size(), true, 0, 0777, e)) != Zi::OK) {
+      if ((r = m_data.mmap(params().name() + ".data",
+	      mmapFlags, params().size(), true, 0, 0777, e)) != Zi::OK) {
 	m_ctrl.close();
-	if (!config().ll()) ZiRing_::close();
+	if (!params().ll()) ZiRing_::close();
 	return r;
       }
-      if (!!config().cpuset())
+      if (!!params().cpuset())
 	hwloc_set_area_membind(
 	    ZmTopology::hwloc(), m_data.addr(), (m_data.mmapLength())<<1,
-	    config().cpuset(), HWLOC_MEMBIND_BIND, HWLOC_MEMBIND_MIGRATE);
+	    params().cpuset(), HWLOC_MEMBIND_BIND, HWLOC_MEMBIND_MIGRATE);
       if (flags & Read) ++rdrCount();
       if (flags & Write) {
 	gc();
 	this->head() = this->head().load_() & ~EndOfFile;
       }
-      return Zi::OK;
     }
+    return Zi::OK;
 
   einval:
 #ifndef _WIN32
@@ -370,6 +354,20 @@ public:
     return Zi::IOError;
   }
 
+  int shadow(const ZiRing &ring) {
+    if (m_ctrl.addr() || !ring.m_ctrl.addr()) return Zi::IOError;
+    if (m_ctrl.shadow(ring.m_ctrl) != Zi::OK) return Zi::IOError;
+    if (m_data.shadow(ring.m_data) != Zi::OK) {
+      m_ctrl.close();
+      return Zi::IOError;
+    }
+    m_params = ring.m_params;
+    m_flags = Read | Shadow;
+    m_id = -1;
+    m_tail = 0;
+    return Zi::OK;
+  }
+
   void close() {
     if (!m_ctrl.addr()) return;
     if (m_flags & Read) {
@@ -378,7 +376,7 @@ public:
     }
     m_ctrl.close();
     m_data.close();
-    if (!config().ll()) ZiRing_::close();
+    if (!params().ll()) ZiRing_::close();
   }
 
   int reset() {
@@ -433,7 +431,7 @@ public:
       if (ZuUnlikely(j < 0)) return 0;
       if (ZuUnlikely(j > 0)) goto retry;
       if constexpr (!Wait) return 0;
-      if (ZuUnlikely(!config().ll()))
+      if (ZuUnlikely(!params().ll()))
 	if (ZiRing_wait(Tail, this->tail(), tail) != Zi::OK) return 0;
       goto retry;
     }
@@ -452,7 +450,7 @@ public:
     if ((head & ~(Wrapped | Mask)) >= size())
       head = (head ^ Wrapped) - size();
 
-    if (ZuUnlikely(!config().ll())) {
+    if (ZuUnlikely(!params().ll())) {
       if (ZuUnlikely(this->head().xch(head & ~Waiting) & Waiting))
 	ZiRing_wake(Head, this->head(), rdrCount().load_());
     } else
@@ -469,7 +467,7 @@ public:
     else
       head &= ~EndOfFile;
 
-    if (ZuUnlikely(!config().ll())) {
+    if (ZuUnlikely(!params().ll())) {
       if (ZuUnlikely(this->head().xch(head & ~Waiting) & Waiting))
 	ZiRing_wake(Head, this->head(), rdrCount().load_());
     } else
@@ -502,7 +500,7 @@ public:
       }
       if (attSeqNo == this->attSeqNo()) break;
       ZmPlatform::yield();
-      if (++i == config().spin()) return 0;
+      if (++i == params().spin()) return 0;
     }
 
     uint32_t tail_ = this->tail(); // acquire
@@ -517,7 +515,7 @@ public:
       uint64_t mask = (*(ZmAtomic<uint64_t> *)ptr).xchAnd(~dead);
       if (mask && !(mask & ~dead)) {
 	freed += n;
-	if (ZuUnlikely(!config().ll())) {
+	if (ZuUnlikely(!params().ll())) {
 	  if (ZuUnlikely(
 		this->tail().xch(tail | (tail_ & (Mask & ~Waiting))) & Waiting))
 	    ZiRing_wake(Tail, this->tail(), 1);
@@ -549,8 +547,8 @@ public:
     }
     for (unsigned id = 0; id < 64; id++)
       if (targets & (1ULL<<id))
-	ZiRing_::kill(rdrPID()[id], config().coredump());
-    ZmPlatform::sleep(ZmTime((time_t)config().killWait()));
+	ZiRing_::kill(rdrPID()[id], params().coredump());
+    ZmPlatform::sleep(ZmTime((time_t)params().killWait()));
     return gc();
   }
 
@@ -663,7 +661,7 @@ public:
 	if ((tail & ~Wrapped) >= size()) tail = (tail ^ Wrapped) - size();
 	if (*(ZmAtomic<uint64_t> *)ptr &= ~(1ULL<<m_id)) continue;
 	/**/ZiRing_bp(detach3);
-	if (ZuUnlikely(!config().ll())) {
+	if (ZuUnlikely(!params().ll())) {
 	  if (ZuUnlikely(this->tail().xch(tail) & Waiting))
 	    ZiRing_wake(Tail, this->tail(), 1);
 	} else
@@ -703,7 +701,7 @@ public:
     /**/ZiRing_bp(shift1);
     if (tail == (head & ~Mask)) {
       if (ZuUnlikely(head & EndOfFile)) return 0;
-      if (ZuUnlikely(!config().ll()))
+      if (ZuUnlikely(!params().ll()))
 	if (ZiRing_wait(Head, this->head(), head) != Zi::OK) return 0;
       goto retry;
     }
@@ -722,7 +720,7 @@ public:
     if ((tail & ~Wrapped) >= size()) tail = (tail ^ Wrapped) - size();
     m_tail = tail;
     if (*(ZmAtomic<uint64_t> *)ptr &= ~(1ULL<<m_id)) return;
-    if (ZuUnlikely(!config().ll())) {
+    if (ZuUnlikely(!params().ll())) {
       if (ZuUnlikely(this->tail().xch(tail) & Waiting))
 	ZiRing_wake(Tail, this->tail(), 1);
     } else

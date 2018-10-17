@@ -44,25 +44,18 @@ class MxMDSubLink;
 
 class MxMDAPI MxMDSubscriber : public MxEngineApp, public MxEngine {
 public:
-  inline MxMDSubscriber() { }
+  MxMDSubscriber() { }
   ~MxMDSubscriber() { }
 
-  inline MxMDCore *core() const { return static_cast<MxMDCore *>(mgr()); }
+  ZuInline MxMDCore *core() const { return static_cast<MxMDCore *>(mgr()); }
 
   void init(MxMDCore *core);
   void final();
 
-  void up();
-  void down();
+  void updateLinks(ZuString partitions); // update from CSV
 
   // Rx (called from engine's rx thread)
-  MxEngineApp::ProcessFn processFn() {
-    return static_cast<MxEngineApp::ProcessFn>(
-	[](MxEngineApp *app, MxAnyLink *link, MxQMsg *msg) {
-	    static_cast<MxMDSubscriber *>(app)->process_(
-		static_cast<MxMDSubLink *>(link), msg);
-    });
-  }
+  ProcessFn processFn();
 
   // Tx (called from engine's tx thread) (unused)
   void sent(MxAnyLink *, MxQMsg *) { }
@@ -76,6 +69,7 @@ public:
 
 private:
   ZuInline const ZiIP &interface() const { return m_interface; }
+  ZuInline bool filter() const { return m_filter; }
   ZuInline unsigned maxQueueSize() const { return m_maxQueueSize; }
   ZuInline ZmTime loginTimeout() const { return ZmTime(m_loginTimeout); }
   ZuInline ZmTime reconnInterval() const { return ZmTime(m_reconnInterval); }
@@ -97,6 +91,7 @@ private:
 
 private:
   ZiIP			m_interface;
+  bool			m_filter = false;
   unsigned		m_maxQueueSize = 0;
   double		m_loginTimeout = 0.0;
   double		m_reconnInterval = 0.0;
@@ -200,8 +195,11 @@ public:
 
   typedef MxMDSubscriber Engine;
 
-  ZuInline Engine *engine() {
-    return static_cast<Engine *>(MxAnyLink::engine()); // actually MxAnyTx
+  ZuInline Engine *engine() const {
+    return static_cast<Engine *>(MxAnyLink::engine());
+  }
+  ZuInline MxMDCore *core() const {
+    return static_cast<MxMDCore *>(engine()->mgr());
   }
 
   ZmTime loginTimeout() { return engine()->loginTimeout(); }

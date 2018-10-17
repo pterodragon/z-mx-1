@@ -605,10 +605,6 @@ template <typename T>
 ZuInline const typename ZuIsBoxed<T, T>::T &ZuBoxed(const T &t) { return t; }
 template <typename T>
 ZuInline typename ZuIsBoxed<T, T>::T &ZuBoxed(T &t) { return t; }
-
-// ZuBoxPtr(t) - convenience function to box pointers as uintptr_t
-#define ZuBoxPtr(x) (ZuBox<uintptr_t, ZuCmp0<uintptr_t> >{(uintptr_t)(x)})
-
 template <typename T>
 ZuInline const typename ZuNotBoxed<T, ZuBox<T> >::T &ZuBoxed(const T &t) {
   const ZuBox<T> *ZuMayAlias(t_) = (const ZuBox<T> *)&t;
@@ -619,6 +615,9 @@ ZuInline typename ZuNotBoxed<T, ZuBox<T> >::T &ZuBoxed(T &t) {
   ZuBox<T> *ZuMayAlias(t_) = (ZuBox<T> *)&t;
   return *t_;
 }
+
+// ZuBoxPtr(t) - convenience function to box pointers as uintptr_t
+#define ZuBoxPtr(x) (ZuBox<uintptr_t, ZuCmp0<uintptr_t> >{(uintptr_t)(x)})
 
 #ifdef _MSC_VER
 #pragma warning(pop)

@@ -47,16 +47,15 @@ public:
   inline MxMDPublisher() { }
   ~MxMDPublisher() { }
 
-  inline MxMDCore *core() const { return static_cast<MxMDCore *>(mgr()); }
+  ZuInline MxMDCore *core() const { return static_cast<MxMDCore *>(mgr()); }
 
   void init(MxMDCore *core);
   void final();
 
-  void up();
-  void down();
+  void updateLinks(ZuString partitions); // update from CSV
 
-  // Rx (called from engine's rx thread) (unused)
-  MxEngineApp::ProcessFn processFn() { return 0; }
+  // Rx (called from engine's rx thread)
+  ProcessFn processFn();
 
   // Tx (called from engine's tx thread)
   void sent(MxAnyLink *, MxQMsg *);
@@ -117,8 +116,6 @@ class MxMDAPI MxMDPubLink : public MxLink<MxMDPubLink> {
   class TCP;
 friend class TCP;
   class TCP : public ZiConnection {
-    // FIXME - implement push(), push2(), linkID, seqNo() so this can be
-    // used as a snapshot
   public:
     struct SocketAccessor : public ZuAccessor<TCP *, ZiPlatform::Socket> {
       inline static ZiPlatform::Socket value(const TCP *tcp) {
@@ -150,10 +147,14 @@ friend class TCP;
     void processLogin(ZiIOContext &);
     void process(ZiIOContext &);
 
-    inline void snapshotSeqNo(MxSeqNo seqNo) { m_snapshotSeqNo = seqNo; }
-    inline MxSeqNo snapshotSeqNo() { return m_snapshotSeqNo; }
+    void snap();
+    Frame *push(unsigned size);
+    void *out(void *ptr, unsigned length, unsigned type, ZmTime stamp);
+    void push2();
 
   private:
+    typedef MxMDStream::MsgData MsgData;
+
     MxMDPubLink		*m_link;
 
     ZmScheduler::Timer	m_loginTimer;
@@ -161,7 +162,7 @@ friend class TCP;
     ZmLock		m_stateLock;
       unsigned		  m_state;
 
-    MxSeqNo		m_snapshotSeqNo;
+    ZmRef<MsgData>	m_snapMsg;
   };
 
   struct TCP_HeapID {
@@ -215,9 +216,15 @@ public:
 
   typedef MxMDPublisher Engine;
 
-  ZuInline Engine *engine() {
+  ZuInline Engine *engine() const {
     return static_cast<Engine *>(MxAnyLink::engine()); // actually MxAnyTx
   }
+  ZuInline MxMDCore *core() const {
+    return static_cast<MxMDCore *>(engine()->mgr());
+  }
+
+  bool publish();
+  void stopPublishing();
 
   ZmTime loginTimeout() { return engine()->loginTimeout(); }
 
@@ -260,9 +267,12 @@ public:
   void udpError(UDP *udp, ZiIOContext *io);
 
 private:
+  typedef MxMDBroadcast::Ring Ring;
+
   const MxMDPartition	*m_partition = 0;
 
   ZmLock		m_connLock;
+    ZmRef<Ring>		  m_ring;
     ZiListenInfo	  m_listenInfo;
     ZmRef<TCPTbl>	  m_tcpTbl;
     ZmRef<UDP>		  m_udp;

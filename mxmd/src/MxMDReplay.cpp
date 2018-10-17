@@ -19,134 +19,190 @@
 
 // MxMD replay
 
-#include <MxMDReplay.hpp>
-
 #include <MxMDCore.hpp>
 
-MxMDReplay::MxMDReplay(MxMDCore *core) : m_core(core) { }
-
-MxMDReplay::~MxMDReplay() { }
+#include <MxMDReplay.hpp>
 
 #define fileERROR(path__, code) \
-  m_core->raise(ZeEVENT(Error, \
+  core()->raise(ZeEVENT(Error, \
     ([=, path = path__](const ZeEvent &, ZmStream &s) { \
       s << "MxMD \"" << path << "\": " << code; })))
 #define fileINFO(path__, code) \
-  m_core->raise(ZeEVENT(Info, \
+  core()->raise(ZeEVENT(Info, \
     ([=, path = path__](const ZeEvent &, ZmStream &s) { \
       s << "MxMD \"" << path << "\": " << code; })))
 
-// FIXME - replay thread
-
-void MxMDReplay::start(ZtString path, MxDateTime begin, bool filter)
+void MxMDReplay::init(MxMDCore *core)
 {
-  Guard guard(m_lock);
-  m_timerNext = !begin ? ZmTime() : begin.zmTime();
-  m_filter = filter;
-  if (!start_(guard, path))
-    fileERROR(path, "failed to start replaying");
-  else
-    fileINFO(path, "started replaying");
+  ZmRef<ZvCf> cf = core->cf()->subset("replay", false, true);
+
+  Mx *mx = core->mx();
+
+  MxEngine::init(core, this, mx, cf);
+
+  updateLink("replay", cf);
 }
 
-void MxMDReplay::stop()
+void MxMDReplay::final() { }
+
+ZmRef<MxAnyLink> MxMDReplay::createLink(MxID id)
 {
-  Guard guard(m_lock);
-  if (!!m_file) {
-    m_path.null();
-    m_file.close();
-    m_msg = 0;
-    m_timerNext = ZmTime();
-  }
+  return new MxMDReplayLink(id);
 }
 
-bool MxMDReplay::start_(Guard &guard, ZtString path)
+bool MxMDReplay::replay(ZtString path)
+{
+  return m_link->replay(ZuMv(path));
+}
+
+ZtString MxMDReplay::stopReplaying()
+{
+  return m_link->stopReplaying();
+}
+
+bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
+{
+  if (engine()->isRx()) return false;
+  Guard guard(m_lock);
+  down();
+  if (!path) return true;
+  engine()->rxRun(ZmFn{
+      [path = ZuMv(path), begin, filter](MxMDReplayLink *link) {
+	link->m_path = ZuMv(path);
+	link->m_replayNext = !begin ? ZmTime() : begin.zmTime();
+	link->m_filter = filter;
+      }, this});
+  up();
+  int state;
+  thread_local ZmSemaphore sem;
+  engine()->rxRun(ZmFn{
+      [&state, &sem](MxMDReplayLink *link) {
+	  state = link->state();
+	  sem.post();
+	}, this});
+  sem.wait();
+  return state != MxLinkState::Failed;
+}
+
+ZtString MxMDReplayLink::stopReplaying()
+{
+  ZtString path;
+  if (engine()->isRx()) return path;
+  { Guard guard(m_lock); path = ZuMv(m_path); }
+  down();
+  return path;
+}
+
+void MxMDReplayLink::update(ZvCf *cf)
+{
+  replay(cf->get("path"),
+      MxDateTime{cf->get("begin", false, "")},
+      cf->getInt("filter", 0, 1, false, 0));
+}
+
+void MxMDReplayLink::reset(MxSeqNo, MxSeqNo)
+{
+}
+
+void MxMDReplayLink::connect()
 {
   using namespace MxMDStream;
 
-  if (!!m_file) m_file.close();
+  if (!m_path) { disconnected(); return; }
+
+  if (m_file) m_file.close();
   ZeError e;
-  if (m_file.open(path, ZiFile::ReadOnly, 0, &e) != Zi::OK) {
-    guard.unlock();
-    fileERROR(path, e);
-    return false;
+  if (m_file.open(m_path, ZiFile::ReadOnly, 0, &e) != Zi::OK) {
+    fileERROR(m_path, e);
+    disconnected();
+    return;
   }
-  m_path = ZuMv(path);
   try {
     FileHdr hdr(m_file, &e);
     m_version = ZuMkPair(hdr.vmajor, hdr.vminor);
   } catch (const FileHdr::IOError &) {
-    guard.unlock();
     fileERROR(m_path, e);
-    return false;
+    disconnected();
+    return;
   } catch (const FileHdr::InvalidFmt &) {
-    guard.unlock();
     fileERROR(m_path, "invalid format");
-    return false;
+    disconnected();
+    return;
   }
+
   if (!m_msg) m_msg = new Msg();
-  m_core->mx()->add(ZmFn<>::Member<&MxMDReplay::replay>::fn(this));
-  return true;
+
+  fileINFO(m_path, "started replaying");
+
+  connected();
+
+  engine()->rxRun(ZmFn{[](MxMDReplayLink *link) { link->read(); }, this});
 }
 
-void MxMDReplay::replay()
+void MxMDReplayLink::disconnect()
+{
+  m_file.close();
+  m_replayNext = ZmTime();
+  m_filter = false;
+  m_version = Version();
+  m_msg = 0;
+
+  if (m_path) fileINFO(m_path, "stopped replaying");
+
+  m_path = ZtString();
+
+  disconnected();
+}
+
+void MxMDReplayLink::read()
 {
   using namespace MxMDStream;
 
+  MxMDCore *core = this->core();
+  Frame *frame = m_msg->frame();
+
   ZeError e;
 
-  {
-    ZmRef<Msg> msg;
-
-    {
-      Guard guard(m_lock);
-      if (!m_file) return;
-      msg = m_msg;
-      Frame *frame = msg->frame();
-  // retry:
-      int n = m_file.read(frame, sizeof(Frame), &e);
-      if (n == Zi::IOError) goto error;
-      if (n == Zi::EndOfFile || (unsigned)n < sizeof(Frame)) goto eof;
-      if (frame->len > sizeof(Buf)) goto lenerror;
-      n = m_file.read(frame->ptr(), frame->len, &e);
-      if (n == Zi::IOError) goto error;
-      if (n == Zi::EndOfFile || (unsigned)n < frame->len) goto eof;
-
-      if (frame->sec) {
-	ZmTime next((time_t)frame->sec, (int32_t)frame->nsec);
-
-	while (!!m_timerNext && next > m_timerNext) {
-	  MxDateTime now = m_timerNext, timerNext;
-	  guard.unlock();
-	  this->handler()->timer(now, timerNext);
-	  guard = Guard(m_lock);
-	  m_timerNext = !timerNext ? ZmTime() : timerNext.zmTime();
-	}
-      }
-    }
-
-    pad(msg->frame());
-    apply(msg->frame());
-    m_core->mx()->add(ZmFn<>::Member<&MxMDReplay::replay>::fn(this));
-  }
-
-  return;
-
-eof:
-  fileINFO(m_path, "EOF");
-  m_core->handler()->eof(m_core);
-  return;
-
+  if (!m_file) return;
+// retry:
+  int n = m_file.read(frame, sizeof(Frame), &e);
+  if (n == Zi::IOError) {
 error:
-  fileERROR(m_path, e);
-  return;
-
-lenerror:
-  {
+    ZtString path = m_path;
+    guard.unlock();
+    fileERROR(ZuMv(path), e);
+    return;
+  }
+  if (n == Zi::EndOfFile || (unsigned)n < sizeof(Frame)) {
+eof:
+    fileINFO(m_path, "EOF");
+    core->handler()->eof(core);
+    return;
+  }
+  if (frame->len > sizeof(Buf)) {
     uint64_t offset = m_file.offset();
     offset -= sizeof(Frame);
     fileERROR(m_path,
 	"message length >" << ZuBoxed(sizeof(Buf)) <<
 	" at offset " << ZuBoxed(offset));
+    return;
   }
+  n = m_file.read(frame->ptr(), frame->len, &e);
+  if (n == Zi::IOError) goto error;
+  if (n == Zi::EndOfFile || (unsigned)n < frame->len) goto eof;
+
+  if (frame->sec) {
+    ZmTime next((time_t)frame->sec, (int32_t)frame->nsec);
+
+    while (m_replayNext && next > m_replayNext) {
+      MxDateTime replayNext;
+      core->handler()->timer(m_replayNext, replayNext);
+      m_replayNext = !replayNext ? ZmTime() : replayNext.zmTime();
+    }
+  }
+
+  core->pad(frame);
+  core->apply(frame, m_filter);
+
+  engine()->rxRun(ZmFn{[](MxMDReplayLink *link) { link->read(); }, this});
 }

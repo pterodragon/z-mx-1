@@ -171,25 +171,26 @@ template <typename T_>
 class ZvCSVColumn<ZvCSVColType::Bool, T_> : public ZvCSVColumn_ {
 public:
   typedef T_ T;
-  typedef typename ZuBoxT<T>::T Box;
-  typedef typename Box::Cmp Cmp;
   enum { ColType = ZvCSVColType::Bool };
 
   template <typename ID>
-  inline ZvCSVColumn(ID &&id, int offset) :
-    ZvCSVColumn_(ZuFwd<ID>(id), offset) { }
+  inline ZvCSVColumn(ID &&id, int offset, T deflt = false) :
+    ZvCSVColumn_(ZuFwd<ID>(id), offset), m_deflt(deflt) { }
 
   void parse(ZuString value, ZuAnyPOD *pod) const {
-    void *ptr = (char *)pod->ptr() + this->m_offset;
+    T *ptr = (T *)((char *)pod->ptr() + this->m_offset);
     if (!value)
-      *(T *)ptr = Cmp::null();
+      *ptr = m_deflt;
     else
-      *(T *)ptr = value.length() == 1 && value[0] == 'Y';
+      *ptr = value.length() == 1 && value[0] == 'Y';
   }
   void place(ZtArray<char> &row, ZuAnyPOD *pod) const {
-    const Box &v = *(const Box *)((const char *)pod->ptr() + this->m_offset);
-    if (*v) row << (v ? 'Y' : 'N');
+    const T &v = *(const T *)((const char *)pod->ptr() + this->m_offset);
+    row << (v ? 'Y' : 'N');
   }
+
+private:
+  T			m_deflt;
 };
 
 template <typename T_>

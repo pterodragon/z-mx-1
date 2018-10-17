@@ -17,10 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// MxMD in-memory Rx/Tx - wrapper around ZiRing
+// MxMD in-memory broadcast (ZiRing wrapper)
 
-#ifndef MxMDRing_HPP
-#define MxMDRing_HPP
+#ifndef MxMDBroadcast_HPP
+#define MxMDBroadcast_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -37,31 +37,37 @@
 
 class MxMDCore;
 
-class MxMDAPI MxMDRing {
+template <> struct ZiRingTraits<MxMDStream::Frame> {
+  inline static unsigned size(const MxMDStream::Frame &hdr) {
+    return sizeof(MxMDStream::Frame) + hdr.len;
+  }
+};
+
+class MxMDAPI MxMDBroadcast {
 public:
   typedef ZmGuard<Lock> Guard;
   typedef ZmReadGuard<Lock> ReadGuard;
 
   typedef MxMDStream::Frame Frame;
-  typedef MxMDStream::Ring Ring;
+  typedef ZiRing<Frame, ZiRingBase<ZmObject> > Ring;
 
-  MxMDRing(MxMDCore *core);
-  ~MxMDRing();
+  MxMDBroadcast(MxMDCore *core);
+  ~MxMDBroadcast();
 
   void init(ZvCf *cf);
 
-  inline const ZiRingParams &config() const { return m_config; }
+  inline const ZiRingParams &params() const { return m_params; }
 
   bool open(); // returns true if successful, false otherwise
   void close();
 
+  ZmRef<Ring> shadow();
+  void close(ZmRef<Ring> ring);
+
 private:
-  void close_() {
-    if (ZuLikely(m_ring)) {
-      m_ring->close();
-      m_ring = 0;
-    }
-  }
+  bool open_();
+  void close_();
+  void close__();
 
 public:
   inline bool active() { return m_openCount; }
@@ -83,11 +89,9 @@ public:
   // Tx
 
   void *push(unsigned size);
-  void *out(void *ptr, unsigned length, unsigned type, ZmTime stamp);
-  void push2() {
-    if (ZuLikely(m_ring)) m_ring->push2();
-    m_lock.unlock();
-  }
+  void *out(void *ptr, unsigned length, unsigned type,
+      int shardID, ZmTime stamp);
+  void push2();
 
   void eof();
 
@@ -97,26 +101,16 @@ public:
     return m_ring->writeStatus();
   }
 
-  void reqDetach(int id = -1) {
-    if (id < 0) {
-      Guard guard(m_lock);
-      if (!m_ring) return;
-      id = m_ring->id();
-    }
-    MxMDStream::detach(*this, id);
-  }
-
   // for snapshots
   inline MxSeqNo seqNo() const { ReadGuard guard(m_lock); return m_seqNo; }
 
 protected:
-  MxMDCore			*m_core;
-  ZvRingParams			m_config;
-  MxID				m_linkID;
-  Lock				m_lock;
-  MxSeqNo			  m_seqNo = 0;
-  unsigned			  m_openCount = 0;
-  ZmRef<MxMDStream::Ring>	  m_ring;
+  MxMDCore		*m_core;
+  ZvRingParams		m_params;
+  Lock			m_lock;
+  MxSeqNo		  m_seqNo = 0;
+  unsigned		  m_openCount = 0;
+  ZmRef<Ring>		  m_ring;
 };
 
-#endif /* MxMDRing_HPP */
+#endif /* MxMDBroadcast_HPP */

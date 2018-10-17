@@ -96,7 +96,7 @@ protected:
 
   enum { Head = 0, Tail };
 
-  inline ZmRing_(const ZmRingParams &params) : m_config(params)
+  inline ZmRing_(const ZmRingParams &params) : m_params(params)
 #ifdef _WIN32
     , m_sem{0, 0}
 #endif
@@ -124,13 +124,13 @@ protected:
 #endif
 
 public:
-  inline void init(const ZmRingParams &params) { m_config = params; }
+  inline void init(const ZmRingParams &params) { m_params = params; }
 
-  ZuInline const ZmRingParams &config() const { return m_config; }
-  ZuInline ZmRingParams &config() { return m_config; }
+  ZuInline const ZmRingParams &params() const { return m_params; }
+  ZuInline ZmRingParams &params() { return m_params; }
 
 private:
-  ZmRingParams		m_config;
+  ZmRingParams		m_params;
 #ifdef _WIN32
   HANDLE		m_sem[2];
 #endif
@@ -217,39 +217,42 @@ private:
   ZuInline ZmAtomic<uint32_t> &tail() { return ctrl()->tail; }
 
 public:
-  ZuInline void *data() { return m_data; }
+  ZuInline bool operator !() const { return !m_ctrl; }
+  ZuOpBool;
+
+  ZuInline void *data() const { return m_data; }
 
   ZuInline unsigned full() const { return m_full; }
 
   int open(unsigned flags) {
     if (m_ctrl) return OK;
-    if (!config().size()) return Error;
+    if (!params().size()) return Error;
     flags &= (Read | Write);
-    m_size = ((config().size() + Size - 1) / Size) * Size;
+    m_size = ((params().size() + Size - 1) / Size) * Size;
     if (m_flags & Shadow) {
       m_flags |= flags;
       return OK;
     }
     m_flags = flags;
-    if (!config().ll() && ZmRing_::open() != OK) return Error;
-    if (!config().cpuset())
+    if (!params().ll() && ZmRing_::open() != OK) return Error;
+    if (!params().cpuset())
       m_ctrl = hwloc_alloc(ZmTopology::hwloc(), sizeof(Ctrl));
     else
       m_ctrl = hwloc_alloc_membind(
 	  ZmTopology::hwloc(), sizeof(Ctrl),
-	  config().cpuset(), HWLOC_MEMBIND_BIND, 0);
-    if (!m_ctrl) { if (!config().ll()) ZmRing_::close(); return Error; }
+	  params().cpuset(), HWLOC_MEMBIND_BIND, 0);
+    if (!m_ctrl) { if (!params().ll()) ZmRing_::close(); return Error; }
     memset(m_ctrl, 0, sizeof(Ctrl));
-    if (!config().cpuset())
+    if (!params().cpuset())
       m_data = hwloc_alloc(ZmTopology::hwloc(), size());
     else
       m_data = hwloc_alloc_membind(
 	  ZmTopology::hwloc(), size(),
-	  config().cpuset(), HWLOC_MEMBIND_BIND, 0);
+	  params().cpuset(), HWLOC_MEMBIND_BIND, 0);
     if (!m_data) {
       hwloc_free(ZmTopology::hwloc(), m_ctrl, sizeof(Ctrl));
       m_ctrl = 0;
-      if (!config().ll()) ZmRing_::close();
+      if (!params().ll()) ZmRing_::close();
       return Error;
     }
     return OK;
@@ -261,7 +264,7 @@ public:
     hwloc_free(ZmTopology::hwloc(), m_ctrl, sizeof(Ctrl));
     hwloc_free(ZmTopology::hwloc(), m_data, size());
     m_ctrl = m_data = 0;
-    if (!config().ll()) ZmRing_::close();
+    if (!params().ll()) ZmRing_::close();
   }
 
   int reset() {
@@ -302,7 +305,7 @@ public:
     if (ZuUnlikely((head ^ tail) == Wrapped)) {
       ++m_full;
       if constexpr (!Wait) return 0;
-      if (ZuUnlikely(!config().ll()))
+      if (ZuUnlikely(!params().ll()))
 	if (this->ZmRing_wait(Tail, this->tail(), tail) != OK) return 0;
       goto retry;
     }
@@ -323,7 +326,7 @@ public:
 
     ZmAtomic<uint32_t> *ptr = &((ZmAtomic<uint32_t> *)ptr_)[-2];
 
-    if (ZuUnlikely(!config().ll())) {
+    if (ZuUnlikely(!params().ll())) {
       if (ZuUnlikely(ptr->xch(Ready) & Waiting))
 	this->ZmRing_wake(Head, *ptr, 1);
     } else
@@ -342,7 +345,7 @@ public:
       this->head() = head & ~EndOfFile_; // release
       return;
     }
-    if (ZuUnlikely(!config().ll())) {
+    if (ZuUnlikely(!params().ll())) {
       if (ZuUnlikely(ptr->xch(EndOfFile_) & Waiting))
 	this->ZmRing_wake(Head, *ptr, 1);
     } else
@@ -380,7 +383,7 @@ public:
       (ZmAtomic<uint32_t> *)&((uint8_t *)data())[tail & ~Wrapped];
     uint32_t header = *ptr; // acquire
     if (!(header &~ Waiting)) {
-      if (ZuUnlikely(!config().ll()))
+      if (ZuUnlikely(!params().ll()))
 	if (this->ZmRing_wait(Head, *ptr, 0) != OK) return 0;
       goto retry;
     }
@@ -397,7 +400,7 @@ public:
     tail += Size;
     if ((tail & ~Wrapped) >= size()) tail = (tail ^ Wrapped) - size();
 
-    if (ZuUnlikely(!config().ll())) {
+    if (ZuUnlikely(!params().ll())) {
       if (ZuUnlikely(this->tail().xch(tail & ~Waiting) & Waiting))
 	this->ZmRing_wake(Tail, this->tail(), 1);
     } else

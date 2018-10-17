@@ -9,13 +9,13 @@ include_HEADERS = \
 	MxMD.hpp MxMDLib.hpp MxMDVersion.hpp MxMDTypes.hpp \
 	MxMDCore.hpp MxMDCmd.hpp MxMDCSV.hpp MxMDFrame.hpp MxMDStream.hpp \
 	MxMDPartition.hpp \
-	MxMDRing.hpp \
+	MxMDBroadcast.hpp \
 	MxMDRecord.hpp MxMDReplay.hpp \
 	MxMDSubscriber.hpp MxMDPublisher.hpp
 lib_LTLIBRARIES = libMxMD.la
 libMxMD_la_SOURCES = \
 	MxMD.cpp MxMDLib.cpp MxMDVersion.cpp MxMDCore.cpp \
-	MxMDRing.cpp \
+	MxMDBroadcast.cpp \
 	MxMDRecord.cpp MxMDReplay.cpp \
 	MxMDSubscriber.cpp MxMDPublisher.cpp
 libMxMD_la_LIBADD = @MXBASE_LIBS@ @Z_LIBS@ @MXMD_XLIBS@

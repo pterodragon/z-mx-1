@@ -50,8 +50,8 @@
 #endif
 
 class ZiAPI ZiFile {
-  ZiFile(const ZiFile &);
-  ZiFile &operator =(const ZiFile &);	// prevent mis-use
+  ZiFile(const ZiFile &) = delete;
+  ZiFile &operator =(const ZiFile &) = delete;	// prevent mis-use
 
 public:
   typedef ZiPlatform::Handle Handle;
@@ -77,7 +77,8 @@ public:
     Shm		= 0x0400,// global named shared memory, not a real file
     ShmGC	= 0x0800,// remove shared memory on close()
     ShmDbl	= 0x1000,// map two adjacent copies of the same memory
-    MMPopulate	= 0x2000 // MAP_POPULATE
+    MMPopulate	= 0x2000,// MAP_POPULATE
+    Shadow	= 0x4000 // shadow already opened file
   };
 
   // Note: Direct requires caller align all reads/writes to blkSize()
@@ -127,6 +128,7 @@ public:
   int mmap(const Path &name,
       unsigned flags, Offset length, bool shared = true,
       int mmapFlags = 0, unsigned mode = 0777, ZeError *e = 0);
+  int shadow(const ZiFile &file);
   void close();
 
   Offset size();
@@ -177,6 +179,9 @@ public:
   inline Lock &lock() { return m_lock; }
 
 private:
+  int open_(const Path &name,
+      unsigned flags, unsigned mode, Offset length, ZeError *e);
+
   void init_(Handle handle, unsigned flags, int blkSize, Offset mmapLength = 0);
 
   template <typename U, typename R = void,

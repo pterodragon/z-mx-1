@@ -47,35 +47,44 @@ void MxMDReplay::final() { }
 
 ZmRef<MxAnyLink> MxMDReplay::createLink(MxID id)
 {
-  return new MxMDReplayLink(id);
+  m_link = new MxMDReplayLink(id);
+  return m_link;
 }
 
 bool MxMDReplay::replay(ZtString path)
 {
+  if (ZuUnlikely(!m_link)) return false;
   return m_link->replay(ZuMv(path));
 }
 
 ZtString MxMDReplay::stopReplaying()
 {
+  if (ZuUnlikely(!m_link)) return ZtString();
   return m_link->stopReplaying();
 }
 
 bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
 {
-  if (engine()->isRx()) return false;
+  if (engine()->isRx()) {
+    core()->raise(ZeEVENT(Fatal,
+      ([=, path = ZuMv(path)](const ZeEvent &, ZmStream &s) {
+	s << "MxMD \"" << path << "\": " <<
+	"replay invoked from Rx thread"; })));
+    return false;
+  }
   Guard guard(m_lock);
   down();
   if (!path) return true;
-  engine()->rxRun(ZmFn{
-      [path = ZuMv(path), begin, filter](MxMDReplayLink *link) {
-	link->m_path = ZuMv(path);
-	link->m_replayNext = !begin ? ZmTime() : begin.zmTime();
-	link->m_filter = filter;
-      }, this});
+  engine()->rxRun(ZmFn<>{
+      [this, path = ZuMv(path), begin, filter]() {
+	m_path = ZuMv(path);
+	m_replayNext = !begin ? ZmTime() : begin.zmTime();
+	m_filter = filter;
+      } });
   up();
   int state;
   thread_local ZmSemaphore sem;
-  engine()->rxRun(ZmFn{
+  engine()->rxRun(ZmFn<>{
       [&state, &sem](MxMDReplayLink *link) {
 	  state = link->state();
 	  sem.post();
@@ -87,9 +96,18 @@ bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
 ZtString MxMDReplayLink::stopReplaying()
 {
   ZtString path;
-  if (engine()->isRx()) return path;
-  { Guard guard(m_lock); path = ZuMv(m_path); }
-  down();
+  if (engine()->isRx()) {
+    core()->raise(ZeEVENT(Fatal,
+      ([=, path = ZuMv(path)](const ZeEvent &, ZmStream &s) {
+	s << "MxMD \"" << path << "\": " <<
+	"stopReplaying invoked from Rx thread"; })));
+    return path;
+  }
+  {
+    Guard guard(m_lock);
+    path = ZuMv(m_path);
+    down();
+  }
   return path;
 }
 
@@ -136,7 +154,7 @@ void MxMDReplayLink::connect()
 
   connected();
 
-  engine()->rxRun(ZmFn{[](MxMDReplayLink *link) { link->read(); }, this});
+  engine()->rxRun_(ZmFn<>{[](MxMDReplayLink *link) { link->read(); }, this});
 }
 
 void MxMDReplayLink::disconnect()
@@ -153,6 +171,8 @@ void MxMDReplayLink::disconnect()
 
   disconnected();
 }
+
+// replay
 
 void MxMDReplayLink::read()
 {
@@ -204,5 +224,9 @@ eof:
   core->pad(frame);
   core->apply(frame, m_filter);
 
-  engine()->rxRun(ZmFn{[](MxMDReplayLink *link) { link->read(); }, this});
+  engine()->rxRun_(ZmFn<>{[](MxMDReplayLink *link) { link->read(); }, this});
 }
+
+// commands
+
+// FIXME - move from MxMDCore

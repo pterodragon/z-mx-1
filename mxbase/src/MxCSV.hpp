@@ -62,7 +62,7 @@ public:
   static void place_(ZtArray<char> &b, const ZiIP *i) { b << *i; }
 };
 
-typedef ZvCSVColumn<ZvCSVColType::Int, uint16_t> MxPortCol;
+typedef ZvCSVColumn<ZvCSVColType::Int, ZuBox0(uint16_t)> MxPortCol;
 
 class MxIDCol : public ZvCSVColumn<ZvCSVColType::Func, MxID>  {
   typedef ZvCSVColumn<ZvCSVColType::Func, MxID> Base;

@@ -46,13 +46,13 @@
 #include <MxMDFrame.hpp>
 
 struct Group {
-  uint16_t	id;
-  ZiIP		ip;
-  uint16_t	port;
+  uint16_t		id;
+  ZiIP			ip;
+  ZuBox0(uint16_t)	port;
 };
 
 typedef ZvCSVColumn<ZvCSVColType::Int, uint16_t> GroupCol;
-typedef ZvCSVColumn<ZvCSVColType::Int, uint16_t> PortCol;
+typedef ZvCSVColumn<ZvCSVColType::Int, ZuBox0(uint16_t)> PortCol;
 typedef MxIPCol IPCol;
 
 class GroupCSV : public ZvCSV {

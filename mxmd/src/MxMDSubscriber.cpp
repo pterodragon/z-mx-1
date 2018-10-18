@@ -89,7 +89,7 @@ MxEngineApp::ProcessFn MxMDPublisher::processFn()
 
 void MxMDSubscriber::process_(MxMDSubLink *link, MxQMsg *msg)
 {
-  const Frame &frame = m_in->as<Frame>();
+  const Frame &frame = msg->as<Frame>();
   core()->apply(&frame, m_filter);
 }
 
@@ -278,10 +278,10 @@ void MxMDSubLink::TCP::disconnected()
 void MxMDSubLink::TCP::sendLogin()
 {
   using namespace MxMDStream;
-  ZmRef<Msg> msg = new Msg();
+  ZuRef<Msg> msg = new Msg();
   new (msg->out<Login>(id(), 1, ZmTime()))
     Login{m_partition->tcpUsername, m_partition->tcpPassword};
-  ZmRef<MxQMsg> qmsg = new MxQMsg(msg, MxQMsgFn(), msg->length());
+  ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(msg), MxQMsgFn(), msg->length());
   MxMDStream::TCP::send(qmsg, this); // bypass Tx queue
   mx()->add(ZmFn<>([](MxMDSubLink::TCP *tcp) {
       {
@@ -481,7 +481,8 @@ void MxMDSubLink::udpReceived(MxQMsg *msg)
   }
   msg->fn = MxQMsgFn([](MxMDSubLink *link, MxQMsg *msg, ZiIOContext *) {
 	link->rx()->received(msg); }, this);
-  engine()->rxRun([](MxQMsg *msg) { msg->fn(msg, nullptr); }, ZmMkRef(msg));
+  engine()->rxRun(
+      ZmFn<>{[](MxQMsg *msg) { msg->fn(msg, nullptr); }, ZmMkRef(msg)});
 }
 void MxMDSubLink::request(const MxQueue::Gap &, const MxQueue::Gap &now)
 {
@@ -524,18 +525,15 @@ void MxMDSubscriber::statusCmd(const MxMDCmd::CmdArgs &args, ZtArray<char> &out)
 void MxMDSubLink::status(ZtArray<char> &out)
 {
   out << "Link " << id() << ":\n";
-  out << "  TCP:    " << m_partition->tcpIP << ':' <<
-    ZuBox<uint16_t>(m_partition->tcpPort) << " | " <<
-    m_partition->tcpIP2 << ':' <<
-    ZuBox<uint16_t>(m_partition->tcpPort2) << '\n';
-  out << "  UDP:    " << m_partition->udpIP << ':' <<
-    ZuBox<uint16_t>(m_partition->udpPort) << " | " <<
-    m_partition->udpIP2 << ':' <<
-    ZuBox<uint16_t>(m_partition->udpPort2) << '\n';
-  out << "  Resend: " << m_partition->resendIP << ':' <<
-    ZuBox<uint16_t>(m_partition->resendPort) << " | " <<
-    m_partition->resendIP2 << ':' <<
-    ZuBox<uint16_t>(m_partition->resendPort2) << '\n';
+  out << "  TCP:    " <<
+    m_partition->tcpIP << ':' << m_partition->tcpPort << " | " <<
+    m_partition->tcpIP2 << ':' << m_partition->tcpPort2 << '\n';
+  out << "  UDP:    " <<
+    m_partition->udpIP << ':' << m_partition->udpPort << " | " <<
+    m_partition->udpIP2 << ':' << m_partition->udpPort2 << '\n';
+  out << "  Resend: " <<
+    m_partition->resendIP << ':' << m_partition->resendPort << " | " <<
+    m_partition->resendIP2 << ':' << m_partition->resendPort2 << '\n';
   out << "  TCP Username: " << m_partition->tcpUsername <<
     " Password: " << m_partition->tcpPassword << '\n';
 

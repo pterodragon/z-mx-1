@@ -314,7 +314,7 @@ public:
   // run(tid, fn) - immediate execution (asynchronous) on a specific thread
   // invoke(tid, fn) - immediate execution on a specific thread
   //   unlike run(), invoke() will execute synchronously if the caller is
-  //   already running on the specified thread
+  //   already running on the specified thread; returns true if synchronous
 
   // run(tid, fn, timeout, mode, &timer) - deferred execution
   //   tid == 0 - run on any worker thread
@@ -355,21 +355,23 @@ public:
   }
 
   template <typename Fn>
-  ZuInline void invoke(unsigned tid, Fn &&fn) {
+  ZuInline bool invoke(unsigned tid, Fn &&fn) {
     ZmAssert(tid && tid <= m_nThreads);
     Thread *thread = &m_threads[tid - 1];
-    if (ZuLikely(ZmPlatform::getTID() == thread->tid)) { fn(); return; }
-    run_(thread, ZmFn{ZuFwd<Fn>(fn)});
+    if (ZuLikely(ZmPlatform::getTID() == thread->tid)) { fn(); return true; }
+    run_(thread, ZmFn<>{ZuFwd<Fn>(fn)});
+    return false;
   }
   template <typename Fn, typename O>
-  ZuInline void invoke(unsigned tid, Fn &&fn, O &&o) {
+  ZuInline bool invoke(unsigned tid, Fn &&fn, O &&o) {
     ZmAssert(tid && tid <= m_nThreads);
     Thread *thread = &m_threads[tid - 1];
     if (ZuLikely(ZmPlatform::getTID() == thread->tid)) {
       fn(ZuFwd<O>(o));
-      return;
+      return true;
     }
     run_(thread, ZmFn{ZuFwd<Fn>(fn), ZuFwd<O>(o)});
+    return false;
   }
 
   ZuInline int runningTID() {

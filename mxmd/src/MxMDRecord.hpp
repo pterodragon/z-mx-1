@@ -54,14 +54,18 @@ public:
 protected:
   ZmRef<MxAnyLink> createLink(MxID id);
 
-  // Rx (called from engine's rx thread)
+  // Rx
   MxEngineApp::ProcessFn processFn();
+  void wake();
 
   // Tx (called from engine's tx thread) (unused)
   void sent(MxAnyLink *, MxQMsg *) { }
   void aborted(MxAnyLink *, MxQMsg *) { }
   void archive(MxAnyLink *, MxQMsg *) { }
   ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
+
+private:
+  MxMDRecLink	*m_link = 0;
 };
 
 class MxMDAPI MxMDRecLink : public MxLink<MxMDRecLink> {
@@ -105,12 +109,13 @@ private:
   typedef MxQueueRx<MxMDRecLink> Rx;
   typedef MxMDStream::MsgData MsgData;
 
-  int write(const Frame *frame, ZeError *e);
+  int write_(const Frame *frame, ZeError *e);
 
+  // Rx thread
   void recv(Rx *rx);
-  void recvMsg(Rx *rx);
-  void writeMsg(MxQMsg *qmsg);
+  void write(MxQMsg *qmsg);
 
+  // snap thread
   void snap();
   Frame *push(unsigned size);
   void *out(void *ptr, unsigned length, unsigned type, ZmTime stamp);
@@ -118,15 +123,11 @@ private:
 
 private:
   int			m_snapThread = -1;
-
-  ZmSemaphore		m_attachSem;
-  ZmSemaphore		m_detachSem;
-
-  // FIXME ZiFile is internally locked, so we are double-locking...
-  Lock			m_lock;
+  Lock			m_lock;	// serializes record/stopRecording
+  Lock			m_fileLock;
     ZtString		  m_path;
-    ZiFile		  m_file;	// FIXME - shard?
-    ZmRef<MsgData>	  m_snapMsg;
+    ZiFile		  m_file;
+  ZmRef<MsgData>	m_snapMsg;
 };
 
 #endif /* MxMDRecord_HPP */

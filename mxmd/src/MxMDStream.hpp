@@ -86,8 +86,8 @@ namespace MxMDStream {
 	RefDataLoaded,
 
 	// control events follow
+	Wake,			// ITC wake-up
 	EndOfSnapshot,		// end of snapshot
-	Detach,			// ITC detach
 	Login,			// TCP login
 	ResendReq);		// UDP resend request
 
@@ -104,8 +104,8 @@ namespace MxMDStream {
 	"AddTrade", "CorrectTrade", "CancelTrade",
 	"RefDataLoaded",
 
+	"Wake",
 	"EndOfSnapshot",
-	"Detach",
 	"Login",
 	"ResendReq");
 
@@ -372,15 +372,15 @@ namespace MxMDStream {
 
   // transport / session control messages follow
 
+  struct Wake { // ITC wake-up
+    enum { Code = Type::Wake };
+    MxUInt		id;
+  };
+
   struct EndOfSnapshot { // end of snapshot
     enum { Code = Type::EndOfSnapshot };
     MxUInt		id;
     MxSeqNo		seqNo; // 0 if snapshot failed
-  };
-
-  struct Detach { // ITC detach
-    enum { Code = Type::Detach };
-    MxUInt		id;
   };
 
   struct Login { // TCP login
@@ -418,7 +418,7 @@ namespace MxMDStream {
       CorrectTrade,
       CancelTrade,
       RefDataLoaded,
-      Detach,
+      Wake,
       Login,
       EndOfSnapshot,
       ResendReq>::T Largest;
@@ -471,7 +471,7 @@ namespace MxMDStream {
   }
 
   template <typename T, typename App>
-  inline void *push(App &app, int shardID) {
+  inline void *push(App &app, MxInt shardID) {
     void *ptr = app.push(sizeof(Frame) + sizeof(T));
     if (ZuUnlikely(!ptr)) return 0;
     return app.out(ptr, sizeof(T), T::Code, shardID, ZmTimeNow());
@@ -483,7 +483,7 @@ namespace MxMDStream {
 #define FnDeclare(Fn, Type) \
   template <typename App, typename ...Args> \
   inline bool Fn(App &app, Args &&... args) { \
-    void *ptr = push<Type>(app, -1); \
+    void *ptr = push<Type>(app, MxInt()); \
     if (ZuUnlikely(!ptr)) return false; \
     new (ptr) Type{ZuFwd<Args>(args)...}; \
     app.push2(); \
@@ -502,13 +502,13 @@ namespace MxMDStream {
 
   FnDeclare(refDataLoaded, RefDataLoaded)
 
-  FnDeclare(detach, Detach)
+  FnDeclare(wake, Wake)
   FnDeclare(endOfSnapshot, EndOfSnapshot)
 
 #undef FnDeclare
 #define FnDeclare(Fn, Type) \
   template <typename App, typename ...Args> \
-  inline bool Fn(App &app, int shardID, Args &&... args) { \
+  inline bool Fn(App &app, MxInt shardID, Args &&... args) { \
     void *ptr = push<Type>(app, shardID); \
     if (ZuUnlikely(!ptr)) return false; \
     new (ptr) Type{ZuFwd<Args>(args)...}; \
@@ -524,7 +524,7 @@ namespace MxMDStream {
   // special processing for AddCombination's securities/sides/ratios fields
   template <typename App,
 	   typename Key_, typename Security, typename TickSizeTbl>
-  inline bool addCombination(App &app, int shardID, MxDateTime transactTime,
+  inline bool addCombination(App &app, MxInt shardID, MxDateTime transactTime,
       const Key_ &key, MxNDP pxNDP, MxNDP qtyNDP, unsigned legs,
       const Security *securities, const MxEnum *sides, const MxRatio *ratios,
       const TickSizeTbl &tickSizeTbl, const MxMDLotSizes &lotSizes) {

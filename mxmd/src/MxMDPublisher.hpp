@@ -54,8 +54,9 @@ public:
 
   void updateLinks(ZuString partitions); // update from CSV
 
-  // Rx (called from engine's rx thread)
-  ProcessFn processFn();
+  // Rx
+  MxEngineApp::ProcessFn processFn();
+  void wake();
 
   // Tx (called from engine's tx thread)
   void sent(MxAnyLink *, MxQMsg *);
@@ -153,7 +154,7 @@ friend class TCP;
     void push2();
 
   private:
-    typedef MxMDStream::MsgData MsgData;
+    typedef MxMDStream::Msg Msg;
 
     MxMDPubLink		*m_link;
 
@@ -162,7 +163,7 @@ friend class TCP;
     ZmLock		m_stateLock;
       unsigned		  m_state;
 
-    ZmRef<MsgData>	m_snapMsg;
+    ZuRef<Msg>		m_snapMsg;
   };
 
   struct TCP_HeapID {
@@ -250,9 +251,6 @@ public:
   bool sendGap_(const MxQueue::Gap &gap, bool more);
   bool resendGap_(const MxQueue::Gap &gap, bool more);
 
-  // command support
-  void status(ZtArray<char> &out);
-
   // connection management
   void tcpListen();
   void tcpListening(const ZiListenInfo &);
@@ -266,12 +264,35 @@ public:
   void tcpError(TCP *tcp, ZiIOContext *io);
   void udpError(UDP *udp, ZiIOContext *io);
 
+  // command support
+  void status(ZtArray<char> &out);
+
 private:
+  typedef ZmPLock Lock;
+  typedef ZmGuard<Lock> Guard;
+
+  typedef MxQueueRx<MxMDRecLink> Rx;
+  typedef MxMDStream::MsgData MsgData;
+
   typedef MxMDBroadcast::Ring Ring;
 
+  int write_(const Frame *frame, ZeError *e);
+
+  // Rx thread
+  void recv(Rx *rx);
+
+  // snap thread
+  void snap();
+  Frame *push(unsigned size);
+  void *out(void *ptr, unsigned length, unsigned type, ZmTime stamp);
+  void push2();
+
+private:
   const MxMDPartition	*m_partition = 0;
 
-  ZmLock		m_connLock;
+  ZiSockAddr		m_udpAddr;
+
+  Lock			m_connLock;
     ZmRef<Ring>		  m_ring;
     ZiListenInfo	  m_listenInfo;
     ZmRef<TCPTbl>	  m_tcpTbl;

@@ -31,6 +31,7 @@
 #endif
 
 class MxMDCore;
+class MxMDReplayLink;
 
 class MxMDAPI MxMDReplay : public MxEngineApp, public MxEngine {
 public:
@@ -56,6 +57,9 @@ protected:
   void aborted(MxAnyLink *, MxQMsg *) { }
   void archive(MxAnyLink *, MxQMsg *) { }
   ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
+
+private:
+  MxMDReplayLink	*m_link = 0;
 };
 
 class MxMDAPI MxMDReplayLink : public MxLink<MxMDReplayLink> {
@@ -92,8 +96,8 @@ public:
   bool resendGap_(const MxQueue::Gap &, bool) { return true; }
 
 private:
-  typedef ZmLock Lock;
-  typedef ZmGuard<ZmLock> Guard;
+  typedef ZmPLock Lock;
+  typedef ZmGuard<Lock> Guard;
 
   typedef MxMDStream::MsgData MsgData;
 
@@ -102,7 +106,9 @@ private:
   void read();
 
 private:
-  ZmLock		m_lock;	// serializes replay/stopReplaying
+  Lock			m_lock;	// serializes replay/stopReplaying
+ 
+  // Rx thread members
   ZtString		m_path;
   ZiFile		m_file;
   ZmRef<MsgData>	m_msg;

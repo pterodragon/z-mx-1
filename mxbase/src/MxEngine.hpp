@@ -221,9 +221,10 @@ struct MxEngineMgr {
 struct MxEngineApp {
   virtual ZmRef<MxAnyLink> createLink(MxID) = 0;
 
-  // Rx (called from engine's rx thread)
+  // Rx
   typedef void (*ProcessFn)(MxEngineApp *, MxAnyLink *, MxQMsg *);
   virtual ProcessFn processFn() = 0;	// stashed in engine for performance
+  virtual void wake() { }		// wake up rx thread, if blocking
 
   // Tx (called from engine's tx thread)
   virtual void sent(MxAnyLink *, MxQMsg *) = 0;	// tx sent (persistent)
@@ -301,10 +302,10 @@ public:
   void start();
   void stop();
 
-  template <typename ...Args> ZuInline void rxRun(Args &&... args)
-    { m_mx->run(m_rxThread, ZuFwd<Args>(args)...); }
+  ZuInline void rxRun(ZmFn<> fn) { m_mx->run(m_rxThread, ZuMv(fn)); appWake(); }
+  ZuInline void rxRun_(ZmFn<> fn) { m_mx->run(m_rxThread, ZuMv(fn)); }
   template <typename ...Args> ZuInline void rxInvoke(Args &&... args)
-    { m_mx->invoke(m_rxThread, ZuFwd<Args>(args)...); }
+    { if (!m_mx->invoke(m_rxThread, ZuFwd<Args>(args)...)) appWake(); }
   template <typename ...Args> ZuInline void txRun(Args &&... args)
     { m_mx->run(m_txThread, ZuFwd<Args>(args)...); }
   template <typename ...Args> ZuInline void txInvoke(Args &&... args)
@@ -346,6 +347,7 @@ public:
 
   ZuInline void appException(ZmRef<ZeEvent> e) { mgr()->exception(ZuMv(e)); }
 
+  ZuInline void appWake() { app()->wake(); }
   ZuInline void appProcess(MxAnyLink *link, MxQMsg *msg)
     { (*m_processFn)(app(), link, msg); }
 
@@ -502,9 +504,9 @@ public:
   ZuInline void idleArchive() { m_archiving = 0; }
 
   template <typename L> ZuInline void txRun(L &&l)
-    { this->engine()->txRun(ZmFn{ZuFwd<L>(l), impl().tx()}); }
+    { this->engine()->txRun(ZmFn<>{ZuFwd<L>(l), impl().tx()}); }
   template <typename L> ZuInline void txRun(L &&l) const
-    { this->engine()->txRun(ZmFn{ZuFwd<L>(l), impl().tx()}); }
+    { this->engine()->txRun(ZmFn<>{ZuFwd<L>(l), impl().tx()}); }
   template <typename L> ZuInline void txInvoke(L &&l)
     { this->engine()->txInvoke(ZuFwd<L>(l), impl().tx()); }
   template <typename L> ZuInline void txInvoke(L &&l) const
@@ -642,7 +644,9 @@ public:
     m_rrTime.now();
     ZmTime rrTime = (m_rrTime += interval);
     guard.unlock();
-    rxRun([](Rx *rx) { rx->reRequest(); }, rrTime, &m_rrTimer);
+    mx()->add(ZmFn<>{[](MxLink *link) {
+	  link->rxRun([](Rx *rx) { rx->reRequest(); }); }, this},
+	rrTime, &m_rrTimer);
   }
   ZuInline void cancelReRequest() {
     this->mx()->del(&m_rrTimer);
@@ -667,12 +671,18 @@ public:
   MxQueue *rxQueuePtr() { return &(this->rxQueue()); }
   MxQueue *txQueuePtr() { return &(this->txQueue()); }
 
+  template <typename L>
+  ZuInline void rxRun(L &&l)
+    { this->engine()->rxRun(ZmFn<>{ZuFwd<L>(l), rx()}, ZuFwd<Args>(args)...); }
+  template <typename L>
+  ZuInline void rxRun(L &&l) const
+    { this->engine()->rxRun(ZmFn<>{ZuFwd<L>(l), rx()}, ZuFwd<Args>(args)...); }
   template <typename L, typename ...Args>
-  ZuInline void rxRun(L &&l, Args &&... args)
-    { this->engine()->rxRun(ZmFn{ZuFwd<L>(l), rx()}, ZuFwd<Args>(args)...); }
+  ZuInline void rxRun_(L &&l)
+    { this->engine()->rxRun_(ZmFn<>{ZuFwd<L>(l), rx()}, ZuFwd<Args>(args)...); }
   template <typename L, typename ...Args>
-  ZuInline void rxRun(L &&l, Args &&... args) const
-    { this->engine()->rxRun(ZmFn{ZuFwd<L>(l), rx()}, ZuFwd<Args>(args)...); }
+  ZuInline void rxRun_(L &&l) const
+    { this->engine()->rxRun_(ZmFn<>{ZuFwd<L>(l), rx()}, ZuFwd<Args>(args)...); }
   template <typename L> ZuInline void rxInvoke(L &&l)
     { this->engine()->rxInvoke(ZuFwd<L>(l), rx()); }
   template <typename L> ZuInline void rxInvoke(L &&l) const

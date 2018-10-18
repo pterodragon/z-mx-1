@@ -176,8 +176,6 @@ public:
 
   static void age(const Path &name, unsigned max);
 
-  inline Lock &lock() { return m_lock; }
-
 private:
   int open_(const Path &name,
       unsigned flags, unsigned mode, Offset length, ZeError *e);

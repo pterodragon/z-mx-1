@@ -40,16 +40,16 @@
 #include <MxMDCSV.hpp>
 
 struct MxMDPartition {
-  MxID		id;
-  MxBool	enabled;
-  MxInt		shardID;
-  ZiIP		tcpIP, tcpIP2;
-  uint16_t	tcpPort, tcpPort2;
-  MxIDString	tcpUsername, tcpPassword;
-  ZiIP		udpIP, udpIP2;
-  uint16_t	udpPort, udpPort2;
-  ZiIP		resendIP, resendIP2;
-  uint16_t	resendPort, resendPort2;
+  MxID			id;
+  MxBool		enabled;
+  ZuBox_1(int)		shardID;
+  ZiIP			tcpIP, tcpIP2;
+  ZuBox0(uint16_t)	tcpPort, tcpPort2;
+  MxIDString		tcpUsername, tcpPassword;
+  ZiIP			udpIP, udpIP2;
+  ZuBox0(uint16_t)	udpPort, udpPort2;
+  ZiIP			resendIP, resendIP2;
+  ZuBox0(uint16_t)	resendPort, resendPort2;
 };
 
 class MxMDPartitionCSV : public ZvCSV, public MxMDCSV<MxMDPartitionCSV> {
@@ -66,7 +66,7 @@ public:
 #define Offset(x) offsetof(Data, x)
     add(new MxIDCol("id", Offset(id)));
     add(new MxBoolCol("enabled", Offset(enabled), -1, 1));
-    add(new MxIntCol("shardID", Offset(shardID), -1, -1));
+    add(new MxIntCol("shardID", Offset(shardID)));
     add(new MxIPCol("tcpIP", Offset(tcpIP)));
     add(new MxPortCol("tcpPort", Offset(tcpPort)));
     add(new MxIPCol("tcpIP2", Offset(tcpIP2)));

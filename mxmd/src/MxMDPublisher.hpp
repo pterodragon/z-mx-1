@@ -57,7 +57,6 @@ public:
 
   // Rx
   MxEngineApp::ProcessFn processFn();
-  void wake();
 
   // Tx (called from engine's tx thread)
   void sent(MxAnyLink *, MxQMsg *);
@@ -280,6 +279,7 @@ private:
   int write_(const Frame *frame, ZeError *e);
 
   // Rx thread
+  void wake();
   void recv(Rx *rx);
 
   // snap thread
@@ -292,6 +292,8 @@ private:
   const MxMDPartition	*m_partition = 0;
 
   ZiSockAddr		m_udpAddr;
+
+  ZmAtomic<int>		m_ringID = -1;
 
   Lock			m_connLock;
     ZmRef<Ring>		  m_ring;

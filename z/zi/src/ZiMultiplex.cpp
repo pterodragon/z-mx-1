@@ -1991,7 +1991,6 @@ void ZiMultiplex::stop(bool drain)
     case ZmScheduler::Draining:
     case ZmScheduler::Drained:
     case ZmScheduler::Stopping:
-      wakeFn(rxThread(), nullptr);
       wake();
       ZmScheduler::stop();
     case ZmScheduler::Stopped:
@@ -2010,7 +2009,7 @@ void ZiMultiplex::stop(bool drain)
   rxInvoke(ZmFn<>([](ZiMultiplex *self) { self->stop_1(); }, this));
 
   stopping.wait();
-  wakeFn(rxThread(), nullptr);
+
   wake();
 
   stop_3();
@@ -2075,6 +2074,8 @@ void ZiMultiplex::stop_3()
   m_drain = false;
 
   // close down underlying I/O platform
+
+  wakeFn(rxThread(), ZmScheduler::WakeFn());
 
 #ifdef ZiMultiplex_IOCP
   CloseHandle(m_completionPort);

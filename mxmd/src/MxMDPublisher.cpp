@@ -162,6 +162,8 @@ void MxMDPubLink::disconnect()
   ZmRef<TCPTbl> tcpTbl;
   ZmRef<UDP> udp;
 
+  wake();
+
   {
     ZmGuard<ZmLock> connGuard(m_connLock);
     ring = ZuMv(m_ring);
@@ -169,10 +171,13 @@ void MxMDPubLink::disconnect()
     tcpTbl = ZuMv(m_tcpTbl);
     udp = ZuMv(m_udp);
     m_ring = nullptr;
+    m_ringID = -1;
     m_listenInfo = ZiListenInfo();
     m_tcpTbl = nullptr;
     m_udp = nullptr;
   }
+
+  mx()->wakeFn(rxThread(), ZmScheduler::WakeFn());
 
   if (ring) {
     ring->detach();
@@ -418,14 +423,31 @@ void MxMDPubLink::udpConnected(MxMDPubLink::UDP *udp, ZiIOContext &io)
 
   MxMDRing &broadcast = core()->broadcast();
 
-  if (!(m_ring = broadcast.shadow()) || m_ring->attach() != Zi::OK) {
-    engine()->rxInvoke(
-	ZmFn<>{[](MxMDPubLink *link) { link->disconnect(); }, this});
-    return;
+  {
+    ZmRef<ZiRing> ring;
+
+    if (!(ring = broadcast.shadow()) || ring->attach() != Zi::OK) {
+      engine()->rxInvoke(
+	  ZmFn<>{[](MxMDPubLink *link) { link->disconnect(); }, this});
+      return;
+    }
+
+    {
+      ZmGuard<ZmLock> connGuard(m_connLock);
+      m_ring = ring;
+      m_ringID = ring->id();
+    }
   }
 
   // begin reading broadcast
-  rxRun([](Rx *rx) { rx->app().recv(rx); });
+
+  mx()->wakeFn(engine()->rxThread(),
+      ZmScheduler::WakeFn{[](MxMDPubLink *link, ZmScheduler *, unsigned) {
+	link->rxRun_([](Rx *rx) { rx->app().recv(rx); });
+	link->wake();
+      }, this});
+
+  rxRun_([](Rx *rx) { rx->app().recv(rx); });
 
   connected();
 }
@@ -606,21 +628,10 @@ MxEngineApp::ProcessFn MxMDPublisher::processFn()
   });
 }
 
-void MxMDPublisher::wake()
-{
-  if (ZuUnlikely(!m_link)) return;
-  m_link->wake();
-}
-
 void MxMDPubLink::wake()
 {
-  int id;
-  {
-    ZmGuard<ZmLock> connGuard(m_connLock);
-    if (!m_ring || (id = m_ring->id()) < 0) return;
-  }
-  rxRun_([](Rx *rx) { rx->app().recv(rx); });
-  MxMDStream::wake(core()->broadcast(), id);
+  int id = m_ringID;
+  if (id >= 0) MxMDStream::wake(core()->broadcast(), id);
 }
 
 bool MxMDPubLink::send_(MxQMsg *msg, bool)

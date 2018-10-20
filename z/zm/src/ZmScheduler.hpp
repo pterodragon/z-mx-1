@@ -299,7 +299,7 @@ public:
   }
 
 public:
-  typedef void (*WakeFn)(ZmScheduler *sched, unsigned tid);
+  typedef ZmFn<ZmScheduler *, unsigned> WakeFn; // scheduler, thread ID
 
   void wakeFn(unsigned tid, WakeFn fn);
 
@@ -421,12 +421,12 @@ private:
     Ring	ring;
     ZmThreadID	tid = 0;
     ZmThread	thread;
-    WakeFn	wakeFn = 0;
+    WakeFn	wakeFn;
   };
 
   ZuInline void wake(Thread *thread) {
     if (ZuUnlikely(thread->wakeFn))
-      (*(thread->wakeFn))(this, (thread - &m_threads[0]) + 1);
+      (thread->wakeFn)(this, (thread - &m_threads[0]) + 1);
   }
 
   void timer();

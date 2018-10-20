@@ -56,7 +56,6 @@ protected:
 
   // Rx
   MxEngineApp::ProcessFn processFn();
-  void wake();
 
   // Tx (called from engine's tx thread) (unused)
   void sent(MxAnyLink *, MxQMsg *) { }
@@ -112,6 +111,7 @@ private:
   int write_(const Frame *frame, ZeError *e);
 
   // Rx thread
+  void wake();
   void recv(Rx *rx);
   void write(MxQMsg *qmsg);
 
@@ -123,10 +123,15 @@ private:
 
 private:
   int			m_snapThread = -1;
+
   Lock			m_lock;	// serializes record/stopRecording
+
+  ZmAtomic<int>		m_ringID = -1;
+
   Lock			m_fileLock;
     ZtString		  m_path;
     ZiFile		  m_file;
+
   ZmRef<MsgData>	m_snapMsg;
 };
 

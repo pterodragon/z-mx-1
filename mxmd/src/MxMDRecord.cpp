@@ -167,6 +167,8 @@ void MxMDRecLink::connect()
       return;
     }
 
+    m_ringID = broadcast.id();
+
     path = m_path;
   }
 
@@ -178,12 +180,24 @@ void MxMDRecLink::connect()
 
   mx()->run(m_snapThread, [](MxMDRecLink *link) { link->snap(); }, this);
 
+  mx()->wakeFn(engine()->rxThread(),
+      ZmScheduler::WakeFn{[](MxMDRecLink *link, ZmScheduler *, unsigned) {
+	link->rxRun_([](Rx *rx) { rx->app().recv(rx); });
+	link->wake();
+      }, this});
+
   rxRun_([](Rx *rx) { rx->app().recv(rx); });
 }
 
 void MxMDRecLink::disconnect()
 {
   MxMDRing &broadcast = core()->broadcast();
+
+  wake();
+
+  m_ringID = -1;
+
+  mx()->wakeFn(rxThread(), ZmScheduler::WakeFn());
 
   broadcast.detach();
   broadcast.close();
@@ -211,7 +225,7 @@ int MxMDRecLink::write_(const Frame *frame, ZeError *e)
 void MxMDRecLink::snap()
 {
   m_snapMsg = new MsgData();
-  if (!core()->snapshot(*this, broadcast.id()))
+  if (!core()->snapshot(*this, m_ringID))
     engine()->rxRun(
 	ZmFn<>{[](MxMDRecLink *link) { link->disconnect(); }, this});
   m_snapMsg = nullptr;
@@ -281,7 +295,7 @@ void MxMDRecLink::recv(Rx *rx)
     case Type::EndOfSnapshot:
       {
 	const EndOfSnapshot &eos = frame->as<EndOfSnapshot>();
-	if (ZuUnlikely(eos.id == broadcast.id())) {
+	if (ZuUnlikely(eos.id == m_ringID)) {
 	  MxSeqNo seqNo = eos.seqNo;
 	  broadcast.shift2();
 	  // snapshot failure (!seqNo) is handled in snap()
@@ -293,7 +307,7 @@ void MxMDRecLink::recv(Rx *rx)
     case Type::Wake:
       {
 	const Wake &wake = frame->as<Wake>();
-	if (ZuUnlikely(wake.id == broadcast.id())) {
+	if (ZuUnlikely(wake.id == m_ringID)) {
 	  broadcast.shift2();
 	  return;
 	}
@@ -330,19 +344,10 @@ MxEngineApp::ProcessFn MxMDRecord::processFn()
   });
 }
 
-void MxMDRecord::wake()
-{
-  if (ZuUnlikely(!m_link)) return;
-  int id;
-  if ((id = core()->broadcast().id()) >= 0) {
-    m_link->wake();
-    MxMDStream::wake(core()->broadcast(), id);
-  }
-}
-
 void MxMDRecLink::wake()
 {
-  rxRun_([](Rx *rx) { rx->app().recv(rx); });
+  int id = m_ringID;
+  if (id >= 0) MxMDStream::wake(core()->broadcast(), id);
 }
 
 void MxMDRecLink::write(MxQMsg *qmsg)

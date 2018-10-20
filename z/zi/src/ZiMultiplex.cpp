@@ -286,19 +286,12 @@ void ZiMultiplex::udp(ZiConnectFn fn, ZiFailFn failFn,
     return;
   }
 
-  if (ZuLikely(ZmPlatform::getTID() == m_rxTID)) {
-    this->udp_(ZuMv(fn), ZuMv(failFn),
-	localIP, localPort, remoteIP, remotePort, ZuMv(options));
-    return;
-  }
-  run(rxThread(),
+  invoke(rxThread(), 
       [this, fn = ZuMv(fn), failFn = ZuMv(failFn),
 	  localIP, localPort, remoteIP, remotePort, options = ZuMv(options)]() {
 	this->udp_(fn, failFn,
 	    localIP, localPort, remoteIP, remotePort, options);
-	this->rx();
       });
-  wake();
 }
 
 void ZiMultiplex::udp_(ZiConnectFn fn, ZiFailFn failFn,
@@ -552,19 +545,13 @@ void ZiMultiplex::connect(
     return;
   }
 
-  if (ZuLikely(ZmPlatform::getTID() == m_rxTID)) {
-    this->connect_(ZuMv(fn), ZuMv(failFn),
-	localIP, localPort, remoteIP, remotePort, ZuMv(options));
-    return;
-  }
-  run(rxThread(),
+  invoke(rxThread(),
       [this, fn = ZuMv(fn), failFn = ZuMv(failFn),
 	  localIP, localPort, remoteIP, remotePort, options = ZuMv(options)]() {
 	this->connect_(fn, failFn,
 	    localIP, localPort, remoteIP, remotePort, options);
 	this->rx();
       });
-  wake();
 }
 
 void ZiMultiplex::connect_(ZiConnectFn fn, ZiFailFn failFn,
@@ -801,12 +788,7 @@ void ZiMultiplex::listen(
   }
 #endif
 
-  if (ZuLikely(ZmPlatform::getTID() == m_rxTID)) {
-    this->listen_(ZuMv(listenFn), ZuMv(failFn), ZuMv(acceptFn),
-	localIP, localPort, nAccepts, ZuMv(options));
-    return;
-  }
-  run(rxThread(),
+  invoke(rxThread(),
       [this, listenFn = ZuMv(listenFn),
 	  failFn = ZuMv(failFn), acceptFn = ZuMv(acceptFn),
 	  localIP, localPort, nAccepts, options = ZuMv(options)]() {
@@ -814,7 +796,6 @@ void ZiMultiplex::listen(
 	    localIP, localPort, nAccepts, options);
 	this->rx();
       });
-  wake();
 }
 
 void ZiMultiplex::listen_(
@@ -954,16 +935,11 @@ void ZiMultiplex::stopListening(ZiIP localIP, uint16_t localPort)
 
   if (ZuUnlikely(state() != ZmScheduler::Running)) return;
 
-  if (ZuLikely(ZmPlatform::getTID() == m_rxTID)) {
-    this->stopListening_(localIP, localPort);
-    return;
-  }
-  run(rxThread(),
+  invoke(rxThread(),
       [this, localIP, localPort]() {
 	this->stopListening_(localIP, localPort);
 	this->rx();
       });
-  wake();
 }
 
 void ZiMultiplex::stopListening_(ZiIP localIP, uint16_t localPort)
@@ -2015,6 +1991,7 @@ void ZiMultiplex::stop(bool drain)
     case ZmScheduler::Draining:
     case ZmScheduler::Drained:
     case ZmScheduler::Stopping:
+      wakeFn(rxThread(), nullptr);
       wake();
       ZmScheduler::stop();
     case ZmScheduler::Stopped:
@@ -2033,6 +2010,7 @@ void ZiMultiplex::stop(bool drain)
   rxInvoke(ZmFn<>([](ZiMultiplex *self) { self->stop_1(); }, this));
 
   stopping.wait();
+  wakeFn(rxThread(), nullptr);
   wake();
 
   stop_3();
@@ -2114,7 +2092,11 @@ void ZiMultiplex::stop_3()
 
 void ZiMultiplex::rxStart()
 {
-  m_rxTID = ZmPlatform::getTID();
+  wakeFn(rxThread(), [](ZmScheduler *sched, unsigned) {
+	ZiMultiplex *mx = static_cast<ZiMultiplex *>(sched);
+	mx->run_(mx->rxThread(), ZmFn<>::Member<&ZiMultiplex::rx>::fn(mx));
+	mx->wake();
+      });
   rx();
 }
 

@@ -42,7 +42,8 @@
 class MxMDCore;
 class MxMDPubLink;
 
-class MxMDAPI MxMDPublisher : public MxEngineApp, public MxEngine {
+class MxMDAPI MxMDPublisher :
+  public ZuObject, public MxEngineApp, public MxEngine {
 public:
   inline MxMDPublisher() { }
   ~MxMDPublisher() { }

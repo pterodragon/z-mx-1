@@ -42,7 +42,8 @@
 class MxMDCore;
 class MxMDSubLink;
 
-class MxMDAPI MxMDSubscriber : public MxEngineApp, public MxEngine {
+class MxMDAPI MxMDSubscriber :
+  public ZuObject, public MxEngineApp, public MxEngine {
 public:
   MxMDSubscriber() { }
   ~MxMDSubscriber() { }

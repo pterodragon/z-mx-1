@@ -324,7 +324,8 @@ void MxAnyLink::up_(bool enable)
 
   if (next != prev) engine()->linkState(this, prev, next);
   if (connect)
-    engine()->rxRun(ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this});
+    engine()->rxInvoke(
+	ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this});
 }
 
 void MxAnyLink::down_(bool disable)
@@ -365,7 +366,8 @@ void MxAnyLink::down_(bool disable)
 
   if (next != prev) engine()->linkState(this, prev, next);
   if (disconnect)
-    engine()->rxRun(ZmFn<>{[](MxAnyLink *link) { link->disconnect(); }, this});
+    engine()->rxInvoke(
+	ZmFn<>{[](MxAnyLink *link) { link->disconnect(); }, this});
 }
 
 void MxAnyLink::connected()
@@ -398,7 +400,8 @@ void MxAnyLink::connected()
 
   engine()->linkState(this, prev, next);
   if (disconnect) 
-    engine()->rxRun(ZmFn<>{[](MxAnyLink *link) { link->disconnect(); }, this});
+    engine()->rxRun(
+	ZmFn<>{[](MxAnyLink *link) { link->disconnect(); }, this});
 }
 
 void MxAnyLink::disconnected()
@@ -439,7 +442,8 @@ void MxAnyLink::disconnected()
 
   engine()->linkState(this, prev, next);
   if (connect)
-    engine()->rxRun(ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this});
+    engine()->rxRun(
+	ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this});
 }
 
 void MxAnyLink::reconnect()
@@ -479,8 +483,10 @@ void MxAnyLink::reconnect()
 
   engine()->linkState(this, prev, next);
   if (reconnect)
-    engine()->rxRun(ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this},
+    engine()->rxRun(
+	ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this},
 	reconnTime, &m_reconnTimer);
   if (disconnect) 
-    engine()->rxRun(ZmFn<>{[](MxAnyLink *link) { link->disconnect(); }, this});
+    engine()->rxRun(
+	ZmFn<>{[](MxAnyLink *link) { link->disconnect(); }, this});
 }

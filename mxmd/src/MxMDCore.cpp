@@ -163,20 +163,10 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
   else {
     cf->fromString(
       "mx {\n"
-	"nThreads 5\n"		// thread IDs are 1-based
+	"nThreads 3\n"		// thread IDs are 1-based
 	"rxThread 1\n"		// I/O Rx
 	"txThread 2\n"		// I/O Tx
-	"isolation 1-4\n"	// leave thread 5 for general purpose
-      "}\n"
-      "record {\n"
-        "id record\n"
-	"rxThread 3\n"
-	"txThread 4\n"
-	"snapThread 5\n"
-      "}\n"
-      "replay {\n"
-        "id replay\n"
-	"rxThread 4\n"
+	"isolation 1-2\n"	// leave thread 3 for general purpose
       "}\n",
       false);
   }
@@ -240,16 +230,7 @@ MxMDLib *MxMDLib::instance()
   return ZmSingleton<MxMDCore, 0>::instance();
 }
 
-MxMDCore::MxMDCore(ZmRef<Mx> mx) :
-  MxMDLib(mx),
-  m_mx(ZuMv(mx)),
-  m_broadcast(this),
-  m_snapper(this),
-  m_recorder(this),
-  m_publisher(this),
-  m_subscriber(this)
-{
-}
+MxMDCore::MxMDCore(ZmRef<Mx> mx) : MxMDLib(mx), m_mx(ZuMv(mx)) { }
 
 void MxMDCore::init_(ZvCf *cf)
 {
@@ -328,17 +309,31 @@ void MxMDCore::init_(ZvCf *cf)
     m_broadcast.init(ringCf);
 
   if (ZmRef<ZvCf> cmdCf = cf->subset("cmd", false)) {
-    m_cmd = new MxMDCore::CmdServer(this);
-    m_cmd->init(cmdCf);
+    m_cmd = new MxMDCmd();
+    m_cmd->init(this, cmdCf);
     initCmds();
   }
 
   m_record.init(this);
   m_replay.init(this);
-  m_publisher.init(this);
-  m_subscriber.init(this);
+
+  if (ZmRef<ZvCf> publisherCf = cf->subset("publisher", false)) {
+    m_publisher = new MxMDPublisher();
+    m_publisher->init(this, publisherCf);
+  }
+  if (ZmRef<ZvCf> subscriberCf = cf->subset("subscriber", false)) {
+    m_subscriber = new MxMDSubscriber();
+    m_subscriber->init(this, subscriberCf);
+  }
 
   ZeLOG(Info, "MxMDLib - initialized...");
+}
+
+void addCmd(ZuString name, ZuString syntax,
+  MxMDCmd::Fn fn, ZtString brief, ZtString usage)
+{
+  if (!m_cmd) return;
+  m_cmd->addCmd(name, syntax, ZuMv(fn), ZuMv(brief), ZuMv(usage));
 }
 
 void MxMDCore::initCmds()
@@ -383,26 +378,6 @@ void MxMDCore::initCmds()
       "dump order books in CSV format",
       "usage: orderbooks [VENUE [SEGMENT]]\n"
       "dump order books in CSV format");
-  addCmd(
-      "record",
-      "s stop stop { type flag }",
-      CmdFn::Member<&MxMDCore::recordCmd>::fn(this),
-      "record market data to file", 
-      "usage: record FILE\n"
-      "       record -s\n"
-      "record market data to FILE\n\n"
-      "Options:\n"
-      "-s, --stop\tstop recording\n");
-  addCmd(
-      "replay",
-      "s stop stop { type flag }",
-      CmdFn::Member<&MxMDCore::replayCmd>::fn(this),
-      "replay market data from file",
-      "usage: replay FILE\n"
-      "       replay -s\n"
-      "replay market data from FILE\n\n"
-      "Options:\n"
-      "-s, --stop\tstop replaying\n");
 #if 0
   addCmd(
       "subscribe",
@@ -429,8 +404,14 @@ void MxMDCore::start()
   m_record.start();
   m_replay.start();
 
-  if (cf()->subset("publisher", false, true)->get("multicastAddr")) publish();
-  if (cf()->subset("subscriber", false, true)->get("username")) subscribe();
+  if (m_publisher) {
+    raise(ZeEVENT(Info, "starting publisher..."));
+    m_publisher->start();
+  }
+  if (m_subscriber) {
+    raise(ZeEVENT(Info, "starting subscriber..."));
+    m_subscriber->start();
+  }
 
   raise(ZeEVENT(Info, "starting feeds..."));
   allFeeds([](MxMDFeed *feed) { try { feed->start(); } catch (...) { } });
@@ -443,17 +424,20 @@ void MxMDCore::stop()
   raise(ZeEVENT(Info, "stopping feeds..."));
   allFeeds([](MxMDFeed *feed) { try { feed->stop(); } catch (...) { } });
 
-  if (m_mx) { // FIXME
-    stopReplaying();
-    m_record.stop();
-
-    stopPublish();
-    stopSubscribe();
-
-    stopStreaming();
-
-    broadcast().close();
+  if (m_subscriber) {
+    raise(ZeEVENT(Info, "stopping subscriber..."));
+    m_subscriber->stop();
   }
+  if (m_publisher) {
+    raise(ZeEVENT(Info, "stopping publisher..."));
+    m_publisher->stop();
+  }
+
+  m_replay.stop();
+  m_record.stop();
+
+  m_broadcast.eof();
+  m_broadcast.close();
 
   if (m_cmd) {
     raise(ZeEVENT(Info, "stopping command server..."));
@@ -472,207 +456,6 @@ void MxMDCore::final()
 
   raise(ZeEVENT(Info, "finalizing feeds..."));
   allFeeds([](MxMDFeed *feed) { try { feed->final(); } catch (...) { } });
-}
-
-MxMDCore::CmdServer::CmdServer(MxMDCore *md) : m_md(md), m_syntax(new ZvCf())
-{
-}
-
-void MxMDCore::CmdServer::init(ZvCf *cf)
-{
-  ZvCmdServer::init(cf, m_md->m_mx, ZvCmdDiscFn(),
-      ZvCmdRcvdFn::Member<&MxMDCore::CmdServer::rcvd>::fn(this));
-  // Assumption: DST transitions do not occur while market is open
-  {
-    ZtDate now(ZtDate::Now);
-    ZuString timezone = cf->get("timezone"); // default to system tz
-    now.sec() = 0, now.nsec() = 0; // midnight GMT (start of today)
-    now += ZmTime((time_t)(now.offset(timezone) + 43200)); // midday local time
-    m_tzOffset = now.offset(timezone);
-  }
-  m_md->addCmd(
-      "help", "", CmdFn::Member<&MxMDCore::CmdServer::help>::fn(this),
-      "list commands", "usage: help [COMMAND]");
-}
-
-void MxMDCore::CmdServer::final()
-{
-  m_syntax = 0;
-  m_cmds.clean();
-  ZvCmdServer::final();
-}
-
-MxMDCmd *MxMDCmd::instance(MxMDLib *md)
-{
-  return static_cast<MxMDCmd *>(static_cast<MxMDCore *>(md));
-}
-
-void MxMDCmd::addCmd(ZuString name, ZuString syntax,
-    CmdFn fn, ZtString brief, ZtString usage)
-{
-  MxMDCore::CmdServer *server = static_cast<MxMDCore *>(this)->m_cmd;
-  if (!server) return;
-  {
-    ZmRef<ZvCf> cf = server->m_syntax->subset(name, true);
-    cf->fromString(syntax, false);
-    cf->set("help:type", "flag");
-  }
-  if (MxMDCore::CmdServer::Cmds::NodeRef cmd = server->m_cmds.find(name))
-    cmd->val() = ZuMkTuple(ZuMv(fn), ZuMv(brief), ZuMv(usage));
-  else
-    server->m_cmds.add(name, ZuMkTuple(ZuMv(fn), ZuMv(brief), ZuMv(usage)));
-}
-
-void MxMDCore::CmdServer::rcvd(
-  ZvCmdLine *line, const ZvInvocation &inv, ZvAnswer &ans)
-{
-  ZmRef<ZvCf> cf = new ZvCf();
-  ZuString name;
-  Cmds::NodeRef cmd;
-  try {
-    cf->fromCLI(m_syntax, inv.cmd());
-    name = cf->get("0");
-    cmd = m_cmds.find(name);
-    if (!cmd) throw ZtString("unknown command");
-    if (cf->getInt("help", 0, 1, false, 0))
-      ans.make(ZvCmd::Success, Ze::Info,
-	       ZvAnswerArgs, cmd->val().p3());
-    else {
-      CmdArgs args;
-      ZvCf::Iterator i(cf);
-      {
-	ZuString arg;
-	const ZtArray<ZtString> *values;
-	while (values = i.getMultiple(arg, 0, INT_MAX)) args.add(arg, values);
-      }
-      ZtArray<char> out;
-      (cmd->val().p1())(args, out);
-      ans.make(ZvCmd::Success, out);
-    }
-  } catch (const CmdUsage &) {
-    ans.make(ZvCmd::Fail, Ze::Warning, ZvAnswerArgs, cmd->val().p3().data());
-  } catch (const ZvError &e) {
-    ans.make(ZvCmd::Fail | ZvCmd::Log, Ze::Error, ZvAnswerArgs,
-	ZtString() << '"' << name << "\": " << e);
-  } catch (const ZeError &e) {
-    ans.make(ZvCmd::Fail | ZvCmd::Log, Ze::Error, ZvAnswerArgs,
-	ZtString() << '"' << name << "\": " << e);
-  } catch (const ZtString &s) {
-    ans.make(ZvCmd::Fail | ZvCmd::Log, Ze::Error, ZvAnswerArgs,
-	ZtString() << '"' << name << "\": " << s);
-  } catch (const ZtArray<char> &s) {
-    ans.make(ZvCmd::Fail | ZvCmd::Log, Ze::Error, ZvAnswerArgs,
-	ZtString() << '"' << name << "\": " << s);
-  } catch (...) {
-    ans.make(ZvCmd::Fail | ZvCmd::Log, Ze::Error, ZvAnswerArgs,
-	ZtString() << '"' << name << "\": unknown exception");
-  }
-}
-
-void MxMDCore::CmdServer::help(const CmdArgs &args, ZtArray<char> &help)
-{
-  int argc = ZuBox<int>(args.get("#"));
-  if (argc > 2) throw CmdUsage();
-  if (ZuUnlikely(argc == 2)) {
-    Cmds::NodeRef cmd = m_cmds.find(args.get("1"));
-    if (!cmd) throw CmdUsage();
-    help = cmd->val().p3();
-    return;
-  }
-  help.size(m_cmds.count() * 80 + 40);
-  help += "List of commands:\n\n";
-  {
-    auto i = m_cmds.readIterator();
-    while (Cmds::NodeRef cmd = i.iterate()) {
-      help += cmd->key();
-      help += " -- ";
-      help += cmd->val().p2();
-      help += "\n";
-    }
-  }
-}
-
-ZtString MxMDCmd::lookupSyntax()
-{
-  return 
-    "S src src { type scalar } "
-    "m market market { type scalar } "
-    "s segment segment { type scalar }";
-}
-
-ZtString MxMDCmd::lookupOptions()
-{
-  return
-    "    -S --src=SRC\t- symbol ID source is SRC\n"
-    "\t(CUSIP|SEDOL|QUIK|ISIN|RIC|EXCH|CTA|BSYM|BBGID|FX|CRYPTO)\n"
-    "    -m --market=MIC\t - market MIC, e.g. XTKS\n"
-    "    -s --segment=SEGMENT\t- market segment SEGMENT\n";
-}
-
-void MxMDCmd::lookupSecurity(
-    MxMDLib *md, const MxMDCmd::CmdArgs &args, unsigned index,
-    bool secRequired, ZmFn<MxMDSecurity *> fn)
-{
-  ZuString symbol = args.get(ZuStringN<16>(ZuBoxed(index)));
-  MxID venue = args.get("market");
-  MxID segment = args.get("segment");
-  thread_local ZmSemaphore sem;
-  bool notFound = 0;
-  if (ZuString src_ = args.get("src")) {
-    MxEnum src = MxSecIDSrc::lookup(src_);
-    MxSecSymKey key{src, symbol};
-    md->secInvoke(key,
-	[secRequired, sem = &sem, &notFound, fn = ZuMv(fn)](MxMDSecurity *sec) {
-      if (secRequired && ZuUnlikely(!sec))
-	notFound = 1;
-      else
-	fn(sec);
-      sem->post();
-    });
-    sem.wait();
-    if (ZuUnlikely(notFound))
-      throw ZtString() << "security " << key << " not found";
-  } else {
-    if (!*venue) throw MxMDCmd::CmdUsage();
-    MxSecKey key{venue, segment, symbol};
-    md->secInvoke(key,
-	[secRequired, sem = &sem, &notFound, fn = ZuMv(fn)](MxMDSecurity *sec) {
-      if (secRequired && ZuUnlikely(!sec))
-	notFound = 1;
-      else
-	fn(sec);
-      sem->post();
-    });
-    sem.wait();
-    if (ZuUnlikely(notFound))
-      throw ZtString() << "security " << key << " not found";
-  }
-}
-
-void MxMDCmd::lookupOrderBook(
-    MxMDLib *md, const MxMDCmd::CmdArgs &args, unsigned index,
-    bool secRequired, bool obRequired,
-    ZmFn<MxMDSecurity *, MxMDOrderBook *> fn)
-{
-  MxID venue = args.get("market");
-  MxID segment = args.get("segment");
-  thread_local ZmSemaphore sem;
-  bool notFound = 0;
-  lookupSecurity(md, args, index, secRequired || obRequired,
-      [obRequired, sem = &sem, &notFound, venue, segment, fn = ZuMv(fn)](
-	MxMDSecurity *sec) {
-    ZmRef<MxMDOrderBook> ob = sec->orderBook(venue, segment);
-    if (obRequired && ZuUnlikely(!ob))
-      notFound = 1;
-    else
-      fn(sec, ob);
-    sem->post();
-  });
-  sem.wait();
-  if (ZuUnlikely(notFound))
-    throw ZtString() << "order book " <<
-	MxSecKey{venue, segment, args.get(ZuStringN<16>(ZuBoxed(index)))} <<
-	" not found";
 }
 
 void MxMDCore::l1(const CmdArgs &args, ZtArray<char> &out)
@@ -937,25 +720,6 @@ void MxMDCore::orderbooks(const CmdArgs &args, ZtArray<char> &out)
   writeOrderBooks(this, csv, csv.writeData(out), venueID, segment);
 }
 
-void MxMDCore::recordCmd(const CmdArgs &args, ZtArray<char> &out)
-{
-  ZuBox<int> argc = args.get("#");
-  if (argc < 1 || argc > 2) throw CmdUsage();
-  if (!!args.get("stop")) {
-    if (argc == 2) throw CmdUsage();
-    if (ZtString path = stopRecording())
-      out << "stopped recording to \"" << path << "\"\n";
-    return;
-  }
-  if (argc != 2) throw CmdUsage();
-  ZuString path = args.get("1");
-  if (!path) CmdUsage();
-  if (record(path))
-    out << "started recording to \"" << path << "\"\n";
-  else
-    out << "failed to record to \"" << path << "\"\n";
-}
-
 #define fileERROR(path__, code) \
   raise(ZeEVENT(Error, \
     ([=, path = MxTxtString(path__)](const ZeEvent &, ZmStream &s) { \
@@ -1008,12 +772,6 @@ void MxMDCore::stopSubscribe()
   raise(ZeEVENT(Info, "stopped subscribing"));
 }
 
-void MxMDCore::stopStreaming()
-{
-  m_snapper.stop();
-  m_broadcast.eof();
-}
-
 void MxMDCore::threadName(ZmThreadName &name, unsigned id)
 {
   switch ((int)id) {
@@ -1047,24 +805,6 @@ void MxMDCore::subscribeCmd(const CmdArgs &args, ZtArray<char> &out)
   m_snapper.snap(ringParams);
 }
 #endif
-
-void MxMDCore::replayCmd(const CmdArgs &args, ZtArray<char> &out)
-{
-  ZuBox<int> argc = args.get("#");
-  if (argc < 1 || argc > 2) throw CmdUsage();
-  if (!!args.get("stop")) {
-    if (ZtString path = stopReplaying())
-      out << "stopped replaying to \"" << path << "\"\n";
-    return;
-  }
-  if (argc != 2) throw CmdUsage();
-  ZuString path = args.get("1");
-  if (!path) CmdUsage();
-  if (replay(path))
-    out << "started replaying from \"" << path << "\"\n";
-  else
-    out << "failed to replay from \"" << path << "\"\n";
-}
 
 void MxMDCore::pad(Frame *frame)
 {

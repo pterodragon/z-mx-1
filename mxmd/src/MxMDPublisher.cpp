@@ -419,7 +419,7 @@ void MxMDPubLink::udpConnected(MxMDPubLink::UDP *udp, ZiIOContext &io)
   MxMDRing &broadcast = core()->broadcast();
 
   if (!(m_ring = broadcast.shadow()) || m_ring->attach() != Zi::OK) {
-    engine()->rxRun(
+    engine()->rxInvoke(
 	ZmFn<>{[](MxMDPubLink *link) { link->disconnect(); }, this});
     return;
   }
@@ -700,7 +700,7 @@ void MxMDPubLink::status(ZtArray<char> &out)
   out << "\n  UDP Queue: ";
   {
     thread_local ZmSemaphore sem;
-    rxInvoke([&sem, &out](Rx *rx) {
+    rxInvoke([&out, sem = &sem](Rx *rx) {
       const MxQueue &queue = rx->rxQueue();
       MxQueue::Gap gap = queue.gap();
       out <<
@@ -708,7 +708,7 @@ void MxMDPubLink::status(ZtArray<char> &out)
 	"  gap: (" << gap.key() << ")," << ZuBox<unsigned>(gap.length()) <<
 	"  length: " << ZuBox<unsigned>(queue.length()) << 
 	"  count: " << ZuBox<unsigned>(queue.count());
-      sem.post();
+      sem->post();
     });
     sem.wait();
   }

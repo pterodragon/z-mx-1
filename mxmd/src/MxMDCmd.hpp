@@ -34,11 +34,27 @@
 
 #include <ZmFn.hpp>
 #include <ZmRBTree.hpp>
+
 #include <ZtArray.hpp>
 #include <ZtString.hpp>
 
-class MxMDAPI MxMDCmd {
+#include <ZvCmd.hpp>
+
+class MxMDCore;
+
+class MxMDAPI MxMDCmd : public ZuObject, public ZvCmdServer {
 public:
+  MxMDCmd() { }
+  ~MxMDCmd() { }
+
+  ZuInline MxMDCore *core() const { return m_core; }
+
+  void init(MxMDCore *core);
+  void final();
+
+  void start();
+  void stop();
+
   typedef ZmRBTree<ZtString,
 	    ZmRBTreeVal<const ZtArray<ZtString> *,
 	      ZmRBTreeLock<ZmNoLock> > > CmdArgs_;
@@ -53,25 +69,44 @@ public:
     }
   };
 
-  typedef ZmFn<const CmdArgs &, ZtArray<char> &> CmdFn;
+  typedef ZmFn<const CmdArgs &, ZtArray<char> &> Fn;
+
   struct CmdUsage { };
 
-  static MxMDCmd *instance(MxMDLib *md);
-
   // add command
-  void addCmd(ZuString cmd, ZuString syntax, CmdFn fn,
+  void addCmd(ZuString cmd, ZuString syntax, Fn fn,
       ZtString brief, ZtString usage);
 
   // single security / order book lookup
   static ZtString lookupSyntax();
   static ZtString lookupOptions();
-  static void lookupSecurity(
-      MxMDLib *md, const MxMDCmd::CmdArgs &args, unsigned index,
+
+  void lookupSecurity(
+      const CmdArgs &args, unsigned index,
       bool secRequired, ZmFn<MxMDSecurity *> fn);
-  static void lookupOrderBook(
-      MxMDLib *md, const MxMDCmd::CmdArgs &args, unsigned index,
+  void lookupOrderBook(
+      const CmdArgs &args, unsigned index,
       bool secRequired, bool obRequired,
       ZmFn<MxMDSecurity *, MxMDOrderBook *> fn);
+
+  void help(const CmdArgs &args, ZtArray<char> &result);
+
+private:
+  void rcvd(ZvCmdLine *, const ZvInvocation &, ZvAnswer &);
+
+  typedef ZmRBTree<ZtString,
+	    ZmRBTreeVal<ZuTuple<Fn, ZtString, ZtString>,
+	      ZmRBTreeLock<ZmNoLock> > > Cmds;
+
+  typedef ZuBoxFmt<ZuBox<unsigned>, ZuFmt::Right<6> > TimeFmt;
+  inline TimeFmt timeFmt(MxDateTime t) {
+    return ZuBox<unsigned>((t + m_tzOffset).hhmmss()).fmt(ZuFmt::Right<6>());
+  }
+
+  MxMDCore	*m_core = 0;
+  ZmRef<ZvCf>	m_syntax;
+  Cmds		m_cmds;
+  int		m_tzOffset = 0;
 };
 
 #endif /* MxMDCmd_HPP */

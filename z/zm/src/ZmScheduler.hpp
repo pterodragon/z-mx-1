@@ -189,9 +189,6 @@ private:
   ZmBitmap	*m_cpusets;
 };
 
-// FIXME - rethink thread naming, permit apps to esclusively reserve & name a
-// thread (needed for e.g. ZiRing Rx, or for perf reasons)
-
 // generic printing
 template <> struct ZuPrint<ZmAffinity> : public ZuPrintFn { };
 
@@ -301,13 +298,11 @@ public:
     return m_state;
   }
 
-  template <typename L>
-  inline auto stateLocked(L &&l) const {
-    ZmReadGuard<ZmLock> stateGuard(m_stateLock);
-    return l(m_state);
-  }
-
 public:
+  typedef void (*WakeFn)(ZmScheduler *sched, unsigned tid);
+
+  void wakeFn(unsigned tid, WakeFn fn);
+
   enum { Update = 0, Advance, Defer };
 
   // add(fn) - immediate execution (asynchronous) on any worker thread
@@ -349,36 +344,33 @@ public:
 
   void del(Timer *);				// cancel job
 
-  ZuInline void run(unsigned tid, ZmFn<> fn) {
+  template <typename Fn>
+  ZuInline void run(unsigned tid, Fn &&fn) {
     ZmAssert(tid && tid <= m_nThreads);
-    run_(&m_threads[tid - 1], ZuMv(fn));
+    runWake(&m_threads[tid - 1], ZmFn<>{ZuFwd<Fn>(fn)});
+  }
+  template <typename Fn>
+  ZuInline void run_(unsigned tid, Fn &&fn) {
+    ZmAssert(tid && tid <= m_nThreads);
+    run__(&m_threads[tid - 1], ZmFn<>{ZuFwd<Fn>(fn)});
   }
 
   template <typename Fn>
-  ZuInline bool invoke(unsigned tid, Fn &&fn) {
+  ZuInline void invoke(unsigned tid, Fn &&fn) {
     ZmAssert(tid && tid <= m_nThreads);
     Thread *thread = &m_threads[tid - 1];
-    if (ZuLikely(ZmPlatform::getTID() == thread->tid)) { fn(); return true; }
-    run_(thread, ZmFn<>{ZuFwd<Fn>(fn)});
-    return false;
+    if (ZuLikely(ZmPlatform::getTID() == thread->tid)) { fn(); return; }
+    runWake(thread, ZmFn<>{ZuFwd<Fn>(fn)});
   }
   template <typename Fn, typename O>
-  ZuInline bool invoke(unsigned tid, Fn &&fn, O &&o) {
+  ZuInline void invoke(unsigned tid, Fn &&fn, O &&o) {
     ZmAssert(tid && tid <= m_nThreads);
     Thread *thread = &m_threads[tid - 1];
     if (ZuLikely(ZmPlatform::getTID() == thread->tid)) {
       fn(ZuFwd<O>(o));
-      return true;
+      return;
     }
-    run_(thread, ZmFn{ZuFwd<Fn>(fn), ZuFwd<O>(o)});
-    return false;
-  }
-
-  ZuInline int runningTID() {
-    int tid = -1;
-    ZmThreadContext *context = ZmThread::self();
-    if (context->mgr() == this) tid = context->id();
-    return tid;
+    runWake(thread, ZmFn{ZuFwd<Fn>(fn), ZuFwd<O>(o)});
   }
 
   ZuInline void threadInit(ZmFn<> fn) { m_threadInitFn = ZuMv(fn); }
@@ -429,13 +421,21 @@ private:
     Ring	ring;
     ZmThreadID	tid = 0;
     ZmThread	thread;
+    WakeFn	wakeFn = 0;
   };
+
+  ZuInline void wake(Thread *thread) {
+    if (ZuUnlikely(thread->wakeFn))
+      (*(thread->wakeFn))(this, (thread - &m_threads[0]) + 1);
+  }
 
   void timer();
   bool timerAdd(ZmFn<> &fn);
-  bool timerRun(Thread *thread, ZmFn<> &fn);
 
-  void run_(Thread *thread, ZmFn<> fn);
+  void runWake(Thread *thread, ZmFn<> fn);
+  bool tryRunWake(Thread *thread, ZmFn<> &fn);
+  bool run__(Thread *thread, ZmFn<> fn);
+  bool tryRun__(Thread *thread, ZmFn<> &fn);
 
   void work();
 

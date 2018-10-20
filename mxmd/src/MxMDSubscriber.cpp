@@ -27,6 +27,8 @@ void MxMDSubscriber::init(MxMDCore *core)
 {
   ZmRef<ZvCf> cf = core->cf()->subset("subscriber", false, true);
 
+  Mx *mx = core->mx();
+
   if (!cf->get("id")) cf->set("id", "subscriber");
 
   MxEngine::init(core, this, core->mx(), cf);
@@ -481,7 +483,7 @@ void MxMDSubLink::udpReceived(MxQMsg *msg)
   }
   msg->fn = MxQMsgFn([](MxMDSubLink *link, MxQMsg *msg, ZiIOContext *) {
 	link->rx()->received(msg); }, this);
-  engine()->rxRun(
+  engine()->rxInvoke(
       ZmFn<>{[](MxQMsg *msg) { msg->fn(msg, nullptr); }, ZmMkRef(msg)});
 }
 void MxMDSubLink::request(const MxQueue::Gap &, const MxQueue::Gap &now)
@@ -565,7 +567,7 @@ void MxMDSubLink::status(ZtArray<char> &out)
   out << "\n  UDP Queue: ";
   {
     thread_local ZmSemaphore sem;
-    rxInvoke([&sem, &out](Rx *rx) {
+    rxInvoke([&out, sem = &sem](Rx *rx) {
       const MxQueue &queue = rx->rxQueue();
       MxQueue::Gap gap = queue.gap();
       out <<
@@ -573,7 +575,7 @@ void MxMDSubLink::status(ZtArray<char> &out)
 	"  gap: (" << gap.key() << ")," << ZuBox<unsigned>(gap.length()) <<
 	"  length: " << ZuBox<unsigned>(queue.length()) << 
 	"  count: " << ZuBox<unsigned>(queue.count());
-      sem.post();
+      sem->post();
     });
     sem.wait();
   }

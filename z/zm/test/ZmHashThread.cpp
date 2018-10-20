@@ -52,10 +52,11 @@ struct TestObject {
   ConnHash connHash;
 };
 
-ZmSemaphore sema;
+ZmSemaphore sem;
+
 void stop() {
   running = false;
-  sema.post();
+  sem.post();
 }
 
 int main(int argc, char *argv[])
@@ -68,7 +69,7 @@ int main(int argc, char *argv[])
   ZmThread remover(0, 0, ZmFn<>::Member<&TestObject::remover>::fn(&prog));
   ZmThread finder(0, 0, ZmFn<>::Member<&TestObject::finder>::fn(&prog));
 
-  sema.wait();
+  sem.wait();
 
   puts("Caught Ctrl-C\n");
 

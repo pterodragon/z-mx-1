@@ -39,18 +39,16 @@
 
 #include <ZvCf.hpp>
 #include <ZvRingCf.hpp>
-#include <ZvThreadCf.hpp>
-#include <ZvCmd.hpp>
 
 #include <MxMultiplex.hpp>
 #include <MxEngine.hpp>
 
 #include <MxMD.hpp>
-#include <MxMDCmd.hpp>
 #include <MxMDStream.hpp>
 
+#include <MxMDCmd.hpp>
+
 #include <MxMDBroadcast.hpp>
-#include <MxMDThread.hpp>
 
 #include <MxMDRecord.hpp>
 #include <MxMDReplay.hpp>
@@ -65,9 +63,8 @@ extern "C" {
 };
 
 class MxMDAPI MxMDCore :
-  public ZmPolymorph, public MxMDLib, public MxMDCmd, public MxEngineMgr {
+  public ZmPolymorph, public MxMDLib, public MxEngineMgr {
 friend class MxMDLib;
-friend class MxMDCmd;
 
 public:
   static unsigned vmajor();
@@ -76,38 +73,6 @@ public:
   typedef MxMultiplex Mx;
 
 private:
-  class CmdServer : public ZvCmdServer {
-  friend class MxMDLib;
-  friend class MxMDCmd;
-  friend class MxMDCore;
-
-    typedef ZmRBTree<ZtString,
-	      ZmRBTreeVal<ZuTuple<CmdFn, ZtString, ZtString>,
-		ZmRBTreeLock<ZmNoLock> > > Cmds;
-
-    void rcvd(ZvCmdLine *, const ZvInvocation &, ZvAnswer &);
-
-    void help(const CmdArgs &args, ZtArray<char> &result);
-
-    CmdServer(MxMDCore *md);
-  public:
-    virtual ~CmdServer() { }
-
-  private:
-    void init(ZvCf *cf);
-    void final();
-
-    typedef ZuBoxFmt<ZuBox<unsigned>, ZuFmt::Right<6> > TimeFmt;
-    inline TimeFmt timeFmt(MxDateTime t) {
-      return ZuBox<unsigned>((t + m_tzOffset).hhmmss()).fmt(ZuFmt::Right<6>());
-    }
-
-    MxMDCore	*m_md;
-    ZmRef<ZvCf>	m_syntax;
-    Cmds	m_cmds;
-    int		m_tzOffset = 0;
-  };
-
   MxMDCore(ZmRef<Mx> mx);
 
   void init_(ZvCf *cf);
@@ -160,8 +125,10 @@ private:
   void pad(Frame *);
   void apply(const Frame *, bool filter);
 
-  void startCmdServer();
-  void initCmds();
+  // commands
+
+  void addCmd(ZuString name, ZuString syntax,
+    MxMDCmd::Fn fn, ZtString brief, ZtString usage)
 
   void l1(const CmdArgs &, ZtArray<char> &);
   void l2(const CmdArgs &, ZtArray<char> &);
@@ -316,15 +283,16 @@ private:
 
   ZmRef<Mx>		m_mx;
   ZmRef<ZvCf>		m_cf;
-  ZmRef<CmdServer>	m_cmd;
+
+  ZmRef<MxMDCmd>	m_cmd;
 
   MxMDBroadcast		m_broadcast;	// broadcasts updates
 
   MxMDRecord		m_record;	// records to file
   MxMDReplay		m_replay;	// replays from file
 
-  MxMDPublisher		m_publisher;	// publishes to network
-  MxMDSubscriber	m_subscriber;	// subscribes to network
+  ZmRef<MxMDPublisher>	m_publisher;	// publishes to network
+  ZmRef<MxMDSubscriber>	m_subscriber;	// subscribes from network
 
   ZmRef<MxMDFeed>	m_localFeed;
 

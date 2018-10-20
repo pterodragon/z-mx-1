@@ -288,9 +288,9 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 
       MxMDSecHandle sec = md->security(secKey, 0); // default to shard 0
 
-      thread_local ZmSemaphore sem;
       ZtString error;
-      sec.invokeMv([sem = &sem, &error,
+      thread_local ZmSemaphore sem;
+      sec.invokeMv([&error, sem = &sem,
 	  secKey, &refData, &tickSizeTbl, &lotSizes](
 	    MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
 

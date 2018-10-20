@@ -34,13 +34,29 @@
 
 void MxMDReplay::init(MxMDCore *core)
 {
-  ZmRef<ZvCf> cf = core->cf()->subset("replay", false, true);
+  ZmRef<ZvCf> cf = core->cf()->subset("replay", false, false);
 
   Mx *mx = core->mx();
+
+  if (!cf) {
+    cf = new ZvCf();
+    cf->fromString("id replay");
+  }
 
   MxEngine::init(core, this, mx, cf);
 
   updateLink("replay", cf);
+
+  core->addCmd(
+      "replay",
+      "s stop stop { type flag }",
+      CmdFn::Member<&MxMDReplay::replayCmd>::fn(this),
+      "replay market data from file",
+      "usage: replay FILE\n"
+      "       replay -s\n"
+      "replay market data from FILE\n\n"
+      "Options:\n"
+      "-s, --stop\tstop replaying\n");
 }
 
 void MxMDReplay::final() { }
@@ -54,28 +70,25 @@ ZmRef<MxAnyLink> MxMDReplay::createLink(MxID id)
 bool MxMDReplay::replay(ZtString path)
 {
   if (ZuUnlikely(!m_link)) return false;
-  return m_link->replay(ZuMv(path));
+  bool ok = m_link->replay(ZuMv(path));
+  start();
+  return ok;
 }
 
 ZtString MxMDReplay::stopReplaying()
 {
   if (ZuUnlikely(!m_link)) return ZtString();
-  return m_link->stopReplaying();
+  ZtString path = m_link->stopReplaying();
+  stop();
+  return path;
 }
 
 bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
 {
-  if (engine()->isRx()) {
-    core()->raise(ZeEVENT(Fatal,
-      ([=, path = ZuMv(path)](const ZeEvent &, ZmStream &s) {
-	s << "MxMD \"" << path << "\": " <<
-	"replay invoked from Rx thread"; })));
-    return false;
-  }
   Guard guard(m_lock);
   down();
   if (!path) return true;
-  engine()->rxRun(ZmFn<>{
+  engine()->rxInvoke(ZmFn<>{
       [this, path = ZuMv(path), begin, filter]() {
 	m_path = ZuMv(path);
 	m_replayNext = !begin ? ZmTime() : begin.zmTime();
@@ -84,10 +97,10 @@ bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
   up();
   int state;
   thread_local ZmSemaphore sem;
-  engine()->rxRun(ZmFn<>{
-      [&state, &sem](MxMDReplayLink *link) {
+  engine()->rxInvoke(ZmFn<>{
+      [&state, sem = &sem](MxMDReplayLink *link) {
 	  state = link->state();
-	  sem.post();
+	  sem->post();
 	}, this});
   sem.wait();
   return state != MxLinkState::Failed;
@@ -96,13 +109,6 @@ bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
 ZtString MxMDReplayLink::stopReplaying()
 {
   ZtString path;
-  if (engine()->isRx()) {
-    core()->raise(ZeEVENT(Fatal,
-      ([=, path = ZuMv(path)](const ZeEvent &, ZmStream &s) {
-	s << "MxMD \"" << path << "\": " <<
-	"stopReplaying invoked from Rx thread"; })));
-    return path;
-  }
   {
     Guard guard(m_lock);
     path = ZuMv(m_path);
@@ -113,9 +119,12 @@ ZtString MxMDReplayLink::stopReplaying()
 
 void MxMDReplayLink::update(ZvCf *cf)
 {
-  replay(cf->get("path"),
+  if (ZtString path = cf->get("path"))
+    replay(ZuMv(path),
       MxDateTime{cf->get("begin", false, "")},
       cf->getInt("filter", 0, 1, false, 0));
+  else
+    stopReplaying();
 }
 
 void MxMDReplayLink::reset(MxSeqNo, MxSeqNo)
@@ -229,4 +238,20 @@ eof:
 
 // commands
 
-// FIXME - move from MxMDCore
+void MxMDReplay::replayCmd(const CmdArgs &args, ZtArray<char> &out)
+{
+  ZuBox<int> argc = args.get("#");
+  if (argc < 1 || argc > 2) throw CmdUsage();
+  if (!!args.get("stop")) {
+    if (ZtString path = stopReplaying())
+      out << "stopped replaying to \"" << path << "\"\n";
+    return;
+  }
+  if (argc != 2) throw CmdUsage();
+  ZuString path = args.get("1");
+  if (!path) CmdUsage();
+  if (replay(path))
+    out << "started replaying from \"" << path << "\"\n";
+  else
+    out << "failed to replay from \"" << path << "\"\n";
+}

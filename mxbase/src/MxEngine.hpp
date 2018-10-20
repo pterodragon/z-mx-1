@@ -641,10 +641,8 @@ public:
     m_rrTime.now();
     ZmTime rrTime = (m_rrTime += interval);
     guard.unlock();
-    // FIXME - if rxRun 
-    this->mx()->add(
-	ZmFn<>{[](MxLink *link) {
-	  link->rxRun([](Rx *rx) { rx->reRequest(); });
+    rxRun(ZmFn<>{[](MxLink *link) {
+	  link->rxInvoke([](Rx *rx) { rx->reRequest(); });
 	}, this}, rrTime, &m_rrTimer);
   }
   ZuInline void cancelReRequest() {

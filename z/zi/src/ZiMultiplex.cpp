@@ -2074,7 +2074,7 @@ void ZiMultiplex::stop_3()
 
   // close down underlying I/O platform
 
-  wakeFn(rxThread(), ZmScheduler::WakeFn());
+  wakeFn(rxThread(), ZmFn<>());
 
 #ifdef ZiMultiplex_IOCP
   CloseHandle(m_completionPort);
@@ -2092,11 +2092,10 @@ void ZiMultiplex::stop_3()
 
 void ZiMultiplex::rxStart()
 {
-  wakeFn(rxThread(), [](ZmScheduler *sched, unsigned) {
-	ZiMultiplex *mx = static_cast<ZiMultiplex *>(sched);
+  wakeFn(rxThread(), ZmFn<>{[](ZiMultiplex *mx) {
 	mx->run_(mx->rxThread(), ZmFn<>::Member<&ZiMultiplex::rx>::fn(mx));
 	mx->wake();
-      });
+      }, this});
   rx();
 }
 

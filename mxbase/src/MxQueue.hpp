@@ -112,7 +112,7 @@ private:
 struct MxQueue_HeapID { inline static const char *id() { return "MxQueue"; } };
 typedef ZmPQueue<MxQMsgData,
 	  ZmPQueueNodeIsItem<true,
-	    ZmPQueueObject<ZuObject,
+	    ZmPQueueObject<ZmPolymorph,
 	      ZmPQueueFn<MxQFn,
 		ZmPQueueLock<ZmNoLock,
 		  ZmPQueueHeapID<MxQueue_HeapID> > > > > > MxQueue;

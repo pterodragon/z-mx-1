@@ -227,10 +227,12 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
 
 MxMDLib *MxMDLib::instance()
 {
-  return ZmSingleton<MxMDCore, 0>::instance();
+  return ZmSingleton<MxMDCore, false>::instance();
 }
 
-MxMDCore::MxMDCore(ZmRef<Mx> mx) : MxMDLib(mx), m_mx(ZuMv(mx)) { }
+MxMDCore::MxMDCore(ZmRef<Mx> mx) : MxMDLib(mx), m_mx(ZuMv(mx))
+{
+}
 
 void MxMDCore::init_(ZvCf *cf)
 {
@@ -305,8 +307,7 @@ void MxMDCore::init_(ZvCf *cf)
 	  ZvCSVReadFn::Member<&MxMDCore::addOrderBook_>::fn(this));
   }
 
-  if (ZmRef<ZvCf> ringCf = cf->subset("broadcast", false))
-    m_broadcast.init(ringCf);
+  m_broadcast.init(this);
 
   if (ZmRef<ZvCf> cmdCf = cf->subset("cmd", false)) {
     m_cmd = new MxMDCmd();
@@ -314,8 +315,10 @@ void MxMDCore::init_(ZvCf *cf)
     initCmds();
   }
 
-  m_record.init(this);
-  m_replay.init(this);
+  m_record = new MxMDRecord();
+  m_record->init(this);
+  m_replay = new MxMDReplay();
+  m_replay->init(this);
 
   if (ZmRef<ZvCf> publisherCf = cf->subset("publisher", false)) {
     m_publisher = new MxMDPublisher();
@@ -329,11 +332,94 @@ void MxMDCore::init_(ZvCf *cf)
   ZeLOG(Info, "MxMDLib - initialized...");
 }
 
-void addCmd(ZuString name, ZuString syntax,
-  MxMDCmd::Fn fn, ZtString brief, ZtString usage)
+void MxMDCore::addCmd(ZuString name, ZuString syntax,
+  CmdFn fn, ZtString brief, ZtString usage)
 {
   if (!m_cmd) return;
   m_cmd->addCmd(name, syntax, ZuMv(fn), ZuMv(brief), ZuMv(usage));
+}
+
+ZtString MxMDCore::lookupSyntax()
+{
+  return 
+    "S src src { type scalar } "
+    "m market market { type scalar } "
+    "s segment segment { type scalar }";
+}
+
+ZtString MxMDCore::lookupOptions()
+{
+  return
+    "    -S --src=SRC\t- symbol ID source is SRC\n"
+    "\t(CUSIP|SEDOL|QUIK|ISIN|RIC|EXCH|CTA|BSYM|BBGID|FX|CRYPTO)\n"
+    "    -m --market=MIC\t - market MIC, e.g. XTKS\n"
+    "    -s --segment=SEGMENT\t- market segment SEGMENT\n";
+}
+
+void MxMDCore::lookupSecurity(
+    const CmdArgs &args, unsigned index,
+    bool secRequired, ZmFn<MxMDSecurity *> fn)
+{
+  ZuString symbol = args.get(ZuStringN<16>(ZuBoxed(index)));
+  MxID venue = args.get("market");
+  MxID segment = args.get("segment");
+  bool notFound = 0;
+  thread_local ZmSemaphore sem;
+  if (ZuString src_ = args.get("src")) {
+    MxEnum src = MxSecIDSrc::lookup(src_);
+    MxSecSymKey key{src, symbol};
+    secInvoke(key,
+	[secRequired, sem = &sem, &notFound, fn = ZuMv(fn)](MxMDSecurity *sec) {
+      if (secRequired && ZuUnlikely(!sec))
+	notFound = 1;
+      else
+	fn(sec);
+      sem->post();
+    });
+    sem.wait();
+    if (ZuUnlikely(notFound))
+      throw ZtString() << "security " << key << " not found";
+  } else {
+    if (!*venue) throw CmdUsage();
+    MxSecKey key{venue, segment, symbol};
+    secInvoke(key,
+	[secRequired, sem = &sem, &notFound, fn = ZuMv(fn)](MxMDSecurity *sec) {
+      if (secRequired && ZuUnlikely(!sec))
+	notFound = 1;
+      else
+	fn(sec);
+      sem->post();
+    });
+    sem.wait();
+    if (ZuUnlikely(notFound))
+      throw ZtString() << "security " << key << " not found";
+  }
+}
+
+void MxMDCore::lookupOrderBook(
+    const CmdArgs &args, unsigned index,
+    bool secRequired, bool obRequired,
+    ZmFn<MxMDSecurity *, MxMDOrderBook *> fn)
+{
+  MxID venue = args.get("market");
+  MxID segment = args.get("segment");
+  bool notFound = 0;
+  thread_local ZmSemaphore sem;
+  lookupSecurity(args, index, secRequired || obRequired,
+      [obRequired, &notFound, sem = &sem, venue, segment, fn = ZuMv(fn)](
+	MxMDSecurity *sec) {
+    ZmRef<MxMDOrderBook> ob = sec->orderBook(venue, segment);
+    if (obRequired && ZuUnlikely(!ob))
+      notFound = 1;
+    else
+      fn(sec, ob);
+    sem->post();
+  });
+  sem.wait();
+  if (ZuUnlikely(notFound))
+    throw ZtString() << "order book " <<
+	MxSecKey{venue, segment, args.get(ZuStringN<16>(ZuBoxed(index)))} <<
+	" not found";
 }
 
 void MxMDCore::initCmds()
@@ -401,8 +487,8 @@ void MxMDCore::start()
     m_cmd->start();
   }
 
-  m_record.start();
-  m_replay.start();
+  m_record->start();
+  m_replay->start();
 
   if (m_publisher) {
     raise(ZeEVENT(Info, "starting publisher..."));
@@ -433,8 +519,8 @@ void MxMDCore::stop()
     m_publisher->stop();
   }
 
-  m_replay.stop();
-  m_record.stop();
+  m_replay->stop();
+  m_record->stop();
 
   m_broadcast.eof();
   m_broadcast.close();
@@ -467,7 +553,7 @@ void MxMDCore::l1(const CmdArgs &args, ZtArray<char> &out)
     out << "stamp,status,last,lastQty,bid,bidQty,ask,askQty,tickDir,"
       "high,low,accVol,accVolQty,match,matchQty,surplusQty,flags\n";
   for (unsigned i = 1; i < argc; i++)
-    lookupOrderBook(this, args, i, 1, 1,
+    lookupOrderBook(args, i, 1, 1,
 	[this, &out, csv](MxMDSecurity *, MxMDOrderBook *ob) {
       const MxMDL1Data &l1Data = ob->l1Data();
       MxNDP pxNDP = l1Data.pxNDP;
@@ -517,7 +603,7 @@ void MxMDCore::l2(const CmdArgs &args, ZtArray<char> &out)
 {
   ZuBox<int> argc = args.get("#");
   if (argc != 2) throw CmdUsage();
-  lookupOrderBook(this, args, 1, 1, 1,
+  lookupOrderBook(args, 1, 1, 1,
       [this, &out](MxMDSecurity *, MxMDOrderBook *ob) {
     out << "bids:\n";
     l2_side(ob->bids(), out);
@@ -551,7 +637,7 @@ void MxMDCore::security_(const CmdArgs &args, ZtArray<char> &out)
 {
   ZuBox<int> argc = args.get("#");
   if (argc != 2) throw CmdUsage();
-  lookupOrderBook(this, args, 1, 1, 0,
+  lookupOrderBook(args, 1, 1, 0,
       [&out](MxMDSecurity *sec, MxMDOrderBook *ob) {
     const MxMDSecRefData &refData = sec->refData();
     out <<
@@ -731,55 +817,21 @@ void MxMDCore::orderbooks(const CmdArgs &args, ZtArray<char> &out)
 
 bool MxMDCore::record(ZuString path)
 {
-  return m_record.record(path);
+  return m_record->record(path);
 }
 ZtString MxMDCore::stopRecording()
 {
-  return ZuMv(m_record.stopRecording());
+  return m_record->stopRecording();
 }
 
 bool MxMDCore::replay(ZuString path, MxDateTime begin, bool filter)
 {
   m_mx->del(&m_timer);
-  return m_replay.replay(path, begin, filter);
+  return m_replay->replay(path, begin, filter);
 }
 ZtString MxMDCore::stopReplaying()
 {
-  return ZuMv(m_replay.stopReplaying());
-}
-
-void MxMDCore::publish()
-{
-  raise(ZeEVENT(Info, "started publishing"));
-  m_publisher.start();
-}
-
-void MxMDCore::stopPublish()
-{
-  m_publisher.stop();
-  raise(ZeEVENT(Info, "stopped publishing"));
-}
-
-void MxMDCore::subscribe()
-{
-  raise(ZeEVENT(Info, "started subscribing"));
-  m_subscriber.start();
-}
-
-void MxMDCore::stopSubscribe()
-{
-  m_subscriber.stop();
-  raise(ZeEVENT(Info, "stopped subscribing"));
-}
-
-void MxMDCore::threadName(ZmThreadName &name, unsigned id)
-{
-  switch ((int)id) {
-    default: name = "MxMDCore"; break;
-    case ThreadID::Recorder: name = "MxMDCore.Recorder"; break;
-    // case ThreadID::RecSnapper: name = "MxMDCore.RecSnapper"; break;
-    case ThreadID::Snapper: name = "MxMDCore.Snapper"; break;
-  }
+  return m_replay->stopReplaying();
 }
 
 #if 0

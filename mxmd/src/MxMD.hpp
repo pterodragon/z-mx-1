@@ -1760,15 +1760,13 @@ public:
   virtual void stop() = 0;
   virtual void final() = 0;
 
-  virtual void record(ZuString path) = 0;
-  virtual void stopRecording() = 0;
-  virtual void stopStreaming() = 0;
+  virtual bool record(ZuString path) = 0;
+  virtual ZtString stopRecording() = 0;
 
-  virtual void replay(
-    ZuString path,
-    MxDateTime begin = MxDateTime(),
-    bool filter = true) = 0;
-  virtual void stopReplaying() = 0;
+  virtual bool replay(ZuString path,
+      MxDateTime begin = MxDateTime(),
+      bool filter = true) = 0;
+  virtual ZtString stopReplaying() = 0;
 
   virtual void startTimer(MxDateTime begin = MxDateTime()) = 0;
   virtual void stopTimer() = 0;

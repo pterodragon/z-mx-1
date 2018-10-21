@@ -122,13 +122,13 @@ void addSecurity(MxMDSecurity *security, MxDateTime)
   security->subscribe(secHandler);
 }
 
-void subscribe(const MxMDCmd::CmdArgs &args, ZtArray<char> &out)
+void subscribe(const MxMDCmd::Args &args, ZtArray<char> &out)
 {
   MxMDLib *md = MxMDLib::instance();
   if (!md) throw ZtString("MxMDLib::instance() failed");
   ZmRef<MxMDSecurity> security;
   unsigned argc = ZuBox<unsigned>(args.get("#"));
-  if (argc < 2) throw MxMDCmd::CmdUsage();
+  if (argc < 2) throw CmdUsage();
   MxMDCmd::instance(md)->lookupSecurity(md, args, 1, 1,
       [&out](MxMDSecurity *sec) {
     sec->subscribe(secHandler);

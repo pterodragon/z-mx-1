@@ -18,14 +18,17 @@ public class MxMDLib {
 
   public native void close();
 
-  public native void record(String path);
-  public native void stopRecording();
-  public native void stopStreaming();
+  public native boolean record(String path);
+  public native String stopRecording();
 
-  public void replay(String path) { replay(path, null, true); }
-  public void replay(String path, Instant begin) { replay(path, begin, true); }
-  public native void replay(String path, Instant begin, boolean filter);
-  public native void stopReplaying();
+  public boolean replay(String path) {
+    return replay(path, null, true);
+  }
+  public boolean replay(String path, Instant begin) {
+    return replay(path, begin, true);
+  }
+  public native boolean replay(String path, Instant begin, boolean filter);
+  public native String stopReplaying();
 
   public void startTimer() { startTimer(null); }
   public native void startTimer(Instant begin);

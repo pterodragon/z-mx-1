@@ -55,12 +55,12 @@ template <typename T, bool IsObject = ZuIsObject_<T>::OK> struct ZmSingleton_ {
   ZuInline void ref(T *p) { ZmREF(p); }
   ZuInline void deref(T *p) { ZmDEREF(p); }
 };
-template <typename T> struct ZmSingleton_<T, 0> {
+template <typename T> struct ZmSingleton_<T, false> {
   ZuInline static void ref(T *) { }
   ZuInline static void deref(T *p) { delete p; }
 };
 
-template <typename T_, bool Construct_ = 1>
+template <typename T_, bool Construct_ = true>
 class ZmSingleton : public ZmGlobal, public ZmSingleton_<T_> {
   ZmSingleton(const ZmSingleton &);
   ZmSingleton &operator =(const ZmSingleton &);	// prevent mis-use

@@ -560,13 +560,13 @@ namespace MxMDStream {
   namespace UDP {
     void send(MxQMsg *msg, ZiConnection *cxn, const ZiSockAddr &addr) {
       msg->addr = addr;
-      cxn->send(ZiIOFn([](MxQMsg *msg, ZiIOContext &io) {
-	  io.init(ZiIOFn([](MxQMsg *msg, ZiIOContext &io) {
+      cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
+	  io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
 	      msg->fn(msg, &io);
-	    }, ZmMkRef(msg)),
+	    }, ZmMkRef(msg)},
 	    msg->payload->ptr(), msg->length, 0, msg->addr);
-	}, ZmMkRef(msg)));
+	}, ZmMkRef(msg)});
     }
 
     void recv(MxQMsg *msg, ZiIOContext &io) {
@@ -604,7 +604,7 @@ namespace MxMDStream {
 	    msg->fn(msg, &io);
 	    if (ZuUnlikely(io.completed())) return;
 	    if (io.offset = len - msgLen)
-	      memmove(io.ptr, io.ptr + msgLen, io.offset);
+	      memmove(io.ptr, (const char *)io.ptr + msgLen, io.offset);
 	    len = io.offset;
 	  }
 	}, ZmMkRef(msg)),

@@ -23,10 +23,8 @@
 
 #include <MxMDSubscriber.hpp>
 
-void MxMDSubscriber::init(MxMDCore *core)
+void MxMDSubscriber::init(MxMDCore *core, ZvCf *cf)
 {
-  ZmRef<ZvCf> cf = core->cf()->subset("subscriber", false, true);
-
   Mx *mx = core->mx();
 
   if (!cf->get("id")) cf->set("id", "subscriber");
@@ -46,13 +44,13 @@ void MxMDSubscriber::init(MxMDCore *core)
 
   core->addCmd(
       "subscriber.status", "",
-      MxMDCmd::CmdFn::Member<&MxITCHFeed::statusCmd>::fn(this),
+      MxMDCmd::Fn::Member<&MxMDSubscriber::statusCmd>::fn(this),
       "subscriber status",
       "usage: subscriber.status\n");
 
   core->addCmd(
       "subscriber.resend", "",
-      MxMDCmd::CmdFn::Member<&MxITCHFeed::resendCmd>::fn(this),
+      MxMDCmd::Fn::Member<&MxITCHFeed::resendCmd>::fn(this),
       "manually test subscriber resend",
       "usage: subscriber.resend LINK SEQNO COUNT\n"
       "    LINK: link ID (determines server IP/port)\n"
@@ -80,7 +78,13 @@ void MxMDSubscriber::updateLinks(ZuString partitions)
     }, this);
 }
 
-MxEngineApp::ProcessFn MxMDPublisher::processFn()
+ZmRef<MxAnyLink> MxMDSubscriber::createLink(MxID id)
+{
+  m_link = new MxMDSubLink(id);
+  return m_link;
+}
+
+MxEngineApp::ProcessFn MxMDSubscriber::processFn()
 {
   return static_cast<MxEngineApp::ProcessFn>(
       [](MxEngineApp *app, MxAnyLink *link, MxQMsg *msg) {
@@ -146,7 +150,7 @@ void MxMDSubLink::tcpError(TCP *tcp, ZiIOContext *io)
     io->disconnect();
   else if (tcp)
     tcp->close();
-  ZmGuard<ZmLock> connGuard(m_connLock);
+  Guard connGuard(m_connLock);
   if (!tcp || tcp == m_tcp) reconnect();
 }
 
@@ -156,7 +160,7 @@ void MxMDSubLink::udpError(UDP *udp, ZiIOContext *io)
     io->disconnect();
   else if (udp)
     udp->close();
-  ZmGuard<ZmLock> connGuard(m_connLock);
+  Guard connGuard(m_connLock);
   if (!udp || udp == m_udp) reconnect();
 }
 
@@ -175,7 +179,7 @@ void MxMDSubLink::disconnect()
   ZmRef<UDP> udp;
 
   {
-    ZmGuard<ZmLock> connGuard(m_connLock);
+    Guard connGuard(m_connLock);
     tcp = ZuMv(m_tcp);
     udp = ZuMv(m_udp);
     m_tcp = nullptr;
@@ -239,7 +243,7 @@ void MxMDSubLink::tcpConnected(MxMDSubLink::TCP *tcp)
       tcp->info().remoteIP << ':' << ZuBoxed(tcp->info().remotePort));
 
   {
-    ZmGuard<ZmLock> connGuard(m_connLock);
+    Guard connGuard(m_connLock);
     m_tcp = tcp;
   }
 
@@ -251,7 +255,7 @@ void MxMDSubLink::tcpConnected(MxMDSubLink::TCP *tcp)
 
 void MxMDSubLink::TCP::disconnect_()
 {
-  ZmGuard<ZmLock> stateGuard(m_stateLock);
+  Guard stateGuard(m_stateLock);
   m_state = State::Disconnect;
 }
 void MxMDSubLink::TCP::disconnect()
@@ -269,7 +273,7 @@ void MxMDSubLink::TCP::disconnected()
   mx()->del(&m_loginTimer);
   bool intentional;
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    Guard stateGuard(m_stateLock);
     intentional = m_state == State::Disconnect;
   }
   if (!intentional) tcpERROR(this, 0, "TCP disconnected");
@@ -287,7 +291,7 @@ void MxMDSubLink::TCP::sendLogin()
   MxMDStream::TCP::send(qmsg, this); // bypass Tx queue
   mx()->add(ZmFn<>([](MxMDSubLink::TCP *tcp) {
       {
-	ZmGuard<ZmLock> stateGuard(m_stateLock);
+	Guard stateGuard(m_stateLock);
 	if (m_state != State::Login) return;
       }
       tcpERROR(tcp, 0, "TCP login timeout");
@@ -297,7 +301,7 @@ void MxMDSubLink::TCP::processLoginAck(ZiIOContext &io)
 {
   mx()->del(&m_loginTimer);
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    Guard stateGuard(m_stateLock);
     if (m_state != State::Login) {
       stateGuard.unlock();
       tcpERROR(this, &io, "TCP unexpected login ack");
@@ -321,7 +325,7 @@ void MxMDSubLink::TCP::process(ZiIOContext &io)
   const Frame &frame = m_in->as<Frame>();
   if (ZuUnlikely(frame.type == Type::EndOfSnapshot)) {
     {
-      ZmGuard<ZmLock> stateGuard(m_stateLock);
+      Guard stateGuard(m_stateLock);
       m_state = State::Disconnect;
     }
     io.disconnect();
@@ -394,7 +398,7 @@ void MxMDSubLink::udpConnected(MxMDSubLink::UDP *udp, ZiIOContext &io)
   ZmRef<TCP> tcp;
 
   {
-    ZmGuard<ZmLock> connGuard(m_connLock);
+    Guard connGuard(m_connLock);
     if (!(tcp = m_tcp)) { // paranoia
       connGuard.unlock();
       udp->disconnect();
@@ -414,7 +418,7 @@ void MxMDSubLink::udpConnected(MxMDSubLink::UDP *udp, ZiIOContext &io)
 
 void MxMDSubLink::UDP::disconnect_()
 {
-  ZmGuard<ZmLock> stateGuard(m_stateLock);
+  Guard stateGuard(m_stateLock);
   m_state = State::Disconnect;
 }
 void MxMDSubLink::UDP::disconnect()
@@ -431,7 +435,7 @@ void MxMDSubLink::UDP::disconnected()
 {
   bool intentional;
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    Guard stateGuard(m_stateLock);
     intentional = m_state == State::Disconnect;
   }
   if (!intentional) udpERROR(this, 0, "UDP disconnected");
@@ -470,7 +474,7 @@ void MxMDSubLink::udpReceived(MxQMsg *msg)
   if (ZuUnlikely(
 	msg->addr.ip() == m_partition->resendIP ||
 	msg->addr.ip() == m_partition->resendIP2)) {
-    ZmGuard<ZmLock> guard(m_resendLock);
+    Guard guard(m_resendLock);
     if (ZuUnlikely(*m_resendSeqNo)) {
       uint64_t seqNo = msg->seqNo();
       if (seqNo >= m_resendSeqNo && seqNo < m_resendSeqNo + m_resendCount) {
@@ -504,7 +508,7 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
   ZmRef<MxQMsg> qmsg = new MxQMsg(msg, MxQMsgFn(), msg->length());
   ZmRef<UDP> udp;
   {
-    ZmGuard<ZmLock> connGuard(m_connLock);
+    Guard connGuard(m_connLock);
     udp = m_udp;
   }
   if (ZuLikely(udp)) MxMDStream::UDP::send(qmsg, udp);
@@ -512,10 +516,11 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
 
 // commands
 
-void MxMDSubscriber::statusCmd(const MxMDCmd::CmdArgs &args, ZtArray<char> &out)
+void MxMDSubscriber::statusCmd(
+    const MxMDCmd::Args &args, ZtArray<char> &out)
 {
   int argc = ZuBox<int>(args.get("#"));
-  if (argc != 1) throw MxMDCmd::CmdUsage();
+  if (argc != 1) throw MxMDCmd::Usage();
   out.size(512 * nLinks());
   out << "State: " << MxEngineState::name(state()) << '\n';
   allLinks([&out](MxAnyLink *link) {
@@ -582,17 +587,18 @@ void MxMDSubLink::status(ZtArray<char> &out)
   out << '\n';
 }
 
-void MxMDSubscriber::resendCmd(const MxMDCmd::CmdArgs &args, ZtArray<char> &out)
+void MxMDSubscriber::resendCmd(
+    const MxMDCmd::Args &args, ZtArray<char> &out)
 {
   ZuBox<int> argc(args.get("#"));
-  if (argc != 4) throw MxMDCmd::CmdUsage();
+  if (argc != 4) throw MxMDCmd::Usage();
   auto id = args.get("1");
   ZmRef<MxAnyLink> link_ = link(id);
   if (!link_) throw ZtString() << id << " - unknown link";
   auto link = static_cast<MxMDSubLink *>(link_.ptr());
   ZuBox<uint64_t> seqNo(args.get("2"));
   ZuBox<uint16_t> count(args.get("3"));
-  if (!*seqNo || !*count) throw MxMDCmd::CmdUsage();
+  if (!*seqNo || !*count) throw MxMDCmd::Usage();
   ZmRef<MxQMsg> msg = link->resend(seqNo, count);
   if (!msg) throw ZtString("timed out");
   seqNo = msg->seqNo();
@@ -608,7 +614,7 @@ ZmRef<MxQMsg> MxSubLink::resend(MxSeqNo seqNo, unsigned count);
   using namespace MxMDStream;
   MxQueue::Gap gap{seqNo, count};
   {
-    ZmGuard<ZmLock> guard(m_resendLock);
+    Guard guard(m_resendLock);
     m_resendGap = gap;
   }
   reRequest(gap);
@@ -616,7 +622,7 @@ ZmRef<MxQMsg> MxSubLink::resend(MxSeqNo seqNo, unsigned count);
     return 0;
   ZmRef<MxQMsg> msg;
   {
-    ZmGuard<ZmLock> guard(m_resendLock);
+    Guard guard(m_resendLock);
     m_resendGap = MxQueue::Gap();
     msg = ZuMv(m_resendMsg);
   }

@@ -30,23 +30,36 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <ZmTime.hpp>
+#include <ZmPLock.hpp>
+#include <ZmGuard.hpp>
+#include <ZmRef.hpp>
+#include <ZmAtomic.hpp>
+
+#include <ZtString.hpp>
+
 #include <ZiFile.hpp>
 
 #include <MxEngine.hpp>
 
 #include <MxMDTypes.hpp>
+#include <MxMDCmd.hpp>
 
 class MxMDCore;
 
-class MxMDRecord : public MxEngineApp, public MxEngine {
+class MxMDRecLink;
+
+class MxMDRecord : public MxEngine, public MxEngineApp {
 public:
   MxMDRecord() { }
   ~MxMDRecord() { }
 
-  inline MxMDCore *core() const { return static_cast<MxMDCore *>(mgr()); }
+  MxMDCore *core() const;
 
   void init(MxMDCore *core);
   void final();
+
+  ZuInline int snapThread() const { return m_snapThread; }
 
   bool record(ZtString path);
   ZtString stopRecording();
@@ -63,7 +76,12 @@ protected:
   void archive(MxAnyLink *, MxQMsg *) { }
   ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
 
+  // commands
+  void recordCmd(const MxMDCmd::Args &, ZtArray<char> &);
+
 private:
+  int		m_snapThread = -1;
+
   MxMDRecLink	*m_link = 0;
 };
 
@@ -71,8 +89,13 @@ class MxMDAPI MxMDRecLink : public MxLink<MxMDRecLink> {
 public:
   MxMDRecLink(MxID id) : MxLink<MxMDRecLink>{id} { }
 
-  inline MxMDCore *core() const {
-    return static_cast<MxMDCore *>(engine()->mgr());
+  typedef MxMDRecord Engine;
+
+  ZuInline Engine *engine() const {
+    return static_cast<Engine *>(MxAnyLink::engine()); // actually MxAnyTx
+  }
+  ZuInline MxMDCore *core() const {
+    return engine()->core();
   }
 
   bool record(ZtString path);
@@ -106,7 +129,9 @@ private:
   typedef ZmReadGuard<Lock> ReadGuard;
 
   typedef MxQueueRx<MxMDRecLink> Rx;
-  typedef MxMDStream::MsgData MsgData;
+
+  typedef MxMDStream::Frame Frame;
+  typedef MxMDStream::Msg Msg;
 
   int write_(const Frame *frame, ZeError *e);
 
@@ -122,8 +147,6 @@ private:
   void push2();
 
 private:
-  int			m_snapThread = -1;
-
   Lock			m_lock;	// serializes record/stopRecording
 
   ZmAtomic<int>		m_ringID = -1;
@@ -132,7 +155,7 @@ private:
     ZtString		  m_path;
     ZiFile		  m_file;
 
-  ZmRef<MsgData>	m_snapMsg;
+  ZmRef<Msg>		m_snapMsg;
 };
 
 #endif /* MxMDRecord_HPP */

@@ -42,14 +42,14 @@
 
 class MxMDCore;
 
-class MxMDAPI MxMDCmd : public ZuObject, public ZvCmdServer {
+class MxMDAPI MxMDCmd : public ZvCmdServer {
 public:
   MxMDCmd() { }
   ~MxMDCmd() { }
 
   ZuInline MxMDCore *core() const { return m_core; }
 
-  void init(MxMDCore *core);
+  void init(MxMDCore *core, ZvCf *cf);
   void final();
 
   void start();
@@ -57,8 +57,8 @@ public:
 
   typedef ZmRBTree<ZtString,
 	    ZmRBTreeVal<const ZtArray<ZtString> *,
-	      ZmRBTreeLock<ZmNoLock> > > CmdArgs_;
-  struct CmdArgs : public CmdArgs_ {
+	      ZmRBTreeLock<ZmNoLock> > > Args_;
+  struct Args : public Args_ {
     inline ZuString get(ZuString arg) const {
       const ZtArray<ZtString> *values = findVal(arg);
       if (!values) return ZtString();
@@ -69,27 +69,22 @@ public:
     }
   };
 
-  typedef ZmFn<const CmdArgs &, ZtArray<char> &> Fn;
+  typedef ZmFn<const Args &, ZtArray<char> &> Fn;
 
-  struct CmdUsage { };
+  struct Usage { };
 
   // add command
   void addCmd(ZuString cmd, ZuString syntax, Fn fn,
       ZtString brief, ZtString usage);
 
-  // single security / order book lookup
-  static ZtString lookupSyntax();
-  static ZtString lookupOptions();
+  // built-in help command
+  void help(const Args &args, ZtArray<char> &result);
 
-  void lookupSecurity(
-      const CmdArgs &args, unsigned index,
-      bool secRequired, ZmFn<MxMDSecurity *> fn);
-  void lookupOrderBook(
-      const CmdArgs &args, unsigned index,
-      bool secRequired, bool obRequired,
-      ZmFn<MxMDSecurity *, MxMDOrderBook *> fn);
-
-  void help(const CmdArgs &args, ZtArray<char> &result);
+  // CLI time format (using local timezone)
+  typedef ZuBoxFmt<ZuBox<unsigned>, ZuFmt::Right<6> > TimeFmt;
+  inline TimeFmt timeFmt(MxDateTime t) {
+    return ZuBox<unsigned>((t + m_tzOffset).hhmmss()).fmt(ZuFmt::Right<6>());
+  }
 
 private:
   void rcvd(ZvCmdLine *, const ZvInvocation &, ZvAnswer &);
@@ -97,11 +92,6 @@ private:
   typedef ZmRBTree<ZtString,
 	    ZmRBTreeVal<ZuTuple<Fn, ZtString, ZtString>,
 	      ZmRBTreeLock<ZmNoLock> > > Cmds;
-
-  typedef ZuBoxFmt<ZuBox<unsigned>, ZuFmt::Right<6> > TimeFmt;
-  inline TimeFmt timeFmt(MxDateTime t) {
-    return ZuBox<unsigned>((t + m_tzOffset).hhmmss()).fmt(ZuFmt::Right<6>());
-  }
 
   MxMDCore	*m_core = 0;
   ZmRef<ZvCf>	m_syntax;

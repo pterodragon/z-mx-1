@@ -30,15 +30,30 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <ZmTime.hpp>
+#include <ZmPLock.hpp>
+#include <ZmGuard.hpp>
+#include <ZmRef.hpp>
+
+#include <ZtString.hpp>
+
+#include <ZiFile.hpp>
+
+#include <MxEngine.hpp>
+
+#include <MxMDTypes.hpp>
+#include <MxMDCmd.hpp>
+
 class MxMDCore;
+
 class MxMDReplayLink;
 
-class MxMDAPI MxMDReplay : public MxEngineApp, public MxEngine {
+class MxMDAPI MxMDReplay : public MxEngine, public MxEngineApp {
 public:
   MxMDReplay() { }
   ~MxMDReplay() { }
 
-  ZuInline MxMDCore *core() const { return static_cast<MxMDCore *>(mgr()); }
+  MxMDCore *core() const;
 
   void init(MxMDCore *core);
   void final();
@@ -58,6 +73,9 @@ protected:
   void archive(MxAnyLink *, MxQMsg *) { }
   ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
 
+  // commands
+  void replayCmd(const MxMDCmd::Args &, ZtArray<char> &);
+
 private:
   MxMDReplayLink	*m_link = 0;
 };
@@ -66,8 +84,13 @@ class MxMDAPI MxMDReplayLink : public MxLink<MxMDReplayLink> {
 public:
   MxMDReplayLink(MxID id) : MxLink<MxMDReplayLink>{id} { }
 
+  typedef MxMDReplay Engine;
+
+  ZuInline Engine *engine() const {
+    return static_cast<Engine *>(MxAnyLink::engine()); // actually MxAnyTx
+  }
   ZuInline MxMDCore *core() const {
-    return static_cast<MxMDCore *>(engine()->mgr());
+    return engine()->core();
   }
 
   bool replay(ZtString path, MxDateTime begin, bool filter);
@@ -99,7 +122,7 @@ private:
   typedef ZmPLock Lock;
   typedef ZmGuard<Lock> Guard;
 
-  typedef MxMDStream::MsgData MsgData;
+  typedef MxMDStream::Msg Msg;
 
   typedef ZuPair<ZuBox0(uint16_t), ZuBox0(uint16_t)> Version;
 
@@ -111,7 +134,7 @@ private:
   // Rx thread members
   ZtString		m_path;
   ZiFile		m_file;
-  ZmRef<MsgData>	m_msg;
+  ZmRef<Msg>		m_msg;
   ZmTime		m_replayNext;
   bool			m_filter = false;
   Version		m_version;

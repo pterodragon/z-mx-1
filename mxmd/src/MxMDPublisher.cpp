@@ -23,10 +23,8 @@
 
 #include <MxMDPublisher.hpp>
 
-void MxMDPublisher::init(MxMDCore *core)
+void MxMDPublisher::init(MxMDCore *core, ZvCf *cf)
 {
-  ZmRef<ZvCf> cf = core->cf()->subset("publisher", false, true);
-
   if (!cf->get("id")) cf->set("id", "publisher");
 
   MxEngine::init(core, this, core->mx(), cf);
@@ -47,7 +45,7 @@ void MxMDPublisher::init(MxMDCore *core)
 
   core->addCmd(
       "publisher.status", "",
-      MxMDCmd::CmdFn::Member<&MxITCHFeed::status>::fn(this),
+      MxMDCmd::Fn::Member<&MxPublisher::statusCmd>::fn(this),
       "publisher status",
       "usage: publisher.status\n");
 }
@@ -132,7 +130,7 @@ void MxMDPubLink::udpError(UDP *udp, ZiIOContext *io)
     io->disconnect();
   else if (udp)
     udp->close();
-  ZmGuard<ZmLock> connGuard(m_connLock);
+  Guard connGuard(m_connLock);
   if (!udp || udp == m_udp) reconnect();
 }
 
@@ -141,7 +139,7 @@ void MxMDPubLink::connect()
   linkINFO("MxMDPubLink::connect(" << id << ')');
 
   {
-    ZmGuard<ZmLock> connGuard(m_connLock);
+    Guard connGuard(m_connLock);
     m_tcpTbl = new TCPTbl(ZmHashParams().bits(4).loadFactor(1.0).cBits(3).
 	init(ZuStringN<ZmHeapIDSize>() <<
 	  "MxMDPublisher." << id() << ".TCPTbl"));
@@ -165,7 +163,7 @@ void MxMDPubLink::disconnect()
   wake();
 
   {
-    ZmGuard<ZmLock> connGuard(m_connLock);
+    Guard connGuard(m_connLock);
     ring = ZuMv(m_ring);
     listenInfo = m_listenInfo;
     tcpTbl = ZuMv(m_tcpTbl);
@@ -177,7 +175,7 @@ void MxMDPubLink::disconnect()
     m_udp = nullptr;
   }
 
-  mx()->wakeFn(rxThread(), ZmScheduler::WakeFn());
+  mx()->wakeFn(rxThread(), ZmFn<>());
 
   if (ring) {
     ring->detach();
@@ -239,7 +237,7 @@ void MxMDPubLink::tcpListen()
 void MxMDPubLink::tcpListening(const ZiListenInfo &info)
 {
   {
-    ZmGuard<ZmLock> connGuard(m_connLock);
+    Guard connGuard(m_connLock);
     m_listenInfo = info;
   }
   linkINFO("MxMDPubLink::tcpListening(" << id << ") " <<
@@ -259,7 +257,7 @@ void MxMDPubLink::TCP::connected(ZiIOContext &io)
   MxMDStream::TCP::recv(m_in, io);
   mx()->add(ZmFn<>([](MxMDPubLink::TCP *tcp) {
       {
-	ZmGuard<ZmLock> stateGuard(m_stateLock);
+	Guard stateGuard(m_stateLock);
 	if (m_state != State::Login) return;
       }
       tcpERROR(tcp, 0, "TCP login timeout");
@@ -271,7 +269,7 @@ void MxMDPubLink::tcpConnected(MxMDPubLink::TCP *tcp)
       tcp->info().remoteIP << ':' << ZuBoxed(tcp->info().remotePort));
 
   {
-    ZmGuard<ZmLock> connGuard(m_connLock);
+    Guard connGuard(m_connLock);
     m_tcpTbl->add(tcp);
   }
 }
@@ -280,7 +278,7 @@ void MxMDPubLink::tcpConnected(MxMDPubLink::TCP *tcp)
 
 void MxMDPubLink::TCP::disconnect_()
 {
-  ZmGuard<ZmLock> stateGuard(m_stateLock);
+  Guard stateGuard(m_stateLock);
   m_state = State::Disconnect;
 }
 void MxMDPubLink::TCP::disconnect()
@@ -299,14 +297,14 @@ void MxMDPubLink::TCP::disconnected()
   m_link->tcpDisconnected(this);
   bool intentional;
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    Guard stateGuard(m_stateLock);
     intentional = m_state == State::Disconnect;
   }
   if (!intentional) tcpERROR(this, 0, "TCP disconnected");
 }
 void MxMDPubLink::tcpDisconnected(MxMDPubLink::TCP *tcp)
 {
-  ZmGuard<ZmLock> connGuard(m_connLock);
+  Guard connGuard(m_connLock);
   m_tcpTbl->del(tcp);
 }
 
@@ -316,7 +314,7 @@ void MxMDPubLink::TCP::processLogin(ZiIOContext &io)
 {
   mx()->del(&m_loginTimer);
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    Guard stateGuard(m_stateLock);
     if (m_state != State::Login) {
       stateGuard.unlock();
       tcpERROR(this, &io, "TCP unexpected message");
@@ -415,13 +413,13 @@ void MxMDPubLink::udpConnected(MxMDPubLink::UDP *udp, ZiIOContext &io)
   linkINFO("MxMDPubLink::udpConnected(" << id << ')');
 
   {
-    ZmGuard<ZmLock> connGuard(m_connLock);
+    Guard connGuard(m_connLock);
     m_udp = udp;
   }
 
   udp->recv(io); // begin receiving UDP packets (resend requests)
 
-  MxMDRing &broadcast = core()->broadcast();
+  MxMDBroadcast &broadcast = core()->broadcast();
 
   {
     ZmRef<ZiRing> ring;
@@ -433,7 +431,7 @@ void MxMDPubLink::udpConnected(MxMDPubLink::UDP *udp, ZiIOContext &io)
     }
 
     {
-      ZmGuard<ZmLock> connGuard(m_connLock);
+      Guard connGuard(m_connLock);
       m_ring = ring;
       m_ringID = ring->id();
     }
@@ -441,8 +439,7 @@ void MxMDPubLink::udpConnected(MxMDPubLink::UDP *udp, ZiIOContext &io)
 
   // begin reading broadcast
 
-  mx()->wakeFn(engine()->rxThread(),
-      ZmScheduler::WakeFn{[](MxMDPubLink *link, ZmScheduler *, unsigned) {
+  mx()->wakeFn(engine()->rxThread(), ZmFn<>{[](MxMDPubLink *link) {
 	link->rxRun_([](Rx *rx) { rx->app().recv(rx); });
 	link->wake();
       }, this});
@@ -456,7 +453,7 @@ void MxMDPubLink::udpConnected(MxMDPubLink::UDP *udp, ZiIOContext &io)
 
 void MxMDPubLink::UDP::disconnect_()
 {
-  ZmGuard<ZmLock> stateGuard(m_stateLock);
+  Guard stateGuard(m_stateLock);
   m_state = State::Disconnect;
 }
 void MxMDPubLink::UDP::disconnect()
@@ -473,7 +470,7 @@ void MxMDPubLink::UDP::disconnected()
 {
   bool intentional;
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    Guard stateGuard(m_stateLock);
     intentional = m_state == State::Disconnect;
   }
   if (!intentional) udpERROR(this, 0, "UDP disconnected");
@@ -620,6 +617,12 @@ void MxMDPubLink::recv(Rx *rx)
   rxRun_([](Rx *rx) { rx->app().recv(rx); });
 }
 
+ZmRef<MxAnyLink> MxMDPublisher::createLink(MxID id)
+{
+  m_link = new MxMDPubLink(id);
+  return m_link;
+}
+
 MxEngineApp::ProcessFn MxMDPublisher::processFn()
 {
   return static_cast<MxEngineApp::ProcessFn>(
@@ -656,10 +659,11 @@ bool MxMDPubLink::resendGap_(const MxQueue::Gap &gap, bool more)
 
 // commands
 
-void MxMDPublisher::statusCmd(const MxMDCmd::CmdArgs &args, ZtArray<char> &out)
+void MxMDPublisher::statusCmd(
+    const MxMDCmd::Args &args, ZtArray<char> &out)
 {
   int argc = ZuBox<int>(args.get("#"));
-  if (argc != 1) throw MxMDCmd::CmdUsage();
+  if (argc != 1) throw MxMDCmd::Usage();
   out.size(512 * nLinks());
   out << "State: " << MxEngineState::name(state()) << '\n';
   allLinks([&out](MxAnyLink *link) {

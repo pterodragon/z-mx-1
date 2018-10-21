@@ -30,6 +30,12 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <ZmTime.hpp>
+#include <ZmPLock.hpp>
+#include <ZmGuard.hpp>
+#include <ZmRef.hpp>
+#include <ZmSemaphore.hpp>
+
 #include <ZiMultiplex.hpp>
 
 #include <MxMultiplex.hpp>
@@ -40,35 +46,19 @@
 #include <MxMDPartition.hpp>
 
 class MxMDCore;
+
 class MxMDSubLink;
 
-class MxMDAPI MxMDSubscriber :
-  public ZuObject, public MxEngineApp, public MxEngine {
+class MxMDAPI MxMDSubscriber : public MxEngine, public MxEngineApp {
 public:
   MxMDSubscriber() { }
   ~MxMDSubscriber() { }
 
-  ZuInline MxMDCore *core() const { return static_cast<MxMDCore *>(mgr()); }
+  MxMDCore *core() const;
 
-  void init(MxMDCore *core);
+  void init(MxMDCore *core, ZvCf *cf);
   void final();
 
-  void updateLinks(ZuString partitions); // update from CSV
-
-  // Rx (called from engine's rx thread)
-  ProcessFn processFn();
-
-  // Tx (called from engine's tx thread) (unused)
-  void sent(MxAnyLink *, MxQMsg *) { }
-  void aborted(MxAnyLink *, MxQMsg *) { }
-  void archive(MxAnyLink *, MxQMsg *) { }
-  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
-
-  // commands
-  void statusCmd(const MxMDCmd::CmdArgs &args, ZtArray<char> &out);
-  void resendCmd(const MxMDCmd::CmdArgs &args, ZtArray<char> &out);
-
-private:
   ZuInline const ZiIP &interface() const { return m_interface; }
   ZuInline bool filter() const { return m_filter; }
   ZuInline unsigned maxQueueSize() const { return m_maxQueueSize; }
@@ -77,28 +67,12 @@ private:
   ZuInline ZmTime reReqInterval() const { return ZmTime(m_reReqInterval); }
   ZuInline unsigned reReqMaxGap() const { return m_reReqMaxGap; }
 
-  void process_(MxMDSubLink *link, MxQMsg *qmsg);
-
-  template <typename L>
-  ZuInline void partition(MxID id, L &&l) const {
-    if (auto node = m_partitions.find(id))
-      l(&(node->key()));
-    else
-      l(nullptr);
-  }
-
   bool failover() const { return m_failover; }
   void failover(bool v) { m_failover = v; }
 
-private:
-  ZiIP			m_interface;
-  bool			m_filter = false;
-  unsigned		m_maxQueueSize = 0;
-  double		m_loginTimeout = 0.0;
-  double		m_reconnInterval = 0.0;
-  double		m_reReqInterval = 0.0;
-  unsigned		m_reReqMaxGap = 10;
+  void updateLinks(ZuString partitions); // update from CSV
 
+private:
   struct PartitionIDAccessor : public ZuAccessor<MxMDPartition, MxID> {
     inline static MxID value(const MxMDPartition &partition) {
       return partition.id;
@@ -109,12 +83,52 @@ private:
 	      ZmRBTreeLock<ZmRWLock> > > Partitions;
   typedef Partitions::Node Partition;
 
+public:
+  template <typename L>
+  ZuInline void partition(MxID id, L &&l) const {
+    if (auto node = m_partitions.find(id))
+      l(&(node->key()));
+    else
+      l(nullptr);
+  }
+
+  ZmRef<MxAnyLink> createLink(MxID id);
+
+  // Rx (called from engine's rx thread)
+  MxEngineApp::ProcessFn processFn();
+
+  // Tx (called from engine's tx thread) (unused)
+  void sent(MxAnyLink *, MxQMsg *) { }
+  void aborted(MxAnyLink *, MxQMsg *) { }
+  void archive(MxAnyLink *, MxQMsg *) { }
+  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
+
+  // commands
+  void statusCmd(const MxMDCmd::Args &args, ZtArray<char> &out);
+  void resendCmd(const MxMDCmd::Args &args, ZtArray<char> &out);
+
+private:
+  void process_(MxMDSubLink *link, MxQMsg *qmsg);
+
+private:
+  ZiIP			m_interface;
+  bool			m_filter = false;
+  unsigned		m_maxQueueSize = 0;
+  double		m_loginTimeout = 0.0;
+  double		m_reconnInterval = 0.0;
+  double		m_reReqInterval = 0.0;
+  unsigned		m_reReqMaxGap = 10;
+
   Partitions		m_partitions;
 
   bool			m_failover = false;
 };
 
 class MxMDAPI MxMDSubLink : public MxLink<MxMDSubLink> {
+  typedef ZmPLock Lock;
+  typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
+
   class TCP;
 friend class TCP;
   class TCP : public ZiConnection {
@@ -130,7 +144,7 @@ friend class TCP;
     TCP(MxMDSubLink *link, const ZiCxnInfo &ci);
 
     inline unsigned state() const {
-      ZmReadGuard<ZmLock> guard(m_stateLock);
+      ReadGuard guard(m_stateLock);
       return m_state;
     }
 
@@ -149,7 +163,7 @@ friend class TCP;
 
     ZmScheduler::Timer	m_loginTimer;
 
-    ZmLock		m_stateLock;
+    Lock		m_stateLock;
       unsigned		  m_state;
 
     ZmRef<MxQMsg>	m_in;
@@ -171,7 +185,7 @@ friend class UDP;
     ZuInline MxMDSubLink *link() const { return m_link; }
 
     inline unsigned state() const {
-      ZmReadGuard<ZmLock> guard(m_stateLock);
+      ReadGuard guard(m_stateLock);
       return m_state;
     }
 
@@ -185,7 +199,7 @@ friend class UDP;
   private:
     MxMDSubLink		*m_link;
 
-    ZmLock		m_stateLock;
+    Lock		m_stateLock;
       unsigned		  m_state;
 
     ZmRef<MxQMsg>	m_in;
@@ -200,7 +214,7 @@ public:
     return static_cast<Engine *>(MxAnyLink::engine());
   }
   ZuInline MxMDCore *core() const {
-    return static_cast<MxMDCore *>(engine()->mgr());
+    return engine()->core();
   }
 
   ZmTime loginTimeout() { return engine()->loginTimeout(); }
@@ -236,18 +250,18 @@ public:
   void tcpConnected(TCP *tcp);
   void tcpLoginAck();
   void udpConnect();
-  void udpConnected(UDP *udp, ZiIOContext &io)
+  void udpConnected(UDP *udp, ZiIOContext &io);
   void udpReceived(MxQMsg *);
 
   void tcpError(TCP *tcp, ZiIOContext *io);
   void udpError(UDP *udp, ZiIOContext *io);
 
   inline void snapshotSeqNo(MxSeqNo seqNo) {
-    ZmGuard<ZmLock> connGuard(m_connLock);
+    Guard connGuard(m_connLock);
     m_snapshotSeqNo = seqNo;
   }
   inline MxSeqNo snapshotSeqNo() {
-    ZmGuard<ZmLock> connGuard(m_connLock);
+    Guard connGuard(m_connLock);
     return m_snapshotSeqNo;
   }
 
@@ -256,13 +270,13 @@ private:
 
   ZiSockAddr		m_udpResendAddr;
 
-  ZmLock		m_connLock;
+  Lock			m_connLock;
     MxSeqNo		  m_snapshotSeqNo;
     ZmRef<TCP>		  m_tcp;
     ZmRef<UDP>		  m_udp;
 
   ZmSemaphore		m_resendSem;	// test resend semaphore
-  ZmLock		m_resendLock;
+  Lock			m_resendLock;
     MxQueue::Gap	  m_resendGap;
     ZmRef<MxQMsg>	  m_resendMsg;
 };

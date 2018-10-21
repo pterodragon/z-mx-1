@@ -250,10 +250,10 @@ void ZmScheduler::reset()
   }
 }
 
-void ZmScheduler::wakeFn(unsigned tid, WakeFn fn)
+void ZmScheduler::wakeFn(unsigned tid, ZmFn<> fn)
 {
   ZmAssert(tid && tid <= m_nThreads);
-  m_threads[tid - 1].wakeFn = fn;
+  m_threads[tid - 1].wakeFn = ZuMv(fn);
 }
 
 void ZmScheduler::timer()

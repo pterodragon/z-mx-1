@@ -201,10 +201,10 @@ protected:
 
 public:
   ZuInline const ZiRingParams &params() const { return m_params; }
-  ZuInline ZiRingParams &params() { return m_params; }
 
-private:
+protected:
   ZiRingParams		m_params;
+private:
 #ifdef _WIN32
   HANDLE		m_sem[2];
 #endif
@@ -299,18 +299,18 @@ public:
 
   int open(unsigned flags, ZeError *e) {
     if (m_ctrl.addr()) goto einval;
-    if (!params().name()) goto einval;
+    if (!m_params.name()) goto einval;
     m_flags = flags;
-    if (!params().ll() && ZiRing_::open(e) != Zi::OK) return Zi::IOError;
+    if (!m_params.ll() && ZiRing_::open(e) != Zi::OK) return Zi::IOError;
     {
       unsigned mmapFlags = ZiFile::Shm;
       if (flags & Create) mmapFlags |= ZiFile::Create;
       int r;
-      if ((r = m_ctrl.mmap(params().name() + ".ctrl",
+      if ((r = m_ctrl.mmap(m_params.name() + ".ctrl",
 	      mmapFlags, sizeof(Ctrl), true, 0, 0777, e)) != Zi::OK)
 	return r;
-      if (params().size()) {
-	uint32_t reqSize = (uint32_t)params().size() | (uint32_t)params().ll();
+      if (m_params.size()) {
+	uint32_t reqSize = (uint32_t)m_params.size() | (uint32_t)m_params.ll();
 	// check that requested sizes and latency are consistent
 	if (uint32_t openSize = this->openSize().cmpXch(reqSize, 0))
 	  if (openSize != reqSize) {
@@ -323,20 +323,20 @@ public:
 	  m_ctrl.close();
 	  goto einval;
 	}
-	params().size(openSize & ~1);
-	params().ll(openSize & 1);
+	m_params.size(openSize & ~1);
+	m_params.ll(openSize & 1);
       }
       mmapFlags |= ZiFile::ShmDbl;
-      if ((r = m_data.mmap(params().name() + ".data",
-	      mmapFlags, params().size(), true, 0, 0777, e)) != Zi::OK) {
+      if ((r = m_data.mmap(m_params.name() + ".data",
+	      mmapFlags, m_params.size(), true, 0, 0777, e)) != Zi::OK) {
 	m_ctrl.close();
-	if (!params().ll()) ZiRing_::close();
+	if (!m_params.ll()) ZiRing_::close();
 	return r;
       }
-      if (!!params().cpuset())
+      if (!!m_params.cpuset())
 	hwloc_set_area_membind(
 	    ZmTopology::hwloc(), m_data.addr(), (m_data.mmapLength())<<1,
-	    params().cpuset(), HWLOC_MEMBIND_BIND, HWLOC_MEMBIND_MIGRATE);
+	    m_params.cpuset(), HWLOC_MEMBIND_BIND, HWLOC_MEMBIND_MIGRATE);
       if (flags & Read) ++rdrCount();
       if (flags & Write) {
 	gc();
@@ -376,7 +376,7 @@ public:
     }
     m_ctrl.close();
     m_data.close();
-    if (!params().ll()) ZiRing_::close();
+    if (!m_params.ll()) ZiRing_::close();
   }
 
   int reset() {
@@ -431,7 +431,7 @@ public:
       if (ZuUnlikely(j < 0)) return 0;
       if (ZuUnlikely(j > 0)) goto retry;
       if constexpr (!Wait) return 0;
-      if (ZuUnlikely(!params().ll()))
+      if (ZuUnlikely(!m_params.ll()))
 	if (ZiRing_wait(Tail, this->tail(), tail) != Zi::OK) return 0;
       goto retry;
     }
@@ -450,7 +450,7 @@ public:
     if ((head & ~(Wrapped | Mask)) >= size())
       head = (head ^ Wrapped) - size();
 
-    if (ZuUnlikely(!params().ll())) {
+    if (ZuUnlikely(!m_params.ll())) {
       if (ZuUnlikely(this->head().xch(head & ~Waiting) & Waiting))
 	ZiRing_wake(Head, this->head(), rdrCount().load_());
     } else
@@ -467,7 +467,7 @@ public:
     else
       head &= ~EndOfFile;
 
-    if (ZuUnlikely(!params().ll())) {
+    if (ZuUnlikely(!m_params.ll())) {
       if (ZuUnlikely(this->head().xch(head & ~Waiting) & Waiting))
 	ZiRing_wake(Head, this->head(), rdrCount().load_());
     } else
@@ -500,7 +500,7 @@ public:
       }
       if (attSeqNo == this->attSeqNo()) break;
       ZmPlatform::yield();
-      if (++i == params().spin()) return 0;
+      if (++i == m_params.spin()) return 0;
     }
 
     uint32_t tail_ = this->tail(); // acquire
@@ -515,7 +515,7 @@ public:
       uint64_t mask = (*(ZmAtomic<uint64_t> *)ptr).xchAnd(~dead);
       if (mask && !(mask & ~dead)) {
 	freed += n;
-	if (ZuUnlikely(!params().ll())) {
+	if (ZuUnlikely(!m_params.ll())) {
 	  if (ZuUnlikely(
 		this->tail().xch(tail | (tail_ & (Mask & ~Waiting))) & Waiting))
 	    ZiRing_wake(Tail, this->tail(), 1);
@@ -547,8 +547,8 @@ public:
     }
     for (unsigned id = 0; id < 64; id++)
       if (targets & (1ULL<<id))
-	ZiRing_::kill(rdrPID()[id], params().coredump());
-    ZmPlatform::sleep(ZmTime((time_t)params().killWait()));
+	ZiRing_::kill(rdrPID()[id], m_params.coredump());
+    ZmPlatform::sleep(ZmTime((time_t)m_params.killWait()));
     return gc();
   }
 
@@ -661,7 +661,7 @@ public:
 	if ((tail & ~Wrapped) >= size()) tail = (tail ^ Wrapped) - size();
 	if (*(ZmAtomic<uint64_t> *)ptr &= ~(1ULL<<m_id)) continue;
 	/**/ZiRing_bp(detach3);
-	if (ZuUnlikely(!params().ll())) {
+	if (ZuUnlikely(!m_params.ll())) {
 	  if (ZuUnlikely(this->tail().xch(tail) & Waiting))
 	    ZiRing_wake(Tail, this->tail(), 1);
 	} else
@@ -701,7 +701,7 @@ public:
     /**/ZiRing_bp(shift1);
     if (tail == (head & ~Mask)) {
       if (ZuUnlikely(head & EndOfFile)) return 0;
-      if (ZuUnlikely(!params().ll()))
+      if (ZuUnlikely(!m_params.ll()))
 	if (ZiRing_wait(Head, this->head(), head) != Zi::OK) return 0;
       goto retry;
     }
@@ -720,7 +720,7 @@ public:
     if ((tail & ~Wrapped) >= size()) tail = (tail ^ Wrapped) - size();
     m_tail = tail;
     if (*(ZmAtomic<uint64_t> *)ptr &= ~(1ULL<<m_id)) return;
-    if (ZuUnlikely(!params().ll())) {
+    if (ZuUnlikely(!m_params.ll())) {
       if (ZuUnlikely(this->tail().xch(tail) & Waiting))
 	ZiRing_wake(Tail, this->tail(), 1);
     } else

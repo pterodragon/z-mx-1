@@ -30,6 +30,11 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <ZmTime.hpp>
+#include <ZmPLock.hpp>
+#include <ZmGuard.hpp>
+#include <ZmRef.hpp>
+
 #include <ZiMultiplex.hpp>
 
 #include <MxMultiplex.hpp>
@@ -38,22 +43,56 @@
 #include <MxMDTypes.hpp>
 #include <MxMDCSV.hpp>
 #include <MxMDPartition.hpp>
+#include <MxMDBroadcast.hpp>
 
 class MxMDCore;
+
 class MxMDPubLink;
 
-class MxMDAPI MxMDPublisher :
-  public ZuObject, public MxEngineApp, public MxEngine {
+class MxMDAPI MxMDPublisher : public MxEngine, public MxEngineApp {
 public:
-  inline MxMDPublisher() { }
+  MxMDPublisher() { }
   ~MxMDPublisher() { }
 
-  ZuInline MxMDCore *core() const { return static_cast<MxMDCore *>(mgr()); }
+  MxMDCore *core() const;
 
-  void init(MxMDCore *core);
+  void init(MxMDCore *core, ZvCf *cf);
   void final();
 
+  ZuInline const ZiIP &interface() const { return m_interface; }
+  ZuInline unsigned maxQueueSize() const { return m_maxQueueSize; }
+  ZuInline ZmTime loginTimeout() const { return ZmTime(m_loginTimeout); }
+  ZuInline unsigned reReqMaxGap() const { return m_reReqMaxGap; }
+  ZuInline unsigned nAccepts() const { return m_nAccepts; }
+  ZuInline unsigned ttl() const { return m_ttl; }
+  ZuInline bool loopBack() const { return m_loopBack; }
+
+  bool failover() const { return m_failover; }
+  void failover(bool v) { m_failover = v; }
+
   void updateLinks(ZuString partitions); // update from CSV
+
+private:
+  struct PartitionIDAccessor : public ZuAccessor<MxMDPartition, MxID> {
+    inline static MxID value(const MxMDPartition &partition) {
+      return partition.id;
+    }
+  };
+  typedef ZmRBTree<MxMDPartition,
+	    ZmRBTreeIndex<PartitionIDAccessor,
+	      ZmRBTreeLock<ZmRWLock> > > Partitions;
+  typedef Partitions::Node Partition;
+
+public:
+  template <typename L>
+  ZuInline void partition(MxID id, L &&l) const {
+    if (auto node = m_partitions.find(id))
+      l(&(node->key()));
+    else
+      l(nullptr);
+  }
+
+  ZmRef<MxAnyLink> createLink(MxID id);
 
   // Rx
   MxEngineApp::ProcessFn processFn();
@@ -65,27 +104,7 @@ public:
   ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo);
 
   // commands
-  void statusCmd(const MxMDCmd::CmdArgs &args, ZtArray<char> &out);
-
-private:
-  ZuInline const ZiIP &interface() const { return m_interface; }
-  ZuInline unsigned maxQueueSize() const { return m_maxQueueSize; }
-  ZuInline ZmTime loginTimeout() const { return ZmTime(m_loginTimeout); }
-  ZuInline unsigned reReqMaxGap() const { return m_reReqMaxGap; }
-  ZuInline unsigned nAccepts() const { return m_nAccepts; }
-  ZuInline unsigned ttl() const { return m_ttl; }
-  ZuInline bool loopBack() const { return m_loopBack; }
-
-  template <typename L>
-  ZuInline void partition(MxID id, L &&l) const {
-    if (auto node = m_partitions.find(id))
-      l(&(node->key()));
-    else
-      l(nullptr);
-  }
-
-  bool failover() const { return m_failover; }
-  void failover(bool v) { m_failover = v; }
+  void statusCmd(const MxMDCmd::Args &args, ZtArray<char> &out);
 
 private:
   ZiIP			m_interface;
@@ -98,22 +117,16 @@ private:
   unsigned		m_ttl = 1;
   bool			m_loopBack = false;
 
-  struct PartitionIDAccessor : public ZuAccessor<MxMDPartition, MxID> {
-    inline static MxID value(const MxMDPartition &partition) {
-      return partition.id;
-    }
-  };
-  typedef ZmRBTree<MxMDPartition,
-	    ZmRBTreeIndex<PartitionIDAccessor,
-	      ZmRBTreeLock<ZmRWLock> > > Partitions;
-  typedef Partitions::Node Partition;
-
   Partitions		m_partitions;
 
   bool			m_failover = false;
 };
 
 class MxMDAPI MxMDPubLink : public MxLink<MxMDPubLink> {
+  typedef ZmPLock Lock;
+  typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
+
   class TCP;
 friend class TCP;
   class TCP : public ZiConnection {
@@ -135,7 +148,7 @@ friend class TCP;
     TCP(MxMDPubLink *link, const ZiCxnInfo &ci);
 
     inline unsigned state() const {
-      ZmReadGuard<ZmLock> guard(m_stateLock);
+      ReadGuard guard(m_stateLock);
       return m_state;
     }
 
@@ -147,6 +160,8 @@ friend class TCP;
 
     void processLogin(ZiIOContext &);
     void process(ZiIOContext &);
+
+    typedef MxMDStream::Frame Frame;
 
     void snap();
     Frame *push(unsigned size);
@@ -160,7 +175,7 @@ friend class TCP;
 
     ZmScheduler::Timer	m_loginTimer;
 
-    ZmLock		m_stateLock;
+    Lock		m_stateLock;
       unsigned		  m_state;
 
     ZuRef<Msg>		m_snapMsg;
@@ -192,7 +207,7 @@ friend class UDP;
     ZuInline MxMDPubLink *link() const { return m_link; }
 
     inline unsigned state() const {
-      ZmReadGuard<ZmLock> guard(m_stateLock);
+      ReadGuard guard(m_stateLock);
       return m_state;
     }
 
@@ -206,7 +221,7 @@ friend class UDP;
   private:
     MxMDPubLink		*m_link;
 
-    ZmLock		m_stateLock;
+    Lock		m_stateLock;
       unsigned		  m_state;
 
     ZmRef<MxQMsg>	m_in;
@@ -221,13 +236,13 @@ public:
     return static_cast<Engine *>(MxAnyLink::engine()); // actually MxAnyTx
   }
   ZuInline MxMDCore *core() const {
-    return static_cast<MxMDCore *>(engine()->mgr());
+    return engine()->core();
   }
 
   bool publish();
   void stopPublishing();
 
-  ZmTime loginTimeout() { return engine()->loginTimeout(); }
+  ZmTime loginTimeout() const { return engine()->loginTimeout(); }
 
   // MxAnyLink virtual
   void update(ZvCf *);
@@ -258,7 +273,7 @@ public:
   void tcpDisconnected(TCP *tcp);
   bool tcpLogin(MxMDStream::Login &);
   void udpConnect();
-  void udpConnected(UDP *udp, ZiIOContext &io)
+  void udpConnected(UDP *udp, ZiIOContext &io);
   void udpReceived(MxQMsg *);
 
   void tcpError(TCP *tcp, ZiIOContext *io);
@@ -268,11 +283,9 @@ public:
   void status(ZtArray<char> &out);
 
 private:
-  typedef ZmPLock Lock;
-  typedef ZmGuard<Lock> Guard;
-
   typedef MxQueueRx<MxMDRecLink> Rx;
-  typedef MxMDStream::MsgData MsgData;
+
+  typedef MxMDStream::Frame Frame;
 
   typedef MxMDBroadcast::Ring Ring;
 

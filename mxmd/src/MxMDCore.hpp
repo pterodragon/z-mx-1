@@ -38,7 +38,6 @@
 #include <ZePlatform.hpp>
 
 #include <ZvCf.hpp>
-#include <ZvRingCf.hpp>
 
 #include <MxMultiplex.hpp>
 #include <MxEngine.hpp>
@@ -78,7 +77,7 @@ private:
   void init_(ZvCf *cf);
 
 public:
-  virtual ~MxMDCore() { }
+  ~MxMDCore() { }
 
   ZuInline Mx *mx() { return m_mx.ptr(); }
   ZuInline ZvCf *cf() { return m_cf.ptr(); }
@@ -87,6 +86,8 @@ public:
   void stop();
   void final();
 
+  void stopStreaming();
+
   bool record(ZuString path);
   ZtString stopRecording();
 
@@ -94,20 +95,6 @@ public:
       MxDateTime begin = MxDateTime(),
       bool filter = true);
   ZtString stopReplaying();
-
-  void publish();
-  void stopPublish();
-
-  void subscribe();
-  void stopSubscribe();
-
-  void stopStreaming();
-
-  void replay(
-    ZuString path,
-    MxDateTime begin = MxDateTime(),
-    bool filter = true);
-  void stopReplaying();
 
   void startTimer(MxDateTime begin = MxDateTime());
   void stopTimer();
@@ -118,7 +105,6 @@ public:
   void dumpOrderBooks(
       ZuString path, MxID venue = MxID(), MxID segment = MxID());
 
-private:
   typedef MxMDStream::Frame Frame;
   typedef MxMDStream::Msg Msg;
 
@@ -127,8 +113,27 @@ private:
 
   // commands
 
+  typedef MxMDCmd::Fn CmdFn;
+  typedef MxMDCmd::Args CmdArgs;
+  typedef MxMDCmd::Usage CmdUsage;
+
   void addCmd(ZuString name, ZuString syntax,
-    MxMDCmd::Fn fn, ZtString brief, ZtString usage)
+    CmdFn fn, ZtString brief, ZtString usage);
+
+  // single security / order book lookup
+  static ZtString lookupSyntax();
+  static ZtString lookupOptions();
+
+  void lookupSecurity(
+      const CmdArgs &args, unsigned index,
+      bool secRequired, ZmFn<MxMDSecurity *> fn);
+  void lookupOrderBook(
+      const CmdArgs &args, unsigned index,
+      bool secRequired, bool obRequired,
+      ZmFn<MxMDSecurity *, MxMDOrderBook *> fn);
+
+private:
+  void initCmds();
 
   void l1(const CmdArgs &, ZtArray<char> &);
   void l2(const CmdArgs &, ZtArray<char> &);
@@ -138,10 +143,6 @@ private:
   void ticksizes(const CmdArgs &, ZtArray<char> &);
   void securities(const CmdArgs &, ZtArray<char> &);
   void orderbooks(const CmdArgs &, ZtArray<char> &);
-
-  void recordCmd(const CmdArgs &, ZtArray<char> &);
-  // void subscribeCmd(const CmdArgs &, ZtArray<char> &);
-  void replayCmd(const CmdArgs &, ZtArray<char> &);
 
 #if 0
   void tick(const CmdArgs &, ZtArray<char> &);
@@ -159,12 +160,12 @@ private:
   // Engine Management
   void addEngine(MxEngine *) { }
   void delEngine(MxEngine *) { }
-  void engineState(MxEngine *, MxEnum) { }
+  void engineState(MxEngine *, MxEnum, MxEnum) { }
 
   // Link Management
   void updateLink(MxAnyLink *) { }
   void delLink(MxAnyLink *) { }
-  void linkState(MxAnyLink *, MxEnum, ZuString txt) { }
+  void linkState(MxAnyLink *, MxEnum, MxEnum) { }
 
   // Pool Management
   void updateTxPool(MxAnyTxPool *) { }
@@ -288,8 +289,8 @@ private:
 
   MxMDBroadcast		m_broadcast;	// broadcasts updates
 
-  MxMDRecord		m_record;	// records to file
-  MxMDReplay		m_replay;	// replays from file
+  ZmRef<MxMDRecord>	m_record;	// records to file
+  ZmRef<MxMDReplay>	m_replay;	// replays from file
 
   ZmRef<MxMDPublisher>	m_publisher;	// publishes to network
   ZmRef<MxMDSubscriber>	m_subscriber;	// subscribes from network
@@ -300,5 +301,14 @@ private:
   Lock			m_timerLock;
     ZmTime		  m_timerNext;	// time of next timer event
 };
+
+ZuInline MxMDCore *MxMDRecord::core() const
+  { return static_cast<MxMDCore *>(mgr()); }
+ZuInline MxMDCore *MxMDReplay::core() const
+  { return static_cast<MxMDCore *>(mgr()); }
+ZuInline MxMDCore *MxMDPublisher::core() const
+  { return static_cast<MxMDCore *>(mgr()); }
+ZuInline MxMDCore *MxMDSubscriber::core() const
+  { return static_cast<MxMDCore *>(mgr()); }
 
 #endif /* MxMDCore_HPP */

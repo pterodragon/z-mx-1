@@ -384,8 +384,7 @@ void ZvCf::fromString(ZuString in,
 key:
     while (fileSkip.m(in, c, pos))
       pos += c[1].length();
-    if (self->m_parent &&
-	fileEndScope.m(in, c, pos)) {
+    if (self->m_parent && fileEndScope.m(in, c, pos)) {
       pos += c[1].length();
       self = self->m_parent;
       goto key;

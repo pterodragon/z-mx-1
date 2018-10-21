@@ -35,7 +35,7 @@
 
 #include <ZiIP.hpp>
 
-#include <MxTypes.hpp>
+#include <MxBase.hpp>
 
 #include <MxMDCSV.hpp>
 
@@ -70,7 +70,7 @@ public:
     add(new MxIPCol("tcpIP", Offset(tcpIP)));
     add(new MxPortCol("tcpPort", Offset(tcpPort)));
     add(new MxIPCol("tcpIP2", Offset(tcpIP2)));
-    add(new MxPortCol("tcpPort2", offsetof(tcpPort2)));
+    add(new MxPortCol("tcpPort2", Offset(tcpPort2)));
     add(new MxIDStrCol("tcpUsername", Offset(tcpUsername)));
     add(new MxIDStrCol("tcpPassword", Offset(tcpPassword)));
     add(new MxIPCol("udpIP", Offset(udpIP)));

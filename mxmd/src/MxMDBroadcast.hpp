@@ -30,7 +30,12 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <ZmPLock.hpp>
+#include <ZmRef.hpp>
+
 #include <ZiRing.hpp>
+
+#include <ZvRingCf.hpp>
 
 #include <MxMDTypes.hpp>
 #include <MxMDStream.hpp>
@@ -45,16 +50,14 @@ template <> struct ZiRingTraits<MxMDStream::Frame> {
 
 class MxMDAPI MxMDBroadcast {
 public:
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
-
   typedef MxMDStream::Frame Frame;
+
   typedef ZiRing<Frame, ZiRingBase<ZmObject> > Ring;
 
-  MxMDBroadcast(MxMDCore *core);
+  MxMDBroadcast();
   ~MxMDBroadcast();
 
-  void init(ZvCf *cf);
+  void init(MxMDCore *core);
 
   inline const ZiRingParams &params() const { return m_params; }
 
@@ -64,12 +67,6 @@ public:
   ZmRef<Ring> shadow();
   void close(ZmRef<Ring> ring);
 
-private:
-  bool open_();
-  void close_();
-  void close__();
-
-public:
   inline bool active() { return m_openCount; }
 
   // caller must ensure ring is open during Rx/Tx
@@ -102,15 +99,25 @@ public:
   }
 
   // for snapshots
+
   inline MxSeqNo seqNo() const { ReadGuard guard(m_lock); return m_seqNo; }
 
-protected:
-  MxMDCore		*m_core;
+private:
+  typedef ZmPLock Lock;
+  typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
+
+  bool open_(Guard &guard);
+  void close_();
+  void close__();
+
+private:
+  MxMDCore		*m_core = 0;
   ZvRingParams		m_params;
   Lock			m_lock;
-  MxSeqNo		  m_seqNo = 0;
-  unsigned		  m_openCount = 0;
-  ZmRef<Ring>		  m_ring;
+    MxSeqNo		  m_seqNo = 0;
+    unsigned		  m_openCount = 0;
+    ZmRef<Ring>		  m_ring;
 };
 
 #endif /* MxMDBroadcast_HPP */

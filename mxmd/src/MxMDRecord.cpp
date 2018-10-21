@@ -40,7 +40,7 @@ void MxMDRecord::init(MxMDCore *core)
 
   if (!cf) {
     cf = new ZvCf();
-    cf->fromString("id record");
+    cf->fromString("id record", false);
     cf->set("snapThread", ZtString() << ZuBoxed(mx->txThread()));
   }
 
@@ -53,7 +53,7 @@ void MxMDRecord::init(MxMDCore *core)
   core->addCmd(
       "record",
       "s stop stop { type flag }",
-      CmdFn::Member<&MxMDRecord::recordCmd>::fn(this),
+      MxMDCmd::Fn::Member<&MxMDRecord::recordCmd>::fn(this),
       "record market data to file", 
       "usage: record FILE\n"
       "       record -s\n"
@@ -158,7 +158,7 @@ void MxMDRecLink::connect()
       }
     }
 
-    MxMDRing &broadcast = core()->broadcast();
+    MxMDBroadcast &broadcast = core()->broadcast();
 
     if (!broadcast.open() || broadcast.attach() != Zi::OK) {
       m_file.close();
@@ -178,10 +178,10 @@ void MxMDRecLink::connect()
 
   connected();
 
-  mx()->run(m_snapThread, [](MxMDRecLink *link) { link->snap(); }, this);
+  mx()->run(engine()->snapThread(),
+      ZmFn<>{[](MxMDRecLink *link) { link->snap(); }, this});
 
-  mx()->wakeFn(engine()->rxThread(),
-      ZmScheduler::WakeFn{[](MxMDRecLink *link, ZmScheduler *, unsigned) {
+  mx()->wakeFn(engine()->rxThread(), ZmFn<>{[](MxMDRecLink *link) {
 	link->rxRun_([](Rx *rx) { rx->app().recv(rx); });
 	link->wake();
       }, this});
@@ -191,13 +191,13 @@ void MxMDRecLink::connect()
 
 void MxMDRecLink::disconnect()
 {
-  MxMDRing &broadcast = core()->broadcast();
+  MxMDBroadcast &broadcast = core()->broadcast();
 
   wake();
 
   m_ringID = -1;
 
-  mx()->wakeFn(rxThread(), ZmScheduler::WakeFn());
+  mx()->wakeFn(rxThread(), ZmFn<>());
 
   broadcast.detach();
   broadcast.close();
@@ -224,7 +224,7 @@ int MxMDRecLink::write_(const Frame *frame, ZeError *e)
 
 void MxMDRecLink::snap()
 {
-  m_snapMsg = new MsgData();
+  m_snapMsg = new Msg();
   if (!core()->snapshot(*this, m_ringID))
     engine()->rxRun(
 	ZmFn<>{[](MxMDRecLink *link) { link->disconnect(); }, this});
@@ -252,7 +252,7 @@ void MxMDRecLink::push2()
     ZtString path = ZuMv(m_path);
     fileGuard.unlock();
     if (path) fileERROR(ZuMv(path), e);
-    engine()->rxInvoke(
+    engine()->rxRun(
 	ZmFn<>{[](MxMDRecLink *link) { link->disconnect(); }, this});
     return;
   }
@@ -264,7 +264,7 @@ void MxMDRecLink::recv(Rx *rx)
 {
   using namespace MxMDStream;
   const Frame *frame;
-  MxMDRing &broadcast = core()->broadcast();
+  MxMDBroadcast &broadcast = core()->broadcast();
   if (ZuUnlikely(!(frame = broadcast.shift()))) {
     if (ZuLikely(broadcast.readStatus() == Zi::EndOfFile)) {
       broadcast.detach();
@@ -359,7 +359,7 @@ void MxMDRecLink::write(MxQMsg *qmsg)
     m_file.close();
     ZtString path = ZuMv(m_path);
     fileGuard.unlock();
-    MxMDRing &broadcast = core()->broadcast();
+    MxMDBroadcast &broadcast = core()->broadcast();
     broadcast.detach();
     broadcast.close();
     disconnected();
@@ -370,19 +370,19 @@ void MxMDRecLink::write(MxQMsg *qmsg)
 
 // commands
 
-void MxMDRecord::recordCmd(const CmdArgs &args, ZtArray<char> &out)
+void MxMDRecord::recordCmd(const MxMDCmd::Args &args, ZtArray<char> &out)
 {
   ZuBox<int> argc = args.get("#");
-  if (argc < 1 || argc > 2) throw CmdUsage();
+  if (argc < 1 || argc > 2) throw MxMDCmd::Usage();
   if (!!args.get("stop")) {
-    if (argc == 2) throw CmdUsage();
+    if (argc == 2) throw MxMDCmd::Usage();
     if (ZtString path = stopRecording())
       out << "stopped recording to \"" << path << "\"\n";
     return;
   }
-  if (argc != 2) throw CmdUsage();
+  if (argc != 2) throw MxMDCmd::Usage();
   ZuString path = args.get("1");
-  if (!path) CmdUsage();
+  if (!path) MxMDCmd::Usage();
   if (record(path))
     out << "started recording to \"" << path << "\"\n";
   else

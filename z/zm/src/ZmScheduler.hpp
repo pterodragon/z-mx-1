@@ -299,9 +299,7 @@ public:
   }
 
 public:
-  typedef ZmFn<ZmScheduler *, unsigned> WakeFn; // scheduler, thread ID
-
-  void wakeFn(unsigned tid, WakeFn fn);
+  void wakeFn(unsigned tid, ZmFn<> fn);
 
   enum { Update = 0, Advance, Defer };
 
@@ -419,15 +417,12 @@ private:
   struct Thread {
     ZmSpinLock	lock;
     Ring	ring;
-    WakeFn	wakeFn;
+    ZmFn<>	wakeFn;
     ZmThreadID	tid = 0;
     ZmThread	thread;
   };
 
-  ZuInline void wake(Thread *thread) {
-    if (ZuUnlikely(thread->wakeFn))
-      (thread->wakeFn)(this, (thread - &m_threads[0]) + 1);
-  }
+  ZuInline void wake(Thread *thread) { (thread->wakeFn)(); }
 
   void timer();
   bool timerAdd(ZmFn<> &fn);

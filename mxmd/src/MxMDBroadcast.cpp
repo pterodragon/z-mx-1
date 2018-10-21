@@ -23,28 +23,54 @@
 
 #include <MxMDCore.hpp>
 
-MxMDBroadcast(MxMDCore *core) : m_core(core), m_seqNo(0)
+MxMDBroadcast::MxMDBroadcast()
 {
-  m_params.name("RMD").size(131072); // 131072 is ~100mics at 1Gbit/s
 }
 
-~MxMDBroadcast()
+MxMDBroadcast::~MxMDBroadcast()
 {
   close__();
 }
 
-void MxMDBroadcast::init(ZvCf *cf)
+void MxMDBroadcast::init(MxMDCore *core)
 {
-  m_config.init(cf);
+  m_core = core;
+
+  if (ZmRef<ZvCf> cf = core->cf()->subset("broadcast", false))
+    m_params.init(cf);
+  else
+    m_params.name("RMD").size(131072); // 131072 is ~100mics at 1Gbit/s
 }
 
 bool MxMDBroadcast::open()
 {
   Guard guard(m_lock);
-  return open_();
+  return open_(guard);
 }
 
-bool MxMDBroadcast::open_()
+ZmRef<MxMDBroadcast::Ring> MxMDBroadcast::shadow()
+{
+  Guard guard(m_lock);
+  if (!open_(guard)) return nullptr;
+  ZmRef<Ring> ring = new Ring(m_params);
+  if (ring->shadow(*m_ring) < 0) { close_(); return nullptr; }
+  return ring;
+}
+
+void MxMDBroadcast::close(ZmRef<Ring> ring)
+{
+  Guard guard(m_lock);
+  ring->close();
+  close_();
+}
+
+void MxMDBroadcast::close()
+{
+  Guard guard(m_lock);
+  close_();
+}
+
+bool MxMDBroadcast::open_(Guard &guard)
 {
   ++m_openCount;
   if (m_ring) return true;
@@ -63,28 +89,6 @@ bool MxMDBroadcast::open_()
     return false;
   }
   return true;
-}
-
-ZmRef<Ring> MxMDBroadcast::shadow()
-{
-  Guard guard(m_lock);
-  if (!open_()) return false;
-  ZmRef<Ring> ring = new Ring();
-  if (ring->shadow(*m_ring) < 0) { close_(); return false; }
-  return true;
-}
-
-void MxMDBroadcast::close(ZmRef<Ring> ring)
-{
-  Guard guard(m_lock);
-  ring->close();
-  close_();
-}
-
-void MxMDBroadcast::close()
-{
-  Guard guard(m_lock);
-  close_();
 }
 
 void MxMDBroadcast::close_()
@@ -141,7 +145,9 @@ void *MxMDBroadcast::out(void *ptr, unsigned length, unsigned type,
     int shardID, ZmTime stamp)
 {
   Frame *frame = new (ptr) Frame(
-      length, type, shardID, ++m_seqNo, stamp.sec(), stamp.nsec());
+      (uint16_t)length, (uint16_t)type,
+      (uint64_t)shardID, ++m_seqNo,
+      stamp.sec(), (uint32_t)stamp.nsec());
   return frame->ptr();
 }
 

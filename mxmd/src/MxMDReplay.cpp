@@ -40,7 +40,7 @@ void MxMDReplay::init(MxMDCore *core)
 
   if (!cf) {
     cf = new ZvCf();
-    cf->fromString("id replay");
+    cf->fromString("id replay", false);
   }
 
   MxEngine::init(core, this, mx, cf);
@@ -50,7 +50,7 @@ void MxMDReplay::init(MxMDCore *core)
   core->addCmd(
       "replay",
       "s stop stop { type flag }",
-      CmdFn::Member<&MxMDReplay::replayCmd>::fn(this),
+      MxMDCmd::Fn::Member<&MxMDReplay::replayCmd>::fn(this),
       "replay market data from file",
       "usage: replay FILE\n"
       "       replay -s\n"
@@ -81,6 +81,17 @@ ZtString MxMDReplay::stopReplaying()
   ZtString path = m_link->stopReplaying();
   stop();
   return path;
+}
+
+ZmRef<MxAnyLink> MxMDReplay::createLink(MxID id)
+{
+  m_link = new MxMDReplayLink(id);
+  return m_link;
+}
+
+MxEngineApp::ProcessFn MxMDReplay::processFn()
+{
+  return MxEngineApp::ProcessFn();
 }
 
 bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
@@ -238,18 +249,18 @@ eof:
 
 // commands
 
-void MxMDReplay::replayCmd(const CmdArgs &args, ZtArray<char> &out)
+void MxMDReplay::replayCmd(const MxMDCmd::Args &args, ZtArray<char> &out)
 {
   ZuBox<int> argc = args.get("#");
-  if (argc < 1 || argc > 2) throw CmdUsage();
+  if (argc < 1 || argc > 2) throw MxMDCmd::Usage();
   if (!!args.get("stop")) {
     if (ZtString path = stopReplaying())
       out << "stopped replaying to \"" << path << "\"\n";
     return;
   }
-  if (argc != 2) throw CmdUsage();
+  if (argc != 2) throw MxMDCmd::Usage();
   ZuString path = args.get("1");
-  if (!path) CmdUsage();
+  if (!path) MxMDCmd::Usage();
   if (replay(path))
     out << "started replaying from \"" << path << "\"\n";
   else

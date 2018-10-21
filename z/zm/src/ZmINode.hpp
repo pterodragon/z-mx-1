@@ -50,7 +50,7 @@ public:
 
   ZuInline ZmINode() { }
   template <typename ...Args>
-  ZuInline ZmINode(Args &&... args) : m_item(ZuFwd<Args>(args)...) { }
+  ZuInline ZmINode(Args &&... args) : m_item{ZuFwd<Args>(args)...} { }
 
   ZuInline const Item &item() const { return m_item; }
   ZuInline Item &item() { return m_item; }
@@ -71,7 +71,7 @@ public:
 
   ZuInline ZmINode() { }
   template <typename ...Args>
-  ZuInline ZmINode(Args &&... args) : Item(ZuFwd<Args>(args)...) { }
+  ZuInline ZmINode(Args &&... args) : Item{ZuFwd<Args>(args)...} { }
 
   ZuInline const Item &item() const { return *this; }
   ZuInline Item &item() { return *this; }

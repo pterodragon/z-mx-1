@@ -316,13 +316,15 @@ public:
   template <typename A>
   ZuInline int cmp(const A &a) const {
     if (same(a)) return 0;
-    return ZuArray{data(), length()}.equals(a);
+    ZuArray self{data(), length()};
+    return self.cmp(a);
   }
 
   template <typename A>
   ZuInline bool equals(const A &a) const {
     if (same(a)) return true;
-    return ZuArray{data(), length()}.equals(a);
+    ZuArray self{data(), length()};
+    return self.equals(a);
   }
 
   template <typename A>

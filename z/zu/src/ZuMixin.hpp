@@ -106,7 +106,7 @@ public:
   }
 
   template <typename ...Args>
-  ZuInline ZuMixin(Args &&... args) : T(ZuFwd<Args>(args)...) { }
+  ZuInline ZuMixin(Args &&... args) : T{ZuFwd<Args>(args)...} { }
 };
 
 template <typename T> struct ZuTraits;

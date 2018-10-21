@@ -77,7 +77,7 @@ public:
 
   ZuInline ZmKVNode() { }
   template <typename ...Args>
-  ZuInline ZmKVNode(Args &&... args) : m_key(ZuFwd<Args>(args)...) { }
+  ZuInline ZmKVNode(Args &&... args) : m_key{ZuFwd<Args>(args)...} { }
 
   ZuInline const Key &key() const { return m_key; }
   ZuInline Key &key() { return m_key; }
@@ -127,7 +127,7 @@ public:
 
   ZuInline ZmKVNode() { }
   template <typename ...Args>
-  ZuInline ZmKVNode(Args &&... args) : Key(ZuFwd<Args>(args)...) { }
+  ZuInline ZmKVNode(Args &&... args) : Key{ZuFwd<Args>(args)...} { }
 
   ZuInline const Key &key() const { return *this; }
   ZuInline Key &key() { return *this; }

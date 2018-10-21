@@ -288,8 +288,9 @@ void ZiMultiplex::udp(ZiConnectFn fn, ZiFailFn failFn,
 
   invoke(rxThread(), 
       [this, fn = ZuMv(fn), failFn = ZuMv(failFn),
-	  localIP, localPort, remoteIP, remotePort, options = ZuMv(options)]() {
-	this->udp_(fn, failFn,
+	  localIP, localPort,
+	  remoteIP, remotePort, options = ZuMv(options)]() mutable {
+	this->udp_(ZuMv(fn), ZuMv(failFn),
 	    localIP, localPort, remoteIP, remotePort, options);
       });
 }
@@ -547,10 +548,10 @@ void ZiMultiplex::connect(
 
   invoke(rxThread(),
       [this, fn = ZuMv(fn), failFn = ZuMv(failFn),
-	  localIP, localPort, remoteIP, remotePort, options = ZuMv(options)]() {
-	this->connect_(fn, failFn,
+	  localIP, localPort,
+	  remoteIP, remotePort, options = ZuMv(options)]() mutable {
+	this->connect_(ZuMv(fn), ZuMv(failFn),
 	    localIP, localPort, remoteIP, remotePort, options);
-	this->rx();
       });
 }
 
@@ -791,10 +792,9 @@ void ZiMultiplex::listen(
   invoke(rxThread(),
       [this, listenFn = ZuMv(listenFn),
 	  failFn = ZuMv(failFn), acceptFn = ZuMv(acceptFn),
-	  localIP, localPort, nAccepts, options = ZuMv(options)]() {
-	this->listen_(listenFn, failFn, acceptFn,
+	  localIP, localPort, nAccepts, options = ZuMv(options)]() mutable {
+	this->listen_(ZuMv(listenFn), ZuMv(failFn), ZuMv(acceptFn),
 	    localIP, localPort, nAccepts, options);
-	this->rx();
       });
 }
 
@@ -938,7 +938,6 @@ void ZiMultiplex::stopListening(ZiIP localIP, uint16_t localPort)
   invoke(rxThread(),
       [this, localIP, localPort]() {
 	this->stopListening_(localIP, localPort);
-	this->rx();
       });
 }
 
@@ -1362,8 +1361,8 @@ void ZiConnection::executedRecv(unsigned n)
 
 void ZiConnection::send(ZiIOFn fn)
 {
-  m_mx->ZmScheduler::invoke(m_mx->txThread(),
-	[this, fn = ZuMv(fn)]() { this->send_(fn); });
+  m_mx->invoke(m_mx->txThread(),
+	[this, fn = ZuMv(fn)]() mutable { this->send_(ZuMv(fn)); });
 }
 
 void ZiConnection::send_(ZiIOFn fn)
@@ -1727,7 +1726,7 @@ void ZiMultiplex::connectDel(Socket s)
 
 void ZiConnection::disconnect()
 {
-  m_mx->ZmScheduler::invoke(m_mx->txThread(),
+  m_mx->invoke(m_mx->txThread(),
       ZmFn<>::Member<&ZiConnection::disconnect_1>::fn(this));
 }
 
@@ -1836,7 +1835,7 @@ void ZiMultiplex::disconnected(ZiConnection *cxn)
 
 void ZiConnection::close()
 {
-  m_mx->ZmScheduler::invoke(m_mx->txThread(),
+  m_mx->invoke(m_mx->txThread(),
       ZmFn<>::Member<&ZiConnection::close_1>::fn(this));
 }
 

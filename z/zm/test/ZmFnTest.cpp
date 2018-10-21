@@ -124,6 +124,16 @@ struct Derived : public Base {
   void bar() { Base::foo_(); }
 };
 
+struct MoveOnly {
+  inline MoveOnly() : i(42) { }
+  inline ~MoveOnly() { }
+  MoveOnly(const MoveOnly &) = delete;
+  MoveOnly &operator =(const MoveOnly &) = delete;
+  inline MoveOnly(MoveOnly &&m) : i(m.i) { m.i = 0; }
+  inline MoveOnly &operator =(MoveOnly &&m) { i = m.i; m.i = 0; }
+  int	i;
+};
+
 void foo(X &x) { printf("%d\n", x.m_i); }
 
 void fail() { exit(1); }
@@ -322,6 +332,12 @@ int main()
     ZmFn<X &> bar = ZmFn<X &>::Ptr<&foo>::fn();
     bar(vr);
     foo(v);
+  }
+  {
+    ZmFn<MoveOnly> fn{[](MoveOnly m) { printf("%d\n", m.i); } };
+    fn(MoveOnly());
+    MoveOnly m;
+    fn(ZuMv(m));
   }
   {
     ZmAtomic<unsigned> i;

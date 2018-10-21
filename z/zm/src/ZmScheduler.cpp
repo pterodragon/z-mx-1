@@ -163,7 +163,7 @@ void ZmScheduler::drain()
   }
 
   for (unsigned i = 0; i < m_nThreads; i++)
-    runWake(&m_threads[i], ZmFn<>::Member<&ZmScheduler::drained>::fn(this));
+    runWake_(&m_threads[i], ZmFn<>::Member<&ZmScheduler::drained>::fn(this));
 
   {
     ZmGuard<ZmLock> stateGuard(m_stateLock);
@@ -305,7 +305,7 @@ void ZmScheduler::timer()
 	  unsigned tid = timer->val().tid;
 	  ZmFn<> fn = timer->val().fn;
 	  if (ZuLikely(tid))
-	    ok = tryRunWake(&m_threads[tid - 1], fn);
+	    ok = tryRunWake_(&m_threads[tid - 1], fn);
 	  else
 	    ok = timerAdd(fn);
 	  if (ZuUnlikely(!ok)) {
@@ -326,7 +326,7 @@ bool ZmScheduler::timerAdd(ZmFn<> &fn)
   unsigned next = first;
   do {
     Thread *thread = m_workers[next % m_nWorkers];
-    if (tryRunWake(thread, fn)) return true;
+    if (tryRunWake_(thread, fn)) return true;
   } while (((next = m_next++) - first) < m_nWorkers);
   return false;
 }
@@ -364,7 +364,7 @@ void ZmScheduler::run(
 
     if (ZuUnlikely(timeout <= ZmTimeNow())) {
       if (ZuLikely(tid)) {
-	if (ZuLikely(tryRunWake(&m_threads[tid - 1], fn))) return;
+	if (ZuLikely(tryRunWake_(&m_threads[tid - 1], fn))) return;
       } else {
 	if (ZuLikely(timerAdd(fn))) return;
       }
@@ -394,17 +394,17 @@ void ZmScheduler::add(ZmFn<> fn)
   unsigned next = first;
   do {
     Thread *thread = m_workers[next % m_nWorkers];
-    if (tryRunWake(thread, fn)) return;
+    if (tryRunWake_(thread, fn)) return;
   } while (((next = m_next++) - first) < m_nWorkers);
-  runWake(m_workers[first % m_nWorkers], ZuMv(fn));
+  runWake_(m_workers[first % m_nWorkers], ZuMv(fn));
 }
 
-void ZmScheduler::runWake(Thread *thread, ZmFn<> fn)
+void ZmScheduler::runWake_(Thread *thread, ZmFn<> fn)
 {
   if (ZuLikely(run__(thread, ZuMv(fn)))) wake(thread);
 }
 
-bool ZmScheduler::tryRunWake(Thread *thread, ZmFn<> &fn)
+bool ZmScheduler::tryRunWake_(Thread *thread, ZmFn<> &fn)
 {
   if (ZuLikely(tryRun__(thread, fn))) { wake(thread); return true; }
   return false;

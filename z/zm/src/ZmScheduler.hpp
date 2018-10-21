@@ -347,7 +347,7 @@ public:
   template <typename Fn>
   ZuInline void run(unsigned tid, Fn &&fn) {
     ZmAssert(tid && tid <= m_nThreads);
-    runWake(&m_threads[tid - 1], ZmFn<>{ZuFwd<Fn>(fn)});
+    runWake_(&m_threads[tid - 1], ZmFn<>{ZuFwd<Fn>(fn)});
   }
   template <typename Fn>
   ZuInline void run_(unsigned tid, Fn &&fn) {
@@ -360,7 +360,7 @@ public:
     ZmAssert(tid && tid <= m_nThreads);
     Thread *thread = &m_threads[tid - 1];
     if (ZuLikely(ZmPlatform::getTID() == thread->tid)) { fn(); return; }
-    runWake(thread, ZmFn<>{ZuFwd<Fn>(fn)});
+    runWake_(thread, ZmFn<>{ZuFwd<Fn>(fn)});
   }
   template <typename Fn, typename O>
   ZuInline void invoke(unsigned tid, Fn &&fn, O &&o) {
@@ -370,7 +370,7 @@ public:
       fn(ZuFwd<O>(o));
       return;
     }
-    runWake(thread, ZmFn{ZuFwd<Fn>(fn), ZuFwd<O>(o)});
+    runWake_(thread, ZmFn{ZuFwd<Fn>(fn), ZuFwd<O>(o)});
   }
 
   ZuInline void threadInit(ZmFn<> fn) { m_threadInitFn = ZuMv(fn); }
@@ -419,9 +419,9 @@ private:
   struct Thread {
     ZmSpinLock	lock;
     Ring	ring;
+    WakeFn	wakeFn;
     ZmThreadID	tid = 0;
     ZmThread	thread;
-    WakeFn	wakeFn;
   };
 
   ZuInline void wake(Thread *thread) {
@@ -432,8 +432,8 @@ private:
   void timer();
   bool timerAdd(ZmFn<> &fn);
 
-  void runWake(Thread *thread, ZmFn<> fn);
-  bool tryRunWake(Thread *thread, ZmFn<> &fn);
+  void runWake_(Thread *thread, ZmFn<> fn);
+  bool tryRunWake_(Thread *thread, ZmFn<> &fn);
   bool run__(Thread *thread, ZmFn<> fn);
   bool tryRun__(Thread *thread, ZmFn<> &fn);
 

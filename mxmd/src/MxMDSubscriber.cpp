@@ -487,7 +487,7 @@ void MxMDSubLink::udpReceived(MxQMsg *msg)
     Guard guard(m_resendLock);
     unsigned gapLength = m_resendGap.length();
     if (ZuUnlikely(gapLength)) {
-      uint64_t seqNo = msg->seqNo();
+      uint64_t seqNo = msg->as<MxMDFrame>().seqNo;
       uint64_t gapSeqNo = m_resendGap.key();
       if (seqNo >= gapSeqNo && seqNo < gapSeqNo + gapLength) {
 	m_resendMsg = msg;
@@ -516,13 +516,13 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
   new (frame->ptr())
     ResendReq{now.key(), now.length()};
   ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(msg), msg->length());
-  qmsg->addr = m_udpResendAddr;
   ZmRef<UDP> udp;
   {
     Guard connGuard(m_connLock);
     udp = m_udp;
   }
-  if (ZuLikely(udp)) MxMDStream::UDP::send(ZuMv(qmsg), udp);
+  if (ZuLikely(udp))
+    MxMDStream::UDP::send(udp.ptr(), ZuMv(qmsg), m_udpResendAddr);
 }
 
 // commands
@@ -614,15 +614,15 @@ void MxMDSubscriber::resendCmd(
   if (!*seqNo || !*count) throw MxMDCmd::Usage();
   ZmRef<MxQMsg> msg = link->resend(seqNo, count);
   if (!msg) throw ZtString("timed out");
-  seqNo = msg->seqNo();
-  out << "seqNo: " << msg->id.seqNo << '\n';
+  seqNo = msg->as<MxMDFrame>().seqNo;
+  out << "seqNo: " << seqNo << '\n';
   const Frame &frame = msg->as<Frame>();
   out << ZtHexDump(
       ZtString() << "type: " << Type::name(frame.type),
       msg->ptr(), msg->length) << '\n';
 }
 
-ZmRef<MxQMsg> MxSubLink::resend(MxSeqNo seqNo, unsigned count);
+ZmRef<MxQMsg> MxMDSubLink::resend(MxSeqNo seqNo, unsigned count)
 {
   using namespace MxMDStream;
   MxQueue::Gap gap{seqNo, count};
@@ -631,7 +631,7 @@ ZmRef<MxQMsg> MxSubLink::resend(MxSeqNo seqNo, unsigned count);
     m_resendGap = gap;
   }
   reRequest(gap);
-  if (m_resendSem.timedwait(ZmTimeNow() + engine()->ReRequestInterval()))
+  if (m_resendSem.timedwait(ZmTimeNow() + engine()->reReqInterval()))
     return 0;
   ZmRef<MxQMsg> msg;
   {

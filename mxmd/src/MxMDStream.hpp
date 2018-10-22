@@ -561,8 +561,8 @@ namespace MxMDStream {
   template <typename Cxn, typename L> struct IOLambda_ {
     typedef void (*Fn)(Cxn *, MxQMsg *, ZiIOContext &);
     enum { OK = ZuConversion<L, Fn>::Exists };
-  }
-  template <typename Cxn, typename L, bool OK = IOLambda_<Cxn, L>::OK>
+  };
+  template <typename Cxn, typename L, bool = IOLambda_<Cxn, L>::OK>
   struct IOLambda;
   template <typename Cxn, typename L> struct IOLambda<Cxn, L, true> {
     typedef void T;
@@ -573,8 +573,8 @@ namespace MxMDStream {
   template <typename Cxn, typename L> struct IOMvLambda_ {
     typedef void (*Fn)(Cxn *, ZmRef<MxQMsg>, ZiIOContext &);
     enum { OK = ZuConversion<L, Fn>::Exists };
-  }
-  template <typename Cxn, typename L, bool OK = IOMvLambda_<Cxn, L>::OK>
+  };
+  template <typename Cxn, typename L, bool = IOMvLambda_<Cxn, L>::OK>
   struct IOMvLambda;
   template <typename Cxn, typename L> struct IOMvLambda<Cxn, L, true> {
     typedef void T;
@@ -584,29 +584,30 @@ namespace MxMDStream {
     }
   };
   namespace UDP {
-    typename void send(Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr) {
+    template <typename Cxn>
+    inline void send(Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr) {
       msg->addr = addr;
       cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	  io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	    }, io.fn.mvObject<MxQMsg>())},
+	    }, io.fn.mvObject<MxQMsg>()},
 	    msg->payload->ptr(), msg->length, 0, msg->addr);
 	}, ZuMv(msg)});
     }
     template <typename Cxn, typename L>
-    typename ZuIfT<IOMvLambda<Cxn, L>::OK>::T send(
+    inline typename IOMvLambda<Cxn, L>::T send(
 	Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr, L l) {
       msg->addr = addr;
       cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	  io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
 	      IOMvLambda<Cxn, L>::invoke(io);
-	    }, io.fn.mvObject<MxQMsg>())},
+	    }, io.fn.mvObject<MxQMsg>()},
 	    msg->payload->ptr(), msg->length, 0, msg->addr);
 	}, ZuMv(msg)});
     }
     template <typename Cxn, typename L>
-    typename ZuIfT<IOMvLambda<Cxn, L>::OK>::T recv(
+    inline typename IOMvLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	  msg->addr = io.addr;
@@ -617,7 +618,8 @@ namespace MxMDStream {
   }
 
   namespace TCP {
-    typename void send(Cxn *cxn, ZmRef<MxQMsg> msg) {
+    template <typename Cxn>
+    inline void send(Cxn *cxn, ZmRef<MxQMsg> msg) {
       cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	  io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
@@ -626,7 +628,7 @@ namespace MxMDStream {
 	}, ZuMv(msg)});
     }
     template <typename Cxn, typename L>
-    typename ZuIfT<IOMvLambda<Cxn, L>::OK>::T send(
+    inline typename IOMvLambda<Cxn, L>::T send(
 	Cxn *cxn, ZmRef<MxQMsg> msg, L l) {
       cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	  io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
@@ -638,7 +640,7 @@ namespace MxMDStream {
     }
 
     template <typename Cxn, typename L>
-    typename ZuIfT<IOLambda<Cxn, L>::OK>::T recv(
+    inline typename IOLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	  unsigned len = io.offset += io.length;
@@ -646,7 +648,7 @@ namespace MxMDStream {
 	    Frame &frame = msg->as<Frame>();
 	    unsigned msgLen = sizeof(Frame) + frame.len;
 	    if (ZuUnlikely(msgLen > msg->payload->size())) {
-	      ZeLOG(Error, "received corrupt TCP message");
+	      ZeLOG(Error, "MxMDStream::recv oversized/corrupt TCP message");
 	      io.disconnect();
 	      return;
 	    }

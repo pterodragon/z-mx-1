@@ -155,6 +155,7 @@ public:
   unsigned	offset;	// offset within buffer - set by app
   unsigned	length;	// length - set by ZiMultiplex
   ZiSockAddr	addr;	// address - set by app (send) / ZiMultiplex (recv)
+  ZiConnection	*cxn;	// connection - set by ZiMultiplex
 };
 typedef ZmFn<ZiIOContext &> ZiIOFn;
 ZuInline void ZiIOContext::operator ()() { fn.as<ZiIOFn>()(*this); }

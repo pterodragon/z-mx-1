@@ -127,6 +127,8 @@ class MxMDAPI MxMDPubLink : public MxLink<MxMDPubLink> {
   typedef ZmGuard<Lock> Guard;
   typedef ZmReadGuard<Lock> ReadGuard;
 
+  typedef MxMDStream::Msg Msg;
+
   class TCP;
 friend class TCP;
   class TCP : public ZiConnection {
@@ -155,7 +157,9 @@ friend class TCP;
     ZuInline MxMDPubLink *link() const { return m_link; }
 
     void connected(ZiIOContext &);
+    void close();
     void disconnect();
+    void disconnect_();
     void disconnected();
 
     void processLogin(ZiIOContext &);
@@ -165,12 +169,11 @@ friend class TCP;
 
     void snap();
     Frame *push(unsigned size);
-    void *out(void *ptr, unsigned length, unsigned type, ZmTime stamp);
+    void *out(void *ptr, unsigned length, unsigned type,
+	int shardID, ZmTime stamp);
     void push2();
 
   private:
-    typedef MxMDStream::Msg Msg;
-
     MxMDPubLink		*m_link;
 
     ZmScheduler::Timer	m_loginTimer;
@@ -211,8 +214,10 @@ friend class UDP;
       return m_state;
     }
 
-    void connected(ZiIOContext &io);
+    void connected(ZiIOContext &);
+    void close();
     void disconnect();
+    void disconnect_();
     void disconnected();
 
     void recv(ZiIOContext &);

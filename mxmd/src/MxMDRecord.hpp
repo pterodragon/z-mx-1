@@ -132,18 +132,22 @@ private:
 
   typedef MxMDStream::Frame Frame;
   typedef MxMDStream::Msg Msg;
+  typedef MxMDStream::MsgData MsgData;
 
   int write_(const Frame *frame, ZeError *e);
 
   // Rx thread
   void wake();
   void recv(Rx *rx);
+
+public:
   void write(MxQMsg *qmsg);
 
   // snap thread
   void snap();
   Frame *push(unsigned size);
-  void *out(void *ptr, unsigned length, unsigned type, ZmTime stamp);
+  void *out(void *ptr, unsigned length, unsigned type,
+      int shardID, ZmTime stamp);
   void push2();
 
 private:
@@ -155,7 +159,7 @@ private:
     ZtString		  m_path;
     ZiFile		  m_file;
 
-  ZmRef<Msg>		m_snapMsg;
+  ZuRef<Msg>		m_snapMsg;
 };
 
 #endif /* MxMDRecord_HPP */

@@ -23,15 +23,6 @@
 
 #include <MxMDRecord.hpp>
 
-#define fileERROR(path__, code) \
-  core()->raise(ZeEVENT(Error, \
-    ([=, path = path__](const ZeEvent &, ZmStream &s) { \
-      s << "MxMD \"" << path << "\": " << code; })))
-#define fileINFO(path__, code) \
-  core()->raise(ZeEVENT(Info, \
-    ([=, path = path__](const ZeEvent &, ZmStream &s) { \
-      s << "MxMD \"" << path << "\": " << code; })))
-
 void MxMDRecord::init(MxMDCore *core)
 {
   ZmRef<ZvCf> cf = core->cf()->subset("record", false, false);
@@ -91,7 +82,7 @@ bool MxMDRecLink::record(ZtString path)
   int state;
   thread_local ZmSemaphore sem;
   engine()->rxInvoke(ZmFn<>{
-      [&state, sem = &sem](MxMDReplayLink *link) {
+      [&state, sem = &sem](MxMDRecLink *link) {
 	  state = link->state();
 	  sem->post();
 	}, this});
@@ -125,6 +116,15 @@ void MxMDRecLink::reset(MxSeqNo rxSeqNo, MxSeqNo)
 {
   rxInvoke([rxSeqNo](Rx *rx) { rx->rxReset(rxSeqNo); });
 }
+
+#define fileERROR(path__, code) \
+  engine()->appException(ZeEVENT(Error, \
+    ([=, path = path__](const ZeEvent &, ZmStream &s) { \
+      s << "MxMD \"" << path << "\": " << code; })))
+#define fileINFO(path__, code) \
+  engine()->appException(ZeEVENT(Info, \
+    ([=, path = path__](const ZeEvent &, ZmStream &s) { \
+      s << "MxMD \"" << path << "\": " << code; })))
 
 void MxMDRecLink::connect()
 {
@@ -174,7 +174,7 @@ void MxMDRecLink::connect()
 
   fileINFO(path, "started recording");
 
-  rx->startQueuing();
+  rxInvoke([](Rx *rx) { rx->startQueuing(); });
 
   connected();
 
@@ -197,7 +197,7 @@ void MxMDRecLink::disconnect()
 
   m_ringID = -1;
 
-  mx()->wakeFn(rxThread(), ZmFn<>());
+  mx()->wakeFn(engine()->rxThread(), ZmFn<>());
 
   broadcast.detach();
   broadcast.close();
@@ -230,7 +230,7 @@ void MxMDRecLink::snap()
 	ZmFn<>{[](MxMDRecLink *link) { link->disconnect(); }, this});
   m_snapMsg = nullptr;
 }
-Frame *MxMDRecLink::push(unsigned size)
+MxMDStream::Frame *MxMDRecLink::push(unsigned size)
 {
   if (ZuUnlikely(state() != MxLinkState::Up)) return nullptr;
   return m_snapMsg->frame();
@@ -239,7 +239,9 @@ void *MxMDRecLink::out(void *ptr, unsigned length, unsigned type,
     int shardID, ZmTime stamp)
 {
   Frame *frame = new (ptr) Frame(
-      length, type, shardID, 0, stamp.sec(), stamp.nsec());
+      (uint16_t)length, (uint16_t)type,
+      (uint64_t)shardID, (uint64_t)0,
+      stamp.sec(), (uint32_t)stamp.nsec());
   return frame->ptr();
 }
 void MxMDRecLink::push2()
@@ -247,7 +249,7 @@ void MxMDRecLink::push2()
   Guard fileGuard(m_fileLock);
 
   ZeError e;
-  if (ZuUnlikely(write_(msg->frame(), &e) != Zi::OK)) {
+  if (ZuUnlikely(write_(m_snapMsg->frame(), &e) != Zi::OK)) {
     m_file.close();
     ZtString path = ZuMv(m_path);
     fileGuard.unlock();
@@ -269,7 +271,7 @@ void MxMDRecLink::recv(Rx *rx)
     if (ZuLikely(broadcast.readStatus() == Zi::EndOfFile)) {
       broadcast.detach();
       broadcast.close();
-      { FileGuard guard(m_fileLock); m_file.close(); }
+      { Guard guard(m_fileLock); m_file.close(); }
       disconnected();
       return;
     }
@@ -280,7 +282,7 @@ void MxMDRecLink::recv(Rx *rx)
     broadcast.shift2();
     broadcast.detach();
     broadcast.close();
-    { FileGuard guard(m_fileLock); m_file.close(); }
+    { Guard guard(m_fileLock); m_file.close(); }
     disconnected();
     core()->raise(ZeEVENT(Error,
 	([name = ZtString(broadcast.params().name())](
@@ -317,12 +319,12 @@ void MxMDRecLink::recv(Rx *rx)
     default:
       {
 	unsigned length = sizeof(Frame) + frame->len;
-	ZmRef<Msg> msg = new Msg();
+	ZuRef<Msg> msg = new Msg();
 	Frame *msgFrame = msg->frame();
 	memcpy(msgFrame, frame, length);
 	broadcast.shift2();
 	ZmRef<MxQMsg> qmsg = new MxQMsg(
-	    msg, 0, length, MxMsgID{id(), msgFrame->seqNo});
+	    ZuMv(msg), length, MxMsgID{id(), msgFrame->seqNo});
 	rx->received(qmsg);
       }
       break;
@@ -340,7 +342,7 @@ MxEngineApp::ProcessFn MxMDRecord::processFn()
 {
   return static_cast<MxEngineApp::ProcessFn>(
       [](MxEngineApp *, MxAnyLink *link, MxQMsg *msg) {
-    static_cast<Link *>(link)->write(msg);
+    static_cast<MxMDRecLink *>(link)->write(msg);
   });
 }
 

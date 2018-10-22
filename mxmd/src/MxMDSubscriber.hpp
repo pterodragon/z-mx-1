@@ -129,6 +129,8 @@ class MxMDAPI MxMDSubLink : public MxLink<MxMDSubLink> {
   typedef ZmGuard<Lock> Guard;
   typedef ZmReadGuard<Lock> ReadGuard;
 
+  typedef MxMDStream::Msg Msg;
+
   class TCP;
 friend class TCP;
   class TCP : public ZiConnection {
@@ -151,7 +153,9 @@ friend class TCP;
     ZuInline MxMDSubLink *link() const { return m_link; }
 
     void connected(ZiIOContext &);
+    void close();
     void disconnect();
+    void disconnect_();
     void disconnected();
 
     void sendLogin();
@@ -189,12 +193,14 @@ friend class UDP;
       return m_state;
     }
 
-    void connected(ZiIOContext &io);
+    void connected(ZiIOContext &);
+    void close();
     void disconnect();
+    void disconnect_();
     void disconnected();
 
     void recv(ZiIOContext &);
-    static void process(MxQMsg *, ZiIOContext &);
+    void process(MxQMsg *, ZiIOContext &);
 
   private:
     MxMDSubLink		*m_link;
@@ -248,7 +254,10 @@ public:
   // connection management
   void tcpConnect();
   void tcpConnected(TCP *tcp);
+  ZmRef<MxQMsg> tcpLogin();
   void tcpLoginAck();
+  void tcpProcess(MxQMsg *);
+  void endOfSnapshot(MxSeqNo seqNo);
   void udpConnect();
   void udpConnected(UDP *udp, ZiIOContext &io);
   void udpReceived(MxQMsg *);

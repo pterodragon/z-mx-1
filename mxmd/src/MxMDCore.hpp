@@ -186,6 +186,7 @@ private:
   }, msg)); */
   void log(MxMsgID, MxTraffic) { }
 
+public:
   inline MxMDBroadcast &broadcast() { return m_broadcast; }
 
   inline bool streaming() { return m_broadcast.active(); }
@@ -243,6 +244,7 @@ private:
     MxMDStream::endOfSnapshot(m_broadcast, id, seqNo);
     return ok;
   }
+private:
   template <class Snapshot>
   static bool snapshotL2Side(Snapshot &snapshot, MxMDOBSide *side) {
     return !(!(!side->mktLevel() ||
@@ -273,6 +275,7 @@ private:
 	pxLevel->price(), data.qty, data.nOrders, data.flags);
   }
 
+private:
   typedef ZmPLock Lock;
   typedef ZmGuard<Lock> Guard;
 

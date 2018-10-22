@@ -25,8 +25,6 @@
 
 void MxMDSubscriber::init(MxMDCore *core, ZvCf *cf)
 {
-  Mx *mx = core->mx();
-
   if (!cf->get("id")) cf->set("id", "subscriber");
 
   MxEngine::init(core, this, core->mx(), cf);
@@ -50,7 +48,7 @@ void MxMDSubscriber::init(MxMDCore *core, ZvCf *cf)
 
   core->addCmd(
       "subscriber.resend", "",
-      MxMDCmd::Fn::Member<&MxITCHFeed::resendCmd>::fn(this),
+      MxMDCmd::Fn::Member<&MxMDSubscriber::resendCmd>::fn(this),
       "manually test subscriber resend",
       "usage: subscriber.resend LINK SEQNO COUNT\n"
       "    LINK: link ID (determines server IP/port)\n"
@@ -59,7 +57,7 @@ void MxMDSubscriber::init(MxMDCore *core, ZvCf *cf)
 }
 
 #define engineINFO(code) \
-    engine()->appException(ZeEVENT(Info, \
+    appException(ZeEVENT(Info, \
       ([=](const ZeEvent &, ZmStream &out) { out << code; })))
 
 void MxMDSubscriber::final()
@@ -70,18 +68,17 @@ void MxMDSubscriber::final()
 void MxMDSubscriber::updateLinks(ZuString partitions)
 {
   MxMDPartitionCSV csv;
-  csv.read(partitions, [](MxMDSubscriber *sub, ZuAnyPOD *pod) {
+  csv.read(partitions, ZvCSVReadFn{[](MxMDSubscriber *sub, ZuAnyPOD *pod) {
       const MxMDPartition &partition = pod->as<MxMDPartition>();
       sub->m_partitions.del(partition.id);
       sub->m_partitions.add(partition);
       sub->updateLink(partition.id, nullptr);
-    }, this);
+    }, this});
 }
 
 ZmRef<MxAnyLink> MxMDSubscriber::createLink(MxID id)
 {
-  m_link = new MxMDSubLink(id);
-  return m_link;
+  return new MxMDSubLink(id);
 }
 
 MxEngineApp::ProcessFn MxMDSubscriber::processFn()
@@ -93,8 +90,9 @@ MxEngineApp::ProcessFn MxMDSubscriber::processFn()
   });
 }
 
-void MxMDSubscriber::process_(MxMDSubLink *link, MxQMsg *msg)
+void MxMDSubscriber::process_(MxMDSubLink *, MxQMsg *msg)
 {
+  using namespace MxMDStream;
   const Frame &frame = msg->as<Frame>();
   core()->apply(&frame, m_filter);
 }
@@ -210,11 +208,12 @@ void MxMDSubLink::tcpConnect()
       ip << ':' << ZuBoxed(port) << ')');
 
   mx()->connect(
-      ZiConnectFn([](MxMDSubLink *link, const ZiCxnInfo &ci) {
-	  if (link->stateLocked([](MxMDSubLink *, int state) -> bool {
-		return state != MxLinkState::Connecting; }))
+      ZiConnectFn([](MxMDSubLink *link, const ZiCxnInfo &ci) -> uintptr_t {
+	  if (link->stateLocked<MxMDSubLink>(
+		[](MxMDSubLink *, int state) -> bool {
+		  return state != MxLinkState::Connecting; }))
 	    return 0;
-	  return new TCP(link, ci);
+	  return (uintptr_t)(new TCP(link, ci));
 	}, this),
       ZiFailFn([](MxMDSubLink *link, bool transient) {
 	  if (transient)
@@ -227,15 +226,13 @@ void MxMDSubLink::tcpConnect()
 MxMDSubLink::TCP::TCP(MxMDSubLink *link, const ZiCxnInfo &ci) :
   ZiConnection(link->mx(), ci), m_link(link), m_state(State::Login)
 {
-  using namespace MxMDStream;
   m_in = new MxQMsg(new Msg());
 }
 void MxMDSubLink::TCP::connected(ZiIOContext &io)
 {
   m_link->tcpConnected(this);
-  m_in->fn = MxQMsgFn([](MxMDSubLink::TCP *tcp, MxQMsg *, ZiIOContext *io) {
-      tcp->processLoginAck(*io); }, this);
-  MxMDStream::TCP::recv(m_in, io);
+  MxMDStream::TCP::recv<TCP>(m_in, io,
+      [](TCP *tcp, MxQMsg *, ZiIOContext &io) { tcp->processLoginAck(io); });
 }
 void MxMDSubLink::tcpConnected(MxMDSubLink::TCP *tcp)
 {
@@ -247,7 +244,7 @@ void MxMDSubLink::tcpConnected(MxMDSubLink::TCP *tcp)
     m_tcp = tcp;
   }
 
-  mx()->add([](MxMDSubLink *link) { link->udpConnect(); }, this);
+  mx()->rxRun(ZmFn<>{[](MxMDSubLink *link) { link->udpConnect(); }, this});
   // TCP sendLogin() is called once UDP is receiving/queuing
 }
 
@@ -281,21 +278,26 @@ void MxMDSubLink::TCP::disconnected()
 
 // TCP login, recv
 
-void MxMDSubLink::TCP::sendLogin()
+ZmRef<MxQMsg> MxMDSubLink::tcpLogin()
 {
   using namespace MxMDStream;
   ZuRef<Msg> msg = new Msg();
-  new (msg->out<Login>(id(), 1, ZmTime()))
+  Frame *frame = new (msg->frame()) Frame(
+      (uint16_t)sizeof(Login), (uint16_t)Login::Code, (uint64_t)id());
+  new (frame->ptr()) 
     Login{m_partition->tcpUsername, m_partition->tcpPassword};
-  ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(msg), MxQMsgFn(), msg->length());
-  MxMDStream::TCP::send(qmsg, this); // bypass Tx queue
-  mx()->add(ZmFn<>([](MxMDSubLink::TCP *tcp) {
+  return new MxQMsg(ZuMv(msg), msg->length());
+}
+void MxMDSubLink::TCP::sendLogin()
+{
+  MxMDStream::TCP::send(this, m_link->tcpLogin()); // bypass Tx queue
+  mx()->rxRun(ZmFn<>{[](MxMDSubLink::TCP *tcp) {
       {
-	Guard stateGuard(m_stateLock);
-	if (m_state != State::Login) return;
+	Guard stateGuard(tcp->m_stateLock);
+	if (tcp->m_state != State::Login) return;
       }
       tcpERROR(tcp, 0, "TCP login timeout");
-    }, this), ZmTimeNow(m_link->loginTimeout()), &m_loginTimer);
+    }, this}, ZmTimeNow(m_link->loginTimeout()), &m_loginTimer);
 }
 void MxMDSubLink::TCP::processLoginAck(ZiIOContext &io)
 {
@@ -310,8 +312,8 @@ void MxMDSubLink::TCP::processLoginAck(ZiIOContext &io)
     m_state = State::Receiving;
   }
   m_link->tcpLoginAck();
-  m_in->fn = MxQMsgFn([](MxMDSubLink::TCP *tcp, MxQMsg *, ZiIOContext *io) {
-      tcp->process(*io); }, this);
+  MxMDStream::TCP::recv<TCP>(m_in, io,
+      [](TCP *tcp, MxQMsg *, ZiIOContext &io) { tcp->process(io); });
   process(io);
 }
 void MxMDSubLink::tcpLoginAck()
@@ -332,7 +334,13 @@ void MxMDSubLink::TCP::process(ZiIOContext &io)
     m_link->endOfSnapshot(frame.as<EndOfSnapshot>().seqNo);
     return;
   }
-  engine()->process_(this, m_in);
+  m_link->tcpProcess(m_in);
+}
+void MxMDSubLink::tcpProcess(MxQMsg *msg)
+{
+  using namespace MxMDStream;
+  const Frame &frame = msg->as<Frame>();
+  core()->apply(&frame, false);
 }
 void MxMDSubLink::endOfSnapshot(MxSeqNo seqNo)
 {
@@ -370,11 +378,12 @@ void MxMDSubLink::udpConnect()
   options.multicast(true);
   options.mreq(ZiMReq(ip, engine()->interface()));
   mx()->udp(
-      ZiConnectFn([](MxMDSubLink *link, const ZiCxnInfo &ci) {
-	  if (link->stateLocked([](MxMDSubLink *, int state) -> bool {
-		return state != MxLinkState::Connecting; }))
+      ZiConnectFn([](MxMDSubLink *link, const ZiCxnInfo &ci) -> uintptr_t {
+	  if (link->stateLocked<MxMDSubLink>(
+		[](MxMDSubLink *, int state) -> bool {
+		  return state != MxLinkState::Connecting; }))
 	    return 0;
-	  return new UDP(link, ci);
+	  return (uintptr_t)(new UDP(link, ci));
 	}, this),
       ZiFailFn([](MxMDSubLink *link, bool transient) {
 	  if (transient)
@@ -446,28 +455,29 @@ void MxMDSubLink::UDP::disconnected()
 void MxMDSubLink::UDP::recv(ZiIOContext &io)
 {
   using namespace MxMDStream;
-  ZmRef<MxQMsg> msg = new MxQMsg(new Msg(),
-      MxQMsgFn([](MxMDSubLink::UDP *udp, MxQMsg *msg, ZiIOContext *io) {
-	  udp->process(msg, io); }, this));
-  MxMDStream::UDP::recv(msg, io);
+  ZmRef<MxQMsg> msg = new MxQMsg(new Msg());
+  MxMDStream::UDP::recv<UDP>(ZuMv(msg), io,
+      [](UDP *udp, ZmRef<MxQMsg> msg, ZiIOContext &io) {
+	udp->process(ZuMv(msg), io);
+      });
 }
-void MxMDSubLink::UDP::process(MxQMsg *msg, ZiIOContext *io)
+void MxMDSubLink::UDP::process(MxQMsg *msg, ZiIOContext &io)
 {
   using namespace MxMDStream;
-  msg->length = io->offset + io->length;
+  msg->length = io.offset + io.length;
   const Frame &frame = msg->as<Frame>();
   if (ZuUnlikely(frame.scan(msg->length))) {
-    ZtHexDump msg_{"truncated UDP message", msg->data(), msg->length()};
+    ZtHexDump msg_{"truncated UDP message", msg->ptr(), msg->length};
     m_link->engine()->appException(ZeEVENT(Warning,
       ([=, id = m_link->id(), msg_ = ZuMv(msg_)](
 	const ZeEvent &, ZmStream &out) {
 	  out << "MxMDSubLink::UDP::process() link " << id << ' ' << msg_;
 	})));
   } else {
-    msg->addr = io->addr;
+    msg->addr = io.addr;
     m_link->udpReceived(msg);
   }
-  recv(*io);
+  recv(io);
 }
 void MxMDSubLink::udpReceived(MxQMsg *msg)
 {
@@ -475,9 +485,11 @@ void MxMDSubLink::udpReceived(MxQMsg *msg)
 	msg->addr.ip() == m_partition->resendIP ||
 	msg->addr.ip() == m_partition->resendIP2)) {
     Guard guard(m_resendLock);
-    if (ZuUnlikely(*m_resendSeqNo)) {
+    unsigned gapLength = m_resendGap.length();
+    if (ZuUnlikely(gapLength)) {
       uint64_t seqNo = msg->seqNo();
-      if (seqNo >= m_resendSeqNo && seqNo < m_resendSeqNo + m_resendCount) {
+      uint64_t gapSeqNo = m_resendGap.key();
+      if (seqNo >= gapSeqNo && seqNo < gapSeqNo + gapLength) {
 	m_resendMsg = msg;
 	guard.unlock();
 	m_resendSem.post();
@@ -485,10 +497,7 @@ void MxMDSubLink::udpReceived(MxQMsg *msg)
       }
     }
   }
-  msg->fn = MxQMsgFn([](MxMDSubLink *link, MxQMsg *msg, ZiIOContext *) {
-	link->rx()->received(msg); }, this);
-  engine()->rxInvoke(
-      ZmFn<>{[](MxQMsg *msg) { msg->fn(msg, nullptr); }, ZmMkRef(msg)});
+  rxInvoke([msg = ZmMkRef(msg)](Rx *rx) mutable { rx->received(ZuMv(msg)); });
 }
 void MxMDSubLink::request(const MxQueue::Gap &, const MxQueue::Gap &now)
 {
@@ -501,17 +510,19 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
     return;
   }
   using namespace MxMDStream;
-  ZmRef<Msg> msg = new Msg();
-  new (msg->out<ResendReq>(id(), 0, ZmTime()))
+  ZuRef<Msg> msg = new Msg();
+  Frame *frame = new (msg->frame()) Frame(
+      (uint16_t)sizeof(ResendReq), (uint16_t)ResendReq::Code, (uint64_t)id());
+  new (frame->ptr())
     ResendReq{now.key(), now.length()};
-  msg->addr = m_udpResendAddr;
-  ZmRef<MxQMsg> qmsg = new MxQMsg(msg, MxQMsgFn(), msg->length());
+  ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(msg), msg->length());
+  qmsg->addr = m_udpResendAddr;
   ZmRef<UDP> udp;
   {
     Guard connGuard(m_connLock);
     udp = m_udp;
   }
-  if (ZuLikely(udp)) MxMDStream::UDP::send(qmsg, udp);
+  if (ZuLikely(udp)) MxMDStream::UDP::send(ZuMv(qmsg), udp);
 }
 
 // commands
@@ -523,9 +534,10 @@ void MxMDSubscriber::statusCmd(
   if (argc != 1) throw MxMDCmd::Usage();
   out.size(512 * nLinks());
   out << "State: " << MxEngineState::name(state()) << '\n';
-  allLinks([&out](MxAnyLink *link) {
+  allLinks([&out](MxAnyLink *link) -> uintptr_t {
 	out << '\n';
 	static_cast<MxMDSubLink *>(link)->status(out);
+	return 0;
       });
 }
 
@@ -590,6 +602,7 @@ void MxMDSubLink::status(ZtArray<char> &out)
 void MxMDSubscriber::resendCmd(
     const MxMDCmd::Args &args, ZtArray<char> &out)
 {
+  using namespace MxMDStream;
   ZuBox<int> argc(args.get("#"));
   if (argc != 4) throw MxMDCmd::Usage();
   auto id = args.get("1");

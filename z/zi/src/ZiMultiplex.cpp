@@ -253,6 +253,7 @@ ZiConnection::ZiConnection(ZiMultiplex *mx, const ZiCxnInfo &info) :
 #endif
   m_txUp(1), m_txRequests(0), m_txBytes(0)
 {
+  m_rxContext.cxn = m_txContext.cxn = this;
 }
 
 ZiConnection::~ZiConnection()

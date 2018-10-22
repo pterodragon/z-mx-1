@@ -58,7 +58,9 @@ public:
   void init(MxMDCore *core);
   void final();
 
-  bool replay(ZtString path, MxDateTime begin, bool filter);
+  bool replay(ZtString path,
+      MxDateTime begin = MxDateTime(),
+      bool filter = true);
   ZtString stopReplaying();
 
 protected:
@@ -134,7 +136,7 @@ private:
   // Rx thread members
   ZtString		m_path;
   ZiFile		m_file;
-  ZmRef<Msg>		m_msg;
+  ZuRef<Msg>		m_msg;
   ZmTime		m_replayNext;
   bool			m_filter = false;
   Version		m_version;

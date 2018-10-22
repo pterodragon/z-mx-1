@@ -164,15 +164,15 @@ protected:
 
   virtual ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
 
-private:
-  void up_(bool enable);
-  void down_(bool disable);
-
   template <typename Impl, typename L>
   inline auto stateLocked(L &&l) {
     ZmGuard<ZmLock> guard(m_stateLock);
     return l(static_cast<Impl *>(this), m_state);
   }
+
+private:
+  void up_(bool enable);
+  void down_(bool disable);
 
 private:
   ZmScheduler::Timer	m_reconnTimer;
@@ -641,9 +641,7 @@ public:
     m_rrTime.now();
     ZmTime rrTime = (m_rrTime += interval);
     guard.unlock();
-    rxRun(ZmFn<>{[](MxLink *link) {
-	  link->rxInvoke([](Rx *rx) { rx->reRequest(); });
-	}, this}, rrTime, &m_rrTimer);
+    rxRun([](Rx *rx) { rx->reRequest(); }, rrTime, &m_rrTimer);
   }
   ZuInline void cancelReRequest() {
     this->mx()->del(&m_rrTimer);
@@ -668,10 +666,12 @@ public:
   MxQueue *rxQueuePtr() { return &(this->rxQueue()); }
   MxQueue *txQueuePtr() { return &(this->txQueue()); }
 
-  template <typename L> ZuInline void rxRun(L &&l)
-    { this->engine()->rxRun(ZmFn<>{ZuFwd<L>(l), rx()}); }
-  template <typename L> ZuInline void rxRun(L &&l) const
-    { this->engine()->rxRun(ZmFn<>{ZuFwd<L>(l), rx()}); }
+  template <typename L, typename ...Args>
+  ZuInline void rxRun(L &&l, Args &&... args)
+    { this->engine()->rxRun(ZmFn<>{ZuFwd<L>(l), rx()}, ZuFwd<Args>(args)...); }
+  template <typename L, typename ...Args>
+  ZuInline void rxRun(L &&l, Args &&... args) const
+    { this->engine()->rxRun(ZmFn<>{ZuFwd<L>(l), rx()}, ZuFwd<Args>(args)...); }
   template <typename L> ZuInline void rxRun_(L &&l)
     { this->engine()->rxRun_(ZmFn<>{ZuFwd<L>(l), rx()}); }
   template <typename L> ZuInline void rxRun_(L &&l) const

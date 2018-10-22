@@ -1778,13 +1778,13 @@ public:
       ZuString path, MxID venue = MxID(), MxID segment = MxID()) = 0;
 
   ZuInline unsigned nShards() const { return m_shards.length(); }
-  template <typename L> ZuInline typename ZuNotMutable<L>::T shard(
-      unsigned i, L l) const {
+  template <typename L>
+  ZuInline typename ZuNotMutable<L>::T shard(unsigned i, L l) const {
     MxMDShard *shard = m_shards[i];
     shard->invoke([l = ZuMv(l), shard]() { l(shard); });
   }
-  template <typename L> ZuInline typename ZuIsMutable<L>::T shard(
-      unsigned i, L l) const {
+  template <typename L>
+  ZuInline typename ZuIsMutable<L>::T shard(unsigned i, L l) const {
     MxMDShard *shard = m_shards[i];
     shard->invoke([l = ZuMv(l), shard]() mutable { l(shard); });
   }

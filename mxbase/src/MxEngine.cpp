@@ -25,7 +25,7 @@ void MxEngine::start_()
 {
   appAddEngine();
 
-  appException(ZeEVENT(Info, "START"));
+  // appException(ZeEVENT(Info, "START"));
 
   auto i = m_links.readIterator();
   while (ZmRef<MxAnyLink> link = i.iterateKey())
@@ -34,7 +34,7 @@ void MxEngine::start_()
 
 void MxEngine::stop_()
 {
-  appException(ZeEVENT(Info, "STOP"));
+  // appException(ZeEVENT(Info, "STOP"));
 
   auto i = m_links.readIterator();
   while (ZmRef<MxAnyLink> link = i.iterateKey())

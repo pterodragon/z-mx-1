@@ -122,6 +122,16 @@ public:
     return *static_cast<Fn *>(this);
   }
 
+  // access captured object
+  template <typename O> O *object() const {
+    return (O *)(void *)(m_object & ~(uintptr_t)1);
+  }
+  template <typename O> ZmRef<O> mvObject() {
+    if (!(m_object & (uintptr_t)1)) return ZmRef<O>((O *)(void *)m_object);
+    uintptr_t o = (m_object &= ~(uintptr_t)1);
+    return ZuMv(*(ZmRef<O> *)(void *)&o);
+  }
+
   ZuInline bool operator ==(const ZmAnyFn &fn) const {
     return m_invoker == fn.m_invoker && m_object == fn.m_object;
   }

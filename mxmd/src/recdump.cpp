@@ -492,7 +492,7 @@ void App::read()
   }
 
   for (;;) {
-    ZmRef<Msg> msg = new Msg();
+    ZuRef<Msg> msg = new Msg();
     Frame *frame = msg->frame();
     o = m_file.offset();
     n = m_file.read(frame, sizeof(Frame), &e);

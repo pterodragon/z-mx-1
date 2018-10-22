@@ -487,9 +487,6 @@ void MxMDCore::start()
     m_cmd->start();
   }
 
-  m_record->start();
-  m_replay->start();
-
   if (m_publisher) {
     raise(ZeEVENT(Info, "starting publisher..."));
     m_publisher->start();
@@ -519,8 +516,8 @@ void MxMDCore::stop()
     m_publisher->stop();
   }
 
-  m_replay->stop();
-  m_record->stop();
+  stopReplaying();
+  stopRecording();
 
   m_broadcast.eof();
   m_broadcast.close();
@@ -805,15 +802,6 @@ void MxMDCore::orderbooks(const CmdArgs &args, ZtArray<char> &out)
   MxMDOrderBookCSV csv;
   writeOrderBooks(this, csv, csv.writeData(out), venueID, segment);
 }
-
-#define fileERROR(path__, code) \
-  raise(ZeEVENT(Error, \
-    ([=, path = MxTxtString(path__)](const ZeEvent &, ZmStream &s) { \
-      s << "MxMD \"" << path << "\": " << code; })))
-#define fileINFO(path__, code) \
-  raise(ZeEVENT(Info, \
-    ([=, path = MxTxtString(path__)](const ZeEvent &, ZmStream &s) { \
-      s << "MxMD \"" << path << "\": " << code; })))
 
 bool MxMDCore::record(ZuString path)
 {

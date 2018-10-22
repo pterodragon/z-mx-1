@@ -23,15 +23,6 @@
 
 #include <MxMDReplay.hpp>
 
-#define fileERROR(path__, code) \
-  core()->raise(ZeEVENT(Error, \
-    ([=, path = path__](const ZeEvent &, ZmStream &s) { \
-      s << "MxMD \"" << path << "\": " << code; })))
-#define fileINFO(path__, code) \
-  core()->raise(ZeEVENT(Info, \
-    ([=, path = path__](const ZeEvent &, ZmStream &s) { \
-      s << "MxMD \"" << path << "\": " << code; })))
-
 void MxMDReplay::init(MxMDCore *core)
 {
   ZmRef<ZvCf> cf = core->cf()->subset("replay", false, false);
@@ -61,16 +52,10 @@ void MxMDReplay::init(MxMDCore *core)
 
 void MxMDReplay::final() { }
 
-ZmRef<MxAnyLink> MxMDReplay::createLink(MxID id)
-{
-  m_link = new MxMDReplayLink(id);
-  return m_link;
-}
-
-bool MxMDReplay::replay(ZtString path)
+bool MxMDReplay::replay(ZtString path, MxDateTime begin, bool filter)
 {
   if (ZuUnlikely(!m_link)) return false;
-  bool ok = m_link->replay(ZuMv(path));
+  bool ok = m_link->replay(ZuMv(path), begin, filter);
   start();
   return ok;
 }
@@ -142,6 +127,15 @@ void MxMDReplayLink::reset(MxSeqNo, MxSeqNo)
 {
 }
 
+#define fileERROR(path__, code) \
+  engine()->appException(ZeEVENT(Error, \
+    ([=, path = path__](const ZeEvent &, ZmStream &s) { \
+      s << "MxMD \"" << path << "\": " << code; })))
+#define fileINFO(path__, code) \
+  engine()->appException(ZeEVENT(Info, \
+    ([=, path = path__](const ZeEvent &, ZmStream &s) { \
+      s << "MxMD \"" << path << "\": " << code; })))
+
 void MxMDReplayLink::connect()
 {
   using namespace MxMDStream;
@@ -208,9 +202,7 @@ void MxMDReplayLink::read()
   int n = m_file.read(frame, sizeof(Frame), &e);
   if (n == Zi::IOError) {
 error:
-    ZtString path = m_path;
-    guard.unlock();
-    fileERROR(ZuMv(path), e);
+    fileERROR(m_path, e);
     return;
   }
   if (n == Zi::EndOfFile || (unsigned)n < sizeof(Frame)) {

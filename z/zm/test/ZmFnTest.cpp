@@ -130,7 +130,7 @@ struct MoveOnly {
   MoveOnly(const MoveOnly &) = delete;
   MoveOnly &operator =(const MoveOnly &) = delete;
   inline MoveOnly(MoveOnly &&m) : i(m.i) { m.i = 0; }
-  inline MoveOnly &operator =(MoveOnly &&m) { i = m.i; m.i = 0; }
+  inline MoveOnly &operator =(MoveOnly &&m) { i = m.i; m.i = 0; return *this; }
   int	i;
 };
 
@@ -338,6 +338,14 @@ int main()
     fn(MoveOnly());
     MoveOnly m;
     fn(ZuMv(m));
+  }
+  {
+    ZmRef<E_> e = new E_(42);
+    ZmFn<ZmAnyFn *> fn{[](E_ *, ZmAnyFn *fn) {
+	ZmRef<E_> e = fn->mvObject<E_>();
+	CHECK(e->refCount() == 1);
+      }, ZuMv(e)};
+    fn(&fn);
   }
   {
     ZmAtomic<unsigned> i;

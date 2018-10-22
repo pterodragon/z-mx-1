@@ -68,7 +68,6 @@ struct MxQMsgData {
   typedef ZmFn<MxQMsgData *, ZiIOContext *> Fn;
 
   ZuRef<ZuAnyPOD>	payload;
-  Fn			fn;
   unsigned		length = 0;
   MxMsgID		id;
   MxFlags		flags;		// see MxQFlags
@@ -92,8 +91,6 @@ struct MxQMsgData {
 
   ZuInline void unload() { id = MxMsgID{}; }
 };
-
-typedef MxQMsgData::Fn MxQMsgFn;
 
 class MxQFn {
 public:
@@ -150,8 +147,8 @@ public:
   
   ZuInline void init(MxSeqNo seqNo) { m_queue.head(seqNo); }
 
-  ZuInline const App &app() const { return static_cast<const App *>(*this); }
-  ZuInline App &app() { return static_cast<App *>(*this); }
+  ZuInline const App &app() const { return *static_cast<const App *>(this); }
+  ZuInline App &app() { return *static_cast<App *>(this); }
 
   ZuInline const MxQueue &rxQueue() const { return m_queue; }
   ZuInline MxQueue &rxQueue() { return m_queue; }

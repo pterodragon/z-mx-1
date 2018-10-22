@@ -1093,7 +1093,7 @@ private:
 
   unsigned		m_rxThread;
   ZmThreadID		m_rxTID = 0;
-  // exclusive to Rx thread
+    // Rx exclusive
     ListenerHash	  m_listeners;
     unsigned		  m_nAccepts;	// total #accepts for all listeners
 #if ZiMultiplex__ConnectHash

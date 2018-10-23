@@ -4,21 +4,10 @@
 
 void MxMDCmd::init(MxMDCore *core, ZvCf *cf)
 {
-  m_core = core;
-
   m_syntax = new ZvCf();
 
   ZvCmdServer::init(cf, core->mx(), ZvCmdDiscFn(),
       ZvCmdRcvdFn::Member<&MxMDCmd::rcvd>::fn(this));
-
-  // Assumption: DST transitions do not occur while market is open
-  {
-    ZtDate now(ZtDate::Now);
-    ZuString timezone = cf->get("timezone"); // default to system tz
-    now.sec() = 0, now.nsec() = 0; // midnight GMT (start of today)
-    now += ZmTime((time_t)(now.offset(timezone) + 43200)); // midday local time
-    m_tzOffset = now.offset(timezone);
-  }
 
   addCmd("help", "", Fn::Member<&MxMDCmd::help>::fn(this),
       "list commands", "usage: help [COMMAND]");

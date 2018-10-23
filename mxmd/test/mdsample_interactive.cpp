@@ -129,8 +129,7 @@ void subscribe(const MxMDCmd::Args &args, ZtArray<char> &out)
   ZmRef<MxMDSecurity> security;
   unsigned argc = ZuBox<unsigned>(args.get("#"));
   if (argc < 2) throw MxMDCmd::Usage();
-  MxMDCmd::instance(md)->lookupSecurity(md, args, 1, 1,
-      [&out](MxMDSecurity *sec) {
+  md->lookupSecurity(args, 1, 1, [&out](MxMDSecurity *sec) {
     sec->subscribe(secHandler);
     out << "subscribed\n";
   });
@@ -174,13 +173,12 @@ int main(int argc, char **argv)
     if (!md) return 1;
 
     // add interactive subscribe command
-    MxMDCmd *cmd = MxMDCmd::instance(md);
-    cmd->addCmd("subscribe",
-	cmd->lookupSyntax(),
-	MxMDCmd::CmdFn::Ptr<&subscribe>::fn(),
+    md->addCmd("subscribe",
+	md->lookupSyntax(),
+	MxMDCmdFn::Ptr<&subscribe>::fn(),
 	"subscribe",
 	ZtString() << "usage: subscribe OPTIONS symbol\n\nOptions:\n" <<
-	  cmd->lookupOptions());
+	  md->lookupOptions());
 
     md->subscribe(&((new MxMDLibHandler())->
 	exceptionFn(MxMDExceptionFn::Ptr<&exception>::fn()).

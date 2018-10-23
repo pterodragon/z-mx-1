@@ -40,6 +40,8 @@
 
 #include <ZvCmd.hpp>
 
+#include <MxMD.hpp>
+
 class MxMDCore;
 
 class MxMDAPI MxMDCmd : public ZvCmdServer {
@@ -47,41 +49,19 @@ public:
   MxMDCmd() { }
   ~MxMDCmd() { }
 
-  ZuInline MxMDCore *core() const { return m_core; }
-
   void init(MxMDCore *core, ZvCf *cf);
   void final();
 
-  typedef ZmRBTree<ZtString,
-	    ZmRBTreeVal<const ZtArray<ZtString> *,
-	      ZmRBTreeLock<ZmNoLock> > > Args_;
-  struct Args : public Args_ {
-    inline ZuString get(ZuString arg) const {
-      const ZtArray<ZtString> *values = findVal(arg);
-      if (!values) return ZtString();
-      return (*values)[0];
-    }
-    inline const ZtArray<ZtString> *getMultiple(ZuString arg) const {
-      return findVal(arg);
-    }
-  };
-
-  typedef ZmFn<const Args &, ZtArray<char> &> Fn;
-
-  struct Usage { };
+  typedef MxMDCmdArgs Args;
+  typedef MxMDCmdFn Fn;
+  typedef MxMDCmdUsage Usage;
 
   // add command
-  void addCmd(ZuString cmd, ZuString syntax, Fn fn,
-      ZtString brief, ZtString usage);
+  void addCmd(ZuString name, ZuString syntax,
+      Fn fn, ZtString brief, ZtString usage);
 
   // built-in help command
   void help(const Args &args, ZtArray<char> &result);
-
-  // CLI time format (using local timezone)
-  typedef ZuBoxFmt<ZuBox<unsigned>, ZuFmt::Right<6> > TimeFmt;
-  inline TimeFmt timeFmt(MxDateTime t) {
-    return ZuBox<unsigned>((t + m_tzOffset).hhmmss()).fmt(ZuFmt::Right<6>());
-  }
 
 private:
   void rcvd(ZvCmdLine *, const ZvInvocation &, ZvAnswer &);
@@ -90,10 +70,8 @@ private:
 	    ZmRBTreeVal<ZuTuple<Fn, ZtString, ZtString>,
 	      ZmRBTreeLock<ZmNoLock> > > Cmds;
 
-  MxMDCore	*m_core = 0;
   ZmRef<ZvCf>	m_syntax;
   Cmds		m_cmds;
-  int		m_tzOffset = 0;
 };
 
 #endif /* MxMDCmd_HPP */

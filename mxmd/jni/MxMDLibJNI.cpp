@@ -168,45 +168,38 @@ void MxMDLibJNI::stop(JNIEnv *env, jobject obj)
   }
 }
 
-void MxMDLibJNI::record(JNIEnv *env, jobject obj, jstring path)
+jboolean MxMDLibJNI::record(JNIEnv *env, jobject obj, jstring path)
 {
   // (String) -> void
   MxMDLib *md = md_;
-  if (ZuUnlikely(!md)) return;
-  md->record(ZJNI::j2s_ZtString(env, path));
+  if (ZuUnlikely(!md)) return false;
+  return md->record(ZJNI::j2s_ZtString(env, path));
 }
 
-void MxMDLibJNI::stopRecording(JNIEnv *env, jobject obj)
+jstring MxMDLibJNI::stopRecording(JNIEnv *env, jobject obj)
 {
   // () -> void
   MxMDLib *md = md_;
-  if (ZuUnlikely(!md)) return;
-  md->stopRecording();
+  if (ZuUnlikely(!md)) return 0;
+  return ZJNI::s2j(env, md->stopRecording());
 }
 
-void MxMDLibJNI::stopStreaming(JNIEnv *env, jobject obj)
-{
-  // () -> void
-  MxMDLib *md = md_;
-  if (ZuUnlikely(!md)) return;
-  md->stopStreaming();
-}
-
-void MxMDLibJNI::replay(JNIEnv *env, jobject obj,
+jboolean MxMDLibJNI::replay(JNIEnv *env, jobject obj,
     jstring path, jobject begin, jboolean filter)
 {
   // (String, Instant, boolean) -> void
   MxMDLib *md = md_;
-  if (ZuUnlikely(!md)) return;
-  md->replay(ZJNI::j2s_ZtString(env, path), ZJNI::j2t(env, begin), filter);
+  if (ZuUnlikely(!md)) return false;
+  return md->replay(
+      ZJNI::j2s_ZtString(env, path), ZJNI::j2t(env, begin), filter);
 }
 
-void MxMDLibJNI::stopReplaying(JNIEnv *env, jobject obj)
+jstring MxMDLibJNI::stopReplaying(JNIEnv *env, jobject obj)
 {
   // () -> void
   MxMDLib *md = md_;
-  if (ZuUnlikely(!md)) return;
-  md->stopReplaying();
+  if (ZuUnlikely(!md)) return 0;
+  return ZJNI::s2j(env, md->stopReplaying());
 }
 
 void MxMDLibJNI::startTimer(JNIEnv *env, jobject obj, jobject begin)
@@ -397,19 +390,16 @@ int MxMDLibJNI::bind(JNIEnv *env)
       "()V",
       (void *)&MxMDLibJNI::stop },
     { "record",
-      "(Ljava/lang/String;)V",
+      "(Ljava/lang/String;)Z",
       (void *)&MxMDLibJNI::record },
     { "stopRecording",
-      "()V",
+      "()Ljava/lang/String;",
       (void *)&MxMDLibJNI::stopRecording },
-    { "stopStreaming",
-      "()V",
-      (void *)&MxMDLibJNI::stopStreaming },
     { "replay",
-      "(Ljava/lang/String;Ljava/time/Instant;Z)V",
+      "(Ljava/lang/String;Ljava/time/Instant;Z)Z",
       (void *)&MxMDLibJNI::replay },
     { "stopReplaying",
-      "()V",
+      "()Ljava/lang/String;",
       (void *)&MxMDLibJNI::stopReplaying },
     { "startTimer",
       "(Ljava/time/Instant;)V",

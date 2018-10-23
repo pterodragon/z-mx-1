@@ -86,8 +86,6 @@ public:
   void stop();
   void final();
 
-  void stopStreaming();
-
   bool record(ZuString path);
   ZtString stopRecording();
 
@@ -110,45 +108,27 @@ public:
   void pad(Frame &);
   void apply(const Frame &, bool filter);
 
-  // commands
-
-  typedef MxMDCmd::Fn CmdFn;
-  typedef MxMDCmd::Args CmdArgs;
-  typedef MxMDCmd::Usage CmdUsage;
-
   void addCmd(ZuString name, ZuString syntax,
-    CmdFn fn, ZtString brief, ZtString usage);
-
-  // single security / order book lookup
-  static ZtString lookupSyntax();
-  static ZtString lookupOptions();
-
-  void lookupSecurity(
-      const CmdArgs &args, unsigned index,
-      bool secRequired, ZmFn<MxMDSecurity *> fn);
-  void lookupOrderBook(
-      const CmdArgs &args, unsigned index,
-      bool secRequired, bool obRequired,
-      ZmFn<MxMDSecurity *, MxMDOrderBook *> fn);
+      MxMDCmdFn fn, ZtString brief, ZtString usage);
 
 private:
   void initCmds();
 
-  void l1(const CmdArgs &, ZtArray<char> &);
-  void l2(const CmdArgs &, ZtArray<char> &);
+  void l1(const MxMDCmdArgs &, ZtArray<char> &);
+  void l2(const MxMDCmdArgs &, ZtArray<char> &);
   void l2_side(MxMDOBSide *, ZtArray<char> &);
-  void security_(const CmdArgs &, ZtArray<char> &);
+  void security_(const MxMDCmdArgs &, ZtArray<char> &);
 
-  void ticksizes(const CmdArgs &, ZtArray<char> &);
-  void securities(const CmdArgs &, ZtArray<char> &);
-  void orderbooks(const CmdArgs &, ZtArray<char> &);
+  void ticksizes(const MxMDCmdArgs &, ZtArray<char> &);
+  void securities(const MxMDCmdArgs &, ZtArray<char> &);
+  void orderbooks(const MxMDCmdArgs &, ZtArray<char> &);
 
 #if 0
-  void tick(const CmdArgs &, ZtArray<char> &);
-  void update(const CmdArgs &, ZtArray<char> &);
+  void tick(const MxMDCmdArgs &, ZtArray<char> &);
+  void update(const MxMDCmdArgs &, ZtArray<char> &);
 
-  void feeds(const CmdArgs &, ZtArray<char> &);
-  void venues(const CmdArgs &, ZtArray<char> &);
+  void feeds(const MxMDCmdArgs &, ZtArray<char> &);
+  void venues(const MxMDCmdArgs &, ZtArray<char> &);
 #endif
 
   void addVenueMapping_(ZuAnyPOD *);

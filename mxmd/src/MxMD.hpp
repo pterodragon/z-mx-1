@@ -142,9 +142,30 @@ template <class T> struct MxMDFlags {
   }
 };
 
+// commands
+
+typedef ZmRBTree<ZtString,
+	  ZmRBTreeVal<const ZtArray<ZtString> *,
+	    ZmRBTreeLock<ZmNoLock> > > MxMDCmdArgs_;
+struct MxMDCmdArgs : public MxMDCmdArgs_ {
+  inline ZuString get(ZuString arg) const {
+    const ZtArray<ZtString> *values = findVal(arg);
+    if (!values) return ZtString();
+    return (*values)[0];
+  }
+  inline const ZtArray<ZtString> *getMultiple(ZuString arg) const {
+    return findVal(arg);
+  }
+};
+
+typedef ZmFn<const MxMDCmdArgs &, ZtArray<char> &> MxMDCmdFn;
+
+struct MxMDCmdUsage { };
+
 // pre-declarations
 
 class MxMDCore;
+class MxMDCmd;
 class MxMDLib;
 class MxMDShard;
 class MxMDFeed;
@@ -1730,6 +1751,7 @@ class MxMDAPI MxMDLib {
   MxMDLib(const MxMDLib &) = delete;
   MxMDLib &operator =(const MxMDLib &) = delete;
 
+friend class MxMDCmd;
 friend class MxMDTickSizeTbl;
 friend class MxMDOrderBook;
 friend class MxMDSecurity;
@@ -1811,6 +1833,30 @@ public:
   ZuInline ZmRef<MxMDLibHandler> handler() {
     SubGuard guard(m_subLock);
     return m_handler;
+  }
+
+  // commands
+
+  // add command
+  virtual void addCmd(ZuString cmd, ZuString syntax,
+      MxMDCmdFn fn, ZtString brief, ZtString usage) = 0;
+
+  // single security / order book lookup
+  static ZtString lookupSyntax();
+  static ZtString lookupOptions();
+
+  void lookupSecurity(
+      const MxMDCmdArgs &args, unsigned index,
+      bool secRequired, ZmFn<MxMDSecurity *> fn);
+  void lookupOrderBook(
+      const MxMDCmdArgs &args, unsigned index,
+      bool secRequired, bool obRequired,
+      ZmFn<MxMDSecurity *, MxMDOrderBook *> fn);
+
+  // CLI time format (using local timezone)
+  typedef ZuBoxFmt<ZuBox<unsigned>, ZuFmt::Right<6> > TimeFmt;
+  inline TimeFmt timeFmt(MxDateTime t) {
+    return ZuBox<unsigned>((t + m_tzOffset).hhmmss()).fmt(ZuFmt::Right<6>());
   }
 
 private:
@@ -2059,6 +2105,8 @@ private:
 
   SubLock		m_subLock;
     ZmRef<MxMDLibHandler> m_handler;
+
+  int			m_tzOffset = 0;
 
   uintptr_t		m_appData;
 };

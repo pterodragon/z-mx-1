@@ -1183,6 +1183,15 @@ void MxMDLib::init_(void *cf_)
       }
     if (!m_shards[0]) throw ZtString("mx misconfigured - no worker threads");
   }
+
+  // Assumption: DST transitions do not occur while market is open
+  {
+    ZtDate now(ZtDate::Now);
+    ZuString timezone = cf->get("timezone"); // default to system tz
+    now.sec() = 0, now.nsec() = 0; // midnight GMT (start of today)
+    now += ZmTime((time_t)(now.offset(timezone) + 43200)); // midday local time
+    m_tzOffset = now.offset(timezone);
+  }
 }
 
 void MxMDLib::subscribe(MxMDLibHandler *handler)
@@ -1747,4 +1756,89 @@ void MxMDLib::cancelTrade(const MxMDOrderBook *ob,
   if (ZuUnlikely(core->streaming()))
     MxMDStream::cancelTrade(core->broadcast(), transactTime,
 	ob->key(), tradeID, ob->pxNDP(), ob->qtyNDP(), price, qty);
+}
+
+// commands
+
+ZtString MxMDLib::lookupSyntax()
+{
+  return 
+    "S src src { type scalar } "
+    "m market market { type scalar } "
+    "s segment segment { type scalar }";
+}
+
+ZtString MxMDLib::lookupOptions()
+{
+  return
+    "    -S --src=SRC\t- symbol ID source is SRC\n"
+    "\t(CUSIP|SEDOL|QUIK|ISIN|RIC|EXCH|CTA|BSYM|BBGID|FX|CRYPTO)\n"
+    "    -m --market=MIC\t - market MIC, e.g. XTKS\n"
+    "    -s --segment=SEGMENT\t- market segment SEGMENT\n";
+}
+
+void MxMDLib::lookupSecurity(
+    const MxMDCmdArgs &args, unsigned index,
+    bool secRequired, ZmFn<MxMDSecurity *> fn)
+{
+  ZuString symbol = args.get(ZuStringN<16>(ZuBoxed(index)));
+  MxID venue = args.get("market");
+  MxID segment = args.get("segment");
+  bool notFound = 0;
+  thread_local ZmSemaphore sem;
+  if (ZuString src_ = args.get("src")) {
+    MxEnum src = MxSecIDSrc::lookup(src_);
+    MxSecSymKey key{src, symbol};
+    secInvoke(key,
+	[secRequired, sem = &sem, &notFound, fn = ZuMv(fn)](MxMDSecurity *sec) {
+      if (secRequired && ZuUnlikely(!sec))
+	notFound = 1;
+      else
+	fn(sec);
+      sem->post();
+    });
+    sem.wait();
+    if (ZuUnlikely(notFound))
+      throw ZtString() << "security " << key << " not found";
+  } else {
+    if (!*venue) throw MxMDCmdUsage();
+    MxSecKey key{venue, segment, symbol};
+    secInvoke(key,
+	[secRequired, sem = &sem, &notFound, fn = ZuMv(fn)](MxMDSecurity *sec) {
+      if (secRequired && ZuUnlikely(!sec))
+	notFound = 1;
+      else
+	fn(sec);
+      sem->post();
+    });
+    sem.wait();
+    if (ZuUnlikely(notFound))
+      throw ZtString() << "security " << key << " not found";
+  }
+}
+
+void MxMDLib::lookupOrderBook(
+    const MxMDCmdArgs &args, unsigned index,
+    bool secRequired, bool obRequired,
+    ZmFn<MxMDSecurity *, MxMDOrderBook *> fn)
+{
+  MxID venue = args.get("market");
+  MxID segment = args.get("segment");
+  bool notFound = 0;
+  thread_local ZmSemaphore sem;
+  lookupSecurity(args, index, secRequired || obRequired,
+      [obRequired, &notFound, sem = &sem, venue, segment, fn = ZuMv(fn)](
+	MxMDSecurity *sec) {
+    ZmRef<MxMDOrderBook> ob = sec->orderBook(venue, segment);
+    if (obRequired && ZuUnlikely(!ob))
+      notFound = 1;
+    else
+      fn(sec, ob);
+    sem->post();
+  });
+  sem.wait();
+  if (ZuUnlikely(notFound))
+    throw ZtString() << "order book " <<
+	MxSecKey{venue, segment, args.get(ZuStringN<16>(ZuBoxed(index)))} <<
+	" not found";
 }

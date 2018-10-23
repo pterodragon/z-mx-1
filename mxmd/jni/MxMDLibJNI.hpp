@@ -47,17 +47,15 @@ namespace MxMDLibJNI {
   // () -> void
   void stop(JNIEnv *, jobject);
 
-  // (String) -> void
-  void record(JNIEnv *, jobject, jstring);
-  // () -> void
-  void stopRecording(JNIEnv *, jobject);
-  // () -> void
-  void stopStreaming(JNIEnv *, jobject);
+  // (String) -> boolean
+  jboolean record(JNIEnv *, jobject, jstring);
+  // () -> String
+  jstring stopRecording(JNIEnv *, jobject);
 
-  // (String, Instant, boolean) -> void
-  void replay(JNIEnv *, jobject, jstring, jobject, jboolean);
-  // () -> void
-  void stopReplaying(JNIEnv *, jobject);
+  // (String, Instant, boolean) -> boolean
+  jboolean replay(JNIEnv *, jobject, jstring, jobject, jboolean);
+  // () -> String
+  jstring stopReplaying(JNIEnv *, jobject);
 
   // (Instant) -> void
   void startTimer(JNIEnv *, jobject, jobject);

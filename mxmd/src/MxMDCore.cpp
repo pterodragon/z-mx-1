@@ -337,100 +337,17 @@ void MxMDCore::init_(ZvCf *cf)
 }
 
 void MxMDCore::addCmd(ZuString name, ZuString syntax,
-  CmdFn fn, ZtString brief, ZtString usage)
+  MxMDCmdFn fn, ZtString brief, ZtString usage)
 {
   if (!m_cmd) return;
   m_cmd->addCmd(name, syntax, ZuMv(fn), ZuMv(brief), ZuMv(usage));
-}
-
-ZtString MxMDCore::lookupSyntax()
-{
-  return 
-    "S src src { type scalar } "
-    "m market market { type scalar } "
-    "s segment segment { type scalar }";
-}
-
-ZtString MxMDCore::lookupOptions()
-{
-  return
-    "    -S --src=SRC\t- symbol ID source is SRC\n"
-    "\t(CUSIP|SEDOL|QUIK|ISIN|RIC|EXCH|CTA|BSYM|BBGID|FX|CRYPTO)\n"
-    "    -m --market=MIC\t - market MIC, e.g. XTKS\n"
-    "    -s --segment=SEGMENT\t- market segment SEGMENT\n";
-}
-
-void MxMDCore::lookupSecurity(
-    const CmdArgs &args, unsigned index,
-    bool secRequired, ZmFn<MxMDSecurity *> fn)
-{
-  ZuString symbol = args.get(ZuStringN<16>(ZuBoxed(index)));
-  MxID venue = args.get("market");
-  MxID segment = args.get("segment");
-  bool notFound = 0;
-  thread_local ZmSemaphore sem;
-  if (ZuString src_ = args.get("src")) {
-    MxEnum src = MxSecIDSrc::lookup(src_);
-    MxSecSymKey key{src, symbol};
-    secInvoke(key,
-	[secRequired, sem = &sem, &notFound, fn = ZuMv(fn)](MxMDSecurity *sec) {
-      if (secRequired && ZuUnlikely(!sec))
-	notFound = 1;
-      else
-	fn(sec);
-      sem->post();
-    });
-    sem.wait();
-    if (ZuUnlikely(notFound))
-      throw ZtString() << "security " << key << " not found";
-  } else {
-    if (!*venue) throw CmdUsage();
-    MxSecKey key{venue, segment, symbol};
-    secInvoke(key,
-	[secRequired, sem = &sem, &notFound, fn = ZuMv(fn)](MxMDSecurity *sec) {
-      if (secRequired && ZuUnlikely(!sec))
-	notFound = 1;
-      else
-	fn(sec);
-      sem->post();
-    });
-    sem.wait();
-    if (ZuUnlikely(notFound))
-      throw ZtString() << "security " << key << " not found";
-  }
-}
-
-void MxMDCore::lookupOrderBook(
-    const CmdArgs &args, unsigned index,
-    bool secRequired, bool obRequired,
-    ZmFn<MxMDSecurity *, MxMDOrderBook *> fn)
-{
-  MxID venue = args.get("market");
-  MxID segment = args.get("segment");
-  bool notFound = 0;
-  thread_local ZmSemaphore sem;
-  lookupSecurity(args, index, secRequired || obRequired,
-      [obRequired, &notFound, sem = &sem, venue, segment, fn = ZuMv(fn)](
-	MxMDSecurity *sec) {
-    ZmRef<MxMDOrderBook> ob = sec->orderBook(venue, segment);
-    if (obRequired && ZuUnlikely(!ob))
-      notFound = 1;
-    else
-      fn(sec, ob);
-    sem->post();
-  });
-  sem.wait();
-  if (ZuUnlikely(notFound))
-    throw ZtString() << "order book " <<
-	MxSecKey{venue, segment, args.get(ZuStringN<16>(ZuBoxed(index)))} <<
-	" not found";
 }
 
 void MxMDCore::initCmds()
 {
   addCmd(
       "l1", ZtString("c csv csv { type flag }\n") + lookupSyntax(),
-      CmdFn::Member<&MxMDCore::l1>::fn(this),
+      MxMDCmdFn::Member<&MxMDCore::l1>::fn(this),
       "dump L1 data",
       ZtString("usage: l1 OPTIONS SYMBOL [SYMBOL...]\n"
 	"Display level 1 market data for SYMBOL(s)\n\nOptions:\n"
@@ -438,33 +355,33 @@ void MxMDCore::initCmds()
 	lookupOptions());
   addCmd(
       "l2", lookupSyntax(),
-      CmdFn::Member<&MxMDCore::l2>::fn(this),
+      MxMDCmdFn::Member<&MxMDCore::l2>::fn(this),
       "dump L2 data",
       ZtString("usage: l2 OPTIONS SYMBOL\n"
 	"Display level 2 market data for SYMBOL\n\nOptions:\n") +
 	lookupOptions());
   addCmd(
       "security", lookupSyntax(),
-      CmdFn::Member<&MxMDCore::security_>::fn(this),
+      MxMDCmdFn::Member<&MxMDCore::security_>::fn(this),
       "dump security reference data",
       ZtString("usage: security OPTIONS SYMBOL\n"
 	"Display security reference data (\"static data\") for SYMBOL\n"
 	"\nOptions:\n") + lookupOptions());
   addCmd(
       "ticksizes", "",
-      CmdFn::Member<&MxMDCore::ticksizes>::fn(this),
+      MxMDCmdFn::Member<&MxMDCore::ticksizes>::fn(this),
       "dump in CSV format",
       "usage: ticksizes [VENUE [SEGMENT]]\n"
       "dump tick sizes in CSV format");
   addCmd(
       "securities", "",
-      CmdFn::Member<&MxMDCore::securities>::fn(this),
+      MxMDCmdFn::Member<&MxMDCore::securities>::fn(this),
       "dump securities in CSV format",
       "usage: securities [VENUE [SEGMENT]]\n"
       "dump securities in CSV format");
   addCmd(
       "orderbooks", "",
-      CmdFn::Member<&MxMDCore::orderbooks>::fn(this),
+      MxMDCmdFn::Member<&MxMDCore::orderbooks>::fn(this),
       "dump order books in CSV format",
       "usage: orderbooks [VENUE [SEGMENT]]\n"
       "dump order books in CSV format");
@@ -472,7 +389,7 @@ void MxMDCore::initCmds()
   addCmd(
       "subscribe",
       "s stop stop { type scalar }",
-      CmdFn::Member<&MxMDCore::subscribeCmd>::fn(this),
+      MxMDCmdFn::Member<&MxMDCore::subscribeCmd>::fn(this),
       "subscribe to market data",
       "usage: subscribe IPCRING\n"
       "       subscribe -s ID\n"
@@ -545,10 +462,10 @@ void MxMDCore::final()
   allFeeds([](MxMDFeed *feed) { try { feed->final(); } catch (...) { } });
 }
 
-void MxMDCore::l1(const CmdArgs &args, ZtArray<char> &out)
+void MxMDCore::l1(const MxMDCmdArgs &args, ZtArray<char> &out)
 {
   unsigned argc = ZuBox<unsigned>(args.get("#"));
-  if (argc < 2) throw CmdUsage();
+  if (argc < 2) throw MxMDCmdUsage();
   bool csv = !!args.get("csv");
   if (csv)
     out << "stamp,status,last,lastQty,bid,bidQty,ask,askQty,tickDir,"
@@ -562,7 +479,7 @@ void MxMDCore::l1(const CmdArgs &args, ZtArray<char> &out)
       MxMDFlagsStr flags;
       MxMDL1Flags::print(flags, ob->venueID(), l1Data.flags);
       if (csv) out <<
-	m_cmd->timeFmt(l1Data.stamp) << ',' <<
+	timeFmt(l1Data.stamp) << ',' <<
 	MxTradingStatus::name(l1Data.status) << ',' <<
 	MxValNDP{l1Data.last, pxNDP} << ',' <<
 	MxValNDP{l1Data.lastQty, qtyNDP} << ',' <<
@@ -580,7 +497,7 @@ void MxMDCore::l1(const CmdArgs &args, ZtArray<char> &out)
 	MxValNDP{l1Data.surplusQty, qtyNDP} << ',' <<
 	flags << '\n';
       else out <<
-	"stamp: " << m_cmd->timeFmt(l1Data.stamp) <<
+	"stamp: " << timeFmt(l1Data.stamp) <<
 	"\nstatus: " << MxTradingStatus::name(l1Data.status) <<
 	"\nlast: " << MxValNDP{l1Data.last, pxNDP} <<
 	"\nlastQty: " << MxValNDP{l1Data.lastQty, qtyNDP} <<
@@ -600,10 +517,10 @@ void MxMDCore::l1(const CmdArgs &args, ZtArray<char> &out)
     });
 }
 
-void MxMDCore::l2(const CmdArgs &args, ZtArray<char> &out)
+void MxMDCore::l2(const MxMDCmdArgs &args, ZtArray<char> &out)
 {
   ZuBox<int> argc = args.get("#");
-  if (argc != 2) throw CmdUsage();
+  if (argc != 2) throw MxMDCmdUsage();
   lookupOrderBook(args, 1, 1, 1,
       [this, &out](MxMDSecurity *, MxMDOrderBook *ob) {
     out << "bids:\n";
@@ -629,15 +546,15 @@ void MxMDCore::l2_side(MxMDOBSide *side, ZtArray<char> &out)
       " qty: " << MxValNDP{pxLvlData.qty, qtyNDP} <<
       " nOrders: " << pxLvlData.nOrders;
     if (flags) out << " flags: " << flags;
-    out << " transactTime: " << m_cmd->timeFmt(pxLvlData.transactTime);
+    out << " transactTime: " << timeFmt(pxLvlData.transactTime);
     return 0;
   });
 }
 
-void MxMDCore::security_(const CmdArgs &args, ZtArray<char> &out)
+void MxMDCore::security_(const MxMDCmdArgs &args, ZtArray<char> &out)
 {
   ZuBox<int> argc = args.get("#");
-  if (argc != 2) throw CmdUsage();
+  if (argc != 2) throw MxMDCmdUsage();
   lookupOrderBook(args, 1, 1, 0,
       [&out](MxMDSecurity *sec, MxMDOrderBook *ob) {
     const MxMDSecRefData &refData = sec->refData();
@@ -714,10 +631,10 @@ void MxMDCore::dumpTickSizes(ZuString path, MxID venueID)
   writeTickSizes(this, csv, csv.writeFile(path), venueID);
 }
 
-void MxMDCore::ticksizes(const CmdArgs &args, ZtArray<char> &out)
+void MxMDCore::ticksizes(const MxMDCmdArgs &args, ZtArray<char> &out)
 {
   ZuBox<int> argc = args.get("#");
-  if (argc < 1 || argc > 3) throw CmdUsage();
+  if (argc < 1 || argc > 3) throw MxMDCmdUsage();
   MxID venueID;
   if (argc == 2) venueID = args.get("1");
   MxMDTickSizeCSV csv;
@@ -749,10 +666,10 @@ void MxMDCore::dumpSecurities(ZuString path, MxID venueID, MxID segment)
   writeSecurities(this, csv, csv.writeFile(path), venueID, segment);
 }
 
-void MxMDCore::securities(const CmdArgs &args, ZtArray<char> &out)
+void MxMDCore::securities(const MxMDCmdArgs &args, ZtArray<char> &out)
 {
   ZuBox<int> argc = args.get("#");
-  if (argc < 1 || argc > 3) throw CmdUsage();
+  if (argc < 1 || argc > 3) throw MxMDCmdUsage();
   MxID venueID, segment;
   if (argc == 2) venueID = args.get("1");
   if (argc == 3) segment = args.get("2");
@@ -796,10 +713,10 @@ void MxMDCore::dumpOrderBooks(ZuString path, MxID venueID, MxID segment)
   writeOrderBooks(this, csv, csv.writeFile(path), venueID, segment);
 }
 
-void MxMDCore::orderbooks(const CmdArgs &args, ZtArray<char> &out)
+void MxMDCore::orderbooks(const MxMDCmdArgs &args, ZtArray<char> &out)
 {
   ZuBox<int> argc = args.get("#");
-  if (argc < 1 || argc > 3) throw CmdUsage();
+  if (argc < 1 || argc > 3) throw MxMDCmdUsage();
   MxID venueID, segment;
   if (argc == 2) venueID = args.get("1");
   if (argc == 3) segment = args.get("2");
@@ -827,7 +744,7 @@ ZtString MxMDCore::stopReplaying()
 }
 
 #if 0
-void MxMDCore::subscribeCmd(const CmdArgs &args, ZtArray<char> &out)
+void MxMDCore::subscribeCmd(const MxMDCmdArgs &args, ZtArray<char> &out)
 {
   ZuBox<int> argc = args.get("#");
   if (ZuString id_ = args.get("stop")) {
@@ -837,7 +754,7 @@ void MxMDCore::subscribeCmd(const CmdArgs &args, ZtArray<char> &out)
     out << "detached " << id << "\n";
     return;
   }
-  if (argc != 2) throw CmdUsage();
+  if (argc != 2) throw MxMDCmdUsage();
   ZiRingParams ringParams(args.get("1"), m_broadcast.params());
   if (ZuString spin = args.get("spin"))
     ringParams.spin(ZvCf::toInt("spin", spin, 0, INT_MAX));

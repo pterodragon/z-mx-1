@@ -23,21 +23,23 @@
 
 #include <MxMDRecord.hpp>
 
-void MxMDRecord::init(MxMDCore *core)
+void MxMDRecord::init(MxMDCore *core, ZvCf *cf)
 {
-  ZmRef<ZvCf> cf = core->cf()->subset("record", false, false);
-
   Mx *mx = core->mx();
 
-  if (!cf) {
-    cf = new ZvCf();
-    cf->fromString("id record", false);
-    cf->set("snapThread", ZtString() << ZuBoxed(mx->txThread()));
-  }
+  if (!cf->get("id")) cf->set("id", "record");
 
   MxEngine::init(core, this, mx, cf);
 
   m_snapThread = cf->getInt("snapThread", 1, mx->nThreads() + 1, true);
+
+  if (rxThread() == mx->rxThread() ||
+      m_snapThread == mx->rxThread() ||
+      m_snapThread == rxThread())
+    throw ZtString() << "recorder misconfigured - thread conflict -"
+      " I/O Rx: " << ZuBoxed(mx->rxThread()) <<
+      " IPC Rx: " << ZuBoxed(rxThread()) <<
+      " Snapshot: " << ZuBoxed(m_snapThread);
 
   updateLink("record", cf);
 
@@ -114,7 +116,7 @@ void MxMDRecLink::update(ZvCf *cf)
 
 void MxMDRecLink::reset(MxSeqNo rxSeqNo, MxSeqNo)
 {
-  rxInvoke([rxSeqNo](Rx *rx) { rx->rxReset(rxSeqNo); });
+  rxInvoke([rxSeqNo](Rx *rx) { rx->rxReset(rx->app().m_seqNo = rxSeqNo); });
 }
 
 #define fileERROR(path__, code) \
@@ -167,8 +169,6 @@ void MxMDRecLink::connect()
       return;
     }
 
-    m_ringID = broadcast.id();
-
     path = m_path;
   }
 
@@ -177,6 +177,8 @@ void MxMDRecLink::connect()
   rxInvoke([](Rx *rx) { rx->startQueuing(); });
 
   connected();
+
+  m_seqNo = 0;
 
   mx()->run(engine()->snapThread(),
       ZmFn<>{[](MxMDRecLink *link) { link->snap(); }, this});
@@ -194,8 +196,6 @@ void MxMDRecLink::disconnect()
   MxMDBroadcast &broadcast = core()->broadcast();
 
   wake();
-
-  m_ringID = -1;
 
   mx()->wakeFn(engine()->rxThread(), ZmFn<>());
 
@@ -215,9 +215,10 @@ void MxMDRecLink::disconnect()
   disconnected();
 }
 
-int MxMDRecLink::write_(const Frame *frame, ZeError *e)
+int MxMDRecLink::write_(const void *ptr, ZeError *e)
 {
-  return m_file.write((const void *)frame, sizeof(Frame) + frame->len, e);
+  using namespace MxMDStream;
+  return m_file.write(ptr, sizeof(Frame) + ((const Frame *)ptr)->len, e);
 }
 
 // snapshot
@@ -225,19 +226,20 @@ int MxMDRecLink::write_(const Frame *frame, ZeError *e)
 void MxMDRecLink::snap()
 {
   m_snapMsg = new Msg();
-  if (!core()->snapshot(*this, m_ringID))
+  if (!core()->snapshot(*this, id(), 0))
     engine()->rxRun(
 	ZmFn<>{[](MxMDRecLink *link) { link->disconnect(); }, this});
   m_snapMsg = nullptr;
 }
-MxMDStream::Frame *MxMDRecLink::push(unsigned size)
+void *MxMDRecLink::push(unsigned size)
 {
   if (ZuUnlikely(state() != MxLinkState::Up)) return nullptr;
-  return m_snapMsg->frame();
+  return m_snapMsg->ptr();
 }
 void *MxMDRecLink::out(void *ptr, unsigned length, unsigned type,
     int shardID, ZmTime stamp)
 {
+  using namespace MxMDStream;
   Frame *frame = new (ptr) Frame(
       (uint16_t)length, (uint16_t)type,
       (uint64_t)shardID, (uint64_t)0,
@@ -249,7 +251,7 @@ void MxMDRecLink::push2()
   Guard fileGuard(m_fileLock);
 
   ZeError e;
-  if (ZuUnlikely(write_(m_snapMsg->frame(), &e) != Zi::OK)) {
+  if (ZuUnlikely(write_(m_snapMsg->ptr(), &e) != Zi::OK)) {
     m_file.close();
     ZtString path = ZuMv(m_path);
     fileGuard.unlock();
@@ -275,8 +277,7 @@ void MxMDRecLink::recv(Rx *rx)
       disconnected();
       return;
     }
-    rxRun_([](Rx *rx) { rx->app().recv(rx); });
-    return;
+    goto again;
   }
   if (frame->len > sizeof(Buf)) {
     broadcast.shift2();
@@ -289,7 +290,7 @@ void MxMDRecLink::recv(Rx *rx)
 	    const ZeEvent &, ZmStream &s) {
 	  s << '"' << name << "\": "
 	  "IPC shared memory ring buffer read error - "
-	  "message too big";
+	  "message too big / corrupt";
 	})));
     return;
   }
@@ -297,7 +298,7 @@ void MxMDRecLink::recv(Rx *rx)
     case Type::EndOfSnapshot:
       {
 	const EndOfSnapshot &eos = frame->as<EndOfSnapshot>();
-	if (ZuUnlikely(eos.id == m_ringID)) {
+	if (ZuUnlikely(eos.id == id())) {
 	  MxSeqNo seqNo = eos.seqNo;
 	  broadcast.shift2();
 	  // snapshot failure (!seqNo) is handled in snap()
@@ -309,7 +310,7 @@ void MxMDRecLink::recv(Rx *rx)
     case Type::Wake:
       {
 	const Wake &wake = frame->as<Wake>();
-	if (ZuUnlikely(wake.id == m_ringID)) {
+	if (ZuUnlikely(wake.id == id())) {
 	  broadcast.shift2();
 	  return;
 	}
@@ -318,17 +319,15 @@ void MxMDRecLink::recv(Rx *rx)
       break;
     default:
       {
-	unsigned length = sizeof(Frame) + frame->len;
 	ZuRef<Msg> msg = new Msg();
-	Frame *msgFrame = msg->frame();
-	memcpy(msgFrame, frame, length);
+	unsigned msgLen = sizeof(Frame) + frame->len;
+	memcpy(msg->ptr(), frame, msgLen);
 	broadcast.shift2();
-	ZmRef<MxQMsg> qmsg = new MxQMsg(
-	    ZuMv(msg), length, MxMsgID{id(), msgFrame->seqNo});
-	rx->received(qmsg);
+	rx->received(new MxQMsg(ZuMv(msg), msgLen, MxMsgID{id(), m_seqNo++}));
       }
       break;
   }
+again:
   rxRun_([](Rx *rx) { rx->app().recv(rx); });
 }
 
@@ -348,8 +347,7 @@ MxEngineApp::ProcessFn MxMDRecord::processFn()
 
 void MxMDRecLink::wake()
 {
-  int id = m_ringID;
-  if (id >= 0) MxMDStream::wake(core()->broadcast(), id);
+  MxMDStream::wake(core()->broadcast(), id());
 }
 
 void MxMDRecLink::write(MxQMsg *qmsg)
@@ -357,7 +355,7 @@ void MxMDRecLink::write(MxQMsg *qmsg)
   Guard fileGuard(m_fileLock);
 
   ZeError e;
-  if (ZuUnlikely(write_(qmsg->as<MsgData>().frame(), &e)) != Zi::OK) {
+  if (ZuUnlikely(write_(qmsg->ptr(), &e)) != Zi::OK) {
     m_file.close();
     ZtString path = ZuMv(m_path);
     fileGuard.unlock();

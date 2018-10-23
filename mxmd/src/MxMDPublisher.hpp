@@ -62,6 +62,7 @@ public:
   ZuInline const ZiIP &interface() const { return m_interface; }
   ZuInline unsigned maxQueueSize() const { return m_maxQueueSize; }
   ZuInline ZmTime loginTimeout() const { return ZmTime(m_loginTimeout); }
+  ZuInline ZmTime ackInterval() const { return ZmTime(m_ackInterval); }
   ZuInline unsigned reReqMaxGap() const { return m_reReqMaxGap; }
   ZuInline unsigned nAccepts() const { return m_nAccepts; }
   ZuInline unsigned ttl() const { return m_ttl; }
@@ -94,25 +95,35 @@ public:
 
   ZmRef<MxAnyLink> createLink(MxID id);
 
-  // Rx
+  // Rx (unused)
   MxEngineApp::ProcessFn processFn();
 
   // Tx (called from engine's tx thread)
-  void sent(MxAnyLink *, MxQMsg *);
-  void aborted(MxAnyLink *, MxQMsg *);
+  void sent(MxAnyLink *, MxQMsg *) { }
+  void aborted(MxAnyLink *, MxQMsg *) { }
   void archive(MxAnyLink *, MxQMsg *);
-  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo);
+  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return nullptr; }
+
+  // broadcast
+  bool attach();
+  void detach();
+  void wake();
+  void recv();
+  void ack();
+
+  // snapshot
+  ZuInline unsigned snapThread() const { return m_snapThread; }
 
   // commands
   void statusCmd(const MxMDCmd::Args &args, ZtArray<char> &out);
 
 private:
+  unsigned		m_snapThread = 0;
   ZiIP			m_interface;
   unsigned		m_maxQueueSize = 0;
   double		m_loginTimeout = 0.0;
-  double		m_reconnInterval = 0.0;
-  double		m_reReqInterval = 0.0;
   unsigned		m_reReqMaxGap = 10;
+  double		m_ackInterval = 0;
   unsigned		m_nAccepts = 8;
   unsigned		m_ttl = 1;
   bool			m_loopBack = false;
@@ -120,6 +131,15 @@ private:
   Partitions		m_partitions;
 
   bool			m_failover = false;
+
+  typedef MxMDBroadcast::Ring Ring;
+
+  // Rx exclusive
+  unsigned		m_attached = 0;
+  ZmRef<Ring>		m_ring;
+
+  // Tx queue GC
+  ZmScheduler::Timer	m_ackTimer;
 };
 
 class MxMDAPI MxMDPubLink : public MxLink<MxMDPubLink> {
@@ -149,12 +169,12 @@ friend class TCP;
 
     TCP(MxMDPubLink *link, const ZiCxnInfo &ci);
 
+    ZuInline MxMDPubLink *link() const { return m_link; }
+
     inline unsigned state() const {
       ReadGuard guard(m_stateLock);
       return m_state;
     }
-
-    ZuInline MxMDPubLink *link() const { return m_link; }
 
     void connected(ZiIOContext &);
     void close();
@@ -165,10 +185,8 @@ friend class TCP;
     void processLogin(ZiIOContext &);
     void process(ZiIOContext &);
 
-    typedef MxMDStream::Frame Frame;
-
-    void snap();
-    Frame *push(unsigned size);
+    void snap(MxSeqNo seqNo);
+    void *push(unsigned size);
     void *out(void *ptr, unsigned length, unsigned type,
 	int shardID, ZmTime stamp);
     void push2();
@@ -181,6 +199,7 @@ friend class TCP;
     Lock		m_stateLock;
       unsigned		  m_state;
 
+    ZmRef<MxQMsg>	m_in;
     ZuRef<Msg>		m_snapMsg;
   };
 
@@ -221,7 +240,7 @@ friend class UDP;
     void disconnected();
 
     void recv(ZiIOContext &);
-    static void process(MxQMsg *, ZiIOContext &);
+    void process(MxQMsg *, ZiIOContext &);
 
   private:
     MxMDPubLink		*m_link;
@@ -265,6 +284,9 @@ public:
   void reRequest(const MxQueue::Gap &now) { }
 
   // MxLink Tx CRTP
+  void loaded_(MxQMsg *msg);
+  void unloaded_(MxQMsg *msg);
+
   bool send_(MxQMsg *msg, bool more);
   bool resend_(MxQMsg *msg, bool more);
 
@@ -276,45 +298,38 @@ public:
   void tcpListening(const ZiListenInfo &);
   void tcpConnected(TCP *tcp);
   void tcpDisconnected(TCP *tcp);
-  bool tcpLogin(MxMDStream::Login &);
+  bool tcpLogin(const MxMDStream::Login &);
   void udpConnect();
   void udpConnected(UDP *udp, ZiIOContext &io);
-  void udpReceived(MxQMsg *);
+  void udpReceived(const MxMDStream::ResendReq &);
 
   void tcpError(TCP *tcp, ZiIOContext *io);
   void udpError(UDP *udp, ZiIOContext *io);
+
+  // broadcast
+  void sendFrame(const MxMDStream::Frame *frame);
+  void ack();
+
+  // snapshot
+  void snap(ZmRef<TCP> tcp);
 
   // command support
   void status(ZtArray<char> &out);
 
 private:
-  typedef MxQueueRx<MxMDRecLink> Rx;
+  typedef MxQueueRx<MxMDPubLink> Rx;
+  typedef MxQueueTx<MxMDPubLink> Tx;
 
   typedef MxMDStream::Frame Frame;
 
-  typedef MxMDBroadcast::Ring Ring;
-
   int write_(const Frame *frame, ZeError *e);
-
-  // Rx thread
-  void wake();
-  void recv(Rx *rx);
-
-  // snap thread
-  void snap();
-  Frame *push(unsigned size);
-  void *out(void *ptr, unsigned length, unsigned type, ZmTime stamp);
-  void push2();
 
 private:
   const MxMDPartition	*m_partition = 0;
 
   ZiSockAddr		m_udpAddr;
 
-  ZmAtomic<int>		m_ringID = -1;
-
   Lock			m_connLock;
-    ZmRef<Ring>		  m_ring;
     ZiListenInfo	  m_listenInfo;
     ZmRef<TCPTbl>	  m_tcpTbl;
     ZmRef<UDP>		  m_udp;

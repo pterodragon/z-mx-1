@@ -25,7 +25,7 @@
 
 void MxMDSubscriber::init(MxMDCore *core, ZvCf *cf)
 {
-  if (!cf->get("id")) cf->set("id", "subscriber");
+  if (!cf->get("id")) cf->set("id", "subscrib");
 
   MxEngine::init(core, this, core->mx(), cf);
 
@@ -93,8 +93,7 @@ MxEngineApp::ProcessFn MxMDSubscriber::processFn()
 void MxMDSubscriber::process_(MxMDSubLink *, MxQMsg *msg)
 {
   using namespace MxMDStream;
-  const Frame &frame = msg->as<Frame>();
-  core()->apply(&frame, m_filter);
+  core()->apply(msg->as<Frame>(), m_filter);
 }
 
 #define linkINFO(code) \
@@ -226,6 +225,7 @@ void MxMDSubLink::tcpConnect()
 MxMDSubLink::TCP::TCP(MxMDSubLink *link, const ZiCxnInfo &ci) :
   ZiConnection(link->mx(), ci), m_link(link), m_state(State::Login)
 {
+  using namespace MxMDStream;
   m_in = new MxQMsg(new Msg());
 }
 void MxMDSubLink::TCP::connected(ZiIOContext &io)
@@ -282,11 +282,11 @@ ZmRef<MxQMsg> MxMDSubLink::tcpLogin()
 {
   using namespace MxMDStream;
   ZuRef<Msg> msg = new Msg();
-  Frame *frame = new (msg->frame()) Frame(
+  Frame *frame = new (msg->ptr()) Frame(
       (uint16_t)sizeof(Login), (uint16_t)Login::Code, (uint64_t)id());
-  new (frame->ptr()) 
-    Login{m_partition->tcpUsername, m_partition->tcpPassword};
-  return new MxQMsg(ZuMv(msg), msg->length());
+  new (frame->ptr()) Login{m_partition->tcpUsername, m_partition->tcpPassword};
+  unsigned msgLen = msg->length();
+  return new MxQMsg(ZuMv(msg), msgLen);
 }
 void MxMDSubLink::TCP::sendLogin()
 {
@@ -297,7 +297,7 @@ void MxMDSubLink::TCP::sendLogin()
 	if (tcp->m_state != State::Login) return;
       }
       tcpERROR(tcp, 0, "TCP login timeout");
-    }, this}, ZmTimeNow(m_link->loginTimeout()), &m_loginTimer);
+    }, ZmMkRef(this)}, ZmTimeNow(m_link->loginTimeout()), &m_loginTimer);
 }
 void MxMDSubLink::TCP::processLoginAck(ZiIOContext &io)
 {
@@ -339,8 +339,7 @@ void MxMDSubLink::TCP::process(ZiIOContext &io)
 void MxMDSubLink::tcpProcess(MxQMsg *msg)
 {
   using namespace MxMDStream;
-  const Frame &frame = msg->as<Frame>();
-  core()->apply(&frame, false);
+  core()->apply(msg->as<Frame>(), false);
 }
 void MxMDSubLink::endOfSnapshot(MxSeqNo seqNo)
 {
@@ -375,8 +374,10 @@ void MxMDSubLink::udpConnect()
   m_udpResendAddr = ZiSockAddr(resendIP, resendPort);
   ZiCxnOptions options;
   options.udp(true);
-  options.multicast(true);
-  options.mreq(ZiMReq(ip, engine()->interface()));
+  if (ip.multicast()) {
+    options.multicast(true);
+    options.mreq(ZiMReq(ip, engine()->interface()));
+  }
   mx()->udp(
       ZiConnectFn([](MxMDSubLink *link, const ZiCxnInfo &ci) -> uintptr_t {
 	  if (link->stateLocked<MxMDSubLink>(
@@ -511,11 +512,11 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
   }
   using namespace MxMDStream;
   ZuRef<Msg> msg = new Msg();
-  Frame *frame = new (msg->frame()) Frame(
+  Frame *frame = new (msg->ptr()) Frame(
       (uint16_t)sizeof(ResendReq), (uint16_t)ResendReq::Code, (uint64_t)id());
-  new (frame->ptr())
-    ResendReq{now.key(), now.length()};
-  ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(msg), msg->length());
+  new (frame->ptr()) ResendReq{now.key(), now.length()};
+  unsigned msgLen = msg->length();
+  ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(msg), msgLen);
   ZmRef<UDP> udp;
   {
     Guard connGuard(m_connLock);
@@ -534,11 +535,8 @@ void MxMDSubscriber::statusCmd(
   if (argc != 1) throw MxMDCmd::Usage();
   out.size(512 * nLinks());
   out << "State: " << MxEngineState::name(state()) << '\n';
-  allLinks([&out](MxAnyLink *link) -> uintptr_t {
-	out << '\n';
-	static_cast<MxMDSubLink *>(link)->status(out);
-	return 0;
-      });
+  allLinks<MxMDSubLink>([&out](MxMDSubLink *link) -> uintptr_t {
+	out << '\n'; link->status(out); return 0; });
 }
 
 void MxMDSubLink::status(ZtArray<char> &out)

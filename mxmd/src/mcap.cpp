@@ -257,7 +257,7 @@ void Msg_<Heap>::rcvd(ZiIOContext &io)
   m_frame.type = 0;
   m_frame.sec = now.sec();
   m_frame.nsec = now.nsec();
-  m_frame.channel = m_cxn->group().id;
+  m_frame.linkID = m_cxn->group().id;
 
   m_cxn->app()->mx2()->add(ZmFn<>::Member<&Msg_::write>::fn(ZmMkRef(this)));
 

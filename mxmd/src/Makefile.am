@@ -14,7 +14,8 @@ include_HEADERS = \
 	MxMDSubscriber.hpp MxMDPublisher.hpp
 lib_LTLIBRARIES = libMxMD.la
 libMxMD_la_SOURCES = \
-	MxMDSubscriber.cpp MxMDPublisher.cpp \
+	MxMDPublisher.cpp \
+	MxMDSubscriber.cpp \
 	MxMD.cpp MxMDLib.cpp MxMDVersion.cpp MxMDCore.cpp MxMDCmd.cpp \
 	MxMDBroadcast.cpp \
 	MxMDRecord.cpp MxMDReplay.cpp

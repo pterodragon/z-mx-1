@@ -150,6 +150,8 @@ public:
   void reRequest(const MxQueue::Gap &now) { }
 
   // MxLink Tx CRTP
+  void loaded_(MxQMsg *) { }
+  void unloaded_(MxQMsg *) { }
   bool send_(MxQMsg *msg, bool more) {
     // if a msg deadline has passed, could call aborted_() and return false
     this->sent_(msg);

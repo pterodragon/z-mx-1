@@ -106,10 +106,9 @@ public:
       ZuString path, MxID venue = MxID(), MxID segment = MxID());
 
   typedef MxMDStream::Frame Frame;
-  typedef MxMDStream::Msg Msg;
 
-  void pad(Frame *);
-  void apply(const Frame *, bool filter);
+  void pad(Frame &);
+  void apply(const Frame &, bool filter);
 
   // commands
 
@@ -192,8 +191,7 @@ public:
   inline bool streaming() { return m_broadcast.active(); }
 
   template <typename Snapshot>
-  bool snapshot(Snapshot &snapshot, unsigned id) {
-    MxSeqNo seqNo = m_broadcast.seqNo();
+  bool snapshot(Snapshot &snapshot, MxID id, MxSeqNo seqNo) {
     bool ok = !(allVenues([&snapshot](MxMDVenue *venue) -> uintptr_t {
       return venue->allTickSizeTbls(
 	    [&snapshot, venue](MxMDTickSizeTbl *tbl) -> uintptr_t {

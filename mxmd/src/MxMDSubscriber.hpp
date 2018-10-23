@@ -101,7 +101,7 @@ public:
   void sent(MxAnyLink *, MxQMsg *) { }
   void aborted(MxAnyLink *, MxQMsg *) { }
   void archive(MxAnyLink *, MxQMsg *) { }
-  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
+  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return nullptr; }
 
   // commands
   void statusCmd(const MxMDCmd::Args &args, ZtArray<char> &out);
@@ -145,12 +145,12 @@ friend class TCP;
 
     TCP(MxMDSubLink *link, const ZiCxnInfo &ci);
 
+    ZuInline MxMDSubLink *link() const { return m_link; }
+
     inline unsigned state() const {
       ReadGuard guard(m_stateLock);
       return m_state;
     }
-
-    ZuInline MxMDSubLink *link() const { return m_link; }
 
     void connected(ZiIOContext &);
     void close();
@@ -241,6 +241,9 @@ public:
   void reRequest(const MxQueue::Gap &now);
 
   // MxLink Tx CRTP (unused - TCP login bypasses Tx queue)
+  void loaded_(MxQMsg *) { }
+  void unloaded_(MxQMsg *) { }
+
   bool send_(MxQMsg *msg, bool more) { return true; }
   bool resend_(MxQMsg *msg, bool more) { return true; }
 

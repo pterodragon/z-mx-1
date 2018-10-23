@@ -184,7 +184,7 @@ public:
   inline ~Msg_() { }
 
   int read(ZiFile *);
-  inline uint32_t group() { return m_frame.channel; }
+  inline uint32_t group() { return m_frame.linkID; }
 
   void send(Connection *);
   void send_(ZiIOContext &);

@@ -56,7 +56,7 @@ public:
 
   MxMDCore *core() const;
 
-  void init(MxMDCore *core);
+  void init(MxMDCore *core, ZvCf *cf);
   void final();
 
   ZuInline int snapThread() const { return m_snapThread; }
@@ -117,6 +117,9 @@ public:
   void reRequest(const MxQueue::Gap &now) { }
 
   // MxLink Tx CRTP (unused)
+  void loaded_(MxQMsg *) { }
+  void unloaded_(MxQMsg *) { }
+
   bool send_(MxQMsg *, bool) { return true; }
   bool resend_(MxQMsg *, bool) { return true; }
 
@@ -130,11 +133,9 @@ private:
 
   typedef MxQueueRx<MxMDRecLink> Rx;
 
-  typedef MxMDStream::Frame Frame;
   typedef MxMDStream::Msg Msg;
-  typedef MxMDStream::MsgData MsgData;
 
-  int write_(const Frame *frame, ZeError *e);
+  int write_(const void *ptr, ZeError *e);
 
   // Rx thread
   void wake();
@@ -145,7 +146,7 @@ public:
 
   // snap thread
   void snap();
-  Frame *push(unsigned size);
+  void *push(unsigned size);
   void *out(void *ptr, unsigned length, unsigned type,
       int shardID, ZmTime stamp);
   void push2();
@@ -153,7 +154,7 @@ public:
 private:
   Lock			m_lock;	// serializes record/stopRecording
 
-  ZmAtomic<int>		m_ringID = -1;
+  MxSeqNo		m_seqNo = 0;
 
   Lock			m_fileLock;
     ZtString		  m_path;

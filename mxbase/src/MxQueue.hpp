@@ -185,8 +185,8 @@ struct App : public MxQueueTx<App> {
 
   void aborted_(MxQMsg *msg);
 
-  void loaded_(MxQMsg *msg) { }		// optionally adjust readiness
-  void unloaded_(MxQMsg *msg) { }	// ''
+  void loaded_(MxQMsg *msg);		// may adjust readiness
+  void unloaded_(MxQMsg *msg);		// ''
 
   // send_() must perform one of
   // 1] usual case (successful send): call sent_(), return true
@@ -219,8 +219,8 @@ struct App : public MxQueueTxPool<App> {
 
   void aborted_(MxQMsg *msg);
 
-  void loaded_(MxQMsg *msg) { }		// optionally adjust readiness
-  void unloaded_(MxQMsg *msg) { }	// ''
+  void loaded_(MxQMsg *msg);		// may adjust readiness
+  void unloaded_(MxQMsg *msg);		// ''
 };
 #endif
 
@@ -252,9 +252,6 @@ public:
 
   ZuInline const MxQueue &txQueue() const { return m_queue; }
   ZuInline MxQueue &txQueue() { return m_queue; }
-
-  ZuInline void loaded_(MxQMsg *) { } // can be overridden by App
-  ZuInline void unloaded_(MxQMsg *) { } // can be overridden by App
 
   ZuInline void send() { Tx::send(); }
   void send(MxQMsg *msg) {
@@ -353,6 +350,8 @@ class MxQueueTxPool : public MxQueueTx<App, Lock_> {
 		  ZmRBTreeHeapID<Queues_HeapID> > > > > Queues;
 
 public:
+  ZuInline void loaded_(MxQMsg *) { }   // may be overridden by App
+  ZuInline void unloaded_(MxQMsg *) { } // ''
   bool send_(MxQMsg *msg, bool more) {
     if (ZmRef<Tx> next = next_()) {
       next->send(msg);

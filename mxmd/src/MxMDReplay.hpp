@@ -55,7 +55,7 @@ public:
 
   MxMDCore *core() const;
 
-  void init(MxMDCore *core);
+  void init(MxMDCore *core, ZvCf *cf);
   void final();
 
   bool replay(ZtString path,
@@ -114,6 +114,9 @@ public:
   void reRequest(const MxQueue::Gap &now) { }
 
   // MxLink Tx CRTP (unused)
+  void loaded_(MxQMsg *) { }
+  void unloaded_(MxQMsg *) { }
+
   bool send_(MxQMsg *, bool) { return true; }
   bool resend_(MxQMsg *, bool) { return true; }
 

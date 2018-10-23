@@ -136,29 +136,29 @@ public:
 
     {
       using namespace MxMDStream;
-      const Frame *frame = msg->frame();
-      switch ((int)frame->type) {
+      const Frame &frame = msg->frame();
+      switch ((int)frame.type) {
 	case Type::TradingSession:
 	  {
-	    const TradingSession &obj = frame->as<TradingSession>();
+	    const TradingSession &obj = frame.as<TradingSession>();
 	    new (data) Data{
-	      obj.venue, obj.segment, {}, frame->type,
+	      obj.venue, obj.segment, {}, frame.type,
 	      obj.session, { obj.stamp } };
 	  }
 	  break;
 	case Type::L1:
 	  {
-	    const L1 &obj = frame->as<L1>();
+	    const L1 &obj = frame.as<L1>();
 	    new (data) Data{
-	      obj.key.venue(), obj.key.segment(), obj.key.id(), frame->type,
+	      obj.key.venue(), obj.key.segment(), obj.key.id(), frame.type,
 	      {}, obj.data};
 	  }
 	  break;
 	case Type::PxLevel:
 	  {
-	    const PxLevel &obj = frame->as<PxLevel>();
+	    const PxLevel &obj = frame.as<PxLevel>();
 	    new (data) Data{
-	      obj.key.venue(), obj.key.segment(), obj.key.id(), frame->type,
+	      obj.key.venue(), obj.key.segment(), obj.key.id(), frame.type,
 	      {}, { obj.transactTime, obj.pxNDP, obj.qtyNDP },
 	      { {}, {}, obj.side, {}, obj.delta, obj.price, obj.qty,
 		obj.nOrders, obj.flags } };
@@ -166,11 +166,11 @@ public:
 	  break;
 	case Type::AddOrder:
 	  {
-	    const AddOrder &obj = frame->as<AddOrder>();
+	    const AddOrder &obj = frame.as<AddOrder>();
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = frame->type;
+	    data->event = frame.type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -184,11 +184,11 @@ public:
 	  break;
 	case Type::ModifyOrder:
 	  {
-	    const ModifyOrder &obj = frame->as<ModifyOrder>();
+	    const ModifyOrder &obj = frame.as<ModifyOrder>();
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = frame->type;
+	    data->event = frame.type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -202,11 +202,11 @@ public:
 	  break;
 	case Type::CancelOrder:
 	  {
-	    const CancelOrder &obj = frame->as<CancelOrder>();
+	    const CancelOrder &obj = frame.as<CancelOrder>();
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = frame->type;
+	    data->event = frame.type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l2Data.objectID = obj.orderID;
 	    data->l2Data.side = obj.side;
@@ -214,32 +214,32 @@ public:
 	  break;
 	case Type::L2:
 	  {
-	    const L2 &obj = frame->as<L2>();
+	    const L2 &obj = frame.as<L2>();
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = frame->type;
+	    data->event = frame.type;
 	    data->l1Data.stamp = obj.stamp;
 	    data->updateL1 = obj.updateL1;
 	  }
 	  break;
 	case Type::ResetOB:
 	  {
-	    const ResetOB &obj = frame->as<ResetOB>();
+	    const ResetOB &obj = frame.as<ResetOB>();
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = frame->type;
+	    data->event = frame.type;
 	    data->l1Data.stamp = obj.transactTime;
 	  }
 	  break;
 	case Type::AddTrade:
 	  {
-	    const AddTrade &obj = frame->as<AddTrade>();
+	    const AddTrade &obj = frame.as<AddTrade>();
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = frame->type;
+	    data->event = frame.type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -250,11 +250,11 @@ public:
 	  break;
 	case Type::CorrectTrade:
 	  {
-	    const CorrectTrade &obj = frame->as<CorrectTrade>();
+	    const CorrectTrade &obj = frame.as<CorrectTrade>();
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = frame->type;
+	    data->event = frame.type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -265,11 +265,11 @@ public:
 	  break;
 	case Type::CancelTrade:
 	  {
-	    const CancelTrade &obj = frame->as<CancelTrade>();
+	    const CancelTrade &obj = frame.as<CancelTrade>();
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = frame->type;
+	    data->event = frame.type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -280,9 +280,9 @@ public:
 	  break;
 	case Type::RefDataLoaded:
 	  {
-	    const RefDataLoaded &obj = frame->as<RefDataLoaded>();
+	    const RefDataLoaded &obj = frame.as<RefDataLoaded>();
 	    data->venue = obj.venue;
-	    data->event = frame->type;
+	    data->event = frame.type;
 	  }
 	  break;
 	default:
@@ -493,31 +493,31 @@ void App::read()
 
   for (;;) {
     ZuRef<Msg> msg = new Msg();
-    Frame *frame = msg->frame();
     o = m_file.offset();
-    n = m_file.read(frame, sizeof(Frame), &e);
+    n = m_file.read(msg->ptr(), sizeof(Frame), &e);
     if (n == Zi::IOError) goto error;
     if (n == Zi::EndOfFile || (unsigned)n < sizeof(Frame)) return;
-    if (frame->len > sizeof(Buf)) goto lenerror;
-    n = m_file.read(frame->ptr(), frame->len, &e);
+    Frame &frame = msg->frame();
+    if (frame.len > sizeof(Buf)) goto lenerror;
+    n = m_file.read(frame.ptr(), frame.len, &e);
     if (n == Zi::IOError) goto error;
-    if (n == Zi::EndOfFile || (unsigned)n < frame->len) return;
+    if (n == Zi::EndOfFile || (unsigned)n < frame.len) return;
 
     if (m_verbose) {
-      if (frame->sec) {
-	ZtDate stamp((time_t)frame->sec, (int32_t)frame->nsec);
-	std::cout << "len: " << ZuBoxed(frame->len).fmt(ZuFmt::Right<6>()) <<
-	  "  type: " << ZuBoxed(frame->type).fmt(ZuFmt::Right<6>()) <<
+      if (frame.sec) {
+	ZtDate stamp((time_t)frame.sec, (int32_t)frame.nsec);
+	std::cout << "len: " << ZuBoxed(frame.len).fmt(ZuFmt::Right<6>()) <<
+	  "  type: " << ZuBoxed(frame.type).fmt(ZuFmt::Right<6>()) <<
 	  "  stamp: " << stamp.iso(m_isoFmt) << '\n';
       } else {
-	std::cout << "len: " << ZuBoxed(frame->len).fmt(ZuFmt::Right<6>()) <<
-	  "  type: " << ZuBoxed(frame->type).fmt(ZuFmt::Right<6>()) <<
+	std::cout << "len: " << ZuBoxed(frame.len).fmt(ZuFmt::Right<6>()) <<
+	  "  type: " << ZuBoxed(frame.type).fmt(ZuFmt::Right<6>()) <<
 	  "  stamp: (null)\n";
       }
     }
  
     {
-      switch ((int)frame->type) {
+      switch ((int)frame.type) {
 	case Type::AddTickSizeTbl:
 	case Type::ResetTickSizeTbl:
 	  if (n != (int)sizeof(AddTickSizeTbl)) goto dataerror;
@@ -580,38 +580,38 @@ void App::read()
 	case Type::L1:
 	  if (n != (int)sizeof(L1)) goto dataerror;
 	  if (!m_l1) continue;
-	  if (filterID(frame->as<L1>().key)) continue;
+	  if (filterID(frame.as<L1>().key)) continue;
 	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
 	  break;
 	case Type::PxLevel:
 	  if (n != (int)sizeof(PxLevel)) goto dataerror;
 	  if (!m_l2) continue;
-	  if (filterID(frame->as<PxLevel>().key)) continue;
+	  if (filterID(frame.as<PxLevel>().key)) continue;
 	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
 	  break;
 	case Type::AddOrder:
 	case Type::ModifyOrder:
 	  if (n != (int)sizeof(AddOrder)) goto dataerror;
 	  if (!m_l2) continue;
-	  if (filterID(frame->as<AddOrder>().key)) continue;
+	  if (filterID(frame.as<AddOrder>().key)) continue;
 	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
 	  break;
 	case Type::CancelOrder:
 	  if (n != (int)sizeof(CancelOrder)) goto dataerror;
 	  if (!m_l2) continue;
-	  if (filterID(frame->as<CancelOrder>().key)) continue;
+	  if (filterID(frame.as<CancelOrder>().key)) continue;
 	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
 	  break;
 	case Type::L2:
 	  if (n != (int)sizeof(L2)) goto dataerror;
 	  if (!m_l2) continue;
-	  if (filterID(frame->as<L2>().key)) continue;
+	  if (filterID(frame.as<L2>().key)) continue;
 	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
 	  break;
 	case Type::ResetOB:
 	  if (n != (int)sizeof(ResetOB)) goto dataerror;
 	  if (!m_l2) continue;
-	  if (filterID(frame->as<ResetOB>().key)) continue;
+	  if (filterID(frame.as<ResetOB>().key)) continue;
 	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
 	  break;
 
@@ -637,13 +637,9 @@ void App::read()
     }
 
     if (m_outFile) {
-      ZiVec vec[2];
-      ZiVec_ptr(vec[0]) = (void *)frame;
-      ZiVec_len(vec[0]) = sizeof(Frame);
-      ZiVec_ptr(vec[1]) = (void *)frame->ptr();
-      ZiVec_len(vec[1]) = frame->len;
       ZeError e;
-      if (m_outFile.writev(vec, 2, &e) != Zi::OK) {
+      if (m_outFile.write(
+	    msg->ptr(), sizeof(Frame) + frame.len, &e) != Zi::OK) {
 	ZeLOG(Error, ZtString() << '"' << m_outPath << "\": " << e);
 	return;
       }

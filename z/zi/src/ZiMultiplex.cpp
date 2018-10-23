@@ -1846,9 +1846,7 @@ void ZiConnection::close_1()
   
   m_txUp = false;
 
-  ZiMultiplex *mx = m_mx;
-
-  mx->rxInvoke(ZmFn<>([](ZiConnection *self) { self->close_2(); }, this));
+  m_mx->rxInvoke(ZmFn<>([](ZiConnection *self) { self->close_2(); }, this));
 }
 
 void ZiConnection::close_2()

@@ -23,16 +23,13 @@
 
 #include <MxMDReplay.hpp>
 
-void MxMDReplay::init(MxMDCore *core)
+void MxMDReplay::init(MxMDCore *core, ZvCf *cf)
 {
-  ZmRef<ZvCf> cf = core->cf()->subset("replay", false, false);
-
   Mx *mx = core->mx();
 
-  if (!cf) {
-    cf = new ZvCf();
-    cf->fromString("id replay", false);
-  }
+  if (!cf) cf = new ZvCf();
+
+  if (!cf->get("id")) cf->set("id", "replay");
 
   MxEngine::init(core, this, mx, cf);
 
@@ -193,13 +190,12 @@ void MxMDReplayLink::read()
   using namespace MxMDStream;
 
   MxMDCore *core = this->core();
-  Frame *frame = m_msg->frame();
 
   ZeError e;
 
   if (!m_file) return;
 // retry:
-  int n = m_file.read(frame, sizeof(Frame), &e);
+  int n = m_file.read(m_msg->ptr(), sizeof(Frame), &e);
   if (n == Zi::IOError) {
 error:
     fileERROR(m_path, e);
@@ -211,7 +207,8 @@ eof:
     core->handler()->eof(core);
     return;
   }
-  if (frame->len > sizeof(Buf)) {
+  Frame &frame = m_msg->frame();
+  if (frame.len > sizeof(Buf)) {
     uint64_t offset = m_file.offset();
     offset -= sizeof(Frame);
     fileERROR(m_path,
@@ -219,12 +216,12 @@ eof:
 	" at offset " << ZuBoxed(offset));
     return;
   }
-  n = m_file.read(frame->ptr(), frame->len, &e);
+  n = m_file.read(frame.ptr(), frame.len, &e);
   if (n == Zi::IOError) goto error;
-  if (n == Zi::EndOfFile || (unsigned)n < frame->len) goto eof;
+  if (n == Zi::EndOfFile || (unsigned)n < frame.len) goto eof;
 
-  if (frame->sec) {
-    ZmTime next((time_t)frame->sec, (int32_t)frame->nsec);
+  if (frame.sec) {
+    ZmTime next((time_t)frame.sec, (int32_t)frame.nsec);
 
     while (m_replayNext && next > m_replayNext) {
       MxDateTime replayNext;

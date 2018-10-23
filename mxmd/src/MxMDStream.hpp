@@ -167,7 +167,7 @@ namespace MxMDStream {
     }
 
     bool scan(unsigned length) const {
-      return len + sizeof(Frame) > length;
+      return sizeof(Frame) + len > length;
     }
   };
 
@@ -374,12 +374,12 @@ namespace MxMDStream {
 
   struct Wake { // ITC wake-up
     enum { Code = Type::Wake };
-    MxUInt		id;
+    MxID		id;
   };
 
   struct EndOfSnapshot { // end of snapshot
     enum { Code = Type::EndOfSnapshot };
-    MxUInt		id;
+    MxID		id;
     MxSeqNo		seqNo; // 0 if snapshot failed
   };
 
@@ -431,8 +431,8 @@ namespace MxMDStream {
   public:
     inline MsgData() { }
 
-    ZuInline const Frame *frame() const { return &m_frame; }
-    ZuInline Frame *frame() { return &m_frame; }
+    ZuInline const Frame &frame() const { return m_frame; }
+    ZuInline Frame &frame() { return m_frame; }
 
     ZuInline unsigned length() { return sizeof(Frame) + m_frame.len; }
 
@@ -449,26 +449,13 @@ namespace MxMDStream {
   struct Msg_ : public Heap, public ZuPOD<MsgData> {
     ZuInline Msg_() { new (this->ptr()) MsgData(); }
 
-    ZuInline const Frame *frame() const { return this->data().frame(); }
-    ZuInline Frame *frame() { return this->data().frame(); }
+    ZuInline const Frame &frame() const { return this->data().frame(); }
+    ZuInline Frame &frame() { return this->data().frame(); }
 
     ZuInline unsigned length() { return this->data().length(); }
   };
 
   typedef Msg_<ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> > Msg;
-  typedef ZuRef<Msg> MsgRef;
-
-  template <typename App>
-  ZuRef<Msg> shift(App &app) {
-    const Frame *frame = app.shift();
-    if (ZuUnlikely(!frame)) return 0;
-    if (frame->len > sizeof(Buf)) { app.shift2(); return 0; }
-    ZuRef<Msg> msg = new Msg();
-    memcpy(msg->frame(), frame, sizeof(Frame));
-    memcpy(msg->frame()->ptr(), frame->ptr(), frame->len);
-    app.shift2();
-    return msg;
-  }
 
   template <typename T, typename App>
   inline void *push(App &app, MxInt shardID) {
@@ -610,6 +597,7 @@ namespace MxMDStream {
     inline typename IOMvLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
+	  msg->length = (io.offset += io.length);
 	  msg->addr = io.addr;
 	  IOMvLambda<Cxn, L>::invoke(io);
 	}, ZuMv(msg)},
@@ -648,11 +636,12 @@ namespace MxMDStream {
 	    Frame &frame = msg->as<Frame>();
 	    unsigned msgLen = sizeof(Frame) + frame.len;
 	    if (ZuUnlikely(msgLen > msg->payload->size())) {
-	      ZeLOG(Error, "MxMDStream::recv oversized/corrupt TCP message");
+	      ZeLOG(Error, "MxMDStream::recv TCP message too big / corrupt");
 	      io.disconnect();
 	      return;
 	    }
 	    if (ZuLikely(len < msgLen)) return;
+	    msg->length = msgLen;
 	    IOLambda<Cxn, L>::invoke(msg, io);
 	    if (ZuUnlikely(io.completed())) return;
 	    if (io.offset = len - msgLen)

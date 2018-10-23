@@ -52,9 +52,6 @@ public:
   void init(MxMDCore *core, ZvCf *cf);
   void final();
 
-  void start();
-  void stop();
-
   typedef ZmRBTree<ZtString,
 	    ZmRBTreeVal<const ZtArray<ZtString> *,
 	      ZmRBTreeLock<ZmNoLock> > > Args_;

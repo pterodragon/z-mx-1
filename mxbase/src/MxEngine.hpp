@@ -436,10 +436,10 @@ public:
     return link;
   }
   ZuInline unsigned nLinks() const { return m_links.count(); }
-  template <typename L> uintptr_t allLinks(L &&l) {
+  template <typename Link, typename L> uintptr_t allLinks(L l) {
     auto i = m_links.readIterator();
     while (MxAnyLink *link = i.iterateKey())
-      if (uintptr_t v = l(link)) return v;
+      if (uintptr_t v = l(static_cast<Link *>(link))) return v;
     return 0;
   }
 
@@ -577,6 +577,9 @@ struct LinkImpl : public MxLink<LinkImpl> {
   void reRequest(const MxQueue::Gap &now);
 
   // Tx
+  void loaded_(MxQMsg *msg);
+  void unloaded_(MxQMsg *msg);
+
   bool send_(MxQMsg *msg, bool more); // true on success
   bool resend_(MxQMsg *msg, bool more); // true on success
 

@@ -98,10 +98,6 @@ public:
     return m_ring->writeStatus();
   }
 
-  // for snapshots
-
-  inline MxSeqNo seqNo() const { ReadGuard guard(m_lock); return m_seqNo; }
-
 private:
   typedef ZmPLock Lock;
   typedef ZmGuard<Lock> Guard;

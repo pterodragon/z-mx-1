@@ -45,7 +45,7 @@ int main()
 {
   ZeLog::init("CfTest");
   ZeLog::level(0);
-  ZeLog::add(ZeLog::fileSink());
+  ZeLog::add(ZeLog::fileSink("&2"));
   ZeLog::start();
 
   try {
@@ -70,10 +70,9 @@ int main()
 
       cf->fromFile("out.cf", false);
       out << *cf;
-      ZiFile::remove("out.cf");
       bool caught = false;
       try {
-	cf->fromFile("out.cf", false);
+	cf->fromFile("out_.cf", false);
       } catch (const ZvError &) {
 	caught = true;
       } catch (const ZeError &) {
@@ -132,6 +131,7 @@ int main()
 	"-D",
 	"Arg1",
 	"--key7:foo=bar",
+	"--key8=Cartman",
 	0
       };
       static ZvOpt opts[] = {
@@ -144,6 +144,7 @@ int main()
 	{ "key6:c", 0, ZvOptScalar, 0 },
 	{ "key7:foo", 0, ZvOptScalar, 0 },
 	{ "key7:foo:bah", "D", ZvOptFlag, 0 },
+	{ "key8", 0, ZvOptScalar, 0 },
 	{ 0 }
       };
 
@@ -151,6 +152,7 @@ int main()
 	ZmRef<ZvCf> cf = new ZvCf();
 
 	cf->fromArgs(opts, sizeof(argv) / sizeof(argv[0]) - 1, (char **)argv);
+	cf->unset("#");
 	cf->toFile("out3.cf");
 	ZtString out3;
 	out3 << *cf;
@@ -169,7 +171,9 @@ int main()
 	  "--key4 "
 	  "-D "
 	  "--key7:foo=bar "
+	  "--key8=Cartman "
 	  "Arg1");
+	cf->unset("#");
 	cf->toFile("out4.cf");
 	ZtString out4;
 	out4 << *cf;
@@ -186,7 +190,8 @@ int main()
 	"key4=\"# value4\":"
 	"key5=\"# k51\",k5``2,\"k 53,\",k54` ,k55:"
 	"key6={a=b:c=d`}}:"
-	"key7={foo=bar{bah=1}}";
+	"key7={foo=bar{bah=1}}:"
+	"key8=Cartman";
 
 #ifdef _WIN32
       _putenv(env);

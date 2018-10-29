@@ -57,9 +57,7 @@ public:
       static_cast<App *>(self)->process_(link, msg);
     };
   }
-  ZuInline void wake() {
-    puts("GOT HERE"); fflush(stdout);
-  }
+  ZuInline void wake() { }
 
   // Tx
   void sent(MxAnyLink *, MxQMsg *) { }
@@ -159,9 +157,6 @@ public:
   }
   bool resend_(MxQMsg *msg, bool more) { return true; }
   void abort_(MxQMsg *msg) { }
-
-  // void loaded_(MxQMsg *msg) { }
-  // void unloaded_(MxQMsg *msg) { }
 
   bool sendGap_(const MxQueue::Gap &gap, bool more) { return true; }
   bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }

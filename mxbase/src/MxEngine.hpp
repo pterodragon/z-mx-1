@@ -139,9 +139,13 @@ protected:
   MxAnyLink(MxID id);
 
 public:
-  ZuInline int state(unsigned *reconnects = 0) const {
+  ZuInline int state() const {
     ZmReadGuard<ZmLock> guard(m_stateLock);
-    if (reconnects) *reconnects = m_reconnects;
+    return m_state;
+  }
+  ZuInline int state(unsigned *reconnects) const {
+    ZmReadGuard<ZmLock> guard(m_stateLock);
+    *reconnects = m_reconnects;
     return m_state;
   }
 
@@ -163,12 +167,6 @@ protected:
   void reconnect();
 
   virtual ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
-
-  template <typename Impl, typename L>
-  inline auto stateLocked(L &&l) {
-    ZmGuard<ZmLock> guard(m_stateLock);
-    return l(static_cast<Impl *>(this), m_state);
-  }
 
 private:
   void up_(bool enable);
@@ -613,8 +611,8 @@ public:
   inline void init(MxEngine *engine,
       MxSeqNo rxSeqNo = MxSeqNo(), MxSeqNo txSeqNo = MxSeqNo()) {
     Base::init(engine);
-    Rx::init(rxSeqNo);
-    Tx::init(txSeqNo);
+    this->rxInit(rxSeqNo);
+    this->txInit(txSeqNo);
   }
 
   ZuInline void process(MxQMsg *msg) {

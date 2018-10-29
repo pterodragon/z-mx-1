@@ -84,8 +84,9 @@ struct MxQMsgData {
     return *static_cast<T *>(payload->ptr());
   }
 
-  ZuInline void load(MxID linkID, MxSeqNo seqNo) {
+  ZuInline void load(MxID linkID, MxSession session, MxSeqNo seqNo) {
     id.linkID = linkID;
+    id.session = session;
     id.seqNo = seqNo;
   }
 
@@ -145,7 +146,7 @@ public:
 
   ZuInline MxQueueRx() : m_queue(MxSeqNo()) { }
   
-  ZuInline void init(MxSeqNo seqNo) { m_queue.head(seqNo); }
+  ZuInline void rxInit(MxSeqNo seqNo) { m_queue.head(seqNo); }
 
   ZuInline const App &app() const { return *static_cast<const App *>(this); }
   ZuInline App &app() { return *static_cast<App *>(this); }
@@ -242,9 +243,10 @@ protected:
 public:
   ZuInline MxQueueTx() : m_queue(MxSeqNo()) { }
 
-  ZuInline void init(MxSeqNo seqNo) {
+  ZuInline void txInit(MxSeqNo seqNo) {
+    m_session = MxNewSession();
     m_seqNo = seqNo;
-    m_queue.head(seqNo);
+    m_queue.head(m_seqNo = seqNo);
   }
 
   ZuInline const App &app() const { return static_cast<const App &>(*this); }
@@ -252,6 +254,8 @@ public:
 
   ZuInline const MxQueue &txQueue() const { return m_queue; }
   ZuInline MxQueue &txQueue() { return m_queue; }
+
+  ZuInline MxSession session() const { return m_session; }
 
   ZuInline void send() { Tx::send(); }
   void send(MxQMsg *msg) {
@@ -263,7 +267,7 @@ public:
 	return;
       }
     }
-    msg->load(app().id(), m_seqNo++);
+    msg->load(app().id(), m_session, m_seqNo++);
     app().loaded_(msg);
     Tx::send(msg);
   }
@@ -285,7 +289,8 @@ public:
     }
   }
 
-  inline void txReset(MxSeqNo seqNo = MxSeqNo()) {
+  ZuInline void txReset(MxSeqNo seqNo = MxSeqNo()) {
+    m_session = MxNewSession();
     Tx::txReset(m_seqNo = seqNo);
   }
 
@@ -322,6 +327,7 @@ protected:
 
 private:
 
+  MxSession	m_session;
   MxSeqNo	m_seqNo;
   MxQueue	m_queue;
 

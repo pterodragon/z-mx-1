@@ -1846,7 +1846,7 @@ void ZiConnection::close_1()
   
   m_txUp = false;
 
-  m_mx->rxInvoke(ZmFn<>([](ZiConnection *self) { self->close_2(); }, this));
+  m_mx->rxInvoke([this]() { this->close_2(); });
 }
 
 void ZiConnection::close_2()
@@ -2004,7 +2004,7 @@ void ZiMultiplex::stop(bool drain)
   m_stopping = &stopping;
   m_drain = drain;
 
-  rxInvoke(ZmFn<>([](ZiMultiplex *self) { self->stop_1(); }, this));
+  rxInvoke([this]() { this->stop_1(); });
 
   stopping.wait();
 

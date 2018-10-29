@@ -30,6 +30,8 @@
 #endif
 #endif
 
+#include <iostream>
+
 #include <ZmSingleton.hpp>
 #include <ZmSpecific.hpp>
 #include <ZmTopology.hpp>
@@ -281,4 +283,9 @@ void ZmThread::info(InfoFn fn)
     c->info(info);
     fn(info);
   });
+}
+
+void ZmThread::dump()
+{
+  std::cerr << ZmThread::csv() << std::flush;
 }

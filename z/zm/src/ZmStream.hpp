@@ -68,7 +68,7 @@ private:
   ZmFn<>			m_lengthFn;
   ZmFn<char *, unsigned>	m_printFn;
 };
-template <> struct ZuPrint<ZmStreamBuf> : public ZuPrintBuffer<ZmStreamBuf> {
+template <> struct ZuPrint<ZmStreamBuf> : public ZuPrintBuffer {
   ZuInline static unsigned length(const ZmStreamBuf &b) {
     return b.length();
   }

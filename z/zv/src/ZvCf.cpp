@@ -845,6 +845,13 @@ ZtArray<ZtString> *ZvCf::setMultiple(ZuString fullKey)
   return &node->m_values;
 }
 
+void ZvCf::unset(ZuString fullKey)
+{
+  ZuString key;
+  ZmRef<ZvCf> self = scope(fullKey, key, 1);
+  self->m_tree.del(key);
+}
+
 ZmRef<ZvCf> ZvCf::subset(ZuString key, bool create, bool required)
 {
   ZmRef<ZvCf> self = this;

@@ -1416,7 +1416,7 @@ private:
   uint8_t	*data;
   unsigned	length;
 };
-template <> struct ZuPrint<ZtHexDump> : public ZuPrintDelegate<ZtHexDump> {
+template <> struct ZuPrint<ZtHexDump> : public ZuPrintDelegate {
   ZuInline static void print(ZmStream &s, const ZtHexDump &d) {
     d.print(s);
   }
@@ -1432,6 +1432,6 @@ template <> struct ZuPrint<ZtHexDump> : public ZuPrintDelegate<ZtHexDump> {
 #endif
 
 // generic printing
-template <> struct ZuPrint<ZtString> : public ZuPrintString<ZtString> { };
+template <> struct ZuPrint<ZtString> : public ZuPrintString { };
 
 #endif /* ZtString_HPP */

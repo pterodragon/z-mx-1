@@ -376,6 +376,12 @@ public:
 
   ZuInline const char *id() const { return m_id; }
   ZuInline unsigned nThreads() const { return m_nThreads; }
+  ZuInline unsigned nWorkers() const { return m_nWorkers; }
+  ZuInline int workerID(unsigned i) const {
+    if (ZuLikely(i < m_nWorkers))
+      return (m_workers[i] - &m_threads[0]) + 1;
+    return -1;
+  }
   ZuInline unsigned stackSize() const { return m_stackSize; }
   ZuInline unsigned priority() const { return m_priority; }
   ZuInline unsigned partition() const { return m_partition; }

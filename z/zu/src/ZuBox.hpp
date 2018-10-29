@@ -579,7 +579,7 @@ struct ZuCmp<ZuBox<T_, Cmp> > {
 };
 
 // generic printing
-template <typename B> struct ZuBoxPrint : public ZuPrintBuffer<B> {
+template <typename B> struct ZuBoxPrint : public ZuPrintBuffer {
   ZuInline static unsigned length(const B &b) {
     return b.length();
   }

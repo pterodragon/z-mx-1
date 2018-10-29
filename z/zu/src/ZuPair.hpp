@@ -196,7 +196,7 @@ auto ZuInline ZuMkPair(T1 &&t1, T2 &&t2) {
 }
 
 template <typename T1, typename T2>
-struct ZuPrint<ZuPair<T1, T2> > : public ZuPrintDelegate<ZuPair<T1, T2> > {
+struct ZuPrint<ZuPair<T1, T2> > : public ZuPrintDelegate {
   template <typename S>
   inline static void print(S &s, const ZuPair<T1, T2> &p) {
     s << p.p1() << ':' << p.p2();

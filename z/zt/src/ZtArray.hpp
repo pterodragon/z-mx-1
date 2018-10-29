@@ -1179,7 +1179,7 @@ struct ZuTraits<ZtArray<Elem_, Cmp> > :
 };
 
 // generic printing
-template <class Cmp> struct ZuPrint<ZtArray<char, Cmp> > :
-  public ZuPrintString<ZtArray<char, Cmp> > { };
+template <class Cmp>
+struct ZuPrint<ZtArray<char, Cmp> > : public ZuPrintString { };
 
 #endif /* ZtArray_HPP */

@@ -35,6 +35,7 @@
 #include <ZuHash.hpp>
 #include <ZuBox.hpp>
 #include <ZuStringN.hpp>
+#include <ZuPrint.hpp>
 
 #include <ZmPlatform.hpp>
 #include <ZmBitmap.hpp>
@@ -278,6 +279,12 @@ public:
     info.cpuset = m_cpuset;
   }
 
+  template <typename S> inline void print(S &s) const {
+    ZmThreadName name;
+    this->name(name);
+    s << name << " (" << ZuBoxed(tid()) << ") [" << m_cpuset << "]";
+  }
+
 private:
   inline static ZmThreadContext *self(ZmThreadContext *c) {
     return ZmSpecific<ZmThreadContext>::instance(c);
@@ -299,6 +306,17 @@ private:
   ZmBitmap	m_cpuset;
 
   void		*m_result;
+};
+
+template <> struct ZuPrint<ZmThreadContext> : public ZuPrintFn { };
+template <> struct ZuPrint<ZmThreadContext *> : public ZuPrintDelegate {
+  template <typename S>
+  inline static void print(S &s, const ZmThreadContext *v) {
+    if (!v)
+      s << "null";
+    else
+      s << *v;
+  }
 };
 
 #define ZmSelf() (ZmThreadContext::self())
@@ -355,8 +373,8 @@ public:
   typedef ZmFn<const ZmThreadInfo &> InfoFn;
   static void info(InfoFn fn);
 
-  template <class S> struct CSV {
-    CSV(S &stream) : m_stream(stream) { 
+  template <class S> struct CSV_ {
+    CSV_(S &stream) : m_stream(stream) { 
       m_stream << "name,id,tid,main,detached,stackSize,priority,cpuset\n";
     }
     void print(const ZmThreadInfo &info) {
@@ -375,10 +393,14 @@ public:
   private:
     S	&m_stream;
   };
-  template <typename S> static void csv(S &stream) {
-    CSV<S> csv(stream);
-    ZmThread::info(InfoFn::Member<&CSV<S>::print>::fn(&csv));
-  }
+  struct CSV {
+    template <typename S> void print(S &s) const {
+      CSV_<S> csv(s);
+      ZmThread::info(InfoFn::Member<&CSV_<S>::print>::fn(&csv));
+    }
+  };
+  inline static CSV csv() { return CSV(); }
+  static void dump();
 
 private:
   ZmRef<Context>	m_context;
@@ -387,6 +409,8 @@ private:
 template <> struct ZuTraits<ZmThread> : public ZuGenericTraits<ZmThread> {
   enum { IsComparable = 1, IsHashable = 1 };
 };
+
+template <> struct ZuPrint<ZmThread::CSV> : public ZuPrintFn { };
 
 #ifdef _MSC_VER
 #pragma warning(pop)

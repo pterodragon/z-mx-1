@@ -640,8 +640,8 @@ struct ZuTraits<ZuArrayN<T_, N, Cmp> > :
 };
 
 // generic printing
-template <unsigned N> struct ZuPrint<ZuArrayN<char, N> > :
-  public ZuPrintString<ZuArrayN<char, N> > { };
+template <unsigned N>
+struct ZuPrint<ZuArrayN<char, N> > : public ZuPrintString { };
 
 #ifdef _MSC_VER
 #pragma warning(pop)

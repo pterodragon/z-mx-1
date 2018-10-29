@@ -1156,32 +1156,29 @@ public:
 
 inline ZtDate ZtDateNow() { return ZtDate(ZtDate::Now); }
 
-template <int Prec, class Null> struct ZuPrint<ZtDateFmt::FIX<Prec, Null> > :
-    public ZuPrintDelegate<ZtDateFmt::FIX<Prec, Null> > {
+template <int Prec, class Null>
+struct ZuPrint<ZtDateFmt::FIX<Prec, Null> > : public ZuPrintDelegate {
   template <typename S>
   ZuInline static void print(S &s, const ZtDateFmt::FIX<Prec, Null> &fmt) {
     fmt.ptr()->fixPrint(s, fmt);
   }
 };
 
-template <> struct ZuPrint<ZtDateFmt::CSV> :
-    public ZuPrintDelegate<ZtDateFmt::CSV> {
+template <> struct ZuPrint<ZtDateFmt::CSV> : public ZuPrintDelegate {
   template <typename S>
   ZuInline static void print(S &s, const ZtDateFmt::CSV &fmt) {
     fmt.ptr()->csvPrint(s, fmt);
   }
 };
 
-template <> struct ZuPrint<ZtDateFmt::ISO> :
-    public ZuPrintDelegate<ZtDateFmt::ISO> {
+template <> struct ZuPrint<ZtDateFmt::ISO> : public ZuPrintDelegate {
   template <typename S>
   ZuInline static void print(S &s, const ZtDateFmt::ISO &fmt) {
     fmt.ptr()->isoPrint(s, fmt);
   }
 };
 
-template <> struct ZuPrint<ZtDateFmt::Strftime> :
-    public ZuPrintDelegate<ZtDateFmt::Strftime> {
+template <> struct ZuPrint<ZtDateFmt::Strftime> : public ZuPrintDelegate {
 private:
   template <typename Boxed>
   inline static auto vfmt(ZuVFmt &fmt,

@@ -361,7 +361,7 @@ private:
   Zdb_			*m_db;
   unsigned		m_writeCount;	// guarded by Zdb_::m_lock
 };
-template <> struct ZuPrint<ZdbAnyPOD> : public ZuPrintDelegate<ZdbAnyPOD> {
+template <> struct ZuPrint<ZdbAnyPOD> : public ZuPrintDelegate {
   template <typename S>
   inline static void print(S &s, const ZdbAnyPOD &v) {
     s << ZtHexDump("", v.ptr(), v.size());
@@ -518,8 +518,7 @@ private:
 template <typename T, class HeapID = ZdbPOD_HeapID>
 using ZdbPOD = ZdbPOD_<T, ZmHeap<HeapID, sizeof(ZdbPOD_<T, ZuNull>)> >;
 template <typename T, class HeapID>
-struct ZuPrint<ZdbPOD<T, HeapID> > :
-    public ZuPrintDelegate<ZdbPOD<T, HeapID> > {
+struct ZuPrint<ZdbPOD<T, HeapID> > : public ZuPrintDelegate {
   template <typename S>
   inline static void print(S &s, const ZdbPOD<T, HeapID> &v) { s << v.data(); }
 };
@@ -790,7 +789,7 @@ inline void Zdb_Lock_<Base>::unlock()
 
 typedef ZtArray<ZuBox<ZdbRN> > Zdb_DBState;
 
-template <> struct ZuPrint<Zdb_DBState> : public ZuPrintDelegate<Zdb_DBState> {
+template <> struct ZuPrint<Zdb_DBState> : public ZuPrintDelegate {
   template <typename P, typename S>
   inline static void print(S &s, const P &p) {
     unsigned i = 0, n = p.length();
@@ -918,19 +917,19 @@ friend struct IDAccessor;
   Zdb_DBState		m_dbState;	// ''
   bool			m_voted;	// ''
 };
-template <> struct ZuPrint<Zdb_Host> : public ZuPrintDelegate<Zdb_Host> {
+template <> struct ZuPrint<Zdb_Host> : public ZuPrintDelegate {
   template <typename S>
   inline static void print(S &s, const Zdb_Host &v) {
     s << "[ID:" << v.id() << " PRI:" << v.priority() << " V:" << v.voted() <<
       " S:" << v.state() << "] " << v.dbState();
   }
 };
-template <> struct ZuPrint<Zdb_Host *> : public ZuPrintDelegate<Zdb_Host *> {
+template <> struct ZuPrint<Zdb_Host *> : public ZuPrintDelegate {
   typedef Zdb_Host *Zdb_HostPtr;
   template <typename S>
   inline static void print(S &s, const Zdb_HostPtr &v) {
     if (!v)
-      s << " null";
+      s << "null";
     else
       s << *v;
   }

@@ -40,13 +40,13 @@
 template <typename> struct ZuPrint {
   enum { OK = 0, String = 0, Delegate = 0, Buffer = 0 };
 };
-template <typename> struct ZuPrintString {
+struct ZuPrintString {
   enum { OK = 1, String = 1, Delegate = 0, Buffer = 0 };
 };
-template <typename> struct ZuPrintDelegate {
+struct ZuPrintDelegate {
   enum { OK = 1, String = 0, Delegate = 1, Buffer = 0 };
 };
-template <typename> struct ZuPrintBuffer {
+struct ZuPrintBuffer {
   enum { OK = 1, String = 0, Delegate = 0, Buffer = 1 };
 };
 struct ZuPrintFn {

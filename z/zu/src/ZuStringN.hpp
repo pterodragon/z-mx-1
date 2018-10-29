@@ -488,8 +488,8 @@ template <unsigned N> struct ZuTraits<ZuStringN<N> > :
     public ZuStringN_Traits<ZuStringN<N> > { };
 
 // generic printing
-template <unsigned N> struct ZuPrint<ZuStringN<N> > :
-  public ZuPrintString<ZuStringN<N> > { };
+template <unsigned N>
+struct ZuPrint<ZuStringN<N> > : public ZuPrintString { };
 
 // ZuWStringN<N> can be cast and used as ZuWStringN<>
 

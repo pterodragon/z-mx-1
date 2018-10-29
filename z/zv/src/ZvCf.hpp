@@ -395,6 +395,7 @@ public:
       unsigned minimum, unsigned maximum, bool required = false);
   void set(ZuString key, ZuString val);
   ZtArray<ZtString> *setMultiple(ZuString key);
+  void unset(ZuString key);
   ZmRef<ZvCf> subset(ZuString key, bool create, bool required = false);
   void subset(ZuString key, ZvCf *cf);
 

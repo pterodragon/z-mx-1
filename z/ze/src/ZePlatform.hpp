@@ -252,7 +252,7 @@ typedef ZmHeap<ZeEvent_HeapID, sizeof(ZeEvent_<ZuNull>)> ZeEvent_Heap;
 typedef ZeEvent_<ZeEvent_Heap> ZeEvent;
 typedef ZeEvent::MessageFn ZeMessageFn;
 template <> struct ZuPrint<ZeEvent::Message> : public ZuPrintFn { };
-template <> struct ZuPrint<ZeEvent> : public ZuPrintDelegate<ZeEvent> {
+template <> struct ZuPrint<ZeEvent> : public ZuPrintDelegate {
   template <typename S>
   ZuInline static void print(S &s, const ZeEvent &e) { s << e.message(); }
 };

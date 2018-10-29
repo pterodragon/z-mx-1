@@ -198,7 +198,7 @@ namespace ZJNI {
   // Java String -> C++ any string
   template <typename Alloc, typename Buf, typename SetLen>
   inline auto j2s(JNIEnv *env, jstring s_,
-      Alloc &&alloc, Buf &&buf, SetLen &&setLen) {
+      Alloc alloc, Buf buf, SetLen setLen) {
     if (ZuUnlikely(!s_)) return alloc(0);
     unsigned n = env->GetStringLength(s_);
     if (ZuUnlikely(!n)) return alloc(0);

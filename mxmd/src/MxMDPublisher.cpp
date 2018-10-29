@@ -152,6 +152,8 @@ void MxMDPubLink::connect()
 {
   linkINFO("MxMDPubLink::connect(" << id << ')');
 
+  reset(0, 0);
+
   {
     Guard connGuard(m_connLock);
     m_tcpTbl = new TCPTbl(ZmHashParams().bits(4).loadFactor(1.0).cBits(3).
@@ -229,9 +231,7 @@ void MxMDPubLink::tcpListen()
 	    link->disconnected();
 	}, this),
       ZiConnectFn([](MxMDPubLink *link, const ZiCxnInfo &ci) -> uintptr_t {
-	  if (link->stateLocked<MxMDPubLink>(
-		[](MxMDPubLink *, int state) -> bool {
-		  return state != MxLinkState::Up; }))
+	  if (link->state() != MxLinkState::Up)
 	    return 0;
 	  return (uintptr_t)(new TCP(link, ci));
 	}, this),
@@ -390,9 +390,8 @@ void MxMDPubLink::udpConnect()
   }
   mx()->udp(
       ZiConnectFn([](MxMDPubLink *link, const ZiCxnInfo &ci) -> uintptr_t {
-	  if (link->stateLocked<MxMDPubLink>(
-		[](MxMDPubLink *, int state) -> bool {
-		  return state != MxLinkState::Connecting; }))
+	  // link state will not be Up until UDP has connected
+	  if (link->state() != MxLinkState::Connecting)
 	    return 0;
 	  return (uintptr_t)(new UDP(link, ci));
 	}, this),
@@ -406,7 +405,7 @@ void MxMDPubLink::udpConnect()
 }
 MxMDPubLink::UDP::UDP(MxMDPubLink *link, const ZiCxnInfo &ci) :
     ZiConnection(link->mx(), ci), m_link(link),
-    m_state(State::Receiving) { }
+    m_state(State::Sending) { }
 void MxMDPubLink::UDP::connected(ZiIOContext &io)
 {
   m_link->udpConnected(this, io);
@@ -481,7 +480,8 @@ void MxMDPubLink::UDP::process(MxQMsg *msg, ZiIOContext &io)
     msg->addr = io.addr;
     const Frame &frame = msg->as<Frame>();
     if (ZuUnlikely(frame.type != Type::ResendReq)) {
-      udpERROR(this, &io, "UDP unexpected message type");
+      // ignore to prevent (probably accidental) DOS
+      // udpERROR(this, &io, "UDP unexpected message type");
       return;
     }
     m_link->udpReceived(frame.as<ResendReq>());
@@ -527,8 +527,8 @@ void *MxMDPubLink::TCP::out(void *ptr, unsigned length, unsigned type,
 {
   Frame *frame = new (ptr) Frame(
       (uint16_t)length, (uint16_t)type,
-      (uint64_t)shardID, (uint64_t)0,
-      stamp.sec(), (uint32_t)stamp.nsec());
+      (uint32_t)m_link->session(), (uint64_t)0,
+      (uint64_t)shardID, stamp.sec(), (uint32_t)stamp.nsec());
   return frame->ptr();
 }
 void MxMDPubLink::TCP::push2()
@@ -572,10 +572,6 @@ void MxMDPublisher::detach()
 
   mx()->del(&m_ackTimer);
 
-  mx()->wakeFn(rxThread(), ZmFn<>());
-
-  wake();
-
   if (!m_ring) return; // paranoia
 
   m_ring->detach();
@@ -590,9 +586,22 @@ void MxMDPublisher::wake()
 
 void MxMDPublisher::recv()
 {
+  if (ZuUnlikely(!m_ring)) return;
+  switch ((int)state()) {
+    case MxEngineState::Starting:
+    case MxEngineState::Running:
+      recv_();
+      break;
+    default:
+      mx()->wakeFn(rxThread(), ZmFn<>());
+      break;
+  }
+}
+
+void MxMDPublisher::recv_()
+{
   using namespace MxMDStream;
   const Frame *frame;
-  if (ZuUnlikely(!m_ring)) return;
   if (ZuUnlikely(!(frame = m_ring->shift()))) {
     if (ZuLikely(m_ring->readStatus() == Zi::EndOfFile)) {
       allLinks<MxMDPubLink>([](MxMDPubLink *link) -> uintptr_t {
@@ -635,7 +644,7 @@ void MxMDPublisher::recv()
       break;
   }
 again:
-  rxRun_(ZmFn<>{[](MxMDPublisher *pub) { pub->recv(); }, this});
+  rxRun_(ZmFn<>{[](MxMDPublisher *pub) { pub->recv_(); }, this});
 }
 
 MxEngineApp::ProcessFn MxMDPublisher::processFn()
@@ -659,16 +668,18 @@ void MxMDPubLink::loaded_(MxQMsg *msg)
 {
   using namespace MxMDStream;
   Frame &frame = msg->as<Frame>();
-  frame.linkID = msg->id.linkID;
+  frame.session = msg->id.session;
   frame.seqNo = msg->id.seqNo;
+  frame.linkID = msg->id.linkID;	// same as id()
 }
 
 void MxMDPubLink::unloaded_(MxQMsg *msg) // unused
 {
   using namespace MxMDStream;
   Frame &frame = msg->as<Frame>();
-  frame.linkID = 0;
+  frame.session = 0;
   frame.seqNo = 0;
+  frame.linkID = 0;
 }
 
 bool MxMDPubLink::send_(MxQMsg *msg, bool)
@@ -701,11 +712,9 @@ bool MxMDPubLink::resendGap_(const MxQueue::Gap &gap, bool more)
 void MxMDPublisher::ack()
 {
   if (state() != MxEngineState::Running) return;
-
   allLinks<MxMDPubLink>(
       [maxQueueSize = maxQueueSize()](MxMDPubLink *link) -> uintptr_t {
 	link->ack(); return 0; });
-
   mx()->run(txThread(), ZmFn<>{[](MxMDPublisher *pub) {
 	pub->ack();
       }, this}, ZmTimeNow(ackInterval()), &m_ackTimer);
@@ -754,25 +763,28 @@ void MxMDPubLink::status(ZtArray<char> &out)
     " Password: " << m_partition->tcpPassword << '\n';
 
   out << "  State: " << MxLinkState::name(state());
-  out << "\n  TCP: ";
+  out << '\n';
   if (ZmRef<TCPTbl> tcpTbl = m_tcpTbl) {
     auto i = tcpTbl->readIterator();
     while (TCP *tcp = i.iterateKey()) {
-      // FIXME - print TCP remote addr
+      const ZiCxnInfo &info = tcp->info();
+      out << "  TCP " <<
+	info.remoteIP << ':' << ZuBoxed(info.remotePort) << ' ';
       switch (tcp->state()) {
 	case TCP::State::Login: out << "Login"; break;
 	case TCP::State::Sending: out << "Sending"; break;
 	case TCP::State::Disconnect: out << "Disconnect"; break;
 	default: out << "Unknown"; break;
       }
+      out << '\n';
     }
   } else {
-    out << "Disconnected";
+    out << "  TCP Disconnected\n";
   }
-  out << "  UDP: ";
+  out << "  UDP ";
   if (ZmRef<UDP> udp = m_udp) {
     switch (udp->state()) {
-      case UDP::State::Receiving: out << "Receiving"; break;
+      case UDP::State::Sending: out << "Sending"; break;
       case UDP::State::Disconnect: out << "Disconnect"; break;
       default: out << "Unknown"; break;
     }

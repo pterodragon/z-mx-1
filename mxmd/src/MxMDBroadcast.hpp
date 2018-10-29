@@ -111,6 +111,7 @@ private:
   MxMDCore		*m_core = 0;
   ZvRingParams		m_params;
   Lock			m_lock;
+    MxSession		  m_session;
     MxSeqNo		  m_seqNo = 0;
     unsigned		  m_openCount = 0;
     ZmRef<Ring>		  m_ring;

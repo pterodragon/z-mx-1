@@ -218,8 +218,7 @@ public:
 	!snapshotL2Side(snapshot, ob->bids()) ||
 	!snapshotL2Side(snapshot, ob->asks());
     }) || !MxMDStream::endOfSnapshot(snapshot, id, seqNo));
-    if (!ok) seqNo = 0;
-    MxMDStream::endOfSnapshot(m_broadcast, id, seqNo);
+    MxMDStream::endOfSnapshot(m_broadcast, id, seqNo, ok);
     return ok;
   }
 private:

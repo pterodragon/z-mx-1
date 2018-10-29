@@ -34,12 +34,13 @@
 
 #pragma pack(push, 1)
 
-// used for capture/replay of messages
+// general purpose header
 struct MxMDFrame {
   uint16_t	len = 0;	// exclusive of MxMDFrame
   uint16_t	type = 0;
-  uint64_t	linkID = 0;	// shard ID when used for ITC/IPC
+  uint32_t	session = 0;	// scopes seqNo
   uint64_t  	seqNo = 0;
+  uint64_t	linkID = 0;	// shard ID when used by MxMD
   int64_t	sec = 0;
   uint32_t	nsec = 0;
 };

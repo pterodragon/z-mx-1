@@ -55,7 +55,7 @@ public:
 
   MxMDCore *core() const;
 
-  void init(MxMDCore *core, ZvCf *cf);
+  void init(MxMDCore *core, ZmRef<ZvCf> cf);
   void final();
 
   bool replay(ZtString path,

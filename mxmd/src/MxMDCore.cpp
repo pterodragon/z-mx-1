@@ -163,10 +163,11 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
   else {
     cf->fromString(
       "mx {\n"
-	"nThreads 4\n"		// thread IDs are 1-based
-	"rxThread 1\n"		// I/O Rx
-	"txThread 2\n"		// I/O Tx
-	"isolation 1-3\n"	// leave thread 4 for general purpose
+      "  id MxMD\n"
+      "  nThreads 4\n"		// thread IDs are 1-based
+      "  rxThread 1\n"		// I/O Rx
+      "  txThread 2\n"		// I/O Tx
+      "  isolation 1-3\n"	// leave thread 4 for general purpose
       "}\n"
       "record {\n"
       "  rxThread 3\n"		// Record Rx - must be distinct from I/O Rx
@@ -431,17 +432,22 @@ void MxMDCore::stop()
   if (m_subscriber) {
     raise(ZeEVENT(Info, "stopping subscriber..."));
     m_subscriber->stop();
+    // wait for stop() to complete
+    thread_local ZmSemaphore sem;
+    m_subscriber->rxInvoke([sem = &sem]() { sem->post(); });
+    sem.wait();
   }
   if (m_publisher) {
     raise(ZeEVENT(Info, "stopping publisher..."));
     m_publisher->stop();
+    // wait for stop() to complete
+    thread_local ZmSemaphore sem;
+    m_publisher->rxInvoke([sem = &sem]() { sem->post(); });
+    sem.wait();
   }
 
   stopReplaying();
   stopRecording();
-
-  m_broadcast.eof();
-  m_broadcast.close();
 
   if (m_cmd) {
     raise(ZeEVENT(Info, "stopping command server..."));

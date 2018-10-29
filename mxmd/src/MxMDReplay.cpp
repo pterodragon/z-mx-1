@@ -23,13 +23,13 @@
 
 #include <MxMDReplay.hpp>
 
-void MxMDReplay::init(MxMDCore *core, ZvCf *cf)
+void MxMDReplay::init(MxMDCore *core, ZmRef<ZvCf> cf)
 {
   Mx *mx = core->mx();
 
   if (!cf) cf = new ZvCf();
 
-  if (!cf->get("id")) cf->set("id", "replay");
+  cf->set("id", "replay");
 
   MxEngine::init(core, this, mx, cf);
 
@@ -62,6 +62,9 @@ ZtString MxMDReplay::stopReplaying()
   if (ZuUnlikely(!m_link)) return ZtString();
   ZtString path = m_link->stopReplaying();
   stop();
+  thread_local ZmSemaphore sem;
+  rxInvoke([sem = &sem]() { sem->post(); });
+  sem.wait();
   return path;
 }
 
@@ -81,20 +84,18 @@ bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
   Guard guard(m_lock);
   down();
   if (!path) return true;
-  engine()->rxInvoke(ZmFn<>{
-      [this, path = ZuMv(path), begin, filter]() {
+  engine()->rxInvoke([this, path = ZuMv(path), begin, filter]() mutable {
 	m_path = ZuMv(path);
 	m_replayNext = !begin ? ZmTime() : begin.zmTime();
 	m_filter = filter;
-      } });
+      });
   up();
   int state;
   thread_local ZmSemaphore sem;
-  engine()->rxInvoke(ZmFn<>{
-      [&state, sem = &sem](MxMDReplayLink *link) {
-	  state = link->state();
-	  sem->post();
-	}, this});
+  engine()->rxInvoke([this, &state, sem = &sem]() {
+	state = this->state();
+	sem->post();
+      });
   sem.wait();
   return state != MxLinkState::Failed;
 }
@@ -102,11 +103,9 @@ bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
 ZtString MxMDReplayLink::stopReplaying()
 {
   ZtString path;
-  {
-    Guard guard(m_lock);
-    path = ZuMv(m_path);
-    down();
-  }
+  Guard guard(m_lock);
+  path = ZuMv(m_path);
+  down();
   return path;
 }
 

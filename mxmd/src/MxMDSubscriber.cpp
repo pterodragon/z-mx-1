@@ -208,9 +208,8 @@ void MxMDSubLink::tcpConnect()
 
   mx()->connect(
       ZiConnectFn([](MxMDSubLink *link, const ZiCxnInfo &ci) -> uintptr_t {
-	  if (link->stateLocked<MxMDSubLink>(
-		[](MxMDSubLink *, int state) -> bool {
-		  return state != MxLinkState::Connecting; }))
+	  // link state will not be Up until TCP+UDP has connected, login ackd
+	  if (link->state() != MxLinkState::Connecting)
 	    return 0;
 	  return (uintptr_t)(new TCP(link, ci));
 	}, this),
@@ -283,7 +282,8 @@ ZmRef<MxQMsg> MxMDSubLink::tcpLogin()
   using namespace MxMDStream;
   ZuRef<Msg> msg = new Msg();
   Frame *frame = new (msg->ptr()) Frame(
-      (uint16_t)sizeof(Login), (uint16_t)Login::Code, (uint64_t)id());
+      (uint16_t)sizeof(Login), (uint16_t)Login::Code,
+      (uint32_t)0, (uint64_t)0, (uint64_t)id());
   new (frame->ptr()) Login{m_partition->tcpUsername, m_partition->tcpPassword};
   unsigned msgLen = msg->length();
   return new MxQMsg(ZuMv(msg), msgLen);
@@ -380,9 +380,8 @@ void MxMDSubLink::udpConnect()
   }
   mx()->udp(
       ZiConnectFn([](MxMDSubLink *link, const ZiCxnInfo &ci) -> uintptr_t {
-	  if (link->stateLocked<MxMDSubLink>(
-		[](MxMDSubLink *, int state) -> bool {
-		  return state != MxLinkState::Connecting; }))
+	  // link state will not be Up until TCP+UDP has connected, login ackd
+	  if (link->state() != MxLinkState::Connecting)
 	    return 0;
 	  return (uintptr_t)(new UDP(link, ci));
 	}, this),
@@ -513,7 +512,8 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
   using namespace MxMDStream;
   ZuRef<Msg> msg = new Msg();
   Frame *frame = new (msg->ptr()) Frame(
-      (uint16_t)sizeof(ResendReq), (uint16_t)ResendReq::Code, (uint64_t)id());
+      (uint16_t)sizeof(ResendReq), (uint16_t)ResendReq::Code,
+      (uint32_t)0, (uint64_t)0, (uint64_t)id());
   new (frame->ptr()) ResendReq{now.key(), now.length()};
   unsigned msgLen = msg->length();
   ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(msg), msgLen);

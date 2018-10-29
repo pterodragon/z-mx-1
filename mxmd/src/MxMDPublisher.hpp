@@ -109,6 +109,7 @@ public:
   void detach();
   void wake();
   void recv();
+  void recv_();
   void ack();
 
   // snapshot
@@ -219,7 +220,7 @@ friend class UDP;
   public:
     struct State {
       enum _ {
-	Receiving = 0,
+	Sending = 0,
 	Disconnect
       };
     };
@@ -263,10 +264,7 @@ public:
     return engine()->core();
   }
 
-  bool publish();
-  void stopPublishing();
-
-  ZmTime loginTimeout() const { return engine()->loginTimeout(); }
+  ZuInline ZmTime loginTimeout() const { return engine()->loginTimeout(); }
 
   // MxAnyLink virtual
   void update(ZvCf *);

@@ -170,7 +170,7 @@ void MxMDLibJNI::stop(JNIEnv *env, jobject obj)
 
 jboolean MxMDLibJNI::record(JNIEnv *env, jobject obj, jstring path)
 {
-  // (String) -> void
+  // (String) -> boolean
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return false;
   return md->record(ZJNI::j2s_ZtString(env, path));
@@ -178,7 +178,7 @@ jboolean MxMDLibJNI::record(JNIEnv *env, jobject obj, jstring path)
 
 jstring MxMDLibJNI::stopRecording(JNIEnv *env, jobject obj)
 {
-  // () -> void
+  // () -> String
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
   return ZJNI::s2j(env, md->stopRecording());
@@ -187,7 +187,7 @@ jstring MxMDLibJNI::stopRecording(JNIEnv *env, jobject obj)
 jboolean MxMDLibJNI::replay(JNIEnv *env, jobject obj,
     jstring path, jobject begin, jboolean filter)
 {
-  // (String, Instant, boolean) -> void
+  // (String, Instant, boolean) -> boolean
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return false;
   return md->replay(
@@ -196,7 +196,7 @@ jboolean MxMDLibJNI::replay(JNIEnv *env, jobject obj,
 
 jstring MxMDLibJNI::stopReplaying(JNIEnv *env, jobject obj)
 {
-  // () -> void
+  // () -> String
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
   return ZJNI::s2j(env, md->stopReplaying());

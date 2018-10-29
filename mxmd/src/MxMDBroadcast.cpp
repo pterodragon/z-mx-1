@@ -72,8 +72,7 @@ void MxMDBroadcast::close()
 
 bool MxMDBroadcast::open_(Guard &guard)
 {
-  ++m_openCount;
-  if (m_ring) return true;
+  if (m_openCount++) return true;
   m_ring = new Ring(m_params);
   ZeError e;
   if (m_ring->open(Ring::Create | Ring::Read | Ring::Write, &e) < 0) {
@@ -88,6 +87,7 @@ bool MxMDBroadcast::open_(Guard &guard)
 	})));
     return false;
   }
+  m_session = MxNewSession();
   return true;
 }
 
@@ -108,36 +108,23 @@ void MxMDBroadcast::close__()
 void MxMDBroadcast::eof()
 {
   Guard guard(m_lock);
-  if (ZuUnlikely(!m_ring)) return;
-  m_openCount = 0;
-  m_ring->eof();
-  m_ring->close();
-  m_ring = 0;
+  if (ZuLikely(m_ring)) m_ring->eof();
 }
 
 void *MxMDBroadcast::push(unsigned size)
 {
   m_lock.lock();
   if (ZuUnlikely(!m_ring)) { m_lock.unlock(); return 0; }
-retry:
   if (void *ptr = m_ring->push(size)) return ptr;
   int i = m_ring->writeStatus();
-  if (ZuUnlikely(i == Zi::EndOfFile)) { // should never happen
-    m_ring->eof(false);
-    goto retry;
-  }
-  m_openCount = 0;
-  m_ring->eof();
-  m_ring->close();
-  m_ring = 0;
   m_lock.unlock();
-  if (i != Zi::NotReady)
-    m_core->raise(ZeEVENT(Error,
-      ([name = MxTxtString(m_params.name())](
-	  const ZeEvent &, ZmStream &s) {
-	s << '"' << name << "\": "
-	"IPC shared memory ring buffer overflow";
-      })));
+  if (ZuLikely(i == Zi::NotReady || i == Zi::EndOfFile)) return 0;
+  m_core->raise(ZeEVENT(Error,
+    ([name = MxTxtString(m_params.name())](
+	const ZeEvent &, ZmStream &s) {
+      s << '"' << name << "\": "
+      "IPC shared memory ring buffer overflow";
+    })));
   return 0;
 }
 
@@ -146,8 +133,8 @@ void *MxMDBroadcast::out(void *ptr, unsigned length, unsigned type,
 {
   Frame *frame = new (ptr) Frame(
       (uint16_t)length, (uint16_t)type,
-      (uint64_t)shardID, ++m_seqNo,
-      stamp.sec(), (uint32_t)stamp.nsec());
+      (uint32_t)m_session, ++m_seqNo,
+      (uint64_t)shardID, stamp.sec(), (uint32_t)stamp.nsec());
   return frame->ptr();
 }
 

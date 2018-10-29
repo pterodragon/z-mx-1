@@ -380,7 +380,8 @@ namespace MxMDStream {
   struct EndOfSnapshot { // end of snapshot
     enum { Code = Type::EndOfSnapshot };
     MxID		id;
-    MxSeqNo		seqNo; // 0 if snapshot failed
+    MxSeqNo		seqNo;
+    uint8_t		ok;
   };
 
   struct Login { // TCP login

@@ -1100,8 +1100,9 @@ uintptr_t MxMDLib::allSecurities(ZmFn<MxMDSecurity *> fn) const
   thread_local ZmSemaphore sem;
   for (unsigned i = 0, n = m_shards.length(); i < n; i++) {
     uintptr_t v;
-    m_shards[i]->run([shard = m_shards[i], sem = &sem, &v, fn]() {
-	v = shard->allSecurities(ZuMv(fn)); sem->post(); });
+    m_shards[i]->invoke(
+	[shard = m_shards[i], sem = &sem, &v, fn]() mutable {
+	  v = shard->allSecurities(ZuMv(fn)); sem->post(); });
     sem.wait();
     if (v) return v;
   }
@@ -1113,8 +1114,9 @@ uintptr_t MxMDLib::allOrderBooks(ZmFn<MxMDOrderBook *> fn) const
   thread_local ZmSemaphore sem;
   for (unsigned i = 0, n = m_shards.length(); i < n; i++) {
     uintptr_t v;
-    m_shards[i]->run([shard = m_shards[i], sem = &sem, &v, fn]() {
-	v = shard->allOrderBooks(ZuMv(fn)); sem->post(); });
+    m_shards[i]->invoke(
+	[shard = m_shards[i], sem = &sem, &v, fn]() mutable {
+	  v = shard->allOrderBooks(ZuMv(fn)); sem->post(); });
     sem.wait();
     if (v) return v;
   }
@@ -1175,13 +1177,10 @@ void MxMDLib::init_(void *cf_)
       m_shards[id] = new MxMDShard(this, id, tid);
     }
   } else {
-    m_shards.length(1);
-    for (unsigned tid = 1, n = mx->nThreads(); tid <= n; tid++)
-      if (tid != mx->rxThread() && tid != mx->txThread()) {
-	m_shards[0] = new MxMDShard(this, 0, tid);
-	break;
-      }
-    if (!m_shards[0]) throw ZtString("mx misconfigured - no worker threads");
+    int tid = mx->workerID(0);
+    if (tid < 0)
+      throw ZtString("mx misconfigured - no worker threads");
+    m_shards.push(new MxMDShard(this, 0, tid));
   }
 
   // Assumption: DST transitions do not occur while market is open

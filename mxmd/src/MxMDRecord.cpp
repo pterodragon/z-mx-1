@@ -70,6 +70,9 @@ ZtString MxMDRecord::stopRecording()
   if (ZuUnlikely(!m_link)) return ZtString();
   ZtString path = m_link->stopRecording();
   stop();
+  thread_local ZmSemaphore sem;
+  rxInvoke([sem = &sem]() { sem->post(); });
+  sem.wait();
   return path;
 }
 
@@ -78,31 +81,28 @@ bool MxMDRecLink::record(ZtString path)
   Guard guard(m_lock);
   down();
   if (!path) return true;
-  engine()->rxInvoke(ZmFn<>{
-      [this, path = ZuMv(path)]() { m_path = ZuMv(path); } });
+  engine()->rxInvoke([this, path = ZuMv(path)]() mutable {
+      m_path = ZuMv(path); });
   up();
   int state;
   thread_local ZmSemaphore sem;
-  engine()->rxInvoke(ZmFn<>{
-      [&state, sem = &sem](MxMDRecLink *link) {
-	  state = link->state();
-	  sem->post();
-	}, this});
+  engine()->rxInvoke([this, &state, sem = &sem]() {
+	state = this->state();
+	sem->post();
+      });
   sem.wait();
   return state != MxLinkState::Failed;
 }
 
 ZtString MxMDRecLink::stopRecording()
 {
+  Guard guard(m_lock);
   ZtString path;
   {
-    Guard guard(m_lock);
-    {
-      Guard fileGuard(m_fileLock);
-      path = ZuMv(m_path);
-    }
-    down();
+    Guard fileGuard(m_fileLock);
+    path = ZuMv(m_path);
   }
+  down();
   return path;
 }
 
@@ -130,6 +130,8 @@ void MxMDRecLink::reset(MxSeqNo rxSeqNo, MxSeqNo)
 
 void MxMDRecLink::connect()
 {
+  reset(0, m_seqNo = 0);
+
   ZtString path;
 
   {
@@ -195,10 +197,6 @@ void MxMDRecLink::disconnect()
 {
   MxMDBroadcast &broadcast = core()->broadcast();
 
-  wake();
-
-  mx()->wakeFn(engine()->rxThread(), ZmFn<>());
-
   broadcast.detach();
   broadcast.close();
 
@@ -241,9 +239,8 @@ void *MxMDRecLink::out(void *ptr, unsigned length, unsigned type,
 {
   using namespace MxMDStream;
   Frame *frame = new (ptr) Frame(
-      (uint16_t)length, (uint16_t)type,
-      (uint64_t)shardID, (uint64_t)0,
-      stamp.sec(), (uint32_t)stamp.nsec());
+      (uint16_t)length, (uint16_t)type, (uint32_t)0, (uint64_t)0,
+      (uint64_t)shardID, stamp.sec(), (uint32_t)stamp.nsec());
   return frame->ptr();
 }
 void MxMDRecLink::push2()
@@ -265,6 +262,14 @@ void MxMDRecLink::push2()
 // broadcast
 
 void MxMDRecLink::recv(Rx *rx)
+{
+  if (ZuLikely(state() == MxLinkState::Up))
+    recv_(rx);
+  else
+    mx()->wakeFn(engine()->rxThread(), ZmFn<>());
+}
+
+void MxMDRecLink::recv_(Rx *rx)
 {
   using namespace MxMDStream;
   const Frame *frame;
@@ -300,9 +305,9 @@ void MxMDRecLink::recv(Rx *rx)
 	const EndOfSnapshot &eos = frame->as<EndOfSnapshot>();
 	if (ZuUnlikely(eos.id == id())) {
 	  MxSeqNo seqNo = eos.seqNo;
+	  bool ok = eos.ok;
 	  broadcast.shift2();
-	  // snapshot failure (!seqNo) is handled in snap()
-	  if (seqNo) rx->stopQueuing(seqNo);
+	  if (ok) rx->stopQueuing(seqNo);
 	} else
 	  broadcast.shift2();
       }
@@ -323,12 +328,18 @@ void MxMDRecLink::recv(Rx *rx)
 	unsigned msgLen = sizeof(Frame) + frame->len;
 	memcpy(msg->ptr(), frame, msgLen);
 	broadcast.shift2();
-	rx->received(new MxQMsg(ZuMv(msg), msgLen, MxMsgID{id(), m_seqNo++}));
+	MxSeqNo seqNo = m_seqNo++;
+	Frame &msgFrame = msg->as<Frame>();
+	msgFrame.linkID = id();
+	msgFrame.session = session();
+	msgFrame.seqNo = seqNo;
+	rx->received(new MxQMsg(ZuMv(msg), msgLen,
+	      MxMsgID{id(), session(), seqNo}));
       }
       break;
   }
 again:
-  rxRun_([](Rx *rx) { rx->app().recv(rx); });
+  rxRun_([](Rx *rx) { rx->app().recv_(rx); });
 }
 
 ZmRef<MxAnyLink> MxMDRecord::createLink(MxID id)

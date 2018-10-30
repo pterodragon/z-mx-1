@@ -507,7 +507,7 @@ void App::read()
 
     if (m_verbose) {
       if (hdr.nsec) {
-	ZtDate stamp = m_lastTime + ZmTime((time_t)0, hdr.nsec);
+	ZtDate stamp = m_lastTime + ZmTime(ZmTime::Nano, hdr.nsec);
 	std::cout << "len: " << ZuBoxed(hdr.len).fmt(ZuFmt::Right<6>()) <<
 	  "  type: " << ZuBoxed(hdr.type).fmt(ZuFmt::Right<6>()) <<
 	  "  stamp: " << stamp.iso(m_isoFmt) << '\n';

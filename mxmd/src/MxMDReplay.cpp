@@ -223,7 +223,7 @@ eof:
     m_lastTime = m_msg->as<HeartBeat>().stamp.zmTime();
   } else {
     if (hdr.nsec) {
-      ZmTime next((time_t)0, (int32_t)hdr.nsec);
+      ZmTime next(ZmTime::Nano, hdr.nsec);
       next += m_lastTime;
       while (m_nextTime && next > m_nextTime) {
 	MxDateTime nextTime;

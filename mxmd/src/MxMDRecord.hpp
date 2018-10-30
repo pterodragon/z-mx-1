@@ -148,8 +148,7 @@ public:
   // snap thread
   void snap();
   void *push(unsigned size);
-  void *out(void *ptr, unsigned length, unsigned type,
-      int shardID, ZmTime stamp);
+  void *out(void *ptr, unsigned length, unsigned type, int shardID);
   void push2();
 
 private:

@@ -86,11 +86,8 @@ public:
   // Tx
 
   void *push(unsigned size);
-  void *out(void *ptr, unsigned length, unsigned type,
-      int shardID, ZmTime stamp);
+  void *out(void *ptr, unsigned length, unsigned type, int shardID);
   void push2();
-
-  void eof();
 
   int writeStatus() {
     Guard guard(m_lock);
@@ -107,13 +104,17 @@ private:
   void close_();
   void close__();
 
+  void heartbeat();
+  void heartbeat_();
+  void eof();
+
 private:
   MxMDCore		*m_core = 0;
   ZvRingParams		m_params;
   Lock			m_lock;
     MxSeqNo		  m_seqNo = 0;
     ZmTime		  m_lastTime;
-    // FIXME - heartbeat timer
+    ZmScheduler::Timer	  m_hbTimer;
     unsigned		  m_openCount = 0;
     ZmRef<Ring>		  m_ring;
 };

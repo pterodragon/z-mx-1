@@ -522,8 +522,8 @@ void *MxMDPubLink::TCP::push(unsigned size)
   m_snapMsg = new Msg();
   return m_snapMsg->ptr();
 }
-void *MxMDPubLink::TCP::out(void *ptr, unsigned length, unsigned type,
-    int shardID, ZmTime stamp)
+void *MxMDPubLink::TCP::out(
+    void *ptr, unsigned length, unsigned type, int shardID)
 {
   Hdr *hdr = new (ptr) Hdr(
       (uint16_t)length, (uint8_t)type, (uint8_t)shardID);

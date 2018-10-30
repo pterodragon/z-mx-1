@@ -476,7 +476,7 @@ namespace MxMDStream {
   inline void *push(App &app, int shardID) {
     void *ptr = app.push(sizeof(Hdr) + sizeof(T));
     if (ZuUnlikely(!ptr)) return 0;
-    return app.out(ptr, sizeof(T), T::Code, shardID, ZmTimeNow());
+    return app.out(ptr, sizeof(T), T::Code, shardID);
   }
 
 #ifdef FnDeclare
@@ -504,8 +504,11 @@ namespace MxMDStream {
 
   FnDeclare(refDataLoaded, RefDataLoaded)
 
+  FnDeclare(heartBeat, HeartBeat)
   FnDeclare(wake, Wake)
   FnDeclare(endOfSnapshot, EndOfSnapshot)
+  FnDeclare(login, Login)
+  FnDeclare(resendReq, ResendReq)
 
 #undef FnDeclare
 #define FnDeclare(Fn, Type) \

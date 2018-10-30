@@ -480,18 +480,13 @@ namespace MxTradingSession {
 namespace MxSide {
   MxEnumValues(Buy, Sell, SellShort, SellShortExempt, Cross);
   MxEnumNames("Buy", "Sell", "SellShort", "SellShortExempt", "Cross");
-  MxEnumMap(CSVMap,
-      "B", Buy, "1", Buy,
-      "S", Sell, "2", Sell, "C", Sell,
-      "SS", SellShort, "5", SellShort,
-      "SSE", SellShortExempt, "6", SellShortExempt,
-      "X", Cross, "8", Cross);
   MxEnumMap(FixMap,
-      "1", Buy, "B", Buy,
-      "2", Sell, "C", Sell,
+      "1", Buy,
+      "2", Sell,
       "5", SellShort,
       "6", SellShortExempt,
       "8", Cross);
+  typedef FixMap CSVMap;
 }
 
 #define Mx_TupleField(Type, Fn, N) \

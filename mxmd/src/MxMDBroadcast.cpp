@@ -87,8 +87,7 @@ bool MxMDBroadcast::open_(Guard &guard)
 	})));
     return false;
   }
-  m_lastTime.now();
-  // FIXME - start heartbeating (including sending of initial heartbeat)
+  heartbeat_();
   return true;
 }
 
@@ -100,11 +99,32 @@ void MxMDBroadcast::close_()
 
 void MxMDBroadcast::close__()
 {
-  // FIXME - stop heartbeating
+  m_core->mx()->del(&m_hbTimer);
   if (ZuLikely(m_ring)) {
     m_ring->close();
     m_ring = 0;
   }
+}
+
+void MxMDBroadcast::heartbeat()
+{
+  Guard guard(m_lock);
+  heartbeat_();
+}
+
+void MxMDBroadcast::heartbeat_()
+{
+  using namespace MxMDStream;
+  if (ZuUnlikely(!m_ring)) return;
+  void *ptr = m_ring->push(sizeof(Hdr) + sizeof(HeartBeat));
+  if (!ptr) return;
+  Hdr *hdr = new (ptr) Hdr(
+      (uint16_t)sizeof(HeartBeat), (uint8_t)HeartBeat::Code);
+  m_lastTime.now();
+  new (hdr->body()) HeartBeat{MxDateTime{m_lastTime}};
+  m_ring->push2();
+  m_core->mx()->add(ZmFn<>::Member<&MxMDBroadcast::heartbeat>::fn(this),
+      m_lastTime + ZmTime{(time_t)1, 0}, &m_hbTimer);
 }
 
 void MxMDBroadcast::eof()
@@ -130,18 +150,19 @@ void *MxMDBroadcast::push(unsigned size)
   return 0;
 }
 
-void *MxMDBroadcast::out(void *ptr, unsigned length, unsigned type,
-    int shardID, ZmTime stamp)
+void *MxMDBroadcast::out(
+    void *ptr, unsigned length, unsigned type, int shardID)
 {
-  ZmTime delta = stamp - m_lastTime;
+  ZmTime delta = ZmTimeNow() - m_lastTime;
+  uint32_t nsec = delta.sec() * 1000000000 + delta.nsec();
   Hdr *hdr = new (ptr) Hdr(
       (uint16_t)length, (uint8_t)type,
-      (uint8_t)shardID, (uint32_t)delta.nsec(), (uint64_t)++m_seqNo);
+      (uint8_t)shardID, nsec, (uint64_t)++m_seqNo);
   return hdr->body();
 }
 
 void MxMDBroadcast::push2()
 {
-  if (ZuLikely(m_ring)) m_ring->push2();
+  m_ring->push2();
   m_lock.unlock();
 }

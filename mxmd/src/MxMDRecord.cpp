@@ -234,8 +234,7 @@ void *MxMDRecLink::push(unsigned size)
   if (ZuUnlikely(state() != MxLinkState::Up)) return nullptr;
   return m_snapMsg->ptr();
 }
-void *MxMDRecLink::out(void *ptr, unsigned length, unsigned type,
-    int shardID, ZmTime stamp)
+void *MxMDRecLink::out(void *ptr, unsigned length, unsigned type, int shardID)
 {
   using namespace MxMDStream;
   Hdr *hdr = new (ptr) Hdr(

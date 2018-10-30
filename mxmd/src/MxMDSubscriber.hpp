@@ -200,7 +200,7 @@ friend class UDP;
     void disconnected();
 
     void recv(ZiIOContext &);
-    void process(MxQMsg *, ZiIOContext &);
+    void process(ZmRef<MxQMsg>, ZiIOContext &);
 
   private:
     MxMDSubLink		*m_link;
@@ -263,7 +263,7 @@ public:
   void endOfSnapshot(MxSeqNo seqNo);
   void udpConnect();
   void udpConnected(UDP *udp, ZiIOContext &io);
-  void udpReceived(MxQMsg *);
+  void udpReceived(ZmRef<MxQMsg>);
 
   void tcpError(TCP *tcp, ZiIOContext *io);
   void udpError(UDP *udp, ZiIOContext *io);

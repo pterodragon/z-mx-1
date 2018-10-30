@@ -86,7 +86,7 @@ bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
   if (!path) return true;
   engine()->rxInvoke([this, path = ZuMv(path), begin, filter]() mutable {
 	m_path = ZuMv(path);
-	m_replayNext = !begin ? ZmTime() : begin.zmTime();
+	m_nextTime = !begin ? ZmTime() : begin.zmTime();
 	m_filter = filter;
       });
   up();
@@ -170,7 +170,7 @@ void MxMDReplayLink::connect()
 void MxMDReplayLink::disconnect()
 {
   m_file.close();
-  m_replayNext = ZmTime();
+  m_nextTime = ZmTime();
   m_filter = false;
   m_version = Version();
   m_msg = 0;
@@ -194,43 +194,47 @@ void MxMDReplayLink::read()
 
   if (!m_file) return;
 // retry:
-  int n = m_file.read(m_msg->ptr(), sizeof(Frame), &e);
+  int n = m_file.read(m_msg->ptr(), sizeof(Hdr), &e);
   if (n == Zi::IOError) {
 error:
     fileERROR(m_path, e);
     return;
   }
-  if (n == Zi::EndOfFile || (unsigned)n < sizeof(Frame)) {
+  if (n == Zi::EndOfFile || (unsigned)n < sizeof(Hdr)) {
 eof:
     fileINFO(m_path, "EOF");
     core->handler()->eof(core);
     return;
   }
-  Frame &frame = m_msg->frame();
-  if (frame.len > sizeof(Buf)) {
+  Hdr &hdr = m_msg->hdr();
+  if (hdr.len > sizeof(Buf)) {
     uint64_t offset = m_file.offset();
-    offset -= sizeof(Frame);
+    offset -= sizeof(Hdr);
     fileERROR(m_path,
 	"message length >" << ZuBoxed(sizeof(Buf)) <<
 	" at offset " << ZuBoxed(offset));
     return;
   }
-  n = m_file.read(frame.ptr(), frame.len, &e);
+  n = m_file.read(hdr.body(), hdr.len, &e);
   if (n == Zi::IOError) goto error;
-  if (n == Zi::EndOfFile || (unsigned)n < frame.len) goto eof;
+  if (n == Zi::EndOfFile || (unsigned)n < hdr.len) goto eof;
 
-  if (frame.sec) {
-    ZmTime next((time_t)frame.sec, (int32_t)frame.nsec);
-
-    while (m_replayNext && next > m_replayNext) {
-      MxDateTime replayNext;
-      core->handler()->timer(m_replayNext, replayNext);
-      m_replayNext = !replayNext ? ZmTime() : replayNext.zmTime();
+  if (hdr.type == Type::HeartBeat) {
+    m_lastTime = m_msg->as<HeartBeat>().stamp.zmTime();
+  } else {
+    if (hdr.nsec) {
+      ZmTime next((time_t)0, (int32_t)hdr.nsec);
+      next += m_lastTime;
+      while (m_nextTime && next > m_nextTime) {
+	MxDateTime nextTime;
+	core->handler()->timer(m_nextTime, nextTime);
+	m_nextTime = !nextTime ? ZmTime() : nextTime.zmTime();
+      }
     }
-  }
 
-  core->pad(frame);
-  core->apply(frame, m_filter);
+    core->pad(hdr);
+    core->apply(hdr, m_filter);
+  }
 
   engine()->rxRun_(ZmFn<>{[](MxMDReplayLink *link) { link->read(); }, this});
 }

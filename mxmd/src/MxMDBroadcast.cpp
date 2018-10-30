@@ -87,7 +87,8 @@ bool MxMDBroadcast::open_(Guard &guard)
 	})));
     return false;
   }
-  m_session = MxNewSession();
+  m_lastTime.now();
+  // FIXME - start heartbeating (including sending of initial heartbeat)
   return true;
 }
 
@@ -99,6 +100,7 @@ void MxMDBroadcast::close_()
 
 void MxMDBroadcast::close__()
 {
+  // FIXME - stop heartbeating
   if (ZuLikely(m_ring)) {
     m_ring->close();
     m_ring = 0;
@@ -131,11 +133,11 @@ void *MxMDBroadcast::push(unsigned size)
 void *MxMDBroadcast::out(void *ptr, unsigned length, unsigned type,
     int shardID, ZmTime stamp)
 {
-  Frame *frame = new (ptr) Frame(
-      (uint16_t)length, (uint16_t)type,
-      (uint32_t)m_session, ++m_seqNo,
-      (uint64_t)shardID, stamp.sec(), (uint32_t)stamp.nsec());
-  return frame->ptr();
+  ZmTime delta = stamp - m_lastTime;
+  Hdr *hdr = new (ptr) Hdr(
+      (uint16_t)length, (uint8_t)type,
+      (uint8_t)shardID, (uint32_t)delta.nsec(), (uint64_t)++m_seqNo);
+  return hdr->body();
 }
 
 void MxMDBroadcast::push2()

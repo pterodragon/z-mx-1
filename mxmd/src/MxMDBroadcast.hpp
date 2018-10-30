@@ -42,17 +42,17 @@
 
 class MxMDCore;
 
-template <> struct ZiRingTraits<MxMDStream::Frame> {
-  inline static unsigned size(const MxMDStream::Frame &hdr) {
-    return sizeof(MxMDStream::Frame) + hdr.len;
+template <> struct ZiRingTraits<MxMDStream::Hdr> {
+  inline static unsigned size(const MxMDStream::Hdr &hdr) {
+    return sizeof(MxMDStream::Hdr) + hdr.len;
   }
 };
 
 class MxMDAPI MxMDBroadcast {
 public:
-  typedef MxMDStream::Frame Frame;
+  typedef MxMDStream::Hdr Hdr;
 
-  typedef ZiRing<Frame, ZiRingBase<ZmObject> > Ring;
+  typedef ZiRing<Hdr, ZiRingBase<ZmObject> > Ring;
 
   MxMDBroadcast();
   ~MxMDBroadcast();
@@ -78,7 +78,7 @@ public:
 
   inline int id() { return m_ring->id(); }
 
-  inline const Frame *shift() { return m_ring->shift(); }
+  inline const Hdr *shift() { return m_ring->shift(); }
   inline void shift2() { m_ring->shift2(); }
 
   inline int readStatus() { return m_ring->readStatus(); }
@@ -111,8 +111,9 @@ private:
   MxMDCore		*m_core = 0;
   ZvRingParams		m_params;
   Lock			m_lock;
-    MxSession		  m_session;
     MxSeqNo		  m_seqNo = 0;
+    ZmTime		  m_lastTime;
+    // FIXME - heartbeat timer
     unsigned		  m_openCount = 0;
     ZmRef<Ring>		  m_ring;
 };

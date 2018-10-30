@@ -773,52 +773,52 @@ void MxMDCore::subscribeCmd(const MxMDCmdArgs &args, ZtArray<char> &out)
 }
 #endif
 
-void MxMDCore::pad(Frame &frame)
+void MxMDCore::pad(Hdr &hdr)
 {
   using namespace MxMDStream;
 
-  switch ((int)frame.type) {
-    case Type::AddTickSizeTbl:	frame.pad<AddTickSizeTbl>(); break;
-    case Type::ResetTickSizeTbl: frame.pad<ResetTickSizeTbl>(); break;
-    case Type::AddTickSize:	frame.pad<AddTickSize>(); break;
-    case Type::AddSecurity:	frame.pad<AddSecurity>(); break;
-    case Type::UpdateSecurity:	frame.pad<UpdateSecurity>(); break;
-    case Type::AddOrderBook:	frame.pad<AddOrderBook>(); break;
-    case Type::DelOrderBook:	frame.pad<DelOrderBook>(); break;
-    case Type::AddCombination:	frame.pad<AddCombination>(); break;
-    case Type::DelCombination:	frame.pad<DelCombination>(); break;
-    case Type::UpdateOrderBook:	frame.pad<UpdateOrderBook>(); break;
-    case Type::TradingSession:	frame.pad<TradingSession>(); break;
-    case Type::L1:		frame.pad<L1>(); break;
-    case Type::PxLevel:		frame.pad<PxLevel>(); break;
-    case Type::L2:		frame.pad<L2>(); break;
-    case Type::AddOrder:	frame.pad<AddOrder>(); break;
-    case Type::ModifyOrder:	frame.pad<ModifyOrder>(); break;
-    case Type::CancelOrder:	frame.pad<CancelOrder>(); break;
-    case Type::ResetOB:		frame.pad<ResetOB>(); break;
-    case Type::AddTrade:	frame.pad<AddTrade>(); break;
-    case Type::CorrectTrade:	frame.pad<CorrectTrade>(); break;
-    case Type::CancelTrade:	frame.pad<CancelTrade>(); break;
-    case Type::RefDataLoaded:	frame.pad<RefDataLoaded>(); break;
+  switch ((int)hdr.type) {
+    case Type::AddTickSizeTbl:	hdr.pad<AddTickSizeTbl>(); break;
+    case Type::ResetTickSizeTbl: hdr.pad<ResetTickSizeTbl>(); break;
+    case Type::AddTickSize:	hdr.pad<AddTickSize>(); break;
+    case Type::AddSecurity:	hdr.pad<AddSecurity>(); break;
+    case Type::UpdateSecurity:	hdr.pad<UpdateSecurity>(); break;
+    case Type::AddOrderBook:	hdr.pad<AddOrderBook>(); break;
+    case Type::DelOrderBook:	hdr.pad<DelOrderBook>(); break;
+    case Type::AddCombination:	hdr.pad<AddCombination>(); break;
+    case Type::DelCombination:	hdr.pad<DelCombination>(); break;
+    case Type::UpdateOrderBook:	hdr.pad<UpdateOrderBook>(); break;
+    case Type::TradingSession:	hdr.pad<TradingSession>(); break;
+    case Type::L1:		hdr.pad<L1>(); break;
+    case Type::PxLevel:		hdr.pad<PxLevel>(); break;
+    case Type::L2:		hdr.pad<L2>(); break;
+    case Type::AddOrder:	hdr.pad<AddOrder>(); break;
+    case Type::ModifyOrder:	hdr.pad<ModifyOrder>(); break;
+    case Type::CancelOrder:	hdr.pad<CancelOrder>(); break;
+    case Type::ResetOB:		hdr.pad<ResetOB>(); break;
+    case Type::AddTrade:	hdr.pad<AddTrade>(); break;
+    case Type::CorrectTrade:	hdr.pad<CorrectTrade>(); break;
+    case Type::CancelTrade:	hdr.pad<CancelTrade>(); break;
+    case Type::RefDataLoaded:	hdr.pad<RefDataLoaded>(); break;
     default: break;
   }
 }
 
-void MxMDCore::apply(const Frame &frame, bool filter)
+void MxMDCore::apply(const Hdr &hdr, bool filter)
 {
   using namespace MxMDStream;
 
-  switch ((int)frame.type) {
+  switch ((int)hdr.type) {
     case Type::AddTickSizeTbl:
       {
-	const AddTickSizeTbl &obj = frame.as<AddTickSizeTbl>();
+	const AddTickSizeTbl &obj = hdr.as<AddTickSizeTbl>();
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.venue))
 	  venue->addTickSizeTbl(obj.id, obj.pxNDP);
       }
       break;
     case Type::ResetTickSizeTbl:
       {
-	const ResetTickSizeTbl &obj = frame.as<ResetTickSizeTbl>();
+	const ResetTickSizeTbl &obj = hdr.as<ResetTickSizeTbl>();
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.venue))
 	  if (ZmRef<MxMDTickSizeTbl> tbl = venue->tickSizeTbl(obj.id))
 	    tbl->reset();
@@ -826,7 +826,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::AddTickSize:
       {
-	const AddTickSize &obj = frame.as<AddTickSize>();
+	const AddTickSize &obj = hdr.as<AddTickSize>();
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.venue))
 	  if (ZmRef<MxMDTickSizeTbl> tbl = venue->tickSizeTbl(obj.id)) {
 	    if (ZuUnlikely(tbl->pxNDP() != obj.pxNDP)) {
@@ -847,7 +847,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::AddSecurity:
       {
-	const AddSecurity &obj = frame.as<AddSecurity>();
+	const AddSecurity &obj = hdr.as<AddSecurity>();
 	MxMDSecHandle secHandle = security(obj.key, obj.shard);
 	secHandle.invokeMv([key = obj.key, refData = obj.refData,
 	    transactTime = obj.transactTime](
@@ -858,7 +858,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::UpdateSecurity:
       {
-	const UpdateSecurity &obj = frame.as<UpdateSecurity>();
+	const UpdateSecurity &obj = hdr.as<UpdateSecurity>();
 	MxMDLib::secInvoke(obj.key, [refData = obj.refData,
 	    transactTime = obj.transactTime](MxMDSecurity *sec) {
 	  if (sec) sec->update(refData, transactTime);
@@ -867,7 +867,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::AddOrderBook:
       {
-	const AddOrderBook &obj = frame.as<AddOrderBook>();
+	const AddOrderBook &obj = hdr.as<AddOrderBook>();
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
 	  if (ZmRef<MxMDTickSizeTbl> tbl =
 		  venue->tickSizeTbl(obj.tickSizeTbl))
@@ -895,7 +895,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::DelOrderBook:
       {
-	const DelOrderBook &obj = frame.as<DelOrderBook>();
+	const DelOrderBook &obj = hdr.as<DelOrderBook>();
 	obInvoke(obj.key, [transactTime = obj.transactTime](
 	      MxMDOrderBook *ob) {
 	  if (ob) ob->security()->delOrderBook(
@@ -905,7 +905,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::AddCombination:
       {
-	const AddCombination &obj = frame.as<AddCombination>();
+	const AddCombination &obj = hdr.as<AddCombination>();
 	MxMDSecHandle secHandle = security(obj.securities[0]);
 	if (secHandle)
 	  if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
@@ -933,7 +933,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::DelCombination:
       {
-	const DelCombination &obj = frame.as<DelCombination>();
+	const DelCombination &obj = hdr.as<DelCombination>();
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
 	obInvoke(obj.key, [venue = ZuMv(venue),
 	    transactTime = obj.transactTime](MxMDOrderBook *ob) {
@@ -945,7 +945,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::UpdateOrderBook:
       {
-	const UpdateOrderBook &obj = frame.as<UpdateOrderBook>();
+	const UpdateOrderBook &obj = hdr.as<UpdateOrderBook>();
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
 	  if (ZmRef<MxMDTickSizeTbl> tbl = venue->tickSizeTbl(obj.tickSizeTbl))
 	    obInvoke(obj.key, [
@@ -957,7 +957,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::TradingSession:
       {
-	const TradingSession &obj = frame.as<TradingSession>();
+	const TradingSession &obj = hdr.as<TradingSession>();
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.venue))
 	  venue->tradingSession(
 	      MxMDSegment{obj.segment, obj.session, obj.stamp});
@@ -965,7 +965,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::L1:
       {
-	const L1 &obj = frame.as<L1>();
+	const L1 &obj = hdr.as<L1>();
 	obInvoke(obj.key, [data = obj.data, filter](MxMDOrderBook *ob) mutable {
 	  // inconsistent NDP handled within MxMDOrderBook::l1()
 	  if (ob && (!filter || ob->handler())) ob->l1(data);
@@ -974,7 +974,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::PxLevel:
       {
-	const PxLevel &obj = frame.as<PxLevel>();
+	const PxLevel &obj = hdr.as<PxLevel>();
 	obInvoke(obj.key, [
 	    side = obj.side, transactTime = obj.transactTime,
 	    delta = obj.delta, pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
@@ -993,7 +993,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::L2:
       {
-	const L2 &obj = frame.as<L2>();
+	const L2 &obj = hdr.as<L2>();
 	obInvoke(obj.key, [
 	    stamp = obj.stamp, updateL1 = obj.updateL1, filter](
 	      MxMDOrderBook *ob) {
@@ -1003,7 +1003,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::AddOrder:
       {
-	const AddOrder &obj = frame.as<AddOrder>();
+	const AddOrder &obj = hdr.as<AddOrder>();
 	obInvoke(obj.key, [
 	    orderID = obj.orderID, transactTime = obj.transactTime,
 	    side = obj.side, rank = obj.rank,
@@ -1024,7 +1024,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::ModifyOrder:
       {
-	const ModifyOrder &obj = frame.as<ModifyOrder>();
+	const ModifyOrder &obj = hdr.as<ModifyOrder>();
 	obInvoke(obj.key, [
 	    orderID = obj.orderID, transactTime = obj.transactTime,
 	    side = obj.side, rank = obj.rank,
@@ -1045,7 +1045,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::CancelOrder:
       {
-	const CancelOrder &obj = frame.as<CancelOrder>();
+	const CancelOrder &obj = hdr.as<CancelOrder>();
 	obInvoke(obj.key, [
 	    orderID = obj.orderID,
 	    transactTime = obj.transactTime,
@@ -1057,7 +1057,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::ResetOB:
       {
-	const ResetOB &obj = frame.as<ResetOB>();
+	const ResetOB &obj = hdr.as<ResetOB>();
 	obInvoke(obj.key, [transactTime = obj.transactTime, filter](
 	      MxMDOrderBook *ob) {
 	  if (ob && (!filter || ob->handler()))
@@ -1067,7 +1067,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::AddTrade:
       {
-	const AddTrade &obj = frame.as<AddTrade>();
+	const AddTrade &obj = hdr.as<AddTrade>();
 	obInvoke(obj.key, [
 	    tradeID = obj.tradeID, transactTime = obj.transactTime,
 	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
@@ -1085,7 +1085,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::CorrectTrade:
       {
-	const CorrectTrade &obj = frame.as<CorrectTrade>();
+	const CorrectTrade &obj = hdr.as<CorrectTrade>();
 	obInvoke(obj.key, [
 	    tradeID = obj.tradeID, transactTime = obj.transactTime,
 	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
@@ -1103,7 +1103,7 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::CancelTrade:
       {
-	const CancelTrade &obj = frame.as<CancelTrade>();
+	const CancelTrade &obj = hdr.as<CancelTrade>();
 	obInvoke(obj.key, [
 	    tradeID = obj.tradeID, transactTime = obj.transactTime,
 	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
@@ -1121,10 +1121,16 @@ void MxMDCore::apply(const Frame &frame, bool filter)
       break;
     case Type::RefDataLoaded:
       {
-	const RefDataLoaded &obj = frame.as<RefDataLoaded>();
+	const RefDataLoaded &obj = hdr.as<RefDataLoaded>();
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.venue))
 	  this->loaded(venue);
       }
+    case Type::HeartBeat:
+    case Type::Wake:
+    case Type::EndOfSnapshot:
+    case Type::Login:
+    case Type::ResendReq:
+      break;
     default:
       raise(ZeEVENT(Error, "MxMDLib - unknown message type"));
       break;

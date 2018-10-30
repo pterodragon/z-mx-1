@@ -30,7 +30,7 @@
 #include <ZiFile.hpp>
 
 #include <MxBase.hpp>
-#include <MxMDFrame.hpp>
+#include <MxMCapHdr.hpp>
 
 void usage()
 {
@@ -62,40 +62,40 @@ public:
   ZmTime read() {
     ZeError e;
     int i;
-    if ((i = m_file.read(&m_frame, sizeof(MxMDFrame), &e)) == Zi::IOError) {
+    if ((i = m_file.read(&m_hdr, sizeof(MxMCapHdr), &e)) == Zi::IOError) {
       ZeLOG(Error, ZtString() << '"' << m_path << "\": " << e);
       exit(1);
     }
-    if (i == Zi::EndOfFile || (unsigned)i < sizeof(MxMDFrame)) {
+    if (i == Zi::EndOfFile || (unsigned)i < sizeof(MxMCapHdr)) {
       close();
       return ZmTime();
     }
-    if (m_frame.len > MsgSize) {
+    if (m_hdr.len > MsgSize) {
       ZeLOG(Error, ZtString() << "message length >" << ZuBoxed(MsgSize) <<
-	  " at offset " << ZuBoxed(m_file.offset() - sizeof(MxMDFrame)));
+	  " at offset " << ZuBoxed(m_file.offset() - sizeof(MxMCapHdr)));
       exit(1);
     }
-    if ((i = m_file.read(m_buf, m_frame.len, &e)) == Zi::IOError) {
+    if ((i = m_file.read(m_buf, m_hdr.len, &e)) == Zi::IOError) {
       ZeLOG(Error, ZtString() << '"' << m_path << "\": " << e);
       exit(1);
     }
-    if (i == Zi::EndOfFile || (unsigned)i < m_frame.len) {
+    if (i == Zi::EndOfFile || (unsigned)i < m_hdr.len) {
       close();
       return ZmTime();
     }
-    return ZmTime((time_t)m_frame.sec, (int32_t)m_frame.nsec);
+    return ZmTime((time_t)m_hdr.sec, (int32_t)m_hdr.nsec);
   }
   int write(ZiFile *out, ZeError *e) {
     int i;
-    if ((i = out->write(&m_frame, sizeof(MxMDFrame), e)) < 0) return i;
-    if ((i = out->write(m_buf, m_frame.len, e)) < 0) return i;
+    if ((i = out->write(&m_hdr, sizeof(MxMCapHdr), e)) < 0) return i;
+    if ((i = out->write(m_buf, m_hdr.len, e)) < 0) return i;
     return Zi::OK;
   }
 
 private:
   ZtString	m_path;
   ZiFile	m_file;
-  MxMDFrame	m_frame;
+  MxMCapHdr	m_hdr;
   char		m_buf[MsgSize];
 };
 

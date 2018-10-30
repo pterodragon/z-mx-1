@@ -42,7 +42,7 @@
 
 #include <MxBase.hpp>
 #include <MxQueue.hpp>
-#include <MxMDFrame.hpp>
+
 #include <MxMDTypes.hpp>
 
 // App must conform to the following interface:
@@ -59,9 +59,9 @@ struct App {
 
   // begin message push - allocate message buffer
   void *push(unsigned size);
-  // fill message header with MxMDFrame, return ptr to body
+  // fill message header, return ptr to body
   void *out(void *ptr, unsigned length, unsigned type,
-      MxID linkID, ZmTime stamp);
+      int shardID, ZmTime stamp);
   // complete message push
   void push2();
 };
@@ -86,6 +86,7 @@ namespace MxMDStream {
 	RefDataLoaded,
 
 	// control events follow
+	HeartBeat,		// heart beat
 	Wake,			// ITC wake-up
 	EndOfSnapshot,		// end of snapshot
 	Login,			// TCP login
@@ -104,6 +105,7 @@ namespace MxMDStream {
 	"AddTrade", "CorrectTrade", "CancelTrade",
 	"RefDataLoaded",
 
+	"HeartBeat",
 	"Wake",
 	"EndOfSnapshot",
 	"Login",
@@ -145,12 +147,19 @@ namespace MxMDStream {
     uint16_t	vminor;	// version - minor number
   };
 
-  struct Frame : public MxMDFrame {
+  struct HdrData {
+    uint16_t	len = 0;	// exclusive of MxMDFrame
+    uint8_t	type = 0;
+    uint8_t	shard = 0xff;	// 0xff is null
+    uint32_t	nsec = 0;
+    uint64_t  	seqNo = 0;
+  };
+  struct Hdr : public HdrData {
     template <typename ...Args>
-    ZuInline Frame(Args &&... args) : MxMDFrame{ZuFwd<Args>(args)...} { }
+    ZuInline Hdr(Args &&... args) : HdrData{ZuFwd<Args>(args)...} { }
 
-    ZuInline void *ptr() { return (void *)&this[1]; }
-    ZuInline const void *ptr() const { return (const void *)&this[1]; }
+    ZuInline void *body() { return (void *)&this[1]; }
+    ZuInline const void *body() const { return (const void *)&this[1]; }
 
     template <typename T> ZuInline T &as() {
       T *ZuMayAlias(ptr) = (T *)&this[1];
@@ -167,7 +176,7 @@ namespace MxMDStream {
     }
 
     bool scan(unsigned length) const {
-      return sizeof(Frame) + len > length;
+      return sizeof(Hdr) + len > length;
     }
   };
 
@@ -372,6 +381,11 @@ namespace MxMDStream {
 
   // transport / session control messages follow
 
+  struct HeartBeat { // heart beat / time synchronization
+    enum { Code = Type::HeartBeat };
+    MxDateTime		stamp;
+  };
+
   struct Wake { // ITC wake-up
     enum { Code = Type::Wake };
     MxID		id;
@@ -432,13 +446,13 @@ namespace MxMDStream {
   public:
     inline MsgData() { }
 
-    ZuInline const Frame &frame() const { return m_frame; }
-    ZuInline Frame &frame() { return m_frame; }
+    ZuInline const Hdr &hdr() const { return m_hdr; }
+    ZuInline Hdr &hdr() { return m_hdr; }
 
-    ZuInline unsigned length() { return sizeof(Frame) + m_frame.len; }
+    ZuInline unsigned length() { return sizeof(Hdr) + m_hdr.len; }
 
   private:
-    Frame	m_frame;
+    Hdr		m_hdr;
     Buf		m_buf;
   };
 
@@ -450,8 +464,8 @@ namespace MxMDStream {
   struct Msg_ : public Heap, public ZuPOD<MsgData> {
     ZuInline Msg_() { new (this->ptr()) MsgData(); }
 
-    ZuInline const Frame &frame() const { return this->data().frame(); }
-    ZuInline Frame &frame() { return this->data().frame(); }
+    ZuInline const Hdr &hdr() const { return this->data().hdr(); }
+    ZuInline Hdr &hdr() { return this->data().hdr(); }
 
     ZuInline unsigned length() { return this->data().length(); }
   };
@@ -459,8 +473,8 @@ namespace MxMDStream {
   typedef Msg_<ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> > Msg;
 
   template <typename T, typename App>
-  inline void *push(App &app, MxInt shardID) {
-    void *ptr = app.push(sizeof(Frame) + sizeof(T));
+  inline void *push(App &app, int shardID) {
+    void *ptr = app.push(sizeof(Hdr) + sizeof(T));
     if (ZuUnlikely(!ptr)) return 0;
     return app.out(ptr, sizeof(T), T::Code, shardID, ZmTimeNow());
   }
@@ -471,7 +485,7 @@ namespace MxMDStream {
 #define FnDeclare(Fn, Type) \
   template <typename App, typename ...Args> \
   inline bool Fn(App &app, Args &&... args) { \
-    void *ptr = push<Type>(app, MxInt()); \
+    void *ptr = push<Type>(app, -1); \
     if (ZuUnlikely(!ptr)) return false; \
     new (ptr) Type{ZuFwd<Args>(args)...}; \
     app.push2(); \
@@ -633,9 +647,9 @@ namespace MxMDStream {
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	  unsigned len = io.offset += io.length;
-	  while (len >= sizeof(Frame)) {
-	    Frame &frame = msg->as<Frame>();
-	    unsigned msgLen = sizeof(Frame) + frame.len;
+	  while (len >= sizeof(Hdr)) {
+	    Hdr &hdr = msg->as<Hdr>();
+	    unsigned msgLen = sizeof(Hdr) + hdr.len;
 	    if (ZuUnlikely(msgLen > msg->payload->size())) {
 	      ZeLOG(Error, "MxMDStream::recv TCP message too big / corrupt");
 	      io.disconnect();

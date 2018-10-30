@@ -84,9 +84,8 @@ struct MxQMsgData {
     return *static_cast<T *>(payload->ptr());
   }
 
-  ZuInline void load(MxID linkID, MxSession session, MxSeqNo seqNo) {
+  ZuInline void load(MxID linkID, MxSeqNo seqNo) {
     id.linkID = linkID;
-    id.session = session;
     id.seqNo = seqNo;
   }
 
@@ -244,7 +243,6 @@ public:
   ZuInline MxQueueTx() : m_queue(MxSeqNo()) { }
 
   ZuInline void txInit(MxSeqNo seqNo) {
-    m_session = MxNewSession();
     m_seqNo = seqNo;
     m_queue.head(m_seqNo = seqNo);
   }
@@ -254,8 +252,6 @@ public:
 
   ZuInline const MxQueue &txQueue() const { return m_queue; }
   ZuInline MxQueue &txQueue() { return m_queue; }
-
-  ZuInline MxSession session() const { return m_session; }
 
   ZuInline void send() { Tx::send(); }
   void send(MxQMsg *msg) {
@@ -267,7 +263,7 @@ public:
 	return;
       }
     }
-    msg->load(app().id(), m_session, m_seqNo++);
+    msg->load(app().id(), m_seqNo++);
     app().loaded_(msg);
     Tx::send(msg);
   }
@@ -290,7 +286,6 @@ public:
   }
 
   ZuInline void txReset(MxSeqNo seqNo = MxSeqNo()) {
-    m_session = MxNewSession();
     Tx::txReset(m_seqNo = seqNo);
   }
 
@@ -327,7 +322,6 @@ protected:
 
 private:
 
-  MxSession	m_session;
   MxSeqNo	m_seqNo;
   MxQueue	m_queue;
 

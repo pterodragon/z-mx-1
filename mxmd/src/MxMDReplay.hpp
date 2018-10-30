@@ -140,7 +140,8 @@ private:
   ZtString		m_path;
   ZiFile		m_file;
   ZuRef<Msg>		m_msg;
-  ZmTime		m_replayNext;
+  ZmTime		m_lastTime;
+  ZmTime		m_nextTime;
   bool			m_filter = false;
   Version		m_version;
 };

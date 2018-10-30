@@ -40,8 +40,7 @@
 #include <ZvHeapCf.hpp>
 
 #include <MxCSV.hpp>
-
-#include <MxMDFrame.hpp>
+#include <MxMCapHdr.hpp>
 
 struct Group {
   uint16_t		id;
@@ -184,20 +183,20 @@ public:
   inline ~Msg_() { }
 
   int read(ZiFile *);
-  inline uint32_t group() { return m_frame.linkID; }
+  inline uint32_t group() { return m_hdr.group; }
 
   void send(Connection *);
   void send_(ZiIOContext &);
   void sent_(ZiIOContext &);
 
   inline ZmTime stamp() const {
-    return ZmTime((time_t)m_frame.sec, (int32_t)m_frame.nsec);
+    return ZmTime((time_t)m_hdr.sec, (int32_t)m_hdr.nsec);
   }
 
 private:
   App			*m_app;
   ZmRef<Connection>	m_cxn;
-  MxMDFrame		m_frame;
+  MxMCapHdr		m_hdr;
   char			m_buf[Size];
 };
 struct Msg_HeapID {
@@ -299,14 +298,14 @@ int Msg_<Heap>::read(ZiFile *file)
   ZeError e;
   int n;
 
-  n = file->read(&m_frame, sizeof(MxMDFrame), &e);
+  n = file->read(&m_hdr, sizeof(MxMCapHdr), &e);
   if (n == Zi::IOError) goto error;
-  if (n == Zi::EndOfFile || (unsigned)n < sizeof(MxMDFrame)) goto eof;
+  if (n == Zi::EndOfFile || (unsigned)n < sizeof(MxMCapHdr)) goto eof;
 
-  if (m_frame.len > Size) goto lenerror;
-  n = file->read(m_buf, m_frame.len, &e);
+  if (m_hdr.len > Size) goto lenerror;
+  n = file->read(m_buf, m_hdr.len, &e);
   if (n == Zi::IOError) goto error;
-  if (n == Zi::EndOfFile || (unsigned)n < m_frame.len) goto eof;
+  if (n == Zi::EndOfFile || (unsigned)n < m_hdr.len) goto eof;
 
   return Zi::OK;
 
@@ -322,7 +321,7 @@ error:
 lenerror:
   {
     uint64_t offset = file->offset();
-    offset -= sizeof(MxMDFrame);
+    offset -= sizeof(MxMCapHdr);
     ZeLOG(Error, ZtString() << '"' << m_app->replay() << "\": "
 	"message length >" << ZuBoxed(Size) <<
 	" at offset " << ZuBoxed(offset));
@@ -339,7 +338,7 @@ template <typename Heap>
 void Msg_<Heap>::send_(ZiIOContext &io)
 {
   io.init(ZiIOFn::Member<&Msg_<Heap>::sent_>::fn(ZmMkRef(this)),
-      m_buf, m_frame.len, 0, m_cxn->dest());
+      m_buf, m_hdr.len, 0, m_cxn->dest());
   m_cxn = 0;
 }
 template <typename Heap>

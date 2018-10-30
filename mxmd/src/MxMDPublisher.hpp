@@ -253,6 +253,8 @@ friend class UDP;
   };
 
 public:
+  typedef MxMDStream::Hdr Hdr;
+
   MxMDPubLink(MxID id) : MxLink<MxMDPubLink>(id) { }
 
   typedef MxMDPublisher Engine;
@@ -305,7 +307,7 @@ public:
   void udpError(UDP *udp, ZiIOContext *io);
 
   // broadcast
-  void sendFrame(const MxMDStream::Frame *frame);
+  void sendMsg(const Hdr *hdr);
   void ack();
 
   // snapshot
@@ -318,9 +320,7 @@ private:
   typedef MxQueueRx<MxMDPubLink> Rx;
   typedef MxQueueTx<MxMDPubLink> Tx;
 
-  typedef MxMDStream::Frame Frame;
-
-  int write_(const Frame *frame, ZeError *e);
+  int write_(const Hdr *hdr, ZeError *e);
 
 private:
   const MxMDPartition	*m_partition = 0;

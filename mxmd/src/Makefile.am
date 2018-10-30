@@ -7,7 +7,7 @@ AM_LDFLAGS = @MXMD_LDFLAGS@ @MXMD_SO_LDFLAGS@ \
 	@MXBASE_LDFLAGS@ @Z_LDFLAGS@
 include_HEADERS = \
 	MxMD.hpp MxMDLib.hpp MxMDVersion.hpp MxMDTypes.hpp \
-	MxMDCore.hpp MxMDCmd.hpp MxMDCSV.hpp MxMDFrame.hpp MxMDStream.hpp \
+	MxMDCore.hpp MxMDCmd.hpp MxMDCSV.hpp MxMDStream.hpp \
 	MxMDPartition.hpp \
 	MxMDBroadcast.hpp \
 	MxMDRecord.hpp MxMDReplay.hpp \
@@ -20,14 +20,8 @@ libMxMD_la_SOURCES = \
 	MxMDBroadcast.cpp \
 	MxMDRecord.cpp MxMDReplay.cpp
 libMxMD_la_LIBADD = @MXBASE_LIBS@ @Z_LIBS@ @MXMD_XLIBS@
-bin_PROGRAMS = recdump mdrecord mcap mcmerge mcreplay
+bin_PROGRAMS = recdump mdrecord
 recdump_LDADD = libMxMD.la @MXBASE_LIBS@ @Z_LIBS@ @MXMD_XLIBS@
 mdrecord_LDADD = libMxMD.la @MXBASE_LIBS@ @Z_LIBS@ @MXMD_XLIBS@
-mcap_LDADD = libMxMD.la @MXBASE_LIBS@ @Z_LIBS@ @MXMD_XLIBS@
-mcmerge_LDADD = libMxMD.la @MXBASE_LIBS@ @Z_LIBS@ @MXMD_XLIBS@
-mcreplay_LDADD = libMxMD.la @MXBASE_LIBS@ @Z_LIBS@ @MXMD_XLIBS@
 recdump_SOURCES = recdump.cpp
 mdrecord_SOURCES = mdrecord.cpp
-mcap_SOURCES = mcap.cpp
-mcmerge_SOURCES = mcmerge.cpp
-mcreplay_SOURCES = mcreplay.cpp

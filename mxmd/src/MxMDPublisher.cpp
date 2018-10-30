@@ -324,12 +324,12 @@ void MxMDPubLink::TCP::processLogin(ZiIOContext &io)
     }
     {
       using namespace MxMDStream;
-      const Frame &frame = m_in->as<Frame>();
-      if (ZuUnlikely(frame.type != Type::Login)) {
+      const Hdr &hdr = m_in->as<Hdr>();
+      if (ZuUnlikely(hdr.type != Type::Login)) {
 	tcpERROR(this, &io, "TCP unexpected message type");
 	return;
       }
-      if (!m_link->tcpLogin(frame.as<Login>())) {
+      if (!m_link->tcpLogin(hdr.as<Login>())) {
 	tcpERROR(this, &io, "TCP invalid login");
 	return;
       }
@@ -468,8 +468,8 @@ void MxMDPubLink::UDP::process(MxQMsg *msg, ZiIOContext &io)
 {
   using namespace MxMDStream;
   msg->length = io.offset + io.length;
-  const Frame &frame = msg->as<Frame>();
-  if (ZuUnlikely(frame.scan(msg->length))) {
+  const Hdr &hdr = msg->as<Hdr>();
+  if (ZuUnlikely(hdr.scan(msg->length))) {
     ZtHexDump msg_{"truncated UDP message", msg->ptr(), msg->length};
     m_link->engine()->appException(ZeEVENT(Warning,
       ([=, id = m_link->id(), msg_ = ZuMv(msg_)](
@@ -478,13 +478,13 @@ void MxMDPubLink::UDP::process(MxQMsg *msg, ZiIOContext &io)
 	})));
   } else {
     msg->addr = io.addr;
-    const Frame &frame = msg->as<Frame>();
-    if (ZuUnlikely(frame.type != Type::ResendReq)) {
+    const Hdr &hdr = msg->as<Hdr>();
+    if (ZuUnlikely(hdr.type != Type::ResendReq)) {
       // ignore to prevent (probably accidental) DOS
       // udpERROR(this, &io, "UDP unexpected message type");
       return;
     }
-    m_link->udpReceived(frame.as<ResendReq>());
+    m_link->udpReceived(hdr.as<ResendReq>());
   }
   recv(io);
 }
@@ -525,11 +525,9 @@ void *MxMDPubLink::TCP::push(unsigned size)
 void *MxMDPubLink::TCP::out(void *ptr, unsigned length, unsigned type,
     int shardID, ZmTime stamp)
 {
-  Frame *frame = new (ptr) Frame(
-      (uint16_t)length, (uint16_t)type,
-      (uint32_t)m_link->session(), (uint64_t)0,
-      (uint64_t)shardID, stamp.sec(), (uint32_t)stamp.nsec());
-  return frame->ptr();
+  Hdr *hdr = new (ptr) Hdr(
+      (uint16_t)length, (uint8_t)type, (uint8_t)shardID);
+  return hdr->body();
 }
 void MxMDPubLink::TCP::push2()
 {
@@ -601,8 +599,8 @@ void MxMDPublisher::recv()
 void MxMDPublisher::recv_()
 {
   using namespace MxMDStream;
-  const Frame *frame;
-  if (ZuUnlikely(!(frame = m_ring->shift()))) {
+  const Hdr *hdr;
+  if (ZuUnlikely(!(hdr = m_ring->shift()))) {
     if (ZuLikely(m_ring->readStatus() == Zi::EndOfFile)) {
       allLinks<MxMDPubLink>([](MxMDPubLink *link) -> uintptr_t {
 	  link->disconnect(); return 0; });
@@ -610,7 +608,7 @@ void MxMDPublisher::recv_()
     }
     goto again;
   }
-  if (frame->len > sizeof(Buf)) {
+  if (hdr->len > sizeof(Buf)) {
     m_ring->shift2();
     allLinks<MxMDPubLink>([](MxMDPubLink *link) -> uintptr_t {
 	link->disconnect(); return 0; });
@@ -623,10 +621,10 @@ void MxMDPublisher::recv_()
 	})));
     return;
   }
-  switch ((int)frame->type) {
+  switch ((int)hdr->type) {
     case Type::Wake:
       {
-	const Wake &wake = frame->as<Wake>();
+	const Wake &wake = hdr->as<Wake>();
 	if (ZuUnlikely(wake.id == id())) {
 	  m_ring->shift2();
 	  return;
@@ -638,8 +636,8 @@ void MxMDPublisher::recv_()
       m_ring->shift2();
       break;
     default:
-      allLinks<MxMDPubLink>([frame](MxMDPubLink *link) -> uintptr_t {
-	  link->sendFrame(frame); return 0; });
+      allLinks<MxMDPubLink>([hdr](MxMDPubLink *link) -> uintptr_t {
+	  link->sendMsg(hdr); return 0; });
       m_ring->shift2();
       break;
   }
@@ -652,14 +650,14 @@ MxEngineApp::ProcessFn MxMDPublisher::processFn()
   return nullptr;
 }
 
-void MxMDPubLink::sendFrame(const Frame *frame)
+void MxMDPubLink::sendMsg(const Hdr *hdr)
 {
-  if (m_partition->shardID >= 0 && frame->linkID != ~(uint64_t)0 &&
-      frame->linkID != m_partition->shardID) return;
+  if (m_partition->shardID >= 0 && hdr->shard != 0xff &&
+      hdr->shard != m_partition->shardID) return;
   using namespace MxMDStream;
   ZuRef<Msg> msg = new Msg();
-  unsigned msgLen = sizeof(Frame) + frame->len;
-  memcpy(msg->ptr(), frame, msgLen);
+  unsigned msgLen = sizeof(Hdr) + hdr->len;
+  memcpy(msg->ptr(), hdr, msgLen);
   ZmRef<MxQMsg> qmsg = new MxQMsg(msg, msgLen);
   txInvoke([qmsg = ZuMv(qmsg)](Tx *tx) { tx->send(ZuMv(qmsg)); });
 }
@@ -667,19 +665,15 @@ void MxMDPubLink::sendFrame(const Frame *frame)
 void MxMDPubLink::loaded_(MxQMsg *msg)
 {
   using namespace MxMDStream;
-  Frame &frame = msg->as<Frame>();
-  frame.session = msg->id.session;
-  frame.seqNo = msg->id.seqNo;
-  frame.linkID = msg->id.linkID;	// same as id()
+  Hdr &hdr = msg->as<Hdr>();
+  hdr.seqNo = msg->id.seqNo;
 }
 
 void MxMDPubLink::unloaded_(MxQMsg *msg) // unused
 {
   using namespace MxMDStream;
-  Frame &frame = msg->as<Frame>();
-  frame.session = 0;
-  frame.seqNo = 0;
-  frame.linkID = 0;
+  Hdr &hdr = msg->as<Hdr>();
+  hdr.seqNo = 0;
 }
 
 bool MxMDPubLink::send_(MxQMsg *msg, bool)

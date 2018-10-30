@@ -103,10 +103,10 @@ public:
   void dumpOrderBooks(
       ZuString path, MxID venue = MxID(), MxID segment = MxID());
 
-  typedef MxMDStream::Frame Frame;
+  typedef MxMDStream::Hdr Hdr;
 
-  void pad(Frame &);
-  void apply(const Frame &, bool filter);
+  void pad(Hdr &);
+  void apply(const Hdr &, bool filter);
 
   void addCmd(ZuString name, ZuString syntax,
       MxMDCmdFn fn, ZtString brief, ZtString usage);

@@ -93,7 +93,7 @@ MxEngineApp::ProcessFn MxMDSubscriber::processFn()
 void MxMDSubscriber::process_(MxMDSubLink *, MxQMsg *msg)
 {
   using namespace MxMDStream;
-  core()->apply(msg->as<Frame>(), m_filter);
+  core()->apply(msg->as<Hdr>(), m_filter);
 }
 
 #define linkINFO(code) \
@@ -281,10 +281,9 @@ ZmRef<MxQMsg> MxMDSubLink::tcpLogin()
 {
   using namespace MxMDStream;
   ZuRef<Msg> msg = new Msg();
-  Frame *frame = new (msg->ptr()) Frame(
-      (uint16_t)sizeof(Login), (uint16_t)Login::Code,
-      (uint32_t)0, (uint64_t)0, (uint64_t)id());
-  new (frame->ptr()) Login{m_partition->tcpUsername, m_partition->tcpPassword};
+  Hdr *hdr = new (msg->ptr()) Hdr(
+      (uint16_t)sizeof(Login), (uint8_t)Login::Code);
+  new (hdr->body()) Login{m_partition->tcpUsername, m_partition->tcpPassword};
   unsigned msgLen = msg->length();
   return new MxQMsg(ZuMv(msg), msgLen);
 }
@@ -324,14 +323,14 @@ void MxMDSubLink::tcpLoginAck()
 void MxMDSubLink::TCP::process(ZiIOContext &io)
 {
   using namespace MxMDStream;
-  const Frame &frame = m_in->as<Frame>();
-  if (ZuUnlikely(frame.type == Type::EndOfSnapshot)) {
+  const Hdr &hdr = m_in->as<Hdr>();
+  if (ZuUnlikely(hdr.type == Type::EndOfSnapshot)) {
     {
       Guard stateGuard(m_stateLock);
       m_state = State::Disconnect;
     }
     io.disconnect();
-    m_link->endOfSnapshot(frame.as<EndOfSnapshot>().seqNo);
+    m_link->endOfSnapshot(hdr.as<EndOfSnapshot>().seqNo);
     return;
   }
   m_link->tcpProcess(m_in);
@@ -339,7 +338,7 @@ void MxMDSubLink::TCP::process(ZiIOContext &io)
 void MxMDSubLink::tcpProcess(MxQMsg *msg)
 {
   using namespace MxMDStream;
-  core()->apply(msg->as<Frame>(), false);
+  core()->apply(msg->as<Hdr>(), false);
 }
 void MxMDSubLink::endOfSnapshot(MxSeqNo seqNo)
 {
@@ -457,16 +456,16 @@ void MxMDSubLink::UDP::recv(ZiIOContext &io)
   using namespace MxMDStream;
   ZmRef<MxQMsg> msg = new MxQMsg(new Msg());
   MxMDStream::UDP::recv<UDP>(ZuMv(msg), io,
-      [](UDP *udp, ZmRef<MxQMsg> msg, ZiIOContext &io) {
+      [](UDP *udp, ZmRef<MxQMsg> msg, ZiIOContext &io) mutable {
 	udp->process(ZuMv(msg), io);
       });
 }
-void MxMDSubLink::UDP::process(MxQMsg *msg, ZiIOContext &io)
+void MxMDSubLink::UDP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 {
   using namespace MxMDStream;
   msg->length = io.offset + io.length;
-  const Frame &frame = msg->as<Frame>();
-  if (ZuUnlikely(frame.scan(msg->length))) {
+  const Hdr &hdr = msg->as<Hdr>();
+  if (ZuUnlikely(hdr.scan(msg->length))) {
     ZtHexDump msg_{"truncated UDP message", msg->ptr(), msg->length};
     m_link->engine()->appException(ZeEVENT(Warning,
       ([=, id = m_link->id(), msg_ = ZuMv(msg_)](
@@ -475,19 +474,20 @@ void MxMDSubLink::UDP::process(MxQMsg *msg, ZiIOContext &io)
 	})));
   } else {
     msg->addr = io.addr;
-    m_link->udpReceived(msg);
+    m_link->udpReceived(ZuMv(msg));
   }
   recv(io);
 }
-void MxMDSubLink::udpReceived(MxQMsg *msg)
+void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
 {
+  using namespace MxMDStream;
   if (ZuUnlikely(
 	msg->addr.ip() == m_partition->resendIP ||
 	msg->addr.ip() == m_partition->resendIP2)) {
     Guard guard(m_resendLock);
     unsigned gapLength = m_resendGap.length();
     if (ZuUnlikely(gapLength)) {
-      uint64_t seqNo = msg->as<MxMDFrame>().seqNo;
+      uint64_t seqNo = msg->as<Hdr>().seqNo;
       uint64_t gapSeqNo = m_resendGap.key();
       if (seqNo >= gapSeqNo && seqNo < gapSeqNo + gapLength) {
 	m_resendMsg = msg;
@@ -497,7 +497,7 @@ void MxMDSubLink::udpReceived(MxQMsg *msg)
       }
     }
   }
-  rxInvoke([msg = ZmMkRef(msg)](Rx *rx) mutable { rx->received(ZuMv(msg)); });
+  rxInvoke([msg = ZuMv(msg)](Rx *rx) mutable { rx->received(ZuMv(msg)); });
 }
 void MxMDSubLink::request(const MxQueue::Gap &, const MxQueue::Gap &now)
 {
@@ -511,10 +511,9 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
   }
   using namespace MxMDStream;
   ZuRef<Msg> msg = new Msg();
-  Frame *frame = new (msg->ptr()) Frame(
-      (uint16_t)sizeof(ResendReq), (uint16_t)ResendReq::Code,
-      (uint32_t)0, (uint64_t)0, (uint64_t)id());
-  new (frame->ptr()) ResendReq{now.key(), now.length()};
+  Hdr *hdr = new (msg->ptr()) Hdr(
+      (uint16_t)sizeof(ResendReq), (uint8_t)ResendReq::Code);
+  new (hdr->body()) ResendReq{now.key(), now.length()};
   unsigned msgLen = msg->length();
   ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(msg), msgLen);
   ZmRef<UDP> udp;
@@ -612,11 +611,11 @@ void MxMDSubscriber::resendCmd(
   if (!*seqNo || !*count) throw MxMDCmd::Usage();
   ZmRef<MxQMsg> msg = link->resend(seqNo, count);
   if (!msg) throw ZtString("timed out");
-  seqNo = msg->as<MxMDFrame>().seqNo;
+  seqNo = msg->as<Hdr>().seqNo;
   out << "seqNo: " << seqNo << '\n';
-  const Frame &frame = msg->as<Frame>();
+  const Hdr &hdr = msg->as<Hdr>();
   out << ZtHexDump(
-      ZtString() << "type: " << Type::name(frame.type),
+      ZtString() << "type: " << Type::name(hdr.type),
       msg->ptr(), msg->length) << '\n';
 }
 

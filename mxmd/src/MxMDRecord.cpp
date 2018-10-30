@@ -216,7 +216,7 @@ void MxMDRecLink::disconnect()
 int MxMDRecLink::write_(const void *ptr, ZeError *e)
 {
   using namespace MxMDStream;
-  return m_file.write(ptr, sizeof(Frame) + ((const Frame *)ptr)->len, e);
+  return m_file.write(ptr, sizeof(Hdr) + ((const Hdr *)ptr)->len, e);
 }
 
 // snapshot
@@ -238,10 +238,9 @@ void *MxMDRecLink::out(void *ptr, unsigned length, unsigned type,
     int shardID, ZmTime stamp)
 {
   using namespace MxMDStream;
-  Frame *frame = new (ptr) Frame(
-      (uint16_t)length, (uint16_t)type, (uint32_t)0, (uint64_t)0,
-      (uint64_t)shardID, stamp.sec(), (uint32_t)stamp.nsec());
-  return frame->ptr();
+  Hdr *hdr = new (ptr) Hdr(
+      (uint16_t)length, (uint8_t)type, (uint8_t)shardID);
+  return hdr->body();
 }
 void MxMDRecLink::push2()
 {
@@ -272,9 +271,9 @@ void MxMDRecLink::recv(Rx *rx)
 void MxMDRecLink::recv_(Rx *rx)
 {
   using namespace MxMDStream;
-  const Frame *frame;
+  const Hdr *hdr;
   MxMDBroadcast &broadcast = core()->broadcast();
-  if (ZuUnlikely(!(frame = broadcast.shift()))) {
+  if (ZuUnlikely(!(hdr = broadcast.shift()))) {
     if (ZuLikely(broadcast.readStatus() == Zi::EndOfFile)) {
       broadcast.detach();
       broadcast.close();
@@ -284,7 +283,7 @@ void MxMDRecLink::recv_(Rx *rx)
     }
     goto again;
   }
-  if (frame->len > sizeof(Buf)) {
+  if (hdr->len > sizeof(Buf)) {
     broadcast.shift2();
     broadcast.detach();
     broadcast.close();
@@ -299,10 +298,10 @@ void MxMDRecLink::recv_(Rx *rx)
 	})));
     return;
   }
-  switch ((int)frame->type) {
+  switch ((int)hdr->type) {
     case Type::EndOfSnapshot:
       {
-	const EndOfSnapshot &eos = frame->as<EndOfSnapshot>();
+	const EndOfSnapshot &eos = hdr->as<EndOfSnapshot>();
 	if (ZuUnlikely(eos.id == id())) {
 	  MxSeqNo seqNo = eos.seqNo;
 	  bool ok = eos.ok;
@@ -314,7 +313,7 @@ void MxMDRecLink::recv_(Rx *rx)
       break;
     case Type::Wake:
       {
-	const Wake &wake = frame->as<Wake>();
+	const Wake &wake = hdr->as<Wake>();
 	if (ZuUnlikely(wake.id == id())) {
 	  broadcast.shift2();
 	  return;
@@ -325,16 +324,14 @@ void MxMDRecLink::recv_(Rx *rx)
     default:
       {
 	ZuRef<Msg> msg = new Msg();
-	unsigned msgLen = sizeof(Frame) + frame->len;
-	memcpy(msg->ptr(), frame, msgLen);
+	unsigned msgLen = sizeof(Hdr) + hdr->len;
+	memcpy(msg->ptr(), hdr, msgLen);
 	broadcast.shift2();
 	MxSeqNo seqNo = m_seqNo++;
-	Frame &msgFrame = msg->as<Frame>();
-	msgFrame.linkID = id();
-	msgFrame.session = session();
-	msgFrame.seqNo = seqNo;
+	Hdr &msgHdr = msg->as<Hdr>();
+	msgHdr.seqNo = seqNo;
 	rx->received(new MxQMsg(ZuMv(msg), msgLen,
-	      MxMsgID{id(), session(), seqNo}));
+	      MxMsgID{id(), seqNo}));
       }
       break;
   }

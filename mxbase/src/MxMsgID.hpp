@@ -39,15 +39,8 @@
 
 // generic message ID
 
-typedef ZuBox0(uint32_t) MxSession;
-
-inline MxSession MxNewSession() {
-  return (int64_t)ZmTimeNow().sec() - (int64_t)1540833603;
-}
-
 struct MxMsgID {
   MxID		linkID;
-  MxSession	session;
   MxSeqNo	seqNo;
 };
 

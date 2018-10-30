@@ -142,19 +142,19 @@ public:
 
     {
       using namespace MxMDStream;
-      const Frame &frame = msg->frame();
-      switch ((int)frame.type) {
+      const Hdr &hdr = msg->hdr();
+      switch ((int)hdr.type) {
 	case Type::AddTickSizeTbl:
 	case Type::ResetTickSizeTbl:
 	  {
-	    const AddTickSizeTbl &obj = frame.as<AddTickSizeTbl>();
-	    new (data) Data{frame.type, obj.venue, obj.id, obj.pxNDP};
+	    const AddTickSizeTbl &obj = hdr.as<AddTickSizeTbl>();
+	    new (data) Data{hdr.type, obj.venue, obj.id, obj.pxNDP};
 	  }
 	  break;
 	case Type::AddTickSize:
 	  {
-	    const AddTickSize &obj = frame.as<AddTickSize>();
-	    new (data) Data{frame.type,
+	    const AddTickSize &obj = hdr.as<AddTickSize>();
+	    new (data) Data{hdr.type,
 	      obj.venue, obj.id, obj.pxNDP,
 	      obj.minPrice, obj.maxPrice, obj.tickSize};
 	  }
@@ -238,20 +238,20 @@ public:
 
     {
       using namespace MxMDStream;
-      const Frame &frame = msg->frame();
-      switch ((int)frame.type) {
+      const Hdr &hdr = msg->hdr();
+      switch ((int)hdr.type) {
 	case Type::AddSecurity:
 	  {
-	    const AddSecurity &obj = frame.as<AddSecurity>();
-	    new (data) Data{frame.type, obj.transactTime,
+	    const AddSecurity &obj = hdr.as<AddSecurity>();
+	    new (data) Data{hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
 	      obj.shard, obj.refData};
 	  }
 	  break;
 	case Type::UpdateSecurity:
 	  {
-	    const UpdateSecurity &obj = frame.as<UpdateSecurity>();
-	    new (data) Data{frame.type, obj.transactTime,
+	    const UpdateSecurity &obj = hdr.as<UpdateSecurity>();
+	    new (data) Data{hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
 	      {}, obj.refData};
 	  }
@@ -350,12 +350,12 @@ public:
 
     {
       using namespace MxMDStream;
-      const Frame &frame = msg->frame();
-      switch ((int)frame.type) {
+      const Hdr &hdr = msg->hdr();
+      switch ((int)hdr.type) {
 	case Type::AddOrderBook:
 	  {
-	    const AddOrderBook &obj = frame.as<AddOrderBook>();
-	    new (data) Data{frame.type, obj.transactTime,
+	    const AddOrderBook &obj = hdr.as<AddOrderBook>();
+	    new (data) Data{hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
 	      {}, obj.qtyNDP, 1, obj.tickSizeTbl, obj.lotSizes,
 	      { obj.security.venue() },
@@ -366,15 +366,15 @@ public:
 	  break;
 	case Type::DelOrderBook:
 	  {
-	    const DelOrderBook &obj = frame.as<DelOrderBook>();
-	    new (data) Data{frame.type, obj.transactTime,
+	    const DelOrderBook &obj = hdr.as<DelOrderBook>();
+	    new (data) Data{hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id()};
 	  }
 	  break;
 	case Type::AddCombination:
 	  {
-	    const AddCombination &obj = frame.as<AddCombination>();
-	    new (data) Data{frame.type, obj.transactTime,
+	    const AddCombination &obj = hdr.as<AddCombination>();
+	    new (data) Data{hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
 	      obj.pxNDP, obj.qtyNDP, obj.legs, obj.tickSizeTbl, obj.lotSizes,
 	      {}, {}, {}, {}, {} };
@@ -389,15 +389,15 @@ public:
 	  break;
 	case Type::DelCombination:
 	  {
-	    const DelCombination &obj = frame.as<DelCombination>();
-	    new (data) Data{frame.type, obj.transactTime,
+	    const DelCombination &obj = hdr.as<DelCombination>();
+	    new (data) Data{hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id() };
 	  }
 	  break;
 	case Type::UpdateOrderBook:
 	  {
-	    const UpdateOrderBook &obj = frame.as<UpdateOrderBook>();
-	    new (data) Data{frame.type, obj.transactTime,
+	    const UpdateOrderBook &obj = hdr.as<UpdateOrderBook>();
+	    new (data) Data{hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
 	      {}, {}, MxUInt(), obj.tickSizeTbl, obj.lotSizes,
 	      {}, {}, {}, {}, {} };

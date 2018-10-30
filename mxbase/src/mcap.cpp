@@ -42,8 +42,7 @@
 #include <ZvHeapCf.hpp>
 
 #include <MxCSV.hpp>
-
-#include <MxMDFrame.hpp>
+#include <MxMCapHdr.hpp>
 
 struct Group {
   uint16_t		id;
@@ -132,7 +131,7 @@ public:
   void post() { m_sem.post(); }
 
   void connect(ZuAnyPOD *group_);
-  void write(const MxMDFrame *frame, const char *buf);
+  void write(const MxMCapHdr *hdr, const char *buf);
 
   inline const ZtString &path() const { return m_path; }
   inline const ZtString &groups() const { return m_groups; }
@@ -174,7 +173,7 @@ public:
 
 private:
   ZmRef<Connection>	m_cxn;
-  MxMDFrame		m_frame;
+  MxMCapHdr		m_hdr;
   ZiSockAddr		m_addr;
   char			m_buf[Size];
 };
@@ -253,11 +252,10 @@ template <typename Heap>
 void Msg_<Heap>::rcvd(ZiIOContext &io)
 {
   ZmTime now(ZmTime::Now);
-  m_frame.len = io.offset + io.length;
-  m_frame.type = 0;
-  m_frame.sec = now.sec();
-  m_frame.nsec = now.nsec();
-  m_frame.linkID = m_cxn->group().id;
+  m_hdr.len = io.offset + io.length;
+  m_hdr.group = m_cxn->group().id;
+  m_hdr.sec = now.sec();
+  m_hdr.nsec = now.nsec();
 
   m_cxn->app()->mx2()->add(ZmFn<>::Member<&Msg_::write>::fn(ZmMkRef(this)));
 
@@ -267,22 +265,22 @@ void Msg_<Heap>::rcvd(ZiIOContext &io)
 template <typename Heap>
 void Msg_<Heap>::write()
 {
-  m_cxn->app()->write(&m_frame, m_buf);
+  m_cxn->app()->write(&m_hdr, m_buf);
 }
 
-void App::write(const MxMDFrame *frame, const char *buf)
+void App::write(const MxMCapHdr *hdr, const char *buf)
 {
   ZeError e;
   {
     ZmGuard<ZmLock> guard(m_fileLock);
     if (!m_raw) {
-      m_vecs[0].iov_base = (void *)frame;
-      m_vecs[0].iov_len = sizeof(MxMDFrame);
+      m_vecs[0].iov_base = (void *)hdr;
+      m_vecs[0].iov_len = sizeof(MxMCapHdr);
       m_vecs[1].iov_base = (void *)buf;
-      m_vecs[1].iov_len = frame->len;
+      m_vecs[1].iov_len = hdr->len;
       if (m_file.writev(m_vecs, 2, &e) != Zi::OK) goto error;
     } else {
-      if (m_file.write((void *)buf, frame->len, &e) != Zi::OK) goto error;
+      if (m_file.write((void *)buf, hdr->len, &e) != Zi::OK) goto error;
     }
   }
   return;

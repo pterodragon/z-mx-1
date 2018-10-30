@@ -66,11 +66,13 @@ public:
 
   template <typename S>
   inline ZiIP(S &&s, typename ZuIsString<S>::T *_ = 0) {
+    if (!s) { s_addr = 0; return; }
     ZeError e;
     if (resolve(ZuFwd<S>(s), &e) != OK) throw e;
   }
   template <typename S>
   inline typename ZuIsString<S, ZiIP &>::T &operator =(S &&s) {
+    if (!s) { s_addr = 0; return; }
     ZeError e;
     if (resolve(ZuFwd<S>(s), &e) != OK) throw e;
     return *this;

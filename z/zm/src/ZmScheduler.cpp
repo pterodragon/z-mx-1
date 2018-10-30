@@ -216,6 +216,7 @@ void ZmScheduler::stop()
     for (unsigned i = 0; i < m_nThreads; i++) {
       ZmThread &thread = m_threads[i].thread;
       if (!!thread) {
+	wake(&m_threads[i]);
 	thread.join();
 	thread = ZmThread();
       }
@@ -421,9 +422,10 @@ bool ZmScheduler::run__(Thread *thread, ZmFn<> fn)
       return true;
     }
   }
+  int status = thread->ring.writeStatus();
+  if (status == ZmRing_::EndOfFile) return false;
   // should never happen - the enqueuing thread will normally
   // be forced to wait for the dequeuing thread to drain the ring
-  int status = thread->ring.writeStatus();
   ZuStringN<120> s;
   s << "FATAL - Thread Dispatch Failure - push() failed: ";
   if (status <= 0)

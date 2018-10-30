@@ -426,7 +426,7 @@ private:
     for (unsigned i = 0; i < n; i++) {
       int j;
       if ((j = colIndex[i]) < 0 || j >= (int)a.length())
-        m_colArray[i]->parse(ZtArray<char>(), pod);
+        m_colArray[i]->parse(ZuString(), pod);
     }
     for (unsigned i = 0; i < n; i++) {
       int j;

@@ -68,9 +68,6 @@ public:
   ZuInline unsigned ttl() const { return m_ttl; }
   ZuInline bool loopBack() const { return m_loopBack; }
 
-  bool failover() const { return m_failover; }
-  void failover(bool v) { m_failover = v; }
-
   void updateLinks(ZuString partitions); // update from CSV
 
 private:
@@ -130,8 +127,6 @@ private:
   bool			m_loopBack = false;
 
   Partitions		m_partitions;
-
-  bool			m_failover = false;
 
   typedef MxMDBroadcast::Ring Ring;
 
@@ -270,6 +265,12 @@ public:
   // MxAnyLink virtual
   void update(ZvCf *);
   void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo);
+  bool failover() const { return m_failover; }
+  void failover(bool v) {
+    if (v == m_failover) return;
+    m_failover = v;
+    reconnect();
+  }
 
   void connect();
   void disconnect();
@@ -292,6 +293,14 @@ public:
   bool sendGap_(const MxQueue::Gap &gap, bool more);
   bool resendGap_(const MxQueue::Gap &gap, bool more);
 
+  // broadcast
+  void sendMsg(const Hdr *hdr);
+  void ack();
+
+  // command support
+  void status(ZtArray<char> &out);
+
+private:
   // connection management
   void tcpListen();
   void tcpListening(const ZiListenInfo &);
@@ -305,24 +314,16 @@ public:
   void tcpError(TCP *tcp, ZiIOContext *io);
   void udpError(UDP *udp, ZiIOContext *io);
 
-  // broadcast
-  void sendMsg(const Hdr *hdr);
-  void ack();
-
   // snapshot
   void snap(ZmRef<TCP> tcp);
-
-  // command support
-  void status(ZtArray<char> &out);
 
 private:
   typedef MxQueueRx<MxMDPubLink> Rx;
   typedef MxQueueTx<MxMDPubLink> Tx;
 
-  int write_(const Hdr *hdr, ZeError *e);
-
-private:
   const MxMDPartition	*m_partition = 0;
+
+  bool			m_failover = false;
 
   ZiSockAddr		m_udpAddr;
 

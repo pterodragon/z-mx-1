@@ -115,7 +115,7 @@ public:
   // MxAnyLink virtual
   void update(ZvCf *cf) { }
   void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) { }
-  bool failover() { return false; }
+  bool failover() const { return false; }
   void failover(bool) { }
 
 #define linkINFO(code) \

@@ -1,0 +1,22 @@
+mx {
+  id MxMD
+  nThreads 5
+  rxThread 1
+  txThread 2
+  isolation 1-4
+}
+record {
+  rxThread 3
+  snapThread 5
+}
+shards {
+  0 { tid 4 }
+}
+publisher {
+  snapThread 5
+  maxQueueSize 1000
+  loginTimeout 1
+  ackInterval 1
+  reReqMaxGap 10
+  partitions partitions.csv
+}

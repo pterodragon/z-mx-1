@@ -43,7 +43,7 @@ void MxMDPublisher::init(MxMDCore *core, ZvCf *cf)
 
   if (ZuString ip = cf->get("interface")) m_interface = ip;
   m_maxQueueSize = cf->getInt("maxQueueSize", 1000, 1000000, false, 100000);
-  m_loginTimeout = cf->getDbl("loginTimeout", 0, 3600, false, 10);
+  m_loginTimeout = cf->getDbl("loginTimeout", 0, 3600, false, 3);
   m_ackInterval = cf->getDbl("ackInterval", 0, 3600, false, 10);
   m_reReqMaxGap = cf->getInt("reReqMaxGap", 0, 1000, false, 10);
   m_ttl = cf->getInt("ttl", 0, INT_MAX, false, 1);
@@ -209,7 +209,7 @@ void MxMDPubLink::tcpListen()
 {
   ZiIP ip;
   uint16_t port;
-  if (!engine()->failover()) {
+  if (!m_failover) {
     ip = m_partition->tcpIP;
     port = m_partition->tcpPort;
   } else {
@@ -228,7 +228,8 @@ void MxMDPubLink::tcpListen()
 	  if (transient)
 	    link->reconnect();
 	  else
-	    link->disconnected();
+	    link->engine()->rxRun(ZmFn<>{
+		[](MxMDPubLink *link) { link->disconnect(); }, link});
 	}, this),
       ZiConnectFn([](MxMDPubLink *link, const ZiCxnInfo &ci) -> uintptr_t {
 	  if (link->state() != MxLinkState::Up)
@@ -366,7 +367,7 @@ void MxMDPubLink::udpConnect()
   uint16_t port;
   ZiIP resendIP;
   uint16_t resendPort;
-  if (!engine()->failover()) {
+  if (!m_failover) {
     ip = m_partition->udpIP;
     port = m_partition->udpPort;
     resendIP = m_partition->resendIP;
@@ -399,7 +400,8 @@ void MxMDPubLink::udpConnect()
 	  if (transient)
 	    link->reconnect();
 	  else
-	    link->disconnected();
+	    link->engine()->rxRun(ZmFn<>{
+		[](MxMDPubLink *link) { link->disconnect(); }, link});
 	}, this),
       resendIP, resendPort, ZiIP(), 0, options);
 }

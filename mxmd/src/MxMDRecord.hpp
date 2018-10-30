@@ -104,6 +104,8 @@ public:
   // MxAnyLink virtual (mostly unused)
   void update(ZvCf *);
   void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo);
+  bool failover() const { return false; }
+  void failover(bool) { }
 
   void connect();
   void disconnect();

@@ -32,7 +32,8 @@ void MxMDSubscriber::init(MxMDCore *core, ZvCf *cf)
   if (ZuString ip = cf->get("interface")) m_interface = ip;
   m_filter = cf->getInt("filter", 0, 1, false, 0);
   m_maxQueueSize = cf->getInt("maxQueueSize", 1000, 1000000, false, 100000);
-  m_loginTimeout = cf->getDbl("loginTimeout", 0, 3600, false, 10);
+  m_loginTimeout = cf->getDbl("loginTimeout", 0, 3600, false, 3);
+  m_timeout = cf->getDbl("timeout", 0, 3600, false, 3);
   m_reconnInterval = cf->getDbl("reconnInterval", 0, 3600, false, 10);
   m_reReqInterval = cf->getDbl("reReqInterval", 0, 3600, false, 1);
   m_reReqMaxGap = cf->getInt("reReqMaxGap", 0, 1000, false, 10);
@@ -98,6 +99,9 @@ void MxMDSubscriber::process_(MxMDSubLink *, MxQMsg *msg)
 
 #define linkINFO(code) \
     engine()->appException(ZeEVENT(Info, \
+      ([=, id = id()](const ZeEvent &, ZmStream &out) { out << code; })))
+#define linkWARNING(code) \
+    engine()->appException(ZeEVENT(Warning, \
       ([=, id = id()](const ZeEvent &, ZmStream &out) { out << code; })))
 
 void MxMDSubLink::update(ZvCf *)
@@ -165,12 +169,16 @@ void MxMDSubLink::connect()
 {
   linkINFO("MxMDSubLink::connect(" << id << ')');
 
+  reset(0, 0);
+
   tcpConnect();
 }
 
 void MxMDSubLink::disconnect()
 {
   linkINFO("MxMDSubLink::disconnect(" << id << ')');
+
+  mx()->del(&m_timer);
 
   ZmRef<TCP> tcp;
   ZmRef<UDP> udp;
@@ -195,7 +203,7 @@ void MxMDSubLink::tcpConnect()
 {
   ZiIP ip;
   uint16_t port;
-  if (!engine()->failover()) {
+  if (!m_failover) {
     ip = m_partition->tcpIP;
     port = m_partition->tcpPort;
   } else {
@@ -217,7 +225,8 @@ void MxMDSubLink::tcpConnect()
 	  if (transient)
 	    link->reconnect();
 	  else
-	    link->disconnected();
+	    link->engine()->rxRun(ZmFn<>{
+		[](MxMDSubLink *link) { link->disconnect(); }, link});
 	}, this),
       ZiIP(), 0, ip, port);
 }
@@ -319,6 +328,7 @@ void MxMDSubLink::tcpLoginAck()
 {
   linkINFO("MxMDSubLink::tcpLoginAck(" << id << ')');
   connected();
+  hbStart();
 }
 void MxMDSubLink::TCP::process(ZiIOContext &io)
 {
@@ -357,7 +367,7 @@ void MxMDSubLink::udpConnect()
   uint16_t port;
   ZiIP resendIP;
   uint16_t resendPort;
-  if (!engine()->failover()) {
+  if (!m_failover) {
     ip = m_partition->udpIP;
     port = m_partition->udpPort;
     resendIP = m_partition->resendIP;
@@ -388,7 +398,8 @@ void MxMDSubLink::udpConnect()
 	  if (transient)
 	    link->reconnect();
 	  else
-	    link->disconnected();
+	    link->engine()->rxRun(ZmFn<>{
+		[](MxMDSubLink *link) { link->disconnect(); }, link});
 	}, this),
       ZiIP(), port, ZiIP(), 0, options);
 }
@@ -497,7 +508,10 @@ void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
       }
     }
   }
-  rxInvoke([msg = ZuMv(msg)](Rx *rx) mutable { rx->received(ZuMv(msg)); });
+  rxInvoke([msg = ZuMv(msg)](Rx *rx) mutable {
+	rx->app().active();
+	rx->received(ZuMv(msg));
+      });
 }
 void MxMDSubLink::request(const MxQueue::Gap &, const MxQueue::Gap &now)
 {
@@ -506,6 +520,7 @@ void MxMDSubLink::request(const MxQueue::Gap &, const MxQueue::Gap &now)
 void MxMDSubLink::reRequest(const MxQueue::Gap &now)
 {
   if (now.length() > engine()->reReqMaxGap()) {
+    linkWARNING("MxMDSubLink::heartbeat(" << id << "): inactivity timeout");
     reconnect();
     return;
   }
@@ -523,6 +538,33 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
   }
   if (ZuLikely(udp))
     MxMDStream::UDP::send(udp.ptr(), ZuMv(qmsg), m_udpResendAddr);
+}
+
+// failover
+
+void MxMDSubLink::hbStart()
+{
+  m_active = false;
+  m_inactive = 0;
+  mx()->rxRun(ZmFn<>{[](MxMDSubLink *link) { link->heartbeat(); }, this},
+      ZmTimeNow(1), &m_timer);
+}
+
+void MxMDSubLink::heartbeat()
+{
+  if (!m_active) {
+    if (++m_inactive >= (unsigned)timeout()) {
+      m_inactive = 0;
+      linkWARNING("MxMDSubLink::heartbeat(" << id << "): inactivity timeout");
+      reconnect();
+      return;
+    }
+  } else {
+    m_active = false;
+    m_inactive = 0;
+  }
+  mx()->rxRun(ZmFn<>{[](MxMDSubLink *link) { link->heartbeat(); }, this},
+      ZmTimeNow(1), &m_timer);
 }
 
 // commands

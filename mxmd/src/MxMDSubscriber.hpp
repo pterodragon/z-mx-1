@@ -63,12 +63,10 @@ public:
   ZuInline bool filter() const { return m_filter; }
   ZuInline unsigned maxQueueSize() const { return m_maxQueueSize; }
   ZuInline ZmTime loginTimeout() const { return ZmTime(m_loginTimeout); }
+  ZuInline ZmTime timeout() const { return ZmTime(m_timeout); }
   ZuInline ZmTime reconnInterval() const { return ZmTime(m_reconnInterval); }
   ZuInline ZmTime reReqInterval() const { return ZmTime(m_reReqInterval); }
   ZuInline unsigned reReqMaxGap() const { return m_reReqMaxGap; }
-
-  bool failover() const { return m_failover; }
-  void failover(bool v) { m_failover = v; }
 
   void updateLinks(ZuString partitions); // update from CSV
 
@@ -115,13 +113,12 @@ private:
   bool			m_filter = false;
   unsigned		m_maxQueueSize = 0;
   double		m_loginTimeout = 0.0;
+  double		m_timeout = 0.0;
   double		m_reconnInterval = 0.0;
   double		m_reReqInterval = 0.0;
   unsigned		m_reReqMaxGap = 10;
 
   Partitions		m_partitions;
-
-  bool			m_failover = false;
 };
 
 class MxMDAPI MxMDSubLink : public MxLink<MxMDSubLink> {
@@ -223,11 +220,15 @@ public:
     return engine()->core();
   }
 
-  ZmTime loginTimeout() { return engine()->loginTimeout(); }
-
   // MxAnyLink virtual
   void update(ZvCf *);
   void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo);
+  bool failover() const { return m_failover; }
+  void failover(bool v) {
+    if (v == m_failover) return;
+    m_failover = v;
+    reconnect();
+  }
 
   void connect();
   void disconnect();
@@ -254,6 +255,7 @@ public:
   void status(ZtArray<char> &out);
   ZmRef<MxQMsg> resend(MxSeqNo seqNo, unsigned count);
 
+private:
   // connection management
   void tcpConnect();
   void tcpConnected(TCP *tcp);
@@ -277,8 +279,22 @@ public:
     return m_snapshotSeqNo;
   }
 
+  // failover
+  ZuInline ZmTime loginTimeout() { return engine()->loginTimeout(); }
+  ZuInline ZmTime timeout() { return engine()->timeout(); }
+
+  ZuInline void active() { m_active = true; }
+  void hbStart();
+  void heartbeat();
+
 private:
   const MxMDPartition	*m_partition = 0;
+
+  bool			m_failover = false;
+
+  ZmScheduler::Timer	m_timer;
+  bool			m_active = false;
+  unsigned		m_inactive = 0;
 
   ZiSockAddr		m_udpResendAddr;
 

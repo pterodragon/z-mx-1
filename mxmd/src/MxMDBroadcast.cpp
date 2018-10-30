@@ -119,7 +119,8 @@ void MxMDBroadcast::heartbeat_()
   void *ptr = m_ring->push(sizeof(Hdr) + sizeof(HeartBeat));
   if (!ptr) return;
   Hdr *hdr = new (ptr) Hdr(
-      (uint16_t)sizeof(HeartBeat), (uint8_t)HeartBeat::Code);
+      (uint16_t)sizeof(HeartBeat), (uint8_t)HeartBeat::Code,
+      (uint8_t)0xff, (uint32_t)0, (uint64_t)++m_seqNo);
   m_lastTime.now();
   new (hdr->body()) HeartBeat{MxDateTime{m_lastTime}};
   m_ring->push2();

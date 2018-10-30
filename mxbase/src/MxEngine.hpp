@@ -154,7 +154,7 @@ public:
 
   virtual void update(ZvCf *cf) = 0;
   virtual void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) = 0;
-  virtual bool failover() = 0;
+  virtual bool failover() const = 0;
   virtual void failover(bool) = 0;
 
 protected:

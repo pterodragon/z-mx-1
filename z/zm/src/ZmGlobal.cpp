@@ -33,8 +33,8 @@
 
 // statically-initialized spinlock to guard initial singleton registration
 // and cleanup at exit; little if any contention is anticipated; access
-// intended to be exceptional, intermittent, and limited to application
-// startup and shutdown
+// intended to be exceptional, intermittent, almost exclusively during
+// application startup and shutdown
 static uint32_t ZmGlobal_lock = 0;
 #define lock() \
   ZmAtomic<uint32_t> *ZuMayAlias(lock) = \

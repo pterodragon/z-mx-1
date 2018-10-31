@@ -152,7 +152,7 @@ void deletedPxLevel(MxMDPxLevel *pxLevel, MxDateTime stamp)
       (double)MxValNDP{pxLevel->data().qty, pxLevel->qtyNDP()}.fp());
 }
 
-void exception(MxMDLib *, ZmRef<ZeEvent> e) { std::cerr << *e << '\n'; }
+void exception(MxMDLib *, ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 
 void timer(MxDateTime now, MxDateTime &next)
 {

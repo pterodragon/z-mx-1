@@ -41,6 +41,8 @@
 
 #include <ZuCmp.hpp>
 #include <ZuCan.hpp>
+#include <ZuConversion.hpp>
+#include <ZuIfT.hpp>
 
 #include <ZmRef.hpp>
 #include <ZmCleanup.hpp>
@@ -60,7 +62,14 @@ template <typename T> struct ZmSingleton_<T, false> {
   ZuInline static void deref(T *p) { delete p; }
 };
 
-template <typename T_, bool Construct_ = true>
+template <typename T, bool Construct = true> struct ZmSingletonCtor {
+  static T *fn() { return new T(); }
+};
+template <typename T> struct ZmSingletonCtor<T, false> {
+  static T *fn() { return nullptr; }
+};
+template <typename T_, bool Construct_ = true,
+  auto CtorFn = ZmSingletonCtor<T_, Construct_>::fn>
 class ZmSingleton : public ZmGlobal, public ZmSingleton_<T_> {
   ZmSingleton(const ZmSingleton &);
   ZmSingleton &operator =(const ZmSingleton &);	// prevent mis-use
@@ -79,7 +88,7 @@ private:
 
   template <bool Construct = Construct_>
   inline typename ZuIfT<Construct>::T ctor() {
-    T *ptr = new T();
+    T *ptr = CtorFn();
     this->ref(ptr);
     m_instance = ptr;
   }
@@ -128,5 +137,17 @@ public:
     return global()->instance_(ptr);
   }
 };
+
+template <typename L> struct ZmStatic_Ctor {
+  static auto fn() { return (*(L *)(void *)0)(); }
+  typedef decltype(fn()) (*Fn)();
+  enum { OK = ZuConversion<L, Fn>::Exists };
+};
+template <typename L>
+ZuInline const auto &ZmStatic(L l,
+    typename ZuIfT<ZmStatic_Ctor<L>::OK>::T *_ = 0) {
+  typedef typename ZuDeref<decltype(*ZmStatic_Ctor<L>::fn())>::T T;
+  return *(ZmSingleton<T, true, ZmStatic_Ctor<L>::fn>::instance());
+}
 
 #endif /* ZmSingleton_HPP */

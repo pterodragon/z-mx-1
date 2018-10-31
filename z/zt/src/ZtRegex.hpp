@@ -36,8 +36,15 @@
 #include <ZuTraits.hpp>
 #include <ZuString.hpp>
 
+#include <ZmCleanup.hpp>
+
 #include <ZtString.hpp>
 
+// ZtRegex is used by ZeLog
+class ZtRegex;
+template <> struct ZmCleanup<ZtRegex> {
+  enum { Level = ZmCleanupLevel::Platform };
+};
 class ZtAPI ZtRegex {
   ZtRegex(const ZtRegex &) = delete;
   ZtRegex &operator =(const ZtRegex &) = delete;
@@ -160,7 +167,7 @@ public:
     return a.length();
   }
 
-  inline int index(const char *name) {
+  inline int index(const char *name) const {
     int i = pcre_get_stringnumber(m_regex, name);
     if (i < 0) return -1;
     return i + 1;
@@ -211,5 +218,9 @@ private:
   pcre_extra	*m_extra;
   unsigned	m_captureCount;
 };
+
+#define ZtStaticRegex(...) ZmStatic([]() { return new ZtRegex(__VA_ARGS__); })
+#define ZtStaticRegexUTF8(x) \
+  ZmStatic([]() { return new ZtRegex(x, PCRE_UTF8); })
 
 #endif /* ZtRegex_HPP */

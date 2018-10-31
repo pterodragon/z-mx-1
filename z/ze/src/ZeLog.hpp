@@ -77,7 +77,7 @@ class ZeAPI ZeLog : public ZmThreadMgr {
   ZeLog(const ZeLog &);
   ZeLog &operator =(const ZeLog &);		// prevent mis-use
 
-friend class ZmSingleton<ZeLog, 1>;
+friend struct ZmSingletonCtor<ZeLog>;
 friend struct ZmCleanup<ZeLog>;
 
   struct EventQueueID {

@@ -161,6 +161,8 @@ void MxMDPubLink::connect()
 	  "MxMDPublisher." << id() << ".TCPTbl"));
   }
 
+  txInvoke([](Tx *tx) { tx->start(); }); // start sending
+
   tcpListen();
   udpConnect();
 }
@@ -184,6 +186,8 @@ void MxMDPubLink::disconnect()
     m_tcpTbl = nullptr;
     m_udp = nullptr;
   }
+
+  txInvoke([](Tx *tx) { tx->stop(); }); // stop sending
 
   engine()->detach();
 
@@ -218,7 +222,7 @@ void MxMDPubLink::tcpListen()
   }
 
   linkINFO("MxMDPubLink::tcpListen(" << id << ") " <<
-      ip << ':' << ZuBoxed(port) << ')');
+      ip << ':' << ZuBoxed(port));
 
   mx()->listen(
       ZiListenFn([](MxMDPubLink *link, const ZiListenInfo &info) {
@@ -245,7 +249,7 @@ void MxMDPubLink::tcpListening(const ZiListenInfo &info)
     m_listenInfo = info;
   }
   linkINFO("MxMDPubLink::tcpListening(" << id << ") " <<
-      info.ip << ':' << ZuBoxed(info.port) << ')');
+      info.ip << ':' << ZuBoxed(info.port));
 }
 MxMDPubLink::TCP::TCP(MxMDPubLink *link, const ZiCxnInfo &ci) :
   ZiConnection(link->mx(), ci), m_link(link), m_state(State::Login)
@@ -403,7 +407,7 @@ void MxMDPubLink::udpConnect()
 	    link->engine()->rxRun(ZmFn<>{
 		[](MxMDPubLink *link) { link->disconnect(); }, link});
 	}, this),
-      resendIP, resendPort, ZiIP(), 0, options);
+      ZiIP(), resendPort, ZiIP(), 0, options);
 }
 MxMDPubLink::UDP::UDP(MxMDPubLink *link, const ZiCxnInfo &ci) :
     ZiConnection(link->mx(), ci), m_link(link),
@@ -586,65 +590,60 @@ void MxMDPublisher::wake()
 
 void MxMDPublisher::recv()
 {
+  using namespace MxMDStream;
   if (ZuUnlikely(!m_ring)) return;
   switch ((int)state()) {
     case MxEngineState::Starting:
     case MxEngineState::Running:
-      recv_();
       break;
     default:
       mx()->wakeFn(rxThread(), ZmFn<>());
-      break;
+      return;
   }
-}
-
-void MxMDPublisher::recv_()
-{
-  using namespace MxMDStream;
   const Hdr *hdr;
-  if (ZuUnlikely(!(hdr = m_ring->shift()))) {
-    if (ZuLikely(m_ring->readStatus() == Zi::EndOfFile)) {
+  for (;;) {
+    if (ZuUnlikely(!(hdr = m_ring->shift()))) {
+      if (ZuLikely(m_ring->readStatus() == Zi::EndOfFile)) {
+	allLinks<MxMDPubLink>([](MxMDPubLink *link) -> uintptr_t {
+	    link->disconnect(); return 0; });
+	return;
+      }
+      continue;
+    }
+    if (hdr->len > sizeof(Buf)) {
+      m_ring->shift2();
       allLinks<MxMDPubLink>([](MxMDPubLink *link) -> uintptr_t {
 	  link->disconnect(); return 0; });
+      core()->raise(ZeEVENT(Error,
+	  ([name = ZtString(m_ring->params().name())](
+	      const ZeEvent &, ZmStream &s) {
+	    s << '"' << name << "\": "
+	    "IPC shared memory ring buffer read error - "
+	    "message too big / corrupt";
+	  })));
       return;
     }
-    goto again;
-  }
-  if (hdr->len > sizeof(Buf)) {
-    m_ring->shift2();
-    allLinks<MxMDPubLink>([](MxMDPubLink *link) -> uintptr_t {
-	link->disconnect(); return 0; });
-    core()->raise(ZeEVENT(Error,
-	([name = ZtString(m_ring->params().name())](
-	    const ZeEvent &, ZmStream &s) {
-	  s << '"' << name << "\": "
-	  "IPC shared memory ring buffer read error - "
-	  "message too big / corrupt";
-	})));
-    return;
-  }
-  switch ((int)hdr->type) {
-    case Type::Wake:
-      {
-	const Wake &wake = hdr->as<Wake>();
-	if (ZuUnlikely(wake.id == id())) {
+    switch ((int)hdr->type) {
+      case Type::Wake:
+	{
+	  const Wake &wake = hdr->as<Wake>();
+	  if (ZuUnlikely(wake.id == id())) {
+	    m_ring->shift2();
+	    return;
+	  }
 	  m_ring->shift2();
-	  return;
 	}
+	break;
+      case Type::EndOfSnapshot: // ignored
 	m_ring->shift2();
-      }
-      break;
-    case Type::EndOfSnapshot: // ignored
-      m_ring->shift2();
-      break;
-    default:
-      allLinks<MxMDPubLink>([hdr](MxMDPubLink *link) -> uintptr_t {
-	  link->sendMsg(hdr); return 0; });
-      m_ring->shift2();
-      break;
+	break;
+      default:
+	allLinks<MxMDPubLink>([hdr](MxMDPubLink *link) -> uintptr_t {
+	    link->sendMsg(hdr); return 0; });
+	m_ring->shift2();
+	break;
+    }
   }
-again:
-  rxRun_(ZmFn<>{[](MxMDPublisher *pub) { pub->recv_(); }, this});
 }
 
 MxEngineApp::ProcessFn MxMDPublisher::processFn()
@@ -671,12 +670,7 @@ void MxMDPubLink::loaded_(MxQMsg *msg)
   hdr.seqNo = msg->id.seqNo;
 }
 
-void MxMDPubLink::unloaded_(MxQMsg *msg) // unused
-{
-  using namespace MxMDStream;
-  Hdr &hdr = msg->as<Hdr>();
-  hdr.seqNo = 0;
-}
+void MxMDPubLink::unloaded_(MxQMsg *msg) { } // unused
 
 bool MxMDPubLink::send_(MxQMsg *msg, bool)
 {

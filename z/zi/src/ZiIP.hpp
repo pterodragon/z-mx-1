@@ -72,7 +72,7 @@ public:
   }
   template <typename S>
   inline typename ZuIsString<S, ZiIP &>::T &operator =(S &&s) {
-    if (!s) { s_addr = 0; return; }
+    if (!s) { s_addr = 0; return *this; }
     ZeError e;
     if (resolve(ZuFwd<S>(s), &e) != OK) throw e;
     return *this;

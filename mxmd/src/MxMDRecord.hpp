@@ -142,7 +142,6 @@ private:
   // Rx thread
   void wake();
   void recv(Rx *rx);
-  void recv_(Rx *rx);
 
 public:
   void write(MxQMsg *qmsg);

@@ -44,13 +44,13 @@ template <> struct ZmCleanup<ZmTopology> {
   enum { Level = ZmCleanupLevel::Thread };
 };
 
-template <typename, bool> class ZmSingleton;
+template <typename, bool> struct ZmSingletonCtor;
 
 class ZmAPI ZmTopology {
   ZmTopology(const ZmTopology &) = delete;
   ZmTopology &operator =(const ZmTopology &) = delete;
 
-friend class ZmSingleton<ZmTopology, 1>;
+friend struct ZmSingletonCtor<ZmTopology, true>;
 
   ZmTopology();
 

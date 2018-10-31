@@ -75,7 +75,7 @@ public:
 
       m_header.length(m_headerLen, false);
       try {
-	static ZtRegex r("\\bContent-Length:\\s+(\\d+)", PCRE_UTF8);
+	const auto &r = ZtStaticRegexUTF8("\\bContent-Length:\\s+(\\d+)");
 	i = r.m(m_header, c);
       } catch (...) { i = 0; }
       if (i < 2) {

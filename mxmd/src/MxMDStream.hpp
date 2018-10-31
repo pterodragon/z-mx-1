@@ -614,12 +614,13 @@ namespace MxMDStream {
     template <typename Cxn, typename L>
     inline typename IOMvLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
+      MxQMsg *msg_ = msg.ptr();
       io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	  msg->length = (io.offset += io.length);
 	  msg->addr = io.addr;
 	  IOMvLambda<Cxn, L>::invoke(io);
 	}, ZuMv(msg)},
-	msg->payload->ptr(), msg->payload->size(), 0);
+	msg_->payload->ptr(), msg_->payload->size(), 0);
     }
   }
 
@@ -648,6 +649,7 @@ namespace MxMDStream {
     template <typename Cxn, typename L>
     inline typename IOLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
+      MxQMsg *msg_ = msg.ptr();
       io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	  unsigned len = io.offset += io.length;
 	  while (len >= sizeof(Hdr)) {
@@ -667,7 +669,7 @@ namespace MxMDStream {
 	    len = io.offset;
 	  }
 	}, ZuMv(msg)},
-	msg->payload->ptr(), msg->payload->size(), 0);
+	msg_->payload->ptr(), msg_->payload->size(), 0);
     }
   }
 }

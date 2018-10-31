@@ -39,7 +39,7 @@ struct ZmCleanup<ZmHeapMgr_> {
 };
 
 class ZmHeapMgr_ : public ZmObject {
-friend class ZmSingleton<ZmHeapMgr_, 1>;
+friend struct ZmSingletonCtor<ZmHeapMgr_>;
 friend class ZmHeapMgr;
 friend class ZmHeapCache;
 

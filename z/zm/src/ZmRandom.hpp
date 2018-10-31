@@ -271,13 +271,13 @@ protected:
       { return m ^ (mixBits(s0,s1)>>1) ^ (-(int32_t)loBit(s1) & 0x9908b0df); }
 };
 
-template <typename, bool> class ZmSpecific;
+template <typename, bool> struct ZmSpecificCtor;
 
 class ZmAPI ZmRand : public ZmObject, public ZmRandom {
   ZmRand(const ZmRand &) = delete;
   ZmRand &operator =(const ZmRand &) = delete;
 
-friend class ZmSpecific<ZmRand, 1>;
+friend struct ZmSpecificCtor<ZmRand, true>;
 
   ZmRand() : ZmRandom() { }
 

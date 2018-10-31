@@ -101,6 +101,10 @@ private:
   ZmSemaphore	m_reconnect;
 };
 
+#define linkINFO(code) \
+    engine()->appException(ZeEVENT(Info, \
+      ([=, id = id()](const ZeEvent &, ZmStream &out) { out << code; })))
+
 class Link : public MxLink<Link> {
 public:
   Link(MxID id) : MxLink<Link>(id) { }
@@ -118,9 +122,6 @@ public:
   bool failover() const { return false; }
   void failover(bool) { }
 
-#define linkINFO(code) \
-    engine()->appException(ZeEVENT(Info, \
-      ([=, id = id()](const ZeEvent &, ZmStream &out) { out << code; })))
   void connect() {
     linkINFO("connect(): " << id);
     switch (engine()->action()) {

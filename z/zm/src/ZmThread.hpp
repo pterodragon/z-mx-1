@@ -200,10 +200,10 @@ template <> struct ZmCleanup<ZmThreadContext> {
   enum { Level = ZmCleanupLevel::Thread };
 };
 
-template <typename, bool> class ZmSpecific;
+template <typename, bool> struct ZmSpecificCtor;
 
 class ZmAPI ZmThreadContext : public ZmObject, public ZmThreadContext_ {
-  friend class ZmSpecific<ZmThreadContext, 1>;
+  friend struct ZmSpecificCtor<ZmThreadContext, true>;
 #ifndef _WIN32
   friend ZmAPI void *ZmThread_start(void *);
 #else
@@ -237,9 +237,7 @@ public:
   ZuInline ZmThreadMgr *mgr() { return m_mgr; }
   ZuInline int id() const { return m_id; }
 
-  ZuInline static ZmThreadContext *self() {
-    return ZmSpecific<ZmThreadContext>::instance();
-  }
+  static ZmThreadContext *self();
 
   ZuInline ZmThreadID tid() const {
 #ifndef _WIN32
@@ -286,9 +284,7 @@ public:
   }
 
 private:
-  inline static ZmThreadContext *self(ZmThreadContext *c) {
-    return ZmSpecific<ZmThreadContext>::instance(c);
-  }
+  static ZmThreadContext *self(ZmThreadContext *c);
 
   void prioritize();
   void bind();
@@ -415,5 +411,14 @@ template <> struct ZuPrint<ZmThread::CSV> : public ZuPrintFn { };
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+
+#include <ZmSpecific.hpp>
+
+ZuInline ZmThreadContext *ZmThreadContext::self() {
+  return ZmSpecific<ZmThreadContext>::instance();
+}
+ZuInline ZmThreadContext *ZmThreadContext::self(ZmThreadContext *c) {
+  return ZmSpecific<ZmThreadContext>::instance(c);
+}
 
 #endif /* ZmThread_HPP */

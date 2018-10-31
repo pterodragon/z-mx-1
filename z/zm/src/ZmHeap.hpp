@@ -272,7 +272,7 @@ struct ZmCleanup<ZmHeapCacheT<ID, Size> > {
 // TLS heap cache, specific to ID+size; maintains TLS heap statistics
 template <class ID, unsigned Size>
 class ZmHeapCacheT : public ZmObject {
-friend class ZmSpecific<ZmHeapCacheT<ID, Size>, 1>;
+friend struct ZmSpecificCtor<ZmHeapCacheT<ID, Size> >;
 template <class, unsigned> friend class ZmHeap; 
 
   typedef ZmSpecific<ZmHeapCacheT> TLS;

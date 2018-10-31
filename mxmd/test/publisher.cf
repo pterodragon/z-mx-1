@@ -1,19 +1,20 @@
 mx {
   id MxMD
-  nThreads 5
+  nThreads 6
   rxThread 1
   txThread 2
-  isolation 1-4
+  isolation 1-5
 }
 record {
   rxThread 3
-  snapThread 5
+  snapThread 6
 }
 shards {
-  0 { tid 4 }
+  0 { tid 5 }
 }
 publisher {
-  snapThread 5
+  rxThread 4
+  snapThread 6
   maxQueueSize 1000
   loginTimeout 1
   ackInterval 1

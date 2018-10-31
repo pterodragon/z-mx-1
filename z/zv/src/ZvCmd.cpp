@@ -24,7 +24,7 @@
 namespace {
   static void preprocess(ZuString msg,
       ZtArray<char> &cmd, ZtArray<char> &data) {
-    static ZtRegex cmdRedirect("<\\s*", PCRE_UTF8);
+    const auto &cmdRedirect = ZtStaticRegexUTF8("<\\s*");
     ZtRegex::Captures c;
     unsigned pos = 0, n = 0;
     if (n = cmdRedirect.m(msg, c, pos)) {

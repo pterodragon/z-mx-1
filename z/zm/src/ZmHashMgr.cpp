@@ -34,7 +34,7 @@ struct ZmCleanup<ZmHashMgr_> {
 typedef ZuStringN<ZmHeapIDSize> IDString;
 
 class ZmHashMgr_ : public ZmObject {
-friend class ZmSingleton<ZmHashMgr_, 1>;
+friend struct ZmSingletonCtor<ZmHashMgr_>;
 friend class ZmHashMgr;
 
   struct HeapID {

@@ -51,6 +51,7 @@
 #include <ZuConversion.hpp>
 #include <ZuCan.hpp>
 #include <ZuPair.hpp>
+#include <ZuIfT.hpp>
 
 #include <ZmRef.hpp>
 #include <ZmObject.hpp>
@@ -74,7 +75,14 @@ template <class T> struct ZmSpecificTraits {
   enum { Initial = 32, Increment = 32 };
 };
 
-template <class T_, bool Construct_ = 1>
+template <typename T, bool Construct = true> struct ZmSpecificCtor {
+  static T *fn() { return new T(); }
+};
+template <typename T> struct ZmSpecificCtor<T, false> {
+  static T *fn() { return nullptr; }
+};
+template <class T_, bool Construct_ = true,
+  auto CtorFn = ZmSpecificCtor<T_, Construct_>::fn>
 class ZmSpecific : public ZmGlobal {
   ZmSpecific(const ZmSpecific &);
   ZmSpecific &operator =(const ZmSpecific &);	// prevent mis-use
@@ -113,7 +121,7 @@ private:
     return ptr;
   }
 
-  inline T *create_() { return add__(new T()); }
+  inline T *create_() { return add__(CtorFn()); }
   template <typename Factory>
   inline T *create_(Factory &&factory) {
     return add__(ZuFwd<Factory>(factory)());
@@ -217,5 +225,16 @@ public:
 
   inline static void all(ZmFn<T *> fn) { return global()->all_(fn); }
 };
+
+template <typename L> struct ZmTLS_Ctor {
+  static auto fn() { return (*(L *)(void *)0)(); }
+  typedef decltype(fn()) (*Fn)();
+  enum { OK = ZuConversion<L, Fn>::Exists };
+};
+template <typename L>
+ZuInline auto ZmTLS(L l, typename ZuIfT<ZmTLS_Ctor<L>::OK>::T *_ = 0) {
+  typedef typename ZuDeref<decltype(*ZmTLS_Ctor<L>::fn())>::T T;
+  return ZmSpecific<T, true, ZmTLS_Ctor<L>::fn>::instance();
+}
 
 #endif /* ZmSpecific_HPP */

@@ -261,81 +261,77 @@ void MxMDRecLink::push2()
 
 void MxMDRecLink::recv(Rx *rx)
 {
-  if (ZuLikely(state() == MxLinkState::Up))
-    recv_(rx);
-  else
-    mx()->wakeFn(engine()->rxThread(), ZmFn<>());
-}
-
-void MxMDRecLink::recv_(Rx *rx)
-{
   using namespace MxMDStream;
+  if (ZuUnlikely(state() != MxLinkState::Up)) {
+    mx()->wakeFn(engine()->rxThread(), ZmFn<>());
+    return;
+  }
   const Hdr *hdr;
   MxMDBroadcast &broadcast = core()->broadcast();
-  if (ZuUnlikely(!(hdr = broadcast.shift()))) {
-    if (ZuLikely(broadcast.readStatus() == Zi::EndOfFile)) {
+  for (;;) {
+    if (ZuUnlikely(!(hdr = broadcast.shift()))) {
+      if (ZuLikely(broadcast.readStatus() == Zi::EndOfFile)) {
+	broadcast.detach();
+	broadcast.close();
+	{ Guard guard(m_fileLock); m_file.close(); }
+	disconnected();
+	return;
+      }
+      continue;
+    }
+    if (hdr->len > sizeof(Buf)) {
+      broadcast.shift2();
       broadcast.detach();
       broadcast.close();
       { Guard guard(m_fileLock); m_file.close(); }
       disconnected();
+      core()->raise(ZeEVENT(Error,
+	  ([name = ZtString(broadcast.params().name())](
+	      const ZeEvent &, ZmStream &s) {
+	    s << '"' << name << "\": "
+	    "IPC shared memory ring buffer read error - "
+	    "message too big / corrupt";
+	  })));
       return;
     }
-    goto again;
-  }
-  if (hdr->len > sizeof(Buf)) {
-    broadcast.shift2();
-    broadcast.detach();
-    broadcast.close();
-    { Guard guard(m_fileLock); m_file.close(); }
-    disconnected();
-    core()->raise(ZeEVENT(Error,
-	([name = ZtString(broadcast.params().name())](
-	    const ZeEvent &, ZmStream &s) {
-	  s << '"' << name << "\": "
-	  "IPC shared memory ring buffer read error - "
-	  "message too big / corrupt";
-	})));
-    return;
-  }
-  switch ((int)hdr->type) {
-    case Type::EndOfSnapshot:
-      {
-	const EndOfSnapshot &eos = hdr->as<EndOfSnapshot>();
-	if (ZuUnlikely(eos.id == id())) {
-	  MxSeqNo seqNo = eos.seqNo;
-	  bool ok = eos.ok;
+    switch ((int)hdr->type) {
+      case Type::Wake:
+	{
+	  const Wake &wake = hdr->as<Wake>();
+	  if (ZuUnlikely(wake.id == id())) {
+	    broadcast.shift2();
+	    return;
+	  }
 	  broadcast.shift2();
-	  if (ok) rx->stopQueuing(seqNo);
-	} else
-	  broadcast.shift2();
-      }
-      break;
-    case Type::Wake:
-      {
-	const Wake &wake = hdr->as<Wake>();
-	if (ZuUnlikely(wake.id == id())) {
-	  broadcast.shift2();
-	  return;
 	}
-	broadcast.shift2();
-      }
-      break;
-    default:
-      {
-	ZuRef<Msg> msg = new Msg();
-	unsigned msgLen = sizeof(Hdr) + hdr->len;
-	memcpy(msg->ptr(), hdr, msgLen);
-	broadcast.shift2();
-	MxSeqNo seqNo = m_seqNo++;
-	Hdr &msgHdr = msg->as<Hdr>();
-	msgHdr.seqNo = seqNo;
-	rx->received(new MxQMsg(ZuMv(msg), msgLen,
-	      MxMsgID{id(), seqNo}));
-      }
-      break;
+	break;
+      case Type::EndOfSnapshot:
+	{
+	  const EndOfSnapshot &eos = hdr->as<EndOfSnapshot>();
+	  if (ZuUnlikely(eos.id == id())) {
+	    MxSeqNo seqNo = eos.seqNo;
+	    bool ok = eos.ok;
+	    broadcast.shift2();
+	    if (ok) rx->stopQueuing(seqNo);
+	  } else
+	    broadcast.shift2();
+	}
+	break;
+      default:
+	{
+	  ZuRef<Msg> msg = new Msg();
+	  unsigned msgLen = sizeof(Hdr) + hdr->len;
+	  memcpy(msg->ptr(), hdr, msgLen);
+	  broadcast.shift2();
+	  MxSeqNo seqNo = m_seqNo++;
+	  Hdr &msgHdr = msg->as<Hdr>();
+	  msgHdr.seqNo = seqNo;
+	  rx->received(new MxQMsg(ZuMv(msg), msgLen,
+		MxMsgID{id(), seqNo}));
+	}
+	break;
+    }
   }
-again:
-  rxRun_([](Rx *rx) { rx->app().recv_(rx); });
 }
 
 ZmRef<MxAnyLink> MxMDRecord::createLink(MxID id)

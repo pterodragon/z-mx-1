@@ -106,7 +106,6 @@ public:
   void detach();
   void wake();
   void recv();
-  void recv_();
   void ack();
 
   // snapshot

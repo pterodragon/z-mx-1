@@ -134,7 +134,7 @@ template <> struct ZmCleanup<ZmBackTrace_Mgr> {
 struct ZmBackTrace_MgrInit;
 
 class ZmBackTrace_Mgr {
-friend class ZmSingleton<ZmBackTrace_Mgr, 1>;
+friend struct ZmSingletonCtor<ZmBackTrace_Mgr>;
 friend class ZmBackTrace;
 friend struct ZmBackTrace_MgrInit;
 friend void ZmBackTrace_print(ZmStream &s, const ZmBackTrace &bt);

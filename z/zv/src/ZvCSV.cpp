@@ -87,7 +87,7 @@ void ZvCSV::readData(ZuString data, ZvCSVAllocFn allocFn, ZvCSVReadFn readFn)
 {
   ColIndex colIndex;
   try {
-    static ZtRegex newLine("\\n", PCRE_UTF8);
+    const auto &newLine = ZtStaticRegexUTF8("\\n");
     ZtRegex::Captures rows;
     if (!newLine.split(data, rows)) return;
     ZtString row(ZvCSV_MaxLineSize);

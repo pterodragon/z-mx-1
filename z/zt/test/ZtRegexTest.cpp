@@ -11,9 +11,9 @@
 int main()
 {
   ZtString x = "/foo/bar/bah/leaf";
-  static ZtRegex leafName("[^/]+$", PCRE_UTF8);
-  static ZtRegex separator("/", PCRE_UTF8);
-  static ZtRegex nullSpace("\\s*", PCRE_UTF8);
+  const auto &leafName = ZtStaticRegexUTF8("[^/]+$");
+  const auto &separator = ZtStaticRegexUTF8("/");
+  const auto &nullSpace = ZtStaticRegexUTF8("\\s*");
   ZtRegex::Captures c;
   printf("x is \"%s\"\n", x.data());
   int i = leafName.m(x, c);
@@ -44,12 +44,12 @@ int main()
     printf("c[%d] = \"%.*s\"\n", i, c[i].length(), c[i].data());
   
   {
-    static ZtRegex re("\\w+\\s+(?<name>\\w+)\\s+(?<age>\\d+)", PCRE_UTF8);
+    const auto &r = ZtStaticRegexUTF8("\\w+\\s+(?<name>\\w+)\\s+(?<age>\\d+)");
     ZtRegex::Captures captures;
-    int name = re.index("name");
-    int age = re.index("age");
+    int name = r.index("name");
+    int age = r.index("age");
 
-    int i = re.m("foo Joe 42", captures);
+    int i = r.m("foo Joe 42", captures);
     if (i >= 3) {
       ZtString out;
       out << "name=" << captures[name] << ", age=" << captures[age];

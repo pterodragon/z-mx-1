@@ -191,7 +191,7 @@ int main(int argc, char **argv)
 
     {
       ZtRegex::Captures c;
-      static ZtRegex r("^([^:]+):(\\d+)$", PCRE_UTF8);
+      const auto &r = ZtStaticRegexUTF8("^([^:]+):(\\d+)$");
       if (r.m(argv[1], c) >= 2) {
 	ip = c[2];
 	if (!port.scan(c[3]) || !*port || !port) usage();

@@ -27,22 +27,6 @@
 
 #ifndef _WIN32
 #include <alloca.h>
-
-#define ZiEINVAL EINVAL
-#define ZiENOTCONN ENOTCONN
-#define ZiECONNRESET ECONNRESET
-#define ZiEINPROGRESS EINPROGRESS
-#define ZiENOBUFS ENOBUFS
-#else
-#define ZiEINVAL WSAEINVAL
-#define ZiENOTCONN WSAEDISCON
-#define ZiECONNRESET WSAECONNRESET
-#ifdef ZiMultiplex_IOCP
-#define ZiEINPROGRESS WSA_IO_PENDING
-#else
-#define ZiEINPROGRESS WSAEINPROGRESS
-#endif
-#define ZiENOBUFS WSAENOBUFS
 #endif
 
 #ifdef ZiMultiplex_IOCP
@@ -287,7 +271,7 @@ void ZiMultiplex::udp(ZiConnectFn fn, ZiFailFn failFn,
     return;
   }
 
-  invoke(rxThread(), 
+  rxInvoke(
       [this, fn = ZuMv(fn), failFn = ZuMv(failFn),
 	  localIP, localPort,
 	  remoteIP, remotePort, options = ZuMv(options)]() mutable {
@@ -547,7 +531,7 @@ void ZiMultiplex::connect(
     return;
   }
 
-  invoke(rxThread(),
+  rxInvoke(
       [this, fn = ZuMv(fn), failFn = ZuMv(failFn),
 	  localIP, localPort,
 	  remoteIP, remotePort, options = ZuMv(options)]() mutable {
@@ -790,7 +774,7 @@ void ZiMultiplex::listen(
   }
 #endif
 
-  invoke(rxThread(),
+  rxInvoke(
       [this, listenFn = ZuMv(listenFn),
 	  failFn = ZuMv(failFn), acceptFn = ZuMv(acceptFn),
 	  localIP, localPort, nAccepts, options = ZuMv(options)]() mutable {
@@ -936,7 +920,7 @@ void ZiMultiplex::stopListening(ZiIP localIP, uint16_t localPort)
 
   if (ZuUnlikely(state() != ZmScheduler::Running)) return;
 
-  invoke(rxThread(),
+  rxInvoke(
       [this, localIP, localPort]() {
 	this->stopListening_(localIP, localPort);
       });
@@ -1098,7 +1082,8 @@ void ZiConnection::connected()
 
 void ZiConnection::recv(ZiIOFn fn)
 {
-  m_mx->rxInvoke([this, fn = ZuMv(fn)]() { this->recv_(fn); });
+  m_mx->rxInvoke([cxn = ZmMkRef(this), fn = ZuMv(fn)]() mutable {
+      cxn->recv_(ZuMv(fn)); });
 }
 
 void ZiConnection::recv_(ZiIOFn fn)
@@ -1362,8 +1347,8 @@ void ZiConnection::executedRecv(unsigned n)
 
 void ZiConnection::send(ZiIOFn fn)
 {
-  m_mx->invoke(m_mx->txThread(),
-	[this, fn = ZuMv(fn)]() mutable { this->send_(ZuMv(fn)); });
+  m_mx->txInvoke([cxn = ZmMkRef(this), fn = ZuMv(fn)]() mutable {
+      cxn->send_(ZuMv(fn)); });
 }
 
 void ZiConnection::send_(ZiIOFn fn)
@@ -1727,8 +1712,7 @@ void ZiMultiplex::connectDel(Socket s)
 
 void ZiConnection::disconnect()
 {
-  m_mx->invoke(m_mx->txThread(),
-      ZmFn<>::Member<&ZiConnection::disconnect_1>::fn(this));
+  m_mx->txInvoke([cxn = ZmMkRef(this)]() { cxn->disconnect_1(); });
 }
 
 void ZiConnection::disconnect_1()
@@ -1737,9 +1721,7 @@ void ZiConnection::disconnect_1()
   
   m_txUp = false;
 
-  ZiMultiplex *mx = m_mx;
-
-  mx->rxRun(ZmFn<>([](ZiConnection *self) { self->disconnect_2(); }, this));
+  m_mx->rxRun([cxn = ZmMkRef(this)]() { cxn->disconnect_2(); });
 }
 
 void ZiConnection::disconnect_2()
@@ -1836,8 +1818,7 @@ void ZiMultiplex::disconnected(ZiConnection *cxn)
 
 void ZiConnection::close()
 {
-  m_mx->invoke(m_mx->txThread(),
-      ZmFn<>::Member<&ZiConnection::close_1>::fn(this));
+  m_mx->txInvoke([cxn = ZmMkRef(this)]() { cxn->close_1(); });
 }
 
 void ZiConnection::close_1()
@@ -1846,7 +1827,7 @@ void ZiConnection::close_1()
   
   m_txUp = false;
 
-  m_mx->rxInvoke([this]() { this->close_2(); });
+  m_mx->rxRun([cxn = ZmMkRef(this)]() { cxn->close_2(); });
 }
 
 void ZiConnection::close_2()
@@ -1974,8 +1955,7 @@ int ZiMultiplex::start()
   }
 #endif
 
-  run(rxThread(),
-      ZmFn<>::Member<&ZiMultiplex::rxStart>::fn(this));
+  rxRun(ZmFn<>::Member<&ZiMultiplex::rxStart>::fn(this));
   ZmScheduler::start();
   return Zi::OK;
 }
@@ -2179,7 +2159,7 @@ void ZiMultiplex::rx()
 	  ZiConnection *cxn = (ZiConnection *)v;
 	  if (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR))
 	    if (ZuUnlikely(!cxn->recv())) continue;
-	  if (events & EPOLLOUT) this->run(m_txThread,
+	  if (events & EPOLLOUT) this->txRun(
 	      ZmFn<>::Member<static_cast<void (ZiConnection::*)()>(
 		&ZiConnection::send)>::fn(cxn));
 	  continue;

@@ -53,4 +53,18 @@ struct ZiAPI Zi {
   static const char *resultName(int r);
 };
 
+#ifndef _WIN32
+#define ZiEINVAL EINVAL
+#define ZiENOTCONN ENOTCONN
+#define ZiECONNRESET ECONNRESET
+#define ZiENOBUFS ENOBUFS
+#define ZiEADDRINUSE EADDRINUSE
+#else
+#define ZiEINVAL WSAEINVAL
+#define ZiENOTCONN WSAEDISCON
+#define ZiECONNRESET WSAECONNRESET
+#define ZiENOBUFS WSAENOBUFS
+#define ZiEADDRINUSE WSAEADDRINUSE
+#endif
+
 #endif /* ZiLib_HPP */

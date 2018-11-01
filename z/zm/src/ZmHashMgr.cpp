@@ -79,12 +79,12 @@ friend class ZmHashMgr;
 
   void add(void *ptr, ReportFn fn) {
     ZmGuard<ZmPLock> guard(m_lock);
-    m_tables.del(ptr);
+    delete m_tables.del(ptr);
     m_tables.add(ptr, fn);
   }
   void del(void *ptr) {
     ZmGuard<ZmPLock> guard(m_lock);
-    m_tables.del(ptr);
+    delete m_tables.del(ptr);
   }
 
   void stats(StatsFn fn) {

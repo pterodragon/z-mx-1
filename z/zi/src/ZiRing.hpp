@@ -267,6 +267,8 @@ private:
     ZmAtomic<uint64_t>		attMask;  // readers pending attach
     ZmAtomic<uint64_t>		attSeqNo; // attach/detach seqNo
 
+    ZmAtomic<uint32_t>		writerPID;
+    ZmTime			writerTime;
     uint32_t			rdrPID[64];
     ZmTime			rdrTime[64];
   };
@@ -286,8 +288,10 @@ private:
   ZuInline ZmAtomic<uint64_t> &attMask() { return ctrl()->attMask; }
   ZuInline ZmAtomic<uint64_t> &attSeqNo() { return ctrl()->attSeqNo; }
 
-  // PIDs may be re-used by the OS, so readers are ID'd by PID + start time
+  // PIDs may be re-used by the OS, so processes are ID'd by PID + start time
 
+  ZuInline ZmAtomic<uint32_t> &writerPID() { return ctrl()->writerPID; }
+  ZuInline ZmTime &writerTime() { return ctrl()->writerTime; }
   ZuInline uint32_t *rdrPID() { return ctrl()->rdrPID; }
   ZuInline ZmTime *rdrTime() { return ctrl()->rdrTime; }
  
@@ -326,6 +330,20 @@ public:
 	m_params.size(openSize & ~1);
 	m_params.ll(openSize & 1);
       }
+      if (flags & Write) {
+	uint32_t pid;
+	ZmTime start;
+	getpinfo(pid, start);
+	uint32_t oldPID = writerPID().load_();
+	if (alive(oldPID, writerTime()) ||
+	    writerPID().cmpXch(pid, oldPID) != oldPID) {
+	  m_ctrl.close();
+	  if (!m_params.ll()) ZiRing_::close();
+	  if (e) *e = ZiEADDRINUSE;
+	  return Zi::IOError;
+	}
+	writerTime() = start;
+      }
       mmapFlags |= ZiFile::ShmDbl;
       if ((r = m_data.mmap(m_params.name() + ".data",
 	      mmapFlags, m_params.size(), true, 0, 0777, e)) != Zi::OK) {
@@ -346,11 +364,7 @@ public:
     return Zi::OK;
 
   einval:
-#ifndef _WIN32
-    if (e) *e = EINVAL;
-#else
-    if (e) *e = ERROR_INVALID_PARAMETER;
-#endif
+    if (e) *e = ZiEINVAL;
     return Zi::IOError;
   }
 
@@ -373,6 +387,10 @@ public:
     if (m_flags & Read) {
       if (m_id >= 0) detach();
       --rdrCount();
+    }
+    if (m_flags & Write) {
+      writerTime() = ZmTime(); // writerPID store is a release
+      writerPID() = 0;
     }
     m_ctrl.close();
     m_data.close();

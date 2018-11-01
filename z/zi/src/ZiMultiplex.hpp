@@ -941,10 +941,9 @@ template <typename> friend class Connect_;
   };
   typedef ZmHash<ZmRef<ZiConnection>,
             ZmHashIndex<ZiConnection::SocketAccessor,
-	      ZmHashObject<ZuNull,
-		ZmHashLock<ZmNoLock,
-		  ZmHashObject<ZuObject,
-		    ZmHashHeapID<CxnHash_HeapID> > > > > > CxnHash;
+	      ZmHashLock<ZmNoLock,
+		ZmHashObject<ZuNull,
+		  ZmHashHeapID<CxnHash_HeapID> > > > > CxnHash;
 
   typedef ZmLock StateLock;
   typedef ZmGuard<StateLock> StateGuard;
@@ -954,7 +953,7 @@ public:
   typedef ZiPlatform::Socket Socket;
 
   ZiMultiplex(ZiMultiplexParams params = ZiMultiplexParams());
-  virtual ~ZiMultiplex();
+  ~ZiMultiplex();
 
   int start();
   void stop(bool drain);
@@ -998,8 +997,6 @@ public:
       ZiCxnOptions options = ZiCxnOptions());
 
   ZuInline unsigned rxThread() const { return m_rxThread; }
-  ZuInline ZmThreadID rxTID() const { return m_rxTID; }
-
   ZuInline unsigned txThread() const { return m_txThread; }
 
   template <typename ...Args> ZuInline void rxRun(Args &&... args) {
@@ -1007,6 +1004,12 @@ public:
   }
   template <typename ...Args> ZuInline void rxInvoke(Args &&... args) {
     invoke(m_rxThread, ZuFwd<Args>(args)...);
+  }
+  template <typename ...Args> ZuInline void txRun(Args &&... args) {
+    run(m_txThread, ZuFwd<Args>(args)...);
+  }
+  template <typename ...Args> ZuInline void txInvoke(Args &&... args) {
+    invoke(m_txThread, ZuFwd<Args>(args)...);
   }
 
 #ifdef ZiMultiplex_DEBUG

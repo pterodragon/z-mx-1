@@ -17,7 +17,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Phoenix TLS with sequenced cleanup and iteration over all instances
+// TLS with
+// * deterministic destruction sequencing
+// * iteration over all instances
 
 // ZmSpecific<T>::instance() returns T * pointer
 //
@@ -29,6 +31,13 @@
 // constructed on-demand - use ZmSpecific<T, 0>::instance(new T(...))
 //
 // T must be ZmObject-derived
+//
+// thread_local T v; can be replaced with:
+// auto &v = *ZmSpecific<T>::instance();
+// auto &v = ZmTLS([]() { return new T(); });
+//
+// thread_local T v(args); can be replaced with:
+// auto &v = ZmTLS([]() { return new T(args...); });
 
 #ifndef ZmSpecific_HPP
 #define ZmSpecific_HPP

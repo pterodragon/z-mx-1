@@ -129,7 +129,8 @@ public:
   template <typename O> ZmRef<O> mvObject() {
     if (!(m_object & (uintptr_t)1)) return ZmRef<O>((O *)(void *)m_object);
     uintptr_t o = (m_object &= ~(uintptr_t)1);
-    return ZuMv(*(ZmRef<O> *)(void *)&o);
+    ZmRef<O> *ZuMayAlias(ptr) = (ZmRef<O> *)(void *)&o;
+    return ZuMv(*ptr);
   }
 
   ZuInline bool operator ==(const ZmAnyFn &fn) const {

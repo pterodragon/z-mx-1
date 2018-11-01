@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Singleton
+// Singleton with deterministic destruction sequencing
 
 // ZmSingleton<T>::instance() returns T * pointer
 //
@@ -27,6 +27,13 @@
 // constructed on-demand - use ZmSingleton<T, 0>::instance(new T(...))
 //
 // T can be ZmObject-derived, but does not have to be
+//
+// static T v; can be replaced with:
+// auto &v = *ZmSingleton<T>::instance();
+// auto &v = ZmStatic([]() { return new T(); });
+//
+// static T v(args); can be replaced with:
+// auto &v = ZmStatic([]() { return new T(args...); });
 
 #ifndef ZmSingleton_HPP
 #define ZmSingleton_HPP
@@ -144,7 +151,7 @@ template <typename L> struct ZmStatic_Ctor {
   enum { OK = ZuConversion<L, Fn>::Exists };
 };
 template <typename L>
-ZuInline const auto &ZmStatic(L l,
+ZuInline auto &ZmStatic(L l,
     typename ZuIfT<ZmStatic_Ctor<L>::OK>::T *_ = 0) {
   typedef typename ZuDeref<decltype(*ZmStatic_Ctor<L>::fn())>::T T;
   return *(ZmSingleton<T, true, ZmStatic_Ctor<L>::fn>::instance());

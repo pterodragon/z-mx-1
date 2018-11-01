@@ -98,6 +98,7 @@ public:
     return engine()->core();
   }
 
+  bool ok();
   bool record(ZtString path);
   ZtString stopRecording();
 

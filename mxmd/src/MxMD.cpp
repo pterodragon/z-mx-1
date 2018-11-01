@@ -1208,6 +1208,15 @@ void MxMDLib::unsubscribe()
   m_handler->exception = MxMDExceptionFn::Ptr<&exception>::fn();
 }
 
+void MxMDLib::sync()
+{
+  thread_local ZmSemaphore sem;
+  unsigned n = nShards();
+  for (unsigned i = 0; i < n; i++)
+    shardInvoke(i, ZmFn<>{[](ZmSemaphore *sem) { sem->post(); }, &sem});
+  for (unsigned i = 0; i < n; i++) sem.wait();
+}
+
 void MxMDLib::raise(ZmRef<ZeEvent> e)
 {
   handler()->exception(this, ZuMv(e));
@@ -1225,6 +1234,7 @@ void MxMDLib::addVenue(MxMDVenue *venue)
 
 void MxMDLib::loaded(MxMDVenue *venue)
 {
+  sync();
   venue->loaded_(1);
   handler()->refDataLoaded(venue);
   {
@@ -1326,7 +1336,7 @@ ZmRef<MxMDSecurity> MxMDLib::addSecurity(
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::addSecurity(core->broadcast(), shard->id(), transactTime,
-	  key, shard->id(), refData);
+	  key, refData);
   }
   handler()->addSecurity(sec, transactTime);
   return sec;
@@ -1436,7 +1446,7 @@ void MxMDLib::addSecIndices(
       MxMDCore *core = static_cast<MxMDCore *>(this);
       if (ZuUnlikely(core->streaming()))
 	MxMDStream::addSecurity(core->broadcast(), shard->id(), transactTime,
-	      underKey, shard->id(), underRefData);
+	      underKey, underRefData);
       underlying = underlying_;
     }
     security->underlying(underlying);

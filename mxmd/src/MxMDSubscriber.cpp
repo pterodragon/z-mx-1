@@ -240,7 +240,7 @@ void MxMDSubLink::TCP::connected(ZiIOContext &io)
 {
   m_link->tcpConnected(this);
   MxMDStream::TCP::recv<TCP>(m_in, io,
-      [](TCP *tcp, MxQMsg *, ZiIOContext &io) { tcp->processLoginAck(io); });
+      [](TCP *tcp, MxQMsg *, ZiIOContext &io) { tcp->process(io); });
 }
 void MxMDSubLink::tcpConnected(MxMDSubLink::TCP *tcp)
 {
@@ -258,30 +258,20 @@ void MxMDSubLink::tcpConnected(MxMDSubLink::TCP *tcp)
 
 // TCP disconnect
 
-void MxMDSubLink::TCP::disconnect_()
-{
-  Guard stateGuard(m_stateLock);
-  m_state = State::Disconnect;
-}
 void MxMDSubLink::TCP::disconnect()
 {
-  disconnect_();
+  m_state = State::Disconnect;
   ZiConnection::disconnect();
 }
 void MxMDSubLink::TCP::close()
 {
-  disconnect_();
+  m_state = State::Disconnect;
   ZiConnection::close();
 }
 void MxMDSubLink::TCP::disconnected()
 {
-  mx()->del(&m_loginTimer);
-  bool intentional;
-  {
-    Guard stateGuard(m_stateLock);
-    intentional = m_state == State::Disconnect;
-  }
-  if (!intentional) tcpERROR(this, 0, "TCP disconnected");
+  if (m_state == State::Login) mx()->del(&m_loginTimer);
+  if (m_state != State::Disconnect) tcpERROR(this, 0, "TCP disconnected");
 }
 
 // TCP login, recv
@@ -300,29 +290,9 @@ void MxMDSubLink::TCP::sendLogin()
 {
   MxMDStream::TCP::send(this, m_link->tcpLogin()); // bypass Tx queue
   mx()->rxRun(ZmFn<>{[](MxMDSubLink::TCP *tcp) {
-      {
-	Guard stateGuard(tcp->m_stateLock);
-	if (tcp->m_state != State::Login) return;
-      }
+      if (tcp->m_state != State::Login) return;
       tcpERROR(tcp, 0, "TCP login timeout");
     }, ZmMkRef(this)}, ZmTimeNow(m_link->loginTimeout()), &m_loginTimer);
-}
-void MxMDSubLink::TCP::processLoginAck(ZiIOContext &io)
-{
-  mx()->del(&m_loginTimer);
-  {
-    Guard stateGuard(m_stateLock);
-    if (m_state != State::Login) {
-      stateGuard.unlock();
-      tcpERROR(this, &io, "TCP unexpected login ack");
-      return;
-    }
-    m_state = State::Receiving;
-  }
-  m_link->tcpLoginAck();
-  MxMDStream::TCP::recv<TCP>(m_in, io,
-      [](TCP *tcp, MxQMsg *, ZiIOContext &io) { tcp->process(io); });
-  process(io);
 }
 void MxMDSubLink::tcpLoginAck()
 {
@@ -332,13 +302,15 @@ void MxMDSubLink::tcpLoginAck()
 }
 void MxMDSubLink::TCP::process(ZiIOContext &io)
 {
+  if (ZuUnlikely(m_state.load_() == State::Login)) {
+    m_state = State::Receiving;
+    mx()->del(&m_loginTimer);
+    m_link->tcpLoginAck();
+  }
   using namespace MxMDStream;
   const Hdr &hdr = m_in->as<Hdr>();
   if (ZuUnlikely(hdr.type == Type::EndOfSnapshot)) {
-    {
-      Guard stateGuard(m_stateLock);
-      m_state = State::Disconnect;
-    }
+    m_state = State::Disconnect;
     io.disconnect();
     m_link->endOfSnapshot(hdr.as<EndOfSnapshot>().seqNo);
     return;
@@ -435,29 +407,19 @@ void MxMDSubLink::udpConnected(MxMDSubLink::UDP *udp, ZiIOContext &io)
 
 // UDP disconnect
 
-void MxMDSubLink::UDP::disconnect_()
-{
-  Guard stateGuard(m_stateLock);
-  m_state = State::Disconnect;
-}
 void MxMDSubLink::UDP::disconnect()
 {
-  disconnect_();
+  m_state = State::Disconnect;
   ZiConnection::disconnect();
 }
 void MxMDSubLink::UDP::close()
 {
-  disconnect_();
+  m_state = State::Disconnect;
   ZiConnection::close();
 }
 void MxMDSubLink::UDP::disconnected()
 {
-  bool intentional;
-  {
-    Guard stateGuard(m_stateLock);
-    intentional = m_state == State::Disconnect;
-  }
-  if (!intentional) udpERROR(this, 0, "UDP disconnected");
+  if (m_state != State::Disconnect) udpERROR(this, 0, "UDP disconnected");
 }
 
 // UDP recv
@@ -474,7 +436,6 @@ void MxMDSubLink::UDP::recv(ZiIOContext &io)
 void MxMDSubLink::UDP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 {
   using namespace MxMDStream;
-  msg->length = io.offset + io.length;
   const Hdr &hdr = msg->as<Hdr>();
   if (ZuUnlikely(hdr.scan(msg->length))) {
     ZtHexDump msg_{"truncated UDP message", msg->ptr(), msg->length};
@@ -484,6 +445,8 @@ void MxMDSubLink::UDP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 	  out << "MxMDSubLink::UDP::process() link " << id << ' ' << msg_;
 	})));
   } else {
+    msg->id.linkID = m_link->id();
+    msg->id.seqNo = msg->as<Hdr>().seqNo;
     msg->addr = io.addr;
     m_link->udpReceived(ZuMv(msg));
   }

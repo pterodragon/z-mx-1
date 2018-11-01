@@ -177,12 +177,12 @@ private:
 class MxMDSecurityCSV : public ZvCSV, public MxMDCSV<MxMDSecurityCSV> {
 public:
   struct Data {
+    MxUInt		shard;
     MxEnum		event;
     MxDateTime		transactTime;
     MxID		venue;
     MxID		segment;
     MxIDString		id;
-    MxUInt		shard;
     MxMDSecRefData	refData;
   };
   typedef ZuPOD<Data> POD;
@@ -194,6 +194,7 @@ public:
 #undef Offset
 #endif
 #define Offset(x) offsetof(Data, x)
+    add(new MxUIntCol("shard", Offset(shard)));
     add(new MxEnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
     if (app && app->hhmmss())
       add(new MxHHMMSSCol("transactTime", Offset(transactTime),
@@ -204,7 +205,6 @@ public:
     add(new MxIDCol("venue", Offset(venue)));
     add(new MxIDCol("segment", Offset(segment)));
     add(new MxIDStrCol("id", Offset(id)));
-    add(new MxUIntCol("shard", Offset(shard)));
 #undef Offset
 #define Offset(x) offsetof(Data, refData) + offsetof(MxMDSecRefData, x)
     add(new MxBoolCol("tradeable", Offset(tradeable), -1, 1));
@@ -243,17 +243,17 @@ public:
 	case Type::AddSecurity:
 	  {
 	    const AddSecurity &obj = hdr.as<AddSecurity>();
-	    new (data) Data{hdr.type, obj.transactTime,
+	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
-	      obj.shard, obj.refData};
+	      obj.refData};
 	  }
 	  break;
 	case Type::UpdateSecurity:
 	  {
 	    const UpdateSecurity &obj = hdr.as<UpdateSecurity>();
-	    new (data) Data{hdr.type, obj.transactTime,
+	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
-	      {}, obj.refData};
+	      obj.refData};
 	  }
 	  break;
 	default:
@@ -274,6 +274,7 @@ private:
 class MxMDOrderBookCSV : public ZvCSV, public MxMDCSV<MxMDOrderBookCSV> {
 public:
   struct Data {
+    MxUInt		shard;
     MxEnum		event;
     MxDateTime		transactTime;
     MxID		venue;
@@ -299,6 +300,7 @@ public:
 #undef Offset
 #endif
 #define Offset(x) offsetof(Data, x)
+    add(new MxUIntCol("shard", Offset(shard)));
     add(new MxEnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
     if (app && app->hhmmss())
       add(new MxHHMMSSCol("transactTime", Offset(transactTime),
@@ -355,7 +357,7 @@ public:
 	case Type::AddOrderBook:
 	  {
 	    const AddOrderBook &obj = hdr.as<AddOrderBook>();
-	    new (data) Data{hdr.type, obj.transactTime,
+	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
 	      {}, obj.qtyNDP, 1, obj.tickSizeTbl, obj.lotSizes,
 	      { obj.security.venue() },
@@ -367,14 +369,14 @@ public:
 	case Type::DelOrderBook:
 	  {
 	    const DelOrderBook &obj = hdr.as<DelOrderBook>();
-	    new (data) Data{hdr.type, obj.transactTime,
+	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id()};
 	  }
 	  break;
 	case Type::AddCombination:
 	  {
 	    const AddCombination &obj = hdr.as<AddCombination>();
-	    new (data) Data{hdr.type, obj.transactTime,
+	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
 	      obj.pxNDP, obj.qtyNDP, obj.legs, obj.tickSizeTbl, obj.lotSizes,
 	      {}, {}, {}, {}, {} };
@@ -390,14 +392,14 @@ public:
 	case Type::DelCombination:
 	  {
 	    const DelCombination &obj = hdr.as<DelCombination>();
-	    new (data) Data{hdr.type, obj.transactTime,
+	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id() };
 	  }
 	  break;
 	case Type::UpdateOrderBook:
 	  {
 	    const UpdateOrderBook &obj = hdr.as<UpdateOrderBook>();
-	    new (data) Data{hdr.type, obj.transactTime,
+	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
 	      obj.key.venue(), obj.key.segment(), obj.key.id(),
 	      {}, {}, MxUInt(), obj.tickSizeTbl, obj.lotSizes,
 	      {}, {}, {}, {}, {} };

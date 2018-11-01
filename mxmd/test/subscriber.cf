@@ -5,6 +5,10 @@ mx {
   txThread 2
   isolation 1-4
 }
+broadcast {
+  name RMD_sub
+  size 131072
+}
 record {
   rxThread 3
   snapThread 5

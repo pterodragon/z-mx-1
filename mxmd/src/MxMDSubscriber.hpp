@@ -144,19 +144,14 @@ friend class TCP;
 
     ZuInline MxMDSubLink *link() const { return m_link; }
 
-    inline unsigned state() const {
-      ReadGuard guard(m_stateLock);
-      return m_state;
-    }
+    inline unsigned state() const { return m_state.load_(); }
 
     void connected(ZiIOContext &);
     void close();
     void disconnect();
-    void disconnect_();
     void disconnected();
 
     void sendLogin();
-    void processLoginAck(ZiIOContext &);
     void process(ZiIOContext &);
 
   private:
@@ -164,8 +159,7 @@ friend class TCP;
 
     ZmScheduler::Timer	m_loginTimer;
 
-    Lock		m_stateLock;
-      unsigned		  m_state;
+    ZmAtomic<unsigned>	m_state;
 
     ZmRef<MxQMsg>	m_in;
   };
@@ -185,15 +179,11 @@ friend class UDP;
 
     ZuInline MxMDSubLink *link() const { return m_link; }
 
-    inline unsigned state() const {
-      ReadGuard guard(m_stateLock);
-      return m_state;
-    }
+    inline unsigned state() const { return m_state.load_(); }
 
     void connected(ZiIOContext &);
     void close();
     void disconnect();
-    void disconnect_();
     void disconnected();
 
     void recv(ZiIOContext &);
@@ -202,8 +192,7 @@ friend class UDP;
   private:
     MxMDSubLink		*m_link;
 
-    Lock		m_stateLock;
-      unsigned		  m_state;
+    ZmAtomic<unsigned>	m_state;
 
     ZmRef<MxQMsg>	m_in;
   };

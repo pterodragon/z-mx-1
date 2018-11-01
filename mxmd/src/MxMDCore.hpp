@@ -185,8 +185,7 @@ public:
       });
     }) || allSecurities([&snapshot](MxMDSecurity *security) -> uintptr_t {
       return !MxMDStream::addSecurity(snapshot, security->shard()->id(),
-	  MxDateTime(), security->key(), security->shard()->id(),
-	  security->refData());
+	  MxDateTime(), security->key(), security->refData());
     }) || allOrderBooks([&snapshot](MxMDOrderBook *ob) -> uintptr_t {
       if (ob->legs() == 1) {
 	return !MxMDStream::addOrderBook(snapshot, ob->shard()->id(),
@@ -207,11 +206,13 @@ public:
 	    ob->tickSizeTbl()->id(), ob->lotSizes());
       }
     }) || allVenues([&snapshot](MxMDVenue *venue) -> uintptr_t {
-      return venue->allSegments([&snapshot, venue](
-	    const MxMDSegment &segment) -> uintptr_t {
-	return !MxMDStream::tradingSession(snapshot, segment.stamp,
-	    venue->id(), segment.id, segment.session);
-      });
+      return (venue->loaded() &&
+	  !MxMDStream::refDataLoaded(snapshot, venue->id())) ||
+	venue->allSegments([&snapshot, venue](
+	      const MxMDSegment &segment) -> uintptr_t {
+	  return !MxMDStream::tradingSession(snapshot, segment.stamp,
+	      venue->id(), segment.id, segment.session);
+	});
     }) || allOrderBooks([&snapshot](MxMDOrderBook *ob) -> uintptr_t {
       return !MxMDStream::l1(snapshot, ob->shard()->id(),
 	  ob->key(), ob->l1Data()) ||

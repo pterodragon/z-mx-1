@@ -5,6 +5,10 @@ mx {
   txThread 2
   isolation 1-5
 }
+broadcast {
+  name RMD_pub
+  size 131072
+}
 record {
   rxThread 3
   snapThread 6

@@ -75,6 +75,7 @@ struct MxMDSecRefData {	// security reference data ("static data")
   MxUInt	mat;		// maturity (null if not future/option)
   MxNDP		pxNDP;		// price NDP
   MxNDP		qtyNDP;		// qty NDP
+  uint16_t	pad_1 = 0;
   MxValue	strike;		// strike (null if not option)
   MxUInt	outstandingShares; // (null if not stock)
   MxValue	adv;		// average daily volume

@@ -40,7 +40,7 @@ int subscribe();	// subscribe to events
 int main(int argc, char **argv)
 {
   // configure and start logging
-  ZeLog::init("mdsample");		// program name
+  ZeLog::init("mdsample_publisher");	// program name
   ZeLog::add(ZeLog::fileSink("&2"));	// log errors to stderr
   ZeLog::start();			// start logger thread
 
@@ -62,7 +62,7 @@ int main(int argc, char **argv)
       return 1;
     }
 
-    md->record("foo");
+    md->record("pubfoo");
 
     md->start();			// start all feeds
 
@@ -105,6 +105,17 @@ void addOrder(MxMDOrder *order, MxDateTime stamp)
 {
   MxMDOrderBook *ob = order->orderBook();
   printf("add order %s %s %s px=%f qty=%f\n",
+      ob->id().data(),
+      order->id().data(),
+      MxSide::name(order->data().side),
+      (double)MxValNDP{order->data().price, ob->pxNDP()}.fp(),
+      (double)MxValNDP{order->data().qty, ob->pxNDP()}.fp());
+}
+
+void modifiedOrder(MxMDOrder *order, MxDateTime stamp)
+{
+  MxMDOrderBook *ob = order->orderBook();
+  printf("modified order %s %s %s px=%f qty=%f\n",
       ob->id().data(),
       order->id().data(),
       MxSide::name(order->data().side),
@@ -177,6 +188,7 @@ void loaded(MxMDVenue *venue)
     deletedPxLevelFn(MxMDPxLevelFn::Ptr<&deletedPxLevel>::fn()).
     l2Fn(MxMDOrderBookFn::Ptr<&l2>::fn()).
     addOrderFn(MxMDOrderFn::Ptr<&addOrder>::fn()).
+    modifiedOrderFn(MxMDOrderFn::Ptr<&modifiedOrder>::fn()).
     canceledOrderFn(MxMDOrderFn::Ptr<&canceledOrder>::fn());
 
   // iterate through all tickers subscribing to market data updates
@@ -396,7 +408,7 @@ void publish()
       }
 
     // wait one second between ticks
-    } while (sem.timedwait(ZmTime(ZmTime::Now, 1)) < 0);
+    } while (sem.timedwait(ZmTime(ZmTime::Now, 3)) < 0);
 
   } catch (const ZtString &s) {
     ZeLOG(Error, s);

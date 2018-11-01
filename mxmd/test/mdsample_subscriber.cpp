@@ -35,7 +35,8 @@ int main(int argc, char **argv)
   signal(SIGINT, &sigint);		// handle CTRL-C
 
   try {
-    MxMDLib *md = MxMDLib::init("sub.cf");	// initialize market data library
+    MxMDLib *md =
+      MxMDLib::init("subscriber.cf");	// initialize market data library
 
     if (!md) return 1;
 
@@ -43,6 +44,8 @@ int main(int argc, char **argv)
       md->final();
       return 1;
     }
+
+    md->record("subfoo");
 
     md->start();			// start all feeds
 
@@ -54,7 +57,7 @@ int main(int argc, char **argv)
 
     md->final();			// clean up
 
-  } catch (...) { std::cout << "exception in main" << std::endl; }
+  } catch (...) { }
 
   return 0;
 }
@@ -79,6 +82,17 @@ void addOrder(MxMDOrder *order, MxDateTime stamp)
 {
   MxMDOrderBook *ob = order->orderBook();
   printf("add order %s %s %s px=%f qty=%f\n",
+      ob->id().data(),
+      order->id().data(),
+      MxSide::name(order->data().side),
+      (double)MxValNDP{order->data().price, ob->pxNDP()}.fp(),
+      (double)MxValNDP{order->data().qty, ob->pxNDP()}.fp());
+}
+
+void modifiedOrder(MxMDOrder *order, MxDateTime stamp)
+{
+  MxMDOrderBook *ob = order->orderBook();
+  printf("modified order %s %s %s px=%f qty=%f\n",
       ob->id().data(),
       order->id().data(),
       MxSide::name(order->data().side),
@@ -151,6 +165,7 @@ void loaded(MxMDVenue *venue)
     deletedPxLevelFn(MxMDPxLevelFn::Ptr<&deletedPxLevel>::fn()).
     l2Fn(MxMDOrderBookFn::Ptr<&l2>::fn()).
     addOrderFn(MxMDOrderFn::Ptr<&addOrder>::fn()).
+    modifiedOrderFn(MxMDOrderFn::Ptr<&modifiedOrder>::fn()).
     canceledOrderFn(MxMDOrderFn::Ptr<&canceledOrder>::fn());
 
   // iterate through all tickers subscribing to market data updates

@@ -34,8 +34,8 @@ void MxMDRecord::init(MxMDCore *core, ZvCf *cf)
   m_snapThread = cf->getInt("snapThread", 1, mx->nThreads() + 1, true);
 
   if (rxThread() == mx->rxThread() ||
-      m_snapThread == mx->rxThread() ||
-      m_snapThread == rxThread())
+      (unsigned)m_snapThread == mx->rxThread() ||
+      (unsigned)m_snapThread == rxThread())
     throw ZtString() << "recorder misconfigured - thread conflict -"
       " I/O Rx: " << ZuBoxed(mx->rxThread()) <<
       " IPC Rx: " << ZuBoxed(rxThread()) <<
@@ -76,14 +76,8 @@ ZtString MxMDRecord::stopRecording()
   return path;
 }
 
-bool MxMDRecLink::record(ZtString path)
+bool MxMDRecLink::ok()
 {
-  Guard guard(m_lock);
-  down();
-  if (!path) return true;
-  engine()->rxInvoke([this, path = ZuMv(path)]() mutable {
-      m_path = ZuMv(path); });
-  up();
   int state;
   thread_local ZmSemaphore sem;
   engine()->rxInvoke([this, &state, sem = &sem]() {
@@ -92,6 +86,17 @@ bool MxMDRecLink::record(ZtString path)
       });
   sem.wait();
   return state != MxLinkState::Failed;
+}
+
+bool MxMDRecLink::record(ZtString path)
+{
+  Guard guard(m_lock);
+  down();
+  if (!path) return true;
+  engine()->rxInvoke([this, path = ZuMv(path)]() mutable {
+      m_path = ZuMv(path); });
+  up();
+  return ok();
 }
 
 ZtString MxMDRecLink::stopRecording()
@@ -321,13 +326,12 @@ void MxMDRecLink::recv(Rx *rx)
 	{
 	  ZuRef<Msg> msg = new Msg();
 	  unsigned msgLen = sizeof(Hdr) + hdr->len;
-	  memcpy(msg->ptr(), hdr, msgLen);
+	  memcpy((void *)msg->ptr(), (void *)hdr, msgLen);
 	  broadcast.shift2();
 	  MxSeqNo seqNo = m_seqNo++;
 	  Hdr &msgHdr = msg->as<Hdr>();
 	  msgHdr.seqNo = seqNo;
-	  rx->received(new MxQMsg(ZuMv(msg), msgLen,
-		MxMsgID{id(), seqNo}));
+	  rx->received(new MxQMsg(ZuMv(msg), msgLen, MxMsgID{id(), seqNo}));
 	}
 	break;
     }

@@ -79,6 +79,18 @@ MxEngineApp::ProcessFn MxMDReplay::processFn()
   return MxEngineApp::ProcessFn();
 }
 
+bool MxMDReplayLink::ok()
+{
+  int state;
+  thread_local ZmSemaphore sem;
+  engine()->rxInvoke([this, &state, sem = &sem]() {
+	state = this->state();
+	sem->post();
+      });
+  sem.wait();
+  return state != MxLinkState::Failed;
+}
+
 bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
 {
   Guard guard(m_lock);
@@ -90,14 +102,7 @@ bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
 	m_filter = filter;
       });
   up();
-  int state;
-  thread_local ZmSemaphore sem;
-  engine()->rxInvoke([this, &state, sem = &sem]() {
-	state = this->state();
-	sem->post();
-      });
-  sem.wait();
-  return state != MxLinkState::Failed;
+  return ok();
 }
 
 ZtString MxMDReplayLink::stopReplaying()

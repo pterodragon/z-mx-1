@@ -53,10 +53,11 @@ public:
     MxFlags		orderFlags;
   };
   struct Data {
+    MxUInt		shard;
+    MxEnum		event;
     MxID		venue;
     MxID		segment;
     MxSymString		id;
-    MxEnum		event;
     MxEnum		session;
     MxMDL1Data		l1Data;
     L2Data		l2Data;
@@ -71,10 +72,11 @@ public:
 #undef Offset
 #endif
 #define Offset(x) offsetof(Data, x)
+    add(new MxUIntCol("shard", Offset(shard)));
+    add(new MxEnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
     add(new MxIDCol("venue", Offset(venue)));
     add(new MxIDCol("segment", Offset(segment)));
     add(new MxIDStrCol("id", Offset(id)));
-    add(new MxEnumCol<MxMDStream::Type::CSVMap>("event", Offset(event)));
     add(new MxEnumCol<MxTradingSession::CSVMap>("session", Offset(session)));
 #undef Offset
 #define Offset(x) offsetof(Data, l1Data) + offsetof(MxMDL1Data, x)
@@ -141,24 +143,24 @@ public:
 	case Type::TradingSession:
 	  {
 	    const TradingSession &obj = hdr.as<TradingSession>();
-	    new (data) Data{
-	      obj.venue, obj.segment, {}, hdr.type,
+	    new (data) Data{hdr.shard, hdr.type,
+	      obj.venue, obj.segment, {},
 	      obj.session, { obj.stamp } };
 	  }
 	  break;
 	case Type::L1:
 	  {
 	    const L1 &obj = hdr.as<L1>();
-	    new (data) Data{
-	      obj.key.venue(), obj.key.segment(), obj.key.id(), hdr.type,
+	    new (data) Data{hdr.shard, hdr.type,
+	      obj.key.venue(), obj.key.segment(), obj.key.id(),
 	      {}, obj.data};
 	  }
 	  break;
 	case Type::PxLevel:
 	  {
 	    const PxLevel &obj = hdr.as<PxLevel>();
-	    new (data) Data{
-	      obj.key.venue(), obj.key.segment(), obj.key.id(), hdr.type,
+	    new (data) Data{hdr.shard, hdr.type,
+	      obj.key.venue(), obj.key.segment(), obj.key.id(),
 	      {}, { obj.transactTime, obj.pxNDP, obj.qtyNDP },
 	      { {}, {}, obj.side, {}, obj.delta, obj.price, obj.qty,
 		obj.nOrders, obj.flags } };
@@ -167,10 +169,10 @@ public:
 	case Type::AddOrder:
 	  {
 	    const AddOrder &obj = hdr.as<AddOrder>();
+	    new (data) Data{hdr.shard, hdr.type};
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = hdr.type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -185,10 +187,10 @@ public:
 	case Type::ModifyOrder:
 	  {
 	    const ModifyOrder &obj = hdr.as<ModifyOrder>();
+	    new (data) Data{hdr.shard, hdr.type};
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = hdr.type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -203,10 +205,10 @@ public:
 	case Type::CancelOrder:
 	  {
 	    const CancelOrder &obj = hdr.as<CancelOrder>();
+	    new (data) Data{hdr.shard, hdr.type};
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = hdr.type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l2Data.objectID = obj.orderID;
 	    data->l2Data.side = obj.side;
@@ -215,10 +217,10 @@ public:
 	case Type::L2:
 	  {
 	    const L2 &obj = hdr.as<L2>();
+	    new (data) Data{hdr.shard, hdr.type};
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = hdr.type;
 	    data->l1Data.stamp = obj.stamp;
 	    data->updateL1 = obj.updateL1;
 	  }
@@ -226,20 +228,20 @@ public:
 	case Type::ResetOB:
 	  {
 	    const ResetOB &obj = hdr.as<ResetOB>();
+	    new (data) Data{hdr.shard, hdr.type};
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = hdr.type;
 	    data->l1Data.stamp = obj.transactTime;
 	  }
 	  break;
 	case Type::AddTrade:
 	  {
 	    const AddTrade &obj = hdr.as<AddTrade>();
+	    new (data) Data{hdr.shard, hdr.type};
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = hdr.type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -251,10 +253,10 @@ public:
 	case Type::CorrectTrade:
 	  {
 	    const CorrectTrade &obj = hdr.as<CorrectTrade>();
+	    new (data) Data{hdr.shard, hdr.type};
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = hdr.type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -266,10 +268,10 @@ public:
 	case Type::CancelTrade:
 	  {
 	    const CancelTrade &obj = hdr.as<CancelTrade>();
+	    new (data) Data{hdr.shard, hdr.type};
 	    data->venue = obj.key.venue();
 	    data->segment = obj.key.segment();
 	    data->id = obj.key.id();
-	    data->event = hdr.type;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -281,8 +283,8 @@ public:
 	case Type::RefDataLoaded:
 	  {
 	    const RefDataLoaded &obj = hdr.as<RefDataLoaded>();
+	    new (data) Data{hdr.shard, hdr.type};
 	    data->venue = obj.venue;
-	    data->event = hdr.type;
 	  }
 	  break;
 	default:

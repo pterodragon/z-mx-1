@@ -261,12 +261,9 @@ void MxMDPubLink::TCP::connected(ZiIOContext &io)
 {
   m_link->tcpConnected(this);
   MxMDStream::TCP::recv<TCP>(m_in, io,
-      [](TCP *tcp, MxQMsg *, ZiIOContext &io) { tcp->processLogin(io); });
+      [](TCP *tcp, MxQMsg *, ZiIOContext &io) { tcp->process(io); });
   mx()->rxRun(ZmFn<>{[](MxMDPubLink::TCP *tcp) {
-      {
-	Guard stateGuard(tcp->m_stateLock);
-	if (tcp->m_state != State::Login) return;
-      }
+      if (tcp->m_state != State::Login) return;
       tcpERROR(tcp, 0, "TCP login timeout");
     }, ZmMkRef(this)}, ZmTimeNow(m_link->loginTimeout()), &m_loginTimer);
 }
@@ -283,31 +280,21 @@ void MxMDPubLink::tcpConnected(MxMDPubLink::TCP *tcp)
 
 // TCP disconnect
 
-void MxMDPubLink::TCP::disconnect_()
-{
-  Guard stateGuard(m_stateLock);
-  m_state = State::Disconnect;
-}
 void MxMDPubLink::TCP::disconnect()
 {
-  disconnect_();
+  m_state = State::Disconnect;
   ZiConnection::disconnect();
 }
 void MxMDPubLink::TCP::close()
 {
-  disconnect_();
+  m_state = State::Disconnect;
   ZiConnection::close();
 }
 void MxMDPubLink::TCP::disconnected()
 {
-  mx()->del(&m_loginTimer);
+  if (m_state == State::Login) mx()->del(&m_loginTimer);
   m_link->tcpDisconnected(this);
-  bool intentional;
-  {
-    Guard stateGuard(m_stateLock);
-    intentional = m_state == State::Disconnect;
-  }
-  if (!intentional) tcpERROR(this, 0, "TCP disconnected");
+  // if (m_state != State::Disconnect) tcpERROR(this, 0, "TCP disconnected");
 }
 void MxMDPubLink::tcpDisconnected(MxMDPubLink::TCP *tcp)
 {
@@ -317,38 +304,34 @@ void MxMDPubLink::tcpDisconnected(MxMDPubLink::TCP *tcp)
 
 // TCP login, recv
 
-void MxMDPubLink::TCP::processLogin(ZiIOContext &io)
+void MxMDPubLink::TCP::process(ZiIOContext &io)
 {
+  if (ZuUnlikely(m_state.load_() != State::Login)) {
+    tcpERROR(this, &io, "TCP unexpected message");
+    return;
+  }
+
   mx()->del(&m_loginTimer);
+
   {
-    Guard stateGuard(m_stateLock);
-    if (m_state != State::Login) {
-      stateGuard.unlock();
-      tcpERROR(this, &io, "TCP unexpected message");
+    using namespace MxMDStream;
+    const Hdr &hdr = m_in->as<Hdr>();
+    if (ZuUnlikely(hdr.type != Type::Login)) {
+      tcpERROR(this, &io, "TCP unexpected message type");
       return;
     }
-    {
-      using namespace MxMDStream;
-      const Hdr &hdr = m_in->as<Hdr>();
-      if (ZuUnlikely(hdr.type != Type::Login)) {
-	tcpERROR(this, &io, "TCP unexpected message type");
-	return;
-      }
-      if (!m_link->tcpLogin(hdr.as<Login>())) {
-	tcpERROR(this, &io, "TCP invalid login");
-	return;
-      }
+    if (!m_link->tcpLogin(hdr.as<Login>())) {
+      tcpERROR(this, &io, "TCP invalid login");
+      return;
     }
-    m_state = State::Sending;
   }
+
+  m_state = State::Sending;
 
   m_link->engine()->rxRun(
       ZmFn<>{[tcp = ZmMkRef(this)](MxMDPubLink *link) mutable {
 	link->snap(ZuMv(tcp));
       }, m_link});
-
-  MxMDStream::TCP::recv<TCP>(m_in, io,
-      [](TCP *tcp, MxQMsg *, ZiIOContext &io) { tcp->process(io); });
 }
 bool MxMDPubLink::tcpLogin(const MxMDStream::Login &login)
 {
@@ -356,11 +339,6 @@ bool MxMDPubLink::tcpLogin(const MxMDStream::Login &login)
       login.password != m_partition->tcpPassword) return false;
   linkINFO("MxMDPubLink::tcpLogin(" << id << ')');
   return true;
-}
-void MxMDPubLink::TCP::process(ZiIOContext &io)
-{
-  tcpERROR(this, &io, "TCP unexpected message");
-  io.disconnect();
 }
 
 // UDP connect
@@ -434,29 +412,19 @@ void MxMDPubLink::udpConnected(MxMDPubLink::UDP *udp, ZiIOContext &io)
 
 // UDP disconnect
 
-void MxMDPubLink::UDP::disconnect_()
-{
-  Guard stateGuard(m_stateLock);
-  m_state = State::Disconnect;
-}
 void MxMDPubLink::UDP::disconnect()
 {
-  disconnect_();
+  m_state = State::Disconnect;
   ZiConnection::disconnect();
 }
 void MxMDPubLink::UDP::close()
 {
-  disconnect_();
+  m_state = State::Disconnect;
   ZiConnection::close();
 }
 void MxMDPubLink::UDP::disconnected()
 {
-  bool intentional;
-  {
-    Guard stateGuard(m_stateLock);
-    intentional = m_state == State::Disconnect;
-  }
-  if (!intentional) udpERROR(this, 0, "UDP disconnected");
+  if (m_state != State::Disconnect) udpERROR(this, 0, "UDP disconnected");
 }
 
 // UDP recv
@@ -520,6 +488,8 @@ void MxMDPubLink::TCP::snap(MxSeqNo seqNo)
   if (!m_link->core()->snapshot(*this, m_link->id(), seqNo))
     m_link->engine()->rxRun(
 	ZmFn<>{[](MxMDPubLink *link) { link->disconnect(); }, m_link});
+  else
+    disconnect();
   m_snapMsg = nullptr;
 }
 void *MxMDPubLink::TCP::push(unsigned size)
@@ -658,7 +628,7 @@ void MxMDPubLink::sendMsg(const Hdr *hdr)
   using namespace MxMDStream;
   ZuRef<Msg> msg = new Msg();
   unsigned msgLen = sizeof(Hdr) + hdr->len;
-  memcpy(msg->ptr(), hdr, msgLen);
+  memcpy((void *)msg->ptr(), (void *)hdr, msgLen);
   ZmRef<MxQMsg> qmsg = new MxQMsg(msg, msgLen);
   txInvoke([qmsg = ZuMv(qmsg)](Tx *tx) { tx->send(ZuMv(qmsg)); });
 }

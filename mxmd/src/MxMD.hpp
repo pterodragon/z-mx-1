@@ -1817,6 +1817,8 @@ public:
   ZuInline void shardInvoke(unsigned i, Args &&... args)
     { m_shards[i]->invoke(ZuFwd<Args>(args)...); }
 
+  void sync(); // synchronize with all shards
+
   void raise(ZmRef<ZeEvent> e);
 
   void addFeed(MxMDFeed *feed);

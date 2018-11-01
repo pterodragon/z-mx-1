@@ -95,6 +95,7 @@ public:
     return engine()->core();
   }
 
+  bool ok();
   bool replay(ZtString path, MxDateTime begin, bool filter);
   ZtString stopReplaying();
 

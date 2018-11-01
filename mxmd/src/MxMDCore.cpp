@@ -656,9 +656,9 @@ static void writeSecurities(
     if ((!*venueID || venueID == sec->primaryVenue()) &&
 	(!*segment || segment == sec->primarySegment())) {
       new (csv.ptr()) MxMDSecurityCSV::Data{
-	MxMDStream::Type::AddSecurity, MxDateTime(),
+	sec->shard()->id(), MxMDStream::Type::AddSecurity, MxDateTime(),
 	sec->primaryVenue(), sec->primarySegment(),
-	sec->id(), sec->shard()->id(), sec->refData() };
+	sec->id(), sec->refData() };
       fn(csv.pod());
     }
     return 0;
@@ -693,7 +693,7 @@ static void writeOrderBooks(
 	(!*segment || segment == ob->segment())) {
       MxMDOrderBookCSV::Data *data =
 	new (csv.ptr()) MxMDOrderBookCSV::Data{
-	  MxMDStream::Type::AddOrderBook, MxDateTime(),
+	  ob->shard()->id(), MxMDStream::Type::AddOrderBook, MxDateTime(),
 	  ob->venueID(), ob->segment(), ob->id(),
 	  ob->pxNDP(), ob->qtyNDP(),
 	  ob->legs(), ob->tickSizeTbl()->id(), ob->lotSizes() };
@@ -845,116 +845,6 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	  }
       }
       break;
-    case Type::AddSecurity:
-      {
-	const AddSecurity &obj = hdr.as<AddSecurity>();
-	MxMDSecHandle secHandle = security(obj.key, obj.shard);
-	secHandle.invokeMv([key = obj.key, refData = obj.refData,
-	    transactTime = obj.transactTime](
-	      MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
-	  shard->addSecurity(ZuMv(sec), key, refData, transactTime);
-	});
-      }
-      break;
-    case Type::UpdateSecurity:
-      {
-	const UpdateSecurity &obj = hdr.as<UpdateSecurity>();
-	MxMDLib::secInvoke(obj.key, [refData = obj.refData,
-	    transactTime = obj.transactTime](MxMDSecurity *sec) {
-	  if (sec) sec->update(refData, transactTime);
-	});
-      }
-      break;
-    case Type::AddOrderBook:
-      {
-	const AddOrderBook &obj = hdr.as<AddOrderBook>();
-	if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
-	  if (ZmRef<MxMDTickSizeTbl> tbl =
-		  venue->tickSizeTbl(obj.tickSizeTbl))
-	    MxMDLib::secInvoke(obj.security, [key = obj.key,
-		tbl = ZuMv(tbl), qtyNDP = obj.qtyNDP, lotSizes = obj.lotSizes,
-		transactTime = obj.transactTime](
-		  MxMDSecurity *sec) mutable {
-	      if (sec) {
-		if (ZuUnlikely(sec->refData().qtyNDP != qtyNDP)) {
-		  MxNDP newNDP = sec->refData().qtyNDP;
-#ifdef adjustNDP
-#undef adjustNDP
-#endif
-#define adjustNDP(v) v = MxValNDP{v, qtyNDP}.adjust(newNDP)
-		  adjustNDP(lotSizes.oddLotSize);
-		  adjustNDP(lotSizes.lotSize);
-		  adjustNDP(lotSizes.blockLotSize);
-#undef adjustNDP
-		  qtyNDP = newNDP;
-		}
-		sec->addOrderBook(key, tbl, lotSizes, transactTime);
-	      }
-	    });
-      }
-      break;
-    case Type::DelOrderBook:
-      {
-	const DelOrderBook &obj = hdr.as<DelOrderBook>();
-	obInvoke(obj.key, [transactTime = obj.transactTime](
-	      MxMDOrderBook *ob) {
-	  if (ob) ob->security()->delOrderBook(
-	      ob->venueID(), ob->segment(), transactTime);
-	});
-      }
-      break;
-    case Type::AddCombination:
-      {
-	const AddCombination &obj = hdr.as<AddCombination>();
-	MxMDSecHandle secHandle = security(obj.securities[0]);
-	if (secHandle)
-	  if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
-	    if (ZmRef<MxMDTickSizeTbl> tbl =
-		venue->tickSizeTbl(obj.tickSizeTbl))
-	      secHandle.invokeMv(
-		  [obj = obj, venue = ZuMv(venue), tbl = ZuMv(tbl)](
-		    MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
-		ZmRef<MxMDSecurity> securities[MxMDNLegs];
-		for (unsigned i = 0; i < obj.legs; i++) {
-		  if (!i)
-		    securities[i] = ZuMv(sec);
-		  else {
-		    if (!(securities[i] = shard->security(obj.securities[i])))
-		    return;
-		  }
-		}
-		venue->shard(shard)->addCombination(
-		    obj.key.segment(), obj.key.id(),
-		    obj.pxNDP, obj.qtyNDP,
-		    obj.legs, securities, obj.sides, obj.ratios,
-		    tbl, obj.lotSizes, obj.transactTime);
-	      });
-      }
-      break;
-    case Type::DelCombination:
-      {
-	const DelCombination &obj = hdr.as<DelCombination>();
-	if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
-	obInvoke(obj.key, [venue = ZuMv(venue),
-	    transactTime = obj.transactTime](MxMDOrderBook *ob) {
-	  if (ob)
-	    venue->shard(ob->shard())->delCombination(
-		ob->segment(), ob->id(), transactTime);
-	});
-      }
-      break;
-    case Type::UpdateOrderBook:
-      {
-	const UpdateOrderBook &obj = hdr.as<UpdateOrderBook>();
-	if (ZmRef<MxMDVenue> venue = this->venue(obj.key.venue()))
-	  if (ZmRef<MxMDTickSizeTbl> tbl = venue->tickSizeTbl(obj.tickSizeTbl))
-	    obInvoke(obj.key, [
-		lotSizes = obj.lotSizes, transactTime = obj.transactTime,
-		tbl = ZuMv(tbl)](MxMDOrderBook *ob) {
-	      ob->update(tbl, lotSizes, transactTime);
-	    });
-      }
-      break;
     case Type::TradingSession:
       {
 	const TradingSession &obj = hdr.as<TradingSession>();
@@ -963,158 +853,229 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	      MxMDSegment{obj.segment, obj.session, obj.stamp});
       }
       break;
+    case Type::AddSecurity:
+      if (hdr.shard < nShards()) {
+	const AddSecurity &obj = hdr.as<AddSecurity>();
+	shard(hdr.shard, [obj = obj](MxMDShard *shard) {
+	  shard->addSecurity(shard->security(obj.key),
+	      obj.key, obj.refData, obj.transactTime);
+	});
+      }
+      break;
+    case Type::UpdateSecurity:
+      if (hdr.shard < nShards()) {
+	const UpdateSecurity &obj = hdr.as<UpdateSecurity>();
+	shard(hdr.shard, [obj = obj](MxMDShard *shard) {
+	  if (ZmRef<MxMDSecurity> sec = shard->security(obj.key))
+	    sec->update(obj.refData, obj.transactTime);
+	});
+      }
+      break;
+    case Type::AddOrderBook:
+      if (hdr.shard < nShards()) {
+	const AddOrderBook &obj = hdr.as<AddOrderBook>();
+	shard(hdr.shard, [obj = obj](MxMDShard *shard) mutable {
+	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue()))
+	    if (ZmRef<MxMDTickSizeTbl> tbl =
+		    venue->tickSizeTbl(obj.tickSizeTbl))
+	      if (ZmRef<MxMDSecurity> sec = shard->security(obj.security)) {
+		if (ZuUnlikely(sec->refData().qtyNDP != obj.qtyNDP)) {
+		  MxNDP newNDP = sec->refData().qtyNDP;
+#ifdef adjustNDP
+#undef adjustNDP
+#endif
+#define adjustNDP(v) v = MxValNDP{v, obj.qtyNDP}.adjust(newNDP)
+		  adjustNDP(obj.lotSizes.oddLotSize);
+		  adjustNDP(obj.lotSizes.lotSize);
+		  adjustNDP(obj.lotSizes.blockLotSize);
+#undef adjustNDP
+		  obj.qtyNDP = newNDP;
+		}
+		sec->addOrderBook(obj.key, tbl, obj.lotSizes, obj.transactTime);
+	      }
+	});
+      }
+      break;
+    case Type::DelOrderBook:
+      if (hdr.shard < nShards()) {
+	const DelOrderBook &obj = hdr.as<DelOrderBook>();
+	shard(hdr.shard, [obj = obj](MxMDShard *shard) {
+	  if (ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key))
+	    ob->security()->delOrderBook(
+	      obj.key.venue(), obj.key.segment(), obj.transactTime);
+	});
+      }
+      break;
+    case Type::AddCombination:
+      if (hdr.shard < nShards()) {
+	const AddCombination &obj = hdr.as<AddCombination>();
+	shard(hdr.shard, [obj = obj](MxMDShard *shard) {
+	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue()))
+	    if (ZmRef<MxMDTickSizeTbl> tbl =
+		venue->tickSizeTbl(obj.tickSizeTbl)) {
+	    ZmRef<MxMDSecurity> securities[MxMDNLegs];
+	    for (unsigned i = 0; i < obj.legs; i++)
+	      if (!(securities[i] = shard->security(obj.securities[i])))
+		return;
+	    venue->shard(shard)->addCombination(
+		obj.key.segment(), obj.key.id(),
+		obj.pxNDP, obj.qtyNDP,
+		obj.legs, securities, obj.sides, obj.ratios,
+		tbl, obj.lotSizes, obj.transactTime);
+	  }
+	});
+      }
+      break;
+    case Type::DelCombination:
+      if (hdr.shard < nShards()) {
+	const DelCombination &obj = hdr.as<DelCombination>();
+	shard(hdr.shard, [obj = obj](MxMDShard *shard) {
+	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue()))
+	    venue->shard(shard)->delCombination(
+		obj.key.segment(), obj.key.id(), obj.transactTime);
+	});
+      }
+      break;
+    case Type::UpdateOrderBook:
+      if (hdr.shard < nShards()) {
+	const UpdateOrderBook &obj = hdr.as<UpdateOrderBook>();
+	shard(hdr.shard, [obj = obj](MxMDShard *shard) {
+	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue()))
+	    if (ZmRef<MxMDTickSizeTbl> tbl =
+		venue->tickSizeTbl(obj.tickSizeTbl))
+	      if (ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key))
+		ob->update(tbl, obj.lotSizes, obj.transactTime);
+	});
+      }
+      break;
     case Type::L1:
-      {
+      if (hdr.shard < nShards()) {
 	const L1 &obj = hdr.as<L1>();
-	obInvoke(obj.key, [data = obj.data, filter](MxMDOrderBook *ob) mutable {
+	shard(hdr.shard, [obj = obj, filter](MxMDShard *shard) mutable {
 	  // inconsistent NDP handled within MxMDOrderBook::l1()
-	  if (ob && (!filter || ob->handler())) ob->l1(data);
+	  ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key);
+	  if (ob && (!filter || ob->handler())) ob->l1(obj.data);
 	});
       }
       break;
     case Type::PxLevel:
-      {
+      if (hdr.shard < nShards()) {
 	const PxLevel &obj = hdr.as<PxLevel>();
-	obInvoke(obj.key, [
-	    side = obj.side, transactTime = obj.transactTime,
-	    delta = obj.delta, pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
-	    price = obj.price, qty = obj.qty,
-	    nOrders = obj.nOrders, flags = obj.flags, filter](
-	      MxMDOrderBook *ob) mutable {
+	shard(hdr.shard, [obj = obj, filter](MxMDShard *shard) mutable {
+	  ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key);
 	  if (ob && (!filter || ob->handler())) {
-	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
-	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
-	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
-	      qty = MxValNDP{qty, qtyNDP}.adjust(ob->qtyNDP());
-	    ob->pxLevel(side, transactTime, delta, price, qty, nOrders, flags);
+	    if (ZuUnlikely(ob->pxNDP() != obj.pxNDP))
+	      obj.price = MxValNDP{obj.price, obj.pxNDP}.adjust(ob->pxNDP());
+	    if (ZuUnlikely(ob->qtyNDP() != obj.qtyNDP))
+	      obj.qty = MxValNDP{obj.qty, obj.qtyNDP}.adjust(ob->qtyNDP());
+	    ob->pxLevel(obj.side, obj.transactTime, obj.delta,
+		obj.price, obj.qty, obj.nOrders, obj.flags);
 	  }
 	});
       }
       break;
     case Type::L2:
-      {
+      if (hdr.shard < nShards()) {
 	const L2 &obj = hdr.as<L2>();
-	obInvoke(obj.key, [
-	    stamp = obj.stamp, updateL1 = obj.updateL1, filter](
-	      MxMDOrderBook *ob) {
-	  if (ob && (!filter || ob->handler())) ob->l2(stamp, updateL1);
+	shard(hdr.shard, [obj = obj, filter](MxMDShard *shard) mutable {
+	  ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key);
+	  if (ob && (!filter || ob->handler())) ob->l2(obj.stamp, obj.updateL1);
 	});
       }
       break;
     case Type::AddOrder:
-      {
+      if (hdr.shard < nShards()) {
 	const AddOrder &obj = hdr.as<AddOrder>();
-	obInvoke(obj.key, [
-	    orderID = obj.orderID, transactTime = obj.transactTime,
-	    side = obj.side, rank = obj.rank,
-	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
-	    price = obj.price, qty = obj.qty, flags = obj.flags, filter](
-	      MxMDOrderBook *ob) mutable {
+	shard(hdr.shard, [obj = obj, filter](MxMDShard *shard) mutable {
+	  ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key);
 	  if (ob && (!filter || ob->handler())) {
-	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
-	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
-	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
-	      qty = MxValNDP{qty, qtyNDP}.adjust(ob->qtyNDP());
-	    ob->addOrder(
-		orderID, transactTime,
-		side, rank, price, qty, flags);
+	    if (ZuUnlikely(ob->pxNDP() != obj.pxNDP))
+	      obj.price = MxValNDP{obj.price, obj.pxNDP}.adjust(ob->pxNDP());
+	    if (ZuUnlikely(ob->qtyNDP() != obj.qtyNDP))
+	      obj.qty = MxValNDP{obj.qty, obj.qtyNDP}.adjust(ob->qtyNDP());
+	    ob->addOrder(obj.orderID, obj.transactTime,
+		obj.side, obj.rank, obj.price, obj.qty, obj.flags);
 	  }
 	});
       }
       break;
     case Type::ModifyOrder:
-      {
+      if (hdr.shard < nShards()) {
 	const ModifyOrder &obj = hdr.as<ModifyOrder>();
-	obInvoke(obj.key, [
-	    orderID = obj.orderID, transactTime = obj.transactTime,
-	    side = obj.side, rank = obj.rank,
-	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
-	    price = obj.price, qty = obj.qty, flags = obj.flags, filter](
-	      MxMDOrderBook *ob) mutable {
+	shard(hdr.shard, [obj = obj, filter](MxMDShard *shard) mutable {
+	  ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key);
 	  if (ob && (!filter || ob->handler())) {
-	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
-	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
-	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
-	      qty = MxValNDP{qty, qtyNDP}.adjust(ob->qtyNDP());
-	    ob->modifyOrder(
-		orderID, transactTime,
-		side, rank, price, qty, flags);
+	    if (ZuUnlikely(ob->pxNDP() != obj.pxNDP))
+	      obj.price = MxValNDP{obj.price, obj.pxNDP}.adjust(ob->pxNDP());
+	    if (ZuUnlikely(ob->qtyNDP() != obj.qtyNDP))
+	      obj.qty = MxValNDP{obj.qty, obj.qtyNDP}.adjust(ob->qtyNDP());
+	    ob->modifyOrder(obj.orderID, obj.transactTime,
+		obj.side, obj.rank, obj.price, obj.qty, obj.flags);
 	  }
 	});
       }
       break;
     case Type::CancelOrder:
-      {
+      if (hdr.shard < nShards()) {
 	const CancelOrder &obj = hdr.as<CancelOrder>();
-	obInvoke(obj.key, [
-	    orderID = obj.orderID,
-	    transactTime = obj.transactTime,
-	    side = obj.side, filter](MxMDOrderBook *ob) {
+	shard(hdr.shard, [obj = obj, filter](MxMDShard *shard) mutable {
+	  ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key);
 	  if (ob && (!filter || ob->handler()))
-	    ob->cancelOrder(orderID, transactTime, side);
+	    ob->cancelOrder(obj.orderID, obj.transactTime, obj.side);
 	});
       }
       break;
     case Type::ResetOB:
-      {
+      if (hdr.shard < nShards()) {
 	const ResetOB &obj = hdr.as<ResetOB>();
-	obInvoke(obj.key, [transactTime = obj.transactTime, filter](
-	      MxMDOrderBook *ob) {
+	shard(hdr.shard, [obj = obj, filter](MxMDShard *shard) mutable {
+	  ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key);
 	  if (ob && (!filter || ob->handler()))
-	    ob->reset(transactTime);
+	    ob->reset(obj.transactTime);
 	});
       }
       break;
     case Type::AddTrade:
-      {
+      if (hdr.shard < nShards()) {
 	const AddTrade &obj = hdr.as<AddTrade>();
-	obInvoke(obj.key, [
-	    tradeID = obj.tradeID, transactTime = obj.transactTime,
-	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
-	    price = obj.price, qty = obj.qty, filter](
-	      MxMDOrderBook *ob) mutable {
+	shard(hdr.shard, [obj = obj, filter](MxMDShard *shard) mutable {
+	  ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key);
 	  if (ob && (!filter || ob->handler())) {
-	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
-	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
-	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
-	      qty = MxValNDP{qty, qtyNDP}.adjust(ob->qtyNDP());
-	    ob->addTrade(tradeID, transactTime, price, qty);
+	    if (ZuUnlikely(ob->pxNDP() != obj.pxNDP))
+	      obj.price = MxValNDP{obj.price, obj.pxNDP}.adjust(ob->pxNDP());
+	    if (ZuUnlikely(ob->qtyNDP() != obj.qtyNDP))
+	      obj.qty = MxValNDP{obj.qty, obj.qtyNDP}.adjust(ob->qtyNDP());
+	    ob->addTrade(obj.tradeID, obj.transactTime, obj.price, obj.qty);
 	  }
 	});
       }
       break;
     case Type::CorrectTrade:
-      {
+      if (hdr.shard < nShards()) {
 	const CorrectTrade &obj = hdr.as<CorrectTrade>();
-	obInvoke(obj.key, [
-	    tradeID = obj.tradeID, transactTime = obj.transactTime,
-	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
-	    price = obj.price, qty = obj.qty, filter](
-	      MxMDOrderBook *ob) mutable {
+	shard(hdr.shard, [obj = obj, filter](MxMDShard *shard) mutable {
+	  ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key);
 	  if (ob && (!filter || ob->handler())) {
-	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
-	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
-	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
-	      qty = MxValNDP{qty, qtyNDP}.adjust(ob->qtyNDP());
-	    ob->correctTrade(tradeID, transactTime, price, qty);
+	    if (ZuUnlikely(ob->pxNDP() != obj.pxNDP))
+	      obj.price = MxValNDP{obj.price, obj.pxNDP}.adjust(ob->pxNDP());
+	    if (ZuUnlikely(ob->qtyNDP() != obj.qtyNDP))
+	      obj.qty = MxValNDP{obj.qty, obj.qtyNDP}.adjust(ob->qtyNDP());
+	    ob->correctTrade(obj.tradeID, obj.transactTime, obj.price, obj.qty);
 	  }
 	});
       }
       break;
     case Type::CancelTrade:
-      {
+      if (hdr.shard < nShards()) {
 	const CancelTrade &obj = hdr.as<CancelTrade>();
-	obInvoke(obj.key, [
-	    tradeID = obj.tradeID, transactTime = obj.transactTime,
-	    pxNDP = obj.pxNDP, qtyNDP = obj.qtyNDP,
-	    price = obj.price, qty = obj.qty, filter](
-	      MxMDOrderBook *ob) mutable {
+	shard(hdr.shard, [obj = obj, filter](MxMDShard *shard) mutable {
+	  ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key);
 	  if (ob && (!filter || ob->handler())) {
-	    if (ZuUnlikely(ob->pxNDP() != pxNDP))
-	      price = MxValNDP{price, pxNDP}.adjust(ob->pxNDP());
-	    if (ZuUnlikely(ob->qtyNDP() != qtyNDP))
-	      qty = MxValNDP{qty, qtyNDP}.adjust(ob->qtyNDP());
-	    ob->cancelTrade(tradeID, transactTime, price, qty);
+	    if (ZuUnlikely(ob->pxNDP() != obj.pxNDP))
+	      obj.price = MxValNDP{obj.price, obj.pxNDP}.adjust(ob->pxNDP());
+	    if (ZuUnlikely(ob->qtyNDP() != obj.qtyNDP))
+	      obj.qty = MxValNDP{obj.qty, obj.qtyNDP}.adjust(ob->qtyNDP());
+	    ob->cancelTrade(obj.tradeID, obj.transactTime, obj.price, obj.qty);
 	  }
 	});
       }

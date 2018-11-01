@@ -217,7 +217,6 @@ namespace MxMDStream {
     enum { Code = Type::AddSecurity };
     MxDateTime		transactTime;
     Key			key;
-    MxUInt		shard;
     MxMDSecRefData	refData;
   };
 
@@ -433,9 +432,10 @@ namespace MxMDStream {
       CorrectTrade,
       CancelTrade,
       RefDataLoaded,
+      HeartBeat,
       Wake,
-      Login,
       EndOfSnapshot,
+      Login,
       ResendReq>::T Largest;
 
   struct Buf {
@@ -443,17 +443,10 @@ namespace MxMDStream {
   };
 
   struct MsgData {
-  public:
-    inline MsgData() { }
+    HdrData	hdr;
+    Buf		buf;
 
-    ZuInline const Hdr &hdr() const { return m_hdr; }
-    ZuInline Hdr &hdr() { return m_hdr; }
-
-    ZuInline unsigned length() { return sizeof(Hdr) + m_hdr.len; }
-
-  private:
-    Hdr		m_hdr;
-    Buf		m_buf;
+    ZuInline unsigned length() { return sizeof(HdrData) + hdr.len; }
   };
 
   struct Msg_HeapID {
@@ -464,8 +457,12 @@ namespace MxMDStream {
   struct Msg_ : public Heap, public ZuPOD<MsgData> {
     ZuInline Msg_() { new (this->ptr()) MsgData(); }
 
-    ZuInline const Hdr &hdr() const { return this->data().hdr(); }
-    ZuInline Hdr &hdr() { return this->data().hdr(); }
+    ZuInline const Hdr &hdr() const {
+      return static_cast<const Hdr &>(this->data().hdr);
+    }
+    ZuInline Hdr &hdr() {
+      return static_cast<Hdr &>(this->data().hdr);
+    }
 
     ZuInline unsigned length() { return this->data().length(); }
   };

@@ -166,7 +166,7 @@ protected:
 
   void connected();
   void disconnected();
-  void reconnect();
+  void reconnect(bool immediate);
 
   virtual ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
 

@@ -257,11 +257,15 @@ public:
   void failover(bool v) {
     if (v == m_failover) return;
     m_failover = v;
-    reconnect();
+    reconnect(true);
   }
 
   void connect();
   void disconnect();
+private:
+  void reconnect(bool immediate);
+  void disconnect_();
+public:
 
   // MxLink CRTP (unused)
   ZmTime reconnInterval(unsigned) { return ZmTime{1}; }

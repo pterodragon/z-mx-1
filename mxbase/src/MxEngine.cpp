@@ -446,7 +446,7 @@ void MxAnyLink::disconnected()
 	ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this});
 }
 
-void MxAnyLink::reconnect()
+void MxAnyLink::reconnect(bool immediate)
 {
   int prev, next;
   bool reconnect = false, disconnect = false;
@@ -482,10 +482,15 @@ void MxAnyLink::reconnect()
   }
 
   engine()->linkState(this, prev, next);
-  if (reconnect)
-    engine()->rxRun(
-	ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this},
-	reconnTime, &m_reconnTimer);
+  if (reconnect) {
+    if (immediate)
+      engine()->rxRun(
+	  ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this});
+    else
+      engine()->rxRun(
+	  ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this},
+	  reconnTime, &m_reconnTimer);
+  }
   if (disconnect) 
     engine()->rxRun(
 	ZmFn<>{[](MxAnyLink *link) { link->disconnect(); }, this});

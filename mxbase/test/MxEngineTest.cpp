@@ -134,7 +134,7 @@ public:
 	engine()->disconnected();
 	break;
       case Reconnect:
-	reconnect();
+	reconnect(false);
 	engine()->reconnect();
 	break;
     }

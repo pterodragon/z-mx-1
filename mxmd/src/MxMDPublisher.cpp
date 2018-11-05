@@ -145,7 +145,7 @@ void MxMDPubLink::udpError(UDP *udp, ZiIOContext *io)
   else if (udp)
     udp->close();
   Guard connGuard(m_connLock);
-  if (!udp || udp == m_udp) reconnect();
+  if (!udp || udp == m_udp) { connGuard.unlock(); reconnect(false); }
 }
 
 void MxMDPubLink::connect()
@@ -173,6 +173,22 @@ void MxMDPubLink::disconnect()
 {
   linkINFO("MxMDPubLink::disconnect(" << id << ')');
 
+  disconnect_();
+
+  disconnected();
+}
+
+void MxMDPubLink::reconnect(bool immediate)
+{
+  linkINFO("MxMDPubLink::reconnect(" << id << ')');
+
+  disconnect_();
+  
+  MxLink::reconnect(immediate);
+}
+
+void MxMDPubLink::disconnect_()
+{
   ZiListenInfo listenInfo;
   ZmRef<TCPTbl> tcpTbl;
   ZmRef<UDP> udp;
@@ -203,8 +219,6 @@ void MxMDPubLink::disconnect()
     udp->disconnect();
     udp = nullptr;
   }
-
-  disconnected();
 }
 
 // TCP connect
@@ -230,7 +244,7 @@ void MxMDPubLink::tcpListen()
 	}, this),
       ZiFailFn([](MxMDPubLink *link, bool transient) {
 	  if (transient)
-	    link->reconnect();
+	    link->reconnect(false);
 	  else
 	    link->engine()->rxRun(ZmFn<>{
 		[](MxMDPubLink *link) { link->disconnect(); }, link});
@@ -374,13 +388,19 @@ void MxMDPubLink::udpConnect()
   mx()->udp(
       ZiConnectFn([](MxMDPubLink *link, const ZiCxnInfo &ci) -> uintptr_t {
 	  // link state will not be Up until UDP has connected
-	  if (link->state() != MxLinkState::Connecting)
-	    return 0;
-	  return (uintptr_t)(new UDP(link, ci));
+	  switch ((int)link->state()) {
+	    case MxLinkState::Connecting:
+	    case MxLinkState::Reconnecting:
+	      return (uintptr_t)(new UDP(link, ci));
+	    case MxLinkState::DisconnectPending:
+	      link->connected();
+	    default:
+	      return 0;
+	  }
 	}, this),
       ZiFailFn([](MxMDPubLink *link, bool transient) {
 	  if (transient)
-	    link->reconnect();
+	    link->reconnect(false);
 	  else
 	    link->engine()->rxRun(ZmFn<>{
 		[](MxMDPubLink *link) { link->disconnect(); }, link});
@@ -398,10 +418,13 @@ void MxMDPubLink::udpConnected(MxMDPubLink::UDP *udp, ZiIOContext &io)
 {
   linkINFO("MxMDPubLink::udpConnected(" << id << ')');
 
+  ZmRef<UDP> old;
   {
     Guard connGuard(m_connLock);
+    old = m_udp;
     m_udp = udp;
   }
+  if (ZuUnlikely(old)) { old->disconnect(); old = nullptr; } // paranoia
 
   udp->recv(io); // begin receiving UDP packets (resend requests)
 

@@ -99,10 +99,10 @@ int ZiRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
 	      FUTEX_WAIT_BITSET | FUTEX_CLOCK_REALTIME,
 	      (int)val, &out, 0, FUTEX_BITSET_MATCH_ANY) >= 0) return Zi::OK;
 	switch (errno) {
-	  case EINTR:		break;
-	  case EAGAIN:	 addr.cmpXch(val & ~Waiting, val); return Zi::OK;
+	  case EINTR:    break;
+	  case EAGAIN:   addr.cmpXch(val & ~Waiting, val); return Zi::OK;
 	  case ETIMEDOUT:addr.cmpXch(val & ~Waiting, val); return Zi::NotReady;
-	  default:	 addr.cmpXch(val & ~Waiting, val); return Zi::IOError;
+	  default:       addr.cmpXch(val & ~Waiting, val); return Zi::IOError;
 	}
 	i = 0;
       } else

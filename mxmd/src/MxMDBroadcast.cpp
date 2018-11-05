@@ -48,12 +48,12 @@ bool MxMDBroadcast::open()
   return open_(guard);
 }
 
-ZmRef<MxMDBroadcast::Ring> MxMDBroadcast::shadow()
+ZmRef<MxMDBroadcast::Ring> MxMDBroadcast::shadow(ZeError *e)
 {
   Guard guard(m_lock);
   if (!open_(guard)) return nullptr;
   ZmRef<Ring> ring = new Ring(m_params);
-  if (ring->shadow(*m_ring) < 0) { close_(); return nullptr; }
+  if (ring->shadow(*m_ring, e) < 0) { close_(); return nullptr; }
   return ring;
 }
 
@@ -116,14 +116,14 @@ void MxMDBroadcast::heartbeat_()
 {
   using namespace MxMDStream;
   if (ZuUnlikely(!m_ring)) return;
-  void *ptr = m_ring->push(sizeof(Hdr) + sizeof(HeartBeat));
-  if (!ptr) return;
-  Hdr *hdr = new (ptr) Hdr(
-      (uint16_t)sizeof(HeartBeat), (uint8_t)HeartBeat::Code,
-      (uint8_t)0xff, (uint32_t)0, (uint64_t)++m_seqNo);
   m_lastTime.now();
-  new (hdr->body()) HeartBeat{MxDateTime{m_lastTime}};
-  m_ring->push2();
+  if (void *ptr = m_ring->push(sizeof(Hdr) + sizeof(HeartBeat))) {
+    Hdr *hdr = new (ptr) Hdr(
+	(uint16_t)sizeof(HeartBeat), (uint8_t)HeartBeat::Code,
+	(uint8_t)0xff, (uint32_t)0, (uint64_t)m_seqNo++);
+    new (hdr->body()) HeartBeat{MxDateTime{m_lastTime}};
+    m_ring->push2();
+  }
   m_core->mx()->add(ZmFn<>::Member<&MxMDBroadcast::heartbeat>::fn(this),
       m_lastTime + ZmTime{(time_t)1, 0}, &m_hbTimer);
 }
@@ -158,7 +158,7 @@ void *MxMDBroadcast::out(
   uint32_t nsec = delta.sec() * 1000000000 + delta.nsec();
   Hdr *hdr = new (ptr) Hdr(
       (uint16_t)length, (uint8_t)type,
-      (uint8_t)shardID, nsec, (uint64_t)++m_seqNo);
+      (uint8_t)shardID, nsec, (uint64_t)m_seqNo++);
   return hdr->body();
 }
 

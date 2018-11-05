@@ -355,7 +355,14 @@ public:
 	hwloc_set_area_membind(
 	    ZmTopology::hwloc(), m_data.addr(), (m_data.mmapLength())<<1,
 	    m_params.cpuset(), HWLOC_MEMBIND_BIND, HWLOC_MEMBIND_MIGRATE);
-      if (flags & Read) ++rdrCount();
+      if (flags & Read) {
+	if (!incRdrCount()) {
+	  m_ctrl.close();
+	  if (!m_params.ll()) ZiRing_::close();
+	  if (e) *e = ZiEADDRINUSE;
+	  return Zi::IOError;
+	}
+      }
       if (flags & Write) {
 	gc();
 	this->head() = this->head().load_() & ~EndOfFile;
@@ -368,11 +375,26 @@ public:
     return Zi::IOError;
   }
 
-  int shadow(const ZiRing &ring) {
-    if (m_ctrl.addr() || !ring.m_ctrl.addr()) return Zi::IOError;
-    if (m_ctrl.shadow(ring.m_ctrl) != Zi::OK) return Zi::IOError;
-    if (m_data.shadow(ring.m_data) != Zi::OK) {
+  int shadow(const ZiRing &ring, ZeError *e) {
+    if (m_ctrl.addr() || !ring.m_ctrl.addr()) {
+      if (e) *e = ZiEINVAL;
+      return Zi::IOError;
+    }
+    if (!m_params.ll() && ZiRing_::open(e) != Zi::OK) return Zi::IOError;
+    if (m_ctrl.shadow(ring.m_ctrl, e) != Zi::OK) {
+      if (!m_params.ll()) ZiRing_::close();
+      return Zi::IOError;
+    }
+    if (m_data.shadow(ring.m_data, e) != Zi::OK) {
       m_ctrl.close();
+      if (!m_params.ll()) ZiRing_::close();
+      return Zi::IOError;
+    }
+    if (!incRdrCount()) {
+      m_ctrl.close();
+      m_data.close();
+      if (!m_params.ll()) ZiRing_::close();
+      if (e) *e = ZiEADDRINUSE;
       return Zi::IOError;
     }
     m_params = ring.m_params;
@@ -382,6 +404,17 @@ public:
     return Zi::OK;
   }
 
+private:
+  inline bool incRdrCount() {
+    uint32_t rdrCount;
+    do {
+      rdrCount = this->rdrCount();
+      if (rdrCount >= 64) return false;
+    } while (this->rdrCount().cmpXch(rdrCount + 1, rdrCount) != rdrCount);
+    return true;
+  }
+
+public:
   void close() {
     if (!m_ctrl.addr()) return;
     if (m_flags & Read) {

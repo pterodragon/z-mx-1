@@ -461,11 +461,14 @@ error:
   return Zi::IOError;
 }
 
-int ZiFile::shadow(const ZiFile &file)
+int ZiFile::shadow(const ZiFile &file, ZeError *e)
 {
   Guard guard(m_lock);
 
-  if (m_handle != ZiPlatform::nullHandle()) return Zi::IOError;
+  if (m_handle != ZiPlatform::nullHandle()) {
+    *e = ZiEINVAL;
+    return Zi::IOError;
+  }
 
   m_handle = file.m_handle;
   m_flags = file.m_flags | Shadow;

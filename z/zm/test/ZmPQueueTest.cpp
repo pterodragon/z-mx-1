@@ -91,6 +91,7 @@ int main()
   enqueue(q, 12, 2);
   enqueue(q, 10, 3); // should be head- and tail-clipped
   enqueue(q, 6, 3); // should be tail-clipped
+
   enqueue(q, 4, 3); // should be head- and tail-clipped, trigger dequeue
 
   enqueue(q, 15, 1);

@@ -630,6 +630,13 @@ void MxMDPubLink::sendMsg(const Hdr *hdr)
   unsigned msgLen = sizeof(Hdr) + hdr->len;
   memcpy((void *)msg->ptr(), (void *)hdr, msgLen);
   ZmRef<MxQMsg> qmsg = new MxQMsg(msg, msgLen);
+  switch ((int)hdr->type) {
+    case Type::Wake:
+    case Type::EndOfSnapshot:
+    case Type::Login:
+    case Type::ResendReq:
+      return;
+  }
   txInvoke([qmsg = ZuMv(qmsg)](Tx *tx) { tx->send(ZuMv(qmsg)); });
 }
 
@@ -642,7 +649,7 @@ void MxMDPubLink::loaded_(MxQMsg *msg)
 
 void MxMDPubLink::unloaded_(MxQMsg *msg) { } // unused
 
-bool MxMDPubLink::send_(MxQMsg *msg, bool)
+bool MxMDPubLink::send_(MxQMsg *msg, bool more)
 {
   ZmRef<UDP> udp;
   {

@@ -128,7 +128,7 @@ public:
   int mmap(const Path &name,
       unsigned flags, Offset length, bool shared = true,
       int mmapFlags = 0, unsigned mode = 0777, ZeError *e = 0);
-  int shadow(const ZiFile &file);
+  int shadow(const ZiFile &file, ZeError *e = 0);
   void close();
 
   Offset size();

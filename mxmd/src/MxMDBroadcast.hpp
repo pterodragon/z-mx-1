@@ -64,7 +64,7 @@ public:
   bool open(); // returns true if successful, false otherwise
   void close();
 
-  ZmRef<Ring> shadow();
+  ZmRef<Ring> shadow(ZeError *e = 0);
   void close(ZmRef<Ring> ring);
 
   inline bool active() { return m_openCount; }

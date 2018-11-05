@@ -1003,7 +1003,7 @@ retry:
 
   if (!initSocket(s, listener->info().options)) {
     ::close(s);
-    return;
+    goto retry;
   }
 
   ZiDEBUG(this, ZtSprintf("FD: % 3d ACCEPTING from %s:%u", s,
@@ -1254,7 +1254,8 @@ retry:
   ZiDEBUG(m_mx, ZtHexDump(ZtSprintf(
 	  "FD: % 3d recv(%d): %d", (int)m_info.socket, len, n), buf, n));
 
-  if (ZuUnlikely(!n && !m_info.options.udp())) {
+  if (ZuUnlikely(!n)) {
+    if (m_info.options.udp()) return true;
     m_rxContext.completed();
     disconnect();
     return false;
@@ -1277,8 +1278,6 @@ retry:
     m_mx->epollRecv(this, m_info.socket, 0);
     return true;
   }
-
-  if (m_info.options.udp()) return true;
 
   len = m_rxContext.size - m_rxContext.offset;
   buf = (char *)m_rxContext.ptr + m_rxContext.offset;
@@ -1653,7 +1652,7 @@ bool ZiMultiplex::listenerAdd(Listener *listener, Socket s)
   {
     struct epoll_event ev;
     memset(&ev, 0, sizeof(struct epoll_event));
-    ev.events = EPOLLIN;
+    ev.events = EPOLLIN; // | EPOLLET
     ev.data.u64 = ((uintptr_t)listener) | 1;
     if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, s, &ev) < 0) {
       ZeError e(errno);
@@ -1942,7 +1941,7 @@ int ZiMultiplex::start()
   {
     struct epoll_event ev;
     memset(&ev, 0, sizeof(struct epoll_event));
-    ev.events = EPOLLIN;
+    ev.events = EPOLLIN; //  | EPOLLET;
     ev.data.u64 = 3;
     if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, m_wakeFD, &ev) < 0) {
       ZeError e(errno);

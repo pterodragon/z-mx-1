@@ -1095,7 +1095,6 @@ private:
     bool		  m_drain;
 
   unsigned		m_rxThread;
-  ZmThreadID		m_rxTID = 0;
     // Rx exclusive
     ListenerHash	  m_listeners;
     unsigned		  m_nAccepts;	// total #accepts for all listeners

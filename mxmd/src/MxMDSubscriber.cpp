@@ -91,9 +91,18 @@ MxEngineApp::ProcessFn MxMDSubscriber::processFn()
   });
 }
 
-void MxMDSubscriber::process_(MxMDSubLink *, MxQMsg *msg)
+void MxMDSubscriber::process_(MxMDSubLink *link, MxQMsg *msg)
 {
   using namespace MxMDStream;
+  const Hdr &hdr = msg->as<Hdr>();
+  if (hdr.type == Type::HeartBeat) {
+    link->lastTime(hdr.as<HeartBeat>().stamp.zmTime());
+    return;
+  }
+#if 0
+  ZmTime latency = ZmTimeNow() - (link->lastTime() +
+      ZmTime((time_t)(hdr.nsec / 1000000000), hdr.nsec % 1000000000));
+#endif
   core()->apply(msg->as<Hdr>(), m_filter);
 }
 
@@ -179,6 +188,8 @@ void MxMDSubLink::disconnect()
   linkINFO("MxMDSubLink::disconnect(" << id << ')');
 
   mx()->del(&m_timer);
+  m_active = false;
+  m_inactive = 0;
 
   ZmRef<TCP> tcp;
   ZmRef<UDP> udp;
@@ -270,7 +281,7 @@ void MxMDSubLink::TCP::close()
 }
 void MxMDSubLink::TCP::disconnected()
 {
-  if (m_state == State::Login) mx()->del(&m_loginTimer);
+  mx()->del(&m_loginTimer);
   if (m_state != State::Disconnect) tcpERROR(this, 0, "TCP disconnected");
 }
 
@@ -446,7 +457,7 @@ void MxMDSubLink::UDP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 	})));
   } else {
     msg->id.linkID = m_link->id();
-    msg->id.seqNo = msg->as<Hdr>().seqNo;
+    msg->id.seqNo = hdr.seqNo;
     msg->addr = io.addr;
     m_link->udpReceived(ZuMv(msg));
   }
@@ -509,8 +520,7 @@ void MxMDSubLink::hbStart()
 {
   m_active = false;
   m_inactive = 0;
-  mx()->rxRun(ZmFn<>{[](MxMDSubLink *link) { link->heartbeat(); }, this},
-      ZmTimeNow(1), &m_timer);
+  mx()->add(ZmFn<>{[](MxMDSubLink *link) { link->heartbeat(); }, this}, ZmTimeNow(1), &m_timer);
 }
 
 void MxMDSubLink::heartbeat()
@@ -526,8 +536,7 @@ void MxMDSubLink::heartbeat()
     m_active = false;
     m_inactive = 0;
   }
-  mx()->rxRun(ZmFn<>{[](MxMDSubLink *link) { link->heartbeat(); }, this},
-      ZmTimeNow(1), &m_timer);
+  mx()->add(ZmFn<>{[](MxMDSubLink *link) { link->heartbeat(); }, this}, ZmTimeNow(1), &m_timer);
 }
 
 // commands

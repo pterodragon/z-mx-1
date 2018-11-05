@@ -276,6 +276,10 @@ private:
   void hbStart();
   void heartbeat();
 
+public:
+  ZmTime lastTime() const { return m_lastTime; }
+  void lastTime(ZmTime t) { m_lastTime = t; }
+
 private:
   const MxMDPartition	*m_partition = 0;
 
@@ -284,6 +288,7 @@ private:
   ZmScheduler::Timer	m_timer;
   bool			m_active = false;
   unsigned		m_inactive = 0;
+  ZmTime		m_lastTime;
 
   ZiSockAddr		m_udpResendAddr;
 

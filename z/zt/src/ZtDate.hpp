@@ -81,7 +81,7 @@
 //     ZtDateFmt::ISO gb(date.offset("GB"));	// local time in GB
 //     ZtDateFmt::ISO est(date.offset("EST"));	// local time in EST
 //
-//     puts(date.iso(gmt));	// print time in ISO8601 format
+//     std::cout << date.iso(gmt);	// print time in ISO8601 format
 //
 // * WARNING - functions with this annotation call tzset() if the tz argument
 //   is non-zero; these functions should not be called with a high frequency
@@ -1057,7 +1057,6 @@ public:
 
   inline ZtDate &now() {
     ZmTime t(ZmTime::Now);
-
     init(t.sec());
     m_nsec = t.nsec();
     return *this;

@@ -868,6 +868,16 @@ void ZiMultiplex::listen_(
   ZmRef<Listener> listener = new Listener(
       this, acceptFn, lsocket, nAccepts, localIP, localPort, options);
 
+#ifdef ZiMultiplex_EPoll
+  if (::listen(lsocket, nAccepts) < 0) {
+    ZeError e(errno);
+    ::close(lsocket);
+    Error("listen", Zi::IOError, e);
+    failFn(false);
+    return;
+  }
+#endif
+
   if (!listenerAdd(listener, lsocket)) {
     ZiPlatform::closeSocket(lsocket);
     failFn(false);
@@ -888,17 +898,6 @@ void ZiMultiplex::listen_(
     ZeError e(WSAGetLastError());
     listenerDel(lsocket);
     ::closesocket(lsocket);
-    Error("listen", Zi::IOError, e);
-    failFn(false);
-    return;
-  }
-#endif
-
-#ifdef ZiMultiplex_EPoll
-  if (::listen(lsocket, nAccepts) < 0) {
-    ZeError e(errno);
-    listenerDel(lsocket);
-    ::close(lsocket);
     Error("listen", Zi::IOError, e);
     failFn(false);
     return;
@@ -1652,7 +1651,7 @@ bool ZiMultiplex::listenerAdd(Listener *listener, Socket s)
   {
     struct epoll_event ev;
     memset(&ev, 0, sizeof(struct epoll_event));
-    ev.events = EPOLLIN; // | EPOLLET
+    ev.events = EPOLLIN | EPOLLET;
     ev.data.u64 = ((uintptr_t)listener) | 1;
     if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, s, &ev) < 0) {
       ZeError e(errno);
@@ -1941,7 +1940,7 @@ int ZiMultiplex::start()
   {
     struct epoll_event ev;
     memset(&ev, 0, sizeof(struct epoll_event));
-    ev.events = EPOLLIN; //  | EPOLLET;
+    ev.events = EPOLLIN;
     ev.data.u64 = 3;
     if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, m_wakeFD, &ev) < 0) {
       ZeError e(errno);

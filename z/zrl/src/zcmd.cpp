@@ -124,6 +124,11 @@ private:
       prompt();
   }
 
+  void error(ZmRef<ZeEvent> e) {
+    ZeLog::log(ZuMv(e));
+    post();
+  }
+
   void connected() {
     if (m_solo) {
       send(ZuMv(m_soloMsg));
@@ -239,7 +244,7 @@ int main(int argc, char **argv)
     ZeLog::stop();
     exit(1);
   } catch (...) {
-    std::cerr << "Unknown Exception\n" << std::flush;
+    std::cerr << "unknown exception\n" << std::flush;
     ZeLog::stop();
     exit(1);
   }

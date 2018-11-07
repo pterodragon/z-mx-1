@@ -220,14 +220,14 @@ private:
 
   ZiMultiplex		*m_mx = 0;
 
-  unsigned		m_reconnectFreq = 0;
+  unsigned		m_reconnFreq = 0;
   ZiIP			m_localIP;
   uint16_t		m_localPort = 0;
   ZiIP			m_remoteIP;
   uint16_t		m_remotePort = 0;
   unsigned		m_timeout = 0;
 
-  ZmScheduler::Timer	m_reconnectTimer;
+  ZmScheduler::Timer	m_reconnTimer;
 
   typedef ZmList<ZmRef<ZvCmdMsg>, ZmListLock<ZmNoLock> > MsgList;
  
@@ -303,6 +303,7 @@ private:
 
   ZmSemaphore		m_started;
   bool			m_listening = false;
+
   ZmScheduler::Timer	m_rebindTimer;
 
   struct CmdData {

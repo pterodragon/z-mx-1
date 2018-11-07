@@ -136,7 +136,7 @@ void ZvCmdClient::init(ZiMultiplex *mx, ZvCf *cf)
   m_remotePort = cf->getInt("remotePort", 1, (1<<16) - 1, true);
   m_localIP = cf->get("localIP", false, "0.0.0.0");
   m_localPort = cf->getInt("localPort", 1, (1<<16) - 1, false, 0);
-  m_reconnectFreq = cf->getInt("reconnectFreq", 0, 3600, false, 0);
+  m_reconnFreq = cf->getInt("reconnFreq", 0, 3600, false, 0);
   m_timeout = cf->getInt("timeout", 0, 3600, false, 0);
 }
 
@@ -175,9 +175,9 @@ void ZvCmdClient::connect()
 
 void ZvCmdClient::failed(bool transient)
 {
-  if (transient && m_reconnectFreq > 0)
+  if (transient && m_reconnFreq > 0)
     m_mx->add(ZmFn<>{[](ZvCmdClient *client) { client->connect(); }, this},
-	ZmTimeNow(m_reconnectFreq), &m_reconnectTimer);
+	ZmTimeNow(m_reconnFreq), &m_reconnTimer);
   else
     error(ZeEVENT(Error, ([](const ZeEvent &, ZmStream &s) {
       s << "ZvCmdClient::connect() - could not connect"; })));
@@ -185,6 +185,8 @@ void ZvCmdClient::failed(bool transient)
 
 void ZvCmdClient::disconnect()
 {
+  m_mx->del(&m_reconnTimer);
+
   ZmRef<ZvCmdClientCxn> cxn;
 
   {
@@ -266,13 +268,14 @@ void ZvCmdServerCxn::sent()
 
 void ZvCmdServer::init(ZiMultiplex *mx, ZvCf *cf)
 {
+  m_mx = mx;
+
   m_rebindFreq = cf->getInt("rebindFreq", 0, 3600, false, 0);
   m_ip = cf->get("localIP", false, "127.0.0.1");
   m_port = cf->getInt("localPort", 1, (1<<16) - 1, false, 19400);
   m_nAccepts = cf->getInt("nAccepts", 1, 1024, false, 8);
   m_timeout = cf->getInt("timeout", 0, 3600, false, 0);
 
-  m_mx = mx;
   m_listening = false;
 
   m_syntax = new ZvCf();
@@ -295,6 +298,7 @@ void ZvCmdServer::start()
 
 void ZvCmdServer::stop()
 {
+  m_mx->del(&m_rebindTimer);
   m_mx->stopListening(m_ip, m_port);
   m_listening = false;
 }

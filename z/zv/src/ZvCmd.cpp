@@ -21,356 +21,237 @@
 
 #include <ZtRegex.hpp>
 
-namespace {
-  static void preprocess(ZuString msg,
-      ZtArray<char> &cmd, ZtArray<char> &data) {
-    const auto &cmdRedirect = ZtStaticRegexUTF8("<\\s*");
-    ZtRegex::Captures c;
-    unsigned pos = 0, n = 0;
-    if (n = cmdRedirect.m(msg, c, pos)) {
-      cmd = c[0];
-      data = c[2];
+int ZvCmdMsg::redirect(ZmRef<ZeEvent> *e)
+{
+  const auto &redirect = ZtStaticRegexUTF8("\\s*<\\s*");
+  ZtRegex::Captures c;
+  unsigned pos = 0, n = 0;
+  ZtString cmd = ZuMv(m_cmd);
+  if (n = redirect.m(cmd, c, pos)) {
+    m_cmd = c[0];
+    ZiFile f;
+    ZeError e_;
+    int r = f.open(c[2], ZiFile::ReadOnly | ZiFile::GC, 0777, &e_);
+    if (r == Zi::OK) {
+      m_data.length(f.size());
+      if (f.read(m_data.data(), m_data.length()) != (int)m_data.length())
+	m_data.null();
     } else {
-      cmd = msg;
+      if (e) *e = ZeEVENT(Error, ([file = ZtString(c[2]), e = e_]
+	  (const ZeEvent &, ZmStream &s) { s << file << ": " << e; }));
     }
-    if (data.length() > 0) {
-      ZiFile f;
-      if (Zi::OK == f.open(data, ZiFile::ReadOnly | ZiFile::GC)) {
-	data.length((int)f.size());
-	if (f.read(data.data(), data.length()) != (int)data.length())
-	  data.null();
-	return;
-      }
-    }
-    data.null();
-  }
-}
-
-void ZvCmdClient::send(ZuString s, uint32_t seqNo)
-{
-  ZtArray<char> cmd;
-  ZtArray<char> data;
-
-  preprocess(s, cmd, data);
-  if (!data) data = m_stdinData;
-
-  ZmRef<ZvCmd_Msg> msg = new ZvCmd_Msg(seqNo, cmd, data);
-  ZmRef<ZvCmdLine> line;
-
-  {
-    Guard guard(m_lock);
-    if (!(line = m_line)) return;
-    if (m_busy) { m_queue.push(msg); return; }
-    m_busy = true;
-  }
-  line->send(msg);
-}
-
-void ZvCmdLine::send(ZvCmd_Msg *msg)
-{
-  msg->line(this);
-  msg->send();
-}
-
-void ZvCmdLine::connected(ZiIOContext &io) {
-  if (m_connFn) m_connFn(this);
-  ZmRef<ZvCmd_Msg> msg = new ZvCmd_Msg(this);
-  msg->recv(io);
-}
-
-void ZvCmd_Msg::recv(ZiIOContext &io)
-{
-  io.init(ZiIOFn::Member<&ZvCmd_Msg::recvHdr_>::fn(ZmMkRef(this)),
-      header(), headerLen(), 0);
-}
-void ZvCmd_Msg::recvHdr_(ZiIOContext &io)
-{
-  if ((io.offset += io.length) < io.size) return;
-  int n = cmdLen();
-  if (n < 0) {
-    io.disconnect();
-    ZeLOG(Warning, "received corrupt message");
-    return;
-  }
-  extend();
-  if (!n && !dataLen()) { rcvd_(io); return; }
-  io.init(ZiIOFn::Member<&ZvCmd_Msg::recvCmd_>::fn(ZmMkRef(this)),
-      cmdPtr(), cmdLen(), 0);
-}
-void ZvCmd_Msg::recvCmd_(ZiIOContext &io)
-{
-  if ((io.offset += io.length) < io.size) return;
-  if (!dataLen()) { rcvd_(io); return; }
-  io.init(ZiIOFn::Member<&ZvCmd_Msg::recvData_>::fn(ZmMkRef(this)),
-      dataPtr(), dataLen(), 0);
-}
-void ZvCmd_Msg::recvData_(ZiIOContext &io)
-{
-  if ((io.offset += io.length) < io.size) return;
-  rcvd_(io);
-}
-void ZvCmd_Msg::rcvd_(ZiIOContext &io)
-{
-  m_line->mx()->add(
-      ZmFn<>::Member<static_cast<void (ZvCmd_Msg::*)()>(
-	&ZvCmd_Msg::rcvd_)>::fn(ZmMkRef(this)));
-  ZmRef<ZvCmd_Msg> msg = new ZvCmd_Msg(m_line);
-  msg->recv(io);
-}
-void ZvCmd_Msg::rcvd_()
-{
-  m_line->rcvd(this);
-}
-
-void ZvCmd_Msg::send()
-{
-  m_line->ZiConnection::send(
-      ZiIOFn::Member<&ZvCmd_Msg::send_>::fn(ZmMkRef(this)));
-}
-void ZvCmd_Msg::send_(ZiIOContext &io)
-{
-  io.init(ZiIOFn::Member<&ZvCmd_Msg::sendHdr_>::fn(ZmMkRef(this)),
-      header(), headerLen(), 0);
-}
-void ZvCmd_Msg::sendHdr_(ZiIOContext &io)
-{
-  if ((io.offset += io.length) < io.size) return;
-  if (!cmdLen()) { io.complete(); sent_(); return; }
-  io.init(ZiIOFn::Member<&ZvCmd_Msg::sendCmd_>::fn(ZmMkRef(this)),
-      cmdPtr(), cmdLen(), 0);
-}
-void ZvCmd_Msg::sendCmd_(ZiIOContext &io)
-{
-  if ((io.offset += io.length) < io.size) return;
-  if (!dataLen()) { io.complete(); sent_(); return; }
-  io.init(ZiIOFn::Member<&ZvCmd_Msg::sendData_>::fn(ZmMkRef(this)),
-      dataPtr(), dataLen(), 0);
-}
-void ZvCmd_Msg::sendData_(ZiIOContext &io)
-{
-  if ((io.offset += io.length) < io.size) return;
-  io.complete();
-  sent_();
-}
-void ZvCmd_Msg::sent_() { m_line->sent(this); }
-
-void ZvCmdLine::disconnected() { if (m_discFn) m_discFn(this); }
-
-void ZvCmdLine::send(ZuString msg_, uint32_t seqNo)
-{
-  ZtArray<char> cmd;
-  ZtArray<char> data;
-  preprocess(msg_, cmd, data);
-  ZmRef<ZvCmd_Msg> msg = new ZvCmd_Msg(seqNo, ZuMv(cmd), ZuMv(data));
-  msg->line(this);
-  msg->send();
-}
-
-void ZvCmdLine::send(const ZvAnswer &ans)
-{
-  ZtArray<char> event;
-  event << ans.message();
-  ZmRef<ZvCmd_Msg> msg = new ZvCmd_Msg(
-      ans.flags(), ans.seqNo(), ZuMv(event), ZuMv(ans.data()));
-  msg->line(this);
-  msg->send();
-}
-
-void ZvCmdLine::rcvd(ZvCmd_Msg *msg)
-{
-  if (m_incoming) {
-    if (m_rcvdFn) {
-      ZvInvocation inv(msg->seqNo(), msg->cmd(), msg->data());
-      ZvAnswer ans(msg->seqNo());
-      m_rcvdFn(this, inv, ans);
-      send(ans);
-    }
+    return r;
   } else {
-    cancelTimeout();
-    ZvAnswer ans(msg->flags(), msg->seqNo(), msg->cmd(), msg->data());
-    if (m_ackRcvdFn) m_ackRcvdFn(this, ans);
+    m_cmd = ZuMv(cmd);
+    return Zi::OK;
   }
 }
 
-void ZvCmdClient::ackd(ZvCmdLine *line, const ZvAnswer &ans)
+void ZvCmdMsg::send(ZiConnection *cxn)
 {
-  if (m_ackRcvdFn) m_ackRcvdFn(line, ans);
-  ZmRef<ZvCmd_Msg> msg = 0;
-
-  {
-    Guard guard(m_lock);
-    if (line != m_line) return;
-    if (!(msg = m_queue.shift())) { m_busy = false; return; }
-  }
-  line->send(msg);
+  m_hdr.cmdLen = m_cmd.length();
+  m_hdr.dataLen = m_data.length();
+  cxn->send(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
+    io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
+      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+      io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
+	if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	if (!msg->m_data) return;
+	io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
+	  if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	}, io.fn.mvObject<ZvCmdMsg>()},
+	msg->m_data.data(), msg->m_data.length(), 0);
+      }, io.fn.mvObject<ZvCmdMsg>()},
+      msg->m_cmd.data(), msg->m_cmd.length(), 0);
+    }, io.fn.mvObject<ZvCmdMsg>()},
+    &msg->m_hdr, sizeof(Hdr), 0);
+  }, ZmMkRef(this)});
 }
 
-void ZvCmdLine::sent(ZvCmd_Msg *msg)
+// client
+
+void ZvCmdClientCxn::connected()
 {
-  if (m_incoming) {
-    if (m_ackSentFn) m_ackSentFn(this);
-  } else {
-    scheduleTimeout();
-    if (m_sentFn) {
-      ZvInvocation inv(msg->seqNo(), msg->cmd(), msg->data());
-      m_sentFn(this, inv);
-    }
-  }
+  mgr()->connected(this);
+}
+void ZvCmdClientCxn::disconnected()
+{
+  cancelTimeout();
+  mgr()->disconnected(this);
+}
+void ZvCmdClientCxn::rcvd(ZmRef<ZvCmdMsg> msg)
+{
+  cancelTimeout();
+  mgr()->rcvd(ZuMv(msg));
+}
+void ZvCmdClientCxn::sent()
+{
+  scheduleTimeout();
 }
 
-void ZvCmdLine::scheduleTimeout()
-{
-  if (m_timeoutDisconnect > 0)
-    mx()->add(ZmFn<>::Member<&ZvCmdLine::timeout>::fn(this),
-	ZmTimeNow(m_timeoutDisconnect), ZmScheduler::Defer, &m_timeout);
-}
-
-void ZvCmdLine::cancelTimeout()
-{
-  if (m_timeoutDisconnect > 0) mx()->del(&m_timeout);
-}
-
-void ZvCmdLine::timeout()
-{
-#ifndef _WIN32
-  static ZeError::ErrNo code = ETIMEDOUT;
-#else
-  static ZeError::ErrNo code = WAIT_TIMEOUT;
-#endif
-  warn(ZuFnName, Zi::IOError, ZeError(code));
-}
-
-void ZvCmdLine::warn(const char *op, int status, ZeError e)
-{
-  if (status == Zi::IOError) {
-    ZeLOG(Warning, ZtSprintf("%s - %s", op, e.message()));
-  }
-  disconnect();
-}
-
-void ZvCmdClient::init(
-    ZiMultiplex *mx, ZvCf *cf, ZvCmdConnFn connFn,
-    ZvCmdDiscFn discFn, ZvCmdAckRcvdFn ackRcvdFn)
+void ZvCmdClient::init(ZiMultiplex *mx, unsigned timeout)
 {
   m_mx = mx;
-  m_connFn = connFn;
-  m_discFn = discFn;
-  m_ackRcvdFn = ackRcvdFn;
+  m_timeout = timeout;
+}
 
-  m_remotePort = m_localPort = m_reconnectFreq = 0;
-  if (cf) {
-    m_remoteIP = cf->get("remoteIP", false, "127.0.0.1");
-    m_remotePort = cf->getInt("remotePort", 1, (1<<16) - 1, true);
-    m_localIP = cf->get("localIP", false, "0.0.0.0");
-    m_localPort = cf->getInt("localPort", 1, (1<<16) - 1, false, 0);
-    m_reconnectFreq = cf->getInt("reconnectFreq", 0, 3600, false, 0);
-  }
+void ZvCmdClient::init(ZiMultiplex *mx, ZvCf *cf)
+{
+  m_mx = mx;
+
+  m_remoteIP = cf->get("remoteIP", false, "127.0.0.1");
+  m_remotePort = cf->getInt("remotePort", 1, (1<<16) - 1, true);
+  m_localIP = cf->get("localIP", false, "0.0.0.0");
+  m_localPort = cf->getInt("localPort", 1, (1<<16) - 1, false, 0);
+  m_reconnectFreq = cf->getInt("reconnectFreq", 0, 3600, false, 0);
+  m_timeout = cf->getInt("timeout", 0, 3600, false, 0);
 }
 
 void ZvCmdClient::final()
 {
-  m_mx = 0;
-  m_connFn = ZvCmdConnFn();
-  m_discFn = ZvCmdDiscFn();
-  m_ackRcvdFn = ZvCmdAckRcvdFn();
 }
 
 void ZvCmdClient::connect(ZiIP ip, int port)
 {
   m_mx->connect(
-      ZiConnectFn::Member<&ZvCmdClient::connected>::fn(this),
-      ZiFailFn::Member<&ZvCmdClient::failed>::fn(this),
+      ZiConnectFn{[](ZvCmdClient *client, const ZiCxnInfo &info) -> uintptr_t {
+	  return (uintptr_t)(new ZvCmdClientCxn(client, info));
+	}, this},
+      ZiFailFn{[](ZvCmdClient *client, bool transient) {
+	  client->failed(transient);
+	}, this},
       ZiIP(), 0, ip, port);
+}
+
+void ZvCmdClient::connect()
+{
+  if (!m_remoteIP || !m_remotePort) {
+    error(ZeEVENT(Error, ([](const ZeEvent &, ZmStream &s) {
+      s << "ZvCmdClient::connect() - no remote address configured"; })));
+    return;
+  }
+  m_mx->connect(
+      ZiConnectFn{[](ZvCmdClient *client, const ZiCxnInfo &info) -> uintptr_t {
+	  return (uintptr_t)(new ZvCmdClientCxn(client, info));
+	}, this},
+      ZiFailFn{[](ZvCmdClient *client, bool transient) {
+	  client->failed(transient);
+	}, this},
+      m_localIP, m_localPort, m_remoteIP, m_remotePort);
 }
 
 void ZvCmdClient::failed(bool transient)
 {
   if (transient && m_reconnectFreq > 0)
-    m_mx->add(ZmFn<>::Member<static_cast<void (ZvCmdClient::*)()>(
-	  &ZvCmdClient::connect)>::fn(this),
-	ZmTimeNow(m_reconnectFreq));
+    m_mx->add(ZmFn<>{[](ZvCmdClient *client) { client->connect(); }, this},
+	ZmTimeNow(m_reconnectFreq), &m_reconnectTimer);
+  else
+    error(ZeEVENT(Error, ([](const ZeEvent &, ZmStream &s) {
+      s << "ZvCmdClient::connect() - could not connect"; })));
 }
 
-void ZvCmdClient::connect()
+void ZvCmdClient::disconnect()
 {
-  ZeLOG(Info, ZtString() << "connect(" <<
-      m_localIP << ':' << ZuBoxed(m_localPort) << " -> " <<
-      m_remoteIP << ':' << ZuBoxed(m_remotePort) << ')');
-  m_mx->connect(
-      ZiConnectFn::Member<&ZvCmdClient::connected>::fn(this),
-      ZiFailFn::Member<&ZvCmdClient::failed>::fn(this),
-      m_localIP, m_localPort, m_remoteIP, m_remotePort);
-}
-
-void ZvCmdClient::stop()
-{
-  ZmRef<ZvCmdLine> line;
+  ZmRef<ZvCmdClientCxn> cxn;
 
   {
     Guard guard(m_lock);
-    if (!(line = m_line)) return;
+    cxn = ZuMv(m_cxn);
+    m_cxn = nullptr;
+    m_busy = false;
   }
-  line->disconnect();
+
+  if (cxn) cxn->disconnect();
 }
 
-#if 0
-  if (status != Zi::OK) {
-    if (status == Zi::IOError) {
-      ZeLOG(Warning, ZtSprintf(
-	    "connected(%s:%d): %s",
-	    ci.remoteIP().string().data(),
-	    ci.remotePort(), e.message().data()));
-    }
-    if (m_discFn) m_discFn((ZvCmdLine *)0);
-    reconnect();
-    return 0;
+void ZvCmdClient::connected(ZvCmdClientCxn *cxn)
+{
+  {
+    Guard guard(m_lock);
+    m_cxn = cxn;
+    if (m_queue.count()) {
+      m_busy = true;
+      ZmRef<ZvCmdMsg> msg = m_queue.shift();
+      msg->send(m_cxn);
+    } else
+      m_busy = false;
   }
-#endif
+  connected();
+}
 
-ZiConnection *ZvCmdClient::connected(const ZiConnectionInfo &info)
+void ZvCmdClient::disconnected(ZvCmdClientCxn *cxn)
+{
+  {
+    Guard guard(m_lock);
+    if (m_cxn == cxn) m_cxn = nullptr;
+    m_busy = false;
+  }
+  disconnected();
+}
+
+void ZvCmdClient::send(ZmRef<ZvCmdMsg> msg)
 {
   Guard guard(m_lock);
-  m_line = new ZvCmdLine(
-      m_mx, info, false, m_timeoutDisconnect, m_connFn,
-      ZvCmdDiscFn::Member<&ZvCmdClient::disconnected>::fn(this),
-      ZvCmdSentFn::Member<&ZvCmdClient::sent>::fn(this),
-      ZvCmdRcvdFn(), ZvCmdAckSentFn(),
-      ZvCmdAckRcvdFn::Member<&ZvCmdClient::ackd>::fn(this));
-  m_busy = false;
-  m_queue.clean();
-  return m_line;
+  msg->seqNo(m_seqNo++);
+  if (m_cxn && !m_busy) {
+    m_busy = true;
+    msg->send(m_cxn);
+  } else
+    m_queue.push(msg);
 }
 
-void ZvCmdClient::disconnected(ZvCmdLine *line)
+void ZvCmdClient::rcvd(ZmRef<ZvCmdMsg> msg)
 {
-  if (m_discFn) m_discFn(line);
-  {
-    Guard guard(m_lock);
-    if (m_line == line) m_line = 0;
-  }
+  process(msg);
+  Guard guard(m_lock);
+  if (m_cxn && m_queue.count()) {
+    ZmRef<ZvCmdMsg> msg = m_queue.shift();
+    msg->send(m_cxn);
+  } else
+    m_busy = false;
 }
 
-void ZvCmdClient::sent(ZvCmdLine *line, const ZvInvocation &inv)
+// server
+
+void ZvCmdServerCxn::connected()
 {
+  scheduleTimeout();
+}
+void ZvCmdServerCxn::disconnected()
+{
+  cancelTimeout();
+}
+void ZvCmdServerCxn::rcvd(ZmRef<ZvCmdMsg> msg)
+{
+  scheduleTimeout();
+  mgr()->rcvd(this, ZuMv(msg));
+}
+void ZvCmdServerCxn::sent()
+{
+  scheduleTimeout();
 }
 
-void ZvCmdServer::init(ZvCf *cf,
-    ZiMultiplex *mx, ZvCmdDiscFn discFn, ZvCmdRcvdFn rcvdFn)
+void ZvCmdServer::init(ZiMultiplex *mx, ZvCf *cf)
 {
   m_rebindFreq = cf->getInt("rebindFreq", 0, 3600, false, 0);
   m_ip = cf->get("localIP", false, "127.0.0.1");
   m_port = cf->getInt("localPort", 1, (1<<16) - 1, false, 19400);
   m_nAccepts = cf->getInt("nAccepts", 1, 1024, false, 8);
+  m_timeout = cf->getInt("timeout", 0, 3600, false, 0);
+
   m_mx = mx;
-  m_discFn = discFn;
-  m_rcvdFn = rcvdFn;
+  m_listening = false;
+
+  m_syntax = new ZvCf();
+
+  addCmd("help", "", ZvCmdFn::Member<&ZvCmdServer::help>::fn(this),
+      "list commands", "usage: help [COMMAND]");
 }
 
 void ZvCmdServer::final()
 {
-  m_mx = 0;
-  m_discFn = ZvCmdDiscFn();
-  m_rcvdFn = ZvCmdRcvdFn();
+  m_syntax = nullptr;
+  m_cmds.clean();
 }
 
 void ZvCmdServer::start()
@@ -388,13 +269,19 @@ void ZvCmdServer::stop()
 void ZvCmdServer::listen()
 {
   m_mx->listen(
-      ZiListenFn::Member<&ZvCmdServer::listening>::fn(this),
-      ZiFailFn::Member<&ZvCmdServer::failed>::fn(this),
-      ZiConnectFn::Member<&ZvCmdServer::accepted>::fn(this),
+      ZiListenFn{[](ZvCmdServer *server, const ZiListenInfo &) {
+	  server->listening();
+	}, this},
+      ZiFailFn{[](ZvCmdServer *server, bool transient) {
+	  server->failed(transient);
+	}, this},
+      ZiConnectFn{[](ZvCmdServer *server, const ZiCxnInfo &info) -> uintptr_t {
+	  return (uintptr_t)(new ZvCmdServerCxn(server, info));
+	}, this},
       m_ip, m_port, m_nAccepts);
 }
 
-void ZvCmdServer::listening(const ZiListenInfo &)
+void ZvCmdServer::listening()
 {
   m_listening = true;
   m_started.post();
@@ -403,249 +290,96 @@ void ZvCmdServer::listening(const ZiListenInfo &)
 void ZvCmdServer::failed(bool transient)
 {
   if (transient && m_rebindFreq > 0)
-    m_mx->add(ZmFn<>::Member<&ZvCmdServer::listen>::fn(this),
-	ZmTimeNow(m_rebindFreq));
+    m_mx->add(ZmFn<>{[](ZvCmdServer *server) { server->listen(); }, this},
+	ZmTimeNow(m_rebindFreq), &m_rebindTimer);
   else {
     m_listening = false;
+    error(ZeEVENT(Error, ([](const ZeEvent &, ZmStream &s) {
+      s << "ZvCmdServer::listen() - could not listen"; })));
     m_started.post();
   }
 }
 
-ZiConnection *ZvCmdServer::accepted(const ZiConnectionInfo &info)
+void ZvCmdServer::rcvd(ZvCmdServerCxn *cxn, ZmRef<ZvCmdMsg> in)
 {
-  return new ZvCmdLine(
-      m_mx, info, true, 10,
-      ZvCmdConnFn::Member<&ZvCmdServer::connected>::fn(this),
-      m_discFn, ZvCmdSentFn(), m_rcvdFn,
-      ZvCmdAckSentFn::Member<&ZvCmdServer::ackSent>::fn(this),
-      ZvCmdAckRcvdFn());
-}
-
-void ZvCmdServer::connected(ZvCmdLine *line)
-{
-}
-
-void ZvCmdServer::ackSent(ZvCmdLine *line)
-{
-}
-
-ZmRef<ZvCmdObject::CmdOption> ZvCmdObject::HelpOption = 
-  new ZvCmdObject::CmdOption("", "help", "", "flag", "display this help");
-
-struct Sort_Helper { 
-  char *m_shortName; 
-  char *m_longName;
-  int  m_idx;
-};
-
-int opt_sorter(const void *p1_, const void *p2_)
-{
-  const Sort_Helper *p1 = (const Sort_Helper *)p1_;
-  const Sort_Helper *p2 = (const Sort_Helper *)p2_;
-  if (p1->m_shortName && p2->m_shortName)
-    return strcmp(p1->m_shortName, p2->m_shortName);
-  if (p1->m_shortName && !p2->m_shortName)
-    return strcmp(p1->m_shortName, p2->m_longName);
-  if (!p1->m_shortName && p2->m_shortName)
-    return strcmp(p1->m_longName, p2->m_shortName);
-  return strcmp(p1->m_longName, p2->m_longName);
-}
-
-void ZvCmdObject::CmdData::sort()
-{
-  unsigned optGrps = m_optGrps.length();
-  for (unsigned x = 0; x < optGrps; x++) {
-    unsigned optLen = m_optGrps[x]->m_options.length();
-    if (!optLen) continue;
-    Sort_Helper *helper = new Sort_Helper[optLen];
-    if (!helper) return;
-    for (unsigned i = 0; i < optLen; i++) { 
-      ZmRef<CmdOption> opt = m_optGrps[x]->m_options[i];
-      helper[i].m_shortName = helper[i].m_longName = 0;
-      helper[i].m_idx = i;
-      if (opt->m_shortName) helper[i].m_shortName = opt->m_shortName.data();
-      if (opt->m_longName) helper[i].m_longName = opt->m_longName.data();
+  ZmRef<ZvCf> cf = new ZvCf();
+  ZtString name;
+  Cmds::NodeRef cmd;
+  uint32_t seqNo = in->seqNo();
+  try {
+    cf->fromCLI(m_syntax, in->cmd());
+    name = cf->get("0");
+    cmd = m_cmds.find(name);
+    if (!cmd) throw ZtString("unknown command");
+    if (cf->getInt("help", 0, 1, false, 0)) {
+      ZmRef<ZvCmdMsg> out = new ZvCmdMsg(in->seqNo());
+      out->cmd() << cmd->val().usage << '\n';
+      out->send(cxn);
+    } else {
+      ZmRef<ZvCmdMsg> out;
+      (cmd->val().fn)(cxn, cf, ZuMv(in), out);
+      if (!out) out = new ZvCmdMsg(seqNo);
+      out->send(cxn);
     }
-    ::qsort(&helper[0], optLen, sizeof(Sort_Helper), opt_sorter);
-    ZtArray<ZmRef<ZvCmdObject::CmdOption> > newOpts(0U, optLen);
-    for (unsigned i = 0; i < optLen; i++)
-      newOpts.push(m_optGrps[x]->m_options[helper[i].m_idx]);
-    m_optGrps[x]->m_options = newOpts;
-    delete [] helper;
+  } catch (const ZvCmdUsage &) {
+    ZmRef<ZvCmdMsg> out = new ZvCmdMsg(seqNo, -1);
+    out->cmd() << cmd->val().usage << '\n';
+    out->send(cxn);
+  } catch (const ZvError &e) {
+    ZmRef<ZvCmdMsg> out = new ZvCmdMsg(seqNo, -1);
+    out->cmd() << e << '\n';
+    out->send(cxn);
+  } catch (const ZeError &e) {
+    ZmRef<ZvCmdMsg> out = new ZvCmdMsg(seqNo, -1);
+    out->cmd() << '"' << name << "\": " << e << '\n';
+    out->send(cxn);
+  } catch (const ZtString &s) {
+    ZmRef<ZvCmdMsg> out = new ZvCmdMsg(seqNo, -1);
+    out->cmd() << '"' << name << "\": " << s << '\n';
+    out->send(cxn);
+  } catch (const ZtArray<char> &s) {
+    ZmRef<ZvCmdMsg> out = new ZvCmdMsg(seqNo, -1);
+    out->cmd() << '"' << name << "\": " << s << '\n';
+    out->send(cxn);
+  } catch (...) {
+    ZmRef<ZvCmdMsg> out = new ZvCmdMsg(seqNo, -1);
+    out->cmd() << '"' << name << "\": unknown exception\n";
+    out->send(cxn);
   }
 }
 
-#define ZvUsageShort(opt) \
-  do { \
-    if (opt->m_shortName) { \
-      tmp = ZtSprintf("  -%s,", opt->m_shortName.data()); \
-    } else { \
-      tmp = ZtSprintf("%5.5s", " "); \
-    } \
-  } while (0)
-
-#define ZvUsageLong(opt) \
-  do { \
-    if (opt->m_longName) { \
-      tmp << ZtSprintf(" --%s", opt->m_longName.data()); \
-      if (opt->m_longType) { \
-	tmp << ZtSprintf("=%s", opt->m_longType.data()); \
-      } \
-    } else { \
-      tmp << ZtSprintf("%21.21s", " "); \
-    } \
-  } while (0)
-
-void ZvCmdObject::CmdData::wordWrap(ZtString &dst,
-    const char *src, int srcLen, int lineLen, int used, int indent)
+void ZvCmdServer::addCmd(ZuString name, ZuString syntax,
+    ZvCmdFn fn, ZtString brief, ZtString usage)
 {
-  int bytesWrote = 0;
-  int bytesLeft = srcLen - bytesWrote;
-  int wlen = (used ? lineLen - used : lineLen);
-  do {
-    int wlen_ = wlen;
-    if (wlen < bytesLeft) {
-      while (wlen_ && src[wlen_ - 1] && src[wlen_ - 1] != ' ') --wlen_;
-      if (!wlen_) wlen_ = wlen;
-    }
-    dst << ZtSprintf("%-*.*s", wlen_, wlen_, src);
-    src += wlen_;
-    bytesWrote += wlen_;
-    bytesLeft -= wlen_;
-    wlen = lineLen;
-    if (bytesLeft > 0 && indent)
-      dst << ZtSprintf("\n%*.*s", indent, indent, " ");
-    else if (bytesLeft > 0) dst << "\n";
-  } while (bytesLeft > 0);
-}
-
-ZtString ZvCmdObject::CmdData::toGNUString(ZuString name)
-{
-  ZmAssert(name);
-  this->sort();
-
-  ZtString usage;
-  // generate usage string. 
-  // format taken from http://www.gnu.org/software/help2man
-  if (m_usages.length()) {
-    usage << "Usage: " << name << ' ' << m_usages[0];
-    unsigned len = m_usages.length();
-    for (unsigned i = 1; i < len; i++)
-      usage << "\n  or:  " << name << ' ' << m_usages[i];
-  } else {
-    usage << "Usage: " << name << " [OPTION]...";
-  }
-
-  // add short description
-  if (m_brief) usage << "\n" << m_brief;
-
-  unsigned optGrps = m_optGrps.length();
-  for (unsigned x = 0; x < optGrps; x++) {
-    ZmRef<OptionGroup> group = m_optGrps[x];
-    ZtArray<ZmRef<CmdOption> > &options = group->m_options;
-    unsigned optLen = options.length();
-    if (optLen) {
-      usage << "\n";
-      if (group->m_header)
-	usage << "\n" << group->m_header << ":";
-      // add option descriptions
-      ZtString tmp;
-      for (unsigned i = 0; i < optLen; i++) {
-	usage << "\n";
-	tmp.init(0U, 256);
-	ZvUsageShort(options[i]);
-	ZvUsageLong(options[i]);
-	if (!options[i]->m_description) {
-	  usage << tmp;
-	  continue;
-	}
-	// pad the string with spaces until length is 28
-	// but at least two spaces if it is larger
-	tmp << "  ";
-	while (tmp.length() < 28) tmp << ' ';
-	
-	wordWrap(tmp, options[i]->m_description.data(),
-	    options[i]->m_description.length(),
-	    50, 50 - (78 - tmp.length()), 30);
-	usage << tmp;
-      }
-    }
-  }
-
-  // always add a break for the help option even if no brief or other
-  // options are given
-  if (!m_optGrps[0]->m_options.length()) usage << "\n";
-
   {
-    // if more that the default option group add an extra break before
-    // the help option to distinguish it from the last group
-    if (optGrps > 1) usage << "\n";
-    usage << "\n";
-    ZtString tmp(0U, 80);
-    ZvUsageShort(ZvCmdObject::HelpOption);
-    ZvUsageLong(ZvCmdObject::HelpOption);
-    tmp << "  ";
-    while (tmp.length() < 28) tmp << ' ';
-      
-    wordWrap(tmp, ZvCmdObject::HelpOption->m_description.data(), 
-	     ZvCmdObject::HelpOption->m_description.length(), 
-	     50, 50 - (78 - tmp.length()), 30);
-    usage << tmp;
+    ZmRef<ZvCf> cf = m_syntax->subset(name, true);
+    cf->fromString(syntax, false);
+    cf->set("help:type", "flag");
   }
-
-  // add long description(s)
-  unsigned n = m_manuscripts.length();
-  for (unsigned i = 0; i < n; i++) {
-    if (m_manuscripts[i]) {
-      usage << "\n\n";
-      wordWrap(usage, m_manuscripts[i].data(), m_manuscripts[i].length());
-    }
-  }
-
-  return usage;
+  if (Cmds::NodeRef cmd = m_cmds.find(name))
+    cmd->val() = CmdData{ZuMv(fn), ZuMv(brief), ZuMv(usage)};
+  else
+    m_cmds.add(name, CmdData{ZuMv(fn), ZuMv(brief), ZuMv(usage)});
 }
 
-void ZvCmdObject::CmdData::clean()
+void ZvCmdServer::help(
+    ZvCmdServerCxn *, ZvCf *args, ZmRef<ZvCmdMsg> in, ZmRef<ZvCmdMsg> &out)
 {
-  m_usages.null();
-  m_optGrps.null();
-  m_brief.null();
-  m_manuscripts.null();
-}
-
-#define ZvCheckOpt(s, l, o) \
-    do { \
-      if (l.length() > 0) { \
-	m_syntax << ZtSprintf("%s { type %s }\n", l.data(), o.data());	\
-	if (s.length() > 0) { \
-	  m_syntax << ZtSprintf("%s %s\n", s.data(), l.data()); \
-	} \
-      } \
-    } while (0)
-
-void ZvCmdObject::compile()
-{
-  ZmHash<const char *, ZmHashLock<ZmNoLock> > uniqueHash;
-
-  // setup syntax
-  for (unsigned i = 0, n = m_data.m_optGrps.length(); i < n; i++) {
-    ZmRef<OptionGroup> group = m_data.m_optGrps[i];
-    for (unsigned j = 0, m = group->m_options.length(); j < m; j++) {
-      if (uniqueHash.findKey(group->m_options[j]->m_shortName.data()) ||
-	  uniqueHash.findKey(group->m_options[j]->m_longName.data()))
-	continue;
-      uniqueHash.add(group->m_options[j]->m_shortName);
-      uniqueHash.add(group->m_options[j]->m_longName);
-      ZvCheckOpt(group->m_options[j]->m_shortName,
-		 group->m_options[j]->m_longName,
-		 group->m_options[j]->m_optName);
-    }
+  int argc = ZuBox<int>(args->get("#"));
+  if (argc > 2) throw ZvCmdUsage();
+  out = new ZvCmdMsg(in->seqNo());
+  if (ZuUnlikely(argc == 2)) {
+    Cmds::NodeRef cmd = m_cmds.find(args->get("1"));
+    if (!cmd) throw ZvCmdUsage();
+    out->cmd() << cmd->val().usage << '\n';
+    return;
   }
-  m_syntax << "help { type flag }\n}"; // trailing bracket to close namespace
-  m_usage = m_data.toGNUString(m_name); // options sorted as side effect
-  m_data.clean();
+  auto &help = out->cmd();
+  help.size(m_cmds.count() * 80 + 40);
+  help << "commands:\n\n";
+  {
+    auto i = m_cmds.readIterator();
+    while (Cmds::NodeRef cmd = i.iterate())
+      help << cmd->key() << " -- " << cmd->val().brief << '\n';
+  }
 }
-
-#undef ZvUsageShort
-#undef ZvUsageLong
-#undef ZvCheckOpt

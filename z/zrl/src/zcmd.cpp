@@ -23,6 +23,7 @@
 
 #include <ZvCf.hpp>
 #include <ZvCmd.hpp>
+#include <ZvMultiplexCf.hpp>
 
 #include <Zrl.hpp>
 
@@ -59,39 +60,31 @@ static void usage()
   exit(1);
 }
 
-static unsigned getCxnTimeout()
+static unsigned getTimeout()
 {
   const char *txt = getenv("ZCMD_TIMEOUT");
   return (txt && *txt) ? atoi(txt) : 10;
 }
 
-class Mx : public ZuPolymorph, public ZiMultiplex {
+class Mx : public ZuObject, public ZiMultiplex {
 public:
   inline Mx() : ZiMultiplex(ZvMultiplexParams()) { }
 };
 
-class ZCmd : public ZvCmdClient {
+class ZCmd : public ZmPolymorph, public ZvCmdClient {
 public:
-  inline ZCmd():
-    ZvCmdClient(getCxnTimeout()), m_interactive(false), m_status(0) { }
-
   void init(ZiMultiplex *mx) {
-    ZvCmdClient::init(
-	mx, 0,
-	ZvCmdConnFn::Member<&ZCmd::connected>::fn(this),
-	ZvCmdDiscFn::Member<&ZCmd::disconnected>::fn(this),
-	ZvCmdAckRcvdFn::Member<&ZCmd::ackRcvd>::fn(this));
+    ZvCmdClient::init(mx, getTimeout());
 
     m_interactive = isatty(fileno(stdin));
-    if (!m_interactive && m_solo.length() != 0) {
-      ZtArray<char> data;
-      ZuArrayN<char, BUFSIZ> buf;
+    if (!m_interactive && m_solo) {
+      auto &data = m_soloMsg->data();
+      ZuArrayN<char, 10240> buf;
       size_t length;
-      while ((length = fread(buf.data(), 1, BUFSIZ, stdin)) > 0) {
+      while ((length = fread(buf.data(), 1, 10240, stdin)) > 0) {
 	buf.length(length);
-	data += buf;
+	data << buf;
       }
-      stdinData(ZuMv(data));
     }
   }
   void final() {
@@ -100,8 +93,13 @@ public:
 
   inline bool interactive() const { return m_interactive; }
 
-  template <typename S> inline void solo(const S &s) { m_solo = s; }
-  template <typename S> inline void target(const S &s) {
+  inline void solo(ZuString s) {
+    m_solo = true;
+    m_soloMsg = new ZvCmdMsg();
+    m_soloMsg->cmd() = s;
+  }
+  inline void target(ZuString s) {
+    m_prompt.null();
     m_prompt << s << "] ";
   }
 
@@ -111,27 +109,21 @@ public:
   inline int status() const { return m_status; }
 
 private:
-  void ackRcvd(ZvCmdLine *line, const ZvAnswer &ans) {
-    m_status = 0;
-    std::cout << ans.message() << std::flush;
-
-    if (ans.flags() & (ZvCmd::Fail | ZvCmd::Error)) {
-      m_status = 1;
-    } else {
-      std::cout << ans.data() << std::flush;
-    }
-
+  void process(ZmRef<ZvCmdMsg> ack) {
+    std::cout << ack->cmd() << std::flush;
+    m_status = ack->code();
+    if (!m_status) std::cout << ack->data() << std::flush;
     if (m_solo)
       post();
     else
       prompt();
   }
 
-  void connected(ZvCmdLine *line) {
-    if (m_solo)
-      send(m_solo);
-    else {
-      std::cerr <<
+  void connected() {
+    if (m_solo) {
+      send(ZuMv(m_soloMsg));
+    } else {
+      std::cout <<
 	"For a list of valid commands: help\n"
 	"For help on a particular command: COMMAND --help\n" << std::flush;
       prompt();
@@ -139,38 +131,45 @@ private:
   }
 
   void prompt() {
-    ZtString s;
-    do {
-      if (m_interactive) {
-	try {
-	  s = Zrl::readline_(m_prompt);
-	} catch (const Zrl::EndOfFile &) {
-	  post();
-	  return;
-	}
-      } else {
-	s.length(4096);
-	if (!fgets(s, 4096, stdin)) {
-	  post();
-	  return;
-	}
-	s.calcLength();
-	s.chomp();
+    ZmRef<ZvCmdMsg> msg = new ZvCmdMsg();
+    auto &cmd = msg->cmd();
+next:
+    if (m_interactive) {
+      try {
+	cmd = Zrl::readline_(m_prompt);
+      } catch (const Zrl::EndOfFile &) {
+	post();
+	return;
       }
-    } while (!s);
-    send(ZuMv(s));
+    } else {
+      cmd.length(4096);
+      if (!fgets(cmd, 4096, stdin)) {
+	post();
+	return;
+      }
+      cmd.calcLength();
+      cmd.chomp();
+    }
+    if (!cmd) goto next;
+    ZmRef<ZeEvent> e;
+    if (msg->redirect(&e) != Zi::OK) {
+      if (e) std::cerr << *e << '\n' << std::flush;
+      goto next;
+    }
+    send(ZuMv(msg));
   }
 
-  void disconnected(ZvCmdLine *line) {
+  void disconnected() {
     if (m_interactive) Zrl::stop();
     post();
   }
 
-  ZmSemaphore	m_done;
-  bool		m_interactive;
-  ZtString	m_solo;
-  ZtString	m_prompt;
-  int		m_status;
+  ZmSemaphore		m_done;
+  bool			m_interactive = true;
+  bool			m_solo;
+  ZmRef<ZvCmdMsg>	m_soloMsg;
+  ZtString		m_prompt;
+  int			m_status = 0;
 };
 
 int main(int argc, char **argv)
@@ -203,13 +202,12 @@ int main(int argc, char **argv)
     if (mx->start() != Zi::OK) throw ZtString("multiplexer start failed");
 
     if (argc > 2) {
-      ZtString solo;
+      ZtArray<char> solo;
       for(int i = 2; i < argc; i++) {
-	solo += argv[i];
-	if (i < argc - 1) solo += " ";
+	solo << argv[i];
+	if (ZuLikely(i < argc - 1)) solo << ' ';
       }
-
-      client->solo(solo);
+      client->solo(ZuMv(solo));
     } else
       client->target(argv[1]);
 
@@ -243,7 +241,7 @@ int main(int argc, char **argv)
     std::cout << std::flush;
   }
 
-  client->stop();
+  client->disconnect();
   mx->stop(true);
   ZeLog::stop();
 

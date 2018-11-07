@@ -123,14 +123,23 @@ public:
   }
 
   // access captured object
-  template <typename O> O *object() const {
-    return (O *)(void *)(m_object & ~(uintptr_t)1);
+  template <typename O> ZuInline O *object() const {
+    return (O *)ptr(m_object);
   }
-  template <typename O> ZmRef<O> mvObject() {
-    if (!(m_object & (uintptr_t)1)) return ZmRef<O>((O *)(void *)m_object);
-    uintptr_t o = (m_object &= ~(uintptr_t)1);
-    ZmRef<O> *ZuMayAlias(ptr) = (ZmRef<O> *)(void *)&o;
+  template <typename O> ZuInline ZmRef<O> mvObject() {
+    if (ZuUnlikely(!ref(m_object))) return ZmRef<O>((O *)(void *)m_object);
+    m_object &= ~(uintptr_t)1;
+    ZmRef<O> *ZuMayAlias(ptr) = (ZmRef<O> *)(void *)&m_object;
     return ZuMv(*ptr);
+  }
+  template <typename O> ZuInline void object(O *o) {
+    if (ZuUnlikely(ref(m_object))) ZmDEREF(ptr(m_object));
+    m_object = (uintptr_t)o;
+  }
+  template <typename O> ZuInline void object(ZmRef<O> o) {
+    if (ZuLikely(ref(m_object))) ZmDEREF(ptr(m_object));
+    new (&m_object) ZmRef<O>(ZuMv(o));
+    m_object |= (uintptr_t)1;
   }
 
   ZuInline bool operator ==(const ZmAnyFn &fn) const {

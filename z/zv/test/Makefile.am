@@ -9,10 +9,9 @@ LDADD = $(top_builddir)/zv/src/libZv.la $(top_builddir)/zi/src/libZi.la \
 	$(top_builddir)/ze/src/libZe.la $(top_builddir)/zt/src/libZt.la \
 	$(top_builddir)/zm/src/libZm.la $(top_builddir)/zu/src/libZu.la \
 	@Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
-bin_PROGRAMS = CfTest CSVTest CmdTest CSVWriteTest ZvCmdDataTest CfFlatten
+bin_PROGRAMS = CfTest CSVTest CmdTest CSVWriteTest CfFlatten
 CfTest_SOURCES = CfTest.cpp
 CSVTest_SOURCES = CSVTest.cpp
 CmdTest_SOURCES = CmdTest.cpp
 CSVWriteTest_SOURCES = CSVWriteTest.cpp
-ZvCmdDataTest_SOURCES = ZvCmdDataTest.cpp
 CfFlatten_SOURCES = CfFlatten.cpp

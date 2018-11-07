@@ -25,6 +25,7 @@
 #include <ZmTrap.hpp>
 
 #include <ZvCmd.hpp>
+#include <ZvMultiplexCf.hpp>
 
 class Mx : public ZuPolymorph, public ZiMultiplex {
 public:
@@ -32,40 +33,33 @@ public:
   inline Mx(ZvCf *cf) : ZiMultiplex(ZvMultiplexParams(cf)) { }
 };
 
-class ZvCmdTest : public ZvCmdServer {
+class ZvCmdTest : public ZmPolymorph, public ZvCmdServer {
 public:
-  inline ZvCmdTest() { }
-  virtual ~ZvCmdTest() { }
-
-  void init(ZvCf *cf, ZiMultiplex *mx) {
-    ZvCmdServer::init(cf, mx,
-	ZvCmdDiscFn::Member<&ZvCmdTest::disconnected>::fn(this),
-	ZvCmdRcvdFn::Member<&ZvCmdTest::cmdRcvd>::fn(this));
+  void init(ZiMultiplex *mx, ZvCf *cf) {
+    ZvCmdServer::init(mx, cf);
+    addCmd("ackme", "", ZvCmdFn{[](ZvCmdServerCxn *cxn,
+	  ZvCf *args, ZmRef<ZvCmdMsg> in, ZmRef<ZvCmdMsg> &out) {
+	  std::cout << cxn->info().remoteIP << ':' << 
+	    ZuBoxed(cxn->info().remotePort) <<
+	    " cmd: " << args->get("0") << '\n' <<
+	    ZtHexDump("data:", in->data().data(), in->data().length());
+	  out = new ZvCmdMsg(in->seqNo(), 0, "this is an ack\n");
+	}}, "test ack", "");
+    addCmd("nakme", "", ZvCmdFn{[](ZvCmdServerCxn *cxn,
+	    ZvCf *args, ZmRef<ZvCmdMsg> in, ZmRef<ZvCmdMsg> &out) {
+	  out = new ZvCmdMsg(in->seqNo(), -1, "this is a nak\n");
+	}}, "test nak", "");
+    addCmd("quit", "", ZvCmdFn{[](ZvCmdServerCxn *cxn,
+	    ZvCf *args, ZmRef<ZvCmdMsg> in, ZmRef<ZvCmdMsg> &out) {
+	  static_cast<ZvCmdTest *>(cxn->mgr())->post();
+	  out = new ZvCmdMsg(in->seqNo(), -1, "quitting...\n");
+	}}, "quit", "");
   }
 
   void wait() { m_done.wait(); }
   void post() { m_done.post(); }
 
 private:
-  void cmdRcvd(ZvCmdLine *line, const ZvInvocation &inv, ZvAnswer &ans) {
-    std::cout << line->info().remoteIP << ':' << 
-      ZuBoxed(line->info().remotePort) << " cmd: " << inv.cmd() << '\n';
-    std::cout << ZtHexDump("data:", inv.data().data(), inv.data().length());
-    if (inv.cmd() == "ackme") {
-      ans.make(ZvCmd::Success, Ze::Info, ZvAnswerArgs, "this is an ack");
-    } else if (inv.cmd() == "nakme") {
-      ans.make(ZvCmd::Fail, Ze::Info, ZvAnswerArgs, "this is a nak");
-    } else {
-      ans.make(ZvCmd::Success, Ze::Info, ZvAnswerArgs,
-	  ZtString() << "code 1 " << inv.cmd());
-    }
-  }
-
-  void disconnected(ZvCmdLine *line) {
-    std::cout << line->info().remoteIP << ':' << 
-      ZuBoxed(line->info().remotePort) <<
-      " disconnected\n";
-  }
 
   ZmSemaphore m_done;
 };
@@ -83,7 +77,7 @@ int main(int argc, char **argv)
   ZeLog::add(ZeLog::fileSink("&2"));
   ZeLog::start();
 
-  server->init(ZmRef<ZvCf>(new ZvCf()), mx);
+  server->init(mx, ZmMkRef(new ZvCf()));
 
   mx->start();
   server->start();

@@ -98,12 +98,14 @@ public:
   // thrown by fromArgs() on error
   class ZvAPI Usage : public ZvError {
   public:
-    template <typename Option>
-    inline Usage(Option &&option) : m_option(ZuFwd<Option>(option)) { }
+    template <typename Cmd, typename Option>
+    inline Usage(Cmd &&cmd, Option &&option) :
+      m_cmd(ZuFwd<Cmd>(cmd)), m_option(ZuFwd<Option>(option)) { }
     void print_(ZmStream &s) const {
-      s << "invalid option \"" << m_option << '"';
+      s << "\"" << m_cmd << "\": invalid option \"" << m_option << '"';
     }
   private:
+    ZtString	m_cmd;
     ZtString	m_option;
   };
 

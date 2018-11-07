@@ -185,7 +185,7 @@ int ZvCf::fromArgs(ZvCf *options, const ZtArray<ZtString> &args)
 	  if (!options ||
 	      !(longOpt = options->get(shortOpt)) ||
 	      !(option = options->subset(longOpt, false)))
-	    throw Usage(shortOpt);
+	    throw Usage(args[0], shortOpt);
 	  int type = option->getEnum<ZvOptTypes::Map>("type", true);
 	  if (type == ZvOptFlag) {
 	    fromArg(longOpt, ZvOptFlag, "1");
@@ -201,7 +201,7 @@ int ZvCf::fromArgs(ZvCf *options, const ZtArray<ZtString> &args)
 		fromArg(longOpt, type, deflt);
 	      }
 	    } else {
-	      if (n == l) throw Usage(shortOpt);
+	      if (n == l) throw Usage(args[0], shortOpt);
 	      fromArg(longOpt, type,
 		      args[n].data() +
 			(args[n][0] == '`' && args[n][1] == '-'));
@@ -213,20 +213,20 @@ int ZvCf::fromArgs(ZvCf *options, const ZtArray<ZtString> &args)
 	ZtString longOpt = c[2];
 	if (!options ||
 	    !(option = options->subset(longOpt, false)))
-	  throw Usage(longOpt);
+	  throw Usage(args[0], longOpt);
 	int type = option->getEnum<ZvOptTypes::Map>("type", true);
 	if (type == ZvOptFlag) {
 	  fromArg(longOpt, ZvOptFlag, "1");
 	} else {
 	  ZuString deflt = option->get("default");
-	  if (!deflt) throw Usage(longOpt);
+	  if (!deflt) throw Usage(args[0], longOpt);
 	  fromArg(longOpt, type, deflt);
 	}
       } else if (argLongValue.m(args[i], c)) {
 	ZtString longOpt = c[2];
 	if (!options ||
 	    !(option = options->subset(longOpt, false)))
-	  throw Usage(longOpt);
+	  throw Usage(args[0], longOpt);
 	fromArg(longOpt,
 	    option->getEnum<ZvOptTypes::Map>("type", false, ZvOptScalar), c[3]);
       } else {
@@ -254,7 +254,7 @@ int ZvCf::fromArgs(const ZvOpt *opts, const ZtArray<ZtString> &args)
     static const char *types[] = { "flag", "scalar", "multi" };
     if (opts[i].m_type < 0 ||
 	opts[i].m_type >= (int)(sizeof(types) / sizeof(types[0])))
-      throw Usage(opts[i].m_long);
+      throw Usage(args[0], opts[i].m_long);
     option->set("type", types[opts[i].m_type]);
     if (opts[i].m_default) option->set("default", opts[i].m_default);
     options->subset(opts[i].m_long, option);

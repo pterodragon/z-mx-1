@@ -111,8 +111,13 @@ public:
 private:
   void process(ZmRef<ZvCmdMsg> ack) {
     std::cout << ack->cmd() << std::flush;
+    if (m_out) {
+      m_out.write(ack->data().data(), ack->data().length());
+      m_out.close();
+    } else {
+      std::cout << ack->data() << std::flush;
+    }
     m_status = ack->code();
-    if (!m_status) std::cout << ack->data() << std::flush;
     if (m_solo)
       post();
     else
@@ -152,7 +157,11 @@ next:
     }
     if (!cmd) goto next;
     ZmRef<ZeEvent> e;
-    if (msg->redirect(&e) != Zi::OK) {
+    if (msg->redirectIn(&e) != Zi::OK) {
+      if (e) std::cerr << *e << '\n' << std::flush;
+      goto next;
+    }
+    if (msg->redirectOut(m_out, &e) != Zi::OK) {
       if (e) std::cerr << *e << '\n' << std::flush;
       goto next;
     }
@@ -170,6 +179,7 @@ next:
   ZmRef<ZvCmdMsg>	m_soloMsg;
   ZtString		m_prompt;
   int			m_status = 0;
+  ZiFile		m_out;
 };
 
 int main(int argc, char **argv)

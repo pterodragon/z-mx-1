@@ -7,7 +7,7 @@ AM_LDFLAGS = @MXMD_LDFLAGS@ @MXMD_SO_LDFLAGS@ \
 	@MXBASE_LDFLAGS@ @Z_LDFLAGS@
 include_HEADERS = \
 	MxMD.hpp MxMDLib.hpp MxMDVersion.hpp MxMDTypes.hpp \
-	MxMDCore.hpp MxMDCmd.hpp MxMDCSV.hpp MxMDStream.hpp \
+	MxMDCore.hpp MxMDCSV.hpp MxMDStream.hpp \
 	MxMDPartition.hpp \
 	MxMDBroadcast.hpp \
 	MxMDRecord.hpp MxMDReplay.hpp \
@@ -16,7 +16,7 @@ lib_LTLIBRARIES = libMxMD.la
 libMxMD_la_SOURCES = \
 	MxMDPublisher.cpp \
 	MxMDSubscriber.cpp \
-	MxMD.cpp MxMDLib.cpp MxMDVersion.cpp MxMDCore.cpp MxMDCmd.cpp \
+	MxMD.cpp MxMDLib.cpp MxMDVersion.cpp MxMDCore.cpp \
 	MxMDBroadcast.cpp \
 	MxMDRecord.cpp MxMDReplay.cpp
 libMxMD_la_LIBADD = @MXBASE_LIBS@ @Z_LIBS@ @MXMD_XLIBS@

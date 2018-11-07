@@ -55,7 +55,7 @@ void MxMDPublisher::init(MxMDCore *core, ZvCf *cf)
 
   core->addCmd(
       "publisher.status", "",
-      MxMDCmd::Fn::Member<&MxMDPublisher::statusCmd>::fn(this),
+      ZvCmdFn::Member<&MxMDPublisher::statusCmd>::fn(this),
       "publisher status",
       "usage: publisher.status\n");
 }
@@ -726,18 +726,20 @@ void MxMDPublisher::archive(MxAnyLink *link, MxQMsg *msg)
 
 // commands
 
-void MxMDPublisher::statusCmd(
-    const MxMDCmd::Args &args, ZtArray<char> &out)
+void MxMDPublisher::statusCmd(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
-  int argc = ZuBox<int>(args.get("#"));
-  if (argc != 1) throw MxMDCmd::Usage();
+  int argc = ZuBox<int>(args->get("#"));
+  if (argc != 1) throw ZvCmdUsage();
+  outMsg = new ZvCmdMsg();
+  auto &out = outMsg->cmd();
   out.size(512 * nLinks());
   out << "State: " << MxEngineState::name(state()) << '\n';
   allLinks<MxMDPubLink>([&out](MxMDPubLink *link) -> uintptr_t {
 	out << '\n'; link->status(out); return 0; });
 }
 
-void MxMDPubLink::status(ZtArray<char> &out)
+void MxMDPubLink::status(ZtString &out)
 {
   out << "Link " << id() << ":\n";
   out << "  TCP:    " <<

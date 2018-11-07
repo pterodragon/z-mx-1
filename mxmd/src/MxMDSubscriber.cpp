@@ -43,13 +43,13 @@ void MxMDSubscriber::init(MxMDCore *core, ZvCf *cf)
 
   core->addCmd(
       "subscriber.status", "",
-      MxMDCmd::Fn::Member<&MxMDSubscriber::statusCmd>::fn(this),
+      ZvCmdFn::Member<&MxMDSubscriber::statusCmd>::fn(this),
       "subscriber status",
       "usage: subscriber.status\n");
 
   core->addCmd(
       "subscriber.resend", "",
-      MxMDCmd::Fn::Member<&MxMDSubscriber::resendCmd>::fn(this),
+      ZvCmdFn::Member<&MxMDSubscriber::resendCmd>::fn(this),
       "manually test subscriber resend",
       "usage: subscriber.resend LINK SEQNO COUNT\n"
       "    LINK: link ID (determines server IP/port)\n"
@@ -575,18 +575,20 @@ void MxMDSubLink::heartbeat()
 
 // commands
 
-void MxMDSubscriber::statusCmd(
-    const MxMDCmd::Args &args, ZtArray<char> &out)
+void MxMDSubscriber::statusCmd(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
-  int argc = ZuBox<int>(args.get("#"));
-  if (argc != 1) throw MxMDCmd::Usage();
+  int argc = ZuBox<int>(args->get("#"));
+  if (argc != 1) throw ZvCmdUsage();
+  outMsg = new ZvCmdMsg();
+  auto &out = outMsg->cmd();
   out.size(512 * nLinks());
   out << "State: " << MxEngineState::name(state()) << '\n';
   allLinks<MxMDSubLink>([&out](MxMDSubLink *link) -> uintptr_t {
 	out << '\n'; link->status(out); return 0; });
 }
 
-void MxMDSubLink::status(ZtArray<char> &out)
+void MxMDSubLink::status(ZtString &out)
 {
   out << "Link " << id() << ":\n";
   out << "  TCP:    " <<
@@ -644,19 +646,21 @@ void MxMDSubLink::status(ZtArray<char> &out)
   out << '\n';
 }
 
-void MxMDSubscriber::resendCmd(
-    const MxMDCmd::Args &args, ZtArray<char> &out)
+void MxMDSubscriber::resendCmd(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
   using namespace MxMDStream;
-  ZuBox<int> argc(args.get("#"));
-  if (argc != 4) throw MxMDCmd::Usage();
-  auto id = args.get("1");
+  ZuBox<int> argc(args->get("#"));
+  if (argc != 4) throw ZvCmdUsage();
+  outMsg = new ZvCmdMsg();
+  auto &out = outMsg->cmd();
+  auto id = args->get("1");
   ZmRef<MxAnyLink> link_ = link(id);
   if (!link_) throw ZtString() << id << " - unknown link";
   auto link = static_cast<MxMDSubLink *>(link_.ptr());
-  ZuBox<uint64_t> seqNo(args.get("2"));
-  ZuBox<uint16_t> count(args.get("3"));
-  if (!*seqNo || !*count) throw MxMDCmd::Usage();
+  ZuBox<uint64_t> seqNo(args->get("2"));
+  ZuBox<uint16_t> count(args->get("3"));
+  if (!*seqNo || !*count) throw ZvCmdUsage();
   ZmRef<MxQMsg> msg = link->resend(seqNo, count);
   if (!msg) throw ZtString("timed out");
   seqNo = msg->as<Hdr>().seqNo;

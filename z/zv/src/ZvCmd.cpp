@@ -21,7 +21,7 @@
 
 #include <ZtRegex.hpp>
 
-int ZvCmdMsg::redirect(ZmRef<ZeEvent> *e)
+int ZvCmdMsg::redirectIn(ZmRef<ZeEvent> *e)
 {
   const auto &redirect = ZtStaticRegexUTF8("\\s*<\\s*");
   ZtRegex::Captures c;
@@ -47,6 +47,28 @@ int ZvCmdMsg::redirect(ZmRef<ZeEvent> *e)
   }
 }
 
+int ZvCmdMsg::redirectOut(ZiFile &f, ZmRef<ZeEvent> *e)
+{
+  const auto &redirect = ZtStaticRegexUTF8("\\s*>\\s*");
+  ZtRegex::Captures c;
+  unsigned pos = 0, n = 0;
+  ZtString cmd = ZuMv(m_cmd);
+  if (n = redirect.m(cmd, c, pos)) {
+    m_cmd = c[0];
+    ZeError e_;
+    int r = f.open(c[2],
+	ZiFile::Create | ZiFile::WriteOnly | ZiFile::GC, 0777, &e_);
+    if (r != Zi::OK) {
+      if (e) *e = ZeEVENT(Error, ([file = ZtString(c[2]), e = e_]
+	  (const ZeEvent &, ZmStream &s) { s << file << ": " << e; }));
+    }
+    return r;
+  } else {
+    m_cmd = ZuMv(cmd);
+    return Zi::OK;
+  }
+}
+
 void ZvCmdMsg::send(ZiConnection *cxn)
 {
   m_hdr.cmdLen = m_cmd.length();
@@ -54,18 +76,29 @@ void ZvCmdMsg::send(ZiConnection *cxn)
   cxn->send(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
     io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
       if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-      io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
-	if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	if (!msg->m_data) return;
-	io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
-	  if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	}, io.fn.mvObject<ZvCmdMsg>()},
-	msg->m_data.data(), msg->m_data.length(), 0);
-      }, io.fn.mvObject<ZvCmdMsg>()},
-      msg->m_cmd.data(), msg->m_cmd.length(), 0);
-    }, io.fn.mvObject<ZvCmdMsg>()},
-    &msg->m_hdr, sizeof(Hdr), 0);
+      if (msg->m_cmd)
+	msg->sendCmd(io);
+      else if (msg->m_data)
+	msg->sendData(io);
+    }, io.fn.mvObject<ZvCmdMsg>()}, &msg->m_hdr, sizeof(Hdr), 0); 
   }, ZmMkRef(this)});
+}
+
+void ZvCmdMsg::sendCmd(ZiIOContext &io)
+{
+  io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
+    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+    if (msg->m_data) msg->sendData(io);
+  }, io.fn.mvObject<ZvCmdMsg>()},
+  m_cmd.data(), m_cmd.length(), 0);
+}
+
+void ZvCmdMsg::sendData(ZiIOContext &io)
+{
+  io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
+    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+  }, io.fn.mvObject<ZvCmdMsg>()},
+  m_data.data(), m_data.length(), 0);
 }
 
 // client

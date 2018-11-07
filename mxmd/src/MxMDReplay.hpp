@@ -39,10 +39,11 @@
 
 #include <ZiFile.hpp>
 
+#include <ZvCmd.hpp>
+
 #include <MxEngine.hpp>
 
 #include <MxMDTypes.hpp>
-#include <MxMDCmd.hpp>
 
 class MxMDCore;
 
@@ -76,7 +77,8 @@ protected:
   ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
 
   // commands
-  void replayCmd(const MxMDCmd::Args &, ZtArray<char> &);
+  void replayCmd(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg);
 
 private:
   MxMDReplayLink	*m_link = 0;

@@ -112,7 +112,8 @@ public:
   ZuInline unsigned snapThread() const { return m_snapThread; }
 
   // commands
-  void statusCmd(const MxMDCmd::Args &args, ZtArray<char> &out);
+  void statusCmd(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg);
 
 private:
   unsigned		m_snapThread = 0;
@@ -290,7 +291,7 @@ public:
   void ack();
 
   // command support
-  void status(ZtArray<char> &out);
+  void status(ZtString &out);
 
 private:
   // connection management

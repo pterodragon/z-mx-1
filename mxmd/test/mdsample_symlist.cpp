@@ -27,7 +27,6 @@
 #include <ZeLog.hpp>
 
 #include <MxMD.hpp>
-#include <MxMDCmd.hpp>
 
 #include <iostream>
 

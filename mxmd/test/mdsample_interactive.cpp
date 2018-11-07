@@ -27,7 +27,6 @@
 #include <ZeLog.hpp>
 
 #include <MxMD.hpp>
-#include <MxMDCmd.hpp>
 
 #include <iostream>
 
@@ -122,13 +121,16 @@ void addSecurity(MxMDSecurity *security, MxDateTime)
   security->subscribe(secHandler);
 }
 
-void subscribe(const MxMDCmd::Args &args, ZtArray<char> &out)
+void subscribe(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
   MxMDLib *md = MxMDLib::instance();
   if (!md) throw ZtString("MxMDLib::instance() failed");
+  outMsg = new ZvCmdMsg();
+  auto &out = outMsg->cmd();
   ZmRef<MxMDSecurity> security;
-  unsigned argc = ZuBox<unsigned>(args.get("#"));
-  if (argc < 2) throw MxMDCmd::Usage();
+  unsigned argc = ZuBox<unsigned>(args->get("#"));
+  if (argc < 2) throw ZvCmdUsage();
   md->lookupSecurity(args, 1, 1, [&out](MxMDSecurity *sec) {
     sec->subscribe(secHandler);
     out << "subscribed\n";
@@ -140,6 +142,10 @@ int main(int argc, char **argv)
   if (argc < 2 || argc > 3) usage();
   if (!argv[1]) usage();
 
+  ZeLog::init("mdsample_interactive");	// program name
+  ZeLog::add(ZeLog::fileSink("&2"));	// log errors to stderr
+  ZeLog::start();			// start logger thread
+
   syms = new Syms();
   (secHandler = new MxMDSecHandler())->
     l1Fn(MxMDLevel1Fn::Ptr<&l1>::fn()).
@@ -149,7 +155,7 @@ int main(int argc, char **argv)
     l2Fn(MxMDOrderBookFn::Ptr<&l2>::fn());
 
   // read rics from file into hash table
-  {
+  if (argv[2]) {
     FILE *f = fopen(argv[2], "r");
     if (f) {
       int i = 0;
@@ -175,7 +181,7 @@ int main(int argc, char **argv)
     // add interactive subscribe command
     md->addCmd("subscribe",
 	md->lookupSyntax(),
-	MxMDCmdFn::Ptr<&subscribe>::fn(),
+	ZvCmdFn::Ptr<&subscribe>::fn(),
 	"subscribe",
 	ZtString() << "usage: subscribe OPTIONS symbol\n\nOptions:\n" <<
 	  md->lookupOptions());

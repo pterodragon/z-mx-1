@@ -102,8 +102,10 @@ public:
   ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return nullptr; }
 
   // commands
-  void statusCmd(const MxMDCmd::Args &args, ZtArray<char> &out);
-  void resendCmd(const MxMDCmd::Args &args, ZtArray<char> &out);
+  void statusCmd(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg);
+  void resendCmd(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg);
 
 private:
   void process_(MxMDSubLink *link, MxQMsg *qmsg);
@@ -245,7 +247,7 @@ public:
   bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }
 
   // command support
-  void status(ZtArray<char> &out);
+  void status(ZtString &out);
   ZmRef<MxQMsg> resend(MxSeqNo seqNo, unsigned count);
 
 private:

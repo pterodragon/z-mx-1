@@ -38,14 +38,13 @@
 #include <ZePlatform.hpp>
 
 #include <ZvCf.hpp>
+#include <ZvCmd.hpp>
 
 #include <MxMultiplex.hpp>
 #include <MxEngine.hpp>
 
 #include <MxMD.hpp>
 #include <MxMDStream.hpp>
-
-#include <MxMDCmd.hpp>
 
 #include <MxMDBroadcast.hpp>
 
@@ -60,6 +59,8 @@ class MxMDCore;
 extern "C" {
   typedef void (*MxMDFeedPluginFn)(MxMDCore *md, ZvCf *cf);
 };
+
+class MxMDCmd : public ZmPolymorph, public ZvCmdServer { };
 
 class MxMDAPI MxMDCore :
   public ZmPolymorph, public MxMDLib, public MxEngineMgr {
@@ -109,26 +110,32 @@ public:
   void apply(const Hdr &, bool filter);
 
   void addCmd(ZuString name, ZuString syntax,
-      MxMDCmdFn fn, ZtString brief, ZtString usage);
+      ZvCmdFn fn, ZtString brief, ZtString usage);
 
 private:
   void initCmds();
 
-  void l1(const MxMDCmdArgs &, ZtArray<char> &);
-  void l2(const MxMDCmdArgs &, ZtArray<char> &);
-  void l2_side(MxMDOBSide *, ZtArray<char> &);
-  void security_(const MxMDCmdArgs &, ZtArray<char> &);
+  void l1(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void l2(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void l2_side(MxMDOBSide *, ZtString &);
+  void security_(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
 
-  void ticksizes(const MxMDCmdArgs &, ZtArray<char> &);
-  void securities(const MxMDCmdArgs &, ZtArray<char> &);
-  void orderbooks(const MxMDCmdArgs &, ZtArray<char> &);
+  void ticksizes(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void securities(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void orderbooks(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
 
 #if 0
-  void tick(const MxMDCmdArgs &, ZtArray<char> &);
-  void update(const MxMDCmdArgs &, ZtArray<char> &);
+  void tick(
+  void update(
 
-  void feeds(const MxMDCmdArgs &, ZtArray<char> &);
-  void venues(const MxMDCmdArgs &, ZtArray<char> &);
+  void feeds(
+  void venues(
 #endif
 
   void addVenueMapping_(ZuAnyPOD *);

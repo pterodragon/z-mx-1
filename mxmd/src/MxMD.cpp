@@ -1780,22 +1780,22 @@ ZtString MxMDLib::lookupSyntax()
 ZtString MxMDLib::lookupOptions()
 {
   return
-    "    -S --src=SRC\t- symbol ID source is SRC\n"
+    "    -S, --src=SRC\t- symbol ID source is SRC\n"
     "\t(CUSIP|SEDOL|QUIK|ISIN|RIC|EXCH|CTA|BSYM|BBGID|FX|CRYPTO)\n"
-    "    -m --market=MIC\t - market MIC, e.g. XTKS\n"
-    "    -s --segment=SEGMENT\t- market segment SEGMENT\n";
+    "    -m, --market=MIC\t - market MIC, e.g. XTKS\n"
+    "    -s, --segment=SEGMENT\t- market segment SEGMENT\n";
 }
 
 void MxMDLib::lookupSecurity(
-    const MxMDCmdArgs &args, unsigned index,
+    ZvCf *args, unsigned index,
     bool secRequired, ZmFn<MxMDSecurity *> fn)
 {
-  ZuString symbol = args.get(ZuStringN<16>(ZuBoxed(index)));
-  MxID venue = args.get("market");
-  MxID segment = args.get("segment");
+  ZuString symbol = args->get(ZuStringN<16>(ZuBoxed(index)));
+  MxID venue = args->get("market");
+  MxID segment = args->get("segment");
   bool notFound = 0;
   thread_local ZmSemaphore sem;
-  if (ZuString src_ = args.get("src")) {
+  if (ZuString src_ = args->get("src")) {
     MxEnum src = MxSecIDSrc::lookup(src_);
     MxSecSymKey key{src, symbol};
     secInvoke(key,
@@ -1810,7 +1810,7 @@ void MxMDLib::lookupSecurity(
     if (ZuUnlikely(notFound))
       throw ZtString() << "security " << key << " not found";
   } else {
-    if (!*venue) throw MxMDCmdUsage();
+    if (!*venue) throw ZvCmdUsage();
     MxSecKey key{venue, segment, symbol};
     secInvoke(key,
 	[secRequired, sem = &sem, &notFound, fn = ZuMv(fn)](MxMDSecurity *sec) {
@@ -1827,12 +1827,12 @@ void MxMDLib::lookupSecurity(
 }
 
 void MxMDLib::lookupOrderBook(
-    const MxMDCmdArgs &args, unsigned index,
+    ZvCf *args, unsigned index,
     bool secRequired, bool obRequired,
     ZmFn<MxMDSecurity *, MxMDOrderBook *> fn)
 {
-  MxID venue = args.get("market");
-  MxID segment = args.get("segment");
+  MxID venue = args->get("market");
+  MxID segment = args->get("segment");
   bool notFound = 0;
   thread_local ZmSemaphore sem;
   lookupSecurity(args, index, secRequired || obRequired,
@@ -1848,6 +1848,6 @@ void MxMDLib::lookupOrderBook(
   sem.wait();
   if (ZuUnlikely(notFound))
     throw ZtString() << "order book " <<
-	MxSecKey{venue, segment, args.get(ZuStringN<16>(ZuBoxed(index)))} <<
+	MxSecKey{venue, segment, args->get(ZuStringN<16>(ZuBoxed(index)))} <<
 	" not found";
 }

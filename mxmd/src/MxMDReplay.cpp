@@ -38,7 +38,7 @@ void MxMDReplay::init(MxMDCore *core, ZmRef<ZvCf> cf)
   core->addCmd(
       "replay",
       "s stop stop { type flag }",
-      MxMDCmd::Fn::Member<&MxMDReplay::replayCmd>::fn(this),
+      ZvCmdFn::Member<&MxMDReplay::replayCmd>::fn(this),
       "replay market data from file",
       "usage: replay FILE\n"
       "       replay -s\n"
@@ -246,18 +246,21 @@ eof:
 
 // commands
 
-void MxMDReplay::replayCmd(const MxMDCmd::Args &args, ZtArray<char> &out)
+void MxMDReplay::replayCmd(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
-  ZuBox<int> argc = args.get("#");
-  if (argc < 1 || argc > 2) throw MxMDCmd::Usage();
-  if (!!args.get("stop")) {
+  ZuBox<int> argc = args->get("#");
+  if (argc < 1 || argc > 2) throw ZvCmdUsage();
+  outMsg = new ZvCmdMsg();
+  auto &out = outMsg->cmd();
+  if (!!args->get("stop")) {
     if (ZtString path = stopReplaying())
       out << "stopped replaying to \"" << path << "\"\n";
     return;
   }
-  if (argc != 2) throw MxMDCmd::Usage();
-  ZuString path = args.get("1");
-  if (!path) MxMDCmd::Usage();
+  if (argc != 2) throw ZvCmdUsage();
+  ZuString path = args->get("1");
+  if (!path) ZvCmdUsage();
   if (replay(path))
     out << "started replaying from \"" << path << "\"\n";
   else

@@ -45,6 +45,8 @@
 #include <ZmShard.hpp>
 #include <ZmScheduler.hpp>
 
+#include <ZvCmd.hpp>
+
 #include <MxBase.hpp>
 
 #include <MxMDTypes.hpp>
@@ -142,30 +144,9 @@ template <class T> struct MxMDFlags {
   }
 };
 
-// commands
-
-typedef ZmRBTree<ZtString,
-	  ZmRBTreeVal<const ZtArray<ZtString> *,
-	    ZmRBTreeLock<ZmNoLock> > > MxMDCmdArgs_;
-struct MxMDCmdArgs : public MxMDCmdArgs_ {
-  inline ZuString get(ZuString arg) const {
-    const ZtArray<ZtString> *values = findVal(arg);
-    if (!values) return ZtString();
-    return (*values)[0];
-  }
-  inline const ZtArray<ZtString> *getMultiple(ZuString arg) const {
-    return findVal(arg);
-  }
-};
-
-typedef ZmFn<const MxMDCmdArgs &, ZtArray<char> &> MxMDCmdFn;
-
-struct MxMDCmdUsage { };
-
 // pre-declarations
 
 class MxMDCore;
-class MxMDCmd;
 class MxMDLib;
 class MxMDShard;
 class MxMDFeed;
@@ -1840,18 +1821,18 @@ public:
   // commands
 
   // add command
-  virtual void addCmd(ZuString cmd, ZuString syntax,
-      MxMDCmdFn fn, ZtString brief, ZtString usage) = 0;
+  virtual void addCmd(ZuString name, ZuString syntax,
+      ZvCmdFn fn, ZtString brief, ZtString usage) = 0;
 
   // single security / order book lookup
   static ZtString lookupSyntax();
   static ZtString lookupOptions();
 
   void lookupSecurity(
-      const MxMDCmdArgs &args, unsigned index,
+      ZvCf *args, unsigned index,
       bool secRequired, ZmFn<MxMDSecurity *> fn);
   void lookupOrderBook(
-      const MxMDCmdArgs &args, unsigned index,
+      ZvCf *args, unsigned index,
       bool secRequired, bool obRequired,
       ZmFn<MxMDSecurity *, MxMDOrderBook *> fn);
 

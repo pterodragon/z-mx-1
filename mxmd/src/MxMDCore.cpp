@@ -316,7 +316,7 @@ void MxMDCore::init_(ZvCf *cf)
 
   if (ZmRef<ZvCf> cmdCf = cf->subset("cmd", false)) {
     m_cmd = new MxMDCmd();
-    m_cmd->init(this, cmdCf);
+    m_cmd->init(m_mx, cmdCf);
     initCmds();
   }
 
@@ -338,7 +338,7 @@ void MxMDCore::init_(ZvCf *cf)
 }
 
 void MxMDCore::addCmd(ZuString name, ZuString syntax,
-  MxMDCmdFn fn, ZtString brief, ZtString usage)
+  ZvCmdFn fn, ZtString brief, ZtString usage)
 {
   if (!m_cmd) return;
   m_cmd->addCmd(name, syntax, ZuMv(fn), ZuMv(brief), ZuMv(usage));
@@ -348,41 +348,41 @@ void MxMDCore::initCmds()
 {
   addCmd(
       "l1", ZtString("c csv csv { type flag }\n") + lookupSyntax(),
-      MxMDCmdFn::Member<&MxMDCore::l1>::fn(this),
+      ZvCmdFn::Member<&MxMDCore::l1>::fn(this),
       "dump L1 data",
       ZtString("usage: l1 OPTIONS SYMBOL [SYMBOL...]\n"
 	"Display level 1 market data for SYMBOL(s)\n\nOptions:\n"
-	"-c, --csv\toutput CSV format\n") +
+	"    -c, --csv\toutput CSV format\n") <<
 	lookupOptions());
   addCmd(
       "l2", lookupSyntax(),
-      MxMDCmdFn::Member<&MxMDCore::l2>::fn(this),
+      ZvCmdFn::Member<&MxMDCore::l2>::fn(this),
       "dump L2 data",
       ZtString("usage: l2 OPTIONS SYMBOL\n"
-	"Display level 2 market data for SYMBOL\n\nOptions:\n") +
+	"Display level 2 market data for SYMBOL\n\nOptions:\n") <<
 	lookupOptions());
   addCmd(
       "security", lookupSyntax(),
-      MxMDCmdFn::Member<&MxMDCore::security_>::fn(this),
+      ZvCmdFn::Member<&MxMDCore::security_>::fn(this),
       "dump security reference data",
       ZtString("usage: security OPTIONS SYMBOL\n"
 	"Display security reference data (\"static data\") for SYMBOL\n"
-	"\nOptions:\n") + lookupOptions());
+	"\nOptions:\n") << lookupOptions());
   addCmd(
       "ticksizes", "",
-      MxMDCmdFn::Member<&MxMDCore::ticksizes>::fn(this),
-      "dump in CSV format",
+      ZvCmdFn::Member<&MxMDCore::ticksizes>::fn(this),
+      "dump ticksizes in CSV format",
       "usage: ticksizes [VENUE [SEGMENT]]\n"
       "dump tick sizes in CSV format");
   addCmd(
       "securities", "",
-      MxMDCmdFn::Member<&MxMDCore::securities>::fn(this),
+      ZvCmdFn::Member<&MxMDCore::securities>::fn(this),
       "dump securities in CSV format",
       "usage: securities [VENUE [SEGMENT]]\n"
       "dump securities in CSV format");
   addCmd(
       "orderbooks", "",
-      MxMDCmdFn::Member<&MxMDCore::orderbooks>::fn(this),
+      ZvCmdFn::Member<&MxMDCore::orderbooks>::fn(this),
       "dump order books in CSV format",
       "usage: orderbooks [VENUE [SEGMENT]]\n"
       "dump order books in CSV format");
@@ -390,7 +390,7 @@ void MxMDCore::initCmds()
   addCmd(
       "subscribe",
       "s stop stop { type scalar }",
-      MxMDCmdFn::Member<&MxMDCore::subscribeCmd>::fn(this),
+      ZvCmdFn::Member<&MxMDCore::subscribeCmd>::fn(this),
       "subscribe to market data",
       "usage: subscribe IPCRING\n"
       "       subscribe -s ID\n"
@@ -468,11 +468,14 @@ void MxMDCore::final()
   allFeeds([](MxMDFeed *feed) { try { feed->final(); } catch (...) { } });
 }
 
-void MxMDCore::l1(const MxMDCmdArgs &args, ZtArray<char> &out)
+void MxMDCore::l1(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
-  unsigned argc = ZuBox<unsigned>(args.get("#"));
-  if (argc < 2) throw MxMDCmdUsage();
-  bool csv = !!args.get("csv");
+  unsigned argc = ZuBox<unsigned>(args->get("#"));
+  if (argc < 2) throw ZvCmdUsage();
+  outMsg = new ZvCmdMsg();
+  auto &out = outMsg->cmd();
+  bool csv = !!args->get("csv");
   if (csv)
     out << "stamp,status,last,lastQty,bid,bidQty,ask,askQty,tickDir,"
       "high,low,accVol,accVolQty,match,matchQty,surplusQty,flags\n";
@@ -523,10 +526,13 @@ void MxMDCore::l1(const MxMDCmdArgs &args, ZtArray<char> &out)
     });
 }
 
-void MxMDCore::l2(const MxMDCmdArgs &args, ZtArray<char> &out)
+void MxMDCore::l2(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
-  ZuBox<int> argc = args.get("#");
-  if (argc != 2) throw MxMDCmdUsage();
+  ZuBox<int> argc = args->get("#");
+  if (argc != 2) throw ZvCmdUsage();
+  outMsg = new ZvCmdMsg();
+  auto &out = outMsg->cmd();
   lookupOrderBook(args, 1, 1, 1,
       [this, &out](MxMDSecurity *, MxMDOrderBook *ob) {
     out << "bids:\n";
@@ -537,7 +543,7 @@ void MxMDCore::l2(const MxMDCmdArgs &args, ZtArray<char> &out)
   });
 }
 
-void MxMDCore::l2_side(MxMDOBSide *side, ZtArray<char> &out)
+void MxMDCore::l2_side(MxMDOBSide *side, ZtString &out)
 {
   out << "  vwap: " << side->vwap();
   MxMDOrderBook *ob = side->orderBook();
@@ -557,10 +563,13 @@ void MxMDCore::l2_side(MxMDOBSide *side, ZtArray<char> &out)
   });
 }
 
-void MxMDCore::security_(const MxMDCmdArgs &args, ZtArray<char> &out)
+void MxMDCore::security_(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
-  ZuBox<int> argc = args.get("#");
-  if (argc != 2) throw MxMDCmdUsage();
+  ZuBox<int> argc = args->get("#");
+  if (argc != 2) throw ZvCmdUsage();
+  outMsg = new ZvCmdMsg();
+  auto &out = outMsg->cmd();
   lookupOrderBook(args, 1, 1, 0,
       [&out](MxMDSecurity *sec, MxMDOrderBook *ob) {
     const MxMDSecRefData &refData = sec->refData();
@@ -637,12 +646,15 @@ void MxMDCore::dumpTickSizes(ZuString path, MxID venueID)
   writeTickSizes(this, csv, csv.writeFile(path), venueID);
 }
 
-void MxMDCore::ticksizes(const MxMDCmdArgs &args, ZtArray<char> &out)
+void MxMDCore::ticksizes(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
-  ZuBox<int> argc = args.get("#");
-  if (argc < 1 || argc > 3) throw MxMDCmdUsage();
+  ZuBox<int> argc = args->get("#");
+  if (argc < 1 || argc > 3) throw ZvCmdUsage();
+  outMsg = new ZvCmdMsg();
+  auto &out = outMsg->data();
   MxID venueID;
-  if (argc == 2) venueID = args.get("1");
+  if (argc == 2) venueID = args->get("1");
   MxMDTickSizeCSV csv;
   writeTickSizes(this, csv, csv.writeData(out), venueID);
 }
@@ -672,13 +684,16 @@ void MxMDCore::dumpSecurities(ZuString path, MxID venueID, MxID segment)
   writeSecurities(this, csv, csv.writeFile(path), venueID, segment);
 }
 
-void MxMDCore::securities(const MxMDCmdArgs &args, ZtArray<char> &out)
+void MxMDCore::securities(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
-  ZuBox<int> argc = args.get("#");
-  if (argc < 1 || argc > 3) throw MxMDCmdUsage();
+  ZuBox<int> argc = args->get("#");
+  if (argc < 1 || argc > 3) throw ZvCmdUsage();
+  outMsg = new ZvCmdMsg();
+  auto &out = outMsg->data();
   MxID venueID, segment;
-  if (argc == 2) venueID = args.get("1");
-  if (argc == 3) segment = args.get("2");
+  if (argc == 2) venueID = args->get("1");
+  if (argc == 3) segment = args->get("2");
   MxMDSecurityCSV csv;
   writeSecurities(this, csv, csv.writeData(out), venueID, segment);
 }
@@ -719,13 +734,16 @@ void MxMDCore::dumpOrderBooks(ZuString path, MxID venueID, MxID segment)
   writeOrderBooks(this, csv, csv.writeFile(path), venueID, segment);
 }
 
-void MxMDCore::orderbooks(const MxMDCmdArgs &args, ZtArray<char> &out)
+void MxMDCore::orderbooks(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
-  ZuBox<int> argc = args.get("#");
-  if (argc < 1 || argc > 3) throw MxMDCmdUsage();
+  ZuBox<int> argc = args->get("#");
+  if (argc < 1 || argc > 3) throw ZvCmdUsage();
+  outMsg = new ZvCmdMsg();
+  auto &out = outMsg->data();
   MxID venueID, segment;
-  if (argc == 2) venueID = args.get("1");
-  if (argc == 3) segment = args.get("2");
+  if (argc == 2) venueID = args->get("1");
+  if (argc == 3) segment = args->get("2");
   MxMDOrderBookCSV csv;
   writeOrderBooks(this, csv, csv.writeData(out), venueID, segment);
 }
@@ -750,21 +768,21 @@ ZtString MxMDCore::stopReplaying()
 }
 
 #if 0
-void MxMDCore::subscribeCmd(const MxMDCmdArgs &args, ZtArray<char> &out)
+void MxMDCore::subscribeCmd(ZvCf *args, ZtArray<char> &out)
 {
-  ZuBox<int> argc = args.get("#");
-  if (ZuString id_ = args.get("stop")) {
+  ZuBox<int> argc = args->get("#");
+  if (ZuString id_ = args->get("stop")) {
     ZuBox<int> id = ZvCf::toInt("spin", id_, 0, 63);
     MxMDStream::detach(m_broadcast, m_broadcast.id());
     m_broadcast.close();
     out << "detached " << id << "\n";
     return;
   }
-  if (argc != 2) throw MxMDCmdUsage();
-  ZiRingParams ringParams(args.get("1"), m_broadcast.params());
-  if (ZuString spin = args.get("spin"))
+  if (argc != 2) throw ZvCmdUsage();
+  ZiRingParams ringParams(args->get("1"), m_broadcast.params());
+  if (ZuString spin = args->get("spin"))
     ringParams.spin(ZvCf::toInt("spin", spin, 0, INT_MAX));
-  if (ZuString timeout = args.get("timeout"))
+  if (ZuString timeout = args->get("timeout"))
     ringParams.timeout(ZvCf::toInt("timeout", timeout, 0, 3600));
   if (!m_broadcast.open())
     throw ZtString() << '"' << m_broadcast.params().name() <<

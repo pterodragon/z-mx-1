@@ -40,10 +40,11 @@
 
 #include <ZiFile.hpp>
 
+#include <ZvCmd.hpp>
+
 #include <MxEngine.hpp>
 
 #include <MxMDTypes.hpp>
-#include <MxMDCmd.hpp>
 
 class MxMDCore;
 
@@ -77,7 +78,8 @@ protected:
   ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
 
   // commands
-  void recordCmd(const MxMDCmd::Args &, ZtArray<char> &);
+  void recordCmd(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg);
 
 private:
   int		m_snapThread = -1;

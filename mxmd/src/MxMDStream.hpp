@@ -590,34 +590,34 @@ namespace MxMDStream {
     inline void send(Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr) {
       msg->addr = addr;
       cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	  io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	    }, io.fn.mvObject<MxQMsg>()},
-	    msg->payload->ptr(), msg->length, 0, msg->addr);
-	}, ZuMv(msg)});
+	io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
+	  if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	}, io.fn.mvObject<MxQMsg>()},
+	msg->payload->ptr(), msg->length, 0, msg->addr);
+      }, ZuMv(msg)});
     }
     template <typename Cxn, typename L>
     inline typename IOMvLambda<Cxn, L>::T send(
 	Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr, L l) {
       msg->addr = addr;
       cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	  io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	      IOMvLambda<Cxn, L>::invoke(io);
-	    }, io.fn.mvObject<MxQMsg>()},
-	    msg->payload->ptr(), msg->length, 0, msg->addr);
-	}, ZuMv(msg)});
+	io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
+	  if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	  IOMvLambda<Cxn, L>::invoke(io);
+	}, io.fn.mvObject<MxQMsg>()},
+	msg->payload->ptr(), msg->length, 0, msg->addr);
+      }, ZuMv(msg)});
     }
     template <typename Cxn, typename L>
     inline typename IOMvLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       MxQMsg *msg_ = msg.ptr();
       io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	  msg->length = (io.offset += io.length);
-	  msg->addr = io.addr;
-	  IOMvLambda<Cxn, L>::invoke(io);
-	}, ZuMv(msg)},
-	msg_->payload->ptr(), msg_->payload->size(), 0);
+	msg->length = (io.offset += io.length);
+	msg->addr = io.addr;
+	IOMvLambda<Cxn, L>::invoke(io);
+      }, ZuMv(msg)},
+      msg_->payload->ptr(), msg_->payload->size(), 0);
     }
   }
 
@@ -625,22 +625,22 @@ namespace MxMDStream {
     template <typename Cxn>
     inline void send(Cxn *cxn, ZmRef<MxQMsg> msg) {
       cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	  io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	    }, io.fn.mvObject<MxQMsg>()},
-	    msg->payload->ptr(), msg->length, 0);
-	}, ZuMv(msg)});
+	io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
+	  if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	}, io.fn.mvObject<MxQMsg>()},
+	msg->payload->ptr(), msg->length, 0);
+      }, ZuMv(msg)});
     }
     template <typename Cxn, typename L>
     inline typename IOMvLambda<Cxn, L>::T send(
 	Cxn *cxn, ZmRef<MxQMsg> msg, L l) {
       cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	  io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	      IOMvLambda<Cxn, L>::invoke(io);
-	    }, io.fn.mvObject<MxQMsg>()},
-	    msg->payload->ptr(), msg->length, 0);
-	}, ZuMv(msg)});
+	io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
+	  if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	  IOMvLambda<Cxn, L>::invoke(io);
+	}, io.fn.mvObject<MxQMsg>()},
+	msg->payload->ptr(), msg->length, 0);
+      }, ZuMv(msg)});
     }
 
     template <typename Cxn, typename L>
@@ -648,25 +648,26 @@ namespace MxMDStream {
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       MxQMsg *msg_ = msg.ptr();
       io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	  unsigned len = io.offset += io.length;
-	  while (len >= sizeof(Hdr)) {
-	    Hdr &hdr = msg->as<Hdr>();
-	    unsigned msgLen = sizeof(Hdr) + hdr.len;
-	    if (ZuUnlikely(msgLen > msg->payload->size())) {
-	      ZeLOG(Error, "MxMDStream::recv TCP message too big / corrupt");
-	      io.disconnect();
-	      return;
-	    }
-	    if (ZuLikely(len < msgLen)) return;
-	    msg->length = msgLen;
-	    IOLambda<Cxn, L>::invoke(msg, io);
-	    if (ZuUnlikely(io.completed())) return;
-	    if (io.offset = len - msgLen)
-	      memmove(io.ptr, (const char *)io.ptr + msgLen, io.offset);
-	    len = io.offset;
+	unsigned len = io.offset += io.length;
+	while (len >= sizeof(Hdr)) {
+	  Hdr &hdr = msg->as<Hdr>();
+	  unsigned msgLen = sizeof(Hdr) + hdr.len;
+	  if (ZuUnlikely(msgLen > msg->payload->size())) {
+	    ZeLOG(Error, "MxMDStream::recv TCP message too big / corrupt");
+	    io.disconnect();
+	    return;
 	  }
-	}, ZuMv(msg)},
-	msg_->payload->ptr(), msg_->payload->size(), 0);
+	  if (ZuLikely(len < msgLen)) return;
+	  msg->length = msgLen;
+	  IOLambda<Cxn, L>::invoke(msg, io);
+	  if (ZuUnlikely(io.completed())) return;
+	  msg = io.fn.object<MxQMsg>();
+	  if (io.offset = len - msgLen)
+	    memmove(io.ptr, (const char *)io.ptr + msgLen, io.offset);
+	  len = io.offset;
+	}
+      }, ZuMv(msg)},
+      msg_->payload->ptr(), msg_->payload->size(), 0);
     }
   }
 }

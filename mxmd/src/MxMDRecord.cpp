@@ -46,7 +46,7 @@ void MxMDRecord::init(MxMDCore *core, ZvCf *cf)
   core->addCmd(
       "record",
       "s stop stop { type flag }",
-      MxMDCmd::Fn::Member<&MxMDRecord::recordCmd>::fn(this),
+      ZvCmdFn::Member<&MxMDRecord::recordCmd>::fn(this),
       "record market data to file", 
       "usage: record FILE\n"
       "       record -s\n"
@@ -377,21 +377,26 @@ void MxMDRecLink::write(MxQMsg *qmsg)
 
 // commands
 
-void MxMDRecord::recordCmd(const MxMDCmd::Args &args, ZtArray<char> &out)
+void MxMDRecord::recordCmd(ZvCmdServerCxn *,
+    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
-  ZuBox<int> argc = args.get("#");
-  if (argc < 1 || argc > 2) throw MxMDCmd::Usage();
-  if (!!args.get("stop")) {
-    if (argc == 2) throw MxMDCmd::Usage();
+  ZuBox<int> argc = args->get("#");
+  if (argc < 1 || argc > 2) throw ZvCmdUsage();
+  outMsg = new ZvCmdMsg();
+  auto &out = outMsg->cmd();
+  if (!!args->get("stop")) {
+    if (argc == 2) throw ZvCmdUsage();
     if (ZtString path = stopRecording())
       out << "stopped recording to \"" << path << "\"\n";
     return;
   }
-  if (argc != 2) throw MxMDCmd::Usage();
-  ZuString path = args.get("1");
-  if (!path) MxMDCmd::Usage();
+  if (argc != 2) throw ZvCmdUsage();
+  ZuString path = args->get("1");
+  if (!path) ZvCmdUsage();
   if (record(path))
     out << "started recording to \"" << path << "\"\n";
-  else
+  else {
+    outMsg->code(1);
     out << "failed to record to \"" << path << "\"\n";
+  }
 }

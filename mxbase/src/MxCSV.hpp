@@ -43,7 +43,6 @@ typedef ZvCSVColumn<ZvCSVColType::Float, MxFloat> MxFloatCol;
 typedef ZvCSVColumn<ZvCSVColType::Int, MxNDP> MxNDPCol;
 typedef ZvCSVColumn<ZvCSVColType::Int, MxRatio> MxRatioCol;
 typedef ZvCSVColumn<ZvCSVColType::Time, MxDateTime> MxTimeCol;
-typedef ZvCSVColumn<ZvCSVColType::String, MxSymString> MxSymStrCol;
 typedef ZvCSVColumn<ZvCSVColType::String, MxIDString> MxIDStrCol;
 template <typename Map> using MxEnumCol = ZvCSVEnumColumn<MxEnum, Map>;
 template <typename Map> using MxFlagsCol = ZvCSVFlagsColumn<MxFlags, Map>;

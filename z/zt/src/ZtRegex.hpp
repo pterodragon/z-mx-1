@@ -107,14 +107,12 @@ public:
 
   inline int m(ZuString s, int offset = 0, int options = 0) const {
     ZtArray<int> ovector;
-
     return exec(s, offset, options, ovector);
   }
   inline int m(ZuString s,
       Captures &captures, int offset = 0, int options = 0) const {
     ZtArray<int> ovector;
     int i = exec(s, offset, options, ovector);
-
     if (i) capture(s, ovector, captures);
     return i;
   }

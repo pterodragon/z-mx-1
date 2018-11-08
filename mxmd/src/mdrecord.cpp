@@ -50,7 +50,7 @@ void exception(MxMDLib *, ZmRef<ZeEvent> e) { std::cerr << *e << '\n'; }
 void l1(MxMDOrderBook *, const MxMDL1Data &) { }
 void l2(MxMDOrderBook *, MxDateTime) { }
 
-typedef ZmLHash<MxSymString> Syms; // hash table of syms
+typedef ZmLHash<MxIDString> Syms; // hash table of syms
 static Syms *syms = 0;
 
 void refDataLoaded(MxMDVenue *venue)
@@ -85,8 +85,8 @@ int main(int argc, char **argv)
     if (f) {
       int i = 0;
       do {
-	MxSymString sym;
-	if (!fgets(sym, MxSymString::N - 1, f)) break;
+	MxIDString sym;
+	if (!fgets(sym, MxIDString::N - 1, f)) break;
 	sym.calcLength();
 	sym.chomp();
 	syms->add(sym);

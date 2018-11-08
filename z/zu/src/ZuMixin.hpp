@@ -88,14 +88,14 @@ public:
   typedef M_<ZuMixin_<T_, M_<ZuNull> > > M;
 
   ZuInline ZuMixin() { }
-  ZuInline ZuMixin(const ZuMixin &t) : T(t) { }
-  ZuInline ZuMixin &operator =(const ZuMixin &t) {
-    if (this != &t) T::operator =(t);
+  ZuInline ZuMixin(const ZuMixin &v) : T(v) { }
+  ZuInline ZuMixin &operator =(const ZuMixin &v) {
+    if (this != &v) T::operator =(v);
     return *this;
   }
-  ZuInline ZuMixin(ZuMixin &&t) : T(static_cast<T &&>(t)) { }
-  ZuInline ZuMixin &operator =(ZuMixin &&t) {
-    T::operator =(static_cast<T &&>(t));
+  ZuInline ZuMixin(ZuMixin &&v) : T(static_cast<T &&>(v)) { }
+  ZuInline ZuMixin &operator =(ZuMixin &&v) {
+    T::operator =(static_cast<T &&>(v));
     return *this;
   }
 

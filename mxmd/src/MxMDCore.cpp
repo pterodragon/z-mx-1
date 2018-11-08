@@ -352,7 +352,7 @@ void MxMDCore::initCmds()
       "dump L1 data",
       ZtString("usage: l1 OPTIONS SYMBOL [SYMBOL...]\n"
 	"Display level 1 market data for SYMBOL(s)\n\nOptions:\n"
-	"    -c, --csv\toutput CSV format\n") <<
+	"    -c, --csv\t\toutput CSV format\n") <<
 	lookupOptions());
   addCmd(
       "l2", lookupSyntax(),
@@ -479,9 +479,10 @@ void MxMDCore::l1(ZvCmdServerCxn *,
   if (csv)
     out << "stamp,status,last,lastQty,bid,bidQty,ask,askQty,tickDir,"
       "high,low,accVol,accVolQty,match,matchQty,surplusQty,flags\n";
-  for (unsigned i = 1; i < argc; i++)
-    lookupOrderBook(args, i, 1, 1,
-	[this, &out, csv](MxMDSecurity *, MxMDOrderBook *ob) {
+  for (unsigned i = 1; i < argc; i++) {
+    MxMDKey key = lookupOrderBook(args, i);
+    lookupOrderBook(key, 1, 1,
+	[this, &out, csv](MxMDSecurity *, MxMDOrderBook *ob) -> bool {
       const MxMDL1Data &l1Data = ob->l1Data();
       MxNDP pxNDP = l1Data.pxNDP;
       MxNDP qtyNDP = l1Data.qtyNDP;
@@ -523,7 +524,9 @@ void MxMDCore::l1(ZvCmdServerCxn *,
 	"\nmatchQty: " << MxValNDP{l1Data.matchQty, qtyNDP} <<
 	"\nsurplusQty: " << MxValNDP{l1Data.surplusQty, qtyNDP} <<
 	"\nflags: " << flags << '\n';
+      return true;
     });
+  }
 }
 
 void MxMDCore::l2(ZvCmdServerCxn *,
@@ -533,13 +536,15 @@ void MxMDCore::l2(ZvCmdServerCxn *,
   if (argc != 2) throw ZvCmdUsage();
   outMsg = new ZvCmdMsg();
   auto &out = outMsg->cmd();
-  lookupOrderBook(args, 1, 1, 1,
-      [this, &out](MxMDSecurity *, MxMDOrderBook *ob) {
+  MxMDKey key = lookupOrderBook(args, 1);
+  lookupOrderBook(key, 1, 1,
+      [this, &out](MxMDSecurity *, MxMDOrderBook *ob) -> bool {
     out << "bids:\n";
     l2_side(ob->bids(), out);
     out << "\nasks:\n";
     l2_side(ob->asks(), out);
     out << '\n';
+    return true;
   });
 }
 
@@ -570,8 +575,9 @@ void MxMDCore::security_(ZvCmdServerCxn *,
   if (argc != 2) throw ZvCmdUsage();
   outMsg = new ZvCmdMsg();
   auto &out = outMsg->cmd();
-  lookupOrderBook(args, 1, 1, 0,
-      [&out](MxMDSecurity *sec, MxMDOrderBook *ob) {
+  MxMDKey key = lookupOrderBook(args, 1);
+  lookupOrderBook(key, 1, 0,
+      [&out](MxMDSecurity *sec, MxMDOrderBook *ob) -> bool {
     const MxMDSecRefData &refData = sec->refData();
     out <<
       "ID: " << sec->id() <<
@@ -613,6 +619,7 @@ void MxMDCore::security_(ZvCmdServerCxn *,
       });
     }
     out << '\n';
+    return true;
   });
 }
 
@@ -771,7 +778,7 @@ ZtString MxMDCore::stopReplaying()
 void MxMDCore::subscribeCmd(ZvCf *args, ZtArray<char> &out)
 {
   ZuBox<int> argc = args->get("#");
-  if (ZuString id_ = args->get("stop")) {
+  if (ZtString id_ = args->get("stop")) {
     ZuBox<int> id = ZvCf::toInt("spin", id_, 0, 63);
     MxMDStream::detach(m_broadcast, m_broadcast.id());
     m_broadcast.close();
@@ -780,9 +787,9 @@ void MxMDCore::subscribeCmd(ZvCf *args, ZtArray<char> &out)
   }
   if (argc != 2) throw ZvCmdUsage();
   ZiRingParams ringParams(args->get("1"), m_broadcast.params());
-  if (ZuString spin = args->get("spin"))
+  if (ZtString spin = args->get("spin"))
     ringParams.spin(ZvCf::toInt("spin", spin, 0, INT_MAX));
-  if (ZuString timeout = args->get("timeout"))
+  if (ZtString timeout = args->get("timeout"))
     ringParams.timeout(ZvCf::toInt("timeout", timeout, 0, 3600));
   if (!m_broadcast.open())
     throw ZtString() << '"' << m_broadcast.params().name() <<

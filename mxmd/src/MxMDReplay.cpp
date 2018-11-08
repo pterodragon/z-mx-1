@@ -33,6 +33,11 @@ void MxMDReplay::init(MxMDCore *core, ZmRef<ZvCf> cf)
 
   MxEngine::init(core, this, mx, cf);
 
+  if (rxThread() == mx->rxThread())
+    throw ZtString() << "replay misconfigured - thread conflict -"
+      " Network Rx: " << ZuBoxed(mx->rxThread()) <<
+      " File Rx: " << ZuBoxed(rxThread());
+
   updateLink("replay", cf);
 
   core->addCmd(
@@ -169,7 +174,7 @@ void MxMDReplayLink::connect()
 
   connected();
 
-  engine()->rxRun_(ZmFn<>{[](MxMDReplayLink *link) { link->read(); }, this});
+  engine()->rxRun(ZmFn<>{[](MxMDReplayLink *link) { link->read(); }, this});
 }
 
 void MxMDReplayLink::disconnect()
@@ -241,7 +246,7 @@ eof:
     core->apply(hdr, m_filter);
   }
 
-  engine()->rxRun_(ZmFn<>{[](MxMDReplayLink *link) { link->read(); }, this});
+  engine()->rxRun(ZmFn<>{[](MxMDReplayLink *link) { link->read(); }, this});
 }
 
 // commands
@@ -259,7 +264,7 @@ void MxMDReplay::replayCmd(ZvCmdServerCxn *,
     return;
   }
   if (argc != 2) throw ZvCmdUsage();
-  ZuString path = args->get("1");
+  ZtString path = args->get("1");
   if (!path) ZvCmdUsage();
   if (replay(path))
     out << "started replaying from \"" << path << "\"\n";

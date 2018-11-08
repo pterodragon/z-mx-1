@@ -1347,6 +1347,38 @@ public:
     MxDateTime transactTime);
   void delOrderBook(MxID venue, MxID segment, MxDateTime transactTime);
 
+private:
+  template <typename L>
+  inline L keys_(L l) const {
+    l(MxMDKey{m_key.venue(), m_key.segment(), MxEnum(), m_key.id()});
+    if (*m_refData.idSrc)
+      l(MxMDKey{MxID(), MxID(), m_refData.idSrc, m_refData.symbol});
+    if (*m_refData.altIDSrc)
+      l(MxMDKey{MxID(), MxID(), m_refData.altIDSrc, m_refData.altSymbol});
+    return l;
+  }
+public:
+  template <typename L>
+  inline void keys(L l_) const {
+    auto l = keys_(ZuMv(l_));
+    if (m_underlying && *m_refData.mat) {
+      if (*m_refData.strike)
+	m_underlying->keys_([l = ZuMv(l),
+	    refData = &m_refData](MxMDKey key) mutable {
+	  key.mat() = refData->mat;
+	  key.putCall() = refData->putCall;
+	  key.strike() = refData->strike;
+	  l(key);
+	});
+      else
+	m_underlying->keys_([l = ZuMv(l),
+	    refData = &m_refData](MxMDKey key) mutable {
+	  key.mat() = refData->mat;
+	  l(key);
+	});
+    }
+  }
+
   ZuInline uintptr_t appData() const { return m_appData; }
   ZuInline void appData(uintptr_t v) { m_appData = v; }
 
@@ -1828,12 +1860,12 @@ public:
   static ZtString lookupSyntax();
   static ZtString lookupOptions();
 
-  void lookupSecurity(
-      ZvCf *args, unsigned index,
-      bool secRequired, ZmFn<MxMDSecurity *> fn);
-  void lookupOrderBook(
-      ZvCf *args, unsigned index,
-      bool secRequired, bool obRequired,
+  MxMDKey lookupSecurity(ZvCf *args, unsigned index);
+  bool lookupSecurity(
+      const MxMDKey &key, bool secRequired, ZmFn<MxMDSecurity *> fn);
+  MxMDKey lookupOrderBook(ZvCf *args, unsigned index);
+  bool lookupOrderBook(
+      const MxMDKey &key, bool secRequired, bool obRequired,
       ZmFn<MxMDSecurity *, MxMDOrderBook *> fn);
 
   // CLI time format (using local timezone)

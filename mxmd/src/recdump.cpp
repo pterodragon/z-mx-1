@@ -57,7 +57,7 @@ public:
     MxEnum		event;
     MxID		venue;
     MxID		segment;
-    MxSymString		id;
+    MxIDString		id;
     MxEnum		session;
     MxMDL1Data		l1Data;
     L2Data		l2Data;

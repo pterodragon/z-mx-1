@@ -1051,6 +1051,20 @@ private:
     s.resized = resized(); // deliberately unsafe
   }
 
+public:
+  auto iterator() { return Iterator(*this); }
+  template <typename Index_>
+  auto iterator(Index_ &&index) {
+    return IndexIterator(*this, ZuFwd<Index_>(index));
+  }
+
+  auto readIterator() const { return ReadIterator(*this); }
+  template <typename Index_>
+  auto readIterator(Index_ &&index) const {
+    return ReadIndexIterator(*this, ZuFwd<Index_>(index));
+  }
+
+private:
   inline void startIterate(Iterator_ &iterator) {
     iterator.lock(lock());
     iterator.m_slot = -1;

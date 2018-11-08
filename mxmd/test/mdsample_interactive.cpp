@@ -27,6 +27,7 @@
 #include <ZeLog.hpp>
 
 #include <MxMD.hpp>
+#include <MxMDCSV.hpp>
 
 #include <iostream>
 
@@ -37,9 +38,9 @@ void sigint(int sig) { stop.post(); }	// CTRL-C signal handler
 
 void usage() {
   std::cerr <<
-    "usage: mdsample_interactive CONFIG [RICS]\n"
+    "usage: mdsample_interactive CONFIG [SYMBOLS]\n"
     "    CONFIG - configuration file\n"
-    "    RICS - optional file containing RICs to subscribe to\n"
+    "    SYMBOLS - optional file containing symbols to subscribe to\n"
     << std::flush;
   exit(1);
 }
@@ -104,8 +105,8 @@ void l2(MxMDOrderBook *ob, MxDateTime stamp)
 
 void exception(MxMDLib *, ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 
-typedef ZmLHash<MxSymString> Syms; // hash table of syms
-static Syms *syms = 0;
+typedef ZmHash<MxMDKey> Keys; // hash table of security keys
+static Keys *keys = 0;
 
 void refDataLoaded(MxMDVenue *venue)
 {
@@ -114,11 +115,14 @@ void refDataLoaded(MxMDVenue *venue)
 
 static ZmRef<MxMDSecHandler> secHandler;
 
-void addSecurity(MxMDSecurity *security, MxDateTime)
+void addSecurity(MxMDSecurity *sec, MxDateTime)
 {
-  if (!syms) return;
-  if (!syms->findKey(security->refData().symbol)) return;
-  security->subscribe(secHandler);
+  if (!keys) return;
+  bool matched = false;
+  sec->keys([&matched](const MxMDKey &key) {
+      if (keys->find(key)) matched = true;
+    });
+  if (matched) sec->subscribe(secHandler);
 }
 
 void subscribe(ZvCmdServerCxn *,
@@ -131,9 +135,16 @@ void subscribe(ZvCmdServerCxn *,
   ZmRef<MxMDSecurity> security;
   unsigned argc = ZuBox<unsigned>(args->get("#"));
   if (argc < 2) throw ZvCmdUsage();
-  md->lookupSecurity(args, 1, 1, [&out](MxMDSecurity *sec) {
-    sec->subscribe(secHandler);
-    out << "subscribed\n";
+  MxMDKey key = md->lookupSecurity(args, 1);
+  md->lookupSecurity(key, 0, [&key, &out](MxMDSecurity *sec) -> bool {
+    if (!sec) {
+      keys->add(key);
+      out << "subscription pending\n";
+    } else {
+      sec->subscribe(secHandler);
+      out << "subscribed\n";
+    }
+    return true;
   });
 }
 
@@ -146,7 +157,7 @@ int main(int argc, char **argv)
   ZeLog::add(ZeLog::fileSink("&2"));	// log errors to stderr
   ZeLog::start();			// start logger thread
 
-  syms = new Syms();
+  keys = new Keys();
   (secHandler = new MxMDSecHandler())->
     l1Fn(MxMDLevel1Fn::Ptr<&l1>::fn()).
     addPxLevelFn(MxMDPxLevelFn::Ptr<&pxLevel>::fn()).
@@ -154,22 +165,12 @@ int main(int argc, char **argv)
     deletedPxLevelFn(MxMDPxLevelFn::Ptr<&deletedPxLevel>::fn()).
     l2Fn(MxMDOrderBookFn::Ptr<&l2>::fn());
 
-  // read rics from file into hash table
+  // read keys from file into hash table
   if (argv[2]) {
-    FILE *f = fopen(argv[2], "r");
-    if (f) {
-      int i = 0;
-      do {
-	MxSymString sym;
-	if (!fgets(sym, MxSymString::N - 1, f)) break;
-	sym.calcLength();
-	sym.chomp();
-	syms->add(sym);
-      } while (i < 10000);
-      fclose(f);
-    } else {
-      std::cerr << "could not open " << argv[2] << '\n';
-    }
+    MxMDAnyKeyCSV csv;
+    csv.read(argv[2], ZvCSVReadFn{[](ZuAnyPOD *pod) {
+	keys->add(MxMDAnyKeyCSV::key(pod));
+      }});
   }
 
   signal(SIGINT, &sigint);		// handle CTRL-C
@@ -200,7 +201,7 @@ int main(int argc, char **argv)
 
   } catch (...) { }
 
-  delete syms;
+  delete keys;
 
   return 0;
 }

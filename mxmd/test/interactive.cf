@@ -16,6 +16,9 @@ record {
   rxThread 3
   snapThread 5
 }
+replay {
+  rxThread 4
+}
 shards {
   0 { tid 4 }
 }

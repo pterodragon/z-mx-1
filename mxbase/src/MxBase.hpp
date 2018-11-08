@@ -372,17 +372,13 @@ template <typename U> struct MxType :
 
 #define MxDateTimeNow ZtDateNow
 
-#ifndef MxSymSize
-#define MxSymSize 32	// security symbol size (including null terminator)
-#endif
 #ifndef MxIDStrSize
-#define MxIDStrSize 32	// ID size (order IDs, trade IDs, etc.)
+#define MxIDStrSize 32	// ID size (symbols, order IDs, trade IDs, etc.)
 #endif
 #ifndef MxTxtSize
 #define MxTxtSize 124	// text field size (alerts, error messages, etc.)
 #endif
 
-typedef MxString<MxSymSize> MxSymString;
 typedef MxString<MxIDStrSize> MxIDString;
 typedef MxString<MxTxtSize> MxTxtString;
 
@@ -489,15 +485,15 @@ namespace MxSide {
   typedef FixMap CSVMap;
 }
 
-#define Mx_TupleField(Type, Fn, N) \
-  ZuInline const Type &Fn() const { return T::ptr()->p ## N(); } \
-  ZuInline Type &Fn() { return T::ptr()->p ## N(); }
+#define Mx_TupleField(Fn, N) \
+  ZuInline const auto &Fn() const { return T::ptr()->p ## N(); } \
+  ZuInline auto &Fn() { return T::ptr()->p ## N(); }
 
 typedef ZuTuple<MxID, MxID, MxIDString> MxSecKey_;
 template <typename T> struct MxSecKey_Fn : public T {
-  Mx_TupleField(MxID, venue, 1)
-  Mx_TupleField(MxID, segment, 2)
-  Mx_TupleField(MxIDString, id, 3)
+  Mx_TupleField(venue, 1)
+  Mx_TupleField(segment, 2)
+  Mx_TupleField(id, 3)
   template <typename S> inline void print(S &s) const {
     s << venue() << '|' << segment() << '|' << id();
   }
@@ -505,10 +501,10 @@ template <typename T> struct MxSecKey_Fn : public T {
 typedef ZuMixin<MxSecKey_, MxSecKey_Fn> MxSecKey;
 template <> struct ZuPrint<MxSecKey> : public ZuPrintFn { };
 
-typedef ZuPair<MxEnum, MxSymString> MxSecSymKey_;
+typedef ZuPair<MxEnum, MxIDString> MxSecSymKey_;
 template <typename T> struct MxSecSymKey_Fn : public T {
-  Mx_TupleField(MxEnum, src, 1)
-  Mx_TupleField(MxSymString, id, 2)
+  Mx_TupleField(src, 1)
+  Mx_TupleField(id, 2)
   template <typename S> inline void print(S &s) const {
     s << MxSecIDSrc::name(src()) << '|' << id();
   }
@@ -518,12 +514,16 @@ template <> struct ZuPrint<MxSecSymKey> : public ZuPrintFn { };
 
 typedef MxUInt MxFutKey;	// mat
 
-typedef ZuTuple<MxUInt, MxEnum, MxInt> MxOptKey_;
+typedef ZuTuple<MxUInt, MxEnum, MxValue> MxOptKey_;
 template <typename T> struct MxOptKey_Fn : public T {
-  Mx_TupleField(MxUInt, mat, 1)
-  Mx_TupleField(MxEnum, putCall, 2)
-  Mx_TupleField(MxInt, strike, 3)
+  Mx_TupleField(mat, 1)
+  Mx_TupleField(putCall, 2)
+  Mx_TupleField(strike, 3)
+  template <typename S> inline void print(S &s) const {
+    s << mat() << '|' << MxPutCall::name(putCall()) << '|' << strike();
+  }
 };
 typedef ZuMixin<MxOptKey_, MxOptKey_Fn> MxOptKey;
+template <> struct ZuPrint<MxOptKey> : public ZuPrintFn { };
 
 #endif /* MxBase_HPP */

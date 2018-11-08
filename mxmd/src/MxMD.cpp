@@ -1773,8 +1773,12 @@ ZtString MxMDLib::lookupSyntax()
 {
   return 
     "S src src { type scalar } "
-    "m market market { type scalar } "
-    "s segment segment { type scalar }";
+    "v venue venue { type scalar } "
+    "s segment segment { type scalar } "
+    "m maturity maturity { type scalar } "
+    "p put put { type flag } "
+    "c call call { type flag } "
+    "x strike strike { type scalar }";
 }
 
 ZtString MxMDLib::lookupOptions()
@@ -1782,72 +1786,109 @@ ZtString MxMDLib::lookupOptions()
   return
     "    -S, --src=SRC\t- symbol ID source is SRC\n"
     "\t(CUSIP|SEDOL|QUIK|ISIN|RIC|EXCH|CTA|BSYM|BBGID|FX|CRYPTO)\n"
-    "    -m, --market=MIC\t - market MIC, e.g. XTKS\n"
-    "    -s, --segment=SEGMENT\t- market segment SEGMENT\n";
+    "    -v, --venue=MIC\t - market MIC, e.g. XTKS\n"
+    "    -s, --segment=SEGMENT\t- market segment SEGMENT\n"
+    "    -m, --maturity=MAT\t- maturity (YYYYMMDD - DD is normally 00)\n"
+    "    -p, --put\t\t- put option\n"
+    "    -c, --call\t\t- call option\n"
+    "    -x, --strike\t- strike price (as integer, per security convention)\n";
 }
 
-void MxMDLib::lookupSecurity(
-    ZvCf *args, unsigned index,
-    bool secRequired, ZmFn<MxMDSecurity *> fn)
+MxMDKey MxMDLib::lookupSecurity(ZvCf *args, unsigned index)
 {
-  ZuString symbol = args->get(ZuStringN<16>(ZuBoxed(index)));
-  MxID venue = args->get("market");
-  MxID segment = args->get("segment");
-  bool notFound = 0;
-  thread_local ZmSemaphore sem;
-  if (ZuString src_ = args->get("src")) {
-    MxEnum src = MxSecIDSrc::lookup(src_);
-    MxSecSymKey key{src, symbol};
-    secInvoke(key,
-	[secRequired, sem = &sem, &notFound, fn = ZuMv(fn)](MxMDSecurity *sec) {
-      if (secRequired && ZuUnlikely(!sec))
-	notFound = 1;
-      else
-	fn(sec);
-      sem->post();
-    });
-    sem.wait();
-    if (ZuUnlikely(notFound))
-      throw ZtString() << "security " << key << " not found";
+  MxMDKey key;
+  key.id() = args->get(ZuStringN<16>(ZuBoxed(index)));
+  if (ZtString src_ = args->get("src")) {
+    key.src() = MxSecIDSrc::lookup(src_);
   } else {
-    if (!*venue) throw ZvCmdUsage();
-    MxSecKey key{venue, segment, symbol};
-    secInvoke(key,
-	[secRequired, sem = &sem, &notFound, fn = ZuMv(fn)](MxMDSecurity *sec) {
-      if (secRequired && ZuUnlikely(!sec))
-	notFound = 1;
-      else
-	fn(sec);
-      sem->post();
-    });
-    sem.wait();
-    if (ZuUnlikely(notFound))
-      throw ZtString() << "security " << key << " not found";
+    key.venue() = args->get("venue", true);
+    key.segment() = args->get("segment");
   }
+  if (ZtString mat = args->get("mat")) {
+    const auto &r = ZtStaticRegexUTF8("^\\d{8}$");
+    if (!r.m(mat))
+      throw ZtString() << "maturity \"" << mat << "\" invalid - "
+	"must be YYYYMMDD (DD is usually 00)";
+    key.mat() = mat;
+    bool put = args->getInt("put", 0, 1, false, 0);
+    bool call = args->getInt("call", 0, 1, false, 0);
+    ZtString strike = args->get("strike");
+    if (put && call)
+      throw ZtString() << "put and call are mutually exclusive";
+    if (put || call) {
+      if (!strike)
+	throw ZtString() << "strike must be specified for options";
+      key.putCall() = put ? MxPutCall::PUT : MxPutCall::CALL;
+      key.strike() = strike;
+    }
+  }
+  return key;
 }
 
-void MxMDLib::lookupOrderBook(
-    ZvCf *args, unsigned index,
+bool MxMDLib::lookupSecurity(
+    const MxMDKey &key, bool secRequired, ZmFn<MxMDSecurity *> fn)
+{
+  bool ok = true;
+  thread_local ZmSemaphore sem;
+  if (*key.mat()) {
+    auto l = [&key, secRequired, sem = &sem, &ok, fn = ZuMv(fn)](
+	MxMDSecurity *sec) {
+      if (ZuLikely(sec && sec->derivatives())) {
+	if (*key.strike())
+	  sec = sec->derivatives()->option(
+	      MxOptKey{key.mat(), key.putCall(), key.strike()});
+	else
+	  sec = sec->derivatives()->future(MxFutKey{key.mat()});
+      }
+      if (secRequired && ZuUnlikely(!sec))
+	ok = false;
+      else
+	ok = fn(sec);
+      sem->post();
+    };
+    if (*key.src())
+      secInvoke(MxSecSymKey{key.src(), key.id()}, ZuMv(l));
+    else
+      secInvoke(MxSecKey{key.venue(), key.segment(), key.id()}, ZuMv(l));
+  } else {
+    auto l = [secRequired, sem = &sem, &ok, fn = ZuMv(fn)](
+	MxMDSecurity *sec) {
+      if (secRequired && ZuUnlikely(!sec))
+	ok = false;
+      else
+	ok = fn(sec);
+      sem->post();
+    };
+    if (*key.src())
+      secInvoke(MxSecSymKey{key.src(), key.id()}, ZuMv(l));
+    else
+      secInvoke(MxSecKey{key.venue(), key.segment(), key.id()}, ZuMv(l));
+  }
+  sem.wait();
+  return ok;
+}
+
+MxMDKey MxMDLib::lookupOrderBook(ZvCf *args, unsigned index)
+{
+  MxMDKey key{lookupSecurity(args, index)};
+  if (*key.src()) {
+    key.venue() = args->get("venue", true);
+    key.segment() = args->get("segment");
+  }
+  return key;
+}
+
+bool MxMDLib::lookupOrderBook(
+    const MxMDKey &key,
     bool secRequired, bool obRequired,
     ZmFn<MxMDSecurity *, MxMDOrderBook *> fn)
 {
-  MxID venue = args->get("market");
-  MxID segment = args->get("segment");
-  bool notFound = 0;
-  thread_local ZmSemaphore sem;
-  lookupSecurity(args, index, secRequired || obRequired,
-      [obRequired, &notFound, sem = &sem, venue, segment, fn = ZuMv(fn)](
-	MxMDSecurity *sec) {
-    ZmRef<MxMDOrderBook> ob = sec->orderBook(venue, segment);
+  return lookupSecurity(key, secRequired || obRequired,
+      [&key, obRequired, fn = ZuMv(fn)](MxMDSecurity *sec) -> bool {
+    ZmRef<MxMDOrderBook> ob = sec->orderBook(key.venue(), key.segment());
     if (obRequired && ZuUnlikely(!ob))
-      notFound = 1;
+      return false;
     else
-      fn(sec, ob);
-    sem->post();
+      return fn(sec, ob);
   });
-  sem.wait();
-  if (ZuUnlikely(notFound))
-    throw ZtString() << "order book " <<
-	MxSecKey{venue, segment, args->get(ZuStringN<16>(ZuBoxed(index)))} <<
-	" not found";
 }

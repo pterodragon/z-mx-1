@@ -101,7 +101,7 @@ void MxMDSubscriber::process_(MxMDSubLink *link, MxQMsg *msg)
   }
 #if 0
   ZmTime latency = ZmTimeNow() - (link->lastTime() +
-      ZmTime((time_t)(hdr.nsec / 1000000000), hdr.nsec % 1000000000));
+      ZmTime(ZmTim::Nano, hdr.nsec);
 #endif
   core()->apply(msg->as<Hdr>(), m_filter);
 }

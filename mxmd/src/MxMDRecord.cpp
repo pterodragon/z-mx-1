@@ -37,7 +37,7 @@ void MxMDRecord::init(MxMDCore *core, ZvCf *cf)
       (unsigned)m_snapThread == mx->rxThread() ||
       (unsigned)m_snapThread == rxThread())
     throw ZtString() << "recorder misconfigured - thread conflict -"
-      " I/O Rx: " << ZuBoxed(mx->rxThread()) <<
+      " Network Rx: " << ZuBoxed(mx->rxThread()) <<
       " IPC Rx: " << ZuBoxed(rxThread()) <<
       " Snapshot: " << ZuBoxed(m_snapThread);
 
@@ -391,7 +391,7 @@ void MxMDRecord::recordCmd(ZvCmdServerCxn *,
     return;
   }
   if (argc != 2) throw ZvCmdUsage();
-  ZuString path = args->get("1");
+  ZtString path = args->get("1");
   if (!path) ZvCmdUsage();
   if (record(path))
     out << "started recording to \"" << path << "\"\n";

@@ -50,9 +50,9 @@ struct MxMDSegment { // venue segment
 
 typedef ZuTuple<MxValue, MxValue, MxValue> MxMDTickSize_;
 template <typename T> struct MxMDTickSize_Fn : public T {
-  Mx_TupleField(MxValue, minPrice, 1);
-  Mx_TupleField(MxValue, maxPrice, 2);
-  Mx_TupleField(MxValue, tickSize, 3);
+  Mx_TupleField(minPrice, 1);
+  Mx_TupleField(maxPrice, 2);
+  Mx_TupleField(tickSize, 3);
 };
 typedef ZuMixin<MxMDTickSize_, MxMDTickSize_Fn> MxMDTickSize;
 struct MxMDTickSize_MinPxAccessor :
@@ -67,8 +67,8 @@ struct MxMDSecRefData {	// security reference data ("static data")
   MxEnum	idSrc;		// symbol ID source
   MxEnum	altIDSrc;	// altSymbol ID source
   MxEnum	putCall;	// put/call (null if not option)
-  MxSymString	symbol;		// symbol
-  MxSymString	altSymbol;	// alternative symbol
+  MxIDString	symbol;		// symbol
+  MxIDString	altSymbol;	// alternative symbol
   MxID		underVenue;	// underlying venue (null if no underlying)
   MxID		underSegment;	// underlying segment (can be null)
   MxIDString	underlying;	// underlying ID (null if no underlying)
@@ -80,6 +80,15 @@ struct MxMDSecRefData {	// security reference data ("static data")
   MxUInt	outstandingShares; // (null if not stock)
   MxValue	adv;		// average daily volume
 };
+
+// Note: mat is, by industry convention, in YYYYMMDD format
+//
+// the mat field is NOT to be used for time-to-maturity calculations; it
+// is for security identification only
+//
+// DD is normally 00 since listed derivatives maturities/expiries are
+// normally uniquely identified by the month; the actual day varies
+// and is not required for security identification
 
 struct MxMDLotSizes {
   MxValue	oddLotSize;
@@ -119,5 +128,31 @@ struct MxMDL1Data {
 typedef MxString<12> MxMDFlagsStr;
 
 #pragma pack(pop)
+
+typedef ZuTuple<MxID, MxID, MxEnum, MxIDString, MxUInt, MxEnum, MxValue>
+  MxMDKey_;
+template <typename T> struct MxMDKey_Fn : public T {
+  Mx_TupleField(venue, 1)
+  Mx_TupleField(segment, 2)
+  Mx_TupleField(src, 3)
+  Mx_TupleField(id, 4)
+  Mx_TupleField(mat, 5)
+  Mx_TupleField(putCall, 6)
+  Mx_TupleField(strike, 7)
+  template <typename S> inline void print(S &s) const {
+    if (*src())
+      s << MxSecSymKey{src(), id()};
+    else
+      s << MxSecKey{venue(), segment(), id()};
+    if (*mat()) {
+      if (*strike())
+	s << '|' << MxOptKey{mat(), putCall(), strike()};
+      else
+	s << '|' << MxFutKey{mat()};
+    }
+  }
+};
+typedef ZuMixin<MxMDKey_, MxMDKey_Fn> MxMDKey;
+template <> struct ZuPrint<MxMDKey> : public ZuPrintFn { };
 
 #endif /* MxMDTypes_HPP */

@@ -104,7 +104,7 @@ void l2(MxMDOrderBook *ob, MxDateTime stamp)
 
 void exception(MxMDLib *, ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 
-typedef ZmLHash<MxSymString> Syms; // hash table of syms
+typedef ZmLHash<MxIDString> Syms; // hash table of syms
 static Syms *syms = 0;
 
 void refDataLoaded(MxMDVenue *venue)
@@ -139,9 +139,9 @@ int main(int argc, char **argv)
     if (f) {
       int i = 0;
       do {
-	char s[MxSymString::N];
-	if (!fgets(s, MxSymString::N - 1, f)) break;
-	MxSymString sym(s);
+	char s[MxIDString::N];
+	if (!fgets(s, MxIDString::N - 1, f)) break;
+	MxIDString sym(s);
 	sym.calcLength();
 	sym.chomp();
 	syms->add(sym);

@@ -209,9 +209,9 @@ public:
 #define Offset(x) offsetof(Data, refData) + offsetof(MxMDSecRefData, x)
     add(new MxBoolCol("tradeable", Offset(tradeable), -1, 1));
     add(new MxEnumCol<MxSecIDSrc::CSVMap>("idSrc", Offset(idSrc)));
-    add(new MxSymStrCol("symbol", Offset(symbol)));
+    add(new MxIDStrCol("symbol", Offset(symbol)));
     add(new MxEnumCol<MxSecIDSrc::CSVMap>("altIDSrc", Offset(altIDSrc)));
-    add(new MxSymStrCol("altSymbol", Offset(altSymbol)));
+    add(new MxIDStrCol("altSymbol", Offset(altSymbol)));
     add(new MxIDCol("underVenue", Offset(underVenue)));
     add(new MxIDCol("underSegment", Offset(underSegment)));
     add(new MxIDStrCol("underlying", Offset(underlying)));
@@ -324,7 +324,7 @@ public:
       add(new MxIDCol(secVenue, Offset(secVenues) + (i * sizeof(MxID))));
       add(new MxIDCol(secSegment, Offset(secSegments) + (i * sizeof(MxID))));
       add(new MxIDStrCol(security,
-	    Offset(securities) + (i * sizeof(MxSymString))));
+	    Offset(securities) + (i * sizeof(MxIDString))));
       add(new MxEnumCol<MxSide::CSVMap>(side,
 	    Offset(sides) + (i * sizeof(MxEnum))));
       add(new MxRatioCol(ratio,
@@ -415,6 +415,58 @@ public:
 
   ZuInline POD *pod() { return m_pod.ptr(); }
   ZuInline Data *ptr() { return m_pod->ptr(); }
+
+private:
+  ZuRef<POD>	m_pod;
+};
+
+class MxMDAnyKeyCSV : public ZvCSV, public MxMDCSV<MxMDAnyKeyCSV> {
+public:
+  struct Data {
+    MxID	venue;
+    MxID	segment;
+    MxEnum	src;
+    MxIDString	id;
+    MxUInt	mat;
+    MxEnum	putCall;
+    MxValue	strike;
+  };
+  typedef ZuPOD<Data> POD;
+
+  typedef ZvCSVColumn<ZvCSVColType::Int, MxValue> RawValueCol;
+
+  template <typename App = MxMDCSVApp>
+  MxMDAnyKeyCSV(App *app = 0) {
+    new ((m_pod = new POD())->ptr()) Data{};
+#ifdef Offset
+#undef Offset
+#endif
+#define Offset(x) offsetof(Data, x)
+    add(new MxIDCol("venue", Offset(venue)));
+    add(new MxIDCol("segment", Offset(segment)));
+    add(new MxEnumCol<MxSecIDSrc::CSVMap>("src", Offset(src)));
+    add(new MxIDStrCol("id", Offset(id)));
+    add(new MxUIntCol("mat", Offset(mat)));
+    add(new MxEnumCol<MxPutCall::CSVMap>("putCall", Offset(putCall)));
+    add(new RawValueCol("strike", Offset(strike)));
+  }
+
+  void alloc(ZuRef<ZuAnyPOD> &pod) { pod = m_pod; }
+
+  template <typename File>
+  void read(const File &file, ZvCSVReadFn fn) {
+    ZvCSV::readFile(file,
+	ZvCSVAllocFn::Member<&MxMDAnyKeyCSV::alloc>::fn(this), fn);
+  }
+
+  ZuInline POD *pod() { return m_pod.ptr(); }
+  ZuInline Data *ptr() { return m_pod->ptr(); }
+
+  ZuInline static MxMDKey key(const ZuAnyPOD *pod) {
+    const Data &data = pod->as<Data>();
+    return MxMDKey{data.venue, data.segment, data.src, data.id,
+      data.mat, data.putCall, data.strike};
+  }
 
 private:
   ZuRef<POD>	m_pod;

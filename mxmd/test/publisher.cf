@@ -9,9 +9,15 @@ broadcast {
   name RMD_pub
   size 131072
 }
+cmd {
+  localPort 19400
+}
 record {
   rxThread 3
   snapThread 6
+}
+replay {
+  rxThread 5
 }
 shards {
   0 { tid 5 }

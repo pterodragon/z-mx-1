@@ -22,7 +22,7 @@
 #ifndef ZuPP_HPP
 #define ZuPP_HPP
 
-#define ZuPP_Args(...) __VA_ARGS__
+// use "ZuPP_String ZuEval1(x)" to strip x of parentheses
 #define ZuPP_Strip(x) x
 
 #define ZuPP_Eval(...) ZuPP_Eval32(__VA_ARGS__)

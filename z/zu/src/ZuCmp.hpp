@@ -62,7 +62,7 @@
 // signed integer	MIN	minimum representable value
 // unsigned integer	MAX	maximum representable value
 // floating point	NaN	IEEE 754 NaN
-// pointer, C string	0	aka NULL
+// pointer, C string	0	aka nullptr, NULL
 //
 // Note: int8_t  is a typedef for signed char
 //	 uint8_t is a typedef for unsigned char

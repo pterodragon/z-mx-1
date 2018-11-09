@@ -140,7 +140,8 @@ ZuPP_List1(ZuTuple_Ctor, _, ZuPP_N)
 #define ZuTuple_Method(N, O) \
   ZuInline const T##O &p##O() const { return P::p2().p##N(); } \
   ZuInline T##O &p##O() { return P::p2().p##N(); } \
-  template <typename Q> ZuInline void p##O(Q &&q) { P::p2().p##N(ZuFwd<Q>(q)); }
+  template <typename Q> \
+  ZuInline auto &p##O(Q &&q) { P::p2().p##N(ZuFwd<Q>(q)); return *this; }
 ZuPP_SList(ZuTuple_Method, ZuPP_N)
 };
 
@@ -233,5 +234,34 @@ auto ZuInline ZuMkTuple(Args &&... args) {
 }
 
 template <typename... Args> ZuTuple(Args...) -> ZuTuple<Args...>;
+
+// ZuTupleFields(Type, 1, Fn1, 2, Fn2, ...) creates
+// a ZuTuple<Args>-derived Type with named member functions Fn1, Fn2, etc.
+// that alias p1, p2, etc.
+//
+// ZuTupleFields(PersonTuple, 1, name, 2, age, 3, gender);
+// typedef PersonTuple<ZtString, unsigned, bool> Person;
+// Person p = Person().name("Fred").age(1).gender(1);
+// p.age() = 42;
+// std::cout << p.name() << '\n';
+
+#define ZuTuple_Field(N, Fn) \
+  ZuInline const auto &Fn() const { return this->p##N(); } \
+  ZuInline auto &Fn() { return this->p##N(); } \
+  template <typename P> \
+  ZuInline auto &Fn(P &&v) { this->p##N(ZuFwd<P>(v)); return *this; }
+
+#define ZuTupleFields(T, ...) \
+template <typename ...Args> class T : public ZuTuple<Args...> { \
+  typedef ZuTuple<Args...> Tuple; \
+public: \
+  using Tuple::Tuple; \
+  using Tuple::operator =; \
+  ZuInline T(const Tuple &v) : Tuple(v) { }; \
+  ZuInline T(Tuple &&v) : Tuple(ZuMv(v)) { }; \
+  ZuPP_Eval(ZuPP_Map2(ZuTuple_Field, __VA_ARGS__)) \
+}; \
+template <typename ...Args> \
+struct ZuTraits<T<Args...> > : public ZuTraits<ZuTuple<Args...> > { }
 
 #endif /* ZuTuple_HPP */

@@ -34,7 +34,6 @@
 #include <ZuBox.hpp>
 #include <ZuPair.hpp>
 #include <ZuTuple.hpp>
-#include <ZuMixin.hpp>
 #include <ZuStringN.hpp>
 #include <ZuPrint.hpp>
 #include <ZuID.hpp>
@@ -485,45 +484,34 @@ namespace MxSide {
   typedef FixMap CSVMap;
 }
 
-#define Mx_TupleField(Fn, N) \
-  ZuInline const auto &Fn() const { return T::ptr()->p ## N(); } \
-  ZuInline auto &Fn() { return T::ptr()->p ## N(); }
-
-typedef ZuTuple<MxID, MxID, MxIDString> MxSecKey_;
-template <typename T> struct MxSecKey_Fn : public T {
-  Mx_TupleField(venue, 1)
-  Mx_TupleField(segment, 2)
-  Mx_TupleField(id, 3)
-  template <typename S> inline void print(S &s) const {
-    s << venue() << '|' << segment() << '|' << id();
+ZuTupleFields(MxSecKey_, 1, venue, 2, segment, 3, id);
+typedef MxSecKey_<MxID, MxID, MxIDString> MxSecKey;
+template <> struct ZuPrint<MxSecKey> : public ZuPrintDelegate {
+  template <typename S>
+  inline static void print(S &s, const MxSecKey &key) {
+    s << key.venue() << '|' << key.segment() << '|' << key.id();
   }
 };
-typedef ZuMixin<MxSecKey_, MxSecKey_Fn> MxSecKey;
-template <> struct ZuPrint<MxSecKey> : public ZuPrintFn { };
 
-typedef ZuPair<MxEnum, MxIDString> MxSecSymKey_;
-template <typename T> struct MxSecSymKey_Fn : public T {
-  Mx_TupleField(src, 1)
-  Mx_TupleField(id, 2)
-  template <typename S> inline void print(S &s) const {
-    s << MxSecIDSrc::name(src()) << '|' << id();
+ZuTupleFields(MxSecSymKey_, 1, src, 2, id);
+typedef MxSecSymKey_<MxEnum, MxIDString> MxSecSymKey;
+template <> struct ZuPrint<MxSecSymKey> : public ZuPrintDelegate {
+  template <typename S>
+  inline static void print(S &s, const MxSecSymKey &key) {
+    s << MxSecIDSrc::name(key.src()) << '|' << key.id();
   }
 };
-typedef ZuMixin<MxSecSymKey_, MxSecSymKey_Fn> MxSecSymKey;
-template <> struct ZuPrint<MxSecSymKey> : public ZuPrintFn { };
 
 typedef MxUInt MxFutKey;	// mat
 
-typedef ZuTuple<MxUInt, MxEnum, MxValue> MxOptKey_;
-template <typename T> struct MxOptKey_Fn : public T {
-  Mx_TupleField(mat, 1)
-  Mx_TupleField(putCall, 2)
-  Mx_TupleField(strike, 3)
-  template <typename S> inline void print(S &s) const {
-    s << mat() << '|' << MxPutCall::name(putCall()) << '|' << strike();
+ZuTupleFields(MxOptKey_, 1, mat, 2, putCall, 3, strike);
+typedef MxOptKey_<MxUInt, MxEnum, MxValue> MxOptKey;
+template <> struct ZuPrint<MxOptKey> : public ZuPrintDelegate {
+  template <typename S>
+  inline static void print(S &s, const MxOptKey &key) {
+    s << key.mat() << '|' << MxPutCall::name(key.putCall()) <<
+      '|' << key.strike();
   }
 };
-typedef ZuMixin<MxOptKey_, MxOptKey_Fn> MxOptKey;
-template <> struct ZuPrint<MxOptKey> : public ZuPrintFn { };
 
 #endif /* MxBase_HPP */

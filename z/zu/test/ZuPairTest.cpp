@@ -43,7 +43,14 @@ struct A {
   inline A &operator =(const A &a) { i = a.i; ++copied; return *this; }
   inline A(A &&a) : i(a.i) { ++moved; }
   inline A &operator =(A &&a) { i = a.i; ++moved; return *this; }
+  inline int cmp(const A &a) const { return ZuCmp<int>::cmp(i, a.i); }
+  inline int hash() const { return ZuHash<int>::hash(i); }
+  inline bool operator !() const { return !i; }
+  inline bool operator ==(const A &a) const { return i == a.i; }
   int i;
+};
+template <> struct ZuTraits<A> : public ZuGenericTraits<A> {
+  enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
 };
 
 ZuPair<A, A> mkapair() { return ZuMkPair(A(42), A(42)); }
@@ -51,6 +58,9 @@ ZuPair<A, A> passapair(ZuPair<A, A> a) { return a; }
 
 ZuTuple<A, A, A> mkatuple() { return ZuMkTuple(A(42), A(42), A(42)); }
 ZuTuple<A, A, A> passatuple(ZuTuple<A, A, A> a) { return a; }
+
+ZuTupleFields(B_, 1, foo);
+typedef B_<A, A, A> B;
 
 int main()
 {
@@ -89,9 +99,20 @@ int main()
     CHECK(!copied && moved == 6 && p.p1().i == 42);
   }
   {
+    copied = moved = 0;
     ZuTuple<A, A, A> p(passatuple(mkatuple()));
     A a = ZuMv(p.p1()), b = ZuMv(p.p2()), c = ZuMv(p.p3());
-    CHECK(!copied && moved == 15);
+    CHECK(!copied && moved == 9);
     CHECK(a.i == 42 && b.i == 42 && c.i == 42);
+  }
+  {
+    copied = moved = 0;
+    B p(passatuple(mkatuple()));
+    A a = ZuMv(p.foo()), b = ZuMv(p.p2()), c = ZuMv(p.p3());
+    CHECK(!copied && moved == 12);
+    CHECK(a.i == 42 && b.i == 42 && c.i == 42);
+    B q = B().foo(42), r{p};
+    p = q;
+    r = ZuMv(q);
   }
 }

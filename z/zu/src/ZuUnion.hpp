@@ -464,4 +464,25 @@ private: \
 };
 ZuPP_List(ZuUnion_Specialization, ZuPP_N)
 
+#define ZuUnion_Field(N, Fn) \
+  ZuInline const auto &Fn() const { return this->p##N(); } \
+  ZuInline auto &Fn() { return this->p##N(); } \
+  template <typename P> \
+  ZuInline auto &Fn(P &&v) { this->p##N(ZuFwd<P>(v)); return *this; } \
+  ZuInline auto ptr_##Fn() { return this->ptr##N(); } \
+  ZuInline auto new_##Fn() { return this->new##N(); }
+
+#define ZuUnionFields(T, ...) \
+template <typename ...Args> struct T : public ZuUnion<Args...> { \
+  typedef ZuUnion<Args...> Union; \
+public: \
+  using Union::Union; \
+  using Union::operator =; \
+  ZuInline T(const Union &v) : Union(v) { }; \
+  ZuInline T(Union &&v) : Union(ZuMv(v)) { }; \
+  ZuPP_Eval(ZuPP_Map2(ZuUnion_Field, __VA_ARGS__)) \
+}; \
+template <typename ...Args> \
+struct ZuTraits<T<Args...> > : public ZuTraits<ZuUnion<Args...> > { }
+
 #endif /* ZuUnion_HPP */

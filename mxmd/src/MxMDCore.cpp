@@ -23,8 +23,6 @@
 
 #include <stddef.h>
 
-#include <ZuUnion.hpp>
-
 #include <ZeLog.hpp>
 
 #include <ZiModule.hpp>

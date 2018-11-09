@@ -12,7 +12,6 @@
 #include <ZuBox.hpp>
 #include <ZuPair.hpp>
 #include <ZuTuple.hpp>
-#include <ZuMixin.hpp>
 #include <ZuUnion.hpp>
 #include <ZuArrayN.hpp>
 #include <ZuStringN.hpp>
@@ -31,24 +30,6 @@ template <typename T> struct A : public T {
   inline int id() const { return T::ptr()->p1(); }
   inline int age() const { return T::ptr()->p2(); }
   inline int height() const { return T::ptr()->p3(); }
-};
-
-template <typename T> struct B : public T {
-  inline B() : m_bar(0) { }
-  inline ~B() { if (m_bar) ++*m_bar; }
-  inline int id() const { return T::ptr()->p1(); }
-  inline void id(int i) { T::ptr()->p1(i); }
-  inline double income() const { return T::ptr()->p2(); }
-  inline void income(double d) { T::ptr()->p2(d); }
-  inline const char *name() const { return T::ptr()->p3(); }
-  template <typename S> inline void name(const S &s) { T::ptr()->p3(s); }
-  inline const ZuPair<int, int> &dependents() { return T::ptr()->p4(); }
-  inline void dependents(int i, int j) {
-    new (T::ptr()->new4()) ZuPair<int, int>(i, j);
-  }
-  inline int foo() const { return *m_bar; }
-  inline void foo(int *bar) { m_bar = bar; }
-  int *m_bar;
 };
 
 struct S {
@@ -83,6 +64,31 @@ template <typename T1, typename T2> void checkNull() {
   ZuBox<T2> w;
   w = t;
   CHECK(!*u && !*v && !*w);
+}
+
+ZuTupleFields(T1_Fields, 1, id, 2, age, 3, height);
+namespace T1 {
+  typedef ZuBox<int> I;
+  typedef const ZuBox<int> &R;
+  typedef T1_Fields<I, I, I> V;
+  typedef T1_Fields<R, R, R> T;
+}
+
+ZuUnionFields(T2_Fields, 1, id, 2, income, 3, name, 4, dependents, 5, foo);
+namespace T2 {
+  typedef int I;
+  typedef double D;
+  typedef const char *S;
+  typedef ZuPair<int, int> P;
+  typedef int *CP;
+  typedef T2_Fields<I, D, S, P, CP> V;
+}
+
+ZuTupleFields(T3_Fields, 1, id, 2, age, 3, height);
+namespace T3 {
+  typedef ZuBox<int> I;
+  typedef T3_Fields<I, I, I> V;
+  typedef ZuTuple<ZuArrayN<V, 3>, ZuArrayN<int, 3> > T;
 }
 
 int main()
@@ -152,11 +158,7 @@ int main()
   }
 
   {
-    typedef ZuBox<int> I;
-    typedef const ZuBox<int> &R;
-    typedef ZuMixin<ZuTuple<I, I, I>, A> V;
-    typedef ZuMixin<ZuTuple<R, R, R>, A> T;
-
+    using namespace T1;
     V j(1, 2, 3);
     V i;
     i = j;
@@ -180,12 +182,7 @@ int main()
   }
 
   {
-    typedef int I;
-    typedef double D;
-    typedef const char *S;
-    typedef ZuPair<int, int> P;
-    typedef ZuMixin<ZuUnion<I, D, S, P>, B> V;
-
+    using namespace T2;
     int c = 42;
 
     {
@@ -202,17 +199,17 @@ int main()
       CHECK(ZuCmp<V>::cmp(i, j) < 0);
       j.id(42);
       CHECK(ZuCmp<V>::cmp(i, j) > 0);
-      i.dependents(1, 2);
+      i.dependents(ZuMkPair(1, 2));
       j = i;
       CHECK(i == j);
       CHECK(ZuCmp<V>::cmp(i, j) == 0);
       CHECK(i.dependents() == j.dependents());
-      j.dependents(1, 3);
+      j.dependents(ZuMkPair(1, 3));
       CHECK(ZuCmp<V>::cmp(i, j) < 0);
-      i.dependents(1, 4);
+      i.dependents(ZuMkPair(1, 4));
       CHECK(ZuCmp<V>::cmp(i, j) > 0);
       i.foo(&c);
-      CHECK(i.foo() == 42);
+      CHECK(*(i.foo()) == 42);
     }
     CHECK(c == 43);
   }
@@ -243,9 +240,7 @@ int main()
   }
 
   {
-    typedef ZuBox<int> I;
-    typedef ZuMixin<ZuTuple<I, I, I>, A> V;
-    typedef ZuTuple<ZuArrayN<V, 3>, ZuArrayN<int, 3> > T;
+    using namespace T3;
     T t, s;
     t.p1().length(1);
     t.p1()[0] = ZuMkTuple(1, 2, 3);

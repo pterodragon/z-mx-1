@@ -48,15 +48,9 @@ struct MxMDSegment { // venue segment
   ZuOpBool
 };
 
-typedef ZuTuple<MxValue, MxValue, MxValue> MxMDTickSize_;
-template <typename T> struct MxMDTickSize_Fn : public T {
-  Mx_TupleField(minPrice, 1);
-  Mx_TupleField(maxPrice, 2);
-  Mx_TupleField(tickSize, 3);
-};
-typedef ZuMixin<MxMDTickSize_, MxMDTickSize_Fn> MxMDTickSize;
-struct MxMDTickSize_MinPxAccessor :
-    public ZuAccessor<MxMDTickSize, MxFloat> {
+ZuTupleFields(MxMDTickSize_, 1, minPrice, 2, maxPrice, 3, tickSize);
+typedef MxMDTickSize_<MxValue, MxValue, MxValue> MxMDTickSize;
+struct MxMDTickSize_MinPxAccessor : public ZuAccessor<MxMDTickSize, MxValue> {
   inline static MxValue value(const MxMDTickSize &t) { return t.minPrice(); }
 };
 
@@ -129,30 +123,24 @@ typedef MxString<12> MxMDFlagsStr;
 
 #pragma pack(pop)
 
-typedef ZuTuple<MxID, MxID, MxEnum, MxIDString, MxUInt, MxEnum, MxValue>
-  MxMDKey_;
-template <typename T> struct MxMDKey_Fn : public T {
-  Mx_TupleField(venue, 1)
-  Mx_TupleField(segment, 2)
-  Mx_TupleField(src, 3)
-  Mx_TupleField(id, 4)
-  Mx_TupleField(mat, 5)
-  Mx_TupleField(putCall, 6)
-  Mx_TupleField(strike, 7)
-  template <typename S> inline void print(S &s) const {
-    if (*src())
-      s << MxSecSymKey{src(), id()};
+ZuTupleFields(MxMDKey_,
+    1, venue, 2, segment, 3, src, 4, id, 5, mat, 6, putCall, 7, strike);
+typedef MxMDKey_<MxID, MxID, MxEnum, MxIDString, MxUInt, MxEnum, MxValue>
+  MxMDKey;
+template <> struct ZuPrint<MxMDKey> : public ZuPrintDelegate {
+  template <typename S>
+  inline static void print(S &s, const MxMDKey &key) {
+    if (*key.src())
+      s << MxSecSymKey{key.src(), key.id()};
     else
-      s << MxSecKey{venue(), segment(), id()};
-    if (*mat()) {
-      if (*strike())
-	s << '|' << MxOptKey{mat(), putCall(), strike()};
+      s << MxSecKey{key.venue(), key.segment(), key.id()};
+    if (*key.mat()) {
+      if (*key.strike())
+	s << '|' << MxOptKey{key.mat(), key.putCall(), key.strike()};
       else
-	s << '|' << MxFutKey{mat()};
+	s << '|' << MxFutKey{key.mat()};
     }
   }
 };
-typedef ZuMixin<MxMDKey_, MxMDKey_Fn> MxMDKey;
-template <> struct ZuPrint<MxMDKey> : public ZuPrintFn { };
 
 #endif /* MxMDTypes_HPP */

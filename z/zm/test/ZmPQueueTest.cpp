@@ -31,20 +31,23 @@
 #include <ZmNoLock.hpp>
 
 typedef ZuPair<uint32_t, unsigned> Msg_Data;
-template <typename T> struct Msg_Fn : public T {
-  inline uint32_t key() const { return T::ptr()->p1(); }
-  inline unsigned length() const { return T::ptr()->p2(); }
+struct Msg : public Msg_Data {
+  using Msg_Data::Msg_Data;
+  using Msg_Data::operator =;
+  inline Msg(const Msg_Data &v) : Msg_Data(v) { }
+  inline Msg(Msg_Data &&v) : Msg_Data(ZuMv(v)) { }
+  inline uint32_t key() const { return p1(); }
+  inline unsigned length() const { return p2(); }
   inline unsigned clipHead(unsigned length) {
-    T::ptr()->p1() += length;
-    return T::ptr()->p2() -= length;
+    p1() += length;
+    return p2() -= length;
   }
   inline unsigned clipTail(unsigned length) {
-    return T::ptr()->p2() -= length;
+    return p2() -= length;
   }
   template <typename I>
   inline void write(const I &i) { }
 };
-typedef ZuMixin<Msg_Data, Msg_Fn> Msg;
 
 typedef ZmPQueue<Msg,
 	  ZmPQueueLock<ZmNoLock,

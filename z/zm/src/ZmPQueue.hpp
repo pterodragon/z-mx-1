@@ -48,8 +48,6 @@
 #include <ZuIndex.hpp>
 #include <ZuPair.hpp>
 #include <ZuBox.hpp>
-#include <ZuUnion.hpp>
-#include <ZuMixin.hpp>
 
 #include <ZmLock.hpp>
 #include <ZmGuard.hpp>
@@ -178,6 +176,8 @@ namespace ZmPQueue_ {
   struct Last<Levels, Levels, T_> { typedef void T; };
 };
 
+ZuTupleFields(ZmPQueue_Gap, 1, key, 2, length);
+
 template <typename Item_, class NTP = ZmPQueue_Defaults>
 class ZmPQueue : public NTP::Base {
   ZmPQueue(const ZmPQueue &);
@@ -197,14 +197,7 @@ public:
   typedef ZmGuard<Lock> Guard;
   typedef ZmReadGuard<Lock> ReadGuard;
 
-  typedef ZuPair<ZuBox0(Key), ZuBox0(unsigned)> Gap_Data;
-  template <typename T> struct Gap_Fn : public T {
-    inline const ZuBox0(Key) &key() const { return T::ptr()->p1(); }
-    inline ZuBox0(Key) &key() { return T::ptr()->p1(); }
-    inline const ZuBox0(unsigned) &length() const { return T::ptr()->p2(); }
-    inline ZuBox0(unsigned) &length() { return T::ptr()->p2(); }
-  };
-  typedef ZuMixin<Gap_Data, Gap_Fn> Gap;
+  typedef ZmPQueue_Gap<ZuBox0(Key), ZuBox0(unsigned)> Gap;
 
   struct NullObject { }; // deconflict with ZuNull
   template <typename Node, typename Heap, bool NodeIsItem> class NodeFn_ :

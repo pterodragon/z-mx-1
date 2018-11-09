@@ -180,10 +180,16 @@ public:
 
   ZuInline const U1 &p1() const { return m_p1; }
   ZuInline U1 &p1() { return m_p1; }
-  template <typename P1> ZuInline void p1(P1 &&p1) { m_p1 = ZuFwd<P1>(p1); }
+  template <typename P1> ZuInline auto &p1(P1 &&p1) {
+    m_p1 = ZuFwd<P1>(p1);
+    return *this;
+  }
   ZuInline const U2 &p2() const { return m_p2; }
   ZuInline U2 &p2() { return m_p2; }
-  template <typename P2> ZuInline void p2(P2 &&p2) { m_p2 = ZuFwd<P2>(p2); }
+  template <typename P2> ZuInline auto &p2(P2 &&p2) {
+    m_p2 = ZuFwd<P2>(p2);
+    return *this;
+  }
 
   T1		m_p1;
   T2		m_p2;

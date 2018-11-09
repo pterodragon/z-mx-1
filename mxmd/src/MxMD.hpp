@@ -219,7 +219,8 @@ struct MxMDL1Flags : public MxMDFlags<MxMDL1Flags> {
 
 // venue mapping
 
-typedef ZuTuple<MxID, MxID> MxMDVenueMapKey; // venue, segment
+ZuTupleFields(MxMDVenueMapKey_, 1, venue, 2, segment);
+typedef MxMDVenueMapKey_<MxID, MxID> MxMDVenueMapKey;
 struct MxMDVenueMapping {
   MxID		venue;
   MxID		segment;
@@ -370,23 +371,13 @@ namespace MxMDOrderIDScope {
   MxEnumMapAlias(Map, CSVMap);
 }
 
-typedef ZuTuple<MxSecKey, MxIDString> MxMDOrderID2_;
-template <typename T> struct MxMDOrderID2_Fn : public T {
-  inline const MxSecKey &obKey() const { return T::ptr()->p1(); }
-  inline const MxIDString &orderID() const { return T::ptr()->p2(); }
-};
-typedef ZuMixin<MxMDOrderID2_, MxMDOrderID2_Fn> MxMDOrderID2;
-typedef ZuTuple<MxSecKey, MxEnum, MxIDString> MxMDOrderID3_;
-template <typename T> struct MxMDOrderID3_Fn : public T {
-  inline const MxSecKey &obKey() const { return T::ptr()->p1(); }
-  inline const MxEnum &side() const { return T::ptr()->p2(); }
-  inline const MxIDString &orderID() const { return T::ptr()->p3(); }
-};
-typedef ZuMixin<MxMDOrderID3_, MxMDOrderID3_Fn> MxMDOrderID3;
-typedef ZuTuple<
-  const MxSecKey &, const MxEnum &, const MxIDString &> MxMDOrderID3Ref;
-typedef ZuTuple<MxSecKey, MxIDString> MxMDOrderID2_;
-typedef ZuTuple<const MxSecKey &, const MxIDString &> MxMDOrderID2Ref;
+ZuTupleFields(MxMDOrderID2_, 1, obKey, 2, orderID);
+typedef MxMDOrderID2_<MxSecKey, MxIDString> MxMDOrderID2;
+typedef MxMDOrderID2_<const MxSecKey &, const MxIDString &> MxMDOrderID2Ref;
+ZuTupleFields(MxMDOrderID3_, 1, obKey, 2, side, 3, orderID);
+typedef MxMDOrderID3_<MxSecKey, MxEnum, MxIDString> MxMDOrderID3;
+typedef MxMDOrderID3_<const MxSecKey &, const MxEnum &, const MxIDString &>
+  MxMDOrderID3Ref;
 
 class MxMDAPI MxMDOrder_ {
   MxMDOrder_(const MxMDOrder_ &) = delete;
@@ -1350,11 +1341,11 @@ public:
 private:
   template <typename L>
   inline L keys_(L l) const {
-    l(MxMDKey{m_key.venue(), m_key.segment(), MxEnum(), m_key.id()});
+    l(MxMDKey().venue(m_key.venue()).segment(m_key.segment()).id(m_key.id()));
     if (*m_refData.idSrc)
-      l(MxMDKey{MxID(), MxID(), m_refData.idSrc, m_refData.symbol});
+      l(MxMDKey().src(m_refData.idSrc).id(m_refData.symbol));
     if (*m_refData.altIDSrc)
-      l(MxMDKey{MxID(), MxID(), m_refData.altIDSrc, m_refData.altSymbol});
+      l(MxMDKey().src(m_refData.altIDSrc).id(m_refData.altSymbol));
     return l;
   }
 public:

@@ -17,10 +17,39 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// generic pre-processor list expansion macros
+// C/C++ pre-processor macros
 
 #ifndef ZuPP_HPP
 #define ZuPP_HPP
+
+#define ZuPP_Args(...) __VA_ARGS__
+#define ZuPP_Strip(x) x
+
+#define ZuPP_Eval(...) ZuPP_Eval32(__VA_ARGS__)
+// #define ZuPP_Eval(...) ZuPP_Eval1024(__VA_ARGS__)
+// #define ZuPP_Eval1024(...) ZuPP_Eval512(ZuPP_Eval512(__VA_ARGS__))
+// #define ZuPP_Eval512(...) ZuPP_Eval256(ZuPP_Eval256(__VA_ARGS__))
+// #define ZuPP_Eval256(...) ZuPP_Eval128(ZuPP_Eval128(__VA_ARGS__))
+// #define ZuPP_Eval128(...) ZuPP_Eval64(ZuPP_Eval64(__VA_ARGS__))
+// #define ZuPP_Eval64(...) ZuPP_Eval32(ZuPP_Eval32(__VA_ARGS__))
+#define ZuPP_Eval32(...) ZuPP_Eval16(ZuPP_Eval16(__VA_ARGS__))
+#define ZuPP_Eval16(...) ZuPP_Eval8(ZuPP_Eval8(__VA_ARGS__))
+#define ZuPP_Eval8(...) ZuPP_Eval4(ZuPP_Eval4(__VA_ARGS__))
+#define ZuPP_Eval4(...) ZuPP_Eval2(ZuPP_Eval2(__VA_ARGS__))
+#define ZuPP_Eval2(...) ZuPP_Eval1(ZuPP_Eval1(__VA_ARGS__))
+#define ZuPP_Eval1(...) __VA_ARGS__
+
+#define ZuPP_Empty()
+
+#define ZuPP_Defer(x) x ZuPP_Empty ZuPP_Empty()()
+
+#define ZuPP_Map(map, first, ...) \
+  map(first) __VA_OPT__(ZuPP_Defer(_ZuPP_Map)()(map, __VA_ARGS__))
+#define _ZuPP_Map() ZuPP_Map
+
+#define ZuPP_Map2(map, first, second, ...) \
+  map(first, second) __VA_OPT__(ZuPP_Defer(_ZuPP_Map2)()(map, __VA_ARGS__))
+#define _ZuPP_Map2() ZuPP_Map2
 
 #ifndef ZuPP_N
 #define ZuPP_N 30       // max. # expansions supported

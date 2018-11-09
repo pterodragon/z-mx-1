@@ -36,7 +36,6 @@
 #include <ZuIndex.hpp>
 #include <ZuHash.hpp>
 #include <ZuLargest.hpp>
-#include <ZuUnion.hpp>
 #include <ZuArrayN.hpp>
 
 #include <ZmAtomic.hpp>

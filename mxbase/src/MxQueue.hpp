@@ -30,7 +30,6 @@
 #include <MxBaseLib.hpp>
 #endif
 
-#include <ZuUnion.hpp>
 #include <ZuArrayN.hpp>
 #include <ZuPOD.hpp>
 #include <ZuRef.hpp>

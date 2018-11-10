@@ -137,8 +137,8 @@ void MxMDSubLink::reset(MxSeqNo rxSeqNo, MxSeqNo)
     engine->appException(ZeEVENT(Error, \
       ([=, engineID = engine->id(), id = link->id()]( \
 	const ZeEvent &, ZmStream &s) { \
-	  s << "MxMDSubscriber(" << engineID << ':' << id << \
-	  ") " << code; }))); \
+	  s << "MxMDSubscriber{" << engineID << ':' << id << \
+	  "} " << code; }))); \
     link->tcpError(tcp, io); \
   } while (0)
 
@@ -149,8 +149,8 @@ void MxMDSubLink::reset(MxSeqNo rxSeqNo, MxSeqNo)
     engine->appException(ZeEVENT(Error, \
       ([=, engineID = engine->id(), id = link->id()]( \
 	const ZeEvent &, ZmStream &s) { \
-	  s << "MxMDSubscriber(" << engineID << ':' << id << \
-	  ") " << code; }))); \
+	  s << "MxMDSubscriber{" << engineID << ':' << id << \
+	  "} " << code; }))); \
     link->udpError(udp, io); \
   } while (0)
 

@@ -14,7 +14,7 @@
 namespace {
   void usage() {
     puts("usage: DaemonTest [username [password]] [-d|--daemonize]");
-    exit(1);
+    ZmPlatform::exit(1);
   }
 
   void notify(const char *text) {
@@ -64,7 +64,7 @@ int main(int argc, char **argv)
     ZeLog::start();
     ZeLOG(Error, e.message());
     ZeLog::stop();
-    exit(1);
+    ZmPlatform::exit(1);
   }
 
   int r = ZvDaemon::init(
@@ -79,12 +79,12 @@ int main(int argc, char **argv)
     case ZvDaemon::Running:
       notify("already running");
       ZeLog::stop();
-      exit(1);
+      ZmPlatform::exit(1);
       break;
     case ZvDaemon::Error:
       notify("error");
       ZeLog::stop();
-      exit(1);
+      ZmPlatform::exit(1);
       break;
   }
 

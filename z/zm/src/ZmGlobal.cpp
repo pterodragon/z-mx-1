@@ -80,7 +80,6 @@ ZmExtern void ZmGlobal_atexit()
   // do not call dtor with lock held
   for (unsigned i = 0; i < n; i++) {
     ZmGlobal *g = globals[i];
-    // std::cerr << "ZmGlobal_atexit() deleting " << g->m_name << ' ' << ZuBoxPtr(g).hex() << '\n' << std::flush;
     delete g;
   }
 }

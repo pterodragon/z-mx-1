@@ -20,6 +20,7 @@
 #include <ZuPolymorph.hpp>
 
 #include <ZmTrap.hpp>
+#include <ZmPlatform.hpp>
 
 #include <ZvCf.hpp>
 #include <ZvCmd.hpp>
@@ -57,7 +58,7 @@ static void usage()
     "\tARGS\t- command arguments\n";
   std::cerr << usage << std::flush;
   ZeLog::stop();
-  exit(1);
+  ZmPlatform::exit(1);
 }
 
 static unsigned getTimeout()
@@ -174,8 +175,11 @@ next:
   }
 
   void disconnected() {
-    if (m_interactive) Zrl::stop();
-    post();
+    if (m_interactive) {
+      Zrl::stop();
+      std::cerr << "\nserver disconnected\n" << std::flush;
+    }
+    ZmPlatform::exit(1);
   }
 
   ZmSemaphore		m_done;
@@ -194,7 +198,7 @@ int main(int argc, char **argv)
 
   ZeLog::init("zcmd");
   ZeLog::level(0);
-  ZeLog::add(ZeLog::fileSink("&2"));
+  ZeLog::add([](ZeEvent *e) { std::cerr << e->message() << '\n' << std::flush; });
   ZeLog::start();
 
   try {
@@ -238,15 +242,15 @@ int main(int argc, char **argv)
   } catch (const ZeError &e) {
     std::cerr << e << '\n' << std::flush;
     ZeLog::stop();
-    exit(1);
+    ZmPlatform::exit(1);
   } catch (const ZtString &s) {
     std::cerr << s << '\n' << std::flush;
     ZeLog::stop();
-    exit(1);
+    ZmPlatform::exit(1);
   } catch (...) {
     std::cerr << "unknown exception\n" << std::flush;
     ZeLog::stop();
-    exit(1);
+    ZmPlatform::exit(1);
   }
 
   client->wait();

@@ -54,7 +54,7 @@ int main()
     }
   } catch (const ZeError &e) {
     ZeLOG(Fatal, e);
-    exit(1);
+    ZmPlatform::exit(1);
   }
 
   ZeLog::stop();

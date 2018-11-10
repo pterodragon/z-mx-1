@@ -278,14 +278,14 @@ int main()
 
   } catch (const ZvError &e) {
     std::cerr << e << '\n';
-    exit(1);
+    ZmPlatform::exit(1);
   } catch (const ZeError &e) {
     fputs(e.message(), stderr);
     fputc('\n', stderr);
-    exit(1);
+    ZmPlatform::exit(1);
   } catch (...) {
     fputs("unknown exception\n", stderr);
-    exit(1);
+    ZmPlatform::exit(1);
   }
 
   ZeLog::stop();

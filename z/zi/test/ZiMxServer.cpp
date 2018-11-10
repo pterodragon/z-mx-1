@@ -201,7 +201,7 @@ void usage()
     "  -R N\t- receive buffer size (default: OS setting)\n"
     "  -S N\t- send buffer size (default: OS setting)\n"
     << std::flush;
-  exit(1);
+  ZmPlatform::exit(1);
 }
 
 int main(int argc, char **argv)
@@ -223,10 +223,10 @@ int main(int argc, char **argv)
 	} catch (const ZeError &e) {
 	  fprintf(stderr, "%s: IP address unresolvable (%s)\n",
 	      argv[i], e.message());
-	  exit(1);
+	  ZmPlatform::exit(1);
 	} catch (...) {
 	  fprintf(stderr, "%s: IP address unresolvable\n", argv[i]);
-	  exit(1);
+	  ZmPlatform::exit(1);
 	}
 	continue;
       }
@@ -311,7 +311,7 @@ int main(int argc, char **argv)
   ZmTrap::sigintFn(ZmFn<>::Ptr<&Global::post>::fn());
   ZmTrap::trap();
 
-  if (mx.start() != Zi::OK) exit(1);
+  if (mx.start() != Zi::OK) ZmPlatform::exit(1);
 
   mx.listen();
 

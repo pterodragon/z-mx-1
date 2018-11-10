@@ -120,13 +120,13 @@ int main()
     }
   } catch (const ZvError &e) {
     std::cerr << "ZvError: " << e << '\n';
-    exit(1);
+    ZmPlatform::exit(1);
   } catch (const ZeError &e) {
     std::cerr << "ZeError: " << e << '\n';
-    exit(1);
+    ZmPlatform::exit(1);
   } catch (...) {
     std::cerr << "unknown exception\n";
-    exit(1);
+    ZmPlatform::exit(1);
   }
   return 0;
 }

@@ -407,7 +407,7 @@ void usage()
     "  replay IP multicast data as specified in the CONFIG file\n\n"
     "Options:\n"
     << std::flush;
-  exit(1);
+  ZmPlatform::exit(1);
 }
 
 int main(int argc, const char *argv[])
@@ -475,5 +475,5 @@ int main(int argc, const char *argv[])
 
 error:
   ZeLog::stop();
-  exit(1);
+  ZmPlatform::exit(1);
 }

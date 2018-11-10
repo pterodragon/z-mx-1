@@ -405,7 +405,7 @@ public:
     ZeError e;
     if (m_file.open(m_path, ZiFile::ReadOnly, 0, &e) < 0) {
       ZeLOG(Error, ZtString() << '"' << m_path << "\": " << e);
-      exit(1);
+      ZmPlatform::exit(1);
     }
     if (m_outPath) {
       ZeError e;
@@ -413,7 +413,7 @@ public:
 	    ZiFile::WriteOnly | ZiFile::Append | ZiFile::Create,
 	    0666, &e) != Zi::OK) {
 	ZeLOG(Error, ZtString() << '"' << m_outPath << "\": " << e);
-	exit(1);
+	ZmPlatform::exit(1);
       }
       MxMDStream::FileHdr hdr("RMD",
 	  MXMD_VMAJOR(MXMD_VERSION), 
@@ -421,7 +421,7 @@ public:
       if (m_outFile.write(&hdr, sizeof(MxMDStream::FileHdr), &e) != Zi::OK) {
 	m_outFile.close();
 	ZeLOG(Error, ZtString() << '"' << m_outPath << "\": " << e);
-	exit(1);
+	ZmPlatform::exit(1);
       }
     }
     if (m_tickSizeCSV) m_tickSizeCSV->start();
@@ -694,7 +694,7 @@ void usage()
     "\t\t\t(may be specified multiple times)\n"
     "  -o OUT\t- record filtered output in file OUT\n"
     << std::flush;
-  exit(1);
+  ZmPlatform::exit(1);
 }
 
 int main(int argc, const char *argv[])

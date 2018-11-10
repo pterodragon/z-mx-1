@@ -69,7 +69,7 @@ void usage()
 "    NTHR\t- number of threads\n"
 "    VERB\t- verbose (0 | 1 - defaults to 0)\n"
 , stderr);
-  exit(1);
+  ZmPlatform::exit(1);
 }
 
 int main(int argc, char **argv)
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 #endif
   if (!threads) {
     fputs("alloca() failed\n", stderr);
-    exit(1);
+    ZmPlatform::exit(1);
   }
   ZmTime start(ZmTime::Now);
   for (int i = 0; i < nthr; i++)

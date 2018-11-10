@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <time.h>
 
 #include <ZuInt.hpp>
@@ -20,7 +21,11 @@
 template <typename M> void fail(const char *s, const M &m)
 {
   std::cerr << "FAIL: " << s << " - " << m << '\n';
-  exit(1);
+#ifndef _WIN32
+  ::_exit(1);
+#else
+  ::ExitProcess(1);
+#endif
 }
 
 #define CHECK(x) ((x) ? (void)0 : (void)fail(#x, ""))

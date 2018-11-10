@@ -29,7 +29,7 @@ void usage()
     "  -S\t\t- slow reader (sleep INTERVAL seconds in between reads)\n"
     "  -c CPUSET\t- bind memory to CPUSET\n"
     << std::flush;
-  exit(1);
+  ZmPlatform::exit(1);
 }
 
 typedef ZiRing<ZiRingMsg> Ring;
@@ -138,7 +138,7 @@ int App::main(int argc, char **argv)
 
       if (ring->open(flags, &e) != Zi::OK) {
 	std::cerr << e << '\n' << std::flush;
-	exit(1);
+	ZmPlatform::exit(1);
       }
     }
 

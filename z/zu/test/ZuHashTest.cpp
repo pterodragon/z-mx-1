@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <ZuHash.hpp>
 #include <ZuCmp.hpp>
@@ -127,7 +128,11 @@ void testString(const char *s)
   if (ZuHash<char *>::hash(s) != ZuHash<char *>::hash(buf + 1) ||
       ZuHash<char *>::hash(s + 1) != ZuHash<char *>::hash(buf + 2)) {
     printf("Failed to hash \"%s\" to identical values\n", s);
-    exit(1);
+#ifndef _WIN32
+    ::_exit(1);
+#else
+    ::ExitProcess(1);
+#endif
   }
 }
 

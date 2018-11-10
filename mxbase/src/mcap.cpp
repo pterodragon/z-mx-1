@@ -349,7 +349,7 @@ void usage()
     "  capture IP multicast data as specified in the CONFIG file\n\n"
     "Options:\n"
     << std::flush;
-  exit(1);
+  ZmPlatform::exit(1);
 }
 
 #if 0
@@ -430,5 +430,5 @@ int main(int argc, const char *argv[])
 
 error:
   ZeLog::stop();
-  exit(1);
+  ZmPlatform::exit(1);
 }

@@ -160,7 +160,7 @@ void ZvCmdClient::connect()
 {
   if (!m_remoteIP || !m_remotePort) {
     error(ZeEVENT(Error, ([](const ZeEvent &, ZmStream &s) {
-      s << "ZvCmdClient::connect() - no remote address configured"; })));
+      s << "no remote address configured"; })));
     return;
   }
   m_mx->connect(
@@ -180,7 +180,7 @@ void ZvCmdClient::failed(bool transient)
 	ZmTimeNow(m_reconnFreq), &m_reconnTimer);
   else
     error(ZeEVENT(Error, ([](const ZeEvent &, ZmStream &s) {
-      s << "ZvCmdClient::connect() - could not connect"; })));
+      s << "could not connect"; })));
 }
 
 void ZvCmdClient::disconnect()

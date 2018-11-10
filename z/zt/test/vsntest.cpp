@@ -3,6 +3,8 @@
 
 #include <ZuLib.hpp>
 
+#include <ZmPlatform.hpp>
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -88,7 +90,7 @@ retry:
 void usage()
 {
   puts("usage: vsntest increment max");
-  exit(1);
+  ZmPlatform::exit(1);
 }
 
 int main(int argc, char **argv)

@@ -113,8 +113,8 @@ void MxMDPubLink::reset(MxSeqNo, MxSeqNo txSeqNo)
     engine->appException(ZeEVENT(Error, \
       ([=, engineID = engine->id(), id = link->id()]( \
 	const ZeEvent &, ZmStream &s) { \
-	  s << "MxMDPublisher(" << engineID << ':' << id << \
-	  ") " << code; }))); \
+	  s << "MxMDPublisher{" << engineID << ':' << id << \
+	  "} " << code; }))); \
     link->tcpError(tcp, io); \
   } while (0)
 
@@ -125,8 +125,8 @@ void MxMDPubLink::reset(MxSeqNo, MxSeqNo txSeqNo)
     engine->appException(ZeEVENT(Error, \
       ([=, engineID = engine->id(), id = link->id()]( \
 	const ZeEvent &, ZmStream &s) { \
-	  s << "MxMDPublisher(" << engineID << ':' << id << \
-	  ") " << code; }))); \
+	  s << "MxMDPublisher{" << engineID << ':' << id << \
+	  "} " << code; }))); \
     link->udpError(udp, io); \
   } while (0)
 

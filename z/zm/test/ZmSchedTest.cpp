@@ -89,7 +89,7 @@ void usage()
   fputs("usage: ZmSchedTest [OPTIONS]...\n\nOptions:\n"
 "    -n N\tset number of threads to N\n"
     , stderr);
-  exit(1);
+  ZmPlatform::exit(1);
 }
 
 void fail(const char *s) 

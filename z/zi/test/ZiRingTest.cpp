@@ -38,7 +38,7 @@ private:
 
 void fail()
 {
-  exit(1);
+  ZmPlatform::exit(1);
 }
 #define ensure(x) ((x) ? (void)0 : check_(x, __LINE__, #x))
 #define check(x) check_(x, __LINE__, #x)
@@ -309,7 +309,7 @@ void usage()
     "usage: ZiRingTest [SIZE]\n"
     "\tSIZE - optional requested size of ring buffer\n"
     << std::flush;
-  exit(1);
+  ZmPlatform::exit(1);
 }
 
 int main(int argc, char **argv)

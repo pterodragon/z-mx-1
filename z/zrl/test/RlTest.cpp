@@ -23,11 +23,11 @@ int main()
   for (;;) {
     try {
       ZmRef<ZvCf> line = Zrl::readline("prompt> ");
-      if (!line) exit(0);
+      if (!line) ZmPlatform::exit(0);
       std::cout << *line << std::flush;
-      if (line->get("0") == "exit") exit(0);
+      if (line->get("0") == "exit") ZmPlatform::exit(0);
     } catch (const Zrl::EndOfFile &) {
-      exit(0);
+      ZmPlatform::exit(0);
     } catch (ZvError &e) {
       std::cerr << e << '\n' << std::flush;
     }

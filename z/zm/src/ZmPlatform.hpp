@@ -149,6 +149,13 @@ public:
   static void sleep(ZmTime timeout);
   ZuInline static void yield() { ::Sleep(0); }
 #endif
+
+// (hard) exit process
+#ifndef _WIN32
+  ZuInline static void exit(int code) { ::_exit(code); }
+#else
+  ZuInline static void exit(int code) { ::ExitProcess(code); }
+#endif
 };
 
 #ifdef _MSC_VER

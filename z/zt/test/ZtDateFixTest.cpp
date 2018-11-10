@@ -35,7 +35,7 @@ int main(int argc, char **argv)
   test(ZtDate(1, 1, 1));
   test(ZtDateNow());
 
-  if (argc < 2) { fputs("usage: ZtDateFixTest N\n", stderr); exit(1); }
+  if (argc < 2) { fputs("usage: ZtDateFixTest N\n", stderr); ZmPlatform::exit(1); }
   unsigned n = atoi(argv[1]);
   {
     ZtDate::FIXFmt<-9, Null> fmt;

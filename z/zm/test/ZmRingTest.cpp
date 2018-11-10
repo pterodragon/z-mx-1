@@ -22,7 +22,7 @@ void usage()
 "  -L\t\t- low-latency (readers spin indefinitely and do not yield)\n"
 "  -s SPIN\t- set spin count to SPIN (default: 1000)\n"
 "  -S\t\t- slow reader (sleep INTERVAL seconds in between reads)\n";
-  exit(1);
+  ZmPlatform::exit(1);
 }
 
 struct Msg {
@@ -111,7 +111,7 @@ int App::main(int argc, char **argv)
     {
       if (ring->open(Ring::Read | Ring::Write) != Ring::OK) {
 	std::cerr << "open failed\n";
-	exit(1);
+	ZmPlatform::exit(1);
       }
     }
 

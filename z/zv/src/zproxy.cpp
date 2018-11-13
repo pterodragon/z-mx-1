@@ -1350,7 +1350,7 @@ void Proxy::connected(Connection *connection)
     m_out = connection;
     m_app->add(this);
     m_listener->del(this);
-    if (m_app->verbose()) ZeLOG(Info, status());
+    if (m_app->verbose()) { ZeLOG(Info, status()); }
     m_in->peer(m_out);
     m_out->peer(m_in);
     m_in->recv();
@@ -1361,7 +1361,7 @@ void Proxy::connected(Connection *connection)
 void Proxy::connect2()
 {
   if (!m_listener) return;
-  if (m_app->verbose()) ZeLOG(Info, status());
+  if (m_app->verbose()) { ZeLOG(Info, status()); }
   m_mx->connect(
       ZiConnectFn::Member<&Proxy::connected2>::fn(this),
       ZiFailFn::Member<&Proxy::failed2>::fn(this),
@@ -1376,7 +1376,7 @@ void Proxy::failed2(bool transient)
 	ZmFn<>::Member<&Proxy::connect2>::fn(this),
 	ZmTimeNow((int)m_listener->reconnectFreq()));
   } else {
-    if (m_app->verbose()) ZeLOG(Info, this->status());
+    if (m_app->verbose()) { ZeLOG(Info, this->status()); }
     m_in->proxy(0);
     m_in->disconnect();
     m_listener->del(this);
@@ -1484,7 +1484,7 @@ void Listener::stop()
 ZiConnection *Listener::accepted(const ZiCxnInfo &ci)
 {
   ZmRef<Proxy> proxy = new Proxy(this);
-  if (m_app->verbose()) ZeLOG(Info, this->status());
+  if (m_app->verbose()) { ZeLOG(Info, this->status()); }
   add(proxy);
   return new Connection(proxy, Connection::In | m_cxnFlags,
       m_cxnLatency, m_cxnFrag, m_cxnPack, m_cxnDelay, ci);

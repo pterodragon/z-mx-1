@@ -675,7 +675,7 @@ private:
 
   template <typename Fill>
   uintptr_t match(
-      MxValue &qty, MxValue &cumQty, MxValue &grossTradeAmt, Fill &&fill) {
+      MxValue &qty, MxValue &cumQty, MxValue &grossTradeAmt, Fill fill) {
     auto i = this->m_orders.iterator();
     while (MxMDPxLevel_::Orders::Node *node = i.iterate()) {
       const ZmRef<MxMDOrder> &contra = node->key();

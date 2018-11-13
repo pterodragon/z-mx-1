@@ -37,13 +37,21 @@
 #include <ZvCf.hpp>
 #include <ZvMultiplexCf.hpp>
 
+#include <MxBase.hpp>
+
 class MxMultiplex : public ZuPolymorph, public ZiMultiplex {
 public:
-  template <typename ID>
-  inline MxMultiplex(const ID &id) :
+  typedef ZmScheduler::ID ID;
+
+  struct IDAccessor : public ZuAccessor<MxMultiplex *, ID> {
+    ZuInline static ID value(const MxMultiplex *mx) { return mx->id(); }
+  };
+
+  template <typename ID_>
+  inline MxMultiplex(const ID_ &id) :
     ZiMultiplex(ZiMultiplexParams().id(id)) { }
-  template <typename ID>
-  inline MxMultiplex(const ID &id, ZvCf *cf) :
+  template <typename ID_>
+  inline MxMultiplex(const ID_ &id, ZvCf *cf) :
     ZiMultiplex(ZvMultiplexParams(cf, ZiMultiplexParams().id(id))) { }
 };
 

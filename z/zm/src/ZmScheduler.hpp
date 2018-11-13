@@ -37,6 +37,7 @@
 #include <ZuString.hpp>
 #include <ZuStringN.hpp>
 #include <ZuPrint.hpp>
+#include <ZuID.hpp>
 
 #include <ZmAtomic.hpp>
 #include <ZmObject.hpp>
@@ -192,11 +193,9 @@ private:
 // generic printing
 template <> struct ZuPrint<ZmAffinity> : public ZuPrintFn { };
 
-typedef ZuStringN<32> ZmSchedulerID;
-
 class ZmSchedulerParams {
 public:
-  typedef ZmSchedulerID ID;
+  typedef ZuID ID;
 
   inline ZmSchedulerParams() :
       m_nThreads(1), m_stackSize(0),
@@ -281,7 +280,7 @@ class ZmAPI ZmScheduler : public ZmThreadMgr {
 
 public:
   typedef ZmRef<ScheduleTree::Node> Timer;
-  typedef ZmSchedulerID ID;
+  typedef ZmSchedulerParams::ID ID;
   enum State { Stopped = 0, Starting, Running, Draining, Drained, Stopping };
 
   // might throw ZmRingError
@@ -374,7 +373,7 @@ public:
   ZuInline void threadInit(ZmFn<> fn) { m_threadInitFn = ZuMv(fn); }
   ZuInline void threadFinal(ZmFn<> fn) { m_threadFinalFn = ZuMv(fn); }
 
-  ZuInline const char *id() const { return m_id; }
+  ZuInline ID id() const { return m_id; }
   ZuInline unsigned nThreads() const { return m_nThreads; }
   ZuInline unsigned nWorkers() const { return m_nWorkers; }
   ZuInline int workerID(unsigned i) const {

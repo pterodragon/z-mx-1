@@ -27,7 +27,11 @@ void MxMDSubscriber::init(MxMDCore *core, ZvCf *cf)
 {
   if (!cf->get("id")) cf->set("id", "subscrib");
 
-  MxEngine::init(core, this, core->mx(), cf);
+  Mx *mx = core->mx(cf->get("mx", false, "core"));
+
+  if (!mx) throw ZvCf::Required("subscrib:mx");
+
+  MxEngine::init(core, this, mx, cf);
 
   if (ZuString ip = cf->get("interface")) m_interface = ip;
   m_filter = cf->getInt("filter", 0, 1, false, 0);

@@ -35,6 +35,7 @@
 
 #include <ZvCf.hpp>
 
+#include <MxBase.hpp>
 #include <MxQueue.hpp>
 #include <MxScheduler.hpp>
 #include <MxMultiplex.hpp>

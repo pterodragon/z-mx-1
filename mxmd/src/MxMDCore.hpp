@@ -60,7 +60,7 @@ extern "C" {
   typedef void (*MxMDFeedPluginFn)(MxMDCore *md, ZvCf *cf);
 };
 
-class MxMDCmd : public ZmPolymorph, public ZvCmdServer { };
+class MxMDAPI MxMDCmd : public ZmPolymorph, public ZvCmdServer { };
 
 class MxMDAPI MxMDCore :
   public ZmPolymorph, public MxMDLib, public MxEngineMgr {
@@ -73,15 +73,27 @@ public:
   typedef MxMultiplex Mx;
 
 private:
-  MxMDCore(ZmRef<Mx> mx);
+  typedef ZmRBTree<ZmRef<Mx>,
+	    ZmRBTreeIndex<Mx::IDAccessor,
+	      ZmRBTreeObject<ZuNull,
+		ZmRBTreeLock<ZmNoLock,
+		  ZmRBTreeBase<ZmObject> > > > > MxTbl;
+
+  MxMDCore(ZmRef<MxTbl> mxTbl, Mx *mx);
 
   void init_(ZvCf *cf);
 
 public:
   ~MxMDCore() { }
 
-  ZuInline Mx *mx() { return m_mx.ptr(); }
   ZuInline ZvCf *cf() { return m_cf.ptr(); }
+
+  ZuInline Mx *mx() const { return m_mx; }
+  ZuInline Mx *mx(Mx::ID id) const {
+    MxTbl::Node *node = m_mxTbl->find(id);
+    if (!node) return nullptr;
+    return node->key();
+  }
 
   void start();
   void stop();
@@ -270,8 +282,10 @@ private:
 
   Lock			m_stateLock; // prevents overlapping start() / stop()
 
-  ZmRef<Mx>		m_mx;
   ZmRef<ZvCf>		m_cf;
+
+  ZmRef<MxTbl>		m_mxTbl;
+  Mx			*m_mx = 0;
 
   ZmRef<MxMDCmd>	m_cmd;
 

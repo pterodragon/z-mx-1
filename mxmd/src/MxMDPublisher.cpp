@@ -27,7 +27,9 @@ void MxMDPublisher::init(MxMDCore *core, ZvCf *cf)
 {
   if (!cf->get("id")) cf->set("id", "publish");
 
-  MxMultiplex *mx = core->mx();
+  Mx *mx = core->mx(cf->get("mx", false, "core"));
+
+  if (!mx) throw ZvCf::Required("publish:mx");
 
   MxEngine::init(core, this, mx, cf);
 

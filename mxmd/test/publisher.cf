@@ -1,15 +1,18 @@
 mx {
-  id MxMD
-  nThreads 6
-  rxThread 1
-  txThread 2
-  isolation 1-5
+  core {
+    nThreads 6
+    rxThread 1
+    txThread 2
+    isolation 1-5
+  }
+  cmd { nThreads 3 }
 }
 broadcast {
   name RMD_pub
   size 131072
 }
 cmd {
+  mx cmd
   localPort 19400
 }
 record {

@@ -25,11 +25,13 @@
 
 void MxMDReplay::init(MxMDCore *core, ZmRef<ZvCf> cf)
 {
-  Mx *mx = core->mx();
-
   if (!cf) cf = new ZvCf();
 
-  cf->set("id", "replay");
+  if (!cf->get("id")) cf->set("id", "replay");
+
+  Mx *mx = core->mx(cf->get("mx", false, "core"));
+
+  if (!mx) throw ZvCf::Required("replay:mx");
 
   MxEngine::init(core, this, mx, cf);
 

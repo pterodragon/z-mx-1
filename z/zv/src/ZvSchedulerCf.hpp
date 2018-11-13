@@ -67,7 +67,7 @@ struct ZvSchedulerParams : public ZmSchedulerParams {
 
     static unsigned ncpu = ZmPlatform::getncpu();
 
-    id(cf->get("id"));
+    if (ZuString s = cf->get("id")) id(s);
     nThreads(cf->getInt("nThreads", 1, 1024, false, nThreads()));
     stackSize(cf->getInt("stackSize", 16384, 2<<20, false, stackSize()));
     priority(cf->getEnum<ZvSchedulerPriorities::Map>(

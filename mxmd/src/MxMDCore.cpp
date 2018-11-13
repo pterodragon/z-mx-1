@@ -161,15 +161,19 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
   else {
     cf->fromString(
       "mx {\n"
-      "  id MxMD\n"
-      "  nThreads 4\n"		// thread IDs are 1-based
-      "  rxThread 1\n"		// I/O Rx
-      "  txThread 2\n"		// I/O Tx
-      "  isolation 1-3\n"	// leave thread 4 for general purpose
+      "  core {\n"
+      "    nThreads 4\n"	// thread IDs are 1-based
+      "    rxThread 1\n"	// I/O Rx
+      "    txThread 2\n"	// I/O Tx
+      "    isolation 1-3\n"	// leave thread 4 for general purpose
+      "  }\n"
       "}\n"
       "record {\n"
       "  rxThread 3\n"		// Record Rx - must be distinct from I/O Rx
       "  snapThread 4\n"	// Record snapshot - must be distinct from Rx
+      "}\n"
+      "replay {\n"
+      "  rxThread 4\n"
       "}\n",
       false);
   }
@@ -192,37 +196,69 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
     }
 
     {
-      ZmRef<MxMDCore::Mx> mx;
-      if (ZmRef<ZvCf> mxCf = cf->subset("mx", false))
-	mx = new MxMDCore::Mx("mx", mxCf);
-      else
-	mx = new MxMDCore::Mx("mx");
+      using MxTbl = MxMDCore::MxTbl;
+      using Mx = MxMDCore::Mx;
 
-      if (schedInitFn) schedInitFn(mx);
+      ZmRef<MxTbl> mxTbl = new MxTbl();
 
-      ZeLOG(Info, "starting multiplexer...");
-      if (mx->start() != Zi::OK) {
-	ZeLOG(Fatal, "multiplexer start failed");
-	return md = 0;
+      if (ZmRef<ZvCf> mxCf = cf->subset("mx", false, true)) {
+	ZvCf::Iterator i(mxCf);
+	ZuString key;
+	while (ZmRef<ZvCf> mxCf_ = i.subset(key))
+	  mxTbl->add(new Mx(key, mxCf_));
       }
 
-      md = new MxMDCore(ZuMv(mx));
+      Mx *coreMx;
+      {
+	MxTbl::Node *node;
+	if (!(node = mxTbl->find(Mx::ID("core"))))
+	  throw ZvCf::Required("mx:core");
+	coreMx = node->key();
+      }
+
+      ZeLOG(Info, "starting multiplexers...");
+      {
+	bool failed = false;
+	{
+	  auto i = mxTbl->readIterator();
+	  while (MxTbl::Node *node = i.iterate()) {
+	    Mx *mx = node->key();
+	    if (schedInitFn) schedInitFn(mx);
+	    if (mx->start() != Zi::OK) {
+	      failed = true;
+	      ZeLOG(Fatal, ZtString() << node->key()->id() <<
+		  " multiplexer start failed");
+	      break;
+	    }
+	  }
+	}
+	if (failed) {
+	  {
+	    auto i = mxTbl->readIterator();
+	    while (MxTbl::Node *node = i.iterate())
+	      node->key()->stop(false);
+	  }
+	  return md = nullptr;
+	}
+      }
+
+      md = new MxMDCore(ZuMv(mxTbl), coreMx);
     }
 
     md->init_(cf);
 
   } catch (const ZvError &e) {
     ZeLOG(Fatal, ZtString() << "MxMDLib - configuration error: " << e);
-    return md = 0;
+    return md = nullptr;
   } catch (const ZtString &e) {
     ZeLOG(Fatal, ZtString() << "MxMDLib - error: " << e);
-    return md = 0;
+    return md = nullptr;
   } catch (const ZeError &e) {
     ZeLOG(Fatal, ZtString() << "MxMDLib - error: " << e);
-    return md = 0;
+    return md = nullptr;
   } catch (...) {
     ZeLOG(Fatal, "MxMDLib - unknown exception during init");
-    return md = 0;
+    return md = nullptr;
   }
 
   return ZmSingleton<MxMDCore, 0>::instance(md);
@@ -233,7 +269,8 @@ MxMDLib *MxMDLib::instance()
   return ZmSingleton<MxMDCore, false>::instance();
 }
 
-MxMDCore::MxMDCore(ZmRef<Mx> mx) : MxMDLib(mx), m_mx(ZuMv(mx))
+MxMDCore::MxMDCore(ZmRef<MxTbl> mxTbl, Mx *mx) :
+  MxMDLib(mx), m_mxTbl(ZuMv(mxTbl)), m_mx(mx)
 {
 }
 
@@ -314,7 +351,9 @@ void MxMDCore::init_(ZvCf *cf)
 
   if (ZmRef<ZvCf> cmdCf = cf->subset("cmd", false)) {
     m_cmd = new MxMDCmd();
-    m_cmd->init(m_mx, cmdCf);
+    Mx *mx = this->mx(cmdCf->get("mx", false, "cmd"));
+    if (!mx) throw ZvCf::Required("cmd:mx");
+    m_cmd->init(mx, cmdCf);
     initCmds();
   }
 
@@ -452,7 +491,7 @@ void MxMDCore::stop()
     m_cmd->stop();
   }
 
-  raise(ZeEVENT(Info, "stopping multiplexer..."));
+  raise(ZeEVENT(Info, "stopping multiplexers..."));
   m_mx->stop(false);
 }
 

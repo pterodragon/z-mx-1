@@ -448,7 +448,7 @@ namespace MxTelemetry {
 
       ZuInline Server *server() const { return m_server; }
 
-      void transmit(ZmRef<Msg> msg) {
+      void transmit(ZmRef<Msg> msg) { // named to avoid colliding with send()
 	UDP::send(this, ZuMv(msg), m_server->m_addr);
       }
 

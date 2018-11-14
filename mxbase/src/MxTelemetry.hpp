@@ -47,6 +47,9 @@ namespace MxTelemetry {
     MxEnumValues(Heap, Thread, Multiplexer, HashTbl, Queue,
 	Engine, Link,
 	DBEnv, DBHost, DB);
+    MxEnumNames("Heap", "Thread", "Multiplexer", "HashTbl", "Queue",
+	"Engine", "Link",
+	"DBEnv", "DBHost", "DB");
   }
 
   struct HdrData {
@@ -83,14 +86,7 @@ namespace MxTelemetry {
     }
   };
 
-  struct BitRange {
-    uint8_t	first;
-    uint8_t	count;
-  };
-  struct Bitmap {
-    uint8_t	nRanges;
-    BitRange	ranges[8];
-  };
+  typedef uint64_t Bitmap;
  
   struct Heap {
     enum { Code = Type::Heap };
@@ -165,7 +161,7 @@ namespace MxTelemetry {
   struct Queue {
     enum { Code = Type::Queue };
 
-    char	id[32];
+    char	id[32];		// is same as Link id for Rx/Tx
     uint64_t	inCount;
     uint64_t	inBytes;
     uint64_t	outCount;
@@ -179,8 +175,6 @@ namespace MxTelemetry {
     enum { Code = Type::Link };
 
     char	id[8];
-    char	rxQueue[8];
-    char	txQueue[8];
     uint64_t	rxSeqNo;
     uint64_t	txSeqNo;
     int32_t	readySec;

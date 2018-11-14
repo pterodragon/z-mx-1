@@ -303,14 +303,14 @@ int main(int argc, char **argv)
 	{
 	  int j;
 	  if ((j = atoi(argv[++i])) <= 0) usage();
-	  params.rcvBufSize(j);
+	  params.rxBufSize(j);
 	}
 	break;
       case 'S':
 	{
 	  int j;
 	  if ((j = atoi(argv[++i])) <= 0) usage();
-	  params.sndBufSize(j);
+	  params.txBufSize(j);
 	}
 	break;
       default:

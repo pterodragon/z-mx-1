@@ -77,8 +77,8 @@ struct ZvMultiplexParams : public ZiMultiplexParams {
     epollMaxFDs(cf->getInt("epollMaxFDs", 1, 100000, false, epollMaxFDs()));
     epollQuantum(cf->getInt("epollQuantum", 1, 1024, false, epollQuantum()));
 #endif
-    rcvBufSize(cf->getInt("rcvBufSize", 0, INT_MAX, false, rcvBufSize()));
-    sndBufSize(cf->getInt("sndBufSize", 0, INT_MAX, false, sndBufSize()));
+    rxBufSize(cf->getInt("rcvBufSize", 0, INT_MAX, false, rxBufSize()));
+    txBufSize(cf->getInt("sndBufSize", 0, INT_MAX, false, txBufSize()));
 #ifdef ZiMultiplex_DEBUG
     trace(cf->getInt("trace", 0, 1, false, trace()));
     debug(cf->getInt("debug", 0, 1, false, debug()));

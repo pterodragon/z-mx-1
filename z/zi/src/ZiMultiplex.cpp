@@ -1522,13 +1522,13 @@ bool ZiMultiplex::initSocket(Socket s, const ZiCxnOptions &options)
   {
     int b = 1;
     static struct linger l = { 0, 0 };
-    if (m_rcvBufSize && setsockopt(s, SOL_SOCKET, SO_RCVBUF,
-	  (const char *)&m_rcvBufSize, sizeof(unsigned)) < 0) {
+    if (m_rxBufSize && setsockopt(s, SOL_SOCKET, SO_RCVBUF,
+	  (const char *)&m_rxBufSize, sizeof(unsigned)) < 0) {
       Error("setsockopt(SO_RCVBUF)", Zi::IOError, ZeLastSockError);
       return false;
     }
-    if (m_sndBufSize && setsockopt(s, SOL_SOCKET, SO_SNDBUF,
-	  (const char *)&m_sndBufSize, sizeof(unsigned)) < 0) {
+    if (m_txBufSize && setsockopt(s, SOL_SOCKET, SO_SNDBUF,
+	  (const char *)&m_txBufSize, sizeof(unsigned)) < 0) {
       Error("setsockopt(SO_SNDBUF)", Zi::IOError, ZeLastSockError);
       return false;
     }
@@ -1566,13 +1566,13 @@ bool ZiMultiplex::initSocket(Socket s, const ZiCxnOptions &options)
 
   {
     BOOL b = TRUE;
-    if (m_rcvBufSize && setsockopt(s, SOL_SOCKET, SO_RCVBUF,
-	  (const char *)&m_rcvBufSize, sizeof(unsigned))) {
+    if (m_rxBufSize && setsockopt(s, SOL_SOCKET, SO_RCVBUF,
+	  (const char *)&m_rxBufSize, sizeof(unsigned))) {
       Error("setsockopt(SO_RCVBUF)", Zi::IOError, ZeLastSockError);
       return false;
     }
-    if (m_sndBufSize && setsockopt(s, SOL_SOCKET, SO_SNDBUF,
-	  (const char *)&m_sndBufSize, sizeof(unsigned))) {
+    if (m_txBufSize && setsockopt(s, SOL_SOCKET, SO_SNDBUF,
+	  (const char *)&m_txBufSize, sizeof(unsigned))) {
       Error("setsockopt(SO_SNDBUF)", Zi::IOError, ZeLastSockError);
       return false;
     }
@@ -1852,8 +1852,8 @@ ZiMultiplex::ZiMultiplex(ZiMultiplexParams params) :
 #endif
   m_cxns(ZmHashParams().bits(8).loadFactor(1).cBits(4).init(params.cxnHash())),
   m_txThread(params.txThread()),
-  m_rcvBufSize(params.rcvBufSize()),
-  m_sndBufSize(params.sndBufSize())
+  m_rxBufSize(params.rxBufSize()),
+  m_txBufSize(params.txBufSize())
 #ifdef ZiMultiplex_EPoll
   , m_epollFD(-1),
   m_epollMaxFDs(params.epollMaxFDs()),

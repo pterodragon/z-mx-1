@@ -70,6 +70,7 @@ struct ZmThreadInfo {
   bool		detached;
   unsigned	stackSize;
   int		priority;
+  unsigned	partition;
   ZmBitmap	cpuset;
 };
 
@@ -274,6 +275,7 @@ public:
     info.detached = m_detached;
     info.stackSize = m_stackSize;
     info.priority = m_priority;
+    info.partition = m_partition;
     info.cpuset = m_cpuset;
   }
 
@@ -371,17 +373,19 @@ public:
 
   template <class S> struct CSV_ {
     CSV_(S &stream) : m_stream(stream) { 
-      m_stream << "name,id,tid,main,detached,stackSize,priority,cpuset\n";
+      m_stream <<
+	"name,id,tid,main,detached,stackSize,priority,partition,cpuset\n";
     }
     void print(const ZmThreadInfo &info) {
       m_stream <<
 	info.name << ',' <<
-	info.id << ',' <<
-	info.tid << ',' <<
-	info.main << ',' <<
-	info.detached << ',' <<
-	info.stackSize << ',' <<
-	info.priority << ',' <<
+	ZuBoxed(info.id) << ',' <<
+	ZuBoxed(info.tid) << ',' <<
+	ZuBoxed((unsigned)info.main) << ',' <<
+	ZuBoxed((unsigned)info.detached) << ',' <<
+	ZuBoxed(info.stackSize) << ',' <<
+	ZuBoxed(info.priority) << ',' <<
+	ZuBoxed(info.partition) << ',' <<
 	info.cpuset << '\n';
     }
     S &stream() { return m_stream; }

@@ -448,6 +448,11 @@ namespace MxMDStream {
 
     ZuInline unsigned length() { return sizeof(HdrData) + hdr.len; }
   };
+}
+
+#pragma pack(pop)
+
+namespace MxMDStream {
 
   struct Msg_HeapID {
     ZuInline static const char *id() { return "MxMDStream.Msg"; }
@@ -554,11 +559,7 @@ namespace MxMDStream {
   FnDeclare(resetOB, ResetOB)
 
 #undef FnDeclare
-}
 
-#pragma pack(pop)
-
-namespace MxMDStream {
   // ensure passed lambdas are stateless and match required signature
   template <typename Cxn, typename L> struct IOLambda_ {
     typedef void (*Fn)(Cxn *, MxQMsg *, ZiIOContext &);

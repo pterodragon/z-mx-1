@@ -809,12 +809,12 @@ struct ZdbHostConfig {
     down = cf->get("down");
   }
 
-  ZuBox0(unsigned)	id;
-  ZuBox0(unsigned)	priority;
-  ZiIP			ip;
-  ZuBox0(uint16_t)	port;
-  ZtString		up;
-  ZtString		down;
+  unsigned	id = 0;
+  unsigned	priority = 0;
+  ZiIP		ip;
+  uint16_t	port = 0;
+  ZtString	up;
+  ZtString	down;
 };
 
 class Zdb_Host : public ZmPolymorph {

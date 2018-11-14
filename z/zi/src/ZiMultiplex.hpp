@@ -645,8 +645,8 @@ public:
     m_epollMaxFDs(256),
     m_epollQuantum(8),
 #endif
-    m_rcvBufSize(0),
-    m_sndBufSize(0),
+    m_rxBufSize(0),
+    m_txBufSize(0),
     m_listenerHash("ZiMultiplex.ListenerHash"),
     m_requestHash("ZiMultiplex.RequestHash"),
     m_cxnHash("ZiMultiplex.CxnHash")
@@ -700,10 +700,10 @@ public:
   inline ZiMultiplexParams &epollQuantum(unsigned n)
     { m_epollQuantum = n; return *this; }
 #endif
-  inline ZiMultiplexParams &rcvBufSize(unsigned v)
-    { m_rcvBufSize = v; return *this; }
-  inline ZiMultiplexParams &sndBufSize(unsigned v)
-    { m_sndBufSize = v; return *this; }
+  inline ZiMultiplexParams &rxBufSize(unsigned v)
+    { m_rxBufSize = v; return *this; }
+  inline ZiMultiplexParams &txBufSize(unsigned v)
+    { m_txBufSize = v; return *this; }
   inline ZiMultiplexParams &listenerHash(ZuString id)
     { m_listenerHash = id; return *this; }
   inline ZiMultiplexParams &requestHash(ZuString id)
@@ -724,8 +724,8 @@ public:
   inline unsigned epollMaxFDs() const { return m_epollMaxFDs; }
   inline unsigned epollQuantum() const { return m_epollQuantum; }
 #endif
-  inline unsigned rcvBufSize() const { return m_rcvBufSize; }
-  inline unsigned sndBufSize() const { return m_sndBufSize; }
+  inline unsigned rxBufSize() const { return m_rxBufSize; }
+  inline unsigned txBufSize() const { return m_txBufSize; }
   inline ZuString listenerHash() const { return m_listenerHash; }
   inline ZuString requestHash() const { return m_requestHash; }
   inline ZuString cxnHash() const { return m_cxnHash; }
@@ -744,8 +744,8 @@ private:
   unsigned		m_epollMaxFDs;
   unsigned		m_epollQuantum;
 #endif
-  unsigned		m_rcvBufSize;
-  unsigned		m_sndBufSize;
+  unsigned		m_rxBufSize;
+  unsigned		m_txBufSize;
   const char		*m_listenerHash;
   const char		*m_requestHash;
   const char		*m_cxnHash;
@@ -1040,8 +1040,8 @@ public:
   ZuInline unsigned epollMaxFDs() const { return m_epollMaxFDs; }
   ZuInline unsigned epollQuantum() const { return m_epollQuantum; }
 #endif
-  ZuInline unsigned rcvBufSize() const { return m_rcvBufSize; }
-  ZuInline unsigned sndBufSize() const { return m_sndBufSize; }
+  ZuInline unsigned rxBufSize() const { return m_rxBufSize; }
+  ZuInline unsigned txBufSize() const { return m_txBufSize; }
 
 private:
   void drain();			// prevents mis-use of ZmScheduler::drain
@@ -1104,8 +1104,8 @@ private:
 
   unsigned		m_txThread;
 
-  unsigned		m_rcvBufSize;	// setsockopt SO_RCVBUF option
-  unsigned		m_sndBufSize;	// setsockopt SO_SNDBUF option
+  unsigned		m_rxBufSize;	// setsockopt SO_RCVBUF option
+  unsigned		m_txBufSize;	// setsockopt SO_SNDBUF option
 
 #ifdef ZiMultiplex_IOCP
   HANDLE		m_completionPort;

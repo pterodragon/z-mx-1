@@ -22,6 +22,7 @@
 // * cached length
 // * always null-terminated
 // * optimized for smaller sizes
+// * max 64k
 
 #ifndef ZuStringN_HPP
 #define ZuStringN_HPP
@@ -308,8 +309,8 @@ public:
   }
 
 protected:
-  uint32_t	m_size;
-  uint32_t	m_length;
+  uint16_t	m_size;
+  uint16_t	m_length;
 };
 
 template <typename T_>

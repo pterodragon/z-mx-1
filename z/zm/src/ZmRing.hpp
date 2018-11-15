@@ -199,10 +199,16 @@ public:
 private:
   struct Ctrl {
     ZmAtomic<uint32_t>		head;
-    char			pad_1[CacheLineSize - 4];
+    uint32_t			pad_1;
+    ZmAtomic<uint64_t>		inCount;
+    ZmAtomic<uint64_t>		inBytes;
+    char			pad_2[CacheLineSize - 24];
 
     ZmAtomic<uint32_t>		tail;
-    char			pad_2[CacheLineSize - 4];
+    uint32_t			pad_3;
+    ZmAtomic<uint64_t>		outCount;
+    ZmAtomic<uint64_t>		outBytes;
+    char			pad_4[CacheLineSize - 24];
   };
 
   ZuInline const Ctrl *ctrl() const { return (const Ctrl *)m_ctrl; }
@@ -213,6 +219,19 @@ private:
 
   ZuInline const ZmAtomic<uint32_t> &tail() const { return ctrl()->tail; }
   ZuInline ZmAtomic<uint32_t> &tail() { return ctrl()->tail; }
+
+  ZuInline const ZmAtomic<uint64_t> &inCount() const
+    { return ctrl()->inCount; }
+  ZuInline ZmAtomic<uint64_t> &inCount() { return ctrl()->inCount; }
+  ZuInline const ZmAtomic<uint64_t> &inBytes() const
+    { return ctrl()->inBytes; }
+  ZuInline ZmAtomic<uint64_t> &inBytes() { return ctrl()->inBytes; }
+  ZuInline const ZmAtomic<uint64_t> &outCount() const
+    { return ctrl()->outCount; }
+  ZuInline ZmAtomic<uint64_t> &outCount() { return ctrl()->outCount; }
+  ZuInline const ZmAtomic<uint64_t> &outBytes() const
+    { return ctrl()->outBytes; }
+  ZuInline ZmAtomic<uint64_t> &outBytes() { return ctrl()->outBytes; }
 
 public:
   ZuInline bool operator !() const { return !m_ctrl; }
@@ -329,6 +348,9 @@ public:
 	this->ZmRing_wake(Head, *ptr, 1);
     } else
       *ptr = Ready; // release
+
+    this->inCount().store_(this->inCount().load_() + 1);
+    this->inBytes().store_(this->inBytes().load_() + Size);
   }
 
   void eof(bool b = true) {
@@ -403,6 +425,9 @@ public:
 	this->ZmRing_wake(Tail, this->tail(), 1);
     } else
       this->tail() = tail; // release
+
+    this->outCount().store_(this->outCount().load_() + 1);
+    this->outBytes().store_(this->outBytes().load_() + Size);
   }
 
   // can be called by a reader after shift() returns 0; returns
@@ -429,6 +454,17 @@ public:
     int i = readStatus();
     if (i < 0) return 0;
     return i / Size;
+  }
+
+  inline void stats(
+      uint64_t &inCount, uint64_t &inBytes, 
+      uint64_t &outCount, uint64_t &outBytes) {
+    ZmAssert(m_ctrl);
+
+    inCount = this->inCount().load_();
+    inBytes = this->inBytes().load_();
+    outCount = this->outCount().load_();
+    outBytes = this->outBytes().load_();
   }
 
 private:

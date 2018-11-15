@@ -256,10 +256,16 @@ private:
 #endif
   struct Ctrl {
     ZmAtomic<uint32_t>		head;
-    char			pad_1[CacheLineSize - 4];
+    uint32_t			pad_1;
+    ZmAtomic<uint64_t>		inCount;
+    ZmAtomic<uint64_t>		inBytes;
+    char			pad_2[CacheLineSize - 24];
 
     ZmAtomic<uint32_t>		tail;
-    char			pad_2[CacheLineSize - 4];
+    uint32_t			pad_3;
+    ZmAtomic<uint64_t>		outCount;
+    ZmAtomic<uint64_t>		outBytes;
+    char			pad_4[CacheLineSize - 24];
 
     ZmAtomic<uint32_t>		openSize; // opened size && latency
     ZmAtomic<uint32_t>		rdrCount; // reader count
@@ -282,6 +288,19 @@ private:
   ZuInline const ZmAtomic<uint32_t> &tail() const { return ctrl()->tail; }
   ZuInline ZmAtomic<uint32_t> &tail() { return ctrl()->tail; }
 
+  ZuInline const ZmAtomic<uint64_t> &inCount() const
+    { return ctrl()->inCount; }
+  ZuInline ZmAtomic<uint64_t> &inCount() { return ctrl()->inCount; }
+  ZuInline const ZmAtomic<uint64_t> &inBytes() const
+    { return ctrl()->inBytes; }
+  ZuInline ZmAtomic<uint64_t> &inBytes() { return ctrl()->inBytes; }
+  ZuInline const ZmAtomic<uint64_t> &outCount() const
+    { return ctrl()->outCount; }
+  ZuInline ZmAtomic<uint64_t> &outCount() { return ctrl()->outCount; }
+  ZuInline const ZmAtomic<uint64_t> &outBytes() const
+    { return ctrl()->outBytes; }
+  ZuInline ZmAtomic<uint64_t> &outBytes() { return ctrl()->outBytes; }
+ 
   ZuInline ZmAtomic<uint32_t> &openSize() { return ctrl()->openSize; }
   ZuInline ZmAtomic<uint32_t> &rdrCount() { return ctrl()->rdrCount; }
   ZuInline ZmAtomic<uint64_t> &rdrMask() { return ctrl()->rdrMask; }
@@ -497,7 +516,8 @@ public:
 
     uint32_t head = this->head().load_();
     uint8_t *ptr = &((uint8_t *)data())[head & ~(Wrapped | Mask)];
-    head += align(Traits::size(*(const T *)&ptr[8]));
+    uint32_t size_ = align(Traits::size(*(const T *)&ptr[8]));
+    head += size_;
     if ((head & ~(Wrapped | Mask)) >= size())
       head = (head ^ Wrapped) - size();
 
@@ -506,6 +526,9 @@ public:
 	ZiRing_wake(Head, this->head(), rdrCount().load_());
     } else
       this->head() = head; // release
+
+    this->inCount().store_(this->inCount().load_() + 1);
+    this->inBytes().store_(this->inBytes().load_() + size_);
   }
 
   void eof(bool b = true) {
@@ -767,7 +790,8 @@ public:
 
     uint32_t tail = m_tail;
     uint8_t *ptr = &((uint8_t *)data())[tail & ~Wrapped];
-    tail += align(Traits::size(*(const T *)&ptr[8]));
+    uint32_t size_ = align(Traits::size(*(const T *)&ptr[8]));
+    tail += size_;
     if ((tail & ~Wrapped) >= size()) tail = (tail ^ Wrapped) - size();
     m_tail = tail;
     if (*(ZmAtomic<uint64_t> *)ptr &= ~(1ULL<<m_id)) return;
@@ -776,6 +800,9 @@ public:
 	ZiRing_wake(Tail, this->tail(), 1);
     } else
       this->tail() = tail; // release
+
+    this->outCount().store_(this->outCount().load_() + 1);
+    this->outBytes().store_(this->outBytes().load_() + size_);
   }
 
   // can be called by readers after push returns 0; returns
@@ -793,6 +820,17 @@ public:
     tail &= ~Wrapped;
     if (head >= tail) return head - tail;
     return size() - (tail - head);
+  }
+
+  inline void stats(
+      uint64_t &inCount, uint64_t &inBytes, 
+      uint64_t &outCount, uint64_t &outBytes) {
+    ZmAssert(m_ctrl);
+
+    inCount = this->inCount().load_();
+    inBytes = this->inBytes().load_();
+    outCount = this->outCount().load_();
+    outBytes = this->outBytes().load_();
   }
 
 #ifndef ZiRing_FUNCTEST

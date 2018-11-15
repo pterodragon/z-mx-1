@@ -94,6 +94,9 @@ public:
     m_item.write(item.m_item);
   }
 
+  // bytes() returns the size in bytes of the item (for queue statistics)
+  ZuInline unsigned bytes() const { return m_item.bytes(); }
+
 private:
   Item	&m_item;
 };
@@ -266,8 +269,7 @@ public:
   template <typename ...Args>
   ZmPQueue(Key head, Args &&... args) :
       NTP::Base{ZuFwd<Args>(args)...},
-      m_headKey(head), m_tailKey(head),
-      m_length(0), m_count(0), m_addSeqNo(0) {
+      m_headKey(head), m_tailKey(head) {
     memset(m_head, 0, sizeof(Node *) * Levels);
     memset(m_tail, 0, sizeof(Node *) * Levels);
   }
@@ -580,6 +582,15 @@ public:
 
   inline bool empty() const { return (!m_count); }
 
+  inline void stats(
+      uint64_t &inCount, uint64_t &inBytes, 
+      uint64_t &outCount, uint64_t &outBytes) {
+    inCount = m_inCount;
+    inBytes = m_inBytes;
+    outCount = m_outCount;
+    outBytes = m_outBytes;
+  }
+
   inline void reset(Key head) {
     Guard guard(m_lock);
     m_headKey = m_tailKey = head;
@@ -689,11 +700,16 @@ private:
       return 0;
     }
 
+    unsigned bytes = item.bytes();
+
     if (ZuLikely(key == m_headKey)) { // usual case - in-order
       clipHead_(end); // remove overlapping data from queue
 
-      return enqueue__<Dequeue>(node, end, length, addSeqNo);
+      return enqueue__<Dequeue>(node, end, length, bytes, addSeqNo);
     }
+
+    ++m_inCount;
+    m_inBytes += bytes;
 
     // find the item immediately following the key
 
@@ -790,19 +806,25 @@ private:
   }
   template <bool Dequeue>
   ZuInline typename ZuIfT<Dequeue, NodeRef>::T enqueue__(
-      Node *node, Key end, unsigned, unsigned) {
+      Node *node, Key end, unsigned, unsigned bytes, unsigned) {
     m_headKey = end;
     if (end > m_tailKey) m_tailKey = end;
+    ++m_inCount;
+    m_inBytes += bytes;
+    ++m_outCount;
+    m_outCount += bytes;
     return node;
   }
   template <bool Dequeue>
   ZuInline typename ZuIfT<!Dequeue, NodeRef>::T enqueue__(
-      Node *node, Key end, unsigned length, unsigned addSeqNo) {
+      Node *node, Key end, unsigned length, unsigned bytes, unsigned addSeqNo) {
     nodeRef(node);
     addHead_<0>(node, addSeqNo);
     if (end > m_tailKey) m_tailKey = end;
     m_length += length;
     ++m_count;
+    ++m_inCount;
+    m_inBytes += bytes;
     return 0;
   }
 
@@ -822,6 +844,8 @@ private:
     if (!length) goto loop;
     Key end = key + length;
     m_headKey = end;
+    ++m_outCount;
+    m_outBytes += item.bytes();
     return node;
   }
 public:
@@ -851,6 +875,8 @@ private:
     if (!length) goto loop;
     Key end = item.key() + length;
     m_headKey = end;
+    ++m_outCount;
+    m_outBytes += item.bytes();
     return node;
   }
 public:
@@ -948,9 +974,13 @@ private:
   Node		  *m_head[Levels];
   Key		  m_tailKey;
   Node		  *m_tail[Levels];
-  unsigned	  m_length;
-  unsigned	  m_count;
-  unsigned	  m_addSeqNo;
+  unsigned	  m_length = 0;
+  unsigned	  m_count = 0;
+  unsigned	  m_addSeqNo = 0;
+  uint64_t	  m_inBytes = 0;
+  uint64_t	  m_inCount = 0;
+  uint64_t	  m_outBytes = 0;
+  uint64_t	  m_outCount = 0;
 };
 
 // template resend-requesting receiver using ZmPQueue

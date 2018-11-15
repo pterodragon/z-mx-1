@@ -349,6 +349,11 @@ void MxMDCore::init_(ZvCf *cf)
 
   m_broadcast.init(this);
 
+  if (ZmRef<ZvCf> telCf = cf->subset("telemetry", false)) {
+    m_telemetry = new MxMDTelemetry();
+    m_telemetry->init(this, telCf);
+  }
+
   if (ZmRef<ZvCf> cmdCf = cf->subset("cmd", false)) {
     m_cmd = new MxMDCmd();
     Mx *mx = this->mx(cmdCf->get("mx", false, "cmd"));
@@ -441,6 +446,11 @@ void MxMDCore::start()
 {
   Guard guard(m_stateLock);
 
+  if (m_telemetry) {
+    raise(ZeEVENT(Info, "starting telemetry..."));
+    m_telemetry->start();
+  }
+
   if (m_cmd) {
     raise(ZeEVENT(Info, "starting cmd server..."));
     m_cmd->start();
@@ -489,6 +499,11 @@ void MxMDCore::stop()
   if (m_cmd) {
     raise(ZeEVENT(Info, "stopping command server..."));
     m_cmd->stop();
+  }
+
+  if (m_telemetry) {
+    raise(ZeEVENT(Info, "stopping telemetry..."));
+    m_telemetry->stop();
   }
 
   raise(ZeEVENT(Info, "stopping multiplexers..."));
@@ -1203,4 +1218,106 @@ void MxMDCore::timer()
   else
     m_mx->add(ZmFn<>::Member<&MxMDCore::timer>::fn(this),
 	next.zmTime(), &m_timer);
+}
+
+void MxMDTelemetry::init(MxMDCore *core, ZvCf *cf)
+{
+  using namespace MxTelemetry;
+
+  MxMultiplex *mx = core->mx(cf->get("mx", false, "telemetry"));
+  if (!mx) throw ZvCf::Required("telemetry:mx");
+  m_core = core;
+  Server::init(mx, cf);
+}
+
+void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
+{
+  using namespace MxTelemetry;
+
+  ZmHeapMgr::stats(ZmHeapMgr::StatsFn{
+      [](Cxn *cxn, const ZmHeapInfo &info, const ZmHeapStats &stats) {
+	cxn->transmit(heap(
+	      info.id, info.config.cacheSize, info.config.cpuset.uint64(),
+	      stats.cacheAllocs, stats.heapAllocs, stats.frees,
+	      stats.allocated, stats.maxAllocated,
+	      info.size, (uint16_t)info.partition,
+	      (uint8_t)info.config.alignment));
+      }, cxn});
+
+  ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{
+      [](Cxn *cxn, ZmThreadContext *tc) {
+	ZmThreadName name;
+	tc->name(name);
+	cxn->transmit(thread(
+	      name, (uint64_t)tc->tid(), tc->stackSize(),
+	      tc->cpuset().uint64(), tc->id(),
+	      tc->priority(), (uint16_t)tc->partition(),
+	      tc->main(), tc->detached()));
+      }, cxn});
+
+  {
+    ReadGuard guard(m_lock);
+
+    {
+      while (MxEngine *engine_ = m_engines.shift()) {
+	unsigned down, disabled, transient, up, reconn, failed;
+        int state = engine_->state(
+	    down, disabled, transient, up, reconn, failed);
+	cxn->transmit(MxTelemetry::engine(
+	      engine_->id(), engine_->mx()->id(),
+	      down, disabled, transient, up, reconn, failed,
+	      (uint16_t)engine_->nLinks(),
+	      (uint8_t)engine_->rxThread(), (uint8_t)engine_->txThread(),
+	      (uint8_t)state));
+      }
+    }
+    {
+      while (MxAnyLink *link_ = m_links.shift()) {
+	unsigned reconnects;
+	int state = link_->state(&reconnects);
+	cxn->transmit(MxTelemetry::link(
+	      link_->id(), link_->rxSeqNo(), link_->txSeqNo(),
+	      reconnects, (uint8_t)state));
+      }
+    }
+    {
+      auto i = m_queues.readIterator();
+      while (Queues::Node *node = i.iterate()) {
+	MxQueue *queue_ = node->val();
+	const auto &key = node->key();
+	uint64_t inCount, inBytes, outCount, outBytes;
+	queue_->stats(inCount, inBytes, outCount, outBytes);
+	cxn->transmit(queue(
+	      key.p1(), queue_->head(),
+	      inCount, inBytes, outCount, outBytes, (uint32_t)0,
+	      (uint8_t)(key.p2() ? QueueType::Tx : QueueType::Rx)));
+      }
+    }
+  }
+}
+
+void MxMDTelemetry::engine(MxEngine *engine)
+{
+  Guard guard(m_lock);
+  m_engines.push(engine);
+}
+
+void MxMDTelemetry::link(MxAnyLink *link)
+{
+  Guard guard(m_lock);
+  m_links.push(link);
+}
+
+void MxMDTelemetry::addQueue(MxID id, bool tx, MxQueue *queue)
+{
+  auto key = ZuMkPair(id, tx);
+  Guard guard(m_lock);
+  if (!m_queues.find(key)) m_queues.add(key, queue);
+}
+
+void MxMDTelemetry::delQueue(MxID id, bool tx)
+{
+  auto key = ZuMkPair(id, tx);
+  Guard guard(m_lock);
+  m_queues.del(key);
 }

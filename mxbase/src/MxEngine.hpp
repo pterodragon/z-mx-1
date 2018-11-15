@@ -158,9 +158,20 @@ public:
   virtual bool failover() const = 0;
   virtual void failover(bool) = 0;
 
+  inline MxSeqNo rxSeqNo() const {
+    if (const MxQueue *queue = rxQueuePtr()) return queue->head();
+    return 0;
+  }
+  inline MxSeqNo txSeqNo() const {
+    if (const MxQueue *queue = txQueuePtr()) return queue->head();
+    return 0;
+  }
+
 protected:
   virtual MxQueue *rxQueuePtr() = 0;
+  virtual const MxQueue *rxQueuePtr() const = 0;
   virtual MxQueue *txQueuePtr() = 0;
+  virtual const MxQueue *txQueuePtr() const = 0;
 
   virtual void connect() = 0;
   virtual void disconnect() = 0;
@@ -298,6 +309,14 @@ public:
 
   ZuInline int state() const {
     ZmReadGuard<ZmLock> guard(m_stateLock);
+    return m_state;
+  }
+  inline int state(
+      unsigned &down, unsigned &disabled, unsigned &transient,
+      unsigned &up, unsigned &reconn, unsigned &failed) {
+    ZmReadGuard<ZmLock> guard(m_stateLock);
+    down = m_down; disabled = m_disabled; transient = m_transient;
+    up = m_up; reconn = m_reconn; failed = m_failed;
     return m_state;
   }
 
@@ -668,7 +687,9 @@ public:
     { return this->engine()->app()->retrieve(this, seqNo); }
 
   MxQueue *rxQueuePtr() { return &(this->rxQueue()); }
+  const MxQueue *rxQueuePtr() const { return &(this->rxQueue()); }
   MxQueue *txQueuePtr() { return &(this->txQueue()); }
+  const MxQueue *txQueuePtr() const { return &(this->txQueue()); }
 
   template <typename L, typename ...Args>
   ZuInline void rxRun(L &&l, Args &&... args)

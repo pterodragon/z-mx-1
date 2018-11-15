@@ -94,12 +94,13 @@ struct MxQMsgData {
 class MxQFn {
 public:
   typedef MxSeqNo Key;
-  inline MxQFn(MxQMsgData &item) : m_item(item) { }
-  inline MxSeqNo key() const { return m_item.id.seqNo; }
-  inline unsigned length() const { return 1; }
-  inline unsigned clipHead(unsigned n) { return 1; }
-  inline unsigned clipTail(unsigned n) { return 1; }
-  inline void write(const MxQFn &) { }
+  ZuInline MxQFn(MxQMsgData &item) : m_item(item) { }
+  ZuInline MxSeqNo key() const { return m_item.id.seqNo; }
+  ZuInline unsigned length() const { return 1; }
+  ZuInline unsigned clipHead(unsigned n) { return 1; }
+  ZuInline unsigned clipTail(unsigned n) { return 1; }
+  ZuInline void write(const MxQFn &) { }
+  ZuInline unsigned bytes() const { return m_item.length; }
 
 private:
   MxQMsgData	&m_item;

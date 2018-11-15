@@ -47,6 +47,7 @@ struct Msg : public Msg_Data {
   }
   template <typename I>
   inline void write(const I &i) { }
+  inline unsigned bytes() const { return 1; }
 };
 
 typedef ZmPQueue<Msg,

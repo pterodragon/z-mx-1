@@ -30,10 +30,13 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <ZuPOD.hpp>
+
 #include <ZmObject.hpp>
+#include <ZmDRing.hpp>
+#include <ZmRBTree.hpp>
 #include <ZmRef.hpp>
 #include <ZmThread.hpp>
-#include <ZuPOD.hpp>
 
 #include <ZePlatform.hpp>
 
@@ -42,6 +45,7 @@
 
 #include <MxMultiplex.hpp>
 #include <MxEngine.hpp>
+#include <MxTelemetry.hpp>
 
 #include <MxMD.hpp>
 #include <MxMDStream.hpp>
@@ -58,6 +62,39 @@ class MxMDCore;
 
 extern "C" {
   typedef void (*MxMDFeedPluginFn)(MxMDCore *md, ZvCf *cf);
+};
+
+class MxMDAPI MxMDTelemetry : public ZmPolymorph, public MxTelemetry::Server {
+  typedef ZmLock Lock;
+  typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
+
+public:
+  void init(MxMDCore *core, ZvCf *cf);
+
+  void run(MxTelemetry::Server::Cxn *);
+
+  void engine(MxEngine *);
+  void link(MxAnyLink *);
+  void addQueue(MxID, bool tx, MxQueue *queue);
+  void delQueue(MxID, bool tx);
+
+private:
+  typedef ZmDRing<MxEngine *,
+	    ZmDRingLock<ZmNoLock> > Engines;
+
+  typedef ZmDRing<MxAnyLink *,
+	    ZmDRingLock<ZmNoLock> > Links;
+
+  typedef ZmRBTree<ZuPair<MxID, bool>,
+	    ZmRBTreeVal<MxQueue *,
+	      ZmRBTreeLock<ZmNoLock> > > Queues;
+
+  MxMDCore	*m_core = 0;
+  Lock		m_lock;
+    Engines	  m_engines;
+    Links	  m_links;
+    Queues	  m_queues;
 };
 
 class MxMDAPI MxMDCmd : public ZmPolymorph, public ZvCmdServer { };
@@ -127,27 +164,21 @@ public:
 private:
   void initCmds();
 
-  void l1(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
-  void l2(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void l1(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void l2(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
   void l2_side(MxMDOBSide *, ZtString &);
-  void security_(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void security_(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
 
-  void ticksizes(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
-  void securities(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
-  void orderbooks(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void ticksizes(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void securities(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void orderbooks(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
 
 #if 0
-  void tick(
-  void update(
+  void tick(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void update(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
 
-  void feeds(
-  void venues(
+  void feeds(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void venues(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
 #endif
 
   void addVenueMapping_(ZuAnyPOD *);
@@ -158,20 +189,28 @@ private:
   // Engine Management
   void addEngine(MxEngine *) { }
   void delEngine(MxEngine *) { }
-  void engineState(MxEngine *, MxEnum, MxEnum) { }
+  void engineState(MxEngine *engine, MxEnum, MxEnum) {
+    if (m_telemetry) m_telemetry->engine(engine);
+  }
 
   // Link Management
   void updateLink(MxAnyLink *) { }
   void delLink(MxAnyLink *) { }
-  void linkState(MxAnyLink *, MxEnum, MxEnum) { }
+  void linkState(MxAnyLink *link, MxEnum, MxEnum) {
+    if (m_telemetry) m_telemetry->link(link);
+  }
 
   // Pool Management
   void updateTxPool(MxAnyTxPool *) { }
   void delTxPool(MxAnyTxPool *) { }
 
   // Queue Management
-  void addQueue(MxID id, bool tx, MxQueue *) { }
-  void delQueue(MxID id, bool tx) { }
+  void addQueue(MxID id, bool tx, MxQueue *queue) {
+    if (m_telemetry) m_telemetry->addQueue(id, tx, queue);
+  }
+  void delQueue(MxID id, bool tx) {
+    if (m_telemetry) m_telemetry->delQueue(id, tx);
+  }
 
   // Exception handling
   void exception(ZmRef<ZeEvent> e) { raise(ZuMv(e)); }
@@ -287,6 +326,7 @@ private:
   ZmRef<MxTbl>		m_mxTbl;
   Mx			*m_mx = 0;
 
+  ZmRef<MxMDTelemetry>	m_telemetry;
   ZmRef<MxMDCmd>	m_cmd;
 
   MxMDBroadcast		m_broadcast;	// broadcasts updates

@@ -167,12 +167,12 @@ namespace MxTelemetry {
     enum { Code = Type::Queue };
 
     MxIDString	id;		// is same as Link id for Rx/Tx
+    uint64_t	seqNo;		// 0 for Thread, IPC
     uint64_t	inCount;
     uint64_t	inBytes;
     uint64_t	outCount;
     uint64_t	outBytes;
-    uint32_t	maxSize;
-    uint8_t	state;
+    uint32_t	size;		// 0 for Rx, Tx
     uint8_t	type;		// QueueType
   };
 
@@ -182,14 +182,8 @@ namespace MxTelemetry {
     MxID	id;
     uint64_t	rxSeqNo;
     uint64_t	txSeqNo;
-    int32_t	readySec;
-    uint32_t	readyNsec;
-    uint16_t	poolOffset;
+    uint32_t	reconnects;
     uint8_t	state;
-    uint8_t	dequeuing;
-    uint8_t	sending;
-    uint8_t	resending;
-    uint8_t	archiving;
   };
 
   // followed by
@@ -206,7 +200,6 @@ namespace MxTelemetry {
     uint32_t	up;
     uint32_t	reconn;
     uint32_t	failed;
-    uint16_t	nTxPools;
     uint16_t	nLinks;
     uint8_t	rxThread;
     uint8_t	txThread;

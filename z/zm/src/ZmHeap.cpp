@@ -104,11 +104,19 @@ private:
   }
 
   void stats(StatsFn fn) {
-    ReadGuard guard(m_lock);
-    auto i = m_caches3.readIterator();
-    while (ZmHeapCache *c = i.iterateKey()) {
+    ZmRef<ZmHeapCache> c;
+    {
+      ReadGuard guard(m_lock);
+      c = m_caches3.minimumKey();
+    }
+    while (c) {
       c->allStats();
       fn(c->info(), c->stats());
+      {
+	ReadGuard guard(m_lock);
+	c = m_caches3.readIterator<ZmRBTreeGreater>(
+	    ZmHeapCache::IDPartSizeAccessor::value(c)).iterateKey();
+      }
     }
   }
 
@@ -331,10 +339,10 @@ void ZmHeapCache::allStats()
   m_stats = {};
   StatsFn fn = StatsFn::Lambda<ZmNoHeap>::fn(
       [this](const ZmHeapInfo &, const ZmHeapStats &s) {
-	this->m_stats.heapAllocs += s.heapAllocs;
-	this->m_stats.cacheAllocs += s.cacheAllocs;
-	this->m_stats.frees += s.frees;
-	this->m_stats.allocated += s.allocated;
-	this->m_stats.maxAllocated += s.maxAllocated; });
+	m_stats.heapAllocs += s.heapAllocs;
+	m_stats.cacheAllocs += s.cacheAllocs;
+	m_stats.frees += s.frees;
+	m_stats.allocated += s.allocated;
+	m_stats.maxAllocated += s.maxAllocated; });
   m_allStatsFn(fn);
 }

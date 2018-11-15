@@ -6,12 +6,18 @@
 
 static ZmSemaphore sem;
 
-class App : public MxTelemetry::Client {
-  void process(ZmRef<MxTelemetry::Msg> msg) {
+class App : public MxTelemetry::Server {
+  void run(MxTelemetry::Server::Cxn *cxn) {
     using namespace MxTelemetry;
 
-    std::cout << "received " << Type::name(msg->hdr().type) <<
-      '\n' << std::flush;
+    ZmHeapMgr::stats(ZmHeapMgr::StatsFn{
+	[](Cxn *cxn, const ZmHeapInfo &info, const ZmHeapStats &stats) {
+	  cxn->transmit(heap(
+		info.id, info.config.cacheSize, info.config.cpuset.uint64(),
+		stats.cacheAllocs, stats.heapAllocs, stats.frees,
+		stats.allocated, stats.maxAllocated,
+		info.size, info.partition, info.config.alignment));
+	}, cxn});
   }
 };
 
@@ -20,7 +26,7 @@ int main()
   ZmTrap::sigintFn([]() { sem.post(); });
   ZmTrap::trap();
 
-  ZeLog::init("MxTelClient");
+  ZeLog::init("MxTelServer");
   ZeLog::level(0);
   ZeLog::add(ZeLog::fileSink("&2"));
   ZeLog::start();
@@ -30,6 +36,7 @@ int main()
       "telemetry {\n"
       "  ip 127.0.0.1\n"
       "  port 19300\n"
+      "  freq 1000000\n"
       "}\n",
       false);
 

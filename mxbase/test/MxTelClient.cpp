@@ -10,8 +10,15 @@ class App : public MxTelemetry::Client {
   void process(ZmRef<MxTelemetry::Msg> msg) {
     using namespace MxTelemetry;
 
-    std::cout << "received " << Type::name(msg->hdr().type) <<
-      '\n' << std::flush;
+    std::cout << Type::name(msg->hdr().type) << '\n' << std::flush;
+    switch ((int)msg->hdr().type) {
+      case Type::Heap:
+	{
+	  const Heap &heap = msg->as<Heap>();
+	  std::cout << "  id: " << heap.id << '\n' << std::flush;
+	}
+	break;
+    }
   }
 };
 

@@ -58,8 +58,8 @@ namespace MxTelemetry {
   };
 
   struct Hdr : public HdrData {
-    template <typename ...Args>
-    ZuInline Hdr(Args &&... args) : HdrData{ZuFwd<Args>(args)...} { }
+    ZuInline Hdr() { }
+    ZuInline Hdr(uint32_t len, uint32_t type) : HdrData{len, type} { }
 
     ZuInline void *ptr() { return (void *)this; }
     ZuInline const void *ptr() const { return (const void *)this; }
@@ -91,44 +91,49 @@ namespace MxTelemetry {
   struct Heap {
     enum { Code = Type::Heap };
 
-    char	id[64];
+    MxIDString	id;
     uint64_t	cacheSize;
-    uint32_t	size;
-    uint8_t	partition;
-    uint8_t	alignment;
     Bitmap	cpuset;
+    uint64_t	cacheAllocs;
+    uint64_t	heapAllocs;
+    uint64_t	frees;
+    uint64_t	allocated;
+    uint64_t	maxAllocated;
+    uint32_t	size;
+    uint16_t	partition;
+    uint8_t	alignment;
   };
 
   struct Thread {
     enum { Code = Type::Thread };
 
-    char	name[32];
+    MxIDString	name;
     uint64_t	tid;
     uint64_t	stackSize;
     int32_t	id;		// thread mgr ID, -ve if unset
     int32_t	priority;
+    uint16_t	partition;
     uint8_t	main;
     uint8_t	detached;
-    uint8_t	partition;
     Bitmap	cpuset;
   };
 
   struct MxThread {
-    char	id[32];		// ID of both thread and queue
+    MxIDString	id;		// ID of both thread and queue
   };
   struct Multiplexer {	
     enum { Code = Type::Multiplexer };
 
-    char	id[8];
+    MxID	id;
     uint32_t	stackSize;
     uint32_t	rxBufSize;
     uint32_t	txBufSize;
     uint32_t	nCxns;
     uint16_t	rxThread;
     uint16_t	txThread;
+    uint16_t	partition;
     uint8_t	state;
     uint8_t	priority;
-    uint8_t	partition;
     uint8_t	nThreads;
     MxThread	threads[16];
     Bitmap	affinity[16];
@@ -138,7 +143,7 @@ namespace MxTelemetry {
   struct HashTbl {
     enum { Code = Type::HashTbl };
 
-    char	id[64];
+    MxIDString	id;
     uint32_t	nodeSize;
     uint32_t	loadFactor;	// (double)N / 16.0
     uint32_t	count;
@@ -161,7 +166,7 @@ namespace MxTelemetry {
   struct Queue {
     enum { Code = Type::Queue };
 
-    char	id[32];		// is same as Link id for Rx/Tx
+    MxIDString	id;		// is same as Link id for Rx/Tx
     uint64_t	inCount;
     uint64_t	inBytes;
     uint64_t	outCount;
@@ -174,7 +179,7 @@ namespace MxTelemetry {
   struct Link {
     enum { Code = Type::Link };
 
-    char	id[8];
+    MxID	id;
     uint64_t	rxSeqNo;
     uint64_t	txSeqNo;
     int32_t	readySec;
@@ -193,8 +198,8 @@ namespace MxTelemetry {
   struct Engine {
     enum { Code = Type::Engine };
 
-    char	id[8];
-    char	mxID[8];
+    MxID	id;
+    MxID	mxID;
     uint32_t	down;
     uint32_t	disabled;
     uint32_t	transient;
@@ -211,7 +216,7 @@ namespace MxTelemetry {
   struct DB {
     enum { Code = Type::DB };
 
-    char	path[128];
+    MxTxtString	path;
     uint64_t	fileSize;
     uint64_t	allocRN;
     uint64_t	fileRN;

@@ -110,12 +110,12 @@ namespace MxTelemetry {
     MxIDString	name;
     uint64_t	tid;
     uint64_t	stackSize;
+    Bitmap	cpuset;
     int32_t	id;		// thread mgr ID, -ve if unset
     int32_t	priority;
     uint16_t	partition;
     uint8_t	main;
     uint8_t	detached;
-    Bitmap	cpuset;
   };
 
   struct MxThread {
@@ -125,6 +125,9 @@ namespace MxTelemetry {
     enum { Code = Type::Multiplexer };
 
     MxID	id;
+    MxThread	threads[16];
+    Bitmap	affinity[16];
+    Bitmap	isolation;
     uint32_t	stackSize;
     uint32_t	rxBufSize;
     uint32_t	txBufSize;
@@ -135,9 +138,6 @@ namespace MxTelemetry {
     uint8_t	state;
     uint8_t	priority;
     uint8_t	nThreads;
-    MxThread	threads[16];
-    Bitmap	affinity[16];
-    Bitmap	isolation;
   };
 
   struct HashTbl {

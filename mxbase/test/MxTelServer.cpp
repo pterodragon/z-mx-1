@@ -16,7 +16,19 @@ class App : public MxTelemetry::Server {
 		info.id, info.config.cacheSize, info.config.cpuset.uint64(),
 		stats.cacheAllocs, stats.heapAllocs, stats.frees,
 		stats.allocated, stats.maxAllocated,
-		info.size, info.partition, info.config.alignment));
+		info.size, (uint16_t)info.partition,
+		(uint8_t)info.config.alignment));
+	}, cxn});
+
+    ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{
+	[](Cxn *cxn, ZmThreadContext *tc) {
+	  ZmThreadName name;
+	  tc->name(name);
+	  cxn->transmit(thread(
+		name, (uint64_t)tc->tid(), tc->stackSize(),
+		tc->cpuset().uint64(), tc->id(),
+		tc->priority(), (uint16_t)tc->partition(),
+		tc->main(), tc->detached()));
 	}, cxn});
   }
 };

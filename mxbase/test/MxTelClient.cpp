@@ -18,6 +18,11 @@ class App : public MxTelemetry::Client {
 	  std::cout << "  id: " << heap.id << '\n' << std::flush;
 	}
 	break;
+      case Type::Thread:
+	{
+	  const Thread &thread = msg->as<Thread>();
+	  std::cout << "  name: " << thread.name << '\n' << std::flush;
+	}
     }
   }
 };

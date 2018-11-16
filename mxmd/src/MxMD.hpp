@@ -1231,22 +1231,22 @@ class MxMDDerivatives : public ZmObject {
 
 friend class MxMDSecurity;
 
-  struct Futures_HeapID : public ZmHeapSharded {
+  struct Futures_HeapID {
     inline static const char *id() { return "MxMDLib.Futures"; }
   };
   typedef ZmRBTree<MxFutKey,			// mat
 	    ZmRBTreeVal<MxMDSecurity *,
 	      ZmRBTreeObject<ZuNull,
 		ZmRBTreeHeapID<Futures_HeapID,
-		  ZmRBTreeLock<ZmNoLock> > > > > Futures;
-  struct Options_HeapID : public ZmHeapSharded {
+		  ZmRBTreeLock<ZmPLock> > > > > Futures;
+  struct Options_HeapID {
     inline static const char *id() { return "MxMDLib.Options"; }
   };
   typedef ZmRBTree<MxOptKey,			// mat, putCall, strike
 	    ZmRBTreeVal<MxMDSecurity *,
 	      ZmRBTreeObject<ZuNull,
 		ZmRBTreeHeapID<Options_HeapID,
-		  ZmRBTreeLock<ZmNoLock> > > > > Options;
+		  ZmRBTreeLock<ZmPLock> > > > > Options;
 
   ZuInline MxMDDerivatives() { }
 
@@ -1340,31 +1340,34 @@ public:
 
 private:
   template <typename L>
-  inline L keys_(L l) const {
-    l(MxMDKey().venue(m_key.venue()).segment(m_key.segment()).id(m_key.id()));
+  inline L secIDs_(L l) const {
+    l(MxSecID{
+	.id = m_key.id(),
+	.venue = m_key.venue(),
+	.segment = m_key.segment()});
     if (*m_refData.idSrc)
-      l(MxMDKey().src(m_refData.idSrc).id(m_refData.symbol));
+      l(MxSecID{.id = m_refData.symbol, .src = m_refData.idSrc});
     if (*m_refData.altIDSrc)
-      l(MxMDKey().src(m_refData.altIDSrc).id(m_refData.altSymbol));
+      l(MxSecID{.id = m_refData.altSymbol, .src = m_refData.altIDSrc});
     return l;
   }
 public:
   template <typename L>
-  inline void keys(L l_) const {
-    auto l = keys_(ZuMv(l_));
+  inline void secIDs(L l_) const {
+    auto l = secIDs_(ZuMv(l_));
     if (m_underlying && *m_refData.mat) {
       if (*m_refData.strike)
-	m_underlying->keys_([l = ZuMv(l),
-	    refData = &m_refData](MxMDKey key) mutable {
-	  key.mat() = refData->mat;
-	  key.putCall() = refData->putCall;
-	  key.strike() = refData->strike;
+	m_underlying->secIDs_([l = ZuMv(l),
+	    refData = &m_refData](MxSecID key) mutable {
+	  key.mat = refData->mat;
+	  key.putCall = refData->putCall;
+	  key.strike = refData->strike;
 	  l(key);
 	});
       else
-	m_underlying->keys_([l = ZuMv(l),
-	    refData = &m_refData](MxMDKey key) mutable {
-	  key.mat() = refData->mat;
+	m_underlying->secIDs_([l = ZuMv(l),
+	    refData = &m_refData](MxSecID key) mutable {
+	  key.mat = refData->mat;
 	  l(key);
 	});
     }
@@ -1851,13 +1854,13 @@ public:
   static ZtString lookupSyntax();
   static ZtString lookupOptions();
 
-  MxMDKey lookupSecurity(ZvCf *args, unsigned index);
+  MxSecID parseSecurity(ZvCf *args, unsigned index) const;
   bool lookupSecurity(
-      const MxMDKey &key, bool secRequired, ZmFn<MxMDSecurity *> fn);
-  MxMDKey lookupOrderBook(ZvCf *args, unsigned index);
+      const MxSecID &key, bool secRequired, ZmFn<MxMDSecurity *> fn) const;
+  MxSecID parseOrderBook(ZvCf *args, unsigned index) const;
   bool lookupOrderBook(
-      const MxMDKey &key, bool secRequired, bool obRequired,
-      ZmFn<MxMDSecurity *, MxMDOrderBook *> fn);
+      const MxSecID &key, bool secRequired, bool obRequired,
+      ZmFn<MxMDSecurity *, MxMDOrderBook *> fn) const;
 
   // CLI time format (using local timezone)
   typedef ZuBoxFmt<ZuBox<unsigned>, ZuFmt::Right<6> > TimeFmt;
@@ -2019,20 +2022,40 @@ public:
       return MxMDSecHandle{ZuMv(sec)};
     return MxMDSecHandle{};
   }
+  ZuInline MxMDSecHandle security(const MxSecSymKey &key) const {
+    if (ZmRef<MxMDSecurity> sec = m_securities.findVal(key))
+      return MxMDSecHandle{ZuMv(sec)};
+    return MxMDSecHandle{};
+  }
+private:
+  ZuInline ZmRef<MxMDSecurity> security_(const MxSecID &key) const {
+    ZmRef<MxMDSecurity> sec;
+    if (*key.src)
+      sec = m_securities.findVal(MxSecSymKey{key.src, key.id});
+    else
+      sec = m_allSecurities.findKey(MxSecKey{key.venue, key.segment, key.id});
+    if (sec && *key.mat && sec->derivatives()) {
+      if (*key.strike)
+	sec = sec->derivatives()->option(
+	    MxOptKey{key.mat, key.putCall, key.strike});
+      else
+	sec = sec->derivatives()->future(MxFutKey{key.mat});
+    }
+    return ZuMv(sec);
+  }
+public:
+  ZuInline MxMDSecHandle security(const MxSecID &key) const {
+    ZmRef<MxMDSecurity> sec = security_(key);
+    if (sec) return MxMDSecHandle{ZuMv(sec)};
+    return MxMDSecHandle{};
+  }
   ZuInline MxMDSecHandle security(
       const MxSecKey &key, unsigned shardID) const {
     if (ZmRef<MxMDSecurity> sec = m_allSecurities.findKey(key))
       return MxMDSecHandle{ZuMv(sec)};
     return MxMDSecHandle{m_shards[shardID % m_shards.length()]};
   }
-  template <typename L> ZuInline typename ZuNotMutable<L>::T secInvoke(
-      const MxSecKey &key, L l) const {
-    if (ZmRef<MxMDSecurity> sec = m_allSecurities.findKey(key))
-      sec->shard()->invoke([l = ZuMv(l), sec = ZuMv(sec)]() { l(sec); });
-    else
-      l((MxMDSecurity *)0);
-  }
-  template <typename L> ZuInline typename ZuIsMutable<L>::T secInvoke(
+  template <typename L> ZuInline void secInvoke(
       const MxSecKey &key, L l) const {
     if (ZmRef<MxMDSecurity> sec = m_allSecurities.findKey(key))
       sec->shard()->invoke(
@@ -2040,20 +2063,37 @@ public:
     else
       l((MxMDSecurity *)0);
   }
-  template <typename L> ZuInline typename ZuNotMutable<L>::T secInvoke(
-      const MxSecSymKey &key, L l) const {
-    if (ZmRef<MxMDSecurity> sec = m_securities.findVal(key))
-      sec->shard()->invoke([l = ZuMv(l), sec = ZuMv(sec)]() { l(sec); });
-    else
-      l((MxMDSecurity *)0);
-  }
-  template <typename L> ZuInline typename ZuIsMutable<L>::T secInvoke(
+  template <typename L> ZuInline void secInvoke(
       const MxSecSymKey &key, L l) const {
     if (ZmRef<MxMDSecurity> sec = m_securities.findVal(key))
       sec->shard()->invoke(
 	  [l = ZuMv(l), sec = ZuMv(sec)]() mutable { l(sec); });
     else
       l((MxMDSecurity *)0);
+  }
+  template <typename L>
+  ZuInline void secInvoke(const MxSecID &key, L l) const {
+    if (*key.mat) {
+      auto l_ = [key = key, l = ZuMv(l)](MxMDSecurity *sec) mutable {
+	if (ZuLikely(sec && sec->derivatives())) {
+	  if (*key.strike)
+	    sec = sec->derivatives()->option(
+		MxOptKey{key.mat, key.putCall, key.strike});
+	  else
+	    sec = sec->derivatives()->future(MxFutKey{key.mat});
+	}
+	l(sec);
+      };
+      if (*key.src)
+	secInvoke(MxSecSymKey{key.src, key.id}, ZuMv(l_));
+      else
+	secInvoke(MxSecKey{key.venue, key.segment, key.id}, ZuMv(l_));
+    } else {
+      if (*key.src)
+	secInvoke(MxSecSymKey{key.src, key.id}, ZuMv(l));
+      else
+	secInvoke(MxSecKey{key.venue, key.segment, key.id}, ZuMv(l));
+    }
   }
   uintptr_t allSecurities(ZmFn<MxMDSecurity *>) const;
 
@@ -2062,24 +2102,33 @@ public:
       return MxMDOBHandle{ob};
     return MxMDOBHandle{};
   }
+  ZuInline MxMDOBHandle orderBook(const MxSecID &key) const {
+    ZmRef<MxMDSecurity> sec = security_(key);
+    if (!sec) return MxMDOBHandle{};
+    if (ZmRef<MxMDOrderBook> ob = sec->orderBook(key.venue, key.segment))
+      return MxMDOBHandle{ob};
+    return MxMDOBHandle{};
+  }
   ZuInline MxMDOBHandle orderBook(const MxSecKey &key, unsigned shardID) const {
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks.findKey(key))
       return MxMDOBHandle{ob};
     return MxMDOBHandle{m_shards[shardID % m_shards.length()]};
   }
-  template <typename L> ZuInline typename ZuNotMutable<L>::T obInvoke(
-      const MxSecKey &key, L l) const {
-    if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks.findKey(key))
-      ob->shard()->invoke([l = ZuMv(l), ob = ZuMv(ob)]() { l(ob); });
-    else
-      l((MxMDOrderBook *)0);
-  }
-  template <typename L> ZuInline typename ZuIsMutable<L>::T obInvoke(
-      const MxSecKey &key, L l) const {
+  template <typename L>
+  ZuInline void obInvoke(const MxSecKey &key, L l) const {
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks.findKey(key))
       ob->shard()->invoke([l = ZuMv(l), ob = ZuMv(ob)]() mutable { l(ob); });
     else
       l((MxMDOrderBook *)0);
+  }
+  template <typename L>
+  ZuInline void obInvoke(const MxSecID &key, L l) const {
+    secInvoke(key, [key = key, l = ZuMv(l)](MxMDSecurity *sec) mutable {
+	if (!sec)
+	  l(nullptr);
+	else
+	  l(sec->orderBook(key.venue, key.segment));
+      });
   }
   uintptr_t allOrderBooks(ZmFn<MxMDOrderBook *>) const;
 

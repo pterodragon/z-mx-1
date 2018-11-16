@@ -514,4 +514,78 @@ template <> struct ZuPrint<MxOptKey> : public ZuPrintDelegate {
   }
 };
 
+#pragma pack(push, 1)
+
+struct MxSecID {
+  MxIDString	id;
+  MxID		venue;
+  MxID		segment;
+  MxValue	strike;
+  MxUInt	mat;
+  MxEnum	src;
+  MxEnum	putCall;
+
+  inline bool operator ==(const MxSecID &v) const {
+    if (id != v.id || src != v.src) return false;
+    if (!*src && (venue != v.venue || segment != v.venue)) return false;
+    if (mat != v.mat) return false;
+    if (*mat) {
+      if (strike != v.strike) return false;
+      if (*strike && (putCall != v.putCall)) return false;
+    }
+    return true;
+  }
+  inline bool operator !=(const MxSecID &v) const { return !operator ==(v); }
+
+  inline int cmp(const MxSecID &v) const {
+    int i;
+    if (i = id.cmp(v.id)) return i;
+    if (i = src.cmp(v.src)) return i;
+    if (!*src) {
+      if (i = venue.cmp(v.venue)) return i;
+      if (i = segment.cmp(v.segment)) return i;
+    }
+    if (i = mat.cmp(v.mat)) return i;
+    if (!*mat) return 0;
+    if (i = strike.cmp(v.strike)) return i;
+    if (!*strike) return 0;
+    return putCall.cmp(v.putCall);
+  }
+  inline bool operator >(const MxSecID &v) { return cmp(v) > 0; }
+  inline bool operator >=(const MxSecID &v) { return cmp(v) >= 0; }
+  inline bool operator <(const MxSecID &v) { return cmp(v) < 0; }
+  inline bool operator <=(const MxSecID &v) { return cmp(v) <= 0; }
+
+  inline uint32_t hash() const {
+    uint32_t code = id.hash();
+    if (*src)
+      code ^= src.hash();
+    else
+      code ^= venue.hash() ^ segment.hash();
+    if (!*mat) return code;
+    code ^= mat.hash();
+    if (!*strike) return code;
+    return code ^ strike.hash() ^ (uint32_t)putCall;
+  }
+
+  template <typename S> inline void print(S &s) const {
+    if (*src)
+      s << MxSecSymKey{src, id};
+    else
+      s << MxSecKey{venue, segment, id};
+    if (*mat) {
+      if (*strike)
+	s << '|' << MxOptKey{mat, putCall, strike};
+      else
+	s << '|' << MxFutKey{mat};
+    }
+  }
+};
+template <> struct ZuTraits<MxSecID> : public ZuGenericTraits<MxSecID> {
+  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
+};
+template <> struct ZuPrint<MxSecID> : public ZuPrintFn { };
+
+#pragma pack(pop)
+
 #endif /* MxBase_HPP */

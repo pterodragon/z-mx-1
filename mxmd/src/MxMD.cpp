@@ -1794,22 +1794,22 @@ ZtString MxMDLib::lookupOptions()
     "    -x, --strike\t- strike price (as integer, per security convention)\n";
 }
 
-MxMDKey MxMDLib::lookupSecurity(ZvCf *args, unsigned index)
+MxSecID MxMDLib::parseSecurity(ZvCf *args, unsigned index) const
 {
-  MxMDKey key;
-  key.id() = args->get(ZuStringN<16>(ZuBoxed(index)));
+  MxSecID key;
+  key.id = args->get(ZuStringN<16>(ZuBoxed(index)));
   if (ZtString src_ = args->get("src")) {
-    key.src() = MxSecIDSrc::lookup(src_);
+    key.src = MxSecIDSrc::lookup(src_);
   } else {
-    key.venue() = args->get("venue", true);
-    key.segment() = args->get("segment");
+    key.venue = args->get("venue", true);
+    key.segment = args->get("segment");
   }
   if (ZtString mat = args->get("mat")) {
     const auto &r = ZtStaticRegexUTF8("^\\d{8}$");
     if (!r.m(mat))
       throw ZtString() << "maturity \"" << mat << "\" invalid - "
 	"must be YYYYMMDD (DD is usually 00)";
-    key.mat() = mat;
+    key.mat = mat;
     bool put = args->getInt("put", 0, 1, false, 0);
     bool call = args->getInt("call", 0, 1, false, 0);
     ZtString strike = args->get("strike");
@@ -1818,74 +1818,48 @@ MxMDKey MxMDLib::lookupSecurity(ZvCf *args, unsigned index)
     if (put || call) {
       if (!strike)
 	throw ZtString() << "strike must be specified for options";
-      key.putCall() = put ? MxPutCall::PUT : MxPutCall::CALL;
-      key.strike() = strike;
+      key.putCall = put ? MxPutCall::PUT : MxPutCall::CALL;
+      key.strike = strike;
     }
   }
   return key;
 }
 
 bool MxMDLib::lookupSecurity(
-    const MxMDKey &key, bool secRequired, ZmFn<MxMDSecurity *> fn)
+    const MxSecID &key, bool secRequired, ZmFn<MxMDSecurity *> fn) const
 {
   bool ok = true;
   thread_local ZmSemaphore sem;
-  if (*key.mat()) {
-    auto l = [&key, secRequired, sem = &sem, &ok, fn = ZuMv(fn)](
-	MxMDSecurity *sec) {
-      if (ZuLikely(sec && sec->derivatives())) {
-	if (*key.strike())
-	  sec = sec->derivatives()->option(
-	      MxOptKey{key.mat(), key.putCall(), key.strike()});
-	else
-	  sec = sec->derivatives()->future(MxFutKey{key.mat()});
-      }
-      if (secRequired && ZuUnlikely(!sec))
-	ok = false;
-      else
-	ok = fn(sec);
-      sem->post();
-    };
-    if (*key.src())
-      secInvoke(MxSecSymKey{key.src(), key.id()}, ZuMv(l));
-    else
-      secInvoke(MxSecKey{key.venue(), key.segment(), key.id()}, ZuMv(l));
-  } else {
-    auto l = [secRequired, sem = &sem, &ok, fn = ZuMv(fn)](
+  secInvoke(key, [secRequired, sem = &sem, &ok, fn = ZuMv(fn)](
 	MxMDSecurity *sec) {
       if (secRequired && ZuUnlikely(!sec))
 	ok = false;
       else
 	ok = fn(sec);
       sem->post();
-    };
-    if (*key.src())
-      secInvoke(MxSecSymKey{key.src(), key.id()}, ZuMv(l));
-    else
-      secInvoke(MxSecKey{key.venue(), key.segment(), key.id()}, ZuMv(l));
-  }
+    });
   sem.wait();
   return ok;
 }
 
-MxMDKey MxMDLib::lookupOrderBook(ZvCf *args, unsigned index)
+MxSecID MxMDLib::parseOrderBook(ZvCf *args, unsigned index) const
 {
-  MxMDKey key{lookupSecurity(args, index)};
-  if (*key.src()) {
-    key.venue() = args->get("venue", true);
-    key.segment() = args->get("segment");
+  MxSecID key{parseSecurity(args, index)};
+  if (*key.src) {
+    key.venue = args->get("venue", true);
+    key.segment = args->get("segment");
   }
   return key;
 }
 
 bool MxMDLib::lookupOrderBook(
-    const MxMDKey &key,
+    const MxSecID &key,
     bool secRequired, bool obRequired,
-    ZmFn<MxMDSecurity *, MxMDOrderBook *> fn)
+    ZmFn<MxMDSecurity *, MxMDOrderBook *> fn) const
 {
   return lookupSecurity(key, secRequired || obRequired,
-      [&key, obRequired, fn = ZuMv(fn)](MxMDSecurity *sec) -> bool {
-    ZmRef<MxMDOrderBook> ob = sec->orderBook(key.venue(), key.segment());
+      [key = key, obRequired, fn = ZuMv(fn)](MxMDSecurity *sec) -> bool {
+    ZmRef<MxMDOrderBook> ob = sec->orderBook(key.venue, key.segment);
     if (obRequired && ZuUnlikely(!ob))
       return false;
     else

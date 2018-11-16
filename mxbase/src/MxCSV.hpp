@@ -152,4 +152,68 @@ private:
   int	m_ndpOffset;
 };
 
+struct MxCSVApp {
+  inline static bool hhmmss() { return false; }
+  inline static unsigned yyyymmdd() { return 0; }
+  inline static int tzOffset() { return 0; }
+
+  inline static bool raw() { return false; }
+};
+
+template <typename CSV> struct MxCSV {
+  template <typename App, typename ID>
+  void addValCol(App *app, ID &&id, int offset, int ndpOffset) {
+    if (app && app->raw())
+      static_cast<CSV *>(this)->add(
+	  new ZvCSVColumn<ZvCSVColType::Int, MxValue>(ZuFwd<ID>(id), offset));
+    else
+      static_cast<CSV *>(this)->add(
+	  new MxValueCol(ZuFwd<ID>(id), offset, ndpOffset));
+  }
+};
+
+class MxSecIDCSV : public ZvCSV, public MxCSV<MxSecIDCSV> {
+public:
+  typedef MxSecID Data;
+  typedef ZuPOD<Data> POD;
+
+  typedef ZvCSVColumn<ZvCSVColType::Int, MxValue> RawValueCol;
+
+  template <typename App = MxCSVApp>
+  MxSecIDCSV(App *app = 0) {
+    new ((m_pod = new POD())->ptr()) Data{};
+#ifdef Offset
+#undef Offset
+#endif
+#define Offset(x) offsetof(Data, x)
+    add(new MxIDStrCol("id", Offset(id)));
+    add(new MxIDCol("venue", Offset(venue)));
+    add(new MxIDCol("segment", Offset(segment)));
+    add(new RawValueCol("strike", Offset(strike)));
+    add(new MxUIntCol("mat", Offset(mat)));
+    add(new MxEnumCol<MxSecIDSrc::CSVMap>("src", Offset(src)));
+    add(new MxEnumCol<MxPutCall::CSVMap>("putCall", Offset(putCall)));
+  }
+
+  void alloc(ZuRef<ZuAnyPOD> &pod) { pod = m_pod; }
+
+  template <typename File>
+  void read(const File &file, ZvCSVReadFn fn) {
+    ZvCSV::readFile(file,
+	ZvCSVAllocFn::Member<&MxSecIDCSV::alloc>::fn(this), fn);
+  }
+
+  ZuInline POD *pod() { return m_pod.ptr(); }
+  ZuInline Data *ptr() { return m_pod->ptr(); }
+
+  ZuInline static MxSecID key(const ZuAnyPOD *pod) {
+    const Data &data = pod->as<Data>();
+    return MxSecID{data.id, data.venue, data.segment, data.src,
+      data.mat, data.putCall, data.strike};
+  }
+
+private:
+  ZuRef<POD>	m_pod;
+};
+
 #endif /* MxCSV_HPP */

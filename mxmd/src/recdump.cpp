@@ -39,7 +39,7 @@
 
 #include <version.h>
 
-class RealTimeCSV : public ZvCSV, public MxMDCSV<RealTimeCSV> {
+class RealTimeCSV : public ZvCSV, public MxCSV<RealTimeCSV> {
 public:
   struct L2Data {
     MxIDString		objectID;

@@ -40,14 +40,6 @@
 #include <MxMDTypes.hpp>
 #include <MxMDStream.hpp>
 
-struct MxMDCSVApp {
-  inline static bool hhmmss() { return false; }
-  inline static unsigned yyyymmdd() { return 0; }
-  inline static int tzOffset() { return 0; }
-
-  inline static bool raw() { return false; }
-};
-
 template <typename Flags>
 class MxMDVenueFlagsCol : public ZvCSVColumn<ZvCSVColType::Func, MxFlags> {
   typedef ZvCSVColumn<ZvCSVColType::Func, MxFlags> Base;
@@ -87,19 +79,7 @@ private:
   int	m_venueOffset;
 };
 
-template <typename CSV> struct MxMDCSV {
-  template <typename App, typename ID>
-  void addValCol(App *app, ID &&id, int offset, int ndpOffset) {
-    if (app && app->raw())
-      static_cast<CSV *>(this)->add(
-	  new ZvCSVColumn<ZvCSVColType::Int, MxValue>(ZuFwd<ID>(id), offset));
-    else
-      static_cast<CSV *>(this)->add(
-	  new MxValueCol(ZuFwd<ID>(id), offset, ndpOffset));
-  }
-};
-
-class MxMDTickSizeCSV : public ZvCSV, public MxMDCSV<MxMDTickSizeCSV> {
+class MxMDTickSizeCSV : public ZvCSV, public MxCSV<MxMDTickSizeCSV> {
 public:
   struct Data {
     MxEnum		event;
@@ -112,7 +92,7 @@ public:
   };
   typedef ZuPOD<Data> POD;
 
-  template <typename App = MxMDCSVApp>
+  template <typename App = MxCSVApp>
   MxMDTickSizeCSV(App *app = 0) {
     new ((m_pod = new POD())->ptr()) Data{};
 #ifdef Offset
@@ -174,7 +154,7 @@ private:
   ZuRef<POD>	m_pod;
 };
 
-class MxMDSecurityCSV : public ZvCSV, public MxMDCSV<MxMDSecurityCSV> {
+class MxMDSecurityCSV : public ZvCSV, public MxCSV<MxMDSecurityCSV> {
 public:
   struct Data {
     MxUInt		shard;
@@ -187,7 +167,7 @@ public:
   };
   typedef ZuPOD<Data> POD;
 
-  template <typename App = MxMDCSVApp>
+  template <typename App = MxCSVApp>
   MxMDSecurityCSV(App *app = 0) {
     new ((m_pod = new POD())->ptr()) Data{};
 #ifdef Offset
@@ -271,7 +251,7 @@ private:
   ZuRef<POD>	m_pod;
 };
 
-class MxMDOrderBookCSV : public ZvCSV, public MxMDCSV<MxMDOrderBookCSV> {
+class MxMDOrderBookCSV : public ZvCSV, public MxCSV<MxMDOrderBookCSV> {
 public:
   struct Data {
     MxUInt		shard;
@@ -293,7 +273,7 @@ public:
   };
   typedef ZuPOD<Data> POD;
 
-  template <typename App = MxMDCSVApp>
+  template <typename App = MxCSVApp>
   MxMDOrderBookCSV(App *app = 0) {
     new ((m_pod = new POD())->ptr()) Data{};
 #ifdef Offset
@@ -415,58 +395,6 @@ public:
 
   ZuInline POD *pod() { return m_pod.ptr(); }
   ZuInline Data *ptr() { return m_pod->ptr(); }
-
-private:
-  ZuRef<POD>	m_pod;
-};
-
-class MxMDAnyKeyCSV : public ZvCSV, public MxMDCSV<MxMDAnyKeyCSV> {
-public:
-  struct Data {
-    MxID	venue;
-    MxID	segment;
-    MxEnum	src;
-    MxIDString	id;
-    MxUInt	mat;
-    MxEnum	putCall;
-    MxValue	strike;
-  };
-  typedef ZuPOD<Data> POD;
-
-  typedef ZvCSVColumn<ZvCSVColType::Int, MxValue> RawValueCol;
-
-  template <typename App = MxMDCSVApp>
-  MxMDAnyKeyCSV(App *app = 0) {
-    new ((m_pod = new POD())->ptr()) Data{};
-#ifdef Offset
-#undef Offset
-#endif
-#define Offset(x) offsetof(Data, x)
-    add(new MxIDCol("venue", Offset(venue)));
-    add(new MxIDCol("segment", Offset(segment)));
-    add(new MxEnumCol<MxSecIDSrc::CSVMap>("src", Offset(src)));
-    add(new MxIDStrCol("id", Offset(id)));
-    add(new MxUIntCol("mat", Offset(mat)));
-    add(new MxEnumCol<MxPutCall::CSVMap>("putCall", Offset(putCall)));
-    add(new RawValueCol("strike", Offset(strike)));
-  }
-
-  void alloc(ZuRef<ZuAnyPOD> &pod) { pod = m_pod; }
-
-  template <typename File>
-  void read(const File &file, ZvCSVReadFn fn) {
-    ZvCSV::readFile(file,
-	ZvCSVAllocFn::Member<&MxMDAnyKeyCSV::alloc>::fn(this), fn);
-  }
-
-  ZuInline POD *pod() { return m_pod.ptr(); }
-  ZuInline Data *ptr() { return m_pod->ptr(); }
-
-  ZuInline static MxMDKey key(const ZuAnyPOD *pod) {
-    const Data &data = pod->as<Data>();
-    return MxMDKey{data.id, data.venue, data.segment, data.src,
-      data.mat, data.putCall, data.strike};
-  }
 
 private:
   ZuRef<POD>	m_pod;

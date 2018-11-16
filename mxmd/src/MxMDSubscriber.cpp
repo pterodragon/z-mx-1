@@ -518,9 +518,12 @@ void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
     }
   }
   rxInvoke([msg = ZuMv(msg)](Rx *rx) mutable {
-	rx->app().active();
+	auto &link = rx->app();
+	link.active();
 	rx->received(ZuMv(msg));
-	// FIXME - if queue size > m_maxQueueSize reconnect
+	if (ZuUnlikely(
+	      rx->rxQueue().count() > link.engine()->maxQueueSize()))
+	  link.reconnect(true);
       });
 }
 void MxMDSubLink::request(const MxQueue::Gap &, const MxQueue::Gap &now)

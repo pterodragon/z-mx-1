@@ -118,7 +118,7 @@ public:
 };
 
 template <> struct ZuTraits<ZiIP> : public ZuGenericTraits<ZiIP> {
-  enum { IsPOD = 1, IsHashable = 1, IsComparable = 1 };
+  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
 };
 
 // generic printing

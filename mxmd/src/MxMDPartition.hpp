@@ -52,12 +52,12 @@ struct MxMDPartition {
   ZuBox0(uint16_t)	resendPort, resendPort2;
 };
 
-class MxMDPartitionCSV : public ZvCSV, public MxMDCSV<MxMDPartitionCSV> {
+class MxMDPartitionCSV : public ZvCSV, public MxCSV<MxMDPartitionCSV> {
 public:
   typedef MxMDPartition Data;
   typedef ZuPOD<Data> POD;
 
-  template <typename App = MxMDCSVApp>
+  template <typename App = MxCSVApp>
   MxMDPartitionCSV(App *app = 0) {
     new ((m_pod = new POD())->ptr()) Data{};
 #ifdef Offset

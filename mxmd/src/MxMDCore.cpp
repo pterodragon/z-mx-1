@@ -532,7 +532,7 @@ void MxMDCore::l1(ZvCmdServerCxn *,
     out << "stamp,status,last,lastQty,bid,bidQty,ask,askQty,tickDir,"
       "high,low,accVol,accVolQty,match,matchQty,surplusQty,flags\n";
   for (unsigned i = 1; i < argc; i++) {
-    MxMDKey key = lookupOrderBook(args, i);
+    MxSecID key = parseOrderBook(args, i);
     lookupOrderBook(key, 1, 1,
 	[this, &out, csv](MxMDSecurity *, MxMDOrderBook *ob) -> bool {
       const MxMDL1Data &l1Data = ob->l1Data();
@@ -588,7 +588,7 @@ void MxMDCore::l2(ZvCmdServerCxn *,
   if (argc != 2) throw ZvCmdUsage();
   outMsg = new ZvCmdMsg();
   auto &out = outMsg->cmd();
-  MxMDKey key = lookupOrderBook(args, 1);
+  MxSecID key = parseOrderBook(args, 1);
   lookupOrderBook(key, 1, 1,
       [this, &out](MxMDSecurity *, MxMDOrderBook *ob) -> bool {
     out << "bids:\n";
@@ -627,7 +627,7 @@ void MxMDCore::security_(ZvCmdServerCxn *,
   if (argc != 2) throw ZvCmdUsage();
   outMsg = new ZvCmdMsg();
   auto &out = outMsg->cmd();
-  MxMDKey key = lookupOrderBook(args, 1);
+  MxSecID key = parseOrderBook(args, 1);
   lookupOrderBook(key, 1, 0,
       [&out](MxMDSecurity *sec, MxMDOrderBook *ob) -> bool {
     const MxMDSecRefData &refData = sec->refData();

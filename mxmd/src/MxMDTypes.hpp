@@ -123,24 +123,4 @@ typedef MxString<12> MxMDFlagsStr;
 
 #pragma pack(pop)
 
-ZuTupleFields(MxMDKey_,
-    1, id, 2, venue, 3, segment, 4, src, 5, mat, 6, putCall, 7, strike);
-typedef MxMDKey_<MxIDString, MxID, MxID, MxEnum, MxUInt, MxEnum, MxValue>
-  MxMDKey;
-template <> struct ZuPrint<MxMDKey> : public ZuPrintDelegate {
-  template <typename S>
-  inline static void print(S &s, const MxMDKey &key) {
-    if (*key.src())
-      s << MxSecSymKey{key.src(), key.id()};
-    else
-      s << MxSecKey{key.venue(), key.segment(), key.id()};
-    if (*key.mat()) {
-      if (*key.strike())
-	s << '|' << MxOptKey{key.mat(), key.putCall(), key.strike()};
-      else
-	s << '|' << MxFutKey{key.mat()};
-    }
-  }
-};
-
 #endif /* MxMDTypes_HPP */

@@ -168,6 +168,7 @@ namespace MxTelemetry {
 
     MxIDString	id;		// is same as Link id for Rx/Tx
     uint64_t	seqNo;		// 0 for Thread, IPC
+    uint64_t	count;		// due to overlaps, may not equal in - out
     uint64_t	inCount;
     uint64_t	inBytes;
     uint64_t	outCount;

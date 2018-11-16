@@ -1259,7 +1259,7 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
     ReadGuard guard(m_lock);
 
     {
-      while (MxEngine *engine_ = m_engines.shift()) {
+      while (ZmRef<MxEngine> engine_ = m_engines.shift()) {
 	unsigned down, disabled, transient, up, reconn, failed;
         int state = engine_->state(
 	    down, disabled, transient, up, reconn, failed);
@@ -1272,7 +1272,7 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
       }
     }
     {
-      while (MxAnyLink *link_ = m_links.shift()) {
+      while (ZmRef<MxAnyLink> link_ = m_links.shift()) {
 	unsigned reconnects;
 	int state = link_->state(&reconnects);
 	cxn->transmit(MxTelemetry::link(
@@ -1288,7 +1288,7 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 	uint64_t inCount, inBytes, outCount, outBytes;
 	queue_->stats(inCount, inBytes, outCount, outBytes);
 	cxn->transmit(queue(
-	      key.p1(), queue_->head(),
+	      key.p1(), queue_->head(), queue_->count(),
 	      inCount, inBytes, outCount, outBytes, (uint32_t)0,
 	      (uint8_t)(key.p2() ? QueueType::Tx : QueueType::Rx)));
       }

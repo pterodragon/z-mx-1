@@ -80,14 +80,14 @@ public:
   void delQueue(MxID, bool tx);
 
 private:
-  typedef ZmDRing<MxEngine *,
+  typedef ZmDRing<ZmRef<MxEngine>,
 	    ZmDRingLock<ZmNoLock> > Engines;
 
-  typedef ZmDRing<MxAnyLink *,
+  typedef ZmDRing<ZmRef<MxAnyLink>,
 	    ZmDRingLock<ZmNoLock> > Links;
 
   typedef ZmRBTree<ZuPair<MxID, bool>,
-	    ZmRBTreeVal<MxQueue *,
+	    ZmRBTreeVal<ZmRef<MxQueue>,
 	      ZmRBTreeLock<ZmNoLock> > > Queues;
 
   MxMDCore	*m_core = 0;

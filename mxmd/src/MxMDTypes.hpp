@@ -124,8 +124,8 @@ typedef MxString<12> MxMDFlagsStr;
 #pragma pack(pop)
 
 ZuTupleFields(MxMDKey_,
-    1, venue, 2, segment, 3, src, 4, id, 5, mat, 6, putCall, 7, strike);
-typedef MxMDKey_<MxID, MxID, MxEnum, MxIDString, MxUInt, MxEnum, MxValue>
+    1, id, 2, venue, 3, segment, 4, src, 5, mat, 6, putCall, 7, strike);
+typedef MxMDKey_<MxIDString, MxID, MxID, MxEnum, MxUInt, MxEnum, MxValue>
   MxMDKey;
 template <> struct ZuPrint<MxMDKey> : public ZuPrintDelegate {
   template <typename S>

@@ -442,7 +442,6 @@ private:
   void send_(ZiIOContext &io);
   void sent(ZiIOContext &io);
 
-  ZmRef<Zdb_Cxn>		m_cxn;
   ZmRef<ZdbAnyPOD>		m_pod;
   ZmRef<ZdbAnyPOD_Compressed>	m_compressed;
   unsigned			m_vec;

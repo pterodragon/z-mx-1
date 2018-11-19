@@ -800,7 +800,7 @@ void ZdbEnv::startReplication()
     m_recovering = true;
     m_recover = m_next->dbState();
     m_recoverEnd = m_self->dbState();
-    m_mx->add(ZmFn<>::Member<&ZdbEnv::recSend>::fn(this));
+    m_mx->run(m_mx->txThread(), ZmFn<>::Member<&ZdbEnv::recSend>::fn(this));
   }
 }
 
@@ -1053,7 +1053,6 @@ uncompressed:
 // send replication message
 void ZdbAnyPOD_Send__::send(Zdb_Cxn *cxn)
 {
-  m_cxn = cxn;
   cxn->send(ZiIOFn::Member<&ZdbAnyPOD_Send__::send_>::fn(ZmMkRef(this)));
 }
 void ZdbAnyPOD_Send__::send_(ZiIOContext &io)
@@ -1071,9 +1070,12 @@ void ZdbAnyPOD_Send__::sent(ZiIOContext &io)
 	ZiVec_ptr(m_vecs[i]), ZiVec_len(m_vecs[i]), 0);
     return;
   }
+  if (ZuUnlikely(m_recovery)) {
+    ZiMultiplex *mx = io.cxn->mx();
+    ZdbEnv *env = m_pod->db()->env();
+    mx->run(mx->txThread(), ZmFn<>::Member<&ZdbEnv::recSend>::fn(env));
+  }
   io.complete();
-  if (ZuUnlikely(m_recovery))
-    m_cxn->mx()->add(ZmFn<>::Member<&ZdbEnv::recSend>::fn(m_cxn->env()));
 }
 
 int ZdbAnyPOD_Compressed::compress(const char *src, unsigned size)

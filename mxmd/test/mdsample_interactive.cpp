@@ -105,7 +105,7 @@ void l2(MxMDOrderBook *ob, MxDateTime stamp)
 
 void exception(MxMDLib *, ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 
-typedef ZmHash<MxSecID> SecIDs; // hash table of secIDs
+typedef ZmHash<MxUniKey> SecIDs; // hash table of secIDs
 static SecIDs *secIDs = 0;
 
 void refDataLoaded(MxMDVenue *venue)
@@ -119,7 +119,7 @@ void addSecurity(MxMDSecurity *sec, MxDateTime)
 {
   if (!secIDs) return;
   bool matched = false;
-  sec->secIDs([&matched](const MxSecID &key) {
+  sec->secIDs([&matched](const MxUniKey &key) {
       if (secIDs->find(key)) matched = true;
     });
   if (matched) sec->subscribe(secHandler);
@@ -135,7 +135,7 @@ void subscribe(ZvCmdServerCxn *,
   ZmRef<MxMDSecurity> security;
   unsigned argc = ZuBox<unsigned>(args->get("#"));
   if (argc < 2) throw ZvCmdUsage();
-  MxSecID key = md->parseSecurity(args, 1);
+  MxUniKey key = md->parseSecurity(args, 1);
   md->lookupSecurity(key, 0, [&key, &out](MxMDSecurity *sec) -> bool {
     if (!sec) {
       secIDs->add(key);
@@ -167,9 +167,9 @@ int main(int argc, char **argv)
 
   // read secIDs from file into hash table
   if (argv[2]) {
-    MxSecIDCSV csv;
+    MxUniKeyCSV csv;
     csv.read(argv[2], ZvCSVReadFn{[](ZuAnyPOD *pod) {
-	secIDs->add(MxSecIDCSV::key(pod));
+	secIDs->add(MxUniKeyCSV::key(pod));
       }});
   }
 

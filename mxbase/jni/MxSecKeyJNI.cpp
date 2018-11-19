@@ -68,9 +68,9 @@ MxSecKey MxSecKeyJNI::j2c(JNIEnv *env, jobject obj)
 jobject MxSecKeyJNI::ctor(JNIEnv *env, const MxSecKey &key)
 {
   return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
-      ZJNI::s2j(env, key.venue()),
-      ZJNI::s2j(env, key.segment()),
-      ZJNI::s2j(env, key.id()));
+      ZJNI::s2j(env, key.venue),
+      ZJNI::s2j(env, key.segment),
+      ZJNI::s2j(env, key.id));
 }
 
 int MxSecKeyJNI::bind(JNIEnv *env)

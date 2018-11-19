@@ -47,7 +47,7 @@ int ZiDir::open(const Path &name, ZeError *e)
   return Zi::OK;
 }
 
-ZiDir::Path ZiDir::read(ZeError *e)
+int ZiDir::read(Path &file, ZeError *e)
 {
   Guard guard(m_lock);
 
@@ -58,15 +58,16 @@ ZiDir::Path ZiDir::read(ZeError *e)
   if (m_handle == INVALID_HANDLE_VALUE) {
     if (!m_match) {
       if (e) *e = ZeError(EBADF);
-      return Path();
+      return Zi::IOError;
     }
-    m_handle = FindFirstFileEx(m_match, FindExInfoStandard, &wfd,
-			       FindExSearchNameMatch, 0, 0);
+    m_handle = FindFirstFileEx(
+	m_match, FindExInfoStandard, &wfd, FindExSearchNameMatch, 0, 0);
     if (m_handle == INVALID_HANDLE_VALUE) goto error;
   } else {
     if (!FindNextFile(m_handle, &wfd)) goto error;
   }
-  return Path(Path::Copy, wfd.cFileName);
+  file = Path(Path::Copy, wfd.cFileName);
+  return Zi::OK;
 
 error:
   DWORD errNo;
@@ -74,32 +75,33 @@ error:
     case ERROR_NO_MORE_FILES:
     case ERROR_FILE_NOT_FOUND:
     case ERROR_PATH_NOT_FOUND:
-      break;
+      return Zi::EndOfFile;
     default:
       if (e) *e = ZeError(errNo);
       break;
   }
   close();
-  return Path();
+  return Zi::IOError;
 
 #else /* _WIN32 */
 
   if (!m_dir) {
     if (e) *e = ZeError(EBADF);
-    return Path();
+    return Zi::IOError;
   }
 
   struct dirent d, *r;
   int i;
 
   if (i = readdir_r(m_dir, &d, &r)) goto error;
-  if (!r) return Path();
-  return Path(Path::Copy, d.d_name);
+  if (!r) return Zi::EndOfFile;
+  file = Path(Path::Copy, &d.d_name[0]);
+  return Zi::OK;
 
 error:
   if (e) *e = ZeError(errno);
   close();
-  return Path();
+  return Zi::IOError;
 
 #endif /* _WIN32 */
 }

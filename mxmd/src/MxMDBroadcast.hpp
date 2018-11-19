@@ -69,6 +69,8 @@ public:
 
   inline bool active() { return m_openCount; }
 
+  inline ZmRef<Ring> ring() { Guard guard(m_lock); return m_ring; }
+
   // caller must ensure ring is open during Rx/Tx
 
   // Rx

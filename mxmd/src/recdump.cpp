@@ -152,7 +152,7 @@ public:
 	  {
 	    const L1 &obj = hdr.as<L1>();
 	    new (data) Data{hdr.shard, hdr.type,
-	      obj.key.venue(), obj.key.segment(), obj.key.id(),
+	      obj.key.venue, obj.key.segment, obj.key.id,
 	      {}, obj.data};
 	  }
 	  break;
@@ -160,7 +160,7 @@ public:
 	  {
 	    const PxLevel &obj = hdr.as<PxLevel>();
 	    new (data) Data{hdr.shard, hdr.type,
-	      obj.key.venue(), obj.key.segment(), obj.key.id(),
+	      obj.key.venue, obj.key.segment, obj.key.id,
 	      {}, { obj.transactTime, obj.pxNDP, obj.qtyNDP },
 	      { {}, {}, obj.side, {}, obj.delta, obj.price, obj.qty,
 		obj.nOrders, obj.flags } };
@@ -170,9 +170,9 @@ public:
 	  {
 	    const AddOrder &obj = hdr.as<AddOrder>();
 	    new (data) Data{hdr.shard, hdr.type};
-	    data->venue = obj.key.venue();
-	    data->segment = obj.key.segment();
-	    data->id = obj.key.id();
+	    data->venue = obj.key.venue;
+	    data->segment = obj.key.segment;
+	    data->id = obj.key.id;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -188,9 +188,9 @@ public:
 	  {
 	    const ModifyOrder &obj = hdr.as<ModifyOrder>();
 	    new (data) Data{hdr.shard, hdr.type};
-	    data->venue = obj.key.venue();
-	    data->segment = obj.key.segment();
-	    data->id = obj.key.id();
+	    data->venue = obj.key.venue;
+	    data->segment = obj.key.segment;
+	    data->id = obj.key.id;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -206,9 +206,9 @@ public:
 	  {
 	    const CancelOrder &obj = hdr.as<CancelOrder>();
 	    new (data) Data{hdr.shard, hdr.type};
-	    data->venue = obj.key.venue();
-	    data->segment = obj.key.segment();
-	    data->id = obj.key.id();
+	    data->venue = obj.key.venue;
+	    data->segment = obj.key.segment;
+	    data->id = obj.key.id;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l2Data.objectID = obj.orderID;
 	    data->l2Data.side = obj.side;
@@ -218,9 +218,9 @@ public:
 	  {
 	    const L2 &obj = hdr.as<L2>();
 	    new (data) Data{hdr.shard, hdr.type};
-	    data->venue = obj.key.venue();
-	    data->segment = obj.key.segment();
-	    data->id = obj.key.id();
+	    data->venue = obj.key.venue;
+	    data->segment = obj.key.segment;
+	    data->id = obj.key.id;
 	    data->l1Data.stamp = obj.stamp;
 	    data->updateL1 = obj.updateL1;
 	  }
@@ -229,9 +229,9 @@ public:
 	  {
 	    const ResetOB &obj = hdr.as<ResetOB>();
 	    new (data) Data{hdr.shard, hdr.type};
-	    data->venue = obj.key.venue();
-	    data->segment = obj.key.segment();
-	    data->id = obj.key.id();
+	    data->venue = obj.key.venue;
+	    data->segment = obj.key.segment;
+	    data->id = obj.key.id;
 	    data->l1Data.stamp = obj.transactTime;
 	  }
 	  break;
@@ -239,9 +239,9 @@ public:
 	  {
 	    const AddTrade &obj = hdr.as<AddTrade>();
 	    new (data) Data{hdr.shard, hdr.type};
-	    data->venue = obj.key.venue();
-	    data->segment = obj.key.segment();
-	    data->id = obj.key.id();
+	    data->venue = obj.key.venue;
+	    data->segment = obj.key.segment;
+	    data->id = obj.key.id;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -254,9 +254,9 @@ public:
 	  {
 	    const CorrectTrade &obj = hdr.as<CorrectTrade>();
 	    new (data) Data{hdr.shard, hdr.type};
-	    data->venue = obj.key.venue();
-	    data->segment = obj.key.segment();
-	    data->id = obj.key.id();
+	    data->venue = obj.key.venue;
+	    data->segment = obj.key.segment;
+	    data->id = obj.key.id;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -269,9 +269,9 @@ public:
 	  {
 	    const CancelTrade &obj = hdr.as<CancelTrade>();
 	    new (data) Data{hdr.shard, hdr.type};
-	    data->venue = obj.key.venue();
-	    data->segment = obj.key.segment();
-	    data->id = obj.key.id();
+	    data->venue = obj.key.venue;
+	    data->segment = obj.key.segment;
+	    data->id = obj.key.id;
 	    data->l1Data.stamp = obj.transactTime;
 	    data->l1Data.pxNDP = obj.pxNDP;
 	    data->l1Data.qtyNDP = obj.qtyNDP;
@@ -361,12 +361,12 @@ public:
   inline bool filterID(MxSecKey key) {
     if (!m_secIDs.count()) return false;
     if (m_secIDs.exists(key)) return false;
-    if (*key.segment()) {
-      key.segment() = MxID();
+    if (*key.segment) {
+      key.segment = MxID();
       if (m_secIDs.exists(key)) return false;
     }
-    if (*key.venue()) {
-      key.venue() = MxID();
+    if (*key.venue) {
+      key.venue = MxID();
       if (m_secIDs.exists(key)) return false;
     }
     return true;
@@ -747,7 +747,7 @@ int main(int argc, const char *argv[])
 	break;
       case 'i':
 	if (++i >= argc) usage();
-	app.secID(MxSecKey(venue, segment, argv[i]));
+	app.secID(MxSecKey{.id = argv[i], .venue = venue, .segment = segment});
 	break;
       case 'o':
 	if (app.outPath()) usage();

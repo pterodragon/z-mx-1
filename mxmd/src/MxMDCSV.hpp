@@ -224,7 +224,7 @@ public:
 	  {
 	    const AddSecurity &obj = hdr.as<AddSecurity>();
 	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
-	      obj.key.venue(), obj.key.segment(), obj.key.id(),
+	      obj.key.venue, obj.key.segment, obj.key.id,
 	      obj.refData};
 	  }
 	  break;
@@ -232,7 +232,7 @@ public:
 	  {
 	    const UpdateSecurity &obj = hdr.as<UpdateSecurity>();
 	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
-	      obj.key.venue(), obj.key.segment(), obj.key.id(),
+	      obj.key.venue, obj.key.segment, obj.key.id,
 	      obj.refData};
 	  }
 	  break;
@@ -338,11 +338,11 @@ public:
 	  {
 	    const AddOrderBook &obj = hdr.as<AddOrderBook>();
 	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
-	      obj.key.venue(), obj.key.segment(), obj.key.id(),
+	      obj.key.venue, obj.key.segment, obj.key.id,
 	      {}, obj.qtyNDP, 1, obj.tickSizeTbl, obj.lotSizes,
-	      { obj.security.venue() },
-	      { obj.security.segment() },
-	      { obj.security.id() },
+	      { obj.security.venue },
+	      { obj.security.segment },
+	      { obj.security.id },
 	      {}, {} };
 	  }
 	  break;
@@ -350,20 +350,20 @@ public:
 	  {
 	    const DelOrderBook &obj = hdr.as<DelOrderBook>();
 	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
-	      obj.key.venue(), obj.key.segment(), obj.key.id()};
+	      obj.key.venue, obj.key.segment, obj.key.id};
 	  }
 	  break;
 	case Type::AddCombination:
 	  {
 	    const AddCombination &obj = hdr.as<AddCombination>();
 	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
-	      obj.key.venue(), obj.key.segment(), obj.key.id(),
+	      obj.key.venue, obj.key.segment, obj.key.id,
 	      obj.pxNDP, obj.qtyNDP, obj.legs, obj.tickSizeTbl, obj.lotSizes,
 	      {}, {}, {}, {}, {} };
 	    for (unsigned i = 0, n = obj.legs; i < n; i++) {
-	      data->secVenues[i] = obj.securities[i].venue();
-	      data->secSegments[i] = obj.securities[i].segment();
-	      data->securities[i] = obj.securities[i].id();
+	      data->secVenues[i] = obj.securities[i].venue;
+	      data->secSegments[i] = obj.securities[i].segment;
+	      data->securities[i] = obj.securities[i].id;
 	      data->sides[i] = obj.sides[i];
 	      data->ratios[i] = obj.ratios[i];
 	    }
@@ -373,14 +373,14 @@ public:
 	  {
 	    const DelCombination &obj = hdr.as<DelCombination>();
 	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
-	      obj.key.venue(), obj.key.segment(), obj.key.id() };
+	      obj.key.venue, obj.key.segment, obj.key.id };
 	  }
 	  break;
 	case Type::UpdateOrderBook:
 	  {
 	    const UpdateOrderBook &obj = hdr.as<UpdateOrderBook>();
 	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
-	      obj.key.venue(), obj.key.segment(), obj.key.id(),
+	      obj.key.venue, obj.key.segment, obj.key.id,
 	      {}, {}, MxUInt(), obj.tickSizeTbl, obj.lotSizes,
 	      {}, {}, {}, {}, {} };
 	  }

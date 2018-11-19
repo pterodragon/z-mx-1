@@ -172,15 +172,15 @@ template <typename CSV> struct MxCSV {
   }
 };
 
-class MxSecIDCSV : public ZvCSV, public MxCSV<MxSecIDCSV> {
+class MxUniKeyCSV : public ZvCSV, public MxCSV<MxUniKeyCSV> {
 public:
-  typedef MxSecID Data;
+  typedef MxUniKey Data;
   typedef ZuPOD<Data> POD;
 
   typedef ZvCSVColumn<ZvCSVColType::Int, MxValue> RawValueCol;
 
   template <typename App = MxCSVApp>
-  MxSecIDCSV(App *app = 0) {
+  MxUniKeyCSV(App *app = 0) {
     new ((m_pod = new POD())->ptr()) Data{};
 #ifdef Offset
 #undef Offset
@@ -200,15 +200,15 @@ public:
   template <typename File>
   void read(const File &file, ZvCSVReadFn fn) {
     ZvCSV::readFile(file,
-	ZvCSVAllocFn::Member<&MxSecIDCSV::alloc>::fn(this), fn);
+	ZvCSVAllocFn::Member<&MxUniKeyCSV::alloc>::fn(this), fn);
   }
 
   ZuInline POD *pod() { return m_pod.ptr(); }
   ZuInline Data *ptr() { return m_pod->ptr(); }
 
-  ZuInline static MxSecID key(const ZuAnyPOD *pod) {
+  ZuInline static MxUniKey key(const ZuAnyPOD *pod) {
     const Data &data = pod->as<Data>();
-    return MxSecID{data.id, data.venue, data.segment, data.src,
+    return MxUniKey{data.id, data.venue, data.segment, data.src,
       data.mat, data.putCall, data.strike};
   }
 

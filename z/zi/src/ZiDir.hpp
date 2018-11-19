@@ -72,7 +72,7 @@ public:
   ZuOpBool
 
   int open(const Path &name, ZeError *e = 0);
-  Path read(ZeError *e = 0);
+  int read(Path &file, ZeError *e = 0);
   void close();
 
   static bool isdir(const Path &name, ZeError *e = 0);

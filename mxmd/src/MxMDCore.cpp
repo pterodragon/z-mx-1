@@ -120,7 +120,7 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
       MxIDString id = data.securities[0];
       if (!id) id = data.id;
       sec->addOrderBook(
-	  MxSecKey{data.venue, data.segment, data.id}, tbl, data.lotSizes,
+	  MxSecKey{data.id, data.venue, data.segment}, tbl, data.lotSizes,
 	  data.transactTime);
     } else {
       ZmRef<MxMDSecurity> securities[MxMDNLegs];
@@ -136,7 +136,7 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
 	if (!i)
 	  securities[i] = ZuMv(sec);
 	else {
-	  securities[i] = shard->security(MxSecKey{venueID, segment, id});
+	  securities[i] = shard->security(MxSecKey{id, venueID, segment});
 	  if (!securities[i]) return;
 	}
 	sides[i] = data.sides[i];
@@ -532,7 +532,7 @@ void MxMDCore::l1(ZvCmdServerCxn *,
     out << "stamp,status,last,lastQty,bid,bidQty,ask,askQty,tickDir,"
       "high,low,accVol,accVolQty,match,matchQty,surplusQty,flags\n";
   for (unsigned i = 1; i < argc; i++) {
-    MxSecID key = parseOrderBook(args, i);
+    MxUniKey key = parseOrderBook(args, i);
     lookupOrderBook(key, 1, 1,
 	[this, &out, csv](MxMDSecurity *, MxMDOrderBook *ob) -> bool {
       const MxMDL1Data &l1Data = ob->l1Data();
@@ -588,7 +588,7 @@ void MxMDCore::l2(ZvCmdServerCxn *,
   if (argc != 2) throw ZvCmdUsage();
   outMsg = new ZvCmdMsg();
   auto &out = outMsg->cmd();
-  MxSecID key = parseOrderBook(args, 1);
+  MxUniKey key = parseOrderBook(args, 1);
   lookupOrderBook(key, 1, 1,
       [this, &out](MxMDSecurity *, MxMDOrderBook *ob) -> bool {
     out << "bids:\n";
@@ -627,7 +627,7 @@ void MxMDCore::security_(ZvCmdServerCxn *,
   if (argc != 2) throw ZvCmdUsage();
   outMsg = new ZvCmdMsg();
   auto &out = outMsg->cmd();
-  MxSecID key = parseOrderBook(args, 1);
+  MxUniKey key = parseOrderBook(args, 1);
   lookupOrderBook(key, 1, 0,
       [&out](MxMDSecurity *sec, MxMDOrderBook *ob) -> bool {
     const MxMDSecRefData &refData = sec->refData();
@@ -638,7 +638,7 @@ void MxMDCore::security_(ZvCmdServerCxn *,
       "\naltIDSrc: " << refData.altIDSrc <<
       "\naltSymbol: " << refData.altSymbol;
     if (refData.underVenue) out << "\nunderlying: " <<
-      MxSecKey{refData.underVenue, refData.underSegment, refData.underlying};
+      MxSecKey{refData.underlying, refData.underVenue, refData.underSegment};
     if (*refData.mat) {
       out << "\nmat: " << refData.mat;
       if (*refData.putCall) out <<
@@ -952,7 +952,7 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
       if (hdr.shard < nShards()) {
 	const AddOrderBook &obj = hdr.as<AddOrderBook>();
 	shard(hdr.shard, [obj = obj](MxMDShard *shard) mutable {
-	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue()))
+	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue))
 	    if (ZmRef<MxMDTickSizeTbl> tbl =
 		    venue->tickSizeTbl(obj.tickSizeTbl))
 	      if (ZmRef<MxMDSecurity> sec = shard->security(obj.security)) {
@@ -979,7 +979,7 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	shard(hdr.shard, [obj = obj](MxMDShard *shard) {
 	  if (ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key))
 	    ob->security()->delOrderBook(
-	      obj.key.venue(), obj.key.segment(), obj.transactTime);
+	      obj.key.venue, obj.key.segment, obj.transactTime);
 	});
       }
       break;
@@ -987,7 +987,7 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
       if (hdr.shard < nShards()) {
 	const AddCombination &obj = hdr.as<AddCombination>();
 	shard(hdr.shard, [obj = obj](MxMDShard *shard) {
-	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue()))
+	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue))
 	    if (ZmRef<MxMDTickSizeTbl> tbl =
 		venue->tickSizeTbl(obj.tickSizeTbl)) {
 	    ZmRef<MxMDSecurity> securities[MxMDNLegs];
@@ -995,7 +995,7 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	      if (!(securities[i] = shard->security(obj.securities[i])))
 		return;
 	    venue->shard(shard)->addCombination(
-		obj.key.segment(), obj.key.id(),
+		obj.key.segment, obj.key.id,
 		obj.pxNDP, obj.qtyNDP,
 		obj.legs, securities, obj.sides, obj.ratios,
 		tbl, obj.lotSizes, obj.transactTime);
@@ -1007,9 +1007,9 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
       if (hdr.shard < nShards()) {
 	const DelCombination &obj = hdr.as<DelCombination>();
 	shard(hdr.shard, [obj = obj](MxMDShard *shard) {
-	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue()))
+	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue))
 	    venue->shard(shard)->delCombination(
-		obj.key.segment(), obj.key.id(), obj.transactTime);
+		obj.key.segment, obj.key.id, obj.transactTime);
 	});
       }
       break;
@@ -1017,7 +1017,7 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
       if (hdr.shard < nShards()) {
 	const UpdateOrderBook &obj = hdr.as<UpdateOrderBook>();
 	shard(hdr.shard, [obj = obj](MxMDShard *shard) {
-	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue()))
+	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue))
 	    if (ZmRef<MxMDTickSizeTbl> tbl =
 		venue->tickSizeTbl(obj.tickSizeTbl))
 	      if (ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key))
@@ -1234,6 +1234,7 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 {
   using namespace MxTelemetry;
 
+  // heaps
   ZmHeapMgr::stats(ZmHeapMgr::StatsFn{
       [](Cxn *cxn, const ZmHeapInfo &info, const ZmHeapStats &stats) {
 	cxn->transmit(heap(
@@ -1244,6 +1245,7 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 	      (uint8_t)info.config.alignment));
       }, cxn});
 
+  // threads
   ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{
       [](Cxn *cxn, ZmThreadContext *tc) {
 	ZmThreadName name;
@@ -1255,9 +1257,37 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 	      tc->main(), tc->detached()));
       }, cxn});
 
+  // thread queues (ZmScheduler)
+  core()->allMx([cxn](MxMultiplex *mx) {
+	unsigned n = mx->nThreads();
+	ZmThreadName name;
+	uint64_t inCount, inBytes, outCount, outBytes;
+	for (unsigned tid = 1; tid <= n; tid++) {
+	  mx->threadName(tid, name);
+	  const ZmScheduler::Ring &ring = mx->ring(tid);
+	  ring.stats(inCount, inBytes, outCount, outBytes);
+	  cxn->transmit(queue(
+		name, 0, ring.count(), inCount, inBytes, outCount, outBytes,
+		ring.params().size, QueueType::Thread));
+
+	}
+      });
+
+  // IPC queues (MD broadcast)
+  if (ZmRef<MxMDBroadcast::Ring> ring = m_broadcast.ring()) {
+    uint64_t inCount, inBytes, outCount, outBytes;
+    ring->stats(inCount, inBytes, outCount, outBytes);
+    cxn->transmit(queue(
+	  ring->params().name(), 0, ring->count(),
+	  inCount, inBytes, outCount, outBytes,
+	  ring->params().size(), QueueType::IPC));
+  }
+
+
   {
     ReadGuard guard(m_lock);
 
+    // I/O Engines
     {
       while (ZmRef<MxEngine> engine_ = m_engines.shift()) {
 	unsigned down, disabled, transient, up, reconn, failed;
@@ -1271,6 +1301,7 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 	      (uint8_t)state));
       }
     }
+    // I/O Links
     {
       while (ZmRef<MxAnyLink> link_ = m_links.shift()) {
 	unsigned reconnects;
@@ -1280,6 +1311,7 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 	      reconnects, (uint8_t)state));
       }
     }
+    // I/O Queues
     {
       auto i = m_queues.readIterator();
       while (Queues::Node *node = i.iterate()) {

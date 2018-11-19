@@ -131,6 +131,11 @@ public:
     if (!node) return nullptr;
     return node->key();
   }
+  template <typename L>
+  ZuInline allMx(L l) const {
+    auto i = m_mxTbl->readIterator();
+    while (MxTbl::Node *node = i.iterate()) l(node->key());
+  }
 
   void start();
   void stop();

@@ -1016,9 +1016,9 @@ public:
 
   ZuInline MxMDOrderBook *out() const { return m_out; };
 
-  ZuInline MxID venueID() const { return m_key.venue(); }
-  ZuInline MxID segment() const { return m_key.segment(); }
-  ZuInline const MxIDString &id() const { return m_key.id(); };
+  ZuInline MxID venueID() const { return m_key.venue; }
+  ZuInline MxID segment() const { return m_key.segment; }
+  ZuInline const MxIDString &id() const { return m_key.id; };
   ZuInline const MxSecKey &key() const { return m_key; }
 
   ZuInline MxUInt legs() const { return m_legs; };
@@ -1295,9 +1295,9 @@ friend class MxMDShard;
 public:
   MxMDLib *md() const;
 
-  ZuInline MxID primaryVenue() const { return m_key.venue(); }
-  ZuInline MxID primarySegment() const { return m_key.segment(); }
-  ZuInline const MxIDString &id() const { return m_key.id(); }
+  ZuInline MxID primaryVenue() const { return m_key.venue; }
+  ZuInline MxID primarySegment() const { return m_key.segment; }
+  ZuInline const MxIDString &id() const { return m_key.id; }
   ZuInline const MxSecKey &key() const { return m_key; }
 
   ZuInline const MxMDSecRefData &refData() const { return m_refData; }
@@ -1341,14 +1341,11 @@ public:
 private:
   template <typename L>
   inline L secIDs_(L l) const {
-    l(MxSecID{
-	.id = m_key.id(),
-	.venue = m_key.venue(),
-	.segment = m_key.segment()});
+    l(MxUniKey{.id = m_key.id, .venue = m_key.venue, .segment = m_key.segment});
     if (*m_refData.idSrc)
-      l(MxSecID{.id = m_refData.symbol, .src = m_refData.idSrc});
+      l(MxUniKey{.id = m_refData.symbol, .src = m_refData.idSrc});
     if (*m_refData.altIDSrc)
-      l(MxSecID{.id = m_refData.altSymbol, .src = m_refData.altIDSrc});
+      l(MxUniKey{.id = m_refData.altSymbol, .src = m_refData.altIDSrc});
     return l;
   }
 public:
@@ -1358,7 +1355,7 @@ public:
     if (m_underlying && *m_refData.mat) {
       if (*m_refData.strike)
 	m_underlying->secIDs_([l = ZuMv(l),
-	    refData = &m_refData](MxSecID key) mutable {
+	    refData = &m_refData](MxUniKey key) mutable {
 	  key.mat = refData->mat;
 	  key.putCall = refData->putCall;
 	  key.strike = refData->strike;
@@ -1366,7 +1363,7 @@ public:
 	});
       else
 	m_underlying->secIDs_([l = ZuMv(l),
-	    refData = &m_refData](MxSecID key) mutable {
+	    refData = &m_refData](MxUniKey key) mutable {
 	  key.mat = refData->mat;
 	  l(key);
 	});
@@ -1854,12 +1851,12 @@ public:
   static ZtString lookupSyntax();
   static ZtString lookupOptions();
 
-  MxSecID parseSecurity(ZvCf *args, unsigned index) const;
+  MxUniKey parseSecurity(ZvCf *args, unsigned index) const;
   bool lookupSecurity(
-      const MxSecID &key, bool secRequired, ZmFn<MxMDSecurity *> fn) const;
-  MxSecID parseOrderBook(ZvCf *args, unsigned index) const;
+      const MxUniKey &key, bool secRequired, ZmFn<MxMDSecurity *> fn) const;
+  MxUniKey parseOrderBook(ZvCf *args, unsigned index) const;
   bool lookupOrderBook(
-      const MxSecID &key, bool secRequired, bool obRequired,
+      const MxUniKey &key, bool secRequired, bool obRequired,
       ZmFn<MxMDSecurity *, MxMDOrderBook *> fn) const;
 
   // CLI time format (using local timezone)
@@ -1981,7 +1978,7 @@ template <typename> friend class ZmShard;
   struct Securities_HeapID {
     ZuInline static const char *id() { return "MxMDLib.Securities"; }
   };
-  typedef ZmHash<MxSecSymKey,
+  typedef ZmHash<MxSymKey,
 	    ZmHashVal<MxMDSecurity *,
 	      ZmHashObject<ZuNull,
 		ZmHashLock<ZmPLock,
@@ -2022,18 +2019,18 @@ public:
       return MxMDSecHandle{ZuMv(sec)};
     return MxMDSecHandle{};
   }
-  ZuInline MxMDSecHandle security(const MxSecSymKey &key) const {
+  ZuInline MxMDSecHandle security(const MxSymKey &key) const {
     if (ZmRef<MxMDSecurity> sec = m_securities.findVal(key))
       return MxMDSecHandle{ZuMv(sec)};
     return MxMDSecHandle{};
   }
 private:
-  ZuInline ZmRef<MxMDSecurity> security_(const MxSecID &key) const {
+  ZuInline ZmRef<MxMDSecurity> security_(const MxUniKey &key) const {
     ZmRef<MxMDSecurity> sec;
     if (*key.src)
-      sec = m_securities.findVal(MxSecSymKey{key.src, key.id});
+      sec = m_securities.findVal(MxSymKey{key.id, key.src});
     else
-      sec = m_allSecurities.findKey(MxSecKey{key.venue, key.segment, key.id});
+      sec = m_allSecurities.findKey(MxSecKey{key.id, key.venue, key.segment});
     if (sec && *key.mat && sec->derivatives()) {
       if (*key.strike)
 	sec = sec->derivatives()->option(
@@ -2044,7 +2041,7 @@ private:
     return ZuMv(sec);
   }
 public:
-  ZuInline MxMDSecHandle security(const MxSecID &key) const {
+  ZuInline MxMDSecHandle security(const MxUniKey &key) const {
     ZmRef<MxMDSecurity> sec = security_(key);
     if (sec) return MxMDSecHandle{ZuMv(sec)};
     return MxMDSecHandle{};
@@ -2064,7 +2061,7 @@ public:
       l((MxMDSecurity *)0);
   }
   template <typename L> ZuInline void secInvoke(
-      const MxSecSymKey &key, L l) const {
+      const MxSymKey &key, L l) const {
     if (ZmRef<MxMDSecurity> sec = m_securities.findVal(key))
       sec->shard()->invoke(
 	  [l = ZuMv(l), sec = ZuMv(sec)]() mutable { l(sec); });
@@ -2072,7 +2069,7 @@ public:
       l((MxMDSecurity *)0);
   }
   template <typename L>
-  ZuInline void secInvoke(const MxSecID &key, L l) const {
+  ZuInline void secInvoke(const MxUniKey &key, L l) const {
     if (*key.mat) {
       auto l_ = [key = key, l = ZuMv(l)](MxMDSecurity *sec) mutable {
 	if (ZuLikely(sec && sec->derivatives())) {
@@ -2085,14 +2082,14 @@ public:
 	l(sec);
       };
       if (*key.src)
-	secInvoke(MxSecSymKey{key.src, key.id}, ZuMv(l_));
+	secInvoke(MxSymKey{key.id, key.src}, ZuMv(l_));
       else
-	secInvoke(MxSecKey{key.venue, key.segment, key.id}, ZuMv(l_));
+	secInvoke(MxSecKey{key.id, key.venue, key.segment}, ZuMv(l_));
     } else {
       if (*key.src)
-	secInvoke(MxSecSymKey{key.src, key.id}, ZuMv(l));
+	secInvoke(MxSymKey{key.id, key.src}, ZuMv(l));
       else
-	secInvoke(MxSecKey{key.venue, key.segment, key.id}, ZuMv(l));
+	secInvoke(MxSecKey{key.id, key.venue, key.segment}, ZuMv(l));
     }
   }
   uintptr_t allSecurities(ZmFn<MxMDSecurity *>) const;
@@ -2102,7 +2099,7 @@ public:
       return MxMDOBHandle{ob};
     return MxMDOBHandle{};
   }
-  ZuInline MxMDOBHandle orderBook(const MxSecID &key) const {
+  ZuInline MxMDOBHandle orderBook(const MxUniKey &key) const {
     ZmRef<MxMDSecurity> sec = security_(key);
     if (!sec) return MxMDOBHandle{};
     if (ZmRef<MxMDOrderBook> ob = sec->orderBook(key.venue, key.segment))
@@ -2122,7 +2119,7 @@ public:
       l((MxMDOrderBook *)0);
   }
   template <typename L>
-  ZuInline void obInvoke(const MxSecID &key, L l) const {
+  ZuInline void obInvoke(const MxUniKey &key, L l) const {
     secInvoke(key, [key = key, l = ZuMv(l)](MxMDSecurity *sec) mutable {
 	if (!sec)
 	  l(nullptr);

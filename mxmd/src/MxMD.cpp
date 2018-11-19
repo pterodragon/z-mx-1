@@ -122,7 +122,7 @@ MxMDOrderBook::MxMDOrderBook( // single leg
     MxMDSharded(shard),
     m_venue(venue),
     m_venueShard(venue ? venue->shard_(shard->id()) : (MxMDVenueShard *)0),
-    m_key(venue ? venue->id() : MxID(), segment, id),
+    m_key{.id = id, .venue = venue ? venue->id() : MxID(), .segment = segment},
     m_legs(1),
     m_tickSizeTbl(tickSizeTbl),
     m_lotSizes(lotSizes),
@@ -147,7 +147,7 @@ MxMDOrderBook::MxMDOrderBook( // multi-leg
   const MxMDLotSizes &lotSizes) :
     MxMDSharded(shard),
     m_venue(venue),
-    m_key(venue->id(), segment, id),
+    m_key{.id = id, .venue = venue->id(), .segment = segment},
     m_legs(legs),
     m_tickSizeTbl(tickSizeTbl),
     m_lotSizes(lotSizes),
@@ -1428,10 +1428,11 @@ void MxMDLib::addSecIndices(
     MxDateTime transactTime)
 {
   if (*refData.idSrc && refData.symbol)
-    m_securities.add(MxSecSymKey(refData.idSrc, refData.symbol), security);
+    m_securities.add(
+	MxSymKey{.id = refData.symbol, .src = refData.idSrc}, security);
   if (*refData.altIDSrc && refData.altSymbol)
     m_securities.add(
-	MxSecSymKey(refData.altIDSrc, refData.altSymbol), security);
+	MxSymKey{.id = refData.altSymbol, .src = refData.altIDSrc}, security);
   if (*refData.underVenue && refData.underlying && *refData.mat) {
     MxSecKey underKey{
       refData.underVenue, refData.underSegment, refData.underlying};
@@ -1458,9 +1459,11 @@ void MxMDLib::delSecIndices(
     MxMDSecurity *security, const MxMDSecRefData &refData)
 {
   if (*refData.idSrc && refData.symbol)
-    m_securities.delKey(MxSecSymKey(refData.idSrc, refData.symbol));
+    m_securities.delKey(
+	MxSymKey{.id = refData.symbol, .src = refData.idSrc});
   if (*refData.altIDSrc && refData.altSymbol)
-    m_securities.delKey(MxSecSymKey(refData.altIDSrc, refData.altSymbol));
+    m_securities.delKey(
+	MxSymKey{.id = refData.altSymbol, .src = refData.altIDSrc});
   if (*refData.underVenue && refData.underlying && *refData.mat)
     if (MxMDSecurity *underlying = security->underlying()) {
       underlying->delDerivative(security);
@@ -1472,17 +1475,18 @@ void MxMDDerivatives::add(MxMDSecurity *security)
 {
   const MxMDSecRefData &refData = security->refData();
   if (*refData.putCall && *refData.strike)
-    m_options.add(MxOptKey(refData.mat, refData.putCall, refData.strike),
-	security);
+    m_options.add(MxOptKey{.strike = refData.strike,
+	.mat = refData.mat, .putCall = refData.putCall}, security);
   else
-    m_futures.add(MxFutKey(refData.mat), security);
+    m_futures.add(MxFutKey{refData.mat}, security);
 }
 
 void MxMDDerivatives::del(MxMDSecurity *security)
 {
   const MxMDSecRefData &refData = security->refData();
   if (*refData.putCall && *refData.strike)
-    m_options.delVal(MxOptKey(refData.mat, refData.putCall, refData.strike));
+    m_options.delVal(MxOptKey{.strike = refData.strike,
+	.mat = refData.mat, .putCall = refData.putCall});
   else
     m_futures.delVal(MxFutKey(refData.mat));
 }
@@ -1508,9 +1512,9 @@ ZmRef<MxMDOrderBook> MxMDLib::addOrderBook(
     MxMDTickSizeTbl *tickSizeTbl, MxMDLotSizes lotSizes,
     MxDateTime transactTime)
 {
-  if (ZuUnlikely(!*key.venue())) {
+  if (ZuUnlikely(!*key.venue)) {
     raise(ZeEVENT(Error,
-      ([id = key.id()](const ZeEvent &, ZmStream &s) {
+      ([id = key.id](const ZeEvent &, ZmStream &s) {
 	s << "addOrderBook - null venueID for \"" << id << '"';
       })));
     return 0;
@@ -1520,22 +1524,22 @@ ZmRef<MxMDOrderBook> MxMDLib::addOrderBook(
 loop:
   {
     Guard guard(m_refDataLock);
-    if (ob = security->findOrderBook_(key.venue(), key.segment())) {
+    if (ob = security->findOrderBook_(key.venue, key.segment)) {
       guard.unlock();
       if (!newOB) ob->update(tickSizeTbl, lotSizes, transactTime);
       goto added;
     }
-    ZmRef<MxMDVenue> venue = m_venues.findKey(key.venue());
+    ZmRef<MxMDVenue> venue = m_venues.findKey(key.venue);
     if (ZuUnlikely(!venue)) {
       raise(ZeEVENT(Error,
-	([venueID = key.venue(), id = key.id()](const ZeEvent &, ZmStream &s) {
+	([venueID = key.venue, id = key.id](const ZeEvent &, ZmStream &s) {
 	  s << "addOrderBook - no such venue for \"" << id << "\" " << venueID;
 	})));
       return newOB;
     }
     ob = new MxMDOrderBook(
       security->shard(), venue,
-      key.segment(), key.id(), security, tickSizeTbl, lotSizes,
+      key.segment, key.id, security, tickSizeTbl, lotSizes,
       security->handler());
     m_allOrderBooks.add(ob);
     ob->shard()->addOrderBook(ob);
@@ -1555,10 +1559,10 @@ added:
     if (inOB) inOB->map(inRank, ob);
   }
   if (MxMDVenueMapping mapping =
-      venueMapping(MxMDVenueMapKey(key.venue(), key.segment()))) {
-    key.id() = security->id();
-    key.venue() = mapping.venue;
-    key.segment() = mapping.segment;
+      venueMapping(MxMDVenueMapKey(key.venue, key.segment))) {
+    key.id = security->id();
+    key.venue = mapping.venue;
+    key.segment = mapping.segment;
     tickSizeTbl = 0;
     lotSizes = MxMDLotSizes();
     inOB = ob;
@@ -1581,7 +1585,8 @@ ZmRef<MxMDOrderBook> MxMDLib::addCombination(
   ZmRef<MxMDOrderBook> ob;
   {
     Guard guard(m_refDataLock);
-    if (ob = m_allOrderBooks.findKey(MxSecKey(venue->id(), segment, id))) {
+    if (ob = m_allOrderBooks.findKey(
+	  MxSecKey{.id = id, .venue = venue->id(), .segment = segment})) {
       guard.unlock();
       ob->update(tickSizeTbl, lotSizes, transactTime);
       return ob;
@@ -1630,7 +1635,8 @@ void MxMDLib::delOrderBook(
     Guard guard(m_refDataLock);
     ob = security->delOrderBook_(venue, segment);
     if (!ob) return;
-    m_allOrderBooks.delKey(MxSecKey(venue, segment, ob->id()));
+    m_allOrderBooks.delKey(
+	MxSecKey{.id = ob->id(), .venue = venue, .segment = segment});
     ob->shard()->delOrderBook(ob);
     ob->venue()->feed()->delOrderBook(ob, transactTime);
     MxMDCore *core = static_cast<MxMDCore *>(this);
@@ -1651,7 +1657,8 @@ void MxMDLib::delCombination(
   ZmRef<MxMDOrderBook> ob;
   {
     Guard guard(m_refDataLock);
-    ob = m_allOrderBooks.delKey(MxSecKey(venue->id(), segment, id));
+    ob = m_allOrderBooks.delKey(
+	MxSecKey{.id = id, .venue = venue->id(), .segment = segment});
     if (!ob) return;
     shard->delOrderBook(ob);
     venue->feed()->delOrderBook(ob, transactTime);
@@ -1794,9 +1801,9 @@ ZtString MxMDLib::lookupOptions()
     "    -x, --strike\t- strike price (as integer, per security convention)\n";
 }
 
-MxSecID MxMDLib::parseSecurity(ZvCf *args, unsigned index) const
+MxUniKey MxMDLib::parseSecurity(ZvCf *args, unsigned index) const
 {
-  MxSecID key;
+  MxUniKey key;
   key.id = args->get(ZuStringN<16>(ZuBoxed(index)));
   if (ZtString src_ = args->get("src")) {
     key.src = MxSecIDSrc::lookup(src_);
@@ -1826,7 +1833,7 @@ MxSecID MxMDLib::parseSecurity(ZvCf *args, unsigned index) const
 }
 
 bool MxMDLib::lookupSecurity(
-    const MxSecID &key, bool secRequired, ZmFn<MxMDSecurity *> fn) const
+    const MxUniKey &key, bool secRequired, ZmFn<MxMDSecurity *> fn) const
 {
   bool ok = true;
   thread_local ZmSemaphore sem;
@@ -1842,9 +1849,9 @@ bool MxMDLib::lookupSecurity(
   return ok;
 }
 
-MxSecID MxMDLib::parseOrderBook(ZvCf *args, unsigned index) const
+MxUniKey MxMDLib::parseOrderBook(ZvCf *args, unsigned index) const
 {
-  MxSecID key{parseSecurity(args, index)};
+  MxUniKey key{parseSecurity(args, index)};
   if (*key.src) {
     key.venue = args->get("venue", true);
     key.segment = args->get("segment");
@@ -1853,7 +1860,7 @@ MxSecID MxMDLib::parseOrderBook(ZvCf *args, unsigned index) const
 }
 
 bool MxMDLib::lookupOrderBook(
-    const MxSecID &key,
+    const MxUniKey &key,
     bool secRequired, bool obRequired,
     ZmFn<MxMDSecurity *, MxMDOrderBook *> fn) const
 {

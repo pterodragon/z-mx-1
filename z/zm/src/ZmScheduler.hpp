@@ -279,6 +279,7 @@ class ZmAPI ZmScheduler : public ZmThreadMgr {
 		ZmRBTreeHeapID<ScheduleTree_HeapID> > > > ScheduleTree;
 
 public:
+  typedef ZmRing<ZmFn<> > Ring;
   typedef ZmRef<ScheduleTree::Node> Timer;
   typedef ZmSchedulerParams::ID ID;
   enum State { Stopped = 0, Starting, Running, Draining, Drained, Stopping };
@@ -401,8 +402,8 @@ public:
       count += m_threads[i].ring.count();
     return count;
   }
-  inline unsigned count(unsigned tid) const {
-    return m_threads[tid].ring.count();
+  inline const Ring &ring(unsigned tid) const {
+    return m_threads[tid - 1].ring;
   }
 
   inline bool ll() const { return m_threads[0].ring.params().ll(); }
@@ -417,8 +418,6 @@ protected:
   void idle();
 
 private:
-  typedef ZmRing<ZmFn<> > Ring;
-
   struct Thread {
     ZmSpinLock	lock;
     Ring	ring;

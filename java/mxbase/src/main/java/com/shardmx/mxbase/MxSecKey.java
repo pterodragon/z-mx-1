@@ -12,13 +12,13 @@ public abstract class MxSecKey implements Comparable<MxSecKey> {
 
   public int compareTo(MxSecKey k) {
     int i;
+    if ((i = id().compareTo(k.id())) != 0) return i;
     if ((i = venue().compareTo(k.venue())) != 0) return i;
     if (segment() == null) {
       if (k.segment() != null) return -1;
-    } else {
-      if (k.segment() == null) return 1;
-      if ((i = segment().compareTo(k.segment())) != 0) return i;
+      return 0;
     }
-    return id().compareTo(k.id());
+    if (k.segment() == null) return 1;
+    return segment().compareTo(k.segment());
   }
 }

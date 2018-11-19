@@ -156,7 +156,7 @@ static void publish_()
     if (!md) throw ZtString("MxMDLib::instance() failed");
 
     for (const char **ticker = tickers; *ticker; ticker++) {
-      md->secInvoke(MxSecKey{"JNITest", MxID(), *ticker},
+      md->secInvoke(MxSecKey{*ticker, "JNITest", MxID()},
 	  [ticker](MxMDSecurity *sec) {
 	if (!sec)
 	  throw ZtString() << "security \"" << *ticker << "\" not found";

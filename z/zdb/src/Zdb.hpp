@@ -75,9 +75,17 @@
 typedef uint32_t ZdbID;		// database ID
 typedef uint64_t ZdbRN;		// record ID
 
+namespace ZdbOp {
+  enum { New = 0, Update, Delete };
+  inline static const char *name(int op) {
+    return op == New ? "New" : op == Update ? "Update" : "Del";
+  }
+};
+
 // replication protocol messages
-struct Zdb_Msg {
-  enum Type { HB, Rep, Rec };
+
+namespace Zdb_Msg {
+  enum { HB = 0, Rep, Rec };
 };
 #pragma pack(push, 1)
 struct Zdb_Msg_HB {	// heartbeat
@@ -86,12 +94,10 @@ struct Zdb_Msg_HB {	// heartbeat
   uint16_t	dbCount;		// followed by RNs
 };
 struct Zdb_Msg_Rep {	// replication
-  enum { Update = 0x0001 };		// flags
-
   ZdbID		db;
   ZdbRN		rn;			// followed by record
   uint32_t	range;
-  uint16_t	flags;
+  uint16_t	op;			// ZdbOp
   uint16_t	clen;
 };
 struct Zdb_Msg_Hdr {	// header
@@ -173,38 +179,71 @@ template <> struct ZuPrint<ZdbRange> : public ZuPrintFn { };
 
 struct Zdb_File_IndexAccessor;
 
-class Zdb_File : public ZiFile {
+class Zdb_File_ : public ZmPolymorph, public ZiFile {
 friend struct Zdb_File_IndexAccessor;
 
 public:
-  inline Zdb_File(unsigned index) : m_index(index) { }
+  inline Zdb_File_(unsigned index, unsigned unallocated) :
+    m_index(index), m_unallocated(unallocated) { }
 
-  inline unsigned index() const { return m_index; }
+  ZuInline unsigned index() const { return m_index; }
+
+  ZuInline unsigned unallocated() const { return m_unallocated; }
+  ZuInline unsigned allocated() const { return m_allocated; }
+  ZuInline unsigned deleted() const { return m_deleted; }
+
+  ZuInline unsigned alloc() { --m_unallocated; return ++m_allocated; }
+  ZuInline unsigned del() { --m_allocated; return ++m_deleted; }
+  ZuInline unsigned skip() { --m_unallocated; return ++m_deleted; }
 
   void checkpoint() { sync(); }
 
 private:
-  unsigned	m_index;
+  unsigned	m_index = 0;
+  unsigned	m_unallocated = 0;
+  unsigned	m_allocated = 0;
+  unsigned	m_deleted = 0;
 };
 
-struct Zdb_File_IndexAccessor : public ZuAccessor<Zdb_File *, unsigned> {
-  inline static unsigned value(const Zdb_File *file) { return file->m_index; }
+typedef ZmList<Zdb_File_,
+	  ZmListObject<ZmPolymorph,
+	    ZmListNodeIsItem<true,
+	      ZmListHeapID<ZmNoHeap,
+		ZmListLock<ZmNoLock> > > > > Zdb_FileLRU;
+typedef Zdb_FileLRU::Node Zdb_FileLRUNode;
+
+struct Zdb_FileIndexAccessor : public ZuAccessor<Zdb_FileLRUNode, unsigned> {
+  inline static unsigned value(const Zdb_FileLRUNode &node) {
+    return node.index();
+  }
 };
+
+struct Zdb_FileHeapID {
+  inline static const char *id() { return "Zdb_File"; }
+};
+typedef ZmHash<Zdb_FileLRUNode,
+	  ZmHashObject<ZmPolymorph,
+	    ZmHashNodeIsKey<true,
+	      ZmHashIndex<Zdb_FileIndexAccessor,
+		ZmHashHeapID<Zdb_FileHeapID,
+		  ZmHashLock<ZmNoLock,
+		    ZmHashBase<ZmObject> > > > > > > Zdb_FileHash;
+typedef Zdb_FileHash::Node Zdb_File;
 
 class Zdb_FileRec {
 public:
   ZuInline Zdb_FileRec() : m_file(0), m_off(0) { }
-  ZuInline Zdb_FileRec(Zdb_File *file, ZiFile::Offset off) :
-    m_file(file), m_off(off) { }
+  ZuInline Zdb_FileRec(ZmRef<Zdb_File> file, ZiFile::Offset off) :
+    m_file(ZuMv(file)), m_off(off) { }
 
   ZuInline bool operator !() const { return !m_file; }
   ZuOpBool
 
   ZuInline Zdb_File *file() const { return m_file; }
-  ZuInline const ZiFile::Offset &off() const { return m_off; }
+  ZuInline ZiFile::Offset off() const { return m_off; }
 
 private:
-  Zdb_File		*m_file;
+  ZmRef<Zdb_File>	m_file;
   ZiFile::Offset	m_off;
 };
 
@@ -249,8 +288,7 @@ typedef Zdb_Lock_<ZmHeap<Zdb_Lock_HeapID, sizeof(Zdb_Lock_<ZuNull>)> > Zdb_Lock;
 
 #define ZdbAllocated 0xa110c8ed // "allocated"
 #define ZdbCommitted 0xc001da7a // "cool data"
-#define ZdbArchived  0xa5edda7a	// "aged data"
-#define ZdbAborted   0xdeadda7a	// "dead data"
+#define ZdbDeleted   0xdeadda7a	// "dead data"
 
 #pragma pack(push, 1)
 struct ZdbTrailer {
@@ -290,7 +328,7 @@ struct ZdbLRUNode_RNAccessor : public ZuAccessor<ZdbLRUNode, ZdbRN> {
   static ZdbRN value(const ZdbLRUNode &pod);
 };
 
-struct ZdbCache_ID {
+struct Zdb_Cache_ID {
   inline static const char *id() { return "Zdb.Cache"; }
 };
 
@@ -299,15 +337,15 @@ typedef ZmHash<ZdbLRUNode,
 	    ZmHashNodeIsKey<true,
 	      ZmHashIndex<ZdbLRUNode_RNAccessor,
 		ZmHashHeapID<ZmNoHeap,
-		  ZmHashID<ZdbCache_ID,
+		  ZmHashID<Zdb_Cache_ID,
 		    ZmHashLock<ZmNoLock,
-		      ZmHashBase<ZmObject> > > > > > > > ZdbCache;
-typedef ZdbCache::Node ZdbCacheNode;
+		      ZmHashBase<ZmObject> > > > > > > > Zdb_Cache;
+typedef Zdb_Cache::Node Zdb_CacheNode;
 
 class ZdbAnyPOD_Compressed;
 class ZdbAnyPOD_Send__;
 
-class ZdbAPI ZdbAnyPOD : public ZdbCacheNode {
+class ZdbAPI ZdbAnyPOD : public Zdb_CacheNode {
 friend class Zdb_;
 friend class Zdb_Cxn;
 friend class ZdbAnyPOD_Send__;
@@ -316,7 +354,7 @@ friend class ZdbGuard;
 
 protected:
   inline ZdbAnyPOD(void *ptr, unsigned size, Zdb_ *db) :
-    ZdbCacheNode(ZuMkPair(ptr, size)), m_db(db), m_writeCount(0) { }
+    Zdb_CacheNode(ZuMkPair(ptr, size)), m_db(db), m_writeCount(0) { }
 
 public:
   inline ~ZdbAnyPOD() { }
@@ -349,12 +387,12 @@ public:
   inline bool uninitialized() const { return !trailer()->magic; }
   inline bool committed() const {
     uint32_t magic = trailer()->magic;
-    return magic == ZdbCommitted || magic == ZdbArchived;
+    return magic == ZdbCommitted;
   }
 
 private:
   inline void commit() { trailer()->magic = ZdbCommitted; }
-  inline void abort() { trailer()->magic = ZdbAborted; }
+  inline void del() { trailer()->magic = ZdbDeleted; }
 
   virtual ZmRef<ZdbAnyPOD_Compressed> compress() { return 0; }
 
@@ -391,26 +429,26 @@ private:
 class ZdbAnyPOD_Send__ : public ZmPolymorph {
 public:
   inline ZdbAnyPOD_Send__(ZdbAnyPOD *pod,
-    int type, ZdbRange range, bool update, bool compress, ZmFn<> fn) :
-      m_continuation(fn), m_pod(pod), m_vec(0) {
-    init(type, range, update, compress);
+    int type, ZdbRange range, int op, bool compress, bool recovery) :
+      m_pod(pod), m_vec(0), m_recovery(recovery) {
+    init(type, range, op, compress);
   }
 
   void send(Zdb_Cxn *cxn);
 
 private:
-  void init(int type, ZdbRange range, bool update, bool compress);
+  void init(int type, ZdbRange range, int op, bool compress);
 
   void send_(ZiIOContext &io);
   void sent(ZiIOContext &io);
 
   ZmRef<Zdb_Cxn>		m_cxn;
-  ZmFn<>			m_continuation;
   ZmRef<ZdbAnyPOD>		m_pod;
   ZmRef<ZdbAnyPOD_Compressed>	m_compressed;
   unsigned			m_vec;
   ZiVec				m_vecs[2];
   Zdb_Msg_Hdr			m_hdr;
+  bool				m_recovery;
 };
 struct ZdbAnyPOD_Send_HeapID {
   inline static const char *id() { return "ZdbAnyPOD_Send"; }
@@ -427,19 +465,19 @@ typedef ZdbAnyPOD_Send_<ZmHeap<ZdbAnyPOD_Send_HeapID,
 
 class ZdbAPI ZdbAnyPOD_Write__ : public ZmPolymorph {
 public:
-  inline ZdbAnyPOD_Write__(ZdbAnyPOD *pod, ZdbRange range, bool update) :
-    m_pod(pod), m_range(range), m_update(update) { }
+  inline ZdbAnyPOD_Write__(ZdbAnyPOD *pod, ZdbRange range, int op) :
+    m_pod(pod), m_range(range), m_op(op) { }
 
   inline ZmRef<ZdbAnyPOD> pod() const { return m_pod; }
   inline const ZdbRange &range() const { return m_range; }
-  inline bool update() const { return m_update; }
+  inline int op() const { return m_op; }
 
   void write();
 
 private:
-  ZmRef<ZdbAnyPOD>		m_pod;
-  ZdbRange			m_range;
-  bool				m_update;
+  ZmRef<ZdbAnyPOD>	m_pod;
+  ZdbRange		m_range;
+  int			m_op;	// ZdbOp
 };
 template <class Heap>
 class ZdbAnyPOD_Write_ : public ZdbAnyPOD_Write__, public Heap {
@@ -458,10 +496,10 @@ typedef ZdbAnyPOD_Write_<ZmHeap<ZdbAnyPOD_Write_HeapID,
 typedef ZmFn<Zdb_ *, ZmRef<ZdbAnyPOD> &> ZdbAllocFn;
 // RecoverFn(pod) - (optional) called when record is recovered
 typedef ZmFn<ZdbAnyPOD *> ZdbRecoverFn;
-// ReplicateFn(pod, ptr, range, update) - (optional) called when replicated
-typedef ZmFn<ZdbAnyPOD *, void *, ZdbRange, bool> ZdbReplicateFn;
-// CopyFn(pod, range, update) - (optional) called for app drop copy
-typedef ZmFn<ZdbAnyPOD *, ZdbRange, bool> ZdbCopyFn;
+// ReplicateFn(pod, ptr, range, op) - (optional) '' when replicated (rcvd)
+typedef ZmFn<ZdbAnyPOD *, void *, ZdbRange, int> ZdbReplicateFn;
+// CopyFn(pod, range, op) - (optional) called for app drop copy
+typedef ZmFn<ZdbAnyPOD *, ZdbRange, int> ZdbCopyFn;
 
 struct ZdbPOD_HeapID {
   inline static const char *id() { return "ZdbPOD"; }
@@ -591,14 +629,8 @@ friend struct IDAccessor;
     inline static ZdbID value(const Zdb_ *db) { return db->m_id; }
   };
 
-  struct FileHash_HeapID {
-    inline static const char *id() { return "Zdb.FileHash"; }
-  };
-  typedef ZmHash<Zdb_File *,
-	    ZmHashIndex<Zdb_File_IndexAccessor,
-	      ZmHashLock<ZmPLock,
-		ZmHashBase<ZmObject,
-		  ZmHashHeapID<FileHash_HeapID> > > > > FileHash;
+  typedef Zdb_Cache Cache;
+  typedef Zdb_FileHash FileHash;
 
   struct IndexHash_HeapID {
     inline static const char *id() { return "Zdb.IndexHash"; }
@@ -640,6 +672,7 @@ private:
   void open();
   void close();
 
+  void recover();
   void checkpoint();
   void checkpoint_();
 
@@ -650,6 +683,7 @@ public:
   inline ZdbID id() const { return m_id; }
   inline unsigned recSize() { return m_recSize; }
   inline unsigned cacheSize() { return m_cacheSize; } // unclean read
+  inline unsigned filesMax() { return m_filesMax; }
 
   // database record contains { ...data..., rn, prevRN, headRN, magic }
   // magic is 0 until put() completes
@@ -680,11 +714,8 @@ public:
   // update record following push()/get() - causes replication / sync
   void put(ZdbAnyPOD *, ZdbRange range = ZdbRange(), bool copy = true);
 
-  // abort push
-  void abort(ZdbAnyPOD *);
-
-  // archive record when it is no longer in application's working set
-  // void archive(ZdbAnyPOD *pod);
+  // delete (following either get or push - aborts push)
+  void del(ZdbAnyPOD *);
 
   inline void replicate(bool v) { m_config->replicate = v; }
 
@@ -693,18 +724,18 @@ private:
   inline void alloc(ZmRef<ZdbAnyPOD> &pod) { m_handler.allocFn(this, pod); }
   inline void recover(ZdbAnyPOD *pod) { m_handler.recoverFn(pod); }
   inline void replicate(ZdbAnyPOD *pod,
-      void *ptr, ZdbRange range, bool update) {
+      void *ptr, ZdbRange range, int op) {
 #ifdef ZdbRep_DEBUG
     ZmAssert(range.len() > 0);
     ZmAssert((range.off() + range.len()) <= pod->size());
 #endif
     if (m_handler.replicateFn)
-      m_handler.replicateFn(pod, ptr, range, update);
+      m_handler.replicateFn(pod, ptr, range, op);
     else
       memcpy((char*)pod->ptr() + range.off(), ptr, range.len());
   }
-  inline void copy(ZdbAnyPOD *pod, ZdbRange range, bool update) {
-    m_handler.copyFn(pod, range, update);
+  inline void copy(ZdbAnyPOD *pod, ZdbRange range, int op) {
+    m_handler.copyFn(pod, range, op);
   }
 
   // lock record sequence
@@ -723,28 +754,34 @@ private:
   ZmRef<ZdbAnyPOD> push_(ZdbAnyPOD *prev);
 
   // replication data rcvd (copy/commit, called while env is unlocked)
-  ZmRef<ZdbAnyPOD> replicated(
-      ZdbRN rn, void *ptr, ZdbRange range, bool update);
+  ZmRef<ZdbAnyPOD> replicated(ZdbRN rn, void *ptr, ZdbRange range, int op);
 
   // get a new or existing record, adding it to the cache
   ZmRef<ZdbAnyPOD> replicated_(ZdbRN rn);
 
-  inline ZtString fileName(unsigned i) {
-    ZtString name(m_config->path.length() + 16);
-    name << m_config->path << '_' << i;
-    return name;
+  inline ZiFile::Path dirName(unsigned i) const {
+    return ZiFile::append(m_config->path, ZuStringN<8>() <<
+	ZuBox<unsigned>(i>>16).hex(ZuFmt::Right<4>()));
+  }
+  inline ZiFile::Path fileName(ZiFile::Path dir, unsigned i) const {
+    return ZiFile::append(dir, ZuStringN<12>() <<
+	ZuBox<unsigned>(i & 0xffffU).hex(ZuFmt::Right<4>()) << ".zdb");
+  }
+  inline ZiFile::Path fileName(unsigned i) const {
+    return fileName(dirName(i), i);
   }
 
   Zdb_FileRec rn2file(ZdbRN rn, bool write);
 
-  Zdb_File *getFile(unsigned i, bool create, bool recover);
-  Zdb_File *openFile(unsigned i, bool create, bool recover);
+  ZmRef<Zdb_File> getFile(unsigned index, bool create);
+  ZmRef<Zdb_File> openFile(unsigned i, bool create);
+  void delFile(Zdb_File *file);
   void recover(Zdb_File *file);
 
   ZmRef<ZdbAnyPOD> read_(const Zdb_FileRec &rec);
 
-  void write(ZdbAnyPOD *pod, ZdbRange range, bool update);
-  void write_(ZdbRN rn, void *ptr, ZdbRange range);
+  void write(ZdbAnyPOD *pod, ZdbRange range, int op);
+  void write_(ZdbRN rn, void *ptr, ZdbRange range, int op);
 
   void cache(ZdbAnyPOD *pod);
 
@@ -752,20 +789,21 @@ private:
   ZdbConfig			*m_config;
   ZdbID				m_id;
   ZdbHandler			m_handler;
-  bool				m_noIndex;
-  bool				m_noLock;
-  unsigned			m_recSize;
+  bool				m_noIndex = false;
+  bool				m_noLock = false;
+  unsigned			m_recSize = 0;
   Lock				m_lock;
     unsigned			  m_fileRecs;
-    ZdbRN			  m_allocRN;
-    ZdbRN			  m_fileRN;
+    ZdbRN			  m_allocRN = 0;
+    ZdbRN			  m_fileRN = 0;
     ZdbLRU			  m_lru;
-    ZmRef<ZdbCache>		  m_cache;
-    unsigned			  m_cacheSize;
+    ZmRef<Zdb_Cache>		  m_cache;
+    unsigned			  m_cacheSize = 0;
     ZmRef<LockHash>		  m_locks;	// headRN -> lock
-  FSLock			m_createLock;	// guards file creation
-  FSLock			m_closeLock;	// guards database close
-  ZmRef<FileHash>		m_files;
+  FSLock			m_fsLock;	// guards files
+    Zdb_FileLRU			  m_filesLRU;
+    ZmRef<Zdb_FileHash>		  m_files;
+    unsigned			  m_filesMax = 0;
   ZmRef<IndexHash>		m_index;	// headRN -> tailRN
 };
 
@@ -970,8 +1008,8 @@ friend class ZdbAnyPOD_Send__;
   void repDataRead(ZiIOContext &);
   void repDataRcvd(ZiIOContext &);
 
-  void repSend(ZdbAnyPOD *pod, int type, ZdbRange range, bool update,
-      bool compress, ZmFn<> continuation);
+  void repSend(ZdbAnyPOD *pod, int type, ZdbRange range, int op,
+      bool compress, bool recovery);
 
   void ackRcvd();
   void ackSend(int type, ZdbAnyPOD *pod);
@@ -1176,15 +1214,15 @@ private:
       Zdb_Host *host, Zdb_Cxn *cxn, int type,
       const Zdb_Msg_Rep &rep, void *ptr);
 
-  void repSend(ZdbAnyPOD *pod, int type, ZdbRange range, bool update,
-      bool compress, ZmFn<> continuation = ZmFn<>());
+  void repSend(ZdbAnyPOD *pod, int type, ZdbRange range, int op,
+      bool compress, bool recovery = false);
   void recSend();
 
   void ackRcvd(Zdb_Host *host, bool positive, ZdbID db, ZdbRN rn);
 
   void replicate(ZdbAnyPOD *pod);
 
-  void write(ZdbAnyPOD *pod, ZdbRange range, bool update);
+  void write(ZdbAnyPOD *pod, ZdbRange range, int op);
 
   ZdbEnvConfig		m_config;
   ZiMultiplex		*m_mx;

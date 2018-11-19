@@ -184,7 +184,7 @@ void loaded(MxMDVenue *venue)
 
     // look up security
 
-    md->secInvoke(MxSecKey{"XTKS", MxID(), *ticker},
+    md->secInvoke(MxSecKey{*ticker, "XTKS", MxID()},
 	[secHandler, ticker](MxMDSecurity *sec) {
       if (!sec) {
 	ZeLOG(Error, ZtString() <<
@@ -346,7 +346,7 @@ void publish()
 
 	// look up security
 
-	md->secInvoke(MxSecKey{"XTKS", MxID(), *ticker},
+	md->secInvoke(MxSecKey{*ticker, "XTKS", MxID()},
 	    [ticker](MxMDSecurity *sec) {
 	  if (!sec) {
 	    ZeLOG(Error, ZtString() <<

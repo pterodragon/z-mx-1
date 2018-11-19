@@ -219,6 +219,7 @@ namespace MxTelemetry {
     uint32_t	recSize;
     uint32_t	fileRecs;
     uint32_t	cacheSize;
+    uint32_t	filesMax;
     uint8_t	compress;
     uint8_t	replicate;
     uint8_t	noIndex;
@@ -229,9 +230,10 @@ namespace MxTelemetry {
     enum { Code = Type::DBHost };
 
     ZiIP	ip;
+    uint32_t	id;
     uint32_t	priority;
     uint16_t	port;
-    uint8_t	id;
+    uint8_t	voted;
     uint8_t	state;
   };
 
@@ -246,13 +248,18 @@ namespace MxTelemetry {
     uint32_t	heartbeatTimeout;
     uint32_t	reconnectFreq;
     uint32_t	electionTimeout;
+    uint32_t	self;		// host ID 
+    uint32_t	master;		// ''
+    uint32_t	prev;		// ''
+    uint32_t	next;		// ''
     uint16_t	writeThread;
     uint8_t	nHosts;
     uint8_t	nPeers;
-    uint8_t	hostID;
     uint8_t	nDBs;
-    uint8_t	state;	// same as hosts[hostID].state
+    uint8_t	state;		// same as hosts[hostID].state
     uint8_t	active;
+    uint8_t	recovering;
+    uint8_t	replicating;
   };
 
   typedef ZuLargest<

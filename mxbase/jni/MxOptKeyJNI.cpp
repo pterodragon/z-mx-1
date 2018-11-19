@@ -74,10 +74,9 @@ MxOptKey MxOptKeyJNI::j2c(JNIEnv *env, jobject obj)
 jobject MxOptKeyJNI::ctor(JNIEnv *env, const MxOptKey &key)
 {
   return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
-      (jint)key.mat(),
-      env->CallStaticObjectMethod(pcClass, pcMethod[0].mid,
-	(jint)key.putCall()),
-      (jlong)key.strike());
+      (jint)key.mat,
+      env->CallStaticObjectMethod(pcClass, pcMethod[0].mid, (jint)key.putCall),
+      (jlong)key.strike);
 }
 
 int MxOptKeyJNI::bind(JNIEnv *env)

@@ -142,6 +142,17 @@ struct MxValNDP {
     return MxValNDP{(int64_t)i, ndp};
   }
 
+  // divide: NDP of result is taken from the LHS
+  // a 128bit integer intermediary is used to avoid overflow
+  inline MxValNDP operator /(const MxValNDP &v) const {
+    int128_t i = (typename MxValue::T)value;
+    i *= ZuDecimal::pow10_64(v.ndp);
+    i /= (typename MxValue::T)v.value;
+    if (ZuUnlikely(i >= 1000000000000000000ULL))
+      return MxValNDP{MxValue(), ndp};
+    return MxValNDP{(int64_t)i, ndp};
+  }
+
   // scan from string, given NDP
   template <typename S>
   inline MxValNDP(const S &s_, MxNDP ndp_,
@@ -484,39 +495,132 @@ namespace MxSide {
   typedef FixMap CSVMap;
 }
 
-ZuTupleFields(MxSecKey_, 1, venue, 2, segment, 3, id);
-typedef MxSecKey_<MxID, MxID, MxIDString> MxSecKey;
-template <> struct ZuPrint<MxSecKey> : public ZuPrintDelegate {
-  template <typename S>
-  inline static void print(S &s, const MxSecKey &key) {
-    s << key.venue() << '|' << key.segment() << '|' << key.id();
-  }
-};
-
-ZuTupleFields(MxSecSymKey_, 1, src, 2, id);
-typedef MxSecSymKey_<MxEnum, MxIDString> MxSecSymKey;
-template <> struct ZuPrint<MxSecSymKey> : public ZuPrintDelegate {
-  template <typename S>
-  inline static void print(S &s, const MxSecSymKey &key) {
-    s << MxSecIDSrc::name(key.src()) << '|' << key.id();
-  }
-};
-
-typedef MxUInt MxFutKey;	// mat
-
-ZuTupleFields(MxOptKey_, 1, mat, 2, putCall, 3, strike);
-typedef MxOptKey_<MxUInt, MxEnum, MxValue> MxOptKey;
-template <> struct ZuPrint<MxOptKey> : public ZuPrintDelegate {
-  template <typename S>
-  inline static void print(S &s, const MxOptKey &key) {
-    s << key.mat() << '|' << MxPutCall::name(key.putCall()) <<
-      '|' << key.strike();
-  }
-};
+// securities are fundamentally identified either by
+// venue/segment and the venue's native identifier - MxSecKey, or
+// security ID source (aka symbology) and a unique symbol - MxSymKey;
+// if not directly identified by MxSecKey or MxSymKey, individual
+// futures/options can be specified by underlying + parameters, e.g.
+// "MSFT Mar 2019 Call Option @100", which is expressed as
+// the MxSecKey or MxSymKey for the underlying (MSFT) together
+// with an MxOptKey{20190300, MxPutCall::CALL, 10000} (assuming pxNDP=2)
+//
+// an individual security might therefore be identified by:
+//
+// MxSecKey - market-native ID
+// MxSymKey - industry standard symbology
+// MxSecKey or MxSymKey, with MxFutKey - future specified by maturity
+// MxSecKey or MxSymKey, with MxOptKey - option specified by mat/putCall/strike
+//
+// for cases (FIX message parsing, etc.) where the type of key cannot be
+// pre-determined at compile time, MxUniKey ("universal key") can be used -
+// this is capable of encapsulating all the above possibilities but unused
+// fields potentially waste memory
 
 #pragma pack(push, 1)
 
-struct MxSecID {
+struct MxSecKey {
+  MxIDString	id;
+  MxID		venue;
+  MxID		segment;
+
+  inline bool operator ==(const MxSecKey &v) const {
+    return id == v.id && venue == v.venue && segment == v.venue;
+  }
+  inline bool operator !=(const MxSecKey &v) const { return !operator ==(v); }
+
+  inline int cmp(const MxSecKey &v) const {
+    int i;
+    if (i = id.cmp(v.id)) return i;
+    if (i = venue.cmp(v.venue)) return i;
+    return segment.cmp(v.segment);
+  }
+  inline bool operator >(const MxSecKey &v) { return cmp(v) > 0; }
+  inline bool operator >=(const MxSecKey &v) { return cmp(v) >= 0; }
+  inline bool operator <(const MxSecKey &v) { return cmp(v) < 0; }
+  inline bool operator <=(const MxSecKey &v) { return cmp(v) <= 0; }
+
+  inline uint32_t hash() const {
+    return id.hash() ^ venue.hash() ^ segment.hash();
+  }
+
+  template <typename S> inline void print(S &s) const {
+    s << venue << '|' << segment << '|' << id;
+  }
+};
+template <> struct ZuTraits<MxSecKey> : public ZuGenericTraits<MxSecKey> {
+  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
+};
+template <> struct ZuPrint<MxSecKey> : public ZuPrintFn { };
+
+struct MxSymKey {
+  MxIDString	id;
+  MxEnum	src;
+
+  inline bool operator ==(const MxSymKey &v) const {
+    return id == v.id && src == v.src;
+  }
+  inline bool operator !=(const MxSymKey &v) const { return !operator ==(v); }
+
+  inline int cmp(const MxSymKey &v) const {
+    int i;
+    if (i = id.cmp(v.id)) return i;
+    return src.cmp(v.src);
+  }
+  inline bool operator >(const MxSymKey &v) { return cmp(v) > 0; }
+  inline bool operator >=(const MxSymKey &v) { return cmp(v) >= 0; }
+  inline bool operator <(const MxSymKey &v) { return cmp(v) < 0; }
+  inline bool operator <=(const MxSymKey &v) { return cmp(v) <= 0; }
+
+  inline uint32_t hash() const {
+    return id.hash() ^ src.hash();
+  }
+
+  template <typename S> inline void print(S &s) const {
+    s << src << '|' << id;
+  }
+};
+template <> struct ZuTraits<MxSymKey> : public ZuGenericTraits<MxSymKey> {
+  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
+};
+template <> struct ZuPrint<MxSymKey> : public ZuPrintFn { };
+
+typedef MxUInt MxFutKey;	// mat
+
+struct MxOptKey {
+  MxValue	strike;
+  MxUInt	mat;
+  MxEnum	putCall;
+
+  inline bool operator ==(const MxOptKey &v) const {
+    return strike == v.strike && mat == v.mat && putCall == v.mat;
+  }
+  inline bool operator !=(const MxOptKey &v) const { return !operator ==(v); }
+
+  inline int cmp(const MxOptKey &v) const {
+    int i;
+    if (i = strike.cmp(v.strike)) return i;
+    if (i = mat.cmp(v.mat)) return i;
+    return putCall.cmp(v.putCall);
+  }
+  inline bool operator >(const MxOptKey &v) { return cmp(v) > 0; }
+  inline bool operator >=(const MxOptKey &v) { return cmp(v) >= 0; }
+  inline bool operator <(const MxOptKey &v) { return cmp(v) < 0; }
+  inline bool operator <=(const MxOptKey &v) { return cmp(v) <= 0; }
+
+  inline uint32_t hash() const {
+    return strike.hash() ^ mat.hash() ^ putCall.hash();
+  }
+
+  template <typename S> inline void print(S &s) const {
+    s << mat << '|' << MxPutCall::name(putCall) << '|' << strike;
+  }
+};
+template <> struct ZuTraits<MxOptKey> : public ZuGenericTraits<MxOptKey> {
+  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
+};
+template <> struct ZuPrint<MxOptKey> : public ZuPrintFn { };
+
+struct MxUniKey {
   MxIDString	id;
   MxID		venue;
   MxID		segment;
@@ -525,7 +629,7 @@ struct MxSecID {
   MxEnum	src;
   MxEnum	putCall;
 
-  inline bool operator ==(const MxSecID &v) const {
+  inline bool operator ==(const MxUniKey &v) const {
     if (id != v.id || src != v.src) return false;
     if (!*src && (venue != v.venue || segment != v.venue)) return false;
     if (mat != v.mat) return false;
@@ -535,9 +639,9 @@ struct MxSecID {
     }
     return true;
   }
-  inline bool operator !=(const MxSecID &v) const { return !operator ==(v); }
+  inline bool operator !=(const MxUniKey &v) const { return !operator ==(v); }
 
-  inline int cmp(const MxSecID &v) const {
+  inline int cmp(const MxUniKey &v) const {
     int i;
     if (i = id.cmp(v.id)) return i;
     if (i = src.cmp(v.src)) return i;
@@ -551,10 +655,10 @@ struct MxSecID {
     if (!*strike) return 0;
     return putCall.cmp(v.putCall);
   }
-  inline bool operator >(const MxSecID &v) { return cmp(v) > 0; }
-  inline bool operator >=(const MxSecID &v) { return cmp(v) >= 0; }
-  inline bool operator <(const MxSecID &v) { return cmp(v) < 0; }
-  inline bool operator <=(const MxSecID &v) { return cmp(v) <= 0; }
+  inline bool operator >(const MxUniKey &v) { return cmp(v) > 0; }
+  inline bool operator >=(const MxUniKey &v) { return cmp(v) >= 0; }
+  inline bool operator <(const MxUniKey &v) { return cmp(v) < 0; }
+  inline bool operator <=(const MxUniKey &v) { return cmp(v) <= 0; }
 
   inline uint32_t hash() const {
     uint32_t code = id.hash();
@@ -570,9 +674,9 @@ struct MxSecID {
 
   template <typename S> inline void print(S &s) const {
     if (*src)
-      s << MxSecSymKey{src, id};
+      s << MxSymKey{id, src};
     else
-      s << MxSecKey{venue, segment, id};
+      s << MxSecKey{id, venue, segment};
     if (*mat) {
       if (*strike)
 	s << '|' << MxOptKey{mat, putCall, strike};
@@ -581,10 +685,10 @@ struct MxSecID {
     }
   }
 };
-template <> struct ZuTraits<MxSecID> : public ZuGenericTraits<MxSecID> {
+template <> struct ZuTraits<MxUniKey> : public ZuGenericTraits<MxUniKey> {
   enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
 };
-template <> struct ZuPrint<MxSecID> : public ZuPrintFn { };
+template <> struct ZuPrint<MxUniKey> : public ZuPrintFn { };
 
 #pragma pack(pop)
 

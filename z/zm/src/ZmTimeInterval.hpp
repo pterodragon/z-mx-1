@@ -30,6 +30,7 @@
 #include <ZmLib.hpp>
 #endif
 
+#include <ZuBox.hpp>
 #include <ZuPrint.hpp>
 
 #include <ZmLock.hpp>

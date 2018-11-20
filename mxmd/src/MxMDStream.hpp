@@ -500,10 +500,6 @@ namespace MxMDStream {
 
   FnDeclare(tradingSession, TradingSession)
 
-  FnDeclare(addTrade, AddTrade)
-  FnDeclare(correctTrade, CorrectTrade)
-  FnDeclare(cancelTrade, CancelTrade)
-
   FnDeclare(refDataLoaded, RefDataLoaded)
 
   FnDeclare(heartBeat, HeartBeat)
@@ -522,6 +518,10 @@ namespace MxMDStream {
     app.push2(); \
     return true; \
   }
+
+  FnDeclare(addTrade, AddTrade)
+  FnDeclare(correctTrade, CorrectTrade)
+  FnDeclare(cancelTrade, CancelTrade)
 
   FnDeclare(addSecurity, AddSecurity)
   FnDeclare(updateSecurity, UpdateSecurity)

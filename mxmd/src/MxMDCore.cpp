@@ -156,8 +156,15 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
 
   ZmRef<ZvCf> cf = new ZvCf();
 
+  ZmRef<MxMDCore> md;
+
   if (cf_)
-    cf->fromFile(cf_, false);
+    try {
+      cf->fromFile(cf_, false);
+    } catch (const ZvError &e) {
+      ZeLOG(Fatal, ZtString() << "MxMDLib - when reading configuration file '" << cf_ << "': " << e);
+      return md = nullptr;
+    }
   else {
     cf->fromString(
       "mx {\n"
@@ -177,8 +184,6 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
       "}\n",
       false);
   }
-
-  ZmRef<MxMDCore> md;
 
   try {
     if (ZmRef<ZvCf> logCf = cf->subset("log", false)) {

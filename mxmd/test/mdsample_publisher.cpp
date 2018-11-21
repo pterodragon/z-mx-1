@@ -284,9 +284,9 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
       // primary security key (venue, segment and ID)
  
       MxSecKey secKey{
+	      *ticker,			// ID (same as symbol in this case)
 	      "XTKS",			// Tokyo Stock Exchange
-	      MxID(),			// null segment (segment not used)
-	      *ticker};			// ID (same as symbol in this case)
+	      MxID()};			// null segment (segment not used)
 
       // minimal reference data (just the native symbol and RIC)
 

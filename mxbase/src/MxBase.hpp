@@ -524,7 +524,7 @@ struct MxSecKey {
   MxID		segment;
 
   inline bool operator ==(const MxSecKey &v) const {
-    return id == v.id && venue == v.venue && segment == v.venue;
+    return id == v.id && venue == v.venue && segment == v.segment;
   }
   inline bool operator !=(const MxSecKey &v) const { return !operator ==(v); }
 
@@ -592,7 +592,7 @@ struct MxOptKey {
   MxEnum	putCall;
 
   inline bool operator ==(const MxOptKey &v) const {
-    return strike == v.strike && mat == v.mat && putCall == v.mat;
+    return strike == v.strike && mat == v.mat && putCall == v.putCall;
   }
   inline bool operator !=(const MxOptKey &v) const { return !operator ==(v); }
 

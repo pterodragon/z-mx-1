@@ -13,7 +13,7 @@ broadcast {
 }
 cmd {
   mx cmd
-  localPort 19400
+  localPort 19401
 }
 record {
   rxThread 3

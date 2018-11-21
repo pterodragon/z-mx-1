@@ -734,9 +734,9 @@ Zdb_Host *ZdbEnv::setMaster()
     ZmRef<Zdb_Host> host;
 
     ZdbDEBUG(this, ZtString() << "setMaster()\n" << 
-	"  self" << m_self << '\n' <<
-	"  prev" << m_prev << '\n' <<
-	"  next" << m_next << '\n' <<
+	"  self " << m_self << '\n' <<
+	"  prev " << m_prev << '\n' <<
+	"  next " << m_next << '\n' <<
 	"  recovering " << m_recovering << " replicating " << !!m_nextCxn);
     while (host = i.iterateKey()) {
       if (host->voted()) {
@@ -766,10 +766,10 @@ void ZdbEnv::setNext()
   {
     auto i = m_hosts.readIterator();
     ZdbDEBUG(this, ZtString() << "setNext()\n" <<
-	"  self" << m_self << '\n' <<
-	"  master" << m_master << '\n' <<
-	"  prev" << m_prev << '\n' <<
-	"  next" << m_next << '\n' <<
+	"  self " << m_self << '\n' <<
+	"  master " << m_master << '\n' <<
+	"  prev " << m_prev << '\n' <<
+	"  next " << m_next << '\n' <<
 	"  recovering " << m_recovering << " replicating " << !!m_nextCxn);
     while (Zdb_Host *host = i.iterateKey()) {
       if (host != m_self && host != m_prev && host->voted() &&
@@ -792,10 +792,10 @@ void ZdbEnv::startReplication()
   m_nextCxn = m_next->m_cxn;	// starts replication
   dbStateRefresh_();		// must be called after m_nextCxn assignment
   ZdbDEBUG(this, ZtString() << "startReplication()\n" <<
-      "  self" << m_self << '\n' <<
-      "  master" << m_master << '\n' <<
-      "  prev" << m_prev << '\n' <<
-      "  next" << m_next << '\n' <<
+      "  self " << m_self << '\n' <<
+      "  master " << m_master << '\n' <<
+      "  prev " << m_prev << '\n' <<
+      "  next " << m_next << '\n' <<
       "  recovering " << m_recovering << " replicating " << !!m_nextCxn);
   if (m_next->dbState().cmp(m_self->dbState()) < 0 && !m_recovering) {
     // ZeLOG(Info, "startReplication() initiating recovery");

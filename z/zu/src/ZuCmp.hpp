@@ -295,9 +295,8 @@ struct ZuCmp_StrCmp<T1, T2, 0, 1, 0> {
     if (!s1) return s2 ? -1 : 0;
     if (!s2) return 1;
     int l1 = ZuTraits<T1>::length(s1_), l2 = ZuTraits<T2>::length(s2_);
-    int i = strncmp(s1, s2, l1 > l2 ? l2 : l1);
-    if (i) return i;
-    return l1 > l2 ? 1 : l1 < l2 ? -1 : 0;
+    if (int i = strncmp(s1, s2, l1 > l2 ? l2 : l1)) return i;
+    return l1 - l2;
   }
   inline static bool equals(const T1 &s1_, const T2 &s2_) {
     const char *s1 = ZuTraits<T1>::data(s1_);
@@ -334,9 +333,8 @@ struct ZuCmp_StrCmp<T1, T2, 0, 1, 1> {
     if (!w1) return w2 ? -1 : 0;
     if (!w2) return 1;
     int l1 = ZuTraits<T1>::length(w1_), l2 = ZuTraits<T2>::length(w2_);
-    int i = wcsncmp(w1, w2, l1 > l2 ? l2 : l1);
-    if (i) return i;
-    return l1 > l2 ? 1 : l1 < l2 ? -1 : 0;
+    if (int i = wcsncmp(w1, w2, l1 > l2 ? l2 : l1)) return i;
+    return l1 - l2;
   }
   inline static bool equals(const T1 &w1_, const T2 &w2_) {
     const wchar_t *w1 = ZuTraits<T1>::data(w1_);

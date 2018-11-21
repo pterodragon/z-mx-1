@@ -109,6 +109,8 @@ public:
 
   inline int status() const { return m_status; }
 
+  void exiting() { m_exiting = true; }
+
 private:
   void process(ZmRef<ZvCmdMsg> ack) {
     std::cout << ack->cmd() << std::flush;
@@ -175,6 +177,7 @@ next:
   }
 
   void disconnected() {
+    if (m_exiting) return;
     if (m_interactive) {
       Zrl::stop();
       std::cerr << "\nserver disconnected\n" << std::flush;
@@ -184,7 +187,8 @@ next:
 
   ZmSemaphore		m_done;
   bool			m_interactive = true;
-  bool			m_solo;
+  bool			m_solo = false;
+  bool			m_exiting = false;
   ZmRef<ZvCmdMsg>	m_soloMsg;
   ZtString		m_prompt;
   int			m_status = 0;
@@ -260,6 +264,7 @@ int main(int argc, char **argv)
     std::cout << std::flush;
   }
 
+  client->exiting();
   client->disconnect();
   mx->stop(true);
   ZeLog::stop();

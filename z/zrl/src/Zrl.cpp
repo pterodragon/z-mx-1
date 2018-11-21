@@ -63,6 +63,7 @@ struct Zrl_ {
   void stop() {
 #ifdef linux
     rl_deprep_terminal();
+    ::close(0);
 #endif
   }
 

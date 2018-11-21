@@ -132,7 +132,7 @@ public:
     return node->key();
   }
   template <typename L>
-  ZuInline allMx(L l) const {
+  ZuInline void allMx(L l) const {
     auto i = m_mxTbl->readIterator();
     while (MxTbl::Node *node = i.iterate()) l(node->key());
   }

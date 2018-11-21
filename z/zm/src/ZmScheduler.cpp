@@ -482,8 +482,9 @@ void ZmScheduler::work()
   m_stopped.post();
 }
 
-void ZmScheduler::threadName(ZmThreadName &s, unsigned tid)
+void ZmScheduler::threadName(unsigned tid, ZmThreadName &s)
 {
+  s.null();
   s << m_id << ':' << ZuBoxed(tid);
 }
 

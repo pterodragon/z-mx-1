@@ -1258,7 +1258,7 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
       }, cxn});
 
   // thread queues (ZmScheduler)
-  core()->allMx([cxn](MxMultiplex *mx) {
+  m_core->allMx([cxn](MxMultiplex *mx) {
 	unsigned n = mx->nThreads();
 	ZmThreadName name;
 	uint64_t inCount, inBytes, outCount, outBytes;
@@ -1267,22 +1267,23 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 	  const ZmScheduler::Ring &ring = mx->ring(tid);
 	  ring.stats(inCount, inBytes, outCount, outBytes);
 	  cxn->transmit(queue(
-		name, 0, ring.count(), inCount, inBytes, outCount, outBytes,
-		ring.params().size, QueueType::Thread));
-
+		name, (uint64_t)0, (uint64_t)ring.count(),
+		inCount, inBytes, outCount, outBytes,
+		(uint32_t)ring.params().size(), (uint8_t)QueueType::Thread));
 	}
       });
 
   // IPC queues (MD broadcast)
-  if (ZmRef<MxMDBroadcast::Ring> ring = m_broadcast.ring()) {
+  if (ZmRef<MxMDBroadcast::Ring> ring = m_core->broadcast().ring()) {
     uint64_t inCount, inBytes, outCount, outBytes;
     ring->stats(inCount, inBytes, outCount, outBytes);
+    int count = ring->readStatus();
+    if (count < 0) count = 0;
     cxn->transmit(queue(
-	  ring->params().name(), 0, ring->count(),
+	  ring->params().name(), (uint64_t)0, (uint64_t)count,
 	  inCount, inBytes, outCount, outBytes,
-	  ring->params().size(), QueueType::IPC));
+	  (uint32_t)ring->params().size(), (uint8_t)QueueType::IPC));
   }
-
 
   {
     ReadGuard guard(m_lock);

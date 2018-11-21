@@ -105,8 +105,7 @@ void ZmThreadContext::name(ZmThreadName &s) const
     else
       s = ZuBox<unsigned>(tid()); 
   } else {
-    s = "";
-    m_mgr->threadName(s, m_id);
+    m_mgr->threadName(m_id, s);
   }
 }
 

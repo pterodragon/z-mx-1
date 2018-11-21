@@ -26,26 +26,36 @@ struct Order {
   int		m_price;
   int		m_quantity;
   // char	m_pad[1500];
-  ZtString dump() {
-    return ZtSprintf("Side: %s Symbol: %s Price: %d Qty: %d\n",
-		     m_side == Buy ? "Buy" : "Sell", m_symbol,
-		     m_price, m_quantity);
+  template <typename S> inline void print(S &s) const {
+    s << "Side: " << (m_side == Buy ? "Buy" : "Sell") <<
+      " Symbol: " << m_symbol <<
+      " Price: " << ZuBoxed(m_price) <<
+      " Qty: " << ZuBoxed(m_quantity);
   }
 };
+template <> struct ZuPrint<Order> : public ZuPrintFn { };
 
 typedef Zdb<Order> OrderDB;
 
-static void dump(const char *prefix, ZdbRN head, ZdbRN rn, Order *o)
+static void deleted(const char *prefix, ZdbRN rn, ZdbRN prev)
 {
-  printf("%s Head: %d RN: %d %s", prefix, (int)head, (int)rn, o->dump().data());
+  std::cout << prefix << " RN: " << ZuBoxed(rn) <<
+    " prev: " << ZuBoxed(prev) << "  DELETED\n" << std::flush;
+}
+
+static void dump(const char *prefix, ZdbRN rn, ZdbRN prev, Order *o)
+{
+  std::cout << prefix << " RN: " << ZuBoxed(rn) <<
+    " prev: " << ZuBoxed(prev) << "  " << *o << '\n' << std::flush;
 }
 
 ZmRef<OrderDB> orders;
 ZmSemaphore done;
 ZmScheduler *appMx = 0;
 ZiMultiplex *dbMx = 0;
-int append;
-unsigned nThreads;
+unsigned del = 0;
+unsigned append = 0;
+unsigned nThreads = 1;
 ZdbRN maxRN;
 
 void sigint()
@@ -65,8 +75,8 @@ void push() {
   if (orders->allocRN() >= maxRN) return;
   ZmRef<ZdbPOD<Order> > pod;
   if (append) {
-    ZdbRN head = append == 1 ? 0 : ZmRand::randInt(append - 1);
-    pod = orders->push(head);
+    ZdbRN rn = append == 1 ? 0 : ZmRand::randInt(append - 1);
+    pod = orders->get(rn);
   } else
     pod = orders->push();
   if (!pod) return;
@@ -75,21 +85,27 @@ void push() {
   strncpy(order->m_symbol, "IBM", 32);
   order->m_price = 100;
   order->m_quantity = 100;
-  orders->put(pod);
-  if (append > 0) {
+  if (!append)
+    orders->put(pod);
+  else {
+    orders->update(pod);
     if (orders->allocRN() >= maxRN) return;
-    ZmRef<ZdbPOD<Order> > pod2 = orders->push(pod->headRN(), false);
-    if (!pod2) return;
-    memcpy(pod2->ptr(), pod->ptr(), sizeof(Order));
-    orders->put(pod2);
+    if (pod = orders->get(pod->rn()))
+      orders->update(pod);
   }
   appMx->add(ZmFn<>::Ptr<&push>::fn());
 }
 
 void active() {
   puts("ACTIVE");
+  if (del) {
+    for (unsigned i = 0; i < del; i++) {
+      if (ZmRef<ZdbPOD<Order> > pod = orders->get_(i))
+	orders->del(pod);
+    }
+  }
   if (append) {
-    for (int i = 0; i < append; i++) {
+    for (unsigned i = 0; i < append; i++) {
       if (orders->allocRN() >= maxRN) return;
       ZmRef<ZdbPOD<Order> > pod = orders->push();
       if (!pod) return;
@@ -111,6 +127,7 @@ void usage()
   static const char *help =
     "usage: ZdbTest [OPTIONS] nThreads maxRN\n\n"
     "Options:\n"
+    "  -D, --del=N\t\t- delete first N sequences\n"
     "  -a, --append=N\t\t- append to N sequences\n"
     "  -s, --dbs:0:fileSize=N\t- file size\n"
     "  -f, --dbs:0:path=PATH\t\t- file path\n"
@@ -159,6 +176,7 @@ void usage()
 int main(int argc, char **argv)
 {
   static ZvOpt opts[] = {
+    { "del", "D", ZvOptScalar },
     { "append", "a", ZvOptScalar },
     { "dbs:0:fileSize", "s", ZvOptScalar, "4096" },
     { "dbs:0:path", "f", ZvOptScalar, "orders" },
@@ -209,7 +227,7 @@ int main(int argc, char **argv)
     cf = inlineCf(
       "writeThread 3\n"
       "hostID 0\n"
-      "hosts { 0 { priority 100 IP 127.0.0.1 port 9943 } }\n"
+      // "hosts { 0 { priority 100 IP 127.0.0.1 port 9943 } }\n"
       "hosts { 1 { priority 75 IP 127.0.0.1 port 9944 } }\n"
       "hosts { 2 { priority 50 IP 127.0.0.1 port 9945 } }\n"
       "dbs { 0 { fileSize 4096 path orders preAlloc 0 } }\n"
@@ -217,6 +235,7 @@ int main(int argc, char **argv)
 
     if (cf->fromArgs(opts, argc, argv) != 3) usage();
 
+    del = cf->getInt("del", 1, INT_MAX, false, 0);
     append = cf->getInt("append", 1, INT_MAX, false, 0);
     nThreads = cf->getInt("1", 1, 1<<10, true);
     maxRN = cf->getInt("2", 0, 1<<20, true);
@@ -268,15 +287,22 @@ int main(int argc, char **argv)
 	    // new (pod->ptr()) Order();
 	  },
 	  [](ZdbAnyPOD *pod) {
-	    dump("recovered", pod->headRN(), pod->rn(), (Order *)pod->ptr());
+	    dump("recovered", pod->rn(), pod->prevRN(), (Order *)pod->ptr());
 	  },
-	  [](ZdbAnyPOD *pod, void *ptr, ZdbRange range, bool update) {
-	    dump("replicated", pod->headRN(), pod->rn(), (Order *)ptr);
+	  [](ZdbAnyPOD *pod, void *ptr, ZdbRange range, int op) {
 	    memcpy((char*)pod->ptr() + range.off(), ptr, range.len());
+	    if (op == ZdbOp::Delete)
+	      deleted("replicated", pod->rn(), pod->prevRN());
+	    else
+	      dump("replicated", pod->rn(), pod->prevRN(), (Order *)pod->ptr());
 	  },
-	  [](ZdbAnyPOD *pod, ZdbRange, bool) {
-	    dump(ZtSprintf("DC TID=%d", (int)ZmPlatform::getTID()).data(),
-		 pod->headRN(), pod->rn(), (Order *)pod->ptr());
+	  [](ZdbAnyPOD *pod, ZdbRange, int op) {
+	    if (op == ZdbOp::Delete)
+	      deleted("DC delete", pod->rn(), pod->prevRN());
+	    else if (op == ZdbOp::Update)
+	      dump("DC update", pod->rn(), pod->prevRN(), (Order *)pod->ptr());
+	    else
+	      dump("DC new", pod->rn(), pod->prevRN(), (Order *)pod->ptr());
 	  }
 	});
 

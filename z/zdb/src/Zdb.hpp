@@ -96,6 +96,7 @@ struct Zdb_Msg_HB {	// heartbeat
 struct Zdb_Msg_Rep {	// replication
   ZdbID		db;
   ZdbRN		rn;			// followed by record
+  ZdbRN		prevRN;
   uint32_t	range;
   uint16_t	op;			// ZdbOp
   uint16_t	clen;
@@ -247,45 +248,6 @@ private:
   ZiFile::Offset	m_off;
 };
 
-template <class Heap>
-class Zdb_Lock_ : public ZmObject, public Heap {
-friend class Zdb_;
-friend class ZdbGuard;
-friend class ZdbAnyPOD;
-
-  struct RNAccessor;
-friend struct RNAccessor;
-  struct RNAccessor : public ZuAccessor<Zdb_Lock_ *, ZdbRN> {
-    inline static ZdbRN value(const Zdb_Lock_ *lock) {
-      return lock->m_rn;
-    }
-  };
-
-  inline Zdb_Lock_(Zdb_ *db, ZdbRN rn, unsigned nThreads = 0) :
-      m_db(db), m_rn(rn), m_nThreads(nThreads) {
-    m_sem.post();
-  }
-
-  inline unsigned incThreads() { return ++m_nThreads; }
-  inline unsigned decThreads() { return --m_nThreads; }
-
-  inline void lock() { m_sem.wait(); }
-  void unlock(); // calls m_db->unlock(this)
-  inline void unlock_() { m_sem.post(); }
-
-  inline Zdb_ *db() const { return m_db; }
-  inline ZdbRN rn() const { return m_rn; }
-
-  Zdb_			*m_db;
-  ZdbRN			m_rn;		// headRN
-  unsigned		m_nThreads;	// guarded by Zdb_
-  ZmSemaphore		m_sem;
-};
-struct Zdb_Lock_HeapID {
-  inline static const char *id() { return "Zdb_Lock"; }
-};
-typedef Zdb_Lock_<ZmHeap<Zdb_Lock_HeapID, sizeof(Zdb_Lock_<ZuNull>)> > Zdb_Lock;
-
 #define ZdbAllocated 0xa110c8ed // "allocated"
 #define ZdbCommitted 0xc001da7a // "cool data"
 #define ZdbDeleted   0xdeadda7a	// "dead data"
@@ -294,7 +256,6 @@ typedef Zdb_Lock_<ZmHeap<Zdb_Lock_HeapID, sizeof(Zdb_Lock_<ZuNull>)> > Zdb_Lock;
 struct ZdbTrailer {
   ZdbRN		rn;
   ZdbRN		prevRN;
-  ZdbRN		headRN;
   uint32_t	magic;
 };
 #pragma pack(pop)
@@ -360,14 +321,6 @@ public:
   inline ~ZdbAnyPOD() { }
 
 private:
-  inline void init(ZdbRN rn, ZdbRN prevRN, ZdbRN headRN) {
-    ZdbTrailer *trailer = this->trailer();
-    trailer->rn = rn;
-    trailer->prevRN = prevRN;
-    trailer->headRN = headRN;
-    trailer->magic = ZdbAllocated;
-  }
-
   inline const ZdbTrailer *trailer() const {
     return (const ZdbTrailer *)
       ((const char *)ptr() + size() - sizeof(ZdbTrailer));
@@ -381,16 +334,25 @@ public:
 
   inline ZdbRN rn() const { return trailer()->rn; }
   inline ZdbRN prevRN() const { return trailer()->prevRN; }
-  inline ZdbRN headRN() const { return trailer()->headRN; }
   inline uint32_t magic() const { return trailer()->magic; }
 
-  inline bool uninitialized() const { return !trailer()->magic; }
   inline bool committed() const {
-    uint32_t magic = trailer()->magic;
-    return magic == ZdbCommitted;
+    return trailer()->magic == ZdbCommitted;
   }
 
 private:
+  inline void init(ZdbRN rn, uint32_t magic = ZdbAllocated) {
+    ZdbTrailer *trailer = this->trailer();
+    trailer->rn = trailer->prevRN = rn;
+    trailer->magic = magic;
+  }
+
+  inline void update(ZdbRN rn, ZdbRN prevRN) {
+    ZdbTrailer *trailer = this->trailer();
+    trailer->rn = rn;
+    trailer->prevRN = prevRN;
+  }
+
   inline void commit() { trailer()->magic = ZdbCommitted; }
   inline void del() { trailer()->magic = ZdbDeleted; }
 
@@ -429,8 +391,8 @@ private:
 class ZdbAnyPOD_Send__ : public ZmPolymorph {
 public:
   inline ZdbAnyPOD_Send__(ZdbAnyPOD *pod,
-    int type, ZdbRange range, int op, bool compress, bool recovery) :
-      m_pod(pod), m_vec(0), m_recovery(recovery) {
+      int type, ZdbRange range, int op, bool compress) :
+	m_pod(pod), m_vec(0) {
     init(type, range, op, compress);
   }
 
@@ -447,7 +409,6 @@ private:
   unsigned			m_vec;
   ZiVec				m_vecs[2];
   Zdb_Msg_Hdr			m_hdr;
-  bool				m_recovery;
 };
 struct ZdbAnyPOD_Send_HeapID {
   inline static const char *id() { return "ZdbAnyPOD_Send"; }
@@ -560,28 +521,6 @@ struct ZuPrint<ZdbPOD<T, HeapID> > : public ZuPrintDelegate {
   inline static void print(S &s, const ZdbPOD<T, HeapID> &v) { s << v.data(); }
 };
 
-class ZdbGuard {
-  ZdbGuard(const ZdbGuard &);
-  ZdbGuard &operator =(const ZdbGuard &);
-
-public:
-  inline ZdbGuard() : m_lock(0) { }
-  inline ZdbGuard(ZdbGuard &&c) noexcept : m_lock(ZuMv(c.m_lock)) { }
-  inline ZdbGuard &operator =(ZdbGuard &&c) {
-    m_lock = ZuMv(c.m_lock);
-    return *this;
-  }
-  inline ZdbGuard(ZmRef<Zdb_Lock> &&lock) : m_lock(ZuMv(lock)) { }
-  inline ZdbGuard &operator =(ZmRef<Zdb_Lock> &&lock) {
-    m_lock = ZuMv(lock);
-    return *this;
-  }
-  inline ~ZdbGuard() { if (m_lock) m_lock->unlock(); }
-
-private:
-  ZmRef<Zdb_Lock>	m_lock;
-};
-
 struct ZdbConfig {
   inline ZdbConfig() { }
   inline ZdbConfig(const ZtString &key, ZvCf *cf) {
@@ -594,8 +533,6 @@ struct ZdbConfig {
     replicate = cf->getInt("replicate", 0, 1, false, 1);
     cache.init(cf->get("cache", false, "Zdb.Cache"));
     fileHash.init(cf->get("fileHash", false, "Zdb.FileHash"));
-    indexHash.init(cf->get("indexHash", false, "Zdb.IndexHash"));
-    lockHash.init(cf->get("lockHash", false, "Zdb.LockHash"));
   }
 
   unsigned		id = 0;
@@ -606,8 +543,6 @@ struct ZdbConfig {
   bool			replicate = 0;
   ZmHashParams		cache;
   ZmHashParams		fileHash;
-  ZmHashParams		indexHash;
-  ZmHashParams		lockHash;
 };
 
 struct ZdbHandler {
@@ -620,7 +555,6 @@ struct ZdbHandler {
 class ZdbAPI Zdb_ : public ZmPolymorph {
 friend class ZdbEnv;
 friend class ZdbAnyPOD_Write__;
-template <typename> friend class Zdb_Lock_;
 
   struct IDAccessor;
 friend struct IDAccessor;
@@ -631,25 +565,6 @@ friend struct IDAccessor;
   typedef Zdb_Cache Cache;
   typedef Zdb_FileHash FileHash;
 
-  struct IndexHash_HeapID {
-    inline static const char *id() { return "Zdb.IndexHash"; }
-  };
-  typedef ZmHash<ZdbRN,
-	    ZmHashVal<ZuBox<ZdbRN>,
-	      ZmHashBase<ZmObject,
-		ZmHashLock<ZmPLock,
-		  ZmHashHeapID<IndexHash_HeapID> > > > > IndexHash;
-
-  struct LockHash_HeapID {
-    inline static const char *id() { return "Zdb.LockHash"; }
-  };
-  typedef ZmHash<ZmRef<Zdb_Lock>,
-	    ZmHashIndex<Zdb_Lock::RNAccessor,
-	      ZmHashObject<ZuNull,
-		ZmHashLock<ZmNoLock,
-		  ZmHashBase<ZmObject,
-		    ZmHashHeapID<LockHash_HeapID> > > > > > LockHash;
-
 protected:
   typedef ZmPLock Lock;
   typedef ZmGuard<Lock> Guard;
@@ -659,7 +574,7 @@ protected:
   typedef ZmGuard<FSLock> FSGuard;
 
   Zdb_(ZdbEnv *env, ZdbID id, ZdbHandler handler,
-      bool noIndex, bool noLock, unsigned recSize);
+      unsigned recSize, unsigned dataSize);
 
 public:
   ~Zdb_();
@@ -681,40 +596,28 @@ public:
   inline ZdbEnv *env() const { return m_env; }
   inline ZdbID id() const { return m_id; }
   inline unsigned recSize() { return m_recSize; }
+  inline unsigned dataSize() { return m_dataSize; }
   inline unsigned cacheSize() { return m_cacheSize; } // unclean read
   inline unsigned filesMax() { return m_filesMax; }
-
-  // database record contains { ...data..., rn, prevRN, headRN, magic }
-  // magic is 0 until put() completes
 
   // next RN that will be allocated
   inline ZdbRN allocRN() { return m_allocRN; }
 
-  // begin new record sequence
+  // new record
   ZmRef<ZdbAnyPOD> push();
-  ZuPair<ZmRef<ZdbAnyPOD>, ZdbGuard> pushLocked();
 
-  // get tail of existing record sequence
-  ZmRef<ZdbAnyPOD> get(ZdbRN head);
-  ZuPair<ZmRef<ZdbAnyPOD>, ZdbGuard> getLocked(ZdbRN head);
+  // commit record following push() - causes replication / sync
+  void put(ZdbAnyPOD *, bool copy = true);
 
-  // get record directly (unlocked, possibly within sequence)
-  ZmRef<ZdbAnyPOD> get_(ZdbRN rn);
- 
-  // append to existing record sequence
-  // this can be used for read-modify-write
-  // (if lock is true, obtains a locked record)
-  ZmRef<ZdbAnyPOD> push(ZdbRN head, bool modify = true);
-  ZuPair<ZmRef<ZdbAnyPOD>, ZdbGuard> pushLocked(ZdbRN head, bool modify = true);
+  // get record
+  ZmRef<ZdbAnyPOD> get(ZdbRN rn);	// use for read-only queries
+  ZmRef<ZdbAnyPOD> get_(ZdbRN rn);	// use for RMW - does not update cache
 
-  // push another pod within the same scope
-  ZmRef<ZdbAnyPOD> push(ZdbAnyPOD *, bool modify = true);
+  // update record following get() / get_()
+  void update(ZdbAnyPOD *, ZdbRange range = ZdbRange(), bool copy = true);
 
-  // update record following push()/get() - causes replication / sync
-  void put(ZdbAnyPOD *, ZdbRange range = ZdbRange(), bool copy = true);
-
-  // delete (following either get or push - aborts push)
-  void del(ZdbAnyPOD *);
+  // delete record following push() / get() / get_()
+  void del(ZdbAnyPOD *, bool copy = true);
 
   inline void replicate(bool v) { m_config->replicate = v; }
 
@@ -731,40 +634,32 @@ private:
     if (m_handler.replicateFn)
       m_handler.replicateFn(pod, ptr, range, op);
     else
-      memcpy((char*)pod->ptr() + range.off(), ptr, range.len());
+      memcpy((char *)pod->ptr() + range.off(), ptr, range.len());
   }
   inline void copy(ZdbAnyPOD *pod, ZdbRange range, int op) {
     m_handler.copyFn(pod, range, op);
   }
 
-  // lock record sequence
-  ZmRef<Zdb_Lock> lock(ZdbRN rn);
-  ZmRef<Zdb_Lock> lockNew(ZdbRN rn);
-  // unlock record sequence - called from Zdb_Lock::unlock()
-  void unlock(Zdb_Lock *lock);
-
   // push initial record
   ZmRef<ZdbAnyPOD> push_();
 
-  // get an existing record without adding it to the cache
-  ZmRef<ZdbAnyPOD> pushed_(ZdbRN rn);
-
-  // append record to sequence
-  ZmRef<ZdbAnyPOD> push_(ZdbAnyPOD *prev);
+  // low-level get, does not filter deleted records
+  ZmRef<ZdbAnyPOD> get__(ZdbRN rn);
 
   // replication data rcvd (copy/commit, called while env is unlocked)
-  ZmRef<ZdbAnyPOD> replicated(ZdbRN rn, void *ptr, ZdbRange range, int op);
+  ZmRef<ZdbAnyPOD> replicated(
+      ZdbRN rn, ZdbRN prevRN, void *ptr, ZdbRange range, int op);
 
-  // get a new or existing record, adding it to the cache
-  ZmRef<ZdbAnyPOD> replicated_(ZdbRN rn);
+  // apply received replication data
+  ZmRef<ZdbAnyPOD> replicated_(ZdbRN rn, ZdbRN prevRN, int op);
 
   inline ZiFile::Path dirName(unsigned i) const {
     return ZiFile::append(m_config->path, ZuStringN<8>() <<
-	ZuBox<unsigned>(i>>16).hex(ZuFmt::Right<4>()));
+	ZuBox<unsigned>(i>>20).hex(ZuFmt::Right<5>()));
   }
   inline ZiFile::Path fileName(ZiFile::Path dir, unsigned i) const {
     return ZiFile::append(dir, ZuStringN<12>() <<
-	ZuBox<unsigned>(i & 0xffffU).hex(ZuFmt::Right<4>()) << ".zdb");
+	ZuBox<unsigned>(i & 0xfffffU).hex(ZuFmt::Right<5>()) << ".zdb");
   }
   inline ZiFile::Path fileName(unsigned i) const {
     return fileName(dirName(i), i);
@@ -777,20 +672,22 @@ private:
   void delFile(Zdb_File *file);
   void recover(Zdb_File *file);
 
-  ZmRef<ZdbAnyPOD> read_(const Zdb_FileRec &rec);
+  ZmRef<ZdbAnyPOD> read_(const Zdb_FileRec &);
 
   void write(ZdbAnyPOD *pod, ZdbRange range, int op);
-  void write_(ZdbRN rn, void *ptr, ZdbRange range, int op);
+  void write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, ZdbRange range, int op);
+  void fileError_(const Zdb_FileRec &, ZeError);
 
   void cache(ZdbAnyPOD *pod);
+  void cache_(ZdbAnyPOD *pod);
+  void cacheDel_(ZdbAnyPOD *pod);
 
   ZdbEnv			*m_env;
   ZdbConfig			*m_config;
   ZdbID				m_id;
   ZdbHandler			m_handler;
-  bool				m_noIndex = false;
-  bool				m_noLock = false;
   unsigned			m_recSize = 0;
+  unsigned			m_dataSize = 0;
   Lock				m_lock;
     unsigned			  m_fileRecs;
     ZdbRN			  m_allocRN = 0;
@@ -798,12 +695,10 @@ private:
     ZdbLRU			  m_lru;
     ZmRef<Zdb_Cache>		  m_cache;
     unsigned			  m_cacheSize = 0;
-    ZmRef<LockHash>		  m_locks;	// headRN -> lock
   FSLock			m_fsLock;	// guards files
     Zdb_FileLRU			  m_filesLRU;
     ZmRef<Zdb_FileHash>		  m_files;
     unsigned			  m_filesMax = 0;
-  ZmRef<IndexHash>		m_index;	// headRN -> tailRN
 };
 
 template <typename T_>
@@ -812,19 +707,12 @@ public:
   typedef T_ T;
 
   template <typename Handler>
-  inline Zdb(ZdbEnv *env, ZdbID id, Handler &&handler,
-      bool noIndex = false, bool noLock = false) :
-    Zdb_(env, id, ZuFwd<Handler>(handler), noIndex, noLock,
-	sizeof(typename ZdbPOD<T, ZuNull>::Data)) { }
+  inline Zdb(ZdbEnv *env, ZdbID id, Handler &&handler) :
+    Zdb_(env, id, ZuFwd<Handler>(handler),
+	sizeof(typename ZdbPOD<T, ZuNull>::Data), sizeof(T)) { }
 };
 
-template <class Base>
-inline void Zdb_Lock_<Base>::unlock()
-{
-  m_db->unlock(this);
-}
-
-typedef ZtArray<ZuBox<ZdbRN> > Zdb_DBState;
+typedef ZtArray<ZdbRN> Zdb_DBState;
 
 template <> struct ZuPrint<Zdb_DBState> : public ZuPrintDelegate {
   template <typename P, typename S>
@@ -1007,8 +895,7 @@ friend class ZdbAnyPOD_Send__;
   void repDataRead(ZiIOContext &);
   void repDataRcvd(ZiIOContext &);
 
-  void repSend(ZdbAnyPOD *pod, int type, ZdbRange range, int op,
-      bool compress, bool recovery);
+  void repSend(ZdbAnyPOD *pod, int type, ZdbRange range, int op, bool compress);
 
   void ackRcvd();
   void ackSend(int type, ZdbAnyPOD *pod);
@@ -1213,8 +1100,7 @@ private:
       Zdb_Host *host, Zdb_Cxn *cxn, int type,
       const Zdb_Msg_Rep &rep, void *ptr);
 
-  void repSend(ZdbAnyPOD *pod, int type, ZdbRange range, int op,
-      bool compress, bool recovery = false);
+  void repSend(ZdbAnyPOD *pod, int type, ZdbRange range, int op, bool compress);
   void recSend();
 
   void ackRcvd(Zdb_Host *host, bool positive, ZdbID db, ZdbRN rn);

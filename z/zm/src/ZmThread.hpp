@@ -75,7 +75,7 @@ struct ZmThreadInfo {
 };
 
 struct ZmAPI ZmThreadMgr {
-  virtual void threadName(ZmThreadName &, unsigned tid) = 0;
+  virtual void threadName(unsigned tid, ZmThreadName &) = 0;
 };
 
 #ifndef _WIN32

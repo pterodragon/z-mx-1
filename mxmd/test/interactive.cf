@@ -25,3 +25,12 @@ replay {
 shards {
   0 { tid 4 }
 }
+subscriber {
+  maxQueueSize 1000
+  loginTimeout 1
+  timeout 3
+  reconnInterval 1
+  reReqInterval 1
+  reReqMaxGap 10
+  partitions partitions.csv
+}

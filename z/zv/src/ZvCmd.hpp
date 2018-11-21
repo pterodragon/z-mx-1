@@ -145,10 +145,10 @@ public:
 private:
   void connected(ZiIOContext &io) {
     (new ZvCmdMsg())->recv<ZvCmdCxn>(io);
-    static_cast<Impl *>(this)->connected();
+    static_cast<Impl *>(this)->connected_();
   }
   void disconnected() {
-    static_cast<Impl *>(this)->disconnected();
+    static_cast<Impl *>(this)->disconnected_();
   }
 
 public:
@@ -182,8 +182,8 @@ public:
 
   ZvCmdClientCxn(Mgr *mgr, const ZiConnectionInfo &info) : Base(mgr, info) { }
 
-  void connected();
-  void disconnected();
+  void connected_();
+  void disconnected_();
   void rcvd(ZmRef<ZvCmdMsg>);
   void sent();
 };
@@ -261,8 +261,8 @@ public:
 
   ZvCmdServerCxn(Mgr *mgr, const ZiConnectionInfo &info) : Base(mgr, info) { }
 
-  void connected();
-  void disconnected();
+  void connected_();
+  void disconnected_();
   void rcvd(ZmRef<ZvCmdMsg>);
   void sent();
 };

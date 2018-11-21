@@ -411,6 +411,8 @@ public:
   inline unsigned timeout() const
     { return m_threads[0].ring.params().timeout(); }
 
+  void threadName(unsigned tid, ZmThreadName &s);
+
 protected:
   void runThreads();
 
@@ -439,8 +441,6 @@ private:
   void work();
 
   void drained();
-
-  void threadName(ZmThreadName &s, unsigned tid);
 
   ID				m_id;
   unsigned			m_nThreads;

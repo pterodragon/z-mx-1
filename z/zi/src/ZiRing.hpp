@@ -824,7 +824,7 @@ public:
 
   inline void stats(
       uint64_t &inCount, uint64_t &inBytes, 
-      uint64_t &outCount, uint64_t &outBytes) {
+      uint64_t &outCount, uint64_t &outBytes) const {
     ZmAssert(m_ctrl);
 
     inCount = this->inCount().load_();

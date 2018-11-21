@@ -222,7 +222,7 @@ private:
   void log_(ZmRef<ZeEvent> e);
   void log__(ZeEvent *e);
 
-  void threadName(ZmThreadName &s, unsigned) { s = "log"; }
+  void threadName(unsigned, ZmThreadName &s) { s = "log"; }
 
 private:
   SinkList	m_sinks;

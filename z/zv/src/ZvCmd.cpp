@@ -103,11 +103,11 @@ void ZvCmdMsg::sendData(ZiIOContext &io)
 
 // client
 
-void ZvCmdClientCxn::connected()
+void ZvCmdClientCxn::connected_()
 {
   mgr()->connected(this);
 }
-void ZvCmdClientCxn::disconnected()
+void ZvCmdClientCxn::disconnected_()
 {
   cancelTimeout();
   mgr()->disconnected(this);
@@ -248,11 +248,11 @@ void ZvCmdClient::rcvd(ZmRef<ZvCmdMsg> msg)
 
 // server
 
-void ZvCmdServerCxn::connected()
+void ZvCmdServerCxn::connected_()
 {
   scheduleTimeout();
 }
-void ZvCmdServerCxn::disconnected()
+void ZvCmdServerCxn::disconnected_()
 {
   cancelTimeout();
 }

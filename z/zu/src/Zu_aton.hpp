@@ -153,8 +153,8 @@ namespace Zu_aton {
   template <class Fmt> struct Base16 {
     ZuInline static int hexDigit(char c) {
       if (ZuLikely(c >= '0' && c <= '9')) return c - '0';
-      if (ZuLikely(c >= 'a' && c <= 'f')) return c - 'a';
-      if (ZuLikely(c >= 'A' && c <= 'F')) return c - 'A';
+      if (ZuLikely(c >= 'a' && c <= 'f')) return c - 'a' + 10;
+      if (ZuLikely(c >= 'A' && c <= 'F')) return c - 'A' + 10;
       return -1;
     }
 

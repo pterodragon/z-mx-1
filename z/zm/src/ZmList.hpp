@@ -589,8 +589,10 @@ protected:
   }
 
   void del_(Node *node) {
-    Node *nextNode(node->Fn::next());
     Node *prevNode(node->Fn::prev());
+    Node *nextNode(node->Fn::next());
+
+    ZmAssert(prevNode || nextNode);
 
     if (!prevNode)
       m_head = nextNode;

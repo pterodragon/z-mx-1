@@ -99,10 +99,9 @@ void push() {
 void active() {
   puts("ACTIVE");
   if (del) {
-    for (unsigned i = 0; i < del; i++) {
+    for (unsigned i = 0; i < del; i++)
       if (ZmRef<ZdbPOD<Order> > pod = orders->get_(i))
 	orders->del(pod);
-    }
   }
   if (append) {
     for (unsigned i = 0; i < append; i++) {

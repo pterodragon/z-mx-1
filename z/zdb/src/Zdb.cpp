@@ -1606,7 +1606,7 @@ void Zdb_::cache(ZdbAnyPOD *pod)
       if (ZuLikely(!lru->m_writeCount))
 	m_cache->del(lru->rn());
       else {
-	m_lru.unshift(lru_);
+	m_lru.unshift(ZuMv(lru_));
 	m_cacheSize = m_cache->count() + 1;
       }
     }
@@ -1622,8 +1622,8 @@ void Zdb_::cache_(ZdbAnyPOD *pod)
 
 void Zdb_::cacheDel_(ZdbAnyPOD *pod)
 {
-  m_cache->del(pod->rn());
-  m_lru.del(pod);
+  if (m_cache->del(pod->rn()))
+    m_lru.del(pod);
 }
 
 void Zdb_::put(ZdbAnyPOD *pod, bool copy)
@@ -1734,6 +1734,7 @@ ZmRef<Zdb_File> Zdb_::getFile(unsigned index, bool create)
     if (ZmRef<Zdb_File> lru = m_filesLRU.shiftNode())
       m_files->del(lru->index());
   m_files->add(file);
+  m_filesLRU.push(file);
   return file;
 }
 
@@ -1758,11 +1759,9 @@ ZmRef<Zdb_File> Zdb_::openFile(unsigned index, bool create)
 
 void Zdb_::delFile(Zdb_File *file)
 {
-  {
-    FSGuard guard(m_fsLock);
+  FSGuard guard(m_fsLock);
+  if (m_files->del(file->index()))
     m_filesLRU.del(file);
-    m_files->del(file->index());
-  }
   file->close();
   ZiFile::remove(fileName(file->index()));
 }
@@ -1834,21 +1833,21 @@ void Zdb_::write_(
   if (op == ZdbOp::New)
     rec.file()->alloc();
   else if (op == ZdbOp::Delete && rec.file()->del() == m_fileRecs)
-    delFile(rec.file());
+    delFile(rec.file()); // FIXME - can potentially delete the most recent file, resulting in a rewind of RN upon recovery, which would result in other nodes gaining higher priority due to higher RN
 
   if (prevRN == rn) return;
 
   if (!(rec = rn2file(prevRN, false))) return;
 
-  {
+  if (rec.file()->del() == m_fileRecs)
+    delFile(rec.file());
+  else {
     uint32_t magic = ZdbDeleted;
     if ((r = rec.file()->pwrite(
 	    rec.off() + trailerOffset + offsetof(ZdbTrailer, magic),
 	    &magic, 4, &e)) != Zi::OK)
       fileError_(rec, e);
   }
-  if (rec.file()->del() == m_fileRecs)
-    delFile(rec.file());
 }
 
 void Zdb_::fileError_(const Zdb_FileRec &rec, ZeError e)

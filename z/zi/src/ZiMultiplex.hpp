@@ -120,12 +120,14 @@ public:
   template <typename Fn>
   ZuInline void init(Fn &&fn_,
       void *ptr_, unsigned size_, unsigned offset_) {
+    ZmAssert(size_);
     fn = ZuFwd<Fn>(fn_); ptr = ptr_; size = size_; offset = offset_; length = 0;
   }
   // UDP send
   template <typename Fn, typename Addr>
   ZuInline void init(Fn &&fn_,
       void *ptr_, unsigned size_, unsigned offset_, Addr &&addr_) {
+    ZmAssert(size_);
     fn = ZuFwd<Fn>(fn_); ptr = ptr_; size = size_; offset = offset_; length = 0;
     addr = ZuFwd<Addr>(addr_);
   }

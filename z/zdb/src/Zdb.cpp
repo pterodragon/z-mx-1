@@ -1229,10 +1229,15 @@ void Zdb_Cxn::repDataRead(ZiIOContext &io)
     ZeLOG(Fatal, "Zdb_Cxn::repDataRead internal error");
     return;
   }
-  m_readData2.length(
-      rep.clen ? (unsigned)rep.clen : (unsigned)(ZdbRange(rep.range).len()));
-  io.init(ZiIOFn::Member<&Zdb_Cxn::repDataRcvd>::fn(this),
-      m_readData2.data(), m_readData2.length(), 0);
+  ZdbRange range(rep.range);
+  if (!range) {
+    m_env->repDataRcvd(m_host, this, m_readHdr.type, rep, nullptr);
+    msgRead(io);
+  } else {
+    m_readData2.length(rep.clen ? (unsigned)rep.clen : (unsigned)range.len());
+    io.init(ZiIOFn::Member<&Zdb_Cxn::repDataRcvd>::fn(this),
+	m_readData2.data(), m_readData2.length(), 0);
+  }
 }
 
 // pre-process received replication data, decompress as needed

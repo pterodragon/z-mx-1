@@ -452,6 +452,8 @@ struct ZdbAnyPOD_Write_HeapID {
 typedef ZdbAnyPOD_Write_<ZmHeap<ZdbAnyPOD_Write_HeapID,
 	sizeof(ZdbAnyPOD_Write_<ZuNull>)> > ZdbAnyPOD_Write;
 
+// Note: ptr and range can be null if op is ZdbOp::Delete
+
 // AllocFn - called to allocate/initialize new record from memory
 typedef ZmFn<Zdb_ *, ZmRef<ZdbAnyPOD> &> ZdbAllocFn;
 // RecoverFn(pod) - (optional) called when record is recovered
@@ -625,15 +627,13 @@ private:
   // application call handlers
   inline void alloc(ZmRef<ZdbAnyPOD> &pod) { m_handler.allocFn(this, pod); }
   inline void recover(ZdbAnyPOD *pod) { m_handler.recoverFn(pod); }
-  inline void replicate(ZdbAnyPOD *pod,
-      void *ptr, ZdbRange range, int op) {
+  inline void replicate(ZdbAnyPOD *pod, void *ptr, ZdbRange range, int op) {
 #ifdef ZdbRep_DEBUG
-    ZmAssert(range.len() > 0);
-    ZmAssert((range.off() + range.len()) <= pod->size());
+    ZmAssert((!range || (range.off() + range.len()) <= pod->size()));
 #endif
     if (m_handler.replicateFn)
       m_handler.replicateFn(pod, ptr, range, op);
-    else
+    else if (range)
       memcpy((char *)pod->ptr() + range.off(), ptr, range.len());
   }
   inline void copy(ZdbAnyPOD *pod, ZdbRange range, int op) {

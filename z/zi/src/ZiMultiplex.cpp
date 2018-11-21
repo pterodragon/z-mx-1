@@ -689,7 +689,7 @@ retry:
 	s, ci.options.familyName(), ci.familyID, ci.portID)) != ZeOK) {
       connectDel(s);
       ::close(s);
-      Error("connect", Zi::IOError, e);
+      Warning("connect", Zi::IOError, e);
       request->fail(true);
       return;
     }
@@ -703,7 +703,7 @@ retry:
       if (e.errNo() == EINTR) goto retry;
       connectDel(s);
       ::close(s);
-      Error("connect", Zi::IOError, e);
+      Warning("connect", Zi::IOError, e);
       request->fail(true);
       return;
     }
@@ -2201,7 +2201,7 @@ void ZiMultiplex::rx()
 	  }
 	  connectDel(s);
 	  ::close(s);
-	  Error("connect", Zi::IOError, e);
+	  Warning("connect", Zi::IOError, e);
 	  request->fail(true);
 	  continue;
 	}

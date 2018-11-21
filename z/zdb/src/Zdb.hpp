@@ -616,7 +616,9 @@ public:
   ZmRef<ZdbAnyPOD> get_(ZdbRN rn);	// use for RMW - does not update cache
 
   // update record following get() / get_()
-  void update(ZdbAnyPOD *, ZdbRange range = ZdbRange(), bool copy = true);
+  void update(
+      ZdbAnyPOD *, ZdbRange range = ZdbRange(),
+      bool copy = true, bool cache = true);
 
   // delete record following push() / get() / get_()
   void del(ZdbAnyPOD *, bool copy = true);
@@ -699,6 +701,7 @@ private:
     Zdb_FileLRU			  m_filesLRU;
     ZmRef<Zdb_FileHash>		  m_files;
     unsigned			  m_filesMax = 0;
+    unsigned			  m_lastFile = 0;
 };
 
 template <typename T_>

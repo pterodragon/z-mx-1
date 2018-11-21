@@ -1645,7 +1645,7 @@ void Zdb_::put(ZdbAnyPOD *pod, bool copy)
   m_env->write(pod, range, ZdbOp::New);
 }
 
-void Zdb_::update(ZdbAnyPOD *pod, ZdbRange range, bool copy)
+void Zdb_::update(ZdbAnyPOD *pod, ZdbRange range, bool copy, bool cache)
 {
   if (ZuUnlikely(!m_fileRecs)) return;
   if (ZuUnlikely(!m_env->active())) {
@@ -1658,7 +1658,7 @@ void Zdb_::update(ZdbAnyPOD *pod, ZdbRange range, bool copy)
     Guard guard(m_lock);
     cacheDel_(pod);
     pod->update(m_allocRN++, pod->rn());
-    cache_(pod);
+    if (cache) cache_(pod);
     ++pod->m_writeCount;
   }
   if (copy) this->copy(pod, range, ZdbOp::Update);
@@ -1735,6 +1735,7 @@ ZmRef<Zdb_File> Zdb_::getFile(unsigned index, bool create)
       m_files->del(lru->index());
   m_files->add(file);
   m_filesLRU.push(file);
+  if (index > m_lastFile) m_lastFile = index;
   return file;
 }
 
@@ -1759,11 +1760,17 @@ ZmRef<Zdb_File> Zdb_::openFile(unsigned index, bool create)
 
 void Zdb_::delFile(Zdb_File *file)
 {
-  FSGuard guard(m_fsLock);
-  if (m_files->del(file->index()))
-    m_filesLRU.del(file);
+  bool lastFile;
+  unsigned index = file->index();
+  {
+    FSGuard guard(m_fsLock);
+    if (m_files->del(index))
+      m_filesLRU.del(file);
+    lastFile = index == m_lastFile;
+  }
+  if (ZuUnlikely(lastFile)) getFile(index + 1, true);
   file->close();
-  ZiFile::remove(fileName(file->index()));
+  ZiFile::remove(fileName(index));
 }
 
 ZmRef<ZdbAnyPOD> Zdb_::read_(const Zdb_FileRec &rec)
@@ -1833,7 +1840,7 @@ void Zdb_::write_(
   if (op == ZdbOp::New)
     rec.file()->alloc();
   else if (op == ZdbOp::Delete && rec.file()->del() == m_fileRecs)
-    delFile(rec.file()); // FIXME - can potentially delete the most recent file, resulting in a rewind of RN upon recovery, which would result in other nodes gaining higher priority due to higher RN
+    delFile(rec.file());
 
   if (prevRN == rn) return;
 

@@ -592,7 +592,7 @@ protected:
     Node *prevNode(node->Fn::prev());
     Node *nextNode(node->Fn::next());
 
-    ZmAssert(prevNode || nextNode);
+    ZmAssert(prevNode || nextNode || (m_head == node && m_tail == node));
 
     if (!prevNode)
       m_head = nextNode;

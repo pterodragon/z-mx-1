@@ -500,10 +500,6 @@ namespace MxMDStream {
 
   FnDeclare(tradingSession, TradingSession)
 
-  FnDeclare(addTrade, AddTrade)
-  FnDeclare(correctTrade, CorrectTrade)
-  FnDeclare(cancelTrade, CancelTrade)
-
   FnDeclare(refDataLoaded, RefDataLoaded)
 
   FnDeclare(heartBeat, HeartBeat)
@@ -557,6 +553,10 @@ namespace MxMDStream {
   FnDeclare(modifyOrder, ModifyOrder)
   FnDeclare(cancelOrder, CancelOrder)
   FnDeclare(resetOB, ResetOB)
+
+  FnDeclare(addTrade, AddTrade)
+  FnDeclare(correctTrade, CorrectTrade)
+  FnDeclare(cancelTrade, CancelTrade)
 
 #undef FnDeclare
 

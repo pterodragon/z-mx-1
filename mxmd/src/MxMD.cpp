@@ -1758,7 +1758,7 @@ void MxMDLib::addTrade(const MxMDOrderBook *ob,
 {
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
-    MxMDStream::addTrade(core->broadcast(), transactTime,
+    MxMDStream::addTrade(core->broadcast(), ob->shard()->id(), transactTime,
 	ob->key(), tradeID, ob->pxNDP(), ob->qtyNDP(), price, qty);
 }
 void MxMDLib::correctTrade(const MxMDOrderBook *ob,
@@ -1766,7 +1766,7 @@ void MxMDLib::correctTrade(const MxMDOrderBook *ob,
 {
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
-    MxMDStream::correctTrade(core->broadcast(), transactTime,
+    MxMDStream::correctTrade(core->broadcast(), ob->shard()->id(), transactTime,
 	ob->key(), tradeID, ob->pxNDP(), ob->qtyNDP(), price, qty);
 }
 void MxMDLib::cancelTrade(const MxMDOrderBook *ob,
@@ -1774,7 +1774,7 @@ void MxMDLib::cancelTrade(const MxMDOrderBook *ob,
 {
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
-    MxMDStream::cancelTrade(core->broadcast(), transactTime,
+    MxMDStream::cancelTrade(core->broadcast(), ob->shard()->id(), transactTime,
 	ob->key(), tradeID, ob->pxNDP(), ob->qtyNDP(), price, qty);
 }
 

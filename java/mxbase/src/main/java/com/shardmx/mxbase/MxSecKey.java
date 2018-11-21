@@ -5,10 +5,10 @@ import javax.annotation.Nullable;
 
 @Value.Immutable @MxTuple
 public abstract class MxSecKey implements Comparable<MxSecKey> {
+  public abstract String id();
   public abstract String venue();
   @Value.Default @Nullable
   public String segment() { return null; }
-  public abstract String id();
 
   public int compareTo(MxSecKey k) {
     int i;

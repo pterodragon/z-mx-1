@@ -41,26 +41,26 @@ namespace MxSecKeyJNI {
 
   // MxSecKey accessors
   ZJNI::JavaMethod methods[] {
+    { "id", "()Ljava/lang/String;" },
     { "venue", "()Ljava/lang/String;" },
     { "segment", "()Ljava/lang/String;" },
-    { "id", "()Ljava/lang/String;" },
   };
 }
 
 MxSecKey MxSecKeyJNI::j2c(JNIEnv *env, jobject obj)
 {
-  jstring venue = (jstring)(env->CallObjectMethod(obj, methods[0].mid));
-  jstring segment = (jstring)(env->CallObjectMethod(obj, methods[1].mid));
-  jstring id = (jstring)(env->CallObjectMethod(obj, methods[2].mid));
+  jstring id = (jstring)(env->CallObjectMethod(obj, methods[0].mid));
+  jstring venue = (jstring)(env->CallObjectMethod(obj, methods[1].mid));
+  jstring segment = (jstring)(env->CallObjectMethod(obj, methods[2].mid));
 
   MxSecKey key{
+    ZJNI::j2s_ZuStringN<MxIDStrSize>(env, id),
     ZJNI::j2s_ZuStringN<8>(env, venue),
-    ZJNI::j2s_ZuStringN<8>(env, segment),
-    ZJNI::j2s_ZuStringN<MxIDStrSize>(env, id)};
+    ZJNI::j2s_ZuStringN<8>(env, segment)};
 
+  env->DeleteLocalRef(id);
   env->DeleteLocalRef(venue);
   env->DeleteLocalRef(segment);
-  env->DeleteLocalRef(id);
 
   return key;
 }
@@ -68,9 +68,9 @@ MxSecKey MxSecKeyJNI::j2c(JNIEnv *env, jobject obj)
 jobject MxSecKeyJNI::ctor(JNIEnv *env, const MxSecKey &key)
 {
   return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
+      ZJNI::s2j(env, key.id),
       ZJNI::s2j(env, key.venue),
-      ZJNI::s2j(env, key.segment),
-      ZJNI::s2j(env, key.id));
+      ZJNI::s2j(env, key.segment));
 }
 
 int MxSecKeyJNI::bind(JNIEnv *env)

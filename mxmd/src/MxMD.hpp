@@ -1340,7 +1340,7 @@ public:
 
 private:
   template <typename L>
-  inline L secIDs_(L l) const {
+  inline L keys_(L l) const {
     l(MxUniKey{.id = m_key.id, .venue = m_key.venue, .segment = m_key.segment});
     if (*m_refData.idSrc)
       l(MxUniKey{.id = m_refData.symbol, .src = m_refData.idSrc});
@@ -1350,11 +1350,11 @@ private:
   }
 public:
   template <typename L>
-  inline void secIDs(L l_) const {
-    auto l = secIDs_(ZuMv(l_));
+  inline void keys(L l_) const {
+    auto l = keys_(ZuMv(l_));
     if (m_underlying && *m_refData.mat) {
       if (*m_refData.strike)
-	m_underlying->secIDs_([l = ZuMv(l),
+	m_underlying->keys_([l = ZuMv(l),
 	    refData = &m_refData](MxUniKey key) mutable {
 	  key.mat = refData->mat;
 	  key.putCall = refData->putCall;
@@ -1362,7 +1362,7 @@ public:
 	  l(key);
 	});
       else
-	m_underlying->secIDs_([l = ZuMv(l),
+	m_underlying->keys_([l = ZuMv(l),
 	    refData = &m_refData](MxUniKey key) mutable {
 	  key.mat = refData->mat;
 	  l(key);

@@ -105,8 +105,8 @@ void l2(MxMDOrderBook *ob, MxDateTime stamp)
 
 void exception(MxMDLib *, ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 
-typedef ZmHash<MxUniKey> SecIDs; // hash table of secIDs
-static SecIDs *secIDs = 0;
+typedef ZmHash<MxUniKey> Keys; // hash table of keys
+static Keys *keys = 0;
 
 void refDataLoaded(MxMDVenue *venue)
 {
@@ -117,10 +117,14 @@ static ZmRef<MxMDSecHandler> secHandler;
 
 void addSecurity(MxMDSecurity *sec, MxDateTime)
 {
-  if (!secIDs) return;
+  if (!keys) return;
   bool matched = false;
-  sec->secIDs([&matched](const MxUniKey &key) {
-      if (secIDs->find(key)) matched = true;
+  std::cerr << "SUBSCRIBED KEYS\n";
+  { auto i = keys->readIterator(); while (MxUniKey key = i.iterateKey()) { std::cerr << key << '\n'; } }
+  std::cerr << "RCVD KEYS\n";
+  sec->keys([&matched](const MxUniKey &key) {
+      if (keys->find(key)) matched = true;
+      std::cerr << key << (matched ? " MATCHED\n" : " NOT MATCHED\n") << std::flush;
     });
   if (matched) sec->subscribe(secHandler);
 }
@@ -138,7 +142,7 @@ void subscribe(ZvCmdServerCxn *,
   MxUniKey key = md->parseSecurity(args, 1);
   md->lookupSecurity(key, 0, [&key, &out](MxMDSecurity *sec) -> bool {
     if (!sec) {
-      secIDs->add(key);
+      keys->add(key);
       out << "subscription pending\n";
     } else {
       sec->subscribe(secHandler);
@@ -157,7 +161,7 @@ int main(int argc, char **argv)
   ZeLog::add(ZeLog::fileSink("&2"));	// log errors to stderr
   ZeLog::start();			// start logger thread
 
-  secIDs = new SecIDs();
+  keys = new Keys();
   (secHandler = new MxMDSecHandler())->
     l1Fn(MxMDLevel1Fn::Ptr<&l1>::fn()).
     addPxLevelFn(MxMDPxLevelFn::Ptr<&pxLevel>::fn()).
@@ -165,11 +169,11 @@ int main(int argc, char **argv)
     deletedPxLevelFn(MxMDPxLevelFn::Ptr<&deletedPxLevel>::fn()).
     l2Fn(MxMDOrderBookFn::Ptr<&l2>::fn());
 
-  // read secIDs from file into hash table
+  // read keys from file into hash table
   if (argv[2]) {
     MxUniKeyCSV csv;
     csv.read(argv[2], ZvCSVReadFn{[](ZuAnyPOD *pod) {
-	secIDs->add(MxUniKeyCSV::key(pod));
+	keys->add(MxUniKeyCSV::key(pod));
       }});
   }
 
@@ -201,7 +205,7 @@ int main(int argc, char **argv)
 
   } catch (...) { }
 
-  delete secIDs;
+  delete keys;
 
   return 0;
 }

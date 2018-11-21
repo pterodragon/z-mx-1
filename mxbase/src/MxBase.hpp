@@ -629,6 +629,9 @@ struct MxUniKey {
   MxEnum	src;
   MxEnum	putCall;
 
+  ZuInline bool operator !() const { return !id; }
+  ZuOpBool
+
   inline bool operator ==(const MxUniKey &v) const {
     if (id != v.id || src != v.src) return false;
     if (!*src && (venue != v.venue || segment != v.venue)) return false;

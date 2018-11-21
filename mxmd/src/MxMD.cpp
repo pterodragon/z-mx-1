@@ -1331,10 +1331,6 @@ ZmRef<MxMDSecurity> MxMDLib::addSecurity(
     }
     sec = new MxMDSecurity(shard, key, refData);
     m_allSecurities.add(sec);
-    if (key.id == "6502") {
-      ZmAssert((key == MxSecKey{"6502", "XTKS", MxID()}));
-      ZmAssert(m_allSecurities.findKey(MxSecKey{"6502", "XTKS", MxID()}));
-    }
     addSecIndices(sec, refData, transactTime);
     shard->addSecurity(sec);
     MxMDCore *core = static_cast<MxMDCore *>(this);

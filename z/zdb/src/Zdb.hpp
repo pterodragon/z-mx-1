@@ -114,7 +114,6 @@ class ZdbEnv;				// database environment
 class Zdb_;				// individual database (generic)
 template <typename> class Zdb;		// individual database (type-specific)
 class ZdbAnyPOD;			// in-memory record (generic)
-class ZdbGuard;				// record sequence guard
 class Zdb_Host;				// host
 class Zdb_Cxn;				// cxn
 
@@ -311,7 +310,6 @@ friend class Zdb_;
 friend class Zdb_Cxn;
 friend class ZdbAnyPOD_Send__;
 friend class ZdbEnv;
-friend class ZdbGuard;
 
 protected:
   inline ZdbAnyPOD(void *ptr, unsigned size, Zdb_ *db) :
@@ -391,23 +389,21 @@ private:
 class ZdbAnyPOD_Send__ : public ZmPolymorph {
 public:
   inline ZdbAnyPOD_Send__(ZdbAnyPOD *pod,
-      int type, ZdbRange range, int op, bool compress) :
-	m_pod(pod), m_vec(0) {
+      int type, ZdbRange range, int op, bool compress) : m_pod(pod) {
     init(type, range, op, compress);
   }
 
-  void send(Zdb_Cxn *cxn);
+  void send(ZiIOContext &io);
 
 private:
   void init(int type, ZdbRange range, int op, bool compress);
 
-  void send_(ZiIOContext &io);
   void sent(ZiIOContext &io);
+  void sent2(ZiIOContext &io);
+  void sent3(ZiIOContext &io);
 
   ZmRef<ZdbAnyPOD>		m_pod;
   ZmRef<ZdbAnyPOD_Compressed>	m_compressed;
-  unsigned			m_vec;
-  ZiVec				m_vecs[2];
   Zdb_Msg_Hdr			m_hdr;
 };
 struct ZdbAnyPOD_Send_HeapID {
@@ -677,7 +673,7 @@ private:
   ZmRef<ZdbAnyPOD> read_(const Zdb_FileRec &);
 
   void write(ZdbAnyPOD *pod, ZdbRange range, int op);
-  void write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, ZdbRange range, int op);
+  void write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op);
   void fileError_(const Zdb_FileRec &, ZeError);
 
   void cache(ZdbAnyPOD *pod);
@@ -893,6 +889,7 @@ friend class ZdbAnyPOD_Send__;
   void hbSend();
   void hbSend_(ZiIOContext &);
   void hbSent(ZiIOContext &);
+  void hbSent2(ZiIOContext &);
 
   void repRcvd(ZiIOContext &);
   void repDataRead(ZiIOContext &);
@@ -907,12 +904,10 @@ friend class ZdbAnyPOD_Send__;
   ZiMultiplex		*m_mx;
   Zdb_Host		*m_host;	// 0 if not yet associated
 
-  Zdb_Msg_Hdr		m_readHdr;
-  ZtArray<char>		m_readData;
-  ZtArray<char>		m_readData2;
+  Zdb_Msg_Hdr		m_recvHdr;
+  ZtArray<char>		m_recvData;
+  ZtArray<char>		m_recvData2;
 
-  unsigned		m_hbSendVec;
-  ZiVec			m_hbSendVecs[2];
   Zdb_Msg_Hdr		m_hbSendHdr;
 
   Zdb_Msg_Hdr		m_ackSendHdr;

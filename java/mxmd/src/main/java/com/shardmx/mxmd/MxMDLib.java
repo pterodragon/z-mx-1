@@ -16,7 +16,7 @@ public class MxMDLib {
   public native void start();
   public native void stop();
 
-  public native void close();
+  public native void close(); // calls C++ final()
 
   public native boolean record(String path);
   public native String stopRecording();

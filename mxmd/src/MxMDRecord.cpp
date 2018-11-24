@@ -244,8 +244,9 @@ void *MxMDRecLink::push(unsigned size)
 void *MxMDRecLink::out(void *ptr, unsigned length, unsigned type, int shardID)
 {
   using namespace MxMDStream;
-  Hdr *hdr = new (ptr) Hdr(
-      (uint16_t)length, (uint8_t)type, (uint8_t)shardID);
+  Hdr *hdr = new (ptr) Hdr{
+      (uint64_t)0, (uint32_t)0,
+      (uint16_t)length, (uint8_t)type, (uint8_t)shardID};
   return hdr->body();
 }
 void MxMDRecLink::push2()

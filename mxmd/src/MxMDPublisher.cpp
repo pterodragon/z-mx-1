@@ -271,13 +271,14 @@ MxMDPubLink::TCP::TCP(MxMDPubLink *link, const ZiCxnInfo &ci) :
   ZiConnection(link->mx(), ci), m_link(link), m_state(State::Login)
 {
   using namespace MxMDStream;
-  m_in = new MxQMsg(new Msg());
 }
 void MxMDPubLink::TCP::connected(ZiIOContext &io)
 {
   m_link->tcpConnected(this);
-  MxMDStream::TCP::recv<TCP>(m_in, io,
-      [](TCP *tcp, MxQMsg *, ZiIOContext &io) { tcp->process(io); });
+  MxMDStream::TCP::recv<TCP>(new MxQMsg(new Msg()), io,
+      [](TCP *tcp, ZmRef<MxQMsg> msg, ZiIOContext &io) {
+	tcp->process(ZuMv(msg), io);
+      });
   mx()->rxRun(ZmFn<>{[](MxMDPubLink::TCP *tcp) {
       if (tcp->m_state != State::Login) return;
       tcpERROR(tcp, 0, "TCP login timeout");
@@ -320,7 +321,7 @@ void MxMDPubLink::tcpDisconnected(MxMDPubLink::TCP *tcp)
 
 // TCP login, recv
 
-void MxMDPubLink::TCP::process(ZiIOContext &io)
+void MxMDPubLink::TCP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 {
   if (ZuUnlikely(m_state.load_() != State::Login)) {
     tcpERROR(this, &io, "TCP unexpected message");
@@ -331,7 +332,7 @@ void MxMDPubLink::TCP::process(ZiIOContext &io)
 
   {
     using namespace MxMDStream;
-    const Hdr &hdr = m_in->as<Hdr>();
+    const Hdr &hdr = msg->as<Hdr>();
     if (ZuUnlikely(hdr.type != Type::Login)) {
       tcpERROR(this, &io, "TCP unexpected message type");
       return;
@@ -341,6 +342,8 @@ void MxMDPubLink::TCP::process(ZiIOContext &io)
       return;
     }
   }
+
+  io.fn.object(ZuMv(msg)); // recycle
 
   m_state = State::Sending;
 
@@ -463,7 +466,7 @@ void MxMDPubLink::UDP::recv(ZiIOContext &io)
 	udp->process(ZuMv(msg), io);
       });
 }
-void MxMDPubLink::UDP::process(MxQMsg *msg, ZiIOContext &io)
+void MxMDPubLink::UDP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 {
   using namespace MxMDStream;
   msg->length = io.offset + io.length;
@@ -485,7 +488,10 @@ void MxMDPubLink::UDP::process(MxQMsg *msg, ZiIOContext &io)
     }
     m_link->udpReceived(hdr.as<ResendReq>());
   }
-  recv(io);
+  MxMDStream::UDP::recv<UDP>(ZuMv(msg), io,
+      [](UDP *udp, ZmRef<MxQMsg> msg, ZiIOContext &io) {
+	udp->process(ZuMv(msg), io);
+      });
 }
 void MxMDPubLink::udpReceived(const MxMDStream::ResendReq &resendReq)
 {
@@ -526,8 +532,9 @@ void *MxMDPubLink::TCP::push(unsigned size)
 void *MxMDPubLink::TCP::out(
     void *ptr, unsigned length, unsigned type, int shardID)
 {
-  Hdr *hdr = new (ptr) Hdr(
-      (uint16_t)length, (uint8_t)type, (uint8_t)shardID);
+  Hdr *hdr = new (ptr) Hdr{
+      (uint64_t)0, (uint32_t)0,
+      (uint16_t)length, (uint8_t)type, (uint8_t)shardID};
   return hdr->body();
 }
 void MxMDPubLink::TCP::push2()

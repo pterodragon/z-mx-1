@@ -174,7 +174,7 @@ friend class TCP;
     void disconnect();
     void disconnected();
 
-    void process(ZiIOContext &);
+    void process(ZmRef<MxQMsg>, ZiIOContext &);
 
     void snap(MxSeqNo seqNo);
     void *push(unsigned size);
@@ -188,7 +188,6 @@ friend class TCP;
 
     ZmAtomic<unsigned>	m_state;
 
-    ZmRef<MxQMsg>	m_in;
     ZuRef<Msg>		m_snapMsg;
   };
 
@@ -225,14 +224,12 @@ friend class UDP;
     void disconnected();
 
     void recv(ZiIOContext &);
-    void process(MxQMsg *, ZiIOContext &);
+    void process(ZmRef<MxQMsg>, ZiIOContext &);
 
   private:
     MxMDPubLink		*m_link;
 
     ZmAtomic<unsigned>	m_state;
-
-    ZmRef<MxQMsg>	m_in;
   };
 
 public:

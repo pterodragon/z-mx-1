@@ -268,17 +268,13 @@ void MxMDSubLink::tcpConnect()
 MxMDSubLink::TCP::TCP(MxMDSubLink *link, const ZiCxnInfo &ci) :
   ZiConnection(link->mx(), ci), m_link(link), m_state(State::Login)
 {
-  using namespace MxMDStream;
-  m_in = new MxQMsg(new Msg());
 }
 void MxMDSubLink::TCP::connected(ZiIOContext &io)
 {
   m_link->tcpConnected(this);
-  MxMDStream::TCP::recv<TCP>(ZuMv(m_in), io,
+  MxMDStream::TCP::recv<TCP>(new MxQMsg(new Msg()), io,
       [](TCP *tcp, ZmRef<MxQMsg> msg, ZiIOContext &io) {
-	m_in = ZuMv(msg);
-	tcp->process(io);
-	if (ZuLikely(!io.completed())) io.fn.object(ZuMv(m_in));
+	tcp->process(ZuMv(msg), io);
       });
 }
 void MxMDSubLink::tcpConnected(MxMDSubLink::TCP *tcp)
@@ -322,8 +318,9 @@ ZmRef<MxQMsg> MxMDSubLink::tcpLogin()
 {
   using namespace MxMDStream;
   ZuRef<Msg> msg = new Msg();
-  Hdr *hdr = new (msg->ptr()) Hdr(
-      (uint16_t)sizeof(Login), (uint8_t)Login::Code);
+  Hdr *hdr = new (msg->ptr()) Hdr{
+      (uint64_t)0, (uint32_t)0,
+      (uint16_t)sizeof(Login), (uint8_t)Login::Code};
   new (hdr->body()) Login{m_partition->tcpUsername, m_partition->tcpPassword};
   unsigned msgLen = msg->length();
   return new MxQMsg(ZuMv(msg), msgLen);
@@ -342,22 +339,27 @@ void MxMDSubLink::tcpLoginAck()
   connected();
   hbStart();
 }
-void MxMDSubLink::TCP::process(ZiIOContext &io)
+void MxMDSubLink::TCP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 {
   if (ZuUnlikely(m_state.load_() == State::Login)) {
     m_state = State::Receiving;
     mx()->del(&m_loginTimer);
     m_link->tcpLoginAck();
   }
+
   using namespace MxMDStream;
-  const Hdr &hdr = m_in->as<Hdr>();
+
+  const Hdr &hdr = msg->as<Hdr>();
   if (ZuUnlikely(hdr.type == Type::EndOfSnapshot)) {
     m_state = State::Disconnect;
     io.disconnect();
     m_link->endOfSnapshot(hdr.as<EndOfSnapshot>().seqNo);
     return;
   }
-  m_link->tcpProcess(m_in);
+
+  m_link->tcpProcess(msg);
+
+  io.fn.object(ZuMv(msg)); // recycle
 }
 void MxMDSubLink::tcpProcess(MxQMsg *msg)
 {
@@ -544,8 +546,9 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
   }
   using namespace MxMDStream;
   ZuRef<Msg> msg = new Msg();
-  Hdr *hdr = new (msg->ptr()) Hdr(
-      (uint16_t)sizeof(ResendReq), (uint8_t)ResendReq::Code);
+  Hdr *hdr = new (msg->ptr()) Hdr{
+      (uint64_t)0, (uint32_t)0,
+      (uint16_t)sizeof(ResendReq), (uint8_t)ResendReq::Code};
   new (hdr->body()) ResendReq{now.key(), now.length()};
   unsigned msgLen = msg->length();
   ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(msg), msgLen);

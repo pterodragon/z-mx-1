@@ -154,7 +154,7 @@ friend class TCP;
     void disconnected();
 
     void sendLogin();
-    void process(ZiIOContext &);
+    void process(ZmRef<MxQMsg>, ZiIOContext &);
 
   private:
     MxMDSubLink		*m_link;
@@ -162,8 +162,6 @@ friend class TCP;
     ZmScheduler::Timer	m_loginTimer;
 
     ZmAtomic<unsigned>	m_state;
-
-    ZmRef<MxQMsg>	m_in;
   };
 
   class UDP;
@@ -195,8 +193,6 @@ friend class UDP;
     MxMDSubLink		*m_link;
 
     ZmAtomic<unsigned>	m_state;
-
-    ZmRef<MxQMsg>	m_in;
   };
 
 public:

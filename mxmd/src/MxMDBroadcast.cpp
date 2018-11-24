@@ -118,9 +118,9 @@ void MxMDBroadcast::heartbeat_()
   if (ZuUnlikely(!m_ring)) return;
   m_lastTime.now();
   if (void *ptr = m_ring->push(sizeof(Hdr) + sizeof(HeartBeat))) {
-    Hdr *hdr = new (ptr) Hdr(
-	(uint16_t)sizeof(HeartBeat), (uint8_t)HeartBeat::Code,
-	(uint8_t)0xff, (uint32_t)0, (uint64_t)m_seqNo++);
+    Hdr *hdr = new (ptr) Hdr{
+	(uint64_t)m_seqNo++, (uint32_t)0,
+	(uint16_t)sizeof(HeartBeat), (uint8_t)HeartBeat::Code};
     new (hdr->body()) HeartBeat{MxDateTime{m_lastTime}};
     m_ring->push2();
   }
@@ -156,9 +156,9 @@ void *MxMDBroadcast::out(
 {
   ZmTime delta = ZmTimeNow() - m_lastTime;
   uint32_t nsec = delta.sec() * 1000000000 + delta.nsec();
-  Hdr *hdr = new (ptr) Hdr(
-      (uint16_t)length, (uint8_t)type,
-      (uint8_t)shardID, nsec, (uint64_t)m_seqNo++);
+  Hdr *hdr = new (ptr) Hdr{
+      (uint64_t)m_seqNo++, nsec,
+      (uint16_t)length, (uint8_t)type, (uint8_t)shardID};
   return hdr->body();
 }
 

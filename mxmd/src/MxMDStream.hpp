@@ -148,11 +148,11 @@ namespace MxMDStream {
   };
 
   struct HdrData {
-    uint16_t	len = 0;	// exclusive of MxMDFrame
+    uint64_t  	seqNo = 0;
+    uint32_t	nsec = 0;
+    uint16_t	len = 0;	// exclusive of HdrData
     uint8_t	type = 0;
     uint8_t	shard = 0xff;	// 0xff is null
-    uint32_t	nsec = 0;
-    uint64_t  	seqNo = 0;
   };
   struct Hdr : public HdrData {
     template <typename ...Args>
@@ -561,18 +561,6 @@ namespace MxMDStream {
 #undef FnDeclare
 
   // ensure passed lambdas are stateless and match required signature
-  template <typename Cxn, typename L> struct IOLambda_ {
-    typedef void (*Fn)(Cxn *, MxQMsg *, ZiIOContext &);
-    enum { OK = ZuConversion<L, Fn>::Exists };
-  };
-  template <typename Cxn, typename L, bool = IOLambda_<Cxn, L>::OK>
-  struct IOLambda;
-  template <typename Cxn, typename L> struct IOLambda<Cxn, L, true> {
-    typedef void T;
-    ZuInline static void invoke(MxQMsg *msg, ZiIOContext &io) {
-      (*(L *)(void *)0)(static_cast<Cxn *>(io.cxn), msg, io);
-    }
-  };
   template <typename Cxn, typename L> struct IOMvLambda_ {
     typedef void (*Fn)(Cxn *, ZmRef<MxQMsg>, ZiIOContext &);
     enum { OK = ZuConversion<L, Fn>::Exists };
@@ -586,6 +574,7 @@ namespace MxMDStream {
 	  static_cast<Cxn *>(io.cxn), io.fn.mvObject<MxQMsg>(), io);
     }
   };
+
   namespace UDP {
     template <typename Cxn>
     inline void send(Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr) {
@@ -645,7 +634,7 @@ namespace MxMDStream {
     }
 
     template <typename Cxn, typename L>
-    inline typename IOLambda<Cxn, L>::T recv(
+    inline typename IOMvLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       MxQMsg *msg_ = msg.ptr();
       io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
@@ -660,9 +649,10 @@ namespace MxMDStream {
 	  }
 	  if (ZuLikely(len < msgLen)) return;
 	  msg->length = msgLen;
-	  IOLambda<Cxn, L>::invoke(msg, io);
+	  IOMvLambda<Cxn, L>::invoke(io);
 	  if (ZuUnlikely(io.completed())) return;
 	  msg = io.fn.object<MxQMsg>();
+	  if (ZuUnlikely(!msg)) return;
 	  if (io.offset = len - msgLen)
 	    memmove(io.ptr, (const char *)io.ptr + msgLen, io.offset);
 	  len = io.offset;

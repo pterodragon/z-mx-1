@@ -32,34 +32,33 @@
 
 #include <MxBase.hpp>
 
+// balance (deposited assets, loaned assets, traded/confirmed assets)
 struct MxBalance {
   MxValue	deposited;	// deposited
+  MxValue	loanAvail;	// loan available
+  MxValue	loaned;		// loan used (should be <= loanAvail)
   MxValue	confirmed;	// confirmed / settled
   MxValue	traded;		// traded / realized
 };
 
-struct MxAssetBal {
-  MxBalance	longBal;	// long sells reduce longBal
-  MxBalance	shortBal;	// short sold balance
-  MxValue	shortAvail;	// short availability (>= shortBal.tradedQty)
-};
-
-struct MxExposure {
+// exposure (open orders, unexpired derivatives, margined positions)
+struct MxExpSide {
   MxValue	open;		// total qty of open/working orders
   MxValue	futures;	// total qty of futures (on this underlying)
   MxValue	options;	// total qty of options (on this underlying)
-  MxValue	margin;		// total margin (= limit + mkt for cash trading)
+  MxValue	margin;		// total margin (= open for cash trading)
 };
 
-// can be aggregated across pairs/venues
-struct MxAssetPos : public MxAssetBal {
+// can be aggregated across instruments/venues
+struct MxExpAsset {
   MxExposure	longExp;
   MxExposure	shortExp;
 };
 
-struct MxPosition {
-  MxAssetPos	basePos;
-  MxAssetPos	quotePos;
+// exposure for an instrument - i.e. an asset pair
+struct MxExposure {
+  MxExpAsset	base;
+  MxExpAsset	quote;
 };
 
 #endif /* MxPosition_HPP */

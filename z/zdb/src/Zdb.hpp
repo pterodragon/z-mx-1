@@ -78,7 +78,10 @@ typedef uint64_t ZdbRN;		// record ID
 namespace ZdbOp {
   enum { New = 0, Update, Delete };
   inline static const char *name(int op) {
-    return op == New ? "New" : op == Update ? "Update" : "Del";
+    static const char *names[] = { "New", "Update", "Delete" };
+    if (ZuUnlikely(op < 0 || op >= (int)(sizeof(names) / sizeof(names[0]))))
+      return "Unknown";
+    return names[op];
   }
 };
 
@@ -183,26 +186,25 @@ class Zdb_File_ : public ZmPolymorph, public ZiFile {
 friend struct Zdb_File_IndexAccessor;
 
 public:
-  inline Zdb_File_(unsigned index, unsigned unallocated) :
-    m_index(index), m_unallocated(unallocated) { }
+  inline Zdb_File_(unsigned index, unsigned fileRecs) : m_index(index) {
+    m_undeleted.set(ZmBitmap::Range(0, fileRecs - 1));
+  }
 
   ZuInline unsigned index() const { return m_index; }
 
-  ZuInline unsigned unallocated() const { return m_unallocated; }
-  ZuInline unsigned allocated() const { return m_allocated; }
-  ZuInline unsigned deleted() const { return m_deleted; }
-
-  ZuInline unsigned alloc() { --m_unallocated; return ++m_allocated; }
-  ZuInline unsigned del() { --m_allocated; return ++m_deleted; }
-  ZuInline unsigned skip() { --m_unallocated; return ++m_deleted; }
+  ZuInline bool del(unsigned i) {
+    // std::cerr << (ZuStringN<1024>() << "GOT HERE\n" << ZuBoxed(m_index) << ':' << ZuBoxed(i) << ' ' << m_undeleted << '\n') << std::flush;
+    m_undeleted.clr(i);
+    bool r = !m_undeleted;
+    // std::cerr << (ZuStringN<1024>() << ZuBoxed(m_index) << ':' << ZuBoxed(i) << ' ' << m_undeleted << ": " << ZuBoxed((int)r) << '\n') << std::flush;
+    return r;
+  }
 
   void checkpoint() { sync(); }
 
 private:
   unsigned	m_index = 0;
-  unsigned	m_unallocated = 0;
-  unsigned	m_allocated = 0;
-  unsigned	m_deleted = 0;
+  ZmBitmap	m_undeleted;
 };
 
 typedef ZmList<Zdb_File_,
@@ -232,19 +234,19 @@ typedef Zdb_FileHash::Node Zdb_File;
 
 class Zdb_FileRec {
 public:
-  ZuInline Zdb_FileRec() : m_file(0), m_off(0) { }
-  ZuInline Zdb_FileRec(ZmRef<Zdb_File> file, ZiFile::Offset off) :
-    m_file(ZuMv(file)), m_off(off) { }
+  ZuInline Zdb_FileRec() : m_file(0), m_offRN(0) { }
+  ZuInline Zdb_FileRec(ZmRef<Zdb_File> file, unsigned offRN) :
+    m_file(ZuMv(file)), m_offRN(offRN) { }
 
   ZuInline bool operator !() const { return !m_file; }
   ZuOpBool
 
   ZuInline Zdb_File *file() const { return m_file; }
-  ZuInline ZiFile::Offset off() const { return m_off; }
+  ZuInline unsigned offRN() const { return m_offRN; }
 
 private:
   ZmRef<Zdb_File>	m_file;
-  ZiFile::Offset	m_off;
+  unsigned		m_offRN;
 };
 
 #define ZdbAllocated 0xa110c8ed // "allocated"
@@ -524,8 +526,8 @@ struct ZdbConfig {
   inline ZdbConfig(const ZtString &key, ZvCf *cf) {
     id = cf->toInt("ID", key, 0, 1<<30);
     path = cf->get("path", true);
-    fileSize = cf->getInt64("fileSize",
-	((int64_t)4)<<10, ((int64_t)10)<<30, false, 0);
+    fileSize = cf->getInt("fileSize",
+	((int32_t)4)<<10, ((int32_t)1)<<30, false, 0);
     preAlloc = cf->getInt("preAlloc", 0, 10<<24, false, 0);
     compress = cf->getInt("compress", 0, 1, false, 0);
     replicate = cf->getInt("replicate", 0, 1, false, 1);
@@ -535,7 +537,7 @@ struct ZdbConfig {
 
   unsigned		id = 0;
   ZtString		path;
-  uint64_t		fileSize = 0;
+  unsigned		fileSize = 0;
   unsigned		preAlloc = 0;	// #records to pre-allocate
   bool			compress = 0;
   bool			replicate = 0;
@@ -550,6 +552,9 @@ struct ZdbHandler {
   ZdbCopyFn		copyFn;
 };
 
+// FIXME - stats - cacheLoads; cacheMisses; fileLoads; fileMisses;
+// FIXME - store schema version, recSize, fileRecs in top-level directory
+// so that recovering from an incompatible/inconsistent DB is impossible
 class ZdbAPI Zdb_ : public ZmPolymorph {
 friend class ZdbEnv;
 friend class ZdbAnyPOD_Write__;
@@ -669,6 +674,7 @@ private:
   ZmRef<Zdb_File> openFile(unsigned i, bool create);
   void delFile(Zdb_File *file);
   void recover(Zdb_File *file);
+  void scan(Zdb_File *file);
 
   ZmRef<ZdbAnyPOD> read_(const Zdb_FileRec &);
 
@@ -1094,8 +1100,7 @@ private:
   void startReplication();
   void stopReplication();
 
-  void repDataRcvd(
-      Zdb_Host *host, Zdb_Cxn *cxn, int type,
+  void repDataRcvd(Zdb_Host *host, Zdb_Cxn *cxn,
       const Zdb_Msg_Rep &rep, void *ptr);
 
   void repSend(ZdbAnyPOD *pod, int type, ZdbRange range, int op, bool compress);

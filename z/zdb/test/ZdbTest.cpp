@@ -265,7 +265,7 @@ int main(int argc, char **argv)
       appMx = new ZmScheduler(ZmSchedulerParams().nThreads(nThreads));
       dbMx = new ZiMultiplex(
 	  ZiMultiplexParams().nThreads(4).rxThread(1).txThread(2).
-	    isolation(ZmBitmap() << 1 << 2 << 3)
+	    isolation(ZmBitmap().set(1).set(2).set(3))
 #ifdef ZiMultiplex_DEBUG
 	    .debug(cf->getInt("debug", 0, 1, false, 0))
 #endif

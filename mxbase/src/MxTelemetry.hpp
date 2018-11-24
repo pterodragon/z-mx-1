@@ -214,6 +214,10 @@ namespace MxTelemetry {
     uint64_t	fileSize;
     uint64_t	allocRN;
     uint64_t	fileRN;
+    uint64_t	cacheLoads;
+    uint64_t	cacheMisses;
+    uint64_t	fileLoads;
+    uint64_t	fileMisses;
     uint32_t	id;
     uint32_t	preAlloc;
     uint32_t	recSize;

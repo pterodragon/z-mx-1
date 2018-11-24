@@ -127,7 +127,7 @@ protected:
     m_count = n;
     int j;
     for (unsigned i = 0; i < n; i++) {
-      while ((j = va_arg(args, int)) >= 0) m_cpusets[i] << j;
+      while ((j = va_arg(args, unsigned)) >= 0) m_cpusets[i].set(j);
       if (j != Next) return;
     }
   }

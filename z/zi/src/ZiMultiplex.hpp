@@ -641,7 +641,7 @@ public:
 
   inline ZiMultiplexParams() :
     m_scheduler(ZmSchedulerParams().
-	nThreads(3).isolation(ZmBitmap() << RxThread << TxThread)),
+	nThreads(3).isolation(ZmBitmap().set(RxThread).set(TxThread))),
     m_rxThread(RxThread), m_txThread(TxThread),
 #ifdef ZiMultiplex_EPoll
     m_epollMaxFDs(256),

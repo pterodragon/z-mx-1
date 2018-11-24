@@ -38,6 +38,7 @@
 #include <ZuBox.hpp>
 #include <ZuPair.hpp>
 #include <ZuString.hpp>
+#include <ZuConversion.hpp>
 
 class ZmBitmap;
 
@@ -95,26 +96,31 @@ public:
     if (this == &b || m_map == b.m_map) return 0;
     if (!m_map) return -1;
     if (!b.m_map) return 1;
-    return hwloc_bitmap_weight(m_map) - hwloc_bitmap_weight(b.m_map);
-      // assumes no bitmap has >= 2^31 indices
+    return hwloc_bitmap_compare(m_map, b.m_map);
   }
 
-  typedef ZuPair<int, int> Range;
+  typedef ZuPair<unsigned, unsigned> Range;
 
-  inline ZmBitmap &operator <<(int i) {
+  inline ZmBitmap &set(unsigned i) {
     lazy();
-    if (i >= 0)
-      hwloc_bitmap_set(m_map, i);
-    else
-      hwloc_bitmap_clr(m_map, i);
+    hwloc_bitmap_set(m_map, i);
     return *this;
   }
-  inline ZmBitmap &operator <<(const Range &r) {
+  inline ZmBitmap &clr(unsigned i) {
     lazy();
-    if (r.p1() >= 0)
-      hwloc_bitmap_set_range(m_map, r.p1(), r.p2());
-    else
-      hwloc_bitmap_clr_range(m_map, -r.p1(), r.p2());
+    hwloc_bitmap_clr(m_map, i);
+    return *this;
+  }
+  template <typename T>
+  inline typename ZuSame<Range, T, ZmBitmap &>::T set(const T &v) {
+    lazy();
+    hwloc_bitmap_set_range(m_map, v.p1(), v.p2());
+    return *this;
+  }
+  template <typename T>
+  inline typename ZuSame<Range, T, ZmBitmap &>::T clr(const T &v) {
+    lazy();
+    hwloc_bitmap_clr_range(m_map, v.p1(), v.p2());
     return *this;
   }
 
@@ -124,7 +130,7 @@ public:
       ZuConversion<T, Range>::Same>::T *_ = 0) :
     m_map(hwloc_bitmap_alloc()) { operator <<(t); }
 
-  inline bool operator &&(int i) const {
+  inline bool operator &&(unsigned i) const {
     if (!m_map) return false;
     return hwloc_bitmap_isset(m_map, i);
   }

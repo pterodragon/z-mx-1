@@ -274,8 +274,12 @@ MxMDSubLink::TCP::TCP(MxMDSubLink *link, const ZiCxnInfo &ci) :
 void MxMDSubLink::TCP::connected(ZiIOContext &io)
 {
   m_link->tcpConnected(this);
-  MxMDStream::TCP::recv<TCP>(m_in, io,
-      [](TCP *tcp, MxQMsg *, ZiIOContext &io) { tcp->process(io); });
+  MxMDStream::TCP::recv<TCP>(ZuMv(m_in), io,
+      [](TCP *tcp, ZmRef<MxQMsg> msg, ZiIOContext &io) {
+	m_in = ZuMv(msg);
+	tcp->process(io);
+	if (ZuLikely(!io.completed())) io.fn.object(ZuMv(m_in));
+      });
 }
 void MxMDSubLink::tcpConnected(MxMDSubLink::TCP *tcp)
 {

@@ -280,7 +280,7 @@ int main(int argc, char **argv)
     env->init(ZdbEnvConfig(cf),
       dbMx, ZmFn<>::Ptr<&active>::fn(), ZmFn<>::Ptr<&inactive>::fn());
 
-    orders = new OrderDB(env, 0, ZdbHandler{
+    orders = new OrderDB(env, 0, 0, ZdbHandler{
 	  [](Zdb_ *db, ZmRef<ZdbAnyPOD> &pod) {
 	    pod = new ZdbPOD<Order>(db);
 	    // new (pod->ptr()) Order();
@@ -305,7 +305,7 @@ int main(int argc, char **argv)
 	  }
 	});
 
-    env->open();
+    if (!env->open()) throw ZtString() << "Zdb open failed";
     env->start();
 
     done.wait();

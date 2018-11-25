@@ -249,6 +249,7 @@ private:
   unsigned		m_offRN;
 };
 
+#define ZdbSchema    0x2db5ce3a // "Zdb schema"
 #define ZdbAllocated 0xa110c8ed // "allocated"
 #define ZdbCommitted 0xc001da7a // "cool data"
 #define ZdbDeleted   0xdeadda7a	// "dead data"
@@ -530,7 +531,6 @@ struct ZdbConfig {
 	((int32_t)4)<<10, ((int32_t)1)<<30, false, 0);
     preAlloc = cf->getInt("preAlloc", 0, 10<<24, false, 0);
     compress = cf->getInt("compress", 0, 1, false, 0);
-    replicate = cf->getInt("replicate", 0, 1, false, 1);
     cache.init(cf->get("cache", false, "Zdb.Cache"));
     fileHash.init(cf->get("fileHash", false, "Zdb.FileHash"));
   }
@@ -539,8 +539,7 @@ struct ZdbConfig {
   ZtString		path;
   unsigned		fileSize = 0;
   unsigned		preAlloc = 0;	// #records to pre-allocate
-  bool			compress = 0;
-  bool			replicate = 0;
+  bool			compress = false;
   ZmHashParams		cache;
   ZmHashParams		fileHash;
 };
@@ -552,9 +551,6 @@ struct ZdbHandler {
   ZdbCopyFn		copyFn;
 };
 
-// FIXME - stats - cacheLoads; cacheMisses; fileLoads; fileMisses;
-// FIXME - store schema version, recSize, fileRecs in top-level directory
-// so that recovering from an incompatible/inconsistent DB is impossible
 class ZdbAPI Zdb_ : public ZmPolymorph {
 friend class ZdbEnv;
 friend class ZdbAnyPOD_Write__;
@@ -575,8 +571,9 @@ protected:
 
   typedef ZmLock FSLock;
   typedef ZmGuard<FSLock> FSGuard;
+  typedef ZmReadGuard<FSLock> FSReadGuard;
 
-  Zdb_(ZdbEnv *env, ZdbID id, ZdbHandler handler,
+  Zdb_(ZdbEnv *env, ZdbID id, uint32_t version, ZdbHandler handler,
       unsigned recSize, unsigned dataSize);
 
 public:
@@ -586,10 +583,10 @@ private:
   void init(ZdbConfig *config);
   void final();
 
-  void open();
+  bool open();
   void close();
 
-  void recover();
+  bool recover();
   void checkpoint();
   void checkpoint_();
 
@@ -624,7 +621,9 @@ public:
   // delete record following push() / get() / get_()
   void del(ZdbAnyPOD *, bool copy = true);
 
-  inline void replicate(bool v) { m_config->replicate = v; }
+  void stats(
+      uint64_t &cacheLoads, uint64_t &cacheMisses, 
+      uint64_t &fileLoads, uint64_t &fileMisses) const;
 
 private:
   // application call handlers
@@ -680,7 +679,9 @@ private:
 
   void write(ZdbAnyPOD *pod, ZdbRange range, int op);
   void write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op);
-  void fileError_(const Zdb_FileRec &, ZeError);
+
+  void fileReadError_(Zdb_File *, ZiFile::Offset, int, ZeError e);
+  void fileWriteError_(Zdb_File *, ZiFile::Offset, ZeError e);
 
   void cache(ZdbAnyPOD *pod);
   void cache_(ZdbAnyPOD *pod);
@@ -689,6 +690,7 @@ private:
   ZdbEnv			*m_env;
   ZdbConfig			*m_config;
   ZdbID				m_id;
+  uint32_t			m_version;
   ZdbHandler			m_handler;
   unsigned			m_recSize = 0;
   unsigned			m_dataSize = 0;
@@ -699,11 +701,15 @@ private:
     ZdbLRU			  m_lru;
     ZmRef<Zdb_Cache>		  m_cache;
     unsigned			  m_cacheSize = 0;
+    uint64_t			  m_cacheLoads = 0;
+    uint64_t			  m_cacheMisses = 0;
   FSLock			m_fsLock;	// guards files
     Zdb_FileLRU			  m_filesLRU;
     ZmRef<Zdb_FileHash>		  m_files;
     unsigned			  m_filesMax = 0;
     unsigned			  m_lastFile = 0;
+    uint64_t			  m_fileLoads = 0;
+    uint64_t			  m_fileMisses = 0;
 };
 
 template <typename T_>
@@ -712,8 +718,8 @@ public:
   typedef T_ T;
 
   template <typename Handler>
-  inline Zdb(ZdbEnv *env, ZdbID id, Handler &&handler) :
-    Zdb_(env, id, ZuFwd<Handler>(handler),
+  inline Zdb(ZdbEnv *env, ZdbID id, uint32_t version, Handler &&handler) :
+    Zdb_(env, id, version, ZuFwd<Handler>(handler),
 	sizeof(typename ZdbPOD<T, ZuNull>::Data), sizeof(T)) { }
 };
 
@@ -1013,7 +1019,7 @@ public:
       ZmFn<> activeFn, ZmFn<> inactiveFn);
   void final();
 
-  void open();
+  bool open();
   void close();
 
   void start();

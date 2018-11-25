@@ -45,10 +45,10 @@ namespace MxMDOrderBookJNI {
   // () -> MxMDVenue
   jobject venue(JNIEnv *, jobject);
 
-  // () -> MxMDSecurity
-  jobject security(JNIEnv *, jobject);
-  // (int) -> MxMDSecurity
-  jobject security(JNIEnv *, jobject, jint);
+  // () -> MxMDInstrument
+  jobject instrument(JNIEnv *, jobject);
+  // (int) -> MxMDInstrument
+  jobject instrument(JNIEnv *, jobject, jint);
 
   // () -> MxMDOrderBook
   jobject out(JNIEnv *, jobject);
@@ -59,7 +59,7 @@ namespace MxMDOrderBookJNI {
   jstring segment(JNIEnv *, jobject);
   // () -> String
   jstring id(JNIEnv *, jobject);
-  // () -> MxSecKey
+  // () -> MxInstrKey
   jobject key(JNIEnv *, jobject);
 
   // () -> int
@@ -88,11 +88,11 @@ namespace MxMDOrderBookJNI {
   // () -> MxMDOBSide
   jobject asks(JNIEnv *, jobject);
 
-  // (MxMDSecHandler) -> void
+  // (MxMDInstrHandler) -> void
   void subscribe(JNIEnv *, jobject, jobject);
   // () -> void
   void unsubscribe(JNIEnv *, jobject);
-  // () -> MxMDSecHandler
+  // () -> MxMDInstrHandler
   jobject handler(JNIEnv *, jobject);
 
   jobject ctor(JNIEnv *, ZmRef<MxMDOrderBook>);

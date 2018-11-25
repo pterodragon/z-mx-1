@@ -1,6 +1,6 @@
 package com.shardmx.mxbase;
 
-public enum MxSecIDSrc {
+public enum MxInstrIDSrc {
   NULL	(null),
   CUSIP	("1"),
   SEDOL	("2"),
@@ -15,13 +15,13 @@ public enum MxSecIDSrc {
   CRYPTO("C"),
   N	(null);
 
-  private static final MxSecIDSrc values[] = values();
-  public static MxSecIDSrc value(int i) {
+  private static final MxInstrIDSrc values[] = values();
+  public static MxInstrIDSrc value(int i) {
     if (Integer.compareUnsigned(i, N.ordinal()) >= 0) return null;
     return values[i];
   }
 
   private final String fix;
-  MxSecIDSrc(String fix) { this.fix = fix; }
+  MxInstrIDSrc(String fix) { this.fix = fix; }
   public String fix() { return this.fix; }
 }

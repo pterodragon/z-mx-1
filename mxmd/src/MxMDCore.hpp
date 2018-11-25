@@ -153,7 +153,7 @@ public:
   void stopTimer();
 
   void dumpTickSizes(ZuString path, MxID venue = MxID());
-  void dumpSecurities(
+  void dumpInstruments(
       ZuString path, MxID venue = MxID(), MxID segment = MxID());
   void dumpOrderBooks(
       ZuString path, MxID venue = MxID(), MxID segment = MxID());
@@ -172,10 +172,10 @@ private:
   void l1(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
   void l2(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
   void l2_side(MxMDOBSide *, ZtString &);
-  void security_(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void instrument_(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
 
   void ticksizes(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
-  void securities(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void instruments(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
   void orderbooks(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
 
 #if 0
@@ -188,7 +188,7 @@ private:
 
   void addVenueMapping_(ZuAnyPOD *);
   void addTickSize_(ZuAnyPOD *);
-  void addSecurity_(ZuAnyPOD *);
+  void addInstrument_(ZuAnyPOD *);
   void addOrderBook_(ZuAnyPOD *);
 
   // Engine Management
@@ -246,26 +246,26 @@ public:
 	      ts.minPrice(), ts.maxPrice(), ts.tickSize());
 	});
       });
-    }) || allSecurities([&snapshot](MxMDSecurity *security) -> uintptr_t {
-      return !MxMDStream::addSecurity(snapshot, security->shard()->id(),
-	  MxDateTime(), security->key(), security->refData());
+    }) || allInstruments([&snapshot](MxMDInstrument *instrument) -> uintptr_t {
+      return !MxMDStream::addInstrument(snapshot, instrument->shard()->id(),
+	  MxDateTime(), instrument->key(), instrument->refData());
     }) || allOrderBooks([&snapshot](MxMDOrderBook *ob) -> uintptr_t {
       if (ob->legs() == 1) {
 	return !MxMDStream::addOrderBook(snapshot, ob->shard()->id(),
-	    MxDateTime(), ob->key(), ob->security()->key(),
+	    MxDateTime(), ob->key(), ob->instrument()->key(),
 	    ob->tickSizeTbl()->id(), ob->qtyNDP(), ob->lotSizes());
       } else {
-	MxSecKey securityKeys[MxMDNLegs];
+	MxInstrKey instrumentKeys[MxMDNLegs];
 	MxEnum sides[MxMDNLegs];
 	MxRatio ratios[MxMDNLegs];
 	for (unsigned i = 0, n = ob->legs(); i < n; i++) {
-	  securityKeys[i] = ob->security(i)->key();
+	  instrumentKeys[i] = ob->instrument(i)->key();
 	  sides[i] = ob->side(i);
 	  ratios[i] = ob->ratio(i);
 	}
 	return !MxMDStream::addCombination(snapshot, ob->shard()->id(),
 	    MxDateTime(), ob->key(), ob->pxNDP(), ob->qtyNDP(),
-	    ob->legs(), securityKeys, sides, ratios,
+	    ob->legs(), instrumentKeys, sides, ratios,
 	    ob->tickSizeTbl()->id(), ob->lotSizes());
       }
     }) || allVenues([&snapshot](MxMDVenue *venue) -> uintptr_t {

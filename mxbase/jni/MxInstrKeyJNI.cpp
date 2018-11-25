@@ -27,19 +27,19 @@
 
 #include <MxBase.hpp>
 
-#include <MxSecKeyJNI.hpp>
+#include <MxInstrKeyJNI.hpp>
 
-namespace MxSecKeyJNI {
-  jclass	class_; // MxSecKeyTuple
+namespace MxInstrKeyJNI {
+  jclass	class_; // MxInstrKeyTuple
 
-  // MxSecKeyTuple named constructor
+  // MxInstrKeyTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
     { "of",
       "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)"
-      "Lcom/shardmx/mxbase/MxSecKeyTuple;" }
+      "Lcom/shardmx/mxbase/MxInstrKeyTuple;" }
   };
 
-  // MxSecKey accessors
+  // MxInstrKey accessors
   ZJNI::JavaMethod methods[] {
     { "id", "()Ljava/lang/String;" },
     { "venue", "()Ljava/lang/String;" },
@@ -47,13 +47,13 @@ namespace MxSecKeyJNI {
   };
 }
 
-MxSecKey MxSecKeyJNI::j2c(JNIEnv *env, jobject obj)
+MxInstrKey MxInstrKeyJNI::j2c(JNIEnv *env, jobject obj)
 {
   jstring id = (jstring)(env->CallObjectMethod(obj, methods[0].mid));
   jstring venue = (jstring)(env->CallObjectMethod(obj, methods[1].mid));
   jstring segment = (jstring)(env->CallObjectMethod(obj, methods[2].mid));
 
-  MxSecKey key{
+  MxInstrKey key{
     ZJNI::j2s_ZuStringN<MxIDStrSize>(env, id),
     ZJNI::j2s_ZuStringN<8>(env, venue),
     ZJNI::j2s_ZuStringN<8>(env, segment)};
@@ -65,7 +65,7 @@ MxSecKey MxSecKeyJNI::j2c(JNIEnv *env, jobject obj)
   return key;
 }
 
-jobject MxSecKeyJNI::ctor(JNIEnv *env, const MxSecKey &key)
+jobject MxInstrKeyJNI::ctor(JNIEnv *env, const MxInstrKey &key)
 {
   return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
       ZJNI::s2j(env, key.id),
@@ -73,15 +73,15 @@ jobject MxSecKeyJNI::ctor(JNIEnv *env, const MxSecKey &key)
       ZJNI::s2j(env, key.segment));
 }
 
-int MxSecKeyJNI::bind(JNIEnv *env)
+int MxInstrKeyJNI::bind(JNIEnv *env)
 {
-  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxSecKeyTuple");
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxInstrKeyTuple");
   if (!class_) return -1;
 
   if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
 
   {
-    jclass c = env->FindClass("com/shardmx/mxbase/MxSecKey");
+    jclass c = env->FindClass("com/shardmx/mxbase/MxInstrKey");
     if (!c) return -1;
     if (ZJNI::bind(env, c, methods, sizeof(methods) / sizeof(methods[0])) < 0)
       return -1;
@@ -91,7 +91,7 @@ int MxSecKeyJNI::bind(JNIEnv *env)
   return 0;
 }
 
-void MxSecKeyJNI::final(JNIEnv *env)
+void MxInstrKeyJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
 }

@@ -154,7 +154,7 @@ private:
   ZuRef<POD>	m_pod;
 };
 
-class MxMDSecurityCSV : public ZvCSV, public MxCSV<MxMDSecurityCSV> {
+class MxMDInstrumentCSV : public ZvCSV, public MxCSV<MxMDInstrumentCSV> {
 public:
   struct Data {
     MxUInt		shard;
@@ -163,12 +163,12 @@ public:
     MxID		venue;
     MxID		segment;
     MxIDString		id;
-    MxMDSecRefData	refData;
+    MxMDInstrRefData	refData;
   };
   typedef ZuPOD<Data> POD;
 
   template <typename App = MxCSVApp>
-  MxMDSecurityCSV(App *app = 0) {
+  MxMDInstrumentCSV(App *app = 0) {
     new ((m_pod = new POD())->ptr()) Data{};
 #ifdef Offset
 #undef Offset
@@ -186,11 +186,11 @@ public:
     add(new MxIDCol("segment", Offset(segment)));
     add(new MxIDStrCol("id", Offset(id)));
 #undef Offset
-#define Offset(x) offsetof(Data, refData) + offsetof(MxMDSecRefData, x)
+#define Offset(x) offsetof(Data, refData) + offsetof(MxMDInstrRefData, x)
     add(new MxBoolCol("tradeable", Offset(tradeable), -1, 1));
-    add(new MxEnumCol<MxSecIDSrc::CSVMap>("idSrc", Offset(idSrc)));
+    add(new MxEnumCol<MxInstrIDSrc::CSVMap>("idSrc", Offset(idSrc)));
     add(new MxIDStrCol("symbol", Offset(symbol)));
-    add(new MxEnumCol<MxSecIDSrc::CSVMap>("altIDSrc", Offset(altIDSrc)));
+    add(new MxEnumCol<MxInstrIDSrc::CSVMap>("altIDSrc", Offset(altIDSrc)));
     add(new MxIDStrCol("altSymbol", Offset(altSymbol)));
     add(new MxIDCol("underVenue", Offset(underVenue)));
     add(new MxIDCol("underSegment", Offset(underSegment)));
@@ -210,7 +210,7 @@ public:
   template <typename File>
   void read(const File &file, ZvCSVReadFn fn) {
     ZvCSV::readFile(file,
-	ZvCSVAllocFn::Member<&MxMDSecurityCSV::alloc>::fn(this), fn);
+	ZvCSVAllocFn::Member<&MxMDInstrumentCSV::alloc>::fn(this), fn);
   }
 
   ZuAnyPOD *row(const MxMDStream::Msg *msg) {
@@ -220,17 +220,17 @@ public:
       using namespace MxMDStream;
       const Hdr &hdr = msg->hdr();
       switch ((int)hdr.type) {
-	case Type::AddSecurity:
+	case Type::AddInstrument:
 	  {
-	    const AddSecurity &obj = hdr.as<AddSecurity>();
+	    const AddInstrument &obj = hdr.as<AddInstrument>();
 	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
 	      obj.key.venue, obj.key.segment, obj.key.id,
 	      obj.refData};
 	  }
 	  break;
-	case Type::UpdateSecurity:
+	case Type::UpdateInstrument:
 	  {
-	    const UpdateSecurity &obj = hdr.as<UpdateSecurity>();
+	    const UpdateInstrument &obj = hdr.as<UpdateInstrument>();
 	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
 	      obj.key.venue, obj.key.segment, obj.key.id,
 	      obj.refData};
@@ -265,9 +265,9 @@ public:
     MxUInt		legs;
     MxIDString		tickSizeTbl;
     MxMDLotSizes	lotSizes;
-    MxID		secVenues[MxMDNLegs];
-    MxID		secSegments[MxMDNLegs];
-    MxIDString		securities[MxMDNLegs];
+    MxID		instrVenues[MxMDNLegs];
+    MxID		instrSegments[MxMDNLegs];
+    MxIDString		instruments[MxMDNLegs];
     MxEnum		sides[MxMDNLegs];
     MxRatio		ratios[MxMDNLegs];
   };
@@ -296,15 +296,15 @@ public:
     add(new MxNDPCol("qtyNDP", qtyNDP));
     add(new MxUIntCol("legs", Offset(legs)));
     for (unsigned i = 0; i < MxMDNLegs; i++) {
-      ZuStringN<32> secVenue = "secVenue"; secVenue << ZuBoxed(i);
-      ZuStringN<32> secSegment = "secSegment"; secSegment << ZuBoxed(i);
-      ZuStringN<32> security = "security"; security << ZuBoxed(i);
+      ZuStringN<32> instrVenue = "instrVenue"; instrVenue << ZuBoxed(i);
+      ZuStringN<32> instrSegment = "instrSegment"; instrSegment << ZuBoxed(i);
+      ZuStringN<32> instrument = "instrument"; instrument << ZuBoxed(i);
       ZuStringN<32> side = "side"; side << ZuBoxed(i);
       ZuStringN<32> ratio = "ratio"; ratio << ZuBoxed(i);
-      add(new MxIDCol(secVenue, Offset(secVenues) + (i * sizeof(MxID))));
-      add(new MxIDCol(secSegment, Offset(secSegments) + (i * sizeof(MxID))));
-      add(new MxIDStrCol(security,
-	    Offset(securities) + (i * sizeof(MxIDString))));
+      add(new MxIDCol(instrVenue, Offset(instrVenues) + (i * sizeof(MxID))));
+      add(new MxIDCol(instrSegment, Offset(instrSegments) + (i * sizeof(MxID))));
+      add(new MxIDStrCol(instrument,
+	    Offset(instruments) + (i * sizeof(MxIDString))));
       add(new MxEnumCol<MxSide::CSVMap>(side,
 	    Offset(sides) + (i * sizeof(MxEnum))));
       add(new MxRatioCol(ratio,
@@ -340,9 +340,9 @@ public:
 	    new (data) Data{hdr.shard, hdr.type, obj.transactTime,
 	      obj.key.venue, obj.key.segment, obj.key.id,
 	      {}, obj.qtyNDP, 1, obj.tickSizeTbl, obj.lotSizes,
-	      { obj.security.venue },
-	      { obj.security.segment },
-	      { obj.security.id },
+	      { obj.instrument.venue },
+	      { obj.instrument.segment },
+	      { obj.instrument.id },
 	      {}, {} };
 	  }
 	  break;
@@ -361,9 +361,9 @@ public:
 	      obj.pxNDP, obj.qtyNDP, obj.legs, obj.tickSizeTbl, obj.lotSizes,
 	      {}, {}, {}, {}, {} };
 	    for (unsigned i = 0, n = obj.legs; i < n; i++) {
-	      data->secVenues[i] = obj.securities[i].venue;
-	      data->secSegments[i] = obj.securities[i].segment;
-	      data->securities[i] = obj.securities[i].id;
+	      data->instrVenues[i] = obj.instruments[i].venue;
+	      data->instrSegments[i] = obj.instruments[i].segment;
+	      data->instruments[i] = obj.instruments[i].id;
 	      data->sides[i] = obj.sides[i];
 	      data->ratios[i] = obj.ratios[i];
 	    }

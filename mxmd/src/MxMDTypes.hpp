@@ -56,7 +56,7 @@ struct MxMDTickSize_MinPxAccessor : public ZuAccessor<MxMDTickSize, MxValue> {
 
 #pragma pack(push, 4)
 
-struct MxMDSecRefData {	// security reference data ("static data")
+struct MxMDInstrRefData {	// instrument reference data ("static data")
   MxBool	tradeable;	// usually true, is false e.g. for an index
   MxEnum	idSrc;		// symbol ID source
   MxEnum	altIDSrc;	// altSymbol ID source
@@ -78,11 +78,11 @@ struct MxMDSecRefData {	// security reference data ("static data")
 // Note: mat is, by industry convention, in YYYYMMDD format
 //
 // the mat field is NOT to be used for time-to-maturity calculations; it
-// is for security identification only
+// is for instrument identification only
 //
 // DD is normally 00 since listed derivatives maturities/expiries are
 // normally uniquely identified by the month; the actual day varies
-// and is not required for security identification
+// and is not required for instrument identification
 
 struct MxMDLotSizes {
   MxValue	oddLotSize;

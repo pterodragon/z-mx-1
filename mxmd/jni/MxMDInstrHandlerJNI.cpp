@@ -25,7 +25,7 @@
 
 #include <MxMD.hpp>
 
-#include <MxMDSecurityJNI.hpp>
+#include <MxMDInstrumentJNI.hpp>
 #include <MxMDOrderBookJNI.hpp>
 #include <MxMDPxLevelJNI.hpp>
 #include <MxMDOrderJNI.hpp>
@@ -33,13 +33,13 @@
 
 #include <MxMDL1DataJNI.hpp>
 
-#include <MxMDSecHandlerJNI.hpp>
+#include <MxMDInstrHandlerJNI.hpp>
 
-namespace MxMDSecHandlerJNI {
+namespace MxMDInstrHandlerJNI {
   // event handlers
-  ZJNI::JavaMethod updatedSecurityFn[] = {
-    { "updatedSecurity", "()Lcom/shardmx/mxmd/MxMDSecEventFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;Ljava/time/Instant;)V" }
+  ZJNI::JavaMethod updatedInstrumentFn[] = {
+    { "updatedInstrument", "()Lcom/shardmx/mxmd/MxMDInstrEventFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDInstrument;Ljava/time/Instant;)V" }
   };
   ZJNI::JavaMethod updatedOrderBookFn[] = {
     { "updatedOrderBook", "()Lcom/shardmx/mxmd/MxMDOBEventFn;" },
@@ -103,9 +103,9 @@ namespace MxMDSecHandlerJNI {
   };
 }
 
-ZmRef<MxMDSecHandler> MxMDSecHandlerJNI::j2c(JNIEnv *env, jobject handler_)
+ZmRef<MxMDInstrHandler> MxMDInstrHandlerJNI::j2c(JNIEnv *env, jobject handler_)
 {
-  ZmRef<MxMDSecHandler> handler = new MxMDSecHandler();
+  ZmRef<MxMDInstrHandler> handler = new MxMDInstrHandler();
 
 #ifdef lambda1
 #undef lambda1
@@ -128,9 +128,9 @@ ZmRef<MxMDSecHandler> MxMDSecHandlerJNI::j2c(JNIEnv *env, jobject handler_)
       if (JNIEnv *env = ZJNI::env()) \
 	env->CallVoidMethod(fn, method ## Fn[1].mid, __VA_ARGS__); })
 
-  lambda2(updatedSecurity,
-      MxMDSecurity *sec, MxDateTime stamp,
-      MxMDSecurityJNI::ctor(env, sec), ZJNI::t2j(env, stamp));
+  lambda2(updatedInstrument,
+      MxMDInstrument *instr, MxDateTime stamp,
+      MxMDInstrumentJNI::ctor(env, instr), ZJNI::t2j(env, stamp));
   lambda2(updatedOrderBook,
       MxMDOrderBook *ob, MxDateTime stamp,
       MxMDOrderBookJNI::ctor(env, ob), ZJNI::t2j(env, stamp));
@@ -191,11 +191,11 @@ static int bindHandlerFn(JNIEnv *env, jclass c, ZJNI::JavaMethod *fn)
   return ZJNI::bind(env, fn_c, &fn[1], 1);
 }
 
-int MxMDSecHandlerJNI::bind(JNIEnv *env)
+int MxMDInstrHandlerJNI::bind(JNIEnv *env)
 {
   jclass c;
-  if (!(c = env->FindClass("com/shardmx/mxmd/MxMDSecHandler"))) return -1;
-  if (bindHandlerFn(env, c, updatedSecurityFn) < 0) return -1;
+  if (!(c = env->FindClass("com/shardmx/mxmd/MxMDInstrHandler"))) return -1;
+  if (bindHandlerFn(env, c, updatedInstrumentFn) < 0) return -1;
   if (bindHandlerFn(env, c, updatedOrderBookFn) < 0) return -1;
   if (bindHandlerFn(env, c, l1Fn) < 0) return -1;
   if (bindHandlerFn(env, c, addMktLevelFn) < 0) return -1;
@@ -215,4 +215,4 @@ int MxMDSecHandlerJNI::bind(JNIEnv *env)
   return 0;
 }
 
-void MxMDSecHandlerJNI::final(JNIEnv *env) { }
+void MxMDInstrHandlerJNI::final(JNIEnv *env) { }

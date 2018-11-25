@@ -165,8 +165,8 @@ void loaded(MxMDVenue *venue)
 {
   MxMDLib *md = venue->md();
 
-  ZmRef<MxMDSecHandler> secHandler = new MxMDSecHandler();
-  secHandler->
+  ZmRef<MxMDInstrHandler> instrHandler = new MxMDInstrHandler();
+  instrHandler->
     l1Fn(MxMDLevel1Fn::Ptr<&l1>::fn()).
     addMktLevelFn(MxMDPxLevelFn::Ptr<&addPxLevel>::fn()).
     updatedMktLevelFn(MxMDPxLevelFn::Ptr<&updatedPxLevel>::fn()).
@@ -182,16 +182,16 @@ void loaded(MxMDVenue *venue)
 
   for (const char **ticker = tickers; *ticker; ticker++) {
 
-    // look up security
+    // look up instrument
 
-    md->secInvoke(MxSecKey{*ticker, "XTKS", MxID()},
-	[secHandler, ticker](MxMDSecurity *sec) {
-      if (!sec) {
+    md->instrInvoke(MxInstrKey{*ticker, "XTKS", MxID()},
+	[instrHandler, ticker](MxMDInstrument *instr) {
+      if (!instr) {
 	ZeLOG(Error, ZtString() <<
-	    "security \"" << *ticker << "\" not found");
+	    "instrument \"" << *ticker << "\" not found");
 	return;
       }
-      sec->subscribe(secHandler); // subscribe to L1/L2 data
+      instr->subscribe(instrHandler); // subscribe to L1/L2 data
     });
   }
 }
@@ -263,56 +263,56 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 
     MxMDLotSizes lotSizes{100, 100, 100}; // odd, round, block
 
-    // add securities
+    // add instruments
 
     for (const char **ticker = tickers; *ticker; ticker++) {
-      MxMDSecRefData refData;
+      MxMDInstrRefData refData;
 
-      // primary security key (venue, segment and ID)
+      // primary instrument key (venue, segment and ID)
  
-      MxSecKey secKey{
+      MxInstrKey instrKey{
 	      *ticker,			// ID (same as symbol in this case)
 	      "XTKS",			// Tokyo Stock Exchange
 	      MxID()};			// null segment (segment not used)
 
       // minimal reference data (just the native symbol and RIC)
 
-      refData.idSrc = MxSecIDSrc::EXCH;
+      refData.idSrc = MxInstrIDSrc::EXCH;
       refData.symbol = *ticker;
-      refData.altIDSrc = MxSecIDSrc::RIC;
+      refData.altIDSrc = MxInstrIDSrc::RIC;
       refData.altSymbol = *ticker; refData.altSymbol += ".T";
       refData.pxNDP = 2;
       refData.qtyNDP = 2;
 
-      // add the security
+      // add the instrument
 
-      MxMDSecHandle sec = md->security(secKey, 0); // default to shard 0
+      MxMDInstrHandle instr = md->instrument(instrKey, 0); // default to shard 0
 
       ZtString error;
       thread_local ZmSemaphore sem;
-      sec.invokeMv([&error, sem = &sem,
-	  secKey, &refData, &tickSizeTbl, &lotSizes](
-	    MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
+      instr.invokeMv([&error, sem = &sem,
+	  instrKey, &refData, &tickSizeTbl, &lotSizes](
+	    MxMDShard *shard, ZmRef<MxMDInstrument> instr) {
 
 	// this runs inside shard 0
 
-	sec = shard->addSecurity(ZuMv(sec), secKey, refData, MxDateTime()); 
+	instr = shard->addInstrument(ZuMv(instr), instrKey, refData, MxDateTime()); 
 
-	if (ZuUnlikely(!sec)) {
-	  error = "MxMDLib::addSecurity() failed";
+	if (ZuUnlikely(!instr)) {
+	  error = "MxMDLib::addInstrument() failed";
 	  sem->post();
 	  return;
 	}
 
 	// add the order book
 
-	ZmRef<MxMDOrderBook> orderBook = sec->addOrderBook(
-	  secKey,			// primary key for order book
+	ZmRef<MxMDOrderBook> orderBook = instr->addOrderBook(
+	  instrKey,			// primary key for order book
 	  tickSizeTbl,			// tick sizes
 	  lotSizes,			// lot sizes
 	  MxDateTime());
 	if (ZuUnlikely(!orderBook)) {
-	  error = "MxMDSecurity::addOrderBook() failed";
+	  error = "MxMDInstrument::addOrderBook() failed";
 	  sem->post();
 	  return;
 	}
@@ -344,19 +344,19 @@ void publish()
 
       for (const char **ticker = tickers; *ticker; ticker++) {
 
-	// look up security
+	// look up instrument
 
-	md->secInvoke(MxSecKey{*ticker, "XTKS", MxID()},
-	    [ticker](MxMDSecurity *sec) {
-	  if (!sec) {
+	md->instrInvoke(MxInstrKey{*ticker, "XTKS", MxID()},
+	    [ticker](MxMDInstrument *instr) {
+	  if (!instr) {
 	    ZeLOG(Error, ZtString() <<
-		"security \"" << *ticker << "\" not found");
+		"instrument \"" << *ticker << "\" not found");
 	    return;
 	  }
 
 	  // get order book
 
-	  ZmRef<MxMDOrderBook> ob = sec->orderBook("XTKS", MxID());
+	  ZmRef<MxMDOrderBook> ob = instr->orderBook("XTKS", MxID());
 	  if (!ob) {
 	    ZeLOG(Error, ZtString() <<
 		"XTKS order book for \"" << *ticker << "\" not found");

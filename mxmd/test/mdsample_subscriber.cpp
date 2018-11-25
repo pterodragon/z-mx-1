@@ -154,8 +154,8 @@ void loaded(MxMDVenue *venue)
 {
   MxMDLib *md = venue->md();
 
-  ZmRef<MxMDSecHandler> secHandler = new MxMDSecHandler();
-  secHandler->
+  ZmRef<MxMDInstrHandler> instrHandler = new MxMDInstrHandler();
+  instrHandler->
     l1Fn(MxMDLevel1Fn::Ptr<&l1>::fn()).
     addMktLevelFn(MxMDPxLevelFn::Ptr<&addPxLevel>::fn()).
     updatedMktLevelFn(MxMDPxLevelFn::Ptr<&updatedPxLevel>::fn()).
@@ -172,16 +172,16 @@ void loaded(MxMDVenue *venue)
 
   for (const char **ticker = tickers; *ticker; ticker++) {
 
-    // look up security
+    // look up instrument
 
-    md->secInvoke(MxSecKey{*ticker, "XTKS", MxID()},
-	[secHandler, ticker](MxMDSecurity *sec) {
-      if (!sec) {
+    md->instrInvoke(MxInstrKey{*ticker, "XTKS", MxID()},
+	[instrHandler, ticker](MxMDInstrument *instr) {
+      if (!instr) {
 	ZeLOG(Error, ZtString() <<
-	    "security \"" << *ticker << "\" not found");
+	    "instrument \"" << *ticker << "\" not found");
 	return;
       }
-      sec->subscribe(secHandler); // subscribe to L1/L2 data
+      instr->subscribe(instrHandler); // subscribe to L1/L2 data
     });
   }
 }

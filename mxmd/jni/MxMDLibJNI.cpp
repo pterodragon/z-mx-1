@@ -28,7 +28,7 @@
 #include <MxMD.hpp>
 #include <MxMDCore.hpp>
 
-#include <MxSecKeyJNI.hpp>
+#include <MxInstrKeyJNI.hpp>
 
 #include <MxMDJNI.hpp>
 
@@ -36,12 +36,12 @@
 #include <MxMDVenueJNI.hpp>
 #include <MxMDTickSizeTblJNI.hpp>
 
-#include <MxMDSecurityJNI.hpp>
+#include <MxMDInstrumentJNI.hpp>
 #include <MxMDOrderBookJNI.hpp>
 
 #include <MxMDLibHandlerJNI.hpp>
 
-#include <MxMDSecHandleJNI.hpp>
+#include <MxMDInstrHandleJNI.hpp>
 #include <MxMDOBHandleJNI.hpp>
 
 #include <MxMDTickSizeJNI.hpp>
@@ -58,11 +58,11 @@ namespace MxMDLibJNI {
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "()V" } };
 
   // query callbacks
-  ZJNI::JavaMethod securityFn[] = {
-    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;)V" }
+  ZJNI::JavaMethod instrumentFn[] = {
+    { "fn", "(Lcom/shardmx/mxmd/MxMDInstrument;)V" }
   };
-  ZJNI::JavaMethod allSecuritiesFn[] = {
-    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;)J" }
+  ZJNI::JavaMethod allInstrumentsFn[] = {
+    { "fn", "(Lcom/shardmx/mxmd/MxMDInstrument;)J" }
   };
   ZJNI::JavaMethod orderBookFn[] = {
     { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook;)V" }
@@ -83,12 +83,12 @@ public:
   ZuInline static MxMDLib *init(ZuString cf, ZmFn<ZmScheduler *> schedInitFn) {
     return MxMDLib::init(cf, ZuMv(schedInitFn));
   }
-  ZuInline static ZmRef<MxMDSecurity> security_(
-      const MxMDLib *md, const MxSecKey &key) {
-    return md->m_allSecurities.findKey(key);
+  ZuInline static ZmRef<MxMDInstrument> instrument_(
+      const MxMDLib *md, const MxInstrKey &key) {
+    return md->m_allInstruments.findKey(key);
   }
   ZuInline static ZmRef<MxMDOrderBook> orderBook_(
-      const MxMDLib *md, const MxSecKey &key) {
+      const MxMDLib *md, const MxInstrKey &key) {
     return md->m_allOrderBooks.findKey(key);
   }
 };
@@ -162,7 +162,7 @@ void MxMDLibJNI::stop(JNIEnv *env, jobject obj)
     ZmGuard<ZmLock> guard(lock);
     if (!running) return;
     running = false;
-    md->allSecurities([](MxMDSecurity *sec) { sec->unsubscribe(); });
+    md->allInstruments([](MxMDInstrument *instr) { instr->unsubscribe(); });
     md->stop();
     md->unsubscribe();
   }
@@ -245,59 +245,59 @@ jobject MxMDLibJNI::handler(JNIEnv *env, jobject obj)
   return (jobject)(void *)(md->appData());
 }
 
-jobject MxMDLibJNI::security(JNIEnv *env, jobject obj, jobject key_)
+jobject MxMDLibJNI::instrument(JNIEnv *env, jobject obj, jobject key_)
 {
-  // (MxSecKey) -> MxMDSecHandle
+  // (MxInstrKey) -> MxMDInstrHandle
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
-  if (MxMDSecHandle sec = md->security(MxSecKeyJNI::j2c(env, key_)))
-    return MxMDSecHandleJNI::ctor(env, ZuMv(sec));
+  if (MxMDInstrHandle instr = md->instrument(MxInstrKeyJNI::j2c(env, key_)))
+    return MxMDInstrHandleJNI::ctor(env, ZuMv(instr));
   return 0;
 }
 
-void MxMDLibJNI::security(JNIEnv *env, jobject obj, jobject key_, jobject fn)
+void MxMDLibJNI::instrument(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 {
-  // (MxSecKey, MxMDSecurityFn) -> void
+  // (MxInstrKey, MxMDInstrumentFn) -> void
   MxMDLib *md = md_;
   if (ZuUnlikely(!md || !fn)) return;
-  md->secInvoke(MxSecKeyJNI::j2c(env, key_),
-      [fn = ZJNI::globalRef(env, fn)](MxMDSecurity *sec) {
+  md->instrInvoke(MxInstrKeyJNI::j2c(env, key_),
+      [fn = ZJNI::globalRef(env, fn)](MxMDInstrument *instr) {
     if (JNIEnv *env = ZJNI::env())
-      env->CallVoidMethod(fn, securityFn[0].mid,
-	  MxMDSecurityJNI::ctor(env, sec));
+      env->CallVoidMethod(fn, instrumentFn[0].mid,
+	  MxMDInstrumentJNI::ctor(env, instr));
   });
 }
 
-jlong MxMDLibJNI::allSecurities(JNIEnv *env, jobject obj, jobject fn)
+jlong MxMDLibJNI::allInstruments(JNIEnv *env, jobject obj, jobject fn)
 {
-  // (MxMDAllSecuritiesFn) -> long
+  // (MxMDAllInstrumentsFn) -> long
   MxMDLib *md = md_;
   if (ZuUnlikely(!md || !fn)) return 0;
-  return md->allSecurities(
-      [fn = ZJNI::globalRef(env, fn)](MxMDSecurity *sec) -> uintptr_t {
+  return md->allInstruments(
+      [fn = ZJNI::globalRef(env, fn)](MxMDInstrument *instr) -> uintptr_t {
     if (JNIEnv *env = ZJNI::env())
-      return env->CallLongMethod(fn, allSecuritiesFn[0].mid,
-	  MxMDSecurityJNI::ctor(env, sec));
+      return env->CallLongMethod(fn, allInstrumentsFn[0].mid,
+	  MxMDInstrumentJNI::ctor(env, instr));
     return 0;
   });
 }
 
 jobject MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_)
 {
-  // (MxSecKey) -> MxMDOBHandle
+  // (MxInstrKey) -> MxMDOBHandle
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
-  if (MxMDOBHandle ob = md->orderBook(MxSecKeyJNI::j2c(env, key_)))
+  if (MxMDOBHandle ob = md->orderBook(MxInstrKeyJNI::j2c(env, key_)))
     return MxMDOBHandleJNI::ctor(env, ZuMv(ob));
   return 0;
 }
 
 void MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_, jobject fn)
 {
-  // (MxSecKey, MxMDOrderBookFn) -> void
+  // (MxInstrKey, MxMDOrderBookFn) -> void
   MxMDLib *md = md_;
   if (ZuUnlikely(!md || !fn)) return;
-  md->obInvoke(MxSecKeyJNI::j2c(env, key_),
+  md->obInvoke(MxInstrKeyJNI::j2c(env, key_),
       [fn = ZJNI::globalRef(env, fn)](MxMDOrderBook *ob) {
     if (JNIEnv *env = ZJNI::env())
       env->CallVoidMethod(fn, orderBookFn[0].mid,
@@ -416,23 +416,23 @@ int MxMDLibJNI::bind(JNIEnv *env)
     { "handler",
       "()Lcom/shardmx/mxmd/MxMDLibHandler;",
       (void *)&MxMDLibJNI::handler },
-    { "security",
-      "(Lcom/shardmx/mxbase/MxSecKey;)Lcom/shardmx/mxmd/MxMDSecHandle;",
+    { "instrument",
+      "(Lcom/shardmx/mxbase/MxInstrKey;)Lcom/shardmx/mxmd/MxMDInstrHandle;",
       (void *)static_cast<jobject (*)(JNIEnv *, jobject, jobject)>(
-	  MxMDLibJNI::security) },
-    { "security",
-      "(Lcom/shardmx/mxbase/MxSecKey;Lcom/shardmx/mxmd/MxMDSecurityFn;)V",
+	  MxMDLibJNI::instrument) },
+    { "instrument",
+      "(Lcom/shardmx/mxbase/MxInstrKey;Lcom/shardmx/mxmd/MxMDInstrumentFn;)V",
       (void *)static_cast<void (*)(JNIEnv *, jobject, jobject, jobject)>(
-	  MxMDLibJNI::security) },
-    { "allSecurities",
-      "(Lcom/shardmx/mxmd/MxMDAllSecuritiesFn;)J",
-      (void *)&MxMDLibJNI::allSecurities },
+	  MxMDLibJNI::instrument) },
+    { "allInstruments",
+      "(Lcom/shardmx/mxmd/MxMDAllInstrumentsFn;)J",
+      (void *)&MxMDLibJNI::allInstruments },
     { "orderBook",
-      "(Lcom/shardmx/mxbase/MxSecKey;)Lcom/shardmx/mxmd/MxMDOBHandle;",
+      "(Lcom/shardmx/mxbase/MxInstrKey;)Lcom/shardmx/mxmd/MxMDOBHandle;",
       (void *)static_cast<jobject (*)(JNIEnv *, jobject, jobject)>(
 	  MxMDLibJNI::orderBook) },
     { "orderBook",
-      "(Lcom/shardmx/mxbase/MxSecKey;Lcom/shardmx/mxmd/MxMDOrderBookFn;)V",
+      "(Lcom/shardmx/mxbase/MxInstrKey;Lcom/shardmx/mxmd/MxMDOrderBookFn;)V",
       (void *)static_cast<void (*)(JNIEnv *, jobject, jobject, jobject)>(
 	  MxMDLibJNI::orderBook) },
     { "allOrderBooks",
@@ -462,10 +462,10 @@ int MxMDLibJNI::bind(JNIEnv *env)
 
   env->DeleteLocalRef((jobject)c);
 
-  if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDSecurityFn",
-	securityFn, 1) < 0) return -1;
-  if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDAllSecuritiesFn",
-	allSecuritiesFn, 1) < 0) return -1;
+  if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDInstrumentFn",
+	instrumentFn, 1) < 0) return -1;
+  if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDAllInstrumentsFn",
+	allInstrumentsFn, 1) < 0) return -1;
   if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDOrderBookFn",
 	orderBookFn, 1) < 0) return -1;
   if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDAllOrderBooksFn",
@@ -490,7 +490,7 @@ void MxMDLibJNI::final(JNIEnv *env)
     md_ = 0;
     if (running) {
       running = false;
-      md->allSecurities([](MxMDSecurity *sec) { sec->unsubscribe(); });
+      md->allInstruments([](MxMDInstrument *instr) { instr->unsubscribe(); });
       md->stop();
       md->unsubscribe();
     }

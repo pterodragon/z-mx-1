@@ -34,23 +34,23 @@ public class MxMDJNITest extends TestCase {
 
     md.start();
 
-    MxMDSecHandler secHandler = new MxMDSecHandlerTuple.Builder().
+    MxMDInstrHandler instrHandler = new MxMDInstrHandlerTuple.Builder().
       l1((MxMDOrderBook ob, MxMDL1Data l1) -> {
 	System.out.format("tick %s -> %f\n",
 	    ob.id(), ((double)l1.last()) / 100.0);
       }).
       build();
 
-    MxMDSecurityFn fn = (MxMDSecurity sec) -> {
-      if (sec != null) sec.subscribe(secHandler);
+    MxMDInstrumentFn fn = (MxMDInstrument instr) -> {
+      if (instr != null) instr.subscribe(instrHandler);
     };
 
-    md.security(MxSecKeyTuple.of("JNITest", null, "ETHBTC"), fn);
+    md.instrument(MxInstrKeyTuple.of("JNITest", null, "ETHBTC"), fn);
 
     {
-      MxMDSecHandle sec = 
-	md.security(MxSecKeyTuple.of("JNITest", null, "LTCBTC"));
-      if (sec != null) sec.invoke(fn);
+      MxMDInstrHandle instr = 
+	md.instrument(MxInstrKeyTuple.of("JNITest", null, "LTCBTC"));
+      if (instr != null) instr.invoke(fn);
     }
 
     publish();

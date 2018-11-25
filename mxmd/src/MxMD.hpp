@@ -152,7 +152,7 @@ class MxMDShard;
 class MxMDFeed;
 class MxMDVenue;
 class MxMDVenueShard;
-class MxMDSecurity;
+class MxMDInstrument;
 class MxMDOrderBook;
 class MxMDOBSide;
 class MxMDPxLevel_;
@@ -311,22 +311,22 @@ friend class MxMDOrderBook;
 friend class MxMDLib;
 
   template <typename TradeID>
-  inline MxMDTrade_(MxMDSecurity *security, MxMDOrderBook *ob,
+  inline MxMDTrade_(MxMDInstrument *instrument, MxMDOrderBook *ob,
 	const TradeID &tradeID, MxDateTime transactTime,
 	MxValue price, MxValue qty) :
-      m_security(security), m_orderBook(ob),
+      m_security(instrument), m_orderBook(ob),
       m_data{tradeID, transactTime, price, qty} { }
 
 public:
   ~MxMDTrade_() { }
 
-  inline MxMDSecurity *security() const { return m_security; }
+  inline MxMDInstrument *instrument() const { return m_security; }
   inline MxMDOrderBook *orderBook() const { return m_orderBook; }
 
   inline const MxMDTradeData &data() const { return m_data; }
 
 private:
-  MxMDSecurity		*m_security;
+  MxMDInstrument		*m_security;
   MxMDOrderBook		*m_orderBook;
   MxMDTradeData		m_data;
 };
@@ -372,11 +372,11 @@ namespace MxMDOrderIDScope {
 }
 
 ZuTupleFields(MxMDOrderID2_, 1, obKey, 2, orderID);
-typedef MxMDOrderID2_<MxSecKey, MxIDString> MxMDOrderID2;
-typedef MxMDOrderID2_<const MxSecKey &, const MxIDString &> MxMDOrderID2Ref;
+typedef MxMDOrderID2_<MxInstrKey, MxIDString> MxMDOrderID2;
+typedef MxMDOrderID2_<const MxInstrKey &, const MxIDString &> MxMDOrderID2Ref;
 ZuTupleFields(MxMDOrderID3_, 1, obKey, 2, side, 3, orderID);
-typedef MxMDOrderID3_<MxSecKey, MxEnum, MxIDString> MxMDOrderID3;
-typedef MxMDOrderID3_<const MxSecKey &, const MxEnum &, const MxIDString &>
+typedef MxMDOrderID3_<MxInstrKey, MxEnum, MxIDString> MxMDOrderID3;
+typedef MxMDOrderID3_<const MxInstrKey &, const MxEnum &, const MxIDString &>
   MxMDOrderID3Ref;
 
 class MxMDAPI MxMDOrder_ {
@@ -747,7 +747,7 @@ typedef ZmFn<MxMDTickSizeTbl *, const MxMDTickSize &> MxMDTickSizeFn;
 // venue, segment data
 typedef ZmFn<MxMDVenue *, MxMDSegment> MxMDTradingSessionFn;
 
-typedef ZmFn<MxMDSecurity *, MxDateTime> MxMDSecurityFn;
+typedef ZmFn<MxMDInstrument *, MxDateTime> MxMDInstrumentFn;
 typedef ZmFn<MxMDOrderBook *, MxDateTime> MxMDOrderBookFn;
 
 // order book, data
@@ -777,8 +777,8 @@ struct MxMDLibHandler : public ZmObject {
   MxMDLib_Fn(MxMDTickSizeTblFn,		addTickSizeTbl);
   MxMDLib_Fn(MxMDTickSizeTblFn,		resetTickSizeTbl);
   MxMDLib_Fn(MxMDTickSizeFn,		addTickSize);
-  MxMDLib_Fn(MxMDSecurityFn,		addSecurity);
-  MxMDLib_Fn(MxMDSecurityFn,		updatedSecurity);
+  MxMDLib_Fn(MxMDInstrumentFn,		addInstrument);
+  MxMDLib_Fn(MxMDInstrumentFn,		updatedInstrument);
   MxMDLib_Fn(MxMDOrderBookFn,		addOrderBook);
   MxMDLib_Fn(MxMDOrderBookFn,		updatedOrderBook);
   MxMDLib_Fn(MxMDOrderBookFn,		deletedOrderBook);
@@ -787,31 +787,31 @@ struct MxMDLibHandler : public ZmObject {
 #undef MxMDLib_Fn
 };
 
-struct MxMDSecHandler : public ZuObject {
-#define MxMDSecurity_Fn(Type, member) \
+struct MxMDInstrHandler : public ZuObject {
+#define MxMDInstrument_Fn(Type, member) \
   template <typename Arg> \
-  inline MxMDSecHandler & member##Fn(Arg &&arg) { \
+  inline MxMDInstrHandler & member##Fn(Arg &&arg) { \
     member = ZuFwd<Arg>(arg); \
     return *this; \
   } \
   Type	member
-  MxMDSecurity_Fn(MxMDSecurityFn,	updatedSecurity); // ref. data changed
-  MxMDSecurity_Fn(MxMDOrderBookFn,	updatedOrderBook); // ''
-  MxMDSecurity_Fn(MxMDLevel1Fn,		l1);
-  MxMDSecurity_Fn(MxMDPxLevelFn,	addMktLevel);
-  MxMDSecurity_Fn(MxMDPxLevelFn,	updatedMktLevel);
-  MxMDSecurity_Fn(MxMDPxLevelFn,	deletedMktLevel);
-  MxMDSecurity_Fn(MxMDPxLevelFn,	addPxLevel);
-  MxMDSecurity_Fn(MxMDPxLevelFn,	updatedPxLevel);
-  MxMDSecurity_Fn(MxMDPxLevelFn,	deletedPxLevel);
-  MxMDSecurity_Fn(MxMDOrderBookFn,	l2);
-  MxMDSecurity_Fn(MxMDOrderFn,		addOrder);
-  MxMDSecurity_Fn(MxMDOrderFn,		modifiedOrder);
-  MxMDSecurity_Fn(MxMDOrderFn,		canceledOrder);
-  MxMDSecurity_Fn(MxMDTradeFn,		addTrade);
-  MxMDSecurity_Fn(MxMDTradeFn,		correctedTrade);
-  MxMDSecurity_Fn(MxMDTradeFn,		canceledTrade);
-#undef MxMDSecurity_Fn
+  MxMDInstrument_Fn(MxMDInstrumentFn,	updatedInstrument); // ref. data changed
+  MxMDInstrument_Fn(MxMDOrderBookFn,	updatedOrderBook); // ''
+  MxMDInstrument_Fn(MxMDLevel1Fn,		l1);
+  MxMDInstrument_Fn(MxMDPxLevelFn,	addMktLevel);
+  MxMDInstrument_Fn(MxMDPxLevelFn,	updatedMktLevel);
+  MxMDInstrument_Fn(MxMDPxLevelFn,	deletedMktLevel);
+  MxMDInstrument_Fn(MxMDPxLevelFn,	addPxLevel);
+  MxMDInstrument_Fn(MxMDPxLevelFn,	updatedPxLevel);
+  MxMDInstrument_Fn(MxMDPxLevelFn,	deletedPxLevel);
+  MxMDInstrument_Fn(MxMDOrderBookFn,	l2);
+  MxMDInstrument_Fn(MxMDOrderFn,		addOrder);
+  MxMDInstrument_Fn(MxMDOrderFn,		modifiedOrder);
+  MxMDInstrument_Fn(MxMDOrderFn,		canceledOrder);
+  MxMDInstrument_Fn(MxMDTradeFn,		addTrade);
+  MxMDInstrument_Fn(MxMDTradeFn,		correctedTrade);
+  MxMDInstrument_Fn(MxMDTradeFn,		canceledTrade);
+#undef MxMDInstrument_Fn
 };
 
 // order books
@@ -930,20 +930,20 @@ private:
   void pxLevel_(
       MxDateTime transactTime, bool delta,
       MxValue price, MxValue qty, MxUInt nOrders, MxFlags flags,
-      const MxMDSecHandler *handler,
+      const MxMDInstrHandler *handler,
       MxValue &d_qty, MxUInt &d_nOrders,
       const MxMDPxLevelFn *&, ZmRef<MxMDPxLevel> &);
 
   void addOrder_(
       MxMDOrder *order, MxDateTime transactTime,
-      const MxMDSecHandler *handler,
+      const MxMDInstrHandler *handler,
       const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
   void delOrder_(
       MxMDOrder *order, MxDateTime transactTime,
-      const MxMDSecHandler *handler,
+      const MxMDInstrHandler *handler,
       const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
 
-  void reset(MxDateTime transactTime, const MxMDSecHandler *handler);
+  void reset(MxDateTime transactTime, const MxMDInstrHandler *handler);
 
   MxMDOrderBook		*m_orderBook;
   MxEnum		m_side;
@@ -959,8 +959,8 @@ ZuInline MxEnum MxMDPxLevel_::side() const
 
 struct MxMDFeedOB : public ZmPolymorph {
   virtual ~MxMDFeedOB() { }
-  virtual void subscribe(MxMDOrderBook *, MxMDSecHandler *) { }
-  virtual void unsubscribe(MxMDOrderBook *, MxMDSecHandler *) { }
+  virtual void subscribe(MxMDOrderBook *, MxMDInstrHandler *) { }
+  virtual void unsubscribe(MxMDOrderBook *, MxMDInstrHandler *) { }
 };
 
 class MxMDAPI MxMDOrderBook : public ZmObject, public MxMDSharded {
@@ -970,11 +970,11 @@ class MxMDAPI MxMDOrderBook : public ZmObject, public MxMDSharded {
 friend class MxMDLib;
 friend class MxMDShard;
 friend class MxMDVenue;
-friend class MxMDSecurity;
+friend class MxMDInstrument;
 friend class MxMDOBSide;
 
-  struct KeyAccessor : public ZuAccessor<MxMDOrderBook *, MxSecKey> {
-    inline static const MxSecKey &value(const MxMDOrderBook *ob) {
+  struct KeyAccessor : public ZuAccessor<MxMDOrderBook *, MxInstrKey> {
+    inline static const MxInstrKey &value(const MxMDOrderBook *ob) {
       return ob->key();
     }
   };
@@ -989,16 +989,16 @@ friend class MxMDOBSide;
     MxMDShard *shard, 
     MxMDVenue *venue,
     MxID segment, ZuString id,
-    MxMDSecurity *security,
+    MxMDInstrument *instrument,
     MxMDTickSizeTbl *tickSizeTbl,
     const MxMDLotSizes &lotSizes,
-    MxMDSecHandler *handler);
+    MxMDInstrHandler *handler);
 
   MxMDOrderBook( // multi-leg
     MxMDShard *shard, 
     MxMDVenue *venue,
     MxID segment, ZuString id, MxNDP pxNDP, MxNDP qtyNDP,
-    MxUInt legs, const ZmRef<MxMDSecurity> *securities,
+    MxUInt legs, const ZmRef<MxMDInstrument> *instruments,
     const MxEnum *sides, const MxRatio *ratios,
     MxMDTickSizeTbl *tickSizeTbl,
     const MxMDLotSizes &lotSizes);
@@ -1008,10 +1008,10 @@ public:
 
   ZuInline MxMDVenue *venue() const { return m_venue; };
 
-  ZuInline MxMDSecurity *security() const { return m_securities[0]; }
-  ZuInline MxMDSecurity *security(MxUInt leg) const {
+  ZuInline MxMDInstrument *instrument() const { return m_instruments[0]; }
+  ZuInline MxMDInstrument *instrument(MxUInt leg) const {
     if (ZuUnlikely(!*leg)) leg = 0;
-    return m_securities[leg];
+    return m_instruments[leg];
   }
 
   ZuInline MxMDOrderBook *out() const { return m_out; };
@@ -1019,7 +1019,7 @@ public:
   ZuInline MxID venueID() const { return m_key.venue; }
   ZuInline MxID segment() const { return m_key.segment; }
   ZuInline const MxIDString &id() const { return m_key.id; };
-  ZuInline const MxSecKey &key() const { return m_key; }
+  ZuInline const MxInstrKey &key() const { return m_key; }
 
   ZuInline MxUInt legs() const { return m_legs; };
   ZuInline MxEnum side(unsigned leg) const { return m_sides[leg]; }
@@ -1068,10 +1068,10 @@ public:
       const MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes,
       MxDateTime transactTime);
 
-  void subscribe(MxMDSecHandler *);
+  void subscribe(MxMDInstrHandler *);
   void unsubscribe();
 
-  ZuInline const ZmRef<MxMDSecHandler> &handler() const { return m_handler; }
+  ZuInline const ZmRef<MxMDInstrHandler> &handler() const { return m_handler; }
 
   ZuInline uintptr_t appData() const { return m_appData; }
   ZuInline void appData(uintptr_t v) { m_appData = v; }
@@ -1155,11 +1155,11 @@ private:
 
   void addOrder_(
     MxMDOrder *order, MxDateTime transactTime,
-    const MxMDSecHandler *handler,
+    const MxMDInstrHandler *handler,
     const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
   void delOrder_(
     MxMDOrder *order, MxDateTime transactTime,
-    const MxMDSecHandler *handler,
+    const MxMDInstrHandler *handler,
     const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
 
   void reset_(MxMDPxLevel *pxLevel, MxDateTime transactTime);
@@ -1174,9 +1174,9 @@ private:
   MxMDOrderBook			*m_next = 0;	// next in output list
   MxMDOrderBook			*m_out = 0;	// output order book
 
-  MxSecKey			m_key;
+  MxInstrKey			m_key;
   MxUInt			m_legs;
-  MxMDSecurity			*m_securities[MxMDNLegs];
+  MxMDInstrument			*m_instruments[MxMDNLegs];
   MxEnum			m_sides[MxMDNLegs];
   MxRatio			m_ratios[MxMDNLegs];
 
@@ -1190,7 +1190,7 @@ private:
   ZmRef<MxMDOBSide>		m_bids;
   ZmRef<MxMDOBSide>		m_asks;
 
-  ZmRef<MxMDSecHandler>		m_handler;
+  ZmRef<MxMDInstrHandler>		m_handler;
 
   uintptr_t			m_appData = 0;
 };
@@ -1223,19 +1223,19 @@ ZuInline MxMDOrderID3Ref MxMDOrder_::OrderID3Accessor::value(
   return MxMDOrderID3Ref(o->orderBook()->key(), o->m_data.side, o->m_id);
 }
 
-// securities
+// instruments
 
 class MxMDDerivatives : public ZmObject {
   MxMDDerivatives(const MxMDDerivatives &) = delete;
   MxMDDerivatives &operator =(const MxMDDerivatives &) = delete;
 
-friend class MxMDSecurity;
+friend class MxMDInstrument;
 
   struct Futures_HeapID {
     inline static const char *id() { return "MxMDLib.Futures"; }
   };
   typedef ZmRBTree<MxFutKey,			// mat
-	    ZmRBTreeVal<MxMDSecurity *,
+	    ZmRBTreeVal<MxMDInstrument *,
 	      ZmRBTreeObject<ZuNull,
 		ZmRBTreeHeapID<Futures_HeapID,
 		  ZmRBTreeLock<ZmPLock> > > > > Futures;
@@ -1243,7 +1243,7 @@ friend class MxMDSecurity;
     inline static const char *id() { return "MxMDLib.Options"; }
   };
   typedef ZmRBTree<MxOptKey,			// mat, putCall, strike
-	    ZmRBTreeVal<MxMDSecurity *,
+	    ZmRBTreeVal<MxMDInstrument *,
 	      ZmRBTreeObject<ZuNull,
 		ZmRBTreeHeapID<Options_HeapID,
 		  ZmRBTreeLock<ZmPLock> > > > > Options;
@@ -1251,37 +1251,37 @@ friend class MxMDSecurity;
   ZuInline MxMDDerivatives() { }
 
 public:
-  ZuInline MxMDSecurity *future(const MxFutKey &key) const
+  ZuInline MxMDInstrument *future(const MxFutKey &key) const
     { return m_futures.findVal(key); }
-  uintptr_t allFutures(ZmFn<MxMDSecurity *>) const;
+  uintptr_t allFutures(ZmFn<MxMDInstrument *>) const;
 
-  ZuInline MxMDSecurity *option(const MxOptKey &key) const
+  ZuInline MxMDInstrument *option(const MxOptKey &key) const
     { return m_options.findVal(key); }
-  uintptr_t allOptions(ZmFn<MxMDSecurity *>) const;
+  uintptr_t allOptions(ZmFn<MxMDInstrument *>) const;
 
 private:
-  void add(MxMDSecurity *);
-  void del(MxMDSecurity *);
+  void add(MxMDInstrument *);
+  void del(MxMDInstrument *);
 
   Futures		m_futures;
   Options		m_options;
 };
 
-class MxMDAPI MxMDSecurity : public ZmObject, public MxMDSharded {
-  MxMDSecurity(const MxMDSecurity &) = delete;
-  MxMDSecurity &operator =(const MxMDSecurity &) = delete;
+class MxMDAPI MxMDInstrument : public ZmObject, public MxMDSharded {
+  MxMDInstrument(const MxMDInstrument &) = delete;
+  MxMDInstrument &operator =(const MxMDInstrument &) = delete;
 
 friend class MxMDLib;
 friend class MxMDShard;
 
-  struct KeyAccessor : public ZuAccessor<MxMDSecurity *, MxSecKey> {
-    ZuInline static const MxSecKey &value(const MxMDSecurity *security) {
-      return security->key();
+  struct KeyAccessor : public ZuAccessor<MxMDInstrument *, MxInstrKey> {
+    ZuInline static const MxInstrKey &value(const MxMDInstrument *instrument) {
+      return instrument->key();
     }
   };
 
   struct OrderBooks_HeapID : public ZmHeapSharded {
-    inline static const char *id() { return "MxMDSecurity.OrderBooks"; }
+    inline static const char *id() { return "MxMDInstrument.OrderBooks"; }
   };
   typedef ZmRBTree<ZmRef<MxMDOrderBook>,
 	    ZmRBTreeIndex<MxMDOrderBook::VenueSegmentAccessor,
@@ -1289,8 +1289,8 @@ friend class MxMDShard;
 		ZmRBTreeLock<ZmNoLock,
 		  ZmRBTreeHeapID<OrderBooks_HeapID> > > > > OrderBooks;
 
-  MxMDSecurity(MxMDShard *shard, const MxSecKey &key,
-      const MxMDSecRefData &refData);
+  MxMDInstrument(MxMDShard *shard, const MxInstrKey &key,
+      const MxMDInstrRefData &refData);
 
 public:
   MxMDLib *md() const;
@@ -1298,19 +1298,19 @@ public:
   ZuInline MxID primaryVenue() const { return m_key.venue; }
   ZuInline MxID primarySegment() const { return m_key.segment; }
   ZuInline const MxIDString &id() const { return m_key.id; }
-  ZuInline const MxSecKey &key() const { return m_key; }
+  ZuInline const MxInstrKey &key() const { return m_key; }
 
-  ZuInline const MxMDSecRefData &refData() const { return m_refData; }
+  ZuInline const MxMDInstrRefData &refData() const { return m_refData; }
 
-  ZuInline MxMDSecurity *underlying() const { return m_underlying; }
+  ZuInline MxMDInstrument *underlying() const { return m_underlying; }
   ZuInline MxMDDerivatives *derivatives() const { return m_derivatives; }
 
-  void update(const MxMDSecRefData &refData, MxDateTime transactTime);
+  void update(const MxMDInstrRefData &refData, MxDateTime transactTime);
 
-  void subscribe(MxMDSecHandler *);
+  void subscribe(MxMDInstrHandler *);
   void unsubscribe();
 
-  ZuInline const ZmRef<MxMDSecHandler> &handler() const { return m_handler; }
+  ZuInline const ZmRef<MxMDInstrHandler> &handler() const { return m_handler; }
 
   ZuInline ZmRef<MxMDOrderBook> orderBook(MxID venue) const {
     if (ZmRef<MxMDOrderBook> ob =
@@ -1333,7 +1333,7 @@ public:
     return 0;
   }
 
-  ZmRef<MxMDOrderBook> addOrderBook(const MxSecKey &key,
+  ZmRef<MxMDOrderBook> addOrderBook(const MxInstrKey &key,
     MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes,
     MxDateTime transactTime);
   void delOrderBook(MxID venue, MxID segment, MxDateTime transactTime);
@@ -1378,28 +1378,28 @@ private:
   ZmRef<MxMDOrderBook> findOrderBook_(MxID venue, MxID segment);
   ZmRef<MxMDOrderBook> delOrderBook_(MxID venue, MxID segment);
 
-  ZuInline void underlying(MxMDSecurity *u) { m_underlying = u; }
-  ZuInline void addDerivative(MxMDSecurity *d) {
+  ZuInline void underlying(MxMDInstrument *u) { m_underlying = u; }
+  ZuInline void addDerivative(MxMDInstrument *d) {
     if (!m_derivatives) m_derivatives = new MxMDDerivatives();
     m_derivatives->add(d);
   }
-  ZuInline void delDerivative(MxMDSecurity *d) {
+  ZuInline void delDerivative(MxMDInstrument *d) {
     if (!m_derivatives) return;
     m_derivatives->del(d);
   }
 
-  void update_(const MxMDSecRefData &, MxDateTime transactTime);
+  void update_(const MxMDInstrRefData &, MxDateTime transactTime);
 
-  MxSecKey			m_key;
+  MxInstrKey			m_key;
 
-  MxMDSecRefData		m_refData;
+  MxMDInstrRefData		m_refData;
 
-  MxMDSecurity			*m_underlying = 0;
+  MxMDInstrument			*m_underlying = 0;
   ZmRef<MxMDDerivatives>	m_derivatives;
 
   OrderBooks			m_orderBooks;
 
-  ZmRef<MxMDSecHandler>	  	m_handler;
+  ZmRef<MxMDInstrHandler>	  	m_handler;
 
   uintptr_t			m_appData = 0;
 };
@@ -1473,7 +1473,7 @@ public:
   ZmRef<MxMDOrderBook> addCombination(
       MxID segment, ZuString orderBookID,
       MxNDP pxNDP, MxNDP qtyNDP,
-      MxUInt legs, const ZmRef<MxMDSecurity> *securities,
+      MxUInt legs, const ZmRef<MxMDInstrument> *instruments,
       const MxEnum *sides, const MxRatio *ratios,
       MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes,
       MxDateTime transactTime);
@@ -1484,28 +1484,28 @@ private:
   void addOrder(MxMDOrder *order);
   template <typename OrderID>
   ZmRef<MxMDOrder> findOrder(
-      const MxSecKey &obKey, MxEnum side, OrderID &&orderID);
+      const MxInstrKey &obKey, MxEnum side, OrderID &&orderID);
   template <typename OrderID>
   ZmRef<MxMDOrder> delOrder(
-      const MxSecKey &obKey, MxEnum side, OrderID &&orderID);
+      const MxInstrKey &obKey, MxEnum side, OrderID &&orderID);
 
   inline void addOrder2(MxMDOrder *order) { m_orders2.add(order); }
   template <typename OrderID> ZuInline ZmRef<MxMDOrder> findOrder2(
-      const MxSecKey &obKey, OrderID &&orderID) {
+      const MxInstrKey &obKey, OrderID &&orderID) {
     return m_orders2.findKey(ZuMkTuple(obKey, ZuFwd<OrderID>(orderID)));
   }
   template <typename OrderID> ZuInline ZmRef<MxMDOrder> delOrder2(
-      const MxSecKey &obKey, OrderID &&orderID) {
+      const MxInstrKey &obKey, OrderID &&orderID) {
     return m_orders2.delKey(ZuMkTuple(obKey, ZuFwd<OrderID>(orderID)));
   }
 
   inline void addOrder3(MxMDOrder *order) { m_orders3.add(order); }
   template <typename OrderID> ZuInline ZmRef<MxMDOrder> findOrder3(
-      const MxSecKey &obKey, MxEnum side, OrderID &&orderID) {
+      const MxInstrKey &obKey, MxEnum side, OrderID &&orderID) {
     return m_orders3.findKey(ZuMkTuple(obKey, side, ZuFwd<OrderID>(orderID)));
   }
   template <typename OrderID> ZuInline ZmRef<MxMDOrder> delOrder3(
-      const MxSecKey &obKey, MxEnum side, OrderID &&orderID) {
+      const MxInstrKey &obKey, MxEnum side, OrderID &&orderID) {
     return m_orders3.delKey(ZuMkTuple(obKey, side, ZuFwd<OrderID>(orderID)));
   }
 
@@ -1655,7 +1655,7 @@ inline void MxMDVenueShard::addOrder(MxMDOrder *order)
 }
 template <typename OrderID>
 inline ZmRef<MxMDOrder> MxMDVenueShard::findOrder(
-    const MxSecKey &obKey, MxEnum side, OrderID &&orderID)
+    const MxInstrKey &obKey, MxEnum side, OrderID &&orderID)
 {
   switch ((int)m_orderIDScope) {
     case MxMDOrderIDScope::Venue:
@@ -1669,7 +1669,7 @@ inline ZmRef<MxMDOrder> MxMDVenueShard::findOrder(
 }
 template <typename OrderID>
 inline ZmRef<MxMDOrder> MxMDVenueShard::delOrder(
-    const MxSecKey &obKey, MxEnum side, OrderID &&orderID)
+    const MxInstrKey &obKey, MxEnum side, OrderID &&orderID)
 {
   switch ((int)m_orderIDScope) {
     case MxMDOrderIDScope::Venue:
@@ -1694,33 +1694,33 @@ public:
   ZuInline MxMDLib *md() const { return mgr(); }
   ZuInline unsigned id() const { return m_id; }
 
-  ZuInline ZmRef<MxMDSecurity> security(const MxSecKey &key) const {
-    return m_securities.findKey(key);
+  ZuInline ZmRef<MxMDInstrument> instrument(const MxInstrKey &key) const {
+    return m_instruments.findKey(key);
   }
-  uintptr_t allSecurities(ZmFn<MxMDSecurity *>) const;
-  ZmRef<MxMDSecurity> addSecurity(ZmRef<MxMDSecurity> sec,
-      const MxSecKey &key, const MxMDSecRefData &refData,
+  uintptr_t allInstruments(ZmFn<MxMDInstrument *>) const;
+  ZmRef<MxMDInstrument> addInstrument(ZmRef<MxMDInstrument> instr,
+      const MxInstrKey &key, const MxMDInstrRefData &refData,
       MxDateTime transactTime);
 
-  ZuInline ZmRef<MxMDOrderBook> orderBook(const MxSecKey &key) const {
+  ZuInline ZmRef<MxMDOrderBook> orderBook(const MxInstrKey &key) const {
     return m_orderBooks.findKey(key);
   }
   uintptr_t allOrderBooks(ZmFn<MxMDOrderBook *>) const;
 
 private:
-  struct Securities_HeapID : public ZmHeapSharded {
-    ZuInline static const char *id() { return "MxMDShard.Securities"; }
+  struct Instruments_HeapID : public ZmHeapSharded {
+    ZuInline static const char *id() { return "MxMDShard.Instruments"; }
   };
-  typedef ZmHash<MxMDSecurity *,
-	    ZmHashIndex<MxMDSecurity::KeyAccessor,
+  typedef ZmHash<MxMDInstrument *,
+	    ZmHashIndex<MxMDInstrument::KeyAccessor,
 	      ZmHashObject<ZuObject,
 		ZmHashLock<ZmNoLock,
-		  ZmHashHeapID<Securities_HeapID> > > > > Securities;
-  ZuInline void addSecurity(MxMDSecurity *security) {
-    m_securities.add(security);
+		  ZmHashHeapID<Instruments_HeapID> > > > > Instruments;
+  ZuInline void addInstrument(MxMDInstrument *instrument) {
+    m_instruments.add(instrument);
   }
-  ZuInline void delSecurity(MxMDSecurity *security) {
-    m_securities.del(security->key());
+  ZuInline void delInstrument(MxMDInstrument *instrument) {
+    m_instruments.del(instrument->key());
   }
 
   struct OrderBooks_HeapID : public ZmHeapSharded {
@@ -1735,17 +1735,17 @@ private:
   ZuInline void delOrderBook(MxMDOrderBook *ob) { m_orderBooks.del(ob->key()); }
 
   unsigned	m_id;
-  Securities	m_securities;
+  Instruments	m_instruments;
   OrderBooks	m_orderBooks;
 };
 
 ZuInline MxMDLib *MxMDOrderBook::md() const { return shard()->mgr(); }
 
-ZuInline MxMDLib *MxMDSecurity::md() const { return shard()->mgr(); }
+ZuInline MxMDLib *MxMDInstrument::md() const { return shard()->mgr(); }
 
 ZuInline unsigned MxMDVenueShard::id() const { return m_shard->id(); }
 
-typedef ZmHandle<MxMDSecurity> MxMDSecHandle;
+typedef ZmHandle<MxMDInstrument> MxMDInstrHandle;
 typedef ZmHandle<MxMDOrderBook> MxMDOBHandle;
 
 // library
@@ -1758,7 +1758,7 @@ class MxMDAPI MxMDLib {
 friend class MxMDCmd;
 friend class MxMDTickSizeTbl;
 friend class MxMDOrderBook;
-friend class MxMDSecurity;
+friend class MxMDInstrument;
 friend class MxMDFeed;
 friend class MxMDVenue;
 friend class MxMDVenueShard;
@@ -1798,7 +1798,7 @@ public:
   virtual void stopTimer() = 0;
 
   virtual void dumpTickSizes(ZuString path, MxID venue = MxID()) = 0;
-  virtual void dumpSecurities(
+  virtual void dumpInstruments(
       ZuString path, MxID venue = MxID(), MxID segment = MxID()) = 0;
   virtual void dumpOrderBooks(
       ZuString path, MxID venue = MxID(), MxID segment = MxID()) = 0;
@@ -1847,17 +1847,17 @@ public:
   virtual void addCmd(ZuString name, ZuString syntax,
       ZvCmdFn fn, ZtString brief, ZtString usage) = 0;
 
-  // single security / order book lookup
+  // single instrument / order book lookup
   static ZtString lookupSyntax();
   static ZtString lookupOptions();
 
-  MxUniKey parseSecurity(ZvCf *args, unsigned index) const;
-  bool lookupSecurity(
-      const MxUniKey &key, bool secRequired, ZmFn<MxMDSecurity *> fn) const;
+  MxUniKey parseInstrument(ZvCf *args, unsigned index) const;
+  bool lookupInstrument(
+      const MxUniKey &key, bool instrRequired, ZmFn<MxMDInstrument *> fn) const;
   MxUniKey parseOrderBook(ZvCf *args, unsigned index) const;
   bool lookupOrderBook(
-      const MxUniKey &key, bool secRequired, bool obRequired,
-      ZmFn<MxMDSecurity *, MxMDOrderBook *> fn) const;
+      const MxUniKey &key, bool instrRequired, bool obRequired,
+      ZmFn<MxMDInstrument *, MxMDOrderBook *> fn) const;
 
   // CLI time format (using local timezone)
   typedef ZuBoxFmt<ZuBox<unsigned>, ZuFmt::Right<6> > TimeFmt;
@@ -1885,9 +1885,9 @@ template <typename> friend class ZmShard;
 
   ZuInline MxMDShard *shard_(unsigned i) const { return m_shards[i]; }
 
-  ZmRef<MxMDSecurity> addSecurity(
-      MxMDShard *shard, ZmRef<MxMDSecurity> sec,
-      const MxSecKey &key, const MxMDSecRefData &refData,
+  ZmRef<MxMDInstrument> addInstrument(
+      MxMDShard *shard, ZmRef<MxMDInstrument> instr,
+      const MxInstrKey &key, const MxMDInstrRefData &refData,
       MxDateTime transactTime);
 
   ZmRef<MxMDTickSizeTbl> addTickSizeTbl(
@@ -1896,23 +1896,23 @@ template <typename> friend class ZmShard;
   void addTickSize(MxMDTickSizeTbl *tbl,
       MxValue minPrice, MxValue maxPrice, MxValue tickSize);
 
-  void updateSecurity(
-      MxMDSecurity *security, const MxMDSecRefData &refData,
+  void updateInstrument(
+      MxMDInstrument *instrument, const MxMDInstrRefData &refData,
       MxDateTime transactTime);
-  void addSecIndices(
-      MxMDSecurity *, const MxMDSecRefData &, MxDateTime transactTime);
-  void delSecIndices(
-      MxMDSecurity *, const MxMDSecRefData &);
+  void addInstrIndices(
+      MxMDInstrument *, const MxMDInstrRefData &, MxDateTime transactTime);
+  void delInstrIndices(
+      MxMDInstrument *, const MxMDInstrRefData &);
 
   ZmRef<MxMDOrderBook> addOrderBook(
-      MxMDSecurity *security, MxSecKey key,
+      MxMDInstrument *instrument, MxInstrKey key,
       MxMDTickSizeTbl *tickSizeTbl, MxMDLotSizes lotSizes,
       MxDateTime transactTime);
       
   ZmRef<MxMDOrderBook> addCombination(
       MxMDVenueShard *venueShard, MxID segment, ZuString id,
       MxNDP pxNDP, MxNDP qtyNDP,
-      MxUInt legs, const ZmRef<MxMDSecurity> *securities,
+      MxUInt legs, const ZmRef<MxMDInstrument> *instruments,
       const MxEnum *sides, const MxRatio *ratios,
       MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes,
       MxDateTime transactTime);
@@ -1921,7 +1921,7 @@ template <typename> friend class ZmShard;
       const MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes,
       MxDateTime transactTime);
 
-  void delOrderBook(MxMDSecurity *security, MxID venue, MxID segment,
+  void delOrderBook(MxMDInstrument *instrument, MxID venue, MxID segment,
       MxDateTime transactTime);
   void delCombination(MxMDVenueShard *venueShard, MxID segment, ZuString id,
       MxDateTime transactTime);
@@ -1955,14 +1955,14 @@ template <typename> friend class ZmShard;
 
   // primary indices
 
-  struct AllSecurities_HeapID {
-    ZuInline static const char *id() { return "MxMDLib.AllSecurities"; }
+  struct AllInstruments_HeapID {
+    ZuInline static const char *id() { return "MxMDLib.AllInstruments"; }
   };
-  typedef ZmHash<ZmRef<MxMDSecurity>,
-	    ZmHashIndex<MxMDSecurity::KeyAccessor,
+  typedef ZmHash<ZmRef<MxMDInstrument>,
+	    ZmHashIndex<MxMDInstrument::KeyAccessor,
 	      ZmHashObject<ZuNull,
 		ZmHashLock<ZmPLock,
-		  ZmHashHeapID<AllSecurities_HeapID> > > > > AllSecurities;
+		  ZmHashHeapID<AllInstruments_HeapID> > > > > AllInstruments;
 
   struct AllOrderBooks_HeapID {
     ZuInline static const char *id() { return "MxMDLib.AllOrderBooks"; }
@@ -1975,14 +1975,14 @@ template <typename> friend class ZmShard;
 
   // secondary indices
 
-  struct Securities_HeapID {
-    ZuInline static const char *id() { return "MxMDLib.Securities"; }
+  struct Instruments_HeapID {
+    ZuInline static const char *id() { return "MxMDLib.Instruments"; }
   };
   typedef ZmHash<MxSymKey,
-	    ZmHashVal<MxMDSecurity *,
+	    ZmHashVal<MxMDInstrument *,
 	      ZmHashObject<ZuNull,
 		ZmHashLock<ZmPLock,
-		  ZmHashHeapID<Securities_HeapID> > > > > Securities;
+		  ZmHashHeapID<Instruments_HeapID> > > > > Instruments;
 
   // feeds, venues
 
@@ -2014,105 +2014,105 @@ template <typename> friend class ZmShard;
 		  ZmRBTreeHeapID<VenueMap_HeapID> > > > > VenueMap;
 
 public:
-  ZuInline MxMDSecHandle security(const MxSecKey &key) const {
-    if (ZmRef<MxMDSecurity> sec = m_allSecurities.findKey(key))
-      return MxMDSecHandle{ZuMv(sec)};
-    return MxMDSecHandle{};
+  ZuInline MxMDInstrHandle instrument(const MxInstrKey &key) const {
+    if (ZmRef<MxMDInstrument> instr = m_allInstruments.findKey(key))
+      return MxMDInstrHandle{ZuMv(instr)};
+    return MxMDInstrHandle{};
   }
-  ZuInline MxMDSecHandle security(const MxSymKey &key) const {
-    if (ZmRef<MxMDSecurity> sec = m_securities.findVal(key))
-      return MxMDSecHandle{ZuMv(sec)};
-    return MxMDSecHandle{};
+  ZuInline MxMDInstrHandle instrument(const MxSymKey &key) const {
+    if (ZmRef<MxMDInstrument> instr = m_instruments.findVal(key))
+      return MxMDInstrHandle{ZuMv(instr)};
+    return MxMDInstrHandle{};
   }
 private:
-  ZuInline ZmRef<MxMDSecurity> security_(const MxUniKey &key) const {
-    ZmRef<MxMDSecurity> sec;
+  ZuInline ZmRef<MxMDInstrument> instrument_(const MxUniKey &key) const {
+    ZmRef<MxMDInstrument> instr;
     if (*key.src)
-      sec = m_securities.findVal(MxSymKey{key.id, key.src});
+      instr = m_instruments.findVal(MxSymKey{key.id, key.src});
     else
-      sec = m_allSecurities.findKey(MxSecKey{key.id, key.venue, key.segment});
-    if (sec && *key.mat && sec->derivatives()) {
+      instr = m_allInstruments.findKey(MxInstrKey{key.id, key.venue, key.segment});
+    if (instr && *key.mat && instr->derivatives()) {
       if (*key.strike)
-	sec = sec->derivatives()->option(
+	instr = instr->derivatives()->option(
 	    MxOptKey{key.mat, key.putCall, key.strike});
       else
-	sec = sec->derivatives()->future(MxFutKey{key.mat});
+	instr = instr->derivatives()->future(MxFutKey{key.mat});
     }
-    return ZuMv(sec);
+    return ZuMv(instr);
   }
 public:
-  ZuInline MxMDSecHandle security(const MxUniKey &key) const {
-    ZmRef<MxMDSecurity> sec = security_(key);
-    if (sec) return MxMDSecHandle{ZuMv(sec)};
-    return MxMDSecHandle{};
+  ZuInline MxMDInstrHandle instrument(const MxUniKey &key) const {
+    ZmRef<MxMDInstrument> instr = instrument_(key);
+    if (instr) return MxMDInstrHandle{ZuMv(instr)};
+    return MxMDInstrHandle{};
   }
-  ZuInline MxMDSecHandle security(
-      const MxSecKey &key, unsigned shardID) const {
-    if (ZmRef<MxMDSecurity> sec = m_allSecurities.findKey(key))
-      return MxMDSecHandle{ZuMv(sec)};
-    return MxMDSecHandle{m_shards[shardID % m_shards.length()]};
+  ZuInline MxMDInstrHandle instrument(
+      const MxInstrKey &key, unsigned shardID) const {
+    if (ZmRef<MxMDInstrument> instr = m_allInstruments.findKey(key))
+      return MxMDInstrHandle{ZuMv(instr)};
+    return MxMDInstrHandle{m_shards[shardID % m_shards.length()]};
   }
-  template <typename L> ZuInline void secInvoke(
-      const MxSecKey &key, L l) const {
-    if (ZmRef<MxMDSecurity> sec = m_allSecurities.findKey(key))
-      sec->shard()->invoke(
-	  [l = ZuMv(l), sec = ZuMv(sec)]() mutable { l(sec); });
+  template <typename L> ZuInline void instrInvoke(
+      const MxInstrKey &key, L l) const {
+    if (ZmRef<MxMDInstrument> instr = m_allInstruments.findKey(key))
+      instr->shard()->invoke(
+	  [l = ZuMv(l), instr = ZuMv(instr)]() mutable { l(instr); });
     else
-      l((MxMDSecurity *)0);
+      l((MxMDInstrument *)0);
   }
-  template <typename L> ZuInline void secInvoke(
+  template <typename L> ZuInline void instrInvoke(
       const MxSymKey &key, L l) const {
-    if (ZmRef<MxMDSecurity> sec = m_securities.findVal(key))
-      sec->shard()->invoke(
-	  [l = ZuMv(l), sec = ZuMv(sec)]() mutable { l(sec); });
+    if (ZmRef<MxMDInstrument> instr = m_instruments.findVal(key))
+      instr->shard()->invoke(
+	  [l = ZuMv(l), instr = ZuMv(instr)]() mutable { l(instr); });
     else
-      l((MxMDSecurity *)0);
+      l((MxMDInstrument *)0);
   }
   template <typename L>
-  ZuInline void secInvoke(const MxUniKey &key, L l) const {
+  ZuInline void instrInvoke(const MxUniKey &key, L l) const {
     if (*key.mat) {
-      auto l_ = [key = key, l = ZuMv(l)](MxMDSecurity *sec) mutable {
-	if (ZuLikely(sec && sec->derivatives())) {
+      auto l_ = [key = key, l = ZuMv(l)](MxMDInstrument *instr) mutable {
+	if (ZuLikely(instr && instr->derivatives())) {
 	  if (*key.strike)
-	    sec = sec->derivatives()->option(
+	    instr = instr->derivatives()->option(
 		MxOptKey{key.mat, key.putCall, key.strike});
 	  else
-	    sec = sec->derivatives()->future(MxFutKey{key.mat});
+	    instr = instr->derivatives()->future(MxFutKey{key.mat});
 	}
-	l(sec);
+	l(instr);
       };
       if (*key.src)
-	secInvoke(MxSymKey{key.id, key.src}, ZuMv(l_));
+	instrInvoke(MxSymKey{key.id, key.src}, ZuMv(l_));
       else
-	secInvoke(MxSecKey{key.id, key.venue, key.segment}, ZuMv(l_));
+	instrInvoke(MxInstrKey{key.id, key.venue, key.segment}, ZuMv(l_));
     } else {
       if (*key.src)
-	secInvoke(MxSymKey{key.id, key.src}, ZuMv(l));
+	instrInvoke(MxSymKey{key.id, key.src}, ZuMv(l));
       else
-	secInvoke(MxSecKey{key.id, key.venue, key.segment}, ZuMv(l));
+	instrInvoke(MxInstrKey{key.id, key.venue, key.segment}, ZuMv(l));
     }
   }
-  uintptr_t allSecurities(ZmFn<MxMDSecurity *>) const;
+  uintptr_t allInstruments(ZmFn<MxMDInstrument *>) const;
 
-  ZuInline MxMDOBHandle orderBook(const MxSecKey &key) const {
+  ZuInline MxMDOBHandle orderBook(const MxInstrKey &key) const {
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks.findKey(key))
       return MxMDOBHandle{ob};
     return MxMDOBHandle{};
   }
   ZuInline MxMDOBHandle orderBook(const MxUniKey &key) const {
-    ZmRef<MxMDSecurity> sec = security_(key);
-    if (!sec) return MxMDOBHandle{};
-    if (ZmRef<MxMDOrderBook> ob = sec->orderBook(key.venue, key.segment))
+    ZmRef<MxMDInstrument> instr = instrument_(key);
+    if (!instr) return MxMDOBHandle{};
+    if (ZmRef<MxMDOrderBook> ob = instr->orderBook(key.venue, key.segment))
       return MxMDOBHandle{ob};
     return MxMDOBHandle{};
   }
-  ZuInline MxMDOBHandle orderBook(const MxSecKey &key, unsigned shardID) const {
+  ZuInline MxMDOBHandle orderBook(const MxInstrKey &key, unsigned shardID) const {
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks.findKey(key))
       return MxMDOBHandle{ob};
     return MxMDOBHandle{m_shards[shardID % m_shards.length()]};
   }
   template <typename L>
-  ZuInline void obInvoke(const MxSecKey &key, L l) const {
+  ZuInline void obInvoke(const MxInstrKey &key, L l) const {
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks.findKey(key))
       ob->shard()->invoke([l = ZuMv(l), ob = ZuMv(ob)]() mutable { l(ob); });
     else
@@ -2120,11 +2120,11 @@ public:
   }
   template <typename L>
   ZuInline void obInvoke(const MxUniKey &key, L l) const {
-    secInvoke(key, [key = key, l = ZuMv(l)](MxMDSecurity *sec) mutable {
-	if (!sec)
+    instrInvoke(key, [key = key, l = ZuMv(l)](MxMDInstrument *instr) mutable {
+	if (!instr)
 	  l(nullptr);
 	else
-	  l(sec->orderBook(key.venue, key.segment));
+	  l(instr->orderBook(key.venue, key.segment));
       });
   }
   uintptr_t allOrderBooks(ZmFn<MxMDOrderBook *>) const;
@@ -2146,9 +2146,9 @@ private:
   ZmScheduler		*m_scheduler = 0;
   Shards		m_shards;
 
-  AllSecurities		m_allSecurities;
+  AllInstruments		m_allInstruments;
   AllOrderBooks		m_allOrderBooks;
-  Securities		m_securities;
+  Instruments		m_instruments;
   Feeds			m_feeds;
   Venues		m_venues;
   VenueMap		m_venueMap;

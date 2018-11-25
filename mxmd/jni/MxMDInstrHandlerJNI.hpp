@@ -19,8 +19,8 @@
 
 // MxMD JNI
 
-#ifndef MxMDSecRefDataJNI_HPP
-#define MxMDSecRefDataJNI_HPP
+#ifndef MxMDInstrHandlerJNI_HPP
+#define MxMDInstrHandlerJNI_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -34,10 +34,10 @@
 
 #include <MxMD.hpp>
 
-namespace MxMDSecRefDataJNI {
-  jobject ctor(JNIEnv *, const MxMDSecRefData &data);
+namespace MxMDInstrHandlerJNI {
+  ZmRef<MxMDInstrHandler> j2c(JNIEnv *env, jobject handler);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }
 
-#endif /* MxMDSecRefDataJNI_HPP */
+#endif /* MxMDInstrHandlerJNI_HPP */

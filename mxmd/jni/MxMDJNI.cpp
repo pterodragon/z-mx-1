@@ -30,7 +30,7 @@
 #include <MxMDVenueJNI.hpp>
 #include <MxMDTickSizeTblJNI.hpp>
 
-#include <MxMDSecurityJNI.hpp>
+#include <MxMDInstrumentJNI.hpp>
 #include <MxMDDerivativesJNI.hpp>
 
 #include <MxMDOrderBookJNI.hpp>
@@ -41,14 +41,14 @@
 #include <MxMDTradeJNI.hpp>
 
 #include <MxMDLibHandlerJNI.hpp>
-#include <MxMDSecHandlerJNI.hpp>
+#include <MxMDInstrHandlerJNI.hpp>
 
-#include <MxMDSecHandleJNI.hpp>
+#include <MxMDInstrHandleJNI.hpp>
 #include <MxMDOBHandleJNI.hpp>
 
 #include <MxMDTickSizeJNI.hpp>
 #include <MxMDSegmentJNI.hpp>
-#include <MxMDSecRefDataJNI.hpp>
+#include <MxMDInstrRefDataJNI.hpp>
 #include <MxMDLotSizesJNI.hpp>
 #include <MxMDL1DataJNI.hpp>
 #include <MxMDOBSideDataJNI.hpp>
@@ -84,7 +84,7 @@ int MxMDJNI::bind(JNIEnv *env)
   if (MxMDVenueJNI::bind(env) < 0) return -1;
   if (MxMDTickSizeTblJNI::bind(env) < 0) return -1;
 
-  if (MxMDSecurityJNI::bind(env) < 0) return -1;
+  if (MxMDInstrumentJNI::bind(env) < 0) return -1;
   if (MxMDDerivativesJNI::bind(env) < 0) return -1;
 
   if (MxMDOrderBookJNI::bind(env) < 0) return -1;
@@ -95,14 +95,14 @@ int MxMDJNI::bind(JNIEnv *env)
   if (MxMDTradeJNI::bind(env) < 0) return -1;
 
   if (MxMDLibHandlerJNI::bind(env) < 0) return -1;
-  if (MxMDSecHandlerJNI::bind(env) < 0) return -1;
+  if (MxMDInstrHandlerJNI::bind(env) < 0) return -1;
 
-  if (MxMDSecHandleJNI::bind(env) < 0) return -1;
+  if (MxMDInstrHandleJNI::bind(env) < 0) return -1;
   if (MxMDOBHandleJNI::bind(env) < 0) return -1;
 
   if (MxMDTickSizeJNI::bind(env) < 0) return -1;
   if (MxMDSegmentJNI::bind(env) < 0) return -1;
-  if (MxMDSecRefDataJNI::bind(env) < 0) return -1;
+  if (MxMDInstrRefDataJNI::bind(env) < 0) return -1;
   if (MxMDLotSizesJNI::bind(env) < 0) return -1;
   if (MxMDL1DataJNI::bind(env) < 0) return -1;
   if (MxMDOBSideDataJNI::bind(env) < 0) return -1;
@@ -120,7 +120,7 @@ void MxMDJNI::final(JNIEnv *env)
   MxMDVenueJNI::final(env);
   MxMDTickSizeTblJNI::final(env);
 
-  MxMDSecurityJNI::final(env);
+  MxMDInstrumentJNI::final(env);
   MxMDDerivativesJNI::final(env);
 
   MxMDOrderBookJNI::final(env);
@@ -131,14 +131,14 @@ void MxMDJNI::final(JNIEnv *env)
   MxMDTradeJNI::final(env);
 
   MxMDLibHandlerJNI::final(env);
-  MxMDSecHandlerJNI::final(env);
+  MxMDInstrHandlerJNI::final(env);
 
-  MxMDSecHandleJNI::final(env);
+  MxMDInstrHandleJNI::final(env);
   MxMDOBHandleJNI::final(env);
 
   MxMDTickSizeJNI::final(env);
   MxMDSegmentJNI::final(env);
-  MxMDSecRefDataJNI::final(env);
+  MxMDInstrRefDataJNI::final(env);
   MxMDLotSizesJNI::final(env);
   MxMDL1DataJNI::final(env);
   MxMDOBSideDataJNI::final(env);

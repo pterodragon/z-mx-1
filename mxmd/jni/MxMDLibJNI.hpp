@@ -69,16 +69,16 @@ namespace MxMDLibJNI {
   // () -> MxMDLibHandler
   jobject handler(JNIEnv *, jobject);
 
-  // (MxSecKey) -> MxMDSecHandle
-  jobject security(JNIEnv *, jobject, jobject);
-  // (MxSecKey, MxMDSecurityFn) -> void
-  void security(JNIEnv *, jobject, jobject, jobject);
-  // (MxMDAllSecuritiesFn) -> long
-  jlong allSecurities(JNIEnv *, jobject, jobject);
+  // (MxInstrKey) -> MxMDInstrHandle
+  jobject instrument(JNIEnv *, jobject, jobject);
+  // (MxInstrKey, MxMDInstrumentFn) -> void
+  void instrument(JNIEnv *, jobject, jobject, jobject);
+  // (MxMDAllInstrumentsFn) -> long
+  jlong allInstruments(JNIEnv *, jobject, jobject);
 
-  // (MxSecKey) -> MxMDOBHandle
+  // (MxInstrKey) -> MxMDOBHandle
   jobject orderBook(JNIEnv *, jobject, jobject);
-  // (MxSecKey, MxMDOrderBookFn) -> void
+  // (MxInstrKey, MxMDOrderBookFn) -> void
   void orderBook(JNIEnv *, jobject, jobject, jobject);
   // (MxMDAllOrderBooksFn) -> long
   jlong allOrderBooks(JNIEnv *, jobject, jobject);

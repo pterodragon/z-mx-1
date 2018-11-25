@@ -115,10 +115,10 @@ MxMDOrderBook::MxMDOrderBook( // single leg
   MxMDShard *shard, 
   MxMDVenue *venue,
   MxID segment, ZuString id,
-  MxMDSecurity *security,
+  MxMDInstrument *instrument,
   MxMDTickSizeTbl *tickSizeTbl,
   const MxMDLotSizes &lotSizes,
-  MxMDSecHandler *handler) :
+  MxMDInstrHandler *handler) :
     MxMDSharded(shard),
     m_venue(venue),
     m_venueShard(venue ? venue->shard_(shard->id()) : (MxMDVenueShard *)0),
@@ -132,16 +132,16 @@ MxMDOrderBook::MxMDOrderBook( // single leg
 {
   m_sides[0] = MxEnum();
   m_ratios[0] = MxRatio();
-  m_securities[0] = security;
-  m_l1Data.pxNDP = security->refData().pxNDP;
-  m_l1Data.qtyNDP = security->refData().qtyNDP;
+  m_instruments[0] = instrument;
+  m_l1Data.pxNDP = instrument->refData().pxNDP;
+  m_l1Data.qtyNDP = instrument->refData().qtyNDP;
 }
 
 MxMDOrderBook::MxMDOrderBook( // multi-leg
   MxMDShard *shard, 
   MxMDVenue *venue,
   MxID segment, ZuString id, MxNDP pxNDP, MxNDP qtyNDP,
-  MxUInt legs, const ZmRef<MxMDSecurity> *securities,
+  MxUInt legs, const ZmRef<MxMDInstrument> *instruments,
   const MxEnum *sides, const MxRatio *ratios,
   MxMDTickSizeTbl *tickSizeTbl,
   const MxMDLotSizes &lotSizes) :
@@ -155,7 +155,7 @@ MxMDOrderBook::MxMDOrderBook( // multi-leg
     m_asks(new MxMDOBSide(this, MxSide::Sell))
 {
   for (unsigned i = 0; i < legs; i++) {
-    m_securities[i] = securities[i];
+    m_instruments[i] = instruments[i];
     m_sides[i] = sides[i];
     m_ratios[i] = ratios[i];
   }
@@ -163,7 +163,7 @@ MxMDOrderBook::MxMDOrderBook( // multi-leg
   m_l1Data.qtyNDP = qtyNDP;
 }
 
-void MxMDOrderBook::subscribe(MxMDSecHandler *handler)
+void MxMDOrderBook::subscribe(MxMDInstrHandler *handler)
 {
   m_handler = handler;
   if (MxMDFeedOB *feedOB = this->feedOB<>())
@@ -339,7 +339,7 @@ void MxMDOrderBook::pxLevel(
 void MxMDOBSide::pxLevel_(
   MxDateTime transactTime, bool delta,
   MxValue price, MxValue qty, MxUInt nOrders, MxFlags flags,
-  const MxMDSecHandler *handler,
+  const MxMDInstrHandler *handler,
   MxValue &d_qty, MxUInt &d_nOrders,
   const MxMDPxLevelFn *&pxLevelFn,
   ZmRef<MxMDPxLevel> &pxLevel)
@@ -448,7 +448,7 @@ void MxMDFeed::dumporders(const char *op)
 
 void MxMDOBSide::addOrder_(
     MxMDOrder *order, MxDateTime transactTime,
-    const MxMDSecHandler *handler,
+    const MxMDInstrHandler *handler,
     const MxMDPxLevelFn *&pxLevelFn, ZmRef<MxMDPxLevel> &pxLevel)
 {
   const MxMDOrderData &orderData = order->data();
@@ -487,7 +487,7 @@ void MxMDOBSide::addOrder_(
 
 void MxMDOrderBook::addOrder_(
   MxMDOrder *order, MxDateTime transactTime,
-  const MxMDSecHandler *handler,
+  const MxMDInstrHandler *handler,
   const MxMDPxLevelFn *&pxLevelFn, ZmRef<MxMDPxLevel> &pxLevel)
 {
   const MxMDOrderData &orderData = order->data();
@@ -499,7 +499,7 @@ void MxMDOrderBook::addOrder_(
 
 void MxMDOBSide::delOrder_(
     MxMDOrder *order, MxDateTime transactTime,
-    const MxMDSecHandler *handler,
+    const MxMDInstrHandler *handler,
     const MxMDPxLevelFn *&pxLevelFn, ZmRef<MxMDPxLevel> &pxLevel)
 {
   const MxMDOrderData &orderData = order->data();
@@ -539,7 +539,7 @@ void MxMDOBSide::delOrder_(
 
 void MxMDOrderBook::delOrder_(
   MxMDOrder *order, MxDateTime transactTime,
-  const MxMDSecHandler *handler,
+  const MxMDInstrHandler *handler,
   const MxMDPxLevelFn *&pxLevelFn, ZmRef<MxMDPxLevel> &pxLevel)
 {
   const MxMDOrderData &orderData = order->data();
@@ -776,7 +776,7 @@ void MxMDOrderBook::cancelOrder_(MxMDOrder *order, MxDateTime transactTime)
   if (m_handler) m_handler->canceledOrder(order, transactTime);
 }
 
-void MxMDOBSide::reset(MxDateTime transactTime, const MxMDSecHandler *handler)
+void MxMDOBSide::reset(MxDateTime transactTime, const MxMDInstrHandler *handler)
 {
   const MxMDOrderFn *canceledOrder =
     handler ? &handler->canceledOrder : (const MxMDOrderFn *)0;
@@ -838,7 +838,7 @@ void MxMDOrderBook::addTrade(
   md()->addTrade(this, tradeID, transactTime, price, qty);
   if (m_handler && m_handler->addTrade) {
     ZmRef<MxMDTrade> trade = new MxMDTrade(
-	security(0), this, tradeID, transactTime, price, qty);
+	instrument(0), this, tradeID, transactTime, price, qty);
     m_handler->addTrade(trade, transactTime);
   }
 }
@@ -849,7 +849,7 @@ void MxMDOrderBook::correctTrade(
   md()->correctTrade(this, tradeID, transactTime, price, qty);
   if (m_handler && m_handler->correctedTrade) {
     ZmRef<MxMDTrade> trade = new MxMDTrade(
-	security(0), this, tradeID, transactTime, price, qty);
+	instrument(0), this, tradeID, transactTime, price, qty);
     m_handler->correctedTrade(trade, transactTime);
   }
 }
@@ -860,7 +860,7 @@ void MxMDOrderBook::cancelTrade(
   md()->cancelTrade(this, tradeID, transactTime, price, qty);
   if (m_handler && m_handler->canceledTrade) {
     ZmRef<MxMDTrade> trade = new MxMDTrade(
-	security(0), this, tradeID, transactTime, price, qty);
+	instrument(0), this, tradeID, transactTime, price, qty);
     m_handler->canceledTrade(trade, transactTime);
   }
 }
@@ -915,13 +915,13 @@ void MxMDOrderBook::map(unsigned inRank, MxMDOrderBook *outOB)
   }
 }
 
-MxMDSecurity::MxMDSecurity(MxMDShard *shard,
-    const MxSecKey &key, const MxMDSecRefData &refData) :
+MxMDInstrument::MxMDInstrument(MxMDShard *shard,
+    const MxInstrKey &key, const MxMDInstrRefData &refData) :
   MxMDSharded(shard), m_key(key), m_refData(refData)
 {
 }
 
-void MxMDSecurity::subscribe(MxMDSecHandler *handler)
+void MxMDInstrument::subscribe(MxMDInstrHandler *handler)
 {
   m_handler = handler;
   auto i = m_orderBooks.iterator();
@@ -929,7 +929,7 @@ void MxMDSecurity::subscribe(MxMDSecHandler *handler)
     if (*(ob->venueID())) ob->subscribe(handler);
 }
 
-void MxMDSecurity::unsubscribe()
+void MxMDInstrument::unsubscribe()
 {
   auto i = m_orderBooks.iterator();
   while (ZmRef<MxMDOrderBook> ob = i.iterateKey())
@@ -937,39 +937,39 @@ void MxMDSecurity::unsubscribe()
   m_handler = 0;
 }
 
-ZmRef<MxMDOrderBook> MxMDSecurity::findOrderBook_(MxID venue, MxID segment)
+ZmRef<MxMDOrderBook> MxMDInstrument::findOrderBook_(MxID venue, MxID segment)
 {
   return m_orderBooks.findKey(MxMDOrderBook::venueSegment(venue, segment));
 }
 
-ZmRef<MxMDOrderBook> MxMDSecurity::addOrderBook(const MxSecKey &key,
+ZmRef<MxMDOrderBook> MxMDInstrument::addOrderBook(const MxInstrKey &key,
     MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes,
     MxDateTime transactTime)
 {
   return md()->addOrderBook(this, key, tickSizeTbl, lotSizes, transactTime);
 }
 
-void MxMDSecurity::addOrderBook_(MxMDOrderBook *ob)
+void MxMDInstrument::addOrderBook_(MxMDOrderBook *ob)
 {
   m_orderBooks.add(ob);
 }
 
-void MxMDSecurity::delOrderBook(MxID venue, MxID segment,
+void MxMDInstrument::delOrderBook(MxID venue, MxID segment,
     MxDateTime transactTime)
 {
   md()->delOrderBook(this, venue, segment, transactTime);
 }
 
-ZmRef<MxMDOrderBook> MxMDSecurity::delOrderBook_(MxID venue, MxID segment)
+ZmRef<MxMDOrderBook> MxMDInstrument::delOrderBook_(MxID venue, MxID segment)
 {
   return m_orderBooks.delKey(MxMDOrderBook::venueSegment(venue, segment));
 }
 
-void MxMDSecurity::update(
-    const MxMDSecRefData &refData, MxDateTime transactTime)
+void MxMDInstrument::update(
+    const MxMDInstrRefData &refData, MxDateTime transactTime)
 {
-  md()->updateSecurity(this, refData, transactTime);
-  if (m_handler) m_handler->updatedSecurity(this, transactTime);
+  md()->updateInstrument(this, refData, transactTime);
+  if (m_handler) m_handler->updatedInstrument(this, transactTime);
 }
 
 MxMDVenueShard::MxMDVenueShard(MxMDVenue *venue, MxMDShard *shard) :
@@ -1040,14 +1040,14 @@ void MxMDVenue::tradingSession(MxMDSegment segment)
 
 ZmRef<MxMDOrderBook> MxMDVenueShard::addCombination(
   MxID segment, ZuString id, MxNDP pxNDP, MxNDP qtyNDP,
-  MxUInt legs, const ZmRef<MxMDSecurity> *securities,
+  MxUInt legs, const ZmRef<MxMDInstrument> *instruments,
   const MxEnum *sides, const MxRatio *ratios,
   MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes,
   MxDateTime transactTime)
 {
   return md()->addCombination(
       this, segment, id, pxNDP, qtyNDP,
-      legs, securities, sides, ratios, tickSizeTbl, lotSizes,
+      legs, instruments, sides, ratios, tickSizeTbl, lotSizes,
       transactTime);
 }
 
@@ -1071,19 +1071,19 @@ void MxMDFeed::final() { }
 void MxMDFeed::addOrderBook(MxMDOrderBook *, MxDateTime) { }
 void MxMDFeed::delOrderBook(MxMDOrderBook *, MxDateTime) { }
 
-ZmRef<MxMDSecurity> MxMDShard::addSecurity(
-    ZmRef<MxMDSecurity> sec,
-    const MxSecKey &key, const MxMDSecRefData &refData,
+ZmRef<MxMDInstrument> MxMDShard::addInstrument(
+    ZmRef<MxMDInstrument> instr,
+    const MxInstrKey &key, const MxMDInstrRefData &refData,
     MxDateTime transactTime)
 {
-  return md()->addSecurity(this, ZuMv(sec), key, refData, transactTime);
+  return md()->addInstrument(this, ZuMv(instr), key, refData, transactTime);
 }
 
-uintptr_t MxMDShard::allSecurities(ZmFn<MxMDSecurity *> fn) const
+uintptr_t MxMDShard::allInstruments(ZmFn<MxMDInstrument *> fn) const
 {
-  auto i = m_securities.readIterator();
-  while (MxMDSecurity *security = i.iterateKey())
-    if (uintptr_t v = fn(security)) return v;
+  auto i = m_instruments.readIterator();
+  while (MxMDInstrument *instrument = i.iterateKey())
+    if (uintptr_t v = fn(instrument)) return v;
   return 0;
 }
 
@@ -1095,14 +1095,14 @@ uintptr_t MxMDShard::allOrderBooks(ZmFn<MxMDOrderBook *> fn) const
   return 0;
 }
 
-uintptr_t MxMDLib::allSecurities(ZmFn<MxMDSecurity *> fn) const
+uintptr_t MxMDLib::allInstruments(ZmFn<MxMDInstrument *> fn) const
 {
   thread_local ZmSemaphore sem;
   for (unsigned i = 0, n = m_shards.length(); i < n; i++) {
     uintptr_t v;
     m_shards[i]->invoke(
 	[shard = m_shards[i], sem = &sem, &v, fn]() mutable {
-	  v = shard->allSecurities(ZuMv(fn)); sem->post(); });
+	  v = shard->allInstruments(ZuMv(fn)); sem->post(); });
     sem.wait();
     if (v) return v;
   }
@@ -1143,12 +1143,12 @@ static void exception(MxMDLib *, ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 
 MxMDLib::MxMDLib(ZmScheduler *scheduler) :
   m_scheduler(scheduler),
-  m_allSecurities(ZmHashParams().bits(12).loadFactor(1.0).cBits(4).
-    init("MxMDLib.AllSecurities")),
+  m_allInstruments(ZmHashParams().bits(12).loadFactor(1.0).cBits(4).
+    init("MxMDLib.AllInstruments")),
   m_allOrderBooks(ZmHashParams().bits(12).loadFactor(1.0).cBits(4).
     init("MxMDLib.AllOrderBooks")),
-  m_securities(ZmHashParams().bits(12).loadFactor(1.0).cBits(4).
-    init("MxMDLib.Securities")),
+  m_instruments(ZmHashParams().bits(12).loadFactor(1.0).cBits(4).
+    init("MxMDLib.Instruments")),
 #if 0
   m_feeds(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
     init("MxMDLib.Feeds")),
@@ -1317,34 +1317,34 @@ void MxMDLib::addTickSize(MxMDTickSizeTbl *tbl,
   handler()->addTickSize(tbl, MxMDTickSize{minPrice, maxPrice, tickSize});
 }
 
-ZmRef<MxMDSecurity> MxMDLib::addSecurity(
-    MxMDShard *shard, ZmRef<MxMDSecurity> sec,
-    const MxSecKey &key, const MxMDSecRefData &refData,
+ZmRef<MxMDInstrument> MxMDLib::addInstrument(
+    MxMDShard *shard, ZmRef<MxMDInstrument> instr,
+    const MxInstrKey &key, const MxMDInstrRefData &refData,
     MxDateTime transactTime)
 {
   {
     Guard guard(m_refDataLock);
-    if (sec) {
+    if (instr) {
       guard.unlock();
-      sec->update(refData, transactTime);
-      return sec;
+      instr->update(refData, transactTime);
+      return instr;
     }
-    sec = new MxMDSecurity(shard, key, refData);
-    m_allSecurities.add(sec);
-    addSecIndices(sec, refData, transactTime);
-    shard->addSecurity(sec);
+    instr = new MxMDInstrument(shard, key, refData);
+    m_allInstruments.add(instr);
+    addInstrIndices(instr, refData, transactTime);
+    shard->addInstrument(instr);
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
-      MxMDStream::addSecurity(core->broadcast(), shard->id(), transactTime,
+      MxMDStream::addInstrument(core->broadcast(), shard->id(), transactTime,
 	  key, refData);
   }
-  handler()->addSecurity(sec, transactTime);
-  return sec;
+  handler()->addInstrument(instr, transactTime);
+  return instr;
 }
 
 
-void MxMDSecurity::update_(
-    const MxMDSecRefData &refData, MxDateTime transactTime)
+void MxMDInstrument::update_(
+    const MxMDInstrRefData &refData, MxDateTime transactTime)
 {
   m_refData.tradeable.update(refData.tradeable);
   m_refData.idSrc.update(refData.idSrc);
@@ -1400,90 +1400,90 @@ void MxMDSecurity::update_(
   m_refData.adv.update(refData.adv, MxValueReset);
 }
 
-void MxMDLib::updateSecurity(
-  MxMDSecurity *security, const MxMDSecRefData &refData,
+void MxMDLib::updateInstrument(
+  MxMDInstrument *instrument, const MxMDInstrRefData &refData,
   MxDateTime transactTime)
 {
   {
     Guard guard(m_refDataLock);
 
-    MxMDSecRefData oldRefData;
+    MxMDInstrRefData oldRefData;
 
-    oldRefData = security->refData();
-    security->update_(refData, transactTime);
+    oldRefData = instrument->refData();
+    instrument->update_(refData, transactTime);
 
-    delSecIndices(security, oldRefData);
-    addSecIndices(security, security->refData(), transactTime);
+    delInstrIndices(instrument, oldRefData);
+    addInstrIndices(instrument, instrument->refData(), transactTime);
 
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
-      MxMDStream::updateSecurity(core->broadcast(), security->shard()->id(),
-	  transactTime, security->key(), refData);
+      MxMDStream::updateInstrument(core->broadcast(), instrument->shard()->id(),
+	  transactTime, instrument->key(), refData);
   }
-  handler()->updatedSecurity(security, transactTime);
+  handler()->updatedInstrument(instrument, transactTime);
 }
 
-void MxMDLib::addSecIndices(
-    MxMDSecurity *security, const MxMDSecRefData &refData,
+void MxMDLib::addInstrIndices(
+    MxMDInstrument *instrument, const MxMDInstrRefData &refData,
     MxDateTime transactTime)
 {
   if (*refData.idSrc && refData.symbol)
-    m_securities.add(
-	MxSymKey{.id = refData.symbol, .src = refData.idSrc}, security);
+    m_instruments.add(
+	MxSymKey{.id = refData.symbol, .src = refData.idSrc}, instrument);
   if (*refData.altIDSrc && refData.altSymbol)
-    m_securities.add(
-	MxSymKey{.id = refData.altSymbol, .src = refData.altIDSrc}, security);
+    m_instruments.add(
+	MxSymKey{.id = refData.altSymbol, .src = refData.altIDSrc}, instrument);
   if (*refData.underVenue && refData.underlying && *refData.mat) {
-    MxSecKey underKey{
+    MxInstrKey underKey{
       refData.underVenue, refData.underSegment, refData.underlying};
-    ZmRef<MxMDSecurity> underlying = m_allSecurities.findKey(underKey);
+    ZmRef<MxMDInstrument> underlying = m_allInstruments.findKey(underKey);
     if (!underlying) {
-      MxMDShard *shard = security->shard();
-      MxMDSecRefData underRefData{0}; // default to non-tradable
-      ZmRef<MxMDSecurity> underlying_ =
-	new MxMDSecurity(shard, underKey, underRefData);
-      m_allSecurities.add(underlying_);
-      shard->addSecurity(underlying_);
+      MxMDShard *shard = instrument->shard();
+      MxMDInstrRefData underRefData{0}; // default to non-tradable
+      ZmRef<MxMDInstrument> underlying_ =
+	new MxMDInstrument(shard, underKey, underRefData);
+      m_allInstruments.add(underlying_);
+      shard->addInstrument(underlying_);
       MxMDCore *core = static_cast<MxMDCore *>(this);
       if (ZuUnlikely(core->streaming()))
-	MxMDStream::addSecurity(core->broadcast(), shard->id(), transactTime,
+	MxMDStream::addInstrument(core->broadcast(), shard->id(), transactTime,
 	      underKey, underRefData);
       underlying = underlying_;
     }
-    security->underlying(underlying);
-    underlying->addDerivative(security);
+    instrument->underlying(underlying);
+    underlying->addDerivative(instrument);
   }
 }
 
-void MxMDLib::delSecIndices(
-    MxMDSecurity *security, const MxMDSecRefData &refData)
+void MxMDLib::delInstrIndices(
+    MxMDInstrument *instrument, const MxMDInstrRefData &refData)
 {
   if (*refData.idSrc && refData.symbol)
-    m_securities.delKey(
+    m_instruments.delKey(
 	MxSymKey{.id = refData.symbol, .src = refData.idSrc});
   if (*refData.altIDSrc && refData.altSymbol)
-    m_securities.delKey(
+    m_instruments.delKey(
 	MxSymKey{.id = refData.altSymbol, .src = refData.altIDSrc});
   if (*refData.underVenue && refData.underlying && *refData.mat)
-    if (MxMDSecurity *underlying = security->underlying()) {
-      underlying->delDerivative(security);
-      security->underlying(0);
+    if (MxMDInstrument *underlying = instrument->underlying()) {
+      underlying->delDerivative(instrument);
+      instrument->underlying(0);
     }
 }
 
-void MxMDDerivatives::add(MxMDSecurity *security)
+void MxMDDerivatives::add(MxMDInstrument *instrument)
 {
-  const MxMDSecRefData &refData = security->refData();
+  const MxMDInstrRefData &refData = instrument->refData();
   if (*refData.putCall && *refData.strike)
     m_options.add(MxOptKey{.strike = refData.strike,
-	.mat = refData.mat, .putCall = refData.putCall}, security);
+	.mat = refData.mat, .putCall = refData.putCall}, instrument);
   else
-    m_futures.add(MxFutKey{refData.mat}, security);
+    m_futures.add(MxFutKey{refData.mat}, instrument);
 }
 
-void MxMDDerivatives::del(MxMDSecurity *security)
+void MxMDDerivatives::del(MxMDInstrument *instrument)
 {
-  const MxMDSecRefData &refData = security->refData();
+  const MxMDInstrRefData &refData = instrument->refData();
   if (*refData.putCall && *refData.strike)
     m_options.delVal(MxOptKey{.strike = refData.strike,
 	.mat = refData.mat, .putCall = refData.putCall});
@@ -1491,24 +1491,24 @@ void MxMDDerivatives::del(MxMDSecurity *security)
     m_futures.delVal(MxFutKey(refData.mat));
 }
 
-uintptr_t MxMDDerivatives::allFutures(ZmFn<MxMDSecurity *> fn) const
+uintptr_t MxMDDerivatives::allFutures(ZmFn<MxMDInstrument *> fn) const
 {
   auto i = m_futures.readIterator();
-  while (MxMDSecurity *future = i.iterateVal())
+  while (MxMDInstrument *future = i.iterateVal())
     if (uintptr_t v = fn(future)) return v;
   return 0;
 }
 
-uintptr_t MxMDDerivatives::allOptions(ZmFn<MxMDSecurity *> fn) const
+uintptr_t MxMDDerivatives::allOptions(ZmFn<MxMDInstrument *> fn) const
 {
   auto i = m_options.readIterator();
-  while (MxMDSecurity *option = i.iterateVal())
+  while (MxMDInstrument *option = i.iterateVal())
     if (uintptr_t v = fn(option)) return v;
   return 0;
 }
 
 ZmRef<MxMDOrderBook> MxMDLib::addOrderBook(
-    MxMDSecurity *security, MxSecKey key,
+    MxMDInstrument *instrument, MxInstrKey key,
     MxMDTickSizeTbl *tickSizeTbl, MxMDLotSizes lotSizes,
     MxDateTime transactTime)
 {
@@ -1524,7 +1524,7 @@ ZmRef<MxMDOrderBook> MxMDLib::addOrderBook(
 loop:
   {
     Guard guard(m_refDataLock);
-    if (ob = security->findOrderBook_(key.venue, key.segment)) {
+    if (ob = instrument->findOrderBook_(key.venue, key.segment)) {
       guard.unlock();
       if (!newOB) ob->update(tickSizeTbl, lotSizes, transactTime);
       goto added;
@@ -1538,17 +1538,17 @@ loop:
       return newOB;
     }
     ob = new MxMDOrderBook(
-      security->shard(), venue,
-      key.segment, key.id, security, tickSizeTbl, lotSizes,
-      security->handler());
+      instrument->shard(), venue,
+      key.segment, key.id, instrument, tickSizeTbl, lotSizes,
+      instrument->handler());
     m_allOrderBooks.add(ob);
     ob->shard()->addOrderBook(ob);
-    ob->security()->addOrderBook_(ob);
+    ob->instrument()->addOrderBook_(ob);
     ob->venue()->feed()->addOrderBook(ob, transactTime);
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::addOrderBook(core->broadcast(), ob->shard()->id(),
-	  transactTime, key, security->key(), tickSizeTbl->id(),
+	  transactTime, key, instrument->key(), tickSizeTbl->id(),
 	  ob->qtyNDP(), ob->lotSizes());
   }
   handler()->addOrderBook(ob, transactTime);
@@ -1560,7 +1560,7 @@ added:
   }
   if (MxMDVenueMapping mapping =
       venueMapping(MxMDVenueMapKey(key.venue, key.segment))) {
-    key.id = security->id();
+    key.id = instrument->id();
     key.venue = mapping.venue;
     key.segment = mapping.segment;
     tickSizeTbl = 0;
@@ -1575,7 +1575,7 @@ added:
 ZmRef<MxMDOrderBook> MxMDLib::addCombination(
     MxMDVenueShard *venueShard, MxID segment, ZuString id,
     MxNDP pxNDP, MxNDP qtyNDP,
-    MxUInt legs, const ZmRef<MxMDSecurity> *securities,
+    MxUInt legs, const ZmRef<MxMDInstrument> *instruments,
     const MxEnum *sides, const MxRatio *ratios,
     MxMDTickSizeTbl *tickSizeTbl, const MxMDLotSizes &lotSizes,
     MxDateTime transactTime)
@@ -1586,25 +1586,25 @@ ZmRef<MxMDOrderBook> MxMDLib::addCombination(
   {
     Guard guard(m_refDataLock);
     if (ob = m_allOrderBooks.findKey(
-	  MxSecKey{.id = id, .venue = venue->id(), .segment = segment})) {
+	  MxInstrKey{.id = id, .venue = venue->id(), .segment = segment})) {
       guard.unlock();
       ob->update(tickSizeTbl, lotSizes, transactTime);
       return ob;
     }
     ob = new MxMDOrderBook(shard, venue,
-      segment, id, pxNDP, qtyNDP, legs, securities, sides, ratios,
+      segment, id, pxNDP, qtyNDP, legs, instruments, sides, ratios,
       tickSizeTbl, lotSizes);
     m_allOrderBooks.add(ob);
     shard->addOrderBook(ob);
     venue->feed()->addOrderBook(ob, transactTime);
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming())) {
-      MxSecKey securityKeys[MxMDNLegs];
+      MxInstrKey instrumentKeys[MxMDNLegs];
       for (unsigned i = 0; i < legs; i++)
-	securityKeys[i] = securities[i]->key();
+	instrumentKeys[i] = instruments[i]->key();
       MxMDStream::addCombination(core->broadcast(), shard->id(),
 	  transactTime, ob->key(), pxNDP, qtyNDP,
-	  legs, securityKeys, sides, ratios, tickSizeTbl->id(), lotSizes);
+	  legs, instrumentKeys, sides, ratios, tickSizeTbl->id(), lotSizes);
     }
   }
   handler()->addOrderBook(ob, transactTime);
@@ -1627,16 +1627,16 @@ void MxMDLib::updateOrderBook(
 }
 
 void MxMDLib::delOrderBook(
-    MxMDSecurity *security, MxID venue, MxID segment,
+    MxMDInstrument *instrument, MxID venue, MxID segment,
     MxDateTime transactTime)
 {
   ZmRef<MxMDOrderBook> ob;
   {
     Guard guard(m_refDataLock);
-    ob = security->delOrderBook_(venue, segment);
+    ob = instrument->delOrderBook_(venue, segment);
     if (!ob) return;
     m_allOrderBooks.delKey(
-	MxSecKey{.id = ob->id(), .venue = venue, .segment = segment});
+	MxInstrKey{.id = ob->id(), .venue = venue, .segment = segment});
     ob->shard()->delOrderBook(ob);
     ob->venue()->feed()->delOrderBook(ob, transactTime);
     MxMDCore *core = static_cast<MxMDCore *>(this);
@@ -1658,7 +1658,7 @@ void MxMDLib::delCombination(
   {
     Guard guard(m_refDataLock);
     ob = m_allOrderBooks.delKey(
-	MxSecKey{.id = id, .venue = venue->id(), .segment = segment});
+	MxInstrKey{.id = id, .venue = venue->id(), .segment = segment});
     if (!ob) return;
     shard->delOrderBook(ob);
     venue->feed()->delOrderBook(ob, transactTime);
@@ -1798,15 +1798,15 @@ ZtString MxMDLib::lookupOptions()
     "    -m, --maturity=MAT\t- maturity (YYYYMMDD - DD is normally 00)\n"
     "    -p, --put\t\t- put option\n"
     "    -c, --call\t\t- call option\n"
-    "    -x, --strike\t- strike price (as integer, per security convention)\n";
+    "    -x, --strike\t- strike price (as integer, per instrument convention)\n";
 }
 
-MxUniKey MxMDLib::parseSecurity(ZvCf *args, unsigned index) const
+MxUniKey MxMDLib::parseInstrument(ZvCf *args, unsigned index) const
 {
   MxUniKey key;
   key.id = args->get(ZuStringN<16>(ZuBoxed(index)));
   if (ZtString src_ = args->get("src")) {
-    key.src = MxSecIDSrc::lookup(src_);
+    key.src = MxInstrIDSrc::lookup(src_);
   } else {
     key.venue = args->get("venue", true);
     key.segment = args->get("segment");
@@ -1832,17 +1832,17 @@ MxUniKey MxMDLib::parseSecurity(ZvCf *args, unsigned index) const
   return key;
 }
 
-bool MxMDLib::lookupSecurity(
-    const MxUniKey &key, bool secRequired, ZmFn<MxMDSecurity *> fn) const
+bool MxMDLib::lookupInstrument(
+    const MxUniKey &key, bool instrRequired, ZmFn<MxMDInstrument *> fn) const
 {
   bool ok = true;
   thread_local ZmSemaphore sem;
-  secInvoke(key, [secRequired, sem = &sem, &ok, fn = ZuMv(fn)](
-	MxMDSecurity *sec) {
-      if (secRequired && ZuUnlikely(!sec))
+  instrInvoke(key, [instrRequired, sem = &sem, &ok, fn = ZuMv(fn)](
+	MxMDInstrument *instr) {
+      if (instrRequired && ZuUnlikely(!instr))
 	ok = false;
       else
-	ok = fn(sec);
+	ok = fn(instr);
       sem->post();
     });
   sem.wait();
@@ -1851,7 +1851,7 @@ bool MxMDLib::lookupSecurity(
 
 MxUniKey MxMDLib::parseOrderBook(ZvCf *args, unsigned index) const
 {
-  MxUniKey key{parseSecurity(args, index)};
+  MxUniKey key{parseInstrument(args, index)};
   if (*key.src) {
     key.venue = args->get("venue", true);
     key.segment = args->get("segment");
@@ -1861,15 +1861,15 @@ MxUniKey MxMDLib::parseOrderBook(ZvCf *args, unsigned index) const
 
 bool MxMDLib::lookupOrderBook(
     const MxUniKey &key,
-    bool secRequired, bool obRequired,
-    ZmFn<MxMDSecurity *, MxMDOrderBook *> fn) const
+    bool instrRequired, bool obRequired,
+    ZmFn<MxMDInstrument *, MxMDOrderBook *> fn) const
 {
-  return lookupSecurity(key, secRequired || obRequired,
-      [key = key, obRequired, fn = ZuMv(fn)](MxMDSecurity *sec) -> bool {
-    ZmRef<MxMDOrderBook> ob = sec->orderBook(key.venue, key.segment);
+  return lookupInstrument(key, instrRequired || obRequired,
+      [key = key, obRequired, fn = ZuMv(fn)](MxMDInstrument *instr) -> bool {
+    ZmRef<MxMDOrderBook> ob = instr->orderBook(key.venue, key.segment);
     if (obRequired && ZuUnlikely(!ob))
       return false;
     else
-      return fn(sec, ob);
+      return fn(instr, ob);
   });
 }

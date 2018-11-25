@@ -27,87 +27,87 @@
 
 #include <MxMD.hpp>
 
-#include <MxMDSecurityJNI.hpp>
+#include <MxMDInstrumentJNI.hpp>
 
-#include <MxMDSecHandleJNI.hpp>
+#include <MxMDInstrHandleJNI.hpp>
 
-namespace MxMDSecHandleJNI {
+namespace MxMDInstrHandleJNI {
   jclass	class_;
 
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(J)V" } };
   ZJNI::JavaField ptrField[] = { { "ptr", "J" } };
 
   // invoke fn
-  ZJNI::JavaMethod securityFn[] = {
-    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;)V" }
+  ZJNI::JavaMethod instrumentFn[] = {
+    { "fn", "(Lcom/shardmx/mxmd/MxMDInstrument;)V" }
   };
 }
 
-void MxMDSecHandleJNI::ctor_(JNIEnv *env, jobject obj, jlong)
+void MxMDInstrHandleJNI::ctor_(JNIEnv *env, jobject obj, jlong)
 {
   // (long) -> void
 }
 
-void MxMDSecHandleJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
+void MxMDInstrHandleJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
-  MxMDSecHandle *ZuMayAlias(ptr) = (MxMDSecHandle *)&ptr_;
-  ptr->~MxMDSecHandle();
+  MxMDInstrHandle *ZuMayAlias(ptr) = (MxMDInstrHandle *)&ptr_;
+  ptr->~MxMDInstrHandle();
 }
 
-void MxMDSecHandleJNI::invoke(JNIEnv *env, jobject obj, jobject fn)
+void MxMDInstrHandleJNI::invoke(JNIEnv *env, jobject obj, jobject fn)
 {
-  // (MxMDSecurityFn) -> void
+  // (MxMDInstrumentFn) -> void
   if (!fn) return;
   uintptr_t ptr_ = env->GetLongField(obj, ptrField[0].fid);
-  MxMDSecHandle *ZuMayAlias(ptr) = (MxMDSecHandle *)&ptr_;
+  MxMDInstrHandle *ZuMayAlias(ptr) = (MxMDInstrHandle *)&ptr_;
   ptr->invoke(
-      [fn = ZJNI::globalRef(env, fn)](MxMDShard *, MxMDSecurity *sec) {
+      [fn = ZJNI::globalRef(env, fn)](MxMDShard *, MxMDInstrument *instr) {
     if (JNIEnv *env = ZJNI::env())
-      env->CallVoidMethod(fn, securityFn[0].mid,
-	  MxMDSecurityJNI::ctor(env, sec));
+      env->CallVoidMethod(fn, instrumentFn[0].mid,
+	  MxMDInstrumentJNI::ctor(env, instr));
   });
 }
 
-jobject MxMDSecHandleJNI::ctor(JNIEnv *env, MxMDSecHandle handle)
+jobject MxMDInstrHandleJNI::ctor(JNIEnv *env, MxMDInstrHandle handle)
 {
   uintptr_t ptr_;
-  MxMDSecHandle *ZuMayAlias(ptr) = (MxMDSecHandle *)&ptr_;
-  new (ptr) MxMDSecHandle(ZuMv(handle));
+  MxMDInstrHandle *ZuMayAlias(ptr) = (MxMDInstrHandle *)&ptr_;
+  new (ptr) MxMDInstrHandle(ZuMv(handle));
   return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
 }
 
-int MxMDSecHandleJNI::bind(JNIEnv *env)
+int MxMDInstrHandleJNI::bind(JNIEnv *env)
 {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
     { "ctor_",
       "(J)V",
-      (void *)&MxMDSecHandleJNI::ctor_ },
+      (void *)&MxMDInstrHandleJNI::ctor_ },
     { "dtor_",
       "(J)V",
-      (void *)&MxMDSecHandleJNI::dtor_ },
+      (void *)&MxMDInstrHandleJNI::dtor_ },
     { "invoke",
-      "(Lcom/shardmx/mxmd/MxMDSecurityFn;)V",
-      (void *)&MxMDSecHandleJNI::invoke }
+      "(Lcom/shardmx/mxmd/MxMDInstrumentFn;)V",
+      (void *)&MxMDInstrHandleJNI::invoke }
   };
 #pragma GCC diagnostic pop
 
-  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDSecHandle");
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDInstrHandle");
   if (ZJNI::bind(env, class_,
         methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
 
   if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
   if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
 
-  if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDSecurityFn",
-	securityFn, 1) < 0) return -1;
+  if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDInstrumentFn",
+	instrumentFn, 1) < 0) return -1;
 
   return 0;
 }
 
-void MxMDSecHandleJNI::final(JNIEnv *env)
+void MxMDInstrHandleJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
 }

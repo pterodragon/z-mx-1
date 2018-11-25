@@ -6,9 +6,9 @@ import javax.annotation.Nullable;
 import com.shardmx.mxbase.*;
 
 @Value.Immutable @MxTuple
-public abstract class MxMDSecHandler {
+public abstract class MxMDInstrHandler {
   @Value.Default @Nullable
-  public MxMDSecEventFn		updatedSecurity() { return null; }
+  public MxMDInstrEventFn		updatedInstrument() { return null; }
   @Value.Default @Nullable
   public MxMDOBEventFn		updatedOrderBook() { return null; }
   @Value.Default @Nullable

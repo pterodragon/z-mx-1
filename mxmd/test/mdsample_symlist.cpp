@@ -50,7 +50,7 @@ void l1(MxMDOrderBook *ob, const MxMDL1Data &)
   const MxMDL1Data &l1 = ob->l1Data();
   MxMDFlagsStr flags;
   MxMDL1Flags::print(flags, ob->venueID(), l1.flags);
-  std::cout << ob->security()->id() <<
+  std::cout << ob->instrument()->id() <<
     " stamp: " <<
       ZuBox<unsigned>(l1.stamp.hhmmss()).fmt(Right<6>()) << '.' <<
 	ZuBox<unsigned>(l1.stamp.nsec()).fmt(Right<9>()) <<
@@ -112,13 +112,13 @@ void refDataLoaded(MxMDVenue *venue)
   std::cout << "reference data loaded for " << venue->id() << '\n';
 }
 
-static ZmRef<MxMDSecHandler> secHandler;
+static ZmRef<MxMDInstrHandler> instrHandler;
 
-void addSecurity(MxMDSecurity *security, MxDateTime)
+void addInstrument(MxMDInstrument *instrument, MxDateTime)
 {
   if (!syms) return;
-  if (!syms->findKey(security->refData().symbol)) return;
-  security->subscribe(secHandler);
+  if (!syms->findKey(instrument->refData().symbol)) return;
+  instrument->subscribe(instrHandler);
 }
 
 int main(int argc, char **argv)
@@ -126,7 +126,7 @@ int main(int argc, char **argv)
   if (argc != 3) usage();
 
   syms = new Syms();
-  (secHandler = new MxMDSecHandler())->
+  (instrHandler = new MxMDInstrHandler())->
     l1Fn(MxMDLevel1Fn::Ptr<&l1>::fn()).
     addPxLevelFn(MxMDPxLevelFn::Ptr<&pxLevel>::fn()).
     updatedPxLevelFn(MxMDPxLevelFn::Ptr<&pxLevel>::fn()).
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
     md->subscribe(&((new MxMDLibHandler())->
 	exceptionFn(MxMDExceptionFn::Ptr<&exception>::fn()).
 	refDataLoadedFn(MxMDVenueFn::Ptr<&refDataLoaded>::fn()).
-	addSecurityFn(MxMDSecurityFn::Ptr<&addSecurity>::fn())));
+	addInstrumentFn(MxMDInstrumentFn::Ptr<&addInstrument>::fn())));
 
     md->start();			// start all feeds
 

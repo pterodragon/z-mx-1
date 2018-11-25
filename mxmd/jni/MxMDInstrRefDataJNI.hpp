@@ -17,26 +17,27 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// MxBase JNI
+// MxMD JNI
 
-#ifndef MxSecKeyJNI_HPP
-#define MxSecKeyJNI_HPP
+#ifndef MxMDInstrRefDataJNI_HPP
+#define MxMDInstrRefDataJNI_HPP
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#ifndef MxMDLib_HPP
+#include <MxMDLib.hpp>
 #endif
 
-#include <MxBase.hpp>
+#include <jni.h>
 
-namespace MxSecKeyJNI {
-  MxSecKey j2c(JNIEnv *, jobject);
-  jobject ctor(JNIEnv *, const MxSecKey &key);
+#include <MxMD.hpp>
+
+namespace MxMDInstrRefDataJNI {
+  jobject ctor(JNIEnv *, const MxMDInstrRefData &data);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }
 
-#endif /* MxSecKeyJNI_HPP */
+#endif /* MxMDInstrRefDataJNI_HPP */

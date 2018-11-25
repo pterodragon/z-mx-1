@@ -57,17 +57,17 @@ void refDataLoaded(MxMDVenue *venue)
 {
   MxMDLib *md = venue->md();
   md->dumpTickSizes(MxTxtString() << venue->id() << "_tickSizes.csv");
-  md->dumpSecurities(MxTxtString() << venue->id() << "_securities.csv");
+  md->dumpInstruments(MxTxtString() << venue->id() << "_instruments.csv");
   md->dumpOrderBooks(MxTxtString() << venue->id() << "_orderBooks.csv");
 }
 
-static ZmRef<MxMDSecHandler> secHandler;
+static ZmRef<MxMDInstrHandler> instrHandler;
 
-void addSecurity(MxMDSecurity *security, MxDateTime)
+void addInstrument(MxMDInstrument *instrument, MxDateTime)
 {
   if (!syms) return;
-  if (!syms->findKey(security->refData().symbol)) return;
-  security->subscribe(secHandler);
+  if (!syms->findKey(instrument->refData().symbol)) return;
+  instrument->subscribe(instrHandler);
 }
 
 int main(int argc, char **argv)
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
   if (!argv[1] || !argv[2]) usage();
 
   syms = new Syms();
-  (secHandler = new MxMDSecHandler())->
+  (instrHandler = new MxMDInstrHandler())->
     l1Fn(MxMDLevel1Fn::Ptr<&l1>::fn()).
     l2Fn(MxMDOrderBookFn::Ptr<&l2>::fn());
 
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
     md->subscribe(&((new MxMDLibHandler())->
 	exceptionFn(MxMDExceptionFn::Ptr<&exception>::fn()).
 	refDataLoadedFn(MxMDVenueFn::Ptr<&refDataLoaded>::fn()).
-	addSecurityFn(MxMDSecurityFn::Ptr<&addSecurity>::fn())));
+	addInstrumentFn(MxMDInstrumentFn::Ptr<&addInstrument>::fn())));
 
     md->record(argv[2]);		// start recording
     md->start();			// start all feeds

@@ -19,8 +19,8 @@
 
 // MxMD JNI
 
-#ifndef MxMDSecHandleJNI_HPP
-#define MxMDSecHandleJNI_HPP
+#ifndef MxMDInstrumentJNI_HPP
+#define MxMDInstrumentJNI_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -34,18 +34,55 @@
 
 #include <MxMD.hpp>
 
-namespace MxMDSecHandleJNI {
+namespace MxMDInstrumentJNI {
   // (long) -> void
   void ctor_(JNIEnv *, jobject, jlong);
   // (long) -> void
   void dtor_(JNIEnv *, jobject, jlong);
 
-  // (MxMDSecurityFn) -> void
-  void invoke(JNIEnv *, jobject, jobject);
+  // () -> MxMDLib
+  jobject md(JNIEnv *, jobject);
 
-  jobject ctor(JNIEnv *, MxMDSecHandle);
+  // () -> String
+  jstring primaryVenue(JNIEnv *, jobject);
+
+  // () -> String
+  jstring primarySegment(JNIEnv *, jobject);
+
+  // () -> String
+  jstring id(JNIEnv *, jobject);
+
+  // () -> MxInstrKey
+  jobject key(JNIEnv *, jobject);
+
+  // () -> MxMDInstrRefData
+  jobject refData(JNIEnv *, jobject);
+
+  // () -> MxMDInstrument
+  jobject underlying(JNIEnv *, jobject);
+
+  // () -> MxMDDerivatives
+  jobject derivatives(JNIEnv *, jobject);
+
+  // (MxMDInstrHandler) -> void
+  void subscribe(JNIEnv *, jobject, jobject);
+  // () -> void
+  void unsubscribe(JNIEnv *, jobject);
+  // () -> MxMDInstrHandler
+  jobject handler(JNIEnv *, jobject);
+
+  // (String) -> MxMDOrderBook
+  jobject orderBook(JNIEnv *, jobject, jstring);
+
+  // (String, String) -> MxMDOrderBook
+  jobject orderBook(JNIEnv *, jobject, jstring, jstring);
+
+  // (MxMDAllOrderBooksFn) -> long
+  jlong allOrderBooks(JNIEnv *, jobject, jobject);
+
+  jobject ctor(JNIEnv *, ZmRef<MxMDInstrument>);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }
 
-#endif /* MxMDSecHandleJNI_HPP */
+#endif /* MxMDInstrumentJNI_HPP */

@@ -12,11 +12,11 @@ public class MxMDDerivatives implements AutoCloseable {
 
   // methods
 
-  public native MxMDSecurity future(MxFutKey key);
-  public native long allFutures(MxMDAllSecuritiesFn fn); 
+  public native MxMDInstrument future(MxFutKey key);
+  public native long allFutures(MxMDAllInstrumentsFn fn); 
 
-  public native MxMDSecurity option(MxOptKey key);
-  public native long allOptions(MxMDAllSecuritiesFn fn); 
+  public native MxMDInstrument option(MxOptKey key);
+  public native long allOptions(MxMDAllInstrumentsFn fn); 
  
   // data members
 

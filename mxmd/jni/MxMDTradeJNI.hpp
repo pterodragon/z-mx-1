@@ -40,8 +40,8 @@ namespace MxMDTradeJNI {
   // (long) -> void
   void dtor_(JNIEnv *, jobject, jlong);
 
-  // () -> MxMDSecurity
-  jobject security(JNIEnv *, jobject);
+  // () -> MxMDInstrument
+  jobject instrument(JNIEnv *, jobject);
 
   // () -> MxMDOrderBook
   jobject orderBook(JNIEnv *, jobject);

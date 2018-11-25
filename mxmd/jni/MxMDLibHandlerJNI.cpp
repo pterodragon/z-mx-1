@@ -30,7 +30,7 @@
 #include <MxMDVenueJNI.hpp>
 #include <MxMDTickSizeTblJNI.hpp>
 
-#include <MxMDSecurityJNI.hpp>
+#include <MxMDInstrumentJNI.hpp>
 #include <MxMDOrderBookJNI.hpp>
 
 #include <MxMDTickSizeJNI.hpp>
@@ -73,13 +73,13 @@ namespace MxMDLibHandlerJNI {
     { "fn", "(Lcom/shardmx/mxmd/MxMDTickSizeTbl;"
 	"Lcom/shardmx/mxmd/MxMDTickSize;)V" }
   };
-  ZJNI::JavaMethod addSecurityFn[] = {
-    { "addSecurity", "()Lcom/shardmx/mxmd/MxMDSecEventFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;Ljava/time/Instant;)V" }
+  ZJNI::JavaMethod addInstrumentFn[] = {
+    { "addInstrument", "()Lcom/shardmx/mxmd/MxMDInstrEventFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDInstrument;Ljava/time/Instant;)V" }
   };
-  ZJNI::JavaMethod updatedSecurityFn[] = {
-    { "updatedSecurity", "()Lcom/shardmx/mxmd/MxMDSecEventFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDSecurity;Ljava/time/Instant;)V" }
+  ZJNI::JavaMethod updatedInstrumentFn[] = {
+    { "updatedInstrument", "()Lcom/shardmx/mxmd/MxMDInstrEventFn;" },
+    { "fn", "(Lcom/shardmx/mxmd/MxMDInstrument;Ljava/time/Instant;)V" }
   };
   ZJNI::JavaMethod addOrderBookFn[] = {
     { "addOrderBook", "()Lcom/shardmx/mxmd/MxMDOBEventFn;" },
@@ -152,12 +152,12 @@ ZmRef<MxMDLibHandler> MxMDLibHandlerJNI::j2c(JNIEnv *env, jobject handler_)
       MxMDTickSizeTbl *tbl, const MxMDTickSize &ts,
       MxMDTickSizeTblJNI::ctor(env, tbl),
       MxMDTickSizeJNI::ctor(env, ts));
-  lambda2(addSecurity,
-      MxMDSecurity *sec, MxDateTime stamp,
-      MxMDSecurityJNI::ctor(env, sec), ZJNI::t2j(env, stamp));
-  lambda2(updatedSecurity,
-      MxMDSecurity *sec, MxDateTime stamp,
-      MxMDSecurityJNI::ctor(env, sec), ZJNI::t2j(env, stamp));
+  lambda2(addInstrument,
+      MxMDInstrument *instr, MxDateTime stamp,
+      MxMDInstrumentJNI::ctor(env, instr), ZJNI::t2j(env, stamp));
+  lambda2(updatedInstrument,
+      MxMDInstrument *instr, MxDateTime stamp,
+      MxMDInstrumentJNI::ctor(env, instr), ZJNI::t2j(env, stamp));
   lambda2(addOrderBook,
       MxMDOrderBook *ob, MxDateTime stamp,
       MxMDOrderBookJNI::ctor(env, ob), ZJNI::t2j(env, stamp));
@@ -212,8 +212,8 @@ int MxMDLibHandlerJNI::bind(JNIEnv *env)
   if (bindHandlerFn(env, c, addTickSizeTblFn) < 0) return -1;
   if (bindHandlerFn(env, c, resetTickSizeTblFn) < 0) return -1;
   if (bindHandlerFn(env, c, addTickSizeFn) < 0) return -1;
-  if (bindHandlerFn(env, c, addSecurityFn) < 0) return -1;
-  if (bindHandlerFn(env, c, updatedSecurityFn) < 0) return -1;
+  if (bindHandlerFn(env, c, addInstrumentFn) < 0) return -1;
+  if (bindHandlerFn(env, c, updatedInstrumentFn) < 0) return -1;
   if (bindHandlerFn(env, c, addOrderBookFn) < 0) return -1;
   if (bindHandlerFn(env, c, updatedOrderBookFn) < 0) return -1;
   if (bindHandlerFn(env, c, deletedOrderBookFn) < 0) return -1;

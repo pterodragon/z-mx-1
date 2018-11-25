@@ -38,12 +38,12 @@ public class MxMDLib {
   public native void unsubscribe();
   public native MxMDLibHandler handler();
 
-  public native MxMDSecHandle security(MxSecKey key);
-  public native void security(MxSecKey key, MxMDSecurityFn fn);
-  public native long allSecurities(MxMDAllSecuritiesFn fn);
+  public native MxMDInstrHandle instrument(MxInstrKey key);
+  public native void instrument(MxInstrKey key, MxMDInstrumentFn fn);
+  public native long allInstruments(MxMDAllInstrumentsFn fn);
 
-  public native MxMDOBHandle orderBook(MxSecKey key);
-  public native void orderBook(MxSecKey key, MxMDOrderBookFn fn);
+  public native MxMDOBHandle orderBook(MxInstrKey key);
+  public native void orderBook(MxInstrKey key, MxMDOrderBookFn fn);
   public native long allOrderBooks(MxMDAllOrderBooksFn fn);
 
   public native MxMDFeed feed(String id);

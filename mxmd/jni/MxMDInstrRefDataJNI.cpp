@@ -25,17 +25,17 @@
 
 #include <ZJNI.hpp>
 
-#include <MxMDSecRefDataJNI.hpp>
+#include <MxMDInstrRefDataJNI.hpp>
 
-namespace MxMDSecRefDataJNI {
+namespace MxMDInstrRefDataJNI {
   jclass	class_;
 
-  // MxMDSecRefDataTuple named constructor
+  // MxMDInstrRefDataTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
     { "of",
       "(Z"				// tradeable
-      "Lcom/shardmx/mxbase/MxSecIDSrc;"	// idSrc
-      "Lcom/shardmx/mxbase/MxSecIDSrc;"	// altIDSrc
+      "Lcom/shardmx/mxbase/MxInstrIDSrc;"	// idSrc
+      "Lcom/shardmx/mxbase/MxInstrIDSrc;"	// altIDSrc
       "Lcom/shardmx/mxbase/MxPutCall;"	// putCall
       "Ljava/lang/String;"		// symbol
       "Ljava/lang/String;"		// altSymbol
@@ -48,15 +48,15 @@ namespace MxMDSecRefDataJNI {
       "J"				// strike
       "J"				// outstandingShares
       "J"				// adv
-      ")Lcom/shardmx/mxmd/MxMDSecRefDataTuple;"
+      ")Lcom/shardmx/mxmd/MxMDInstrRefDataTuple;"
     }
   };
 
   jclass	sisClass;
 
-  // MxSecIDSrc named constructor
+  // MxInstrIDSrc named constructor
   ZJNI::JavaMethod sisMethod[] = {
-    { "value", "(I)Lcom/shardmx/mxbase/MxSecIDSrc;" }
+    { "value", "(I)Lcom/shardmx/mxbase/MxInstrIDSrc;" }
   };
 
   jclass	pcClass;
@@ -67,7 +67,7 @@ namespace MxMDSecRefDataJNI {
   };
 }
 
-jobject MxMDSecRefDataJNI::ctor(JNIEnv *env, const MxMDSecRefData &data)
+jobject MxMDInstrRefDataJNI::ctor(JNIEnv *env, const MxMDInstrRefData &data)
 {
   return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
       (jboolean)data.tradeable,
@@ -90,13 +90,13 @@ jobject MxMDSecRefDataJNI::ctor(JNIEnv *env, const MxMDSecRefData &data)
       (jlong)data.adv);
 }
 
-int MxMDSecRefDataJNI::bind(JNIEnv *env)
+int MxMDInstrRefDataJNI::bind(JNIEnv *env)
 {
-  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDSecRefDataTuple");
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDInstrRefDataTuple");
   if (!class_) return -1;
   if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
 
-  sisClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxSecIDSrc");
+  sisClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxInstrIDSrc");
   if (!sisClass) return -1;
   if (ZJNI::bindStatic(env, sisClass, sisMethod, 1) < 0) return -1;
 
@@ -107,7 +107,7 @@ int MxMDSecRefDataJNI::bind(JNIEnv *env)
   return 0;
 }
 
-void MxMDSecRefDataJNI::final(JNIEnv *env)
+void MxMDInstrRefDataJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
   if (sisClass) env->DeleteGlobalRef(sisClass);

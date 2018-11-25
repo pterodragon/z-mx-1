@@ -23,7 +23,7 @@
 
 #include <ZJNI.hpp>
 
-#include <MxSecKeyJNI.hpp>
+#include <MxInstrKeyJNI.hpp>
 #include <MxFutKeyJNI.hpp>
 #include <MxOptKeyJNI.hpp>
 
@@ -48,7 +48,7 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
 
 int MxBaseJNI::bind(JNIEnv *env)
 {
-  if (MxSecKeyJNI::bind(env) < 0) return -1;
+  if (MxInstrKeyJNI::bind(env) < 0) return -1;
   if (MxFutKeyJNI::bind(env) < 0) return -1;
   if (MxOptKeyJNI::bind(env) < 0) return -1;
 
@@ -57,7 +57,7 @@ int MxBaseJNI::bind(JNIEnv *env)
 
 void MxBaseJNI::final(JNIEnv *env)
 {
-  MxSecKeyJNI::final(env);
+  MxInstrKeyJNI::final(env);
   MxFutKeyJNI::final(env);
   MxOptKeyJNI::final(env);
   

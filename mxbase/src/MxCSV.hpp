@@ -191,7 +191,7 @@ public:
     add(new MxIDCol("segment", Offset(segment)));
     add(new RawValueCol("strike", Offset(strike)));
     add(new MxUIntCol("mat", Offset(mat)));
-    add(new MxEnumCol<MxSecIDSrc::CSVMap>("src", Offset(src)));
+    add(new MxEnumCol<MxInstrIDSrc::CSVMap>("src", Offset(src)));
     add(new MxEnumCol<MxPutCall::CSVMap>("putCall", Offset(putCall)));
   }
 

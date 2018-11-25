@@ -6,12 +6,12 @@ import javax.annotation.Nullable;
 import com.shardmx.mxbase.*;
 
 @Value.Immutable @MxTuple
-public abstract class MxMDSecRefData {
+public abstract class MxMDInstrRefData {
   @Value.Default
   public boolean tradeable() { return true; }
-  public abstract MxSecIDSrc idSrc();
+  public abstract MxInstrIDSrc idSrc();
   @Value.Default @Nullable
-  public MxSecIDSrc altIDSrc() { return MxSecIDSrc.NULL; }
+  public MxInstrIDSrc altIDSrc() { return MxInstrIDSrc.NULL; }
   @Value.Default @Nullable
   public MxPutCall putCall() { return MxPutCall.NULL; }
   public abstract String symbol();

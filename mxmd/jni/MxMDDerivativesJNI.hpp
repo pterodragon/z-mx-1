@@ -40,16 +40,16 @@ namespace MxMDDerivativesJNI {
   // (long) -> void
   void dtor_(JNIEnv *, jobject, jlong);
 
-  // (MxFutKey) -> MxMDSecurity
+  // (MxFutKey) -> MxMDInstrument
   jobject future(JNIEnv *, jobject, jobject);
 
-  // (MxMDAllSecuritiesFn) -> long
+  // (MxMDAllInstrumentsFn) -> long
   jlong allFutures(JNIEnv *, jobject, jobject);
 
-  // (MxOptKey) -> MxMDSecurity
+  // (MxOptKey) -> MxMDInstrument
   jobject option(JNIEnv *, jobject, jobject);
 
-  // (MxMDAllSecuritiesFn) -> long
+  // (MxMDAllInstrumentsFn) -> long
   jlong allOptions(JNIEnv *, jobject, jobject);
 
   jobject ctor(JNIEnv *, ZmRef<MxMDDerivatives>);

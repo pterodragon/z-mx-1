@@ -75,7 +75,7 @@ namespace MxMDStream {
     MxEnumValues(
 	AddTickSizeTbl, ResetTickSizeTbl, AddTickSize,
 	TradingSession,
-	AddSecurity, UpdateSecurity,
+	AddInstrument, UpdateInstrument,
 	AddOrderBook, DelOrderBook,
 	AddCombination, DelCombination,
 	UpdateOrderBook,
@@ -95,7 +95,7 @@ namespace MxMDStream {
     MxEnumNames(
 	"AddTickSizeTbl", "ResetTickSizeTbl", "AddTickSize",
 	"TradingSession",
-	"AddSecurity", "UpdateSecurity",
+	"AddInstrument", "UpdateInstrument",
 	"AddOrderBook", "DelOrderBook",
 	"AddCombination", "DelCombination",
 	"UpdateOrderBook",
@@ -180,7 +180,7 @@ namespace MxMDStream {
     }
   };
 
-  typedef MxSecKey Key;
+  typedef MxInstrKey Key;
 
   struct AddTickSizeTbl {
     enum { Code = Type::AddTickSizeTbl };
@@ -213,25 +213,25 @@ namespace MxMDStream {
     MxEnum		session;
   };
 
-  struct AddSecurity {
-    enum { Code = Type::AddSecurity };
+  struct AddInstrument {
+    enum { Code = Type::AddInstrument };
     MxDateTime		transactTime;
     Key			key;
-    MxMDSecRefData	refData;
+    MxMDInstrRefData	refData;
   };
 
-  struct UpdateSecurity {
-    enum { Code = Type::UpdateSecurity };
+  struct UpdateInstrument {
+    enum { Code = Type::UpdateInstrument };
     MxDateTime		transactTime;
     Key			key;
-    MxMDSecRefData	refData;
+    MxMDInstrRefData	refData;
   };
 
   struct AddOrderBook {
     enum { Code = Type::AddOrderBook };
     MxDateTime		transactTime;
     Key			key;
-    Key			security;
+    Key			instrument;
     MxIDString		tickSizeTbl;
     MxNDP		qtyNDP;
     MxMDLotSizes	lotSizes;
@@ -250,7 +250,7 @@ namespace MxMDStream {
     MxNDP		pxNDP;
     MxNDP		qtyNDP;
     MxUInt		legs;
-    Key			securities[MxMDNLegs];
+    Key			instruments[MxMDNLegs];
     MxEnum		sides[MxMDNLegs];
     MxRatio		ratios[MxMDNLegs];
     MxIDString		tickSizeTbl;
@@ -414,8 +414,8 @@ namespace MxMDStream {
       AddTickSize,
       ResetTickSizeTbl,
       TradingSession,
-      AddSecurity,
-      UpdateSecurity,
+      AddInstrument,
+      UpdateInstrument,
       AddOrderBook,
       DelOrderBook,
       AddCombination,
@@ -519,24 +519,24 @@ namespace MxMDStream {
     return true; \
   }
 
-  FnDeclare(addSecurity, AddSecurity)
-  FnDeclare(updateSecurity, UpdateSecurity)
+  FnDeclare(addInstrument, AddInstrument)
+  FnDeclare(updateInstrument, UpdateInstrument)
   FnDeclare(addOrderBook, AddOrderBook)
   FnDeclare(delOrderBook, DelOrderBook)
 
-  // special processing for AddCombination's securities/sides/ratios fields
+  // special processing for AddCombination's instruments/sides/ratios fields
   template <typename App,
-	   typename Key_, typename Security, typename TickSizeTbl>
+	   typename Key_, typename Instrument, typename TickSizeTbl>
   inline bool addCombination(App &app, MxInt shardID, MxDateTime transactTime,
       const Key_ &key, MxNDP pxNDP, MxNDP qtyNDP, unsigned legs,
-      const Security *securities, const MxEnum *sides, const MxRatio *ratios,
+      const Instrument *instruments, const MxEnum *sides, const MxRatio *ratios,
       const TickSizeTbl &tickSizeTbl, const MxMDLotSizes &lotSizes) {
     void *ptr = push<AddCombination>(app, shardID);
     if (ZuUnlikely(!ptr)) return false;
     AddCombination *data = new (ptr) AddCombination{transactTime,
       key, pxNDP, qtyNDP, legs, {}, {}, {}, tickSizeTbl, lotSizes};
     for (unsigned i = 0; i < legs; i++) {
-      data->securities[i] = securities[i];
+      data->instruments[i] = instruments[i];
       data->sides[i] = sides[i];
       data->ratios[i] = ratios[i];
     }

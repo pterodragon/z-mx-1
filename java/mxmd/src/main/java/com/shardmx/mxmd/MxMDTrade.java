@@ -12,7 +12,7 @@ public class MxMDTrade implements AutoCloseable {
 
   // methods
 
-  public native MxMDSecurity security();
+  public native MxMDInstrument instrument();
   public native MxMDOrderBook orderBook();
 
   public native MxMDTradeData data();

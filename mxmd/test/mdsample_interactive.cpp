@@ -51,7 +51,7 @@ void l1(MxMDOrderBook *ob, const MxMDL1Data &)
   const MxMDL1Data &l1 = ob->l1Data();
   MxMDFlagsStr flags;
   MxMDL1Flags::print(flags, ob->venueID(), l1.flags);
-  std::cout << ob->security()->id() <<
+  std::cout << ob->instrument()->id() <<
     " stamp: " <<
       ZuBox<unsigned>(l1.stamp.hhmmss()).fmt(Right<6>()) << '.' <<
 	ZuBox<unsigned>(l1.stamp.nsec()).fmt(Right<9>()) <<
@@ -113,20 +113,20 @@ void refDataLoaded(MxMDVenue *venue)
   std::cout << "reference data loaded for " << venue->id() << '\n';
 }
 
-static ZmRef<MxMDSecHandler> secHandler;
+static ZmRef<MxMDInstrHandler> instrHandler;
 
-void addSecurity(MxMDSecurity *sec, MxDateTime)
+void addInstrument(MxMDInstrument *instr, MxDateTime)
 {
   if (!keys) return;
   bool matched = false;
   std::cerr << "SUBSCRIBED KEYS\n";
   { auto i = keys->readIterator(); while (MxUniKey key = i.iterateKey()) { std::cerr << key << '\n'; } }
   std::cerr << "RCVD KEYS\n";
-  sec->keys([&matched](const MxUniKey &key) {
+  instr->keys([&matched](const MxUniKey &key) {
       if (keys->find(key)) matched = true;
       std::cerr << key << (matched ? " MATCHED\n" : " NOT MATCHED\n") << std::flush;
     });
-  if (matched) sec->subscribe(secHandler);
+  if (matched) instr->subscribe(instrHandler);
 }
 
 void subscribe(ZvCmdServerCxn *,
@@ -136,16 +136,16 @@ void subscribe(ZvCmdServerCxn *,
   if (!md) throw ZtString("MxMDLib::instance() failed");
   outMsg = new ZvCmdMsg();
   auto &out = outMsg->cmd();
-  ZmRef<MxMDSecurity> security;
+  ZmRef<MxMDInstrument> instrument;
   unsigned argc = ZuBox<unsigned>(args->get("#"));
   if (argc < 2) throw ZvCmdUsage();
-  MxUniKey key = md->parseSecurity(args, 1);
-  md->lookupSecurity(key, 0, [&key, &out](MxMDSecurity *sec) -> bool {
-    if (!sec) {
+  MxUniKey key = md->parseInstrument(args, 1);
+  md->lookupInstrument(key, 0, [&key, &out](MxMDInstrument *instr) -> bool {
+    if (!instr) {
       keys->add(key);
       out << "subscription pending\n";
     } else {
-      sec->subscribe(secHandler);
+      instr->subscribe(instrHandler);
       out << "subscribed\n";
     }
     return true;
@@ -162,7 +162,7 @@ int main(int argc, char **argv)
   ZeLog::start();			// start logger thread
 
   keys = new Keys();
-  (secHandler = new MxMDSecHandler())->
+  (instrHandler = new MxMDInstrHandler())->
     l1Fn(MxMDLevel1Fn::Ptr<&l1>::fn()).
     addPxLevelFn(MxMDPxLevelFn::Ptr<&pxLevel>::fn()).
     updatedPxLevelFn(MxMDPxLevelFn::Ptr<&pxLevel>::fn()).
@@ -194,7 +194,7 @@ int main(int argc, char **argv)
     md->subscribe(&((new MxMDLibHandler())->
 	exceptionFn(MxMDExceptionFn::Ptr<&exception>::fn()).
 	refDataLoadedFn(MxMDVenueFn::Ptr<&refDataLoaded>::fn()).
-	addSecurityFn(MxMDSecurityFn::Ptr<&addSecurity>::fn())));
+	addInstrumentFn(MxMDInstrumentFn::Ptr<&addInstrument>::fn())));
 
     md->start();			// start all feeds
 

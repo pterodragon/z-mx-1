@@ -87,64 +87,64 @@ void MxMDCore::addTickSize_(ZuAnyPOD *pod)
   tbl->addTickSize(data->minPrice, data->maxPrice, data->tickSize);
 }
 
-void MxMDCore::addSecurity_(ZuAnyPOD *pod)
+void MxMDCore::addInstrument_(ZuAnyPOD *pod)
 {
-  MxMDSecurityCSV::Data *data = (MxMDSecurityCSV::Data *)(pod->ptr());
-  MxSecKey key{data->venue, data->segment, data->id};
-  MxMDSecHandle secHandle = security(key, data->shard);
-  secHandle.invokeMv([key, refData = data->refData,
+  MxMDInstrumentCSV::Data *data = (MxMDInstrumentCSV::Data *)(pod->ptr());
+  MxInstrKey key{data->venue, data->segment, data->id};
+  MxMDInstrHandle instrHandle = instrument(key, data->shard);
+  instrHandle.invokeMv([key, refData = data->refData,
       transactTime = data->transactTime](
-	MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
-    shard->addSecurity(ZuMv(sec), key, refData, transactTime);
+	MxMDShard *shard, ZmRef<MxMDInstrument> instr) {
+    shard->addInstrument(ZuMv(instr), key, refData, transactTime);
   });
 }
 
 void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
 {
   MxMDOrderBookCSV::Data *data = (MxMDOrderBookCSV::Data *)(pod->ptr());
-  MxSecKey secKey{
-    data->secVenues[0], data->secSegments[0], data->securities[0]};
-  MxMDSecHandle secHandle = security(secKey);
-  if (!secHandle) throw ZtString() << "unknown security: " << secKey;
+  MxInstrKey instrKey{
+    data->instrVenues[0], data->instrSegments[0], data->instruments[0]};
+  MxMDInstrHandle instrHandle = instrument(instrKey);
+  if (!instrHandle) throw ZtString() << "unknown instrument: " << instrKey;
   ZmRef<MxMDVenue> venue = this->venue(data->venue);
   ZmRef<MxMDTickSizeTbl> tbl =
     venue->addTickSizeTbl(data->tickSizeTbl, data->pxNDP);
-  secHandle.invokeMv(
+  instrHandle.invokeMv(
       [data = *data, venue = ZuMv(venue), tbl = ZuMv(tbl)](
-	MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
+	MxMDShard *shard, ZmRef<MxMDInstrument> instr) {
     if (data.legs == 1) {
-      MxID venueID = data.secVenues[0];
+      MxID venueID = data.instrVenues[0];
       if (!*venueID) venueID = data.venue;
-      MxID segment = data.secSegments[0];
+      MxID segment = data.instrSegments[0];
       if (!*segment) segment = data.segment;
-      MxIDString id = data.securities[0];
+      MxIDString id = data.instruments[0];
       if (!id) id = data.id;
-      sec->addOrderBook(
-	  MxSecKey{data.id, data.venue, data.segment}, tbl, data.lotSizes,
+      instr->addOrderBook(
+	  MxInstrKey{data.id, data.venue, data.segment}, tbl, data.lotSizes,
 	  data.transactTime);
     } else {
-      ZmRef<MxMDSecurity> securities[MxMDNLegs];
+      ZmRef<MxMDInstrument> instruments[MxMDNLegs];
       MxEnum sides[MxMDNLegs];
       MxRatio ratios[MxMDNLegs];
       for (unsigned i = 0, n = data.legs; i < n; i++) {
-	MxID venueID = data.secVenues[i];
+	MxID venueID = data.instrVenues[i];
 	if (!*venueID) venueID = data.venue;
-	MxID segment = data.secSegments[i];
+	MxID segment = data.instrSegments[i];
 	if (!*segment) segment = data.segment;
-	MxIDString id = data.securities[i];
+	MxIDString id = data.instruments[i];
 	if (!id) return;
 	if (!i)
-	  securities[i] = ZuMv(sec);
+	  instruments[i] = ZuMv(instr);
 	else {
-	  securities[i] = shard->security(MxSecKey{id, venueID, segment});
-	  if (!securities[i]) return;
+	  instruments[i] = shard->instrument(MxInstrKey{id, venueID, segment});
+	  if (!instruments[i]) return;
 	}
 	sides[i] = data.sides[i];
 	ratios[i] = data.ratios[i];
       }
       venue->shard(shard)->addCombination(
 	  data.segment, data.id, data.pxNDP, data.qtyNDP,
-	  data.legs, securities, sides, ratios, tbl, data.lotSizes,
+	  data.legs, instruments, sides, ratios, tbl, data.lotSizes,
 	  data.transactTime);
     }
   });
@@ -335,13 +335,13 @@ void MxMDCore::init_(ZvCf *cf)
       csv.read((*tickSizes)[i],
 	  ZvCSVReadFn::Member<&MxMDCore::addTickSize_>::fn(this));
   }
-  if (const ZtArray<ZtString> *securities =
-	cf->getMultiple("securities", 0, INT_MAX)) {
-    ZeLOG(Info, "MxMDLib - reading security reference data...");
-    MxMDSecurityCSV csv;
-    for (unsigned i = 0, n = securities->length(); i < n; i++)
-      csv.read((*securities)[i],
-	  ZvCSVReadFn::Member<&MxMDCore::addSecurity_>::fn(this));
+  if (const ZtArray<ZtString> *instruments =
+	cf->getMultiple("instruments", 0, INT_MAX)) {
+    ZeLOG(Info, "MxMDLib - reading instrument reference data...");
+    MxMDInstrumentCSV csv;
+    for (unsigned i = 0, n = instruments->length(); i < n; i++)
+      csv.read((*instruments)[i],
+	  ZvCSVReadFn::Member<&MxMDCore::addInstrument_>::fn(this));
   }
   if (const ZtArray<ZtString> *orderBooks =
 	cf->getMultiple("orderBooks", 0, INT_MAX)) {
@@ -409,11 +409,11 @@ void MxMDCore::initCmds()
 	"Display level 2 market data for SYMBOL\n\nOptions:\n") <<
 	lookupOptions());
   addCmd(
-      "security", lookupSyntax(),
-      ZvCmdFn::Member<&MxMDCore::security_>::fn(this),
-      "dump security reference data",
-      ZtString("usage: security OPTIONS SYMBOL\n"
-	"Display security reference data (\"static data\") for SYMBOL\n"
+      "instrument", lookupSyntax(),
+      ZvCmdFn::Member<&MxMDCore::instrument_>::fn(this),
+      "dump instrument reference data",
+      ZtString("usage: instrument OPTIONS SYMBOL\n"
+	"Display instrument reference data (\"static data\") for SYMBOL\n"
 	"\nOptions:\n") << lookupOptions());
   addCmd(
       "ticksizes", "",
@@ -422,11 +422,11 @@ void MxMDCore::initCmds()
       "usage: ticksizes [VENUE [SEGMENT]]\n"
       "dump tick sizes in CSV format");
   addCmd(
-      "securities", "",
-      ZvCmdFn::Member<&MxMDCore::securities>::fn(this),
-      "dump securities in CSV format",
-      "usage: securities [VENUE [SEGMENT]]\n"
-      "dump securities in CSV format");
+      "instruments", "",
+      ZvCmdFn::Member<&MxMDCore::instruments>::fn(this),
+      "dump instruments in CSV format",
+      "usage: instruments [VENUE [SEGMENT]]\n"
+      "dump instruments in CSV format");
   addCmd(
       "orderbooks", "",
       ZvCmdFn::Member<&MxMDCore::orderbooks>::fn(this),
@@ -539,7 +539,7 @@ void MxMDCore::l1(ZvCmdServerCxn *,
   for (unsigned i = 1; i < argc; i++) {
     MxUniKey key = parseOrderBook(args, i);
     lookupOrderBook(key, 1, 1,
-	[this, &out, csv](MxMDSecurity *, MxMDOrderBook *ob) -> bool {
+	[this, &out, csv](MxMDInstrument *, MxMDOrderBook *ob) -> bool {
       const MxMDL1Data &l1Data = ob->l1Data();
       MxNDP pxNDP = l1Data.pxNDP;
       MxNDP qtyNDP = l1Data.qtyNDP;
@@ -595,7 +595,7 @@ void MxMDCore::l2(ZvCmdServerCxn *,
   auto &out = outMsg->cmd();
   MxUniKey key = parseOrderBook(args, 1);
   lookupOrderBook(key, 1, 1,
-      [this, &out](MxMDSecurity *, MxMDOrderBook *ob) -> bool {
+      [this, &out](MxMDInstrument *, MxMDOrderBook *ob) -> bool {
     out << "bids:\n";
     l2_side(ob->bids(), out);
     out << "\nasks:\n";
@@ -625,7 +625,7 @@ void MxMDCore::l2_side(MxMDOBSide *side, ZtString &out)
   });
 }
 
-void MxMDCore::security_(ZvCmdServerCxn *,
+void MxMDCore::instrument_(ZvCmdServerCxn *,
     ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
   ZuBox<int> argc = args->get("#");
@@ -634,16 +634,16 @@ void MxMDCore::security_(ZvCmdServerCxn *,
   auto &out = outMsg->cmd();
   MxUniKey key = parseOrderBook(args, 1);
   lookupOrderBook(key, 1, 0,
-      [&out](MxMDSecurity *sec, MxMDOrderBook *ob) -> bool {
-    const MxMDSecRefData &refData = sec->refData();
+      [&out](MxMDInstrument *instr, MxMDOrderBook *ob) -> bool {
+    const MxMDInstrRefData &refData = instr->refData();
     out <<
-      "ID: " << sec->id() <<
+      "ID: " << instr->id() <<
       "\nIDSrc: " << refData.idSrc <<
       "\nsymbol: " << refData.symbol <<
       "\naltIDSrc: " << refData.altIDSrc <<
       "\naltSymbol: " << refData.altSymbol;
     if (refData.underVenue) out << "\nunderlying: " <<
-      MxSecKey{refData.underlying, refData.underVenue, refData.underSegment};
+      MxInstrKey{refData.underlying, refData.underVenue, refData.underSegment};
     if (*refData.mat) {
       out << "\nmat: " << refData.mat;
       if (*refData.putCall) out <<
@@ -723,18 +723,18 @@ void MxMDCore::ticksizes(ZvCmdServerCxn *,
   writeTickSizes(this, csv, csv.writeData(out), venueID);
 }
 
-static void writeSecurities(
-    const MxMDLib *md, MxMDSecurityCSV &csv, ZvCSVWriteFn fn,
+static void writeInstruments(
+    const MxMDLib *md, MxMDInstrumentCSV &csv, ZvCSVWriteFn fn,
     MxID venueID, MxID segment)
 {
-  md->allSecurities(
-      [&csv, &fn, venueID, segment](MxMDSecurity *sec) -> uintptr_t {
-    if ((!*venueID || venueID == sec->primaryVenue()) &&
-	(!*segment || segment == sec->primarySegment())) {
-      new (csv.ptr()) MxMDSecurityCSV::Data{
-	sec->shard()->id(), MxMDStream::Type::AddSecurity, MxDateTime(),
-	sec->primaryVenue(), sec->primarySegment(),
-	sec->id(), sec->refData() };
+  md->allInstruments(
+      [&csv, &fn, venueID, segment](MxMDInstrument *instr) -> uintptr_t {
+    if ((!*venueID || venueID == instr->primaryVenue()) &&
+	(!*segment || segment == instr->primarySegment())) {
+      new (csv.ptr()) MxMDInstrumentCSV::Data{
+	instr->shard()->id(), MxMDStream::Type::AddInstrument, MxDateTime(),
+	instr->primaryVenue(), instr->primarySegment(),
+	instr->id(), instr->refData() };
       fn(csv.pod());
     }
     return 0;
@@ -742,13 +742,13 @@ static void writeSecurities(
   fn((ZuAnyPOD *)0);
 }
 
-void MxMDCore::dumpSecurities(ZuString path, MxID venueID, MxID segment)
+void MxMDCore::dumpInstruments(ZuString path, MxID venueID, MxID segment)
 {
-  MxMDSecurityCSV csv;
-  writeSecurities(this, csv, csv.writeFile(path), venueID, segment);
+  MxMDInstrumentCSV csv;
+  writeInstruments(this, csv, csv.writeFile(path), venueID, segment);
 }
 
-void MxMDCore::securities(ZvCmdServerCxn *,
+void MxMDCore::instruments(ZvCmdServerCxn *,
     ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
   ZuBox<int> argc = args->get("#");
@@ -758,8 +758,8 @@ void MxMDCore::securities(ZvCmdServerCxn *,
   MxID venueID, segment;
   if (argc == 2) venueID = args->get("1");
   if (argc == 3) segment = args->get("2");
-  MxMDSecurityCSV csv;
-  writeSecurities(this, csv, csv.writeData(out), venueID, segment);
+  MxMDInstrumentCSV csv;
+  writeInstruments(this, csv, csv.writeData(out), venueID, segment);
 }
 
 static void writeOrderBooks(
@@ -777,11 +777,11 @@ static void writeOrderBooks(
 	  ob->pxNDP(), ob->qtyNDP(),
 	  ob->legs(), ob->tickSizeTbl()->id(), ob->lotSizes() };
       for (unsigned i = 0, n = ob->legs(); i < n; i++) {
-	MxMDSecurity *sec;
-	if (!(sec = ob->security(i))) break;
-	data->secVenues[i] = sec->primaryVenue();
-	data->secSegments[i] = sec->primarySegment();
-	data->securities[i] = sec->id();
+	MxMDInstrument *instr;
+	if (!(instr = ob->instrument(i))) break;
+	data->instrVenues[i] = instr->primaryVenue();
+	data->instrSegments[i] = instr->primarySegment();
+	data->instruments[i] = instr->id();
 	data->sides[i] = ob->side(i);
 	data->ratios[i] = ob->ratio(i);
       }
@@ -863,8 +863,8 @@ void MxMDCore::pad(Hdr &hdr)
     case Type::AddTickSizeTbl:	hdr.pad<AddTickSizeTbl>(); break;
     case Type::ResetTickSizeTbl: hdr.pad<ResetTickSizeTbl>(); break;
     case Type::AddTickSize:	hdr.pad<AddTickSize>(); break;
-    case Type::AddSecurity:	hdr.pad<AddSecurity>(); break;
-    case Type::UpdateSecurity:	hdr.pad<UpdateSecurity>(); break;
+    case Type::AddInstrument:	hdr.pad<AddInstrument>(); break;
+    case Type::UpdateInstrument:	hdr.pad<UpdateInstrument>(); break;
     case Type::AddOrderBook:	hdr.pad<AddOrderBook>(); break;
     case Type::DelOrderBook:	hdr.pad<DelOrderBook>(); break;
     case Type::AddCombination:	hdr.pad<AddCombination>(); break;
@@ -935,21 +935,21 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	      MxMDSegment{obj.segment, obj.session, obj.stamp});
       }
       break;
-    case Type::AddSecurity:
+    case Type::AddInstrument:
       if (hdr.shard < nShards()) {
-	const AddSecurity &obj = hdr.as<AddSecurity>();
+	const AddInstrument &obj = hdr.as<AddInstrument>();
 	shard(hdr.shard, [obj = obj](MxMDShard *shard) {
-	  shard->addSecurity(shard->security(obj.key),
+	  shard->addInstrument(shard->instrument(obj.key),
 	      obj.key, obj.refData, obj.transactTime);
 	});
       }
       break;
-    case Type::UpdateSecurity:
+    case Type::UpdateInstrument:
       if (hdr.shard < nShards()) {
-	const UpdateSecurity &obj = hdr.as<UpdateSecurity>();
+	const UpdateInstrument &obj = hdr.as<UpdateInstrument>();
 	shard(hdr.shard, [obj = obj](MxMDShard *shard) {
-	  if (ZmRef<MxMDSecurity> sec = shard->security(obj.key))
-	    sec->update(obj.refData, obj.transactTime);
+	  if (ZmRef<MxMDInstrument> instr = shard->instrument(obj.key))
+	    instr->update(obj.refData, obj.transactTime);
 	});
       }
       break;
@@ -960,9 +960,9 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue))
 	    if (ZmRef<MxMDTickSizeTbl> tbl =
 		    venue->tickSizeTbl(obj.tickSizeTbl))
-	      if (ZmRef<MxMDSecurity> sec = shard->security(obj.security)) {
-		if (ZuUnlikely(sec->refData().qtyNDP != obj.qtyNDP)) {
-		  MxNDP newNDP = sec->refData().qtyNDP;
+	      if (ZmRef<MxMDInstrument> instr = shard->instrument(obj.instrument)) {
+		if (ZuUnlikely(instr->refData().qtyNDP != obj.qtyNDP)) {
+		  MxNDP newNDP = instr->refData().qtyNDP;
 #ifdef adjustNDP
 #undef adjustNDP
 #endif
@@ -973,7 +973,7 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 #undef adjustNDP
 		  obj.qtyNDP = newNDP;
 		}
-		sec->addOrderBook(obj.key, tbl, obj.lotSizes, obj.transactTime);
+		instr->addOrderBook(obj.key, tbl, obj.lotSizes, obj.transactTime);
 	      }
 	});
       }
@@ -983,7 +983,7 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	const DelOrderBook &obj = hdr.as<DelOrderBook>();
 	shard(hdr.shard, [obj = obj](MxMDShard *shard) {
 	  if (ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key))
-	    ob->security()->delOrderBook(
+	    ob->instrument()->delOrderBook(
 	      obj.key.venue, obj.key.segment, obj.transactTime);
 	});
       }
@@ -995,14 +995,14 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue))
 	    if (ZmRef<MxMDTickSizeTbl> tbl =
 		venue->tickSizeTbl(obj.tickSizeTbl)) {
-	    ZmRef<MxMDSecurity> securities[MxMDNLegs];
+	    ZmRef<MxMDInstrument> instruments[MxMDNLegs];
 	    for (unsigned i = 0; i < obj.legs; i++)
-	      if (!(securities[i] = shard->security(obj.securities[i])))
+	      if (!(instruments[i] = shard->instrument(obj.instruments[i])))
 		return;
 	    venue->shard(shard)->addCombination(
 		obj.key.segment, obj.key.id,
 		obj.pxNDP, obj.qtyNDP,
-		obj.legs, securities, obj.sides, obj.ratios,
+		obj.legs, instruments, obj.sides, obj.ratios,
 		tbl, obj.lotSizes, obj.transactTime);
 	  }
 	});

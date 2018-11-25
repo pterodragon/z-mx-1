@@ -404,7 +404,7 @@ namespace MxRAG {
   MxEnumValues(Off, Red, Amber, Green);
 }
 
-namespace MxSecIDSrc {
+namespace MxInstrIDSrc {
   MxEnumValues(CUSIP, SEDOL, QUIK, ISIN, RIC, EXCH, CTA, BSYM, BBGID,
       FX, CRYPTO);
   MxEnumNames(
@@ -495,21 +495,21 @@ namespace MxSide {
   typedef FixMap CSVMap;
 }
 
-// securities are fundamentally identified either by
-// venue/segment and the venue's native identifier - MxSecKey, or
-// security ID source (aka symbology) and a unique symbol - MxSymKey;
-// if not directly identified by MxSecKey or MxSymKey, individual
+// instruments are fundamentally identified either by
+// venue/segment and the venue's native identifier - MxInstrKey, or
+// instrument ID source (aka symbology) and a unique symbol - MxSymKey;
+// if not directly identified by MxInstrKey or MxSymKey, individual
 // futures/options can be specified by underlying + parameters, e.g.
 // "MSFT Mar 2019 Call Option @100", which is expressed as
-// the MxSecKey or MxSymKey for the underlying (MSFT) together
+// the MxInstrKey or MxSymKey for the underlying (MSFT) together
 // with an MxOptKey{20190300, MxPutCall::CALL, 10000} (assuming pxNDP=2)
 //
-// an individual security might therefore be identified by:
+// an individual instrument might therefore be identified by:
 //
-// MxSecKey - market-native ID
+// MxInstrKey - market-native ID
 // MxSymKey - industry standard symbology
-// MxSecKey or MxSymKey, with MxFutKey - future specified by maturity
-// MxSecKey or MxSymKey, with MxOptKey - option specified by mat/putCall/strike
+// MxInstrKey or MxSymKey, with MxFutKey - future specified by maturity
+// MxInstrKey or MxSymKey, with MxOptKey - option specified by mat/putCall/strike
 //
 // for cases (FIX message parsing, etc.) where the type of key cannot be
 // pre-determined at compile time, MxUniKey ("universal key") can be used -
@@ -518,26 +518,26 @@ namespace MxSide {
 
 #pragma pack(push, 1)
 
-struct MxSecKey {
+struct MxInstrKey {
   MxIDString	id;
   MxID		venue;
   MxID		segment;
 
-  inline bool operator ==(const MxSecKey &v) const {
+  inline bool operator ==(const MxInstrKey &v) const {
     return id == v.id && venue == v.venue && segment == v.segment;
   }
-  inline bool operator !=(const MxSecKey &v) const { return !operator ==(v); }
+  inline bool operator !=(const MxInstrKey &v) const { return !operator ==(v); }
 
-  inline int cmp(const MxSecKey &v) const {
+  inline int cmp(const MxInstrKey &v) const {
     int i;
     if (i = id.cmp(v.id)) return i;
     if (i = venue.cmp(v.venue)) return i;
     return segment.cmp(v.segment);
   }
-  inline bool operator >(const MxSecKey &v) { return cmp(v) > 0; }
-  inline bool operator >=(const MxSecKey &v) { return cmp(v) >= 0; }
-  inline bool operator <(const MxSecKey &v) { return cmp(v) < 0; }
-  inline bool operator <=(const MxSecKey &v) { return cmp(v) <= 0; }
+  inline bool operator >(const MxInstrKey &v) { return cmp(v) > 0; }
+  inline bool operator >=(const MxInstrKey &v) { return cmp(v) >= 0; }
+  inline bool operator <(const MxInstrKey &v) { return cmp(v) < 0; }
+  inline bool operator <=(const MxInstrKey &v) { return cmp(v) <= 0; }
 
   inline uint32_t hash() const {
     return id.hash() ^ venue.hash() ^ segment.hash();
@@ -547,10 +547,10 @@ struct MxSecKey {
     s << venue << '|' << segment << '|' << id;
   }
 };
-template <> struct ZuTraits<MxSecKey> : public ZuGenericTraits<MxSecKey> {
+template <> struct ZuTraits<MxInstrKey> : public ZuGenericTraits<MxInstrKey> {
   enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
 };
-template <> struct ZuPrint<MxSecKey> : public ZuPrintFn { };
+template <> struct ZuPrint<MxInstrKey> : public ZuPrintFn { };
 
 struct MxSymKey {
   MxIDString	id;
@@ -679,7 +679,7 @@ struct MxUniKey {
     if (*src)
       s << MxSymKey{id, src};
     else
-      s << MxSecKey{id, venue, segment};
+      s << MxInstrKey{id, venue, segment};
     if (*mat) {
       if (*strike)
 	s << '|' << MxOptKey{mat, putCall, strike};

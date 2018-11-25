@@ -27,7 +27,7 @@
 
 #include <MxMD.hpp>
 
-#include <MxMDSecurityJNI.hpp>
+#include <MxMDInstrumentJNI.hpp>
 #include <MxMDOrderBookJNI.hpp>
 #include <MxMDTradeDataJNI.hpp>
 
@@ -59,12 +59,12 @@ void MxMDTradeJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
   ptr->~ZmRef<MxMDTrade>();
 }
 
-jobject MxMDTradeJNI::security(JNIEnv *env, jobject obj)
+jobject MxMDTradeJNI::instrument(JNIEnv *env, jobject obj)
 {
-  // () -> MxMDSecurity
+  // () -> MxMDInstrument
   MxMDTrade *trade = ptr_(env, obj);
   if (ZuUnlikely(!trade)) return 0;
-  return MxMDSecurityJNI::ctor(env, trade->security());
+  return MxMDInstrumentJNI::ctor(env, trade->instrument());
 }
 
 jobject MxMDTradeJNI::orderBook(JNIEnv *env, jobject obj)
@@ -96,9 +96,9 @@ int MxMDTradeJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
-    { "security",
-      "()Lcom/shardmx/mxmd/MxMDSecurity;",
-      (void *)&MxMDTradeJNI::security },
+    { "instrument",
+      "()Lcom/shardmx/mxmd/MxMDInstrument;",
+      (void *)&MxMDTradeJNI::instrument },
     { "orderBook",
       "()Lcom/shardmx/mxmd/MxMDOrderBook;",
       (void *)&MxMDTradeJNI::orderBook },

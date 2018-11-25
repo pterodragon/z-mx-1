@@ -62,54 +62,54 @@ struct Feed : public MxMDFeed {
 
       MxMDLotSizes lotSizes{100, 100, 100}; // odd, round, block
 
-      // add securities
+      // add instruments
 
       for (const char **ticker = tickers; *ticker; ticker++) {
-	MxMDSecRefData refData;
+	MxMDInstrRefData refData;
 
-	// primary security key (venue, segment and ID)
+	// primary instrument key (venue, segment and ID)
    
-	MxSecKey secKey{
+	MxInstrKey instrKey{
 		"JNITest",
 		MxID(),
 		*ticker};	// ID (same as symbol in this case)
 
 	// minimal reference data (just the native symbol and RIC)
 
-	refData.idSrc = MxSecIDSrc::EXCH;
+	refData.idSrc = MxInstrIDSrc::EXCH;
 	refData.symbol = *ticker;
 	refData.pxNDP = 2;
 	refData.qtyNDP = 2;
 
-	// add the security
+	// add the instrument
 
-	MxMDSecHandle sec = md->security(secKey, 0); // default to shard 0
+	MxMDInstrHandle instr = md->instrument(instrKey, 0); // default to shard 0
 
 	ZtString error;
 	thread_local ZmSemaphore sem;
-	sec.invokeMv([sem = &sem, &error,
-	    secKey, &refData, &tickSizeTbl, &lotSizes](
-	      MxMDShard *shard, ZmRef<MxMDSecurity> sec) {
+	instr.invokeMv([sem = &sem, &error,
+	    instrKey, &refData, &tickSizeTbl, &lotSizes](
+	      MxMDShard *shard, ZmRef<MxMDInstrument> instr) {
 
 	  // this runs inside shard 0
 
-	  sec = shard->addSecurity(ZuMv(sec), secKey, refData, MxDateTime()); 
+	  instr = shard->addInstrument(ZuMv(instr), instrKey, refData, MxDateTime()); 
 
-	  if (ZuUnlikely(!sec)) {
-	    error = "MxMDLib::addSecurity() failed";
+	  if (ZuUnlikely(!instr)) {
+	    error = "MxMDLib::addInstrument() failed";
 	    sem->post();
 	    return;
 	  }
 
 	  // add the order book
 
-	  ZmRef<MxMDOrderBook> orderBook = sec->addOrderBook(
-	    secKey,			// primary key for order book
+	  ZmRef<MxMDOrderBook> orderBook = instr->addOrderBook(
+	    instrKey,			// primary key for order book
 	    tickSizeTbl,			// tick sizes
 	    lotSizes,			// lot sizes
 	    MxDateTime());
 	  if (ZuUnlikely(!orderBook)) {
-	    error = "MxMDSecurity::addOrderBook() failed";
+	    error = "MxMDInstrument::addOrderBook() failed";
 	    sem->post();
 	    return;
 	  }
@@ -156,14 +156,14 @@ static void publish_()
     if (!md) throw ZtString("MxMDLib::instance() failed");
 
     for (const char **ticker = tickers; *ticker; ticker++) {
-      md->secInvoke(MxSecKey{*ticker, "JNITest", MxID()},
-	  [ticker](MxMDSecurity *sec) {
-	if (!sec)
-	  throw ZtString() << "security \"" << *ticker << "\" not found";
+      md->instrInvoke(MxInstrKey{*ticker, "JNITest", MxID()},
+	  [ticker](MxMDInstrument *instr) {
+	if (!instr)
+	  throw ZtString() << "instrument \"" << *ticker << "\" not found";
 
 	// get order book
 
-	ZmRef<MxMDOrderBook> ob = sec->orderBook("JNITest", MxID());
+	ZmRef<MxMDOrderBook> ob = instr->orderBook("JNITest", MxID());
 	if (!ob)
 	  throw ZtString() << "order book for \"" << *ticker << "\" not found";
 

@@ -324,7 +324,7 @@ private:
 };
 
 class App {
-  typedef ZmLHash<MxSecKey> SecIDHash;
+  typedef ZmLHash<MxInstrKey> SecIDHash;
 
 public:
   App() : m_yyyymmdd(ZtDateNow().yyyymmdd()) { }
@@ -357,8 +357,8 @@ public:
   inline void l2(bool b) { m_l2 = b; }
   inline void trades(bool b) { m_trades = b; }
 
-  inline void secID(const MxSecKey &key) { m_secIDs.add(key); }
-  inline bool filterID(MxSecKey key) {
+  inline void instrID(const MxInstrKey &key) { m_secIDs.add(key); }
+  inline bool filterID(MxInstrKey key) {
     if (!m_secIDs.count()) return false;
     if (m_secIDs.exists(key)) return false;
     if (*key.segment) {
@@ -387,8 +387,8 @@ public:
     m_tickSizeCSV = new CSVWriter<MxMDTickSizeCSV>(this, path);
   }
   template <typename Path>
-  inline void securityCSV(const Path &path) {
-    m_securityCSV = new CSVWriter<MxMDSecurityCSV>(this, path);
+  inline void instrumentCSV(const Path &path) {
+    m_securityCSV = new CSVWriter<MxMDInstrumentCSV>(this, path);
   }
   template <typename Path>
   inline void orderBookCSV(const Path &path) {
@@ -467,7 +467,7 @@ private:
   ZmTime			m_lastTime;
 
   ZuRef<CSVWriter<MxMDTickSizeCSV> >	m_tickSizeCSV;
-  ZuRef<CSVWriter<MxMDSecurityCSV> >	m_securityCSV;
+  ZuRef<CSVWriter<MxMDInstrumentCSV> >	m_securityCSV;
   ZuRef<CSVWriter<MxMDOrderBookCSV> >	m_orderBookCSV;
   ZuRef<CSVWriter<RealTimeCSV> >	m_realTimeCSV;
 };
@@ -537,13 +537,13 @@ void App::read()
 	  if (!m_refData) continue;
 	  break;
 
-	case Type::AddSecurity:
-	  if (n != (int)sizeof(AddSecurity)) goto dataerror;
+	case Type::AddInstrument:
+	  if (n != (int)sizeof(AddInstrument)) goto dataerror;
 	  if (m_securityCSV) m_securityCSV->enqueue(msg);
 	  if (!m_refData) continue;
 	  break;
-	case Type::UpdateSecurity:
-	  if (n != (int)sizeof(UpdateSecurity)) goto dataerror;
+	case Type::UpdateInstrument:
+	  if (n != (int)sizeof(UpdateInstrument)) goto dataerror;
 	  if (m_securityCSV) m_securityCSV->enqueue(msg);
 	  if (!m_refData) continue;
 	  break;
@@ -679,18 +679,18 @@ void usage()
     "  -t\t\t- include trade data in output\n"
     "  -R CSV\t- dump real-time messages to CSV\n"
     "  -O CSV\t- dump order book messages to CSV\n"
-    "  -S CSV\t- dump security messages to CSV\n"
+    "  -S CSV\t- dump instrument messages to CSV\n"
     "  -T CSV\t- dump tick size messages to CSV\n"
     "  -n\t\t- CSV time stamps as HHMMSS instead of Excel format\n"
     "  -V\t\t- verbose - dump messages to standard output\n"
     "  -N\t\t- raw - output raw fixed-point values (without decimal point)\n"
     "  -d YYYYMMDD\t- CSV time stamps use date YYYYMMDD\n"
     "  -z ZONE\t- CSV time stamps in local time ZONE (defaults to GMT)\n"
-    "  -v MIC\t- select venue MIC for following securities\n"
+    "  -v MIC\t- select venue MIC for following instruments\n"
     "\t\t\t(may be specified multiple times)\n"
-    "  -s SEGMENT\t- select SEGMENT for following securities\n"
+    "  -s SEGMENT\t- select SEGMENT for following instruments\n"
     "\t\t\t(may be specified multiple times)\n"
-    "  -i ID\t\t- filter for security ID\n"
+    "  -i ID\t\t- filter for instrument ID\n"
     "\t\t\t(may be specified multiple times)\n"
     "  -o OUT\t- record filtered output in file OUT\n"
     << std::flush;
@@ -703,7 +703,7 @@ int main(int argc, const char *argv[])
   MxID venue;
   MxID segment;
   bool tickSizeCSV = false,
-       securityCSV = false,
+       instrumentCSV = false,
        orderBookCSV = false,
        realTimeCSV = false;
 
@@ -747,7 +747,7 @@ int main(int argc, const char *argv[])
 	break;
       case 'i':
 	if (++i >= argc) usage();
-	app.secID(MxSecKey{.id = argv[i], .venue = venue, .segment = segment});
+	app.instrID(MxInstrKey{.id = argv[i], .venue = venue, .segment = segment});
 	break;
       case 'o':
 	if (app.outPath()) usage();
@@ -760,9 +760,9 @@ int main(int argc, const char *argv[])
 	app.tickSizeCSV(argv[i]);
 	break;
       case 'S':
-	if (securityCSV || ++i >= argc) usage();
-	securityCSV = true;
-	app.securityCSV(argv[i]);
+	if (instrumentCSV || ++i >= argc) usage();
+	instrumentCSV = true;
+	app.instrumentCSV(argv[i]);
 	break;
       case 'O':
 	if (orderBookCSV || ++i >= argc) usage();

@@ -24,9 +24,9 @@ public abstract class MxMDLibHandler {
   @Value.Default @Nullable
   public MxMDTickSizeFn		addTickSize() { return null; }
   @Value.Default @Nullable
-  public MxMDSecEventFn		addSecurity() { return null; }
+  public MxMDInstrEventFn		addInstrument() { return null; }
   @Value.Default @Nullable
-  public MxMDSecEventFn		updatedSecurity() { return null; }
+  public MxMDInstrEventFn		updatedInstrument() { return null; }
   @Value.Default @Nullable
   public MxMDOBEventFn		addOrderBook() { return null; }
   @Value.Default @Nullable

@@ -16,15 +16,15 @@ public class MxMDOrderBook implements AutoCloseable {
 
   public native MxMDVenue venue();
 
-  public native MxMDSecurity security();
-  public native MxMDSecurity security(int leg);
+  public native MxMDInstrument instrument();
+  public native MxMDInstrument instrument(int leg);
 
   public native MxMDOrderBook out();
 
   public native String venueID();
   public native String segment();
   public native String id();
-  public native MxSecKey key();
+  public native MxInstrKey key();
 
   public native int legs();
   public native MxSide side(int leg);
@@ -41,9 +41,9 @@ public class MxMDOrderBook implements AutoCloseable {
   public native MxMDOBSide bids();
   public native MxMDOBSide asks();
 
-  public native void subscribe(MxMDSecHandler handler);
+  public native void subscribe(MxMDInstrHandler handler);
   public native void unsubscribe();
-  public native MxMDSecHandler handler();
+  public native MxMDInstrHandler handler();
 
   // data members
 

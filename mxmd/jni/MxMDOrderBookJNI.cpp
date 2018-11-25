@@ -27,18 +27,18 @@
 
 #include <MxMD.hpp>
 
-#include <MxSecKeyJNI.hpp>
+#include <MxInstrKeyJNI.hpp>
 
 #include <MxMDLibJNI.hpp>
 #include <MxMDVenueJNI.hpp>
 #include <MxMDTickSizeTblJNI.hpp>
-#include <MxMDSecurityJNI.hpp>
+#include <MxMDInstrumentJNI.hpp>
 #include <MxMDOBSideJNI.hpp>
 
 #include <MxMDLotSizesJNI.hpp>
 #include <MxMDL1DataJNI.hpp>
 
-#include <MxMDSecHandlerJNI.hpp>
+#include <MxMDInstrHandlerJNI.hpp>
 
 #include <MxMDOrderBookJNI.hpp>
 
@@ -89,20 +89,20 @@ jobject MxMDOrderBookJNI::venue(JNIEnv *env, jobject obj)
   return MxMDVenueJNI::ctor(env, ob->venue());
 }
 
-jobject MxMDOrderBookJNI::security(JNIEnv *env, jobject obj)
+jobject MxMDOrderBookJNI::instrument(JNIEnv *env, jobject obj)
 {
-  // () -> MxMDSecurity
+  // () -> MxMDInstrument
   MxMDOrderBook *ob = ptr_(env, obj);
   if (ZuUnlikely(!ob)) return 0;
-  return MxMDSecurityJNI::ctor(env, ob->security());
+  return MxMDInstrumentJNI::ctor(env, ob->instrument());
 }
 
-jobject MxMDOrderBookJNI::security(JNIEnv *env, jobject obj, jint leg)
+jobject MxMDOrderBookJNI::instrument(JNIEnv *env, jobject obj, jint leg)
 {
-  // (int) -> MxMDSecurity
+  // (int) -> MxMDInstrument
   MxMDOrderBook *ob = ptr_(env, obj);
   if (ZuUnlikely(!ob)) return 0;
-  return MxMDSecurityJNI::ctor(env, ob->security(leg));
+  return MxMDInstrumentJNI::ctor(env, ob->instrument(leg));
 }
 
 jobject MxMDOrderBookJNI::out(JNIEnv *env, jobject obj)
@@ -139,10 +139,10 @@ jstring MxMDOrderBookJNI::id(JNIEnv *env, jobject obj)
 
 jobject MxMDOrderBookJNI::key(JNIEnv *env, jobject obj)
 {
-  // () -> MxSecKey
+  // () -> MxInstrKey
   MxMDOrderBook *ob = ptr_(env, obj);
   if (ZuUnlikely(!ob)) return 0;
-  return MxSecKeyJNI::ctor(env, ob->key());
+  return MxInstrKeyJNI::ctor(env, ob->key());
 }
 
 jint MxMDOrderBookJNI::legs(JNIEnv *env, jobject obj)
@@ -228,10 +228,10 @@ jobject MxMDOrderBookJNI::asks(JNIEnv *env, jobject obj)
 
 void MxMDOrderBookJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
 {
-  // (MxMDSecHandler) -> void
+  // (MxMDInstrHandler) -> void
   MxMDOrderBook *ob = ptr_(env, obj);
   if (ZuUnlikely(!ob)) return;
-  ob->subscribe(MxMDSecHandlerJNI::j2c(env, handler_));
+  ob->subscribe(MxMDInstrHandlerJNI::j2c(env, handler_));
   ob->appData((uintptr_t)(void *)(env->NewGlobalRef(handler_)));
 
 }
@@ -248,7 +248,7 @@ void MxMDOrderBookJNI::unsubscribe(JNIEnv *env, jobject obj)
 
 jobject MxMDOrderBookJNI::handler(JNIEnv *env, jobject obj)
 {
-  // () -> MxMDSecHandler
+  // () -> MxMDInstrHandler
   MxMDOrderBook *ob = ptr_(env, obj);
   if (ZuUnlikely(!ob)) return 0;
   return (jobject)(void *)(ob->appData());
@@ -273,14 +273,14 @@ int MxMDOrderBookJNI::bind(JNIEnv *env)
     { "venue",
       "()Lcom/shardmx/mxmd/MxMDVenue;",
       (void *)&MxMDOrderBookJNI::venue },
-    { "security",
-      "()Lcom/shardmx/mxmd/MxMDSecurity;",
+    { "instrument",
+      "()Lcom/shardmx/mxmd/MxMDInstrument;",
       (void *)static_cast<jobject (*)(JNIEnv *, jobject)>(
-	  MxMDOrderBookJNI::security) },
-    { "security",
-      "(I)Lcom/shardmx/mxmd/MxMDSecurity;",
+	  MxMDOrderBookJNI::instrument) },
+    { "instrument",
+      "(I)Lcom/shardmx/mxmd/MxMDInstrument;",
       (void *)static_cast<jobject (*)(JNIEnv *, jobject, jint)>(
-	  MxMDOrderBookJNI::security) },
+	  MxMDOrderBookJNI::instrument) },
     { "out",
       "()Lcom/shardmx/mxmd/MxMDOrderBook;",
       (void *)&MxMDOrderBookJNI::out },
@@ -294,7 +294,7 @@ int MxMDOrderBookJNI::bind(JNIEnv *env)
       "()Ljava/lang/String;",
       (void *)&MxMDOrderBookJNI::id },
     { "key",
-      "()Lcom/shardmx/mxbase/MxSecKey;",
+      "()Lcom/shardmx/mxbase/MxInstrKey;",
       (void *)&MxMDOrderBookJNI::key },
     { "legs",
       "()I",
@@ -327,13 +327,13 @@ int MxMDOrderBookJNI::bind(JNIEnv *env)
       "()Lcom/shardmx/mxmd/MxMDOBSide;",
       (void *)&MxMDOrderBookJNI::asks },
     { "subscribe",
-      "(Lcom/shardmx/mxmd/MxMDSecHandler;)V",
+      "(Lcom/shardmx/mxmd/MxMDInstrHandler;)V",
       (void *)&MxMDOrderBookJNI::subscribe },
     { "unsubscribe",
       "()V",
       (void *)&MxMDOrderBookJNI::unsubscribe },
     { "handler",
-      "()Lcom/shardmx/mxmd/MxMDSecHandler;",
+      "()Lcom/shardmx/mxmd/MxMDInstrHandler;",
       (void *)&MxMDOrderBookJNI::handler },
   };
 #pragma GCC diagnostic pop

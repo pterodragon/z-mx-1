@@ -330,13 +330,13 @@ namespace MxTelemetry {
 
 #undef FnDeclare
 
-  template <typename Cxn, typename L> struct IOMvLambda_ {
+  template <typename Cxn, typename L> struct IOLambda_ {
     typedef void (*Fn)(Cxn *, ZmRef<Msg>, ZiIOContext &);
     enum { OK = ZuConversion<L, Fn>::Exists };
   };
-  template <typename Cxn, typename L, bool = IOMvLambda_<Cxn, L>::OK>
-  struct IOMvLambda;
-  template <typename Cxn, typename L> struct IOMvLambda<Cxn, L, true> {
+  template <typename Cxn, typename L, bool = IOLambda_<Cxn, L>::OK>
+  struct IOLambda;
+  template <typename Cxn, typename L> struct IOLambda<Cxn, L, true> {
     typedef void T;
     ZuInline static void invoke(ZiIOContext &io) {
       (*(L *)(void *)0)(
@@ -357,13 +357,13 @@ namespace MxTelemetry {
     }
 
     template <typename Cxn, typename L>
-    inline typename IOMvLambda<Cxn, L>::T recv(
+    inline typename IOLambda<Cxn, L>::T recv(
 	ZmRef<Msg> msg, ZiIOContext &io, L l) {
       Msg *msg_ = msg.ptr();
       io.init(ZiIOFn{[](Msg *msg, ZiIOContext &io) {
 	msg->length = (io.offset += io.length);
 	msg->addr = io.addr;
-	IOMvLambda<Cxn, L>::invoke(io);
+	IOLambda<Cxn, L>::invoke(io);
       }, ZuMv(msg)},
       msg_->ptr(), msg_->size(), 0);
     }

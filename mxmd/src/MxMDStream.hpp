@@ -561,13 +561,13 @@ namespace MxMDStream {
 #undef FnDeclare
 
   // ensure passed lambdas are stateless and match required signature
-  template <typename Cxn, typename L> struct IOMvLambda_ {
+  template <typename Cxn, typename L> struct IOLambda_ {
     typedef void (*Fn)(Cxn *, ZmRef<MxQMsg>, ZiIOContext &);
     enum { OK = ZuConversion<L, Fn>::Exists };
   };
-  template <typename Cxn, typename L, bool = IOMvLambda_<Cxn, L>::OK>
-  struct IOMvLambda;
-  template <typename Cxn, typename L> struct IOMvLambda<Cxn, L, true> {
+  template <typename Cxn, typename L, bool = IOLambda_<Cxn, L>::OK>
+  struct IOLambda;
+  template <typename Cxn, typename L> struct IOLambda<Cxn, L, true> {
     typedef void T;
     ZuInline static void invoke(ZiIOContext &io) {
       (*(L *)(void *)0)(
@@ -587,25 +587,25 @@ namespace MxMDStream {
       }, ZuMv(msg)});
     }
     template <typename Cxn, typename L>
-    inline typename IOMvLambda<Cxn, L>::T send(
+    inline typename IOLambda<Cxn, L>::T send(
 	Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr, L l) {
       msg->addr = addr;
       cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	  if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	  IOMvLambda<Cxn, L>::invoke(io);
+	  IOLambda<Cxn, L>::invoke(io);
 	}, io.fn.mvObject<MxQMsg>()},
 	msg->payload->ptr(), msg->length, 0, msg->addr);
       }, ZuMv(msg)});
     }
     template <typename Cxn, typename L>
-    inline typename IOMvLambda<Cxn, L>::T recv(
+    inline typename IOLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       MxQMsg *msg_ = msg.ptr();
       io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	msg->length = (io.offset += io.length);
 	msg->addr = io.addr;
-	IOMvLambda<Cxn, L>::invoke(io);
+	IOLambda<Cxn, L>::invoke(io);
       }, ZuMv(msg)},
       msg_->payload->ptr(), msg_->payload->size(), 0);
     }
@@ -622,19 +622,19 @@ namespace MxMDStream {
       }, ZuMv(msg)});
     }
     template <typename Cxn, typename L>
-    inline typename IOMvLambda<Cxn, L>::T send(
+    inline typename IOLambda<Cxn, L>::T send(
 	Cxn *cxn, ZmRef<MxQMsg> msg, L l) {
       cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
 	  if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	  IOMvLambda<Cxn, L>::invoke(io);
+	  IOLambda<Cxn, L>::invoke(io);
 	}, io.fn.mvObject<MxQMsg>()},
 	msg->payload->ptr(), msg->length, 0);
       }, ZuMv(msg)});
     }
 
     template <typename Cxn, typename L>
-    inline typename IOMvLambda<Cxn, L>::T recv(
+    inline typename IOLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       MxQMsg *msg_ = msg.ptr();
       io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
@@ -649,7 +649,7 @@ namespace MxMDStream {
 	  }
 	  if (ZuLikely(len < msgLen)) return;
 	  msg->length = msgLen;
-	  IOMvLambda<Cxn, L>::invoke(io);
+	  IOLambda<Cxn, L>::invoke(io);
 	  if (ZuUnlikely(io.completed())) return;
 	  msg = io.fn.object<MxQMsg>();
 	  if (ZuUnlikely(!msg)) return;

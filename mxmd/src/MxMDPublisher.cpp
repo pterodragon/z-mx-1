@@ -488,6 +488,7 @@ void MxMDPubLink::UDP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
     }
     m_link->udpReceived(hdr.as<ResendReq>());
   }
+
   MxMDStream::UDP::recv<UDP>(ZuMv(msg), io,
       [](UDP *udp, ZmRef<MxQMsg> msg, ZiIOContext &io) {
 	udp->process(ZuMv(msg), io);

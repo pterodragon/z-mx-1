@@ -19,8 +19,8 @@
 
 // MxMD library internal API
 
-#ifndef MxMDPartition_HPP
-#define MxMDPartition_HPP
+#ifndef MxMDChannel_HPP
+#define MxMDChannel_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -39,7 +39,7 @@
 
 #include <MxMDCSV.hpp>
 
-struct MxMDPartition {
+struct MxMDChannel {
   MxID			id;
   MxBool		enabled;
   ZuBox_1(int)		shardID;
@@ -52,13 +52,13 @@ struct MxMDPartition {
   ZuBox0(uint16_t)	resendPort, resendPort2;
 };
 
-class MxMDPartitionCSV : public ZvCSV, public MxCSV<MxMDPartitionCSV> {
+class MxMDChannelCSV : public ZvCSV, public MxCSV<MxMDChannelCSV> {
 public:
-  typedef MxMDPartition Data;
+  typedef MxMDChannel Data;
   typedef ZuPOD<Data> POD;
 
   template <typename App = MxCSVApp>
-  MxMDPartitionCSV(App *app = 0) {
+  MxMDChannelCSV(App *app = 0) {
     new ((m_pod = new POD())->ptr()) Data{};
 #ifdef Offset
 #undef Offset
@@ -89,7 +89,7 @@ public:
   template <typename File>
   void read(File &&file, ZvCSVReadFn fn) {
     ZvCSV::readFile(ZuFwd<File>(file),
-	ZvCSVAllocFn::Member<&MxMDPartitionCSV::alloc>::fn(this), fn);
+	ZvCSVAllocFn::Member<&MxMDChannelCSV::alloc>::fn(this), fn);
   }
 
   ZuInline POD *pod() { return m_pod.ptr(); }
@@ -99,4 +99,4 @@ private:
   ZuRef<POD>	m_pod;
 };
 
-#endif /* MxMDPartition_HPP */
+#endif /* MxMDChannel_HPP */

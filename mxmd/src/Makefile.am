@@ -8,7 +8,7 @@ AM_LDFLAGS = @MXMD_LDFLAGS@ @MXMD_SO_LDFLAGS@ \
 include_HEADERS = \
 	MxMD.hpp MxMDLib.hpp MxMDVersion.hpp MxMDTypes.hpp \
 	MxMDCore.hpp MxMDCSV.hpp MxMDStream.hpp \
-	MxMDPartition.hpp \
+	MxMDChannel.hpp \
 	MxMDBroadcast.hpp \
 	MxMDRecord.hpp MxMDReplay.hpp \
 	MxMDSubscriber.hpp MxMDPublisher.hpp

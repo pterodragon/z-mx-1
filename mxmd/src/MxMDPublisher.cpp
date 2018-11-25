@@ -52,8 +52,8 @@ void MxMDPublisher::init(MxMDCore *core, ZvCf *cf)
   m_nAccepts = cf->getInt("nAccepts", 1, INT_MAX, false, 8);
   m_loopBack = cf->getInt("loopBack", 0, 1, false, 0);
 
-  if (ZuString partitions = cf->get("partitions"))
-    updateLinks(partitions);
+  if (ZuString channels = cf->get("channels"))
+    updateLinks(channels);
 
   core->addCmd(
       "publisher.status", "",
@@ -71,14 +71,14 @@ void MxMDPublisher::final()
   engineINFO("MxMDPublisher::final()");
 }
 
-void MxMDPublisher::updateLinks(ZuString partitions)
+void MxMDPublisher::updateLinks(ZuString channels)
 {
-  MxMDPartitionCSV csv;
-  csv.read(partitions, ZvCSVReadFn{[](MxMDPublisher *pub, ZuAnyPOD *pod) {
-      const MxMDPartition &partition = pod->as<MxMDPartition>();
-      pub->m_partitions.del(partition.id);
-      pub->m_partitions.add(partition);
-      pub->updateLink(partition.id, nullptr);
+  MxMDChannelCSV csv;
+  csv.read(channels, ZvCSVReadFn{[](MxMDPublisher *pub, ZuAnyPOD *pod) {
+      const MxMDChannel &channel = pod->as<MxMDChannel>();
+      pub->m_channels.del(channel.id);
+      pub->m_channels.add(channel);
+      pub->updateLink(channel.id, nullptr);
     }, this});
 }
 
@@ -93,11 +93,11 @@ ZmRef<MxAnyLink> MxMDPublisher::createLink(MxID id)
 
 void MxMDPubLink::update(ZvCf *)
 {
-  engine()->partition(id(), [this](MxMDPartition *partition) {
-      if (ZuUnlikely(!partition)) throw ZvCf::Required(id());
-      m_partition = partition;
+  engine()->channel(id(), [this](MxMDChannel *channel) {
+      if (ZuUnlikely(!channel)) throw ZvCf::Required(id());
+      m_channel = channel;
     });
-  if (m_partition && m_partition->enabled)
+  if (m_channel && m_channel->enabled)
     up();
   else
     down();
@@ -230,11 +230,11 @@ void MxMDPubLink::tcpListen()
   ZiIP ip;
   uint16_t port;
   if (!m_failover) {
-    ip = m_partition->tcpIP;
-    port = m_partition->tcpPort;
+    ip = m_channel->tcpIP;
+    port = m_channel->tcpPort;
   } else {
-    if (!(ip = m_partition->tcpIP2)) ip = m_partition->tcpIP;
-    if (!(port = m_partition->tcpPort2)) port = m_partition->tcpPort;
+    if (!(ip = m_channel->tcpIP2)) ip = m_channel->tcpIP;
+    if (!(port = m_channel->tcpPort2)) port = m_channel->tcpPort;
   }
 
   linkINFO("MxMDPubLink::tcpListen(" << id << ") " <<
@@ -354,8 +354,8 @@ void MxMDPubLink::TCP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 }
 bool MxMDPubLink::tcpLogin(const MxMDStream::Login &login)
 {
-  if (login.username != m_partition->tcpUsername ||
-      login.password != m_partition->tcpPassword) return false;
+  if (login.username != m_channel->tcpUsername ||
+      login.password != m_channel->tcpPassword) return false;
   linkINFO("MxMDPubLink::tcpLogin(" << id << ')');
   return true;
 }
@@ -369,17 +369,17 @@ void MxMDPubLink::udpConnect()
   ZiIP resendIP;
   uint16_t resendPort;
   if (!m_failover) {
-    ip = m_partition->udpIP;
-    port = m_partition->udpPort;
-    resendIP = m_partition->resendIP;
-    resendPort = m_partition->resendPort;
+    ip = m_channel->udpIP;
+    port = m_channel->udpPort;
+    resendIP = m_channel->resendIP;
+    resendPort = m_channel->resendPort;
   } else {
-    if (!(ip = m_partition->udpIP2)) ip = m_partition->udpIP;
-    if (!(port = m_partition->udpPort2)) port = m_partition->udpPort;
-    if (!(resendIP = m_partition->resendIP2))
-      resendIP = m_partition->resendIP;
-    if (!(resendPort = m_partition->resendPort2))
-      resendPort = m_partition->resendPort;
+    if (!(ip = m_channel->udpIP2)) ip = m_channel->udpIP;
+    if (!(port = m_channel->udpPort2)) port = m_channel->udpPort;
+    if (!(resendIP = m_channel->resendIP2))
+      resendIP = m_channel->resendIP;
+    if (!(resendPort = m_channel->resendPort2))
+      resendPort = m_channel->resendPort;
   }
   m_udpAddr = ZiSockAddr(ip, port);
   ZiCxnOptions options;
@@ -656,8 +656,8 @@ MxEngineApp::ProcessFn MxMDPublisher::processFn()
 
 void MxMDPubLink::sendMsg(const Hdr *hdr)
 {
-  if (m_partition->shardID >= 0 && hdr->shard != 0xff &&
-      hdr->shard != m_partition->shardID) return;
+  if (m_channel->shardID >= 0 && hdr->shard != 0xff &&
+      hdr->shard != m_channel->shardID) return;
   using namespace MxMDStream;
   ZuRef<Msg> msg = new Msg();
   unsigned msgLen = sizeof(Hdr) + hdr->len;
@@ -753,16 +753,16 @@ void MxMDPubLink::status(ZtString &out)
 {
   out << "Link " << id() << ":\n";
   out << "  TCP:    " <<
-    m_partition->tcpIP << ':' << m_partition->tcpPort << " | " <<
-    m_partition->tcpIP2 << ':' << m_partition->tcpPort2 << '\n';
+    m_channel->tcpIP << ':' << m_channel->tcpPort << " | " <<
+    m_channel->tcpIP2 << ':' << m_channel->tcpPort2 << '\n';
   out << "  UDP:    " <<
-    m_partition->udpIP << ':' << m_partition->udpPort << " | " <<
-    m_partition->udpIP2 << ':' << m_partition->udpPort2 << '\n';
+    m_channel->udpIP << ':' << m_channel->udpPort << " | " <<
+    m_channel->udpIP2 << ':' << m_channel->udpPort2 << '\n';
   out << "  Resend: " <<
-    m_partition->resendIP << ':' << m_partition->resendPort << " | " <<
-    m_partition->resendIP2 << ':' << m_partition->resendPort2 << '\n';
-  out << "  TCP Username: " << m_partition->tcpUsername <<
-    " Password: " << m_partition->tcpPassword << '\n';
+    m_channel->resendIP << ':' << m_channel->resendPort << " | " <<
+    m_channel->resendIP2 << ':' << m_channel->resendPort2 << '\n';
+  out << "  TCP Username: " << m_channel->tcpUsername <<
+    " Password: " << m_channel->tcpPassword << '\n';
 
   out << "  State: " << MxLinkState::name(state());
   out << '\n';

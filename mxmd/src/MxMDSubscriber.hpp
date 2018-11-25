@@ -43,7 +43,7 @@
 
 #include <MxMDTypes.hpp>
 #include <MxMDCSV.hpp>
-#include <MxMDPartition.hpp>
+#include <MxMDChannel.hpp>
 
 class MxMDCore;
 
@@ -68,23 +68,23 @@ public:
   ZuInline ZmTime reReqInterval() const { return ZmTime(m_reReqInterval); }
   ZuInline unsigned reReqMaxGap() const { return m_reReqMaxGap; }
 
-  void updateLinks(ZuString partitions); // update from CSV
+  void updateLinks(ZuString channels); // update from CSV
 
 private:
-  struct PartitionIDAccessor : public ZuAccessor<MxMDPartition, MxID> {
-    inline static MxID value(const MxMDPartition &partition) {
-      return partition.id;
+  struct ChannelIDAccessor : public ZuAccessor<MxMDChannel, MxID> {
+    inline static MxID value(const MxMDChannel &channel) {
+      return channel.id;
     }
   };
-  typedef ZmRBTree<MxMDPartition,
-	    ZmRBTreeIndex<PartitionIDAccessor,
-	      ZmRBTreeLock<ZmRWLock> > > Partitions;
-  typedef Partitions::Node Partition;
+  typedef ZmRBTree<MxMDChannel,
+	    ZmRBTreeIndex<ChannelIDAccessor,
+	      ZmRBTreeLock<ZmRWLock> > > Channels;
+  typedef Channels::Node Channel;
 
 public:
   template <typename L>
-  ZuInline void partition(MxID id, L &&l) const {
-    if (auto node = m_partitions.find(id))
+  ZuInline void channel(MxID id, L &&l) const {
+    if (auto node = m_channels.find(id))
       l(&(node->key()));
     else
       l(nullptr);
@@ -120,7 +120,7 @@ private:
   double		m_reReqInterval = 0.0;
   unsigned		m_reReqMaxGap = 10;
 
-  Partitions		m_partitions;
+  Channels		m_channels;
 };
 
 class MxMDAPI MxMDSubLink : public MxLink<MxMDSubLink> {
@@ -283,7 +283,7 @@ public:
   void lastTime(ZmTime t) { m_lastTime = t; }
 
 private:
-  const MxMDPartition	*m_partition = 0;
+  const MxMDChannel	*m_channel = 0;
 
   bool			m_failover = false;
 

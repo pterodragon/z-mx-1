@@ -45,11 +45,11 @@ public class MxMDJNITest extends TestCase {
       if (instr != null) instr.subscribe(instrHandler);
     };
 
-    md.instrument(MxInstrKeyTuple.of("JNITest", null, "ETHBTC"), fn);
+    md.instrument(MxInstrKeyTuple.of("ETHBTC", "JNITest", null), fn);
 
     {
       MxMDInstrHandle instr = 
-	md.instrument(MxInstrKeyTuple.of("JNITest", null, "LTCBTC"));
+	md.instrument(MxInstrKeyTuple.of("LTCBTC", "JNITest", null));
       if (instr != null) instr.invoke(fn);
     }
 

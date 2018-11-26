@@ -85,8 +85,8 @@ namespace MxMDInstrHandlerJNI {
     { "modifiedOrder", "()Lcom/shardmx/mxmd/MxMDOrderFn;" },
     { "fn", "(Lcom/shardmx/mxmd/MxMDOrder;Ljava/time/Instant;)V" }
   };
-  ZJNI::JavaMethod canceledOrderFn[] = {
-    { "canceledOrder", "()Lcom/shardmx/mxmd/MxMDOrderFn;" },
+  ZJNI::JavaMethod deletedOrderFn[] = {
+    { "deletedOrder", "()Lcom/shardmx/mxmd/MxMDOrderFn;" },
     { "fn", "(Lcom/shardmx/mxmd/MxMDOrder;Ljava/time/Instant;)V" }
   };
   ZJNI::JavaMethod addTradeFn[] = {
@@ -164,7 +164,7 @@ ZmRef<MxMDInstrHandler> MxMDInstrHandlerJNI::j2c(JNIEnv *env, jobject handler_)
   lambda2(modifiedOrder,
       MxMDOrder *order, MxDateTime stamp,
       MxMDOrderJNI::ctor(env, order), ZJNI::t2j(env, stamp));
-  lambda2(canceledOrder,
+  lambda2(deletedOrder,
       MxMDOrder *order, MxDateTime stamp,
       MxMDOrderJNI::ctor(env, order), ZJNI::t2j(env, stamp));
   lambda2(addTrade,
@@ -207,7 +207,7 @@ int MxMDInstrHandlerJNI::bind(JNIEnv *env)
   if (bindHandlerFn(env, c, l2Fn) < 0) return -1;
   if (bindHandlerFn(env, c, addOrderFn) < 0) return -1;
   if (bindHandlerFn(env, c, modifiedOrderFn) < 0) return -1;
-  if (bindHandlerFn(env, c, canceledOrderFn) < 0) return -1;
+  if (bindHandlerFn(env, c, deletedOrderFn) < 0) return -1;
   if (bindHandlerFn(env, c, addTradeFn) < 0) return -1;
   if (bindHandlerFn(env, c, correctedTradeFn) < 0) return -1;
   if (bindHandlerFn(env, c, canceledTradeFn) < 0) return -1;

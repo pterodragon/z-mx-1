@@ -111,7 +111,7 @@ void addOrder(MxMDOrder *order, MxDateTime stamp)
       (double)MxValNDP{order->data().qty, ob->pxNDP()}.fp());
 }
 
-void canceledOrder(MxMDOrder *order, MxDateTime stamp)
+void deletedOrder(MxMDOrder *order, MxDateTime stamp)
 {
   MxMDOrderBook *ob = order->orderBook();
   printf("canceled order %s %s %s px=%f qty=%f\n",
@@ -176,7 +176,7 @@ void loaded(MxMDVenue *venue)
     deletedPxLevelFn(MxMDPxLevelFn::Ptr<&deletedPxLevel>::fn()).
     l2Fn(MxMDOrderBookFn::Ptr<&l2>::fn()).
     addOrderFn(MxMDOrderFn::Ptr<&addOrder>::fn()).
-    canceledOrderFn(MxMDOrderFn::Ptr<&canceledOrder>::fn());
+    deletedOrderFn(MxMDOrderFn::Ptr<&deletedOrder>::fn());
 
   // iterate through all tickers subscribing to market data updates
 

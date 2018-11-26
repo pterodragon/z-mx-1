@@ -33,20 +33,13 @@ void MxMDTickSizeTbl::addTickSize(
   m_venue->md()->addTickSize(this, minPrice, maxPrice, tickSize);
 }
 
-void MxMDPxLevel_::reset(MxDateTime transactTime,
-    const ZmFn<MxMDOrder *, MxDateTime> *canceledOrderFn)
+void MxMDPxLevel_::reset(MxDateTime transactTime)
 {
   {
     auto i = m_orders.iterator();
-    MxEnum side = m_obSide->side();
-    MxMDOrderBook *ob = m_obSide->orderBook();
     while (const ZmRef<MxMDOrder> &order = i.iterateKey()) {
-      // FIXME - bottom up, not top down
-      if (canceledOrderFn) (*canceledOrderFn)(order, transactTime);
-      order->pxLevel(nullptr);
-      ob->venueShard()->delOrder(ob->key(), side, order->id());
+      deletedOrder_(order, transactTime);
       i.del();
-      // FIXME to here - common code with PxLevel_::match()
     }
   }
   m_data.transactTime = transactTime;
@@ -130,6 +123,15 @@ void MxMDPxLevel_::delOrder(MxUInt rank)
     while ((node = i.iterate()) && node->key()->m_data.rank == ++rank)
       --node->key()->m_data.rank;
   }
+}
+
+void MxMDPxLevel_::deletedOrder_(MxMDOrder *order, MxDateTime transactTime)
+{
+  MxMDOrderBook *ob = m_obSide->orderBook();
+  MxMDVenueShard *venueShard = ob->venueShard();
+  ob->deletedOrder_(order, transactTime);
+  order->pxLevel(nullptr);
+  venueShard->delOrder(ob->key(), m_obSide->side(), order->id());
 }
 
 MxMDOrderBook::MxMDOrderBook( // single leg
@@ -794,16 +796,14 @@ void MxMDOrderBook::cancelOrder_(MxMDOrder *order, MxDateTime transactTime)
       pxLevel->price(), -qty, -1, 0, 0, 0);
 
   if (pxLevelFn) (*pxLevelFn)(pxLevel, transactTime);
-  if (m_handler) m_handler->canceledOrder(order, transactTime);
+  if (m_handler) m_handler->deletedOrder(order, transactTime);
 }
 
-void MxMDOBSide::reset(MxDateTime transactTime, const MxMDInstrHandler *handler)
+void MxMDOBSide::reset(MxDateTime transactTime)
 {
-  const MxMDOrderFn *canceledOrder =
-    handler ? &handler->canceledOrder : (const MxMDOrderFn *)0;
   if (m_mktLevel) {
-    m_mktLevel->reset(transactTime, canceledOrder);
-    if (handler) handler->deletedPxLevel(m_mktLevel, transactTime);
+    m_mktLevel->reset(transactTime);
+    m_orderBook->deletedPxLevel_(m_mktLevel, transactTime);
     m_mktLevel = 0;
   }
   {
@@ -811,8 +811,8 @@ void MxMDOBSide::reset(MxDateTime transactTime, const MxMDInstrHandler *handler)
     while (ZmRef<MxMDPxLevel> pxLevel = i.iterate()) {
       MxValue d_qty = -pxLevel->data().qty;
       MxUInt d_nOrders = -pxLevel->data().nOrders;
-      pxLevel->reset(transactTime, canceledOrder);
-      if (handler) handler->deletedPxLevel(pxLevel, transactTime);
+      pxLevel->reset(transactTime);
+      m_orderBook->deletedPxLevel_(pxLevel, transactTime);
       if (MxMDOrderBook *out = m_orderBook->out())
 	out->pxLevel_(
 	  m_side, transactTime, true,
@@ -842,8 +842,8 @@ void MxMDOrderBook::reset(MxDateTime transactTime)
     m_l1Data.stamp = delta.stamp = transactTime;
   }
 
-  m_bids->reset(transactTime, m_handler);
-  m_asks->reset(transactTime, m_handler);
+  m_bids->reset(transactTime);
+  m_asks->reset(transactTime);
 
   md()->resetOB(this, transactTime);
 

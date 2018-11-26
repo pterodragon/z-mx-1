@@ -645,8 +645,7 @@ public:
   }
 
 private:
-  void reset(MxDateTime transactTime,
-      const ZmFn<MxMDOrder *, MxDateTime> *canceledOrderFn);
+  void reset(MxDateTime transactTime);
 
   void updateAbs(
       MxDateTime transactTime, MxValue qty, MxUInt nOrders, MxFlags flags,
@@ -664,7 +663,7 @@ private:
   void delOrder(MxUInt rank);
 
   template <typename Fill>
-  uintptr_t match(
+  uintptr_t match(MxDateTime transactTime,
       MxValue &qty, MxValue &cumQty, MxValue &grossTradeAmt, Fill fill) {
     auto i = this->m_orders.iterator();
     while (MxMDPxLevel_::Orders::Node *node = i.iterate()) {
@@ -677,18 +676,10 @@ private:
 	cumQty += cQty;
 	grossTradeAmt +=
 	  (MxValNDP{m_price, m_pxNDP} * MxValNDP{cQty, m_qtyNDP}).value;
-
-	// FIXME - bottom up, not top down; canceledOrder handler needs calling
-	// refactor below into common function - also used by PxLevel_::reset()
-	if (canceledOrderFn) (*canceledOrderFn)(order, transactTime);
-	contra->pxLevel(nullptr);
-	ob->venueShard()->delOrder(ob->key(), side, contra->id());
+	deletedOrder_(contra, transactTime);
 	i.del();
-	// FIXME to here
-
 	--m_data.nOrders;
 	m_data.qty -= cQty;
-
 	qty -= cQty;
 	if (!qty) return 0;
       } else {
@@ -706,6 +697,8 @@ private:
     }
     return 0;
   }
+
+  void deletedOrder_(MxMDOrder *order, MxDateTime transactTime);
 
   MxMDOBSide		*m_obSide;
   MxNDP			m_pxNDP;
@@ -796,7 +789,7 @@ struct MxMDInstrHandler : public ZuObject {
   Type	member
   MxMDInstrument_Fn(MxMDInstrumentFn,	updatedInstrument); // ref. data changed
   MxMDInstrument_Fn(MxMDOrderBookFn,	updatedOrderBook); // ''
-  MxMDInstrument_Fn(MxMDLevel1Fn,		l1);
+  MxMDInstrument_Fn(MxMDLevel1Fn,	l1);
   MxMDInstrument_Fn(MxMDPxLevelFn,	addMktLevel);
   MxMDInstrument_Fn(MxMDPxLevelFn,	updatedMktLevel);
   MxMDInstrument_Fn(MxMDPxLevelFn,	deletedMktLevel);
@@ -806,7 +799,7 @@ struct MxMDInstrHandler : public ZuObject {
   MxMDInstrument_Fn(MxMDOrderBookFn,	l2);
   MxMDInstrument_Fn(MxMDOrderFn,	addOrder);
   MxMDInstrument_Fn(MxMDOrderFn,	modifiedOrder);
-  MxMDInstrument_Fn(MxMDOrderFn,	canceledOrder);
+  MxMDInstrument_Fn(MxMDOrderFn,	deletedOrder);
   MxMDInstrument_Fn(MxMDTradeFn,	addTrade);
   MxMDInstrument_Fn(MxMDTradeFn,	correctedTrade);
   MxMDInstrument_Fn(MxMDTradeFn,	canceledTrade);
@@ -910,12 +903,14 @@ public:
 private:
   template <int Direction, typename Fill, typename Limit>
   uintptr_t match(
-      MxValue px, MxValue qty,
-      MxValue &cumQty, MxValue &grossTradeAmt, Fill &&fill, Limit &&limit) {
+      MxDateTime transactTime, MxValue px, MxValue qty,
+      MxValue &cumQty, MxValue &grossTradeAmt,
+      Fill &&fill, Limit &&limit) {
     auto i = m_pxLevels.readIterator<Direction>();
     while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate()) {
       if (!limit(px, pxLevel->price())) break;
-      if (uintptr_t v = pxLevel->match(qty, cumQty, grossTradeAmt, fill))
+      if (uintptr_t v = pxLevel->match(
+	    transactTime, qty, cumQty, grossTradeAmt, fill))
 	return v;
       if (!qty) break;
     }
@@ -942,7 +937,7 @@ private:
       const MxMDInstrHandler *handler,
       const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
 
-  void reset(MxDateTime transactTime, const MxMDInstrHandler *handler);
+  void reset(MxDateTime transactTime);
 
   MxMDOrderBook		*m_orderBook;
   MxEnum		m_side;
@@ -971,6 +966,7 @@ friend class MxMDShard;
 friend class MxMDVenue;
 friend class MxMDInstrument;
 friend class MxMDOBSide;
+friend class MxMDPxLevel_;
 
   struct KeyAccessor : public ZuAccessor<MxMDOrderBook *, MxInstrKey> {
     inline static const MxInstrKey &value(const MxMDOrderBook *ob) {
@@ -1085,15 +1081,16 @@ public:
 private:
   template <int Direction, typename Fill, typename Leaves,
 	   typename Limit, typename Side>
-  uintptr_t match_(MxValue px, MxValue qty,
+  uintptr_t match_(MxDateTime transactTime, MxValue px, MxValue qty,
       Fill &&fill, Leaves &&leaves, Limit &&limit, Side &&side) {
     MxValue cumQty = 0;
     MxValue grossTradeAmt = 0;
-    auto l = [px, qty, &cumQty, &grossTradeAmt, &fill, &limit, &side](
-	auto &recurse, MxMDOrderBook *ob) mutable -> uintptr_t {
+    auto l = [transactTime, px, qty,
+	 &cumQty, &grossTradeAmt, &fill, &limit, &side](
+	     auto &recurse, MxMDOrderBook *ob) mutable -> uintptr_t {
       if (ZuLikely(!ob->m_in))
 	return side()->template match<Direction>(
-	    px, qty, cumQty, grossTradeAmt, fill, limit);
+	    transactTime, px, qty, cumQty, grossTradeAmt, fill, limit);
       for (MxMDOrderBook *inOB = ob->m_in; inOB; inOB = inOB->m_next) {
 	if (uintptr_t v = recurse(inOB)) return v;
 	if (!qty) break;
@@ -1112,25 +1109,30 @@ public:
 
   // match order
   template <typename Fill, typename Leaves>
-  uintptr_t match(MxEnum side, MxValue px, MxValue qty,
+  uintptr_t match(
+      MxDateTime transactTime, MxEnum side, MxValue px, MxValue qty,
       Fill &&fill, Leaves &&leaves) {
     if (ZuUnlikely(!*px)) {
       if (side == MxSide::Buy) {
-	return match_<ZmRBTreeLessEqual>(px, qty, fill, leaves,
+	return match_<ZmRBTreeLessEqual>(
+	    transactTime, side, px, qty, fill, leaves,
 	    [](MxValue, MxValue) -> bool { return true; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_asks; });
       } else {
-	return match_<ZmRBTreeGreaterEqual>(side, px, qty, fill, leaves,
+	return match_<ZmRBTreeGreaterEqual>(
+	    transactTime, side, px, qty, fill, leaves,
 	    [](MxValue, MxValue) -> bool { return true; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_bids; });
       }
     } else {
       if (side == MxSide::Buy) {
-	return match_<ZmRBTreeLessEqual>(side, px, qty, fill, leaves,
+	return match_<ZmRBTreeLessEqual>(
+	    transactTime, side, px, qty, fill, leaves,
 	    [](MxValue px, MxValue cPx) -> bool { return px >= cPx; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_asks; });
       } else {
-	return match_<ZmRBTreeGreaterEqual>(side, px, qty, fill, leaves,
+	return match_<ZmRBTreeGreaterEqual>(
+	    transactTime, side, px, qty, fill, leaves,
 	    [](MxValue px, MxValue cPx) -> bool { return px <= cPx; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_bids; });
       }
@@ -1164,6 +1166,13 @@ private:
 
   void reset_(MxMDPxLevel *pxLevel, MxDateTime transactTime);
 
+  inline void deletedOrder_(MxMDOrder *order, MxDateTime transactTime) {
+    if (m_handler) m_handler->deletedOrder(order, transactTime);
+  }
+  inline void deletedPxLevel_(MxMDPxLevel *pxLevel, MxDateTime transactTime) {
+    if (m_handler) m_handler->deletedPxLevel(pxLevel, transactTime);
+  }
+
   void map(unsigned inRank, MxMDOrderBook *outOB);
 
   MxMDVenue			*m_venue;
@@ -1176,7 +1185,7 @@ private:
 
   MxInstrKey			m_key;
   MxUInt			m_legs;
-  MxMDInstrument			*m_instruments[MxMDNLegs];
+  MxMDInstrument		*m_instruments[MxMDNLegs];
   MxEnum			m_sides[MxMDNLegs];
   MxRatio			m_ratios[MxMDNLegs];
 
@@ -1190,7 +1199,7 @@ private:
   ZmRef<MxMDOBSide>		m_bids;
   ZmRef<MxMDOBSide>		m_asks;
 
-  ZmRef<MxMDInstrHandler>		m_handler;
+  ZmRef<MxMDInstrHandler>	m_handler;
 
   uintptr_t			m_appData = 0;
 };
@@ -1317,13 +1326,13 @@ public:
 	m_orderBooks.readIterator<ZmRBTreeGreaterEqual>(
 	  MxMDOrderBook::venueSegment(venue, MxID())).iterateKey())
       if (ob && ob->venueID() == venue) return ob;
-    return (MxMDOrderBook *)0;
+    return (MxMDOrderBook *)nullptr;
   }
   ZuInline ZmRef<MxMDOrderBook> orderBook(MxID venue, MxID segment) const {
     if (ZmRef<MxMDOrderBook> ob = m_orderBooks.findKey(
 	  MxMDOrderBook::venueSegment(venue, segment)))
       return ob;
-    return (MxMDOrderBook *)0;
+    return (MxMDOrderBook *)nullptr;
   }
   template <typename L> // (MxMDOrderBook *) -> uintptr_t
   uintptr_t allOrderBooks(L l) const {
@@ -1394,12 +1403,12 @@ private:
 
   MxMDInstrRefData		m_refData;
 
-  MxMDInstrument			*m_underlying = 0;
+  MxMDInstrument		*m_underlying = 0;
   ZmRef<MxMDDerivatives>	m_derivatives;
 
   OrderBooks			m_orderBooks;
 
-  ZmRef<MxMDInstrHandler>	  	m_handler;
+  ZmRef<MxMDInstrHandler>  	m_handler;
 
   uintptr_t			m_appData = 0;
 };
@@ -2059,7 +2068,7 @@ public:
       instr->shard()->invoke(
 	  [l = ZuMv(l), instr = ZuMv(instr)]() mutable { l(instr); });
     else
-      l((MxMDInstrument *)0);
+      l((MxMDInstrument *)nullptr);
   }
   template <typename L> ZuInline void instrInvoke(
       const MxSymKey &key, L l) const {
@@ -2067,7 +2076,7 @@ public:
       instr->shard()->invoke(
 	  [l = ZuMv(l), instr = ZuMv(instr)]() mutable { l(instr); });
     else
-      l((MxMDInstrument *)0);
+      l((MxMDInstrument *)nullptr);
   }
   template <typename L>
   ZuInline void instrInvoke(const MxUniKey &key, L l) const {
@@ -2117,13 +2126,13 @@ public:
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks.findKey(key))
       ob->shard()->invoke([l = ZuMv(l), ob = ZuMv(ob)]() mutable { l(ob); });
     else
-      l((MxMDOrderBook *)0);
+      l((MxMDOrderBook *)nullptr);
   }
   template <typename L>
   ZuInline void obInvoke(const MxUniKey &key, L l) const {
     instrInvoke(key, [key = key, l = ZuMv(l)](MxMDInstrument *instr) mutable {
 	if (!instr)
-	  l(nullptr);
+	  l((MxMDOrderBook *)nullptr);
 	else
 	  l(instr->orderBook(key.venue, key.segment));
       });
@@ -2147,7 +2156,7 @@ private:
   ZmScheduler		*m_scheduler = 0;
   Shards		m_shards;
 
-  AllInstruments		m_allInstruments;
+  AllInstruments	m_allInstruments;
   AllOrderBooks		m_allOrderBooks;
   Instruments		m_instruments;
   Feeds			m_feeds;

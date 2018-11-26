@@ -8,7 +8,7 @@ import com.shardmx.mxbase.*;
 @Value.Immutable @MxTuple
 public abstract class MxMDInstrHandler {
   @Value.Default @Nullable
-  public MxMDInstrEventFn		updatedInstrument() { return null; }
+  public MxMDInstrEventFn	updatedInstrument() { return null; }
   @Value.Default @Nullable
   public MxMDOBEventFn		updatedOrderBook() { return null; }
   @Value.Default @Nullable
@@ -32,7 +32,7 @@ public abstract class MxMDInstrHandler {
   @Value.Default @Nullable
   public MxMDOrderFn		modifiedOrder() { return null; }
   @Value.Default @Nullable
-  public MxMDOrderFn		canceledOrder() { return null; }
+  public MxMDOrderFn		deletedOrder() { return null; }
   @Value.Default @Nullable
   public MxMDTradeFn		addTrade() { return null; }
   @Value.Default @Nullable

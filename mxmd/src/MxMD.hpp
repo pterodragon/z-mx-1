@@ -646,17 +646,7 @@ public:
 
 private:
   void reset(MxDateTime transactTime,
-      const ZmFn<MxMDOrder *, MxDateTime> *canceledOrderFn) {
-    if (canceledOrderFn) {
-      auto i = m_orders.readIterator();
-      while (const ZmRef<MxMDOrder> &order = i.iterateKey())
-	(*canceledOrderFn)(order, transactTime);
-    }
-    m_orders.clean();
-    m_data.transactTime = transactTime;
-    m_data.qty = 0;
-    m_data.nOrders = 0;
-  }
+      const ZmFn<MxMDOrder *, MxDateTime> *canceledOrderFn);
 
   void updateAbs(
       MxDateTime transactTime, MxValue qty, MxUInt nOrders, MxFlags flags,
@@ -687,9 +677,18 @@ private:
 	cumQty += cQty;
 	grossTradeAmt +=
 	  (MxValNDP{m_price, m_pxNDP} * MxValNDP{cQty, m_qtyNDP}).value;
+
+	// FIXME - bottom up, not top down; canceledOrder handler needs calling
+	// refactor below into common function - also used by PxLevel_::reset()
+	if (canceledOrderFn) (*canceledOrderFn)(order, transactTime);
+	contra->pxLevel(nullptr);
+	ob->venueShard()->delOrder(ob->key(), side, contra->id());
 	i.del();
+	// FIXME to here
+
 	--m_data.nOrders;
 	m_data.qty -= cQty;
+
 	qty -= cQty;
 	if (!qty) return 0;
       } else {
@@ -805,12 +804,12 @@ struct MxMDInstrHandler : public ZuObject {
   MxMDInstrument_Fn(MxMDPxLevelFn,	updatedPxLevel);
   MxMDInstrument_Fn(MxMDPxLevelFn,	deletedPxLevel);
   MxMDInstrument_Fn(MxMDOrderBookFn,	l2);
-  MxMDInstrument_Fn(MxMDOrderFn,		addOrder);
-  MxMDInstrument_Fn(MxMDOrderFn,		modifiedOrder);
-  MxMDInstrument_Fn(MxMDOrderFn,		canceledOrder);
-  MxMDInstrument_Fn(MxMDTradeFn,		addTrade);
-  MxMDInstrument_Fn(MxMDTradeFn,		correctedTrade);
-  MxMDInstrument_Fn(MxMDTradeFn,		canceledTrade);
+  MxMDInstrument_Fn(MxMDOrderFn,	addOrder);
+  MxMDInstrument_Fn(MxMDOrderFn,	modifiedOrder);
+  MxMDInstrument_Fn(MxMDOrderFn,	canceledOrder);
+  MxMDInstrument_Fn(MxMDTradeFn,	addTrade);
+  MxMDInstrument_Fn(MxMDTradeFn,	correctedTrade);
+  MxMDInstrument_Fn(MxMDTradeFn,	canceledTrade);
 #undef MxMDInstrument_Fn
 };
 
@@ -1007,6 +1006,7 @@ public:
   MxMDLib *md() const;
 
   ZuInline MxMDVenue *venue() const { return m_venue; };
+  ZuInline MxMDVenueShard *venueShard() const { return m_venueShard; };
 
   ZuInline MxMDInstrument *instrument() const { return m_instruments[0]; }
   ZuInline MxMDInstrument *instrument(MxUInt leg) const {
@@ -1449,6 +1449,7 @@ class MxMDAPI MxMDVenueShard : public ZuObject {
 friend class MxMDVenue;
 friend class MxMDOrderBook;
 friend class MxMDOBSide;
+friend class MxMDPxLevel_;
 
   typedef ZmHash<ZmRef<MxMDOrder>,
 	    ZmHashIndex<MxMDOrder::OrderID2Accessor,

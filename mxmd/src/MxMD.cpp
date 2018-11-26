@@ -33,6 +33,27 @@ void MxMDTickSizeTbl::addTickSize(
   m_venue->md()->addTickSize(this, minPrice, maxPrice, tickSize);
 }
 
+void MxMDPxLevel_::reset(MxDateTime transactTime,
+    const ZmFn<MxMDOrder *, MxDateTime> *canceledOrderFn)
+{
+  {
+    auto i = m_orders.iterator();
+    MxEnum side = m_obSide->side();
+    MxMDOrderBook *ob = m_obSide->orderBook();
+    while (const ZmRef<MxMDOrder> &order = i.iterateKey()) {
+      // FIXME - bottom up, not top down
+      if (canceledOrderFn) (*canceledOrderFn)(order, transactTime);
+      order->pxLevel(nullptr);
+      ob->venueShard()->delOrder(ob->key(), side, order->id());
+      i.del();
+      // FIXME to here - common code with PxLevel_::match()
+    }
+  }
+  m_data.transactTime = transactTime;
+  m_data.qty = 0;
+  m_data.nOrders = 0;
+}
+
 void MxMDPxLevel_::updateAbs(
     MxDateTime transactTime, MxValue qty, MxUInt nOrders, MxFlags flags,
     MxValue &d_qty, MxUInt &d_nOrders)
@@ -104,9 +125,9 @@ void MxMDPxLevel_::delOrder(MxUInt rank)
   m_orders.delVal(rank);
   if (obSide()->orderBook()->venue()->flags() &
       (1U<<MxMDVenueFlags::UniformRanks)) {
-    auto i = m_orders.iterator<ZmRBTreeGreaterEqual>(rank++);
+    auto i = m_orders.iterator<ZmRBTreeGreater>(rank);
     typename Orders::Node *node;
-    while ((node = i.iterate()) && node->key()->m_data.rank == rank++)
+    while ((node = i.iterate()) && node->key()->m_data.rank == ++rank)
       --node->key()->m_data.rank;
   }
 }
@@ -516,6 +537,7 @@ void MxMDOBSide::delOrder_(
       m_mktLevel = 0;
     } else
       if (handler) pxLevelFn = &handler->updatedMktLevel;
+    order->pxLevel(nullptr);
     m_data.qty -= orderData.qty;
     return;
   }
@@ -532,7 +554,7 @@ void MxMDOBSide::delOrder_(
   } else {
     if (handler) pxLevelFn = &handler->updatedPxLevel;
   }
-  order->pxLevel(0);
+  order->pxLevel(nullptr);
   m_data.nv -= orderData.price * orderData.qty;
   m_data.qty -= orderData.qty;
 }
@@ -737,7 +759,6 @@ ZmRef<MxMDOrder> MxMDOrderBook::cancelOrder(
   MxEnum side)
 {
   if (ZuUnlikely(!m_venueShard)) return (MxMDOrder *)0;
-
   ZmRef<MxMDOrder> order = m_venueShard->delOrder(key(), side, orderID);
   if (ZuUnlikely(!order)) return 0;
   cancelOrder_(order, transactTime);

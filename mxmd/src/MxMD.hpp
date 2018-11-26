@@ -439,7 +439,7 @@ public:
   ZuInline const MxIDString &id() const { return m_id; }
   ZuInline const MxMDOrderData &data() const { return m_data; }
 
-  // can stash a ZdbRN for a Zdb<MxTOrder> in here
+  // can stash a ZmRef<ZdbPOD<MxTOrder> > here
   ZuInline uintptr_t appData() const { return m_appData; }
   ZuInline void appData(uintptr_t v) { m_appData = v; }
 

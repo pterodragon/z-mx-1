@@ -39,20 +39,22 @@ struct MxBalance {
   MxValue	loaned;		// loan used (should be <= loanAvail)
   MxValue	confirmed;	// confirmed / settled
   MxValue	traded;		// traded / realized
+  MxValue	marginTraded;	// traded / realized on margin
+  MxValue	marginFunded;	// used to fund margin trading (other assets)
+  MxValue	comFunded;	// used to fund trading costs
 };
 
-// exposure (open orders, unexpired derivatives, margined positions)
+// exposure (open orders, unexpired derivatives)
 struct MxExpSide {
   MxValue	open;		// total qty of open/working orders
   MxValue	futures;	// total qty of futures (on this underlying)
   MxValue	options;	// total qty of options (on this underlying)
-  MxValue	margin;		// total margin (= open for cash trading)
 };
 
 // can be aggregated across instruments/venues
 struct MxExpAsset {
-  MxExposure	longExp;
-  MxExposure	shortExp;
+  MxExpSide	longExp;
+  MxExpSide	shortExp;
 };
 
 // exposure for an instrument - i.e. an asset pair

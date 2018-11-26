@@ -1727,8 +1727,20 @@ void Zdb_::cacheDel_(ZdbAnyPOD *pod)
     m_lru.del(pod);
 }
 
-void Zdb_::put(ZdbAnyPOD *pod, bool copy)
+void Zdb_::abort(ZdbAnyPOD *pod) // aborts a push()
 {
+  ZmAssert(!pod->committed());
+  pod->del();
+  {
+    Guard guard(m_lock);
+    ++pod->m_writeCount;
+  }
+  m_env->write(pod, ZdbRange(), ZdbOp::Delete);
+}
+
+void Zdb_::put(ZdbAnyPOD *pod, bool copy) // commits a push
+{
+  ZmAssert(!pod->committed());
   pod->commit();
   {
     Guard guard(m_lock);
@@ -1740,7 +1752,7 @@ void Zdb_::put(ZdbAnyPOD *pod, bool copy)
   m_env->write(pod, range, ZdbOp::New);
 }
 
-void Zdb_::update(ZdbAnyPOD *pod, ZdbRange range, bool copy, bool cache)
+ZdbRN Zdb_::update(ZdbAnyPOD *pod, ZdbRange range, bool copy, bool cache)
 {
   if (!range) range.init(0, m_dataSize);
   {
@@ -1752,22 +1764,22 @@ void Zdb_::update(ZdbAnyPOD *pod, ZdbRange range, bool copy, bool cache)
   }
   if (copy) this->copy(pod, range, ZdbOp::Update);
   m_env->write(pod, range, ZdbOp::Update);
+  return pod->rn();
 }
 
-void Zdb_::del(ZdbAnyPOD *pod, bool copy)
+ZdbRN Zdb_::del(ZdbAnyPOD *pod, bool copy)
 {
-  bool abort = !pod->committed();
+  ZmAssert(pod->committed());
   pod->del();
   {
     Guard guard(m_lock);
-    if (!abort) {
-      cacheDel_(pod);
-      pod->update(m_allocRN++, pod->rn());
-    }
+    cacheDel_(pod);
+    pod->update(m_allocRN++, pod->rn());
     ++pod->m_writeCount;
   }
   if (copy) this->copy(pod, ZdbRange(), ZdbOp::Delete);
   m_env->write(pod, ZdbRange(), ZdbOp::Delete);
+  return pod->rn();
 }
 
 void Zdb_::stats(

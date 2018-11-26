@@ -603,23 +603,26 @@ public:
   // next RN that will be allocated
   inline ZdbRN allocRN() { return m_allocRN; }
 
-  // new record
+  // create new record
   ZmRef<ZdbAnyPOD> push();
 
   // commit record following push() - causes replication / sync
   void put(ZdbAnyPOD *, bool copy = true);
 
+  // abort push()
+  void abort(ZdbAnyPOD *);
+
   // get record
   ZmRef<ZdbAnyPOD> get(ZdbRN rn);	// use for read-only queries
   ZmRef<ZdbAnyPOD> get_(ZdbRN rn);	// use for RMW - does not update cache
 
-  // update record following get() / get_()
-  void update(
+  // update record following get() / get_() - returns new RN
+  ZdbRN update(
       ZdbAnyPOD *, ZdbRange range = ZdbRange(),
       bool copy = true, bool cache = true);
 
-  // delete record following push() / get() / get_()
-  void del(ZdbAnyPOD *, bool copy = true);
+  // delete record following get() / get_() - returns new RN
+  ZdbRN del(ZdbAnyPOD *, bool copy = true);
 
   void stats(
       uint64_t &cacheLoads, uint64_t &cacheMisses, 

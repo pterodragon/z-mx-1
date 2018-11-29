@@ -41,6 +41,7 @@
 struct MxMsgID {
   MxID		linkID;
   MxSeqNo	seqNo;
+  MxUInt	date = 0;	// YYYYMMDD - scopes seqNo
 };
 
 #endif /* MxMsgID_HPP */

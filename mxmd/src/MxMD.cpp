@@ -1251,6 +1251,13 @@ void MxMDLib::addFeed(MxMDFeed *feed)
 void MxMDLib::addVenue(MxMDVenue *venue)
 {
   m_venues.add(venue);
+  handler()->addVenue(venue);
+  {
+    MxMDCore *core = static_cast<MxMDCore *>(this);
+    if (ZuUnlikely(core->streaming()))
+      MxMDStream::addVenue(core->broadcast(), venue->id(),
+	venue->orderIDScope(), venue->flags());
+  }
 }
 
 void MxMDLib::loaded(MxMDVenue *venue)

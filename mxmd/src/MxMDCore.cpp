@@ -882,6 +882,7 @@ void MxMDCore::pad(Hdr &hdr)
     case Type::CorrectTrade:	hdr.pad<CorrectTrade>(); break;
     case Type::CancelTrade:	hdr.pad<CancelTrade>(); break;
     case Type::RefDataLoaded:	hdr.pad<RefDataLoaded>(); break;
+    case Type::AddVenue:	hdr.pad<AddVenue>(); break;
     default: break;
   }
 }
@@ -1162,6 +1163,12 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	});
       }
       break;
+    case Type::AddVenue:
+      {
+	const AddVenue &obj = hdr.as<AddVenue>();
+	this->venue(obj.venue, obj.orderIDScope, obj.flags);
+      }
+      break;
     case Type::RefDataLoaded:
       {
 	const RefDataLoaded &obj = hdr.as<RefDataLoaded>();
@@ -1178,15 +1185,6 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
       raise(ZeEVENT(Error, "MxMDLib - unknown message type"));
       break;
   }
-}
-
-ZmRef<MxMDVenue> MxMDCore::venue(MxID id)
-{
-  ZmRef<MxMDVenue> venue;
-  if (ZuLikely(venue = MxMDLib::venue(id))) return venue;
-  venue = new MxMDVenue(this, m_localFeed, id);
-  addVenue(venue);
-  return venue;
 }
 
 void MxMDCore::startTimer(MxDateTime begin)

@@ -236,7 +236,8 @@ public:
   template <typename Snapshot>
   bool snapshot(Snapshot &snapshot, MxID id, MxSeqNo seqNo) {
     bool ok = !(allVenues([&snapshot](MxMDVenue *venue) -> uintptr_t {
-      return venue->allTickSizeTbls(
+      return !MxMDStream::addVenue(snapshot, venue->id(), venue->orderIDScope(),
+	  venue->flags()) || venue->allTickSizeTbls(
 	    [&snapshot, venue](MxMDTickSizeTbl *tbl) -> uintptr_t {
 	return !MxMDStream::addTickSizeTbl(snapshot, venue->id(), tbl->id()) ||
 	  tbl->allTickSizes(
@@ -320,7 +321,14 @@ private:
   typedef ZmPLock Lock;
   typedef ZmGuard<Lock> Guard;
 
-  ZmRef<MxMDVenue> venue(MxID id);
+  template<typename ...Args>
+  ZmRef<MxMDVenue> venue(MxID id, Args&&... args) {
+    ZmRef<MxMDVenue> venue;
+    if (ZuLikely(venue = MxMDLib::venue(id))) return venue;
+    venue = new MxMDVenue(this, m_localFeed, id, ZuFwd<Args>(args)...);
+    addVenue(venue);
+    return venue;
+  }
 
   void timer();
 

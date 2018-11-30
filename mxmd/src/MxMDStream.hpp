@@ -84,6 +84,7 @@ namespace MxMDStream {
 	ResetOB,
 	AddTrade, CorrectTrade, CancelTrade,
 	RefDataLoaded,
+	AddVenue,
 
 	// control events follow
 	HeartBeat,		// heart beat
@@ -104,6 +105,7 @@ namespace MxMDStream {
 	"ResetOB",
 	"AddTrade", "CorrectTrade", "CancelTrade",
 	"RefDataLoaded",
+	"AddVenue",
 
 	"HeartBeat",
 	"Wake",
@@ -378,6 +380,13 @@ namespace MxMDStream {
     MxID		venue;
   };
 
+  struct AddVenue {
+    enum { Code = Type::AddVenue };
+    MxID		venue;
+    MxEnum		orderIDScope;
+    MxFlags		flags;
+  };
+
   // transport / session control messages follow
 
   struct HeartBeat { // heart beat / time synchronization
@@ -432,6 +441,7 @@ namespace MxMDStream {
       CorrectTrade,
       CancelTrade,
       RefDataLoaded,
+      AddVenue,
       HeartBeat,
       Wake,
       EndOfSnapshot,
@@ -501,6 +511,7 @@ namespace MxMDStream {
   FnDeclare(tradingSession, TradingSession)
 
   FnDeclare(refDataLoaded, RefDataLoaded)
+  FnDeclare(addVenue, AddVenue)
 
   FnDeclare(heartBeat, HeartBeat)
   FnDeclare(wake, Wake)

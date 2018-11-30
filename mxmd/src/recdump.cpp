@@ -39,6 +39,8 @@
 
 #include <version.h>
 
+class App;
+
 class RealTimeCSV : public ZvCSV, public MxCSV<RealTimeCSV> {
 public:
   struct L2Data {
@@ -61,6 +63,8 @@ public:
     MxEnum		session;
     MxMDL1Data		l1Data;
     L2Data		l2Data;
+    MxEnum		extraEnum; // used for orderIDScope in AddVenue event
+    MxFlags		extraFlags; // used for venue flags in AddVenue event
     MxBool		updateL1;
   };
   typedef ZuPOD<Data> POD;
@@ -129,6 +133,12 @@ public:
 	  Offset(orderFlags), offsetof(Data, venue)));
 #undef Offset
 #define Offset(x) offsetof(Data, x)
+    if constexpr (ZuConversion<App, ::App>::Same) {
+      if (app->addVenueEvents()) {
+	add(new MxEnumCol<MxMDOrderIDScope::CSVMap>("extraEnum", Offset(extraEnum)));
+	add(new MxFlagsCol<MxMDVenueFlags::Flags>("extraFlags", Offset(extraFlags)));
+      }
+    }
     add(new MxBoolCol("updateL1", Offset(updateL1)));
 #undef Offset
   }
@@ -287,6 +297,15 @@ public:
 	    data->venue = obj.venue;
 	  }
 	  break;
+	case Type::AddVenue:
+	  {
+	    const AddVenue &obj = hdr.as<AddVenue>();
+	    new (data) Data{hdr.shard, hdr.type};
+	    data->venue = obj.venue;
+	    data->extraEnum = obj.orderIDScope;
+	    data->extraFlags = obj.flags;
+	  }
+	  break;
 	default:
 	  return 0;
       }
@@ -356,6 +375,8 @@ public:
   inline void l1(bool b) { m_l1 = b; }
   inline void l2(bool b) { m_l2 = b; }
   inline void trades(bool b) { m_trades = b; }
+  inline void addVenueEvents(bool b) { m_addVenueEvents = b; }
+  inline bool addVenueEvents() const { return m_addVenueEvents; }
 
   inline void instrID(const MxInstrKey &key) { m_secIDs.add(key); }
   inline bool filterID(MxInstrKey key) {
@@ -446,6 +467,7 @@ private:
   bool				m_l1 = 0;
   bool				m_l2 = 0;
   bool				m_trades = 0;
+  bool				m_addVenueEvents = 0;
 
   bool				m_hhmmss = 0;
   unsigned			m_yyyymmdd = 0;
@@ -579,6 +601,12 @@ void App::read()
 	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
 	  if (!m_refData) continue;
 	  break;
+	case Type::AddVenue:
+	  if (!addVenueEvents()) continue;
+	  if (n != (int)sizeof(AddVenue)) goto dataerror;
+	  if (m_realTimeCSV) m_realTimeCSV->enqueue(msg);
+	  if (!m_refData) continue;
+	  break;
 
 	case Type::TradingSession:
 	  if (n != (int)sizeof(TradingSession)) goto dataerror;
@@ -677,6 +705,7 @@ void usage()
     "  -1\t\t- include Level 1 data in output\n"
     "  -2\t\t- include Level 2 data in output\n"
     "  -t\t\t- include trade data in output\n"
+    "  -e\t\t- include \"AddVenue\" event data in real-time messages output\n"
     "  -R CSV\t- dump real-time messages to CSV\n"
     "  -O CSV\t- dump order book messages to CSV\n"
     "  -S CSV\t- dump instrument messages to CSV\n"
@@ -725,6 +754,9 @@ int main(int argc, const char *argv[])
 	break;
       case 't':
 	app.trades(true);
+	break;
+      case 'e':
+	app.addVenueEvents(true);
 	break;
       case 'n':
 	app.hhmmss(true);

@@ -766,6 +766,7 @@ struct MxMDLibHandler : public ZmObject {
   MxMDLib_Fn(MxMDFeedFn,		disconnected);
   MxMDLib_Fn(MxMDLibFn,			eof);
   MxMDLib_Fn(MxMDVenueFn,		refDataLoaded);
+  MxMDLib_Fn(MxMDVenueFn,		addVenue);
   MxMDLib_Fn(MxMDTickSizeTblFn,		addTickSizeTbl);
   MxMDLib_Fn(MxMDTickSizeTblFn,		resetTickSizeTbl);
   MxMDLib_Fn(MxMDTickSizeFn,		addTickSize);

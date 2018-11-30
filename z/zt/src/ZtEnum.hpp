@@ -44,8 +44,13 @@ typedef ZuBox_1(int8_t) ZtEnum;
 
 // ZtEnum class declaration macros
 //   Note: must use in this order: Values; Names; Map; Flags;...
+constexpr int ZtEnumNumArgs_(const char* str, char c) {
+    return str[0] == char(0) ? 0 : (str[0] == c) + ZtEnumNumArgs_(str+1, c);
+}
+#define ZtEnumNumArgs(...) (ZtEnumNumArgs_(#__VA_ARGS__, ',') + 1)
+
 #define ZtEnumValues(...) \
-  enum _ { Invalid = -1, __VA_ARGS__, N }; \
+  enum _ { Invalid = -1, __VA_ARGS__, N = ZtEnumNumArgs(__VA_ARGS__) }; \
   ZuAssert(N < 1024); \
   enum { Bits = \
     N < 2 ? 1 : N < 4 ? 2 : N < 8 ? 3 : N < 16 ? 4 : N < 32 ? 5 : \

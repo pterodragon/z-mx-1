@@ -437,7 +437,7 @@ void MxMDOrderBook::pxLevel_(
     obSide->pxLevel_(
 	transactTime, delta, price, qty, nOrders, flags, m_handler,
 	d_qty, d_nOrders, pxLevelFn, pxLevel);
-    if (!m_venue->flags() & (1<<MxMDVenueFlags::Dark))
+    if (!(m_venue->flags() & (1<<MxMDVenueFlags::Dark)))
       md()->pxLevel(
 	  this, side, transactTime, delta, price, qty, nOrders, flags);
   }

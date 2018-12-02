@@ -37,9 +37,20 @@
 #include <ZuTraits.hpp>
 #include <ZuConversion.hpp>
 
-template <typename> struct ZuPrint {
+struct ZuPrintable { };
+
+struct ZuPrintFn {
+  enum { OK = 1, String = 0, Delegate = 1, Buffer = 0 };
+  template <typename S, typename T>
+  inline static void print(S &s, const T &v) { v.print(s); }
+};
+template <bool> struct ZuPrint_ {
   enum { OK = 0, String = 0, Delegate = 0, Buffer = 0 };
 };
+template <> struct ZuPrint_<true> : public ZuPrintFn { };
+template <typename T>
+struct ZuPrint : public ZuPrint_<ZuConversion<ZuPrintable, T>::Base> { };
+
 struct ZuPrintString {
   enum { OK = 1, String = 1, Delegate = 0, Buffer = 0 };
 };
@@ -49,11 +60,7 @@ struct ZuPrintDelegate {
 struct ZuPrintBuffer {
   enum { OK = 1, String = 0, Delegate = 0, Buffer = 1 };
 };
-struct ZuPrintFn {
-  enum { OK = 1, String = 0, Delegate = 1, Buffer = 0 };
-  template <typename S, typename T>
-  inline static void print(S &s, const T &v) { v.print(s); }
-};
+
 struct ZuPrintNull {
   enum { OK = 1, String = 0, Delegate = 1, Buffer = 0 };
   template <typename S, typename T>

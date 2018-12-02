@@ -1,0 +1,16 @@
+METASOURCES = AUTO
+AM_CPPFLAGS =  \
+	-DMXT_EXPORTS \
+	@MXT_CPPFLAGS@ @MXBASE_CPPFLAGS@ @Z_CPPFLAGS@
+AM_CXXFLAGS = @Z_CXXFLAGS@
+AM_LDFLAGS = @MXT_LDFLAGS@ @MXT_SO_LDFLAGS@ \
+	@MXBASE_LDFLAGS@ @Z_LDFLAGS@
+include_HEADERS = \
+	MxTLib.hpp
+	MxTFeatures.hpp
+	MxTTypes.hpp MxTMsg.hpp MxTOrder.hpp MxTOrderMgr.hpp MxTOrderDB.hpp
+	MxTIf.hpp MxTIf_FIX.hpp MxTIf_NSED.hpp
+	MxTIfFn.hpp MxTIfFn_FIX.hpp
+lib_LTLIBRARIES = libMxT.la
+libMxT_la_SOURCES =
+libMxT_la_LIBADD = @MXBASE_LIBS@ @Z_LIBS@ @MXT_XLIBS@

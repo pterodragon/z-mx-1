@@ -19,8 +19,8 @@
 
 // MxT Order State Management - Events/Messages
 
-#ifndef MxTIf_HPP
-#define MxTIf_HPP
+#ifndef MxTOrder_HPP
+#define MxTOrder_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -99,14 +99,21 @@ namespace MxTEventFlags { // event flags
   MxEnumValues(
       Unsolicited,	// unsolicited modified / canceled from market
       Synthesized,	// synthesized - not received from market
-      Pending		// synthesized and pending ordered / modified
+      Pending,		// synthesized and pending ordered / modified
+      RiskFiltered,	// risk filtered
+      RiskHeld,		// risk held
+      Stopped		// stopped (held by stop)
   );
   MxEnumNames(
-      "Unsolicited", "Synthesized", "Pending");
+      "Unsolicited", "Synthesized", "Pending",
+      "RiskFiltered", "RiskHeld", "Stopped");
   MxEnumFlags(Flags,
       "Unsolicited", Unsolicited,
       "Synthesized", Synthesized,
-      "Pending", Pending);
+      "Pending", Pending,
+      "RiskFiltered", RiskFiltered,
+      "RiskHeld", RiskHeld,
+      "Stopped", Stopped);
 }
 
 namespace MxTEventState { // event state
@@ -186,7 +193,7 @@ namespace MxTEventState { // event state
 
 #pragma pack(push, 4)
 
-template <typename AppData> struct MxTMsgData {
+template <typename AppData> struct MxTEventData {
 
   struct Event : public ZuPrintable {
     MxEnum		eventType;	// EventType
@@ -204,6 +211,9 @@ template <typename AppData> struct MxTMsgData {
     Event_Flag(Unsolicited, unsolicited)
     Event_Flag(Synthesized, synthesized)
     Event_Flag(Pending, pending)
+    Event_Flag(RiskFiltered, riskFiltered)
+    Event_Flag(RiskHeld, riskHeld)
+    Event_Flag(Stopped, stopped)
 
     template <typename Update>
     inline void update(const Update &u) { }
@@ -291,6 +301,7 @@ template <typename AppData> struct MxTMsgData {
   struct CanceledLeg_ {
     MxValue		cumQty;
     MxNDP		qtyNDP;
+    char		pad_0[3];
 
     // only update cumQty from an acknowledgment
     template <typename Update>
@@ -360,10 +371,11 @@ template <typename AppData> struct MxTMsgData {
   };
 
   struct ModifyLeg_ : public CancelLeg_ {
+    MxValue		px;		// always set; ref. px for mkt orders
     MxEnum		side;		// MxSide
     MxEnum		ordType;	// MxOrdType
-    MxValue		px;		// always set; ref. px for mkt orders
     MxNDP		pxNDP;
+    char		pad_0[1];
 
     template <typename Update>
     inline typename ZuIs<ModifyLeg_, Update>::T update(const Update &u) {
@@ -425,6 +437,7 @@ template <typename AppData> struct MxTMsgData {
   template <typename Leg>
   struct Modify_ : public Modify__, public Cancel_<Leg> {
     MxEnum		timeInForce;	// MxTimeInForce
+    char		pad_0[3];
 
     template <typename Update>
     inline typename ZuIs<Modify__, Update>::T update(const Update &u) {
@@ -575,6 +588,7 @@ template <typename AppData> struct MxTMsgData {
     MxValue		lastQty;
     MxNDP		pxNDP;
     MxNDP		qtyNDP;
+    char		pad_0[2];
 
     template <typename S> inline void print(S &s) const {
       static_cast<const typename AppData::Event &>(*this).print(s);
@@ -602,8 +616,9 @@ template <typename AppData> struct MxTMsgData {
 
   // generic reject data for new order / modify / cancel
   struct AnyReject : public AppData::Event {
-    MxEnum		rejReason;	// RejReason
     MxInt		rejCode;	// source-specific numerical code
+    MxEnum		rejReason;	// RejReason
+    char		pad_0[3];
     MxTxtString		rejText;	// reject text
 
     template <typename S> inline void print(S &s) const {
@@ -646,7 +661,7 @@ template <typename AppData> struct MxTMsgData {
 
 #pragma pack(pop)
 
-template <typename AppData> struct MxTMsgTypes : public AppData {
+template <typename AppData> struct MxTEventTypes : public AppData {
   // types that can be extended by the app
   typedef typename AppData::Event Event;
 
@@ -1072,4 +1087,4 @@ template <typename AppData> struct MxTMsgTypes : public AppData {
   };
 };
 
-#endif /* MxTIf_HPP */
+#endif /* MxTOrder_HPP */

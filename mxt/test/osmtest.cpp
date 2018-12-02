@@ -3,11 +3,11 @@
 
 // #define MxT_NLegs 4
 
-#include <MxTMsg.hpp>
+#include <MxTOrder.hpp>
 #include <MxTOrderMgr.hpp>
 
-struct AppData : public MxTMsgData<AppData> {
-  typedef MxTMsgData<AppData> Base;
+struct AppData : public MxTEventData<AppData> {
+  typedef MxTEventData<AppData> Base;
 
   struct Request {
     MxIDString	clOrdID;

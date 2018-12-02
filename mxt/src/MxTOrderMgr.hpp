@@ -33,13 +33,13 @@
 #include <MxBase.hpp>
 
 #include <MxTTypes.hpp>
-#include <MxTMsg.hpp>
+#include <MxTOrder.hpp>
 
 // application must instantiate MxTOrderMgr
 // and supply the following interface:
 #if 0
-struct AppData : public MxTMsgData<AppData> {
-  typedef MxTMsgData<MsgAppData> Base;
+struct AppData : public MxTEventData<AppData> {
+  typedef MxTEventData<MsgAppData> Base;
 
   // extend data definitions
   struct NewOrder : public Base::NewOrder {
@@ -93,61 +93,61 @@ struct App : public MxTOrderMgr<App, AppData> {
 #endif
 
 template <typename App, typename AppData>
-class MxTOrderMgr : public MxTMsgTypes<AppData> {
+class MxTOrderMgr : public MxTEventTypes<AppData> {
 public:
-  typedef MxTMsgTypes<AppData> MsgTypes;
+  typedef MxTEventTypes<AppData> EventTypes;
 
-  typedef typename MsgTypes::Event Event;
+  typedef typename EventTypes::Event Event;
 
-  typedef typename MsgTypes::OrderLeg OrderLeg;
-  typedef typename MsgTypes::ModifyLeg ModifyLeg;
-  typedef typename MsgTypes::CancelLeg CancelLeg;
+  typedef typename EventTypes::OrderLeg OrderLeg;
+  typedef typename EventTypes::ModifyLeg ModifyLeg;
+  typedef typename EventTypes::CancelLeg CancelLeg;
 
-  typedef typename MsgTypes::AnyReject AnyReject;
+  typedef typename EventTypes::AnyReject AnyReject;
 
-  typedef typename MsgTypes::NewOrder NewOrder;
-  typedef typename MsgTypes::OrderHeld OrderHeld;
-  typedef typename MsgTypes::OrderFiltered OrderFiltered;
-  typedef typename MsgTypes::Ordered Ordered;
-  typedef typename MsgTypes::Reject Reject;
+  typedef typename EventTypes::NewOrder NewOrder;
+  typedef typename EventTypes::OrderHeld OrderHeld;
+  typedef typename EventTypes::OrderFiltered OrderFiltered;
+  typedef typename EventTypes::Ordered Ordered;
+  typedef typename EventTypes::Reject Reject;
 
-  typedef typename MsgTypes::Modify Modify;
-  typedef typename MsgTypes::ModSimulated ModSimulated;
-  typedef typename MsgTypes::ModHeld ModHeld;
-  typedef typename MsgTypes::ModFiltered ModFiltered;
-  typedef typename MsgTypes::ModFilteredCxl ModFilteredCxl;
-  typedef typename MsgTypes::Modified Modified;
-  typedef typename MsgTypes::ModReject ModReject;
-  typedef typename MsgTypes::ModRejectCxl ModRejectCxl;
+  typedef typename EventTypes::Modify Modify;
+  typedef typename EventTypes::ModSimulated ModSimulated;
+  typedef typename EventTypes::ModHeld ModHeld;
+  typedef typename EventTypes::ModFiltered ModFiltered;
+  typedef typename EventTypes::ModFilteredCxl ModFilteredCxl;
+  typedef typename EventTypes::Modified Modified;
+  typedef typename EventTypes::ModReject ModReject;
+  typedef typename EventTypes::ModRejectCxl ModRejectCxl;
 
-  typedef typename MsgTypes::Cancel Cancel;
-  typedef typename MsgTypes::CxlFiltered CxlFiltered;
-  typedef typename MsgTypes::Canceled Canceled;
-  typedef typename MsgTypes::CxlReject CxlReject;
+  typedef typename EventTypes::Cancel Cancel;
+  typedef typename EventTypes::CxlFiltered CxlFiltered;
+  typedef typename EventTypes::Canceled Canceled;
+  typedef typename EventTypes::CxlReject CxlReject;
 
-  typedef typename MsgTypes::Hold Hold;
-  typedef typename MsgTypes::Release Release;
-  typedef typename MsgTypes::Deny Deny;
+  typedef typename EventTypes::Hold Hold;
+  typedef typename EventTypes::Release Release;
+  typedef typename EventTypes::Deny Deny;
 
-  typedef typename MsgTypes::Fill Fill;
+  typedef typename EventTypes::Fill Fill;
 
-  typedef typename MsgTypes::Closed Closed;
+  typedef typename EventTypes::Closed Closed;
 
-  typedef typename MsgTypes::OrderSent OrderSent;
-  typedef typename MsgTypes::ModifySent ModifySent;
-  typedef typename MsgTypes::CancelSent CancelSent;
+  typedef typename EventTypes::OrderSent OrderSent;
+  typedef typename EventTypes::ModifySent ModifySent;
+  typedef typename EventTypes::CancelSent CancelSent;
 
-  typedef typename MsgTypes::Msg_ Msg_;
+  typedef typename EventTypes::Msg_ Msg_;
   template <typename Largest>
-  using Msg = typename MsgTypes::template Msg<Largest>;
+  using Msg = typename EventTypes::template Msg<Largest>;
 
-  typedef typename MsgTypes::OrderMsg OrderMsg;
-  typedef typename MsgTypes::ModifyMsg ModifyMsg;
-  typedef typename MsgTypes::CancelMsg CancelMsg;
+  typedef typename EventTypes::OrderMsg OrderMsg;
+  typedef typename EventTypes::ModifyMsg ModifyMsg;
+  typedef typename EventTypes::CancelMsg CancelMsg;
 
-  typedef typename MsgTypes::AnyMsg AnyMsg;
+  typedef typename EventTypes::AnyMsg AnyMsg;
 
-  typedef typename MsgTypes::Order Order;
+  typedef typename EventTypes::Order Order;
 
 private:
   inline const App *app() const { return static_cast<const App *>(this); }

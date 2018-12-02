@@ -286,16 +286,6 @@ struct MxTTimeFmt {
 };
 template <> struct ZuPrint<MxTTimeFmt::Null> : public ZuPrintFn { };
 
-struct MxTEventIDFmt {
-  template <typename S> inline void print(S &s) const {
-    if (!*id) return;
-    s << date.fmt(ZuFmt::Right<8>()) << ':' << id.hex(ZuFmt::Right<8>());
-  }
-  MxUInt64	id;
-  MxUInt	date;
-};
-template <> struct ZuPrint<MxTEventIDFmt> : public ZuPrintFn { };
-
 struct MxTBoolFmt {
   template <typename S> inline void print(S &s) const {
     if (!*v) return;

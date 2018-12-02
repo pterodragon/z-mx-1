@@ -79,6 +79,66 @@ private:
   int	m_venueOffset;
 };
 
+class MxMDVenueCSV : public ZvCSV, public MxCSV<MxMDVenueCSV> {
+public:
+  struct Data {
+    MxID		id;
+    MxEnum		orderIDScope;
+    MxFlags		venueFlags;
+  };
+  typedef ZuPOD<Data> POD;
+
+  template <typename App = MxCSVApp>
+  MxMDVenueCSV(App *app = 0) {
+    new ((m_pod = new POD())->ptr()) Data{};
+#ifdef Offset
+#undef Offset
+#endif
+#define Offset(x) offsetof(Data, x)
+    add(new MxIDCol("id", Offset(id)));
+    add(new MxEnumCol<MxMDOrderIDScope::CSVMap>(
+	  "orderIDScope", Offset(orderIDScope)));
+    add(new MxFlagsCol<MxMDVenueFlags::Flags>(
+	  "venueFlags", Offset(venueFlags)));
+#undef Offset
+  }
+
+  void alloc(ZuRef<ZuAnyPOD> &pod) { pod = m_pod; }
+
+  template <typename File>
+  void read(const File &file, ZvCSVReadFn fn) {
+    ZvCSV::readFile(file,
+	ZvCSVAllocFn::Member<&MxMDVenueCSV::alloc>::fn(this), fn);
+  }
+
+  ZuAnyPOD *row(const MxMDStream::Msg *msg) {
+    Data *data = ptr();
+
+    {
+      using namespace MxMDStream;
+      const Hdr &hdr = msg->hdr();
+      switch ((int)hdr.type) {
+	case Type::AddVenue:
+	  {
+	    const AddVenue &obj = hdr.as<AddVenue>();
+	    new (data) Data{obj.id, obj.orderIDScope, obj.flags};
+	  }
+	  break;
+	default:
+	  return 0;
+      }
+    }
+
+    return pod();
+  }
+
+  ZuInline POD *pod() { return m_pod.ptr(); }
+  ZuInline Data *ptr() { return m_pod->ptr(); }
+
+private:
+  ZuRef<POD>	m_pod;
+};
+
 class MxMDTickSizeCSV : public ZvCSV, public MxCSV<MxMDTickSizeCSV> {
 public:
   struct Data {

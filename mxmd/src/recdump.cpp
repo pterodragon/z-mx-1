@@ -383,6 +383,10 @@ public:
   inline void outPath(const Path &path) { m_outPath = path; }
 
   template <typename Path>
+  inline void venueCSV(const Path &path) {
+    m_venueCSV = new CSVWriter<MxMDVenueCSV>(this, path);
+  }
+  template <typename Path>
   inline void tickSizeCSV(const Path &path) {
     m_tickSizeCSV = new CSVWriter<MxMDTickSizeCSV>(this, path);
   }
@@ -424,6 +428,7 @@ public:
 	ZmPlatform::exit(1);
       }
     }
+    if (m_venueCSV) m_venueCSV->start();
     if (m_tickSizeCSV) m_tickSizeCSV->start();
     if (m_securityCSV) m_securityCSV->start();
     if (m_orderBookCSV) m_orderBookCSV->start();
@@ -433,6 +438,7 @@ public:
   void stop() {
     m_file.close();
     if (m_outFile) m_outFile.close();
+    if (m_venueCSV) m_venueCSV->stop();
     if (m_tickSizeCSV) m_tickSizeCSV->stop();
     if (m_securityCSV) m_securityCSV->stop();
     if (m_orderBookCSV) m_orderBookCSV->stop();
@@ -466,6 +472,7 @@ private:
 
   ZmTime			m_lastTime;
 
+  ZuRef<CSVWriter<MxMDVenueCSV> >	m_venueCSV;
   ZuRef<CSVWriter<MxMDTickSizeCSV> >	m_tickSizeCSV;
   ZuRef<CSVWriter<MxMDInstrumentCSV> >	m_securityCSV;
   ZuRef<CSVWriter<MxMDOrderBookCSV> >	m_orderBookCSV;
@@ -525,6 +532,13 @@ void App::read()
 	case Type::HeartBeat:
 	  m_lastTime = msg->as<HeartBeat>().stamp.zmTime();
 	  break;
+
+	case Type::AddVenue:
+	  if (n != (int)sizeof(AddVenue)) goto dataerror;
+	  if (m_venueCSV) m_venueCSV->enqueue(msg);
+	  if (!m_refData) continue;
+	  break;
+
 	case Type::AddTickSizeTbl:
 	case Type::ResetTickSizeTbl:
 	  if (n != (int)sizeof(AddTickSizeTbl)) goto dataerror;
@@ -677,6 +691,7 @@ void usage()
     "  -1\t\t- include Level 1 data in output\n"
     "  -2\t\t- include Level 2 data in output\n"
     "  -t\t\t- include trade data in output\n"
+    "  -M CSV\t- dump venue messages to CSV\n"
     "  -R CSV\t- dump real-time messages to CSV\n"
     "  -O CSV\t- dump order book messages to CSV\n"
     "  -S CSV\t- dump instrument messages to CSV\n"
@@ -702,7 +717,8 @@ int main(int argc, const char *argv[])
   App app;
   MxID venue;
   MxID segment;
-  bool tickSizeCSV = false,
+  bool venueCSV = false,
+       tickSizeCSV = false,
        instrumentCSV = false,
        orderBookCSV = false,
        realTimeCSV = false;
@@ -729,6 +745,11 @@ int main(int argc, const char *argv[])
       case 'n':
 	app.hhmmss(true);
 	break;
+      case 'M':
+	if (venueCSV || ++i >= argc) usage();
+	venueCSV = true;
+	app.venueCSV(argv[i]);
+	break;
       case 'd':
 	if (++i >= argc) usage();
 	app.yyyymmdd(atoi(argv[i]));
@@ -747,7 +768,8 @@ int main(int argc, const char *argv[])
 	break;
       case 'i':
 	if (++i >= argc) usage();
-	app.instrID(MxInstrKey{.id = argv[i], .venue = venue, .segment = segment});
+	app.instrID(
+	    MxInstrKey{.id = argv[i], .venue = venue, .segment = segment});
 	break;
       case 'o':
 	if (app.outPath()) usage();

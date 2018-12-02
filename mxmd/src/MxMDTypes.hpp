@@ -123,4 +123,29 @@ typedef MxString<12> MxMDFlagsStr;
 
 #pragma pack(pop)
 
+// venue order ID scope
+
+namespace MxMDOrderIDScope {
+  MxEnumValues(Venue, OrderBook, OBSide, Default = Venue);
+  MxEnumNames("Venue", "OrderBook", "OBSide");
+  MxEnumMapAlias(Map, CSVMap);
+}
+
+// venue flags
+
+namespace MxMDVenueFlags {
+  MxEnumValues(
+      UniformRanks,		// order ranks are uniformly distributed
+      Dark,			// lit if not dark
+      Synthetic);		// synthetic (aggregated from input venues)
+  MxEnumNames(
+      "UniformRanks",
+      "Dark",
+      "Synthetic");
+  MxEnumFlags(Flags,
+      "UniformRanks", UniformRanks,
+      "Dark", Dark,
+      "Synthetic", Synthetic);
+}
+
 #endif /* MxMDTypes_HPP */

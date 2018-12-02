@@ -160,23 +160,6 @@ class MxMDOrder_;
 
 typedef ZmSharded<MxMDShard> MxMDSharded;
 
-// venue flags
-
-namespace MxMDVenueFlags {
-  MxEnumValues(
-      UniformRanks,		// order ranks are uniformly distributed
-      Dark,			// lit if not dark
-      Synthetic);		// synthetic (aggregated from input venues)
-  MxEnumNames(
-      "UniformRanks",
-      "Dark",
-      "Synthetic");
-  MxEnumFlags(Flags,
-      "UniformRanks", UniformRanks,
-      "Dark", Dark,
-      "Synthetic", Synthetic);
-}
-
 // L1 flags
 
 struct MxMDL1Flags : public MxMDFlags<MxMDL1Flags> {
@@ -364,12 +347,6 @@ struct MxMDOrderData {
   MxValue	qty;
   MxFlags	flags;		// MxMDOrderFlags
 };
-
-namespace MxMDOrderIDScope {
-  MxEnumValues(Venue, OrderBook, OBSide, Default = Venue);
-  MxEnumNames("Venue", "OrderBook", "OBSide");
-  MxEnumMapAlias(Map, CSVMap);
-}
 
 ZuTupleFields(MxMDOrderID2_, 1, obKey, 2, orderID);
 typedef MxMDOrderID2_<MxInstrKey, MxIDString> MxMDOrderID2;
@@ -765,6 +742,7 @@ struct MxMDLibHandler : public ZmObject {
   MxMDLib_Fn(MxMDFeedFn,		connected);
   MxMDLib_Fn(MxMDFeedFn,		disconnected);
   MxMDLib_Fn(MxMDLibFn,			eof);
+  MxMDLib_Fn(MxMDVenueFn,		addVenue);
   MxMDLib_Fn(MxMDVenueFn,		refDataLoaded);
   MxMDLib_Fn(MxMDTickSizeTblFn,		addTickSizeTbl);
   MxMDLib_Fn(MxMDTickSizeTblFn,		resetTickSizeTbl);

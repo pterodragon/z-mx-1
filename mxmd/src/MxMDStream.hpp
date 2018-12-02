@@ -73,6 +73,7 @@ namespace MxMDStream {
 
   namespace Type {
     MxEnumValues(
+	AddVenue,
 	AddTickSizeTbl, ResetTickSizeTbl, AddTickSize,
 	TradingSession,
 	AddInstrument, UpdateInstrument,
@@ -93,6 +94,7 @@ namespace MxMDStream {
 	ResendReq);		// UDP resend request
 
     MxEnumNames(
+	"AddVenue",
 	"AddTickSizeTbl", "ResetTickSizeTbl", "AddTickSize",
 	"TradingSession",
 	"AddInstrument", "UpdateInstrument",
@@ -181,6 +183,13 @@ namespace MxMDStream {
   };
 
   typedef MxInstrKey Key;
+
+  struct AddVenue {
+    enum { Code = Type::AddVenue };
+    MxID		id;
+    MxEnum		orderIDScope;
+    MxFlags		flags;
+  };
 
   struct AddTickSizeTbl {
     enum { Code = Type::AddTickSizeTbl };
@@ -410,6 +419,7 @@ namespace MxMDStream {
   };
   
   typedef ZuLargest<
+      AddVenue,
       AddTickSizeTbl,
       AddTickSize,
       ResetTickSizeTbl,
@@ -493,6 +503,8 @@ namespace MxMDStream {
     app.push2(); \
     return true; \
   }
+
+  FnDeclare(addVenue, AddVenue)
 
   FnDeclare(addTickSizeTbl, AddTickSizeTbl)
   FnDeclare(resetTickSizeTbl, ResetTickSizeTbl)

@@ -860,11 +860,12 @@ void MxMDCore::pad(Hdr &hdr)
   using namespace MxMDStream;
 
   switch ((int)hdr.type) {
+    case Type::AddVenue:	hdr.pad<AddVenue>(); break;
     case Type::AddTickSizeTbl:	hdr.pad<AddTickSizeTbl>(); break;
     case Type::ResetTickSizeTbl: hdr.pad<ResetTickSizeTbl>(); break;
     case Type::AddTickSize:	hdr.pad<AddTickSize>(); break;
     case Type::AddInstrument:	hdr.pad<AddInstrument>(); break;
-    case Type::UpdateInstrument:	hdr.pad<UpdateInstrument>(); break;
+    case Type::UpdateInstrument: hdr.pad<UpdateInstrument>(); break;
     case Type::AddOrderBook:	hdr.pad<AddOrderBook>(); break;
     case Type::DelOrderBook:	hdr.pad<DelOrderBook>(); break;
     case Type::AddCombination:	hdr.pad<AddCombination>(); break;
@@ -891,6 +892,12 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
   using namespace MxMDStream;
 
   switch ((int)hdr.type) {
+    case Type::AddVenue:
+      {
+	const AddVenue &obj = hdr.as<AddVenue>();
+	this->venue(obj.id, obj.orderIDScope, obj.flags);
+      }
+      break;
     case Type::AddTickSizeTbl:
       {
 	const AddTickSizeTbl &obj = hdr.as<AddTickSizeTbl>();
@@ -1180,11 +1187,11 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
   }
 }
 
-ZmRef<MxMDVenue> MxMDCore::venue(MxID id)
+ZmRef<MxMDVenue> MxMDCore::venue(MxID id, MxEnum orderIDScope, MxFlags flags)
 {
   ZmRef<MxMDVenue> venue;
   if (ZuLikely(venue = MxMDLib::venue(id))) return venue;
-  venue = new MxMDVenue(this, m_localFeed, id);
+  venue = new MxMDVenue(this, m_localFeed, id, orderIDScope, flags);
   addVenue(venue);
   return venue;
 }

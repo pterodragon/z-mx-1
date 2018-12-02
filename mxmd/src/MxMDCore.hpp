@@ -236,16 +236,19 @@ public:
   template <typename Snapshot>
   bool snapshot(Snapshot &snapshot, MxID id, MxSeqNo seqNo) {
     bool ok = !(allVenues([&snapshot](MxMDVenue *venue) -> uintptr_t {
-      return venue->allTickSizeTbls(
-	    [&snapshot, venue](MxMDTickSizeTbl *tbl) -> uintptr_t {
-	return !MxMDStream::addTickSizeTbl(snapshot, venue->id(), tbl->id()) ||
-	  tbl->allTickSizes(
-	      [&snapshot, venue, tbl](const MxMDTickSize &ts) -> uintptr_t {
-	  return !MxMDStream::addTickSize(snapshot,
-	      venue->id(), tbl->id(), tbl->pxNDP(),
-	      ts.minPrice(), ts.maxPrice(), ts.tickSize());
+      return !MxMDStream::addVenue(
+	  snapshot, venue->id(), venue->orderIDScope(), venue->flags()) ||
+	venue->allTickSizeTbls(
+	      [&snapshot, venue](MxMDTickSizeTbl *tbl) -> uintptr_t {
+	  return !MxMDStream::addTickSizeTbl(
+	      snapshot, venue->id(), tbl->id()) ||
+	    tbl->allTickSizes(
+		[&snapshot, venue, tbl](const MxMDTickSize &ts) -> uintptr_t {
+	    return !MxMDStream::addTickSize(snapshot,
+		venue->id(), tbl->id(), tbl->pxNDP(),
+		ts.minPrice(), ts.maxPrice(), ts.tickSize());
+	  });
 	});
-      });
     }) || allInstruments([&snapshot](MxMDInstrument *instrument) -> uintptr_t {
       return !MxMDStream::addInstrument(snapshot, instrument->shard()->id(),
 	  MxDateTime(), instrument->key(), instrument->refData());
@@ -316,11 +319,14 @@ private:
 	pxLevel->price(), data.qty, data.nOrders, data.flags);
   }
 
+  using MxMDLib::venue;
+
+private:
+  ZmRef<MxMDVenue> venue(MxID id, MxEnum orderIDScope, MxFlags flags);
+
 private:
   typedef ZmPLock Lock;
   typedef ZmGuard<Lock> Guard;
-
-  ZmRef<MxMDVenue> venue(MxID id);
 
   void timer();
 

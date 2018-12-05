@@ -46,6 +46,12 @@ struct App : public MxTOrderMgr<App, AppData> {
   // returns true if async. cancel enabled for order
   bool asyncCxl(Order *);
 
+  // pre-process messages
+  template <typename Event, typename Msg> void requestIn(Order *, Msg &) { }
+  template <typename Event, typename Msg> void requestOut(Order *, Msg &) { }
+  template <typename Event, typename Msg> void executionIn(Order *, Msg &) { }
+  template <typename Event, typename Msg> void executionOut(Order *, Msg &) { }
+
   template <typename Msg> void sendNewOrder(Msg &) { }
   template <typename Msg> void sendOrdered(Msg &) { }
   template <typename Msg> void sendReject(Msg &) { }

@@ -219,10 +219,10 @@ template <typename AppData> struct MxTEventData {
     inline void update(const Update &u) { }
 
     template <typename S> inline void print(S &s) const {
-      s << "eventType=" << MxTEventType::name(eventType) <<
-	" eventState=" << MxTEventState::name(eventState) << 
-	" eventLeg=" << eventLeg <<
-	" eventFlags=";
+      s << "eventType=" << MxTEventType::name(eventType)
+	<< " eventState=" << MxTEventState::name(eventState)
+	<< " eventLeg=" << eventLeg
+	<< " eventFlags=";
       MxTEventFlags::Flags::instance()->print(s, eventFlags);
     }
   };
@@ -301,7 +301,7 @@ template <typename AppData> struct MxTEventData {
   struct CanceledLeg_ {
     MxValue		cumQty;
     MxNDP		qtyNDP;
-    char		pad_0[3];
+    uint8_t		pad_0[3];
 
     // only update cumQty from an acknowledgment
     template <typename Update>
@@ -323,14 +323,11 @@ template <typename AppData> struct MxTEventData {
   struct CancelLeg_ : public CanceledLeg_ {
     MxValue		orderQty;
 
+    using CanceledLeg_::update;
     template <typename Update>
     inline typename ZuIs<CancelLeg_, Update>::T update(const Update &u) {
       CanceledLeg_::update(u);
       orderQty.update(u.orderQty, MxValueReset);
-    }
-    template <typename Update>
-    inline typename ZuIsNot<CancelLeg_, Update>::T update(const Update &u) {
-      CanceledLeg_::update(u);
     }
 
     template <typename Update> inline void expose(const Update &u) {
@@ -338,7 +335,7 @@ template <typename AppData> struct MxTEventData {
     }
 
     template <typename S> inline void print(S &s) const {
-      static_cast<const CanceledLeg_ &>(*this).print(s);
+      CanceledLeg_::print(s);
       s << " orderQty=" << MxValNDP{orderQty, this->qtyNDP};
     }
   };
@@ -348,7 +345,7 @@ template <typename AppData> struct MxTEventData {
     MxFlags		ackFlags;	// pending ack - EventFlags
 
     template <typename S> inline void print(S &s) const {
-      static_cast<const Legs<Leg> &>(*this).print(s);
+      Legs<Leg>::print(s);
       s << " ackFlags=";
       MxTEventFlags::Flags::instance()->print(s, ackFlags);
     }
@@ -364,9 +361,9 @@ template <typename AppData> struct MxTEventData {
       Cancel_<typename AppData::CancelLeg>::update(u);
     }
     template <typename S> inline void print(S &s) const {
-      static_cast<const typename AppData::Event &>(*this).print(s);
+      AppData::Event::print(s);
       s << ' ';
-      static_cast<const Cancel_<typename AppData::CancelLeg> &>(*this).print(s);
+      Cancel_<typename AppData::CancelLeg>::print(s);
     }
   };
 
@@ -375,8 +372,9 @@ template <typename AppData> struct MxTEventData {
     MxEnum		side;		// MxSide
     MxEnum		ordType;	// MxOrdType
     MxNDP		pxNDP;
-    char		pad_0[1];
+    uint8_t		pad_0[1];
 
+    using CancelLeg_::update;
     template <typename Update>
     inline typename ZuIs<ModifyLeg_, Update>::T update(const Update &u) {
       CancelLeg_::update(u);
@@ -398,10 +396,6 @@ template <typename AppData> struct MxTEventData {
 	px = u.px;
 	pxNDP.update(u.pxNDP);
       }
-    }
-    template <typename Update>
-    inline typename ZuIsNot<ModifyLeg_, Update>::T update(const Update &u) {
-      CancelLeg_::update(u);
     }
 
     template <typename Update> inline void expose(const Update &u) {
@@ -428,7 +422,7 @@ template <typename AppData> struct MxTEventData {
 	<< " pxNDP=" << pxNDP
 	<< " px=" << MxValNDP{px, pxNDP}
 	<< ' ';
-      static_cast<const CancelLeg_ &>(*this).print(s);
+	CancelLeg_::print(s);
     }
   };
   struct ModifyLeg : public ModifyLeg_ { };
@@ -437,20 +431,17 @@ template <typename AppData> struct MxTEventData {
   template <typename Leg>
   struct Modify_ : public Modify__, public Cancel_<Leg> {
     MxEnum		timeInForce;	// MxTimeInForce
-    char		pad_0[3];
+    uint8_t		pad_0[3];
 
+    using Cancel_<Leg>::update;
     template <typename Update>
     inline typename ZuIs<Modify__, Update>::T update(const Update &u) {
       Cancel_<Leg>::update(u); // takes care of legs
       timeInForce.update(u.timeInForce);
     }
-    template <typename Update>
-    inline typename ZuIsNot<Modify__, Update>::T update(const Update &u) {
-      Cancel_<Leg>::update(u); // takes care of legs
-    }
 
     template <typename S> inline void print(S &s) const {
-      static_cast<const Cancel_<Leg> &>(*this).print(s);
+      Cancel_<Leg>::print(s);
       s << " timeInForce=" << MxTimeInForce::name(timeInForce);
     }
   };
@@ -466,9 +457,9 @@ template <typename AppData> struct MxTEventData {
     }
 
     template <typename S> inline void print(S &s) const {
-      static_cast<const typename AppData::Event &>(*this).print(s);
+      AppData::Event::print(s);
       s << ' ';
-      static_cast<const Modify_<typename AppData::ModifyLeg> &>(*this).print(s);
+      Modify_<typename AppData::ModifyLeg>::print(s);
     }
   };
 
@@ -492,10 +483,9 @@ template <typename AppData> struct MxTEventData {
     }
 
     template <typename S> inline void print(S &s) const {
-      static_cast<const typename AppData::Event &>(*this).print(s);
+      AppData::Event::print(s);
       s << ' ';
-      static_cast<const Modify_<typename AppData::ModifiedLeg> &>(*this).
-	print(s);
+      Modify_<typename AppData::ModifiedLeg>::print(s);
     }
   };
 
@@ -511,24 +501,19 @@ template <typename AppData> struct MxTEventData {
     }
 
     template <typename S> inline void print(S &s) const {
-      static_cast<const typename AppData::Event &>(*this).print(s);
+      AppData::Event::print(s);
       s << ' ';
-      static_cast<const Cancel_<typename AppData::CanceledLeg> &>(*this).
-	print(s);
+      Cancel_<typename AppData::CanceledLeg>::print(s);
     }
   };
 
   struct OrderLeg_ : public ModifyLeg_ {
     MxValue		leavesQty;
+    MxValue		grossTradeAmt;
 
-    template <typename Update>
-    inline typename ZuIs<OrderLeg_, Update>::T update(const Update &u) {
+    template <typename Update> inline void update(const Update &u) {
       ModifyLeg_::update(u);
       updateLeavesQty();
-    }
-    template <typename Update>
-    inline typename ZuIsNot<OrderLeg_, Update>::T update(const Update &u) {
-      ModifyLeg_::update(u);
     }
 
     template <typename Update> inline void expose(const Update &u) {
@@ -542,7 +527,7 @@ template <typename AppData> struct MxTEventData {
     }
 
     template <typename S> inline void print(S &s) const {
-      static_cast<const ModifyLeg_ &>(*this).print(s);
+      ModifyLeg_::print(s);
       s << " leavesQty=" << MxValNDP{leavesQty, this->qtyNDP};
     }
   };
@@ -552,7 +537,7 @@ template <typename AppData> struct MxTEventData {
     MxFlags		flags;		// MxTOrderFlags
 
     template <typename S> inline void print(S &s) const {
-      static_cast<const Modify_<Leg> &>(*this).print(s);
+      Modify_<Leg>::print(s);
       s << " flags=";
       MxTOrderFlags::Flags::instance()->print(s, flags);
     }
@@ -574,9 +559,9 @@ template <typename AppData> struct MxTEventData {
     }
 
     template <typename S> inline void print(S &s) const {
-      static_cast<const typename AppData::Event &>(*this).print(s);
+      AppData::Event::print(s);
       s << ' ';
-      static_cast<const Order_<typename AppData::OrderLeg> &>(*this).print(s);
+      Order_<typename AppData::OrderLeg>::print(s);
     }
   };
 
@@ -588,13 +573,12 @@ template <typename AppData> struct MxTEventData {
     MxValue		lastQty;
     MxNDP		pxNDP;
     MxNDP		qtyNDP;
-    char		pad_0[2];
+    uint8_t		pad_0[2];
 
     template <typename S> inline void print(S &s) const {
-      static_cast<const typename AppData::Event &>(*this).print(s);
-      s <<
-	" lastPx=" << MxValNDP{lastPx, pxNDP} <<
-	" lastQty=" << MxValNDP{lastQty, qtyNDP};
+      AppData::Event::print(s);
+      s << " lastPx=" << MxValNDP{lastPx, pxNDP}
+	<< " lastQty=" << MxValNDP{lastQty, qtyNDP};
     }
   };
 
@@ -618,15 +602,14 @@ template <typename AppData> struct MxTEventData {
   struct AnyReject : public AppData::Event {
     MxInt		rejCode;	// source-specific numerical code
     MxEnum		rejReason;	// RejReason
-    char		pad_0[3];
+    uint8_t		pad_0[3];
     MxTxtString		rejText;	// reject text
 
     template <typename S> inline void print(S &s) const {
-      static_cast<const typename AppData::Event &>(*this).print(s);
-      s <<
-	" rejReason=" << MxTRejReason::name(rejReason) <<
-	" rejCode=" << rejCode <<
-	" rejText=" << rejText;
+      AppData::Event::print(s);
+      s << " rejReason=" << MxTRejReason::name(rejReason)
+	<< " rejCode=" << rejCode
+	<< " rejText=" << rejText;
     }
   };
 
@@ -715,7 +698,7 @@ template <typename AppData> struct MxTEventTypes : public AppData {
     Reject	reject;
 
     template <typename S> inline void print(S &s) const {
-      static_cast<const Request &>(*this).print(s);
+      Request::print(s);
       s << ' ';
       reject.print(s);
     }
@@ -1080,9 +1063,9 @@ template <typename AppData> struct MxTEventTypes : public AppData {
     }
 
     template <typename S> inline void print(S &s) const {
-      s << "orderMsg={" << orderMsg <<
-	"} modifyMsg={" << modifyMsg <<
-	"} cancelMsg={" << cancelMsg << '}';
+      s << "orderMsg={" << orderMsg
+	<< "} modifyMsg={" << modifyMsg
+	<< "} cancelMsg={" << cancelMsg << '}';
     }
   };
 };

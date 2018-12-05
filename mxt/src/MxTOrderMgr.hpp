@@ -41,6 +41,22 @@
 struct AppData : public MxTEventData<AppData> {
   typedef MxTEventData<MsgAppData> Base;
 
+  // void NewOrder::update(const Ordered &);
+  // void NewOrder::update(const Modify &);
+  // void NewOrder::update(const Modified &);
+  // void OrderLeg::update(const ModifyLeg &);
+  // void OrderLeg::update(const ModifiedLeg &);
+  // void Modify::update(const Modify &);
+  // void Modify::update(const Modified &);
+  // void ModifyLeg::update(const ModifyLeg &);
+  // void ModifyLeg::update(const ModifiedLeg &);
+  // void Modified::update(const Modify &);
+  // void Modified::update(const NewOrder &);
+  // void ModifiedLeg::update(const ModifyLeg &);
+  // void ModifiedLeg::update(const OrderLeg &);
+  // void Cancel::update(const Canceled &);
+  // void Cancel::update(const NewOrder &);
+
   // extend data definitions
   struct NewOrder : public Base::NewOrder {
     // fields
@@ -69,6 +85,12 @@ struct App : public MxTOrderMgr<App, AppData> {
   bool asyncMod(Order *);
   // returns true if async. cancel enabled for order
   bool asyncCxl(Order *);
+
+  // pre-process messages
+  template <typename Event, typename Msg> void requestIn(Order *, Msg &);
+  template <typename Event, typename Msg> void requestOut(Order *, Msg &);
+  template <typename Event, typename Msg> void executionIn(Order *, Msg &);
+  template <typename Event, typename Msg> void executionOut(Order *, Msg &);
 
   // send*() - send the corresponding message
   template <typename Msg> void sendNewOrder(Msg &);
@@ -201,22 +223,26 @@ private:
   void requestIn(Order *order, In &in) {
     Event &event = in.template as<Event>();
     event.eventState = MxTEventState::Received;
+    app()->template requestIn<Event>(order, in);
   }
   template <typename Event, typename Out>
   void requestOut(Order *order, Out &out) {
     Event &event = out.template as<Event>();
     event.eventState = MxTEventState::Queued;
+    app()->template requestOut<Event>(order, out);
   }
 
   template <typename Event, typename In>
   void executionIn(Order *order, In &in) {
     Event &event = in.template as<Event>();
     event.eventState = MxTEventState::Received;
+    app()->template executionIn<Event>(order, in);
   }
   template <typename Event, typename Out>
   void executionOut(Order *order, Out &out) {
     Event &event = out.template as<Event>();
     event.eventState = MxTEventState::Sent;
+    app()->template executionOut<Event>(order, out);
   }
 
   void sendNewOrder(Order *order) {
@@ -314,7 +340,7 @@ public:
   // app calls newOrderIn followed by one of newOrder order{Held,Filtered}
   template <typename In> typename ZuIsBase<Msg_, In>::T newOrderIn(
       Order *order, In &in) {
-    requestIn<NewOrder, In>(order, in);
+    requestIn<NewOrder>(order, in);
   }
 
   template <typename In> typename ZuIsBase<Msg_, In>::T newOrder(
@@ -343,6 +369,7 @@ private:
   template <typename In> void applyOrdered(Order *order, In &in) {
     NewOrder &newOrder = order->newOrder();
     newOrder.eventState = MxTEventState::Acknowledged;
+    newOrder.update(in.template as<Ordered>());
     if (ZuUnlikely(MxTOrderFlags::matchM(newOrder.flags))) {
       newOrder.flags &= ~(1U<<MxTOrderFlags::M);
       Msg<Modified> out;
@@ -607,7 +634,6 @@ public:
 	order->cancelMsg.initCancel((1U<<MxTEventFlags::Synthesized));
 	requestIn<Cancel, CancelMsg>(order, order->cancelMsg);
 	cancel.update(newOrder);
-	requestIn<Cancel, CancelMsg>(order, order->cancelMsg);
 	if (ZuUnlikely(MxTEventState::matchS(newOrder.eventState) &&
 	      !app()->asyncCxl(order))) {
 	  // async. cancel disabled

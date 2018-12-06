@@ -1,6 +1,7 @@
 package com.shardmx.mxmd;
 
 public enum MxMDOrderIDScope {
+  NULL,
   VENUE,
   ORDERBOOK,
   OBSIDE,
@@ -12,4 +13,3 @@ public enum MxMDOrderIDScope {
     return values[i];
   }
 }
-

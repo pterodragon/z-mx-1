@@ -25,6 +25,8 @@
 
 #include <MxBaseJNI.hpp>
 
+#include <MxMDOrderIDScopeJNI.hpp>
+
 #include <MxMDLibJNI.hpp>
 #include <MxMDFeedJNI.hpp>
 #include <MxMDVenueJNI.hpp>
@@ -78,6 +80,8 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
 int MxMDJNI::bind(JNIEnv *env)
 {
   if (MxBaseJNI::bind(env) < 0) return -1;
+
+  if (MxMDOrderIDScopeJNI::bind(env) < 0) return -1;
 
   if (MxMDLibJNI::bind(env) < 0) return -1;
   if (MxMDFeedJNI::bind(env) < 0) return -1;
@@ -145,6 +149,8 @@ void MxMDJNI::final(JNIEnv *env)
   MxMDPxLvlDataJNI::final(env);
   MxMDOrderDataJNI::final(env);
   MxMDTradeDataJNI::final(env);
+
+  MxMDOrderIDScopeJNI::final(env);
 
   MxBaseJNI::final(env);
 

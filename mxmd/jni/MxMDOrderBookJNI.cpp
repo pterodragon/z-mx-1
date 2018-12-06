@@ -25,9 +25,10 @@
 
 #include <ZJNI.hpp>
 
-#include <MxMD.hpp>
-
+#include <MxSideJNI.hpp>
 #include <MxInstrKeyJNI.hpp>
+
+#include <MxMD.hpp>
 
 #include <MxMDLibJNI.hpp>
 #include <MxMDVenueJNI.hpp>
@@ -54,13 +55,6 @@ namespace MxMDOrderBookJNI {
     ZmRef<MxMDOrderBook> *ZuMayAlias(ptr) = (ZmRef<MxMDOrderBook> *)&ptr_;
     return ptr->ptr();
   }
-
-  jclass	sideClass;
-
-  // MxSide named constructor
-  ZJNI::JavaMethod sideMethod[] = {
-    { "value", "(I)Lcom/shardmx/mxbase/MxSide;" }
-  };
 }
 
 void MxMDOrderBookJNI::ctor_(JNIEnv *env, jobject obj, jlong)
@@ -158,8 +152,7 @@ jobject MxMDOrderBookJNI::side(JNIEnv *env, jobject obj, jint leg)
   // (int) -> MxSide
   MxMDOrderBook *ob = ptr_(env, obj);
   if (ZuUnlikely(!ob)) return 0;
-  return env->CallStaticObjectMethod(sideClass, sideMethod[0].mid,
-      (jint)ob->side(leg));
+  return MxSideJNI::ctor(env, ob->side(leg));
 }
 
 jint MxMDOrderBookJNI::ratio(JNIEnv *env, jobject obj, jint leg)
@@ -345,15 +338,10 @@ int MxMDOrderBookJNI::bind(JNIEnv *env)
   if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
   if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
 
-  sideClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxSide");
-  if (!sideClass) return -1;
-  if (ZJNI::bindStatic(env, sideClass, sideMethod, 1) < 0) return -1;
-
   return 0;
 }
 
 void MxMDOrderBookJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
-  if (sideClass) env->DeleteGlobalRef(sideClass);
 }

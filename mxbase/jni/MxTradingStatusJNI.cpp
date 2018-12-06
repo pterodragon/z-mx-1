@@ -25,38 +25,48 @@
 
 #include <ZJNI.hpp>
 
-#include <MxSideJNI.hpp>
+#include <MxBase.hpp>
 
-#include <MxMDOrderDataJNI.hpp>
+#include <MxTradingStatusJNI.hpp>
 
-namespace MxMDOrderDataJNI {
-  jclass	class_;
+namespace MxTradingStatusJNI {
+  jclass	class_; // MxTradingStatus
 
-  // MxMDOrderDataTuple named constructor
+  // MxPutCall named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "of",
-      "(Ljava/time/Instant;Lcom/shardmx/mxbase/MxSide;IJJJ)"
-      "Lcom/shardmx/mxmd/MxMDOrderDataTuple;" }
+    { "value", "(I)Lcom/shardmx/mxbase/MxTradingStatus;" }
+  };
+
+  // MxPutCall ordinal()
+  ZJNI::JavaMethod methods[] = {
+    { "ordinal", "()I" }
   };
 }
 
-jobject MxMDOrderDataJNI::ctor(JNIEnv *env, const MxMDOrderData &data)
+MxEnum MxTradingStatusJNI::j2c(JNIEnv *env, jobject obj)
 {
-  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
-      ZJNI::t2j(env, data.transactTime),
-      MxSideJNI::ctor(env, data.side),
-      (jint)data.rank, (jlong)data.price, (jlong)data.qty, (jlong)data.flags);
+  return env->CallIntMethod(obj, methods[0].mid) - 1;
 }
 
-int MxMDOrderDataJNI::bind(JNIEnv *env)
+jobject MxTradingStatusJNI::ctor(JNIEnv *env, MxEnum v)
 {
-  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDOrderDataTuple");
+  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid, (jint)v + 1);
+}
+
+int MxTradingStatusJNI::bind(JNIEnv *env)
+{
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxTradingStatus");
   if (!class_) return -1;
+
   if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
+
+  if (ZJNI::bind(env, class_, methods,
+	sizeof(methods) / sizeof(methods[0])) < 0) return -1;
+
   return 0;
 }
 
-void MxMDOrderDataJNI::final(JNIEnv *env)
+void MxTradingStatusJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
 }

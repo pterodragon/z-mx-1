@@ -25,6 +25,8 @@
 
 #include <ZJNI.hpp>
 
+#include <MxTradingSessionJNI.hpp>
+
 #include <MxMDSegmentJNI.hpp>
 
 namespace MxMDSegmentJNI {
@@ -38,21 +40,13 @@ namespace MxMDSegmentJNI {
       "Ljava/time/Instant;)"
       "Lcom/shardmx/mxmd/MxMDSegmentTuple;" }
   };
-
-  jclass	tsClass;
-
-  // MxTradingSession named constructor
-  ZJNI::JavaMethod tsMethod[] = {
-    { "value", "(I)Lcom/shardmx/mxbase/MxTradingSession;" }
-  };
 }
 
 jobject MxMDSegmentJNI::ctor(JNIEnv *env, const MxMDSegment &segment)
 {
   return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
       ZJNI::s2j(env, segment.id),
-      env->CallStaticObjectMethod(tsClass, tsMethod[0].mid,
-	(jint)segment.session),
+      MxTradingSessionJNI::ctor(env, segment.session),
       ZJNI::t2j(env, segment.stamp));
 }
 
@@ -62,15 +56,10 @@ int MxMDSegmentJNI::bind(JNIEnv *env)
   if (!class_) return -1;
   if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
 
-  tsClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxTradingSession");
-  if (!tsClass) return -1;
-  if (ZJNI::bindStatic(env, tsClass, tsMethod, 1) < 0) return -1;
-
   return 0;
 }
 
 void MxMDSegmentJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
-  if (tsClass) env->DeleteGlobalRef(tsClass);
 }

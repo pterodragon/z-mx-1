@@ -25,11 +25,12 @@
 
 #include <ZJNI.hpp>
 
+#include <MxSideJNI.hpp>
+
 #include <MxMD.hpp>
 
 #include <MxMDOrderBookJNI.hpp>
 #include <MxMDPxLevelJNI.hpp>
-
 #include <MxMDOBSideDataJNI.hpp>
 
 #include <MxMDOBSideJNI.hpp>
@@ -46,13 +47,6 @@ namespace MxMDOBSideJNI {
     ZmRef<MxMDOBSide> *ZuMayAlias(ptr) = (ZmRef<MxMDOBSide> *)&ptr_;
     return ptr->ptr();
   }
-
-  jclass	sideClass;
-
-  // MxSide named constructor
-  ZJNI::JavaMethod sideMethod[] = {
-    { "value", "(I)Lcom/shardmx/mxbase/MxSide;" }
-  };
 
   // query callbacks
   ZJNI::JavaMethod allPxLevelsFn[] = {
@@ -85,8 +79,7 @@ jobject MxMDOBSideJNI::side(JNIEnv *env, jobject obj)
   // () -> MxSide
   MxMDOBSide *obs = ptr_(env, obj);
   if (ZuUnlikely(!obs)) return 0;
-  return env->CallStaticObjectMethod(sideClass, sideMethod[0].mid,
-      (jint)obs->side());
+  return MxSideJNI::ctor(env, obs->side());
 }
 
 jobject MxMDOBSideJNI::data(JNIEnv *env, jobject obj)
@@ -168,10 +161,6 @@ int MxMDOBSideJNI::bind(JNIEnv *env)
   if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
   if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
 
-  sideClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxSide");
-  if (!sideClass) return -1;
-  if (ZJNI::bindStatic(env, sideClass, sideMethod, 1) < 0) return -1;
-
   if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDAllPxLevelsFn",
 	allPxLevelsFn, 1) < 0) return -1;
 
@@ -181,5 +170,4 @@ int MxMDOBSideJNI::bind(JNIEnv *env)
 void MxMDOBSideJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
-  if (sideClass) env->DeleteGlobalRef(sideClass);
 }

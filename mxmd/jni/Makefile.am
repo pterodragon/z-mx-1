@@ -4,6 +4,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/src \
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @MXMD_LDFLAGS@ @MXMD_SO_LDFLAGS@ @MXBASE_LDFLAGS@ @Z_LDFLAGS@
 include_HEADERS = MxMDJNI.hpp \
+	MxMDOrderIDScopeJNI.hpp MxMDVenueFlagsJNI.hpp \
 	MxMDLibJNI.hpp MxMDFeedJNI.hpp MxMDVenueJNI.hpp MxMDTickSizeTblJNI.hpp \
 	MxMDInstrumentJNI.hpp MxMDDerivativesJNI.hpp \
 	MxMDOrderBookJNI.hpp MxMDOBSideJNI.hpp MxMDPxLevelJNI.hpp \
@@ -16,6 +17,7 @@ include_HEADERS = MxMDJNI.hpp \
 	MxMDOrderDataJNI.hpp MxMDTradeDataJNI.hpp
 lib_LTLIBRARIES = libMxMDJNI.la libMxMDJNITest.la
 libMxMDJNI_la_SOURCES = MxMDJNI.cpp \
+	MxMDOrderIDScopeJNI.cpp MxMDVenueFlagsJNI.cpp \
 	MxMDLibJNI.cpp MxMDFeedJNI.cpp MxMDVenueJNI.cpp MxMDTickSizeTblJNI.cpp \
 	MxMDInstrumentJNI.cpp MxMDDerivativesJNI.cpp \
 	MxMDOrderBookJNI.cpp MxMDOBSideJNI.cpp MxMDPxLevelJNI.cpp \

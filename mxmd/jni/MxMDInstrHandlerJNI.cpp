@@ -30,7 +30,6 @@
 #include <MxMDPxLevelJNI.hpp>
 #include <MxMDOrderJNI.hpp>
 #include <MxMDTradeJNI.hpp>
-
 #include <MxMDL1DataJNI.hpp>
 
 #include <MxMDInstrHandlerJNI.hpp>

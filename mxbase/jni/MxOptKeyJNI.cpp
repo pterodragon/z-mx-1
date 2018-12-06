@@ -27,6 +27,8 @@
 
 #include <MxBase.hpp>
 
+#include <MxPutCallJNI.hpp>
+
 #include <MxOptKeyJNI.hpp>
 
 namespace MxOptKeyJNI {
@@ -45,18 +47,6 @@ namespace MxOptKeyJNI {
     { "putCall", "()Lcom/shardmx/mxbase/MxPutCall;" },
     { "strike", "()J" },
   };
-
-  jclass	pcClass;
-
-  // MxPutCall named constructor
-  ZJNI::JavaMethod pcCtorMethod[] = {
-    { "value", "(I)Lcom/shardmx/mxbase/MxPutCall;" }
-  };
-
-  // MxPutCall ordinal()
-  ZJNI::JavaMethod pcMethods[] = {
-    { "ordinal", "()I" }
-  };
 }
 
 MxOptKey MxOptKeyJNI::j2c(JNIEnv *env, jobject obj)
@@ -64,7 +54,7 @@ MxOptKey MxOptKeyJNI::j2c(JNIEnv *env, jobject obj)
   unsigned mat = env->CallIntMethod(obj, methods[0].mid);
   MxEnum putCall;
   if (jobject pcObj = env->CallObjectMethod(obj, methods[1].mid)) {
-    putCall = env->CallIntMethod(pcObj, pcMethods[0].mid);
+    putCall = MxPutCallJNI::j2c(env, pcObj);
     env->DeleteLocalRef(pcObj);
   }
   MxValue strike = env->CallLongMethod(obj, methods[2].mid);
@@ -76,8 +66,7 @@ jobject MxOptKeyJNI::ctor(JNIEnv *env, const MxOptKey &key)
   return env->CallStaticObjectMethod(
       class_, ctorMethod[0].mid,
       (jint)key.mat,
-      env->CallStaticObjectMethod(
-	pcClass, pcCtorMethod[0].mid, (jint)key.putCall),
+      MxPutCallJNI::ctor(env, key.putCall),
       (jlong)key.strike);
 }
 
@@ -96,17 +85,10 @@ int MxOptKeyJNI::bind(JNIEnv *env)
     env->DeleteLocalRef((jobject)c);
   }
 
-  pcClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxPutCall");
-  if (!pcClass) return -1;
-  if (ZJNI::bindStatic(env, pcClass, pcCtorMethod, 1) < 0) return -1;
-  if (ZJNI::bind(env, pcClass, pcMethods,
-	sizeof(pcMethods) / sizeof(pcMethods[0])) < 0) return -1;
-
   return 0;
 }
 
 void MxOptKeyJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
-  if (pcClass) env->DeleteGlobalRef(pcClass);
 }

@@ -1759,8 +1759,7 @@ void MxMDLib::modifyOrder(const MxMDOrderBook *ob,
 	rank, price, qty, flags);
 }
 void MxMDLib::cancelOrder(const MxMDOrderBook *ob,
-    ZuString orderID,
-    MxDateTime transactTime, MxEnum side)
+    ZuString orderID, MxDateTime transactTime, MxEnum side)
 {
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))

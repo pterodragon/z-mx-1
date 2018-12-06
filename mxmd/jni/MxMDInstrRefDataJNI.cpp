@@ -25,6 +25,9 @@
 
 #include <ZJNI.hpp>
 
+#include <MxInstrIDSrcJNI.hpp>
+#include <MxPutCallJNI.hpp>
+
 #include <MxMDInstrRefDataJNI.hpp>
 
 namespace MxMDInstrRefDataJNI {
@@ -51,32 +54,15 @@ namespace MxMDInstrRefDataJNI {
       ")Lcom/shardmx/mxmd/MxMDInstrRefDataTuple;"
     }
   };
-
-  jclass	sisClass;
-
-  // MxInstrIDSrc named constructor
-  ZJNI::JavaMethod sisMethod[] = {
-    { "value", "(I)Lcom/shardmx/mxbase/MxInstrIDSrc;" }
-  };
-
-  jclass	pcClass;
-
-  // MxPutCall named constructor
-  ZJNI::JavaMethod pcMethod[] = {
-    { "value", "(I)Lcom/shardmx/mxbase/MxPutCall;" }
-  };
 }
 
 jobject MxMDInstrRefDataJNI::ctor(JNIEnv *env, const MxMDInstrRefData &data)
 {
   return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
       (jboolean)data.tradeable,
-      env->CallStaticObjectMethod(sisClass, sisMethod[0].mid,
-	(jint)data.idSrc),
-      env->CallStaticObjectMethod(sisClass, sisMethod[0].mid,
-	(jint)data.altIDSrc),
-      env->CallStaticObjectMethod(pcClass, pcMethod[0].mid,
-	(jint)data.putCall),
+      MxInstrIDSrcJNI::ctor(env, data.idSrc),
+      MxInstrIDSrcJNI::ctor(env, data.altIDSrc),
+      MxPutCallJNI::ctor(env, data.putCall),
       ZJNI::s2j(env, data.symbol),
       ZJNI::s2j(env, data.altSymbol),
       ZJNI::s2j(env, data.underVenue),
@@ -95,21 +81,10 @@ int MxMDInstrRefDataJNI::bind(JNIEnv *env)
   class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDInstrRefDataTuple");
   if (!class_) return -1;
   if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
-
-  sisClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxInstrIDSrc");
-  if (!sisClass) return -1;
-  if (ZJNI::bindStatic(env, sisClass, sisMethod, 1) < 0) return -1;
-
-  pcClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxPutCall");
-  if (!pcClass) return -1;
-  if (ZJNI::bindStatic(env, pcClass, pcMethod, 1) < 0) return -1;
-
   return 0;
 }
 
 void MxMDInstrRefDataJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
-  if (sisClass) env->DeleteGlobalRef(sisClass);
-  if (pcClass) env->DeleteGlobalRef(pcClass);
 }

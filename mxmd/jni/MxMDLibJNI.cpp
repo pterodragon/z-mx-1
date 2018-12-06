@@ -25,10 +25,10 @@
 
 #include <ZJNI.hpp>
 
+#include <MxInstrKeyJNI.hpp>
+
 #include <MxMD.hpp>
 #include <MxMDCore.hpp>
-
-#include <MxInstrKeyJNI.hpp>
 
 #include <MxMDJNI.hpp>
 

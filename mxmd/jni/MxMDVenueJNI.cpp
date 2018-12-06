@@ -25,10 +25,10 @@
 
 #include <MxMD.hpp>
 
+#include <MxMDOrderIDScopeJNI.hpp>
 #include <MxMDLibJNI.hpp>
 #include <MxMDFeedJNI.hpp>
 #include <MxMDTickSizeTblJNI.hpp>
-
 #include <MxMDSegmentJNI.hpp>
 
 #include <MxMDVenueJNI.hpp>
@@ -45,13 +45,6 @@ namespace MxMDVenueJNI {
     ZmRef<MxMDVenue> *ZuMayAlias(ptr) = (ZmRef<MxMDVenue> *)&ptr_;
     return ptr->ptr();
   }
-
-  jclass	oisClass;
-
-  // MxOrderIDScope named constructor
-  ZJNI::JavaMethod oisMethod[] = {
-    { "value", "(I)Lcom/shardmx/mxmd/MxMDOrderIDScope;" }
-  };
 
   // query callbacks
   ZJNI::JavaMethod allTickSizeTblsFn[] = {
@@ -102,8 +95,7 @@ jobject MxMDVenueJNI::orderIDScope(JNIEnv *env, jobject obj)
   // () -> MxMDOrderIDScope
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue)) return 0;
-  return env->CallStaticObjectMethod(oisClass, oisMethod[0].mid,
-      (jint)(int)venue->orderIDScope());
+  return MxMDOrderIDScopeJNI::ctor(env, venue->orderIDScope());
 }
 
 jlong MxMDVenueJNI::flags(JNIEnv *env, jobject obj)
@@ -230,10 +222,6 @@ int MxMDVenueJNI::bind(JNIEnv *env)
   if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
   if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
 
-  oisClass = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDOrderIDScope");
-  if (!oisClass) return -1;
-  if (ZJNI::bindStatic(env, oisClass, oisMethod, 1) < 0) return -1;
-
   if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDAllTickSizeTblsFn",
 	allTickSizeTblsFn, 1) < 0) return -1;
   if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDAllSegmentsFn",
@@ -245,5 +233,4 @@ int MxMDVenueJNI::bind(JNIEnv *env)
 void MxMDVenueJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
-  if (oisClass) env->DeleteGlobalRef(oisClass);
 }

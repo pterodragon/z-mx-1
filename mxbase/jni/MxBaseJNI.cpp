@@ -23,9 +23,17 @@
 
 #include <ZJNI.hpp>
 
+#include <MxSideJNI.hpp>
+#include <MxInstrIDSrcJNI.hpp>
+#include <MxPutCallJNI.hpp>
+#include <MxTickDirJNI.hpp>
+#include <MxTradingSessionJNI.hpp>
+#include <MxTradingStatusJNI.hpp>
+
 #include <MxInstrKeyJNI.hpp>
 #include <MxFutKeyJNI.hpp>
 #include <MxOptKeyJNI.hpp>
+#include <MxUniKeyJNI.hpp>
 
 #include <MxBaseJNI.hpp>
 
@@ -48,9 +56,17 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
 
 int MxBaseJNI::bind(JNIEnv *env)
 {
+  if (MxSideJNI::bind(env) < 0) return -1;
+  if (MxInstrIDSrcJNI::bind(env) < 0) return -1;
+  if (MxPutCallJNI::bind(env) < 0) return -1;
+  if (MxTickDirJNI::bind(env) < 0) return -1;
+  if (MxTradingSessionJNI::bind(env) < 0) return -1;
+  if (MxTradingStatusJNI::bind(env) < 0) return -1;
+
   if (MxInstrKeyJNI::bind(env) < 0) return -1;
   if (MxFutKeyJNI::bind(env) < 0) return -1;
   if (MxOptKeyJNI::bind(env) < 0) return -1;
+  if (MxUniKeyJNI::bind(env) < 0) return -1;
 
   return 0;
 }  
@@ -60,6 +76,14 @@ void MxBaseJNI::final(JNIEnv *env)
   MxInstrKeyJNI::final(env);
   MxFutKeyJNI::final(env);
   MxOptKeyJNI::final(env);
+  MxUniKeyJNI::final(env);
   
+  MxSideJNI::final(env);
+  MxInstrIDSrcJNI::final(env);
+  MxPutCallJNI::final(env);
+  MxTickDirJNI::final(env);
+  MxTradingSessionJNI::final(env);
+  MxTradingStatusJNI::final(env);
+
   ZJNI::final(env);
 }

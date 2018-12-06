@@ -30,7 +30,6 @@
 #include <MxMDOrderBookJNI.hpp>
 #include <MxMDOBSideJNI.hpp>
 #include <MxMDPxLevelJNI.hpp>
-
 #include <MxMDOrderDataJNI.hpp>
 
 #include <MxMDOrderJNI.hpp>

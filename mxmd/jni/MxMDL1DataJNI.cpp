@@ -25,6 +25,8 @@
 
 #include <ZJNI.hpp>
 
+#include <MxTickDirJNI.hpp>
+
 #include <MxMDL1DataJNI.hpp>
 
 namespace MxMDL1DataJNI {
@@ -56,13 +58,6 @@ namespace MxMDL1DataJNI {
       "J)"				// flags
       "Lcom/shardmx/mxmd/MxMDL1DataTuple;" }
   };
-
-  jclass	tdClass;
-
-  // MxTickDir named constructor
-  ZJNI::JavaMethod tdMethod[] = {
-    { "value", "(I)Lcom/shardmx/mxbase/MxTickDir;" }
-  };
 }
 
 jobject MxMDL1DataJNI::ctor(JNIEnv *env, const MxMDL1Data &l1Data)
@@ -71,8 +66,7 @@ jobject MxMDL1DataJNI::ctor(JNIEnv *env, const MxMDL1Data &l1Data)
       ZJNI::t2j(env, l1Data.stamp),
       (jint)l1Data.pxNDP,
       (jint)l1Data.qtyNDP,
-      env->CallStaticObjectMethod(tdClass, tdMethod[0].mid,
-	(jint)l1Data.tickDir),
+      MxTickDirJNI::ctor(env, l1Data.tickDir),
       (jlong)l1Data.base,
       (jlong)l1Data.open,
       (jlong)l1Data.close,
@@ -97,16 +91,10 @@ int MxMDL1DataJNI::bind(JNIEnv *env)
   class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDL1DataTuple");
   if (!class_) return -1;
   if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
-
-  tdClass = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxTickDir");
-  if (!tdClass) return -1;
-  if (ZJNI::bindStatic(env, tdClass, tdMethod, 1) < 0) return -1;
-
   return 0;
 }
 
 void MxMDL1DataJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
-  if (tdClass) env->DeleteGlobalRef(tdClass);
 }

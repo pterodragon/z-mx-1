@@ -70,9 +70,9 @@ struct Feed : public MxMDFeed {
 	// primary instrument key (venue, segment and ID)
    
 	MxInstrKey instrKey{
+		*ticker,
 		"JNITest",
-		MxID(),
-		*ticker};	// ID (same as symbol in this case)
+		MxID()};	// ID (same as symbol in this case)
 
 	// minimal reference data (just the native symbol and RIC)
 
@@ -83,7 +83,8 @@ struct Feed : public MxMDFeed {
 
 	// add the instrument
 
-	MxMDInstrHandle instr = md->instrument(instrKey, 0); // default to shard 0
+	MxMDInstrHandle instr =
+	  md->instrument(instrKey, 0); // default to shard 0
 
 	ZtString error;
 	thread_local ZmSemaphore sem;
@@ -93,7 +94,8 @@ struct Feed : public MxMDFeed {
 
 	  // this runs inside shard 0
 
-	  instr = shard->addInstrument(ZuMv(instr), instrKey, refData, MxDateTime()); 
+	  instr = shard->addInstrument(
+	      ZuMv(instr), instrKey, refData, MxDateTime()); 
 
 	  if (ZuUnlikely(!instr)) {
 	    error = "MxMDLib::addInstrument() failed";
@@ -105,7 +107,7 @@ struct Feed : public MxMDFeed {
 
 	  ZmRef<MxMDOrderBook> orderBook = instr->addOrderBook(
 	    instrKey,			// primary key for order book
-	    tickSizeTbl,			// tick sizes
+	    tickSizeTbl,		// tick sizes
 	    lotSizes,			// lot sizes
 	    MxDateTime());
 	  if (ZuUnlikely(!orderBook)) {

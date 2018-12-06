@@ -383,9 +383,9 @@ void MxMDOBSide::pxLevel_(
       pxLevel = m_mktLevel;
       m_mktLevel->update(
 	  transactTime, delta, qty, nOrders, flags, d_qty, d_nOrders);
-      if (m_mktLevel->data().qty)
+      if (m_mktLevel->data().qty) {
 	if (handler) pxLevelFn = &handler->updatedMktLevel;
-      else {
+      } else {
 	m_mktLevel = 0;
 	if (handler) pxLevelFn = &handler->deletedMktLevel;
       }
@@ -409,9 +409,9 @@ void MxMDOBSide::pxLevel_(
   } else {
     pxLevel->update(
 	transactTime, delta, qty, nOrders, flags, d_qty, d_nOrders);
-    if (pxLevel->data().qty)
+    if (pxLevel->data().qty) {
       if (handler) pxLevelFn = &handler->updatedPxLevel;
-    else {
+    } else {
       if (handler) pxLevelFn = &handler->deletedPxLevel;
       m_pxLevels.delVal(price);
     }

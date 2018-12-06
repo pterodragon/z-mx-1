@@ -126,7 +126,8 @@ typedef MxString<12> MxMDFlagsStr;
 // venue order ID scope
 
 namespace MxMDOrderIDScope {
-  MxEnumValues(Venue, OrderBook, OBSide, Default = Venue);
+  MxEnumValues(Venue, OrderBook, OBSide);
+  enum { Default = Venue };
   MxEnumNames("Venue", "OrderBook", "OBSide");
   MxEnumMapAlias(Map, CSVMap);
 }

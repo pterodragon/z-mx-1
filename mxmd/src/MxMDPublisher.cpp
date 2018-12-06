@@ -207,7 +207,10 @@ void MxMDPubLink::disconnect_()
 
   txInvoke([](Tx *tx) { tx->stop(); }); // stop sending
 
-  engine()->detach();
+  if (m_attached) {
+    engine()->detach();
+    m_attached = false;
+  }
 
   if (listenInfo.port) mx()->stopListening(listenInfo.ip, listenInfo.port);
 
@@ -433,7 +436,10 @@ void MxMDPubLink::udpConnected(MxMDPubLink::UDP *udp, ZiIOContext &io)
 
   udp->recv(io); // begin receiving UDP packets (resend requests)
 
-  if (!engine()->attach()) return;
+  if (!m_attached) {
+    if (!engine()->attach()) return;
+    m_attached = true;
+  }
 
   connected();
 }

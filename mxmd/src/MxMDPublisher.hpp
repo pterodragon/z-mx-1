@@ -321,6 +321,9 @@ private:
     ZiListenInfo	  m_listenInfo;
     ZmRef<TCPTbl>	  m_tcpTbl;
     ZmRef<UDP>		  m_udp;
+
+  // Rx thread exclusive
+  bool			m_attached = false;
 };
 
 #endif /* MxMDPublisher_HPP */

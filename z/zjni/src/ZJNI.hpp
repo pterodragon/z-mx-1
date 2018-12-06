@@ -89,8 +89,8 @@ namespace ZJNI {
   ZJNIExtern int bindStatic(JNIEnv *, jclass,
       JavaField *, unsigned n);
 
-  ZJNIExtern int attach(const char *name);	// attach thread - -ve on error
-  ZJNIExtern void detach();			// detach thread
+  ZJNIExtern void attach();		// attach thread
+  ZJNIExtern void detach();		// detach thread
 
   ZJNIExtern void throwNPE(JNIEnv *, ZuString);	// throw NullPointerException
 

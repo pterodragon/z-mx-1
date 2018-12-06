@@ -76,7 +76,6 @@ static ZmRef<Ring> ring;
 
 void loop()
 {
-  if (ZJNI::attach("loop") < 0) return;
   JNIEnv *env = ZJNI::env();
   jclass c = env->FindClass("com/shardmx/mxbase/MxJNITestObject");
   jmethodID mid = env->GetMethodID(c, "helloWorld_", "(Ljava/lang/String;)V");

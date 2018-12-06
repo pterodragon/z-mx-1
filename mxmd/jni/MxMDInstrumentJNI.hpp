@@ -55,6 +55,9 @@ namespace MxMDInstrumentJNI {
   // () -> MxInstrKey
   jobject key(JNIEnv *, jobject);
 
+  // (MxMDInstrKeyFn) -> void
+  void keys(JNIEnv *, jobject, jobject);
+
   // () -> MxMDInstrRefData
   jobject refData(JNIEnv *, jobject);
 

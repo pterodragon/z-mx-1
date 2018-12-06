@@ -18,6 +18,7 @@ public class MxMDInstrument implements AutoCloseable {
   public native String primarySegment();
   public native String id();
   public native MxInstrKey key();
+  public native void keys(MxMDInstrKeyFn fn);
 
   public native MxMDInstrRefData refData();
 

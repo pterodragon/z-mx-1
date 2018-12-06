@@ -28,6 +28,7 @@
 #include <MxMD.hpp>
 
 #include <MxInstrKeyJNI.hpp>
+#include <MxUniKeyJNI.hpp>
 
 #include <MxMDLibJNI.hpp>
 #include <MxMDDerivativesJNI.hpp>
@@ -51,6 +52,11 @@ namespace MxMDInstrumentJNI {
     ZmRef<MxMDInstrument> *ZuMayAlias(ptr) = (ZmRef<MxMDInstrument> *)&ptr_;
     return ptr->ptr();
   }
+
+  // query callbacks
+  ZJNI::JavaMethod instrKeyFn[] = {
+    { "fn", "(Lcom/shardmx/mxbase/MxUniKey;)V" }
+  };
 
   // query callbacks
   ZJNI::JavaMethod allOrderBooksFn[] = {
@@ -106,6 +112,18 @@ jobject MxMDInstrumentJNI::key(JNIEnv *env, jobject obj)
   MxMDInstrument *instr = ptr_(env, obj);
   if (ZuUnlikely(!instr)) return 0;
   return MxInstrKeyJNI::ctor(env, instr->key());
+}
+
+void MxMDInstrumentJNI::keys(JNIEnv *env, jobject obj, jobject fn)
+{
+  // (MxMDInstrKeyFn) -> void
+  MxMDInstrument *instr = ptr_(env, obj);
+  if (ZuUnlikely(!instr || !fn)) return;
+  return instr->keys(
+      [fn = ZJNI::globalRef(env, fn)](const MxUniKey &key) {
+    if (JNIEnv *env = ZJNI::env())
+      env->CallLongMethod(fn, instrKeyFn[0].mid, MxUniKeyJNI::ctor(env, key));
+  });
 }
 
 jobject MxMDInstrumentJNI::refData(JNIEnv *env, jobject obj)
@@ -221,6 +239,9 @@ int MxMDInstrumentJNI::bind(JNIEnv *env)
     { "key",
       "()Lcom/shardmx/mxbase/MxInstrKey;",
       (void *)&MxMDInstrumentJNI::key },
+    { "keys",
+      "(Lcom/shardmx/mxmd/MxMDInstrKeyFn;)V",
+      (void *)&MxMDInstrumentJNI::keys },
     { "refData",
       "()Lcom/shardmx/mxmd/MxMDInstrRefData;",
       (void *)&MxMDInstrumentJNI::refData },
@@ -259,6 +280,9 @@ int MxMDInstrumentJNI::bind(JNIEnv *env)
 
   if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
   if (ZJNI::bind(env, class_, ptrField, 1) < 0) return -1;
+
+  if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDInstrKeyFn",
+	instrKeyFn, 1) < 0) return -1;
 
   if (ZJNI::bind(env, "com/shardmx/mxmd/MxMDAllOrderBooksFn",
 	allOrderBooksFn, 1) < 0) return -1;

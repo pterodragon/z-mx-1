@@ -111,11 +111,7 @@ jobject MxMDLibJNI::init(JNIEnv *env, jclass c, jstring cf)
 
   MxMDLib *md = MxMDLib_JNI::init(ZJNI::j2s_ZtString(env, cf),
       [](ZmScheduler *mx) {
-    mx->threadInit([]() {
-      ZmThreadName name;
-      ZmThreadContext::self()->name(name);
-      ZJNI::attach(name.data());
-    });
+    mx->threadInit([]() { ZJNI::attach(); });
     mx->threadFinal([]() { ZJNI::detach(); });
   });
   if (ZuUnlikely(!md)) {

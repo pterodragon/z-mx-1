@@ -114,6 +114,7 @@ protected:
   }
 
   template <typename P> inline typename MatchPDelegate<P>::T init(const P &p) {
+    m_length = 0;
     ZuPrint<P>::print(*static_cast<StringN *>(this), p);
   }
   template <typename P> inline typename MatchPBuffer<P>::T init(const P &p) {

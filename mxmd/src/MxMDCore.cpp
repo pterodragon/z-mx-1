@@ -91,7 +91,7 @@ void MxMDCore::addTickSize_(ZuAnyPOD *pod)
 void MxMDCore::addInstrument_(ZuAnyPOD *pod)
 {
   MxMDInstrumentCSV::Data *data = (MxMDInstrumentCSV::Data *)(pod->ptr());
-  MxInstrKey key{data->venue, data->segment, data->id};
+  MxInstrKey key{data->id, data->venue, data->segment};
   MxMDInstrHandle instrHandle = instrument(key, data->shard);
   instrHandle.invokeMv([key, refData = data->refData,
       transactTime = data->transactTime](
@@ -104,7 +104,7 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
 {
   MxMDOrderBookCSV::Data *data = (MxMDOrderBookCSV::Data *)(pod->ptr());
   MxInstrKey instrKey{
-    data->instrVenues[0], data->instrSegments[0], data->instruments[0]};
+    data->instruments[0], data->instrVenues[0], data->instrSegments[0]};
   MxMDInstrHandle instrHandle = instrument(instrKey);
   if (!instrHandle) throw ZtString() << "unknown instrument: " << instrKey;
   ZmRef<MxMDVenue> venue = this->venue(data->venue);

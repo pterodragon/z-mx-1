@@ -218,6 +218,16 @@ public:
 
   // order state management
 
+  // FIXME - requestIn/Out etc. are not suitable for extension by app, get rid
+  // of it from App
+  //
+  // FIXME - need to enrich args passed to send* to enable
+  // sendOrdered, sendModified, etc. to determine WHICH of order, modify, cancel
+  // is being responded to (obvious / implied???)
+  //
+  // fill/close - O/M is uncertain
+  //
+  // hold/release - ????
 private:
   template <typename Event, typename In>
   void requestIn(Order *order, In &in) {

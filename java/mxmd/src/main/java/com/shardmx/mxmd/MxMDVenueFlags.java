@@ -1,5 +1,6 @@
 package com.shardmx.mxmd;
 
+// bit mask is (1<<(MxMDVenueFlags.FLAG.ordinal()))
 public enum MxMDVenueFlags {
   UNIFORM_RANKS,
   DARK,

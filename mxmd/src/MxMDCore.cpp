@@ -83,6 +83,7 @@ void MxMDCore::addTickSize_(ZuAnyPOD *pod)
 {
   MxMDTickSizeCSV::Data *data = (MxMDTickSizeCSV::Data *)(pod->ptr());
   ZmRef<MxMDVenue> venue = this->venue(data->venue);
+  if (!venue) throw ZtString() << "unknown venue: " << data->venue;
   ZmRef<MxMDTickSizeTbl> tbl = venue->addTickSizeTbl(data->id, data->pxNDP);
   tbl->addTickSize(data->minPrice, data->maxPrice, data->tickSize);
 }
@@ -107,6 +108,7 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
   MxMDInstrHandle instrHandle = instrument(instrKey);
   if (!instrHandle) throw ZtString() << "unknown instrument: " << instrKey;
   ZmRef<MxMDVenue> venue = this->venue(data->venue);
+  if (!venue) throw ZtString() << "unknown venue: " << data->venue;
   ZmRef<MxMDTickSizeTbl> tbl =
     venue->addTickSizeTbl(data->tickSizeTbl, data->pxNDP);
   instrHandle.invokeMv(

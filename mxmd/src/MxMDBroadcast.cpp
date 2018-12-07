@@ -99,7 +99,9 @@ void MxMDBroadcast::close_()
 
 void MxMDBroadcast::close__()
 {
-  m_core->mx()->del(&m_hbTimer);
+  if (ZuLikely(m_core)) {
+    m_core->mx()->del(&m_hbTimer);
+  }
   if (ZuLikely(m_ring)) {
     m_ring->close();
     m_ring = 0;

@@ -17,7 +17,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// MxT Order State Management - Events/Messages
+// MxT Order State Management - Transactions, Events and Order State
+
+// A transaction (*Txn) is a POD union (buffer) containing an event,
+// with enough space for one of a number of different event types; it can
+// be stored/retrieved/sent/rcvd as-is
+//
+// An event is a specific type that encapsulates an update to order state
+//
+// An order state is an order transaction together with (at most one)
+// pending modify transaction and (at most one) pending cancel transaction
 
 #ifndef MxTOrder_HPP
 #define MxTOrder_HPP
@@ -193,7 +202,7 @@ namespace MxTEventState { // event state
 
 #pragma pack(push, 4)
 
-template <typename AppData> struct MxTEventData {
+template <typename AppTypes> struct MxTEventTypes {
 
   struct Event : public ZuPrintable {
     MxEnum		eventType;	// EventType
@@ -353,17 +362,17 @@ template <typename AppData> struct MxTEventData {
 
   // requests must include the data for the corresponding ack and reject
   struct Cancel :
-      public AppData::Event, public Cancel_<typename AppData::CancelLeg> {
+      public AppTypes::Event, public Cancel_<typename AppTypes::CancelLeg> {
     enum { EventType = MxTEventType::Cancel };
 
     template <typename Update> inline void update(const Update &u) {
-      AppData::Event::update(u);
-      Cancel_<typename AppData::CancelLeg>::update(u);
+      AppTypes::Event::update(u);
+      Cancel_<typename AppTypes::CancelLeg>::update(u);
     }
     template <typename S> inline void print(S &s) const {
-      AppData::Event::print(s);
+      AppTypes::Event::print(s);
       s << ' ';
-      Cancel_<typename AppData::CancelLeg>::print(s);
+      Cancel_<typename AppTypes::CancelLeg>::print(s);
     }
   };
 
@@ -448,62 +457,62 @@ template <typename AppData> struct MxTEventData {
 
   // requests must include the data for the corresponding ack and reject
   struct Modify :
-      public AppData::Event, public Modify_<typename AppData::ModifyLeg> {
+      public AppTypes::Event, public Modify_<typename AppTypes::ModifyLeg> {
     enum { EventType = MxTEventType::Modify };
 
     template <typename Update> inline void update(const Update &u) {
-      AppData::Event::update(u);
-      Modify_<typename AppData::ModifyLeg>::update(u);
+      AppTypes::Event::update(u);
+      Modify_<typename AppTypes::ModifyLeg>::update(u);
     }
 
     template <typename S> inline void print(S &s) const {
-      AppData::Event::print(s);
+      AppTypes::Event::print(s);
       s << ' ';
-      Modify_<typename AppData::ModifyLeg>::print(s);
+      Modify_<typename AppTypes::ModifyLeg>::print(s);
     }
   };
 
-  struct Ordered : public AppData::Event {
+  struct Ordered : public AppTypes::Event {
     enum { EventType = MxTEventType::Ordered };
 
     template <typename Update> inline void update(const Update &u) {
-      AppData::Event::update(u);
+      AppTypes::Event::update(u);
     }
   };
 
   struct ModifiedLeg : public AckLeg__, public ModifyLeg_ { };
 
-  struct Modified : public AppData::Event,
-      public Modify_<typename AppData::ModifiedLeg> {
+  struct Modified : public AppTypes::Event,
+      public Modify_<typename AppTypes::ModifiedLeg> {
     enum { EventType = MxTEventType::Modified };
 
     template <typename Update> inline void update(const Update &u) {
-      AppData::Event::update(u);
-      Modify_<typename AppData::ModifiedLeg>::update(u);
+      AppTypes::Event::update(u);
+      Modify_<typename AppTypes::ModifiedLeg>::update(u);
     }
 
     template <typename S> inline void print(S &s) const {
-      AppData::Event::print(s);
+      AppTypes::Event::print(s);
       s << ' ';
-      Modify_<typename AppData::ModifiedLeg>::print(s);
+      Modify_<typename AppTypes::ModifiedLeg>::print(s);
     }
   };
 
   struct CanceledLeg : public AckLeg__, public CanceledLeg_ { };
 
-  struct Canceled : public AppData::Event,
-      public Cancel_<typename AppData::CanceledLeg> {
+  struct Canceled : public AppTypes::Event,
+      public Cancel_<typename AppTypes::CanceledLeg> {
     enum { EventType = MxTEventType::Canceled };
 
     template <typename Update> inline void update(const Update &u) {
       Event::update(u);
-      Cancel_<CanceledLeg>::update(u);
+      Cancel_<typename AppTypes::CanceledLeg>::update(u);
     }
 
     template <typename S> inline void print(S &s) const {
-      AppData::Event::print(s);
+      AppTypes::Event::print(s);
       s << ' ';
-      Cancel_<typename AppData::CanceledLeg>::print(s);
+      Cancel_<typename AppTypes::CanceledLeg>::print(s);
     }
   };
 
@@ -545,7 +554,7 @@ template <typename AppData> struct MxTEventData {
 
   // requests must include the data for the corresponding ack and reject
   struct NewOrder :
-      public AppData::Event, public Order_<typename AppData::OrderLeg> {
+      public AppTypes::Event, public Order_<typename AppTypes::OrderLeg> {
     enum { EventType = MxTEventType::NewOrder };
 
     inline NewOrder &operator =(const NewOrder &v) {
@@ -555,18 +564,18 @@ template <typename AppData> struct MxTEventData {
 
     template <typename Update> inline void update(const Update &u) {
       Event::update(u);
-      Order_<OrderLeg>::update(u);
+      Order_<typename AppTypes::OrderLeg>::update(u);
     }
 
     template <typename S> inline void print(S &s) const {
-      AppData::Event::print(s);
+      AppTypes::Event::print(s);
       s << ' ';
-      Order_<typename AppData::OrderLeg>::print(s);
+      Order_<typename AppTypes::OrderLeg>::print(s);
     }
   };
 
   // eventLeg will be set
-  struct Fill : public AppData::Event {
+  struct Fill : public AppTypes::Event {
     enum { EventType = MxTEventType::Fill };
 
     MxValue		lastPx;
@@ -576,37 +585,37 @@ template <typename AppData> struct MxTEventData {
     uint8_t		pad_0[2];
 
     template <typename S> inline void print(S &s) const {
-      AppData::Event::print(s);
+      AppTypes::Event::print(s);
       s << " lastPx=" << MxValNDP{lastPx, pxNDP}
 	<< " lastQty=" << MxValNDP{lastQty, qtyNDP};
     }
   };
 
-  struct Closed : public AppData::Event {
+  struct Closed : public AppTypes::Event {
     enum { EventType = MxTEventType::Closed };
   };
 
-  struct AnySent : public AppData::Event { };
+  struct AnySent : public AppTypes::Event { };
 
-  struct OrderSent : public AppData::AnySent {
+  struct OrderSent : public AppTypes::AnySent {
     enum { EventType = MxTEventType::OrderSent };
   };
-  struct ModifySent : public AppData::AnySent {
+  struct ModifySent : public AppTypes::AnySent {
     enum { EventType = MxTEventType::ModifySent };
   };
-  struct CancelSent : public AppData::AnySent {
+  struct CancelSent : public AppTypes::AnySent {
     enum { EventType = MxTEventType::CancelSent };
   };
 
   // generic reject data for new order / modify / cancel
-  struct AnyReject : public AppData::Event {
+  struct AnyReject : public AppTypes::Event {
     MxInt		rejCode;	// source-specific numerical code
     MxEnum		rejReason;	// RejReason
     uint8_t		pad_0[3];
     MxTxtString		rejText;	// reject text
 
     template <typename S> inline void print(S &s) const {
-      AppData::Event::print(s);
+      AppTypes::Event::print(s);
       s << " rejReason=" << MxTRejReason::name(rejReason)
 	<< " rejCode=" << rejCode
 	<< " rejText=" << rejText;
@@ -614,22 +623,22 @@ template <typename AppData> struct MxTEventData {
   };
 
   // used for mkt-initiated rejects
-  struct Reject : public AppData::AnyReject {
+  struct Reject : public AppTypes::AnyReject {
     enum { EventType = MxTEventType::Reject };
   };
 
   // used for mkt-initiated modify rejects
-  struct ModReject : public AppData::AnyReject {
+  struct ModReject : public AppTypes::AnyReject {
     enum { EventType = MxTEventType::ModReject };
   };
 
   // used for mkt-initiated cancel rejects
-  struct CxlReject : public AppData::AnyReject {
+  struct CxlReject : public AppTypes::AnyReject {
     enum { EventType = MxTEventType::CxlReject };
   };
 
   // used for broker-initiated hold of order/modify
-  struct Hold : public AppData::AnyReject { };
+  struct Hold : public AppTypes::AnyReject { };
 
   // used for broker-initiated release of a held order/modify
   struct Release : public Event {
@@ -637,47 +646,47 @@ template <typename AppData> struct MxTEventData {
   };
 
   // used for broker-initiated reject of a held modify (implies cancel)
-  struct Deny : public AppData::AnyReject {
+  struct Deny : public AppTypes::AnyReject {
     enum { EventType = MxTEventType::Deny };
   };
 };
 
 #pragma pack(pop)
 
-template <typename AppData> struct MxTEventTypes : public AppData {
+template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
   // types that can be extended by the app
-  typedef typename AppData::Event Event;
+  typedef typename AppTypes::Event Event;
 
-  typedef typename AppData::OrderLeg OrderLeg;
-  typedef typename AppData::ModifyLeg ModifyLeg;
-  typedef typename AppData::CancelLeg CancelLeg;
+  typedef typename AppTypes::OrderLeg OrderLeg;
+  typedef typename AppTypes::ModifyLeg ModifyLeg;
+  typedef typename AppTypes::CancelLeg CancelLeg;
 
-  typedef typename AppData::AnyReject AnyReject;
+  typedef typename AppTypes::AnyReject AnyReject;
 
-  typedef typename AppData::NewOrder NewOrder;
-  typedef typename AppData::Ordered Ordered;
-  typedef typename AppData::Reject Reject;
+  typedef typename AppTypes::NewOrder NewOrder;
+  typedef typename AppTypes::Ordered Ordered;
+  typedef typename AppTypes::Reject Reject;
 
-  typedef typename AppData::Modify Modify;
-  typedef typename AppData::Modified Modified;
-  typedef typename AppData::ModReject ModReject;
+  typedef typename AppTypes::Modify Modify;
+  typedef typename AppTypes::Modified Modified;
+  typedef typename AppTypes::ModReject ModReject;
 
-  typedef typename AppData::Cancel Cancel;
-  typedef typename AppData::Canceled Canceled;
-  typedef typename AppData::CxlReject CxlReject;
+  typedef typename AppTypes::Cancel Cancel;
+  typedef typename AppTypes::Canceled Canceled;
+  typedef typename AppTypes::CxlReject CxlReject;
 
-  typedef typename AppData::Hold Hold;
-  typedef typename AppData::Release Release;
-  typedef typename AppData::Deny Deny;
+  typedef typename AppTypes::Hold Hold;
+  typedef typename AppTypes::Release Release;
+  typedef typename AppTypes::Deny Deny;
 
-  typedef typename AppData::Fill Fill;
-  typedef typename AppData::Closed Closed;
+  typedef typename AppTypes::Fill Fill;
+  typedef typename AppTypes::Closed Closed;
 
-  typedef typename AppData::AnySent AnySent;
+  typedef typename AppTypes::AnySent AnySent;
 
-  typedef typename AppData::OrderSent OrderSent;
-  typedef typename AppData::ModifySent ModifySent;
-  typedef typename AppData::CancelSent CancelSent;
+  typedef typename AppTypes::OrderSent OrderSent;
+  typedef typename AppTypes::ModifySent ModifySent;
+  typedef typename AppTypes::CancelSent CancelSent;
 
   // additional typedefs
   struct ModSimulated : public Modify {
@@ -824,38 +833,38 @@ template <typename AppData> struct MxTEventTypes : public AppData {
     uintptr_t		data[Size];
   };
 
-  struct Msg_ {
+  struct Txn_ {
   protected:
     struct Data__ { };
     struct Request__ { };
     struct Reject__ { };
   };
   template <typename Largest>
-  class Msg : public Buf<Largest>, public Msg_ {
-    typedef typename Msg_::Data__ Data__;
-    typedef typename Msg_::Request__ Request__;
-    typedef typename Msg_::Reject__ Reject__;
+  class Txn : public Buf<Largest>, public Txn_ {
+    typedef typename Txn_::Data__ Data__;
+    typedef typename Txn_::Request__ Request__;
+    typedef typename Txn_::Reject__ Reject__;
 
   public:
-    inline Msg() { }
+    inline Txn() { }
 
-    // Msg m1, m2;
+    // Txn m1, m2;
     // m1 = m2.data<NewOrder>(); // copy m2 (containing NewOrder) to m1
-    template <typename Msg_, typename T_> struct Data : public Data__ {
-      typedef Msg_ Msg;
+    template <typename Txn_, typename T_> struct Data : public Data__ {
+      typedef Txn_ Txn;
       typedef T_ T;
-      inline Data(const Msg &msg_) : msg(msg_) { }
-      const Msg	&msg;
+      inline Data(const Txn &txn_) : txn(txn_) { }
+      const Txn	&txn;
     };
-    template <typename T> inline Data<Msg, T> data() const {
-      return Data<Msg, T>(*this);
+    template <typename T> inline Data<Txn, T> data() const {
+      return Data<Txn, T>(*this);
     }
   private:
     template <typename Data_> inline void initData(const Data_ &data) {
-      memcpy((void *)this, &data.msg, sizeof(typename Data_::T));
+      memcpy((void *)this, &data.txn, sizeof(typename Data_::T));
     }
   public:
-    template <typename Data_> inline Msg(const Data_ &data,
+    template <typename Data_> inline Txn(const Data_ &data,
 	typename ZuIfT<ZuConversion<Data__, Data_>::Base &&
 	  sizeof(typename Data_::T) <= sizeof(Largest)>::T *_ = 0) {
       initData(data);
@@ -863,32 +872,32 @@ template <typename AppData> struct MxTEventTypes : public AppData {
     template <typename Data_> typename ZuIfT<
 	ZuConversion<Data__, Data_>::Base &&
 	  sizeof(typename Data_::T) <= sizeof(Largest),
-	Msg &>::T operator =(const Data_ &data) {
+	Txn &>::T operator =(const Data_ &data) {
       initData(data);
       return *this;
     }
 
-    // Msg m1, m2;
+    // Txn m1, m2;
     // m1 = m2.request<OrderFiltered>(); // assign request part of m2 to m1
-    template <typename Msg_, typename T_> struct Request_ : public Request__ {
-      typedef Msg_ Msg;
+    template <typename Txn_, typename T_> struct Request_ : public Request__ {
+      typedef Txn_ Txn;
       typedef T_ T;
-      inline Request_(const Msg &msg_) : msg(msg_) { }
-      const Msg	&msg;
+      inline Request_(const Txn &txn_) : txn(txn_) { }
+      const Txn	&txn;
     };
     template <typename T>
-    inline ZuIsBase<Filtered__, T, Request_<Msg, T> > request() const {
-      return Request_<Msg, T>(*this);
+    inline ZuIsBase<Filtered__, T, Request_<Txn, T> > request() const {
+      return Request_<Txn, T>(*this);
     }
   private:
     template <typename Request_>
     inline void initRequest_(const Request_ &request) {
-      memcpy((void *)this, &request.msg,
+      memcpy((void *)this, &request.txn,
 	  sizeof(typename Request_::T::Request_));
     }
   public:
     template <typename Request_>
-    inline Msg(const Request_ &request,
+    inline Txn(const Request_ &request,
 	typename ZuIfT<ZuConversion<Request__, Request_>::Base &&
 	  sizeof(typename Request_::T::Request_) <=
 	    sizeof(Largest)>::T *_ = 0) {
@@ -897,32 +906,32 @@ template <typename AppData> struct MxTEventTypes : public AppData {
     template <typename Request_> typename ZuIfT<
 	ZuConversion<Request__, Request_>::Base &&
 	  sizeof(typename Request_::T::Request_) <= sizeof(Largest),
-	Msg &>::T operator =(const Request_ &request) {
+	Txn &>::T operator =(const Request_ &request) {
       initRequest_(request);
       return *this;
     }
 
-    // Msg<...> m1, m2;
+    // Txn<...> m1, m2;
     // m1 = m2.reject<OrderFiltered>(); // assign reject part of m2 to m1
-    template <typename Msg_, typename T_> struct Reject_ : public Reject__ {
-      typedef Msg_ Msg;
+    template <typename Txn_, typename T_> struct Reject_ : public Reject__ {
+      typedef Txn_ Txn;
       typedef T_ T;
-      inline Reject_(const Msg &msg_) : msg(msg_) { }
-      const Msg	&msg;
+      inline Reject_(const Txn &txn_) : txn(txn_) { }
+      const Txn	&txn;
     };
     template <typename T>
-    inline ZuIsBase<Filtered__, T, Reject_<Msg, T> > reject() const {
-      return Reject_<Msg, T>(*this);
+    inline ZuIsBase<Filtered__, T, Reject_<Txn, T> > reject() const {
+      return Reject_<Txn, T>(*this);
     }
   private:
     template <typename Reject_>
     inline void initReject_(const Reject_ &reject) {
-      memcpy((void *)this, &reject.msg.reject,
+      memcpy((void *)this, &reject.txn.reject,
 	  sizeof(typename Reject_::T::Reject_));
     }
   public:
     template <typename Reject_>
-    inline Msg(const Reject_ &reject,
+    inline Txn(const Reject_ &reject,
 	typename ZuIfT<ZuConversion<Reject__, Reject_>::Base &&
 	  sizeof(typename Reject_::T::Reject_) <= sizeof(Largest)>::T *_ = 0) {
       initReject_(reject);
@@ -930,7 +939,7 @@ template <typename AppData> struct MxTEventTypes : public AppData {
     template <typename Reject_> inline typename ZuIfT<
 	ZuConversion<Reject__, Reject_>::Base && 
 	  sizeof(typename Reject_::T::Reject_) <= sizeof(Largest),
-	Msg &>::T operator =(const Reject_ &reject) {
+	Txn &>::T operator =(const Reject_ &reject) {
       initReject_(reject);
       return *this;
     }
@@ -940,7 +949,7 @@ template <typename AppData> struct MxTEventTypes : public AppData {
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
 
-#define Msg_Init(Type) \
+#define Txn_Init(Type) \
     inline Type &init##Type(MxUInt8 eventFlags_) { \
       static Type blank; \
       { \
@@ -952,10 +961,10 @@ template <typename AppData> struct MxTEventTypes : public AppData {
       return this->template as<Type>(); \
     }
 
-#define Msg_InitFiltered(Type) \
-    template <typename Msg> \
-    inline Type &init##Type(const Msg &msg, MxFlags eventFlags_) { \
-      memcpy((void *)this, &msg, sizeof(typename Type::Request)); \
+#define Txn_InitFiltered(Type) \
+    template <typename Txn> \
+    inline Type &init##Type(const Txn &txn, MxFlags eventFlags_) { \
+      memcpy((void *)this, &txn, sizeof(typename Type::Request)); \
       static typename Type::Reject blank; \
       { \
 	typename Type::Reject &reject = this->template as<Type>().reject; \
@@ -965,107 +974,107 @@ template <typename AppData> struct MxTEventTypes : public AppData {
       return this->template as<Type>(); \
     }
 
-    Msg_Init(NewOrder)
-    Msg_InitFiltered(OrderHeld)
-    Msg_InitFiltered(OrderFiltered)
-    Msg_Init(Ordered)
-    Msg_Init(Reject)
+    Txn_Init(NewOrder)
+    Txn_InitFiltered(OrderHeld)
+    Txn_InitFiltered(OrderFiltered)
+    Txn_Init(Ordered)
+    Txn_Init(Reject)
 
-    Msg_Init(Modify)
-    Msg_Init(ModSimulated)
-    Msg_InitFiltered(ModHeld)
-    Msg_InitFiltered(ModFiltered)
-    Msg_InitFiltered(ModFilteredCxl)
-    Msg_Init(Modified)
-    Msg_Init(ModReject)
-    Msg_Init(ModRejectCxl)
+    Txn_Init(Modify)
+    Txn_Init(ModSimulated)
+    Txn_InitFiltered(ModHeld)
+    Txn_InitFiltered(ModFiltered)
+    Txn_InitFiltered(ModFilteredCxl)
+    Txn_Init(Modified)
+    Txn_Init(ModReject)
+    Txn_Init(ModRejectCxl)
 
-    Msg_Init(Cancel)
-    Msg_InitFiltered(CxlFiltered)
-    Msg_Init(Canceled)
-    Msg_Init(CxlReject)
+    Txn_Init(Cancel)
+    Txn_InitFiltered(CxlFiltered)
+    Txn_Init(Canceled)
+    Txn_Init(CxlReject)
 
-    Msg_Init(Release)
-    Msg_Init(Deny)
+    Txn_Init(Release)
+    Txn_Init(Deny)
 
-    Msg_Init(Fill)
+    Txn_Init(Fill)
 
-    Msg_Init(Closed)
+    Txn_Init(Closed)
 
-    Msg_Init(OrderSent)
-    Msg_Init(ModifySent)
-    Msg_Init(CancelSent)
+    Txn_Init(OrderSent)
+    Txn_Init(ModifySent)
+    Txn_Init(CancelSent)
   };
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
 
-  // OrderMsg can contain a new order
-  typedef Msg<NewOrder> OrderMsg;
+  // OrderTxn can contain a new order
+  typedef Txn<NewOrder> OrderTxn;
 
-  // ModifyMsg can contain a modify
-  typedef Msg<Modify> ModifyMsg;
+  // ModifyTxn can contain a modify
+  typedef Txn<Modify> ModifyTxn;
 
-  // CancelMsg can contain a cancel
-  typedef Msg<Cancel> CancelMsg;
+  // CancelTxn can contain a cancel
+  typedef Txn<Cancel> CancelTxn;
 
-  // ExecMsg can contain a execution(notice)/ack/reject
+  // ExecTxn can contain a execution(notice)/ack/reject
   typedef typename ZuLargest<
     Ordered, Reject,
     Modified, ModReject,
     Canceled, CxlReject,
     Release, Deny,
     Fill, Closed>::T Exec_Largest;
-  typedef Msg<Exec_Largest> ExecMsg;
+  typedef Txn<Exec_Largest> ExecTxn;
 
-  // UpdateMsg can contain any update to an open order
+  // UpdateTxn can contain any update to an open order
   typedef typename ZuLargest<
     Modify,
     Cancel,
     Exec_Largest>::T Update_Largest;
-  typedef Msg<Update_Largest> UpdateMsg;
+  typedef Txn<Update_Largest> UpdateTxn;
 
-  // AnyMsg can contain any trading message
+  // AnyTxn can contain any trading message
   typedef typename ZuLargest<
     NewOrder,
     Update_Largest,
     OrderFiltered,
     ModFiltered,
-    CxlFiltered>::T Msg_Largest;
-  typedef Msg<Msg_Largest> AnyMsg;
+    CxlFiltered>::T Txn_Largest;
+  typedef Txn<Txn_Largest> AnyTxn;
 
   // Order - open order state including pending modify/cancel
   struct Order : public ZuPrintable {
     inline Order() { }
 
-    OrderMsg		orderMsg;	// new order
-    ModifyMsg		modifyMsg;	// (pending) modify
-    CancelMsg		cancelMsg;	// (pending) cancel
+    OrderTxn		orderTxn;	// new order
+    ModifyTxn		modifyTxn;	// (pending) modify
+    CancelTxn		cancelTxn;	// (pending) cancel
 
     inline NewOrder &newOrder() {
-      return orderMsg.template as<NewOrder>();
+      return orderTxn.template as<NewOrder>();
     }
     inline const NewOrder &newOrder() const {
-      return orderMsg.template as<NewOrder>();
+      return orderTxn.template as<NewOrder>();
     }
     inline Modify &modify() {
-      return modifyMsg.template as<Modify>();
+      return modifyTxn.template as<Modify>();
     }
     inline const Modify &modify() const {
-      return modifyMsg.template as<Modify>();
+      return modifyTxn.template as<Modify>();
     }
     inline Cancel &cancel() {
-      return cancelMsg.template as<Cancel>();
+      return cancelTxn.template as<Cancel>();
     }
     inline const Cancel &cancel() const {
-      return cancelMsg.template as<Cancel>();
+      return cancelTxn.template as<Cancel>();
     }
 
     template <typename S> inline void print(S &s) const {
-      s << "orderMsg={" << orderMsg
-	<< "} modifyMsg={" << modifyMsg
-	<< "} cancelMsg={" << cancelMsg << '}';
+      s << "orderTxn={" << orderTxn
+	<< "} modifyTxn={" << modifyTxn
+	<< "} cancelTxn={" << cancelTxn << '}';
     }
   };
 };

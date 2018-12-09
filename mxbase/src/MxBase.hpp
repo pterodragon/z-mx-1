@@ -77,7 +77,7 @@ typedef ZuBox0(uint64_t) MxFlags64;
 struct MxSeqNoCmp {
   ZuInline static int cmp(uint64_t v1, uint64_t v2) {
     int64_t d = v1 - v2; // handles wraparound ok
-    return d | (d>>((sizeof(int64_t)-sizeof(int))<<3)); // safely narrows
+    return d < 0 ? -1 : d > 0 ? 1 : 0;
   }
   ZuInline static bool equals(uint64_t v1, uint64_t v2) { return v1 == v2; }
   ZuInline static bool null(uint64_t v) { return !v; }

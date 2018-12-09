@@ -58,32 +58,11 @@ namespace MxTelemetry {
   };
 
   struct Hdr : public HdrData {
-    ZuInline Hdr() { }
-    ZuInline Hdr(uint32_t len, uint32_t type) : HdrData{len, type} { }
-
-    ZuInline void *ptr() { return (void *)this; }
-    ZuInline const void *ptr() const { return (const void *)this; }
+    Hdr() = delete;
+    ZuInline Hdr(uint32_t type, uint32_t len) : HdrData{len, type} { }
 
     ZuInline void *body() { return (void *)&this[1]; }
     ZuInline const void *body() const { return (const void *)&this[1]; }
-
-    template <typename T> ZuInline T &as() {
-      T *ZuMayAlias(ptr) = (T *)&this[1];
-      return *ptr;
-    }
-    template <typename T> ZuInline const T &as() const {
-      const T *ZuMayAlias(ptr) = (const T *)&this[1];
-      return *ptr;
-    }
-
-    template <typename T> ZuInline void pad() {
-      if (ZuUnlikely(len < sizeof(T)))
-	memset(((char *)&this[1]) + len, 0, sizeof(T) - len);
-    }
-
-    bool scan(unsigned length) const {
-      return sizeof(Hdr) + len > length;
-    }
   };
 
   typedef uint64_t Bitmap;
@@ -272,10 +251,40 @@ namespace MxTelemetry {
      DBEnv, DBHost, DB>::T Largest;
 
   struct Buf {
-    char	data[sizeof(Largest)];
-  };
+    char	data[sizeof(Hdr) + sizeof(Largest)];
 
-  struct MsgData : public Hdr, public Buf { };
+    ZuInline void *ptr() { return (void *)this; }
+    ZuInline const void *ptr() const { return (const void *)this; }
+
+    ZuInline Hdr &hdr() {
+      Hdr *ZuMayAlias(ptr) = (Hdr *)this;
+      return *ptr;
+    }
+    ZuInline const Hdr &hdr() const {
+      const Hdr *ZuMayAlias(ptr) = (const Hdr *)this;
+      return *ptr;
+    }
+
+    ZuInline void *body() { return hdr().body(); }
+    ZuInline const void *body() const { return hdr().body(); }
+
+    template <typename T> ZuInline T &as() {
+      T *ZuMayAlias(ptr) = (T *)body();
+      return *ptr;
+    }
+    template <typename T> ZuInline const T &as() const {
+      const T *ZuMayAlias(ptr) = (const T *)body();
+      return *ptr;
+    }
+
+    bool scan(unsigned length) const {
+      return sizeof(Hdr) + hdr().len > length;
+    }
+
+    ZuInline unsigned length() const {
+      return sizeof(Hdr) + hdr().len;
+    }
+  };
 }
 
 #pragma pack(pop)
@@ -283,20 +292,14 @@ namespace MxTelemetry {
 namespace MxTelemetry {
 
   struct Msg_HeapID {
-    ZuInline static const char *id() { return "MxMDStream.Msg"; }
+    ZuInline static const char *id() { return "MxTelemetry.Msg"; }
   };
 
   template <typename Heap>
-  struct Msg_ : public Heap, public ZmPolymorph, public MsgData {
-    ZuInline const Hdr &hdr() const {
-      return static_cast<const Hdr &>(*this);
-    }
-    ZuInline Hdr &hdr() {
-      return static_cast<Hdr &>(*this);
-    }
+  struct Msg_ : public Heap, public ZmPolymorph, public Buf {
+    ZuInline void calcLength() { length = this->Buf::length(); }
 
-    ZuInline void calcLength() { length = sizeof(Hdr) + this->len; }
-    ZuInline constexpr unsigned size() const { return sizeof(MsgData); }
+    ZuInline constexpr unsigned size() const { return sizeof(Buf); }
 
     ZiSockAddr	addr;
     unsigned	length = 0;
@@ -304,31 +307,31 @@ namespace MxTelemetry {
 
   typedef Msg_<ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> > Msg;
 
-#ifdef FnDeclare
-#undef FnDeclare
+#ifdef DeclFn
+#undef DeclFn
 #endif
-#define FnDeclare(Fn, Type) \
+#define DeclFn(Fn, Type) \
   template <typename ...Args> \
   inline ZmRef<Msg> Fn(Args &&... args) { \
     ZmRef<Msg> msg = new Msg(); \
-    new (msg->ptr()) Hdr{sizeof(Type), Type::Code}; \
+    new (msg->ptr()) Hdr{Type::Code, sizeof(Type)}; \
     new (msg->body()) Type{ZuFwd<Args>(args)...}; \
     msg->calcLength(); \
     return msg; \
   }
 
-  FnDeclare(heap, Heap)
-  FnDeclare(thread, Thread)
-  FnDeclare(multiplexer, Multiplexer)
-  FnDeclare(hashTbl, HashTbl)
-  FnDeclare(queue, Queue)
-  FnDeclare(link, Link)
-  FnDeclare(engine, Engine)
-  FnDeclare(db, DB)
-  FnDeclare(dbHost, DBHost)
-  FnDeclare(dbEnv, DBEnv)
+  DeclFn(heap, Heap)
+  DeclFn(thread, Thread)
+  DeclFn(multiplexer, Multiplexer)
+  DeclFn(hashTbl, HashTbl)
+  DeclFn(queue, Queue)
+  DeclFn(link, Link)
+  DeclFn(engine, Engine)
+  DeclFn(db, DB)
+  DeclFn(dbHost, DBHost)
+  DeclFn(dbEnv, DBEnv)
 
-#undef FnDeclare
+#undef DeclFn
 
   template <typename Cxn, typename L> struct IOLambda_ {
     typedef void (*Fn)(Cxn *, ZmRef<Msg>, ZiIOContext &);
@@ -402,7 +405,7 @@ namespace MxTelemetry {
 	ZmRef<Msg> msg = new Msg();
 	UDP::recv<Cxn>(ZuMv(msg), io,
 	    [](Cxn *cxn, ZmRef<Msg> msg, ZiIOContext &io) mutable {
-	      if (!msg->hdr().scan(msg->length))
+	      if (!msg->scan(msg->length))
 		cxn->client()->process(ZuMv(msg));
 	      cxn->recv(io);
 	    });

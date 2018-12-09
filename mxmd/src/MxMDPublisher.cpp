@@ -539,6 +539,7 @@ void *MxMDPubLink::TCP::push(unsigned size)
 void *MxMDPubLink::TCP::out(
     void *ptr, unsigned length, unsigned type, int shardID)
 {
+  using namespace MxMDStream;
   Hdr *hdr = new (ptr) Hdr{
       (uint64_t)0, (uint32_t)0,
       (uint16_t)length, (uint8_t)type, (uint8_t)shardID};

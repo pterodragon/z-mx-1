@@ -38,8 +38,8 @@
 // application must instantiate MxTOrderMgr
 // and supply the following interface:
 #if 0
-struct AppTypes : public MxTEventTypes<AppTypes> {
-  typedef MxTEventTypes<TxnAppTypes> Base;
+struct AppTypes : public MxTAppTypes<AppTypes> {
+  typedef MxTAppTypes<AppTypes> Base;
 
   // extend data definitions
   struct NewOrder : public Base::NewOrder {
@@ -92,50 +92,53 @@ struct App : public MxTOrderMgr<App, AppTypes> {
 };
 #endif
 
+#define MxTImport(Base) \
+  typedef typename Base::Event Event; \
+ \
+  typedef typename Base::OrderLeg OrderLeg; \
+  typedef typename Base::ModifyLeg ModifyLeg; \
+  typedef typename Base::CancelLeg CancelLeg; \
+ \
+  typedef typename Base::AnyReject AnyReject; \
+ \
+  typedef typename Base::NewOrder NewOrder; \
+  typedef typename Base::OrderHeld OrderHeld; \
+  typedef typename Base::OrderFiltered OrderFiltered; \
+  typedef typename Base::Ordered Ordered; \
+  typedef typename Base::Reject Reject; \
+ \
+  typedef typename Base::Modify Modify; \
+  typedef typename Base::ModSimulated ModSimulated; \
+  typedef typename Base::ModHeld ModHeld; \
+  typedef typename Base::ModFiltered ModFiltered; \
+  typedef typename Base::ModFilteredCxl ModFilteredCxl; \
+  typedef typename Base::Modified Modified; \
+  typedef typename Base::ModReject ModReject; \
+  typedef typename Base::ModRejectCxl ModRejectCxl; \
+ \
+  typedef typename Base::Cancel Cancel; \
+  typedef typename Base::CxlFiltered CxlFiltered; \
+  typedef typename Base::Canceled Canceled; \
+  typedef typename Base::CxlReject CxlReject; \
+ \
+  typedef typename Base::Hold Hold; \
+  typedef typename Base::Release Release; \
+  typedef typename Base::Deny Deny; \
+ \
+  typedef typename Base::Fill Fill; \
+ \
+  typedef typename Base::Closed Closed; \
+ \
+  typedef typename Base::OrderSent OrderSent; \
+  typedef typename Base::ModifySent ModifySent; \
+  typedef typename Base::CancelSent CancelSent
+
 template <typename App, typename AppTypes>
 class MxTOrderMgr : public MxTTxnTypes<AppTypes> {
 public:
   typedef MxTTxnTypes<AppTypes> TxnTypes;
 
-  typedef typename TxnTypes::Event Event;
-
-  typedef typename TxnTypes::OrderLeg OrderLeg;
-  typedef typename TxnTypes::ModifyLeg ModifyLeg;
-  typedef typename TxnTypes::CancelLeg CancelLeg;
-
-  typedef typename TxnTypes::AnyReject AnyReject;
-
-  typedef typename TxnTypes::NewOrder NewOrder;
-  typedef typename TxnTypes::OrderHeld OrderHeld;
-  typedef typename TxnTypes::OrderFiltered OrderFiltered;
-  typedef typename TxnTypes::Ordered Ordered;
-  typedef typename TxnTypes::Reject Reject;
-
-  typedef typename TxnTypes::Modify Modify;
-  typedef typename TxnTypes::ModSimulated ModSimulated;
-  typedef typename TxnTypes::ModHeld ModHeld;
-  typedef typename TxnTypes::ModFiltered ModFiltered;
-  typedef typename TxnTypes::ModFilteredCxl ModFilteredCxl;
-  typedef typename TxnTypes::Modified Modified;
-  typedef typename TxnTypes::ModReject ModReject;
-  typedef typename TxnTypes::ModRejectCxl ModRejectCxl;
-
-  typedef typename TxnTypes::Cancel Cancel;
-  typedef typename TxnTypes::CxlFiltered CxlFiltered;
-  typedef typename TxnTypes::Canceled Canceled;
-  typedef typename TxnTypes::CxlReject CxlReject;
-
-  typedef typename TxnTypes::Hold Hold;
-  typedef typename TxnTypes::Release Release;
-  typedef typename TxnTypes::Deny Deny;
-
-  typedef typename TxnTypes::Fill Fill;
-
-  typedef typename TxnTypes::Closed Closed;
-
-  typedef typename TxnTypes::OrderSent OrderSent;
-  typedef typename TxnTypes::ModifySent ModifySent;
-  typedef typename TxnTypes::CancelSent CancelSent;
+  MxTImport(TxnTypes);
 
   typedef typename TxnTypes::Txn_ Txn_;
   template <typename Largest>

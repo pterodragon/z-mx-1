@@ -164,20 +164,20 @@ namespace MxMDStream {
     ZuInline const void *body() const { return (const void *)&this[1]; }
 
     template <typename T> ZuInline T &as() {
-      T *ZuMayAlias(ptr) = (T *)&this[1];
+      T *ZuMayAlias(ptr) = (T *)body();
       return *ptr;
     }
     template <typename T> ZuInline const T &as() const {
-      const T *ZuMayAlias(ptr) = (const T *)&this[1];
+      const T *ZuMayAlias(ptr) = (const T *)body();
       return *ptr;
     }
 
     template <typename T> ZuInline void pad() {
       if (ZuUnlikely(len < sizeof(T)))
-	memset(((char *)&this[1]) + len, 0, sizeof(T) - len);
+	memset(((char *)body()) + len, 0, sizeof(T) - len);
     }
 
-    bool scan(unsigned length) const {
+    ZuInline bool scan(unsigned length) const {
       return sizeof(Hdr) + len > length;
     }
   };
@@ -449,14 +449,7 @@ namespace MxMDStream {
       ResendReq>::T Largest;
 
   struct Buf {
-    char	data[sizeof(Largest)];
-  };
-
-  struct MsgData {
-    HdrData	hdr;
-    Buf		buf;
-
-    ZuInline unsigned length() { return sizeof(HdrData) + hdr.len; }
+    char	data[sizeof(Hdr) + sizeof(Largest)];
   };
 }
 
@@ -469,17 +462,16 @@ namespace MxMDStream {
   };
 
   template <typename Heap>
-  struct Msg_ : public Heap, public ZuPOD<MsgData> {
-    ZuInline Msg_() { new (this->ptr()) MsgData(); }
+  struct Msg_ : public Heap, public ZuPOD<Buf> {
+    ZuInline Msg_() { }
 
-    ZuInline const Hdr &hdr() const {
-      return static_cast<const Hdr &>(this->data().hdr);
-    }
-    ZuInline Hdr &hdr() {
-      return static_cast<Hdr &>(this->data().hdr);
-    }
+    ZuInline Hdr &hdr() { return this->template as<Hdr>(); }
+    ZuInline const Hdr &hdr() const { return this->template as<Hdr>(); }
 
-    ZuInline unsigned length() { return this->data().length(); }
+    ZuInline void *body() { return hdr().body(); }
+    ZuInline const void *body() const { return hdr().body(); }
+
+    ZuInline unsigned length() const { return sizeof(Hdr) + hdr().len; }
   };
 
   typedef Msg_<ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> > Msg;
@@ -491,10 +483,10 @@ namespace MxMDStream {
     return app.out(ptr, sizeof(T), T::Code, shardID);
   }
 
-#ifdef FnDeclare
-#undef FnDeclare
+#ifdef DeclFn
+#undef DeclFn
 #endif
-#define FnDeclare(Fn, Type) \
+#define DeclFn(Fn, Type) \
   template <typename App, typename ...Args> \
   inline bool Fn(App &app, Args &&... args) { \
     void *ptr = push<Type>(app, -1); \
@@ -504,24 +496,24 @@ namespace MxMDStream {
     return true; \
   }
 
-  FnDeclare(addVenue, AddVenue)
+  DeclFn(addVenue, AddVenue)
 
-  FnDeclare(addTickSizeTbl, AddTickSizeTbl)
-  FnDeclare(resetTickSizeTbl, ResetTickSizeTbl)
-  FnDeclare(addTickSize, AddTickSize)
+  DeclFn(addTickSizeTbl, AddTickSizeTbl)
+  DeclFn(resetTickSizeTbl, ResetTickSizeTbl)
+  DeclFn(addTickSize, AddTickSize)
 
-  FnDeclare(tradingSession, TradingSession)
+  DeclFn(tradingSession, TradingSession)
 
-  FnDeclare(refDataLoaded, RefDataLoaded)
+  DeclFn(refDataLoaded, RefDataLoaded)
 
-  FnDeclare(heartBeat, HeartBeat)
-  FnDeclare(wake, Wake)
-  FnDeclare(endOfSnapshot, EndOfSnapshot)
-  FnDeclare(login, Login)
-  FnDeclare(resendReq, ResendReq)
+  DeclFn(heartBeat, HeartBeat)
+  DeclFn(wake, Wake)
+  DeclFn(endOfSnapshot, EndOfSnapshot)
+  DeclFn(login, Login)
+  DeclFn(resendReq, ResendReq)
 
-#undef FnDeclare
-#define FnDeclare(Fn, Type) \
+#undef DeclFn
+#define DeclFn(Fn, Type) \
   template <typename App, typename ...Args> \
   inline bool Fn(App &app, MxInt shardID, Args &&... args) { \
     void *ptr = push<Type>(app, shardID); \
@@ -531,10 +523,10 @@ namespace MxMDStream {
     return true; \
   }
 
-  FnDeclare(addInstrument, AddInstrument)
-  FnDeclare(updateInstrument, UpdateInstrument)
-  FnDeclare(addOrderBook, AddOrderBook)
-  FnDeclare(delOrderBook, DelOrderBook)
+  DeclFn(addInstrument, AddInstrument)
+  DeclFn(updateInstrument, UpdateInstrument)
+  DeclFn(addOrderBook, AddOrderBook)
+  DeclFn(delOrderBook, DelOrderBook)
 
   // special processing for AddCombination's instruments/sides/ratios fields
   template <typename App,
@@ -556,21 +548,21 @@ namespace MxMDStream {
     return true;
   }
 
-  FnDeclare(delCombination, DelCombination)
-  FnDeclare(updateOrderBook, UpdateOrderBook)
-  FnDeclare(l1, L1)
-  FnDeclare(pxLevel, PxLevel)
-  FnDeclare(l2, L2)
-  FnDeclare(addOrder, AddOrder)
-  FnDeclare(modifyOrder, ModifyOrder)
-  FnDeclare(cancelOrder, CancelOrder)
-  FnDeclare(resetOB, ResetOB)
+  DeclFn(delCombination, DelCombination)
+  DeclFn(updateOrderBook, UpdateOrderBook)
+  DeclFn(l1, L1)
+  DeclFn(pxLevel, PxLevel)
+  DeclFn(l2, L2)
+  DeclFn(addOrder, AddOrder)
+  DeclFn(modifyOrder, ModifyOrder)
+  DeclFn(cancelOrder, CancelOrder)
+  DeclFn(resetOB, ResetOB)
 
-  FnDeclare(addTrade, AddTrade)
-  FnDeclare(correctTrade, CorrectTrade)
-  FnDeclare(cancelTrade, CancelTrade)
+  DeclFn(addTrade, AddTrade)
+  DeclFn(correctTrade, CorrectTrade)
+  DeclFn(cancelTrade, CancelTrade)
 
-#undef FnDeclare
+#undef DeclFn
 
   // ensure passed lambdas are stateless and match required signature
   template <typename Cxn, typename L> struct IOLambda_ {

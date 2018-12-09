@@ -202,7 +202,7 @@ namespace MxTEventState { // event state
 
 #pragma pack(push, 4)
 
-template <typename AppTypes> struct MxTEventTypes {
+template <typename AppTypes> struct MxTAppTypes {
 
   struct Event : public ZuPrintable {
     MxEnum		eventType;	// EventType

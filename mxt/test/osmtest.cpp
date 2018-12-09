@@ -6,8 +6,8 @@
 #include <MxTOrder.hpp>
 #include <MxTOrderMgr.hpp>
 
-struct AppTypes : public MxTEventTypes<AppTypes> {
-  typedef MxTEventTypes<AppTypes> Base;
+struct AppTypes : public MxTAppTypes<AppTypes> {
+  typedef MxTAppTypes<AppTypes> Base;
 
   struct AppCxlLeg {
     template <typename S> inline void print(S &) const { }

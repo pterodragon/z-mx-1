@@ -1256,7 +1256,7 @@ void MxMDLib::addVenue(MxMDVenue *venue)
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::addVenue(core->broadcast(), venue->id(),
-	  venue->orderIDScope(), venue->flags());
+	  venue->flags(), venue->orderIDScope());
   }
 }
 
@@ -1292,7 +1292,7 @@ ZmRef<MxMDTickSizeTbl> MxMDLib::addTickSizeTbl(
     tbl = venue->addTickSizeTbl_(id, pxNDP);
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
-      MxMDStream::addTickSizeTbl(core->broadcast(), venue->id(), id);
+      MxMDStream::addTickSizeTbl(core->broadcast(), venue->id(), id, pxNDP);
   }
   handler()->addTickSizeTbl(tbl);
   return tbl;
@@ -1339,8 +1339,9 @@ void MxMDLib::addTickSize(MxMDTickSizeTbl *tbl,
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::addTickSize(core->broadcast(),
-	    tbl->venue()->id(), tbl->id(), tbl->pxNDP(),
-	    minPrice, maxPrice, tickSize);
+	    tbl->venue()->id(),
+	    minPrice, maxPrice, tickSize,
+	    tbl->id(), tbl->pxNDP());
   }
   handler()->addTickSize(tbl, MxMDTickSize{minPrice, maxPrice, tickSize});
 }
@@ -1467,7 +1468,7 @@ void MxMDLib::addInstrIndices(
     ZmRef<MxMDInstrument> underlying = m_allInstruments.findKey(underKey);
     if (!underlying) {
       MxMDShard *shard = instrument->shard();
-      MxMDInstrRefData underRefData{0}; // default to non-tradable
+      MxMDInstrRefData underRefData{.tradeable = false}; // default
       ZmRef<MxMDInstrument> underlying_ =
 	new MxMDInstrument(shard, underKey, underRefData);
       m_allInstruments.add(underlying_);
@@ -1576,8 +1577,8 @@ loop:
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::addOrderBook(core->broadcast(), ob->shard()->id(),
-	  transactTime, key, instrument->key(), tickSizeTbl->id(),
-	  ob->qtyNDP(), ob->lotSizes());
+	  transactTime, key, instrument->key(),
+	  ob->lotSizes(), tickSizeTbl->id(), ob->qtyNDP());
   }
   handler()->addOrderBook(ob, transactTime);
 added:
@@ -1631,8 +1632,8 @@ ZmRef<MxMDOrderBook> MxMDLib::addCombination(
       for (unsigned i = 0; i < legs; i++)
 	instrumentKeys[i] = instruments[i]->key();
       MxMDStream::addCombination(core->broadcast(), shard->id(),
-	  transactTime, ob->key(), pxNDP, qtyNDP,
-	  legs, instrumentKeys, sides, ratios, tickSizeTbl->id(), lotSizes);
+	  transactTime, ob->key(), legs, instrumentKeys,
+	  ratios, lotSizes, tickSizeTbl->id(), pxNDP, qtyNDP, sides);
     }
   }
   handler()->addOrderBook(ob, transactTime);
@@ -1649,7 +1650,7 @@ void MxMDLib::updateOrderBook(
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::updateOrderBook(core->broadcast(), ob->shard()->id(),
-	  transactTime, ob->key(), tickSizeTbl->id(), lotSizes);
+	  transactTime, ob->key(), lotSizes, tickSizeTbl->id());
   }
   handler()->updatedOrderBook(ob, transactTime);
 }
@@ -1726,8 +1727,8 @@ void MxMDLib::pxLevel(
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::pxLevel(core->broadcast(), ob->shard()->id(),
-	transactTime, ob->key(), side, delta, ob->pxNDP(), ob->qtyNDP(),
-	price, qty, nOrders, flags);
+	transactTime, ob->key(), price, qty, nOrders, flags,
+	ob->pxNDP(), ob->qtyNDP(), side, delta);
 }
 
 void MxMDLib::l2(const MxMDOrderBook *ob, MxDateTime stamp, bool updateL1)
@@ -1745,8 +1746,8 @@ void MxMDLib::addOrder(const MxMDOrderBook *ob,
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::addOrder(core->broadcast(), ob->shard()->id(),
-	transactTime, ob->key(), orderID, side, ob->pxNDP(), ob->qtyNDP(),
-	rank, price, qty, flags);
+	transactTime, ob->key(), price, qty, rank, flags,
+	orderID, ob->pxNDP(), ob->qtyNDP(), side);
 }
 void MxMDLib::modifyOrder(const MxMDOrderBook *ob,
     ZuString orderID, MxDateTime transactTime,
@@ -1755,8 +1756,8 @@ void MxMDLib::modifyOrder(const MxMDOrderBook *ob,
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::modifyOrder(core->broadcast(), ob->shard()->id(),
-	transactTime, ob->key(), orderID, side, ob->pxNDP(), ob->qtyNDP(),
-	rank, price, qty, flags);
+	transactTime, ob->key(), price, qty, rank, flags,
+	orderID, ob->pxNDP(), ob->qtyNDP(), side);
 }
 void MxMDLib::cancelOrder(const MxMDOrderBook *ob,
     ZuString orderID, MxDateTime transactTime, MxEnum side)
@@ -1782,7 +1783,7 @@ void MxMDLib::addTrade(const MxMDOrderBook *ob,
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::addTrade(core->broadcast(), ob->shard()->id(), transactTime,
-	ob->key(), tradeID, ob->pxNDP(), ob->qtyNDP(), price, qty);
+	ob->key(), price, qty, tradeID, ob->pxNDP(), ob->qtyNDP());
 }
 void MxMDLib::correctTrade(const MxMDOrderBook *ob,
     ZuString tradeID, MxDateTime transactTime, MxValue price, MxValue qty)
@@ -1790,7 +1791,7 @@ void MxMDLib::correctTrade(const MxMDOrderBook *ob,
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::correctTrade(core->broadcast(), ob->shard()->id(), transactTime,
-	ob->key(), tradeID, ob->pxNDP(), ob->qtyNDP(), price, qty);
+	ob->key(), price, qty, tradeID, ob->pxNDP(), ob->qtyNDP());
 }
 void MxMDLib::cancelTrade(const MxMDOrderBook *ob,
     ZuString tradeID, MxDateTime transactTime, MxValue price, MxValue qty)
@@ -1798,7 +1799,7 @@ void MxMDLib::cancelTrade(const MxMDOrderBook *ob,
   MxMDCore *core = static_cast<MxMDCore *>(this);
   if (ZuUnlikely(core->streaming()))
     MxMDStream::cancelTrade(core->broadcast(), ob->shard()->id(), transactTime,
-	ob->key(), tradeID, ob->pxNDP(), ob->qtyNDP(), price, qty);
+	ob->key(), price, qty, tradeID, ob->pxNDP(), ob->qtyNDP());
 }
 
 // commands

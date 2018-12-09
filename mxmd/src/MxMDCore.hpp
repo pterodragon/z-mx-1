@@ -237,16 +237,16 @@ public:
   bool snapshot(Snapshot &snapshot, MxID id, MxSeqNo seqNo) {
     bool ok = !(allVenues([&snapshot](MxMDVenue *venue) -> uintptr_t {
       return !MxMDStream::addVenue(
-	  snapshot, venue->id(), venue->orderIDScope(), venue->flags()) ||
+	  snapshot, venue->id(), venue->flags(), venue->orderIDScope()) ||
 	venue->allTickSizeTbls(
 	      [&snapshot, venue](MxMDTickSizeTbl *tbl) -> uintptr_t {
 	  return !MxMDStream::addTickSizeTbl(
-	      snapshot, venue->id(), tbl->id()) ||
+	      snapshot, venue->id(), tbl->id(), tbl->pxNDP()) ||
 	    tbl->allTickSizes(
 		[&snapshot, venue, tbl](const MxMDTickSize &ts) -> uintptr_t {
 	    return !MxMDStream::addTickSize(snapshot,
-		venue->id(), tbl->id(), tbl->pxNDP(),
-		ts.minPrice(), ts.maxPrice(), ts.tickSize());
+		venue->id(), ts.minPrice(), ts.maxPrice(), ts.tickSize(),
+		tbl->id(), tbl->pxNDP());
 	  });
 	});
     }) || allInstruments([&snapshot](MxMDInstrument *instrument) -> uintptr_t {
@@ -256,7 +256,7 @@ public:
       if (ob->legs() == 1) {
 	return !MxMDStream::addOrderBook(snapshot, ob->shard()->id(),
 	    MxDateTime(), ob->key(), ob->instrument()->key(),
-	    ob->tickSizeTbl()->id(), ob->qtyNDP(), ob->lotSizes());
+	    ob->lotSizes(), ob->tickSizeTbl()->id(), ob->qtyNDP());
       } else {
 	MxInstrKey instrumentKeys[MxMDNLegs];
 	MxEnum sides[MxMDNLegs];
@@ -267,9 +267,9 @@ public:
 	  ratios[i] = ob->ratio(i);
 	}
 	return !MxMDStream::addCombination(snapshot, ob->shard()->id(),
-	    MxDateTime(), ob->key(), ob->pxNDP(), ob->qtyNDP(),
-	    ob->legs(), instrumentKeys, sides, ratios,
-	    ob->tickSizeTbl()->id(), ob->lotSizes());
+	    MxDateTime(), ob->key(), ob->legs(), instrumentKeys,
+	    ratios, ob->lotSizes(), ob->tickSizeTbl()->id(),
+	    ob->pxNDP(), ob->qtyNDP(), sides);
       }
     }) || allVenues([&snapshot](MxMDVenue *venue) -> uintptr_t {
       return (venue->loaded() &&
@@ -284,7 +284,7 @@ public:
 	  ob->key(), ob->l1Data()) ||
 	!snapshotL2Side(snapshot, ob->bids()) ||
 	!snapshotL2Side(snapshot, ob->asks());
-    }) || !MxMDStream::endOfSnapshot(snapshot, id, seqNo));
+    }) || !MxMDStream::endOfSnapshot(snapshot, id, seqNo, (uint8_t)true));
     MxMDStream::endOfSnapshot(m_broadcast, id, seqNo, ok);
     return ok;
   }
@@ -306,17 +306,17 @@ private:
       const MxMDOrderData &data = order->data();
       MxMDOrderBook *ob = order->orderBook();
       return !MxMDStream::addOrder(snapshot, ob->shard()->id(),
-	  data.transactTime, ob->key(), order->id(), data.side,
-	  ob->pxNDP(), ob->qtyNDP(),
-	  data.rank, data.price, data.qty, data.flags);
+	  data.transactTime, ob->key(),
+	  data.price, data.qty, data.rank, data.flags,
+	  order->id(), ob->pxNDP(), ob->qtyNDP(), data.side);
     })) return false;
     if (orderCount) return true;
     const MxMDPxLvlData &data = pxLevel->data();
     MxMDOrderBook *ob = pxLevel->obSide()->orderBook();
     return MxMDStream::pxLevel(snapshot, ob->shard()->id(),
-	data.transactTime, ob->key(), pxLevel->side(), false,
-	ob->pxNDP(), ob->qtyNDP(),
-	pxLevel->price(), data.qty, data.nOrders, data.flags);
+	data.transactTime, ob->key(), pxLevel->price(), data.qty,
+	data.nOrders, data.flags, ob->pxNDP(), ob->qtyNDP(),
+	pxLevel->side(), (uint8_t)false);
   }
 
   using MxMDLib::venue;

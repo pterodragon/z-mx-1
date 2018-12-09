@@ -135,27 +135,27 @@ struct App : public MxTOrderMgr<App, AppTypes> {
   bool asyncCxl(Order *);
 
   // pre-process messages
-  template <typename Txn> void sendNewOrder(Txn &) { }
-  template <typename Txn> void sendOrdered(Txn &) { }
-  template <typename Txn> void sendReject(Txn &) { }
+  template <typename Txn> void sendNewOrder(Order *, Txn &) { }
+  template <typename Txn> void sendOrdered(Order *, Txn &) { }
+  template <typename Txn> void sendReject(Order *, Txn &) { }
 
-  template <typename Txn> void sendModify(Txn &) { }
-  template <typename Txn> void sendModified(Txn &) { }
-  template <typename Txn> void sendModReject(Txn &) { }
+  template <typename Txn> void sendModify(Order *, Txn &) { }
+  template <typename Txn> void sendModified(Order *, Txn &) { }
+  template <typename Txn> void sendModReject(Order *, Txn &) { }
 
-  template <typename Txn> void sendCancel(Txn &) { }
-  template <typename Txn> void sendCanceled(Txn &) { }
-  template <typename Txn> void sendCxlReject(Txn &) { }
+  template <typename Txn> void sendCancel(Order *, Txn &) { }
+  template <typename Txn> void sendCanceled(Order *, Txn &) { }
+  template <typename Txn> void sendCxlReject(Order *, Txn &) { }
 
-  template <typename Txn> void sendSuspend(Txn &) { }
-  template <typename Txn> void sendRelease(Txn &) { }
+  template <typename Txn> void sendSuspend(Order *, Txn &) { }
+  template <typename Txn> void sendRelease(Order *, Txn &) { }
 
-  template <typename Txn> void sendFill(Txn &) { }
-  template <typename Txn> void sendCorrect(Txn &) { }
-  template <typename Txn> void sendBust(Txn &) { }
+  template <typename Txn> void sendFill(Order *, Txn &) { }
+  template <typename Txn> void sendCorrect(Order *, Txn &) { }
+  template <typename Txn> void sendBust(Order *, Txn &) { }
 
-  template <typename Txn> void sendClosed(Txn &) { }
-  template <typename Txn> void sendMktNotice(Txn &) { }
+  template <typename Txn> void sendClosed(Order *, Txn &) { }
+  template <typename Txn> void sendMktNotice(Order *, Txn &) { }
 
   void main();
 };
@@ -168,7 +168,7 @@ int main()
 
 void App::main()
 {
-  Order *order = new Order();
+  Order *order = new Order(); // would be derived and indexed by real app
   Txn<NewOrder> txn;
 
   // initialize new order
@@ -180,13 +180,26 @@ void App::main()
   // order state management
   newOrderIn(order, txn);
   this->newOrder(order, txn);
+  // log newOrder
   // dump order
   std::cout << *order << '\n';
 
-  sendNewOrder(order);
+  {
+    Txn<OrderSent> sentTxn;
+    OrderSent &orderSent = sentTxn.initOrderSent(0);
+    if (orderSend(order, sentTxn))
+      std::cout << "send OK\n";
+    else
+      std::cout << "send FAILED\n";
+    // log orderSent
+  }
+  // dump order
+  std::cout << *order << '\n';
+
   Txn<Ordered> ack;
   Ordered &ordered = ack.initOrdered(0);
   this->ordered(order, ack);
+  // log ordered
   // dump order
   std::cout << *order << '\n';
 

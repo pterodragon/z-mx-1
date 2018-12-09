@@ -382,8 +382,10 @@ template <typename U> struct MxType :
 
 #define MxDateTimeNow ZtDateNow
 
+// Note: MxString/ZuStringN overhead is 4 bytes
+
 #ifndef MxIDStrSize
-#define MxIDStrSize 32	// ID size (symbols, order IDs, trade IDs, etc.)
+#define MxIDStrSize 28	// ID size (symbols, order IDs, trade IDs, etc.)
 #endif
 #ifndef MxTxtSize
 #define MxTxtSize 124	// text field size (alerts, error messages, etc.)

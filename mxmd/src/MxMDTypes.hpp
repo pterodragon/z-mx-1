@@ -57,22 +57,21 @@ struct MxMDTickSize_MinPxAccessor : public ZuAccessor<MxMDTickSize, MxValue> {
 #pragma pack(push, 4)
 
 struct MxMDInstrRefData {	// instrument reference data ("static data")
+  MxValue	strike;		// strike (null if not option)
+  MxValue	adv;		// average daily volume (often null)
+  MxID		underVenue;	// underlying venue (null if no underlying)
+  MxID		underSegment;	// underlying segment (can be null)
+  MxUInt	mat;		// maturity (null if not future/option)
+  MxUInt	outstandingShares; // (null if not stock)
+  MxIDString	symbol;		// symbol
+  MxIDString	altSymbol;	// alternative symbol
+  MxIDString	underlying;	// underlying ID (null if no underlying)
+  MxNDP		pxNDP;		// price NDP
+  MxNDP		qtyNDP;		// qty NDP
   MxBool	tradeable;	// usually true, is false e.g. for an index
   MxEnum	idSrc;		// symbol ID source
   MxEnum	altIDSrc;	// altSymbol ID source
   MxEnum	putCall;	// put/call (null if not option)
-  MxIDString	symbol;		// symbol
-  MxIDString	altSymbol;	// alternative symbol
-  MxID		underVenue;	// underlying venue (null if no underlying)
-  MxID		underSegment;	// underlying segment (can be null)
-  MxIDString	underlying;	// underlying ID (null if no underlying)
-  MxUInt	mat;		// maturity (null if not future/option)
-  MxNDP		pxNDP;		// price NDP
-  MxNDP		qtyNDP;		// qty NDP
-  uint16_t	pad_1 = 0;
-  MxValue	strike;		// strike (null if not option)
-  MxUInt	outstandingShares; // (null if not stock)
-  MxValue	adv;		// average daily volume
 };
 
 // Note: mat is, by industry convention, in YYYYMMDD format
@@ -95,10 +94,6 @@ struct MxMDLotSizes {
 
 struct MxMDL1Data {
   MxDateTime	stamp;
-  MxNDP		pxNDP;			// price NDP
-  MxNDP		qtyNDP;			// qty NDP
-  MxEnum	status;			// MxTradingStatus
-  MxEnum	tickDir;		// MxTickDir
   // Note: all px/qty are integers scaled by 10^ndp
   MxValue	base;			// aka adjusted previous day's close
   MxValue	open[MxMDNSessions];	// [0] is open of first session
@@ -117,6 +112,10 @@ struct MxMDL1Data {
   MxValue	matchQty;	// auction - indicative match volume
   MxValue	surplusQty;	// auction - surplus volume
   MxFlags	flags;
+  MxNDP		pxNDP;			// price NDP
+  MxNDP		qtyNDP;			// qty NDP
+  MxEnum	status;			// MxTradingStatus
+  MxEnum	tickDir;		// MxTickDir
 };
 
 typedef MxString<12> MxMDFlagsStr;

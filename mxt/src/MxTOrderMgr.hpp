@@ -71,24 +71,24 @@ struct App : public MxTOrderMgr<App, AppTypes> {
   bool asyncCxl(Order *);
 
   // send*() - send the corresponding message
-  template <typename Txn> void sendNewOrder(Txn &);
-  template <typename Txn> void sendOrdered(Txn &);
-  template <typename Txn> void sendReject(Txn &);
+  template <typename Txn> void sendNewOrder(Order *, Txn &);
+  template <typename Txn> void sendOrdered(Order *, Txn &);
+  template <typename Txn> void sendReject(Order *, Txn &);
 
-  template <typename Txn> void sendModify(Txn &);
-  template <typename Txn> void sendModified(Txn &);
-  template <typename Txn> void sendModReject(Txn &);
+  template <typename Txn> void sendModify(Order *, Txn &);
+  template <typename Txn> void sendModified(Order *, Txn &);
+  template <typename Txn> void sendModReject(Order *, Txn &);
 
-  template <typename Txn> void sendCancel(Txn &);
-  template <typename Txn> void sendCanceled(Txn &);
-  template <typename Txn> void sendCxlReject(Txn &);
+  template <typename Txn> void sendCancel(Order *, Txn &);
+  template <typename Txn> void sendCanceled(Order *, Txn &);
+  template <typename Txn> void sendCxlReject(Order *, Txn &);
 
-  template <typename Txn> void sendHold(Txn &);
-  template <typename Txn> void sendRelease(Txn &);
+  template <typename Txn> void sendHold(Order *, Txn &);
+  template <typename Txn> void sendRelease(Order *, Txn &);
 
-  template <typename Txn> void sendFill(Txn &);
+  template <typename Txn> void sendFill(Order *, Txn &);
 
-  template <typename Txn> void sendClosed(Txn &);
+  template <typename Txn> void sendClosed(Order *, Txn &);
 };
 #endif
 
@@ -222,43 +222,43 @@ private:
     requestOut(order->orderTxn);
     // Note: app should use leavesQty since this may be a simulated modify
     // (cancel/replace) of a partially filled order
-    app()->sendNewOrder(order->orderTxn);
+    app()->sendNewOrder(order, order->orderTxn);
   }
   template <typename Out> void sendOrdered(Order *order, Out &out) {
     executionOut(out);
-    app()->sendOrdered(out);
+    app()->sendOrdered(order, out);
   }
   template <typename Out> void sendReject(Order *order, Out &out) {
     executionOut(out);
-    app()->sendReject(out);
+    app()->sendReject(order, out);
   }
   template <typename Out> void sendHold(Order *order, Out &out) {
     executionOut(out);
-    app()->sendHold(out);
+    app()->sendHold(order, out);
   }
   void sendModify(Order *order) {
     requestOut(order->modifyTxn);
-    app()->sendModify(order->modifyTxn);
+    app()->sendModify(order, order->modifyTxn);
   }
   template <typename Out> void sendModified(Order *order, Out &out) {
     executionOut(out);
-    app()->sendModified(out);
+    app()->sendModified(order, out);
   }
   template <typename Out> void sendModReject(Order *order, Out &out) {
     executionOut(out);
-    app()->sendModReject(out);
+    app()->sendModReject(order, out);
   }
   void sendCancel(Order *order) {
     requestOut(order->cancelTxn);
-    app()->sendCancel(order->cancelTxn);
+    app()->sendCancel(order, order->cancelTxn);
   }
   template <typename Out> void sendCanceled(Order *order, Out &out) {
     executionOut(out);
-    app()->sendCanceled(out);
+    app()->sendCanceled(order, out);
   }
   template <typename Out> void sendCxlReject(Order *order, Out &out) {
     executionOut(out);
-    app()->sendCxlReject(out);
+    app()->sendCxlReject(order, out);
   }
 
 public:

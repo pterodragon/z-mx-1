@@ -93,11 +93,15 @@ void MxMDCore::addInstrument_(ZuAnyPOD *pod)
   MxMDInstrumentCSV::Data *data = (MxMDInstrumentCSV::Data *)(pod->ptr());
   MxInstrKey key{data->id, data->venue, data->segment};
   MxMDInstrHandle instrHandle = instrument(key, data->shard);
+
+  thread_local ZmSemaphore sem;
   instrHandle.invokeMv([key, refData = data->refData,
-      transactTime = data->transactTime](
+      transactTime = data->transactTime, sem = &sem](
 	MxMDShard *shard, ZmRef<MxMDInstrument> instr) {
     shard->addInstrument(ZuMv(instr), key, refData, transactTime);
+    sem->post();
   });
+  sem.wait();
 }
 
 void MxMDCore::addOrderBook_(ZuAnyPOD *pod)

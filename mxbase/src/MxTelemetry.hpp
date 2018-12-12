@@ -37,6 +37,8 @@
 #include <ZiIP.hpp>
 #include <ZiMultiplex.hpp>
 
+#include <Zdb.hpp>
+
 #include <MxBase.hpp>
 #include <MxMultiplex.hpp>
 
@@ -290,6 +292,19 @@ namespace MxTelemetry {
   DeclFn(queue, Queue)
   DeclFn(link, Link)
   DeclFn(engine, Engine)
+
+#undef DeclFn
+#define DeclFn(Fn, Type) \
+  template <typename Arg> \
+  inline ZmRef<Msg> Fn(const Arg &arg) { \
+    ZmRef<Msg> msg = new Msg(); \
+    new (msg->ptr()) Hdr{Type::Code, sizeof(Type)}; \
+    Type *ZuMayAlias(body) = (Type *)msg->body(); \
+    arg.telemetry(body->data); \
+    msg->calcLength(); \
+    return msg; \
+  }
+
   DeclFn(db, DB)
   DeclFn(dbHost, DBHost)
   DeclFn(dbEnv, DBEnv)

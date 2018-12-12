@@ -11,13 +11,15 @@ include_HEADERS = \
 	MxMDChannel.hpp \
 	MxMDBroadcast.hpp \
 	MxMDRecord.hpp MxMDReplay.hpp \
-	MxMDSubscriber.hpp MxMDPublisher.hpp
+	MxMDSubscriber.hpp MxMDPublisher.hpp \
+	MxMDTelemetry.hpp
 lib_LTLIBRARIES = libMxMD.la
 libMxMD_la_SOURCES = \
 	MxMD.cpp MxMDLib.cpp MxMDVersion.cpp MxMDCore.cpp \
 	MxMDBroadcast.cpp \
 	MxMDRecord.cpp MxMDReplay.cpp \
-	MxMDPublisher.cpp MxMDSubscriber.cpp
+	MxMDPublisher.cpp MxMDSubscriber.cpp \
+	MxMDTelemetry.cpp
 libMxMD_la_LIBADD = @MXBASE_LIBS@ @Z_LIBS@ @MXMD_XLIBS@
 bin_PROGRAMS = recdump mdrecord
 recdump_LDADD = libMxMD.la @MXBASE_LIBS@ @Z_LIBS@ @MXMD_XLIBS@

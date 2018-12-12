@@ -45,7 +45,6 @@
 
 #include <MxMultiplex.hpp>
 #include <MxEngine.hpp>
-#include <MxTelemetry.hpp>
 
 #include <MxMD.hpp>
 #include <MxMDStream.hpp>
@@ -58,43 +57,12 @@
 #include <MxMDPublisher.hpp>
 #include <MxMDSubscriber.hpp>
 
+#include <MxMDTelemetry.hpp>
+
 class MxMDCore;
 
 extern "C" {
   typedef void (*MxMDFeedPluginFn)(MxMDCore *md, ZvCf *cf);
-};
-
-class MxMDAPI MxMDTelemetry : public ZmPolymorph, public MxTelemetry::Server {
-  typedef ZmLock Lock;
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
-
-public:
-  void init(MxMDCore *core, ZvCf *cf);
-
-  void run(MxTelemetry::Server::Cxn *);
-
-  void engine(MxEngine *);
-  void link(MxAnyLink *);
-  void addQueue(MxID, bool tx, MxQueue *queue);
-  void delQueue(MxID, bool tx);
-
-private:
-  typedef ZmDRing<ZmRef<MxEngine>,
-	    ZmDRingLock<ZmNoLock> > Engines;
-
-  typedef ZmDRing<ZmRef<MxAnyLink>,
-	    ZmDRingLock<ZmNoLock> > Links;
-
-  typedef ZmRBTree<ZuPair<MxID, bool>,
-	    ZmRBTreeVal<ZmRef<MxQueue>,
-	      ZmRBTreeLock<ZmNoLock> > > Queues;
-
-  MxMDCore	*m_core = 0;
-  Lock		m_lock;
-    Engines	  m_engines;
-    Links	  m_links;
-    Queues	  m_queues;
 };
 
 class MxMDAPI MxMDCmd : public ZmPolymorph, public ZvCmdServer { };
@@ -215,6 +183,11 @@ private:
   }
   void delQueue(MxID id, bool tx) {
     if (m_telemetry) m_telemetry->delQueue(id, tx);
+  }
+
+  // DB Management
+  void addDBEnv(ZdbEnv *env) {
+    if (m_telemetry) m_telemetry->addDBEnv(env);
   }
 
   // Exception handling

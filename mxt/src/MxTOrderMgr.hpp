@@ -92,46 +92,6 @@ struct App : public MxTOrderMgr<App, AppTypes> {
 };
 #endif
 
-#define MxTImport(Base) \
-  typedef typename Base::Event Event; \
- \
-  typedef typename Base::OrderLeg OrderLeg; \
-  typedef typename Base::ModifyLeg ModifyLeg; \
-  typedef typename Base::CancelLeg CancelLeg; \
- \
-  typedef typename Base::AnyReject AnyReject; \
- \
-  typedef typename Base::NewOrder NewOrder; \
-  typedef typename Base::OrderHeld OrderHeld; \
-  typedef typename Base::OrderFiltered OrderFiltered; \
-  typedef typename Base::Ordered Ordered; \
-  typedef typename Base::Reject Reject; \
- \
-  typedef typename Base::Modify Modify; \
-  typedef typename Base::ModSimulated ModSimulated; \
-  typedef typename Base::ModHeld ModHeld; \
-  typedef typename Base::ModFiltered ModFiltered; \
-  typedef typename Base::ModFilteredCxl ModFilteredCxl; \
-  typedef typename Base::Modified Modified; \
-  typedef typename Base::ModReject ModReject; \
-  typedef typename Base::ModRejectCxl ModRejectCxl; \
- \
-  typedef typename Base::Cancel Cancel; \
-  typedef typename Base::CxlFiltered CxlFiltered; \
-  typedef typename Base::Canceled Canceled; \
-  typedef typename Base::CxlReject CxlReject; \
- \
-  typedef typename Base::Hold Hold; \
-  typedef typename Base::Release Release; \
-  typedef typename Base::Deny Deny; \
- \
-  typedef typename Base::Fill Fill; \
- \
-  typedef typename Base::Closed Closed; \
- \
-  typedef typename Base::OrderSent OrderSent; \
-  typedef typename Base::ModifySent ModifySent; \
-  typedef typename Base::CancelSent CancelSent
 
 template <typename App, typename AppTypes>
 class MxTOrderMgr : public MxTTxnTypes<AppTypes> {
@@ -139,6 +99,15 @@ public:
   typedef MxTTxnTypes<AppTypes> TxnTypes;
 
   MxTImport(TxnTypes);
+
+  typedef typename TxnTypes::OrderHeld OrderHeld;
+  typedef typename TxnTypes::OrderFiltered OrderFiltered;
+  typedef typename TxnTypes::ModSimulated ModSimulated;
+  typedef typename TxnTypes::ModRejectCxl ModRejectCxl;
+  typedef typename TxnTypes::ModHeld ModHeld;
+  typedef typename TxnTypes::ModFiltered ModFiltered;
+  typedef typename TxnTypes::ModFilteredCxl ModFilteredCxl;
+  typedef typename TxnTypes::CxlFiltered CxlFiltered;
 
   typedef typename TxnTypes::Txn_ Txn_;
   template <typename Largest>
@@ -153,8 +122,8 @@ public:
   typedef typename TxnTypes::Order Order;
 
 private:
-  inline const App *app() const { return static_cast<const App *>(this); }
-  inline App *app() { return static_cast<App *>(this); }
+  ZuInline const App *app() const { return static_cast<const App *>(this); }
+  ZuInline App *app() { return static_cast<App *>(this); }
 
 public:
   MxTOrderMgr() {

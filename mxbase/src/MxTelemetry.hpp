@@ -142,6 +142,7 @@ namespace MxTelemetry {
 	);
     MxEnumNames("Thread", "IPC", "Rx", "Tx");
   }
+  // RAG for queues - count > 50% size - amber; 75% - red
   struct Queue {
     enum { Code = Type::Queue };
 
@@ -189,35 +190,13 @@ namespace MxTelemetry {
   struct DB {
     enum { Code = Type::DB };
 
-    MxTxtString	path;
-    uint64_t	fileSize;
-    uint64_t	allocRN;
-    uint64_t	fileRN;
-    uint64_t	cacheLoads;
-    uint64_t	cacheMisses;
-    uint64_t	fileLoads;
-    uint64_t	fileMisses;
-    uint32_t	id;
-    uint32_t	preAlloc;
-    uint32_t	recSize;
-    uint32_t	fileRecs;
-    uint32_t	cacheSize;
-    uint32_t	filesMax;
-    uint8_t	compress;
-    uint8_t	replicate;
-    uint8_t	noIndex;
-    uint8_t	noLock;
+    ZdbAny::Telemetry	data;
   };
 
   struct DBHost {
     enum { Code = Type::DBHost };
 
-    ZiIP	ip;
-    uint32_t	id;
-    uint32_t	priority;
-    uint16_t	port;
-    uint8_t	voted;
-    uint8_t	state;
+    ZdbHost::Telemetry	data;
   };
 
   // followed by
@@ -226,23 +205,7 @@ namespace MxTelemetry {
   struct DBEnv {
     enum { Code = Type::DBEnv };
 
-    uint32_t	nCxns;
-    uint32_t	heartbeatFreq;
-    uint32_t	heartbeatTimeout;
-    uint32_t	reconnectFreq;
-    uint32_t	electionTimeout;
-    uint32_t	self;		// host ID 
-    uint32_t	master;		// ''
-    uint32_t	prev;		// ''
-    uint32_t	next;		// ''
-    uint16_t	writeThread;
-    uint8_t	nHosts;
-    uint8_t	nPeers;
-    uint8_t	nDBs;
-    uint8_t	state;		// same as hosts[hostID].state
-    uint8_t	active;
-    uint8_t	recovering;
-    uint8_t	replicating;
+    ZdbEnv::Telemetry	data;
   };
 
   typedef ZuLargest<

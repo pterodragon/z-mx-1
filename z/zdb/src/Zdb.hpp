@@ -114,10 +114,10 @@ struct Zdb_Msg_Hdr {	// header
 #pragma pack(pop)
 
 class ZdbEnv;				// database environment
-class Zdb_;				// individual database (generic)
+class ZdbAny;				// individual database (generic)
 template <typename> class Zdb;		// individual database (type-specific)
 class ZdbAnyPOD;			// in-memory record (generic)
-class Zdb_Host;				// host
+class ZdbHost;				// host
 class Zdb_Cxn;				// cxn
 
 class ZdbRange {
@@ -309,13 +309,13 @@ class ZdbAnyPOD_Compressed;
 class ZdbAnyPOD_Send__;
 
 class ZdbAPI ZdbAnyPOD : public Zdb_CacheNode {
-friend class Zdb_;
+friend class ZdbAny;
 friend class Zdb_Cxn;
 friend class ZdbAnyPOD_Send__;
 friend class ZdbEnv;
 
 protected:
-  inline ZdbAnyPOD(void *ptr, unsigned size, Zdb_ *db) :
+  inline ZdbAnyPOD(void *ptr, unsigned size, ZdbAny *db) :
     Zdb_CacheNode(ZuMkPair(ptr, size)), m_db(db), m_writeCount(0) { }
 
 public:
@@ -331,7 +331,7 @@ private:
   }
 
 public:
-  inline Zdb_ *db() const { return m_db; }
+  inline ZdbAny *db() const { return m_db; }
 
   inline ZdbRN rn() const { return trailer()->rn; }
   inline ZdbRN prevRN() const { return trailer()->prevRN; }
@@ -359,8 +359,8 @@ private:
 
   virtual ZmRef<ZdbAnyPOD_Compressed> compress() { return 0; }
 
-  Zdb_			*m_db;
-  unsigned		m_writeCount;	// guarded by Zdb_::m_lock
+  ZdbAny			*m_db;
+  unsigned		m_writeCount;	// guarded by ZdbAny::m_lock
 };
 template <> struct ZuPrint<ZdbAnyPOD> : public ZuPrintDelegate {
   template <typename S>
@@ -454,7 +454,7 @@ typedef ZdbAnyPOD_Write_<ZmHeap<ZdbAnyPOD_Write_HeapID,
 // Note: ptr and range can be null if op is ZdbOp::Delete
 
 // AllocFn - called to allocate/initialize new record from memory
-typedef ZmFn<Zdb_ *, ZmRef<ZdbAnyPOD> &> ZdbAllocFn;
+typedef ZmFn<ZdbAny *, ZmRef<ZdbAnyPOD> &> ZdbAllocFn;
 // RecoverFn(pod) - (optional) called when record is recovered
 typedef ZmFn<ZdbAnyPOD *> ZdbRecoverFn;
 // ReplicateFn(pod, ptr, range, op) - (optional) '' when replicated (rcvd)
@@ -496,7 +496,7 @@ private:
   ZmRef<ZdbAnyPOD_Compressed> compress() { return new Compressed(); }
 
 public:
-  inline ZdbPOD_(Zdb_ *db) :
+  inline ZdbPOD_(ZdbAny *db) :
     ZdbAnyPOD(&m_data, sizeof(Data), db) { }
 
   inline const T *ptr() const {
@@ -531,6 +531,7 @@ struct ZdbConfig {
 	((int32_t)4)<<10, ((int32_t)1)<<30, false, 0);
     preAlloc = cf->getInt("preAlloc", 0, 10<<24, false, 0);
     compress = cf->getInt("compress", 0, 1, false, 0);
+    noCache = cf->getInt("noCache", 0, 1, false, 0);
     cache.init(cf->get("cache", false, "Zdb.Cache"));
     fileHash.init(cf->get("fileHash", false, "Zdb.FileHash"));
   }
@@ -540,6 +541,7 @@ struct ZdbConfig {
   unsigned		fileSize = 0;
   unsigned		preAlloc = 0;	// #records to pre-allocate
   bool			compress = false;
+  bool			noCache = false;
   ZmHashParams		cache;
   ZmHashParams		fileHash;
 };
@@ -551,14 +553,14 @@ struct ZdbHandler {
   ZdbCopyFn		copyFn;
 };
 
-class ZdbAPI Zdb_ : public ZmPolymorph {
+class ZdbAPI ZdbAny : public ZmPolymorph {
 friend class ZdbEnv;
 friend class ZdbAnyPOD_Write__;
 
   struct IDAccessor;
 friend struct IDAccessor;
-  struct IDAccessor : public ZuAccessor<Zdb_ *, ZdbID> {
-    inline static ZdbID value(const Zdb_ *db) { return db->m_id; }
+  struct IDAccessor : public ZuAccessor<ZdbAny *, ZdbID> {
+    inline static ZdbID value(const ZdbAny *db) { return db->m_id; }
   };
 
   typedef Zdb_Cache Cache;
@@ -573,11 +575,11 @@ protected:
   typedef ZmGuard<FSLock> FSGuard;
   typedef ZmReadGuard<FSLock> FSReadGuard;
 
-  Zdb_(ZdbEnv *env, ZdbID id, uint32_t version, ZdbHandler handler,
+  ZdbAny(ZdbEnv *env, ZdbID id, uint32_t version, ZdbHandler handler,
       unsigned recSize, unsigned dataSize);
 
 public:
-  ~Zdb_();
+  ~ZdbAny();
 
 private:
   void init(ZdbConfig *config);
@@ -624,9 +626,28 @@ public:
   // delete record following get() / get_() - returns new RN
   ZdbRN del(ZdbAnyPOD *, bool copy = true);
 
-  void stats(
-      uint64_t &cacheLoads, uint64_t &cacheMisses, 
-      uint64_t &fileLoads, uint64_t &fileMisses) const;
+  struct Telemetry {
+    typedef ZuStringN<124> Path;
+
+    Path	path;
+    uint64_t	fileSize;
+    uint64_t	allocRN;
+    uint64_t	fileRN;
+    uint64_t	cacheLoads;
+    uint64_t	cacheMisses;
+    uint64_t	fileLoads;
+    uint64_t	fileMisses;
+    uint32_t	id;
+    uint32_t	preAlloc;
+    uint32_t	recSize;
+    uint32_t	fileRecs;
+    uint32_t	cacheSize;
+    uint32_t	filesMax;
+    uint8_t	compress;
+    uint8_t	noCache;
+  };
+
+  void telemetry(Telemetry &data) const;
 
 private:
   // application call handlers
@@ -716,13 +737,13 @@ private:
 };
 
 template <typename T_>
-class Zdb : public Zdb_ {
+class Zdb : public ZdbAny {
 public:
   typedef T_ T;
 
   template <typename Handler>
   inline Zdb(ZdbEnv *env, ZdbID id, uint32_t version, Handler &&handler) :
-    Zdb_(env, id, version, ZuFwd<Handler>(handler),
+    ZdbAny(env, id, version, ZuFwd<Handler>(handler),
 	sizeof(typename ZdbPOD<T, ZuNull>::Data), sizeof(T)) { }
 };
 
@@ -756,14 +777,16 @@ struct ZdbHostConfig {
   ZtString	down;
 };
 
-class Zdb_Host : public ZmPolymorph {
+class ZdbAPI ZdbHost : public ZmPolymorph {
 friend class ZdbEnv;
 friend class Zdb_Cxn;
 template <typename> friend struct ZuPrint;
 
   typedef ZmPLock Lock;
   typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
 
+public:
   enum State {
     Instantiated = 0,	// instantiated, init() not yet called
     Initialized,	// init() called
@@ -776,14 +799,16 @@ template <typename> friend struct ZuPrint;
     Stopping		// stop() called - stopping
   };
 
+private:
   struct IDAccessor;
 friend struct IDAccessor;
-  struct IDAccessor : public ZuAccessor<Zdb_Host *, int> {
-    inline static int value(Zdb_Host *h) { return h->id(); }
+  struct IDAccessor : public ZuAccessor<ZdbHost *, int> {
+    inline static int value(ZdbHost *h) { return h->id(); }
   };
 
-  Zdb_Host(ZdbEnv *env, const ZdbHostConfig *config);
+  ZdbHost(ZdbEnv *env, const ZdbHostConfig *config);
 
+public:
   inline const ZdbHostConfig &config() const { return *m_config; }
 
   inline unsigned id() const { return m_config->id; }
@@ -791,9 +816,23 @@ friend struct IDAccessor;
   inline ZiIP ip() const { return m_config->ip; }
   inline uint16_t port() const { return m_config->port; }
 
+  inline bool voted() const { return m_voted; }
+  inline int state() const { return m_state; }
+
+  struct Telemetry {
+    ZiIP	ip;
+    uint32_t	id;
+    uint32_t	priority;
+    uint16_t	port;
+    uint8_t	voted;
+    uint8_t	state;
+  };
+
+  void telemetry(Telemetry &data) const;
+
+private:
   inline ZmRef<Zdb_Cxn> cxn() const { return m_cxn; }
 
-  inline int state() const { return m_state; }
   inline void state(int s) { m_state = s; }
 
   inline const Zdb_DBState &dbState() const { return m_dbState; }
@@ -801,21 +840,21 @@ friend struct IDAccessor;
 
   inline bool active() const {
     switch (m_state) {
-      case Zdb_Host::Activating:
-      case Zdb_Host::Active:
+      case ZdbHost::Activating:
+      case ZdbHost::Active:
 	return true;
     }
     return false;
   }
 
-  inline int cmp(const Zdb_Host *host) const {
+  inline int cmp(const ZdbHost *host) const {
     int i = m_dbState.cmp(host->m_dbState); if (i) return i;
     if (i = ZuCmp<bool>::cmp(active(), host->active())) return i;
     return ZuCmp<int>::cmp(priority(), host->priority());
   }
 
 #if 0
-  inline int cmp(const Zdb_Host *host) {
+  inline int cmp(const ZdbHost *host) {
     int i = cmp_(host);
 
     printf("cmp(host %d priority %d dbState %d, "
@@ -824,13 +863,12 @@ friend struct IDAccessor;
 	   (int)this->config().m_priority, (int)this->dbState()[0],
 	   (int)host->id(),
 	   (int)host->config().m_priority,
-	   (int)((Zdb_Host *)host)->dbState()[0], i);
+	   (int)((ZdbHost *)host)->dbState()[0], i);
     return i;
   }
 #endif
 
   inline void voted(bool v) { m_voted = v; }
-  inline bool voted() const { return m_voted; }
 
   void connect();
   void connectFailed(bool transient);
@@ -856,15 +894,15 @@ friend struct IDAccessor;
   Zdb_DBState		m_dbState;	// ''
   bool			m_voted;	// ''
 };
-template <> struct ZuPrint<Zdb_Host> : public ZuPrintDelegate {
+template <> struct ZuPrint<ZdbHost> : public ZuPrintDelegate {
   template <typename S>
-  inline static void print(S &s, const Zdb_Host &v) {
+  inline static void print(S &s, const ZdbHost &v) {
     s << "[ID:" << v.id() << " PRI:" << v.priority() << " V:" << v.voted() <<
       " S:" << v.state() << "] " << v.dbState();
   }
 };
-template <> struct ZuPrint<Zdb_Host *> : public ZuPrintDelegate {
-  typedef Zdb_Host *Zdb_HostPtr;
+template <> struct ZuPrint<ZdbHost *> : public ZuPrintDelegate {
+  typedef ZdbHost *Zdb_HostPtr;
   template <typename S>
   inline static void print(S &s, const Zdb_HostPtr &v) {
     if (!v)
@@ -881,14 +919,14 @@ class Zdb_Cxn : public ZiConnection {
 friend class ZiConnection;
 friend class ZiMultiplex;
 friend class ZdbEnv;
-friend class Zdb_Host;
+friend class ZdbHost;
 friend class ZdbAnyPOD_Send__;
 
-  Zdb_Cxn(ZdbEnv *env, Zdb_Host *host, const ZiCxnInfo &ci);
+  Zdb_Cxn(ZdbEnv *env, ZdbHost *host, const ZiCxnInfo &ci);
 
   inline ZdbEnv *env() const { return m_env; }
-  inline void host(Zdb_Host *host) { m_host = host; }
-  inline Zdb_Host *host() const { return m_host; }
+  inline void host(ZdbHost *host) { m_host = host; }
+  inline ZdbHost *host() const { return m_host; }
   inline ZiMultiplex *mx() const { return m_mx; }
 
   void connected(ZiIOContext &);
@@ -917,7 +955,7 @@ friend class ZdbAnyPOD_Send__;
 
   ZdbEnv		*m_env;
   ZiMultiplex		*m_mx;
-  Zdb_Host		*m_host;	// 0 if not yet associated
+  ZdbHost		*m_host;	// 0 if not yet associated
 
   Zdb_Msg_Hdr		m_recvHdr;
   ZtArray<char>		m_recvData;
@@ -982,8 +1020,8 @@ class ZdbAPI ZdbEnv : public ZuObject {
   ZdbEnv(const ZdbEnv &);
   ZdbEnv &operator =(const ZdbEnv &);		// prevent mis-use
 
-friend class Zdb_;
-friend class Zdb_Host;
+friend class ZdbAny;
+friend class ZdbHost;
 friend class Zdb_Cxn;
 friend class ZdbAnyPOD;
 friend class ZdbAnyPOD_Send__;
@@ -991,8 +1029,8 @@ friend class ZdbAnyPOD_Send__;
   struct HostTree_HeapID {
     inline static const char *id() { return "ZdbEnv.HostTree"; }
   };
-  typedef ZmRBTree<ZmRef<Zdb_Host>,
-	    ZmRBTreeIndex<Zdb_Host::IDAccessor,
+  typedef ZmRBTree<ZmRef<ZdbHost>,
+	    ZmRBTreeIndex<ZdbHost::IDAccessor,
 	      ZmRBTreeObject<ZuNull,
 		ZmRBTreeLock<ZmNoLock,
 		  ZmRBTreeHeapID<HostTree_HeapID> > > > > HostTree;
@@ -1008,6 +1046,7 @@ friend class ZdbAnyPOD_Send__;
 
   typedef ZmLock Lock;
   typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
   typedef ZmCondition<Lock> StateCond;
 
 #ifdef ZdbRep_DEBUG
@@ -1034,7 +1073,7 @@ public:
   inline ZiMultiplex *mx() const { return m_mx; }
 
   inline int state() const {
-    return m_self ? m_self->state() : Zdb_Host::Instantiated;
+    return m_self ? m_self->state() : ZdbHost::Instantiated;
   }
   inline void state(int n) {
     if (!m_self) {
@@ -1046,29 +1085,65 @@ public:
   }
   inline bool running() {
     switch (state()) {
-      case Zdb_Host::Electing:
-      case Zdb_Host::Activating:
-      case Zdb_Host::Active:
-      case Zdb_Host::Deactivating:
-      case Zdb_Host::Inactive:
+      case ZdbHost::Electing:
+      case ZdbHost::Activating:
+      case ZdbHost::Active:
+      case ZdbHost::Deactivating:
+      case ZdbHost::Inactive:
 	return true;
     }
     return false;
   }
   inline bool active() {
     switch (state()) {
-      case Zdb_Host::Activating:
-      case Zdb_Host::Active:
+      case ZdbHost::Activating:
+      case ZdbHost::Active:
 	return true;
     }
     return false;
   }
 
-private:
-  inline Zdb_Host *self() const { return m_self; }
+  inline ZdbHost *self() const { return m_self; }
+  inline ZdbHost *host(unsigned id) const { return m_hosts.findKey(id); }
+  template <typename L> inline void allHosts(L l) const {
+    auto i = m_hosts.readIterator();
+    while (auto node = i.iterate()) { l(node->key()); }
+  }
 
-  void add(Zdb_ *db);	// adds database, finds cf, calls db->init(cf)
-  inline Zdb_ *db(ZdbID id) {
+  inline ZdbAny *db(unsigned id) const {
+    if (id >= m_dbs.length()) return nullptr;
+    return m_dbs[id];
+  }
+  template <typename L> inline void allDBs(L l) const {
+    for (unsigned i = 0, n = m_dbs.length(); i < n; i++)
+      l(m_dbs[i]);
+  }
+
+  struct Telemetry {
+    uint32_t	nCxns;
+    uint32_t	heartbeatFreq;
+    uint32_t	heartbeatTimeout;
+    uint32_t	reconnectFreq;
+    uint32_t	electionTimeout;
+    uint32_t	self;		// host ID 
+    uint32_t	master;		// ''
+    uint32_t	prev;		// ''
+    uint32_t	next;		// ''
+    uint16_t	writeThread;
+    uint8_t	nHosts;
+    uint8_t	nPeers;
+    uint8_t	nDBs;
+    uint8_t	state;		// same as hosts[hostID].state
+    uint8_t	active;
+    uint8_t	recovering;
+    uint8_t	replicating;
+  };
+
+  void telemetry(Telemetry &data) const;
+
+private:
+  void add(ZdbAny *db);	// adds database, finds cf, calls db->init(cf)
+  inline ZdbAny *db(ZdbID id) {
     if (id >= (ZdbID)m_dbs.length()) return 0;
     return m_dbs[id];
   }
@@ -1083,17 +1158,17 @@ private:
 
   void holdElection();	// elect new master
   void deactivate();	// become client (following dup master)
-  void reactivate(Zdb_Host *host);	// re-assert master
+  void reactivate(ZdbHost *host);	// re-assert master
 
   ZiConnection *accepted(const ZiCxnInfo &ci);
   void connected(Zdb_Cxn *cxn);
   void associate(Zdb_Cxn *cxn, int hostID);
-  void associate(Zdb_Cxn *cxn, Zdb_Host *host);
+  void associate(Zdb_Cxn *cxn, ZdbHost *host);
   void disconnected(Zdb_Cxn *cxn);
 
   void hbDataRcvd(
-      Zdb_Host *host, const Zdb_Msg_HB &hb, ZdbRN *dbState);
-  void vote(Zdb_Host *host);
+      ZdbHost *host, const Zdb_Msg_HB &hb, ZdbRN *dbState);
+  void vote(ZdbHost *host);
 
   void hbStart();
   void hbSend();		// send heartbeat and reschedule self
@@ -1102,20 +1177,20 @@ private:
   void dbStateRefresh();	// refresh m_self->dbState() (with guard)
   void dbStateRefresh_();	// '' (unlocked)
 
-  Zdb_Host *setMaster();	// returns old master
-  void setNext(Zdb_Host *host);
+  ZdbHost *setMaster();	// returns old master
+  void setNext(ZdbHost *host);
   void setNext();
 
   void startReplication();
   void stopReplication();
 
-  void repDataRcvd(Zdb_Host *host, Zdb_Cxn *cxn,
+  void repDataRcvd(ZdbHost *host, Zdb_Cxn *cxn,
       const Zdb_Msg_Rep &rep, void *ptr);
 
   void repSend(ZdbAnyPOD *pod, int type, ZdbRange range, int op, bool compress);
   void recSend();
 
-  void ackRcvd(Zdb_Host *host, bool positive, ZdbID db, ZdbRN rn);
+  void ackRcvd(ZdbHost *host, bool positive, ZdbID db, ZdbRN rn);
 
   void replicate(ZdbAnyPOD *pod);
 
@@ -1130,10 +1205,10 @@ private:
   Lock			m_lock;
     StateCond		m_stateCond;
     bool		m_appActive;
-    Zdb_Host		*m_self;
-    Zdb_Host		*m_master;	// == m_self if Active
-    Zdb_Host		*m_prev;	// previous-ranked host
-    Zdb_Host		*m_next;	// next-ranked host
+    ZdbHost		*m_self;
+    ZdbHost		*m_master;	// == m_self if Active
+    ZdbHost		*m_prev;	// previous-ranked host
+    ZdbHost		*m_next;	// next-ranked host
     ZmRef<Zdb_Cxn>	m_nextCxn;	// replica peer's cxn
     bool		m_recovering;	// recovering next-ranked host
     Zdb_DBState		m_recover;	// recovery state
@@ -1145,9 +1220,10 @@ private:
 
   ZmScheduler::Timer	m_hbSendTimer;
   ZmScheduler::Timer	m_electTimer;
-  ZtArray<ZmRef<Zdb_> >	m_dbs;
-  HostTree		m_hosts;
-  ZmRef<CxnHash>	m_cxns;
+
+  ZtArray<ZmRef<ZdbAny> >	m_dbs;
+  HostTree			m_hosts;
+  ZmRef<CxnHash>		m_cxns;
 };
 
 #ifdef _MSC_VER

@@ -281,7 +281,7 @@ int main(int argc, char **argv)
       dbMx, ZmFn<>::Ptr<&active>::fn(), ZmFn<>::Ptr<&inactive>::fn());
 
     orders = new OrderDB(env, 0, 0, ZdbHandler{
-	  [](Zdb_ *db, ZmRef<ZdbAnyPOD> &pod) {
+	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) {
 	    pod = new ZdbPOD<Order>(db);
 	    // new (pod->ptr()) Order();
 	  },

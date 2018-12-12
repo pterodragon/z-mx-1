@@ -653,40 +653,44 @@ template <typename AppTypes> struct MxTAppTypes {
 
 #pragma pack(pop)
 
+// types that can be extended by the app
+#define MxTImport(Base) \
+  typedef typename Base::Event Event; \
+ \
+  typedef typename Base::OrderLeg OrderLeg; \
+  typedef typename Base::ModifyLeg ModifyLeg; \
+  typedef typename Base::CancelLeg CancelLeg; \
+ \
+  typedef typename Base::AnyReject AnyReject; \
+ \
+  typedef typename Base::NewOrder NewOrder; \
+  typedef typename Base::OrderHeld OrderHeld; \
+  typedef typename Base::OrderFiltered OrderFiltered; \
+  typedef typename Base::Ordered Ordered; \
+  typedef typename Base::Reject Reject; \
+ \
+  typedef typename Base::Modify Modify; \
+  typedef typename Base::Modified Modified; \
+  typedef typename Base::ModReject ModReject; \
+ \
+  typedef typename Base::Cancel Cancel; \
+  typedef typename Base::Canceled Canceled; \
+  typedef typename Base::CxlReject CxlReject; \
+ \
+  typedef typename Base::Hold Hold; \
+  typedef typename Base::Release Release; \
+  typedef typename Base::Deny Deny; \
+ \
+  typedef typename Base::Fill Fill; \
+ \
+  typedef typename Base::Closed Closed; \
+ \
+  typedef typename Base::OrderSent OrderSent; \
+  typedef typename Base::ModifySent ModifySent; \
+  typedef typename Base::CancelSent CancelSent
+
 template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
-  // types that can be extended by the app
-  typedef typename AppTypes::Event Event;
-
-  typedef typename AppTypes::OrderLeg OrderLeg;
-  typedef typename AppTypes::ModifyLeg ModifyLeg;
-  typedef typename AppTypes::CancelLeg CancelLeg;
-
-  typedef typename AppTypes::AnyReject AnyReject;
-
-  typedef typename AppTypes::NewOrder NewOrder;
-  typedef typename AppTypes::Ordered Ordered;
-  typedef typename AppTypes::Reject Reject;
-
-  typedef typename AppTypes::Modify Modify;
-  typedef typename AppTypes::Modified Modified;
-  typedef typename AppTypes::ModReject ModReject;
-
-  typedef typename AppTypes::Cancel Cancel;
-  typedef typename AppTypes::Canceled Canceled;
-  typedef typename AppTypes::CxlReject CxlReject;
-
-  typedef typename AppTypes::Hold Hold;
-  typedef typename AppTypes::Release Release;
-  typedef typename AppTypes::Deny Deny;
-
-  typedef typename AppTypes::Fill Fill;
-  typedef typename AppTypes::Closed Closed;
-
-  typedef typename AppTypes::AnySent AnySent;
-
-  typedef typename AppTypes::OrderSent OrderSent;
-  typedef typename AppTypes::ModifySent ModifySent;
-  typedef typename AppTypes::CancelSent CancelSent;
+  MxTImport(AppTypes);
 
   // additional typedefs
   struct ModSimulated : public Modify {
@@ -1010,14 +1014,12 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 #pragma GCC diagnostic pop
 #endif
 
-  // OrderTxn can contain a new order
   typedef Txn<NewOrder> OrderTxn;
-
-  // ModifyTxn can contain a modify
   typedef Txn<Modify> ModifyTxn;
-
-  // CancelTxn can contain a cancel
   typedef Txn<Cancel> CancelTxn;
+
+  // FillTxn can contain a fill (trade)
+  typedef Txn<Fill> FillTxn;
 
   // ExecTxn can contain a execution(notice)/ack/reject
   typedef typename ZuLargest<
@@ -1027,13 +1029,6 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     Release, Deny,
     Fill, Closed>::T Exec_Largest;
   typedef Txn<Exec_Largest> ExecTxn;
-
-  // UpdateTxn can contain any update to an open order
-  typedef typename ZuLargest<
-    Modify,
-    Cancel,
-    Exec_Largest>::T Update_Largest;
-  typedef Txn<Update_Largest> UpdateTxn;
 
   // AnyTxn can contain any trading message
   typedef typename ZuLargest<

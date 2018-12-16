@@ -77,8 +77,9 @@ void push() {
   if (append) {
     ZdbRN rn = append == 1 ? 0 : ZmRand::randInt(append - 1);
     pod = orders->get(rn);
-  } else
-    pod = orders->push();
+  } else {
+    pod = orders->push(orders->allocRN());
+  }
   if (!pod) return;
   Order *order = pod->ptr();
   order->m_side = Buy;
@@ -88,10 +89,10 @@ void push() {
   if (!append)
     orders->put(pod);
   else {
-    orders->update(pod);
+    orders->update(pod, orders->allocRN());
     if (orders->allocRN() >= maxRN) return;
     if (pod = orders->get(pod->rn()))
-      orders->update(pod);
+      orders->update(pod, orders->allocRN());
   }
   appMx->add(ZmFn<>::Ptr<&push>::fn());
 }
@@ -106,7 +107,7 @@ void active() {
   if (append) {
     for (unsigned i = 0; i < append; i++) {
       if (orders->allocRN() >= maxRN) return;
-      ZmRef<ZdbPOD<Order> > pod = orders->push();
+      ZmRef<ZdbPOD<Order> > pod = orders->push(orders->allocRN());
       if (!pod) return;
       Order *order = pod->ptr();
       order->m_side = Buy;

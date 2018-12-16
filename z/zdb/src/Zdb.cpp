@@ -1671,26 +1671,25 @@ void ZdbAny::checkpoint_()
     file->checkpoint();
 }
 
-ZmRef<ZdbAnyPOD> ZdbAny::push()
+ZmRef<ZdbAnyPOD> ZdbAny::push(ZdbRN rn)
 {
-  if (!m_fileRecs) return 0;
-  if (!m_env->active()) {
+  if (ZuUnlikely(!m_fileRecs)) return nullptr;
+  if (ZuUnlikely(!m_env->active())) {
     ZeLOG(Error, ZtString() <<
 	"Zdb inactive application attempted push on DBID " << m_id);
-    return 0;
+    return nullptr;
   }
-  ZmRef<ZdbAnyPOD> pod = push_();
-  if (!pod) return 0;
-  return pod;
+  return push_(rn);
 }
 
-ZmRef<ZdbAnyPOD> ZdbAny::push_()
+ZmRef<ZdbAnyPOD> ZdbAny::push_(ZdbRN rn)
 {
   ZmRef<ZdbAnyPOD> pod;
   alloc(pod);
-  if (ZuUnlikely(!pod)) return 0;
+  if (ZuUnlikely(!pod)) return nullptr;
   Guard guard(m_lock);
-  pod->init(m_allocRN++);
+  if (ZuLikely(m_allocRN <= rn)) m_allocRN = rn + 1;
+  pod->init(rn);
   return pod;
 }
 
@@ -1796,34 +1795,35 @@ void ZdbAny::put(ZdbAnyPOD *pod, bool copy) // commits a push
   m_env->write(pod, range, ZdbOp::New);
 }
 
-ZdbRN ZdbAny::update(ZdbAnyPOD *pod, ZdbRange range, bool copy, bool cache)
+void ZdbAny::update(
+    ZdbAnyPOD *pod, ZdbRN rn, ZdbRange range, bool copy, bool cache)
 {
   if (!range) range.init(0, m_dataSize);
   {
     Guard guard(m_lock);
     cacheDel_(pod);
-    pod->update(m_allocRN++, pod->rn());
+    if (ZuLikely(m_allocRN <= rn)) m_allocRN = rn + 1;
+    pod->update(rn, pod->rn());
     if (cache) cache_(pod);
     ++pod->m_writeCount;
   }
   if (copy) this->copy(pod, range, ZdbOp::Update);
   m_env->write(pod, range, ZdbOp::Update);
-  return pod->rn();
 }
 
-ZdbRN ZdbAny::del(ZdbAnyPOD *pod, bool copy)
+void ZdbAny::del(ZdbAnyPOD *pod, ZdbRN rn, bool copy)
 {
   ZmAssert(pod->committed());
   pod->del();
   {
     Guard guard(m_lock);
     cacheDel_(pod);
-    pod->update(m_allocRN++, pod->rn());
+    if (ZuLikely(m_allocRN <= rn)) m_allocRN = rn + 1;
+    pod->update(rn, pod->rn());
     ++pod->m_writeCount;
   }
   if (copy) this->copy(pod, ZdbRange(), ZdbOp::Delete);
   m_env->write(pod, ZdbRange(), ZdbOp::Delete);
-  return pod->rn();
 }
 
 void ZdbAny::telemetry(Telemetry &data) const
@@ -1966,6 +1966,10 @@ void ZdbAny::write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op)
   {
     ZdbRN gapRN = m_fileRN;
     if (m_fileRN <= rn) m_fileRN = rn + 1;
+    {
+      ZdbRN minGapRN = (rn / m_fileRecs) * m_fileRecs;
+      if (gapRN < minGapRN) gapRN = minGapRN;
+    }
     while (gapRN < rn) {
       rec = rn2file(gapRN, true);
       if (!rec) return; // error is logged by getFile/openFile
@@ -1984,7 +1988,8 @@ void ZdbAny::write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op)
     }
   }
 
-  if (!(rec = rn2file(rn, true))) return; // error is logged by getFile/openFile
+  if (!(rec = rn2file(rn, true))) return;
+    // any error is logged by getFile/openFile
 
   if (op == ZdbOp::Delete && rec.file()->del(rec.offRN()))
     delFile(rec.file());
@@ -2009,7 +2014,8 @@ void ZdbAny::write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op)
   }
 }
 
-void ZdbAny::fileReadError_(Zdb_File *file, ZiFile::Offset off, int r, ZeError e)
+void ZdbAny::fileReadError_(
+    Zdb_File *file, ZiFile::Offset off, int r, ZeError e)
 {
   if (r < 0) {
     ZeLOG(Error, ZtString() <<

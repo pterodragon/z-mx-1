@@ -193,10 +193,8 @@ public:
   ZuInline unsigned index() const { return m_index; }
 
   ZuInline bool del(unsigned i) {
-    // std::cerr << (ZuStringN<1024>() << "GOT HERE\n" << ZuBoxed(m_index) << ':' << ZuBoxed(i) << ' ' << m_undeleted << '\n') << std::flush;
     m_undeleted.clr(i);
     bool r = !m_undeleted;
-    // std::cerr << (ZuStringN<1024>() << ZuBoxed(m_index) << ':' << ZuBoxed(i) << ' ' << m_undeleted << ": " << ZuBoxed((int)r) << '\n') << std::flush;
     return r;
   }
 
@@ -606,11 +604,9 @@ public:
   inline ZdbRN allocRN() { return m_allocRN; }
 
   // create new record
-  ZmRef<ZdbAnyPOD> push();
-
+  ZmRef<ZdbAnyPOD> push(ZdbRN rn);
   // commit record following push() - causes replication / sync
   void put(ZdbAnyPOD *, bool copy = true);
-
   // abort push()
   void abort(ZdbAnyPOD *);
 
@@ -618,13 +614,13 @@ public:
   ZmRef<ZdbAnyPOD> get(ZdbRN rn);	// use for read-only queries
   ZmRef<ZdbAnyPOD> get_(ZdbRN rn);	// use for RMW - does not update cache
 
-  // update record following get() / get_() - returns new RN
-  ZdbRN update(
-      ZdbAnyPOD *, ZdbRange range = ZdbRange(),
+  // update record following get() / get_()
+  void update(
+      ZdbAnyPOD *, ZdbRN rn, ZdbRange range = ZdbRange(),
       bool copy = true, bool cache = true);
 
-  // delete record following get() / get_() - returns new RN
-  ZdbRN del(ZdbAnyPOD *, bool copy = true);
+  // delete record following get() / get_()
+  void del(ZdbAnyPOD *, ZdbRN rn, bool copy = true);
 
   struct Telemetry {
     typedef ZuStringN<124> Path;
@@ -667,7 +663,7 @@ private:
   }
 
   // push initial record
-  ZmRef<ZdbAnyPOD> push_();
+  ZmRef<ZdbAnyPOD> push_(ZdbRN rn);
 
   // low-level get, does not filter deleted records
   ZmRef<ZdbAnyPOD> get__(ZdbRN rn);

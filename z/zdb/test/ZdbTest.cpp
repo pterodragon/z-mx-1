@@ -102,7 +102,7 @@ void active() {
   if (del) {
     for (unsigned i = 0; i < del; i++)
       if (ZmRef<ZdbPOD<Order> > pod = orders->get_(i))
-	orders->del(pod);
+	orders->del(pod, orders->allocRN());
   }
   if (append) {
     for (unsigned i = 0; i < append; i++) {
@@ -276,7 +276,7 @@ int main(int argc, char **argv)
     appMx->start();
     if (dbMx->start() != Zi::OK) throw ZtString("multiplexer start failed");
 
-    ZmRef<ZdbEnv> env = new ZdbEnv(0);
+    ZuRef<ZdbEnv> env = new ZdbEnv(0);
 
     env->init(ZdbEnvConfig(cf),
       dbMx, ZmFn<>::Ptr<&active>::fn(), ZmFn<>::Ptr<&inactive>::fn());

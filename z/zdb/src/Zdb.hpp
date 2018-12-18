@@ -526,7 +526,7 @@ struct ZdbConfig {
     id = cf->toInt("ID", key, 0, 1<<30);
     path = cf->get("path", true);
     fileSize = cf->getInt("fileSize",
-	((int32_t)4)<<10, ((int32_t)1)<<30, false, 0);
+	((int32_t)4)<<10, ((int32_t)1)<<30, false, 0); // range: 4K to 1G
     preAlloc = cf->getInt("preAlloc", 0, 10<<24, false, 0);
     compress = cf->getInt("compress", 0, 1, false, 0);
     noCache = cf->getInt("noCache", 0, 1, false, 0);

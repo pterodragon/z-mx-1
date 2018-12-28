@@ -46,10 +46,10 @@
 
 namespace MxTelemetry {
   namespace Type {
-    MxEnumValues(Heap, Thread, Multiplexer, HashTbl, Queue,
+    MxEnumValues(Heap, Thread, Multiplexer, Socket, HashTbl, Queue,
 	Engine, Link,
 	DBEnv, DBHost, DB);
-    MxEnumNames("Heap", "Thread", "Multiplexer", "HashTbl", "Queue",
+    MxEnumNames("Heap", "Thread", "Multiplexer", "Socket", "HashTbl", "Queue",
 	"Engine", "Link",
 	"DBEnv", "DBHost", "DB");
   }
@@ -99,26 +99,26 @@ namespace MxTelemetry {
     uint8_t	detached;
   };
 
-  struct MxThread {
-    MxIDString	id;		// ID of both thread and queue
-  };
   struct Multiplexer {	
     enum { Code = Type::Multiplexer };
 
     MxID	id;
-    MxThread	threads[16];
-    Bitmap	affinity[16];
     Bitmap	isolation;
     uint32_t	stackSize;
     uint32_t	rxBufSize;
     uint32_t	txBufSize;
-    uint32_t	nCxns;
     uint16_t	rxThread;
     uint16_t	txThread;
     uint16_t	partition;
     uint8_t	state;
     uint8_t	priority;
     uint8_t	nThreads;
+  };
+
+  struct Socket {
+    enum { Code = Type::Socket };
+
+    ZiCxnTelemetry	data;
   };
 
   struct HashTbl {
@@ -211,7 +211,7 @@ namespace MxTelemetry {
   };
 
   typedef ZuLargest<
-     Heap, Thread, Multiplexer, HashTbl, Queue,
+     Heap, Thread, Multiplexer, Socket, HashTbl, Queue,
      Engine, Link,
      DBEnv, DBHost, DB>::T Largest;
 
@@ -288,6 +288,7 @@ namespace MxTelemetry {
   DeclFn(heap, Heap)
   DeclFn(thread, Thread)
   DeclFn(multiplexer, Multiplexer)
+  DeclFn(socket, Socket)
   DeclFn(hashTbl, HashTbl)
   DeclFn(queue, Queue)
   DeclFn(link, Link)

@@ -540,7 +540,9 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
 {
   if (now.length() > engine()->reReqMaxGap()) {
     linkWARNING("MxMDSubLink::reRequest(" << id <<
-	"): too many missing messages");
+	"): too many missing messages (" <<
+	ZuBoxed(now.length()) << " > " <<
+	ZuBoxed(engine()->reReqMaxGap()) << ')');
     reconnect(true);
     return;
   }

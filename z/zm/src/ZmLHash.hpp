@@ -157,7 +157,7 @@ struct ZmLHashLock : public NTP {
   typedef Lock_ Lock;
 };
 
-// ZmLHashID - the hash ID (if different than heap ID)
+// ZmLHashID - the hash ID
 template <class ID_, class NTP = ZmLHash_Defaults>
 struct ZmLHashID : public NTP {
   typedef ID_ ID;

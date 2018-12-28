@@ -484,7 +484,7 @@ struct ZiCxnInfo { // pure aggregate, no ctor
     }
   }
 
-  ZtEnum		type;
+  ZtEnum		type;		// ZiCxnType
   ZiPlatform::Socket	socket;
   ZiCxnOptions 		options;
   ZiIP			localIP;
@@ -495,6 +495,25 @@ struct ZiCxnInfo { // pure aggregate, no ctor
   uint32_t		portID = 0; // only valid when familyID is valid
 };
 template <> struct ZuPrint<ZiCxnInfo> : public ZuPrintFn { };
+
+struct ZiCxnTelemetry {
+  ZuID		mxID;		// multiplexer ID
+  uint64_t	socket;		// Unix file descriptor / Winsock SOCKET
+  uint32_t	rxBufSize;	// getsockopt(..., SO_RCVBUF, ...)
+  uint32_t	rxBufLen;	// ioctl(..., SIOCINQ, ...)
+  uint32_t	txBufSize;	// getsockopt(..., SO_SNDBUF, ...)
+  uint32_t	txBufLen;	// ioctl(..., SIOCOUTQ, ...)
+  uint32_t	flags;		// ZiCxnFlags
+  ZiIP		mreqAddr;	// mreqs[0]
+  ZiIP		mreqIf;		// mreqs[0]
+  ZiIP		mif;
+  uint32_t	ttl;
+  ZiIP		localIP;
+  ZiIP		remoteIP;
+  uint16_t	localPort;
+  uint16_t	remotePort;
+  uint8_t	type;		// ZiCxnType
+};
 
 typedef ZmFn<const ZiListenInfo &> ZiListenFn;
 typedef ZmFn<const ZiCxnInfo &> ZiConnectFn;
@@ -964,6 +983,9 @@ private:
   void stop_3();	// App thread - clean up
 
 public:
+  void allCxns(ZmFn<const ZiCxnTelemetry &> fn);
+  void allCxns_(ZmFn<const ZiCxnTelemetry &> fn);
+
   void listen(
       ZiListenFn listenFn, ZiFailFn failFn, ZiConnectFn acceptFn,
       ZiIP localIP, uint16_t localPort, unsigned nAccepts,

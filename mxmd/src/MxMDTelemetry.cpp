@@ -60,9 +60,16 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 	      tc->main(), tc->detached()));
       }, cxn});
 
-  // thread queues (ZmScheduler)
+  // mutiplexers, thread queues, sockets
   m_core->allMx([cxn](MxMultiplex *mx) {
-	unsigned n = mx->nThreads();
+      unsigned n = mx->nThreads();
+      cxn->transmit(multiplexer(
+	    mx->id(), mx->isolation().uint64(), mx->stackSize(),
+	    mx->rxBufSize(), mx->txBufSize(),
+	    mx->rxThread(), mx->txThread(),
+	    mx->partition(), mx->state(),
+	    mx->priority(), n));
+      {
 	ZmThreadName name;
 	uint64_t inCount, inBytes, outCount, outBytes;
 	for (unsigned tid = 1; tid <= n; tid++) {
@@ -74,7 +81,11 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 		inCount, inBytes, outCount, outBytes,
 		(uint32_t)ring.params().size(), (uint8_t)QueueType::Thread));
 	}
+      }
+      mx->allCxns([cxn](const ZiCxnTelemetry &data) {
+	  cxn->transmit(MxTelemetry::socket(data));
       });
+    });
 
   // IPC queues (MD broadcast)
   if (ZmRef<MxMDBroadcast::Ring> ring = m_core->broadcast().ring()) {

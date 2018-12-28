@@ -260,22 +260,20 @@ struct ZdbTrailer {
 };
 #pragma pack(pop)
 
-class ZdbAnyPOD_ : public ZmPolymorph {
+struct ZdbAnyPOD__ {
+  void		*ptr;
+  unsigned	size;
+};
+
+class ZdbAnyPOD_ : public ZmPolymorph, protected ZdbAnyPOD__ {
 template <typename, typename> friend struct ZuConversionFriend;
 
 protected:
-  template <typename P>
-  inline ZdbAnyPOD_(const P &p) : m_ptr(p.p1()), m_size(p.p2()) { }
+  inline ZdbAnyPOD_(const ZdbAnyPOD__ &p) : ZdbAnyPOD__(p) { }
 
 public:
-  inline const void *ptr() const { return m_ptr; }
-  inline void *ptr() { return m_ptr; }
-
-  inline unsigned size() const { return m_size; }
-
-private:
-  void		*m_ptr;
-  unsigned	m_size;
+  inline void *ptr() const { return ZdbAnyPOD__::ptr; }
+  inline unsigned size() const { return ZdbAnyPOD__::size; }
 };
 
 typedef ZmList<ZdbAnyPOD_,
@@ -314,7 +312,7 @@ friend class ZdbEnv;
 
 protected:
   inline ZdbAnyPOD(void *ptr, unsigned size, ZdbAny *db) :
-    Zdb_CacheNode(ZuMkPair(ptr, size)), m_db(db), m_writeCount(0) { }
+    Zdb_CacheNode(ZdbAnyPOD__{ptr, size}), m_db(db), m_writeCount(0) { }
 
 public:
   inline ~ZdbAnyPOD() { }
@@ -357,7 +355,7 @@ private:
 
   virtual ZmRef<ZdbAnyPOD_Compressed> compress() { return 0; }
 
-  ZdbAny			*m_db;
+  ZdbAny		*m_db;
   unsigned		m_writeCount;	// guarded by ZdbAny::m_lock
 };
 template <> struct ZuPrint<ZdbAnyPOD> : public ZuPrintDelegate {

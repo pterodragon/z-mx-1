@@ -202,6 +202,7 @@ ZiMultiplex_WSExt::~ZiMultiplex_WSExt()
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
 #include <linux/unistd.h>
+#include <linux/sockios.h>
 
 #ifndef EPOLLRDHUP
 #define EPOLLRDHUP 0
@@ -750,6 +751,50 @@ void ZiMultiplex::executedConnect(ZiConnectFn fn, const ZiCxnInfo &ci)
 
   ZiDEBUG(this, ZtSprintf("FD: % 3d TCP CONNECTED to %s:%u",
 	(int)ci.socket, inet_ntoa(ci.remoteIP), (unsigned)ci.remotePort));
+}
+
+void ZiMultiplex::allCxns(ZmFn<const ZiCxnTelemetry &> fn)
+{
+  rxInvoke([this, fn = ZuMv(fn)]() mutable { this->allCxns_(ZuMv(fn)); });
+}
+
+void ZiMultiplex::allCxns_(ZmFn<const ZiCxnTelemetry &> fn)
+{
+  auto i = m_cxns.readIterator();
+  while (auto node = i.iterate())
+    txRun([this, fn, ci = node->key()->info()]() {
+	ZiPlatform::Socket s = ci.socket;
+	unsigned rxBufSize = 0;
+	unsigned txBufSize = 0;
+	socklen_t l = sizeof(unsigned);
+	getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&rxBufSize, &l);
+	getsockopt(s, SOL_SOCKET, SO_SNDBUF, (char *)&txBufSize, &l);
+#ifdef ZiMultiplex_EPoll
+	int rxBufLen = 0;
+	int txBufLen = 0;
+	ioctl(s, SIOCINQ, &rxBufLen);
+	ioctl(s, SIOCOUTQ, &txBufLen);
+#endif
+#ifdef ZiMultiplex_IOCP
+	u_long rxBufLen = 0;
+	u_long txBufLen = 0; // WinDoze - txBufLen is unavailable
+	ioctlsocket(s, FIONREAD, &rxBufLen);
+#endif
+	ZiIP mreqAddr, mreqIf;
+	const auto &mreqs = ci.options.mreqs();
+	if (mreqs.length()) {
+	  mreqAddr = mreqs[0].imr_multiaddr;
+	  mreqIf = mreqs[0].imr_interface;
+	}
+	fn(ZiCxnTelemetry{
+	    this->id(), (uint64_t)ci.socket,
+	    rxBufSize, (uint32_t)rxBufLen,
+	    txBufSize, (uint32_t)txBufLen,
+	    ci.options.flags(),
+	    mreqAddr, mreqIf, ci.options.mif(), ci.options.ttl(),
+	    ci.localIP, ci.remoteIP, ci.localPort, ci.remotePort,
+	    (uint8_t)ci.type});
+    });
 }
 
 void ZiMultiplex::listen(

@@ -250,7 +250,7 @@ void MxMDPubLink::tcpListen()
       ZiFailFn([](MxMDPubLink *link, bool transient) {
 	  if (transient)
 	    link->reconnect(false);
-	  else
+	  else /* FIXME - why not disconnected() ? */
 	    link->engine()->rxRun(ZmFn<>{
 		[](MxMDPubLink *link) { link->disconnect(); }, link});
 	}, this),

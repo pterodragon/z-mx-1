@@ -15,26 +15,43 @@ class App : public MxTelemetry::Client {
       case Type::Heap:
 	{
 	  const Heap &heap = msg->as<Heap>();
-	  std::cout << "  id: " << heap.id << '\n' << std::flush;
+	  std::cout << "  id: " << heap.id << '\n';
 	}
 	break;
       case Type::Thread:
 	{
 	  const Thread &thread = msg->as<Thread>();
-	  std::cout << "  name: " << thread.name << '\n' << std::flush;
+	  std::cout << "  name: " << thread.name << '\n';
+	}
+    break;
+      case Type::Multiplexer:
+	{
+	  const Multiplexer &multiplexer = msg->as<Multiplexer>();
+	  std::cout << "  id: " << multiplexer.id << '\n'
+	    << "  isolation: " << multiplexer.isolation << '\n'
+	    << "  stackSize: " << multiplexer.stackSize << '\n'
+	    << "  rxBufSize: " << multiplexer.rxBufSize << '\n'
+	    << "  txBufSize: " << multiplexer.txBufSize << '\n'
+	    << "  rxThread: " << multiplexer.rxThread << '\n'
+	    << "  txThread: " << multiplexer.txThread << '\n'
+	    << "  partition: " << multiplexer.partition << '\n'
+	    << "  state: " << multiplexer.state << '\n'
+	    << "  priority: " << multiplexer.priority << '\n'
+	    << "  nThreads: " << multiplexer.nThreads << '\n';
 	}
     break;
       case Type::Socket:
 	{
 	  const Socket &socket = msg->as<Socket>();
 	  std::cout << "  mxID: " << socket.data.mxID << '\n'
-	    << "  socket: " << socket.data.socket << '\n'
+	    << "  socket fd: " << socket.data.socket << '\n'
 	    << "  rxBufSize: " << socket.data.rxBufSize << '\n'
 	    << "  rxBufLen: " << socket.data.rxBufLen << '\n'
 	    << "  txBufSize: " << socket.data.txBufSize << '\n'
 	    << "  txBufLen: " << socket.data.txBufLen << '\n'
-	    << "  flags: " << socket.data.flags << '\n'
-	    << "  mreqAddr: " << socket.data.mreqAddr << '\n'
+	    << "  flags: ";
+        ZvFlags<ZiCxnFlags::Flags>::instance()->print("flags", std::cout, socket.data.flags);
+        std::cout << "\n  mreqAddr: " << socket.data.mreqAddr << '\n'
 	    << "  mreqIf: " << socket.data.mreqIf << '\n'
 	    << "  mif: " << socket.data.mif << '\n'
 	    << "  ttl: " << socket.data.ttl << '\n'
@@ -42,7 +59,7 @@ class App : public MxTelemetry::Client {
 	    << "  remoteIP: " << socket.data.remoteIP << '\n'
 	    << "  localPort: " << socket.data.localPort << '\n'
 	    << "  remotePort: " << socket.data.remotePort << '\n'
-	    << "  type: " << socket.data.type << '\n';
+	    << "  type: " << ZiCxnType::name(socket.data.type) << '\n';
 	}
     break;
       case Type::Queue:
@@ -56,9 +73,10 @@ class App : public MxTelemetry::Client {
 	    << "  outCount: " << queue.outCount << '\n'
 	    << "  outBytes: " << queue.outBytes << '\n'
 	    << "  size: " << queue.size << '\n'
-	    << "  type: " << queue.type << '\n';
+	    << "  type: " << QueueType::name(queue.type) << '\n';
 	}
     }
+    std::cout.flush();
   }
 };
 

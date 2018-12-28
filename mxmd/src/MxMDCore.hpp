@@ -226,6 +226,8 @@ public:
       return !MxMDStream::addInstrument(snapshot, instrument->shard()->id(),
 	  MxDateTime(), instrument->key(), instrument->refData());
     }) || allOrderBooks([&snapshot](MxMDOrderBook *ob) -> uintptr_t {
+      if (!MxMDStream::resetOB(snapshot, ob->shard()->id(),
+	  MxDateTime(), ob->key())) return true;
       if (ob->legs() == 1) {
 	return !MxMDStream::addOrderBook(snapshot, ob->shard()->id(),
 	    MxDateTime(), ob->key(), ob->instrument()->key(),

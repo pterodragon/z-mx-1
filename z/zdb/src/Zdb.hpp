@@ -599,6 +599,8 @@ public:
   inline unsigned cacheSize() { return m_cacheSize; } // unclean read
   inline unsigned filesMax() { return m_filesMax; }
 
+  // first RN that is committed (will be ZdbMaxRN if DB is empty)
+  inline ZdbRN minRN() { return m_minRN; }
   // next RN that will be allocated
   inline ZdbRN allocRN() { return m_allocRN; }
 

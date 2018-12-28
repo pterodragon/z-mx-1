@@ -74,6 +74,7 @@
 
 typedef uint32_t ZdbID;		// database ID
 typedef uint64_t ZdbRN;		// record ID
+#define ZdbMaxRN (~((ZdbRN)0))
 
 namespace ZdbOp {
   enum { New = 0, Update, Delete };
@@ -620,6 +621,9 @@ public:
   // delete record following get() / get_()
   void del(ZdbAnyPOD *, ZdbRN rn, bool copy = true);
 
+  // delete all records < minRN
+  void purge(ZdbRN minRN, bool copy = true);
+
   struct Telemetry {
     typedef ZuStringN<124> Path;
 
@@ -714,6 +718,7 @@ private:
   unsigned			m_dataSize = 0;
   Lock				m_lock;
     unsigned			  m_fileRecs;
+    ZdbRN			  m_minRN = ZdbMaxRN;
     ZdbRN			  m_allocRN = 0;
     ZdbRN			  m_fileRN = 0;
     ZdbLRU			  m_lru;

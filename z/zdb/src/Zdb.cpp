@@ -1590,6 +1590,7 @@ void ZdbAny::recover(Zdb_File *file)
     }
     switch (pod->magic()) {
       case ZdbCommitted:
+	if (rn < m_minRN) m_minRN = rn;
 	if (m_handler.recoverFn) {
 	  cache(pod);
 	  this->recover(pod);
@@ -1824,6 +1825,28 @@ void ZdbAny::del(ZdbAnyPOD *pod, ZdbRN rn, bool copy)
   }
   if (copy) this->copy(pod, ZdbRange(), ZdbOp::Delete);
   m_env->write(pod, ZdbRange(), ZdbOp::Delete);
+}
+
+void ZdbAny::purge(ZdbRN minRN, bool copy)
+{
+  ZdbRN rn;
+  {
+    ReadGuard guard(m_lock);
+    rn = m_minRN;
+  }
+  while (rn < minRN) {
+    Guard guard(m_lock);
+    if (rn >= m_allocRN) return;
+    if (ZmRef<ZdbAnyPOD> pod = get__(rn)) {
+      cacheDel_(pod);
+      ++pod->m_writeCount;
+      m_minRN = rn;
+      guard.unlock();
+      if (copy) this->copy(pod, ZdbRange(), ZdbOp::Delete);
+      m_env->write(pod, ZdbRange(), ZdbOp::Delete);
+    }
+    ++rn;
+  }
 }
 
 void ZdbAny::telemetry(Telemetry &data) const

@@ -51,11 +51,6 @@ class MxMDPubLink;
 
 class MxMDAPI MxMDPublisher : public MxEngine, public MxEngineApp {
 public:
-  MxMDPublisher() { }
-  ~MxMDPublisher() { }
-
-  MxMDCore *core() const;
-
   void init(MxMDCore *core, ZvCf *cf);
   void final();
 

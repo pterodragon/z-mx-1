@@ -52,11 +52,6 @@ class MxMDRecLink;
 
 class MxMDRecord : public MxEngine, public MxEngineApp {
 public:
-  MxMDRecord() { }
-  ~MxMDRecord() { }
-
-  MxMDCore *core() const;
-
   void init(MxMDCore *core, ZvCf *cf);
   void final();
 

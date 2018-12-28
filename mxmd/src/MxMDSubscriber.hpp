@@ -51,11 +51,6 @@ class MxMDSubLink;
 
 class MxMDAPI MxMDSubscriber : public MxEngine, public MxEngineApp {
 public:
-  MxMDSubscriber() { }
-  ~MxMDSubscriber() { }
-
-  MxMDCore *core() const;
-
   void init(MxMDCore *core, ZvCf *cf);
   void final();
 

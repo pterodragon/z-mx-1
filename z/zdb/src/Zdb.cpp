@@ -1860,6 +1860,7 @@ void ZdbAny::telemetry(Telemetry &data) const
   data.noCache = m_config->noCache;
   {
     ReadGuard guard(m_lock);
+    data.minRN = m_minRN;
     data.allocRN = m_allocRN;
     data.fileRN = m_fileRN;
     data.cacheLoads = m_cacheLoads;

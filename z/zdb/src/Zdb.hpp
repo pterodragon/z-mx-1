@@ -631,6 +631,7 @@ public:
 
     Path	path;
     uint64_t	fileSize;
+    uint64_t	minRN;
     uint64_t	allocRN;
     uint64_t	fileRN;
     uint64_t	cacheLoads;

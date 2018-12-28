@@ -32,12 +32,12 @@
 namespace MxSideJNI {
   jclass	class_; // MxSide
 
-  // MxPutCall named constructor
+  // MxSide named constructor
   ZJNI::JavaMethod ctorMethod[] = {
     { "value", "(I)Lcom/shardmx/mxbase/MxSide;" }
   };
 
-  // MxPutCall ordinal()
+  // MxSide ordinal()
   ZJNI::JavaMethod methods[] = {
     { "ordinal", "()I" }
   };

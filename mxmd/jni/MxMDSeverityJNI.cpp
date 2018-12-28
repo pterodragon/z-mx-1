@@ -27,35 +27,35 @@
 
 #include <MxBase.hpp>
 
-#include <MxMDVenueFlagsJNI.hpp>
+#include <MxMDSeverityJNI.hpp>
 
-namespace MxMDVenueFlagsJNI {
-  jclass	class_; // MxMDVenueFlags
+namespace MxMDSeverityJNI {
+  jclass	class_; // MxMDSeverity
 
-  // MxVenueFlags named constructor
+  // MxMDSeverity named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "value", "(I)Lcom/shardmx/mxmd/MxMDVenueFlags;" }
+    { "value", "(I)Lcom/shardmx/mxmd/MxMDSeverity;" }
   };
 
-  // MxVenueFlags ordinal()
+  // MxMDSeverity ordinal()
   ZJNI::JavaMethod methods[] = {
     { "ordinal", "()I" }
   };
 }
 
-MxEnum MxMDVenueFlagsJNI::j2c(JNIEnv *env, jobject obj)
+MxEnum MxMDSeverityJNI::j2c(JNIEnv *env, jobject obj)
 {
-  return env->CallIntMethod(obj, methods[0].mid);
+  return env->CallIntMethod(obj, methods[0].mid) - 1;
 }
 
-jobject MxMDVenueFlagsJNI::ctor(JNIEnv *env, MxEnum v)
+jobject MxMDSeverityJNI::ctor(JNIEnv *env, MxEnum v)
 {
-  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid, (jint)v);
+  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid, (jint)v + 1);
 }
 
-int MxMDVenueFlagsJNI::bind(JNIEnv *env)
+int MxMDSeverityJNI::bind(JNIEnv *env)
 {
-  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDVenueFlags");
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDSeverity");
   if (!class_) return -1;
 
   if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
@@ -66,7 +66,7 @@ int MxMDVenueFlagsJNI::bind(JNIEnv *env)
   return 0;
 }
 
-void MxMDVenueFlagsJNI::final(JNIEnv *env)
+void MxMDSeverityJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
 }

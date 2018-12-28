@@ -32,12 +32,12 @@
 namespace MxTickDirJNI {
   jclass	class_; // MxTickDir
 
-  // MxPutCall named constructor
+  // MxTickDir named constructor
   ZJNI::JavaMethod ctorMethod[] = {
     { "value", "(I)Lcom/shardmx/mxbase/MxTickDir;" }
   };
 
-  // MxPutCall ordinal()
+  // MxTickDir ordinal()
   ZJNI::JavaMethod methods[] = {
     { "ordinal", "()I" }
   };

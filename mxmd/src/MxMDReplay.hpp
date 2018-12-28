@@ -51,6 +51,8 @@ class MxMDReplayLink;
 
 class MxMDAPI MxMDReplay : public MxEngine, public MxEngineApp {
 public:
+  MxMDCore *core() const;
+
   void init(MxMDCore *core, ZmRef<ZvCf> cf);
   void final();
 

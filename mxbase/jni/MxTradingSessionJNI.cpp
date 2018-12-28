@@ -32,12 +32,12 @@
 namespace MxTradingSessionJNI {
   jclass	class_; // MxTradingSession
 
-  // MxPutCall named constructor
+  // MxTradingSession named constructor
   ZJNI::JavaMethod ctorMethod[] = {
     { "value", "(I)Lcom/shardmx/mxbase/MxTradingSession;" }
   };
 
-  // MxPutCall ordinal()
+  // MxTradingSession ordinal()
   ZJNI::JavaMethod methods[] = {
     { "ordinal", "()I" }
   };

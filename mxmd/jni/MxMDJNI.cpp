@@ -25,6 +25,7 @@
 
 #include <MxBaseJNI.hpp>
 
+#include <MxMDSeverityJNI.hpp>
 #include <MxMDOrderIDScopeJNI.hpp>
 
 #include <MxMDLibJNI.hpp>
@@ -48,6 +49,7 @@
 #include <MxMDInstrHandleJNI.hpp>
 #include <MxMDOBHandleJNI.hpp>
 
+#include <MxMDExceptionJNI.hpp>
 #include <MxMDTickSizeJNI.hpp>
 #include <MxMDSegmentJNI.hpp>
 #include <MxMDInstrRefDataJNI.hpp>
@@ -81,6 +83,7 @@ int MxMDJNI::bind(JNIEnv *env)
 {
   if (MxBaseJNI::bind(env) < 0) return -1;
 
+  if (MxMDSeverityJNI::bind(env) < 0) return -1;
   if (MxMDOrderIDScopeJNI::bind(env) < 0) return -1;
 
   if (MxMDLibJNI::bind(env) < 0) return -1;
@@ -104,6 +107,7 @@ int MxMDJNI::bind(JNIEnv *env)
   if (MxMDInstrHandleJNI::bind(env) < 0) return -1;
   if (MxMDOBHandleJNI::bind(env) < 0) return -1;
 
+  if (MxMDExceptionJNI::bind(env) < 0) return -1;
   if (MxMDTickSizeJNI::bind(env) < 0) return -1;
   if (MxMDSegmentJNI::bind(env) < 0) return -1;
   if (MxMDInstrRefDataJNI::bind(env) < 0) return -1;
@@ -140,6 +144,7 @@ void MxMDJNI::final(JNIEnv *env)
   MxMDInstrHandleJNI::final(env);
   MxMDOBHandleJNI::final(env);
 
+  MxMDExceptionJNI::final(env);
   MxMDTickSizeJNI::final(env);
   MxMDSegmentJNI::final(env);
   MxMDInstrRefDataJNI::final(env);
@@ -150,6 +155,7 @@ void MxMDJNI::final(JNIEnv *env)
   MxMDOrderDataJNI::final(env);
   MxMDTradeDataJNI::final(env);
 
+  MxMDSeverityJNI::final(env);
   MxMDOrderIDScopeJNI::final(env);
 
   MxBaseJNI::final(env);

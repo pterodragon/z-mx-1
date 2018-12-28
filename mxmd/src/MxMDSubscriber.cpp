@@ -528,9 +528,19 @@ void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
 	link.active();
 	rx->received(ZuMv(msg));
 	if (ZuUnlikely(
-	      rx->rxQueue().count() > link.engine()->maxQueueSize()))
+	      rx->rxQueue().count() > link.engine()->maxQueueSize())) {
+	  link.rxQueueTooBig(
+	      rx->rxQueue().count(),
+	      link.engine()->maxQueueSize());
 	  link.reconnect(true);
+	}
       });
+}
+void MxMDSubLink::rxQueueTooBig(uint32_t count, uint32_t max)
+{
+  linkWARNING("MxMDSubLink::udpReceived(" << id <<
+      "): Rx queue too large (" <<
+      ZuBoxed(count) << " > " << ZuBoxed(max) << ')');
 }
 void MxMDSubLink::request(const MxQueue::Gap &, const MxQueue::Gap &now)
 {
@@ -539,10 +549,11 @@ void MxMDSubLink::request(const MxQueue::Gap &, const MxQueue::Gap &now)
 void MxMDSubLink::reRequest(const MxQueue::Gap &now)
 {
   if (now.length() > engine()->reReqMaxGap()) {
+    uint32_t len = now.length();
+    uint32_t max = engine()->reReqMaxGap();
     linkWARNING("MxMDSubLink::reRequest(" << id <<
 	"): too many missing messages (" <<
-	ZuBoxed(now.length()) << " > " <<
-	ZuBoxed(engine()->reReqMaxGap()) << ')');
+	ZuBoxed(len) << " > " << ZuBoxed(max) << ')');
     reconnect(true);
     return;
   }

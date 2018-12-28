@@ -32,12 +32,12 @@
 namespace MxTradingStatusJNI {
   jclass	class_; // MxTradingStatus
 
-  // MxPutCall named constructor
+  // MxTradingStatus named constructor
   ZJNI::JavaMethod ctorMethod[] = {
     { "value", "(I)Lcom/shardmx/mxbase/MxTradingStatus;" }
   };
 
-  // MxPutCall ordinal()
+  // MxTradingStatus ordinal()
   ZJNI::JavaMethod methods[] = {
     { "ordinal", "()I" }
   };

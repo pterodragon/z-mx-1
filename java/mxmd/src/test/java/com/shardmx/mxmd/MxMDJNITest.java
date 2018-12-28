@@ -23,8 +23,8 @@ public class MxMDJNITest extends TestCase {
     assertTrue(md != null);
 
     md.subscribe(new MxMDLibHandlerTuple.Builder().
-	exception((MxMDLib md_, String s) -> {
-	  System.out.format("exception %s\n", s);
+	exception((MxMDLib md_, MxMDException e) -> {
+	  System.out.format("exception %s\n", e.message());
 	}).
 	build());
 

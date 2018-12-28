@@ -51,6 +51,8 @@ class MxMDSubLink;
 
 class MxMDAPI MxMDSubscriber : public MxEngine, public MxEngineApp {
 public:
+  MxMDCore *core() const;
+
   void init(MxMDCore *core, ZvCf *cf);
   void final();
 
@@ -255,6 +257,7 @@ private:
 
   void tcpError(TCP *tcp, ZiIOContext *io);
   void udpError(UDP *udp, ZiIOContext *io);
+  void rxQueueTooBig(uint32_t count, uint32_t max);
 
   inline void snapshotSeqNo(MxSeqNo seqNo) {
     Guard connGuard(m_connLock);

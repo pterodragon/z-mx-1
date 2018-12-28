@@ -66,9 +66,9 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
       cxn->transmit(multiplexer(
 	    mx->id(), mx->isolation().uint64(), mx->stackSize(),
 	    mx->rxBufSize(), mx->txBufSize(),
-	    mx->rxThread(), mx->txThread(),
-	    mx->partition(), mx->state(),
-	    mx->priority(), n));
+	    (uint16_t)mx->rxThread(), (uint16_t)mx->txThread(),
+	    (uint16_t)mx->partition(), (uint8_t)mx->state(),
+	    (uint8_t)mx->priority(), (uint8_t)n));
       {
 	ZmThreadName name;
 	uint64_t inCount, inBytes, outCount, outBytes;

@@ -33,6 +33,7 @@
 #include <MxMDInstrumentJNI.hpp>
 #include <MxMDOrderBookJNI.hpp>
 
+#include <MxMDExceptionJNI.hpp>
 #include <MxMDTickSizeJNI.hpp>
 #include <MxMDSegmentJNI.hpp>
 
@@ -42,7 +43,7 @@ namespace MxMDLibHandlerJNI {
   // event handlers
   ZJNI::JavaMethod exceptionFn[] = {
     { "exception", "()Lcom/shardmx/mxmd/MxMDExceptionFn;" },
-    { "fn", "(Lcom/shardmx/mxmd/MxMDLib;Ljava/lang/String;)V" }
+    { "fn", "(Lcom/shardmx/mxmd/MxMDLib;Lcom/shardmx/mxmd/MxMDException;)V" }
   };
   ZJNI::JavaMethod connectedFn[] = {
     { "connected", "()Lcom/shardmx/mxmd/MxMDFeedFn;" },
@@ -131,7 +132,7 @@ ZmRef<MxMDLibHandler> MxMDLibHandlerJNI::j2c(JNIEnv *env, jobject handler_)
   lambda2(exception,
       MxMDLib *md, ZmRef<ZeEvent> e,
       MxMDLibJNI::instance_(),
-      ZJNI::s2j(env, ZuStringN<512>() << e->message()));
+      MxMDExceptionJNI::ctor(env, e));
   lambda1(connected,
       MxMDFeed *feed,
       MxMDFeedJNI::ctor(env, feed));

@@ -32,12 +32,12 @@
 namespace MxMDOrderIDScopeJNI {
   jclass	class_; // MxMDOrderIDScope
 
-  // MxPutCall named constructor
+  // MxOrderIDScope named constructor
   ZJNI::JavaMethod ctorMethod[] = {
     { "value", "(I)Lcom/shardmx/mxmd/MxMDOrderIDScope;" }
   };
 
-  // MxPutCall ordinal()
+  // MxOrderIDScope ordinal()
   ZJNI::JavaMethod methods[] = {
     { "ordinal", "()I" }
   };

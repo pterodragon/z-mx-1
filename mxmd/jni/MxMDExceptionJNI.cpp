@@ -25,48 +25,50 @@
 
 #include <ZJNI.hpp>
 
-#include <MxBase.hpp>
+#include <MxMDSeverityJNI.hpp>
 
-#include <MxMDVenueFlagsJNI.hpp>
+#include <MxMDExceptionJNI.hpp>
 
-namespace MxMDVenueFlagsJNI {
-  jclass	class_; // MxMDVenueFlags
+namespace MxMDExceptionJNI {
+  jclass	class_;
 
-  // MxVenueFlags named constructor
+  // MxMDExceptionTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "value", "(I)Lcom/shardmx/mxmd/MxMDVenueFlags;" }
+    { "of",
+      "(Ljava/time/Instant;"		// time
+      "J"				// tid
+      "Lcom/shardmx/mxmd/MxMDSeverity;"	// severity
+      "Ljava/lang/String;"		// filename
+      "I"				// lineNumber
+      "Ljava/lang/String;"		// function
+      "Ljava/lang/String;"		// message
+      ")Lcom/shardmx/mxmd/MxMDExceptionTuple;" }
   };
-
-  // MxVenueFlags ordinal()
-  ZJNI::JavaMethod methods[] = {
-    { "ordinal", "()I" }
-  };
 }
 
-MxEnum MxMDVenueFlagsJNI::j2c(JNIEnv *env, jobject obj)
+jobject MxMDExceptionJNI::ctor(JNIEnv *env, const ZeEvent *data)
 {
-  return env->CallIntMethod(obj, methods[0].mid);
+  ZuStringN<BUFSIZ> s;
+  s << data->message();
+  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
+      ZJNI::t2j(env, ZtDate{data->time()}),
+      (jlong)data->tid(),
+      MxMDSeverityJNI::ctor(env, data->severity()),
+      ZJNI::s2j(env, data->filename()),
+      (jint)data->lineNumber(),
+      ZJNI::s2j(env, data->function()),
+      ZJNI::s2j(env, s));
 }
 
-jobject MxMDVenueFlagsJNI::ctor(JNIEnv *env, MxEnum v)
+int MxMDExceptionJNI::bind(JNIEnv *env)
 {
-  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid, (jint)v);
-}
-
-int MxMDVenueFlagsJNI::bind(JNIEnv *env)
-{
-  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDVenueFlags");
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDExceptionTuple");
   if (!class_) return -1;
-
   if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
-
-  if (ZJNI::bind(env, class_, methods,
-	sizeof(methods) / sizeof(methods[0])) < 0) return -1;
-
   return 0;
 }
 
-void MxMDVenueFlagsJNI::final(JNIEnv *env)
+void MxMDExceptionJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
 }

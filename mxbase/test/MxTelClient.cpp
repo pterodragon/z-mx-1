@@ -23,6 +23,41 @@ class App : public MxTelemetry::Client {
 	  const Thread &thread = msg->as<Thread>();
 	  std::cout << "  name: " << thread.name << '\n' << std::flush;
 	}
+    break;
+      case Type::Socket:
+	{
+	  const Socket &socket = msg->as<Socket>();
+	  std::cout << "  mxID: " << socket.data.mxID << '\n'
+	    << "  socket: " << socket.data.socket << '\n'
+	    << "  rxBufSize: " << socket.data.rxBufSize << '\n'
+	    << "  rxBufLen: " << socket.data.rxBufLen << '\n'
+	    << "  txBufSize: " << socket.data.txBufSize << '\n'
+	    << "  txBufLen: " << socket.data.txBufLen << '\n'
+	    << "  flags: " << socket.data.flags << '\n'
+	    << "  mreqAddr: " << socket.data.mreqAddr << '\n'
+	    << "  mreqIf: " << socket.data.mreqIf << '\n'
+	    << "  mif: " << socket.data.mif << '\n'
+	    << "  ttl: " << socket.data.ttl << '\n'
+	    << "  localIP: " << socket.data.localIP << '\n'
+	    << "  remoteIP: " << socket.data.remoteIP << '\n'
+	    << "  localPort: " << socket.data.localPort << '\n'
+	    << "  remotePort: " << socket.data.remotePort << '\n'
+	    << "  type: " << socket.data.type << '\n';
+	}
+    break;
+      case Type::Queue:
+	{
+	  const Queue &queue = msg->as<Queue>();
+	  std::cout << "  id: " << queue.id << '\n'
+	    << "  seqNo: " << queue.seqNo << '\n'
+	    << "  count: " << queue.count << '\n'
+	    << "  inCount: " << queue.inCount << '\n'
+	    << "  inBytes: " << queue.inBytes << '\n'
+	    << "  outCount: " << queue.outCount << '\n'
+	    << "  outBytes: " << queue.outBytes << '\n'
+	    << "  size: " << queue.size << '\n'
+	    << "  type: " << queue.type << '\n';
+	}
     }
   }
 };

@@ -47,13 +47,6 @@ template <> struct ZuTraits<ZmBitmap> : public ZuGenericTraits<ZmBitmap> {
 };
 
 class ZmBitmap {
-  // violates encapsulation for the sake of performance
-  struct Internal { // same as hwloc_bitmap_s in hwloc/src/bitmap.c
-    unsigned long	count;
-    unsigned long	allocated;
-    unsigned long	*ulongs;
-    int			infinite;
-  };
 public:
   ZuInline ZmBitmap() : m_map(0) { }
   ZuInline ZmBitmap(const ZmBitmap &b) :
@@ -238,19 +231,13 @@ public:
 
   inline uint64_t uint64() const {
     if (ZuLikely(!m_map)) return 0;
-    const Internal *internal = (const Internal *)(const void *)m_map;
-    if (ZuLikely(!internal->count)) return 0;
-    return internal->ulongs[0];
+    return hwloc_bitmap_to_ulong(m_map);
   }
   inline uint128_t uint128() const {
-    const Internal *internal = (const Internal *)(const void *)m_map;
-    if (ZuLikely(!internal->count)) return 0;
-    return internal->ulongs[0];
-    if (ZuLikely(internal->count == 1)) return internal->ulongs[0];
-    return (uint128_t)(internal->ulongs[0]) +
-      ((uint128_t)(internal->ulongs[1])<<64);
+    if (ZuLikely(!m_map)) return 0;
+    return (uint128_t)hwloc_bitmap_to_ith_ulong(m_map, 0) |
+      ((uint128_t)hwloc_bitmap_to_ith_ulong(m_map, 1) << 64U);
   }
-
   template <typename S>
   inline ZmBitmap(const S &s, typename ZuIsCharString<S>::T *_ = 0) :
       m_map(hwloc_bitmap_alloc()) { scan(s); }

@@ -143,6 +143,20 @@ typedef ZuBox_1(int8_t) ZtEnum;
       } while (!end); \
       return v; \
     } \
+    template <typename Flags_> \
+    struct Print : public ZuPrintable { \
+      inline Print(const Flags_ &v_, char delim_ = '|') : \
+	v(v_), delim(delim_) { } \
+      template <typename S> inline void print(S &s) const { \
+	ZmSingleton<Map>::instance()->print(s, v, delim); \
+      } \
+      const Flags_	&v; \
+      char		delim; \
+    }; \
+    template <typename Flags_> \
+    inline static Print<Flags_> print(const Flags_ &v) { \
+      return Print<Flags_>(v); \
+    } \
   };
 
 #endif /* ZtEnum_HPP */

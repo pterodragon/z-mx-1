@@ -49,9 +49,8 @@ class App : public MxTelemetry::Client {
 	    << "  rxBufLen: " << data.rxBufLen << '\n'
 	    << "  txBufSize: " << data.txBufSize << '\n'
 	    << "  txBufLen: " << data.txBufLen << '\n'
-	    << "  flags: ";
-        ZvFlags<ZiCxnFlags::Flags>::instance()->print("flags", std::cout, data.flags);
-        std::cout << "\n  mreqAddr: " << data.mreqAddr << '\n'
+	    << "  flags: " << ZiCxnFlags::Flags::print(data.flags) << '\n'
+	    << "  mreqAddr: " << data.mreqAddr << '\n'
 	    << "  mreqIf: " << data.mreqIf << '\n'
 	    << "  mif: " << data.mif << '\n'
 	    << "  ttl: " << data.ttl << '\n'

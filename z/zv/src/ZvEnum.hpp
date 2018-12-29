@@ -159,10 +159,13 @@ public:
   template <typename S, typename Flags> inline unsigned print(
       ZuString key, S &s, const Flags &v, char delim = '|') const {
     if (!v) return 0;
+    return T::print(s, v, delim);
+#if 0
     if (unsigned n = T::print(s, v, delim)) return n;
     throw ZvInvalidEnumT<T>(
 	key, ZuBoxed(v).hex(), static_cast<const ZvEnum<T> *>(this));
     // not reached
+#endif
   }
 
   template <typename Flags>

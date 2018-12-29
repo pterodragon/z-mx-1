@@ -33,9 +33,10 @@ void MxMDPublisher::init(MxMDCore *core, ZvCf *cf)
 
   MxEngine::init(core, this, mx, cf);
 
-  m_snapThread = cf->getInt("snapThread", 1, mx->nThreads() + 1, true);
+  m_snapThread = mx->tid(cf->get("snapThread", true));
 
-  if (rxThread() == mx->rxThread() ||
+  if (!m_snapThread ||
+      rxThread() == mx->rxThread() ||
       m_snapThread == mx->rxThread() ||
       m_snapThread == rxThread())
     throw ZtString() << "publisher misconfigured - thread conflict -"

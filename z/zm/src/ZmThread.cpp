@@ -103,7 +103,7 @@ void ZmThreadContext::name(ZmThreadName &s) const
     if (main())
       s = "main";
     else
-      s = ZuBox<unsigned>(tid()); 
+      s = ZuBoxed(tid()); 
   } else {
     m_mgr->threadName(m_id, s);
   }
@@ -273,18 +273,3 @@ int ZmThread::join(void **status)
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-
-void ZmThread::info(InfoFn fn)
-{
-  ZmSpecific<ZmThreadContext>::all(
-      [fn = ZuMv(fn)](ZmThreadContext *c) {
-    ZmThreadInfo info;
-    c->info(info);
-    fn(info);
-  });
-}
-
-void ZmThread::dump()
-{
-  std::cerr << ZmThread::csv() << std::flush;
-}

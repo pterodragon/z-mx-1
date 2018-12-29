@@ -595,6 +595,8 @@ public:
   ZuInline ZiMultiplex *mx() const { return m_mx; }
   ZuInline const ZiCxnInfo &info() const { return m_info; }
 
+  void telemetry(ZiCxnTelemetry &data) const;
+
 private:
   void connected();
 
@@ -776,6 +778,20 @@ private:
   bool			m_frag;
   bool			m_yield;
 #endif
+};
+
+struct ZiMxTelemetry {
+  ZuID		id;
+  uint64_t	isolation;
+  uint32_t	stackSize;
+  uint32_t	rxBufSize;
+  uint32_t	txBufSize;
+  uint16_t	rxThread;
+  uint16_t	txThread;
+  uint16_t	partition;
+  uint8_t	state;
+  uint8_t	priority;
+  uint8_t	nThreads;
 };
 
 class ZiAPI ZiMultiplex : public ZmScheduler {
@@ -983,26 +999,26 @@ private:
   void stop_3();	// App thread - clean up
 
 public:
-  void allCxns(ZmFn<const ZiCxnTelemetry &> fn);
-  void allCxns_(ZmFn<const ZiCxnTelemetry &> fn);
+  void allCxns(ZmFn<ZiConnection *> fn);
+  void allCxns_(ZmFn<ZiConnection *> fn);			// Rx thread
 
   void listen(
       ZiListenFn listenFn, ZiFailFn failFn, ZiConnectFn acceptFn,
       ZiIP localIP, uint16_t localPort, unsigned nAccepts,
       ZiCxnOptions options = ZiCxnOptions());
-  void listen_(
+  void listen_(							// Rx thread
       ZiListenFn listenFn, ZiFailFn failFn, ZiConnectFn acceptFn,
       ZiIP localIP, uint16_t localPort, unsigned nAccepts,
       ZiCxnOptions options = ZiCxnOptions());
   void stopListening(ZiIP localIP, uint16_t localPort);
-  void stopListening_(ZiIP localIP, uint16_t localPort);
+  void stopListening_(ZiIP localIP, uint16_t localPort);	// Rx thread
 
   void connect(
       ZiConnectFn fn, ZiFailFn failFn,
       ZiIP localIP, uint16_t localPort,
       ZiIP remoteIP, uint16_t remotePort,
       ZiCxnOptions options = ZiCxnOptions());
-  void connect_(
+  void connect_(						// Rx thread
       ZiConnectFn fn, ZiFailFn failFn,
       ZiIP localIP, uint16_t localPort,
       ZiIP remoteIP, uint16_t remotePort,
@@ -1013,7 +1029,7 @@ public:
       ZiIP localIP, uint16_t localPort,
       ZiIP remoteIP, uint16_t remotePort,
       ZiCxnOptions options = ZiCxnOptions());
-  void udp_(
+  void udp_(							// Rx thread
       ZiConnectFn fn, ZiFailFn failFn,
       ZiIP localIP, uint16_t localPort,
       ZiIP remoteIP, uint16_t remotePort,
@@ -1066,6 +1082,8 @@ public:
 #endif
   ZuInline unsigned rxBufSize() const { return m_rxBufSize; }
   ZuInline unsigned txBufSize() const { return m_txBufSize; }
+
+  void telemetry(ZiMxTelemetry &data) const;
 
 private:
   void drain();			// prevents mis-use of ZmScheduler::drain

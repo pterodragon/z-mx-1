@@ -80,6 +80,10 @@ struct ZvSchedulerParams : public ZmSchedulerParams {
     ll(cf->getInt("ll", 0, 1, false, ll()));
     spin(cf->getInt("spin", 0, INT_MAX, false, spin()));
     timeout(cf->getInt("timeout", 0, 3600, false, timeout()));
+    if (const ZtArray<ZtString> *names =
+	cf->getMultiple("names", 0, nThreads()))
+      for (unsigned i = 0, n = names->length(); i < n; i++)
+	name(i + 1, (*names)[i]);
   }
 };
 

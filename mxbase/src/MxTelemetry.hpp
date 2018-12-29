@@ -67,52 +67,22 @@ namespace MxTelemetry {
     ZuInline const void *body() const { return (const void *)&this[1]; }
   };
 
-  typedef uint64_t Bitmap;
- 
   struct Heap {
     enum { Code = Type::Heap };
 
-    MxIDString	id;
-    uint64_t	cacheSize;
-    Bitmap	cpuset;
-    uint64_t	cacheAllocs;
-    uint64_t	heapAllocs;
-    uint64_t	frees;
-    uint64_t	allocated;
-    uint64_t	maxAllocated;
-    uint32_t	size;
-    uint16_t	partition;
-    uint8_t	alignment;
+    ZmHeapTelemetry	data;
   };
 
   struct Thread {
     enum { Code = Type::Thread };
 
-    MxIDString	name;
-    uint64_t	tid;
-    uint64_t	stackSize;
-    Bitmap	cpuset;
-    int32_t	id;		// thread mgr ID, -ve if unset
-    int32_t	priority;
-    uint16_t	partition;
-    uint8_t	main;
-    uint8_t	detached;
+    ZmThreadTelemetry	data;
   };
 
   struct Multiplexer {	
     enum { Code = Type::Multiplexer };
 
-    MxID	id;
-    Bitmap	isolation;
-    uint32_t	stackSize;
-    uint32_t	rxBufSize;
-    uint32_t	txBufSize;
-    uint16_t	rxThread;
-    uint16_t	txThread;
-    uint16_t	partition;
-    uint8_t	state;
-    uint8_t	priority;
-    uint8_t	nThreads;
+    ZiMxTelemetry	data;
   };
 
   struct Socket {
@@ -285,10 +255,6 @@ namespace MxTelemetry {
     return msg; \
   }
 
-  DeclFn(heap, Heap)
-  DeclFn(thread, Thread)
-  DeclFn(multiplexer, Multiplexer)
-  DeclFn(socket, Socket)
   DeclFn(hashTbl, HashTbl)
   DeclFn(queue, Queue)
   DeclFn(link, Link)
@@ -306,6 +272,10 @@ namespace MxTelemetry {
     return msg; \
   }
 
+  DeclFn(heap, Heap)
+  DeclFn(thread, Thread)
+  DeclFn(multiplexer, Multiplexer)
+  DeclFn(socket, Socket)
   DeclFn(db, DB)
   DeclFn(dbHost, DBHost)
   DeclFn(dbEnv, DBEnv)

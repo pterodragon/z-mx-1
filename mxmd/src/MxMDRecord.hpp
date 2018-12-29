@@ -79,7 +79,7 @@ protected:
     ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg);
 
 private:
-  int		m_snapThread = -1;
+  unsigned	m_snapThread = 0;
 
   MxMDRecLink	*m_link = 0;
 };

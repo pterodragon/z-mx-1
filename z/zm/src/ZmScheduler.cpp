@@ -44,6 +44,7 @@ ZmScheduler::ZmScheduler(ZmSchedulerParams params) :
   m_runThreads(0)
 {
   m_threads = new Thread[m_nThreads];
+  m_names = new ZmThreadName[m_nThreads];
   m_workers = new Thread *[m_nThreads];
   for (unsigned i = 0; i < m_nThreads; i++) {
     unsigned tid = i + 1;
@@ -58,6 +59,7 @@ ZmScheduler::ZmScheduler(ZmSchedulerParams params) :
       throw ZmRingError(r);
     // if ((r = ring.attach()) != Ring::OK) throw ZmRingError(r);
     if (!(m_isolation && tid)) m_workers[m_nWorkers++] = &m_threads[i];
+    m_names[i] = params.name(tid);
   }
 }
 
@@ -70,6 +72,7 @@ ZmScheduler::~ZmScheduler()
     ring.close();
   }
   delete [] m_workers;
+  delete [] m_names;
   delete [] m_threads;
 }
 
@@ -482,9 +485,17 @@ void ZmScheduler::work()
   m_stopped.post();
 }
 
-void ZmScheduler::threadName(unsigned tid, ZmThreadName &s)
+void ZmScheduler::threadName(unsigned tid, ZmThreadName &s) const
 {
   s.null();
+  if (!tid) {
+    s << m_id << ":timer";
+    return;
+  }
+  if (const auto &name = m_names[tid - 1]) {
+    s << m_id << ':' << name;
+    return;
+  }
   s << m_id << ':' << ZuBoxed(tid);
 }
 

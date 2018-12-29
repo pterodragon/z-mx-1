@@ -69,10 +69,8 @@ struct ZvMultiplexParams : public ZiMultiplexParams {
     if (!cf) return;
 
     scheduler().init(cf);
-    rxThread(cf->getInt("rxThread",
-	  1, scheduler().nThreads() + 1, false, rxThread()));
-    txThread(cf->getInt("txThread",
-	  1, scheduler().nThreads() + 1, false, txThread()));
+    if (const auto &name = cf->get("rxThread")) rxThread(scheduler().tid(name));
+    if (const auto &name = cf->get("txThread")) txThread(scheduler().tid(name));
 #ifdef ZiMultiplex_EPoll
     epollMaxFDs(cf->getInt("epollMaxFDs", 1, 100000, false, epollMaxFDs()));
     epollQuantum(cf->getInt("epollQuantum", 1, 1024, false, epollQuantum()));

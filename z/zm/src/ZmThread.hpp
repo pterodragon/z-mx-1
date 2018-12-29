@@ -62,20 +62,20 @@ struct ZmThreadPriority {
 
 typedef ZuStringN<32> ZmThreadName;
 
-struct ZmThreadInfo {
+struct ZmThreadTelemetry {
   ZmThreadName	name;
-  int		id;
-  ZmThreadID	tid;
-  bool		main;
-  bool		detached;
-  unsigned	stackSize;
-  int		priority;
-  unsigned	partition;
-  ZmBitmap	cpuset;
+  uint64_t	tid;
+  uint64_t	stackSize;
+  uint64_t	cpuset;
+  int32_t	id;		// thread mgr ID, -ve if unset
+  int32_t	priority;
+  uint16_t	partition;
+  uint8_t	main;
+  uint8_t	detached;
 };
 
 struct ZmAPI ZmThreadMgr {
-  virtual void threadName(unsigned tid, ZmThreadName &) = 0;
+  virtual void threadName(unsigned tid, ZmThreadName &) const = 0;
 };
 
 #ifndef _WIN32
@@ -267,16 +267,16 @@ public:
 
   ZuInline void *result() const { return m_result; }
 
-  inline void info(ZmThreadInfo &info) const {
-    name(info.name);
-    info.id = m_id;
-    info.tid = tid();
-    info.main = this->main();
-    info.detached = m_detached;
-    info.stackSize = m_stackSize;
-    info.priority = m_priority;
-    info.partition = m_partition;
-    info.cpuset = m_cpuset;
+  inline void telemetry(ZmThreadTelemetry &data) const {
+    name(data.name);
+    data.tid = tid();
+    data.stackSize = m_stackSize;
+    data.cpuset = m_cpuset.uint64();
+    data.id = m_id;
+    data.priority = m_priority;
+    data.partition = m_partition;
+    data.main = this->main();
+    data.detached = m_detached;
   }
 
   template <typename S> inline void print(S &s) const {
@@ -368,25 +368,24 @@ public:
   ZuInline bool operator !() const { return !m_context; }
   ZuOpBool
 
-  typedef ZmFn<const ZmThreadInfo &> InfoFn;
-  static void info(InfoFn fn);
-
   template <class S> struct CSV_ {
     CSV_(S &stream) : m_stream(stream) { 
       m_stream <<
 	"name,id,tid,main,detached,stackSize,priority,partition,cpuset\n";
     }
-    void print(const ZmThreadInfo &info) {
+    void print(const ZmThreadContext *tc) {
+      ZmThreadTelemetry data;
+      tc->telemetry(data);
       m_stream <<
-	info.name << ',' <<
-	ZuBoxed(info.id) << ',' <<
-	ZuBoxed(info.tid) << ',' <<
-	ZuBoxed((unsigned)info.main) << ',' <<
-	ZuBoxed((unsigned)info.detached) << ',' <<
-	ZuBoxed(info.stackSize) << ',' <<
-	ZuBoxed(info.priority) << ',' <<
-	ZuBoxed(info.partition) << ',' <<
-	info.cpuset << '\n';
+	data.name << ',' <<
+	ZuBoxed(data.id) << ',' <<
+	ZuBoxed(data.tid) << ',' <<
+	ZuBoxed((unsigned)data.main) << ',' <<
+	ZuBoxed((unsigned)data.detached) << ',' <<
+	ZuBoxed(data.stackSize) << ',' <<
+	ZuBoxed(data.priority) << ',' <<
+	ZuBoxed(data.partition) << ',' <<
+	ZmBitmap(data.cpuset) << '\n';
     }
     S &stream() { return m_stream; }
 
@@ -396,11 +395,11 @@ public:
   struct CSV {
     template <typename S> void print(S &s) const {
       CSV_<S> csv(s);
-      ZmThread::info(InfoFn::Member<&CSV_<S>::print>::fn(&csv));
+      ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{
+	  [](CSV_<S> *csv, ZmThreadContext *tc) { csv->print(tc); }, &csv});
     }
   };
   inline static CSV csv() { return CSV(); }
-  static void dump();
 
 private:
   ZmRef<Context>	m_context;

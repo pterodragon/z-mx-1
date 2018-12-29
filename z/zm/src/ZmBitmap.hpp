@@ -117,12 +117,6 @@ public:
     return *this;
   }
 
-  template <typename T> inline ZmBitmap(const T &t,
-    typename ZuIfT<
-      ZuConversion<T, int>::Same ||
-      ZuConversion<T, Range>::Same>::T *_ = 0) :
-    m_map(hwloc_bitmap_alloc()) { operator <<(t); }
-
   inline bool operator &&(unsigned i) const {
     if (!m_map) return false;
     return hwloc_bitmap_isset(m_map, i);
@@ -229,9 +223,16 @@ public:
     return m_map;
   }
 
+  inline ZmBitmap(uint64_t v) :
+      m_map(hwloc_bitmap_alloc()) { hwloc_bitmap_from_ulong(m_map, v); }
   inline uint64_t uint64() const {
     if (ZuLikely(!m_map)) return 0;
     return hwloc_bitmap_to_ulong(m_map);
+  }
+  inline ZmBitmap(uint128_t v) :
+      m_map(hwloc_bitmap_alloc()) {
+    hwloc_bitmap_from_ith_ulong(m_map, 0, (uint64_t)v);
+    hwloc_bitmap_from_ith_ulong(m_map, 1, (uint64_t)(v >> 64U));
   }
   inline uint128_t uint128() const {
     if (ZuLikely(!m_map)) return 0;

@@ -753,48 +753,58 @@ void ZiMultiplex::executedConnect(ZiConnectFn fn, const ZiCxnInfo &ci)
 	(int)ci.socket, inet_ntoa(ci.remoteIP), (unsigned)ci.remotePort));
 }
 
-void ZiMultiplex::allCxns(ZmFn<const ZiCxnTelemetry &> fn)
+void ZiConnection::telemetry(ZiCxnTelemetry &data) const
+{
+  unsigned rxBufSize = 0;
+  unsigned txBufSize = 0;
+  socklen_t l = sizeof(unsigned);
+  getsockopt(m_info.socket, SOL_SOCKET, SO_RCVBUF, (char *)&rxBufSize, &l);
+  getsockopt(m_info.socket, SOL_SOCKET, SO_SNDBUF, (char *)&txBufSize, &l);
+#ifdef ZiMultiplex_EPoll
+  int rxBufLen = 0;
+  int txBufLen = 0;
+  ioctl(m_info.socket, SIOCINQ, &rxBufLen);
+  ioctl(m_info.socket, SIOCOUTQ, &txBufLen);
+#endif
+#ifdef ZiMultiplex_IOCP
+  u_long rxBufLen = 0;
+  u_long txBufLen = 0; // WinDoze - txBufLen is unavailable
+  ioctlsocket(m_info.socket, FIONREAD, &rxBufLen);
+#endif
+  ZiIP mreqAddr, mreqIf;
+  const auto &mreqs = m_info.options.mreqs();
+  if (mreqs.length()) {
+    mreqAddr = mreqs[0].imr_multiaddr;
+    mreqIf = mreqs[0].imr_interface;
+  }
+  data.mxID = m_mx->id();
+  data.socket = m_info.socket;
+  data.rxBufSize = rxBufSize;
+  data.rxBufLen = rxBufLen;
+  data.txBufSize = txBufSize;
+  data.txBufLen = txBufLen;
+  data.flags = m_info.options.flags();
+  data.mreqAddr = mreqAddr;
+  data.mreqIf = mreqIf;
+  data.mif = m_info.options.mif();
+  data.ttl = m_info.options.ttl();
+  data.localIP = m_info.localIP;
+  data.remoteIP = m_info.remoteIP;
+  data.localPort = m_info.localPort;
+  data.remotePort = m_info.remotePort;
+  data.type = m_info.type;
+}
+
+void ZiMultiplex::allCxns(ZmFn<ZiConnection *> fn)
 {
   rxInvoke([this, fn = ZuMv(fn)]() mutable { this->allCxns_(ZuMv(fn)); });
 }
 
-void ZiMultiplex::allCxns_(ZmFn<const ZiCxnTelemetry &> fn)
+void ZiMultiplex::allCxns_(ZmFn<ZiConnection *> fn)
 {
   auto i = m_cxns.readIterator();
-  while (auto node = i.iterate())
-    txRun([this, fn, ci = node->key()->info()]() {
-	ZiPlatform::Socket s = ci.socket;
-	unsigned rxBufSize = 0;
-	unsigned txBufSize = 0;
-	socklen_t l = sizeof(unsigned);
-	getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&rxBufSize, &l);
-	getsockopt(s, SOL_SOCKET, SO_SNDBUF, (char *)&txBufSize, &l);
-#ifdef ZiMultiplex_EPoll
-	int rxBufLen = 0;
-	int txBufLen = 0;
-	ioctl(s, SIOCINQ, &rxBufLen);
-	ioctl(s, SIOCOUTQ, &txBufLen);
-#endif
-#ifdef ZiMultiplex_IOCP
-	u_long rxBufLen = 0;
-	u_long txBufLen = 0; // WinDoze - txBufLen is unavailable
-	ioctlsocket(s, FIONREAD, &rxBufLen);
-#endif
-	ZiIP mreqAddr, mreqIf;
-	const auto &mreqs = ci.options.mreqs();
-	if (mreqs.length()) {
-	  mreqAddr = mreqs[0].imr_multiaddr;
-	  mreqIf = mreqs[0].imr_interface;
-	}
-	fn(ZiCxnTelemetry{
-	    this->id(), (uint64_t)ci.socket,
-	    rxBufSize, (uint32_t)rxBufLen,
-	    txBufSize, (uint32_t)txBufLen,
-	    ci.options.flags(),
-	    mreqAddr, mreqIf, ci.options.mif(), ci.options.ttl(),
-	    ci.localIP, ci.remoteIP, ci.localPort, ci.remotePort,
-	    (uint8_t)ci.type});
-    });
+  while (ZmRef<ZiConnection> cxn = i.iterateKey())
+    txRun([fn, cxn = ZuMv(cxn)]() { fn(cxn); });
 }
 
 void ZiMultiplex::listen(
@@ -1912,6 +1922,8 @@ ZiMultiplex::ZiMultiplex(ZiMultiplexParams params) :
   m_yield(params.yield())
 #endif
 {
+  if (!name(m_rxThread)) name(m_rxThread, "ioRx");
+  if (!name(m_txThread)) name(m_txThread, "ioTx");
 }
 
 ZiMultiplex::~ZiMultiplex()
@@ -2294,3 +2306,18 @@ void ZiMultiplex::writeWake()
   }
 }
 #endif
+
+void ZiMultiplex::telemetry(ZiMxTelemetry &data) const
+{
+  data.id = id();
+  data.isolation = isolation().uint64();
+  data.stackSize = stackSize();
+  data.rxBufSize = rxBufSize();
+  data.txBufSize = txBufSize(),
+  data.rxThread = rxThread();
+  data.txThread = txThread();
+  data.partition = partition();
+  data.state = state();
+  data.priority = priority();
+  data.nThreads = nThreads();
+}

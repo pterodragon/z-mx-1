@@ -15,13 +15,13 @@ class App : public MxTelemetry::Client {
       case Type::Heap:
 	{
 	  const Heap &heap = msg->as<Heap>();
-	  std::cout << "  id: " << heap.id << '\n' << std::flush;
+	  std::cout << "  id: " << heap.data.id << '\n' << std::flush;
 	}
 	break;
       case Type::Thread:
 	{
 	  const Thread &thread = msg->as<Thread>();
-	  std::cout << "  name: " << thread.name << '\n' << std::flush;
+	  std::cout << "  name: " << thread.data.name << '\n' << std::flush;
 	}
     }
   }

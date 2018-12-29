@@ -76,10 +76,11 @@ void ZdbEnv::init(const ZdbEnvConfig &config, ZiMultiplex *mx,
     ZeLOG(Fatal, "ZdbEnv::init called out of order");
     return;
   }
-  if (!config.writeThread ||
-      config.writeThread > mx->nThreads() ||
-      config.writeThread == mx->rxThread() ||
-      config.writeThread == mx->txThread()) {
+  config.writeTID = mx->tid(config.writeThread);
+  if (!config.writeTID ||
+      config.writeTID > mx->nThreads() ||
+      config.writeTID == mx->rxThread() ||
+      config.writeTID == mx->txThread()) {
     ZeLOG(Fatal, ZtString() <<
 	"Zdb writeThread misconfigured: " << config.writeThread);
     return;
@@ -478,7 +479,7 @@ void ZdbEnv::telemetry(Telemetry &data) const
   data.heartbeatTimeout = m_config.heartbeatTimeout;
   data.reconnectFreq = m_config.reconnectFreq;
   data.electionTimeout = m_config.electionTimeout;
-  data.writeThread = m_config.writeThread;
+  data.writeThread = m_config.writeTID;
 
   ReadGuard guard(m_lock);
   data.nCxns = m_cxns->count();
@@ -1660,7 +1661,7 @@ void ZdbAny::close()
 void ZdbAny::checkpoint()
 {
   m_env->mx()->run(
-      m_env->config().writeThread,
+      m_env->config().writeTID,
       ZmFn<>::Member<&ZdbAny::checkpoint_>::fn(ZmMkRef(this)));
 }
 
@@ -1879,7 +1880,7 @@ void ZdbAny::telemetry(Telemetry &data) const
 void ZdbEnv::write(ZdbAnyPOD *pod, ZdbRange range, int op)
 {
   ZmRef<ZdbAnyPOD_Write> write = new ZdbAnyPOD_Write(pod, range, op);
-  m_mx->run(m_config.writeThread,
+  m_mx->run(m_config.writeTID,
       ZmFn<>::Member<&ZdbAnyPOD_Write__::write>::fn(write));
 }
 

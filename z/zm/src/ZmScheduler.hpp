@@ -193,20 +193,48 @@ private:
 // generic printing
 template <> struct ZuPrint<ZmAffinity> : public ZuPrintFn { };
 
-class ZmSchedulerParams {
+template <typename T> struct ZmScheduler_Names {
+  inline unsigned nThreads() const {
+    return static_cast<const T *>(this)->nThreads();
+  }
+  inline const ZmThreadName &name(unsigned tid) const {
+    static ZmThreadName null;
+    if (!tid || tid > nThreads()) return null;
+    return m_names[tid - 1];
+  }
+  template <typename S> inline void name(unsigned tid, S &&s) {
+    if (!tid || tid > nThreads()) return;
+    m_names[tid - 1] = ZuFwd<S>(s);
+  }
+  template <typename S> inline unsigned tid(const S &s) {
+    if (unsigned tid = ZuBox<unsigned>(s))
+      return tid;
+    for (unsigned tid = 0, n = nThreads(); tid < n; tid++)
+      if (s == m_names[tid]) return tid + 1;
+    return 0;
+  }
+
+protected:
+  ZmThreadName	*m_names = 0;
+};
+
+class ZmSchedulerParams : public ZmScheduler_Names<ZmSchedulerParams> {
 public:
   typedef ZuID ID;
 
-  inline ZmSchedulerParams() :
-      m_nThreads(1), m_stackSize(0),
-      m_priority(ZmThreadPriority::Normal), m_partition(0),
-      m_quantum(.01), m_queueSize(131072),
-      m_ll(false), m_spin(1000), m_timeout(1) { }
+  inline ZmSchedulerParams() {
+    if (m_nThreads) m_names = new ZmThreadName[m_nThreads];
+  }
+  inline ~ZmSchedulerParams() { delete [] m_names; }
 
   template <typename S> inline ZmSchedulerParams &id(const S &s)
     { m_id = s; return *this; }
-  inline ZmSchedulerParams &nThreads(unsigned v)
-    { m_nThreads = v; return *this; }
+  inline ZmSchedulerParams &nThreads(unsigned v) {
+    m_nThreads = v;
+    delete [] m_names;
+    m_names = new ZmThreadName[v];
+    return *this;
+  }
   inline ZmSchedulerParams &stackSize(unsigned v)
     { m_stackSize = v; return *this; }
   inline ZmSchedulerParams &priority(unsigned v)
@@ -245,23 +273,24 @@ public:
 
 private:
   ID		m_id;
-  unsigned	m_nThreads;
-  unsigned	m_stackSize;
-  unsigned	m_priority;
-  unsigned	m_partition;
+  unsigned	m_nThreads = 1;
+  unsigned	m_stackSize = 0;
+  unsigned	m_priority = ZmThreadPriority::Normal;
+  unsigned	m_partition = 0;
   ZmAffinity	m_affinity;
   ZmBitmap	m_isolation;
-  ZmTime	m_quantum;
+  ZmTime	m_quantum = .01;
 
-  unsigned	m_queueSize;
-  bool		m_ll;
-  unsigned	m_spin;
-  unsigned	m_timeout;
+  unsigned	m_queueSize = 131072;
+  bool		m_ll = false;
+  unsigned	m_spin = 1000;
+  unsigned	m_timeout = 1;
 };
 
-class ZmAPI ZmScheduler : public ZmThreadMgr {
-  ZmScheduler(const ZmScheduler &);
-  ZmScheduler &operator =(const ZmScheduler &);	// prevent mis-use
+class ZmAPI ZmScheduler :
+    public ZmThreadMgr, public ZmScheduler_Names<ZmScheduler> {
+  ZmScheduler(const ZmScheduler &) = delete;
+  ZmScheduler &operator =(const ZmScheduler &) = delete;
 
   struct ScheduleTree_HeapID {
     inline static const char *id() { return "ZmScheduler.ScheduleTree"; }
@@ -298,7 +327,6 @@ public:
     return m_state;
   }
 
-public:
   void wakeFn(unsigned tid, ZmFn<> fn);
 
   enum { Update = 0, Advance, Defer };
@@ -411,7 +439,7 @@ public:
   inline unsigned timeout() const
     { return m_threads[0].ring.params().timeout(); }
 
-  void threadName(unsigned tid, ZmThreadName &s);
+  void threadName(unsigned tid, ZmThreadName &s) const;
 
 protected:
   void runThreads();

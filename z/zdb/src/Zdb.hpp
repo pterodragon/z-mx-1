@@ -974,7 +974,7 @@ friend class ZdbAnyPOD_Send__;
 struct ZdbEnvConfig {
   inline ZdbEnvConfig() { }
   inline ZdbEnvConfig(ZvCf *cf) {
-    writeThread = cf->getInt("writeThread", 1, INT_MAX, true);
+    writeThread = cf->get("writeThread", true);
     {
       ZvCf::Iterator i(cf->subset("dbs", false, true));
       ZuString key;
@@ -1003,7 +1003,8 @@ struct ZdbEnvConfig {
 #endif
   }
 
-  unsigned			writeThread = 0;
+  ZmThreadName			writeThread;
+  mutable unsigned		writeTID = 0;
   ZtArray<ZdbConfig>		dbCfs;
   unsigned			hostID = 0;
   ZtArray<ZdbHostConfig>	hostCfs;
@@ -1122,23 +1123,23 @@ public:
   }
 
   struct Telemetry {
-    uint32_t	nCxns;
-    uint32_t	heartbeatFreq;
-    uint32_t	heartbeatTimeout;
-    uint32_t	reconnectFreq;
-    uint32_t	electionTimeout;
-    uint32_t	self;		// host ID 
-    uint32_t	master;		// ''
-    uint32_t	prev;		// ''
-    uint32_t	next;		// ''
-    uint16_t	writeThread;
-    uint8_t	nHosts;
-    uint8_t	nPeers;
-    uint8_t	nDBs;
-    uint8_t	state;		// same as hosts[hostID].state
-    uint8_t	active;
-    uint8_t	recovering;
-    uint8_t	replicating;
+    uint32_t		nCxns;
+    uint32_t		heartbeatFreq;
+    uint32_t		heartbeatTimeout;
+    uint32_t		reconnectFreq;
+    uint32_t		electionTimeout;
+    uint32_t		self;		// host ID 
+    uint32_t		master;		// ''
+    uint32_t		prev;		// ''
+    uint32_t		next;		// ''
+    uint16_t		writeThread;
+    uint8_t		nHosts;
+    uint8_t		nPeers;
+    uint8_t		nDBs;
+    uint8_t		state;		// same as hosts[hostID].state
+    uint8_t		active;
+    uint8_t		recovering;
+    uint8_t		replicating;
   };
 
   void telemetry(Telemetry &data) const;

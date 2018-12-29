@@ -103,15 +103,14 @@ private:
     }
   }
 
-  void stats(StatsFn fn) {
+  void all(ZmFn<ZmHeapCache *> fn) {
     ZmRef<ZmHeapCache> c;
     {
       ReadGuard guard(m_lock);
       c = m_caches3.minimumKey();
     }
     while (c) {
-      c->allStats();
-      fn(c->info(), c->stats());
+      fn(c);
       {
 	ReadGuard guard(m_lock);
 	c = m_caches3.readIterator<ZmRBTreeGreater>(
@@ -170,9 +169,9 @@ void ZmHeapMgr::init(
   ZmHeapMgr_::instance()->init(id, partition, config);
 }
 
-void ZmHeapMgr::stats(StatsFn fn)
+void ZmHeapMgr::all(ZmFn<ZmHeapCache *> fn)
 {
-  ZmHeapMgr_::instance()->stats(fn);
+  ZmHeapMgr_::instance()->all(ZuMv(fn));
 }
 
 #ifdef ZmHeap_DEBUG
@@ -334,15 +333,34 @@ void ZmHeapCache::free_(ZmHeapCache *self, void *p)
   ::free(p);
 }
 
-void ZmHeapCache::allStats()
+void ZmHeapCache::allStats() const
 {
   m_stats = {};
   StatsFn fn = StatsFn::Lambda<ZmNoHeap>::fn(
-      [this](const ZmHeapInfo &, const ZmHeapStats &s) {
+      [this](const ZmHeapStats &s) {
 	m_stats.heapAllocs += s.heapAllocs;
 	m_stats.cacheAllocs += s.cacheAllocs;
 	m_stats.frees += s.frees;
 	m_stats.allocated += s.allocated;
 	m_stats.maxAllocated += s.maxAllocated; });
-  m_allStatsFn(fn);
+  m_allStatsFn(ZuMv(fn));
+}
+
+void ZmHeapCache::telemetry(ZmHeapTelemetry &data) const
+{
+  allStats();
+  const ZmHeapInfo &info = this->info();
+  const ZmHeapStats &stats = this->stats();
+  data.id = info.id;
+  data.cacheSize = info.config.cacheSize;
+  data.cpuset = info.config.cpuset.uint64();
+  data.cacheAllocs = stats.cacheAllocs;
+  data.heapAllocs = stats.heapAllocs;
+  data.frees = stats.frees;
+  data.allocated = stats.allocated;
+  data.maxAllocated = stats.maxAllocated;
+  data.size = info.size;
+  data.partition = info.partition;
+  data.sharded = info.sharded;
+  data.alignment = info.config.alignment;
 }

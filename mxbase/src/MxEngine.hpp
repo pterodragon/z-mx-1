@@ -293,10 +293,14 @@ public:
     m_processFn = app->processFn();
     m_id = cf->get("id", true);
     m_mx = mx;
-    m_rxThread =
-      cf->getInt("rxThread", 1, mx->nThreads() + 1, false, mx->rxThread());
-    m_txThread =
-      cf->getInt("txThread", 1, mx->nThreads() + 1, false, mx->txThread());
+    if (const auto &name = cf->get("rxThread"))
+      m_rxThread = mx->tid(name);
+    else
+      m_rxThread = mx->rxThread();
+    if (const auto &name = cf->get("txThread"))
+      m_txThread = mx->tid(name);
+    else
+      m_txThread = mx->txThread();
   }
   void final();
 

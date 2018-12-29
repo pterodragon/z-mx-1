@@ -10,26 +10,12 @@ class App : public MxTelemetry::Server {
   void run(MxTelemetry::Server::Cxn *cxn) {
     using namespace MxTelemetry;
 
-    ZmHeapMgr::stats(ZmHeapMgr::StatsFn{
-	[](Cxn *cxn, const ZmHeapInfo &info, const ZmHeapStats &stats) {
-	  cxn->transmit(heap(
-		info.id, info.config.cacheSize, info.config.cpuset.uint64(),
-		stats.cacheAllocs, stats.heapAllocs, stats.frees,
-		stats.allocated, stats.maxAllocated,
-		info.size, (uint16_t)info.partition,
-		(uint8_t)info.config.alignment));
-	}, cxn});
+    ZmHeapMgr::all(ZmFn<ZmHeapCache *>{
+	[](Cxn *cxn, ZmHeapCache *h) { cxn->transmit(heap(*h)); }, cxn});
 
     ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{
 	[](Cxn *cxn, ZmThreadContext *tc) {
-	  ZmThreadName name;
-	  tc->name(name);
-	  cxn->transmit(thread(
-		name, (uint64_t)tc->tid(), tc->stackSize(),
-		tc->cpuset().uint64(), tc->id(),
-		tc->priority(), (uint16_t)tc->partition(),
-		tc->main(), tc->detached()));
-	}, cxn});
+	  cxn->transmit(thread(*tc)); }, cxn});
   }
 };
 

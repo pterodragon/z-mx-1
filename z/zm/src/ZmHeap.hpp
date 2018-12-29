@@ -33,6 +33,7 @@
 #include <ZuNew.hpp>
 #include <ZuTuple.hpp>
 #include <ZuPrint.hpp>
+#include <ZuStringN.hpp>
 
 #include <ZmPlatform.hpp>
 #include <ZmBitmap.hpp>
@@ -59,25 +60,40 @@ template <class ID, unsigned Size> class ZmHeap;
 template <class ID, unsigned Size> class ZmHeapCacheT;
 
 struct ZmHeapConfig {
-  unsigned		alignment;
-  uint64_t		cacheSize;
-  ZmBitmap		cpuset;
+  unsigned	alignment;
+  uint64_t	cacheSize;
+  ZmBitmap	cpuset;
 };
 
 struct ZmHeapInfo {
-  const char		*id;
-  unsigned		size;
-  unsigned		partition;
-  bool			sharded;
-  ZmHeapConfig		config;
+  const char	*id;
+  unsigned	size;
+  unsigned	partition;
+  bool		sharded;
+  ZmHeapConfig	config;
 };
 
 struct ZmHeapStats {
-  uint64_t		heapAllocs;
-  uint64_t		cacheAllocs;
-  uint64_t		frees;
-  uint64_t		allocated;
-  uint64_t		maxAllocated;
+  uint64_t	heapAllocs;
+  uint64_t	cacheAllocs;
+  uint64_t	frees;
+  uint64_t	allocated;
+  uint64_t	maxAllocated;
+};
+
+struct ZmHeapTelemetry {
+  ZuStringN<28>	id;
+  uint64_t	cacheSize;
+  uint64_t	cpuset;
+  uint64_t	cacheAllocs;
+  uint64_t	heapAllocs;
+  uint64_t	frees;
+  uint64_t	allocated;
+  uint64_t	maxAllocated;
+  uint32_t	size;
+  uint16_t	partition;
+  uint8_t	sharded;
+  uint8_t	alignment;
 };
 
 // cache (LIFO free list) of fixed-size blocks; one per CPU set / NUMA node
@@ -92,7 +108,9 @@ template <class, unsigned> friend class ZmHeapCacheT;
   typedef ZmPLock Lock;
   typedef ZmGuard<Lock> Guard;
 
-  typedef ZmFn<const ZmHeapInfo &, const ZmHeapStats &> StatsFn;
+  typedef ZmFn<const ZmHeapTelemetry &> TelemetryFn;
+
+  typedef ZmFn<const ZmHeapStats &> StatsFn;
   typedef ZmFn<StatsFn> AllStatsFn;
 
   struct IDAccessor : public ZuAccessor<ZmHeapCache *, const char *> {
@@ -129,6 +147,7 @@ public:
 
   ZuInline const ZmHeapInfo &info() const { return m_info; }
   ZuInline const ZmHeapStats &stats() const { return m_stats; }
+  void telemetry(ZmHeapTelemetry &data) const;
 
 #ifdef ZmHeap_DEBUG
   typedef void (*TraceFn)(const char *, unsigned);
@@ -174,7 +193,7 @@ private:
     if (m_head.cmpXch((uintptr_t)p, n) != n) goto loop;
   }
 
-  void allStats();
+  void allStats() const;
 
   // cache, end, next are guarded by ZmHeapMgr
 
@@ -193,7 +212,7 @@ private:
   TraceFn		m_traceFreeFn;
 #endif
 
-  ZmHeapStats		m_stats;	// aggregated on demand
+  mutable ZmHeapStats	m_stats;	// aggregated on demand
 };
 
 class ZmAPI ZmHeapMgr {
@@ -206,22 +225,24 @@ template <class, unsigned> friend class ZmHeapCacheT;
       m_stream <<
 	"ID,size,partition,sharded,alignment,cacheSize,cpuset,"
 	"cacheAllocs,heapAllocs,frees,allocated,maxAllocated\n";
-      ZmHeapMgr::stats(StatsFn::Member<&CSV_::print_>::fn(this));
+      ZmHeapMgr::all(ZmFn<ZmHeapCache *>::Member<&CSV_::print_>::fn(this));
     }
-    void print_(const ZmHeapInfo &info, const ZmHeapStats &stats) {
+    void print_(ZmHeapCache *c) {
+      ZmHeapTelemetry data;
+      c->telemetry(data);
       m_stream <<
-	info.id << ',' <<
-	ZuBoxed(info.size) << ',' <<
-	ZuBoxed(info.partition) << ',' <<
-	(info.sharded ? "1," : "0,") <<
-	ZuBoxed(info.config.alignment) << ',' <<
-	ZuBoxed(info.config.cacheSize) << ',' <<
-	info.config.cpuset << ',' <<
-	ZuBoxed(stats.cacheAllocs) << ',' <<
-	ZuBoxed(stats.heapAllocs) << ',' <<
-	ZuBoxed(stats.frees) << ',' <<
-	ZuBoxed(stats.allocated) << ',' <<
-	ZuBoxed(stats.maxAllocated) << '\n';
+	data.id << ',' <<
+	ZuBoxed(data.size) << ',' <<
+	ZuBoxed(data.partition) << ',' <<
+	ZuBoxed(data.sharded) << ',' <<
+	ZuBoxed(data.alignment) << ',' <<
+	ZuBoxed(data.cacheSize) << ',' <<
+	ZmBitmap(data.cpuset) << ',' <<
+	ZuBoxed(data.cacheAllocs) << ',' <<
+	ZuBoxed(data.heapAllocs) << ',' <<
+	ZuBoxed(data.frees) << ',' <<
+	ZuBoxed(data.allocated) << ',' <<
+	ZuBoxed(data.maxAllocated) << '\n';
     }
 
   private:
@@ -232,9 +253,7 @@ public:
   static void init(
       const char *id, unsigned partition, const ZmHeapConfig &config);
 
-  typedef ZmHeapCache::StatsFn StatsFn;
-
-  static void stats(StatsFn fn);
+  static void all(ZmFn<ZmHeapCache *> fn);
 
   struct CSV {
     template <typename S> ZuInline void print(S &s) const {
@@ -366,7 +385,7 @@ template <class ID, unsigned Size>
 inline void ZmHeapCacheT<ID, Size>::allStats(StatsFn fn)
 {
   TLS::all(ZmFn<ZmHeapCacheT *>::template Lambda<ZmNoHeap>::fn(
-	[fn](ZmHeapCacheT *c) { fn(c->m_cache->info(), c->m_stats); }));
+	[fn](ZmHeapCacheT *c) { fn(c->m_stats); }));
 }
 
 #ifdef _MSC_VER

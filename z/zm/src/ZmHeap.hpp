@@ -51,8 +51,6 @@
 #pragma warning(disable:4251 4275 4996)
 #endif
 
-#define ZmHeapIDSize	64	// max size of a heap ID incl. null terminator
-
 class ZmHeapMgr;
 class ZmHeapMgr_;
 class ZmHeapCache;
@@ -63,6 +61,7 @@ struct ZmHeapConfig {
   unsigned	alignment;
   uint64_t	cacheSize;
   ZmBitmap	cpuset;
+  unsigned	telFreq;
 };
 
 struct ZmHeapInfo {
@@ -82,7 +81,7 @@ struct ZmHeapStats {
 };
 
 struct ZmHeapTelemetry {
-  ZuStringN<28>	id;
+  ZmIDString	id;
   uint64_t	cacheSize;
   uint64_t	cpuset;
   uint64_t	cacheAllocs;
@@ -107,8 +106,6 @@ template <class, unsigned> friend class ZmHeapCacheT;
 
   typedef ZmPLock Lock;
   typedef ZmGuard<Lock> Guard;
-
-  typedef ZmFn<const ZmHeapTelemetry &> TelemetryFn;
 
   typedef ZmFn<const ZmHeapStats &> StatsFn;
   typedef ZmFn<StatsFn> AllStatsFn;
@@ -147,6 +144,14 @@ public:
 
   ZuInline const ZmHeapInfo &info() const { return m_info; }
   ZuInline const ZmHeapStats &stats() const { return m_stats; }
+  ZuInline unsigned telCount() const {
+    unsigned v = m_telCount;
+    if (!v)
+      m_telCount = m_info.config.telFreq;
+    else
+      m_telCount = v - 1;
+    return v;
+  }
   void telemetry(ZmHeapTelemetry &data) const;
 
 #ifdef ZmHeap_DEBUG
@@ -203,9 +208,10 @@ private:
   ZmHeapInfo		m_info;
   ZmHeapCache		*m_next;	// next in partition list
   AllStatsFn		m_allStatsFn;	// aggregates stats from TLS
+  mutable unsigned	m_telCount = 0;	// telemetry count
 
-  void			*m_cache;	// bound memory region
-  void			*m_end;		// end of memory region
+  void			*m_cache = 0;	// bound memory region
+  void			*m_end = 0;	// end of memory region
 
 #ifdef ZmHeap_DEBUG
   TraceFn		m_traceAllocFn;

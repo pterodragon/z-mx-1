@@ -41,15 +41,16 @@
 
 #include <MxBase.hpp>
 #include <MxMultiplex.hpp>
+#include <MxEngine.hpp>
 
 #pragma pack(push, 1)
 
 namespace MxTelemetry {
   namespace Type {
-    MxEnumValues(Heap, Thread, Multiplexer, Socket, HashTbl, Queue,
+    MxEnumValues(Heap, HashTbl, Thread, Multiplexer, Socket, Queue,
 	Engine, Link,
 	DBEnv, DBHost, DB);
-    MxEnumNames("Heap", "Thread", "Multiplexer", "Socket", "HashTbl", "Queue",
+    MxEnumNames("Heap", "HashTbl", "Thread", "Multiplexer", "Socket", "Queue",
 	"Engine", "Link",
 	"DBEnv", "DBHost", "DB");
   }
@@ -67,43 +68,15 @@ namespace MxTelemetry {
     ZuInline const void *body() const { return (const void *)&this[1]; }
   };
 
-  struct Heap {
-    enum { Code = Type::Heap };
+  typedef ZmHeapTelemetry Heap;
 
-    ZmHeapTelemetry	data;
-  };
+  typedef ZmHashTelemetry HashTbl;
 
-  struct Thread {
-    enum { Code = Type::Thread };
+  typedef ZmThreadTelemetry Thread;
 
-    ZmThreadTelemetry	data;
-  };
+  typedef ZiMxTelemetry Multiplexer;
 
-  struct Multiplexer {	
-    enum { Code = Type::Multiplexer };
-
-    ZiMxTelemetry	data;
-  };
-
-  struct Socket {
-    enum { Code = Type::Socket };
-
-    ZiCxnTelemetry	data;
-  };
-
-  struct HashTbl {
-    enum { Code = Type::HashTbl };
-
-    MxIDString	id;
-    uint32_t	nodeSize;
-    uint32_t	loadFactor;	// (double)N / 16.0
-    uint32_t	count;
-    uint32_t	effLoadFactor;	// (double)N / 16.0
-    uint32_t	resized;
-    uint8_t	bits;
-    uint8_t	cBits;
-    uint8_t	linear;
-  };
+  typedef ZiCxnTelemetry Socket;
 
   namespace QueueType {
     MxEnumValues(
@@ -116,8 +89,6 @@ namespace MxTelemetry {
   }
   // RAG for queues - count > 50% size - amber; 75% - red
   struct Queue {
-    enum { Code = Type::Queue };
-
     MxIDString	id;		// is same as Link id for Rx/Tx
     uint64_t	seqNo;		// 0 for Thread, IPC
     uint64_t	count;		// due to overlaps, may not equal in - out
@@ -129,59 +100,23 @@ namespace MxTelemetry {
     uint8_t	type;		// QueueType
   };
 
-  struct Link {
-    enum { Code = Type::Link };
-
-    MxID	id;
-    uint64_t	rxSeqNo;
-    uint64_t	txSeqNo;
-    uint32_t	reconnects;
-    uint8_t	state;
-  };
-
   // followed by
-  //   TxPool[nTxPools]
   //   Link[nLinks]
-  struct Engine {
-    enum { Code = Type::Engine };
+  typedef MxEngine::Telemetry Engine;
 
-    MxID	id;
-    MxID	mxID;
-    uint32_t	down;
-    uint32_t	disabled;
-    uint32_t	transient;
-    uint32_t	up;
-    uint32_t	reconn;
-    uint32_t	failed;
-    uint16_t	nLinks;
-    uint8_t	rxThread;
-    uint8_t	txThread;
-    uint8_t	state;
-  };
+  typedef MxAnyLink::Telemetry Link;
 
-  struct DB {
-    enum { Code = Type::DB };
+  typedef ZdbAny::Telemetry DB;
 
-    ZdbAny::Telemetry	data;
-  };
-
-  struct DBHost {
-    enum { Code = Type::DBHost };
-
-    ZdbHost::Telemetry	data;
-  };
+  typedef ZdbHost::Telemetry DBHost;
 
   // followed by
   //   DBHost[nHosts]
   //   DB[nDBs]
-  struct DBEnv {
-    enum { Code = Type::DBEnv };
-
-    ZdbEnv::Telemetry	data;
-  };
+  typedef ZdbEnv::Telemetry DBEnv;
 
   typedef ZuLargest<
-     Heap, Thread, Multiplexer, Socket, HashTbl, Queue,
+     Heap, HashTbl, Thread, Multiplexer, Socket, Queue,
      Engine, Link,
      DBEnv, DBHost, DB>::T Largest;
 
@@ -245,37 +180,37 @@ namespace MxTelemetry {
 #ifdef DeclFn
 #undef DeclFn
 #endif
-#define DeclFn(Fn, Type) \
+#define DeclFn(Fn, T) \
   template <typename ...Args> \
   inline ZmRef<Msg> Fn(Args &&... args) { \
     ZmRef<Msg> msg = new Msg(); \
-    new (msg->ptr()) Hdr{Type::Code, sizeof(Type)}; \
-    new (msg->body()) Type{ZuFwd<Args>(args)...}; \
+    new (msg->ptr()) Hdr{Type::T, sizeof(T)}; \
+    new (msg->body()) T{ZuFwd<Args>(args)...}; \
     msg->calcLength(); \
     return msg; \
   }
 
-  DeclFn(hashTbl, HashTbl)
   DeclFn(queue, Queue)
-  DeclFn(link, Link)
-  DeclFn(engine, Engine)
 
 #undef DeclFn
-#define DeclFn(Fn, Type) \
+#define DeclFn(Fn, T) \
   template <typename Arg> \
   inline ZmRef<Msg> Fn(const Arg &arg) { \
     ZmRef<Msg> msg = new Msg(); \
-    new (msg->ptr()) Hdr{Type::Code, sizeof(Type)}; \
-    Type *ZuMayAlias(body) = (Type *)msg->body(); \
-    arg.telemetry(body->data); \
+    new (msg->ptr()) Hdr{Type::T, sizeof(T)}; \
+    T *ZuMayAlias(body) = (T *)msg->body(); \
+    arg.telemetry(*body); \
     msg->calcLength(); \
     return msg; \
   }
 
   DeclFn(heap, Heap)
+  DeclFn(hashTbl, HashTbl)
   DeclFn(thread, Thread)
   DeclFn(multiplexer, Multiplexer)
   DeclFn(socket, Socket)
+  DeclFn(engine, Engine)
+  DeclFn(link, Link)
   DeclFn(db, DB)
   DeclFn(dbHost, DBHost)
   DeclFn(dbEnv, DBEnv)

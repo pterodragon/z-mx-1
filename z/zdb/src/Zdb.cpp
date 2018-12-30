@@ -1431,18 +1431,10 @@ void ZdbAny::init(ZdbConfig *config)
   m_config = config;
   if (!m_config->noCache) {
     m_cache = new Zdb_Cache(m_config->cache);
-    {
-      ZmHashStats s;
-      m_cache->report(s);
-      m_cacheSize = ((double)(((uint64_t)1)<<s.bits) * s.loadFactor);
-    }
+    m_cacheSize = m_cache->size();
   }
   m_files = new FileHash(m_config->fileHash);
-  {
-    ZmHashStats s;
-    m_files->report(s);
-    m_filesMax = ((double)(((uint64_t)1)<<s.bits) * s.loadFactor);
-  }
+  m_filesMax = m_files->size();
 }
 
 void ZdbAny::final()

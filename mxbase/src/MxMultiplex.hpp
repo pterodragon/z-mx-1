@@ -48,11 +48,10 @@ public:
   };
 
   template <typename ID_>
-  inline MxMultiplex(const ID_ &id) :
-    ZiMultiplex(ZiMultiplexParams().id(id)) { }
+  inline MxMultiplex(const ID_ &id) : ZiMxParams(ZiMxParams().id(id)) { }
   template <typename ID_>
   inline MxMultiplex(const ID_ &id, ZvCf *cf) :
-    ZiMultiplex(ZvMultiplexParams(cf, ZiMultiplexParams().id(id))) { }
+    ZiMultiplex(ZvMxParams(cf, ZiMxParams().id(id))) { }
 };
 
 #endif /* MxMultiplex_HPP */

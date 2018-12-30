@@ -120,7 +120,7 @@ friend class Connection;
 public:
   Mx(ZiIP ip, unsigned port, unsigned nAccepts, const ZiCxnOptions &options,
       unsigned nConnections, unsigned maxSend, int reconnInterval,
-      const ZiMultiplexParams &params) :
+      const ZiMxParams &params) :
     ZiMultiplex(params), m_ip(ip), m_port(port),
     m_nAccepts(nAccepts), m_options(options),
     m_maxDisconnects(nConnections), m_maxSend(maxSend),
@@ -213,7 +213,7 @@ int main(int argc, char **argv)
   int nAccepts = 1;
   int maxSend = 0;
   int reconnInterval = 1;
-  ZiMultiplexParams params;
+  ZiMxParams params;
 
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] != '-' || argv[i][2]) {

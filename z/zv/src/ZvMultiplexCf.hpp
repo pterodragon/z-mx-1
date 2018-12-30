@@ -40,29 +40,28 @@
 #pragma warning(disable:4800)
 #endif
 
-struct ZvMultiplexParams : public ZiMultiplexParams {
-  inline ZvMultiplexParams() : ZiMultiplexParams() { }
+struct ZvMxParams : public ZiMxParams {
+  inline ZvMxParams() : ZiMxParams() { }
 
-  inline ZvMultiplexParams(const ZiMultiplexParams &p) :
-    ZiMultiplexParams(p) { }
-  inline ZvMultiplexParams &operator =(const ZiMultiplexParams &p) {
-    ZiMultiplexParams::operator =(p);
+  inline ZvMxParams(const ZiMxParams &p) :
+    ZiMxParams(p) { }
+  inline ZvMxParams &operator =(const ZiMxParams &p) {
+    ZiMxParams::operator =(p);
     return *this;
   }
 
-  inline ZvMultiplexParams(ZvCf *cf) { init(cf); }
+  inline ZvMxParams(ZvCf *cf) { init(cf); }
 
-  inline ZvMultiplexParams(ZvCf *cf,
-      const ZiMultiplexParams &deflt) :
-    ZiMultiplexParams(deflt) { init(cf); }
+  inline ZvMxParams(ZvCf *cf, const ZiMxParams &deflt) :
+    ZiMxParams(deflt) { init(cf); }
 
-  inline ZvSchedulerParams &scheduler() {
-    return static_cast<ZvSchedulerParams &>(
-	ZiMultiplexParams::scheduler());
+  inline ZvSchedParams &scheduler() {
+    return static_cast<ZvSchedParams &>(
+	ZiMxParams::scheduler());
   }
-  inline const ZvSchedulerParams &scheduler() const {
-    return static_cast<const ZvSchedulerParams &>(
-	ZiMultiplexParams::scheduler());
+  inline const ZvSchedParams &scheduler() const {
+    return static_cast<const ZvSchedParams &>(
+	ZiMxParams::scheduler());
   }
 
   inline void init(ZvCf *cf) {

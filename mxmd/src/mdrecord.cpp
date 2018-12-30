@@ -51,7 +51,7 @@ void l1(MxMDOrderBook *, const MxMDL1Data &) { }
 void l2(MxMDOrderBook *, MxDateTime) { }
 
 typedef ZmLHash<MxIDString> Syms; // hash table of syms
-static Syms *syms = 0;
+static ZmRef<Syms> syms;
 
 void refDataLoaded(MxMDVenue *venue)
 {
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 
   } catch (...) { }
 
-  delete syms;
+  syms = nullptr;
 
   return 0;
 }

@@ -136,19 +136,28 @@ class MxAnyLink : public MxAnyTx {
 
 friend class MxEngine;
 
+  typedef ZmLock StateLock;
+  typedef ZmGuard<StateLock> StateGuard;
+  typedef ZmReadGuard<StateLock> StateReadGuard;
+
 protected:
   MxAnyLink(MxID id);
 
 public:
   ZuInline int state() const {
-    ZmReadGuard<ZmLock> guard(m_stateLock);
+    StateReadGuard guard(m_stateLock);
     return m_state;
   }
-  ZuInline int state(unsigned *reconnects) const {
-    ZmReadGuard<ZmLock> guard(m_stateLock);
-    *reconnects = m_reconnects;
-    return m_state;
-  }
+
+  struct Telemetry {
+    MxID	id;
+    uint64_t	rxSeqNo;
+    uint64_t	txSeqNo;
+    uint32_t	reconnects;
+    uint8_t	state;
+  };
+
+  void telemetry(Telemetry &data) const;
 
   inline void up() { up_(true); }
   inline void down() { down_(true); }
@@ -189,7 +198,7 @@ private:
 private:
   ZmScheduler::Timer	m_reconnTimer;
 
-  ZmLock		m_stateLock;
+  StateLock		m_stateLock;
     int			  m_state = MxLinkState::Down;
     unsigned		  m_reconnects;
     bool		  m_enabled = true;
@@ -274,6 +283,14 @@ class MxEngine : public ZmPolymorph {
 
 friend class MxAnyLink;
 
+  typedef ZmRWLock Lock;
+  typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
+
+  typedef ZmLock StateLock;
+  typedef ZmGuard<StateLock> StateGuard;
+  typedef ZmReadGuard<StateLock> StateReadGuard;
+
 public:
   struct IDAccessor : public ZuAccessor<MxEngine *, MxID> {
     ZuInline static MxID value(const MxEngine *e) { return e->id(); }
@@ -312,15 +329,7 @@ public:
   ZuInline unsigned txThread() const { return m_txThread; }
 
   ZuInline int state() const {
-    ZmReadGuard<ZmLock> guard(m_stateLock);
-    return m_state;
-  }
-  inline int state(
-      unsigned &down, unsigned &disabled, unsigned &transient,
-      unsigned &up, unsigned &reconn, unsigned &failed) {
-    ZmReadGuard<ZmLock> guard(m_stateLock);
-    down = m_down; disabled = m_disabled; transient = m_transient;
-    up = m_up; reconn = m_reconn; failed = m_failed;
+    StateReadGuard guard(m_stateLock);
     return m_state;
   }
 
@@ -376,11 +385,24 @@ public:
 
   ZuInline void log(MxMsgID id, MxTraffic traffic) { mgr()->log(id, traffic); }
 
-private:
-  typedef ZmRWLock Lock;
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  struct Telemetry {
+    MxID	id;
+    MxID	mxID;
+    uint32_t	down;
+    uint32_t	disabled;
+    uint32_t	transient;
+    uint32_t	up;
+    uint32_t	reconn;
+    uint32_t	failed;
+    uint16_t	nLinks;
+    uint8_t	rxThread;
+    uint8_t	txThread;
+    uint8_t	state;
+  };
 
+  void telemetry(Telemetry &data) const;
+
+private:
   typedef ZmRBTree<ZmRef<MxAnyTxPool>,
 	    ZmRBTreeIndex<MxAnyTxPool::IDAccessor,
 	      ZmRBTreeObject<ZuNull,
@@ -486,7 +508,7 @@ private:
     TxPools			  m_txPools;	// from csv
     Links			  m_links;	// from csv
 
-  ZmLock			m_stateLock;
+  StateLock			m_stateLock;
     int				  m_state;
     unsigned			  m_down = 0;		// #links down
     unsigned			  m_disabled = 0;	// #links disabled

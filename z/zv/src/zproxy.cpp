@@ -294,7 +294,8 @@ template <typename S> inline void Connection::print(S &s) const
 struct ListenerPrintIn;
 struct ListenerPrintOut;
 class Listener : public ZmObject {
-  typedef ZmHash<ZmRef<Proxy>, ZmHashObject<ZuNull> > ProxyHash;
+  typedef ZmHash<ZmRef<Proxy>,
+	    ZmHashObject<ZuNull> > ProxyHash;
 
 public:
   struct LocalPortAccessor;
@@ -311,8 +312,8 @@ friend struct LocalPortAccessor;
       ZiIP srcIP, unsigned srcPort, ZuString tag, unsigned reconnectFreq);
   virtual ~Listener() { }
 
-  void add(Proxy *proxy) { m_proxies.add(proxy); }
-  void del(Proxy *proxy) { delete m_proxies.del(proxy); }
+  void add(Proxy *proxy) { m_proxies->add(proxy); }
+  void del(Proxy *proxy) { delete m_proxies->del(proxy); }
 
   inline ZiMultiplex *mx() const { return m_mx; }
   inline App *app() const { return m_app; }
@@ -379,7 +380,7 @@ friend struct ListenerPrintOut;
   ZiMultiplex		*m_mx;
   App			*m_app;
   ZmSemaphore		m_started;
-  ProxyHash		m_proxies;
+  ZmRef<ProxyHash>	m_proxies;
   uint32_t		m_cxnFlags;
   double		m_cxnLatency;
   uint32_t		m_cxnFrag;
@@ -460,8 +461,8 @@ class App : public ZmPolymorph, public ZvCmdServer {
 
   class Mx : public ZuObject, public ZiMultiplex {
   public:
-    inline Mx() : ZiMultiplex(ZvMultiplexParams()) { }
-    inline Mx(ZvCf *cf) : ZiMultiplex(ZvMultiplexParams(cf)) { }
+    inline Mx() : ZiMultiplex(ZvMxParams()) { }
+    inline Mx(ZvCf *cf) : ZiMultiplex(ZvMxParams(cf)) { }
   };
 
   typedef ZmHash<ZmRef<Listener>,
@@ -473,10 +474,10 @@ class App : public ZmPolymorph, public ZvCmdServer {
 	      ZmHashObject<ZuNull> > > ProxyHash;
 
 public:
-  App() :
-      m_listeners(ZmHashParams().bits(4).loadFactor(1.0)),
-      m_proxies(ZmHashParams().bits(8).loadFactor(1.0)),
-      m_verbose(false) { }
+  App() : m_verbose(false) {
+    m_listeners = new ListenerHash(ZmHashParams().bits(4).loadFactor(1.0));
+    m_proxies = new ProxyHash(ZmHashParams().bits(8).loadFactor(1.0));
+  }
 
   void init(ZvCf *cf) {
     // cf->set("mx:debug", "1");
@@ -556,8 +557,8 @@ public:
   }
   void final() {
     ZvCmdServer::final();
-    m_listeners.clean();
-    m_proxies.clean();
+    m_listeners->clean();
+    m_proxies->clean();
   }
 
   inline Mx *mx() const { return m_mx; }
@@ -578,9 +579,11 @@ public:
   void wait() { m_done.wait(); }
   void post() { m_done.post(); }
 
-  void add(Proxy *proxy) { m_proxies.add(proxy); }
+  void add(Proxy *proxy) {
+    m_proxies->add(proxy);
+  }
   void del(Proxy *proxy) {
-    delete m_proxies.del(Proxy::SrcPortAccessor::value(proxy));
+    delete m_proxies->del(Proxy::SrcPortAccessor::value(proxy));
   }
 
   void proxy(ZvCmdServerCxn *cxn,
@@ -625,7 +628,7 @@ public:
     }
     outMsg = new ZvCmdMsg();
     auto &out = outMsg->cmd();
-    if (m_listeners.findKey(localPort)) {
+    if (m_listeners->findKey(localPort)) {
       outMsg->code(1);
       out << "already listening on port " << ZuBoxed(localPort) << '\n';
       return;
@@ -635,7 +638,7 @@ public:
 	localIP, localPort, remoteIP, remotePort, srcIP, srcPort, tag,
 	reconnectFreq);
     if (listener->start() == Zi::OK)
-      m_listeners.add(listener);
+      m_listeners->add(listener);
     else
       outMsg->code(1);
     out << listener->status() << '\n';
@@ -659,16 +662,16 @@ public:
     outMsg = new ZvCmdMsg();
     auto &out = outMsg->cmd();
     if (isTag) {
-      ListenerHash::Iterator i(m_listeners);
+      auto i = m_listeners->iterator();
       while (ZmRef<Listener> listener = i.iterateKey()) {
         if (listener->tag() != tag) continue;
         listener->stop();
-        delete m_listeners.del(listener->localPort());
+        delete m_listeners->del(listener->localPort());
         out << listener->status() << '\n';
         status(cxn, args, ZuMv(inMsg), outMsg);
       }
     } else {
-      ZmRef<Listener> listener = m_listeners.findKey(localPort);
+      ZmRef<Listener> listener = m_listeners->findKey(localPort);
       if (!listener) {
 	outMsg->code(1);
 	out << "no listener on port " << ZuBoxed(localPort) << '\n';
@@ -676,7 +679,7 @@ public:
       }
       listener->stop();
       out << listener->status() << '\n';
-      delete m_listeners.del(localPort);
+      delete m_listeners->del(localPort);
     }
   }
 
@@ -699,7 +702,7 @@ public:
       throw ZvCmdUsage();
     }
     if (allProxies || isTag) {
-      ProxyHash::ReadIterator i(m_proxies);
+      auto i = m_proxies->readIterator();
       while (ZmRef<Proxy> proxy = i.iterateKey()) {
 	ZmRef<Connection> connection;
         if (isTag && proxy->tag() != tag)
@@ -715,7 +718,7 @@ public:
     } else {
       outMsg = new ZvCmdMsg();
       auto &out = outMsg->cmd();
-      ZmRef<Proxy> proxy = m_proxies.findKey(srcPort);
+      ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
 	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
@@ -751,7 +754,7 @@ public:
       throw ZvCmdUsage();
     }
     if (allProxies || isTag) {
-      ProxyHash::ReadIterator i(m_proxies);
+      auto i = m_proxies->readIterator();
       while (ZmRef<Proxy> proxy = i.iterateKey()) {
 	ZmRef<Connection> connection;
         if (isTag && proxy->tag() != tag)
@@ -767,7 +770,7 @@ public:
     } else {
       outMsg = new ZvCmdMsg();
       auto &out = outMsg->cmd();
-      ZmRef<Proxy> proxy = m_proxies.findKey(srcPort);
+      ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
 	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
@@ -801,7 +804,7 @@ public:
       throw ZvCmdUsage();
     }
     if (allProxies || isTag) {
-      ProxyHash::ReadIterator i(m_proxies);
+      auto i = m_proxies->readIterator();
       while (ZmRef<Proxy> proxy = i.iterateKey()) {
 	ZmRef<Connection> connection;
         if (isTag && proxy->tag() != tag)
@@ -813,7 +816,7 @@ public:
     } else {
       outMsg = new ZvCmdMsg();
       auto &out = outMsg->cmd();
-      ZmRef<Proxy> proxy = m_proxies.findKey(srcPort);
+      ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
 	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
@@ -846,7 +849,7 @@ public:
       throw ZvCmdUsage();
     }
     if (allProxies || isTag) {
-      ProxyHash::ReadIterator i(m_proxies);
+      auto i = m_proxies->readIterator();
       while (ZmRef<Proxy> proxy = i.iterateKey()) {
 	ZmRef<Connection> connection;
         if (isTag && proxy->tag() != tag)
@@ -870,7 +873,7 @@ public:
     } else {
       outMsg = new ZvCmdMsg();
       auto &out = outMsg->cmd();
-      ZmRef<Proxy> proxy = m_proxies.findKey(srcPort);
+      ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
 	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
@@ -911,7 +914,7 @@ public:
       throw ZvCmdUsage();
     }
     if (allProxies || isTag) {
-      ProxyHash::ReadIterator i(m_proxies);
+      auto i = m_proxies->readIterator();
       while (ZmRef<Proxy> proxy = i.iterateKey()) {
 	ZmRef<Connection> connection;
         if (isTag && proxy->tag() != tag)
@@ -931,7 +934,7 @@ public:
     } else {
       outMsg = new ZvCmdMsg();
       auto &out = outMsg->cmd();
-      ZmRef<Proxy> proxy = m_proxies.findKey(srcPort);
+      ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
 	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
@@ -973,7 +976,7 @@ public:
       throw ZvCmdUsage();
     }
     if (allProxies || isTag) {
-      ProxyHash::ReadIterator i(m_proxies);
+      auto i = m_proxies->readIterator();
       while (ZmRef<Proxy> proxy = i.iterateKey()) {
 	ZmRef<Connection> connection;
         if (isTag && proxy->tag() != tag)
@@ -989,7 +992,7 @@ public:
     } else {
       outMsg = new ZvCmdMsg();
       auto &out = outMsg->cmd();
-      ZmRef<Proxy> proxy = m_proxies.findKey(srcPort);
+      ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
 	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
@@ -1027,7 +1030,7 @@ public:
       throw ZvCmdUsage();
     }
     if (allProxies || isTag) {
-      ProxyHash::ReadIterator i(m_proxies);
+      auto i = m_proxies->readIterator();
       while (ZmRef<Proxy> proxy = i.iterateKey()) {
 	ZmRef<Connection> connection;
         if (isTag && proxy->tag() != tag)
@@ -1043,7 +1046,7 @@ public:
     } else {
       outMsg = new ZvCmdMsg();
       auto &out = outMsg->cmd();
-      ZmRef<Proxy> proxy = m_proxies.findKey(srcPort);
+      ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
 	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
@@ -1087,7 +1090,7 @@ public:
     if (!outMsg) outMsg = new ZvCmdMsg();
     auto &out = outMsg->cmd();
     {
-      ListenerHash::Iterator i(m_listeners);
+      auto i = m_listeners->iterator();
       while (ZmRef<Listener> listener = i.iterateKey()) {
         if (isTag && listener->tag() != tag)
           continue;
@@ -1096,7 +1099,7 @@ public:
       }
     }
     {
-      ProxyHash::ReadIterator i(m_proxies);
+      auto i = m_proxies->readIterator();
       while (ZmRef<Proxy> proxy = i.iterateKey()) {
 	if (out.length()) out << '\n';
 	out << proxy->status();
@@ -1115,8 +1118,8 @@ public:
 private:
   ZmRef<Mx>		m_mx;
   ZmSemaphore		m_done;
-  ListenerHash		m_listeners;
-  ProxyHash		m_proxies;
+  ZmRef<ListenerHash>	m_listeners;
+  ZmRef<ProxyHash>	m_proxies;
   bool			m_verbose;
 };
 
@@ -1450,6 +1453,7 @@ Listener::Listener(App *app, uint32_t cxnFlags,
   m_srcIP(srcIP), m_srcPort(srcPort), m_listening(false), m_tag(tag),
   m_reconnectFreq(reconnectFreq)
 {
+  m_proxies = new ProxyHash();
 }
 
 int Listener::start()
@@ -1493,7 +1497,7 @@ ZiConnection *Listener::accepted(const ZiCxnInfo &ci)
 void Listener::status_(ZmStream &s) const
 {
   s << *this;
-  ProxyHash::ReadIterator i(m_proxies);
+  auto i = m_proxies->readIterator();
   while (ZmRef<Proxy> proxy = i.iterateKey())
     s << "\n" << proxy->status();
 }

@@ -4,8 +4,8 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src -I$(top_srcdir)/zm/src \
 	-DZV_EXPORTS @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@
-include_HEADERS = ZvCf.hpp ZvCSV.hpp ZvError.hpp ZvEnum.hpp ZvHashMgrCf.hpp \
-	ZvHeapCf.hpp ZvMultiplexCf.hpp ZvSchedulerCf.hpp ZvCxnOptionsCf.hpp \
+include_HEADERS = ZvCf.hpp ZvCSV.hpp ZvError.hpp ZvEnum.hpp ZvHashCSV.hpp \
+	ZvHeapCSV.hpp ZvMultiplexCf.hpp ZvSchedulerCf.hpp ZvCxnOptionsCf.hpp \
 	ZvDaemon.hpp ZvRegexError.hpp ZvLib.hpp ZvCmd.hpp ZvDateError.hpp \
 	ZvRingCf.hpp ZvThreadCf.hpp
 lib_LTLIBRARIES = libZv.la

@@ -218,43 +218,43 @@ protected:
   ZmThreadName	*m_names = 0;
 };
 
-class ZmSchedulerParams : public ZmScheduler_Names<ZmSchedulerParams> {
+class ZmSchedParams : public ZmScheduler_Names<ZmSchedParams> {
 public:
   typedef ZuID ID;
 
-  inline ZmSchedulerParams() {
+  inline ZmSchedParams() {
     if (m_nThreads) m_names = new ZmThreadName[m_nThreads];
   }
-  inline ~ZmSchedulerParams() { delete [] m_names; }
+  inline ~ZmSchedParams() { delete [] m_names; }
 
-  template <typename S> inline ZmSchedulerParams &id(const S &s)
+  template <typename S> inline ZmSchedParams &id(const S &s)
     { m_id = s; return *this; }
-  inline ZmSchedulerParams &nThreads(unsigned v) {
+  inline ZmSchedParams &nThreads(unsigned v) {
     m_nThreads = v;
     delete [] m_names;
     m_names = new ZmThreadName[v];
     return *this;
   }
-  inline ZmSchedulerParams &stackSize(unsigned v)
+  inline ZmSchedParams &stackSize(unsigned v)
     { m_stackSize = v; return *this; }
-  inline ZmSchedulerParams &priority(unsigned v)
+  inline ZmSchedParams &priority(unsigned v)
     { m_priority = v; return *this; }
-  inline ZmSchedulerParams &partition(unsigned v)
+  inline ZmSchedParams &partition(unsigned v)
     { m_partition = v; return *this; }
-  template <typename T> inline ZmSchedulerParams &affinity(const T &t)
+  template <typename T> inline ZmSchedParams &affinity(const T &t)
     { m_affinity = t; return *this; }
-  template <typename T> inline ZmSchedulerParams &isolation(const T &t)
+  template <typename T> inline ZmSchedParams &isolation(const T &t)
     { m_isolation = t; return *this; }
-  template <typename T> inline ZmSchedulerParams &quantum(const T &t)
+  template <typename T> inline ZmSchedParams &quantum(const T &t)
     { m_quantum = t; return *this; }
 
-  inline ZmSchedulerParams &queueSize(unsigned v)
+  inline ZmSchedParams &queueSize(unsigned v)
     { m_queueSize = v; return *this; }
-  inline ZmSchedulerParams &ll(bool v)
+  inline ZmSchedParams &ll(bool v)
     { m_ll = v; return *this; }
-  inline ZmSchedulerParams &spin(unsigned v)
+  inline ZmSchedParams &spin(unsigned v)
     { m_spin = v; return *this; }
-  inline ZmSchedulerParams &timeout(unsigned v)
+  inline ZmSchedParams &timeout(unsigned v)
     { m_timeout = v; return *this; }
 
   inline ID id() const { return m_id; }
@@ -310,11 +310,11 @@ class ZmAPI ZmScheduler :
 public:
   typedef ZmRing<ZmFn<> > Ring;
   typedef ZmRef<ScheduleTree::Node> Timer;
-  typedef ZmSchedulerParams::ID ID;
+  typedef ZmSchedParams::ID ID;
   enum State { Stopped = 0, Starting, Running, Draining, Drained, Stopping };
 
   // might throw ZmRingError
-  ZmScheduler(ZmSchedulerParams params = ZmSchedulerParams());
+  ZmScheduler(ZmSchedParams params = ZmSchedParams());
   virtual ~ZmScheduler();
 
   void start();

@@ -324,10 +324,12 @@ private:
 };
 
 class App {
-  typedef ZmLHash<MxInstrKey> SecIDHash;
+  typedef ZmLHash<MxInstrKey> InstrIDHash;
 
 public:
-  App() : m_yyyymmdd(ZtDateNow().yyyymmdd()) { }
+  App() : m_yyyymmdd(ZtDateNow().yyyymmdd()) {
+    m_instrIDs = new InstrIDHash();
+  }
 
   // dump options
 
@@ -357,17 +359,17 @@ public:
   inline void l2(bool b) { m_l2 = b; }
   inline void trades(bool b) { m_trades = b; }
 
-  inline void instrID(const MxInstrKey &key) { m_secIDs.add(key); }
+  inline void instrID(const MxInstrKey &key) { m_instrIDs->add(key); }
   inline bool filterID(MxInstrKey key) {
-    if (!m_secIDs.count()) return false;
-    if (m_secIDs.exists(key)) return false;
+    if (!m_instrIDs->count()) return false;
+    if (m_instrIDs->exists(key)) return false;
     if (*key.segment) {
       key.segment = MxID();
-      if (m_secIDs.exists(key)) return false;
+      if (m_instrIDs->exists(key)) return false;
     }
     if (*key.venue) {
       key.venue = MxID();
-      if (m_secIDs.exists(key)) return false;
+      if (m_instrIDs->exists(key)) return false;
     }
     return true;
   }
@@ -462,7 +464,7 @@ private:
 
   ZtDateFmt::ISO		m_isoFmt;
 
-  SecIDHash			m_secIDs;
+  ZmRef<InstrIDHash>		m_instrIDs;
 
   ZtString			m_path;
   ZiFile			m_file;

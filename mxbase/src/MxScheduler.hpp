@@ -40,11 +40,11 @@ class MxScheduler : public ZuObject, public ZmScheduler {
 public:
   template <typename ID>
   inline MxScheduler(const ID &id) :
-    ZmScheduler(ZmSchedulerParams().nThreads(1).id(id)) { }
+    ZmScheduler(ZmSchedParams().nThreads(1).id(id)) { }
   template <typename ID>
   inline MxScheduler(const ID &id, ZvCf *cf) :
-    ZmScheduler(ZvSchedulerParams(cf,
-	  ZmSchedulerParams().nThreads(1).id(id))) { }
+    ZmScheduler(ZvSchedParams(cf,
+	  ZmSchedParams().nThreads(1).id(id))) { }
 };
 
 #endif /* MxScheduler_HPP */

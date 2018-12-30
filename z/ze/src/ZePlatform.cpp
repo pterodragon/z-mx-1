@@ -334,16 +334,17 @@ public:
 		ZmLHashLock<ZmNoLock> > > > Hash;
 
   ZePlatform_WSAErrors() {
+    m_hash = new Hash();
     const char *msg;
     for (unsigned i = 0; msg = ZePlatform_WSAErrors_[i].msg; i++)
-      m_hash.add(ZePlatform_WSAErrors_[i].code, msg);
+      m_hash->add(ZePlatform_WSAErrors_[i].code, msg);
   }
   ZuInline const char *lookup(DWORD i) {
-    return m_hash.findVal(i);
+    return m_hash->findVal(i);
   }
 
 private:
-  Hash	m_hash;
+  ZmRef<Hash>	m_hash;
 };
 
 struct ZePlatform_FMBuf;

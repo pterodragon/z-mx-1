@@ -48,7 +48,7 @@ void MxEngine::start()
   int prev, next;
 
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    StateGuard stateGuard(m_stateLock);
 
     bool start = false;
 
@@ -77,7 +77,7 @@ void MxEngine::stop()
   int prev, next;
 
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    StateGuard stateGuard(m_stateLock);
 
     bool stop = false;
 
@@ -130,7 +130,7 @@ void MxEngine::linkState(MxAnyLink *link, int prev, int next)
   int enginePrev, engineNext;
 
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    StateGuard stateGuard(m_stateLock);
 
     switch (prev) {
       case MxLinkState::Down:
@@ -256,6 +256,28 @@ void MxEngine::final()
   m_txPools.clean();
 }
 
+void MxEngine::telemetry(Telemetry &data) const
+{
+  data.id = m_id;
+  data.mxID = m_mx->id();
+  {
+    StateReadGuard guard(m_stateLock);
+    data.down = m_down;
+    data.disabled = m_disabled;
+    data.transient = m_transient;
+    data.up = m_up;
+    data.reconn = m_reconn;
+    data.failed = m_failed;
+    data.state = m_state;
+  }
+  {
+    ReadGuard guard(m_lock);
+    data.nLinks = m_links.count();
+  }
+  data.rxThread = m_rxThread;
+  data.txThread = m_txThread;
+}
+
 // connection state management
 
 MxAnyTx::MxAnyTx(MxID id) : m_id(id)
@@ -292,7 +314,7 @@ void MxAnyLink::up_(bool enable)
   mx()->del(&m_reconnTimer);
 
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    StateGuard stateGuard(m_stateLock);
 
     if (enable) m_enabled = true;
 
@@ -337,7 +359,7 @@ void MxAnyLink::down_(bool disable)
   mx()->del(&m_reconnTimer);
 
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    StateGuard stateGuard(m_stateLock);
 
     if (disable) m_enabled = false;
 
@@ -376,7 +398,7 @@ void MxAnyLink::connected()
   bool disconnect = false;
 
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    StateGuard stateGuard(m_stateLock);
 
     // state machine
     prev = m_state;
@@ -410,7 +432,7 @@ void MxAnyLink::disconnected()
   bool connect = false;
 
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    StateGuard stateGuard(m_stateLock);
 
     // state machine
     prev = m_state;
@@ -456,7 +478,7 @@ void MxAnyLink::reconnect(bool immediate)
   mx()->del(&m_reconnTimer);
 
   {
-    ZmGuard<ZmLock> stateGuard(m_stateLock);
+    StateGuard stateGuard(m_stateLock);
 
     // state machine
     prev = m_state;
@@ -493,4 +515,16 @@ void MxAnyLink::reconnect(bool immediate)
   if (disconnect) 
     engine()->rxRun(
 	ZmFn<>{[](MxAnyLink *link) { link->disconnect(); }, this});
+}
+
+void MxAnyLink::telemetry(Telemetry &data) const
+{
+  data.id = id();
+  data.rxSeqNo = rxSeqNo();
+  data.txSeqNo = txSeqNo();
+  {
+    StateReadGuard guard(m_stateLock);
+    data.reconnects = m_reconnects;
+    data.state = m_state;
+  }
 }

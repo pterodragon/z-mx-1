@@ -57,15 +57,15 @@ typedef ZmHash<ZmRef<Order>,
 int main(int argc, char **argv)
 {
   ZmHeapMgr::init("Orders", 0, ZmHeapConfig{0, 100});
-  Orders orders(ZmHashParams().bits(7).loadFactor(1.0));
+  ZmRef<Orders> orders = new Orders(ZmHashParams().bits(7).loadFactor(1.0));
 
   printf("node size: %u\n", (unsigned)sizeof(Orders::Node));
-  for (unsigned i = 0; i < 100; i++) orders.add(new Order(i));
-  ZmRef<Order> o = orders.findKey(0);
+  for (unsigned i = 0; i < 100; i++) orders->add(new Order(i));
+  ZmRef<Order> o = orders->findKey(0);
   dump(o);
-  Orders::Node *n = orders.del(0);
+  Orders::Node *n = orders->del(0);
   dump(n->key());
   delete n;
-  o = orders.delKey(1);
+  o = orders->delKey(1);
   dump(o);
 }

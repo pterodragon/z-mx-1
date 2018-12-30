@@ -170,10 +170,11 @@ int main(int argc, char **argv)
   int n = ZmPlatform::getncpu();
 
   for (k = 0; k < 10; k++) {
-    ZHash hash2(ZmHashParams().bits(2).loadFactor(1.0).cBits(1));
+    ZmRef<ZHash> hash2 = new ZHash(
+	ZmHashParams().bits(2).loadFactor(1.0).cBits(1));
 
     printf("hash count, bits, cbits: %d, %d, %d\n",
-      hash2.count(), hash2.bits(), hash2.cBits());
+      hash2->count(), hash2->bits(), hash2->cBits());
     printf("spawning %d threads...\n", n);
 
     ZmTime start, end;
@@ -181,7 +182,7 @@ int main(int argc, char **argv)
     start.now();
 
     for (j = 0; j < n; j++) r[j] =
-      ZmThread(0, 0, ZmFn<>::Bound<&hashIt>::fn(&hash2));
+      ZmThread(0, 0, ZmFn<>::Bound<&hashIt>::fn(hash2.ptr()));
 
     for (j = 0; j < n; j++) r[j].join(0);
 
@@ -190,14 +191,15 @@ int main(int argc, char **argv)
     printf("hash time: %d.%.3d\n", (int)end.sec(), (int)(end.nsec() / 1000000));
 
     printf("%d threads finished\n", n);
-    printf("hash count, bits: %d, %d\n", hash2.count(), hash2.bits());
+    printf("hash count, bits: %d, %d\n", hash2->count(), hash2->bits());
   }
 
   for (k = 0; k < 10; k++) {
-    ZHash hash2(ZmHashParams().bits(4).loadFactor(1.0).cBits(4));
+    ZmRef<ZHash> hash2 = new ZHash(
+	ZmHashParams().bits(4).loadFactor(1.0).cBits(4));
 
     printf("hash count, bits, cbits: %d, %d, %d\n",
-      hash2.count(), hash2.bits(), hash2.cBits());
+      hash2->count(), hash2->bits(), hash2->cBits());
     printf("spawning %d threads...\n", n);
 
     ZmTime start, end;
@@ -205,7 +207,7 @@ int main(int argc, char **argv)
     start.now();
 
     for (j = 0; j < n; j++)
-      r[j] = ZmThread(0, 0, ZmFn<>::Bound<&hashIt>::fn(&hash2));
+      r[j] = ZmThread(0, 0, ZmFn<>::Bound<&hashIt>::fn(hash2.ptr()));
 
     for (j = 0; j < n; j++) r[j].join(0);
 
@@ -214,7 +216,7 @@ int main(int argc, char **argv)
     printf("hash time: %d.%.3d\n", (int)end.sec(), (int)(end.nsec() / 1000000));
 
     printf("%d threads finished\n", n);
-    printf("hash count, bits: %d, %d\n", hash2.count(), hash2.bits());
+    printf("hash count, bits: %d, %d\n", hash2->count(), hash2->bits());
   }
 
   overallEnd.now();
@@ -223,8 +225,10 @@ int main(int argc, char **argv)
     (int)overallEnd.sec(), (int)(overallEnd.nsec() / 1000000));
 
   {
-    typedef ZmHash<ZmRef<J>, ZmHashIndex<J::IAccessor> > H;
-    H h;
+    typedef ZmHash<ZmRef<J>,
+	      ZmHashIndex<J::IAccessor> > H;
+    ZmRef<H> h_ = new H();
+    H &h = *h_;
     for (int k = 0; k < 100; k++) h.add(ZmRef<J>(new J(k)));
     for (int k = 0; k < 100; k++) {
       I i(k);

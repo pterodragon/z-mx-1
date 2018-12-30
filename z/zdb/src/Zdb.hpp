@@ -227,8 +227,7 @@ typedef ZmHash<Zdb_FileLRUNode,
 	    ZmHashNodeIsKey<true,
 	      ZmHashIndex<Zdb_FileIndexAccessor,
 		ZmHashHeapID<Zdb_FileHeapID,
-		  ZmHashLock<ZmNoLock,
-		    ZmHashBase<ZmObject> > > > > > > Zdb_FileHash;
+		  ZmHashLock<ZmNoLock> > > > > > Zdb_FileHash;
 typedef Zdb_FileHash::Node Zdb_File;
 
 class Zdb_FileRec {
@@ -298,8 +297,7 @@ typedef ZmHash<ZdbLRUNode,
 	      ZmHashIndex<ZdbLRUNode_RNAccessor,
 		ZmHashHeapID<ZmNoHeap,
 		  ZmHashID<Zdb_Cache_ID,
-		    ZmHashLock<ZmNoLock,
-		      ZmHashBase<ZmObject> > > > > > > > Zdb_Cache;
+		    ZmHashLock<ZmNoLock> > > > > > > Zdb_Cache;
 typedef Zdb_Cache::Node Zdb_CacheNode;
 
 class ZdbAnyPOD_Compressed;
@@ -1044,8 +1042,7 @@ friend class ZdbAnyPOD_Send__;
   typedef ZmHash<ZmRef<Zdb_Cxn>,
 	    ZmHashLock<ZmPLock,
 	      ZmHashObject<ZuNull,
-		ZmHashBase<ZmObject,
-		  ZmHashHeapID<CxnHash_HeapID> > > > > CxnHash;
+		ZmHashHeapID<CxnHash_HeapID> > > > CxnHash;
 
   typedef ZmLock Lock;
   typedef ZmGuard<Lock> Guard;

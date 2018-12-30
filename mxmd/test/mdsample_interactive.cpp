@@ -106,7 +106,7 @@ void l2(MxMDOrderBook *ob, MxDateTime stamp)
 void exception(MxMDLib *, ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 
 typedef ZmHash<MxUniKey> Keys; // hash table of keys
-static Keys *keys = 0;
+static ZmRef<Keys> keys;
 
 void refDataLoaded(MxMDVenue *venue)
 {
@@ -205,7 +205,7 @@ int main(int argc, char **argv)
 
   } catch (...) { }
 
-  delete keys;
+  keys = nullptr;
 
   return 0;
 }

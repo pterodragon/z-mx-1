@@ -631,9 +631,15 @@ void MxMDSubLink::status(ZtString &out)
   out << "  TCP Username: " << m_channel->tcpUsername <<
     " Password: " << m_channel->tcpPassword << '\n';
 
-  unsigned reconnects;
-  out << "  State: " << MxLinkState::name(state(&reconnects));
-  out << "  #Reconnects: " << ZuBox<unsigned>(reconnects);
+  {
+    MxAnyLink::Telemetry data;
+    telemetry(data);
+    out
+      << "  State: " << MxLinkState::name(data.state)
+      << "  #Reconnects: " << ZuBoxed(data.reconnects)
+      << "  RxSeqNo: " << ZuBoxed(data.rxSeqNo)
+      << "  TxSeqNo: " << ZuBoxed(data.txSeqNo);
+  }
   out << "  Snapshot SeqNo: " << snapshotSeqNo();
   out << "\n  TCP: ";
   if (ZmRef<TCP> tcp = m_tcp) {

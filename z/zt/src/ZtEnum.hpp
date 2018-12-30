@@ -71,14 +71,23 @@ typedef ZuBox_1(int8_t) ZtEnum;
       va_end(args); \
     } \
     inline void add(ZuString s, ZtEnum v) \
-      { m_s2v.add(s, v); m_v2s.add(v, s); } \
+      { m_s2v->add(s, v); m_v2s->add(v, s); } \
   public: \
+    inline Map_() { m_s2v = new S2V(); m_v2s = new V2S(); } \
     inline static T *instance() { return ZmSingleton<T>::instance(); } \
-    inline ZtEnum s2v(ZuString s) const { return m_s2v.findVal(s); } \
-    inline ZuString v2s(ZtEnum v) const { return m_v2s.findVal(v); } \
+    inline ZtEnum s2v(ZuString s) const { return m_s2v->findVal(s); } \
+    inline ZuString v2s(ZtEnum v) const { return m_v2s->findVal(v); } \
+    template <typename L> inline void all(L l) const { \
+      auto i = m_s2v->readIterator(); \
+      for (;;) { \
+	auto kv = i.iterate(); \
+	if (!kv.p1()) break; \
+	l(kv.p1(), kv.p2()); \
+      } \
+    } \
   protected: \
-    S2V		m_s2v; \
-    V2S		m_v2s; \
+    ZmRef<S2V>	m_s2v; \
+    ZmRef<V2S>	m_v2s; \
   }
 #define ZtEnumNames(...) \
   inline ZuPair<const char *const *const, unsigned> names() { \

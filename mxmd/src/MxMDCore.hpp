@@ -94,7 +94,7 @@ public:
   ZuInline ZvCf *cf() { return m_cf.ptr(); }
 
   ZuInline Mx *mx() const { return m_mx; }
-  ZuInline Mx *mx(Mx::ID id) const {
+  ZuInline Mx *mx(const Mx::ID &id) const {
     MxTbl::Node *node = m_mxTbl->find(id);
     if (!node) return nullptr;
     return node->key();

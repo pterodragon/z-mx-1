@@ -448,27 +448,6 @@ void MxMDOrderBook::pxLevel_(
   if (d_nOrders_) *d_nOrders_ = d_nOrders;
 }
 
-#if 0
-static void dumporder(const char *op, MxMDOrder *order)
-{
-  MxMDOrderID3Ref id3 = MxMDOrder::OrderID3Accessor::value(order);
-  std::cout << op << ' ' <<
-    id3.p1().venue() << ' ' <<
-    id3.p1().segment() << ' ' <<
-    id3.p1().id() << ' ' <<
-    MxSide::name(id3.p2()) << ' ' <<
-    id3.p3() << '\n';
-}
-
-void MxMDFeed::dumporders(const char *op)
-{
-  MxMDFeed::Orders3::ReadIterator i(m_orders3);
-  while (ZmRef<MxMDOrder> order = i.iterateKey()) {
-    dumporder(op, order);
-  }
-}
-#endif
-
 void MxMDOBSide::addOrder_(
     MxMDOrder *order, MxDateTime transactTime,
     const MxMDInstrHandler *handler,
@@ -994,26 +973,24 @@ void MxMDInstrument::update(
 }
 
 MxMDVenueShard::MxMDVenueShard(MxMDVenue *venue, MxMDShard *shard) :
-    m_venue(venue), m_shard(shard), m_orderIDScope(venue->orderIDScope()),
-    m_orders2(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
-      init(ZuStringN<ZmHeapIDSize>() <<
-	"MxMDVenueShard." << venue->id() << ".Orders2")),
-    m_orders3(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
-      init(ZuStringN<ZmHeapIDSize>() <<
-	"MxMDVenueShard." << venue->id() << ".Orders3"))
+    m_venue(venue), m_shard(shard), m_orderIDScope(venue->orderIDScope())
 {
+  m_orders2 = new Orders2(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
+    init(ZmIDString() << "MxMDVenueShard." << venue->id() << ".Orders2"));
+  m_orders3 = new Orders3(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
+    init(ZmIDString() << "MxMDVenueShard." << venue->id() << ".Orders3"));
 }
 
 MxMDVenue::MxMDVenue(MxMDLib *md, MxMDFeed *feed, MxID id,
     MxEnum orderIDScope, MxFlags flags) :
   m_md(md), m_feed(feed), m_id(id),
   m_orderIDScope(orderIDScope), m_flags(flags),
-  m_shards(md->nShards()),
-  m_segments(ZmHashParams().bits(2).init(
-	ZuStringN<ZmHeapIDSize>() << "MxMDVenue." << id << ".Segments")),
-  m_orders(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
-    init(ZuStringN<ZmHeapIDSize>() << "MxMDVenue." << id << ".Orders"))
+  m_shards(md->nShards())
 {
+  m_segments = new Segments(ZmHashParams().bits(2).
+      init(ZmIDString() << "MxMDVenue." << id << ".Segments"));
+  m_orders = new Orders(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
+      init(ZmIDString() << "MxMDVenue." << id << ".Orders"));
   unsigned n = md->nShards();
   m_shards.length(n);
   for (unsigned i = 0; i < n; i++)
@@ -1047,7 +1024,7 @@ ZmRef<MxMDTickSizeTbl> MxMDVenue::addTickSizeTbl(ZuString id, MxNDP pxNDP)
 
 uintptr_t MxMDVenue::allSegments(ZmFn<const MxMDSegment &> fn) const
 {
-  auto i = m_segments.readIterator();
+  auto i = m_segments->readIterator();
   uintptr_t v;
   while (const MxMDSegment &segment = i.iterateKey())
     if (v = fn(segment)) return v;
@@ -1102,7 +1079,7 @@ ZmRef<MxMDInstrument> MxMDShard::addInstrument(
 
 uintptr_t MxMDShard::allInstruments(ZmFn<MxMDInstrument *> fn) const
 {
-  auto i = m_instruments.readIterator();
+  auto i = m_instruments->readIterator();
   while (MxMDInstrument *instrument = i.iterateKey())
     if (uintptr_t v = fn(instrument)) return v;
   return 0;
@@ -1110,7 +1087,7 @@ uintptr_t MxMDShard::allInstruments(ZmFn<MxMDInstrument *> fn) const
 
 uintptr_t MxMDShard::allOrderBooks(ZmFn<MxMDOrderBook *> fn) const
 {
-  auto i = m_orderBooks.readIterator();
+  auto i = m_orderBooks->readIterator();
   while (MxMDOrderBook *ob = i.iterateKey())
     if (uintptr_t v = fn(ob)) return v;
   return 0;
@@ -1164,12 +1141,6 @@ static void exception(MxMDLib *, ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 
 MxMDLib::MxMDLib(ZmScheduler *scheduler) :
   m_scheduler(scheduler),
-  m_allInstruments(ZmHashParams().bits(12).loadFactor(1.0).cBits(4).
-    init("MxMDLib.AllInstruments")),
-  m_allOrderBooks(ZmHashParams().bits(12).loadFactor(1.0).cBits(4).
-    init("MxMDLib.AllOrderBooks")),
-  m_instruments(ZmHashParams().bits(12).loadFactor(1.0).cBits(4).
-    init("MxMDLib.Instruments")),
 #if 0
   m_feeds(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
     init("MxMDLib.Feeds")),
@@ -1178,6 +1149,15 @@ MxMDLib::MxMDLib(ZmScheduler *scheduler) :
 #endif
   m_handler(new MxMDLibHandler())
 {
+  m_allInstruments =
+    new AllInstruments(ZmHashParams().bits(12).loadFactor(1.0).cBits(4).
+      init("MxMDLib.AllInstruments"));
+  m_allOrderBooks =
+    new AllOrderBooks(ZmHashParams().bits(12).loadFactor(1.0).cBits(4).
+	init("MxMDLib.AllOrderBooks"));
+  m_instruments =
+    new Instruments(ZmHashParams().bits(12).loadFactor(1.0).cBits(4).
+	init("MxMDLib.Instruments"));
   m_handler->exception = MxMDExceptionFn::Ptr<&exception>::fn();
 }
 
@@ -1359,7 +1339,7 @@ ZmRef<MxMDInstrument> MxMDLib::addInstrument(
       return instr;
     }
     instr = new MxMDInstrument(shard, key, refData);
-    m_allInstruments.add(instr);
+    m_allInstruments->add(instr);
     addInstrIndices(instr, refData, transactTime);
     shard->addInstrument(instr);
     MxMDCore *core = static_cast<MxMDCore *>(this);
@@ -1457,21 +1437,21 @@ void MxMDLib::addInstrIndices(
     MxDateTime transactTime)
 {
   if (*refData.idSrc && refData.symbol)
-    m_instruments.add(
+    m_instruments->add(
 	MxSymKey{.id = refData.symbol, .src = refData.idSrc}, instrument);
   if (*refData.altIDSrc && refData.altSymbol)
-    m_instruments.add(
+    m_instruments->add(
 	MxSymKey{.id = refData.altSymbol, .src = refData.altIDSrc}, instrument);
   if (*refData.underVenue && refData.underlying && *refData.mat) {
     MxInstrKey underKey{
       refData.underVenue, refData.underSegment, refData.underlying};
-    ZmRef<MxMDInstrument> underlying = m_allInstruments.findKey(underKey);
+    ZmRef<MxMDInstrument> underlying = m_allInstruments->findKey(underKey);
     if (!underlying) {
       MxMDShard *shard = instrument->shard();
       MxMDInstrRefData underRefData{.tradeable = false}; // default
       ZmRef<MxMDInstrument> underlying_ =
 	new MxMDInstrument(shard, underKey, underRefData);
-      m_allInstruments.add(underlying_);
+      m_allInstruments->add(underlying_);
       shard->addInstrument(underlying_);
       MxMDCore *core = static_cast<MxMDCore *>(this);
       if (ZuUnlikely(core->streaming()))
@@ -1488,10 +1468,10 @@ void MxMDLib::delInstrIndices(
     MxMDInstrument *instrument, const MxMDInstrRefData &refData)
 {
   if (*refData.idSrc && refData.symbol)
-    m_instruments.delKey(
+    m_instruments->delKey(
 	MxSymKey{.id = refData.symbol, .src = refData.idSrc});
   if (*refData.altIDSrc && refData.altSymbol)
-    m_instruments.delKey(
+    m_instruments->delKey(
 	MxSymKey{.id = refData.altSymbol, .src = refData.altIDSrc});
   if (*refData.underVenue && refData.underlying && *refData.mat)
     if (MxMDInstrument *underlying = instrument->underlying()) {
@@ -1570,7 +1550,7 @@ loop:
       instrument->shard(), venue,
       key.segment, key.id, instrument, tickSizeTbl, lotSizes,
       instrument->handler());
-    m_allOrderBooks.add(ob);
+    m_allOrderBooks->add(ob);
     ob->shard()->addOrderBook(ob);
     ob->instrument()->addOrderBook_(ob);
     ob->venue()->feed()->addOrderBook(ob, transactTime);
@@ -1614,7 +1594,7 @@ ZmRef<MxMDOrderBook> MxMDLib::addCombination(
   ZmRef<MxMDOrderBook> ob;
   {
     Guard guard(m_refDataLock);
-    if (ob = m_allOrderBooks.findKey(
+    if (ob = m_allOrderBooks->findKey(
 	  MxInstrKey{.id = id, .venue = venue->id(), .segment = segment})) {
       guard.unlock();
       ob->update(tickSizeTbl, lotSizes, transactTime);
@@ -1623,7 +1603,7 @@ ZmRef<MxMDOrderBook> MxMDLib::addCombination(
     ob = new MxMDOrderBook(shard, venue,
       segment, id, pxNDP, qtyNDP, legs, instruments, sides, ratios,
       tickSizeTbl, lotSizes);
-    m_allOrderBooks.add(ob);
+    m_allOrderBooks->add(ob);
     shard->addOrderBook(ob);
     venue->feed()->addOrderBook(ob, transactTime);
     MxMDCore *core = static_cast<MxMDCore *>(this);
@@ -1664,7 +1644,7 @@ void MxMDLib::delOrderBook(
     Guard guard(m_refDataLock);
     ob = instrument->delOrderBook_(venue, segment);
     if (!ob) return;
-    m_allOrderBooks.delKey(
+    m_allOrderBooks->delKey(
 	MxInstrKey{.id = ob->id(), .venue = venue, .segment = segment});
     ob->shard()->delOrderBook(ob);
     ob->venue()->feed()->delOrderBook(ob, transactTime);
@@ -1686,7 +1666,7 @@ void MxMDLib::delCombination(
   ZmRef<MxMDOrderBook> ob;
   {
     Guard guard(m_refDataLock);
-    ob = m_allOrderBooks.delKey(
+    ob = m_allOrderBooks->delKey(
 	MxInstrKey{.id = id, .venue = venue->id(), .segment = segment});
     if (!ob) return;
     shard->delOrderBook(ob);

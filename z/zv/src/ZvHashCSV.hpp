@@ -19,8 +19,8 @@
 
 // hash table configuration
 
-#ifndef ZvHashMgrCf_HPP
-#define ZvHashMgrCf_HPP
+#ifndef ZvHashCSV_HPP
+#define ZvHashCSV_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -37,16 +37,15 @@
 
 #include <ZvCSV.hpp>
 
-struct ZvHashMgrCf {
-  typedef ZuStringN<ZmHeapIDSize> ID;
+struct ZvAPI ZvHashCSV {
   struct Data {
-    ID			id;
+    ZmIDString		id;
     ZuBox<unsigned>	bits;
     ZuBox<double>	loadFactor;
     ZuBox<unsigned>	cBits;
   };
 
-  typedef ZvCSVColumn<ZvCSVColType::String, ID> IDCol;
+  typedef ZvCSVColumn<ZvCSVColType::String, ZmIDString> IDCol;
   typedef ZvCSVColumn<ZvCSVColType::Int, ZuBox<unsigned> > UIntCol;
   typedef ZvCSVColumn<ZvCSVColType::Float, ZuBox<double> > DblCol;
 
@@ -85,4 +84,4 @@ struct ZvHashMgrCf {
   }
 };
 
-#endif /* ZvHashMgrCf_HPP */
+#endif /* ZvHashCSV_HPP */

@@ -286,11 +286,15 @@ friend struct Thread;
 
   typedef ZmRef<Thread> ThreadRef;
 
-  typedef ZmHash<TID, ZmHashVal<ThreadRef, ZmHashLock<ZmNoLock> > > ThreadHash;
+  typedef ZmHash<TID,
+	    ZmHashVal<ThreadRef,
+	      ZmHashLock<ZmNoLock> > > ThreadHash;
 
 public:
-  ZmTLock(ZmTLockParams params = ZmTLockParams()) :
-    m_locks(params.m_idHash), m_threads(params.m_tidHash) { }
+  ZmTLock(ZmTLockParams params = ZmTLockParams()) {
+    m_locks = new LockHash(params.m_idHash);
+    m_threads = new ThreadHash(params.m_tidHash);
+  }
   virtual ~ZmTLock() { }
 
 private:
@@ -302,18 +306,18 @@ private:
 
     // printf("Read Locking\t(TID = %d, ID = %d)\n", (int)tid, (int)id);
 
-    if (!(lock = m_locks.findVal(id)))
-      m_locks.add(id, lock = allocLock(id));
+    if (!(lock = m_locks->findVal(id)))
+      m_locks->add(id, lock = allocLock(id));
 
     lock->m_useCount++;
 
     {
       typename ThreadHash::NodeRef threadNode;
 
-      if (threadNode = m_threads.find(tid))
+      if (threadNode = m_threads->find(tid))
 	thread = threadNode->val();
       else
-	m_threads.add(tid, thread = new Thread(tid));
+	m_threads->add(tid, thread = new Thread(tid));
     }
 
     if (lock->m_writeLocker == thread) { // we already write locked it
@@ -352,7 +356,7 @@ acquire:
     return 0;
 
 fail:
-    if (!--lock->m_useCount) { freeLock(lock); m_locks.del(id); }
+    if (!--lock->m_useCount) { freeLock(lock); m_locks->del(id); }
     return -1;
   }
 
@@ -367,10 +371,10 @@ fail:
     {
       typename LockHash::NodeRef lockNode;
 
-      if (lockNode = m_locks.find(id))
+      if (lockNode = m_locks->find(id))
 	lock = lockNode->val();
       else
-	m_locks.add(id, lock = allocLock(id));
+	m_locks->add(id, lock = allocLock(id));
     }
 
     lock->m_useCount++;
@@ -378,10 +382,10 @@ fail:
     {
       typename ThreadHash::NodeRef threadNode;
 
-      if (threadNode = m_threads.find(tid))
+      if (threadNode = m_threads->find(tid))
 	thread = threadNode->val();
       else
-	m_threads.add(tid, thread = new Thread(tid));
+	m_threads->add(tid, thread = new Thread(tid));
     }
 
     if (lock->m_writeLocker == thread) {	// we already write locked it
@@ -451,7 +455,7 @@ fail:
       lock->m_upgradeCount--;
     }
 
-    if (!--lock->m_useCount) m_locks.del(id);
+    if (!--lock->m_useCount) m_locks->del(id);
     return -1;
   }
 
@@ -500,7 +504,7 @@ fail:
     return;
 
 unused:
-    m_locks.del(lock->m_id);
+    m_locks->del(lock->m_id);
   }
 
 
@@ -528,14 +532,14 @@ public:
 #define ZmTLock_ID2LOCK(id, lock, ret) do { \
       typename LockHash::NodeRef lockNode; \
  \
-      if (!(lockNode = m_locks.find(id))) return ret; \
+      if (!(lockNode = m_locks->find(id))) return ret; \
       lock = lockNode->val(); \
     } while (0)
 
 #define ZmTLock_TID2THREAD(tid, thread, ret) do { \
       typename ThreadHash::NodeRef threadNode; \
  \
-      if (!(threadNode = m_threads.find(tid))) return ret; \
+      if (!(threadNode = m_threads->find(tid))) return ret; \
       thread = threadNode->val(); \
     } while (0)
 
@@ -595,7 +599,7 @@ public:
     {
       typename LockHash::NodeRef lockNode;
 
-      if (!(lockNode = m_locks.find(ZuFwd<ID_>(id)))) {
+      if (!(lockNode = m_locks->find(ZuFwd<ID_>(id)))) {
 	s << "LOCK NOT FOUND";
 	return s;
       }
@@ -621,13 +625,13 @@ public:
     {
       typename ThreadHash::NodeRef threadNode;
 
-      if (!(threadNode = m_threads.find(oldTID))) return;
+      if (!(threadNode = m_threads->find(oldTID))) return;
       oldThread = threadNode->val();
 
-      if (threadNode = m_threads.find(newTID))
+      if (threadNode = m_threads->find(newTID))
 	newThread = threadNode->val();
       else
-	m_threads.add(newTID, newThread = new Thread(newTID));
+	m_threads->add(newTID, newThread = new Thread(newTID));
     }
 
     while (oldThread->readUnlock(lock)) newThread->readLock(lock);
@@ -657,7 +661,7 @@ public:
 #undef ZmTLock_ID2LOCK
 #undef ZmTLock_TID2THREAD
 
-  int count() { return m_locks.count(); }
+  int count() { return m_locks->count(); }
 
 private:
   template <typename ID_>
@@ -672,8 +676,8 @@ private:
   void freeLock(Lock *lock) { m_freeLocks.push(lock); }
 
   Lock_			m_lock;		// global lock
-  LockHash		m_locks;	// locks
-  ThreadHash		m_threads;	// threads
+  ZmRef<LockHash>	m_locks;	// locks
+  ZmRef<ThreadHash>	m_threads;	// threads
   LockList		m_freeLocks;	// free list
 };
 

@@ -113,33 +113,16 @@ public:
   }
 
 private:
-  inline typename T::V2S &v2s_() { return this->m_v2s; }
-public:
-  class Iterator;
-friend class Iterator;
-  class Iterator : private T::V2S::ReadIterator {
-  public:
-    inline Iterator(const ZvEnum *e) :
-      T::V2S::ReadIterator(e->v2s_()) { }
-    inline ZtEnum iterate() { return this->iterateKey(); }
-  };
-
-private:
   template <typename Key, typename Value>
   inline void errorMessage(ZmStream &s, Key &&key, Value &&value) const {
     s << ZuFwd<Key>(key) << ": \"" << ZuFwd<Value>(value) <<
       "\" did not match { ";
-    {
-      typename T::S2V::ReadIterator i(this->m_s2v);
-      ZuPair<const char *, ZtEnum> kv = i.iterate();
-      if (kv.p1()) {
-	s << kv.p1() << " = " << kv.p2();
-	while (kv = i.iterate(), kv.p1()) {
-	  s << ", ";
-	  s << kv.p1() << " = " << kv.p2();
-	}
-      }
-    }
+    bool first = true;
+    this->all([&s, &first](ZuString name, ZtEnum ordinal) {
+	  if (!first) s << ", ";
+	  first = false;
+	  s << name << " = " << ordinal;
+	});
     s << " }";
   }
 };

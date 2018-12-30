@@ -160,8 +160,7 @@ void MxMDPubLink::connect()
   {
     Guard connGuard(m_connLock);
     m_tcpTbl = new TCPTbl(ZmHashParams().bits(4).loadFactor(1.0).cBits(3).
-	init(ZuStringN<ZmHeapIDSize>() <<
-	  "MxMDPublisher." << id() << ".TCPTbl"));
+	init(ZmIDString() << "MxMDPublisher." << id() << ".TCPTbl"));
   }
 
   txInvoke([](Tx *tx) { tx->start(); }); // start sending

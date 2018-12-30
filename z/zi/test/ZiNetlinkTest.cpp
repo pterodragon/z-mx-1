@@ -111,8 +111,8 @@ friend class Connection;
 public:
   Mx(int nThreads, int nConnections, int nConcurrent, int maxRecv,
      int nFragments, int yield, int debug, int epollMaxFDs, int epollQuantum) :
-      ZiMultiplex(ZiMultiplexParams().scheduler(
-	  ZmSchedulerParams().nThreads(nThreads))
+      ZiMultiplex(ZiMxParams().scheduler(
+	  ZmSchedParams().nThreads(nThreads))
 #ifdef ZiMultiplex_EPoll
 	.epollMaxFDs(epollMaxFDs).epollQuantum(epollQuantum)
 #endif

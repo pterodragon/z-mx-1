@@ -31,25 +31,27 @@ typedef ZmHash<int, ZmHashVal<ZmRef<Connection> > > ConnHash;
 bool running = true;
 
 struct TestObject {
+  TestObject() { connHash = new ConnHash(); }
+
   void inserter() {
     printf("Starting inserter\n");
     while (running) {
-      connHash.findAdd(15, ZmRef<Connection>(new Connection()));
+      connHash->findAdd(15, ZmRef<Connection>(new Connection()));
     }
   }
   void remover() {
     printf("Starting remover\n");
     while (running) {
-      connHash.del(15);
+      connHash->del(15);
     }
   }
   void finder() {
     printf("Starting finder\n");
     while (running) {
-      ZmRef<Connection> c = connHash.findVal(15);
+      ZmRef<Connection> c = connHash->findVal(15);
     }
   }
-  ConnHash connHash;
+  ZmRef<ConnHash>	connHash;
 };
 
 ZmSemaphore sem;

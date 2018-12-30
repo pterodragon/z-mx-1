@@ -139,7 +139,7 @@ public:
   Mx(ZiIP ip, unsigned port, const ZiCxnOptions &options,
       unsigned nConnections, unsigned nConcurrent,
       unsigned maxRecv, int reconnInterval,
-      const ZiMultiplexParams &params) :
+      const ZiMxParams &params) :
     ZiMultiplex(params), m_ip(ip), m_port(port), m_options(options),
     m_nConnections(nConnections), m_nConcurrent(nConcurrent),
     m_maxRecv(maxRecv), m_reconnInterval(reconnInterval),
@@ -233,7 +233,7 @@ int main(int argc, char **argv)
   int nConcurrent = 1;
   int maxRecv = 0;
   int reconnInterval = 1;
-  ZiMultiplexParams params;
+  ZiMxParams params;
 
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] != '-') {

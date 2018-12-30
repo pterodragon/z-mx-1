@@ -195,8 +195,7 @@ friend class TCP;
 	    ZmHashIndex<TCP::SocketAccessor,
 	      ZmHashLock<ZmNoLock,
 		ZmHashObject<ZuObject,
-		  ZmHashHeapID<TCP_HeapID,
-		    ZmHashBase<ZmObject> > > > > > TCPTbl;
+		  ZmHashHeapID<TCP_HeapID> > > > > TCPTbl;
 
   class UDP;
 friend class UDP;

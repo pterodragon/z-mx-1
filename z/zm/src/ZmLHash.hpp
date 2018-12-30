@@ -57,9 +57,8 @@
 // NTP (named template parameters):
 //
 // ZmLHash<ZtString,			// keys are ZtStrings
-//   ZmLHashBase<ZmObject,		// base of ZmObject
-//     ZmLHashVal<ZtString,		// values are ZtStrings
-//	 ZmLHashValCmp<ZtICmp> > > >	// case-insensitive comparison
+//   ZmLHashVal<ZtString,		// values are ZtStrings
+//     ZmLHashValCmp<ZtICmp> > > >	// case-insensitive comparison
 
 // NTP defaults
 struct ZmLHash_Defaults {
@@ -72,7 +71,6 @@ struct ZmLHash_Defaults {
   template <typename T> struct ValCmpT	{ typedef ZuCmp<T>	ValCmp; };
   typedef ZmLock Lock;
   struct ID { inline static const char *id() { return "ZmLHash"; } };
-  struct Base { };
   enum { Static = 0 };
 };
 
@@ -161,13 +159,6 @@ struct ZmLHashLock : public NTP {
 template <class ID_, class NTP = ZmLHash_Defaults>
 struct ZmLHashID : public NTP {
   typedef ID_ ID;
-};
-
-// ZmLHashBase - injection of a base class (e.g. ZmObject)
-template <class Base_, class NTP = ZmLHash_Defaults>
-struct ZmLHashBase : public NTP {
-  typedef Base_ Base;
-  // struct Base : public virtual Base_ { };
 };
 
 // ZmLHashStatic<Bits> - static/non-resizable vs dynamic/resizable allocation
@@ -346,11 +337,14 @@ struct ZuTraits<ZmLHash_Node<Key, Cmp, Val, ValCmp> > :
 };
 
 // common base class for both static and dynamic tables
-template <typename Key, typename NTP> class ZmLHash__ {
+template <typename Key, typename NTP> class ZmLHash__ : public ZmAnyHash {
   typedef typename NTP::Lock Lock;
 
 public:
   inline unsigned count() const { return m_count; }
+  inline unsigned loadFactor_() const { return m_loadFactor; }
+  inline double loadFactor() const { return (double)m_loadFactor / 16.0; }
+  inline unsigned telFreq() const { return m_telFreq; }
 
 protected:
   inline ZmLHash__(const ZmHashParams &params) : m_count(0) {
@@ -358,11 +352,13 @@ protected:
     if (loadFactor < 0.5) loadFactor = 0.5;
     else if (loadFactor > 1.0) loadFactor = 1.0;
     m_loadFactor = (unsigned)(loadFactor * 16.0);
+    m_telFreq = params.telFreq();
   }
 
-  unsigned	m_loadFactor;
-  unsigned	m_count;
+  unsigned	m_loadFactor = 0;
+  unsigned	m_count = 0;
   Lock		m_lock;
+  unsigned	m_telFreq = 0;
 };
 
 // statically allocated hash table base class
@@ -376,7 +372,7 @@ class ZmLHash_ : public ZmLHash__<Key, NTP> {
   typedef ZmLHash_Ops<Node> Ops;
 
 public:
-  inline unsigned bits() const { return Static; }
+  inline static constexpr unsigned bits() { return Static; }
 
 protected:
   inline ZmLHash_(const ZmHashParams &params) : Base(params) { }
@@ -384,7 +380,7 @@ protected:
   inline void init() { Ops::initItems(m_table, 1U<<Static); }
   inline void final() { Ops::destroyItems(m_table, 1U<<Static); }
   inline void resize() { }
-  unsigned resized() const { return 0; }
+  inline static constexpr unsigned resized() { return 0; }
 
   Node		m_table[1U<<Static];
 };
@@ -444,14 +440,13 @@ protected:
 };
 
 template <typename Key_, class NTP = ZmLHash_Defaults>
-class ZmLHash :
-    public NTP::Base,
-    public ZmLHash_<ZmLHash<Key_, NTP>, Key_, NTP, NTP::Static> {
-  ZmLHash(const ZmLHash &);
-  ZmLHash &operator =(const ZmLHash &);	// prevent mis-use
+class ZmLHash : public ZmLHash_<ZmLHash<Key_, NTP>, Key_, NTP, NTP::Static> {
+  ZmLHash(const ZmLHash &) = delete;
+  ZmLHash &operator =(const ZmLHash &) = delete; // prevent mis-use
+
+template <class, typename, class, unsigned> friend class ZmLHash_;
 
   typedef ZmLHash_<ZmLHash<Key_, NTP>, Key_, NTP, NTP::Static> Base;
-template <class, typename, class, unsigned> friend class ZmLHash_;
 
 public:
   typedef Key_ Key;
@@ -493,22 +488,15 @@ private:
   };
   ZuAssert(CheckHashFn::IsUInt32);
 
-  inline void init() { return Base::init(); }
-  inline void final() { return Base::final(); }
-  inline void resize() { return Base::resize(); }
-  inline unsigned resized() const { return Base::resized(); }
-
-  inline const unsigned &loadFactor() const { return this->m_loadFactor; }
-  inline unsigned &loadFactor() { return this->m_loadFactor; }
-  inline unsigned &count_() { return this->m_count; }
-  inline const Lock &lock() const { return this->m_lock; }
-  inline Lock &lock() { return this->m_lock; }
-  inline const Node *table() const { return this->m_table; }
-  inline Node *table() { return this->m_table; }
+  using Base::m_count;
+  using Base::m_lock;
+  using Base::m_table;
 
 public:
-  inline unsigned bits() const { return Base::bits(); }
-  inline unsigned count() const { return this->m_count; }
+  using Base::bits;
+  using Base::loadFactor_;
+  using Base::loadFactor;
+  using Base::resized;
 
 protected:
   class Iterator_;
@@ -541,16 +529,18 @@ friend class IndexIterator_;
     typedef ZmLHash<Key, NTP> Hash;
   friend class ZmLHash<Key, NTP>;
 
+    using Iterator_::m_hash;
+
   protected:
     template <typename Index_>
     inline IndexIterator_(Hash &hash, const Index_ &index) :
 	Iterator_(hash), m_index(index), m_prev(-1) { }
 
   public:
-    inline void reset() { this->m_hash.startIterate(*this); }
-    inline KeyValRef iterate() { return this->m_hash.iterate(*this); }
-    inline const Key &iterateKey() { return this->m_hash.iterateKey(*this); }
-    inline const Val &iterateVal() { return this->m_hash.iterateVal(*this); }
+    inline void reset() { m_hash.startIterate(*this); }
+    inline KeyValRef iterate() { return m_hash.iterate(*this); }
+    inline const Key &iterateKey() { return m_hash.iterateKey(*this); }
+    inline const Val &iterateVal() { return m_hash.iterateVal(*this); }
 
   protected:
     Index	m_index;
@@ -566,10 +556,12 @@ public:
     void lock(Lock &l) { LockTraits::lock(l); }
     void unlock(Lock &l) { LockTraits::unlock(l); }
 
+    using Iterator_::m_hash;
+
   public:
     inline Iterator(Hash &hash) : Iterator_(hash) { hash.startIterate(*this); }
-    inline ~Iterator() { this->m_hash.endIterate(*this); }
-    inline void del() { this->m_hash.delIterate(*this); }
+    inline ~Iterator() { m_hash.endIterate(*this); }
+    inline void del() { m_hash.delIterate(*this); }
   };
 
   class ReadIterator : public Iterator_ {
@@ -580,10 +572,12 @@ public:
     void lock(Lock &l) { LockTraits::readlock(l); }
     void unlock(Lock &l) { LockTraits::readunlock(l); }
 
+    using Iterator_::m_hash;
+
   public:
     inline ReadIterator(const Hash &hash) : Iterator_(const_cast<Hash &>(hash))
       { const_cast<Hash &>(hash).startIterate(*this); }
-    inline ~ReadIterator() { this->m_hash.endIterate(*this); }
+    inline ~ReadIterator() { m_hash.endIterate(*this); }
   };
 
   class IndexIterator : public IndexIterator_ {
@@ -594,12 +588,14 @@ public:
     void lock(Lock &l) { LockTraits::lock(l); }
     void unlock(Lock &l) { LockTraits::unlock(l); }
 
+    using IndexIterator_::m_hash;
+
   public:
     template <typename Index_>
     inline IndexIterator(Hash &hash, Index_ &&index) :
 	IndexIterator_(hash, ZuFwd<Index_>(index)) { hash.startIterate(*this); }
-    inline ~IndexIterator() { this->m_hash.endIterate(*this); }
-    inline void del() { this->m_hash.delIterate(*this); }
+    inline ~IndexIterator() { m_hash.endIterate(*this); }
+    inline void del() { m_hash.delIterate(*this); }
   };
 
   class ReadIndexIterator : public IndexIterator_ {
@@ -610,30 +606,33 @@ public:
     void lock(Lock &l) { LockTraits::readlock(l); }
     void unlock(Lock &l) { LockTraits::readunlock(l); }
 
+    using IndexIterator_::m_hash;
+
   public:
     template <typename Index_>
     inline ReadIndexIterator(Hash &hash, Index_ &&index) :
 	IndexIterator_(const_cast<Hash &>(hash), ZuFwd<Index_>(index))
       { const_cast<Hash &>(hash).startIterate(*this); }
-    inline ~ReadIndexIterator() { this->m_hash.endIterate(*this); }
+    inline ~ReadIndexIterator() { m_hash.endIterate(*this); }
   };
 
   template <typename ...Args>
-  inline ZmLHash(
-    ZmHashParams params = ZmHashParams(ID::id()), Args &&... args) :
-      NTP::Base{ZuFwd<Args>(args)...},
-      Base(params) {
-    init();
+  inline ZmLHash(ZmHashParams params = ZmHashParams(ID::id())) : Base(params) {
+    Base::init();
   }
 
-  ~ZmLHash() { final(); }
+  ~ZmLHash() { Base::final(); }
+
+  inline unsigned size() const {
+    return (double)(((uint64_t)1)<<bits()) * loadFactor();
+  }
 
   template <typename Key__>
   inline int add(Key__ &&key) { return add(ZuFwd<Key__>(key), Val()); }
   template <typename Key__, typename Val_>
   inline int add(Key__ &&key, Val_ &&val) {
     uint32_t code = HashFn::hash(key);
-    Guard guard(lock());
+    Guard guard(m_lock);
 
     return add_(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code);
   }
@@ -649,62 +648,63 @@ public:
   }
 private:
   inline int alloc(unsigned slot) {
-    unsigned size = 1U<<this->bits();
+    unsigned size = 1U<<bits();
     for (unsigned i = 1; i < size; i++) {
       unsigned probe = (slot + i) & (size - 1);
-      if (!table()[probe]) return probe;
+      if (!m_table[probe]) return probe;
     }
     return -1;
   }
   inline int prev(unsigned slot) {
-    unsigned size = 1U<<this->bits();
+    unsigned size = 1U<<bits();
     for (unsigned i = 1; i < size; i++) {
       unsigned prev = (slot + size - i) & (size - 1);
-      if (table()[prev].next() == slot) return prev;
+      if (m_table[prev].next() == slot) return prev;
     }
     return -1;
   }
   template <typename Key__, typename Val_>
   inline int add_(Key__ &&key, Val_ &&val, uint32_t code) {
-    unsigned size = 1U<<this->bits();
+    unsigned size = 1U<<bits();
 
-    if (count_() < (1U<<28) && ((count_()<<4)>>this->bits()) >= loadFactor()) {
-      resize();
-      size = 1U<<this->bits();
+    if (m_count < (1U<<28) &&
+	((m_count<<4)>>bits()) >= loadFactor_()) {
+      Base::resize();
+      size = 1U<<bits();
     }
 
-    if (count_() >= size) return -1;
+    if (m_count >= size) return -1;
 
-    ++count_();
+    ++m_count;
 
     return add__(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code);
   }
 
   template <typename Key__, typename Val_>
   inline int add__(Key__ &&key, Val_ &&val, uint32_t code) {
-    unsigned size = 1U<<this->bits();
+    unsigned size = 1U<<bits();
     unsigned slot = code & (size - 1);
 
-    if (!table()[slot]) {
-      table()[slot].init(1, 1, 0, ZuFwd<Key__>(key), ZuFwd<Val_>(val));
+    if (!m_table[slot]) {
+      m_table[slot].init(1, 1, 0, ZuFwd<Key__>(key), ZuFwd<Val_>(val));
       return slot;
     }
 
     int move = alloc(slot);
     if (move < 0) return -1;
 
-    if (table()[slot].head()) {
-      (table()[move] = table()[slot]).clrHead();
-      table()[slot].init(1, 0, move, ZuFwd<Key__>(key), ZuFwd<Val_>(val));
+    if (m_table[slot].head()) {
+      (m_table[move] = m_table[slot]).clrHead();
+      m_table[slot].init(1, 0, move, ZuFwd<Key__>(key), ZuFwd<Val_>(val));
       return slot;
     }
 
     int prev = this->prev(slot);
     if (prev < 0) return -1;
 
-    table()[move] = table()[slot];
-    table()[prev].next(move);
-    table()[slot].init(1, 1, 0, ZuFwd<Key__>(key), ZuFwd<Val_>(val));
+    m_table[move] = m_table[slot];
+    m_table[prev].next(move);
+    m_table[slot].init(1, 1, 0, ZuFwd<Key__>(key), ZuFwd<Val_>(val));
     return slot;
   }
 
@@ -712,7 +712,7 @@ public:
   template <typename Index_>
   inline bool exists(const Index_ &index) const {
     uint32_t code = IHashFn::hash(index);
-    ReadGuard guard(const_cast<Lock &>(lock()));
+    ReadGuard guard(const_cast<Lock &>(m_lock));
 
     return find__(index, code) >= 0;
   }
@@ -723,7 +723,7 @@ public:
   template <typename Index_>
   inline KeyVal find(const Index_ &index) const {
     uint32_t code = IHashFn::hash(index);
-    ReadGuard guard(const_cast<Lock &>(lock()));
+    ReadGuard guard(const_cast<Lock &>(m_lock));
 
     return keyVal__(find__(index, code));
   }
@@ -734,60 +734,60 @@ public:
   template <typename Index_>
   inline Key findKey(const Index_ &index) const {
     uint32_t code = IHashFn::hash(index);
-    ReadGuard guard(const_cast<Lock &>(lock()));
+    ReadGuard guard(const_cast<Lock &>(m_lock));
 
     return key__(find__(index, code));
   }
   template <typename Index_>
   inline Val findVal(const Index_ &index) const {
     uint32_t code = IHashFn::hash(index);
-    ReadGuard guard(const_cast<Lock &>(lock()));
+    ReadGuard guard(const_cast<Lock &>(m_lock));
 
     return val__(find__(index, code));
   }
 private:
   template <typename Index_>
   inline int find__(const Index_ &index, uint32_t code) const {
-    unsigned size = 1U<<this->bits();
+    unsigned size = 1U<<bits();
     unsigned slot = code & (size - 1);
-    if (!table()[slot] || !table()[slot].head()) return -1;
+    if (!m_table[slot] || !m_table[slot].head()) return -1;
     for (;;) {
-      if (ICmp::equals(table()[slot].key(), index)) return slot;
-      if (table()[slot].tail()) return -1;
-      slot = table()[slot].next();
+      if (ICmp::equals(m_table[slot].key(), index)) return slot;
+      if (m_table[slot].tail()) return -1;
+      slot = m_table[slot].next();
     }
   }
   template <typename Index_>
   inline int findPrev__(const Index_ &index, uint32_t code) const {
-    unsigned size = 1U<<this->bits();
+    unsigned size = 1U<<bits();
     unsigned slot = code & (size - 1);
-    if (!table()[slot] || !table()[slot].head()) return -1;
+    if (!m_table[slot] || !m_table[slot].head()) return -1;
     int prev = -1;
     for (;;) {
-      if (ICmp::equals(table()[slot].key(), index))
+      if (ICmp::equals(m_table[slot].key(), index))
 	return prev < 0 ? (-((int)slot) - 2) : prev;
-      if (table()[slot].tail()) return -1;
-      prev = slot, slot = table()[slot].next();
+      if (m_table[slot].tail()) return -1;
+      prev = slot, slot = m_table[slot].next();
     }
   }
 
   inline KeyVal keyVal__(int slot) const {
     if (ZuUnlikely(slot < 0))
       return KeyVal(Cmp::null(), ValCmp::null());
-    return KeyVal(table()[slot].key(), table()[slot].value());
+    return KeyVal(m_table[slot].key(), m_table[slot].value());
   }
   inline KeyValRef keyValRef__(int slot) const {
     if (ZuUnlikely(slot < 0))
       return KeyValRef(Cmp::null(), ValCmp::null());
-    return KeyValRef(table()[slot].key(), table()[slot].value());
+    return KeyValRef(m_table[slot].key(), m_table[slot].value());
   }
   inline const Key &key__(int slot) const {
     if (ZuUnlikely(slot < 0)) return Cmp::null();
-    return table()[slot].key();
+    return m_table[slot].key();
   }
   inline const Val &val__(int slot) const {
     if (ZuUnlikely(slot < 0)) return ValCmp::null();
-    return table()[slot].value();
+    return m_table[slot].value();
   }
 
 public:
@@ -795,7 +795,7 @@ public:
   inline KeyVal find(
       const Index_ &index, const Val_ &val) const {
     uint32_t code = IHashFn::hash(index);
-    ReadGuard guard(lock());
+    ReadGuard guard(m_lock);
 
     return keyVal__(find__(index, val, code));
   }
@@ -807,14 +807,14 @@ public:
   template <typename Index_, typename Val_>
   inline Key findKey(const Index_ &index, const Val_ &val) const {
     uint32_t code = IHashFn::hash(index);
-    ReadGuard guard(lock());
+    ReadGuard guard(m_lock);
 
     return key__(find__(index, val, code));
   }
   template <typename Index_, typename Val_>
   inline Val findVal(const Index_ &index, const Val_ &val) const {
     uint32_t code = IHashFn::hash(index);
-    ReadGuard guard(lock());
+    ReadGuard guard(m_lock);
 
     return val__(find__(index, val, code));
   }
@@ -822,29 +822,29 @@ private:
   template <typename Index_, typename Val_>
   inline int find__(
       const Index_ &index, const Val_ &val, uint32_t code) const {
-    unsigned size = 1U<<this->bits();
+    unsigned size = 1U<<bits();
     unsigned slot = code & (size - 1);
-    if (!table()[slot] || !table()[slot].head()) return -1;
+    if (!m_table[slot] || !m_table[slot].head()) return -1;
     for (;;) {
-      if (ICmp::equals(table()[slot].key(), index) &&
-	  ValCmp::equals(table()[slot].value(), val)) return slot;
-      if (table()[slot].tail()) return -1;
-      slot = table()[slot].next();
+      if (ICmp::equals(m_table[slot].key(), index) &&
+	  ValCmp::equals(m_table[slot].value(), val)) return slot;
+      if (m_table[slot].tail()) return -1;
+      slot = m_table[slot].next();
     }
   }
   template <typename Index_, typename Val_>
   inline int findPrev__(
       const Index_ &index, const Val_ &val, uint32_t code) const {
-    unsigned size = 1U<<this->bits();
+    unsigned size = 1U<<bits();
     unsigned slot = code & (size - 1);
-    if (!table()[slot] || !table()[slot].head()) return -1;
+    if (!m_table[slot] || !m_table[slot].head()) return -1;
     int prev = -1;
     for (;;) {
-      if (ICmp::equals(table()[slot].key(), index) &&
-	  ValCmp::equals(table()[slot].value(), val))
+      if (ICmp::equals(m_table[slot].key(), index) &&
+	  ValCmp::equals(m_table[slot].value(), val))
 	return prev < 0 ? (-slot - 2) : prev;
-      if (table()[slot].tail()) return -1;
-      prev = slot, slot = table()[slot].next();
+      if (m_table[slot].tail()) return -1;
+      prev = slot, slot = m_table[slot].next();
     }
   }
 
@@ -852,14 +852,14 @@ public:
   template <typename Key__>
   inline KeyVal findAdd(Key__ &&key) {
     uint32_t code = HashFn::hash(key);
-    Guard guard(lock());
+    Guard guard(m_lock);
 
     return keyVal__(findAdd__(ZuFwd<Key__>(key), Val(), code));
   }
   template <typename Key__, typename Val_>
   inline KeyVal findAdd(Key__ &&key, Val_ &&val) {
     uint32_t code = HashFn::hash(key);
-    Guard guard(lock());
+    Guard guard(m_lock);
 
     return keyVal__(findAdd__(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code));
   }
@@ -877,34 +877,34 @@ public:
   template <typename Key__>
   inline Key findAddKey(Key__ &&key) {
     uint32_t code = HashFn::hash(key);
-    Guard guard(lock());
+    Guard guard(m_lock);
 
     return key__(findAdd__(ZuFwd<Key__>(key), Val(), code));
   }
   template <typename Key__, typename Val_>
   inline Key findAddKey(Key__ &&key, Val_ &&val) {
     uint32_t code = HashFn::hash(key);
-    Guard guard(lock());
+    Guard guard(m_lock);
 
     return key__(findAdd__(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code));
   }
   template <typename Key__, typename Val_>
   inline Val findAddVal(Key__ &&key, Val_ &&val) {
     uint32_t code = HashFn::hash(key);
-    Guard guard(lock());
+    Guard guard(m_lock);
 
     return val__(findAdd__(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code));
   }
 private:
   template <typename Key__, typename Val_>
   inline int findAdd__(Key__ &&key, Val_ &&val, uint32_t code) {
-    unsigned size = 1U<<this->bits();
+    unsigned size = 1U<<bits();
     unsigned slot = code & (size - 1);
-    if (!!table()[slot] && table()[slot].head())
+    if (!!m_table[slot] && m_table[slot].head())
       for (;;) {
-	if (Cmp::equals(table()[slot].key(), key)) return slot;
-	if (table()[slot].tail()) break;
-	slot = table()[slot].next();
+	if (Cmp::equals(m_table[slot].key(), key)) return slot;
+	if (m_table[slot].tail()) break;
+	slot = m_table[slot].next();
       }
     return add_(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code);
   }
@@ -913,7 +913,7 @@ public:
   template <typename Index_>
   inline Key del(const Index_ &index) {
     uint32_t code = IHashFn::hash(index);
-    Guard guard(lock());
+    Guard guard(m_lock);
 
     return delKey__(findPrev__(index, code));
   }
@@ -924,14 +924,14 @@ public:
   template <typename Index_>
   inline Key delKey(const Index_ &index) {
     uint32_t code = IHashFn::hash(index);
-    Guard guard(lock());
+    Guard guard(m_lock);
 
     return delKey__(findPrev__(index, code));
   }
   template <typename Index_>
   inline Val delVal(const Index_ &index) {
     uint32_t code = IHashFn::hash(index);
-    Guard guard(lock());
+    Guard guard(m_lock);
 
     return delVal__(findPrev__(index, code));
   }
@@ -943,54 +943,54 @@ private:
     if (prev < 0)
       slot = (-prev - 2), prev = -1;
     else
-      slot = table()[prev].next();
+      slot = m_table[prev].next();
 
-    if (!table()[slot]) return;
+    if (!m_table[slot]) return;
 
-    --count_();
+    --m_count;
 
-    if (table()[slot].head()) {
+    if (m_table[slot].head()) {
       ZmAssert(prev < 0);
-      if (table()[slot].tail()) {
-	table()[slot].null();
+      if (m_table[slot].tail()) {
+	m_table[slot].null();
 	return;
       }
-      unsigned next = table()[slot].next();
-      (table()[slot] = table()[next]).setHead();
-      table()[next].null();
+      unsigned next = m_table[slot].next();
+      (m_table[slot] = m_table[next]).setHead();
+      m_table[next].null();
       return;
     }
 
-    if (table()[slot].tail()) {
+    if (m_table[slot].tail()) {
       ZmAssert(prev >= 0);
-      if (prev >= 0) table()[prev].setTail();
-      table()[slot].null();
+      if (prev >= 0) m_table[prev].setTail();
+      m_table[slot].null();
       return;
     }
 
-    unsigned next = table()[slot].next();
-    table()[slot] = table()[next];
-    table()[next].null();
+    unsigned next = m_table[slot].next();
+    m_table[slot] = m_table[next];
+    m_table[next].null();
   }
 
   inline KeyVal delKeyVal__(int prev) {
     if (prev == -1) return KeyVal(Cmp::null(), ValCmp::null());
-    int slot = prev < 0 ? (-prev - 2) : table()[prev].next();
-    KeyVal keyVal(ZuMv(table()[slot].key()), ZuMv(table()[slot].value()));
+    int slot = prev < 0 ? (-prev - 2) : m_table[prev].next();
+    KeyVal keyVal(ZuMv(m_table[slot].key()), ZuMv(m_table[slot].value()));
     del__(prev);
     return keyVal;
   }
   inline Key delKey__(int prev) {
     if (prev == -1) return Cmp::null();
-    int slot = prev < 0 ? (-prev - 2) : table()[prev].next();
-    Key key(ZuMv(table()[slot].key()));
+    int slot = prev < 0 ? (-prev - 2) : m_table[prev].next();
+    Key key(ZuMv(m_table[slot].key()));
     del__(prev);
     return key;
   }
   inline Key delVal__(int prev) {
     if (prev == -1) return Cmp::null();
-    int slot = prev < 0 ? (-prev - 2) : table()[prev].next();
-    Val val(ZuMv(table()[slot].value()));
+    int slot = prev < 0 ? (-prev - 2) : m_table[prev].next();
+    Val val(ZuMv(m_table[slot].value()));
     del__(prev);
     return val;
   }
@@ -999,7 +999,7 @@ public:
   template <typename Index_, typename Val_>
   inline KeyVal del(const Index_ &index, const Val_ &val) {
     uint32_t code = IHashFn::hash(index);
-    Guard guard(lock());
+    Guard guard(m_lock);
 
     return delKeyVal__(findPrev__(index, val, code));
   }
@@ -1010,48 +1010,44 @@ public:
   template <typename Index_, typename Val_>
   inline Key delKey(const Index_ &index, const Val_ &val) {
     uint32_t code = IHashFn::hash(index);
-    Guard guard(lock());
+    Guard guard(m_lock);
 
     return delKey__(findPrev__(index, val, code));
   }
   template <typename Index_, typename Val_>
   inline Val delVal(const Index_ &index, const Val_ &val) {
     uint32_t code = IHashFn::hash(index);
-    Guard guard(lock());
+    Guard guard(m_lock);
 
     return delVal__(findPrev__(index, val, code));
   }
 
   void clean() {
-    unsigned size = 1U<<this->bits();
-    Guard guard(lock());
+    unsigned size = 1U<<bits();
+    Guard guard(m_lock);
 
-    for (unsigned i = 0; i < size; i++) table()[i].null();
-    count_() = 0;
+    for (unsigned i = 0; i < size; i++) m_table[i].null();
+    m_count = 0;
   }
 
 private:
-  void addMgr() {
-    ZmHashMgr::add(this,
-	ZmHashMgr::ReportFn::Member<&ZmLHash::report>::fn(this));
-  }
-  void delMgr() {
-    ZmHashMgr::del(this);
-  }
-
-  void report(ZmHashStats &s) {
-    s.id = ID::id();
-    s.linear = true;
-    s.nodeSize = sizeof(Node);
-    s.bits = this->bits();
-    s.loadFactor = ((double)loadFactor()) / 16.0;
-    s.cBits = 0;
-    s.count = count_(); // deliberately unsafe
-    s.effLoadFactor = ((double)s.count) / ((double)(1<<s.bits));
-    s.resized = resized(); // deliberately unsafe
-  }
+  void addMgr() { ZmHashMgr::add(this); }
+  void delMgr() { ZmHashMgr::del(this); }
 
 public:
+  void telemetry(ZmHashTelemetry &data) const {
+    data.id = ID::id();
+    data.nodeSize = sizeof(Node);
+    data.loadFactor = loadFactor_();
+    data.count = m_count; // deliberately unsafe
+    unsigned bits = this->bits();
+    data.effLoadFactor = ((double)data.count) / ((double)(1<<bits));
+    data.resized = resized(); // deliberately unsafe
+    data.bits = bits;
+    data.cBits = 0;
+    data.linear = true;
+  }
+
   auto iterator() { return Iterator(*this); }
   template <typename Index_>
   auto iterator(Index_ &&index) {
@@ -1066,19 +1062,19 @@ public:
 
 private:
   inline void startIterate(Iterator_ &iterator) {
-    iterator.lock(lock());
+    iterator.lock(m_lock);
     iterator.m_slot = -1;
     int next = -1;
-    int size = 1<<this->bits();
+    int size = 1<<bits();
     while (++next < size)
-      if (!!table()[next]) {
+      if (!!m_table[next]) {
 	iterator.m_next = next;
 	return;
       }
     iterator.m_next = -1;
   }
   inline void startIterate(IndexIterator_ &iterator) {
-    iterator.lock(lock());
+    iterator.lock(m_lock);
     iterator.m_slot = -1;
     int prev =
       findPrev__(iterator.m_index, IHashFn::hash(iterator.m_index));
@@ -1089,7 +1085,7 @@ private:
     if (prev < 0)
       iterator.m_next = -prev - 2, iterator.m_prev = -1;
     else
-      iterator.m_next = table()[iterator.m_prev = prev].next();
+      iterator.m_next = m_table[iterator.m_prev = prev].next();
   }
   inline void iterate_(Iterator_ &iterator) {
     int next = iterator.m_next;
@@ -1098,9 +1094,9 @@ private:
       return;
     }
     iterator.m_slot = next;
-    int size = 1<<this->bits();
+    int size = 1<<bits();
     while (++next < size)
-      if (!!table()[next]) {
+      if (!!m_table[next]) {
 	iterator.m_next = next;
 	return;
       }
@@ -1114,9 +1110,9 @@ private:
     }
     if (iterator.m_slot >= 0) iterator.m_prev = iterator.m_slot;
     iterator.m_slot = next;
-    while (!table()[next].tail()) {
-      next = table()[next].next();
-      if (ICmp::equals(table()[next].key(), iterator.m_index)) {
+    while (!m_table[next].tail()) {
+      next = m_table[next].next();
+      if (ICmp::equals(m_table[next].key(), iterator.m_index)) {
 	iterator.m_next = next;
 	return;
       }
@@ -1139,16 +1135,16 @@ private:
     return val__(iterator.m_slot);
   }
   void endIterate(Iterator_ &iterator) {
-    iterator.unlock(lock());
+    iterator.unlock(m_lock);
     iterator.m_slot = iterator.m_next = -1;
   }
   void delIterate(Iterator_ &iterator) {
     int slot = iterator.m_slot;
     if (slot < 0) return;
     bool advanceRegardless =
-      !table()[slot].tail() && (int)table()[slot].next() < slot;
-    del__(table()[slot].head() ? (-slot - 2) : prev(slot));
-    if (!advanceRegardless && !!table()[slot]) iterator.m_next = slot;
+      !m_table[slot].tail() && (int)m_table[slot].next() < slot;
+    del__(m_table[slot].head() ? (-slot - 2) : prev(slot));
+    if (!advanceRegardless && !!m_table[slot]) iterator.m_next = slot;
     iterator.m_slot = -1;
   }
   void delIterate(IndexIterator_ &iterator) {
@@ -1156,14 +1152,14 @@ private:
     if (slot < 0) return;
     del__(iterator.m_prev < 0 ? (-slot - 2) : iterator.m_prev);
     iterator.m_slot = -1;
-    if (!table()[slot]) return;
+    if (!m_table[slot]) return;
     for (;;) {
-      if (ICmp::equals(table()[slot].key(), iterator.m_index)) {
+      if (ICmp::equals(m_table[slot].key(), iterator.m_index)) {
 	iterator.m_next = slot;
 	return;
       }
-      if (table()[slot].tail()) break;
-      slot = table()[slot].next();
+      if (m_table[slot].tail()) break;
+      slot = m_table[slot].next();
     }
     iterator.m_next = -1;
   }

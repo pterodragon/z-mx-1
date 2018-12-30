@@ -167,8 +167,10 @@ public:
   template <typename ...Args>
   inline ZmQueue(ID initialID, const ZmHashParams &params, Args &&... args) :
       NTP::Base{ZuFwd<Args>(args)...},
-      m_head(initialID), m_tail(initialID),
-      m_key2id(params), m_id2key(params) { }
+      m_head(initialID), m_tail(initialID) {
+    m_key2id = new Key2ID(params);
+    m_id2key = new ID2Key(params);
+  }
 
   virtual ~ZmQueue() { }
 
@@ -187,11 +189,11 @@ friend class Iterator;
     inline void reset() { m_id = m_queue.m_head; }
 
     inline const Key &iterate() {
-      if (!m_queue.m_key2id.count() || m_id == m_queue.m_tail)
+      if (!m_queue.m_key2id->count() || m_id == m_queue.m_tail)
 	return Cmp::null();
       typename ID2Key::NodeRef node;
       do {
-	node = m_queue.m_id2key.find(m_id++);
+	node = m_queue.m_id2key->find(m_id++);
       } while (!node && m_id != m_queue.m_tail);
       if (!node) return Cmp::null();
       return node->val();
@@ -199,9 +201,9 @@ friend class Iterator;
 
     inline void del() {
       ID prevID = m_id - 1;
-      typename ID2Key::NodeRef node = m_queue.m_id2key.del(prevID);
+      typename ID2Key::NodeRef node = m_queue.m_id2key->del(prevID);
       if (!node) return;
-      m_queue.m_key2id.del(node->val());
+      m_queue.m_key2id->del(node->val());
       if (prevID == m_queue.m_tail - 1) {
 	if (prevID != m_queue.m_head - 1) m_id = m_queue.m_tail = prevID;
       } else if (prevID == m_queue.m_head && prevID != m_queue.m_tail) {
@@ -220,47 +222,47 @@ friend class Iterator;
     Guard guard(m_lock);
     ID id = m_tail++;
     if (possDup) {
-      typename Key2ID::NodeRef node = m_key2id.del(key);
+      typename Key2ID::NodeRef node = m_key2id->del(key);
       if (node) {
 	ID id = node->val();
-	if (m_id2key.del(id)) del_(id);
+	if (m_id2key->del(id)) del_(id);
       }
     }
-    m_key2id.add(key, id);
-    m_id2key.add(id, key);
+    m_key2id->add(key, id);
+    m_id2key->add(id, key);
   }
   inline void push(ID id, const Key &key, bool possDup) {
     Guard guard(m_lock);
     if (m_tail <= id) m_tail = id + 1;
     if (m_head > id) m_head = id;
     if (possDup) {
-      typename Key2ID::NodeRef node = m_key2id.del(key);
+      typename Key2ID::NodeRef node = m_key2id->del(key);
       if (node) {
 	ID id_ = node->val();
-	if (id_ != id && m_id2key.del(id_)) del_(id_);
+	if (id_ != id && m_id2key->del(id_)) del_(id_);
       }
     }
-    m_key2id.add(key, id);
-    if (possDup) m_id2key.del(id);
-    m_id2key.add(id, key);
+    m_key2id->add(key, id);
+    if (possDup) m_id2key->del(id);
+    m_id2key->add(id, key);
   }
 
   inline Key shift() {
     Guard guard(m_lock);
-    if (!m_key2id.count() || m_head == m_tail) return Cmp::null();
+    if (!m_key2id->count() || m_head == m_tail) return Cmp::null();
     typename ID2Key::NodeRef node;
-    do { node = m_id2key.del(m_head++); } while (!node && m_head != m_tail);
+    do { node = m_id2key->del(m_head++); } while (!node && m_head != m_tail);
     if (!node) return Cmp::null();
-    m_key2id.del(node->val());
+    m_key2id->del(node->val());
     return ZuMv(node->val());
   }
   inline Key shift(ID &id) {
     Guard guard(m_lock);
-    if (!m_key2id.count() || m_head == m_tail) return Cmp::null();
+    if (!m_key2id->count() || m_head == m_tail) return Cmp::null();
     typename ID2Key::NodeRef node;
-    do { node = m_id2key.del(m_head++); } while (!node && m_head != m_tail);
+    do { node = m_id2key->del(m_head++); } while (!node && m_head != m_tail);
     if (!node) return Cmp::null();
-    m_key2id.del(node->val());
+    m_key2id->del(node->val());
     id = node->key();
     return ZuMv(node->val());
   }
@@ -268,45 +270,45 @@ friend class Iterator;
   inline void unshift(const Key &key) {
     Guard guard(m_lock);
     ID id = --m_head;
-    m_key2id.add(key, id);
-    m_id2key.add(id, key);
+    m_key2id->add(key, id);
+    m_id2key->add(id, key);
   }
 
   inline bool find(const Key &key, ID &id) {
     Guard guard(m_lock);
-    typename Key2ID::NodeRef node = m_key2id.find(key);
+    typename Key2ID::NodeRef node = m_key2id->find(key);
     if (!node) return false;
     id = node->val();
     return true;
   }
   inline const Key &findID(ID id) {
     Guard guard(m_lock);
-    typename ID2Key::NodeRef node = m_id2key.find(id);
+    typename ID2Key::NodeRef node = m_id2key->find(id);
     if (!node) return Cmp::null();
     return node->val();
   }
 
   inline bool del(const Key &key) {
     Guard guard(m_lock);
-    typename Key2ID::NodeRef node = m_key2id.del(key);
+    typename Key2ID::NodeRef node = m_key2id->del(key);
     if (!node) return false;
     ID id = node->val();
-    if (m_id2key.del(id)) del_(id);
+    if (m_id2key->del(id)) del_(id);
     return true;
   }
   inline bool del(const Key &key, ID &id) {
     Guard guard(m_lock);
-    typename Key2ID::NodeRef node = m_key2id.del(key);
+    typename Key2ID::NodeRef node = m_key2id->del(key);
     if (!node) return false;
     id = node->val();
-    if (m_id2key.del(id)) del_(id);
+    if (m_id2key->del(id)) del_(id);
     return true;
   }
   inline Key delID(ID id) {
     Guard guard(m_lock);
-    typename ID2Key::NodeRef node = m_id2key.del(id);
+    typename ID2Key::NodeRef node = m_id2key->del(id);
     if (!node) return Cmp::null();
-    m_key2id.del(node->val());
+    m_key2id->del(node->val());
     del_(id);
     return ZuMv(node->val());
   }
@@ -324,11 +326,11 @@ public:
   inline void clean(ID initialID = 0) {
     Guard guard(m_lock);
     m_head = m_tail = initialID;
-    m_key2id.clean();
-    m_id2key.clean();
+    m_key2id->clean();
+    m_id2key->clean();
   }
 
-  inline int count() const { return m_key2id.count(); }
+  inline int count() const { return m_key2id->count(); }
 
   inline ID head() const { return m_head; }
   inline ID tail() const { return m_tail; }
@@ -337,8 +339,8 @@ private:
   Lock			m_lock;
   ID			m_head;
   ID			m_tail;
-  Key2ID		m_key2id;
-  ID2Key		m_id2key;
+  ZmRef<Key2ID>		m_key2id;
+  ZmRef<ID2Key>		m_id2key;
 };
 
 #endif /* ZmQueue_HPP */

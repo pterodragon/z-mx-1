@@ -39,7 +39,15 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 
   // heaps
   ZmHeapMgr::all(ZmFn<ZmHeapCache *>{
-      [](Cxn *cxn, ZmHeapCache *h) { cxn->transmit(heap(*h)); }, cxn});
+      [](Cxn *cxn, ZmHeapCache *h) {
+	if (!h->telCount()) cxn->transmit(heap(*h));
+      }, cxn});
+
+  // hash tables
+  ZmHashMgr::all(ZmFn<ZmAnyHash *>{
+      [](Cxn *cxn, ZmAnyHash *h) {
+	if (!h->telCount()) cxn->transmit(hashTbl(*h));
+      }, cxn});
 
   // threads
   ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{
@@ -47,6 +55,7 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 
   // mutiplexers, thread queues, sockets
   m_core->allMx([cxn](MxMultiplex *mx) {
+      if (mx->telCount()) return;
       cxn->transmit(multiplexer(*mx));
       {
 	ZmThreadName name;
@@ -82,27 +91,15 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 
     // I/O Engines
     {
-      while (ZmRef<MxEngine> engine_ = m_engines.shift()) {
-	unsigned down, disabled, transient, up, reconn, failed;
-        int state = engine_->state(
-	    down, disabled, transient, up, reconn, failed);
-	cxn->transmit(MxTelemetry::engine(
-	      engine_->id(), engine_->mx()->id(),
-	      down, disabled, transient, up, reconn, failed,
-	      (uint16_t)engine_->nLinks(),
-	      (uint8_t)engine_->rxThread(), (uint8_t)engine_->txThread(),
-	      (uint8_t)state));
-      }
+      auto i = m_engines.readIterator();
+      while (ZmRef<MxEngine> engine = i.iterateVal())
+	cxn->transmit(MxTelemetry::engine(*engine));
     }
     // I/O Links
     {
-      while (ZmRef<MxAnyLink> link_ = m_links.shift()) {
-	unsigned reconnects;
-	int state = link_->state(&reconnects);
-	cxn->transmit(MxTelemetry::link(
-	      link_->id(), link_->rxSeqNo(), link_->txSeqNo(),
-	      reconnects, (uint8_t)state));
-      }
+      auto i = m_links.readIterator();
+      while (ZmRef<MxAnyLink> link = i.iterateVal())
+	cxn->transmit(MxTelemetry::link(*link));
     }
     // I/O Queues
     {
@@ -131,14 +128,16 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 
 void MxMDTelemetry::engine(MxEngine *engine)
 {
+  auto key = engine->id();
   Guard guard(m_lock);
-  m_engines.push(engine);
+  if (!m_engines.find(key)) m_engines.add(key, engine);
 }
 
 void MxMDTelemetry::link(MxAnyLink *link)
 {
+  auto key = ZuMkPair(link->engine()->id(), link->id());
   Guard guard(m_lock);
-  m_links.push(link);
+  if (!m_links.find(key)) m_links.add(key, link);
 }
 
 void MxMDTelemetry::addQueue(MxID id, bool tx, MxQueue *queue)
@@ -152,7 +151,7 @@ void MxMDTelemetry::delQueue(MxID id, bool tx)
 {
   auto key = ZuMkPair(id, tx);
   Guard guard(m_lock);
-  m_queues.del(key);
+  delete m_queues.del(key);
 }
 
 void MxMDTelemetry::addDBEnv(ZdbEnv *env)

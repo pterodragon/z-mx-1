@@ -31,8 +31,6 @@
 #include <ZmRBTree.hpp>
 #include <ZmNoLock.hpp>
 
-typedef ZuStringN<ZmHeapIDSize> IDString;
-
 template <>
 struct ZmCleanup<ZmHeapMgr_> {
   enum { Level = ZmCleanupLevel::Heap };
@@ -47,7 +45,7 @@ friend class ZmHeapCache;
   typedef ZmGuard<Lock> Guard;
   typedef ZmReadGuard<Lock> ReadGuard;
 
-  typedef ZmRBTree<ZuPair<IDString, unsigned>,
+  typedef ZmRBTree<ZuPair<ZmIDString, unsigned>,
 	    ZmRBTreeVal<ZmHeapConfig,
 	      ZmRBTreeHeapID<ZmNoHeap,
 		ZmRBTreeLock<ZmNoLock> > > > IDPart2Config;

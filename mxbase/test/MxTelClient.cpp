@@ -14,19 +14,19 @@ class App : public MxTelemetry::Client {
     switch ((int)msg->hdr().type) {
       case Type::Heap:
 	{
-	  const auto &data = msg->as<Heap>().data;
+	  const auto &data = msg->as<Heap>();
 	  std::cout << "  id: " << data.id << '\n' << std::flush;
 	}
 	break;
       case Type::Thread:
 	{
-	  const auto &data = msg->as<Thread>().data;
+	  const auto &data = msg->as<Thread>();
 	  std::cout << "  name: " << data.name << '\n';
 	}
     break;
       case Type::Multiplexer:
 	{
-	  const auto &data = msg->as<Multiplexer>().data;
+	  const auto &data = msg->as<Multiplexer>();
 	  std::cout << "  id: " << data.id << '\n'
 	    << "  isolation: " << data.isolation << '\n'
 	    << "  stackSize: " << data.stackSize << '\n'
@@ -42,7 +42,7 @@ class App : public MxTelemetry::Client {
     break;
       case Type::Socket:
 	{
-	  const auto &data = msg->as<Socket>().data;
+	  const auto &data = msg->as<Socket>();
 	  std::cout << "  mxID: " << data.mxID << '\n'
 	    << "  socket fd: " << data.socket << '\n'
 	    << "  rxBufSize: " << data.rxBufSize << '\n'
@@ -63,16 +63,16 @@ class App : public MxTelemetry::Client {
     break;
       case Type::Queue:
 	{
-	  const auto &queue = msg->as<Queue>();
-	  std::cout << "  id: " << queue.id << '\n'
-	    << "  seqNo: " << queue.seqNo << '\n'
-	    << "  count: " << queue.count << '\n'
-	    << "  inCount: " << queue.inCount << '\n'
-	    << "  inBytes: " << queue.inBytes << '\n'
-	    << "  outCount: " << queue.outCount << '\n'
-	    << "  outBytes: " << queue.outBytes << '\n'
-	    << "  size: " << queue.size << '\n'
-	    << "  type: " << QueueType::name(queue.type) << '\n';
+	  const auto &data = msg->as<Queue>();
+	  std::cout << "  id: " << data.id << '\n'
+	    << "  seqNo: " << data.seqNo << '\n'
+	    << "  count: " << data.count << '\n'
+	    << "  inCount: " << data.inCount << '\n'
+	    << "  inBytes: " << data.inBytes << '\n'
+	    << "  outCount: " << data.outCount << '\n'
+	    << "  outBytes: " << data.outBytes << '\n'
+	    << "  size: " << data.size << '\n'
+	    << "  type: " << QueueType::name(data.type) << '\n';
 	}
     }
   }

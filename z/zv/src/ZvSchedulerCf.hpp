@@ -47,20 +47,20 @@ namespace ZvSchedulerPriorities {
       "Low", Low);
 }
 
-struct ZvSchedulerParams : public ZmSchedulerParams {
-  inline ZvSchedulerParams() { }
+struct ZvSchedParams : public ZmSchedParams {
+  inline ZvSchedParams() { }
 
-  inline ZvSchedulerParams(const ZmSchedulerParams &p) :
-    ZmSchedulerParams(p) { }
-  inline ZvSchedulerParams &operator =(const ZmSchedulerParams &p) {
-    ZmSchedulerParams::operator =(p);
+  inline ZvSchedParams(const ZmSchedParams &p) :
+    ZmSchedParams(p) { }
+  inline ZvSchedParams &operator =(const ZmSchedParams &p) {
+    ZmSchedParams::operator =(p);
     return *this;
   }
 
-  inline ZvSchedulerParams(ZvCf *cf) { init(cf); }
-  inline ZvSchedulerParams(ZvCf *cf,
-      const ZmSchedulerParams &deflt) :
-    ZmSchedulerParams(deflt) { init(cf); }
+  inline ZvSchedParams(ZvCf *cf) { init(cf); }
+  inline ZvSchedParams(ZvCf *cf,
+      const ZmSchedParams &deflt) :
+    ZmSchedParams(deflt) { init(cf); }
 
   inline void init(ZvCf *cf) {
     if (!cf) return;

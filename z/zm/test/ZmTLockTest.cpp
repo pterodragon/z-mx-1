@@ -219,7 +219,7 @@ int result(int tid)
 struct ZmTLock_Test {
   static ZmTLock<int, int>::LockRef lock(int id) {
     ZmTLock<int, int>::LockHash::NodeRef node;
-    if (!(node = Global::locks().m_locks.find(id))) return 0;
+    if (!(node = Global::locks().m_locks->find(id))) return 0;
     return node->val();
   }
   static void waitForPendingUpgraders(int id, int n) {

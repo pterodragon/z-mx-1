@@ -148,7 +148,7 @@ int main(int argc, char **argv)
 
   signal(SIGSEGV, segv);
 
-  ZmScheduler s(ZmSchedulerParams().
+  ZmScheduler s(ZmSchedParams().
       id("scheduler").
       nThreads(nThreads).
       affinity(affinity).

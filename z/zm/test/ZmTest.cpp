@@ -256,17 +256,17 @@ int main(int argc, char **argv)
     ((ZmRef<Y>)(Y *)(X *)xPtr)->helloWorld();
   }
 
-  ZHash hash(ZmHashParams().bits(8));
+  ZmRef<ZHash> hash = new ZHash(ZmHashParams().bits(8));
   ZmRef<Z> z = new Z;
 
   z->m_z = 1;
 
-  hash.add(0, z);
-  hash.add(1, z);
-  hash.del(0);
+  hash->add(0, z);
+  hash->add(1, z);
+  hash->del(0);
 
   {
-    ZHash::Iterator i(hash);
+    ZHash::Iterator i(*hash);
 
     if ((Z *)i.iterate()->val() != (Z *)z)
       puts("collection test failed");

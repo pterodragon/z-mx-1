@@ -51,6 +51,7 @@
 
 #include <ZuNew.hpp>
 #include <ZuInt.hpp>
+#include <ZuStringN.hpp>
 
 #ifdef linux
 #include <sys/types.h>
@@ -61,6 +62,10 @@
 #pragma warning(push)
 #pragma warning(disable:4251 4800 4996)
 #endif
+
+#define ZmIDSize	60	// max size of a heap/hash ID incl. terminator
+
+typedef ZuStringN<ZmIDSize> ZmIDString;
 
 class ZmTime;
 

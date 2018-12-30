@@ -802,7 +802,7 @@ void ZiMultiplex::allCxns(ZmFn<ZiConnection *> fn)
 
 void ZiMultiplex::allCxns_(ZmFn<ZiConnection *> fn)
 {
-  auto i = m_cxns.readIterator();
+  auto i = m_cxns->readIterator();
   while (ZmRef<ZiConnection> cxn = i.iterateKey())
     txRun([fn, cxn = ZuMv(cxn)]() { fn(cxn); });
 }
@@ -986,7 +986,7 @@ void ZiMultiplex::stopListening_(ZiIP localIP, uint16_t localPort)
   unsigned nAccepts;
 
   {
-    ListenerHash::ReadIterator i(m_listeners);
+    ListenerHash::ReadIterator i(*m_listeners);
     ZmRef<Listener> listener;
 
     while (listener = i.iterate()) {
@@ -1668,7 +1668,7 @@ bool ZiMultiplex::initSocket(Socket s, const ZiCxnOptions &options)
 
 bool ZiMultiplex::cxnAdd(ZiConnection *cxn, Socket s)
 {
-  m_cxns.add(cxn);
+  m_cxns->add(cxn);
 
 #ifdef ZiMultiplex_EPoll
   {
@@ -1678,7 +1678,7 @@ bool ZiMultiplex::cxnAdd(ZiConnection *cxn, Socket s)
     ev.data.u64 = (uintptr_t)cxn;
     if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, s, &ev) < 0) {
       ZeError e(errno);
-      delete m_cxns.del(s);
+      delete m_cxns->del(s);
       ZiPlatform::closeSocket(s);
       Error("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e);
       return false;
@@ -1695,12 +1695,12 @@ void ZiMultiplex::cxnDel(Socket s)
   epoll_ctl(m_epollFD, EPOLL_CTL_DEL, s, 0);
 #endif
 
-  delete m_cxns.del(s);
+  delete m_cxns->del(s);
 }
 
 bool ZiMultiplex::listenerAdd(Listener *listener, Socket s)
 {
-  m_listeners.add(listener);
+  m_listeners->add(listener);
 
 #ifdef ZiMultiplex_EPoll
   {
@@ -1710,7 +1710,7 @@ bool ZiMultiplex::listenerAdd(Listener *listener, Socket s)
     ev.data.u64 = ((uintptr_t)listener) | 1;
     if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, s, &ev) < 0) {
       ZeError e(errno);
-      m_listeners.del(s);
+      m_listeners->del(s);
       Error("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e);
       return false;
     }
@@ -1726,14 +1726,14 @@ void ZiMultiplex::listenerDel(Socket s)
   epoll_ctl(m_epollFD, EPOLL_CTL_DEL, s, 0);
 #endif
 
-  if (ZmRef<Listener> listener = m_listeners.del(s))
+  if (ZmRef<Listener> listener = m_listeners->del(s))
     listener->down();
 }
 
 #ifdef ZiMultiplex_EPoll
 bool ZiMultiplex::connectAdd(Connect *request, Socket s)
 {
-  m_connects.add(request);
+  m_connects->add(request);
 
   {
     struct epoll_event ev;
@@ -1742,7 +1742,7 @@ bool ZiMultiplex::connectAdd(Connect *request, Socket s)
     ev.data.u64 = ((uintptr_t)request) | 2;
     if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, s, &ev) < 0) {
       ZeError e(errno);
-      m_connects.del(s);
+      m_connects->del(s);
       Error("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e);
       return false;
     }
@@ -1759,7 +1759,7 @@ void ZiMultiplex::connectDel(Socket s)
 #endif
 
 #if ZiMultiplex__ConnectHash
-  m_connects.del(s);
+  m_connects->del(s);
 #endif
 }
 
@@ -1866,7 +1866,7 @@ void ZiMultiplex::disconnected(ZiConnection *cxn)
 
   cxnDel(s);
   
-  if (ZuUnlikely(m_stopping && !m_cxns.count())) stop_2();
+  if (ZuUnlikely(m_stopping && !m_cxns->count())) stop_2();
 }
 
 void ZiConnection::close()
@@ -1894,18 +1894,11 @@ void ZiConnection::close_2()
   executedDisconnect();
 }
 
-ZiMultiplex::ZiMultiplex(ZiMultiplexParams params) :
+ZiMultiplex::ZiMultiplex(ZiMxParams params) :
   ZmScheduler(params.scheduler()),
   m_stopping(0), m_drain(false),
   m_rxThread(params.rxThread()),
-  m_listeners(ZmHashParams().bits(4).loadFactor(1).cBits(4).init(
-	params.listenerHash())),
   m_nAccepts(0),
-#if ZiMultiplex__ConnectHash
-  m_connects(ZmHashParams().bits(5).loadFactor(1).cBits(4).init(
-	params.requestHash())),
-#endif
-  m_cxns(ZmHashParams().bits(8).loadFactor(1).cBits(4).init(params.cxnHash())),
   m_txThread(params.txThread()),
   m_rxBufSize(params.rxBufSize()),
   m_txBufSize(params.txBufSize())
@@ -1921,7 +1914,18 @@ ZiMultiplex::ZiMultiplex(ZiMultiplexParams params) :
   m_frag(params.frag()),
   m_yield(params.yield())
 #endif
+  , m_telFreq(params.telFreq())
 {
+  m_listeners =
+    new ListenerHash(ZmHashParams().bits(4).loadFactor(1).cBits(4).
+	init(params.listenerHash()));
+#if ZiMultiplex__ConnectHash
+  m_connects =
+    new ConnectHash(ZmHashParams().bits(5).loadFactor(1).cBits(4).
+	init(params.requestHash()));
+#endif
+  m_cxns = new CxnHash(ZmHashParams().bits(8).loadFactor(1).cBits(4).
+      init(params.cxnHash()));
   if (!name(m_rxThread)) name(m_rxThread, "ioRx");
   if (!name(m_txThread)) name(m_txThread, "ioTx");
 }
@@ -2052,9 +2056,9 @@ void ZiMultiplex::stop(bool drain)
 
 void ZiMultiplex::stop_1()
 {
-  if (!m_cxns.count()) { stop_2(); return; }
+  if (!m_cxns->count()) { stop_2(); return; }
 
-  CxnHash::ReadIterator i(m_cxns);
+  CxnHash::ReadIterator i(*m_cxns);
   while (ZmRef<ZiConnection> cxn = i.iterateKey())
     cxn->disconnect();
 }
@@ -2063,7 +2067,7 @@ void ZiMultiplex::stop_2()
 {
 #ifdef ZiMultiplex_EPoll
   {
-    ConnectHash::Iterator i(m_connects);
+    ConnectHash::Iterator i(*m_connects);
     while (ZmRef<Connect> connect = i.iterate()) {
       i.del();
       ::close(connect->info().socket);
@@ -2072,7 +2076,7 @@ void ZiMultiplex::stop_2()
 #endif
 
   {
-    ListenerHash::Iterator i(m_listeners);
+    ListenerHash::Iterator i(*m_listeners);
     while (ZmRef<Listener> listener = i.iterate()) {
       i.del();
       listener->down();
@@ -2144,7 +2148,7 @@ void ZiMultiplex::rx()
   for (;;) {
     ZiDEBUG(this, ZtSprintf(
 	  "wait() nThreads: % 2d nConnections: % 4d nListeners: % 3d",
-	  nThreads(), m_cxns.count(), m_listeners.count()));
+	  nThreads(), m_cxns->count(), m_listeners->count()));
     if (!GetQueuedCompletionStatus(
 	  m_completionPort, &len, &key, (OVERLAPPED **)&overlapped, INFINITE)) {
       e = GetLastError();
@@ -2178,8 +2182,8 @@ void ZiMultiplex::rx()
     ZiDEBUG(this, ZtSprintf(
 	  "wait() nThreads: % 2d nConnections: % 4d epollFD: % 3d "
 	  "wakeFD: % 3d wakeFD2: % 3d nListeners: % 3d",
-	  nThreads(), m_cxns.count(), m_epollFD, m_wakeFD, m_wakeFD2,
-	  m_listeners.count()));
+	  nThreads(), m_cxns->count(), m_epollFD, m_wakeFD, m_wakeFD2,
+	  m_listeners->count()));
 
 #if 0
 #ifdef ZiMultiplex_DEBUG

@@ -69,7 +69,7 @@ static unsigned getTimeout()
 
 class Mx : public ZuObject, public ZiMultiplex {
 public:
-  inline Mx() : ZiMultiplex(ZvMultiplexParams()) { }
+  inline Mx() : ZiMultiplex(ZvMxParams()) { }
 };
 
 class ZCmd : public ZmPolymorph, public ZvCmdClient {

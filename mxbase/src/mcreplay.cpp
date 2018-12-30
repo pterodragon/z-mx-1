@@ -118,7 +118,7 @@ private:
 
 class Mx : public ZmObject, public ZiMultiplex {
 public:
-  Mx(ZvCf *cf) : ZiMultiplex(ZvMultiplexParams(cf)) { }
+  Mx(ZvCf *cf) : ZiMultiplex(ZvMxParams(cf)) { }
   ~Mx() { }
 };
 
@@ -150,9 +150,9 @@ public:
 
   inline Mx *mx() { return m_mx; }
 
-  void connected_(Connection *cxn) { m_cxns.add(cxn); }
-  void disconnected_(Connection *cxn) { delete m_cxns.del(cxn->groupID()); }
-  inline int nCxns() { return m_cxns.count(); }
+  void connected_(Connection *cxn) { m_cxns->add(cxn); }
+  void disconnected_(Connection *cxn) { delete m_cxns->del(cxn->groupID()); }
+  inline int nCxns() { return m_cxns->count(); }
 
 private:
   ZmSemaphore	m_sem;
@@ -170,7 +170,7 @@ private:
 
   ZmRef<Mx>	m_mx;		// multiplexer
 
-  Cxns		m_cxns;
+  ZmRef<Cxns>	m_cxns;
   ZmTime	m_prev;
 };
 
@@ -269,7 +269,7 @@ void App::read()
     if (msg->read(&m_file) != Zi::OK) { post(); return; }
   }
 
-  if (ZmRef<Connection> cxn = m_cxns.findKey(msg->group()))
+  if (ZmRef<Connection> cxn = m_cxns->findKey(msg->group()))
     msg->send(cxn);
 
   ZuBox<double> delay;
@@ -358,6 +358,7 @@ App::App(ZvCf *cf) :
   m_loopBack(cf->getInt("loopBack", 0, 1, false, 0))
 {
   m_mx = new Mx(cf->subset("mx", false));
+  m_cxns = new Cxns();
 }
 
 int App::start()
@@ -397,7 +398,7 @@ void App::stop()
 {
   m_mx->stop(true);
   m_file.close();
-  m_cxns.clean();
+  m_cxns->clean();
 }
 
 void usage()

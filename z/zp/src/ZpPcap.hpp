@@ -433,7 +433,7 @@ class ZpAPI ZpPcap : public ZmObject {
 	    ZmHashObject<ZuNull,
 	      ZmHashIndex<ZpHandle::FilterAccessor> > > HandleHash;
 
-  inline void del(const ZtString &c) { delete m_handles.del(c); }
+  inline void del(const ZtString &c) { delete m_handles->del(c); }
   
  public:
   ZpPcap(ZiMultiplex *mx, ZvCf *cf);
@@ -463,11 +463,11 @@ friend struct Stats;
 #endif
 
 private:
-  ZiMultiplex                 *m_mx;
-  HandleHash	              m_handles;
-  int                         m_maxCapture; // max packets captured in dispatch
+  ZiMultiplex		*m_mx;
+  ZmRef<HandleHash>	m_handles;
+  int			m_maxCapture; // max packets captured in dispatch
 #ifdef ZpPcap_DEBUG
-  bool                        m_debug;
+  bool			m_debug;
 #endif
 };
 template <> struct ZuPrint<ZpPcap::Stats> : public ZuPrintFn { };

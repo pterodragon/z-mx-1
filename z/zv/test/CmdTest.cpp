@@ -28,8 +28,8 @@
 
 class Mx : public ZuPolymorph, public ZiMultiplex {
 public:
-  inline Mx() : ZiMultiplex(ZvMultiplexParams()) { }
-  inline Mx(ZvCf *cf) : ZiMultiplex(ZvMultiplexParams(cf)) { }
+  inline Mx() : ZiMultiplex(ZvMxParams()) { }
+  inline Mx(ZvCf *cf) : ZiMultiplex(ZvMxParams(cf)) { }
 };
 
 class ZvCmdTest : public ZmPolymorph, public ZvCmdServer {

@@ -19,19 +19,16 @@
 
 // hash table
 
-#include <ZmHash.hpp>
+#include <ZmHashMgr.hpp>
 
 #include <ZuStringN.hpp>
 
-#include <ZmRBTree.hpp>
 #include <ZmSingleton.hpp>
 
 template <>
 struct ZmCleanup<ZmHashMgr_> {
   enum { Level = ZmCleanupLevel::Library };
 };
-
-typedef ZuStringN<ZmHeapIDSize> IDString;
 
 class ZmHashMgr_ : public ZmObject {
 friend struct ZmSingletonCtor<ZmHashMgr_>;
@@ -41,19 +38,11 @@ friend class ZmHashMgr;
     inline static const char *id() { return "ZmHashMgr_"; }
   };
 
-  typedef ZmHashMgr::StatsFn StatsFn;
-  typedef ZmHashMgr::ReportFn ReportFn;
-
-  typedef ZmRBTree<IDString,
+  typedef ZmRBTree<ZmIDString,
 	    ZmRBTreeVal<ZmHashParams,
 	      ZmRBTreeObject<ZuNull,
 		ZmRBTreeHeapID<HeapID,
 		  ZmRBTreeLock<ZmNoLock> > > > > ID2Params;
-  typedef ZmRBTree<void *,
-	    ZmRBTreeVal<ReportFn,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeHeapID<HeapID,
-		  ZmRBTreeLock<ZmNoLock> > > > > Ptr2ReportFn;
 
   ZmHashMgr_() { }
 
@@ -77,26 +66,37 @@ friend class ZmHashMgr;
     return in;
   }
 
-  void add(void *ptr, ReportFn fn) {
+  void add(ZmAnyHash *tbl) {
     ZmGuard<ZmPLock> guard(m_lock);
-    delete m_tables.del(ptr);
-    m_tables.add(ptr, fn);
+    m_tables.del(tbl);
+    m_tables.add(tbl);
   }
-  void del(void *ptr) {
+  void del(ZmAnyHash *tbl) {
     ZmGuard<ZmPLock> guard(m_lock);
-    delete m_tables.del(ptr);
+    m_tables.del(tbl);
   }
 
-  void stats(StatsFn fn) {
-    ZmHashStats stats;
-    ZmGuard<ZmPLock> guard(m_lock);
-    auto i = m_tables.readIterator();
-    while (ReportFn rfn = i.iterateVal()) { rfn(stats); fn(stats); }
+  typedef ZmHashMgr_Tables Tables;
+
+  void all(ZmFn<ZmAnyHash *> fn) {
+    ZmRef<ZmAnyHash> tbl;
+    {
+      ZmGuard<ZmPLock> guard(m_lock);
+      tbl = m_tables.minimum();
+    }
+    while (tbl) {
+      fn(tbl);
+      {
+	ZmGuard<ZmPLock> guard(m_lock);
+	tbl = m_tables.readIterator<ZmRBTreeGreater>(
+	    ZmAnyHash_PtrAccessor::value(*tbl)).iterate();
+      }
+    }
   }
 
   ZmPLock	m_lock;
   ID2Params	m_params;
-  Ptr2ReportFn	m_tables;
+  Tables	m_tables;
 };
 
 void ZmHashMgr::init(ZuString id, const ZmHashParams &params)
@@ -104,9 +104,9 @@ void ZmHashMgr::init(ZuString id, const ZmHashParams &params)
   ZmHashMgr_::instance()->init(id, params);
 }
 
-void ZmHashMgr::stats(StatsFn fn)
+void ZmHashMgr::all(ZmFn<ZmAnyHash *> fn)
 {
-  ZmHashMgr_::instance()->stats(fn);
+  ZmHashMgr_::instance()->all(fn);
 }
 
 ZmHashParams &ZmHashMgr::params(ZuString id, ZmHashParams &in)
@@ -114,12 +114,12 @@ ZmHashParams &ZmHashMgr::params(ZuString id, ZmHashParams &in)
   return ZmHashMgr_::instance()->params(id, in);
 }
 
-void ZmHashMgr::add(void *ptr, ReportFn fn)
+void ZmHashMgr::add(ZmAnyHash *tbl)
 {
-  ZmHashMgr_::instance()->add(ptr, fn);
+  ZmHashMgr_::instance()->add(tbl);
 }
 
-void ZmHashMgr::del(void *ptr)
+void ZmHashMgr::del(ZmAnyHash *tbl)
 {
-  ZmHashMgr_::instance()->del(ptr);
+  ZmHashMgr_::instance()->del(tbl);
 }

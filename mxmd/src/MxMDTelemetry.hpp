@@ -30,7 +30,6 @@
 #include <MxMDLib.hpp>
 #endif
 
-#include <ZmDRing.hpp>
 #include <ZmRBTree.hpp>
 
 #include <MxBase.hpp>
@@ -58,15 +57,20 @@ public:
   void addDBEnv(ZdbEnv *);
 
 private:
-  typedef ZmDRing<ZmRef<MxEngine>,
-	    ZmDRingLock<ZmNoLock> > Engines;
+  typedef ZmRBTree<MxID,
+	    ZmRBTreeVal<ZmRef<MxEngine>,
+	      ZmRBTreeObject<ZuNull,
+		ZmRBTreeLock<ZmNoLock> > > > Engines;
 
-  typedef ZmDRing<ZmRef<MxAnyLink>,
-	    ZmDRingLock<ZmNoLock> > Links;
+  typedef ZmRBTree<ZuPair<MxID, MxID>,
+	    ZmRBTreeVal<ZmRef<MxAnyLink>,
+	      ZmRBTreeObject<ZuNull,
+		ZmRBTreeLock<ZmNoLock> > > > Links;
 
   typedef ZmRBTree<ZuPair<MxID, bool>,
 	    ZmRBTreeVal<ZmRef<MxQueue>,
-	      ZmRBTreeLock<ZmNoLock> > > Queues;
+	      ZmRBTreeObject<ZuNull,
+		ZmRBTreeLock<ZmNoLock> > > > Queues;
 
   MxMDCore	*m_core = 0;
   Lock		m_lock;

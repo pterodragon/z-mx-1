@@ -263,9 +263,9 @@ int main(int argc, char **argv)
     ZeError e;
 
     {
-      appMx = new ZmScheduler(ZmSchedulerParams().nThreads(nThreads));
+      appMx = new ZmScheduler(ZmSchedParams().nThreads(nThreads));
       dbMx = new ZiMultiplex(
-	  ZiMultiplexParams().nThreads(4).rxThread(1).txThread(2).
+	  ZiMxParams().nThreads(4).rxThread(1).txThread(2).
 	    isolation(ZmBitmap().set(1).set(2).set(3))
 #ifdef ZiMultiplex_DEBUG
 	    .debug(cf->getInt("debug", 0, 1, false, 0))

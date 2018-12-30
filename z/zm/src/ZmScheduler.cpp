@@ -28,7 +28,7 @@
 #pragma warning(disable:4800)
 #endif
 
-ZmScheduler::ZmScheduler(ZmSchedulerParams params) :
+ZmScheduler::ZmScheduler(ZmSchedParams params) :
   m_id(params.id()),
   m_nThreads(params.nThreads()),
   m_stackSize(params.stackSize()),

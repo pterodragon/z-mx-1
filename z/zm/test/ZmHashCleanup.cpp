@@ -36,7 +36,7 @@ template <> struct ZuTraits<Object> : public ZuGenericTraits<Object> {
   enum _ { IsHashable = 1, IsComparable = 1 };
 };
 
-typedef ZmHash<ZmRef<Object>, ZmHashBase<ZmObject> > ObjectHash;
+typedef ZmHash<ZmRef<Object> > ObjectHash;
 
 int main(int argc, char *argv[])
 {

@@ -67,7 +67,7 @@ class Mx : public ZiMultiplex {
 public:
   Mx(ZiIP localIP, unsigned localPort, ZiIP remoteIP, unsigned remotePort,
       bool connect, const ZiCxnOptions &options, unsigned nMessages,
-      const ZiMultiplexParams &params) :
+      const ZiMxParams &params) :
     ZiMultiplex(params), m_localIP(localIP), m_localPort(localPort),
     m_remoteIP(remoteIP), m_remotePort(remotePort),
     m_connect(connect), m_options(options), m_nMessages(nMessages) { }
@@ -166,7 +166,7 @@ int main(int argc, const char *argv[])
   bool connect = false;
   ZiCxnOptions options;
   unsigned nMessages = 1;
-  ZiMultiplexParams params;
+  ZiMxParams params;
 
   options.udp(true);
 

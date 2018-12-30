@@ -157,7 +157,7 @@ int main(int argc, char **argv)
   ZeError e;
 
   try {
-    ZiMultiplex mx(ZvMultiplexParams(cf->subset("mx", false)));
+    ZiMultiplex mx(ZvMxParams(cf->subset("mx", false)));
 
     if (mx.start(&e) != Zi::OK) throw e;
 

@@ -19,8 +19,8 @@
 
 // heap configuration
 
-#ifndef ZvHeapCf_HPP
-#define ZvHeapCf_HPP
+#ifndef ZvHeapCSV_HPP
+#define ZvHeapCSV_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -35,20 +35,19 @@
 #include <ZmHeap.hpp>
 #include <ZuPOD.hpp>
 
-#include <ZvCf.hpp>
 #include <ZvCSV.hpp>
 
-struct ZvHeapMgrCf {
-  typedef ZuStringN<ZmHeapIDSize> ID;
+struct ZvAPI ZvHeapCSV {
   struct Data {
-    ID			id;
+    ZmIDString		id;
     ZuBox<unsigned>	alignment;
     ZuBox<unsigned>	partition;
     ZuBox<uint64_t>	cacheSize;
     ZmBitmap		cpuset;
+    ZuBox<unsigned>	telFreq;
   };
 
-  typedef ZvCSVColumn<ZvCSVColType::String, ID> IDCol;
+  typedef ZvCSVColumn<ZvCSVColType::String, ZmIDString> IDCol;
   typedef ZvCSVColumn<ZvCSVColType::Int, ZuBox<unsigned> > UIntCol;
   typedef ZvCSVColumn<ZvCSVColType::Int, ZuBox<uint64_t> > UInt64Col;
   class BitmapCol : public ZvCSVColumn<ZvCSVColType::Func, ZmBitmap> {
@@ -76,10 +75,10 @@ struct ZvHeapMgrCf {
       add(new UIntCol("partition", offsetof(Data, partition)));
       add(new UInt64Col("cacheSize", offsetof(Data, cacheSize)));
       add(new BitmapCol("cpuset", offsetof(Data, cpuset)));
+      add(new UIntCol("telFreq", offsetof(Data, telFreq)));
     }
 
-    template <typename File>
-    void read(const File &file) {
+    void read(ZuString file) {
       ZvCSV::readFile(file,
 	  ZvCSVAllocFn::Member<&CSV::alloc>::fn(this),
 	  ZvCSVReadFn::Member<&CSV::row>::fn(this));
@@ -89,37 +88,18 @@ struct ZvHeapMgrCf {
 
     void row(ZuAnyPOD *pod) {
       const Data *data = (const Data *)(pod->ptr());
-      ZmHeapMgr::init(data->id, data->partition,
-	  ZmHeapConfig{data->alignment, data->cacheSize, data->cpuset});
+      ZmHeapMgr::init(data->id, data->partition, ZmHeapConfig{
+	  data->alignment, data->cacheSize, data->cpuset, data->telFreq});
     }
 
   private:
     ZuRef<POD>	m_pod;
   };
 
-  inline static void init(ZvCf *cf) {
-    if (!cf) return;
-
-    if (ZuString file = cf->get("file")) CSV().read(file);
-
-    {
-      ZvCf::Iterator i(cf);
-      ZuString id;
-      while (ZmRef<ZvCf> heapCf = i.subset(id)) {
-	ZuString partition;
-	ZvCf::Iterator j(heapCf);
-	while (ZmRef<ZvCf> partitionCf = j.subset(partition))
-	  ZmHeapMgr::init(
-	      id, ZuBox<unsigned>(partition),
-	      ZmHeapConfig{
-		(unsigned)partitionCf->getInt(
-		    "alignment", 0, ZmPlatform::CacheLineSize, false, 0),
-		(uint64_t)partitionCf->getInt64(
-		    "cacheSize", 0, 2<<24, false, 0),
-		partitionCf->get("cpuset")});
-      }
-    }
+  static void init(ZuString file) {
+    if (!file) return;
+    CSV().read(file);
   }
 };
 
-#endif /* ZvHeapCf_HPP */
+#endif /* ZvHeapCSV_HPP */

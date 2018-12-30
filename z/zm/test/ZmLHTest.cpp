@@ -99,8 +99,12 @@ struct ZuTraits<String<N> > : public ZuGenericTraits<String<N> > {
 };
 typedef String<16> S;
 
-typedef ZmHash<S, ZmHashVal<int, ZmHashLock<ZmNoLock> > > Hash;
-typedef ZmLHash<S, ZmLHashVal<int, ZmLHashLock<ZmNoLock> > > LHash;
+typedef ZmHash<S,
+	  ZmHashVal<int,
+	    ZmHashLock<ZmNoLock> > > Hash;
+typedef ZmLHash<S,
+	  ZmLHashVal<int,
+	    ZmLHashLock<ZmNoLock> > > LHash;
 
 template <typename H>
 struct HashAdapter {
@@ -182,7 +186,9 @@ template <typename H> void iterDel(H &h)
 template <typename H, template <typename> class A>
 void funcTest_(int bits, double loadFactor)
 {
-  H h(typename A<H>::Params().bits(bits).loadFactor(loadFactor));
+  ZmRef<H> h_ =
+    new H(typename A<H>::Params().bits(bits).loadFactor(loadFactor));
+  H &h = *h_;
   h.add("Goodbye", -42);
   CHECK(A<H>::value(typename A<H>::Ret(h.find("Goodbye"))) == -42);
   add(h), iter(h, 42+43+44);
@@ -301,7 +307,8 @@ template <typename H, template <typename> class A> void perfTest_(int bits)
 
   if (n > 16) n = 16;
 
-  H h(typename A<H>::Params().bits(bits).loadFactor(1.0));
+  ZmRef<H> h_ = new H(typename A<H>::Params().bits(bits).loadFactor(1.0));
+  H &h = *h_;
 
   for (int i = 0; i < n; i++)
     threads[i] = ZmThread(0, 0, ZmFn<>::Bound<&hashIt<H> >::fn(&h));

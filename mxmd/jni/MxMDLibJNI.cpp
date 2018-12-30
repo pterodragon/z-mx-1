@@ -85,11 +85,11 @@ public:
   }
   ZuInline static ZmRef<MxMDInstrument> instrument_(
       const MxMDLib *md, const MxInstrKey &key) {
-    return md->m_allInstruments.findKey(key);
+    return md->instrument_(key);
   }
   ZuInline static ZmRef<MxMDOrderBook> orderBook_(
       const MxMDLib *md, const MxInstrKey &key) {
-    return md->m_allOrderBooks.findKey(key);
+    return md->orderBook_(key);
   }
 };
 

@@ -23,10 +23,10 @@
 extern "C" void dispatch_cb(u_char *userarg, const pcap_pkthdr *pkthdr,
 			    const u_char *packet);
 
-ZpPcap::ZpPcap(ZiMultiplex *mx, ZvCf *cf) : 
-  m_mx(mx),
-  m_handles(ZmHashParams(cf->get("handleHash", false, "ZpPcap.Handles")))
+ZpPcap::ZpPcap(ZiMultiplex *mx, ZvCf *cf) : m_mx(mx)
 {
+  m_handles = new HandleHash(
+      ZmHashParams(cf->get("handleHash", false, "ZpPcap.Handles")));
   m_maxCapture = cf->getInt("maxCapture", 1, (1<<16) - 1, false, 100);
 #ifdef ZpPcap_DEBUG
   m_debug = cf->getInt("debug", 0, 1, false, 0);
@@ -70,7 +70,7 @@ void ZpPcap::connect(ZpConnected connected, const ZpHandleInfo &hi)
     return;
   }
 
-  m_handles.add(handle);
+  m_handles->add(handle);
   handle->connected();
 
   return;
@@ -305,10 +305,9 @@ void ZpHandle::stats_(ZmStream &s) const
 
 void ZpPcap::stats_(ZmStream &s) const
 {
-  HandleHash::ReadIterator i(m_handles);
+  auto i = m_handles->readIterator();
   s << "ZpPcapStats [";
-  while (ZmRef<ZpHandle> h = i.iterateKey()) {
+  while (ZmRef<ZpHandle> h = i.iterateKey())
     s << h->stats() << " ";
-  }
   s << "]";
 }

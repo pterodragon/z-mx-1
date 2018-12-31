@@ -47,6 +47,7 @@ class MxMDAPI MxMDTelemetry : public ZmPolymorph, public MxTelemetry::Server {
 
 public:
   void init(MxMDCore *core, ZvCf *cf);
+  void final();
 
   void run(MxTelemetry::Server::Cxn *);
 

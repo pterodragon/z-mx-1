@@ -450,10 +450,10 @@ typedef ZdbAnyPOD_Write_<ZmHeap<ZdbAnyPOD_Write_HeapID,
 
 // AllocFn - called to allocate/initialize new record from memory
 typedef ZmFn<ZdbAny *, ZmRef<ZdbAnyPOD> &> ZdbAllocFn;
-// RecoverFn(pod) - (optional) called when record is recovered
-typedef ZmFn<ZdbAnyPOD *> ZdbRecoverFn;
-// ReplicateFn(pod, ptr, range, op) - (optional) '' when replicated (rcvd)
-typedef ZmFn<ZdbAnyPOD *, void *, ZdbRange, int> ZdbReplicateFn;
+// IndexAddFn(pod, recovered) - record is recovered, or new/update replicated
+typedef ZmFn<ZdbAnyPOD *, bool> ZdbIndexAddFn;
+// IndexDelFn(pod) - record update/delete replicated
+typedef ZmFn<ZdbAnyPOD *> ZdbIndexDelFn;
 // CopyFn(pod, range, op) - (optional) called for app drop copy
 typedef ZmFn<ZdbAnyPOD *, ZdbRange, int> ZdbCopyFn;
 
@@ -542,10 +542,10 @@ struct ZdbConfig {
 };
 
 struct ZdbHandler {
-  ZdbAllocFn		allocFn;
-  ZdbRecoverFn		recoverFn;
-  ZdbReplicateFn	replicateFn;
-  ZdbCopyFn		copyFn;
+  ZdbAllocFn	allocFn;
+  ZdbIndexAddFn	indexAddFn;
+  ZdbIndexDelFn	indexDelFn;
+  ZdbCopyFn	copyFn;
 };
 
 class ZdbAPI ZdbAny : public ZmPolymorph {
@@ -651,15 +651,16 @@ public:
 private:
   // application call handlers
   inline void alloc(ZmRef<ZdbAnyPOD> &pod) { m_handler.allocFn(this, pod); }
-  inline void recover(ZdbAnyPOD *pod) { m_handler.recoverFn(pod); }
+  inline void recover(ZdbAnyPOD *pod) {
+    m_handler.indexAddFn(pod, true);
+  }
   inline void replicate(ZdbAnyPOD *pod, void *ptr, ZdbRange range, int op) {
 #ifdef ZdbRep_DEBUG
     ZmAssert((!range || (range.off() + range.len()) <= pod->size()));
 #endif
-    if (m_handler.replicateFn)
-      m_handler.replicateFn(pod, ptr, range, op);
-    else if (range)
-      memcpy((char *)pod->ptr() + range.off(), ptr, range.len());
+    if (op != ZdbOp::New) m_handler.indexDelFn(pod);
+    if (range) memcpy((char *)pod->ptr() + range.off(), ptr, range.len());
+    if (op != ZdbOp::Delete) m_handler.indexAddFn(pod, false);
   }
   inline void copy(ZdbAnyPOD *pod, ZdbRange range, int op) {
     m_handler.copyFn(pod, range, op);
@@ -970,7 +971,12 @@ friend class ZdbAnyPOD_Send__;
 
 // ZdbEnv configuration
 struct ZdbEnvConfig {
-  inline ZdbEnvConfig() { }
+  ZdbEnvConfig(const ZdbEnvConfig &) = delete;
+  ZdbEnvConfig &operator =(const ZdbEnvConfig &) = delete;
+  ZdbEnvConfig() = default;
+  ZdbEnvConfig(ZdbEnvConfig &&) = default;
+  ZdbEnvConfig &operator =(ZdbEnvConfig &&) = default;
+
   inline ZdbEnvConfig(ZvCf *cf) {
     writeThread = cf->get("writeThread", true);
     {
@@ -1057,7 +1063,7 @@ public:
   ZdbEnv(unsigned maxDBID);
   ~ZdbEnv();
 
-  void init(const ZdbEnvConfig &config, ZiMultiplex *mx,
+  void init(ZdbEnvConfig config, ZiMultiplex *mx,
       ZmFn<> activeFn, ZmFn<> inactiveFn);
   void final();
 

@@ -529,6 +529,9 @@ void MxMDCore::final()
 
   raise(ZeEVENT(Info, "finalizing feeds..."));
   allFeeds([](MxMDFeed *feed) { try { feed->final(); } catch (...) { } });
+
+  raise(ZeEVENT(Info, "finalizing telemetry..."));
+  if (m_telemetry) m_telemetry->final();
 }
 
 void MxMDCore::l1(ZvCmdServerCxn *,

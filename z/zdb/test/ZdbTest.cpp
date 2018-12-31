@@ -286,15 +286,13 @@ int main(int argc, char **argv)
 	    pod = new ZdbPOD<Order>(db);
 	    // new (pod->ptr()) Order();
 	  },
-	  [](ZdbAnyPOD *pod) {
-	    dump("recovered", pod->rn(), pod->prevRN(), (Order *)pod->ptr());
+	  [](ZdbAnyPOD *pod, bool recovered) {
+	    dump(recovered ? "recovered" : "replicated (add)",
+		pod->rn(), pod->prevRN(), (Order *)pod->ptr());
 	  },
-	  [](ZdbAnyPOD *pod, void *ptr, ZdbRange range, int op) {
-	    memcpy((char*)pod->ptr() + range.off(), ptr, range.len());
-	    if (op == ZdbOp::Delete)
-	      deleted("replicated", pod->rn(), pod->prevRN());
-	    else
-	      dump("replicated", pod->rn(), pod->prevRN(), (Order *)pod->ptr());
+	  [](ZdbAnyPOD *pod) {
+	    dump("replicated (del)",
+		pod->rn(), pod->prevRN(), (Order *)pod->ptr());
 	  },
 	  [](ZdbAnyPOD *pod, ZdbRange, int op) {
 	    if (op == ZdbOp::Delete)

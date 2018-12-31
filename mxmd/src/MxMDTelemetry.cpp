@@ -33,6 +33,15 @@ void MxMDTelemetry::init(MxMDCore *core, ZvCf *cf)
   Server::init(mx, cf);
 }
 
+void MxMDTelemetry::final()
+{
+  Guard guard(m_lock);
+  m_engines.clean();
+  m_links.clean();
+  m_queues.clean();
+  m_dbEnv = nullptr;
+}
+
 void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 {
   using namespace MxTelemetry;

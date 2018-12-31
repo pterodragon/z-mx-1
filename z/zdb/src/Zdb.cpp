@@ -68,7 +68,7 @@ ZdbEnv::~ZdbEnv()
 {
 }
 
-void ZdbEnv::init(const ZdbEnvConfig &config, ZiMultiplex *mx,
+void ZdbEnv::init(ZdbEnvConfig config, ZiMultiplex *mx,
     ZmFn<> activeFn, ZmFn<> inactiveFn)
 {
   Guard guard(m_lock);
@@ -85,7 +85,7 @@ void ZdbEnv::init(const ZdbEnvConfig &config, ZiMultiplex *mx,
 	"Zdb writeThread misconfigured: " << config.writeThread);
     return;
   }
-  m_config = config;
+  m_config = ZuMv(config);
   m_mx = mx;
   m_cxns = new CxnHash(m_config.cxnHash);
   unsigned n = m_config.hostCfs.length();
@@ -1584,7 +1584,7 @@ void ZdbAny::recover(Zdb_File *file)
     switch (pod->magic()) {
       case ZdbCommitted:
 	if (rn < m_minRN) m_minRN = rn;
-	if (m_handler.recoverFn) {
+	if (m_handler.indexAddFn) {
 	  cache(pod);
 	  this->recover(pod);
 	}

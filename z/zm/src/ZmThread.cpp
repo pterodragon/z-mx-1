@@ -109,6 +109,18 @@ void ZmThreadContext::name(ZmThreadName &s) const
   }
 }
 
+void ZmThreadContext::telemetry(ZmThreadTelemetry &data) const {
+  name(data.name);
+  data.tid = tid();
+  data.stackSize = m_stackSize;
+  data.cpuset = m_cpuset.uint64();
+  data.id = m_id;
+  data.priority = m_priority;
+  data.partition = m_partition;
+  data.main = this->main();
+  data.detached = m_detached;
+}
+
 void ZmThreadContext::manage(ZmThreadMgr *mgr, int id)
 {
   m_mgr = mgr;
@@ -177,6 +189,8 @@ void ZmThreadContext::bind()
       " failed: " << strerror(errno_) << '\n' << std::flush;
     ZmTopology::error(errno_);
   }
+  hwloc_get_cpubind(
+      ZmTopology::hwloc(), m_cpuset, HWLOC_CPUBIND_THREAD);
 }
 
 #ifndef _WIN32

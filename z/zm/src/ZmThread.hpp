@@ -267,17 +267,7 @@ public:
 
   ZuInline void *result() const { return m_result; }
 
-  inline void telemetry(ZmThreadTelemetry &data) const {
-    name(data.name);
-    data.tid = tid();
-    data.stackSize = m_stackSize;
-    data.cpuset = m_cpuset.uint64();
-    data.id = m_id;
-    data.priority = m_priority;
-    data.partition = m_partition;
-    data.main = this->main();
-    data.detached = m_detached;
-  }
+  void telemetry(ZmThreadTelemetry &data) const;
 
   template <typename S> inline void print(S &s) const {
     ZmThreadName name;

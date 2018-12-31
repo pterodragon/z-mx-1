@@ -43,8 +43,8 @@ ZmScheduler::ZmScheduler(ZmSchedParams params) :
   m_nWorkers(0),
   m_runThreads(0)
 {
-  m_threads = new Thread[m_nThreads];
   m_names = new ZmThreadName[m_nThreads];
+  m_threads = new Thread[m_nThreads];
   m_workers = new Thread *[m_nThreads];
   for (unsigned i = 0; i < m_nThreads; i++) {
     unsigned tid = i + 1;
@@ -71,8 +71,8 @@ ZmScheduler::~ZmScheduler()
     // ring.detach();
     ring.close();
   }
-  delete [] m_workers;
   delete [] m_names;
+  delete [] m_workers;
   delete [] m_threads;
 }
 

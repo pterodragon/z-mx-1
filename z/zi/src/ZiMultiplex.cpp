@@ -1895,7 +1895,7 @@ void ZiConnection::close_2()
 }
 
 ZiMultiplex::ZiMultiplex(ZiMxParams params) :
-  ZmScheduler(params.scheduler()),
+  ZmScheduler(ZuMv(params.scheduler())),
   m_stopping(0), m_drain(false),
   m_rxThread(params.rxThread()),
   m_nAccepts(0),

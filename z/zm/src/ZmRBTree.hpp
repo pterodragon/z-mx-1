@@ -527,7 +527,6 @@ public:
   }
   inline NodeRef del(Node *node) {
     if (ZuUnlikely(!node)) return 0;
-    ZmAssert(node->refCount() > 1);
     Guard guard(m_lock);
     Node *parent = node->Fn::parent();
     if (parent && parent->Fn::dup() == node) {

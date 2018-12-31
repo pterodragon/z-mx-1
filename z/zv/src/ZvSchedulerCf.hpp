@@ -50,17 +50,18 @@ namespace ZvSchedulerPriorities {
 struct ZvSchedParams : public ZmSchedParams {
   inline ZvSchedParams() { }
 
-  inline ZvSchedParams(const ZmSchedParams &p) :
-    ZmSchedParams(p) { }
-  inline ZvSchedParams &operator =(const ZmSchedParams &p) {
-    ZmSchedParams::operator =(p);
+  using ZmSchedParams::ZmSchedParams;
+#if 0
+  inline ZvSchedParams(ZmSchedParams &&p) : ZmSchedParams(ZuMv(p)) { }
+  inline ZvSchedParams &operator =(ZmSchedParams &&p) {
+    ZmSchedParams::operator =(ZuMv(p));
     return *this;
   }
+#endif
 
   inline ZvSchedParams(ZvCf *cf) { init(cf); }
-  inline ZvSchedParams(ZvCf *cf,
-      const ZmSchedParams &deflt) :
-    ZmSchedParams(deflt) { init(cf); }
+  inline ZvSchedParams(ZvCf *cf, ZmSchedParams &&deflt) :
+    ZmSchedParams(ZuMv(deflt)) { init(cf); }
 
   inline void init(ZvCf *cf) {
     if (!cf) return;

@@ -68,12 +68,17 @@ friend class ZmHashMgr;
 
   void add(ZmAnyHash *tbl) {
     ZmGuard<ZmPLock> guard(m_lock);
-    m_tables.del(tbl);
     m_tables.add(tbl);
+    // deref, otherwise m_tables.add() prevents dtor from ever being called
+    this->deref_();
   }
+
   void del(ZmAnyHash *tbl) {
     ZmGuard<ZmPLock> guard(m_lock);
-    m_tables.del(tbl);
+    // double ref prevents m_tables.del() from recursing into dtor
+    this->ref2_();
+    m_tables.del(ZmAnyHash_PtrAccessor::value(*tbl));
+    ZmAssert(this->deref_()); // check refCount is returned to 0
   }
 
   typedef ZmHashMgr_Tables Tables;
@@ -82,14 +87,22 @@ friend class ZmHashMgr;
     ZmRef<ZmAnyHash> tbl;
     {
       ZmGuard<ZmPLock> guard(m_lock);
-      tbl = m_tables.minimum();
+      // for (;;) {
+	tbl = m_tables.minimum();
+	// if (!tbl || tbl->refCount() > 2) break;
+	// m_tables.del(tbl);
+      // }
     }
     while (tbl) {
       fn(tbl);
       {
 	ZmGuard<ZmPLock> guard(m_lock);
-	tbl = m_tables.readIterator<ZmRBTreeGreater>(
-	    ZmAnyHash_PtrAccessor::value(*tbl)).iterate();
+	// for (;;) {
+	  tbl = m_tables.readIterator<ZmRBTreeGreater>(
+	      ZmAnyHash_PtrAccessor::value(*tbl)).iterate();
+	  // if (!tbl || tbl->refCount() > 2) break;
+	  // m_tables.del(tbl);
+	// }
       }
     }
   }

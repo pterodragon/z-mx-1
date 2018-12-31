@@ -657,6 +657,9 @@ private:
 
 // named parameter list for configuring ZiMultiplex
 class ZiMxParams {
+  ZiMxParams(const ZiMxParams &) = delete;
+  ZiMxParams &operator =(const ZiMxParams &) = delete;
+
 public:
   enum { RxThread = 1, TxThread = 2 }; // defaults
 
@@ -664,65 +667,68 @@ public:
     m_scheduler(ZmSchedParams().
 	nThreads(3).isolation(ZmBitmap().set(RxThread).set(TxThread))) { }
 
+  ZiMxParams(ZiMxParams &&) = default;
+  ZiMxParams &operator =(ZiMxParams &&) = default;
+
   inline ZmSchedParams &scheduler() { return m_scheduler; }
 
-  template <typename S> inline ZiMxParams &id(const S &s)
-    { m_scheduler.id(s); return *this; }
-  inline ZiMxParams &nThreads(unsigned v)
-    { m_scheduler.nThreads(v); return *this; }
-  inline ZiMxParams &stackSize(unsigned v)
-    { m_scheduler.stackSize(v); return *this; }
-  inline ZiMxParams &priority(unsigned v)
-    { m_scheduler.priority(v); return *this; }
-  inline ZiMxParams &partition(unsigned v)
-    { m_scheduler.partition(v); return *this; }
-  template <typename T> inline ZiMxParams &affinity(const T &t)
-    { m_scheduler.affinity(t); return *this; }
-  template <typename T> inline ZiMxParams &isolation(const T &t)
-    { m_scheduler.isolation(t); return *this; }
-  template <typename T> inline ZiMxParams &quantum(const T &t)
-    { m_scheduler.quantum(t); return *this; }
+  template <typename S> inline ZiMxParams &&id(const S &s)
+    { m_scheduler.id(s); return ZuMv(*this); }
+  inline ZiMxParams &&nThreads(unsigned v)
+    { m_scheduler.nThreads(v); return ZuMv(*this); }
+  inline ZiMxParams &&stackSize(unsigned v)
+    { m_scheduler.stackSize(v); return ZuMv(*this); }
+  inline ZiMxParams &&priority(unsigned v)
+    { m_scheduler.priority(v); return ZuMv(*this); }
+  inline ZiMxParams &&partition(unsigned v)
+    { m_scheduler.partition(v); return ZuMv(*this); }
+  template <typename T> inline ZiMxParams &&affinity(const T &t)
+    { m_scheduler.affinity(t); return ZuMv(*this); }
+  template <typename T> inline ZiMxParams &&isolation(const T &t)
+    { m_scheduler.isolation(t); return ZuMv(*this); }
+  template <typename T> inline ZiMxParams &&quantum(const T &t)
+    { m_scheduler.quantum(t); return ZuMv(*this); }
 
-  inline ZiMxParams &queueSize(unsigned v)
-    { m_scheduler.queueSize(v); return *this; }
-  inline ZiMxParams &ll(bool v)
-    { m_scheduler.ll(v); return *this; }
-  inline ZiMxParams &spin(unsigned v)
-    { m_scheduler.spin(v); return *this; }
-  inline ZiMxParams &timeout(unsigned v)
-    { m_scheduler.timeout(v); return *this; }
+  inline ZiMxParams &&queueSize(unsigned v)
+    { m_scheduler.queueSize(v); return ZuMv(*this); }
+  inline ZiMxParams &&ll(bool v)
+    { m_scheduler.ll(v); return ZuMv(*this); }
+  inline ZiMxParams &&spin(unsigned v)
+    { m_scheduler.spin(v); return ZuMv(*this); }
+  inline ZiMxParams &&timeout(unsigned v)
+    { m_scheduler.timeout(v); return ZuMv(*this); }
 
-  inline ZiMxParams &rxThread(unsigned tid) {
+  inline ZiMxParams &&rxThread(unsigned tid) {
     m_rxThread = tid;
-    return *this;
+    return ZuMv(*this);
   }
-  inline ZiMxParams &txThread(unsigned tid) {
+  inline ZiMxParams &&txThread(unsigned tid) {
     m_txThread = tid;
-    return *this;
+    return ZuMv(*this);
   }
 #ifdef ZiMultiplex_EPoll
-  inline ZiMxParams &epollMaxFDs(unsigned n)
-    { m_epollMaxFDs = n; return *this; }
-  inline ZiMxParams &epollQuantum(unsigned n)
-    { m_epollQuantum = n; return *this; }
+  inline ZiMxParams &&epollMaxFDs(unsigned n)
+    { m_epollMaxFDs = n; return ZuMv(*this); }
+  inline ZiMxParams &&epollQuantum(unsigned n)
+    { m_epollQuantum = n; return ZuMv(*this); }
 #endif
-  inline ZiMxParams &rxBufSize(unsigned v)
-    { m_rxBufSize = v; return *this; }
-  inline ZiMxParams &txBufSize(unsigned v)
-    { m_txBufSize = v; return *this; }
-  inline ZiMxParams &listenerHash(ZuString id)
-    { m_listenerHash = id; return *this; }
-  inline ZiMxParams &requestHash(ZuString id)
-    { m_requestHash = id; return *this; }
-  inline ZiMxParams &cxnHash(ZuString id)
-    { m_cxnHash = id; return *this; }
+  inline ZiMxParams &&rxBufSize(unsigned v)
+    { m_rxBufSize = v; return ZuMv(*this); }
+  inline ZiMxParams &&txBufSize(unsigned v)
+    { m_txBufSize = v; return ZuMv(*this); }
+  inline ZiMxParams &&listenerHash(ZuString id)
+    { m_listenerHash = id; return ZuMv(*this); }
+  inline ZiMxParams &&requestHash(ZuString id)
+    { m_requestHash = id; return ZuMv(*this); }
+  inline ZiMxParams &&cxnHash(ZuString id)
+    { m_cxnHash = id; return ZuMv(*this); }
 #ifdef ZiMultiplex_DEBUG
-  inline ZiMxParams &trace(bool b) { m_trace = b; return *this; }
-  inline ZiMxParams &debug(bool b) { m_debug = b; return *this; }
-  inline ZiMxParams &frag(bool b) { m_frag = b; return *this; }
-  inline ZiMxParams &yield(bool b) { m_yield = b; return *this; }
+  inline ZiMxParams &&trace(bool b) { m_trace = b; return ZuMv(*this); }
+  inline ZiMxParams &&debug(bool b) { m_debug = b; return ZuMv(*this); }
+  inline ZiMxParams &&frag(bool b) { m_frag = b; return ZuMv(*this); }
+  inline ZiMxParams &&yield(bool b) { m_yield = b; return ZuMv(*this); }
 #endif
-  inline ZiMxParams &telFreq(unsigned v) { m_telFreq = v; return *this; }
+  inline ZiMxParams &&telFreq(unsigned v) { m_telFreq = v; return ZuMv(*this); }
 
   inline const ZmSchedParams &scheduler() const { return m_scheduler; }
   inline unsigned rxThread() const { return m_rxThread; }

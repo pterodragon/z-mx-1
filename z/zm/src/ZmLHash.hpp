@@ -344,21 +344,18 @@ public:
   inline unsigned count() const { return m_count; }
   inline unsigned loadFactor_() const { return m_loadFactor; }
   inline double loadFactor() const { return (double)m_loadFactor / 16.0; }
-  inline unsigned telFreq() const { return m_telFreq; }
 
 protected:
-  inline ZmLHash__(const ZmHashParams &params) : m_count(0) {
+  inline ZmLHash__(const ZmHashParams &params) : ZmAnyHash(params.telFreq()) {
     double loadFactor = params.loadFactor();
     if (loadFactor < 0.5) loadFactor = 0.5;
     else if (loadFactor > 1.0) loadFactor = 1.0;
     m_loadFactor = (unsigned)(loadFactor * 16.0);
-    m_telFreq = params.telFreq();
   }
 
   unsigned	m_loadFactor = 0;
   unsigned	m_count = 0;
   Lock		m_lock;
-  unsigned	m_telFreq = 0;
 };
 
 // statically allocated hash table base class
@@ -407,11 +404,11 @@ protected:
     unsigned size = 1U<<m_bits;
     m_table = Ops::alloc(size);
     Ops::initItems(m_table, size);
-    static_cast<Hash *>(this)->addMgr();
+    ZmHashMgr::add(this);
   }
 
   inline void final() {
-    static_cast<Hash *>(this)->delMgr();
+    ZmHashMgr::del(this);
     Ops::destroyItems(m_table, 1U<<m_bits);
     Ops::free(m_table);
   }
@@ -1030,11 +1027,6 @@ public:
     m_count = 0;
   }
 
-private:
-  void addMgr() { ZmHashMgr::add(this); }
-  void delMgr() { ZmHashMgr::del(this); }
-
-public:
   void telemetry(ZmHashTelemetry &data) const {
     data.id = ID::id();
     data.nodeSize = sizeof(Node);

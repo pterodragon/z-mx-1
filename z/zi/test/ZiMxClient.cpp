@@ -139,8 +139,8 @@ public:
   Mx(ZiIP ip, unsigned port, const ZiCxnOptions &options,
       unsigned nConnections, unsigned nConcurrent,
       unsigned maxRecv, int reconnInterval,
-      const ZiMxParams &params) :
-    ZiMultiplex(params), m_ip(ip), m_port(port), m_options(options),
+      ZiMxParams params) :
+    ZiMultiplex(ZuMv(params)), m_ip(ip), m_port(port), m_options(options),
     m_nConnections(nConnections), m_nConcurrent(nConcurrent),
     m_maxRecv(maxRecv), m_reconnInterval(reconnInterval),
     m_nDisconnects(0) { }
@@ -326,7 +326,7 @@ int main(int argc, char **argv)
   ZeLog::start();
 
   Mx mx(ip, port, options, nConnections, nConcurrent, maxRecv,
-      reconnInterval, params);
+      reconnInterval, ZuMv(params));
 
   ZmTrap::sigintFn(ZmFn<>::Ptr<&Global::post>::fn());
   ZmTrap::trap();

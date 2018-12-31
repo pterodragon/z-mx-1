@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// hash table configuration management & statistics
+// hash table configuration management & telemetry
 
 #ifndef ZmHashMgr_HPP
 #define ZmHashMgr_HPP
@@ -77,6 +77,8 @@ struct ZmHashTelemetry {
 
 class ZmAPI ZmAnyHash_ : public ZmPolymorph {
 public:
+  inline ZmAnyHash_(unsigned telFreq) : m_telFreq(telFreq) { }
+
   ZuInline unsigned telCount() const {
     unsigned v = m_telCount;
     if (!v)
@@ -89,6 +91,7 @@ public:
   virtual void telemetry(ZmHashTelemetry &) const { }
 
 private:
+  unsigned		m_telFreq = 0;
   mutable unsigned	m_telCount = 0;
 };
 struct ZmAnyHash_PtrAccessor : public ZuAccessor<ZmAnyHash_, uintptr_t> {
@@ -100,11 +103,12 @@ struct ZmHashMgr_HeapID {
   inline static const char *id() { return "ZmHashMgr_"; }
 };
 typedef ZmRBTree<ZmAnyHash_,
-	  ZmRBTreeObject<ZmPolymorph,
-	    ZmRBTreeNodeIsKey<true,
-	      ZmRBTreeIndex<ZmAnyHash_PtrAccessor,
-		ZmRBTreeHeapID<ZmHashMgr_HeapID,
-		  ZmRBTreeLock<ZmNoLock> > > > > > ZmHashMgr_Tables;
+	  ZmRBTreeNodeIsKey<true,
+	    ZmRBTreeObject<ZmPolymorph,
+	      ZmRBTreeHeapID<ZmNoHeap,
+		ZmRBTreeIndex<ZmAnyHash_PtrAccessor,
+		  ZmRBTreeHeapID<ZmHashMgr_HeapID,
+		    ZmRBTreeLock<ZmNoLock> > > > > > > ZmHashMgr_Tables;
 typedef ZmHashMgr_Tables::Node ZmAnyHash;
 
 class ZmHashMgr_;
@@ -112,7 +116,7 @@ class ZmAPI ZmHashMgr {
 friend class ZmHashMgr_;
 friend class ZmHashParams;
 template <typename, class> friend class ZmHash; 
-template <typename, class> friend class ZmLHash; 
+template <class, typename, class, unsigned> friend class ZmLHash_;
 
   template <class S> struct CSV_ {
     CSV_(S &stream) : m_stream(stream) {
@@ -129,9 +133,9 @@ template <typename, class> friend class ZmLHash;
 	<< data.nodeSize << ','
 	<< (unsigned)data.bits << ','
 	<< (unsigned)data.cBits << ','
-	<< data.loadFactor << ','
+	<< ZuBoxed((double)data.loadFactor / 16.0) << ','
 	<< data.count << ','
-	<< data.effLoadFactor << ','
+	<< ZuBoxed((double)data.effLoadFactor / 16.0) << ','
 	<< data.resized << '\n';
     }
     S &stream() { return m_stream; }
@@ -159,6 +163,7 @@ friend struct CSV;
 private:
   static ZmHashParams &params(ZuString id, ZmHashParams &in);
 
+public:
   static void add(ZmAnyHash *);
   static void del(ZmAnyHash *);
 };

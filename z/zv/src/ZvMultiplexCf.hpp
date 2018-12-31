@@ -43,17 +43,20 @@
 struct ZvMxParams : public ZiMxParams {
   inline ZvMxParams() : ZiMxParams() { }
 
-  inline ZvMxParams(const ZiMxParams &p) :
-    ZiMxParams(p) { }
-  inline ZvMxParams &operator =(const ZiMxParams &p) {
-    ZiMxParams::operator =(p);
+#if 0
+  inline ZvMxParams(ZiMxParams &&p) : ZiMxParams(ZuMv(p)) { }
+  inline ZvMxParams &operator =(ZiMxParams &&p) {
+    ZiMxParams::operator =(ZuMv(p));
     return *this;
   }
+#endif
+
+  using ZiMxParams::ZiMxParams;
 
   inline ZvMxParams(ZvCf *cf) { init(cf); }
 
-  inline ZvMxParams(ZvCf *cf, const ZiMxParams &deflt) :
-    ZiMxParams(deflt) { init(cf); }
+  inline ZvMxParams(ZvCf *cf, ZiMxParams &&deflt) :
+    ZiMxParams(ZuMv(deflt)) { init(cf); }
 
   inline ZvSchedParams &scheduler() {
     return static_cast<ZvSchedParams &>(

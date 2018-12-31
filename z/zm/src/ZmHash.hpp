@@ -138,7 +138,7 @@ protected:
 template <> class ZmHash_LockMgr<ZmNoLock> {
 protected:
   ZmHash_LockMgr(const ZmHashParams &p) :
-      m_bits(p.bits()   < 2 ? 2 : p.bits() >  28 ? 28 : p.bits()) { }
+      m_bits(p.bits() < 2 ? 2 : p.bits() > 28 ? 28 : p.bits()) { }
   ~ZmHash_LockMgr() { }
 
 public:
@@ -587,19 +587,18 @@ private:
     if (loadFactor < 1.0) loadFactor = 1.0;
     m_loadFactor = (unsigned)(loadFactor * (1<<4));
     m_table = new NodePtr[1<<m_bits];
-    memset(m_table, 0, sizeof(NodePtr)<<(m_bits));
-    m_telFreq = params.telFreq();
-    addMgr();
+    memset(m_table, 0, sizeof(NodePtr)<<m_bits);
+    ZmHashMgr::add(this);
   }
 
 public:
   inline ZmHash(ZmHashParams params = ZmHashParams(ID::id())) :
-      ZmHash_LockMgr<Lock>(params), m_count(0), m_resized(0) {
+      ZmAnyHash(params.telFreq()), ZmHash_LockMgr<Lock>(params) {
     init(params);
   }
 
   ~ZmHash() {
-    delMgr();
+    ZmHashMgr::del(this);
     clean();
     delete [] m_table;
   }
@@ -1004,12 +1003,6 @@ public:
     return lockCode(IHashFn::hash(ZuFwd<Index_>(index)));
   }
 
-private:
-  void addMgr() { ZmHashMgr::add(this); }
-  void delMgr() { ZmHashMgr::del(this); }
-
-public:
-  unsigned telFreq() const { return m_telFreq; }
   void telemetry(ZmHashTelemetry &data) const {
     data.id = ID::id();
     data.nodeSize = sizeof(Node);
@@ -1029,13 +1022,15 @@ private:
 
     ++m_resized;
 
+    unsigned n = (1U<<bits);
+
     m_bits = ++bits;
 
     NodePtr *table = new NodePtr[1<<bits];
     memset(table, 0, sizeof(NodePtr)<<bits);
     Node *node, *nextNode;
 
-    for (unsigned i = 0, n = (1U<<bits); i < n; i++)
+    for (unsigned i = 0; i < n; i++)
       for (node = m_table[i]; node; node = nextNode) {
 	nextNode = node->Fn::next();
 	unsigned j = ZmHash_Bits::hashBits(
@@ -1053,7 +1048,6 @@ private:
   unsigned	m_count = 0;
   unsigned	m_resized = 0;
   NodePtr	*m_table;
-  unsigned	m_telFreq = 0;
 };
 
 #endif /* ZmHash_HPP */

@@ -60,7 +60,7 @@ struct ZmThreadPriority {
   };
 };
 
-typedef ZuStringN<32> ZmThreadName;
+typedef ZuStringN<28> ZmThreadName;
 
 struct ZmThreadTelemetry {
   ZmThreadName	name;

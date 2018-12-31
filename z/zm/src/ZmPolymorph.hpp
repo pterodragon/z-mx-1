@@ -89,9 +89,12 @@ public:
   }
 #endif
 
-private:
-  ZuInline void ref_() const { m_refCount++; }
+  // apps occasionally need to manipulate the refCount directly
+  ZuInline void ref_() const { ++m_refCount; }
+  ZuInline void ref2_() const { m_refCount += 2; }
   ZuInline bool deref_() const { return !--m_refCount; }
+
+private:
 #ifdef ZmObject_DEBUG
   ZuInline bool deleted_() const { return m_refCount.load_() < 0; }
   ZuInline void del_() const { m_refCount.store_(-1); }

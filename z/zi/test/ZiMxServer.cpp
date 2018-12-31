@@ -120,8 +120,8 @@ friend class Connection;
 public:
   Mx(ZiIP ip, unsigned port, unsigned nAccepts, const ZiCxnOptions &options,
       unsigned nConnections, unsigned maxSend, int reconnInterval,
-      const ZiMxParams &params) :
-    ZiMultiplex(params), m_ip(ip), m_port(port),
+      ZiMxParams params) :
+    ZiMultiplex(ZuMv(params)), m_ip(ip), m_port(port),
     m_nAccepts(nAccepts), m_options(options),
     m_maxDisconnects(nConnections), m_maxSend(maxSend),
     m_reconnInterval(reconnInterval), m_nDisconnects(0) { }
@@ -306,7 +306,7 @@ int main(int argc, char **argv)
   ZeLog::start();
 
   Mx mx(ip, port, nAccepts, options, nConnections, maxSend,
-      reconnInterval, params);
+      reconnInterval, ZuMv(params));
 
   ZmTrap::sigintFn(ZmFn<>::Ptr<&Global::post>::fn());
   ZmTrap::trap();

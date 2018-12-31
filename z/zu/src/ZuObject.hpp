@@ -41,9 +41,14 @@ class ZuObject : public ZuObject_ {
 public:
   ZuInline ZuObject() : m_refCount(0) { }
 
-  ZuInline void ref() const { m_refCount++; }
+  ZuInline void ref() const { ++m_refCount; }
   ZuInline bool deref() const { return !--m_refCount; }
   ZuInline int refCount() const { return m_refCount; }
+
+  // apps occasionally need to manipulate the refCount directly
+  ZuInline void ref_() const { ++m_refCount; }
+  ZuInline void ref2_() const { m_refCount += 2; }
+  ZuInline bool deref_() const { return !--m_refCount; }
 
 private:
   mutable int		m_refCount;

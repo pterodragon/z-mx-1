@@ -108,7 +108,6 @@ typedef ZmLHash<S,
 
 template <typename H>
 struct HashAdapter {
-  typedef ZmHashParams Params;
   typedef ZmRef<typename H::Node> Ret;
   inline static const typename H::Key &key(const typename H::Node *n) {
     return n->key();
@@ -119,7 +118,6 @@ struct HashAdapter {
 };
 template <typename H>
 struct LHashAdapter {
-  typedef ZmHashParams Params;
   typedef ZuPair<typename H::Key, typename H::Val> Ret;
   inline static const typename H::Key &key(const Ret &n) {
     return n.p1();
@@ -186,8 +184,7 @@ template <typename H> void iterDel(H &h)
 template <typename H, template <typename> class A>
 void funcTest_(int bits, double loadFactor)
 {
-  ZmRef<H> h_ =
-    new H(typename A<H>::Params().bits(bits).loadFactor(loadFactor));
+  ZmRef<H> h_ = new H(ZmHashParams().bits(bits).loadFactor(loadFactor));
   H &h = *h_;
   h.add("Goodbye", -42);
   CHECK(A<H>::value(typename A<H>::Ret(h.find("Goodbye"))) == -42);
@@ -307,7 +304,7 @@ template <typename H, template <typename> class A> void perfTest_(int bits)
 
   if (n > 16) n = 16;
 
-  ZmRef<H> h_ = new H(typename A<H>::Params().bits(bits).loadFactor(1.0));
+  ZmRef<H> h_ = new H(ZmHashParams().bits(bits).loadFactor(1.0));
   H &h = *h_;
 
   for (int i = 0; i < n; i++)

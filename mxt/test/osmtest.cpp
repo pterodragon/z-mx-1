@@ -151,11 +151,8 @@ struct App : public MxTOrderMgr<App, AppTypes> {
   template <typename Txn> void sendRelease(Order *, Txn &) { }
 
   template <typename Txn> void sendFill(Order *, Txn &) { }
-  template <typename Txn> void sendCorrect(Order *, Txn &) { }
-  template <typename Txn> void sendBust(Order *, Txn &) { }
 
   template <typename Txn> void sendClosed(Order *, Txn &) { }
-  template <typename Txn> void sendMktNotice(Order *, Txn &) { }
 
   void main();
 };

@@ -30,7 +30,7 @@
 #include <MxBaseLib.hpp>
 #endif
 
-#include <ZuPair.hpp>
+#include <ZuPrint.hpp>
 
 #include <ZmTime.hpp>
 
@@ -41,6 +41,11 @@
 struct MxMsgID {
   MxID		linkID;
   MxSeqNo	seqNo;
+
+  template <typename S> inline void print(S &s) const {
+    s << "linkID=" << linkID << " seqNo=" << seqNo;
+  }
 };
+template <> struct ZuPrint<MxMsgID> : public ZuPrintFn { };
 
 #endif /* MxMsgID_HPP */

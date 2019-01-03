@@ -654,40 +654,40 @@ template <typename AppTypes> struct MxTAppTypes {
 #pragma pack(pop)
 
 // types that can be extended by the app
-#define MxTImport(Base) \
-  typedef typename Base::Event Event; \
+#define MxTImport(Scope) \
+  using Event = typename Scope::Event \
  \
-  typedef typename Base::OrderLeg OrderLeg; \
-  typedef typename Base::ModifyLeg ModifyLeg; \
-  typedef typename Base::CancelLeg CancelLeg; \
+  using OrderLeg = typename Scope::OrderLeg \
+  using ModifyLeg = typename Scope::ModifyLeg \
+  using CancelLeg = typename Scope::CancelLeg \
  \
-  typedef typename Base::AnyReject AnyReject; \
+  using AnyReject = typename Scope::AnyReject \
  \
-  typedef typename Base::NewOrder NewOrder; \
-  typedef typename Base::OrderHeld OrderHeld; \
-  typedef typename Base::OrderFiltered OrderFiltered; \
-  typedef typename Base::Ordered Ordered; \
-  typedef typename Base::Reject Reject; \
+  using NewOrder = typename Scope::NewOrder \
+  using OrderHeld = typename Scope::OrderHeld \
+  using OrderFiltered = typename Scope::OrderFiltered \
+  using Ordered = typename Scope::Ordered \
+  using Reject = typename Scope::Reject \
  \
-  typedef typename Base::Modify Modify; \
-  typedef typename Base::Modified Modified; \
-  typedef typename Base::ModReject ModReject; \
+  using Modify = typename Scope::Modify \
+  using Modified = typename Scope::Modified \
+  using ModReject = typename Scope::ModReject \
  \
-  typedef typename Base::Cancel Cancel; \
-  typedef typename Base::Canceled Canceled; \
-  typedef typename Base::CxlReject CxlReject; \
+  using Cancel = typename Scope::Cancel \
+  using Canceled = typename Scope::Canceled \
+  using CxlReject = typename Scope::CxlReject \
  \
-  typedef typename Base::Hold Hold; \
-  typedef typename Base::Release Release; \
-  typedef typename Base::Deny Deny; \
+  using Hold = typename Scope::Hold \
+  using Release = typename Scope::Release \
+  using Deny = typename Scope::Deny \
  \
-  typedef typename Base::Fill Fill; \
+  using Fill = typename Scope::Fill \
  \
-  typedef typename Base::Closed Closed; \
+  using Closed = typename Scope::Closed \
  \
-  typedef typename Base::OrderSent OrderSent; \
-  typedef typename Base::ModifySent ModifySent; \
-  typedef typename Base::CancelSent CancelSent
+  using OrderSent = typename Scope::OrderSent \
+  using ModifySent = typename Scope::ModifySent \
+  using CancelSent = typename Scope::CancelSent
 
 template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
   MxTImport(AppTypes);

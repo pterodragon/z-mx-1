@@ -1874,7 +1874,7 @@ void ZdbEnv::write(ZdbAnyPOD *pod, ZdbRange range, int op)
   {
     const ZdbConfig &config = pod->db()->config();
     if (config.repMode)
-      m_env->repSend(pod, Zdb_Msg::Rep, range, op, config.compress);
+      repSend(pod, Zdb_Msg::Rep, range, op, config.compress);
   }
   ZmRef<ZdbAnyPOD_Write> write = new ZdbAnyPOD_Write(pod, range, op);
   m_mx->run(m_config.writeTID,

@@ -450,10 +450,10 @@ typedef ZdbAnyPOD_Write_<ZmHeap<ZdbAnyPOD_Write_HeapID,
 
 // AllocFn - called to allocate/initialize new record from memory
 typedef ZmFn<ZdbAny *, ZmRef<ZdbAnyPOD> &> ZdbAllocFn;
-// IndexAddFn(pod, recovered) - record is recovered, or new/update replicated
-typedef ZmFn<ZdbAnyPOD *, bool> ZdbIndexAddFn;
-// IndexDelFn(pod) - record update/delete replicated
-typedef ZmFn<ZdbAnyPOD *> ZdbIndexDelFn;
+// AddFn(pod, recovered) - record is recovered, or new/update replicated
+typedef ZmFn<ZdbAnyPOD *, bool> ZdbAddFn;
+// DelFn(pod) - record update/delete replicated
+typedef ZmFn<ZdbAnyPOD *> ZdbDelFn;
 // CopyFn(pod, range, op) - (optional) called for app drop copy
 typedef ZmFn<ZdbAnyPOD *, ZdbRange, int> ZdbCopyFn;
 
@@ -525,6 +525,7 @@ struct ZdbConfig {
     fileSize = cf->getInt("fileSize",
 	((int32_t)4)<<10, ((int32_t)1)<<30, false, 0); // range: 4K to 1G
     preAlloc = cf->getInt("preAlloc", 0, 10<<24, false, 0);
+    repMode = cf->getInt("repMode", 0, 1, false, 0);
     compress = cf->getInt("compress", 0, 1, false, 0);
     noCache = cf->getInt("noCache", 0, 1, false, 0);
     cache.init(cf->get("cache", false, "Zdb.Cache"));
@@ -535,6 +536,7 @@ struct ZdbConfig {
   ZtString		path;
   unsigned		fileSize = 0;
   unsigned		preAlloc = 0;	// #records to pre-allocate
+  uint8_t		repMode = 0;	// 0 - deferred, 1 - in put()
   bool			compress = false;
   bool			noCache = false;
   ZmHashParams		cache;
@@ -543,8 +545,8 @@ struct ZdbConfig {
 
 struct ZdbHandler {
   ZdbAllocFn	allocFn;
-  ZdbIndexAddFn	indexAddFn;
-  ZdbIndexDelFn	indexDelFn;
+  ZdbAddFn	addFn;
+  ZdbDelFn	delFn;
   ZdbCopyFn	copyFn;
 };
 
@@ -652,15 +654,15 @@ private:
   // application call handlers
   inline void alloc(ZmRef<ZdbAnyPOD> &pod) { m_handler.allocFn(this, pod); }
   inline void recover(ZdbAnyPOD *pod) {
-    m_handler.indexAddFn(pod, true);
+    m_handler.addFn(pod, true);
   }
   inline void replicate(ZdbAnyPOD *pod, void *ptr, ZdbRange range, int op) {
 #ifdef ZdbRep_DEBUG
     ZmAssert((!range || (range.off() + range.len()) <= pod->size()));
 #endif
-    if (op != ZdbOp::New) m_handler.indexDelFn(pod);
+    if (op != ZdbOp::New) m_handler.delFn(pod);
     if (range) memcpy((char *)pod->ptr() + range.off(), ptr, range.len());
-    if (op != ZdbOp::Delete) m_handler.indexAddFn(pod, false);
+    if (op != ZdbOp::Delete) m_handler.addFn(pod, false);
   }
   inline void copy(ZdbAnyPOD *pod, ZdbRange range, int op) {
     m_handler.copyFn(pod, range, op);

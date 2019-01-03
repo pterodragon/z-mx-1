@@ -149,18 +149,14 @@ public:
 template <typename T, class Cmp, class DefltCmp, bool IsIntegral, unsigned Size>
 struct ZuArrayFn_Cmp {
   inline static int cmp(const T *dst, const T *src, unsigned length) {
-    if (ZuUnlikely(!length)) return 0;
-    do {
+    while (ZuLikely(length--))
       if (int i = Cmp::cmp(*dst++, *src++)) return i;
-    } while (--length > 0);
     return 0;
   }
 
   inline static bool equals(const T *dst, const T *src, unsigned length) {
-    if (ZuUnlikely(!length)) return true;
-    do {
+    while (ZuLikely(length--))
       if (!Cmp::equals(*dst++, *src++)) return false;
-    } while (--length > 0);
     return true;
   }
 };

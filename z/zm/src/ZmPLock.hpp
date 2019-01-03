@@ -58,7 +58,7 @@
 typedef uint32_t ZmPLock_;
 #define ZmPLock_init(m) m = 0
 #define ZmPLock_final(m) (void)0
-static inline void ZmPLock_lock_(ZmPLock_ &m) {
+ZuInline void ZmPLock_lock_(ZmPLock_ &m) {
   int i = 0x00010000, j;
   __asm__ __volatile__(	"lock; xaddl %0, %1\n\t"
 			"movzwl %w0, %2\n\t"
@@ -73,7 +73,7 @@ static inline void ZmPLock_lock_(ZmPLock_ &m) {
 			: : "memory", "cc");
 }
 #define ZmPLock_lock(m) ZmPLock_lock_(m)
-static inline bool ZmPLock_trylock_(ZmPLock_ &m) {
+ZuInline bool ZmPLock_trylock_(ZmPLock_ &m) {
   int i, j;
   __asm__ __volatile__(	"movl %2,%0\n\t"
 			"movl %0,%1\n\t"
@@ -93,7 +93,7 @@ static inline bool ZmPLock_trylock_(ZmPLock_ &m) {
   return !i;
 }
 #define ZmPLock_trylock(m) ZmPLock_trylock_(m)
-static inline void ZmPLock_unlock_(ZmPLock_ &m) {
+ZuInline void ZmPLock_unlock_(ZmPLock_ &m) {
   __asm__ __volatile__(	"lock; incw %0"
 			: "+m" (m)
 			: : "memory", "cc");

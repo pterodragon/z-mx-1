@@ -25,7 +25,7 @@
 //
 // An event is a specific type that encapsulates an update to order state
 //
-// An order state is an order transaction together with (at most one)
+// An open order is an order transaction together with (at most one)
 // pending modify transaction and (at most one) pending cancel transaction
 
 #ifndef MxTOrder_HPP

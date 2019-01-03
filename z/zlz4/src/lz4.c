@@ -251,7 +251,7 @@ struct refTables
 //****************************
 #if LZ4_ARCH64
 
-static inline int LZ4_NbCommonBytes (register U64 val)
+inline static int LZ4_NbCommonBytes (register U64 val)
 {
 #if defined(LZ4_BIG_ENDIAN)
     #if defined(_MSC_VER) && !defined(LZ4_FORCE_SW_BITCOUNT)
@@ -283,7 +283,7 @@ static inline int LZ4_NbCommonBytes (register U64 val)
 
 #else
 
-static inline int LZ4_NbCommonBytes (register U32 val)
+inline static int LZ4_NbCommonBytes (register U32 val)
 {
 #if defined(LZ4_BIG_ENDIAN)
     #if defined(_MSC_VER) && !defined(LZ4_FORCE_SW_BITCOUNT)
@@ -326,7 +326,7 @@ static inline int LZ4_NbCommonBytes (register U32 val)
 // If it cannot achieve it, compression will stop, and result of the function will be zero.
 // return : the number of bytes written in buffer 'dest', or 0 if the compression fails
 
-static inline int LZ4_compressCtx(
+inline static int LZ4_compressCtx(
     void** ctx, const char* source, char* dest, int isize, int maxOutputSize)
 {
 #if HEAPMODE
@@ -489,7 +489,7 @@ _last_literals:
 #define HASH64KTABLESIZE (1U<<HASHLOG64K)
 #define LZ4_HASH64K_FUNCTION(i)	(((i) * 2654435761U) >> ((MINMATCH*8)-HASHLOG64K))
 #define LZ4_HASH64K_VALUE(p)	LZ4_HASH64K_FUNCTION(A32(p))
-static inline int LZ4_compress64kCtx(
+inline static int LZ4_compress64kCtx(
     void** ctx, const char* source, char* dest, int isize, int maxOutputSize)
 {
 #if HEAPMODE

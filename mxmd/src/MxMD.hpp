@@ -1774,7 +1774,7 @@ public:
 
   static MxMDLib *instance();
 
-  static inline MxMDLib *init(ZuString cf) {
+  inline static MxMDLib *init(ZuString cf) {
     return init(cf, ZmFn<ZmScheduler *>());
   }
 

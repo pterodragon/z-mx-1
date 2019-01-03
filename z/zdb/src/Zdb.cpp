@@ -1584,7 +1584,7 @@ void ZdbAny::recover(Zdb_File *file)
     switch (pod->magic()) {
       case ZdbCommitted:
 	if (rn < m_minRN) m_minRN = rn;
-	if (m_handler.indexAddFn) {
+	if (m_handler.addFn) {
 	  cache(pod);
 	  this->recover(pod);
 	}
@@ -1871,6 +1871,11 @@ void ZdbAny::telemetry(Telemetry &data) const
 
 void ZdbEnv::write(ZdbAnyPOD *pod, ZdbRange range, int op)
 {
+  {
+    const ZdbConfig &config = pod->db()->config();
+    if (config.repMode)
+      m_env->repSend(pod, Zdb_Msg::Rep, range, op, config.compress);
+  }
   ZmRef<ZdbAnyPOD_Write> write = new ZdbAnyPOD_Write(pod, range, op);
   m_mx->run(m_config.writeTID,
       ZmFn<>::Member<&ZdbAnyPOD_Write__::write>::fn(write));
@@ -1883,7 +1888,8 @@ void ZdbAnyPOD_Write__::write()
 
 void ZdbAny::write(ZdbAnyPOD *pod, ZdbRange range, int op)
 {
-  m_env->repSend(pod, Zdb_Msg::Rep, range, op, m_config->compress);
+  if (!m_config->repMode)
+    m_env->repSend(pod, Zdb_Msg::Rep, range, op, m_config->compress);
   write_(pod->rn(), pod->prevRN(), pod->ptr(), op);
   {
     Guard guard(m_lock);

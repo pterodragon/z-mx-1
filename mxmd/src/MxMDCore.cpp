@@ -28,7 +28,7 @@
 #include <ZiModule.hpp>
 
 #include <ZvCf.hpp>
-#include <ZvHeapCf.hpp>
+#include <ZvHeapCSV.hpp>
 
 #include <MxMDCSV.hpp>
 
@@ -201,9 +201,9 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
 	  logCf->getInt("offset", INT_MIN, INT_MAX, false, 0)));
     }
 
-    if (ZmRef<ZvCf> heapCf = cf->subset("heap", false)) {
+    if (ZtString heapCSV = cf->get("heap")) {
       ZeLOG(Info, "MxMDLib - configuring heap...");
-      ZvHeapMgrCf::init(heapCf);
+      ZvHeapCSV::init(heapCSV);
     }
 
     {

@@ -37,7 +37,7 @@
 
 #include <ZvCf.hpp>
 #include <ZvMultiplexCf.hpp>
-#include <ZvHeapCf.hpp>
+#include <ZvHeapCSV.hpp>
 
 #include <MxCSV.hpp>
 #include <MxMCapHdr.hpp>
@@ -443,8 +443,8 @@ int main(int argc, const char *argv[])
 
       cf->fromFile(cfPath, false);
 
-      if (ZmRef<ZvCf> heapCf = cf->subset("heap", false))
-	ZvHeapMgrCf::init(heapCf);
+      if (ZtString heapCSV = cf->get("heap"))
+	ZvHeapCSV::init(heapCSV);
 
       app = new App(cf);
 

@@ -148,6 +148,7 @@ void MxEngine::linkState(MxAnyLink *link, int prev, int next)
       case MxLinkState::Up:
 	--m_up;
 	break;
+      case MxLinkState::ReconnectPending:
       case MxLinkState::Reconnecting:
 	--m_reconn;
 	break;
@@ -174,6 +175,7 @@ void MxEngine::linkState(MxAnyLink *link, int prev, int next)
       case MxLinkState::Up:
 	++m_up;
 	break;
+      case MxLinkState::ReconnectPending:
       case MxLinkState::Reconnecting:
 	++m_reconn;
 	break;
@@ -370,6 +372,7 @@ void MxAnyLink::down_(bool disable)
 	if (!m_enabled) m_state = MxLinkState::Disabled;
 	break;
       case MxLinkState::Up:
+      case MxLinkState::ReconnectPending:
       case MxLinkState::Reconnecting:
 	m_state = MxLinkState::Disconnecting;
 	disconnect = true;
@@ -397,6 +400,9 @@ void MxAnyLink::connected()
   int prev, next;
   bool disconnect = false;
 
+  // cancel reconnect
+  mx()->del(&m_reconnTimer);
+
   {
     StateGuard stateGuard(m_stateLock);
 
@@ -404,6 +410,7 @@ void MxAnyLink::connected()
     prev = m_state;
     switch (prev) {
       case MxLinkState::Connecting:
+      case MxLinkState::ReconnectPending:
       case MxLinkState::Reconnecting:
 	m_state = MxLinkState::Up;
       case MxLinkState::Up:
@@ -431,6 +438,9 @@ void MxAnyLink::disconnected()
   int prev, next;
   bool connect = false;
 
+  // cancel reconnect
+  mx()->del(&m_reconnTimer);
+
   {
     StateGuard stateGuard(m_stateLock);
 
@@ -439,6 +449,7 @@ void MxAnyLink::disconnected()
     switch (prev) {
       case MxLinkState::Connecting:
       case MxLinkState::DisconnectPending:
+      case MxLinkState::ReconnectPending:
       case MxLinkState::Reconnecting:
       case MxLinkState::Up:
 	m_state = m_enabled ? MxLinkState::Failed : MxLinkState::Disabled;
@@ -484,8 +495,9 @@ void MxAnyLink::reconnect(bool immediate)
     prev = m_state;
     switch (prev) {
       case MxLinkState::Connecting:
+      case MxLinkState::Reconnecting:
       case MxLinkState::Up:
-	m_state = MxLinkState::Reconnecting;
+	m_state = MxLinkState::ReconnectPending;
 	reconnect = true;
 	break;
       case MxLinkState::DisconnectPending:
@@ -506,15 +518,42 @@ void MxAnyLink::reconnect(bool immediate)
   if (reconnect) {
     if (immediate)
       engine()->rxRun(
-	  ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this});
+	  ZmFn<>{[](MxAnyLink *link) { link->reconnect_(); }, this});
     else
       engine()->rxRun(
-	  ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this},
+	  ZmFn<>{[](MxAnyLink *link) { link->reconnect_(); }, this},
 	  reconnTime, &m_reconnTimer);
   }
   if (disconnect) 
     engine()->rxRun(
 	ZmFn<>{[](MxAnyLink *link) { link->disconnect(); }, this});
+}
+
+void MxAnyLink::reconnect_()
+{
+  int prev, next;
+  bool connect = false;
+
+  {
+    StateGuard stateGuard(m_stateLock);
+
+    // state machine
+    prev = m_state;
+    switch (prev) {
+      case MxLinkState::ReconnectPending:
+	m_state = MxLinkState::Reconnecting;
+	connect = true;
+	break;
+      default:
+	break;
+    }
+    next = m_state;
+  }
+
+  if (next != prev) engine()->linkState(this, prev, next);
+  if (connect)
+    engine()->rxRun(
+	ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this});
 }
 
 void MxAnyLink::telemetry(Telemetry &data) const

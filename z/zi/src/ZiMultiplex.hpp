@@ -148,7 +148,7 @@ public:
   }
   ZuInline bool disconnected() const { return ptr == (void *)(uintptr_t)-1; }
 
-  void operator()();
+  uintptr_t operator()();
 
   ZmAnyFn	fn;	// callback to app - set by app (null to complete I/O)
   void		*ptr;	// pointer to buffer - set by app (0 to disconnect)
@@ -159,7 +159,7 @@ public:
   ZiConnection	*cxn;	// connection - set by ZiMultiplex
 };
 typedef ZmFn<ZiIOContext &> ZiIOFn;
-ZuInline void ZiIOContext::operator ()() { fn.as<ZiIOFn>()(*this); }
+ZuInline uintptr_t ZiIOContext::operator ()() { return fn.as<ZiIOFn>()(*this); }
 
 // transient
 typedef ZmFn<bool> ZiFailFn;

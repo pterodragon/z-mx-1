@@ -643,26 +643,25 @@ namespace MxMDStream {
     inline typename IOLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       MxQMsg *msg_ = msg.ptr();
-      io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
+      io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) -> uintptr_t {
 	unsigned len = io.offset += io.length;
-	while (len >= sizeof(Hdr)) {
-	  Hdr &hdr = msg->as<Hdr>();
-	  unsigned msgLen = sizeof(Hdr) + hdr.len;
-	  if (ZuUnlikely(msgLen > msg->payload->size())) {
-	    ZeLOG(Error, "MxMDStream::recv TCP message too big / corrupt");
-	    io.disconnect();
-	    return;
-	  }
-	  if (ZuLikely(len < msgLen)) return;
-	  msg->length = msgLen;
-	  IOLambda<Cxn, L>::invoke(io);
-	  if (ZuUnlikely(io.completed())) return;
-	  msg = io.fn.object<MxQMsg>();
-	  if (ZuUnlikely(!msg)) return;
-	  if (io.offset = len - msgLen)
-	    memmove(io.ptr, (const char *)io.ptr + msgLen, io.offset);
-	  len = io.offset;
+	io.length = 0;
+	if (ZuUnlikely(len < sizeof(Hdr))) return 0;
+	Hdr &hdr = msg->as<Hdr>();
+	unsigned msgLen = sizeof(Hdr) + hdr.len;
+	if (ZuUnlikely(msgLen > msg->payload->size())) {
+	  ZeLOG(Error, "MxMDStream::recv TCP message too big / corrupt");
+	  io.disconnect();
+	  return 0;
 	}
+	if (ZuLikely(len < msgLen)) return 0;
+	msg->length = msgLen;
+	IOLambda<Cxn, L>::invoke(io);
+	if (io.offset = len - msgLen) {
+	  memmove(io.ptr, (const char *)io.ptr + msgLen, io.offset);
+	  return io.offset;
+	}
+	return 0;
       }, ZuMv(msg)},
       msg_->payload->ptr(), msg_->payload->size(), 0);
     }

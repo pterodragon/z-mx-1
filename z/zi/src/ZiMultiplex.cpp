@@ -1395,7 +1395,7 @@ void ZiConnection::executedRecv(unsigned n)
 
   m_rxRequests++, m_rxBytes += n;
   m_rxContext.length = n;
-  m_rxContext();
+  while (m_rxContext());
 }
 
 void ZiConnection::send(ZiIOFn fn)
@@ -1568,7 +1568,7 @@ void ZiConnection::executedSend(unsigned n)
   m_txRequests++, m_txBytes += n;
 
   m_txContext.length = n;
-  m_txContext();
+  while (m_txContext());
 }
 
 bool ZiMultiplex::initSocket(Socket s, const ZiCxnOptions &options)

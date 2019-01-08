@@ -61,6 +61,7 @@ namespace MxLinkState {
       Disabled,			// intentionally down (admin/ops disabled)
       Connecting,		// connecting (being brought up)
       Up,			// up/running
+      ReconnectPending,		// reconnect pending following transient failure
       Reconnecting,		// reconnecting following transient failure
       Failed,			// failed (non-transient)
       Disconnecting,		// disconnecting (being brought down)
@@ -71,6 +72,7 @@ namespace MxLinkState {
       "Disabled",
       "Connecting",
       "Up",
+      "ReconnectPending",
       "Reconnecting",
       "Failed",
       "Disconnecting",
@@ -81,7 +83,7 @@ namespace MxLinkState {
     using namespace MxRAG;
     if (i < 0 || i >= N) return Off;
     static const int values[N] =
-      { Red, Off, Amber, Green, Amber, Red, Amber, Amber, Amber };
+      { Red, Off, Amber, Green, Amber, Amber, Red, Amber, Amber, Amber };
     return values[i];
   }
 }
@@ -194,6 +196,8 @@ protected:
 private:
   void up_(bool enable);
   void down_(bool disable);
+
+  void reconnect_();
 
 private:
   ZmScheduler::Timer	m_reconnTimer;

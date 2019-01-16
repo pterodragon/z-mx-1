@@ -361,6 +361,18 @@ void MxMDSubLink::TCP::processLoginAck(ZmRef<MxQMsg> msg, ZiIOContext &io)
   mx()->del(&m_loginTimer);
   m_link->tcpLoginAck();
 
+  using namespace MxMDStream;
+
+  const Hdr &hdr = msg->as<Hdr>();
+  if (ZuUnlikely(hdr.type == Type::EndOfSnapshot)) {
+    m_state = State::Disconnect;
+    io.disconnect();
+    m_link->endOfSnapshot(hdr.as<EndOfSnapshot>().seqNo);
+    return;
+  }
+
+  m_link->tcpProcess(msg);
+
   MxMDStream::TCP::recv<TCP>(ZuMv(msg), io,
       [](TCP *tcp, ZmRef<MxQMsg> msg, ZiIOContext &io) {
 	tcp->process(ZuMv(msg), io);
@@ -714,9 +726,9 @@ void MxMDSubscriber::resendCmd(ZvCmdServerCxn *,
   seqNo = msg->as<Hdr>().seqNo;
   out << "seqNo: " << seqNo << '\n';
   const Hdr &hdr = msg->as<Hdr>();
-  out << ZtHexDump(
+  out << ZtHexDump{
       ZtString() << "type: " << Type::name(hdr.type),
-      msg->ptr(), msg->length) << '\n';
+      msg->ptr(), msg->length} << '\n';
 }
 
 ZmRef<MxQMsg> MxMDSubLink::resend(MxSeqNo seqNo, unsigned count)

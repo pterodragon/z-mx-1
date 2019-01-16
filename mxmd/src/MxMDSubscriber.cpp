@@ -361,15 +361,7 @@ void MxMDSubLink::TCP::processLoginAck(ZmRef<MxQMsg> msg, ZiIOContext &io)
   mx()->del(&m_loginTimer);
   m_link->tcpLoginAck();
 
-  using namespace MxMDStream;
-
-  const Hdr &hdr = msg->as<Hdr>();
-  if (ZuUnlikely(hdr.type == Type::EndOfSnapshot)) {
-    m_state = State::Disconnect;
-    io.disconnect();
-    m_link->endOfSnapshot(hdr.as<EndOfSnapshot>().seqNo);
-    return;
-  }
+  if (endOfSnapshot(msg, io)) return;
 
   m_link->tcpProcess(msg);
 
@@ -385,15 +377,7 @@ void MxMDSubLink::TCP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
     return;
   }
 
-  using namespace MxMDStream;
-
-  const Hdr &hdr = msg->as<Hdr>();
-  if (ZuUnlikely(hdr.type == Type::EndOfSnapshot)) {
-    m_state = State::Disconnect;
-    io.disconnect();
-    m_link->endOfSnapshot(hdr.as<EndOfSnapshot>().seqNo);
-    return;
-  }
+  if (endOfSnapshot(msg, io)) return;
 
   m_link->tcpProcess(msg);
 
@@ -403,6 +387,19 @@ void MxMDSubLink::tcpProcess(MxQMsg *msg)
 {
   using namespace MxMDStream;
   core()->apply(msg->as<Hdr>(), false);
+}
+bool MxMDSubLink::TCP::endOfSnapshot(MxQMsg *msg, ZiIOContext &io)
+{
+  using namespace MxMDStream;
+
+  const Hdr &hdr = msg->as<Hdr>();
+  if (ZuUnlikely(hdr.type == Type::EndOfSnapshot)) {
+    m_state = State::Disconnect;
+    io.disconnect();
+    m_link->endOfSnapshot(hdr.as<EndOfSnapshot>().seqNo);
+    return true;
+  }
+  return false;
 }
 void MxMDSubLink::endOfSnapshot(MxSeqNo seqNo)
 {

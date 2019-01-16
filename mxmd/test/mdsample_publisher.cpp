@@ -299,7 +299,8 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 
       // add the instrument
 
-      MxMDInstrHandle instr = md->instrument(instrKey, 0); // default to shard 0
+      MxMDInstrHandle instr =
+	md->instrument(instrKey, 0);	// default to shard 0
 
       ZtString error;
       thread_local ZmSemaphore sem;
@@ -309,7 +310,8 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 
 	// this runs inside shard 0
 
-	instr = shard->addInstrument(ZuMv(instr), instrKey, refData, MxDateTime()); 
+	instr = shard->addInstrument(
+	    ZuMv(instr), instrKey, refData, MxDateTime()); 
 
 	if (ZuUnlikely(!instr)) {
 	  error = "MxMDLib::addInstrument() failed";

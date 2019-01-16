@@ -151,8 +151,11 @@ friend class TCP;
     void disconnected();
 
     void sendLogin();
+
+  private:
     void processLoginAck(ZmRef<MxQMsg>, ZiIOContext &);
     void process(ZmRef<MxQMsg>, ZiIOContext &);
+    bool endOfSnapshot(MxQMsg *, ZiIOContext &);
 
   private:
     MxMDSubLink		*m_link;

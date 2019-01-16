@@ -582,7 +582,6 @@ void MxMDPubLink::TCP::push2()
 {
   unsigned msgLen = m_snapMsg->length();
   ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(m_snapMsg), msgLen);
-  std::cout << ZtHexDump("MxMDPubLink::TCP::push2()", qmsg->payload->ptr(), qmsg->length) << std::flush;
   MxMDStream::TCP::send(this, ZuMv(qmsg));
 }
 

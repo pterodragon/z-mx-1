@@ -127,7 +127,7 @@ private:
 
   typedef MxMDBroadcast::Ring Ring;
 
-  // Rx exclusive
+  // Rx thread exclusive
   unsigned		m_attached = 0;
   ZmRef<Ring>		m_ring;
 
@@ -171,6 +171,7 @@ friend class TCP;
     void disconnect();
     void disconnected();
 
+    void processLogin(ZmRef<MxQMsg>, ZiIOContext &);
     void process(ZmRef<MxQMsg>, ZiIOContext &);
 
     void snap(MxSeqNo seqNo);
@@ -254,12 +255,8 @@ public:
     reconnect(true);
   }
 
-  void connect();
-  void disconnect();
-private:
-  void reconnect(bool immediate);
-  void disconnect_();
-public:
+  void connect();		// Rx
+  void disconnect();		// Rx
 
   // MxLink CRTP (unused)
   ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
@@ -288,17 +285,31 @@ public:
 
 private:
   // connection management
+  void reconnect(bool immediate);	// any thread
+
+  void reconnect_(bool immediate);	// Rx - calls disconnect_1()
+  void disconnect_1();			// Rx
+  void disconnect_2();			// Tx
+  void disconnect_3();			// Rx
+
   void tcpListen();
   void tcpListening(const ZiListenInfo &);
-  void tcpConnected(TCP *tcp);
-  void tcpDisconnected(TCP *tcp);
+  void tcpConnected(TCP *tcp);			// Rx
+  void tcpDisconnected(TCP *tcp);		// Rx
   bool tcpLogin(const MxMDStream::Login &);
   void udpConnect();
-  void udpConnected(UDP *udp, ZiIOContext &io);
+  void udpConnected(UDP *udp);			// Rx
+  void udpConnected_2();			// Tx
+  void udpConnected_3();			// Rx
+  void udpDisconnected(UDP *udp);		// Rx
   void udpReceived(const MxMDStream::ResendReq &);
 
   void tcpError(TCP *tcp, ZiIOContext *io);
   void udpError(UDP *udp, ZiIOContext *io);
+
+  // broadcast
+  void attach();
+  void detach();
 
   // snapshot
   void snap(ZmRef<TCP> tcp);
@@ -313,13 +324,16 @@ private:
 
   ZiSockAddr		m_udpAddr;
 
-  Lock			m_connLock;
-    ZiListenInfo	  m_listenInfo;
-    ZmRef<TCPTbl>	  m_tcpTbl;
-    ZmRef<UDP>		  m_udp;
-
-  // Rx thread exclusive
+  // Engine Rx thread exclusive
+  ZiListenInfo	 	m_listenInfo;
+  ZmRef<TCPTbl>	 	m_tcpTbl;
+  ZmRef<UDP>		m_udp;
   bool			m_attached = false;
+  bool			m_reconnect = false;
+  bool			m_immediate = false;	// immediate reconnect
+
+  // Engine Tx thread exclusive
+  ZmRef<UDP>		m_udpTx;
 };
 
 #endif /* MxMDPublisher_HPP */

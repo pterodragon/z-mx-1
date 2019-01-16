@@ -151,6 +151,7 @@ friend class TCP;
     void disconnected();
 
     void sendLogin();
+    void processLoginAck(ZmRef<MxQMsg>, ZiIOContext &);
     void process(ZmRef<MxQMsg>, ZiIOContext &);
 
   private:
@@ -214,12 +215,8 @@ public:
     reconnect(true);
   }
 
-  void connect();
-  void disconnect();
-private:
-  void reconnect(bool immediate);
-  void disconnect_();
-public:
+  void connect();			// Rx
+  void disconnect();			// Rx - calls disconnect_1()
 
   // MxLink CTRP
   ZmTime reconnInterval(unsigned) { return engine()->reconnInterval(); }
@@ -245,28 +242,26 @@ public:
 
 private:
   // connection management
+  void reconnect(bool immediate);	// any thread
+
+  void reconnect_(bool immediate);	// Rx - calls disconnect_1()
+  void disconnect_1();			// Rx
+
   void tcpConnect();
-  void tcpConnected(TCP *tcp);
+  void tcpConnected(TCP *tcp);			// Rx
+  void tcpDisconnected(TCP *tcp);		// Rx
   ZmRef<MxQMsg> tcpLogin();
   void tcpLoginAck();
   void tcpProcess(MxQMsg *);
   void endOfSnapshot(MxSeqNo seqNo);
   void udpConnect();
-  void udpConnected(UDP *udp, ZiIOContext &io);
+  void udpConnected(UDP *udp);			// Rx
+  void udpDisconnected(UDP *udp);		// Rx
   void udpReceived(ZmRef<MxQMsg>);
 
   void tcpError(TCP *tcp, ZiIOContext *io);
   void udpError(UDP *udp, ZiIOContext *io);
   void rxQueueTooBig(uint32_t count, uint32_t max);
-
-  inline void snapshotSeqNo(MxSeqNo seqNo) {
-    Guard connGuard(m_connLock);
-    m_snapshotSeqNo = seqNo;
-  }
-  inline MxSeqNo snapshotSeqNo() {
-    Guard connGuard(m_connLock);
-    return m_snapshotSeqNo;
-  }
 
   // failover
   ZuInline ZmTime loginTimeout() { return engine()->loginTimeout(); }
@@ -285,6 +280,7 @@ private:
 
   bool			m_failover = false;
 
+  // Rx
   ZmScheduler::Timer	m_timer;
   bool			m_active = false;
   unsigned		m_inactive = 0;
@@ -292,10 +288,11 @@ private:
 
   ZiSockAddr		m_udpResendAddr;
 
-  Lock			m_connLock;
-    MxSeqNo		  m_snapshotSeqNo;
-    ZmRef<TCP>		  m_tcp;
-    ZmRef<UDP>		  m_udp;
+  ZmRef<TCP>		m_tcp;
+  ZmRef<UDP>		m_udp;
+  MxSeqNo		m_snapshotSeqNo;
+  bool			m_reconnect = false;
+  bool			m_immediate = false;	// immediate reconnect
 
   ZmSemaphore		m_resendSem;	// test resend semaphore
   Lock			m_resendLock;

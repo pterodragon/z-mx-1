@@ -349,7 +349,7 @@ public:
 
   void wakeFn(unsigned tid, ZmFn<> fn);
 
-  enum { Update = 0, Advance, Defer };
+  enum { Update = 0, Advance, Defer }; // mode
 
   // add(fn) - immediate execution (asynchronous) on any worker thread
   // run(tid, fn) - immediate execution (asynchronous) on a specific thread

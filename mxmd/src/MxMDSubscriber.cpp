@@ -164,8 +164,13 @@ void MxMDSubLink::tcpError(TCP *tcp, ZiIOContext *io)
     io->disconnect();
   else if (tcp)
     tcp->close();
-  Guard connGuard(m_connLock);
-  if (!tcp || tcp == m_tcp) { connGuard.unlock(); reconnect(false); }
+
+  if (!tcp)
+    reconnect(false);
+  else
+    engine()->rxInvoke([](TCP *tcp) {
+	  tcp->link()->tcpDisconnected(tcp);
+	}, ZmMkRef(tcp));
 }
 
 void MxMDSubLink::udpError(UDP *udp, ZiIOContext *io)
@@ -174,8 +179,13 @@ void MxMDSubLink::udpError(UDP *udp, ZiIOContext *io)
     io->disconnect();
   else if (udp)
     udp->close();
-  Guard connGuard(m_connLock);
-  if (!udp || udp == m_udp) { connGuard.unlock(); reconnect(false); }
+
+  if (!udp)
+    reconnect(false);
+  else
+    engine()->rxInvoke([](UDP *udp) {
+	  udp->link()->udpDisconnected(udp);
+	}, ZmMkRef(udp));
 }
 
 void MxMDSubLink::connect()
@@ -191,39 +201,39 @@ void MxMDSubLink::disconnect()
 {
   linkINFO("MxMDSubLink::disconnect(" << id << ')');
 
-  disconnect_();
-
-  disconnected();
+  m_reconnect = false;
+  disconnect_1();
 }
 
 void MxMDSubLink::reconnect(bool immediate)
 {
   linkINFO("MxMDSubLink::reconnect(" << id << ')');
 
-  disconnect_();
-
-  MxLink::reconnect(immediate);
+  engine()->rxInvoke([this, immediate]() { reconnect_(immediate); });
 }
 
-void MxMDSubLink::disconnect_()
+void MxMDSubLink::reconnect_(bool immediate)
+{
+  m_reconnect = true;
+  m_immediate = immediate;
+  disconnect_1();
+}
+
+void MxMDSubLink::disconnect_1()
 {
   mx()->del(&m_timer);
+
   m_active = false;
   m_inactive = 0;
 
-  ZmRef<TCP> tcp;
-  ZmRef<UDP> udp;
+  if (m_tcp) { m_tcp->disconnect(); m_tcp = nullptr; }
+  if (m_udp) { m_udp->disconnect(); m_udp = nullptr; }
 
-  {
-    Guard connGuard(m_connLock);
-    tcp = ZuMv(m_tcp);
-    udp = ZuMv(m_udp);
-    m_tcp = nullptr;
-    m_udp = nullptr;
-  }
-
-  if (tcp) tcp->disconnect();
-  if (udp) udp->disconnect();
+  if (m_reconnect) {
+    m_reconnect = false;
+    MxLink::reconnect(m_immediate);
+  } else
+    disconnected();
 }
 
 // TCP connect
@@ -271,10 +281,12 @@ MxMDSubLink::TCP::TCP(MxMDSubLink *link, const ZiCxnInfo &ci) :
 }
 void MxMDSubLink::TCP::connected(ZiIOContext &io)
 {
-  m_link->tcpConnected(this);
+  m_link->engine()->rxRun(ZmFn<>{[](TCP *tcp) {
+	tcp->link()->tcpConnected(tcp);
+      }, ZmMkRef(this)});
   MxMDStream::TCP::recv<TCP>(new MxQMsg(new Msg()), io,
       [](TCP *tcp, ZmRef<MxQMsg> msg, ZiIOContext &io) {
-	tcp->process(ZuMv(msg), io);
+	tcp->processLoginAck(ZuMv(msg), io);
       });
 }
 void MxMDSubLink::tcpConnected(MxMDSubLink::TCP *tcp)
@@ -282,15 +294,10 @@ void MxMDSubLink::tcpConnected(MxMDSubLink::TCP *tcp)
   linkINFO("MxMDSubLink::tcpConnected(" << id << ") " <<
       tcp->info().remoteIP << ':' << ZuBoxed(tcp->info().remotePort));
 
-  ZmRef<TCP> old;
-  {
-    Guard connGuard(m_connLock);
-    old = m_tcp;
-    m_tcp = tcp;
-  }
-  if (ZuUnlikely(old)) { old->disconnect(); old = nullptr; } // paranoia
+  if (ZuUnlikely(m_tcp)) m_tcp->disconnect();
+  m_tcp = tcp;
 
-  mx()->rxRun(ZmFn<>{[](MxMDSubLink *link) { link->udpConnect(); }, this});
+  udpConnect();
   // TCP sendLogin() is called once UDP is receiving/queuing
 }
 
@@ -311,6 +318,10 @@ void MxMDSubLink::TCP::disconnected()
   mx()->del(&m_loginTimer);
   if (m_state != State::Disconnect) tcpERROR(this, 0, "TCP disconnected");
 }
+void MxMDSubLink::tcpDisconnected(TCP *tcp)
+{
+  if (tcp == m_tcp) reconnect(false);
+}
 
 // TCP login, recv
 
@@ -329,9 +340,9 @@ void MxMDSubLink::TCP::sendLogin()
 {
   MxMDStream::TCP::send(this, m_link->tcpLogin()); // bypass Tx queue
   mx()->rxRun(ZmFn<>{[](MxMDSubLink::TCP *tcp) {
-      if (tcp->m_state != State::Login) return;
+      if (tcp->state() != State::Login) return;
       tcpERROR(tcp, 0, "TCP login timeout");
-    }, ZmMkRef(this)}, ZmTimeNow(m_link->loginTimeout()), &m_loginTimer);
+    }, this}, ZmTimeNow(m_link->loginTimeout()), &m_loginTimer);
 }
 void MxMDSubLink::tcpLoginAck()
 {
@@ -339,12 +350,27 @@ void MxMDSubLink::tcpLoginAck()
   connected();
   hbStart();
 }
+void MxMDSubLink::TCP::processLoginAck(ZmRef<MxQMsg> msg, ZiIOContext &io)
+{
+  if (ZuUnlikely(m_state.load_() != State::Login)) {
+    tcpERROR(this, &io, "TCP FSM internal error");
+    return;
+  }
+
+  m_state = State::Receiving;
+  mx()->del(&m_loginTimer);
+  m_link->tcpLoginAck();
+
+  MxMDStream::TCP::recv<TCP>(ZuMv(msg), io,
+      [](TCP *tcp, ZmRef<MxQMsg> msg, ZiIOContext &io) {
+	tcp->process(ZuMv(msg), io);
+      });
+}
 void MxMDSubLink::TCP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 {
   if (ZuUnlikely(m_state.load_() == State::Login)) {
-    m_state = State::Receiving;
-    mx()->del(&m_loginTimer);
-    m_link->tcpLoginAck();
+    tcpERROR(this, &io, "TCP FSM internal error");
+    return;
   }
 
   using namespace MxMDStream;
@@ -368,9 +394,7 @@ void MxMDSubLink::tcpProcess(MxQMsg *msg)
 }
 void MxMDSubLink::endOfSnapshot(MxSeqNo seqNo)
 {
-  snapshotSeqNo(seqNo);
-  rxInvoke([](MxMDSubLink::Rx *rx) {
-      rx->stopQueuing(rx->app().snapshotSeqNo()); });
+  rxInvoke([seqNo](MxMDSubLink::Rx *rx) { rx->stopQueuing(seqNo); });
 }
 
 // UDP connect
@@ -430,31 +454,23 @@ MxMDSubLink::UDP::UDP(MxMDSubLink *link, const ZiCxnInfo &ci) :
     m_state(State::Receiving) { }
 void MxMDSubLink::UDP::connected(ZiIOContext &io)
 {
-  m_link->udpConnected(this, io);
+  m_link->engine()->rxRun(ZmFn<>{[](UDP *udp) {
+	udp->link()->udpConnected(udp);
+      }, ZmMkRef(this)});
+  recv(io); // begin receiving UDP packets
 }
-void MxMDSubLink::udpConnected(MxMDSubLink::UDP *udp, ZiIOContext &io)
+void MxMDSubLink::udpConnected(MxMDSubLink::UDP *udp)
 {
   linkINFO("MxMDSubLink::udpConnected(" << id << ')');
 
-  ZmRef<TCP> tcp;
-  ZmRef<UDP> old;
-  {
-    Guard connGuard(m_connLock);
-    if (!(tcp = m_tcp)) { // paranoia
-      connGuard.unlock();
-      udp->disconnect();
-      return;
-    }
-    old = m_udp;
-    m_udp = udp;
-  }
-  if (ZuUnlikely(old)) { old->disconnect(); old = nullptr; } // paranoia
+  if (ZuUnlikely(!m_tcp)) { udp->disconnect(); return; }
 
-  udp->recv(io); // begin receiving UDP packets
+  if (ZuUnlikely(m_udp)) m_udp->disconnect();
+  m_udp = udp;
 
   linkINFO("MxMDSubLink::udpConnected(" << id << ") TCP sendLogin");
 
-  tcp->sendLogin(); // login to TCP
+  m_tcp->sendLogin(); // login to TCP
 }
 
 // UDP disconnect
@@ -472,6 +488,10 @@ void MxMDSubLink::UDP::close()
 void MxMDSubLink::UDP::disconnected()
 {
   if (m_state != State::Disconnect) udpERROR(this, 0, "UDP disconnected");
+}
+void MxMDSubLink::udpDisconnected(UDP *udp)
+{
+  if (udp == m_udp) reconnect(false);
 }
 
 // UDP recv
@@ -565,13 +585,8 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
   new (hdr->body()) ResendReq{now.key(), now.length()};
   unsigned msgLen = msg->length();
   ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(msg), msgLen);
-  ZmRef<UDP> udp;
-  {
-    Guard connGuard(m_connLock);
-    udp = m_udp;
-  }
-  if (ZuLikely(udp))
-    MxMDStream::UDP::send(udp.ptr(), ZuMv(qmsg), m_udpResendAddr);
+  if (ZuLikely(m_udp))
+    MxMDStream::UDP::send(m_udp.ptr(), ZuMv(qmsg), m_udpResendAddr);
 }
 
 // failover
@@ -580,7 +595,7 @@ void MxMDSubLink::hbStart()
 {
   m_active = false;
   m_inactive = 0;
-  mx()->add(ZmFn<>{[](MxMDSubLink *link) { link->heartbeat(); }, this},
+  engine()->rxRun(ZmFn<>{[](MxMDSubLink *link) { link->heartbeat(); }, this},
       ZmTimeNow(1), &m_timer);
 }
 
@@ -597,7 +612,7 @@ void MxMDSubLink::heartbeat()
     m_active = false;
     m_inactive = 0;
   }
-  mx()->add(ZmFn<>{[](MxMDSubLink *link) { link->heartbeat(); }, this},
+  engine()->rxRun(ZmFn<>{[](MxMDSubLink *link) { link->heartbeat(); }, this},
       ZmTimeNow(1), &m_timer);
 }
 
@@ -640,7 +655,6 @@ void MxMDSubLink::status(ZtString &out)
       << "  RxSeqNo: " << ZuBoxed(data.rxSeqNo)
       << "  TxSeqNo: " << ZuBoxed(data.txSeqNo);
   }
-  out << "  Snapshot SeqNo: " << snapshotSeqNo();
   out << "\n  TCP: ";
   if (ZmRef<TCP> tcp = m_tcp) {
     switch (tcp->state()) {

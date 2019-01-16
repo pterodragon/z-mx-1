@@ -86,6 +86,7 @@ public:
     now(i);
   }
   ZuInline ZmTime(Now_, double d) { now(d); }
+  ZuInline ZmTime(Now_, const ZmTime &d) { now(d); }
 
   template <typename T>
   ZuInline ZmTime(T v, typename MatchInt<T>::T *_ = 0) :
@@ -142,6 +143,7 @@ public:
   template <typename T>
   ZuInline typename MatchInt<T, ZmTime &>::T now(T i) { return now() += i; }
   ZuInline ZmTime &now(double d) { return now() += d; }
+  ZuInline ZmTime &now(const ZmTime &d) { return now() += d; }
 
   ZuInline time_t time() const { return(tv_sec); }
   ZuInline operator time_t() const { return(tv_sec); }
@@ -305,6 +307,7 @@ ZuInline typename ZmTime::MatchInt<T, ZmTime>::T ZmTimeNow(T i) {
   return ZmTime(ZmTime::Now, i);
 }
 ZuInline ZmTime ZmTimeNow(double d) { return ZmTime(ZmTime::Now, d); }
+ZuInline ZmTime ZmTimeNow(const ZmTime &d) { return ZmTime(ZmTime::Now, d); }
 
 template <> struct ZuTraits<ZmTime> : public ZuGenericTraits<ZmTime> {
   enum { IsPOD = 1, IsHashable = 1, IsComparable = 1 };

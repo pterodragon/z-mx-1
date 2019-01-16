@@ -1765,7 +1765,8 @@ void ZiMultiplex::connectDel(Socket s)
 
 void ZiConnection::disconnect()
 {
-  m_mx->txInvoke([cxn = ZmMkRef(this)]() { cxn->disconnect_1(); });
+  m_mx->txInvoke(
+      [](ZiConnection *cxn) { cxn->disconnect_1(); }, ZmMkRef(this));
 }
 
 void ZiConnection::disconnect_1()
@@ -1774,7 +1775,8 @@ void ZiConnection::disconnect_1()
   
   m_txUp = false;
 
-  m_mx->rxRun([cxn = ZmMkRef(this)]() { cxn->disconnect_2(); });
+  m_mx->rxRun(
+      ZmFn<>{[](ZiConnection *cxn) { cxn->disconnect_2(); }, ZmMkRef(this)});
 }
 
 void ZiConnection::disconnect_2()
@@ -1871,7 +1873,8 @@ void ZiMultiplex::disconnected(ZiConnection *cxn)
 
 void ZiConnection::close()
 {
-  m_mx->txInvoke([cxn = ZmMkRef(this)]() { cxn->close_1(); });
+  m_mx->txInvoke(
+      [](ZiConnection *cxn) { cxn->close_1(); }, ZmMkRef(this));
 }
 
 void ZiConnection::close_1()
@@ -1880,7 +1883,8 @@ void ZiConnection::close_1()
   
   m_txUp = false;
 
-  m_mx->rxRun([cxn = ZmMkRef(this)]() { cxn->close_2(); });
+  m_mx->rxRun(
+      ZmFn<>{[](ZiConnection *cxn) { cxn->close_2(); }, ZmMkRef(this)});
 }
 
 void ZiConnection::close_2()
@@ -2014,7 +2018,7 @@ int ZiMultiplex::start()
   }
 #endif
 
-  rxRun(ZmFn<>::Member<&ZiMultiplex::rxStart>::fn(this));
+  rxRun(ZmFn<>{[](ZiMultiplex *mx) { mx->rxStart(); }, this});
   ZmScheduler::start();
   return Zi::OK;
 }
@@ -2043,7 +2047,7 @@ void ZiMultiplex::stop(bool drain)
   m_stopping = &stopping;
   m_drain = drain;
 
-  rxInvoke([this]() { this->stop_1(); });
+  rxInvoke([](ZiMultiplex *mx) { mx->stop_1(); }, this);
 
   stopping.wait();
 
@@ -2218,9 +2222,8 @@ void ZiMultiplex::rx()
 	  ZiConnection *cxn = (ZiConnection *)v;
 	  if (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR))
 	    if (ZuUnlikely(!cxn->recv())) continue;
-	  if (events & EPOLLOUT) this->txRun(
-	      ZmFn<>::Member<static_cast<void (ZiConnection::*)()>(
-		&ZiConnection::send)>::fn(cxn));
+	  if (events & EPOLLOUT)
+	    txRun(ZmFn<>{[](ZiConnection *cxn) { cxn->send(); }, cxn});
 	  continue;
 	}
 

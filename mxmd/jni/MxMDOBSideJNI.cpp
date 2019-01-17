@@ -122,10 +122,9 @@ jlong MxMDOBSideJNI::allPxLevels(JNIEnv *env, jobject obj, jobject fn)
 
 jobject MxMDOBSideJNI::ctor(JNIEnv *env, ZmRef<MxMDOBSide> obs)
 {
-  uintptr_t ptr_;
-  ZmRef<MxMDOBSide> *ZuMayAlias(ptr) = (ZmRef<MxMDOBSide> *)&ptr_;
-  new (ptr) ZmRef<MxMDOBSide>(ZuMv(obs));
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
+  uintptr_t ptr;
+  new (&ptr) ZmRef<MxMDOBSide>(ZuMv(obs));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr);
 }
 
 int MxMDOBSideJNI::bind(JNIEnv *env)

@@ -84,9 +84,9 @@ bool MxMDRecLink::ok()
   int state;
   thread_local ZmSemaphore sem;
   engine()->rxInvoke([this, &state, sem = &sem]() {
-	state = this->state();
-	sem->post();
-      });
+    state = this->state();
+    sem->post();
+  });
   sem.wait();
   return state != MxLinkState::Failed;
 }
@@ -97,7 +97,8 @@ bool MxMDRecLink::record(ZtString path)
   down();
   if (!path) return true;
   engine()->rxInvoke([this, path = ZuMv(path)]() mutable {
-      m_path = ZuMv(path); });
+    m_path = ZuMv(path);
+  });
   up();
   return ok();
 }
@@ -304,40 +305,34 @@ void MxMDRecLink::recv(Rx *rx)
       return;
     }
     switch ((int)hdr->type) {
-      case Type::Wake:
-	{
-	  const Wake &wake = hdr->as<Wake>();
-	  if (ZuUnlikely(wake.id == id())) {
-	    broadcast.shift2();
-	    return;
-	  }
+      case Type::Wake: {
+	const Wake &wake = hdr->as<Wake>();
+	if (ZuUnlikely(wake.id == id())) {
 	  broadcast.shift2();
+	  return;
 	}
-	break;
-      case Type::EndOfSnapshot:
-	{
-	  const EndOfSnapshot &eos = hdr->as<EndOfSnapshot>();
-	  if (ZuUnlikely(eos.id == id())) {
-	    MxSeqNo seqNo = eos.seqNo;
-	    bool ok = eos.ok;
-	    broadcast.shift2();
-	    if (ok) rx->stopQueuing(seqNo);
-	  } else
-	    broadcast.shift2();
-	}
-	break;
-      default:
-	{
-	  ZuRef<Msg> msg = new Msg();
-	  unsigned msgLen = sizeof(Hdr) + hdr->len;
-	  memcpy((void *)msg->ptr(), (void *)hdr, msgLen);
+	broadcast.shift2();
+      } break;
+      case Type::EndOfSnapshot: {
+	const EndOfSnapshot &eos = hdr->as<EndOfSnapshot>();
+	if (ZuUnlikely(eos.id == id())) {
+	  MxSeqNo seqNo = eos.seqNo;
+	  bool ok = eos.ok;
 	  broadcast.shift2();
-	  MxSeqNo seqNo = m_seqNo++;
-	  Hdr &msgHdr = msg->as<Hdr>();
-	  msgHdr.seqNo = seqNo;
-	  rx->received(new MxQMsg(ZuMv(msg), msgLen, MxMsgID{id(), seqNo}));
-	}
-	break;
+	  if (ok) rx->stopQueuing(seqNo);
+	} else
+	  broadcast.shift2();
+      } break;
+      default: {
+	ZuRef<Msg> msg = new Msg();
+	unsigned msgLen = sizeof(Hdr) + hdr->len;
+	memcpy((void *)msg->ptr(), (void *)hdr, msgLen);
+	broadcast.shift2();
+	MxSeqNo seqNo = m_seqNo++;
+	Hdr &msgHdr = msg->as<Hdr>();
+	msgHdr.seqNo = seqNo;
+	rx->received(new MxQMsg(ZuMv(msg), msgLen, MxMsgID{id(), seqNo}));
+      } break;
     }
   }
 }

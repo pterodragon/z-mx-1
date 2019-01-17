@@ -79,10 +79,9 @@ jint MxMDFeedJNI::level(JNIEnv *env, jobject obj)
 
 jobject MxMDFeedJNI::ctor(JNIEnv *env, ZmRef<MxMDFeed> feed)
 {
-  uintptr_t ptr_;
-  ZmRef<MxMDFeed> *ZuMayAlias(ptr) = (ZmRef<MxMDFeed> *)&ptr_;
-  new (ptr) ZmRef<MxMDFeed>(ZuMv(feed));
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
+  uintptr_t ptr;
+  new (&ptr) ZmRef<MxMDFeed>(ZuMv(feed));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr);
 }
 
 int MxMDFeedJNI::bind(JNIEnv *env)

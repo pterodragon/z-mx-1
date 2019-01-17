@@ -85,10 +85,9 @@ jobject MxMDTradeJNI::data(JNIEnv *env, jobject obj)
 
 jobject MxMDTradeJNI::ctor(JNIEnv *env, ZmRef<MxMDTrade> trade)
 {
-  uintptr_t ptr_;
-  ZmRef<MxMDTrade> *ZuMayAlias(ptr) = (ZmRef<MxMDTrade> *)&ptr_;
-  new (ptr) ZmRef<MxMDTrade>(ZuMv(trade));
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
+  uintptr_t ptr;
+  new (&ptr) ZmRef<MxMDTrade>(ZuMv(trade));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr);
 }
 
 int MxMDTradeJNI::bind(JNIEnv *env)

@@ -142,8 +142,8 @@ void MxMDPubLink::tcpError(TCP *tcp, ZiIOContext *io)
 
   if (tcp)
     engine()->rxInvoke([](TCP *tcp) {
-	  tcp->link()->tcpDisconnected(tcp);
-	}, ZmMkRef(tcp));
+      tcp->link()->tcpDisconnected(tcp);
+    }, ZmMkRef(tcp));
 }
 
 void MxMDPubLink::udpError(UDP *udp, ZiIOContext *io)
@@ -157,8 +157,8 @@ void MxMDPubLink::udpError(UDP *udp, ZiIOContext *io)
     reconnect(false);
   else
     engine()->rxInvoke([](UDP *udp) {
-	  udp->link()->udpDisconnected(udp);
-	}, ZmMkRef(udp));
+      udp->link()->udpDisconnected(udp);
+    }, ZmMkRef(udp));
 }
 
 void MxMDPubLink::connect()
@@ -289,7 +289,6 @@ void MxMDPubLink::tcpListening(const ZiListenInfo &info)
 MxMDPubLink::TCP::TCP(MxMDPubLink *link, const ZiCxnInfo &ci) :
   ZiConnection(link->mx(), ci), m_link(link), m_state(State::Login)
 {
-  using namespace MxMDStream;
 }
 void MxMDPubLink::TCP::connected(ZiIOContext &io)
 {
@@ -714,10 +713,6 @@ void MxMDPubLink::sendMsg(const Hdr *hdr)
   if (m_channel->shardID >= 0 && hdr->shard != 0xff &&
       hdr->shard != m_channel->shardID) return;
   using namespace MxMDStream;
-  ZuRef<Msg> msg = new Msg();
-  unsigned msgLen = sizeof(Hdr) + hdr->len;
-  memcpy((void *)msg->ptr(), (void *)hdr, msgLen);
-  ZmRef<MxQMsg> qmsg = new MxQMsg(msg, msgLen);
   switch ((int)hdr->type) {
     case Type::Wake:
     case Type::EndOfSnapshot:
@@ -725,7 +720,16 @@ void MxMDPubLink::sendMsg(const Hdr *hdr)
     case Type::ResendReq:
       return;
   }
-  txInvoke([qmsg = ZuMv(qmsg)](Tx *tx) { tx->send(ZuMv(qmsg)); });
+  ZuRef<Msg> msg = new Msg();
+  unsigned msgLen = sizeof(Hdr) + hdr->len;
+  memcpy((void *)msg->ptr(), (void *)hdr, msgLen);
+  MxQMsg *qmsg = new MxQMsg(msg, msgLen);
+  qmsg->appData = (uintptr_t)tx();
+  qmsg->ref();
+  engine()->txInvoke([](MxQMsg *msg) {
+    ((Tx *)(msg->appData))->send(
+      ZuMv(*reinterpret_cast<ZmRef<MxQMsg> *>(&msg)));
+  }, qmsg);
 }
 
 void MxMDPubLink::loaded_(MxQMsg *msg)
@@ -774,10 +778,10 @@ void MxMDPublisher::ack()
 void MxMDPubLink::ack()
 {
   txInvoke([maxQueueSize = engine()->maxQueueSize()](Tx *tx) {
-	MxSeqNo seqNo = tx->txQueue().tail();
-	if (seqNo < maxQueueSize) return;
-	tx->ackd(seqNo - maxQueueSize);
-      });
+    MxSeqNo seqNo = tx->txQueue().tail();
+    if (seqNo < maxQueueSize) return;
+    tx->ackd(seqNo - maxQueueSize);
+  });
 }
 
 void MxMDPublisher::archive(MxAnyLink *link, MxQMsg *msg)

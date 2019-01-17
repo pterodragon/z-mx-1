@@ -213,10 +213,9 @@ jlong MxMDInstrumentJNI::allOrderBooks(JNIEnv *env, jobject obj, jobject fn)
 
 jobject MxMDInstrumentJNI::ctor(JNIEnv *env, ZmRef<MxMDInstrument> instr)
 {
-  uintptr_t ptr_;
-  ZmRef<MxMDInstrument> *ZuMayAlias(ptr) = (ZmRef<MxMDInstrument> *)&ptr_;
-  new (ptr) ZmRef<MxMDInstrument>(ZuMv(instr));
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
+  uintptr_t ptr;
+  new (&ptr) ZmRef<MxMDInstrument>(ZuMv(instr));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr);
 }
 
 int MxMDInstrumentJNI::bind(JNIEnv *env)

@@ -64,14 +64,13 @@ namespace MxQFlags {
 }
 
 struct MxQMsgData {
-  typedef ZmFn<MxQMsgData *, ZiIOContext *> Fn;
-
   ZuRef<ZuAnyPOD>	payload;
   unsigned		length = 0;
   MxMsgID		id;
   MxFlags		flags;		// see MxQFlags
   ZmTime		deadline;
   ZiSockAddr		addr;
+  uintptr_t		appData = 0;
 
   ZuInline void *ptr() { return payload->ptr(); }
   ZuInline const void *ptr() const { return payload->ptr(); }

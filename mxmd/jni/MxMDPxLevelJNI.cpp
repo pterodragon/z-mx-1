@@ -130,10 +130,9 @@ jlong MxMDPxLevelJNI::allOrders(JNIEnv *env, jobject obj, jobject fn)
 
 jobject MxMDPxLevelJNI::ctor(JNIEnv *env, ZmRef<MxMDPxLevel> pxLevel)
 {
-  uintptr_t ptr_;
-  ZmRef<MxMDPxLevel> *ZuMayAlias(ptr) = (ZmRef<MxMDPxLevel> *)&ptr_;
-  new (ptr) ZmRef<MxMDPxLevel>(ZuMv(pxLevel));
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
+  uintptr_t ptr;
+  new (&ptr) ZmRef<MxMDPxLevel>(ZuMv(pxLevel));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr);
 }
 
 int MxMDPxLevelJNI::bind(JNIEnv *env)

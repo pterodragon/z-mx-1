@@ -165,10 +165,9 @@ jobject MxMDVenueJNI::tradingSession(JNIEnv *env, jobject obj, jstring id)
 
 jobject MxMDVenueJNI::ctor(JNIEnv *env, ZmRef<MxMDVenue> venue)
 {
-  uintptr_t ptr_;
-  ZmRef<MxMDVenue> *ZuMayAlias(ptr) = (ZmRef<MxMDVenue> *)&ptr_;
-  new (ptr) ZmRef<MxMDVenue>(ZuMv(venue));
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
+  uintptr_t ptr;
+  new (&ptr) ZmRef<MxMDVenue>(ZuMv(venue));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr);
 }
 
 int MxMDVenueJNI::bind(JNIEnv *env)

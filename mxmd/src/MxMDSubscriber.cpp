@@ -169,8 +169,8 @@ void MxMDSubLink::tcpError(TCP *tcp, ZiIOContext *io)
     reconnect(false);
   else
     engine()->rxInvoke([](TCP *tcp) {
-	  tcp->link()->tcpDisconnected(tcp);
-	}, ZmMkRef(tcp));
+      tcp->link()->tcpDisconnected(tcp);
+    }, ZmMkRef(tcp));
 }
 
 void MxMDSubLink::udpError(UDP *udp, ZiIOContext *io)
@@ -184,8 +184,8 @@ void MxMDSubLink::udpError(UDP *udp, ZiIOContext *io)
     reconnect(false);
   else
     engine()->rxInvoke([](UDP *udp) {
-	  udp->link()->udpDisconnected(udp);
-	}, ZmMkRef(udp));
+      udp->link()->udpDisconnected(udp);
+    }, ZmMkRef(udp));
 }
 
 void MxMDSubLink::connect()
@@ -410,7 +410,7 @@ void MxMDSubLink::endOfSnapshot(MxSeqNo seqNo)
 
 void MxMDSubLink::udpConnect()
 {
-  rxInvoke([](MxMDSubLink::Rx *rx) { rx->startQueuing(); });
+  rxInvoke([](Rx *rx) { rx->startQueuing(); });
 
   ZiIP ip;
   uint16_t port;
@@ -552,18 +552,22 @@ void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
       }
     }
   }
-  rxInvoke([msg = ZuMv(msg)](Rx *rx) mutable {
-	auto &link = rx->app();
-	link.active();
-	rx->received(ZuMv(msg));
-	if (ZuUnlikely(
-	      rx->rxQueue().count() > link.engine()->maxQueueSize())) {
-	  link.rxQueueTooBig(
-	      rx->rxQueue().count(),
-	      link.engine()->maxQueueSize());
-	  link.reconnect(true);
-	}
-      });
+  msg->appData = (uintptr_t)rx();
+  MxQMsg *ptr;
+  new (&ptr) ZmRef<MxQMsg>(ZuMv(msg));
+  engine()->rxInvoke([](MxQMsg *msg) {
+    Rx *rx = (Rx *)(msg->appData);
+    auto &link = rx->app();
+    link.active();
+    rx->received(ZuMv(*reinterpret_cast<ZmRef<MxQMsg> *>(&msg)));
+    if (ZuUnlikely(
+	  rx->rxQueue().count() > link.engine()->maxQueueSize())) {
+      link.rxQueueTooBig(
+	  rx->rxQueue().count(),
+	  link.engine()->maxQueueSize());
+      link.reconnect(true);
+    }
+  }, ptr);
 }
 void MxMDSubLink::rxQueueTooBig(uint32_t count, uint32_t max)
 {

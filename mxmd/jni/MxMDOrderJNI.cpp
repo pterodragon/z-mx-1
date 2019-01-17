@@ -102,10 +102,9 @@ jobject MxMDOrderJNI::data(JNIEnv *env, jobject obj)
 
 jobject MxMDOrderJNI::ctor(JNIEnv *env, ZmRef<MxMDOrder> order)
 {
-  uintptr_t ptr_;
-  ZmRef<MxMDOrder> *ZuMayAlias(ptr) = (ZmRef<MxMDOrder> *)&ptr_;
-  new (ptr) ZmRef<MxMDOrder>(ZuMv(order));
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
+  uintptr_t ptr;
+  new (&ptr) ZmRef<MxMDOrder>(ZuMv(order));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr);
 }
 
 int MxMDOrderJNI::bind(JNIEnv *env)

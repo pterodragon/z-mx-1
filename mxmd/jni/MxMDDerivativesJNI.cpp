@@ -111,10 +111,9 @@ jlong MxMDDerivativesJNI::allOptions(JNIEnv *env, jobject obj, jobject fn)
 
 jobject MxMDDerivativesJNI::ctor(JNIEnv *env, ZmRef<MxMDDerivatives> der)
 {
-  uintptr_t ptr_;
-  ZmRef<MxMDDerivatives> *ZuMayAlias(ptr) = (ZmRef<MxMDDerivatives> *)&ptr_;
-  new (ptr) ZmRef<MxMDDerivatives>(ZuMv(der));
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
+  uintptr_t ptr;
+  new ((void *)&ptr) ZmRef<MxMDDerivatives>(ZuMv(der));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr);
 }
 
 int MxMDDerivativesJNI::bind(JNIEnv *env)

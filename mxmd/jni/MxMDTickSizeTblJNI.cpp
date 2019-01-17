@@ -112,10 +112,9 @@ jlong MxMDTickSizeTblJNI::allTickSizes(JNIEnv *env, jobject obj, jobject fn)
 
 jobject MxMDTickSizeTblJNI::ctor(JNIEnv *env, ZmRef<MxMDTickSizeTbl> tbl)
 {
-  uintptr_t ptr_;
-  ZmRef<MxMDTickSizeTbl> *ZuMayAlias(ptr) = (ZmRef<MxMDTickSizeTbl> *)&ptr_;
-  new (ptr) ZmRef<MxMDTickSizeTbl>(ZuMv(tbl));
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
+  uintptr_t ptr;
+  new (&ptr) ZmRef<MxMDTickSizeTbl>(ZuMv(tbl));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr);
 }
 
 int MxMDTickSizeTblJNI::bind(JNIEnv *env)

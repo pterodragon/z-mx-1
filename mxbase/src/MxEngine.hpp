@@ -589,8 +589,15 @@ public:
 
   MxQueue *txQueuePtr() { return &(this->txQueue()); }
 
-  void send(MxQMsg *msg)
-    { this->txInvoke([msg = ZmMkRef(msg)](Tx *tx) { tx->send(msg); }); }
+  void send(ZmRef<MxQMsg> msg) {
+    msg->appData = (uintptr_t)tx();
+    MxQMsg *ptr;
+    new (&ptr) ZmRef<MxQMsg>(ZuMv(msg));
+    this->engine()->txInvoke([](MxQMsg *msg) {
+      ((Tx *)(msg->appData))->send(
+	ZuMv(*reinterpret_cast<ZmRef<MxQMsg> *>(&msg)));
+    }, ptr);
+  }
   void abort(MxSeqNo seqNo)
     { this->txInvoke([seqNo](Tx *tx) { tx->abort(seqNo); }); }
 
@@ -736,8 +743,15 @@ public:
   template <typename L> ZuInline void rxInvoke(L &&l) const
     { this->engine()->rxInvoke(ZuFwd<L>(l), rx()); }
 
-  void send(MxQMsg *msg)
-    { this->txInvoke([msg = ZmMkRef(msg)](Tx *tx) { tx->send(msg); }); }
+  void send(MxQMsg *msg) {
+    msg->appData = (uintptr_t)tx();
+    MxQMsg *ptr;
+    new (&ptr) ZmRef<MxQMsg>(ZuMv(msg));
+    this->engine()->txInvoke([](MxQMsg *msg) {
+      ((Tx *)(msg->appData))->send(
+	ZuMv(*reinterpret_cast<ZmRef<MxQMsg> *>(&msg)));
+    }, ptr);
+  }
   void abort(MxSeqNo seqNo)
     { this->txInvoke([seqNo](Tx *tx) { tx->abort(seqNo); }); }
   void archived(MxSeqNo seqNo)

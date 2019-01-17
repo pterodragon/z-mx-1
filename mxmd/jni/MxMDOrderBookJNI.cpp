@@ -249,10 +249,9 @@ jobject MxMDOrderBookJNI::handler(JNIEnv *env, jobject obj)
 
 jobject MxMDOrderBookJNI::ctor(JNIEnv *env, ZmRef<MxMDOrderBook> ob)
 {
-  uintptr_t ptr_;
-  ZmRef<MxMDOrderBook> *ZuMayAlias(ptr) = (ZmRef<MxMDOrderBook> *)&ptr_;
-  new (ptr) ZmRef<MxMDOrderBook>(ZuMv(ob));
-  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr_);
+  uintptr_t ptr;
+  new (&ptr) ZmRef<MxMDOrderBook>(ZuMv(ob));
+  return env->NewObject(class_, ctorMethod[0].mid, (jlong)ptr);
 }
 
 int MxMDOrderBookJNI::bind(JNIEnv *env)

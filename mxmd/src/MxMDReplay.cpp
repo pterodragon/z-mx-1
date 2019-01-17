@@ -91,9 +91,9 @@ bool MxMDReplayLink::ok()
   int state;
   thread_local ZmSemaphore sem;
   engine()->rxInvoke([this, &state, sem = &sem]() {
-	state = this->state();
-	sem->post();
-      });
+    state = this->state();
+    sem->post();
+  });
   sem.wait();
   return state != MxLinkState::Failed;
 }
@@ -104,10 +104,10 @@ bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
   down();
   if (!path) return true;
   engine()->rxInvoke([this, path = ZuMv(path), begin, filter]() mutable {
-	m_path = ZuMv(path);
-	m_nextTime = !begin ? ZmTime() : begin.zmTime();
-	m_filter = filter;
-      });
+    m_path = ZuMv(path);
+    m_nextTime = !begin ? ZmTime() : begin.zmTime();
+    m_filter = filter;
+  });
   up();
   return ok();
 }

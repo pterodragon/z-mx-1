@@ -198,10 +198,12 @@ public:
 
   template <typename O>
   inline typename MatchPtr<O, ZmRef &>::T operator =(O *n) {
-    if (n) ZmREF(n);
-    T *o = m_object;
-    m_object = n;
-    if (o) ZmDEREF(o);
+    if (m_object != n) {
+      if (n) ZmREF(n);
+      T *o = m_object;
+      m_object = n;
+      if (o) ZmDEREF(o);
+    }
     return *this;
   }
 

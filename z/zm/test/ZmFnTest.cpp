@@ -112,15 +112,15 @@ struct X {
 };
 
 struct Base {
-  inline Base(ZmAtomic<unsigned> &i_) : i(i_) { }
+  inline Base(ZmAtomic<uint64_t> &i_) : i(i_) { }
   inline void foo_() { i.xch(i.load_() + 1); }
   void foo() { foo_(); }
   virtual void bar() { }
-  ZmAtomic<unsigned> &i;
+  ZmAtomic<uint64_t> &i;
 };
 
 struct Derived : public Base {
-  inline Derived(ZmAtomic<unsigned> &i) : Base(i) { }
+  inline Derived(ZmAtomic<uint64_t> &i) : Base(i) { }
   void bar() { Base::foo_(); }
 };
 
@@ -310,7 +310,7 @@ int main()
       printf("foo() %d (should be 42)\n", (int)foo());
     }
     ZmRef<E3> e3 = new E3();
-    ZmFn<> bar = ZmFn<>::lambdaFn([e3]() { e3->foo<1>(1, 1); });
+    ZmFn<> bar = ZmFn<>::fn([e3]() { e3->foo<1>(1, 1); });
     ZmFn<> baz = ZmFn<>([](E3 *e3) { e3->foo<1>(1, 1); }, e3);
     bar();
     baz();
@@ -348,7 +348,14 @@ int main()
     fn(&fn);
   }
   {
-    ZmAtomic<unsigned> i;
+    ZmRef<E_> e = new E_(42);
+    ZmFn<> fn{ZmFn<>::mvFn([](ZmRef<E_> e) {
+	CHECK(e->refCount() == 1);
+      }, ZuMv(e))};
+    fn();
+  }
+  {
+    ZmAtomic<uint64_t> i;
     double baseline;
     {
       Derived d(i);
@@ -357,7 +364,7 @@ int main()
       ZmTime end(ZmTime::Now); end -= begin;
       baseline = end.dtime();
       std::cout << "direct call:\t" << ZuBoxed(baseline).fmt(ZuFmt::FP<9>()) <<
-	"\t(" << ZuBox<unsigned>(d.i) << ")\n";
+	"\t(" << ZuBox<uint64_t>(d.i) << ")\n";
     }
     {
       Derived d(i);
@@ -367,7 +374,7 @@ int main()
       ZmTime end(ZmTime::Now); end -= begin;
       std::cout << "castFn:\t\t" <<
 	ZuBoxed(end.dtime() - baseline).fmt(ZuFmt::FP<9>()) <<
-	"\t(" << ZuBox<unsigned>(d.i) << ")\n";
+	"\t(" << ZuBox<uint64_t>(d.i) << ")\n";
     }
     {
       Derived d(i);
@@ -377,7 +384,7 @@ int main()
       ZmTime end(ZmTime::Now); end -= begin;
       std::cout << "fast lambdaFn:\t" <<
 	ZuBoxed(end.dtime() - baseline).fmt(ZuFmt::FP<9>()) <<
-	"\t(" << ZuBox<unsigned>(d.i) << ")\n";
+	"\t(" << ZuBox<uint64_t>(d.i) << ")\n";
     }
     {
       Derived d(i);
@@ -387,7 +394,7 @@ int main()
       ZmTime end(ZmTime::Now); end -= begin;
       std::cout << "slow lambdaFn:\t" <<
 	ZuBoxed(end.dtime() - baseline).fmt(ZuFmt::FP<9>()) <<
-	"\t(" << ZuBox<unsigned>(d.i) << ")\n";
+	"\t(" << ZuBox<uint64_t>(d.i) << ")\n";
     }
     {
       Derived d(i);
@@ -397,7 +404,7 @@ int main()
       ZmTime end(ZmTime::Now); end -= begin;
       std::cout << "virtual fn:\t" <<
 	ZuBoxed(end.dtime() - baseline).fmt(ZuFmt::FP<9>()) <<
-	"\t(" << ZuBox<unsigned>(d.i) << ")\n";
+	"\t(" << ZuBox<uint64_t>(d.i) << ")\n";
     }
   }
 }

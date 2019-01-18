@@ -141,7 +141,7 @@ void MxMDPubLink::tcpError(TCP *tcp, ZiIOContext *io)
     tcp->close();
 
   if (tcp)
-    engine()->rxInvoke([](TCP *tcp) {
+    engine()->rxInvoke([](ZmRef<TCP> tcp) {
       tcp->link()->tcpDisconnected(tcp);
     }, ZmMkRef(tcp));
 }
@@ -156,7 +156,7 @@ void MxMDPubLink::udpError(UDP *udp, ZiIOContext *io)
   if (!udp)
     reconnect(false);
   else
-    engine()->rxInvoke([](UDP *udp) {
+    engine()->rxInvoke([](ZmRef<UDP> udp) {
       udp->link()->udpDisconnected(udp);
     }, ZmMkRef(udp));
 }
@@ -329,7 +329,7 @@ void MxMDPubLink::TCP::disconnected()
   mx()->del(&m_loginTimer);
   if (m_state != State::Disconnect) {
     // tcpERROR(this, 0, "TCP disconnected");
-    m_link->engine()->rxRun(ZmFn<>{[](TCP *tcp) {
+    m_link->engine()->rxRun(ZmFn<>{[](ZmRef<TCP> tcp) {
 	  tcp->link()->tcpDisconnected(tcp);
 	}, ZmMkRef(this)});
   }
@@ -723,13 +723,11 @@ void MxMDPubLink::sendMsg(const Hdr *hdr)
   ZuRef<Msg> msg = new Msg();
   unsigned msgLen = sizeof(Hdr) + hdr->len;
   memcpy((void *)msg->ptr(), (void *)hdr, msgLen);
-  MxQMsg *qmsg = new MxQMsg(msg, msgLen);
+  ZmRef<MxQMsg> qmsg = new MxQMsg(msg, msgLen);
   qmsg->appData = (uintptr_t)tx();
-  qmsg->ref();
-  engine()->txInvoke([](MxQMsg *msg) {
-    ((Tx *)(msg->appData))->send(
-      ZuMv(*reinterpret_cast<ZmRef<MxQMsg> *>(&msg)));
-  }, qmsg);
+  engine()->txInvoke([](ZmRef<MxQMsg> msg) {
+    ((Tx *)(msg->appData))->send(ZuMv(msg));
+  }, ZuMv(qmsg));
 }
 
 void MxMDPubLink::loaded_(MxQMsg *msg)

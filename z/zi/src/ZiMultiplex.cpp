@@ -1766,7 +1766,7 @@ void ZiMultiplex::connectDel(Socket s)
 void ZiConnection::disconnect()
 {
   m_mx->txInvoke(
-      [](ZiConnection *cxn) { cxn->disconnect_1(); }, ZmMkRef(this));
+      [](ZmRef<ZiConnection> cxn) { cxn->disconnect_1(); }, ZmMkRef(this));
 }
 
 void ZiConnection::disconnect_1()
@@ -1775,8 +1775,8 @@ void ZiConnection::disconnect_1()
   
   m_txUp = false;
 
-  m_mx->rxRun(
-      ZmFn<>{[](ZiConnection *cxn) { cxn->disconnect_2(); }, ZmMkRef(this)});
+  m_mx->rxRun(ZmFn<>::mvFn(
+	[](ZmRef<ZiConnection> cxn) { cxn->disconnect_2(); }, ZmMkRef(this)));
 }
 
 void ZiConnection::disconnect_2()
@@ -1874,7 +1874,7 @@ void ZiMultiplex::disconnected(ZiConnection *cxn)
 void ZiConnection::close()
 {
   m_mx->txInvoke(
-      [](ZiConnection *cxn) { cxn->close_1(); }, ZmMkRef(this));
+      [](ZmRef<ZiConnection> cxn) { cxn->close_1(); }, ZmMkRef(this));
 }
 
 void ZiConnection::close_1()
@@ -1883,8 +1883,8 @@ void ZiConnection::close_1()
   
   m_txUp = false;
 
-  m_mx->rxRun(
-      ZmFn<>{[](ZiConnection *cxn) { cxn->close_2(); }, ZmMkRef(this)});
+  m_mx->rxRun(ZmFn<>::mvFn(
+	[](ZmRef<ZiConnection> cxn) { cxn->close_2(); }, ZmMkRef(this)));
 }
 
 void ZiConnection::close_2()

@@ -168,7 +168,7 @@ void MxMDSubLink::tcpError(TCP *tcp, ZiIOContext *io)
   if (!tcp)
     reconnect(false);
   else
-    engine()->rxInvoke([](TCP *tcp) {
+    engine()->rxInvoke([](ZmRef<TCP> tcp) {
       tcp->link()->tcpDisconnected(tcp);
     }, ZmMkRef(tcp));
 }
@@ -183,7 +183,7 @@ void MxMDSubLink::udpError(UDP *udp, ZiIOContext *io)
   if (!udp)
     reconnect(false);
   else
-    engine()->rxInvoke([](UDP *udp) {
+    engine()->rxInvoke([](ZmRef<UDP> udp) {
       udp->link()->udpDisconnected(udp);
     }, ZmMkRef(udp));
 }
@@ -339,7 +339,7 @@ ZmRef<MxQMsg> MxMDSubLink::tcpLogin()
 void MxMDSubLink::TCP::sendLogin()
 {
   MxMDStream::TCP::send(this, m_link->tcpLogin()); // bypass Tx queue
-  mx()->rxRun(ZmFn<>{[](MxMDSubLink::TCP *tcp) {
+  mx()->rxRun(ZmFn<>{[](TCP *tcp) {
       if (tcp->state() != State::Login) return;
       tcpERROR(tcp, 0, "TCP login timeout");
     }, this}, ZmTimeNow(m_link->loginTimeout()), &m_loginTimer);
@@ -553,21 +553,18 @@ void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
     }
   }
   msg->appData = (uintptr_t)rx();
-  MxQMsg *ptr;
-  new (&ptr) ZmRef<MxQMsg>(ZuMv(msg));
-  engine()->rxInvoke([](MxQMsg *msg) {
+  engine()->rxInvoke([](ZmRef<MxQMsg> msg) {
     Rx *rx = (Rx *)(msg->appData);
     auto &link = rx->app();
     link.active();
-    rx->received(ZuMv(*reinterpret_cast<ZmRef<MxQMsg> *>(&msg)));
-    if (ZuUnlikely(
-	  rx->rxQueue().count() > link.engine()->maxQueueSize())) {
+    rx->received(ZuMv(msg));
+    if (ZuUnlikely(rx->rxQueue().count() > link.engine()->maxQueueSize())) {
       link.rxQueueTooBig(
 	  rx->rxQueue().count(),
 	  link.engine()->maxQueueSize());
       link.reconnect(true);
     }
-  }, ptr);
+  }, ZuMv(msg));
 }
 void MxMDSubLink::rxQueueTooBig(uint32_t count, uint32_t max)
 {

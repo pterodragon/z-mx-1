@@ -1765,8 +1765,8 @@ void ZiMultiplex::connectDel(Socket s)
 
 void ZiConnection::disconnect()
 {
-  m_mx->txInvoke(
-      [](ZmRef<ZiConnection> cxn) { cxn->disconnect_1(); }, ZmMkRef(this));
+  m_mx->txInvoke(ZmMkRef(this),
+      [](ZmRef<ZiConnection> cxn) { cxn->disconnect_1(); });
 }
 
 void ZiConnection::disconnect_1()
@@ -1775,8 +1775,8 @@ void ZiConnection::disconnect_1()
   
   m_txUp = false;
 
-  m_mx->rxRun(ZmFn<>::mvFn(
-	[](ZmRef<ZiConnection> cxn) { cxn->disconnect_2(); }, ZmMkRef(this)));
+  m_mx->rxRun(ZmFn<>::mvFn(ZmMkRef(this),
+	[](ZmRef<ZiConnection> cxn) { cxn->disconnect_2(); }));
 }
 
 void ZiConnection::disconnect_2()
@@ -1873,8 +1873,8 @@ void ZiMultiplex::disconnected(ZiConnection *cxn)
 
 void ZiConnection::close()
 {
-  m_mx->txInvoke(
-      [](ZmRef<ZiConnection> cxn) { cxn->close_1(); }, ZmMkRef(this));
+  m_mx->txInvoke(ZmMkRef(this),
+      [](ZmRef<ZiConnection> cxn) { cxn->close_1(); });
 }
 
 void ZiConnection::close_1()
@@ -1883,8 +1883,8 @@ void ZiConnection::close_1()
   
   m_txUp = false;
 
-  m_mx->rxRun(ZmFn<>::mvFn(
-	[](ZmRef<ZiConnection> cxn) { cxn->close_2(); }, ZmMkRef(this)));
+  m_mx->rxRun(ZmFn<>::mvFn(ZmMkRef(this),
+	[](ZmRef<ZiConnection> cxn) { cxn->close_2(); })); 
 }
 
 void ZiConnection::close_2()
@@ -2018,7 +2018,7 @@ int ZiMultiplex::start()
   }
 #endif
 
-  rxRun(ZmFn<>{[](ZiMultiplex *mx) { mx->rxStart(); }, this});
+  rxRun(ZmFn<>{this, [](ZiMultiplex *mx) { mx->rxStart(); }});
   ZmScheduler::start();
   return Zi::OK;
 }
@@ -2047,7 +2047,7 @@ void ZiMultiplex::stop(bool drain)
   m_stopping = &stopping;
   m_drain = drain;
 
-  rxInvoke([](ZiMultiplex *mx) { mx->stop_1(); }, this);
+  rxInvoke(this, [](ZiMultiplex *mx) { mx->stop_1(); });
 
   stopping.wait();
 
@@ -2134,10 +2134,10 @@ void ZiMultiplex::stop_3()
 
 void ZiMultiplex::rxStart()
 {
-  wakeFn(rxThread(), ZmFn<>{[](ZiMultiplex *mx) {
+  wakeFn(rxThread(), ZmFn<>{this, [](ZiMultiplex *mx) {
 	mx->run_(mx->rxThread(), ZmFn<>::Member<&ZiMultiplex::rx>::fn(mx));
 	mx->wake();
-      }, this});
+      }});
   rx();
 }
 
@@ -2223,7 +2223,8 @@ void ZiMultiplex::rx()
 	  if (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR))
 	    if (ZuUnlikely(!cxn->recv())) continue;
 	  if (events & EPOLLOUT)
-	    txRun(ZmFn<>{[](ZiConnection *cxn) { cxn->send(); }, cxn});
+	    txRun(ZmFn<>::mvFn(ZmMkRef(cxn),
+		  [](ZmRef<ZiConnection> cxn) { cxn->send(); }));
 	  continue;
 	}
 

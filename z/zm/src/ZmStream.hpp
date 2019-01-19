@@ -41,10 +41,10 @@
 class ZmStreamBuf {
 public:
   template <typename T> ZuInline ZmStreamBuf(const T &v) :
-    m_lengthFn([](const T *v) -> unsigned {
-	return ZuPrint<T>::length(*v); }, &v),
-    m_printFn([](const T *v, char *buf, unsigned n) -> unsigned {
-	return ZuPrint<T>::print(buf, n, *v); }, &v) { }
+    m_lengthFn(&v, [](const T *v) -> unsigned {
+	return ZuPrint<T>::length(*v); }),
+    m_printFn(&v, [](const T *v, char *buf, unsigned n) -> unsigned {
+	return ZuPrint<T>::print(buf, n, *v); }) { }
 
   ZmStreamBuf(const ZmStreamBuf &) = delete;
   ZmStreamBuf &operator =(const ZmStreamBuf &) = delete;
@@ -80,8 +80,8 @@ template <> struct ZuPrint<ZmStreamBuf> : public ZuPrintBuffer {
 class ZmStream {
 public:
   template <typename S> ZuInline ZmStream(S &s) :
-    m_strFn([](S *s, const ZuString &v) { *s << v; }, &s),
-    m_bufFn([](S *s, const ZmStreamBuf &v) { *s << v; }, &s) { }
+    m_strFn(&s, [](S *s, const ZuString &v) { *s << v; }),
+    m_bufFn(&s, [](S *s, const ZmStreamBuf &v) { *s << v; }) { }
 
   ZmStream(const ZmStream &) = delete;
   ZmStream &operator =(const ZmStream &) = delete;

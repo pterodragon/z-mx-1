@@ -10,12 +10,12 @@ class App : public MxTelemetry::Server {
   void run(MxTelemetry::Server::Cxn *cxn) {
     using namespace MxTelemetry;
 
-    ZmHeapMgr::all(ZmFn<ZmHeapCache *>{
-	[](Cxn *cxn, ZmHeapCache *h) { cxn->transmit(heap(*h)); }, cxn});
+    ZmHeapMgr::all(ZmFn<ZmHeapCache *>{cxn,
+	[](Cxn *cxn, ZmHeapCache *h) { cxn->transmit(heap(*h)); }});
 
-    ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{
+    ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{cxn,
 	[](Cxn *cxn, ZmThreadContext *tc) {
-	  cxn->transmit(thread(*tc)); }, cxn});
+	  cxn->transmit(thread(*tc)); }});
   }
 };
 

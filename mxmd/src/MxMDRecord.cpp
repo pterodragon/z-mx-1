@@ -192,12 +192,13 @@ void MxMDRecLink::connect()
   m_seqNo = 0;
 
   mx()->run(engine()->snapThread(),
-      ZmFn<>{[](MxMDRecLink *link) { link->snap(); }, this});
+      ZmFn<>{this, [](MxMDRecLink *link) { link->snap(); }});
 
-  mx()->wakeFn(engine()->rxThread(), ZmFn<>{[](MxMDRecLink *link) {
+  mx()->wakeFn(engine()->rxThread(),
+      ZmFn<>{this, [](MxMDRecLink *link) {
 	link->rxRun_([](Rx *rx) { rx->app().recv(rx); });
 	link->wake();
-      }, this});
+      }});
 
   rxRun_([](Rx *rx) { rx->app().recv(rx); });
 }
@@ -235,7 +236,7 @@ void MxMDRecLink::snap()
   m_snapMsg = new Msg();
   if (!core()->snapshot(*this, id(), 0))
     engine()->rxRun(
-	ZmFn<>{[](MxMDRecLink *link) { link->disconnect(); }, this});
+	ZmFn<>{this, [](MxMDRecLink *link) { link->disconnect(); }});
   m_snapMsg = nullptr;
 }
 void *MxMDRecLink::push(unsigned size)
@@ -262,7 +263,7 @@ void MxMDRecLink::push2()
     fileGuard.unlock();
     if (path) fileERROR(ZuMv(path), e);
     engine()->rxRun(
-	ZmFn<>{[](MxMDRecLink *link) { link->disconnect(); }, this});
+	ZmFn<>{this, [](MxMDRecLink *link) { link->disconnect(); }});
     return;
   }
 }

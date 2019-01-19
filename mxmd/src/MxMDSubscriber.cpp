@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -73,12 +73,12 @@ void MxMDSubscriber::final()
 void MxMDSubscriber::updateLinks(ZuString channels)
 {
   MxMDChannelCSV csv;
-  csv.read(channels, ZvCSVReadFn{[](MxMDSubscriber *sub, ZuAnyPOD *pod) {
+  csv.read(channels, ZvCSVReadFn{this, [](MxMDSubscriber *sub, ZuAnyPOD *pod) {
       const MxMDChannel &channel = pod->as<MxMDChannel>();
       sub->m_channels.del(channel.id);
       sub->m_channels.add(channel);
       sub->updateLink(channel.id, nullptr);
-    }, this});
+    }});
 }
 
 ZmRef<MxAnyLink> MxMDSubscriber::createLink(MxID id)
@@ -90,9 +90,9 @@ MxEngineApp::ProcessFn MxMDSubscriber::processFn()
 {
   return static_cast<MxEngineApp::ProcessFn>(
       [](MxEngineApp *app, MxAnyLink *link, MxQMsg *msg) {
-	  static_cast<MxMDSubscriber *>(app)->process_(
-	      static_cast<MxMDSubLink *>(link), msg);
-  });
+	static_cast<MxMDSubscriber *>(app)->process_(
+	    static_cast<MxMDSubLink *>(link), msg);
+      });
 }
 
 void MxMDSubscriber::process_(MxMDSubLink *link, MxQMsg *msg)
@@ -168,9 +168,9 @@ void MxMDSubLink::tcpError(TCP *tcp, ZiIOContext *io)
   if (!tcp)
     reconnect(false);
   else
-    engine()->rxInvoke([](ZmRef<TCP> tcp) {
+    engine()->rxInvoke(ZmMkRef(tcp), [](ZmRef<TCP> tcp) {
       tcp->link()->tcpDisconnected(tcp);
-    }, ZmMkRef(tcp));
+    });
 }
 
 void MxMDSubLink::udpError(UDP *udp, ZiIOContext *io)
@@ -183,9 +183,9 @@ void MxMDSubLink::udpError(UDP *udp, ZiIOContext *io)
   if (!udp)
     reconnect(false);
   else
-    engine()->rxInvoke([](ZmRef<UDP> udp) {
+    engine()->rxInvoke(ZmMkRef(udp), [](ZmRef<UDP> udp) {
       udp->link()->udpDisconnected(udp);
-    }, ZmMkRef(udp));
+    });
 }
 
 void MxMDSubLink::connect()
@@ -254,7 +254,8 @@ void MxMDSubLink::tcpConnect()
       ip << ':' << ZuBoxed(port) << ')');
 
   mx()->connect(
-      ZiConnectFn([](MxMDSubLink *link, const ZiCxnInfo &ci) -> uintptr_t {
+      ZiConnectFn(this,
+	[](MxMDSubLink *link, const ZiCxnInfo &ci) -> uintptr_t {
 	  // link state will not be Up until TCP+UDP has connected, login ackd
 	  switch ((int)link->state()) {
 	    case MxLinkState::Connecting:
@@ -265,14 +266,14 @@ void MxMDSubLink::tcpConnect()
 	    default:
 	      return 0;
 	  }
-	}, this),
-      ZiFailFn([](MxMDSubLink *link, bool transient) {
+	}),
+      ZiFailFn(this, [](MxMDSubLink *link, bool transient) {
 	  if (transient)
 	    link->reconnect(false);
 	  else
-	    link->engine()->rxRun(ZmFn<>{
-		[](MxMDSubLink *link) { link->disconnect(); }, link});
-	}, this),
+	    link->engine()->rxRun(
+		ZmFn<>{link, [](MxMDSubLink *link) { link->disconnect(); }});
+	}),
       ZiIP(), 0, ip, port);
 }
 MxMDSubLink::TCP::TCP(MxMDSubLink *link, const ZiCxnInfo &ci) :
@@ -281,9 +282,9 @@ MxMDSubLink::TCP::TCP(MxMDSubLink *link, const ZiCxnInfo &ci) :
 }
 void MxMDSubLink::TCP::connected(ZiIOContext &io)
 {
-  m_link->engine()->rxRun(ZmFn<>{[](TCP *tcp) {
+  m_link->engine()->rxRun(ZmFn<>{ZmMkRef(this), [](TCP *tcp) {
 	tcp->link()->tcpConnected(tcp);
-      }, ZmMkRef(this)});
+      }});
   MxMDStream::TCP::recv<TCP>(new MxQMsg(new Msg()), io,
       [](TCP *tcp, ZmRef<MxQMsg> msg, ZiIOContext &io) {
 	tcp->processLoginAck(ZuMv(msg), io);
@@ -339,10 +340,10 @@ ZmRef<MxQMsg> MxMDSubLink::tcpLogin()
 void MxMDSubLink::TCP::sendLogin()
 {
   MxMDStream::TCP::send(this, m_link->tcpLogin()); // bypass Tx queue
-  mx()->rxRun(ZmFn<>{[](TCP *tcp) {
+  mx()->rxRun(ZmFn<>{ZmMkRef(this), [](TCP *tcp) {
       if (tcp->state() != State::Login) return;
       tcpERROR(tcp, 0, "TCP login timeout");
-    }, this}, ZmTimeNow(m_link->loginTimeout()), &m_loginTimer);
+    }}, ZmTimeNow(m_link->loginTimeout()), &m_loginTimer);
 }
 void MxMDSubLink::tcpLoginAck()
 {
@@ -437,7 +438,8 @@ void MxMDSubLink::udpConnect()
     options.mreq(ZiMReq(ip, engine()->interface()));
   }
   mx()->udp(
-      ZiConnectFn([](MxMDSubLink *link, const ZiCxnInfo &ci) -> uintptr_t {
+      ZiConnectFn(this,
+	[](MxMDSubLink *link, const ZiCxnInfo &ci) -> uintptr_t {
 	  // link state will not be Up until TCP+UDP has connected, login ackd
 	  switch ((int)link->state()) {
 	    case MxLinkState::Connecting:
@@ -448,14 +450,14 @@ void MxMDSubLink::udpConnect()
 	    default:
 	      return 0;
 	  }
-	}, this),
-      ZiFailFn([](MxMDSubLink *link, bool transient) {
+	}),
+      ZiFailFn(this, [](MxMDSubLink *link, bool transient) {
 	  if (transient)
 	    link->reconnect(false);
 	  else
-	    link->engine()->rxRun(ZmFn<>{
-		[](MxMDSubLink *link) { link->disconnect(); }, link});
-	}, this),
+	    link->engine()->rxRun(
+		ZmFn<>{link, [](MxMDSubLink *link) { link->disconnect(); }});
+	}),
       ZiIP(), port, ZiIP(), 0, options);
 }
 MxMDSubLink::UDP::UDP(MxMDSubLink *link, const ZiCxnInfo &ci) :
@@ -463,9 +465,9 @@ MxMDSubLink::UDP::UDP(MxMDSubLink *link, const ZiCxnInfo &ci) :
     m_state(State::Receiving) { }
 void MxMDSubLink::UDP::connected(ZiIOContext &io)
 {
-  m_link->engine()->rxRun(ZmFn<>{[](UDP *udp) {
-	udp->link()->udpConnected(udp);
-      }, ZmMkRef(this)});
+  m_link->engine()->rxRun(ZmFn<>{ZmMkRef(this), [](UDP *udp) {
+    udp->link()->udpConnected(udp);
+  }});
   recv(io); // begin receiving UDP packets
 }
 void MxMDSubLink::udpConnected(MxMDSubLink::UDP *udp)
@@ -553,7 +555,7 @@ void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
     }
   }
   msg->appData = (uintptr_t)rx();
-  engine()->rxInvoke([](ZmRef<MxQMsg> msg) {
+  engine()->rxInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
     Rx *rx = (Rx *)(msg->appData);
     auto &link = rx->app();
     link.active();
@@ -564,7 +566,7 @@ void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
 	  link.engine()->maxQueueSize());
       link.reconnect(true);
     }
-  }, ZuMv(msg));
+  });
 }
 void MxMDSubLink::rxQueueTooBig(uint32_t count, uint32_t max)
 {
@@ -605,7 +607,7 @@ void MxMDSubLink::hbStart()
 {
   m_active = false;
   m_inactive = 0;
-  engine()->rxRun(ZmFn<>{[](MxMDSubLink *link) { link->heartbeat(); }, this},
+  engine()->rxRun(ZmFn<>{this, [](MxMDSubLink *link) { link->heartbeat(); }},
       ZmTimeNow(1), &m_timer);
 }
 
@@ -622,7 +624,7 @@ void MxMDSubLink::heartbeat()
     m_active = false;
     m_inactive = 0;
   }
-  engine()->rxRun(ZmFn<>{[](MxMDSubLink *link) { link->heartbeat(); }, this},
+  engine()->rxRun(ZmFn<>{this, [](MxMDSubLink *link) { link->heartbeat(); }},
       ZmTimeNow(1), &m_timer);
 }
 

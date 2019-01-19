@@ -77,8 +77,9 @@
 //
 // struct O { ... void fn() { ... } };
 // ZmRef<O> o = new O(...);
-// ZmFn<> fn1([o]() { o->fn(); });		// inefficient
-// ZmFn<> fn2([](O *o) { o->fn(); }, o);	// leverages ZmFn<> capture
+// ZmFn<> fn1([o = ZuMv(o)]() { o->fn(); });	// inefficient
+// ZmFn<> fn2(ZuMv(o), [](O *o) { o->fn(); });	// leverages ZmFn capture
+// ZmFn<> fn3(ZmFn<>::mvFn(ZuMv(o), [](ZmRef<O> o) { o->fn(); })); // move
 
 // Performance:
 // Member/Lambda overhead is ~2ns per call (g++ -O6, Core i7 @3.6GHz)

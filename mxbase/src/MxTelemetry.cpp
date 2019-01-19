@@ -45,17 +45,17 @@ void Client::start()
     options.mreq(ZiMReq(m_ip, m_interface));
   }
   m_mx->udp(
-      ZiConnectFn([](Client *client, const ZiCxnInfo &ci) -> uintptr_t {
+      ZiConnectFn(this, [](Client *client, const ZiCxnInfo &ci) -> uintptr_t {
 	  return (uintptr_t)(new Cxn(client, ci));
-	}, this),
-      ZiFailFn([](Client *client, bool transient) {
+	}),
+      ZiFailFn(this, [](Client *client, bool transient) {
 	  client->error(ZeEVENT(Error,
 		([ip = client->m_ip, port = client->m_port](
 		    const ZeEvent &, ZmStream &s) {
 		  s << "MxTelemetry::Client{" <<
 		    ip << ':' << ZuBoxed(port) << "} UDP receive failed";
 		})));
-	}, this),
+	}),
       ZiIP(), m_port, ZiIP(), 0, options);
 }
 
@@ -121,17 +121,17 @@ void Server::start()
     options.loopBack(m_loopBack);
   }
   m_mx->udp(
-      ZiConnectFn([](Server *server, const ZiCxnInfo &ci) -> uintptr_t {
+      ZiConnectFn(this, [](Server *server, const ZiCxnInfo &ci) -> uintptr_t {
 	  return (uintptr_t)(new Cxn(server, ci));
-	}, this),
-      ZiFailFn([](Server *server, bool transient) {
+	}),
+      ZiFailFn(this, [](Server *server, bool transient) {
 	  server->error(ZeEVENT(Error,
 		([ip = server->m_ip, port = server->m_port](
 		    const ZeEvent &, ZmStream &s) {
 		  s << "MxTelemetry::Server{" <<
 		    ip << ':' << ZuBoxed(port) << "} UDP send failed";
 		})));
-	}, this),
+	}),
       ZiIP(), 0, ZiIP(), 0, options);
 }
 
@@ -152,7 +152,7 @@ void Server::stop()
 void Server::scheduleRun()
 {
   m_mx->run(m_mx->txThread(),
-      ZmFn<>{[](Server *server) { server->run_(); }, this},
+      ZmFn<>{this, [](Server *server) { server->run_(); }},
       ZmTimeNow((double)m_freq / 1000000), &m_timer);
 }
 

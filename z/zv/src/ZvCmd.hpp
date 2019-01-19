@@ -84,7 +84,8 @@ public:
   int redirectOut(ZiFile &, ZmRef<ZeEvent> *e = 0);
 
   template <typename Cxn> void recv(ZiIOContext &io) {
-    io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
+    io.init(ZiIOFn{ZmMkRef(this),
+      [](ZvCmdMsg *msg, ZiIOContext &io) {
 	if ((io.offset += io.length) < io.size) return;
 	auto &hdr = msg->m_hdr;
 	msg->m_cmd.length(hdr.cmdLen);
@@ -95,28 +96,28 @@ public:
 	  msg->recvData<Cxn>(io);
 	else
 	  static_cast<Cxn *>(io.cxn)->rcvd(io.fn.mvObject<ZvCmdMsg>(), io);
-      }, ZmMkRef(this)}, &m_hdr, sizeof(Hdr), 0);
+      }}, &m_hdr, sizeof(Hdr), 0);
   }
 
   void send(ZiConnection *);
 
 private:
   template <typename Cxn> void recvCmd(ZiIOContext &io) {
-    io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
+    io.init(ZiIOFn{io.fn.mvObject<ZvCmdMsg>(),
+      [](ZvCmdMsg *msg, ZiIOContext &io) {
 	if ((io.offset += io.length) < io.size) return;
 	if (msg->m_data.length())
 	  msg->recvData<Cxn>(io);
 	else
 	  static_cast<Cxn *>(io.cxn)->rcvd(io.fn.mvObject<ZvCmdMsg>(), io);
-      }, io.fn.mvObject<ZvCmdMsg>()},
-      m_cmd.data(), m_cmd.length(), 0);
+      }}, m_cmd.data(), m_cmd.length(), 0);
   }
   template <typename Cxn> void recvData(ZiIOContext &io) {
-    io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
+    io.init(ZiIOFn{io.fn.mvObject<ZvCmdMsg>(),
+      [](ZvCmdMsg *msg, ZiIOContext &io) {
 	if ((io.offset += io.length) < io.size) return;
 	static_cast<Cxn *>(io.cxn)->rcvd(io.fn.mvObject<ZvCmdMsg>(), io);
-      }, io.fn.mvObject<ZvCmdMsg>()},
-      m_data.data(), m_data.length(), 0);
+      }}, m_data.data(), m_data.length(), 0);
   }
 
   void sendCmd(ZiIOContext &);
@@ -162,7 +163,7 @@ public:
 protected:
   void scheduleTimeout() {
     if (m_mgr->timeout())
-      mx()->add(ZmFn<>{[](ZvCmdCxn *cxn) { cxn->disconnect(); }, ZmMkRef(this)},
+      mx()->add(ZmFn<>{ZmMkRef(this), [](ZvCmdCxn *cxn) { cxn->disconnect(); }},
 	  ZmTimeNow(m_mgr->timeout()), &m_timer);
   }
   void cancelTimeout() { mx()->del(&m_timer); }

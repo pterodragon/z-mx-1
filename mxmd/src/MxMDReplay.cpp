@@ -176,7 +176,7 @@ void MxMDReplayLink::connect()
 
   connected();
 
-  engine()->rxRun(ZmFn<>{[](MxMDReplayLink *link) { link->read(); }, this});
+  engine()->rxRun(ZmFn<>{this, [](MxMDReplayLink *link) { link->read(); }});
 }
 
 void MxMDReplayLink::disconnect()
@@ -248,7 +248,7 @@ eof:
     core->apply(hdr, m_filter);
   }
 
-  engine()->rxRun(ZmFn<>{[](MxMDReplayLink *link) { link->read(); }, this});
+  engine()->rxRun(ZmFn<>{this, [](MxMDReplayLink *link) { link->read(); }});
 }
 
 // commands

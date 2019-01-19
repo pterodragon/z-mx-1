@@ -553,13 +553,13 @@ public:
   ZuInline void idleArchive() { m_archiving = 0; }
 
   template <typename L> ZuInline void txRun(L &&l)
-    { this->engine()->txRun(ZmFn<>{ZuFwd<L>(l), impl().tx()}); }
+    { this->engine()->txRun(ZmFn<>{impl().tx(), ZuFwd<L>(l)}); }
   template <typename L> ZuInline void txRun(L &&l) const
-    { this->engine()->txRun(ZmFn<>{ZuFwd<L>(l), impl().tx()}); }
+    { this->engine()->txRun(ZmFn<>{impl().tx(), ZuFwd<L>(l)}); }
   template <typename L> ZuInline void txInvoke(L &&l)
-    { this->engine()->txInvoke(ZuFwd<L>(l), impl().tx()); }
+    { this->engine()->txInvoke(impl().tx(), ZuFwd<L>(l)); }
   template <typename L> ZuInline void txInvoke(L &&l) const
-    { this->engine()->txInvoke(ZuFwd<L>(l), impl().tx()); }
+    { this->engine()->txInvoke(impl().tx(), ZuFwd<L>(l)); }
 
 private:
   ZmAtomic<unsigned>	m_sending;
@@ -591,9 +591,9 @@ public:
 
   void send(ZmRef<MxQMsg> msg) {
     msg->appData = (uintptr_t)tx();
-    this->engine()->txInvoke([](ZmRef<MxQMsg> msg) {
+    this->engine()->txInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
       ((Tx *)(msg->appData))->send(ZuMv(msg));
-    }, ZuMv(msg));
+    });
   }
   void abort(MxSeqNo seqNo)
     { this->txInvoke([seqNo](Tx *tx) { tx->abort(seqNo); }); }
@@ -727,24 +727,24 @@ public:
 
   template <typename L, typename ...Args>
   ZuInline void rxRun(L &&l, Args &&... args)
-    { this->engine()->rxRun(ZmFn<>{ZuFwd<L>(l), rx()}, ZuFwd<Args>(args)...); }
+    { this->engine()->rxRun(ZmFn<>{rx(), ZuFwd<L>(l)}, ZuFwd<Args>(args)...); }
   template <typename L, typename ...Args>
   ZuInline void rxRun(L &&l, Args &&... args) const
-    { this->engine()->rxRun(ZmFn<>{ZuFwd<L>(l), rx()}, ZuFwd<Args>(args)...); }
+    { this->engine()->rxRun(ZmFn<>{rx(), ZuFwd<L>(l)}, ZuFwd<Args>(args)...); }
   template <typename L> ZuInline void rxRun_(L &&l)
-    { this->engine()->rxRun_(ZmFn<>{ZuFwd<L>(l), rx()}); }
+    { this->engine()->rxRun_(ZmFn<>{rx(), ZuFwd<L>(l)}); }
   template <typename L> ZuInline void rxRun_(L &&l) const
-    { this->engine()->rxRun_(ZmFn<>{ZuFwd<L>(l), rx()}); }
+    { this->engine()->rxRun_(ZmFn<>{rx(), ZuFwd<L>(l)}); }
   template <typename L> ZuInline void rxInvoke(L &&l)
-    { this->engine()->rxInvoke(ZuFwd<L>(l), rx()); }
+    { this->engine()->rxInvoke(rx(), ZuFwd<L>(l)); }
   template <typename L> ZuInline void rxInvoke(L &&l) const
-    { this->engine()->rxInvoke(ZuFwd<L>(l), rx()); }
+    { this->engine()->rxInvoke(rx(), ZuFwd<L>(l)); }
 
   void send(ZmRef<MxQMsg> msg) {
     msg->appData = (uintptr_t)tx();
-    this->engine()->txInvoke([](ZmRef<MxQMsg> msg) {
+    this->engine()->txInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
       ((Tx *)(msg->appData))->send(ZuMv(msg));
-    }, ZuMv(msg));
+    });
   }
   void abort(MxSeqNo seqNo)
     { this->txInvoke([seqNo](Tx *tx) { tx->abort(seqNo); }); }

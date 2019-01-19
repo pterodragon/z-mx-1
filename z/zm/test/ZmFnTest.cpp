@@ -311,17 +311,17 @@ int main()
     }
     ZmRef<E3> e3 = new E3();
     ZmFn<> bar = ZmFn<>::fn([e3]() { e3->foo<1>(1, 1); });
-    ZmFn<> baz = ZmFn<>([](E3 *e3) { e3->foo<1>(1, 1); }, e3);
+    ZmFn<> baz = ZmFn<>(e3, [](E3 *e3) { e3->foo<1>(1, 1); });
     bar();
     baz();
   }
   {
     ZmRef<E_> e = new E_(42);
-    ZmFn<> foo = ZmFn<>([](E_ *e) { e->foo(); }, e.ptr());
+    ZmFn<> foo = ZmFn<>(e.ptr(), [](E_ *e) { e->foo(); });
     CHECK(e->refCount() == 1);
     foo();
     const char *s = "Hello World";
-    ZmFn<> foo2 = ZmFn<>([s](E_ *e) { puts(s); e->bar(); }, e);
+    ZmFn<> foo2 = ZmFn<>(e, [s](E_ *e) { puts(s); e->bar(); });
     CHECK(e->refCount() == 2);
     foo2();
   }
@@ -341,17 +341,17 @@ int main()
   }
   {
     ZmRef<E_> e = new E_(42);
-    ZmFn<ZmAnyFn *> fn{[](E_ *, ZmAnyFn *fn) {
+    ZmFn<ZmAnyFn *> fn{ZuMv(e), [](E_ *, ZmAnyFn *fn) {
 	ZmRef<E_> e = fn->mvObject<E_>();
 	CHECK(e->refCount() == 1);
-      }, ZuMv(e)};
+      }};
     fn(&fn);
   }
   {
     ZmRef<E_> e = new E_(42);
-    ZmFn<> fn{ZmFn<>::mvFn([](ZmRef<E_> e) {
+    ZmFn<> fn{ZmFn<>::mvFn(ZuMv(e), [](ZmRef<E_> e) {
 	CHECK(e->refCount() == 1);
-      }, ZuMv(e))};
+      })};
     fn();
   }
   {
@@ -378,7 +378,7 @@ int main()
     }
     {
       Derived d(i);
-      ZmFn<> baz = ZmFn<>([](Derived *d_) { d_->foo(); }, &d);
+      ZmFn<> baz = ZmFn<>(&d, [](Derived *d_) { d_->foo(); });
       ZmTime begin(ZmTime::Now);
       for (unsigned i = 0; i < 1000000000; i++) baz();
       ZmTime end(ZmTime::Now); end -= begin;

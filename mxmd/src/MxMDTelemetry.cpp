@@ -48,40 +48,43 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 
   // heaps
   ZmHeapMgr::all(ZmFn<ZmHeapCache *>{
-      [](Cxn *cxn, ZmHeapCache *h) {
+      cxn, [](Cxn *cxn, ZmHeapCache *h) {
 	if (!h->telCount()) cxn->transmit(heap(*h));
-      }, cxn});
+      }});
 
   // hash tables
   ZmHashMgr::all(ZmFn<ZmAnyHash *>{
-      [](Cxn *cxn, ZmAnyHash *h) {
+      cxn, [](Cxn *cxn, ZmAnyHash *h) {
 	if (!h->telCount()) cxn->transmit(hashTbl(*h));
-      }, cxn});
+      }});
 
   // threads
   ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{
-      [](Cxn *cxn, ZmThreadContext *tc) { cxn->transmit(thread(*tc)); }, cxn});
+      cxn, [](Cxn *cxn, ZmThreadContext *tc) {
+	cxn->transmit(thread(*tc));
+      }});
 
   // mutiplexers, thread queues, sockets
-  m_core->allMx([cxn](MxMultiplex *mx) {
-      if (mx->telCount()) return;
-      cxn->transmit(multiplexer(*mx));
-      {
-	ZmThreadName name;
-	uint64_t inCount, inBytes, outCount, outBytes;
-	for (unsigned tid = 1, n = mx->nThreads(); tid <= n; tid++) {
-	  mx->threadName(tid, name);
-	  const ZmScheduler::Ring &ring = mx->ring(tid);
-	  ring.stats(inCount, inBytes, outCount, outBytes);
-	  cxn->transmit(queue(
-		name, (uint64_t)0, (uint64_t)ring.count(),
-		inCount, inBytes, outCount, outBytes,
-		(uint32_t)ring.params().size(), (uint8_t)QueueType::Thread));
+  m_core->allMx(ZmFn<MxMultiplex *>{
+      cxn, [](Cxn *cxn, MxMultiplex *mx) {
+	if (mx->telCount()) return;
+	cxn->transmit(multiplexer(*mx));
+	{
+	  ZmThreadName name;
+	  uint64_t inCount, inBytes, outCount, outBytes;
+	  for (unsigned tid = 1, n = mx->nThreads(); tid <= n; tid++) {
+	    mx->threadName(tid, name);
+	    const ZmScheduler::Ring &ring = mx->ring(tid);
+	    ring.stats(inCount, inBytes, outCount, outBytes);
+	    cxn->transmit(queue(
+		  name, (uint64_t)0, (uint64_t)ring.count(),
+		  inCount, inBytes, outCount, outBytes,
+		  (uint32_t)ring.params().size(), (uint8_t)QueueType::Thread));
+	  }
 	}
-      }
-      mx->allCxns([cxn](ZiConnection *cxn_) {
-	  cxn->transmit(MxTelemetry::socket(*cxn_)); });
-    });
+	mx->allCxns([cxn](ZiConnection *cxn_) {
+	    cxn->transmit(MxTelemetry::socket(*cxn_)); });
+      }});
 
   // IPC queues (MD broadcast)
   if (ZmRef<MxMDBroadcast::Ring> ring = m_core->broadcast().ring()) {

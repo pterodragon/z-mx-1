@@ -235,24 +235,22 @@ namespace MxTelemetry {
     template <typename Cxn>
     inline void send(Cxn *cxn, ZmRef<Msg> msg, const ZiSockAddr &addr) {
       msg->addr = addr;
-      cxn->send(ZiIOFn{[](Msg *msg, ZiIOContext &io) {
-	io.init(ZiIOFn{[](Msg *msg, ZiIOContext &io) {
+      cxn->send(ZiIOFn{ZuMv(msg), [](Msg *msg, ZiIOContext &io) {
+	io.init(ZiIOFn{io.fn.mvObject<Msg>(), [](Msg *msg, ZiIOContext &io) {
 	  if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	}, io.fn.mvObject<Msg>()},
-	msg->ptr(), msg->length, 0, msg->addr);
-      }, ZuMv(msg)});
+	}}, msg->ptr(), msg->length, 0, msg->addr);
+      }});
     }
 
     template <typename Cxn, typename L>
     inline typename IOLambda<Cxn, L>::T recv(
 	ZmRef<Msg> msg, ZiIOContext &io, L l) {
       Msg *msg_ = msg.ptr();
-      io.init(ZiIOFn{[](Msg *msg, ZiIOContext &io) {
+      io.init(ZiIOFn{ZuMv(msg), [](Msg *msg, ZiIOContext &io) {
 	msg->length = (io.offset += io.length);
 	msg->addr = io.addr;
 	IOLambda<Cxn, L>::invoke(io);
-      }, ZuMv(msg)},
-      msg_->ptr(), msg_->size(), 0);
+      }}, msg_->ptr(), msg_->size(), 0);
     }
   }
 

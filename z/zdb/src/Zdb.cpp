@@ -1654,7 +1654,7 @@ void ZdbAny::checkpoint()
 {
   m_env->mx()->run(
       m_env->config().writeTID,
-      ZmFn<>{[](ZdbAny *db) { db->checkpoint_(); }, this});
+      ZmFn<>{this, [](ZdbAny *db) { db->checkpoint_(); }});
 }
 
 void ZdbAny::checkpoint_()

@@ -73,32 +73,33 @@ void ZvCmdMsg::send(ZiConnection *cxn)
 {
   m_hdr.cmdLen = m_cmd.length();
   m_hdr.dataLen = m_data.length();
-  cxn->send(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
-    io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
-      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-      if (msg->m_cmd)
-	msg->sendCmd(io);
-      else if (msg->m_data)
-	msg->sendData(io);
-    }, io.fn.mvObject<ZvCmdMsg>()}, &msg->m_hdr, sizeof(Hdr), 0); 
-  }, ZmMkRef(this)});
+  cxn->send(ZiIOFn{ZmMkRef(this), [](ZvCmdMsg *msg, ZiIOContext &io) {
+    io.init(ZiIOFn{io.fn.mvObject<ZvCmdMsg>(),
+      [](ZvCmdMsg *msg, ZiIOContext &io) {
+	if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	if (msg->m_cmd)
+	  msg->sendCmd(io);
+	else if (msg->m_data)
+	  msg->sendData(io);
+      }}, &msg->m_hdr, sizeof(Hdr), 0); 
+  }});
 }
 
 void ZvCmdMsg::sendCmd(ZiIOContext &io)
 {
-  io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
-    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-    if (msg->m_data) msg->sendData(io);
-  }, io.fn.mvObject<ZvCmdMsg>()},
-  m_cmd.data(), m_cmd.length(), 0);
+  io.init(ZiIOFn{io.fn.mvObject<ZvCmdMsg>(),
+    [](ZvCmdMsg *msg, ZiIOContext &io) {
+      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+      if (msg->m_data) msg->sendData(io);
+    }}, m_cmd.data(), m_cmd.length(), 0);
 }
 
 void ZvCmdMsg::sendData(ZiIOContext &io)
 {
-  io.init(ZiIOFn{[](ZvCmdMsg *msg, ZiIOContext &io) {
-    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-  }, io.fn.mvObject<ZvCmdMsg>()},
-  m_data.data(), m_data.length(), 0);
+  io.init(ZiIOFn{io.fn.mvObject<ZvCmdMsg>(),
+    [](ZvCmdMsg *msg, ZiIOContext &io) {
+      if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+    }}, m_data.data(), m_data.length(), 0);
 }
 
 // client
@@ -147,12 +148,13 @@ void ZvCmdClient::final()
 void ZvCmdClient::connect(ZiIP ip, int port)
 {
   m_mx->connect(
-      ZiConnectFn{[](ZvCmdClient *client, const ZiCxnInfo &info) -> uintptr_t {
+      ZiConnectFn{this,
+	[](ZvCmdClient *client, const ZiCxnInfo &info) -> uintptr_t {
 	  return (uintptr_t)(new ZvCmdClientCxn(client, info));
-	}, this},
-      ZiFailFn{[](ZvCmdClient *client, bool transient) {
+	}},
+      ZiFailFn{this, [](ZvCmdClient *client, bool transient) {
 	  client->failed(transient);
-	}, this},
+	}},
       ZiIP(), 0, ip, port);
 }
 
@@ -164,19 +166,20 @@ void ZvCmdClient::connect()
     return;
   }
   m_mx->connect(
-      ZiConnectFn{[](ZvCmdClient *client, const ZiCxnInfo &info) -> uintptr_t {
+      ZiConnectFn{this,
+	[](ZvCmdClient *client, const ZiCxnInfo &info) -> uintptr_t {
 	  return (uintptr_t)(new ZvCmdClientCxn(client, info));
-	}, this},
-      ZiFailFn{[](ZvCmdClient *client, bool transient) {
+	}},
+      ZiFailFn{this, [](ZvCmdClient *client, bool transient) {
 	  client->failed(transient);
-	}, this},
+	}},
       m_localIP, m_localPort, m_remoteIP, m_remotePort);
 }
 
 void ZvCmdClient::failed(bool transient)
 {
   if (transient && m_reconnFreq > 0)
-    m_mx->add(ZmFn<>{[](ZvCmdClient *client) { client->connect(); }, this},
+    m_mx->add(ZmFn<>{this, [](ZvCmdClient *client) { client->connect(); }},
 	ZmTimeNow(m_reconnFreq), &m_reconnTimer);
   else
     error(ZeEVENT(Error, ([](const ZeEvent &, ZmStream &s) {
@@ -306,15 +309,16 @@ void ZvCmdServer::stop()
 void ZvCmdServer::listen()
 {
   m_mx->listen(
-      ZiListenFn{[](ZvCmdServer *server, const ZiListenInfo &) {
+      ZiListenFn{this, [](ZvCmdServer *server, const ZiListenInfo &) {
 	  server->listening();
-	}, this},
-      ZiFailFn{[](ZvCmdServer *server, bool transient) {
+	}},
+      ZiFailFn{this, [](ZvCmdServer *server, bool transient) {
 	  server->failed(transient);
-	}, this},
-      ZiConnectFn{[](ZvCmdServer *server, const ZiCxnInfo &info) -> uintptr_t {
+	}},
+      ZiConnectFn{this,
+	[](ZvCmdServer *server, const ZiCxnInfo &info) -> uintptr_t {
 	  return (uintptr_t)(new ZvCmdServerCxn(server, info));
-	}, this},
+	}},
       m_ip, m_port, m_nAccepts);
 }
 
@@ -327,7 +331,7 @@ void ZvCmdServer::listening()
 void ZvCmdServer::failed(bool transient)
 {
   if (transient && m_rebindFreq > 0)
-    m_mx->add(ZmFn<>{[](ZvCmdServer *server) { server->listen(); }, this},
+    m_mx->add(ZmFn<>{this, [](ZvCmdServer *server) { server->listen(); }},
 	ZmTimeNow(m_rebindFreq), &m_rebindTimer);
   else {
     m_listening = false;

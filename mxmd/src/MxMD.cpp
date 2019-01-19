@@ -1214,7 +1214,7 @@ void MxMDLib::sync()
   thread_local ZmSemaphore sem;
   unsigned n = nShards();
   for (unsigned i = 0; i < n; i++)
-    shardInvoke(i, ZmFn<>{[](ZmSemaphore *sem) { sem->post(); }, &sem});
+    shardInvoke(i, &sem, [](ZmSemaphore *sem) { sem->post(); });
   for (unsigned i = 0; i < n; i++) sem.wait();
 }
 

@@ -29,7 +29,7 @@ void MxEngine::start_()
 
   auto i = m_links.readIterator();
   while (ZmRef<MxAnyLink> link = i.iterateKey())
-    rxRun(ZmFn<>([](MxAnyLink *link) { link->up_(false); }, link));
+    rxRun(ZmFn<>{link, [](MxAnyLink *link) { link->up_(false); }});
 }
 
 void MxEngine::stop_()
@@ -38,7 +38,7 @@ void MxEngine::stop_()
 
   auto i = m_links.readIterator();
   while (ZmRef<MxAnyLink> link = i.iterateKey())
-    rxRun(ZmFn<>([](MxAnyLink *link) { link->down_(false); }, link));
+    rxRun(ZmFn<>{link, [](MxAnyLink *link) { link->down_(false); }});
 
   appDelEngine();
 }
@@ -348,8 +348,7 @@ void MxAnyLink::up_(bool enable)
 
   if (next != prev) engine()->linkState(this, prev, next);
   if (connect)
-    engine()->rxInvoke(
-	ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this});
+    engine()->rxInvoke(this, [](MxAnyLink *link) { link->connect(); });
 }
 
 void MxAnyLink::down_(bool disable)
@@ -391,8 +390,7 @@ void MxAnyLink::down_(bool disable)
 
   if (next != prev) engine()->linkState(this, prev, next);
   if (disconnect)
-    engine()->rxInvoke(
-	ZmFn<>{[](MxAnyLink *link) { link->disconnect(); }, this});
+    engine()->rxInvoke(this, [](MxAnyLink *link) { link->disconnect(); });
 }
 
 void MxAnyLink::connected()
@@ -430,7 +428,7 @@ void MxAnyLink::connected()
   if (next != prev) engine()->linkState(this, prev, next);
   if (disconnect) 
     engine()->rxRun(
-	ZmFn<>{[](MxAnyLink *link) { link->disconnect(); }, this});
+	ZmFn<>{this, [](MxAnyLink *link) { link->disconnect(); }});
 }
 
 void MxAnyLink::disconnected()
@@ -476,7 +474,7 @@ void MxAnyLink::disconnected()
   if (next != prev) engine()->linkState(this, prev, next);
   if (connect)
     engine()->rxRun(
-	ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this});
+	ZmFn<>{this, [](MxAnyLink *link) { link->connect(); }});
 }
 
 void MxAnyLink::reconnect(bool immediate)
@@ -518,15 +516,15 @@ void MxAnyLink::reconnect(bool immediate)
   if (reconnect) {
     if (immediate)
       engine()->rxRun(
-	  ZmFn<>{[](MxAnyLink *link) { link->reconnect_(); }, this});
+	  ZmFn<>{this, [](MxAnyLink *link) { link->reconnect_(); }});
     else
       engine()->rxRun(
-	  ZmFn<>{[](MxAnyLink *link) { link->reconnect_(); }, this},
+	  ZmFn<>{this, [](MxAnyLink *link) { link->reconnect_(); }},
 	  reconnTime, &m_reconnTimer);
   }
   if (disconnect) 
     engine()->rxRun(
-	ZmFn<>{[](MxAnyLink *link) { link->disconnect(); }, this});
+	ZmFn<>{this, [](MxAnyLink *link) { link->disconnect(); }});
 }
 
 void MxAnyLink::reconnect_()
@@ -553,7 +551,7 @@ void MxAnyLink::reconnect_()
   if (next != prev) engine()->linkState(this, prev, next);
   if (connect)
     engine()->rxRun(
-	ZmFn<>{[](MxAnyLink *link) { link->connect(); }, this});
+	ZmFn<>{this, [](MxAnyLink *link) { link->connect(); }});
 }
 
 void MxAnyLink::telemetry(Telemetry &data) const

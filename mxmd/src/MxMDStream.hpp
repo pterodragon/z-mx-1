@@ -585,34 +585,34 @@ namespace MxMDStream {
     template <typename Cxn>
     inline void send(Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr) {
       msg->addr = addr;
-      cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	  if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	}, io.fn.mvObject<MxQMsg>()},
-	msg->payload->ptr(), msg->length, 0, msg->addr);
-      }, ZuMv(msg)});
+      cxn->send(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
+	io.init(ZiIOFn{io.fn.mvObject<MxQMsg>(),
+	  [](MxQMsg *msg, ZiIOContext &io) {
+	    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	  }}, msg->payload->ptr(), msg->length, 0, msg->addr);
+      }});
     }
     template <typename Cxn, typename L>
     inline typename IOLambda<Cxn, L>::T send(
 	Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr, L l) {
       msg->addr = addr;
-      cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	  if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	  IOLambda<Cxn, L>::invoke(io);
-	}, io.fn.mvObject<MxQMsg>()},
-	msg->payload->ptr(), msg->length, 0, msg->addr);
-      }, ZuMv(msg)});
+      cxn->send(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
+	io.init(ZiIOFn{io.fn.mvObject<MxQMsg>(),
+	  [](MxQMsg *msg, ZiIOContext &io) {
+	    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	    IOLambda<Cxn, L>::invoke(io);
+	  }}, msg->payload->ptr(), msg->length, 0, msg->addr);
+      }});
     }
     template <typename Cxn, typename L>
     inline typename IOLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       MxQMsg *msg_ = msg.ptr();
-      io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
+      io.init(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
 	msg->length = (io.offset += io.length);
 	msg->addr = io.addr;
 	IOLambda<Cxn, L>::invoke(io);
-      }, ZuMv(msg)},
+      }},
       msg_->payload->ptr(), msg_->payload->size(), 0);
     }
   }
@@ -620,30 +620,30 @@ namespace MxMDStream {
   namespace TCP {
     template <typename Cxn>
     inline void send(Cxn *cxn, ZmRef<MxQMsg> msg) {
-      cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	  if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	}, io.fn.mvObject<MxQMsg>()},
-	msg->payload->ptr(), msg->length, 0);
-      }, ZuMv(msg)});
+      cxn->send(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
+	io.init(ZiIOFn{io.fn.mvObject<MxQMsg>(),
+	  [](MxQMsg *msg, ZiIOContext &io) {
+	    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	  }}, msg->payload->ptr(), msg->length, 0);
+      }});
     }
     template <typename Cxn, typename L>
     inline typename IOLambda<Cxn, L>::T send(
 	Cxn *cxn, ZmRef<MxQMsg> msg, L l) {
-      cxn->send(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) {
-	  if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	  IOLambda<Cxn, L>::invoke(io);
-	}, io.fn.mvObject<MxQMsg>()},
-	msg->payload->ptr(), msg->length, 0);
-      }, ZuMv(msg)});
+      cxn->send(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
+	io.init(ZiIOFn{io.fn.mvObject<MxQMsg>(),
+	  [](MxQMsg *msg, ZiIOContext &io) {
+	    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	    IOLambda<Cxn, L>::invoke(io);
+	  }}, msg->payload->ptr(), msg->length, 0);
+      }});
     }
 
     template <typename Cxn, typename L>
     inline typename IOLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       MxQMsg *msg_ = msg.ptr();
-      io.init(ZiIOFn{[](MxQMsg *msg, ZiIOContext &io) -> uintptr_t {
+      io.init(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) -> uintptr_t {
 	unsigned len = io.offset += io.length;
 	io.length = 0;
 	if (ZuUnlikely(len < sizeof(Hdr))) return 0;
@@ -662,8 +662,7 @@ namespace MxMDStream {
 	  return io.offset;
 	}
 	return 0;
-      }, ZuMv(msg)},
-      msg_->payload->ptr(), msg_->payload->size(), 0);
+      }}, msg_->payload->ptr(), msg_->payload->size(), 0);
     }
   }
 }

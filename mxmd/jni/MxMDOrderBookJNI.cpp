@@ -225,7 +225,7 @@ void MxMDOrderBookJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
   MxMDOrderBook *ob = ptr_(env, obj);
   if (ZuUnlikely(!ob)) return;
   ob->subscribe(MxMDInstrHandlerJNI::j2c(env, handler_));
-  ob->appData((uintptr_t)(void *)(env->NewGlobalRef(handler_)));
+  ob->appData(env->NewGlobalRef(handler_));
 
 }
 
@@ -235,8 +235,8 @@ void MxMDOrderBookJNI::unsubscribe(JNIEnv *env, jobject obj)
   MxMDOrderBook *ob = ptr_(env, obj);
   if (ZuUnlikely(!ob)) return;
   ob->unsubscribe();
-  env->DeleteGlobalRef((jobject)(void *)(ob->appData()));
-  ob->appData(0);
+  env->DeleteGlobalRef(ob->appData<jobject>());
+  ob->appData(nullptr);
 }
 
 jobject MxMDOrderBookJNI::handler(JNIEnv *env, jobject obj)
@@ -244,7 +244,7 @@ jobject MxMDOrderBookJNI::handler(JNIEnv *env, jobject obj)
   // () -> MxMDInstrHandler
   MxMDOrderBook *ob = ptr_(env, obj);
   if (ZuUnlikely(!ob)) return 0;
-  return (jobject)(void *)(ob->appData());
+  return ob->appData<jobject>();
 }
 
 jobject MxMDOrderBookJNI::ctor(JNIEnv *env, ZmRef<MxMDOrderBook> ob)

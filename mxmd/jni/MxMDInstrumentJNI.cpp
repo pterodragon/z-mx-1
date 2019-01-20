@@ -156,7 +156,7 @@ void MxMDInstrumentJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
   MxMDInstrument *instr = ptr_(env, obj);
   if (ZuUnlikely(!instr)) return;
   instr->subscribe(MxMDInstrHandlerJNI::j2c(env, handler_));
-  instr->appData((uintptr_t)(void *)(env->NewGlobalRef(handler_)));
+  instr->appData(env->NewGlobalRef(handler_));
 }
 
 void MxMDInstrumentJNI::unsubscribe(JNIEnv *env, jobject obj)
@@ -165,8 +165,8 @@ void MxMDInstrumentJNI::unsubscribe(JNIEnv *env, jobject obj)
   MxMDInstrument *instr = ptr_(env, obj);
   if (ZuUnlikely(!instr)) return;
   instr->unsubscribe();
-  env->DeleteGlobalRef((jobject)(void *)(instr->appData()));
-  instr->appData(0);
+  env->DeleteGlobalRef(instr->appData<jobject>());
+  instr->appData(nullptr);
 }
 
 jobject MxMDInstrumentJNI::handler(JNIEnv *env, jobject obj)
@@ -174,7 +174,7 @@ jobject MxMDInstrumentJNI::handler(JNIEnv *env, jobject obj)
   // () -> MxMDInstrHandler
   MxMDInstrument *instr = ptr_(env, obj);
   if (ZuUnlikely(!instr)) return 0;
-  return (jobject)(void *)(instr->appData());
+  return instr->appData<jobject>();
 }
 
 jobject MxMDInstrumentJNI::orderBook(JNIEnv *env, jobject obj, jstring venue)

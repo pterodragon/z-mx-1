@@ -590,9 +590,9 @@ public:
   MxQueue *txQueuePtr() { return &(this->txQueue()); }
 
   void send(ZmRef<MxQMsg> msg) {
-    msg->appData = (uintptr_t)tx();
+    msg->appData(tx());
     this->engine()->txInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
-      ((Tx *)(msg->appData))->send(ZuMv(msg));
+      msg->appData<Tx *>()->send(ZuMv(msg));
     });
   }
   void abort(MxSeqNo seqNo)
@@ -741,9 +741,9 @@ public:
     { this->engine()->rxInvoke(rx(), ZuFwd<L>(l)); }
 
   void send(ZmRef<MxQMsg> msg) {
-    msg->appData = (uintptr_t)tx();
+    msg->appData(tx());
     this->engine()->txInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
-      ((Tx *)(msg->appData))->send(ZuMv(msg));
+      msg->appData<Tx *>()->send(ZuMv(msg));
     });
   }
   void abort(MxSeqNo seqNo)

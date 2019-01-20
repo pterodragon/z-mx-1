@@ -220,7 +220,7 @@ void MxMDLibJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   md->subscribe(MxMDLibHandlerJNI::j2c(env, handler_));
-  md->appData((uintptr_t)(void *)(env->NewGlobalRef(handler_)));
+  md->appData(env->NewGlobalRef(handler_));
 }
 
 void MxMDLibJNI::unsubscribe(JNIEnv *env, jobject obj)
@@ -229,8 +229,8 @@ void MxMDLibJNI::unsubscribe(JNIEnv *env, jobject obj)
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   md->unsubscribe();
-  env->DeleteGlobalRef((jobject)(void *)(md->appData()));
-  md->appData(0);
+  env->DeleteGlobalRef(md->appData<jobject>());
+  md->appData(nullptr);
 }
 
 jobject MxMDLibJNI::handler(JNIEnv *env, jobject obj)
@@ -238,7 +238,7 @@ jobject MxMDLibJNI::handler(JNIEnv *env, jobject obj)
   // () -> MxMDLibHandler
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
-  return (jobject)(void *)(md->appData());
+  return md->appData<jobject>();
 }
 
 jobject MxMDLibJNI::instrument(JNIEnv *env, jobject obj, jobject key_)

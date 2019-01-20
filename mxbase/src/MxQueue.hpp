@@ -70,7 +70,7 @@ struct MxQMsgData {
   MxFlags		flags;		// see MxQFlags
   ZmTime		deadline;
   ZiSockAddr		addr;
-  uintptr_t		appData = 0;
+  uintptr_t		appData_ = 0;
 
   ZuInline void *ptr() { return payload->ptr(); }
   ZuInline const void *ptr() const { return payload->ptr(); }
@@ -88,6 +88,11 @@ struct MxQMsgData {
   }
 
   ZuInline void unload() { id = MxMsgID{}; }
+
+  template <typename T = uintptr_t>
+  ZuInline T appData() const { return (T)appData_; }
+  template <typename T>
+  ZuInline void appData(T v) { appData_ = (uintptr_t)v; }
 };
 
 class MxQFn {

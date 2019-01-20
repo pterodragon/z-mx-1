@@ -726,9 +726,9 @@ void MxMDPubLink::sendMsg(const Hdr *hdr)
   unsigned msgLen = sizeof(Hdr) + hdr->len;
   memcpy((void *)msg->ptr(), (void *)hdr, msgLen);
   ZmRef<MxQMsg> qmsg = new MxQMsg(msg, msgLen);
-  qmsg->appData = (uintptr_t)tx();
+  qmsg->appData(tx());
   engine()->txInvoke(ZuMv(qmsg), [](ZmRef<MxQMsg> msg) {
-    ((Tx *)(msg->appData))->send(ZuMv(msg));
+    msg->appData<Tx *>()->send(ZuMv(msg));
   });
 }
 

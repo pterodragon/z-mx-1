@@ -554,9 +554,9 @@ void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
       }
     }
   }
-  msg->appData = (uintptr_t)rx();
+  msg->appData(rx());
   engine()->rxInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
-    Rx *rx = (Rx *)(msg->appData);
+    Rx *rx = msg->appData<Rx *>();
     auto &link = rx->app();
     link.active();
     rx->received(ZuMv(msg));

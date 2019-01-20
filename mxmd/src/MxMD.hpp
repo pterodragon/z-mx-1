@@ -416,8 +416,10 @@ public:
   ZuInline const MxIDString &id() const { return m_id; }
   ZuInline const MxMDOrderData &data() const { return m_data; }
 
-  ZuInline uintptr_t &appData() { return m_appData; }
-  ZuInline const uintptr_t &appData() const { return m_appData; }
+  template <typename T = uintptr_t>
+  ZuInline T appData() const { return (T)m_appData; }
+  template <typename T>
+  ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
 
 private:
   inline void update_(MxUInt rank, MxValue price, MxValue qty, MxFlags flags) {
@@ -1046,8 +1048,10 @@ public:
 
   ZuInline const ZmRef<MxMDInstrHandler> &handler() const { return m_handler; }
 
-  ZuInline uintptr_t appData() const { return m_appData; }
-  ZuInline void appData(uintptr_t v) { m_appData = v; }
+  template <typename T = uintptr_t>
+  ZuInline T appData() const { return (T)m_appData; }
+  template <typename T>
+  ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
 
   template <typename T = MxMDFeedOB>
   ZuInline typename ZuIs<MxMDFeedOB, T, ZmRef<T> &>::T feedOB() {
@@ -1335,7 +1339,7 @@ private:
     return l;
   }
 public:
-  template <typename L>
+  template <typename L> // (MxUniKey)
   inline void keys(L l_) const {
     auto l = keys_(ZuMv(l_));
     if (m_underlying && *m_refData.mat) {
@@ -1356,8 +1360,10 @@ public:
     }
   }
 
-  ZuInline uintptr_t appData() const { return m_appData; }
-  ZuInline void appData(uintptr_t v) { m_appData = v; }
+  template <typename T = uintptr_t>
+  ZuInline T appData() const { return (T)m_appData; }
+  template <typename T>
+  ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
 
 private:
   void addOrderBook_(MxMDOrderBook *);
@@ -2112,7 +2118,8 @@ public:
       return MxMDOBHandle{ob};
     return MxMDOBHandle{};
   }
-  ZuInline MxMDOBHandle orderBook(const MxInstrKey &key, unsigned shardID) const {
+  ZuInline MxMDOBHandle orderBook(
+      const MxInstrKey &key, unsigned shardID) const {
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks->findKey(key))
       return MxMDOBHandle{ob};
     return MxMDOBHandle{m_shards[shardID % m_shards.length()]};
@@ -2145,8 +2152,10 @@ public:
   }
   uintptr_t allVenues(ZmFn<MxMDVenue *>) const;
 
-  ZuInline uintptr_t appData() const { return m_appData; }
-  ZuInline void appData(uintptr_t v) { m_appData = v; }
+  template <typename T = uintptr_t>
+  ZuInline T appData() const { return (T)m_appData; }
+  template <typename T>
+  ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
 
 private:
   ZmScheduler		*m_scheduler = 0;

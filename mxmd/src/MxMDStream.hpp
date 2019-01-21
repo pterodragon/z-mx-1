@@ -150,7 +150,7 @@ namespace MxMDStream {
   };
 
   struct HdrData {
-    uint64_t  	seqNo = 0;
+    uint64_t	seqNo = 0;
     uint32_t	nsec = 0;
     uint16_t	len = 0;	// exclusive of HdrData
     uint8_t	type = 0;
@@ -457,12 +457,16 @@ namespace MxMDStream {
 
 namespace MxMDStream {
 
+  struct MsgData {
+    ZiSockAddr	addr;
+  };
+
   struct Msg_HeapID {
     ZuInline static const char *id() { return "MxMDStream.Msg"; }
   };
 
   template <typename Heap>
-  struct Msg_ : public Heap, public ZuPOD<Buf> {
+  struct Msg_ : public Heap, public ZuPOD<Buf>, public MsgData {
     ZuInline Msg_() { }
 
     ZuInline Hdr &hdr() { return this->template as<Hdr>(); }
@@ -584,24 +588,26 @@ namespace MxMDStream {
   namespace UDP {
     template <typename Cxn>
     inline void send(Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr) {
-      msg->addr = addr;
+      static_cast<Msg *>(msg->payload.ptr())->addr = addr;
       cxn->send(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
 	io.init(ZiIOFn{io.fn.mvObject<MxQMsg>(),
 	  [](MxQMsg *msg, ZiIOContext &io) {
 	    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	  }}, msg->payload->ptr(), msg->length, 0, msg->addr);
+	  }}, msg->payload->ptr(), msg->length, 0,
+	    static_cast<Msg *>(msg->payload.ptr())->addr);
       }});
     }
     template <typename Cxn, typename L>
     inline typename IOLambda<Cxn, L>::T send(
 	Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr, L l) {
-      msg->addr = addr;
+      static_cast<Msg *>(msg->payload.ptr())->addr = addr;
       cxn->send(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
 	io.init(ZiIOFn{io.fn.mvObject<MxQMsg>(),
 	  [](MxQMsg *msg, ZiIOContext &io) {
 	    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
 	    IOLambda<Cxn, L>::invoke(io);
-	  }}, msg->payload->ptr(), msg->length, 0, msg->addr);
+	  }}, msg->payload->ptr(), msg->length, 0,
+	    static_cast<Msg *>(msg->payload.ptr())->addr);
       }});
     }
     template <typename Cxn, typename L>
@@ -610,7 +616,7 @@ namespace MxMDStream {
       MxQMsg *msg_ = msg.ptr();
       io.init(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
 	msg->length = (io.offset += io.length);
-	msg->addr = io.addr;
+	static_cast<Msg *>(msg->payload.ptr())->addr = io.addr;
 	IOLambda<Cxn, L>::invoke(io);
       }},
       msg_->payload->ptr(), msg_->payload->size(), 0);

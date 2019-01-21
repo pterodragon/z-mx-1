@@ -518,7 +518,6 @@ void MxMDPubLink::UDP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 	  out << "MxMDPubLink::UDP::process() link " << id << ' ' << msg_;
 	})));
   } else {
-    msg->addr = io.addr;
     const Hdr &hdr = msg->as<Hdr>();
     if (ZuUnlikely(hdr.type != Type::ResendReq)) {
       // ignore to prevent (probably accidental) DOS

@@ -68,18 +68,16 @@ struct MxQMsgData {
   unsigned		length = 0;
   MxMsgID		id;
   MxFlags		flags;		// see MxQFlags
-  ZmTime		deadline;
-  ZiSockAddr		addr;
   uintptr_t		appData_ = 0;
 
   ZuInline void *ptr() { return payload->ptr(); }
   ZuInline const void *ptr() const { return payload->ptr(); }
 
-  template <typename T> ZuInline const T &as() const {
-    return *static_cast<const T *>(payload->ptr());
-  }
   template <typename T> ZuInline T &as() {
     return *static_cast<T *>(payload->ptr());
+  }
+  template <typename T> ZuInline const T &as() const {
+    return *static_cast<const T *>(payload->ptr());
   }
 
   ZuInline void load(MxID linkID, MxSeqNo seqNo) {
@@ -262,7 +260,7 @@ public:
   void send(MxQMsg *msg) {
     if (ZuUnlikely(msg->flags & (1<<MxQFlags::NoQueue))) {
       Guard guard(m_lock);
-      if (ZuUnlikely(!m_ready || m_ready > msg->deadline)) {
+      if (ZuUnlikely(!m_ready)) {
 	guard.unlock();
 	app().aborted_(msg);
 	return;

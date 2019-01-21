@@ -36,6 +36,7 @@
 #include <ZuCmp.hpp>
 #include <ZuHash.hpp>
 #include <ZuPrint.hpp>
+#include <ZuPOD.hpp>
 
 #include <ZmAssert.hpp>
 #include <ZmBackTrace.hpp>
@@ -260,23 +261,7 @@ struct ZdbTrailer {
 };
 #pragma pack(pop)
 
-struct ZdbAnyPOD__ {
-  void		*ptr;
-  unsigned	size;
-};
-
-class ZdbAnyPOD_ : public ZmPolymorph, protected ZdbAnyPOD__ {
-template <typename, typename> friend struct ZuConversionFriend;
-
-protected:
-  inline ZdbAnyPOD_(const ZdbAnyPOD__ &p) : ZdbAnyPOD__(p) { }
-
-public:
-  inline void *ptr() const { return ZdbAnyPOD__::ptr; }
-  inline unsigned size() const { return ZdbAnyPOD__::size; }
-};
-
-typedef ZmList<ZdbAnyPOD_,
+typedef ZmList<ZmPolymorph,
 	  ZmListObject<ZmPolymorph,
 	    ZmListNodeIsItem<true,
 	      ZmListHeapID<ZmNoHeap,
@@ -310,29 +295,37 @@ friend class ZdbAnyPOD_Send__;
 friend class ZdbEnv;
 
 protected:
-  inline ZdbAnyPOD(void *ptr, unsigned size, ZdbAny *db) :
-    Zdb_CacheNode(ZdbAnyPOD__{ptr, size}), m_db(db), m_writeCount(0) { }
+  ZuInline ZdbAnyPOD(ZdbAny *db) : m_db(db), m_writeCount(0) { }
 
 public:
-  inline ~ZdbAnyPOD() { }
+  ZuInline const void *ptr() const {
+    return static_cast<const ZuAnyPOD_<ZdbAnyPOD> *>(this)->ptr();
+  }
+  ZuInline void *ptr() {
+    return static_cast<ZuAnyPOD_<ZdbAnyPOD> *>(this)->ptr();
+  }
+  ZuInline unsigned size() const {
+    return static_cast<const ZuAnyPOD_<ZdbAnyPOD> *>(this)->size();
+  }
 
 private:
-  inline const ZdbTrailer *trailer() const {
-    return (const ZdbTrailer *)
-      ((const char *)ptr() + size() - sizeof(ZdbTrailer));
+  ZuInline const ZdbTrailer *trailer() const {
+    return const_cast<ZdbAnyPOD *>(this)->trailer();
   }
-  inline ZdbTrailer *trailer() {
-    return (ZdbTrailer *)((char *)ptr() + size() - sizeof(ZdbTrailer));
+  ZuInline ZdbTrailer *trailer() {
+    auto pod = static_cast<ZuAnyPOD_<ZdbAnyPOD> *>(this);
+    return (ZdbTrailer *)
+      ((char *)pod->ptr() + pod->size() - sizeof(ZdbTrailer));
   }
 
 public:
-  inline ZdbAny *db() const { return m_db; }
+  ZuInline ZdbAny *db() const { return m_db; }
 
-  inline ZdbRN rn() const { return trailer()->rn; }
-  inline ZdbRN prevRN() const { return trailer()->prevRN; }
-  inline uint32_t magic() const { return trailer()->magic; }
+  ZuInline ZdbRN rn() const { return trailer()->rn; }
+  ZuInline ZdbRN prevRN() const { return trailer()->prevRN; }
+  ZuInline uint32_t magic() const { return trailer()->magic; }
 
-  inline bool committed() const {
+  ZuInline bool committed() const {
     return trailer()->magic == ZdbCommitted;
   }
 
@@ -349,14 +342,16 @@ private:
     trailer->prevRN = prevRN;
   }
 
-  inline void commit() { trailer()->magic = ZdbCommitted; }
-  inline void del() { trailer()->magic = ZdbDeleted; }
+  ZuInline void commit() { trailer()->magic = ZdbCommitted; }
+  ZuInline void del() { trailer()->magic = ZdbDeleted; }
 
-  virtual ZmRef<ZdbAnyPOD_Compressed> compress() { return 0; }
+  virtual ZmRef<ZdbAnyPOD_Compressed> compress() { return nullptr; }
 
-  ZdbAny		*m_db;
-  unsigned		m_writeCount;	// guarded by ZdbAny::m_lock
+private:
+  ZdbAny	*m_db;
+  unsigned	m_writeCount;	// guarded by ZdbAny::m_lock
 };
+
 template <> struct ZuPrint<ZdbAnyPOD> : public ZuPrintDelegate {
   template <typename S>
   inline static void print(S &s, const ZdbAnyPOD &v) {
@@ -371,11 +366,11 @@ inline ZdbRN ZdbLRUNode_RNAccessor::value(const ZdbLRUNode &pod)
 
 class ZdbAnyPOD_Compressed : public ZuObject {
 public:
-  inline ZdbAnyPOD_Compressed(void *ptr, unsigned size) :
+  ZuInline ZdbAnyPOD_Compressed(void *ptr, unsigned size) :
     m_ptr(ptr), m_size(size) { }
 
-  inline void *ptr() const { return m_ptr; }
-  inline unsigned size() const { return m_size; }
+  ZuInline void *ptr() const { return m_ptr; }
+  ZuInline unsigned size() const { return m_size; }
 
   int compress(const char *src, unsigned size);
 
@@ -465,17 +460,23 @@ template <typename T> struct ZdbPOD_Compressed_HeapID {
   inline static const char *id() { return "ZdbPOD_Compressed"; }
 };
 
+template <typename T_>
+struct ZdbData : public T_, public ZdbTrailer { };
+
 template <typename T_, class Heap>
-class ZdbPOD_ : public Heap, public ZdbAnyPOD {
+class ZdbPOD_ : public Heap, public ZuPOD_<ZdbData<T_>, ZdbAnyPOD> {
 friend class Zdb<T_>;
 friend class ZdbAnyPOD_Send__;
 
+  typedef ZuPOD_<ZdbData<T_>, ZdbAnyPOD> Base;
+
 public:
   typedef T_ T;
+  typedef ZdbData<T> Data;
+
+  inline ZdbPOD_(ZdbAny *db) : Base(db) { }
 
 private:
-  struct Data : public T, public ZdbTrailer { };
-
   template <class Heap_>
   class Compressed_ : public ZdbAnyPOD_Compressed, public Heap_ {
   public:
@@ -489,25 +490,6 @@ private:
 	  sizeof(Compressed_<ZuNull>)> > Compressed;
 
   ZmRef<ZdbAnyPOD_Compressed> compress() { return new Compressed(); }
-
-public:
-  inline ZdbPOD_(ZdbAny *db) :
-    ZdbAnyPOD(&m_data, sizeof(Data), db) { }
-
-  inline const T *ptr() const {
-    const T *ZuMayAlias(ptr_) = (const T *)&m_data[0];
-    return ptr_;
-  }
-  inline T *ptr() {
-    T *ZuMayAlias(ptr_) = (T *)&m_data[0];
-    return ptr_;
-  }
-
-  inline const T &data() const { return *ptr(); }
-  inline T &data() { return *ptr(); }
-
-private:
-  char	m_data[sizeof(Data)];
 };
 template <typename T, class HeapID = ZdbPOD_HeapID>
 using ZdbPOD = ZdbPOD_<T, ZmHeap<HeapID, sizeof(ZdbPOD_<T, ZuNull>)> >;

@@ -530,7 +530,6 @@ void MxMDSubLink::UDP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
   } else {
     msg->id.linkID = m_link->id();
     msg->id.seqNo = hdr.seqNo;
-    msg->addr = io.addr;
     m_link->udpReceived(ZuMv(msg));
   }
   recv(io);
@@ -538,19 +537,20 @@ void MxMDSubLink::UDP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
 {
   using namespace MxMDStream;
-  if (ZuUnlikely(
-	msg->addr.ip() == m_channel->resendIP ||
-	msg->addr.ip() == m_channel->resendIP2)) {
-    Guard guard(m_resendLock);
-    unsigned gapLength = m_resendGap.length();
-    if (ZuUnlikely(gapLength)) {
-      uint64_t seqNo = msg->as<Hdr>().seqNo;
-      uint64_t gapSeqNo = m_resendGap.key();
-      if (seqNo >= gapSeqNo && seqNo < gapSeqNo + gapLength) {
-	m_resendMsg = msg;
-	guard.unlock();
-	m_resendSem.post();
-	return;
+  {
+    ZiIP ip = static_cast<Msg *>(msg->payload.ptr())->addr.ip();
+    if (ZuUnlikely(ip == m_channel->resendIP || ip == m_channel->resendIP2)) {
+      Guard guard(m_resendLock);
+      unsigned gapLength = m_resendGap.length();
+      if (ZuUnlikely(gapLength)) {
+	uint64_t seqNo = msg->as<Hdr>().seqNo;
+	uint64_t gapSeqNo = m_resendGap.key();
+	if (seqNo >= gapSeqNo && seqNo < gapSeqNo + gapLength) {
+	  m_resendMsg = msg;
+	  guard.unlock();
+	  m_resendSem.post();
+	  return;
+	}
       }
     }
   }

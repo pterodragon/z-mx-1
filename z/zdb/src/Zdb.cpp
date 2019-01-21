@@ -1138,7 +1138,7 @@ void ZdbAnyPOD_Send__::sent3(ZiIOContext &io)
 
 int ZdbAnyPOD_Compressed::compress(const char *src, unsigned size)
 {
-  return LZ4_compress((const char *)src, (char *)m_ptr, size);
+  return LZ4_compress((const char *)src, (char *)ptr(), size);
 }
 
 // broadcast heartbeat

@@ -34,25 +34,27 @@
 
 // generic run-time access to a reference-counted POD type
 
-template <typename Object>
-class ZuAnyPOD_ : public Object {
+template <typename Base>
+class ZuAnyPOD_ : public Base {
 public:
-  inline ZuAnyPOD_(unsigned size) : m_size(size) { }
+  template <typename ...Args>
+  ZuInline ZuAnyPOD_(unsigned size, Args &&... args) :
+    Base(ZuFwd<Args>(args)...), m_size(size) { }
   virtual ~ZuAnyPOD_() { }
 
-  inline const void *ptr() const { return &m_data; }
-  inline void *ptr() { return &m_data; }
+  ZuInline const void *ptr() const { return &m_data; }
+  ZuInline void *ptr() { return &m_data; }
 
-  template <typename T> inline const T &as() const {
+  template <typename T> ZuInline const T &as() const {
     const T *ZuMayAlias(ptr) = (const T *)&m_data;
     return *ptr;
   }
-  template <typename T> inline T &as() {
+  template <typename T> ZuInline T &as() {
     T *ZuMayAlias(ptr) = (T *)&m_data;
     return *ptr;
   }
 
-  inline unsigned size() const { return m_size; }
+  ZuInline unsigned size() const { return m_size; }
 
 private:
   unsigned	m_size;
@@ -63,35 +65,39 @@ private:
 
 typedef ZuAnyPOD_<ZuPolymorph> ZuAnyPOD;
 
-template <typename T_, class Object,
+template <typename T_, class Base,
   bool Small = sizeof(T_) <= sizeof(uintptr_t)>
-class ZuPOD_ : public ZuAnyPOD_<Object> {
+class ZuPOD_ : public ZuAnyPOD_<Base> {
 public:
   typedef T_ T;
 
-  ZuPOD_() : ZuAnyPOD_<Object>(sizeof(T)) { }
+  template <typename ...Args>
+  ZuPOD_(Args &&... args) :
+    ZuAnyPOD_<Base>(sizeof(T), ZuFwd<Args>(args)...) { }
 
-  inline const T *ptr() const { return &(this->template as<T>()); }
-  inline T *ptr() { return &(this->template as<T>()); }
+  ZuInline const T *ptr() const { return &(this->template as<T>()); }
+  ZuInline T *ptr() { return &(this->template as<T>()); }
 
-  inline const T &data() const { return this->template as<T>(); }
-  inline T &data() { return this->template as<T>(); }
+  ZuInline const T &data() const { return this->template as<T>(); }
+  ZuInline T &data() { return this->template as<T>(); }
 
 private:
   char		m_data[sizeof(T) - sizeof(uintptr_t)];
 };
-template <typename T_, class Object>
-class ZuPOD_<T_, Object, 1> : public ZuAnyPOD_<Object> {
+template <typename T_, class Base>
+class ZuPOD_<T_, Base, 1> : public ZuAnyPOD_<Base> {
 public:
   typedef T_ T;
 
-  ZuPOD_() : ZuAnyPOD_<Object>(sizeof(T)) { }
+  template <typename ...Args>
+  ZuPOD_(Args &&... args) :
+    ZuAnyPOD_<Base>(sizeof(T), ZuFwd<Args>(args)...) { }
 
-  inline const T *ptr() const { return &(this->template as<T>()); }
-  inline T *ptr() { return &(this->template as<T>()); }
+  ZuInline const T *ptr() const { return &(this->template as<T>()); }
+  ZuInline T *ptr() { return &(this->template as<T>()); }
 
-  inline const T &data() const { return this->template as<T>(); }
-  inline T &data() { return this->template as<T>(); }
+  ZuInline const T &data() const { return this->template as<T>(); }
+  ZuInline T &data() { return this->template as<T>(); }
 };
 
 template <typename T> using ZuPOD = ZuPOD_<T, ZuPolymorph>;

@@ -704,11 +704,6 @@ void MxMDPublisher::recv()
   }
 }
 
-MxEngineApp::ProcessFn MxMDPublisher::processFn()
-{
-  return nullptr;
-}
-
 void MxMDPubLink::sendMsg(const Hdr *hdr)
 {
   if (m_channel->shardID >= 0 && hdr->shard != 0xff &&
@@ -724,11 +719,7 @@ void MxMDPubLink::sendMsg(const Hdr *hdr)
   ZuRef<Msg> msg = new Msg();
   unsigned msgLen = sizeof(Hdr) + hdr->len;
   memcpy((void *)msg->ptr(), (void *)hdr, msgLen);
-  ZmRef<MxQMsg> qmsg = new MxQMsg(msg, msgLen);
-  qmsg->appData(tx());
-  engine()->txInvoke(ZuMv(qmsg), [](ZmRef<MxQMsg> msg) {
-    msg->appData<Tx *>()->send(ZuMv(msg));
-  });
+  send(new MxQMsg(msg, msgLen)); // MxLink::send()
 }
 
 void MxMDPubLink::loaded_(MxQMsg *msg)
@@ -744,7 +735,6 @@ bool MxMDPubLink::send_(MxQMsg *msg, bool more)
 {
   if (ZuUnlikely(!m_udpTx)) return false;
   MxMDStream::UDP::send(m_udpTx.ptr(), msg, m_udpAddr);
-  sent_(msg);
   return true;
 }
 
@@ -781,11 +771,6 @@ void MxMDPubLink::ack()
     if (seqNo < maxQueueSize) return;
     tx->ackd(seqNo - maxQueueSize);
   });
-}
-
-void MxMDPublisher::archive(MxAnyLink *link, MxQMsg *msg)
-{
-  link->archived(msg->id.seqNo);
 }
 
 // commands

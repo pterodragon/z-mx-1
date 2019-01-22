@@ -86,30 +86,6 @@ ZmRef<MxAnyLink> MxMDSubscriber::createLink(MxID id)
   return new MxMDSubLink(id);
 }
 
-MxEngineApp::ProcessFn MxMDSubscriber::processFn()
-{
-  return static_cast<MxEngineApp::ProcessFn>(
-      [](MxEngineApp *app, MxAnyLink *link, MxQMsg *msg) {
-	static_cast<MxMDSubscriber *>(app)->process_(
-	    static_cast<MxMDSubLink *>(link), msg);
-      });
-}
-
-void MxMDSubscriber::process_(MxMDSubLink *link, MxQMsg *msg)
-{
-  using namespace MxMDStream;
-  const Hdr &hdr = msg->as<Hdr>();
-  if (hdr.type == Type::HeartBeat) {
-    link->lastTime(hdr.as<HeartBeat>().stamp.zmTime());
-    return;
-  }
-#if 0
-  ZmTime latency = ZmTimeNow() - (link->lastTime() +
-      ZmTime(ZmTim::Nano, hdr.nsec);
-#endif
-  core()->apply(msg->as<Hdr>(), m_filter);
-}
-
 #define linkINFO(code) \
     engine()->appException(ZeEVENT(Info, \
       ([=, id = id()](const ZeEvent &, ZmStream &out) { out << code; })))
@@ -554,12 +530,9 @@ void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
       }
     }
   }
-  msg->appData(rx());
-  engine()->rxInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
-    Rx *rx = msg->appData<Rx *>();
+  received(ZuMv(msg), [](Rx *rx) {
     auto &link = rx->app();
     link.active();
-    rx->received(ZuMv(msg));
     if (ZuUnlikely(rx->rxQueue().count() > link.engine()->maxQueueSize())) {
       link.rxQueueTooBig(
 	  rx->rxQueue().count(),
@@ -599,6 +572,28 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
   ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(msg), msgLen);
   if (ZuLikely(m_udp))
     MxMDStream::UDP::send(m_udp.ptr(), ZuMv(qmsg), m_udpResendAddr);
+}
+
+// Rx
+
+void MxMDSubLink::process(MxQMsg *msg)
+{
+  using namespace MxMDStream;
+  const Hdr &hdr = msg->as<Hdr>();
+  if (hdr.type == Type::HeartBeat) {
+    lastTime(hdr.as<HeartBeat>().stamp.zmTime());
+    return;
+  }
+#if 0
+  ZmTime latency = ZmTimeNow() - (lastTime() + ZmTime(ZmTim::Nano, hdr.nsec));
+#endif
+  engine()->process(msg);
+}
+
+void MxMDSubscriber::process(MxQMsg *msg)
+{
+  using namespace MxMDStream;
+  core()->apply(msg->as<Hdr>(), m_filter);
 }
 
 // failover

@@ -111,10 +111,6 @@ public:
   ZuInline Mx *mx() const { return m_mx; }
   ZuInline MxID id() const { return m_id; }
 
-  virtual void send(ZmRef<MxQMsg>) = 0;
-  virtual void abort(MxSeqNo) = 0;
-  virtual void archived(MxSeqNo) = 0;
-
 private:
   MxID			m_id;
   MxEngine		*m_engine = 0;
@@ -245,16 +241,6 @@ struct MxEngineMgr {
 // Callbacks to the application from the engine implementation
 struct MxEngineApp {
   virtual ZmRef<MxAnyLink> createLink(MxID) = 0;
-
-  // Rx
-  typedef void (*ProcessFn)(MxEngineApp *, MxAnyLink *, MxQMsg *);
-  virtual ProcessFn processFn() = 0;	// stashed in engine for performance
-
-  // Tx (called from engine's tx thread)
-  virtual void sent(MxAnyLink *, MxQMsg *) = 0;	// tx sent (persistent)
-  virtual void aborted(MxAnyLink *, MxQMsg *) = 0;	// tx aborted
-  virtual void archive(MxAnyLink *, MxQMsg *) = 0;	// tx archive
-  virtual ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) = 0; // tx retrieve
 };
 
 // Note: When event/flow steering, referenced objects must remain
@@ -304,14 +290,12 @@ public:
   typedef MxMultiplex Mx;
   typedef MxEngineMgr Mgr;
   typedef MxEngineApp App;
-  typedef App::ProcessFn ProcessFn;
 
   inline MxEngine() : m_state(MxEngineState::Stopped) { }
 
   void init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf) {
     m_mgr = mgr,
     m_app = app;
-    m_processFn = app->processFn();
     m_id = cf->get("id", true);
     m_mx = mx;
     if (const auto &name = cf->get("rxThread"))
@@ -383,9 +367,6 @@ public:
   }
 
   ZuInline void appException(ZmRef<ZeEvent> e) { mgr()->exception(ZuMv(e)); }
-
-  ZuInline void appProcess(MxAnyLink *link, MxQMsg *msg)
-    { (*m_processFn)(app(), link, msg); }
 
   ZuInline void log(MxMsgID id, MxTraffic traffic) { mgr()->log(id, traffic); }
 
@@ -503,7 +484,6 @@ private:
   MxID				m_id;
   Mgr				*m_mgr = 0;
   App				*m_app = 0;
-  ProcessFn			m_processFn = 0;
   ZmRef<Mx>			m_mx;
   unsigned			m_rxThread = 0;
   unsigned			m_txThread = 0;
@@ -602,8 +582,8 @@ private:
   // prevent direct call from Impl - must be called via txRun/txInvoke
   using Tx_::start;		// Tx - start
   using Tx_::stop;		// Tx - stop
-  using Tx::send;		// Tx - send (from app)
-  using Tx::abort;		// Tx - abort (from app)
+  // using Tx::send;		// Tx - send (from app)
+  // using Tx::abort;		// Tx - abort (from app)
   using Tx::unload;		// Tx - unload all messages (for reload)
   using Tx::txReset;		// Tx - reset sequence numbers
   using Tx::join;		// Tx - join pool
@@ -671,10 +651,6 @@ public:
     this->txInit(txSeqNo);
   }
 
-  ZuInline void process(MxQMsg *msg) {
-    this->engine()->appProcess(this, msg);
-  }
-
   ZuInline void scheduleDequeue() {
     if (!m_dequeuing.xch(1)) rescheduleDequeue();
   }
@@ -708,18 +684,6 @@ public:
     }
   }
 
-  // Impl/MxQueueTx callbacks (send_() must call sent_()/aborted_())
-  ZuInline void sent_(MxQMsg *msg) // tx sent (persistent)
-    { this->engine()->app()->sent(this, msg); }
-  ZuInline void aborted_(MxQMsg *msg) // tx aborted
-    { this->engine()->app()->aborted(this, msg); }
-
-  // MxQueueTx/ZmPQTx callbacks
-  ZuInline void archive_(MxQMsg *msg) // tx archive - app calls archived()
-    { this->engine()->app()->archive(this, msg); }
-  ZuInline ZmRef<MxQMsg> retrieve_(MxSeqNo seqNo) // tx retrieve
-    { return this->engine()->app()->retrieve(this, seqNo); }
-
   MxQueue *rxQueuePtr() { return &(this->rxQueue()); }
   const MxQueue *rxQueuePtr() const { return &(this->rxQueue()); }
   MxQueue *txQueuePtr() { return &(this->txQueue()); }
@@ -740,6 +704,30 @@ public:
   template <typename L> ZuInline void rxInvoke(L &&l) const
     { this->engine()->rxInvoke(rx(), ZuFwd<L>(l)); }
 
+  // ensure passed lambdas are stateless and match required signature
+  template <typename L> struct RcvdLambda_ {
+    typedef void (*Fn)(Rx *);
+    enum { OK = ZuConversion<L, Fn>::Exists };
+  };
+  template <typename L, bool = RcvdLambda_<L>::OK>
+  struct RcvdLambda;
+  template <typename L> struct RcvdLambda<L, true> {
+    typedef void T;
+    ZuInline static void invoke(Rx *rx) {
+      (*(L *)(void *)0)(rx);
+    }
+  };
+
+  template <typename L>
+  typename RcvdLambda<L>::T received(ZmRef<MxQMsg> msg, L) {
+    msg->appData(rx());
+    this->engine()->rxInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
+      Rx *rx = msg->appData<Rx *>();
+      rx->received(ZuMv(msg));
+      RcvdLambda<L>::invoke(rx);
+    });
+  }
+
   void send(ZmRef<MxQMsg> msg) {
     msg->appData(tx());
     this->engine()->txInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
@@ -756,13 +744,13 @@ private:
   using Rx_::rxReset;		// Rx - reset sequence numbers
   using Rx_::startQueuing;	// Rx - start queuing
   using Rx_::stopQueuing;	// Rx - stop queuing (start processing)
-  using Rx_::received;		// Rx - received (from network)
+  // using Rx_::received;	// Rx - received (from network)
   using Tx_::start;		// Tx - start
   using Tx_::stop;		// Tx - stop
   using Tx_::ackd;		// Tx - ackd (due to received message)
-  using Tx_::archived;		// Tx - archived (following call to archive)
-  using Tx::send;		// Tx - send (from app)
-  using Tx::abort;		// Tx - abort (from app)
+  using Tx_::archived;		// Tx - archived (following call to archive_)
+  // using Tx::send;		// Tx - send (from app)
+  // using Tx::abort;		// Tx - abort (from app)
   using Tx::unload;		// Tx - unload all messages (for reload)
   using Tx::txReset;		// Tx - reset sequence numbers
   using Tx::join;		// Tx - join pool

@@ -457,16 +457,15 @@ namespace MxMDStream {
 
 namespace MxMDStream {
 
-  struct MsgData {
-    ZiSockAddr	addr;
-  };
-
   struct Msg_HeapID {
     ZuInline static const char *id() { return "MxMDStream.Msg"; }
   };
 
+  struct Msg__ {
+    ZiSockAddr	addr;
+  };
   template <typename Heap>
-  struct Msg_ : public Heap, public ZuPOD<Buf>, public MsgData {
+  struct Msg_ : public Heap, public Msg__, public ZuPOD<Buf> {
     ZuInline Msg_() { }
 
     ZuInline Hdr &hdr() { return this->template as<Hdr>(); }

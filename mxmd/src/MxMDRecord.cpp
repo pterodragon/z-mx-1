@@ -344,20 +344,12 @@ ZmRef<MxAnyLink> MxMDRecord::createLink(MxID id)
   return m_link;
 }
 
-MxEngineApp::ProcessFn MxMDRecord::processFn()
-{
-  return static_cast<MxEngineApp::ProcessFn>(
-      [](MxEngineApp *, MxAnyLink *link, MxQMsg *msg) {
-    static_cast<MxMDRecLink *>(link)->write(msg);
-  });
-}
-
 void MxMDRecLink::wake()
 {
   MxMDStream::wake(core()->broadcast(), id());
 }
 
-void MxMDRecLink::write(MxQMsg *qmsg)
+void MxMDRecLink::process(MxQMsg *qmsg)
 {
   Guard fileGuard(m_fileLock);
 

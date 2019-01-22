@@ -64,15 +64,6 @@ public:
 protected:
   ZmRef<MxAnyLink> createLink(MxID id);
 
-  // Rx (called from engine's rx thread) (unused)
-  MxEngineApp::ProcessFn processFn();
-
-  // Tx (called from engine's tx thread) (unused)
-  void sent(MxAnyLink *, MxQMsg *) { }
-  void aborted(MxAnyLink *, MxQMsg *) { }
-  void archive(MxAnyLink *, MxQMsg *) { }
-  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
-
   // commands
   void replayCmd(ZvCmdServerCxn *,
     ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg);
@@ -111,6 +102,7 @@ public:
   ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
 
   // MxLink Rx CRTP (unused)
+  void process(MxQMsg *) { }
   ZmTime reReqInterval() { return ZmTime{1}; }
   void request(const MxQueue::Gap &prev, const MxQueue::Gap &now) { }
   void reRequest(const MxQueue::Gap &now) { }
@@ -124,6 +116,9 @@ public:
 
   bool sendGap_(const MxQueue::Gap &, bool) { return true; }
   bool resendGap_(const MxQueue::Gap &, bool) { return true; }
+
+  void archive_(MxQMsg *msg) { archived(msg->id.seqNo + 1); }
+  ZmRef<MxQMsg> retrieve_(MxSeqNo) { return nullptr; }
 
 private:
   typedef ZmPLock Lock;

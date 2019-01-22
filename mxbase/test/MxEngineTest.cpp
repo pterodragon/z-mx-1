@@ -51,6 +51,7 @@ public:
   ZmRef<MxAnyLink> createLink(MxID id);
 
   // Rx
+#if 0
   ZuInline void process_(MxAnyLink *, MxQMsg *) { }
   ProcessFn processFn() {
     return [](MxEngineApp *self, MxAnyLink *link, MxQMsg *msg) {
@@ -64,6 +65,7 @@ public:
   void aborted(MxAnyLink *, MxQMsg *) { }
   void archive(MxAnyLink *, MxQMsg *) { }
   ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
+#endif
 };
 
 enum { Connected, Disconnected, Reconnect };
@@ -146,6 +148,8 @@ public:
   }
 
   // MxLink Rx CRTP
+  void process(MxQMsg *msg) { }
+
   ZmTime reReqInterval() { return engine()->reReqInterval(); }
   void request(const MxQueue::Gap &prev, const MxQueue::Gap &now) { }
   void reRequest(const MxQueue::Gap &now) { }
@@ -153,16 +157,14 @@ public:
   // MxLink Tx CRTP
   void loaded_(MxQMsg *) { }
   void unloaded_(MxQMsg *) { }
-  bool send_(MxQMsg *msg, bool more) {
-    // if a msg deadline has passed, could call aborted_() and return false
-    this->sent_(msg);
-    return true;
-  }
-  bool resend_(MxQMsg *msg, bool more) { return true; }
-  void abort_(MxQMsg *msg) { }
+  bool send_(MxQMsg *, bool more) { return true; }
+  bool resend_(MxQMsg *, bool more) { return true; }
 
   bool sendGap_(const MxQueue::Gap &gap, bool more) { return true; }
   bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }
+
+  void archive_(MxQMsg *msg) { archived(msg->id.seqNo + 1); }
+  ZmRef<MxQMsg> retrieve_(MxSeqNo) { return nullptr; }
 };
 
 ZmRef<MxAnyLink> App::createLink(MxID id) { return new Link(id); }

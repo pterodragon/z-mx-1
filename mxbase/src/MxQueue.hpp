@@ -67,7 +67,7 @@ struct MxQMsgData {
   ZuRef<ZuAnyPOD>	payload;
   unsigned		length = 0;
   MxMsgID		id;
-  MxFlags		flags;		// see MxQFlags
+  MxFlags		flags;		// MxQFlags
   uintptr_t		appData_ = 0;
 
   ZuInline void *ptr() { return payload->ptr(); }
@@ -170,7 +170,6 @@ template <class App, class Lock> class MxQueueTxPool;
 // CRTP - application must conform to the following interface:
 #if 0
 struct App : public MxQueueTx<App> {
-  void sent_(MxQMsg *);			// tx sent (persistent)
   void archive_(MxQMsg *);		// tx archive (persistent)
   ZmRef<MxQMsg> retrieve_(MxSeqNo);	// tx retrieve
 
@@ -186,18 +185,16 @@ struct App : public MxQueueTx<App> {
   void rescheduleArchive();
   void idleArchive();
 
-  void aborted_(MxQMsg *msg);
-
   void loaded_(MxQMsg *msg);		// may adjust readiness
   void unloaded_(MxQMsg *msg);		// ''
 
   // send_() must perform one of
-  // 1] usual case (successful send): call sent_(), return true
-  // 2] stale message: call aborted_(), return true
+  // 1] usual case (successful send): persist seqNo, return true
+  // 2] stale message: abort message, return true
   // 3] transient failure (throttling, I/O, etc.): return false
   bool send_(MxQMsg *msg, bool more);
   // resend_() must perform one of
-  // 1] usual case (successful resend): return true (do not call sent_())
+  // 1] usual case (successful resend): return true
   // 2] transient failure (throttling, I/O, etc.): return false
   bool resend_(MxQMsg *msg, bool more);
 
@@ -334,6 +331,7 @@ private:
     ZmTime		  m_ready;
 };
 
+// FIXME
 template <class App, class Lock_ = ZmNoLock>
 class MxQueueTxPool : public MxQueueTx<App, Lock_> {
   struct Queues_HeapID {
@@ -369,7 +367,7 @@ public:
 
   ZuInline void sent_(MxQMsg *msg) { Tx::ackd(msg->id.seqNo + 1); }
   ZuInline void archive_(MxQMsg *msg) { Tx::archived(msg->id.seqNo + 1); }
-  ZuInline ZmRef<MxQMsg> retrieve_(MxSeqNo) { return 0; } // unused
+  ZuInline ZmRef<MxQMsg> retrieve_(MxSeqNo) { return nullptr; } // unused
 
   inline ZmRef<Tx> next_() {
     Guard guard(this->lock());

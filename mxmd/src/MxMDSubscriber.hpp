@@ -89,23 +89,13 @@ public:
 
   ZmRef<MxAnyLink> createLink(MxID id);
 
-  // Rx (called from engine's rx thread)
-  MxEngineApp::ProcessFn processFn();
-
-  // Tx (called from engine's tx thread) (unused)
-  void sent(MxAnyLink *, MxQMsg *) { }
-  void aborted(MxAnyLink *, MxQMsg *) { }
-  void archive(MxAnyLink *, MxQMsg *) { }
-  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return nullptr; }
+  void process(MxQMsg *);
 
   // commands
   void statusCmd(ZvCmdServerCxn *,
     ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg);
   void resendCmd(ZvCmdServerCxn *,
     ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg);
-
-private:
-  void process_(MxMDSubLink *link, MxQMsg *qmsg);
 
 private:
   ZiIP			m_interface;
@@ -225,6 +215,7 @@ public:
   ZmTime reconnInterval(unsigned) { return engine()->reconnInterval(); }
 
   // MxLink Rx CRTP
+  void process(MxQMsg *);
   ZmTime reReqInterval() { return engine()->reReqInterval(); }
   void request(const MxQueue::Gap &prev, const MxQueue::Gap &now);
   void reRequest(const MxQueue::Gap &now);
@@ -238,6 +229,9 @@ public:
 
   bool sendGap_(const MxQueue::Gap &gap, bool more) { return true; }
   bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }
+
+  void archive_(MxQMsg *msg) { archived(msg->id.seqNo + 1); }
+  ZmRef<MxQMsg> retrieve_(MxSeqNo) { return nullptr; }
 
   // command support
   void status(ZtString &out);

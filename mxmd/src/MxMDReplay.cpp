@@ -81,11 +81,6 @@ ZmRef<MxAnyLink> MxMDReplay::createLink(MxID id)
   return m_link;
 }
 
-MxEngineApp::ProcessFn MxMDReplay::processFn()
-{
-  return MxEngineApp::ProcessFn();
-}
-
 bool MxMDReplayLink::ok()
 {
   int state;

@@ -89,15 +89,6 @@ public:
 
   ZmRef<MxAnyLink> createLink(MxID id);
 
-  // Rx (unused)
-  MxEngineApp::ProcessFn processFn();
-
-  // Tx (called from engine's tx thread)
-  void sent(MxAnyLink *, MxQMsg *) { }
-  void aborted(MxAnyLink *, MxQMsg *) { }
-  void archive(MxAnyLink *, MxQMsg *);
-  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return nullptr; }
-
   // broadcast
   bool attach();
   void detach();
@@ -262,6 +253,7 @@ public:
   ZmTime reconnInterval(unsigned) { return ZmTime{1}; }
 
   // MxLink Rx CRTP (unused)
+  void process(MxQMsg *) { }
   ZmTime reReqInterval() { return ZmTime{1}; }
   void request(const MxQueue::Gap &prev, const MxQueue::Gap &now) { }
   void reRequest(const MxQueue::Gap &now) { }
@@ -275,6 +267,9 @@ public:
 
   bool sendGap_(const MxQueue::Gap &gap, bool more);
   bool resendGap_(const MxQueue::Gap &gap, bool more);
+
+  void archive_(MxQMsg *msg) { archived(msg->id.seqNo + 1); } // unused
+  ZmRef<MxQMsg> retrieve_(MxSeqNo) { return nullptr; } // unused
 
   // broadcast
   void sendMsg(const Hdr *hdr);

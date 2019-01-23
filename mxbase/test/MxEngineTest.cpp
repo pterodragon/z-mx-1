@@ -157,8 +157,10 @@ public:
   // MxLink Tx CRTP
   void loaded_(MxQMsg *) { }
   void unloaded_(MxQMsg *) { }
+
   bool send_(MxQMsg *, bool more) { return true; }
   bool resend_(MxQMsg *, bool more) { return true; }
+  void aborted_(MxQMsg *msg) { }
 
   bool sendGap_(const MxQueue::Gap &gap, bool more) { return true; }
   bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }

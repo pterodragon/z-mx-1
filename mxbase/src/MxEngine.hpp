@@ -616,6 +616,7 @@ struct LinkImpl : public MxLink<LinkImpl> {
 
   bool send_(MxQMsg *msg, bool more); // true on success
   bool resend_(MxQMsg *msg, bool more); // true on success
+  void aborted_(MxQMsg *msg);
 
   bool sendGap_(const MxQueue::Gap &gap, bool more); // true on success
   bool resendGap_(const MxQueue::Gap &gap, bool more); // true on success

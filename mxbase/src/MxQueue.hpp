@@ -353,6 +353,7 @@ class MxQueueTxPool : public MxQueueTx<App, Lock_> {
 public:
   ZuInline void loaded_(MxQMsg *) { }   // may be overridden by App
   ZuInline void unloaded_(MxQMsg *) { } // ''
+
   bool send_(MxQMsg *msg, bool more) {
     if (ZmRef<Tx> next = next_()) {
       next->send(msg);
@@ -362,6 +363,8 @@ public:
     return false;
   }
   ZuInline bool resend_(MxQMsg *, bool) { return true; } // unused
+  ZuInline void aborted_(MxQMsg *) { } // unused
+
   ZuInline bool sendGap_(const Gap &, bool) { return true; } // unused
   ZuInline bool resendGap_(const Gap &, bool) { return true; } // unused
 

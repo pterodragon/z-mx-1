@@ -264,6 +264,7 @@ public:
 
   bool send_(MxQMsg *msg, bool more);
   bool resend_(MxQMsg *msg, bool more);
+  void aborted_(MxQMsg *msg) { } // unused
 
   bool sendGap_(const MxQueue::Gap &gap, bool more);
   bool resendGap_(const MxQueue::Gap &gap, bool more);

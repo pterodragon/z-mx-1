@@ -327,7 +327,7 @@ private:
       sendModified(order, out);
       return;
     }
-    Txn<Ordered> out(in.template data<Ordered>());
+    Txn<Ordered> out(in.template data<Ordered>()); // FIXME - needs to be a db push in app
     Ordered &ordered = out.template as<Ordered>();
     ordered.update(newOrder);
     sendOrdered(order, out);

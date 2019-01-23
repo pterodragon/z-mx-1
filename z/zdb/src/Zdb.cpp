@@ -1739,12 +1739,7 @@ void ZdbAny::cache(ZdbAnyPOD *pod)
     ZmRef<ZdbLRUNode> lru_ = m_lru.shiftNode();
     if (ZuLikely(lru_)) {
       ZdbAnyPOD *lru = static_cast<ZdbAnyPOD *>(lru_.ptr());
-      if (ZuLikely(!lru->m_writeCount))
-	m_cache->del(lru->rn());
-      else {
-	m_lru.unshift(ZuMv(lru_));
-	m_cacheSize = m_cache->count() + 1;
-      }
+      m_cache->del(lru->rn());
     }
   }
   cache_(pod);
@@ -1768,10 +1763,6 @@ void ZdbAny::abort(ZdbAnyPOD *pod) // aborts a push()
 {
   ZmAssert(!pod->committed());
   pod->del();
-  {
-    Guard guard(m_lock);
-    ++pod->m_writeCount;
-  }
   m_env->write(pod, ZdbRange(), ZdbOp::Delete);
 }
 
@@ -1782,25 +1773,36 @@ void ZdbAny::put(ZdbAnyPOD *pod, bool copy) // commits a push
   {
     Guard guard(m_lock);
     cache(pod);
-    ++pod->m_writeCount;
   }
   ZdbRange range(0, m_dataSize);
   if (copy) this->copy(pod, range, ZdbOp::New);
   m_env->write(pod, range, ZdbOp::New);
 }
 
-void ZdbAny::update(
-    ZdbAnyPOD *pod, ZdbRN rn, ZdbRange range, bool copy, bool cache)
+ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *orig, ZdbRN rn)
 {
-  if (!range) range.init(0, m_dataSize);
+  ZmRef<ZdbAnyPOD> pod;
+  alloc(pod);
+  if (ZuUnlikely(!pod)) return nullptr;
   {
     Guard guard(m_lock);
-    cacheDel_(pod);
+    cacheDel_(orig);
     if (ZuLikely(m_allocRN <= rn)) m_allocRN = rn + 1;
-    pod->update(rn, pod->rn());
-    if (cache) cache_(pod);
-    ++pod->m_writeCount;
+    memcpy(pod->ptr(), orig->ptr(), m_dataSize);
   }
+  pod->update(rn, orig->rn());
+  return pod;
+}
+
+void ZdbAny::putUpdate(ZdbAnyPOD *pod, ZdbRange range, bool copy)
+{
+  ZmAssert(!pod->committed());
+  pod->commit();
+  {
+    Guard guard(m_lock);
+    cache(pod);
+  }
+  if (!range) range.init(0, m_dataSize);
   if (copy) this->copy(pod, range, ZdbOp::Update);
   m_env->write(pod, range, ZdbOp::Update);
 }
@@ -1814,7 +1816,6 @@ void ZdbAny::del(ZdbAnyPOD *pod, ZdbRN rn, bool copy)
     cacheDel_(pod);
     if (ZuLikely(m_allocRN <= rn)) m_allocRN = rn + 1;
     pod->update(rn, pod->rn());
-    ++pod->m_writeCount;
   }
   if (copy) this->copy(pod, ZdbRange(), ZdbOp::Delete);
   m_env->write(pod, ZdbRange(), ZdbOp::Delete);
@@ -1832,7 +1833,6 @@ void ZdbAny::purge(ZdbRN minRN, bool copy)
     if (rn >= m_allocRN) return;
     if (ZmRef<ZdbAnyPOD> pod = get__(rn)) {
       cacheDel_(pod);
-      ++pod->m_writeCount;
       m_minRN = rn;
       guard.unlock();
       if (copy) this->copy(pod, ZdbRange(), ZdbOp::Delete);
@@ -1891,10 +1891,6 @@ void ZdbAny::write(ZdbAnyPOD *pod, ZdbRange range, int op)
   if (!m_config->repMode)
     m_env->repSend(pod, Zdb_Msg::Rep, range, op, m_config->compress);
   write_(pod->rn(), pod->prevRN(), pod->ptr(), op);
-  {
-    Guard guard(m_lock);
-    --pod->m_writeCount;
-  }
 }
 
 Zdb_FileRec ZdbAny::rn2file(ZdbRN rn, bool write)

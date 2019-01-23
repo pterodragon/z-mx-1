@@ -76,7 +76,8 @@ void push() {
   ZmRef<ZdbPOD<Order> > pod;
   if (append) {
     ZdbRN rn = append == 1 ? 0 : ZmRand::randInt(append - 1);
-    pod = orders->get(rn);
+    pod = orders->get_(rn);
+    pod = orders->update(pod, orders->allocRN());
   } else {
     pod = orders->push(orders->allocRN());
   }
@@ -89,7 +90,7 @@ void push() {
   if (!append)
     orders->put(pod);
   else {
-    orders->update(pod, orders->allocRN());
+    orders->putUpdate(pod);
     if (orders->allocRN() >= maxRN) return;
     if (pod = orders->get(pod->rn()))
       orders->update(pod, orders->allocRN());

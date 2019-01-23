@@ -295,7 +295,7 @@ friend class ZdbAnyPOD_Send__;
 friend class ZdbEnv;
 
 protected:
-  ZuInline ZdbAnyPOD(ZdbAny *db) : m_db(db), m_writeCount(0) { }
+  ZuInline ZdbAnyPOD(ZdbAny *db) : m_db(db) { }
 
 public:
   ZuInline const void *ptr() const {
@@ -336,10 +336,11 @@ private:
     trailer->magic = magic;
   }
 
-  inline void update(ZdbRN rn, ZdbRN prevRN) {
+  inline void update(ZdbRN rn, ZdbRN prevRN, uint32_t magic = ZdbAllocated) {
     ZdbTrailer *trailer = this->trailer();
     trailer->rn = rn;
     trailer->prevRN = prevRN;
+    trailer->magic = magic;
   }
 
   ZuInline void commit() { trailer()->magic = ZdbCommitted; }
@@ -349,7 +350,6 @@ private:
 
 private:
   ZdbAny	*m_db;
-  unsigned	m_writeCount;	// guarded by ZdbAny::m_lock
 };
 
 template <> struct ZuPrint<ZdbAnyPOD> : public ZuPrintDelegate {
@@ -597,10 +597,11 @@ public:
   ZmRef<ZdbAnyPOD> get(ZdbRN rn);	// use for read-only queries
   ZmRef<ZdbAnyPOD> get_(ZdbRN rn);	// use for RMW - does not update cache
 
-  // update record following get() / get_()
-  void update(
-      ZdbAnyPOD *, ZdbRN rn, ZdbRange range = ZdbRange(),
-      bool copy = true, bool cache = true);
+  // update record
+  ZmRef<ZdbAnyPOD> update(ZdbAnyPOD *orig, ZdbRN rn);
+  // commit partial record following update()
+  void putUpdate(
+      ZdbAnyPOD *, ZdbRange range = ZdbRange(), bool copy = true);
 
   // delete record following get() / get_()
   void del(ZdbAnyPOD *, ZdbRN rn, bool copy = true);

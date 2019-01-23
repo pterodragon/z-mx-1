@@ -193,9 +193,8 @@ private:
     // (cancel/replace) of a partially filled order
     app()->sendNewOrder(order, order->orderTxn);
   }
-  template <typename Out> void sendOrdered(Order *order, Out &out) {
-    executionOut(out);
-    app()->sendOrdered(order, out);
+  template <typename Out> inline void sendOrdered(Order *order, L l) {
+    app()->sendOrdered(order, ZuMv(l));
   }
   template <typename Out> void sendReject(Order *order, Out &out) {
     executionOut(out);
@@ -327,10 +326,13 @@ private:
       sendModified(order, out);
       return;
     }
-    Txn<Ordered> out(in.template data<Ordered>()); // FIXME - needs to be a db push in app
-    Ordered &ordered = out.template as<Ordered>();
-    ordered.update(newOrder);
-    sendOrdered(order, out);
+    sendOrdered(order, [&in, &newOrder](void *ptr) {
+      auto out = new (ptr) Txn<Ordered>(in.template data<Ordered>());
+      Ordered &ordered = out->template as<Ordered>();
+      ordered.update(newOrder);
+      executionOut(*out);
+      return out;
+    });
   }
 public:
   template <typename In> typename ZuIsBase<Txn_, In>::T ordered(

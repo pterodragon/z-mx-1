@@ -655,38 +655,36 @@ template <typename AppTypes> struct MxTAppTypes {
 
 // types that can be extended by the app
 #define MxTImport(Scope) \
-  using Event = typename Scope::Event \
+  using Event = typename Scope::Event; \
  \
-  using OrderLeg = typename Scope::OrderLeg \
-  using ModifyLeg = typename Scope::ModifyLeg \
-  using CancelLeg = typename Scope::CancelLeg \
+  using OrderLeg = typename Scope::OrderLeg; \
+  using ModifyLeg = typename Scope::ModifyLeg; \
+  using CancelLeg = typename Scope::CancelLeg; \
  \
-  using AnyReject = typename Scope::AnyReject \
+  using AnyReject = typename Scope::AnyReject; \
  \
-  using NewOrder = typename Scope::NewOrder \
-  using OrderHeld = typename Scope::OrderHeld \
-  using OrderFiltered = typename Scope::OrderFiltered \
-  using Ordered = typename Scope::Ordered \
-  using Reject = typename Scope::Reject \
+  using NewOrder = typename Scope::NewOrder; \
+  using Ordered = typename Scope::Ordered; \
+  using Reject = typename Scope::Reject; \
  \
-  using Modify = typename Scope::Modify \
-  using Modified = typename Scope::Modified \
-  using ModReject = typename Scope::ModReject \
+  using Modify = typename Scope::Modify; \
+  using Modified = typename Scope::Modified; \
+  using ModReject = typename Scope::ModReject; \
  \
-  using Cancel = typename Scope::Cancel \
-  using Canceled = typename Scope::Canceled \
-  using CxlReject = typename Scope::CxlReject \
+  using Cancel = typename Scope::Cancel; \
+  using Canceled = typename Scope::Canceled; \
+  using CxlReject = typename Scope::CxlReject; \
  \
-  using Hold = typename Scope::Hold \
-  using Release = typename Scope::Release \
-  using Deny = typename Scope::Deny \
+  using Hold = typename Scope::Hold; \
+  using Release = typename Scope::Release; \
+  using Deny = typename Scope::Deny; \
  \
-  using Fill = typename Scope::Fill \
+  using Fill = typename Scope::Fill; \
  \
-  using Closed = typename Scope::Closed \
+  using Closed = typename Scope::Closed; \
  \
-  using OrderSent = typename Scope::OrderSent \
-  using ModifySent = typename Scope::ModifySent \
+  using OrderSent = typename Scope::OrderSent; \
+  using ModifySent = typename Scope::ModifySent; \
   using CancelSent = typename Scope::CancelSent
 
 template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
@@ -1032,11 +1030,9 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 
   // AnyTxn can contain any trading message
   typedef typename ZuLargest<
-    NewOrder,
-    Update_Largest,
-    OrderFiltered,
-    ModFiltered,
-    CxlFiltered>::T Txn_Largest;
+    NewOrder, Modify, Cancel,
+    OrderFiltered, ModFiltered, CxlFiltered,
+    Exec_Largest>::T Txn_Largest;
   typedef Txn<Txn_Largest> AnyTxn;
 
   // Order - open order state including pending modify/cancel

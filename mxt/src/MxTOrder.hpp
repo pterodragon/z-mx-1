@@ -664,8 +664,6 @@ template <typename AppTypes> struct MxTAppTypes {
   using AnyReject = typename Scope::AnyReject; \
  \
   using NewOrder = typename Scope::NewOrder; \
-  using OrderHeld = typename Scope::OrderHeld; \
-  using OrderFiltered = typename Scope::OrderFiltered; \
   using Ordered = typename Scope::Ordered; \
   using Reject = typename Scope::Reject; \
  \
@@ -1032,11 +1030,9 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 
   // AnyTxn can contain any trading message
   typedef typename ZuLargest<
-    NewOrder,
-    Update_Largest,
-    OrderFiltered,
-    ModFiltered,
-    CxlFiltered>::T Txn_Largest;
+    NewOrder, Modify, Cancel,
+    OrderFiltered, ModFiltered, CxlFiltered,
+    Exec_Largest>::T Txn_Largest;
   typedef Txn<Txn_Largest> AnyTxn;
 
   // Order - open order state including pending modify/cancel

@@ -1054,40 +1054,48 @@ void ZdbEnv::recSend()
 
 // send replication message to next-in-line
 void ZdbEnv::repSend(
-    ZdbAnyPOD *pod, int type, ZdbRange range, int op, bool compress)
+    ZmRef<ZdbAnyPOD> pod, int type, ZdbRange range, int op, bool compress)
 {
   if (ZmRef<Zdb_Cxn> cxn = m_nextCxn)
-    cxn->repSend(pod, type, range, op, compress);
+    cxn->repSend(ZuMv(pod), type, range, op, compress);
+}
+void ZdbEnv::repSend(ZmRef<ZdbAnyPOD> pod)
+{
+  if (ZmRef<Zdb_Cxn> cxn = m_nextCxn)
+    cxn->send(ZiIOFn::Member<&ZdbAnyPOD::send>::fn(ZuMv(pod)));
 }
 
 // send replication message (directed)
 void Zdb_Cxn::repSend(
-    ZdbAnyPOD *pod, int type, ZdbRange range, int op, bool compress)
+    ZmRef<ZdbAnyPOD> pod, int type, ZdbRange range, int op, bool compress)
 {
-  ZmRef<ZdbAnyPOD_Send> send =
-    new ZdbAnyPOD_Send(pod, type, range, op, compress);
-  this->send(ZiIOFn::Member<&ZdbAnyPOD_Send__::send>::fn(ZuMv(send)));
+  pod->replicate(type, range, op, compress);
+  this->send(ZiIOFn::Member<&ZdbAnyPOD::send>::fn(ZuMv(pod)));
+}
+void Zdb_Cxn::repSend(ZmRef<ZdbAnyPOD> pod)
+{
+  this->send(ZiIOFn::Member<&ZdbAnyPOD::send>::fn(ZuMv(pod)));
 }
 
-// prepare replication data for sending
-void ZdbAnyPOD_Send__::init(int type, ZdbRange range, int op, bool compress)
+// prepare replication data for sending & writing to disk
+void ZdbAnyPOD::replicate(int type, ZdbRange range, int op, bool compress)
 {
-  ZdbDEBUG(m_pod->db()->env(), ZtString() << "ZdbAnyPOD_Send__::init(" <<
+  ZdbDEBUG(m_db->env(), ZtString() << "ZdbAnyPOD::replicate(" <<
       type << ", " << range << ", " << ZdbOp::name(op) << ", " <<
       (int)compress << ')');
   m_hdr.type = type;
   Zdb_Msg_Rep &rep = m_hdr.u.rep;
-  rep.db = m_pod->db()->id();
-  rep.rn = m_pod->rn();
-  rep.prevRN = m_pod->prevRN();
+  rep.db = m_db->id();
+  rep.rn = rn();
+  rep.prevRN = prevRN();
   rep.range = range;
   rep.op = op;
 
   if (compress && range) {
-    m_compressed = m_pod->compress();
+    m_compressed = this->compress();
     if (ZuUnlikely(!m_compressed)) goto uncompressed;
     int n = m_compressed->compress(
-	(const char *)m_pod->ptr() + range.off(), range.len());
+	(const char *)this->ptr() + range.off(), range.len());
     if (ZuUnlikely(n < 0)) goto uncompressed;
     rep.clen = n;
     return;
@@ -1099,38 +1107,36 @@ uncompressed:
 }
 
 // send replication message
-void ZdbAnyPOD_Send__::send(ZiIOContext &io)
+void ZdbAnyPOD::send(ZiIOContext &io)
 {
-  io.init(ZiIOFn::Member<&ZdbAnyPOD_Send__::sent>::fn(
-	io.fn.mvObject<ZdbAnyPOD_Send__>()),
-      &m_hdr, sizeof(Zdb_Msg_Hdr), 0);
+  io.init(ZiIOFn::Member<&ZdbAnyPOD::sent>::fn(
+	io.fn.mvObject<ZdbAnyPOD>()), &m_hdr, sizeof(Zdb_Msg_Hdr), 0);
 }
-void ZdbAnyPOD_Send__::sent(ZiIOContext &io)
+void ZdbAnyPOD::sent(ZiIOContext &io)
 {
   if ((io.offset += io.length) < io.size) return;
   Zdb_Msg_Rep &rep = m_hdr.u.rep;
   ZdbRange range(rep.range);
   if (m_compressed)
-    io.init(ZiIOFn::Member<&ZdbAnyPOD_Send__::sent2>::fn(
-	  io.fn.mvObject<ZdbAnyPOD_Send__>()),
-	m_compressed->ptr(), rep.clen, 0);
+    io.init(ZiIOFn::Member<&ZdbAnyPOD::sent2>::fn(
+	  io.fn.mvObject<ZdbAnyPOD>()), m_compressed->ptr(), rep.clen, 0);
   else if (range)
-    io.init(ZiIOFn::Member<&ZdbAnyPOD_Send__::sent2>::fn(
-	  io.fn.mvObject<ZdbAnyPOD_Send__>()),
-	(void *)((const char *)m_pod->ptr() + range.off()), range.len(), 0);
+    io.init(ZiIOFn::Member<&ZdbAnyPOD::sent2>::fn(
+	  io.fn.mvObject<ZdbAnyPOD>()),
+	(void *)((const char *)this->ptr() + range.off()), range.len(), 0);
   else
     sent3(io);
 }
-void ZdbAnyPOD_Send__::sent2(ZiIOContext &io)
+void ZdbAnyPOD::sent2(ZiIOContext &io)
 {
   if ((io.offset += io.length) < io.size) return;
   sent3(io);
 }
-void ZdbAnyPOD_Send__::sent3(ZiIOContext &io)
+void ZdbAnyPOD::sent3(ZiIOContext &io)
 {
   if (ZuUnlikely(m_hdr.type == Zdb_Msg::Rec)) {
     ZiMultiplex *mx = io.cxn->mx();
-    ZdbEnv *env = m_pod->db()->env();
+    ZdbEnv *env = m_db->env();
     mx->run(mx->txThread(), ZmFn<>::Member<&ZdbEnv::recSend>::fn(env));
   }
   io.complete();
@@ -1348,7 +1354,7 @@ void ZdbEnv::repDataRcvd(ZdbHost *host, Zdb_Cxn *cxn,
   ZmRef<ZdbAnyPOD> pod =
     db->replicated(rep.rn, rep.prevRN, ptr, range, rep.op);
   if (pod)
-    repSend(pod, Zdb_Msg::Rep, range, rep.op, db->config().compress);
+    repSend(ZuMv(pod), Zdb_Msg::Rep, range, rep.op, db->config().compress);
 }
 
 // process replicated record
@@ -1356,9 +1362,9 @@ ZmRef<ZdbAnyPOD> ZdbAny::replicated(
     ZdbRN rn, ZdbRN prevRN, void *ptr, ZdbRange range, int op)
 {
   ZmRef<ZdbAnyPOD> pod = replicated_(rn, prevRN, op);
-  if (!pod) return 0;
+  if (!pod) return nullptr;
   replicate(pod, ptr, range, op);
-  m_env->write(pod, range, op);
+  m_env->write(pod, Zdb_Msg::Rep, range, op, m_config->compress);
   return pod;
 }
 
@@ -1585,8 +1591,8 @@ void ZdbAny::recover(Zdb_File *file)
       case ZdbCommitted:
 	if (rn < m_minRN) m_minRN = rn;
 	if (m_handler.addFn) {
-	  cache(pod);
 	  this->recover(pod);
+	  cache(ZuMv(pod));
 	}
 	break;
       case ZdbAllocated:
@@ -1763,7 +1769,7 @@ void ZdbAny::abort(ZdbAnyPOD *pod) // aborts a push()
 {
   ZmAssert(!pod->committed());
   pod->del();
-  m_env->write(pod, ZdbRange(), ZdbOp::Delete);
+  m_env->write(pod, Zdb_Msg::Rep, ZdbRange(), ZdbOp::Delete, false);
 }
 
 void ZdbAny::put(ZdbAnyPOD *pod, bool copy) // commits a push
@@ -1776,7 +1782,7 @@ void ZdbAny::put(ZdbAnyPOD *pod, bool copy) // commits a push
   }
   ZdbRange range(0, m_dataSize);
   if (copy) this->copy(pod, range, ZdbOp::New);
-  m_env->write(pod, range, ZdbOp::New);
+  m_env->write(pod, Zdb_Msg::Rep, range, ZdbOp::New, m_config->compress);
 }
 
 ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *orig, ZdbRN rn)
@@ -1804,7 +1810,7 @@ void ZdbAny::putUpdate(ZdbAnyPOD *pod, ZdbRange range, bool copy)
   }
   if (!range) range.init(0, m_dataSize);
   if (copy) this->copy(pod, range, ZdbOp::Update);
-  m_env->write(pod, range, ZdbOp::Update);
+  m_env->write(pod, Zdb_Msg::Rep, range, ZdbOp::Update, m_config->compress);
 }
 
 void ZdbAny::del(ZdbAnyPOD *pod, ZdbRN rn, bool copy)
@@ -1818,7 +1824,7 @@ void ZdbAny::del(ZdbAnyPOD *pod, ZdbRN rn, bool copy)
     pod->update(rn, pod->rn());
   }
   if (copy) this->copy(pod, ZdbRange(), ZdbOp::Delete);
-  m_env->write(pod, ZdbRange(), ZdbOp::Delete);
+  m_env->write(pod, Zdb_Msg::Rep, ZdbRange(), ZdbOp::Delete, false);
 }
 
 void ZdbAny::purge(ZdbRN minRN, bool copy)
@@ -1836,7 +1842,7 @@ void ZdbAny::purge(ZdbRN minRN, bool copy)
       m_minRN = rn;
       guard.unlock();
       if (copy) this->copy(pod, ZdbRange(), ZdbOp::Delete);
-      m_env->write(pod, ZdbRange(), ZdbOp::Delete);
+      m_env->write(ZuMv(pod), Zdb_Msg::Rep, ZdbRange(), ZdbOp::Delete, false);
     }
     ++rn;
   }
@@ -1869,28 +1875,31 @@ void ZdbAny::telemetry(Telemetry &data) const
   }
 }
 
-void ZdbEnv::write(ZdbAnyPOD *pod, ZdbRange range, int op)
+void ZdbEnv::write(ZmRef<ZdbAnyPOD> pod,
+    int type, ZdbRange range, int op, bool compress)
 {
+  pod->replicate(type, range, op, compress);
   {
     const ZdbConfig &config = pod->db()->config();
-    if (config.repMode)
-      repSend(pod, Zdb_Msg::Rep, range, op, config.compress);
+    if (config.repMode) repSend(pod);
   }
-  ZmRef<ZdbAnyPOD_Write> write = new ZdbAnyPOD_Write(pod, range, op);
   m_mx->run(m_config.writeTID,
-      ZmFn<>::Member<&ZdbAnyPOD_Write__::write>::fn(write));
+      ZmFn<>::mvFn(ZuMv(pod), [](ZmRef<ZdbAnyPOD> pod) {
+	ZdbAny *db = pod->db();
+	db->write(ZuMv(pod));
+      }));
 }
 
-void ZdbAnyPOD_Write__::write()
+void ZdbAny::write(ZmRef<ZdbAnyPOD> pod)
 {
-  m_pod->db()->write(m_pod, m_range, m_op);
+  if (!m_config->repMode) m_env->repSend(pod);
+  pod->write();
 }
 
-void ZdbAny::write(ZdbAnyPOD *pod, ZdbRange range, int op)
+void ZdbAnyPOD::write()
 {
-  if (!m_config->repMode)
-    m_env->repSend(pod, Zdb_Msg::Rep, range, op, m_config->compress);
-  write_(pod->rn(), pod->prevRN(), pod->ptr(), op);
+  Zdb_Msg_Rep &rep = m_hdr.u.rep;
+  m_db->write_(rn(), prevRN(), ptr(), rep.op);
 }
 
 Zdb_FileRec ZdbAny::rn2file(ZdbRN rn, bool write)

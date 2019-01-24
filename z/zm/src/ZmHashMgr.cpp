@@ -70,15 +70,15 @@ friend class ZmHashMgr;
     ZmGuard<ZmPLock> guard(m_lock);
     m_tables.add(tbl);
     // deref, otherwise m_tables.add() prevents dtor from ever being called
-    this->deref_();
+    tbl->deref_();
   }
 
   void del(ZmAnyHash *tbl) {
     ZmGuard<ZmPLock> guard(m_lock);
     // double ref prevents m_tables.del() from recursing into dtor
-    this->ref2_();
+    tbl->ref2_();
     m_tables.del(ZmAnyHash_PtrAccessor::value(*tbl));
-    ZmAssert(this->deref_()); // check refCount is returned to 0
+    ZmAssert(tbl->deref_()); // check refCount is returned to 0
   }
 
   typedef ZmHashMgr_Tables Tables;

@@ -346,10 +346,22 @@ private:
   ZuInline void commit() { trailer()->magic = ZdbCommitted; }
   ZuInline void del() { trailer()->magic = ZdbDeleted; }
 
-  virtual ZmRef<ZdbAnyPOD_Compressed> compress() { return nullptr; }
+private:
+  void replicate(int type, ZdbRange range, int op, bool compress);
+
+  void send(ZiIOContext &io);
+  void write();
+
+  virtual ZmRef<ZdbAnyPOD_Compressed> compress() = 0;
+
+  void sent(ZiIOContext &io);
+  void sent2(ZiIOContext &io);
+  void sent3(ZiIOContext &io);
 
 private:
-  ZdbAny	*m_db;
+  ZdbAny			*m_db;
+  ZmRef<ZdbAnyPOD_Compressed>	m_compressed;
+  Zdb_Msg_Hdr			m_hdr;
 };
 
 template <> struct ZuPrint<ZdbAnyPOD> : public ZuPrintDelegate {
@@ -378,68 +390,6 @@ private:
   void		*m_ptr;
   unsigned	m_size;
 };
-
-class ZdbAnyPOD_Send__ : public ZmPolymorph {
-public:
-  inline ZdbAnyPOD_Send__(ZdbAnyPOD *pod,
-      int type, ZdbRange range, int op, bool compress) : m_pod(pod) {
-    init(type, range, op, compress);
-  }
-
-  void send(ZiIOContext &io);
-
-private:
-  void init(int type, ZdbRange range, int op, bool compress);
-
-  void sent(ZiIOContext &io);
-  void sent2(ZiIOContext &io);
-  void sent3(ZiIOContext &io);
-
-  ZmRef<ZdbAnyPOD>		m_pod;
-  ZmRef<ZdbAnyPOD_Compressed>	m_compressed;
-  Zdb_Msg_Hdr			m_hdr;
-};
-struct ZdbAnyPOD_Send_HeapID {
-  inline static const char *id() { return "ZdbAnyPOD_Send"; }
-};
-template <class Heap>
-class ZdbAnyPOD_Send_ : public ZdbAnyPOD_Send__, public Heap {
-public:
-  template <typename ...Args>
-  inline ZdbAnyPOD_Send_(Args &&... args) :
-    ZdbAnyPOD_Send__(ZuFwd<Args>(args)...) { }
-};
-typedef ZdbAnyPOD_Send_<ZmHeap<ZdbAnyPOD_Send_HeapID,
-	sizeof(ZdbAnyPOD_Send_<ZuNull>)> > ZdbAnyPOD_Send;
-
-class ZdbAPI ZdbAnyPOD_Write__ : public ZmPolymorph {
-public:
-  inline ZdbAnyPOD_Write__(ZdbAnyPOD *pod, ZdbRange range, int op) :
-    m_pod(pod), m_range(range), m_op(op) { }
-
-  inline ZmRef<ZdbAnyPOD> pod() const { return m_pod; }
-  inline const ZdbRange &range() const { return m_range; }
-  inline int op() const { return m_op; }
-
-  void write();
-
-private:
-  ZmRef<ZdbAnyPOD>	m_pod;
-  ZdbRange		m_range;
-  int			m_op;	// ZdbOp
-};
-template <class Heap>
-class ZdbAnyPOD_Write_ : public ZdbAnyPOD_Write__, public Heap {
-public:
-  template <typename ...Args>
-  inline ZdbAnyPOD_Write_(Args &&... args) :
-    ZdbAnyPOD_Write__(ZuFwd<Args>(args)...) { }
-};
-struct ZdbAnyPOD_Write_HeapID {
-  inline static const char *id() { return "ZdbAnyPOD_Write"; }
-};
-typedef ZdbAnyPOD_Write_<ZmHeap<ZdbAnyPOD_Write_HeapID,
-	sizeof(ZdbAnyPOD_Write_<ZuNull>)> > ZdbAnyPOD_Write;
 
 // Note: ptr and range can be null if op is ZdbOp::Delete
 
@@ -534,7 +484,7 @@ struct ZdbHandler {
 
 class ZdbAPI ZdbAny : public ZmPolymorph {
 friend class ZdbEnv;
-friend class ZdbAnyPOD_Write__;
+friend class ZdbAnyPOD;
 
   struct IDAccessor;
 friend struct IDAccessor;
@@ -636,9 +586,7 @@ public:
 private:
   // application call handlers
   inline void alloc(ZmRef<ZdbAnyPOD> &pod) { m_handler.allocFn(this, pod); }
-  inline void recover(ZdbAnyPOD *pod) {
-    m_handler.addFn(pod, true);
-  }
+  inline void recover(ZdbAnyPOD *pod) { m_handler.addFn(pod, true); }
   inline void replicate(ZdbAnyPOD *pod, void *ptr, ZdbRange range, int op) {
 #ifdef ZdbRep_DEBUG
     ZmAssert((!range || (range.off() + range.len()) <= pod->size()));
@@ -686,7 +634,7 @@ private:
 
   ZmRef<ZdbAnyPOD> read_(const Zdb_FileRec &);
 
-  void write(ZdbAnyPOD *pod, ZdbRange range, int op);
+  void write(ZmRef<ZdbAnyPOD> pod);
   void write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op);
 
   void fileReadError_(Zdb_File *, ZiFile::Offset, int, ZeError e);
@@ -934,7 +882,9 @@ friend class ZdbAnyPOD_Send__;
   void repDataRead(ZiIOContext &);
   void repDataRcvd(ZiIOContext &);
 
-  void repSend(ZdbAnyPOD *pod, int type, ZdbRange range, int op, bool compress);
+  void repSend(ZmRef<ZdbAnyPOD> pod,
+      int type, ZdbRange range, int op, bool compress);
+  void repSend(ZmRef<ZdbAnyPOD> pod);
 
   void ackRcvd();
   void ackSend(int type, ZdbAnyPOD *pod);
@@ -1178,14 +1128,15 @@ private:
   void repDataRcvd(ZdbHost *host, Zdb_Cxn *cxn,
       const Zdb_Msg_Rep &rep, void *ptr);
 
-  void repSend(ZdbAnyPOD *pod, int type, ZdbRange range, int op, bool compress);
+  void repSend(ZmRef<ZdbAnyPOD> pod,
+      int type, ZdbRange range, int op, bool compress);
+  void repSend(ZmRef<ZdbAnyPOD> pod);
   void recSend();
 
   void ackRcvd(ZdbHost *host, bool positive, ZdbID db, ZdbRN rn);
 
-  void replicate(ZdbAnyPOD *pod);
-
-  void write(ZdbAnyPOD *pod, ZdbRange range, int op);
+  void write(ZmRef<ZdbAnyPOD> pod,
+      int type, ZdbRange range, int op, bool compress);
 
   ZdbEnvConfig		m_config;
   ZiMultiplex		*m_mx;

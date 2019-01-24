@@ -331,7 +331,13 @@ public:
   typedef ZmRing<ZmFn<> > Ring;
   typedef ZmRef<ScheduleTree::Node> Timer;
   typedef ZmSchedParams::ID ID;
-  enum State { Stopped = 0, Starting, Running, Draining, Drained, Stopping };
+  enum { Stopped = 0, Starting, Running, Draining, Drained, Stopping, N };
+  inline static const char *stateName(int i) {
+    static const char *names[] =
+      { "Stopped", "Starting", "Running", "Draining", "Drained", "Stopping" };
+    if (i < 0 || i >= N) return "Unknown";
+    return names[i];
+  }
 
   // might throw ZmRingError
   ZmScheduler(ZmSchedParams params = ZmSchedParams());

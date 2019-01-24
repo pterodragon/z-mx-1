@@ -198,7 +198,7 @@ namespace MxTelemetry {
   inline ZmRef<Msg> Fn(const Arg &arg) { \
     ZmRef<Msg> msg = new Msg(); \
     new (msg->ptr()) Hdr{Type::T, sizeof(T)}; \
-    T *ZuMayAlias(body) = (T *)msg->body(); \
+    T *ZuMayAlias(body) = new (msg->body()) T{}; \
     arg.telemetry(*body); \
     msg->calcLength(); \
     return msg; \

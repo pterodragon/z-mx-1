@@ -332,11 +332,14 @@ template <typename AppTypes> struct MxTAppTypes {
   struct CancelLeg_ : public CanceledLeg_ {
     MxValue		orderQty;
 
-    using CanceledLeg_::update;
     template <typename Update>
     inline typename ZuIs<CancelLeg_, Update>::T update(const Update &u) {
       CanceledLeg_::update(u);
       orderQty.update(u.orderQty, MxValueReset);
+    }
+    template <typename Update>
+    inline typename ZuIsNot<CancelLeg_, Update>::T update(const Update &u) {
+      CanceledLeg_::update(u);
     }
 
     template <typename Update> inline void expose(const Update &u) {
@@ -383,7 +386,6 @@ template <typename AppTypes> struct MxTAppTypes {
     MxNDP		pxNDP;
     uint8_t		pad_0[1];
 
-    using CancelLeg_::update;
     template <typename Update>
     inline typename ZuIs<ModifyLeg_, Update>::T update(const Update &u) {
       CancelLeg_::update(u);
@@ -405,6 +407,10 @@ template <typename AppTypes> struct MxTAppTypes {
 	px = u.px;
 	pxNDP.update(u.pxNDP);
       }
+    }
+    template <typename Update>
+    inline typename ZuIsNot<ModifyLeg_, Update>::T update(const Update &u) {
+      CancelLeg_::update(u);
     }
 
     template <typename Update> inline void expose(const Update &u) {
@@ -442,11 +448,14 @@ template <typename AppTypes> struct MxTAppTypes {
     MxEnum		timeInForce;	// MxTimeInForce
     uint8_t		pad_0[3];
 
-    using Cancel_<Leg>::update;
     template <typename Update>
     inline typename ZuIs<Modify__, Update>::T update(const Update &u) {
       Cancel_<Leg>::update(u); // takes care of legs
       timeInForce.update(u.timeInForce);
+    }
+    template <typename Update>
+    inline typename ZuIsNot<Modify__, Update>::T update(const Update &u) {
+      Cancel_<Leg>::update(u);
     }
 
     template <typename S> inline void print(S &s) const {
@@ -892,23 +901,23 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
       return Request_<Txn, T>(*this);
     }
   private:
-    template <typename Request_>
-    inline void initRequest_(const Request_ &request) {
+    template <typename Request>
+    inline void initRequest_(const Request &request) {
       memcpy((void *)this, &request.txn,
-	  sizeof(typename Request_::T::Request_));
+	  sizeof(typename Request::T::Request_));
     }
   public:
-    template <typename Request_>
-    inline Txn(const Request_ &request,
-	typename ZuIfT<ZuConversion<Request__, Request_>::Base &&
-	  sizeof(typename Request_::T::Request_) <=
+    template <typename Request>
+    inline Txn(const Request &request,
+	typename ZuIfT<ZuConversion<Request__, Request>::Base &&
+	  sizeof(typename Request::T::Request_) <=
 	    sizeof(Largest)>::T *_ = 0) {
       initRequest_(request);
     }
-    template <typename Request_> typename ZuIfT<
-	ZuConversion<Request__, Request_>::Base &&
-	  sizeof(typename Request_::T::Request_) <= sizeof(Largest),
-	Txn &>::T operator =(const Request_ &request) {
+    template <typename Request> typename ZuIfT<
+	ZuConversion<Request__, Request>::Base &&
+	  sizeof(typename Request::T::Request_) <= sizeof(Largest),
+	Txn &>::T operator =(const Request &request) {
       initRequest_(request);
       return *this;
     }
@@ -926,22 +935,22 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
       return Reject_<Txn, T>(*this);
     }
   private:
-    template <typename Reject_>
-    inline void initReject_(const Reject_ &reject) {
+    template <typename Reject>
+    inline void initReject_(const Reject &reject) {
       memcpy((void *)this, &reject.txn.reject,
-	  sizeof(typename Reject_::T::Reject_));
+	  sizeof(typename Reject::T::Reject_));
     }
   public:
-    template <typename Reject_>
-    inline Txn(const Reject_ &reject,
-	typename ZuIfT<ZuConversion<Reject__, Reject_>::Base &&
-	  sizeof(typename Reject_::T::Reject_) <= sizeof(Largest)>::T *_ = 0) {
+    template <typename Reject>
+    inline Txn(const Reject &reject,
+	typename ZuIfT<ZuConversion<Reject__, Reject>::Base &&
+	  sizeof(typename Reject::T::Reject_) <= sizeof(Largest)>::T *_ = 0) {
       initReject_(reject);
     }
-    template <typename Reject_> inline typename ZuIfT<
-	ZuConversion<Reject__, Reject_>::Base && 
-	  sizeof(typename Reject_::T::Reject_) <= sizeof(Largest),
-	Txn &>::T operator =(const Reject_ &reject) {
+    template <typename Reject> inline typename ZuIfT<
+	ZuConversion<Reject__, Reject>::Base && 
+	  sizeof(typename Reject::T::Reject_) <= sizeof(Largest),
+	Txn &>::T operator =(const Reject &reject) {
       initReject_(reject);
       return *this;
     }

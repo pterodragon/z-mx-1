@@ -134,25 +134,26 @@ struct App : public MxTOrderMgr<App, AppTypes> {
   // returns true if async. cancel enabled for order
   bool asyncCxl(Order *);
 
-  // pre-process messages
-  template <typename Txn> void sendNewOrder(Order *, Txn &) { }
-  template <typename Txn> void sendOrdered(Order *, Txn &) { }
-  template <typename Txn> void sendReject(Order *, Txn &) { }
+  // process messages
+  void sendNewOrder(Order *) { }
+  void sendModify(Order *) { }
+  void sendCancel(Order *) { }
 
-  template <typename Txn> void sendModify(Order *, Txn &) { }
-  template <typename Txn> void sendModified(Order *, Txn &) { }
-  template <typename Txn> void sendModReject(Order *, Txn &) { }
+  template <typename L> void sendOrdered(Order *, L) { }
+  template <typename L> void sendReject(Order *, L) { }
 
-  template <typename Txn> void sendCancel(Order *, Txn &) { }
-  template <typename Txn> void sendCanceled(Order *, Txn &) { }
-  template <typename Txn> void sendCxlReject(Order *, Txn &) { }
+  template <typename L> void sendModified(Order *, L) { }
+  template <typename L> void sendModReject(Order *, L) { }
 
-  template <typename Txn> void sendSuspend(Order *, Txn &) { }
-  template <typename Txn> void sendRelease(Order *, Txn &) { }
+  template <typename L> void sendCanceled(Order *, L) { }
+  template <typename L> void sendCxlReject(Order *, L) { }
 
-  template <typename Txn> void sendFill(Order *, Txn &) { }
+  template <typename L> void sendSuspend(Order *, L) { }
+  template <typename L> void sendRelease(Order *, L) { }
 
-  template <typename Txn> void sendClosed(Order *, Txn &) { }
+  template <typename L> void sendFill(Order *, L) { }
+
+  template <typename L> void sendClosed(Order *, L) { }
 
   void main();
 };

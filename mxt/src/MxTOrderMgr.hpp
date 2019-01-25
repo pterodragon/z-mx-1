@@ -71,24 +71,27 @@ struct App : public MxTOrderMgr<App, AppTypes> {
   bool asyncCxl(Order *);
 
   // send*() - send the corresponding message
-  template <typename Txn> void sendNewOrder(Order *, Txn &);
-  template <typename Txn> void sendOrdered(Order *, Txn &);
-  template <typename Txn> void sendReject(Order *, Txn &);
+  // the passed lambda has signature Txn<T> *fn(void *), and
+  // should be invoked by the callee, passing the address of the
+  // buffer to fill with the message
+  void sendNewOrder(Order *);
+  template <typename L> void sendOrdered(Order *, L); 
+  template <typename L> void sendReject(Order *, L);
 
-  template <typename Txn> void sendModify(Order *, Txn &);
-  template <typename Txn> void sendModified(Order *, Txn &);
-  template <typename Txn> void sendModReject(Order *, Txn &);
+  void sendModify(Order *);
+  template <typename L> void sendModified(Order *, L);
+  template <typename L> void sendModReject(Order *, L);
 
-  template <typename Txn> void sendCancel(Order *, Txn &);
-  template <typename Txn> void sendCanceled(Order *, Txn &);
-  template <typename Txn> void sendCxlReject(Order *, Txn &);
+  void sendCancel(Order *);
+  template <typename L> void sendCanceled(Order *, L);
+  template <typename L> void sendCxlReject(Order *, L);
 
-  template <typename Txn> void sendHold(Order *, Txn &);
-  template <typename Txn> void sendRelease(Order *, Txn &);
+  template <typename L> void sendHold(Order *, L);
+  template <typename L> void sendRelease(Order *, L);
 
-  template <typename Txn> void sendFill(Order *, Txn &);
+  template <typename L> void sendFill(Order *, L);
 
-  template <typename Txn> void sendClosed(Order *, Txn &);
+  template <typename L> void sendClosed(Order *, L);
 };
 #endif
 
@@ -169,64 +172,31 @@ public:
   // order state management
 
 private:
-  template <typename In> void requestIn(In &in) {
-    Event &event = in.template as<Event>();
+  inline static void requestIn(Event &event) {
     event.eventState = MxTEventState::Received;
   }
-  template <typename Out> void requestOut(Out &out) {
-    Event &event = out.template as<Event>();
+  inline static void requestOut(Event &event) {
     event.eventState = MxTEventState::Queued;
   }
 
-  template <typename In> void executionIn(In &in) {
-    Event &event = in.template as<Event>();
+  inline static void executionIn(Event &event) {
     event.eventState = MxTEventState::Received;
   }
-  template <typename Out> void executionOut(Out &out) {
-    Event &event = out.template as<Event>();
+  inline static void executionOut(Event &event) {
     event.eventState = MxTEventState::Sent;
   }
 
-  void sendNewOrder(Order *order) {
-    requestOut(order->orderTxn);
-    // Note: app should use leavesQty since this may be a simulated modify
-    // (cancel/replace) of a partially filled order
-    app()->sendNewOrder(order, order->orderTxn);
+  inline void sendNewOrder(Order *order) {
+    requestOut(order->orderTxn.template as<NewOrder>());
+    app()->sendNewOrder(order);
   }
-  template <typename Out> inline void sendOrdered(Order *order, L l) {
-    app()->sendOrdered(order, ZuMv(l));
+  inline void sendModify(Order *order) {
+    requestOut(order->modifyTxn.template as<Modify>());
+    app()->sendModify(order);
   }
-  template <typename Out> void sendReject(Order *order, Out &out) {
-    executionOut(out);
-    app()->sendReject(order, out);
-  }
-  template <typename Out> void sendHold(Order *order, Out &out) {
-    executionOut(out);
-    app()->sendHold(order, out);
-  }
-  void sendModify(Order *order) {
-    requestOut(order->modifyTxn);
-    app()->sendModify(order, order->modifyTxn);
-  }
-  template <typename Out> void sendModified(Order *order, Out &out) {
-    executionOut(out);
-    app()->sendModified(order, out);
-  }
-  template <typename Out> void sendModReject(Order *order, Out &out) {
-    executionOut(out);
-    app()->sendModReject(order, out);
-  }
-  void sendCancel(Order *order) {
-    requestOut(order->cancelTxn);
-    app()->sendCancel(order, order->cancelTxn);
-  }
-  template <typename Out> void sendCanceled(Order *order, Out &out) {
-    executionOut(out);
-    app()->sendCanceled(order, out);
-  }
-  template <typename Out> void sendCxlReject(Order *order, Out &out) {
-    executionOut(out);
-    app()->sendCxlReject(order, out);
+  inline void sendCancel(Order *order) {
+    requestOut(order->cancelTxn.template as<Cancel>());
+    app()->sendCancel(order);
   }
 
 public:
@@ -281,7 +251,7 @@ public:
   // app calls newOrderIn followed by one of newOrder order{Held,Filtered}
   template <typename In> typename ZuIsBase<Txn_, In>::T newOrderIn(
       Order *order, In &in) {
-    requestIn(in);
+    requestIn(in.template as<NewOrder>());
   }
 
   template <typename In> typename ZuIsBase<Txn_, In>::T newOrder(
@@ -295,10 +265,13 @@ public:
     order->orderTxn = in.template request<OrderHeld>();
     NewOrder &newOrder = order->newOrder();
     newOrder.eventState = MxTEventState::Held;
-    Txn<Hold> out(in.template reject<OrderHeld>());
-    Hold &hold = out.template as<Hold>();
-    hold.update(newOrder);
-    sendHold(order, out);
+    app()->sendHold(order, [&in, &newOrder](void *ptr) {
+      auto out = new (ptr) Txn<Hold>(in.template reject<OrderHeld>());
+      Hold &hold = out->template as<Hold>();
+      hold.update(newOrder);
+      executionOut(hold);
+      return out;
+    });
   }
 
   template <typename In> typename ZuIsBase<Txn_, In>::T orderFiltered(
@@ -306,10 +279,13 @@ public:
     order->orderTxn = in.template request<OrderFiltered>();
     NewOrder &newOrder = order->newOrder();
     newOrder.eventState = MxTEventState::Rejected;
-    Txn<Reject> out(in.template reject<OrderFiltered>());
-    Reject &reject = out.template as<Reject>();
-    reject.update(newOrder);
-    sendReject(order, out);
+    app()->sendReject(order, [&in, &newOrder](void *ptr) {
+      auto out = new (ptr) Txn<Reject>(in.template reject<OrderFiltered>());
+      Reject &reject = out->template as<Reject>();
+      reject.update(newOrder);
+      executionOut(reject);
+      return out;
+    });
   }
 
 private:
@@ -319,25 +295,28 @@ private:
     newOrder.update(in.template as<Ordered>());
     if (ZuUnlikely(MxTOrderFlags::matchM(newOrder.flags))) {
       newOrder.flags &= ~(1U<<MxTOrderFlags::M);
-      Txn<Modified> out;
-      Modified &modified = out.initModified((1U<<MxTEventFlags::Synthesized));
-      executionIn(out);
-      modified.update(newOrder);
-      sendModified(order, out);
+      app()->sendModified(order, [&newOrder](void *ptr) {
+	auto out = (Txn<Modified> *)ptr;
+	Modified &modified = out->initModified(
+	    (1U<<MxTEventFlags::Synthesized));
+	modified.update(newOrder);
+	executionOut(modified);
+	return out;
+      });
       return;
     }
-    sendOrdered(order, [&in, &newOrder](void *ptr) {
+    app()->sendOrdered(order, [&in, &newOrder](void *ptr) {
       auto out = new (ptr) Txn<Ordered>(in.template data<Ordered>());
       Ordered &ordered = out->template as<Ordered>();
       ordered.update(newOrder);
-      executionOut(*out);
+      executionOut(ordered);
       return out;
     });
   }
 public:
   template <typename In> typename ZuIsBase<Txn_, In>::T ordered(
       Order *order, In &in) {
-    executionIn(in);
+    executionIn(in.template as<Ordered>());
     NewOrder &newOrder = order->newOrder();
     Modify &modify = order->modify();
     Cancel &cancel = order->cancel();
@@ -378,22 +357,30 @@ private:
   // synthetic modify reject
   template <typename In> void modReject_(Order *order, In &in, int reason) {
     in.template as<Event>.eventState = MxTEventState::Rejected;
-    Txn<ModReject> out;
-    ModReject &modReject = out.initModReject((1U<<MxTEventFlags::Synthesized));
-    executionIn(out);
-    modReject.rejReason = reason;
-    modReject.update(in.template as<Modify>());
-    sendModReject(order, out);
+    Modify &modify = in.template as<Modify>();
+    app()->sendModReject(order, [reason, &modify](void *ptr) {
+      auto out = (Txn<ModReject> *)ptr;
+      ModReject &modReject = out->initModReject(
+	  (1U<<MxTEventFlags::Synthesized));
+      modReject.rejReason = reason;
+      modReject.update(modify);
+      executionOut(modReject);
+      return out;
+    });
   }
   // synthetic cancel reject
   template <typename In> void cxlReject_(Order *order, In &in, int reason) {
     in.template as<Event>.eventState = MxTEventState::Rejected;
-    Txn<CxlReject> out;
-    CxlReject &cxlReject = out.initCxlReject((1U<<MxTEventFlags::Synthesized));
-    executionIn(out);
-    cxlReject.rejReason = reason;
-    cxlReject.update(in.template as<Cancel>());
-    sendCxlReject(order, out);
+    Cancel &cancel = in.template as<Cancel>();
+    app()->sendCxlReject(order, [reason, &cancel](void *ptr) {
+      auto out = (Txn<CxlReject> *)ptr;
+      CxlReject &cxlReject = out->initCxlReject(
+	  (1U<<MxTEventFlags::Synthesized));
+      cxlReject.rejReason = reason;
+      cxlReject.update(cancel);
+      executionOut(cxlReject);
+      return out;
+    });
   }
 
   template <typename In> void applyReject(Order *order, In &in) {
@@ -401,15 +388,18 @@ private:
     if (!MxTEventState::matchXC(newOrder.eventState))
       newOrder.eventState = MxTEventState::Rejected;
     newOrder.flags &= ~(1U<<MxTOrderFlags::M);
-    Txn<Reject> out(in.template data<Reject>());
-    Reject &reject = out.template as<Reject>();
-    reject.update(newOrder);
-    sendReject(order, out);
+    app()->sendReject(order, [&in, &newOrder](void *ptr) {
+      auto out = new (ptr) Txn<Reject>(in.template data<Reject>());
+      Reject &reject = out->template as<Reject>();
+      reject.update(newOrder);
+      executionOut(reject);
+      return out;
+    });
   }
 public:
   template <typename In> typename ZuIsBase<Txn_, In>::T reject(
       Order *order, In &in) {
-    executionIn(in);
+    executionIn(in.template as<Reject>());
     NewOrder &newOrder = order->newOrder();
     Modify &modify = order->modify();
     Cancel &cancel = order->cancel();
@@ -472,7 +462,7 @@ public:
   // returns MxTRejReason::OK, or reason if modify is rejected due to OSM
   template <typename In> typename ZuIsBase<Txn_, In, MxEnum>::T modifyIn(
       Order *order, In &in) {
-    requestIn(in);
+    requestIn(in.template as<Modify>());
     return filterModify(order, in);
   }
 
@@ -503,32 +493,38 @@ public:
 	if (!MxTOrderFlags::matchM(newOrder.flags)) {
 	  // new order is original, not following a previous modify-on-queue
 	  newOrder.flags |= (1U<<MxTOrderFlags::M);
-	  Txn<Ordered> out;
-	  Ordered &ordered = out.initOrdered(
-	    (1U<<MxTEventFlags::Synthesized) | (1U<<MxTEventFlags::Pending));
-	  executionIn(out);
-	  ordered.update(newOrder);
-	  sendOrdered(order, out);
+	  app()->sendOrdered(order, [&newOrder](void *ptr) {
+	    auto out = (Txn<Ordered> *)ptr;
+	    Ordered &ordered = out->initOrdered(
+	      (1U<<MxTEventFlags::Synthesized) | (1U<<MxTEventFlags::Pending));
+	    ordered.update(newOrder);
+	    executionOut(ordered);
+	    return out;
+	  });
 	  newOrder.update(in.template as<Modify>());
 	  sendNewOrder(order);
 	  return;
 	}
 	// new order is synthetic, following a previous modify-on-queue
-	Txn<Modified> out;
-	Modified &modified = out.initModified(
-	  (1U<<MxTEventFlags::Synthesized) | (1U<<MxTEventFlags::Pending));
-	executionIn(out);
-	modified.update(newOrder);
-	sendModified(order, out);
+	app()->sendModified(order, [&newOrder](void *ptr) {
+	  auto out = (Txn<Modified> *)ptr;
+	  Modified &modified = out->initModified(
+	      (1U<<MxTEventFlags::Synthesized) | (1U<<MxTEventFlags::Pending));
+	  modified.update(newOrder);
+	  executionOut(modified);
+	  return out;
+	});
 	newOrder.update(in.template as<Modify>());
 	if (newOrder.filled()) {
 	  // modify-on-queue may have reduced qty so that order is now filled
-	  Txn<Modified> out;
-	  Modified &modified = out.initModified(
-	    (1U<<MxTEventFlags::Synthesized));
-	  executionIn(out);
-	  modified.update(newOrder);
-	  sendModified(order, out);
+	  app()->sendModified(order, [&newOrder](void *ptr) {
+	    auto out = (Txn<Modified> *)ptr;
+	    Modified &modified = out->initModified(
+		(1U<<MxTEventFlags::Synthesized));
+	    modified.update(newOrder);
+	    executionOut(modified);
+	    return out;
+	  });
 	  newOrder.flags &= ~(1U<<MxTOrderFlags::M);
 	  newOrder.eventState = MxTEventState::Acknowledged;
 	  return;
@@ -541,13 +537,15 @@ public:
 	  MxTEventState::matchA(newOrder.eventState) &&
 	  MxTEventState::matchHDQ(modify.eventState))) {
       // modify-on-queue
-      Txn<Modified> out;
-      Modified &modified = out.initModified(
-	(1U<<MxTEventFlags::Synthesized) | (1U<<MxTEventFlags::Pending));
-      executionIn(out);
-      modified.update(newOrder);
-      modified.update(modify);
-      sendModified(order, out);
+      app()->sendModified(order, [&newOrder, &modify](void *ptr) {
+	auto out = (Txn<Modified> *)ptr;
+	Modified &modified = out->initModified(
+	    (1U<<MxTEventFlags::Synthesized) | (1U<<MxTEventFlags::Pending));
+	modified.update(newOrder);
+	modified.update(modify);
+	executionOut(modified);
+	return out;
+      });
       modify.update(in.template as<Modify>());
       modify.eventState = MxTEventState::Deferred;
       if (MxTOrderFlags::matchC(newOrder.flags)) {
@@ -586,7 +584,6 @@ public:
 	order->modifyTxn = in.template data<Modify>();
 	modify.eventState = MxTEventState::Deferred;
 	order->cancelTxn.initCancel((1U<<MxTEventFlags::Synthesized));
-	requestIn(order->cancelTxn);
 	cancel.update(newOrder);
 	if (ZuUnlikely(MxTEventState::matchS(newOrder.eventState) &&
 	      !app()->asyncCxl(order))) {
@@ -603,30 +600,38 @@ public:
 	if (!MxTOrderFlags::matchM(newOrder.flags)) {
 	  // new order is original, not following a previous modify-on-queue
 	  newOrder.flags |= (1U<<MxTOrderFlags::M);
-	  Txn<Ordered> out;
-	  Ordered &ordered = out.initOrdered((1U<<MxTEventFlags::Synthesized));
-	  executionIn(out);
-	  ordered.update(newOrder);
-	  sendOrdered(order, out);
+	  app()->sendOrdered(order, [&newOrder](void *ptr) {
+	    auto out = (Txn<Ordered> *)ptr;
+	    Ordered &ordered = out->initOrdered(
+	      (1U<<MxTEventFlags::Synthesized));
+	    ordered.update(newOrder);
+	    executionOut(ordered);
+	    return out;
+	  });
 	  newOrder.update(in.template as<Modify>());
 	  sendNewOrder(order);
 	  return;
 	}
 	// new order is synthetic, following a previous modify-on-queue
-	Txn<Modified> out;
-	Modified &modified = out.initModified((1U<<MxTEventFlags::Synthesized));
-	executionIn(out);
-	modified.update(newOrder);
-	sendModified(order, out);
+	app()->sendModified(order, [&newOrder](void *ptr) {
+	  auto out = (Txn<Modified> *)ptr;
+	  Modified &modified = out->initModified(
+	      (1U<<MxTEventFlags::Synthesized));
+	  modified.update(newOrder);
+	  executionOut(modified);
+	  return out;
+	});
 	newOrder.update(in.template as<Modify>());
 	if (newOrder.filled()) {
 	  // modify-on-queue may have reduced qty so that order is now filled
-	  Txn<Modified> out;
-	  Modified &modified = out.initModified(
-	    (1U<<MxTEventFlags::Synthesized));
-	  executionIn(out);
-	  modified.update(newOrder);
-	  sendModified(order, out);
+	  app()->sendModified(order, [&newOrder](void *ptr) {
+	    auto out = (Txn<Modified> *)ptr;
+	    Modified &modified = out->initModified(
+		(1U<<MxTEventFlags::Synthesized));
+	    modified.update(newOrder);
+	    executionOut(modified);
+	    return out;
+	  });
 	  newOrder.flags &= ~(1U<<MxTOrderFlags::M);
 	  newOrder.eventState = MxTEventState::Acknowledged;
 	  return;
@@ -639,12 +644,15 @@ public:
 	  MxTEventState::matchA(newOrder.eventState) &&
 	  MxTEventState::matchHDQ(modify.eventState))) {
       // modify-on-queue
-      Txn<Modified> out;
-      Modified &modified = out.initModified((1U<<MxTEventFlags::Synthesized));
-      executionIn(out);
-      modified.update(newOrder);
-      modified.update(modify);
-      sendModified(order, out);
+      app()->sendModified(order, [&newOrder, &modify](void *ptr) {
+	auto out = (Txn<Modified> *)ptr;
+	Modified &modified = out->initModified(
+	    (1U<<MxTEventFlags::Synthesized));
+	modified.update(newOrder);
+	modified.update(modify);
+	executionOut(modified);
+	return out;
+      });
       modify.update(in.template as<Modify>());
       modify.eventState = MxTEventState::Deferred;
       if (MxTOrderFlags::matchC(newOrder.flags)) {
@@ -654,7 +662,6 @@ public:
       } else
 	newOrder.flags |= (1U<<MxTOrderFlags::C);
       order->cancelTxn.initCancel((1U<<MxTEventFlags::Synthesized));
-      requestIn(order->cancelTxn);
       cancel.update(newOrder);
       sendCancel(order);
       return;
@@ -678,7 +685,6 @@ public:
 	// usual case
 	newOrder.flags |= (1U<<MxTOrderFlags::C);
 	order->cancelTxn.initCancel((1U<<MxTEventFlags::Synthesized));
-	requestIn(order->cancelTxn);
 	cancel.update(newOrder);
 	if (ZuUnlikely(MxTEventState::matchS(newOrder.eventState) &&
 	      !app()->asyncCxl(order)))
@@ -687,10 +693,13 @@ public:
 	  sendCancel(order);
 	order->modifyTxn = in.template request<ModHeld>();
 	modify.eventState = MxTEventState::Held;
-	Txn<Hold> out(in.template reject<ModHeld>());
-	Hold &hold = out.template as<Hold>();
-	hold.update(modify);
-	sendHold(order, out);
+	app()->sendHold(order, [&in, &modify](void *ptr) {
+	  auto out = new (ptr) Txn<Hold>(in.template reject<ModHeld>());
+	  Hold &hold = out->template as<Hold>();
+	  hold.update(modify);
+	  executionOut(hold);
+	  return out;
+	});
 	return;
       }
       if (MxTEventState::matchHQ(newOrder.eventState)) {
@@ -699,41 +708,49 @@ public:
 	if (!MxTOrderFlags::matchM(newOrder.flags)) {
 	  // new order is original, not following a previous modify-on-queue
 	  newOrder.flags |= (1U<<MxTOrderFlags::M);
-	  Txn<Ordered> out;
-	  Ordered &ordered = out.initOrdered((1U<<MxTEventFlags::Synthesized));
-	  executionIn(out);
-	  ordered.update(newOrder);
-	  sendOrdered(order, out);
+	  app()->sendOrdered(order, [&newOrder](void *ptr) {
+	    auto out = (Txn<Ordered> *)ptr;
+	    Ordered &ordered = out->initOrdered(
+	      (1U<<MxTEventFlags::Synthesized));
+	    ordered.update(newOrder);
+	    executionOut(ordered);
+	    return out;
+	  });
 	} else {
 	  // new order is synthetic, following a previous modify-on-queue
-	  Txn<Modified> out;
-	  Modified &modified = out.initModified(
-	    (1U<<MxTEventFlags::Synthesized));
-	  executionIn(out);
-	  modified.update(newOrder);
-	  sendModified(order, out);
+	  app()->sendModified(order, [&newOrder](void *ptr) {
+	    auto out = (Txn<Modified> *)ptr;
+	    Modified &modified = out->initModified(
+		(1U<<MxTEventFlags::Synthesized));
+	    modified.update(newOrder);
+	    executionOut(modified);
+	    return out;
+	  });
 	}
 	newOrder.update(in.template request<ModHeld>());
 	newOrder.eventState = MxTEventState::Held;
-	Txn<Hold> out(in.template reject<ModHeld>());
-	Hold &hold = out.template as<Hold>();
-	hold.update(newOrder);
-	sendHold(order, out);
+	app()->sendHold(order, [&in, &newOrder](void *ptr) {
+	  auto out = new (ptr) Txn<Hold>(in.template reject<ModHeld>());
+	  Hold &hold = out->template as<Hold>();
+	  hold.update(newOrder);
+	  executionOut(hold);
+	  return out;
+	});
 	return;
       }
     }
     if (ZuLikely(
 	  MxTEventState::matchA(newOrder.eventState) &&
 	  MxTEventState::matchHDQ(modify.eventState))) {
-      {
-	Txn<Modified> out;
-	Modified &modified = out.initModified(
-	  (1U<<MxTEventFlags::Synthesized));
-	executionIn(out);
+      app()->sendModified(order, [&newOrder, &modify](void *ptr) {
+	auto out = (Txn<Modified> *)ptr;
+	Modified &modified = out->initModified(
+	    (1U<<MxTEventFlags::Synthesized));
 	modified.update(newOrder);
 	modified.update(modify);
-	sendModified(order, out);
-      }
+	executionOut(modified);
+	return out;
+      });
       modify.update(in.template request<ModHeld>());
       modify.eventState = MxTEventState::Held;
       if (MxTOrderFlags::matchC(newOrder.flags)) {
@@ -743,16 +760,16 @@ public:
       } else
 	newOrder.flags |= (1U<<MxTOrderFlags::C);
       order->cancelTxn.initCancel((1U<<MxTEventFlags::Synthesized));
-      requestIn(order->cancelTxn);
       cancel.update(newOrder);
       sendCancel(order);
 cancelSent:
-      {
-	Txn<Hold> out(in.template reject<ModHeld>());
-	Hold &hold = out.template as<Hold>();
+      app()->sendHold(order, [&in, &modify](void *ptr) {
+	auto out = new (ptr) Txn<Hold>(in.template reject<ModHeld>());
+	Hold &hold = out->template as<Hold>();
 	hold.update(modify);
-	sendHold(order, out);
-      }
+	executionOut(hold);
+	return out;
+      });
       return;
     }
     MxEnum rejReason = filterModify(order, in);
@@ -763,10 +780,13 @@ cancelSent:
 
   template <typename In> typename ZuIsBase<Txn_, In>::T modFiltered(
       Order *order, In &in) {
-    Txn<ModReject> out(in.template reject<ModFiltered>());
-    ModReject &modReject = out.template as<ModReject>();
-    modReject.update(in.template as<Modify>());
-    sendModReject(order, out);
+    app()->sendModReject(order, [&in](void *ptr) {
+      auto out = new (ptr) Txn<ModReject>(in.template reject<ModFiltered>());
+      ModReject &modReject = out->template as<ModReject>();
+      modReject.update(in.template as<Modify>());
+      executionOut(modReject);
+      return out;
+    });
   }
 
   template <typename In> typename ZuIsBase<Txn_, In>::T modFilteredCxl(
@@ -787,7 +807,6 @@ cancelSent:
       modify.eventState = MxTEventState::Deferred;
       newOrder.flags &= ~(1U<<MxTOrderFlags::C);
       order->cancelTxn.initCancel((1U<<MxTEventFlags::Synthesized));
-      requestIn(order->cancelTxn);
       cancel.update(newOrder);
       if (ZuUnlikely(MxTEventState::matchS(newOrder.eventState) &&
 	    !app()->asyncCxl(order)))
@@ -802,7 +821,6 @@ cancelSent:
       // preceding modify in progress, sent to market (or pending fill)
       newOrder.flags &= ~(1U<<MxTOrderFlags::C);
       order->cancelTxn.initCancel((1U<<MxTEventFlags::Synthesized));
-      requestIn(order->cancelTxn);
       cancel.update(newOrder);
       if (ZuUnlikely(
 	    (MxTEventState::matchS(newOrder.eventState) ||
@@ -816,19 +834,19 @@ cancelSent:
     if (MxTEventState::matchHQ(newOrder.eventState)) {
       // new order held/queued, modify-on-queue (now cancel-on-queue)
       newOrder.eventState = MxTEventState::Closed;
-      {
-	// inform client that order is canceled
-	Txn<Canceled> out;
-	Canceled &canceled = out.initCanceled((1U<<MxTEventFlags::Synthesized));
-	executionIn(out);
+      // inform client that order is canceled
+      app()->sendCanceled(order, [&newOrder](void *ptr) {
+	auto out = (Txn<Canceled> *)ptr;
+	Canceled &canceled = out->initCanceled(
+	    (1U<<MxTEventFlags::Synthesized));
 	canceled.update(newOrder);
-	sendCanceled(order, out);
-      }
+	executionOut(canceled);
+	return out;
+      });
       goto sendModReject;
     }
     newOrder.flags &= ~(1U<<MxTOrderFlags::C);
     order->cancelTxn.initCancel((1U<<MxTEventFlags::Synthesized));
-    requestIn(order->cancelTxn);
     cancel.update(newOrder);
     if (ZuUnlikely(MxTEventState::matchS(newOrder.eventState) &&
 	  !app()->asyncCxl(order)))
@@ -836,10 +854,13 @@ cancelSent:
     else
       sendCancel(order);
 sendModReject:
-    Txn<ModReject> out(in.template reject<ModFiltered>());
-    ModReject &modReject = out.template as<ModReject>();
-    modReject.update(in.template as<Modify>());
-    sendModReject(order, out);
+    app()->sendModReject(order, [&in](void *ptr) {
+      auto out = new (ptr) Txn<ModReject>(in.template reject<ModFiltered>());
+      ModReject &modReject = out->template as<ModReject>();
+      modReject.update(in.template as<Modify>());
+      executionOut(modReject);
+      return out;
+    });
   }
 
 private:
@@ -848,32 +869,38 @@ private:
     NewOrder &newOrder = order->newOrder();
     newOrder.eventState = MxTEventState::Acknowledged;
     newOrder.flags &= ~(1U<<MxTOrderFlags::M);
-    Txn<Ordered> out;
-    Ordered &ordered = out.initOrdered((1U<<MxTEventFlags::Synthesized));
-    executionIn(out);
-    ordered.update(newOrder);
-    sendOrdered(order, out);
+    app()->sendOrdered(order, [&newOrder](void *ptr) {
+      auto out = (Txn<Ordered> *)ptr;
+      Ordered &ordered = out->initOrdered(
+	(1U<<MxTEventFlags::Synthesized));
+      ordered.update(newOrder);
+      executionOut(ordered);
+      return out;
+    });
   }
 
   // apply unsolicited Modified (aka Restated)
   template <typename In> void applyRestated(Order *order, In &in) {
     NewOrder &newOrder = order->newOrder();
     newOrder.update(in.template as<Modified>());
-    Txn<Modified> out;
-    Modified &modified = out.initModified((1U<<MxTEventFlags::Unsolicited));
-    executionIn(out);
-    modified.update(newOrder);
-    sendModified(order, out);
+    app()->sendModified(order, [&newOrder](void *ptr) {
+      auto out = (Txn<Modified> *)ptr;
+      Modified &modified = out->initModified(
+	  (1U<<MxTEventFlags::Unsolicited));
+      modified.update(newOrder);
+      executionOut(modified);
+      return out;
+    });
   }
 
 public:
   template <typename In> typename ZuIsBase<Txn_, In>::T modified(
       Order *order, In &in) {
-    executionIn(in);
+    Modified &modified = in.template as<Modified>();
+    executionIn(modified);
     NewOrder &newOrder = order->newOrder();
     Modify &modify = order->modify();
     Cancel &cancel = order->cancel();
-    Modified &modified = in.template as<Modified>();
     if (MxTEventState::matchSA(newOrder.eventState) &&
 	MxTEventState::matchDQS(modify.eventState)) {
       // usual case
@@ -886,11 +913,13 @@ public:
       } else {
 	modify.eventState = MxTEventState::Acknowledged;
 	newOrder.update(modify);
-	Txn<Modified> out;
-	Modified &outModified = out.initModified(modified.eventFlags);
-	executionIn(out);
-	outModified.update(newOrder);
-	sendModified(order, out);
+	app()->sendModified(order, [&in, &newOrder](void *ptr) {
+	  auto out = new (ptr) Txn<Modified>(in.template data<Modified>());
+	  Modified &modified = out->template as<Modified>();
+	  modified.update(newOrder);
+	  executionOut(modified);
+	  return out;
+	});
       }
       if (MxTEventState::matchD(cancel.eventState))
 	sendCancel(order);
@@ -932,7 +961,7 @@ public:
 
   template <typename In> typename ZuIsBase<Txn_, In>::T modReject(
       Order *order, In &in) {
-    executionIn(in);
+    executionIn(in.template as<ModReject>());
     NewOrder &newOrder = order->newOrder();
     Modify &modify = order->modify();
     Cancel &cancel = order->cancel();
@@ -940,10 +969,13 @@ public:
 	  MxTEventState::matchSA(newOrder.eventState) &&
 	  MxTEventState::matchDQSP(modify.eventState))) {
       modify.eventState = MxTEventState::Rejected;
-      Txn<ModReject> out(in.template data<ModReject>());
-      ModReject &modReject = out.template as<ModReject>();
-      modReject.update(modify);
-      sendModReject(order, out);
+      app()->sendModReject(order, [&in](void *ptr) {
+	auto out = new (ptr) Txn<ModReject>(in.template data<ModReject>());
+	ModReject &modReject = out->template as<ModReject>();
+	modReject.update(modify);
+	executionOut(modReject);
+	return out;
+      });
       if (MxTEventState::matchD(cancel.eventState))
 	sendCancel(order);
       return;
@@ -959,7 +991,7 @@ public:
 
   template <typename In> typename ZuIsBase<Txn_, In>::T modRejectCxl(
       Order *order, In &in) {
-    executionIn(in);
+    executionIn(in.template as<ModReject>());
     NewOrder &newOrder = order->newOrder();
     Modify &modify = order->modify();
     Cancel &cancel = order->cancel();
@@ -968,17 +1000,19 @@ public:
 	  MxTEventState::matchDQSP(modify.eventState))) {
       newOrder.flags &= ~(1U<<MxTOrderFlags::C);
       modify.eventState = MxTEventState::Rejected;
-      Txn<ModReject> out(in.template data<ModReject>());
-      ModReject &modReject = out.template as<ModReject>();
-      modReject.update(modify);
-      sendModReject(order, out);
+      app()->sendModReject(order, [&in, &modify](void *ptr) {
+	auto out = new (ptr) Txn<ModReject>(in.template data<ModReject>());
+	ModReject &modReject = out->template as<ModReject>();
+	modReject.update(modify);
+	executionOut(modReject);
+	return out;
+      });
       // do not need to cancel if order already filled
       if (ZuLikely(!newOrder.filled())) {
 	if (MxTEventState::matchQSP(cancel.eventState)) return;
 	if (!MxTEventState::matchD(cancel.eventState)) {
 	  order->cancelTxn.initCancel(
 	    (1U<<MxTEventFlags::Synthesized));
-	  requestIn(order->cancelTxn);
 	  cancel.update(newOrder);
 	}
 	if (ZuUnlikely(MxTEventState::matchS(newOrder.eventState) &&
@@ -1019,7 +1053,7 @@ public:
   // returns MxTRejReason::OK, or reason if cancel is rejected due to OSM
   template <typename In> typename ZuIsBase<Txn_, In, MxEnum>::T cancelIn(
       Order *order, In &in) {
-    requestIn(in);
+    requestIn(in.template as<Cancel>());
     return filterCancel(order, in);
   }
 
@@ -1048,15 +1082,15 @@ public:
     if (MxTEventState::matchHQ(newOrder.eventState)) {
       newOrder.flags &= ~(1U<<MxTOrderFlags::M);
       newOrder.eventState = MxTEventState::Closed;
-      {
-	// inform client that order is canceled
-	Txn<Canceled> out;
-	Canceled &canceled = out.initCanceled(
-	  (1U<<MxTEventFlags::Synthesized));
-	executionIn(out);
+      // inform client that order is canceled
+      app()->sendCanceled(order, [&newOrder](void *ptr) {
+	auto out = (Txn<Canceled> *)ptr;
+	Canceled &canceled = out->initCanceled(
+	    (1U<<MxTEventFlags::Synthesized));
 	canceled.update(newOrder);
-	sendCanceled(order, out);
-      }
+	executionOut(canceled);
+	return out;
+      });
       return;
     }
     // should never happen; somehow this point was reached despite
@@ -1069,19 +1103,22 @@ public:
 
   template <typename In> typename ZuIsBase<Txn_, In>::T cxlFiltered(
       Order *order, In &in) {
-    Txn<CxlReject> out(in.template reject<CxlFiltered>());
-    CxlReject &cxlReject = out.template as<CxlReject>();
-    cxlReject.update(in.template as<Cancel>());
-    sendCxlReject(order, out);
+    app()->sendCxlReject(order, [&in](void *ptr) {
+      auto out = new (ptr) Txn<CxlReject>(in.template reject<CxlFiltered>());
+      CxlReject &cxlReject = out->template as<CxlReject>();
+      cxlReject.update(in.template as<Cancel>());
+      executionOut(cxlReject);
+      return out;
+    });
   }
 
   template <typename In> typename ZuIsBase<Txn_, In>::T canceled(
       Order *order, In &in) {
-    executionIn(in);
+    Canceled &canceled = in.template as<Canceled>();
+    executionIn(canceled);
     NewOrder &newOrder = order->newOrder();
     Modify &modify = order->modify();
     Cancel &cancel = order->cancel();
-    Canceled &canceled = in.template as<Canceled>();
     if (ZuLikely(
 	  !MxTOrderFlags::matchC(newOrder.flags) &&
 	  MxTEventState::matchHQSA(newOrder.eventState))) {
@@ -1094,10 +1131,13 @@ public:
 	// unsolicited
 	in.template as<Event>().unsolicited_set();
 	newOrder.eventState = MxTEventState::Closed;
-	Txn<Canceled> out = in.template data<Canceled>();
-	Canceled &canceled = out.template as<Canceled>();
-	canceled.update(newOrder);
-	sendCanceled(order, out);
+	app()->sendCanceled(order, [&in, &newOrder](void *ptr) {
+	  auto out = new (ptr) Txn<Canceled>(in.template data<Canceled>());
+	  Canceled &canceled = out->template as<Canceled>();
+	  canceled.update(newOrder);
+	  executionOut(canceled);
+	  return out;
+	});
 	return;
       }
       cancel.update(canceled);
@@ -1109,10 +1149,13 @@ public:
       }
       cancel.eventState = MxTEventState::Acknowledged;
       newOrder.eventState = MxTEventState::Closed;
-      Txn<Canceled> out = in.template data<Canceled>();
-      Canceled &canceled = out.template as<Canceled>();
-      canceled.update(cancel);
-      sendCanceled(order, out);
+      app()->sendCanceled(order, [&in, &newOrder](void *ptr) {
+	auto out = new (ptr) Txn<Canceled>(in.template data<Canceled>());
+	Canceled &canceled = out->template as<Canceled>();
+	canceled.update(cancel);
+	executionOut(canceled);
+	return out;
+      });
       return;
     }
     if (ZuUnlikely(MxTEventState::matchXC(newOrder.eventState))) {
@@ -1149,11 +1192,14 @@ public:
       modify.eventState = MxTEventState::Unset;
       if (newOrder.filled()) {
 	// modify may have reduced qty so that order is now filled
-	Txn<Modified> out;
-	Modified &modified = out.initModified((1U<<MxTEventFlags::Synthesized));
-	executionIn(out);
-	modified.update(newOrder);
-	sendModified(order, out);
+	app()->sendModified(order, [&newOrder](void *ptr) {
+	  auto out = (Txn<Modified> *)ptr;
+	  Modified &modified = out->initModified(
+	      (1U<<MxTEventFlags::Synthesized));
+	  modified.update(newOrder);
+	  executionOut(modified);
+	  return out;
+	});
 	newOrder.flags &= ~(1U<<MxTOrderFlags::M);
 	newOrder.eventState = MxTEventState::Acknowledged;
 	return;
@@ -1170,7 +1216,7 @@ public:
 
   template <typename In> typename ZuIsBase<Txn_, In>::T cxlReject(
       Order *order, In &in) {
-    executionIn(in);
+    executionIn(in.template as<CxlReject>());
     NewOrder &newOrder = order->newOrder();
     Modify &modify = order->modify();
     Cancel &cancel = order->cancel();
@@ -1179,10 +1225,13 @@ public:
       cancel.eventState = MxTEventState::Rejected;
       if (MxTOrderFlags::matchC(newOrder.flags)) // simulated modify
 	return;
-      Txn<CxlReject> out = in.template data<CxlReject>();
-      CxlReject &cxlReject = out.template as<CxlReject>();
-      cxlReject.update(cancel);
-      sendCxlReject(order, out);
+      app()->sendCxlReject(order, [&in, &cancel](void *ptr) {
+	auto out = new (ptr) Txn<CxlReject>(in.template data<CxlReject>());
+	CxlReject &cxlReject = out->template as<CxlReject>();
+	cxlReject.update(cancel);
+	executionOut(cxlReject);
+	return out;
+      });
       return;
     }
     // abnormal
@@ -1221,7 +1270,6 @@ public:
 	modify.eventState = MxTEventState::Deferred;
 	if (MxTEventState::matchDQSP(cancel.eventState)) goto sendRelease;
 	order->cancelTxn.initCancel((1U<<MxTEventFlags::Synthesized));
-	requestIn(order->cancelTxn);
 	cancel.update(newOrder);
 	if (ZuUnlikely(MxTEventState::matchS(newOrder.eventState) &&
 	      !app()->asyncCxl(order))) {
@@ -1237,23 +1285,23 @@ public:
     app()->abnormal(order, in);
     return false;
 sendRelease:
-    {
-      Txn<Release> out = in.template data<Release>();
-      executionOut(out);
-      Release &release = out.template as<Release>();
+    app()->sendRelease(order, [&in, &newOrder](void *ptr) {
+      auto out = new (ptr) Txn<Release>(in.template data<Release>());
+      Release &release = out->template as<Release>();
       release.update(newOrder);
-      app()->sendRelease(out);
-      return true;
-    }
+      executionOut(release);
+      return out;
+    });
+    return true;
 sendModRelease:
-    {
-      Txn<Release> out = in.template data<Release>();
-      executionOut(out);
-      Release &release = out.template as<Release>();
+    app()->sendRelease(order, [&in, &modify](void *ptr) {
+      auto out = new (ptr) Txn<Release>(in.template data<Release>());
+      Release &release = out->template as<Release>();
       release.update(modify);
-      app()->sendRelease(out);
-      return true;
-    }
+      executionOut(release);
+      return out;
+    });
+    return true;
   }
 
   template <typename In> typename ZuIsBase<Txn_, In, bool>::T deny(
@@ -1276,7 +1324,6 @@ sendModRelease:
       if (MxTEventState::matchDQSP(cancel.eventState))
 	goto sendModReject;
       order->cancelTxn.initCancel((1U<<MxTEventFlags::Synthesized));
-      requestIn(order->cancelTxn);
       cancel.update(newOrder);
       if (ZuUnlikely(MxTEventState::matchS(newOrder.eventState) &&
 	    !app()->asyncCxl(order))) {
@@ -1291,32 +1338,29 @@ sendModRelease:
     app()->abnormal(order, in);
     return false;
 sendReject:
-    {
-      Txn<Reject> out;
-      Reject &reject = out.initReject((1U<<MxTEventFlags::Synthesized));
-      executionIn(out);
+    app()->sendReject(order, [&in, &newOrder](void *ptr) {
+      auto out = (Txn<Reject> *)ptr;
+      Reject &reject = out->initReject((1U<<MxTEventFlags::Synthesized));
       memcpy(
 	  &static_cast<AnyReject &>(reject),
 	  &static_cast<const AnyReject &>(in.template as<Deny>()),
 	  sizeof(AnyReject));
       reject.update(newOrder);
-      sendReject(order, out);
-      return true;
-    }
+      executionOut(reject);
+    });
 sendModReject:
-    {
-      Txn<ModReject> out;
-      ModReject &modReject = out.initModReject(
+    app()->sendModReject(order, [&in, &modify](void *ptr) {
+      auto out = (Txn<ModReject> *)ptr;
+      ModReject &modReject = out->initModReject(
 	  (1U<<MxTEventFlags::Synthesized));
-      executionIn(out);
       memcpy(
 	  &static_cast<AnyReject &>(modReject),
 	  &static_cast<const AnyReject &>(in.template as<Deny>()),
 	  sizeof(AnyReject));
       modReject.update(modify);
-      sendModReject(order, out);
+      executionOut(modReject);
       return true;
-    }
+    });
   }
 
 private:
@@ -1329,29 +1373,36 @@ private:
       // modify ack pending
       modify.eventState = MxTEventState::Acknowledged;
       newOrder.update(modify);
-      Txn<Modified> out;
-      Modified &modified = out.initModified(modify.ackFlags);
-      executionIn(out);
-      modified.update(newOrder);
-      sendModified(order, out);
+      app()->sendModified(order,
+	  [eventFlags = modify.ackFlags, &newOrder](void *ptr) {
+	auto out = (Txn<Modified> *)ptr;
+	Modified &modified = out->initModified(eventFlags);
+	modified.update(newOrder);
+	executionOut(modified);
+	return out;
+      });
     }
     if (MxTEventState::matchP(cancel.eventState) &&
 	!newOrder.pending(cancel)) {
       // cancel ack pending
       newOrder.eventState = MxTEventState::Closed;
       cancel.eventState = MxTEventState::Acknowledged;
-      Txn<Canceled> out;
-      Canceled &canceled = out.initCanceled(cancel.ackFlags);
-      executionIn(out);
-      canceled.update(cancel);
-      sendCanceled(order, out);
+      app()->sendCanceled(order,
+	  [eventFlags = cancel.ackFlags, &cancel](void *ptr) {
+	auto out = (Txn<Canceled> *)ptr;
+	Canceled &canceled = out->initCanceled(eventFlags);
+	canceled.update(cancel);
+	executionOut(canceled);
+	return out;
+      });
     }
   }
 
 public:
   template <typename In> typename ZuIsBase<Txn_, In>::T fill(
       Order *order, In &in) {
-    executionIn(in);
+    Fill &fill = in.template as<Fill>();
+    executionIn(fill);
     NewOrder &newOrder = order->newOrder();
     Modify &modify = order->modify();
     Cancel &cancel = order->cancel();
@@ -1383,14 +1434,15 @@ public:
     }
     // always process fills, regardless of order status
 sendFill:
-    Txn<Fill> out = in.template data<Fill>();
-    executionOut(out);
-    Fill &fill = out.template as<Fill>();
-    fill.update(newOrder);
-    app()->sendFill(out);
+    app()->sendFill(order, [&in, &newOrder](void *ptr) {
+      auto out = new (ptr) Txn<Fill>(in.template data<Fill>());
+      Fill &fill = out->template as<Fill>();
+      fill.update(newOrder);
+      executionOut(out);
+      return out;
+    });
     {
       // apply fill to order leg
-      Fill &fill = in.template as<Fill>();
 #if _NLegs > 1
       unsigned leg_ = !*fill.eventLeg ? 0U : (unsigned)fill.eventLeg;
       if (leg_ >= _NLegs) {
@@ -1413,14 +1465,16 @@ sendFill:
   // closes the order
   template <typename In> typename ZuIsBase<Txn_, In>::T closed(
       Order *order, In &in) {
-    executionIn(in);
+    executionIn(in.template as<Closed>());
     NewOrder &newOrder = order->newOrder();
-    Txn<Closed> out = in.template data<Closed>();
-    executionOut(out);
-    Closed &closed = out.template as<Closed>();
-    closed.update(newOrder);
-    app()->sendClosed(out);
     newOrder.eventState = MxTEventState::Closed;
+    app()->sendClosed(order, [&in, &newOrder](void *ptr) {
+      auto out = new (ptr) Txn<Closed>(in.template data<Closed>());
+      Closed &closed = out->template as<Closed>();
+      closed.update(newOrder);
+      executionOut(out);
+      return out;
+    });
   }
 
   // returns true if transmission should proceed, false if aborted

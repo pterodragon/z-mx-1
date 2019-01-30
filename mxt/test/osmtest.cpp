@@ -18,7 +18,7 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
     MxIDString	instrument;	// instrument symbol
 
     template <typename S> inline void print(S &s) const {
-      // AppModLeg::print(s);
+      AppModLeg::print(s);
       s << "instrument=" << instrument;
     }
   };
@@ -211,14 +211,14 @@ void App::main()
     "sizeof(OrderFiltered): " << ZuBoxed(sizeof(OrderFiltered)) << '\n' <<
     "sizeof(Modify): " << ZuBoxed(sizeof(Modify)) << '\n' <<
     "sizeof(ModifyLeg): " << ZuBoxed(sizeof(ModifyLeg)) << '\n' <<
-    "sizeof(ModifyFiltered): " << ZuBoxed(sizeof(ModFiltered)) << '\n' <<
+    "sizeof(ModFiltered): " << ZuBoxed(sizeof(ModFiltered)) << '\n' <<
     "sizeof(Cancel): " << ZuBoxed(sizeof(Cancel)) << '\n' <<
     "sizeof(CancelLeg): " << ZuBoxed(sizeof(CancelLeg)) << '\n' <<
     "sizeof(CxlFiltered): " << ZuBoxed(sizeof(CxlFiltered)) << '\n' <<
     "sizeof(OrderTxn): " << ZuBoxed(sizeof(OrderTxn)) << '\n' <<
     "sizeof(ModifyTxn): " << ZuBoxed(sizeof(ModifyTxn)) << '\n' <<
     "sizeof(CancelTxn): " << ZuBoxed(sizeof(CancelTxn)) << '\n' <<
-    "sizeof(ExecTxn): " << ZuBoxed(sizeof(ExecTxn)) << '\n' <<
+    "sizeof(AckTxn): " << ZuBoxed(sizeof(AckTxn)) << '\n' <<
     "sizeof(AnyTxn): " << ZuBoxed(sizeof(AnyTxn)) << '\n' <<
     "sizeof(Order): " << ZuBoxed(sizeof(Order)) << '\n';
 }

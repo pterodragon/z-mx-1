@@ -215,7 +215,13 @@ namespace MxTRejReason {
     BadInvestorID,		// bad investor ID
     BrokerReject,		// broker-specific reject
     MarketReject,		// market-specific reject
-    OSM);			// order state management
+    OSM,			// order state management
+    InstrRestricted,		// instrument restricted
+    AcctDisabled,		// account disabled
+    NoAssets,			// cash trading - insufficient assets/funds
+    NoCollateral,		// margining - insufficient collateral
+    RiskBreach			// risk limit breached
+    );
   enum { OK = Invalid };	// OK == Invalid == -1
   MxEnumNames(
     "UnknownOrder",
@@ -253,7 +259,13 @@ namespace MxTRejReason {
     "BadInvestorID",
     "BrokerReject",
     "MarketReject",
-    "OSM");
+    "OSM",
+    "InstrRestricted",
+    "AcctDisabled",
+    "NoAssets",
+    "NoCollateral",
+    "RiskBreach"
+  );
 }
 
 namespace MxTCrossType {

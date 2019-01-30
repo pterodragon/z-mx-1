@@ -88,13 +88,28 @@ namespace MxTEventType {
       "OrderSent", "ModifySent", "CancelSent");
 }
 
-namespace MxTOrderFlags { // order flags
+// Note: Pending causes Pending New/Modify instead of Ordered/Modified
+// when processing modify-on-queue
+namespace MxTEventFlags { // event flags
   MxEnumValues(
-      C, ModifyCxl = 0,
-      M, ModifyNew = 1);
-  MxEnumNames("ModifyCxl", "ModifyNew");
+      Rx,		// received (cleared before each txn)
+      Tx,		// transmitted (cleared before each txn)
+      C, ModifyCxl = C,	// synthetic cancel/replace in progress
+      M, ModifyNew = M,	// new order/ack is consequence of modify-on-queue
+      Unsolicited,	// unsolicited modified/canceled from market
+      Synthesized,	// synthesized - not received from market
+      Pending		// synthesized and pending ordered/modified
+  );
+  MxEnumNames(
+      "Rx", "Tx",
+      "ModifyCxl", "ModifyNew",
+      "Unsolicited", "Synthesized", "Pending");
   MxEnumFlags(Flags,
-      "C", ModifyCxl, "M", ModifyNew);
+      "Rx", Rx, "Tx", Tx,
+      "ModifyCxl", ModifyCxl, "ModifyNew", ModifyNew,
+      "Unsolicited", Unsolicited,
+      "Synthesized", Synthesized,
+      "Pending", Pending);
 
   inline bool matchC(const MxFlags &v) { return v & (1U<<C); }
   inline bool matchM(const MxFlags &v) { return v & (1U<<M); }
@@ -102,41 +117,18 @@ namespace MxTOrderFlags { // order flags
     { return (v & ((1U<<C) | (1U<<M))) == ((1U<<C) | (1U<<M)); }
 }
 
-// Note: Pending causes Pending New/Modify instead of Ordered/Modified
-// when processing Modify-on-Queue
-namespace MxTEventFlags { // event flags
-  MxEnumValues(
-      Unsolicited,	// unsolicited modified / canceled from market
-      Synthesized,	// synthesized - not received from market
-      Pending,		// synthesized and pending ordered / modified
-      RiskFiltered,	// risk filtered
-      RiskHeld,		// risk held
-      Stopped		// stopped (held by stop)
-  );
-  MxEnumNames(
-      "Unsolicited", "Synthesized", "Pending",
-      "RiskFiltered", "RiskHeld", "Stopped");
-  MxEnumFlags(Flags,
-      "Unsolicited", Unsolicited,
-      "Synthesized", Synthesized,
-      "Pending", Pending,
-      "RiskFiltered", RiskFiltered,
-      "RiskHeld", RiskHeld,
-      "Stopped", Stopped);
-}
-
 namespace MxTEventState { // event state
   MxEnumValues(
-      U, Unset = 0,
-      R, Received = 1,
-      H, Held = 2,
-      D, Deferred = 3, // deferred awaiting ack of pending order or modify
-      Q, Queued = 4,
-      S, Sent = 5,
-      P, PendingFill = 6, // ack before fill
-      A, Acknowledged = 7,
-      X, Rejected = 8,
-      C, Closed = 9);
+      U, Unset = U,
+      R, Received = R,
+      H, Held = H,
+      D, Deferred = D, // deferred awaiting ack of pending order or modify
+      Q, Queued = Q,
+      S, Sent = S,
+      P, PendingFill = P, // ack before fill
+      A, Acknowledged = A,
+      X, Rejected = X,
+      C, Closed = C);
   MxEnumNames(
       "Unset", "Received", "Held", "Deferred", "Queued", "Sent",
       "PendingFill", "Acknowledged", "Rejected", "Closed");
@@ -204,11 +196,57 @@ namespace MxTEventState { // event state
 
 template <typename AppTypes> struct MxTAppTypes {
 
+#pragma pack(push, 1)
   struct Event : public ZuPrintable {
-    MxEnum		eventType;	// EventType
-    MxEnum		eventState;	// EventState
-    MxUInt8		eventFlags = 0;	// EventFlags
-    MxUInt8		eventLeg = 0;
+    MxEnum	eventType = MxTEventType::Invalid;	// MxTEventType
+    MxEnum	eventState = MxTEventState::Unset;	// MxTEventState
+    MxUInt8	eventFlags = 0;				// MxTEventFlags
+    MxUInt8	eventLeg = 0;
+
+    inline void null() {
+      eventType = MxTEventType::Invalid;
+      eventState = MxTEventState::Unset;
+      eventFlags = 0;
+      eventLeg = 0;
+    }
+
+    template <bool Rx, bool Tx>
+    inline typename ZuIfT<Rx && Tx>::T rxtx() {
+      eventFlags |= (1U<<MxTEventFlags::Rx) | (1U<<MxTEventFlags::Tx);
+    }
+    template <bool Rx, bool Tx>
+    inline typename ZuIfT<Rx && !Tx>::T rxtx() {
+      eventFlags =
+	(eventFlags | (1U<<MxTEventFlags::Rx)) & ~(1U<<MxTEventFlags::Tx);
+    }
+    template <bool Rx, bool Tx>
+    inline typename ZuIfT<!Rx && Tx>::T rxtx() {
+      eventFlags =
+	(eventFlags & ~(1U<<MxTEventFlags::Rx)) | (1U<<MxTEventFlags::Tx);
+    }
+    template <bool Rx, bool Tx>
+    inline typename ZuIfT<!Rx && !Tx>::T rxtx() {
+      eventFlags &= ~((1U<<MxTEventFlags::Rx) | (1U<<MxTEventFlags::Tx));
+    }
+
+    template <bool M, bool C>
+    inline typename ZuIfT<M && C>::T mc() {
+      eventFlags |= (1U<<MxTEventFlags::M) | (1U<<MxTEventFlags::C);
+    }
+    template <bool M, bool C>
+    inline typename ZuIfT<M && !C>::T mc() {
+      eventFlags =
+	(eventFlags | (1U<<MxTEventFlags::M)) & ~(1U<<MxTEventFlags::C);
+    }
+    template <bool M, bool C>
+    inline typename ZuIfT<!M && C>::T mc() {
+      eventFlags =
+	(eventFlags & ~(1U<<MxTEventFlags::M)) | (1U<<MxTEventFlags::C);
+    }
+    template <bool M, bool C>
+    inline typename ZuIfT<!M && !C>::T mc() {
+      eventFlags &= ~((1U<<MxTEventFlags::M) | (1U<<MxTEventFlags::C));
+    }
 
 #define Event_Flag(Bit, Fn) \
     inline bool Fn() const { \
@@ -217,12 +255,13 @@ template <typename AppTypes> struct MxTAppTypes {
     inline void Fn##_set() { eventFlags |=  (1U<<MxTEventFlags::Bit); } \
     inline void Fn##_clr() { eventFlags &= ~(1U<<MxTEventFlags::Bit); }
 
+    Event_Flag(Rx, rx)
+    Event_Flag(Tx, tx)
+    Event_Flag(ModifyNew, modifyNew)
+    Event_Flag(ModifyCxl, modifyCxl)
     Event_Flag(Unsolicited, unsolicited)
     Event_Flag(Synthesized, synthesized)
     Event_Flag(Pending, pending)
-    Event_Flag(RiskFiltered, riskFiltered)
-    Event_Flag(RiskHeld, riskHeld)
-    Event_Flag(Stopped, stopped)
 
     template <typename Update>
     inline void update(const Update &u) { }
@@ -235,6 +274,7 @@ template <typename AppTypes> struct MxTAppTypes {
       MxTEventFlags::Flags::instance()->print(s, eventFlags);
     }
   };
+#pragma pack(pop)
 
   struct OrderLeg;
   struct ModifyLeg;
@@ -552,12 +592,9 @@ template <typename AppTypes> struct MxTAppTypes {
 
   struct OrderLeg : public OrderLeg_ { };
   template <typename Leg> struct Order_ : public Modify_<Leg> {
-    MxFlags		flags;		// MxTOrderFlags
 
     template <typename S> inline void print(S &s) const {
       Modify_<Leg>::print(s);
-      s << " flags=";
-      MxTOrderFlags::Flags::instance()->print(s, flags);
     }
   };
 
@@ -619,15 +656,12 @@ template <typename AppTypes> struct MxTAppTypes {
   // generic reject data for new order / modify / cancel
   struct AnyReject : public AppTypes::Event {
     MxInt		rejCode;	// source-specific numerical code
-    MxEnum		rejReason;	// RejReason
-    uint8_t		pad_0[3];
-    MxTxtString		rejText;	// reject text
+    MxEnum		rejReason;	// MxTRejReason
 
     template <typename S> inline void print(S &s) const {
       AppTypes::Event::print(s);
       s << " rejReason=" << MxTRejReason::name(rejReason)
-	<< " rejCode=" << rejCode
-	<< " rejText=" << rejText;
+	<< " rejCode=" << rejCode;
     }
   };
 
@@ -757,6 +791,9 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
       T *ZuMayAlias(ptr) = (T *)&data[0];
       return *ptr;
     }
+
+    ZuInline Event &event() { return as<Event>(); }
+    ZuInline const Event &event() const { return as<Event>(); }
 
     ZuInline const MxEnum &type() const { return as<Event>().eventType; }
     ZuInline const MxFlags &flags() const { return as<Event>().eventFlags; }
@@ -974,7 +1011,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 
 #define Txn_InitFiltered(Type) \
     template <typename Txn> \
-    inline Type &init##Type(const Txn &txn, MxFlags eventFlags_) { \
+    inline Type &init##Type(const Txn &txn, MxUInt8 eventFlags_) { \
       memcpy((void *)this, &txn, sizeof(typename Type::Request)); \
       static typename Type::Reject blank; \
       { \
@@ -1021,28 +1058,28 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 #pragma GCC diagnostic pop
 #endif
 
-  typedef Txn<NewOrder> OrderTxn;
-  typedef Txn<Modify> ModifyTxn;
-  typedef Txn<Cancel> CancelTxn;
+  typedef Txn<NewOrder> OrderTxn;	// order / order ack
+  typedef Txn<Modify> ModifyTxn;	// modify / modify ack
+  typedef Txn<Cancel> CancelTxn;	// cancel / cancel ack
 
-  // FillTxn can contain a fill (trade)
-  typedef Txn<Fill> FillTxn;
+  typedef Txn<Event> AckTxn;		// ack event header
 
-  // ExecTxn can contain a execution(notice)/ack/reject
+  // ExecTxn can contain a reject/execution(notice) (acks update OMC)
   typedef typename ZuLargest<
-    Ordered, Reject,
-    Modified, ModReject,
-    Canceled, CxlReject,
+    Reject, ModReject, CxlReject,
     Release, Deny,
-    Fill, Closed>::T Exec_Largest;
+    Fill, Closed,
+    OrderSent, ModifySent, CancelSent>::T Exec_Largest;
   typedef Txn<Exec_Largest> ExecTxn;
 
-  // AnyTxn can contain any trading message
+  // AnyTxn can contain any request or event
   typedef typename ZuLargest<
     NewOrder, Modify, Cancel,
+    Ordered, Modified, Canceled,
+    OrderHeld, ModHeld,
     OrderFiltered, ModFiltered, CxlFiltered,
-    Exec_Largest>::T Txn_Largest;
-  typedef Txn<Txn_Largest> AnyTxn;
+    Exec_Largest>::T Any_Largest;
+  typedef Txn<Any_Largest> AnyTxn;
 
   // Order - open order state including pending modify/cancel
   struct Order : public ZuPrintable {
@@ -1051,6 +1088,8 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     OrderTxn		orderTxn;	// new order
     ModifyTxn		modifyTxn;	// (pending) modify
     CancelTxn		cancelTxn;	// (pending) cancel
+    AckTxn		ackTxn;		// last ack/reject of above OMC
+    ExecTxn		execTxn;	// last execution
 
     inline NewOrder &newOrder() {
       return orderTxn.template as<NewOrder>();
@@ -1070,11 +1109,26 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     inline const Cancel &cancel() const {
       return cancelTxn.template as<Cancel>();
     }
+    inline Event &ack() {
+      return ackTxn.template as<Event>();
+    }
+    inline const Event &ack() const {
+      return ackTxn.template as<Event>();
+    }
+    inline Event &exec() {
+      return execTxn.template as<Event>();
+    }
+    inline const Event &exec() const {
+      return execTxn.template as<Event>();
+    }
 
     template <typename S> inline void print(S &s) const {
       s << "orderTxn={" << orderTxn
 	<< "} modifyTxn={" << modifyTxn
-	<< "} cancelTxn={" << cancelTxn << '}';
+	<< "} cancelTxn={" << cancelTxn
+	<< "} ackTxn={" << ackTxn
+	<< "} execTxn={" << execTxn
+	<< '}';
     }
   };
 };

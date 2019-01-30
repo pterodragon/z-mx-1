@@ -88,7 +88,7 @@ void push() {
   order->m_price = 100;
   order->m_quantity = 100;
   if (!append)
-    orders->put(pod);
+    orders->put(ZdbPOD<Order>::pod(order));
   else {
     orders->putUpdate(pod);
     if (orders->allocRN() >= maxRN) return;

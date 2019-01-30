@@ -1378,8 +1378,10 @@ ZmRef<ZdbAnyPOD> ZdbAny::replicated_(ZdbRN rn, ZdbRN prevRN, int op)
     if (op != ZdbOp::Delete) {
       pod->commit();
       cache_(pod);
-    } else
+    } else {
       pod->del();
+
+    }
   } else {
     if (prevRN < m_allocRN) {
       Zdb_FileRec rec = rn2file(prevRN, false);
@@ -1821,7 +1823,7 @@ void ZdbAny::del(ZdbAnyPOD *pod, ZdbRN rn, bool copy)
     Guard guard(m_lock);
     cacheDel_(pod);
     if (ZuLikely(m_allocRN <= rn)) m_allocRN = rn + 1;
-    pod->update(rn, pod->rn());
+    if (rn != pod->rn()) pod->update(rn, pod->rn());
   }
   if (copy) this->copy(pod, ZdbRange(), ZdbOp::Delete);
   m_env->write(pod, Zdb_Msg::Rep, ZdbRange(), ZdbOp::Delete, false);
@@ -2027,18 +2029,30 @@ void ZdbAny::write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op)
       fileWriteError_(rec.file(), off, e);
   }
 
-  if (prevRN == rn) return;
+  while (prevRN != rn) {
+    rn = prevRN;
 
-  if (!(rec = rn2file(prevRN, false))) return;
+    if (!(rec = rn2file(rn, false))) return;
 
-  if (rec.file()->del(rec.offRN()))
-    delFile(rec.file());
-  else {
-    uint32_t magic = ZdbDeleted;
-    unsigned magicOffset = trailerOffset + offsetof(ZdbTrailer, magic);
-    ZiFile::Offset off = (ZiFile::Offset)rec.offRN() * m_recSize + magicOffset;
-    if (ZuUnlikely((r = rec.file()->pwrite(off, &magic, 4, &e)) != Zi::OK))
-      fileWriteError_(rec.file(), off, e);
+    {
+      unsigned prevOffset = trailerOffset + offsetof(ZdbTrailer, prevRN);
+      ZiFile::Offset off =
+	(ZiFile::Offset)rec.offRN() * m_recSize + prevOffset;
+      if (ZuUnlikely((r = rec.file()->pread(
+		off, &prevRN, sizeof(ZdbRN), &e)) < (int)sizeof(ZdbRN)))
+	prevRN = rn;
+    }
+
+    if (rec.file()->del(rec.offRN()))
+      delFile(rec.file());
+    else {
+      uint32_t magic = ZdbDeleted;
+      unsigned magicOffset = trailerOffset + offsetof(ZdbTrailer, magic);
+      ZiFile::Offset off =
+	(ZiFile::Offset)rec.offRN() * m_recSize + magicOffset;
+      if (ZuUnlikely((r = rec.file()->pwrite(off, &magic, 4, &e)) != Zi::OK))
+	fileWriteError_(rec.file(), off, e);
+    }
   }
 }
 

@@ -426,6 +426,15 @@ public:
 
   inline ZdbPOD_(ZdbAny *db) : Base(db) { }
 
+  ZuInline static const ZdbPOD_ *pod(const T *data) {
+    const Data *ZuMayAlias(ptr) = (const Data *)data;
+    return static_cast<const ZdbPOD_ *>(Base::pod(ptr));
+  }
+  ZuInline static ZdbPOD_ *pod(T *data) {
+    Data *ZuMayAlias(ptr) = (Data *)data;
+    return static_cast<ZdbPOD_ *>(Base::pod(ptr));
+  }
+
 private:
   template <class Heap_>
   class Compressed_ : public ZdbAnyPOD_Compressed, public Heap_ {

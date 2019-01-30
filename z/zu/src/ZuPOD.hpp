@@ -34,31 +34,45 @@
 
 // generic run-time access to a reference-counted POD type
 
-template <typename Base>
-class ZuAnyPOD_ : public Base {
+class ZuAnyPOD_Data {
 public:
-  template <typename ...Args>
-  ZuInline ZuAnyPOD_(unsigned size, Args &&... args) :
-    Base(ZuFwd<Args>(args)...), m_size(size) { }
-  virtual ~ZuAnyPOD_() { }
-
-  ZuInline const void *ptr() const { return &m_data; }
-  ZuInline void *ptr() { return &m_data; }
+  ZuInline const void *ptr() const { return this; }
+  ZuInline void *ptr() { return this; }
 
   template <typename T> ZuInline const T &as() const {
-    const T *ZuMayAlias(ptr) = (const T *)&m_data;
+    const T *ZuMayAlias(ptr) = (const T *)this;
     return *ptr;
   }
   template <typename T> ZuInline T &as() {
-    T *ZuMayAlias(ptr) = (T *)&m_data;
+    T *ZuMayAlias(ptr) = (T *)this;
     return *ptr;
   }
+
+private:
+  uintptr_t	m_data;
+};
+
+class ZuAnyPOD_Size {
+public:
+  ZuInline ZuAnyPOD_Size(unsigned size) : m_size(size) { }
 
   ZuInline unsigned size() const { return m_size; }
 
 private:
   unsigned	m_size;
-  uintptr_t	m_data;
+};
+
+template <typename Base>
+class ZuAnyPOD_ : public Base, public ZuAnyPOD_Size, public ZuAnyPOD_Data {
+public:
+  template <typename ...Args>
+  ZuInline ZuAnyPOD_(unsigned size, Args &&... args) :
+    Base(ZuFwd<Args>(args)...), ZuAnyPOD_Size(size) { }
+  virtual ~ZuAnyPOD_() { }
+
+  using ZuAnyPOD_Size::size;
+  using ZuAnyPOD_Data::ptr;
+  using ZuAnyPOD_Data::as;
 };
 
 #include <ZuPolymorph.hpp>
@@ -80,6 +94,15 @@ public:
 
   ZuInline const T &data() const { return this->template as<T>(); }
   ZuInline T &data() { return this->template as<T>(); }
+
+  ZuInline static const ZuPOD_ *pod(const T *data) {
+    const ZuAnyPOD_Data *ZuMayAlias(ptr) = (const ZuAnyPOD_Data *)data;
+    return static_cast<const ZuPOD_ *>(ptr);
+  }
+  ZuInline static ZuPOD_ *pod(T *data) {
+    ZuAnyPOD_Data *ZuMayAlias(ptr) = (ZuAnyPOD_Data *)data;
+    return static_cast<ZuPOD_ *>(ptr);
+  }
 
 private:
   char		m_data[sizeof(T) - sizeof(uintptr_t)];

@@ -94,6 +94,7 @@ namespace MxTEventFlags { // event flags
   MxEnumValues(
       Rx,		// received (cleared before each txn)
       Tx,		// transmitted (cleared before each txn)
+      Ack,		// acknowledged (OMC only - cleared before each txn)
       C, ModifyCxl = C,	// synthetic cancel/replace in progress
       M, ModifyNew = M,	// new order/ack is consequence of modify-on-queue
       Unsolicited,	// unsolicited modified/canceled from market
@@ -101,11 +102,11 @@ namespace MxTEventFlags { // event flags
       Pending		// synthesized and pending ordered/modified
   );
   MxEnumNames(
-      "Rx", "Tx",
+      "Rx", "Tx", "Ack",
       "ModifyCxl", "ModifyNew",
       "Unsolicited", "Synthesized", "Pending");
   MxEnumFlags(Flags,
-      "Rx", Rx, "Tx", Tx,
+      "Rx", Rx, "Tx", Tx, "Ack", Ack,
       "ModifyCxl", ModifyCxl, "ModifyNew", ModifyNew,
       "Unsolicited", Unsolicited,
       "Synthesized", Synthesized,
@@ -210,42 +211,23 @@ template <typename AppTypes> struct MxTAppTypes {
       eventLeg = 0;
     }
 
-    template <bool Rx, bool Tx>
-    inline typename ZuIfT<Rx && Tx>::T rxtx() {
-      eventFlags |= (1U<<MxTEventFlags::Rx) | (1U<<MxTEventFlags::Tx);
-    }
-    template <bool Rx, bool Tx>
-    inline typename ZuIfT<Rx && !Tx>::T rxtx() {
-      eventFlags =
-	(eventFlags | (1U<<MxTEventFlags::Rx)) & ~(1U<<MxTEventFlags::Tx);
-    }
-    template <bool Rx, bool Tx>
-    inline typename ZuIfT<!Rx && Tx>::T rxtx() {
-      eventFlags =
-	(eventFlags & ~(1U<<MxTEventFlags::Rx)) | (1U<<MxTEventFlags::Tx);
-    }
-    template <bool Rx, bool Tx>
-    inline typename ZuIfT<!Rx && !Tx>::T rxtx() {
-      eventFlags &= ~((1U<<MxTEventFlags::Rx) | (1U<<MxTEventFlags::Tx));
-    }
-
-    template <bool M, bool C>
-    inline typename ZuIfT<M && C>::T mc() {
-      eventFlags |= (1U<<MxTEventFlags::M) | (1U<<MxTEventFlags::C);
+    template <bool Rx, bool Tx, bool Ack>
+    inline void rxtx() {
+      eventFlags = (eventFlags &
+	~((1U<<MxTEventFlags::Rx) |
+	  (1U<<MxTEventFlags::Tx) |
+	  (1U<<MxTEventFlags::Ack))) |
+	(((unsigned)Rx)<<MxTEventFlags::Rx) |
+	(((unsigned)Tx)<<MxTEventFlags::Tx) |
+	(((unsigned)Ack)<<MxTEventFlags::Ack);
     }
     template <bool M, bool C>
-    inline typename ZuIfT<M && !C>::T mc() {
-      eventFlags =
-	(eventFlags | (1U<<MxTEventFlags::M)) & ~(1U<<MxTEventFlags::C);
-    }
-    template <bool M, bool C>
-    inline typename ZuIfT<!M && C>::T mc() {
-      eventFlags =
-	(eventFlags & ~(1U<<MxTEventFlags::M)) | (1U<<MxTEventFlags::C);
-    }
-    template <bool M, bool C>
-    inline typename ZuIfT<!M && !C>::T mc() {
-      eventFlags &= ~((1U<<MxTEventFlags::M) | (1U<<MxTEventFlags::C));
+    inline void mc() {
+      eventFlags = (eventFlags &
+	~((1U<<MxTEventFlags::M) |
+	  (1U<<MxTEventFlags::C))) |
+	(((unsigned)M)<<MxTEventFlags::M) |
+	(((unsigned)C)<<MxTEventFlags::C);
     }
 
 #define Event_Flag(Bit, Fn) \
@@ -257,6 +239,7 @@ template <typename AppTypes> struct MxTAppTypes {
 
     Event_Flag(Rx, rx)
     Event_Flag(Tx, tx)
+    Event_Flag(Ack, ack)
     Event_Flag(ModifyNew, modifyNew)
     Event_Flag(ModifyCxl, modifyCxl)
     Event_Flag(Unsolicited, unsolicited)
@@ -998,13 +981,16 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 #endif
 
 #define Txn_Init(Type) \
-    inline Type &init##Type(MxUInt8 eventFlags_) { \
+    template <bool Synthesized> \
+    inline Type &init##Type(unsigned flags = 0U, unsigned leg = 0) { \
       static Type blank; \
       { \
 	Event &event = this->template as<Event>(); \
 	memcpy(&event, &blank, sizeof(Type)); \
 	event.eventType = Type::EventType; \
-	event.eventFlags = eventFlags_; \
+	event.eventFlags = flags | \
+	  ((unsigned)Synthesized)<<MxTEventFlags::Synthesized; \
+	event.eventLeg = leg; \
       } \
       return this->template as<Type>(); \
     }
@@ -1085,6 +1071,9 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
   struct Order : public ZuPrintable {
     inline Order() { }
 
+    // following each state transition, outgoing messages are
+    // transmitted/processed in the following sequence:
+    // order/modify/cancel, exec, ack
     OrderTxn		orderTxn;	// new order
     ModifyTxn		modifyTxn;	// (pending) modify
     CancelTxn		cancelTxn;	// (pending) cancel

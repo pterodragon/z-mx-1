@@ -173,6 +173,7 @@ namespace MxTEventState { // event state
   inline bool matchDSP(const MxEnum &v)
     { return v == D || v == S || v == P; }
   inline bool matchDX(const MxEnum &v) { return v == D || v == X; }
+  inline bool matchDQX(const MxEnum &v) { return v == D || v == Q || v == X; }
   inline bool matchQ(const MxEnum &v) { return v == Q; }
   inline bool matchQS(const MxEnum &v) { return v == Q || v == S; }
   inline bool matchQSP(const MxEnum &v)
@@ -537,7 +538,7 @@ template <typename AppTypes> struct MxTAppTypes {
     enum { EventType = MxTEventType::Canceled };
 
     template <typename Update> inline void update(const Update &u) {
-      Event::update(u);
+      AppTypes::Event::update(u);
       Cancel_<typename AppTypes::CanceledLeg>::update(u);
     }
 
@@ -592,7 +593,7 @@ template <typename AppTypes> struct MxTAppTypes {
     }
 
     template <typename Update> inline void update(const Update &u) {
-      Event::update(u);
+      AppTypes::Event::update(u);
       Order_<typename AppTypes::OrderLeg>::update(u);
     }
 
@@ -640,6 +641,17 @@ template <typename AppTypes> struct MxTAppTypes {
   struct AnyReject : public AppTypes::Event {
     MxInt		rejCode;	// source-specific numerical code
     MxEnum		rejReason;	// MxTRejReason
+
+    template <typename Update>
+    inline ZuIs<AnyReject, Update>::T update(const Update &u) {
+      AppTypes::Event::update(u);
+      rejCode = u.rejCode;
+      rejReason = u.rejReason;
+    }
+    template <typename Update>
+    inline ZuIsNot<AnyReject, Update>::T update(const Update &u) {
+      AppTypes::Event::update(u);
+    }
 
     template <typename S> inline void print(S &s) const {
       AppTypes::Event::print(s);

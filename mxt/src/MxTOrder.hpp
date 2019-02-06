@@ -643,13 +643,13 @@ template <typename AppTypes> struct MxTAppTypes {
     MxEnum		rejReason;	// MxTRejReason
 
     template <typename Update>
-    inline ZuIs<AnyReject, Update>::T update(const Update &u) {
+    inline typename ZuIs<AnyReject, Update>::T update(const Update &u) {
       AppTypes::Event::update(u);
       rejCode = u.rejCode;
       rejReason = u.rejReason;
     }
     template <typename Update>
-    inline ZuIsNot<AnyReject, Update>::T update(const Update &u) {
+    inline typename ZuIsNot<AnyReject, Update>::T update(const Update &u) {
       AppTypes::Event::update(u);
     }
 
@@ -929,7 +929,8 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
       const Txn	&txn;
     };
     template <typename T>
-    inline ZuIsBase<Filtered__, T, Request_<Txn, T> > request() const {
+    inline typename ZuIsBase<Filtered__, T, Request_<Txn, T> >::T
+    request() const {
       return Request_<Txn, T>(*this);
     }
   private:
@@ -963,7 +964,8 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
       const Txn	&txn;
     };
     template <typename T>
-    inline ZuIsBase<Filtered__, T, Reject_<Txn, T> > reject() const {
+    inline typename ZuIsBase<Filtered__, T, Reject_<Txn, T> >::T
+    reject() const {
       return Reject_<Txn, T>(*this);
     }
   private:
@@ -993,7 +995,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 #endif
 
 #define Txn_Init(Type) \
-    template <bool Synthesized> \
+    template <bool Synthesized = false> \
     inline Type &init##Type(unsigned flags = 0U, unsigned leg = 0) { \
       static Type blank; \
       { \

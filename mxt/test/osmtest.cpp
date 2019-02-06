@@ -176,7 +176,6 @@ void App::main()
   newOrder.legs[0].pxNDP = 0;
   newOrder.legs[0].qtyNDP = 0;
   // order state management
-  newOrderIn(order, txn);
   this->newOrder(order, txn);
   // log newOrder
   // dump order

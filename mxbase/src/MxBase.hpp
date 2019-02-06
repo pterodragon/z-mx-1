@@ -121,6 +121,19 @@ struct MxValNDP {
   MxValue	value;
   MxNDP		ndp;
 
+  ZuInline static void update(
+      MxValue &value, MxNDP &ndp, 
+      const MxValue &u_value, const MxNDP &u_ndp) {
+    if (!*u_value) return;
+    if (u_value == MxValueReset) {
+      value = MxValue();
+      ndp = MxNDP();
+    } else {
+      value = u_value;
+      ndp = u_ndp;
+    }
+  }
+
   template <typename V>
   ZuInline MxValNDP(V value_, MxNDP ndp_,
       typename ZuIsIntegral<V>::T *_ = 0) :

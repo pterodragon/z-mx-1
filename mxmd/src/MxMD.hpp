@@ -642,17 +642,16 @@ private:
 
   template <typename Fill>
   uintptr_t match(MxDateTime transactTime,
-      MxValue &qty, MxValue &cumQty, MxValue &grossTradeAmt, Fill fill) {
+      MxValue &qty, MxValue &cumQty, MxValue &cumValue, Fill fill) {
     auto i = this->m_orders.iterator();
     while (MxMDPxLevel_::Orders::Node *node = i.iterate()) {
       const ZmRef<MxMDOrder> &contra = node->key();
       MxValue cQty = contra->data().qty;
       if (cQty <= qty) {
-	if (uintptr_t v = fill(
-	      qty, cumQty, grossTradeAmt, m_price, cQty, contra))
+	if (uintptr_t v = fill(qty, cumQty, cumValue, m_price, cQty, contra))
 	  return v;
 	cumQty += cQty;
-	grossTradeAmt +=
+	cumValue +=
 	  (MxValNDP{m_price, m_pxNDP} * MxValNDP{cQty, m_qtyNDP}).value;
 	deletedOrder_(contra, transactTime);
 	i.del();
@@ -661,11 +660,10 @@ private:
 	qty -= cQty;
 	if (!qty) return 0;
       } else {
-	if (uintptr_t v = fill(
-	      qty, cumQty, grossTradeAmt, m_price, qty, contra))
+	if (uintptr_t v = fill(qty, cumQty, cumValue, m_price, qty, contra))
 	  return v;
 	cumQty += qty;
-	grossTradeAmt +=
+	cumValue +=
 	  (MxValNDP{m_price, m_pxNDP} * MxValNDP{qty, m_qtyNDP}).value;
 	contra->updateQty_(cQty - qty);
 	m_data.qty -= qty;
@@ -883,13 +881,13 @@ private:
   template <int Direction, typename Fill, typename Limit>
   uintptr_t match(
       MxDateTime transactTime, MxValue px, MxValue qty,
-      MxValue &cumQty, MxValue &grossTradeAmt,
+      MxValue &cumQty, MxValue &cumValue,
       Fill &&fill, Limit &&limit) {
     auto i = m_pxLevels.readIterator<Direction>();
     while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate()) {
       if (!limit(px, pxLevel->price())) break;
       if (uintptr_t v = pxLevel->match(
-	    transactTime, qty, cumQty, grossTradeAmt, fill))
+	    transactTime, qty, cumQty, cumValue, fill))
 	return v;
       if (!qty) break;
     }
@@ -1065,13 +1063,12 @@ private:
   uintptr_t match_(MxDateTime transactTime, MxValue px, MxValue qty,
       Fill &&fill, Leaves &&leaves, Limit &&limit, Side &&side) {
     MxValue cumQty = 0;
-    MxValue grossTradeAmt = 0;
-    auto l = [transactTime, px, qty,
-	 &cumQty, &grossTradeAmt, &fill, &limit, &side](
+    MxValue cumValue = 0;
+    auto l = [transactTime, px, qty, &cumQty, &cumValue, &fill, &limit, &side](
 	     auto &recurse, MxMDOrderBook *ob) mutable -> uintptr_t {
       if (ZuLikely(!ob->m_in))
 	return side()->template match<Direction>(
-	    transactTime, px, qty, cumQty, grossTradeAmt, fill, limit);
+	    transactTime, px, qty, cumQty, cumValue, fill, limit);
       for (MxMDOrderBook *inOB = ob->m_in; inOB; inOB = inOB->m_next) {
 	if (uintptr_t v = recurse(inOB)) return v;
 	if (!qty) break;
@@ -1079,14 +1076,14 @@ private:
       return 0;
     };
     uintptr_t v = l(l, this); // recursive lambda
-    leaves(qty, cumQty, grossTradeAmt);
+    leaves(qty, cumQty, cumValue);
     return v;
   }
 
 public:
-  // fill(leavesQty, cumQty, grossTradeAmt, px, qty, MxMDOrder *contra)
+  // fill(leavesQty, cumQty, cumValue, px, qty, MxMDOrder *contra)
   //   /* fill(...) is called repeatedly for each contra order */
-  // leaves(leavesQty, cumQty, grossTradeAmt) /* called on completion */
+  // leaves(leavesQty, cumQty, cumValue) /* called on completion */
 
   // match order
   template <typename Fill, typename Leaves>

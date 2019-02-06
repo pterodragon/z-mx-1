@@ -36,40 +36,58 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
   };
 
   struct AppRequest;
+  struct AppAck;
   struct AppExec;
 
   struct AppRequest : public AppMsgID {
     template <typename Update>
     inline typename ZuIs<AppRequest, Update>::T update(const Update &u) {
-      clOrdID.update(clOrdID);
-      orderID.update(orderID);
-      execID.update(execID);
+      clOrdID.update(u.clOrdID);
+      orderID.update(u.orderID);
+      execID.update(u.execID);
     }
     template <typename Update>
-    inline typename ZuIs<AppExec, Update>::T update(const Update &u) {
-      orderID.update(orderID);
-      execID.update(execID);
+    inline typename ZuIfT<
+	ZuConversion<AppAck, Update>::Is ||
+	ZuConversion<AppExec, Update>::Is>::T update(const Update &u) {
+      orderID.update(u.orderID);
+      execID.update(u.execID);
     }
     template <typename Update>
     inline typename ZuIfT<
       !ZuConversion<AppRequest, Update>::Is &&
+      !ZuConversion<AppAck, Update>::Is &&
       !ZuConversion<AppExec, Update>::Is>::T update(const Update &) { }
+  };
+
+  struct AppAck : public AppMsgID {
+    template <typename Update>
+    inline typename ZuIs<AppRequest, Update>::T update(const Update &u) {
+      clOrdID.update(u.clOrdID);
+      orderID.update(u.orderID);
+      execID.update(u.execID);
+    }
+    template <typename Update>
+    inline typename ZuIfT<
+      !ZuConversion<AppRequest, Update>::Is>::T update(const Update &) { }
   };
 
   struct AppExec : public AppMsgID {
     template <typename Update>
     inline typename ZuIs<AppRequest, Update>::T update(const Update &u) {
-      clOrdID.update(clOrdID);
+      clOrdID.update(u.clOrdID);
     }
     template <typename Update>
     inline typename ZuIs<AppExec, Update>::T update(const Update &u) {
-      orderID.update(orderID);
-      execID.update(execID);
+      orderID.update(u.orderID);
+      execID.update(u.execID);
     }
+#if 0
     template <typename Update>
     inline typename ZuIfT<
       !ZuConversion<AppRequest, Update>::Is &&
       !ZuConversion<AppExec, Update>::Is>::T update(const Update &) { }
+#endif
   };
 
   struct AppNewOrder : public AppRequest {
@@ -104,15 +122,15 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
   DeclType(OrderLeg, OrderLeg);
 
   DeclType(NewOrder, NewOrder);
-  DeclType(Ordered, Exec);
+  DeclType(Ordered, Ack);
   DeclType(Reject, Exec);
 
   DeclType(Modify, Request);
-  DeclType(Modified, Exec);
+  DeclType(Modified, Ack);
   DeclType(ModReject, Exec);
 
   DeclType(Cancel, Request);
-  DeclType(Canceled, Exec);
+  DeclType(Canceled, Ack);
   DeclType(CxlReject, Exec);
 
   DeclType(Hold, Exec);
@@ -130,9 +148,9 @@ struct App : public MxTOrderMgr<App, AppTypes> {
   template <typename Txn> void abnormal(Order *, const Txn &) { }
 
   // returns true if async. modify enabled for order
-  bool asyncMod(Order *);
+  bool asyncMod(Order *) { return true; }
   // returns true if async. cancel enabled for order
-  bool asyncCxl(Order *);
+  bool asyncCxl(Order *) { return true; }
 
   // process messages
   void sendNewOrder(Order *) { }
@@ -167,20 +185,23 @@ int main()
 void App::main()
 {
   Order *order = new Order(); // would be derived and indexed by real app
-  Txn<NewOrder> txn;
+  {
+    Txn<NewOrder> txn;
 
-  // initialize new order
-  NewOrder &newOrder = txn.initNewOrder(0);
-  // fill out new order data
-  newOrder.legs[0].side = MxSide::Buy;
-  newOrder.legs[0].pxNDP = 0;
-  newOrder.legs[0].qtyNDP = 0;
-  // order state management
-  this->newOrder(order, txn);
-  // log newOrder
-  // dump order
-  std::cout << *order << '\n';
-
+    // initialize new order
+    NewOrder &newOrder = txn.initNewOrder();
+    // fill out new order data
+    newOrder.clOrdID = "foo";
+    newOrder.legs[0].side = MxSide::Buy;
+    newOrder.legs[0].px = 100;
+    newOrder.legs[0].pxNDP = 0;
+    newOrder.legs[0].orderQty = 100;
+    newOrder.legs[0].qtyNDP = 0;
+    // order state management
+    this->newOrder(order, txn);
+    // dump order
+    std::cout << *order << '\n';
+  }
   {
     Txn<OrderSent> sentTxn;
     OrderSent &orderSent = sentTxn.initOrderSent(0);
@@ -188,17 +209,53 @@ void App::main()
       std::cout << "send OK\n";
     else
       std::cout << "send FAILED\n";
-    // log orderSent
+    std::cout << *order << '\n';
   }
-  // dump order
-  std::cout << *order << '\n';
+  {
+    Txn<Ordered> txn;
 
-  Txn<Ordered> ack;
-  Ordered &ordered = ack.initOrdered(0);
-  this->ordered(order, ack);
-  // log ordered
-  // dump order
-  std::cout << *order << '\n';
+    Ordered &ordered = txn.initOrdered();
+    ordered.orderID = "bar";
+    ordered.execID = "baz";
+    this->ordered(order, txn);
+    std::cout << *order << '\n';
+    if (this->ack(order, txn))
+      std::cout << txn << '\n';
+  }
+  {
+    Txn<Cancel> txn;
+
+    Cancel &cancel = txn.initCancel();
+    cancel.clOrdID = "foo2";
+    this->cancel(order, txn);
+    std::cout << *order << '\n';
+  }
+  {
+    Txn<Canceled> txn;
+
+    Canceled &canceled = txn.initCanceled();
+    canceled.orderID = "bar2";
+    canceled.execID = "baz2";
+    canceled.legs[0].cumQty = 50;
+    canceled.legs[0].qtyNDP = 0;
+    this->canceled(order, txn);
+    std::cout << *order << '\n';
+    if (this->ack(order, txn))
+      std::cout << "ACK: " << txn << '\n';
+  }
+  {
+    Txn<Fill> txn;
+
+    Fill &fill = txn.initFill();
+    fill.lastPx = 100;
+    fill.lastQty = 50;
+    fill.pxNDP = 0;
+    fill.qtyNDP = 0;
+    this->fill(order, txn);
+    std::cout << *order << '\n';
+    if (this->ack(order, txn))
+      std::cout << "ACK: " << txn << '\n';
+  }
 
   delete order;
   std::cout <<

@@ -68,8 +68,7 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
       execID.update(u.execID);
     }
     template <typename Update>
-    inline typename ZuIfT<
-      !ZuConversion<AppRequest, Update>::Is>::T update(const Update &) { }
+    inline typename ZuIsNot<AppRequest, Update>::T update(const Update &u) { }
   };
 
   struct AppExec : public AppMsgID {
@@ -82,12 +81,10 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
       orderID.update(u.orderID);
       execID.update(u.execID);
     }
-#if 0
     template <typename Update>
     inline typename ZuIfT<
       !ZuConversion<AppRequest, Update>::Is &&
       !ZuConversion<AppExec, Update>::Is>::T update(const Update &) { }
-#endif
   };
 
   struct AppNewOrder : public AppRequest {
@@ -203,9 +200,7 @@ void App::main()
     std::cout << *order << '\n';
   }
   {
-    Txn<OrderSent> sentTxn;
-    OrderSent &orderSent = sentTxn.initOrderSent(0);
-    if (orderSend(order, sentTxn))
+    if (orderSend(order))
       std::cout << "send OK\n";
     else
       std::cout << "send FAILED\n";

@@ -295,7 +295,7 @@ int main(int argc, char **argv)
 	    dump("replicated (del)",
 		pod->rn(), pod->prevRN(), (Order *)pod->ptr());
 	  },
-	  [](ZdbAnyPOD *pod, ZdbRange, int op) {
+	  [](ZdbAnyPOD *pod, int op) {
 	    if (op == ZdbOp::Delete)
 	      deleted("DC delete", pod->rn(), pod->prevRN());
 	    else if (op == ZdbOp::Update)

@@ -108,28 +108,25 @@ private:
 public:
   MxTOrderMgr() {
     { // ensure all static initializers are run once
-      AnyTxn txn, request;
+      AnyTxn txn;
 
       txn.initNewOrder();
-      request = txn.template data<NewOrder>();
-      txn.initOrderHeld(request, 0);
-      txn.initOrderFiltered(request, 0);
+      txn.initOrderHeld();
+      txn.initOrderFiltered();
       txn.initOrdered();
       txn.initReject();
 
       txn.initModify();
       txn.initModSimulated();
-      request = txn.template data<Modify>();
-      txn.initModHeld(request, 0);
-      txn.initModFiltered(request, 0);
-      txn.initModFilteredCxl(request, 0);
+      txn.initModHeld();
+      txn.initModFiltered();
+      txn.initModFilteredCxl();
       txn.initModified();
       txn.initModReject();
       txn.initModRejectCxl();
 
       txn.initCancel();
-      request = txn.template data<Cancel>();
-      txn.initCxlFiltered(request, 0);
+      txn.initCxlFiltered();
       txn.initCanceled();
       txn.initCxlReject();
 
@@ -139,10 +136,6 @@ public:
       txn.initFill();
 
       txn.initClosed();
-
-      txn.initOrderSent();
-      txn.initModifySent();
-      txn.initCancelSent();
     }
   }
 
@@ -188,7 +181,7 @@ public:
   }
 
 private:
-  static void newOrderIn__(Order *order) {
+  inline static void newOrderIn__(Order *order) {
     auto &newOrder = order->newOrder();
     unsigned n = newOrder.nLegs();
     for (unsigned i = 0; i < n; i++) {
@@ -1538,49 +1531,34 @@ applyFill:
   }
 
   // returns true if transmission should proceed, false if aborted
-  template <typename In>
-  typename ZuIsBase<Txn_, In, bool>::T orderSend(Order *order, In &in) {
+  bool orderSend(Order *order) {
     auto &newOrder = order->newOrder();
-    order->execTxn = in.template data<OrderSent>();
     if (ZuUnlikely(!MxTEventState::matchQ(newOrder.eventState))) {
-      execIn<MxTEventState::Rejected>(order);
+      newOrder.eventState = MxTEventState::Rejected;
       return false;
     }
-    execIn<MxTEventState::Sent>(order);
-    auto &sent = order->execTxn.template as<OrderSent>();
-    newOrder.update(sent);
     newOrder.eventState = MxTEventState::Sent;
     return true;
   }
 
   // returns true if transmission should proceed, false if aborted
-  template <typename In>
-  typename ZuIsBase<Txn_, In, bool>::T modifySend(Order *order, In &in) {
+  bool modifySend(Order *order) {
     auto &modify = order->modify();
-    order->execTxn = in.template data<ModifySent>();
     if (ZuUnlikely(!MxTEventState::matchQ(modify.eventState))) {
-      execIn<MxTEventState::Rejected>(order);
+      modify.eventState = MxTEventState::Rejected;
       return false;
     }
-    execIn<MxTEventState::Sent>(order);
-    auto &sent = order->execTxn.template as<ModifySent>();
-    modify.update(sent);
     modify.eventState = MxTEventState::Sent;
     return true;
   }
 
   // returns true if transmission should proceed, false if aborted
-  template <typename In>
-  typename ZuIsBase<Txn_, In, bool>::T cancelSend(Order *order, In &in) {
+  bool cancelSend(Order *order) {
     auto &cancel = order->cancel();
-    order->execTxn = in.template data<CancelSent>();
     if (ZuUnlikely(!MxTEventState::matchQ(cancel.eventState))) {
-      execIn<MxTEventState::Rejected>(order);
+      cancel.eventState = MxTEventState::Rejected;
       return false;
     }
-    execIn<MxTEventState::Sent>(order);
-    auto &sent = order->execTxn.template as<CancelSent>();
-    cancel.update(sent);
     cancel.eventState = MxTEventState::Sent;
     return true;
   }

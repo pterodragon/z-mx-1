@@ -73,10 +73,7 @@ namespace MxTEventType {
       Release,			// release from being held
       Deny,			// deny (reject by broker) following held
       Fill,			// order filled (partially or fully)
-      Closed,			// order closed (expired)
-      OrderSent,		// new order sent to market
-      ModifySent,		// modify sent to market
-      CancelSent		// cancel sent to market
+      Closed			// order closed (expired)
   );
   MxEnumNames(
       "NewOrder", "OrderHeld", "OrderFiltered", "Ordered", "Reject",
@@ -84,8 +81,7 @@ namespace MxTEventType {
       "ModFilteredCxl", "Modified", "ModReject", "ModRejectCxl",
       "Cancel", "CxlFiltered", "Canceled", "CxlReject",
       "Release", "Deny",
-      "Fill", "Closed",
-      "OrderSent", "ModifySent", "CancelSent");
+      "Fill", "Closed");
 }
 
 // Note: Pending causes Pending New/Modify instead of Ordered/Modified
@@ -637,18 +633,6 @@ template <typename AppTypes> struct MxTAppTypes {
     enum { EventType = MxTEventType::Closed };
   };
 
-  struct AnySent : public AppTypes::Event { };
-
-  struct OrderSent : public AppTypes::AnySent {
-    enum { EventType = MxTEventType::OrderSent };
-  };
-  struct ModifySent : public AppTypes::AnySent {
-    enum { EventType = MxTEventType::ModifySent };
-  };
-  struct CancelSent : public AppTypes::AnySent {
-    enum { EventType = MxTEventType::CancelSent };
-  };
-
   // generic reject data for new order / modify / cancel
   struct AnyReject : public AppTypes::Event {
     MxInt		rejCode;	// source-specific numerical code
@@ -731,11 +715,7 @@ template <typename AppTypes> struct MxTAppTypes {
  \
   using Fill = typename Scope::Fill; \
  \
-  using Closed = typename Scope::Closed; \
- \
-  using OrderSent = typename Scope::OrderSent; \
-  using ModifySent = typename Scope::ModifySent; \
-  using CancelSent = typename Scope::CancelSent
+  using Closed = typename Scope::Closed;
 
 template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
   MxTImport(AppTypes);
@@ -838,10 +818,6 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 
 	case MxTEventType::Closed: return sizeof(Closed);
 
-	case MxTEventType::OrderSent: return sizeof(OrderSent);
-	case MxTEventType::ModifySent: return sizeof(ModifySent);
-	case MxTEventType::CancelSent: return sizeof(CancelSent);
-
 	default: return sizeof(Event);
       }
     }
@@ -875,10 +851,6 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 	case MxTEventType::Fill: s << as<Fill>(); break;
 
 	case MxTEventType::Closed: s << as<Closed>(); break;
-
-	case MxTEventType::OrderSent: s << as<OrderSent>(); break;
-	case MxTEventType::ModifySent: s << as<ModifySent>(); break;
-	case MxTEventType::CancelSent: s << as<CancelSent>(); break;
       }
     }
 
@@ -930,7 +902,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
       return *this;
     }
 
-    // Txn m1, m2;
+    // Txn<...> m1, m2;
     // m1 = m2.request<OrderFiltered>(); // assign request part of m2 to m1
     template <typename Txn_, typename T_> struct Request_ : public Request__ {
       typedef Txn_ Txn;
@@ -1020,36 +992,23 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
       return this->template as<Type>(); \
     }
 
-#define Txn_InitFiltered(Type) \
-    template <typename Txn> \
-    inline Type &init##Type(const Txn &txn, MxUInt8 eventFlags_) { \
-      memcpy((void *)this, &txn, sizeof(typename Type::Request)); \
-      static typename Type::Reject blank; \
-      { \
-	typename Type::Reject &reject = this->template as<Type>().reject; \
-	memcpy(&reject, &blank, sizeof(typename Type::Reject)); \
-	reject.eventFlags = eventFlags_ | (1U<<MxTEventFlags::Synthesized); \
-      } \
-      return this->template as<Type>(); \
-    }
-
     Txn_Init(NewOrder)
-    Txn_InitFiltered(OrderHeld)
-    Txn_InitFiltered(OrderFiltered)
+    Txn_Init(OrderHeld)
+    Txn_Init(OrderFiltered)
     Txn_Init(Ordered)
     Txn_Init(Reject)
 
     Txn_Init(Modify)
     Txn_Init(ModSimulated)
-    Txn_InitFiltered(ModHeld)
-    Txn_InitFiltered(ModFiltered)
-    Txn_InitFiltered(ModFilteredCxl)
+    Txn_Init(ModHeld)
+    Txn_Init(ModFiltered)
+    Txn_Init(ModFilteredCxl)
     Txn_Init(Modified)
     Txn_Init(ModReject)
     Txn_Init(ModRejectCxl)
 
     Txn_Init(Cancel)
-    Txn_InitFiltered(CxlFiltered)
+    Txn_Init(CxlFiltered)
     Txn_Init(Canceled)
     Txn_Init(CxlReject)
 
@@ -1059,10 +1018,6 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     Txn_Init(Fill)
 
     Txn_Init(Closed)
-
-    Txn_Init(OrderSent)
-    Txn_Init(ModifySent)
-    Txn_Init(CancelSent)
   };
 
 #ifdef __GNUC__
@@ -1079,8 +1034,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
   typedef typename ZuLargest<
     Reject, ModReject, CxlReject,
     Release, Deny,
-    Fill, Closed,
-    OrderSent, ModifySent, CancelSent>::T Exec_Largest;
+    Fill, Closed>::T Exec_Largest;
   typedef Txn<Exec_Largest> ExecTxn;
 
   // AnyTxn can contain any request or event

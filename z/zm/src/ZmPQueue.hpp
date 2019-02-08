@@ -1315,7 +1315,7 @@ public:
     if (scheduleResend) app->scheduleResend();
   }
 
-  // send - called via scheduleSend(), may reschedule itself
+  // send - called via {,re}scheduleSend(), may call rescheduleSend()
   void send() {
     App *app = static_cast<App *>(this);
     bool scheduleSend = false;

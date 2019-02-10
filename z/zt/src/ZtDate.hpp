@@ -289,11 +289,19 @@ public:
     m_julian(date.m_julian), m_sec(date.m_sec), m_nsec(date.m_nsec) { }
 
   inline ZtDate &operator =(const ZtDate &date) {
-    if (this == &date) return *this;
+    if (ZuUnlikely(this == &date)) return *this;
     m_julian = date.m_julian;
     m_sec = date.m_sec;
     m_nsec = date.m_nsec;
     return *this;
+  }
+
+  inline void update(const ZtDate &date) {
+    if (ZuUnlikely(this == &date) ||
+	date.m_julian == ZtDate_NullJulian) return;
+    m_julian = date.m_julian;
+    m_sec = date.m_sec;
+    m_nsec = date.m_nsec;
   }
 
   inline ZtDate(Now_ _) { now(); }
@@ -1001,9 +1009,9 @@ public:
     return ZtDate::operator +(-t);
   }
   template <typename T> ZuInline typename ZuIfT<
-    ZuConversion<time_t, T>::Same ||
-    ZuConversion<long, T>::Same ||
-    ZuConversion<int, T>::Same, ZtDate>::T operator -(T sec_) {
+      ZuConversion<time_t, T>::Same ||
+      ZuConversion<long, T>::Same ||
+      ZuConversion<int, T>::Same, ZtDate>::T operator -(T sec_) {
     return ZtDate::operator +(-sec_);
   }
   template <typename T>

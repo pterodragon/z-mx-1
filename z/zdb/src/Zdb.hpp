@@ -73,9 +73,9 @@
 #define ZdbDEBUG(env, e) ((void)0)
 #endif
 
-typedef uint32_t ZdbID;		// database ID
-typedef uint64_t ZdbRN;		// record ID
-#define ZdbMaxRN (~((ZdbRN)0))
+typedef uint32_t ZdbID;				// database ID
+#define ZdbMaxRN (~((uint64_t)0))
+typedef ZuBoxN(uint64_t, ZdbMaxRN) ZdbRN;	// record ID
 
 namespace ZdbOp {
   enum { New = 0, Update, Delete };
@@ -566,7 +566,7 @@ public:
   // create new record
   ZmRef<ZdbAnyPOD> push(ZdbRN rn);
   // commit record following push() - causes replication / sync
-  void put(ZdbAnyPOD *, bool copy = true);
+  void put(ZdbAnyPOD *);
   // abort push()
   void abort(ZdbAnyPOD *);
 
@@ -577,13 +577,13 @@ public:
   // update record
   ZmRef<ZdbAnyPOD> update(ZdbAnyPOD *orig, ZdbRN rn);
   // commit record following update(), potentially a partial update
-  void putUpdate(ZdbAnyPOD *, bool replace = true, bool copy = true);
+  void putUpdate(ZdbAnyPOD *, bool replace = true);
 
   // delete record following get() / get_()
-  void del(ZdbAnyPOD *, ZdbRN rn, bool copy = true);
+  void del(ZdbAnyPOD *, ZdbRN rn);
 
   // delete all records < minRN
-  void purge(ZdbRN minRN, bool copy = true);
+  void purge(ZdbRN minRN);
 
   struct Telemetry {
     typedef ZuStringN<124> Path;

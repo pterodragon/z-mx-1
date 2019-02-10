@@ -59,7 +59,7 @@ template <typename App> class MxTOrderDB {
   using OrderDB = Zdb<OrderData>;
   using OrderPOD = ZdbPOD<OrderData>;
 
-  using ClosedData = TxnTypes::NewOrder;	// closed order
+  using ClosedData = TxnTypes::OrderTxn;	// closed order
   using ClosedDB = Zdb<ClosedData>;
   using ClosedPOD = ZdbPOD<ClosedData>;
 

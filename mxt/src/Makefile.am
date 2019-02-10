@@ -7,7 +7,7 @@ AM_LDFLAGS = @MXT_LDFLAGS@ @MXT_SO_LDFLAGS@ \
 	@MXBASE_LDFLAGS@ @Z_LDFLAGS@
 include_HEADERS = \
 	MxTLib.hpp MxTTypes.hpp MxTOrder.hpp MxTOrderMgr.hpp \
-	MxTOrderDB.hpp MxTTxDB.hpp
+	MxTOrderDB.hpp MxTTxDB.hpp MxTVersion.hpp
 lib_LTLIBRARIES = libMxT.la
-libMxT_la_SOURCES =
+libMxT_la_SOURCES = MxTVersion.cpp
 libMxT_la_LIBADD = @MXBASE_LIBS@ @Z_LIBS@ @MXT_XLIBS@

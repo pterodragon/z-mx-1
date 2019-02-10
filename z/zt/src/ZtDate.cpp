@@ -49,7 +49,7 @@ void ZtDate::reformation(int year, int month, int day)
 
   ZtDate r(year, month, day);
 
-  m_reformationJulian = r.julian();
+  m_reformationJulian = r.m_julian;
 
   r.ymd(m_reformationYear, m_reformationMonth, m_reformationDay);
 }
@@ -71,7 +71,7 @@ void ZtDate::ymd(int &year, int &month, int &day) const
   if (ZuLikely(m_julian >= m_reformationJulian)) {
     int i, j, l, n;
 
-    l = julian() + 68569;
+    l = m_julian + 68569;
     n = (l<<2) / 146097;
     l = l - ((146097 * n + 3)>>2);
     i = (4000 * (l + 1)) / 1461001;
@@ -84,7 +84,7 @@ void ZtDate::ymd(int &year, int &month, int &day) const
   } else {
     int i, j, k, l, n;
 
-    j = julian() + 1402;
+    j = m_julian + 1402;
     k = (j - 1) / 1461;
     l = j - 1461 * k;
     n = (l - 1) / 365 - l / 1461;
@@ -115,7 +115,7 @@ void ZtDate::hmsn(int &hour, int &minute, int &sec, int &nsec) const
 // 1st Monday in year is 1st day of week 1
 void ZtDate::ywd(int year, int days, int &week, int &wkDay) const
 {
-  int wkDay_ = julian() % 7;
+  int wkDay_ = m_julian % 7;
   if (wkDay_ < 0) wkDay_ += 7;
   wkDay = wkDay_ + 1;
   week = days < wkDay_ ? 0 : ((days - wkDay_) / 7 + 1);
@@ -125,7 +125,7 @@ void ZtDate::ywd(int year, int days, int &week, int &wkDay) const
 // 1st Sunday in year is 1st day of week 1
 void ZtDate::ywdSun(int year, int days, int &week, int &wkDay) const
 {
-  int wkDay_ = (julian() + 1) % 7;
+  int wkDay_ = (m_julian + 1) % 7;
   if (wkDay_ < 0) wkDay_ += 7;
   wkDay = wkDay_ + 1;
   week = days < wkDay_ ? 0 : ((days - wkDay_) / 7 + 1);
@@ -136,7 +136,7 @@ void ZtDate::ywdSun(int year, int days, int &week, int &wkDay) const
 void ZtDate::ywdISO(
     int year, int days, int &wkYear, int &week, int &wkDay) const
 {
-  int wkDay_ = julian() % 7;
+  int wkDay_ = m_julian % 7;
   if (wkDay_ < 0) wkDay_ += 7;
   wkDay = wkDay_ + 1;
   int days_;

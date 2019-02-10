@@ -80,11 +80,7 @@ struct MxQMsgData {
     return *static_cast<const T *>(payload->ptr());
   }
 
-  ZuInline void load(MxID linkID, MxSeqNo seqNo) {
-    id.linkID = linkID;
-    id.seqNo = seqNo;
-  }
-
+  ZuInline void load(const MxMsgID &id_) { id = id_; }
   ZuInline void unload() { id = MxMsgID{}; }
 
   template <typename T = uintptr_t>

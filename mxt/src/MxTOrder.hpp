@@ -85,14 +85,15 @@ namespace MxTEventType {
 }
 
 // Note: Pending causes Pending New/Modify instead of Ordered/Modified
-// when processing modify-on-queue
+// when processing modify-on-queue; Ack is overloaded to specify fill target
 namespace MxTEventFlags { // event flags
   MxEnumValues(
       Rx,		// received (cleared before each txn)
       Tx,		// transmitted (cleared before each txn)
-      Ack,		// acknowledged (OMC only - cleared before each txn)
+      Ack,		// OMC - acknowledged - cleared before each txn)
+      			// Fill - fill targets pending modify
       C, ModifyCxl = C,	// synthetic cancel/replace in progress
-      M, ModifyNew = M,	// new order/ack is consequence of modify-on-queue
+      M, ModifyNew = M,	// new order/ack following modify-on-queue
       Unsolicited,	// unsolicited modified/canceled from market
       Synthesized,	// synthesized - not received from market
       Pending		// synthesized and pending ordered/modified
@@ -155,6 +156,7 @@ namespace MxTEventState { // event state
     { return v == H || v == Q || v == S; }
   inline bool matchHQSA(const MxEnum &v)
     { return v == H || v == Q || v == S || v == A; }
+  inline bool matchHDQS(const MxEnum &v) { return v >= H && v <= S; }
   inline bool matchHDQSP(const MxEnum &v) { return v >= H && v <= P; }
   inline bool matchHDQSPA(const MxEnum &v) { return v >= H && v <= A; }
   inline bool matchHQSAX(const MxEnum &v)
@@ -343,8 +345,7 @@ template <typename AppTypes> struct MxTAppTypes {
     inline typename ZuIfT<
 	ZuConversion<CanceledLeg_, Update>::Is &&
 	ZuConversion<AckLeg__, Update>::Is>::T update(const Update &u) {
-      // cumQty.update(u.cumQty, MxValueReset);
-      MxValNDP::update(cumQty, qtyNDP, u.cumQty, u.qtyNDP);
+      // MxValNDP::update(cumQty, qtyNDP, u.cumQty, u.qtyNDP);
     }
     template <typename Update>
     inline typename ZuIfT<
@@ -411,6 +412,7 @@ template <typename AppTypes> struct MxTAppTypes {
 
   struct ModifyLeg_ : public CancelLeg_ {
     MxValue		px;		// always set; ref. px for mkt orders
+    MxValue		cumValue = 0;	// FIX GrossTradeAmt
     MxEnum		side;		// MxSide
     MxEnum		ordType;	// MxOrdType
     MxNDP		pxNDP;
@@ -467,7 +469,7 @@ template <typename AppTypes> struct MxTAppTypes {
       if (*px)
 	s << " pxNDP=" << pxNDP
 	  << " px=" << MxValNDP{px, pxNDP};
-      s << ' ';
+      s << " cumValue=" << MxValNDP{cumValue, this->pxNDP} << ' ';
       CancelLeg_::print(s);
     }
   };
@@ -558,7 +560,6 @@ template <typename AppTypes> struct MxTAppTypes {
 
   struct OrderLeg_ : public ModifyLeg_ {
     MxValue		leavesQty = 0;
-    MxValue		cumValue = 0;	// FIX GrossTradeAmt
 
     template <typename Update> inline void update(const Update &u) {
       ModifyLeg_::update(u);
@@ -577,8 +578,7 @@ template <typename AppTypes> struct MxTAppTypes {
 
     template <typename S> inline void print(S &s) const {
       ModifyLeg_::print(s);
-      s << " leavesQty=" << MxValNDP{leavesQty, this->qtyNDP}
-        << " cumValue=" << MxValNDP{cumValue, this->pxNDP};
+      s << " leavesQty=" << MxValNDP{leavesQty, this->qtyNDP};
     }
   };
 
@@ -624,7 +624,9 @@ template <typename AppTypes> struct MxTAppTypes {
 
     template <typename S> inline void print(S &s) const {
       AppTypes::Event::print(s);
-      s << " lastPx=" << MxValNDP{lastPx, pxNDP}
+      s << " pxNDP=" << pxNDP
+	<< " qtyNDP=" << qtyNDP
+	<< " lastPx=" << MxValNDP{lastPx, pxNDP}
 	<< " lastQty=" << MxValNDP{lastQty, qtyNDP};
     }
   };

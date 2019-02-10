@@ -1771,7 +1771,7 @@ void ZdbAny::abort(ZdbAnyPOD *pod) // aborts a push()
   m_env->write(pod, Zdb_Msg::Rep, ZdbOp::Delete, false);
 }
 
-void ZdbAny::put(ZdbAnyPOD *pod, bool copy) // commits a push
+void ZdbAny::put(ZdbAnyPOD *pod) // commits a push
 {
   ZmAssert(!pod->committed());
   pod->commit();
@@ -1779,7 +1779,7 @@ void ZdbAny::put(ZdbAnyPOD *pod, bool copy) // commits a push
     Guard guard(m_lock);
     cache(pod);
   }
-  if (copy) this->copy(pod, ZdbOp::New);
+  this->copy(pod, ZdbOp::New);
   m_env->write(pod, Zdb_Msg::Rep, ZdbOp::New, m_config->compress);
 }
 
@@ -1799,7 +1799,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *orig, ZdbRN rn)
 }
 
 // commits an update - if replace, previous versions are deleted
-void ZdbAny::putUpdate(ZdbAnyPOD *pod, bool replace, bool copy)
+void ZdbAny::putUpdate(ZdbAnyPOD *pod, bool replace)
 {
   ZmAssert(!pod->committed());
   pod->commit();
@@ -1808,11 +1808,11 @@ void ZdbAny::putUpdate(ZdbAnyPOD *pod, bool replace, bool copy)
     cache(pod);
   }
   int op = replace ? ZdbOp::Update : ZdbOp::New;
-  if (copy) this->copy(pod, op);
+  this->copy(pod, op);
   m_env->write(pod, Zdb_Msg::Rep, op, m_config->compress);
 }
 
-void ZdbAny::del(ZdbAnyPOD *pod, ZdbRN rn, bool copy)
+void ZdbAny::del(ZdbAnyPOD *pod, ZdbRN rn)
 {
   ZmAssert(pod->committed());
   {
@@ -1824,11 +1824,11 @@ void ZdbAny::del(ZdbAnyPOD *pod, ZdbRN rn, bool copy)
     else
       pod->del();
   }
-  if (copy) this->copy(pod, ZdbOp::Delete);
+  this->copy(pod, ZdbOp::Delete);
   m_env->write(pod, Zdb_Msg::Rep, ZdbOp::Delete, false);
 }
 
-void ZdbAny::purge(ZdbRN minRN, bool copy)
+void ZdbAny::purge(ZdbRN minRN)
 {
   ZdbRN rn;
   {
@@ -1843,7 +1843,7 @@ void ZdbAny::purge(ZdbRN minRN, bool copy)
       m_minRN = rn;
       guard.unlock();
       pod->del();
-      if (copy) this->copy(pod, ZdbOp::Delete);
+      this->copy(pod, ZdbOp::Delete);
       m_env->write(ZuMv(pod), Zdb_Msg::Rep, ZdbOp::Delete, false);
     }
     ++rn;

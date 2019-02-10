@@ -141,7 +141,7 @@ public:
 
   // order state management
 
-  // build ack message (Ordered/Modified/Canceled)
+  // emits ack message (Ordered/Modified/Canceled)
   template <typename Out>
   typename ZuIsBase<Txn_, Out, bool>::T ack(Order *order, Out &out) {
     auto &newOrder = order->newOrder();
@@ -154,7 +154,7 @@ public:
 	auto &ordered = out.template initOrdered<0>(
 	    ack.eventFlags | (1U<<MxTEventFlags::Tx), ack.eventLeg);
 	if (newOrder.ack()) ordered.update(newOrder);
-	if (modify.ack()) ordered.update(modify);
+	// if (modify.ack()) ordered.update(modify);
 	ordered.eventState = MxTEventState::Sent;
 	return true;
       }
@@ -169,8 +169,8 @@ public:
       case MxTEventType::Canceled: {
 	auto &canceled = out.template initCanceled<0>(
 	    ack.eventFlags | (1U<<MxTEventFlags::Tx), ack.eventLeg);
-	if (newOrder.ack()) canceled.update(newOrder);
-	if (modify.ack()) canceled.update(modify);
+	// if (newOrder.ack()) canceled.update(newOrder);
+	// if (modify.ack()) canceled.update(modify);
 	if (cancel.ack()) canceled.update(cancel);
 	canceled.eventState = MxTEventState::Sent;
 	return true;
@@ -178,6 +178,13 @@ public:
       default:
 	return false;
     }
+  }
+
+  // returns either new order or modify, according to the fill target
+  Modify &fillModify(Order *order) {
+    auto &fill = order->execTxn.template as<Fill>();
+    if (ZuUnlikely(fill.ack())) return order->modify();
+    return order->newOrder();
   }
 
 private:
@@ -197,8 +204,8 @@ private:
     newOrder.eventState = State;
     newOrder.template rxtx<1, State == MxTEventState::Queued, 0>();
     // no need to set/clr other rx/tx bits since order is new
-    // order->modify().template rxtx<0, 0>();
-    // order->cancel().template rxtx<0, 0>();
+    // order->modify().template rxtx<0, 0, 0>();
+    // order->cancel().template rxtx<0, 0, 0>();
     // order->ack().null();
     // order->exec().null();
     newOrderIn__(order);
@@ -296,10 +303,11 @@ private:
     exec.eventState = State;
     exec.template rxtx<1, State == MxTEventState::Sent, 0>();
   }
+  template <int State = MxTEventState::Sent>
   inline static void execOut(Order *order) {
     auto &exec = order->exec();
-    exec.eventState = MxTEventState::Sent;
-    exec.tx_set();
+    exec.eventState = State;
+    if constexpr (State == MxTEventState::Sent) exec.tx_set();
   }
 
   // continuation helpers
@@ -1432,10 +1440,10 @@ private:
     if (ZuUnlikely(newOrder.modifyNew())) {
       newOrder.modifyNew_clr();
       ackOut<MxTEventType::Modified, MxTEventState::Sent,
-	1, 0, 0, 1, 0, 0>(order, leg);
+	1, 0, 0, 0, 1, 0>(order, leg); // OmcuSp
     } else {
       ackOut<MxTEventType::Ordered, MxTEventState::Sent,
-	1, 0, 0, 1, 0, 0>(order, leg);
+	1, 0, 0, 0, 1, 0>(order, leg); // OmcuSp
     }
   }
 
@@ -1476,6 +1484,7 @@ public:
       goto applyFill;
     }
 applyFill:
+    bool fillModify = false;
     {
       // apply fill to order leg
 #if _NLegs > 1
@@ -1491,28 +1500,58 @@ applyFill:
       OrderLeg &leg = newOrder.legs[0];
 #endif
       leg.cumQty += fill.lastQty;
+      if (MxTEventState::matchHDQS(modify.eventState)) {
+#if _NLegs > 1
+	ModifyLeg &modLeg = modify.legs[leg_];
+#else
+	ModifyLeg &modLeg = modify.legs[0];
+#endif
+	if (*modLeg.orderQty && leg.cumQty > leg.orderQty) {
+	  if (leg.cumQty <= modLeg.orderQty)
+	    // modify qty up, fill implies modified
+	    fillModify = true;
+	} else if (*modLeg.px) {
+	  if (leg.side == MxSide::Buy) {
+	    if (fill.lastPx > leg.px && fill.lastPx <= modLeg.px)
+	      // modify bid price up, fill implies modified
+	      fillModify = true;
+	  } else {
+	    if (fill.lastPx < leg.px && fill.lastPx >= modLeg.px)
+	      // modify ask price down, fill implies modified
+	      fillModify = true;
+	  }
+	}
+      }
       leg.updateLeavesQty();
       leg.cumValue += (fill.lastQty * fill.lastPx);
     }
-    if (MxTEventState::matchP(modify.eventState) &&
-	!newOrder.pendingFill(modify)) {
-      // modify ack pending
-      modify.eventState = MxTEventState::Acknowledged;
-      newOrder.update(modify);
+    if (ZuUnlikely(fillModify)) {
+      modify.update(fill);
+      fill.update(modify);
+      fill.ack_set();
       ackOut<MxTEventType::Modified, MxTEventState::Sent,
-	1, 0, 0, 0, 0, 0>(order); // Omcusp
+	1, 1, 0, 0, 1, 1>(order); // OmcuSP
+    } else {
+      newOrder.update(fill);
+      fill.update(newOrder);
+      if (MxTEventState::matchP(modify.eventState) &&
+	  !newOrder.pendingFill(modify)) {
+	// modify ack pending
+	modify.eventState = MxTEventState::Acknowledged;
+	newOrder.update(modify);
+	ackOut<MxTEventType::Modified, MxTEventState::Sent,
+	  1, 0, 0, 0, 0, 0>(order); // Omcusp
+      }
+      if (MxTEventState::matchP(cancel.eventState) &&
+	  !newOrder.pendingFill(cancel)) {
+	// cancel ack pending - (simulated modify cancels are never deferred)
+	cancel.eventState = MxTEventState::Acknowledged;
+	newOrder.eventState = MxTEventState::Closed;
+	newOrder.update(cancel);
+	ackOut<MxTEventType::Canceled, MxTEventState::Sent,
+	  1, 0, 0, 0, 0, 0>(order); // Omcusp
+      }
     }
-    if (MxTEventState::matchP(cancel.eventState) &&
-	!newOrder.pendingFill(cancel)) {
-      // cancel ack pending - (simulated modify cancels are never deferred)
-      cancel.eventState = MxTEventState::Acknowledged;
-      newOrder.eventState = MxTEventState::Closed;
-      newOrder.update(cancel);
-      ackOut<MxTEventType::Canceled, MxTEventState::Sent,
-	1, 0, 0, 0, 0, 0>(order); // Omcusp
-    }
-    newOrder.update(fill);
-    fill.update(newOrder);
     return 0;
   }
 

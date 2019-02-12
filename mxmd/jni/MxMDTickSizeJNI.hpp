@@ -35,8 +35,8 @@
 #include <MxMD.hpp>
 
 namespace MxMDTickSizeJNI {
-  // MxMDTickSize j2c(JNIEnv *, jobject);
-  jobject ctor(JNIEnv *, const MxMDTickSize &ts);
+  // MxMDExtern MxMDTickSize j2c(JNIEnv *, jobject);
+  MxMDExtern jobject ctor(JNIEnv *, const MxMDTickSize &ts);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

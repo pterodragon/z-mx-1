@@ -33,8 +33,8 @@
 #include <MxMDTypes.hpp>
 
 namespace MxMDOrderIDScopeJNI {
-  MxEnum j2c(JNIEnv *, jobject);
-  jobject ctor(JNIEnv *, MxEnum);
+  MxMDExtern MxEnum j2c(JNIEnv *, jobject);
+  MxMDExtern jobject ctor(JNIEnv *, MxEnum);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

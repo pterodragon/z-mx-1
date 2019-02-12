@@ -33,8 +33,8 @@
 #include <MxBase.hpp>
 
 namespace MxInstrKeyJNI {
-  MxInstrKey j2c(JNIEnv *, jobject);
-  jobject ctor(JNIEnv *, const MxInstrKey &key);
+  MxBaseExtern MxInstrKey j2c(JNIEnv *, jobject);
+  MxBaseExtern jobject ctor(JNIEnv *, const MxInstrKey &key);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

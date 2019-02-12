@@ -35,7 +35,7 @@
 #include <MxMD.hpp>
 
 namespace MxMDInstrHandlerJNI {
-  ZmRef<MxMDInstrHandler> j2c(JNIEnv *env, jobject handler);
+  MxMDExtern ZmRef<MxMDInstrHandler> j2c(JNIEnv *env, jobject handler);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

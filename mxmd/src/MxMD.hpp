@@ -1212,7 +1212,7 @@ ZuInline MxMDOrderID3Ref MxMDOrder_::OrderID3Accessor::value(
 
 // instruments
 
-class MxMDDerivatives : public ZmObject {
+class MxMDAPI MxMDDerivatives : public ZmObject {
   MxMDDerivatives(const MxMDDerivatives &) = delete;
   MxMDDerivatives &operator =(const MxMDDerivatives &) = delete;
 

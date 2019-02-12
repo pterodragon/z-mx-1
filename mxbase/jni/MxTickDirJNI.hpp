@@ -33,8 +33,8 @@
 #include <MxBase.hpp>
 
 namespace MxTickDirJNI {
-  MxEnum j2c(JNIEnv *, jobject);
-  jobject ctor(JNIEnv *, MxEnum);
+  MxBaseExtern MxEnum j2c(JNIEnv *, jobject);
+  MxBaseExtern jobject ctor(JNIEnv *, MxEnum);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }

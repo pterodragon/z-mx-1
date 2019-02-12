@@ -136,7 +136,7 @@ public:
   inline const ZtString &path() const { return m_path; }
   inline const ZtString &groups() const { return m_groups; }
   inline bool raw() const { return m_raw; }
-  inline ZiIP interface() const { return m_interface; }
+  inline ZiIP interface_() const { return m_interface; }
   inline unsigned reconnectFreq() const { return m_reconnectFreq; }
 
   inline Mx *mx() { return m_mx; }
@@ -194,7 +194,7 @@ void Source::connect()
   ZiCxnOptions options;
   options.udp(true);
   options.multicast(true);
-  options.mreq(ZiMReq(group().ip, m_app->interface()));
+  options.mreq(ZiMReq(group().ip, m_app->interface_()));
   m_app->mx()->udp(
       ZiConnectFn::Member<&Source::connected>::fn(ZmMkRef(this)),
       ZiFailFn::Member<&Source::connectFailed>::fn(ZmMkRef(this)),
@@ -274,11 +274,8 @@ void App::write(const MxMCapHdr *hdr, const char *buf)
   {
     ZmGuard<ZmLock> guard(m_fileLock);
     if (!m_raw) {
-      m_vecs[0].iov_base = (void *)hdr;
-      m_vecs[0].iov_len = sizeof(MxMCapHdr);
-      m_vecs[1].iov_base = (void *)buf;
-      m_vecs[1].iov_len = hdr->len;
-      if (m_file.writev(m_vecs, 2, &e) != Zi::OK) goto error;
+      if (m_file.write((void *)hdr, sizeof(MxMCapHdr), &e) != Zi::OK ||
+	  m_file.write((void *)buf, hdr->len, &e) != Zi::OK) goto error;
     } else {
       if (m_file.write((void *)buf, hdr->len, &e) != Zi::OK) goto error;
     }

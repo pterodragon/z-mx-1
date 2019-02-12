@@ -259,7 +259,7 @@ public:
 	return;
       }
     }
-    msg->load(app().id(), m_seqNo++);
+    msg->load(MxMsgID{app().id(), m_seqNo++});
     app().loaded_(msg);
     Tx::send(msg);
   }

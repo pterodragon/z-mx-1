@@ -411,7 +411,7 @@ void MxMDSubLink::udpConnect()
   options.udp(true);
   if (ip.multicast()) {
     options.multicast(true);
-    options.mreq(ZiMReq(ip, engine()->interface()));
+    options.mreq(ZiMReq(ip, engine()->interface_()));
   }
   mx()->udp(
       ZiConnectFn(this,

@@ -413,7 +413,7 @@ void MxMDPubLink::udpConnect()
   options.udp(true);
   if (ip.multicast()) {
     options.multicast(true);
-    options.mif(engine()->interface());
+    options.mif(engine()->interface_());
     options.ttl(engine()->ttl());
     options.loopBack(engine()->loopBack());
   }

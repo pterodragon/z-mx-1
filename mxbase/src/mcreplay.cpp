@@ -144,7 +144,7 @@ public:
   inline const ZtString &groups() const { return m_groups; }
   inline ZuBox<double> speed() const { return m_speed; }
   inline ZuBox<double> interval() const { return m_interval; }
-  inline ZiIP interface() const { return m_interface; }
+  inline ZiIP interface_() const { return m_interface; }
   inline int ttl() const { return m_ttl; }
   inline bool loopBack() const { return m_loopBack; }
 
@@ -217,7 +217,7 @@ void Dest::connect()
   ZiCxnOptions options;
   options.udp(true);
   options.multicast(true);
-  options.mif(m_app->interface());
+  options.mif(m_app->interface_());
   options.ttl(m_app->ttl());
   options.loopBack(m_app->loopBack());
   m_app->mx()->udp(

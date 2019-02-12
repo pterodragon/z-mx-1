@@ -56,7 +56,7 @@ public:
   void init(MxMDCore *core, ZvCf *cf);
   void final();
 
-  ZuInline const ZiIP &interface() const { return m_interface; }
+  ZuInline ZiIP interface_() const { return m_interface; }
   ZuInline bool filter() const { return m_filter; }
   ZuInline unsigned maxQueueSize() const { return m_maxQueueSize; }
   ZuInline ZmTime loginTimeout() const { return ZmTime(m_loginTimeout); }

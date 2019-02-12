@@ -90,7 +90,7 @@ namespace MxLinkState {
 
 class MxEngine;
 
-class MxAnyTx : public ZmPolymorph {
+class MxBaseAPI MxAnyTx : public ZmPolymorph {
   MxAnyTx(const MxAnyTx &);	//prevent mis-use
   MxAnyTx &operator =(const MxAnyTx &);
 
@@ -117,7 +117,7 @@ private:
   Mx			*m_mx = 0;
 };
 
-class MxAnyTxPool : public MxAnyTx {
+class MxBaseAPI MxAnyTxPool : public MxAnyTx {
   MxAnyTxPool(const MxAnyTxPool &) = delete;
   MxAnyTxPool &operator =(const MxAnyTxPool &) = delete;
 
@@ -128,7 +128,7 @@ public:
   virtual MxQueue *txQueuePtr() = 0;
 };
 
-class MxAnyLink : public MxAnyTx {
+class MxBaseAPI MxAnyLink : public MxAnyTx {
   MxAnyLink(const MxAnyLink &) = delete;
   MxAnyLink &operator =(const MxAnyLink &) = delete;
 
@@ -207,7 +207,7 @@ private:
 // Traffic Logging (timestamp, payload)
 typedef ZmFn<ZmTime &, ZuString &> MxTraffic;
 
-struct MxEngineMgr {
+struct MxBaseAPI MxEngineMgr {
   // Engine Management
   virtual void addEngine(MxEngine *) = 0;
   virtual void delEngine(MxEngine *) = 0;
@@ -239,7 +239,7 @@ struct MxEngineMgr {
 };
 
 // Callbacks to the application from the engine implementation
-struct MxEngineApp {
+struct MxBaseAPI MxEngineApp {
   virtual ZmRef<MxAnyLink> createLink(MxID) = 0;
 };
 
@@ -267,7 +267,7 @@ struct MxEngineApp {
 // 5] Destroy the link/engine, safe in the knowledge that no pending functions
 //    that reference it can remain in existence
 
-class MxEngine : public ZmPolymorph {
+class MxBaseAPI MxEngine : public ZmPolymorph {
   MxEngine(const MxEngine &);	//prevent mis-use
   MxEngine &operator =(const MxEngine &);
 

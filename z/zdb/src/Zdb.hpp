@@ -73,9 +73,10 @@
 #define ZdbDEBUG(env, e) ((void)0)
 #endif
 
-typedef uint32_t ZdbID;				// database ID
-#define ZdbMaxRN (~((uint64_t)0))
-typedef uint64_t ZdbRN;	// record ID
+typedef uint32_t ZdbID;		// database ID
+typedef uint64_t ZdbRN;		// record ID
+#define ZdbNullRN (~((uint64_t)0))
+#define ZdbMaxRN ZdbNullRN
 
 namespace ZdbOp {
   enum { New = 0, Update, Delete };

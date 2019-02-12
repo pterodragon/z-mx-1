@@ -35,6 +35,14 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
     }
   };
 
+  struct AppExecID {
+    MxIDString	execID;
+
+    template <typename S> inline void print(S &s) const {
+      s << "execID=" << execID;
+    }
+  };
+
   struct AppRequest;
   struct AppAck;
   struct AppExec;
@@ -47,10 +55,12 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
       execID.update(u.execID);
     }
     template <typename Update>
-    inline typename ZuIfT<
-	ZuConversion<AppAck, Update>::Is ||
-	ZuConversion<AppExec, Update>::Is>::T update(const Update &u) {
+    inline typename ZuIs<AppAck, Update>::T update(const Update &u) {
       orderID.update(u.orderID);
+      execID.update(u.execID);
+    }
+    template <typename Update>
+    inline typename ZuIs<AppExec, Update>::T update(const Update &u) {
       execID.update(u.execID);
     }
     template <typename Update>
@@ -68,23 +78,12 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
       execID.update(u.execID);
     }
     template <typename Update>
-    inline typename ZuIsNot<AppRequest, Update>::T update(const Update &u) { }
+    inline typename ZuIsNot<AppRequest, Update>::T update(const Update &) { }
   };
 
-  struct AppExec : public AppMsgID {
+  struct AppExec : public AppExecID {
     template <typename Update>
-    inline typename ZuIs<AppRequest, Update>::T update(const Update &u) {
-      clOrdID.update(u.clOrdID);
-    }
-    template <typename Update>
-    inline typename ZuIs<AppExec, Update>::T update(const Update &u) {
-      orderID.update(u.orderID);
-      execID.update(u.execID);
-    }
-    template <typename Update>
-    inline typename ZuIfT<
-      !ZuConversion<AppRequest, Update>::Is &&
-      !ZuConversion<AppExec, Update>::Is>::T update(const Update &) { }
+    inline void update(const Update &) { }
   };
 
   struct AppNewOrder : public AppRequest {

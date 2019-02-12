@@ -75,7 +75,7 @@
 
 typedef uint32_t ZdbID;				// database ID
 #define ZdbMaxRN (~((uint64_t)0))
-typedef ZuBoxN(uint64_t, ZdbMaxRN) ZdbRN;	// record ID
+typedef uint64_t ZdbRN;	// record ID
 
 namespace ZdbOp {
   enum { New = 0, Update, Delete };

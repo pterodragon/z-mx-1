@@ -1246,7 +1246,7 @@ void ZdbEnv::dbStateRefresh_()
   unsigned i, n = m_dbs.length();
   for (i = 0; i < n; i++) {
     ZdbAny *db = m_dbs[i];
-    dbState[i] = db ? db->allocRN() : 0;
+    dbState[i] = db ? db->allocRN() : (ZdbRN)0;
   }
 }
 

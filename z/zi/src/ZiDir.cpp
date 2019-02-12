@@ -66,7 +66,7 @@ int ZiDir::read(Path &file, ZeError *e)
   } else {
     if (!FindNextFile(m_handle, &wfd)) goto error;
   }
-  file = Path(Path::Copy, wfd.cFileName);
+  file = Path(Path::Copy, static_cast<const TCHAR *>(wfd.cFileName));
   return Zi::OK;
 
 error:

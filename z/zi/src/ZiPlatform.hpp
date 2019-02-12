@@ -87,9 +87,9 @@ struct ZiAPI ZiPlatform {
   };
 #else
   typedef HANDLE Handle;
-  ZuInline static constexpr const Handle nullHandle()
+  ZuInline static const Handle nullHandle()
     { return INVALID_HANDLE_VALUE; }
-  ZuInline static constexpr bool nullHandle(Handle i)
+  ZuInline static bool nullHandle(Handle i)
     { return !i || i == INVALID_HANDLE_VALUE; }
   typedef SOCKET Socket;
   ZuInline static constexpr const Socket nullSocket()

@@ -59,3 +59,45 @@ void ZtRegex::study()
     throw error;
   }
 }
+
+static const char *exec_errors[] = {
+  "NOMATCH",
+  "NULL",
+  "BADOPTION",
+  "BADMAGIC",
+  "UNKNOWN_OPCODE",
+  "NOMEMORY",
+  "NOSUBSTRING",
+  "MATCHLIMIT",
+  "CALLOUT",
+  "BADUTF",
+  "BADUTF_OFFSET",
+  "PARTIAL",
+  "BADPARTIAL",
+  "INTERNAL",
+  "BADCOUNT",
+  "DFA_UITEM",
+  "DFA_UCOND",
+  "DFA_UMLIMIT",
+  "DFA_WSSIZE",
+  "DFA_RECURSE",
+  "RECURSIONLIMIT",
+  "NULLWSLIMIT",
+  "BADNEWLINE",
+  "BADOFFSET",
+  "SHORTUTF",
+  "RECURSELOOP",
+  "JIT_STACKLIMIT",
+  "BADMODE",
+  "BADENDIANNESS",
+  "DFA_BADRESTART",
+  "JIT_BADOPTION",
+  "BADLENGTH",
+  "UNSET"
+};
+
+const char *ZtRegex::exec_strerror(int i)
+{
+  if (i < -33 || i > -1) return "UNKNOWN";
+  return exec_errors[-i - 1];
+}

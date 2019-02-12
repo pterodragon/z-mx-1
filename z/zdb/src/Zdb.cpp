@@ -1173,7 +1173,7 @@ void ZdbEnv::hbSend_(Zdb_Cxn *cxn_)
   unsigned i = 0, n = m_cxns->count();
   ZtArray<ZmRef<Zdb_Cxn> > cxns(n);
   {
-    CxnHash::ReadIterator j(*m_cxns);
+    auto j = m_cxns->readIterator();
     while (i < n && (cxn = j.iterateKey())) if (cxn->up()) ++i, cxns.push(cxn);
   }
   for (unsigned j = 0; j < i; j++) {
@@ -1202,9 +1202,9 @@ void Zdb_Cxn::hbSend_(ZiIOContext &io)
   hb.dbCount = self->dbState().length();
   io.init(ZiIOFn::Member<&Zdb_Cxn::hbSent>::fn(this),
       &m_hbSendHdr, sizeof(Zdb_Msg_Hdr), 0);
-  ZdbDEBUG(m_env, ZtString() << "hbSend()\n" <<
-	"  self[ID:" << hb.hostID << " S:" << hb.state <<
-	" N:" << hb.dbCount << "] " << self->dbState());
+  ZdbDEBUG(m_env, ZtString() << "hbSend()"
+      "  self[ID:" << hb.hostID << " S:" << hb.state <<
+      " N:" << hb.dbCount << "] " << self->dbState());
 }
 void Zdb_Cxn::hbSent(ZiIOContext &io)
 {
@@ -1527,17 +1527,34 @@ bool ZdbAny::recover()
       }
     }
     while (dir.read(subName) == Zi::OK) {
-      const auto &r = ZtStaticRegexUTF8("^[0-9a-f]{5}$");
-      if (!r.m(subName)) continue;
+#ifdef _WIN32
+      ZtString subName_{subName};
+#else
+      auto &subName_ = subName;
+#endif
+      try {
+	const auto &r = ZtStaticRegexUTF8("^[0-9a-f]{5}$");
+	if (!r.m(subName_)) continue;
+      } catch (const ZtRegex::Error &e) {
+	ZeLOG(Error, ZtString() << e);
+	continue;
+      } catch (...) {
+	continue;
+      }
       ZuBox<unsigned> subIndex;
-      subIndex.scan(ZuFmt::Hex<>(), subName);
+      subIndex.scan(ZuFmt::Hex<>(), subName_);
       subDirs.set(subIndex);
     }
     dir.close();
   }
   for (int i = subDirs.first(); i >= 0; i = subDirs.next(i)) {
-    subName = ZuBox<unsigned>(i).hex(ZuFmt::Right<5>());
-    subName = ZiFile::append(m_config->path, subName);
+#ifdef _WIN32
+    ZtString subName_;
+#else
+    auto &subName_ = subName;
+#endif
+    subName_ = ZuBox<unsigned>(i).hex(ZuFmt::Right<5>());
+    subName = ZiFile::append(m_config->path, subName_);
     ZiDir::Path fileName;
     ZmBitmap files;
     {
@@ -1547,19 +1564,36 @@ bool ZdbAny::recover()
 	continue;
       }
       while (subDir.read(fileName) == Zi::OK) {
-	const auto &r = ZtStaticRegexUTF8("^[0-9a-f]{5}\\.zdb$");
-	if (!r.m(fileName)) continue;
+#ifdef _WIN32
+	ZtString fileName_{fileName};
+#else
+	auto &fileName_ = fileName;
+#endif
+	try {
+	  const auto &r = ZtStaticRegexUTF8("^[0-9a-f]{5}\\.zdb$");
+	  if (!r.m(fileName_)) continue;
+	} catch (const ZtRegex::Error &e) {
+	  ZeLOG(Error, ZtString() << e);
+	  continue;
+	} catch (...) {
+	  continue;
+	}
 	ZuBox<unsigned> fileIndex;
-	fileIndex.scan(ZuFmt::Hex<>(), fileName);
+	fileIndex.scan(ZuFmt::Hex<>(), fileName_);
 	files.set(fileIndex);
       }
       subDir.close();
     }
     for (int j = files.first(); j >= 0; j = files.next(j)) {
-      fileName = ZuBox<unsigned>(j).hex(ZuFmt::Right<5>());
-      fileName << ".zdb";
+#ifdef _WIN32
+      ZtString fileName_;
+#else
+      auto &fileName_ = fileName;
+#endif
+      fileName_ = ZuBox<unsigned>(j).hex(ZuFmt::Right<5>());
+      fileName_ << ".zdb";
       unsigned index = (((unsigned)i)<<20U) | ((unsigned)j);
-      fileName = ZiFile::append(subName, fileName);
+      fileName = ZiFile::append(subName, fileName_);
       ZmRef<Zdb_File> file = new Zdb_File(index, m_fileRecs);
       if (file->open(
 	    fileName, ZiFile::GC, 0666, m_config->fileSize, &e) != Zi::OK) {

@@ -612,9 +612,6 @@ private:
   void executedRecv(unsigned n);
 
   void send();
-#ifdef ZiMultiplex_IOCP
-  void overlappedSend(int status, unsigned n, ZeError e);
-#endif
   void errorSend(int status, ZeError e);
   void executedSend(unsigned n);
 
@@ -650,9 +647,6 @@ private:
     uint64_t			  m_txRequests;
     uint64_t			  m_txBytes;
     ZiIOContext			  m_txContext;
-#ifdef ZiMultiplex_IOCP
-    Zi_Overlapped		  m_txOverlapped;
-#endif
 };
 
 // named parameter list for configuring ZiMultiplex
@@ -1091,7 +1085,6 @@ private:
   ZuInline void busy() { ZmScheduler::busy(); }
   ZuInline void idle() { ZmScheduler::idle(); }
 
-  void rxStart();
   void rx();			// handle I/O completions (IOCP) or
   				// readiness notifications (epoll, ports, etc.)
   void wake();			// wake up rx(), cause it to return

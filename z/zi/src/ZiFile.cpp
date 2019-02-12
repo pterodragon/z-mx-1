@@ -200,7 +200,7 @@ void ZiFile_WindowsDrives::dump_()
 int ZiFile_WindowsDrives::blkSize_path(const ZtWString &path_)
 {
   ZtWString path =
-    !path_.cmp(L"\\\\?\\", 4) ? path_.splice(4) : (ZtWString)path_;
+    !path_.cmp(L"\\\\?\\", 4) ? path_.splice(4) : ZuArray<wchar_t>{path_};
 
   int dl = 0;
   if (path[1] == ':')
@@ -213,8 +213,7 @@ int ZiFile_WindowsDrives::blkSize_path(const ZtWString &path_)
       bool retried = false;
 
 retry:
-      DriveLetters::ReadIterator i(
-	  m_driveLetters, path, DriveLetters::LessEqual);
+      auto i = m_driveLetters.readIterator<ZmRBTreeLessEqual>(path);
       DriveLetters::NodeRef dln = i.iterate();
       if (dln) {
 	const ZtWString &drive = dln->key();

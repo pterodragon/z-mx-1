@@ -88,7 +88,10 @@ public:
   ZuInline bool operator !() const { return !s_addr; }
   ZuOpBool
 
-  ZuInline uint32_t hash() const { return *(uint32_t *)&s_addr; }
+  ZuInline uint32_t hash() const {
+    uint32_t *ZuMayAlias(ptr) = (uint32_t *)&s_addr;
+    return *ptr;
+  }
 
   template <typename S> void print(S &s) const {
     uint32_t addr = (uint32_t)ntohl(s_addr);
@@ -112,7 +115,7 @@ private:
 public:
   template <typename S>
   inline typename ZuIsString<S, int>::T resolve(S &&s, ZeError *e = 0) {
-    return resolve_(ZuFwd<S>(s), e);
+    return resolve_(ZuString{ZuFwd<S>(s)}, e);
   }
   Hostname name(ZeError *e = 0);
 };

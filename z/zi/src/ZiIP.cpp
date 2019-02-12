@@ -193,7 +193,7 @@ int ZiIP::resolve_(ZuString host_, ZeError *e)
   ZuWStringN<ZiPlatform::NameMax + 1> host;
   host.length(ZuUTF<wchar_t, char>::cvt(
 	ZuArray<wchar_t>(host.data(), host.size() - 1), host_));
-  return resolve_(host, e);
+  return resolve_(ZuWString{host}, e);
 }
 int ZiIP::resolve_(ZuWString host_, ZeError *e)
 #endif /* _WIN32 */

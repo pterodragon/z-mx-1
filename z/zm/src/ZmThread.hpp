@@ -407,10 +407,10 @@ template <> struct ZuPrint<ZmThread::CSV> : public ZuPrintFn { };
 
 #include <ZmSpecific.hpp>
 
-ZuInline ZmThreadContext *ZmThreadContext::self() {
+inline ZmThreadContext *ZmThreadContext::self() {
   return ZmSpecific<ZmThreadContext>::instance();
 }
-ZuInline ZmThreadContext *ZmThreadContext::self(ZmThreadContext *c) {
+inline ZmThreadContext *ZmThreadContext::self(ZmThreadContext *c) {
   return ZmSpecific<ZmThreadContext>::instance(c);
 }
 

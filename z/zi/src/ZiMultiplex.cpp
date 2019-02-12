@@ -612,7 +612,7 @@ void ZiMultiplex::connect_(ZiConnectFn fn, ZiFailFn failFn,
   Connect *request = new Connect(
       this, fn, failFn,
       ZiCxnType::TCPOut, s, options, localIP, localPort, remoteIP, remotePort);
-  typedef ZiOverlapped::Executed Executed;
+  typedef Zi_Overlapped::Executed Executed;
   Zi_Overlapped &overlapped = request->overlapped();
   overlapped.init(Executed::Member<&Connect::executed>::fn(request));
   ZeError e;
@@ -1203,7 +1203,7 @@ void ZiConnection::recv()
   wsaBuf.buf = (char *)m_rxContext.ptr + m_rxContext.offset;
   wsaBuf.len = len;
 
-  typedef ZiOverlapped::Executed Executed;
+  typedef Zi_Overlapped::Executed Executed;
   Zi_Overlapped &overlapped = m_rxOverlapped;
 
 #ifdef ZiMultiplex_DEBUG
@@ -1420,42 +1420,42 @@ void ZiConnection::send()
 
   if (ZuLikely(m_txContext.completed())) return;
 
-  unsigned len = m_txContext.size - m_txContext.offset;
-
 #ifdef ZiMultiplex_IOCP
   WSABUF wsaBuf;
   wsaBuf.buf = (char *)m_txContext.ptr + m_txContext.offset;
-  wsaBuf.len = len;
+  wsaBuf.len = m_txContext.size - m_txContext.offset;
 
-  typedef ZiOverlapped::Executed Executed;
-  Zi_Overlapped &overlapped = m_txOverlapped;
-
+retry:
   ZiDEBUG(m_mx, ZtHexDump(ZtSprintf(
-	  "FD: % 3d WSASend(%u) size: %u offset: %u overlapped: %p",
-	(int)m_info.socket, len, m_txContext.size, m_txContext.offset,
-	(void *)&overlapped), wsaBuf.buf, wsaBuf.len));
+	  "FD: % 3d WSASend(%lu) size: %u offset: %u",
+	(int)m_info.socket, wsaBuf.len, m_txContext.size, m_txContext.offset),
+	wsaBuf.buf, wsaBuf.len));
 
-  overlapped.init(Executed::Member<&ZiConnection::overlappedSend>::fn(this));
   ZeError e;
   DWORD n;
   if (m_info.options.udp() && !!m_txContext.addr) {
-    if (ZuLikely(WSASendTo(m_info.socket, &wsaBuf, 1, &n, 0,
+    if (ZuUnlikely(WSASendTo(m_info.socket, &wsaBuf, 1, &n, 0,
 	    m_txContext.addr.sa(), m_txContext.addr.len(),
-	    (WSAOVERLAPPED *)&overlapped, 0) != SOCKET_ERROR ||
-	  (e = WSAGetLastError()).errNo() == WSA_IO_PENDING))
+	    0, 0) == SOCKET_ERROR)) {
+      errorSend(Zi::IOError, e);
       return;
+    }
+    ZiDEBUG(m_mx, ZtSprintf(
+	  "FD: % 3d WSASendTo(%lu): %lu", (int)m_info.socket, wsaBuf.len, n));
   } else {
-    if (ZuLikely(WSASend(m_info.socket, &wsaBuf, 1, &n, 0,
-	    (WSAOVERLAPPED *)&overlapped, 0) != SOCKET_ERROR ||
-	  (e = WSAGetLastError()).errNo() == WSA_IO_PENDING))
+    if (ZuUnlikely(WSASend(m_info.socket, &wsaBuf, 1, &n, 0,
+	    0, 0) == SOCKET_ERROR)) {
+      errorSend(Zi::IOError, e);
       return;
+    }
+    ZiDEBUG(m_mx, ZtSprintf(
+	  "FD: % 3d WSASend(%lu): %lu", (int)m_info.socket, wsaBuf.len, n));
   }
-  errorSend(Zi::IOError, e);
-  return;
 #endif
 
 #ifdef ZiMultiplex_EPoll
   void *buf = (char *)m_txContext.ptr + m_txContext.offset;
+  unsigned len = m_txContext.size - m_txContext.offset;
 
   ZeError e;
   int n;
@@ -1498,6 +1498,7 @@ retry:
 
   ZiDEBUG(m_mx, ZtSprintf(
 	  "FD: % 3d send(%d): %d", (int)m_info.socket, len, n));
+#endif
 
   executedSend(n);
 
@@ -1510,37 +1511,19 @@ retry:
     m_txContext.complete();
     return;
   }
-
-  len = m_txContext.size - m_txContext.offset;
-  buf = (char *)m_txContext.ptr + m_txContext.offset;
-
-  goto retry;
-#endif
-}
 
 #ifdef ZiMultiplex_IOCP
-void ZiConnection::overlappedSend(int status, unsigned n, ZeError e)
-{
-  if (ZuUnlikely(status != Zi::OK)) {
-    if (m_txUp) errorSend(status, e);
-    return;
-  }
-
-  executedSend(n);
-
-  if (ZuLikely(m_txContext.completed())) {
-    if (m_txContext.disconnected()) disconnect();
-    return;
-  }
-
-  if (ZuLikely(m_txContext.offset >= m_txContext.size)) {
-    m_txContext.complete();
-    return;
-  }
-
-  send();
-}
+  wsaBuf.buf = (char *)m_txContext.ptr + m_txContext.offset;
+  wsaBuf.len = m_txContext.size - m_txContext.offset;
 #endif
+
+#ifdef ZiMultiplex_EPoll
+  buf = (char *)m_txContext.ptr + m_txContext.offset;
+  len = m_txContext.size - m_txContext.offset;
+#endif
+
+  goto retry;
+}
 
 void ZiConnection::errorSend(int status, ZeError e)
 {
@@ -1797,7 +1780,7 @@ void ZiConnection::disconnect_2()
   ZiDEBUG(m_mx, ZtSprintf("FD: % 3d disconnect()", (int)m_info.socket));
   
 #ifdef ZiMultiplex_IOCP
-  typedef ZiOverlapped::Executed Executed;
+  typedef Zi_Overlapped::Executed Executed;
   Zi_Overlapped &overlapped = m_disconnectOverlapped;
   ZeError e;
   overlapped.init(
@@ -2018,7 +2001,11 @@ int ZiMultiplex::start()
   }
 #endif
 
-  rxRun(ZmFn<>{this, [](ZiMultiplex *mx) { mx->rxStart(); }});
+  wakeFn(rxThread(), ZmFn<>{this, [](ZiMultiplex *mx) {
+	mx->run_(mx->rxThread(), ZmFn<>::Member<&ZiMultiplex::rx>::fn(mx));
+	mx->wake();
+      }});
+  run_(rxThread(), ZmFn<>::Member<&ZiMultiplex::rx>::fn(this));
   ZmScheduler::start();
   return Zi::OK;
 }
@@ -2130,15 +2117,6 @@ void ZiMultiplex::stop_3()
   if (m_wakeFD2 >= 0) { ::close(m_wakeFD2); m_wakeFD2 = -1; }
   if (m_epollFD >= 0) { ::close(m_epollFD); m_epollFD = -1; }
 #endif
-}
-
-void ZiMultiplex::rxStart()
-{
-  wakeFn(rxThread(), ZmFn<>{this, [](ZiMultiplex *mx) {
-	mx->run_(mx->rxThread(), ZmFn<>::Member<&ZiMultiplex::rx>::fn(mx));
-	mx->wake();
-      }});
-  rx();
 }
 
 void ZiMultiplex::rx()

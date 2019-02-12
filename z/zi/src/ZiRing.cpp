@@ -142,8 +142,8 @@ int ZiRing_::wake(ZmAtomic<uint32_t> &addr, uint32_t n)
 int ZiRing_::open(ZeError *e)
 {
   if (m_sem[Head]) return Zi::OK;
-  ZiFile::Path path(m_config.name().length() + 16);
-  path << L"Global\\" << m_config.name() << L".sem";
+  ZiFile::Path path(m_params.name().length() + 16);
+  path << L"Global\\" << m_params.name() << L".sem";
   if (!(m_sem[Head] = CreateSemaphore(0, 0, 0x7fffffff, path))) {
     if (e) *e = ZeLastError;
     return Zi::IOError;

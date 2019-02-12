@@ -29,6 +29,7 @@
 #include <ZmRWLock.hpp>
 #include <ZmAtomic.hpp>
 #include <ZmSpecific.hpp>
+#include <ZmTime.hpp>
 
 ZmAtomic<int> gc = 0;
 
@@ -149,5 +150,5 @@ int main(int argc, char **argv)
     }
   }
   dump(&c);
-  ::sleep(1);
+  ZmPlatform::sleep(1);
 }

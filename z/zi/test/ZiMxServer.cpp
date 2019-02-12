@@ -135,16 +135,18 @@ public:
     if (++m_nDisconnects >= m_maxDisconnects) Global::post();
   }
 
-  void listening(const ZiListenInfo &) { std::cerr << "listening\n"; }
+  void listening(const ZiListenInfo &) {
+    std::cerr << "listening\n" << std::flush;
+  }
 
   void failed(bool transient) {
     if (transient && m_reconnInterval > 0) {
       std::cerr << "bind to " << m_ip << ':' << ZuBoxed(m_port) <<
-	" failed, retrying...\n";
+	" failed, retrying...\n" << std::flush;
       add(ZmFn<>::Member<&Mx::listen>::fn(this),
 	  ZmTimeNow(m_reconnInterval));
     } else {
-      std::cerr << "listen failed\n";
+      std::cerr << "listen failed\n" << std::flush;
       Global::post();
     }
   }

@@ -161,11 +161,11 @@ public:
   void failed(bool transient) {
     if (transient && m_reconnInterval > 0) {
       std::cerr << "connect to " << m_ip << ':' << ZuBoxed(m_port) <<
-	" failed, retrying...\n";
+	" failed, retrying...\n" << std::flush;
       add(ZmFn<>::Member<&Mx::connect>::fn(this),
 	  ZmTimeNow(m_reconnInterval));
     } else if (++m_nDisconnects >= m_nConnections) {
-      std::cerr << "connect failed\n";
+      std::cerr << "connect failed\n" << std::flush;
       Global::post();
     }
   }

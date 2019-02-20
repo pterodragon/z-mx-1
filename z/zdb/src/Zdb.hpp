@@ -197,8 +197,7 @@ public:
 
   ZuInline bool del(unsigned i) {
     m_undeleted.clr(i);
-    bool r = !m_undeleted;
-    return r;
+    return !m_undeleted;
   }
 
   void checkpoint() { sync(); }

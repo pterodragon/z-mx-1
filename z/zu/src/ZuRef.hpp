@@ -56,14 +56,14 @@ private:
       (ZuConversion<T, typename U::T>::Base ||
        ZuConversion<typename U::T, T>::Base) };
   };
-  template <typename U, typename R = void, bool OK = IsOtherRef2<U>::OK>
+  template <typename U, typename = void, bool = IsOtherRef2<U>::OK>
   struct MatchOtherRef2 { };
   template <typename U, typename R>
   struct MatchOtherRef2<U, R, true> { typedef R T; };
   template <typename U> struct IsOtherRef1 {
     enum { OK = ZuConversion<ZuRef_, U>::Base };
   };
-  template <typename U, typename R = void, bool OK = IsOtherRef1<U>::OK>
+  template <typename U, typename = void, bool = IsOtherRef1<U>::OK>
   struct MatchOtherRef;
   template <typename U, typename R>
   struct MatchOtherRef<U, R, true> : public MatchOtherRef2<U, R> { };
@@ -74,14 +74,14 @@ private:
       (ZuConversion<T, typename U::T>::Is ||
        ZuConversion<typename U::T, T>::Is) };
   };
-  template <typename U, typename R = void, bool OK = IsRef2<U>::OK>
+  template <typename U, typename = void, bool = IsRef2<U>::OK>
   struct MatchRef2 { };
   template <typename U, typename R>
   struct MatchRef2<U, R, true> { typedef R T; };
   template <typename U> struct IsRef1 {
     enum { OK = ZuConversion<ZuRef_, U>::Base };
   };
-  template <typename U, typename R = void, bool OK = IsRef1<U>::OK>
+  template <typename U, typename = void, bool = IsRef1<U>::OK>
   struct MatchRef;
   template <typename U, typename R>
   struct MatchRef<U, R, true> : public MatchRef2<U, R> { };
@@ -90,7 +90,7 @@ private:
   template <typename U> struct IsPtr {
     enum { OK = (ZuConversion<T, U>::Is || ZuConversion<U, T>::Is) };
   };
-  template <typename U, typename R = void, bool OK = IsPtr<U>::OK>
+  template <typename U, typename = void, bool = IsPtr<U>::OK>
   struct MatchPtr;
   template <typename U, typename R>
   struct MatchPtr<U, R, true> { typedef R T; };
@@ -153,12 +153,10 @@ public:
   ZuInline operator T *() const { return m_object; }
   ZuInline T *operator ->() const { return m_object; }
 
-  template <typename O>
-  ZuInline typename MatchOtherRef<ZuRef<O>, O *>::T as() const {
+  template <typename O = T>
+  ZuInline typename MatchRef<ZuRef<O>, O *>::T ptr() const {
     return static_cast<O *>(m_object);
   }
-
-  ZuInline T *ptr() const { return m_object; }
   T *ptr_() const { return m_object; }
 
   ZuInline bool operator !() const { return !m_object; }

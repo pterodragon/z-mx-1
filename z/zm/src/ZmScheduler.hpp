@@ -424,7 +424,7 @@ public:
     }
     runWake_(thread, ZmFn<>::mvFn(ZuMv(o), ZuFwd<Fn>(fn)));
   }
-  template <typename Fn, typename O>
+  template <typename O, typename Fn>
   ZuInline void invoke(unsigned tid, O *o, Fn &&fn) {
     ZmAssert(tid && tid <= m_nThreads);
     Thread *thread = &m_threads[tid - 1];

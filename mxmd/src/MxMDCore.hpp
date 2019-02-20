@@ -185,11 +185,13 @@ private:
     if (m_telemetry) m_telemetry->delQueue(id, tx);
   }
 
+public:
   // DB Management
   void addDBEnv(ZdbEnv *env) {
     if (m_telemetry) m_telemetry->addDBEnv(env);
   }
 
+private:
   // Exception handling
   void exception(ZmRef<ZeEvent> e) { raise(ZuMv(e)); }
 

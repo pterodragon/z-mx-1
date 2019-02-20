@@ -181,7 +181,7 @@ friend class TCP;
   };
 
   struct TCP_HeapID {
-    ZuInline static const char *id() { return "MxMDPublisher.TCP"; }
+    inline static const char *id() { return "MxMDPublisher.TCP"; }
   };
   typedef ZmHash<TCP *,
 	    ZmHashIndex<TCP::SocketAccessor,

@@ -458,14 +458,14 @@ namespace MxMDStream {
 namespace MxMDStream {
 
   struct Msg_HeapID {
-    ZuInline static const char *id() { return "MxMDStream.Msg"; }
+    inline static const char *id() { return "MxMDStream.Msg"; }
   };
 
-  struct Msg__ {
+  struct MsgData : public ZuPolymorph {
     ZiSockAddr	addr;
   };
   template <typename Heap>
-  struct Msg_ : public Heap, public Msg__, public ZuPOD<Buf> {
+  struct Msg_ : public Heap, public ZuPOD_<Buf, MsgData> {
     ZuInline Msg_() { }
 
     ZuInline Hdr &hdr() { return this->template as<Hdr>(); }
@@ -587,26 +587,26 @@ namespace MxMDStream {
   namespace UDP {
     template <typename Cxn>
     inline void send(Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr) {
-      static_cast<Msg *>(msg->payload.ptr())->addr = addr;
+      msg->ptr<Msg>()->addr = addr;
       cxn->send(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
 	io.init(ZiIOFn{io.fn.mvObject<MxQMsg>(),
 	  [](MxQMsg *msg, ZiIOContext &io) {
 	    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	  }}, msg->payload->ptr(), msg->length, 0,
-	    static_cast<Msg *>(msg->payload.ptr())->addr);
+	  }}, msg->ptr<Msg>()->ptr(), msg->length, 0,
+	  msg->ptr<Msg>()->addr);
       }});
     }
     template <typename Cxn, typename L>
     inline typename IOLambda<Cxn, L>::T send(
 	Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr, L l) {
-      static_cast<Msg *>(msg->payload.ptr())->addr = addr;
+      msg->ptr<Msg>()->addr = addr;
       cxn->send(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
 	io.init(ZiIOFn{io.fn.mvObject<MxQMsg>(),
 	  [](MxQMsg *msg, ZiIOContext &io) {
 	    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
 	    IOLambda<Cxn, L>::invoke(io);
-	  }}, msg->payload->ptr(), msg->length, 0,
-	    static_cast<Msg *>(msg->payload.ptr())->addr);
+	  }}, msg->ptr<Msg>()->ptr(), msg->length, 0,
+	  msg->ptr<Msg>()->addr);
       }});
     }
     template <typename Cxn, typename L>
@@ -615,10 +615,10 @@ namespace MxMDStream {
       MxQMsg *msg_ = msg.ptr();
       io.init(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
 	msg->length = (io.offset += io.length);
-	static_cast<Msg *>(msg->payload.ptr())->addr = io.addr;
+	msg->ptr<Msg>()->addr = io.addr;
 	IOLambda<Cxn, L>::invoke(io);
       }},
-      msg_->payload->ptr(), msg_->payload->size(), 0);
+      msg_->ptr<Msg>()->ptr(), msg_->ptr<Msg>()->size(), 0);
     }
   }
 
@@ -629,7 +629,7 @@ namespace MxMDStream {
 	io.init(ZiIOFn{io.fn.mvObject<MxQMsg>(),
 	  [](MxQMsg *msg, ZiIOContext &io) {
 	    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	  }}, msg->payload->ptr(), msg->length, 0);
+	  }}, msg->ptr<Msg>()->ptr(), msg->length, 0);
       }});
     }
     template <typename Cxn, typename L>
@@ -640,7 +640,7 @@ namespace MxMDStream {
 	  [](MxQMsg *msg, ZiIOContext &io) {
 	    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
 	    IOLambda<Cxn, L>::invoke(io);
-	  }}, msg->payload->ptr(), msg->length, 0);
+	  }}, msg->ptr<Msg>()->ptr(), msg->length, 0);
       }});
     }
 
@@ -652,9 +652,9 @@ namespace MxMDStream {
 	unsigned len = io.offset += io.length;
 	io.length = 0;
 	if (ZuUnlikely(len < sizeof(Hdr))) return 0;
-	Hdr &hdr = msg->as<Hdr>();
+	Hdr &hdr = msg->ptr<Msg>()->as<Hdr>();
 	unsigned msgLen = sizeof(Hdr) + hdr.len;
-	if (ZuUnlikely(msgLen > msg->payload->size())) {
+	if (ZuUnlikely(msgLen > msg->ptr<Msg>()->size())) {
 	  ZeLOG(Error, "MxMDStream::recv TCP message too big / corrupt");
 	  io.disconnect();
 	  return 0;
@@ -667,7 +667,7 @@ namespace MxMDStream {
 	  return io.offset;
 	}
 	return 0;
-      }}, msg_->payload->ptr(), msg_->payload->size(), 0);
+      }}, msg_->ptr<Msg>()->ptr(), msg_->ptr<Msg>()->size(), 0);
     }
   }
 }

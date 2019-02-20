@@ -49,23 +49,6 @@ public:
   inline void final() { }
 
   ZmRef<MxAnyLink> createLink(MxID id);
-
-  // Rx
-#if 0
-  ZuInline void process_(MxAnyLink *, MxQMsg *) { }
-  ProcessFn processFn() {
-    return [](MxEngineApp *self, MxAnyLink *link, MxQMsg *msg) {
-      static_cast<App *>(self)->process_(link, msg);
-    };
-  }
-  ZuInline void wake() { }
-
-  // Tx
-  void sent(MxAnyLink *, MxQMsg *) { }
-  void aborted(MxAnyLink *, MxQMsg *) { }
-  void archive(MxAnyLink *, MxQMsg *) { }
-  ZmRef<MxQMsg> retrieve(MxAnyLink *, MxSeqNo) { return 0; }
-#endif
 };
 
 enum { Connected, Disconnected, Reconnect };
@@ -149,7 +132,6 @@ public:
 
   // MxLink Rx CRTP
   void process(MxQMsg *msg) { }
-
   ZmTime reReqInterval() { return engine()->reReqInterval(); }
   void request(const MxQueue::Gap &prev, const MxQueue::Gap &now) { }
   void reRequest(const MxQueue::Gap &now) { }

@@ -354,7 +354,7 @@ void MxMDRecLink::process(MxQMsg *qmsg)
   Guard fileGuard(m_fileLock);
 
   ZeError e;
-  if (ZuUnlikely(write_(qmsg->ptr(), &e)) != Zi::OK) {
+  if (ZuUnlikely(write_(qmsg->ptr<Msg>()->ptr(), &e)) != Zi::OK) {
     m_file.close();
     ZtString path = ZuMv(m_path);
     fileGuard.unlock();

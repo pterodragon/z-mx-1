@@ -352,7 +352,7 @@ void MxMDPubLink::TCP::processLogin(ZmRef<MxQMsg> msg, ZiIOContext &io)
 
   {
     using namespace MxMDStream;
-    const Hdr &hdr = msg->as<Hdr>();
+    const Hdr &hdr = msg->ptr<Msg>()->as<Hdr>();
     if (ZuUnlikely(hdr.type != Type::Login)) {
       tcpERROR(this, &io, "TCP unexpected message type");
       return;
@@ -509,16 +509,17 @@ void MxMDPubLink::UDP::recv(ZiIOContext &io)
 void MxMDPubLink::UDP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 {
   using namespace MxMDStream;
-  const Hdr &hdr = msg->as<Hdr>();
+  const Hdr &hdr = msg->ptr<Msg>()->as<Hdr>();
   if (ZuUnlikely(hdr.scan(msg->length))) {
-    ZtHexDump msg_{"truncated UDP message", msg->ptr(), msg->length};
+    ZtHexDump msg_{"truncated UDP message",
+      msg->ptr<Msg>()->ptr(), msg->length};
     m_link->engine()->appException(ZeEVENT(Warning,
       ([=, id = m_link->id(), msg_ = ZuMv(msg_)](
 	const ZeEvent &, ZmStream &out) {
 	  out << "MxMDPubLink::UDP::process() link " << id << ' ' << msg_;
 	})));
   } else {
-    const Hdr &hdr = msg->as<Hdr>();
+    const Hdr &hdr = msg->ptr<Msg>()->as<Hdr>();
     if (ZuUnlikely(hdr.type != Type::ResendReq)) {
       // ignore to prevent (probably accidental) DOS
       // udpERROR(this, &io, "UDP unexpected message type");
@@ -725,7 +726,7 @@ void MxMDPubLink::sendMsg(const Hdr *hdr)
 void MxMDPubLink::loaded_(MxQMsg *msg)
 {
   using namespace MxMDStream;
-  Hdr &hdr = msg->as<Hdr>();
+  Hdr &hdr = msg->ptr<Msg>()->as<Hdr>();
   hdr.seqNo = msg->id.seqNo;
 }
 

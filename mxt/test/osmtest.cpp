@@ -139,7 +139,9 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
 #undef DeclType
 };
 
-struct App : public MxTOrderMgr<App, AppTypes> {
+typedef MxTTxnTypes<AppTypes> TxnTypes;
+
+struct App : public MxTOrderMgr<App, TxnTypes> {
   // log abnormal OSM transition
   template <typename Txn> void abnormal(Order *, const Txn &) { }
 

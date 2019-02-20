@@ -570,9 +570,9 @@ public:
   MxQueue *txQueuePtr() { return &(this->txQueue()); }
 
   void send(ZmRef<MxQMsg> msg) {
-    msg->appData(tx());
+    msg->owner(tx());
     this->engine()->txInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
-      msg->appData<Tx *>()->send(ZuMv(msg));
+      msg->owner<Tx *>()->send(ZuMv(msg));
     });
   }
   void abort(MxSeqNo seqNo)
@@ -602,10 +602,11 @@ private:
 // CRTP - implementation must conform to the following interface:
 // (Note: can be derived from TxPoolImpl above)
 #if 0
-struct LinkImpl : public MxLink<LinkImpl> {
+struct Link : public MxLink<Link> {
   ZmTime reconnInterval(unsigned reconnects); // optional - defaults to 1sec
 
   // Rx
+  void process(MxQMsg *);
   ZmTime reReqInterval(); // resend request interval
   void request(const MxQueue::Gap &prev, const MxQueue::Gap &now);
   void reRequest(const MxQueue::Gap &now);
@@ -714,25 +715,30 @@ public:
   struct RcvdLambda;
   template <typename L> struct RcvdLambda<L, true> {
     typedef void T;
-    ZuInline static void invoke(Rx *rx) {
-      (*(L *)(void *)0)(rx);
-    }
+    ZuInline static void invoke(Rx *rx) { (*(L *)(void *)0)(rx); }
   };
 
   template <typename L>
   typename RcvdLambda<L>::T received(ZmRef<MxQMsg> msg, L) {
-    msg->appData(rx());
+    msg->owner(rx());
     this->engine()->rxInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
-      Rx *rx = msg->appData<Rx *>();
+      Rx *rx = msg->owner<Rx *>();
       rx->received(ZuMv(msg));
       RcvdLambda<L>::invoke(rx);
     });
   }
+  void received(ZmRef<MxQMsg> msg) {
+    msg->owner(rx());
+    this->engine()->rxInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
+      Rx *rx = msg->owner<Rx *>();
+      rx->received(ZuMv(msg));
+    });
+  }
 
   void send(ZmRef<MxQMsg> msg) {
-    msg->appData(tx());
+    msg->owner(tx());
     this->engine()->txInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
-      msg->appData<Tx *>()->send(ZuMv(msg));
+      msg->owner<Tx *>()->send(ZuMv(msg));
     });
   }
   void abort(MxSeqNo seqNo)

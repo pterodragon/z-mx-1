@@ -363,13 +363,13 @@ void MxMDSubLink::TCP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 void MxMDSubLink::tcpProcess(MxQMsg *msg)
 {
   using namespace MxMDStream;
-  core()->apply(msg->as<Hdr>(), false);
+  core()->apply(msg->ptr<Msg>()->as<Hdr>(), false);
 }
 bool MxMDSubLink::TCP::endOfSnapshot(MxQMsg *msg, ZiIOContext &io)
 {
   using namespace MxMDStream;
 
-  const Hdr &hdr = msg->as<Hdr>();
+  const Hdr &hdr = msg->ptr<Msg>()->as<Hdr>();
   if (ZuUnlikely(hdr.type == Type::EndOfSnapshot)) {
     m_state = State::Disconnect;
     io.disconnect();
@@ -495,9 +495,10 @@ void MxMDSubLink::UDP::recv(ZiIOContext &io)
 void MxMDSubLink::UDP::process(ZmRef<MxQMsg> msg, ZiIOContext &io)
 {
   using namespace MxMDStream;
-  const Hdr &hdr = msg->as<Hdr>();
+  const Hdr &hdr = msg->ptr<Msg>()->as<Hdr>();
   if (ZuUnlikely(hdr.scan(msg->length))) {
-    ZtHexDump msg_{"truncated UDP message", msg->ptr(), msg->length};
+    ZtHexDump msg_{"truncated UDP message",
+      msg->ptr<Msg>()->ptr(), msg->length};
     m_link->engine()->appException(ZeEVENT(Warning,
       ([=, id = m_link->id(), msg_ = ZuMv(msg_)](
 	const ZeEvent &, ZmStream &out) {
@@ -514,12 +515,12 @@ void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
 {
   using namespace MxMDStream;
   {
-    ZiIP ip = static_cast<Msg *>(msg->payload.ptr())->addr.ip();
+    ZiIP ip = msg->ptr<Msg>()->addr.ip();
     if (ZuUnlikely(ip == m_channel->resendIP || ip == m_channel->resendIP2)) {
       Guard guard(m_resendLock);
       unsigned gapLength = m_resendGap.length();
       if (ZuUnlikely(gapLength)) {
-	uint64_t seqNo = msg->as<Hdr>().seqNo;
+	uint64_t seqNo = msg->ptr<Msg>()->as<Hdr>().seqNo;
 	uint64_t gapSeqNo = m_resendGap.key();
 	if (seqNo >= gapSeqNo && seqNo < gapSeqNo + gapLength) {
 	  m_resendMsg = msg;
@@ -579,7 +580,7 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
 void MxMDSubLink::process(MxQMsg *msg)
 {
   using namespace MxMDStream;
-  const Hdr &hdr = msg->as<Hdr>();
+  const Hdr &hdr = msg->ptr<Msg>()->as<Hdr>();
   if (hdr.type == Type::HeartBeat) {
     lastTime(hdr.as<HeartBeat>().stamp.zmTime());
     return;
@@ -593,7 +594,7 @@ void MxMDSubLink::process(MxQMsg *msg)
 void MxMDSubscriber::process(MxQMsg *msg)
 {
   using namespace MxMDStream;
-  core()->apply(msg->as<Hdr>(), m_filter);
+  core()->apply(msg->ptr<Msg>()->as<Hdr>(), m_filter);
 }
 
 // failover
@@ -718,12 +719,12 @@ void MxMDSubscriber::resendCmd(ZvCmdServerCxn *,
   if (!*seqNo || !*count) throw ZvCmdUsage();
   ZmRef<MxQMsg> msg = link->resend(seqNo, count);
   if (!msg) throw ZtString("timed out");
-  seqNo = msg->as<Hdr>().seqNo;
+  const auto &hdr = msg->ptr<Msg>()->as<Hdr>();
+  seqNo = hdr.seqNo;
   out << "seqNo: " << seqNo << '\n';
-  const Hdr &hdr = msg->as<Hdr>();
   out << ZtHexDump{
       ZtString() << "type: " << Type::name(hdr.type),
-      msg->ptr(), msg->length} << '\n';
+      msg->ptr<Msg>()->ptr(), msg->length} << '\n';
 }
 
 ZmRef<MxQMsg> MxMDSubLink::resend(MxSeqNo seqNo, unsigned count)

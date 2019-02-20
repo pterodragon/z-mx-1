@@ -37,8 +37,7 @@
 #include <MxTTypes.hpp>
 #include <MxTOrder.hpp>
 
-// application must instantiate MxTOrderDB
-// and supply the following interface:
+// CRTP - implementation must conform to the following interface:
 #if 0
 struct App : public MxTOrderDB<App> {
   struct Types : public MxTAppTypes<Types> { ... };
@@ -51,34 +50,33 @@ struct App : public MxTOrderDB<App> {
 };
 #endif
 
-template <typename App> class MxTOrderDB {
-  using Types = typename App::Types;
-  using TxnTypes = MxTTxnTypes<Types>;
-
-  using OrderData = TxnTypes::Order;		// open order
-  using OrderDB = Zdb<OrderData>;
-  using OrderPOD = ZdbPOD<OrderData>;
-
-  using ClosedData = TxnTypes::OrderTxn;	// closed order
-  using ClosedDB = Zdb<ClosedData>;
-  using ClosedPOD = ZdbPOD<ClosedData>;
+template <typename App, typename Types_> class MxTOrderDB {
+  typedef Types_ Types;
 
   inline App *app() { return static_cast<App *>(this); }
   inline const App *app() const { return static_cast<const App *>(this); }
 
 public:
+  using OrderData = typename Types::Order;		// open order
+  using OrderDB = Zdb<OrderData>;
+  using OrderPOD = ZdbPOD<OrderData>; // FIXME - need backpointer to link
+
+  using ClosedData = typename Types::OrderTxn;		// closed order
+  using ClosedDB = Zdb<ClosedData>;
+  using ClosedPOD = ZdbPOD<ClosedData>;
+
   void init(ZdbEnv *dbEnv, ZvCf *cf) {
     unsigned orderDBID = cf->getInt("orderDB", 0, 10000, true);
     unsigned closedDBID = cf->getInt("closedDB", 0, 10000, true);
 
     m_orderDB = new OrderDB(
-	dbEnv, orderDBID, RefDataMsg::DBVersion, ZdbHandler{
+	dbEnv, orderDBID, Types::DBVersion, ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new OrderPOD(db); },
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
 	    app->orderAdded(static_cast<OrderPOD *>(pod)); }},
 	  ZdbDelFn{}, ZdbCopyFn{}});
     m_closedDB = new ClosedDB(
-	dbEnv, closedDBID, RefDataMsg::DBVersion, ZdbHandler{
+	dbEnv, closedDBID, Types::DBVersion, ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new ClosedPOD(db); },
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
 	    app->closedAdded(static_cast<ClosedPOD *>(pod)); }},

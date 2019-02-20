@@ -64,29 +64,24 @@ namespace MxQFlags {
 }
 
 struct MxQMsgData {
-  ZuRef<ZuAnyPOD>	payload;
+  ZuRef<ZuPolymorph>	payload;
   unsigned		length = 0;
   MxMsgID		id;
   MxFlags		flags;		// MxQFlags
-  uintptr_t		appData_ = 0;
+  void			*owner_ = 0;
 
-  ZuInline void *ptr() { return payload->ptr(); }
-  ZuInline const void *ptr() const { return payload->ptr(); }
-
-  template <typename T> ZuInline T &as() {
-    return *static_cast<T *>(payload->ptr());
-  }
-  template <typename T> ZuInline const T &as() const {
-    return *static_cast<const T *>(payload->ptr());
-  }
+  template <typename T>
+  ZuInline const T *ptr() const { return payload.ptr<T>(); }
+  template <typename T>
+  ZuInline T *ptr() { return payload.ptr<T>(); }
 
   ZuInline void load(const MxMsgID &id_) { id = id_; }
   ZuInline void unload() { id = MxMsgID{}; }
 
-  template <typename T = uintptr_t>
-  ZuInline T appData() const { return (T)appData_; }
+  template <typename T = void *>
+  ZuInline T owner() const { return (T)owner_; }
   template <typename T>
-  ZuInline void appData(T v) { appData_ = (uintptr_t)v; }
+  ZuInline void owner(T v) { owner_ = (void *)v; }
 };
 
 class MxQFn {

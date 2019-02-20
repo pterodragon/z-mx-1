@@ -35,8 +35,7 @@
 #include <MxTTypes.hpp>
 #include <MxTOrder.hpp>
 
-// application must instantiate MxTOrderMgr
-// and supply the following interface:
+// CRTP - implementation must conform to the following interface:
 #if 0
 struct AppTypes : public MxTAppTypes<AppTypes> {
   typedef MxTAppTypes<AppTypes> Base;
@@ -72,10 +71,10 @@ struct App : public MxTOrderMgr<App, AppTypes> {
 };
 #endif
 
-template <typename App, typename AppTypes>
-class MxTOrderMgr : public MxTTxnTypes<AppTypes> {
+template <typename App, typename TxnTypes_>
+class MxTOrderMgr : public TxnTypes_ {
 public:
-  typedef MxTTxnTypes<AppTypes> TxnTypes;
+  typedef TxnTypes_ TxnTypes;
 
   MxTImport(TxnTypes);
 
@@ -321,7 +320,7 @@ private:
 public:
   template <typename In>
   ZuInline uintptr_t nextInvoke(uintptr_t fn, Order *order, In &in) {
-    return static_cast<typename Next<In>::Fn>((void *)fn)(order, in);
+    return reinterpret_cast<typename Next<In>::Fn>(fn)(order, in);
   }
 
 private:

@@ -212,7 +212,7 @@ void MxMDPubLink::disconnect_1()
 
   txRun([](Tx *tx) {
     tx->stop(); // stop sending
-    tx->app().disconnect_2();
+    tx->app()->disconnect_2();
   });
 }
 
@@ -457,7 +457,7 @@ void MxMDPubLink::udpConnected(MxMDPubLink::UDP *udp)
   if (ZuUnlikely(m_udp)) m_udp->disconnect();
   m_udp = udp;
   txRun([](Tx *tx) {
-    tx->app().udpConnected_2();
+    tx->app()->udpConnected_2();
     tx->start();
   });
 }
@@ -538,8 +538,8 @@ void MxMDPubLink::udpReceived(const MxMDStream::ResendReq &resendReq)
   using namespace MxMDStream;
   MxQueue::Gap gap{resendReq.seqNo, resendReq.count};
   txRun([gap](Tx *tx) {
-    if (gap.key() < tx->txQueue().head()) return;
-    if (gap.length() > tx->app().engine()->reReqMaxGap()) return;
+    if (gap.key() < tx->txQueue()->head()) return;
+    if (gap.length() > tx->app()->engine()->reReqMaxGap()) return;
     tx->resend(gap);
   });
 }
@@ -549,9 +549,9 @@ void MxMDPubLink::udpReceived(const MxMDStream::ResendReq &resendReq)
 void MxMDPubLink::snap(ZmRef<TCP> tcp)
 {
   txRun([tcp = ZuMv(tcp)](Tx *tx) mutable {
-    tx->app().mx()->run(tx->app().engine()->snapThread(),
+    tx->app()->mx()->run(tx->app()->engine()->snapThread(),
 	ZmFn<>{ZuMv(tcp),
-	  [seqNo = tx->txQueue().tail()](MxMDPubLink::TCP *tcp) {
+	  [seqNo = tx->txQueue()->tail()](MxMDPubLink::TCP *tcp) {
 	    tcp->snap(seqNo);
 	  }});
   });
@@ -664,7 +664,9 @@ void MxMDPublisher::recv()
     if (ZuUnlikely(!(hdr = m_ring->shift()))) {
       if (ZuLikely(m_ring->readStatus() == Zi::EndOfFile)) {
 	allLinks<MxMDPubLink>([](MxMDPubLink *link) -> uintptr_t {
-	    link->disconnect(); return 0; });
+	  link->down();
+	  return 0;
+	});
 	return;
       }
       continue;
@@ -672,8 +674,10 @@ void MxMDPublisher::recv()
     if (hdr->len > sizeof(Buf)) {
       m_ring->shift2();
       allLinks<MxMDPubLink>([](MxMDPubLink *link) -> uintptr_t {
-	  link->disconnect(); return 0; });
-      core()->raise(ZeEVENT(Error,
+	link->down();
+	return 0;
+      });
+      core()->raise(ZeEVENT(Fatal,
 	    ([name = ZtString(m_ring->params().name())](
 		const ZeEvent &, ZmStream &s) {
 	      s << '"' << name << "\": "
@@ -698,7 +702,10 @@ void MxMDPublisher::recv()
 	break;
       default:
 	allLinks<MxMDPubLink>([hdr](MxMDPubLink *link) -> uintptr_t {
-	  link->sendMsg(hdr); return 0; });
+	  if (link->state() == MxLinkState::Up)
+	    link->sendMsg(hdr);
+	  return 0;
+	});
 	m_ring->shift2();
 	break;
     }
@@ -759,7 +766,10 @@ void MxMDPublisher::ack()
   if (state() != MxEngineState::Running) return;
   allLinks<MxMDPubLink>(
       [maxQueueSize = maxQueueSize()](MxMDPubLink *link) -> uintptr_t {
-	link->ack(); return 0; });
+	if (link->state() == MxLinkState::Up)
+	  link->ack();
+	return 0;
+      });
   mx()->run(txThread(), ZmFn<>{this, [](MxMDPublisher *pub) {
 	pub->ack();
       }}, ZmTimeNow(ackInterval()), &m_ackTimer);
@@ -768,7 +778,7 @@ void MxMDPublisher::ack()
 void MxMDPubLink::ack()
 {
   txInvoke([maxQueueSize = engine()->maxQueueSize()](Tx *tx) {
-    MxSeqNo seqNo = tx->txQueue().tail();
+    MxSeqNo seqNo = tx->txQueue()->tail();
     if (seqNo < maxQueueSize) return;
     tx->ackd(seqNo - maxQueueSize);
   });
@@ -837,13 +847,13 @@ void MxMDPubLink::status(ZtString &out)
   {
     thread_local ZmSemaphore sem;
     rxInvoke([&out, sem = &sem](Rx *rx) {
-      const MxQueue &queue = rx->rxQueue();
-      MxQueue::Gap gap = queue.gap();
+      const MxQueue *queue = rx->rxQueue();
+      MxQueue::Gap gap = queue->gap();
       out <<
-	"head: " << queue.head() << 
+	"head: " << queue->head() << 
 	"  gap: (" << gap.key() << ")," << ZuBox<unsigned>(gap.length()) <<
-	"  length: " << ZuBox<unsigned>(queue.length()) << 
-	"  count: " << ZuBox<unsigned>(queue.count());
+	"  length: " << ZuBox<unsigned>(queue->length()) << 
+	"  count: " << ZuBox<unsigned>(queue->count());
       sem->post();
     });
     sem.wait();

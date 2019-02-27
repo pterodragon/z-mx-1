@@ -76,8 +76,6 @@ struct ZmHeapStats {
   uint64_t	heapAllocs;
   uint64_t	cacheAllocs;
   uint64_t	frees;
-  uint64_t	allocated;
-  uint64_t	maxAllocated;
 };
 
 struct ZmHeapTelemetry {
@@ -87,8 +85,6 @@ struct ZmHeapTelemetry {
   uint64_t	cacheAllocs;
   uint64_t	heapAllocs;
   uint64_t	frees;
-  uint64_t	allocated;
-  uint64_t	maxAllocated;
   uint32_t	size;
   uint16_t	partition;
   uint8_t	sharded;
@@ -230,7 +226,7 @@ template <class, unsigned> friend class ZmHeapCacheT;
     void print() {
       m_stream <<
 	"ID,size,partition,sharded,alignment,cacheSize,cpuset,"
-	"cacheAllocs,heapAllocs,frees,allocated,maxAllocated\n";
+	"cacheAllocs,heapAllocs,frees\n";
       ZmHeapMgr::all(ZmFn<ZmHeapCache *>::Member<&CSV_::print_>::fn(this));
     }
     void print_(ZmHeapCache *c) {
@@ -246,9 +242,7 @@ template <class, unsigned> friend class ZmHeapCacheT;
 	ZmBitmap(data.cpuset) << ',' <<
 	ZuBoxed(data.cacheAllocs) << ',' <<
 	ZuBoxed(data.heapAllocs) << ',' <<
-	ZuBoxed(data.frees) << ',' <<
-	ZuBoxed(data.allocated) << ',' <<
-	ZuBoxed(data.maxAllocated) << '\n';
+	ZuBoxed(data.frees) << '\n';
     }
 
   private:

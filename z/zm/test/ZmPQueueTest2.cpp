@@ -109,7 +109,7 @@ public:
 
   /* -- receiver callback interface -- */
 
-  inline Queue &rxQueue() { return m_queue; }
+  inline Queue *rxQueue() { return &m_queue; }
 
   // process message
   void process(Msg *msg) {
@@ -200,19 +200,19 @@ int main()
   send(a, 4, 3); // should be head- and tail-clipped
 
   send(a, 15, 0);
-  assert(a.rxQueue().gap() == ZuMkPair(14, 1));
+  assert(a.rxQueue()->gap() == ZuMkPair(14, 1));
   send(a, 15, 0);
-  assert(a.rxQueue().gap() == ZuMkPair(14, 1));
+  assert(a.rxQueue()->gap() == ZuMkPair(14, 1));
   send(a, 15, 1);
-  assert(a.rxQueue().gap() == ZuMkPair(14, 1));
+  assert(a.rxQueue()->gap() == ZuMkPair(14, 1));
   send(a, 17, 1);
   send(a, 17, 0);
   send(a, 18, 0);
   send(a, 19, 1);
   send(a, 21, 3);
-  assert(a.rxQueue().tail() == 24);
+  assert(a.rxQueue()->tail() == 24);
   send(a, 27, 0);
-  assert(a.rxQueue().tail() == 27);
+  assert(a.rxQueue()->tail() == 27);
   send(a, 14, 8); // should overwrite 15,17,19 and be clipped by 21
 
   send(a, 28, 1);
@@ -220,7 +220,7 @@ int main()
   send(a, 27, 0);
   send(a, 28, 0);
   send(a, 29, 0);
-  assert(a.rxQueue().tail() == 30);
+  assert(a.rxQueue()->tail() == 30);
   send(a, 24, 10); // should overwrite 27,3
 
   a.reset(1);
@@ -233,26 +233,26 @@ int main()
   send(a, 8, 2);
   send(a, 10, 1);
   send(a, 11, 3);
-  assert(a.rxQueue().tail() == 14);
+  assert(a.rxQueue()->tail() == 14);
 
   a.stopQueuing(12);
 
   send(a, 15, 1);
-  assert(a.rxQueue().gap() == ZuMkPair(14, 1));
+  assert(a.rxQueue()->gap() == ZuMkPair(14, 1));
 
-  assert(a.rxQueue().gap() == ZuMkPair(14, 1));
+  assert(a.rxQueue()->gap() == ZuMkPair(14, 1));
   send(a, 14, 1);
 
   a.reset(1);
   a.startQueuing();
   send(a, 4, 1);
   a.respond(0, 0);
-  assert(a.rxQueue().gap() == ZuMkPair(1, 3));
+  assert(a.rxQueue()->gap() == ZuMkPair(1, 3));
   a.stopQueuing(2);
   while (a.runDequeue());
-  assert(a.rxQueue().gap() == ZuMkPair(2, 2));
+  assert(a.rxQueue()->gap() == ZuMkPair(2, 2));
   a.respond(0, 0);
   while (a.runDequeue());
-  assert(a.rxQueue().gap() == ZuMkPair(0, 0));
-  assert(a.rxQueue().head() == 5 && a.rxQueue().tail() == 5);
+  assert(a.rxQueue()->gap() == ZuMkPair(0, 0));
+  assert(a.rxQueue()->head() == 5 && a.rxQueue()->tail() == 5);
 }

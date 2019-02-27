@@ -98,11 +98,15 @@ bool MxMDReplayLink::replay(ZtString path, MxDateTime begin, bool filter)
   Guard guard(m_lock);
   down();
   if (!path) return true;
-  engine()->rxInvoke([this, path = ZuMv(path), begin, filter]() mutable {
+  thread_local ZmSemaphore sem;
+  engine()->rxInvoke(
+      [this, path = ZuMv(path), begin, filter, sem = &sem]() mutable {
     m_path = ZuMv(path);
     m_nextTime = !begin ? ZmTime() : begin.zmTime();
     m_filter = filter;
+    sem->post();
   });
+  sem.wait();
   up();
   return ok();
 }

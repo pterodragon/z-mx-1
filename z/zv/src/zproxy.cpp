@@ -317,6 +317,7 @@ friend struct LocalPortAccessor;
 
   inline ZiMultiplex *mx() const { return m_mx; }
   inline App *app() const { return m_app; }
+
   inline uint32_t cxnFlags() const { return m_cxnFlags; }
   inline double cxnLatency() const { return m_cxnLatency; }
   inline uint32_t cxnFrag() const { return m_cxnFrag; }

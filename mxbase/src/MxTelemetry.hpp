@@ -96,6 +96,7 @@ namespace MxTelemetry {
     uint64_t	inBytes;
     uint64_t	outCount;
     uint64_t	outBytes;
+    uint32_t	full;		// how many times queue overflowed
     uint32_t	size;		// 0 for Rx, Tx
     uint8_t	type;		// QueueType
   };
@@ -195,11 +196,11 @@ namespace MxTelemetry {
 #undef DeclFn
 #define DeclFn(Fn, T) \
   template <typename Arg> \
-  inline ZmRef<Msg> Fn(const Arg &arg) { \
+  inline ZmRef<Msg> Fn(const Arg *arg) { \
     ZmRef<Msg> msg = new Msg(); \
     new (msg->ptr()) Hdr{Type::T, sizeof(T)}; \
     T *ZuMayAlias(body) = new (msg->body()) T{}; \
-    arg.telemetry(*body); \
+    arg->telemetry(*body); \
     msg->calcLength(); \
     return msg; \
   }

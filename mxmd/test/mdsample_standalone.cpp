@@ -70,7 +70,7 @@ int main(int argc, char **argv)
     md->startTimer();
 
     {
-      ZmThread thread(0, 0, []() { publish(); });
+      ZmThread thread("publish", 0, []() { publish(); });
 					// generate ticks in other thread
       thread.join();
     }

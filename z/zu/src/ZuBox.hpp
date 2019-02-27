@@ -472,18 +472,18 @@ public:
   template <typename R>
   ZuInline ZuBox &operator ^=(const R &r) { m_val ^= r; return *this; }
 
-  // apply update (leaves existing value in place if r is null)
-  ZuInline ZuBox &update(const ZuBox &r) {
-    if (!Cmp::null(r)) m_val = r.m_val;
+  // apply update (leaves existing value in place if u is null)
+  ZuInline ZuBox &update(const ZuBox &u) {
+    if (!Cmp::null(u)) m_val = u.m_val;
     return *this;
   }
   // apply update, with additional sentinel value signifying "reset to null"
-  ZuInline ZuBox &update(const ZuBox &r, const ZuBox &reset) {
-    if (!Cmp::null(r)) {
-      if (r == reset)
+  ZuInline ZuBox &update(const ZuBox &u, const ZuBox &reset) {
+    if (!Cmp::null(u)) {
+      if (u == reset)
 	m_val = Cmp::null();
       else
-	m_val = r;
+	m_val = u.m_val;
     }
     return *this;
   }

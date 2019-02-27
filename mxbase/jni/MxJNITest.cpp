@@ -100,7 +100,7 @@ int init(JNIEnv *, jobject)
     return -1;
   }
 
-  ZmThread(0, 0, []() { loop(); });
+  ZmThread("JNITest", 0, []() { loop(); });
 
   return 0;
 }

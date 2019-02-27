@@ -11,16 +11,16 @@ class App : public MxTelemetry::Server {
     using namespace MxTelemetry;
 
     ZmHeapMgr::all(ZmFn<ZmHeapCache *>{cxn,
-	[](Cxn *cxn, ZmHeapCache *h) { cxn->transmit(heap(*h)); }});
+	[](Cxn *cxn, ZmHeapCache *h) { cxn->transmit(heap(h)); }});
 
     ZmHashMgr::all(ZmFn<ZmAnyHash *>{
 	cxn, [](Cxn *cxn, ZmAnyHash *h) {
-	  if (!h->telCount()) cxn->transmit(hashTbl(*h));
+	  if (!h->telCount()) cxn->transmit(hashTbl(h));
 	}});
 
     ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{cxn,
 	[](Cxn *cxn, ZmThreadContext *tc) {
-	  cxn->transmit(thread(*tc)); }});
+	  cxn->transmit(thread(tc)); }});
   }
 };
 

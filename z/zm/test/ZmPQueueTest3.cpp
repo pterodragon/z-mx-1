@@ -93,7 +93,7 @@ public:
 
   /* -- sender callback interface -- */
 
-  inline Queue &txQueue() { return m_queue; }
+  inline Queue *txQueue() { return &m_queue; }
 
   // send message
   bool send_(Msg *msg, bool) {

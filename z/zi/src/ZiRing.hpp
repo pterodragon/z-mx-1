@@ -247,7 +247,7 @@ public:
   template <typename ...Args>
   ZiRing(const ZiRingParams &params, Args &&... args) :
       NTP::Base{ZuFwd<Args>(args)...},
-      ZiRing_(params), m_flags(0), m_id(-1), m_tail(0) { }
+      ZiRing_(params), m_flags(0), m_id(-1), m_tail(0), m_full(0) { }
 
   ~ZiRing() { close(); }
 
@@ -319,6 +319,8 @@ public:
   ZuOpBool;
 
   ZuInline void *data() const { return m_data.addr(); }
+
+  ZuInline unsigned full() const { return m_full; }
 
   int open(unsigned flags, ZeError *e) {
     if (m_ctrl.addr()) goto einval;
@@ -454,6 +456,7 @@ public:
     if ((m_flags & Read) && m_id >= 0) detach();
     if (ZuUnlikely(this->rdrMask())) return Zi::NotReady;
     memset(m_ctrl.addr(), 0, sizeof(Ctrl));
+    m_full = 0;
     return Zi::OK;
   }
 
@@ -500,6 +503,7 @@ public:
       int j = gc();
       if (ZuUnlikely(j < 0)) return 0;
       if (ZuUnlikely(j > 0)) goto retry;
+      ++m_full;
       if constexpr (!Wait) return 0;
       if (ZuUnlikely(!m_params.ll()))
 	if (ZiRing_wait(Tail, this->tail(), tail) != Zi::OK) return 0;
@@ -841,6 +845,7 @@ private:
   ZiFile		m_ctrl;
   ZiFile		m_data;
   uint32_t		m_tail;	// reader only
+  uint32_t		m_full;
 
 #ifdef ZiRing_FUNCTEST
 public:

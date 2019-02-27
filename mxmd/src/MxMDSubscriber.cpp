@@ -532,13 +532,13 @@ void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
     }
   }
   received(ZuMv(msg), [](Rx *rx) {
-    auto &link = rx->app();
-    link.active();
-    if (ZuUnlikely(rx->rxQueue().count() > link.engine()->maxQueueSize())) {
-      link.rxQueueTooBig(
-	  rx->rxQueue().count(),
-	  link.engine()->maxQueueSize());
-      link.reconnect(true);
+    auto link = rx->app();
+    link->active();
+    if (ZuUnlikely(rx->rxQueue()->count() > link->engine()->maxQueueSize())) {
+      link->rxQueueTooBig(
+	  rx->rxQueue()->count(),
+	  link->engine()->maxQueueSize());
+      link->reconnect(true);
     }
   });
 }
@@ -688,13 +688,13 @@ void MxMDSubLink::status(ZtString &out)
   {
     thread_local ZmSemaphore sem;
     rxInvoke([&out, sem = &sem](Rx *rx) {
-      const MxQueue &queue = rx->rxQueue();
-      MxQueue::Gap gap = queue.gap();
+      const MxQueue *queue = rx->rxQueue();
+      MxQueue::Gap gap = queue->gap();
       out <<
-	"head: " << queue.head() << 
+	"head: " << queue->head() << 
 	"  gap: (" << gap.key() << ")," << ZuBox<unsigned>(gap.length()) <<
-	"  length: " << ZuBox<unsigned>(queue.length()) << 
-	"  count: " << ZuBox<unsigned>(queue.count());
+	"  length: " << ZuBox<unsigned>(queue->length()) << 
+	"  count: " << ZuBox<unsigned>(queue->count());
       sem->post();
     });
     sem.wait();

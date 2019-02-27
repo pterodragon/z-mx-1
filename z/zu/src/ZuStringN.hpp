@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// fixed-size POD strings/buffers for use in structs and passing by value
+// fixed-size POD strings/buffers for use in POD structs and passing by value
 //
 // * cached length
 // * always null-terminated
@@ -47,6 +47,7 @@
 #include <ZuPrint.hpp>
 #include <ZuCmp.hpp>
 #include <ZuHash.hpp>
+#include <ZuBox.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -348,6 +349,19 @@ public:
 
 private:
   template <typename U, typename R = void,
+    bool B = ZuConversion<U, char>::Same> struct MatchChar;
+  template <typename U, typename R>
+  struct MatchChar<U, R, true> { typedef R T; };
+
+  template <typename U, typename R = void,
+    bool B = ZuTraits<U>::IsPrimitive &&
+	     ZuTraits<U>::IsReal &&
+	     !ZuConversion<U, char>::Same
+    > struct MatchReal;
+  template <typename U, typename R>
+  struct MatchReal<U, R, true> { typedef R T; };
+
+  template <typename U, typename R = void,
     bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct MatchPrint;
   template <typename U, typename R>
   struct MatchPrint<U, R, true> { typedef R T; };
@@ -464,20 +478,46 @@ public:
     return *this;
   }
 
+  // primitive real types
+  template <typename R>
+  ZuInline ZuStringN(const R &r, typename MatchReal<R>::T *_ = 0) :
+      Base(Base::Nop) {
+    this->m_size = N;
+    this->init(ZuBoxed(r));
+  }
+  template <typename R>
+  ZuInline typename MatchReal<R, ZuStringN &>::T operator =(const R &r) {
+    this->init(ZuBoxed(r));
+    return *this;
+  }
+  template <typename R>
+  ZuInline typename MatchReal<R, ZuStringN &>::T operator +=(const R &r) {
+    this->append(ZuBoxed(r));
+    return *this;
+  }
+  template <typename R>
+  ZuInline typename MatchReal<R, ZuStringN &>::T operator <<(const R &r) {
+    this->append(ZuBoxed(r));
+    return *this;
+  }
+
   // length
   template <typename L>
   ZuInline ZuStringN(L l, typename CtorLength<L>::T *_ = 0) : Base(N, l) { }
 
   // element types 
-  ZuInline ZuStringN &operator =(char c) {
+  template <typename C>
+  ZuInline typename MatchChar<C, ZuStringN &>::T operator =(C c) {
     this->init(&c, 1);
     return *this;
   }
-  ZuInline ZuStringN &operator +=(char c) {
+  template <typename C>
+  ZuInline typename MatchChar<C, ZuStringN &>::T operator +=(C c) {
     this->append(&c, 1);
     return *this;
   }
-  ZuInline ZuStringN &operator <<(char c) {
+  template <typename C>
+  ZuInline typename MatchChar<C, ZuStringN &>::T operator <<(C c) {
     this->append(&c, 1);
     return *this;
   }

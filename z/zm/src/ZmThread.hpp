@@ -30,6 +30,8 @@
 #include <ZmLib.hpp>
 #endif
 
+#include <cstddef>
+
 #include <ZuTraits.hpp>
 #include <ZuCmp.hpp>
 #include <ZuHash.hpp>
@@ -74,9 +76,9 @@ struct ZmThreadTelemetry {
   uint8_t	detached;
 };
 
-struct ZmAPI ZmThreadMgr {
-  virtual void threadName(unsigned tid, ZmThreadName &) const = 0;
-};
+class ZmThreadContext;
+
+typedef ZmFn<ZmThreadName &, const ZmThreadContext *> ZmThreadMgr;
 
 #ifndef _WIN32
 extern "C" { ZmExtern void *ZmThread_start(void *); }
@@ -195,8 +197,6 @@ protected:
 #endif /* !_WIN32 */
 };
 
-class ZmThreadContext;
-
 template <> struct ZmCleanup<ZmThreadContext> {
   enum { Level = ZmCleanupLevel::Thread };
 };
@@ -213,15 +213,15 @@ class ZmAPI ZmThreadContext : public ZmObject, public ZmThreadContext_ {
   friend class ZmThread;
 
   inline ZmThreadContext() : // only called via self() for unmanaged threads
-      m_mgr(0), m_id(-1),
+      m_id(-1),
       m_detached(false),
       m_stackSize(0), m_priority(ZmThreadPriority::Normal),
       m_partition(0),
       m_result(0) { init(); }
   template <typename Fn>
   inline ZmThreadContext(
-    ZmThreadMgr *mgr, int id, Fn &&fn, const ZmThreadParams &params) :
-      m_mgr(mgr), m_id(id),
+    ZmThreadMgr mgr, int id, Fn &&fn, const ZmThreadParams &params) :
+      m_mgr(ZuMv(mgr)), m_id(id),
       m_fn(ZuFwd<Fn>(fn)),
       m_detached(params.detached()),
       m_stackSize(params.stackSize()), m_priority(params.priority()),
@@ -231,11 +231,10 @@ class ZmAPI ZmThreadContext : public ZmObject, public ZmThreadContext_ {
 public:
   ~ZmThreadContext() { }
 
-  void manage(ZmThreadMgr *mgr, int id);
+  void manage(ZmThreadMgr mgr, int id);
   void prioritize(int priority);
   void bind(unsigned partition, const ZmBitmap &cpuset);
 
-  ZuInline ZmThreadMgr *mgr() { return m_mgr; }
   ZuInline int id() const { return m_id; }
 
   static ZmThreadContext *self();
@@ -281,7 +280,7 @@ private:
   void prioritize();
   void bind();
 
-  ZmThreadMgr	*m_mgr;
+  ZmThreadMgr	m_mgr;
   int		m_id;
 
   ZmFn<>	m_fn;
@@ -315,10 +314,10 @@ public:
   typedef ZmThreadID ID;
 
   inline ZmThread() { }
-  template <typename Fn>
-  inline ZmThread(ZmThreadMgr *mgr, int id,
-      Fn &&fn, ZmThreadParams params = ZmThreadParams()) {
-    run(mgr, id, ZuFwd<Fn>(fn), params); // sets m_context
+  template <typename Mgr, typename Fn>
+  inline ZmThread(Mgr &&mgr, int id, Fn &&fn,
+      ZmThreadParams params = ZmThreadParams()) {
+    run(ZuFwd<Mgr>(mgr), id, ZuFwd<Fn>(fn), params); // sets m_context
   }
 
   ZuInline ZmThread(const ZmThread &t) : m_context(t.m_context) { }
@@ -333,7 +332,21 @@ public:
     return *this;
   }
 
-  int run(ZmThreadMgr *mgr, int id,
+  // match 0 to preserve usages like ZmThread(0, 0, ...)
+  template <typename T>
+  ZuInline typename ZuSame<int, T, int>::T run(T, int id,
+      ZmFn<> fn, ZmThreadParams params = ZmThreadParams()) {
+    return run(ZmThreadMgr{}, id, ZuMv(fn), ZuMv(params));
+  }
+  // fixed name
+  ZuInline int run(ZuString name, int id,
+      ZmFn<> fn, ZmThreadParams params = ZmThreadParams()) {
+    return run(
+	[name = ZmThreadName{name}](
+	  ZmThreadName &s, const ZmThreadContext *) { s = name; }, id,
+	ZuMv(fn), ZuMv(params));
+  }
+  int run(ZmThreadMgr mgr, int id,
       ZmFn<> fn, ZmThreadParams params = ZmThreadParams());
 
   int join(void **status = 0);

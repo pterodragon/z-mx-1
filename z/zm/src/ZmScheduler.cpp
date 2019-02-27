@@ -92,7 +92,12 @@ void ZmScheduler::runThreads()
       ZmBitmap cpuset;
       unsigned tid = ++m_runThreads;
       if (tid < m_affinity.count()) cpuset = m_affinity[tid];
-      m_threads[tid - 1].thread = ZmThread(this, tid,
+      m_threads[tid - 1].thread = ZmThread(
+	  ZmThreadMgr{this, [](
+	      ZmScheduler *self, ZmThreadName &s,
+	      const ZmThreadContext *context) {
+	    self->threadName(s, context->id());
+	  }}, tid,
 	  ZmFn<>::Member<&ZmScheduler::work>::fn(this),
 	  params.cpuset(cpuset));
     }
@@ -125,7 +130,12 @@ void ZmScheduler::start()
     m_stateCond.broadcast();
   }
 
-  m_thread = ZmThread(this, 0,
+  m_thread = ZmThread(
+      ZmThreadMgr{this, [](
+	  ZmScheduler *self, ZmThreadName &s,
+	  const ZmThreadContext *context) {
+	self->threadName(s, context->id());
+      }}, 0,
       ZmFn<>::Member<&ZmScheduler::timer>::fn(this),
       ZmThreadParams().priority(m_priority).
 	cpuset(!m_affinity.count() ? ZmBitmap() : m_affinity[0]));
@@ -303,7 +313,7 @@ void ZmScheduler::timer()
 	  i.del();
 	  {
 	    Timer *ptr = (Timer *)timer->val().ptr;
-	    if (ZuLikely(ptr)) *ptr = 0;
+	    if (ZuLikely(ptr)) *ptr = nullptr;
 	  }
 	  bool ok;
 	  unsigned tid = timer->val().tid;
@@ -362,7 +372,7 @@ void ZmScheduler::run(
 	    break;
 	}
 	m_schedule.del(timer);
-	timer = *ptr = 0;
+	timer = nullptr;
       }
     }
 
@@ -387,7 +397,7 @@ void ZmScheduler::del(Timer *ptr)
 {
   if (ZuUnlikely(!ptr)) return;
   ZmGuard<ZmPLock> scheduleGuard(m_scheduleLock);
-  if (ZuLikely(*ptr)) { m_schedule.del(*ptr); *ptr = 0; }
+  if (ZuLikely(*ptr)) { m_schedule.del(*ptr); *ptr = nullptr; }
 }
 
 void ZmScheduler::add(ZmFn<> fn)
@@ -485,7 +495,7 @@ void ZmScheduler::work()
   m_stopped.post();
 }
 
-void ZmScheduler::threadName(unsigned tid, ZmThreadName &s) const
+void ZmScheduler::threadName(ZmThreadName &s, unsigned tid) const
 {
   s.null();
   if (!tid) {

@@ -104,9 +104,8 @@ void ZmThreadContext::name(ZmThreadName &s) const
       s = "main";
     else
       s = ZuBoxed(tid()); 
-  } else {
-    m_mgr->threadName(m_id, s);
-  }
+  } else
+    m_mgr(s, this);
 }
 
 void ZmThreadContext::telemetry(ZmThreadTelemetry &data) const {
@@ -121,9 +120,9 @@ void ZmThreadContext::telemetry(ZmThreadTelemetry &data) const {
   data.detached = m_detached;
 }
 
-void ZmThreadContext::manage(ZmThreadMgr *mgr, int id)
+void ZmThreadContext::manage(ZmThreadMgr mgr, int id)
 {
-  m_mgr = mgr;
+  m_mgr = ZuMv(mgr);
   m_id = id;
 }
 
@@ -227,10 +226,9 @@ ZmAPI unsigned __stdcall ZmThread_start(void *c_)
 #endif
 }
 
-int ZmThread::run(
-    ZmThreadMgr *mgr, int id, ZmFn<> fn, ZmThreadParams params)
+int ZmThread::run(ZmThreadMgr mgr, int id, ZmFn<> fn, ZmThreadParams params)
 {
-  m_context = new ZmThreadContext(mgr, id, fn, params);
+  m_context = new ZmThreadContext(ZuMv(mgr), id, fn, params);
   ZmREF(m_context);
 #ifndef _WIN32
   {

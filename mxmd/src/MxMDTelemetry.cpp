@@ -49,41 +49,42 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
   // heaps
   ZmHeapMgr::all(ZmFn<ZmHeapCache *>{
       cxn, [](Cxn *cxn, ZmHeapCache *h) {
-	if (!h->telCount()) cxn->transmit(heap(*h));
+	if (!h->telCount()) cxn->transmit(heap(h));
       }});
 
   // hash tables
   ZmHashMgr::all(ZmFn<ZmAnyHash *>{
       cxn, [](Cxn *cxn, ZmAnyHash *h) {
-	if (!h->telCount()) cxn->transmit(hashTbl(*h));
+	if (!h->telCount()) cxn->transmit(hashTbl(h));
       }});
 
   // threads
   ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{
       cxn, [](Cxn *cxn, ZmThreadContext *tc) {
-	cxn->transmit(thread(*tc));
+	cxn->transmit(thread(tc));
       }});
 
   // mutiplexers, thread queues, sockets
   m_core->allMx(ZmFn<MxMultiplex *>{
       cxn, [](Cxn *cxn, MxMultiplex *mx) {
 	if (mx->telCount()) return;
-	cxn->transmit(multiplexer(*mx));
+	cxn->transmit(multiplexer(mx));
 	{
 	  ZmThreadName name;
 	  uint64_t inCount, inBytes, outCount, outBytes;
 	  for (unsigned tid = 1, n = mx->nThreads(); tid <= n; tid++) {
-	    mx->threadName(tid, name);
+	    mx->threadName(name, tid);
 	    const ZmScheduler::Ring &ring = mx->ring(tid);
 	    ring.stats(inCount, inBytes, outCount, outBytes);
 	    cxn->transmit(queue(
 		  name, (uint64_t)0, (uint64_t)ring.count(),
 		  inCount, inBytes, outCount, outBytes,
-		  (uint32_t)ring.params().size(), (uint8_t)QueueType::Thread));
+		  (uint32_t)ring.full(), (uint32_t)ring.params().size(),
+		  (uint8_t)QueueType::Thread));
 	  }
 	}
 	mx->allCxns([cxn](ZiConnection *cxn_) {
-	    cxn->transmit(MxTelemetry::socket(*cxn_)); });
+	    cxn->transmit(MxTelemetry::socket(cxn_)); });
       }});
 
   // IPC queues (MD broadcast)
@@ -95,7 +96,8 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
     cxn->transmit(queue(
 	  ring->params().name(), (uint64_t)0, (uint64_t)count,
 	  inCount, inBytes, outCount, outBytes,
-	  (uint32_t)ring->params().size(), (uint8_t)QueueType::IPC));
+	  (uint32_t)ring->full(), (uint32_t)ring->params().size(),
+	  (uint8_t)QueueType::IPC));
   }
 
   {
@@ -105,13 +107,13 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
     {
       auto i = m_engines.readIterator();
       while (ZmRef<MxEngine> engine = i.iterateVal())
-	cxn->transmit(MxTelemetry::engine(*engine));
+	cxn->transmit(MxTelemetry::engine(engine.ptr()));
     }
     // I/O Links
     {
       auto i = m_links.readIterator();
       while (ZmRef<MxAnyLink> link = i.iterateVal())
-	cxn->transmit(MxTelemetry::link(*link));
+	cxn->transmit(MxTelemetry::link(link.ptr()));
     }
     // I/O Queues
     {
@@ -123,17 +125,18 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 	queue_->stats(inCount, inBytes, outCount, outBytes);
 	cxn->transmit(queue(
 	      key.p1(), queue_->head(), queue_->count(),
-	      inCount, inBytes, outCount, outBytes, (uint32_t)0,
+	      inCount, inBytes, outCount, outBytes,
+	      (uint32_t)0, (uint32_t)0,
 	      (uint8_t)(key.p2() ? QueueType::Tx : QueueType::Rx)));
       }
     }
     // Databases
     if (m_dbEnv) {
-      cxn->transmit(dbEnv(*m_dbEnv));
+      cxn->transmit(dbEnv(m_dbEnv.ptr()));
       m_dbEnv->allHosts([cxn](const ZdbHost *host) {
-	  cxn->transmit(dbHost(*host)); });
+	  cxn->transmit(dbHost(host)); });
       m_dbEnv->allDBs([cxn](const ZdbAny *db_) {
-	  cxn->transmit(db(*db_)); });
+	  cxn->transmit(db(db_)); });
     }
   }
 }

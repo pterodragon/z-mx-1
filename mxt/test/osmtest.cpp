@@ -50,18 +50,18 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
   struct AppRequest : public AppMsgID {
     template <typename Update>
     inline typename ZuIs<AppRequest, Update>::T update(const Update &u) {
-      clOrdID.update(u.clOrdID);
-      orderID.update(u.orderID);
-      execID.update(u.execID);
+      clOrdID = u.clOrdID;
+      orderID = u.orderID;
+      execID = u.execID;
     }
     template <typename Update>
     inline typename ZuIs<AppAck, Update>::T update(const Update &u) {
-      orderID.update(u.orderID);
-      execID.update(u.execID);
+      orderID = u.orderID;
+      execID = u.execID;
     }
     template <typename Update>
     inline typename ZuIs<AppExec, Update>::T update(const Update &u) {
-      execID.update(u.execID);
+      execID = u.execID;
     }
     template <typename Update>
     inline typename ZuIfT<
@@ -73,9 +73,9 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
   struct AppAck : public AppMsgID {
     template <typename Update>
     inline typename ZuIs<AppRequest, Update>::T update(const Update &u) {
-      clOrdID.update(u.clOrdID);
-      orderID.update(u.orderID);
-      execID.update(u.execID);
+      clOrdID = u.clOrdID;
+      orderID = u.orderID;
+      execID = u.execID;
     }
     template <typename Update>
     inline typename ZuIsNot<AppRequest, Update>::T update(const Update &) { }

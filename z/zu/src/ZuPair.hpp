@@ -196,9 +196,8 @@ public:
 };
 
 template <typename T1, typename T2>
-auto ZuInline ZuMkPair(T1 &&t1, T2 &&t2) {
-  return ZuPair<decltype(ZuFwd<T1>(t1)), decltype(ZuFwd<T2>(t2))>(
-      ZuFwd<T1>(t1), ZuFwd<T2>(t2));
+auto ZuInline ZuMkPair(T1 t1, T2 t2) {
+  return ZuPair<T1, T2>(ZuMv(t1), ZuMv(t2));
 }
 
 template <typename T1, typename T2>

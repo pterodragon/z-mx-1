@@ -77,9 +77,9 @@ void push() {
   if (append) {
     ZdbRN rn = append == 1 ? 0 : ZmRand::randInt(append - 1);
     pod = orders->get_(rn);
-    pod = orders->update(pod, orders->allocRN());
+    pod = orders->update(pod);
   } else {
-    pod = orders->push(orders->allocRN());
+    pod = orders->push();
   }
   if (!pod) return;
   Order *order = pod->ptr();
@@ -93,7 +93,7 @@ void push() {
     orders->putUpdate(pod);
     if (orders->allocRN() >= maxRN) return;
     if (pod = orders->get(pod->rn()))
-      orders->update(pod, orders->allocRN());
+      orders->update(pod);
   }
   appMx->add(ZmFn<>::Ptr<&push>::fn());
 }
@@ -103,12 +103,12 @@ void active() {
   if (del) {
     for (unsigned i = 0; i < del; i++)
       if (ZmRef<ZdbPOD<Order> > pod = orders->get_(i))
-	orders->del(pod, orders->allocRN());
+	orders->del(pod);
   }
   if (append) {
     for (unsigned i = 0; i < append; i++) {
       if (orders->allocRN() >= maxRN) return;
-      ZmRef<ZdbPOD<Order> > pod = orders->push(orders->allocRN());
+      ZmRef<ZdbPOD<Order> > pod = orders->push();
       if (!pod) return;
       Order *order = pod->ptr();
       order->m_side = Buy;
@@ -282,17 +282,17 @@ int main(int argc, char **argv)
     env->init(ZdbEnvConfig(cf),
       dbMx, ZmFn<>::Ptr<&active>::fn(), ZmFn<>::Ptr<&inactive>::fn());
 
-    orders = new OrderDB(env, 0, 0, ZdbHandler{
+    orders = new OrderDB(env, 0, 0, ZdbCacheMode::Normal, ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) {
 	    pod = new ZdbPOD<Order>(db);
 	    // new (pod->ptr()) Order();
 	  },
 	  [](ZdbAnyPOD *pod, bool recovered) {
-	    dump(recovered ? "recovered" : "replicated (add)",
+	    dump(recovered ? "recovered (add)" : "replicated (add)",
 		pod->rn(), pod->prevRN(), (Order *)pod->ptr());
 	  },
-	  [](ZdbAnyPOD *pod) {
-	    dump("replicated (del)",
+	  [](ZdbAnyPOD *pod, bool recovered) {
+	    dump(recovered ? "recovered (del)" : "replicated (del)",
 		pod->rn(), pod->prevRN(), (Order *)pod->ptr());
 	  },
 	  [](ZdbAnyPOD *pod, int op) {

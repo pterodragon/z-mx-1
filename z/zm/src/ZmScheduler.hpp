@@ -308,7 +308,7 @@ private:
   ThreadNames	m_names = ThreadNames(m_nThreads);
 };
 
-class ZmAPI ZmScheduler : public ZmThreadMgr {
+class ZmAPI ZmScheduler {
   ZmScheduler(const ZmScheduler &) = delete;
   ZmScheduler &operator =(const ZmScheduler &) = delete;
 
@@ -475,7 +475,7 @@ public:
   inline unsigned timeout() const
     { return m_threads[0].ring.params().timeout(); }
 
-  void threadName(unsigned tid, ZmThreadName &s) const;
+  void threadName(ZmThreadName &, unsigned tid) const;
 
   inline const ZmThreadName &name(unsigned tid) const {
     static ZmThreadName null;

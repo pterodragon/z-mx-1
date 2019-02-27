@@ -76,7 +76,8 @@ void ZeLog::start_()
 void ZeLog::start__()
 {
   m_thread = ZmThread(
-      this, 0, ZmFn<>::Member<&ZeLog::work_>::fn(this),
+      [](ZmThreadName &s, const ZmThreadContext *) { s = "log"; }, 0,
+      ZmFn<>::Member<&ZeLog::work_>::fn(this),
       ZmThreadParams().priority(ZmThreadPriority::Low));
   m_started.wait();
 }

@@ -91,7 +91,6 @@ namespace MxTEventFlags { // event flags
       Rx,		// received (cleared before each txn)
       Tx,		// transmitted (cleared before each txn)
       Ack,		// OMC - acknowledged - cleared before each txn)
-      			// Fill - fill targets pending modify
       C, ModifyCxl = C,	// synthetic cancel/replace in progress
       M, ModifyNew = M,	// new order/ack following modify-on-queue
       Unsolicited,	// unsolicited modified/canceled from market
@@ -690,7 +689,7 @@ template <typename AppTypes> struct MxTAppTypes {
 #pragma pack(pop)
 
 // types that can be extended by the app
-#define MxTImport(Scope) \
+#define MxTImport_(Scope) \
   using Event = typename Scope::Event; \
  \
   using OrderLeg = typename Scope::OrderLeg; \
@@ -717,10 +716,10 @@ template <typename AppTypes> struct MxTAppTypes {
  \
   using Fill = typename Scope::Fill; \
  \
-  using Closed = typename Scope::Closed;
+  using Closed = typename Scope::Closed
 
 template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
-  MxTImport(AppTypes);
+  MxTImport_(AppTypes);
 
   // additional typedefs
   struct ModSimulated : public Modify {
@@ -1103,5 +1102,29 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     }
   };
 };
+
+#define MxTImport(Scope) \
+  MxTImport_(Scope); \
+ \
+  using OrderHeld = typename Scope::OrderHeld; \
+  using OrderFiltered = typename Scope::OrderFiltered; \
+  using ModSimulated = typename Scope::ModSimulated; \
+  using ModRejectCxl = typename Scope::ModRejectCxl; \
+  using ModHeld = typename Scope::ModHeld; \
+  using ModFiltered = typename Scope::ModFiltered; \
+  using ModFilteredCxl = typename Scope::ModFilteredCxl; \
+  using CxlFiltered = typename Scope::CxlFiltered; \
+ \
+  using Txn_ = typename Scope::Txn_; \
+  template <typename T> using Txn = typename Scope::template Txn<T>; \
+ \
+  using OrderTxn = typename Scope::OrderTxn; \
+  using ModifyTxn = typename Scope::ModifyTxn; \
+  using CancelTxn = typename Scope::CancelTxn; \
+ \
+  using ExecTxn = typename Scope::ExecTxn; \
+  using AnyTxn = typename Scope::AnyTxn; \
+ \
+  using Order = typename Scope::Order
 
 #endif /* MxTOrder_HPP */

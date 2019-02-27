@@ -53,15 +53,16 @@ struct App : public MxTOrderDB<App> {
 template <typename App, typename Types_> class MxTOrderDB {
   typedef Types_ Types;
 
-  inline App *app() { return static_cast<App *>(this); }
-  inline const App *app() const { return static_cast<const App *>(this); }
+  ZuInline const App *app() const { return static_cast<const App *>(this); }
+  ZuInline App *app() { return static_cast<App *>(this); }
 
 public:
   using OrderData = typename Types::Order;		// open order
   using OrderDB = Zdb<OrderData>;
-  using OrderPOD = ZdbPOD<OrderData>; // FIXME - need backpointer to link
+  using OrderPOD = ZdbPOD<OrderData>;
 
-  using ClosedData = typename Types::OrderTxn;		// closed order
+  using ClosedData =					// closed order
+    typename Types::template Txn<typename Types::OrderFiltered>;
   using ClosedDB = Zdb<ClosedData>;
   using ClosedPOD = ZdbPOD<ClosedData>;
 
@@ -70,26 +71,33 @@ public:
     unsigned closedDBID = cf->getInt("closedDB", 0, 10000, true);
 
     m_orderDB = new OrderDB(
-	dbEnv, orderDBID, Types::DBVersion, ZdbHandler{
+	dbEnv, orderDBID, Types::DBVersion, ZdbCacheMode::FullCache,
+	ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new OrderPOD(db); },
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
 	    app->orderAdded(static_cast<OrderPOD *>(pod)); }},
-	  ZdbDelFn{}, ZdbCopyFn{}});
+	  ZdbDelFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
+	    app->orderDeleted(static_cast<OrderPOD *>(pod)); }},
+	  ZdbCopyFn{}});
     m_closedDB = new ClosedDB(
-	dbEnv, closedDBID, Types::DBVersion, ZdbHandler{
+	dbEnv, closedDBID, Types::DBVersion, ZdbCacheMode::Normal,
+	ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new ClosedPOD(db); },
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
 	    app->closedAdded(static_cast<ClosedPOD *>(pod)); }},
-	  ZdbDelFn{}, ZdbCopyFn{}});
+	  ZdbDelFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
+	    app->closedDeleted(static_cast<ClosedPOD *>(pod)); }},
+	  ZdbCopyFn{}});
   }
   void final() {
     m_orderDB = nullptr;
     m_closedDB = nullptr;
   }
 
-protected:
   ZuInline OrderDB *orderDB() const { return m_orderDB; }
   ZuInline ClosedDB *closedDB() const { return m_closedDB; }
+
+  // FIXME - functions to move order from openDB to closedDB
 
 private:
   ZmRef<OrderDB>	m_orderDB;

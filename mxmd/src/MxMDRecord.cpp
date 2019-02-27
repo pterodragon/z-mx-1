@@ -96,9 +96,12 @@ bool MxMDRecLink::record(ZtString path)
   Guard guard(m_lock);
   down();
   if (!path) return true;
-  engine()->rxInvoke([this, path = ZuMv(path)]() mutable {
+  thread_local ZmSemaphore sem;
+  engine()->rxInvoke([this, path = ZuMv(path), sem = &sem]() mutable {
     m_path = ZuMv(path);
+    sem->post();
   });
+  sem.wait();
   up();
   return ok();
 }
@@ -125,7 +128,7 @@ void MxMDRecLink::update(ZvCf *cf)
 
 void MxMDRecLink::reset(MxSeqNo rxSeqNo, MxSeqNo)
 {
-  rxInvoke([rxSeqNo](Rx *rx) { rx->rxReset(rx->app().m_seqNo = rxSeqNo); });
+  rxInvoke([rxSeqNo](Rx *rx) { rx->rxReset(rx->app()->m_seqNo = rxSeqNo); });
 }
 
 #define fileERROR(path__, code) \
@@ -196,11 +199,11 @@ void MxMDRecLink::connect()
 
   mx()->wakeFn(engine()->rxThread(),
       ZmFn<>{this, [](MxMDRecLink *link) {
-	link->rxRun_([](Rx *rx) { rx->app().recv(rx); });
+	link->rxRun_([](Rx *rx) { rx->app()->recv(rx); });
 	link->wake();
       }});
 
-  rxRun_([](Rx *rx) { rx->app().recv(rx); });
+  rxRun_([](Rx *rx) { rx->app()->recv(rx); });
 }
 
 void MxMDRecLink::disconnect()

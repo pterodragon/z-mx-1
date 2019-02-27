@@ -282,8 +282,6 @@ void *ZmHeapCache::alloc(ZmHeapStats &stats)
       (*fn)(m_info.id, m_info.size);
   }
 #endif
-  if (ZuUnlikely(stats.maxAllocated < ++stats.allocated))
-    stats.maxAllocated = stats.allocated;
   void *p;
   if (ZuLikely(p = alloc_())) {
     ++stats.cacheAllocs;
@@ -304,7 +302,7 @@ void ZmHeapCache::free(ZmHeapStats &stats, void *p)
   }
 #endif
   free_(this, p);
-  ++stats.frees, --stats.allocated;
+  ++stats.frees;
 }
 
 void ZmHeapCache::free_(ZmHeapCache *self, void *p)
@@ -338,9 +336,7 @@ void ZmHeapCache::allStats() const
       [this](const ZmHeapStats &s) {
 	m_stats.heapAllocs += s.heapAllocs;
 	m_stats.cacheAllocs += s.cacheAllocs;
-	m_stats.frees += s.frees;
-	m_stats.allocated += s.allocated;
-	m_stats.maxAllocated += s.maxAllocated; });
+	m_stats.frees += s.frees; });
   m_allStatsFn(ZuMv(fn));
 }
 
@@ -355,8 +351,6 @@ void ZmHeapCache::telemetry(ZmHeapTelemetry &data) const
   data.cacheAllocs = stats.cacheAllocs;
   data.heapAllocs = stats.heapAllocs;
   data.frees = stats.frees;
-  data.allocated = stats.allocated;
-  data.maxAllocated = stats.maxAllocated;
   data.size = info.size;
   data.partition = info.partition;
   data.sharded = info.sharded;

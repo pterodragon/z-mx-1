@@ -73,7 +73,7 @@ template <> struct ZmCleanup<ZeLog> {
   static void final(ZeLog *);
 };
 
-class ZeAPI ZeLog : public ZmThreadMgr {
+class ZeAPI ZeLog {
   ZeLog(const ZeLog &);
   ZeLog &operator =(const ZeLog &);		// prevent mis-use
 
@@ -221,8 +221,6 @@ private:
   void work_();
   void log_(ZmRef<ZeEvent> e);
   void log__(ZeEvent *e);
-
-  void threadName(unsigned, ZmThreadName &s) const { s = "log"; }
 
 private:
   SinkList	m_sinks;

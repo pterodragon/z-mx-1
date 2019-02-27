@@ -142,10 +142,7 @@ protected:
   MxAnyLink(MxID id);
 
 public:
-  ZuInline int state() const {
-    StateReadGuard guard(m_stateLock);
-    return m_state;
-  }
+  ZuInline int state() const { return m_state.load_(); }
 
   struct Telemetry {
     MxID	id;
@@ -166,19 +163,19 @@ public:
   virtual void failover(bool) = 0;
 
   inline MxSeqNo rxSeqNo() const {
-    if (const MxQueue *queue = rxQueuePtr()) return queue->head();
+    if (const MxQueue *queue = rxQueue()) return queue->head();
     return 0;
   }
   inline MxSeqNo txSeqNo() const {
-    if (const MxQueue *queue = txQueuePtr()) return queue->head();
+    if (const MxQueue *queue = txQueue()) return queue->head();
     return 0;
   }
 
 protected:
-  virtual MxQueue *rxQueuePtr() = 0;
-  virtual const MxQueue *rxQueuePtr() const = 0;
-  virtual MxQueue *txQueuePtr() = 0;
-  virtual const MxQueue *txQueuePtr() const = 0;
+  virtual MxQueue *rxQueue() = 0;
+  virtual const MxQueue *rxQueue() const = 0;
+  virtual MxQueue *txQueue() = 0;
+  virtual const MxQueue *txQueue() const = 0;
 
   virtual void connect() = 0;
   virtual void disconnect() = 0;
@@ -199,7 +196,7 @@ private:
   ZmScheduler::Timer	m_reconnTimer;
 
   StateLock		m_stateLock;
-    int			  m_state = MxLinkState::Down;
+    ZmAtomic<int>	  m_state = MxLinkState::Down;
     unsigned		  m_reconnects;
     bool		  m_enabled = true;
 };
@@ -316,10 +313,7 @@ public:
   ZuInline unsigned rxThread() const { return m_rxThread; }
   ZuInline unsigned txThread() const { return m_txThread; }
 
-  ZuInline int state() const {
-    StateReadGuard guard(m_stateLock);
-    return m_state;
-  }
+  ZuInline int state() const { return m_state.load_(); }
 
   void start();
   void stop();
@@ -446,13 +440,13 @@ public:
     }
     link = appCreateLink(id);
     link->init(this);
-    link->update(cf);
     m_links.add(link);
     guard.unlock();
     linkState(link, -1, link->state());
+    link->update(cf);
     appUpdateLink(link);
-    appAddQueue(id, 0, link->rxQueuePtr());
-    appAddQueue(id, 1, link->txQueuePtr());
+    appAddQueue(id, 0, link->rxQueue());
+    appAddQueue(id, 1, link->txQueue());
     return link;
   }
   ZmRef<MxAnyLink> delLink(MxID id) {
@@ -493,7 +487,7 @@ private:
     Links			  m_links;	// from csv
 
   StateLock			m_stateLock;
-    int				  m_state;
+    ZmAtomic<int>		  m_state;
     unsigned			  m_down = 0;		// #links down
     unsigned			  m_disabled = 0;	// #links disabled
     unsigned			  m_transient = 0;	// #links transient
@@ -515,8 +509,8 @@ public:
   
   inline void init(MxEngine *engine) { Base::init(engine); }
 
-  ZuInline const Impl &impl() const { return static_cast<const Impl &>(*this); }
-  ZuInline Impl &impl() { return static_cast<Impl &>(*this); }
+  ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
+  ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
   ZuInline void scheduleSend() { if (!m_sending.xch(1)) rescheduleSend(); }
   ZuInline void rescheduleSend() { txRun([](Tx *tx) { tx->send(); }); }
@@ -533,13 +527,13 @@ public:
   ZuInline void idleArchive() { m_archiving = 0; }
 
   template <typename L> ZuInline void txRun(L &&l)
-    { this->engine()->txRun(ZmFn<>{impl().tx(), ZuFwd<L>(l)}); }
+    { this->engine()->txRun(ZmFn<>{impl()->tx(), ZuFwd<L>(l)}); }
   template <typename L> ZuInline void txRun(L &&l) const
-    { this->engine()->txRun(ZmFn<>{impl().tx(), ZuFwd<L>(l)}); }
+    { this->engine()->txRun(ZmFn<>{impl()->tx(), ZuFwd<L>(l)}); }
   template <typename L> ZuInline void txInvoke(L &&l)
-    { this->engine()->txInvoke(impl().tx(), ZuFwd<L>(l)); }
+    { this->engine()->txInvoke(impl()->tx(), ZuFwd<L>(l)); }
   template <typename L> ZuInline void txInvoke(L &&l) const
-    { this->engine()->txInvoke(impl().tx(), ZuFwd<L>(l)); }
+    { this->engine()->txInvoke(impl()->tx(), ZuFwd<L>(l)); }
 
 private:
   ZmAtomic<unsigned>	m_sending;
@@ -564,10 +558,11 @@ public:
 
   inline MxTxPool(MxID id) : Base(id) { }
 
+  const MxQueue *txQueue() const { return MxQueueTxPool<Impl>::txQueue(); }
+  MxQueue *txQueue() { return MxQueueTxPool<Impl>::txQueue(); }
+
   ZuInline const Tx *tx() const { return static_cast<const Tx *>(this); }
   ZuInline Tx *tx() { return static_cast<Tx *>(this); }
-
-  MxQueue *txQueuePtr() { return &(this->txQueue()); }
 
   void send(ZmRef<MxQMsg> msg) {
     msg->owner(tx());
@@ -636,12 +631,12 @@ public:
 
   typedef MxAnyTx::AbortFn AbortFn;
 
-  ZuInline const Impl &impl() const { return static_cast<const Impl &>(*this); }
-  ZuInline Impl &impl() { return static_cast<Impl &>(*this); }
+  ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
+  ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
-  ZuInline const Rx *rx() const { return static_cast<const Rx *>(this); }
+  ZuInline const Rx *rx() const { return static_cast<const Rx >(this); }
   ZuInline Rx *rx() { return static_cast<Rx *>(this); }
-  ZuInline const Tx *tx() const { return static_cast<const Tx *>(this); }
+  ZuInline const Tx *tx() const { return static_cast<const Tx >(this); }
   ZuInline Tx *tx() { return static_cast<Tx *>(this); }
 
   inline MxLink(MxID id) : Base(id) { }
@@ -671,7 +666,7 @@ public:
     scheduleReRequest_(guard);
   }
   ZuInline void scheduleReRequest_(RRGuard &guard) {
-    ZmTime interval = impl().reReqInterval();
+    ZmTime interval = impl()->reReqInterval();
     if (!interval) return;
     m_rrTime.now();
     ZmTime rrTime = (m_rrTime += interval);
@@ -686,10 +681,10 @@ public:
     }
   }
 
-  MxQueue *rxQueuePtr() { return &(this->rxQueue()); }
-  const MxQueue *rxQueuePtr() const { return &(this->rxQueue()); }
-  MxQueue *txQueuePtr() { return &(this->txQueue()); }
-  const MxQueue *txQueuePtr() const { return &(this->txQueue()); }
+  const MxQueue *rxQueue() const { return MxQueueRx<Impl>::rxQueue(); }
+  MxQueue *rxQueue() { return MxQueueRx<Impl>::rxQueue(); }
+  const MxQueue *txQueue() const { return MxQueueTx<Impl>::txQueue(); }
+  MxQueue *txQueue() { return MxQueueTx<Impl>::txQueue(); }
 
   template <typename L, typename ...Args>
   ZuInline void rxRun(L &&l, Args &&... args)

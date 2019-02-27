@@ -99,13 +99,13 @@ private:
   MxQMsgData	&m_item;
 };
 
-struct MxQueue_HeapID { inline static const char *id() { return "MxQueue"; } };
+struct MxQMsg_HeapID { inline static const char *id() { return "MxQMsg"; } };
 typedef ZmPQueue<MxQMsgData,
 	  ZmPQueueNodeIsItem<true,
 	    ZmPQueueObject<ZmPolymorph,
 	      ZmPQueueFn<MxQFn,
 		ZmPQueueLock<ZmNoLock,
-		  ZmPQueueHeapID<MxQueue_HeapID,
+		  ZmPQueueHeapID<MxQMsg_HeapID,
 		    ZmPQueueBase<ZmObject> > > > > > > MxQueue;
 typedef MxQueue::Node MxQMsg;
 typedef MxQueue::Gap MxQGap;
@@ -141,11 +141,11 @@ public:
   
   ZuInline void rxInit(MxSeqNo seqNo) { m_queue->head(seqNo); }
 
-  ZuInline const App &app() const { return *static_cast<const App *>(this); }
-  ZuInline App &app() { return *static_cast<App *>(this); }
+  ZuInline const App *app() const { return static_cast<const App *>(this); }
+  ZuInline App *app() { return static_cast<App *>(this); }
 
-  ZuInline const MxQueue &rxQueue() const { return *m_queue; }
-  ZuInline MxQueue &rxQueue() { return *m_queue; }
+  ZuInline const MxQueue *rxQueue() const { return m_queue; }
+  ZuInline MxQueue *rxQueue() { return m_queue; }
 
 private:
   ZmRef<MxQueue>	m_queue;
@@ -238,11 +238,11 @@ public:
     m_queue->head(m_seqNo = seqNo);
   }
 
-  ZuInline const App &app() const { return static_cast<const App &>(*this); }
-  ZuInline App &app() { return static_cast<App &>(*this); }
+  ZuInline const App *app() const { return static_cast<const App *>(this); }
+  ZuInline App *app() { return static_cast<App *>(this); }
 
-  ZuInline const MxQueue &txQueue() const { return *m_queue; }
-  ZuInline MxQueue &txQueue() { return *m_queue; }
+  ZuInline const MxQueue *txQueue() const { return m_queue; }
+  ZuInline MxQueue *txQueue() { return m_queue; }
 
   ZuInline void send() { Tx::send(); }
   void send(MxQMsg *msg) {
@@ -250,19 +250,19 @@ public:
       Guard guard(m_lock);
       if (ZuUnlikely(!m_ready)) {
 	guard.unlock();
-	app().aborted_(msg);
+	app()->aborted_(msg);
 	return;
       }
     }
-    msg->load(MxMsgID{app().id(), m_seqNo++});
-    app().loaded_(msg);
+    msg->load(MxMsgID{app()->id(), m_seqNo++});
+    app()->loaded_(msg);
     Tx::send(msg);
   }
   void abort(MxSeqNo seqNo) {
     ZmRef<MxQMsg> msg = Tx::abort(seqNo);
     if (msg) {
-      app().aborted_(msg);
-      app().unloaded_(msg);
+      app()->aborted_(msg);
+      app()->unloaded_(msg);
       msg->unload();
     }
   }
@@ -270,7 +270,7 @@ public:
   // unload all messages from queue
   void unload(ZmFn<MxQMsg *> fn) {
     while (ZmRef<MxQMsg> msg = m_queue->shift()) {
-      app().unloaded_(msg);
+      app()->unloaded_(msg);
       msg->unload();
       fn(msg);
     }
@@ -322,7 +322,6 @@ private:
     ZmTime		  m_ready;
 };
 
-// FIXME
 template <class App, class Lock_ = ZmNoLock>
 class MxQueueTxPool : public MxQueueTx<App, Lock_> {
   struct Queues_HeapID {
@@ -377,7 +376,7 @@ public:
       if (m_queues.count() == 1) {
 	Tx::ready_(next);
 	guard.unlock();
-	this->app().scheduleSend();
+	this->app()->scheduleSend();
 	return;
       }
     } else {

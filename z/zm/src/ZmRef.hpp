@@ -210,12 +210,10 @@ public:
   ZuInline operator T *() const { return m_object; }
   ZuInline T *operator ->() const { return m_object; }
 
-  template <typename O>
-  inline typename MatchOtherRef<ZmRef<O>, O *>::T as() const {
+  template <typename O = T>
+  ZuInline typename MatchRef<ZmRef<O>, O *>::T ptr() const {
     return static_cast<O *>(m_object);
   }
-
-  ZuInline T *ptr() const { return m_object; }
   T *ptr_() const { return m_object; }
 
   ZuInline bool operator !() const { return !m_object; }

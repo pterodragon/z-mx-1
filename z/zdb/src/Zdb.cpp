@@ -499,6 +499,22 @@ void ZdbEnv::telemetry(Telemetry &data) const
   data.replicating = !!m_nextCxn;
 }
 
+const char *ZdbHost::stateName(int i)
+{
+  static const char *const names[] = {
+    "Instantiated",
+    "Initialized",
+    "Stopped",
+    "Electing",
+    "Activating",
+    "Active",
+    "Deactivating",
+    "Inactive",
+    "Stopping"
+  };
+  if (i < 0 || i >= Stopping) return "Unknown";
+  return names[i];
+}
 
 void ZdbHost::telemetry(Telemetry &data) const
 {
@@ -1142,7 +1158,7 @@ void ZdbAnyPOD::sent3(ZiIOContext &io)
   io.complete();
 }
 
-int ZdbAnyPOD_Compressed::compress(const char *src, unsigned size)
+int ZdbAnyPOD_Cmpr::compress(const char *src, unsigned size)
 {
   return LZ4_compress((const char *)src, (char *)ptr(), size);
 }
@@ -1374,7 +1390,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::replicated_(
   ZmRef<ZdbAnyPOD> pod;
   Guard guard(m_lock);
   if (ZuUnlikely(m_cache && (pod = m_cache->del(prevRN)))) {
-    m_lru.del(pod);
+    if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.del(pod);
     if (op != ZdbOp::Delete) {
       pod->update(rn, prevRN, range, ZdbCommitted);
       cache_(pod);
@@ -1397,10 +1413,21 @@ ZmRef<ZdbAnyPOD> ZdbAny::replicated_(
   return pod;
 }
 
-ZdbAny::ZdbAny(ZdbEnv *env, ZdbID id, uint32_t version, ZdbHandler handler,
-    unsigned recSize, unsigned dataSize) :
-  m_env(env), m_id(id), m_version(version), m_handler(ZuMv(handler)),
-  m_recSize(recSize), m_dataSize(dataSize)
+void ZdbAny::replicate(ZdbAnyPOD *pod, void *ptr, int op)
+{
+  ZdbRange range = pod->range();
+#ifdef ZdbRep_DEBUG
+  ZmAssert((!range || (range.off() + range.len()) <= pod->size()));
+#endif
+  if (op != ZdbOp::New) m_handler.delFn(pod, false);
+  if (range) memcpy((char *)pod->ptr() + range.off(), ptr, range.len());
+  if (op != ZdbOp::Delete) m_handler.addFn(pod, false);
+}
+
+ZdbAny::ZdbAny(ZdbEnv *env, ZdbID id, uint32_t version, int cacheMode,
+    ZdbHandler handler, unsigned recSize, unsigned dataSize) :
+  m_env(env), m_id(id), m_version(version), m_cacheMode(cacheMode),
+  m_handler(ZuMv(handler)), m_recSize(recSize), m_dataSize(dataSize)
 {
   if (!m_recSize || !m_dataSize) {
     ZeLOG(Fatal, ZtString() <<
@@ -1434,7 +1461,7 @@ ZdbAny::~ZdbAny()
 void ZdbAny::init(ZdbConfig *config)
 {
   m_config = config;
-  if (!m_config->noCache) {
+  if (m_cacheMode != ZdbCacheMode::NoCache) {
     m_cache = new Zdb_Cache(m_config->cache);
     m_cacheSize = m_cache->size();
   }
@@ -1623,10 +1650,7 @@ void ZdbAny::recover(Zdb_File *file)
     switch (pod->magic()) {
       case ZdbCommitted:
 	if (rn < m_minRN) m_minRN = rn;
-	if (m_handler.addFn) {
-	  this->recover(pod);
-	  cache(ZuMv(pod));
-	}
+	this->recover(ZuMv(pod));
 	break;
       case ZdbAllocated:
       case ZdbDeleted:
@@ -1638,6 +1662,22 @@ void ZdbAny::recover(Zdb_File *file)
     if (m_allocRN <= rn) m_allocRN = rn + 1;
     if (m_fileRN <= rn) m_fileRN = rn + 1;
   }
+}
+
+void ZdbAny::recover(ZmRef<ZdbAnyPOD> pod)
+{
+  ZdbRN prevRN = pod->prevRN();
+  ZmRef<ZdbAnyPOD> prevPOD;
+  if (pod->rn() != prevRN) {
+    if (ZuLikely(m_cache)) prevPOD = m_cache->del(prevRN);
+    if (ZuUnlikely(!prevPOD)) {
+      Zdb_FileRec rec = rn2file(prevRN, false);
+      if (rec) prevPOD = read_(rec);
+    }
+  }
+  if (prevPOD) m_handler.delFn(prevPOD, true);
+  m_handler.addFn(pod, true);
+  cache(ZuMv(pod));
 }
 
 void ZdbAny::scan(Zdb_File *file)
@@ -1704,7 +1744,7 @@ void ZdbAny::checkpoint_()
     file->checkpoint();
 }
 
-ZmRef<ZdbAnyPOD> ZdbAny::push(ZdbRN rn)
+ZmRef<ZdbAnyPOD> ZdbAny::push()
 {
   if (ZuUnlikely(!m_fileRecs)) return nullptr;
   if (ZuUnlikely(!m_env->active())) {
@@ -1712,16 +1752,16 @@ ZmRef<ZdbAnyPOD> ZdbAny::push(ZdbRN rn)
 	"Zdb inactive application attempted push on DBID " << m_id);
     return nullptr;
   }
-  return push_(rn);
+  return push_();
 }
 
-ZmRef<ZdbAnyPOD> ZdbAny::push_(ZdbRN rn)
+ZmRef<ZdbAnyPOD> ZdbAny::push_()
 {
   ZmRef<ZdbAnyPOD> pod;
   alloc(pod);
   if (ZuUnlikely(!pod)) return nullptr;
   Guard guard(m_lock);
-  if (ZuLikely(m_allocRN <= rn)) m_allocRN = rn + 1;
+  ZdbRN rn = m_allocRN++;
   pod->init(rn, ZdbRange{0, m_dataSize});
   return pod;
 }
@@ -1734,8 +1774,10 @@ ZmRef<ZdbAnyPOD> ZdbAny::get(ZdbRN rn)
   if (ZuUnlikely(rn >= m_allocRN)) return nullptr;
   ++m_cacheLoads;
   if (ZuLikely(m_cache && (pod = m_cache->find(rn)))) {
-    m_lru.del(pod);
-    m_lru.push(pod);
+    if (m_cacheMode != ZdbCacheMode::FullCache) {
+      m_lru.del(pod);
+      m_lru.push(pod);
+    }
     return pod;
   }
   ++m_cacheMisses;
@@ -1774,7 +1816,8 @@ ZmRef<ZdbAnyPOD> ZdbAny::get__(ZdbRN rn)
 void ZdbAny::cache(ZdbAnyPOD *pod)
 {
   if (!m_cache) return;
-  if (m_cache->count() >= m_cacheSize) {
+  if (m_cacheMode != ZdbCacheMode::FullCache &&
+      m_cache->count() >= m_cacheSize) {
     ZmRef<ZdbLRUNode> lru_ = m_lru.shiftNode();
     if (ZuLikely(lru_)) {
       ZdbAnyPOD *lru = static_cast<ZdbAnyPOD *>(lru_.ptr());
@@ -1788,14 +1831,14 @@ void ZdbAny::cache_(ZdbAnyPOD *pod)
 {
   if (!m_cache) return;
   m_cache->add(pod);
-  m_lru.push(pod);
+  if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.push(pod);
 }
 
 void ZdbAny::cacheDel_(ZdbAnyPOD *pod)
 {
   if (!m_cache) return;
-  if (m_cache->del(pod->rn()))
-    m_lru.del(pod);
+  if (m_cache->del(pod->rn()) &&
+      m_cacheMode != ZdbCacheMode::FullCache) m_lru.del(pod);
 }
 
 void ZdbAny::abort(ZdbAnyPOD *pod) // aborts a push()
@@ -1817,18 +1860,19 @@ void ZdbAny::put(ZdbAnyPOD *pod) // commits a push
   m_env->write(pod, Zdb_Msg::Rep, ZdbOp::New, m_config->compress);
 }
 
-ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *orig, ZdbRN rn)
+ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *prev)
 {
   ZmRef<ZdbAnyPOD> pod;
   alloc(pod);
   if (ZuUnlikely(!pod)) return nullptr;
+  ZdbRN rn;
   {
     Guard guard(m_lock);
-    cacheDel_(orig);
-    if (ZuLikely(m_allocRN <= rn)) m_allocRN = rn + 1;
-    memcpy(pod->ptr(), orig->ptr(), m_dataSize);
+    cacheDel_(prev);
+    rn = m_allocRN++;
+    memcpy(pod->ptr(), prev->ptr(), m_dataSize);
   }
-  pod->update(rn, orig->rn(), ZdbRange{0, m_dataSize});
+  pod->update(rn, prev->rn(), ZdbRange{0, m_dataSize});
   return pod;
 }
 
@@ -1846,17 +1890,15 @@ void ZdbAny::putUpdate(ZdbAnyPOD *pod, bool replace)
   m_env->write(pod, Zdb_Msg::Rep, op, m_config->compress);
 }
 
-void ZdbAny::del(ZdbAnyPOD *pod, ZdbRN rn)
+void ZdbAny::del(ZdbAnyPOD *pod)
 {
   ZmAssert(pod->committed());
+  ZdbRN rn;
   {
     Guard guard(m_lock);
     cacheDel_(pod);
-    if (ZuLikely(m_allocRN <= rn)) m_allocRN = rn + 1;
-    if (rn != pod->rn())
-      pod->update(rn, pod->rn(), ZdbRange{}, ZdbDeleted);
-    else
-      pod->del();
+    rn = m_allocRN++;
+    pod->update(rn, pod->rn(), ZdbRange{}, ZdbDeleted);
   }
   this->copy(pod, ZdbOp::Delete);
   m_env->write(pod, Zdb_Msg::Rep, ZdbOp::Delete, false);
@@ -1892,7 +1934,7 @@ void ZdbAny::telemetry(Telemetry &data) const
   data.preAlloc = m_config->preAlloc;
   data.recSize = m_recSize;
   data.compress = m_config->compress;
-  data.noCache = m_config->noCache;
+  data.cacheMode = m_cacheMode;
   {
     ReadGuard guard(m_lock);
     data.minRN = m_minRN;

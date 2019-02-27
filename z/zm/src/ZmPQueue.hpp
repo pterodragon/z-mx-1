@@ -812,7 +812,7 @@ private:
     ++m_inCount;
     m_inBytes += bytes;
     ++m_outCount;
-    m_outCount += bytes;
+    m_outBytes += bytes;
     return node;
   }
   template <bool Dequeue>
@@ -977,10 +977,10 @@ private:
   unsigned	  m_length = 0;
   unsigned	  m_count = 0;
   unsigned	  m_addSeqNo = 0;
-  uint64_t	  m_inBytes = 0;
   uint64_t	  m_inCount = 0;
-  uint64_t	  m_outBytes = 0;
+  uint64_t	  m_inBytes = 0;
   uint64_t	  m_outCount = 0;
+  uint64_t	  m_outBytes = 0;
 };
 
 // template resend-requesting receiver using ZmPQueue
@@ -1045,7 +1045,7 @@ public:
     app->cancelReRequest();
     m_queuing = m_dequeuing = false;
     m_gap = Gap();
-    app->rxQueue().reset(key);
+    app->rxQueue()->reset(key);
   }
 
   // start queueing (during snapshot recovery)
@@ -1061,8 +1061,8 @@ public:
     {
       Guard guard(m_lock);
       m_queuing = false;
-      app->rxQueue().head(key);
-      scheduleDequeue = !m_dequeuing && app->rxQueue().count();
+      app->rxQueue()->head(key);
+      scheduleDequeue = !m_dequeuing && app->rxQueue()->count();
       if (scheduleDequeue) m_dequeuing = true;
     }
     if (scheduleDequeue) app->scheduleDequeue();
@@ -1073,11 +1073,11 @@ public:
     App *app = static_cast<App *>(this);
     Guard guard(m_lock);
     if (ZuUnlikely(m_queuing || m_dequeuing)) {
-      app->rxQueue().enqueue(msg);
+      app->rxQueue()->enqueue(msg);
       return;
     }
-    msg = app->rxQueue().rotate(msg);
-    bool scheduleDequeue = msg && app->rxQueue().count();
+    msg = app->rxQueue()->rotate(msg);
+    bool scheduleDequeue = msg && app->rxQueue()->count();
     if (scheduleDequeue) m_dequeuing = true;
     guard.unlock();
     if (ZuUnlikely(!msg)) { stalled(); return; }
@@ -1089,8 +1089,8 @@ public:
   void dequeue() {
     App *app = static_cast<App *>(this);
     Guard guard(m_lock);
-    ZmRef<Msg> msg = app->rxQueue().dequeue();
-    bool scheduleDequeue = msg && app->rxQueue().count();
+    ZmRef<Msg> msg = app->rxQueue()->dequeue();
+    bool scheduleDequeue = msg && app->rxQueue()->count();
     if (!scheduleDequeue) m_dequeuing = false;
     guard.unlock();
     if (ZuUnlikely(!msg)) { stalled(); return; }
@@ -1121,8 +1121,8 @@ private:
     Gap old, gap;
     {
       Guard guard(m_lock);
-      if (!app->rxQueue().count()) return;
-      gap = app->rxQueue().gap();
+      if (!app->rxQueue()->count()) return;
+      gap = app->rxQueue()->gap();
       if (gap == m_gap) return;
       old = m_gap;
       m_gap = gap;
@@ -1150,7 +1150,7 @@ struct App : public ZmPQTx<App, Queue> {
   typedef typename Queue::Gap Gap;
 
   // access queue
-  Queue &txQueue();
+  Queue *txQueue();
 
   // Note: *send*_()
   // - more indicates if messages are queued and will be sent immediately
@@ -1223,7 +1223,7 @@ public:
       Guard guard(m_lock);
       if (m_running) return;
       m_running = true;
-      scheduleSend = !m_sending && m_sendKey < app->txQueue().tail();
+      scheduleSend = !m_sending && m_sendKey < app->txQueue()->tail();
       if (scheduleSend) m_sending = true;
       scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey;
       if (scheduleArchive) m_archiving = true;
@@ -1248,7 +1248,7 @@ public:
     Guard guard(m_lock);
     m_sendKey = m_ackdKey = m_archiveKey = key;
     m_gap = Gap();
-    app->txQueue().reset(key);
+    app->txQueue()->reset(key);
   }
 
   // send message (with key already allocated)
@@ -1257,7 +1257,7 @@ public:
     bool scheduleSend;
     {
       Guard guard(m_lock);
-      app->txQueue().enqueue(msg);
+      app->txQueue()->enqueue(msg);
       scheduleSend = m_running && !m_sending &&
 	m_sendKey <= Fn(msg->item()).key();
       if (scheduleSend) m_sending = true;
@@ -1271,7 +1271,7 @@ public:
     ZmRef<Msg> msg;
     {
       Guard guard(m_lock);
-      msg = app->txQueue().abort(key);
+      msg = app->txQueue()->abort(key);
     }
     return msg;
   }
@@ -1326,9 +1326,9 @@ public:
       Guard guard(m_lock);
       if (!m_running) { m_sending = false; return; }
       prevKey = m_sendKey;
-      scheduleSend = m_sendKey < app->txQueue().tail();
+      scheduleSend = m_sendKey < app->txQueue()->tail();
       while (scheduleSend) {
-	msg = app->txQueue().find(m_sendKey);
+	msg = app->txQueue()->find(m_sendKey);
 	unsigned length;
 	if (msg)
 	  length = Fn(msg->item()).length();
@@ -1337,7 +1337,7 @@ public:
 	  sendGap.length() += (length = 1);
 	}
 	m_sendKey += length;
-	scheduleSend = m_sendKey < app->txQueue().tail();
+	scheduleSend = m_sendKey < app->txQueue()->tail();
 	if (msg) break;
       }
       if (!scheduleSend) m_sending = false;
@@ -1371,7 +1371,7 @@ public:
       if (!m_running) { m_archiving = false; return; }
       scheduleArchive = m_archiveKey < m_ackdKey;
       while (scheduleArchive) {
-	msg = app->txQueue().find(m_archiveKey);
+	msg = app->txQueue()->find(m_archiveKey);
 	m_archiveKey += msg ? (unsigned)Fn(msg->item()).length() : 1U;
 	scheduleArchive = m_archiveKey < m_ackdKey;
 	if (msg) break;
@@ -1392,7 +1392,7 @@ public:
     ZmRef<Msg> msg;
     do {
       Guard guard(m_lock);
-      msg = app->txQueue().shift(key);
+      msg = app->txQueue()->shift(key);
     } while (msg);
   }
 
@@ -1407,7 +1407,7 @@ public:
       if (!m_running) { m_resending = false; return; }
       prevGap = m_gap;
       while (m_gap.length()) {
-	msg = app->txQueue().find(m_gap.key());
+	msg = app->txQueue()->find(m_gap.key());
 	if (!msg) msg = app->retrieve_(m_gap.key());
 	unsigned length;
 	if (msg) {

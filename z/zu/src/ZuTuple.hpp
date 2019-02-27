@@ -229,8 +229,8 @@ struct ZuTraits<ZuTuple_<ZuPP_CList(ZuTuple_TemplateArg, ZuPP_N)> > :
 };
 
 template <typename ...Args>
-auto ZuInline ZuMkTuple(Args &&... args) {
-  return ZuTuple<decltype(ZuFwd<Args>(args))...>{ZuFwd<Args>(args)...};
+auto ZuInline ZuMkTuple(Args... args) {
+  return ZuTuple<Args...>{ZuMv(args)...};
 }
 
 template <typename... Args> ZuTuple(Args...) -> ZuTuple<Args...>;

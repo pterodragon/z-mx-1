@@ -49,6 +49,7 @@
 #include <ZmPLock.hpp>
 
 #include <ZtString.hpp>
+#include <ZtEnum.hpp>
 
 #include <ZePlatform.hpp>
 #include <ZeLog.hpp>
@@ -104,15 +105,15 @@ struct Zdb_Msg_Rep {	// replication
   ZdbRN		rn;			// followed by record
   ZdbRN		prevRN;
   uint32_t	range;
-  uint16_t	op;			// ZdbOp
   uint16_t	clen;
+  uint8_t	op;			// ZdbOp
 };
 struct Zdb_Msg_Hdr {	// header
-  uint8_t		type;
   union {
     struct Zdb_Msg_HB	  hb;
     struct Zdb_Msg_Rep	  rep;
   }			u;
+  uint8_t		type;
 };
 #pragma pack(pop)
 
@@ -285,7 +286,7 @@ typedef ZmHash<ZdbLRUNode,
 		    ZmHashLock<ZmNoLock> > > > > > > Zdb_Cache;
 typedef Zdb_Cache::Node Zdb_CacheNode;
 
-class ZdbAnyPOD_Compressed;
+class ZdbAnyPOD_Cmpr;
 class ZdbAnyPOD_Send__;
 
 class ZdbAPI ZdbAnyPOD : public Zdb_CacheNode {
@@ -370,16 +371,16 @@ private:
   void send(ZiIOContext &io);
   void write();
 
-  virtual ZmRef<ZdbAnyPOD_Compressed> compress() = 0;
+  virtual ZmRef<ZdbAnyPOD_Cmpr> compress() = 0;
 
   void sent(ZiIOContext &io);
   void sent2(ZiIOContext &io);
   void sent3(ZiIOContext &io);
 
 private:
-  ZdbAny			*m_db;
-  ZmRef<ZdbAnyPOD_Compressed>	m_compressed;
-  Zdb_Msg_Hdr			m_hdr;
+  ZdbAny		*m_db;
+  ZmRef<ZdbAnyPOD_Cmpr>	m_compressed;
+  Zdb_Msg_Hdr		m_hdr;
 };
 
 template <> struct ZuPrint<ZdbAnyPOD> : public ZuPrintDelegate {
@@ -394,9 +395,9 @@ inline ZdbRN ZdbLRUNode_RNAccessor::value(const ZdbLRUNode &pod)
   return static_cast<const ZdbAnyPOD &>(pod).rn();
 }
 
-class ZdbAnyPOD_Compressed : public ZuObject {
+class ZdbAnyPOD_Cmpr : public ZuObject {
 public:
-  ZuInline ZdbAnyPOD_Compressed(void *ptr, unsigned size) :
+  ZuInline ZdbAnyPOD_Cmpr(void *ptr, unsigned size) :
     m_ptr(ptr), m_size(size) { }
 
   ZuInline void *ptr() const { return m_ptr; }
@@ -415,8 +416,8 @@ private:
 typedef ZmFn<ZdbAny *, ZmRef<ZdbAnyPOD> &> ZdbAllocFn;
 // AddFn(pod, recovered) - record is recovered, or new/update replicated
 typedef ZmFn<ZdbAnyPOD *, bool> ZdbAddFn;
-// DelFn(pod) - record update/delete replicated
-typedef ZmFn<ZdbAnyPOD *> ZdbDelFn;
+// DelFn(pod, recovered) - record update/delete replicated
+typedef ZmFn<ZdbAnyPOD *, bool> ZdbDelFn;
 // CopyFn(pod, range, op) - (optional) called for app drop copy
 typedef ZmFn<ZdbAnyPOD *, int> ZdbCopyFn;
 
@@ -424,8 +425,8 @@ struct ZdbPOD_HeapID {
   inline static const char *id() { return "ZdbPOD"; }
 };
 // heap ID can be specialized by app
-template <typename T> struct ZdbPOD_Compressed_HeapID {
-  inline static const char *id() { return "ZdbPOD_Compressed"; }
+template <typename T> struct ZdbPOD_Cmpr_HeapID {
+  inline static const char *id() { return "ZdbPOD_Cmpr"; }
 };
 
 template <typename T_>
@@ -454,19 +455,18 @@ public:
   }
 
 private:
-  template <class Heap_>
-  class Compressed_ : public ZdbAnyPOD_Compressed, public Heap_ {
+  template <class Heap_> class Cmpr_ : public Heap_, public ZdbAnyPOD_Cmpr {
   public:
-    inline Compressed_() : 
-      ZdbAnyPOD_Compressed(m_data, LZ4_compressBound(sizeof(Data))) { }
+    inline Cmpr_() : 
+      ZdbAnyPOD_Cmpr(m_data, LZ4_compressBound(sizeof(Data))) { }
 
   private:
     char	m_data[LZ4_compressBound(sizeof(Data))];
   };
-  typedef Compressed_<ZmHeap<ZdbPOD_Compressed_HeapID<T_>,
-	  sizeof(Compressed_<ZuNull>)> > Compressed;
+  using Cmpr_Heap = ZmHeap<ZdbPOD_Cmpr_HeapID<T_>, sizeof(Cmpr_<ZuNull>)>;
+  typedef Cmpr_<Cmpr_Heap> Cmpr;
 
-  ZmRef<ZdbAnyPOD_Compressed> compress() { return new Compressed(); }
+  ZmRef<ZdbAnyPOD_Cmpr> compress() { return new Cmpr(); }
 };
 template <typename T, class HeapID = ZdbPOD_HeapID>
 using ZdbPOD = ZdbPOD_<T, ZmHeap<HeapID, sizeof(ZdbPOD_<T, ZuNull>)> >;
@@ -486,7 +486,6 @@ struct ZdbConfig {
     preAlloc = cf->getInt("preAlloc", 0, 10<<24, false, 0);
     repMode = cf->getInt("repMode", 0, 1, false, 0);
     compress = cf->getInt("compress", 0, 1, false, 0);
-    noCache = cf->getInt("noCache", 0, 1, false, 0);
     cache.init(cf->get("cache", false, "Zdb.Cache"));
     fileHash.init(cf->get("fileHash", false, "Zdb.FileHash"));
   }
@@ -497,9 +496,13 @@ struct ZdbConfig {
   unsigned		preAlloc = 0;	// #records to pre-allocate
   uint8_t		repMode = 0;	// 0 - deferred, 1 - in put()
   bool			compress = false;
-  bool			noCache = false;
   ZmHashParams		cache;
   ZmHashParams		fileHash;
+};
+
+namespace ZdbCacheMode {
+  ZtEnumValues(Normal, NoCache, FullCache);
+  ZtEnumNames("Normal", "NoCache", "FullCache");
 };
 
 struct ZdbHandler {
@@ -531,8 +534,8 @@ protected:
   typedef ZmGuard<FSLock> FSGuard;
   typedef ZmReadGuard<FSLock> FSReadGuard;
 
-  ZdbAny(ZdbEnv *env, ZdbID id, uint32_t version, ZdbHandler handler,
-      unsigned recSize, unsigned dataSize);
+  ZdbAny(ZdbEnv *env, ZdbID id, uint32_t version, int cacheMode,
+      ZdbHandler handler, unsigned recSize, unsigned dataSize);
 
 public:
   ~ZdbAny();
@@ -564,7 +567,7 @@ public:
   inline ZdbRN allocRN() { return m_allocRN; }
 
   // create new record
-  ZmRef<ZdbAnyPOD> push(ZdbRN rn);
+  ZmRef<ZdbAnyPOD> push();
   // commit record following push() - causes replication / sync
   void put(ZdbAnyPOD *);
   // abort push()
@@ -575,12 +578,12 @@ public:
   ZmRef<ZdbAnyPOD> get_(ZdbRN rn);	// use for RMW - does not update cache
 
   // update record
-  ZmRef<ZdbAnyPOD> update(ZdbAnyPOD *orig, ZdbRN rn);
+  ZmRef<ZdbAnyPOD> update(ZdbAnyPOD *prev);
   // commit record following update(), potentially a partial update
   void putUpdate(ZdbAnyPOD *, bool replace = true);
 
   // delete record following get() / get_()
-  void del(ZdbAnyPOD *, ZdbRN rn);
+  void del(ZdbAnyPOD *);
 
   // delete all records < minRN
   void purge(ZdbRN minRN);
@@ -604,7 +607,7 @@ public:
     uint32_t	cacheSize;
     uint32_t	filesMax;
     uint8_t	compress;
-    uint8_t	noCache;
+    int8_t	cacheMode;
   };
 
   void telemetry(Telemetry &data) const;
@@ -612,22 +615,12 @@ public:
 private:
   // application call handlers
   inline void alloc(ZmRef<ZdbAnyPOD> &pod) { m_handler.allocFn(this, pod); }
-  inline void recover(ZdbAnyPOD *pod) { m_handler.addFn(pod, true); }
-  inline void replicate(ZdbAnyPOD *pod, void *ptr, int op) {
-    ZdbRange range = pod->range();
-#ifdef ZdbRep_DEBUG
-    ZmAssert((!range || (range.off() + range.len()) <= pod->size()));
-#endif
-    if (op != ZdbOp::New) m_handler.delFn(pod);
-    if (range) memcpy((char *)pod->ptr() + range.off(), ptr, range.len());
-    if (op != ZdbOp::Delete) m_handler.addFn(pod, false);
-  }
-  inline void copy(ZdbAnyPOD *pod, int op) {
-    m_handler.copyFn(pod, op);
-  }
+  void recover(ZmRef<ZdbAnyPOD> pod);
+  void replicate(ZdbAnyPOD *pod, void *ptr, int op);
+  inline void copy(ZdbAnyPOD *pod, int op) { m_handler.copyFn(pod, op); }
 
   // push initial record
-  ZmRef<ZdbAnyPOD> push_(ZdbRN rn);
+  ZmRef<ZdbAnyPOD> push_();
 
   // low-level get, does not filter deleted records
   ZmRef<ZdbAnyPOD> get__(ZdbRN rn);
@@ -675,6 +668,7 @@ private:
   ZdbConfig			*m_config;
   ZdbID				m_id;
   uint32_t			m_version;
+  int				m_cacheMode = ZdbCacheMode::Normal;
   ZdbHandler			m_handler;
   unsigned			m_recSize = 0;
   unsigned			m_dataSize = 0;
@@ -703,8 +697,9 @@ public:
   typedef T_ T;
 
   template <typename Handler>
-  inline Zdb(ZdbEnv *env, ZdbID id, uint32_t version, Handler &&handler) :
-    ZdbAny(env, id, version, ZuFwd<Handler>(handler),
+  inline Zdb(ZdbEnv *env, ZdbID id, uint32_t version, int cacheMode,
+      Handler &&handler) :
+    ZdbAny(env, id, version, cacheMode, ZuFwd<Handler>(handler),
 	sizeof(typename ZdbPOD<T, ZuNull>::Data), sizeof(T)) { }
 };
 
@@ -779,6 +774,8 @@ public:
 
   inline bool voted() const { return m_voted; }
   inline int state() const { return m_state; }
+
+  static const char *stateName(int);
 
   struct Telemetry {
     ZiIP	ip;

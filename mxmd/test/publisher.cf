@@ -34,3 +34,9 @@ publisher {
   reReqMaxGap 10
   channels channels.csv
 }
+telemetry {
+  mx cmd
+  ip 127.0.0.1
+  port 19300
+  freq 1000000
+}

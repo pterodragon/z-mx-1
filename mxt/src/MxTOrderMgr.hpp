@@ -1559,16 +1559,16 @@ applyFill:
   }
   bool orderSend(Order *order) { return requestSend(order->newOrder()); }
   bool modifySend(Order *order) { return requestSend(order->modify()); }
-  bool cancelSend(Order *order) {return requestSend(order->cancel()); }
+  bool cancelSend(Order *order) { return requestSend(order->cancel()); }
 
   // processes recovered (possibly outdated) transmission
-  bool requestTxAdded(Event &event) {
+  void requestTxAdded(Event &event) {
     if (ZuLikely(MxTEventState::matchQ(event.eventState)))
       event.eventState = MxTEventState::Sent;
   }
-  bool orderTxAdded(Order *order) { return requestTxAdded(order->newOrder()); }
-  bool modifyTxAdded(Order *order) { return requestTxAdded(order->modify()); }
-  bool cancelTxAdded(Order *order) {return requestTxAdded(order->cancel()); }
+  void orderTxAdded(Order *order) { requestTxAdded(order->newOrder()); }
+  void modifyTxAdded(Order *order) { requestTxAdded(order->modify()); }
+  void cancelTxAdded(Order *order) { requestTxAdded(order->cancel()); }
 };
 
 #endif /* MxTOrderMgr_HPP */

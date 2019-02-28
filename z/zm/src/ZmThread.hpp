@@ -163,16 +163,7 @@ class ZmAPI ZmThreadContext_ {
   friend ZmAPI unsigned __stdcall ZmThread_start(void *);
 #endif
 protected:
-  ZuInline ZmThreadContext_() :
-#ifndef _WIN32
-    m_pthread(0)
-#ifdef linux
-    , m_tid(0), m_cid(0)
-#endif
-#else /* !_WIN32 */
-    m_tid(0), m_handle(0)
-#endif /* !_WIN32 */
-    { }
+  ZuInline ZmThreadContext_() { }
 
 public:
 #ifndef _WIN32
@@ -200,16 +191,16 @@ protected:
   void init();
 
 #ifndef _WIN32
-  pthread_t		m_pthread;
+  pthread_t		m_pthread = 0;
 #ifdef linux
-  pid_t			m_tid;
+  pid_t			m_tid = 0;
 #endif
-  clockid_t		m_cid;
+  clockid_t		m_cid = 0;
   mutable ZmTime	m_cpuTime;
 #else /* !_WIN32 */
-  unsigned		m_tid;
-  HANDLE		m_handle;
-  mutable ULONG64	m_cpuTime;
+  unsigned		m_tid = 0;
+  HANDLE		m_handle = 0;
+  mutable ULONG64	m_cpuTime = 0;
 #endif /* !_WIN32 */
 };
 

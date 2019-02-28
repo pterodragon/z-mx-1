@@ -127,11 +127,49 @@ void ZmThreadContext::name(ZmThreadName &s) const
 }
 
 #ifdef _WIN32
+#include <intrin.h>
 struct CPUFreq {
   CPUFreq() {
-    LARGE_INTEGER i;
-    QueryPerformanceFrequency(&i);
-    n = (double)i;
+    int info[4];
+    __cpuid(info, 0);
+    if (info[0] < 0x15) {
+fallback:
+      LARGE_INTEGER qpStart, qpEnd, qpFreq;
+      QueryPerformanceFrequency(&qpFreq);
+      auto elapsed = __rdtsc();
+      QueryPerformanceCounter(&qpStart);
+      ::Sleep(100);
+      elapsed = __rdtsc() - elapsed;
+      QueryPerformanceCounter(&qpEnd);
+      n = (double)(elapsed * qpFreq.QuadPart) / (double)(qpEnd.QuadPart - qpStart.QuadPart);
+    } else {
+      __cpuid(info, 0x1);
+      unsigned family = (info[0] >> 8) & 0xf;
+      unsigned model = (info[0] >> 4) & 0xf;
+      if (family == 0xf) family += (info[0] >> 20) & 0xff;
+      if (family >= 0x6) model += ((info[0] >> 16) & 0xf) << 4;
+      __cpuid(info, 0x15);
+      unsigned crystal_khz = info[2] / 1000;
+      if (!crystal_khz) {
+	switch (model) {
+	  case 0x4e: // INTEL_FAM6_SKYLAKE_MOBILE
+	  case 0x5e: // INTEL_FAM6_SKYLAKE_DESKTOP
+	  case 0x8e: // INTEL_FAM6_KABYLAKE_MOBILE
+	  case 0x9e: // INTEL_FAM6_KABYLAKE_DESKTOP
+	    crystal_khz = 24000;
+	    break;
+	  case 0x5f: // INTEL_FAM6_ATOM_GOLDMONT_X
+	    crystal_khz = 25000;
+	    break;
+	  case 0x5c: // INTEL_FAM6_ATOM_GOLDMONT
+	    crystal_khz = 19200;
+	    break;
+	  default:
+	    goto fallback;
+	}
+      }
+      n = (double)((crystal_khz * info[1]) / info[0]) * 1000.0;
+    }
   }
   double n;
 };

@@ -28,6 +28,8 @@
 
 #ifdef _WIN32
 
+#include <intrin.h>
+
 class ZmPlatform_WinTimer {
 public:
   ZmPlatform_WinTimer() { calibrate(); }
@@ -36,7 +38,7 @@ public:
     int64_t t;
     long double m10 = 10000000.0L;
     QueryPerformanceCounter((LARGE_INTEGER *)&t);
-    t -= m_pcStart;
+    t -= m_qpcStart;
     t += m_ftStart;
     return (int64_t)(((long double)t * m10) / m_ftFreq);
   }
@@ -64,7 +66,7 @@ private:
       QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
     qpcIntrinsic = (int64_t)((long double)(qpcNow - m_qpcStart) / k10);
 
-    // "burn in" - tight loop until system time ticks up
+    // "burn in" - tight loop until FT ticks up
 
     GetSystemTimeAsFileTime((FILETIME *)&ftCheck);
     do {
@@ -74,11 +76,12 @@ private:
 
     // establish start times
 
+    auto cpuStamp = __rdtsc();
+    auto qpcStamp = qpcNow;
     m_ftStart = ftNow;
     m_qpcStart = qpcNow;
-    auto cpuStart = __rtdsc();
 
-    // calculate and record
+    // calculate and record for 100 FT ticks
 
     ftCheck = m_ftStart;
     unsigned i = 0, j = 0;
@@ -90,16 +93,16 @@ private:
       ftTotal += ftNow - m_ftStart;
       j++;
       if (ftNow != ftCheck) {
-	if (++i == n) break;
+	if (++i >= 100) break;
 	ftCheck = ftNow;
       }
     }
 
-    // calculate *effective* m_freq for FILETIME
+    // calculate *effective* m_ftFreq for FT
 
     m_ftFreq = ((long double)qpcDelta * m10) / (long double)(ftNow - m_ftStart);
 
-    // establish accurate FILETIME and Performance Counter offsets
+    // establish accurate FT and PC offsets
 
     long double jd = j;
 
@@ -108,19 +111,22 @@ private:
     m_ftStart = (int64_t)(((long double)m_ftStart * m_ftFreq) / m10);
     m_qpcStart += (int64_t)((long double)qpcTotal / jd);
 
-    // obtain CPU frequency
+    // obtain CPU frequency, preferring CPUID to elapsed TSC
+ 
     int info[4];
     __cpuid(info, 0);
-    if (1) { // info[0] < 0x15) {
+    if (info[0] < 0x15) {
 fallback:
       int64_t qpcFreq;
       QueryPerformanceFrequency((LARGE_INTEGER *)&qpcFreq);
-      ::Sleep(100);
-      auto cpuDelta = __rdtsc() - cpuStart;
+      auto cpuDelta = __rdtsc() - cpuStamp;
       QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
-      m_cpuFreq = (long double)(cpuDelta * qpcFreq) /
-	(long double)((qpcNow - qpcStart) - qpcIntrinsic);
+      qpcDelta = qpcNow - qpcStamp;
+      m_cpuFreq =
+	(long double)(cpuDelta * qpcFreq) /
+	(long double)(qpcDelta - qpcIntrinsic);
     } else {
+      // below code ported from Linux kernel
       __cpuid(info, 0x1);
       unsigned family = (info[0] >> 8) & 0xf;
       unsigned model = (info[0] >> 4) & 0xf;
@@ -153,10 +159,10 @@ fallback:
 private:
   ZmPLock	m_lock;
 
-  long double	m_ftFreq;
-  int64_t	m_pcStart;
-  int64_t	m_ftStart;
-  long double	m_cpuFreq;
+  long double	m_ftFreq;	// FILETIME frequency
+  int64_t	m_qpcStart;	// QueryPerformanceCounter start
+  int64_t	m_ftStart;	// FILETIME start
+  long double	m_cpuFreq;	// CPU frequency (TSC cycles per second)
 };
 
 static ZmPlatform_WinTimer ZmPlatform_winTimer;

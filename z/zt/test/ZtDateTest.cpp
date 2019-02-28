@@ -213,8 +213,6 @@ int main()
 #ifndef _WIN32
   ZmTime t1, t1_;
 #else
-  ZmTime::calibrate(512);
-
   ZmTime o1, o2, t1, t1_, t2, t2_;
   double d1 = 0, d2 = 0, d3 = 0,
          d1sum = 0, d2sum = 0, d3sum = 0, d1vsum = 0, d2vsum = 0, d3vsum = 0,

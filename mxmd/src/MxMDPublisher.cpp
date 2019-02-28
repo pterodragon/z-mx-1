@@ -851,9 +851,9 @@ void MxMDPubLink::status(ZtString &out)
       MxQueue::Gap gap = queue->gap();
       out <<
 	"head: " << queue->head() << 
-	"  gap: (" << gap.key() << ")," << ZuBox<unsigned>(gap.length()) <<
-	"  length: " << ZuBox<unsigned>(queue->length()) << 
-	"  count: " << ZuBox<unsigned>(queue->count());
+	"  gap: (" << gap.key() << ")," << gap.length() <<
+	"  length: " << queue->length() << 
+	"  count: " << queue->count();
       sem->post();
     });
     sem.wait();

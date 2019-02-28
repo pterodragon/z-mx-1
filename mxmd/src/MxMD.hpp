@@ -458,7 +458,7 @@ friend class MxMDOrderBook;
   inline MxMDOrder__(Args &&... args) : MxMDOrder_(ZuFwd<Args>(args)...) { }
 
 public:
-  inline ~MxMDOrder__() { }
+  inline ~MxMDOrder__() = default;
 };
 typedef ZmHeap<MxMDOrder_HeapID, sizeof(MxMDOrder__<ZuNull>)> MxMDOrder_Heap;
 typedef MxMDOrder__<MxMDOrder_Heap> MxMDOrder;

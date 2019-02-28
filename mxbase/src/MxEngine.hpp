@@ -111,10 +111,16 @@ public:
   ZuInline Mx *mx() const { return m_mx; }
   ZuInline MxID id() const { return m_id; }
 
+  template <typename T = uintptr_t>
+  ZuInline T appData() const { return (T)m_appData; }
+  template <typename T>
+  ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
+
 private:
   MxID			m_id;
   MxEngine		*m_engine = 0;
   Mx			*m_mx = 0;
+  uintptr_t		m_appData = 0;
 };
 
 class MxBaseAPI MxAnyTxPool : public MxAnyTx {

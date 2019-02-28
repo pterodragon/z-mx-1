@@ -692,9 +692,9 @@ void MxMDSubLink::status(ZtString &out)
       MxQueue::Gap gap = queue->gap();
       out <<
 	"head: " << queue->head() << 
-	"  gap: (" << gap.key() << ")," << ZuBox<unsigned>(gap.length()) <<
-	"  length: " << ZuBox<unsigned>(queue->length()) << 
-	"  count: " << ZuBox<unsigned>(queue->count());
+	"  gap: (" << gap.key() << ")," << gap.length() <<
+	"  length: " << queue->length() << 
+	"  count: " << queue->count();
       sem->post();
     });
     sem.wait();
@@ -715,8 +715,8 @@ void MxMDSubscriber::resendCmd(ZvCmdServerCxn *,
   if (!link_) throw ZtString() << id << " - unknown link";
   auto link = static_cast<MxMDSubLink *>(link_.ptr());
   ZuBox<uint64_t> seqNo(args->get("2"));
-  ZuBox<uint16_t> count(args->get("3"));
-  if (!*seqNo || !*count) throw ZvCmdUsage();
+  ZuBox0(uint16_t) count(args->get("3"));
+  if (!*seqNo || !count) throw ZvCmdUsage();
   ZmRef<MxQMsg> msg = link->resend(seqNo, count);
   if (!msg) throw ZtString("timed out");
   const auto &hdr = msg->ptr<Msg>()->as<Hdr>();

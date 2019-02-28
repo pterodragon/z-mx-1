@@ -52,7 +52,8 @@ private:
     ZmGuard<ZmPLock> guard(m_lock);
 
     int64_t ftTotal = 0, ftNow, ftCheck;
-    int64_t qpcTotal = 0, qpcDelta, qpcNow, qpcIntrinsic;
+    int64_t qpcTotal = 0, qpcDelta, qpcNow, qpcCheck, qpcIntrinsic, qpcStamp;
+    int64_t cpuStamp;
 
     long double k10 = 10000.0L;
     long double m10 = 10000000.0L;
@@ -70,14 +71,17 @@ private:
 
     GetSystemTimeAsFileTime((FILETIME *)&ftCheck);
     do {
+      QueryPerformanceCounter((LARGE_INTEGER *)&qpcCheck);
+      do {
+	QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
+      } while (qpcNow == qpcCheck);
+      cpuStamp = __rdtsc();
+      qpcStamp = qpcNow;
       GetSystemTimeAsFileTime((FILETIME *)&ftNow);
-      QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
     } while (ftNow == ftCheck);
 
     // establish start times
 
-    auto cpuStamp = __rdtsc();
-    auto qpcStamp = qpcNow;
     m_ftStart = ftNow;
     m_qpcStart = qpcNow;
 
@@ -86,8 +90,13 @@ private:
     ftCheck = m_ftStart;
     unsigned i = 0, j = 0;
     for (;;) {
+      QueryPerformanceCounter((LARGE_INTEGER *)&qpcCheck);
+      do {
+	QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
+      } while (qpcNow == qpcCheck);
       GetSystemTimeAsFileTime((FILETIME *)&ftNow);
-      QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
+      QueryPerformanceCounter((LARGE_INTEGER *)&qpcDelta);
+      qpcNow += ((qpcDelta - qpcNow)>>1);
       qpcDelta = qpcNow - m_qpcStart;
       qpcTotal += qpcDelta;
       ftTotal += ftNow - m_ftStart;
@@ -118,9 +127,14 @@ private:
     if (info[0] < 0x15) {
 fallback:
       int64_t qpcFreq;
+      int64_t cpuDelta;
       QueryPerformanceFrequency((LARGE_INTEGER *)&qpcFreq);
-      auto cpuDelta = __rdtsc() - cpuStamp;
-      QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
+      QueryPerformanceCounter((LARGE_INTEGER *)&qpcCheck);
+      do {
+	cpuDelta = __rdtsc();
+	QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
+      } while (qpcNow == qpcCheck);
+      cpuDelta -= cpuStamp;
       qpcDelta = qpcNow - qpcStamp;
       m_cpuFreq =
 	(long double)(cpuDelta * qpcFreq) /

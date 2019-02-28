@@ -26,64 +26,67 @@
 #include <ZmThread.hpp>
 #include <ZmSingleton.hpp>
 
-#ifndef _WIN32
+#ifdef _WIN32
 
-void ZmTime::calibrate(int n) { }
+class ZmPlatform_WinTimer {
+public:
+  ZmPlatform_WinTimer() { calibrate(); }
 
-#else /* !_WIN32 */
-
-struct ZmPlatform_WinTimer {
-  ZmPlatform_WinTimer() {
-    calibrate(64);
+  int64_t now() const {
+    int64_t t;
+    long double m10 = 10000000.0L;
+    QueryPerformanceCounter((LARGE_INTEGER *)&t);
+    t -= m_pcStart;
+    t += m_ftStart;
+    return (int64_t)(((long double)t * m10) / m_ftFreq);
   }
 
-  ~ZmPlatform_WinTimer() { }
-
-  static ZmPlatform_WinTimer *instance() {
-    return ZmSingleton<ZmPlatform_WinTimer>::instance();
+  long double cpuFreq() const {
+    return m_cpuFreq;
   }
 
-  void calibrate(int n) {
+private:
+  void calibrate() {
     ZmGuard<ZmPLock> guard(m_lock);
 
     int64_t ftTotal = 0, ftNow, ftCheck;
-    int64_t pcTotal = 0, pcDelta, pcNow, pcIntrinsic;
+    int64_t qpcTotal = 0, qpcDelta, qpcNow, qpcIntrinsic;
 
-    long double k10 = (long double)10000;
-    long double m10 = (long double)10000000;
+    long double k10 = 10000.0L;
+    long double m10 = 10000000.0L;
 
     // establish intrinsic function call time
 
-    for (int i = 0; i < 100; i++)
-      QueryPerformanceCounter((LARGE_INTEGER *)&pcNow);
-    QueryPerformanceCounter((LARGE_INTEGER *)&m_pcStart);
-    for (int i = 0; i < 10000; i++)
-      QueryPerformanceCounter((LARGE_INTEGER *)&pcNow);
-    pcIntrinsic = (int64_t)((long double)(pcNow - m_pcStart) / k10);
+    for (unsigned i = 0; i < 100; i++)
+      QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
+    QueryPerformanceCounter((LARGE_INTEGER *)&m_qpcStart);
+    for (unsigned i = 0; i < 10000; i++)
+      QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
+    qpcIntrinsic = (int64_t)((long double)(qpcNow - m_qpcStart) / k10);
 
-    // "burn in"
+    // "burn in" - tight loop until system time ticks up
 
     GetSystemTimeAsFileTime((FILETIME *)&ftCheck);
     do {
       GetSystemTimeAsFileTime((FILETIME *)&ftNow);
-      QueryPerformanceCounter((LARGE_INTEGER *)&pcNow);
+      QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
     } while (ftNow == ftCheck);
 
     // establish start times
 
     m_ftStart = ftNow;
-    m_pcStart = pcNow - pcIntrinsic;
+    m_qpcStart = qpcNow;
+    auto cpuStart = __rtdsc();
 
     // calculate and record
 
     ftCheck = m_ftStart;
-    int i = 0, j = 0;
+    unsigned i = 0, j = 0;
     for (;;) {
       GetSystemTimeAsFileTime((FILETIME *)&ftNow);
-      QueryPerformanceCounter((LARGE_INTEGER *)&pcNow);
-      pcNow -= pcIntrinsic;
-      pcDelta = pcNow - m_pcStart;
-      pcTotal += pcDelta;
+      QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
+      qpcDelta = qpcNow - m_qpcStart;
+      qpcTotal += qpcDelta;
       ftTotal += ftNow - m_ftStart;
       j++;
       if (ftNow != ftCheck) {
@@ -92,42 +95,78 @@ struct ZmPlatform_WinTimer {
       }
     }
 
-    // calculate *effective* m_freq
-    // - QueryPerformanceFrequency() is inaccurate due to clock drift
+    // calculate *effective* m_freq for FILETIME
 
-    m_freq = ((long double)pcDelta * m10) / (long double)(ftNow - m_ftStart);
+    m_ftFreq = ((long double)qpcDelta * m10) / (long double)(ftNow - m_ftStart);
 
     // establish accurate FILETIME and Performance Counter offsets
 
+    long double jd = j;
+
     m_ftStart -= ZmTime_FT_Epoch;
-    m_ftStart += (int64_t)((long double)ftTotal / (long double)j);
-    m_ftStart =
-      (int64_t)(((long double)m_ftStart * m_freq) / (long double)10000000);
+    m_ftStart += (int64_t)((long double)ftTotal / jd);
+    m_ftStart = (int64_t)(((long double)m_ftStart * m_ftFreq) / m10);
+    m_qpcStart += (int64_t)((long double)qpcTotal / jd);
 
-    m_pcStart += (int64_t)((long double)pcTotal / (long double)j);
+    // obtain CPU frequency
+    int info[4];
+    __cpuid(info, 0);
+    if (1) { // info[0] < 0x15) {
+fallback:
+      int64_t qpcFreq;
+      QueryPerformanceFrequency((LARGE_INTEGER *)&qpcFreq);
+      ::Sleep(100);
+      auto cpuDelta = __rdtsc() - cpuStart;
+      QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
+      m_cpuFreq = (long double)(cpuDelta * qpcFreq) /
+	(long double)((qpcNow - qpcStart) - qpcIntrinsic);
+    } else {
+      __cpuid(info, 0x1);
+      unsigned family = (info[0] >> 8) & 0xf;
+      unsigned model = (info[0] >> 4) & 0xf;
+      if (family == 0xf) family += (info[0] >> 20) & 0xff;
+      if (family >= 0x6) model += ((info[0] >> 16) & 0xf) << 4;
+      __cpuid(info, 0x15);
+      unsigned crystal_khz = info[2] / 1000;
+      if (!crystal_khz) {
+	switch (model) {
+	  case 0x4e: // INTEL_FAM6_SKYLAKE_MOBILE
+	  case 0x5e: // INTEL_FAM6_SKYLAKE_DESKTOP
+	  case 0x8e: // INTEL_FAM6_KABYLAKE_MOBILE
+	  case 0x9e: // INTEL_FAM6_KABYLAKE_DESKTOP
+	    crystal_khz = 24000;
+	    break;
+	  case 0x5f: // INTEL_FAM6_ATOM_GOLDMONT_X
+	    crystal_khz = 25000;
+	    break;
+	  case 0x5c: // INTEL_FAM6_ATOM_GOLDMONT
+	    crystal_khz = 19200;
+	    break;
+	  default:
+	    goto fallback;
+	}
+      }
+      m_cpuFreq = (long double)((crystal_khz * info[1]) / info[0]) * 1000.0L;
+    }
   }
 
-  int64_t now() {
-    int64_t t;
-    QueryPerformanceCounter((LARGE_INTEGER *)&t);
-    t -= m_pcStart;
-    t += m_ftStart;
-    return (int64_t)(((long double)t * (long double)10000000) / m_freq);
-  }
-
+private:
   ZmPLock	m_lock;
 
-  long double	m_freq;
+  long double	m_ftFreq;
   int64_t	m_pcStart;
   int64_t	m_ftStart;
+  long double	m_cpuFreq;
 };
 
+static ZmPlatform_WinTimer ZmPlatform_winTimer;
+
 int64_t ZmTime::now_() {
-  return ZmPlatform_WinTimer::instance()->now();
+  return ZmPlatform_winTimer.now();
 }
 
-void ZmTime::calibrate(int n) {
-  ZmPlatform_WinTimer::instance()->calibrate(n);
+long double ZmTime::cpuFreq() {
+  return ZmPlatform_winTimer.cpuFreq();
 }
 
 #endif /* !_WIN32 */

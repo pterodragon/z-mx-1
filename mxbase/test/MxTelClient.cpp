@@ -15,7 +15,7 @@ public:
 
   void open() {
     open_(m_heap, "heap");
-    write_(m_heap, "time,id,size,alignment,partition,sharded,cacheSize,cpuset,cacheAllocs,heapAllocs,frees\n");
+    write_(m_heap, "time,id,size,alignment,partition,sharded,cacheSize,cpuset,cacheAllocs,heapAllocs,frees,allocated\n");
     open_(m_hashTbl, "hashTbl");
     write_(m_hashTbl, "time,id,linear,bits,slots,cBits,cSlots,count,resized,loadFactor,effLoadFactor,nodeSize\n");
     open_(m_thread, "thread");
@@ -72,7 +72,8 @@ private:
 	  << ',' << ZmBitmap(data.cpuset)
 	  << ',' << data.cacheAllocs
 	  << ',' << data.heapAllocs
-	  << ',' << data.frees << '\n');
+	  << ',' << data.frees
+	  << ',' << (data.cacheAllocs + data.heapAllocs - data.frees) << '\n');
       } break;
       case Type::HashTbl: {
 	const auto &data = msg->as<HashTbl>();

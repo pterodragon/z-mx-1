@@ -124,14 +124,15 @@ public:
   }
 #endif
 
-  static void calibrate(int n);
 #ifndef _WIN32
   ZuInline ZmTime &now() {
     clock_gettime(CLOCK_REALTIME, this);
     return *this;
   }
 #else
-  int64_t now_();
+  static int64_t now_();
+  static long double cpuFreq();
+
   ZuInline ZmTime &now() {
     int64_t t = now_();
     tv_sec = t / 10000000;

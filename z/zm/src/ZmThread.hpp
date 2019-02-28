@@ -45,6 +45,7 @@
 #include <ZmRef.hpp>
 #include <ZmCleanup.hpp>
 #include <ZmFn.hpp>
+#include <ZmTime.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -69,6 +70,7 @@ struct ZmThreadTelemetry {
   uint64_t	tid;
   uint64_t	stackSize;
   uint64_t	cpuset;
+  double	cpuUsage;
   int32_t	id;		// thread mgr ID, -ve if unset
   int32_t	priority;
   uint16_t	partition;
@@ -165,7 +167,7 @@ protected:
 #ifndef _WIN32
     m_pthread(0)
 #ifdef linux
-    , m_tid(0)
+    , m_tid(0), m_cid(0)
 #endif
 #else /* !_WIN32 */
     m_tid(0), m_handle(0)
@@ -178,22 +180,36 @@ public:
 #ifdef linux
   ZuInline pid_t tid_() const { return m_tid; }
 #endif
+  ZuInline clockid_t cid_() const { return m_cid; }
+  ZuInline ZmTime cpuTime() const {
+    ZmTime last = m_cpuTime;
+    clock_gettime(m_cid, &m_cpuTime);
+    return m_cpuTime - last;
+  }
 #else /* !_WIN32 */
   ZuInline unsigned tid_() const { return m_tid; }
   ZuInline HANDLE handle() const { return m_handle; }
+  ZuInline ULONG64 cpuTime() const {
+    ULONG64 last = m_cpuTime;
+    QueryThreadCycleTime(m_handle, &m_cpuTime);
+    return m_cpuTime - last;
+  }
 #endif /* !_WIN32 */
 
 protected:
   void init();
 
 #ifndef _WIN32
-  pthread_t	m_pthread;
+  pthread_t		m_pthread;
 #ifdef linux
-  pid_t		m_tid;
+  pid_t			m_tid;
 #endif
+  clockid_t		m_cid;
+  mutable ZmTime	m_cpuTime;
 #else /* !_WIN32 */
-  unsigned	m_tid;
-  HANDLE	m_handle;
+  unsigned		m_tid;
+  HANDLE		m_handle;
+  mutable ULONG64	m_cpuTime;
 #endif /* !_WIN32 */
 };
 
@@ -266,7 +282,7 @@ public:
 
   ZuInline void *result() const { return m_result; }
 
-  void telemetry(ZmThreadTelemetry &data) const;
+  void telemetry(ZmThreadTelemetry &data, ZmTime elapsed) const;
 
   template <typename S> inline void print(S &s) const {
     ZmThreadName name;
@@ -374,21 +390,28 @@ public:
   template <class S> struct CSV_ {
     CSV_(S &stream) : m_stream(stream) { 
       m_stream <<
-	"name,id,tid,main,detached,stackSize,priority,partition,cpuset\n";
+	"name,id,tid,cpuUsage,main,detached,"
+	"stackSize,priority,partition,cpuset\n";
     }
     void print(const ZmThreadContext *tc) {
+      static ZmPLock lock;
+      ZmGuard<ZmPLock> guard(lock);
+      static ZmTime last(ZmTime::Now);
+      ZmTime elapsed = last;
+      last.now();
+      elapsed = last - elapsed;
       ZmThreadTelemetry data;
-      tc->telemetry(data);
-      m_stream <<
-	data.name << ',' <<
-	ZuBoxed(data.id) << ',' <<
-	ZuBoxed(data.tid) << ',' <<
-	ZuBoxed((unsigned)data.main) << ',' <<
-	ZuBoxed((unsigned)data.detached) << ',' <<
-	ZuBoxed(data.stackSize) << ',' <<
-	ZuBoxed(data.priority) << ',' <<
-	ZuBoxed(data.partition) << ',' <<
-	ZmBitmap(data.cpuset) << '\n';
+      tc->telemetry(data, elapsed);
+      m_stream << data.name
+	<< ',' << data.id
+	<< ',' << data.tid
+	<< ',' << ZuBoxed(data.cpuUsage * 100.0).fmt(ZuFmt::FP<2>())
+	<< ',' << ZmBitmap(data.cpuset)
+	<< ',' << ZuBoxed(data.priority)
+	<< ',' << data.stackSize
+	<< ',' << ZuBoxed(data.partition)
+	<< ',' << ZuBoxed(data.main)
+	<< ',' << ZuBoxed(data.detached) << '\n';
     }
     S &stream() { return m_stream; }
 

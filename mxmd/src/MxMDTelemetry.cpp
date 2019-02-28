@@ -37,7 +37,6 @@ void MxMDTelemetry::final()
 {
   Guard guard(m_lock);
   m_engines.clean();
-  m_links.clean();
   m_queues.clean();
   m_dbEnv = nullptr;
 }
@@ -59,10 +58,13 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
       }});
 
   // threads
-  ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{
-      cxn, [](Cxn *cxn, ZmThreadContext *tc) {
-	cxn->transmit(thread(tc));
-      }});
+  {
+    ZmTime elapsed = m_time;
+    m_time.now();
+    elapsed = m_time - elapsed;
+    ZmSpecific<ZmThreadContext>::all([elapsed, cxn](ZmThreadContext *tc) {
+      cxn->transmit(thread(tc, elapsed)); });
+  }
 
   // mutiplexers, thread queues, sockets
   m_core->allMx(ZmFn<MxMultiplex *>{
@@ -103,17 +105,16 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
   {
     ReadGuard guard(m_lock);
 
-    // I/O Engines
+    // I/O Engines & Links
     {
       auto i = m_engines.readIterator();
-      while (ZmRef<MxEngine> engine = i.iterateVal())
+      while (ZmRef<MxEngine> engine = i.iterateVal()) {
 	cxn->transmit(MxTelemetry::engine(engine.ptr()));
-    }
-    // I/O Links
-    {
-      auto i = m_links.readIterator();
-      while (ZmRef<MxAnyLink> link = i.iterateVal())
-	cxn->transmit(MxTelemetry::link(link.ptr()));
+	engine->allLinks<MxAnyLink>([cxn](MxAnyLink *link) -> uintptr_t {
+	  cxn->transmit(MxTelemetry::link(link));
+	  return 0;
+	});
+      }
     }
     // I/O Queues
     {
@@ -141,18 +142,11 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
   }
 }
 
-void MxMDTelemetry::engine(MxEngine *engine)
+void MxMDTelemetry::addEngine(MxEngine *engine)
 {
   auto key = engine->id();
   Guard guard(m_lock);
   if (!m_engines.find(key)) m_engines.add(key, engine);
-}
-
-void MxMDTelemetry::link(MxAnyLink *link)
-{
-  auto key = ZuMkPair(link->engine()->id(), link->id());
-  Guard guard(m_lock);
-  if (!m_links.find(key)) m_links.add(key, link);
 }
 
 void MxMDTelemetry::addQueue(MxID id, bool tx, MxQueue *queue)

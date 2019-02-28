@@ -195,12 +195,12 @@ namespace MxTelemetry {
 
 #undef DeclFn
 #define DeclFn(Fn, T) \
-  template <typename Arg> \
-  inline ZmRef<Msg> Fn(const Arg *arg) { \
+  template <typename Arg, typename ...Args> \
+  inline ZmRef<Msg> Fn(const Arg *arg, Args &&... args) { \
     ZmRef<Msg> msg = new Msg(); \
     new (msg->ptr()) Hdr{Type::T, sizeof(T)}; \
     T *ZuMayAlias(body) = new (msg->body()) T{}; \
-    arg->telemetry(*body); \
+    arg->telemetry(*body, ZuFwd<Args>(args)...); \
     msg->calcLength(); \
     return msg; \
   }

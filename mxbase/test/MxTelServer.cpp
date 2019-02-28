@@ -7,6 +7,10 @@
 static ZmSemaphore sem;
 
 class App : public MxTelemetry::Server {
+public:
+  App() : m_time(ZmTime::Now) { }
+
+private:
   void run(MxTelemetry::Server::Cxn *cxn) {
     using namespace MxTelemetry;
 
@@ -18,10 +22,14 @@ class App : public MxTelemetry::Server {
 	  if (!h->telCount()) cxn->transmit(hashTbl(h));
 	}});
 
-    ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{cxn,
-	[](Cxn *cxn, ZmThreadContext *tc) {
-	  cxn->transmit(thread(tc)); }});
+    ZmTime elapsed = m_time;
+    m_time.now();
+    elapsed = m_time - elapsed;
+    ZmSpecific<ZmThreadContext>::all([elapsed, cxn](ZmThreadContext *tc) {
+      cxn->transmit(thread(tc, elapsed)); });
   }
+
+  ZmTime	m_time;
 };
 
 int main()
@@ -50,6 +58,8 @@ int main()
   app.init(mx, cf->subset("telemetry", false));
 
   mx->start();
+
+  ZmThread{"busy", 0, []() { while (sem.trywait() < 0); sem.post(); }};
 
   app.start();
 

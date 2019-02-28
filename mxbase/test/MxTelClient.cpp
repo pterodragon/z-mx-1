@@ -19,7 +19,7 @@ public:
     open_(m_hashTbl, "hashTbl");
     write_(m_hashTbl, "time,id,linear,bits,slots,cBits,cSlots,count,resized,loadFactor,effLoadFactor,nodeSize\n");
     open_(m_thread, "thread");
-    write_(m_thread,"time,name,tid,stackSize,cpuset,id,priority,partition,main,detached\n");
+    write_(m_thread,"time,name,id,tid,cpuUsage,cpuset,priority,stackSize,partition,main,detached\n");
     open_(m_multiplexer, "multiplexer");
     write_(m_multiplexer, "time,id,state,nThreads,priority,partition,isolation,rxThread,txThread,stackSize,rxBufSize,txBufSize\n");
     open_(m_socket, "socket");
@@ -93,11 +93,12 @@ private:
 	const auto &data = msg->as<Thread>();
 	write_(m_thread, ZuStringN<512>() << now.csv(nowFmt)
 	  << ',' << data.name
-	  << ',' << data.tid
-	  << ',' << data.stackSize
-	  << ',' << ZmBitmap(data.cpuset)
 	  << ',' << data.id
+	  << ',' << data.tid
+	  << ',' << ZuBoxed(data.cpuUsage * 100.0).fmt(ZuFmt::FP<2>())
+	  << ',' << ZmBitmap(data.cpuset)
 	  << ',' << ZuBoxed(data.priority)
+	  << ',' << data.stackSize
 	  << ',' << ZuBoxed(data.partition)
 	  << ',' << ZuBoxed(data.main)
 	  << ',' << ZuBoxed(data.detached) << '\n');

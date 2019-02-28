@@ -291,6 +291,12 @@ void MxMDCore::init_(ZvCf *cf)
 
   MxMDLib::init_(cf);
 
+  // initialize telemetry first
+  if (ZmRef<ZvCf> telCf = cf->subset("telemetry", false)) {
+    m_telemetry = new MxMDTelemetry();
+    m_telemetry->init(this, telCf);
+  }
+
   m_localFeed = new MxMDFeed(this, "_LOCAL", 3);
   addFeed(m_localFeed);
 
@@ -359,11 +365,6 @@ void MxMDCore::init_(ZvCf *cf)
   }
 
   m_broadcast.init(this);
-
-  if (ZmRef<ZvCf> telCf = cf->subset("telemetry", false)) {
-    m_telemetry = new MxMDTelemetry();
-    m_telemetry->init(this, telCf);
-  }
 
   if (ZmRef<ZvCf> cmdCf = cf->subset("cmd", false)) {
     m_cmd = new MxMDCmd();

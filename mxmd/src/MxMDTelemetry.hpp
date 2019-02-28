@@ -46,13 +46,14 @@ class MxMDAPI MxMDTelemetry : public ZmPolymorph, public MxTelemetry::Server {
   typedef ZmReadGuard<Lock> ReadGuard;
 
 public:
+  MxMDTelemetry() : m_time(ZmTime::Now) { }
+
   void init(MxMDCore *core, ZvCf *cf);
   void final();
 
   void run(MxTelemetry::Server::Cxn *);
 
-  void engine(MxEngine *);
-  void link(MxAnyLink *);
+  void addEngine(MxEngine *);
   void addQueue(MxID, bool tx, MxQueue *queue);
   void delQueue(MxID, bool tx);
   void addDBEnv(ZdbEnv *);
@@ -63,11 +64,6 @@ private:
 	      ZmRBTreeObject<ZuNull,
 		ZmRBTreeLock<ZmNoLock> > > > Engines;
 
-  typedef ZmRBTree<ZuPair<MxID, MxID>,
-	    ZmRBTreeVal<ZmRef<MxAnyLink>,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmNoLock> > > > Links;
-
   typedef ZmRBTree<ZuPair<MxID, bool>,
 	    ZmRBTreeVal<ZmRef<MxQueue>,
 	      ZmRBTreeObject<ZuNull,
@@ -76,9 +72,9 @@ private:
   MxMDCore	*m_core = 0;
   Lock		m_lock;
     Engines	  m_engines;
-    Links	  m_links;
     Queues	  m_queues;
     ZuRef<ZdbEnv> m_dbEnv = nullptr;
+  ZmTime	m_time;
 };
 
 #endif /* MxMDTelemetry_HPP */

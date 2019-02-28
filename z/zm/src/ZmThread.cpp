@@ -75,15 +75,33 @@ void ZmTopology::error(int errNo)
   if (ErrorFn fn = instance()->m_errorFn) (*fn)(errNo);
 }
 
+#ifdef _WIN32
+struct HandleCloser {
+  ~HandleCloser() { CloseHandle(h); }
+  HANDLE h = 0;
+};
+#endif
+
 void ZmThreadContext_::init()
 {
 #ifndef _WIN32
   m_pthread = pthread_self();
 #ifdef linux
   m_tid = syscall(SYS_gettid);
+  pthread_getcpuclockid(m_pthread, &m_cid);
 #endif
 #else /* !_WIN32 */
   m_tid = GetCurrentThreadId();
+  DuplicateHandle(
+    GetCurrentProcess(),
+    GetCurrentThread(),
+    GetCurrentProcess(),
+    &m_handle,
+    0,
+    FALSE,
+    DUPLICATE_SAME_ACCESS);
+  thread_local HandleCloser handleCloser;
+  handleCloser.h = m_handle;
 #endif /* !_WIN32 */
 }
 
@@ -108,11 +126,28 @@ void ZmThreadContext::name(ZmThreadName &s) const
     m_mgr(s, this);
 }
 
-void ZmThreadContext::telemetry(ZmThreadTelemetry &data) const {
+#ifdef _WIN32
+struct CPUFreq {
+  CPUFreq() {
+    LARGE_INTEGER i;
+    QueryPerformanceFrequency(&i);
+    n = (double)i;
+  }
+  double n;
+};
+#endif
+
+void ZmThreadContext::telemetry(ZmThreadTelemetry &data, ZmTime elapsed) const {
   name(data.name);
   data.tid = tid();
   data.stackSize = m_stackSize;
   data.cpuset = m_cpuset.uint64();
+#ifndef _WIN32
+  data.cpuUsage = this->cpuTime().dtime() / elapsed.dtime();
+#else
+  static CPUFreq cpuFreq;
+  data.cpuUsage = ((double)(this->cpuTime()) / cpuFreq.n) / elapsed.dtime();
+#endif
   data.id = m_id;
   data.priority = m_priority;
   data.partition = m_partition;

@@ -160,18 +160,16 @@ private:
   void addOrderBook_(ZuAnyPOD *);
 
   // Engine Management
-  void addEngine(MxEngine *) { }
-  void delEngine(MxEngine *) { }
-  void engineState(MxEngine *engine, MxEnum, MxEnum) {
-    if (m_telemetry) m_telemetry->engine(engine);
+  void addEngine(MxEngine *engine) {
+    if (m_telemetry) m_telemetry->addEngine(engine);
   }
+  void delEngine(MxEngine *) { }
+  void engineState(MxEngine *, MxEnum, MxEnum) { }
 
   // Link Management
   void updateLink(MxAnyLink *) { }
   void delLink(MxAnyLink *) { }
-  void linkState(MxAnyLink *link, MxEnum, MxEnum) {
-    if (m_telemetry) m_telemetry->link(link);
-  }
+  void linkState(MxAnyLink *link, MxEnum, MxEnum) { }
 
   // Pool Management
   void updateTxPool(MxAnyTxPool *) { }

@@ -36,11 +36,9 @@ public:
 
   int64_t now() const {
     int64_t t;
-    long double m10 = 10000000.0L;
     QueryPerformanceCounter((LARGE_INTEGER *)&t);
-    t -= m_qpcStart;
-    t += m_ftStart;
-    return (int64_t)(((long double)t * m10) / m_ftFreq);
+    t += m_qpcOffset;
+    return (int64_t)((long double)t * m_qpc2ft);
   }
 
   long double cpuFreq() const {
@@ -51,8 +49,8 @@ private:
   void calibrate() {
     ZmGuard<ZmPLock> guard(m_lock);
 
-    int64_t ftTotal = 0, ftNow, ftCheck;
-    int64_t qpcTotal = 0, qpcDelta, qpcNow, qpcCheck, qpcStamp;
+    int64_t ftStart, ftTotal = 0, ftNow, ftCheck;
+    int64_t qpcStart, qpcTotal = 0, qpcDelta, qpcNow, qpcCheck, qpcStamp;
     int64_t cpuStamp;
 
     long double m10 = 10000000.0L;
@@ -72,12 +70,12 @@ private:
 
     // establish start times
 
-    m_ftStart = ftNow;
-    m_qpcStart = qpcNow;
+    ftStart = ftNow;
+    qpcStart = qpcNow;
 
     // calculate and record for 100 FT ticks
 
-    ftCheck = m_ftStart;
+    ftCheck = ftStart;
     unsigned i = 0, j = 0;
     for (;;) {
       QueryPerformanceCounter((LARGE_INTEGER *)&qpcCheck);
@@ -87,9 +85,9 @@ private:
       GetSystemTimeAsFileTime((FILETIME *)&ftNow);
       QueryPerformanceCounter((LARGE_INTEGER *)&qpcDelta);
       qpcNow += ((qpcDelta - qpcNow)>>1);
-      qpcDelta = qpcNow - m_qpcStart;
+      qpcDelta = qpcNow - qpcStart;
       qpcTotal += qpcDelta;
-      ftTotal += ftNow - m_ftStart;
+      ftTotal += ftNow - ftStart;
       j++;
       if (ftNow != ftCheck) {
 	if (++i >= 100) break;
@@ -99,16 +97,21 @@ private:
 
     // calculate *effective* m_ftFreq for FT
 
-    m_ftFreq = ((long double)qpcDelta * m10) / (long double)(ftNow - m_ftStart);
+    ftFreq = ((long double)qpcDelta * m10) / (long double)(ftNow - ftStart);
 
-    // establish accurate FT and PC offsets
+    // establish accurate FT and PC offsets, ratio
 
     long double jd = j;
 
-    m_ftStart -= ZmTime_FT_Epoch;
-    m_ftStart += (int64_t)((long double)ftTotal / jd);
-    m_ftStart = (int64_t)(((long double)m_ftStart * m_ftFreq) / m10);
-    m_qpcStart += (int64_t)((long double)qpcTotal / jd);
+    ftStart -= ZmTime_FT_Epoch;
+    ftStart += (int64_t)((long double)ftTotal / jd);
+    ftStart = (int64_t)(((long double)ftStart * ftFreq) / m10);
+    qpcStart += (int64_t)((long double)qpcTotal / jd);
+
+    m_qpcOffset = ftStart - qpcStart;
+    m_qpc2ft = m10 / ftFreq;
+
+    std::cout << "offset: " << ZuBoxed(m_qpcOffset) << " ratio: " << ZuBoxed(m_qpc2ft) << '\n' << std::flush;
 
     // obtain CPU frequency, preferring CPUID to elapsed TSC
  
@@ -162,9 +165,8 @@ fallback:
 private:
   ZmPLock	m_lock;
 
-  long double	m_ftFreq;	// FILETIME frequency
-  int64_t	m_qpcStart;	// QueryPerformanceCounter start
-  int64_t	m_ftStart;	// FILETIME start
+  int64_t	m_qpcOffset;	// QPC offset
+  long double	m_qpc2ft;	// QPC -> FILETIME ratio
   long double	m_cpuFreq;	// CPU frequency (TSC cycles per second)
 };
 

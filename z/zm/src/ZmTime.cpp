@@ -52,20 +52,10 @@ private:
     ZmGuard<ZmPLock> guard(m_lock);
 
     int64_t ftTotal = 0, ftNow, ftCheck;
-    int64_t qpcTotal = 0, qpcDelta, qpcNow, qpcCheck, qpcIntrinsic, qpcStamp;
+    int64_t qpcTotal = 0, qpcDelta, qpcNow, qpcCheck, qpcStamp;
     int64_t cpuStamp;
 
-    long double k10 = 10000.0L;
     long double m10 = 10000000.0L;
-
-    // establish intrinsic function call time
-
-    for (unsigned i = 0; i < 100; i++)
-      QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
-    QueryPerformanceCounter((LARGE_INTEGER *)&m_qpcStart);
-    for (unsigned i = 0; i < 10000; i++)
-      QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
-    qpcIntrinsic = (int64_t)((long double)(qpcNow - m_qpcStart) / k10);
 
     // "burn in" - tight loop until FT ticks up
 
@@ -74,8 +64,8 @@ private:
       QueryPerformanceCounter((LARGE_INTEGER *)&qpcCheck);
       do {
 	QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
+	cpuStamp = __rdtsc();
       } while (qpcNow == qpcCheck);
-      cpuStamp = __rdtsc();
       qpcStamp = qpcNow;
       GetSystemTimeAsFileTime((FILETIME *)&ftNow);
     } while (ftNow == ftCheck);
@@ -131,14 +121,13 @@ fallback:
       QueryPerformanceFrequency((LARGE_INTEGER *)&qpcFreq);
       QueryPerformanceCounter((LARGE_INTEGER *)&qpcCheck);
       do {
-	cpuDelta = __rdtsc();
 	QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
+	cpuDelta = __rdtsc();
       } while (qpcNow == qpcCheck);
       cpuDelta -= cpuStamp;
       qpcDelta = qpcNow - qpcStamp;
-      m_cpuFreq =
-	(long double)(cpuDelta * qpcFreq) /
-	(long double)(qpcDelta - qpcIntrinsic);
+      qpcFreq /= 1000;
+      m_cpuFreq = (long double)((cpuDelta * qpcFreq) / qpcDelta) * 1000.0L;
     } else {
       // below code ported from Linux kernel
       __cpuid(info, 0x1);

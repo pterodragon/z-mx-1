@@ -130,15 +130,9 @@ public:
     return *this;
   }
 #else
-  static int64_t now_();
-  static long double cpuFreq();
+  ZmTime &now();
 
-  ZuInline ZmTime &now() {
-    int64_t t = now_();
-    tv_sec = t / 10000000;
-    tv_nsec = (int32_t)((t % 10000000) * 100);
-    return *this;
-  }
+  static uint64_t cpuFreq();
 #endif /* !_WIN32 */
 
   template <typename T>

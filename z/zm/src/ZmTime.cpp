@@ -30,30 +30,29 @@
 
 #include <intrin.h>
 
-class ZmPlatform_WinTimer {
+class ZmTime_WinTimer;
+
+typedef void (*NowFn)(const ZmTime_WinTimer *, ZmTime &);
+void ZmTime_now_fast(const ZmTime_WinTimer *, ZmTime &);
+void ZmTime_now_slow(const ZmTime_WinTimer *, ZmTime &);
+static NowFn ZmTime_nowFn = ZmTime_now_slow;
+
+class ZmTime_WinTimer {
+friend void ZmTime_now_fast(const ZmTime_WinTimer *, ZmTime &);
+friend void ZmTime_now_slow(const ZmTime_WinTimer *, ZmTime &);
+
 public:
-  ZmPlatform_WinTimer() { calibrate(); }
+  ZmTime_WinTimer() { calibrate(); }
 
-  int64_t now() const {
-    int64_t t;
-    QueryPerformanceCounter((LARGE_INTEGER *)&t);
-    t += m_qpcOffset;
-    return (int64_t)((long double)t * m_qpc2ft);
-  }
-
-  long double cpuFreq() const {
-    return m_cpuFreq;
-  }
+  long double cpuFreq() const { return m_cpuFreq; }
 
 private:
   void calibrate() {
     ZmGuard<ZmPLock> guard(m_lock);
 
-    int64_t ftStart, ftTotal = 0, ftNow, ftCheck;
-    int64_t qpcStart, qpcTotal = 0, qpcDelta, qpcNow, qpcCheck, qpcStamp;
-    int64_t cpuStamp;
-
-    long double m10 = 10000000.0L;
+    uint64_t ftNow, ftCheck;
+    uint64_t qpcNow, qpcCheck, qpcStamp;
+    uint64_t cpuStamp;
 
     // "burn in" - tight loop until FT ticks up
 
@@ -68,15 +67,17 @@ private:
       GetSystemTimeAsFileTime((FILETIME *)&ftNow);
     } while (ftNow == ftCheck);
 
-    // establish start times
+    // establish initial start times
 
-    ftStart = ftNow;
-    qpcStart = qpcNow;
+    uint64_t ftStart = ftNow;
+    uint64_t qpcStart = qpcNow;
 
     // calculate and record for 100 FT ticks
 
     ftCheck = ftStart;
     unsigned i = 0, j = 0;
+    uint64_t ftTotal = 0;
+    uint64_t qpcTotal = 0, qpcDelta;
     for (;;) {
       QueryPerformanceCounter((LARGE_INTEGER *)&qpcCheck);
       do {
@@ -95,33 +96,42 @@ private:
       }
     }
 
-    // calculate *effective* m_ftFreq for FT
-
-    ftFreq = ((long double)qpcDelta * m10) / (long double)(ftNow - ftStart);
-
-    // establish accurate FT and PC offsets, ratio
+    // adjust FT and QPC start times to average out jitter
 
     long double jd = j;
+    ftStart += (uint64_t)((long double)ftTotal / jd);
+    qpcStart += (uint64_t)((long double)qpcTotal / jd);
 
+    // adjust FT start to Unix epoch (FT epoch is Jan 1 1601)
+ 
     ftStart -= ZmTime_FT_Epoch;
-    ftStart += (int64_t)((long double)ftTotal / jd);
-    ftStart = (int64_t)(((long double)ftStart * ftFreq) / m10);
-    qpcStart += (int64_t)((long double)qpcTotal / jd);
 
-    m_qpcOffset = ftStart - qpcStart;
-    m_qpc2ft = m10 / ftFreq;
+    // calculate QPC/FT and nsec/QPC ratios
+ 
+    uint64_t qpcFreq;
+    QueryPerformanceFrequency((LARGE_INTEGER *)&qpcFreq);
+    m_qpc_ft = (uint64_t)((long double)1000.0L *
+	((long double)qpcFreq / (long double)10000000.0L));
+    m_ns_qpc = (uint64_t)((long double)1000.0L *
+	((long double)1000000000.0L / (long double)qpcFreq));
 
-    std::cout << "offset: " << ZuBoxed(m_qpcOffset) << " ratio: " << ZuBoxed(m_qpc2ft) << '\n' << std::flush;
+    // calculate FT and QPC offsets
 
-    // obtain CPU frequency, preferring CPUID to elapsed TSC
+    qpcStart *= 1000;
+    m_ftOffset = ftStart - (qpcStart / m_qpc_ft);
+    m_qpcOffset = qpcStart % m_qpc_ft;
+
+    // divert to faster implementation if QPC frequency == FT frequency
+
+    if (m_qpc_ft == 1000) ZmTime_nowFn = ZmTime_now_fast;
+
+    // obtain CPU TSC frequency, preferring CPUID to elapsed TSC
  
     int info[4];
     __cpuid(info, 0);
     if (info[0] < 0x15) {
 fallback:
-      int64_t qpcFreq;
-      int64_t cpuDelta;
-      QueryPerformanceFrequency((LARGE_INTEGER *)&qpcFreq);
+      uint64_t cpuDelta;
       QueryPerformanceCounter((LARGE_INTEGER *)&qpcCheck);
       do {
 	QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
@@ -130,7 +140,8 @@ fallback:
       cpuDelta -= cpuStamp;
       qpcDelta = qpcNow - qpcStamp;
       qpcFreq /= 1000;
-      m_cpuFreq = (long double)((cpuDelta * qpcFreq) / qpcDelta) * 1000.0L;
+      m_cpuFreq = (uint64_t)
+	((long double)((cpuDelta * qpcFreq) / qpcDelta) * 1000.0L);
     } else {
       // below code ported from Linux kernel
       __cpuid(info, 0x1);
@@ -158,26 +169,54 @@ fallback:
 	    goto fallback;
 	}
       }
-      m_cpuFreq = (long double)((crystal_khz * info[1]) / info[0]) * 1000.0L;
+      m_cpuFreq = (uint64_t)
+	((long double)((crystal_khz * info[1]) / info[0]) * 1000.0L);
     }
   }
 
 private:
-  ZmPLock	m_lock;
+  ZmPLock	m_lock;		// serializes calibration
 
-  int64_t	m_qpcOffset;	// QPC offset
-  long double	m_qpc2ft;	// QPC -> FILETIME ratio
-  long double	m_cpuFreq;	// CPU frequency (TSC cycles per second)
+  uint64_t	m_qpcOffset;	// QPC offset
+  uint64_t	m_ftOffset;	// FILETIME offset
+  uint64_t	m_qpc_ft;	// QPC/FILETIME ratio (x1000)
+  uint64_t	m_ns_qpc;	// nsec/QPC ratio (x1000)
+  uint64_t	m_cpuFreq;	// CPU frequency (TSC cycles per second)
 };
 
-static ZmPlatform_WinTimer ZmPlatform_winTimer;
-
-int64_t ZmTime::now_() {
-  return ZmPlatform_winTimer.now();
+void ZmTime_now_slow(const ZmTime_WinTimer *self, ZmTime &t)
+{
+  uint64_t qpc;
+  QueryPerformanceCounter((LARGE_INTEGER *)&qpc);
+  qpc *= 1000U;
+  qpc -= self->m_qpcOffset;
+  uint64_t ft = qpc / self->m_qpc_ft;
+  qpc %= self->m_qpc_ft;
+  ft += self->m_ftOffset;
+  t.tv_sec = ft / 10000000U;
+  ft %= 10000000U;
+  t.tv_nsec = (qpc * self->m_ns_qpc) / 1000000U + ft * 100U;
 }
 
-long double ZmTime::cpuFreq() {
-  return ZmPlatform_winTimer.cpuFreq();
+void ZmTime_now_fast(const ZmTime_WinTimer *self, ZmTime &t)
+{
+  uint64_t qpc;
+  QueryPerformanceCounter((LARGE_INTEGER *)&qpc);
+  qpc += self->m_ftOffset;
+  t.tv_sec = qpc / 10000000U;
+  qpc %= 10000000U;
+  t.tv_nsec = qpc * 100U;
+}
+
+static ZmTime_WinTimer ZmTime_winTimer;
+
+ZmTime &ZmTime::now() {
+  (*ZmTime_nowFn)(&ZmTime_winTimer, *this);
+  return *this;
+}
+
+uint64_t ZmTime::cpuFreq() {
+  return ZmTime_winTimer.cpuFreq();
 }
 
 #endif /* !_WIN32 */

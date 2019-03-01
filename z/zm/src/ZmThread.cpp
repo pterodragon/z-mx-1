@@ -135,7 +135,7 @@ void ZmThreadContext::telemetry(ZmThreadTelemetry &data, ZmTime elapsed) const {
   data.cpuUsage = this->cpuTime().dtime() / elapsed.dtime();
 #else
   data.cpuUsage =
-    ((double)(this->cpuTime()) / ZmTime::cpuFreq()) / elapsed.dtime();
+    ((double)(this->cpuTime()) / (double)ZmTime::cpuFreq()) / elapsed.dtime();
 #endif
   data.id = m_id;
   data.priority = m_priority;

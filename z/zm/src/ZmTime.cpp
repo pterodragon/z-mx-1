@@ -50,9 +50,16 @@ private:
   void calibrate() {
     ZmGuard<ZmPLock> guard(m_lock);
 
+    unsigned cpuid[4];
+
     uint64_t ftNow, ftCheck;
     uint64_t qpcNow, qpcCheck, qpcStamp;
     uint64_t cpuStamp;
+
+    // attempt CPU core isolation
+ 
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+    SetThreadAffinityMask(GetCurrentThread(), 2);
 
     // "burn in" - tight loop until FT ticks up
 
@@ -60,6 +67,7 @@ private:
     do {
       QueryPerformanceCounter((LARGE_INTEGER *)&qpcCheck);
       do {
+	__cpuid((int *)cpuid, 0);
 	QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
 	cpuStamp = __rdtsc();
       } while (qpcNow == qpcCheck);
@@ -127,30 +135,30 @@ private:
 
     // obtain CPU TSC frequency, preferring CPUID to elapsed TSC
  
-    int info[4];
-    __cpuid(info, 0);
-    if (info[0] < 0x15) {
+    __cpuid((int *)cpuid, 0);
+    if (cpuid[0] < 0x15) {
 fallback:
       uint64_t cpuDelta;
       QueryPerformanceCounter((LARGE_INTEGER *)&qpcCheck);
       do {
+	__cpuid((int *)cpuid, 0);
 	QueryPerformanceCounter((LARGE_INTEGER *)&qpcNow);
 	cpuDelta = __rdtsc();
       } while (qpcNow == qpcCheck);
       cpuDelta -= cpuStamp;
       qpcDelta = qpcNow - qpcStamp;
-      qpcFreq /= 1000;
+      qpcFreq = (qpcFreq + 500) / 1000;
       m_cpuFreq = (uint64_t)
 	((long double)((cpuDelta * qpcFreq) / qpcDelta) * 1000.0L);
     } else {
       // below code ported from Linux kernel
-      __cpuid(info, 0x1);
-      unsigned family = (info[0] >> 8) & 0xf;
-      unsigned model = (info[0] >> 4) & 0xf;
-      if (family == 0xf) family += (info[0] >> 20) & 0xff;
-      if (family >= 0x6) model += ((info[0] >> 16) & 0xf) << 4;
-      __cpuid(info, 0x15);
-      unsigned crystal_khz = info[2] / 1000;
+      __cpuid((int *)cpuid, 0x1);
+      unsigned family = (cpuid[0] >> 8) & 0xf;
+      unsigned model = (cpuid[0] >> 4) & 0xf;
+      if (family == 0xf) family += (cpuid[0] >> 20) & 0xff;
+      if (family >= 0x6) model += ((cpuid[0] >> 16) & 0xf) << 4;
+      __cpuid((int *)cpuid, 0x15);
+      unsigned crystal_khz = cpuid[2] / 1000;
       if (!crystal_khz) {
 	switch (model) {
 	  case 0x4e: // INTEL_FAM6_SKYLAKE_MOBILE
@@ -170,8 +178,13 @@ fallback:
 	}
       }
       m_cpuFreq = (uint64_t)
-	((long double)((crystal_khz * info[1]) / info[0]) * 1000.0L);
+	((long double)((crystal_khz * cpuid[1]) / cpuid[0]) * 1000.0L);
     }
+
+    // revert thread to normal
+ 
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
+    SetThreadAffinityMask(GetCurrentThread(), 0xFF);
   }
 
 private:

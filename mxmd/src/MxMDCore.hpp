@@ -126,13 +126,15 @@ public:
   void dumpOrderBooks(
       ZuString path, MxID venue = MxID(), MxID segment = MxID());
 
-  typedef MxMDStream::Hdr Hdr;
+  void addCmd(ZuString name, ZuString syntax,
+      ZvCmdFn fn, ZtString brief, ZtString usage);
+
+  // for use by replay
+
+  using Hdr = MxMDStream::Hdr;
 
   void pad(Hdr &);
   void apply(const Hdr &, bool filter);
-
-  void addCmd(ZuString name, ZuString syntax,
-      ZvCmdFn fn, ZtString brief, ZtString usage);
 
 private:
   void initCmds();
@@ -263,6 +265,7 @@ public:
     MxMDStream::endOfSnapshot(m_broadcast, id, seqNo, ok);
     return ok;
   }
+
 private:
   template <class Snapshot>
   static bool snapshotL2Side(Snapshot &snapshot, MxMDOBSide *side) {

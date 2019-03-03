@@ -168,7 +168,8 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
     try {
       cf->fromFile(cf_, false);
     } catch (const ZvError &e) {
-      ZeLOG(Fatal, ZtString() << "MxMDLib - configuration error: \"" << cf_ << "\": " << e);
+      ZeLOG(Fatal, ZtString()
+	  << "MxMDLib - configuration error: \"" << cf_ << "\": " << e);
       return md;
     }
   else {
@@ -176,17 +177,18 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
       "mx {\n"
       "  core {\n"
       "    nThreads 4\n"	// thread IDs are 1-based
-      "    rxThread 1\n"	// I/O Rx
-      "    txThread 2\n"	// I/O Tx
-      "    isolation 1-3\n"	// leave thread 4 for general purpose
+      "    isolation 1-3\n"	// leave thread 4 for miscellaneous
+      "    names rx, tx, record, misc\n"
+      "    rxThread rx\n"	// I/O Rx
+      "    txThread tx\n"	// I/O Tx
       "  }\n"
       "}\n"
       "record {\n"
-      "  rxThread 3\n"		// Record Rx - must be distinct from I/O Rx
-      "  snapThread 4\n"	// Record snapshot - must be distinct from Rx
+      "  rxThread record\n"	// Record Rx - must be distinct from I/O Rx
+      "  snapThread misc\n"	// Record snapshot - must be distinct from Rx
       "}\n"
       "replay {\n"
-      "  rxThread 4\n"
+      "  rxThread misc\n"
       "}\n",
       false);
   }

@@ -71,18 +71,17 @@ struct App : public MxTOrderMgr<App, AppTypes> {
 };
 #endif
 
-template <typename App, typename TxnTypes_>
+template <typename App_, typename TxnTypes_>
 class MxTOrderMgr : public TxnTypes_ {
 public:
-  typedef TxnTypes_ TxnTypes;
+  using App = App_;
+  using TxnTypes = TxnTypes_;
 
   MxTImport(TxnTypes);
 
-private:
   ZuInline const App *app() const { return static_cast<const App *>(this); }
   ZuInline App *app() { return static_cast<App *>(this); }
 
-public:
   MxTOrderMgr() {
     { // ensure all static initializers are run once
       AnyTxn txn;

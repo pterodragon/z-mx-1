@@ -158,7 +158,7 @@ fallback:
       if (family == 0xf) family += (cpuid[0] >> 20) & 0xff;
       if (family >= 0x6) model += ((cpuid[0] >> 16) & 0xf) << 4;
       __cpuid((int *)cpuid, 0x15);
-      unsigned crystal_khz = cpuid[2] / 1000;
+      unsigned crystal_khz = (cpuid[2] + 500) / 1000;
       if (!crystal_khz) {
 	switch (model) {
 	  case 0x4e: // INTEL_FAM6_SKYLAKE_MOBILE
@@ -177,8 +177,7 @@ fallback:
 	    goto fallback;
 	}
       }
-      m_cpuFreq = (uint64_t)
-	((long double)((crystal_khz * cpuid[1]) / cpuid[0]) * 1000.0L);
+      m_cpuFreq = ((crystal_khz * cpuid[1]) / cpuid[0]) * 1000;
     }
 
     // revert thread to normal

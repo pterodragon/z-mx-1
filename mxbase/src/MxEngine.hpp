@@ -640,19 +640,14 @@ public:
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
-  ZuInline const Rx *rx() const { return static_cast<const Rx >(this); }
+  ZuInline const Rx *rx() const { return static_cast<const Rx *>(this); }
   ZuInline Rx *rx() { return static_cast<Rx *>(this); }
-  ZuInline const Tx *tx() const { return static_cast<const Tx >(this); }
+  ZuInline const Tx *tx() const { return static_cast<const Tx *>(this); }
   ZuInline Tx *tx() { return static_cast<Tx *>(this); }
 
   inline MxLink(MxID id) : Base(id) { }
 
-  inline void init(MxEngine *engine,
-      MxSeqNo rxSeqNo = MxSeqNo(), MxSeqNo txSeqNo = MxSeqNo()) {
-    Base::init(engine);
-    this->rxInit(rxSeqNo);
-    this->txInit(txSeqNo);
-  }
+  inline void init(MxEngine *engine) { Base::init(engine); }
 
   ZuInline void scheduleDequeue() {
     if (!m_dequeuing.xch(1)) rescheduleDequeue();

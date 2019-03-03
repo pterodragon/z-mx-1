@@ -234,8 +234,7 @@ public:
   ZuInline MxQueueTx() : m_queue(new MxQueue(MxSeqNo())) { }
 
   ZuInline void txInit(MxSeqNo seqNo) {
-    m_seqNo = seqNo;
-    m_queue->head(m_seqNo = seqNo);
+    if (seqNo > m_seqNo) m_queue->head(m_seqNo = seqNo);
   }
 
   ZuInline const App *app() const { return static_cast<const App *>(this); }

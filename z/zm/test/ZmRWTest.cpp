@@ -40,7 +40,7 @@ struct C {
 
 #define self() (ZmPlatform::getTID())
 
-struct T : public ZmObject {
+struct T : public ZuObject {
   inline T() : m_state(0), m_tid(self()) { }
 
   int		m_state;

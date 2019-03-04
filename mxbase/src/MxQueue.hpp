@@ -139,13 +139,13 @@ public:
 
   ZuInline MxQueueRx() : m_queue(new MxQueue(MxSeqNo())) { }
   
-  ZuInline void rxInit(MxSeqNo seqNo) { m_queue->head(seqNo); }
-
   ZuInline const App *app() const { return static_cast<const App *>(this); }
   ZuInline App *app() { return static_cast<App *>(this); }
 
   ZuInline const MxQueue *rxQueue() const { return m_queue; }
   ZuInline MxQueue *rxQueue() { return m_queue; }
+
+  ZuInline void rxInit(MxSeqNo seqNo) { m_queue->head(seqNo); }
 
 private:
   ZmRef<MxQueue>	m_queue;
@@ -233,15 +233,17 @@ protected:
 public:
   ZuInline MxQueueTx() : m_queue(new MxQueue(MxSeqNo())) { }
 
-  ZuInline void txInit(MxSeqNo seqNo) {
-    if (seqNo > m_seqNo) m_queue->head(m_seqNo = seqNo);
-  }
-
   ZuInline const App *app() const { return static_cast<const App *>(this); }
   ZuInline App *app() { return static_cast<App *>(this); }
 
+  ZuInline const MxSeqNo txSeqNo() const { return m_seqNo; }
+
   ZuInline const MxQueue *txQueue() const { return m_queue; }
   ZuInline MxQueue *txQueue() { return m_queue; }
+
+  ZuInline void txInit(MxSeqNo seqNo) {
+    if (seqNo > m_seqNo) m_queue->head(m_seqNo = seqNo);
+  }
 
   ZuInline void send() { Tx::send(); }
   void send(MxQMsg *msg) {

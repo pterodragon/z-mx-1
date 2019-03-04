@@ -26,8 +26,18 @@
 
 #include <ZmFn.hpp>
 #include <ZmScheduler.hpp>
+#include <ZmSpecific.hpp>
 #include <ZmBackoff.hpp>
 #include <ZmTimeout.hpp>
+
+struct TLS : public ZuObject {
+  TLS() : m_ping(0) { }
+  ~TLS() {
+    printf("~TLS(%u) [%d]\n", m_ping, (int)ZmThreadContext::self()->id());
+  }
+  void ping() { ++m_ping; }
+  unsigned	m_ping;
+};
 
 class Job : public ZmPolymorph {
 public:
@@ -39,6 +49,7 @@ public:
   }
 
   void *operator()() {
+    ZmSpecific<TLS>::instance()->ping();
     printf("%s [%d]\n", m_message, (int)ZmThreadContext::self()->id());
     return 0;
   }
@@ -61,16 +72,6 @@ public:
   }
 };
 
-void dumpThread(ZmThreadContext *c)
-{
-  ZmThreadName s;
-  c->name(s);
-  if (!s)
-    printf("%u\n", (unsigned)c->tid());
-  else
-    printf("%u %.*s\n", (unsigned)c->tid(), s.length(), s.data());
-}
-
 #include <signal.h>
 
 void segv(int s)
@@ -86,8 +87,12 @@ void segv(int s)
 
 void usage()
 {
-  fputs("usage: ZmSchedTest [OPTIONS]...\n\nOptions:\n"
-"    -n N\tset number of threads to N\n"
+  fputs(
+    "usage: ZmSchedTest [OPTIONS]...\n"
+    "\nOptions:\n"
+    "    -n N\tset number of threads to N\n"
+    "    -a AFFINITY\tset affinity (e.g. 1=2:3)\n"
+    "    -i ISOLATION\tset isolation (e.g. 1,3:4)\n"
     , stderr);
   ZmPlatform::exit(1);
 }
@@ -149,7 +154,7 @@ int main(int argc, char **argv)
   signal(SIGSEGV, segv);
 
   ZmScheduler s(ZmSchedParams().
-      id("scheduler").
+      id("sched").
       nThreads(nThreads).
       affinity(affinity).
       isolation(isolation));
@@ -199,8 +204,7 @@ int main(int argc, char **argv)
   ZmPlatform::sleep(ZmTime(.6));
 
   puts("threads:");
-  ZmSpecific<ZmThreadContext>::all(
-      ZmFn<ZmThreadContext *>::Ptr<&dumpThread>::fn());
+  std::cout << ZmThread::csv() << '\n';
 
   s.stop();
 
@@ -240,8 +244,7 @@ int main(int argc, char **argv)
   ZmPlatform::sleep(ZmTime(.6));
 
   puts("threads:");
-  ZmSpecific<ZmThreadContext>::all(
-      ZmFn<ZmThreadContext *>::Ptr<&dumpThread>::fn());
+  std::cout << ZmThread::csv() << '\n';
 
   s.stop();
 
@@ -259,8 +262,7 @@ int main(int argc, char **argv)
   r->stop();
 
   puts("threads:");
-  ZmSpecific<ZmThreadContext>::all(
-      ZmFn<ZmThreadContext *>::Ptr<&dumpThread>::fn());
+  std::cout << ZmThread::csv() << '\n';
 
   s.stop();
 }

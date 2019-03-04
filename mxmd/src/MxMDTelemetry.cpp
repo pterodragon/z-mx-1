@@ -58,13 +58,9 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
       }});
 
   // threads
-  {
-    ZmTime elapsed = m_time;
-    m_time.now();
-    elapsed = m_time - elapsed;
-    ZmSpecific<ZmThreadContext>::all([elapsed, cxn](ZmThreadContext *tc) {
-      cxn->transmit(thread(tc, elapsed)); });
-  }
+  ZmSpecific<ZmThreadContext>::all([cxn](ZmThreadContext *tc) {
+    cxn->transmit(thread(tc));
+  });
 
   // mutiplexers, thread queues, sockets
   m_core->allMx(ZmFn<MxMultiplex *>{

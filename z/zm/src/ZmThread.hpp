@@ -163,7 +163,7 @@ class ZmAPI ZmThreadContext_ {
   friend ZmAPI unsigned __stdcall ZmThread_start(void *);
 #endif
 protected:
-  ZuInline ZmThreadContext_() { }
+  ZmThreadContext_() { m_rtLast.now(); }
 
 public:
 #ifndef _WIN32
@@ -172,18 +172,27 @@ public:
   ZuInline pid_t tid_() const { return m_tid; }
 #endif
   ZuInline clockid_t cid_() const { return m_cid; }
-  ZuInline ZmTime cpuTime() const {
-    ZmTime last = m_cpuTime;
-    clock_gettime(m_cid, &m_cpuTime);
-    return m_cpuTime - last;
+  ZuInline double cpuUsage() const {
+    ZmTime cpuLast = m_cpuLast;
+    ZmTime rtLast = m_rtLast;
+    clock_gettime(m_cid, &m_cpuLast);
+    m_rtLast.now();
+    double cpuDelta = (m_cpuLast - cpuLast).dtime();
+    double rtDelta = (m_rtLast - rtLast).dtime();
+    return cpuDelta / rtDelta;
   }
 #else /* !_WIN32 */
   ZuInline unsigned tid_() const { return m_tid; }
   ZuInline HANDLE handle() const { return m_handle; }
-  ZuInline ULONG64 cpuTime() const {
-    ULONG64 last = m_cpuTime;
-    QueryThreadCycleTime(m_handle, &m_cpuTime);
-    return m_cpuTime - last;
+  ZuInline double cpuUsage() const {
+    ULONG64 cpuLast = m_cpuLast;
+    ZmTime rtLast = m_rtLast;
+    QueryThreadCycleTime(m_handle, &m_cpuLast);
+    m_rtLast.now();
+    double cpuDelta =
+      ((double)(m_cpuLast - cpuLast) / (double)ZmTime::cpuFreq());
+    double rtDelta = (m_rtLast - rtLast).dtime();
+    return cpuDelta / rtDelta;
   }
 #endif /* !_WIN32 */
 
@@ -196,12 +205,13 @@ protected:
   pid_t			m_tid = 0;
 #endif
   clockid_t		m_cid = 0;
-  mutable ZmTime	m_cpuTime;
+  mutable ZmTime	m_cpuLast;
 #else /* !_WIN32 */
   unsigned		m_tid = 0;
   HANDLE		m_handle = 0;
-  mutable ULONG64	m_cpuTime = 0;
+  mutable ULONG64	m_cpuLast = 0;
 #endif /* !_WIN32 */
+  mutable ZmTime	m_rtLast;
 };
 
 template <> struct ZmCleanup<ZmThreadContext> {
@@ -210,7 +220,7 @@ template <> struct ZmCleanup<ZmThreadContext> {
 
 template <typename, bool> struct ZmSpecificCtor;
 
-class ZmAPI ZmThreadContext : public ZmObject, public ZmThreadContext_ {
+class ZmAPI ZmThreadContext : public ZuObject, public ZmThreadContext_ {
   friend struct ZmSpecificCtor<ZmThreadContext, true>;
 #ifndef _WIN32
   friend ZmAPI void *ZmThread_start(void *);
@@ -273,7 +283,7 @@ public:
 
   ZuInline void *result() const { return m_result; }
 
-  void telemetry(ZmThreadTelemetry &data, ZmTime elapsed) const;
+  void telemetry(ZmThreadTelemetry &data) const;
 
   template <typename S> inline void print(S &s) const {
     ZmThreadName name;
@@ -381,18 +391,19 @@ public:
   template <class S> struct CSV_ {
     CSV_(S &stream) : m_stream(stream) { 
       m_stream <<
-	"name,id,tid,cpuUsage,main,detached,"
-	"stackSize,priority,partition,cpuset\n";
+	"name,id,tid,cpuUsage,cpuSet,priority,"
+	"stackSize,partition,main,detached\n";
     }
     void print(const ZmThreadContext *tc) {
+      static ZmTime start(ZmTime::Now);
+      ZmThreadTelemetry data;
       static ZmPLock lock;
       ZmGuard<ZmPLock> guard(lock);
-      static ZmTime last(ZmTime::Now);
-      ZmTime elapsed = last;
-      last.now();
-      elapsed = last - elapsed;
-      ZmThreadTelemetry data;
-      tc->telemetry(data, elapsed);
+      thread_local ZmTime time;
+      if (!time) time = start;
+      ZmTime last = time;
+      time.now();
+      tc->telemetry(data);
       m_stream << data.name
 	<< ',' << data.id
 	<< ',' << data.tid
@@ -412,8 +423,8 @@ public:
   struct CSV {
     template <typename S> void print(S &s) const {
       CSV_<S> csv(s);
-      ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{
-	  [](CSV_<S> *csv, ZmThreadContext *tc) { csv->print(tc); }, &csv});
+      ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{&csv,
+	  [](CSV_<S> *csv, ZmThreadContext *tc) { csv->print(tc); }});
     }
   };
   inline static CSV csv() { return CSV(); }

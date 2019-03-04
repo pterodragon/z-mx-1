@@ -27,29 +27,29 @@
 
 static JavaVM *jvm = 0;
 
-class TLS : public ZmObject {
+class TLS : public ZuObject {
 public:
-  ZuInline TLS() {
+  inline TLS() {
     ZmThreadName name;
     ZmThreadContext::self()->name(name);
     JavaVMAttachArgs args{
       JNI_VERSION_1_4, const_cast<char *>(name.data()), 0 };
     jvm->AttachCurrentThread((void **)&m_env, &args);
   }
-  ZuInline TLS(JNIEnv *env) : m_env(env) { }
+  inline TLS(JNIEnv *env) : m_env(env) { }
 
-  ZuInline static void attach() {
+  inline static void attach() {
     ZmSpecific<TLS>::instance();
   }
-  ZuInline static void detach() {
+  inline static void detach() {
     ZmSpecific<TLS>::instance()->m_env = nullptr;
     jvm->DetachCurrentThread();
   }
 
-  ZuInline static void env(JNIEnv *env) {
+  inline static void env(JNIEnv *env) {
     ZmSpecific<TLS>::instance(new TLS(env));
   }
-  ZuInline static JNIEnv *env() {
+  inline static JNIEnv *env() {
     return ZmSpecific<TLS>::instance()->m_env;
   }
 

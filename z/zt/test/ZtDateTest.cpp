@@ -13,7 +13,7 @@
 
 #define CHECK(x) ((x) ? puts("OK  " #x) : puts("NOK " #x))
 
-struct ISOFmt : public ZmObject, public ZtDateFmt::ISO { };
+struct ISOFmt : public ZuObject, public ZtDateFmt::ISO { };
 
 inline const ZtDateFmt::ISO &isoFmt(const ZtDate &d, int offset = 0) {
   ISOFmt &fmt = *(ZmSpecific<ISOFmt>::instance());

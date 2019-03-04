@@ -69,7 +69,7 @@ template <> struct ZmCleanup<ZmTLock_Depth> {
   enum { Level = ZmCleanupLevel::Platform };
 };
 
-struct ZmTLock_Depth : public ZmObject {
+struct ZmTLock_Depth : public ZuObject {
   ZmTLock_Depth() : m_depth(0) { }
   inline void inc() {
     if (m_depth > 20) {

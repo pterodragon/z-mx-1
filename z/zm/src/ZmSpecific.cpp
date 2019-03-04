@@ -23,7 +23,7 @@
 
 #ifdef _WIN32
 
-// voodoo to force TLS support in linked image
+// Win32 voodoo to force TLS support in linked image
 extern "C" { extern DWORD _tls_used; }
 struct R {
   inline R() : m_value(_tls_used) { };
@@ -113,7 +113,7 @@ void NTAPI ZmSpecific_cleanup_(HINSTANCE, DWORD d, void *)
   if (d == DLL_THREAD_DETACH) ZmSpecific_cleanup();
 }
 
-// more voodoo
+// more Win32 voodoo
 #ifdef _MSC_VER
 #pragma section(".CRT$XLC", long, read)
 extern "C" {

@@ -126,17 +126,12 @@ void ZmThreadContext::name(ZmThreadName &s) const
     m_mgr(s, this);
 }
 
-void ZmThreadContext::telemetry(ZmThreadTelemetry &data, ZmTime elapsed) const {
+void ZmThreadContext::telemetry(ZmThreadTelemetry &data) const {
   name(data.name);
   data.tid = tid();
   data.stackSize = m_stackSize;
   data.cpuset = m_cpuset.uint64();
-#ifndef _WIN32
-  data.cpuUsage = this->cpuTime().dtime() / elapsed.dtime();
-#else
-  data.cpuUsage =
-    ((double)(this->cpuTime()) / (double)ZmTime::cpuFreq()) / elapsed.dtime();
-#endif
+  data.cpuUsage = cpuUsage();
   data.id = m_id;
   data.priority = m_priority;
   data.partition = m_partition;

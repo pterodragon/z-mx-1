@@ -27,10 +27,10 @@
 //
 // ZmCleanup<T>::Level determines order of destruction (per ZmCleanupLevel)
 //
-// ZmSpecific<T, 0>::instance() can return null since T will not be
+// ZmSpecific<T, false>::instance() can return null since T will not be
 // constructed on-demand - use ZmSpecific<T, 0>::instance(new T(...))
 //
-// T must be ZmObject-derived
+// T must be ZuObject derived
 //
 // thread_local T v; can be replaced with:
 // auto &v = *ZmSpecific<T>::instance();
@@ -123,11 +123,21 @@ public:
   }
 
 private:
-  typedef T *Ptr;
+  using Ptr = T *;
+
+  template <typename T> struct Ref {
+    ~Ref() {
+      if (ZuLikely(ptr)) {
+	ZmSpecific<T>::global()->cleanup___(ptr);
+	ptr = nullptr;
+      }
+    }
+    Ptr ptr = 0;
+  };
 
   ZuInline static Ptr &local_() {
-    thread_local Ptr ptr = 0;
-    return ptr;
+    thread_local Ref<T> ref;
+    return ref.ptr;
   }
 
   inline T *create_() { return add__(CtorFn()); }
@@ -154,18 +164,22 @@ private:
 #ifdef _WIN32
     ZmSpecific_cleanup_add(&ZmSpecific<T>::cleanup_, (void *)ptr);
 #endif
-    // m_key.set((void *)ptr);
     return ptr;
   }
 
+  static void cleanup_(void *t_) { global()->cleanup__((T *)t_); }
+
   inline void cleanup__(T *ptr) {
     if (ZuUnlikely(!ptr)) return;
+    cleanup___(ptr);
+    local_() = nullptr;
+  }
+
+  inline void cleanup___(T *ptr) {
     m_objects.del(ptr);
     final(ptr); // calls ZmCleanup<T>::final() if available
     ZmDEREF(ptr);
   }
-
-  static void cleanup_(void *t_) { global()->cleanup__((T *)t_); }
 
   inline void all_(ZmFn<T *> fn) {
     all_2(&fn);

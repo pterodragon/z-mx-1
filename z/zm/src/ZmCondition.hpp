@@ -30,6 +30,8 @@
 #include <ZmLib.hpp>
 #endif
 
+#include <ZuObject.hpp>
+
 #include <ZmPlatform.hpp>
 #include <ZmTime.hpp>
 #include <ZmPLock.hpp>

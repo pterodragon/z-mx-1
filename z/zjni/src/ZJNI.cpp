@@ -27,7 +27,7 @@
 
 static JavaVM *jvm = 0;
 
-class TLS : public ZuObject {
+class TLS : public ZmObject {
 public:
   inline TLS() {
     ZmThreadName name;

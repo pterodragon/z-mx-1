@@ -353,16 +353,15 @@ friend class ReadIterator;
       push(const NodeRef_ &node_) {
     const NodeRef &node = node_;
     Guard guard(m_lock);
-    Node *prevNode;
 
     nodeRef(node);
     node->Fn::next(0);
-    node->Fn::prev(prevNode = m_tail);
-    m_tail = node;
-    if (!prevNode)
+    node->Fn::prev(m_tail);
+    if (!m_tail)
       m_head = node;
     else
-      prevNode->Fn::next(node);
+      m_tail->Fn::next(node);
+    m_tail = node;
     ++m_count;
   }
   template <typename Item_>
@@ -420,16 +419,15 @@ friend class ReadIterator;
       unshift(const NodeRef_ &node_) {
     const NodeRef &node = node_;
     Guard guard(m_lock);
-    Node *nextNode;
 
     nodeRef(node);
-    node->Fn::next(nextNode = m_head);
     node->Fn::prev(0);
-    m_head = node;
-    if (!nextNode)
+    node->Fn::next(m_head);
+    if (!m_head)
       m_tail = node;
     else
-      nextNode->Fn::prev(node);
+      m_head->Fn::prev(node);
+    m_head = node;
     ++m_count;
   }
   template <typename Item_>

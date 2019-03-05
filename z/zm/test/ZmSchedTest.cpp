@@ -30,7 +30,7 @@
 #include <ZmBackoff.hpp>
 #include <ZmTimeout.hpp>
 
-struct TLS : public ZuObject {
+struct TLS : public ZmObject {
   TLS() : m_ping(0) { }
   ~TLS() {
     printf("~TLS(%u) [%d]\n", m_ping, (int)ZmThreadContext::self()->id());

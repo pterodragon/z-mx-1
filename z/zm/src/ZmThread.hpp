@@ -169,9 +169,11 @@ public:
 #ifndef _WIN32
   ZuInline pthread_t pthread() const { return m_pthread; }
 #ifdef linux
-  ZuInline pid_t tid_() const { return m_tid; }
+  ZuInline pid_t tid() const { return m_tid; }
+#else
+  ZuInline pthread_t tid() const { return m_pthread; }
 #endif
-  ZuInline clockid_t cid_() const { return m_cid; }
+  ZuInline clockid_t cid() const { return m_cid; }
   ZuInline double cpuUsage() const {
     ZmTime cpuLast = m_cpuLast;
     ZmTime rtLast = m_rtLast;
@@ -182,7 +184,7 @@ public:
     return cpuDelta / rtDelta;
   }
 #else /* !_WIN32 */
-  ZuInline unsigned tid_() const { return m_tid; }
+  ZuInline unsigned tid() const { return m_tid; }
   ZuInline HANDLE handle() const { return m_handle; }
   ZuInline double cpuUsage() const {
     ULONG64 cpuLast = m_cpuLast;

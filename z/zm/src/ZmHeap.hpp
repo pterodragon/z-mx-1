@@ -34,9 +34,9 @@
 #include <ZuTuple.hpp>
 #include <ZuPrint.hpp>
 #include <ZuStringN.hpp>
-#include <ZuObject.hpp>
 
 #include <ZmPlatform.hpp>
+#include <ZmObject.hpp>
 #include <ZmBitmap.hpp>
 #include <ZmSingleton.hpp>
 #include <ZmSpecific.hpp>
@@ -291,7 +291,7 @@ struct ZmCleanup<ZmHeapCacheT<ID, Size> > {
 
 // TLS heap cache, specific to ID+size; maintains TLS heap statistics
 template <class ID, unsigned Size>
-class ZmHeapCacheT : public ZuObject {
+class ZmHeapCacheT : public ZmObject {
 friend struct ZmSpecificCtor<ZmHeapCacheT<ID, Size> >;
 template <class, unsigned> friend class ZmHeap; 
 

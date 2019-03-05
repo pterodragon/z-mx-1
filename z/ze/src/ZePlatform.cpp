@@ -133,7 +133,7 @@ struct ZePlatform_SyslogBuf;
 template <> struct ZmCleanup<ZePlatform_SyslogBuf> {
   enum { Level = ZmCleanupLevel::Platform };
 };
-struct ZePlatform_SyslogBuf : public ZuObject {
+struct ZePlatform_SyslogBuf : public ZmObject {
   ZuStringN<ZeLog_BUFSIZ>	s;
 };
 static ZePlatform_SyslogBuf *syslogBuf()

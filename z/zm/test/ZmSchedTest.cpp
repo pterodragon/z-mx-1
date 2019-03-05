@@ -30,7 +30,7 @@
 #include <ZmBackoff.hpp>
 #include <ZmTimeout.hpp>
 
-struct TLS : public ZuObject {
+struct TLS : public ZmObject {
   TLS() : m_ping(0) { }
   ~TLS() {
     printf("~TLS(%u) [%d]\n", m_ping, (int)ZmThreadContext::self()->id());
@@ -92,7 +92,7 @@ void usage()
     "\nOptions:\n"
     "    -n N\tset number of threads to N\n"
     "    -a AFFINITY\tset affinity (e.g. 1=2:3)\n"
-    "    -i ISOLATION\tset isolation (e.g. 1,3:4)\n"
+    "    -i BITMAP\tset isolation (e.g. 1,3:4)\n"
     , stderr);
   ZmPlatform::exit(1);
 }

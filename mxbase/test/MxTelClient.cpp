@@ -69,7 +69,7 @@ private:
 	  << ',' << ZuBoxed(data.partition)
 	  << ',' << ZuBoxed(data.sharded)
 	  << ',' << data.cacheSize
-	  << ',' << ZmBitmap(data.cpuset)
+	  << ",\"" << ZmBitmap(data.cpuset) << '"'
 	  << ',' << data.cacheAllocs
 	  << ',' << data.heapAllocs
 	  << ',' << data.frees
@@ -97,7 +97,7 @@ private:
 	  << ',' << data.id
 	  << ',' << data.tid
 	  << ',' << ZuBoxed(data.cpuUsage * 100.0).fmt(ZuFmt::FP<2>())
-	  << ',' << ZmBitmap(data.cpuset)
+	  << ",\"" << ZmBitmap(data.cpuset) << '"'
 	  << ',' << ZuBoxed(data.priority)
 	  << ',' << data.stackSize
 	  << ',' << ZuBoxed(data.partition)
@@ -112,7 +112,7 @@ private:
 	  << ',' << ZuBoxed(data.nThreads)
 	  << ',' << ZuBoxed(data.priority)
 	  << ',' << ZuBoxed(data.partition)
-	  << ',' << ZmBitmap(data.isolation)
+	  << ",\"" << ZmBitmap(data.isolation) << '"'
 	  << ',' << data.rxThread
 	  << ',' << data.txThread
 	  << ',' << data.stackSize

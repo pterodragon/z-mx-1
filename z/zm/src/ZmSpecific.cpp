@@ -21,6 +21,24 @@
 
 #include <ZmSpecific.hpp>
 
+// statically-initialized spinlock to guard initial singleton registration
+// and cleanup at exit; little if any contention is anticipated; access
+// intended to be exceptional, intermittent, almost exclusively during
+// application startup and shutdown
+static uint32_t ZmSpecific_lock_ = 0;
+ZmAPI void ZmSpecific_lock()
+{
+  ZmAtomic<uint32_t> *ZuMayAlias(lock) =
+    (ZmAtomic<uint32_t> *)&ZmSpecific_lock_;
+  while (ZuUnlikely(lock->cmpXch(1, 0))) ZmPlatform::yield();
+}
+ZmAPI void ZmSpecific_unlock()
+{
+  ZmAtomic<uint32_t> *ZuMayAlias(lock) =
+    (ZmAtomic<uint32_t> *)&ZmSpecific_lock_;
+  *lock = 0;
+}
+
 #ifdef _WIN32
 
 // Win32 voodoo to force TLS support in linked image
@@ -44,63 +62,57 @@ struct K {
 };
 
 // per-instance cleanup context
-struct C {
-  inline C(C *next, ZmSpecific_cleanup_Fn fn, void *ptr) :
-      m_next(next), m_fn(fn), m_ptr(ptr) { }
+using O = ZmSpecific_Object;
 
-  inline static K &key() {
+struct C {
+  inline static K &head_() {
     static K key_;
     return key_;
   }
-  inline static C *head() { return (C *)key().get(); }
-  inline static void head(C *c) { key().set(c); }
+  inline static K &tail_() {
+    static K key_;
+    return key_;
+  }
+  inline static O *head() { return (O *)head_().get(); }
+  inline static void head(O *o) { head_().set(o); }
+  inline static O *tail() { return (O *)tail_().get(); }
+  inline static void tail(O *o) { tail_().set(o); }
 
   static R		m_ref;
-
-  C			*m_next;
-  ZmSpecific_cleanup_Fn	m_fn;
-  void			*m_ptr;
 };
 
 R C::m_ref;	// TLS reference
 
 void ZmSpecific_cleanup()
 {
-  while (C *c = C::head()) {
-    C::head(0);
-    while (c) {
-      (*(c->m_fn))(c->m_ptr);
-      C *n = c->m_next;
-      delete c;
-      c = n;
-    }
+  for (;;) {
+    ZmSpecific_lock();
+    O *o = C::head(); // LIFO
+    if (!o) { ZmSpecific_unlock(); return; }
+    o->dtor(); // unlocks
   }
 }
 
-ZmAPI void ZmSpecific_cleanup_add(ZmSpecific_cleanup_Fn fn, void *ptr)
+ZmAPI void ZmSpecific_cleanup_add(O *o)
 {
-  C::head(new C(C::head(), fn, ptr));
+  o->modPrev = nullptr;
+  if (!(o->modNext = C::head()))
+    C::tail(o);
+  else
+    o->modNext->modPrev = o;
+  C::head(o);
 }
 
-ZmAPI void ZmSpecific_cleanup_del(void *ptr)
+ZmAPI void ZmSpecific_cleanup_del(O *o)
 {
-  C *c = C::head();
-  if (!c) return;
-  C *n = c->m_next;
-  if (c->m_ptr == ptr) {
-    C::head(n);
-    goto cleanup;
-  }
-  while (n) {
-    if (n->m_ptr == ptr) {
-      c->m_next = n->m_next, c = n;
-      goto cleanup;
-    }
-    c = n, n = c->m_next;
-  }
-  return;
-cleanup:
-  delete c;
+  if (!o->modPrev)
+    C::head(o->modNext);
+  else
+    o->modPrev->modNext = o->modNext;
+  if (!o->modNext)
+    C::tail(o->modPrev);
+  else
+    o->modNext->modPrev = o->modPrev;
 }
 
 extern "C" {

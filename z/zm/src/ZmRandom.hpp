@@ -78,8 +78,8 @@
 #endif
 
 #include <ZuInt.hpp>
-#include <ZuObject.hpp>
 
+#include <ZmObject.hpp>
 #include <ZmTime.hpp>
 
 class ZmAPI ZmRandom {
@@ -274,7 +274,7 @@ protected:
 
 template <typename, bool> struct ZmSpecificCtor;
 
-class ZmAPI ZmRand : public ZuObject, public ZmRandom {
+class ZmAPI ZmRand : public ZmObject, public ZmRandom {
   ZmRand(const ZmRand &) = delete;
   ZmRand &operator =(const ZmRand &) = delete;
 

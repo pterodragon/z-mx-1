@@ -32,6 +32,7 @@
 
 #include <ZmPlatform.hpp>
 #include <ZmTime.hpp>
+#include <ZmObject.hpp>
 #include <ZmPLock.hpp>
 
 #ifdef _MSC_VER
@@ -76,7 +77,7 @@ static int ZmCondition_timedwait_(ZmCondition_ &, ZmPLock_ &, const ZmTime &);
 static void ZmCondition_signal_(ZmCondition_ &);
 static void ZmCondition_broadcast_(ZmCondition_ &);
 
-class ZmCondition_Thread : public ZuObject {
+class ZmCondition_Thread : public ZmObject {
 friend struct ZmSpecificCtor<ZmCondition_Thread>;
 template <typename> friend class ZmCondition;
 friend void ZmCondition_wait_(ZmCondition_ &, ZmPLock_ &);

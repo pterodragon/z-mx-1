@@ -163,15 +163,17 @@ class ZmAPI ZmThreadContext_ {
   friend ZmAPI unsigned __stdcall ZmThread_start(void *);
 #endif
 protected:
-  ZmThreadContext_() { m_rtLast.now(); }
+  ZmThreadContext_() { }
 
 public:
 #ifndef _WIN32
   ZuInline pthread_t pthread() const { return m_pthread; }
 #ifdef linux
-  ZuInline pid_t tid_() const { return m_tid; }
+  ZuInline pid_t tid() const { return m_tid; }
+#else
+  ZuInline pthread_t tid() const { return m_pthread; }
 #endif
-  ZuInline clockid_t cid_() const { return m_cid; }
+  ZuInline clockid_t cid() const { return m_cid; }
   ZuInline double cpuUsage() const {
     ZmTime cpuLast = m_cpuLast;
     ZmTime rtLast = m_rtLast;
@@ -182,17 +184,14 @@ public:
     return cpuDelta / rtDelta;
   }
 #else /* !_WIN32 */
-  ZuInline unsigned tid_() const { return m_tid; }
+  ZuInline unsigned tid() const { return m_tid; }
   ZuInline HANDLE handle() const { return m_handle; }
   ZuInline double cpuUsage() const {
     ULONG64 cpuLast = m_cpuLast;
-    ZmTime rtLast = m_rtLast;
+    ULONG64 rtLast = m_rtLast;
     QueryThreadCycleTime(m_handle, &m_cpuLast);
-    m_rtLast.now();
-    double cpuDelta =
-      ((double)(m_cpuLast - cpuLast) / (double)ZmTime::cpuFreq());
-    double rtDelta = (m_rtLast - rtLast).dtime();
-    return cpuDelta / rtDelta;
+    m_rtLast = __rdtsc();
+    return (double)(m_cpuLast - cpuLast) / (double)(m_rtLast - rtLast);
   }
 #endif /* !_WIN32 */
 
@@ -206,12 +205,13 @@ protected:
 #endif
   clockid_t		m_cid = 0;
   mutable ZmTime	m_cpuLast;
+  mutable ZmTime	m_rtLast;
 #else /* !_WIN32 */
   unsigned		m_tid = 0;
   HANDLE		m_handle = 0;
   mutable ULONG64	m_cpuLast = 0;
+  mutable ULONG64	m_rtLast = 0;
 #endif /* !_WIN32 */
-  mutable ZmTime	m_rtLast;
 };
 
 template <> struct ZmCleanup<ZmThreadContext> {
@@ -220,7 +220,7 @@ template <> struct ZmCleanup<ZmThreadContext> {
 
 template <typename, bool> struct ZmSpecificCtor;
 
-class ZmAPI ZmThreadContext : public ZuObject, public ZmThreadContext_ {
+class ZmAPI ZmThreadContext : public ZmObject, public ZmThreadContext_ {
   friend struct ZmSpecificCtor<ZmThreadContext, true>;
 #ifndef _WIN32
   friend ZmAPI void *ZmThread_start(void *);
@@ -395,20 +395,15 @@ public:
 	"stackSize,partition,main,detached\n";
     }
     void print(const ZmThreadContext *tc) {
-      static ZmTime start(ZmTime::Now);
       ZmThreadTelemetry data;
       static ZmPLock lock;
       ZmGuard<ZmPLock> guard(lock);
-      thread_local ZmTime time;
-      if (!time) time = start;
-      ZmTime last = time;
-      time.now();
       tc->telemetry(data);
       m_stream << data.name
 	<< ',' << data.id
 	<< ',' << data.tid
 	<< ',' << ZuBoxed(data.cpuUsage * 100.0).fmt(ZuFmt::FP<2>())
-	<< ',' << ZmBitmap(data.cpuset)
+	<< ",\"" << ZmBitmap(data.cpuset) << '"'
 	<< ',' << ZuBoxed(data.priority)
 	<< ',' << data.stackSize
 	<< ',' << ZuBoxed(data.partition)

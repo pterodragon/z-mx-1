@@ -95,7 +95,7 @@ void semWait(ZmSemaphore *sema) {
   for (i = 0; i < 10; i++) sema->wait();
 }
 
-struct S : public ZuObject {
+struct S : public ZmObject {
   S() { m_i = 0; }
 
   inline void foo() { m_i++; }

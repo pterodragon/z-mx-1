@@ -54,7 +54,7 @@
 #include <alloca.h>
 #endif
 
-#include <stdio.h>
+#include <stdlib.h>
 
 #include <ZuCmp.hpp>
 #include <ZuConversion.hpp>
@@ -68,20 +68,190 @@
 #include <ZmCleanup.hpp>
 #include <ZmGlobal.hpp>
 #include <ZmStack_.hpp>
-#include <ZmPLock.hpp>
+
+class ZmSpecific_;
+struct ZmSpecific_Object;
+
+extern "C" {
+  ZmExtern void ZmSpecific_lock();
+  ZmExtern void ZmSpecific_unlock();
+#ifdef _WIN32
+  ZmExtern void ZmSpecific_cleanup();
+  ZmExtern void ZmSpecific_cleanup_add(ZmSpecific_Object *);
+  ZmExtern void ZmSpecific_cleanup_del(ZmSpecific_Object *);
+#endif
+}
+
+struct ZmAPI ZmSpecific_Object {
+  typedef void (*DtorFn)(ZmSpecific_Object *);
+
+  inline ZmSpecific_Object() { }
+  inline ~ZmSpecific_Object() {
+    ZmSpecific_lock();
+    dtor();
+  }
+
+  inline void dtor() {
+    if (ZuLikely(dtorFn))
+      (*dtorFn)(this);
+    else
+      ZmSpecific_unlock();
+  }
+
+  DtorFn		dtorFn = nullptr;
+  ZmObject		*ptr = nullptr;
+  ZmSpecific_Object	*prev = nullptr;
+  ZmSpecific_Object	*next = nullptr;
+#ifdef _WIN32
+  ZmPlatform::ThreadID	tid = 0;
+  ZmSpecific_Object	*modPrev = nullptr;
+  ZmSpecific_Object	*modNext = nullptr;
+#endif
+};
+
+class ZmAPI ZmSpecific_ {
+  using Object = ZmSpecific_Object;
+
+public:
+  ZmSpecific_() { }
+  ~ZmSpecific_() {
+    for (;;) {
+      ZmSpecific_lock();
+      Object *o = m_head; // LIFO
+      if (!o) { ZmSpecific_unlock(); return; }
+      o->dtor(); // unlocks
+    }
+  }
+
+  void add(Object *o) {
+    o->prev = nullptr;
+    if (!(o->next = m_head))
+      m_tail = o;
+    else
+      m_head->prev = o;
+    m_head = o;
+#ifdef _WIN32
+    ZmSpecific_cleanup_add(o);
+#endif
+    ++m_count;
+  }
+  void del(Object *o) {
+    if (!o->prev)
+      m_head = o->next;
+    else
+      o->prev->next = o->next;
+    if (!o->next)
+      m_tail = o->prev;
+    else
+      o->next->prev = o->prev;
+#ifdef _WIN32
+    ZmSpecific_cleanup_del(o);
+#endif
+    --m_count;
+  }
 
 #ifdef _WIN32
-extern "C" {
-  typedef void (*ZmSpecific_cleanup_Fn)(void *);
-  ZmExtern void ZmSpecific_cleanup();
-  ZmExtern void ZmSpecific_cleanup_add(ZmSpecific_cleanup_Fn fn, void *ptr);
-  ZmExtern void ZmSpecific_cleanup_del(void *ptr);
-}
+  template <typename T>
+  void set(ZmPlatform::ThreadID tid, T *ptr) {
+  retry:
+    for (Object *o = m_head; o; o = o->next)
+      if (o->tid == tid)
+	if (o->ptr != static_cast<ZmObject *>(ptr)) {
+	  if (o->ptr) {
+	    o->dtor(); // unlocks
+	    ZmSpecific_lock();
+	    goto retry;
+	  }
+	  o->ptr = ptr;
+	  ZmREF(ptr);
+	}
+  }
+  ZmObject *get(ZmPlatform::ThreadID tid) {
+    for (Object *o = m_head; o; o = o->next)
+      if (o->tid == tid && o->ptr) {
+	return o->ptr;
+      }
+    return nullptr;
+  }
 #endif
 
-// can be specialized to override initial/increment sizes for objects container
-template <class T> struct ZmSpecificTraits {
-  enum { Initial = 32, Increment = 32 };
+  template <typename T>
+  inline void all_(ZmFn<T *> fn) {
+    all_2(&fn);
+  }
+
+  template <typename T>
+  void all_2(ZmFn<T *> *fn) {
+    ZmSpecific_lock();
+
+    if (ZuUnlikely(!m_count)) { ZmSpecific_unlock(); return; }
+
+    Object **objects = 0;
+#ifdef __GNUC__
+    objects = (Object **)alloca(sizeof(Object *) * m_count);
+#endif
+#ifdef _MSC_VER
+    __try {
+      objects = (Object **)_alloca(sizeof(Object *) * m_count);
+    } __except(GetExceptionCode() == STATUS_STACK_OVERFLOW) {
+      _resetstkoflw();
+      objects = 0;
+    }
+#endif
+
+    if (ZuUnlikely(!objects)) { ZmSpecific_unlock(); return; }
+
+    memset(objects, 0, sizeof(Object *) * m_count);
+    all_3(objects, fn);
+  }
+
+  template <typename T>
+  void all_3(Object **objects, ZmFn<T *> *fn) {
+    unsigned j = 0, n = m_count;
+
+    for (Object *o = m_head; j < n && o; ++j, o = o->next)
+      if (!o->ptr)
+	objects[j] = nullptr;
+      else
+	objects[j] = o;
+
+#ifdef _WIN32
+    qsort(objects, n, sizeof(Object *),
+	[](const void *o1, const void *o2) -> int {
+	  return ZuCmp<ZmPlatform::ThreadID>::cmp(
+	      (*(Object **)o1)->tid, (*(Object **)o2)->tid);
+	});
+    {
+      ZmPlatform::ThreadID lastTID = 0;
+      for (j = 0; j < n; j++)
+	if (Object *o = objects[j])
+	  if (o->tid == lastTID)
+	    objects[j] = nullptr;
+	  else
+	    lastTID = o->tid;
+    }
+#endif
+
+    for (j = 0; j < n; j++)
+      if (Object *o = objects[j])
+	if (T *ptr = static_cast<T *>(o->ptr))
+	  ZmREF(ptr);
+
+    ZmSpecific_unlock();
+
+    for (j = 0; j < n; j++)
+      if (Object *o = objects[j])
+	if (T *ptr = static_cast<T *>(o->ptr)) {
+	  (*fn)(ptr);
+	  ZmDEREF(ptr);
+	}
+  }
+
+
+private:
+  unsigned	m_count = 0;
+  Object	*m_head = nullptr;
+  Object	*m_tail = nullptr;
 };
 
 template <typename T, bool Construct = true> struct ZmSpecificCtor {
@@ -92,7 +262,7 @@ template <typename T> struct ZmSpecificCtor<T, false> {
 };
 template <class T_, bool Construct_ = true,
   auto CtorFn = ZmSpecificCtor<T_, Construct_>::fn>
-class ZmSpecific : public ZmGlobal {
+class ZmSpecific : public ZmGlobal, public ZmSpecific_ {
   ZmSpecific(const ZmSpecific &);
   ZmSpecific &operator =(const ZmSpecific &);	// prevent mis-use
 
@@ -100,8 +270,6 @@ public:
   typedef T_ T;
 
 private:
-  typedef ZmStack<T *, ZmStackLock<ZmPLock> > Stack;
-
   ZuCan(final, CanFinal);
   template <typename U> inline static typename
     ZuIfT<CanFinal<ZmCleanup<U>, void (*)(U *)>::OK, void>::T
@@ -110,121 +278,107 @@ private:
     ZuIfT<!CanFinal<ZmCleanup<U>, void (*)(U *)>::OK, void>::T
       final(U *u) { }
 
-  typedef ZmSpecificTraits<T> Traits;
+  typedef ZmSpecific_Object Object;
 
 public:
-  inline ZmSpecific() : m_objects(ZmStackParams().
-      initial(Traits::Initial).increment(Traits::Increment)) { }
-  inline ~ZmSpecific() {
-    while (T *ptr = m_objects.pop()) {
-      final(ptr); // calls ZmCleanup<T>::final() if it exists
+  ZmSpecific() { }
+  ~ZmSpecific() { }
+
+private:
+  using ZmSpecific_::add;
+  using ZmSpecific_::del;
+#ifdef _WIN32
+  using ZmSpecific_::set;
+  using ZmSpecific_::get;
+#endif
+
+  static Object *local_() {
+    thread_local Object o;
+    return &o;
+  }
+
+  void dtor_(Object *o) {
+    T *ptr;
+    if (ptr = static_cast<T *>(o->ptr)) {
+      this->del(o);
+      o->ptr = nullptr;
+    }
+    ZmSpecific_unlock();
+    if (ptr) {
+      final(ptr); // calls ZmCleanup<T>::final() if available
       ZmDEREF(ptr);
     }
   }
 
-private:
-  using Ptr = T *;
+  static void dtor__(Object *o) { global()->dtor_(o); }
 
-  template <typename T> struct Ref {
-    ~Ref() {
-      if (ZuLikely(ptr)) {
-	ZmSpecific<T>::global()->cleanup___(ptr);
-	ptr = nullptr;
-      }
+  inline T *create_() {
+#ifdef _WIN32
+    T *ptr = nullptr;
+    Object *o = local_();
+    ZmSpecific_lock();
+    if (!o->ptr) {
+      o->dtorFn = dtor__;
+      o->tid = ZmPlatform::getTID_();
     }
-    Ptr ptr = 0;
-  };
-
-  ZuInline static Ptr &local_() {
-    thread_local Ref<T> ref;
-    return ref.ptr;
-  }
-
-  inline T *create_() { return add__(CtorFn()); }
-  template <typename Factory>
-  inline T *create_(Factory &&factory) {
-    return add__(ZuFwd<Factory>(factory)());
+  retry:
+    if (o->ptr = get(o->tid = ZmPlatform::getTID_())) {
+      T *ptr_ = static_cast<T *>(o->ptr);
+      add(o);
+      ZmREF(ptr_);
+      ZmSpecific_unlock();
+      if (ptr) delete ptr;
+      return ptr_;
+    }
+    if (!ptr) {
+      ZmSpecific_unlock();
+      ptr = CtorFn();
+      ZmSpecific_lock();
+      goto retry;
+    }
+    o->ptr = ptr;
+    add(o);
+    ZmREF(ptr);
+    ZmSpecific_unlock();
+    return ptr;
+#else
+    T *ptr = CtorFn();
+    Object *o = local_();
+    ZmSpecific_lock();
+    o->dtorFn = dtor__;
+    o->ptr = ptr;
+    add(o);
+    ZmREF(ptr);
+    ZmSpecific_unlock();
+    return ptr;
+#endif
   }
 
   inline T *instance_(T *ptr) {
-    if (T *old = local_()) {
+    Object *o = local_();
+    ZmSpecific_lock();
+    if (!o->ptr) {
+      o->dtorFn = dtor__;
 #ifdef _WIN32
-      ZmSpecific_cleanup_del((void *)old);
+      o->tid = ZmPlatform::getTID_();
 #endif
-      cleanup__(old);
     }
-    return add__(ptr);
-  }
-
-  inline T *add__(T *ptr) {
-    ZmREF(ptr);
-    Ptr &local = local_();
-    local = ptr;
-    m_objects.push(ptr);
+  retry:
+    if (!o->ptr) {
+      o->ptr = ptr;
+      add(o);
+      ZmREF(ptr);
+    } else {
+      dtor_(o); // unlocks
+      ZmSpecific_lock();
+      goto retry;
+    }
 #ifdef _WIN32
-    ZmSpecific_cleanup_add(&ZmSpecific<T>::cleanup_, (void *)ptr);
+    set(o->tid, ptr);
 #endif
+    ZmSpecific_unlock();
     return ptr;
   }
-
-  static void cleanup_(void *t_) { global()->cleanup__((T *)t_); }
-
-  inline void cleanup__(T *ptr) {
-    if (ZuUnlikely(!ptr)) return;
-    cleanup___(ptr);
-    local_() = nullptr;
-  }
-
-  inline void cleanup___(T *ptr) {
-    m_objects.del(ptr);
-    final(ptr); // calls ZmCleanup<T>::final() if available
-    ZmDEREF(ptr);
-  }
-
-  inline void all_(ZmFn<T *> fn) {
-    all_2(&fn);
-  }
-
-  void all_2(ZmFn<T *> *fn) {
-    unsigned n = m_objects.count();
-
-    if (ZuUnlikely(!n)) return;
-
-    T **objects = 0;
-#ifdef __GNUC__
-    objects = (T **)alloca(sizeof(T *) * n);
-#endif
-#ifdef _MSC_VER
-    __try {
-      objects = (T **)_alloca(sizeof(T *) * n);
-    } __except(GetExceptionCode() == STATUS_STACK_OVERFLOW) {
-      _resetstkoflw();
-      objects = 0;
-    }
-#endif
-
-    if (ZuUnlikely(!objects)) return;
-
-    memset(objects, 0, sizeof(T *) * n);
-    all_3(objects, n, fn);
-  }
-
-  void all_3(T **objects, unsigned n, ZmFn<T *> *fn) {
-    {
-      typename Stack::Iterator i(m_objects);
-      for (unsigned j = 0; j < n; j++)
-	if (ZuLikely(objects[j] = i.iterate()))
-	  ZmREF(objects[j]);
-    }
-
-    for (unsigned j = 0; j < n; j++)
-      if (ZuLikely(objects[j])) {
-	(*fn)(objects[j]);
-	ZmDEREF(objects[j]);
-      }
-  }
-
-  Stack		m_objects;
 
   ZuInline static ZmSpecific *global() {
     return ZmGlobal::global<ZmSpecific>();
@@ -236,11 +390,13 @@ public:
     return global()->create_();
   }
   template <bool Construct = Construct_>
-  ZuInline static typename ZuIfT<!Construct, T *>::T create() { return 0; }
+  ZuInline static typename ZuIfT<!Construct, T *>::T create() {
+    return nullptr;
+  }
   ZuInline static T *instance() {
-    T *ptr;
-    if (ZuLikely(ptr = local_())) return ptr;
-    return create<>();
+    ZmObject *ptr;
+    if (ZuLikely(ptr = local_()->ptr)) return static_cast<T *>(ptr);
+    return create();
   }
   inline static T *instance(T *ptr) {
     return global()->instance_(ptr);

@@ -19,11 +19,22 @@
 
 // platform primitives
 
+#ifdef linux
+#include <syscall.h>
+#endif
+
 #include <ZmPlatform.hpp>
 #include <ZmThread.hpp>
 
 ZmPlatform::ThreadID ZmPlatform::getTID_()
 {
-  return ZmThreadContext::self()->tid();
+#ifndef _WIN32
+#ifdef linux
+  return syscall(SYS_gettid);
+#else
+  return pthread_self();
+#endif
+#else
+  return GetCurrentThreadId();
+#endif
 }
-

@@ -28,7 +28,7 @@
 #include <ZuHash.hpp>
 
 #include <ZmRef.hpp>
-#include <ZmPolymorph.hpp>
+#include <ZmObject.hpp>
 #include <ZmHash.hpp>
 #include <ZmList.hpp>
 #include <ZmTime.hpp>
@@ -39,9 +39,10 @@
 
 #define CHECK(x) ((x) ? puts("OK  " #x) : puts("NOK " #x))
 
-struct X : public ZmPolymorph {
-  virtual void helloWorld();
+struct X : public ZmObject {
   inline X() : x(0) { }
+  virtual ~X() { }
+  virtual void helloWorld();
   inline void inc() { ++x; }
   unsigned x;
 };

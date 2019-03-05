@@ -76,8 +76,8 @@ void ZmTopology::error(int errNo)
 }
 
 #ifdef _WIN32
-struct HandleCloser {
-  ~HandleCloser() { CloseHandle(h); }
+struct HandleCloser : public ZmObject {
+  ~HandleCloser() { if (h) CloseHandle(h); }
   HANDLE h = 0;
 };
 #endif
@@ -88,8 +88,9 @@ void ZmThreadContext_::init()
   m_pthread = pthread_self();
 #ifdef linux
   m_tid = syscall(SYS_gettid);
-  pthread_getcpuclockid(m_pthread, &m_cid);
 #endif
+  pthread_getcpuclockid(m_pthread, &m_cid);
+  m_rtLast.now();
 #else /* !_WIN32 */
   m_tid = GetCurrentThreadId();
   DuplicateHandle(
@@ -100,8 +101,8 @@ void ZmThreadContext_::init()
     0,
     FALSE,
     DUPLICATE_SAME_ACCESS);
-  thread_local HandleCloser handleCloser;
-  handleCloser.h = m_handle;
+  ZmSpecific<HandleCloser>::instance()->h = m_handle;
+  m_rtLast = __rdtsc();
 #endif /* !_WIN32 */
 }
 

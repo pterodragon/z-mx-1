@@ -145,7 +145,7 @@ struct ZeLog_Buf;
 template <> struct ZmCleanup<ZeLog_Buf> {
   enum { Level = ZmCleanupLevel::Platform };
 };
-struct ZeLog_Buf : public ZuObject {
+struct ZeLog_Buf : public ZmObject {
   inline ZeLog_Buf() { dateFmt.pad(' '); }
 
   ZuStringN<ZeLog_BUFSIZ>	s;

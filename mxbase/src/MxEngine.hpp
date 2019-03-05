@@ -687,6 +687,9 @@ public:
   const MxQueue *txQueue() const { return MxQueueTx<Impl>::txQueue(); }
   MxQueue *txQueue() { return MxQueueTx<Impl>::txQueue(); }
 
+  using MxAnyLink::rxSeqNo;
+  using MxAnyLink::txSeqNo;
+
   template <typename L, typename ...Args>
   ZuInline void rxRun(L &&l, Args &&... args)
     { this->engine()->rxRun(ZmFn<>{rx(), ZuFwd<L>(l)}, ZuFwd<Args>(args)...); }

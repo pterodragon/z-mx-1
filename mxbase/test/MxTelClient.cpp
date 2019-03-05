@@ -58,7 +58,6 @@ private:
 
     switch ((int)msg->hdr().type) {
       default:
-	std::cout << '\n' << std::flush;
 	break;
       case Type::Heap: {
 	const auto &data = msg->as<Heap>();

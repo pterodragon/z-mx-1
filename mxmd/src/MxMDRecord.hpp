@@ -57,7 +57,7 @@ public:
   void init(MxMDCore *core, ZvCf *cf);
   void final();
 
-  ZuInline int snapThread() const { return m_snapThread; }
+  ZuInline unsigned snapThread() const { return m_snapThread; }
 
   bool record(ZtString path);
   ZtString stopRecording();

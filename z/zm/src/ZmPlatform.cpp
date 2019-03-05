@@ -19,6 +19,10 @@
 
 // platform primitives
 
+#ifdef linux
+#include <syscall.h>
+#endif
+
 #include <ZmPlatform.hpp>
 #include <ZmThread.hpp>
 

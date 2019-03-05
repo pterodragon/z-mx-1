@@ -70,7 +70,7 @@
 #include <ZmStack_.hpp>
 
 class ZmSpecific_;
-class ZmSpecific_Object;
+struct ZmSpecific_Object;
 
 extern "C" {
   ZmExtern void ZmSpecific_lock();
@@ -287,8 +287,10 @@ public:
 private:
   using ZmSpecific_::add;
   using ZmSpecific_::del;
+#ifdef _WIN32
   using ZmSpecific_::set;
   using ZmSpecific_::get;
+#endif
 
   static Object *local_() {
     thread_local Object o;

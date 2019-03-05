@@ -111,17 +111,10 @@ SOURCES += \
 # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Readme
-# 1. Compile the base dirs
-# 2. set PATHS part correctly according
-# 3. configure "qmake TelMon.pro"
-# 4. build "make"
-# 5. do 'export LD_LIBRARY_PATH=/home/aristo/projects/binfinity/qt_library_link/lib'
-# 6. './Telmon'
-#
 # memory checks - used Qt Create Memcheck tools
 
 # # # # # PATHS - BEGIN # # # # #
-UNIX_Z_PATH = /home/aristo/projects/binfinity/qt_library_link
+UNIX_Z_PATH = $${PWD}/build_directory
 
 UNIX_Z_LIBRARY_PATH = $${UNIX_Z_PATH}/lib
 UNIX_Z_INCLUDE_PATH = $${UNIX_Z_PATH}/include

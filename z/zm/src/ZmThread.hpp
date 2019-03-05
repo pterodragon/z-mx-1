@@ -403,7 +403,7 @@ public:
 	<< ',' << data.id
 	<< ',' << data.tid
 	<< ',' << ZuBoxed(data.cpuUsage * 100.0).fmt(ZuFmt::FP<2>())
-	<< ',' << ZmBitmap(data.cpuset)
+	<< ",\"" << ZmBitmap(data.cpuset) << '"'
 	<< ',' << ZuBoxed(data.priority)
 	<< ',' << data.stackSize
 	<< ',' << ZuBoxed(data.partition)

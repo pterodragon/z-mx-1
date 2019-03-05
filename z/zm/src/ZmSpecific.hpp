@@ -24,14 +24,20 @@
 // * instance consolidation
 
 // ZmSpecific should be used in preference to thread_local where any of the
-// following problems present a risk:
-// * interdependence of thread-local instances where one requires another
-//   to be reliably created before it, and destroyed after it
+// following problems could arise:
+// * interdependence of thread-local instances where one type requires
+//   another to be reliably created before it and/or destroyed after it
 //   (destruction timing is not explictly controllable using thread_local)
 // * need to iterate over all thread-local instances from other threads
 //   for statistics gathering, telemetry or other purposes
 // * on Windows, DLLs do not share TLS, resulting in multiple conflicting
-//   instances of the same object within the same thread
+//   instances of the same type within the same thread
+
+// performance - normal run-time ZmSpecific::instance() calls are lock-free
+// and equivalent to thread_local with one additional pointer dereference;
+// object construction/destruction involves global lock acquisition and
+// updates to a type-specific linked list (for iteration), and a
+// module-specific linked list (for cleanup on Win32 only)
 
 // ZmSpecific<T>::instance() returns T * pointer
 //

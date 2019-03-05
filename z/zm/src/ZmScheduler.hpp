@@ -283,7 +283,7 @@ public:
     m_names[tid - 1] = ZuFwd<S>(s);
   }
   template <typename S> inline unsigned tid(const S &s) {
-    if (unsigned tid = ZuBox<unsigned>(s))
+    if (unsigned tid = ZuBox0(unsigned)(s))
       return tid;
     for (unsigned tid = 0, n = m_nThreads; tid < n; tid++)
       if (s == m_names[tid]) return tid + 1;
@@ -487,7 +487,7 @@ public:
     m_names[tid - 1] = ZuFwd<S>(s);
   }
   template <typename S> inline unsigned tid(const S &s) {
-    if (unsigned tid = ZuBox<unsigned>(s))
+    if (unsigned tid = ZuBox0(unsigned)(s))
       return tid;
     for (unsigned tid = 0, n = m_nThreads; tid < n; tid++)
       if (s == m_names[tid]) return tid + 1;

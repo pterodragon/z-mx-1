@@ -20,6 +20,18 @@
 // TLS with
 // * deterministic destruction sequencing
 // * iteration over all instances
+//   (the iterating thread gains access to other threads' instances)
+// * instance consolidation
+
+// ZmSpecific should be used in preference to thread_local where any of the
+// following problems present a risk:
+// * interdependence of thread-local instances where one requires another
+//   to be reliably created before it, and destroyed after it
+//   (destruction timing is not explictly controllable using thread_local)
+// * need to iterate over all thread-local instances from other threads
+//   for statistics gathering, telemetry or other purposes
+// * on Windows, DLLs do not share TLS, resulting in multiple conflicting
+//   instances of the same object within the same thread
 
 // ZmSpecific<T>::instance() returns T * pointer
 //

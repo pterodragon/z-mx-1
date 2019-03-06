@@ -141,31 +141,31 @@ void usage()
     "  --heartbeatTimeout=N\t\t- heartbeat timeout in seconds\n"
     "  --reconnectFreq=N\t\t- reconnect frequency in seconds\n"
     "  --electionTimeout=N\t\t- election timeout in seconds\n"
-    "  --dbs:0:cache:bits=N\t\t- bits for cache\n"
-    "  --dbs:0:cache:loadFactor=N\t- load factor for cache\n"
-    "  --dbs:0:fileHash:bits=N\t- bits for file hash table\n"
-    "  --dbs:0:fileHash:loadFactor=N - load factor for file hash table\n"
-    "  --dbs:0:fileHash:cBits=N\t- concurrency bits for file hash table\n"
-    "  --dbs:0:indexHash:bits=N\t- bits for index hash table\n"
-    "  --dbs:0:indexHash:loadFactor=N - load factor for index hash table\n"
-    "  --dbs:0:indexHash:cBits=N\t- concurrency bits for index hash table\n"
-    "  --dbs:0:lockHash:bits=N\t- bits for lock hash table\n"
-    "  --dbs:0:lockHash:loadFactor=N\t- load factor for lock hash table\n"
-    "  --hosts:0:priority=N\t\t- host 0 priority\n"
-    "  --hosts:0:IP=N\t\t- host 0 IP\n"
-    "  --hosts:0:port=N\t\t- host 0 port\n"
-    "  --hosts:0:up=CMD\t\t- host 0 up command\n"
-    "  --hosts:0:down=CMD\t\t- host 0 down command\n"
-    "  --hosts:1:priority=N\t\t- host 1 priority\n"
-    "  --hosts:1:IP=N\t\t- host 1 IP\n"
-    "  --hosts:1:port=N\t\t- host 1 port\n"
-    "  --hosts:1:up=CMD\t\t- host 1 up command\n"
-    "  --hosts:1:down=CMD\t\t- host 1 down command\n"
-    "  --hosts:2:priority=N\t\t- host 2 priority\n"
-    "  --hosts:2:IP=N\t\t- host 2 IP\n"
-    "  --hosts:2:port=N\t\t- host 2 port\n"
-    "  --hosts:2:up=CMD\t\t- host 2 up command\n"
-    "  --hosts:2:down=CMD\t\t- host 2 down command\n"
+    "  --orders:cache:bits=N\t\t- bits for cache\n"
+    "  --orders:cache:loadFactor=N\t- load factor for cache\n"
+    "  --orders:fileHash:bits=N\t- bits for file hash table\n"
+    "  --orders:fileHash:loadFactor=N - load factor for file hash table\n"
+    "  --orders:fileHash:cBits=N\t- concurrency bits for file hash table\n"
+    "  --orders:indexHash:bits=N\t- bits for index hash table\n"
+    "  --orders:indexHash:loadFactor=N - load factor for index hash table\n"
+    "  --orders:indexHash:cBits=N\t- concurrency bits for index hash table\n"
+    "  --orders:lockHash:bits=N\t- bits for lock hash table\n"
+    "  --orders:lockHash:loadFactor=N\t- load factor for lock hash table\n"
+    "  --hosts:1:priority=N\t\t- host 0 priority\n"
+    "  --hosts:1:IP=N\t\t- host 0 IP\n"
+    "  --hosts:1:port=N\t\t- host 0 port\n"
+    "  --hosts:1:up=CMD\t\t- host 0 up command\n"
+    "  --hosts:1:down=CMD\t\t- host 0 down command\n"
+    "  --hosts:2:priority=N\t\t- host 1 priority\n"
+    "  --hosts:2:IP=N\t\t- host 1 IP\n"
+    "  --hosts:2:port=N\t\t- host 1 port\n"
+    "  --hosts:2:up=CMD\t\t- host 1 up command\n"
+    "  --hosts:2:down=CMD\t\t- host 1 down command\n"
+    "  --hosts:3:priority=N\t\t- host 2 priority\n"
+    "  --hosts:3:IP=N\t\t- host 2 IP\n"
+    "  --hosts:3:port=N\t\t- host 2 port\n"
+    "  --hosts:3:up=CMD\t\t- host 2 up command\n"
+    "  --hosts:3:down=CMD\t\t- host 2 down command\n"
     "  --cxnHash:bits=N\t\t- bits for cxn hash table\n"
     "  --cxnHash:loadFactor=N\t- load factor for cxn hash table\n"
     "  --cxnHash:cBits=N\t\t- concurrency bits for cxn hash table\n";
@@ -179,33 +179,28 @@ int main(int argc, char **argv)
   static ZvOpt opts[] = {
     { "del", "D", ZvOptScalar },
     { "append", "a", ZvOptScalar },
-    { "dbs:0:fileSize", "s", ZvOptScalar, "4096" },
-    { "dbs:0:path", "f", ZvOptScalar, "orders" },
-    { "dbs:0:preAlloc", "p", ZvOptScalar, "1" },
-    { "dbs:0:cache:bits", 0, ZvOptScalar, "8" },
-    { "dbs:0:cache:loadFactor", 0, ZvOptScalar, "1.0" },
-    { "dbs:0:fileHash:bits", 0, ZvOptScalar, "8" },
-    { "dbs:0:fileHash:loadFactor", 0, ZvOptScalar, "1.0" },
-    { "dbs:0:fileHash:cBits", 0, ZvOptScalar, "5" },
-    { "dbs:0:indexHash:bits", 0, ZvOptScalar, "8" },
-    { "dbs:0:indexHash:loadFactor", 0, ZvOptScalar, "1.0" },
-    { "dbs:0:indexHash:cBits", 0, ZvOptScalar, "5" },
-    { "dbs:0:lockHash:bits", 0, ZvOptScalar, "8" },
-    { "dbs:0:lockHash:loadFactor", 0, ZvOptScalar, "1.0" },
+    { "orders:fileSize", "s", ZvOptScalar, "4096" },
+    { "orders:path", "f", ZvOptScalar, "orders" },
+    { "orders:preAlloc", "p", ZvOptScalar, "1" },
+    { "orders:cache:bits", 0, ZvOptScalar, "8" },
+    { "orders:cache:loadFactor", 0, ZvOptScalar, "1.0" },
+    { "orders:fileHash:bits", 0, ZvOptScalar, "8" },
+    { "orders:fileHash:loadFactor", 0, ZvOptScalar, "1.0" },
+    { "orders:fileHash:cBits", 0, ZvOptScalar, "5" },
+    { "orders:indexHash:bits", 0, ZvOptScalar, "8" },
+    { "orders:indexHash:loadFactor", 0, ZvOptScalar, "1.0" },
+    { "orders:indexHash:cBits", 0, ZvOptScalar, "5" },
+    { "orders:lockHash:bits", 0, ZvOptScalar, "8" },
+    { "orders:lockHash:loadFactor", 0, ZvOptScalar, "1.0" },
     { "cxnHash:bits", 0, ZvOptScalar, "5" },
     { "cxnHash:loadFactor", 0, ZvOptScalar, "1.0" },
     { "cxnHash:cBits", 0, ZvOptScalar, "5" },
     { "hostID", "h", ZvOptScalar, "0" },
     { "hashOut", "H", ZvOptScalar },
     { "debug", "d", ZvOptFlag },
-    { "hosts:0:priority", 0, ZvOptScalar, "100" },
-    { "hosts:0:IP", 0, ZvOptScalar, "127.0.0.1" },
-    { "hosts:0:port", 0, ZvOptScalar, "9943" },
-    { "hosts:0:up", 0, ZvOptScalar },
-    { "hosts:0:down", 0, ZvOptScalar },
-    { "hosts:1:priority", 0, ZvOptScalar },
-    { "hosts:1:IP", 0, ZvOptScalar },
-    { "hosts:1:port", 0, ZvOptScalar },
+    { "hosts:1:priority", 0, ZvOptScalar, "100" },
+    { "hosts:1:IP", 0, ZvOptScalar, "127.0.0.1" },
+    { "hosts:1:port", 0, ZvOptScalar, "9943" },
     { "hosts:1:up", 0, ZvOptScalar },
     { "hosts:1:down", 0, ZvOptScalar },
     { "hosts:2:priority", 0, ZvOptScalar },
@@ -213,6 +208,11 @@ int main(int argc, char **argv)
     { "hosts:2:port", 0, ZvOptScalar },
     { "hosts:2:up", 0, ZvOptScalar },
     { "hosts:2:down", 0, ZvOptScalar },
+    { "hosts:3:priority", 0, ZvOptScalar },
+    { "hosts:3:IP", 0, ZvOptScalar },
+    { "hosts:3:port", 0, ZvOptScalar },
+    { "hosts:3:up", 0, ZvOptScalar },
+    { "hosts:3:down", 0, ZvOptScalar },
     { "nAccepts", 0, ZvOptScalar },
     { "heartbeatFreq", 0, ZvOptScalar },
     { "heartbeatTimeout", 0, ZvOptScalar },
@@ -227,11 +227,12 @@ int main(int argc, char **argv)
   try {
     cf = inlineCf(
       "writeThread 3\n"
-      "hostID 0\n"
-      // "hosts { 0 { priority 100 IP 127.0.0.1 port 9943 } }\n"
-      "hosts { 1 { priority 75 IP 127.0.0.1 port 9944 } }\n"
-      "hosts { 2 { priority 50 IP 127.0.0.1 port 9945 } }\n"
-      "dbs { 0 { fileSize 4096 path orders preAlloc 0 } }\n"
+      "hostID 1\n"
+      "hosts { 1 { priority 100 IP 127.0.0.1 port 9943 } }\n"
+      "hosts { 2 { priority 75 IP 127.0.0.1 port 9944 } }\n"
+      "hosts { 3 { priority 50 IP 127.0.0.1 port 9945 } }\n"
+      "dbs orders\n"
+      "orders { fileSize 4096 path orders preAlloc 0 }\n"
     );
 
     if (cf->fromArgs(opts, argc, argv) != 3) usage();
@@ -277,12 +278,12 @@ int main(int argc, char **argv)
     appMx->start();
     if (dbMx->start() != Zi::OK) throw ZtString("multiplexer start failed");
 
-    ZuRef<ZdbEnv> env = new ZdbEnv(0);
+    ZuRef<ZdbEnv> env = new ZdbEnv();
 
     env->init(ZdbEnvConfig(cf),
       dbMx, ZmFn<>::Ptr<&active>::fn(), ZmFn<>::Ptr<&inactive>::fn());
 
-    orders = new OrderDB(env, 0, 0, ZdbCacheMode::Normal, ZdbHandler{
+    orders = new OrderDB(env, "orders", 0, ZdbCacheMode::Normal, ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) {
 	    pod = new ZdbPOD<Order>(db);
 	    // new (pod->ptr()) Order();

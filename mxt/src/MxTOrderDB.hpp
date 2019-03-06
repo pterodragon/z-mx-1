@@ -71,11 +71,8 @@ public:
   using ClosedPOD = ZdbPOD<ClosedData>;
 
   void init(ZdbEnv *dbEnv, ZvCf *cf) {
-    unsigned orderDBID = cf->getInt("orderDB", 0, 10000, true);
-    unsigned closedDBID = cf->getInt("closedDB", 0, 10000, true);
-
     m_orderDB = new OrderDB(
-	dbEnv, orderDBID, Types::DBVersion, ZdbCacheMode::FullCache,
+	dbEnv, "orders", Types::DBVersion, ZdbCacheMode::FullCache,
 	ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new OrderPOD(db); },
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
@@ -84,7 +81,7 @@ public:
 	    app->orderDeleted(static_cast<OrderPOD *>(pod)); }},
 	  ZdbCopyFn{}});
     m_closedDB = new ClosedDB(
-	dbEnv, closedDBID, Types::DBVersion, ZdbCacheMode::Normal,
+	dbEnv, "closed", Types::DBVersion, ZdbCacheMode::Normal,
 	ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new ClosedPOD(db); },
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {

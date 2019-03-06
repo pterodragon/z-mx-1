@@ -56,12 +56,11 @@
 
 #include <ZmBitmap.hpp>
 
-ZdbEnv::ZdbEnv(unsigned maxDBID) :
+ZdbEnv::ZdbEnv() :
   m_mx(0), m_stateCond(m_lock),
   m_appActive(false), m_self(0), m_master(0), m_prev(0), m_next(0),
   m_nextCxn(0), m_recovering(false), m_nPeers(0)
 {
-  m_dbs.length(maxDBID + 1);
 }
 
 ZdbEnv::~ZdbEnv()
@@ -86,6 +85,7 @@ void ZdbEnv::init(ZdbEnvConfig config, ZiMultiplex *mx,
     return;
   }
   m_config = ZuMv(config);
+  m_dbs.length(m_config.dbCfs.length());
   m_mx = mx;
   m_cxns = new CxnHash(m_config.cxnHash);
   unsigned n = m_config.hostCfs.length();
@@ -122,30 +122,23 @@ void ZdbEnv::final()
   m_stateCond.broadcast();
 }
 
-void ZdbEnv::add(ZdbAny *db)
+void ZdbEnv::add(ZdbAny *db, ZuString name)
 {
   Guard guard(m_lock);
-  ZdbID id = db->id();
   if (state() != ZdbHost::Initialized) {
     ZeLOG(Fatal, ZtString() <<
-	"ZdbEnv::add called out of order for DBID " << id);
-    return;
-  }
-  if (id >= (ZdbID)m_dbs.length()) {
-    ZeLOG(Fatal, ZtString() <<
-	"ZdbEnv::add called with invalid DBID " << id <<
-	" (dbCount = " << m_dbs.length() << ')');
+	"ZdbEnv::add called out of order for DB " << name);
     return;
   }
   unsigned i, n = m_config.dbCfs.length();
   for (i = 0; i < n; i++)
-    if (id == (ZdbID)m_config.dbCfs[i].id) {
-      db->init(&m_config.dbCfs[i]);
-      m_dbs[id] = db;
+    if (name == m_config.dbCfs[i].name) {
+      db->init(&m_config.dbCfs[i], i);
+      m_dbs[i] = db;
       return;
     }
   ZeLOG(Fatal, ZtString() <<
-      "ZdbEnv::add called with invalid DBID " << id);
+      "ZdbEnv::add called with invalid DB " << name);
 }
 
 bool ZdbEnv::open()
@@ -1424,27 +1417,27 @@ void ZdbAny::replicate(ZdbAnyPOD *pod, void *ptr, int op)
   if (op != ZdbOp::Delete) m_handler.addFn(pod, false);
 }
 
-ZdbAny::ZdbAny(ZdbEnv *env, ZdbID id, uint32_t version, int cacheMode,
+ZdbAny::ZdbAny(ZdbEnv *env, ZuString name, uint32_t version, int cacheMode,
     ZdbHandler handler, unsigned recSize, unsigned dataSize) :
-  m_env(env), m_id(id), m_version(version), m_cacheMode(cacheMode),
+  m_env(env), m_version(version), m_cacheMode(cacheMode),
   m_handler(ZuMv(handler)), m_recSize(recSize), m_dataSize(dataSize)
 {
   if (!m_recSize || !m_dataSize) {
     ZeLOG(Fatal, ZtString() <<
-	"Zdb misconfiguration for DBID " << m_id << " - record/data size is 0");
+	"Zdb misconfiguration for DB " << name << " - record/data size is 0");
     m_fileRecs = 0;
     return;
   }
-  m_env->add(this);
+  m_env->add(this, name);
   if (!m_config) {
     ZeLOG(Fatal, ZtString() <<
-	"Zdb misconfiguration for DBID " << m_id << " - ZdbEnv::add() failed");
+	"Zdb misconfiguration for DB " << name << " - ZdbEnv::add() failed");
     m_fileRecs = 0;
     return;
   }
   if (m_config->fileSize < (m_recSize<<3)) {
     ZeLOG(Warning, ZtString() <<
-	"Zdb misconfiguration for DBID " << m_id <<
+	"Zdb misconfiguration for DB " << name <<
 	" - file size " << m_config->fileSize <<
 	" < 8x record size " << recSize);
     m_config->fileSize = m_recSize<<3;
@@ -1458,9 +1451,10 @@ ZdbAny::~ZdbAny()
   close();
 }
 
-void ZdbAny::init(ZdbConfig *config)
+void ZdbAny::init(ZdbConfig *config, ZdbID id)
 {
   m_config = config;
+  m_id = id;
   if (m_cacheMode != ZdbCacheMode::NoCache) {
     m_cache = new Zdb_Cache(m_config->cache);
     m_cacheSize = m_cache->size();
@@ -1929,8 +1923,9 @@ void ZdbAny::purge(ZdbRN minRN)
 void ZdbAny::telemetry(Telemetry &data) const
 {
   data.path = m_config->path;
+  data.name = m_config->name;
   data.fileSize = m_config->fileSize;
-  data.id = m_config->id;
+  data.id = m_id;
   data.preAlloc = m_config->preAlloc;
   data.recSize = m_recSize;
   data.compress = m_config->compress;

@@ -478,8 +478,8 @@ struct ZuPrint<ZdbPOD<T, HeapID> > : public ZuPrintDelegate {
 
 struct ZdbConfig {
   inline ZdbConfig() { }
-  inline ZdbConfig(const ZtString &key, ZvCf *cf) {
-    id = cf->toInt("ID", key, 0, 1<<30);
+  inline ZdbConfig(ZuString name_, ZvCf *cf) {
+    name = name_;
     path = cf->get("path", true);
     fileSize = cf->getInt("fileSize",
 	((int32_t)4)<<10, ((int32_t)1)<<30, false, 0); // range: 4K to 1G
@@ -490,7 +490,7 @@ struct ZdbConfig {
     fileHash.init(cf->get("fileHash", false, "Zdb.FileHash"));
   }
 
-  unsigned		id = 0;
+  ZtString		name;
   ZtString		path;
   unsigned		fileSize = 0;
   unsigned		preAlloc = 0;	// #records to pre-allocate
@@ -534,14 +534,14 @@ protected:
   typedef ZmGuard<FSLock> FSGuard;
   typedef ZmReadGuard<FSLock> FSReadGuard;
 
-  ZdbAny(ZdbEnv *env, ZdbID id, uint32_t version, int cacheMode,
+  ZdbAny(ZdbEnv *env, ZuString name, uint32_t version, int cacheMode,
       ZdbHandler handler, unsigned recSize, unsigned dataSize);
 
 public:
   ~ZdbAny();
 
 private:
-  void init(ZdbConfig *config);
+  void init(ZdbConfig *config, ZdbID);
   void final();
 
   bool open();
@@ -590,8 +590,10 @@ public:
 
   struct Telemetry {
     typedef ZuStringN<124> Path;
+    typedef ZuStringN<28> Name;
 
     Path	path;
+    Name	name;
     uint64_t	fileSize;
     uint64_t	minRN;
     uint64_t	allocRN;
@@ -665,8 +667,8 @@ private:
   void cacheDel_(ZdbAnyPOD *pod);
 
   ZdbEnv			*m_env;
-  ZdbConfig			*m_config;
-  ZdbID				m_id;
+  ZdbConfig			*m_config = nullptr;
+  ZdbID				m_id = 0;
   uint32_t			m_version;
   int				m_cacheMode = ZdbCacheMode::Normal;
   ZdbHandler			m_handler;
@@ -697,9 +699,9 @@ public:
   typedef T_ T;
 
   template <typename Handler>
-  inline Zdb(ZdbEnv *env, ZdbID id, uint32_t version, int cacheMode,
+  inline Zdb(ZdbEnv *env, ZuString name, uint32_t version, int cacheMode,
       Handler &&handler) :
-    ZdbAny(env, id, version, cacheMode, ZuFwd<Handler>(handler),
+    ZdbAny(env, name, version, cacheMode, ZuFwd<Handler>(handler),
 	sizeof(typename ZdbPOD<T, ZuNull>::Data), sizeof(T)) { }
 };
 
@@ -937,13 +939,12 @@ struct ZdbEnvConfig {
 
   inline ZdbEnvConfig(ZvCf *cf) {
     writeThread = cf->get("writeThread", true);
-    {
-      ZvCf::Iterator i(cf->subset("dbs", false, true));
-      ZuString key;
-      while (ZmRef<ZvCf> dbCf = i.subset(key)) {
-	ZdbConfig db(key, dbCf); // might throw, do not push() here
-	new (dbCfs.push()) ZdbConfig(db);
-      }
+    const ZtArray<ZtString> *names = cf->getMultiple("dbs", 0, 100, true);
+    dbCfs.size(names->length());
+    for (unsigned i = 0; i < names->length(); i++) {
+      ZmRef<ZvCf> dbCf = cf->subset((*names)[i], false, true);
+      ZdbConfig db((*names)[i], dbCf); // might throw, do not push() here
+      new (dbCfs.push()) ZdbConfig(db);
     }
     hostID = cf->getInt("hostID", 0, 1<<30, true);
     {
@@ -1018,7 +1019,7 @@ friend class ZdbAnyPOD_Send__;
 #endif
 
 public:
-  ZdbEnv(unsigned maxDBID);
+  ZdbEnv();
   ~ZdbEnv();
 
   void init(ZdbEnvConfig config, ZiMultiplex *mx,
@@ -1074,8 +1075,8 @@ public:
     while (auto node = i.iterate()) { l(node->key()); }
   }
 
-  inline ZdbAny *db(unsigned id) const {
-    if (id >= m_dbs.length()) return nullptr;
+  inline ZdbAny *db(ZdbID id) const {
+    if (id >= (ZdbID)m_dbs.length()) return nullptr;
     return m_dbs[id];
   }
   template <typename L> inline void allDBs(L l) const {
@@ -1106,7 +1107,7 @@ public:
   void telemetry(Telemetry &data) const;
 
 private:
-  void add(ZdbAny *db);	// adds database, finds cf, calls db->init(cf)
+  void add(ZdbAny *db, ZuString name);
   inline ZdbAny *db(ZdbID id) {
     if (id >= (ZdbID)m_dbs.length()) return 0;
     return m_dbs[id];

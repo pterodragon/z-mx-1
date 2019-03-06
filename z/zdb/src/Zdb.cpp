@@ -71,35 +71,34 @@ void ZdbEnv::init(ZdbEnvConfig config, ZiMultiplex *mx,
     ZmFn<> activeFn, ZmFn<> inactiveFn)
 {
   Guard guard(m_lock);
-  if (state() != ZdbHost::Instantiated) {
-    ZeLOG(Fatal, "ZdbEnv::init called out of order");
-    return;
-  }
+
+  if (state() != ZdbHost::Instantiated)
+    throw ZtString() << "ZdbEnv::init called out of order";
+
   config.writeTID = mx->tid(config.writeThread);
   if (!config.writeTID ||
       config.writeTID > mx->nThreads() ||
       config.writeTID == mx->rxThread() ||
-      config.writeTID == mx->txThread()) {
-    ZeLOG(Fatal, ZtString() <<
-	"Zdb writeThread misconfigured: " << config.writeThread);
-    return;
-  }
+      config.writeTID == mx->txThread())
+    throw ZtString() <<
+      "Zdb writeThread misconfigured: " << config.writeThread;
+
   m_config = ZuMv(config);
   m_dbs.length(m_config.dbCfs.length());
   m_mx = mx;
   m_cxns = new CxnHash(m_config.cxnHash);
+  m_activeFn = activeFn;
+  m_inactiveFn = inactiveFn;
+
   unsigned n = m_config.hostCfs.length();
   for (unsigned i = 0; i < n; i++)
     m_hosts.add(ZmRef<ZdbHost>(new ZdbHost(this, &m_config.hostCfs[i])));
   m_self = m_hosts.findKey(m_config.hostID).ptr();
-  if (!m_self) {
-    ZeLOG(Fatal, ZtString() <<
-	"Zdb own host ID " << m_config.hostID << "not in hosts table");
-    return;
-  }
+  if (!m_self)
+    throw ZtString() <<
+      "Zdb own host ID " << m_config.hostID << " not in hosts table";
+
   state(ZdbHost::Initialized);
-  m_activeFn = activeFn;
-  m_inactiveFn = inactiveFn;
   guard.unlock();
   m_stateCond.broadcast();
 }
@@ -475,7 +474,7 @@ void ZdbEnv::telemetry(Telemetry &data) const
   data.writeThread = m_config.writeTID;
 
   ReadGuard guard(m_lock);
-  data.nCxns = m_cxns->count();
+  data.nCxns = m_cxns ? m_cxns->count() : 0;
   data.self = m_self->id();
   data.master = m_master ? m_master->id() : 0;
   data.prev = m_prev ? m_prev->id() : 0;

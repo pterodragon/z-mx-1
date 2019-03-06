@@ -861,14 +861,14 @@ ZmRef<ZvCf> ZvCf::subset(ZuString key, bool create, bool required)
     NodeRef node = self->m_tree.findVal(scope);
     if (!node) {
       if (!create) {
-	if (required) throw Required(key);
+	if (required) throw Required(scope);
 	return 0;
       }
       self->m_tree.add(scope, node = new Node());
     }
     if (!node->m_cf) {
       if (!create) {
-	if (required) throw Required(key);
+	if (required) throw Required(scope);
 	return 0;
       }
       node->m_cf = new ZvCf(self);

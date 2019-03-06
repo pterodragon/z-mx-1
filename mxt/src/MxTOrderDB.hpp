@@ -72,7 +72,7 @@ public:
 
   void init(ZdbEnv *dbEnv, ZvCf *cf) {
     m_orderDB = new OrderDB(
-	dbEnv, "orders", Types::DBVersion, ZdbCacheMode::FullCache,
+	dbEnv, "orderDB", Types::DBVersion, ZdbCacheMode::FullCache,
 	ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new OrderPOD(db); },
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
@@ -81,7 +81,7 @@ public:
 	    app->orderDeleted(static_cast<OrderPOD *>(pod)); }},
 	  ZdbCopyFn{}});
     m_closedDB = new ClosedDB(
-	dbEnv, "closed", Types::DBVersion, ZdbCacheMode::Normal,
+	dbEnv, "closedDB", Types::DBVersion, ZdbCacheMode::Normal,
 	ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new ClosedPOD(db); },
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {

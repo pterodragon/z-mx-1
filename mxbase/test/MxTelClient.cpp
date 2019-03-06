@@ -35,7 +35,7 @@ public:
     open_(m_dbhost, "dbhost");
     write_(m_dbhost, "time,id,priority,state,voted,ip,port\n");
     open_(m_db, "db");
-    write_(m_db, "time,id,recSize,compress,cacheMode,cacheSize,path,fileSize,fileRecs,filesMax,preAlloc,minRN,allocRN,fileRN,cacheLoads,cacheMisses,fileLoads,fileMisses\n");
+    write_(m_db, "time,name,id,recSize,compress,cacheMode,cacheSize,path,fileSize,fileRecs,filesMax,preAlloc,minRN,allocRN,fileRN,cacheLoads,cacheMisses,fileLoads,fileMisses\n");
   }
 
 private:
@@ -211,6 +211,7 @@ private:
       case Type::DB: {
 	const auto &data = msg->as<DB>();
 	write_(m_db, ZuStringN<512>() << now.csv(nowFmt)
+	  << ',' << data.name
 	  << ',' << data.id
 	  << ',' << data.recSize
 	  << ',' << data.compress

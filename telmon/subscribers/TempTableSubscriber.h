@@ -21,6 +21,8 @@
 #include "DataSubscriber.h"
 #include <functional>
 
+class ZiIP;
+
 class TempTableSubscriber : public QObject, public DataSubscriber
 {
     Q_OBJECT
@@ -39,6 +41,10 @@ public:
     virtual void setTableName(QString a_name) noexcept;
 
     void setUpdateFunction( std::function<void(TempTableSubscriber* a_this, void* a_mxTelemetryMsg)> a_lambda );
+
+    std::string getCurrentTime() const noexcept;
+
+    QString ZiIPTypeToQString(const ZiIP a_ZiIP) const noexcept;
 
     const QString m_name;
     QString m_tableName;

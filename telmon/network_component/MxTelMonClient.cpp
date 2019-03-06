@@ -21,52 +21,34 @@
 #include "MxTelMonClient.h"
 #include "distributors/DataDistributor.h"
 
+
 MxTelMonClient::MxTelMonClient():
     m_dataDistributor(nullptr)
 {
 
 }
 
+
 MxTelMonClient::~MxTelMonClient()
 {
 
 }
+
 
 void MxTelMonClient::initDataDistributor(DataDistributor* a_dataDistributor) noexcept
 {
     m_dataDistributor = a_dataDistributor;
 }
 
+
 void MxTelMonClient::process(ZmRef<MxTelemetry::Msg> msg) {
 
     using namespace MxTelemetry;
-    //std::cout << "##########process()\n";
-    // you can use ZuMv(msg)
-
-//    std::cout << Type::name(msg->hdr().type);
-//    switch ((int)msg->hdr().type) {
-//      case Type::Heap: {
-//    const auto &data = msg->as<Heap>();
-//    std::cout << "  id: " << data.id
-//      << "  cacheSize: " << data.cacheSize
-//      << "  cpuset: " << data.cpuset
-//      << "  cacheAllocs: " << data.cacheAllocs
-//      << "  heapAllocs: " << data.heapAllocs
-//      << "  frees: " << data.frees
-//      << "  allocated: " << data.allocated
-//      << "  maxAllocated: " << data.maxAllocated
-//      << "  size: " << data.size
-//      << "  partition: " << ZuBoxed(data.partition)
-//      << "  sharded: " << ZuBoxed(data.sharded)
-//      << "  alignment: " << ZuBoxed(data.alignment) << '\n' << std::flush;
-//      } break;
-//    }
 
     if (m_dataDistributor)
     {
         m_dataDistributor->notify( static_cast<void*>(msg.ptr()));
     }
-
 
 }
 

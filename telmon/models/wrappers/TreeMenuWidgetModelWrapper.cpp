@@ -60,54 +60,54 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
     const int l_treeFirstLevelOrder = static_cast<int>(a_msg->hdr().type);
 
     switch (l_treeFirstLevelOrder) {
-      case Type::Heap: {
-    const auto &data = a_msg->as<Heap>();
-        l_msgDataID = data.id;
-      } break;
-      case Type::Thread: {
-    const auto &data = a_msg->as<Thread>();
-        l_msgDataID = data.name;
-      } break;
-      case Type::Multiplexer: {
-    const auto &data = a_msg->as<Multiplexer>();
-        l_msgDataID = data.id;
-      } break;
-      case Type::Socket: {
-    const auto &data = a_msg->as<Socket>();
-        l_msgDataID = data.mxID;
-      } break;
-      case Type::Queue: {
-    const auto &data = a_msg->as<Queue>();
-        l_msgDataID = data.id;
-      } break;
-      case Type::HashTbl: {
-    const auto &data = a_msg->as<HashTbl>();
-        l_msgDataID = data.id;
-      } break;
-      case Type::Engine: {
-    const auto &data = a_msg->as<Engine>();
+    case Type::Heap: {
+        const auto &data = a_msg->as<Heap>();
         l_msgDataID = data.id;
     } break;
-      case Type::Link: {
-    const auto &data = a_msg->as<Link>();
+    case Type::HashTbl: {
+        const auto &data = a_msg->as<HashTbl>();
         l_msgDataID = data.id;
-  } break;
-//    case Type::DBEnv: {
-//  const auto &data = a_msg->as<DBEnv>();
-//      l_msgDataID = static_cast<ZmIDString>(data.self);
-//  } break;
-//    case Type::DBHost: {
-//  const auto &data = a_msg->as<DBHost>();
-//      l_msgDataID = data.id;
-//  } break;
-//    case Type::DB: {
-//  const auto &data = a_msg->as<DB>();
-//      l_msgDataID = data.id;
-//  } break;
-      default: {
+    } break;
+    case Type::Thread: {
+        const auto &data = a_msg->as<Thread>();
+        l_msgDataID = data.name;
+    } break;
+    case Type::Multiplexer: {
+        const auto &data = a_msg->as<Multiplexer>();
+        l_msgDataID = data.id;
+    } break;
+    case Type::Socket: {
+        const auto &data = a_msg->as<Socket>();
+        l_msgDataID = data.mxID;
+    } break;
+    case Type::Queue: {
+        const auto &data = a_msg->as<Queue>();
+        l_msgDataID = data.id;
+    } break;
+    case Type::Engine: {
+        const auto &data = a_msg->as<Engine>();
+        l_msgDataID = data.id;
+    } break;
+    case Type::Link: {
+        const auto &data = a_msg->as<Link>();
+        l_msgDataID = data.id;
+    } break;
+    case Type::DBEnv: {
+        const auto &data = a_msg->as<DBEnv>();
+        l_msgDataID = data.self; // use hostID
+    } break;
+    case Type::DBHost: {
+        const auto &data = a_msg->as<DBHost>();
+        l_msgDataID = data.id;
+    } break;
+    case Type::DB: {
+        const auto &data = a_msg->as<DB>();
+        l_msgDataID = data.name;
+    } break;
+    default: {
         qWarning() << "Unkown message header, ignoring:";
         return; //STATUS::UNKNOWN_MSG_HEADER;
-      } break;
+    } break;
     }
 
     auto l_pairHeaderNameHeaderData = std::make_pair(l_msgHeaderName, l_msgDataID);

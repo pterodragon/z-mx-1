@@ -34,26 +34,42 @@ TempTable* TableWidgetFactory::getTableWidget(const int a_tableType, const QStri
     {
     case MxTelemetry::Type::Heap:
         l_result = new TempTable(QList<QString>({"Data"}),
-                                 QList<QString>({"size",       "alignment",  "partition",   "sharded",
-                                                 "cacheSize",  "cpuset X",   "cacheAllocs", "heapAllocs",
-                                                 "frees"}),
+                                 QList<QString>({"time",       "size",       "alignment",   "partition",
+                                                 "sharded",    "cacheSize",  "cpuset X",    "cacheAllocs",
+                                                 "heapAllocs", "frees", "allocated"}),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::HashTbl:
         l_result = new TempTable(QList<QString>({"Data"}),
-                                 QList<QString>({"linear",        "bits",     "1 << bits", "cBits",
-                                                 "1 << cBits",    "count",    "resized",   "loadFactor",
-                                                 "effLoadFactor", "nodeSize"}),
+                                 QList<QString>({"time",   "linear",  "bits",  "slots",
+                                                 "cBits",  "cSlots",  "count", "resized",
+                                                 "loadFactor", "effLoadFactor", "nodeSize"}),
                                  a_mxTelemetryInstanceName);
 
         break;
     case MxTelemetry::Type::Thread:
         l_result = new TempTable(QList<QString>({"Data"}),
-                                 QList<QString>({"id",       "tid",       "cpuUsage X",  "cpuset X",
-                                                 "priority", "stackSize", "partition",   "main",
-                                                 "detached"}),
+                                 QList<QString>({"time",   "id",       "tid",       "cpuUsage",
+                                                 "cpuset", "priority", "stackSize", "partition",
+                                                 "main",   "detached"}),
                                  a_mxTelemetryInstanceName);
         break;
+    case MxTelemetry::Type::Multiplexer:
+        l_result = new TempTable(QList<QString>({"Data"}),
+                                 QList<QString>({"time",   "state",       "nThreads",
+                                                 "priority", "partition",  "isolation *", "rxThread",
+                                                 "txThread",   "stackSize", "rxBufSize",  "txBufSize"}),
+                                 a_mxTelemetryInstanceName);
+        break;
+    case MxTelemetry::Type::Socket:
+        l_result = new TempTable(QList<QString>({"Data"}),
+                                 QList<QString>({"time",      "type",      "remoteIP",  "remotePort",
+                                                 "localIP",   "localPort", "fd",        "flags",
+                                                 "mreqAddr",  "mreqIf",    "mif",       "ttl",
+                                                 "rxBufSize", "rxBufLen",  "txBufSize", "txBufLen"}),
+                                 a_mxTelemetryInstanceName);
+        break;
+
     default:
         //todo - print warning
         //l_result = nullptr;

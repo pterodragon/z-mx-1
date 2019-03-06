@@ -106,6 +106,8 @@ SOURCES += \
     subscribers/DataSubscriber.cpp \
     subscribers/TempTableSubscriber.cpp
 
+#SOURCES += /home/aristo/projects/binfinity/other/z_mx_code_main/mxbase/test/*.cpp
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # support for building with <MxTelemetry.hpp> - BEGIN #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # #

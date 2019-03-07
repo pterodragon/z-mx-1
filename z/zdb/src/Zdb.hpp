@@ -1081,7 +1081,7 @@ public:
   }
   template <typename L> inline void allDBs(L l) const {
     for (unsigned i = 0, n = m_dbs.length(); i < n; i++)
-      l(m_dbs[i]);
+      if (m_dbs[i]) l(m_dbs[i]);
   }
 
   struct Telemetry {

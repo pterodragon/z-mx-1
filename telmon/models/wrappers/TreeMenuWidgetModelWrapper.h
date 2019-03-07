@@ -51,7 +51,7 @@ class TreeMenuWidgetModelWrapper : public DataSubscriber
 {
 public:
     TreeMenuWidgetModelWrapper();
-    virtual ~TreeMenuWidgetModelWrapper();
+    virtual ~TreeMenuWidgetModelWrapper() override;
 
     enum STATUS {APPENEDED_TO_VIEW,
                  FAILED_TO_APPEND_TO_MODEL,
@@ -77,6 +77,8 @@ protected:
     std::set<std::pair<std::string, ZmIDString>> m_localContainer;
 
 private:
+    int m_mxTelemetryTypeFirstTreeLevelPosition; // while doing reset, dont forget to set to zero
+    int *m_mxTelemetryTypeFirstTreeLevelPositionArray;
     const QString  m_name;
     static constexpr auto APPEND_TO_THE_END = -1;
     static constexpr auto EMPRTY_STRING = "";

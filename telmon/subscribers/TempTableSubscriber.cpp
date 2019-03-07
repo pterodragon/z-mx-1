@@ -7,10 +7,13 @@
 #include "QLinkedList"
 #include "QDebug"
 
+#include <sstream> //for ZmBitmapToQString
+
 
 TempTableSubscriber::TempTableSubscriber(const QString a_name):
     m_name(a_name),
-    m_tableName(QString()) // set null QString
+    m_tableName(QString()), // set null QString
+    m_stream(new std::stringstream())
 {
 
 }
@@ -18,7 +21,7 @@ TempTableSubscriber::TempTableSubscriber(const QString a_name):
 
 TempTableSubscriber::~TempTableSubscriber()
 {
-
+    delete m_stream;
 };
 
 
@@ -63,24 +66,53 @@ std::string TempTableSubscriber::getCurrentTime() const noexcept
 }
 
 
-QString TempTableSubscriber::ZiIPTypeToQString(const ZiIP a_ZiIP) const noexcept
+QString TempTableSubscriber::ZmBitmapToQString(const ZmBitmap& a_zmBitMap) const noexcept
 {
-    //todo if readlAll clean the stream, no need to constrcut stream every time!!
-    QTextStream l_out;
-    a_ZiIP.print(l_out);
-    return l_out.readAll();
+    a_zmBitMap.print(*m_stream);
+    const QString l_result = QString::fromStdString(m_stream->str());
+    m_stream->str(std::string());
+    m_stream->clear();
+    return l_result;
+}
 
-    /** get the local ip -- OLD
 
-    const uint32_t l_addrLocal = static_cast<uint32_t>(ntohl(l_data.localIP.s_addr));
-    l_list.append(QString::number(
-                      ZuBoxed(((static_cast<uint32_t>(l_addrLocal)) >> 24) & 1UL) << '.' <<
-                      ZuBoxed(((static_cast<uint32_t>(l_addrLocal)) >> 16) & 1UL) << '.' <<
-                      ZuBoxed(((static_cast<uint32_t>(l_addrLocal)) >> 8 ) & 1UL) << '.' <<
-                      ZuBoxed(((static_cast<uint32_t>(l_addrLocal))      ) & 1UL)
-                                 )
-                  );
-    */
+
+QString TempTableSubscriber::ZiIPTypeToQString(const ZiIP& a_ZiIP) const noexcept
+{
+    a_ZiIP.print(*m_stream);
+    const QString l_result = QString::fromStdString(m_stream->str());
+    m_stream->str(std::string());
+    m_stream->clear();
+    return l_result;
+}
+
+
+QString TempTableSubscriber::ZiCxnFlagsTypeToQString(const uint32_t a_ZiCxnFlags) const noexcept
+{
+    *m_stream << ZiCxnFlags::Flags::print(a_ZiCxnFlags);
+    const QString l_result = QString::fromStdString(m_stream->str());
+    m_stream->str(std::string());
+    m_stream->clear();
+    return l_result;
+}
+
+bool TempTableSubscriber::isAssociatedWithTable() const noexcept
+{
+    if (m_tableName.isNull() || m_tableName.isEmpty())
+    {
+        qWarning() << m_name
+                   << "is not registered to any table, please setTableName or unsubscribe, returning..."
+                   << "table name is:"
+                   << getTableName();
+        return false;
+    }
+    return true;
+}
+
+
+bool TempTableSubscriber::isTelemtryInstanceNameMatchsTableName(const QString& a_instanceName) const noexcept
+{
+    return  (m_tableName ==  a_instanceName);
 }
 
 

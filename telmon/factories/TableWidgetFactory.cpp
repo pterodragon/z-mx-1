@@ -35,9 +35,10 @@ TempTable* TableWidgetFactory::getTableWidget(const int a_tableType, const QStri
     case MxTelemetry::Type::Heap:
         l_result = new TempTable(QList<QString>({"Data"}),
                                  QList<QString>({"time",       "size",       "alignment",   "partition",
-                                                 "sharded",    "cacheSize",  "cpuset X",    "cacheAllocs",
+                                                 "sharded",    "cacheSize",  "cpuset",    "cacheAllocs",
                                                  "heapAllocs", "frees", "allocated"}),
                                  a_mxTelemetryInstanceName);
+
         break;
     case MxTelemetry::Type::HashTbl:
         l_result = new TempTable(QList<QString>({"Data"}),
@@ -45,7 +46,6 @@ TempTable* TableWidgetFactory::getTableWidget(const int a_tableType, const QStri
                                                  "cBits",  "cSlots",  "count", "resized",
                                                  "loadFactor", "effLoadFactor", "nodeSize"}),
                                  a_mxTelemetryInstanceName);
-
         break;
     case MxTelemetry::Type::Thread:
         l_result = new TempTable(QList<QString>({"Data"}),
@@ -57,8 +57,8 @@ TempTable* TableWidgetFactory::getTableWidget(const int a_tableType, const QStri
     case MxTelemetry::Type::Multiplexer:
         l_result = new TempTable(QList<QString>({"Data"}),
                                  QList<QString>({"time",   "state",       "nThreads",
-                                                 "priority", "partition",  "isolation *", "rxThread",
-                                                 "txThread",   "stackSize", "rxBufSize",  "txBufSize"}),
+                                                 "priority", "partition",  "isolation",  "rxThread",
+                                                 "txThread",   "stackSize", "rxBufSize", "txBufSize"}),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Socket:
@@ -69,10 +69,51 @@ TempTable* TableWidgetFactory::getTableWidget(const int a_tableType, const QStri
                                                  "rxBufSize", "rxBufLen",  "txBufSize", "txBufLen"}),
                                  a_mxTelemetryInstanceName);
         break;
-
+    case MxTelemetry::Type::Queue:
+        l_result = new TempTable(QList<QString>({"Data"}),
+                                 QList<QString>({"time",      "type",    "full",    "size",
+                                                 "count",     "seqNo",   "inCount", "inBytes",
+                                                 "outCount",  "outBytes"}),
+                                 a_mxTelemetryInstanceName);
+        break;
+    case MxTelemetry::Type::Engine:
+        l_result = new TempTable(QList<QString>({"Data"}),
+                                 QList<QString>({"time",   "state",    "nLinks",    "up",
+                                                 "down",   "disabled", "transient", "reconn",
+                                                 "failed", "mxID",     "rxThread",  "txThread"}),
+                                 a_mxTelemetryInstanceName);
+        break;
+    case MxTelemetry::Type::Link:
+        l_result = new TempTable(QList<QString>({"Data"}),
+                                 QList<QString>({"state",   "reconnects",    "rxSeqNo",    "txSeqNo"}),
+                                 a_mxTelemetryInstanceName);
+        break;
+    case MxTelemetry::Type::DBEnv:   //TODO
+        l_result = new TempTable(QList<QString>({"Data"}),
+                                 QList<QString>({"time",        "self",            "master",           "prev",
+                                                 "next",        "state",           "active",           "recovering",
+                                                 "replicating", "nDBs",            "nHosts",           "nPeers",
+                                                 "nCxns",       "heartbeatFreq",   "heartbeatTimeout", "reconnectFreq",
+                                                 "m_dbenv",     "electionTimeout", "writeThread"}),
+                                 a_mxTelemetryInstanceName);
+        break;
+    case MxTelemetry::Type::DBHost:  //TODO
+        l_result = new TempTable(QList<QString>({"Data"}),
+                                 QList<QString>({"time",  "priority",  "state",  "voted",
+                                                 "ip",    "port"}),
+                                 a_mxTelemetryInstanceName);
+        break;
+    case MxTelemetry::Type::DB:
+        l_result = new TempTable(QList<QString>({"Data"}),
+                                 QList<QString>({"id",   "recSize",    "compress",    "cacheMode",
+                                                 "cacheSize",   "path",    "fileSize",    "fileRecs",
+                                                 "filesMax",   "preAlloc",    "minRN",    "allocRN",
+                                                 "fileRN",    "cacheLoads",    "cacheMisses",    "fileLoads",
+                                                 "fileMisses"}),
+                                 a_mxTelemetryInstanceName);
+        break;
     default:
-        //todo - print warning
-        //l_result = nullptr;
+        qWarning() << "unknown MxTelemetry::Type:" << a_tableType<< "request, returning...";
         break;
     }
     return l_result;

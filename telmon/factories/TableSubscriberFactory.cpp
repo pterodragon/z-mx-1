@@ -25,7 +25,6 @@
 #include "QLinkedList"
 #include "QDateTime"
 
-#include <arpa/inet.h>
 
 TableSubscriberFactory::TableSubscriberFactory()
 {
@@ -51,36 +50,26 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
         case MxTelemetry::Type::Heap:
             l_result = new TempTableSubscriber(l_name + "Subscriber");
 
+            /**
+             * more:
+             * 1. https://stackoverflow.com/questions/13605141/best-strategy-to-update-qtableview-with-data-in-real-time-from-different-threads
+             * 2. https://stackoverflow.com/questions/4031168/qtableview-is-extremely-slow-even-for-only-3000-rows
+             *
+             *   TODO - convert to pointer
+             *   QLinkedList
+             *   pros constant time insertions and removals.
+             *        iteration is the same as QList
+            */
             l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
-                                              void* a_mxTelemetryMsg) -> void {
-                if (a_this->m_tableName.isNull() || a_this->m_tableName.isEmpty())
-                {
-                    qWarning() << a_this->m_name
-                               << "is not registered to any table, please setTableName or unsubscribe, returning..."
-                               << "table name is:"
-                               << a_this->getTableName();
-                    return;
-                }
-
-                /**
-                // more about my approach
-                // 1. https://stackoverflow.com/questions/13605141/best-strategy-to-update-qtableview-with-data-in-real-time-from-different-threads
-                // 2. https://stackoverflow.com/questions/4031168/qtableview-is-extremely-slow-even-for-only-3000-rows
-                */
-
+                                              void* a_mxTelemetryMsg) -> void
+            {
+                if (!a_this->isAssociatedWithTable()) {return;}
                 const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Heap>();
 
-
-                // make sure msg is of current instance
-                if (a_this->getTableName() != QString((l_data.id.data())))
                 {
-                    return;
+                    auto l_instanceName= QString(ZmIDString((l_data.id.data())));
+                    if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
                 }
-
-                //TODO - convert to pointer
-                // QLinkedList
-                // constant time insertions and removals.
-                // iteration is the same as QList
 
                 QLinkedList<QString> l_list;
 
@@ -108,22 +97,14 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
             l_result = new TempTableSubscriber(l_name + "Subscriber");
 
             l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
-                                              void* a_mxTelemetryMsg) -> void {
-                if (a_this->m_tableName.isNull() || a_this->m_tableName.isEmpty())
-                {
-                    qWarning() << a_this->m_name
-                               << "is not registered to any table, please setTableName or unsubscribe, returning..."
-                               << "table name is:"
-                               << a_this->getTableName();
-                    return;
-                }
-
+                                              void* a_mxTelemetryMsg) -> void
+            {
+                if (!a_this->isAssociatedWithTable()) {return;}
                 const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::HashTbl>();
 
-                // make sure msg is of current instance
-                if (a_this->getTableName() != QString(l_data.id.data()))
                 {
-                    return;
+                    auto l_instanceName= QString(ZmIDString((l_data.id.data())));
+                    if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
                 }
 
 
@@ -152,21 +133,16 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
             l_result = new TempTableSubscriber(l_name + "Subscriber");
 
             l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
-                                         void* a_mxTelemetryMsg) -> void {
-                if (a_this->m_tableName.isNull() || a_this->m_tableName.isEmpty())
-                {
-                    qWarning() << a_this->m_name << "is not registered to any table, please setTableName or unsubscribe, returning..."
-                               << "table name is:" << a_this->getTableName();
-                    return;
-                }
-
+                                         void* a_mxTelemetryMsg) -> void
+            {
+                if (!a_this->isAssociatedWithTable()) {return;}
                 const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Thread>();
 
-                // make sure msg is of current instance
-                if (a_this->getTableName() != QString(l_data.name.data()))
                 {
-                    return;
+                    auto l_instanceName= QString(ZmIDString((l_data.name.data())));
+                    if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
                 }
+
 
                 QLinkedList<QString> l_list;
 
@@ -185,26 +161,18 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
                 emit a_this->updateDone(l_list);
             });
             break;
+
         case MxTelemetry::Type::Multiplexer:
             l_result = new TempTableSubscriber(l_name + "Subscriber");
             l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
-                                         void* a_mxTelemetryMsg) -> void {
-
-                if (a_this->m_tableName.isNull() || a_this->m_tableName.isEmpty())
-                {
-                    qWarning() << a_this->m_name
-                               << "is not registered to any table, please setTableName or unsubscribe, returning..."
-                               << "table name is:"
-                               << a_this->getTableName();
-                    return;
-                }
-
+                                         void* a_mxTelemetryMsg) -> void
+            {
+                if (!a_this->isAssociatedWithTable()) {return;}
                 const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Multiplexer>();
 
-                // make sure msg is of current instance
-                if (a_this->getTableName() != QString::number(l_data.id))
                 {
-                    return;
+                    auto l_instanceName= QString(ZmIDString((l_data.id)));
+                    if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
                 }
 
                 QLinkedList<QString> l_list;
@@ -215,8 +183,7 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
                 l_list.append(QString::number(ZuBoxed(l_data.priority)));
                 l_list.append(QString::number(ZuBoxed(l_data.partition)));
 
-                //l_list.append(QString::number(ZmBitmap(l_data.isolation)); TODO
-                l_list.append(QString::number(l_data.isolation));
+                l_list.append(a_this->ZmBitmapToQString(l_data.isolation));
                 l_list.append(QString::number(l_data.rxThread));
                 l_list.append(QString::number(l_data.txThread));
                 l_list.append(QString::number(l_data.stackSize));
@@ -227,27 +194,20 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
                 emit a_this->updateDone(l_list);
             });
             break;
+
     case MxTelemetry::Type::Socket:
         l_result = new TempTableSubscriber(l_name + "Subscriber");
         l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
-                                     void* a_mxTelemetryMsg) -> void {
-
-            if (a_this->m_tableName.isNull() || a_this->m_tableName.isEmpty())
-            {
-                qWarning() << a_this->m_name
-                           << "is not registered to any table, please setTableName or unsubscribe, returning..."
-                           << "table name is:"
-                           << a_this->getTableName();
-                return;
-            }
-
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithTable()) {return;}
             const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Socket>();
 
-            // make sure msg is of current instance
-            if (a_this->getTableName() != QString::number(l_data.mxID))
             {
-                return;
+                auto l_instanceName= QString(ZmIDString((l_data.mxID)));
+                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
             }
+
 
             QLinkedList<QString> l_list;
 
@@ -259,7 +219,7 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
 
             l_list.append(QString::number(ZuBoxed(l_data.localPort)));
             l_list.append(QString::number(l_data.socket));
-            l_list.append(QString(ZiCxnFlags::Flags::print(l_data.flags).v));
+            l_list.append(a_this->ZiCxnFlagsTypeToQString(l_data.flags));
             l_list.append(a_this->ZiIPTypeToQString(l_data.mreqAddr));
             l_list.append(a_this->ZiIPTypeToQString(l_data.mreqIf));
 
@@ -270,6 +230,205 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
             l_list.append(QString::number(l_data.txBufSize));
 
             l_list.append(QString::number(l_data.txBufLen));
+            emit a_this->updateDone(l_list);
+        });
+        break;
+    case MxTelemetry::Type::Queue:
+        l_result = new TempTableSubscriber(l_name + "Subscriber");
+        l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithTable()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Queue>();
+
+            {
+                auto l_instanceName= QString(ZmIDString((l_data.id)));
+                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+            }
+
+
+            QLinkedList<QString> l_list;
+
+            l_list.append(QString::fromStdString(a_this->getCurrentTime()));
+            l_list.append(MxTelemetry::QueueType::name(l_data.type));
+            l_list.append(QString::number(l_data.full));
+            l_list.append(QString::number(l_data.size));
+            l_list.append(QString::number(l_data.count));
+
+            l_list.append(QString::number(l_data.seqNo));
+            l_list.append(QString::number(l_data.inCount));
+            l_list.append(QString::number(l_data.inBytes));
+            l_list.append(QString::number(l_data.outCount));
+            l_list.append(QString::number(l_data.outBytes));
+
+            emit a_this->updateDone(l_list);
+        });
+        break;
+    case MxTelemetry::Type::Engine:
+        l_result = new TempTableSubscriber(l_name + "Subscriber");
+        l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithTable()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Engine>();
+
+            {
+                auto l_instanceName= QString(ZmIDString((l_data.id)));
+                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+            }
+
+
+            QLinkedList<QString> l_list;
+
+            l_list.append(QString::fromStdString(a_this->getCurrentTime()));
+            l_list.append(MxEngineState::name(l_data.state));
+            l_list.append(QString::number(l_data.nLinks));
+            l_list.append(QString::number(l_data.up));
+            l_list.append(QString::number(l_data.down));
+
+            l_list.append(QString::number(l_data.disabled));
+            l_list.append(QString::number(l_data.transient));
+            l_list.append(QString::number(l_data.reconn));
+            l_list.append(QString::number(l_data.failed));
+            l_list.append(l_data.mxID.data());
+
+            l_list.append(QString::number(l_data.rxThread));
+            l_list.append(QString::number(l_data.txThread));
+
+            emit a_this->updateDone(l_list);
+        });
+        break;
+    case MxTelemetry::Type::Link:
+        l_result = new TempTableSubscriber(l_name + "Subscriber");
+        l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithTable()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Link>();
+
+            {
+                auto l_instanceName= QString(ZmIDString((l_data.id)));
+                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+            }
+
+
+            QLinkedList<QString> l_list;
+
+            l_list.append(QString::fromStdString(a_this->getCurrentTime()));
+            l_list.append(MxLinkState::name(l_data.state));
+            l_list.append(QString::number(l_data.reconnects));
+            l_list.append(QString::number(l_data.rxSeqNo));
+            l_list.append(QString::number(l_data.txSeqNo));
+
+            emit a_this->updateDone(l_list);
+        });
+        break;
+    case MxTelemetry::Type::DBEnv:
+        l_result = new TempTableSubscriber(l_name + "Subscriber");
+        l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithTable()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::DBEnv>();
+
+            {
+                auto l_instanceName= QString((l_data.self));
+                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+            }
+
+            QLinkedList<QString> l_list;
+
+            l_list.append(QString::fromStdString(a_this->getCurrentTime()));
+            l_list.append(QString::number(l_data.master));
+            l_list.append(QString::number(l_data.prev));
+            l_list.append(QString::number(l_data.next));
+            //l_list.append(ZdbHost::stateName(l_data.state));
+
+            l_list.append(QString::number(ZuBoxed(l_data.active)));
+            l_list.append(QString::number(ZuBoxed(l_data.recovering)));
+            l_list.append(QString::number(ZuBoxed(l_data.replicating)));
+            l_list.append(QString::number(ZuBoxed(l_data.nDBs)));
+            l_list.append(QString::number(ZuBoxed(l_data.nHosts)));
+
+            l_list.append(QString::number(ZuBoxed(l_data.nPeers)));
+            l_list.append(QString::number(ZuBoxed(l_data.nCxns)));
+            l_list.append(QString::number(l_data.heartbeatFreq));
+            l_list.append(QString::number(l_data.heartbeatTimeout));
+            l_list.append(QString::number(l_data.reconnectFreq));
+
+            l_list.append(QString::number(l_data.electionTimeout));
+            l_list.append(QString::number(l_data.writeThread));
+
+            emit a_this->updateDone(l_list);
+        });
+        break;
+    case MxTelemetry::Type::DBHost:
+        l_result = new TempTableSubscriber(l_name + "Subscriber");
+        l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithTable()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::DBHost>();
+
+            {
+                auto l_instanceName= QString((l_data.id));
+                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+            }
+
+
+            QLinkedList<QString> l_list;
+
+            //ZdbHost::stateName(l_data.state);
+
+            l_list.append(QString::fromStdString(a_this->getCurrentTime()));
+            l_list.append(QString::number(l_data.priority));
+            //l_list.append(QString(ZdbHost::stateName(l_data.state)));
+            l_list.append(QString::number(ZuBoxed(l_data.voted)));
+            l_list.append(a_this->ZiIPTypeToQString(l_data.ip));
+
+            l_list.append(QString::number(l_data.port));
+
+            emit a_this->updateDone(l_list);
+        });
+        break;
+    case MxTelemetry::Type::DB:
+        l_result = new TempTableSubscriber(l_name + "Subscriber");
+        l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithTable()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::DB>();
+
+            {
+                auto l_instanceName= QString(ZmIDString((l_data.name)));
+                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+            }
+
+
+            QLinkedList<QString> l_list;
+
+            l_list.append(QString::fromStdString(a_this->getCurrentTime()));
+            l_list.append(QString::number(l_data.id));
+            l_list.append(QString::number(l_data.recSize));
+            l_list.append(QString::number(l_data.compress));
+            l_list.append(ZdbCacheMode::name(l_data.cacheMode));
+
+            l_list.append(QString::number(l_data.cacheSize));
+            l_list.append(QString(l_data.path));
+            l_list.append(QString::number(l_data.fileSize));
+            l_list.append(QString::number(l_data.fileRecs));
+            l_list.append(QString::number(l_data.filesMax));
+
+            l_list.append(QString::number(l_data.preAlloc));
+            l_list.append(QString::number(l_data.minRN));
+            l_list.append(QString::number(l_data.allocRN));
+            l_list.append(QString::number(l_data.fileRN));
+            l_list.append(QString::number(l_data.cacheLoads));
+
+            l_list.append(QString::number(l_data.cacheMisses));
+            l_list.append(QString::number(l_data.fileLoads));
+            l_list.append(QString::number(l_data.fileMisses));
+
             emit a_this->updateDone(l_list);
         });
         break;

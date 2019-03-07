@@ -25,13 +25,16 @@
 
 TreeMenuWidgetModelWrapper::TreeMenuWidgetModelWrapper():
     m_treeModel(new TreeModel("MxTelemetry::Types")),
-    m_name("TreeMenuWidgetModelWrappesr")
+    m_mxTelemetryTypeFirstTreeLevelPosition(0),
+    m_mxTelemetryTypeFirstTreeLevelPositionArray(new int[MxTelemetry::Type::N]),
+    m_name("TreeMenuWidgetModelWrapper")
 {
 
 }
 
 TreeMenuWidgetModelWrapper::~TreeMenuWidgetModelWrapper()
 {
+    delete [] m_mxTelemetryTypeFirstTreeLevelPositionArray;
     delete m_treeModel;
 }
 
@@ -48,7 +51,24 @@ const QString& TreeMenuWidgetModelWrapper::getName() const noexcept
 }
 
 
-
+/**
+ * Algorithm:
+ * 1. parse a_msg, get l_msgHeaderName and l_msgDataID
+ *    l_msgHeaderName denotes to which child associate l_msgDataID
+ * 2. Check if the pair<l_msgHeaderName, l_msgDataID> is in m_localContainer
+ *    if yes, return // because model is already updated.
+ * .  if no, go to 3.
+ * 3.  --SKIPPED-- Generate l_msgHeaderDescription for l_msgHeaderName
+ * 4. Check if pair <l_msgHeaderName, l_msgHeaderDescription> is inside m_localContainer
+ *    if yes, go to 7, if not go to 5
+ * 5. insert pair <l_msgHeaderName, l_msgHeaderDescription> to m_localContainer
+ * 6. insert pair <l_msgHeaderName, l_msgHeaderDescription> to model under root index
+ * 7. insert pair <l_msgHeaderName, l_msgDataID> to m_localContainer
+ * 8. get the model index for parent of pair: <l_msgHeaderName, l_msgDataID>
+ * 9. insert pair <l_msgHeaderName, l_msgDataID> under model index for <l_msgHeaderName, l_msgHeaderDescription>
+ *
+ * In case of failure, calling function should print the given msg
+ */
 void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
 {
     using namespace MxTelemetry;
@@ -57,9 +77,9 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
     // step 1
     const auto l_msgHeaderName = Type::name(a_msg->hdr().type);
     ZmIDString l_msgDataID;
-    const int l_treeFirstLevelOrder = static_cast<int>(a_msg->hdr().type);
+    const int l_mxTelemetryTypeIndex = static_cast<int>(a_msg->hdr().type);
 
-    switch (l_treeFirstLevelOrder) {
+    switch (l_mxTelemetryTypeIndex) {
     case Type::Heap: {
         const auto &data = a_msg->as<Heap>();
         l_msgDataID = data.id;
@@ -109,7 +129,6 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
         return; //STATUS::UNKNOWN_MSG_HEADER;
     } break;
     }
-
     auto l_pairHeaderNameHeaderData = std::make_pair(l_msgHeaderName, l_msgDataID);
 
     // TODO: protect by mutex
@@ -134,6 +153,10 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
                         << l_pairHeaderNameHeaderDescription;
             return; //Status::FAILED_TO_APPEND_TO_LOCAL_CONTAINER;
         }
+
+        // set the correspoding index so we can know where to insert instances of that type;
+        m_mxTelemetryTypeFirstTreeLevelPositionArray[l_mxTelemetryTypeIndex] = m_mxTelemetryTypeFirstTreeLevelPosition;
+        m_mxTelemetryTypeFirstTreeLevelPosition++;
 
         // step 6
         QModelIndex l_modelIndexForRoot = QModelIndex();
@@ -161,7 +184,8 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
     }
 
     // step 8
-    QModelIndex l_modelIndexForCurrentParent = m_treeModel->index(l_treeFirstLevelOrder,0, QModelIndex());
+    const int l_currentTypePositionInTree = m_mxTelemetryTypeFirstTreeLevelPositionArray[l_mxTelemetryTypeIndex];
+    QModelIndex l_modelIndexForCurrentParent = m_treeModel->index(l_currentTypePositionInTree, 0, QModelIndex());
 
     // step 9
     if (!m_treeModel->insertRow(APPEND_TO_THE_END, l_modelIndexForCurrentParent, l_msgDataID, EMPRTY_STRING)) {

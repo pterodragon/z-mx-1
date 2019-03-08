@@ -242,7 +242,7 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
             const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Queue>();
 
             {
-                auto l_instanceName= QString(ZmIDString((l_data.id)));
+                auto l_instanceName= QString::fromStdString(a_this->constructQueueName(l_data.id, MxTelemetry::QueueType::name(l_data.type)));
                 if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
             }
 

@@ -102,7 +102,7 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
     } break;
     case Type::Queue: {
         const auto &data = a_msg->as<Queue>();
-        l_msgDataID = data.id;
+        l_msgDataID = constructQueueName(data.id, MxTelemetry::QueueType::name(data.type));
     } break;
     case Type::Engine: {
         const auto &data = a_msg->as<Engine>();

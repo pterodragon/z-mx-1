@@ -31,3 +31,16 @@ DataSubscriber::~DataSubscriber()
 {
 
 }
+
+
+const char* DataSubscriber::QUEUE_NAME_DELIMITER = " - ";
+
+/**
+ * @brief used to create MxTelemetry::Queue name
+ * @param a_mxTelemetryMsg
+ * @return
+ */
+const std::string DataSubscriber::constructQueueName(const char* a_id, const char* a_type) const noexcept
+{
+    return std::string(a_id).append(QUEUE_NAME_DELIMITER).append(a_type);
+}

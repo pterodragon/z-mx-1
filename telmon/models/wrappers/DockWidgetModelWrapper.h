@@ -18,38 +18,32 @@
  */
 
 
+// based on
+// https://stackoverflow.com/questions/318064/how-do-you-declare-an-interface-in-c
 
-#include "controllers/DockWindowController.h"
-#include "QDockWidget"
+#ifndef DOCKWIDGETMODELWRAPPER_H
+#define DOCKWIDGETMODELWRAPPER_H
 
-DockWindowController::DockWindowController(DataDistributor& a_dataDistributor, const char* a_name):
-    BasicController(a_dataDistributor),
-    m_dockWindowName(a_name)
+class DataDistributor;
+class QString;
+
+class DockWidgetModelWrapper
 {
 
-}
+public:
+    DockWidgetModelWrapper(DataDistributor& a_dataDistributor);
+    virtual ~DockWidgetModelWrapper();
+    // Stop the compiler generating methods of copy the object
+    DockWidgetModelWrapper(DockWidgetModelWrapper const& copy);            // Not Implemented
+    DockWidgetModelWrapper& operator=(DockWidgetModelWrapper const& copy); // Not Implemented
+
+    virtual void unsubscribe(const QString& a_mxTelemetryTypeName,
+                             const QString& a_mxTelemetryInstanceName) noexcept = 0;
+
+protected:
+    DataDistributor& m_dataDistributor;
+};
 
 
-DockWindowController::~DockWindowController()
-{
 
-}
-
-
-bool DockWindowController::isDockWidgetExists(const QList<QDockWidget *>& a_currentDockList,
-                                              const QString& a_objectName,
-                                              QDockWidget*& a_dock) const noexcept
-{
-    bool l_contains = false;
-    foreach (a_dock, a_currentDockList)
-    {
-        if (a_dock->windowTitle() == a_objectName)
-        {
-            // yes already exists
-            l_contains = true;
-            break;
-        }
-    }
-    return l_contains;
-}
-
+#endif // DOCKWIDGETMODELWRAPPER_H

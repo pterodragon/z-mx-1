@@ -19,16 +19,15 @@
 
 
 #include "controllers/TableWidgetDockWindowController.h"
-#include "QDockWidget"
 #include "QTableWidget"
 #include "QDebug"
-#include "models/wrappers/TableModelWrapper.h"
+#include "models/wrappers/TableDockWidgetModelWrapper.h"
 #include "models/wrappers/BasicDockWidget.h"
 
 
 TableWidgetDockWindowController::TableWidgetDockWindowController(DataDistributor& a_dataDistributor):
-    DockWindowController(a_dataDistributor),
-    m_tableModelWrapper(new TableModelWrapper(a_dataDistributor))
+    DockWindowController(a_dataDistributor, " Table"),
+    m_tableModelWrapper(new TableDockWidgetModelWrapper(a_dataDistributor))
     //m_modelWrapper(new TableWidgetDockWindowModelWrapper())
 {
 
@@ -57,6 +56,7 @@ QAbstractItemView*  TableWidgetDockWindowController::getView()
     return nullptr;
 }
 
+
 // DockWindowController interface
 void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action,
                                                           QDockWidget*& a_widget,
@@ -66,33 +66,24 @@ void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action
 {
     // constrct widget name
     // for now, using same name for object and table header
-    const QString l_objectName = a_mxTelemetryTypeName + "::" + a_mxTelemetryInstanceName + " Table";
+    const QString l_objectName = a_mxTelemetryTypeName + "::" + a_mxTelemetryInstanceName + m_dockWindowName;
 
     // is dock widget already exists?
     QDockWidget* l_dock = nullptr;
-    bool l_contains = false;
-    foreach (l_dock, a_currentDockList)
-    {
-        if (l_dock->windowTitle() == l_objectName)
-        {
-            // yes already exists\
-            models/wrappers/BasicDockWidget.cpp
-            l_contains = true;
-            break;
-        }
-    }
+    bool l_contains = isDockWidgetExists(a_currentDockList, l_objectName, l_dock);
 
     // handle case that dock widget already exists
     if (l_contains)
     {
-        qDebug() << "table already exists";
+        qDebug() << m_dockWindowName << l_objectName << "already exists";
         // out policy for table, only one at a time
         a_action = DockWindowController::ACTIONS::NO_ACTION;
         a_widget = nullptr;
         l_dock->activateWindow();
         return;
     }
-    qDebug() << "constrcuting table ";
+    qDebug() << "constrcuting" << m_dockWindowName << l_objectName;
+
 
     //handle case that dock widget not exists
     a_action = DockWindowController::ACTIONS::ADD;

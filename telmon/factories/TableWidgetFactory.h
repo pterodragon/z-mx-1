@@ -48,7 +48,8 @@ public:
     }
 
     // Not responsible for deallocating
-    BasicTableWidget* getTableWidget(const int a_tableType, const QString& a_mxTelemetryInstanceName) const noexcept;
+    BasicTableWidget* getTableWidget(const int a_tableType,
+                                     const QString& a_mxTelemetryInstanceName) const noexcept;
 };
 
 #endif // TABLEWIDGETFACTORY_H

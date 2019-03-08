@@ -19,17 +19,15 @@
 
 
 
-
-
 #include "BasicDockWidget.h"
 #include "QDebug"
 #include "QTableWidget"
 #include "QLayout"
-#include "models/wrappers/TableModelWrapper.h"
+#include "models/wrappers/DockWidgetModelWrapper.h"
 #include "QCloseEvent"
 
 BasicDockWidget::BasicDockWidget(const QString &title,
-                               TableModelWrapper* a_tempModelWrapper,
+                               DockWidgetModelWrapper* a_tempModelWrapper,
                                const QString& a_mxTelemetryTypeName,
                                const QString& a_mxTelemetryInstanceNameQWidget,
                                QWidget *parent):
@@ -74,7 +72,6 @@ const QString& BasicDockWidget::getMxTelemetryInstanceName() const noexcept
 
 void BasicDockWidget::closeEvent(QCloseEvent *event)
 {
-
     event->accept();
 
     /**

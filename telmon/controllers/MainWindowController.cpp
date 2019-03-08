@@ -27,13 +27,9 @@
 #include "factories/ControllerFactory.h"
 #include "QAbstractItemView"
 #include "QAction"
+#include "QDockWidget"
 
 #include "QDebug" // perhaps remove after testing
-
-#include "QDockWidget" // For Dock testing
-#include "QListWidget" // For Dock testing
-#include "QtCharts"
-
 
 MainWindowController::MainWindowController(QWidget *parent) :
     QMainWindow(parent),
@@ -53,8 +49,11 @@ MainWindowController::MainWindowController(QWidget *parent) :
     // set as central
     setCentralWidget(m_controllersDB->value(l_key)->getView());
 
-    // init Dock Windows controller
+    // init Table Dock Windows controller
     initController(ControllerFactory::CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER);
+
+    // init Graph Dock Windows controller
+    initController(ControllerFactory::CONTROLLER_TYPE::GRAPH_DOCK_WINDOW_CONTROLLER);
 
     createActions();
     //createDockWindows();
@@ -81,6 +80,15 @@ MainWindowController::~MainWindowController()
 
 void MainWindowController::initController(const unsigned int a_key) noexcept
 {
+    // another sanity check
+    if (a_key >= ControllerFactory::CONTROLLER_TYPE::SIZE)
+    {
+        qWarning() << "initController called with unknown controller type"
+                   << a_key
+                   << "returning...";
+        return;
+    }
+
     // construct controller and insert the DB of controllers
     m_controllersDB->insert( a_key, ControllerFactory::getInstance().getController(a_key, *m_mainWindowModel->getDataDistributor(), *this));
 }
@@ -137,99 +145,6 @@ void MainWindowController::createActions() noexcept
 
     // File->Exit functionality
     QObject::connect(m_mainWindowView->m_exitSubMenu, &QAction::triggered, this, &QWidget::close);
-}
-
-
-void MainWindowController::createDockWindows()
-{
-//    QDockWidget *dock2 = new QDockWidget(tr("Heap::MxTelemetry.Msg Chart"), this);
-//    //dock2->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-//    QListWidget *customerList;
-//    customerList = new QListWidget(dock2);
-//    customerList->addItems(QStringList()
-//            << "John Doe, Harmony Enterprises, 12 Lakeside, Ambleton"
-//            << "Jane Doe, Memorabilia, 23 Watersedge, Beaton"
-//            << "Tammy Shea, Tiblanka, 38 Sea Views, Carlton"
-//            << "Tim Sheen, Caraba Gifts, 48 Ocean Way, Deal"
-//            << "Sol Harvey, Chicos Coffee, 53 New Springs, Eccleston"
-//            << "Sally Hobart, Tiroli Tea, 67 Long River, Fedula");
-//    dock2->setWidget(customerList);
-//    addDockWidget(Qt::RightDockWidgetArea, dock2);
-
-    QtCharts::QLineSeries *upper_series = new QtCharts::QLineSeries();
-    QtCharts::QLineSeries *lower_series = new QtCharts::QLineSeries();
-
-    *upper_series << QPointF(1, 5) << QPointF(3, 7); //<< QPointF(7, 6) << QPointF(9, 7) << QPointF(12, 6)
-             //<< QPointF(16, 7) << QPointF(18, 5);
-    *lower_series << QPointF(1, 0) << QPointF(3, 0); //<< QPointF(7, 0) << QPointF(9, 0) << QPointF(12, 0)
-             //<< QPointF(16, 0) << QPointF(18, 0);
-
-    QAreaSeries *series = new QAreaSeries(upper_series, lower_series);
-    //series->setName("Batman");
-    QPen pen(0x059605);
-    pen.setWidth(3);
-    series->setPen(pen);
-
-    QLinearGradient gradient(QPointF(0, 0), QPointF(0, 1));
-    gradient.setColorAt(0.0, 0x3cc63c);
-    gradient.setColorAt(1.0, 0x26f626);
-    gradient.setCoordinateMode(QGradient::ObjectBoundingMode);
-    series->setBrush(gradient);
-
-    QChart *chart = new QChart();
-    chart->addSeries(series);
-    chart->setTitle("Heap::MxTelemetry.Msg");
-    chart->createDefaultAxes();
-    chart->axes(Qt::Horizontal).first()->setRange(0, 200);
-    chart->axes(Qt::Vertical).first()->setRange(0, 100);
-
-    class chartViewSized : public QChartView {
-    public:
-
-        chartViewSized(QChart *chart, QWidget *parent = nullptr):
-            QChartView(chart) {}
-
-        QSize sizeHint() const override final
-        {
-            return QSize(600,600);
-        };
-
-    protected:
-        void keyPressEvent(QKeyEvent *event)
-        {
-            QAreaSeries *series = (QAreaSeries *) chart()->series().first();
-            switch (event->key()) {
-            case Qt::Key_1:
-                qDebug() << "Qt::Key_1:";
-                for (auto i = 0;i < series->lowerSeries()->count(); i++) {
-                    qDebug() << "upperSeries["<< i <<"]" << series->upperSeries()->at(i).x() << series->upperSeries()->at(i).y();
-                    qDebug() << "lowerSeries["<< i <<"]" << series->lowerSeries()->at(i).x() << series->lowerSeries()->at(i).y();
-                }
-                // 1. get last point x and y, and append the new point
-                double u_x = series->upperSeries()->at(series->upperSeries()->count()-1).x();
-                double u_y = series->upperSeries()->at(series->upperSeries()->count()-1).y();
-
-                if (u_y > 100) {u_y = 24;}
-
-                series->upperSeries()->append(QPointF(u_x+1, u_y+1));
-                series->lowerSeries()->append(QPointF(u_x+1, 0));
-                //chart()->axes(Qt::Horizontal).first()->setRange(0, u_x+1);
-                //chart()->axes(Qt::Vertical).first()->setRange(0, u_y+1);
-                break;
-            }
-        }
-     private:
-         QAreaSeries *series;
-
-    };
-    QDockWidget *dock = new QDockWidget(tr("Heap::MxTelemetry.Msg Graphic Chart"), this);
-    //dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    QChartView *chartView = new chartViewSized(chart);
-    chartView->setRenderHint(QPainter::Antialiasing);
-    chartView->sizeHint();
-    dock->setWidget(chartView);
-    addDockWidget(Qt::RightDockWidgetArea, dock);
-
 }
 
 

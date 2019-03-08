@@ -21,6 +21,8 @@
 #include "ControllerFactory.h"
 #include "controllers/TreeMenuWidgetController.h"
 #include "controllers/TableWidgetDockWindowController.h"
+#include "controllers/GraphWidgetDockWindowController.h"
+#include "QDebug"
 
 ControllerFactory::ControllerFactory()
 {
@@ -41,9 +43,13 @@ BasicController* ControllerFactory::getController(const unsigned int a_type,
         case CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER:
             l_result = new TableWidgetDockWindowController(a_dataDistributor);
             break;
+        case CONTROLLER_TYPE::GRAPH_DOCK_WINDOW_CONTROLLER:
+            l_result = new GraphWidgetDockWindowController(a_dataDistributor);
+            break;
         default:
-            //todo - print warning
-            l_result = nullptr;
+            qWarning() << "ControllerFactory::getController called with unknown type:"
+                       << a_type
+                       << "returning..." ;
             break;
     }
     return l_result;

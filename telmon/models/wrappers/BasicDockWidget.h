@@ -24,13 +24,13 @@
 
 #include "QDockWidget"
 
-class TableModelWrapper;
+class DockWidgetModelWrapper;
 
 class BasicDockWidget : public QDockWidget
 {
 public:
     BasicDockWidget(const QString &title,
-                   TableModelWrapper* a_tempModelWrapper,
+                   DockWidgetModelWrapper* a_tempModelWrapper,
                    const QString& a_mxTelemetryTypeName,
                    const QString& a_mxTelemetryInstanceNameQWidget,
                    QWidget* parent = nullptr);
@@ -41,7 +41,7 @@ public:
     virtual void closeEvent(QCloseEvent *event);
 
 private:
-    TableModelWrapper* m_tempModelWrapper;
+    DockWidgetModelWrapper* m_tempModelWrapper;
     const QString m_mxTelemetryTypeName;
     const QString m_mxTelemetryInstanceName;
 };

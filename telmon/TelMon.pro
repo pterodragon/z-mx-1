@@ -32,6 +32,7 @@ HEADERS +=                                          \
     controllers/DockWindowController.h              \
     controllers/TableWidgetDockWindowController.h   \
     controllers/BasicController.h                   \
+    controllers/GraphWidgetDockWindowController.h   \
     # models
     ## raw
     models/raw/MainWindowModel.h                   \
@@ -39,9 +40,11 @@ HEADERS +=                                          \
     models/raw/TreeItem.h                          \
     ## wrappers
     models/wrappers/TreeMenuWidgetModelWrapper.h   \
-    models/wrappers/TableModelWrapper.h             \
-    models/wrappers/BasicTableWidget.h                    \
-    models/wrappers/BasicDockWidget.h               \
+    models/wrappers/DockWidgetModelWrapper.h       \
+    models/wrappers/TableDockWidgetModelWrapper.h  \
+    models/wrappers/GraphDockWidgetModelWrapper.h  \
+    models/wrappers/BasicTableWidget.h             \
+    models/wrappers/BasicDockWidget.h              \
     # views
     ## raw
     views/raw/MainWindowView.h                    \
@@ -54,25 +57,26 @@ HEADERS +=                                          \
     factories/TableSubscriberFactory.h            \
     factories/TableWidgetFactory.h                \
     # network_component
-    network_component/NetworkManager.h                    \
-    network_component/NetworkManagerQThreadImpl.h         \
-    network_component/ConnectionQThread.h                 \
-    network_component/MxTelMonClient.h                    \
+    network_component/NetworkManager.h            \
+    network_component/NetworkManagerQThreadImpl.h \
+    network_component/ConnectionQThread.h         \
+    network_component/MxTelMonClient.h            \
     # distributor
-    distributors/DataDistributor.h                   \
-    distributors/DataDistributorQThreadImpl.h        \
+    distributors/DataDistributor.h                \
+    distributors/DataDistributorQThreadImpl.h     \
     # subscribers
-    subscribers/DataSubscriber.h                    \
+    subscribers/DataSubscriber.h                  \
     subscribers/TableSubscriber.h
 
 SOURCES += \
     main.cpp \
     #controllers
-    controllers/MainWindowController.cpp \
-    controllers/BasicController.cpp \
+    controllers/MainWindowController.cpp            \
+    controllers/BasicController.cpp                 \
     controllers/TreeMenuWidgetController.cpp \
     controllers/DockWindowController.cpp \
     controllers/TableWidgetDockWindowController.cpp \
+    controllers/GraphWidgetDockWindowController.cpp  \
     # models
     ## raw
     models/raw/MainWindowModel.cpp \
@@ -80,7 +84,9 @@ SOURCES += \
     models/raw/TreeItem.cpp \
     ## wrappers
     models/wrappers/TreeMenuWidgetModelWrapper.cpp \
-    models/wrappers/TableModelWrapper.cpp \
+    models/wrappers/DockWidgetModelWrapper.cpp \
+    models/wrappers/TableDockWidgetModelWrapper.cpp \
+    models/wrappers/GraphDockWidgetModelWrapper.cpp \
     models/wrappers/BasicTableWidget.cpp \
     models/wrappers/BasicDockWidget.cpp \
     # views
@@ -96,7 +102,7 @@ SOURCES += \
     factories/TableWidgetFactory.cpp  \
     # network_component
     network_component/NetworkManager.cpp \
-    network_component/NetworkManagerQThreadImpl.cpp \
+    network_component/NetworkManagerQThreadImpl.cpp  \
     network_component/ConnectionQThread.cpp \
     network_component/MxTelMonClient.cpp \
     # distributor

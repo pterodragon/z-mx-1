@@ -17,46 +17,33 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// based on
-// https://stackoverflow.com/questions/318064/how-do-you-declare-an-interface-in-c
 
-#ifndef DOCKWINDOWCONTROLLER_H
-#define DOCKWINDOWCONTROLLER_H
+#ifndef GRAPHWIDGETDOCKWINDOWCONTROLLER_H
+#define GRAPHWIDGETDOCKWINDOWCONTROLLER_H
 
-#include "BasicController.h"
+#include "DockWindowController.h"
 
-class QDockWidget;
+class GraphDockWidgetModelWrapper;
 
-
-class DockWindowController : public BasicController
+class GraphWidgetDockWindowController : public DockWindowController
 {
 public:
-    DockWindowController(DataDistributor& a_dataDistributor, const char* a_name);
-    virtual ~DockWindowController();
+    GraphWidgetDockWindowController(DataDistributor& a_dataDistributor);
+    ~GraphWidgetDockWindowController() override;
 
     // BasicController interface
-    // Stop the compiler generating methods of copy the object
-    DockWindowController(DockWindowController const& copy);            // Not Implemented
-    DockWindowController& operator=(DockWindowController const& copy); // Not Implemented
-
-    virtual QAbstractItemModel* getModel()  = 0;
-    virtual QAbstractItemView*  getView()   = 0;
-
+    virtual QAbstractItemModel* getModel()  override final;
+    virtual QAbstractItemView*  getView()   override final;
 
     // DockWindowController interface
-    enum ACTIONS {NO_ACTION, ADD};
     virtual void handleUserSelection(unsigned int& a_action,
                                      QDockWidget*& a_widget,
                                      const QList<QDockWidget *>& a_currentDockList,
                                      const QString& a_mxTelemetryTypeName,
-                                     const QString& a_mxTelemetryInstanceName) noexcept = 0;
+                                     const QString& a_mxTelemetryInstanceName) noexcept override final;
 
-    bool isDockWidgetExists(const QList<QDockWidget *>& a_currentDockList,
-                            const QString& l_objectName,
-                            QDockWidget*& a_dock) const noexcept;
-
-protected:
-    const char* m_dockWindowName;
+private:
+    GraphDockWidgetModelWrapper* m_graphModelWrapper;
 };
 
-#endif // DOCKWINDOWCONTROLLER_H
+#endif // GRAPHWIDGETDOCKWINDOWCONTROLLER_H

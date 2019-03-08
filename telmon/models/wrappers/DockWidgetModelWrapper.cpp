@@ -18,38 +18,15 @@
  */
 
 
+#include "DockWidgetModelWrapper.h"
 
-#include "controllers/DockWindowController.h"
-#include "QDockWidget"
-
-DockWindowController::DockWindowController(DataDistributor& a_dataDistributor, const char* a_name):
-    BasicController(a_dataDistributor),
-    m_dockWindowName(a_name)
+DockWidgetModelWrapper::DockWidgetModelWrapper(DataDistributor& a_dataDistributor):
+    m_dataDistributor(a_dataDistributor)
 {
 
 }
 
-
-DockWindowController::~DockWindowController()
+DockWidgetModelWrapper::~DockWidgetModelWrapper()
 {
 
 }
-
-
-bool DockWindowController::isDockWidgetExists(const QList<QDockWidget *>& a_currentDockList,
-                                              const QString& a_objectName,
-                                              QDockWidget*& a_dock) const noexcept
-{
-    bool l_contains = false;
-    foreach (a_dock, a_currentDockList)
-    {
-        if (a_dock->windowTitle() == a_objectName)
-        {
-            // yes already exists
-            l_contains = true;
-            break;
-        }
-    }
-    return l_contains;
-}
-

@@ -48,9 +48,6 @@ private:
 
     void createActions() noexcept;
 
-    // until final DockWidgetDesign
-    void createDockWindows();
-
 
 
 public slots:

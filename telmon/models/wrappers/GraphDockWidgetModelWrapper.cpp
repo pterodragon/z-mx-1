@@ -19,37 +19,24 @@
 
 
 
-#include "controllers/DockWindowController.h"
-#include "QDockWidget"
+#include "GraphDockWidgetModelWrapper.h"
 
-DockWindowController::DockWindowController(DataDistributor& a_dataDistributor, const char* a_name):
-    BasicController(a_dataDistributor),
-    m_dockWindowName(a_name)
+
+GraphDockWidgetModelWrapper::GraphDockWidgetModelWrapper(DataDistributor& a_dataDistributor):
+    DockWidgetModelWrapper(a_dataDistributor)
 {
 
 }
 
 
-DockWindowController::~DockWindowController()
+GraphDockWidgetModelWrapper::~GraphDockWidgetModelWrapper()
 {
 
 }
 
 
-bool DockWindowController::isDockWidgetExists(const QList<QDockWidget *>& a_currentDockList,
-                                              const QString& a_objectName,
-                                              QDockWidget*& a_dock) const noexcept
+void GraphDockWidgetModelWrapper::unsubscribe(const QString& a_mxTelemetryTypeName,
+                                              const QString& a_mxTelemetryInstanceName) noexcept
 {
-    bool l_contains = false;
-    foreach (a_dock, a_currentDockList)
-    {
-        if (a_dock->windowTitle() == a_objectName)
-        {
-            // yes already exists
-            l_contains = true;
-            break;
-        }
-    }
-    return l_contains;
-}
 
+}

@@ -39,9 +39,9 @@ HEADERS +=                                          \
     models/raw/TreeItem.h                          \
     ## wrappers
     models/wrappers/TreeMenuWidgetModelWrapper.h   \
-    models/wrappers/TempModelWrapper.h             \
-    models/wrappers/TempTable.h                    \
-    models/wrappers/TempDockWidget.h               \
+    models/wrappers/TableModelWrapper.h             \
+    models/wrappers/BasicTableWidget.h                    \
+    models/wrappers/BasicDockWidget.h               \
     # views
     ## raw
     views/raw/MainWindowView.h                    \
@@ -63,7 +63,7 @@ HEADERS +=                                          \
     distributors/DataDistributorQThreadImpl.h        \
     # subscribers
     subscribers/DataSubscriber.h                    \
-    subscribers/TempTableSubscriber.h
+    subscribers/TableSubscriber.h
 
 SOURCES += \
     main.cpp \
@@ -80,9 +80,9 @@ SOURCES += \
     models/raw/TreeItem.cpp \
     ## wrappers
     models/wrappers/TreeMenuWidgetModelWrapper.cpp \
-    models/wrappers/TempModelWrapper.cpp \
-    models/wrappers/TempTable.cpp \
-    models/wrappers/TempDockWidget.cpp \
+    models/wrappers/TableModelWrapper.cpp \
+    models/wrappers/BasicTableWidget.cpp \
+    models/wrappers/BasicDockWidget.cpp \
     # views
     ## raw
     views/raw/MainWindowView.cpp \
@@ -104,7 +104,7 @@ SOURCES += \
     distributors/DataDistributorQThreadImpl.cpp \
     # subscribers
     subscribers/DataSubscriber.cpp \
-    subscribers/TempTableSubscriber.cpp
+    subscribers/TableSubscriber.cpp
 
 #SOURCES += /home/aristo/projects/binfinity/other/z_mx_code_main/mxbase/test/*.cpp
 

@@ -25,7 +25,7 @@
 #ifndef TABLESUBSCRIBERFACTORY_H
 #define TABLESUBSCRIBERFACTORY_H
 
-class TempTableSubscriber;
+class TableSubscriber;
 class DataDistributor;
 
 class TableSubscriberFactory
@@ -48,7 +48,7 @@ public:
     }
 
     // Not responsible for deallocating
-    TempTableSubscriber* getTableSubscriber(const int a_type) const noexcept;
+    TableSubscriber* getTableSubscriber(const int a_type) const noexcept;
 };
 
 #endif // TABLESUBSCRIBERFACTORY_H

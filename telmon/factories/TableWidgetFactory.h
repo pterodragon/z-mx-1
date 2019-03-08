@@ -25,7 +25,7 @@
 #ifndef TABLEWIDGETFACTORY_H
 #define TABLEWIDGETFACTORY_H
 
-class TempTable;
+class BasicTableWidget;
 class QString;
 
 class TableWidgetFactory
@@ -48,7 +48,7 @@ public:
     }
 
     // Not responsible for deallocating
-    TempTable* getTableWidget(const int a_tableType, const QString& a_mxTelemetryInstanceName) const noexcept;
+    BasicTableWidget* getTableWidget(const int a_tableType, const QString& a_mxTelemetryInstanceName) const noexcept;
 };
 
 #endif // TABLEWIDGETFACTORY_H

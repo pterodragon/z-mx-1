@@ -29,7 +29,8 @@ NetworkManagerFactory::NetworkManagerFactory()
 
 
 
-NetworkManager* NetworkManagerFactory::getNetworkManager(const unsigned int a_type, DataDistributor* a_dataDistributor) const noexcept
+NetworkManager* NetworkManagerFactory::getNetworkManager(const unsigned int a_type,
+                                                         DataDistributor* a_dataDistributor) const noexcept
 {
     NetworkManager* l_result = nullptr;
     switch (a_type)

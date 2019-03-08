@@ -18,33 +18,32 @@
  */
 
 
-#include "MxTelemetry.hpp"
-#include "DataDistributor.h"
 
-DataDistributor::DataDistributor()
+#ifndef BASICDOCKWIDGET_H
+#define BASICDOCKWIDGET_H
+
+#include "QDockWidget"
+
+class TableModelWrapper;
+
+class BasicDockWidget : public QDockWidget
 {
+public:
+    BasicDockWidget(const QString &title,
+                   TableModelWrapper* a_tempModelWrapper,
+                   const QString& a_mxTelemetryTypeName,
+                   const QString& a_mxTelemetryInstanceNameQWidget,
+                   QWidget* parent = nullptr);
+    virtual ~BasicDockWidget();
 
-}
+    const QString& getMxTelemetryTypeName() const noexcept;
+    const QString& getMxTelemetryInstanceName() const noexcept;
+    virtual void closeEvent(QCloseEvent *event);
 
-DataDistributor::~DataDistributor()
-{
+private:
+    TableModelWrapper* m_tempModelWrapper;
+    const QString m_mxTelemetryTypeName;
+    const QString m_mxTelemetryInstanceName;
+};
 
-}
-
-
-QString DataDistributor::fromMxTypeValueToName(const int a_type) const noexcept
-{
-    return QString(MxTelemetry::Type::name(a_type));
-}
-
-
-int DataDistributor::fromMxTypeNameToValue(const QString& a_name) const noexcept
-{
-    return static_cast<int>(MxTelemetry::Type::lookup(a_name.toStdString().c_str()));
-}
-
-
- int DataDistributor::mxTypeSize() const noexcept
-{
-    return MxTelemetry::Type::N;
-}
+#endif // BASICDOCKWIDGET_H

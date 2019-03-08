@@ -33,7 +33,7 @@ class TreeView : public QTreeView
 
 public:
     TreeView();
-    ~TreeView();
+    ~TreeView() override;
 
     /**
      * @brief this method allows us to remove selection of index in the table

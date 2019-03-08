@@ -107,11 +107,12 @@ void TreeMenuWidgetController::handleContextMenuAction(const QString& a_actionNa
     QModelIndexList indexes = this->m_treeView->selectionModel()->selectedIndexes();
 
     // get some parameters
-    const QString l_actionName = a_actionName;
-    const QString l_childName  = this->m_treeMenuWidgetModelWrapper->getModel()->data(indexes.first()).toString();
-    const QModelIndex l_parent =  this->m_treeMenuWidgetModelWrapper->getModel()->parent(indexes.first());
-    const QString l_parentName = l_parent.isValid() ? this->m_treeMenuWidgetModelWrapper->getModel()->data(l_parent).toString()
-                                                    : QString();
+    const QString      l_actionName = a_actionName;
+    const QString&     l_childName  = this->m_treeMenuWidgetModelWrapper->getModel()->data(indexes.first()).toString();
+    const QModelIndex& l_parent     = this->m_treeMenuWidgetModelWrapper->getModel()->parent(indexes.first());
+    const QString&     l_parentName = l_parent.isValid() ?
+                                        this->m_treeMenuWidgetModelWrapper->getModel()->data(l_parent).toString()
+                                        : QString();
     // sanity check:
     if (l_parentName.isNull()) {
         qWarning() << "Action:"

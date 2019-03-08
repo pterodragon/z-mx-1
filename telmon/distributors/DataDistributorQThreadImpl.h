@@ -40,13 +40,13 @@ public:
 
     virtual uintptr_t subscribeAll( DataSubscriber*  a_subscriber) override final;
     virtual uintptr_t unsubscribeAll( DataSubscriber*  a_subscriber) override final;
-    virtual uintptr_t subscribe(const unsigned int a_mxTelemetryType, DataSubscriber* a_subscriber) override final;
-    virtual uintptr_t unsubscribe(const unsigned int a_mxTelemetryType, DataSubscriber* a_subscriber) override final;
+    virtual uintptr_t subscribe(const int a_mxTelemetryType, DataSubscriber* a_subscriber) override final;
+    virtual uintptr_t unsubscribe(const int a_mxTelemetryType, DataSubscriber* a_subscriber) override final;
     virtual uintptr_t notify(void* a_mxTelemetryMsg) override final;
 
 private:
     // Data Struture based on: https://stackoverflow.com/questions/471432/in-which-scenario-do-i-use-a-particular-stl-container
-    QMap<unsigned int, QVector<DataSubscriber*>*>*  m_subscribersDB; // do not clean DataSubscriber!!
+    QMap<int, QVector<DataSubscriber*>*>*  m_subscribersDB; // do not clean DataSubscriber!!
 
     // mutexs array
     QList<QMutex*>* m_mutexList;

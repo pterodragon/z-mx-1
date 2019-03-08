@@ -43,10 +43,16 @@ private:
     TreeMenuWidgetModelWrapper* m_treeMenuWidgetModelWrapper;
     TreeView* m_treeView;
 
-    // not part of the interface
+    // # # # # # not part of BasicController's interface # # # # #
     MainWindowController& m_MainWindowController;
+
+    /**
+     * @brief // right now we handle only two actions, Table and Chart
+     * @param a_actionName
+     * @param a_dockWindowType
+     */
     void handleContextMenuAction(const QString& a_actionName,
-                                 const unsigned int a_dockWindowType) const noexcept; // right now we handle only two actions, Table and Chart
+                                 const unsigned int a_dockWindowType) const noexcept;
 
     void createActions() noexcept;
 };

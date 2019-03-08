@@ -21,7 +21,7 @@
 #define TABLEWIDGETDOCKWINDOWCONTROLLER_H
 
 #include "DockWindowController.h"
-class TempModelWrapper;
+class TableModelWrapper;
 
 class TableWidgetDockWindowController : public DockWindowController
 {
@@ -41,7 +41,7 @@ public:
                                      const QString& a_mxTelemetryInstanceName) noexcept override final;
 
 private:
-    TempModelWrapper* m_tempModelWrapper;
+    TableModelWrapper* m_tableModelWrapper;
 };
 
 #endif // TABLEWIDGETDOCKWINDOWCONTROLLER_H

@@ -159,7 +159,7 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
         m_mxTelemetryTypeFirstTreeLevelPosition++;
 
         // step 6
-        QModelIndex l_modelIndexForRoot = QModelIndex();
+        const QModelIndex l_modelIndexForRoot = QModelIndex();
         if (!m_treeModel->insertRow(APPEND_TO_THE_END, l_modelIndexForRoot, l_msgHeaderName, l_headerDescription)) {
             qCritical() << "Failed to insert data to model, step 6, printing all information:"
                         << l_pairHeaderNameHeaderData
@@ -185,7 +185,7 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
 
     // step 8
     const int l_currentTypePositionInTree = m_mxTelemetryTypeFirstTreeLevelPositionArray[l_mxTelemetryTypeIndex];
-    QModelIndex l_modelIndexForCurrentParent = m_treeModel->index(l_currentTypePositionInTree, 0, QModelIndex());
+    const QModelIndex l_modelIndexForCurrentParent = m_treeModel->index(l_currentTypePositionInTree, 0, QModelIndex());
 
     // step 9
     if (!m_treeModel->insertRow(APPEND_TO_THE_END, l_modelIndexForCurrentParent, l_msgDataID, EMPRTY_STRING)) {

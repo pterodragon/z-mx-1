@@ -28,12 +28,12 @@
 
 
 DataDistributorQThreadImpl::DataDistributorQThreadImpl():
-    m_subscribersDB(new QMap<unsigned int, QVector<DataSubscriber*>*>),
+    m_subscribersDB(new QMap<int, QVector<DataSubscriber*>*>),
     m_mutexList(new QList<QMutex*>)
 {
     // construct the subscribers according the MxTelemetryTypes
-    const unsigned int l_mxTelemetryTotalTypes = MxTelemetry::Type::N;
-    for (unsigned int i = 0; i < l_mxTelemetryTotalTypes; i++)
+    const int l_mxTelemetryTotalTypes = MxTelemetry::Type::N;
+    for (int i = 0; i < l_mxTelemetryTotalTypes; i++)
     {
         m_subscribersDB->insert(i, new QVector<DataSubscriber*>);
     }
@@ -63,8 +63,8 @@ DataDistributorQThreadImpl::~DataDistributorQThreadImpl()
 
 uintptr_t DataDistributorQThreadImpl::subscribeAll(DataSubscriber* a_subscriber)
 {
-    const unsigned int l_mxTelemetryTotalTypes = MxTelemetry::Type::N;
-    for (unsigned int i = 0; i < l_mxTelemetryTotalTypes; i++)
+    const int l_mxTelemetryTotalTypes = MxTelemetry::Type::N;
+    for (int i = 0; i < l_mxTelemetryTotalTypes; i++)
     {
         subscribe(i, a_subscriber);
     }
@@ -73,8 +73,8 @@ uintptr_t DataDistributorQThreadImpl::subscribeAll(DataSubscriber* a_subscriber)
 
 uintptr_t DataDistributorQThreadImpl::unsubscribeAll(DataSubscriber* a_subscriber)
 {
-    const unsigned int l_mxTelemetryTotalTypes = MxTelemetry::Type::N;
-    for (unsigned int i = 0; i < l_mxTelemetryTotalTypes; i++)
+    const int l_mxTelemetryTotalTypes = MxTelemetry::Type::N;
+    for (int i = 0; i < l_mxTelemetryTotalTypes; i++)
     {
         unsubscribe(i, a_subscriber);
     }
@@ -82,7 +82,7 @@ uintptr_t DataDistributorQThreadImpl::unsubscribeAll(DataSubscriber* a_subscribe
 }
 
 
-uintptr_t DataDistributorQThreadImpl::subscribe(const unsigned int a_mxTelemetryType,
+uintptr_t DataDistributorQThreadImpl::subscribe(const int a_mxTelemetryType,
                                                 DataSubscriber* a_subscriber)
 {
     {
@@ -111,7 +111,7 @@ uintptr_t DataDistributorQThreadImpl::subscribe(const unsigned int a_mxTelemetry
     return STATUS::SUCCESS;
 }
 
-uintptr_t DataDistributorQThreadImpl::unsubscribe(const unsigned int a_mxTelemetryType,
+uintptr_t DataDistributorQThreadImpl::unsubscribe(const int a_mxTelemetryType,
                                                   DataSubscriber* a_subscriber)
 {
     {
@@ -155,7 +155,7 @@ uintptr_t DataDistributorQThreadImpl::notify(void* a_mxTelemetryMsg)
 {
     MxTelemetry::Msg* a_msg = static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg);
 
-    const unsigned int l_mxTelemetryType = static_cast<unsigned int>(a_msg->hdr().type);
+    const int l_mxTelemetryType = static_cast<int>(a_msg->hdr().type);
 
     {
         //get the mutex

@@ -237,10 +237,13 @@ void MainWindowController::dockWindowsManager(const unsigned int a_dockWindowTyp
                                               const QString& a_mxTelemetryTypeName,
                                               const QString& a_mxTelemetryInstanceName) noexcept
 {
-    qDebug() << "dockWindowsManager" << a_dockWindowType << a_mxTelemetryTypeName << a_mxTelemetryInstanceName;
+    qDebug() << "MainWindowController::dockWindowsManage()"
+             << a_dockWindowType
+             << a_mxTelemetryTypeName
+             << a_mxTelemetryInstanceName;
 
     // NOTICE - GRAPH IS NOT SUPPORTED YET
-    auto l_dockWindowType = ControllerFactory::CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER;
+    const auto l_dockWindowType = ControllerFactory::CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER;
     //
 
     // sanity check
@@ -257,10 +260,16 @@ void MainWindowController::dockWindowsManager(const unsigned int a_dockWindowTyp
     // only for readability
     DockWindowController* l_dockWindowController = static_cast<DockWindowController*>(m_controllersDB->value(l_dockWindowType));
 
+    // setting default values which will be set later by handleUserSelection()
     unsigned int l_action = DockWindowController::ACTIONS::NO_ACTION;
     QDockWidget* l_dockWidget = nullptr;
 
-    l_dockWindowController->handleUserSelection(l_action, l_dockWidget, findChildren<QDockWidget *>(), a_mxTelemetryTypeName, a_mxTelemetryInstanceName);
+    // telling dockWindoeController to handle the selection
+    l_dockWindowController->handleUserSelection(l_action,
+                                                l_dockWidget,
+                                                findChildren<QDockWidget *>(),
+                                                a_mxTelemetryTypeName,
+                                                a_mxTelemetryInstanceName);
 
     switch (l_action) {
     case DockWindowController::ACTIONS::NO_ACTION:

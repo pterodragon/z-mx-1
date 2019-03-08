@@ -22,13 +22,13 @@
 #include "QDockWidget"
 #include "QTableWidget"
 #include "QDebug"
-#include "models/wrappers/TempModelWrapper.h"
-#include "models/wrappers/TempDockWidget.h"
+#include "models/wrappers/TableModelWrapper.h"
+#include "models/wrappers/BasicDockWidget.h"
 
 
 TableWidgetDockWindowController::TableWidgetDockWindowController(DataDistributor& a_dataDistributor):
     DockWindowController(a_dataDistributor),
-    m_tempModelWrapper(new TempModelWrapper(a_dataDistributor))
+    m_tableModelWrapper(new TableModelWrapper(a_dataDistributor))
     //m_modelWrapper(new TableWidgetDockWindowModelWrapper())
 {
 
@@ -38,12 +38,8 @@ TableWidgetDockWindowController::TableWidgetDockWindowController(DataDistributor
 TableWidgetDockWindowController::~TableWidgetDockWindowController()
 {
     qDebug() << "    ~TableWidgetDockWindowController() begin";
-//    qDebug() << "before delete &m_tempModelWrapper" << &m_tempModelWrapper;
-//    qDebug() << "before delete m_tempModelWrapper" << m_tempModelWrapper;
-    delete m_tempModelWrapper;
-    m_tempModelWrapper = nullptr;
-//    qDebug() << "after delete &m_tempModelWrapper" << &m_tempModelWrapper;
-//    qDebug() << "after delete m_tempModelWrapper" << m_tempModelWrapper;
+    delete m_tableModelWrapper;
+    m_tableModelWrapper = nullptr;
     qDebug() << "    ~TableWidgetDockWindowController() end";
 }
 
@@ -79,7 +75,8 @@ void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action
     {
         if (l_dock->windowTitle() == l_objectName)
         {
-            // yes already exists
+            // yes already exists\
+            models/wrappers/BasicDockWidget.cpp
             l_contains = true;
             break;
         }
@@ -102,14 +99,18 @@ void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action
 
     // construct the new dock
     //a_widget = new QDockWidget(l_objectName, nullptr);
-    a_widget = new TempDockWidget(l_objectName, m_tempModelWrapper, a_mxTelemetryTypeName, a_mxTelemetryInstanceName, nullptr);
+    a_widget = new BasicDockWidget(l_objectName,
+                                  m_tableModelWrapper,
+                                  a_mxTelemetryTypeName,
+                                  a_mxTelemetryInstanceName,
+                                  nullptr);
 
     // set dock properties
     a_widget->setAttribute(Qt::WA_DeleteOnClose);       // delete when user close the window
     a_widget->setAllowedAreas(Qt::RightDockWidgetArea); // allocate to the right of the window
 
     // create the table
-     QTableWidget* l_table = m_tempModelWrapper->getTable(a_mxTelemetryTypeName, a_mxTelemetryInstanceName);
+     QTableWidget* l_table = m_tableModelWrapper->getTable(a_mxTelemetryTypeName, a_mxTelemetryInstanceName);
 
      l_table->setParent(l_dock);
 

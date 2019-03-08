@@ -18,33 +18,27 @@
  */
 
 
-#include "MxTelemetry.hpp"
-#include "DataDistributor.h"
+#ifndef BASICTABLEWIDGET_H
+#define BASICTABLEWIDGET_H
 
-DataDistributor::DataDistributor()
+#include "QTableWidget"
+
+class BasicTableWidget : public QTableWidget
 {
 
-}
+public:
+    explicit BasicTableWidget(QWidget *parent = nullptr);
+    BasicTableWidget(int rows, int columns, QWidget *parent = nullptr);
+    BasicTableWidget(int rows, int columns, const QString a_objectName, QWidget *parent = nullptr);
+    BasicTableWidget(const QList<QString> a_horizontalHeader,
+                     const QList<QString> a_verticalHeader,
+                     const QString a_objectName,
+                     QWidget *parent = nullptr);
+    virtual ~BasicTableWidget();
 
-DataDistributor::~DataDistributor()
-{
-
-}
-
-
-QString DataDistributor::fromMxTypeValueToName(const int a_type) const noexcept
-{
-    return QString(MxTelemetry::Type::name(a_type));
-}
-
-
-int DataDistributor::fromMxTypeNameToValue(const QString& a_name) const noexcept
-{
-    return static_cast<int>(MxTelemetry::Type::lookup(a_name.toStdString().c_str()));
-}
+public slots:
+    void updateData(QLinkedList<QString> a_list);
+};
 
 
- int DataDistributor::mxTypeSize() const noexcept
-{
-    return MxTelemetry::Type::N;
-}
+#endif // BASICTABLEWIDGET_H

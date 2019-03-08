@@ -20,7 +20,7 @@
 
 #include "MxTelemetry.hpp"
 #include "TableSubscriberFactory.h"
-#include "subscribers/TempTableSubscriber.h"
+#include "subscribers/TableSubscriber.h"
 #include "QDebug"
 #include "QLinkedList"
 #include "QDateTime"
@@ -38,9 +38,9 @@ TableSubscriberFactory::TableSubscriberFactory()
 //    MxEnumValues(Heap, HashTbl, Thread, Multiplexer, Socket, Queue,
 //	Engine, Link,
 //	DBEnv, DBHost, DB);
-TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) const noexcept
+TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) const noexcept
 {
-    TempTableSubscriber* l_result = nullptr;
+    TableSubscriber* l_result = nullptr;
 
     // todo, can be improved to array of constans
     const QString l_name = MxTelemetry::Type::name(a_type); // get the name, if a_type is out of range, return unknown
@@ -48,7 +48,7 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
     switch (a_type)
     {
         case MxTelemetry::Type::Heap:
-            l_result = new TempTableSubscriber(l_name + "Subscriber");
+            l_result = new TableSubscriber(l_name + "Subscriber");
 
             /**
              * more:
@@ -60,7 +60,7 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
              *   pros constant time insertions and removals.
              *        iteration is the same as QList
             */
-            l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+            l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                               void* a_mxTelemetryMsg) -> void
             {
                 if (!a_this->isAssociatedWithTable()) {return;}
@@ -94,9 +94,9 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
 
             break;
         case MxTelemetry::Type::HashTbl:
-            l_result = new TempTableSubscriber(l_name + "Subscriber");
+            l_result = new TableSubscriber(l_name + "Subscriber");
 
-            l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+            l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                               void* a_mxTelemetryMsg) -> void
             {
                 if (!a_this->isAssociatedWithTable()) {return;}
@@ -130,9 +130,9 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
             break;
         case MxTelemetry::Type::Thread:
 
-            l_result = new TempTableSubscriber(l_name + "Subscriber");
+            l_result = new TableSubscriber(l_name + "Subscriber");
 
-            l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+            l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                          void* a_mxTelemetryMsg) -> void
             {
                 if (!a_this->isAssociatedWithTable()) {return;}
@@ -163,8 +163,8 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
             break;
 
         case MxTelemetry::Type::Multiplexer:
-            l_result = new TempTableSubscriber(l_name + "Subscriber");
-            l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+            l_result = new TableSubscriber(l_name + "Subscriber");
+            l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                          void* a_mxTelemetryMsg) -> void
             {
                 if (!a_this->isAssociatedWithTable()) {return;}
@@ -196,8 +196,8 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
             break;
 
     case MxTelemetry::Type::Socket:
-        l_result = new TempTableSubscriber(l_name + "Subscriber");
-        l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+        l_result = new TableSubscriber(l_name + "Subscriber");
+        l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
             if (!a_this->isAssociatedWithTable()) {return;}
@@ -234,8 +234,8 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
         });
         break;
     case MxTelemetry::Type::Queue:
-        l_result = new TempTableSubscriber(l_name + "Subscriber");
-        l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+        l_result = new TableSubscriber(l_name + "Subscriber");
+        l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
             if (!a_this->isAssociatedWithTable()) {return;}
@@ -265,8 +265,8 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
         });
         break;
     case MxTelemetry::Type::Engine:
-        l_result = new TempTableSubscriber(l_name + "Subscriber");
-        l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+        l_result = new TableSubscriber(l_name + "Subscriber");
+        l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
             if (!a_this->isAssociatedWithTable()) {return;}
@@ -299,8 +299,8 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
         });
         break;
     case MxTelemetry::Type::Link:
-        l_result = new TempTableSubscriber(l_name + "Subscriber");
-        l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+        l_result = new TableSubscriber(l_name + "Subscriber");
+        l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
             if (!a_this->isAssociatedWithTable()) {return;}
@@ -324,8 +324,8 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
         });
         break;
     case MxTelemetry::Type::DBEnv:
-        l_result = new TempTableSubscriber(l_name + "Subscriber");
-        l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+        l_result = new TableSubscriber(l_name + "Subscriber");
+        l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
             if (!a_this->isAssociatedWithTable()) {return;}
@@ -363,8 +363,8 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
         });
         break;
     case MxTelemetry::Type::DBHost:
-        l_result = new TempTableSubscriber(l_name + "Subscriber");
-        l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+        l_result = new TableSubscriber(l_name + "Subscriber");
+        l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
             if (!a_this->isAssociatedWithTable()) {return;}
@@ -392,8 +392,8 @@ TempTableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type
         });
         break;
     case MxTelemetry::Type::DB:
-        l_result = new TempTableSubscriber(l_name + "Subscriber");
-        l_result->setUpdateFunction( [] ( TempTableSubscriber* a_this,
+        l_result = new TableSubscriber(l_name + "Subscriber");
+        l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
             if (!a_this->isAssociatedWithTable()) {return;}

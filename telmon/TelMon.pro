@@ -66,7 +66,10 @@ HEADERS +=                                          \
     distributors/DataDistributorQThreadImpl.h     \
     # subscribers
     subscribers/DataSubscriber.h                  \
-    subscribers/TableSubscriber.h
+    subscribers/TableSubscriber.h \
+    views/raw/BasicChartView.h \
+    factories/ChartViewFactory.h \
+    factories/ChartSubscriberFactory.h
 
 SOURCES += \
     main.cpp \
@@ -110,7 +113,10 @@ SOURCES += \
     distributors/DataDistributorQThreadImpl.cpp \
     # subscribers
     subscribers/DataSubscriber.cpp \
-    subscribers/TableSubscriber.cpp
+    subscribers/TableSubscriber.cpp \
+    views/raw/BasicChartView.cpp \
+    factories/ChartViewFactory.cpp \
+    factories/ChartSubscriberFactory.cpp
 
 #SOURCES += /home/aristo/projects/binfinity/other/z_mx_code_main/mxbase/test/*.cpp
 

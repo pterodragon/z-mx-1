@@ -23,19 +23,11 @@
 #define TABLEDOCKWIDGETMODELWRAPPER_H
 
 #include "subscribers/DataSubscriber.h"
-#include "QPair"
 #include "DockWidgetModelWrapper.h"
 
 class BasicTableWidget;
 class QTableWidget;
 class TableSubscriber;
-
-template <class T>
-class QList;
-
-template <class T, class V>
-class QMap;
-
 
 
 class TableDockWidgetModelWrapper : public DockWidgetModelWrapper
@@ -52,8 +44,8 @@ public:
 
 
 private:
-    QPair<BasicTableWidget*, TableSubscriber*> getTableSubscriberPair(const int a_mxTelemetryTypeName,
-                                                                      const QString& a_mxTelemetryInstanceName) noexcept;
+    QPair<BasicTableWidget*, TableSubscriber*> getSubscriberPair(const int a_mxTelemetryTypeName,
+                                                                 const QString& a_mxTelemetryInstanceName) noexcept;
 
     // Notes:
     // QList of all the MxType available by index, that corresponds to MxTelemetry::Type

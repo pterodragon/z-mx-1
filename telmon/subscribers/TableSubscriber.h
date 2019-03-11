@@ -37,6 +37,7 @@ public:
     virtual ~TableSubscriber();
 
     virtual const QString& getName() const noexcept;
+    virtual void setName(const QString& a_name) noexcept;
 
     virtual void update(void* a_mxTelemetryMsg);
 
@@ -84,7 +85,7 @@ signals:
     void updateDone(QLinkedList<QString>);
 
 private:
-        const QString m_name;
+        QString m_name;
         QString m_tableName;
         std::stringstream *m_stream;
 

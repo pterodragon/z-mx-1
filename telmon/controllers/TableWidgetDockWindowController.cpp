@@ -27,7 +27,7 @@
 
 TableWidgetDockWindowController::TableWidgetDockWindowController(DataDistributor& a_dataDistributor):
     DockWindowController(a_dataDistributor, " Table"),
-    m_tableModelWrapper(new TableDockWidgetModelWrapper(a_dataDistributor))
+    m_tableDockWidgetModelWrapper(new TableDockWidgetModelWrapper(a_dataDistributor))
     //m_modelWrapper(new TableWidgetDockWindowModelWrapper())
 {
 
@@ -37,8 +37,8 @@ TableWidgetDockWindowController::TableWidgetDockWindowController(DataDistributor
 TableWidgetDockWindowController::~TableWidgetDockWindowController()
 {
     qDebug() << "    ~TableWidgetDockWindowController() begin";
-    delete m_tableModelWrapper;
-    m_tableModelWrapper = nullptr;
+    delete m_tableDockWidgetModelWrapper;
+    m_tableDockWidgetModelWrapper = nullptr;
     qDebug() << "    ~TableWidgetDockWindowController() end";
 }
 
@@ -59,7 +59,7 @@ QAbstractItemView*  TableWidgetDockWindowController::getView()
 
 // DockWindowController interface
 void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action,
-                                                          QDockWidget*& a_widget,
+                                                          QDockWidget*& a_dockWidget,
                                                           const QList<QDockWidget *>& a_currentDockList,
                                                           const QString& a_mxTelemetryTypeName,
                                                           const QString& a_mxTelemetryInstanceName) noexcept
@@ -78,7 +78,7 @@ void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action
         qDebug() << m_dockWindowName << l_objectName << "already exists";
         // out policy for table, only one at a time
         a_action = DockWindowController::ACTIONS::NO_ACTION;
-        a_widget = nullptr;
+        a_dockWidget = nullptr;
         l_dock->activateWindow();
         return;
     }
@@ -90,23 +90,23 @@ void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action
 
     // construct the new dock
     //a_widget = new QDockWidget(l_objectName, nullptr);
-    a_widget = new BasicDockWidget(l_objectName,
-                                  m_tableModelWrapper,
+    a_dockWidget = new BasicDockWidget(l_objectName,
+                                  m_tableDockWidgetModelWrapper,
                                   a_mxTelemetryTypeName,
                                   a_mxTelemetryInstanceName,
                                   nullptr);
 
     // set dock properties
-    a_widget->setAttribute(Qt::WA_DeleteOnClose);       // delete when user close the window
-    a_widget->setAllowedAreas(Qt::RightDockWidgetArea); // allocate to the right of the window
+    a_dockWidget->setAttribute(Qt::WA_DeleteOnClose);       // delete when user close the window
+    a_dockWidget->setAllowedAreas(Qt::RightDockWidgetArea); // allocate to the right of the window
 
     // create the table
-     QTableWidget* l_table = m_tableModelWrapper->getTable(a_mxTelemetryTypeName, a_mxTelemetryInstanceName);
+     QTableWidget* l_table = m_tableDockWidgetModelWrapper->getTable(a_mxTelemetryTypeName, a_mxTelemetryInstanceName);
 
      l_table->setParent(l_dock);
 
     // associate with l_dock;
-    a_widget->setWidget(l_table);
+    a_dockWidget->setWidget(l_table);
 
     //register to datadistributor
 }

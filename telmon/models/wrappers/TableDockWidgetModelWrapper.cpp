@@ -87,7 +87,7 @@ QTableWidget* TableDockWidgetModelWrapper::getTable(const QString& a_mxTelemetry
     const int mxTelemetryTypeNameNumber = static_cast<int>(m_dataDistributor.fromMxTypeNameToValue(a_mxTelemetryTypeName));
 
     // get the corresponding pair
-    auto l_pair = getTableSubscriberPair(mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName);
+    auto l_pair = getSubscriberPair(mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName);
 
     // sanity check
     if ( (l_pair.first == nullptr && l_pair.second != nullptr)
@@ -141,14 +141,14 @@ void TableDockWidgetModelWrapper::unsubscribe(const QString& a_mxTelemetryTypeNa
     //translate a_mxTelemetryTypeName to corresponding number
     const int mxTelemetryTypeNameNumber = m_dataDistributor.fromMxTypeNameToValue(a_mxTelemetryTypeName);
 
-    auto l_tableSubscriberInstance = getTableSubscriberPair(mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName).second;
+    auto l_tableSubscriberInstance = getSubscriberPair(mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName).second;
 
     // to do --> transfer from string to enum
     m_dataDistributor.unsubscribe(mxTelemetryTypeNameNumber, l_tableSubscriberInstance);
 }
 
 
-QPair<BasicTableWidget*, TableSubscriber*> TableDockWidgetModelWrapper::getTableSubscriberPair(const int a_mxTelemetryTypeName,
+QPair<BasicTableWidget*, TableSubscriber*> TableDockWidgetModelWrapper::getSubscriberPair(const int a_mxTelemetryTypeName,
                                                                                  const QString& a_mxTelemetryInstanceName) noexcept
 {
     //get the map from the list

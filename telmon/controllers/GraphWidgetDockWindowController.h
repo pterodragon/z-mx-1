@@ -43,7 +43,7 @@ public:
                                      const QString& a_mxTelemetryInstanceName) noexcept override final;
 
 private:
-    GraphDockWidgetModelWrapper* m_graphModelWrapper;
+    GraphDockWidgetModelWrapper* m_graphDockWidgetModelWrapper;
 };
 
 #endif // GRAPHWIDGETDOCKWINDOWCONTROLLER_H

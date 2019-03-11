@@ -18,40 +18,35 @@
  */
 
 
-// based on
-// https://stackoverflow.com/questions/318064/how-do-you-declare-an-interface-in-c
 
-#ifndef DOCKWIDGETMODELWRAPPER_H
-#define DOCKWIDGETMODELWRAPPER_H
+#ifndef CHARTSUBSCRIBERFACTORY_H
+#define CHARTSUBSCRIBERFACTORY_H
 
+
+class TableSubscriber;
 class DataDistributor;
-class QString;
-#include "QPair"
 
-template <class T>
-class QList;
-
-template <class T, class V>
-class QMap;
-
-
-class DockWidgetModelWrapper
+class ChartSubscriberFactory
 {
+private:
+    // Private Constructor
+    ChartSubscriberFactory();
+    // Stop the compiler generating methods of copy the object
+    ChartSubscriberFactory(ChartSubscriberFactory const& copy);            // Not Implemented
+    ChartSubscriberFactory& operator=(ChartSubscriberFactory const& copy); // Not Implemented
 
 public:
-    DockWidgetModelWrapper(DataDistributor& a_dataDistributor);
-    virtual ~DockWidgetModelWrapper();
-    // Stop the compiler generating methods of copy the object
-    DockWidgetModelWrapper(DockWidgetModelWrapper const& copy);            // Not Implemented
-    DockWidgetModelWrapper& operator=(DockWidgetModelWrapper const& copy); // Not Implemented
+    static ChartSubscriberFactory& getInstance()
+    {
+        // The only instance
+        // Guaranteed to be lazy initialized
+        // Guaranteed that it will be destroyed correctly
+        static ChartSubscriberFactory m_instance;
+        return m_instance;
+    }
 
-    virtual void unsubscribe(const QString& a_mxTelemetryTypeName,
-                             const QString& a_mxTelemetryInstanceName) noexcept = 0;
-
-protected:
-    DataDistributor& m_dataDistributor;
+    // Not responsible for deallocating
+    TableSubscriber* getSubscriber(const int a_type) const noexcept;
 };
 
-
-
-#endif // DOCKWIDGETMODELWRAPPER_H
+#endif // CHARTSUBSCRIBERFACTORY_H

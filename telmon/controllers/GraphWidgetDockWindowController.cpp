@@ -24,11 +24,13 @@
 #include "QDebug"
 #include "models/wrappers/BasicDockWidget.h"
 #include "models/wrappers/GraphDockWidgetModelWrapper.h"
-#include "QtCharts"
+
+
+//#include "views/raw/BasicChartView.h"
 
 GraphWidgetDockWindowController::GraphWidgetDockWindowController(DataDistributor& a_dataDistributor):
     DockWindowController(a_dataDistributor, " Chart"),
-    m_graphModelWrapper(new GraphDockWidgetModelWrapper(a_dataDistributor))
+    m_graphDockWidgetModelWrapper(new GraphDockWidgetModelWrapper(a_dataDistributor))
 {
     qDebug() << "    GraphWidgetDockWindowController()";
 }
@@ -37,7 +39,7 @@ GraphWidgetDockWindowController::GraphWidgetDockWindowController(DataDistributor
 GraphWidgetDockWindowController::~GraphWidgetDockWindowController()
 {
     qDebug() << "    ~GraphWidgetDockWindowController() begin";
-
+    delete m_graphDockWidgetModelWrapper;
     qDebug() << "    ~GraphWidgetDockWindowController() end";
 }
 
@@ -57,7 +59,7 @@ QAbstractItemView*  GraphWidgetDockWindowController::getView()
 
 // DockWindowController interface
 void GraphWidgetDockWindowController::handleUserSelection(unsigned int& a_action,
-                                                          QDockWidget*& a_widget,
+                                                          QDockWidget*& a_dockWidget,
                                                           const QList<QDockWidget *>& a_currentDockList,
                                                           const QString& a_mxTelemetryTypeName,
                                                           const QString& a_mxTelemetryInstanceName) noexcept
@@ -76,7 +78,7 @@ void GraphWidgetDockWindowController::handleUserSelection(unsigned int& a_action
         qDebug() << m_dockWindowName << l_objectName << "already exists";
         // out policy for table, only one at a time
         a_action = DockWindowController::ACTIONS::NO_ACTION;
-        a_widget = nullptr;
+        a_dockWidget = nullptr;
         l_dock->activateWindow();
         return;
     }
@@ -87,25 +89,26 @@ void GraphWidgetDockWindowController::handleUserSelection(unsigned int& a_action
     a_action = DockWindowController::ACTIONS::ADD;
 
     // construct the new dock
-    //a_widget = new QDockWidget(l_objectName, nullptr);
-    a_widget = new BasicDockWidget(l_objectName,
-                                  m_graphModelWrapper,
+    a_dockWidget = new BasicDockWidget(l_objectName,
+                                  m_graphDockWidgetModelWrapper,
                                   a_mxTelemetryTypeName,
                                   a_mxTelemetryInstanceName,
                                   nullptr);
 
     // set dock properties
-    a_widget->setAttribute(Qt::WA_DeleteOnClose);       // delete when user close the window
-    a_widget->setAllowedAreas(Qt::RightDockWidgetArea); // allocate to the right of the window
+    a_dockWidget->setAttribute(Qt::WA_DeleteOnClose);       // delete when user close the window
+    a_dockWidget->setAllowedAreas(Qt::RightDockWidgetArea); // allocate to the right of the window
 
-    // create the graph
-    //QChartView *chartView = new chartViewSized(chart);
-    //QTableWidget* l_table = m_graphModelWrapper->getTable(a_mxTelemetryTypeName, a_mxTelemetryInstanceName);
 
-//     l_table->setParent(l_dock);
+    // create the chart view
+    QChartView *l_chartView = m_graphDockWidgetModelWrapper->getChartView(a_mxTelemetryTypeName,
+                                                                          a_mxTelemetryInstanceName);
 
-//    // associate with l_dock;
-//    a_widget->setWidget(l_table);
+    // associate with l_dock;
+    l_chartView->setParent(l_dock);
+
+    // associate with chart view
+    a_dockWidget->setWidget(l_chartView);
 
 //    //register to datadistributor
 }
@@ -152,45 +155,7 @@ void GraphWidgetDockWindowController::handleUserSelection(unsigned int& a_action
 //    chart->axes(Qt::Horizontal).first()->setRange(0, 200);
 //    chart->axes(Qt::Vertical).first()->setRange(0, 100);
 
-//    class chartViewSized : public QChartView {
-//    public:
 
-//        chartViewSized(QChart *chart, QWidget *parent = nullptr):
-//            QChartView(chart) {}
-
-//        QSize sizeHint() const override final
-//        {
-//            return QSize(600,600);
-//        };
-
-//    protected:
-//        void keyPressEvent(QKeyEvent *event)
-//        {
-//            QAreaSeries *series = (QAreaSeries *) chart()->series().first();
-//            switch (event->key()) {
-//            case Qt::Key_1:
-//                qDebug() << "Qt::Key_1:";
-//                for (auto i = 0;i < series->lowerSeries()->count(); i++) {
-//                    qDebug() << "upperSeries["<< i <<"]" << series->upperSeries()->at(i).x() << series->upperSeries()->at(i).y();
-//                    qDebug() << "lowerSeries["<< i <<"]" << series->lowerSeries()->at(i).x() << series->lowerSeries()->at(i).y();
-//                }
-//                // 1. get last point x and y, and append the new point
-//                double u_x = series->upperSeries()->at(series->upperSeries()->count()-1).x();
-//                double u_y = series->upperSeries()->at(series->upperSeries()->count()-1).y();
-
-//                if (u_y > 100) {u_y = 24;}
-
-//                series->upperSeries()->append(QPointF(u_x+1, u_y+1));
-//                series->lowerSeries()->append(QPointF(u_x+1, 0));
-//                //chart()->axes(Qt::Horizontal).first()->setRange(0, u_x+1);
-//                //chart()->axes(Qt::Vertical).first()->setRange(0, u_y+1);
-//                break;
-//            }
-//        }
-//     private:
-//         QAreaSeries *series;
-
-//    };
 //    QDockWidget *dock = new QDockWidget(tr("Heap::MxTelemetry.Msg Graphic Chart"), this);
 //    //dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
 //    QChartView *chartView = new chartViewSized(chart);

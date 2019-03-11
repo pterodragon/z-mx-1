@@ -41,7 +41,7 @@ public:
                                      const QString& a_mxTelemetryInstanceName) noexcept override final;
 
 private:
-    TableDockWidgetModelWrapper* m_tableModelWrapper;
+    TableDockWidgetModelWrapper* m_tableDockWidgetModelWrapper;
 };
 
 #endif // TABLEWIDGETDOCKWINDOWCONTROLLER_H

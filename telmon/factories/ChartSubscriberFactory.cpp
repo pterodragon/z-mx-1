@@ -18,32 +18,11 @@
  */
 
 
+#include "ChartSubscriberFactory.h"
 
-#ifndef BASICDOCKWIDGET_H
-#define BASICDOCKWIDGET_H
-
-#include "QDockWidget"
-
-class DockWidgetModelWrapper;
-
-class BasicDockWidget : public QDockWidget
+ChartSubscriberFactory::ChartSubscriberFactory()
 {
-public:
-    BasicDockWidget(const QString &title,
-                   DockWidgetModelWrapper* a_dockWidgetModelWrapper,
-                   const QString& a_mxTelemetryTypeName,
-                   const QString& a_mxTelemetryInstanceNameQWidget,
-                   QWidget* parent = nullptr);
-    virtual ~BasicDockWidget();
 
-    const QString& getMxTelemetryTypeName() const noexcept;
-    const QString& getMxTelemetryInstanceName() const noexcept;
-    virtual void closeEvent(QCloseEvent *event);
+}
 
-private:
-    DockWidgetModelWrapper* m_dockWidgetModelWrapper;
-    const QString m_mxTelemetryTypeName;
-    const QString m_mxTelemetryInstanceName;
-};
 
-#endif // BASICDOCKWIDGET_H

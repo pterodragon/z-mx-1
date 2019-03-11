@@ -19,31 +19,33 @@
 
 
 
-#ifndef BASICDOCKWIDGET_H
-#define BASICDOCKWIDGET_H
+#ifndef BASICCHARTVIEW_H
+#define BASICCHARTVIEW_H
 
-#include "QDockWidget"
+#include "QtCharts"
 
-class DockWidgetModelWrapper;
 
-class BasicDockWidget : public QDockWidget
+class BasicChartView : public QChartView
 {
 public:
-    BasicDockWidget(const QString &title,
-                   DockWidgetModelWrapper* a_dockWidgetModelWrapper,
-                   const QString& a_mxTelemetryTypeName,
-                   const QString& a_mxTelemetryInstanceNameQWidget,
-                   QWidget* parent = nullptr);
-    virtual ~BasicDockWidget();
+    BasicChartView(QChart *chart, QWidget *parent = nullptr);
+    virtual ~BasicChartView() override;
 
-    const QString& getMxTelemetryTypeName() const noexcept;
-    const QString& getMxTelemetryInstanceName() const noexcept;
-    virtual void closeEvent(QCloseEvent *event);
+
+public slots:
+    void updateData(QLinkedList<QString> a_list);
+
+
+protected:
+    // for now
+    QSize sizeHint() const override final;
+    QLineSeries *m_seriesVertical;
+    QLineSeries *m_seriesHorizontal;
 
 private:
-    DockWidgetModelWrapper* m_dockWidgetModelWrapper;
-    const QString m_mxTelemetryTypeName;
-    const QString m_mxTelemetryInstanceName;
+    int m_verticalAxesRange;
 };
 
-#endif // BASICDOCKWIDGET_H
+#endif // BASICCHARTVIEW_H
+
+

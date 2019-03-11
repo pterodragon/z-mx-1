@@ -32,12 +32,6 @@ TableSubscriberFactory::TableSubscriberFactory()
 }
 
 
-
-//todo - add support for all types
-//
-//    MxEnumValues(Heap, HashTbl, Thread, Multiplexer, Socket, Queue,
-//	Engine, Link,
-//	DBEnv, DBHost, DB);
 TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) const noexcept
 {
     TableSubscriber* l_result = nullptr;

@@ -32,7 +32,7 @@ BasicDockWidget::BasicDockWidget(const QString &title,
                                const QString& a_mxTelemetryInstanceNameQWidget,
                                QWidget *parent):
     QDockWidget (title, parent),
-    m_tempModelWrapper(a_tempModelWrapper),
+    m_dockWidgetModelWrapper(a_tempModelWrapper),
     m_mxTelemetryTypeName(a_mxTelemetryTypeName),
     m_mxTelemetryInstanceName(a_mxTelemetryInstanceNameQWidget)
 {
@@ -44,9 +44,9 @@ BasicDockWidget::~BasicDockWidget()
 {
     qDebug() << "    ~BasicDockWidget() -BEGIN";
     //unsubscribe
-    if (m_tempModelWrapper)
+    if (m_dockWidgetModelWrapper)
     {
-        m_tempModelWrapper->unsubscribe(m_mxTelemetryTypeName, m_mxTelemetryInstanceName);
+        m_dockWidgetModelWrapper->unsubscribe(m_mxTelemetryTypeName, m_mxTelemetryInstanceName);
         //m_tempModelWrapper = nullptr;
     }
 

@@ -18,40 +18,35 @@
  */
 
 
-// based on
-// https://stackoverflow.com/questions/318064/how-do-you-declare-an-interface-in-c
+#ifndef CHARTVIEWFACTORY_H
+#define CHARTVIEWFACTORY_H
 
-#ifndef DOCKWIDGETMODELWRAPPER_H
-#define DOCKWIDGETMODELWRAPPER_H
+#include "QtCharts"
 
-class DataDistributor;
 class QString;
-#include "QPair"
 
-template <class T>
-class QList;
-
-template <class T, class V>
-class QMap;
-
-
-class DockWidgetModelWrapper
+class ChartViewFactory
 {
+private:
+    // Private Constructor
+    ChartViewFactory();
+    // Stop the compiler generating methods of copy the object
+    ChartViewFactory(ChartViewFactory const& copy);            // Not Implemented
+    ChartViewFactory& operator=(ChartViewFactory const& copy); // Not Implemented
 
 public:
-    DockWidgetModelWrapper(DataDistributor& a_dataDistributor);
-    virtual ~DockWidgetModelWrapper();
-    // Stop the compiler generating methods of copy the object
-    DockWidgetModelWrapper(DockWidgetModelWrapper const& copy);            // Not Implemented
-    DockWidgetModelWrapper& operator=(DockWidgetModelWrapper const& copy); // Not Implemented
+    static ChartViewFactory& getInstance()
+    {
+        // The only instance
+        // Guaranteed to be lazy initialized
+        // Guaranteed that it will be destroyed correctly
+        static ChartViewFactory m_instance;
+        return m_instance;
+    }
 
-    virtual void unsubscribe(const QString& a_mxTelemetryTypeName,
-                             const QString& a_mxTelemetryInstanceName) noexcept = 0;
-
-protected:
-    DataDistributor& m_dataDistributor;
+    // Not responsible for deallocating
+    QChartView* getChartView(const int a_tableType,
+                                   const QString& a_mxTelemetryInstanceName) const noexcept;
 };
 
-
-
-#endif // DOCKWIDGETMODELWRAPPER_H
+#endif // CHARTVIEWFACTORY_H

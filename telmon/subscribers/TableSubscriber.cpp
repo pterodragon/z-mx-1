@@ -49,6 +49,12 @@ const QString& TableSubscriber::getName() const noexcept
 }
 
 
+void TableSubscriber::setName(const QString& a_name) noexcept
+{
+    m_name = a_name;
+}
+
+
 const QString& TableSubscriber::getTableName() const noexcept
 {
     return m_tableName;

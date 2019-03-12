@@ -23,7 +23,7 @@
 #define CHARTSUBSCRIBERFACTORY_H
 
 
-class TableSubscriber;
+class ChartSubscriber;
 class DataDistributor;
 
 class ChartSubscriberFactory
@@ -46,7 +46,7 @@ public:
     }
 
     // Not responsible for deallocating
-    TableSubscriber* getSubscriber(const int a_type) const noexcept;
+    ChartSubscriber* getSubscriber(const int a_type) const noexcept;
 };
 
 #endif // CHARTSUBSCRIBERFACTORY_H

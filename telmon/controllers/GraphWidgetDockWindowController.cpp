@@ -26,7 +26,6 @@
 #include "models/wrappers/GraphDockWidgetModelWrapper.h"
 
 
-//#include "views/raw/BasicChartView.h"
 
 GraphWidgetDockWindowController::GraphWidgetDockWindowController(DataDistributor& a_dataDistributor):
     DockWindowController(a_dataDistributor, " Chart"),
@@ -100,69 +99,19 @@ void GraphWidgetDockWindowController::handleUserSelection(unsigned int& a_action
     a_dockWidget->setAllowedAreas(Qt::RightDockWidgetArea); // allocate to the right of the window
 
 
-    // create the chart view
-    QChartView *l_chartView = m_graphDockWidgetModelWrapper->getChartView(a_mxTelemetryTypeName,
+    // create the chart view and subscribe
+    QChartView *l_chartView = m_graphDockWidgetModelWrapper->initChartWidget(a_mxTelemetryTypeName,
                                                                           a_mxTelemetryInstanceName);
 
-    // associate with l_dock;
+    // associate with dock widget;
     l_chartView->setParent(l_dock);
 
-    // associate with chart view
+    // associate dock widget with chart view
     a_dockWidget->setWidget(l_chartView);
 
-//    //register to datadistributor
+
 }
 
-
-////    QDockWidget *dock2 = new QDockWidget(tr("Heap::MxTelemetry.Msg Chart"), this);
-////    //dock2->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-////    QListWidget *customerList;
-////    customerList = new QListWidget(dock2);
-////    customerList->addItems(QStringList()
-////            << "John Doe, Harmony Enterprises, 12 Lakeside, Ambleton"
-////            << "Jane Doe, Memorabilia, 23 Watersedge, Beaton"
-////            << "Tammy Shea, Tiblanka, 38 Sea Views, Carlton"
-////            << "Tim Sheen, Caraba Gifts, 48 Ocean Way, Deal"
-////            << "Sol Harvey, Chicos Coffee, 53 New Springs, Eccleston"
-////            << "Sally Hobart, Tiroli Tea, 67 Long River, Fedula");
-////    dock2->setWidget(customerList);
-////    addDockWidget(Qt::RightDockWidgetArea, dock2);
-
-//    QtCharts::QLineSeries *upper_series = new QtCharts::QLineSeries();
-//    QtCharts::QLineSeries *lower_series = new QtCharts::QLineSeries();
-
-//    *upper_series << QPointF(1, 5) << QPointF(3, 7); //<< QPointF(7, 6) << QPointF(9, 7) << QPointF(12, 6)
-//             //<< QPointF(16, 7) << QPointF(18, 5);
-//    *lower_series << QPointF(1, 0) << QPointF(3, 0); //<< QPointF(7, 0) << QPointF(9, 0) << QPointF(12, 0)
-//             //<< QPointF(16, 0) << QPointF(18, 0);
-
-//    QAreaSeries *series = new QAreaSeries(upper_series, lower_series);
-//    //series->setName("Batman");
-//    QPen pen(0x059605);
-//    pen.setWidth(3);
-//    series->setPen(pen);
-
-//    QLinearGradient gradient(QPointF(0, 0), QPointF(0, 1));
-//    gradient.setColorAt(0.0, 0x3cc63c);
-//    gradient.setColorAt(1.0, 0x26f626);
-//    gradient.setCoordinateMode(QGradient::ObjectBoundingMode);
-//    series->setBrush(gradient);
-
-//    QChart *chart = new QChart();
-//    chart->addSeries(series);
-//    chart->setTitle("Heap::MxTelemetry.Msg");
-//    chart->createDefaultAxes();
-//    chart->axes(Qt::Horizontal).first()->setRange(0, 200);
-//    chart->axes(Qt::Vertical).first()->setRange(0, 100);
-
-
-//    QDockWidget *dock = new QDockWidget(tr("Heap::MxTelemetry.Msg Graphic Chart"), this);
-//    //dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-//    QChartView *chartView = new chartViewSized(chart);
-//    chartView->setRenderHint(QPainter::Antialiasing);
-//    chartView->sizeHint();
-//    dock->setWidget(chartView);
-//    addDockWidget(Qt::RightDockWidgetArea, dock);
 
 
 

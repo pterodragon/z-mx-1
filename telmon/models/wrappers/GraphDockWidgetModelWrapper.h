@@ -24,7 +24,7 @@
 #include "DockWidgetModelWrapper.h"
 #include "QtCharts"
 
-class TableSubscriber;
+class ChartSubscriber;
 
 class GraphDockWidgetModelWrapper : public DockWidgetModelWrapper
 {
@@ -36,18 +36,18 @@ public:
     void unsubscribe(const QString& a_mxTelemetryTypeName, const QString& a_mxTelemetryInstanceName) noexcept;
     // # # # DockWidgetModelWrapper INTERFACE end # # #
 
-    QChartView* getChartView(const QString& a_mxTelemetryTypeName, const QString& a_mxTelemetryInstanceName);
+    QChartView* initChartWidget(const QString& a_mxTelemetryTypeName, const QString& a_mxTelemetryInstanceName);
 
 private:
-    QPair<QChartView*, TableSubscriber*> getSubscriberPair(const int a_mxTelemetryTypeName,
+    QPair<QChartView*, ChartSubscriber*> getSubscriberPair(const int a_mxTelemetryTypeName,
                                                                const QString& a_mxTelemetryInstanceName) noexcept;
 
     // Notes:
     // QList of all the MxType available by index, that corresponds to MxTelemetry::Type
     // QMap holds chart and corresponding subscriber per instance, for example
     // QList.at[0=Heap].value(MxTelemetry.Msg) will return the associate chart and subscriber for MxTelemetry.Msg
-    QList<QMap<QString, QPair<QChartView*, TableSubscriber*>>*>* m_subscriberDB;
-    QPair<QChartView*, TableSubscriber*> m_defaultValue;
+    QList<QMap<QString, QPair<QChartView*, ChartSubscriber*>>*>* m_subscriberDB;
+    QPair<QChartView*, ChartSubscriber*> m_defaultValue;
 };
 
 #endif // GRAPHDOCKWIDGETMODELWRAPPER_H

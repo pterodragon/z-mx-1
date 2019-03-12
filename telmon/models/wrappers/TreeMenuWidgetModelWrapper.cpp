@@ -32,6 +32,7 @@ TreeMenuWidgetModelWrapper::TreeMenuWidgetModelWrapper():
 
 }
 
+
 TreeMenuWidgetModelWrapper::~TreeMenuWidgetModelWrapper()
 {
     delete [] m_mxTelemetryTypeFirstTreeLevelPositionArray;

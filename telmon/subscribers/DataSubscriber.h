@@ -17,8 +17,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// based on
-// https://stackoverflow.com/questions/318064/how-do-you-declare-an-interface-in-c
 
 #ifndef DATASUBSCRIBER_H
 #define DATASUBSCRIBER_H
@@ -28,6 +26,10 @@
 class QString;
 #include <string>
 
+/**
+ * @brief The DataSubscriber class
+ * General interface for data subscriber to implement
+ */
 class DataSubscriber
 {
 public:
@@ -42,7 +44,7 @@ public:
 
     /**
      * @brief used to create Queue name
-     * @param a_mxTelemetryMsg
+     * @param
      * @return
      */
     const std::string constructQueueName(const char* a_id, const char* a_type) const noexcept;

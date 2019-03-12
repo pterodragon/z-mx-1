@@ -17,20 +17,36 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// TODO
-// seperate everything to folders: Factories, Controllers, Models, Views
-// provide print mechanizm
+
+#include "ChartSubscriber.h"
 
 
-#include "controllers/MainWindowController.h"
-#include <QApplication>
 
-int main(int argc, char *argv[])
+ChartSubscriber::ChartSubscriber(const QString& a_subscriberName):
+    QObjectDataSubscriber(a_subscriberName)
 {
-    QApplication a(argc, argv);
 
-    MainWindowController w;
-    w.show();
-
-    return a.exec();
 }
+
+
+ChartSubscriber::~ChartSubscriber()
+{
+
+};
+
+
+void ChartSubscriber::update(void* a_mxTelemetryMsg)
+{
+     m_lambda(this, a_mxTelemetryMsg);
+}
+
+
+void ChartSubscriber::setUpdateFunction( std::function<void(ChartSubscriber* a_this,
+                                                            void* a_mxTelemetryMsg)>   a_lambda )
+{
+    m_lambda = a_lambda;
+}
+
+
+
+

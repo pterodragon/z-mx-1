@@ -18,13 +18,13 @@
  */
 
 
-
+#include "ZmHeap.hpp"
 #include "GraphDockWidgetModelWrapper.h"
 #include "QDebug"
 #include "distributors/DataDistributor.h"
 #include "factories/ChartViewFactory.h"
-#include "factories/TableSubscriberFactory.h"
-#include "subscribers/TableSubscriber.h"
+#include "factories/ChartSubscriberFactory.h"
+#include "subscribers/ChartSubscriber.h"
 
 #include "views/raw/BasicChartView.h"
 
@@ -33,7 +33,7 @@
 
 GraphDockWidgetModelWrapper::GraphDockWidgetModelWrapper(DataDistributor& a_dataDistributor):
     DockWidgetModelWrapper(a_dataDistributor),
-     m_subscriberDB(new QList<QMap<QString, QPair<QChartView*, TableSubscriber*>>*>)
+     m_subscriberDB(new QList<QMap<QString, QPair<QChartView*, ChartSubscriber*>>*>)
 {
     qDebug() << "GraphDockWidgetModelWrapper";
 
@@ -41,11 +41,34 @@ GraphDockWidgetModelWrapper::GraphDockWidgetModelWrapper(DataDistributor& a_data
     m_defaultValue.first = nullptr;
     m_defaultValue.second = nullptr;
 
+    /* Notice :
+     * Example how to subscribe unique types
+     * see https://forum.qt.io/topic/93039/qregistermetatype-qmap-qstring-long-long-int/9
+     */
+
+//    struct ZmHeapTelemetry {
+//      ZmIDString	id;
+//      uint64_t	cacheSize;
+//      uint64_t	cpuset;
+//      uint64_t	cacheAllocs;
+//      uint64_t	heapAllocs;
+//      uint64_t	frees;
+//      uint32_t	size;
+//      uint16_t	partition;
+//      uint8_t	sharded;
+//      uint8_t	alignment;
+//    };
+    qRegisterMetaType<ZmHeapTelemetry>("ZmHeapTelemetry");
+
+
+    qRegisterMetaType<uint64_t>("uint64_t");
+    qRegisterMetaType<QList<uint64_t>>("QList<uint64_t>");
+    qRegisterMetaType<QPair<QList<uint64_t>, QString>>("QPair<QList<uint64_t>, QString>");
 
     //init the QMap inside QList in m_tableList
     for (int var = 0; var < m_dataDistributor.mxTypeSize(); ++var)
     {
-        m_subscriberDB->append(new QMap<QString, QPair<QChartView*, TableSubscriber*>>());
+        m_subscriberDB->append(new QMap<QString, QPair<QChartView*, ChartSubscriber*>>());
     }
 }
 
@@ -92,8 +115,7 @@ void GraphDockWidgetModelWrapper::unsubscribe(const QString& a_mxTelemetryTypeNa
 }
 
 
-
-QPair<QChartView*, TableSubscriber*> GraphDockWidgetModelWrapper::getSubscriberPair(
+QPair<QChartView*, ChartSubscriber*> GraphDockWidgetModelWrapper::getSubscriberPair(
                                                 const int a_mxTelemetryTypeName,
                                                 const QString& a_mxTelemetryInstanceName) noexcept
 {
@@ -113,7 +135,7 @@ QPair<QChartView*, TableSubscriber*> GraphDockWidgetModelWrapper::getSubscriberP
 }
 
 
-QChartView* GraphDockWidgetModelWrapper::getChartView(const QString& a_mxTelemetryTypeName,
+QChartView* GraphDockWidgetModelWrapper::initChartWidget(const QString& a_mxTelemetryTypeName,
                                                       const QString& a_mxTelemetryInstanceName)
 {
     //translate a_mxTelemetryTypeName to corresponding number
@@ -146,23 +168,23 @@ QChartView* GraphDockWidgetModelWrapper::getChartView(const QString& a_mxTelemet
 
 
     qDebug() << "getChartView create chart and subscriber for the first time!";
-    // create table
+    // create tables
     l_pair.first = ChartViewFactory::getInstance().getChartView(mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName);
 
 
 //    create subscriber
-    l_pair.second = TableSubscriberFactory::getInstance().getTableSubscriber(mxTelemetryTypeNameNumber);
+    l_pair.second = ChartSubscriberFactory::getInstance().getSubscriber(mxTelemetryTypeNameNumber);
     qDebug() << "setTableName:" << a_mxTelemetryInstanceName;
-    l_pair.second->setTableName(a_mxTelemetryInstanceName); //todo -> move into constrctor
+    l_pair.second->setAssociatedObjesctName(a_mxTelemetryInstanceName); //todo -> move into constrctor
 
     //add to the table
     m_subscriberDB->at(mxTelemetryTypeNameNumber)->insert(a_mxTelemetryInstanceName, l_pair);
 
     //connect signal and slot
-    QObject::connect(l_pair.second, &TableSubscriber::updateDone,
+    QObject::connect(l_pair.second, &ChartSubscriber::updateDone,
                      static_cast<BasicChartView*>(l_pair.first), &BasicChartView::updateData);
 
-    // subscribe
+    // subscribes
     m_dataDistributor.subscribe(mxTelemetryTypeNameNumber, l_pair.second);
 
     //return the chart

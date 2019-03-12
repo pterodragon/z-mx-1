@@ -17,12 +17,227 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-
+#include "MxTelemetry.hpp"
 #include "ChartSubscriberFactory.h"
+#include "subscribers/ChartSubscriber.h"
+#include "QList"
+#include "QDebug"
 
 ChartSubscriberFactory::ChartSubscriberFactory()
 {
 
+}
+
+
+ChartSubscriber* ChartSubscriberFactory::getSubscriber(const int a_type) const noexcept
+{
+    ChartSubscriber* l_result = nullptr;
+
+
+    const QString l_name = MxTelemetry::Type::name(a_type); // get the name, if a_type is out of range, return unknown
+    l_result = new ChartSubscriber(l_name + "Subscriber");
+
+    switch (a_type)
+    {
+    case MxTelemetry::Type::Heap:
+
+        l_result->setUpdateFunction( [] ( ChartSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+
+            if (!a_this->isAssociatedWithObject()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Heap>();
+
+            {
+                auto l_instanceName= QString(ZmIDString((l_data.id.data())));
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
+            }
+
+            ZmHeapTelemetry l_result = std::move(l_data);
+
+//            QPair<QList<uint64_t>, QString> l_pair;
+//            l_pair.second = QString::fromStdString(a_this->getCurrentTime());
+
+//            l_pair.first.reserve(9);
+
+//            l_pair.first.insert(0, l_data.size);
+//            l_pair.first.insert(1, l_data.alignment);
+//            l_pair.first.insert(2, l_data.partition);
+//            l_pair.first.insert(3, l_data.sharded);
+//            l_pair.first.insert(4, l_data.cacheSize);
+
+//            l_pair.first.insert(5, l_data.cpuset);
+//            l_pair.first.insert(6, l_data.cacheAllocs);
+//            l_pair.first.insert(7, l_data.heapAllocs);
+//            l_pair.first.insert(8, l_data.frees);
+//            l_pair.first.insert(9, ((l_data.cacheAllocs + l_data.heapAllocs - l_data.frees)));
+
+            emit a_this->updateDone(l_result);
+
+        });
+        break;
+
+    case MxTelemetry::Type::HashTbl:
+
+        l_result->setUpdateFunction( [] ( ChartSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithObject()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::HashTbl>();
+
+            {
+                auto l_instanceName= QString(ZmIDString((l_data.id.data())));
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
+            }
+        });
+        break;
+
+    case MxTelemetry::Type::Thread:
+
+        l_result->setUpdateFunction( [] ( ChartSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+
+            if (!a_this->isAssociatedWithObject()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Thread>();
+
+            {
+                auto l_instanceName= QString(ZmIDString((l_data.name.data())));
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
+            }
+        });
+        break;
+
+    case MxTelemetry::Type::Multiplexer:
+
+        l_result->setUpdateFunction( [] ( ChartSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithObject()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Multiplexer>();
+
+            {
+                auto l_instanceName= QString(ZmIDString((l_data.id)));
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
+            }
+        });
+        break;
+
+    case MxTelemetry::Type::Socket:
+
+        l_result->setUpdateFunction( [] ( ChartSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithObject()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Socket>();
+
+            {
+                auto l_instanceName= QString(ZmIDString((l_data.mxID)));
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
+            }
+
+        });
+        break;
+
+    case MxTelemetry::Type::Queue:
+
+        l_result->setUpdateFunction( [] ( ChartSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithObject()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Queue>();
+
+            {
+                auto l_instanceName= QString::fromStdString(a_this->constructQueueName(l_data.id, MxTelemetry::QueueType::name(l_data.type)));
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
+            }
+        });
+        break;
+
+    case MxTelemetry::Type::Engine:
+
+        l_result->setUpdateFunction( [] ( ChartSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithObject()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Engine>();
+
+            {
+                auto l_instanceName= QString(ZmIDString((l_data.id)));
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
+            }
+        });
+        break;
+
+    case MxTelemetry::Type::Link:
+
+        l_result->setUpdateFunction( [] ( ChartSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithObject()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Link>();
+
+            {
+                auto l_instanceName= QString(ZmIDString((l_data.id)));
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
+            }
+
+        });
+        break;
+
+    case MxTelemetry::Type::DBEnv:
+
+        l_result->setUpdateFunction( [] ( ChartSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithObject()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::DBEnv>();
+
+            {
+                auto l_instanceName= QString((l_data.self));
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
+            }
+        });
+        break;
+
+    case MxTelemetry::Type::DBHost:
+
+        l_result->setUpdateFunction( [] ( ChartSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithObject()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::DBHost>();
+
+            {
+                auto l_instanceName= QString((l_data.id));
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
+            }
+        });
+        break;
+
+    case MxTelemetry::Type::DB:
+
+        l_result->setUpdateFunction( [] ( ChartSubscriber* a_this,
+                                     void* a_mxTelemetryMsg) -> void
+        {
+            if (!a_this->isAssociatedWithObject()) {return;}
+            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::DB>();
+
+            {
+                auto l_instanceName= QString(ZmIDString((l_data.name)));
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
+            }
+
+        });
+        break;
+
+    default:
+        qWarning() << "ChartSubscriberFactory::getSubscriber() unkown type:" << a_type;
+        delete l_result;
+        l_result = nullptr;
+        break;
+    }
+    return l_result;
 }
 
 

@@ -31,21 +31,74 @@ ChartViewFactory::ChartViewFactory()
 }
 
 
-QChartView* ChartViewFactory::getChartView(const int a_tableType, const QString& a_mxTelemetryInstanceName) const noexcept
+QChartView* ChartViewFactory::getChartView(const int a_mxType, const QString& a_mxTelemetryInstanceName) const noexcept
 {
 
     // create the chart
     QChart *l_chart = new QChart();
-    //l_chart->setTitle(l_objectName);
+    l_chart->setTitle(a_mxTelemetryInstanceName + " Chart");
+    BasicChartView* l_result = new BasicChartView(l_chart);
 
 
-    BasicChartView* l_result = nullptr;
-
-    switch (a_tableType)
+    switch (a_mxType)
     {
     case MxTelemetry::Type::Heap:
-        l_result = new BasicChartView(l_chart);
-        l_result->chart()->setTitle(a_mxTelemetryInstanceName + " Chart");
+
+
+        l_result->setUpdateFunction( [] ( BasicChartView* a_this,
+                                          void* a_mxTelemetryMsg) -> void
+        {
+            // Notice: we defiently know a_mxTelemetryMsg type !
+            const ZmHeapTelemetry* local = static_cast<ZmHeapTelemetry*>(a_mxTelemetryMsg);
+
+            // test
+            qDebug() << " ! BasicChartView::updateData a_pair.first" << local->id;
+
+            // get the series
+            QAreaSeries *series = static_cast<QAreaSeries *>(a_this->chart()->series().first());
+
+            // check not excedding the limits
+            if (series->upperSeries()->count() == a_this->m_verticalAxesRange)
+            {
+                series->upperSeries()->remove(0);
+                series->lowerSeries()->remove(0);
+            }
+
+            // shift all point left
+            const int k = series->upperSeries()->count();
+            qreal upper_x = 0;
+            qreal upper_y = 0;
+            qreal lower_x = 0;
+            qreal lower_y = 0;
+
+            for (int i = 0; i < k; i++)
+            {
+                //get curret point x
+                upper_x = series->upperSeries()->at(i).x() - 2;
+                upper_y = series->upperSeries()->at(i).y();
+                series->upperSeries()->replace(i, upper_x, upper_y);
+
+                series->lowerSeries()->replace(i,
+                                               series->lowerSeries()->at(i).x() - 2,
+                                               series->lowerSeries()->at(i).y());
+            }
+
+            int l_randomNumberForTesting =rand() % 100 ;
+            series->setName("CPU Usage: " + QString::number(l_randomNumberForTesting));
+            series->upperSeries()->append(QPointF(a_this->m_verticalAxesRange, l_randomNumberForTesting));
+
+            //actually lower is always permenant, add until reach limit
+            if (series->lowerSeries()->count() < a_this->m_verticalAxesRange)
+            {
+                series->lowerSeries()->append(QPointF(a_this->m_verticalAxesRange, 0));
+            }
+
+            qDebug() << "series->upperSeries().count()" << series->upperSeries()->count();
+            qDebug() << "series->lowerSeries()->count()" << series->lowerSeries()->count();
+            //series->upperSeries()->re
+        });
+
+
 
         break;
     case MxTelemetry::Type::HashTbl:
@@ -56,8 +109,6 @@ QChartView* ChartViewFactory::getChartView(const int a_tableType, const QString&
 //                                 a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Thread:
-        l_result = new BasicChartView(l_chart);
-        l_result->chart()->setTitle(a_mxTelemetryInstanceName + " Chart");
 
         break;
     case MxTelemetry::Type::Multiplexer:
@@ -120,7 +171,9 @@ QChartView* ChartViewFactory::getChartView(const int a_tableType, const QString&
 //                                 a_mxTelemetryInstanceName);
         break;
     default:
-        qWarning() << "unknown MxTelemetry::Type:" << a_tableType<< "request, returning...";
+        delete l_result;
+        l_result = nullptr;
+        qWarning() << "unknown MxTelemetry::Type:" << a_mxType<< "request, returning...";
         break;
     }
     return l_result;

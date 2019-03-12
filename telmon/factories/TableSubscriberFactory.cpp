@@ -57,12 +57,13 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
             l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                               void* a_mxTelemetryMsg) -> void
             {
-                if (!a_this->isAssociatedWithTable()) {return;}
+
+                if (!a_this->isAssociatedWithObject()) {return;}
                 const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Heap>();
 
                 {
                     auto l_instanceName= QString(ZmIDString((l_data.id.data())));
-                    if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+                    if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
                 }
 
                 QLinkedList<QString> l_list;
@@ -73,9 +74,8 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
                 l_list.append(QString::number(ZuBoxed(l_data.partition)));
                 l_list.append(QString::number(ZuBoxed(l_data.sharded)));
 
-                // how to print the cputest? ZmBitmap(l_data.cpuset)
                 l_list.append(QString::number(l_data.cacheSize));
-                l_list.append(QString::number(l_data.cpuset));
+                l_list.append(a_this->ZmBitmapToQString(ZmBitmap(l_data.cpuset)));
                 l_list.append(QString::number(l_data.cacheAllocs));
                 l_list.append(QString::number(l_data.heapAllocs));
                 l_list.append(QString::number(l_data.frees));
@@ -93,12 +93,12 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
             l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                               void* a_mxTelemetryMsg) -> void
             {
-                if (!a_this->isAssociatedWithTable()) {return;}
+                if (!a_this->isAssociatedWithObject()) {return;}
                 const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::HashTbl>();
 
                 {
                     auto l_instanceName= QString(ZmIDString((l_data.id.data())));
-                    if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+                    if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
                 }
 
 
@@ -129,12 +129,12 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
             l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                          void* a_mxTelemetryMsg) -> void
             {
-                if (!a_this->isAssociatedWithTable()) {return;}
+                if (!a_this->isAssociatedWithObject()) {return;}
                 const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Thread>();
 
                 {
                     auto l_instanceName= QString(ZmIDString((l_data.name.data())));
-                    if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+                    if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
                 }
 
 
@@ -161,12 +161,12 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
             l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                          void* a_mxTelemetryMsg) -> void
             {
-                if (!a_this->isAssociatedWithTable()) {return;}
+                if (!a_this->isAssociatedWithObject()) {return;}
                 const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Multiplexer>();
 
                 {
                     auto l_instanceName= QString(ZmIDString((l_data.id)));
-                    if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+                    if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
                 }
 
                 QLinkedList<QString> l_list;
@@ -194,12 +194,12 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
         l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
-            if (!a_this->isAssociatedWithTable()) {return;}
+            if (!a_this->isAssociatedWithObject()) {return;}
             const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Socket>();
 
             {
                 auto l_instanceName= QString(ZmIDString((l_data.mxID)));
-                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
 
 
@@ -232,12 +232,12 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
         l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
-            if (!a_this->isAssociatedWithTable()) {return;}
+            if (!a_this->isAssociatedWithObject()) {return;}
             const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Queue>();
 
             {
                 auto l_instanceName= QString::fromStdString(a_this->constructQueueName(l_data.id, MxTelemetry::QueueType::name(l_data.type)));
-                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
 
 
@@ -263,12 +263,12 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
         l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
-            if (!a_this->isAssociatedWithTable()) {return;}
+            if (!a_this->isAssociatedWithObject()) {return;}
             const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Engine>();
 
             {
                 auto l_instanceName= QString(ZmIDString((l_data.id)));
-                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
 
 
@@ -297,12 +297,12 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
         l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
-            if (!a_this->isAssociatedWithTable()) {return;}
+            if (!a_this->isAssociatedWithObject()) {return;}
             const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Link>();
 
             {
                 auto l_instanceName= QString(ZmIDString((l_data.id)));
-                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
 
 
@@ -322,12 +322,12 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
         l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
-            if (!a_this->isAssociatedWithTable()) {return;}
+            if (!a_this->isAssociatedWithObject()) {return;}
             const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::DBEnv>();
 
             {
                 auto l_instanceName= QString((l_data.self));
-                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
 
             QLinkedList<QString> l_list;
@@ -361,12 +361,12 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
         l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
-            if (!a_this->isAssociatedWithTable()) {return;}
+            if (!a_this->isAssociatedWithObject()) {return;}
             const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::DBHost>();
 
             {
                 auto l_instanceName= QString((l_data.id));
-                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
 
 
@@ -390,12 +390,12 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
         l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                      void* a_mxTelemetryMsg) -> void
         {
-            if (!a_this->isAssociatedWithTable()) {return;}
+            if (!a_this->isAssociatedWithObject()) {return;}
             const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::DB>();
 
             {
                 auto l_instanceName= QString(ZmIDString((l_data.name)));
-                if (!a_this->isTelemtryInstanceNameMatchsTableName(l_instanceName)) {return;}
+                if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
 
 

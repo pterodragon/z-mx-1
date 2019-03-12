@@ -69,7 +69,9 @@ HEADERS +=                                          \
     subscribers/TableSubscriber.h \
     views/raw/BasicChartView.h \
     factories/ChartViewFactory.h \
-    factories/ChartSubscriberFactory.h
+    factories/ChartSubscriberFactory.h \
+    subscribers/QObjectDataSubscriber.h \
+    subscribers/ChartSubscriber.h
 
 SOURCES += \
     main.cpp \
@@ -116,7 +118,9 @@ SOURCES += \
     subscribers/TableSubscriber.cpp \
     views/raw/BasicChartView.cpp \
     factories/ChartViewFactory.cpp \
-    factories/ChartSubscriberFactory.cpp
+    factories/ChartSubscriberFactory.cpp \
+    subscribers/QObjectDataSubscriber.cpp \
+    subscribers/ChartSubscriber.cpp
 
 #SOURCES += /home/aristo/projects/binfinity/other/z_mx_code_main/mxbase/test/*.cpp
 

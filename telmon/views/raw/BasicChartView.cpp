@@ -18,7 +18,7 @@
  */
 
 
-
+#include "ZmHeap.hpp"
 #include "BasicChartView.h"
 
 
@@ -79,54 +79,20 @@ QSize BasicChartView::sizeHint() const
 }
 
 
-// todo should be provided by lambda function
-void BasicChartView::updateData(QLinkedList<QString> a_list)
+void BasicChartView::setUpdateFunction( std::function<void(BasicChartView* a_this,
+                                                      void* a_mxTelemetryMsg)>   a_lambda )
 {
-    // get the series
-    QAreaSeries *series = static_cast<QAreaSeries *>(chart()->series().first());
-
-    // check not excedding the limits
-    if (series->upperSeries()->count() == m_verticalAxesRange)
-    {
-        series->upperSeries()->remove(0);
-        series->lowerSeries()->remove(0);
-    }
-
-    // shift all point left
-    const int k = series->upperSeries()->count();
-    qreal upper_x = 0;
-    qreal upper_y = 0;
-    qreal lower_x = 0;
-    qreal lower_y = 0;
-
-    for (int i = 0; i < k; i++)
-    {
-        //get curret point x
-        upper_x = series->upperSeries()->at(i).x() - 2;
-        upper_y = series->upperSeries()->at(i).y();
-        series->upperSeries()->replace(i, upper_x, upper_y);
-
-        series->lowerSeries()->replace(i,
-                                       series->lowerSeries()->at(i).x() - 2,
-                                       series->lowerSeries()->at(i).y());
-    }
-
-    int l_randomNumberForTesting =rand() % 100 ;
-    series->setName("CPU Usage: " + QString::number(l_randomNumberForTesting));
-    series->upperSeries()->append(QPointF(m_verticalAxesRange, l_randomNumberForTesting));
-
-    //actually lower is always permenant, add until reach limit
-    if (series->lowerSeries()->count() < m_verticalAxesRange)
-    {
-        series->lowerSeries()->append(QPointF(m_verticalAxesRange, 0));
-    }
-
-    qDebug() << "series->upperSeries().count()" << series->upperSeries()->count();
-    qDebug() << "series->lowerSeries()->count()" << series->lowerSeries()->count();
-    //series->upperSeries()->re
-
-
-
+    m_lambda = a_lambda;
 }
+
+
+void BasicChartView::updateData(ZmHeapTelemetry a_pair)
+{
+    m_lambda(this, &a_pair);
+}
+
+
+
+
 
 

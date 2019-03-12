@@ -120,7 +120,7 @@ QTableWidget* TableDockWidgetModelWrapper::getTable(const QString& a_mxTelemetry
     //create subscriber
     l_pair.second = TableSubscriberFactory::getInstance().getTableSubscriber(mxTelemetryTypeNameNumber);
     qDebug() << "setTableName:" << a_mxTelemetryInstanceName;
-    l_pair.second->setTableName(a_mxTelemetryInstanceName); //todo -> move into constrctor
+    l_pair.second->setAssociatedObjesctName(a_mxTelemetryInstanceName); //todo -> move into constrctor
 
     //add to the table
     m_tableSubscriberDB->at(mxTelemetryTypeNameNumber)->insert(a_mxTelemetryInstanceName, l_pair);

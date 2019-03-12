@@ -18,42 +18,42 @@
  */
 
 
+#ifndef CHARTSUBSCRIBER_H
+#define CHARTSUBSCRIBER_H
 
-#ifndef BASICCHARTVIEW_H
-#define BASICCHARTVIEW_H
+#include "ZmHeap.hpp"
+#include "QObjectDataSubscriber.h"
 
-#include "QtCharts"
 
-class ZmHeapTelemetry;
-
-class BasicChartView : public QChartView
+class ChartSubscriber : public QObjectDataSubscriber
 {
+    Q_OBJECT
 public:
-    BasicChartView(QChart *chart, QWidget *parent = nullptr);
-    virtual ~BasicChartView() override;
+    ChartSubscriber(const QString& a_subscriberName);
+    virtual ~ChartSubscriber() override;
 
-    void setUpdateFunction( std::function<void(BasicChartView* a_this, void* a_mxTelemetryMsg)>   a_lambda );
 
-    //public only for testing
-    int m_verticalAxesRange;
+    // DataSubscriber interface - BEGIN
+    virtual void update(void* a_mxTelemetryMsg) override final;
+    // DataSubscriber interface - END
 
-public slots:
-    void updateData(ZmHeapTelemetry a_pair);
 
+    void setUpdateFunction( std::function<void(ChartSubscriber* a_this,
+                                               void* a_mxTelemetryMsg)> a_lambda );
+
+signals:
+    // must be compatible with qRegisterMetaType! see model wraper constructor
+    void updateDone(ZmHeapTelemetry);
 
 protected:
-    // for now
-    QSize sizeHint() const override final;
-    QLineSeries *m_seriesVertical;
-    QLineSeries *m_seriesHorizontal;
-
-    // update data
-    std::function<void(BasicChartView* a_this, void* a_mxTelemetryMsg)> m_lambda;
-
-private:
-//    int m_verticalAxesRange;
+    // update function
+    std::function<void(ChartSubscriber* a_this, void* a_mxTelemetryMsg)> m_lambda;
 };
 
-#endif // BASICCHARTVIEW_H
+#endif // CHARTSUBSCRIBER_H
+
+
+
+
 
 

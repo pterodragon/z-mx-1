@@ -28,9 +28,8 @@
 #include <sstream> //for ZmBitmapToQString
 
 
-TableSubscriber::TableSubscriber(const QString a_name):
-    m_name(a_name),
-    m_tableName(QString()), // set null QString
+TableSubscriber::TableSubscriber(const QString& a_subscriberName):
+    QObjectDataSubscriber(a_subscriberName),
     m_stream(new std::stringstream())
 {
 
@@ -43,51 +42,16 @@ TableSubscriber::~TableSubscriber()
 };
 
 
-const QString& TableSubscriber::getName() const noexcept
-{
-    return m_name;
-}
-
-
-void TableSubscriber::setName(const QString& a_name) noexcept
-{
-    m_name = a_name;
-}
-
-
-const QString& TableSubscriber::getTableName() const noexcept
-{
-    return m_tableName;
-}
-
-
-void TableSubscriber::setTableName(QString a_name) noexcept
-{
-    m_tableName = a_name;
-}
-
-
-
 void TableSubscriber::update(void* a_mxTelemetryMsg)
 {
      m_lambda(this, a_mxTelemetryMsg);
 }
 
 
-
 void TableSubscriber::setUpdateFunction( std::function<void(TableSubscriber* a_this,
-                                                            void* a_mxTelemetryMsg)>     a_lambda )
+                                                            void* a_mxTelemetryMsg)>   a_lambda )
 {
     m_lambda = a_lambda;
-}
-
-
-
-std::string TableSubscriber::getCurrentTime() const noexcept
-{
-    ZtDate::CSVFmt nowFmt;
-    ZtDate now(ZtDate::Now);
-    return (ZuStringN<512>() << now.csv(nowFmt)).data();
 }
 
 
@@ -119,25 +83,6 @@ QString TableSubscriber::ZiCxnFlagsTypeToQString(const uint32_t a_ZiCxnFlags) co
     m_stream->str(std::string());
     m_stream->clear();
     return l_result;
-}
-
-bool TableSubscriber::isAssociatedWithTable() const noexcept
-{
-    if (m_tableName.isNull() || m_tableName.isEmpty())
-    {
-        qWarning() << m_name
-                   << "is not registered to any table, please setTableName or unsubscribe, returning..."
-                   << "table name is:"
-                   << getTableName();
-        return false;
-    }
-    return true;
-}
-
-
-bool TableSubscriber::isTelemtryInstanceNameMatchsTableName(const QString& a_instanceName) const noexcept
-{
-    return  (m_tableName ==  a_instanceName);
 }
 
 

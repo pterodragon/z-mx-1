@@ -157,10 +157,7 @@ void MainWindowController::dockWindowsManager(const unsigned int a_dockWindowTyp
              << a_mxTelemetryTypeName
              << a_mxTelemetryInstanceName;
 
-    // NOTICE - GRAPH IS NOT SUPPORTED YET
-    //const auto l_dockWindowType = ControllerFactory::CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER;
     const auto l_dockWindowType = a_dockWindowType;
-    //
 
     // sanity check
     if (!m_controllersDB->contains(l_dockWindowType))

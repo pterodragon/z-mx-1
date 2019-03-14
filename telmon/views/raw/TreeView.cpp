@@ -52,7 +52,7 @@ void TreeView::initContextMenu() noexcept
     m_firstAction = new QAction(QObject::tr("Show Table"), this);
     m_firstAction->setStatusTip(QObject::tr("Open new window with data fields updated in real time"));
 
-    m_secondAction = new QAction(QObject::tr("Show Graph"), this);
+    m_secondAction = new QAction(QObject::tr("Show Chart"), this);
     m_secondAction->setStatusTip(QObject::tr("Open new window with graph to monitor specific data filed over time"));
 
     m_contextMenu->addAction(m_firstAction);

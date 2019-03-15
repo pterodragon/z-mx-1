@@ -22,7 +22,9 @@
 #include "ChartViewFactory.h"
 #include "QDebug"
 #include "QtCharts"
-#include "views/raw/BasicChartView.h"
+#include "views/raw/charts/HeapChartView.h"
+#include "views/raw/charts/HashTblChartView.h"
+#include "views/raw/charts/ZmThreadChartView.h"
 
 
 ChartViewFactory::ChartViewFactory()
@@ -36,60 +38,28 @@ QChartView* ChartViewFactory::getChartView(const int a_mxType, const QString& a_
     // create the chart
     QChart *l_chart = new QChart();
     l_chart->setTitle(a_mxTelemetryInstanceName + " Chart");
-    BasicChartView* l_result = new BasicChartView(l_chart);
-
+    BasicChartView* l_result;
 
     switch (a_mxType)
     {
     case MxTelemetry::Type::Heap:
 
-
-        l_result->setUpdateFunction( [] ( BasicChartView* a_this,
-                                          void* a_mxTelemetryMsg) -> void
-        {
-            // Notice: we defiently know a_mxTelemetryMsg type !
-            const ZmHeapTelemetry* local = static_cast<ZmHeapTelemetry*>(a_mxTelemetryMsg);
-
-            // iterate over {SERIES::SERIES_LEFT, SERIES::SERIES_RIGHT}
-            for (unsigned int l_curSeries = 0; l_curSeries < BasicChartView::SERIES::SERIES_N; l_curSeries++)
-            {
-                const unsigned int l_activeDataType = a_this->getActiveDataType(l_curSeries);
-                if (l_activeDataType == BasicChartView::LOCAL_ZmHeapTelemetry::none)
-                {
-                    // nothing to do for this chart
-                    continue;
-                }
-
-                // remove first point if exceeding the limit of points
-                if (a_this->isExceedingLimits(l_curSeries))
-                {
-                       a_this->removeFromSeriesFirstPoint(l_curSeries);
-                }
-
-                // shift all point left
-                a_this->shiftLeft(l_curSeries);
-
-                // get the current value according the user choice
-                const auto l_newPoint = QPointF(a_this->getVerticalAxesRange(),
-                                                a_this->getData(*local, l_activeDataType));
-
-                // append point
-                a_this->appendPoint(l_newPoint, l_curSeries);
-            }
-        });
-
-
-
+        l_result = new HeapChartView(l_chart,
+                                     std::array<unsigned int, 2>{
+                                         HeapChartView::ChartHeapTelemetry::size,
+                                         HeapChartView::ChartHeapTelemetry::alignment});
         break;
     case MxTelemetry::Type::HashTbl:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",   "linear",  "bits",  "slots",
-//                                                 "cBits",  "cSlots",  "count", "resized",
-//                                                 "loadFactor", "effLoadFactor", "nodeSize"}),
-//                                 a_mxTelemetryInstanceName);
+        l_result = new HashTblChartView(l_chart,
+                                     std::array<unsigned int, 2>{
+                                         HashTblChartView::ChartHashTblTelemetry::linear,
+                                         HashTblChartView::ChartHashTblTelemetry::bits});
         break;
     case MxTelemetry::Type::Thread:
-
+        l_result = new ZmThreadChartView(l_chart,
+                                     std::array<unsigned int, 2>{
+                                         ZmThreadChartView::ZmThreadChartView::cpuUsage,
+                                         ZmThreadChartView::ZmThreadChartView::cpuset});
         break;
     case MxTelemetry::Type::Multiplexer:
 //        l_result = new BasicTableWidget(QList<QString>({"Data"}),

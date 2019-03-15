@@ -288,6 +288,8 @@ bool TreeModel::insertRow(const int a_position, const QModelIndex &a_parent,
     l_status = parentItem->insertChildItem(l_pos, a_col0Data, a_col1Data);
     endInsertRows();
 
+    emit resizeColumnToContent(1);
+
     return l_status;
 }
 

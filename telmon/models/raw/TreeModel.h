@@ -91,6 +91,9 @@ public:
     // for other usages
     bool isParentIsRootItem(const QModelIndex &index) const;
 
+signals:
+    void resizeColumnToContent(int columns);
+
 private:
     TreeItem *rootItem;
 

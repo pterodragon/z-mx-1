@@ -34,17 +34,6 @@ TreeView::~TreeView()
     // no need to free m_contextMenu and related
 }
 
-
-//void TreeView::customContextMenuRequested(const QPoint &pos)
-//{
-//    return mapToGlobal(QCursor::pos());
-//}
-
-//void TreeView::bla()
-//{
-
-//}
-
 void TreeView::initContextMenu() noexcept
 {
     m_contextMenu = new QMenu(this);

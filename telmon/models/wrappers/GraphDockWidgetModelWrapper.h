@@ -42,6 +42,17 @@ private:
     QPair<QChartView*, ChartSubscriber*> getSubscriberPair(const int a_mxTelemetryTypeName,
                                                                const QString& a_mxTelemetryInstanceName) noexcept;
 
+    /**
+     * @brief qt does not support overload signals and slots
+     *        i had to use the following
+     *        https://stackoverflow.com/questions/16794695/connecting-overloaded-signals-and-slots-in-qt-5
+     * @param a_pair
+     * @param a_mxTelemetryTypeNameNumber
+     */
+    void connectSignalAndSlot(QPair<QChartView*, ChartSubscriber*>& a_pair,
+                                                                 const int a_mxTelemetryTypeNameNumber) const noexcept;
+
+
     // Notes:
     // QList of all the MxType available by index, that corresponds to MxTelemetry::Type
     // QMap holds chart and corresponding subscriber per instance, for example

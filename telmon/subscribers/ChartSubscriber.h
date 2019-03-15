@@ -21,7 +21,7 @@
 #ifndef CHARTSUBSCRIBER_H
 #define CHARTSUBSCRIBER_H
 
-#include "ZmHeap.hpp"
+#include "MxTelemetry.hpp"
 #include "QObjectDataSubscriber.h"
 
 
@@ -44,6 +44,17 @@ public:
 signals:
     // must be compatible with qRegisterMetaType! see model wraper constructor
     void updateDone(ZmHeapTelemetry);
+    void updateDone(ZmHashTelemetry);
+    void updateDone(ZmThreadTelemetry);
+    void updateDone(ZiMxTelemetry);
+    void updateDone(ZiCxnTelemetry); // SOCKET
+    void updateDone(MxTelemetry::Queue); // inside MxTelemetry
+    void updateDone(MxTelemetry::Engine);
+    void updateDone(MxTelemetry::Link);
+    void updateDone(MxTelemetry::DBEnv);
+    void updateDone(MxTelemetry::DBHost);
+    void updateDone(MxTelemetry::DB);
+
 
 protected:
     // update function

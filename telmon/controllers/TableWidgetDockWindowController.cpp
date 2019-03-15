@@ -60,6 +60,7 @@ QAbstractItemView*  TableWidgetDockWindowController::getView()
 // DockWindowController interface
 void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action,
                                                           QDockWidget*& a_dockWidget,
+                                                          Qt::Orientation& a_orientation,
                                                           const QList<QDockWidget *>& a_currentDockList,
                                                           const QString& a_mxTelemetryTypeName,
                                                           const QString& a_mxTelemetryInstanceName) noexcept
@@ -84,6 +85,8 @@ void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action
     }
     qDebug() << "constrcuting" << m_dockWindowName << l_objectName;
 
+    // set orientation
+    a_orientation = Qt::Orientation::Horizontal;
 
     //handle case that dock widget not exists
     a_action = DockWindowController::ACTIONS::ADD;

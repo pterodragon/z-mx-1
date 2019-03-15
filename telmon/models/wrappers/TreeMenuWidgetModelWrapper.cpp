@@ -201,6 +201,7 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
         }
         return ;//Status::FAILED_TO_APPEND_TO_MODEL;
     }
+
     return ;//Status::APPENEDED_TO_VIEW;
 }
 

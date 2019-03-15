@@ -49,6 +49,8 @@ HEADERS +=                                          \
     ## raw
     views/raw/MainWindowView.h                    \
     views/raw/TreeView.h                          \
+    ### charts
+    views/raw/charts/BasicChartView.h            \
     ## wrappers
     # factories
     factories/ControllerFactory.h                 \
@@ -67,11 +69,13 @@ HEADERS +=                                          \
     # subscribers
     subscribers/DataSubscriber.h                  \
     subscribers/TableSubscriber.h \
-    views/raw/BasicChartView.h \
     factories/ChartViewFactory.h \
     factories/ChartSubscriberFactory.h \
     subscribers/QObjectDataSubscriber.h \
-    subscribers/ChartSubscriber.h
+    subscribers/ChartSubscriber.h \
+    views/raw/charts/HeapChartView.h \
+    views/raw/charts/HashTblChartView.h \
+    views/raw/charts/ZmThreadChartView.h
 
 SOURCES += \
     main.cpp \
@@ -98,6 +102,8 @@ SOURCES += \
     ## raw
     views/raw/MainWindowView.cpp \
     views/raw/TreeView.cpp \
+    ### charts
+    views/raw/charts/BasicChartView.cpp \
     ## wrappers
     # factories
     factories/ControllerFactory.cpp \
@@ -116,11 +122,13 @@ SOURCES += \
     # subscribers
     subscribers/DataSubscriber.cpp \
     subscribers/TableSubscriber.cpp \
-    views/raw/BasicChartView.cpp \
     factories/ChartViewFactory.cpp \
     factories/ChartSubscriberFactory.cpp \
     subscribers/QObjectDataSubscriber.cpp \
-    subscribers/ChartSubscriber.cpp
+    subscribers/ChartSubscriber.cpp \
+    views/raw/charts/HeapChartView.cpp \
+    views/raw/charts/HashTblChartView.cpp \
+    views/raw/charts/ZmThreadChartView.cpp
 
 #SOURCES += /home/aristo/projects/binfinity/other/z_mx_code_main/mxbase/test/*.cpp
 

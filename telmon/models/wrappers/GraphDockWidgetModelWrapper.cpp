@@ -18,7 +18,8 @@
  */
 
 
-#include "ZmHeap.hpp"
+#include "MxTelemetry.hpp"
+//#include "ZmHeap.hpp"
 #include "GraphDockWidgetModelWrapper.h"
 #include "QDebug"
 #include "distributors/DataDistributor.h"
@@ -26,7 +27,7 @@
 #include "factories/ChartSubscriberFactory.h"
 #include "subscribers/ChartSubscriber.h"
 
-#include "views/raw/BasicChartView.h"
+#include "views/raw/charts/BasicChartView.h"
 
 
 
@@ -45,20 +46,9 @@ GraphDockWidgetModelWrapper::GraphDockWidgetModelWrapper(DataDistributor& a_data
      * Example how to subscribe unique types
      * see https://forum.qt.io/topic/93039/qregistermetatype-qmap-qstring-long-long-int/9
      */
-
-//    struct ZmHeapTelemetry {
-//      ZmIDString	id;
-//      uint64_t	cacheSize;
-//      uint64_t	cpuset;
-//      uint64_t	cacheAllocs;
-//      uint64_t	heapAllocs;
-//      uint64_t	frees;
-//      uint32_t	size;
-//      uint16_t	partition;
-//      uint8_t	sharded;
-//      uint8_t	alignment;
-//    };
     qRegisterMetaType<ZmHeapTelemetry>("ZmHeapTelemetry");
+    qRegisterMetaType<ZmHashTelemetry>("ZmHashTelemetry");
+    qRegisterMetaType<ZmThreadTelemetry>("ZmThreadTelemetry");
 
 
     qRegisterMetaType<uint64_t>("uint64_t");
@@ -139,10 +129,10 @@ QChartView* GraphDockWidgetModelWrapper::initChartWidget(const QString& a_mxTele
                                                       const QString& a_mxTelemetryInstanceName)
 {
     //translate a_mxTelemetryTypeName to corresponding number
-    const int mxTelemetryTypeNameNumber = static_cast<int>(m_dataDistributor.fromMxTypeNameToValue(a_mxTelemetryTypeName));
+    const int l_mxTelemetryTypeNameNumber = static_cast<int>(m_dataDistributor.fromMxTypeNameToValue(a_mxTelemetryTypeName));
 
     // get the corresponding pair
-    auto l_pair = getSubscriberPair(mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName);
+    auto l_pair = getSubscriberPair(l_mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName);
 
     // sanity check
     if ( (l_pair.first == nullptr && l_pair.second != nullptr)
@@ -161,7 +151,7 @@ QChartView* GraphDockWidgetModelWrapper::initChartWidget(const QString& a_mxTele
         qDebug() << "getChartView already exists!";
 
         //subscribe
-        m_dataDistributor.subscribe(mxTelemetryTypeNameNumber, l_pair.second);
+        m_dataDistributor.subscribe(l_mxTelemetryTypeNameNumber, l_pair.second);
 
         return l_pair.first;
     }
@@ -169,30 +159,122 @@ QChartView* GraphDockWidgetModelWrapper::initChartWidget(const QString& a_mxTele
 
     qDebug() << "getChartView create chart and subscriber for the first time!";
     // create tables
-    l_pair.first = ChartViewFactory::getInstance().getChartView(mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName);
+    l_pair.first = ChartViewFactory::getInstance().getChartView(l_mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName);
 
 
 //    create subscriber
-    l_pair.second = ChartSubscriberFactory::getInstance().getSubscriber(mxTelemetryTypeNameNumber);
+    l_pair.second = ChartSubscriberFactory::getInstance().getSubscriber(l_mxTelemetryTypeNameNumber);
     qDebug() << "setTableName:" << a_mxTelemetryInstanceName;
     l_pair.second->setAssociatedObjesctName(a_mxTelemetryInstanceName); //todo -> move into constrctor
 
     //add to the table
-    m_subscriberDB->at(mxTelemetryTypeNameNumber)->insert(a_mxTelemetryInstanceName, l_pair);
+    m_subscriberDB->at(l_mxTelemetryTypeNameNumber)->insert(a_mxTelemetryInstanceName, l_pair);
 
     //connect signal and slot
-    QObject::connect(l_pair.second, &ChartSubscriber::updateDone,
-                     static_cast<BasicChartView*>(l_pair.first), &BasicChartView::updateData);
+    connectSignalAndSlot(l_pair, l_mxTelemetryTypeNameNumber);
+//    QObject::connect(l_pair.second, &ChartSubscriber::updateDone,
+//                     static_cast<BasicChartView*>(l_pair.first), &BasicChartView::updateData);
+
 
     // subscribes
-    m_dataDistributor.subscribe(mxTelemetryTypeNameNumber, l_pair.second);
+    m_dataDistributor.subscribe(l_mxTelemetryTypeNameNumber, l_pair.second);
 
     //return the chart
     return l_pair.first;
 }
 
 
+void GraphDockWidgetModelWrapper::connectSignalAndSlot(QPair<QChartView*, ChartSubscriber*>& a_pair,
+                                                             const int a_mxTelemetryTypeNameNumber) const noexcept
+{
+    switch (a_mxTelemetryTypeNameNumber)
+    {
+    case MxTelemetry::Type::Heap:
 
+        QObject::connect(a_pair.second,
+                         static_cast<void (ChartSubscriber::*)(ZmHeapTelemetry)>(&ChartSubscriber::updateDone),
+                         static_cast<BasicChartView*>(a_pair.first),
+                         static_cast<void (BasicChartView::*)(ZmHeapTelemetry)>(&BasicChartView::updateData));
+        break;
+    case MxTelemetry::Type::HashTbl:
+        QObject::connect(a_pair.second,
+                         static_cast<void (ChartSubscriber::*)(ZmHashTelemetry)>(&ChartSubscriber::updateDone),
+                         static_cast<BasicChartView*>(a_pair.first),
+                         static_cast<void (BasicChartView::*)(ZmHashTelemetry)>(&BasicChartView::updateData));
+        break;
+    case MxTelemetry::Type::Thread:
+        QObject::connect(a_pair.second,
+                         static_cast<void (ChartSubscriber::*)(ZmThreadTelemetry)>(&ChartSubscriber::updateDone),
+                         static_cast<BasicChartView*>(a_pair.first),
+                         static_cast<void (BasicChartView::*)(ZmThreadTelemetry)>(&BasicChartView::updateData));
+
+        break;
+    case MxTelemetry::Type::Multiplexer:
+//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
+//                                 QList<QString>({"time",   "state",       "nThreads",
+//                                                 "priority", "partition",  "isolation",  "rxThread",
+//                                                 "txThread",   "stackSize", "rxBufSize", "txBufSize"}),
+//                                 a_mxTelemetryInstanceName);
+        break;
+    case MxTelemetry::Type::Socket:
+//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
+//                                 QList<QString>({"time",      "type",      "remoteIP",  "remotePort",
+//                                                 "localIP",   "localPort", "fd",        "flags",
+//                                                 "mreqAddr",  "mreqIf",    "mif",       "ttl",
+//                                                 "rxBufSize", "rxBufLen",  "txBufSize", "txBufLen"}),
+//                                 a_mxTelemetryInstanceName);
+        break;
+    case MxTelemetry::Type::Queue:
+//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
+//                                 QList<QString>({"time",      "type",    "full",    "size",
+//                                                 "count",     "seqNo",   "inCount", "inBytes",
+//                                                 "outCount",  "outBytes"}),
+//                                 a_mxTelemetryInstanceName);
+        break;
+    case MxTelemetry::Type::Engine:
+//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
+//                                 QList<QString>({"time",   "state",    "nLinks",    "up",
+//                                                 "down",   "disabled", "transient", "reconn",
+//                                                 "failed", "mxID",     "rxThread",  "txThread"}),
+//                                 a_mxTelemetryInstanceName);
+        break;
+    case MxTelemetry::Type::Link:
+//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
+//                                 QList<QString>({"time",  "state",   "reconnects",    "rxSeqNo",
+//                                                 "txSeqNo"}),
+//                                 a_mxTelemetryInstanceName);
+        break;
+    case MxTelemetry::Type::DBEnv:
+//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
+//                                 QList<QString>({"time",        "self",            "master",           "prev",
+//                                                 "next",        "state",           "active",           "recovering",
+//                                                 "replicating", "nDBs",            "nHosts",           "nPeers",
+//                                                 "nCxns",       "heartbeatFreq",   "heartbeatTimeout", "reconnectFreq",
+//                                                 "m_dbenv",     "electionTimeout", "writeThread"}),
+//                                 a_mxTelemetryInstanceName);
+        break;
+    case MxTelemetry::Type::DBHost:
+//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
+//                                 QList<QString>({"time",  "priority",  "state",  "voted",
+//                                                 "ip",    "port"}),
+//                                 a_mxTelemetryInstanceName);
+        break;
+    case MxTelemetry::Type::DB:
+//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
+//                                 QList<QString>({"id",   "recSize",    "compress",    "cacheMode",
+//                                                 "cacheSize",   "path",    "fileSize",    "fileRecs",
+//                                                 "filesMax",   "preAlloc",    "minRN",    "allocRN",
+//                                                 "fileRN",    "cacheLoads",    "cacheMisses",    "fileLoads",
+//                                                 "fileMisses"}),
+//                                 a_mxTelemetryInstanceName);
+        break;
+    default:
+        qWarning() << "connectSignalAndSlotHelper"
+                   << "unknown MxTelemetry::Type:" << a_mxTelemetryTypeNameNumber << "request, returning...";
+        break;
+    }
+
+}
 
 
 

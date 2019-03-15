@@ -25,6 +25,7 @@
 #include "QDebug"
 #include "controllers/MainWindowController.h"
 #include "factories/ControllerFactory.h" // only for enums
+#include "models/raw/TreeModel.h"
 
 TreeMenuWidgetController::TreeMenuWidgetController(DataDistributor& a_dataDistributor, MainWindowController& a_MainWindowController):
     BasicController(a_dataDistributor),
@@ -97,6 +98,16 @@ void TreeMenuWidgetController::createActions() noexcept
         // pop up menu
         this->m_treeView->m_contextMenu->popup(QCursor::pos());
     } );
+
+    // adding functioniality to resize columns width
+    TreeModel* l_treeMode = static_cast<TreeModel*>(getModel());
+    m_treeView->connect(l_treeMode, &TreeModel::resizeColumnToContent,
+                        this, [this](int i) {
+        // NOT WORKING YET
+        qDebug() << "this->m_treeView->columnWidth()" << this->m_treeView->columnWidth(0);
+        qDebug() << "this->m_treeView->columnWidth()" << this->m_treeView->columnWidth(1);
+        this->m_treeView->resizeColumnToContents(i);
+    });
 }
 
 

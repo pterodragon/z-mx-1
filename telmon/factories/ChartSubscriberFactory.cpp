@@ -55,23 +55,6 @@ ChartSubscriber* ChartSubscriberFactory::getSubscriber(const int a_type) const n
 
             ZmHeapTelemetry l_result = std::move(l_data);
 
-//            QPair<QList<uint64_t>, QString> l_pair;
-//            l_pair.second = QString::fromStdString(a_this->getCurrentTime());
-
-//            l_pair.first.reserve(9);
-
-//            l_pair.first.insert(0, l_data.size);
-//            l_pair.first.insert(1, l_data.alignment);
-//            l_pair.first.insert(2, l_data.partition);
-//            l_pair.first.insert(3, l_data.sharded);
-//            l_pair.first.insert(4, l_data.cacheSize);
-
-//            l_pair.first.insert(5, l_data.cpuset);
-//            l_pair.first.insert(6, l_data.cacheAllocs);
-//            l_pair.first.insert(7, l_data.heapAllocs);
-//            l_pair.first.insert(8, l_data.frees);
-//            l_pair.first.insert(9, ((l_data.cacheAllocs + l_data.heapAllocs - l_data.frees)));
-
             emit a_this->updateDone(l_result);
 
         });
@@ -89,6 +72,11 @@ ChartSubscriber* ChartSubscriberFactory::getSubscriber(const int a_type) const n
                 auto l_instanceName= QString(ZmIDString((l_data.id.data())));
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
+
+
+            ZmHashTelemetry l_result = std::move(l_data);
+
+            emit a_this->updateDone(l_result);
         });
         break;
 
@@ -105,6 +93,11 @@ ChartSubscriber* ChartSubscriberFactory::getSubscriber(const int a_type) const n
                 auto l_instanceName= QString(ZmIDString((l_data.name.data())));
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
+
+            ZmThreadTelemetry l_result = std::move(l_data);
+
+            emit a_this->updateDone(l_result);
+
         });
         break;
 

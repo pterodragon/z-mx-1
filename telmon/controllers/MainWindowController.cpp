@@ -46,6 +46,7 @@ MainWindowController::MainWindowController(QWidget *parent) :
 
     // create
     initController(l_key);
+
     // set as central
     setCentralWidget(m_controllersDB->value(l_key)->getView());
 
@@ -56,7 +57,11 @@ MainWindowController::MainWindowController(QWidget *parent) :
     initController(ControllerFactory::CONTROLLER_TYPE::GRAPH_DOCK_WINDOW_CONTROLLER);
 
     createActions();
-    //createDockWindows();
+
+    // set dock windows behavioe
+    // The default value is AnimatedDocks | AllowTabbedDocks.
+    //setDockOptions(dockOptions() & VerticalTabs);
+    setDockNestingEnabled(true);
 }
 
 MainWindowController::~MainWindowController()
@@ -176,10 +181,12 @@ void MainWindowController::dockWindowsManager(const unsigned int a_dockWindowTyp
     // setting default values which will be set later by handleUserSelection()
     unsigned int l_action = DockWindowController::ACTIONS::NO_ACTION;
     QDockWidget* l_dockWidget = nullptr;
+    Qt::Orientation l_orientation = Qt::Vertical;
 
     // telling dockWindoeController to handle the selection
     l_dockWindowController->handleUserSelection(l_action,
                                                 l_dockWidget,
+                                                l_orientation,
                                                 findChildren<QDockWidget *>(),
                                                 a_mxTelemetryTypeName,
                                                 a_mxTelemetryInstanceName);
@@ -190,9 +197,10 @@ void MainWindowController::dockWindowsManager(const unsigned int a_dockWindowTyp
     case DockWindowController::ACTIONS::ADD:
         if (!l_dockWidget) {qCritical() << "DockWindowController::ACTIONS::DO_ADD recived l_dockWidget=nullptr!, doing nothing"
                                         << a_dockWindowType << a_mxTelemetryTypeName << a_mxTelemetryInstanceName; return;}
+        //l_dockWidget->setWindowTitle(QString());
         l_dockWidget->setParent(this);
         // handle orientation
-        addDockWidget(Qt::RightDockWidgetArea, l_dockWidget, Qt::Horizontal);
+        addDockWidget(Qt::RightDockWidgetArea, l_dockWidget, l_orientation);
         break;
     default:
         qCritical() << "Recived unknown action:" << l_action << "doing nothing"

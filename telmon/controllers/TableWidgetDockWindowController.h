@@ -36,6 +36,7 @@ public:
     // DockWindowController interface
     virtual void handleUserSelection(unsigned int& a_action,
                                      QDockWidget*& a_widget,
+                                     Qt::Orientation& a_orientation,
                                      const QList<QDockWidget *>& a_currentDockList,
                                      const QString& a_mxTelemetryTypeName,
                                      const QString& a_mxTelemetryInstanceName) noexcept override final;

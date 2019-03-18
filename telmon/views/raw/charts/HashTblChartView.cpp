@@ -104,7 +104,7 @@ qreal HashTblChartView::getData(void* const a_mxTelemetryMsg, const unsigned int
 }
 
 
-std::string  HashTblChartView::localTypeValueToString(const unsigned int a_val) const noexcept
+std::string HashTblChartView::localTypeValueToString(const unsigned int a_val) const noexcept
 {
     std::string l_result = "";
     switch (a_val) {

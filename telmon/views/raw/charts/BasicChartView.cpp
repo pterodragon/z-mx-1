@@ -23,13 +23,19 @@
 
 #include "BasicChartView.h"
 
+#include "factories/MxTelemetryTypeWrappersFactory.h"
+#include "utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
-BasicChartView::BasicChartView(QChart *a_chart, const std::array<unsigned int, 2>&  a_activeDataList,
+
+BasicChartView::BasicChartView(QChart *a_chart,
+                               const int a_associatedTelemetryType,
                                QWidget *a_parent):
     QChartView(a_chart, a_parent),
-    m_seriesVertical(new QLineSeries()),   // delete as part of QChart object destructor
-    m_seriesHorizontal(new QLineSeries()),  // delete as part of QChart object destructor
-    m_activeData(a_activeDataList) //TOTEST
+    m_associatedTelemetryType(a_associatedTelemetryType),
+    m_activeData(MxTelemetryTypeWrappersFactory::getInstance().
+                 getMxTelemetryWrapper(m_associatedTelemetryType).getActiveDataSet()),
+    m_db(MxTelemetryTypeWrappersFactory::getInstance().
+                          getMxTelemetryWrapper(m_associatedTelemetryType).getChartList())
 {
     qDebug() << "BasicChartView::BasicChartView  --BEGIN--";
 
@@ -40,14 +46,17 @@ BasicChartView::BasicChartView(QChart *a_chart, const std::array<unsigned int, 2
     m_seriesArray[SERIES::SERIES_RIGHT] = new QSplineSeries;
     m_seriesArray[SERIES::SERIES_LEFT] = new QSplineSeries;
 
+    setDefaultUpdateDataFunction();
+    initMenuBar();
+    createActions();
 
-    // TODO improve to generic
     // Adds the axis axis to the chart aligned as specified by alignment.
     // The chart takes the ownership of the axis.
     chart()->addAxis(&getAxes(CHART_AXIS::X), Qt::AlignBottom);
     getAxes(CHART_AXIS::X).setTickCount(10);
     m_axisArray[CHART_AXIS::X]->setRange(0, 10);
-    // iterate over {SERIES::SERIES_LEFT, SERIES::SERIES_RIGHT}
+
+    initSeries();
 
     // to make the chart look nicer
     setRenderHint(QPainter::Antialiasing);
@@ -59,8 +68,6 @@ BasicChartView::BasicChartView(QChart *a_chart, const std::array<unsigned int, 2
 BasicChartView::~BasicChartView()
 {
     qDebug() << "BasicChartView::~BasicChartView";
-    delete m_seriesVertical;
-    delete m_seriesHorizontal;
     delete this->chart();
 }
 
@@ -89,8 +96,8 @@ void BasicChartView::initSeries() noexcept
 
         m_axisArray[l_axis]->setRange(0, 100); // todo: should be according to type
 
-        const auto l_seriesName = localTypeValueToString(m_activeData[a_series]);
-        getSeries(a_series).setName(QString::fromStdString(l_seriesName));
+        const auto l_seriesName = m_db.at(m_activeData[a_series]);
+        getSeries(a_series).setName(l_seriesName);
     }
 }
 
@@ -107,13 +114,11 @@ void BasicChartView::initMenuBar() noexcept
 
 
     // init series menu options
-    const auto l_localTypeSize = getLocalTypeSize();
-    for (unsigned int i = 0; i < l_localTypeSize; i++)
-    {
-        const auto l_name = localTypeValueToString(i);
-        m_rightSeriesMenu->addAction(new QAction(QObject::tr(l_name.c_str())));
-        m_leftSeriesMenu->addAction( new QAction(QObject::tr(l_name.c_str())));
+    for (int i = 0; i < m_db.size(); ++i) {
+        m_rightSeriesMenu->addAction(new QAction((m_db.at(i))));
+        m_leftSeriesMenu->addAction( new QAction((m_db.at(i))));
     }
+
 
     m_menuBar->addMenu(m_settingsMenu);
     m_settingsMenu->addMenu(m_rightSeriesMenu);
@@ -159,17 +164,18 @@ void BasicChartView::createActions() noexcept
 
 void BasicChartView::changeSeriesData(const unsigned int a_series, const int data_type) noexcept
 {
-    const int l_oldDataType = static_cast<int>(m_activeData[a_series]);
+    qDebug() << "BasicChartView::changeSeriesData"
+             << "a_series" << a_series
+             << "old" << m_activeData[a_series]
+             << "new" << data_type;
+    const int l_oldDataType = m_activeData[a_series];
 
     // set new active data
-    m_activeData[a_series] = static_cast<unsigned int>(data_type);
-
-    // set new range
-    // TODO
+    m_activeData[a_series] = static_cast<int>(data_type);
 
     // set new name
-    const auto l_seriesName = localTypeValueToString(m_activeData[a_series]);
-    getSeries(a_series).setName(QString::fromStdString(l_seriesName));
+    const auto l_seriesName = m_db.at((m_activeData[a_series]));
+    getSeries(a_series).setName(l_seriesName);
 
     // flush all current data
     getSeries(a_series).clear();
@@ -178,7 +184,7 @@ void BasicChartView::changeSeriesData(const unsigned int a_series, const int dat
     QMenu* l_menu;
     (a_series == SERIES::SERIES_LEFT) ? (l_menu = m_leftSeriesMenu) : (l_menu =  m_rightSeriesMenu);
     l_menu->actions().at(l_oldDataType)->setEnabled(true);
-    l_menu->actions().at(static_cast<int>(data_type))->setDisabled(true);
+    l_menu->actions().at(data_type)->setDisabled(true);
 
 }
 
@@ -311,7 +317,7 @@ void BasicChartView::appendPoint(const QPointF& a_point, const unsigned int a_se
 }
 
 
-unsigned int BasicChartView::getActiveDataType(const unsigned int a_series) const noexcept
+int BasicChartView::getActiveDataType(const unsigned int a_series) const noexcept
 {
     return m_activeData[a_series];
 }
@@ -325,9 +331,12 @@ void BasicChartView::setDefaultUpdateDataFunction() noexcept
         // iterate over {SERIES::SERIES_LEFT, SERIES::SERIES_RIGHT}
         for (unsigned int l_curSeries = 0; l_curSeries < BasicChartView::SERIES::SERIES_N; l_curSeries++)
         {
-            const unsigned int l_activeDataType = a_this->getActiveDataType(l_curSeries);
+            const int l_activeDataType = a_this->getActiveDataType(l_curSeries);
 
-            if (a_this->isGivenTypeNotUsed(l_activeDataType)) { continue; }
+            const bool l_notUsed = MxTelemetryTypeWrappersFactory::getInstance().
+                                      getMxTelemetryWrapper(a_this->m_associatedTelemetryType).
+                                        isDataTypeNotUsed(l_activeDataType);
+            if (l_notUsed) { continue; }
 
             // remove first point if exceeding the limit of points
             if (a_this->isExceedingLimits(l_curSeries))
@@ -339,8 +348,15 @@ void BasicChartView::setDefaultUpdateDataFunction() noexcept
             a_this->shiftLeft(l_curSeries);
 
             // get the current value according the user choice
+            const auto l_data = MxTelemetryTypeWrappersFactory::getInstance().
+                    getMxTelemetryWrapper(a_this->m_associatedTelemetryType).
+                      getDataForChart(a_mxTelemetryMsg, l_activeDataType);
             const auto l_newPoint = QPointF(a_this->getVerticalAxesRange(),
-                                            a_this->getData(a_mxTelemetryMsg, l_activeDataType));
+                                            l_data);
+
+
+//            const auto l_newPoint = QPointF(a_this->getVerticalAxesRange(),
+//                                            a_this->getData(a_mxTelemetryMsg, l_activeDataType));
 
             // append point
             a_this->appendPoint(l_newPoint, l_curSeries);

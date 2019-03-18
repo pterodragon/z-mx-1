@@ -73,9 +73,12 @@ HEADERS +=                                          \
     factories/ChartSubscriberFactory.h \
     subscribers/QObjectDataSubscriber.h \
     subscribers/ChartSubscriber.h \
-    views/raw/charts/HeapChartView.h \
-    views/raw/charts/HashTblChartView.h \
-    views/raw/charts/ZmThreadChartView.h
+    #views/raw/charts/HeapChartView.h \
+    #views/raw/charts/HashTblChartView.h \
+    #views/raw/charts/ZmThreadChartView.h \
+    utilities/typeWrappers/MxTelemetryHeapWrapper.h \
+    utilities/typeWrappers/MxTelemetryGeneralWrapper.h \
+    factories/MxTelemetryTypeWrappersFactory.h
 
 SOURCES += \
     main.cpp \
@@ -126,11 +129,14 @@ SOURCES += \
     factories/ChartSubscriberFactory.cpp \
     subscribers/QObjectDataSubscriber.cpp \
     subscribers/ChartSubscriber.cpp \
-    views/raw/charts/HeapChartView.cpp \
-    views/raw/charts/HashTblChartView.cpp \
-    views/raw/charts/ZmThreadChartView.cpp
+    #views/raw/charts/HeapChartView.cpp \
+    #views/raw/charts/HashTblChartView.cpp \
+    #views/raw/charts/ZmThreadChartView.cpp \
+    utilities/typeWrappers/MxTelemetryHeapWrapper.cpp \
+    utilities/typeWrappers/MxTelemetryGeneralWrapper.cpp \
+    factories/MxTelemetryTypeWrappersFactory.cpp
 
-#SOURCES += /home/aristo/projects/binfinity/other/z_mx_code_main/mxbase/test/*.cpp
+#SOURCES += $${PWD}/../mxbase/test/*.cpp
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # support for building with <MxTelemetry.hpp> - BEGIN #

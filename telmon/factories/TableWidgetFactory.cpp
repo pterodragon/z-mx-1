@@ -22,6 +22,9 @@
 #include "models/wrappers/BasicTableWidget.h"
 #include "QDebug"
 
+#include "factories/MxTelemetryTypeWrappersFactory.h"
+#include "utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
+
 TableWidgetFactory::TableWidgetFactory()
 {
 
@@ -35,11 +38,8 @@ BasicTableWidget* TableWidgetFactory::getTableWidget(const int a_tableType, cons
     {
     case MxTelemetry::Type::Heap:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 QList<QString>({"time",       "size",       "alignment",   "partition",
-                                                 "sharded",    "cacheSize",  "cpuset",    "cacheAllocs",
-                                                 "heapAllocs", "frees", "allocated"}),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Heap).getTableList(),
                                  a_mxTelemetryInstanceName);
-
         break;
     case MxTelemetry::Type::HashTbl:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),

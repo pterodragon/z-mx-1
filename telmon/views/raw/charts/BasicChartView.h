@@ -31,7 +31,8 @@
 class BasicChartView : public QChartView
 {
 public:
-    BasicChartView(QChart *chart, const std::array<unsigned int, 2>&  a_activeDataList,
+    BasicChartView(QChart *chart,
+                   const int a_associatedTelemetryType,
                    QWidget *parent = nullptr);
     virtual ~BasicChartView() override;
 
@@ -46,11 +47,8 @@ public:
      * @param a_val
      * @return
      */
-    std::string virtual localTypeValueToString(const unsigned int a_val) const noexcept = 0;
+    //std::string virtual localTypeValueToString(const unsigned int a_val) const noexcept = 0;
 
-
-    // denotes the time range <--> amount of points
-    qreal getVerticalAxesRange() const noexcept;
 
     /**
      * @brief used to check for each sub class if given type is none
@@ -58,13 +56,21 @@ public:
      * @param a_activeType
      * @return
      */
-    bool virtual isGivenTypeNotUsed(const unsigned int a_activeType) const noexcept = 0;
+    //bool virtual isGivenTypeNotUsed(const unsigned int a_activeType) const noexcept = 0;
+
 
     /**
-     * @brief should return the total size of each type in each inheriting subclass
-     * @return
+     * @brief get specific msg sub field according to request
+     * @param a_mxTelemetryMsg
+     * @param location
+     * @return qreal because QPointF gets qreal as params
+     *         Notice: qreal is QT typedef for double
      */
-    unsigned int virtual getLocalTypeSize() const noexcept = 0;
+    //qreal virtual getData(void* const a_mxTelemetryMsg, const unsigned int location) const noexcept = 0;
+
+
+    // denotes the time range <--> amount of points
+    qreal getVerticalAxesRange() const noexcept;
 
 
     void setUpdateFunction( std::function<void(BasicChartView* a_this, void* a_mxTelemetryMsg)>   a_lambda );
@@ -88,22 +94,13 @@ public:
      */
     void appendPoint(const QPointF& a_point, const unsigned int a_series) noexcept;
 
-    /**
-     * @brief get specific msg sub field according to request
-     * @param a_mxTelemetryMsg
-     * @param location
-     * @return qreal because QPointF gets qreal as params
-     *         Notice: qreal is QT typedef for double
-     */
-    qreal virtual getData(void* const a_mxTelemetryMsg, const unsigned int location) const noexcept = 0;
-
 
     /**
      * @brief used to get the current data type the series is tracking
      * @param a_series
      * @returns
      */
-    unsigned int getActiveDataType(const unsigned int a_series) const noexcept;
+    int getActiveDataType(const unsigned int a_series) const noexcept;
 
 
 public slots:
@@ -129,7 +126,7 @@ protected:
      * virtual so inherent classes can change style
      * for behavior change -> adjust createActions below
      */
-    void virtual initMenuBar() noexcept;
+    void initMenuBar() noexcept;
 
 
     /**
@@ -137,13 +134,13 @@ protected:
      * virtual so inherent classes can change behavior
      * see also initMenuBar()
      */
-    void virtual createActions() noexcept;
+    void createActions() noexcept;
 
 
     /**
      * @brief changeSeriesData according to Y axis and data selected
      */
-    void virtual changeSeriesData(const unsigned int a_series, const int data_type) noexcept;
+    void changeSeriesData(const unsigned int a_series, const int data_type) noexcept;
 
     /**
      * @brief used to set update data function
@@ -160,8 +157,6 @@ protected:
 
     // for now
     //QSize virtual sizeHint() const override final;
-    QLineSeries *m_seriesVertical;
-    QLineSeries *m_seriesHorizontal;
 
     // update data
     std::function<void(BasicChartView* a_this, void* a_mxTelemetryMsg)> m_lambda;
@@ -172,10 +167,6 @@ protected:
     // array for storing the series, see the enum for understaind why 2
     QSplineSeries* m_seriesArray[2];
 
-    // corresponds to data tracked
-    // must be within LOCAL_ZmHeapTelemetry values
-    //unsigned int m_activeData[2];
-    std::array<unsigned int, NUMBER_OF_Y_AXIS> m_activeData;
 
     void initSeries() noexcept;
 
@@ -187,8 +178,13 @@ protected:
     QMenu* m_leftSeriesMenu;
 
 private:
+    // will be used to access the right MxTelemetryType via factory
+    int m_associatedTelemetryType;
 
+    std::array<int, NUMBER_OF_Y_AXIS> m_activeData;
 
+    // represents the string names ordered by priority
+    const QVector<QString>& m_db;
 };
 
 #endif // BASICCHARTVIEW_H

@@ -22,9 +22,10 @@
 #include "ChartViewFactory.h"
 #include "QDebug"
 #include "QtCharts"
-#include "views/raw/charts/HeapChartView.h"
-#include "views/raw/charts/HashTblChartView.h"
-#include "views/raw/charts/ZmThreadChartView.h"
+#include "views/raw/charts/BasicChartView.h"
+//#include "views/raw/charts/HeapChartView.h"
+//#include "views/raw/charts/HashTblChartView.h"
+//#include "views/raw/charts/ZmThreadChartView.h"
 
 
 ChartViewFactory::ChartViewFactory()
@@ -44,22 +45,20 @@ QChartView* ChartViewFactory::getChartView(const int a_mxType, const QString& a_
     {
     case MxTelemetry::Type::Heap:
 
-        l_result = new HeapChartView(l_chart,
-                                     std::array<unsigned int, 2>{
-                                         HeapChartView::ChartHeapTelemetry::size,
-                                         HeapChartView::ChartHeapTelemetry::alignment});
+        l_result = new BasicChartView(l_chart,
+                                     MxTelemetry::Type::Heap);
         break;
     case MxTelemetry::Type::HashTbl:
-        l_result = new HashTblChartView(l_chart,
-                                     std::array<unsigned int, 2>{
-                                         HashTblChartView::ChartHashTblTelemetry::linear,
-                                         HashTblChartView::ChartHashTblTelemetry::bits});
+//        l_result = new HashTblChartView(l_chart,
+//                                     std::array<unsigned int, 2>{
+//                                         HashTblChartView::ChartHashTblTelemetry::linear,
+//                                         HashTblChartView::ChartHashTblTelemetry::bits});
         break;
     case MxTelemetry::Type::Thread:
-        l_result = new ZmThreadChartView(l_chart,
-                                     std::array<unsigned int, 2>{
-                                         ZmThreadChartView::ZmThreadChartView::cpuUsage,
-                                         ZmThreadChartView::ZmThreadChartView::cpuset});
+//        l_result = new ZmThreadChartView(l_chart,
+//                                     std::array<unsigned int, 2>{
+//                                         ZmThreadChartView::ZmThreadChartView::cpuUsage,
+//                                         ZmThreadChartView::ZmThreadChartView::cpuset});
         break;
     case MxTelemetry::Type::Multiplexer:
 //        l_result = new BasicTableWidget(QList<QString>({"Data"}),

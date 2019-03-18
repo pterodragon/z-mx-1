@@ -43,51 +43,37 @@ BasicTableWidget* TableWidgetFactory::getTableWidget(const int a_tableType, cons
         break;
     case MxTelemetry::Type::HashTbl:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 QList<QString>({"time",   "linear",  "bits",  "slots",
-                                                 "cBits",  "cSlots",  "count", "resized",
-                                                 "loadFactor", "effLoadFactor", "nodeSize"}),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::HashTbl).getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Thread:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 QList<QString>({"time",   "id",       "tid",       "cpuUsage",
-                                                 "cpuset", "priority", "stackSize", "partition",
-                                                 "main",   "detached"}),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Thread).getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Multiplexer:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 QList<QString>({"time",   "state",       "nThreads",
-                                                 "priority", "partition",  "isolation",  "rxThread",
-                                                 "txThread",   "stackSize", "rxBufSize", "txBufSize"}),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Multiplexer).getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Socket:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 QList<QString>({"time",      "type",      "remoteIP",  "remotePort",
-                                                 "localIP",   "localPort", "fd",        "flags",
-                                                 "mreqAddr",  "mreqIf",    "mif",       "ttl",
-                                                 "rxBufSize", "rxBufLen",  "txBufSize", "txBufLen"}),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Socket).getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Queue:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 QList<QString>({"time",      "type",    "full",    "size",
-                                                 "count",     "seqNo",   "inCount", "inBytes",
-                                                 "outCount",  "outBytes"}),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Queue).getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Engine:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 QList<QString>({"time",   "state",    "nLinks",    "up",
-                                                 "down",   "disabled", "transient", "reconn",
-                                                 "failed", "mxID",     "rxThread",  "txThread"}),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Engine).getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Link:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 QList<QString>({"time",  "state",   "reconnects",    "rxSeqNo",
-                                                 "txSeqNo"}),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Link).getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::DBEnv:

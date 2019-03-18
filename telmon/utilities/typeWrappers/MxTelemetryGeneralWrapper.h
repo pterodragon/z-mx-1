@@ -35,6 +35,9 @@ class QVector;
 template <class T, class H>
 class QPair;
 
+template <class T>
+class QLinkedList;
+
 
 /**
  * @brief The MxTelemetryGeneralWrapper class
@@ -48,7 +51,13 @@ public:
     //friend class MxTelemetryTypeWrappersFactory;
     enum REQUESTING_DATA {TABLE, CHART };
     enum CONVERT_FRON {type_uint64_t, type_uint32_t, type_uint16_t, type_uint8_t,
-                       type_none, type_c_char};
+                       type_int32_t, type_none, type_c_char,
+                       type_double, type_ZiIP};
+
+
+    // usually indicating that this field will be calculated
+    // from other fields in the struct
+    static const int NOT_PRIMITVE = 100;
 
     MxTelemetryGeneralWrapper();
     virtual ~MxTelemetryGeneralWrapper();
@@ -56,14 +65,14 @@ public:
     MxTelemetryGeneralWrapper(MxTelemetryGeneralWrapper const& copy);            // Not Implemented
     MxTelemetryGeneralWrapper& operator=(MxTelemetryGeneralWrapper const& copy); // Not Implemented
 
-    const virtual QList<QString>& getTableList() const noexcept = 0;
-    const virtual QVector<QString>& getChartList() const noexcept = 0;
+    const QList<QString>& getTableList() const noexcept;
+    const QVector<QString>& getChartList() const noexcept;
 
     /**
      * @brief getActiveDataSet 0=Y-Left, 1=Y-right
      * @return
      */
-    const virtual std::array<int, 2>&  getActiveDataSet() const noexcept = 0;
+    const std::array<int, 2>&  getActiveDataSet() const noexcept;
 
     /**
      * @brief function to be used by chart
@@ -71,7 +80,7 @@ public:
      * @param a_index
      * @return
      */
-    virtual bool isDataTypeNotUsed(const int a_index) const noexcept = 0;
+    bool isDataTypeNotUsed(const int a_index) const noexcept;
 
     /**
      * @brief get data for index by !CHART PRIORITY!
@@ -82,6 +91,9 @@ public:
      * @return
      */
     double virtual getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept = 0;
+
+
+    void virtual getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept  = 0;
 
 
     // service functions
@@ -104,7 +116,21 @@ protected:
      *  Y left axis and Y right axis
      */
     void virtual initActiveDataSet() noexcept = 0;
+
+
+    // QPair(void*, int); void* = the type, int = to convert
+    QPair<void*, int> virtual getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept = 0;
+
+
+    QList<QString>* m_tableList; // sorted by priorites
+    QVector<QString>* m_chartList; // sorted by priorites
+    std::array<int, 2> m_activeDataSet; // "2" represent number of axis
+    QVector<int>* m_chartPriorityToHeapIndex;
+    QVector<int>* m_tablePriorityToHeapIndex;
 };
+
+
+
 
 
 //void open() {

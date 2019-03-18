@@ -73,7 +73,6 @@ ChartSubscriber* ChartSubscriberFactory::getSubscriber(const int a_type) const n
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
 
-
             ZmHashTelemetry l_result = std::move(l_data);
 
             emit a_this->updateDone(l_result);
@@ -113,7 +112,12 @@ ChartSubscriber* ChartSubscriberFactory::getSubscriber(const int a_type) const n
                 auto l_instanceName= QString(ZmIDString((l_data.id)));
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
+
+            ZiMxTelemetry l_result = std::move(l_data);
+
+            emit a_this->updateDone(l_result);
         });
+
         break;
 
     case MxTelemetry::Type::Socket:
@@ -128,6 +132,10 @@ ChartSubscriber* ChartSubscriberFactory::getSubscriber(const int a_type) const n
                 auto l_instanceName= QString(ZmIDString((l_data.mxID)));
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
+
+            ZiCxnTelemetry l_result = std::move(l_data);
+
+            emit a_this->updateDone(l_result);
 
         });
         break;
@@ -144,6 +152,10 @@ ChartSubscriber* ChartSubscriberFactory::getSubscriber(const int a_type) const n
                 auto l_instanceName= QString::fromStdString(a_this->constructQueueName(l_data.id, MxTelemetry::QueueType::name(l_data.type)));
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
+
+            MxTelemetry::Queue l_result = std::move(l_data);
+
+            emit a_this->updateDone(l_result);
         });
         break;
 
@@ -159,6 +171,11 @@ ChartSubscriber* ChartSubscriberFactory::getSubscriber(const int a_type) const n
                 auto l_instanceName= QString(ZmIDString((l_data.id)));
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
+
+            MxEngine::Telemetry l_result = std::move(l_data);
+
+            emit a_this->updateDone(l_result);
+
         });
         break;
 
@@ -175,6 +192,10 @@ ChartSubscriber* ChartSubscriberFactory::getSubscriber(const int a_type) const n
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
 
+           MxAnyLink::Telemetry l_result = std::move(l_data);
+
+            emit a_this->updateDone(l_result);
+
         });
         break;
 
@@ -190,6 +211,10 @@ ChartSubscriber* ChartSubscriberFactory::getSubscriber(const int a_type) const n
                 auto l_instanceName= QString((l_data.self));
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
+
+            ZdbEnv::Telemetry l_result = std::move(l_data);
+
+             emit a_this->updateDone(l_result);
         });
         break;
 
@@ -205,6 +230,11 @@ ChartSubscriber* ChartSubscriberFactory::getSubscriber(const int a_type) const n
                 auto l_instanceName= QString((l_data.id));
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
+
+            ZdbHost::Telemetry l_result = std::move(l_data);
+
+             emit a_this->updateDone(l_result);
+
         });
         break;
 
@@ -220,6 +250,10 @@ ChartSubscriber* ChartSubscriberFactory::getSubscriber(const int a_type) const n
                 auto l_instanceName= QString(ZmIDString((l_data.name)));
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
+
+            ZdbAny::Telemetry l_result = std::move(l_data);
+
+             emit a_this->updateDone(l_result);
 
         });
         break;

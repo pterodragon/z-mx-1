@@ -49,6 +49,14 @@ GraphDockWidgetModelWrapper::GraphDockWidgetModelWrapper(DataDistributor& a_data
     qRegisterMetaType<ZmHeapTelemetry>("ZmHeapTelemetry");
     qRegisterMetaType<ZmHashTelemetry>("ZmHashTelemetry");
     qRegisterMetaType<ZmThreadTelemetry>("ZmThreadTelemetry");
+    qRegisterMetaType<ZiMxTelemetry >("ZiMxTelemetry");
+    qRegisterMetaType<ZiCxnTelemetry >("ZiCxnTelemetry");
+    qRegisterMetaType<MxTelemetry::Queue>("MxTelemetry::Queue");
+    qRegisterMetaType<MxEngine::Telemetry>("MxEngine::Telemetry");      // Engine
+    qRegisterMetaType<MxAnyLink::Telemetry>("MxAnyLink::Telemetry");    // Link
+    qRegisterMetaType<ZdbEnv::Telemetry>("ZdbEnv::Telemetry");          // DBEnv
+    qRegisterMetaType<ZdbHost::Telemetry>("ZdbHost::Telemetry");        // DBHost
+    qRegisterMetaType<ZdbAny::Telemetry>("ZdbAny::Telemetry");          // DB
 
 
     qRegisterMetaType<uint64_t>("uint64_t");
@@ -210,63 +218,52 @@ void GraphDockWidgetModelWrapper::connectSignalAndSlot(QPair<QChartView*, ChartS
 
         break;
     case MxTelemetry::Type::Multiplexer:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",   "state",       "nThreads",
-//                                                 "priority", "partition",  "isolation",  "rxThread",
-//                                                 "txThread",   "stackSize", "rxBufSize", "txBufSize"}),
-//                                 a_mxTelemetryInstanceName);
+        QObject::connect(a_pair.second,
+                         static_cast<void (ChartSubscriber::*)(ZiMxTelemetry)>(&ChartSubscriber::updateDone),
+                         static_cast<BasicChartView*>(a_pair.first),
+                         static_cast<void (BasicChartView::*)(ZiMxTelemetry)>(&BasicChartView::updateData));
         break;
     case MxTelemetry::Type::Socket:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",      "type",      "remoteIP",  "remotePort",
-//                                                 "localIP",   "localPort", "fd",        "flags",
-//                                                 "mreqAddr",  "mreqIf",    "mif",       "ttl",
-//                                                 "rxBufSize", "rxBufLen",  "txBufSize", "txBufLen"}),
-//                                 a_mxTelemetryInstanceName);
+        QObject::connect(a_pair.second,
+                         static_cast<void (ChartSubscriber::*)(ZiCxnTelemetry)>(&ChartSubscriber::updateDone),
+                         static_cast<BasicChartView*>(a_pair.first),
+                         static_cast<void (BasicChartView::*)(ZiCxnTelemetry)>(&BasicChartView::updateData));
         break;
     case MxTelemetry::Type::Queue:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",      "type",    "full",    "size",
-//                                                 "count",     "seqNo",   "inCount", "inBytes",
-//                                                 "outCount",  "outBytes"}),
-//                                 a_mxTelemetryInstanceName);
+        QObject::connect(a_pair.second,
+                         static_cast<void (ChartSubscriber::*)(MxTelemetry::Queue)>(&ChartSubscriber::updateDone),
+                         static_cast<BasicChartView*>(a_pair.first),
+                         static_cast<void (BasicChartView::*)(MxTelemetry::Queue)>(&BasicChartView::updateData));
         break;
     case MxTelemetry::Type::Engine:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",   "state",    "nLinks",    "up",
-//                                                 "down",   "disabled", "transient", "reconn",
-//                                                 "failed", "mxID",     "rxThread",  "txThread"}),
-//                                 a_mxTelemetryInstanceName);
+        QObject::connect(a_pair.second,
+                         static_cast<void (ChartSubscriber::*)(MxEngine::Telemetry)>(&ChartSubscriber::updateDone),
+                         static_cast<BasicChartView*>(a_pair.first),
+                         static_cast<void (BasicChartView::*)(MxEngine::Telemetry)>(&BasicChartView::updateData));
         break;
     case MxTelemetry::Type::Link:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",  "state",   "reconnects",    "rxSeqNo",
-//                                                 "txSeqNo"}),
-//                                 a_mxTelemetryInstanceName);
+        QObject::connect(a_pair.second,
+                         static_cast<void (ChartSubscriber::*)(MxAnyLink::Telemetry)>(&ChartSubscriber::updateDone),
+                         static_cast<BasicChartView*>(a_pair.first),
+                         static_cast<void (BasicChartView::*)(MxAnyLink::Telemetry)>(&BasicChartView::updateData));
         break;
     case MxTelemetry::Type::DBEnv:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",        "self",            "master",           "prev",
-//                                                 "next",        "state",           "active",           "recovering",
-//                                                 "replicating", "nDBs",            "nHosts",           "nPeers",
-//                                                 "nCxns",       "heartbeatFreq",   "heartbeatTimeout", "reconnectFreq",
-//                                                 "m_dbenv",     "electionTimeout", "writeThread"}),
-//                                 a_mxTelemetryInstanceName);
+        QObject::connect(a_pair.second,
+                         static_cast<void (ChartSubscriber::*)(ZdbEnv::Telemetry)>(&ChartSubscriber::updateDone),
+                         static_cast<BasicChartView*>(a_pair.first),
+                         static_cast<void (BasicChartView::*)(ZdbEnv::Telemetry)>(&BasicChartView::updateData));
         break;
     case MxTelemetry::Type::DBHost:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",  "priority",  "state",  "voted",
-//                                                 "ip",    "port"}),
-//                                 a_mxTelemetryInstanceName);
+        QObject::connect(a_pair.second,
+                         static_cast<void (ChartSubscriber::*)(ZdbHost::Telemetry)>(&ChartSubscriber::updateDone),
+                         static_cast<BasicChartView*>(a_pair.first),
+                         static_cast<void (BasicChartView::*)(ZdbHost::Telemetry)>(&BasicChartView::updateData));
         break;
     case MxTelemetry::Type::DB:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"id",   "recSize",    "compress",    "cacheMode",
-//                                                 "cacheSize",   "path",    "fileSize",    "fileRecs",
-//                                                 "filesMax",   "preAlloc",    "minRN",    "allocRN",
-//                                                 "fileRN",    "cacheLoads",    "cacheMisses",    "fileLoads",
-//                                                 "fileMisses"}),
-//                                 a_mxTelemetryInstanceName);
+        QObject::connect(a_pair.second,
+                         static_cast<void (ChartSubscriber::*)(ZdbAny::Telemetry)>(&ChartSubscriber::updateDone),
+                         static_cast<BasicChartView*>(a_pair.first),
+                         static_cast<void (BasicChartView::*)(ZdbAny::Telemetry)>(&BasicChartView::updateData));
         break;
     default:
         qWarning() << "connectSignalAndSlotHelper"

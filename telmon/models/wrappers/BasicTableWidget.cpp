@@ -55,14 +55,14 @@ void BasicTableWidget::updateData(QLinkedList<QString> a_list)
     //sanity check
     // a list larger than rows?
 
-    //qDebug() << "TempTable::updateData";
     int i = 0;
     foreach (auto list, a_list)
     {
         setItem(i, 0, (new QTableWidgetItem(a_list.takeFirst())) );
         i++;
     }
-    emit dataChanged(QModelIndex(), QModelIndex());
+
+//    emit dataChanged(QModelIndex(), QModelIndex());
 }
 
 

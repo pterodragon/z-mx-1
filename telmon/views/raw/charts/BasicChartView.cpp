@@ -218,16 +218,46 @@ void BasicChartView::updateData(ZmThreadTelemetry a_pair)
     m_lambda(this, &a_pair);
 }
 
+void BasicChartView::updateData(ZiMxTelemetry a_pair)
+{
+    m_lambda(this, &a_pair);
+}
 
-//void updateData(ZmThreadTelemetry a_pair);
-//void updateData(ZiMxTelemetry a_pair);
-//void updateData(ZiCxnTelemetry a_pair); // SOCKET
-//void updateData(MxTelemetry::Queue a_pair); // inside MxTelemetry
-//void updateData(MxTelemetry::Engine a_pair);
-//void updateData(MxTelemetry::Link a_pair);
-//void updateData(MxTelemetry::DBEnv a_pair);
-//void updateData(MxTelemetry::DBHost a_pair);
-//void updateData(MxTelemetry::DB a_pair);
+void BasicChartView::updateData(ZiCxnTelemetry a_pair)
+{
+    m_lambda(this, &a_pair);
+}
+
+void BasicChartView::updateData(MxTelemetry::Queue a_pair)
+{
+    m_lambda(this, &a_pair);
+}
+
+void BasicChartView::updateData(MxEngine::Telemetry a_pair)
+{
+    m_lambda(this, &a_pair);
+}
+
+void BasicChartView::updateData(MxAnyLink::Telemetry a_pair)
+{
+    m_lambda(this, &a_pair);
+}
+
+void BasicChartView::updateData(MxTelemetry::DBEnv a_pair)
+{
+    m_lambda(this, &a_pair);
+}
+
+void BasicChartView::updateData(MxTelemetry::DBHost a_pair)
+{
+    m_lambda(this, &a_pair);
+}
+
+void BasicChartView::updateData(MxTelemetry::DB a_pair)
+{
+    m_lambda(this, &a_pair);
+}
+
 
 QValueAxis& BasicChartView::getAxes(const unsigned int a_axis)
 {
@@ -354,6 +384,13 @@ void BasicChartView::setDefaultUpdateDataFunction() noexcept
             const auto l_newPoint = QPointF(a_this->getVerticalAxesRange(),
                                             l_data);
 
+            // update range if necessary
+            {
+                unsigned int l_axisIndex;
+                (l_curSeries == SERIES::SERIES_LEFT) ? (l_axisIndex = CHART_AXIS::Y_LEFT) : (l_axisIndex = CHART_AXIS::Y_RIGHT);
+                a_this->updateAxisMaxRange(l_axisIndex, l_data);
+            }
+
 
 //            const auto l_newPoint = QPointF(a_this->getVerticalAxesRange(),
 //                                            a_this->getData(a_mxTelemetryMsg, l_activeDataType));
@@ -365,6 +402,17 @@ void BasicChartView::setDefaultUpdateDataFunction() noexcept
     };
 }
 
+
+void BasicChartView::updateAxisMaxRange(const unsigned int a_axis, const double a_data) noexcept
+{
+    auto maxValue = qMax(getAxes(CHART_AXIS::Y_LEFT).max(), getAxes(CHART_AXIS::Y_RIGHT).max());
+    if (maxValue < a_data)
+    {
+        const auto l_newMax = a_data + floor(a_data / 10);
+        getAxes(CHART_AXIS::Y_LEFT).setMax(l_newMax);
+        getAxes(CHART_AXIS::Y_RIGHT).setMax(l_newMax);
+    }
+}
 
 
 qreal BasicChartView::getVerticalAxesRange() const noexcept

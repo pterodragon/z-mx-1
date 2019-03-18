@@ -49,75 +49,44 @@ QChartView* ChartViewFactory::getChartView(const int a_mxType, const QString& a_
                                      MxTelemetry::Type::Heap);
         break;
     case MxTelemetry::Type::HashTbl:
-//        l_result = new HashTblChartView(l_chart,
-//                                     std::array<unsigned int, 2>{
-//                                         HashTblChartView::ChartHashTblTelemetry::linear,
-//                                         HashTblChartView::ChartHashTblTelemetry::bits});
+        l_result = new BasicChartView(l_chart,
+                                     MxTelemetry::Type::HashTbl);
         break;
     case MxTelemetry::Type::Thread:
-//        l_result = new ZmThreadChartView(l_chart,
-//                                     std::array<unsigned int, 2>{
-//                                         ZmThreadChartView::ZmThreadChartView::cpuUsage,
-//                                         ZmThreadChartView::ZmThreadChartView::cpuset});
+        l_result = new BasicChartView(l_chart,
+                                     MxTelemetry::Type::Thread);
         break;
     case MxTelemetry::Type::Multiplexer:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",   "state",       "nThreads",
-//                                                 "priority", "partition",  "isolation",  "rxThread",
-//                                                 "txThread",   "stackSize", "rxBufSize", "txBufSize"}),
-//                                 a_mxTelemetryInstanceName);
+        l_result = new BasicChartView(l_chart,
+                                     MxTelemetry::Type::Multiplexer);
         break;
     case MxTelemetry::Type::Socket:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",      "type",      "remoteIP",  "remotePort",
-//                                                 "localIP",   "localPort", "fd",        "flags",
-//                                                 "mreqAddr",  "mreqIf",    "mif",       "ttl",
-//                                                 "rxBufSize", "rxBufLen",  "txBufSize", "txBufLen"}),
-//                                 a_mxTelemetryInstanceName);
+        l_result = new BasicChartView(l_chart,
+                                     MxTelemetry::Type::Socket);
         break;
     case MxTelemetry::Type::Queue:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",      "type",    "full",    "size",
-//                                                 "count",     "seqNo",   "inCount", "inBytes",
-//                                                 "outCount",  "outBytes"}),
-//                                 a_mxTelemetryInstanceName);
+        l_result = new BasicChartView(l_chart,
+                                     MxTelemetry::Type::Queue);
         break;
     case MxTelemetry::Type::Engine:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",   "state",    "nLinks",    "up",
-//                                                 "down",   "disabled", "transient", "reconn",
-//                                                 "failed", "mxID",     "rxThread",  "txThread"}),
-//                                 a_mxTelemetryInstanceName);
+        l_result = new BasicChartView(l_chart,
+                                     MxTelemetry::Type::Engine);
         break;
     case MxTelemetry::Type::Link:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",  "state",   "reconnects",    "rxSeqNo",
-//                                                 "txSeqNo"}),
-//                                 a_mxTelemetryInstanceName);
+        l_result = new BasicChartView(l_chart,
+                                     MxTelemetry::Type::Link);
         break;
     case MxTelemetry::Type::DBEnv:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",        "self",            "master",           "prev",
-//                                                 "next",        "state",           "active",           "recovering",
-//                                                 "replicating", "nDBs",            "nHosts",           "nPeers",
-//                                                 "nCxns",       "heartbeatFreq",   "heartbeatTimeout", "reconnectFreq",
-//                                                 "m_dbenv",     "electionTimeout", "writeThread"}),
-//                                 a_mxTelemetryInstanceName);
+        l_result = new BasicChartView(l_chart,
+                                     MxTelemetry::Type::DBEnv);
         break;
     case MxTelemetry::Type::DBHost:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"time",  "priority",  "state",  "voted",
-//                                                 "ip",    "port"}),
-//                                 a_mxTelemetryInstanceName);
+        l_result = new BasicChartView(l_chart,
+                                     MxTelemetry::Type::DBHost);
         break;
     case MxTelemetry::Type::DB:
-//        l_result = new BasicTableWidget(QList<QString>({"Data"}),
-//                                 QList<QString>({"id",   "recSize",    "compress",    "cacheMode",
-//                                                 "cacheSize",   "path",    "fileSize",    "fileRecs",
-//                                                 "filesMax",   "preAlloc",    "minRN",    "allocRN",
-//                                                 "fileRN",    "cacheLoads",    "cacheMisses",    "fileLoads",
-//                                                 "fileMisses"}),
-//                                 a_mxTelemetryInstanceName);
+        l_result = new BasicChartView(l_chart,
+                                     MxTelemetry::Type::DB);
         break;
     default:
         delete l_result;

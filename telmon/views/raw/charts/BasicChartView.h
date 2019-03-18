@@ -111,7 +111,7 @@ public slots:
     void updateData(ZiCxnTelemetry a_pair); // SOCKET
     void updateData(MxTelemetry::Queue a_pair); // inside MxTelemetry
     void updateData(MxTelemetry::Engine a_pair);
-    void updateData(MxTelemetry::Link a_pair);
+    void updateData(MxAnyLink::Telemetry);
     void updateData(MxTelemetry::DBEnv a_pair);
     void updateData(MxTelemetry::DBHost a_pair);
     void updateData(MxTelemetry::DB a_pair);
@@ -169,6 +169,8 @@ protected:
 
 
     void initSeries() noexcept;
+
+    void updateAxisMaxRange(const unsigned int a_axis, const double a_data) noexcept;
 
     // member for menu
     QVBoxLayout *m_boxLayout;

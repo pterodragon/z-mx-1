@@ -78,7 +78,14 @@ HEADERS +=                                          \
     #views/raw/charts/ZmThreadChartView.h \
     utilities/typeWrappers/MxTelemetryHeapWrapper.h \
     utilities/typeWrappers/MxTelemetryGeneralWrapper.h \
-    factories/MxTelemetryTypeWrappersFactory.h
+    factories/MxTelemetryTypeWrappersFactory.h \
+    utilities/typeWrappers/MxTelemetryHashTblWrapper.h \
+    utilities/typeWrappers/MxTelemetryZmThreadWrapper.h \
+    utilities/typeWrappers/MxTelemetryZiMultiplexerWrapper.h \
+    utilities/typeWrappers/MxTelemetryZiCxnTelemetry.h \
+    utilities/typeWrappers/MxTelemetryQueueWrapper.h \
+    utilities/typeWrappers/MxTelemetryEngineWrapper.h \
+    utilities/typeWrappers/MxTelemetryLinkWrapper.h
 
 SOURCES += \
     main.cpp \
@@ -134,7 +141,14 @@ SOURCES += \
     #views/raw/charts/ZmThreadChartView.cpp \
     utilities/typeWrappers/MxTelemetryHeapWrapper.cpp \
     utilities/typeWrappers/MxTelemetryGeneralWrapper.cpp \
-    factories/MxTelemetryTypeWrappersFactory.cpp
+    factories/MxTelemetryTypeWrappersFactory.cpp \
+    utilities/typeWrappers/MxTelemetryHashTblWrapper.cpp \
+    utilities/typeWrappers/MxTelemetryZmThreadWrapper.cpp \
+    utilities/typeWrappers/MxTelemetryZiMultiplexerWrapper.cpp \
+    utilities/typeWrappers/MxTelemetryZiCxnTelemetry.cpp \
+    utilities/typeWrappers/MxTelemetryQueueWrapper.cpp \
+    utilities/typeWrappers/MxTelemetryEngineWrapper.cpp \
+    utilities/typeWrappers/MxTelemetryLinkWrapper.cpp
 
 #SOURCES += $${PWD}/../mxbase/test/*.cpp
 

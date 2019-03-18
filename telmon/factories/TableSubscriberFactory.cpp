@@ -101,7 +101,6 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
                     if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
                 }
 
-
                 QLinkedList<QString> l_list;
 
                 l_list.append(QString::fromStdString(a_this->getCurrentTime()));
@@ -245,6 +244,9 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
 
             l_list.append(QString::fromStdString(a_this->getCurrentTime()));
             l_list.append(MxTelemetry::QueueType::name(l_data.type));
+            qDebug() << QString::fromStdString(a_this->constructQueueName(l_data.id, MxTelemetry::QueueType::name(l_data.type)))
+                     << "l_data.full"
+                     << l_data.full << "\n";
             l_list.append(QString::number(l_data.full));
             l_list.append(QString::number(l_data.size));
             l_list.append(QString::number(l_data.count));

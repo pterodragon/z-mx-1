@@ -18,9 +18,8 @@
  */
 
 
-
-#ifndef MXTELEMETRYHEAPWRAPPER_H
-#define MXTELEMETRYHEAPWRAPPER_H
+#ifndef MXTELEMETRYZICXNTELEMETRY_H
+#define MXTELEMETRYZICXNTELEMETRY_H
 
 
 
@@ -29,36 +28,37 @@
 template <class T, class H>
 class QPair;
 
+
 /**
- * @brief The MxTelemetryHeapWrapper class
- * Wrapper for struct ZmHeapTelemetry in ZmHeap.hpp
+ * @brief This class is a
+ * wrapper for struct ZiCxnTelemetry in ZiMultiplex.hpp
  * This should be the only place in the app that
  * this data type releated actions should be written
  * i.e. setting priorites, all other places should
  * be updated according to this end point
  */
-class MxTelemetryHeapWrapper : public MxTelemetryGeneralWrapper
+class MxTelemetryZiCxnTelemetry : public MxTelemetryGeneralWrapper
 {
 private:
     // Private Constructor
-    MxTelemetryHeapWrapper();
-    virtual ~MxTelemetryHeapWrapper() override final;
+    MxTelemetryZiCxnTelemetry();
+    virtual ~MxTelemetryZiCxnTelemetry() override final;
 
     // Stop the compiler generating methods of copy the object
-    MxTelemetryHeapWrapper(MxTelemetryHeapWrapper const& copy);            // Not Implemented
-    MxTelemetryHeapWrapper& operator=(MxTelemetryHeapWrapper const& copy); // Not Implemented
+    MxTelemetryZiCxnTelemetry(MxTelemetryZiCxnTelemetry const& copy);            // Not Implemented
+    MxTelemetryZiCxnTelemetry& operator=(MxTelemetryZiCxnTelemetry const& copy); // Not Implemented
 
 
 protected:
     friend class MxTelemetryTypeWrappersFactory;
     // protected so only friend class can access // to be tested
     // Not part of the inferface
-    static MxTelemetryHeapWrapper& getInstance()
+    static MxTelemetryZiCxnTelemetry& getInstance()
     {
         // The only instance
         // Guaranteed to be lazy initialized
         // Guaranteed that it will be destroyed correctly
-        static MxTelemetryHeapWrapper m_instance;
+        static MxTelemetryZiCxnTelemetry m_instance;
         return m_instance;
     }
 
@@ -70,14 +70,15 @@ protected:
 
 
 public:
-
     // must correspond to struct index
-    enum ZmHeapTelemetryStructIndex {e_id, e_cacheSize, e_cpuset, e_cacheAllocs, e_heapAllocs,
-                                     e_frees, e_size, e_partition, e_sharded, e_alignment};
+    enum ZiCxnMxTelemetryStructIndex {e_mxID, e_socket, e_rxBufSize, e_rxBufLen,
+                                                        e_txBufSize, e_txBufLen,
+                                      e_flags, e_mreqAddr, e_mreqIf, e_mif,
+                                      e_ttl, e_localIP,   e_remoteIP,
+                                             e_localPort, e_remotePort};
 
     double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
 };
 
-
-#endif // MXTELEMETRYHEAPWRAPPER_H
+#endif // MXTELEMETRYZICXNTELEMETRY_H

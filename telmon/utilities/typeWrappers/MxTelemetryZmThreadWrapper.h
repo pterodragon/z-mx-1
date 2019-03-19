@@ -24,9 +24,6 @@
 
 #include "utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
-template <class T, class H>
-class QPair;
-
 
 /**
  * @brief This class is a

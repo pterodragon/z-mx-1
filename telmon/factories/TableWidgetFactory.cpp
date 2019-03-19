@@ -78,26 +78,17 @@ BasicTableWidget* TableWidgetFactory::getTableWidget(const int a_tableType, cons
         break;
     case MxTelemetry::Type::DBEnv:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 QList<QString>({"time",        "self",            "master",           "prev",
-                                                 "next",        "state",           "active",           "recovering",
-                                                 "replicating", "nDBs",            "nHosts",           "nPeers",
-                                                 "nCxns",       "heartbeatFreq",   "heartbeatTimeout", "reconnectFreq",
-                                                 "m_dbenv",     "electionTimeout", "writeThread"}),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::DBEnv).getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::DBHost:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 QList<QString>({"time",  "priority",  "state",  "voted",
-                                                 "ip",    "port"}),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::DBHost).getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::DB:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 QList<QString>({"id",   "recSize",    "compress",    "cacheMode",
-                                                 "cacheSize",   "path",    "fileSize",    "fileRecs",
-                                                 "filesMax",   "preAlloc",    "minRN",    "allocRN",
-                                                 "fileRN",    "cacheLoads",    "cacheMisses",    "fileLoads",
-                                                 "fileMisses"}),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::DB).getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     default:

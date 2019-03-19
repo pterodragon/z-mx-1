@@ -24,8 +24,6 @@
 
 #include "utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
-template <class T, class H>
-class QPair;
 
 
 /**
@@ -67,17 +65,9 @@ protected:
     void initActiveDataSet() noexcept override final;
     QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
 
-    //struct Telemetry {
-    //  MxID	id;
-    //  uint64_t	rxSeqNo;
-    //  uint64_t	txSeqNo;
-    //  uint32_t	reconnects;
-    //  uint8_t	state;
-    //};
-
 public:
     // must correspond to struct index
-    enum EngineMxTelemetryStructIndex {e_id,        e_rxSeqNo,     e_txSeqNo,
+    enum LinkMxTelemetryStructIndex {e_id,        e_rxSeqNo,     e_txSeqNo,
                                       e_reconnects, e_state};
 
     double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;

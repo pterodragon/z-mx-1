@@ -23,9 +23,6 @@
 #include "QDebug"
 #include "QtCharts"
 #include "views/raw/charts/BasicChartView.h"
-//#include "views/raw/charts/HeapChartView.h"
-//#include "views/raw/charts/HashTblChartView.h"
-//#include "views/raw/charts/ZmThreadChartView.h"
 
 
 ChartViewFactory::ChartViewFactory()
@@ -44,49 +41,37 @@ QChartView* ChartViewFactory::getChartView(const int a_mxType, const QString& a_
     switch (a_mxType)
     {
     case MxTelemetry::Type::Heap:
-
-        l_result = new BasicChartView(l_chart,
-                                     MxTelemetry::Type::Heap);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Heap);
         break;
     case MxTelemetry::Type::HashTbl:
-        l_result = new BasicChartView(l_chart,
-                                     MxTelemetry::Type::HashTbl);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::HashTbl);
         break;
     case MxTelemetry::Type::Thread:
-        l_result = new BasicChartView(l_chart,
-                                     MxTelemetry::Type::Thread);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Thread);
         break;
     case MxTelemetry::Type::Multiplexer:
-        l_result = new BasicChartView(l_chart,
-                                     MxTelemetry::Type::Multiplexer);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Multiplexer);
         break;
     case MxTelemetry::Type::Socket:
-        l_result = new BasicChartView(l_chart,
-                                     MxTelemetry::Type::Socket);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Socket);
         break;
     case MxTelemetry::Type::Queue:
-        l_result = new BasicChartView(l_chart,
-                                     MxTelemetry::Type::Queue);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Queue);
         break;
     case MxTelemetry::Type::Engine:
-        l_result = new BasicChartView(l_chart,
-                                     MxTelemetry::Type::Engine);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Engine);
         break;
     case MxTelemetry::Type::Link:
-        l_result = new BasicChartView(l_chart,
-                                     MxTelemetry::Type::Link);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Link);
         break;
     case MxTelemetry::Type::DBEnv:
-        l_result = new BasicChartView(l_chart,
-                                     MxTelemetry::Type::DBEnv);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::DBEnv);
         break;
     case MxTelemetry::Type::DBHost:
-        l_result = new BasicChartView(l_chart,
-                                     MxTelemetry::Type::DBHost);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::DBHost);
         break;
     case MxTelemetry::Type::DB:
-        l_result = new BasicChartView(l_chart,
-                                     MxTelemetry::Type::DB);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::DB);
         break;
     default:
         delete l_result;
@@ -96,3 +81,7 @@ QChartView* ChartViewFactory::getChartView(const int a_mxType, const QString& a_
     }
     return l_result;
 }
+
+
+
+

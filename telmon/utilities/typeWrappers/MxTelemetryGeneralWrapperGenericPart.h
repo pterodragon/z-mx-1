@@ -26,29 +26,32 @@
 #include "QDebug"
 
 template <class T>
-T MxTelemetryGeneralWrapper::typeConvertor(const QPair< void*, int>& a_param) const noexcept
+T MxTelemetryGeneralWrapper::typeConvertor(const QPair<void*, int>& a_param) const noexcept
 {
     double l_return;
     void* l_data = a_param.first;
     switch (a_param.second)
     {
-    case CONVERT_FRON::type_uint64_t: //uint64_t
+    case CONVERT_FRON::type_uint64_t:
         l_return = static_cast<T>(*(static_cast<uint64_t*>(l_data)));
     break;
-    case CONVERT_FRON::type_uint32_t: //uint32_t
+    case CONVERT_FRON::type_uint32_t:
         l_return = static_cast<T>(*(static_cast<uint32_t*>(l_data)));
     break;
-    case CONVERT_FRON::type_uint16_t: //uint16_t
+    case CONVERT_FRON::type_uint16_t:
         l_return = static_cast<T>(*(static_cast<uint16_t*>(l_data)));
     break;
-    case CONVERT_FRON::type_uint8_t: //uint8_t
+    case CONVERT_FRON::type_uint8_t:
         l_return = static_cast<T>(*(static_cast<uint8_t*>(l_data)));
     break;
-    case CONVERT_FRON::type_int32_t: //int32_t
+    case CONVERT_FRON::type_int32_t:
         l_return = static_cast<T>(*(static_cast<int32_t*>(l_data)));
     break;
-    case CONVERT_FRON::type_double: //double
+    case CONVERT_FRON::type_double:
         l_return = static_cast<T>((*(static_cast<double*>(l_data))));
+    break;
+    case CONVERT_FRON::type_int8_t:
+        l_return = static_cast<T>((*(static_cast<int8_t*>(l_data))));
     break;
     default:
         qDebug() << "typeConvertor default, retunring deafult value 0 ";
@@ -57,6 +60,5 @@ T MxTelemetryGeneralWrapper::typeConvertor(const QPair< void*, int>& a_param) co
     }
     return l_return;
 }
-
 
 //#endif // MXTELEMETRYGENERALWRAPPERGENERICPART_H

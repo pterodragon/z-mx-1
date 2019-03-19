@@ -86,7 +86,10 @@ HEADERS +=                                          \
     utilities/typeWrappers/MxTelemetryQueueWrapper.h \
     utilities/typeWrappers/MxTelemetryEngineWrapper.h \
     utilities/typeWrappers/MxTelemetryLinkWrapper.h \
-    utilities/typeWrappers/MxTelemetryGeneralWrapperGenericPart.h
+    utilities/typeWrappers/MxTelemetryGeneralWrapperGenericPart.h \
+    utilities/typeWrappers/MxTelemetryDBEnvWrapper.h \
+    utilities/typeWrappers/MxTelemetryDBHostWrapper.h \
+    utilities/typeWrappers/MxTelemetryDBWrapper.h
 
 SOURCES += \
     main.cpp \
@@ -149,7 +152,10 @@ SOURCES += \
     utilities/typeWrappers/MxTelemetryZiCxnTelemetry.cpp \
     utilities/typeWrappers/MxTelemetryQueueWrapper.cpp \
     utilities/typeWrappers/MxTelemetryEngineWrapper.cpp \
-    utilities/typeWrappers/MxTelemetryLinkWrapper.cpp
+    utilities/typeWrappers/MxTelemetryLinkWrapper.cpp \
+    utilities/typeWrappers/MxTelemetryDBEnvWrapper.cpp \
+    utilities/typeWrappers/MxTelemetryDBHostWrapper.cpp \
+    utilities/typeWrappers/MxTelemetryDBWrapper.cpp
 
 #SOURCES += $${PWD}/../mxbase/test/*.cpp
 

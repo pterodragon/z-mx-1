@@ -51,7 +51,7 @@ public:
     //friend class MxTelemetryTypeWrappersFactory;
     enum REQUESTING_DATA {TABLE, CHART };
     enum CONVERT_FRON {type_uint64_t, type_uint32_t, type_uint16_t, type_uint8_t,
-                       type_int32_t, type_none, type_c_char,
+                       type_int32_t,  type_int8_t,   type_none,     type_c_char,
                        type_double, type_ZiIP};
 
 

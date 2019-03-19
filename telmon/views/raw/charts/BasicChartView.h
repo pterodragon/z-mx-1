@@ -112,9 +112,9 @@ public slots:
     void updateData(MxTelemetry::Queue a_pair); // inside MxTelemetry
     void updateData(MxTelemetry::Engine a_pair);
     void updateData(MxAnyLink::Telemetry);
-    void updateData(MxTelemetry::DBEnv a_pair);
-    void updateData(MxTelemetry::DBHost a_pair);
-    void updateData(MxTelemetry::DB a_pair);
+    void updateData(ZdbEnv::Telemetry a_pair);
+    void updateData(ZdbHost::Telemetry a_pair);
+    void updateData(ZdbAny::Telemetry a_pair);
 
 
 protected:

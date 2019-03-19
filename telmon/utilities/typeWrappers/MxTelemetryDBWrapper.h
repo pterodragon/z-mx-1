@@ -19,44 +19,43 @@
 
 
 
-#ifndef MXTELEMETRYHEAPWRAPPER_H
-#define MXTELEMETRYHEAPWRAPPER_H
-
+#ifndef MXTELEMETRYDBWRAPPER_H
+#define MXTELEMETRYDBWRAPPER_H
 
 
 #include "utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
 
 /**
- * @brief The MxTelemetryHeapWrapper class
- * Wrapper for struct ZmHeapTelemetry in ZmHeap.hpp
+ * @brief This class is a
+ * wrapper for struct ZdbAny::Telemetry in Zdb.hpp
  * This should be the only place in the app that
  * this data type releated actions should be written
  * i.e. setting priorites, all other places should
  * be updated according to this end point
  */
-class MxTelemetryHeapWrapper : public MxTelemetryGeneralWrapper
+class MxTelemetryDBWrapper : public MxTelemetryGeneralWrapper
 {
 private:
     // Private Constructor
-    MxTelemetryHeapWrapper();
-    virtual ~MxTelemetryHeapWrapper() override final;
+    MxTelemetryDBWrapper();
+    virtual ~MxTelemetryDBWrapper() override final;
 
     // Stop the compiler generating methods of copy the object
-    MxTelemetryHeapWrapper(MxTelemetryHeapWrapper const& copy);            // Not Implemented
-    MxTelemetryHeapWrapper& operator=(MxTelemetryHeapWrapper const& copy); // Not Implemented
+    MxTelemetryDBWrapper(MxTelemetryDBWrapper const& copy);            // Not Implemented
+    MxTelemetryDBWrapper& operator=(MxTelemetryDBWrapper const& copy); // Not Implemented
 
 
 protected:
     friend class MxTelemetryTypeWrappersFactory;
     // protected so only friend class can access // to be tested
     // Not part of the inferface
-    static MxTelemetryHeapWrapper& getInstance()
+    static MxTelemetryDBWrapper& getInstance()
     {
         // The only instance
         // Guaranteed to be lazy initialized
         // Guaranteed that it will be destroyed correctly
-        static MxTelemetryHeapWrapper m_instance;
+        static MxTelemetryDBWrapper m_instance;
         return m_instance;
     }
 
@@ -66,16 +65,78 @@ protected:
     void initActiveDataSet() noexcept override final;
     QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
 
+//    struct Telemetry {
+//      typedef ZuStringN<124> Path;
+//      typedef ZuStringN<28> Name;
+
+//      Path	path;
+//      Name	name;
+//      uint64_t	fileSize;
+
+//      uint64_t	minRN;
+//      uint64_t	allocRN;
+//      uint64_t	fileRN;
+
+//      uint64_t	cacheLoads;
+//      uint64_t	cacheMisses;
+//      uint64_t	fileLoads;
+
+//      uint64_t	fileMisses;
+//      uint32_t	id;
+//      uint32_t	preAlloc;
+
+//      uint32_t	recSize;
+//      uint32_t	fileRecs;
+//      uint32_t	cacheSize;
+
+//      uint32_t	filesMax;
+//      uint8_t	compress;
+//      int8_t	cacheMode;
+//    };
+
 
 public:
-
     // must correspond to struct index
-    enum ZmHeapTelemetryStructIndex {e_id, e_cacheSize, e_cpuset, e_cacheAllocs, e_heapAllocs,
-                                     e_frees, e_size, e_partition, e_sharded, e_alignment};
+    enum DBMxTelemetryStructIndex { e_path,        e_name,         e_fileSize,
+                                    e_minRN,       e_allocRN,      e_fileRN,
+                                    e_cacheLoads,  e_cacheMisses,  e_fileLoads,
+                                    e_fileMisses,  e_id,           e_preAlloc,
+                                    e_recSize,     e_fileRecs,     e_cacheSize,
+                                    e_filesMax,    e_compress,     e_cacheMode};
 
     double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
 };
 
+#endif // MXTELEMETRYDBWRAPPER_H
 
-#endif // MXTELEMETRYHEAPWRAPPER_H
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

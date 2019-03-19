@@ -49,11 +49,11 @@ signals:
     void updateDone(ZiMxTelemetry);
     void updateDone(ZiCxnTelemetry); // SOCKET
     void updateDone(MxTelemetry::Queue); // inside MxTelemetry
-    void updateDone(MxEngine::Telemetry);
-    void updateDone(MxAnyLink::Telemetry);
-    void updateDone(MxTelemetry::DBEnv);
-    void updateDone(MxTelemetry::DBHost);
-    void updateDone(MxTelemetry::DB);
+    void updateDone(MxEngine::Telemetry);  // Engine
+    void updateDone(MxAnyLink::Telemetry); // Link
+    void updateDone(ZdbEnv::Telemetry);    // DBEnv
+    void updateDone(ZdbHost::Telemetry);
+    void updateDone(ZdbAny::Telemetry);
 
 
 protected:

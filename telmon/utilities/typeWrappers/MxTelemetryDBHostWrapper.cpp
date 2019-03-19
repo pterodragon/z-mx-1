@@ -17,12 +17,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include "MxEngine.hpp"
-#include "MxTelemetryLinkWrapper.h"
+
+#include "Zdb.hpp"
+#include "MxTelemetryDBHostWrapper.h"
 #include "QList"
 #include "QDebug"
 
-MxTelemetryLinkWrapper::MxTelemetryLinkWrapper()
+
+MxTelemetryDBHostWrapper::MxTelemetryDBHostWrapper()
 {
     initTableList();
     initChartList();
@@ -30,51 +32,51 @@ MxTelemetryLinkWrapper::MxTelemetryLinkWrapper()
 }
 
 
-
-MxTelemetryLinkWrapper::~MxTelemetryLinkWrapper()
+MxTelemetryDBHostWrapper::~MxTelemetryDBHostWrapper()
 {
 }
 
 
-void MxTelemetryLinkWrapper::initActiveDataSet() noexcept
+void MxTelemetryDBHostWrapper::initActiveDataSet() noexcept
 {
     // 0=, 1=
     m_activeDataSet = {0, 1};
 }
 
 
-void MxTelemetryLinkWrapper::initTableList() noexcept
+void MxTelemetryDBHostWrapper::initTableList() noexcept
 {
     // removed irrelvant for table representation
-    m_tableList->reserve(5);
+    m_tableList->reserve(6);
     m_tableList->insert(0, "time");
-    m_tableList->insert(1, "state");
-    m_tableList->insert(2, "reconnects");
-    m_tableList->insert(3, "rxSeqNo");
-    m_tableList->insert(4, "txSeqNo");
+    m_tableList->insert(1, "priority");
+    m_tableList->insert(2, "state");
+    m_tableList->insert(3, "voted");
+    m_tableList->insert(4, "ip");
+
+    m_tableList->insert(5, "port");
 }
 
 
-void MxTelemetryLinkWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
+void MxTelemetryDBHostWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
 
 }
 
 
-void MxTelemetryLinkWrapper::initChartList() noexcept
+void MxTelemetryDBHostWrapper::initChartList() noexcept
 {
     // removed irrelvant for chart representation
     m_chartList->reserve(4);
     m_chartPriorityToHeapIndex->reserve(3); // without none
 
-    m_chartList->insert(0, "reconnects");
-    m_chartPriorityToHeapIndex->insert(0, LinkMxTelemetryStructIndex::e_reconnects);
-
-    m_chartList->insert(1, "rxSeqNo");
-    m_chartPriorityToHeapIndex->insert(1, LinkMxTelemetryStructIndex::e_rxSeqNo);
-
-    m_chartList->insert(2, "txSeqNo");
-    m_chartPriorityToHeapIndex->insert(2, LinkMxTelemetryStructIndex::e_txSeqNo);
+//    m_chartList->insert(0, "time");
+    m_chartList->insert(0, "priority");
+    m_chartPriorityToHeapIndex->insert(0, DBHostMxTelemetryStructIndex::e_priority);
+    m_chartList->insert(1, "state");
+    m_chartPriorityToHeapIndex->insert(1, DBHostMxTelemetryStructIndex::e_state);
+    m_chartList->insert(2, "voted");
+    m_chartPriorityToHeapIndex->insert(2, DBHostMxTelemetryStructIndex::e_voted);
 
 
     // extra
@@ -82,7 +84,7 @@ void MxTelemetryLinkWrapper::initChartList() noexcept
 }
 
 
-double MxTelemetryLinkWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
+double MxTelemetryDBHostWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
     // sanity check
     double l_result = 0;
@@ -98,11 +100,11 @@ double MxTelemetryLinkWrapper::getDataForChart(void* const a_mxTelemetryMsg, con
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
     switch (l_dataPair.second) {
-    case CONVERT_FRON::type_uint64_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
-        break;
     case CONVERT_FRON::type_uint32_t:
         l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
+        break;
+    case CONVERT_FRON::type_uint16_t:
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
         break;
     case CONVERT_FRON::type_uint8_t:
         l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
@@ -117,35 +119,39 @@ double MxTelemetryLinkWrapper::getDataForChart(void* const a_mxTelemetryMsg, con
 }
 
 
-QPair<void*, int> MxTelemetryLinkWrapper::getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept
+QPair<void*, int> MxTelemetryDBHostWrapper::getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
     // Notice: we defiently know a_mxTelemetryMsg type !
-    MxAnyLink::Telemetry* l_data = static_cast<MxAnyLink::Telemetry*>(a_mxTelemetryMsg);
+    ZdbHost::Telemetry* l_data = static_cast<ZdbHost::Telemetry*>(a_mxTelemetryMsg);
 
     QPair<void*, int> l_result;
     switch (a_index) {
-    case LinkMxTelemetryStructIndex::e_id:
-        l_result.first = l_data->id.data();  //not tested
-        l_result.second = CONVERT_FRON::type_c_char;
+    case DBHostMxTelemetryStructIndex::e_ip:
+        l_result.first = &l_data->ip;  //not tested
+        l_result.second = CONVERT_FRON::type_ZiIP;
         break;
-    case LinkMxTelemetryStructIndex::e_rxSeqNo:
-        l_result.first = &l_data->rxSeqNo;
-        l_result.second = CONVERT_FRON::type_uint64_t;
-        break;
-    case LinkMxTelemetryStructIndex::e_txSeqNo:
-        l_result.first = &l_data->txSeqNo;
-        l_result.second = CONVERT_FRON::type_uint64_t;
-        break;
-    case LinkMxTelemetryStructIndex::e_reconnects:
-        l_result.first = &l_data->reconnects;
+    case DBHostMxTelemetryStructIndex::e_id:
+        l_result.first = &l_data->id;
         l_result.second = CONVERT_FRON::type_uint32_t;
         break;
-    case LinkMxTelemetryStructIndex::e_state:
+    case DBHostMxTelemetryStructIndex::e_priority:
+        l_result.first = &l_data->priority;
+        l_result.second = CONVERT_FRON::type_uint32_t;
+        break;
+    case DBHostMxTelemetryStructIndex::e_port:
+        l_result.first = &l_data->port;
+        l_result.second = CONVERT_FRON::type_uint16_t;
+        break;
+    case DBHostMxTelemetryStructIndex::e_voted:
+        l_result.first = &l_data->voted;
+        l_result.second = CONVERT_FRON::type_uint8_t;
+        break;
+    case DBHostMxTelemetryStructIndex::e_state:
         l_result.first = &l_data->state;
         l_result.second = CONVERT_FRON::type_uint8_t;
         break;
     default:
-        qWarning() << "unknown ZmHeapSelemetryStructIndex, a_index" << a_index
+        qWarning() << "unknown DBHostMxTelemetryStructIndex, a_index" << a_index
                    << "retunring <nullptr CONVERT_FRON::none>";
         l_result.first = nullptr;
         l_result.second = CONVERT_FRON::type_none;
@@ -153,4 +159,15 @@ QPair<void*, int> MxTelemetryLinkWrapper::getMxTelemetryDataType(void* const a_m
     }
     return l_result;
 }
+
+
+
+
+
+
+
+
+
+
+
 

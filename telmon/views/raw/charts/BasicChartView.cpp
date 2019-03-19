@@ -243,17 +243,17 @@ void BasicChartView::updateData(MxAnyLink::Telemetry a_pair)
     m_lambda(this, &a_pair);
 }
 
-void BasicChartView::updateData(MxTelemetry::DBEnv a_pair)
+void BasicChartView::updateData(ZdbEnv::Telemetry a_pair)
 {
     m_lambda(this, &a_pair);
 }
 
-void BasicChartView::updateData(MxTelemetry::DBHost a_pair)
+void BasicChartView::updateData(ZdbHost::Telemetry a_pair)
 {
     m_lambda(this, &a_pair);
 }
 
-void BasicChartView::updateData(MxTelemetry::DB a_pair)
+void BasicChartView::updateData(ZdbAny::Telemetry a_pair)
 {
     m_lambda(this, &a_pair);
 }

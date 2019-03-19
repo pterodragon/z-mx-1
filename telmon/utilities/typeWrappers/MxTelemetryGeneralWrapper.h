@@ -97,8 +97,8 @@ public:
 
 
     // service functions
-    //template <class T>
-    double typeConvertor(const QPair<void*, int>& a_param) const noexcept;
+    template <class T>
+    T typeConvertor(const QPair<void*, int>& a_param) const noexcept;
 
 protected:
     /**
@@ -129,8 +129,10 @@ protected:
     QVector<int>* m_tablePriorityToHeapIndex;
 };
 
-
-
+// 1. supress warning Wunused template function
+// 2. used for the generic functions
+// 3. see https://stackoverflow.com/questions/10632251/undefined-reference-to-template-function
+#include "utilities/typeWrappers/MxTelemetryGeneralWrapperGenericPart.h"
 
 
 //void open() {

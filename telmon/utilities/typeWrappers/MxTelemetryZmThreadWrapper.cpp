@@ -115,7 +115,7 @@ double MxTelemetryZmThreadWrapper::getDataForChart(void* const a_mxTelemetryMsg,
     if (a_index == 0) // case: cpuUsage
     {
         ZmThreadTelemetry* l_data = static_cast<ZmThreadTelemetry*>(a_mxTelemetryMsg);
-        double l_cpuUsage = typeConvertor(QPair(&l_data->cpuUsage, CONVERT_FRON::type_double));
+        double l_cpuUsage = typeConvertor<double>(QPair(&l_data->cpuUsage, CONVERT_FRON::type_double));
         return (l_cpuUsage * 100);
     }
 
@@ -125,19 +125,19 @@ double MxTelemetryZmThreadWrapper::getDataForChart(void* const a_mxTelemetryMsg,
 
     switch (l_dataPair.second) {
     case CONVERT_FRON::type_uint64_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
         break;
     case CONVERT_FRON::type_uint32_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
         break;
     case CONVERT_FRON::type_uint16_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
         break;
     case CONVERT_FRON::type_uint8_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
         break;
     case CONVERT_FRON::type_int32_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_int32_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_int32_t));
         break;
     default:
         qDebug() << "Error, unknown conversion a_index=" << a_index

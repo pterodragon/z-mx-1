@@ -144,10 +144,10 @@ double MxTelemetryHashTblWrapper::getDataForChart(void* const a_mxTelemetryMsg, 
         switch (a_index) {
         case 2: // case slots
             l_result = static_cast<uint64_t>(1) << l_data->bits;
-            return typeConvertor(QPair(&l_result, CONVERT_FRON::type_uint64_t));
+            return typeConvertor<double>(QPair(&l_result, CONVERT_FRON::type_uint64_t));
         case 4:  // case c_slots
             l_result = static_cast<uint64_t>(1) << l_data->cBits;
-            return typeConvertor(QPair(&l_result, CONVERT_FRON::type_uint64_t));
+            return typeConvertor<double>(QPair(&l_result, CONVERT_FRON::type_uint64_t));
         }
     }
 
@@ -157,16 +157,16 @@ double MxTelemetryHashTblWrapper::getDataForChart(void* const a_mxTelemetryMsg, 
 
     switch (l_dataPair.second) {
     case CONVERT_FRON::type_uint64_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
         break;
     case CONVERT_FRON::type_uint32_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
         break;
     case CONVERT_FRON::type_uint16_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
         break;
     case CONVERT_FRON::type_uint8_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
         break;
     default:
         qDebug() << "Error, unknown conversion a_index=" << a_index

@@ -131,7 +131,7 @@ double MxTelemetryHeapWrapper::getDataForChart(void* const a_mxTelemetryMsg, con
     {
         const ZmHeapTelemetry* l_data = static_cast<ZmHeapTelemetry*>(a_mxTelemetryMsg);
         uint64_t l_allocated = l_data->cacheAllocs + l_data->heapAllocs - l_data->frees;
-        return typeConvertor(QPair(&l_allocated, CONVERT_FRON::type_uint64_t));
+        return typeConvertor<double>(QPair(&l_allocated, CONVERT_FRON::type_uint64_t));
     }
 
     const int l_index = m_chartPriorityToHeapIndex->at(a_index);
@@ -139,16 +139,16 @@ double MxTelemetryHeapWrapper::getDataForChart(void* const a_mxTelemetryMsg, con
 
     switch (l_dataPair.second) {
     case CONVERT_FRON::type_uint64_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
         break;
     case CONVERT_FRON::type_uint32_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
         break;
     case CONVERT_FRON::type_uint16_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
         break;
     case CONVERT_FRON::type_uint8_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
         break;
     default:
         qDebug() << "Error, unknown conversion a_index=" << a_index

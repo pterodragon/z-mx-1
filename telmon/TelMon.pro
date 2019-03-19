@@ -85,7 +85,8 @@ HEADERS +=                                          \
     utilities/typeWrappers/MxTelemetryZiCxnTelemetry.h \
     utilities/typeWrappers/MxTelemetryQueueWrapper.h \
     utilities/typeWrappers/MxTelemetryEngineWrapper.h \
-    utilities/typeWrappers/MxTelemetryLinkWrapper.h
+    utilities/typeWrappers/MxTelemetryLinkWrapper.h \
+    utilities/typeWrappers/MxTelemetryGeneralWrapperGenericPart.h
 
 SOURCES += \
     main.cpp \

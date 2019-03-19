@@ -115,16 +115,16 @@ double MxTelemetryZiCxnTelemetry::getDataForChart(void* const a_mxTelemetryMsg, 
 
     switch (l_dataPair.second) {
     case CONVERT_FRON::type_uint64_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
         break;
     case CONVERT_FRON::type_uint32_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
         break;
     case CONVERT_FRON::type_uint16_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
         break;
     case CONVERT_FRON::type_uint8_t:
-        l_result = typeConvertor(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
+        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
         break;
     default:
         qDebug() << "Error, unknown conversion a_index=" << a_index

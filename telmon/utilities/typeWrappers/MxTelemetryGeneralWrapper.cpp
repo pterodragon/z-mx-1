@@ -71,40 +71,6 @@ bool MxTelemetryGeneralWrapper::isDataTypeNotUsed(const int a_index) const noexc
     return a_index == (m_chartList->size() - 1);
 }
 
-//template <class T>
-// to make template
-double MxTelemetryGeneralWrapper::typeConvertor(const QPair< void*, int>& a_param) const noexcept
-{
-    double l_return;
-    void* l_data = a_param.first;
-    switch (a_param.second)
-    {
-    case CONVERT_FRON::type_uint64_t: //uint64_t
-        l_return = static_cast<double>(*(static_cast<uint64_t*>(l_data)));
-    break;
-    case CONVERT_FRON::type_uint32_t: //uint32_t
-        l_return = static_cast<double>(*(static_cast<uint32_t*>(l_data)));
-    break;
-    case CONVERT_FRON::type_uint16_t: //uint16_t
-        l_return = static_cast<double>(*(static_cast<uint16_t*>(l_data)));
-    break;
-    case CONVERT_FRON::type_uint8_t: //uint8_t
-        l_return = static_cast<double>(*(static_cast<uint8_t*>(l_data)));
-    break;
-    case CONVERT_FRON::type_int32_t: //int32_t
-        l_return = static_cast<double>(*(static_cast<int32_t*>(l_data)));
-    break;
-    case CONVERT_FRON::type_double: //double
-        l_return = (*(static_cast<double*>(l_data)));
-    break;
-    default:
-        qDebug() << "typeConvertor default, retunring deafult value 0 ";
-        l_return = 0;
-    break;
-    }
-    return l_return;
-}
-
 
 //QString MxTelemetryGeneralWrapper::typeConvertor(const QPair< void*, int>& a_param) const noexcept
 //{

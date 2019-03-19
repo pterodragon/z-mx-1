@@ -18,6 +18,7 @@ TEMPLATE = app
 # depend on your compiler). Please consult the documentation of the
 # deprecated API in order to know how to port your code away from it.
 DEFINES += QT_DEPRECATED_WARNINGS
+#DEFINES += QT_MESSAGELOGCONTEXT
 
 # You can also make your code fail to compile if you use deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -25,137 +26,29 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 
-HEADERS +=                                          \
-    # controllers
-    controllers/MainWindowController.h              \
-    controllers/TreeMenuWidgetController.h          \
-    controllers/DockWindowController.h              \
-    controllers/TableWidgetDockWindowController.h   \
-    controllers/BasicController.h                   \
-    controllers/GraphWidgetDockWindowController.h   \
-    # models
-    ## raw
-    models/raw/MainWindowModel.h                   \
-    models/raw/TreeModel.h                         \
-    models/raw/TreeItem.h                          \
-    ## wrappers
-    models/wrappers/TreeMenuWidgetModelWrapper.h   \
-    models/wrappers/DockWidgetModelWrapper.h       \
-    models/wrappers/TableDockWidgetModelWrapper.h  \
-    models/wrappers/GraphDockWidgetModelWrapper.h  \
-    models/wrappers/BasicTableWidget.h             \
-    models/wrappers/BasicDockWidget.h              \
-    # views
-    ## raw
-    views/raw/MainWindowView.h                    \
-    views/raw/TreeView.h                          \
-    ### charts
-    views/raw/charts/BasicChartView.h            \
-    ## wrappers
-    # factories
-    factories/ControllerFactory.h                 \
-    factories/NetworkManagerFactory.h             \
-    factories/DataDistributorFactory.h            \
-    factories/TableSubscriberFactory.h            \
-    factories/TableWidgetFactory.h                \
-    # network_component
-    network_component/NetworkManager.h            \
-    network_component/NetworkManagerQThreadImpl.h \
-    network_component/ConnectionQThread.h         \
-    network_component/MxTelMonClient.h            \
-    # distributor
-    distributors/DataDistributor.h                \
-    distributors/DataDistributorQThreadImpl.h     \
-    # subscribers
-    subscribers/DataSubscriber.h                  \
-    subscribers/TableSubscriber.h \
-    factories/ChartViewFactory.h \
-    factories/ChartSubscriberFactory.h \
-    subscribers/QObjectDataSubscriber.h \
-    subscribers/ChartSubscriber.h \
-    #views/raw/charts/HeapChartView.h \
-    #views/raw/charts/HashTblChartView.h \
-    #views/raw/charts/ZmThreadChartView.h \
-    utilities/typeWrappers/MxTelemetryHeapWrapper.h \
-    utilities/typeWrappers/MxTelemetryGeneralWrapper.h \
-    factories/MxTelemetryTypeWrappersFactory.h \
-    utilities/typeWrappers/MxTelemetryHashTblWrapper.h \
-    utilities/typeWrappers/MxTelemetryZmThreadWrapper.h \
-    utilities/typeWrappers/MxTelemetryZiMultiplexerWrapper.h \
-    utilities/typeWrappers/MxTelemetryZiCxnTelemetry.h \
-    utilities/typeWrappers/MxTelemetryQueueWrapper.h \
-    utilities/typeWrappers/MxTelemetryEngineWrapper.h \
-    utilities/typeWrappers/MxTelemetryLinkWrapper.h \
-    utilities/typeWrappers/MxTelemetryGeneralWrapperGenericPart.h \
-    utilities/typeWrappers/MxTelemetryDBEnvWrapper.h \
-    utilities/typeWrappers/MxTelemetryDBHostWrapper.h \
-    utilities/typeWrappers/MxTelemetryDBWrapper.h
+HEADERS +=                           \
+    src/controllers/*.h              \
+    src/models/raw/*.h               \
+    src/models/wrappers/*.h          \
+    src/views/raw/*.h                \
+    src/factories/*.h                \
+    src/network_component/*.h        \
+    src/distributors/*.h             \
+    src/subscribers/*.h              \
+    src/utilities/typeWrappers/*.h
 
-SOURCES += \
-    main.cpp \
-    #controllers
-    controllers/MainWindowController.cpp            \
-    controllers/BasicController.cpp                 \
-    controllers/TreeMenuWidgetController.cpp \
-    controllers/DockWindowController.cpp \
-    controllers/TableWidgetDockWindowController.cpp \
-    controllers/GraphWidgetDockWindowController.cpp  \
-    # models
-    ## raw
-    models/raw/MainWindowModel.cpp \
-    models/raw/TreeModel.cpp \
-    models/raw/TreeItem.cpp \
-    ## wrappers
-    models/wrappers/TreeMenuWidgetModelWrapper.cpp \
-    models/wrappers/DockWidgetModelWrapper.cpp \
-    models/wrappers/TableDockWidgetModelWrapper.cpp \
-    models/wrappers/GraphDockWidgetModelWrapper.cpp \
-    models/wrappers/BasicTableWidget.cpp \
-    models/wrappers/BasicDockWidget.cpp \
-    # views
-    ## raw
-    views/raw/MainWindowView.cpp \
-    views/raw/TreeView.cpp \
-    ### charts
-    views/raw/charts/BasicChartView.cpp \
-    ## wrappers
-    # factories
-    factories/ControllerFactory.cpp \
-    factories/DataDistributorFactory.cpp \
-    factories/NetworkManagerFactory.cpp \
-    factories/TableSubscriberFactory.cpp \
-    factories/TableWidgetFactory.cpp  \
-    # network_component
-    network_component/NetworkManager.cpp \
-    network_component/NetworkManagerQThreadImpl.cpp  \
-    network_component/ConnectionQThread.cpp \
-    network_component/MxTelMonClient.cpp \
-    # distributor
-    distributors/DataDistributor.cpp \
-    distributors/DataDistributorQThreadImpl.cpp \
-    # subscribers
-    subscribers/DataSubscriber.cpp \
-    subscribers/TableSubscriber.cpp \
-    factories/ChartViewFactory.cpp \
-    factories/ChartSubscriberFactory.cpp \
-    subscribers/QObjectDataSubscriber.cpp \
-    subscribers/ChartSubscriber.cpp \
-    #views/raw/charts/HeapChartView.cpp \
-    #views/raw/charts/HashTblChartView.cpp \
-    #views/raw/charts/ZmThreadChartView.cpp \
-    utilities/typeWrappers/MxTelemetryHeapWrapper.cpp \
-    utilities/typeWrappers/MxTelemetryGeneralWrapper.cpp \
-    factories/MxTelemetryTypeWrappersFactory.cpp \
-    utilities/typeWrappers/MxTelemetryHashTblWrapper.cpp \
-    utilities/typeWrappers/MxTelemetryZmThreadWrapper.cpp \
-    utilities/typeWrappers/MxTelemetryZiMultiplexerWrapper.cpp \
-    utilities/typeWrappers/MxTelemetryZiCxnTelemetry.cpp \
-    utilities/typeWrappers/MxTelemetryQueueWrapper.cpp \
-    utilities/typeWrappers/MxTelemetryEngineWrapper.cpp \
-    utilities/typeWrappers/MxTelemetryLinkWrapper.cpp \
-    utilities/typeWrappers/MxTelemetryDBEnvWrapper.cpp \
-    utilities/typeWrappers/MxTelemetryDBHostWrapper.cpp \
-    utilities/typeWrappers/MxTelemetryDBWrapper.cpp
+
+SOURCES +=                             \
+    src/main.cpp                       \
+    src/controllers/*.cpp              \
+    src/models/raw/*.cpp               \
+    src/models/wrappers/*.cpp          \
+    src/views/raw/*.cpp                \
+    src/factories/*.cpp                \
+    src/network_component/*.cpp        \
+    src/distributors/*.cpp             \
+    src/subscribers/*.cpp              \
+    src/utilities/typeWrappers/*.cpp
 
 #SOURCES += $${PWD}/../mxbase/test/*.cpp
 

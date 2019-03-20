@@ -21,6 +21,7 @@
 #include "MxTelemetryZiCxnWrapper.h"
 #include "QList"
 #include "QDebug"
+#include "QLinkedList"
 
 MxTelemetryZiCxnWrapper::MxTelemetryZiCxnWrapper()
 {
@@ -38,103 +39,263 @@ MxTelemetryZiCxnWrapper::~MxTelemetryZiCxnWrapper()
 
 void MxTelemetryZiCxnWrapper::initActiveDataSet() noexcept
 {
-    // 0=fd, 1=flagsrxBufSize
+    // 0=, 1=
     m_activeDataSet = {0, 1};
 }
 
 
 void MxTelemetryZiCxnWrapper::initTableList() noexcept
 {
-    // removed irrelvant for table representation
-    m_tableList->reserve(16);
-    m_tableList->insert(0, "time");
-    m_tableList->insert(1, "type");
-    m_tableList->insert(2, "remoteIP");
-    m_tableList->insert(3, "remotePort");
-    m_tableList->insert(4, "localIP");
-    m_tableList->insert(5, "localPort");
-    m_tableList->insert(6, "fd");
-    m_tableList->insert(7, "flags");
-    m_tableList->insert(8, "mreqAddr");
-    m_tableList->insert(9, "mreqIf");
-    m_tableList->insert(10, "mif");
-    m_tableList->insert(11, "ttl");
-    m_tableList->insert(12, "rxBufSize");
-    m_tableList->insert(13, "rxBufLen");
-    m_tableList->insert(14, "txBufSize");
-    m_tableList->insert(15, "txBufLen");
+    // the index for each catagory
+    int i = 0;
+    m_tableList->insert(i, "time");
+    m_tablePriorityToStructIndex->insert(i++, OTHER_ACTIONS::GET_CURRENT_TIME);
+
+    m_tableList->insert(i, "type");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_type);
+
+    m_tableList->insert(i, "remoteIP");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_remoteIP);
+
+    m_tableList->insert(i, "remotePort");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_remotePort);
+
+    m_tableList->insert(i, "localIP");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_localIP);
+
+    m_tableList->insert(i, "localPort");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_localPort);
+
+    m_tableList->insert(i, "fd");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_socket);
+
+    m_tableList->insert(i, "flags");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_flags);
+
+    m_tableList->insert(i, "mreqAddr");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_mreqAddr);
+
+    m_tableList->insert(i, "mreqIf");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_mreqIf);
+
+    m_tableList->insert(i, "mif");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_mif);
+
+    m_tableList->insert(i, "ttl");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_ttl);
+
+    m_tableList->insert(i, "rxBufSize");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_rxBufSize);
+
+    m_tableList->insert(i, "rxBufLen");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_rxBufLen);
+
+    m_tableList->insert(i, "txBufSize");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_txBufSize);
+
+    m_tableList->insert(i, "txBufLen");
+    m_tablePriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_txBufLen);
 }
 
 
 void MxTelemetryZiCxnWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
+    QPair<void*, int> l_dataPair;
+    ZiIP l_otherResult;
 
+    for (auto i = 0; i < m_tableList->count(); i++)
+    {
+        switch (const auto l_index = m_tablePriorityToStructIndex->at(i)) {
+        case OTHER_ACTIONS::GET_CURRENT_TIME:
+            a_result.append(QString::fromStdString(getCurrentTime()));
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_type:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(ZiCxnType::name(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_remoteIP:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(streamToQString(
+                                *(static_cast<ZiIP*>(l_dataPair.first))
+                                )
+                            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_remotePort:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint16_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_localIP:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(streamToQString(
+                                *(static_cast<ZiIP*>(l_dataPair.first))
+                                )
+                            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_localPort:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint16_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_socket:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_flags:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            // Explanation of the following lambda:
+            // 1. return the convertion from flags to QString
+            // 2. it used only here, so no need to implement function for it
+            a_result.append([this](const uint32_t a_ZiCxnFlags) -> const QString
+            {
+                this->getStream() << ZiCxnFlags::Flags::print(a_ZiCxnFlags);
+                const QString l_result = QString::fromStdString(m_stream->str());
+                this->getStream().str(std::string());
+                this->getStream().clear();
+                return l_result;
+            }( typeConvertor<uint32_t> (
+                   QPair(l_dataPair.first, l_dataPair.second)
+                   )
+               )
+            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_mreqAddr:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(streamToQString(
+                                *(static_cast<ZiIP*>(l_dataPair.first))
+                                )
+                            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_mreqIf:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(streamToQString(
+                                *(static_cast<ZiIP*>(l_dataPair.first))
+                                )
+                            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_mif:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(streamToQString(
+                                *(static_cast<ZiIP*>(l_dataPair.first))
+                                )
+                            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_ttl:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_rxBufSize:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_rxBufLen:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_txBufSize:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZiCxnMxTelemetryStructIndex::e_txBufLen:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        default:
+            qCritical() << *m_className
+                        << __func__
+                        << "unsupported index"
+                        << l_index;
+            break;
+        }
+    }
 }
 
 
 void MxTelemetryZiCxnWrapper::initChartList() noexcept
 {
-    // removed irrelvant for chart representation
-    m_chartList->reserve(6);
-    m_chartPriorityToStructIndex->reserve(5); // without none
+    int i = 0;
+    m_chartList->insert(i, "fd");
+    m_chartPriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_socket);
 
-    m_chartList->insert(0, "fd");
-    m_chartPriorityToStructIndex->insert(0, ZiCxnMxTelemetryStructIndex::e_socket);
+    m_chartList->insert(i, "rxBufSize");
+    m_chartPriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_rxBufSize);
 
-    m_chartList->insert(1, "rxBufSize");
-    m_chartPriorityToStructIndex->insert(1, ZiCxnMxTelemetryStructIndex::e_rxBufSize);
+    m_chartList->insert(i, "rxBufLen");
+    m_chartPriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_rxBufLen);
 
-    m_chartList->insert(2, "rxBufLen");
-    m_chartPriorityToStructIndex->insert(2, ZiCxnMxTelemetryStructIndex::e_rxBufLen);
+    m_chartList->insert(i, "txBufSize");
+    m_chartPriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_txBufSize);
 
-    m_chartList->insert(3, "txBufSize");
-    m_chartPriorityToStructIndex->insert(3, ZiCxnMxTelemetryStructIndex::e_txBufSize);
-
-    m_chartList->insert(4, "txBufLen");
-    m_chartPriorityToStructIndex->insert(4, ZiCxnMxTelemetryStructIndex::e_txBufLen);
+    m_chartList->insert(i, "txBufLen");
+    m_chartPriorityToStructIndex->insert(i++, ZiCxnMxTelemetryStructIndex::e_txBufLen);
 
 
     // extra
-    m_chartList->insert(5, "none");
+    m_chartList->insert(i++, "none");
 }
 
 
 double MxTelemetryZiCxnWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
-    double l_result = 0;
-
     // sanity check
-    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
+    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return 0;}
 
     const int l_index = m_chartPriorityToStructIndex->at(a_index);
-    const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
-    switch (l_dataPair.second) {
-    case CONVERT_FRON::type_uint64_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
-        break;
-    case CONVERT_FRON::type_uint32_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
-        break;
-    case CONVERT_FRON::type_uint16_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
-        break;
-    case CONVERT_FRON::type_uint8_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
-        break;
-    default:
-        qCritical() << *m_className
-                    << __func__
-                    << "Unknown Converstion (a_index, l_dataPair.second)"
-                    << a_index
-                    << l_dataPair.second;
-        break;
-    }
-    return l_result;
+    ZiIP l_otherResult;
+
+    const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+
+    return typeConvertor<double>(QPair(l_dataPair.first, l_dataPair.second));
 }
 
 
-QPair<void*, int> MxTelemetryZiCxnWrapper::getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept
+QPair<void*, int> MxTelemetryZiCxnWrapper::getMxTelemetryDataType(void* const a_mxTelemetryMsg,
+                                                                  const int a_index,
+                                                                  void* a_otherResult) const noexcept
 {
     // Notice: we defiently know a_mxTelemetryMsg type !
     ZiCxnTelemetry* l_data = static_cast<ZiCxnTelemetry*>(a_mxTelemetryMsg);
@@ -169,15 +330,18 @@ QPair<void*, int> MxTelemetryZiCxnWrapper::getMxTelemetryDataType(void* const a_
         l_result.second = CONVERT_FRON::type_uint32_t;
         break;
     case ZiCxnMxTelemetryStructIndex::e_mreqAddr:
-        l_result.first = &l_data->mreqAddr;
+        *(static_cast<ZiIP*>(a_otherResult)) = l_data->mreqAddr;
+        l_result.first = a_otherResult;
         l_result.second = CONVERT_FRON::type_ZiIP;
         break;
     case ZiCxnMxTelemetryStructIndex::e_mreqIf:
-        l_result.first = &l_data->mreqIf;
+        *(static_cast<ZiIP*>(a_otherResult)) = l_data->mreqIf;
+        l_result.first = a_otherResult;
         l_result.second = CONVERT_FRON::type_ZiIP;
         break;
     case ZiCxnMxTelemetryStructIndex::e_mif:
-        l_result.first = &l_data->mif;
+        *(static_cast<ZiIP*>(a_otherResult)) = l_data->mif;
+        l_result.first = a_otherResult;
         l_result.second = CONVERT_FRON::type_ZiIP;
         break;
     case ZiCxnMxTelemetryStructIndex::e_ttl:
@@ -185,11 +349,13 @@ QPair<void*, int> MxTelemetryZiCxnWrapper::getMxTelemetryDataType(void* const a_
         l_result.second = CONVERT_FRON::type_uint32_t;
         break;
     case ZiCxnMxTelemetryStructIndex::e_localIP:
-        l_result.first = &l_data->localIP;
+        *(static_cast<ZiIP*>(a_otherResult)) = l_data->localIP;
+        l_result.first = a_otherResult;
         l_result.second = CONVERT_FRON::type_ZiIP;
         break;
     case ZiCxnMxTelemetryStructIndex::e_remoteIP:
-        l_result.first = &l_data->remoteIP;
+        *(static_cast<ZiIP*>(a_otherResult)) = l_data->remoteIP;
+        l_result.first = a_otherResult;
         l_result.second = CONVERT_FRON::type_ZiIP;
         break;
     case ZiCxnMxTelemetryStructIndex::e_localPort:
@@ -199,9 +365,14 @@ QPair<void*, int> MxTelemetryZiCxnWrapper::getMxTelemetryDataType(void* const a_
     case ZiCxnMxTelemetryStructIndex::e_remotePort:
         l_result.first = &l_data->remotePort;
         l_result.second = CONVERT_FRON::type_uint16_t;
+        break;
+    case ZiCxnMxTelemetryStructIndex::e_type:
+        l_result.first = &l_data->type;
+        l_result.second = CONVERT_FRON::type_uint8_t;
+        break;
     default:
         qCritical() << *m_className
-                    << __func__
+                    << __PRETTY_FUNCTION__
                     << "unsupported struct index"
                     << a_index;
         l_result.first = nullptr;

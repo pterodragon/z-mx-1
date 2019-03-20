@@ -74,7 +74,28 @@ void MxTelemetryDBWrapper::initTableList() noexcept
 
 void MxTelemetryDBWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
-
+//    case Type::DB: {
+//  const auto &data = msg->as<DB>();
+//  write_(m_db, ZuStringN<512>() << now.csv(nowFmt)
+//    << ',' << data.name
+//    << ',' << data.id
+//    << ',' << data.recSize
+//    << ',' << data.compress
+//    << ',' << ZdbCacheMode::name(data.cacheMode)
+//    << ',' << data.cacheSize
+//    << ',' << data.path
+//    << ',' << data.fileSize
+//    << ',' << data.fileRecs
+//    << ',' << data.filesMax
+//    << ',' << data.preAlloc
+//    << ',' << data.minRN
+//    << ',' << data.allocRN
+//    << ',' << data.fileRN
+//    << ',' << data.cacheLoads
+//    << ',' << data.cacheMisses
+//    << ',' << data.fileLoads
+//    << ',' << data.fileMisses << '\n');
+//    } break;
 }
 
 
@@ -243,7 +264,7 @@ QPair<void*, int> MxTelemetryDBWrapper::getMxTelemetryDataType(void* const a_mxT
         break;
     default:
         qCritical() << *m_className
-                    << __func__
+                    << __PRETTY_FUNCTION__
                     << "unsupported struct index"
                     << a_index;
         l_result.first = nullptr;

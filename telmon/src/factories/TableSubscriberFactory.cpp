@@ -113,20 +113,9 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
                     if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
                 }
 
-
                 QLinkedList<QString> l_list;
-
-                l_list.append(QString::fromStdString(a_this->getCurrentTime()));
-                l_list.append(QString::number(l_data.id));
-                l_list.append(QString::number(l_data.tid));
-                l_list.append(QString::number(ZuBoxed(l_data.cpuUsage * 100.0), 'f', 2)); // take 2 digits precise
-                l_list.append(QString::number(l_data.cpuset));
-
-                l_list.append(QString::number(ZuBoxed(l_data.priority)));
-                l_list.append(QString::number(l_data.stackSize));
-                l_list.append(QString::number(ZuBoxed(l_data.partition)));
-                l_list.append(QString::number(ZuBoxed(l_data.main)));
-                l_list.append(QString::number(ZuBoxed(l_data.detached)));
+                MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Thread)
+                        .getDataForTable(const_cast<MxTelemetry::Thread*>(&l_data), l_list);
 
                 emit a_this->updateDone(l_list);
             });
@@ -146,20 +135,8 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
                 }
 
                 QLinkedList<QString> l_list;
-
-                l_list.append(QString::fromStdString(a_this->getCurrentTime()));
-                l_list.append(ZmScheduler::stateName(l_data.state));
-                l_list.append(QString::number(ZuBoxed(l_data.nThreads)));
-                l_list.append(QString::number(ZuBoxed(l_data.priority)));
-                l_list.append(QString::number(ZuBoxed(l_data.partition)));
-
-                l_list.append(a_this->ZmBitmapToQString(l_data.isolation));
-                l_list.append(QString::number(l_data.rxThread));
-                l_list.append(QString::number(l_data.txThread));
-                l_list.append(QString::number(l_data.stackSize));
-                l_list.append(QString::number(l_data.rxBufSize));
-
-                l_list.append(QString::number(l_data.txBufSize));
+                MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Multiplexer)
+                        .getDataForTable(const_cast<MxTelemetry::Multiplexer*>(&l_data), l_list);
 
                 emit a_this->updateDone(l_list);
             });
@@ -180,26 +157,9 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
 
 
             QLinkedList<QString> l_list;
+            MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Socket)
+                    .getDataForTable(const_cast<MxTelemetry::Socket*>(&l_data), l_list);
 
-            l_list.append(QString::fromStdString(a_this->getCurrentTime()));
-            l_list.append(ZiCxnType::name(l_data.type));
-            l_list.append(a_this->ZiIPTypeToQString(l_data.remoteIP));
-            l_list.append(QString::number(ZuBoxed(l_data.remotePort)));
-            l_list.append(a_this->ZiIPTypeToQString(l_data.localIP));
-
-            l_list.append(QString::number(ZuBoxed(l_data.localPort)));
-            l_list.append(QString::number(l_data.socket));
-            l_list.append(a_this->ZiCxnFlagsTypeToQString(l_data.flags));
-            l_list.append(a_this->ZiIPTypeToQString(l_data.mreqAddr));
-            l_list.append(a_this->ZiIPTypeToQString(l_data.mreqIf));
-
-            l_list.append(a_this->ZiIPTypeToQString(l_data.mif));
-            l_list.append(QString::number(l_data.ttl));
-            l_list.append(QString::number(l_data.rxBufSize));
-            l_list.append(QString::number(l_data.rxBufLen));
-            l_list.append(QString::number(l_data.txBufSize));
-
-            l_list.append(QString::number(l_data.txBufLen));
             emit a_this->updateDone(l_list);
         });
         break;
@@ -218,21 +178,8 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
 
 
             QLinkedList<QString> l_list;
-
-            l_list.append(QString::fromStdString(a_this->getCurrentTime()));
-            l_list.append(MxTelemetry::QueueType::name(l_data.type));
-            qDebug() << QString::fromStdString(a_this->constructQueueName(l_data.id, MxTelemetry::QueueType::name(l_data.type)))
-                     << "l_data.full"
-                     << l_data.full << "\n";
-            l_list.append(QString::number(l_data.full));
-            l_list.append(QString::number(l_data.size));
-            l_list.append(QString::number(l_data.count));
-
-            l_list.append(QString::number(l_data.seqNo));
-            l_list.append(QString::number(l_data.inCount));
-            l_list.append(QString::number(l_data.inBytes));
-            l_list.append(QString::number(l_data.outCount));
-            l_list.append(QString::number(l_data.outBytes));
+            MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Queue)
+                    .getDataForTable(const_cast<MxTelemetry::Queue*>(&l_data), l_list);
 
             emit a_this->updateDone(l_list);
         });
@@ -252,21 +199,8 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
 
 
             QLinkedList<QString> l_list;
-
-            l_list.append(QString::fromStdString(a_this->getCurrentTime()));
-            l_list.append(MxEngineState::name(l_data.state));
-            l_list.append(QString::number(l_data.nLinks));
-            l_list.append(QString::number(l_data.up));
-            l_list.append(QString::number(l_data.down));
-
-            l_list.append(QString::number(l_data.disabled));
-            l_list.append(QString::number(l_data.transient));
-            l_list.append(QString::number(l_data.reconn));
-            l_list.append(QString::number(l_data.failed));
-            l_list.append(l_data.mxID.data());
-
-            l_list.append(QString::number(l_data.rxThread));
-            l_list.append(QString::number(l_data.txThread));
+            MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Engine)
+                    .getDataForTable(const_cast<MxTelemetry::Engine*>(&l_data), l_list);
 
             emit a_this->updateDone(l_list);
         });
@@ -286,12 +220,8 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
 
 
             QLinkedList<QString> l_list;
-
-            l_list.append(QString::fromStdString(a_this->getCurrentTime()));
-            l_list.append(MxLinkState::name(l_data.state));
-            l_list.append(QString::number(l_data.reconnects));
-            l_list.append(QString::number(l_data.rxSeqNo));
-            l_list.append(QString::number(l_data.txSeqNo));
+            MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Link)
+                    .getDataForTable(const_cast<MxTelemetry::Link*>(&l_data), l_list);
 
             emit a_this->updateDone(l_list);
         });

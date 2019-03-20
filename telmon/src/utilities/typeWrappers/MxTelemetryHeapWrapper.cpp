@@ -91,12 +91,11 @@ void MxTelemetryHeapWrapper::initTableList() noexcept
 void MxTelemetryHeapWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
     uint64_t l_otherResult;
+    QPair<void*, int> l_dataPair;
+
     for (auto i = 0; i < m_tableList->count(); i++)
     {
-        const auto l_index = m_tablePriorityToStructIndex->at(i);
-        QPair<void*, int> l_dataPair;
-
-        switch (l_index) {
+        switch (const auto l_index = m_tablePriorityToStructIndex->at(i)) {
         case OTHER_ACTIONS::GET_CURRENT_TIME:
             a_result.append(QString::fromStdString(getCurrentTime()));
             break;

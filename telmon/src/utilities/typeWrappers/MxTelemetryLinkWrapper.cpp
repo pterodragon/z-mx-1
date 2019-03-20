@@ -21,6 +21,7 @@
 #include "MxTelemetryLinkWrapper.h"
 #include "QList"
 #include "QDebug"
+#include "QLinkedList"
 
 MxTelemetryLinkWrapper::MxTelemetryLinkWrapper()
 {
@@ -46,72 +47,112 @@ void MxTelemetryLinkWrapper::initActiveDataSet() noexcept
 
 void MxTelemetryLinkWrapper::initTableList() noexcept
 {
-    // removed irrelvant for table representation
-    m_tableList->reserve(5);
-    m_tableList->insert(0, "time");
-    m_tableList->insert(1, "state");
-    m_tableList->insert(2, "reconnects");
-    m_tableList->insert(3, "rxSeqNo");
-    m_tableList->insert(4, "txSeqNo");
+    // the index for each catagory
+    int i = 0;
+    m_tableList->insert(i, "time");
+    m_tablePriorityToStructIndex->insert(i++, OTHER_ACTIONS::GET_CURRENT_TIME);
+
+    m_tableList->insert(i, "state");
+    m_tablePriorityToStructIndex->insert(i++, LinkMxTelemetryStructIndex::e_state);
+
+    m_tableList->insert(i, "reconnects");
+    m_tablePriorityToStructIndex->insert(i++, LinkMxTelemetryStructIndex::e_reconnects);
+
+    m_tableList->insert(i, "rxSeqNo");
+    m_tablePriorityToStructIndex->insert(i++, LinkMxTelemetryStructIndex::e_rxSeqNo);
+
+    m_tableList->insert(i, "txSeqNo");
+    m_tablePriorityToStructIndex->insert(i++, LinkMxTelemetryStructIndex::e_txSeqNo);
+
 }
 
 
 void MxTelemetryLinkWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
+    QPair<void*, int> l_dataPair;
 
+    for (auto i = 0; i < m_tableList->count(); i++)
+    {
+        switch (const auto l_index = m_tablePriorityToStructIndex->at(i)) {
+        case OTHER_ACTIONS::GET_CURRENT_TIME:
+            a_result.append(QString::fromStdString(getCurrentTime()));
+            break;
+        case LinkMxTelemetryStructIndex::e_state:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(MxLinkState::name(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case LinkMxTelemetryStructIndex::e_reconnects:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case LinkMxTelemetryStructIndex::e_rxSeqNo:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case LinkMxTelemetryStructIndex::e_txSeqNo:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        default:
+            qCritical() << *m_className
+                        << __func__
+                        << "unsupported index"
+                        << l_index;
+            break;
+        }
+    }
 }
 
 
 void MxTelemetryLinkWrapper::initChartList() noexcept
 {
-    // removed irrelvant for chart representation
-    m_chartList->reserve(4);
-    m_chartPriorityToStructIndex->reserve(3); // without none
+    int i = 0;
+    m_chartList->insert(i, "reconnects");
+    m_chartPriorityToStructIndex->insert(i++, LinkMxTelemetryStructIndex::e_reconnects);
 
-    m_chartList->insert(0, "reconnects");
-    m_chartPriorityToStructIndex->insert(0, LinkMxTelemetryStructIndex::e_reconnects);
+    m_chartList->insert(i, "rxSeqNo");
+    m_chartPriorityToStructIndex->insert(i++, LinkMxTelemetryStructIndex::e_rxSeqNo);
 
-    m_chartList->insert(1, "rxSeqNo");
-    m_chartPriorityToStructIndex->insert(1, LinkMxTelemetryStructIndex::e_rxSeqNo);
-
-    m_chartList->insert(2, "txSeqNo");
-    m_chartPriorityToStructIndex->insert(2, LinkMxTelemetryStructIndex::e_txSeqNo);
+    m_chartList->insert(i, "txSeqNo");
+    m_chartPriorityToStructIndex->insert(i++, LinkMxTelemetryStructIndex::e_txSeqNo);
 
 
     // extra
-    m_chartList->insert(3, "none");
+    m_chartList->insert(i++, "none");
 }
 
 
 double MxTelemetryLinkWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
-    double l_result = 0;
-
     // sanity check
-    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
+    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return 0;}
 
     const int l_index = m_chartPriorityToStructIndex->at(a_index);
+
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
-    switch (l_dataPair.second) {
-    case CONVERT_FRON::type_uint64_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
-        break;
-    case CONVERT_FRON::type_uint32_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
-        break;
-    case CONVERT_FRON::type_uint8_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
-        break;
-    default:
-        qCritical() << *m_className
-                    << __func__
-                    << "Unknown Converstion (a_index, l_dataPair.second)"
-                    << a_index
-                    << l_dataPair.second;
-        break;
-    }
-    return l_result;
+    return  typeConvertor<double>(QPair(l_dataPair.first, l_dataPair.second));
+
 }
 
 
@@ -123,7 +164,7 @@ QPair<void*, int> MxTelemetryLinkWrapper::getMxTelemetryDataType(void* const a_m
     QPair<void*, int> l_result;
     switch (a_index) {
     case LinkMxTelemetryStructIndex::e_id:
-        l_result.first = l_data->id.data();  //not tested
+        l_result.first = l_data->id.data();
         l_result.second = CONVERT_FRON::type_c_char;
         break;
     case LinkMxTelemetryStructIndex::e_rxSeqNo:
@@ -144,7 +185,7 @@ QPair<void*, int> MxTelemetryLinkWrapper::getMxTelemetryDataType(void* const a_m
         break;
     default:
         qCritical() << *m_className
-                    << __func__
+                    << __PRETTY_FUNCTION__
                     << "unsupported struct index"
                     << a_index;
         l_result.first = nullptr;

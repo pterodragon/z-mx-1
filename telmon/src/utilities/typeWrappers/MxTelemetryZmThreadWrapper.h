@@ -62,7 +62,10 @@ protected:
     void initTableList() noexcept override final;
     void initChartList() noexcept override final;
     void initActiveDataSet() noexcept override final;
-    QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
+
+    QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg,
+                                                     const int a_index,
+                                                     void* a_otherResult) const noexcept override final;
 
 
 public:

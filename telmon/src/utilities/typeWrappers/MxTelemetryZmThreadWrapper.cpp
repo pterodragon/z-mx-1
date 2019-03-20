@@ -22,6 +22,7 @@
 #include "QList"
 #include "ZmThread.hpp"
 #include "QDebug"
+#include "QLinkedList"
 
 MxTelemetryZmThreadWrapper::MxTelemetryZmThreadWrapper()
 {
@@ -46,109 +47,193 @@ void MxTelemetryZmThreadWrapper::initActiveDataSet() noexcept
 
 void MxTelemetryZmThreadWrapper::initTableList() noexcept
 {
-    // removed irrelvant for table representation
-    m_tableList->reserve(10);
-    m_tableList->insert(0, "time");
-    m_tableList->insert(1, "id");
-    m_tableList->insert(2, "tid");
-    m_tableList->insert(3, "cpuUsage");
-    m_tableList->insert(4, "cpuset");
-    m_tableList->insert(5, "priority");
-    m_tableList->insert(6, "stackSize");
-    m_tableList->insert(7, "partition");
-    m_tableList->insert(8, "main");
-    m_tableList->insert(9, "detached");
+    // the index for each catagory
+    int i = 0;
+    m_tableList->insert(i, "time");
+    m_tablePriorityToStructIndex->insert(i++, OTHER_ACTIONS::GET_CURRENT_TIME);
+
+    m_tableList->insert(i, "id");
+    m_tablePriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_id);
+
+    m_tableList->insert(i, "tid");
+    m_tablePriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_tid);
+
+    m_tableList->insert(i, "cpuUsage");
+    m_tablePriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_cpuUsage);
+
+    m_tableList->insert(i, "cpuset");
+    m_tablePriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_cpuset);
+
+    m_tableList->insert(i, "priority");
+    m_tablePriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_priority);
+
+    m_tableList->insert(i, "stackSize");
+    m_tablePriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_stackSize);
+
+    m_tableList->insert(i, "partition");
+    m_tablePriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_partition);
+
+    m_tableList->insert(i, "main");
+    m_tablePriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_main);
+
+    m_tableList->insert(i, "detached");
+    m_tablePriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_detached);
+
 }
 
 
 void MxTelemetryZmThreadWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
+    double l_otherResult;
+    QPair<void*, int> l_dataPair;
 
+    for (auto i = 0; i < m_tableList->count(); i++)
+    {
+        switch (const auto l_index = m_tablePriorityToStructIndex->at(i)) {
+        case OTHER_ACTIONS::GET_CURRENT_TIME:
+            a_result.append(QString::fromStdString(getCurrentTime()));
+            break;
+        case ZmThreadTelemetryStructIndex::e_id:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<int32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmThreadTelemetryStructIndex::e_tid:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmThreadTelemetryStructIndex::e_cpuUsage:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<double>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    ),
+                                'f', 2) //take 2 digits precise
+                            );
+            break;
+        case ZmThreadTelemetryStructIndex::e_cpuset:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(streamToQString(ZmBitmap(
+                                                typeConvertor<uint64_t>(
+                                                    QPair(l_dataPair.first, l_dataPair.second)
+                                                    )
+                                                )
+                                            )
+                            );
+            break;
+        case ZmThreadTelemetryStructIndex::e_priority:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<int32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmThreadTelemetryStructIndex::e_stackSize:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmThreadTelemetryStructIndex::e_partition:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint16_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmThreadTelemetryStructIndex::e_main:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmThreadTelemetryStructIndex::e_detached:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        default:
+            qCritical() << *m_className
+                        << __func__
+                        << "unsupported index"
+                        << l_index;
+            break;
+        }
+    }
 }
 
 
 void MxTelemetryZmThreadWrapper::initChartList() noexcept
 {
-    // removed irrelvant for chart representation
-    m_chartList->reserve(7);
-    m_chartPriorityToStructIndex->reserve(6); // without none
-//    m_chartList->insert(0, "time");
-//    m_chartList->insert(1, "id");
+    int i = 0;
+    m_chartList->insert(i, "cpuUsage");
+    m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_cpuUsage);
 
-    m_chartList->insert(0, "cpuUsage");
-    m_chartPriorityToStructIndex->insert(0, ZmThreadTelemetryStructIndex::e_cpuUsage);
+    m_chartList->insert(i, "cpuset");
+    m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_cpuset);
 
-    m_chartList->insert(1, "cpuset");
-    m_chartPriorityToStructIndex->insert(1, ZmThreadTelemetryStructIndex::e_cpuset);
+    m_chartList->insert(i, "priority");
+    m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_priority);
 
-    m_chartList->insert(2, "priority");
-    m_chartPriorityToStructIndex->insert(2, ZmThreadTelemetryStructIndex::e_priority);
+    m_chartList->insert(i, "stackSize");
+    m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_stackSize);
 
-    m_chartList->insert(3, "stackSize");
-    m_chartPriorityToStructIndex->insert(3, ZmThreadTelemetryStructIndex::e_stackSize);
+    m_chartList->insert(i, "partition");
+    m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_partition);
 
-    m_chartList->insert(4, "partition");
-    m_chartPriorityToStructIndex->insert(4, ZmThreadTelemetryStructIndex::e_partition);
+    m_chartList->insert(i, "main");
+    m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_main);
 
-    m_chartList->insert(5, "main");
-    m_chartPriorityToStructIndex->insert(5, ZmThreadTelemetryStructIndex::e_main);
-
-    m_chartList->insert(6, "detached");
-    m_chartPriorityToStructIndex->insert(6, ZmThreadTelemetryStructIndex::e_detached);
+    m_chartList->insert(i, "detached");
+    m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_detached);
 
     // extra
-    m_chartList->insert(7, "none");
+    m_chartList->insert(i, "none");
 }
 
 
 double MxTelemetryZmThreadWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
-    double l_result = 0;
-
     // sanity check
-    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
+    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return 0;}
 
-    if (a_index == 0) // case: cpuUsage
-    {
-        ZmThreadTelemetry* l_data = static_cast<ZmThreadTelemetry*>(a_mxTelemetryMsg);
-        double l_cpuUsage = typeConvertor<double>(QPair(&l_data->cpuUsage, CONVERT_FRON::type_double));
-        return (l_cpuUsage * 100);
-    }
-
+    double l_otherResult; // for cpuUsage
 
     const int l_index = m_chartPriorityToStructIndex->at(a_index);
-    const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
-    switch (l_dataPair.second) {
-    case CONVERT_FRON::type_uint64_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
-        break;
-    case CONVERT_FRON::type_uint32_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
-        break;
-    case CONVERT_FRON::type_uint16_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
-        break;
-    case CONVERT_FRON::type_uint8_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
-        break;
-    case CONVERT_FRON::type_int32_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_int32_t));
-        break;
-    default:
-        qCritical() << *m_className
-                    << __func__
-                    << "Unknown Converstion (a_index, l_dataPair.second)"
-                    << a_index
-                    << l_dataPair.second;
-        break;
-    }
+    const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
 
-    return l_result;
+    return typeConvertor<double>(QPair(l_dataPair.first, l_dataPair.second));
+
 }
 
 
-QPair<void*, int> MxTelemetryZmThreadWrapper::getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept
+QPair<void*, int> MxTelemetryZmThreadWrapper::getMxTelemetryDataType(void* const a_mxTelemetryMsg,
+                                                                     const int a_index,
+                                                                     void* a_otherResult) const noexcept
 {
     // Notice: we defiently know a_mxTelemetryMsg type !
     ZmThreadTelemetry* l_data = static_cast<ZmThreadTelemetry*>(a_mxTelemetryMsg);
@@ -171,7 +256,8 @@ QPair<void*, int> MxTelemetryZmThreadWrapper::getMxTelemetryDataType(void* const
         l_result.second = CONVERT_FRON::type_uint64_t;
         break;
     case ZmThreadTelemetryStructIndex::e_cpuUsage:
-        l_result.first = &l_data->cpuUsage;
+        *(static_cast<double*>(a_otherResult)) = static_cast<double>(l_data->cpuUsage  * 100.0);
+        l_result.first = a_otherResult;
         l_result.second = CONVERT_FRON::type_double;
         break;
     case ZmThreadTelemetryStructIndex::e_id:
@@ -196,7 +282,7 @@ QPair<void*, int> MxTelemetryZmThreadWrapper::getMxTelemetryDataType(void* const
         break;
     default:
         qCritical() << *m_className
-                    << __func__
+                    << __PRETTY_FUNCTION__
                     << "unsupported struct index"
                     << a_index;
         l_result.first = nullptr;

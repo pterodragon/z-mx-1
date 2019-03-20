@@ -61,7 +61,10 @@ protected:
     void initTableList() noexcept override final;
     void initChartList() noexcept override final;
     void initActiveDataSet() noexcept override final;
-    QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
+
+    QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg,
+                                                     const int a_index,
+                                                     void* a_otherResult) const noexcept override final;
 
 
 public:
@@ -70,7 +73,8 @@ public:
                                                         e_txBufSize, e_txBufLen,
                                       e_flags, e_mreqAddr, e_mreqIf, e_mif,
                                       e_ttl, e_localIP,   e_remoteIP,
-                                             e_localPort, e_remotePort};
+                                             e_localPort, e_remotePort,
+                                      e_type};
 
     double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;

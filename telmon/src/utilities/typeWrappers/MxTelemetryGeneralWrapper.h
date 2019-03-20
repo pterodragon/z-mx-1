@@ -166,6 +166,7 @@ protected:
                                                      const int a_index,
                                                      void* a_otherResult) const noexcept;
 
+    std::stringstream& getStream() const noexcept {return *m_stream;}
 
 
     QList<QString>* m_tableList; // sorted by priorites
@@ -174,7 +175,7 @@ protected:
     QVector<int>* m_chartPriorityToStructIndex;
     QVector<int>* m_tablePriorityToStructIndex;
     QString* m_className;
-    std::stringstream *m_stream; // assistance in translation to some types
+    std::stringstream* m_stream; // assistance in translation to some types
 };
 
 // 1. supress warning Wunused template function

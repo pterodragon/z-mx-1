@@ -74,7 +74,49 @@ void MxTelemetryDBEnvWrapper::initTableList() noexcept
 
 void MxTelemetryDBEnvWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
+//    QLinkedList<QString> l_list;
 
+//    l_list.append(QString::fromStdString(a_this->getCurrentTime()));
+//    l_list.append(QString::number(l_data.master));
+//    l_list.append(QString::number(l_data.prev));
+//    l_list.append(QString::number(l_data.next));
+//    //l_list.append(ZdbHost::stateName(l_data.state));
+
+//    l_list.append(QString::number(ZuBoxed(l_data.active)));
+//    l_list.append(QString::number(ZuBoxed(l_data.recovering)));
+//    l_list.append(QString::number(ZuBoxed(l_data.replicating)));
+//    l_list.append(QString::number(ZuBoxed(l_data.nDBs)));
+//    l_list.append(QString::number(ZuBoxed(l_data.nHosts)));
+
+//    l_list.append(QString::number(ZuBoxed(l_data.nPeers)));
+//    l_list.append(QString::number(ZuBoxed(l_data.nCxns)));
+//    l_list.append(QString::number(l_data.heartbeatFreq));
+//    l_list.append(QString::number(l_data.heartbeatTimeout));
+//    l_list.append(QString::number(l_data.reconnectFreq));
+
+//    l_list.append(QString::number(l_data.electionTimeout));
+//    l_list.append(QString::number(l_data.writeThread));
+
+//    emit a_this->updateDone(l_list);
+//    write_(m_dbenv, ZuStringN<512>() << now.csv(nowFmt)
+//	  << ',' << data.self
+//	  << ',' << data.master
+//	  << ',' << data.prev
+//	  << ',' << data.next
+//	  << ',' << ZdbHost::stateName(data.state)
+//	  << ',' << ZuBoxed(data.active)
+//	  << ',' << ZuBoxed(data.recovering)
+//	  << ',' << ZuBoxed(data.replicating)
+//	  << ',' << ZuBoxed(data.nDBs)
+//	  << ',' << ZuBoxed(data.nHosts)
+//	  << ',' << ZuBoxed(data.nPeers)
+//	  << ',' << ZuBoxed(data.nCxns)
+//	  << ',' << data.heartbeatFreq
+//	  << ',' << data.heartbeatTimeout
+//	  << ',' << data.reconnectFreq
+//	  << ',' << data.electionTimeout
+//	  << ',' << data.writeThread << '\n');
+//      } break;
 }
 
 
@@ -237,7 +279,7 @@ QPair<void*, int> MxTelemetryDBEnvWrapper::getMxTelemetryDataType(void* const a_
         break;
     default:
         qCritical() << *m_className
-                    << __func__
+                    << __PRETTY_FUNCTION__
                     << "unsupported struct index"
                     << a_index;
         l_result.first = nullptr;

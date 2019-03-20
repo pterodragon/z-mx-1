@@ -75,27 +75,27 @@ void MxTelemetryZiMultiplexerWrapper::initChartList() noexcept
 {
     // removed irrelvant for chart representation
     m_chartList->reserve(7);
-    m_chartPriorityToHeapIndex->reserve(6); // without none
+    m_chartPriorityToStructIndex->reserve(6); // without none
 //    m_chartList->insert(0, "time");
 //    m_chartList->insert(1, "state");
 
     m_chartList->insert(0, "nThreads");
-    m_chartPriorityToHeapIndex->insert(0, ZiMxTelemetryStructIndex::e_nThreads);
+    m_chartPriorityToStructIndex->insert(0, ZiMxTelemetryStructIndex::e_nThreads);
 
     m_chartList->insert(1, "priority");
-    m_chartPriorityToHeapIndex->insert(1, ZiMxTelemetryStructIndex::e_priority);
+    m_chartPriorityToStructIndex->insert(1, ZiMxTelemetryStructIndex::e_priority);
 
     m_chartList->insert(2, "partition");
-    m_chartPriorityToHeapIndex->insert(2, ZiMxTelemetryStructIndex::e_partition);
+    m_chartPriorityToStructIndex->insert(2, ZiMxTelemetryStructIndex::e_partition);
 
     m_chartList->insert(3, "stackSize");
-    m_chartPriorityToHeapIndex->insert(3, ZiMxTelemetryStructIndex::e_stackSize);
+    m_chartPriorityToStructIndex->insert(3, ZiMxTelemetryStructIndex::e_stackSize);
 
     m_chartList->insert(4, "rxBufSize");
-    m_chartPriorityToHeapIndex->insert(4, ZiMxTelemetryStructIndex::e_rxBufSize);
+    m_chartPriorityToStructIndex->insert(4, ZiMxTelemetryStructIndex::e_rxBufSize);
 
     m_chartList->insert(5, "txBufSize");
-    m_chartPriorityToHeapIndex->insert(5, ZiMxTelemetryStructIndex::e_txBufSize);
+    m_chartPriorityToStructIndex->insert(5, ZiMxTelemetryStructIndex::e_txBufSize);
 ;
 
     // extra
@@ -109,7 +109,7 @@ double MxTelemetryZiMultiplexerWrapper::getDataForChart(void* const a_mxTelemetr
     // sanity check
     if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
 
-    const int l_index = m_chartPriorityToHeapIndex->at(a_index);
+    const int l_index = m_chartPriorityToStructIndex->at(a_index);
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
     switch (l_dataPair.second) {

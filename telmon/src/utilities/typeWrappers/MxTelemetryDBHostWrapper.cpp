@@ -69,15 +69,15 @@ void MxTelemetryDBHostWrapper::initChartList() noexcept
 {
     // removed irrelvant for chart representation
     m_chartList->reserve(4);
-    m_chartPriorityToHeapIndex->reserve(3); // without none
+    m_chartPriorityToStructIndex->reserve(3); // without none
 
 //    m_chartList->insert(0, "time");
     m_chartList->insert(0, "priority");
-    m_chartPriorityToHeapIndex->insert(0, DBHostMxTelemetryStructIndex::e_priority);
+    m_chartPriorityToStructIndex->insert(0, DBHostMxTelemetryStructIndex::e_priority);
     m_chartList->insert(1, "state");
-    m_chartPriorityToHeapIndex->insert(1, DBHostMxTelemetryStructIndex::e_state);
+    m_chartPriorityToStructIndex->insert(1, DBHostMxTelemetryStructIndex::e_state);
     m_chartList->insert(2, "voted");
-    m_chartPriorityToHeapIndex->insert(2, DBHostMxTelemetryStructIndex::e_voted);
+    m_chartPriorityToStructIndex->insert(2, DBHostMxTelemetryStructIndex::e_voted);
 
 
     // extra
@@ -92,7 +92,7 @@ double MxTelemetryDBHostWrapper::getDataForChart(void* const a_mxTelemetryMsg, c
     // sanity check
     if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
 
-    const int l_index = m_chartPriorityToHeapIndex->at(a_index);
+    const int l_index = m_chartPriorityToStructIndex->at(a_index);
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
     switch (l_dataPair.second) {

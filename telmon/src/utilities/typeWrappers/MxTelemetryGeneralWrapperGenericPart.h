@@ -24,6 +24,7 @@
 
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 #include "QDebug"
+#include <sstream> //for ZmBitmapToQString
 
 template <class T>
 T MxTelemetryGeneralWrapper::typeConvertor(const QPair<void*, int>& a_param) const noexcept
@@ -54,11 +55,26 @@ T MxTelemetryGeneralWrapper::typeConvertor(const QPair<void*, int>& a_param) con
         l_return = static_cast<T>((*(static_cast<int8_t*>(l_data))));
     break;
     default:
-        qDebug() << "typeConvertor default, retunring deafult value 0 ";
+        qCritical() << *m_className
+                    << __PRETTY_FUNCTION__
+                    << "Unknown Converstion, a_param.second="
+                    << a_param.second;
         l_return = 0;
     break;
     }
     return l_return;
 }
+
+
+template <class T>
+QString MxTelemetryGeneralWrapper::streamToQString(const T& a_toStream) const noexcept
+{
+    a_toStream.print(*m_stream);
+    const QString l_result = QString::fromStdString(m_stream->str());
+    m_stream->str(std::string());
+    m_stream->clear();
+    return l_result;
+}
+
 
 //#endif // MXTELEMETRYGENERALWRAPPERGENERICPART_H

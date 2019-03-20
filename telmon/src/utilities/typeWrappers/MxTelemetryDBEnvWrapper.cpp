@@ -82,46 +82,46 @@ void MxTelemetryDBEnvWrapper::initChartList() noexcept
 {
     // removed irrelvant for chart representation
     m_chartList->reserve(18);
-    m_chartPriorityToHeapIndex->reserve(17); // without none
+    m_chartPriorityToStructIndex->reserve(17); // without none
 
 //    m_chartList->insert(0, "time");
     m_chartList->insert(0, "self");
-    m_chartPriorityToHeapIndex->insert(0, DBEnvMxTelemetryStructIndex::e_self);
+    m_chartPriorityToStructIndex->insert(0, DBEnvMxTelemetryStructIndex::e_self);
     m_chartList->insert(1, "master");
-    m_chartPriorityToHeapIndex->insert(1, DBEnvMxTelemetryStructIndex::e_master);
+    m_chartPriorityToStructIndex->insert(1, DBEnvMxTelemetryStructIndex::e_master);
     m_chartList->insert(2, "prev");
-    m_chartPriorityToHeapIndex->insert(2, DBEnvMxTelemetryStructIndex::e_prev);
+    m_chartPriorityToStructIndex->insert(2, DBEnvMxTelemetryStructIndex::e_prev);
     m_chartList->insert(3, "next");
-    m_chartPriorityToHeapIndex->insert(3, DBEnvMxTelemetryStructIndex::e_next);
+    m_chartPriorityToStructIndex->insert(3, DBEnvMxTelemetryStructIndex::e_next);
 
     m_chartList->insert(4, "state");
-    m_chartPriorityToHeapIndex->insert(4, DBEnvMxTelemetryStructIndex::e_state);
+    m_chartPriorityToStructIndex->insert(4, DBEnvMxTelemetryStructIndex::e_state);
     m_chartList->insert(5, "active");
-    m_chartPriorityToHeapIndex->insert(5, DBEnvMxTelemetryStructIndex::e_active);
+    m_chartPriorityToStructIndex->insert(5, DBEnvMxTelemetryStructIndex::e_active);
     m_chartList->insert(6, "recovering");
-    m_chartPriorityToHeapIndex->insert(6, DBEnvMxTelemetryStructIndex::e_recovering);
+    m_chartPriorityToStructIndex->insert(6, DBEnvMxTelemetryStructIndex::e_recovering);
     m_chartList->insert(7, "replicating");
-    m_chartPriorityToHeapIndex->insert(7, DBEnvMxTelemetryStructIndex::e_replicating);
+    m_chartPriorityToStructIndex->insert(7, DBEnvMxTelemetryStructIndex::e_replicating);
     m_chartList->insert(8, "nDBs");
-    m_chartPriorityToHeapIndex->insert(8, DBEnvMxTelemetryStructIndex::e_nDBs);
+    m_chartPriorityToStructIndex->insert(8, DBEnvMxTelemetryStructIndex::e_nDBs);
 
     m_chartList->insert(9, "nHosts");
-    m_chartPriorityToHeapIndex->insert(9, DBEnvMxTelemetryStructIndex::e_nHosts);
+    m_chartPriorityToStructIndex->insert(9, DBEnvMxTelemetryStructIndex::e_nHosts);
     m_chartList->insert(10, "nPeers");
-    m_chartPriorityToHeapIndex->insert(10, DBEnvMxTelemetryStructIndex::e_nPeers);
+    m_chartPriorityToStructIndex->insert(10, DBEnvMxTelemetryStructIndex::e_nPeers);
     m_chartList->insert(11, "nCxns");
-    m_chartPriorityToHeapIndex->insert(11, DBEnvMxTelemetryStructIndex::e_nCxns);
+    m_chartPriorityToStructIndex->insert(11, DBEnvMxTelemetryStructIndex::e_nCxns);
     m_chartList->insert(12, "heartbeatFreq");
-    m_chartPriorityToHeapIndex->insert(12, DBEnvMxTelemetryStructIndex::e_heartbeatFreq);
+    m_chartPriorityToStructIndex->insert(12, DBEnvMxTelemetryStructIndex::e_heartbeatFreq);
     m_chartList->insert(13, "heartbeatTimeout");
-    m_chartPriorityToHeapIndex->insert(13, DBEnvMxTelemetryStructIndex::e_heartbeatTimeout);
+    m_chartPriorityToStructIndex->insert(13, DBEnvMxTelemetryStructIndex::e_heartbeatTimeout);
 
     m_chartList->insert(14, "reconnectFreq");
-     m_chartPriorityToHeapIndex->insert(14, DBEnvMxTelemetryStructIndex::e_reconnectFreq);
+     m_chartPriorityToStructIndex->insert(14, DBEnvMxTelemetryStructIndex::e_reconnectFreq);
     m_chartList->insert(15, "electionTimeout");
-     m_chartPriorityToHeapIndex->insert(15, DBEnvMxTelemetryStructIndex::e_electionTimeout);
+     m_chartPriorityToStructIndex->insert(15, DBEnvMxTelemetryStructIndex::e_electionTimeout);
     m_chartList->insert(16, "writeThread");
-     m_chartPriorityToHeapIndex->insert(16, DBEnvMxTelemetryStructIndex::e_writeThread);
+     m_chartPriorityToStructIndex->insert(16, DBEnvMxTelemetryStructIndex::e_writeThread);
 
     // extra
     m_chartList->insert(17, "none");
@@ -135,7 +135,7 @@ double MxTelemetryDBEnvWrapper::getDataForChart(void* const a_mxTelemetryMsg, co
     // sanity check
     if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
 
-    const int l_index = m_chartPriorityToHeapIndex->at(a_index);
+    const int l_index = m_chartPriorityToStructIndex->at(a_index);
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
     switch (l_dataPair.second) {

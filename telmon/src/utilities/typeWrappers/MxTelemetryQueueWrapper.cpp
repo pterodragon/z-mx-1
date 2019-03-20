@@ -71,31 +71,31 @@ void MxTelemetryQueueWrapper::initChartList() noexcept
 {
     // removed irrelvant for chart representation
     m_chartList->reserve(9);
-    m_chartPriorityToHeapIndex->reserve(8); // without none
+    m_chartPriorityToStructIndex->reserve(8); // without none
 
     m_chartList->insert(0, "full");
-    m_chartPriorityToHeapIndex->insert(0, QueueMxTelemetryStructIndex::e_full);
+    m_chartPriorityToStructIndex->insert(0, QueueMxTelemetryStructIndex::e_full);
 
     m_chartList->insert(1, "size");
-    m_chartPriorityToHeapIndex->insert(1, QueueMxTelemetryStructIndex::e_size);
+    m_chartPriorityToStructIndex->insert(1, QueueMxTelemetryStructIndex::e_size);
 
     m_chartList->insert(2, "count");
-    m_chartPriorityToHeapIndex->insert(2, QueueMxTelemetryStructIndex::e_count);
+    m_chartPriorityToStructIndex->insert(2, QueueMxTelemetryStructIndex::e_count);
 
     m_chartList->insert(3, "seqNo");
-    m_chartPriorityToHeapIndex->insert(3, QueueMxTelemetryStructIndex::e_seqNo);
+    m_chartPriorityToStructIndex->insert(3, QueueMxTelemetryStructIndex::e_seqNo);
 
     m_chartList->insert(4, "inCount");
-    m_chartPriorityToHeapIndex->insert(4, QueueMxTelemetryStructIndex::e_inCount);
+    m_chartPriorityToStructIndex->insert(4, QueueMxTelemetryStructIndex::e_inCount);
 
     m_chartList->insert(5, "inBytes");
-    m_chartPriorityToHeapIndex->insert(5, QueueMxTelemetryStructIndex::e_inBytes);
+    m_chartPriorityToStructIndex->insert(5, QueueMxTelemetryStructIndex::e_inBytes);
 
     m_chartList->insert(6, "outCount");
-    m_chartPriorityToHeapIndex->insert(6, QueueMxTelemetryStructIndex::e_outCount);
+    m_chartPriorityToStructIndex->insert(6, QueueMxTelemetryStructIndex::e_outCount);
 
     m_chartList->insert(7, "outBytes");
-    m_chartPriorityToHeapIndex->insert(7, QueueMxTelemetryStructIndex::e_outBytes);
+    m_chartPriorityToStructIndex->insert(7, QueueMxTelemetryStructIndex::e_outBytes);
 
     // extra
     m_chartList->insert(8, "none");
@@ -109,7 +109,7 @@ double MxTelemetryQueueWrapper::getDataForChart(void* const a_mxTelemetryMsg, co
     // sanity check
     if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
 
-    const int l_index = m_chartPriorityToHeapIndex->at(a_index);
+    const int l_index = m_chartPriorityToStructIndex->at(a_index);
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
     switch (l_dataPair.second) {

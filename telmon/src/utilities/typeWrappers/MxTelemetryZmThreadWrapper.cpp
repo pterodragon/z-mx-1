@@ -71,30 +71,30 @@ void MxTelemetryZmThreadWrapper::initChartList() noexcept
 {
     // removed irrelvant for chart representation
     m_chartList->reserve(7);
-    m_chartPriorityToHeapIndex->reserve(6); // without none
+    m_chartPriorityToStructIndex->reserve(6); // without none
 //    m_chartList->insert(0, "time");
 //    m_chartList->insert(1, "id");
 
     m_chartList->insert(0, "cpuUsage");
-    m_chartPriorityToHeapIndex->insert(0, ZmThreadTelemetryStructIndex::e_cpuUsage);
+    m_chartPriorityToStructIndex->insert(0, ZmThreadTelemetryStructIndex::e_cpuUsage);
 
     m_chartList->insert(1, "cpuset");
-    m_chartPriorityToHeapIndex->insert(1, ZmThreadTelemetryStructIndex::e_cpuset);
+    m_chartPriorityToStructIndex->insert(1, ZmThreadTelemetryStructIndex::e_cpuset);
 
     m_chartList->insert(2, "priority");
-    m_chartPriorityToHeapIndex->insert(2, ZmThreadTelemetryStructIndex::e_priority);
+    m_chartPriorityToStructIndex->insert(2, ZmThreadTelemetryStructIndex::e_priority);
 
     m_chartList->insert(3, "stackSize");
-    m_chartPriorityToHeapIndex->insert(3, ZmThreadTelemetryStructIndex::e_stackSize);
+    m_chartPriorityToStructIndex->insert(3, ZmThreadTelemetryStructIndex::e_stackSize);
 
     m_chartList->insert(4, "partition");
-    m_chartPriorityToHeapIndex->insert(4, ZmThreadTelemetryStructIndex::e_partition);
+    m_chartPriorityToStructIndex->insert(4, ZmThreadTelemetryStructIndex::e_partition);
 
     m_chartList->insert(5, "main");
-    m_chartPriorityToHeapIndex->insert(5, ZmThreadTelemetryStructIndex::e_main);
+    m_chartPriorityToStructIndex->insert(5, ZmThreadTelemetryStructIndex::e_main);
 
     m_chartList->insert(6, "detached");
-    m_chartPriorityToHeapIndex->insert(6, ZmThreadTelemetryStructIndex::e_detached);
+    m_chartPriorityToStructIndex->insert(6, ZmThreadTelemetryStructIndex::e_detached);
 
     // extra
     m_chartList->insert(7, "none");
@@ -116,7 +116,7 @@ double MxTelemetryZmThreadWrapper::getDataForChart(void* const a_mxTelemetryMsg,
     }
 
 
-    const int l_index = m_chartPriorityToHeapIndex->at(a_index);
+    const int l_index = m_chartPriorityToStructIndex->at(a_index);
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
     switch (l_dataPair.second) {

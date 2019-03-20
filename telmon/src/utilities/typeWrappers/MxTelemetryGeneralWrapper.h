@@ -48,16 +48,25 @@ class QLinkedList;
 class MxTelemetryGeneralWrapper
 {
 public:
-    //friend class MxTelemetryTypeWrappersFactory;
-    enum REQUESTING_DATA {TABLE, CHART };
     enum CONVERT_FRON {type_uint64_t, type_uint32_t, type_uint16_t, type_uint8_t,
-                       type_int32_t,  type_int8_t,   type_none,     type_c_char,
-                       type_double, type_ZiIP};
+                                      type_int32_t,                 type_int8_t,
+                       type_none,
+                       type_c_char,
+                       type_double,
+                       type_ZiIP};
 
+    // the following struct is used to indicate cases which require calculation
+    // rather than just getting MxTypeStruct specific value
+    // they are organized here and shared between all types to make the
+    // switch cases handling easier in inhernting classes
+    // Note: this enum minimum value must be larger than the max value
+    // of all the structs representing the mxTypes in inhernting classes
+    // right now the largest is |DBMxTelemetryStructIndex| = 17
+    // so we will begin from 40
+    enum OTHER_ACTIONS {GET_CURRENT_TIME=40,
+                        HEAP_MXTYPE_CALCULATE_ALLOCATED,
+                        HASH_TBL_MXTYPE_CALCULATE_SLOTS, HASH_TBL_MXTYPE_CALCULATE_C_SLOTS};
 
-    // usually indicating that this field will be calculated
-    // from other fields in the struct
-    static const int NOT_PRIMITVE = 100;
 
     MxTelemetryGeneralWrapper();
     virtual ~MxTelemetryGeneralWrapper();
@@ -93,12 +102,37 @@ public:
     double virtual getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept = 0;
 
 
+    /**
+     * @brief getDataForTable
+     * Notes regarding implemantation:
+     * 1.
+     * why QLinkedList?
+     *   --> constant time insertions and removals
+     *   --> iteration is the same as QList
+     *
+     * 2.
+     * Qt containers does not support move semantics,
+     * that is why we dont use std::move to move into the container
+     * for more information see:
+     * A. https://stackoverflow.com/questions/32584665/why-do-qts-container-classes-not-allow-movable-non-copyable-element-types
+     * B. https://stackoverflow.com/questions/44217527/why-does-qt-not-support-move-only-qlist
+     *
+     *
+     *
+     * @param a_mxTelemetryMsg
+     * @param a_result
+     */
     void virtual getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept  = 0;
 
 
     // service functions
     template <class T>
     T typeConvertor(const QPair<void*, int>& a_param) const noexcept;
+
+    std::string getCurrentTime() const noexcept;
+
+    template <class T>
+    QString streamToQString(const T& a_toStream) const noexcept;
 
 protected:
     /**
@@ -125,15 +159,22 @@ protected:
 
 
     // QPair(void*, int); void* = the type, int = to convert
-    QPair<void*, int> virtual getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept = 0;
+    QPair<void*, int> virtual getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept;
+
+    // used in case of retrieving data which is callculated from some values in the struct
+    QPair<void*, int> virtual getMxTelemetryDataType(void* const a_mxTelemetryMsg,
+                                                     const int a_index,
+                                                     void* a_otherResult) const noexcept;
+
 
 
     QList<QString>* m_tableList; // sorted by priorites
     QVector<QString>* m_chartList; // sorted by priorites
     std::array<int, 2> m_activeDataSet; // "2" represent number of axis
-    QVector<int>* m_chartPriorityToHeapIndex;
-    QVector<int>* m_tablePriorityToHeapIndex;
+    QVector<int>* m_chartPriorityToStructIndex;
+    QVector<int>* m_tablePriorityToStructIndex;
     QString* m_className;
+    std::stringstream *m_stream; // assistance in translation to some types
 };
 
 // 1. supress warning Wunused template function

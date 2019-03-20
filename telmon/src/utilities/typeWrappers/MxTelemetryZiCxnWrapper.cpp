@@ -76,22 +76,22 @@ void MxTelemetryZiCxnWrapper::initChartList() noexcept
 {
     // removed irrelvant for chart representation
     m_chartList->reserve(6);
-    m_chartPriorityToHeapIndex->reserve(5); // without none
+    m_chartPriorityToStructIndex->reserve(5); // without none
 
     m_chartList->insert(0, "fd");
-    m_chartPriorityToHeapIndex->insert(0, ZiCxnMxTelemetryStructIndex::e_socket);
+    m_chartPriorityToStructIndex->insert(0, ZiCxnMxTelemetryStructIndex::e_socket);
 
     m_chartList->insert(1, "rxBufSize");
-    m_chartPriorityToHeapIndex->insert(1, ZiCxnMxTelemetryStructIndex::e_rxBufSize);
+    m_chartPriorityToStructIndex->insert(1, ZiCxnMxTelemetryStructIndex::e_rxBufSize);
 
     m_chartList->insert(2, "rxBufLen");
-    m_chartPriorityToHeapIndex->insert(2, ZiCxnMxTelemetryStructIndex::e_rxBufLen);
+    m_chartPriorityToStructIndex->insert(2, ZiCxnMxTelemetryStructIndex::e_rxBufLen);
 
     m_chartList->insert(3, "txBufSize");
-    m_chartPriorityToHeapIndex->insert(3, ZiCxnMxTelemetryStructIndex::e_txBufSize);
+    m_chartPriorityToStructIndex->insert(3, ZiCxnMxTelemetryStructIndex::e_txBufSize);
 
     m_chartList->insert(4, "txBufLen");
-    m_chartPriorityToHeapIndex->insert(4, ZiCxnMxTelemetryStructIndex::e_txBufLen);
+    m_chartPriorityToStructIndex->insert(4, ZiCxnMxTelemetryStructIndex::e_txBufLen);
 
 
     // extra
@@ -106,7 +106,7 @@ double MxTelemetryZiCxnWrapper::getDataForChart(void* const a_mxTelemetryMsg, co
     // sanity check
     if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
 
-    const int l_index = m_chartPriorityToHeapIndex->at(a_index);
+    const int l_index = m_chartPriorityToStructIndex->at(a_index);
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
     switch (l_dataPair.second) {

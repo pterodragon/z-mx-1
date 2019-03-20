@@ -82,48 +82,48 @@ void MxTelemetryDBWrapper::initChartList() noexcept
 {
     // removed irrelvant for chart representation
     m_chartList->reserve(19);
-    m_chartPriorityToHeapIndex->reserve(18); // without none
+    m_chartPriorityToStructIndex->reserve(18); // without none
 
 //    m_chartList->insert(0, "time");
     m_chartList->insert(0, "name");
-    m_chartPriorityToHeapIndex->insert(0, DBMxTelemetryStructIndex::e_name);
+    m_chartPriorityToStructIndex->insert(0, DBMxTelemetryStructIndex::e_name);
     m_chartList->insert(1, "id");
-    m_chartPriorityToHeapIndex->insert(1, DBMxTelemetryStructIndex::e_id);
+    m_chartPriorityToStructIndex->insert(1, DBMxTelemetryStructIndex::e_id);
     m_chartList->insert(2, "recSize");
-    m_chartPriorityToHeapIndex->insert(2, DBMxTelemetryStructIndex::e_recSize);
+    m_chartPriorityToStructIndex->insert(2, DBMxTelemetryStructIndex::e_recSize);
     m_chartList->insert(3, "compress");
-    m_chartPriorityToHeapIndex->insert(3, DBMxTelemetryStructIndex::e_compress);
+    m_chartPriorityToStructIndex->insert(3, DBMxTelemetryStructIndex::e_compress);
 
     m_chartList->insert(4, "cacheMode");
-    m_chartPriorityToHeapIndex->insert(4, DBMxTelemetryStructIndex::e_cacheMode);
+    m_chartPriorityToStructIndex->insert(4, DBMxTelemetryStructIndex::e_cacheMode);
     m_chartList->insert(5, "cacheSize");
-    m_chartPriorityToHeapIndex->insert(5, DBMxTelemetryStructIndex::e_cacheSize);
+    m_chartPriorityToStructIndex->insert(5, DBMxTelemetryStructIndex::e_cacheSize);
     m_chartList->insert(6, "path");
-    m_chartPriorityToHeapIndex->insert(6, DBMxTelemetryStructIndex::e_path);
+    m_chartPriorityToStructIndex->insert(6, DBMxTelemetryStructIndex::e_path);
     m_chartList->insert(7, "fileSize");
-    m_chartPriorityToHeapIndex->insert(7, DBMxTelemetryStructIndex::e_fileSize);
+    m_chartPriorityToStructIndex->insert(7, DBMxTelemetryStructIndex::e_fileSize);
     m_chartList->insert(8, "fileRecs");
-    m_chartPriorityToHeapIndex->insert(8, DBMxTelemetryStructIndex::e_fileRecs);
+    m_chartPriorityToStructIndex->insert(8, DBMxTelemetryStructIndex::e_fileRecs);
 
     m_chartList->insert(9, "filesMax");
-    m_chartPriorityToHeapIndex->insert(9, DBMxTelemetryStructIndex::e_filesMax);
+    m_chartPriorityToStructIndex->insert(9, DBMxTelemetryStructIndex::e_filesMax);
     m_chartList->insert(10, "preAlloc");
-    m_chartPriorityToHeapIndex->insert(10, DBMxTelemetryStructIndex::e_preAlloc);
+    m_chartPriorityToStructIndex->insert(10, DBMxTelemetryStructIndex::e_preAlloc);
     m_chartList->insert(11, "minRN");
-    m_chartPriorityToHeapIndex->insert(11, DBMxTelemetryStructIndex::e_minRN);
+    m_chartPriorityToStructIndex->insert(11, DBMxTelemetryStructIndex::e_minRN);
     m_chartList->insert(12, "allocRN");
-    m_chartPriorityToHeapIndex->insert(12, DBMxTelemetryStructIndex::e_allocRN);
+    m_chartPriorityToStructIndex->insert(12, DBMxTelemetryStructIndex::e_allocRN);
     m_chartList->insert(13, "fileRN");
-    m_chartPriorityToHeapIndex->insert(13, DBMxTelemetryStructIndex::e_fileRN);
+    m_chartPriorityToStructIndex->insert(13, DBMxTelemetryStructIndex::e_fileRN);
 
     m_chartList->insert(14, "cacheLoads");
-    m_chartPriorityToHeapIndex->insert(14, DBMxTelemetryStructIndex::e_cacheLoads);
+    m_chartPriorityToStructIndex->insert(14, DBMxTelemetryStructIndex::e_cacheLoads);
     m_chartList->insert(15, "cacheMisses");
-    m_chartPriorityToHeapIndex->insert(15, DBMxTelemetryStructIndex::e_cacheMisses);
+    m_chartPriorityToStructIndex->insert(15, DBMxTelemetryStructIndex::e_cacheMisses);
     m_chartList->insert(16, "fileLoads");
-    m_chartPriorityToHeapIndex->insert(16, DBMxTelemetryStructIndex::e_fileLoads);
+    m_chartPriorityToStructIndex->insert(16, DBMxTelemetryStructIndex::e_fileLoads);
     m_chartList->insert(17, "fileMisses");
-    m_chartPriorityToHeapIndex->insert(17, DBMxTelemetryStructIndex::e_fileMisses);
+    m_chartPriorityToStructIndex->insert(17, DBMxTelemetryStructIndex::e_fileMisses);
 
     // extra
     m_chartList->insert(18, "none");
@@ -137,7 +137,7 @@ double MxTelemetryDBWrapper::getDataForChart(void* const a_mxTelemetryMsg, const
     // sanity check
     if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
 
-    const int l_index = m_chartPriorityToHeapIndex->at(a_index);
+    const int l_index = m_chartPriorityToStructIndex->at(a_index);
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
     switch (l_dataPair.second) {

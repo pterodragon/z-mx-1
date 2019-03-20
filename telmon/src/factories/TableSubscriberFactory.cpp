@@ -24,6 +24,8 @@
 #include "QDebug"
 #include "QLinkedList"
 #include "QDateTime"
+#include "src/factories/MxTelemetryTypeWrappersFactory.h"
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
 
 TableSubscriberFactory::TableSubscriberFactory()
@@ -67,21 +69,8 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
                 }
 
                 QLinkedList<QString> l_list;
-
-                l_list.append(QString::fromStdString(a_this->getCurrentTime()));
-                l_list.append(QString::number(l_data.size));
-                l_list.append(QString::number(ZuBoxed(l_data.alignment)));
-                l_list.append(QString::number(ZuBoxed(l_data.partition)));
-                l_list.append(QString::number(ZuBoxed(l_data.sharded)));
-
-                l_list.append(QString::number(l_data.cacheSize));
-                l_list.append(a_this->ZmBitmapToQString(ZmBitmap(l_data.cpuset)));
-                l_list.append(QString::number(l_data.cacheAllocs));
-                l_list.append(QString::number(l_data.heapAllocs));
-                l_list.append(QString::number(l_data.frees));
-
-                l_list.append(QString::number((l_data.cacheAllocs + l_data.heapAllocs - l_data.frees)));
-
+                MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Heap)
+                        .getDataForTable(const_cast<MxTelemetry::Heap*>(&l_data), l_list);
 
                 emit a_this->updateDone(l_list);
             });
@@ -102,20 +91,8 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
                 }
 
                 QLinkedList<QString> l_list;
-
-                l_list.append(QString::fromStdString(a_this->getCurrentTime()));
-                l_list.append(QString::number(ZuBoxed(l_data.linear)));
-                l_list.append(QString::number(ZuBoxed(l_data.bits)));
-                l_list.append(QString::number(ZuBoxed((static_cast<uint64_t>(1))<<l_data.bits)));
-                l_list.append(QString::number(ZuBoxed(l_data.cBits)));
-
-                l_list.append(QString::number(ZuBoxed((static_cast<uint64_t>(1))<<l_data.cBits)));
-                l_list.append(QString::number(l_data.count));
-                l_list.append(QString::number(l_data.resized));
-                l_list.append(QString::number(static_cast<double>(l_data.loadFactor   / 16.0)));
-                l_list.append(QString::number(static_cast<double>(l_data.effLoadFactor / 16.0)));
-
-                l_list.append(QString::number(l_data.nodeSize));
+                MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::HashTbl)
+                        .getDataForTable(const_cast<MxTelemetry::HashTbl*>(&l_data), l_list);
 
                 emit a_this->updateDone(l_list);
             });

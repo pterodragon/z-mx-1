@@ -24,13 +24,16 @@
 #include "QPair"
 #include <cstdint>
 #include "QDebug"
+#include "ZtDate.hpp"
+
 
 MxTelemetryGeneralWrapper::MxTelemetryGeneralWrapper():
     m_tableList(new QList<QString>),
     m_chartList(new QVector<QString>),
-    m_chartPriorityToHeapIndex(new QVector<int>),
-    m_tablePriorityToHeapIndex(new QVector<int>),
-    m_className(new QString("MxTelemetryGeneralWrapper"))
+    m_chartPriorityToStructIndex(new QVector<int>),
+    m_tablePriorityToStructIndex(new QVector<int>),
+    m_className(new QString("MxTelemetryGeneralWrapper")),
+    m_stream(new std::stringstream())
 {
 
 }
@@ -40,9 +43,10 @@ MxTelemetryGeneralWrapper::~MxTelemetryGeneralWrapper()
 {
     delete m_tableList;
     delete m_chartList;
-    delete m_chartPriorityToHeapIndex;
-    delete m_tablePriorityToHeapIndex;
+    delete m_chartPriorityToStructIndex;
+    delete m_tablePriorityToStructIndex;
     delete m_className;
+    delete m_stream;
 }
 
 
@@ -81,13 +85,44 @@ void MxTelemetryGeneralWrapper::setClassName(const std::string& a_className) noe
 
 bool MxTelemetryGeneralWrapper::isIndexInChartPriorityToHeapIndexContainer(const int a_index) const noexcept
 {
-    if (a_index >= m_chartPriorityToHeapIndex->count())
+    if (a_index >= m_chartPriorityToStructIndex->count())
     {
-        qCritical() << *m_className << __func__ << "unsupported index:" << a_index;
+        qCritical() << *m_className << __PRETTY_FUNCTION__ << "unsupported index:" << a_index;
         return false;
     }
     return true;
 }
+
+
+std::string MxTelemetryGeneralWrapper::getCurrentTime() const noexcept
+{
+    ZtDate::CSVFmt nowFmt;
+    ZtDate now(ZtDate::Now);
+    return (ZuStringN<512>() << now.csv(nowFmt)).data();
+}
+
+
+// Some defaule implementation
+
+// QPair(void*, int); void* = the type, int = to convert
+QPair<void*, int> MxTelemetryGeneralWrapper::getMxTelemetryDataType(void* const /* unused */,
+                                                                     const int  /* unused */) const noexcept
+{
+    qCritical() << *m_className << __PRETTY_FUNCTION__ << "called from MxTelemetryGeneralWrapper";
+    return QPair(nullptr, 0);
+};
+
+// used in case of retrieving data which is callculated from some values in the struct
+QPair<void*, int> MxTelemetryGeneralWrapper::getMxTelemetryDataType(void* const /* unused */,
+                                                                    const int   /* unused */,
+                                                                    void*       /* unused */) const noexcept
+{
+    qCritical() << *m_className << __PRETTY_FUNCTION__ << "called from MxTelemetryGeneralWrapper";
+    return QPair(nullptr, 0);
+};
+
+
+
 
 
 

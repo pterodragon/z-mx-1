@@ -66,16 +66,16 @@ void MxTelemetryLinkWrapper::initChartList() noexcept
 {
     // removed irrelvant for chart representation
     m_chartList->reserve(4);
-    m_chartPriorityToHeapIndex->reserve(3); // without none
+    m_chartPriorityToStructIndex->reserve(3); // without none
 
     m_chartList->insert(0, "reconnects");
-    m_chartPriorityToHeapIndex->insert(0, LinkMxTelemetryStructIndex::e_reconnects);
+    m_chartPriorityToStructIndex->insert(0, LinkMxTelemetryStructIndex::e_reconnects);
 
     m_chartList->insert(1, "rxSeqNo");
-    m_chartPriorityToHeapIndex->insert(1, LinkMxTelemetryStructIndex::e_rxSeqNo);
+    m_chartPriorityToStructIndex->insert(1, LinkMxTelemetryStructIndex::e_rxSeqNo);
 
     m_chartList->insert(2, "txSeqNo");
-    m_chartPriorityToHeapIndex->insert(2, LinkMxTelemetryStructIndex::e_txSeqNo);
+    m_chartPriorityToStructIndex->insert(2, LinkMxTelemetryStructIndex::e_txSeqNo);
 
 
     // extra
@@ -90,7 +90,7 @@ double MxTelemetryLinkWrapper::getDataForChart(void* const a_mxTelemetryMsg, con
     // sanity check
     if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
 
-    const int l_index = m_chartPriorityToHeapIndex->at(a_index);
+    const int l_index = m_chartPriorityToStructIndex->at(a_index);
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
     switch (l_dataPair.second) {

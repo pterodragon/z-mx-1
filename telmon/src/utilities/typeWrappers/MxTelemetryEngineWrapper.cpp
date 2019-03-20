@@ -71,28 +71,28 @@ void MxTelemetryEngineWrapper::initChartList() noexcept
 {
     // removed irrelvant for chart representation
     m_chartList->reserve(8);
-    m_chartPriorityToHeapIndex->reserve(7); // without none
+    m_chartPriorityToStructIndex->reserve(7); // without none
 
     m_chartList->insert(0, "nLinks");
-    m_chartPriorityToHeapIndex->insert(0, EngineMxTelemetryStructIndex::e_nLinks);
+    m_chartPriorityToStructIndex->insert(0, EngineMxTelemetryStructIndex::e_nLinks);
 
     m_chartList->insert(1, "up");
-    m_chartPriorityToHeapIndex->insert(1, EngineMxTelemetryStructIndex::e_up);
+    m_chartPriorityToStructIndex->insert(1, EngineMxTelemetryStructIndex::e_up);
 
     m_chartList->insert(2, "down");
-    m_chartPriorityToHeapIndex->insert(2, EngineMxTelemetryStructIndex::e_down);
+    m_chartPriorityToStructIndex->insert(2, EngineMxTelemetryStructIndex::e_down);
 
     m_chartList->insert(3, "disable");
-    m_chartPriorityToHeapIndex->insert(3, EngineMxTelemetryStructIndex::e_disabled);
+    m_chartPriorityToStructIndex->insert(3, EngineMxTelemetryStructIndex::e_disabled);
 
     m_chartList->insert(4, "transient");
-    m_chartPriorityToHeapIndex->insert(4, EngineMxTelemetryStructIndex::e_transient);
+    m_chartPriorityToStructIndex->insert(4, EngineMxTelemetryStructIndex::e_transient);
 
     m_chartList->insert(5, "reconn");
-    m_chartPriorityToHeapIndex->insert(5, EngineMxTelemetryStructIndex::e_reconn);
+    m_chartPriorityToStructIndex->insert(5, EngineMxTelemetryStructIndex::e_reconn);
 
     m_chartList->insert(6, "failed");
-    m_chartPriorityToHeapIndex->insert(6, EngineMxTelemetryStructIndex::e_failed);
+    m_chartPriorityToStructIndex->insert(6, EngineMxTelemetryStructIndex::e_failed);
 
 
     // extra
@@ -107,7 +107,7 @@ double MxTelemetryEngineWrapper::getDataForChart(void* const a_mxTelemetryMsg, c
     // sanity check
     if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
 
-    const int l_index = m_chartPriorityToHeapIndex->at(a_index);
+    const int l_index = m_chartPriorityToStructIndex->at(a_index);
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
     switch (l_dataPair.second) {

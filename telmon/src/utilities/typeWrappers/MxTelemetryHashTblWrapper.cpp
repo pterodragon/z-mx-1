@@ -22,6 +22,7 @@
 #include "QList"
 #include "QDebug"
 #include "ZmHashMgr.hpp"
+#include "QLinkedList"
 
 MxTelemetryHashTblWrapper::MxTelemetryHashTblWrapper()
 {
@@ -44,141 +45,225 @@ void MxTelemetryHashTblWrapper::initActiveDataSet() noexcept
     m_activeDataSet = {0, 1};
 }
 
+
 void MxTelemetryHashTblWrapper::initTableList() noexcept
 {
-    // removed irrelvant for table representation
-    m_tableList->reserve(11);
-    m_tableList->insert(0, "time");
-//    m_tableList->insert(1, "id");
-    m_tableList->insert(1, "linear");
-    m_tableList->insert(2, "bits");
-    m_tableList->insert(3, "slots");
-    m_tableList->insert(4, "cBits");
-    m_tableList->insert(5, "cSlots");
-    m_tableList->insert(6, "count");
-    m_tableList->insert(7, "resized");
-    m_tableList->insert(8, "loadFactor");
-    m_tableList->insert(9, "effLoadFactor");
-    m_tableList->insert(10, "nodeSize");
+    // the index for each catagory
+    int i = 0;
+    m_tableList->insert(i, "time");
+    m_tablePriorityToStructIndex->insert(i++, OTHER_ACTIONS::GET_CURRENT_TIME);
+
+    m_tableList->insert(i, "linear");
+    m_tablePriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_linear);
+
+    m_tableList->insert(i, "bits");
+    m_tablePriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_bits);
+
+    m_tableList->insert(i, "slots");
+    m_tablePriorityToStructIndex->insert(i++, OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_SLOTS);
+
+    m_tableList->insert(i, "cBits");
+    m_tablePriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_cBits);
+
+    m_tableList->insert(i, "cSlots");
+    m_tablePriorityToStructIndex->insert(i++, OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_C_SLOTS);
+
+    m_tableList->insert(i, "count");
+    m_tablePriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_count);
+
+    m_tableList->insert(i, "resized");
+    m_tablePriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_resized);
+
+    m_tableList->insert(i, "loadFactor");
+    m_tablePriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_loadFactor);
+
+    m_tableList->insert(i, "effLoadFactor");
+    m_tablePriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_effLoadFactor);
+
+    m_tableList->insert(i, "nodeSize");
+    m_tablePriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_nodeSize);
 }
 
 
 void MxTelemetryHashTblWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
-    // TODO
-    // 1. iterate over priorites
-    // 2. for each priority get data
+    double l_otherResult;
+    for (auto i = 0; i < m_tableList->count(); i++)
+    {
+        const auto l_index = m_tablePriorityToStructIndex->at(i);
+        QPair<void*, int> l_dataPair;
 
-//    l_list.append(QString::fromStdString(a_this->getCurrentTime()));
-//    l_list.append(QString::number(ZuBoxed(l_data.linear)));
-//    l_list.append(QString::number(ZuBoxed(l_data.bits)));
-//    l_list.append(QString::number(ZuBoxed((static_cast<uint64_t>(1))<<l_data.bits)));
-//    l_list.append(QString::number(ZuBoxed(l_data.cBits)));
-
-//    l_list.append(QString::number(ZuBoxed((static_cast<uint64_t>(1))<<l_data.cBits)));
-//    l_list.append(QString::number(l_data.count));
-//    l_list.append(QString::number(l_data.resized));
-//    l_list.append(QString::number(static_cast<double>(l_data.loadFactor   / 16.0)));
-//    l_list.append(QString::number(static_cast<double>(l_data.effLoadFactor / 16.0)));
-
-//    l_list.append(QString::number(l_data.nodeSize));
+        switch (l_index) {
+        case OTHER_ACTIONS::GET_CURRENT_TIME:
+            a_result.append(QString::fromStdString(getCurrentTime()));
+            break;
+        case OTHER_ACTIONS::HEAP_MXTYPE_CALCULATE_ALLOCATED:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHashTblTelemetryStructIndex::e_linear:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHashTblTelemetryStructIndex::e_bits:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_SLOTS:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHashTblTelemetryStructIndex::e_cBits:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_C_SLOTS:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHashTblTelemetryStructIndex::e_count:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHashTblTelemetryStructIndex::e_resized:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHashTblTelemetryStructIndex::e_loadFactor:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHashTblTelemetryStructIndex::e_effLoadFactor:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHashTblTelemetryStructIndex::e_nodeSize:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        default:
+            qCritical() << *m_className
+                        << __func__
+                        << "unsupported index"
+                        << l_index;
+            break;
+        }
+    }
 }
+
 
 
 void MxTelemetryHashTblWrapper::initChartList() noexcept
 {
-    // removed irrelvant for chart representation
-    m_chartList->reserve(11);
-    m_chartPriorityToHeapIndex->reserve(10); // without none
-//    m_chartList->insert(0, "time");
-//    m_chartList->insert(1, "id");
+    int i = 0;
+    m_chartList->insert(i, "linear");
+    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_linear);
 
-    m_chartList->insert(0, "linear");
-    m_chartPriorityToHeapIndex->insert(0, ZmHashTblTelemetryStructIndex::e_linear);
+    m_chartList->insert(i, "bits");
+    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_bits);
 
-    m_chartList->insert(1, "bits");
-    m_chartPriorityToHeapIndex->insert(1, ZmHashTblTelemetryStructIndex::e_bits);
+    m_chartList->insert(i, "slots");
+    m_chartPriorityToStructIndex->insert(i++, OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_SLOTS);
 
-    m_chartList->insert(2, "slots");
-    m_chartPriorityToHeapIndex->insert(2, NOT_PRIMITVE);
+    m_chartList->insert(i, "cBits");
+    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_cBits);
 
-    m_chartList->insert(3, "cBits");
-    m_chartPriorityToHeapIndex->insert(3, ZmHashTblTelemetryStructIndex::e_cBits);
+    m_chartList->insert(i, "cSlots");
+    m_chartPriorityToStructIndex->insert(i++, OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_C_SLOTS);
 
-    m_chartList->insert(4, "cSlots");
-    m_chartPriorityToHeapIndex->insert(4, NOT_PRIMITVE);
+    m_chartList->insert(i, "count");
+    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_count);
 
-    m_chartList->insert(5, "count");
-    m_chartPriorityToHeapIndex->insert(5, ZmHashTblTelemetryStructIndex::e_count);
+    m_chartList->insert(i, "resized");
+    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_resized);
 
-    m_chartList->insert(6, "resized");
-    m_chartPriorityToHeapIndex->insert(6, ZmHashTblTelemetryStructIndex::e_resized);
+    m_chartList->insert(i, "loadFactor");
+    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_loadFactor);
 
-    m_chartList->insert(7, "loadFactor");
-    m_chartPriorityToHeapIndex->insert(7, ZmHashTblTelemetryStructIndex::e_loadFactor);
+    m_chartList->insert(i, "effLoadFactor");
+    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_effLoadFactor);
 
-    m_chartList->insert(8, "effLoadFactor");
-    m_chartPriorityToHeapIndex->insert(8, ZmHashTblTelemetryStructIndex::e_effLoadFactor);
+    m_chartList->insert(i, "nodeSize");
+    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_nodeSize);
 
-    m_chartList->insert(9, "nodeSize");
-    m_chartPriorityToHeapIndex->insert(9, ZmHashTblTelemetryStructIndex::e_nodeSize);
     // extra
-    m_chartList->insert(10, "none");
+    m_chartList->insert(i++, "none");
 }
 
 
 double MxTelemetryHashTblWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
-    double l_result = 0;
-
     // sanity check
-    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
+    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return 0;}
 
-    {
-        const ZmHashTelemetry* l_data = static_cast<ZmHashTelemetry*>(a_mxTelemetryMsg);
-        uint64_t l_result;
-        switch (a_index) {
-        case 2: // case slots
-            l_result = static_cast<uint64_t>(1) << l_data->bits;
-            return typeConvertor<double>(QPair(&l_result, CONVERT_FRON::type_uint64_t));
-        case 4:  // case c_slots
-            l_result = static_cast<uint64_t>(1) << l_data->cBits;
-            return typeConvertor<double>(QPair(&l_result, CONVERT_FRON::type_uint64_t));
-        }
-    }
+    const int l_index = m_chartPriorityToStructIndex->at(a_index);
 
+    double l_otherResult;
 
-    const int l_index = m_chartPriorityToHeapIndex->at(a_index);
-    const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+    const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
 
-    switch (l_dataPair.second) {
-    case CONVERT_FRON::type_uint64_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
-        break;
-    case CONVERT_FRON::type_uint32_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
-        break;
-    case CONVERT_FRON::type_uint16_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
-        break;
-    case CONVERT_FRON::type_uint8_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
-        break;
-    default:
-        qCritical() << *m_className
-                    << __func__
-                    << "Unknown Converstion (a_index, l_dataPair.second)"
-                    << a_index
-                    << l_dataPair.second;
-        break;
-    }
-
-    return l_result;
+    return typeConvertor<double>(QPair(l_dataPair.first, l_dataPair.second));
 }
 
 
 QPair<void*, int> MxTelemetryHashTblWrapper::getMxTelemetryDataType(void* const a_mxTelemetryMsg,
-                                                                    const int a_index) const noexcept
+                                                                    const int a_index,
+                                                                    void* a_otherResult) const noexcept
 {
 
     // Notice: we defiently know a_mxTelemetryMsg type !
@@ -194,17 +279,18 @@ QPair<void*, int> MxTelemetryHashTblWrapper::getMxTelemetryDataType(void* const 
         l_result.second = CONVERT_FRON::type_uint32_t;
         break;
     case ZmHashTblTelemetryStructIndex::e_loadFactor:
-        l_result.first = &l_data->loadFactor;
-        l_result.second = CONVERT_FRON::type_uint32_t;
+        *(static_cast<double*>(a_otherResult)) = static_cast<double>(l_data->loadFactor  / 16.0);
+        l_result.first = a_otherResult;
+        l_result.second = CONVERT_FRON::type_double;
         break;
     case ZmHashTblTelemetryStructIndex::e_count:
         l_result.first = &l_data->count;
         l_result.second = CONVERT_FRON::type_uint32_t;
-        qDebug() << "l_data->count" << l_data->count;
         break;
     case ZmHashTblTelemetryStructIndex::e_effLoadFactor:
-        l_result.first = &l_data->effLoadFactor;
-        l_result.second = CONVERT_FRON::type_uint32_t;
+        *(static_cast<double*>(a_otherResult)) = static_cast<double>(l_data->effLoadFactor  / 16.0);
+        l_result.first = a_otherResult;
+        l_result.second = CONVERT_FRON::type_double;
         break;
     case ZmHashTblTelemetryStructIndex::e_resized:
         l_result.first = &l_data->resized;
@@ -222,9 +308,25 @@ QPair<void*, int> MxTelemetryHashTblWrapper::getMxTelemetryDataType(void* const 
         l_result.first = &l_data->linear;
         l_result.second = CONVERT_FRON::type_uint8_t;
         break;
+    case OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_SLOTS:
+        // uint_64 can hold  2^64 - 1
+        // double  can hold  2^53 and -(2^53)
+        // so we lose precision if (a_otherResult > 2^53)
+        *(static_cast<uint64_t*>(a_otherResult)) = static_cast<uint64_t>(1) << l_data->bits;
+        l_result.first = a_otherResult;
+        l_result.second = CONVERT_FRON::type_uint64_t;
+        break;
+    case OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_C_SLOTS:
+        // uint_64 can hold  2^64 - 1
+        // double  can hold  2^53 and -(2^53)
+        // so we lose precision if (a_otherResult > 2^53)
+        *(static_cast<uint64_t*>(a_otherResult)) = static_cast<uint64_t>(1) << l_data->cBits;
+        l_result.first = a_otherResult;
+        l_result.second = CONVERT_FRON::type_uint64_t;
+        break;
     default:
         qCritical() << *m_className
-                    << __func__
+                    << __PRETTY_FUNCTION__
                     << "unsupported struct index"
                     << a_index;
         l_result.first = nullptr;

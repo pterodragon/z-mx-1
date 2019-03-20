@@ -35,6 +35,7 @@
 #include "src/utilities/typeWrappers/MxTelemetryLinkWrapper.h"
 #include "src/utilities/typeWrappers/MxTelemetryDBEnvWrapper.h"
 #include "src/utilities/typeWrappers/MxTelemetryDBHostWrapper.h"
+#include "src/utilities/typeWrappers/MxTelemetryDBWrapper.h"
 
 
 MxTelemetryTypeWrappersFactory::MxTelemetryTypeWrappersFactory()
@@ -79,7 +80,7 @@ const MxTelemetryGeneralWrapper& MxTelemetryTypeWrappersFactory::getMxTelemetryW
         l_result = &MxTelemetryDBHostWrapper::getInstance();
         break;
     case MxTelemetry::Type::DB:
-
+        l_result = &MxTelemetryDBWrapper::getInstance();
         break;
     default:
         qWarning() << "unknown MxTelemetry::Type:" << a_mxType<< "request, returning...";

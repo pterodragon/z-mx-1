@@ -65,35 +65,6 @@ protected:
     void initActiveDataSet() noexcept override final;
     QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
 
-//    struct Telemetry {
-//      typedef ZuStringN<124> Path;
-//      typedef ZuStringN<28> Name;
-
-//      Path	path;
-//      Name	name;
-//      uint64_t	fileSize;
-
-//      uint64_t	minRN;
-//      uint64_t	allocRN;
-//      uint64_t	fileRN;
-
-//      uint64_t	cacheLoads;
-//      uint64_t	cacheMisses;
-//      uint64_t	fileLoads;
-
-//      uint64_t	fileMisses;
-//      uint32_t	id;
-//      uint32_t	preAlloc;
-
-//      uint32_t	recSize;
-//      uint32_t	fileRecs;
-//      uint32_t	cacheSize;
-
-//      uint32_t	filesMax;
-//      uint8_t	compress;
-//      int8_t	cacheMode;
-//    };
-
 
 public:
     // must correspond to struct index

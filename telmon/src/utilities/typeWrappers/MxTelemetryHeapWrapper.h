@@ -46,7 +46,6 @@ private:
     MxTelemetryHeapWrapper(MxTelemetryHeapWrapper const& copy);            // Not Implemented
     MxTelemetryHeapWrapper& operator=(MxTelemetryHeapWrapper const& copy); // Not Implemented
 
-
 protected:
     friend class MxTelemetryTypeWrappersFactory;
     // protected so only friend class can access // to be tested
@@ -64,7 +63,10 @@ protected:
     void initTableList() noexcept override final;
     void initChartList() noexcept override final;
     void initActiveDataSet() noexcept override final;
-    QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
+
+    QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg,
+                                                     const int a_index,
+                                                     void* a_otherResult) const noexcept override final;
 
 
 public:
@@ -72,6 +74,7 @@ public:
     // must correspond to struct index
     enum ZmHeapTelemetryStructIndex {e_id, e_cacheSize, e_cpuset, e_cacheAllocs, e_heapAllocs,
                                      e_frees, e_size, e_partition, e_sharded, e_alignment};
+
 
     double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;

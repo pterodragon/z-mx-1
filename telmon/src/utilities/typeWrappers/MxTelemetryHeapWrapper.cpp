@@ -50,116 +50,212 @@ void MxTelemetryHeapWrapper::initActiveDataSet() noexcept
 
 void MxTelemetryHeapWrapper::initTableList() noexcept
 {
-    // removed irrelvant for table representation
-    m_tableList->reserve(11);
-    m_tableList->insert(0, "time");
-//    m_tableList->insert(1, "id");
-    m_tableList->insert(1, "size");
-    m_tableList->insert(2, "alignment");
-    m_tableList->insert(3, "partition");
-    m_tableList->insert(4, "sharded");
-    m_tableList->insert(5, "cacheSize");
-    m_tableList->insert(6, "cpuset");
-    m_tableList->insert(7, "cacheAllocs");
-    m_tableList->insert(8, "heapAllocs");
-    m_tableList->insert(9, "frees");
-    m_tableList->insert(10, "allocated");
+    // the index for each catagory
+    int i = 0;
+    m_tableList->insert(i, "time");
+    m_tablePriorityToStructIndex->insert(i++, OTHER_ACTIONS::GET_CURRENT_TIME);
+
+    m_tableList->insert(i, "size");
+    m_tablePriorityToStructIndex->insert(i++, MxTelemetryHeapWrapper::e_size);
+
+    m_tableList->insert(i, "alignment");
+    m_tablePriorityToStructIndex->insert(i++, MxTelemetryHeapWrapper::e_alignment);
+
+    m_tableList->insert(i, "partition");
+    m_tablePriorityToStructIndex->insert(i++, MxTelemetryHeapWrapper::e_partition);
+
+    m_tableList->insert(i, "sharded");
+    m_tablePriorityToStructIndex->insert(i++, MxTelemetryHeapWrapper::e_sharded);
+
+    m_tableList->insert(i, "cacheSize");
+    m_tablePriorityToStructIndex->insert(i++, MxTelemetryHeapWrapper::e_cacheSize);
+
+    m_tableList->insert(i, "cpuset");
+    m_tablePriorityToStructIndex->insert(i++, MxTelemetryHeapWrapper::e_cpuset);
+
+    m_tableList->insert(i, "cacheAllocs");
+    m_tablePriorityToStructIndex->insert(i++, MxTelemetryHeapWrapper::e_cacheAllocs);
+
+    m_tableList->insert(i, "heapAllocs");
+    m_tablePriorityToStructIndex->insert(i++, MxTelemetryHeapWrapper::e_heapAllocs);
+
+    m_tableList->insert(i, "frees");
+    m_tablePriorityToStructIndex->insert(i++, MxTelemetryHeapWrapper::e_frees);
+
+    m_tableList->insert(i, "allocated");
+    m_tablePriorityToStructIndex->insert(i++, OTHER_ACTIONS::HEAP_MXTYPE_CALCULATE_ALLOCATED);
+
 }
 
 
 void MxTelemetryHeapWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
+    uint64_t l_otherResult;
+    for (auto i = 0; i < m_tableList->count(); i++)
+    {
+        const auto l_index = m_tablePriorityToStructIndex->at(i);
+        QPair<void*, int> l_dataPair;
 
+        switch (l_index) {
+        case OTHER_ACTIONS::GET_CURRENT_TIME:
+            a_result.append(QString::fromStdString(getCurrentTime()));
+            break;
+        case OTHER_ACTIONS::HEAP_MXTYPE_CALCULATE_ALLOCATED:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHeapTelemetryStructIndex::e_cacheSize:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHeapTelemetryStructIndex::e_cpuset:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHeapTelemetryStructIndex::e_cacheAllocs:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHeapTelemetryStructIndex::e_heapAllocs:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHeapTelemetryStructIndex::e_frees:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint64_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHeapTelemetryStructIndex::e_size:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHeapTelemetryStructIndex::e_partition:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint16_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHeapTelemetryStructIndex::e_sharded:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZmHeapTelemetryStructIndex::e_alignment:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        default:
+            qCritical() << *m_className
+                        << __func__
+                        << "unsupported index"
+                        << l_index;
+            break;
+        }
+    }
 }
-
 
 
 void MxTelemetryHeapWrapper::initChartList() noexcept
 {
-    // removed irrelvant for chart representation
-    m_chartList->reserve(11);
-    m_chartPriorityToHeapIndex->reserve(10); // without none
-//    m_chartList->insert(0, "time");
-//    m_chartList->insert(1, "id");
+    int i = 0;
+    m_chartList->insert(i, "size");
+    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_size);
 
-    m_chartList->insert(0, "size");
-    m_chartPriorityToHeapIndex->insert(0, ZmHeapTelemetryStructIndex::e_size);
+    m_chartList->insert(i, "alignment");
+    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_alignment);
 
-    m_chartList->insert(1, "alignment");
-    m_chartPriorityToHeapIndex->insert(1, ZmHeapTelemetryStructIndex::e_alignment);
+    m_chartList->insert(i, "partition");
+    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_partition);
 
-    m_chartList->insert(2, "partition");
-    m_chartPriorityToHeapIndex->insert(2, ZmHeapTelemetryStructIndex::e_partition);
+    m_chartList->insert(i, "sharded");
+    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_sharded);
 
-    m_chartList->insert(3, "sharded");
-    m_chartPriorityToHeapIndex->insert(3, ZmHeapTelemetryStructIndex::e_sharded);
+    m_chartList->insert(i, "cacheSize");
+    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_cacheSize);
 
-    m_chartList->insert(4, "cacheSize");
-    m_chartPriorityToHeapIndex->insert(4, ZmHeapTelemetryStructIndex::e_cacheSize);
+    m_chartList->insert(i, "cpuset");
+    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_cpuset);
 
-    m_chartList->insert(5, "cpuset");
-    m_chartPriorityToHeapIndex->insert(5, ZmHeapTelemetryStructIndex::e_cpuset);
+    m_chartList->insert(i, "cacheAllocs");
+    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_cacheAllocs);
 
-    m_chartList->insert(6, "cacheAllocs");
-    m_chartPriorityToHeapIndex->insert(6, ZmHeapTelemetryStructIndex::e_cacheAllocs);
+    m_chartList->insert(i, "heapAllocs");
+    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_heapAllocs);
 
-    m_chartList->insert(7, "heapAllocs");
-    m_chartPriorityToHeapIndex->insert(7, ZmHeapTelemetryStructIndex::e_heapAllocs);
+    m_chartList->insert(i, "frees");
+    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_frees);
 
-    m_chartList->insert(8, "frees");
-    m_chartPriorityToHeapIndex->insert(8, ZmHeapTelemetryStructIndex::e_frees);
+    m_chartList->insert(i, "allocated");
+    m_chartPriorityToStructIndex->insert(i++, OTHER_ACTIONS::HEAP_MXTYPE_CALCULATE_ALLOCATED);
 
-    m_chartList->insert(9, "allocated");
-    m_chartPriorityToHeapIndex->insert(9, NOT_PRIMITVE);
     // extra
-    m_chartList->insert(10, "none");
+    m_chartList->insert(i++, "none");
 }
 
 
 double MxTelemetryHeapWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
-    double l_result = 0;
-
     // sanity check
-    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
+    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return 0;}
 
-    if (a_index == 9) // case: allocated
-    {
-        const ZmHeapTelemetry* l_data = static_cast<ZmHeapTelemetry*>(a_mxTelemetryMsg);
-        uint64_t l_allocated = l_data->cacheAllocs + l_data->heapAllocs - l_data->frees;
-        return typeConvertor<double>(QPair(&l_allocated, CONVERT_FRON::type_uint64_t));
-    }
+    const int l_index = m_chartPriorityToStructIndex->at(a_index);
 
-    const int l_index = m_chartPriorityToHeapIndex->at(a_index);
-    const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+    uint64_t l_otherResult;
 
-    switch (l_dataPair.second) {
-    case CONVERT_FRON::type_uint64_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint64_t));
-        break;
-    case CONVERT_FRON::type_uint32_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
-        break;
-    case CONVERT_FRON::type_uint16_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
-        break;
-    case CONVERT_FRON::type_uint8_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
-        break;
-    default:
-        qCritical() << *m_className
-                    << __func__
-                    << "Unknown Converstion (a_index, l_dataPair.second)"
-                    << a_index
-                    << l_dataPair.second;
-        break;
-    }
+    const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
 
-    return l_result;
+    return typeConvertor<double>(QPair(l_dataPair.first, l_dataPair.second));
 }
 
-
-QPair<void*, int> MxTelemetryHeapWrapper::getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept
+QPair<void*, int> MxTelemetryHeapWrapper::getMxTelemetryDataType(void* const a_mxTelemetryMsg,
+                                                                 const int a_index,
+                                                                 void* a_otherResult) const noexcept
 {
     // Notice: we defiently know a_mxTelemetryMsg type !
     ZmHeapTelemetry* l_data = static_cast<ZmHeapTelemetry*>(a_mxTelemetryMsg);
@@ -205,9 +301,14 @@ QPair<void*, int> MxTelemetryHeapWrapper::getMxTelemetryDataType(void* const a_m
         l_result.first = &l_data->alignment;
         l_result.second = CONVERT_FRON::type_uint8_t;
         break;
+    case OTHER_ACTIONS::HEAP_MXTYPE_CALCULATE_ALLOCATED:
+        *(static_cast<uint64_t*>(a_otherResult)) = l_data->cacheAllocs + l_data->heapAllocs - l_data->frees;
+        l_result.first = a_otherResult;
+        l_result.second = CONVERT_FRON::type_uint64_t;
+        break;
     default:
         qCritical() << *m_className
-                    << __func__
+                    << __PRETTY_FUNCTION__
                     << "unsupported struct index"
                     << a_index;
         l_result.first = nullptr;

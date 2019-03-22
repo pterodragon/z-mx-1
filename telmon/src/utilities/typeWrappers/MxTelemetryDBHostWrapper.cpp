@@ -22,6 +22,7 @@
 #include "MxTelemetryDBHostWrapper.h"
 #include "QList"
 #include "QDebug"
+#include "QLinkedList"
 
 
 MxTelemetryDBHostWrapper::MxTelemetryDBHostWrapper()
@@ -47,82 +48,120 @@ void MxTelemetryDBHostWrapper::initActiveDataSet() noexcept
 
 void MxTelemetryDBHostWrapper::initTableList() noexcept
 {
-    // removed irrelvant for table representation
-    m_tableList->reserve(6);
-    m_tableList->insert(0, "time");
-    m_tableList->insert(1, "priority");
-    m_tableList->insert(2, "state");
-    m_tableList->insert(3, "voted");
-    m_tableList->insert(4, "ip");
+    // the index for each catagory
+    int i = 0;
+    m_tableList->insert(i, "time");
+    m_tablePriorityToStructIndex->insert(i++, OTHER_ACTIONS::GET_CURRENT_TIME);
 
-    m_tableList->insert(5, "port");
+    m_tableList->insert(i, "priority");
+    m_tablePriorityToStructIndex->insert(i++, DBHostMxTelemetryStructIndex::e_priority);
+
+    m_tableList->insert(i, "state");
+    m_tablePriorityToStructIndex->insert(i++, DBHostMxTelemetryStructIndex::e_state);
+
+    m_tableList->insert(i, "voted");
+    m_tablePriorityToStructIndex->insert(i++, DBHostMxTelemetryStructIndex::e_voted);
+
+    m_tableList->insert(i, "ip");
+    m_tablePriorityToStructIndex->insert(i++, DBHostMxTelemetryStructIndex::e_ip);
+
+    m_tableList->insert(i, "port");
+    m_tablePriorityToStructIndex->insert(i++, DBHostMxTelemetryStructIndex::e_port);
 }
 
 
 void MxTelemetryDBHostWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
-//    case Type::DBHost: {
-//  const auto &data = msg->as<DBHost>();
-//  write_(m_dbhost, ZuStringN<512>() << now.csv(nowFmt)
-//    << ',' << data.id
-//    << ',' << data.priority
-//    << ',' << ZdbHost::stateName(data.state)
-//    << ',' << ZuBoxed(data.voted)
-//    << ',' << data.ip
-//    << ',' << data.port << '\n');
-//    } break;
+    QPair<void*, int> l_dataPair;
+
+    for (auto i = 0; i < m_tableList->count(); i++)
+    {
+        switch (const auto l_index = m_tablePriorityToStructIndex->at(i)) {
+        case OTHER_ACTIONS::GET_CURRENT_TIME:
+            a_result.append(QString::fromStdString(getCurrentTime()));
+            break;
+        case DBHostMxTelemetryStructIndex::e_priority:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBHostMxTelemetryStructIndex::e_state:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(ZdbHost::stateName(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBHostMxTelemetryStructIndex::e_voted:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBHostMxTelemetryStructIndex::e_ip:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(streamToQString(
+                                *(static_cast<ZiIP*>(l_dataPair.first))
+                                )
+                            );
+            break;
+            break;
+        case DBHostMxTelemetryStructIndex::e_port:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint16_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        default:
+            qCritical() << *m_className
+                        << __func__
+                        << "unsupported index"
+                        << l_index;
+            break;
+        }
+    }
 }
 
 
 void MxTelemetryDBHostWrapper::initChartList() noexcept
 {
-    // removed irrelvant for chart representation
-    m_chartList->reserve(4);
-    m_chartPriorityToStructIndex->reserve(3); // without none
+    int i = 0;
+    m_chartList->insert(i, "priority");
+    m_chartPriorityToStructIndex->insert(i++, DBHostMxTelemetryStructIndex::e_priority);
 
-//    m_chartList->insert(0, "time");
-    m_chartList->insert(0, "priority");
-    m_chartPriorityToStructIndex->insert(0, DBHostMxTelemetryStructIndex::e_priority);
-    m_chartList->insert(1, "state");
-    m_chartPriorityToStructIndex->insert(1, DBHostMxTelemetryStructIndex::e_state);
-    m_chartList->insert(2, "voted");
-    m_chartPriorityToStructIndex->insert(2, DBHostMxTelemetryStructIndex::e_voted);
+    m_chartList->insert(i, "state");
+    m_chartPriorityToStructIndex->insert(i++, DBHostMxTelemetryStructIndex::e_state);
 
+    m_chartList->insert(i, "voted");
+    m_chartPriorityToStructIndex->insert(i++, DBHostMxTelemetryStructIndex::e_voted);
 
     // extra
-    m_chartList->insert(3, "none");
+    m_chartList->insert(i++, "none");
 }
 
 
 double MxTelemetryDBHostWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
-    double l_result = 0;
-
     // sanity check
-    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
+    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return 0;}
 
     const int l_index = m_chartPriorityToStructIndex->at(a_index);
+
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
-    switch (l_dataPair.second) {
-    case CONVERT_FRON::type_uint32_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
-        break;
-    case CONVERT_FRON::type_uint16_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
-        break;
-    case CONVERT_FRON::type_uint8_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
-        break;
-    default:
-        qCritical() << *m_className
-                    << __func__
-                    << "Unknown Converstion (a_index, l_dataPair.second)"
-                    << a_index
-                    << l_dataPair.second;
-        break;
-    }
-    return l_result;
+    return typeConvertor<double>(QPair(l_dataPair.first, l_dataPair.second));
 }
 
 

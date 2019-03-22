@@ -120,6 +120,11 @@ else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../../sandbox/code/l
 else:unix: LIBS += -L$${UNIX_Z_LIBRARY_PATH} -lMxMD
 
 
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../../sandbox/code/lib/release/ -lZdb
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../../sandbox/code/lib/debug/ -lZdb
+else:unix: LIBS += -L$${UNIX_Z_LIBRARY_PATH} -lZdb
+
+
 # adding support for lhwloc
 LIBS += -lhwloc
 

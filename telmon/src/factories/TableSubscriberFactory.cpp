@@ -41,21 +41,15 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
     // todo, can be improved to array of constans
     const QString l_name = MxTelemetry::Type::name(a_type); // get the name, if a_type is out of range, return unknown
 
+    /**
+     * more:
+     * 1. https://stackoverflow.com/questions/13605141/best-strategy-to-update-qtableview-with-data-in-real-time-from-different-threads
+     * 2. https://stackoverflow.com/questions/4031168/qtableview-is-extremely-slow-even-for-only-3000-rows
+     **/
     switch (a_type)
     {
         case MxTelemetry::Type::Heap:
             l_result = new TableSubscriber(l_name + "Subscriber");
-
-            /**
-             * more:
-             * 1. https://stackoverflow.com/questions/13605141/best-strategy-to-update-qtableview-with-data-in-real-time-from-different-threads
-             * 2. https://stackoverflow.com/questions/4031168/qtableview-is-extremely-slow-even-for-only-3000-rows
-             *
-             *   TODO - convert to pointer
-             *   QLinkedList
-             *   pros constant time insertions and removals.
-             *        iteration is the same as QList
-            */
             l_result->setUpdateFunction( [] ( TableSubscriber* a_this,
                                               void* a_mxTelemetryMsg) -> void
             {
@@ -240,27 +234,8 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
             }
 
             QLinkedList<QString> l_list;
-
-            l_list.append(QString::fromStdString(a_this->getCurrentTime()));
-            l_list.append(QString::number(l_data.master));
-            l_list.append(QString::number(l_data.prev));
-            l_list.append(QString::number(l_data.next));
-            //l_list.append(ZdbHost::stateName(l_data.state));
-
-            l_list.append(QString::number(ZuBoxed(l_data.active)));
-            l_list.append(QString::number(ZuBoxed(l_data.recovering)));
-            l_list.append(QString::number(ZuBoxed(l_data.replicating)));
-            l_list.append(QString::number(ZuBoxed(l_data.nDBs)));
-            l_list.append(QString::number(ZuBoxed(l_data.nHosts)));
-
-            l_list.append(QString::number(ZuBoxed(l_data.nPeers)));
-            l_list.append(QString::number(ZuBoxed(l_data.nCxns)));
-            l_list.append(QString::number(l_data.heartbeatFreq));
-            l_list.append(QString::number(l_data.heartbeatTimeout));
-            l_list.append(QString::number(l_data.reconnectFreq));
-
-            l_list.append(QString::number(l_data.electionTimeout));
-            l_list.append(QString::number(l_data.writeThread));
+            MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::DBEnv)
+                    .getDataForTable(const_cast<MxTelemetry::DBEnv*>(&l_data), l_list);
 
             emit a_this->updateDone(l_list);
         });
@@ -280,16 +255,8 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
 
 
             QLinkedList<QString> l_list;
-
-            //ZdbHost::stateName(l_data.state);
-
-            l_list.append(QString::fromStdString(a_this->getCurrentTime()));
-            l_list.append(QString::number(l_data.priority));
-            //l_list.append(QString(ZdbHost::stateName(l_data.state)));
-            l_list.append(QString::number(ZuBoxed(l_data.voted)));
-            l_list.append(a_this->ZiIPTypeToQString(l_data.ip));
-
-            l_list.append(QString::number(l_data.port));
+            MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::DBHost)
+                    .getDataForTable(const_cast<MxTelemetry::DBHost*>(&l_data), l_list);
 
             emit a_this->updateDone(l_list);
         });
@@ -307,38 +274,20 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
 
-
             QLinkedList<QString> l_list;
-
-            l_list.append(QString::fromStdString(a_this->getCurrentTime()));
-            l_list.append(QString::number(l_data.id));
-            l_list.append(QString::number(l_data.recSize));
-            l_list.append(QString::number(l_data.compress));
-            l_list.append(ZdbCacheMode::name(l_data.cacheMode));
-
-            l_list.append(QString::number(l_data.cacheSize));
-            l_list.append(QString(l_data.path));
-            l_list.append(QString::number(l_data.fileSize));
-            l_list.append(QString::number(l_data.fileRecs));
-            l_list.append(QString::number(l_data.filesMax));
-
-            l_list.append(QString::number(l_data.preAlloc));
-            l_list.append(QString::number(l_data.minRN));
-            l_list.append(QString::number(l_data.allocRN));
-            l_list.append(QString::number(l_data.fileRN));
-            l_list.append(QString::number(l_data.cacheLoads));
-
-            l_list.append(QString::number(l_data.cacheMisses));
-            l_list.append(QString::number(l_data.fileLoads));
-            l_list.append(QString::number(l_data.fileMisses));
+            MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::DB)
+                    .getDataForTable(const_cast<MxTelemetry::DB*>(&l_data), l_list);
 
             emit a_this->updateDone(l_list);
         });
         break;
-        default:
-            //todo - print warning
-            l_result = nullptr;
-            break;
+    default:
+        qCritical() << "TableSubscriberFactory"
+                    << __func__
+                    << "unsupported index:"
+                    << a_type;
+        l_result = nullptr;
+        break;
     }
     return l_result;
 

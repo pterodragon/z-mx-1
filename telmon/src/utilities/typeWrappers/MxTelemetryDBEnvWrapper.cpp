@@ -22,6 +22,7 @@
 #include "MxTelemetryDBEnvWrapper.h"
 #include "QList"
 #include "QDebug"
+#include "QLinkedList"
 
 MxTelemetryDBEnvWrapper::MxTelemetryDBEnvWrapper()
 {
@@ -46,159 +47,294 @@ void MxTelemetryDBEnvWrapper::initActiveDataSet() noexcept
 
 void MxTelemetryDBEnvWrapper::initTableList() noexcept
 {
-    // removed irrelvant for table representation
-    m_tableList->reserve(18);
-    m_tableList->insert(0, "time");
-    m_tableList->insert(1, "self");
-    m_tableList->insert(2, "master");
-    m_tableList->insert(3, "prev");
-    m_tableList->insert(4, "next");
+    // the index for each catagory
+    int i = 0;
+    m_tableList->insert(i, "time");
+    m_tablePriorityToStructIndex->insert(i++, OTHER_ACTIONS::GET_CURRENT_TIME);
 
-    m_tableList->insert(5, "state");
-    m_tableList->insert(6, "active");
-    m_tableList->insert(7, "recovering");
-    m_tableList->insert(8, "replicating");
-    m_tableList->insert(9, "nDBs");
+    m_tableList->insert(i, "self");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_self);
 
-    m_tableList->insert(10, "nHosts");
-    m_tableList->insert(11, "nPeers");
-    m_tableList->insert(12, "nCxns");
-    m_tableList->insert(13, "heartbeatFreq");
-    m_tableList->insert(14, "heartbeatTimeout");
+    m_tableList->insert(i, "master");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_master);
 
-    m_tableList->insert(15, "reconnectFreq");
-    m_tableList->insert(16, "electionTimeout");
-    m_tableList->insert(17, "writeThread");
+    m_tableList->insert(i, "prev");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_prev);
+
+    m_tableList->insert(i, "next");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_next);
+
+    m_tableList->insert(i, "state");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_state);
+
+    m_tableList->insert(i, "active");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_active);
+
+    m_tableList->insert(i, "recovering");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_recovering);
+
+    m_tableList->insert(i, "replicating");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_replicating);
+
+    m_tableList->insert(i, "nDBs");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_nDBs);
+
+    m_tableList->insert(i, "nHosts");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_nHosts);
+
+    m_tableList->insert(i, "nPeers");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_nPeers);
+
+    m_tableList->insert(i, "nCxns");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_nCxns);
+
+    m_tableList->insert(i, "heartbeatFreq");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_heartbeatFreq);
+
+    m_tableList->insert(i, "heartbeatTimeout");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_heartbeatTimeout);
+
+    m_tableList->insert(i, "reconnectFreq");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_reconnectFreq);
+
+    m_tableList->insert(i, "electionTimeout");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_electionTimeout);
+
+    m_tableList->insert(i, "writeThread");
+    m_tablePriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_writeThread);
 }
 
 
 void MxTelemetryDBEnvWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
-//    QLinkedList<QString> l_list;
+    QPair<void*, int> l_dataPair;
 
-//    l_list.append(QString::fromStdString(a_this->getCurrentTime()));
-//    l_list.append(QString::number(l_data.master));
-//    l_list.append(QString::number(l_data.prev));
-//    l_list.append(QString::number(l_data.next));
-//    //l_list.append(ZdbHost::stateName(l_data.state));
-
-//    l_list.append(QString::number(ZuBoxed(l_data.active)));
-//    l_list.append(QString::number(ZuBoxed(l_data.recovering)));
-//    l_list.append(QString::number(ZuBoxed(l_data.replicating)));
-//    l_list.append(QString::number(ZuBoxed(l_data.nDBs)));
-//    l_list.append(QString::number(ZuBoxed(l_data.nHosts)));
-
-//    l_list.append(QString::number(ZuBoxed(l_data.nPeers)));
-//    l_list.append(QString::number(ZuBoxed(l_data.nCxns)));
-//    l_list.append(QString::number(l_data.heartbeatFreq));
-//    l_list.append(QString::number(l_data.heartbeatTimeout));
-//    l_list.append(QString::number(l_data.reconnectFreq));
-
-//    l_list.append(QString::number(l_data.electionTimeout));
-//    l_list.append(QString::number(l_data.writeThread));
-
-//    emit a_this->updateDone(l_list);
-//    write_(m_dbenv, ZuStringN<512>() << now.csv(nowFmt)
-//	  << ',' << data.self
-//	  << ',' << data.master
-//	  << ',' << data.prev
-//	  << ',' << data.next
-//	  << ',' << ZdbHost::stateName(data.state)
-//	  << ',' << ZuBoxed(data.active)
-//	  << ',' << ZuBoxed(data.recovering)
-//	  << ',' << ZuBoxed(data.replicating)
-//	  << ',' << ZuBoxed(data.nDBs)
-//	  << ',' << ZuBoxed(data.nHosts)
-//	  << ',' << ZuBoxed(data.nPeers)
-//	  << ',' << ZuBoxed(data.nCxns)
-//	  << ',' << data.heartbeatFreq
-//	  << ',' << data.heartbeatTimeout
-//	  << ',' << data.reconnectFreq
-//	  << ',' << data.electionTimeout
-//	  << ',' << data.writeThread << '\n');
-//      } break;
+    for (auto i = 0; i < m_tableList->count(); i++)
+    {
+        switch (const auto l_index = m_tablePriorityToStructIndex->at(i)) {
+        case OTHER_ACTIONS::GET_CURRENT_TIME:
+            a_result.append(QString::fromStdString(getCurrentTime()));
+            break;
+        case DBEnvMxTelemetryStructIndex::e_self:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_master:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_prev:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_next:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_state:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(ZdbHost::stateName(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_active:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_recovering:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_replicating:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_nDBs:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_nHosts:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_nPeers:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_nCxns:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_heartbeatFreq:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_heartbeatTimeout:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_reconnectFreq:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_electionTimeout:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case DBEnvMxTelemetryStructIndex::e_writeThread:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint16_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        default:
+            qCritical() << *m_className
+                        << __func__
+                        << "unsupported index"
+                        << l_index;
+            break;
+        }
+    }
 }
 
 
 void MxTelemetryDBEnvWrapper::initChartList() noexcept
 {
-    // removed irrelvant for chart representation
-    m_chartList->reserve(18);
-    m_chartPriorityToStructIndex->reserve(17); // without none
+    int i = 0;
+    m_chartList->insert(i, "self");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_self);
+    m_chartList->insert(i, "master");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_master);
+    m_chartList->insert(i, "prev");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_prev);
+    m_chartList->insert(i, "next");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_next);
 
-//    m_chartList->insert(0, "time");
-    m_chartList->insert(0, "self");
-    m_chartPriorityToStructIndex->insert(0, DBEnvMxTelemetryStructIndex::e_self);
-    m_chartList->insert(1, "master");
-    m_chartPriorityToStructIndex->insert(1, DBEnvMxTelemetryStructIndex::e_master);
-    m_chartList->insert(2, "prev");
-    m_chartPriorityToStructIndex->insert(2, DBEnvMxTelemetryStructIndex::e_prev);
-    m_chartList->insert(3, "next");
-    m_chartPriorityToStructIndex->insert(3, DBEnvMxTelemetryStructIndex::e_next);
+    m_chartList->insert(i, "state");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_state);
+    m_chartList->insert(i, "active");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_active);
+    m_chartList->insert(i, "recovering");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_recovering);
+    m_chartList->insert(i, "replicating");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_replicating);
+    m_chartList->insert(i, "nDBs");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_nDBs);
 
-    m_chartList->insert(4, "state");
-    m_chartPriorityToStructIndex->insert(4, DBEnvMxTelemetryStructIndex::e_state);
-    m_chartList->insert(5, "active");
-    m_chartPriorityToStructIndex->insert(5, DBEnvMxTelemetryStructIndex::e_active);
-    m_chartList->insert(6, "recovering");
-    m_chartPriorityToStructIndex->insert(6, DBEnvMxTelemetryStructIndex::e_recovering);
-    m_chartList->insert(7, "replicating");
-    m_chartPriorityToStructIndex->insert(7, DBEnvMxTelemetryStructIndex::e_replicating);
-    m_chartList->insert(8, "nDBs");
-    m_chartPriorityToStructIndex->insert(8, DBEnvMxTelemetryStructIndex::e_nDBs);
+    m_chartList->insert(i, "nHosts");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_nHosts);
+    m_chartList->insert(i, "nPeers");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_nPeers);
+    m_chartList->insert(i, "nCxns");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_nCxns);
+    m_chartList->insert(i, "heartbeatFreq");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_heartbeatFreq);
+    m_chartList->insert(i, "heartbeatTimeout");
+    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_heartbeatTimeout);
 
-    m_chartList->insert(9, "nHosts");
-    m_chartPriorityToStructIndex->insert(9, DBEnvMxTelemetryStructIndex::e_nHosts);
-    m_chartList->insert(10, "nPeers");
-    m_chartPriorityToStructIndex->insert(10, DBEnvMxTelemetryStructIndex::e_nPeers);
-    m_chartList->insert(11, "nCxns");
-    m_chartPriorityToStructIndex->insert(11, DBEnvMxTelemetryStructIndex::e_nCxns);
-    m_chartList->insert(12, "heartbeatFreq");
-    m_chartPriorityToStructIndex->insert(12, DBEnvMxTelemetryStructIndex::e_heartbeatFreq);
-    m_chartList->insert(13, "heartbeatTimeout");
-    m_chartPriorityToStructIndex->insert(13, DBEnvMxTelemetryStructIndex::e_heartbeatTimeout);
-
-    m_chartList->insert(14, "reconnectFreq");
-     m_chartPriorityToStructIndex->insert(14, DBEnvMxTelemetryStructIndex::e_reconnectFreq);
-    m_chartList->insert(15, "electionTimeout");
-     m_chartPriorityToStructIndex->insert(15, DBEnvMxTelemetryStructIndex::e_electionTimeout);
-    m_chartList->insert(16, "writeThread");
-     m_chartPriorityToStructIndex->insert(16, DBEnvMxTelemetryStructIndex::e_writeThread);
+    m_chartList->insert(i, "reconnectFreq");
+     m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_reconnectFreq);
+    m_chartList->insert(i, "electionTimeout");
+     m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_electionTimeout);
+    m_chartList->insert(i, "writeThread");
+     m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_writeThread);
 
     // extra
-    m_chartList->insert(17, "none");
+    m_chartList->insert(i++, "none");
 }
 
 
 double MxTelemetryDBEnvWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
-    double l_result = 0;
-
     // sanity check
-    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return l_result;}
+    if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return 0;}
 
     const int l_index = m_chartPriorityToStructIndex->at(a_index);
+
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
-    switch (l_dataPair.second) {
-    case CONVERT_FRON::type_uint32_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint32_t));
-        break;
-    case CONVERT_FRON::type_uint16_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint16_t));
-        break;
-    case CONVERT_FRON::type_uint8_t:
-        l_result = typeConvertor<double>(QPair(l_dataPair.first, CONVERT_FRON::type_uint8_t));
-        break;
-    default:
-        qCritical() << *m_className
-                    << __func__
-                    << "Unknown Converstion (a_index, l_dataPair.second)"
-                    << a_index
-                    << l_dataPair.second;
-        break;
-    }
-    return l_result;
+    return typeConvertor<double>(QPair(l_dataPair.first, l_dataPair.second));
 }
 
 

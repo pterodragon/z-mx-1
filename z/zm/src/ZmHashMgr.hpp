@@ -64,12 +64,12 @@ private:
 };
 
 struct ZmHashTelemetry {
-  ZmIDString	id;
+  ZmIDString	id;		// primary key
   uint32_t	nodeSize;
   uint32_t	loadFactor;	// (double)N / 16.0
-  uint32_t	count;
-  uint32_t	effLoadFactor;	// (double)N / 16.0
-  uint32_t	resized;
+  uint32_t	count;		// graphable (*)
+  uint32_t	effLoadFactor;	// graphable (*) - (double)N / 16.0
+  uint32_t	resized;	// dynamic
   uint8_t	bits;
   uint8_t	cBits;
   uint8_t	linear;
@@ -105,7 +105,7 @@ struct ZmHashMgr_HeapID {
 typedef ZmRBTree<ZmAnyHash_,
 	  ZmRBTreeNodeIsKey<true,
 	    ZmRBTreeObject<ZmPolymorph,
-	      ZmRBTreeHeapID<ZmNoHeap,
+	      ZmRBTreeHeapID<ZuNull,
 		ZmRBTreeIndex<ZmAnyHash_PtrAccessor,
 		  ZmRBTreeHeapID<ZmHashMgr_HeapID,
 		    ZmRBTreeLock<ZmNoLock> > > > > > > ZmHashMgr_Tables;

@@ -91,9 +91,11 @@ struct ZuTraits<String<N> > : public ZuGenericTraits<String<N> > {
     IsHashable = 1, IsComparable = 1
   };
   typedef char Elem;
+#if 0
   inline String<N> make(const char *data, unsigned length) {
     return String<N>(data);
   }
+#endif
   inline static const char *data(const String<N> &s) { return s.data(); }
   inline static unsigned length(const String<N> &s) { return s.length(); }
 };
@@ -308,7 +310,7 @@ template <typename H, template <typename> class A> void perfTest_(int bits)
   H &h = *h_;
 
   for (int i = 0; i < n; i++)
-    threads[i] = ZmThread(0, 0, ZmFn<>::Bound<&hashIt<H> >::fn(&h));
+    threads[i] = ZmThread(0, ZmFn<>::Bound<&hashIt<H> >::fn(&h));
   for (int i = 0; i < n; i++) threads[i].join(0);
 }
 

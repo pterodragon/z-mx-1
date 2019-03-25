@@ -499,19 +499,19 @@ template <> struct ZuPrint<ZiCxnInfo> : public ZuPrintFn { };
 struct ZiCxnTelemetry {
   ZuID		mxID;		// multiplexer ID
   uint64_t	socket;		// Unix file descriptor / Winsock SOCKET
-  uint32_t	rxBufSize;	// getsockopt(..., SO_RCVBUF, ...)
-  uint32_t	rxBufLen;	// ioctl(..., SIOCINQ, ...)
-  uint32_t	txBufSize;	// getsockopt(..., SO_SNDBUF, ...)
-  uint32_t	txBufLen;	// ioctl(..., SIOCOUTQ, ...)
+  uint32_t	rxBufSize;	// graphable - getsockopt(..., SO_RCVBUF, ...)
+  uint32_t	rxBufLen;	// graphable (*) - ioctl(..., SIOCINQ, ...)
+  uint32_t	txBufSize;	// graphable - getsockopt(..., SO_SNDBUF, ...)
+  uint32_t	txBufLen;	// graphable (*) - ioctl(..., SIOCOUTQ, ...)
   uint32_t	flags;		// ZiCxnFlags
   ZiIP		mreqAddr;	// mreqs[0]
   ZiIP		mreqIf;		// mreqs[0]
   ZiIP		mif;
   uint32_t	ttl;
-  ZiIP		localIP;
-  ZiIP		remoteIP;
-  uint16_t	localPort;
-  uint16_t	remotePort;
+  ZiIP		localIP;	// primary key
+  ZiIP		remoteIP;	// primary key
+  uint16_t	localPort;	// primary key
+  uint16_t	remotePort;	// primary key
   uint8_t	type;		// ZiCxnType
 };
 
@@ -657,40 +657,9 @@ class ZiMxParams {
 public:
   enum { RxThread = 1, TxThread = 2 }; // defaults
 
-  inline ZiMxParams() :
-    m_scheduler(ZmSchedParams().
-	nThreads(3).isolation(ZmBitmap().set(RxThread).set(TxThread))) { }
-
+  ZiMxParams() = default;
   ZiMxParams(ZiMxParams &&) = default;
   ZiMxParams &operator =(ZiMxParams &&) = default;
-
-  inline ZmSchedParams &scheduler() { return m_scheduler; }
-
-  template <typename S> inline ZiMxParams &&id(const S &s)
-    { m_scheduler.id(s); return ZuMv(*this); }
-  inline ZiMxParams &&nThreads(unsigned v)
-    { m_scheduler.nThreads(v); return ZuMv(*this); }
-  inline ZiMxParams &&stackSize(unsigned v)
-    { m_scheduler.stackSize(v); return ZuMv(*this); }
-  inline ZiMxParams &&priority(unsigned v)
-    { m_scheduler.priority(v); return ZuMv(*this); }
-  inline ZiMxParams &&partition(unsigned v)
-    { m_scheduler.partition(v); return ZuMv(*this); }
-  template <typename T> inline ZiMxParams &&affinity(const T &t)
-    { m_scheduler.affinity(t); return ZuMv(*this); }
-  template <typename T> inline ZiMxParams &&isolation(const T &t)
-    { m_scheduler.isolation(t); return ZuMv(*this); }
-  template <typename T> inline ZiMxParams &&quantum(const T &t)
-    { m_scheduler.quantum(t); return ZuMv(*this); }
-
-  inline ZiMxParams &&queueSize(unsigned v)
-    { m_scheduler.queueSize(v); return ZuMv(*this); }
-  inline ZiMxParams &&ll(bool v)
-    { m_scheduler.ll(v); return ZuMv(*this); }
-  inline ZiMxParams &&spin(unsigned v)
-    { m_scheduler.spin(v); return ZuMv(*this); }
-  inline ZiMxParams &&timeout(unsigned v)
-    { m_scheduler.timeout(v); return ZuMv(*this); }
 
   inline ZiMxParams &&rxThread(unsigned tid) {
     m_rxThread = tid;
@@ -724,7 +693,6 @@ public:
 #endif
   inline ZiMxParams &&telFreq(unsigned v) { m_telFreq = v; return ZuMv(*this); }
 
-  inline const ZmSchedParams &scheduler() const { return m_scheduler; }
   inline unsigned rxThread() const { return m_rxThread; }
   inline unsigned txThread() const { return m_txThread; }
 #ifdef ZiMultiplex_EPoll
@@ -745,7 +713,6 @@ public:
   inline unsigned telFreq() const { return m_telFreq; }
 
 private:
-  ZmSchedParams		m_scheduler;
   unsigned		m_rxThread = RxThread;
   unsigned		m_txThread = TxThread;
 #ifdef ZiMultiplex_EPoll
@@ -766,16 +733,19 @@ private:
   unsigned		m_telFreq = 0;
 };
 
-struct ZiMxTelemetry {
-  ZuID		id;
-  uint64_t	isolation;
+struct ZiMxTelemetry { // not graphable
+  ZuID		id;		// primary key
   uint32_t	stackSize;
+  uint32_t	queueSize;
+  uint32_t	spin;
+  uint32_t	timeout;
   uint32_t	rxBufSize;
   uint32_t	txBufSize;
   uint16_t	rxThread;
   uint16_t	txThread;
   uint16_t	partition;
-  uint8_t	state;
+  uint8_t	state;	// RAG: Running - Green; Stopped - Red; * - Amber
+  uint8_t	ll;
   uint8_t	priority;
   uint8_t	nThreads;
 };
@@ -972,9 +942,14 @@ template <typename> friend class Connect_;
   typedef ZmCondition<StateLock> ShutdownCond;
 
 public:
-  typedef ZiPlatform::Socket Socket;
+  using Socket = ZiPlatform::Socket;
 
-  ZiMultiplex(ZiMxParams params = ZiMxParams());
+  ZiMultiplex(ZmSchedParams schedParams =
+      ZmSchedParams()
+	.nThreads(3)
+	.thread(ZiMxParams::RxThread, [](auto &t) { t.isolated(true); })
+	.thread(ZiMxParams::TxThread, [](auto &t) { t.isolated(true); }),
+      ZiMxParams mxParams = ZiMxParams());
   ~ZiMultiplex();
 
   int start();

@@ -117,11 +117,11 @@ int main()
   {
     ZmThreadParams params;
     params.detached(true);
-    ZmThread(0, 0, ZmFn<>::Ptr<&reader>::fn(), params);
-    ZmThread(0, 0, ZmFn<>::Ptr<&reader>::fn(), params);
-    ZmThread(0, 0, ZmFn<>::Ptr<&reader>::fn(), params);
-    ZmThread(0, 0, ZmFn<>::Ptr<&writer>::fn(), params);
-    ZmThread(0, 0, ZmFn<>::Ptr<&writer>::fn(), params);
+    ZmThread(0, ZmFn<>::Ptr<&reader>::fn(), params);
+    ZmThread(0, ZmFn<>::Ptr<&reader>::fn(), params);
+    ZmThread(0, ZmFn<>::Ptr<&reader>::fn(), params);
+    ZmThread(0, ZmFn<>::Ptr<&writer>::fn(), params);
+    ZmThread(0, ZmFn<>::Ptr<&writer>::fn(), params);
   }
 
   for (;;) {

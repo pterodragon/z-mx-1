@@ -80,12 +80,12 @@ struct ZmHeapStats {
 };
 
 struct ZmHeapTelemetry {
-  ZmIDString	id;
+  ZmIDString	id;		// primary key
   uint64_t	cacheSize;
-  uint64_t	cpuset;
-  uint64_t	cacheAllocs;
-  uint64_t	heapAllocs;
-  uint64_t	frees;
+  uint64_t	cpuset;	
+  uint64_t	cacheAllocs;	// graphable (*)
+  uint64_t	heapAllocs;	// graphable (*)
+  uint64_t	frees;		// graphable
   uint32_t	size;
   uint16_t	partition;
   uint8_t	sharded;
@@ -172,7 +172,7 @@ private:
   loop:
     p = m_head.load_();
     if (ZuUnlikely(!p)) return 0;
-    if (ZuLikely(m_info.sharded)) {
+    if (ZuLikely(m_info.sharded)) { // sharded - no contention
       m_head.store_(*(uintptr_t *)p);
       return (void *)p;
     }
@@ -182,17 +182,16 @@ private:
     return (void *)p;
   }
   inline void free__(void *p) {
-    if (ZuLikely(m_info.sharded)) {
-      *(uintptr_t *)p = m_head.load_();
-      m_head.store_((uintptr_t)p);
-      return;
-    }
     uintptr_t n;
   loop:
     n = m_head.load_();
     if (n & 1) { ZmAtomic_acquire(); goto loop; }
     ((ZmAtomic<uintptr_t> *)p)->store_(n);
     if (m_head.cmpXch((uintptr_t)p, n) != n) goto loop;
+  }
+  inline void free__sharded(void *p) { // sharded - no contention
+    *(uintptr_t *)p = m_head.load_();
+    m_head.store_((uintptr_t)p);
   }
 
   void allStats() const;
@@ -277,9 +276,6 @@ private:
 };
 
 template <> struct ZuPrint<ZmHeapMgr::CSV> : public ZuPrintFn { };
-
-// use as heap ID to disable ZmHeap
-struct ZmNoHeap { };
 
 // derive ID from ZmHeapSharded to declare a sharded heap
 struct ZmHeapSharded { };
@@ -378,14 +374,14 @@ inline ZmHeap_Init<Heap>::ZmHeap_Init() { delete new Heap(); }
 template <class ID, unsigned Size_>
 ZmHeap_Init<ZmHeap<ID, Size_> > ZmHeap<ID, Size_>::m_init;
 
-template <unsigned Size> class ZmHeap<ZmNoHeap, Size> { };
+template <unsigned Size> class ZmHeap<ZuNull, Size> { };
 
 #include <ZmFn_Lambda.hpp>
 
 template <class ID, unsigned Size>
 inline void ZmHeapCacheT<ID, Size>::allStats(StatsFn fn)
 {
-  TLS::all(ZmFn<ZmHeapCacheT *>::template Lambda<ZmNoHeap>::fn(
+  TLS::all(ZmFn<ZmHeapCacheT *>::template Lambda<ZuNull>::fn(
 	[fn](ZmHeapCacheT *c) { fn(c->m_stats); }));
 }
 

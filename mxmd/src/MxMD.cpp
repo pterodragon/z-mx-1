@@ -47,6 +47,16 @@ void MxMDPxLevel_::reset(MxDateTime transactTime)
   m_data.nOrders = 0;
 }
 
+void MxMDPxLevel_::updateNDP(
+    MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP)
+{
+  auto i = m_orders.iterator();
+  while (const ZmRef<MxMDOrder> &order = i.iterateKey())
+    order->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP);
+  if (qtyNDP != oldQtyNDP)
+    m_data.qty = MxValNDP{m_data.qty, oldQtyNDP}.adjust(qtyNDP);
+}
+
 void MxMDPxLevel_::updateAbs(
     MxDateTime transactTime, MxValue qty, MxUInt nOrders, MxFlags flags,
     MxValue &d_qty, MxUInt &d_nOrders)
@@ -200,48 +210,53 @@ void MxMDOrderBook::unsubscribe()
   m_handler = 0;
 }
 
+static void updatePxNDP_(MxMDL1Data &l1, MxNDP pxNDP)
+{
+#ifdef adjustNDP
+#undef adjustNDP
+#endif
+#define adjustNDP(v) if (*l1.v) l1.v = MxValNDP{l1.v, l1.pxNDP}.adjust(pxNDP)
+  adjustNDP(base);
+  for (unsigned i = 0; i < MxMDNSessions; i++) {
+    adjustNDP(open[i]);
+    adjustNDP(close[i]);
+  }
+  adjustNDP(last);
+  adjustNDP(bid);
+  adjustNDP(ask);
+  adjustNDP(high);
+  adjustNDP(low);
+  adjustNDP(accVol);
+  adjustNDP(match);
+#undef adjustNDP
+  l1.pxNDP = pxNDP;
+}
+
+static void updateQtyNDP_(MxMDL1Data &l1, MxNDP qtyNDP)
+{
+#define adjustNDP(v) if (*l1.v) l1.v = MxValNDP{l1.v, l1.qtyNDP}.adjust(qtyNDP)
+  adjustNDP(lastQty);
+  adjustNDP(bidQty);
+  adjustNDP(askQty);
+  adjustNDP(accVolQty);
+  adjustNDP(matchQty);
+  adjustNDP(surplusQty);
+#undef adjustNDP
+  l1.qtyNDP = qtyNDP;
+}
+
 void MxMDOrderBook::l1(MxMDL1Data &l1Data)
 {
-  if (!*l1Data.pxNDP) {
+  if (!*l1Data.pxNDP)
     l1Data.pxNDP = m_l1Data.pxNDP;
-  } else if (ZuUnlikely(m_l1Data.pxNDP != l1Data.pxNDP)) {
-#ifdef adjustNDP
-#undef adjustNDP
-#endif
-#define adjustNDP(v) if (*l1Data.v) l1Data.v = \
-    MxValNDP{l1Data.v, l1Data.pxNDP}.adjust(m_l1Data.pxNDP)
-    adjustNDP(base);
-    for (unsigned i = 0; i < MxMDNSessions; i++) {
-      adjustNDP(open[i]);
-      adjustNDP(close[i]);
-    }
-    adjustNDP(last);
-    adjustNDP(bid);
-    adjustNDP(ask);
-    adjustNDP(high);
-    adjustNDP(low);
-    adjustNDP(accVol);
-    adjustNDP(match);
-#undef adjustNDP
-    l1Data.pxNDP = m_l1Data.pxNDP;
-  }
-  if (!*l1Data.qtyNDP) {
+  else if (ZuUnlikely(l1Data.pxNDP != m_l1Data.pxNDP))
+    updatePxNDP_(l1Data, m_l1Data.pxNDP);
+
+  if (!*l1Data.qtyNDP)
     l1Data.qtyNDP = m_l1Data.qtyNDP;
-  } else if (ZuUnlikely(m_l1Data.qtyNDP != l1Data.qtyNDP)) {
-#ifdef adjustNDP
-#undef adjustNDP
-#endif
-#define adjustNDP(v) if (*l1Data.v) l1Data.v = \
-    MxValNDP{l1Data.v, l1Data.qtyNDP}.adjust(m_l1Data.qtyNDP)
-    adjustNDP(lastQty);
-    adjustNDP(bidQty);
-    adjustNDP(askQty);
-    adjustNDP(accVolQty);
-    adjustNDP(matchQty);
-    adjustNDP(surplusQty);
-#undef adjustNDP
-    l1Data.qtyNDP = m_l1Data.qtyNDP;
-  }
+  else if (ZuUnlikely(l1Data.qtyNDP != m_l1Data.qtyNDP))
+    updateQtyNDP_(l1Data, m_l1Data.qtyNDP);
+
   m_l1Data.stamp = l1Data.stamp;
   m_l1Data.status.update(l1Data.status);
   m_l1Data.base.update(l1Data.base, MxValueReset);
@@ -330,7 +345,7 @@ bool MxMDOBSide::updateL1Ask(MxMDL1Data &l1Data, MxMDL1Data &delta)
 
 void MxMDOrderBook::l2(MxDateTime stamp, bool updateL1)
 {
-  MxMDL1Data delta{ {}, m_l1Data.pxNDP, m_l1Data.qtyNDP };
+  MxMDL1Data delta{.pxNDP = m_l1Data.pxNDP, .qtyNDP = m_l1Data.qtyNDP};
   bool l1Updated = false;
 
   if (updateL1) {
@@ -804,7 +819,7 @@ void MxMDOBSide::reset(MxDateTime transactTime)
 
 void MxMDOrderBook::reset(MxDateTime transactTime)
 {
-  MxMDL1Data delta{ {}, m_l1Data.pxNDP, m_l1Data.qtyNDP };
+  MxMDL1Data delta{.pxNDP = m_l1Data.pxNDP, .qtyNDP = m_l1Data.qtyNDP};
   bool l1Updated = false;
 
   if (*m_l1Data.bid) {
@@ -830,6 +845,26 @@ void MxMDOrderBook::reset(MxDateTime transactTime)
     m_handler->l2(this, transactTime);
     if (l1Updated) m_handler->l1(this, delta);
   }
+}
+
+void MxMDOBSide::updateNDP(
+    MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP)
+{
+  if (m_mktLevel)
+    m_mktLevel->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP);
+  auto i = m_pxLevels.readIterator();
+  while (ZmRef<MxMDPxLevel> pxLevel = i.iterate())
+    pxLevel->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP);
+}
+
+void MxMDOrderBook::updateNDP(MxNDP pxNDP, MxNDP qtyNDP)
+{
+  MxValue oldPxNDP = m_l1Data.pxNDP;
+  MxValue oldQtyNDP = m_l1Data.qtyNDP;
+  if (pxNDP != oldPxNDP) updatePxNDP_(m_l1Data, pxNDP);
+  if (qtyNDP != oldQtyNDP) updateQtyNDP_(m_l1Data, qtyNDP);
+  m_bids->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP);
+  m_asks->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP);
 }
 
 void MxMDOrderBook::addTrade(
@@ -994,7 +1029,7 @@ MxMDVenue::MxMDVenue(MxMDLib *md, MxMDFeed *feed, MxID id,
   unsigned n = md->nShards();
   m_shards.length(n);
   for (unsigned i = 0; i < n; i++)
-    m_shards[i] = new MxMDVenueShard(this, md->shard_(i));
+    m_shards[i] = new MxMDVenueShard(this, md->shard_(i)); // FIXME?
 }
 
 uintptr_t MxMDVenue::allTickSizeTbls(ZmFn<MxMDTickSizeTbl *> fn) const
@@ -1165,6 +1200,7 @@ void MxMDLib::init_(void *cf_)
 {
   ZvCf *cf = (ZvCf *)cf_;
   ZiMultiplex *mx = static_cast<ZiMultiplex *>(m_scheduler);
+  unsigned tid = 0;
   if (ZmRef<ZvCf> shardsCf = cf->subset("shards", false)) {
     ZeLOG(Info, "MxMDLib - configuring shards...");
     m_shards.length(shardsCf->count());
@@ -1174,14 +1210,16 @@ void MxMDLib::init_(void *cf_)
       ZuBox<unsigned> id = key;
       if (id >= m_shards.length())
 	throw ZvCf::RangeInt(0, m_shards.size(), id, "shards");
-      unsigned tid = shardCf->getInt("tid", 1, mx->nThreads(), true);
-      m_shards[id] = new MxMDShard(this, id, tid);
+      if (const auto &name = shardCf->get("thread", true))
+	if (!(tid = mx->tid(name)))
+	  throw ZtString()
+	    << "shard misconfigured - bad thread \"" << name << '"';
+      m_shards[id] = new MxMDShard(this, mx, id, tid);
     }
   } else {
-    int tid = mx->workerID(0);
-    if (tid < 0)
+    if (!(tid = mx->workerID(0)))
       throw ZtString("mx misconfigured - no worker threads");
-    m_shards.push(new MxMDShard(this, 0, tid));
+    m_shards.push(new MxMDShard(this, mx, 0, tid));
   }
 
   // Assumption: DST transitions do not occur while market is open
@@ -1351,7 +1389,6 @@ ZmRef<MxMDInstrument> MxMDLib::addInstrument(
   return instr;
 }
 
-
 void MxMDInstrument::update_(
     const MxMDInstrRefData &refData, MxDateTime transactTime)
 {
@@ -1366,32 +1403,9 @@ void MxMDInstrument::update_(
   m_refData.mat.update(refData.mat);
   if ((*refData.pxNDP && refData.pxNDP != m_refData.pxNDP) ||
       (*refData.qtyNDP && refData.qtyNDP != m_refData.qtyNDP)) {
-    allOrderBooks([
-	oldPxNDP = m_refData.pxNDP, newPxNDP = refData.pxNDP,
-	oldQtyNDP = m_refData.qtyNDP, newQtyNDP = refData.qtyNDP,
-	transactTime](
+    allOrderBooks([pxNDP = refData.pxNDP, qtyNDP = refData.qtyNDP](
 	  MxMDOrderBook *ob) -> uintptr_t {
-      MxMDL1Data &l1 = ob->m_l1Data;
-#ifdef adjustNDP
-#undef adjustNDP
-#endif
-#define adjustNDP(v, n) if (*v) v = \
-    MxValNDP{v, old ## n ## NDP}.adjust(new ## n ## NDP)
-      adjustNDP(l1.base, Px);
-      for (unsigned i = 0; i < MxMDNSessions; i++) adjustNDP(l1.open[i], Px);
-      for (unsigned i = 0; i < MxMDNSessions; i++) adjustNDP(l1.close[i], Px);
-      adjustNDP(l1.last, Px); adjustNDP(l1.lastQty, Qty);
-      adjustNDP(l1.bid, Px); adjustNDP(l1.bidQty, Qty);
-      adjustNDP(l1.ask, Px); adjustNDP(l1.askQty, Qty);
-      adjustNDP(l1.high, Px);
-      adjustNDP(l1.low, Px);
-      adjustNDP(l1.accVol, Px); adjustNDP(l1.accVolQty, Qty);
-      adjustNDP(l1.match, Px); adjustNDP(l1.matchQty, Qty);
-      adjustNDP(l1.surplusQty, Qty);
-#undef adjustNDP
-      l1.pxNDP = newPxNDP;
-      l1.qtyNDP = newQtyNDP;
-      ob->reset(transactTime);
+      ob->updateNDP(pxNDP, qtyNDP);
       return 0;
     });
 #define adjustNDP(v, n) if (*m_refData.v && !*refData.v) m_refData.v = \
@@ -1399,6 +1413,7 @@ void MxMDInstrument::update_(
     adjustNDP(strike, px);
     adjustNDP(outstandingShares, qty);
     adjustNDP(adv, px);
+#undef adjustNDP
     m_refData.pxNDP = refData.pxNDP;
     m_refData.qtyNDP = refData.qtyNDP;
   }

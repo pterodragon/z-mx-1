@@ -36,6 +36,7 @@
 #include <ZuNull.hpp>
 #include <ZuString.hpp>
 #include <ZuStringN.hpp>
+#include <ZuMvArray.hpp>
 #include <ZuPrint.hpp>
 #include <ZuID.hpp>
 
@@ -58,197 +59,43 @@
 #pragma warning(disable:4251 4231 4355 4660)
 #endif
 
-class ZmAffinity {
+class ZmSchedTParams : public ZmThreadParams {
 public:
-  enum Varargs_ { Varargs };
-  enum { Next = -1, End = -2 };
+  inline ZmSchedTParams &&isolated(bool b)
+    { m_isolated = b; return ZuMv(*this); }
 
-  inline ZmAffinity() { init_(); }
-  inline ~ZmAffinity() { final_(); }
-
-  inline ZmAffinity(const ZmAffinity &a) { init_(a); }
-  inline ZmAffinity &operator =(const ZmAffinity &a) {
-    if (this != &a) { final_(); init_(a); }
-    return *this;
-  }
-
-  inline ZmAffinity(unsigned n) { init_(n); }
-  inline ZmAffinity(unsigned n, Varargs_ _, ...) {
-    va_list args;
-    va_start(args, _);
-    init_(n, args);
-    va_end(args);
-  }
-  inline ZmAffinity(unsigned n, va_list args) { init_(n, args); }
-
-  inline void init() { final_(); init_(); }
-  inline void init(unsigned n) { final_(); init_(n); }
-  inline void init(unsigned n, Varargs_ _, ...) {
-    va_list args;
-    va_start(args, _);
-    final_();
-    init_(n, args);
-    va_end(args);
-  }
-  inline void init(unsigned n, va_list args) { final_(); init_(n, args); }
-
-  inline unsigned count() const { return m_count; }
-  inline const ZmBitmap &operator [](unsigned i) const { return m_cpusets[i]; }
-  inline ZmBitmap &operator [](unsigned i) { return m_cpusets[i]; }
-
-protected:
-  inline void final_() {
-    if (m_cpusets) {
-      for (unsigned i = 0; i < m_count; i++) m_cpusets[i].~ZmBitmap();
-      ::free(m_cpusets);
-    }
-  }
-  inline void init_() { m_count = 0, m_cpusets = 0; }
-  inline void init_(const ZmAffinity &a) {
-    m_count = 0;
-    if (!(m_cpusets = (ZmBitmap *)::malloc(a.m_count * sizeof(ZmBitmap))))
-      throw std::bad_alloc();
-    for (unsigned i = 0; i < a.m_count; i++)
-      new (&m_cpusets[i]) ZmBitmap(a.m_cpusets[i]);
-    m_count = a.m_count;
-  }
-  inline void init_(unsigned n) {
-    m_count = 0;
-    if (!(m_cpusets = (ZmBitmap *)::malloc(n * sizeof(ZmBitmap))))
-      throw std::bad_alloc();
-    for (unsigned i = 0; i < n; i++) new (&m_cpusets[i]) ZmBitmap();
-    m_count = n;
-  }
-  inline void init_(unsigned n, va_list args) {
-    m_count = 0;
-    if (!(m_cpusets = (ZmBitmap *)::malloc(n * sizeof(ZmBitmap))))
-      throw std::bad_alloc();
-    for (unsigned i = 0; i < n; i++) new (&m_cpusets[i]) ZmBitmap();
-    m_count = n;
-    int j;
-    for (unsigned i = 0; i < n; i++) {
-      while ((j = va_arg(args, unsigned)) >= 0) m_cpusets[i].set(j);
-      if (j != Next) return;
-    }
-  }
-
-public:
-  template <typename S>
-  inline ZmAffinity(const S &s,
-      typename ZuIsCharString<S>::T *_ = 0) {
-    init_();
-    scan(s);
-  }
-  template <typename S>
-  inline typename ZuIsCharString<S, ZmAffinity &>::T operator =(const S &s) {
-    init();
-    scan(s);
-    return *this;
-  }
-  template <bool Store> inline unsigned scan_(ZuString s) {
-    const char *data = s.data();
-    unsigned length = s.length(), offset = 0;
-    if (!length) return 0;
-    unsigned count = 0;
-    while (offset < length) {
-      ZmBitmap cpuset;
-      ZuBox<unsigned> tid;
-      int offset_ = tid.scan(data + offset, length - offset);
-      if (offset_ <= 0) break;
-      offset += offset_;
-      if (offset >= length || data[offset] != '=') break;
-      ++offset;
-      offset_ = cpuset.scan(ZuString(data + offset, length - offset));
-      if (offset_ <= 0) break;
-      if (!!cpuset) {
-	if (tid >= count) count = tid + 1;
-	if (Store) m_cpusets[tid] = ZuMv(cpuset);
-      }
-      offset += offset_;
-      if (offset >= length || data[offset] != ':') break;
-      ++offset;
-    }
-    return count;
-  }
-  inline void scan(ZuString s) {
-    init(scan_<false>(s));
-    scan_<true>(s);
-  }
-  template <typename S> inline void print(S &s) const {
-    if (!m_count) return;
-    bool first = true;
-    for (unsigned i = 0; i < m_count; i++) {
-      if (!m_cpusets[i]) continue;
-      if (!first) s << ':';
-      first = false;
-      s << ZuBoxed(i) << '=' << m_cpusets[i];
-    }
-  }
+  ZuInline bool isolated() const { return m_isolated; }
 
 private:
-  unsigned	m_count;
-  ZmBitmap	*m_cpusets;
+  bool		m_isolated = false;
 };
-
-// generic printing
-template <> struct ZuPrint<ZmAffinity> : public ZuPrintFn { };
 
 class ZmAPI ZmSchedParams {
   ZmSchedParams(const ZmSchedParams &) = delete;
   ZmSchedParams &operator =(const ZmSchedParams &) = delete;
-
-  struct ThreadNames {
-    ThreadNames(const ThreadNames &) = delete;
-    ThreadNames &operator =(const ThreadNames &) = delete;
-    ThreadNames() = delete;
-
-    inline ThreadNames(unsigned n) { data = new ZmThreadName[n]; }
-    inline ~ThreadNames() { delete [] data; }
-
-    inline ThreadNames(ThreadNames &&a) {
-      data = a.data;
-      a.data = nullptr;
-    }
-    inline ThreadNames &operator =(ThreadNames &&a) {
-      data = a.data;
-      a.data = nullptr;
-      return *this;
-    }
-
-    ZuInline ZmThreadName &operator [](int i) { return data[i]; }
-    ZuInline const ZmThreadName &operator [](int i) const { return data[i]; }
-
-    inline void length(unsigned n) {
-      delete [] data;
-      data = new ZmThreadName[n];
-    }
-
-    ZmThreadName	*data;
-  };
 
 public:
   ZmSchedParams() = default;
   ZmSchedParams(ZmSchedParams &&) = default;
   ZmSchedParams &operator =(ZmSchedParams &&) = default;
 
+  using Thread = ZmSchedTParams;
+  using Threads = ZuMvArray<Thread>;
+
   typedef ZuID ID;
 
   template <typename S> inline ZmSchedParams &&id(const S &s)
     { m_id = s; return ZuMv(*this); }
   inline ZmSchedParams &&nThreads(unsigned v)
-    { m_names.length(m_nThreads = v); return ZuMv(*this); }
+    { m_threads.length(m_nThreads = v + 1); return ZuMv(*this); }
   inline ZmSchedParams &&stackSize(unsigned v)
     { m_stackSize = v; return ZuMv(*this); }
   inline ZmSchedParams &&priority(unsigned v)
     { m_priority = v; return ZuMv(*this); }
   inline ZmSchedParams &&partition(unsigned v)
     { m_partition = v; return ZuMv(*this); }
-  template <typename T> inline ZmSchedParams &&affinity(const T &t)
-    { m_affinity = t; return ZuMv(*this); }
-  template <typename T> inline ZmSchedParams &&isolation(const T &t)
-    { m_isolation = t; return ZuMv(*this); }
-  template <typename T> inline ZmSchedParams &&quantum(const T &t)
-    { m_quantum = t; return ZuMv(*this); }
+  template <typename T> inline ZmSchedParams &&quantum(T &&v)
+    { m_quantum = ZuFwd<T>(v); return ZuMv(*this); }
 
   inline ZmSchedParams &&queueSize(unsigned v)
     { m_queueSize = v; return ZuMv(*this); }
@@ -259,13 +106,18 @@ public:
   inline ZmSchedParams &&timeout(unsigned v)
     { m_timeout = v; return ZuMv(*this); }
 
+  template <typename L>
+  inline ZmSchedParams &&thread(unsigned tid, L l) {
+    l(m_threads[tid]);
+    return ZuMv(*this);
+  }
+  inline Thread &thread(unsigned tid) { return m_threads[tid]; }
+
   inline ID id() const { return m_id; }
   inline unsigned nThreads() const { return m_nThreads; }
   inline unsigned stackSize() const { return m_stackSize; }
-  inline unsigned priority() const { return m_priority; }
+  inline int priority() const { return m_priority; }
   inline unsigned partition() const { return m_partition; }
-  inline const ZmAffinity &affinity() const { return m_affinity; }
-  inline const ZmBitmap &isolation() const { return m_isolation; }
   inline const ZmTime &quantum() const { return m_quantum; }
 
   inline unsigned queueSize() const { return m_queueSize; }
@@ -273,20 +125,14 @@ public:
   inline unsigned spin() const { return m_spin; }
   inline unsigned timeout() const { return m_timeout; }
 
-  inline const ZmThreadName &name(unsigned tid) const {
-    static ZmThreadName null;
-    if (!tid || tid > m_nThreads) return null;
-    return m_names[tid - 1];
-  }
-  template <typename S> inline void name(unsigned tid, S &&s) {
-    if (!tid || tid > m_nThreads) return;
-    m_names[tid - 1] = ZuFwd<S>(s);
-  }
+  inline const Thread &thread(unsigned tid) const { return m_threads[tid]; }
+
+public:
   template <typename S> inline unsigned tid(const S &s) {
-    if (unsigned tid = ZuBox0(unsigned)(s))
-      return tid;
-    for (unsigned tid = 0, n = m_nThreads; tid < n; tid++)
-      if (s == m_names[tid]) return tid + 1;
+    unsigned tid;
+    if (tid = ZuBox0(unsigned)(s)) return tid;
+    for (tid = 0; tid <= m_nThreads; tid++)
+      if (s == m_threads[tid].name()) return tid;
     return 0;
   }
 
@@ -294,18 +140,17 @@ private:
   ID		m_id;
   unsigned	m_nThreads = 1;
   unsigned	m_stackSize = 0;
-  unsigned	m_priority = ZmThreadPriority::Normal;
+  int		m_priority = -1;
   unsigned	m_partition = 0;
-  ZmAffinity	m_affinity;
-  ZmBitmap	m_isolation;
   ZmTime	m_quantum = .01;
 
   unsigned	m_queueSize = 131072;
-  bool		m_ll = false;
   unsigned	m_spin = 1000;
   unsigned	m_timeout = 1;
 
-  ThreadNames	m_names = ThreadNames(m_nThreads);
+  Threads	m_threads = Threads{m_nThreads + 1};
+
+  bool		m_ll = false;
 };
 
 class ZmAPI ZmScheduler {
@@ -343,6 +188,11 @@ public:
   ZmScheduler(ZmSchedParams params = ZmSchedParams());
   virtual ~ZmScheduler();
 
+  ZuInline const ZmSchedParams &params() const { return m_params; }
+protected:
+  ZuInline ZmSchedParams &params() { return m_params; }
+
+public:
   void start();
   void drain();
   void stop();
@@ -398,25 +248,25 @@ public:
 
   template <typename Fn>
   ZuInline void run(unsigned tid, Fn &&fn) {
-    ZmAssert(tid && tid <= m_nThreads);
+    ZmAssert(tid && tid <= m_params.nThreads());
     runWake_(&m_threads[tid - 1], ZmFn<>{ZuFwd<Fn>(fn)});
   }
   template <typename Fn>
   ZuInline void run_(unsigned tid, Fn &&fn) {
-    ZmAssert(tid && tid <= m_nThreads);
+    ZmAssert(tid && tid <= m_params.nThreads());
     run__(&m_threads[tid - 1], ZmFn<>{ZuFwd<Fn>(fn)});
   }
 
   template <typename Fn>
   ZuInline void invoke(unsigned tid, Fn &&fn) {
-    ZmAssert(tid && tid <= m_nThreads);
+    ZmAssert(tid && tid <= m_params.nThreads());
     Thread *thread = &m_threads[tid - 1];
     if (ZuLikely(ZmPlatform::getTID() == thread->tid)) { fn(); return; }
     runWake_(thread, ZmFn<>{ZuFwd<Fn>(fn)});
   }
   template <typename O, typename Fn>
   ZuInline void invoke(unsigned tid, ZmRef<O> o, Fn &&fn) {
-    ZmAssert(tid && tid <= m_nThreads);
+    ZmAssert(tid && tid <= m_params.nThreads());
     Thread *thread = &m_threads[tid - 1];
     if (ZuLikely(ZmPlatform::getTID() == thread->tid)) {
       fn(ZuMv(o));
@@ -426,7 +276,7 @@ public:
   }
   template <typename O, typename Fn>
   ZuInline void invoke(unsigned tid, O *o, Fn &&fn) {
-    ZmAssert(tid && tid <= m_nThreads);
+    ZmAssert(tid && tid <= m_params.nThreads());
     Thread *thread = &m_threads[tid - 1];
     if (ZuLikely(ZmPlatform::getTID() == thread->tid)) {
       fn(o);
@@ -438,31 +288,19 @@ public:
   ZuInline void threadInit(ZmFn<> fn) { m_threadInitFn = ZuMv(fn); }
   ZuInline void threadFinal(ZmFn<> fn) { m_threadFinalFn = ZuMv(fn); }
 
-  ZuInline ID id() const { return m_id; }
   ZuInline unsigned nWorkers() const { return m_nWorkers; }
-  ZuInline int workerID(unsigned i) const {
+  ZuInline unsigned workerID(unsigned i) const {
     if (ZuLikely(i < m_nWorkers))
       return (m_workers[i] - &m_threads[0]) + 1;
-    return -1;
+    return 0;
   }
-  ZuInline unsigned nThreads() const { return m_nThreads; }
-  ZuInline unsigned stackSize() const { return m_stackSize; }
-  ZuInline unsigned priority() const { return m_priority; }
-  ZuInline unsigned partition() const { return m_partition; }
-  ZuInline const ZmAffinity &affinity() const { return m_affinity; }
-  ZuInline ZmBitmap affinity(int id) const {
-    return (id >= 0 && id < (int)m_affinity.count()) ?
-      m_affinity[id] : ZmBitmap();
-  }
-  ZuInline const ZmBitmap &isolation() const { return m_isolation; }
-  ZuInline ZmTime quantum() const { return m_quantum; }
 
   inline unsigned size() const {
-    return m_threads[0].ring.size() * m_nThreads;
+    return m_threads[0].ring.size() * m_params.nThreads();
   }
   inline unsigned count() const {
     unsigned count = 0;
-    for (unsigned i = 0; i < m_nThreads; i++)
+    for (unsigned i = 0, n = m_params.nThreads(); i < n; i++)
       count += m_threads[i].ring.count();
     return count;
   }
@@ -470,27 +308,11 @@ public:
     return m_threads[tid - 1].ring;
   }
 
-  inline bool ll() const { return m_threads[0].ring.params().ll(); }
-  inline unsigned spin() const { return m_threads[0].ring.params().spin(); }
-  inline unsigned timeout() const
-    { return m_threads[0].ring.params().timeout(); }
-
-  void threadName(ZmThreadName &, unsigned tid) const;
-
-  inline const ZmThreadName &name(unsigned tid) const {
-    static ZmThreadName null;
-    if (!tid || tid > m_nThreads) return null;
-    return m_names[tid - 1];
-  }
-  template <typename S> inline void name(unsigned tid, S &&s) {
-    if (!tid || tid > m_nThreads) return;
-    m_names[tid - 1] = ZuFwd<S>(s);
-  }
   template <typename S> inline unsigned tid(const S &s) {
     if (unsigned tid = ZuBox0(unsigned)(s))
       return tid;
-    for (unsigned tid = 0, n = m_nThreads; tid < n; tid++)
-      if (s == m_names[tid]) return tid + 1;
+    for (unsigned tid = 0, n = m_params.nThreads(); tid <= n; tid++)
+      if (s == m_params.thread(tid).name()) return tid;
     return 0;
   }
 
@@ -523,16 +345,7 @@ private:
 
   void drained();
 
-  ID				m_id;
-  unsigned			m_nThreads = 0;
-  unsigned			m_stackSize = 0;
-  unsigned			m_priority = 0;
-  unsigned			m_partition = 0;
-  ZmAffinity			m_affinity;
-  ZmBitmap			m_isolation;
-  ZmTime			m_quantum;
-  
-  ZmThreadName			*m_names;
+  ZmSchedParams			m_params;
 
   ZmLock			m_stateLock;
     ZmCondition<ZmLock>		  m_stateCond;

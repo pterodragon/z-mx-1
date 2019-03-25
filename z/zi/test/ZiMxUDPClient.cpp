@@ -77,8 +77,9 @@ class Mx : public ZiMultiplex {
 public:
   Mx(ZiIP localIP, unsigned localPort, ZiIP remoteIP, unsigned remotePort,
       bool connect, const ZiCxnOptions &options, unsigned nMessages,
-      ZiMxParams params) :
-    ZiMultiplex(ZuMv(params)), m_localIP(localIP), m_localPort(localPort),
+      ZmSchedParams schedParams, ZiMxParams params) :
+    ZiMultiplex(ZuMv(schedParams), ZuMv(params)),
+    m_localIP(localIP), m_localPort(localPort),
     m_remoteIP(remoteIP), m_remotePort(remotePort),
     m_connect(connect), m_options(options), m_nMessages(nMessages) { }
   ~Mx() { }
@@ -153,6 +154,7 @@ int main(int argc, const char *argv[])
   bool connect = false;
   ZiCxnOptions options;
   unsigned nMessages = 1;
+  ZmSchedParams schedParams;
   ZiMxParams params;
 
   options.udp(true);
@@ -160,9 +162,11 @@ int main(int argc, const char *argv[])
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] != '-' || argv[i][2]) usage();
     switch (argv[i][1]) {
-      case 't':
-	{ int j; if ((j = atoi(argv[++i])) <= 0) usage(); params.nThreads(j); }
-	break;
+      case 't': {
+	int j;
+	if ((j = atoi(argv[++i])) <= 0) usage();
+	schedParams.nThreads(j);
+      } break;
       case 'n':
 	if ((nMessages = atoi(argv[++i])) <= 0) usage();
 	break;
@@ -269,7 +273,7 @@ int main(int argc, const char *argv[])
   ZeLog::start();
 
   Mx mx(localIP, localPort, remoteIP, remotePort, connect, options,
-      nMessages, ZuMv(params));
+      nMessages, ZuMv(schedParams), ZuMv(params));
 
   ZmTrap::sigintFn(ZmFn<>::Ptr<&Global::post>::fn());
   ZmTrap::trap();

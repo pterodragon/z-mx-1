@@ -37,7 +37,6 @@
 #include <ZuAssert.hpp>
 #include <ZuTraits.hpp>
 #include <ZuConversion.hpp>
-#include <ZuIfT.hpp>
 #include <ZuArray.hpp>
 #include <ZuArrayFn.hpp>
 #include <ZuCmp.hpp>
@@ -94,7 +93,6 @@ class ZuArrayN_ : public ZuArrayN__<T_>, public ZuArrayFn<T_, Cmp_> {
 public:
   typedef T_ T;
   typedef Cmp_ Cmp;
-  typedef ZuArrayFn<T, Cmp> Ops;
 
 private:
   template <typename U, typename R = void, typename V = T,
@@ -193,7 +191,7 @@ public:
   ZuInline unsigned size() const { return Base::m_size; }
   ZuInline unsigned length() const { return Base::m_length; }
 
-// reset to null string
+// reset to null
 
   ZuInline void null() { Base::m_length = 0; }
 
@@ -307,6 +305,7 @@ private:
 // comparison
 
   ZuInline bool operator !() const { return !Base::m_length; }
+  ZuOpBool
 
 protected:
   ZuInline bool same(const ZuArrayN_ &a) const { return this == &a; }
@@ -339,6 +338,8 @@ public:
   ZuInline bool operator <(const A &a) const { return cmp(a) < 0; }
   template <typename A>
   ZuInline bool operator <=(const A &a) const { return cmp(a) <= 0; }
+
+// hash
 
   ZuInline uint32_t hash() const {
     return ZuHash<ArrayN>::hash(*static_cast<const ArrayN *>(this));
@@ -631,10 +632,12 @@ struct ZuTraits<ZuArrayN<T_, N, Cmp> > :
     IsWString = ZuConversion<wchar_t, Elem>::Same,
     IsHashable = 1, IsComparable = 1
   };
+#if 0
   inline static T make(const T *data, unsigned length) {
     if (!data) return T();
     return T(data, length);
   }
+#endif
   inline static const Elem *data(const T &a) { return a.data(); }
   inline static unsigned length(const T &a) { return a.length(); }
 };

@@ -88,8 +88,7 @@ public:
   inline Ring &ring() { return m_ring; }
 
   void start() {
-    m_thread = ZmThread(0, 0,
-	ZmFn<>::Member<&Thread::operator()>::fn(this));
+    m_thread = ZmThread(0, ZmFn<>::Member<&Thread::operator()>::fn(this));
   }
   int synchronous(Work *work, ZeError *e = 0) {
     m_work = work;

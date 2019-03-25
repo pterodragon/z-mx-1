@@ -303,12 +303,14 @@ public:
     return ZuHash<StringN>::hash(*static_cast<const StringN *>(this));
   }
 
+#if 0
 // conversions
  
   template <typename S>
   ZuInline typename ToString<S, S>::T as() const {
     return ZuTraits<S>::make(data(), m_length);
   }
+#endif
 
 protected:
   uint16_t	m_size;
@@ -324,10 +326,12 @@ struct ZuStringN_Traits : public ZuGenericTraits<T_> {
     IsWString = ZuConversion<Elem, wchar_t>::Same,
     IsHashable = 1, IsComparable = 1
   };
+#if 0
   inline static T make(const Elem *data, unsigned length) {
     if (ZuUnlikely(!data)) return T();
     return T(data, length);
   }
+#endif
   inline static T &append(T &s, const Elem *data, unsigned length) {
     if (ZuLikely(data)) s.append(data, length);
     return s;

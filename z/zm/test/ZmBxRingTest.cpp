@@ -134,9 +134,9 @@ int App::main(int argc, char **argv)
       ZmThread r[readers], w[writers];
 
       for (unsigned i = 0; i < readers; i++)
-	r[i] = ZmThread(0, 0, ZmFn<>::Member<&App::reader>::fn(this));
+	r[i] = ZmThread(0, ZmFn<>::Member<&App::reader>::fn(this));
       for (unsigned i = 0; i < writers; i++)
-	w[i] = ZmThread(0, 0, ZmFn<>([this, i]() { this->writer(i); }));
+	w[i] = ZmThread(0, ZmFn<>([this, i]() { this->writer(i); }));
       for (unsigned i = 0; i < writers; i++)
 	if (!!w[i]) w[i].join();
       ring->eof();

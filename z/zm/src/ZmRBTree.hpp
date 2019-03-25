@@ -656,18 +656,20 @@ public:
     return ZuMv(*reinterpret_cast<NodeRef *>(&node));
   }
 
-  template <int Direction = ZmRBTreeGreaterEqual> auto iterator() {
+  template <int Direction = ZmRBTreeGreaterEqual>
+  inline auto iterator() {
     return Iterator<Direction>(*this);
   }
   template <int Direction, typename Index_>
-  auto iterator(Index_ &&index) {
+  inline auto iterator(Index_ &&index) {
     return Iterator<Direction>(*this, ZuFwd<Index_>(index));
   }
-  template <int Direction = ZmRBTreeGreaterEqual> auto readIterator() const {
+  template <int Direction = ZmRBTreeGreaterEqual>
+  inline auto readIterator() const {
     return ReadIterator<Direction>(*this);
   }
   template <int Direction, typename Index_>
-  auto readIterator(Index_ &&index) const {
+  inline auto readIterator(Index_ &&index) const {
     return ReadIterator<Direction>(*this, ZuFwd<Index_>(index));
   }
 

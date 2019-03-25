@@ -69,10 +69,7 @@ struct ZvThreadParams : public ZmThreadParams {
     priority(cf->getEnum<ZvThreadPriorities::Map>(
 	  "priority", false, ZmThreadPriority::Normal));
     partition(cf->getInt("partition", 0, ncpu - 1, false, 0));
-    if (ZuString cpuset = cf->get("cpuset")) {
-      m_cpuset = ZmBitmap();
-      m_cpuset.scan(cpuset);
-    }
+    cpuset(cf->get("cpuset"));
   }
 };
 

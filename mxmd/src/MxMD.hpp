@@ -428,8 +428,15 @@ private:
     if (*qty) m_data.qty = qty;
     m_data.flags = flags;
   }
-  void updateQty_(MxValue qty) {
+  inline void updateQty_(MxValue qty) {
     if (*qty) m_data.qty = qty;
+  }
+  inline void updateNDP(
+      MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP) {
+    if (pxNDP != oldPxNDP)
+      m_data.price = MxValNDP{m_data.price, oldPxNDP}.adjust(pxNDP);
+    if (qtyNDP != oldQtyNDP)
+      m_data.qty = MxValNDP{m_data.qty, oldQtyNDP}.adjust(qtyNDP);
   }
 
   ZuInline void pxLevel(MxMDPxLevel_ *l) { m_pxLevel = l; }
@@ -439,6 +446,7 @@ private:
 
   MxIDString		m_id;
   MxMDOrderData		m_data;
+
   uintptr_t		m_appData = 0;
 };
 
@@ -676,6 +684,8 @@ private:
 
   void deletedOrder_(MxMDOrder *order, MxDateTime transactTime);
 
+  void updateNDP(MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP);
+
   MxMDOBSide		*m_obSide;
   MxNDP			m_pxNDP;
   MxNDP			m_qtyNDP;
@@ -700,7 +710,6 @@ typedef ZmRBTree<MxMDPxLevel_,
 		  ZmRBTreeLock<ZmNoLock> > > > > > MxMDPxLevels;
 
 typedef MxMDPxLevels::Node MxMDPxLevel;
-
 
 // event handlers (callbacks)
 
@@ -916,6 +925,8 @@ private:
 
   void reset(MxDateTime transactTime);
 
+  void updateNDP(MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP);
+
   MxMDOrderBook		*m_orderBook;
   MxEnum		m_side;
   MxMDOBSideData	m_data;
@@ -1047,6 +1058,11 @@ public:
   ZuInline const ZmRef<MxMDInstrHandler> &handler() const { return m_handler; }
 
   template <typename T = uintptr_t>
+  ZuInline T libData() const { return (T)m_libData; }
+  template <typename T>
+  ZuInline void libData(T v) { m_libData = (uintptr_t)v; }
+
+  template <typename T = uintptr_t>
   ZuInline T appData() const { return (T)m_appData; }
   template <typename T>
   ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
@@ -1151,8 +1167,11 @@ private:
     if (m_handler) m_handler->deletedPxLevel(pxLevel, transactTime);
   }
 
+  void updateNDP(MxNDP pxNDP, MxNDP qtyNDP);
+
   void map(unsigned inRank, MxMDOrderBook *outOB);
 
+private:
   MxMDVenue			*m_venue;
   MxMDVenueShard		*m_venueShard;
 
@@ -1179,6 +1198,7 @@ private:
 
   ZmRef<MxMDInstrHandler>	m_handler;
 
+  uintptr_t			m_libData = 0;
   uintptr_t			m_appData = 0;
 };
 
@@ -1358,6 +1378,11 @@ public:
   }
 
   template <typename T = uintptr_t>
+  ZuInline T libData() const { return (T)m_libData; }
+  template <typename T>
+  ZuInline void libData(T v) { m_libData = (uintptr_t)v; }
+
+  template <typename T = uintptr_t>
   ZuInline T appData() const { return (T)m_appData; }
   template <typename T>
   ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
@@ -1390,6 +1415,7 @@ private:
 
   ZmRef<MxMDInstrHandler>  	m_handler;
 
+  uintptr_t			m_libData = 0;
   uintptr_t			m_appData = 0;
 };
 
@@ -1674,7 +1700,7 @@ inline ZmRef<MxMDOrder> MxMDVenueShard::delOrder(
 
 // shard
 
-class MxMDAPI MxMDShard : public ZuObject, public ZmShard<MxMDLib> {
+class MxMDAPI MxMDShard : public ZuObject, public ZmShard {
 friend class MxMDLib;
 
   struct Instruments_HeapID : public ZmHeapSharded {
@@ -1695,14 +1721,14 @@ friend class MxMDLib;
 		ZmHashLock<ZmNoLock,
 		  ZmHashHeapID<OrderBooks_HeapID> > > > > OrderBooks;
 
-  MxMDShard(MxMDLib *md, unsigned id, unsigned tid) :
-      ZmShard<MxMDLib>(md, tid), m_id(id) {
+  MxMDShard(MxMDLib *md, ZmScheduler *sched, unsigned id, unsigned tid) :
+      ZmShard(sched, tid), m_md(md), m_id(id) {
     m_instruments = new Instruments();
     m_orderBooks = new OrderBooks();
   }
 
 public:
-  ZuInline MxMDLib *md() const { return mgr(); }
+  ZuInline MxMDLib *md() const { return m_md; }
   ZuInline unsigned id() const { return m_id; }
 
   ZuInline ZmRef<MxMDInstrument> instrument(const MxInstrKey &key) const {
@@ -1732,14 +1758,15 @@ private:
     m_orderBooks->del(ob->key());
   }
 
+  MxMDLib		*m_md = nullptr;
   unsigned		m_id;
   ZmRef<Instruments>	m_instruments;
   ZmRef<OrderBooks>	m_orderBooks;
 };
 
-ZuInline MxMDLib *MxMDOrderBook::md() const { return shard()->mgr(); }
+ZuInline MxMDLib *MxMDOrderBook::md() const { return shard()->md(); }
 
-ZuInline MxMDLib *MxMDInstrument::md() const { return shard()->mgr(); }
+ZuInline MxMDLib *MxMDInstrument::md() const { return shard()->md(); }
 
 ZuInline unsigned MxMDVenueShard::id() const { return m_shard->id(); }
 
@@ -1805,12 +1832,13 @@ public:
   template <typename L>
   ZuInline typename ZuNotMutable<L>::T shard(unsigned i, L l) const {
     MxMDShard *shard = m_shards[i];
-    shard->invoke([l = ZuMv(l), shard]() { l(shard); });
+    m_scheduler->invoke(shard->tid(), [l = ZuMv(l), shard]() { l(shard); });
   }
   template <typename L>
   ZuInline typename ZuIsMutable<L>::T shard(unsigned i, L l) const {
     MxMDShard *shard = m_shards[i];
-    shard->invoke([l = ZuMv(l), shard]() mutable { l(shard); });
+    m_scheduler->invoke(shard->tid(),
+	[l = ZuMv(l), shard]() mutable { l(shard); });
   }
   template <typename ...Args>
   ZuInline void shardRun(unsigned i, Args &&... args)
@@ -1871,7 +1899,7 @@ private:
   typedef ZmPLock SubLock;
   typedef ZmGuard<SubLock> SubGuard;
 
-template <typename> friend class ZmShard;
+friend class ZmShard;
   template <typename ...Args>
   ZuInline void run(unsigned tid, Args &&... args)
     { m_scheduler->run(tid, ZuFwd<Args>(args)...); }
@@ -2150,6 +2178,11 @@ public:
   uintptr_t allVenues(ZmFn<MxMDVenue *>) const;
 
   template <typename T = uintptr_t>
+  ZuInline T libData() const { return (T)m_libData; }
+  template <typename T>
+  ZuInline void libData(T v) { m_libData = (uintptr_t)v; }
+
+  template <typename T = uintptr_t>
   ZuInline T appData() const { return (T)m_appData; }
   template <typename T>
   ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
@@ -2167,12 +2200,13 @@ private:
 
   RWLock		m_refDataLock;	// serializes updates to containers
 
+  int			m_tzOffset = 0;
+
   SubLock		m_subLock;
     ZmRef<MxMDLibHandler> m_handler;
 
-  int			m_tzOffset = 0;
-
-  uintptr_t		m_appData;
+  uintptr_t		m_libData = 0;
+  uintptr_t		m_appData = 0;
 };
 
 inline void MxMDFeed::connected() {

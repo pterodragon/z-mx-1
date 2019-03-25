@@ -57,7 +57,7 @@ public:
   void operator()();
 
   void start() {
-    m_thread = ZmThread(0, 0, ZmFn<>::Member<&Thread::operator()>::fn(this));
+    m_thread = ZmThread(0, ZmFn<>::Member<&Thread::operator()>::fn(this));
   }
   int synchronous(Work *work) {
     m_work = work;

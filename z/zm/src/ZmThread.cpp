@@ -82,8 +82,18 @@ struct HandleCloser : public ZmObject {
 };
 #endif
 
+struct ZmThread_Main {
+  ZmThread_Main() { is(true); }
+  bool is(bool b = false) {
+    thread_local bool _ = b;
+    return _;
+  }
+};
+static ZmThread_Main ZmThread_main;
+
 void ZmThreadContext_::init()
 {
+  m_main = ZmThread_main.is();
 #ifndef _WIN32
   m_pthread = pthread_self();
 #ifdef linux
@@ -106,44 +116,41 @@ void ZmThreadContext_::init()
 #endif /* !_WIN32 */
 }
 
-struct ZmThreadSelf {
-  ZmThreadSelf() : context(ZmThreadContext::self()) { }
-  ZmThreadContext *context;
-};
-static ZmThreadSelf mainSelf;
-bool ZmThreadContext::main() const
+void ZmThreadContext::init()
 {
-  return this == mainSelf.context;
-}
-
-void ZmThreadContext::name(ZmThreadName &s) const
-{
-  if (!m_mgr) {
+  ZmThreadContext_::init();
+  {
+#ifndef _WIN32
+    size_t n;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_getstacksize(&attr, &n);
+    m_stackSize = n;
+#else /* !_WIN32 */
+    PULONG low, high;
+    void GetCurrentThreadStackLimits(&low, &high);
+    m_stackSize = (high - low) * sizeof(ULONG);
+#endif /* !_WIN32 */
+  }
+  if (!m_name) {
     if (main())
-      s = "main";
+      m_name = "main";
     else
-      s = ZuBoxed(tid()); 
-  } else
-    m_mgr(s, this);
+      m_name = ZuBoxed(tid());
+  }
 }
 
 void ZmThreadContext::telemetry(ZmThreadTelemetry &data) const {
-  name(data.name);
+  data.name = m_name;
   data.tid = tid();
   data.stackSize = m_stackSize;
   data.cpuset = m_cpuset.uint64();
   data.cpuUsage = cpuUsage();
-  data.id = m_id;
+  data.sysPriority = sysPriority();
   data.priority = m_priority;
   data.partition = m_partition;
   data.main = this->main();
   data.detached = m_detached;
-}
-
-void ZmThreadContext::manage(ZmThreadMgr mgr, int id)
-{
-  m_mgr = ZuMv(mgr);
-  m_id = id;
 }
 
 void ZmThreadContext::prioritize(int priority)
@@ -173,7 +180,8 @@ void ZmThreadContext::prioritize()
 	"pthread_setschedparam() failed: " << ZuBoxed(r) << ' ' <<
 	strerror(r) << '\n' << std::flush;
     }
-  }
+  } else if (m_priority < 0)
+    m_priority = ZmThreadPriority::Normal;
 }
 #else /* !_WIN32 */
 void ZmThreadContext::prioritize()
@@ -184,8 +192,9 @@ void ZmThreadContext::prioritize()
     THREAD_PRIORITY_NORMAL,
     THREAD_PRIORITY_BELOW_NORMAL
   };
-  SetThreadPriority(
-      m_handle, p[m_priority < 0 ? 0 : m_priority > 3 ? 3 : m_priority]);
+  if (m_priority >= 0)
+    SetThreadPriority(
+	m_handle, p[m_priority > 3 ? 3 : m_priority]);
 }
 #endif /* !_WIN32 */
 
@@ -222,10 +231,8 @@ ZmAPI unsigned __stdcall ZmThread_start(void *c_)
   c->deref();
   c->init();
 #ifndef _WIN32
-  ZmThreadName name;
-  c->name(name);
 #ifdef linux
-  pthread_setname_np(c->m_pthread, name.data());
+  pthread_setname_np(c->m_pthread, c->name());
 #endif
   pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, 0);
   c->bind();
@@ -246,9 +253,9 @@ ZmAPI unsigned __stdcall ZmThread_start(void *c_)
 #endif
 }
 
-int ZmThread::run(ZmThreadMgr mgr, int id, ZmFn<> fn, ZmThreadParams params)
+int ZmThread::run(int id, ZmFn<> fn, ZmThreadParams params)
 {
-  m_context = new ZmThreadContext(ZuMv(mgr), id, fn, params);
+  m_context = new ZmThreadContext(id, fn, params);
   ZmREF(m_context);
 #ifndef _WIN32
   {

@@ -509,6 +509,9 @@ friend class ReadIterator;
     clean_();
   }
 
+  inline auto iterator() { return Iterator(*this); }
+  inline auto readIterator() const { return ReadIterator(*this); }
+
 protected:
   inline void startIterate(Iterator_ &iterator) {
     iterator.m_node = 0;

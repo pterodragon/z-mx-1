@@ -1827,11 +1827,11 @@ void ZdbAny::cache_(ZdbAnyPOD *pod)
   if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.push(pod);
 }
 
-void ZdbAny::cacheDel_(ZdbAnyPOD *pod)
+void ZdbAny::cacheDel_(ZdbRN rn)
 {
   if (!m_cache) return;
-  if (m_cache->del(pod->rn()) &&
-      m_cacheMode != ZdbCacheMode::FullCache) m_lru.del(pod);
+  if (ZmRef<Zdb_CacheNode> pod = m_cache->del(rn))
+    if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.del(pod);
 }
 
 void ZdbAny::abort(ZdbAnyPOD *pod) // aborts a push()
@@ -1861,10 +1861,9 @@ ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *prev)
   ZdbRN rn;
   {
     Guard guard(m_lock);
-    cacheDel_(prev);
     rn = m_allocRN++;
-    memcpy(pod->ptr(), prev->ptr(), m_dataSize);
   }
+  memcpy(pod->ptr(), prev->ptr(), m_dataSize);
   pod->update(rn, prev->rn(), ZdbRange{0, m_dataSize});
   return pod;
 }
@@ -1876,6 +1875,7 @@ void ZdbAny::putUpdate(ZdbAnyPOD *pod, bool replace)
   pod->commit();
   {
     Guard guard(m_lock);
+    cacheDel_(pod->prevRN());
     cache(pod);
   }
   int op = replace ? ZdbOp::Update : ZdbOp::New;
@@ -1889,10 +1889,10 @@ void ZdbAny::del(ZdbAnyPOD *pod)
   ZdbRN rn;
   {
     Guard guard(m_lock);
-    cacheDel_(pod);
+    cacheDel_(pod->rn());
     rn = m_allocRN++;
-    pod->update(rn, pod->rn(), ZdbRange{}, ZdbDeleted);
   }
+  pod->update(rn, pod->rn(), ZdbRange{}, ZdbDeleted);
   this->copy(pod, ZdbOp::Delete);
   m_env->write(pod, Zdb_Msg::Rep, ZdbOp::Delete, false);
 }
@@ -1908,7 +1908,7 @@ void ZdbAny::purge(ZdbRN minRN)
     Guard guard(m_lock);
     if (rn >= m_allocRN) return;
     if (ZmRef<ZdbAnyPOD> pod = get__(rn)) {
-      cacheDel_(pod);
+      cacheDel_(rn);
       m_minRN = rn;
       guard.unlock();
       pod->del();

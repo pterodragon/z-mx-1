@@ -120,9 +120,9 @@ friend class Connection;
 public:
   Mx(ZiIP ip, unsigned port, unsigned nAccepts, const ZiCxnOptions &options,
       unsigned nConnections, unsigned maxSend, int reconnInterval,
-      ZiMxParams params) :
-    ZiMultiplex(ZuMv(params)), m_ip(ip), m_port(port),
-    m_nAccepts(nAccepts), m_options(options),
+      ZmSchedParams schedParams, ZiMxParams params) :
+    ZiMultiplex(ZuMv(schedParams), ZuMv(params)),
+    m_ip(ip), m_port(port), m_nAccepts(nAccepts), m_options(options),
     m_maxDisconnects(nConnections), m_maxSend(maxSend),
     m_reconnInterval(reconnInterval), m_nDisconnects(0) { }
   ~Mx() { }
@@ -215,6 +215,7 @@ int main(int argc, char **argv)
   int nAccepts = 1;
   int maxSend = 0;
   int reconnInterval = 1;
+  ZmSchedParams schedParams;
   ZiMxParams params;
 
   for (int i = 1; i < argc; i++) {
@@ -237,9 +238,11 @@ int main(int argc, char **argv)
       break;
     }
     switch (argv[i][1]) {
-      case 't':
-	{ int j; if ((j = atoi(argv[++i])) <= 0) usage(); params.nThreads(j); }
-	break;
+      case 't': {
+	int j;
+	if ((j = atoi(argv[++i])) <= 0) usage();
+	schedParams.nThreads(j);
+      } break;
       case 'c':
 	if ((nConnections = atoi(argv[++i])) <= 0) usage();
 	break;
@@ -308,7 +311,7 @@ int main(int argc, char **argv)
   ZeLog::start();
 
   Mx mx(ip, port, nAccepts, options, nConnections, maxSend,
-      reconnInterval, ZuMv(params));
+      reconnInterval, ZuMv(schedParams), ZuMv(params));
 
   ZmTrap::sigintFn(ZmFn<>::Ptr<&Global::post>::fn());
   ZmTrap::trap();

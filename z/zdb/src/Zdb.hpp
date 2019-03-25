@@ -211,7 +211,7 @@ private:
 typedef ZmList<Zdb_File_,
 	  ZmListObject<ZmPolymorph,
 	    ZmListNodeIsItem<true,
-	      ZmListHeapID<ZmNoHeap,
+	      ZmListHeapID<ZuNull,
 		ZmListLock<ZmNoLock> > > > > Zdb_FileLRU;
 typedef Zdb_FileLRU::Node Zdb_FileLRUNode;
 
@@ -265,7 +265,7 @@ struct ZdbTrailer {
 typedef ZmList<ZmPolymorph,
 	  ZmListObject<ZmPolymorph,
 	    ZmListNodeIsItem<true,
-	      ZmListHeapID<ZmNoHeap,
+	      ZmListHeapID<ZuNull,
 		ZmListLock<ZmNoLock> > > > > ZdbLRU;
 typedef ZdbLRU::Node ZdbLRUNode;
 
@@ -281,7 +281,7 @@ typedef ZmHash<ZdbLRUNode,
 	  ZmHashObject<ZmPolymorph,
 	    ZmHashNodeIsKey<true,
 	      ZmHashIndex<ZdbLRUNode_RNAccessor,
-		ZmHashHeapID<ZmNoHeap,
+		ZmHashHeapID<ZuNull,
 		  ZmHashID<Zdb_Cache_ID,
 		    ZmHashLock<ZmNoLock> > > > > > > Zdb_Cache;
 typedef Zdb_Cache::Node Zdb_CacheNode;
@@ -593,15 +593,15 @@ public:
     typedef ZuStringN<28> Name;
 
     Path	path;
-    Name	name;
+    Name	name;		// primary key
     uint64_t	fileSize;
     uint64_t	minRN;
-    uint64_t	allocRN;
+    uint64_t	allocRN;	// graphable
     uint64_t	fileRN;
-    uint64_t	cacheLoads;
-    uint64_t	cacheMisses;
-    uint64_t	fileLoads;
-    uint64_t	fileMisses;
+    uint64_t	cacheLoads;	// graphable (*)
+    uint64_t	cacheMisses;	// graphable (*)
+    uint64_t	fileLoads;	// graphable
+    uint64_t	fileMisses;	// graphable
     uint32_t	id;
     uint32_t	preAlloc;
     uint32_t	recSize;
@@ -664,7 +664,7 @@ private:
 
   void cache(ZdbAnyPOD *pod);
   void cache_(ZdbAnyPOD *pod);
-  void cacheDel_(ZdbAnyPOD *pod);
+  void cacheDel_(ZdbRN rn);
 
   ZdbEnv			*m_env;
   ZdbConfig			*m_config = nullptr;
@@ -779,13 +779,13 @@ public:
 
   static const char *stateName(int);
 
-  struct Telemetry {
+  struct Telemetry { // not graphable
     ZiIP	ip;
     uint32_t	id;
     uint32_t	priority;
     uint16_t	port;
     uint8_t	voted;
-    uint8_t	state;
+    uint8_t	state; // RAG: Instantiated - Red; Active - Green; * - Amber
   };
 
   void telemetry(Telemetry &data) const;
@@ -1084,24 +1084,24 @@ public:
       if (m_dbs[i]) l(m_dbs[i]);
   }
 
-  struct Telemetry {
-    uint32_t		nCxns;
-    uint32_t		heartbeatFreq;
-    uint32_t		heartbeatTimeout;
-    uint32_t		reconnectFreq;
-    uint32_t		electionTimeout;
-    uint32_t		self;		// host ID 
-    uint32_t		master;		// ''
-    uint32_t		prev;		// ''
-    uint32_t		next;		// ''
-    uint16_t		writeThread;
-    uint8_t		nHosts;
-    uint8_t		nPeers;
-    uint8_t		nDBs;
-    uint8_t		state;		// same as hosts[hostID].state
-    uint8_t		active;
-    uint8_t		recovering;
-    uint8_t		replicating;
+  struct Telemetry { // not graphable
+    uint32_t	nCxns;
+    uint32_t	heartbeatFreq;
+    uint32_t	heartbeatTimeout;
+    uint32_t	reconnectFreq;
+    uint32_t	electionTimeout;
+    uint32_t	self;		// primary key - host ID 
+    uint32_t	master;		// ''
+    uint32_t	prev;		// ''
+    uint32_t	next;		// ''
+    uint16_t	writeThread;
+    uint8_t	nHosts;
+    uint8_t	nPeers;
+    uint8_t	nDBs;
+    uint8_t	state;		// same as hosts[hostID].state
+    uint8_t	active;
+    uint8_t	recovering;
+    uint8_t	replicating;
   };
 
   void telemetry(Telemetry &data) const;

@@ -69,6 +69,7 @@ typedef ZuBox<long double> MxFloat;
 typedef ZuBox<double> MxFloat;
 #endif
 typedef ZtDate MxDateTime;
+#define MxNow ZtDateNow
 typedef ZmTime MxDeltaTime;
 typedef ZtEnum MxEnum;
 typedef ZuBox0(uint32_t) MxFlags;
@@ -212,6 +213,7 @@ struct MxValNDP {
 
   // adjust to another NDP
   ZuInline MxValue adjust(MxNDP ndp) {
+    if (ZuLikely(ndp == this->ndp)) return value;
     return (MxValNDP{1.0, ndp} * (*this)).value;
   }
 

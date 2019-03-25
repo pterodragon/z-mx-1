@@ -299,8 +299,8 @@ struct ZmHashHeapID : public NTP {
   typedef HeapID_ ID;
 };
 template <class NTP>
-struct ZmHashHeapID<ZmNoHeap, NTP> : public NTP {
-  typedef ZmNoHeap HeapID;
+struct ZmHashHeapID<ZuNull, NTP> : public NTP {
+  typedef ZuNull HeapID;
 };
 
 // ZmHashID - the hash ID (if the heap ID is shared)
@@ -863,15 +863,15 @@ private:
   }
 
 public:
-  auto iterator() { return Iterator(*this); }
+  inline auto iterator() { return Iterator(*this); }
   template <typename Index_>
-  auto iterator(Index_ &&index) {
+  inline auto iterator(Index_ &&index) {
     return IndexIterator(*this, ZuFwd<Index_>(index));
   }
 
-  auto readIterator() const { return ReadIterator(*this); }
+  inline auto readIterator() const { return ReadIterator(*this); }
   template <typename Index_>
-  auto readIterator(Index_ &&index) const {
+  inline auto readIterator(Index_ &&index) const {
     return ReadIndexIterator(*this, ZuFwd<Index_>(index));
   }
 

@@ -36,7 +36,7 @@ QChartView* ChartViewFactory::getChartView(const int a_mxType, const QString& a_
     // create the chart
     QChart *l_chart = new QChart();
     l_chart->setTitle(a_mxTelemetryInstanceName + " Chart");
-    BasicChartView* l_result;
+    BasicChartView* l_result = nullptr;
 
     switch (a_mxType)
     {
@@ -74,11 +74,11 @@ QChartView* ChartViewFactory::getChartView(const int a_mxType, const QString& a_
         l_result = new BasicChartView(l_chart, MxTelemetry::Type::DB);
         break;
     default:
-        delete l_result;
-        l_result = nullptr;
         qWarning() << "unknown MxTelemetry::Type:" << a_mxType<< "request, returning...";
+        return l_result;
         break;
     }
+    l_result->setRenderHint(QPainter::Antialiasing);
     return l_result;
 }
 

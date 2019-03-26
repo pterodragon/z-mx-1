@@ -71,7 +71,23 @@ protected:
 
 public:
 
-    // must correspond to struct index
+    /**
+     * @brief The ZmHeapTelemetryStructIndex enum corresponds to following:
+     *
+     *  struct ZmHeapTelemetry { // graphable
+     *    ZmIDString	id;         // primary key
+     *    uint64_t	cacheSize;      // static
+     *    uint64_t	cpuset;         // static
+     *    uint64_t	cacheAllocs;	// dynamic(*)
+     *    uint64_t	heapAllocs;     // dynamic(*)
+     *    uint64_t	frees;          // dynamic
+     *    uint32_t	size;           // static
+     *    uint16_t	partition;      // static
+     *    uint8_t	sharded;        // static
+     *    uint8_t	alignment;      // static
+     *  };
+     *
+     */
     enum ZmHeapTelemetryStructIndex {e_id, e_cacheSize, e_cpuset, e_cacheAllocs, e_heapAllocs,
                                      e_frees, e_size, e_partition, e_sharded, e_alignment};
 

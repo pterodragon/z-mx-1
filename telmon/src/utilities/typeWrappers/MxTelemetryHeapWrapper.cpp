@@ -43,7 +43,7 @@ MxTelemetryHeapWrapper::~MxTelemetryHeapWrapper()
 
 void MxTelemetryHeapWrapper::initActiveDataSet() noexcept
 {
-    // 0=size, 1=alignment
+    // 0=cacheAllocs, 1=heapAllocs
     m_activeDataSet = {0, 1};
 }
 
@@ -203,24 +203,6 @@ void MxTelemetryHeapWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLink
 void MxTelemetryHeapWrapper::initChartList() noexcept
 {
     int i = 0;
-    m_chartList->insert(i, "size");
-    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_size);
-
-    m_chartList->insert(i, "alignment");
-    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_alignment);
-
-    m_chartList->insert(i, "partition");
-    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_partition);
-
-    m_chartList->insert(i, "sharded");
-    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_sharded);
-
-    m_chartList->insert(i, "cacheSize");
-    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_cacheSize);
-
-    m_chartList->insert(i, "cpuset");
-    m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_cpuset);
-
     m_chartList->insert(i, "cacheAllocs");
     m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_cacheAllocs);
 
@@ -229,9 +211,6 @@ void MxTelemetryHeapWrapper::initChartList() noexcept
 
     m_chartList->insert(i, "frees");
     m_chartPriorityToStructIndex->insert(i++, ZmHeapTelemetryStructIndex::e_frees);
-
-    m_chartList->insert(i, "allocated");
-    m_chartPriorityToStructIndex->insert(i++, OTHER_ACTIONS::HEAP_MXTYPE_CALCULATE_ALLOCATED);
 
     // extra
     m_chartList->insert(i++, "none");

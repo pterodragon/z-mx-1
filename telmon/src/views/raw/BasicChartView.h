@@ -41,58 +41,7 @@ public:
     static const int NUMBER_OF_Y_AXIS = 2;
 
 
-
-    /**
-     * @brief implement in each inherting class to get type
-     * @param a_val
-     * @return
-     */
-    //std::string virtual localTypeValueToString(const unsigned int a_val) const noexcept = 0;
-
-
-    /**
-     * @brief used to check for each sub class if given type is none
-     *        because each subclass underlying telemetry struct is of different size
-     * @param a_activeType
-     * @return
-     */
-    //bool virtual isGivenTypeNotUsed(const unsigned int a_activeType) const noexcept = 0;
-
-
-    /**
-     * @brief get specific msg sub field according to request
-     * @param a_mxTelemetryMsg
-     * @param location
-     * @return qreal because QPointF gets qreal as params
-     *         Notice: qreal is QT typedef for double
-     */
-    //qreal virtual getData(void* const a_mxTelemetryMsg, const unsigned int location) const noexcept = 0;
-
-
-    // denotes the time range <--> amount of points
-    qreal getVerticalAxesRange() const noexcept;
-
-
     void setUpdateFunction( std::function<void(BasicChartView* a_this, void* a_mxTelemetryMsg)>   a_lambda );
-
-
-    /**
-     * @brief check if current points series is exceeding the amount
-     * @return true/false accordingly
-     */
-    bool isExceedingLimits(const unsigned int a_series) const noexcept;
-
-
-    void removeFromSeriesFirstPoint(const unsigned int a_series) noexcept;
-
-
-    void shiftLeft(const unsigned int a_series) noexcept;
-
-    /**
-     * @brief addPoint to the !end! of given series
-     * @param lPoint
-     */
-    void appendPoint(const QPointF& a_point, const unsigned int a_series) noexcept;
 
 
     /**
@@ -103,12 +52,32 @@ public:
     int getActiveDataType(const unsigned int a_series) const noexcept;
 
 
+    /**
+     * @brief set to true/false to start/stop drawing the chart
+     * @param a_status
+     */
+    void setDrawChartFlag(const bool a_status) noexcept {m_drawChartFlag = a_status;}
+
+
+    /**
+     * @brief get wheter the widget is drawing chart or not
+     * @return
+     */
+    bool getDrawChartFlag() const noexcept {return m_drawChartFlag;}
+
+
+    void setXAxisSpan(const int) noexcept;
+
+
+    int getXAxisSpan() const noexcept {return static_cast<int>(m_axisArray[CHART_AXIS::X]->max());}
+
+
 public slots:
     void updateData(ZmHeapTelemetry a_pair);
     void updateData(ZmHashTelemetry a_pair);
     void updateData(ZmThreadTelemetry a_pair);
     void updateData(ZiMxTelemetry a_pair);
-    void updateData(ZiCxnTelemetry a_pair); // SOCKET
+    void updateData(ZiCxnTelemetry a_pair);     // SOCKET
     void updateData(MxTelemetry::Queue a_pair); // inside MxTelemetry
     void updateData(MxTelemetry::Engine a_pair);
     void updateData(MxAnyLink::Telemetry);
@@ -118,7 +87,6 @@ public slots:
 
 
 protected:
-
 
     /**
      * @brief init the menu bar for the dock
@@ -142,12 +110,14 @@ protected:
      */
     void changeSeriesData(const unsigned int a_series, const int data_type) noexcept;
 
+
     /**
      * @brief used to set update data function
      * This function is generic and compatible with all sub classess
      * if sub classes implement required functions
      */
     void setDefaultUpdateDataFunction() noexcept;
+
 
     QValueAxis& getAxes(const unsigned int a_axe);
     const QValueAxis& getAxes(const unsigned int a_axe) const;
@@ -158,20 +128,6 @@ protected:
     // for now
     //QSize virtual sizeHint() const override final;
 
-    // update data
-    std::function<void(BasicChartView* a_this, void* a_mxTelemetryMsg)> m_lambda;
-
-    // array storing the axes, see the enum for understaind why 3
-    QValueAxis* m_axisArray[3];
-
-    // array for storing the series, see the enum for understaind why 2
-    QSplineSeries* m_seriesArray[2];
-
-
-    void initSeries() noexcept;
-
-    void updateAxisMaxRange(const unsigned int a_axis, const double a_data) noexcept;
-
     // member for menu
     QVBoxLayout *m_boxLayout;
     QMenuBar* m_menuBar;
@@ -179,16 +135,110 @@ protected:
     QMenu* m_rightSeriesMenu;
     QMenu* m_leftSeriesMenu;
 
+
+    // addnig mouse move event functionialy
+    void mouseMoveEvent(QMouseEvent * event) override final;
+    void mousePressEvent(QMouseEvent * event) override final;
+    void mouseReleaseEvent(QMouseEvent * event) override final;
+
 private:
+
+    /**
+     * @brief set reference X coordiante
+     * @param a_x
+     */
+    void setReferenceX(const int a_x) noexcept {m_xReferenceCoordiante = a_x;}
+    int getReferenceX() const noexcept {return m_xReferenceCoordiante;}
+
+
+    /**
+     * @brief repaintChart
+     */
+    void repaintChart() noexcept;
+
+
+    /**
+     * @brief isSeriesIsNull
+     * @param a_series
+     * @return
+     */
+    bool isSeriesIsNull(const int a_series) const noexcept;
+
+
+    void initSeries() noexcept;
+
+
+    // update data
+    std::function<void(BasicChartView* a_this, void* a_mxTelemetryMsg)> m_lambda;
+
+
+    // array storing the axes
+    QValueAxis* m_axisArray[3];
+
+
+    // array for storing the series
+    QSplineSeries* m_seriesArray[2];
+
+
+    void updateVerticalAxisRange(const double a_data) noexcept;
+
+
     // will be used to access the right MxTelemetryType via factory
     int m_associatedTelemetryType;
 
     std::array<int, NUMBER_OF_Y_AXIS> m_activeData;
 
+
     // represents the string names ordered by priority
-    const QVector<QString>& m_db;
+    const QVector<QString>& m_chartFields;
+
+
+    // Data strucutre to hold all chart points
+    QVector<QVector<double>*>* m_chartDataContainer;
+
+
+    /**
+     * @brief initChartDataContainer
+     */
+    void initChartDataContainer() const noexcept;
+
+
+    int m_delayIndicator; // indicator of delay
+
+
+    /**
+     * @brief functio update the local data container with recent telemetryMsg
+     * @param a_mxTelemetryMsg
+     */
+    void addDataToChartDataContainer(void* a_mxTelemetryMsg) const noexcept;
+
+
+    // indicates if we should draw the chart or not
+    // that is done by updating the relevant series
+    bool m_drawChartFlag;
+
+    // used to store to above varaible in some cases
+    // should be used only by mouseReleaseEvent() and mouseReleaseEvent()
+    bool m_drawChartFlagStoreVariable;
+
+    int m_xReferenceCoordiante;
+
+    void handleMouseEventHelper(const int) noexcept;
 };
 
 #endif // BASICCHARTVIEW_H
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

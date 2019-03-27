@@ -1840,6 +1840,8 @@ public:
     m_scheduler->invoke(shard->tid(),
 	[l = ZuMv(l), shard]() mutable { l(shard); });
   }
+
+  // shardRun(), shardInvoke() do not inject the initial MxMDShard * parameter
   template <typename ...Args>
   ZuInline void shardRun(unsigned i, Args &&... args)
     { m_shards[i]->run(ZuFwd<Args>(args)...); }

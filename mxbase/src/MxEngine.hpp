@@ -150,6 +150,8 @@ protected:
 public:
   ZuInline int state() const { return m_state.load_(); }
 
+  // display sequence:
+  //   id, state, reconnects, rxSeqNo, txSeqNo
   struct Telemetry { // not graphable
     MxID	id;
     uint64_t	rxSeqNo;
@@ -301,12 +303,12 @@ public:
     m_app = app;
     m_id = cf->get("id", true);
     m_mx = mx;
-    if (const auto &name = cf->get("rxThread"))
-      m_rxThread = mx->tid(name);
+    if (ZuString s = cf->get("rxThread"))
+      m_rxThread = mx->tid(s);
     else
       m_rxThread = mx->rxThread();
-    if (const auto &name = cf->get("txThread"))
-      m_txThread = mx->tid(name);
+    if (ZuString s = cf->get("txThread"))
+      m_txThread = mx->tid(s);
     else
       m_txThread = mx->txThread();
   }
@@ -370,6 +372,9 @@ public:
 
   ZuInline void log(MxMsgID id, MxTraffic traffic) { mgr()->log(id, traffic); }
 
+  // display sequence:
+  //   id, state, nLinks, up, down, disabled, transient, reconn, failed,
+  //   mxID, rxThread, txThread
   struct Telemetry { // not graphable
     MxID	id;		// primary key
     MxID	mxID;

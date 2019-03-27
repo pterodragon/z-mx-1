@@ -45,11 +45,7 @@ public:
   }
 #endif
 
-  void print_(ZmStream &s) const {
-    s << "regular expression error \"" << m_error.message <<
-      "\" code: " << ZuBoxed(m_error.code) <<
-      " offset: " << ZuBoxed(m_error.offset);
-  }
+  void print_(ZmStream &s) const { s << m_error; }
 
 private:
   ZtRegex::Error	m_error;

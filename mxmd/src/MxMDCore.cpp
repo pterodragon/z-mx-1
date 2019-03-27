@@ -74,29 +74,29 @@ private:
 
 void MxMDCore::addVenueMapping_(ZuAnyPOD *pod)
 {
-  auto data = pod->as<MxMDVenueMapCSV::Data>();
+  const auto &data = pod->as<MxMDVenueMapCSV::Data>();
   addVenueMapping(MxMDVenueMapKey(data.inVenue, data.inSegment),
       MxMDVenueMapping{data.outVenue, data.outSegment, data.inRank});
 }
 
 void MxMDCore::addTickSize_(ZuAnyPOD *pod)
 {
-  MxMDTickSizeCSV::Data *data = (MxMDTickSizeCSV::Data *)(pod->ptr());
-  ZmRef<MxMDVenue> venue = this->venue(data->venue);
-  if (!venue) throw ZtString() << "unknown venue: " << data->venue;
-  ZmRef<MxMDTickSizeTbl> tbl = venue->addTickSizeTbl(data->id, data->pxNDP);
-  tbl->addTickSize(data->minPrice, data->maxPrice, data->tickSize);
+  const auto &data = pod->as<MxMDTickSizeCSV::Data>();
+  ZmRef<MxMDVenue> venue = this->venue(data.venue);
+  if (!venue) throw ZtString() << "unknown venue: " << data.venue;
+  ZmRef<MxMDTickSizeTbl> tbl = venue->addTickSizeTbl(data.id, data.pxNDP);
+  tbl->addTickSize(data.minPrice, data.maxPrice, data.tickSize);
 }
 
 void MxMDCore::addInstrument_(ZuAnyPOD *pod)
 {
-  MxMDInstrumentCSV::Data *data = (MxMDInstrumentCSV::Data *)(pod->ptr());
-  MxInstrKey key{data->id, data->venue, data->segment};
-  MxMDInstrHandle instrHandle = instrument(key, data->shard);
+  const auto &data = pod->as<MxMDInstrumentCSV::Data>();
+  MxInstrKey key{data.id, data.venue, data.segment};
+  MxMDInstrHandle instrHandle = instrument(key, data.shard);
 
   thread_local ZmSemaphore sem;
-  instrHandle.invokeMv([key, refData = data->refData,
-      transactTime = data->transactTime, sem = &sem](
+  instrHandle.invokeMv([key, refData = data.refData,
+      transactTime = data.transactTime, sem = &sem](
 	MxMDShard *shard, ZmRef<MxMDInstrument> instr) {
     shard->addInstrument(ZuMv(instr), key, refData, transactTime);
     sem->post();
@@ -106,17 +106,17 @@ void MxMDCore::addInstrument_(ZuAnyPOD *pod)
 
 void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
 {
-  MxMDOrderBookCSV::Data *data = (MxMDOrderBookCSV::Data *)(pod->ptr());
+  const auto &data = pod->as<MxMDOrderBookCSV::Data>();
   MxInstrKey instrKey{
-    data->instruments[0], data->instrVenues[0], data->instrSegments[0]};
+    data.instruments[0], data.instrVenues[0], data.instrSegments[0]};
   MxMDInstrHandle instrHandle = instrument(instrKey);
   if (!instrHandle) throw ZtString() << "unknown instrument: " << instrKey;
-  ZmRef<MxMDVenue> venue = this->venue(data->venue);
-  if (!venue) throw ZtString() << "unknown venue: " << data->venue;
+  ZmRef<MxMDVenue> venue = this->venue(data.venue);
+  if (!venue) throw ZtString() << "unknown venue: " << data.venue;
   ZmRef<MxMDTickSizeTbl> tbl =
-    venue->addTickSizeTbl(data->tickSizeTbl, data->pxNDP);
+    venue->addTickSizeTbl(data.tickSizeTbl, data.pxNDP);
   instrHandle.invokeMv(
-      [data = *data, venue = ZuMv(venue), tbl = ZuMv(tbl)](
+      [data, venue = ZuMv(venue), tbl = ZuMv(tbl)](
 	MxMDShard *shard, ZmRef<MxMDInstrument> instr) {
     if (data.legs == 1) {
       MxID venueID = data.instrVenues[0];
@@ -177,10 +177,14 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
       "mx {\n"
       "  core {\n"
       "    nThreads 4\n"	// thread IDs are 1-based
-      "    isolation 1-3\n"	// leave thread 4 for miscellaneous
-      "    names rx, tx, record, misc\n"
-      "    rxThread rx\n"	// I/O Rx
-      "    txThread tx\n"	// I/O Tx
+      "    threads {\n"
+      "      1 { name ioRx isolated 1 }\n"
+      "      2 { name ioTx isolated 1 }\n"
+      "      3 { name record isolated 1 }\n"
+      "      4 { name misc }\n"
+      "    }\n"
+      "    rxThread ioRx\n"	// I/O Rx
+      "    txThread ioTx\n"	// I/O Tx
       "  }\n"
       "}\n"
       "record {\n"
@@ -239,8 +243,8 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
 	    if (schedInitFn) schedInitFn(mx);
 	    if (mx->start() != Zi::OK) {
 	      failed = true;
-	      ZeLOG(Fatal, ZtString() << node->key()->id() <<
-		  " multiplexer start failed");
+	      ZeLOG(Fatal, ZtString() << node->key()->params().id() <<
+		  " - multiplexer start failed");
 	      break;
 	    }
 	  }

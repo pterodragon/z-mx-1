@@ -1881,8 +1881,8 @@ void ZiConnection::close_2()
   executedDisconnect();
 }
 
-ZiMultiplex::ZiMultiplex(ZmSchedParams schedParams, ZiMxParams mxParams) :
-  ZmScheduler(ZuMv(schedParams)),
+ZiMultiplex::ZiMultiplex(ZiMxParams mxParams) :
+  ZmScheduler(ZuMv(mxParams.scheduler())),
   m_stopping(0), m_drain(false),
   m_rxThread(mxParams.rxThread()),
   m_nAccepts(0),
@@ -1914,9 +1914,9 @@ ZiMultiplex::ZiMultiplex(ZmSchedParams schedParams, ZiMxParams mxParams) :
   m_cxns = new CxnHash(ZmHashParams().bits(8).loadFactor(1).cBits(4).
       init(mxParams.cxnHash()));
   if (!params().thread(m_rxThread).name())
-    params().thread(m_rxThread).name("ioRx");
+    params_().thread(m_rxThread).name("ioRx");
   if (!params().thread(m_txThread).name())
-    params().thread(m_txThread).name("ioTx");
+    params_().thread(m_txThread).name("ioTx");
 }
 
 ZiMultiplex::~ZiMultiplex()

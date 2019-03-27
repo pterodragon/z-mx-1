@@ -30,8 +30,7 @@ static JavaVM *jvm = 0;
 class TLS : public ZmObject {
 public:
   inline TLS() {
-    ZmThreadName name;
-    ZmThreadContext::self()->name(name);
+    ZmThreadName name = ZmThreadContext::self()->name();
     JavaVMAttachArgs args{
       JNI_VERSION_1_4, const_cast<char *>(name.data()), 0 };
     jvm->AttachCurrentThread((void **)&m_env, &args);

@@ -261,7 +261,7 @@ void MxEngine::final()
 void MxEngine::telemetry(Telemetry &data) const
 {
   data.id = m_id;
-  data.mxID = m_mx->id();
+  data.mxID = m_mx->params().id();
   {
     StateReadGuard guard(m_stateLock);
     data.down = m_down;

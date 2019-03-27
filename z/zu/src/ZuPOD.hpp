@@ -36,8 +36,14 @@
 
 class ZuAnyPOD_Data {
 public:
-  ZuInline const void *ptr() const { return this; }
-  ZuInline void *ptr() { return this; }
+  template <typename T = void> ZuInline const T *ptr() const {
+    const T *ZuMayAlias(ptr) = (const T *)this;
+    return ptr;
+  }
+  template <typename T = void> ZuInline T *ptr() {
+    T *ZuMayAlias(ptr) = (T *)this;
+    return ptr;
+  }
 
   template <typename T> ZuInline const T &as() const {
     const T *ZuMayAlias(ptr) = (const T *)this;
@@ -89,8 +95,10 @@ public:
   ZuPOD_(Args &&... args) :
     ZuAnyPOD_<Base>(sizeof(T), ZuFwd<Args>(args)...) { }
 
-  ZuInline const T *ptr() const { return &(this->template as<T>()); }
-  ZuInline T *ptr() { return &(this->template as<T>()); }
+  template <typename T = T_>
+  ZuInline const T *ptr() const { return ZuAnyPOD_<Base>::template ptr<T>(); }
+  template <typename T = T_>
+  ZuInline T *ptr() { return ZuAnyPOD_<Base>::template ptr<T>(); }
 
   ZuInline const T &data() const { return this->template as<T>(); }
   ZuInline T &data() { return this->template as<T>(); }
@@ -116,8 +124,10 @@ public:
   ZuPOD_(Args &&... args) :
     ZuAnyPOD_<Base>(sizeof(T), ZuFwd<Args>(args)...) { }
 
-  ZuInline const T *ptr() const { return &(this->template as<T>()); }
-  ZuInline T *ptr() { return &(this->template as<T>()); }
+  template <typename T = T_>
+  ZuInline const T *ptr() const { return ZuAnyPOD_<Base>::template ptr<T>(); }
+  template <typename T = T_>
+  ZuInline T *ptr() { return ZuAnyPOD_<Base>::template ptr<T>(); }
 
   ZuInline const T &data() const { return this->template as<T>(); }
   ZuInline T &data() { return this->template as<T>(); }

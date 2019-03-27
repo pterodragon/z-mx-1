@@ -190,7 +190,7 @@ public:
 
   ZuInline const ZmSchedParams &params() const { return m_params; }
 protected:
-  ZuInline ZmSchedParams &params() { return m_params; }
+  ZuInline ZmSchedParams &params_() { return m_params; }
 
 public:
   void start();

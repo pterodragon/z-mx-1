@@ -57,7 +57,8 @@ int main()
 
   mx->start();
 
-  ZmThread{"busy", 0, []() { while (sem.trywait() < 0); sem.post(); }};
+  ZmThread{0, []() { while (sem.trywait() < 0); sem.post(); },
+    ZmThreadParams().name("busy")};
 
   app.start();
 

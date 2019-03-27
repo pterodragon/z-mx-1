@@ -23,7 +23,8 @@
 #include "QMouseEvent"
 #include "QDebug"
 
-TreeView::TreeView()
+TreeView::TreeView():
+    m_mainWindow(nullptr)
 {
     this->setContextMenuPolicy(Qt::CustomContextMenu);
     initContextMenu();
@@ -62,3 +63,25 @@ void TreeView::mousePressEvent(QMouseEvent* event)
         selectionModel()->setCurrentIndex(QModelIndex(), QItemSelectionModel::Select);
     }
 }
+
+
+void TreeView::setMainWindow(QWidget* a_mainWindow) noexcept
+{
+    m_mainWindow = a_mainWindow;
+}
+
+
+QSize TreeView::sizeHint() const
+{
+    if (!m_mainWindow)
+        return QTreeView::sizeHint();
+
+    const auto l_size = m_mainWindow->size();
+
+    // after playing with it, for below values the tree widget looks good on strartup
+    return  QSize(l_size.width() * 20 / 100, l_size.height() * 90 / 100);
+}
+
+
+
+

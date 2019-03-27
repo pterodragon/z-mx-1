@@ -27,8 +27,10 @@
 #include "src/factories/ControllerFactory.h" // only for enums
 #include "src/models/raw/TreeModel.h"
 
-TreeMenuWidgetController::TreeMenuWidgetController(DataDistributor& a_dataDistributor, MainWindowController& a_MainWindowController):
-    BasicController(a_dataDistributor),
+TreeMenuWidgetController::TreeMenuWidgetController(DataDistributor& a_dataDistributor,
+                                                   MainWindowController& a_MainWindowController,
+                                                   QObject* a_parent ):
+    BasicController(a_dataDistributor, a_parent),
     m_treeMenuWidgetModelWrapper(new TreeMenuWidgetModelWrapper()),
     m_treeView (new TreeView),
     m_MainWindowController(a_MainWindowController)
@@ -36,6 +38,8 @@ TreeMenuWidgetController::TreeMenuWidgetController(DataDistributor& a_dataDistri
     m_treeView->setModel(getModel());
 
     createActions();
+
+    m_treeView->setMainWindow(static_cast<QWidget*>(this->parent()));
 
     //subscribe on initilization
     m_dataDistributor.subscribeAll(m_treeMenuWidgetModelWrapper);

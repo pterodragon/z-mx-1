@@ -44,7 +44,7 @@ public:
 
 
     // DockWindowController interface
-    enum ACTIONS {NO_ACTION, ADD};
+    enum ACTIONS {NO_ACTION, ADD, ADD_TO_CENTER, ADD_TO_RIGHT};
     virtual void handleUserSelection(unsigned int& a_action,
                                      QDockWidget*& a_widget,
                                      Qt::Orientation& a_orientation,

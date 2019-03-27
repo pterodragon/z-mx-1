@@ -25,6 +25,11 @@ class QMenu;
 class QAction;
 class MainWindowController;
 
+class QSplitter;
+class QHBoxLayout;
+class QWidget;
+class BasicTextWidget;
+
 class MainWindowView
 {
     friend class MainWindowController;
@@ -32,6 +37,7 @@ class MainWindowView
 public:
     MainWindowView(MainWindowController* a_mainWindowController);
     ~MainWindowView();
+
 
 private:
     MainWindowController* m_mainWindowController;
@@ -46,6 +52,26 @@ private:
     QAction *m_disconnectSubMenu;
     QAction *m_settingsSubMenu;
     QAction *m_exitSubMenu;
+
+    // # # # # # Central Look Part # # # # #
+    void initCentralLook() noexcept;
+    // we are going from micro to macro
+    QSplitter* m_treeWidgetSplitter;
+    QSplitter* m_tablesWidgetSplitter;
+    QSplitter* m_chartsWidgetSplitter;
+
+    // the following splitter is used so the user can resize
+    // windows during runtime
+    QSplitter* m_centralWindowSplitter;
+
+    QHBoxLayout* m_centralWidgetLayout;
+
+    // this widget will be the central widget of the main window
+    QWidget* m_centralWidget;
+
+    BasicTextWidget* m_welcomeScreen;
+    BasicTextWidget* m_chartAreaFiller;
+    // # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 };
 

@@ -28,6 +28,9 @@
 #include "QAbstractItemView"
 #include "QAction"
 #include "QDockWidget"
+#include "QSplitter"
+#include "src/widgets/BasicTextWidget.h"
+
 
 #include "QDebug" // perhaps remove after testing
 
@@ -37,6 +40,8 @@ MainWindowController::MainWindowController(QWidget *parent) :
     m_mainWindowView(new MainWindowView(this)),
     m_controllersDB(new QMap<unsigned int, BasicController*>()) // key, value
 {
+    qDebug() << "MainWindowController() - Begin";
+    m_mainWindowView->initCentralLook();
     m_mainWindowView->initMenuBar();
     m_mainWindowView->setGeometry();
     m_mainWindowView->setWindowTitle();
@@ -47,8 +52,9 @@ MainWindowController::MainWindowController(QWidget *parent) :
     // create
     initController(l_key);
 
-    // set as central
-    setCentralWidget(m_controllersDB->value(l_key)->getView());
+    m_mainWindowView->m_treeWidgetSplitter->addWidget(m_controllersDB->value(l_key)->getView());
+
+    setCentralWidget(m_mainWindowView->m_centralWidget);
 
     // init Table Dock Windows controller
     initController(ControllerFactory::CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER);
@@ -62,6 +68,7 @@ MainWindowController::MainWindowController(QWidget *parent) :
     // The default value is AnimatedDocks | AllowTabbedDocks.
     //setDockOptions(dockOptions() & VerticalTabs);
     setDockNestingEnabled(true);
+    qDebug() << "MainWindowController() - End";
 }
 
 MainWindowController::~MainWindowController()
@@ -95,7 +102,7 @@ void MainWindowController::initController(const unsigned int a_key) noexcept
     }
 
     // construct controller and insert the DB of controllers
-    m_controllersDB->insert( a_key, ControllerFactory::getInstance().getController(a_key, *m_mainWindowModel->getDataDistributor(), *this));
+    m_controllersDB->insert( a_key, ControllerFactory::getInstance().getController(a_key, *m_mainWindowModel->getDataDistributor(), *this, this));
 }
 
 
@@ -126,6 +133,7 @@ void MainWindowController::createActions() noexcept
         m_mainWindowModel->connect();
         this->m_mainWindowView->m_connectSubMenu->setEnabled(false);
         this->m_mainWindowView->m_disconnectSubMenu->setEnabled(true);
+
     });
 
     // File->Disconnect functionality
@@ -145,7 +153,9 @@ void MainWindowController::createActions() noexcept
         initController(l_key);
 
         // set as central
-        setCentralWidget(m_controllersDB->value(l_key)->getView());
+         this->m_mainWindowView->m_treeWidgetSplitter->addWidget(m_controllersDB->value(l_key)->getView());
+
+        setCentralWidget( this->m_mainWindowView->m_centralWidget);
     });
 
     // File->Exit functionality
@@ -162,13 +172,11 @@ void MainWindowController::dockWindowsManager(const unsigned int a_dockWindowTyp
              << a_mxTelemetryTypeName
              << a_mxTelemetryInstanceName;
 
-    const auto l_dockWindowType = a_dockWindowType;
-
     // sanity check
-    if (!m_controllersDB->contains(l_dockWindowType))
+    if (!m_controllersDB->contains(a_dockWindowType))
     {
         qCritical() << "dockWindowsManager called with invalid a_dockWindowType:"
-                    << l_dockWindowType
+                    << a_dockWindowType
                     << a_mxTelemetryTypeName
                     << a_mxTelemetryInstanceName
                     << "returning...";
@@ -176,7 +184,7 @@ void MainWindowController::dockWindowsManager(const unsigned int a_dockWindowTyp
     }
 
     // only for readability
-    DockWindowController* l_dockWindowController = static_cast<DockWindowController*>(m_controllersDB->value(l_dockWindowType));
+    DockWindowController* l_dockWindowController = static_cast<DockWindowController*>(m_controllersDB->value(a_dockWindowType));
 
     // setting default values which will be set later by handleUserSelection()
     unsigned int l_action = DockWindowController::ACTIONS::NO_ACTION;
@@ -191,22 +199,49 @@ void MainWindowController::dockWindowsManager(const unsigned int a_dockWindowTyp
                                                 a_mxTelemetryTypeName,
                                                 a_mxTelemetryInstanceName);
 
+    QSplitter* l_parentWidget = nullptr;
+
     switch (l_action) {
     case DockWindowController::ACTIONS::NO_ACTION:
+        return;
+    case DockWindowController::ACTIONS::ADD_TO_CENTER:
+        if (m_mainWindowView->m_welcomeScreen->isActiveWindow()) {m_mainWindowView->m_welcomeScreen->hide();}
+        l_parentWidget =m_mainWindowView->m_tablesWidgetSplitter;
         break;
-    case DockWindowController::ACTIONS::ADD:
-        if (!l_dockWidget) {qCritical() << "DockWindowController::ACTIONS::DO_ADD recived l_dockWidget=nullptr!, doing nothing"
-                                        << a_dockWindowType << a_mxTelemetryTypeName << a_mxTelemetryInstanceName; return;}
-        //l_dockWidget->setWindowTitle(QString());
-        l_dockWidget->setParent(this);
-        // handle orientation
-        addDockWidget(Qt::RightDockWidgetArea, l_dockWidget, l_orientation);
+    case DockWindowController::ACTIONS::ADD_TO_RIGHT:
+        if (m_mainWindowView->m_chartAreaFiller->isActiveWindow()) {m_mainWindowView->m_chartAreaFiller->hide();}
+        l_parentWidget = m_mainWindowView->m_chartsWidgetSplitter;
         break;
     default:
-        qCritical() << "Recived unknown action:" << l_action << "doing nothing"
-                    << a_dockWindowType << a_mxTelemetryTypeName << a_mxTelemetryInstanceName;
-        break;
+        qCritical() << __func__
+                    << "Recived unknown action:"
+                    << l_action
+                    << "doing nothing!"
+                    << a_dockWindowType
+                    << a_mxTelemetryTypeName
+                    << a_mxTelemetryInstanceName;
+        return;
     }
+
+    // another sanity check
+    if (!l_dockWidget)
+    {
+        qCritical() << __func__
+                    << "Action" << l_action
+                    << "l_dockWidget=nullptr!, doing nothing!"
+                    << a_dockWindowType
+                    << a_mxTelemetryTypeName
+                    << a_mxTelemetryInstanceName;
+        return;
+    }
+
+
+    l_parentWidget->addWidget(l_dockWidget);
+    l_dockWidget->setParent(l_parentWidget);
 }
+
+
+
+
 
 

@@ -31,15 +31,15 @@ ChartWidgetDockWindowController::ChartWidgetDockWindowController(DataDistributor
     DockWindowController(a_dataDistributor, " Chart"),
     m_graphDockWidgetModelWrapper(new ChartDockWidgetModelWrapper(a_dataDistributor))
 {
-    qDebug() << "    GraphWidgetDockWindowController()";
+    qDebug() << "    ChartWidgetDockWindowController()";
 }
 
 
 ChartWidgetDockWindowController::~ChartWidgetDockWindowController()
 {
-    qDebug() << "    ~GraphWidgetDockWindowController() begin";
+    qDebug() << "    ~ChartWidgetDockWindowController() begin";
     delete m_graphDockWidgetModelWrapper;
-    qDebug() << "    ~GraphWidgetDockWindowController() end";
+    qDebug() << "    ~ChartWidgetDockWindowController() end";
 }
 
 
@@ -89,7 +89,7 @@ void ChartWidgetDockWindowController::handleUserSelection(unsigned int& a_action
     a_orientation = Qt::Orientation::Vertical;
 
     //handle case that dock widget not exists
-    a_action = DockWindowController::ACTIONS::ADD;
+    a_action = DockWindowController::ACTIONS::ADD_TO_RIGHT;
 
     // construct the new dock
     a_dockWidget = new BasicDockWidget(l_objectName,

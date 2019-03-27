@@ -32,13 +32,14 @@ ControllerFactory::ControllerFactory()
 
 BasicController* ControllerFactory::getController(const unsigned int a_type,
                                                   DataDistributor& a_dataDistributor,
-                                                  MainWindowController& a_mainWindowController) const noexcept
+                                                  MainWindowController& a_mainWindowController,
+                                                  QObject* a_parent) const noexcept
 {
     BasicController* l_result = nullptr;
     switch (a_type)
     {
         case CONTROLLER_TYPE::TREE_MENU_WIDGET_CONTROLLER:
-            l_result = new TreeMenuWidgetController(a_dataDistributor, a_mainWindowController);
+            l_result = new TreeMenuWidgetController(a_dataDistributor, a_mainWindowController, a_parent);
             break;
         case CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER:
             l_result = new TableWidgetDockWindowController(a_dataDistributor);

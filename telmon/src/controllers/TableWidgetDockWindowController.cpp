@@ -89,7 +89,7 @@ void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action
     a_orientation = Qt::Orientation::Horizontal;
 
     //handle case that dock widget not exists
-    a_action = DockWindowController::ACTIONS::ADD;
+    a_action = DockWindowController::ACTIONS::ADD_TO_CENTER;
 
     // construct the new dock
     //a_widget = new QDockWidget(l_objectName, nullptr);

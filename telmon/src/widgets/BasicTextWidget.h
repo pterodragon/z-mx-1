@@ -18,16 +18,28 @@
  */
 
 
-#include "src/controllers/BasicController.h"
 
-BasicController::BasicController(DataDistributor& a_dataDistributor, QObject* a_parent):
-    QObject(a_parent),
-    m_dataDistributor(a_dataDistributor)
+#ifndef BASICTEXTWIDGET_H
+#define BASICTEXTWIDGET_H
+
+#include "QTextEdit"
+class BasicTextWidget : public QTextEdit
 {
+public:
+    BasicTextWidget(QWidget* a_parent = nullptr,
+                    QWidget* a_mainWindow = nullptr,
+                    std::function<QSize()> a_sizeHintFunction = nullptr);
+    ~BasicTextWidget() override;
 
-}
+    virtual QSize sizeHint() const override;
 
-BasicController::~BasicController()
-{
-    // do not delete m_dataDistributor!
-}
+    void setSizeHintFunction(std::function<QSize()>) noexcept;
+    const QWidget* getMainWindow() const noexcept {return m_mainWindow;}
+
+private:
+    QWidget* m_mainWindow;
+    std::function<QSize()> m_sizeHintFunction;
+
+};
+
+#endif // BASICTEXTWIDGET_H

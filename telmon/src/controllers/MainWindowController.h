@@ -27,12 +27,13 @@ class MainWindowView;
 class MainWindowModel;
 class BasicController;
 
+
 class MainWindowController : public QMainWindow
 {
     Q_OBJECT
 public:
     explicit MainWindowController(QWidget *parent = nullptr);
-    ~MainWindowController();
+    ~MainWindowController() override;
 
     void dockWindowsManager(const unsigned int a_dockWindowType,
                             const QString& a_mxTelemetryTypeName,
@@ -47,11 +48,6 @@ private:
     void terminateController(const unsigned int a_key) noexcept;
 
     void createActions() noexcept;
-
-
-
-public slots:
-
 };
 
 #endif // MAINWINDOWCONTROLLER_H

@@ -41,6 +41,8 @@ public:
      * @param event
      */
     virtual void mousePressEvent(QMouseEvent* event) final override;
+    virtual QSize sizeHint() const override;
+    void setMainWindow(QWidget*) noexcept;
 
 
 protected:
@@ -50,6 +52,8 @@ protected:
 
     void initContextMenu() noexcept;
 
+private:
+    QWidget* m_mainWindow;
 
 };
 

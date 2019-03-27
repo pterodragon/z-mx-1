@@ -33,7 +33,9 @@ class TreeMenuWidgetController : public BasicController
 
 public:
     // interface
-    TreeMenuWidgetController(DataDistributor& a_dataDistributor, MainWindowController& a_MainWindowController);
+    TreeMenuWidgetController(DataDistributor& a_dataDistributor,
+                             MainWindowController& a_MainWindowController,
+                             QObject* a_parent = nullptr);
     virtual ~TreeMenuWidgetController() override;
     virtual QAbstractItemModel* getModel() override;
     virtual QAbstractItemView* getView() override;

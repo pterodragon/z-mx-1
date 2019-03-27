@@ -27,6 +27,7 @@
 class BasicController;
 class DataDistributor;
 class MainWindowController;
+class QObject;
 
 class ControllerFactory
 {
@@ -55,7 +56,8 @@ public:
     // Not responsible for deallocating
     BasicController* getController(const unsigned int a_type,
                                    DataDistributor& a_dataDistributor,
-                                   MainWindowController& a_mainWindowController) const noexcept;
+                                   MainWindowController& a_mainWindowController,
+                                    QObject* a_parent = nullptr) const noexcept;
 };
 
 #endif // CONTROLLERFACTORY_H

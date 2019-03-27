@@ -27,6 +27,9 @@
 #include "QApplication"
 #include "QScreen"
 #include "QDebug"
+#include "QSplitter"
+#include "QHBoxLayout"
+#include "src/widgets/BasicTextWidget.h"
 
 MainWindowView::MainWindowView(MainWindowController* a_mainWindowController):
     m_mainWindowController(a_mainWindowController),
@@ -36,6 +39,7 @@ MainWindowView::MainWindowView(MainWindowController* a_mainWindowController):
     m_settingsSubMenu(nullptr),
     m_exitSubMenu(nullptr)
 {
+
 }
 
 
@@ -77,7 +81,6 @@ void MainWindowView::initMenuBar()
 }
 
 
-
 void MainWindowView::setGeometry()
 {
     // set window size to one quarter of user screen
@@ -90,8 +93,65 @@ void MainWindowView::setGeometry()
     m_mainWindowController->move(x, y);
 }
 
+
 void MainWindowView::setWindowTitle() noexcept
 {
     m_mainWindowController->setWindowTitle("TelMon");
 }
+
+
+void MainWindowView::initCentralLook() noexcept
+{
+    // first, init all related members
+    // (members are not init in initlizair list because i think its more organized here)
+    m_treeWidgetSplitter     = new QSplitter;
+    m_tablesWidgetSplitter   = new QSplitter;
+    m_chartsWidgetSplitter   = new QSplitter;
+    m_centralWindowSplitter  = new QSplitter;
+    m_centralWidgetLayout    = new QHBoxLayout;
+    m_centralWidget          = new QWidget;
+    // we are going from micro to macro
+    m_treeWidgetSplitter  ->setOrientation(Qt::Vertical);
+    m_tablesWidgetSplitter->setOrientation(Qt::Vertical);
+    m_welcomeScreen = new BasicTextWidget(m_tablesWidgetSplitter,
+                                          m_mainWindowController,
+                                          [this]()
+    {
+        const auto l_mainWindow = this->m_welcomeScreen->getMainWindow();
+        if (!l_mainWindow) { return this->m_welcomeScreen->QTextEdit::sizeHint(); }
+
+        const auto l_size = l_mainWindow->size();
+
+        // after playing with it, for below values the tree widget looks good on strartup
+        return  QSize(l_size.width() * 20 / 100, l_size.height() * 90 / 100);
+    });
+
+    m_tablesWidgetSplitter->addWidget(m_welcomeScreen);
+    m_chartAreaFiller = new BasicTextWidget(m_chartsWidgetSplitter,
+                                            m_mainWindowController,
+                                            [this]()
+      {
+          const auto l_mainWindow = this->m_welcomeScreen->getMainWindow();
+          if (!l_mainWindow) { return this->m_welcomeScreen->QTextEdit::sizeHint(); }
+
+          const auto l_size = l_mainWindow->size();
+
+          // after playing with it, for below values the tree widget looks good on strartup
+          return  QSize(l_size.width() * 60 / 100, l_size.height() * 90 / 100);
+      });
+
+    m_chartsWidgetSplitter->addWidget(m_chartAreaFiller);
+    m_chartsWidgetSplitter->setOrientation(Qt::Vertical);
+    m_centralWindowSplitter->setOrientation(Qt::Horizontal);
+    m_centralWindowSplitter->addWidget(m_treeWidgetSplitter);
+    m_centralWindowSplitter->addWidget(m_tablesWidgetSplitter);
+    m_centralWindowSplitter->addWidget(m_chartsWidgetSplitter);
+
+    m_centralWidgetLayout->addWidget(m_centralWindowSplitter);
+    m_centralWidgetLayout->setMargin(2);
+
+    m_centralWidget->setLayout(m_centralWidgetLayout);
+    m_centralWidget->setParent(m_mainWindowController);
+}
+
 

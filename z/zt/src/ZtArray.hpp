@@ -1131,12 +1131,14 @@ public:
     return ZtPlatform::grow(o * sizeof(T), n * sizeof(T)) / sizeof(T);
   }
 
+#if 0
 // conversions
  
   template <typename S>
   ZuInline typename ToString<S, S>::T as() const {
     return ZuTraits<S>::make(m_data, length());
   }
+#endif
 
 private:
   uint32_t		m_size_owned;	// allocated size and owned flag
@@ -1170,10 +1172,12 @@ struct ZuTraits<ZtArray<Elem_, Cmp> > :
     IsWString = ZuConversion<wchar_t, Elem>::Same,
     IsHashable = 1, IsComparable = 1
   };
+#if 0
   inline static T make(const Elem *data, unsigned length) {
     if (!data) return T();
     return T(data, length);
   }
+#endif
   inline static const Elem *data(const T &a) { return a.data(); }
   inline static unsigned length(const T &a) { return a.length(); }
 };

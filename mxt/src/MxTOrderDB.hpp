@@ -50,20 +50,18 @@ struct App : public MxTOrderDB<App> {
 };
 #endif
 
-template <typename App_, typename Types_, typename XOrder_> class MxTOrderDB {
+template <typename App_, typename Types_>
+  class MxTOrderDB {
 public:
   using App = App_;
   using Types = Types_;
-  using XOrder = XOrder_;
 
   ZuInline const App *app() const { return static_cast<const App *>(this); }
   ZuInline App *app() { return static_cast<App *>(this); }
 
   using OrderData = typename Types::Order;		// open order
   using OrderDB = Zdb<OrderData>;
-  struct OrderPOD : public ZdbPOD<OrderData>, public XOrder {
-    inline OrderPOD(ZdbAny *db) : ZdbPOD<OrderData>(db) { }
-  };
+  using OrderPOD = ZdbPOD<OrderData>;
 
   using ClosedData =					// closed order
     typename Types::template Txn<typename Types::OrderFiltered>;

@@ -47,19 +47,19 @@ friend class ZmHeapCache;
 
   typedef ZmRBTree<ZuPair<ZmIDString, unsigned>,
 	    ZmRBTreeVal<ZmHeapConfig,
-	      ZmRBTreeHeapID<ZmNoHeap,
+	      ZmRBTreeHeapID<ZuNull,
 		ZmRBTreeLock<ZmNoLock> > > > IDPart2Config;
   typedef ZmRBTree<ZmHeapCache *,
 	    ZmRBTreeIndex<ZmHeapCache::IDAccessor,
-	      ZmRBTreeHeapID<ZmNoHeap,
+	      ZmRBTreeHeapID<ZuNull,
 		ZmRBTreeLock<ZmNoLock> > > > ID2Cache;
   typedef ZmRBTree<ZmHeapCache *,
 	    ZmRBTreeIndex<ZmHeapCache::IDSizeAccessor,
-	      ZmRBTreeHeapID<ZmNoHeap,
+	      ZmRBTreeHeapID<ZuNull,
 		ZmRBTreeLock<ZmNoLock> > > > IDSize2Cache;
   typedef ZmRBTree<ZmHeapCache *,
 	    ZmRBTreeIndex<ZmHeapCache::IDPartSizeAccessor,
-	      ZmRBTreeHeapID<ZmNoHeap,
+	      ZmRBTreeHeapID<ZuNull,
 		ZmRBTreeLock<ZmNoLock> > > > IDPartSize2Cache;
 
   typedef ZmHeapCache::StatsFn StatsFn;
@@ -307,6 +307,16 @@ void ZmHeapCache::free(ZmHeapStats &stats, void *p)
 
 void ZmHeapCache::free_(ZmHeapCache *self, void *p)
 {
+  if (ZuLikely(self->m_info.sharded)) {
+    // sharded - no contention, no need to check other partitions
+    void *cache = self->m_cache;
+    if (ZuLikely(cache && p >= cache && p < self->m_end)) {
+      self->free__sharded(p);
+      return;
+    }
+    ::free(p);
+    return;
+  }
   // check own cache first - optimize for malloc()/free() within same partition
   void *cache = self->m_cache;
   if (ZuLikely(cache && p >= cache && p < self->m_end)) {
@@ -332,7 +342,7 @@ void ZmHeapCache::free_(ZmHeapCache *self, void *p)
 void ZmHeapCache::allStats() const
 {
   m_stats = {};
-  StatsFn fn = StatsFn::Lambda<ZmNoHeap>::fn(
+  StatsFn fn = StatsFn::Lambda<ZuNull>::fn(
       [this](const ZmHeapStats &s) {
 	m_stats.heapAllocs += s.heapAllocs;
 	m_stats.cacheAllocs += s.cacheAllocs;

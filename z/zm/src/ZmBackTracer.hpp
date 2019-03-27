@@ -53,7 +53,7 @@ public:
     Data *data = new (m_captures[i].new1()) Data();
     ZmThreadContext *self = ZmThreadContext::self();
     data->p1() = self->tid();
-    self->name(data->p2());
+    data->p2() = self->name();
     data->p3().capture(skip + 1);
   }
 

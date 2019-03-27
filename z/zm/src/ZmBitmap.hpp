@@ -216,6 +216,7 @@ public:
     const ZmBitmap	&m_b;
     int			m_i;
   };
+  inline Iterator iterator() const { return Iterator(*this); }
 
   // hwloc_bitmap_t is a pointer
   inline operator hwloc_bitmap_t() const {

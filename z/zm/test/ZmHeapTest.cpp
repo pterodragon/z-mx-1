@@ -99,7 +99,7 @@ int main(int argc, char **argv)
   }
   ZmTime start(ZmTime::Now);
   for (int i = 0; i < nthr; i++)
-    new (&threads[i]) ZmThread(0, 0, ZmFn<>::Ptr<&doit>::fn());
+    new (&threads[i]) ZmThread(0, ZmFn<>::Ptr<&doit>::fn());
   for (int i = 0; i < nthr; i++)
     threads[i].join();
   ZmTime end(ZmTime::Now);

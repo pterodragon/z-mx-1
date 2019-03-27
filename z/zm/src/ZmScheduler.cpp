@@ -29,49 +29,53 @@
 #endif
 
 ZmScheduler::ZmScheduler(ZmSchedParams params) :
-  m_id(params.id()),
-  m_nThreads(params.nThreads()),
-  m_stackSize(params.stackSize()),
-  m_priority(params.priority()),
-  m_partition(params.partition()),
-  m_affinity(params.affinity()),
-  m_isolation(params.isolation()),
-  m_quantum(params.quantum()),
+  m_params(ZuMv(params)),
   m_stateCond(m_stateLock),
   m_state(Stopped),
   m_drained(0),
   m_nWorkers(0),
   m_runThreads(0)
 {
-  m_names = new ZmThreadName[m_nThreads];
-  m_threads = new Thread[m_nThreads];
-  m_workers = new Thread *[m_nThreads];
-  for (unsigned i = 0; i < m_nThreads; i++) {
+  unsigned n = m_params.nThreads();
+  for (unsigned tid = 0; tid <= n; tid++) {
+    auto &thread = m_params.thread(tid);
+    if (!thread.name()) {
+      if (!tid)
+	thread.name(ZmThreadName() << m_params.id() << ":timer");
+      else
+	thread.name(ZmThreadName() << m_params.id() << ':' << ZuBoxed(tid));
+    }
+    if (!thread.stackSize()) thread.stackSize(m_params.stackSize());
+    if (thread.priority() < 0) thread.priority(m_params.priority());
+    if (!thread.partition()) thread.partition(m_params.partition());
+  }
+  m_threads = new Thread[n];
+  m_workers = new Thread *[n];
+  for (unsigned i = 0; i < n; i++) {
     unsigned tid = i + 1;
     Ring &ring = m_threads[i].ring;
-    ring.init(ZmRingParams(params.queueSize()).
-	ll(params.ll()).
-	spin(params.spin()).
-	timeout(params.timeout()).
-	cpuset(tid < m_affinity.count() ? m_affinity[tid] : ZmBitmap()));
+    ring.init(ZmRingParams(m_params.queueSize()).
+	ll(m_params.ll()).
+	spin(m_params.spin()).
+	timeout(m_params.timeout()).
+	cpuset(m_params.thread(tid).cpuset()));
     int r;
     if ((r = ring.open(Ring::Read | Ring::Write)) != Ring::OK)
       throw ZmRingError(r);
     // if ((r = ring.attach()) != Ring::OK) throw ZmRingError(r);
-    if (!(m_isolation && tid)) m_workers[m_nWorkers++] = &m_threads[i];
-    m_names[i] = params.name(tid);
+    if (!m_params.thread(tid).isolated())
+      m_workers[m_nWorkers++] = &m_threads[i];
   }
 }
 
 ZmScheduler::~ZmScheduler()
 {
   stop();
-  for (unsigned i = 0; i < m_nThreads; i++) {
+  for (unsigned i = 0, n = m_params.nThreads(); i < n; i++) {
     Ring &ring = m_threads[i].ring;
     // ring.detach();
     ring.close();
   }
-  delete [] m_names;
   delete [] m_workers;
   delete [] m_threads;
 }
@@ -85,21 +89,14 @@ void ZmScheduler::runThreads()
   }
 
   {
+    unsigned n = m_params.nThreads();
     ZmGuard<ZmSpinLock> spawnGuard(m_spawnLock);
-    ZmThreadParams params;
-    params.stackSize(m_stackSize).priority(m_priority).partition(m_partition);
-    while (m_runThreads < m_nThreads) {
+    while (m_runThreads < n) {
       ZmBitmap cpuset;
       unsigned tid = ++m_runThreads;
-      if (tid < m_affinity.count()) cpuset = m_affinity[tid];
-      m_threads[tid - 1].thread = ZmThread(
-	  ZmThreadMgr{this, [](
-	      ZmScheduler *self, ZmThreadName &s,
-	      const ZmThreadContext *context) {
-	    self->threadName(s, context->id());
-	  }}, tid,
+      m_threads[tid - 1].thread = ZmThread(tid,
 	  ZmFn<>::Member<&ZmScheduler::work>::fn(this),
-	  params.cpuset(cpuset));
+	  m_params.thread(tid));
     }
   }
 }
@@ -130,15 +127,9 @@ void ZmScheduler::start()
     m_stateCond.broadcast();
   }
 
-  m_thread = ZmThread(
-      ZmThreadMgr{this, [](
-	  ZmScheduler *self, ZmThreadName &s,
-	  const ZmThreadContext *context) {
-	self->threadName(s, context->id());
-      }}, 0,
+  m_thread = ZmThread(0,
       ZmFn<>::Member<&ZmScheduler::timer>::fn(this),
-      ZmThreadParams().priority(m_priority).
-	cpuset(!m_affinity.count() ? ZmBitmap() : m_affinity[0]));
+      m_params.thread(0));
 
   runThreads();
 
@@ -175,7 +166,7 @@ void ZmScheduler::drain()
     m_stateCond.broadcast();
   }
 
-  for (unsigned i = 0; i < m_nThreads; i++)
+  for (unsigned i = 0, n = m_params.nThreads(); i < n; i++)
     runWake_(&m_threads[i], ZmFn<>::Member<&ZmScheduler::drained>::fn(this));
 
   {
@@ -191,7 +182,7 @@ void ZmScheduler::drained()
 
   if (m_state != Draining) return;
 
-  if (++m_drained < m_nThreads) return;
+  if (++m_drained < m_params.nThreads()) return;
 
   m_drained = 0;
   m_state = Drained;
@@ -222,11 +213,11 @@ void ZmScheduler::stop()
   }
 
   {
+    unsigned n = m_params.nThreads();
     ZmGuard<ZmSpinLock> spawnGuard(m_spawnLock);
-    for (unsigned i = 0; i < m_nThreads; i++) {
+    for (unsigned i = 0; i < n; i++)
       m_threads[i].ring.eof(true);
-    }
-    for (unsigned i = 0; i < m_nThreads; i++) {
+    for (unsigned i = 0; i < n; i++) {
       ZmThread &thread = m_threads[i].thread;
       if (!!thread) {
 	wake(&m_threads[i]);
@@ -234,7 +225,7 @@ void ZmScheduler::stop()
 	thread = ZmThread();
       }
     }
-    for (unsigned i = 0; i < m_nThreads; i++)
+    for (unsigned i = 0; i < n; i++)
       m_threads[i].ring.eof(false);
   }
 
@@ -258,15 +249,16 @@ void ZmScheduler::reset()
   if (this->state() != Stopped) return;
 
   {
+    unsigned n = m_params.nThreads();
     ZmGuard<ZmSpinLock> spawnGuard(m_spawnLock);
-    for (unsigned i = 0; i < m_nThreads; i++)
+    for (unsigned i = 0; i < n; i++)
       if (!m_threads[i].thread) m_threads[i].ring.reset();
   }
 }
 
 void ZmScheduler::wakeFn(unsigned tid, ZmFn<> fn)
 {
-  ZmAssert(tid && tid <= m_nThreads);
+  ZmAssert(tid && tid <= m_params.nThreads());
   m_threads[tid - 1].wakeFn = ZuMv(fn);
 }
 
@@ -304,7 +296,7 @@ void ZmScheduler::timer()
 
       {
 	ZmTime now(ZmTime::Now);
-	now += m_quantum;
+	now += m_params.quantum();
 	ZmGuard<ZmPLock> scheduleGuard(m_scheduleLock);
 	auto i = m_schedule.iterator<ZmRBTreeLessEqual>(now);
 	Timer timer;
@@ -325,7 +317,7 @@ void ZmScheduler::timer()
 	  if (ZuUnlikely(!ok)) {
 	    scheduleGuard.unlock();
 	    m_schedule.add(timer);
-	    ZmPlatform::sleep(m_quantum);
+	    ZmPlatform::sleep(m_params.quantum());
 	    break;
 	  }
 	}
@@ -348,7 +340,7 @@ bool ZmScheduler::timerAdd(ZmFn<> &fn)
 void ZmScheduler::run(
     unsigned tid, ZmFn<> fn, ZmTime timeout, int mode, Timer *ptr)
 {
-  ZmAssert(tid <= m_nThreads);
+  ZmAssert(tid <= m_params.nThreads());
 
   if (ZuUnlikely(!fn)) return;
 
@@ -438,7 +430,8 @@ bool ZmScheduler::run__(Thread *thread, ZmFn<> fn)
   int status = thread->ring.writeStatus();
   if (status == ZmRing_::EndOfFile) return false;
   // should never happen - the enqueuing thread will normally
-  // be forced to wait for the dequeuing thread to drain the ring
+  // be forced to wait for the dequeuing thread to drain the ring,
+  // i.e. a slower consumer will apply back-pressure to the producer
   ZuStringN<120> s;
   s << "FATAL - Thread Dispatch Failure - push() failed: ";
   if (status <= 0)
@@ -493,20 +486,6 @@ void ZmScheduler::work()
   --m_runThreads;
 
   m_stopped.post();
-}
-
-void ZmScheduler::threadName(ZmThreadName &s, unsigned tid) const
-{
-  s.null();
-  if (!tid) {
-    s << m_id << ":timer";
-    return;
-  }
-  if (const auto &name = m_names[tid - 1]) {
-    s << m_id << ':' << name;
-    return;
-  }
-  s << m_id << ':' << ZuBoxed(tid);
 }
 
 #ifdef _MSC_VER

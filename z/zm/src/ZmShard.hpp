@@ -30,22 +30,23 @@
 #include <ZmLib.hpp>
 #endif
 
-template <class Mgr_> class ZmShard {
+#include <ZmScheduler.hpp>
+
+class ZmShard {
 public:
-  typedef Mgr_ Mgr;
+  ZuInline ZmShard(ZmScheduler *sched, unsigned tid) :
+      m_sched(sched), m_tid(tid) { }
 
-  ZuInline ZmShard(Mgr *mgr, unsigned tid) : m_mgr(mgr), m_tid(tid) { }
-
-  ZuInline Mgr *mgr() const { return m_mgr; }
+  ZuInline ZmScheduler *sched() const { return m_sched; }
   ZuInline unsigned tid() const { return m_tid; }
 
   template <typename ...Args> ZuInline void run(Args &&... args) const
-    { m_mgr->run(m_tid, ZuFwd<Args>(args)...); }
+    { m_sched->run(m_tid, ZuFwd<Args>(args)...); }
   template <typename ...Args> ZuInline void invoke(Args &&... args) const
-    { m_mgr->invoke(m_tid, ZuFwd<Args>(args)...); }
+    { m_sched->invoke(m_tid, ZuFwd<Args>(args)...); }
 
 private:
-  Mgr		*m_mgr;
+  ZmScheduler	*m_sched;
   unsigned	m_tid;
 };
 
@@ -68,6 +69,7 @@ public:
   ZuInline ZmHandle() : m_ptr(0) { }
   ZuInline ZmHandle(Shard *shard) :
     m_ptr((uintptr_t)(void *)shard | (uintptr_t)1) { }
+  ZuInline ZmHandle(T *o) { new (&m_ptr) ZmRef<T>(o); }
   ZuInline ZmHandle(ZmRef<T> o) { new (&m_ptr) ZmRef<T>(ZuMv(o)); }
   ZuInline ~ZmHandle() {
     if (m_ptr && !(m_ptr & 1)) {
@@ -109,6 +111,17 @@ public:
     if (m_ptr && !(m_ptr & 1)) ((T *)(void *)m_ptr)->deref();
     m_ptr = h.m_ptr;
     if (m_ptr && !(m_ptr & 1)) h.m_ptr = 0;
+    return *this;
+  }
+
+  ZuInline ZmHandle &operator =(T *o) {
+    if (m_ptr && !(m_ptr & 1)) ((T *)(void *)m_ptr)->deref();
+    new (&m_ptr) ZmRef<T>(o);
+    return *this;
+  }
+  ZuInline ZmHandle &operator =(ZmRef<T> o) {
+    if (m_ptr && !(m_ptr & 1)) ((T *)(void *)m_ptr)->deref();
+    new (&m_ptr) ZmRef<T>(ZuMv(o));
     return *this;
   }
 

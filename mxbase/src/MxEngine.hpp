@@ -150,12 +150,12 @@ protected:
 public:
   ZuInline int state() const { return m_state.load_(); }
 
-  struct Telemetry {
+  struct Telemetry { // not graphable
     MxID	id;
     uint64_t	rxSeqNo;
     uint64_t	txSeqNo;
     uint32_t	reconnects;
-    uint8_t	state;
+    uint8_t	state;		// MxLinkState::rag(i) - MxRAG
   };
 
   void telemetry(Telemetry &data) const;
@@ -370,8 +370,8 @@ public:
 
   ZuInline void log(MxMsgID id, MxTraffic traffic) { mgr()->log(id, traffic); }
 
-  struct Telemetry {
-    MxID	id;
+  struct Telemetry { // not graphable
+    MxID	id;		// primary key
     MxID	mxID;
     uint32_t	down;
     uint32_t	disabled;
@@ -382,7 +382,7 @@ public:
     uint16_t	nLinks;
     uint8_t	rxThread;
     uint8_t	txThread;
-    uint8_t	state;
+    uint8_t	state;		// MxEngineState::rag(i) - MxRAG
   };
 
   void telemetry(Telemetry &data) const;

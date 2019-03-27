@@ -24,7 +24,7 @@ public class MxMDJNITest extends TestCase {
 
     md.subscribe(new MxMDLibHandlerTuple.Builder().
 	exception((MxMDLib md_, MxMDException e) -> {
-	  System.out.format("exception %s\n", e.message());
+	  System.out.format("%s %s\n", e.severity().toString(), e.message());
 	}).
 	build());
 

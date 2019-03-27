@@ -109,14 +109,17 @@ jobject MxMDLibJNI::init(JNIEnv *env, jclass c, jstring cf)
 
   ZJNI::env(env);
 
-  MxMDLib *md = MxMDLib_JNI::init(ZJNI::j2s_ZtString(env, cf),
-      [](ZmScheduler *mx) {
-    mx->threadInit([]() { ZJNI::attach(); });
-    mx->threadFinal([]() { ZJNI::detach(); });
-  });
-  if (ZuUnlikely(!md)) {
-    ZJNI::throwNPE(env, "MxMDLib.init() failed");
-    return 0;
+  if (ZuLikely(!md_)) {
+    MxMDLib *md = MxMDLib_JNI::init(ZJNI::j2s_ZtString(env, cf),
+	[](ZmScheduler *mx) {
+      mx->threadInit([]() { ZJNI::attach(); });
+      mx->threadFinal([]() { ZJNI::detach(); });
+    });
+    if (ZuUnlikely(!md)) {
+      ZJNI::throwNPE(env, "MxMDLib.init() failed");
+      return 0;
+    }
+    md_ = md;
   }
 
   {
@@ -126,14 +129,12 @@ jobject MxMDLibJNI::init(JNIEnv *env, jclass c, jstring cf)
     env->DeleteLocalRef(obj);
   }
 
-  md_ = md;
-
   return obj_;
 }
 
 void MxMDLibJNI::close(JNIEnv *env, jobject)
 {
-  MxMDJNI::final(env);
+  MxMDJNI::final(env); // calls MxMDLibJNI::final
 }
 
 void MxMDLibJNI::start(JNIEnv *env, jobject obj)
@@ -149,18 +150,25 @@ void MxMDLibJNI::start(JNIEnv *env, jobject obj)
   }
 }
 
-void MxMDLibJNI::stop(JNIEnv *env, jobject obj)
+void MxMDLibJNI::stop(JNIEnv *env, jobject)
 {
   // () -> void
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   {
+    thread_local ZmSemaphore sem;
+    md->allInstruments([env, sem = &sem](MxMDInstrument *instr) {
+      unsubscribe_(env, instr);
+      sem->post();
+    });
+    sem.wait();
+    unsubscribe_(env, md);
+  }
+  {
     ZmGuard<ZmLock> guard(lock);
     if (!running) return;
     running = false;
-    md->allInstruments([](MxMDInstrument *instr) { instr->unsubscribe(); });
     md->stop();
-    md->unsubscribe();
   }
 }
 
@@ -220,28 +228,24 @@ void MxMDLibJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   md->subscribe(MxMDLibHandlerJNI::j2c(env, handler_));
-  md->appData(env->NewGlobalRef(handler_));
+  md->libData(env->NewGlobalRef(handler_));
 }
 
-void MxMDLibJNI::unsubscribe(JNIEnv *env, jobject obj)
+void MxMDLibJNI::unsubscribe(JNIEnv *env, jobject)
 {
   // () -> void
-  MxMDLib *md = md_;
-  if (ZuUnlikely(!md)) return;
-  md->unsubscribe();
-  env->DeleteGlobalRef(md->appData<jobject>());
-  md->appData(nullptr);
+  if (MxMDLib *md = md_) unsubscribe_(env, md);
 }
 
-jobject MxMDLibJNI::handler(JNIEnv *env, jobject obj)
+jobject MxMDLibJNI::handler(JNIEnv *env, jobject)
 {
   // () -> MxMDLibHandler
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
-  return md->appData<jobject>();
+  return md->libData<jobject>();
 }
 
-jobject MxMDLibJNI::instrument(JNIEnv *env, jobject obj, jobject key_)
+jobject MxMDLibJNI::instrument(JNIEnv *env, jobject, jobject key_)
 {
   // (MxInstrKey) -> MxMDInstrHandle
   MxMDLib *md = md_;
@@ -264,7 +268,7 @@ void MxMDLibJNI::instrument(JNIEnv *env, jobject obj, jobject key_, jobject fn)
   });
 }
 
-jlong MxMDLibJNI::allInstruments(JNIEnv *env, jobject obj, jobject fn)
+jlong MxMDLibJNI::allInstruments(JNIEnv *env, jobject, jobject fn)
 {
   // (MxMDAllInstrumentsFn) -> long
   MxMDLib *md = md_;
@@ -278,7 +282,7 @@ jlong MxMDLibJNI::allInstruments(JNIEnv *env, jobject obj, jobject fn)
   });
 }
 
-jobject MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_)
+jobject MxMDLibJNI::orderBook(JNIEnv *env, jobject, jobject key_)
 {
   // (MxInstrKey) -> MxMDOBHandle
   MxMDLib *md = md_;
@@ -288,7 +292,7 @@ jobject MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_)
   return 0;
 }
 
-void MxMDLibJNI::orderBook(JNIEnv *env, jobject obj, jobject key_, jobject fn)
+void MxMDLibJNI::orderBook(JNIEnv *env, jobject, jobject key_, jobject fn)
 {
   // (MxInstrKey, MxMDOrderBookFn) -> void
   MxMDLib *md = md_;
@@ -478,17 +482,16 @@ void MxMDLibJNI::final(JNIEnv *env)
 {
   ZmGuard<ZmLock> guard(lock);
 
-  if (!obj_) return;
-
-  env->DeleteGlobalRef(obj_); obj_ = 0;
+  if (obj_) {
+    env->DeleteGlobalRef(obj_);
+    obj_ = 0;
+  }
 
   if (MxMDLib *md = md_) {
     md_ = 0;
     if (running) {
       running = false;
-      md->allInstruments([](MxMDInstrument *instr) { instr->unsubscribe(); });
       md->stop();
-      md->unsubscribe();
     }
     md->final();
   }

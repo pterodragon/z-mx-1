@@ -1262,9 +1262,11 @@ template <typename T> struct ZtStringTraits : public ZuGenericTraits<T> {
     IsWString = ZuConversion<Elem, wchar_t>::Same,
     IsHashable = 1, IsComparable = 1
   };
+#if 0
   inline static T make(const Elem *data, unsigned length) {
     return T(data, length);
   }
+#endif
   inline static const Elem *data(const T &s) { return s.data(); }
   inline static unsigned length(const T &s) { return s.length(); }
 };

@@ -777,7 +777,7 @@ void ZiConnection::telemetry(ZiCxnTelemetry &data) const
     mreqAddr = mreqs[0].imr_multiaddr;
     mreqIf = mreqs[0].imr_interface;
   }
-  data.mxID = m_mx->id();
+  data.mxID = m_mx->params().id();
   data.socket = m_info.socket;
   data.rxBufSize = rxBufSize;
   data.rxBufLen = rxBufLen;
@@ -1881,40 +1881,42 @@ void ZiConnection::close_2()
   executedDisconnect();
 }
 
-ZiMultiplex::ZiMultiplex(ZiMxParams params) :
-  ZmScheduler(ZuMv(params.scheduler())),
+ZiMultiplex::ZiMultiplex(ZmSchedParams schedParams, ZiMxParams mxParams) :
+  ZmScheduler(ZuMv(schedParams)),
   m_stopping(0), m_drain(false),
-  m_rxThread(params.rxThread()),
+  m_rxThread(mxParams.rxThread()),
   m_nAccepts(0),
-  m_txThread(params.txThread()),
-  m_rxBufSize(params.rxBufSize()),
-  m_txBufSize(params.txBufSize())
+  m_txThread(mxParams.txThread()),
+  m_rxBufSize(mxParams.rxBufSize()),
+  m_txBufSize(mxParams.txBufSize())
 #ifdef ZiMultiplex_EPoll
   , m_epollFD(-1),
-  m_epollMaxFDs(params.epollMaxFDs()),
-  m_epollQuantum(params.epollQuantum()),
+  m_epollMaxFDs(mxParams.epollMaxFDs()),
+  m_epollQuantum(mxParams.epollQuantum()),
   m_wakeFD(-1), m_wakeFD2(-1)
 #endif
 #ifdef ZiMultiplex_DEBUG
-  , m_trace(params.trace()),
-  m_debug(params.debug()),
-  m_frag(params.frag()),
-  m_yield(params.yield())
+  , m_trace(mxParams.trace()),
+  m_debug(mxParams.debug()),
+  m_frag(mxParams.frag()),
+  m_yield(mxParams.yield())
 #endif
-  , m_telFreq(params.telFreq())
+  , m_telFreq(mxParams.telFreq())
 {
   m_listeners =
     new ListenerHash(ZmHashParams().bits(4).loadFactor(1).cBits(4).
-	init(params.listenerHash()));
+	init(mxParams.listenerHash()));
 #if ZiMultiplex__ConnectHash
   m_connects =
     new ConnectHash(ZmHashParams().bits(5).loadFactor(1).cBits(4).
-	init(params.requestHash()));
+	init(mxParams.requestHash()));
 #endif
   m_cxns = new CxnHash(ZmHashParams().bits(8).loadFactor(1).cBits(4).
-      init(params.cxnHash()));
-  if (!name(m_rxThread)) name(m_rxThread, "ioRx");
-  if (!name(m_txThread)) name(m_txThread, "ioTx");
+      init(mxParams.cxnHash()));
+  if (!params().thread(m_rxThread).name())
+    params().thread(m_rxThread).name("ioRx");
+  if (!params().thread(m_txThread).name())
+    params().thread(m_txThread).name("ioTx");
 }
 
 ZiMultiplex::~ZiMultiplex()
@@ -2164,7 +2166,8 @@ void ZiMultiplex::rx()
     ZiDEBUG(this, ZtSprintf(
 	  "wait() nThreads: % 2d nConnections: % 4d epollFD: % 3d "
 	  "wakeFD: % 3d wakeFD2: % 3d nListeners: % 3d",
-	  nThreads(), m_cxns->count(), m_epollFD, m_wakeFD, m_wakeFD2,
+	  params().nThreads(), m_cxns->count(),
+	  m_epollFD, m_wakeFD, m_wakeFD2,
 	  m_listeners->count()));
 
 #if 0
@@ -2295,15 +2298,18 @@ void ZiMultiplex::writeWake()
 
 void ZiMultiplex::telemetry(ZiMxTelemetry &data) const
 {
-  data.id = id();
-  data.isolation = isolation().uint64();
-  data.stackSize = stackSize();
+  data.id = params().id();
+  data.stackSize = params().stackSize();
+  data.queueSize = params().queueSize();
+  data.spin = params().spin();
+  data.timeout = params().timeout();
   data.rxBufSize = rxBufSize();
   data.txBufSize = txBufSize(),
   data.rxThread = rxThread();
   data.txThread = txThread();
-  data.partition = partition();
+  data.partition = params().partition();
   data.state = state();
-  data.priority = priority();
-  data.nThreads = nThreads();
+  data.ll = params().ll();
+  data.priority = params().priority();
+  data.nThreads = params().nThreads();
 }

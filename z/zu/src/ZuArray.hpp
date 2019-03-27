@@ -332,10 +332,12 @@ struct ZuTraits<ZuArray<Elem_> > : public ZuGenericTraits<ZuArray<Elem_> > {
     IsWString = ZuConversion<wchar_t, Elem>::Same,
     IsHashable = 1, IsComparable = 1
   };
+#if 0
   inline static T make(const Elem *data, unsigned length) {
     if (!data) return T();
     return T(data, length);
   }
+#endif
   inline static const Elem *data(const T &a) { return a.data(); }
   inline static unsigned length(const T &a) { return a.length(); }
 };

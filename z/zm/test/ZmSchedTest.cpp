@@ -91,8 +91,8 @@ void usage()
     "usage: ZmSchedTest [OPTIONS]...\n"
     "\nOptions:\n"
     "    -n N\tset number of threads to N\n"
-    "    -a AFFINITY\tset affinity (e.g. 1=2:3)\n"
-    "    -i BITMAP\tset isolation (e.g. 1,3:4)\n"
+    "    -c ID=CPUSET\tset thread ID affinity to CPUSET (e.g. 1=2,4)\n"
+    "    -i BITMAP\tset isolation (e.g. 1,3-4)\n"
     , stderr);
   ZmPlatform::exit(1);
 }
@@ -119,15 +119,11 @@ int main(int argc, char **argv)
     test(ZmBitmap, "3-");
     test(ZmBitmap, "3-5,7");
     test(ZmBitmap, "3-5,7,9-");
-    test(ZmAffinity, "");
-    test2(ZmAffinity, ":", "");
-    test2(ZmAffinity, "::", "");
-    test(ZmAffinity, "0=0-");
-    test(ZmAffinity, "1=0-:2=3-5,7:4=3-");
   }
 
-  ZuBox<unsigned> nThreads = 1;
-  ZmAffinity affinity;
+  signal(SIGSEGV, segv);
+
+  ZmSchedParams params = ZmSchedParams().id("sched");
   ZmBitmap isolation;
 
   for (int i = 1; i < argc; i++) {
@@ -138,12 +134,16 @@ int main(int argc, char **argv)
 	break;
       case 'n':
 	if (++i >= argc) usage();
-	nThreads = argv[i];
+	params.nThreads(ZuBox<unsigned>(argv[i]));
 	break;
-      case 'a':
+      case 'c': {
 	if (++i >= argc) usage();
-	affinity = argv[i];
-	break;
+	unsigned o, n = strlen(argv[i]);
+	for (o = 0; o < n; o++) if (argv[i][o] == '=') break;
+	if (!o || o >= n - 1) usage();
+	params.thread(ZuBox<unsigned>(ZuString(argv[i], o)))
+	  .cpuset(ZuString(&argv[i][o + 1], n - o - 1));
+      } break;
       case 'i':
 	if (++i >= argc) usage();
 	isolation = argv[i];
@@ -151,13 +151,14 @@ int main(int argc, char **argv)
     }
   }
 
-  signal(SIGSEGV, segv);
+  {
+    auto i = isolation.iterator();
+    int tid;
+    while ((tid = i.iterate()) >= 0)
+      params.thread(tid).isolated(true);
+  }
 
-  ZmScheduler s(ZmSchedParams().
-      id("sched").
-      nThreads(nThreads).
-      affinity(affinity).
-      isolation(isolation));
+  ZmScheduler s(ZuMv(params));
   // ZmRef<Job> jobs[10];
   // ZmFn<> fns[10];
   ZmScheduler::Timer timers[10];

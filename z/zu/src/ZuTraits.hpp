@@ -415,10 +415,12 @@ struct ZuStdStringTraits_ : public ZuGenericTraits<T_> {
   enum { IsString = 1 };
   typedef T_ T;
   typedef Char Elem;
+#if 0
   inline static T make(const Char *data, unsigned length) {
     if (ZuUnlikely(!data)) return T();
     return T(data, (size_t)length);
   }
+#endif
   inline static const Char *data(const T &s) { return s.data(); }
   inline static unsigned length(const T &s) { return s.length(); }
 };
@@ -438,20 +440,24 @@ struct ZuStdArrayTraits_ : public ZuGenericTraits<T_> {
 };
 template <typename T, typename Elem>
 struct ZuStdVectorTraits : public ZuStdArrayTraits_<T, Elem> {
+#if 0
   inline static T make(const Elem *data, unsigned length) {
     T vector((size_t)length);
     for (unsigned i = 0; i < length; i++) vector[i] = data[i];
     return vector;
   }
+#endif
 };
 template <typename T, typename Elem, size_t N>
 struct ZuStdArrayTraits : public ZuStdArrayTraits_<T, Elem> {
+#if 0
   inline static T make(const Elem *data, unsigned length) {
     T array;
     if ((size_t)length > N) length = N;
     for (unsigned i = 0; i < length; i++) array[i] = data[i];
     return array;
   }
+#endif
 };
 
 #include <ZuStdString.hpp>
@@ -499,9 +505,11 @@ struct ZuTraits<std::initializer_list<Elem_> > :
   typedef Elem_ Elem;
   inline static const Elem *data(const T &a) { return a.begin(); }
   inline static unsigned length(const T &a) { return a.size(); }
+#if 0
   inline static T make(const Elem *data, unsigned length) {
     return T(data, length);
   }
+#endif
 };
 
 template <typename L> struct ZuLambdaTraits :

@@ -62,6 +62,9 @@ namespace MxMDInstrumentJNI {
   ZJNI::JavaMethod allOrderBooksFn[] = {
     { "fn", "(Lcom/shardmx/mxmd/MxMDOrderBook;)J" }
   };
+
+  // generic unsubscribe
+  using MxMDLibJNI::unsubscribe_;
 }
 
 void MxMDInstrumentJNI::ctor_(JNIEnv *env, jobject obj, jlong)
@@ -69,10 +72,11 @@ void MxMDInstrumentJNI::ctor_(JNIEnv *env, jobject obj, jlong)
   // (long) -> void
 }
 
-void MxMDInstrumentJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
+void MxMDInstrumentJNI::dtor_(JNIEnv *env, jobject, jlong ptr_)
 {
   // (long) -> void
   ZmRef<MxMDInstrument> *ZuMayAlias(ptr) = (ZmRef<MxMDInstrument> *)&ptr_;
+  if (MxMDInstrument *instr = *ptr) unsubscribe_(env, instr);
   ptr->~ZmRef<MxMDInstrument>();
 }
 
@@ -150,23 +154,19 @@ jobject MxMDInstrumentJNI::derivatives(JNIEnv *env, jobject obj)
   return MxMDDerivativesJNI::ctor(env, instr->derivatives());
 }
 
-void MxMDInstrumentJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
+void MxMDInstrumentJNI::subscribe(JNIEnv *env, jobject obj, jobject handler)
 {
   // (MxMDInstrHandler) -> void
   MxMDInstrument *instr = ptr_(env, obj);
   if (ZuUnlikely(!instr)) return;
-  instr->subscribe(MxMDInstrHandlerJNI::j2c(env, handler_));
-  instr->appData(env->NewGlobalRef(handler_));
+  instr->subscribe(MxMDInstrHandlerJNI::j2c(env, handler));
+  instr->libData(env->NewGlobalRef(handler));
 }
 
 void MxMDInstrumentJNI::unsubscribe(JNIEnv *env, jobject obj)
 {
   // () -> void
-  MxMDInstrument *instr = ptr_(env, obj);
-  if (ZuUnlikely(!instr)) return;
-  instr->unsubscribe();
-  env->DeleteGlobalRef(instr->appData<jobject>());
-  instr->appData(nullptr);
+  if (MxMDInstrument *instr = ptr_(env, obj)) unsubscribe_(env, instr);
 }
 
 jobject MxMDInstrumentJNI::handler(JNIEnv *env, jobject obj)
@@ -174,7 +174,7 @@ jobject MxMDInstrumentJNI::handler(JNIEnv *env, jobject obj)
   // () -> MxMDInstrHandler
   MxMDInstrument *instr = ptr_(env, obj);
   if (ZuUnlikely(!instr)) return 0;
-  return instr->appData<jobject>();
+  return instr->libData<jobject>();
 }
 
 jobject MxMDInstrumentJNI::orderBook(JNIEnv *env, jobject obj, jstring venue)

@@ -41,7 +41,7 @@ MxTelemetryHashTblWrapper::~MxTelemetryHashTblWrapper()
 
 void MxTelemetryHashTblWrapper::initActiveDataSet() noexcept
 {
-    // 0=linear, 1=bits
+    // 0=count, 1=effLoadFactor
     m_activeDataSet = {0, 1};
 }
 
@@ -65,8 +65,8 @@ void MxTelemetryHashTblWrapper::initTableList() noexcept
     m_tableList->insert(i, "cBits");
     m_tablePriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_cBits);
 
-    m_tableList->insert(i, "cSlots");
-    m_tablePriorityToStructIndex->insert(i++, OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_C_SLOTS);
+    m_tableList->insert(i, "locks");
+    m_tablePriorityToStructIndex->insert(i++, OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_LOCKS);
 
     m_tableList->insert(i, "count");
     m_tablePriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_count);
@@ -141,7 +141,7 @@ void MxTelemetryHashTblWrapper::getDataForTable(void* const a_mxTelemetryMsg, QL
                                 )
                             );
             break;
-        case OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_C_SLOTS:
+        case OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_LOCKS:
             l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
             a_result.append(QString::number(
                                 typeConvertor<uint64_t>(
@@ -210,35 +210,13 @@ void MxTelemetryHashTblWrapper::getDataForTable(void* const a_mxTelemetryMsg, QL
 void MxTelemetryHashTblWrapper::initChartList() noexcept
 {
     int i = 0;
-    m_chartList->insert(i, "linear");
-    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_linear);
-
-    m_chartList->insert(i, "bits");
-    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_bits);
-
-    m_chartList->insert(i, "slots");
-    m_chartPriorityToStructIndex->insert(i++, OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_SLOTS);
-
-    m_chartList->insert(i, "cBits");
-    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_cBits);
-
-    m_chartList->insert(i, "cSlots");
-    m_chartPriorityToStructIndex->insert(i++, OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_C_SLOTS);
 
     m_chartList->insert(i, "count");
     m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_count);
 
-    m_chartList->insert(i, "resized");
-    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_resized);
-
-    m_chartList->insert(i, "loadFactor");
-    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_loadFactor);
-
     m_chartList->insert(i, "effLoadFactor");
     m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_effLoadFactor);
 
-    m_chartList->insert(i, "nodeSize");
-    m_chartPriorityToStructIndex->insert(i++, ZmHashTblTelemetryStructIndex::e_nodeSize);
 
     // extra
     m_chartList->insert(i++, "none");
@@ -315,7 +293,7 @@ QPair<void*, int> MxTelemetryHashTblWrapper::getMxTelemetryDataType(void* const 
         l_result.first = a_otherResult;
         l_result.second = CONVERT_FRON::type_uint64_t;
         break;
-    case OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_C_SLOTS:
+    case OTHER_ACTIONS::HASH_TBL_MXTYPE_CALCULATE_LOCKS:
         // uint_64 can hold  2^64 - 1
         // double  can hold  2^53 and -(2^53)
         // so we lose precision if (a_otherResult > 2^53)

@@ -40,8 +40,8 @@ MxTelemetryDBEnvWrapper::~MxTelemetryDBEnvWrapper()
 
 void MxTelemetryDBEnvWrapper::initActiveDataSet() noexcept
 {
-    // 0=, 1=
-    m_activeDataSet = {0, 1};
+    // 0=none, 0=none
+    m_activeDataSet = {0, 0};
 }
 
 
@@ -282,44 +282,6 @@ void MxTelemetryDBEnvWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLin
 void MxTelemetryDBEnvWrapper::initChartList() noexcept
 {
     int i = 0;
-    m_chartList->insert(i, "self");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_self);
-    m_chartList->insert(i, "master");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_master);
-    m_chartList->insert(i, "prev");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_prev);
-    m_chartList->insert(i, "next");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_next);
-
-    m_chartList->insert(i, "state");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_state);
-    m_chartList->insert(i, "active");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_active);
-    m_chartList->insert(i, "recovering");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_recovering);
-    m_chartList->insert(i, "replicating");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_replicating);
-    m_chartList->insert(i, "nDBs");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_nDBs);
-
-    m_chartList->insert(i, "nHosts");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_nHosts);
-    m_chartList->insert(i, "nPeers");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_nPeers);
-    m_chartList->insert(i, "nCxns");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_nCxns);
-    m_chartList->insert(i, "heartbeatFreq");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_heartbeatFreq);
-    m_chartList->insert(i, "heartbeatTimeout");
-    m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_heartbeatTimeout);
-
-    m_chartList->insert(i, "reconnectFreq");
-     m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_reconnectFreq);
-    m_chartList->insert(i, "electionTimeout");
-     m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_electionTimeout);
-    m_chartList->insert(i, "writeThread");
-     m_chartPriorityToStructIndex->insert(i++, DBEnvMxTelemetryStructIndex::e_writeThread);
-
     // extra
     m_chartList->insert(i++, "none");
 }

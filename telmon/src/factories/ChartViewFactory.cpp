@@ -54,6 +54,8 @@ QChartView* ChartViewFactory::getChartView(const int a_mxType, const QString& a_
         break;
     case MxTelemetry::Type::Socket:
         l_result = new BasicChartView(l_chart, MxTelemetry::Type::Socket);
+        // there is wierd bug that does not represent the follow char '<' so we replace
+         l_result->chart()->setTitle(QString(a_mxTelemetryInstanceName).replace(a_mxTelemetryInstanceName.indexOf('<'), 1, "/"));
         break;
     case MxTelemetry::Type::Queue:
         l_result = new BasicChartView(l_chart, MxTelemetry::Type::Queue);
@@ -74,7 +76,11 @@ QChartView* ChartViewFactory::getChartView(const int a_mxType, const QString& a_
         l_result = new BasicChartView(l_chart, MxTelemetry::Type::DB);
         break;
     default:
-        qWarning() << "unknown MxTelemetry::Type:" << a_mxType<< "request, returning...";
+        qCritical() << "ChartViewFactory"
+                    << __PRETTY_FUNCTION__
+                    <<  "unknown MxTelemetry::Type:"
+                    << a_mxType
+                    << "request, returning...";
         return l_result;
         break;
     }

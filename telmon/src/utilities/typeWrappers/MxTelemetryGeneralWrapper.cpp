@@ -26,6 +26,7 @@
 #include "QDebug"
 #include "ZtDate.hpp"
 
+const char* MxTelemetryGeneralWrapper::NAME_DELIMITER = " - ";
 
 MxTelemetryGeneralWrapper::MxTelemetryGeneralWrapper():
     m_tableList(new QList<QString>),
@@ -123,7 +124,10 @@ QPair<void*, int> MxTelemetryGeneralWrapper::getMxTelemetryDataType(void* const 
 
 
 
-
+bool MxTelemetryGeneralWrapper::isChartOptionEnabledInContextMenu() const noexcept
+{
+    return (m_chartList->size() > 1);
+}
 
 
 

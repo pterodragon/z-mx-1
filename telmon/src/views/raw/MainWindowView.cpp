@@ -66,7 +66,7 @@ void MainWindowView::initMenuBar()
 
     //settings functionality
     m_settingsSubMenu = new QAction(QObject::tr("&Settings"), m_mainWindowController);
-    m_settingsSubMenu->setEnabled(false); // disabled until implemented
+    //m_settingsSubMenu->setEnabled(false); // disabled until implemented
 
     // Exit functionaility
     m_exitSubMenu = new QAction(QObject::tr("&Exit"), m_mainWindowController);

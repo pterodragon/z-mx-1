@@ -23,6 +23,8 @@
 #define NETWORKMANAGERQTHREADIMPL_H
 
 #include "NetworkManager.h"
+
+
 class ConnectionQThread;
 class ZmSemaphore;
 
@@ -37,7 +39,9 @@ public:
     virtual uintptr_t disconnect()                       override final;
     virtual uintptr_t setConfiguration()                 override final;
     virtual uintptr_t getConfiguration() const noexcept  override final;
-    virtual uintptr_t getState() const noexcept          override final;
+    virtual uintptr_t getState()         const noexcept  override final;
+    virtual void setIP(const QString& a_ip)       noexcept  override final;
+    virtual void setPort(const QString& a_port)   noexcept  override final;
 
 protected:
     virtual void setState(const unsigned int a_state)     override final;
@@ -46,6 +50,9 @@ private:
     ZmSemaphore* m_disconnectSemaphore;
     ConnectionQThread* m_connectionThread;
     unsigned int m_state;
+
+    QString* m_ip;
+    QString* m_port;
 };
 
 

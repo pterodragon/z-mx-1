@@ -55,14 +55,27 @@ uintptr_t MainWindowModel::connect()
     return m_networkManager->connect();
 }
 
+
 uintptr_t MainWindowModel::disconnect()
 {
     return m_networkManager->disconnect();
 }
 
+
 DataDistributor* MainWindowModel::getDataDistributor() const noexcept
 {
     return m_dataDistributor;
+}
+
+
+void MainWindowModel::setIP(const QString& a_ip) noexcept
+{
+    m_networkManager->setIP(a_ip);
+}
+
+void MainWindowModel::setPort(const QString& a_port) noexcept
+{
+    m_networkManager->setPort(a_port);
 }
 
 

@@ -27,6 +27,7 @@
 // https://stackoverflow.com/questions/318064/how-do-you-declare-an-interface-in-c
 
 class DataDistributor;
+class QString;
 
 class NetworkManager
 {
@@ -44,6 +45,8 @@ public:
     virtual uintptr_t setConfiguration()                = 0;
     virtual uintptr_t getConfiguration() const noexcept = 0;
     virtual uintptr_t getState()         const noexcept = 0;
+    virtual void setIP(const QString& a_ip)       noexcept = 0;
+    virtual void setPort(const QString& a_ip)     noexcept = 0;
 
 protected:
     virtual void setState(const unsigned int a_state) = 0;

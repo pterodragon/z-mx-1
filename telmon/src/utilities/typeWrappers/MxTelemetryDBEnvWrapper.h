@@ -66,7 +66,33 @@ protected:
 
 
 public:
-    // must correspond to struct index
+
+
+
+    /**
+     * @brief The DBEnvMxTelemetryStructIndex enum corresponds to following:
+     *
+     *  struct ZdbEnv::Telemetry {        // not graphable
+     *    uint32_t		nCxns;		      // dynamic
+     *    uint32_t		heartbeatFreq;
+     *    uint32_t		heartbeatTimeout;
+     *    uint32_t		reconnectFreq;
+     *    uint32_t		electionTimeout;
+     *    uint32_t		self;             // dynamic - host ID
+     *    uint32_t		master;           // dynamic - ''
+     *    uint32_t		prev;             // dynamic - ''
+     *    uint32_t		next;             // dynamic - ''
+     *    uint16_t		writeThread;
+     *    uint8_t		nHosts;
+     *    uint8_t		nPeers;
+     *    uint8_t		nDBs;
+     *    uint8_t		state;          // dynamic - RAG - same as hosts[hostID].state
+     *    uint8_t		active;         // dynamic
+     *    uint8_t		recovering;     // dynamic
+     *    uint8_t		replicating;	// dynamic
+     *  };
+     *
+     */
     enum DBEnvMxTelemetryStructIndex {e_nCxns,         e_heartbeatFreq,    e_heartbeatTimeout,
                                       e_reconnectFreq, e_electionTimeout,  e_self,
                                       e_master,        e_prev,             e_next,

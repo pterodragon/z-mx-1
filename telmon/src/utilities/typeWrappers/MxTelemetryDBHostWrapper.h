@@ -65,7 +65,19 @@ protected:
     QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
 
 public:
-    // must correspond to struct index
+    /**
+     * @brief The DBHostMxTelemetryStructIndex enum corresponds to following:
+     *
+     *  struct ZdbHost::Telemetry { // not graphable
+     *    ZiIP		ip;
+     *    uint32_t	id;            // primary key
+     *    uint32_t	priority;
+     *    uint16_t	port;
+     *    uint8_t	voted;		   // dynamic
+     *    uint8_t	state;		   // dynamic - RAG
+     *  };
+     *
+     */
     enum DBHostMxTelemetryStructIndex { e_ip,    e_id,     e_priority,
                                         e_port,  e_voted,  e_state};
 

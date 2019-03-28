@@ -41,8 +41,8 @@ MxTelemetryDBHostWrapper::~MxTelemetryDBHostWrapper()
 
 void MxTelemetryDBHostWrapper::initActiveDataSet() noexcept
 {
-    // 0=, 1=
-    m_activeDataSet = {0, 1};
+    // 0=none, 0=none
+    m_activeDataSet = {0, 0};
 }
 
 
@@ -138,14 +138,6 @@ void MxTelemetryDBHostWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLi
 void MxTelemetryDBHostWrapper::initChartList() noexcept
 {
     int i = 0;
-    m_chartList->insert(i, "priority");
-    m_chartPriorityToStructIndex->insert(i++, DBHostMxTelemetryStructIndex::e_priority);
-
-    m_chartList->insert(i, "state");
-    m_chartPriorityToStructIndex->insert(i++, DBHostMxTelemetryStructIndex::e_state);
-
-    m_chartList->insert(i, "voted");
-    m_chartPriorityToStructIndex->insert(i++, DBHostMxTelemetryStructIndex::e_voted);
 
     // extra
     m_chartList->insert(i++, "none");

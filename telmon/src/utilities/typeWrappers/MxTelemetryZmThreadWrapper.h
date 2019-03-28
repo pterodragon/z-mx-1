@@ -69,12 +69,37 @@ protected:
 
 
 public:
-    // must correspond to struct index
+    /**
+     * @brief The ZmThreadTelemetryStructIndex enum corresponds to following:
+     *
+     *  struct ZmThreadTelemetry {  // graphable
+     *    ZmThreadName	name;		// static
+     *    uint64_t	tid;            // primary key
+     *    uint64_t	stackSize;      // static
+     *    uint64_t	cpuset;         // dynamic (not graphable) E.g. "1-4"
+     *    double	cpuUsage;       // dynamic(*)
+     *    int32_t	id;             // static - thread mgr ID, -ve if unset
+     *    int32_t	priority;       // static
+     *    uint16_t	partition;      // static
+     *    uint8_t	main;           // static
+     *    uint8_t	detached;       // static
+     *  };
+     *
+     */
     enum ZmThreadTelemetryStructIndex {e_name, e_tid, e_stackSize, e_cpuset, e_cpuUsage,
                                        e_id, e_priority, e_partition, e_main, e_detached};
 
     double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+
+    /**
+     * @brief  MxTelemetry::Thread name is *name* + *tid*
+     * @param a_name
+     * @param a_tid
+     * @return
+     */
+    virtual const std::string getPrimaryKey(const std::initializer_list<std::string>& a_list) const noexcept override final;
+
 };
 #endif // MXTELEMETRYZMTHREADWRAPPER_H
 

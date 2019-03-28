@@ -40,7 +40,7 @@ MxTelemetryZmThreadWrapper::~MxTelemetryZmThreadWrapper()
 
 void MxTelemetryZmThreadWrapper::initActiveDataSet() noexcept
 {
-    // 0=cpuUsage, 1=cpuset
+    // 0=cpuUsage, 1=none
     m_activeDataSet = {0, 1};
 }
 
@@ -192,24 +192,6 @@ void MxTelemetryZmThreadWrapper::initChartList() noexcept
     m_chartList->insert(i, "cpuUsage");
     m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_cpuUsage);
 
-    m_chartList->insert(i, "cpuset");
-    m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_cpuset);
-
-    m_chartList->insert(i, "priority");
-    m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_priority);
-
-    m_chartList->insert(i, "stackSize");
-    m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_stackSize);
-
-    m_chartList->insert(i, "partition");
-    m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_partition);
-
-    m_chartList->insert(i, "main");
-    m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_main);
-
-    m_chartList->insert(i, "detached");
-    m_chartPriorityToStructIndex->insert(i++, ZmThreadTelemetryStructIndex::e_detached);
-
     // extra
     m_chartList->insert(i, "none");
 }
@@ -291,3 +273,11 @@ QPair<void*, int> MxTelemetryZmThreadWrapper::getMxTelemetryDataType(void* const
     }
     return l_result;
 }
+
+
+const std::string MxTelemetryZmThreadWrapper::getPrimaryKey(const std::initializer_list<std::string>& a_list) const noexcept
+{
+    return std::string(a_list.begin()[0]).append(NAME_DELIMITER).append(a_list.begin()[1]);
+}
+
+

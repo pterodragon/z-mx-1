@@ -40,7 +40,7 @@ MxTelemetryEngineWrapper::~MxTelemetryEngineWrapper()
 void MxTelemetryEngineWrapper::initActiveDataSet() noexcept
 {
     // 0=, 1=
-    m_activeDataSet = {0, 1};
+    m_activeDataSet = {0, 0};
 }
 
 void MxTelemetryEngineWrapper::initTableList() noexcept
@@ -203,27 +203,6 @@ void MxTelemetryEngineWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLi
 void MxTelemetryEngineWrapper::initChartList() noexcept
 {
     int i = 0;
-    m_chartList->insert(i, "nLinks");
-    m_chartPriorityToStructIndex->insert(i++, EngineMxTelemetryStructIndex::e_nLinks);
-
-    m_chartList->insert(i, "up");
-    m_chartPriorityToStructIndex->insert(i++, EngineMxTelemetryStructIndex::e_up);
-
-    m_chartList->insert(i, "down");
-    m_chartPriorityToStructIndex->insert(i++, EngineMxTelemetryStructIndex::e_down);
-
-    m_chartList->insert(i, "disable");
-    m_chartPriorityToStructIndex->insert(i++, EngineMxTelemetryStructIndex::e_disabled);
-
-    m_chartList->insert(i, "transient");
-    m_chartPriorityToStructIndex->insert(i++, EngineMxTelemetryStructIndex::e_transient);
-
-    m_chartList->insert(i, "reconn");
-    m_chartPriorityToStructIndex->insert(i++, EngineMxTelemetryStructIndex::e_reconn);
-
-    m_chartList->insert(i, "failed");
-    m_chartPriorityToStructIndex->insert(i++, EngineMxTelemetryStructIndex::e_failed);
-
 
     // extra
     m_chartList->insert(i++, "none");

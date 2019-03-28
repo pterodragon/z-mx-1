@@ -68,7 +68,29 @@ protected:
 
 
 public:
-    // must correspond to struct index
+    /**
+     * @brief The ZiCxnMxTelemetryStructIndex enum corresponds to following:
+     *
+     *  struct ZiCxnTelemetry { // graphable
+     *    ZuID		mxID;		// static - multiplexer ID
+     *    uint64_t	socket;		// dynamic - Unix file descriptor / Winsock SOCKET
+     *    uint32_t	rxBufSize;	// dynamic - getsockopt(..., SO_RCVBUF, ...)
+     *    uint32_t	rxBufLen;	// dynamic(*) - ioctl(..., SIOCINQ, ...)
+     *    uint32_t	txBufSize;	// dynamic - getsockopt(..., SO_SNDBUF, ...)
+     *    uint32_t	txBufLen;	// dynamic(*) - ioctl(..., SIOCOUTQ, ...)
+     *    uint32_t	flags;		// static - ZiCxnFlags
+     *    ZiIP		mreqAddr;	// static - mreqs[0]
+     *    ZiIP		mreqIf;		// static - mreqs[0]
+     *    ZiIP		mif;		// static
+     *    uint32_t	ttl;		// static
+     *    ZiIP		localIP;	// primary key - static
+     *    ZiIP		remoteIP;	// primary key - static
+     *    uint16_t	localPort;	// primary key - static
+     *    uint16_t	remotePort;	// primary key - static
+     *    uint8_t	type;		// static - ZiCxnType
+     *  };
+     *
+     */
     enum ZiCxnMxTelemetryStructIndex {e_mxID, e_socket, e_rxBufSize, e_rxBufLen,
                                                         e_txBufSize, e_txBufLen,
                                       e_flags, e_mreqAddr, e_mreqIf, e_mif,
@@ -78,6 +100,20 @@ public:
 
     double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+
+
+    /**
+     * @brief  MxTelemetry::Socket name depends on type
+     *         switch (type) {
+     *           case ZiCxnType::TCPIn:   // primary key is localIP:localPort<remoteIP:remotePort
+     *           case ZiCxnType::UDP:
+     *           case ZiCxnType::TCPOut:  // primary key is remoteIP:remotePort<localIP:localPort
+     *          }
+     * @param a_list
+     * @return
+     */
+    virtual const std::string getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
+
 };
 
 

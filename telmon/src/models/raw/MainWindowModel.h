@@ -24,6 +24,7 @@
 
 class NetworkManager;
 class DataDistributor;
+class QString;
 
 class MainWindowModel {
 
@@ -34,6 +35,10 @@ public:
     uintptr_t disconnect();
 
     DataDistributor* getDataDistributor() const noexcept;
+
+
+    void setIP(const QString& a_ip) noexcept;
+    void setPort(const QString& a_port) noexcept;
 
 private:
     DataDistributor* m_dataDistributor;

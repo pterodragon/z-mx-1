@@ -30,6 +30,8 @@
 #include "QDockWidget"
 #include "QSplitter"
 #include "src/widgets/BasicTextWidget.h"
+#include "QInputDialog"
+#include "QHostAddress"
 
 
 #include "QDebug" // perhaps remove after testing
@@ -156,6 +158,49 @@ void MainWindowController::createActions() noexcept
          this->m_mainWindowView->m_treeWidgetSplitter->addWidget(m_controllersDB->value(l_key)->getView());
 
         setCentralWidget( this->m_mainWindowView->m_centralWidget);
+    });
+
+    // File->Settings functionality
+    // for now we use QInputDialog
+    // https://doc.qt.io/qt-5/qinputdialog.html#details
+    // in the future should implement
+    // normal dialog window
+    // https://doc.qt.io/qt-5/examples-dialogs.html
+    QObject::connect(m_mainWindowView->m_settingsSubMenu, &QAction::triggered, this, [this](){
+
+        qInfo() << "MainWindowController::settings ";
+
+        bool l_ok;
+        QString text = QInputDialog::getText(this,
+                                             tr("Settings"),
+                                             tr("Please insert: [ip:port]: \n"
+                                                "(In case of invalid data will use: [127.0.0.1:19300])"),
+                                             QLineEdit::Normal,
+                                             "127.0.0.1:19300",
+                                             &l_ok);
+
+        if (!l_ok) {return;}
+
+        // check that user input is ok:
+        // check that user entered ":" between ip and port
+        QStringList l_IP_and_Port = text.split(':');
+        if (l_IP_and_Port.size() != 2) {return;}
+
+        // check IP
+        QHostAddress l_addres;
+        if (!l_addres.setAddress(l_IP_and_Port[0])) {return;}
+
+        //check PORT
+        // max port 65535
+        if (l_IP_and_Port[1].toInt() > 65535
+                or
+            l_IP_and_Port[1].toInt() < 0)
+        {return;}
+
+        // success, set the ip:port
+        this->m_mainWindowModel->setIP(l_IP_and_Port[0].toLocal8Bit().data());
+        this->m_mainWindowModel->setPort(l_IP_and_Port[1].toLocal8Bit().data());
+
     });
 
     // File->Exit functionality

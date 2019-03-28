@@ -25,11 +25,16 @@
 #include "QMutex"
 #include <QMutexLocker>
 
-ConnectionQThread::ConnectionQThread(ZmSemaphore* a_disconnectSemaphore, DataDistributor* a_dataDistributor):
+ConnectionQThread::ConnectionQThread(ZmSemaphore* a_disconnectSemaphore,
+                                     DataDistributor* a_dataDistributor,
+                                     QString& a_ip,
+                                     QString& a_port):
     m_state(NetworkManager::STATE::DISCONNECTED),
     m_disconnectSemaphore(a_disconnectSemaphore),
     m_threadStateMutex(new QMutex()),
-    m_dataDistributor(a_dataDistributor)
+    m_dataDistributor(a_dataDistributor),
+    m_ip(a_ip),
+    m_port(a_port)
 {
 
 }
@@ -65,12 +70,29 @@ void ConnectionQThread::run()
     setState(NetworkManager::STATE::CONNECTING);
 
     ZmRef<ZvCf> cf = new ZvCf();
+//    cf->fromString(
+//                "telemetry {\n"
+//                "  ip 127.0.0.1\n"
+//                "  port 19300\n"
+//                "}\n",
+//                false);
+
+    QString l_config =
+            "telemetry {\n"
+            "  ip " +
+            m_ip +
+            "\n"
+            "  port " +
+            m_port +
+            "\n"
+            "}\n";
+
     cf->fromString(
-                "telemetry {\n"
-                "  ip 127.0.0.1\n"
-                "  port 19300\n"
-                "}\n",
+                l_config.toLocal8Bit().data(),
                 false);
+
+    qDebug() << "Qthread using the following config\n" << l_config;
+
     ZmRef<MxMultiplex> m_mx = new MxMultiplex("mx", cf->subset("mx", true));
 
     MxTelMonClient app;

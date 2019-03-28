@@ -18,10 +18,11 @@
  */
 
 #include "TreeView.h"
-#include "QMenu"
+//#include "QMenu"
 #include "QAction"
 #include "QMouseEvent"
 #include "QDebug"
+#include "src/widgets/BasicContextMenu.h"
 
 TreeView::TreeView():
     m_mainWindow(nullptr)
@@ -37,13 +38,13 @@ TreeView::~TreeView()
 
 void TreeView::initContextMenu() noexcept
 {
-    m_contextMenu = new QMenu(this);
+    m_contextMenu = new BasicContextMenu(this);
 
     m_firstAction = new QAction(QObject::tr("Show Table"), this);
-    m_firstAction->setStatusTip(QObject::tr("Open new window with data fields updated in real time"));
+    m_firstAction->setToolTip(QObject::tr("Open new window with table"));
 
     m_secondAction = new QAction(QObject::tr("Show Chart"), this);
-    m_secondAction->setStatusTip(QObject::tr("Open new window with graph to monitor specific data filed over time"));
+    m_secondAction->setToolTip(QObject::tr("Open new window with chart"));
 
     m_contextMenu->addAction(m_firstAction);
     m_contextMenu->addAction(m_secondAction);

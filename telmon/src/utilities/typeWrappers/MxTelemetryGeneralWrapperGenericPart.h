@@ -77,4 +77,15 @@ QString MxTelemetryGeneralWrapper::streamToQString(const T& a_toStream) const no
 }
 
 
+template <class T>
+const std::string MxTelemetryGeneralWrapper::streamToStdString(const T& a_toStream) const noexcept
+{
+    a_toStream.print(*m_stream);
+    const std::string l_result = m_stream->str();
+    m_stream->str(std::string());
+    m_stream->clear();
+    return l_result;
+}
+
+
 //#endif // MXTELEMETRYGENERALWRAPPERGENERICPART_H

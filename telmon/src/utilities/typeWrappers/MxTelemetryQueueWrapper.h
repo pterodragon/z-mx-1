@@ -65,13 +65,37 @@ protected:
 
 
 public:
-    // must correspond to struct index
+    /**
+     * @brief The QueueMxTelemetryStructIndex enum corresponds to following:
+     *
+     *  struct Queue { // graphable
+     *      MxIDString	id;         // primary key - is same as Link id for Rx/Tx
+     *      uint64_t	seqNo;		// dynamic - 0 for Thread, IPC
+     *      uint64_t	count;		// dynamic - due to overlaps, may not equal in - out
+     *      uint64_t	inCount;	// dynamic(*)
+     *      uint64_t	inBytes;	// dynamic
+     *      uint64_t	outCount;	// dynamic(*)
+     *      uint64_t	outBytes;	// dynamic
+     *      uint32_t	full;		// dynamic - not graphable - how many times queue overflowed
+     *      uint32_t	size;		// static - 0 for Rx, Tx
+     *      uint8_t	type;           // static - QueueType
+     *   };
+     *
+     */
     enum QueueMxTelemetryStructIndex {e_id,      e_seqNo,    e_count,    e_inCount,
                                       e_inBytes, e_outCount, e_outBytes, e_full,
                                       e_size,    e_type};
 
     double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+
+    /**
+     * @brief  MxTelemetry::Thread name is *id* + *MxTelemetry::QueueType::name(data.type)*
+     * @param a_name
+     * @param a_tid
+     * @return
+     */
+    virtual const std::string getPrimaryKey(const std::initializer_list<std::string>& a_list) const noexcept override final;
 };
 
 #endif // MXTELEMETRYQUEUEWRAPPER_H

@@ -39,6 +39,7 @@ public:
                             const QString& a_mxTelemetryTypeName,
                             const QString& a_mxTelemetryInstanceName) noexcept;
 
+
 private:
     MainWindowModel *m_mainWindowModel;
     MainWindowView *m_mainWindowView;

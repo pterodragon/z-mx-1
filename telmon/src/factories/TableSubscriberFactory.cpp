@@ -103,7 +103,10 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
                 const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Thread>();
 
                 {
-                    auto l_instanceName= QString(ZmIDString((l_data.name.data())));
+                    const auto l_typeWrapper = &MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Thread);
+                    const auto l_instanceName = QString::fromStdString(l_typeWrapper->getPrimaryKey(std::initializer_list<std::string>(
+                                    {std::string(l_data.name),
+                                     std::to_string(l_data.tid)})));
                     if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
                 }
 
@@ -142,10 +145,11 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
                                      void* a_mxTelemetryMsg) -> void
         {
             if (!a_this->isAssociatedWithObject()) {return;}
-            const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Socket>();
+            auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Socket>();
 
             {
-                auto l_instanceName= QString(ZmIDString((l_data.mxID)));
+                const auto l_typeWrapper = &MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Socket);
+                const auto l_instanceName = QString::fromStdString(l_typeWrapper->getPrimaryKey(&l_data));
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
 
@@ -166,7 +170,10 @@ TableSubscriber* TableSubscriberFactory::getTableSubscriber(const int a_type) co
             const auto &l_data = (static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg))->as<MxTelemetry::Queue>();
 
             {
-                auto l_instanceName= QString::fromStdString(a_this->constructQueueName(l_data.id, MxTelemetry::QueueType::name(l_data.type)));
+                const auto l_typeWrapper = &MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Queue);
+                const auto l_instanceName = QString::fromStdString(l_typeWrapper->getPrimaryKey(std::initializer_list<std::string>(
+                                                                                              {std::string(l_data.id),
+                                                                                               MxTelemetry::QueueType::name(l_data.type)})));
                 if (!a_this->isTelemtryInstanceNameMatchsObjectName(l_instanceName)) {return;}
             }
 

@@ -94,6 +94,7 @@ public:
 
     double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+
 };
 
 

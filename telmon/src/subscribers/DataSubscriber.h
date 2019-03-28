@@ -42,15 +42,6 @@ public:
     virtual const QString& getName() const noexcept = 0;
     virtual void update(void* a_mxTelemetryMsg) = 0;
 
-    /**
-     * @brief used to create Queue name
-     * @param
-     * @return
-     */
-    const std::string constructQueueName(const char* a_id, const char* a_type) const noexcept;
-
-private:
-    static const char* QUEUE_NAME_DELIMITER;
 };
 
 #endif // DATASUBSCRIBER_H

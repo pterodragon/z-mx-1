@@ -240,7 +240,7 @@ QPair<void*, int> MxTelemetryHeapWrapper::getMxTelemetryDataType(void* const a_m
     QPair<void*, int> l_result;
     switch (a_index) {
     case ZmHeapTelemetryStructIndex::e_id:
-        l_result.first = &l_data->id;
+        l_result.first = l_data->id.data();
         l_result.second = CONVERT_FRON::type_c_char;
         break;
     case ZmHeapTelemetryStructIndex::e_cacheSize:
@@ -295,5 +295,6 @@ QPair<void*, int> MxTelemetryHeapWrapper::getMxTelemetryDataType(void* const a_m
     }
     return l_result;
 }
+
 
 

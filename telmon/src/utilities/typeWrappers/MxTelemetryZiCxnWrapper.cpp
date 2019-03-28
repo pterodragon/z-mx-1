@@ -39,8 +39,8 @@ MxTelemetryZiCxnWrapper::~MxTelemetryZiCxnWrapper()
 
 void MxTelemetryZiCxnWrapper::initActiveDataSet() noexcept
 {
-    // 0=, 1=
-    m_activeDataSet = {0, 1};
+    // 2=rxBufLen, 4=txBufLen
+    m_activeDataSet = {2, 4};
 }
 
 
@@ -381,4 +381,56 @@ QPair<void*, int> MxTelemetryZiCxnWrapper::getMxTelemetryDataType(void* const a_
     }
     return l_result;
 }
+
+
+const std::string MxTelemetryZiCxnWrapper::getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept
+{
+    ZiIP l_otherResult;
+    const std::string l_localIP = streamToStdString(*(static_cast<ZiIP*>(
+                                                          getMxTelemetryDataType(a_mxTelemetryMsg,
+                                                                                 ZiCxnMxTelemetryStructIndex::e_localIP,
+                                                                                 &l_otherResult).first)
+                                                      )
+                                                    );
+
+
+    const std::string l_localPort = std::to_string(typeConvertor<uint16_t>(
+                                                  getMxTelemetryDataType(a_mxTelemetryMsg,
+                                                                         ZiCxnMxTelemetryStructIndex::e_localPort,
+                                                                         &l_otherResult)));
+
+
+    const std::string l_remoteIP = streamToStdString(*(static_cast<ZiIP*>(
+                                                          getMxTelemetryDataType(a_mxTelemetryMsg,
+                                                                                 ZiCxnMxTelemetryStructIndex::e_remoteIP,
+                                                                                 &l_otherResult).first)
+                                                      )
+                                                    );
+
+    const std::string l_remotePort = std::to_string(typeConvertor<uint16_t>(
+                                                  getMxTelemetryDataType(a_mxTelemetryMsg,
+                                                                         ZiCxnMxTelemetryStructIndex::e_remotePort,
+                                                                         &l_otherResult)));
+
+    const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, ZiCxnMxTelemetryStructIndex::e_type, &l_otherResult);
+    uint8_t l_type = typeConvertor<uint8_t>(QPair(l_dataPair.first, l_dataPair.second));
+
+    switch (l_type)
+    {
+    case ZiCxnType::TCPIn:   // primary key is localIP:localPort<remoteIP:remotePort
+        return std::string().append(l_localIP).append(":").append(l_localPort).append("<").append(l_remoteIP).append(":").append(l_remotePort);
+        break;
+    case ZiCxnType::UDP:     // primary key is remoteIP:remotePort<localIP:localPort
+    case ZiCxnType::TCPOut:
+        return std::string().append(l_remoteIP).append(":").append(l_remotePort).append("<").append(l_localIP).append(":").append(l_localPort);
+        break;
+    default:
+        qCritical() << *m_className << __PRETTY_FUNCTION__ << "unknown ZiCxnType";
+        return std::string("Unknown");
+    }
+}
+
+
+
+
 

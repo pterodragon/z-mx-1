@@ -65,7 +65,25 @@ protected:
     QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
 
 public:
-    // must correspond to struct index
+    /**
+     * @brief The EngineMxTelemetryStructIndex enum corresponds to following:
+     *
+     *  struct MxEngine::Telemetry { // no graph
+     *    MxID		id;         // primary key
+     *    MxID		mxID;		// static
+     *    uint32_t	down;		// dynamic
+     *    uint32_t	disabled;	// dynamic
+     *    uint32_t	transient;	// dynamic
+     *    uint32_t	up;         // dynamic
+     *    uint32_t	reconn;		// dynamic
+     *    uint32_t	failed;		// dynamic
+     *    uint16_t	nLinks;		// static
+     *    uint8_t	rxThread;	// static
+     *    uint8_t	txThread;	// static
+     *    uint8_t	state;		// RAG - MxEngineState::rag(i) - MxRAG namespace return
+     *  };
+     *
+     */
     enum EngineMxTelemetryStructIndex {e_id,       e_mxID,    e_down,      e_disabled,
                                       e_transient, e_up,      e_reconn,    e_failed,
                                       e_nLinks,    e_rxThread, e_txThread, e_state};

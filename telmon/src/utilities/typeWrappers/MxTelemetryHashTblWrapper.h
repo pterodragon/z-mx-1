@@ -70,7 +70,22 @@ protected:
 
 
 public:
-    // must correspond to struct index
+    /**
+     * @brief The ZmHashTblTelemetryStructIndex enum corresponds to following:
+     *
+     * struct ZmHashTelemetry {    // graphable
+     *    ZmIDString	id;		   // primary key
+     *    uint32_t	nodeSize;	   // static
+     *    uint32_t	loadFactor;	   // static - (double)N / 16.0
+     *    uint32_t	count;		   // dynamic(*)
+     *    uint32_t	effLoadFactor; // dynamic(*) - (double)N / 16.0
+     *    uint32_t	resized;	   // dynamic (not graphable)
+     *    uint8_t	bits;		   // static
+     *    uint8_t	cBits;		   // static
+     *    uint8_t	linear;		   // static
+     *  };
+     *
+     */
     enum ZmHashTblTelemetryStructIndex {e_id, e_nodeSize, e_loadFactor, e_count, e_effLoadFactor,
                                               e_resized, e_bits, e_cBits, e_linear};
 

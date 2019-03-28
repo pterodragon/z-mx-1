@@ -67,7 +67,34 @@ protected:
 
 
 public:
-    // must correspond to struct index
+    /**
+     * @brief The DBMxTelemetryStructIndex enum corresponds to following:
+     *
+     *   struct ZdbAny::Telemetry {     // graphable
+     *    typedef ZuStringN<124> Path;
+     *    typedef ZuStringN<28> Name;
+     *
+     *    Path		path;
+     *    Name		name;               // primary key
+     *    uint64_t	fileSize;
+     *    uint64_t	minRN;
+     *    uint64_t	allocRN;           // dynamic
+     *    uint64_t	fileRN;
+     *    uint64_t	cacheLoads;	       // dynamic(*)
+     *    uint64_t	cacheMisses;	   // dynamic(*)
+     *    uint64_t	fileLoads;	       // dynamic
+     *    uint64_t	fileMisses;	       // dynamic
+     *    uint32_t	id;
+     *    uint32_t	preAlloc;
+     *    uint32_t	recSize;
+     *    uint32_t	fileRecs;
+     *    uint32_t	cacheSize;
+     *    uint32_t	filesMax;
+     *    uint8_t	compress;
+     *    int8_t	cacheMode;
+    };
+     *
+     */
     enum DBMxTelemetryStructIndex { e_path,        e_name,         e_fileSize,
                                     e_minRN,       e_allocRN,      e_fileRN,
                                     e_cacheLoads,  e_cacheMisses,  e_fileLoads,

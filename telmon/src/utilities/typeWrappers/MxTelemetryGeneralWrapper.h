@@ -23,6 +23,7 @@
 #define MXTELEMETRYGENERALWRAPPER_H
 
 #include <array> // for std::array
+#include "QDebug"
 
 template <class T>
 class QList;
@@ -65,7 +66,7 @@ public:
     // so we will begin from 40
     enum OTHER_ACTIONS {GET_CURRENT_TIME=40,
                         HEAP_MXTYPE_CALCULATE_ALLOCATED,
-                        HASH_TBL_MXTYPE_CALCULATE_SLOTS, HASH_TBL_MXTYPE_CALCULATE_C_SLOTS};
+                        HASH_TBL_MXTYPE_CALCULATE_SLOTS, HASH_TBL_MXTYPE_CALCULATE_LOCKS};
 
 
     MxTelemetryGeneralWrapper();
@@ -125,6 +126,37 @@ public:
     void virtual getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept  = 0;
 
 
+    /**
+     * @brief isChartOptionEnabledInContextMenu
+     * if "m_chartList" only includes "none", that is, size is 1, return false;
+     * @return
+     */
+    bool isChartOptionEnabledInContextMenu() const noexcept;
+
+
+    /**
+     * @brief getPrimaryKey aka name
+     * @param a_mxTelemetryMsg
+     * @return
+     */
+    virtual const std::string getPrimaryKey(const std::initializer_list<std::string>&) const noexcept
+    {
+        qCritical() << *m_className << __PRETTY_FUNCTION__ << "called";
+        return std::string();
+    }
+
+    /**
+     * @brief getPrimaryKey aka name
+     * @param a_mxTelemetryMsg
+     * @return
+     */
+    virtual const std::string getPrimaryKey(void* const) const noexcept
+    {
+        qCritical() << *m_className << __PRETTY_FUNCTION__ << "called";
+        return std::string();
+    }
+
+
     // service functions
     template <class T>
     T typeConvertor(const QPair<void*, int>& a_param) const noexcept;
@@ -133,6 +165,9 @@ public:
 
     template <class T>
     QString streamToQString(const T& a_toStream) const noexcept;
+
+    template <class T>
+    const std::string streamToStdString(const T& a_toStream) const noexcept;
 
 protected:
     /**
@@ -176,6 +211,8 @@ protected:
     QVector<int>* m_tablePriorityToStructIndex;
     QString* m_className;
     std::stringstream* m_stream; // assistance in translation to some types
+
+    static const char* NAME_DELIMITER;
 };
 
 // 1. supress warning Wunused template function

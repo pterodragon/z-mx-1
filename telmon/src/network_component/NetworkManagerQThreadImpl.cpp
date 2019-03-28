@@ -28,7 +28,9 @@ NetworkManagerQThreadImpl::NetworkManagerQThreadImpl(DataDistributor* a_dataDist
     NetworkManager(a_dataDistributor),
     m_disconnectSemaphore(new ZmSemaphore),
     m_connectionThread(nullptr),
-    m_state(STATE::DISCONNECTED)
+    m_state(STATE::DISCONNECTED),
+    m_ip(new QString("127.0.0.1")),
+    m_port(new QString("19300"))
 {
 
 }
@@ -50,6 +52,12 @@ NetworkManagerQThreadImpl::~NetworkManagerQThreadImpl()
     // make sure to delete only after thread was deleted
     delete m_disconnectSemaphore;
     m_disconnectSemaphore = nullptr;
+
+    delete m_ip;
+    m_ip = nullptr;
+
+    delete m_port;
+    m_port = nullptr;
     qDebug() << "        ~NetworkManagerQThreadImpl() - end";
 }
 
@@ -59,7 +67,10 @@ uintptr_t NetworkManagerQThreadImpl::connect()
     if (!m_connectionThread)
     {
         // creating the thread, the thread is not running until call to start()
-        m_connectionThread = new ConnectionQThread(m_disconnectSemaphore, m_dataDistributor);
+        m_connectionThread = new ConnectionQThread(m_disconnectSemaphore,
+                                                   m_dataDistributor,
+                                                   *m_ip,
+                                                   *m_port);
     }
 
     m_connectionThread->start();
@@ -120,4 +131,15 @@ void NetworkManagerQThreadImpl::setState(const unsigned int a_state)
     m_state = a_state;
 }
 
+
+void NetworkManagerQThreadImpl::setIP(const QString& a_ip)     noexcept
+{
+    *m_ip = a_ip;
+}
+
+
+void NetworkManagerQThreadImpl::setPort(const QString& a_port)   noexcept
+{
+    *m_port = a_port;
+}
 

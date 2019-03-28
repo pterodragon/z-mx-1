@@ -66,7 +66,18 @@ protected:
     QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
 
 public:
-    // must correspond to struct index
+    /**
+     * @brief The LinkMxTelemetryStructIndex enum corresponds to following:
+     *
+     *  struct MxAnyLink::Telemetry { // no graph
+     *    MxID		id;		    // primary key
+     *    uint64_t	rxSeqNo;	// dynamic - not graphable
+     *    uint64_t	txSeqNo;	// dynamic - not graphable
+     *    uint32_t	reconnects;	// dynamic - not graphable
+     *    uint8_t	state;		// RAG - MxLinkState::rag(i) - MxRAG
+     8  };
+     *
+     */
     enum LinkMxTelemetryStructIndex {e_id,        e_rxSeqNo,     e_txSeqNo,
                                       e_reconnects, e_state};
 

@@ -40,8 +40,8 @@ MxTelemetryQueueWrapper::~MxTelemetryQueueWrapper()
 
 void MxTelemetryQueueWrapper::initActiveDataSet() noexcept
 {
-    // 0=, 1=
-    m_activeDataSet = {0, 1};
+    // 2=inCount, 4=outCount
+    m_activeDataSet = {2, 4};
 }
 
 
@@ -186,17 +186,12 @@ void MxTelemetryQueueWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLin
 void MxTelemetryQueueWrapper::initChartList() noexcept
 {
     int i = 0;
-    m_chartList->insert(i, "full");
-    m_chartPriorityToStructIndex->insert(i++, QueueMxTelemetryStructIndex::e_full);
-
-    m_chartList->insert(i, "size");
-    m_chartPriorityToStructIndex->insert(i++, QueueMxTelemetryStructIndex::e_size);
-
-    m_chartList->insert(i, "count");
-    m_chartPriorityToStructIndex->insert(i++, QueueMxTelemetryStructIndex::e_count);
 
     m_chartList->insert(i, "seqNo");
     m_chartPriorityToStructIndex->insert(i++, QueueMxTelemetryStructIndex::e_seqNo);
+
+    m_chartList->insert(i, "count");
+    m_chartPriorityToStructIndex->insert(i++, QueueMxTelemetryStructIndex::e_count);
 
     m_chartList->insert(i, "inCount");
     m_chartPriorityToStructIndex->insert(i++, QueueMxTelemetryStructIndex::e_inCount);
@@ -288,6 +283,9 @@ QPair<void*, int> MxTelemetryQueueWrapper::getMxTelemetryDataType(void* const a_
 }
 
 
-
+const std::string MxTelemetryQueueWrapper::getPrimaryKey(const std::initializer_list<std::string>& a_list) const noexcept
+{
+    return std::string(a_list.begin()[0]).append(NAME_DELIMITER).append(a_list.begin()[1]);
+}
 
 

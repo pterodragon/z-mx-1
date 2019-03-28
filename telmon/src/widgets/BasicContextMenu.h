@@ -18,43 +18,29 @@
  */
 
 
-#ifndef CONNECTIONQTHREAD_H
-#define CONNECTIONQTHREAD_H
+#ifndef BASICCONTEXTMENU_H
+#define BASICCONTEXTMENU_H
 
-#include <QThread>
-class ZmSemaphore;
-class QMutex;
-class DataDistributor;
+#include "QMenu"
 
-class ConnectionQThread: public QThread {
+/**
+ * @brief The BasicContextMenu class
+ * Implemented this class to provide tool tip tin tree view context menu
+ * please read more
+ *  https://stackoverflow.com/questions/27161122/qtooltip-for-qactions-in-qmenu
+ */
+class BasicContextMenu : public QMenu
+{
     Q_OBJECT
-
 public:
-    ConnectionQThread(ZmSemaphore* a_disconnectSemaphore,
-                      DataDistributor* a_dataDistributor,
-                      QString& a_ip,
-                      QString& a_port);
-    ~ConnectionQThread();
+    explicit BasicContextMenu(QWidget* a_parent = nullptr) : BasicContextMenu(QString(), a_parent) {}
+    explicit BasicContextMenu(const QString& a_title, QWidget* a_parent = nullptr);
 
-    void run();
-    unsigned int getState() const noexcept;
+    virtual void popup(const QPoint &p, const int a_mxTelemetryType, QAction *atAction = nullptr);
 
 protected:
-    unsigned int m_state;
-    void setState(unsigned int a_state) noexcept;
+    virtual bool event (QEvent * e) override;
 
-private:
-    ZmSemaphore* m_disconnectSemaphore;
-    QMutex* m_threadStateMutex;
-    void waitForDisconnectSignal() noexcept;
-    DataDistributor* m_dataDistributor;
-
-    QString m_ip;
-    QString m_port;
 };
 
-#endif // CONNECTIONQTHREAD_H
-
-
-
-
+#endif // BASICCONTEXTMENU_H

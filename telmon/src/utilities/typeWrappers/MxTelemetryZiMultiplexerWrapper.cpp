@@ -43,8 +43,8 @@ MxTelemetryZiMultiplexerWrapper::~MxTelemetryZiMultiplexerWrapper()
 
 void MxTelemetryZiMultiplexerWrapper::initActiveDataSet() noexcept
 {
-    // 0=nThreads, 1=priority
-    m_activeDataSet = {0, 1};
+    // 0=none, 1=none
+    m_activeDataSet = {0, 0};
 }
 
 
@@ -202,24 +202,6 @@ void MxTelemetryZiMultiplexerWrapper::getDataForTable(void* const a_mxTelemetryM
 void MxTelemetryZiMultiplexerWrapper::initChartList() noexcept
 {
     int i = 0;
-    m_chartList->insert(i, "nThreads");
-    m_chartPriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_nThreads);
-
-    m_chartList->insert(i, "priority");
-    m_chartPriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_priority);
-
-    m_chartList->insert(i, "partition");
-    m_chartPriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_partition);
-
-    m_chartList->insert(i, "stackSize");
-    m_chartPriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_stackSize);
-
-    m_chartList->insert(i, "rxBufSize");
-    m_chartPriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_rxBufSize);
-
-    m_chartList->insert(i, "txBufSize");
-    m_chartPriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_txBufSize);
-;
 
     // extra
     m_chartList->insert(i++, "none");

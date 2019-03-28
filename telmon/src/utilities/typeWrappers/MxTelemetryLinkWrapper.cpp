@@ -40,8 +40,8 @@ MxTelemetryLinkWrapper::~MxTelemetryLinkWrapper()
 
 void MxTelemetryLinkWrapper::initActiveDataSet() noexcept
 {
-    // 0=, 1=
-    m_activeDataSet = {0, 1};
+    // 0=none, 0=none
+    m_activeDataSet = {0, 0};
 }
 
 
@@ -127,15 +127,6 @@ void MxTelemetryLinkWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLink
 void MxTelemetryLinkWrapper::initChartList() noexcept
 {
     int i = 0;
-    m_chartList->insert(i, "reconnects");
-    m_chartPriorityToStructIndex->insert(i++, LinkMxTelemetryStructIndex::e_reconnects);
-
-    m_chartList->insert(i, "rxSeqNo");
-    m_chartPriorityToStructIndex->insert(i++, LinkMxTelemetryStructIndex::e_rxSeqNo);
-
-    m_chartList->insert(i, "txSeqNo");
-    m_chartPriorityToStructIndex->insert(i++, LinkMxTelemetryStructIndex::e_txSeqNo);
-
 
     // extra
     m_chartList->insert(i++, "none");

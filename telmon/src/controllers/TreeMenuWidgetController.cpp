@@ -26,6 +26,7 @@
 #include "src/controllers/MainWindowController.h"
 #include "src/factories/ControllerFactory.h" // only for enums
 #include "src/models/raw/TreeModel.h"
+#include "src/widgets/BasicContextMenu.h"
 
 TreeMenuWidgetController::TreeMenuWidgetController(DataDistributor& a_dataDistributor,
                                                    MainWindowController& a_MainWindowController,
@@ -99,20 +100,14 @@ void TreeMenuWidgetController::createActions() noexcept
         //  prevent displaying the menu to one of MxTelemetry::types (i.e. Heap, HashTbl..)
         if (!this->m_treeMenuWidgetModelWrapper->isMxTelemetryTypeSelected(indexes.first())) {return;};
 
+        // get the telemetryType index
+        const auto l_MxTelemetryTypeIndex = m_dataDistributor.fromMxTypeNameToValue(indexes.first().parent().data().toString());
+
         // pop up menu
-        this->m_treeView->m_contextMenu->popup(QCursor::pos());
+        // Notice: static cast to call my own implementation of popup
+        static_cast<BasicContextMenu*>(this->m_treeView->m_contextMenu)->popup(QCursor::pos(), l_MxTelemetryTypeIndex);
     } );
 
-    // NOT WORKING YET
-    // adding functioniality to resize columns width
-//    TreeModel* l_treeMode = static_cast<TreeModel*>(getModel());
-//    m_treeView->connect(l_treeMode, &TreeModel::resizeColumnToContent,
-//                        this, [this](int i) {
-//        // NOT WORKING YET
-//        qDebug() << "this->m_treeView->columnWidth()" << this->m_treeView->columnWidth(0);
-//        qDebug() << "this->m_treeView->columnWidth()" << this->m_treeView->columnWidth(1);
-//        this->m_treeView->resizeColumnToContents(i);
-//    });
 }
 
 

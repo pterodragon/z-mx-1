@@ -21,6 +21,8 @@
 #include "src/models/wrappers/TreeMenuWidgetModelWrapper.h"
 #include "src/models/raw/TreeModel.h"
 #include "QDebug"
+#include "src/factories/MxTelemetryTypeWrappersFactory.h"
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
 
 TreeMenuWidgetModelWrapper::TreeMenuWidgetModelWrapper():
@@ -80,6 +82,9 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
     ZmIDString l_msgDataID;
     const int l_mxTelemetryTypeIndex = static_cast<int>(a_msg->hdr().type);
 
+    // for readability
+    const MxTelemetryGeneralWrapper* l_typeWrapper = nullptr;
+
     switch (l_mxTelemetryTypeIndex) {
     case Type::Heap: {
         const auto &data = a_msg->as<Heap>();
@@ -91,19 +96,25 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
     } break;
     case Type::Thread: {
         const auto &data = a_msg->as<Thread>();
-        l_msgDataID = data.name;
+        l_typeWrapper = &MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(Type::Thread);
+        l_msgDataID = l_typeWrapper->getPrimaryKey(std::initializer_list<std::string>(
+                                                                                      {std::string(data.name),
+                                                                                       std::to_string(data.tid)}));
     } break;
     case Type::Multiplexer: {
         const auto &data = a_msg->as<Multiplexer>();
         l_msgDataID = data.id;
     } break;
     case Type::Socket: {
-        const auto &data = a_msg->as<Socket>();
-        l_msgDataID = data.mxID;
+        l_typeWrapper = &MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(Type::Socket);
+        l_msgDataID = l_typeWrapper->getPrimaryKey(&(a_msg->as<Socket>()));
     } break;
     case Type::Queue: {
         const auto &data = a_msg->as<Queue>();
-        l_msgDataID = constructQueueName(data.id, MxTelemetry::QueueType::name(data.type));
+        l_typeWrapper = &MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(Type::Queue);
+        l_msgDataID = l_typeWrapper->getPrimaryKey(std::initializer_list<std::string>(
+                                                                                      {std::string(data.id),
+                                                                                      MxTelemetry::QueueType::name(data.type)}));
     } break;
     case Type::Engine: {
         const auto &data = a_msg->as<Engine>();

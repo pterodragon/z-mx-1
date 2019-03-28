@@ -110,12 +110,12 @@ void BasicChartView::addDataToChartDataContainer(void* a_mxTelemetryMsg) const n
     for (int i = 0; i < l_numberOfFields; ++i)
     {
         // get the data
-//        const auto l_data = MxTelemetryTypeWrappersFactory::getInstance().
-//                getMxTelemetryWrapper(m_associatedTelemetryType).
-//                getDataForChart(a_mxTelemetryMsg, i);
+        const auto l_data = MxTelemetryTypeWrappersFactory::getInstance().
+                getMxTelemetryWrapper(m_associatedTelemetryType).
+                getDataForChart(a_mxTelemetryMsg, i);
 
         // only for testing
-        const auto l_data = rand() % 100;
+        //const auto l_data = rand() % 100;
 
         // insert the data to be the first, pushing all the data inside one index up
         m_chartDataContainer->at(i)->prepend(l_data);

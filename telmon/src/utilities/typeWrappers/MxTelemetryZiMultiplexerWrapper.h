@@ -67,7 +67,29 @@ protected:
 
 
 public:
-    // must correspond to struct index
+    /**
+     * @brief The ZiMxTelemetryStructIndex enum corresponds to following:
+     *
+     *  struct ZiMxTelemetry {  // not graphable
+     *    ZuID		id;         // primary key
+     *    uint64_t	isolation;
+     *    uint32_t	stackSize;
+     *    uint32_t	rxBufSize;
+     *    uint32_t	txBufSize;
+     *    uint16_t	rxThread;
+     *    uint16_t	txThread;
+     *    uint16_t	partition;
+     *    uint8_t	state;		// dynamic (not graphable)
+     *                          // ZmScheduler::stateName(i)
+     *                          // RAG -
+     *                          //   Running - Green
+     *                          //   Stopped - Red
+     *                          //   * - Amber
+     *    uint8_t	priority;
+     *    uint8_t	nThreads;
+     *  };
+     *
+     */
     enum ZiMxTelemetryStructIndex {e_id, e_isolation, e_stackSize, e_rxBufSize, e_txBufSize,
                                    e_rxThread, e_txThread, e_partition, e_state, e_priority,
                                    e_nThreads};

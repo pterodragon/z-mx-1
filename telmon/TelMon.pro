@@ -6,7 +6,7 @@
 
 # for qt charts problem
 # in ubuntu "sudo apt install libqt5charts5 libqt5charts5-de"
-QT       += core gui charts
+QT       += core gui charts network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -36,7 +36,7 @@ HEADERS +=                           \
     src/distributors/*.h             \
     src/subscribers/*.h              \
     src/utilities/typeWrappers/*.h   \
-    src/widgets/*.h
+    src/widgets/*.h                  \
 
 
 SOURCES +=                             \
@@ -50,7 +50,7 @@ SOURCES +=                             \
     src/distributors/*.cpp             \
     src/subscribers/*.cpp              \
     src/utilities/typeWrappers/*.cpp   \
-    src/widgets/*.cpp
+    src/widgets/*.cpp                  \
 
 #SOURCES += $${PWD}/../mxbase/test/*.cpp
 

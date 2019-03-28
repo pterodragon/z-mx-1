@@ -66,12 +66,16 @@ struct ZmThreadPriority {
 
 typedef ZuStringN<28> ZmThreadName;
 
+// display sequence:
+//   name, id, tid, cpuUsage, cpuset, priority, sysPriority,
+//   stackSize, partition, main, detached
 struct ZmThreadTelemetry {
   ZmThreadName	name;
   uint64_t	tid;		// primary key
   uint64_t	stackSize;
   uint64_t	cpuset;
   double	cpuUsage;	// graphable (*)
+  int32_t	id;
   int32_t	sysPriority;
   uint16_t	partition;
   int8_t	priority;
@@ -106,22 +110,22 @@ public:
     { m_partition = v; return ZuMv(*this); }
   inline ZmThreadParams &&cpuset(const ZmBitmap &b)
     { m_cpuset = b; return ZuMv(*this); }
+  inline ZmThreadParams &&detached(bool b)
+    { m_detached = b; return ZuMv(*this); }
 #ifndef _WIN32
   inline ZmThreadParams &&createFn(ZmThread_CreateFn fn)
     { m_createFn = fn; return ZuMv(*this); }
 #endif
-  inline ZmThreadParams &&detached(bool b)
-    { m_detached = b; return ZuMv(*this); }
 
   inline const ZmThreadName &name() const { return m_name; }
   inline unsigned stackSize() const { return m_stackSize; }
   inline int priority() const { return m_priority; }
   inline unsigned partition() const { return m_partition; }
   inline const ZmBitmap &cpuset() const { return m_cpuset; }
+  inline bool detached() const { return m_detached; }
 #ifndef _WIN32
   inline const ZmThread_CreateFn &createFn() const { return m_createFn; }
 #endif
-  inline bool detached() const { return m_detached; }
 
 private:
   ZmThreadName		m_name;

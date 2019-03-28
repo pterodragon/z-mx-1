@@ -1208,12 +1208,12 @@ void MxMDLib::init_(void *cf_)
     ZuString key;
     while (ZmRef<ZvCf> shardCf = i.subset(key)) {
       ZuBox<unsigned> id = key;
-      if (id >= m_shards.length())
-	throw ZvCf::RangeInt(0, m_shards.size(), id, "shards");
-      if (const auto &name = shardCf->get("thread", true))
-	if (!(tid = mx->tid(name)))
+      if (key != ZuStringN<4>{id} || id >= m_shards.length())
+	throw ZtString() << "bad shard ID \"" << key << '"';
+      if (ZuString s = shardCf->get("thread", true))
+	if (!(tid = mx->tid(s)))
 	  throw ZtString()
-	    << "shard misconfigured - bad thread \"" << name << '"';
+	    << "shard misconfigured - bad thread \"" << s << '"';
       m_shards[id] = new MxMDShard(this, mx, id, tid);
     }
   } else {

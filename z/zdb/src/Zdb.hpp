@@ -299,11 +299,11 @@ protected:
   ZuInline ZdbAnyPOD(ZdbAny *db) : m_db(db) { }
 
 public:
-  ZuInline const void *ptr() const {
-    return static_cast<const ZuAnyPOD_<ZdbAnyPOD> *>(this)->ptr();
+  template <typename T = void> ZuInline const T *ptr() const {
+    return static_cast<const ZuAnyPOD_<ZdbAnyPOD> *>(this)->ptr<T>();
   }
-  ZuInline void *ptr() {
-    return static_cast<ZuAnyPOD_<ZdbAnyPOD> *>(this)->ptr();
+  template <typename T = void> ZuInline T *ptr() {
+    return static_cast<ZuAnyPOD_<ZdbAnyPOD> *>(this)->ptr<T>();
   }
   ZuInline unsigned size() const {
     return static_cast<const ZuAnyPOD_<ZdbAnyPOD> *>(this)->size();
@@ -588,6 +588,11 @@ public:
   // delete all records < minRN
   void purge(ZdbRN minRN);
 
+  // display sequence: 
+  //   name, id, recSize, compress, cacheMode, cacheSize,
+  //   path, fileSize, fileRecs, filesMax, preAlloc,
+  //   minRN, allocRN, fileRN,
+  //   cacheLoads, cacheMisses, fileLoads, fileMisses
   struct Telemetry {
     typedef ZuStringN<124> Path;
     typedef ZuStringN<28> Name;
@@ -779,6 +784,8 @@ public:
 
   static const char *stateName(int);
 
+  // display sequence:
+  //   id, priority, state, voted, ip, port
   struct Telemetry { // not graphable
     ZiIP	ip;
     uint32_t	id;
@@ -1084,6 +1091,11 @@ public:
       if (m_dbs[i]) l(m_dbs[i]);
   }
 
+  // display sequence: 
+  //   self, master, prev, next, state, active, recovering, replicating,
+  //   nDBs, nHosts, nPeers, nCxns,
+  //   heartbeatFreq, heartbeatTimeout, reconnectFreq, electionTimeout,
+  //   writeThread
   struct Telemetry { // not graphable
     uint32_t	nCxns;
     uint32_t	heartbeatFreq;

@@ -74,17 +74,37 @@ struct ZvSchedParams : public ZmSchedParams {
     priority(cf->getEnum<ZvSchedulerPriorities::Map>(
 	  "priority", false, ZmThreadPriority::Normal));
     partition(cf->getInt("partition", 0, ncpu - 1, false, 0));
-    if (ZuString s = cf->get("affinity")) affinity(s);
-    if (ZuString s = cf->get("isolation")) isolation(s);
     if (ZuString s = cf->get("quantum")) quantum((double)ZuBox<double>(s));
     queueSize(cf->getInt("queueSize", 8192, (1U<<30U), false, queueSize()));
     ll(cf->getInt("ll", 0, 1, false, ll()));
     spin(cf->getInt("spin", 0, INT_MAX, false, spin()));
     timeout(cf->getInt("timeout", 0, 3600, false, timeout()));
-    if (const ZtArray<ZtString> *names =
-	cf->getMultiple("names", 0, nThreads()))
-      for (unsigned i = 0, n = names->length(); i < n; i++)
-	name(i + 1, (*names)[i]);
+    if (ZmRef<ZvCf> threadsCf = cf->subset("threads", false)) {
+      ZvCf::Iterator i(threadsCf);
+      ZuString id;
+      while (ZmRef<ZvCf> threadCf = i.subset(id)) {
+	ZuBox<unsigned> tid = id;
+	if (id != ZuStringN<4>{tid})
+	  throw ZtString() << "bad thread ID \"" << id << '"';
+	ZmSchedParams::Thread &thread = this->thread(tid);
+	thread.isolated(cf->getInt("isolated", 0, 1, false, thread.isolated()));
+	if (ZuString s = cf->get("name")) thread.name(s);
+	thread.stackSize(
+	    cf->getInt("stackSize", 0, INT_MAX, false, thread.stackSize()));
+	if (ZuString s = cf->get("priority")) {
+	  if (s == "RealTime") thread.priority(ZmThreadPriority::RealTime);
+	  else if (s == "High") thread.priority(ZmThreadPriority::High);
+	  else if (s == "Normal") thread.priority(ZmThreadPriority::Normal);
+	  else if (s == "Low") thread.priority(ZmThreadPriority::Low);
+	  else throw ZtString() << "bad thread priority \"" << s << '"';
+	}
+	thread.partition(
+	    cf->getInt("partition", 0, INT_MAX, false, thread.partition()));
+	if (ZuString s = cf->get("cpuset")) thread.cpuset(s);
+	thread.detached(
+	    cf->getInt("detached", 0, 1, false, thread.detached()));
+      }
+    }
   }
 };
 

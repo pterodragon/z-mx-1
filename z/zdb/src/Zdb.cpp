@@ -77,7 +77,7 @@ void ZdbEnv::init(ZdbEnvConfig config, ZiMultiplex *mx,
 
   config.writeTID = mx->tid(config.writeThread);
   if (!config.writeTID ||
-      config.writeTID > mx->nThreads() ||
+      config.writeTID > mx->params().nThreads() ||
       config.writeTID == mx->rxThread() ||
       config.writeTID == mx->txThread())
     throw ZtString() <<

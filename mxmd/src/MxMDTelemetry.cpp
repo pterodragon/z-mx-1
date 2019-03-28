@@ -68,14 +68,13 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 	if (mx->telCount()) return;
 	cxn->transmit(multiplexer(mx));
 	{
-	  ZmThreadName name;
 	  uint64_t inCount, inBytes, outCount, outBytes;
-	  for (unsigned tid = 1, n = mx->nThreads(); tid <= n; tid++) {
-	    mx->threadName(name, tid);
+	  for (unsigned tid = 1, n = mx->params().nThreads(); tid <= n; tid++) {
 	    const ZmScheduler::Ring &ring = mx->ring(tid);
 	    ring.stats(inCount, inBytes, outCount, outBytes);
 	    cxn->transmit(queue(
-		  name, (uint64_t)0, (uint64_t)ring.count(),
+		  mx->params().thread(tid).name(),
+		  (uint64_t)0, (uint64_t)ring.count(),
 		  inCount, inBytes, outCount, outBytes,
 		  (uint32_t)ring.full(), (uint32_t)ring.params().size(),
 		  (uint8_t)QueueType::Thread));

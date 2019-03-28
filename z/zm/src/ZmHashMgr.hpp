@@ -63,6 +63,12 @@ private:
   unsigned	m_telFreq;
 };
 
+// display sequence:
+//   id, linear, bits, slots (*), cBits, locks (*), count,
+//   resized, loadFactor, effLoadFactor, nodeSize
+// derived display fields:
+//   slots = 1<<bits
+//   locks = 1<<cBits
 struct ZmHashTelemetry {
   ZmIDString	id;		// primary key
   uint32_t	nodeSize;

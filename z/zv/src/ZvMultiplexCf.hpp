@@ -59,20 +59,15 @@ struct ZvMxParams : public ZiMxParams {
     ZiMxParams(ZuMv(deflt)) { init(cf); }
 
   inline ZvSchedParams &scheduler() {
-    return static_cast<ZvSchedParams &>(
-	ZiMxParams::scheduler());
-  }
-  inline const ZvSchedParams &scheduler() const {
-    return static_cast<const ZvSchedParams &>(
-	ZiMxParams::scheduler());
+    return static_cast<ZvSchedParams &>(ZiMxParams::scheduler());
   }
 
   inline void init(ZvCf *cf) {
     if (!cf) return;
 
     scheduler().init(cf);
-    if (const auto &name = cf->get("rxThread")) rxThread(scheduler().tid(name));
-    if (const auto &name = cf->get("txThread")) txThread(scheduler().tid(name));
+    if (ZuString s = cf->get("rxThread")) rxThread(scheduler().tid(s));
+    if (ZuString s = cf->get("txThread")) txThread(scheduler().tid(s));
 #ifdef ZiMultiplex_EPoll
     epollMaxFDs(cf->getInt("epollMaxFDs", 1, 100000, false, epollMaxFDs()));
     epollQuantum(cf->getInt("epollQuantum", 1, 1024, false, epollQuantum()));

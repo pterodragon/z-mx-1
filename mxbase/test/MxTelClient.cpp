@@ -17,11 +17,11 @@ public:
     open_(m_heap, "heap");
     write_(m_heap, "time,id,size,alignment,partition,sharded,cacheSize,cpuset,cacheAllocs,heapAllocs,frees,allocated\n");
     open_(m_hashTbl, "hashTbl");
-    write_(m_hashTbl, "time,id,linear,bits,slots,cBits,cSlots,count,resized,loadFactor,effLoadFactor,nodeSize\n");
+    write_(m_hashTbl, "time,id,linear,bits,slots,cBits,locks,count,resized,loadFactor,effLoadFactor,nodeSize\n");
     open_(m_thread, "thread");
-    write_(m_thread,"time,name,id,tid,cpuUsage,cpuset,priority,stackSize,partition,main,detached\n");
+    write_(m_thread,"time,name,id,tid,cpuUsage,cpuset,priority,sysPriority,stackSize,partition,main,detached\n");
     open_(m_multiplexer, "multiplexer");
-    write_(m_multiplexer, "time,id,state,nThreads,priority,partition,isolation,rxThread,txThread,stackSize,rxBufSize,txBufSize\n");
+    write_(m_multiplexer, "time,id,state,nThreads,rxThread,txThread,priority,stackSize,partition,rxBufSize,txBufSize,queueSize,ll,spin,timeout\n");
     open_(m_socket, "socket");
     write_(m_socket, "time,mxID,type,remoteIP,remotePort,localIP,localPort,fd,flags,mreqAddr,mreqIf,mif,ttl,rxBufSize,rxBufLen,txBufSize,txBufLen\n");
     open_(m_queue, "queue");
@@ -98,6 +98,7 @@ private:
 	  << ',' << ZuBoxed(data.cpuUsage * 100.0).fmt(ZuFmt::FP<2>())
 	  << ",\"" << ZmBitmap(data.cpuset) << '"'
 	  << ',' << ZuBoxed(data.priority)
+	  << ',' << data.sysPriority
 	  << ',' << data.stackSize
 	  << ',' << ZuBoxed(data.partition)
 	  << ',' << ZuBoxed(data.main)
@@ -109,14 +110,17 @@ private:
 	  << ',' << data.id
 	  << ',' << ZmScheduler::stateName(data.state)
 	  << ',' << ZuBoxed(data.nThreads)
+	  << ',' << ZuBoxed(data.rxThread)
+	  << ',' << ZuBoxed(data.txThread)
 	  << ',' << ZuBoxed(data.priority)
-	  << ',' << ZuBoxed(data.partition)
-	  << ",\"" << ZmBitmap(data.isolation) << '"'
-	  << ',' << data.rxThread
-	  << ',' << data.txThread
 	  << ',' << data.stackSize
+	  << ',' << ZuBoxed(data.partition)
 	  << ',' << data.rxBufSize
-	  << ',' << data.txBufSize << '\n');
+	  << ',' << data.txBufSize
+	  << ',' << data.queueSize
+	  << ',' << ZuBoxed(data.ll)
+	  << ',' << data.spin
+	  << ',' << data.timeout << '\n');
       } break;
       case Type::Socket: {
 	const auto &data = msg->as<Socket>();

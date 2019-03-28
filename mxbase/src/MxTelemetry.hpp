@@ -87,6 +87,9 @@ namespace MxTelemetry {
 	);
     MxEnumNames("Thread", "IPC", "Rx", "Tx");
   }
+  // display sequence:
+  //   id, type, full, size, count, seqNo,
+  //   inCount, inBytes, outCount, outBytes
   // RAG for queues - count > 50% size - amber; 75% - red
   struct Queue {
     MxIDString	id;		// primary key - is same as Link id for Rx/Tx

@@ -78,10 +78,8 @@ struct MxQMsgData {
   ZuInline void load(const MxMsgID &id_) { id = id_; }
   ZuInline void unload() { id = MxMsgID{}; }
 
-  template <typename T = void *>
-  ZuInline T owner() const { return (T)owner_; }
-  template <typename T>
-  ZuInline void owner(T v) { owner_ = (void *)v; }
+  template <typename T = void *> ZuInline T owner() const { return (T)owner_; }
+  template <typename T> ZuInline void owner(T v) { owner_ = (void *)v; }
 };
 
 class MxQFn {

@@ -496,6 +496,10 @@ struct ZiCxnInfo { // pure aggregate, no ctor
 };
 template <> struct ZuPrint<ZiCxnInfo> : public ZuPrintFn { };
 
+// display sequence:
+//   mxID, type, remoteIP, remotePort, localIP, localPort,
+//   fd, flags, mreqAddr, mreqIf, mif, ttl,
+//   rxBufSize, rxBufLen, txBufSize, txBufLen
 struct ZiCxnTelemetry {
   ZuID		mxID;		// multiplexer ID
   uint64_t	socket;		// Unix file descriptor / Winsock SOCKET
@@ -657,9 +661,17 @@ class ZiMxParams {
 public:
   enum { RxThread = 1, TxThread = 2 }; // defaults
 
-  ZiMxParams() = default;
+  ZiMxParams() :
+    m_scheduler(ZmSchedParams()
+	.nThreads(3)
+	.thread(ZiMxParams::RxThread, [](auto &t) { t.isolated(true); })
+	.thread(ZiMxParams::TxThread, [](auto &t) { t.isolated(true); })) { }
+
   ZiMxParams(ZiMxParams &&) = default;
   ZiMxParams &operator =(ZiMxParams &&) = default;
+
+  template <typename L>
+  inline ZiMxParams &&scheduler(L l) { l(m_scheduler); return ZuMv(*this); }
 
   inline ZiMxParams &&rxThread(unsigned tid) {
     m_rxThread = tid;
@@ -693,6 +705,8 @@ public:
 #endif
   inline ZiMxParams &&telFreq(unsigned v) { m_telFreq = v; return ZuMv(*this); }
 
+  inline ZmSchedParams &scheduler() { return m_scheduler; }
+
   inline unsigned rxThread() const { return m_rxThread; }
   inline unsigned txThread() const { return m_txThread; }
 #ifdef ZiMultiplex_EPoll
@@ -713,6 +727,7 @@ public:
   inline unsigned telFreq() const { return m_telFreq; }
 
 private:
+  ZmSchedParams		m_scheduler;
   unsigned		m_rxThread = RxThread;
   unsigned		m_txThread = TxThread;
 #ifdef ZiMultiplex_EPoll
@@ -733,6 +748,10 @@ private:
   unsigned		m_telFreq = 0;
 };
 
+// display sequence:
+//   id, state, nThreads, rxThread, txThread,
+//   priority, stackSize, partition, rxBufSize, txBufSize,
+//   queueSize, ll, spin, timeout
 struct ZiMxTelemetry { // not graphable
   ZuID		id;		// primary key
   uint32_t	stackSize;
@@ -944,12 +963,7 @@ template <typename> friend class Connect_;
 public:
   using Socket = ZiPlatform::Socket;
 
-  ZiMultiplex(ZmSchedParams schedParams =
-      ZmSchedParams()
-	.nThreads(3)
-	.thread(ZiMxParams::RxThread, [](auto &t) { t.isolated(true); })
-	.thread(ZiMxParams::TxThread, [](auto &t) { t.isolated(true); }),
-      ZiMxParams mxParams = ZiMxParams());
+  ZiMultiplex(ZiMxParams mxParams = ZiMxParams());
   ~ZiMultiplex();
 
   int start();

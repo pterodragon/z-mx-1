@@ -79,6 +79,11 @@ struct ZmHeapStats {
   uint64_t	frees;
 };
 
+// display sequence:
+//   id, size, alignment, partition, sharded,
+//   cacheSize, cpuset, cacheAllocs, heapAllocs, frees, allocated (*)
+// derived display fields:
+//   allocated = (heapAllocs + cacheAllocs) - frees
 struct ZmHeapTelemetry {
   ZmIDString	id;		// primary key
   uint64_t	cacheSize;

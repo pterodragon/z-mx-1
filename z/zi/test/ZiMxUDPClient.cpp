@@ -77,8 +77,8 @@ class Mx : public ZiMultiplex {
 public:
   Mx(ZiIP localIP, unsigned localPort, ZiIP remoteIP, unsigned remotePort,
       bool connect, const ZiCxnOptions &options, unsigned nMessages,
-      ZmSchedParams schedParams, ZiMxParams params) :
-    ZiMultiplex(ZuMv(schedParams), ZuMv(params)),
+      ZiMxParams params) :
+    ZiMultiplex(ZuMv(params)),
     m_localIP(localIP), m_localPort(localPort),
     m_remoteIP(remoteIP), m_remotePort(remotePort),
     m_connect(connect), m_options(options), m_nMessages(nMessages) { }
@@ -273,7 +273,7 @@ int main(int argc, const char *argv[])
   ZeLog::start();
 
   Mx mx(localIP, localPort, remoteIP, remotePort, connect, options,
-      nMessages, ZuMv(schedParams), ZuMv(params));
+      nMessages, ZuMv(params));
 
   ZmTrap::sigintFn(ZmFn<>::Ptr<&Global::post>::fn());
   ZmTrap::trap();

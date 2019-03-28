@@ -44,14 +44,19 @@ public:
   typedef ZmScheduler::ID ID;
 
   struct IDAccessor : public ZuAccessor<MxMultiplex *, ID> {
-    ZuInline static ID value(const MxMultiplex *mx) { return mx->id(); }
+    ZuInline static ID value(const MxMultiplex *mx) {
+      return mx->params().id();
+    }
   };
 
   template <typename ID_>
-  inline MxMultiplex(const ID_ &id) : ZiMxParams(ZiMxParams().id(id)) { }
+  inline MxMultiplex(const ID_ &id) :
+      ZiMxParams(
+	  ZiMxParams().scheduler([&](auto &s) { s.id(id); })) { }
   template <typename ID_>
   inline MxMultiplex(const ID_ &id, ZvCf *cf) :
-    ZiMultiplex(ZvMxParams(cf, ZiMxParams().id(id))) { }
+    ZiMultiplex(ZvMxParams(cf,
+	  ZiMxParams().scheduler([&](auto &s) { s.id(id); }))) { }
 };
 
 #endif /* MxMultiplex_HPP */

@@ -34,7 +34,8 @@ BasicDockWidget::BasicDockWidget(const QString &title,
     QDockWidget (title, parent),
     m_dockWidgetModelWrapper(a_tempModelWrapper),
     m_mxTelemetryTypeName(a_mxTelemetryTypeName),
-    m_mxTelemetryInstanceName(a_mxTelemetryInstanceNameQWidget)
+    m_mxTelemetryInstanceName(a_mxTelemetryInstanceNameQWidget),
+    m_isTitleBarHidden(false)
 {
 
 }
@@ -82,4 +83,19 @@ void BasicDockWidget::closeEvent(QCloseEvent *event)
     delete this;
 }
 
+void BasicDockWidget::hideTitleBar() noexcept
+{
+    // set no title for the dock widget
+    // see https://stackoverflow.com/questions/18918496/qdockwidget-without-a-title-bar
 
+    // had a lot of issues with this one, eventually this one works
+    if (m_isTitleBarHidden == true)
+    {
+        qWarning() << "BasicDockWidget::hideTitleBar() title bar already hidden, doing nothing";
+        return;
+    }
+
+    m_isTitleBarHidden = true;
+    setTitleBarWidget(new QWidget(this));
+
+}

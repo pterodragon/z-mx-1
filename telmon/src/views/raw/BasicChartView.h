@@ -23,7 +23,6 @@
 #define BASICCHARTVIEW_H
 
 #include "MxTelemetry.hpp"
-
 #include "QtCharts"
 
 
@@ -31,9 +30,11 @@
 class BasicChartView : public QChartView
 {
 public:
-    BasicChartView(QChart *chart,
+    BasicChartView(QChart *a_chart,
                    const int a_associatedTelemetryType,
-                   QWidget *parent = nullptr);
+                   const QString& a_chartTitle,
+                   const bool a_chartTitleVisibility = false,
+                   QWidget *a_parent = nullptr);
     virtual ~BasicChartView() override;
 
     enum CHART_AXIS {X, Y_LEFT, Y_RIGHT, CHART_AXIS_N};
@@ -71,6 +72,14 @@ public:
 
     int getXAxisSpan() const noexcept {return static_cast<int>(m_axisArray[CHART_AXIS::X]->max());}
 
+    /**
+     * @brief if true, show chart title
+     *        else, hide the chart
+     */
+    void setChartTitleVisiblity(const bool) noexcept;
+    bool getChartTitleVisiblity() const noexcept;
+
+    QString& getChartTitle() const noexcept;
 
 public slots:
     void updateData(ZmHeapTelemetry a_pair);
@@ -94,7 +103,7 @@ protected:
      * virtual so inherent classes can change style
      * for behavior change -> adjust createActions below
      */
-    void initMenuBar() noexcept;
+    void initContextMenu() noexcept;
 
 
     /**
@@ -128,18 +137,30 @@ protected:
     // for now
     //QSize virtual sizeHint() const override final;
 
-    // member for menu
-    QVBoxLayout *m_boxLayout;
-    QMenuBar* m_menuBar;
-    QMenu* m_settingsMenu;
-    QMenu* m_rightSeriesMenu;
-    QMenu* m_leftSeriesMenu;
-
+    // member for context menu
+    QMenu* m_contextMenu;
+    QMenu* m_menuYLeft;
+    QMenu* m_menuYRight;
 
     // addnig mouse move event functionialy
     void mouseMoveEvent(QMouseEvent * event) override final;
     void mousePressEvent(QMouseEvent * event) override final;
     void mouseReleaseEvent(QMouseEvent * event) override final;
+
+    /**
+     * @brief resizeEvent
+     * we need to override this function in order to rearrange the legend
+     * @param event
+     */
+    void resizeEvent(QResizeEvent *event) override;
+
+    QLabel* m_titleLabel;
+
+    void initChartLabel() noexcept;
+
+    QPushButton* m_startStopButton;
+
+    void initStartStopButton() noexcept;
 
 private:
 
@@ -224,6 +245,37 @@ private:
     int m_xReferenceCoordiante;
 
     void handleMouseEventHelper(const int) noexcept;
+
+    bool m_chartTitleVisibility;
+    QString* m_chartTitle;
+
+
+    /**
+     * @brief This function is used to set legend properties
+     */
+    void initLegend() noexcept;
+
+    /**
+     * @brief handle legend resize event part
+     * for example, if the width of the chart becomes too low,
+     * will split the legend to two lines
+     */
+    void resizeEventLegend(const QSize&) noexcept;
+
+    /**
+     * @brief make sure the chart title is located above the legend
+     */
+    void resizeEventTitle() noexcept;
+
+    /**
+     * @brief hide/show button
+     */
+    void resizeEventStartStopButton() noexcept;
+
+    /**
+     * @brief handleStartStopFunctionality
+     */
+    void handleStartStopFunctionality() noexcept;
 };
 
 #endif // BASICCHARTVIEW_H

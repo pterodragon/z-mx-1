@@ -36,6 +36,7 @@ public:
     void setSizeHintFunction(std::function<QSize()>) noexcept;
     const QWidget* getMainWindow() const noexcept {return m_mainWindow;}
 
+
 private:
     QWidget* m_mainWindow;
     std::function<QSize()> m_sizeHintFunction;

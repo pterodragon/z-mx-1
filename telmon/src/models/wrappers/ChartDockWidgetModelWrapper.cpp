@@ -156,7 +156,10 @@ QChartView* ChartDockWidgetModelWrapper::initChartWidget(const QString& a_mxTele
     // everything already exists, just need to subscribe again
     if (l_pair.first != nullptr && l_pair.second != nullptr)
     {
-        qDebug() << "getChartView already exists!";
+        qDebug() << "Chart:"
+                 << a_mxTelemetryTypeName
+                 << a_mxTelemetryInstanceName
+                 << "already exists!";
 
         //subscribe
         m_dataDistributor.subscribe(l_mxTelemetryTypeNameNumber, l_pair.second);
@@ -172,7 +175,7 @@ QChartView* ChartDockWidgetModelWrapper::initChartWidget(const QString& a_mxTele
 
 //    create subscriber
     l_pair.second = ChartSubscriberFactory::getInstance().getSubscriber(l_mxTelemetryTypeNameNumber);
-    qDebug() << "setTableName:" << a_mxTelemetryInstanceName;
+
     l_pair.second->setAssociatedObjesctName(a_mxTelemetryInstanceName); //todo -> move into constrctor
 
     //add to the table

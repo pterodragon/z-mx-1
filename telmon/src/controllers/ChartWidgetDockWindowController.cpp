@@ -98,10 +98,7 @@ void ChartWidgetDockWindowController::handleUserSelection(unsigned int& a_action
                                   a_mxTelemetryInstanceName,
                                   nullptr);
 
-    // set dock properties
-    a_dockWidget->setAttribute(Qt::WA_DeleteOnClose);       // delete when user close the window
-    a_dockWidget->setAllowedAreas(Qt::RightDockWidgetArea); // allocate to the right of the window
-
+    static_cast<BasicDockWidget*>(a_dockWidget)->hideTitleBar();
 
     // create the chart view and subscribe
     QChartView *l_chartView = m_graphDockWidgetModelWrapper->initChartWidget(a_mxTelemetryTypeName,

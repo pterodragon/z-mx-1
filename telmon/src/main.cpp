@@ -17,10 +17,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// TODO
-// seperate everything to folders: Factories, Controllers, Models, Views
-// provide print mechanizm
-
 
 #include "src/controllers/MainWindowController.h"
 #include <QApplication>

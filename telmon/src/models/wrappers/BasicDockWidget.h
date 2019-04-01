@@ -40,10 +40,18 @@ public:
     const QString& getMxTelemetryInstanceName() const noexcept;
     virtual void closeEvent(QCloseEvent *event);
 
+    /**
+     * @brief hideTitleBar
+     */
+    void hideTitleBar() noexcept;
+
 private:
     DockWidgetModelWrapper* m_dockWidgetModelWrapper;
     const QString m_mxTelemetryTypeName;
     const QString m_mxTelemetryInstanceName;
+
+
+    bool m_isTitleBarHidden;
 };
 
 #endif // BASICDOCKWIDGET_H

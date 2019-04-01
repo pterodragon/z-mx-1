@@ -41,39 +41,40 @@ QChartView* ChartViewFactory::getChartView(const int a_mxType, const QString& a_
     switch (a_mxType)
     {
     case MxTelemetry::Type::Heap:
-        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Heap);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Heap, a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::HashTbl:
-        l_result = new BasicChartView(l_chart, MxTelemetry::Type::HashTbl);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::HashTbl, a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Thread:
-        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Thread);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Thread, a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Multiplexer:
-        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Multiplexer);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Multiplexer, a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Socket:
-        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Socket);
-        // there is wierd bug that does not represent the follow char '<' so we replace
-         l_result->chart()->setTitle(QString(a_mxTelemetryInstanceName).replace(a_mxTelemetryInstanceName.indexOf('<'), 1, "/"));
+        l_result = new BasicChartView(l_chart,
+                                      MxTelemetry::Type::Socket,
+                                      // there is wierd bug that does not represent the follow char '<' so we replace
+                                      QString(a_mxTelemetryInstanceName).replace(a_mxTelemetryInstanceName.indexOf('<'), 1, "/"));
         break;
     case MxTelemetry::Type::Queue:
-        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Queue);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Queue, a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Engine:
-        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Engine);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Engine, a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Link:
-        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Link);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::Link, a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::DBEnv:
-        l_result = new BasicChartView(l_chart, MxTelemetry::Type::DBEnv);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::DBEnv, a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::DBHost:
-        l_result = new BasicChartView(l_chart, MxTelemetry::Type::DBHost);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::DBHost, a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::DB:
-        l_result = new BasicChartView(l_chart, MxTelemetry::Type::DB);
+        l_result = new BasicChartView(l_chart, MxTelemetry::Type::DB, a_mxTelemetryInstanceName);
         break;
     default:
         qCritical() << "ChartViewFactory"

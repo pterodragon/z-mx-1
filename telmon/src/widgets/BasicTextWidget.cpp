@@ -33,6 +33,10 @@ BasicTextWidget::BasicTextWidget(QWidget* a_parent,
        // set default behavior
        m_sizeHintFunction = [this]() {return QTextEdit::sizeHint();};
     }
+
+    setReadOnly(true);
+    viewport()->setCursor(Qt::ArrowCursor);
+    this->setContextMenuPolicy(Qt::NoContextMenu); // set custom menu policy
 }
 
 
@@ -58,7 +62,6 @@ void BasicTextWidget::setSizeHintFunction(std::function<QSize()> a_func) noexcep
 {
     m_sizeHintFunction = a_func;
 }
-
 
 
 

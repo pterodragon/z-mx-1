@@ -29,8 +29,15 @@
 
 BasicChartView::BasicChartView(QChart *a_chart,
                                const int a_associatedTelemetryType,
+                               const QString& a_chartTitle,
+                               const bool a_chartTitleVisibility,
                                QWidget *a_parent):
     QChartView(a_chart, a_parent),
+    m_contextMenu( new QMenu(this)),
+    m_menuYLeft(nullptr),
+    m_menuYRight(nullptr),
+    m_titleLabel(new QLabel(this)), // no need to delete, we be deleted by parent
+    m_startStopButton(new QPushButton("Stop", this)),
     m_axisArray   { new QValueAxis,    new QValueAxis, new QValueAxis},
     m_seriesArray { new QSplineSeries, new QSplineSeries},
     m_associatedTelemetryType(a_associatedTelemetryType),
@@ -41,11 +48,13 @@ BasicChartView::BasicChartView(QChart *a_chart,
     m_chartDataContainer(new QVector<QVector<double>*>),
     m_delayIndicator(0),       // there is no delay on startup
     m_drawChartFlag(true),     // we draw chart on widget start up
-    m_xReferenceCoordiante(0)  // just default value
+    m_xReferenceCoordiante(0),  // just default value
+    m_chartTitleVisibility(a_chartTitleVisibility),
+    m_chartTitle(new QString(a_chartTitle))
 {
     initChartDataContainer();
     setDefaultUpdateDataFunction();
-    initMenuBar();
+    initContextMenu();
     createActions();
 
     // Adds the axis axis to the chart aligned as specified by alignment.
@@ -69,6 +78,21 @@ BasicChartView::BasicChartView(QChart *a_chart,
 
     setRenderHint(QPainter::Antialiasing); // make the chart look nicer
     setDragMode(DragMode::ScrollHandDrag); //set drag mode
+
+    // set theme
+    //chart()->setTheme(QChart::ChartThemeDark);
+
+    // no need for shadow in charts representation
+    chart()->setDropShadowEnabled(false);
+
+    // set not margin, so utilize all window size
+    chart()->setMargins(QMargins(0,0,0,0));
+
+    initLegend();
+    initChartLabel();
+    initStartStopButton();
+
+
 }
 
 
@@ -82,6 +106,9 @@ BasicChartView::~BasicChartView()
     }
     delete m_chartDataContainer;
     m_chartDataContainer = nullptr;
+
+    delete m_chartTitle;
+    m_chartTitle = nullptr;
 
     delete this->chart();
 }
@@ -149,72 +176,108 @@ void BasicChartView::initSeries() noexcept
 
         const auto l_seriesName = m_chartFields.at(m_activeData[a_series]);
         getSeries(a_series).setName(l_seriesName);
-
-        // set default option disabled in setting menu
-        (a_series == SERIES::SERIES_LEFT)
-                ? ( m_leftSeriesMenu->actions(). at(m_activeData[a_series])->setDisabled(true))
-                : ( m_rightSeriesMenu->actions().at(m_activeData[a_series])->setDisabled(true));
     }
 }
 
 
-void BasicChartView::initMenuBar() noexcept
+void BasicChartView::handleStartStopFunctionality() noexcept
 {
-    // initilization here for readiablity
-    // Notice: no need to delete, it will be deleted with object
-    m_boxLayout = new QVBoxLayout(this);
-    m_menuBar = new QMenuBar;
-    m_settingsMenu = new QMenu(QObject::tr("Settings"));
-    m_rightSeriesMenu = new QMenu(QObject::tr("Right Y-axis data"));
-    m_leftSeriesMenu = new QMenu(QObject::tr("Left Y-axis data"));
+    if (this->getDrawChartFlag())
+    {
+        this->setDrawChartFlag(false);
+        m_startStopButton->setText("Start");
+        this->m_contextMenu->actions().at(0)->setText("Start");
+    } else {
+        this->setDrawChartFlag(true);
+        m_startStopButton->setText("Stop");
+        this->m_contextMenu->actions().at(0)->setText("Stop");
+    }
+}
 
 
-    // init series menu options
+void BasicChartView::initContextMenu() noexcept
+{
+    // init start/stop action
+    m_contextMenu->addAction("Stop", [this](){
+        this->handleStartStopFunctionality();
+    });
+
+    m_contextMenu->addSeparator();
+
+    // init "Data" menu
+    auto l_dataMenu = new QMenu(QObject::tr("Data"));
+
+    // init Y Axis
+    m_menuYLeft = new QMenu("Y Left", l_dataMenu);
+    l_dataMenu->addMenu(m_menuYLeft);
+
+    m_menuYRight = new QMenu("Y Right", l_dataMenu);
+    l_dataMenu->addMenu(m_menuYRight);
+
+    // init series menu actions
     for (int i = 0; i < m_chartFields.size(); ++i) {
-        m_rightSeriesMenu->addAction(new QAction((m_chartFields.at(i))));
-        m_leftSeriesMenu->addAction( new QAction((m_chartFields.at(i))));
+
+        m_menuYLeft->addAction( m_chartFields.at(i), [this, i]() {
+            this->changeSeriesData(SERIES::SERIES_LEFT ,i);
+        });
+
+        m_menuYRight->addAction( m_chartFields.at(i), [this, i]() {
+            this->changeSeriesData(SERIES::SERIES_RIGHT ,i);
+        });
+    }
+
+    // set default option disabled for each axis menu
+    for (unsigned int l_series = 0; l_series < SERIES::SERIES_N; l_series++)
+    {
+        (l_series == SERIES::SERIES_LEFT)
+                ? ( m_menuYLeft->actions(). at(m_activeData[l_series])->setDisabled(true))
+                : ( m_menuYRight->actions().at(m_activeData[l_series])->setDisabled(true));
     }
 
 
-    m_menuBar->addMenu(m_settingsMenu);
-    m_settingsMenu->addMenu(m_rightSeriesMenu);
-    m_settingsMenu->addMenu(m_leftSeriesMenu);
+    m_contextMenu->addMenu(l_dataMenu);
 
-    /** TODO
-    m_settingsMenu->addMenu(new QMenu("X-axis time span"));
-    // later add support for changing color
-    m_settingsMenu->addMenu(new QMenu("Right series color"));
-    m_settingsMenu->addMenu(new QMenu("Left series color"));
+    // in the future, add appearance option
 
-    m_settingsMenu->addAction("Exit");
-    */
+    m_contextMenu->addSeparator();
 
-    this->layout()->setMenuBar(m_menuBar);
+    // init close action
+    m_contextMenu->addAction( "Close", [this]() {
+
+        // delete the dock widget
+        delete this->parent();
+
+        //clean data container
+        // we do not need field for "none", that is why we remove 1
+        const int l_numberOfFields = this->m_chartFields.size() - 1;
+        for (int i = 0; i < l_numberOfFields; ++i)
+        {
+            this->m_chartDataContainer->at(i)->clear();
+        }
+
+        // clean series
+        for (unsigned  int i = 0; i < SERIES::SERIES_N; i++)
+        {
+            getSeries(i).clear();
+        }
+
+    });
 }
 
 
 void BasicChartView::createActions() noexcept
 {
-    // Settings->Right Y-axis data functionality
-    auto l_rightSeriesMenuActions = m_rightSeriesMenu->actions();
-    for (int i = 0; i < l_rightSeriesMenuActions.size(); i++)
-    {
-        QObject::connect(l_rightSeriesMenuActions.at(i), &QAction::triggered, this, [this, i](){
-            this->changeSeriesData(SERIES::SERIES_RIGHT ,i);
-        });
-    }
+    // start/stop button functionality
+    QObject::connect(m_startStopButton, &QAbstractButton::clicked, this, [this]() {
+        this->handleStartStopFunctionality();
+    });
 
-    // Settings->Left Y-axis data functionality
-    auto l_leftSeriesMenuActions  = m_leftSeriesMenu->actions();
-    for (int i = 0; i < l_leftSeriesMenuActions.size(); i++)
+    // contextMenu view/display functionality
+    this->setContextMenuPolicy(Qt::CustomContextMenu); // set custom menu policy
+    QObject::connect(this, &QChartView::customContextMenuRequested, this, [this](const QPoint a_pos)
     {
-        QObject::connect(l_leftSeriesMenuActions.at(i), &QAction::triggered, this, [this, i](){
-            this->changeSeriesData(SERIES::SERIES_LEFT ,i);
-        });
-    }
-
-//    // File->Exit functionality
-//    QObject::connect(m_mainWindowView->m_exitSubMenu, &QAction::triggered, this, &QWidget::close);
+        this->m_contextMenu->exec(mapToGlobal(a_pos));
+    } );
 }
 
 
@@ -234,16 +297,10 @@ void BasicChartView::changeSeriesData(const unsigned int a_series, const int dat
 
     // disable/enable this option from menu
     QMenu* l_menu = nullptr;
-    (a_series == SERIES::SERIES_LEFT) ? (l_menu = m_leftSeriesMenu) : (l_menu =  m_rightSeriesMenu);
+    (a_series == SERIES::SERIES_LEFT) ? (l_menu = m_menuYLeft) : (l_menu =  m_menuYRight);
     l_menu->actions().at(l_oldDataType)->setEnabled(true);
     l_menu->actions().at(data_type)->setDisabled(true);
 }
-
-
-//QSize BasicChartView::sizeHint() const
-//{
-//    return QSize(600,600);
-//}
 
 
 void BasicChartView::setUpdateFunction( std::function<void(BasicChartView* a_this,
@@ -482,6 +539,7 @@ void BasicChartView::mousePressEvent(QMouseEvent * event)
         // store the current x position of the chart for reference
         setReferenceX(static_cast<int>(chart()->mapToValue(event->pos()).x()));
     }
+
     QGraphicsView::mousePressEvent(event);
 }
 
@@ -509,6 +567,166 @@ void BasicChartView::setXAxisSpan(const int a_num) noexcept
 }
 
 
+void BasicChartView::setChartTitleVisiblity(const bool a_visibility) noexcept
+{
+    m_chartTitleVisibility = a_visibility;
+
+    if ( m_chartTitleVisibility )
+    {
+        chart()->setTitle(*m_chartTitle + "Chart");
+    } else {
+        chart()->setTitle("");
+    }
+}
+
+
+bool BasicChartView::getChartTitleVisiblity() const noexcept
+{
+    return m_chartTitleVisibility;
+}
+
+
+QString& BasicChartView::getChartTitle() const noexcept
+{
+    return *m_chartTitle;
+}
+
+
+void BasicChartView::initLegend() noexcept
+{
+    auto l_leg = chart()->legend();
+
+    // we would like to disconnect the legend from the chart layout
+    // this why we can position the legend on/in the chart
+    // if the legend is inside the chart layout, the layout
+    // treat them as different object and i could not embed
+    // the legend in the background of the chart
+    if ( l_leg->isAttachedToChart())
+    {
+        l_leg->detachFromChart();
+    }
+
+    // get chart size
+    const auto l_width = this->size().width();
+    const auto l_height = this->size().height();
+
+    // set legend position in the upper left corner
+    // hight = 0.02 * chart_height
+    // width = 0.06 * chart_width
+    l_leg->setPos(this->size().width()  * 6 / 100,
+                  this->size().height() * 2 / 100);
+
+    // resize legend
+    l_leg->resize(l_width,l_height);
+
+}
+
+
+void BasicChartView::initChartLabel() noexcept
+{
+    // we dont use the base chart title widget, because i could not
+    // embed it in the chart
+    setChartTitleVisiblity(m_chartTitleVisibility);
+    // thereforem we use our own label
+
+    m_titleLabel->setText(*m_chartTitle);
+
+    // set  width as chart width
+    const auto l_width = this->width();
+    m_titleLabel->setMaximumWidth(l_width);
+    m_titleLabel->setMinimumWidth(l_width);
+
+    // scale content to avaiable size
+    m_titleLabel->setScaledContents(true);
+
+    //
+    QFont font = chart()->legend()->font();
+    m_titleLabel->setFont(font);
+}
+
+
+void BasicChartView::resizeEvent(QResizeEvent *event)
+{
+    resizeEventLegend(event->size());
+    resizeEventTitle();
+    resizeEventStartStopButton();
+
+    QChartView::resizeEvent(event);
+}
+
+
+void BasicChartView::resizeEventLegend(const QSize& a_size /*event size*/) noexcept
+{
+    chart()->legend()->resize(a_size);
+
+    // hide/show legend if the width and height are too low
+    if (a_size.height() < 139)
+    {
+        if (chart()->legend()->isVisible())
+        {
+            chart()->legend()->setVisible(false);
+        }
+    } else {
+        if (!chart()->legend()->isVisible())
+        {
+            chart()->legend()->setVisible(true);
+        }
+    }
+}
+
+
+void BasicChartView::resizeEventTitle() noexcept
+{
+    const auto l_legendPosition = chart()->legend()->pos().toPoint();
+
+    // set the title above the legend, we use the following factor:
+    const auto l_factor = (chart()->legend()->font().pointSize() - 4);
+
+    // set the title in the center of width, we use the following:
+    const auto l_centerX = this->width() / 3;
+
+    m_titleLabel->move(l_centerX,
+                       l_legendPosition.y() - l_factor);
+}
+
+
+void BasicChartView::initStartStopButton() noexcept
+{
+    // set similar font to legend font
+    auto l_font = chart()->legend()->font();
+    l_font.setPointSize(9);
+    m_startStopButton->setFont(l_font);
+    m_startStopButton->resize(30,20); //set button size
+}
+
+
+void BasicChartView::resizeEventStartStopButton() noexcept
+{
+    // Notice: must execute after resizeEventLegend
+    if (chart()->legend()->isVisible())
+    {
+        if (!m_startStopButton->isVisible())
+        {
+            m_startStopButton->setVisible(true);
+        }
+
+    } else {
+        if (m_startStopButton->isVisible())
+        {
+            m_startStopButton->setVisible(false);
+        }
+        // no need to move if legend is hidden
+        return;
+    }
+
+    // move
+    const auto l_legendPosition = chart()->legend()->pos().toPoint();
+    m_startStopButton->move(l_legendPosition.x() + 10,
+                            l_legendPosition.y() + 32);
+}
+
+
+// # # # # updateData functions # # # #//
 void BasicChartView::updateData(ZmHeapTelemetry a_pair)
 {
     m_lambda(this, &a_pair);

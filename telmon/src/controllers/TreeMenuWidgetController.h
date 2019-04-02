@@ -37,7 +37,7 @@ public:
                              MainWindowController& a_MainWindowController,
                              QObject* a_parent = nullptr);
     virtual ~TreeMenuWidgetController() override;
-    virtual QAbstractItemModel* getModel() override;
+    virtual void* getModel() override;
     virtual QAbstractItemView* getView() override;
 
 

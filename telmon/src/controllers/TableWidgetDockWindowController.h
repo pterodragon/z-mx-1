@@ -30,7 +30,7 @@ public:
     virtual ~TableWidgetDockWindowController() override;
 
     // BasicController interface
-    virtual QAbstractItemModel* getModel()  override final;
+    virtual void* getModel()  override final;
     virtual QAbstractItemView*  getView()   override final;
 
     // DockWindowController interface

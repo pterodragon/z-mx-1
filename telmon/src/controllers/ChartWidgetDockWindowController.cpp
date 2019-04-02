@@ -43,16 +43,14 @@ ChartWidgetDockWindowController::~ChartWidgetDockWindowController()
 }
 
 
-QAbstractItemModel* ChartWidgetDockWindowController::getModel()
+void* ChartWidgetDockWindowController::getModel()
 {
-    //TODO
-    return nullptr;
+    return m_graphDockWidgetModelWrapper;
 }
 
 
 QAbstractItemView*  ChartWidgetDockWindowController::getView()
 {
-    //TODO
     return nullptr;
 }
 
@@ -109,8 +107,6 @@ void ChartWidgetDockWindowController::handleUserSelection(unsigned int& a_action
 
     // associate dock widget with chart view
     a_dockWidget->setWidget(l_chartView);
-
-
 }
 
 

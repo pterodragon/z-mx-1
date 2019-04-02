@@ -43,10 +43,9 @@ TableWidgetDockWindowController::~TableWidgetDockWindowController()
 }
 
 
-QAbstractItemModel* TableWidgetDockWindowController::getModel()
+void* TableWidgetDockWindowController::getModel()
 {
-    //TODO
-    return nullptr;
+    return m_tableDockWidgetModelWrapper;
 }
 
 

@@ -36,7 +36,7 @@ TreeMenuWidgetController::TreeMenuWidgetController(DataDistributor& a_dataDistri
     m_treeView (new TreeView),
     m_MainWindowController(a_MainWindowController)
 {
-    m_treeView->setModel(getModel());
+    m_treeView->setModel(static_cast<QAbstractItemModel*>(getModel()));
     m_treeView->setObjectName("m_treeView");
 
     createActions();
@@ -57,7 +57,7 @@ TreeMenuWidgetController::~TreeMenuWidgetController()
 }
 
 
-QAbstractItemModel* TreeMenuWidgetController::getModel()
+void* TreeMenuWidgetController::getModel()
 {
     return m_treeMenuWidgetModelWrapper->getModel();
 }

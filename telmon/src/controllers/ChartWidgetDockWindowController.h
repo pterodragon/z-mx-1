@@ -32,8 +32,8 @@ public:
     ~ChartWidgetDockWindowController() override;
 
     // BasicController interface
-    virtual QAbstractItemModel* getModel()  override final;
-    virtual QAbstractItemView*  getView()   override final;
+    virtual void* getModel()  override final;
+    virtual QAbstractItemView* getView()   override final;
 
     // DockWindowController interface
     virtual void handleUserSelection(unsigned int& a_action,

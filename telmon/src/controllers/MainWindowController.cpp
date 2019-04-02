@@ -56,7 +56,10 @@ MainWindowController::MainWindowController(QWidget *parent) :
     // create
     initController(l_key);
 
-    m_mainWindowView->m_treeWidgetSplitter->addWidget(m_controllersDB->value(l_key)->getView());
+    m_mainWindowView->m_treeWidgetSplitter->addWidget(static_cast<QAbstractItemView*>(
+                                                            m_controllersDB->value(l_key)->getView()
+                                                        )
+                                                      );
 
     setCentralWidget(m_mainWindowView->m_centralWidget);
 
@@ -157,7 +160,7 @@ void MainWindowController::createActions() noexcept
         initController(l_key);
 
         // set as central
-         this->m_mainWindowView->m_treeWidgetSplitter->addWidget(m_controllersDB->value(l_key)->getView());
+        this->m_mainWindowView->m_treeWidgetSplitter->addWidget(m_controllersDB->value(l_key)->getView());
 
         setCentralWidget( this->m_mainWindowView->m_centralWidget);
     });

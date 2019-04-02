@@ -39,8 +39,8 @@ public:
     DockWindowController(DockWindowController const& copy);            // Not Implemented
     DockWindowController& operator=(DockWindowController const& copy); // Not Implemented
 
-    virtual QAbstractItemModel* getModel()  = 0;
-    virtual QAbstractItemView*  getView()   = 0;
+    virtual void* getModel()  = 0;
+    virtual QAbstractItemView* getView()   = 0;
 
 
     // DockWindowController interface

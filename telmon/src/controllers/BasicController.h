@@ -25,7 +25,6 @@
 
 #include <QObject>
 
-class QAbstractItemModel;
 class QAbstractItemView;
 class DataDistributor;
 
@@ -39,7 +38,7 @@ public:
     BasicController(BasicController const& copy);            // Not Implemented
     BasicController& operator=(BasicController const& copy); // Not Implemented
 
-    virtual QAbstractItemModel* getModel() = 0;
+    virtual void* getModel() = 0;
     virtual QAbstractItemView* getView() = 0;
 
 

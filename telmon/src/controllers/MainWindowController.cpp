@@ -32,6 +32,7 @@
 #include "src/widgets/BasicTextWidget.h"
 #include "QInputDialog"
 #include "QHostAddress"
+#include "QFile"
 
 
 #include "QDebug" // perhaps remove after testing
@@ -43,6 +44,7 @@ MainWindowController::MainWindowController(QWidget *parent) :
     m_controllersDB(new QMap<unsigned int, BasicController*>()) // key, value
 {
     qDebug() << "MainWindowController() - Begin";
+    setAppearance(); // loading the css file
     m_mainWindowView->initCentralLook();
     m_mainWindowView->initMenuBar();
     m_mainWindowView->setGeometry();
@@ -286,7 +288,41 @@ void MainWindowController::dockWindowsManager(const unsigned int a_dockWindowTyp
 }
 
 
+void MainWindowController::setAppearance(const QString& a_pathToFile) noexcept
+{
+    // most of the time we will use dafault value
+    QString l_pathTofile = DEFAULT_STYLE_PATH;
 
+    // notice: the default QString is Null and Empty
+    // we use logical: (not (A AND B)) equals (not(A) or not(B))
+    if (!a_pathToFile.isNull() or !a_pathToFile.isEmpty())
+    {
+        l_pathTofile = a_pathToFile;
+    }
 
+    // we check file exists
+    if ( !QFile::exists(l_pathTofile) )
+    {
+        qWarning() << __PRETTY_FUNCTION__
+                   << "file does not EXISTS:"
+                   << l_pathTofile;
+        return;
+    }
+
+    // open the file and use
+    QFile l_file(l_pathTofile);
+    if ( !l_file.open(QFile::ReadOnly) )
+    {
+        qWarning() << __PRETTY_FUNCTION__
+                   << "could not OPEN:"
+                   << l_pathTofile
+                   << l_file.errorString();
+        return;
+    }
+
+    const QString StyleSheet = QLatin1String(l_file.readAll());
+    this->setStyleSheet(StyleSheet);
+    l_file.close();
+}
 
 

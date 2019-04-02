@@ -49,6 +49,14 @@ private:
     void terminateController(const unsigned int a_key) noexcept;
 
     void createActions() noexcept;
+
+    /**
+     * @brief used to load .css file for appearnce
+     */
+    void setAppearance(const QString& a_pathToFile = QString()) noexcept;
+
+    inline static const QString DEFAULT_STYLE_PATH = "src/styles/dark_default.qss";
+
 };
 
 #endif // MAINWINDOWCONTROLLER_H

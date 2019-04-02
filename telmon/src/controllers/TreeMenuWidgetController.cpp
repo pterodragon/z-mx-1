@@ -37,6 +37,7 @@ TreeMenuWidgetController::TreeMenuWidgetController(DataDistributor& a_dataDistri
     m_MainWindowController(a_MainWindowController)
 {
     m_treeView->setModel(getModel());
+    m_treeView->setObjectName("m_treeView");
 
     createActions();
 

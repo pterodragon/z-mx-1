@@ -183,8 +183,6 @@ QChartView* ChartDockWidgetModelWrapper::initChartWidget(const QString& a_mxTele
 
     //connect signal and slot
     connectSignalAndSlot(l_pair, l_mxTelemetryTypeNameNumber);
-//    QObject::connect(l_pair.second, &ChartSubscriber::updateDone,
-//                     static_cast<BasicChartView*>(l_pair.first), &BasicChartView::updateData);
 
 
     // subscribes

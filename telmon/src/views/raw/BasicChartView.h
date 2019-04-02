@@ -215,6 +215,13 @@ private:
 
 
     // Data strucutre to hold all chart points
+    // about size for each type:
+    // we use int = 32 bit = 4 bytes
+    // 1 min    = 60 seconds = 60 * 4 = 240 bytes
+    // 60 min   = 240 * 60 = 14400 bytes
+    // 24 hours = 14400 * 24 = 345600 bytes
+    // 345600 bytes = 337.5 KB = 0.32959 MB
+    // for one type
     QVector<QVector<double>*>* m_chartDataContainer;
 
 

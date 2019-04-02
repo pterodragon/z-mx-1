@@ -46,8 +46,8 @@ BasicChartView::BasicChartView(QChart *a_chart,
     m_chartFields(MxTelemetryTypeWrappersFactory::getInstance().
                           getMxTelemetryWrapper(m_associatedTelemetryType).getChartList()),
     m_chartDataContainer(new QVector<QVector<double>*>),
-    m_delayIndicator(0),       // there is no delay on startup
-    m_drawChartFlag(true),     // we draw chart on widget start up
+    m_delayIndicator(0),        // there is no delay on startup
+    m_drawChartFlag(true),      // we draw chart on widget start up
     m_xReferenceCoordiante(0),  // just default value
     m_chartTitleVisibility(a_chartTitleVisibility),
     m_chartTitle(new QString(a_chartTitle))
@@ -137,12 +137,12 @@ void BasicChartView::addDataToChartDataContainer(void* a_mxTelemetryMsg) const n
     for (int i = 0; i < l_numberOfFields; ++i)
     {
         // get the data
-        const auto l_data = MxTelemetryTypeWrappersFactory::getInstance().
-                getMxTelemetryWrapper(m_associatedTelemetryType).
-                getDataForChart(a_mxTelemetryMsg, i);
+//        const auto l_data = MxTelemetryTypeWrappersFactory::getInstance().
+//                getMxTelemetryWrapper(m_associatedTelemetryType).
+//                getDataForChart(a_mxTelemetryMsg, i);
 
         // only for testing
-        //const auto l_data = rand() % 100;
+        const auto l_data = rand() % 100;
 
         // insert the data to be the first, pushing all the data inside one index up
         m_chartDataContainer->at(i)->prepend(l_data);
@@ -205,7 +205,7 @@ void BasicChartView::initContextMenu() noexcept
     m_contextMenu->addSeparator();
 
     // init "Data" menu
-    auto l_dataMenu = new QMenu(QObject::tr("Data"));
+    auto l_dataMenu = new QMenu(QObject::tr("Data"), m_contextMenu);
 
     // init Y Axis
     m_menuYLeft = new QMenu("Y Left", l_dataMenu);
@@ -657,7 +657,12 @@ void BasicChartView::resizeEvent(QResizeEvent *event)
 
 void BasicChartView::resizeEventLegend(const QSize& a_size /*event size*/) noexcept
 {
-    chart()->legend()->resize(a_size);
+    // Notice:
+    // 1. if the legend is too big, for example, covering the all chart
+    // it seems that the hand will not change when trying to move the chart
+    // change i mean from just hand will switched to pressing hand
+    // from tests, sees the minimum height of legend is 42, so i am using it.
+    chart()->legend()->resize(QSize(a_size.width(), 42));
 
     // hide/show legend if the width and height are too low
     if (a_size.height() < 139)

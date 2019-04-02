@@ -104,12 +104,24 @@ void MainWindowView::initCentralLook() noexcept
 {
     // first, init all related members
     // (members are not init in initlizair list because i think its more organized here)
-    m_treeWidgetSplitter     = new QSplitter;
-    m_tablesWidgetSplitter   = new QSplitter;
-    m_chartsWidgetSplitter   = new QSplitter;
-    m_centralWindowSplitter  = new QSplitter;
-    m_centralWidgetLayout    = new QHBoxLayout;
-    m_centralWidget          = new QWidget;
+    m_centralWidget          = new QWidget(m_mainWindowController);
+    m_centralWidget->setObjectName("m_centralWidget"); // for access via css
+
+    m_centralWidgetLayout    = new QHBoxLayout(m_centralWidget);
+    m_centralWidget->setLayout(m_centralWidgetLayout);
+
+    m_centralWindowSplitter  = new QSplitter(m_centralWidget);
+    m_centralWindowSplitter->setObjectName("m_centralWindowSplitter");
+
+    m_treeWidgetSplitter     = new QSplitter(m_centralWidget);
+    m_treeWidgetSplitter->setObjectName("m_treeWidgetSplitter");
+
+    m_tablesWidgetSplitter   = new QSplitter(m_centralWidget);
+    m_tablesWidgetSplitter->setObjectName("m_tablesWidgetSplitter");
+
+    m_chartsWidgetSplitter   = new QSplitter(m_centralWidget);
+    m_chartsWidgetSplitter->setObjectName("m_chartsWidgetSplitter");
+
     // we are going from micro to macro
     m_treeWidgetSplitter  ->setOrientation(Qt::Vertical);
     m_tablesWidgetSplitter->setOrientation(Qt::Vertical);
@@ -150,8 +162,6 @@ void MainWindowView::initCentralLook() noexcept
     m_centralWidgetLayout->addWidget(m_centralWindowSplitter);
     m_centralWidgetLayout->setMargin(2);
 
-    m_centralWidget->setLayout(m_centralWidgetLayout);
-    m_centralWidget->setParent(m_mainWindowController);
 }
 
 

@@ -1,0 +1,175 @@
+/*
+	see:
+	https://doc.qt.io/qt-5/stylesheet-examples.html
+*/
+
+
+
+/* * * * * Customizing QMainWindow * * * * * */
+
+/*
+MainWindow::separator {
+    background-color: yellow;
+    width: 10px;
+    height: 10px;
+}
+
+QMainWindow::separator:hover {
+    background: red;
+}
+*/
+
+QWidget#m_centralWidget {
+	background: #666666;
+	border: 0.5px solid black;
+}
+
+
+
+/* * * * * Customizing QMenu * * * * * */
+
+QMenu {
+    background-color: #ABABAB;
+    border: 2px solid black;
+}
+
+
+QMenu::item {
+    /* sets background of menu item. set this to something non-transparent
+        if you want menu color and menu item color to be different */
+    background-color: transparent;
+}
+
+QMenu::item:selected {
+	background-color: #1E53E4;
+	color: white;
+}
+
+QMenu::item:disabled {
+        background-color: #ABABAB;
+        color: #666666;
+}
+
+
+/* * * * * Customizing QMenuBar * * * * * */
+
+
+QMenuBar {
+    background-color: #ABABAB;
+}
+
+
+
+QMenuBar::item:selected {
+        background-color: #1E53E4;
+        color: white;
+}
+
+QMenuBar::item:pressed {
+        background-color: #1E53E4;
+        color: white;
+}
+
+
+
+/* * * * * Customizing QSplitter * * * * */
+
+
+QSplitter::handle {
+	background-color: #ABABAB;
+	border: 1px solid black;
+	margin: 0px;
+
+}
+
+
+QSplitter::handle:horizontal {
+    width: 2px;
+}
+
+QSplitter::handle:vertical {
+    	height: 2px;
+}
+
+/*
+QSplitter::handle:pressed {
+    url(images/splitter_pressed.png);
+}
+*/
+
+
+/* * * * * Customizing QDockWidget * * * * */
+/*
+QDockWidget {
+    border: 1px solid lightgray;
+    titlebar-close-icon: url(close.png);
+    titlebar-normal-icon: url(undock.png);
+}
+*/
+
+
+
+/* * * * * Customizing QTreeView * * * * */
+
+QTreeView#m_treeView {
+	show-decoration-selected: 1;
+	background: #858585;
+}
+
+
+QTreeView#m_treeView::item {
+	border: 1px solid #d9d9d9;
+	border-top-color: transparent;
+	border-bottom-color: transparent;
+}
+
+QTreeView#m_treeView::item:hover {
+	background: #1E53E4;
+	color: white;
+	border: 1px solid #bfcde4;
+}
+
+QTreeView#m_treeView::item:selected {
+        background: #1E53E4;
+        color: white;
+        border: 1px solid #bfcde4;
+
+}
+
+/*
+QTreeView#m_treeView::item:selected:active{
+    background: yellow;
+}
+
+QTreeView#m_treeView::item:selected:!active {
+    background: orange;
+}
+*/
+
+QTreeView#m_treeView::branch:selected {
+        background: #858585;
+        color: white;
+        border: 0px solid #bfcde4;
+
+}
+
+/*
+	stopped at trying to change the table header
+	after that need to change to table view
+	after that need to change the chart view
+	Huw would like it to be exactly like the lap app  
+*/
+
+/* * * * * Customizing QPushButton * * * * */
+
+
+
+
+
+
+
+
+
+
+
+

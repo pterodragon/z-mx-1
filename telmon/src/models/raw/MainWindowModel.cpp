@@ -78,4 +78,3 @@ void MainWindowModel::setPort(const QString& a_port) noexcept
     m_networkManager->setPort(a_port);
 }
 
-

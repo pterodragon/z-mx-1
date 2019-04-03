@@ -80,7 +80,7 @@ struct ZvAPI ZvHashCSV {
   };
 
   static void init(ZuString file) {
-    if (file) CSV().read(ZuMv(file));
+    if (file) CSV().read(file);
   }
 };
 

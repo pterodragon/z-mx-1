@@ -144,17 +144,6 @@ private:
 
 public:
   template <typename L>
-  ZuInline void invokeMv(L l) {
-    Shard *shard;
-    T *o;
-    shardObject(shard, o);
-    m_ptr = 0;
-    ZmRef<T> *ZuMayAlias(ptr) = (ZmRef<T> *)&o;
-    shard->invoke([l = ZuMv(l), shard, o = ZuMv(*ptr)]() mutable {
-      l(shard, ZuMv(o));
-    });
-  }
-  template <typename L>
   ZuInline typename ZuNotMutable<L>::T invoke(L l) const {
     Shard *shard;
     T *o;
@@ -167,6 +156,17 @@ public:
     T *o;
     shardObject(shard, o);
     shard->invoke([l = ZuMv(l), shard, o]() mutable { l(shard, o); });
+  }
+  template <typename L>
+  ZuInline void invokeMv(L l) {
+    Shard *shard;
+    T *o;
+    shardObject(shard, o);
+    m_ptr = 0;
+    ZmRef<T> *ZuMayAlias(ptr) = (ZmRef<T> *)&o;
+    shard->invoke([l = ZuMv(l), shard, o = ZuMv(*ptr)]() mutable {
+      l(shard, ZuMv(o));
+    });
   }
 
 private:

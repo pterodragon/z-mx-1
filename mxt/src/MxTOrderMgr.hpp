@@ -300,12 +300,6 @@ public:
     return reinterpret_cast<typename Next<In>::Fn>(fn)(order, in);
   }
 
-private:
-  template <typename In>
-  static void newOrder_(Order *order, In &in) {
-  }
-
-public:
   template <typename In>
   typename ZuIsBase<Txn_, In, uintptr_t>::T
   newOrder(Order *order, In &in) {
@@ -338,12 +332,14 @@ public:
   template <typename In>
   typename ZuIsBase<Txn_, In, uintptr_t>::T
   orderFiltered(Order *order, In &in) {
+    auto &newOrder = order->newOrder();
     order->orderTxn = in.template request<OrderFiltered>();
     newOrderIn_<MxTEventState::Rejected>(order);
     {
       order->execTxn = in.template reject<OrderFiltered>();
       auto &reject = order->execTxn.template as<Reject>();
-      reject.update(order->newOrder());
+      newOrder.update(reject);
+      reject.update(newOrder);
       execOut(order);
     }
     return 0;
@@ -440,6 +436,7 @@ public:
 	order->execTxn = in.template data<Reject>();
 	execIn<MxTEventState::Sent>(order);
 	auto &reject = order->execTxn.template as<Reject>();
+	newOrder.update(reject);
 	reject.update(newOrder);
 	if (ZuUnlikely(MxTEventState::matchAX(newOrder.eventState)))
 	  reject.unsolicited_set();
@@ -1372,6 +1369,7 @@ public:
 	auto &reject = order->execTxn.template initReject<1>();
 	execIn<MxTEventState::Sent>(order);
 	reject.update(in.template as<Deny>());
+	newOrder.update(reject);
 	reject.update(newOrder);
       }
       return 0;

@@ -198,6 +198,16 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
   }
 
   try {
+    if (ZtString heapCSV = cf->get("heap")) {
+      ZeLOG(Info, "MxMDLib - configuring heap...");
+      ZvHeapCSV::init(heapCSV);
+    }
+
+    if (ZtString hashCSV = cf->get("hash")) {
+      ZeLOG(Info, "MxMDLib - configuring hash tables...");
+      ZvHashCSV::init(hashCSV);
+    }
+
     if (ZmRef<ZvCf> logCf = cf->subset("log", false)) {
       ZeLog::init("MxMD");
       ZeLog::level(logCf->getInt("level", 0, 5, false, 0));
@@ -205,11 +215,6 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
 	  logCf->get("file"),
 	  logCf->getInt("age", 0, INT_MAX, false, 8),
 	  logCf->getInt("offset", INT_MIN, INT_MAX, false, 0)));
-    }
-
-    if (ZtString heapCSV = cf->get("heap")) {
-      ZeLOG(Info, "MxMDLib - configuring heap...");
-      ZvHeapCSV::init(heapCSV);
     }
 
     {

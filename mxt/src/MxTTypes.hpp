@@ -220,7 +220,8 @@ namespace MxTRejReason {
     AcctDisabled,		// account disabled
     NoAssets,			// cash trading - insufficient assets/funds
     NoCollateral,		// margining - insufficient collateral
-    RiskBreach			// risk limit breached
+    RiskBreach,			// risk limit breached
+    BadComAsset			// bad commission asset
     );
   enum { OK = Invalid };	// OK == Invalid == -1
   MxEnumNames(
@@ -264,7 +265,8 @@ namespace MxTRejReason {
     "AcctDisabled",
     "NoAssets",
     "NoCollateral",
-    "RiskBreach"
+    "RiskBreach",
+    "BadComAsset"
   );
 }
 

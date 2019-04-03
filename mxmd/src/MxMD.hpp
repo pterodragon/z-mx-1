@@ -417,9 +417,9 @@ public:
   ZuInline const MxMDOrderData &data() const { return m_data; }
 
   template <typename T = uintptr_t>
-  ZuInline T appData() const { return (T)m_appData; }
+  ZuInline T appData() const { return (T)m_appData.load_(); }
   template <typename T>
-  ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
+  ZuInline void appData(T v) { m_appData.store_((uintptr_t)v); }
 
 private:
   inline void update_(MxUInt rank, MxValue price, MxValue qty, MxFlags flags) {
@@ -447,7 +447,7 @@ private:
   MxIDString		m_id;
   MxMDOrderData		m_data;
 
-  uintptr_t		m_appData = 0;
+  ZmAtomic<uintptr_t>	m_appData = 0;
 };
 
 struct MxMDOrder_HeapID {
@@ -1058,14 +1058,14 @@ public:
   ZuInline const ZmRef<MxMDInstrHandler> &handler() const { return m_handler; }
 
   template <typename T = uintptr_t>
-  ZuInline T libData() const { return (T)m_libData; }
+  ZuInline T libData() const { return (T)m_libData.load_(); }
   template <typename T>
-  ZuInline void libData(T v) { m_libData = (uintptr_t)v; }
+  ZuInline void libData(T v) { m_libData.store_((uintptr_t)v); }
 
   template <typename T = uintptr_t>
-  ZuInline T appData() const { return (T)m_appData; }
+  ZuInline T appData() const { return (T)m_appData.load_(); }
   template <typename T>
-  ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
+  ZuInline void appData(T v) { m_appData.store_((uintptr_t)v); }
 
   template <typename T = MxMDFeedOB>
   ZuInline typename ZuIs<MxMDFeedOB, T, ZmRef<T> &>::T feedOB() {
@@ -1198,8 +1198,8 @@ private:
 
   ZmRef<MxMDInstrHandler>	m_handler;
 
-  uintptr_t			m_libData = 0;
-  uintptr_t			m_appData = 0;
+  ZmAtomic<uintptr_t>		m_libData = 0;
+  ZmAtomic<uintptr_t>		m_appData = 0;
 };
 
 ZuInline ZmRef<MxMDOBSide> MxMDOrder_::bids_(const MxMDOrderBook *ob)
@@ -1378,14 +1378,14 @@ public:
   }
 
   template <typename T = uintptr_t>
-  ZuInline T libData() const { return (T)m_libData; }
+  ZuInline T libData() const { return (T)m_libData.load_(); }
   template <typename T>
-  ZuInline void libData(T v) { m_libData = (uintptr_t)v; }
+  ZuInline void libData(T v) { m_libData.store_((uintptr_t)v); }
 
   template <typename T = uintptr_t>
-  ZuInline T appData() const { return (T)m_appData; }
+  ZuInline T appData() const { return (T)m_appData.load_(); }
   template <typename T>
-  ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
+  ZuInline void appData(T v) { m_appData.store_((uintptr_t)v); }
 
 private:
   void addOrderBook_(MxMDOrderBook *);
@@ -1415,8 +1415,8 @@ private:
 
   ZmRef<MxMDInstrHandler>  	m_handler;
 
-  uintptr_t			m_libData = 0;
-  uintptr_t			m_appData = 0;
+  ZmAtomic<uintptr_t>		m_libData = 0;
+  ZmAtomic<uintptr_t>		m_appData = 0;
 };
 
 // feeds
@@ -1829,6 +1829,7 @@ public:
       ZuString path, MxID venue = MxID(), MxID segment = MxID()) = 0;
 
   ZuInline unsigned nShards() const { return m_shards.length(); }
+  ZuInline MxMDShard *shard(unsigned i) const { return m_shards[i]; }
   template <typename L>
   ZuInline typename ZuNotMutable<L>::T shard(unsigned i, L l) const {
     MxMDShard *shard = m_shards[i];
@@ -2180,14 +2181,14 @@ public:
   uintptr_t allVenues(ZmFn<MxMDVenue *>) const;
 
   template <typename T = uintptr_t>
-  ZuInline T libData() const { return (T)m_libData; }
+  ZuInline T libData() const { return (T)m_libData.load_(); }
   template <typename T>
-  ZuInline void libData(T v) { m_libData = (uintptr_t)v; }
+  ZuInline void libData(T v) { m_libData.store_((uintptr_t)v); }
 
   template <typename T = uintptr_t>
-  ZuInline T appData() const { return (T)m_appData; }
+  ZuInline T appData() const { return (T)m_appData.load_(); }
   template <typename T>
-  ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
+  ZuInline void appData(T v) { m_appData.store_((uintptr_t)v); }
 
 private:
   ZmScheduler		*m_scheduler = 0;
@@ -2207,8 +2208,8 @@ private:
   SubLock		m_subLock;
     ZmRef<MxMDLibHandler> m_handler;
 
-  uintptr_t		m_libData = 0;
-  uintptr_t		m_appData = 0;
+  ZmAtomic<uintptr_t>	m_libData = 0;
+  ZmAtomic<uintptr_t>	m_appData = 0;
 };
 
 inline void MxMDFeed::connected() {

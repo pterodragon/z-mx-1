@@ -440,12 +440,12 @@ private:
 protected:
   template <typename I> struct Iterator__ {
     inline const Key &iterateKey() {
-      NodeRef node = static_cast<I *>(this)->iterate();
+      Node *node = static_cast<I *>(this)->iterate();
       if (ZuLikely(node)) return node->Node::key();
       return Cmp::null();
     }
     inline const Val &iterateVal() {
-      NodeRef node = static_cast<I *>(this)->iterate();
+      Node *node = static_cast<I *>(this)->iterate();
       if (ZuLikely(node)) return node->Node::val();
       return ValCmp::null();
     }
@@ -462,15 +462,15 @@ protected:
     ZuInline void reset() {
       m_hash.startIterate(static_cast<I &>(*this));
     }
-    ZuInline NodeRef iterate() {
+    ZuInline Node *iterate() {
       return m_hash.iterate(static_cast<I &>(*this));
     }
 
   protected:
     Hash			&m_hash;
     int				m_slot;
-    typename Hash::NodeRef	m_node;
-    typename Hash::NodeRef	m_prev;
+    typename Hash::Node		*m_node;
+    typename Hash::Node		*m_prev;
   };
 
   template <typename I> class IndexIterator_ : public Iterator_<I> {
@@ -488,7 +488,7 @@ protected:
     ZuInline void reset() {
       m_hash.startIndexIterate(static_cast<I &>(*this));
     }
-    ZuInline NodeRef iterate() {
+    ZuInline Node *iterate() {
       return m_hash.indexIterate(static_cast<I &>(*this));
     }
 
@@ -660,24 +660,33 @@ public:
   inline NodeRef find(const Index_ &index) const {
     uint32_t code = IHashFn::hash(index);
     ReadGuard guard(lockCode(code));
-
+    return find_(index, code);
+  }
+  template <typename Index_>
+  inline Node *findPtr(const Index_ &index) const {
+    uint32_t code = IHashFn::hash(index);
+    ReadGuard guard(lockCode(code));
     return find_(index, code);
   }
   template <typename Index_>
   inline Key findKey(const Index_ &index) const {
-    NodeRef node = find(index);
+    uint32_t code = IHashFn::hash(index);
+    ReadGuard guard(lockCode(code));
+    Node *node = find_(index, code);
     if (ZuUnlikely(!node)) return Cmp::null();
     return node->Node::key();
   }
   template <typename Index_>
   inline Val findVal(const Index_ &index) const {
-    NodeRef node = find(index);
+    uint32_t code = IHashFn::hash(index);
+    ReadGuard guard(lockCode(code));
+    Node *node = find_(index, code);
     if (ZuUnlikely(!node)) return ValCmp::null();
     return node->Node::val();
   }
 private:
   template <typename Index_>
-  inline NodeRef find_(const Index_ &index, uint32_t code) const {
+  inline Node *find_(const Index_ &index, uint32_t code) const {
     Node *node;
     unsigned slot = ZmHash_Bits::hashBits(code, m_bits);
 
@@ -693,24 +702,33 @@ public:
   inline NodeRef find(const Index_ &index, const Val_ &val) const {
     uint32_t code = IHashFn::hash(index);
     ReadGuard guard(lockCode(code));
-
+    return findKeyVal_(index, val, code);
+  }
+  template <typename Index_, typename Val_>
+  inline Node *findPtr(const Index_ &index, const Val_ &val) const {
+    uint32_t code = IHashFn::hash(index);
+    ReadGuard guard(lockCode(code));
     return findKeyVal_(index, val, code);
   }
   template <typename Index_, typename Val_>
   inline Key findKey(const Index_ &index, const Val_ &val) const {
-    Node *node = find(index, val);
+    uint32_t code = IHashFn::hash(index);
+    ReadGuard guard(lockCode(code));
+    Node *node = findKeyVal_(index, val, code);
     if (ZuUnlikely(!node)) return Cmp::null();
     return node->Node::key();
   }
   template <typename Index_, typename Val_>
   inline Val findVal(const Index_ &index, const Val_ &val) const {
-    Node *node = find(index, val);
+    uint32_t code = IHashFn::hash(index);
+    ReadGuard guard(lockCode(code));
+    Node *node = findKeyVal_(index, val, code);
     if (ZuUnlikely(!node)) return ValCmp::null();
     return node->Node::val();
   }
 private:
   template <typename Index_, typename Val_>
-  inline NodeRef findKeyVal_(
+  inline Node *findKeyVal_(
       const Index_ &index, const Val_ &val, uint32_t code) const {
     Node *node;
     unsigned slot = ZmHash_Bits::hashBits(code, m_bits);
@@ -728,37 +746,53 @@ public:
   inline NodeRef findAdd(Key__ &&key) {
     uint32_t code = HashFn::hash(key);
     Guard guard(lockCode(code));
-
     return findAdd_(ZuFwd<Key__>(key), Val(), code);
   }
   template <typename Key__, typename Val_>
   inline NodeRef findAdd(Key__ &&key, Val_ &&val) {
     uint32_t code = HashFn::hash(key);
     Guard guard(lockCode(code));
-
+    return findAdd_(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code);
+  }
+  template <typename Key__>
+  inline Node *findAddPtr(Key__ &&key) {
+    uint32_t code = HashFn::hash(key);
+    Guard guard(lockCode(code));
+    return findAdd_(ZuFwd<Key__>(key), Val(), code);
+  }
+  template <typename Key__, typename Val_>
+  inline Node *findAddPtr(Key__ &&key, Val_ &&val) {
+    uint32_t code = HashFn::hash(key);
+    Guard guard(lockCode(code));
     return findAdd_(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code);
   }
   template <typename Key__>
   inline Key findAddKey(Key__ &&key) {
-    NodeRef node = findAdd(ZuFwd<Key__>(key), Val());
+    uint32_t code = HashFn::hash(key);
+    Guard guard(lockCode(code));
+    Node *node = findAdd_(ZuFwd<Key__>(key), Val(), code);
     if (ZuUnlikely(!node)) return Cmp::null();
     return node->Node::key();
   }
   template <typename Key__, typename Val_>
   inline Key findAddKey(Key__ &&key, Val_ &&val) {
-    NodeRef node = findAdd(ZuFwd<Key__>(key), ZuFwd<Val_>(val));
+    uint32_t code = HashFn::hash(key);
+    Guard guard(lockCode(code));
+    Node *node = findAdd_(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code);
     if (ZuUnlikely(!node)) return Cmp::null();
     return node->Node::key();
   }
   template <typename Key__, typename Val_>
   inline Val findAddVal(Key__ &&key, Val_ &&val) {
-    NodeRef node = findAdd(ZuFwd<Key__>(key), ZuFwd<Val_>(val));
+    uint32_t code = HashFn::hash(key);
+    Guard guard(lockCode(code));
+    Node *node = findAdd_(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code);
     if (ZuUnlikely(!node)) return ValCmp::null();
     return node->Node::val();
   }
 private:
   template <typename Key__, typename Val_>
-  inline NodeRef findAdd_(Key__ &&key, Val_ &&val, uint32_t code) {
+  inline Node *findAdd_(Key__ &&key, Val_ &&val, uint32_t code) {
     Node *node;
     unsigned slot = ZmHash_Bits::hashBits(code, m_bits);
 
@@ -766,13 +800,12 @@ private:
 	 node && !Cmp::equals(node->Node::key(), key);
 	 node = node->Fn::next());
 
-    if (node) return node;
-
-    {
-      NodeRef node = new Node(ZuFwd<Key__>(key), ZuFwd<Val_>(val));
-      addNode_(node, code);
-      return node;
+    if (!node) {
+      NodeRef nodeRef = new Node(ZuFwd<Key__>(key), ZuFwd<Val_>(val));
+      node = nodeRef.ptr();
+      addNode_(ZuMv(nodeRef), code);
     }
+    return node;
   }
 
 public:
@@ -818,12 +851,10 @@ private:
     else
       prevNode->Fn::next(node->Fn::next());
 
-    NodeRef ret = node;
-
-    nodeDeref(node);
     --m_count;
 
-    return ret;
+    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    return ZuMv(*ptr);
   }
 
 public:
@@ -854,12 +885,10 @@ private:
     else
       prevNode->Fn::next(node->Fn::next());
 
-    NodeRef ret = node;
-
-    nodeDeref(node);
     --m_count;
 
-    return ret;
+    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    return ZuMv(*ptr);
   }
 
 public:
@@ -893,7 +922,7 @@ private:
     iterator.m_prev = 0;
   }
   template <typename I>
-  inline NodeRef iterate(I &iterator) {
+  inline Node *iterate(I &iterator) {
     int slot = iterator.m_slot;
 
     if (slot < 0) return 0;
@@ -925,7 +954,7 @@ private:
     return iterator.m_node = node;
   }
   template <typename I>
-  inline NodeRef indexIterate(I &iterator) {
+  inline Node *indexIterate(I &iterator) {
     int slot = iterator.m_slot;
 
     if (slot < 0) return 0;

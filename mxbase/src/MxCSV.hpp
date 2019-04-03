@@ -38,7 +38,9 @@
 
 typedef ZvCSVColumn<ZvCSVColType::Int, MxBool> MxBoolCol;
 typedef ZvCSVColumn<ZvCSVColType::Int, MxInt> MxIntCol;
+typedef ZvCSVColumn<ZvCSVColType::Int, MxInt64> MxInt64Col;
 typedef ZvCSVColumn<ZvCSVColType::Int, MxUInt> MxUIntCol;
+typedef ZvCSVColumn<ZvCSVColType::Int, MxUInt64> MxUInt64Col;
 typedef ZvCSVColumn<ZvCSVColType::Float, MxFloat> MxFloatCol;
 typedef ZvCSVColumn<ZvCSVColType::Int, MxNDP> MxNDPCol;
 typedef ZvCSVColumn<ZvCSVColType::Int, MxRatio> MxRatioCol;

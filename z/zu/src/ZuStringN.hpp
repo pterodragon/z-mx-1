@@ -58,12 +58,10 @@
 
 struct ZuStringN__ { }; // type tag
 
-template <typename Char_, typename StringN>
+template <typename Char_, typename StringN, unsigned N>
 class ZuStringN_ : public ZuStringN__ {
-  ZuStringN_();
   ZuStringN_(const ZuStringN_ &);
   ZuStringN_ &operator =(const ZuStringN_ &);
-  bool operator *() const;
 
 public:
   typedef Char_ Char;
@@ -87,30 +85,28 @@ private:
   struct ToString<U, R, wchar_t, true, true> { typedef R T; };
 
 protected:
-  inline ZuStringN_(unsigned size) :
-    m_size(size), m_length(0) { data()[0] = 0; }
+  inline ZuStringN_() : m_length(0) { data()[0] = 0; }
 
   typedef enum { Nop } Nop_;
   ZuInline ZuStringN_(Nop_ _) { }
 
-  inline ZuStringN_(unsigned size, unsigned length) :
-      m_size(size), m_length(length) {
-    if (m_length >= m_size) m_length = m_size - 1;
+  inline ZuStringN_(unsigned length) : m_length(length) {
+    if (m_length >= N) m_length = N - 1;
     data()[m_length] = 0;
   }
 
   inline void init(const Char *s) {
     if (!s) { null(); return; }
     unsigned i;
-    for (i = 0; i < m_size - 1U; i++) if (!(data()[i] = *s++)) break;
-    if (i == m_size - 1U) data()[i] = 0;
+    for (i = 0; i < N - 1U; i++) if (!(data()[i] = *s++)) break;
+    if (i == N - 1U) data()[i] = 0;
     m_length = i;
   }
 
   inline void init(const Char *s, unsigned length) {
-    if (ZuUnlikely(length >= m_size)) length = m_size - 1;
+    if (ZuUnlikely(length >= N)) length = N - 1;
     if (ZuLikely(s && length)) memcpy(data(), s, length * sizeof(Char));
-    memset(data() + (m_length = length), 0, (m_size - length) * sizeof(Char));
+    memset(data() + (m_length = length), 0, (N - length) * sizeof(Char));
     // data()[m_length = length] = 0;
   }
 
@@ -120,14 +116,14 @@ protected:
   }
   template <typename P> inline typename MatchPBuffer<P>::T init(const P &p) {
     unsigned length = ZuPrint<P>::length(p);
-    if (length >= m_size)
+    if (length >= N)
       data()[m_length = 0] = 0;
     else
       data()[m_length = ZuPrint<P>::print(data(), length, p)] = 0;
   }
 
   inline void append(const Char *s, unsigned length) {
-    if (m_length + length >= m_size) length = m_size - m_length - 1;
+    if (m_length + length >= N) length = N - m_length - 1;
     if (s && length) memcpy(data() + m_length, s, length * sizeof(Char));
     data()[m_length += length] = 0;
   }
@@ -139,7 +135,7 @@ protected:
   template <typename P>
   inline typename MatchPBuffer<P>::T append(const P &p) {
     unsigned length = ZuPrint<P>::length(p);
-    if (m_length + length >= m_size) return;
+    if (m_length + length >= N) return;
     data()[m_length += ZuPrint<P>::print(data() + m_length, length, p)] = 0;
   }
 
@@ -165,7 +161,7 @@ public:
   ZuInline Char *data() { return (Char *)(&this[1]); }
   ZuInline const Char *data() const { return (const Char *)(&this[1]); }
   ZuInline unsigned length() const { return m_length; }
-  ZuInline unsigned size() const { return m_size; }
+  ZuInline static constexpr unsigned size() { return N; }
 
 // chomp(), trim(), strip()
 
@@ -232,16 +228,16 @@ public:
 
 private:
   void vsnprintf(const Char *format, va_list args) {
-    if (m_size <= m_length + 2) return;
+    if (N <= m_length + 2) return;
     int n = Zu::vsnprintf(
-	data() + m_length, m_size - m_length, format, args);
+	data() + m_length, N - m_length, format, args);
     if (n < 0) {
       calcLength();
       return;
     }
     n += m_length;
-    if (n == (int)m_size || n == (int)m_size - 1) {
-      data()[m_length = m_size - 1] = 0;
+    if (n == (int)N || n == (int)N - 1) {
+      data()[m_length = N - 1] = 0;
       return;
     }
     m_length = n;
@@ -255,12 +251,12 @@ public:
 // set length
 
   inline void length(unsigned length) {
-    if (length >= m_size) length = m_size - 1;
+    if (length >= N) length = N - 1;
     data()[m_length = length] = 0;
   }
 
   inline void calcLength() {
-    data()[m_size - 1] = 0;
+    data()[N - 1] = 0;
     m_length = Zu::strlen_(data());
   }
 
@@ -313,7 +309,6 @@ public:
 #endif
 
 protected:
-  uint16_t	m_size;
   uint16_t	m_length;
 };
 
@@ -331,24 +326,22 @@ struct ZuStringN_Traits : public ZuGenericTraits<T_> {
     if (ZuUnlikely(!data)) return T();
     return T(data, length);
   }
-#endif
   inline static T &append(T &s, const Elem *data, unsigned length) {
     if (ZuLikely(data)) s.append(data, length);
     return s;
   }
-  inline static const Elem *data(const T &s) { return s.data(); }
-  inline static unsigned length(const T &s) { return s.length(); }
+#endif
+  ZuInline static const Elem *data(const T &s) { return s.data(); }
+  ZuInline static unsigned length(const T &s) { return s.length(); }
 };
 
-// ZuStringN<N> can be cast and used as ZuStringN<>
-
-template <unsigned N_ = 1>
-class ZuStringN : public ZuStringN_<char, ZuStringN<N_> > {
+template <unsigned N_>
+class ZuStringN : public ZuStringN_<char, ZuStringN<N_>, N_> {
   ZuAssert(N_ < (1U<<16) - 1U);
 
 public:
   typedef char Char;
-  typedef ZuStringN_<char, ZuStringN<N_> > Base;
+  typedef ZuStringN_<char, ZuStringN<N_>, N_> Base;
   enum { N = N_ };
 
 private:
@@ -387,10 +380,9 @@ private:
   struct CtorLength<U, R, true> { typedef R T; };
 
 public:
-  ZuInline ZuStringN() : Base(N) { }
+  ZuInline ZuStringN() { }
 
   ZuInline ZuStringN(const ZuStringN &s) : Base(Base::Nop) {
-    this->m_size = N;
     this->init(s.data(), s.length());
   }
   ZuInline ZuStringN &operator =(const ZuStringN &s) {
@@ -403,7 +395,6 @@ public:
   ZuInline ZuStringN(S &&s_, typename MatchString<S>::T *_ = 0) :
       Base(Base::Nop) {
     ZuString s(ZuFwd<S>(s_));
-    this->m_size = N;
     this->init(s.data(), s.length());
   }
   template <typename S>
@@ -433,11 +424,9 @@ public:
 
   // C string types
   ZuInline ZuStringN(const char *s) : Base(Base::Nop) {
-    this->m_size = N;
     this->init(s);
   }
   ZuInline ZuStringN(const char *s, unsigned length) : Base(Base::Nop) {
-    this->m_size = N;
     this->init(s, length);
   }
   ZuInline ZuStringN &operator =(const char *s) {
@@ -463,7 +452,6 @@ public:
   template <typename P>
   ZuInline ZuStringN(const P &p, typename MatchPrint<P>::T *_ = 0) :
       Base(Base::Nop) {
-    this->m_size = N;
     this->init(p);
   }
   template <typename P>
@@ -486,7 +474,6 @@ public:
   template <typename R>
   ZuInline ZuStringN(const R &r, typename MatchReal<R>::T *_ = 0) :
       Base(Base::Nop) {
-    this->m_size = N;
     this->init(ZuBoxed(r));
   }
   template <typename R>
@@ -507,7 +494,7 @@ public:
 
   // length
   template <typename L>
-  ZuInline ZuStringN(L l, typename CtorLength<L>::T *_ = 0) : Base(N, l) { }
+  ZuInline ZuStringN(L l, typename CtorLength<L>::T *_ = 0) : Base(l) { }
 
   // element types 
   template <typename C>
@@ -540,12 +527,12 @@ struct ZuPrint<ZuStringN<N> > : public ZuPrintString { };
 // ZuWStringN<N> can be cast and used as ZuWStringN<>
 
 template <unsigned N_ = 1>
-class ZuWStringN : public ZuStringN_<wchar_t, ZuWStringN<N_> > {
+class ZuWStringN : public ZuStringN_<wchar_t, ZuWStringN<N_>, N_> {
   ZuAssert(N_ < (1U<<15) - 1U);
 
 public:
   typedef wchar_t Char;
-  typedef ZuStringN_<wchar_t, ZuWStringN<N_> > Base;
+  typedef ZuStringN_<wchar_t, ZuWStringN<N_>, N_> Base;
   enum { N = N_ };
 
 private:
@@ -566,10 +553,9 @@ private:
   struct CtorLength<U, R, true> { typedef R T; };
 
 public:
-  ZuInline ZuWStringN() : Base(N) { }
+  ZuInline ZuWStringN() : Base() { }
 
   ZuInline ZuWStringN(const ZuWStringN &s) : Base(Base::Nop) {
-    this->m_size = N;
     this->init(s.data(), s.length());
   }
   ZuInline ZuWStringN &operator =(const ZuWStringN &s) {
@@ -582,7 +568,6 @@ public:
   ZuInline ZuWStringN(S &&s_, typename MatchString<S>::T *_ = 0) :
       Base(Base::Nop) {
     ZuWString s(ZuFwd<S>(s_));
-    this->m_size = N;
     this->init(s.data(), s.length());
   }
   template <typename S>
@@ -612,11 +597,9 @@ public:
 
   // C string types
   ZuInline ZuWStringN(const wchar_t *s) : Base(Base::Nop) {
-    this->m_size = N;
     this->init(s);
   }
   ZuInline ZuWStringN(const wchar_t *s, unsigned length) : Base(Base::Nop) {
-    this->m_size = N;
     this->init(s, length);
   }
   ZuInline ZuWStringN &operator =(const wchar_t *s) {
@@ -640,7 +623,7 @@ public:
 
   // length
   template <typename L>
-  ZuInline ZuWStringN(L l, typename CtorLength<L>::T *_ = 0) : Base(N, l) { }
+  ZuInline ZuWStringN(L l, typename CtorLength<L>::T *_ = 0) : Base(l) { }
 
   // wchar_t is dangerously ambiguous
 #if 0

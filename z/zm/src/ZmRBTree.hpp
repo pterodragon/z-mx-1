@@ -201,7 +201,7 @@ public:
     m_tree.startIterate(*this, index, compare);
   }
 
-  inline NodeRef iterate() { return m_tree.iterate(*this); }
+  inline Node *iterate() { return m_tree.iterate(*this); }
 
   inline const Key &iterateKey() {
     Node *node = m_tree.iterate(*this);
@@ -459,19 +459,30 @@ public:
     return find_(index);
   }
   template <typename Index_>
+  inline Node *findPtr(const Index_ &index) const {
+    ReadGuard guard(m_lock);
+    return find_(index);
+  }
+  template <typename Index_>
   inline const Key &findKey(const Index_ &index) const {
-    NodeRef node = find(index);
+    ReadGuard guard(m_lock);
+    Node *node = find_(index);
     if (ZuUnlikely(!node)) return Cmp::null();
     return node->Node::key();
   }
   template <typename Index_>
   inline const Val &findVal(const Index_ &index) const {
-    NodeRef node = find(index);
+    ReadGuard guard(m_lock);
+    Node *node = find_(index);
     if (ZuUnlikely(!node)) return ValCmp::null();
     return node->Node::val();
   }
 
   inline NodeRef minimum() const {
+    ReadGuard guard(m_lock);
+    return m_minimum;
+  }
+  inline Node *minimumPtr() const {
     ReadGuard guard(m_lock);
     return m_minimum;
   }
@@ -487,6 +498,10 @@ public:
   }
 
   inline NodeRef maximum() const {
+    ReadGuard guard(m_lock);
+    return m_maximum;
+  }
+  inline Node *maximumPtr() const {
     ReadGuard guard(m_lock);
     return m_maximum;
   }
@@ -523,7 +538,8 @@ public:
     }
 
     delNode_(node);
-    return ZuMv(*reinterpret_cast<NodeRef *>(&node));
+    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    return ZuMv(*ptr);
   }
   inline NodeRef del(Node *node) {
     if (ZuUnlikely(!node)) return 0;
@@ -535,7 +551,8 @@ public:
       if (dup) dup->Fn::parent(parent);
     } else
       delNode_(node);
-    return ZuMv(*reinterpret_cast<NodeRef *>(&node));
+    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    return ZuMv(*ptr);
   }
   inline void delNode_(Node *node) {
     Node *dup = node->Fn::dup();
@@ -645,7 +662,8 @@ public:
 	if (dup) dup->Fn::parent(parent);
       }
       --m_count;
-      return ZuMv(*reinterpret_cast<NodeRef *>(&node));
+      NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+      return ZuMv(*ptr);
     }
 
     if (!ValCmp::equals(node->Node::val(), val)) return 0;
@@ -653,7 +671,8 @@ public:
     delRebalance(node);
 
     --m_count;
-    return ZuMv(*reinterpret_cast<NodeRef *>(&node));
+    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    return ZuMv(*ptr);
   }
 
   template <int Direction = ZmRBTreeGreaterEqual>

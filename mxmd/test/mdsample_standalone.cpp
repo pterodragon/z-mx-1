@@ -157,7 +157,7 @@ void exception(MxMDLib *, ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 void timer(MxDateTime now, MxDateTime &next)
 {
   thread_local ZtDateFmt::ISO fmt;
-  std::cout << "TIMER " << now.iso(fmt) << '\n'; fflush(stdout);
+  std::cout << "TIMER " << now.iso(fmt) << '\n' << std::flush;
   next = now + ZmTime(1);
 }
 
@@ -367,20 +367,46 @@ void publish()
 
 	  MxMDL1Data l1Data;
 	  l1Data.stamp = MxDateTime(MxDateTime::Now);
+#if 0
 	  l1Data.last = MxValNDP{ZmRand::randExc(90) + 10, 2}.value; // 10-100
 	  ob->l1(l1Data);
+#endif
 
 	  ob->addOrder("foo",
 	      l1Data.stamp, MxSide::Sell,
 	      1, MxValNDP{100.0, 2}.value, MxValNDP{100.0, 2}.value, 0);
+	  ob->match(l1Data.stamp, MxSide::Buy,
+	      MxValNDP{101.0, 2}.value, MxValNDP{50.0, 2}.value,
+	      [](MxValue leavesQty, MxValue cumQty, MxValue cumValue,
+		MxValue px, MxValue qty, MxMDOrder *contra) -> uintptr_t {
+		std::cout << "matched"
+		  << " leavesQty=" << MxValNDP{leavesQty, 2}
+		  << " cumQty=" << MxValNDP{cumQty, 2}
+		  << " cumValue=" << MxValNDP{cumValue, 2}
+		  << " px=" << MxValNDP{px, 2}
+		  << " qty=" << MxValNDP{qty, 2}
+		  << '\n' << std::flush;
+		return 0;
+	      },
+	      [ob, &l1Data](
+		  MxValue leavesQty, MxValue cumQty, MxValue cumValue) {
+		std::cout << "unmatched"
+		  << " leavesQty=" << MxValNDP{leavesQty, 2}
+		  << " cumQty=" << MxValNDP{cumQty, 2}
+		  << " cumValue=" << MxValNDP{cumValue, 2}
+		  << '\n' << std::flush;
+		ob->addOrder("baz",
+		    l1Data.stamp, MxSide::Buy,
+		    1, MxValNDP{101.0, 2}.value, leavesQty, 0);
+	      });
 	  ob->modifyOrder("foo",
 	      l1Data.stamp, MxSide::Sell,
-	      1, MxValNDP{50.0, 2}.value, MxValNDP{50.0, 2}.value, 0);
+	      1, MxValNDP{50.0, 2}.value, MxValNDP{25.0, 2}.value, 0);
 	  ob->addOrder("bar",
 	      l1Data.stamp, MxSide::Sell,
 	      1, MxValNDP{50.0, 2}.value, MxValNDP{50.0, 2}.value, 0);
 	  ob->reduceOrder("foo",
-	      l1Data.stamp, MxSide::Sell, MxValNDP{50.0, 2}.value);
+	      l1Data.stamp, MxSide::Sell, MxValNDP{25.0, 2}.value);
 	  ob->cancelOrder("bar",
 	      l1Data.stamp, MxSide::Sell);
 	  ob->addOrder("foo",
@@ -391,6 +417,9 @@ void publish()
 	  ob->modifyOrder("foo",
 	      l1Data.stamp, MxSide::Sell,
 	      1, MxValNDP{50.0, 2}.value, 0, 0);
+	  ob->modifyOrder("baz",
+	      l1Data.stamp, MxSide::Buy,
+	      1, MxValNDP{101.0, 2}.value, 0, 0);
 	});
       }
 

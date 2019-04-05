@@ -80,6 +80,7 @@ struct ZvMxParams : public ZiMxParams {
     frag(cf->getInt("frag", 0, 1, false, frag()));
     yield(cf->getInt("yield", 0, 1, false, yield()));
 #endif
+    telFreq(cf->getInt("telFreq", 0, INT_MAX, false, telFreq()));
   }
 };
 

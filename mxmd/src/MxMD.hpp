@@ -1081,12 +1081,12 @@ private:
     MxValue cumQty = 0;
     MxValue cumValue = 0;
     auto l = [transactTime, px, qty, &cumQty, &cumValue, &fill, &limit, &side](
-	     auto &recurse, MxMDOrderBook *ob) mutable -> uintptr_t {
+	     auto &l, MxMDOrderBook *ob) mutable -> uintptr_t {
       if (ZuLikely(!ob->m_in))
-	return side()->template match<Direction>(
+	return side(ob)->template match<Direction>(
 	    transactTime, px, qty, cumQty, cumValue, fill, limit);
       for (MxMDOrderBook *inOB = ob->m_in; inOB; inOB = inOB->m_next) {
-	if (uintptr_t v = recurse(inOB)) return v;
+	if (uintptr_t v = l(l, inOB)) return v;
 	if (!qty) break;
       }
       return 0;
@@ -1097,7 +1097,7 @@ private:
   }
 
 public:
-  // fill(leavesQty, cumQty, cumValue, px, qty, MxMDOrder *contra)
+  // fill(leavesQty, cumQty, cumValue, px, qty, MxMDOrder *contra) -> uintptr_t
   //   /* fill(...) is called repeatedly for each contra order */
   // leaves(leavesQty, cumQty, cumValue) /* called on completion */
 
@@ -1109,24 +1109,24 @@ public:
     if (ZuUnlikely(!*px)) {
       if (side == MxSide::Buy) {
 	return match_<ZmRBTreeLessEqual>(
-	    transactTime, side, px, qty, fill, leaves,
+	    transactTime, px, qty, fill, leaves,
 	    [](MxValue, MxValue) -> bool { return true; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_asks; });
       } else {
 	return match_<ZmRBTreeGreaterEqual>(
-	    transactTime, side, px, qty, fill, leaves,
+	    transactTime, px, qty, fill, leaves,
 	    [](MxValue, MxValue) -> bool { return true; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_bids; });
       }
     } else {
       if (side == MxSide::Buy) {
 	return match_<ZmRBTreeLessEqual>(
-	    transactTime, side, px, qty, fill, leaves,
+	    transactTime, px, qty, fill, leaves,
 	    [](MxValue px, MxValue cPx) -> bool { return px >= cPx; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_asks; });
       } else {
 	return match_<ZmRBTreeGreaterEqual>(
-	    transactTime, side, px, qty, fill, leaves,
+	    transactTime, px, qty, fill, leaves,
 	    [](MxValue px, MxValue cPx) -> bool { return px <= cPx; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_bids; });
       }

@@ -29,6 +29,7 @@
 
 #include <ZvCf.hpp>
 #include <ZvHeapCSV.hpp>
+#include <ZvHashCSV.hpp>
 
 #include <MxMDCSV.hpp>
 

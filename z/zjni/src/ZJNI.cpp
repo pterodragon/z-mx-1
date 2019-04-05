@@ -20,6 +20,7 @@
 // Z JNI library
 
 #include <ZmSpecific.hpp>
+#include <ZmThread.hpp>
 
 #include <ZJNI.hpp>
 

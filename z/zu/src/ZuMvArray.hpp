@@ -59,11 +59,15 @@ public:
   }
 
   inline ZuMvArray(ZuMvArray &&a) {
+    m_length = a.m_length;
     m_data = a.m_data;
+    a.m_length = 0;
     a.m_data = nullptr;
   }
   inline ZuMvArray &operator =(ZuMvArray &&a) {
+    m_length = a.m_length;
     m_data = a.m_data;
+    a.m_length = 0;
     a.m_data = nullptr;
     return *this;
   }

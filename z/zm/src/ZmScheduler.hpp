@@ -87,7 +87,7 @@ public:
   template <typename S> inline ZmSchedParams &&id(const S &s)
     { m_id = s; return ZuMv(*this); }
   inline ZmSchedParams &&nThreads(unsigned v)
-    { m_threads.length(m_nThreads = v + 1); return ZuMv(*this); }
+    { m_threads.length((m_nThreads = v) + 1); return ZuMv(*this); }
   inline ZmSchedParams &&stackSize(unsigned v)
     { m_stackSize = v; return ZuMv(*this); }
   inline ZmSchedParams &&priority(unsigned v)

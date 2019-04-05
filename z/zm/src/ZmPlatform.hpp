@@ -69,7 +69,12 @@ typedef ZuStringN<ZmIDSize> ZmIDString;
 
 class ZmTime;
 
-#define ZmPlatform_CacheLineSize 64
+#define ZmCacheLineSize 64
+#ifdef _MSC_VER
+#define ZmCacheAlign /**/
+#else
+#define ZmCacheAlign __attribute__((aligned(ZmCacheLineSize)))
+#endif
 
 class ZmAPI ZmPlatform {
   ZmPlatform();
@@ -77,7 +82,7 @@ class ZmAPI ZmPlatform {
   ZmPlatform &operator =(const ZmPlatform &);	// prevent mis-use
 
 public:
-  enum { CacheLineSize = ZmPlatform_CacheLineSize };
+  enum { CacheLineSize = ZmCacheLineSize };
 
 #ifndef _WIN32
   typedef pid_t ProcessID;

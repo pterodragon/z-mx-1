@@ -581,17 +581,6 @@ struct MxMDL2Flags : public MxMDFlags<MxMDL2Flags> {
   typedef Liffe XTKD;
 };
 
-// - whatever is left over is added unless FOK/IOC
-// - for external liquidity (consolidated book), match first against
-// internal venue's OB, then against consolidated OB since internal
-// matches are processed immediately and should be prioritized; external
-// matches need to lock the taker while the child IOC orders are executed
-// - return value from lambda indicates whether this match succeeded (
-// if unsuccessful no further matching is attempted)
-// - when matching a L2 feed venue, match entire px levels
-// - when matching consolidated OB, ensure levels are broken up by venue
-// and that venue is available in lambda
-
 class MxMDPxLevel_ : public ZmObject {
   MxMDPxLevel_(const MxMDPxLevel_ &) = delete;
   MxMDPxLevel_ &operator =(const MxMDPxLevel_ &) = delete;

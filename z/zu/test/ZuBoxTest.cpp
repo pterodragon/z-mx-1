@@ -18,9 +18,10 @@
 #include <sstream>
 #include <iostream>
 
-template <typename M> void fail(const char *s, const M &m)
+template <typename V>
+void fail(unsigned line, const char *s, const V &v)
 {
-  std::cerr << "FAIL: " << s << " - " << m << '\n';
+  std::cerr << "FAIL: " << line << ':' << s << " - " << v << '\n';
 #ifndef _WIN32
   ::_exit(1);
 #else
@@ -28,8 +29,19 @@ template <typename M> void fail(const char *s, const M &m)
 #endif
 }
 
-#define CHECK(x) ((x) ? (void)0 : (void)fail(#x, ""))
-#define CHECK2(x, m) ((x) ? (void)0 : (void)fail(#x, m))
+template <typename V1, typename V2>
+void fail2(unsigned line, const char *s, const V1 &v1, const V2 &v2)
+{
+  std::cerr << "FAIL: " << line << ':' << s << " - " << v1 << ' ' << v2 << '\n';
+#ifndef _WIN32
+  ::_exit(1);
+#else
+  ::ExitProcess(1);
+#endif
+}
+
+#define CHECK(x, v) ((x) ? (void)0 : (void)fail(__LINE__, #x, v))
+#define CHECK2(x, v1, v2) ((x) ? (void)0 : (void)fail2(__LINE__, #x, v1, v2))
 
 template <class Fmt, class Boxed> struct VFmt_ {
   inline static void _(ZuVFmt &fmt) {
@@ -79,7 +91,7 @@ void test_std_string2(const char *type, const S &s, const char *s_)
   printf("%s %d '%c' %.*s %s\n",
       type, (int)Fmt::Width_, (int)Fmt::Comma_,
       ZuTraits<S>::length(s), ZuTraits<S>::data(s), s_);
-  CHECK(!strcmp(s.c_str(), s_));
+  CHECK2(!strcmp(s.c_str(), s_), s.c_str(), s_);
 }
 
 template <typename T, class Fmt, typename S>
@@ -98,7 +110,7 @@ void test_std_stream2(const char *type, S &s, const char *s_)
   buf[s.rdbuf()->sgetn(buf, 63)] = 0;
   printf("%s %d '%c' %s %s\n",
       type, (int)Fmt::Width_, (int)Fmt::Comma_, buf, s_);
-  CHECK(!strcmp(buf, s_));
+  CHECK2(!strcmp(buf, s_), buf, s_);
 }
 
 template <typename T, class Fmt, typename S>
@@ -124,27 +136,27 @@ void test(const char *type, T v, const char *s)
   test_std<T, Fmt>(v, s);
   test_std<T, Fmt>(v, s);
   ZuBox<T> i;
-  CHECK(!*i);
+  CHECK(!*i, i);
   i = v;
-  CHECK(*i);
-  CHECK(i > ZuBox<T>());
-  CHECK(ZuBox<T>((T)-i) > ZuBox<T>());
-  CHECK(i > (v - 1));
+  CHECK(*i, i);
+  CHECK(i > ZuBox<T>(), i);
+  CHECK(ZuBox<T>((T)-i) > ZuBox<T>(), i);
+  CHECK2(i > (v - 1), i, v);
   ZuVFmt vfmt = VFmt<Fmt, ZuBox<T> >::_();
   char buf[64], buf2[64];
   printf("%d %d %d\n", (int)strlen(s),
       (int)i.fmt(Fmt()).length(),
       (int)i.vfmt(vfmt).length());
-  CHECK(i.fmt(Fmt()).length() >= strlen(s));
-  CHECK(i.vfmt(vfmt).length() >= strlen(s));
+  CHECK2(i.fmt(Fmt()).length() >= strlen(s), i, s);
+  CHECK2(i.vfmt(vfmt).length() >= strlen(s), i, s);
   buf[i.fmt(Fmt()).print(buf)] = 0;
   buf2[i.vfmt(vfmt).print(buf2)] = 0;
   printf("%s %s %s\n", s, buf, buf2);
-  CHECK(!strcmp(s, buf));
-  CHECK(!strcmp(s, buf2));
+  CHECK2(!strcmp(s, buf), s, buf);
+  CHECK2(!strcmp(s, buf2), s, buf2);
   ZuBox<T> j(Fmt(), buf, strlen(buf));
   printf("%lld %lld\n", (long long)i, (long long)j);
-  CHECK(i == j);
+  CHECK2(i == j, i, j);
 }
 
 template <typename T, class Fmt>
@@ -152,24 +164,24 @@ void testf(const char *type, T v, const char *s, T d = (T)0)
 {
   test_std<T, ZuFmt::Comma<',', Fmt> >(v, s);
   ZuBox<T> f;
-  CHECK(!*f);
+  CHECK(!*f, f);
   f = v;
-  CHECK(*f);
-  CHECK(f > ZuBox<T>());
-  CHECK(ZuBox<T>(-f) > ZuBox<T>());
-  CHECK(f > (v - 1));
+  CHECK(*f, f);
+  CHECK(f > ZuBox<T>(), f);
+  CHECK(ZuBox<T>(-f) > ZuBox<T>(), f);
+  CHECK2(f > (v - 1), f, v);
   char buf[64], buf2[64];
   buf[f.fmt(Fmt()).print(buf)] = 0;
   buf2[f.fmt(ZuFmt::Comma<',', Fmt>()).print(buf2)] = 0;
   printf("%s %s %s\n", s, buf, buf2);
-  CHECK(!strcmp(s, buf2));
+  CHECK2(!strcmp(s, buf2), s, buf2);
   ZuBox<T> g, h;
   g.scan(buf, strlen(buf));
   h.scan(buf2, strlen(buf2));
   T i = (T)strtod(buf, 0);
   printf("%.12f %.12f %.12f %.12f %.12f\n",
 	 (double)f, (double)g, (double)h, (double)i, (double)d);
-  CHECK((f > g) ? ((f - g) <= d) : ((g - f) <= d));
+  CHECK2((f > g) ? ((f - g) <= d) : ((g - f) <= d), f, g);
 }
 
 int foo() { return 42; }
@@ -285,16 +297,16 @@ int main()
 
   {
     ZuBox<int> i;
-    i.scan("-", 1); CHECK(!i);
-    i.scan("-0", 2); CHECK(!i);
-    i.scan("0", 1); CHECK(!i);
-    i.scan("420", 0); CHECK(!*i);
-    i.scan("420", 2); CHECK(i == 42);
-    i.scan("420", 2); CHECK(i == 42);
+    i.scan("-", 1); CHECK(!i, i);
+    i.scan("-0", 2); CHECK(!i, i);
+    i.scan("0", 1); CHECK(!i, i);
+    i.scan("420", 0); CHECK(!*i, i);
+    i.scan("420", 2); CHECK(i == 42, i);
+    i.scan("420", 2); CHECK(i == 42, i);
     char buf[256];
     i = 0;
     buf[i.print(buf)] = 0;
-    CHECK(!strcmp(buf, "0"));
+    CHECK(!strcmp(buf, "0"), buf);
   }
 
   // 7-8 SD
@@ -382,31 +394,31 @@ int main()
 
   {
     ZuBox<double> f;
-    f.scan(".", 1); CHECK(!(int)f);
-    f.scan("-", 1); CHECK(!*f);
-    f.scan("-0", 2); CHECK(!(int)f);
-    f.scan("-.", 2); CHECK(!(int)f);
-    f.scan("0", 1); CHECK(!(int)f);
-    f.scan("42.001", 6); CHECK((int)(f * 1000) == 42001);
-    f.scan("42.001", 0); CHECK(ZuCmp<double>::null(f));
-    f.scan("42.001", 5); CHECK((int)(f * 1000) == 42000);
-    f.scan("42.001", 6); CHECK((int)(f * 1000) == 42001);
-    f.scan((const char *)0, -1); CHECK(ZuCmp<double>::null(f));
-    f.scan("", -1); CHECK(ZuCmp<double>::null(f));
-    f.scan("nan", -1); CHECK(ZuCmp<double>::null(f));
-    f.scan((const char *)0, 0); CHECK(ZuCmp<double>::null(f));
-    f.scan("", 0); CHECK(ZuCmp<double>::null(f));
-    f.scan("nan", 3); CHECK(ZuCmp<double>::null(f));
-    f.scan("inf", 3); CHECK(ZuCmp<double>::inf(f));
-    f.scan("-inf", 4); CHECK(ZuCmp<double>::inf(-f));
-    f.scan("inf", 3); CHECK(ZuCmp<double>::inf(f));
-    f.scan("-inf", 4); CHECK(ZuCmp<double>::inf(-f));
-    CHECK(!f.scan("inf", 2));
-    CHECK(!f.scan("nan", 2));
+    f.scan(".", 1); CHECK(!(int)f, f);
+    f.scan("-", 1); CHECK(!*f, f);
+    f.scan("-0", 2); CHECK(!(int)f, f);
+    f.scan("-.", 2); CHECK(!(int)f, f);
+    f.scan("0", 1); CHECK(!(int)f, f);
+    f.scan("42.001", 6); CHECK((int)(f * 1000) == 42001, f);
+    f.scan("42.001", 0); CHECK(ZuCmp<double>::null(f), f);
+    f.scan("42.001", 5); CHECK((int)(f * 1000) == 42000, f);
+    f.scan("42.001", 6); CHECK((int)(f * 1000) == 42001, f);
+    f.scan((const char *)0, -1); CHECK(ZuCmp<double>::null(f), f);
+    f.scan("", -1); CHECK(ZuCmp<double>::null(f), f);
+    f.scan("nan", -1); CHECK(ZuCmp<double>::null(f), f);
+    f.scan((const char *)0, 0); CHECK(ZuCmp<double>::null(f), f);
+    f.scan("", 0); CHECK(ZuCmp<double>::null(f), f);
+    f.scan("nan", 3); CHECK(ZuCmp<double>::null(f), f);
+    f.scan("inf", 3); CHECK(ZuCmp<double>::inf(f), f);
+    f.scan("-inf", 4); CHECK(ZuCmp<double>::inf(-f), f);
+    f.scan("inf", 3); CHECK(ZuCmp<double>::inf(f), f);
+    f.scan("-inf", 4); CHECK(ZuCmp<double>::inf(-f), f);
+    CHECK(!f.scan("inf", 2), f);
+    CHECK(!f.scan("nan", 2), f);
     char buf[256];
     f = 0;
     buf[f.print(buf)] = 0;
-    CHECK(!strcmp(buf, "0"));
+    CHECK(!strcmp(buf, "0"), buf);
   }
 
   {
@@ -416,9 +428,9 @@ int main()
     i = foo();
     printf("%d\n", i);
     j = i, i = j++, ++j;
-    CHECK(j == i + 2);
+    CHECK2(j == i + 2, i, j);
     j = i, i = j--, --j;
-    CHECK(j == i - 2);
+    CHECK2(j == i - 2, i, j);
     i = bar();
     printf("%d\n", i);
     i = bah();
@@ -474,7 +486,7 @@ int main()
       char buf[30];
       for (int i = INT_MIN; i < INT_MAX - 420; i += 420) {
 	itoa(buf, i);
-	CHECK2(i == atoi(buf), buf);
+	CHECK2(i == atoi(buf), i, buf);
 	buf[0] = 0;
       }
       clock_gettime(CLOCK_REALTIME, &start);
@@ -498,7 +510,7 @@ int main()
       ZuStringN<30> buf;
       for (int i = INT_MIN; i < INT_MAX - 420; i += 420) {
 	buf << ZuBoxed(i);
-	CHECK2(i == ZuBox<int>(buf), buf.data());
+	CHECK2(i == ZuBox<int>(buf), i, buf.data());
 	buf.null();
       }
       clock_gettime(CLOCK_REALTIME, &start);
@@ -523,7 +535,7 @@ int main()
       ZuStringN<30> buf;
       for (int i = INT_MIN; i < INT_MAX - 420; i += 420) {
 	buf << ZuBoxed(i).vfmt(fmt);
-	CHECK2(i == ZuBox<int>(buf), buf.data());
+	CHECK2(i == ZuBox<int>(buf), i, buf.data());
 	buf.null();
       }
       clock_gettime(CLOCK_REALTIME, &start);
@@ -548,7 +560,7 @@ int main()
       for (double d = INT_MIN; d < INT_MAX - 4201; d += 4200.000420) {
 	sprintf(buf, "%f", d);
 	double e = d - strtod(buf, 0);
-	CHECK2(e < .00001 && e > -.00001, buf);
+	CHECK2(e < .00001 && e > -.00001, e, buf);
 	buf[0] = 0;
       }
       clock_gettime(CLOCK_REALTIME, &start);
@@ -574,7 +586,7 @@ int main()
 	buf << ZuBoxed(d);
 	ZuBox<double> e(buf);
 	// printf("d: %f buf: %.*s e: %f diff: %g, epsilon: %g\n", d, buf.length(), buf.data(), (double)e, (double)e - d, (double)ZuFP<double>::epsilon_(d));
-	CHECK2(ZuBoxed(d) ==~ e, buf.data());
+	CHECK2(ZuBoxed(d) ==~ e, e, buf.data());
 	buf.null();
       }
       clock_gettime(CLOCK_REALTIME, &start);
@@ -599,7 +611,7 @@ int main()
       ZuStringN<30> buf;
       for (double d = INT_MIN; d < INT_MAX - 4201; d += 4200.000420) {
 	buf << ZuBoxed(d).vfmt(fmt);
-	CHECK2(ZuBoxed(d) ==~ ZuBox<double>(buf), buf.data());
+	CHECK2(ZuBoxed(d) ==~ ZuBox<double>(buf), d, buf.data());
 	buf.null();
       }
       clock_gettime(CLOCK_REALTIME, &start);

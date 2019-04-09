@@ -668,6 +668,15 @@ public:
     }
   }
 
+  // bypass queue, update stats
+  void bypass(unsigned bytes) {
+    Guard guard(m_lock);
+    ++m_inCount;
+    m_inBytes += bytes;
+    ++m_outCount;
+    m_outBytes += bytes;
+  }
+
   // immediately returns node if key == head (head is incremented)
   // returns 0 if key < head or key is already present in queue
   // returns 0 and enqueues node if key > head
@@ -678,7 +687,7 @@ public:
 
 private:
   template <bool Dequeue>
-  ZuInline NodeRef enqueue_(Node *node) {
+  inline NodeRef enqueue_(Node *node) {
     Guard guard(m_lock);
 
     Fn item(node->Node::item());
@@ -805,7 +814,7 @@ private:
     return 0;
   }
   template <bool Dequeue>
-  ZuInline typename ZuIfT<Dequeue, NodeRef>::T enqueue__(
+  inline typename ZuIfT<Dequeue, NodeRef>::T enqueue__(
       Node *node, Key end, unsigned, unsigned bytes, unsigned) {
     m_headKey = end;
     if (end > m_tailKey) m_tailKey = end;
@@ -816,7 +825,7 @@ private:
     return node;
   }
   template <bool Dequeue>
-  ZuInline typename ZuIfT<!Dequeue, NodeRef>::T enqueue__(
+  inline typename ZuIfT<!Dequeue, NodeRef>::T enqueue__(
       Node *node, Key end, unsigned length, unsigned bytes, unsigned addSeqNo) {
     nodeRef(node);
     addHead_<0>(node, addSeqNo);

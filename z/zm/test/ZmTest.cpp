@@ -37,6 +37,8 @@
 #include <ZmSingleton.hpp>
 #include <ZmSpecific.hpp>
 
+#define mb() __asm__ __volatile__("":::"memory")
+
 #define CHECK(x) ((x) ? puts("OK  " #x) : puts("NOK " #x))
 
 struct X : public ZmObject {
@@ -113,25 +115,33 @@ struct S : public ZmObject {
   static void meyers() {
     for (int i = 0; i < 100000; i++) {
       static ZmRef<S> s_ = new S();
-      ZmRef<S> s = s_;
-
+      S *s = s_;
       s->foo();
+      mb();
     }
   }
 
   static void singleton() {
     for (int i = 0; i < 100000; i++) {
-      ZmRef<S> s = ZmSingleton<S>::instance();
-
+      S *s = ZmSingleton<S>::instance();
       s->foo();
+      mb();
     }
   }
 
   static void specific() {
     for (int i = 0; i < 100000; i++) {
-      ZmRef<S> s = ZmSpecific<S>::instance();
-
+      S *s = ZmSpecific<S>::instance();
       s->foo();
+      mb();
+    }
+  }
+
+  static void tls() {
+    for (int i = 0; i < 100000; i++) {
+      thread_local ZmRef<S> s = new S();
+      s->foo();
+      mb();
     }
   }
 
@@ -440,7 +450,7 @@ int main(int argc, char **argv)
 
     start.now();
 
-    for (j = 0; j < 1000000; j++) l->ref();
+    for (j = 0; j < 1000000; j++) { l->ref(); mb(); }
 
     end.now();
     end -= start;
@@ -449,7 +459,7 @@ int main(int argc, char **argv)
 
     start.now();
 
-    for (j = 0; j < 1000000; j++) l->deref();
+    for (j = 0; j < 1000000; j++) { l->deref(); mb(); }
 
     end.now();
     end -= start;
@@ -458,7 +468,7 @@ int main(int argc, char **argv)
   }
 
   int n = ZmPlatform::getncpu();
-  int t = n * 100000;
+  int t = n * 1000000;
 
   {
     ZmTime start, end;
@@ -514,6 +524,25 @@ int main(int argc, char **argv)
 	end.dtime() / (double)t);
     printf("S() called %u times\n", S::m_j); S::m_j = 0;
   }
+
+  {
+    ZmTime start, end;
+
+    start.now();
+
+    for (j = 0; j < n; j++)
+      r[j] = ZmThread(0, ZmFn<>::Ptr<&S::tls>::fn());
+    for (j = 0; j < n; j++)
+      r[j].join(0);
+
+    end.now();
+    end -= start;
+    printf("thread_local time: %d.%.3d / %d = %.16f\n",
+	(int)end.sec(), (int)(end.nsec() / 1000000), t,
+	end.dtime() / (double)t);
+    printf("S() called %u times\n", S::m_j); S::m_j = 0;
+  }
+
 
   overallEnd.now();
   overallEnd -= overallStart;

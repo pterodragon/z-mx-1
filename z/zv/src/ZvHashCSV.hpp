@@ -64,7 +64,7 @@ struct ZvAPI ZvHashCSV {
     void alloc(ZuRef<ZuAnyPOD> &pod) { pod = m_pod; }
 
     void read(ZuString file) {
-      ZvCSV::read(file,
+      ZvCSV::readFile(file,
 	  ZvCSVAllocFn::Member<&CSV::alloc>::fn(this),
 	  ZvCSVReadFn::Member<&CSV::row>::fn(this));
     }
@@ -80,7 +80,7 @@ struct ZvAPI ZvHashCSV {
   };
 
   static void init(ZuString file) {
-    if (file) CSV().read(ZuMv(file));
+    if (file) CSV().read(file);
   }
 };
 

@@ -1208,7 +1208,7 @@ void MxMDLib::init_(void *cf_)
     ZuString key;
     while (ZmRef<ZvCf> shardCf = i.subset(key)) {
       ZuBox<unsigned> id = key;
-      if (key != ZuStringN<4>{id} || id >= m_shards.length())
+      if (key != ZuStringN<12>{id} || id >= m_shards.length())
 	throw ZtString() << "bad shard ID \"" << key << '"';
       if (ZuString s = shardCf->get("thread", true))
 	if (!(tid = mx->tid(s)))

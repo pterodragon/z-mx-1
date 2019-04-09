@@ -417,9 +417,9 @@ public:
   ZuInline const MxMDOrderData &data() const { return m_data; }
 
   template <typename T = uintptr_t>
-  ZuInline T appData() const { return (T)m_appData; }
+  ZuInline T appData() const { return (T)m_appData.load_(); }
   template <typename T>
-  ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
+  ZuInline void appData(T v) { m_appData.store_((uintptr_t)v); }
 
 private:
   inline void update_(MxUInt rank, MxValue price, MxValue qty, MxFlags flags) {
@@ -447,7 +447,7 @@ private:
   MxIDString		m_id;
   MxMDOrderData		m_data;
 
-  uintptr_t		m_appData = 0;
+  ZmAtomic<uintptr_t>	m_appData = 0;
 };
 
 struct MxMDOrder_HeapID {
@@ -580,17 +580,6 @@ struct MxMDL2Flags : public MxMDFlags<MxMDL2Flags> {
   };
   typedef Liffe XTKD;
 };
-
-// - whatever is left over is added unless FOK/IOC
-// - for external liquidity (consolidated book), match first against
-// internal venue's OB, then against consolidated OB since internal
-// matches are processed immediately and should be prioritized; external
-// matches need to lock the taker while the child IOC orders are executed
-// - return value from lambda indicates whether this match succeeded (
-// if unsuccessful no further matching is attempted)
-// - when matching a L2 feed venue, match entire px levels
-// - when matching consolidated OB, ensure levels are broken up by venue
-// and that venue is available in lambda
 
 class MxMDPxLevel_ : public ZmObject {
   MxMDPxLevel_(const MxMDPxLevel_ &) = delete;
@@ -1058,14 +1047,14 @@ public:
   ZuInline const ZmRef<MxMDInstrHandler> &handler() const { return m_handler; }
 
   template <typename T = uintptr_t>
-  ZuInline T libData() const { return (T)m_libData; }
+  ZuInline T libData() const { return (T)m_libData.load_(); }
   template <typename T>
-  ZuInline void libData(T v) { m_libData = (uintptr_t)v; }
+  ZuInline void libData(T v) { m_libData.store_((uintptr_t)v); }
 
   template <typename T = uintptr_t>
-  ZuInline T appData() const { return (T)m_appData; }
+  ZuInline T appData() const { return (T)m_appData.load_(); }
   template <typename T>
-  ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
+  ZuInline void appData(T v) { m_appData.store_((uintptr_t)v); }
 
   template <typename T = MxMDFeedOB>
   ZuInline typename ZuIs<MxMDFeedOB, T, ZmRef<T> &>::T feedOB() {
@@ -1081,12 +1070,12 @@ private:
     MxValue cumQty = 0;
     MxValue cumValue = 0;
     auto l = [transactTime, px, qty, &cumQty, &cumValue, &fill, &limit, &side](
-	     auto &recurse, MxMDOrderBook *ob) mutable -> uintptr_t {
+	     auto &l, MxMDOrderBook *ob) mutable -> uintptr_t {
       if (ZuLikely(!ob->m_in))
-	return side()->template match<Direction>(
+	return side(ob)->template match<Direction>(
 	    transactTime, px, qty, cumQty, cumValue, fill, limit);
       for (MxMDOrderBook *inOB = ob->m_in; inOB; inOB = inOB->m_next) {
-	if (uintptr_t v = recurse(inOB)) return v;
+	if (uintptr_t v = l(l, inOB)) return v;
 	if (!qty) break;
       }
       return 0;
@@ -1097,7 +1086,7 @@ private:
   }
 
 public:
-  // fill(leavesQty, cumQty, cumValue, px, qty, MxMDOrder *contra)
+  // fill(leavesQty, cumQty, cumValue, px, qty, MxMDOrder *contra) -> uintptr_t
   //   /* fill(...) is called repeatedly for each contra order */
   // leaves(leavesQty, cumQty, cumValue) /* called on completion */
 
@@ -1109,24 +1098,24 @@ public:
     if (ZuUnlikely(!*px)) {
       if (side == MxSide::Buy) {
 	return match_<ZmRBTreeLessEqual>(
-	    transactTime, side, px, qty, fill, leaves,
+	    transactTime, px, qty, fill, leaves,
 	    [](MxValue, MxValue) -> bool { return true; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_asks; });
       } else {
 	return match_<ZmRBTreeGreaterEqual>(
-	    transactTime, side, px, qty, fill, leaves,
+	    transactTime, px, qty, fill, leaves,
 	    [](MxValue, MxValue) -> bool { return true; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_bids; });
       }
     } else {
       if (side == MxSide::Buy) {
 	return match_<ZmRBTreeLessEqual>(
-	    transactTime, side, px, qty, fill, leaves,
+	    transactTime, px, qty, fill, leaves,
 	    [](MxValue px, MxValue cPx) -> bool { return px >= cPx; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_asks; });
       } else {
 	return match_<ZmRBTreeGreaterEqual>(
-	    transactTime, side, px, qty, fill, leaves,
+	    transactTime, px, qty, fill, leaves,
 	    [](MxValue px, MxValue cPx) -> bool { return px <= cPx; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_bids; });
       }
@@ -1198,8 +1187,8 @@ private:
 
   ZmRef<MxMDInstrHandler>	m_handler;
 
-  uintptr_t			m_libData = 0;
-  uintptr_t			m_appData = 0;
+  ZmAtomic<uintptr_t>		m_libData = 0;
+  ZmAtomic<uintptr_t>		m_appData = 0;
 };
 
 ZuInline ZmRef<MxMDOBSide> MxMDOrder_::bids_(const MxMDOrderBook *ob)
@@ -1378,14 +1367,14 @@ public:
   }
 
   template <typename T = uintptr_t>
-  ZuInline T libData() const { return (T)m_libData; }
+  ZuInline T libData() const { return (T)m_libData.load_(); }
   template <typename T>
-  ZuInline void libData(T v) { m_libData = (uintptr_t)v; }
+  ZuInline void libData(T v) { m_libData.store_((uintptr_t)v); }
 
   template <typename T = uintptr_t>
-  ZuInline T appData() const { return (T)m_appData; }
+  ZuInline T appData() const { return (T)m_appData.load_(); }
   template <typename T>
-  ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
+  ZuInline void appData(T v) { m_appData.store_((uintptr_t)v); }
 
 private:
   void addOrderBook_(MxMDOrderBook *);
@@ -1415,8 +1404,8 @@ private:
 
   ZmRef<MxMDInstrHandler>  	m_handler;
 
-  uintptr_t			m_libData = 0;
-  uintptr_t			m_appData = 0;
+  ZmAtomic<uintptr_t>		m_libData = 0;
+  ZmAtomic<uintptr_t>		m_appData = 0;
 };
 
 // feeds
@@ -1829,6 +1818,7 @@ public:
       ZuString path, MxID venue = MxID(), MxID segment = MxID()) = 0;
 
   ZuInline unsigned nShards() const { return m_shards.length(); }
+  ZuInline MxMDShard *shard(unsigned i) const { return m_shards[i]; }
   template <typename L>
   ZuInline typename ZuNotMutable<L>::T shard(unsigned i, L l) const {
     MxMDShard *shard = m_shards[i];
@@ -2180,14 +2170,14 @@ public:
   uintptr_t allVenues(ZmFn<MxMDVenue *>) const;
 
   template <typename T = uintptr_t>
-  ZuInline T libData() const { return (T)m_libData; }
+  ZuInline T libData() const { return (T)m_libData.load_(); }
   template <typename T>
-  ZuInline void libData(T v) { m_libData = (uintptr_t)v; }
+  ZuInline void libData(T v) { m_libData.store_((uintptr_t)v); }
 
   template <typename T = uintptr_t>
-  ZuInline T appData() const { return (T)m_appData; }
+  ZuInline T appData() const { return (T)m_appData.load_(); }
   template <typename T>
-  ZuInline void appData(T v) { m_appData = (uintptr_t)v; }
+  ZuInline void appData(T v) { m_appData.store_((uintptr_t)v); }
 
 private:
   ZmScheduler		*m_scheduler = 0;
@@ -2207,8 +2197,8 @@ private:
   SubLock		m_subLock;
     ZmRef<MxMDLibHandler> m_handler;
 
-  uintptr_t		m_libData = 0;
-  uintptr_t		m_appData = 0;
+  ZmAtomic<uintptr_t>	m_libData = 0;
+  ZmAtomic<uintptr_t>	m_appData = 0;
 };
 
 inline void MxMDFeed::connected() {

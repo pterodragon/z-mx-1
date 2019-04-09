@@ -30,7 +30,7 @@ replay {
   rxThread shard0
 }
 shards {
-  0 { tid shard0 }
+  0 { thread shard0 }
 }
 publisher {
   rxThread publish

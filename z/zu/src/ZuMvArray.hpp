@@ -97,7 +97,7 @@ public:
     unsigned initLength = newLength - mvLength;
     if (mvLength) this->moveItems(m_data, oldData, mvLength);
     if (initLength) this->initItems(m_data + mvLength, initLength);
-    ::free(m_data);
+    ::free(oldData);
   }
 
 // comparison

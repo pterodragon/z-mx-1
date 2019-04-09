@@ -17,7 +17,7 @@ public:
     open_(m_heap, "heap");
     write_(m_heap, "time,id,size,alignment,partition,sharded,cacheSize,cpuset,cacheAllocs,heapAllocs,frees,allocated\n");
     open_(m_hashTbl, "hashTbl");
-    write_(m_hashTbl, "time,id,linear,bits,slots,cBits,locks,count,resized,loadFactor,effLoadFactor,nodeSize\n");
+    write_(m_hashTbl, "time,id,addr,linear,bits,slots,cBits,locks,count,resized,loadFactor,effLoadFactor,nodeSize\n");
     open_(m_thread, "thread");
     write_(m_thread,"time,name,id,tid,cpuUsage,cpuset,priority,sysPriority,stackSize,partition,main,detached\n");
     open_(m_multiplexer, "multiplexer");
@@ -78,6 +78,7 @@ private:
 	const auto &data = msg->as<HashTbl>();
 	write_(m_hashTbl, ZuStringN<512>() << now.csv(nowFmt)
 	  << ',' << data.id
+	  << ',' << ZuBoxed(data.addr).hex()
 	  << ',' << ZuBoxed(data.linear)
 	  << ',' << ZuBoxed(data.bits)
 	  << ',' << ZuBoxed(((uint64_t)1)<<data.bits)

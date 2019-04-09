@@ -19,13 +19,13 @@
 
 #include "src/models/wrappers/TableDockWidgetModelWrapper.h"
 #include "src/subscribers/TableSubscriber.h"
-#include "src/models/wrappers/BasicTableWidget.h"
+#include "src/widgets/BasicTableWidget.h"
 #include "QLinkedList"
 #include "QDebug"
-#include "src/factories/TableSubscriberFactory.h"
 #include "src/factories/TableWidgetFactory.h"
 #include "QTableWidget"
 #include "src/distributors/DataDistributor.h"
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
 
 TableDockWidgetModelWrapper::TableDockWidgetModelWrapper(DataDistributor& a_dataDistributor) :
@@ -44,7 +44,7 @@ TableDockWidgetModelWrapper::TableDockWidgetModelWrapper(DataDistributor& a_data
     qRegisterMetaType<QLinkedList<QString>>();
 
     //init the QMap inside QList in m_tableList
-    for (int var = 0; var < m_dataDistributor.mxTypeSize(); ++var)
+    for (int var = 0; var < MxTelemetryGeneralWrapper::mxTypeSize(); ++var)
     {
         m_tableSubscriberDB->append(new QMap<QString, QPair<BasicTableWidget*, TableSubscriber*>>());
     }
@@ -84,7 +84,7 @@ QTableWidget* TableDockWidgetModelWrapper::getTable(const QString& a_mxTelemetry
                                          const QString& a_mxTelemetryInstanceName)
 {
     //translate a_mxTelemetryTypeName to corresponding number
-    const int mxTelemetryTypeNameNumber = static_cast<int>(m_dataDistributor.fromMxTypeNameToValue(a_mxTelemetryTypeName));
+    const int mxTelemetryTypeNameNumber = MxTelemetryGeneralWrapper::fromMxTypeNameToValue(a_mxTelemetryTypeName);
 
     // get the corresponding pair
     auto l_pair = getSubscriberPair(mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName);
@@ -116,11 +116,12 @@ QTableWidget* TableDockWidgetModelWrapper::getTable(const QString& a_mxTelemetry
     // create table
     l_pair.first = TableWidgetFactory::getInstance().getTableWidget(mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName);
 
-
     //create subscriber
-    l_pair.second = TableSubscriberFactory::getInstance().getTableSubscriber(mxTelemetryTypeNameNumber);
-    qDebug() << "setTableName:" << a_mxTelemetryInstanceName;
-    l_pair.second->setAssociatedObjesctName(a_mxTelemetryInstanceName); //todo -> move into constrctor
+//    l_pair.second = TableSubscriberFactory::getInstance().getTableSubscriber(mxTelemetryTypeNameNumber);
+    l_pair.second = new TableSubscriber(MxTelemetryGeneralWrapper::fromMxTypeNameToValue(a_mxTelemetryTypeName),
+                                        a_mxTelemetryInstanceName);
+//    qDebug() << "setTableName:" << a_mxTelemetryInstanceName;
+    //l_pair.second->setAssociatedObjesctName(a_mxTelemetryInstanceName); //todo -> move into constrctor
 
     //add to the table
     m_tableSubscriberDB->at(mxTelemetryTypeNameNumber)->insert(a_mxTelemetryInstanceName, l_pair);
@@ -139,7 +140,7 @@ void TableDockWidgetModelWrapper::unsubscribe(const QString& a_mxTelemetryTypeNa
 {
 
     //translate a_mxTelemetryTypeName to corresponding number
-    const int mxTelemetryTypeNameNumber = m_dataDistributor.fromMxTypeNameToValue(a_mxTelemetryTypeName);
+    const int mxTelemetryTypeNameNumber = MxTelemetryGeneralWrapper::fromMxTypeNameToValue(a_mxTelemetryTypeName);
 
     auto l_tableSubscriberInstance = getSubscriberPair(mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName).second;
 

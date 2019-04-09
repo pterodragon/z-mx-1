@@ -18,15 +18,27 @@
  */
 
 
-#include "MxTelemetry.hpp"
-#include "DataDistributor.h"
+#ifndef ONEMXTYPEDATASUBSCRIBER_H
+#define ONEMXTYPEDATASUBSCRIBER_H
 
-DataDistributor::DataDistributor()
+#include "src/subscribers/DataSubscriber.h"
+
+class MxTelemetryGeneralWrapper;
+
+class OneMxTypeDataSubscriber : public DataSubscriber
 {
+public:
+    OneMxTypeDataSubscriber(const QString& a_className,
+                            const int a_mxTelemetryType,
+                            const QString& a_instance);
+    virtual ~OneMxTypeDataSubscriber();
 
-}
+    bool isMsgInstanceMatchesSubscriberInstance(void* const a_mxTelemetryMsg) const noexcept;
 
-DataDistributor::~DataDistributor()
-{
+protected:
+    const int m_mxTelemetryType;
+    const QString* m_instance; // The mxTypeInstanceName
+    const MxTelemetryGeneralWrapper& m_wrapper; // The mxTelemetryWrapper
+};
 
-}
+#endif // ONEMXTYPEDATASUBSCRIBER_H

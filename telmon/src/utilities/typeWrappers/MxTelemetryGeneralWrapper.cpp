@@ -19,12 +19,11 @@
 
 
 
-
+#include "MxTelemetry.hpp"
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 #include "QPair"
-#include <cstdint>
 #include "QDebug"
-#include "ZtDate.hpp"
+
 
 const char* MxTelemetryGeneralWrapper::NAME_DELIMITER = " - ";
 
@@ -130,10 +129,154 @@ bool MxTelemetryGeneralWrapper::isChartOptionEnabledInContextMenu() const noexce
 }
 
 
+QString MxTelemetryGeneralWrapper::fromMxTypeValueToName(const int a_type) noexcept
+{
+    return QString(MxTelemetry::Type::name(a_type));
+}
+
+
+int MxTelemetryGeneralWrapper::fromMxTypeNameToValue(const QString& a_name) noexcept
+{
+    return static_cast<int>(MxTelemetry::Type::lookup(a_name.toStdString().c_str()));
+}
+
+
+ int MxTelemetryGeneralWrapper::mxTypeSize() noexcept
+{
+    return MxTelemetry::Type::N;
+}
+
+
+bool MxTelemetryGeneralWrapper::isChartFunctionalityEnabled() const noexcept
+{
+    return (m_activeDataSet[0] != 0
+            or
+            m_activeDataSet[1] != 0);
+}
 
 
 
+void* MxTelemetryGeneralWrapper::mxTelemetryMsgDataRetriever(void* const a_mxTelemetryMsg) const noexcept
+{
+    // used for doing the casting for specific type
+    // each substype does not care about all the other types
+    using namespace MxTelemetry;
+    MxTelemetry::Msg* a_msg = static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg);
+    const int l_mxTelemetryTypeIndex = static_cast<int>(a_msg->hdr().type);
+    void* l_result;
+
+    switch (l_mxTelemetryTypeIndex) {
+    case Type::Heap: {
+        l_result = &(a_msg->as<MxTelemetry::Heap>());
+    } break;
+    case Type::HashTbl: {
+        l_result = &(a_msg->as<MxTelemetry::HashTbl>());
+    } break;
+    case Type::Thread: {
+        l_result = &(a_msg->as<MxTelemetry::Thread>());
+    } break;
+    case Type::Multiplexer: {
+        l_result = &(a_msg->as<MxTelemetry::Multiplexer>());
+    } break;
+    case Type::Socket: {
+        l_result = &(a_msg->as<MxTelemetry::Socket>());
+    } break;
+    case Type::Queue: {
+        l_result = &(a_msg->as<MxTelemetry::Queue>());
+    } break;
+    case Type::Engine: {
+        l_result = &(a_msg->as<MxTelemetry::Engine>());
+    } break;
+    case Type::Link: {
+        l_result = &(a_msg->as<MxTelemetry::Link>());
+    } break;
+    case Type::DBEnv: {
+        l_result = &(a_msg->as<MxTelemetry::DBEnv>());
+    } break;
+    case Type::DBHost: {
+        l_result = &(a_msg->as<MxTelemetry::DBHost>());
+    } break;
+    case Type::DB: {
+        l_result = &(a_msg->as<MxTelemetry::DB>());
+    } break;
+    default: {
+        qWarning() << "Unkown message header, ignoring:";
+        l_result = nullptr;
+    } break;
+    }
+    return l_result;
+}
 
 
+int MxTelemetryGeneralWrapper::fromMxTypeToTelMonType(const int a_type) noexcept
+{
+    int l_result;
+    switch (a_type) {
+    case MxTelemetry::Type::Heap: {
+        l_result = Type::Heap;
+    } break;
+    case MxTelemetry::Type::HashTbl: {
+        l_result = Type::HashTbl;
+    } break;
+    case MxTelemetry::Type::Thread: {
+        l_result = Type::Thread;
+    } break;
+    case MxTelemetry::Type::Multiplexer: {
+        l_result = Type::Multiplexer;
+    } break;
+    case MxTelemetry::Type::Socket: {
+        l_result = Type::Socket;
+    } break;
+    case MxTelemetry::Type::Queue: {
+        l_result = Type::Queue;
+    } break;
+    case MxTelemetry::Type::Engine: {
+        l_result = Type::Engine;
+    } break;
+    case MxTelemetry::Type::Link: {
+        l_result = Type::Link;
+    } break;
+    case  MxTelemetry::Type::DBEnv: {
+        l_result = Type::DBEnv;
+    } break;
+    case MxTelemetry::Type::DBHost: {
+        l_result = Type::DBHost;
+    } break;
+    case MxTelemetry::Type::DB: {
+        l_result = Type::DB;
+    } break;
+    default: {
+        // error msg should be printed by caller
+        l_result = Type::Unknown;
+    } break;
+    }
+    return l_result;
+}
+
+
+void MxTelemetryGeneralWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
+{
+    _getDataForTable(mxTelemetryMsgDataRetriever(a_mxTelemetryMsg), a_result);
+}
+
+
+const QString MxTelemetryGeneralWrapper::getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept
+{
+    return _getPrimaryKey(mxTelemetryMsgDataRetriever(a_mxTelemetryMsg));
+}
+
+
+const char* MxTelemetryGeneralWrapper::getMsgHeaderName(void* const a_mxTelemetryMsg) noexcept
+{
+    MxTelemetry::Msg* a_msg = static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg);
+    return  MxTelemetry::Type::name(a_msg->hdr().type);
+}
+
+
+int MxTelemetryGeneralWrapper::getMsgHeaderType(void* const a_mxTelemetryMsg) noexcept
+{
+    MxTelemetry::Msg* a_msg = static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg);
+    return static_cast<int>(a_msg->hdr().type);
+}
 
 

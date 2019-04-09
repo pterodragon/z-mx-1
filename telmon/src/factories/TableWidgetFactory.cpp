@@ -19,7 +19,7 @@
 
 #include "MxTelemetry.hpp"
 #include "src/factories/TableWidgetFactory.h"
-#include "src/models/wrappers/BasicTableWidget.h"
+#include "src/widgets/BasicTableWidget.h"
 #include "QDebug"
 
 #include "src/factories/MxTelemetryTypeWrappersFactory.h"
@@ -38,57 +38,57 @@ BasicTableWidget* TableWidgetFactory::getTableWidget(const int a_tableType, cons
     {
     case MxTelemetry::Type::Heap:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Heap).getTableList(),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Heap)->getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::HashTbl:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::HashTbl).getTableList(),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::HashTbl)->getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Thread:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Thread).getTableList(),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Thread)->getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Multiplexer:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Multiplexer).getTableList(),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Multiplexer)->getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Socket:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Socket).getTableList(),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Socket)->getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Queue:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Queue).getTableList(),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Queue)->getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Engine:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Engine).getTableList(),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Engine)->getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::Link:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Link).getTableList(),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::Link)->getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::DBEnv:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::DBEnv).getTableList(),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::DBEnv)->getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::DBHost:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::DBHost).getTableList(),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::DBHost)->getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     case MxTelemetry::Type::DB:
         l_result = new BasicTableWidget(QList<QString>({"Data"}),
-                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::DB).getTableList(),
+                                 MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(MxTelemetry::Type::DB)->getTableList(),
                                  a_mxTelemetryInstanceName);
         break;
     default:

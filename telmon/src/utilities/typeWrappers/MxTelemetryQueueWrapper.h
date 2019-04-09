@@ -63,6 +63,14 @@ protected:
     void initActiveDataSet() noexcept override final;
     QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
 
+    /**
+     * @brief  MxTelemetry::Thread name is *id* + *MxTelemetry::QueueType::name(data.type)*
+     * @param a_name
+     * @param a_tid
+     * @return
+     */
+    const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
+
 
 public:
     /**
@@ -86,16 +94,9 @@ public:
                                       e_inBytes, e_outCount, e_outBytes, e_full,
                                       e_size,    e_type};
 
-    double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
-    void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+    int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
+    void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
 
-    /**
-     * @brief  MxTelemetry::Thread name is *id* + *MxTelemetry::QueueType::name(data.type)*
-     * @param a_name
-     * @param a_tid
-     * @return
-     */
-    virtual const std::string getPrimaryKey(const std::initializer_list<std::string>& a_list) const noexcept override final;
 };
 
 #endif // MXTELEMETRYQUEUEWRAPPER_H

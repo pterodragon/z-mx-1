@@ -172,7 +172,7 @@ bool TreeItem::removeColumns(int position, int columns)
 
 // # # # # # # # # NEW
 
-bool TreeItem::insertChildItem(const int a_position, const char* a_col0Data, const char* a_col1Data) noexcept
+bool TreeItem::insertChildItem(const int a_position, const QString& a_col0Data, const QString& a_col1Data) noexcept
 {
     if (a_position < 0 || a_position > m_childItems->size())
     {

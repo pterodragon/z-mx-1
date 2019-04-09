@@ -20,8 +20,10 @@
 
 
 #include "DataSubscriber.h"
+#include "QString"
 
-DataSubscriber::DataSubscriber()
+DataSubscriber::DataSubscriber(const QString& a_className):
+    m_className(new QString(a_className))
 {
 
 }
@@ -29,9 +31,15 @@ DataSubscriber::DataSubscriber()
 
 DataSubscriber::~DataSubscriber()
 {
-
+    delete m_className;
+    m_className = nullptr;
 }
 
+
+const QString& DataSubscriber::getName() const noexcept
+{
+    return *m_className;
+}
 
 
 

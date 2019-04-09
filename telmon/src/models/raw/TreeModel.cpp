@@ -272,7 +272,7 @@ bool TreeModel::setHeaderData(int section, Qt::Orientation orientation,
 // # # # # Not part of the QAbstractItemModel inheritance
 
 bool TreeModel::insertRow(const int a_position, const QModelIndex &a_parent,
-                          const char* a_col0Data, const char* a_col1Data)
+                          const QString& a_col0Data, const QString& a_col1Data)
 {
     TreeItem *parentItem = getItem(a_parent);
     bool l_status;
@@ -294,7 +294,12 @@ bool TreeModel::insertRow(const int a_position, const QModelIndex &a_parent,
 }
 
 
-
+void TreeModel::notifyOfDataInertion(const int a_mxTelemetryTypeName,
+                                     const QString& a_mxTelemetryTypeInnstance) noexcept
+{
+    emit notifyOfDataInsertionSignal(QPair<const int, const QString>(a_mxTelemetryTypeName,
+                                                                     a_mxTelemetryTypeInnstance));
+}
 
 
 

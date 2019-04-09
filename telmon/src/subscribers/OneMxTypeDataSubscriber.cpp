@@ -18,35 +18,34 @@
  */
 
 
-#ifndef CHARTSUBSCRIBER_H
-#define CHARTSUBSCRIBER_H
-
-
 #include "OneMxTypeDataSubscriber.h"
+#include "QString"
+#include "src/factories/MxTelemetryTypeWrappersFactory.h"
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
-
-class BasicChartModel;
-
-
-class ChartSubscriber : public OneMxTypeDataSubscriber
+OneMxTypeDataSubscriber::OneMxTypeDataSubscriber(const QString& a_className,
+                                                 const int a_mxTelemetryType,
+                                                 const QString& a_instance):
+    DataSubscriber(a_className),
+    m_mxTelemetryType(a_mxTelemetryType),
+    m_instance(new QString(a_instance)),
+    m_wrapper(*MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(m_mxTelemetryType))
 {
 
-public:
-    ChartSubscriber(const int a_mxTelemetryType,
-                    const QString& a_instance,
-                    BasicChartModel* a_basicChartModel);
-    virtual ~ChartSubscriber() override;
-    virtual void update(void* a_mxTelemetryMsg) override final;
-
-protected:
-    BasicChartModel* m_model; // associated chart model
+}
 
 
-};
+OneMxTypeDataSubscriber::~OneMxTypeDataSubscriber()
+{
+    delete m_instance;
+    m_instance = nullptr;
+}
 
-#endif // CHARTSUBSCRIBER_H
 
-
+bool OneMxTypeDataSubscriber::isMsgInstanceMatchesSubscriberInstance(void* const a_mxTelemetryMsg) const noexcept
+{
+    return m_instance == m_wrapper.getPrimaryKey(a_mxTelemetryMsg);
+}
 
 
 

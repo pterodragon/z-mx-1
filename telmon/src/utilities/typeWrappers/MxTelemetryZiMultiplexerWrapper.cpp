@@ -87,7 +87,7 @@ void MxTelemetryZiMultiplexerWrapper::initTableList() noexcept
 }
 
 
-void MxTelemetryZiMultiplexerWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
+void MxTelemetryZiMultiplexerWrapper::_getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
     QPair<void*, int> l_dataPair;
 
@@ -208,7 +208,7 @@ void MxTelemetryZiMultiplexerWrapper::initChartList() noexcept
 }
 
 
-double MxTelemetryZiMultiplexerWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
+int MxTelemetryZiMultiplexerWrapper::_getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
     // sanity check
     if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return 0;}
@@ -217,7 +217,7 @@ double MxTelemetryZiMultiplexerWrapper::getDataForChart(void* const a_mxTelemetr
 
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
-    return typeConvertor<double>(QPair(l_dataPair.first, l_dataPair.second));
+    return typeConvertor<int>(QPair(l_dataPair.first, l_dataPair.second));
 }
 
 
@@ -282,3 +282,20 @@ QPair<void*, int> MxTelemetryZiMultiplexerWrapper::getMxTelemetryDataType(void* 
     }
     return l_result;
 }
+
+
+const QString MxTelemetryZiMultiplexerWrapper::_getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept
+{
+     ZiMxTelemetry* l_data = static_cast<ZiMxTelemetry*>(a_mxTelemetryMsg);
+     if (l_data)
+     {
+         return QString(l_data->id.data());
+     } else
+     {
+        return QString();
+     }
+}
+
+
+
+

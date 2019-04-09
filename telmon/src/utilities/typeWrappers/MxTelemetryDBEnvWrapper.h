@@ -63,6 +63,7 @@ protected:
     void initChartList() noexcept override final;
     void initActiveDataSet() noexcept override final;
     QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
+     const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
 
 
 public:
@@ -100,8 +101,8 @@ public:
                                       e_nDBs,          e_state,            e_active,
                                       e_recovering,    e_replicating};
 
-    double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
-    void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+    int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
+    void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
 };
 
 

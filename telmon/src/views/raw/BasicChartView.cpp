@@ -18,46 +18,39 @@
  */
 
 
-#include "ZmHeap.hpp"
-#include "ZmHashMgr.hpp"
-
 #include "BasicChartView.h"
 
-#include "src/factories/MxTelemetryTypeWrappersFactory.h"
-#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
-
-BasicChartView::BasicChartView(QChart *a_chart,
-                               const int a_associatedTelemetryType,
+BasicChartView::BasicChartView(const BasicChartModel& a_model,
                                const QString& a_chartTitle,
-                               const bool a_chartTitleVisibility,
                                QWidget *a_parent):
-    QChartView(a_chart, a_parent),
-    m_contextMenu( new QMenu(this)),
-    m_menuYLeft(nullptr),
-    m_menuYRight(nullptr),
-    m_titleLabel(new QLabel(this)), // no need to delete, we be deleted by parent
-    m_startStopButton(new QPushButton("Stop", this)),
+    // no need to delete QChart()
+    // from doc "the ownership of the chart is passed to the chart view"
+    QChartView(new QChart(), a_parent),
+    m_model(a_model),
+    // no need to delete, will be delete by QChart()
     m_axisArray   { new QValueAxis,    new QValueAxis, new QValueAxis},
     m_seriesArray { new QSplineSeries, new QSplineSeries},
-    m_associatedTelemetryType(a_associatedTelemetryType),
-    m_activeData(MxTelemetryTypeWrappersFactory::getInstance().
-                 getMxTelemetryWrapper(m_associatedTelemetryType).getActiveDataSet()),
-    m_chartFields(MxTelemetryTypeWrappersFactory::getInstance().
-                          getMxTelemetryWrapper(m_associatedTelemetryType).getChartList()),
-    m_chartDataContainer(new QVector<QVector<double>*>),
+    m_activeData(m_model.getActiveDataSet()),
+    m_chartFields(m_model.getChartList()),
     m_delayIndicator(0),        // there is no delay on startup
     m_drawChartFlag(true),      // we draw chart on widget start up
-    m_xReferenceCoordiante(0),  // just default value
-    m_chartTitleVisibility(a_chartTitleVisibility),
-    m_chartTitle(new QString(a_chartTitle))
-{
-    initChartDataContainer();
-    setDefaultUpdateDataFunction();
-    initContextMenu();
-    createActions();
+    m_xReferenceCoordiante(0),  // default value
 
-    // Adds the axis axis to the chart aligned as specified by alignment.
+    // do not show chart title visibiliy, because this build in feature
+    // decrease the available chart size, therefore we will use our own chart label
+    // as follows and we put it in the position we desire
+    m_chartTitleVisibility(false),
+    m_chartTitle(new QString(a_chartTitle)),
+    m_timer(new QTimer(this))
+{
+    // connect the timer
+    m_timer->setTimerType(Qt::VeryCoarseTimer);
+    connect(m_timer, SIGNAL(timeout()), this, SLOT(updateChart()));
+
+    initContextMenu();
+
+    // Adds the axis to the chart aligned as specified by alignment.
     // The chart takes the ownership of the axis.
     QValueAxis* l_axis = &getAxes(CHART_AXIS::X);
     chart()->addAxis(l_axis, Qt::AlignBottom);
@@ -91,62 +84,17 @@ BasicChartView::BasicChartView(QChart *a_chart,
     initLegend();
     initChartLabel();
     initStartStopButton();
+    createActions();
 
-
+    m_timer->start(1000);
 }
 
 
 BasicChartView::~BasicChartView()
 {
-    qInfo() << "BasicChartView::~BasicChartView";
-
-    for (int i = 0; i < m_chartDataContainer->size(); i++) {
-        delete (*m_chartDataContainer)[i];
-        (*m_chartDataContainer)[i] = nullptr;
-    }
-    delete m_chartDataContainer;
-    m_chartDataContainer = nullptr;
-
+    qInfo() << QString("~" + *m_chartTitle);
     delete m_chartTitle;
     m_chartTitle = nullptr;
-
-    delete this->chart();
-}
-
-
-void BasicChartView::initChartDataContainer() const noexcept
-{
-    // we do not need field for "none", that is why we remove 1
-    const int l_numberOfFields = m_chartFields.size() - 1;
-
-    for (int i = 0; i < l_numberOfFields; i++)
-    {
-        m_chartDataContainer->insert(i, new QVector<double>);
-    }
-}
-
-
-void BasicChartView::addDataToChartDataContainer(void* a_mxTelemetryMsg) const noexcept
-{
-    // we do not need field for "none", that is why we remove 1
-    const int l_numberOfFields = m_chartFields.size() - 1;
-
-    // remove points if crossing the limit
-
-
-    for (int i = 0; i < l_numberOfFields; ++i)
-    {
-        // get the data
-//        const auto l_data = MxTelemetryTypeWrappersFactory::getInstance().
-//                getMxTelemetryWrapper(m_associatedTelemetryType).
-//                getDataForChart(a_mxTelemetryMsg, i);
-
-        // only for testing
-        const auto l_data = rand() % 100;
-
-        // insert the data to be the first, pushing all the data inside one index up
-        m_chartDataContainer->at(i)->prepend(l_data);
-    }
 }
 
 
@@ -197,6 +145,9 @@ void BasicChartView::handleStartStopFunctionality() noexcept
 
 void BasicChartView::initContextMenu() noexcept
 {
+    // init here and not in initilaizer list for readability
+    m_contextMenu = new QMenu(this); // no need to delete, we be deleted by parent
+
     // init start/stop action
     m_contextMenu->addAction("Stop", [this](){
         this->handleStartStopFunctionality();
@@ -218,11 +169,11 @@ void BasicChartView::initContextMenu() noexcept
     for (int i = 0; i < m_chartFields.size(); ++i) {
 
         m_menuYLeft->addAction( m_chartFields.at(i), [this, i]() {
-            this->changeSeriesData(SERIES::SERIES_LEFT ,i);
+            this->changeSeriesData(SERIES::SERIES_LEFT ,i, m_menuYLeft);
         });
 
         m_menuYRight->addAction( m_chartFields.at(i), [this, i]() {
-            this->changeSeriesData(SERIES::SERIES_RIGHT ,i);
+            this->changeSeriesData(SERIES::SERIES_RIGHT ,i, m_menuYRight);
         });
     }
 
@@ -237,29 +188,39 @@ void BasicChartView::initContextMenu() noexcept
 
     m_contextMenu->addMenu(l_dataMenu);
 
-    // in the future, add appearance option
+    // init "Refresh Rate"
+    m_refreshRateMenu = new QMenu(QObject::tr("Refresh Rate"), m_contextMenu);
+
+    m_refreshRateMenu->addAction("1 second", [this]() {
+        this->m_timer->start(1000);
+        m_refreshRateMenu->actions().at(0)->setDisabled(true);
+        m_refreshRateMenu->actions().at(1)->setDisabled(false);
+    });
+
+    m_refreshRateMenu->actions().at(0)->setDisabled(true);
+
+    m_refreshRateMenu->addAction("5 second", [this]() {
+        this->m_timer->start(5000);
+        m_refreshRateMenu->actions().at(0)->setDisabled(false);
+        m_refreshRateMenu->actions().at(1)->setDisabled(true);
+    });
+
+    m_contextMenu->addMenu(m_refreshRateMenu);
 
     m_contextMenu->addSeparator();
 
-    // init close action
+    // close action handled by controller;
     m_contextMenu->addAction( "Close", [this]() {
 
-        // delete the dock widget
-        delete this->parent();
+        // Need to solve -- cause segmentation fault
+        // keep the spliiter
+//        QObject* l_splitter = this->parent()->parent();
 
-        //clean data container
-        // we do not need field for "none", that is why we remove 1
-        const int l_numberOfFields = this->m_chartFields.size() - 1;
-        for (int i = 0; i < l_numberOfFields; ++i)
-        {
-            this->m_chartDataContainer->at(i)->clear();
-        }
+//        qDebug() << "count before" <<  static_cast<QSplitter*>(l_splitter)->count();
+//        static_cast<QDockWidget*>(this->parent())->close();
+//        qDebug() << "static_cast<QSplitter*>(l_splitter)" << static_cast<QSplitter*>(l_splitter);
+//        qDebug() << "count after" <<  static_cast<QSplitter*>(l_splitter)->count();
 
-        // clean series
-        for (unsigned  int i = 0; i < SERIES::SERIES_N; i++)
-        {
-            getSeries(i).clear();
-        }
 
     });
 }
@@ -281,9 +242,12 @@ void BasicChartView::createActions() noexcept
 }
 
 
-void BasicChartView::changeSeriesData(const unsigned int a_series, const int data_type) noexcept
+void BasicChartView::changeSeriesData(const unsigned int a_series,
+                                      const int data_type,
+                                      const QMenu* a_menu) noexcept
 {
     const int l_oldDataType = m_activeData[a_series];
+    //const int l_oldDataType = m_model.getActiveData(a_series);
 
     // set new active data
     m_activeData[a_series] = static_cast<int>(data_type);
@@ -296,17 +260,8 @@ void BasicChartView::changeSeriesData(const unsigned int a_series, const int dat
     getSeries(a_series).clear();
 
     // disable/enable this option from menu
-    QMenu* l_menu = nullptr;
-    (a_series == SERIES::SERIES_LEFT) ? (l_menu = m_menuYLeft) : (l_menu =  m_menuYRight);
-    l_menu->actions().at(l_oldDataType)->setEnabled(true);
-    l_menu->actions().at(data_type)->setDisabled(true);
-}
-
-
-void BasicChartView::setUpdateFunction( std::function<void(BasicChartView* a_this,
-                                                      void* a_mxTelemetryMsg)>   a_lambda )
-{
-    m_lambda = a_lambda;
+    a_menu->actions().at(l_oldDataType)->setEnabled(true);
+    a_menu->actions().at(data_type)->setDisabled(true);
 }
 
 
@@ -356,24 +311,7 @@ int BasicChartView::getActiveDataType(const unsigned int a_series) const noexcep
 }
 
 
-void BasicChartView::setDefaultUpdateDataFunction() noexcept
-{
-    m_lambda = [] ( BasicChartView* a_this,
-                    void* a_mxTelemetryMsg) -> void
-    {
-        // to do: in the future, could be done in update thread and not in main thread
-        //we can think about thread just sending the correct series or something like that
-        a_this->addDataToChartDataContainer(a_mxTelemetryMsg);
-
-        // draw chart only if flag is set
-        if (!(a_this->getDrawChartFlag())) {return;}
-
-        a_this->repaintChart();
-    };
-}
-
-
-void BasicChartView::updateVerticalAxisRange(const double a_data) noexcept
+void BasicChartView::updateVerticalAxisRange(const int a_data) noexcept
 {
     const auto l_maxValue = qMax(getAxes(CHART_AXIS::Y_LEFT).max(), getAxes(CHART_AXIS::Y_RIGHT).max());
 
@@ -412,7 +350,7 @@ void BasicChartView::updateVerticalAxisRange(const double a_data) noexcept
 
 void BasicChartView::mouseMoveEvent(QMouseEvent * event)
 {
-    // handle the event only if the left mouse button is pressed
+    // handle the el_activeDataTypeIndexvent only if the left mouse button is pressed
     if (event->buttons() ==  Qt::MouseButton::LeftButton)
     {
         //get the x coordinate of the mouse location
@@ -431,7 +369,7 @@ void BasicChartView::handleMouseEventHelper(const int a_x /** the new x cooredin
 
     // else: repaint series according to new x
     const int l_difference = getReferenceX() - a_x;
-    setReferenceX(a_x);
+    setReferenceXCoordinate(a_x);
 
     // update m_delayIndicator accordingly
     //Notice:
@@ -453,7 +391,7 @@ void BasicChartView::handleMouseEventHelper(const int a_x /** the new x cooredin
         m_delayIndicator = qMax(l_rightBorderLimit, m_delayIndicator + l_difference);
     } else { // that is l_difference > 0
         // check if we are already in the leftest allowed
-        const int l_leftBorderLimit = (m_chartDataContainer->at(0)->size() - 1);
+        const int l_leftBorderLimit = (m_model.getChartDataContainerSize() - 1);
         if (m_delayIndicator == l_leftBorderLimit)
         {
             return;
@@ -464,15 +402,18 @@ void BasicChartView::handleMouseEventHelper(const int a_x /** the new x cooredin
         // we will still show one point
         m_delayIndicator = qMin(l_leftBorderLimit, m_delayIndicator + l_difference);
     }
+
     repaintChart();
 }
 
 
 void BasicChartView::repaintChart() noexcept
 {
+    //qDebug() << *m_chartTitle  << "repaintChart()";
+
     // should be 1 and not 0 because we later multiply it in some values,
     // and you can not multiply by 0
-    double l_Y_coordianteMaxPointBothSeries = 1;
+    int l_Y_coordianteMaxPointBothSeries = 1;
 
     // iterate over series, that is, iterate over {SERIES::SERIES_LEFT, SERIES::SERIES_RIGHT}
     for (unsigned int l_curSeries = 0;
@@ -481,30 +422,34 @@ void BasicChartView::repaintChart() noexcept
     {
         // if current series is "none", then skip
         const int l_activeDataTypeIndex = getActiveDataType(l_curSeries);
-        if (isSeriesIsNull(l_activeDataTypeIndex)) { continue; }
+        if (m_model.isSeriesIsNull(l_activeDataTypeIndex)) { continue; }
 
         // clear current series
         m_seriesArray[l_curSeries]->clear();
 
         // build up new series
+        //qDebug() << *m_chartTitle;
         for (int i = 0; i < getXAxisSpan(); i++)
         {
+            //qDebug() << "i" << i;
             //consider delay indicator
             int l_index = m_delayIndicator + i;
 
             // if (value < 0) that means the user moved chart to right Limit
             // so we skip negative points to give it nice look
-            if (l_index < 0) {/**qDebug() << "skip point" << l_index << "right limit border";*/ continue;}
+            if (l_index < 0) {/*qDebug() << "skip point" << l_index << "right limit border";*/ continue;}
 
             // if (value >= size()) that means the user moved chart left
             // so we skip this points, to give it nicer look
             // Notice: which data type container size we check is irrelevant because all
             // of them should be in the same size
-            if (l_index >= m_chartDataContainer->at(l_activeDataTypeIndex)->size())
-            {/**qDebug() << "skip point" << l_index << "left limit border";*/ continue;}
+//            qDebug() << "m_model.getChartDataContainerSize()" << m_model.getChartDataContainerSize();
+            if (l_index >= m_model.getChartDataContainerSize())
+            {/*qDebug() << "skip point" << l_index << "left limit border";*/ continue;}
 
             // else, constrcut the point
-            const auto l_point_Y = m_chartDataContainer->at(l_activeDataTypeIndex)->at(l_index);
+            const auto l_point_Y = m_model.getData(l_activeDataTypeIndex, l_index);
+            //qDebug() << "l_point_Y" << l_point_Y;
             const auto l_point_X = getXAxisSpan() - i;
             m_seriesArray[l_curSeries]->insert(i, QPointF(l_point_X, l_point_Y));
 
@@ -512,17 +457,8 @@ void BasicChartView::repaintChart() noexcept
             l_Y_coordianteMaxPointBothSeries = qMax(l_Y_coordianteMaxPointBothSeries, l_point_Y);
         }
     }
-
     // update axis max range
     updateVerticalAxisRange(l_Y_coordianteMaxPointBothSeries);
-}
-
-
-bool BasicChartView::isSeriesIsNull(const int a_series) const noexcept
-{
-    return MxTelemetryTypeWrappersFactory::getInstance().
-            getMxTelemetryWrapper(m_associatedTelemetryType).
-            isDataTypeNotUsed(a_series);
 }
 
 
@@ -537,7 +473,7 @@ void BasicChartView::mousePressEvent(QMouseEvent * event)
         setDrawChartFlag(false);
 
         // store the current x position of the chart for reference
-        setReferenceX(static_cast<int>(chart()->mapToValue(event->pos()).x()));
+        setReferenceXCoordinate(static_cast<int>(chart()->mapToValue(event->pos()).x()));
     }
 
     QGraphicsView::mousePressEvent(event);
@@ -548,14 +484,7 @@ void BasicChartView::mouseReleaseEvent(QMouseEvent * event)
 {
     if (event->button() ==  Qt::MouseButton::LeftButton)
     {
-
-        //qDebug() << "mouseReleaseEvent, event->pos()" << event->pos();
-        //qDebug() << "chart()->mapToPosition(event->pos())" << chart()->mapToValue(event->pos());
-        //updateDelayIndicator(m_mousePressEventXCoordiante - static_cast<int>(chart()->mapToValue(event->pos()).x()));
-        //qDebug() << "chart()->mapToPosition(event->pos())" << chart()->mapToPosition(event->pos());
-
-        //return previous status of
-        setDrawChartFlag(m_drawChartFlagStoreVariable);
+        setDrawChartFlag(m_drawChartFlagStoreVariable); // set previous status
     }
     QGraphicsView::mouseReleaseEvent(event);
 }
@@ -624,22 +553,16 @@ void BasicChartView::initLegend() noexcept
 
 void BasicChartView::initChartLabel() noexcept
 {
+    m_titleLabel = new QLabel(*m_chartTitle, this); // no need to delete, we be deleted by parent
+
     // we dont use the base chart title widget, because i could not
-    // embed it in the chart
+    // embed it in the chart, thereforem we use our own label
     setChartTitleVisiblity(m_chartTitleVisibility);
-    // thereforem we use our own label
-
-    m_titleLabel->setText(*m_chartTitle);
-
-    // set  width as chart width
-    const auto l_width = this->width();
-    m_titleLabel->setMaximumWidth(l_width);
-    m_titleLabel->setMinimumWidth(l_width);
 
     // scale content to avaiable size
     m_titleLabel->setScaledContents(true);
 
-    //
+    // set same font
     QFont font = chart()->legend()->font();
     m_titleLabel->setFont(font);
 }
@@ -688,7 +611,7 @@ void BasicChartView::resizeEventTitle() noexcept
     const auto l_factor = (chart()->legend()->font().pointSize() - 4);
 
     // set the title in the center of width, we use the following:
-    const auto l_centerX = this->width() / 3;
+    const auto l_centerX = (this->width() - m_titleLabel->width()) / 2;
 
     m_titleLabel->move(l_centerX,
                        l_legendPosition.y() - l_factor);
@@ -697,6 +620,8 @@ void BasicChartView::resizeEventTitle() noexcept
 
 void BasicChartView::initStartStopButton() noexcept
 {
+    m_startStopButton = new QPushButton("Stop", this); // no need to delete, we be deleted by parent
+
     // set similar font to legend font
     auto l_font = chart()->legend()->font();
     l_font.setPointSize(9);
@@ -731,72 +656,12 @@ void BasicChartView::resizeEventStartStopButton() noexcept
 }
 
 
-// # # # # updateData functions # # # #//
-void BasicChartView::updateData(ZmHeapTelemetry a_pair)
+
+void BasicChartView::updateChart() noexcept
 {
-    m_lambda(this, &a_pair);
+    if (!getDrawChartFlag()) {return;}
+
+    repaintChart();
 }
-
-
-void BasicChartView::updateData(ZmHashTelemetry a_pair)
-{
-    m_lambda(this, &a_pair);
-}
-
-
-void BasicChartView::updateData(ZmThreadTelemetry a_pair)
-{
-    m_lambda(this, &a_pair);
-}
-
-
-void BasicChartView::updateData(ZiMxTelemetry a_pair)
-{
-    m_lambda(this, &a_pair);
-}
-
-
-void BasicChartView::updateData(ZiCxnTelemetry a_pair)
-{
-    m_lambda(this, &a_pair);
-}
-
-
-void BasicChartView::updateData(MxTelemetry::Queue a_pair)
-{
-    m_lambda(this, &a_pair);
-}
-
-
-void BasicChartView::updateData(MxEngine::Telemetry a_pair)
-{
-    m_lambda(this, &a_pair);
-}
-
-
-void BasicChartView::updateData(MxAnyLink::Telemetry a_pair)
-{
-    m_lambda(this, &a_pair);
-}
-
-
-void BasicChartView::updateData(ZdbEnv::Telemetry a_pair)
-{
-    m_lambda(this, &a_pair);
-}
-
-
-void BasicChartView::updateData(ZdbHost::Telemetry a_pair)
-{
-    m_lambda(this, &a_pair);
-}
-
-
-void BasicChartView::updateData(ZdbAny::Telemetry a_pair)
-{
-    m_lambda(this, &a_pair);
-}
-
-
 
 

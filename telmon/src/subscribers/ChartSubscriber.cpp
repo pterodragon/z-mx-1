@@ -20,10 +20,19 @@
 
 #include "ChartSubscriber.h"
 
+#include "src/models/raw/BasicChartModel.h"
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
 
-ChartSubscriber::ChartSubscriber(const QString& a_subscriberName):
-    QObjectDataSubscriber(a_subscriberName)
+ChartSubscriber::ChartSubscriber(const int a_mxTelemetryType,
+                                 const QString& a_instance,
+                                 BasicChartModel* a_basicChartModel):
+    OneMxTypeDataSubscriber(QString("ChartSubscriber::" +
+                                    MxTelemetryGeneralWrapper::fromMxTypeValueToName(a_mxTelemetryType) +
+                                    "::" + a_instance),
+                            a_mxTelemetryType,
+                            a_instance),
+    m_model(a_basicChartModel)
 {
 
 }
@@ -37,15 +46,14 @@ ChartSubscriber::~ChartSubscriber()
 
 void ChartSubscriber::update(void* a_mxTelemetryMsg)
 {
-     m_lambda(this, a_mxTelemetryMsg);
+    if (isMsgInstanceMatchesSubscriberInstance(a_mxTelemetryMsg))
+    {
+        m_model->update(a_mxTelemetryMsg);
+    }
 }
 
 
-void ChartSubscriber::setUpdateFunction( std::function<void(ChartSubscriber* a_this,
-                                                            void* a_mxTelemetryMsg)>   a_lambda )
-{
-    m_lambda = a_lambda;
-}
+
 
 
 

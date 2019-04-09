@@ -89,8 +89,8 @@ public:
     enum ZmThreadTelemetryStructIndex {e_name, e_tid, e_stackSize, e_cpuset, e_cpuUsage,
                                        e_id, e_priority, e_partition, e_main, e_detached};
 
-    double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
-    void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+    int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
+    void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
 
     /**
      * @brief  MxTelemetry::Thread name is *name* + *tid*
@@ -98,7 +98,9 @@ public:
      * @param a_tid
      * @return
      */
-    virtual const std::string getPrimaryKey(const std::initializer_list<std::string>& a_list) const noexcept override final;
+
+protected:
+    virtual const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
 
 };
 #endif // MXTELEMETRYZMTHREADWRAPPER_H

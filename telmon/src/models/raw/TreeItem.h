@@ -8,6 +8,7 @@ template<class T>
 class QList;
 
 class QVariant;
+class QString;
 
 class TreeItem
 {
@@ -73,7 +74,7 @@ public:
     TreeItem *parent() const noexcept;
 
     // new
-    bool insertChildItem(const int position, const char* a_col0Data,const char* a_col1Data) noexcept;
+    bool insertChildItem(const int position, const QString& a_col0Data, const QString& a_col1Data) noexcept;
 
 
 private:

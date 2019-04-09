@@ -29,7 +29,6 @@
 
 class DataSubscriber;
 
-//template <typename T> //use instead of void ?
 class DataDistributor
 {
 public:
@@ -45,10 +44,6 @@ public:
     virtual uintptr_t subscribe(const int a_mxTelemetryType, DataSubscriber*  a_subscriber) = 0;
     virtual uintptr_t unsubscribe(const int a_mxTelemetryType, DataSubscriber* a_subscriber) = 0;
     virtual uintptr_t notify(void* a_mxTelemetryMsg) = 0;
-
-    QString fromMxTypeValueToName(const int a_type) const noexcept;
-    int fromMxTypeNameToValue(const QString& a_name) const noexcept;
-    int mxTypeSize() const noexcept;
 
 };
 

@@ -24,11 +24,14 @@
 #include "DockWindowController.h"
 
 class ChartDockWidgetModelWrapper;
+class BasicChartController;
+template<class T>
+class QVector;
 
 class ChartWidgetDockWindowController : public DockWindowController
 {
 public:
-    ChartWidgetDockWindowController(DataDistributor& a_dataDistributor);
+    ChartWidgetDockWindowController(DataDistributor& a_dataDistributor, QObject* a_parent);
     ~ChartWidgetDockWindowController() override;
 
     // BasicController interface
@@ -38,13 +41,28 @@ public:
     // DockWindowController interface
     virtual void handleUserSelection(unsigned int& a_action,
                                      QDockWidget*& a_widget,
-                                     Qt::Orientation& a_orientation,
                                      const QList<QDockWidget *>& a_currentDockList,
                                      const QString& a_mxTelemetryTypeName,
-                                     const QString& a_mxTelemetryInstanceName) noexcept override final;
+                                     const QString& a_mxTelemetryInstanceName,
+                                     const int a_mxTelemetryType) noexcept override final;
+
+    virtual void initSubController(const int mxTelemetryType,
+                                   const QString& mxTelemetryInstanceName) noexcept override final;
 
 private:
-    ChartDockWidgetModelWrapper* m_graphDockWidgetModelWrapper;
+    // todo, perhaps remove
+    ChartDockWidgetModelWrapper* m_chartDockWidgetModelWrapper;
+
+    // new
+    const QString* m_className;
+    // most important attribute: index lookup, QVector is O(1), that is,
+    //    to access the correct MxTypeInsatnces *dataContainer*;
+    // *dataContainer* will be made from QMap<Key=QString, T=BasicChartController*>
+    //    key lookup is O(log n)
+    QVector<QMap<QString, BasicChartController*>*>* m_DB;
+
+    BasicChartController* getController(const int mxTelemetryType,
+                                        const QString& mxTelemetryInstanceName) noexcept;
 };
 
 #endif // CHARTWIDGETDOCKWINDOWCONTROLLER_H

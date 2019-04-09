@@ -18,19 +18,18 @@
  */
 
 
-
-
-#include "MxTelemetry.hpp"
 #include "TableSubscriber.h"
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 #include "QLinkedList"
-#include "QDebug"
-
-#include <sstream> //for ZmBitmapToQString
 
 
-TableSubscriber::TableSubscriber(const QString& a_subscriberName):
-    QObjectDataSubscriber(a_subscriberName),
-    m_stream(new std::stringstream())
+TableSubscriber::TableSubscriber(const int a_mxTelemetryType,
+                                 const QString& a_instance):
+    OneMxTypeDataSubscriber(QString("TableSubscriber::" +
+                                    MxTelemetryGeneralWrapper::fromMxTypeValueToName(a_mxTelemetryType) +
+                                    "::" + a_instance),
+                            a_mxTelemetryType,
+                            a_instance)
 {
 
 }
@@ -38,52 +37,20 @@ TableSubscriber::TableSubscriber(const QString& a_subscriberName):
 
 TableSubscriber::~TableSubscriber()
 {
-    delete m_stream;
+
 };
 
 
 void TableSubscriber::update(void* a_mxTelemetryMsg)
 {
-     m_lambda(this, a_mxTelemetryMsg);
-}
-
-
-void TableSubscriber::setUpdateFunction( std::function<void(TableSubscriber* a_this,
-                                                            void* a_mxTelemetryMsg)>   a_lambda )
-{
-    m_lambda = a_lambda;
-}
-
-
-QString TableSubscriber::ZmBitmapToQString(const ZmBitmap& a_zmBitMap) const noexcept
-{
-    a_zmBitMap.print(*m_stream);
-    const QString l_result = QString::fromStdString(m_stream->str());
-    m_stream->str(std::string());
-    m_stream->clear();
-    return l_result;
+    if (!isMsgInstanceMatchesSubscriberInstance(a_mxTelemetryMsg)) {return;}
+    QLinkedList<QString> l_list;
+    m_wrapper.getDataForTable(a_mxTelemetryMsg, l_list);
+    emit updateDone(l_list);
 }
 
 
 
-QString TableSubscriber::ZiIPTypeToQString(const ZiIP& a_ZiIP) const noexcept
-{
-    a_ZiIP.print(*m_stream);
-    const QString l_result = QString::fromStdString(m_stream->str());
-    m_stream->str(std::string());
-    m_stream->clear();
-    return l_result;
-}
-
-
-QString TableSubscriber::ZiCxnFlagsTypeToQString(const uint32_t a_ZiCxnFlags) const noexcept
-{
-    *m_stream << ZiCxnFlags::Flags::print(a_ZiCxnFlags);
-    const QString l_result = QString::fromStdString(m_stream->str());
-    m_stream->str(std::string());
-    m_stream->clear();
-    return l_result;
-}
 
 
 

@@ -31,7 +31,7 @@ class QDockWidget;
 class DockWindowController : public BasicController
 {
 public:
-    DockWindowController(DataDistributor& a_dataDistributor, const char* a_name);
+    DockWindowController(DataDistributor& a_dataDistributor, const char* a_name, QObject* a_parent);
     virtual ~DockWindowController();
 
     // BasicController interface
@@ -47,14 +47,17 @@ public:
     enum ACTIONS {NO_ACTION, ADD, ADD_TO_CENTER, ADD_TO_RIGHT};
     virtual void handleUserSelection(unsigned int& a_action,
                                      QDockWidget*& a_widget,
-                                     Qt::Orientation& a_orientation,
                                      const QList<QDockWidget *>& a_currentDockList,
                                      const QString& a_mxTelemetryTypeName,
-                                     const QString& a_mxTelemetryInstanceName) noexcept = 0;
+                                     const QString& a_mxTelemetryInstanceName,
+                                     const int a_mxTelemetryType) noexcept = 0;
 
     bool isDockWidgetExists(const QList<QDockWidget *>& a_currentDockList,
                             const QString& l_objectName,
                             QDockWidget*& a_dock) const noexcept;
+
+    virtual void initSubController(const int mxTelemetryType,
+                                   const QString& mxTelemetryInstanceName) noexcept = 0;
 
 protected:
     const char* m_dockWindowName;

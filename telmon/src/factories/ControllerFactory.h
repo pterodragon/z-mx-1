@@ -41,7 +41,7 @@ private:
 public:
     enum CONTROLLER_TYPE {TREE_MENU_WIDGET_CONTROLLER,
                           TABLE_DOCK_WINDOW_CONTROLLER,
-                          GRAPH_DOCK_WINDOW_CONTROLLER,
+                          CHART_DOCK_WINDOW_CONTROLLER,
                           SIZE };
 
     static ControllerFactory& getInstance()
@@ -57,7 +57,7 @@ public:
     BasicController* getController(const unsigned int a_type,
                                    DataDistributor& a_dataDistributor,
                                    MainWindowController& a_mainWindowController,
-                                    QObject* a_parent = nullptr) const noexcept;
+                                   QObject* a_parent) const noexcept;
 };
 
 #endif // CONTROLLERFACTORY_H

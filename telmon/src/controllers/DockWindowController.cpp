@@ -22,8 +22,10 @@
 #include "src/controllers/DockWindowController.h"
 #include "QDockWidget"
 
-DockWindowController::DockWindowController(DataDistributor& a_dataDistributor, const char* a_name):
-    BasicController(a_dataDistributor),
+DockWindowController::DockWindowController(DataDistributor& a_dataDistributor,
+                                           const char* a_name,
+                                           QObject* a_parent):
+    BasicController(a_dataDistributor, a_parent),
     m_dockWindowName(a_name)
 {
 

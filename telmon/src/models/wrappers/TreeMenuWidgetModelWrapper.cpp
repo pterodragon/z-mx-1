@@ -17,19 +17,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include "MxTelemetry.hpp"
 #include "src/models/wrappers/TreeMenuWidgetModelWrapper.h"
 #include "src/models/raw/TreeModel.h"
-#include "QDebug"
 #include "src/factories/MxTelemetryTypeWrappersFactory.h"
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
 
 TreeMenuWidgetModelWrapper::TreeMenuWidgetModelWrapper():
+    DataSubscriber (QString("TreeMenuWidgetModelWrapper")),
     m_treeModel(new TreeModel("MxTelemetry::Types")),
     m_mxTelemetryTypeFirstTreeLevelPosition(0),
-    m_mxTelemetryTypeFirstTreeLevelPositionArray(new int[MxTelemetry::Type::N]),
-    m_name("TreeMenuWidgetModelWrapper")
+    m_mxTelemetryTypeFirstTreeLevelPositionArray(new int[static_cast<unsigned long>(MxTelemetryGeneralWrapper::mxTypeSize())])
 {
 
 }
@@ -45,12 +43,6 @@ TreeMenuWidgetModelWrapper::~TreeMenuWidgetModelWrapper()
 QAbstractItemModel* TreeMenuWidgetModelWrapper::getModel() const noexcept
 {
     return static_cast<QAbstractItemModel*>(m_treeModel);
-}
-
-
-const QString& TreeMenuWidgetModelWrapper::getName() const noexcept
-{
-    return m_name;
 }
 
 
@@ -74,74 +66,21 @@ const QString& TreeMenuWidgetModelWrapper::getName() const noexcept
  */
 void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
 {
-    using namespace MxTelemetry;
-    MxTelemetry::Msg* a_msg = static_cast<MxTelemetry::Msg*>(a_mxTelemetryMsg);
-
     // step 1
-    const auto l_msgHeaderName = Type::name(a_msg->hdr().type);
-    ZmIDString l_msgDataID;
-    const int l_mxTelemetryTypeIndex = static_cast<int>(a_msg->hdr().type);
-
-    // for readability
-    const MxTelemetryGeneralWrapper* l_typeWrapper = nullptr;
-
-    switch (l_mxTelemetryTypeIndex) {
-    case Type::Heap: {
-        const auto &data = a_msg->as<Heap>();
-        l_msgDataID = data.id;
-    } break;
-    case Type::HashTbl: {
-        const auto &data = a_msg->as<HashTbl>();
-        l_msgDataID = data.id;
-    } break;
-    case Type::Thread: {
-        const auto &data = a_msg->as<Thread>();
-        l_typeWrapper = &MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(Type::Thread);
-        l_msgDataID = l_typeWrapper->getPrimaryKey(std::initializer_list<std::string>(
-                                                                                      {std::string(data.name),
-                                                                                       std::to_string(data.tid)}));
-    } break;
-    case Type::Multiplexer: {
-        const auto &data = a_msg->as<Multiplexer>();
-        l_msgDataID = data.id;
-    } break;
-    case Type::Socket: {
-        l_typeWrapper = &MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(Type::Socket);
-        l_msgDataID = l_typeWrapper->getPrimaryKey(&(a_msg->as<Socket>()));
-    } break;
-    case Type::Queue: {
-        const auto &data = a_msg->as<Queue>();
-        l_typeWrapper = &MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(Type::Queue);
-        l_msgDataID = l_typeWrapper->getPrimaryKey(std::initializer_list<std::string>(
-                                                                                      {std::string(data.id),
-                                                                                      MxTelemetry::QueueType::name(data.type)}));
-    } break;
-    case Type::Engine: {
-        const auto &data = a_msg->as<Engine>();
-        l_msgDataID = data.id;
-    } break;
-    case Type::Link: {
-        const auto &data = a_msg->as<Link>();
-        l_msgDataID = data.id;
-    } break;
-    case Type::DBEnv: {
-        const auto &data = a_msg->as<DBEnv>();
-        l_msgDataID = data.self; // use hostID
-    } break;
-    case Type::DBHost: {
-        const auto &data = a_msg->as<DBHost>();
-        l_msgDataID = data.id;
-    } break;
-    case Type::DB: {
-        const auto &data = a_msg->as<DB>();
-        l_msgDataID = data.name;
-    } break;
-    default: {
-        qWarning() << "Unkown message header, ignoring:";
-        return; //STATUS::UNKNOWN_MSG_HEADER;
-    } break;
+    const auto  l_mxTelemetryTypeIndex = MxTelemetryGeneralWrapper::getMsgHeaderType(a_mxTelemetryMsg);
+    const auto* l_wrapper = MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(l_mxTelemetryTypeIndex);
+    if (!l_wrapper)
+    {
+        qCritical() << getName()
+                    << __PRETTY_FUNCTION__
+                    << "Unkown mxType:"
+                    << l_mxTelemetryTypeIndex;
+        return; // STATUS::UNKNOWN_MSG_HEADER;
     }
-    auto l_pairHeaderNameHeaderData = std::make_pair(l_msgHeaderName, l_msgDataID);
+
+    const QString l_msgDataID = l_wrapper->getPrimaryKey(a_mxTelemetryMsg);
+    const auto l_msgHeaderName = QString(MxTelemetryGeneralWrapper::getMsgHeaderName(a_mxTelemetryMsg));
+    auto l_pairHeaderNameHeaderData = qMakePair(l_msgHeaderName, l_msgDataID);
 
     // TODO: protect by mutex
     // use https://doc.qt.io/archives/qt-4.8/qmutexlocker.html#details
@@ -152,8 +91,8 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
     }
 
     // step 3 -- skipped the generate part, for now use empty header descriptions
-    ZmIDString l_headerDescription = EMPRTY_STRING;
-    auto l_pairHeaderNameHeaderDescription = std::make_pair(l_msgHeaderName, l_headerDescription);
+    const QString l_headerDescription = QString();
+    auto l_pairHeaderNameHeaderDescription = qMakePair(l_msgHeaderName, l_headerDescription);
 
     // step 4
     if (!m_localContainer.count(l_pairHeaderNameHeaderDescription))
@@ -200,7 +139,7 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
     const QModelIndex l_modelIndexForCurrentParent = m_treeModel->index(l_currentTypePositionInTree, 0, QModelIndex());
 
     // step 9
-    if (!m_treeModel->insertRow(APPEND_TO_THE_END, l_modelIndexForCurrentParent, l_msgDataID, EMPRTY_STRING)) {
+    if (!m_treeModel->insertRow(APPEND_TO_THE_END, l_modelIndexForCurrentParent, l_msgDataID, QString())) {
         qCritical() << "Failed to insert data to model, step 9, printing all information:"
                     << l_pairHeaderNameHeaderData
                     << l_pairHeaderNameHeaderDescription;
@@ -213,6 +152,18 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
         return ;//Status::FAILED_TO_APPEND_TO_MODEL;
     }
 
+    // From design view point:
+    // 1. did not want to turn the model wrapper to QObject in order to use signal
+    // 2. also did not want model to know about controller, to keep them independent
+    // Solution: we will use TreeModel (which is QObject) for signal ability
+    // 3. it must be signal as we dont want the update thread to create all the controllers and models
+    //    etc. right now it is the main thread that do it,
+    //    if the main thread will become slow, we can think on solution in the future
+    // and connect both in controller
+    {
+        m_treeModel->notifyOfDataInertion(l_mxTelemetryTypeIndex, l_msgDataID);
+    }
+
     return ;//Status::APPENEDED_TO_VIEW;
 }
 
@@ -223,7 +174,7 @@ void TreeMenuWidgetModelWrapper::update(void* a_mxTelemetryMsg)
  *        if so, return true
  * @return
  */
-bool TreeMenuWidgetModelWrapper::isMxTelemetryTypeSelected(const QModelIndex a_index)
+bool TreeMenuWidgetModelWrapper::isMxTelemetryTypeSelected(const QModelIndex& a_index)
 {
     return (!m_treeModel->isParentIsRootItem(a_index));
 }

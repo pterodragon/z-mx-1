@@ -26,7 +26,7 @@ class TableDockWidgetModelWrapper;
 class TableWidgetDockWindowController : public DockWindowController
 {
 public:
-    TableWidgetDockWindowController(DataDistributor& a_dataDistributor);
+    TableWidgetDockWindowController(DataDistributor& a_dataDistributor, QObject* a_parent);
     virtual ~TableWidgetDockWindowController() override;
 
     // BasicController interface
@@ -36,13 +36,17 @@ public:
     // DockWindowController interface
     virtual void handleUserSelection(unsigned int& a_action,
                                      QDockWidget*& a_widget,
-                                     Qt::Orientation& a_orientation,
                                      const QList<QDockWidget *>& a_currentDockList,
                                      const QString& a_mxTelemetryTypeName,
-                                     const QString& a_mxTelemetryInstanceName) noexcept override final;
+                                     const QString& a_mxTelemetryInstanceName,
+                                     const int a_mxTelemetryType) noexcept override final;
+
+    virtual void initSubController(const int mxTelemetryType,
+                                   const QString& mxTelemetryInstanceName) noexcept override final;
 
 private:
     TableDockWidgetModelWrapper* m_tableDockWidgetModelWrapper;
+    const QString* m_className;
 };
 
 #endif // TABLEWIDGETDOCKWINDOWCONTROLLER_H

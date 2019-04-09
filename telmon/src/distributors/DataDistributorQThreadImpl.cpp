@@ -26,6 +26,8 @@
 
 #include "QDebug" // for testing
 
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
+
 
 DataDistributorQThreadImpl::DataDistributorQThreadImpl():
     m_subscribersDB(new QMap<int, QVector<DataSubscriber*>*>),
@@ -48,7 +50,7 @@ DataDistributorQThreadImpl::DataDistributorQThreadImpl():
 
 DataDistributorQThreadImpl::~DataDistributorQThreadImpl()
 {
-    qDebug() << "        ~DataDistributorQThreadImpl() - begin";
+    qInfo() << "~DataDistributorQThreadImpl() - begin";
 
     // !! do not clean DataSubscriber inside m_subscribersDB !!
     for (auto i = m_subscribersDB->begin(); i != m_subscribersDB->end() ;i++) { delete i.value(); }
@@ -57,7 +59,7 @@ DataDistributorQThreadImpl::~DataDistributorQThreadImpl()
     //clean all the mutexes
     for (auto i = m_mutexList->begin(); i != m_mutexList->end() ;i++) { delete *i; }
     delete m_mutexList;
-    qDebug() << "        ~DataDistributorQThreadImpl() - end";
+    qInfo() << "~DataDistributorQThreadImpl() - end";
 }
 
 
@@ -102,11 +104,11 @@ uintptr_t DataDistributorQThreadImpl::subscribe(const int a_mxTelemetryType,
             return STATUS::FAILURE;
         }
 
-        //debug
-        qDebug() << "subscribed" << a_subscriber->getName() << "to" << fromMxTypeValueToName(a_mxTelemetryType);
+        qInfo() << a_subscriber->getName()
+                << "subscribed to"
+                << MxTelemetryGeneralWrapper::fromMxTypeValueToName(a_mxTelemetryType);
 
         l_vector->append(a_subscriber);
-        //qDebug() << "subscribe release mutex:" << static_cast<int>(a_mxTelemetryType);
     }
     return STATUS::SUCCESS;
 }
@@ -142,10 +144,12 @@ uintptr_t DataDistributorQThreadImpl::unsubscribe(const int a_mxTelemetryType,
              return STATUS::FAILURE;
         }
 
-        qDebug() << "unsubscribed" << a_subscriber->getName() << "to" <<  fromMxTypeValueToName(a_mxTelemetryType);
+        qInfo() << "unsubscribed"
+                << a_subscriber->getName()
+                << "to"
+                <<  MxTelemetryGeneralWrapper::fromMxTypeValueToName(a_mxTelemetryType);
 
         l_vector->remove(i);
-        //qDebug() << "unsubscribe release mutex:" << static_cast<int>(a_mxTelemetryType);
     }
 
     return STATUS::SUCCESS;

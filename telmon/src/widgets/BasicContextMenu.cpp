@@ -49,14 +49,14 @@ bool BasicContextMenu::event (QEvent * e)
 void BasicContextMenu::popup(const QPoint &p, const int a_mxTelemetryType, QAction *atAction)
 {
     // get the wrapper
-    const MxTelemetryGeneralWrapper&  l_typeWrapper = MxTelemetryTypeWrappersFactory::getInstance().
+    const MxTelemetryGeneralWrapper*  l_typeWrapper = MxTelemetryTypeWrappersFactory::getInstance().
             getMxTelemetryWrapper(a_mxTelemetryType);
 
     // enable/disable context menu option according to telemetry
     // indexes:
     // 0 - show table
     // 1 - show chart
-    actions().at(1)->setEnabled(l_typeWrapper.isChartOptionEnabledInContextMenu());
+    actions().at(1)->setEnabled(l_typeWrapper->isChartOptionEnabledInContextMenu());
 
     // in the future, allow tooltip also in disabled menu, see:
     // msg "no dynamic data to show, so this option is disabled"

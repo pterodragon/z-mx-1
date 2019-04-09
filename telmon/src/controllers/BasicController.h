@@ -32,7 +32,7 @@ class BasicController : public QObject
 {
     Q_OBJECT
 public:
-    BasicController(DataDistributor& a_dataDistributor, QObject* a_parent = nullptr);
+    BasicController(DataDistributor& a_dataDistributor, QObject* a_parent);
     virtual ~BasicController();
     // Stop the compiler generating methods of copy the object
     BasicController(BasicController const& copy);            // Not Implemented

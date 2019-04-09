@@ -23,15 +23,14 @@
 
 class TreeModel;
 class QAbstractItemModel;
-//class QModelIndexList;
+class QModelIndex;
+class QString;
 
-#include "ZmPlatform.hpp"
+template <class T, class H>
+class QPair;
 
-
-#include <set>
 #include "src/subscribers/DataSubscriber.h"
-#include "QString"
-#include "QModelIndexList"
+#include <set>
 
 
 /**
@@ -61,10 +60,9 @@ public:
 
     QAbstractItemModel* getModel() const noexcept;
 
-    virtual const QString& getName() const noexcept override final;
     virtual void update(void* a_mxTelemetryMsg) override final;
 
-    bool isMxTelemetryTypeSelected(const QModelIndex a_index) ;
+    bool isMxTelemetryTypeSelected(const QModelIndex& a_index) ;
 
 protected:
     TreeModel* m_treeModel;
@@ -72,16 +70,12 @@ protected:
     // chioce of container made upon
     // https://stackoverflow.com/questions/471432/in-which-scenario-do-i-use-a-particular-stl-container
     // https://stackoverflow.com/questions/181693/what-are-the-complexity-guarantees-of-the-standard-containers
-
-
-    std::set<std::pair<std::string, ZmIDString>> m_localContainer;
+    std::set<QPair<QString, QString>> m_localContainer;
 
 private:
     int m_mxTelemetryTypeFirstTreeLevelPosition; // while doing reset, dont forget to set to zero
     int *m_mxTelemetryTypeFirstTreeLevelPositionArray;
-    const QString  m_name;
     static constexpr auto APPEND_TO_THE_END = -1;
-    static constexpr auto EMPRTY_STRING = "";
 
 };
 

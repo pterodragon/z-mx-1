@@ -88,4 +88,11 @@ const std::string MxTelemetryGeneralWrapper::streamToStdString(const T& a_toStre
 }
 
 
+template <class T>
+const T MxTelemetryGeneralWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
+{
+    return static_cast<T>(_getDataForChart(mxTelemetryMsgDataRetriever(a_mxTelemetryMsg), a_index));
+}
+
+
 //#endif // MXTELEMETRYGENERALWRAPPERGENERICPART_H

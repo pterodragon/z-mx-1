@@ -42,10 +42,10 @@ BasicController* ControllerFactory::getController(const unsigned int a_type,
             l_result = new TreeMenuWidgetController(a_dataDistributor, a_mainWindowController, a_parent);
             break;
         case CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER:
-            l_result = new TableWidgetDockWindowController(a_dataDistributor);
+            l_result = new TableWidgetDockWindowController(a_dataDistributor, a_parent);
             break;
-        case CONTROLLER_TYPE::GRAPH_DOCK_WINDOW_CONTROLLER:
-            l_result = new ChartWidgetDockWindowController(a_dataDistributor);
+        case CONTROLLER_TYPE::CHART_DOCK_WINDOW_CONTROLLER:
+            l_result = new ChartWidgetDockWindowController(a_dataDistributor, a_parent);
             break;
         default:
             qWarning() << "ControllerFactory::getController called with unknown type:"

@@ -50,7 +50,7 @@ public:
         return m_instance;
     }
 
-    const MxTelemetryGeneralWrapper& getMxTelemetryWrapper(const int&) const noexcept;
+    const MxTelemetryGeneralWrapper* getMxTelemetryWrapper(const int&) const noexcept;
 
 };
 

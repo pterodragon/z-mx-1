@@ -22,12 +22,14 @@
 #include "QTableWidget"
 #include "QDebug"
 #include "src/models/wrappers/TableDockWidgetModelWrapper.h"
-#include "src/models/wrappers/BasicDockWidget.h"
+#include "src/widgets/BasicDockWidget.h"
 
 
-TableWidgetDockWindowController::TableWidgetDockWindowController(DataDistributor& a_dataDistributor):
-    DockWindowController(a_dataDistributor, " Table"),
-    m_tableDockWidgetModelWrapper(new TableDockWidgetModelWrapper(a_dataDistributor))
+TableWidgetDockWindowController::TableWidgetDockWindowController(DataDistributor& a_dataDistributor,
+                                                                 QObject* a_parent):
+    DockWindowController(a_dataDistributor, " Table", a_parent),
+    m_tableDockWidgetModelWrapper(new TableDockWidgetModelWrapper(a_dataDistributor)),
+    m_className(new QString("TableWidgetDockWindowController"))
     //m_modelWrapper(new TableWidgetDockWindowModelWrapper())
 {
 
@@ -39,6 +41,9 @@ TableWidgetDockWindowController::~TableWidgetDockWindowController()
     qDebug() << "    ~TableWidgetDockWindowController() begin";
     delete m_tableDockWidgetModelWrapper;
     m_tableDockWidgetModelWrapper = nullptr;
+
+    delete m_className;
+    m_className = nullptr;
     qDebug() << "    ~TableWidgetDockWindowController() end";
 }
 
@@ -59,10 +64,10 @@ QAbstractItemView*  TableWidgetDockWindowController::getView()
 // DockWindowController interface
 void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action,
                                                           QDockWidget*& a_dockWidget,
-                                                          Qt::Orientation& a_orientation,
                                                           const QList<QDockWidget *>& a_currentDockList,
                                                           const QString& a_mxTelemetryTypeName,
-                                                          const QString& a_mxTelemetryInstanceName) noexcept
+                                                          const QString& a_mxTelemetryInstanceName,
+                                                          const int a_mxTelemetryType) noexcept
 {
     // constrct widget name
     // for now, using same name for object and table header
@@ -84,10 +89,7 @@ void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action
     }
     qDebug() << "constrcuting" << m_dockWindowName << l_objectName;
 
-    // set orientation
-    a_orientation = Qt::Orientation::Horizontal;
-
-    //handle case that dock widget not exists
+    // we add tables to center of window
     a_action = DockWindowController::ACTIONS::ADD_TO_CENTER;
 
     // construct the new dock
@@ -96,38 +98,36 @@ void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action
                                   m_tableDockWidgetModelWrapper,
                                   a_mxTelemetryTypeName,
                                   a_mxTelemetryInstanceName,
+                                  // notice: parent will be set later
                                   nullptr);
 
     // set dock properties
     a_dockWidget->setAttribute(Qt::WA_DeleteOnClose);       // delete when user close the window
-    a_dockWidget->setAllowedAreas(Qt::RightDockWidgetArea); // allocate to the right of the window
+    //a_dockWidget->setAllowedAreas(Qt::RightDockWidgetArea); // allocate to the right of the window
 
     // create the table
      QTableWidget* l_table = m_tableDockWidgetModelWrapper->getTable(a_mxTelemetryTypeName, a_mxTelemetryInstanceName);
 
-     l_table->setParent(l_dock);
+    // set table parent as dock
+    l_table->setParent(l_dock);
 
     // associate with l_dock;
     a_dockWidget->setWidget(l_table);
-
-    //register to datadistributor
 }
 
 
 
-
-/**
-// good example
-//QObject::connect(l_table, SIGNAL(processingDone()), this, SLOT()); //compiling example
-//     QObject::connect(this, &QObject::objectNameChanged, this, [](){});
-//     QObject::connect(m_mainWindowView->m_connectSubMenu, &QAction::triggered, this, [this](){
-//         qInfo() << "MainWindowController::conncet ";
-//         m_mainWindowModel->connect();
-//         this->m_mainWindowView->m_connectSubMenu->setEnabled(false);
-//         this->m_mainWindowView->m_disconnectSubMenu->setEnabled(true);
-//     });
- */
-
+void TableWidgetDockWindowController::initSubController(const int mxTelemetryType,
+                                                        const QString& mxTelemetryInstanceName) noexcept
+{
+    qCritical() << *m_className
+                << __PRETTY_FUNCTION__
+                << "was called, INVALID SEQUENCE"
+                << "mxTelemetryType"
+                << mxTelemetryType
+                << "mxTelemetryInstanceName"
+                << mxTelemetryInstanceName;
+}
 
 
 

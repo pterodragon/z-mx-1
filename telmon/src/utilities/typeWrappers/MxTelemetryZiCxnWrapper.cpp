@@ -98,7 +98,7 @@ void MxTelemetryZiCxnWrapper::initTableList() noexcept
 }
 
 
-void MxTelemetryZiCxnWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
+void MxTelemetryZiCxnWrapper::_getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
     QPair<void*, int> l_dataPair;
     ZiIP l_otherResult;
@@ -278,7 +278,7 @@ void MxTelemetryZiCxnWrapper::initChartList() noexcept
 }
 
 
-double MxTelemetryZiCxnWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
+int MxTelemetryZiCxnWrapper::_getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
     // sanity check
     if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return 0;}
@@ -289,7 +289,7 @@ double MxTelemetryZiCxnWrapper::getDataForChart(void* const a_mxTelemetryMsg, co
 
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
 
-    return typeConvertor<double>(QPair(l_dataPair.first, l_dataPair.second));
+    return typeConvertor<int>(QPair(l_dataPair.first, l_dataPair.second));
 }
 
 
@@ -383,7 +383,7 @@ QPair<void*, int> MxTelemetryZiCxnWrapper::getMxTelemetryDataType(void* const a_
 }
 
 
-const std::string MxTelemetryZiCxnWrapper::getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept
+const std::string MxTelemetryZiCxnWrapper::__getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept
 {
     ZiIP l_otherResult;
     const std::string l_localIP = streamToStdString(*(static_cast<ZiIP*>(
@@ -426,11 +426,21 @@ const std::string MxTelemetryZiCxnWrapper::getPrimaryKey(void* const a_mxTelemet
         break;
     default:
         qCritical() << *m_className << __PRETTY_FUNCTION__ << "unknown ZiCxnType";
-        return std::string("Unknown");
+        return std::string();
     }
 }
 
 
-
+const QString MxTelemetryZiCxnWrapper::_getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept
+{
+     const auto l_result = __getPrimaryKey(a_mxTelemetryMsg);
+     if (l_result.length() == 0)
+     {
+         return QString();
+     } else
+     {
+        return QString::fromStdString(l_result);
+     }
+}
 
 

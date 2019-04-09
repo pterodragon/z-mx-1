@@ -85,7 +85,7 @@ void MxTelemetryHashTblWrapper::initTableList() noexcept
 }
 
 
-void MxTelemetryHashTblWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
+void MxTelemetryHashTblWrapper::_getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
     double l_otherResult;
     QPair<void*, int> l_dataPair;
@@ -223,7 +223,7 @@ void MxTelemetryHashTblWrapper::initChartList() noexcept
 }
 
 
-double MxTelemetryHashTblWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
+int MxTelemetryHashTblWrapper::_getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
     // sanity check
     if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return 0;}
@@ -234,7 +234,7 @@ double MxTelemetryHashTblWrapper::getDataForChart(void* const a_mxTelemetryMsg, 
 
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
 
-    return typeConvertor<double>(QPair(l_dataPair.first, l_dataPair.second));
+    return typeConvertor<int>(QPair(l_dataPair.first, l_dataPair.second));
 }
 
 
@@ -312,4 +312,19 @@ QPair<void*, int> MxTelemetryHashTblWrapper::getMxTelemetryDataType(void* const 
     }
     return l_result;
 }
+
+
+const QString  MxTelemetryHashTblWrapper::_getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept
+{
+     ZmHashTelemetry* l_data = static_cast<ZmHashTelemetry*>(a_mxTelemetryMsg);
+
+     if (l_data)
+     {
+         return QString(l_data->id.data());// + "-" + QString(l_data->bits);
+     } else
+     {
+        return QString();
+     }
+}
+
 

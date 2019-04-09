@@ -36,7 +36,8 @@ HEADERS +=                           \
     src/distributors/*.h             \
     src/subscribers/*.h              \
     src/utilities/typeWrappers/*.h   \
-    src/widgets/*.h                  \
+    src/widgets/*.h
+
 
 
 SOURCES +=                             \
@@ -50,7 +51,8 @@ SOURCES +=                             \
     src/distributors/*.cpp             \
     src/subscribers/*.cpp              \
     src/utilities/typeWrappers/*.cpp   \
-    src/widgets/*.cpp                  \
+    src/widgets/*.cpp
+
 
 #SOURCES += $${PWD}/../mxbase/test/*.cpp
 

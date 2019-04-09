@@ -82,7 +82,7 @@ void MxTelemetryZmThreadWrapper::initTableList() noexcept
 }
 
 
-void MxTelemetryZmThreadWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
+void MxTelemetryZmThreadWrapper::_getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
     double l_otherResult;
     QPair<void*, int> l_dataPair;
@@ -197,7 +197,7 @@ void MxTelemetryZmThreadWrapper::initChartList() noexcept
 }
 
 
-double MxTelemetryZmThreadWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
+int MxTelemetryZmThreadWrapper::_getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
     // sanity check
     if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return 0;}
@@ -208,7 +208,7 @@ double MxTelemetryZmThreadWrapper::getDataForChart(void* const a_mxTelemetryMsg,
 
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index, &l_otherResult);
 
-    return typeConvertor<double>(QPair(l_dataPair.first, l_dataPair.second));
+    return typeConvertor<int>(QPair(l_dataPair.first, l_dataPair.second));
 
 }
 
@@ -275,9 +275,28 @@ QPair<void*, int> MxTelemetryZmThreadWrapper::getMxTelemetryDataType(void* const
 }
 
 
-const std::string MxTelemetryZmThreadWrapper::getPrimaryKey(const std::initializer_list<std::string>& a_list) const noexcept
+const QString MxTelemetryZmThreadWrapper::_getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept
 {
-    return std::string(a_list.begin()[0]).append(NAME_DELIMITER).append(a_list.begin()[1]);
+     ZmThreadTelemetry* l_data = static_cast<ZmThreadTelemetry*>(a_mxTelemetryMsg);
+     if (l_data)
+     {
+         return  QString(l_data->name).append(NAME_DELIMITER).append(QString::number(l_data->tid));;
+     } else
+     {
+        return QString();
+     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 

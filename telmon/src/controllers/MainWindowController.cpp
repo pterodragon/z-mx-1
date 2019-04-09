@@ -56,18 +56,15 @@ MainWindowController::MainWindowController(QWidget *parent) :
     // create
     initController(l_key);
 
-    m_mainWindowView->m_treeWidgetSplitter->addWidget(static_cast<QAbstractItemView*>(
-                                                            m_controllersDB->value(l_key)->getView()
-                                                        )
-                                                      );
+    m_mainWindowView->m_treeWidgetSplitter->addWidget(m_controllersDB->value(l_key)->getView());
 
     setCentralWidget(m_mainWindowView->m_centralWidget);
 
     // init Table Dock Windows controller
     initController(ControllerFactory::CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER);
 
-    // init Graph Dock Windows controller
-    initController(ControllerFactory::CONTROLLER_TYPE::GRAPH_DOCK_WINDOW_CONTROLLER);
+    // init Chart Dock Windows controller
+    initController(ControllerFactory::CONTROLLER_TYPE::CHART_DOCK_WINDOW_CONTROLLER);
 
     createActions();
 
@@ -213,15 +210,11 @@ void MainWindowController::createActions() noexcept
 }
 
 
-void MainWindowController::dockWindowsManager(const unsigned int a_dockWindowType,
-                                              const QString& a_mxTelemetryTypeName,
-                                              const QString& a_mxTelemetryInstanceName) noexcept
+void MainWindowController::dockWindowsManagerTreeWidgetContextMenuSequence(const unsigned int a_dockWindowType,
+                                                                           const QString& a_mxTelemetryTypeName,
+                                                                           const QString& a_mxTelemetryInstanceName,
+                                                                           const int a_mxTelemetryType) noexcept
 {
-    qDebug() << "MainWindowController::dockWindowsManage()"
-             << a_dockWindowType
-             << a_mxTelemetryTypeName
-             << a_mxTelemetryInstanceName;
-
     // sanity check
     if (!m_controllersDB->contains(a_dockWindowType))
     {
@@ -239,15 +232,14 @@ void MainWindowController::dockWindowsManager(const unsigned int a_dockWindowTyp
     // setting default values which will be set later by handleUserSelection()
     unsigned int l_action = DockWindowController::ACTIONS::NO_ACTION;
     QDockWidget* l_dockWidget = nullptr;
-    Qt::Orientation l_orientation = Qt::Vertical;
 
-    // telling dockWindoeController to handle the selection
+    // handleUserSelection, different behavior for table, chart etc...
     l_dockWindowController->handleUserSelection(l_action,
                                                 l_dockWidget,
-                                                l_orientation,
                                                 findChildren<QDockWidget *>(),
                                                 a_mxTelemetryTypeName,
-                                                a_mxTelemetryInstanceName);
+                                                a_mxTelemetryInstanceName,
+                                                a_mxTelemetryType);
 
     QSplitter* l_parentWidget = nullptr;
 
@@ -290,6 +282,16 @@ void MainWindowController::dockWindowsManager(const unsigned int a_dockWindowTyp
     l_dockWidget->setParent(l_parentWidget);
 }
 
+void MainWindowController::dockWindowsManagerFirstTimeDataInsertionToTreeSequence(
+        const int a_mxTelemetryType,
+        const QString& a_mxTelemetryInstanceName) noexcept
+{
+    // only for readability, get controller
+    DockWindowController* l_dockWindowController = static_cast<DockWindowController*>(m_controllersDB->value(ControllerFactory::CONTROLLER_TYPE::CHART_DOCK_WINDOW_CONTROLLER));
+
+    l_dockWindowController->initSubController(a_mxTelemetryType, a_mxTelemetryInstanceName);
+}
+
 
 void MainWindowController::setAppearance(const QString& a_pathToFile) noexcept
 {
@@ -327,5 +329,4 @@ void MainWindowController::setAppearance(const QString& a_pathToFile) noexcept
     this->setStyleSheet(StyleSheet);
     l_file.close();
 }
-
 

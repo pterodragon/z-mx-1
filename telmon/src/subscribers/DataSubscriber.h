@@ -24,7 +24,7 @@
 #include <cstdint> // for uintptr_t
 
 class QString;
-#include <string>
+
 
 /**
  * @brief The DataSubscriber class
@@ -33,15 +33,17 @@ class QString;
 class DataSubscriber
 {
 public:
-    DataSubscriber();
+    DataSubscriber(const QString& a_className);
     virtual ~DataSubscriber();
     // Stop the compiler generating methods of copy the object
     DataSubscriber(DataSubscriber const& copy);            // Not Implemented
     DataSubscriber& operator=(DataSubscriber const& copy); // Not Implemented
 
-    virtual const QString& getName() const noexcept = 0;
+    const QString& getName() const noexcept;
     virtual void update(void* a_mxTelemetryMsg) = 0;
 
+private:
+    const QString* m_className;
 };
 
 #endif // DATASUBSCRIBER_H

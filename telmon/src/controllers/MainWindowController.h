@@ -35,9 +35,17 @@ public:
     explicit MainWindowController(QWidget *parent = nullptr);
     ~MainWindowController() override;
 
-    void dockWindowsManager(const unsigned int a_dockWindowType,
+
+    void dockWindowsManagerTreeWidgetContextMenuSequence(
+                            const unsigned int a_dockWindowType,
                             const QString& a_mxTelemetryTypeName,
-                            const QString& a_mxTelemetryInstanceName) noexcept;
+                            const QString& a_mxTelemetryInstanceName,
+                            const int a_mxTelemetryType) noexcept;
+
+
+    void dockWindowsManagerFirstTimeDataInsertionToTreeSequence(
+            const int a_mxTelemetryType,
+            const QString& a_mxTelemetryInstanceName) noexcept;
 
 
 private:

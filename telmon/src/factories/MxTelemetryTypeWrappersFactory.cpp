@@ -44,7 +44,7 @@ MxTelemetryTypeWrappersFactory::MxTelemetryTypeWrappersFactory()
 }
 
 
-const MxTelemetryGeneralWrapper& MxTelemetryTypeWrappersFactory::getMxTelemetryWrapper(const int& a_mxType) const noexcept
+const MxTelemetryGeneralWrapper* MxTelemetryTypeWrappersFactory::getMxTelemetryWrapper(const int& a_mxType) const noexcept
 {
     MxTelemetryGeneralWrapper* l_result = nullptr;
     switch (a_mxType)
@@ -86,7 +86,7 @@ const MxTelemetryGeneralWrapper& MxTelemetryTypeWrappersFactory::getMxTelemetryW
         qWarning() << "unknown MxTelemetry::Type:" << a_mxType<< "request, returning...";
         break;
     }
-    return *l_result;
+    return l_result;
 }
 
 

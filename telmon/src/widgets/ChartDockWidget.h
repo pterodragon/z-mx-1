@@ -18,15 +18,37 @@
  */
 
 
-#include "MxTelemetry.hpp"
-#include "DataDistributor.h"
 
-DataDistributor::DataDistributor()
+#ifndef CHARTDOCKWIDGET_H
+#define CHARTDOCKWIDGET_H
+
+#include "QDockWidget"
+class BasicChartController;
+class BasicChartView;
+
+class ChartDockWidget : public QDockWidget
 {
+public:
+    ChartDockWidget(const int a_mxTelemetryType,
+                    const QString& a_mxTelemetryInstance,
+                    QWidget *parent);
+    virtual ~ChartDockWidget() override;
 
-}
+    //public and const, so no need for getter and setters
+    const int m_mxTelemetryType;
+    const QString* m_mxTelemetryInstance;
+    const QString* m_className;
 
-DataDistributor::~DataDistributor()
-{
+    void setController(BasicChartController*) noexcept;
 
-}
+    virtual void closeEvent(QCloseEvent *event) override;
+
+private:
+    bool m_isTitleBarHidden;
+    void hideTitleBar() noexcept;
+
+    // DO NOT DELETE
+    BasicChartController* m_chartController;
+};
+
+#endif // CHARTDOCKWIDGET_H

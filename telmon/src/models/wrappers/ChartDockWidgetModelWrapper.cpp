@@ -23,11 +23,11 @@
 #include "ChartDockWidgetModelWrapper.h"
 #include "QDebug"
 #include "src/distributors/DataDistributor.h"
-#include "src/factories/ChartViewFactory.h"
-#include "src/factories/ChartSubscriberFactory.h"
 #include "src/subscribers/ChartSubscriber.h"
 
 #include "src/views/raw/BasicChartView.h"
+
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
 
 
@@ -64,7 +64,7 @@ ChartDockWidgetModelWrapper::ChartDockWidgetModelWrapper(DataDistributor& a_data
     qRegisterMetaType<QPair<QList<uint64_t>, QString>>("QPair<QList<uint64_t>, QString>");
 
     //init the QMap inside QList in m_tableList
-    for (int var = 0; var < m_dataDistributor.mxTypeSize(); ++var)
+    for (int var = 0; var < MxTelemetryGeneralWrapper::mxTypeSize(); ++var)
     {
         m_subscriberDB->append(new QMap<QString, QPair<QChartView*, ChartSubscriber*>>());
     }
@@ -104,7 +104,7 @@ void ChartDockWidgetModelWrapper::unsubscribe(const QString& a_mxTelemetryTypeNa
                                               const QString& a_mxTelemetryInstanceName) noexcept
 {
     //translate a_mxTelemetryTypeName to corresponding number
-    const int mxTelemetryTypeNameNumber = m_dataDistributor.fromMxTypeNameToValue(a_mxTelemetryTypeName);
+    const int mxTelemetryTypeNameNumber = MxTelemetryGeneralWrapper::fromMxTypeNameToValue(a_mxTelemetryTypeName);
 
     auto l_tableSubscriberInstance = getSubscriberPair(mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName).second;
 
@@ -137,7 +137,7 @@ QChartView* ChartDockWidgetModelWrapper::initChartWidget(const QString& a_mxTele
                                                       const QString& a_mxTelemetryInstanceName)
 {
     //translate a_mxTelemetryTypeName to corresponding number
-    const int l_mxTelemetryTypeNameNumber = static_cast<int>(m_dataDistributor.fromMxTypeNameToValue(a_mxTelemetryTypeName));
+    const int l_mxTelemetryTypeNameNumber = MxTelemetryGeneralWrapper::fromMxTypeNameToValue(a_mxTelemetryTypeName);
 
     // get the corresponding pair
     auto l_pair = getSubscriberPair(l_mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName);
@@ -170,19 +170,21 @@ QChartView* ChartDockWidgetModelWrapper::initChartWidget(const QString& a_mxTele
 
     qDebug() << "getChartView create chart and subscriber for the first time!";
     // create tables
-    l_pair.first = ChartViewFactory::getInstance().getChartView(l_mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName);
+    //l_pair.first = ChartViewFactory::getInstance().getChartView(l_mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName);
 
 
 //    create subscriber
-    l_pair.second = ChartSubscriberFactory::getInstance().getSubscriber(l_mxTelemetryTypeNameNumber);
+    qDebug("EXIT");
+    exit(-1);
+    //l_pair.second = ChartSubscriberFactory::getInstance().getSubscriber(l_mxTelemetryTypeNameNumber);
 
-    l_pair.second->setAssociatedObjesctName(a_mxTelemetryInstanceName); //todo -> move into constrctor
+    //l_pair.second->setAssociatedObjesctName(a_mxTelemetryInstanceName); //todo -> move into constrctor
 
     //add to the table
     m_subscriberDB->at(l_mxTelemetryTypeNameNumber)->insert(a_mxTelemetryInstanceName, l_pair);
 
     //connect signal and slot
-    connectSignalAndSlot(l_pair, l_mxTelemetryTypeNameNumber);
+    //connectSignalAndSlot(l_pair, l_mxTelemetryTypeNameNumber);
 
 
     // subscribes
@@ -191,89 +193,6 @@ QChartView* ChartDockWidgetModelWrapper::initChartWidget(const QString& a_mxTele
     //return the chart
     return l_pair.first;
 }
-
-
-void ChartDockWidgetModelWrapper::connectSignalAndSlot(QPair<QChartView*, ChartSubscriber*>& a_pair,
-                                                             const int a_mxTelemetryTypeNameNumber) const noexcept
-{
-    switch (a_mxTelemetryTypeNameNumber)
-    {
-    case MxTelemetry::Type::Heap:
-
-        QObject::connect(a_pair.second,
-                         static_cast<void (ChartSubscriber::*)(ZmHeapTelemetry)>(&ChartSubscriber::updateDone),
-                         static_cast<BasicChartView*>(a_pair.first),
-                         static_cast<void (BasicChartView::*)(ZmHeapTelemetry)>(&BasicChartView::updateData));
-        break;
-    case MxTelemetry::Type::HashTbl:
-        QObject::connect(a_pair.second,
-                         static_cast<void (ChartSubscriber::*)(ZmHashTelemetry)>(&ChartSubscriber::updateDone),
-                         static_cast<BasicChartView*>(a_pair.first),
-                         static_cast<void (BasicChartView::*)(ZmHashTelemetry)>(&BasicChartView::updateData));
-        break;
-    case MxTelemetry::Type::Thread:
-        QObject::connect(a_pair.second,
-                         static_cast<void (ChartSubscriber::*)(ZmThreadTelemetry)>(&ChartSubscriber::updateDone),
-                         static_cast<BasicChartView*>(a_pair.first),
-                         static_cast<void (BasicChartView::*)(ZmThreadTelemetry)>(&BasicChartView::updateData));
-
-        break;
-    case MxTelemetry::Type::Multiplexer:
-        QObject::connect(a_pair.second,
-                         static_cast<void (ChartSubscriber::*)(ZiMxTelemetry)>(&ChartSubscriber::updateDone),
-                         static_cast<BasicChartView*>(a_pair.first),
-                         static_cast<void (BasicChartView::*)(ZiMxTelemetry)>(&BasicChartView::updateData));
-        break;
-    case MxTelemetry::Type::Socket:
-        QObject::connect(a_pair.second,
-                         static_cast<void (ChartSubscriber::*)(ZiCxnTelemetry)>(&ChartSubscriber::updateDone),
-                         static_cast<BasicChartView*>(a_pair.first),
-                         static_cast<void (BasicChartView::*)(ZiCxnTelemetry)>(&BasicChartView::updateData));
-        break;
-    case MxTelemetry::Type::Queue:
-        QObject::connect(a_pair.second,
-                         static_cast<void (ChartSubscriber::*)(MxTelemetry::Queue)>(&ChartSubscriber::updateDone),
-                         static_cast<BasicChartView*>(a_pair.first),
-                         static_cast<void (BasicChartView::*)(MxTelemetry::Queue)>(&BasicChartView::updateData));
-        break;
-    case MxTelemetry::Type::Engine:
-        QObject::connect(a_pair.second,
-                         static_cast<void (ChartSubscriber::*)(MxEngine::Telemetry)>(&ChartSubscriber::updateDone),
-                         static_cast<BasicChartView*>(a_pair.first),
-                         static_cast<void (BasicChartView::*)(MxEngine::Telemetry)>(&BasicChartView::updateData));
-        break;
-    case MxTelemetry::Type::Link:
-        QObject::connect(a_pair.second,
-                         static_cast<void (ChartSubscriber::*)(MxAnyLink::Telemetry)>(&ChartSubscriber::updateDone),
-                         static_cast<BasicChartView*>(a_pair.first),
-                         static_cast<void (BasicChartView::*)(MxAnyLink::Telemetry)>(&BasicChartView::updateData));
-        break;
-    case MxTelemetry::Type::DBEnv:
-        QObject::connect(a_pair.second,
-                         static_cast<void (ChartSubscriber::*)(ZdbEnv::Telemetry)>(&ChartSubscriber::updateDone),
-                         static_cast<BasicChartView*>(a_pair.first),
-                         static_cast<void (BasicChartView::*)(ZdbEnv::Telemetry)>(&BasicChartView::updateData));
-        break;
-    case MxTelemetry::Type::DBHost:
-        QObject::connect(a_pair.second,
-                         static_cast<void (ChartSubscriber::*)(ZdbHost::Telemetry)>(&ChartSubscriber::updateDone),
-                         static_cast<BasicChartView*>(a_pair.first),
-                         static_cast<void (BasicChartView::*)(ZdbHost::Telemetry)>(&BasicChartView::updateData));
-        break;
-    case MxTelemetry::Type::DB:
-        QObject::connect(a_pair.second,
-                         static_cast<void (ChartSubscriber::*)(ZdbAny::Telemetry)>(&ChartSubscriber::updateDone),
-                         static_cast<BasicChartView*>(a_pair.first),
-                         static_cast<void (BasicChartView::*)(ZdbAny::Telemetry)>(&BasicChartView::updateData));
-        break;
-    default:
-        qWarning() << "connectSignalAndSlotHelper"
-                   << "unknown MxTelemetry::Type:" << a_mxTelemetryTypeNameNumber << "request, returning...";
-        break;
-    }
-
-}
-
 
 
 

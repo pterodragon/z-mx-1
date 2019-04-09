@@ -81,7 +81,7 @@ void MxTelemetryQueueWrapper::initTableList() noexcept
 }
 
 
-void MxTelemetryQueueWrapper::getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
+void MxTelemetryQueueWrapper::_getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept
 {
     QPair<void*, int> l_dataPair;
 
@@ -210,7 +210,7 @@ void MxTelemetryQueueWrapper::initChartList() noexcept
 }
 
 
-double MxTelemetryQueueWrapper::getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
+int MxTelemetryQueueWrapper::_getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept
 {
     // sanity check
     if ( ! (isIndexInChartPriorityToHeapIndexContainer(a_index)) ) {return 0;}
@@ -219,7 +219,7 @@ double MxTelemetryQueueWrapper::getDataForChart(void* const a_mxTelemetryMsg, co
 
     const QPair<void*, int> l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
 
-    return typeConvertor<double>(QPair(l_dataPair.first, l_dataPair.second));
+    return typeConvertor<int>(QPair(l_dataPair.first, l_dataPair.second));
 }
 
 
@@ -282,10 +282,19 @@ QPair<void*, int> MxTelemetryQueueWrapper::getMxTelemetryDataType(void* const a_
     return l_result;
 }
 
-
-const std::string MxTelemetryQueueWrapper::getPrimaryKey(const std::initializer_list<std::string>& a_list) const noexcept
+const QString MxTelemetryQueueWrapper::_getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept
 {
-    return std::string(a_list.begin()[0]).append(NAME_DELIMITER).append(a_list.begin()[1]);
+     MxTelemetry::Queue* l_data = static_cast<MxTelemetry::Queue*>(a_mxTelemetryMsg);
+     if (l_data)
+     {
+         return QString(l_data->id) +
+                 NAME_DELIMITER     +
+                 QString(MxTelemetry::QueueType::name(l_data->type));
+     } else
+     {
+        return QString();
+     }
 }
+
 
 

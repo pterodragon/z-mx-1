@@ -28,6 +28,8 @@
 #include "src/models/raw/TreeModel.h"
 #include "src/widgets/BasicContextMenu.h"
 
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
+
 TreeMenuWidgetController::TreeMenuWidgetController(DataDistributor& a_dataDistributor,
                                                    MainWindowController& a_MainWindowController,
                                                    QObject* a_parent ):
@@ -62,11 +64,13 @@ void* TreeMenuWidgetController::getModel()
     return m_treeMenuWidgetModelWrapper->getModel();
 }
 
+
 QAbstractItemView* TreeMenuWidgetController::getView()
 {
     //return m_treeView;
     return static_cast<QAbstractItemView*>(m_treeView);
 }
+
 
 void TreeMenuWidgetController::createActions() noexcept
 {
@@ -86,7 +90,7 @@ void TreeMenuWidgetController::createActions() noexcept
     m_treeView->connect(m_treeView->m_secondAction, &QAction::triggered, this, [this]() {
 
         const QString l_actionName = m_treeView->m_secondAction->text();
-        handleContextMenuAction(l_actionName, ControllerFactory::CONTROLLER_TYPE::GRAPH_DOCK_WINDOW_CONTROLLER);
+        handleContextMenuAction(l_actionName, ControllerFactory::CONTROLLER_TYPE::CHART_DOCK_WINDOW_CONTROLLER);
 
     });
 
@@ -102,12 +106,25 @@ void TreeMenuWidgetController::createActions() noexcept
         if (!this->m_treeMenuWidgetModelWrapper->isMxTelemetryTypeSelected(indexes.first())) {return;};
 
         // get the telemetryType index
-        const auto l_MxTelemetryTypeIndex = m_dataDistributor.fromMxTypeNameToValue(indexes.first().parent().data().toString());
+        const auto l_MxTelemetryTypeIndex = MxTelemetryGeneralWrapper::fromMxTypeNameToValue(indexes.first().parent().data().toString());
 
         // pop up menu
         // Notice: static cast to call my own implementation of popup
         static_cast<BasicContextMenu*>(this->m_treeView->m_contextMenu)->popup(QCursor::pos(), l_MxTelemetryTypeIndex);
     } );
+
+    // notify of any pair<MxTelemetryType, MxTelemetryInstance> insertion functionality
+    // so we can notify main controller
+
+    // register so we can use complex slot-signal
+    qRegisterMetaType<QPair<const int,const QString>>("QPair<const int,const QString>");
+    m_treeView->connect(static_cast<TreeModel*>(getModel()),
+                        &TreeModel::notifyOfDataInsertionSignal,
+                        this,
+                        [this](const QPair<const int, const QString> a_pair)
+    {
+        this->m_MainWindowController.dockWindowsManagerFirstTimeDataInsertionToTreeSequence(a_pair.first, a_pair.second);
+    });
 
 }
 
@@ -135,6 +152,10 @@ void TreeMenuWidgetController::handleContextMenuAction(const QString& a_actionNa
         return;
     }
 
-    m_MainWindowController.dockWindowsManager(a_dockWindowType, l_parentName, l_childName);
+    const int l_mxTelemetryType = MxTelemetryGeneralWrapper::fromMxTypeNameToValue(l_parentName);
+    m_MainWindowController.dockWindowsManagerTreeWidgetContextMenuSequence(a_dockWindowType,
+                                                                           l_parentName,
+                                                                           l_childName,
+                                                                           l_mxTelemetryType);
 }
 

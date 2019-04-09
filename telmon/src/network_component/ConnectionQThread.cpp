@@ -91,7 +91,7 @@ void ConnectionQThread::run()
                 l_config.toLocal8Bit().data(),
                 false);
 
-    qDebug() << "Qthread using the following config\n" << l_config;
+    qInfo() << "Qthread using the following config\n" << l_config;
 
     ZmRef<MxMultiplex> m_mx = new MxMultiplex("mx", cf->subset("mx", true));
 

@@ -21,50 +21,27 @@
 #ifndef TABLESUBSCRIBER_H
 #define TABLESUBSCRIBER_H
 
-#include "QObjectDataSubscriber.h"
+#include "OneMxTypeDataSubscriber.h"
+#include "QObject"
 
-class ZmBitmap;
-class ZiIP;
 
-class TableSubscriber : public QObjectDataSubscriber
+class TableSubscriber :  public QObject, public OneMxTypeDataSubscriber
 {
     Q_OBJECT
 
 public:
-    TableSubscriber(const QString& a_subscriberName);
+    TableSubscriber(const int a_mxTelemetryType,
+                    const QString& a_instance);
     virtual ~TableSubscriber() override;
-
-
-    // DataSubscriber interface - BEGIN
     virtual void update(void* a_mxTelemetryMsg) override final;
-    // DataSubscriber interface - END
-
-
-    void setUpdateFunction( std::function<void(TableSubscriber* a_this,
-                                               void* a_mxTelemetryMsg)> a_lambda );
-
-
-
-    QString ZmBitmapToQString(const ZmBitmap& a_zmBitMap) const noexcept;
-
-
-    QString ZiIPTypeToQString(const ZiIP& a_ZiIP) const noexcept;
-
-
-    QString ZiCxnFlagsTypeToQString(const uint32_t a_ZiCxnFlags) const noexcept;
-
 
 
 signals:
     // must be compatible with qRegisterMetaType!
     void updateDone(QLinkedList<QString>);
 
-protected:
-        std::stringstream *m_stream; // assistance in translation to some types
-
-        // update function
-        std::function<void(TableSubscriber* a_this, void* a_mxTelemetryMsg)> m_lambda;
-
 };
 
 #endif // TABLESUBSCRIBER_H
+
+

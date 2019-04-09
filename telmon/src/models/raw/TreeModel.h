@@ -84,15 +84,21 @@ public:
 
     // # # # # Not part of the QAbstractItemModel inheritance
     bool insertRow(const int position, const QModelIndex &parent,
-                   const char* a_col0Data, const char* a_col1Data);
+                   const QString& a_col0Data, const QString& a_col1Data);
 
     // provide support for editing and resizing  - End//
 
     // for other usages
     bool isParentIsRootItem(const QModelIndex &index) const;
+    void notifyOfDataInertion(const int, const QString&) noexcept;
 
 signals:
     void resizeColumnToContent(int columns);
+
+    /**
+     * @brief send pair of MxTelemetryType and MxTelemetryInstance
+     */
+    void notifyOfDataInsertionSignal(const QPair<const int,const QString>);
 
 private:
     TreeItem *rootItem;

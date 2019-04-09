@@ -68,6 +68,8 @@ protected:
                                                      const int a_index,
                                                      void* a_otherResult) const noexcept override final;
 
+    const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
+
 
 public:
 
@@ -92,8 +94,9 @@ public:
                                      e_frees, e_size, e_partition, e_sharded, e_alignment};
 
 
-    double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
-    void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+    int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
+    void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+
 
 };
 

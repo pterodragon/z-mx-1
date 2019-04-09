@@ -44,6 +44,18 @@ private:
     MxTelemetryZiCxnWrapper& operator=(MxTelemetryZiCxnWrapper const& copy); // Not Implemented
 
 
+    /**
+     * @brief  MxTelemetry::Socket name depends on type
+     *         switch (type) {
+     *           case ZiCxnType::TCPIn:   // primary key is localIP:localPort<remoteIP:remotePort
+     *           case ZiCxnType::UDP:
+     *           case ZiCxnType::TCPOut:  // primary key is remoteIP:remotePort<localIP:localPort
+     *          }
+     * @param a_list
+     * @return
+     */
+    const std::string __getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept;
+
 protected:
     friend class MxTelemetryTypeWrappersFactory;
     // protected so only friend class can access // to be tested
@@ -65,6 +77,7 @@ protected:
     QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg,
                                                      const int a_index,
                                                      void* a_otherResult) const noexcept override final;
+    const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
 
 
 public:
@@ -98,21 +111,10 @@ public:
                                              e_localPort, e_remotePort,
                                       e_type};
 
-    double getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
-    void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+    int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
+    void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
 
 
-    /**
-     * @brief  MxTelemetry::Socket name depends on type
-     *         switch (type) {
-     *           case ZiCxnType::TCPIn:   // primary key is localIP:localPort<remoteIP:remotePort
-     *           case ZiCxnType::UDP:
-     *           case ZiCxnType::TCPOut:  // primary key is remoteIP:remotePort<localIP:localPort
-     *          }
-     * @param a_list
-     * @return
-     */
-    virtual const std::string getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
 
 };
 

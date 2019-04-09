@@ -68,12 +68,37 @@ public:
                         HEAP_MXTYPE_CALCULATE_ALLOCATED,
                         HASH_TBL_MXTYPE_CALCULATE_SLOTS, HASH_TBL_MXTYPE_CALCULATE_LOCKS};
 
+    //    MxTelemetry::Type::Heap
+
+//    MxEnumValues(Heap, HashTbl, Thread, Multiplexer, Socket, Queue,
+//    Engine, Link,
+//    DBEnv, DBHost, DB);
+//    MxEnumNames("Heap", "HashTbl", "Thread", "Multiplexer", "Socket", "Queue",
+//    "Engine", "Link",
+//    "DBEnv", "DBHost", "DB");
+
+    enum Type {Heap,
+                HashTbl,
+                Thread,
+                Multiplexer,
+                Socket,
+                Queue,
+                Engine,
+                Link,
+                DBEnv,
+                DBHost,
+                DB,
+                Unknown};
+
+
 
     MxTelemetryGeneralWrapper();
     virtual ~MxTelemetryGeneralWrapper();
     // Stop the compiler generating methods of copy the object
     MxTelemetryGeneralWrapper(MxTelemetryGeneralWrapper const& copy);            // Not Implemented
     MxTelemetryGeneralWrapper& operator=(MxTelemetryGeneralWrapper const& copy); // Not Implemented
+
+    static int fromMxTypeToTelMonType(const int) noexcept;
 
     const QList<QString>& getTableList() const noexcept;
     const QVector<QString>& getChartList() const noexcept;
@@ -84,6 +109,7 @@ public:
      */
     const std::array<int, 2>&  getActiveDataSet() const noexcept;
 
+
     /**
      * @brief function to be used by chart
      *  we represent unused data type by "none"
@@ -92,38 +118,8 @@ public:
      */
     bool isDataTypeNotUsed(const int a_index) const noexcept;
 
-    /**
-     * @brief get data for index by !CHART PRIORITY!
-     *        we translate the corresponding index used by chart
-     *        to the corresponding data type in type a_mxTelemetryMsg
-     * @param a_mxTelemetryMsg
-     * @param a_index
-     * @return
-     */
-    double virtual getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept = 0;
 
-
-    /**
-     * @brief getDataForTable
-     * Notes regarding implemantation:
-     * 1.
-     * why QLinkedList?
-     *   --> constant time insertions and removals
-     *   --> iteration is the same as QList
-     *
-     * 2.
-     * Qt containers does not support move semantics,
-     * that is why we dont use std::move to move into the container
-     * for more information see:
-     * A. https://stackoverflow.com/questions/32584665/why-do-qts-container-classes-not-allow-movable-non-copyable-element-types
-     * B. https://stackoverflow.com/questions/44217527/why-does-qt-not-support-move-only-qlist
-     *
-     *
-     *
-     * @param a_mxTelemetryMsg
-     * @param a_result
-     */
-    void virtual getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept  = 0;
+    void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept;
 
 
     /**
@@ -139,22 +135,10 @@ public:
      * @param a_mxTelemetryMsg
      * @return
      */
-    virtual const std::string getPrimaryKey(const std::initializer_list<std::string>&) const noexcept
-    {
-        qCritical() << *m_className << __PRETTY_FUNCTION__ << "called";
-        return std::string();
-    }
+    const QString getPrimaryKey(void* const) const noexcept;
 
-    /**
-     * @brief getPrimaryKey aka name
-     * @param a_mxTelemetryMsg
-     * @return
-     */
-    virtual const std::string getPrimaryKey(void* const) const noexcept
-    {
-        qCritical() << *m_className << __PRETTY_FUNCTION__ << "called";
-        return std::string();
-    }
+
+    bool isChartFunctionalityEnabled() const noexcept;
 
 
     // service functions
@@ -168,6 +152,20 @@ public:
 
     template <class T>
     const std::string streamToStdString(const T& a_toStream) const noexcept;
+
+    template <class T>
+    const T getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept;
+
+    static QString fromMxTypeValueToName(const int a_type) noexcept;
+
+    static int fromMxTypeNameToValue(const QString& a_name) noexcept;
+
+    static int mxTypeSize() noexcept;
+
+    static const char* getMsgHeaderName(void* const a_mxTelemetryMsg) noexcept;
+
+    static int getMsgHeaderType(void* const a_mxTelemetryMsg) noexcept;
+
 
 protected:
     /**
@@ -213,6 +211,46 @@ protected:
     std::stringstream* m_stream; // assistance in translation to some types
 
     static const char* NAME_DELIMITER;
+
+    void* mxTelemetryMsgDataRetriever(void* const a_mxTelemetryMsg) const noexcept;
+
+    /**
+     * @brief get data for index by !CHART PRIORITY!
+     *        we translate the corresponding index used by chart
+     *        to the corresponding data type in type a_mxTelemetryMsg
+     * @param a_mxTelemetryMsg
+     * @param a_index
+     * @return
+     */
+    int virtual _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept = 0;
+
+    /**
+     * @brief getDataForTable
+     * Notes regarding implemantation:
+     * 1.
+     * why QLinkedList?
+     *   --> constant time insertions and removals
+     *   --> iteration is the same as QList
+     *
+     * 2.
+     * Qt containers does not support move semantics,
+     * that is why we dont use std::move to move into the container
+     * for more information see:
+     * A. https://stackoverflow.com/questions/32584665/why-do-qts-container-classes-not-allow-movable-non-copyable-element-types
+     * B. https://stackoverflow.com/questions/44217527/why-does-qt-not-support-move-only-qlist
+     *
+     *
+     *
+     * @param a_mxTelemetryMsg
+     * @param a_result
+     */
+    void virtual _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept  = 0;
+
+    /**
+     * @brief _getName
+     * @return
+     */
+    virtual const QString _getPrimaryKey(void* const) const noexcept = 0;
 };
 
 // 1. supress warning Wunused template function

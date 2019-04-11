@@ -24,8 +24,9 @@
 
 DockWindowController::DockWindowController(DataDistributor& a_dataDistributor,
                                            const char* a_name,
+                                           QString a_className,
                                            QObject* a_parent):
-    BasicController(a_dataDistributor, a_parent),
+    BasicController(a_dataDistributor, a_className, a_parent),
     m_dockWindowName(a_name)
 {
 

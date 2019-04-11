@@ -28,9 +28,13 @@ class BasicChartView;
 
 class ChartDockWidget : public QDockWidget
 {
+    Q_OBJECT
 public:
     ChartDockWidget(const int a_mxTelemetryType,
                     const QString& a_mxTelemetryInstance,
+                    BasicChartView* a_setWidget,
+                    BasicChartController* const a_controller,
+                    const int a_closeActionType,
                     QWidget *parent);
     virtual ~ChartDockWidget() override;
 
@@ -39,16 +43,17 @@ public:
     const QString* m_mxTelemetryInstance;
     const QString* m_className;
 
-    void setController(BasicChartController*) noexcept;
-
     virtual void closeEvent(QCloseEvent *event) override;
+
+signals:
+    void closeAction(int);
 
 private:
     bool m_isTitleBarHidden;
     void hideTitleBar() noexcept;
 
-    // DO NOT DELETE
-    BasicChartController* m_chartController;
+    BasicChartController* const m_chartController; // DO NOT DELETE
+    const int m_closeActionType;
 };
 
 #endif // CHARTDOCKWIDGET_H

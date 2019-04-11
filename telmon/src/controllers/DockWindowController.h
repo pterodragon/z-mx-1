@@ -31,8 +31,12 @@ class QDockWidget;
 class DockWindowController : public BasicController
 {
 public:
-    DockWindowController(DataDistributor& a_dataDistributor, const char* a_name, QObject* a_parent);
+    DockWindowController(DataDistributor& a_dataDistributor,
+                         const char* a_name,
+                         QString a_className,
+                         QObject* a_parent);
     virtual ~DockWindowController();
+
 
     // BasicController interface
     // Stop the compiler generating methods of copy the object
@@ -44,11 +48,15 @@ public:
 
 
     // DockWindowController interface
-    enum ACTIONS {NO_ACTION, ADD, ADD_TO_CENTER, ADD_TO_RIGHT};
+    enum ACTIONS {NO_ACTION,
+                  ADD_TO_CENTER,
+                  ADD_TO_RIGHT,
+                  REMOVE_FROM_CENTER,
+                  REMOVE_FROM_RIGHT};
+
     virtual void handleUserSelection(unsigned int& a_action,
                                      QDockWidget*& a_widget,
                                      const QList<QDockWidget *>& a_currentDockList,
-                                     const QString& a_mxTelemetryTypeName,
                                      const QString& a_mxTelemetryInstanceName,
                                      const int a_mxTelemetryType) noexcept = 0;
 

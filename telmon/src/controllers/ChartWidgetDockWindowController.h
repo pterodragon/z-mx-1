@@ -23,13 +23,13 @@
 
 #include "DockWindowController.h"
 
-class ChartDockWidgetModelWrapper;
 class BasicChartController;
 template<class T>
 class QVector;
 
 class ChartWidgetDockWindowController : public DockWindowController
 {
+    Q_OBJECT
 public:
     ChartWidgetDockWindowController(DataDistributor& a_dataDistributor, QObject* a_parent);
     ~ChartWidgetDockWindowController() override;
@@ -42,7 +42,6 @@ public:
     virtual void handleUserSelection(unsigned int& a_action,
                                      QDockWidget*& a_widget,
                                      const QList<QDockWidget *>& a_currentDockList,
-                                     const QString& a_mxTelemetryTypeName,
                                      const QString& a_mxTelemetryInstanceName,
                                      const int a_mxTelemetryType) noexcept override final;
 
@@ -50,11 +49,6 @@ public:
                                    const QString& mxTelemetryInstanceName) noexcept override final;
 
 private:
-    // todo, perhaps remove
-    ChartDockWidgetModelWrapper* m_chartDockWidgetModelWrapper;
-
-    // new
-    const QString* m_className;
     // most important attribute: index lookup, QVector is O(1), that is,
     //    to access the correct MxTypeInsatnces *dataContainer*;
     // *dataContainer* will be made from QMap<Key=QString, T=BasicChartController*>

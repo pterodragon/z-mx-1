@@ -46,7 +46,8 @@ public:
     void dockWindowsManagerFirstTimeDataInsertionToTreeSequence(
             const int a_mxTelemetryType,
             const QString& a_mxTelemetryInstanceName) noexcept;
-
+public slots:
+    void closeDockWidget(const int) noexcept;
 
 private:
     MainWindowModel *m_mainWindowModel;

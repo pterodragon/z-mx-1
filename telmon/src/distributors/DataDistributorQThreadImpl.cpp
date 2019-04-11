@@ -24,7 +24,7 @@
 #include "src/subscribers/DataSubscriber.h"
 #include "QMutex"
 
-#include "QDebug" // for testing
+#include "QDebug"
 
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
@@ -90,7 +90,6 @@ uintptr_t DataDistributorQThreadImpl::subscribe(const int a_mxTelemetryType,
     {
         //get the mutex
         QMutexLocker locker(m_mutexList->at(static_cast<int>(a_mxTelemetryType)));
-        //qDebug() << "subscribe acquire mutex:" << static_cast<int>(a_mxTelemetryType);
 
         //get the vector
         QVector<DataSubscriber*> *l_vector = m_subscribersDB->value(a_mxTelemetryType, nullptr);
@@ -119,7 +118,6 @@ uintptr_t DataDistributorQThreadImpl::unsubscribe(const int a_mxTelemetryType,
     {
         //get the mutex
         QMutexLocker locker(m_mutexList->at(static_cast<int>(a_mxTelemetryType)));
-        //qDebug() << "unsubscribe acquire mutex:" << static_cast<int>(a_mxTelemetryType);
 
         //get the vector
         QVector<DataSubscriber*> *l_vector = m_subscribersDB->value(a_mxTelemetryType, nullptr);
@@ -180,7 +178,6 @@ uintptr_t DataDistributorQThreadImpl::notify(void* a_mxTelemetryMsg)
 
         // update subscribers
         for (auto i = l_vector->begin(); i != l_vector->end() ;i++) { (**i).update(a_mxTelemetryMsg); }
-        //qDebug() << "notify release mutex:" << static_cast<int>(l_mxTelemetryType);
     }
 
     return STATUS::SUCCESS;

@@ -20,14 +20,18 @@
 
 #include "src/controllers/BasicController.h"
 
-BasicController::BasicController(DataDistributor& a_dataDistributor, QObject* a_parent):
+BasicController::BasicController(DataDistributor& a_dataDistributor,
+                                 QString a_className,
+                                 QObject* a_parent):
     QObject(a_parent),
-    m_dataDistributor(a_dataDistributor)
+    m_dataDistributor(a_dataDistributor),
+    m_className(new QString(a_className))
 {
 
 }
 
 BasicController::~BasicController()
 {
-    // do not delete m_dataDistributor!
+    delete m_className;
+    m_className = nullptr;
 }

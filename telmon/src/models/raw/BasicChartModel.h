@@ -74,6 +74,7 @@ private:
     // 24 hours = 14400 * 24 = 345600 bytes
     // 345600 bytes = 337.5 KB = 0.32959 MB
     // for one type
+    const int DATA_MAX_ALLOWED_SIZE = 100;
     QVector<QVector<int>*>* m_chartDataContainer;
 
     ChartSubscriber* m_subscriber;

@@ -19,11 +19,12 @@
 
 
 #include "BasicChartView.h"
-
+#include "src/controllers/BasicChartController.h"
 
 BasicChartView::BasicChartView(const BasicChartModel& a_model,
                                const QString& a_chartTitle,
-                               QWidget *a_parent):
+                               QWidget *a_parent,
+                               BasicChartController& a_controller):
     // no need to delete QChart()
     // from doc "the ownership of the chart is passed to the chart view"
     QChartView(new QChart(), a_parent),
@@ -42,7 +43,8 @@ BasicChartView::BasicChartView(const BasicChartModel& a_model,
     // as follows and we put it in the position we desire
     m_chartTitleVisibility(false),
     m_chartTitle(new QString(a_chartTitle)),
-    m_timer(new QTimer(this))
+    m_timer(new QTimer(this)),
+    m_controller(a_controller)
 {
     // connect the timer
     m_timer->setTimerType(Qt::VeryCoarseTimer);
@@ -93,6 +95,8 @@ BasicChartView::BasicChartView(const BasicChartModel& a_model,
 BasicChartView::~BasicChartView()
 {
     qInfo() << QString("~" + *m_chartTitle);
+    m_timer->stop();
+
     delete m_chartTitle;
     m_chartTitle = nullptr;
 }
@@ -209,19 +213,9 @@ void BasicChartView::initContextMenu() noexcept
 
     m_contextMenu->addSeparator();
 
-    // close action handled by controller;
-    m_contextMenu->addAction( "Close", [this]() {
-
-        // Need to solve -- cause segmentation fault
-        // keep the spliiter
-//        QObject* l_splitter = this->parent()->parent();
-
-//        qDebug() << "count before" <<  static_cast<QSplitter*>(l_splitter)->count();
-//        static_cast<QDockWidget*>(this->parent())->close();
-//        qDebug() << "static_cast<QSplitter*>(l_splitter)" << static_cast<QSplitter*>(l_splitter);
-//        qDebug() << "count after" <<  static_cast<QSplitter*>(l_splitter)->count();
-
-
+    // close action;
+    m_contextMenu->addAction("Close", [this]() {
+        emit closeAction();
     });
 }
 
@@ -262,7 +256,8 @@ void BasicChartView::changeSeriesData(const unsigned int a_series,
     // disable/enable this option from menu
     a_menu->actions().at(l_oldDataType)->setEnabled(true);
     a_menu->actions().at(data_type)->setDisabled(true);
-}
+}//    qDebug() << *m_chartTitle << "updateChart() BEGIN";
+
 
 
 QValueAxis& BasicChartView::getAxes(const unsigned int a_axis)
@@ -409,7 +404,7 @@ void BasicChartView::handleMouseEventHelper(const int a_x /** the new x cooredin
 
 void BasicChartView::repaintChart() noexcept
 {
-    //qDebug() << *m_chartTitle  << "repaintChart()";
+//    qDebug() << *m_chartTitle  << "repaintChart()";
 
     // should be 1 and not 0 because we later multiply it in some values,
     // and you can not multiply by 0
@@ -459,6 +454,7 @@ void BasicChartView::repaintChart() noexcept
     }
     // update axis max range
     updateVerticalAxisRange(l_Y_coordianteMaxPointBothSeries);
+//     qDebug() << *m_chartTitle  << "repaintChart() DONE!";
 }
 
 
@@ -656,10 +652,9 @@ void BasicChartView::resizeEventStartStopButton() noexcept
 }
 
 
-
 void BasicChartView::updateChart() noexcept
 {
-    if (!getDrawChartFlag()) {return;}
+    if (!getDrawChartFlag()) {/* qDebug() << *m_chartTitle << "updateChart() END";*/return;}
 
     repaintChart();
 }

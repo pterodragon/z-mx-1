@@ -34,7 +34,6 @@
 #include "QHostAddress"
 #include "QFile"
 
-
 #include "QDebug" // perhaps remove after testing
 
 MainWindowController::MainWindowController(QWidget *parent) :
@@ -237,7 +236,6 @@ void MainWindowController::dockWindowsManagerTreeWidgetContextMenuSequence(const
     l_dockWindowController->handleUserSelection(l_action,
                                                 l_dockWidget,
                                                 findChildren<QDockWidget *>(),
-                                                a_mxTelemetryTypeName,
                                                 a_mxTelemetryInstanceName,
                                                 a_mxTelemetryType);
 
@@ -255,6 +253,7 @@ void MainWindowController::dockWindowsManagerTreeWidgetContextMenuSequence(const
         l_parentWidget = m_mainWindowView->m_chartsWidgetSplitter;
         break;
     default:
+    {
         qCritical() << __func__
                     << "Recived unknown action:"
                     << l_action
@@ -262,6 +261,7 @@ void MainWindowController::dockWindowsManagerTreeWidgetContextMenuSequence(const
                     << a_dockWindowType
                     << a_mxTelemetryTypeName
                     << a_mxTelemetryInstanceName;
+    }
         return;
     }
 
@@ -329,4 +329,30 @@ void MainWindowController::setAppearance(const QString& a_pathToFile) noexcept
     this->setStyleSheet(StyleSheet);
     l_file.close();
 }
+
+
+void MainWindowController::closeDockWidget(const int a_type) noexcept
+{
+    qDebug() << "closeDockWidget" << a_type;
+    switch (a_type) {
+    case DockWindowController::ACTIONS::REMOVE_FROM_CENTER:
+        if (m_mainWindowView->m_tablesWidgetSplitter->count() == 2)
+        {
+            m_mainWindowView->m_welcomeScreen->show();
+        }
+        break;
+    case DockWindowController::ACTIONS::REMOVE_FROM_RIGHT:
+        if (m_mainWindowView->m_chartsWidgetSplitter->count() == 2)
+        {
+            m_mainWindowView->m_chartAreaFiller->show();
+        }
+        break;
+    default:
+        qCritical() << __PRETTY_FUNCTION__
+                    << "unknown type:" << a_type;
+        break;
+    }
+}
+
+
 

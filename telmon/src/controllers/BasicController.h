@@ -32,7 +32,9 @@ class BasicController : public QObject
 {
     Q_OBJECT
 public:
-    BasicController(DataDistributor& a_dataDistributor, QObject* a_parent);
+    BasicController(DataDistributor& a_dataDistributor,
+                    QString a_className,
+                    QObject* a_parent);
     virtual ~BasicController();
     // Stop the compiler generating methods of copy the object
     BasicController(BasicController const& copy);            // Not Implemented
@@ -41,9 +43,9 @@ public:
     virtual void* getModel() = 0;
     virtual QAbstractItemView* getView() = 0;
 
-
 protected:
     DataDistributor& m_dataDistributor;
+    QString* m_className;
 };
 
 #endif // BASICCONTROLLER_H

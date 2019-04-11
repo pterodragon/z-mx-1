@@ -23,18 +23,16 @@
 #include "ChartWidgetDockWindowController.h"
 #include "QDebug"
 #include "src/widgets/ChartDockWidget.h"
-#include "src/models/wrappers/ChartDockWidgetModelWrapper.h"
 #include "src/controllers/BasicChartController.h"
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 #include "src/factories/MxTelemetryTypeWrappersFactory.h"
+#include "src/controllers/MainWindowController.h"
 
 
 
 ChartWidgetDockWindowController::ChartWidgetDockWindowController(DataDistributor& a_dataDistributor,
                                                                  QObject* a_parent):
-    DockWindowController(a_dataDistributor, " Chart", a_parent),
-    m_chartDockWidgetModelWrapper(new ChartDockWidgetModelWrapper(a_dataDistributor)),
-    m_className(new QString("ChartWidgetDockWindowController")),
+    DockWindowController(a_dataDistributor, " Chart", QString("ChartWidgetDockWindowController"), a_parent),
     m_DB(new QVector<QMap<QString, BasicChartController*>*>)
 {
     qDebug() << "    ChartWidgetDockWindowController()";
@@ -50,7 +48,6 @@ ChartWidgetDockWindowController::ChartWidgetDockWindowController(DataDistributor
 ChartWidgetDockWindowController::~ChartWidgetDockWindowController()
 {
     qDebug() << "    ~ChartWidgetDockWindowController() begin";
-    delete m_chartDockWidgetModelWrapper;
 
     // clean DB
     for (int i = 0; i < m_DB->size(); ++i) {
@@ -69,15 +66,13 @@ ChartWidgetDockWindowController::~ChartWidgetDockWindowController()
     delete m_DB;
     m_DB = nullptr;
 
-    delete m_className;
-    m_className = nullptr;
     qDebug() << "    ~ChartWidgetDockWindowController() end";
 }
 
 
 void* ChartWidgetDockWindowController::getModel()
 {
-    return m_chartDockWidgetModelWrapper;
+    return nullptr;
 }
 
 
@@ -91,78 +86,33 @@ QAbstractItemView*  ChartWidgetDockWindowController::getView()
 void ChartWidgetDockWindowController::handleUserSelection(unsigned int& a_action,
                                                           QDockWidget*& a_dockWidget,
                                                           const QList<QDockWidget *>& a_currentDockList,
-                                                          const QString& a_mxTelemetryTypeName,
                                                           const QString& a_mxTelemetryInstanceName,
                                                           const int a_mxTelemetryType) noexcept
 {
-//    // constrct widget name
-//    // for now, using same name for object and chart header
-//    const QString l_objectName = a_mxTelemetryTypeName + "::" + a_mxTelemetryInstanceName + m_dockWindowName;
+    auto* l_controller = getController(a_mxTelemetryType, a_mxTelemetryInstanceName);
+    auto* l_view = l_controller->initView();
 
-//    // is dock widget already exists?
-//    QDockWidget* l_dock = nullptr;
-//    bool l_contains = isDockWidgetExists(a_currentDockList, l_objectName, l_dock);
+    if (l_view == nullptr)
+    {
+        a_action = ACTIONS::NO_ACTION;
+        return;
+    }
 
-//    // handle case that dock widget already exists
-//    if (l_contains)
-//    {
-//        qDebug() << m_dockWindowName << l_objectName << "already exists";
-//        // out policy for table, only one at a time
-//        a_action = DockWindowController::ACTIONS::NO_ACTION;
-//        a_dockWidget = nullptr;
-//        l_dock->activateWindow();
-//        return;
-//    }
+    a_action = DockWindowController::ACTIONS::ADD_TO_RIGHT;
+    a_dockWidget = new ChartDockWidget(a_mxTelemetryType,
+                                       a_mxTelemetryInstanceName,
+                                       l_view,
+                                       l_controller,
+                                       ACTIONS::REMOVE_FROM_RIGHT,
+                                       nullptr  //parent will be set later
+                                       );
 
-//    qDebug() << "constrcuting" << m_dockWindowName << l_objectName;
-
-
-//    //handle case that dock widget not exists
-//    a_action = DockWindowController::ACTIONS::ADD_TO_RIGHT;
-
-//    // construct the new dock
-//    a_dockWidget = new BasicDockWidget(l_objectName,
-//                                  m_chartDockWidgetModelWrapper,
-//                                  a_mxTelemetryTypeName,
-//                                  a_mxTelemetryInstanceName,
-//                                  // notice about the parent - will be set later
-//                                  nullptr);
-
-
-//    static_cast<BasicDockWidget*>(a_dockWidget)->hideTitleBar();
-
-//    // create the chart view and subscribe
-//    QChartView *l_chartView = m_chartDockWidgetModelWrapper->initChartWidget(a_mxTelemetryTypeName,
-//                                                                          a_mxTelemetryInstanceName);
-
-//    // associate dock widget with chart view
-//    a_dockWidget->setWidget(l_chartView);
-
-    // * * * new * * *
-        // construct the new dock
-        auto* l_dockWidget = new ChartDockWidget(a_mxTelemetryType,
-                                           a_mxTelemetryInstanceName,
-                                           nullptr  //parent will be set later
-                                           );
-        // a_dockWidget->setAttribute(Qt::WA_DeleteOnClose);       // delete when user close the window
-
-        // get the container
-        auto* l_controller = getController(a_mxTelemetryType, a_mxTelemetryInstanceName);
-
-        bool l_reachedMaxAllowedViews = false;;
-        auto* l_result = l_controller->initView(l_reachedMaxAllowedViews, a_dockWidget);
-
-        if (l_result == nullptr)
-        {
-            delete a_dockWidget;
-            a_action = ACTIONS::NO_ACTION;
-        }
-
-        a_action = DockWindowController::ACTIONS::ADD_TO_RIGHT;
-        l_dockWidget->setController(l_controller);
-        l_dockWidget->setWidget(l_result);
-
-        a_dockWidget = l_dockWidget;
+    connect(static_cast<ChartDockWidget*>(a_dockWidget),
+            &ChartDockWidget::closeAction,
+            this,
+            [this](int a_type) {
+        static_cast<MainWindowController*>(this->parent())->closeDockWidget(a_type);
+    });
 }
 
 
@@ -224,9 +174,5 @@ BasicChartController* ChartWidgetDockWindowController::getController(
     // get from continer
     return (*m_DB).at(a_mxTelemetryType)->value(a_mxTelemetryInstanceName, nullptr);
 }
-
-
-
-
 
 

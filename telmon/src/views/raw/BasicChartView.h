@@ -25,6 +25,7 @@
 #include "QtCharts"
 #include "src/models/raw/BasicChartModel.h"
 
+class BasicChartController;
 
 class BasicChartView : public QChartView
 {
@@ -32,7 +33,8 @@ class BasicChartView : public QChartView
 public:
     BasicChartView(const BasicChartModel& a_model,
                    const QString& a_chartTitle,
-                   QWidget *a_parent);
+                   QWidget *a_parent,
+                   BasicChartController& a_controller);
     virtual ~BasicChartView() override;
 
     enum CHART_AXIS {X, Y_LEFT, Y_RIGHT, CHART_AXIS_N};
@@ -54,6 +56,9 @@ public:
     QString& getChartTitle() const noexcept;
 
     int getDrawChartFlag() const noexcept {return m_drawChartFlag;}
+
+signals:
+    void closeAction();
 
 public slots:
     // * * * Update Chart Related Function * * * //
@@ -179,6 +184,8 @@ private:
     QMenu* m_menuYRight;
     QMenu* m_refreshRateMenu;
     QTimer* m_timer;
+
+    BasicChartController& m_controller;
 };
 
 #endif // BASICCHARTVIEW_H

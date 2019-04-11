@@ -37,7 +37,6 @@ public:
     virtual void handleUserSelection(unsigned int& a_action,
                                      QDockWidget*& a_widget,
                                      const QList<QDockWidget *>& a_currentDockList,
-                                     const QString& a_mxTelemetryTypeName,
                                      const QString& a_mxTelemetryInstanceName,
                                      const int a_mxTelemetryType) noexcept override final;
 
@@ -46,7 +45,6 @@ public:
 
 private:
     TableDockWidgetModelWrapper* m_tableDockWidgetModelWrapper;
-    const QString* m_className;
 };
 
 #endif // TABLEWIDGETDOCKWINDOWCONTROLLER_H

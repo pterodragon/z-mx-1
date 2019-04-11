@@ -21,12 +21,14 @@
 #include "ChartDockWidget.h"
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 #include "src/controllers/BasicChartController.h"
+#include "src/views/raw/BasicChartView.h"
 #include "QCloseEvent"
-
-#include "QSplitter"
 
 ChartDockWidget::ChartDockWidget(const int a_mxTelemetryType,
                                  const QString& a_mxTelemetryInstance,
+                                 BasicChartView* a_setWidget,
+                                 BasicChartController* const a_controller,
+                                 const int a_closeActionType,
                                  QWidget *parent):
     QDockWidget (QString(), parent),
     m_mxTelemetryType(a_mxTelemetryType),
@@ -36,39 +38,50 @@ ChartDockWidget::ChartDockWidget(const int a_mxTelemetryType,
                             + "::"
                             + m_mxTelemetryInstance)),
     m_isTitleBarHidden(false),
-    m_chartController(nullptr)
+    m_chartController(a_controller),
+    m_closeActionType(a_closeActionType)
 {
     hideTitleBar();
+    setWidget(a_setWidget);
     setAttribute(Qt::WA_DeleteOnClose);
+
+    // set close functionanility
+    connect(a_setWidget, &BasicChartView::closeAction, this, [this](){
+        emit closeAction(m_closeActionType);
+        delete this;
+    });
 }
 
 
 ChartDockWidget::~ChartDockWidget()
 {
-    qDebug() << QString("~" + *m_className + " B");
-    // deleting chart view through the controller
-    if (widget())
+    qInfo() << QString("~" + *m_className);
+
+    setParent(nullptr);
+    auto* l_view = static_cast<BasicChartView*>(this->widget());
+
+    // disassociate with ChartDockWidget
+    l_view->setParent(nullptr);
+
+    // update controller
+    if (!m_chartController->removeView(l_view))
     {
-        if (m_chartController)
-        {
-            m_chartController->finalizeView(widget());
-        } else {
-            qCritical() << *m_className
-                        << __PRETTY_FUNCTION__
-                        << "Closing chartDockWidget without associated m_chartController";
-        }
+        qCritical() << QString("~" + *m_className)
+                    << "failed to remove view from controller";
     }
+
+    // Important: assign to QT smart pointer for later delete
+    // not using this way to delete will cause segmanation fault every time we close the view
+    // by deleting this way, we make sure we delete only when then event loop (of qt) has finished
+    QSharedPointer<BasicChartView>(l_view,  &QObject::deleteLater);
+
     setWidget(nullptr);
+
     delete m_mxTelemetryInstance;
     m_mxTelemetryInstance = nullptr;
 
     delete m_className;
     m_className = nullptr;
-
-    static_cast<QSplitter*>(this->parent())->findChild<ChartDockWidget*>()->hide();
-//    qDebug() << "static_cast<QSplitter*>(this->parent())->findChild<ChartDockWidget*>();"
-//             << static_cast<QSplitter*>(this->parent())->findChild<ChartDockWidget*>()->hide();
-    qDebug() << "this->parent()" << this->parent();
 }
 
 
@@ -90,14 +103,9 @@ void ChartDockWidget::hideTitleBar() noexcept
 }
 
 
-void ChartDockWidget::setController(BasicChartController* a_chartController) noexcept
-{
-    m_chartController = a_chartController;
-}
-
-
 void ChartDockWidget::closeEvent(QCloseEvent *event)
 {
+    qDebug() << "ChartDockWidget::closeEvent";
     event->accept();
 
     /**

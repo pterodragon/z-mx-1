@@ -33,7 +33,7 @@
 TreeMenuWidgetController::TreeMenuWidgetController(DataDistributor& a_dataDistributor,
                                                    MainWindowController& a_MainWindowController,
                                                    QObject* a_parent ):
-    BasicController(a_dataDistributor, a_parent),
+    BasicController(a_dataDistributor,QString("TreeMenuWidgetController"), a_parent),
     m_treeMenuWidgetModelWrapper(new TreeMenuWidgetModelWrapper()),
     m_treeView (new TreeView),
     m_MainWindowController(a_MainWindowController)
@@ -81,7 +81,8 @@ void TreeMenuWidgetController::createActions() noexcept
     m_treeView->connect(m_treeView->m_firstAction, &QAction::triggered, this, [this](){
 
         const QString l_actionName = m_treeView->m_firstAction->text();
-        handleContextMenuAction(l_actionName, ControllerFactory::CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER);
+        handleContextMenuAction(l_actionName,
+                                ControllerFactory::CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER);
 
     });
 
@@ -90,7 +91,8 @@ void TreeMenuWidgetController::createActions() noexcept
     m_treeView->connect(m_treeView->m_secondAction, &QAction::triggered, this, [this]() {
 
         const QString l_actionName = m_treeView->m_secondAction->text();
-        handleContextMenuAction(l_actionName, ControllerFactory::CONTROLLER_TYPE::CHART_DOCK_WINDOW_CONTROLLER);
+        handleContextMenuAction(l_actionName,
+                                ControllerFactory::CONTROLLER_TYPE::CHART_DOCK_WINDOW_CONTROLLER);
 
     });
 
@@ -130,7 +132,7 @@ void TreeMenuWidgetController::createActions() noexcept
 
 
 void TreeMenuWidgetController::handleContextMenuAction(const QString& a_actionName,
-                                                       const unsigned int a_dockWindowType) const noexcept
+                                                       const unsigned int a_dockWindowType) noexcept
 {
     //  get selected item in view
     QModelIndexList indexes = this->m_treeView->selectionModel()->selectedIndexes();
@@ -142,6 +144,11 @@ void TreeMenuWidgetController::handleContextMenuAction(const QString& a_actionNa
     const QString&     l_parentName = l_parent.isValid() ?
                                         this->m_treeMenuWidgetModelWrapper->getModel()->data(l_parent).toString()
                                         : QString();
+    // some info for log
+    qInfo() << *m_className
+            << QString("user selected: (context menu)->" + l_actionName)
+            << QString("(" + l_parentName + "::" + l_childName + ")");
+
     // sanity check:
     if (l_parentName.isNull()) {
         qWarning() << "Action:"
@@ -157,5 +164,6 @@ void TreeMenuWidgetController::handleContextMenuAction(const QString& a_actionNa
                                                                            l_parentName,
                                                                            l_childName,
                                                                            l_mxTelemetryType);
+
 }
 

@@ -39,19 +39,16 @@ public:
     virtual void* getModel()              override final;
     virtual QAbstractItemView* getView()  override final;
 
-    const QString getClassName() const noexcept;
+    BasicChartView* initView()  noexcept;
+    bool removeView(BasicChartView*) noexcept;
 
-
-    QWidget* initView(bool a_reachedMaxAllowedViews,
-                             QWidget* a_parent /* <-- should be the dockWidget */)  noexcept;
-    void finalizeView(QWidget* a_view) noexcept;
-    void finalizeView(BasicChartView* a_view) noexcept;
-
-    void updateViewCharts() noexcept;
+    bool isReachedMaxViewAllowed() const noexcept;
 
 private:
-    const QString* m_className;
+    bool addView(BasicChartView*) noexcept;
     int m_maxViewsAllowed;
+    BasicChartView* getChartView() noexcept;
+
 
 protected:
     BasicChartModel* m_basicChartModel;

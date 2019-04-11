@@ -27,6 +27,7 @@
 class TreeMenuWidgetModelWrapper;
 class TreeView;
 class MainWindowController;
+class QAction;
 
 class TreeMenuWidgetController : public BasicController
 {
@@ -54,7 +55,7 @@ private:
      * @param a_dockWindowType
      */
     void handleContextMenuAction(const QString& a_actionName,
-                                 const unsigned int a_dockWindowType) const noexcept;
+                                 const unsigned int a_dockWindowType) noexcept;
 
     void createActions() noexcept;
 };

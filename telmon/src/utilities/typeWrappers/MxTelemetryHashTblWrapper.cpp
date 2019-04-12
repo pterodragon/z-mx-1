@@ -251,6 +251,10 @@ QPair<void*, int> MxTelemetryHashTblWrapper::getMxTelemetryDataType(void* const 
         l_result.first = &l_data->id;
         l_result.second = CONVERT_FRON::type_c_char;
         break;
+    case ZmHashTblTelemetryStructIndex::e_addr:
+        l_result.first = &l_data->addr;
+        l_result.second = CONVERT_FRON::type_uintptr_t;
+        break;
     case ZmHashTblTelemetryStructIndex::e_nodeSize:
         l_result.first = &l_data->nodeSize;
         l_result.second = CONVERT_FRON::type_uint32_t;
@@ -313,14 +317,13 @@ QPair<void*, int> MxTelemetryHashTblWrapper::getMxTelemetryDataType(void* const 
     return l_result;
 }
 
-
 const QString  MxTelemetryHashTblWrapper::_getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept
 {
      ZmHashTelemetry* l_data = static_cast<ZmHashTelemetry*>(a_mxTelemetryMsg);
 
      if (l_data)
      {
-         return QString(l_data->id.data());// + "-" + QString(l_data->bits);
+         return QString(l_data->id) + NAME_DELIMITER + QString::number(l_data->addr, 16);
      } else
      {
         return QString();

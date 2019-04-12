@@ -76,6 +76,7 @@ public:
      *
      * struct ZmHashTelemetry {    // graphable
      *    ZmIDString	id;		   // primary key
+     *    uintptr_t	addr;		   // primary key
      *    uint32_t	nodeSize;	   // static
      *    uint32_t	loadFactor;	   // static - (double)N / 16.0
      *    uint32_t	count;		   // dynamic(*)
@@ -87,8 +88,8 @@ public:
      *  };
      *
      */
-    enum ZmHashTblTelemetryStructIndex {e_id, e_nodeSize, e_loadFactor, e_count, e_effLoadFactor,
-                                              e_resized, e_bits, e_cBits, e_linear};
+    enum ZmHashTblTelemetryStructIndex {e_id,            e_addr,    e_nodeSize, e_loadFactor, e_count,
+                                        e_effLoadFactor, e_resized, e_bits,     e_cBits,      e_linear};
 
     int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;

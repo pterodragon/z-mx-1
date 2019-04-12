@@ -71,29 +71,31 @@ public:
     /**
      * @brief The ZiMxTelemetryStructIndex enum corresponds to following:
      *
-     *  struct ZiMxTelemetry {  // not graphable
-     *    ZuID		id;         // primary key
-     *    uint64_t	isolation;
-     *    uint32_t	stackSize;
-     *    uint32_t	rxBufSize;
-     *    uint32_t	txBufSize;
-     *    uint16_t	rxThread;
-     *    uint16_t	txThread;
-     *    uint16_t	partition;
-     *    uint8_t	state;		// dynamic (not graphable)
-     *                          // ZmScheduler::stateName(i)
-     *                          // RAG -
-     *                          //   Running - Green
-     *                          //   Stopped - Red
-     *                          //   * - Amber
-     *    uint8_t	priority;
-     *    uint8_t	nThreads;
-     *  };
+        // display sequence:
+        //   id, state, nThreads, rxThread, txThread,
+        //   priority, stackSize, partition, rxBufSize, txBufSize,
+        //   queueSize, ll, spin, timeout
+        struct ZiMxTelemetry { // not graphable
+          ZuID		id;		// primary key
+          uint32_t	stackSize;
+          uint32_t	queueSize;
+          uint32_t	spin;
+          uint32_t	timeout;
+          uint32_t	rxBufSize;
+          uint32_t	txBufSize;
+          uint16_t	rxThread;
+          uint16_t	txThread;
+          uint16_t	partition;
+          uint8_t	state;	// RAG: Running - Green; Stopped - Red; * - Amber
+          uint8_t	ll;
+          uint8_t	priority;
+          uint8_t	nThreads;
+        };
      *
      */
-    enum ZiMxTelemetryStructIndex {e_id, e_isolation, e_stackSize, e_rxBufSize, e_txBufSize,
-                                   e_rxThread, e_txThread, e_partition, e_state, e_priority,
-                                   e_nThreads};
+    enum ZiMxTelemetryStructIndex {e_id,        e_stackSize, e_queueSize, e_spin,     e_timeout,
+                                   e_rxBufSize, e_txBufSize, e_rxThread,  e_txThread, e_partition,
+                                   e_state,     e_ll,        e_priority,  e_nThreads};
 
     int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;

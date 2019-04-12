@@ -76,8 +76,6 @@ public:
      *    uint64_t	txSeqNo;	// dynamic - not graphable
      *    uint32_t	reconnects;	// dynamic - not graphable
      *    uint8_t	state;		// RAG - MxLinkState::rag(i) - MxRAG
-     8  };
-     *
      */
     enum LinkMxTelemetryStructIndex {e_id,        e_rxSeqNo,     e_txSeqNo,
                                       e_reconnects, e_state};

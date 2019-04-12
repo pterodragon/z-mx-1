@@ -53,6 +53,7 @@ public:
                                       type_int32_t,                 type_int8_t,
                        type_none,
                        type_c_char,
+                       type_uintptr_t,
                        type_double,
                        type_ZiIP};
 

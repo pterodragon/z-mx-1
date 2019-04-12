@@ -61,29 +61,38 @@ void MxTelemetryZiMultiplexerWrapper::initTableList() noexcept
     m_tableList->insert(i, "nThreads");
     m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_nThreads);
 
-    m_tableList->insert(i, "priority");
-    m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_priority);
-
-    m_tableList->insert(i, "partition");
-    m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_partition);
-
-    m_tableList->insert(i, "isolation");
-    m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_isolation);
-
     m_tableList->insert(i, "rxThread");
     m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_rxThread);
 
     m_tableList->insert(i, "txThread");
     m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_txThread);
 
+    m_tableList->insert(i, "priority");
+    m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_priority);
+
     m_tableList->insert(i, "stackSize");
     m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_stackSize);
+
+    m_tableList->insert(i, "partition");
+    m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_partition);
 
     m_tableList->insert(i, "rxBufSize");
     m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_rxBufSize);
 
     m_tableList->insert(i, "txBufSize");
     m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_txBufSize);
+
+    m_tableList->insert(i, "queueSize");
+    m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_queueSize);
+
+    m_tableList->insert(i, "ll");
+    m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_ll);
+
+    m_tableList->insert(i, "spin");
+    m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_spin);
+
+    m_tableList->insert(i, "timeout");
+    m_tablePriorityToStructIndex->insert(i++, ZiMxTelemetryStructIndex::e_timeout);
 }
 
 
@@ -115,34 +124,6 @@ void MxTelemetryZiMultiplexerWrapper::_getDataForTable(void* const a_mxTelemetry
                                 )
                             );
             break;
-        case ZiMxTelemetryStructIndex::e_priority:
-            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
-            a_result.append(QString::number(
-                                typeConvertor<uint8_t>(
-                                    QPair(l_dataPair.first, l_dataPair.second)
-                                    )
-                                )
-                            );
-            break;
-        case ZiMxTelemetryStructIndex::e_partition:
-            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
-            a_result.append(QString::number(
-                                typeConvertor<uint16_t>(
-                                    QPair(l_dataPair.first, l_dataPair.second)
-                                    )
-                                )
-                            );
-            break;
-        case ZiMxTelemetryStructIndex::e_isolation:
-            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
-            a_result.append(streamToQString(ZmBitmap(
-                                                typeConvertor<uint64_t>(
-                                                    QPair(l_dataPair.first, l_dataPair.second)
-                                                    )
-                                                )
-                                            )
-                            );
-            break;
         case ZiMxTelemetryStructIndex::e_rxThread:
             l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
             a_result.append(QString::number(
@@ -161,10 +142,28 @@ void MxTelemetryZiMultiplexerWrapper::_getDataForTable(void* const a_mxTelemetry
                                 )
                             );
             break;
+        case ZiMxTelemetryStructIndex::e_priority:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
         case ZiMxTelemetryStructIndex::e_stackSize:
             l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
             a_result.append(QString::number(
                                 typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZiMxTelemetryStructIndex::e_partition:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint16_t>(
                                     QPair(l_dataPair.first, l_dataPair.second)
                                     )
                                 )
@@ -188,6 +187,45 @@ void MxTelemetryZiMultiplexerWrapper::_getDataForTable(void* const a_mxTelemetry
                                 )
                             );
             break;
+
+        case ZiMxTelemetryStructIndex::e_queueSize:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZiMxTelemetryStructIndex::e_ll:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint8_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZiMxTelemetryStructIndex::e_spin:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+        case ZiMxTelemetryStructIndex::e_timeout:
+            l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
+            a_result.append(QString::number(
+                                typeConvertor<uint32_t>(
+                                    QPair(l_dataPair.first, l_dataPair.second)
+                                    )
+                                )
+                            );
+            break;
+
+
         default:
             qCritical() << *m_className
                         << __func__
@@ -231,12 +269,20 @@ QPair<void*, int> MxTelemetryZiMultiplexerWrapper::getMxTelemetryDataType(void* 
         l_result.first = &l_data->id;
         l_result.second = CONVERT_FRON::type_c_char;
         break;
-    case ZiMxTelemetryStructIndex::e_isolation:
-        l_result.first = &l_data->isolation;
-        l_result.second = CONVERT_FRON::type_uint64_t;
-        break;
     case ZiMxTelemetryStructIndex::e_stackSize:
         l_result.first = &l_data->stackSize;
+        l_result.second = CONVERT_FRON::type_uint32_t;
+        break;
+    case ZiMxTelemetryStructIndex::e_queueSize:
+        l_result.first = &l_data->queueSize;
+        l_result.second = CONVERT_FRON::type_uint32_t;
+        break;
+    case ZiMxTelemetryStructIndex::e_spin:
+        l_result.first = &l_data->spin;
+        l_result.second = CONVERT_FRON::type_uint32_t;
+        break;
+    case ZiMxTelemetryStructIndex::e_timeout:
+        l_result.first = &l_data->timeout;
         l_result.second = CONVERT_FRON::type_uint32_t;
         break;
     case ZiMxTelemetryStructIndex::e_rxBufSize:
@@ -261,6 +307,10 @@ QPair<void*, int> MxTelemetryZiMultiplexerWrapper::getMxTelemetryDataType(void* 
         break;
     case ZiMxTelemetryStructIndex::e_state:
         l_result.first = &l_data->state;
+        l_result.second = CONVERT_FRON::type_uint8_t;
+        break;
+    case ZiMxTelemetryStructIndex::e_ll:
+        l_result.first = &l_data->ll;
         l_result.second = CONVERT_FRON::type_uint8_t;
         break;
     case ZiMxTelemetryStructIndex::e_priority:

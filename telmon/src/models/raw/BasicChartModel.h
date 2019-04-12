@@ -22,13 +22,17 @@
 #ifndef BASICCHARTMODEL_H
 #define BASICCHARTMODEL_H
 
-
-
 class QString;
-#include <functional>
+#include <functional> // for std::array
+
+template<class T>
+class QList;
 
 template<class T>
 class QVector;
+
+template<class T>
+class ChartModelDataStructureInterface;
 
 class ChartSubscriber;
 class DataSubscriber;
@@ -41,8 +45,6 @@ public:
                     const QString& a_associatedTelemetryInstanceName);
     ~BasicChartModel();
 
-
-
     static const int NUMBER_OF_Y_AXIS = 2;
 
     const QString getAssociatedTelemetryInstanceName() const noexcept;
@@ -51,8 +53,8 @@ public:
     const std::array<int, NUMBER_OF_Y_AXIS>& getActiveDataSet() const noexcept;
     const QVector<QString>& getChartList() const noexcept;
 
-    int getChartDataContainerSize() const noexcept;
-    int getData(const int a_dataType, const int a_pos) const noexcept;
+    int getSize(const int a_index) const noexcept;
+    QList<int> getData(const int a_index, const int a_beginBegin, const int a_endIndex) const noexcept;
 
     bool isSeriesIsNull(const int a_series) const noexcept;
 
@@ -73,9 +75,13 @@ private:
     // 60 min   = 240 * 60 = 14400 bytes
     // 24 hours = 14400 * 24 = 345600 bytes
     // 345600 bytes = 337.5 KB = 0.32959 MB
+    // so 60 * 60 * 24 = 86400
     // for one type
-    const int DATA_MAX_ALLOWED_SIZE = 100;
-    QVector<QVector<int>*>* m_chartDataContainer;
+    const int DATA_MAX_ALLOWED_SIZE = 86400;
+    QVector<ChartModelDataStructureInterface<int>*>* m_chartDataContainer;
+
+
+//    bool isReachedMax(const int) const noexcept;
 
     ChartSubscriber* m_subscriber;
 

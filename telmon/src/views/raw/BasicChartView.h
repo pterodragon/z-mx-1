@@ -164,6 +164,31 @@ private:
      */
     void setChartTitleVisiblity(const bool) noexcept;
 
+
+    int repaintOneSeries(const unsigned int l_series) noexcept;
+
+    template <class T>
+    int buildSeriesArray(const T& a_data,
+                          QSplineSeries& a_series,
+                          const int a_xAxisSize,
+                          const int a_offset) noexcept
+    {
+        int l_maxY = 0;
+
+        for (auto i = 0; i < a_data.size(); i++)
+        {
+            int l_x = a_xAxisSize - i + a_offset;
+            int l_y = a_data.at(i);
+            if (l_y == -1) {l_y = 0;} // another sanity check, should not happen
+            a_series.append(QPointF(l_x, l_y));
+
+            l_maxY = qMax(l_maxY, l_y);
+        }
+
+        return l_maxY;
+    }
+
+
      // * * * Data Members * * * //
     const BasicChartModel& m_model;
     QValueAxis* m_axisArray[3];

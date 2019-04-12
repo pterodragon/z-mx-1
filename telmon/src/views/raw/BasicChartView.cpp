@@ -21,6 +21,8 @@
 #include "BasicChartView.h"
 #include "src/controllers/BasicChartController.h"
 
+#include <stdlib.h> // abs
+
 BasicChartView::BasicChartView(const BasicChartModel& a_model,
                                const QString& a_chartTitle,
                                QWidget *a_parent,
@@ -356,47 +358,20 @@ void BasicChartView::mouseMoveEvent(QMouseEvent * event)
 }
 
 
-void BasicChartView::handleMouseEventHelper(const int a_x /** the new x cooredinate */ ) noexcept
+void BasicChartView::handleMouseEventHelper(const int a_new_X /** the new x cooredinate */ ) noexcept
 {
-    // if the new coordinate and the current x coordiante difference is zero
-    // there is nothing to do
-    if (a_x == getReferenceX()) {/**qDebug() << "difference is 0";*/ return;}
+    // three options for l_difference:
+    //1. ( 0)
+    //2. (+1)  --> user moves left
+    //3. (-1)  --> user moves right
 
-    // else: repaint series according to new x
-    const int l_difference = getReferenceX() - a_x;
-    setReferenceXCoordinate(a_x);
+    // if the new coordinate and the current x coordiante difference is zero -> do nothing
+    if (a_new_X == getReferenceX()) {return;}
 
-    // update m_delayIndicator accordingly
-    //Notice:
-    // 1. if *l_difference* is negative, user is moving right
-    // 2. else, user is moving left
-    if (l_difference < 0)
-    {
-        // check if we are already on the rightest allowed
-        const int l_rightBorderLimit = ((getXAxisSpan() - 1) * (-1));
-        if ( m_delayIndicator == l_rightBorderLimit )
-        {
-            return;
-        }
-
-        // compute new m_delatIndicator
-        // make sure no crossing the limit
-        // this behavior make sure that even if we are on the rightest border,
-        // we will still show one point
-        m_delayIndicator = qMax(l_rightBorderLimit, m_delayIndicator + l_difference);
-    } else { // that is l_difference > 0
-        // check if we are already in the leftest allowed
-        const int l_leftBorderLimit = (m_model.getChartDataContainerSize() - 1);
-        if (m_delayIndicator == l_leftBorderLimit)
-        {
-            return;
-        }
-        // compute new m_delatIndicator
-        // make sure no crossing the limit
-        // this behavior make sure that even if we are on the leftest border,
-        // we will still show one point
-        m_delayIndicator = qMin(l_leftBorderLimit, m_delayIndicator + l_difference);
-    }
+    // else, repaint series according to new x
+    const int l_difference = getReferenceX() - a_new_X;
+    setReferenceXCoordinate(a_new_X);
+    m_delayIndicator += l_difference;
 
     repaintChart();
 }
@@ -404,57 +379,123 @@ void BasicChartView::handleMouseEventHelper(const int a_x /** the new x cooredin
 
 void BasicChartView::repaintChart() noexcept
 {
-//    qDebug() << *m_chartTitle  << "repaintChart()";
+    int l_maxY = 1; // dont set as 0
 
-    // should be 1 and not 0 because we later multiply it in some values,
-    // and you can not multiply by 0
-    int l_Y_coordianteMaxPointBothSeries = 1;
-
-    // iterate over series, that is, iterate over {SERIES::SERIES_LEFT, SERIES::SERIES_RIGHT}
-    for (unsigned int l_curSeries = 0;
-         l_curSeries < BasicChartView::SERIES::SERIES_N;
-         l_curSeries++)
+    // iterate over series
+    for (unsigned int l_curSeries = 0; l_curSeries < BasicChartView::SERIES::SERIES_N; l_curSeries++)
     {
-        // if current series is "none", then skip
-        const int l_activeDataTypeIndex = getActiveDataType(l_curSeries);
-        if (m_model.isSeriesIsNull(l_activeDataTypeIndex)) { continue; }
-
-        // clear current series
-        m_seriesArray[l_curSeries]->clear();
-
-        // build up new series
-        //qDebug() << *m_chartTitle;
-        for (int i = 0; i < getXAxisSpan(); i++)
-        {
-            //qDebug() << "i" << i;
-            //consider delay indicator
-            int l_index = m_delayIndicator + i;
-
-            // if (value < 0) that means the user moved chart to right Limit
-            // so we skip negative points to give it nice look
-            if (l_index < 0) {/*qDebug() << "skip point" << l_index << "right limit border";*/ continue;}
-
-            // if (value >= size()) that means the user moved chart left
-            // so we skip this points, to give it nicer look
-            // Notice: which data type container size we check is irrelevant because all
-            // of them should be in the same size
-//            qDebug() << "m_model.getChartDataContainerSize()" << m_model.getChartDataContainerSize();
-            if (l_index >= m_model.getChartDataContainerSize())
-            {/*qDebug() << "skip point" << l_index << "left limit border";*/ continue;}
-
-            // else, constrcut the point
-            const auto l_point_Y = m_model.getData(l_activeDataTypeIndex, l_index);
-            //qDebug() << "l_point_Y" << l_point_Y;
-            const auto l_point_X = getXAxisSpan() - i;
-            m_seriesArray[l_curSeries]->insert(i, QPointF(l_point_X, l_point_Y));
-
-            //update max Y
-            l_Y_coordianteMaxPointBothSeries = qMax(l_Y_coordianteMaxPointBothSeries, l_point_Y);
-        }
+        const int l_maxYForSeries = repaintOneSeries(l_curSeries);
+        l_maxY = qMax(l_maxYForSeries, l_maxY);
     }
-    // update axis max range
-    updateVerticalAxisRange(l_Y_coordianteMaxPointBothSeries);
-//     qDebug() << *m_chartTitle  << "repaintChart() DONE!";
+
+     updateVerticalAxisRange(l_maxY);
+}
+
+
+/**
+  * Implementation Notes:
+  *
+  * For simplicity, assume X axis length is 10, denote X_LENGTH
+  *
+  * 1. Figure out which points to request from data structure
+  * 2. Build the series
+  *
+  * There are 3 options:
+  * --OPTION 1--
+  * 1. user moved to the right and is not within container borders,
+  *  which indicated by (m_delayIndicator < 0)
+  *
+  *        0 ______________ N
+  *         |_____________|
+  *        new  ->->       old
+  *
+  *   ^   user refernce
+  *
+  * in the most extreme point to the right, we always print at least one point
+  * this point is the most updated one
+  *
+  * --OPTION 2--
+  * 2. user is within container borders
+  *
+  *        0 ______________ N
+  *         |_____________|
+  *        new  ->->       old
+  *
+  *           ^   user refernce
+  *
+  *
+  *
+  * --OPTION 3--
+  * 1. user moved to the left (to see history) and is not within container borders,
+  *  which indicated by (m_delayIndicator >= *size*)
+  *
+  *        0 ______________ N
+  *         |_____________|
+  *        new  ->->       old
+  *
+  *                          ^   user refernce
+  *
+  */
+int BasicChartView::repaintOneSeries(const unsigned int l_series) noexcept
+{
+    int l_maxY = 0;
+
+    // clear current series
+    m_seriesArray[l_series]->clear();
+
+    // if current series is "none", then skip
+    const int l_activeDataTypeIndex = getActiveDataType(l_series);
+    if (m_model.isSeriesIsNull(l_activeDataTypeIndex)) { return l_maxY; }
+
+    const auto l_containerSize = m_model.getSize(l_activeDataTypeIndex);
+    if (l_containerSize == 0) {return l_maxY;} // container is empty, no data to pull
+
+    int l_beginIndex = 0;
+    int l_endIndex = 0;
+    const int l_xAxisSize = getXAxisSpan();
+    int l_offset = 0;
+
+    // user moved right
+    if (m_delayIndicator < 0)
+    {
+        // set delay indicator, so it will not grow out of propotion
+        const auto l_rightBorder = (l_xAxisSize - 2) * (-1);
+        if (m_delayIndicator < l_rightBorder) {m_delayIndicator = l_rightBorder;}
+
+        // set offset as
+        l_offset = m_delayIndicator;
+
+        // Calculate request indexes:
+        const int l_diff = abs(m_delayIndicator) - l_xAxisSize;
+        if (l_diff < 0) {l_endIndex = qMin(abs(l_diff), l_containerSize);}
+        else {l_endIndex = 1;}
+    }
+
+    // user is within container borders
+    // Notice: we already know m_delayIndicator >= 0
+    else if (m_delayIndicator < l_containerSize - 1 )
+    {
+        // Calculate request indexes:
+        l_beginIndex = m_delayIndicator;
+        if (l_beginIndex + l_xAxisSize >= l_containerSize) {l_endIndex = l_containerSize;}
+        else {l_endIndex = l_beginIndex + l_xAxisSize;}
+
+    }
+
+    // user moved left
+    else //m_delayIndicator >= *size* - 1
+    {
+        // set delay indicator, so it will not grow out of propotion
+        const auto l_leftBorder = l_containerSize - 1 ;
+        if (m_delayIndicator >= l_leftBorder) {m_delayIndicator = l_leftBorder - 1;}
+
+        l_beginIndex = l_leftBorder - 1;
+        l_endIndex = l_leftBorder;
+    }
+
+    // Request and Build:
+    const auto l_requestedData = m_model.getData(l_activeDataTypeIndex, l_beginIndex,  l_endIndex);
+    return buildSeriesArray(l_requestedData,  *m_seriesArray[l_series], l_xAxisSize, l_offset);
 }
 
 

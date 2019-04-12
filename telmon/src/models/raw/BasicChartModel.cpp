@@ -24,6 +24,11 @@
 
 #include "src/subscribers/ChartSubscriber.h"
 
+#include "src/utilities/chartModelDataStructures/ChartModelDataStructureInterface.h"
+
+//TODO: if using more than one type, should be moved to factory
+#include "src/utilities/chartModelDataStructures/ChartModelDataStructureQListImpl.h"
+
 
 BasicChartModel::BasicChartModel(const int a_associatedTelemetryType,
                                  const QString& a_associatedTelemetryInstanceName):
@@ -34,35 +39,37 @@ BasicChartModel::BasicChartModel(const int a_associatedTelemetryType,
                             MxTelemetryGeneralWrapper::fromMxTypeValueToName(m_associatedTelemetryType)
                             + "::" +
                             *m_associatedTelemetryInstanceName)),
+    m_chartDataContainer(new QVector<ChartModelDataStructureInterface<int>*>),
 
-
-    m_chartDataContainer(new QVector<QVector<int>*>),
     m_subscriber(new ChartSubscriber(a_associatedTelemetryType,
                                      a_associatedTelemetryInstanceName,
                                      this))
 {
-//    qInfo() << QString("::" + *m_className);
+    qInfo() << QString("::" + *m_className);
     // * * *  initChartDataContainer * * * //
     // we do not need field for "none", that is why we remove 1
     const int l_numberOfFields = getChartList().size() - 1;
     for (int i = 0; i < l_numberOfFields; i++)
     {
-        m_chartDataContainer->insert(i, new QVector<int>);
+        m_chartDataContainer->insert(i, new ChartModelDataStructureQListImpl<int>(DATA_MAX_ALLOWED_SIZE));
     }
 }
 
 
 BasicChartModel::~BasicChartModel()
 {
-//    qInfo() << QString("::~" + *m_className);
+    qInfo() << QString("::~" + *m_className);
     delete m_subscriber;
     m_subscriber = nullptr;
+
     delete m_className;
     m_className = nullptr;
+
     for (int i = 0; i < m_chartDataContainer->size(); i++) {
         delete (*m_chartDataContainer)[i];
         (*m_chartDataContainer)[i] = nullptr;
     }
+
     delete m_chartDataContainer;
     m_chartDataContainer = nullptr;
 
@@ -97,15 +104,18 @@ const QVector<QString>& BasicChartModel::getChartList() const noexcept
 }
 
 
-int BasicChartModel::getChartDataContainerSize() const noexcept
+int BasicChartModel::getSize(const int a_index) const noexcept
 {
-    return m_chartDataContainer->at(0)->size();
+    const int l_numberOfFields = getChartList().size() - 1; // -1 for "none"
+    if (!(a_index < l_numberOfFields)) { return 0;}
+
+    return m_chartDataContainer->at(a_index)->size();
 }
 
 
-int BasicChartModel::getData(const int a_dataType, const int a_pos) const noexcept
+QList<int> BasicChartModel::getData(const int a_index, const int a_beginBegin, const int a_endIndex) const noexcept
 {
-    return m_chartDataContainer->at(a_dataType)->at(a_pos);
+    return m_chartDataContainer->at(a_index)->getItems(a_beginBegin, a_endIndex);
 }
 
 
@@ -135,13 +145,8 @@ void BasicChartModel::update(void* mxTelemetryType) noexcept
     {
         int l_strcutData = l_wrapper->getDataForChart<int>(mxTelemetryType, i);
                         // only for testing
-//        const auto l_strcutData = rand() % 100;
+        //const auto l_strcutData = rand() % 100;
 
-        // insert the data to be the first, pushing all the data inside one index up
-        // TODO maybe need mutex array!!!
-//        qDebug() << "added at pos:" << i << "data:" << l_strcutData;
-        m_chartDataContainer->at(i)->prepend(l_strcutData);
+        m_chartDataContainer->at(i)->prependKeepingSize(l_strcutData);
     }
 }
-
-

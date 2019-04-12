@@ -45,8 +45,10 @@ public:
     virtual uintptr_t setConfiguration()                = 0;
     virtual uintptr_t getConfiguration() const noexcept = 0;
     virtual uintptr_t getState()         const noexcept = 0;
-    virtual void setIP(const QString& a_ip)       noexcept = 0;
-    virtual void setPort(const QString& a_ip)     noexcept = 0;
+    virtual void setIP(const QString& a_ip)    noexcept = 0;
+    virtual const QString& getIP()       const noexcept = 0;
+    virtual void setPort(const QString& a_ip)  noexcept = 0;
+    virtual const QString& getPort()     const noexcept = 0;
 
 protected:
     virtual void setState(const unsigned int a_state) = 0;

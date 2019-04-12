@@ -21,10 +21,7 @@
 #ifndef DATASUBSCRIBER_H
 #define DATASUBSCRIBER_H
 
-#include <cstdint> // for uintptr_t
-
 class QString;
-
 
 /**
  * @brief The DataSubscriber class

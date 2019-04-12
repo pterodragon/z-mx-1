@@ -78,3 +78,12 @@ void MainWindowModel::setPort(const QString& a_port) noexcept
     m_networkManager->setPort(a_port);
 }
 
+const QString& MainWindowModel::getIP() const noexcept
+{
+    return m_networkManager->getIP();
+}
+
+const QString& MainWindowModel::getPort() const noexcept
+{
+     return m_networkManager->getPort();
+}

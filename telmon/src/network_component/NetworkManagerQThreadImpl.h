@@ -33,18 +33,20 @@ class NetworkManagerQThreadImpl : public NetworkManager
 {
 public:
     NetworkManagerQThreadImpl(DataDistributor* a_dataDistributor);
-    virtual ~NetworkManagerQThreadImpl()                 override final;
+    virtual ~NetworkManagerQThreadImpl()                    override final;
 
-    virtual uintptr_t connect()                          override final;
-    virtual uintptr_t disconnect()                       override final;
-    virtual uintptr_t setConfiguration()                 override final;
-    virtual uintptr_t getConfiguration() const noexcept  override final;
-    virtual uintptr_t getState()         const noexcept  override final;
+    virtual uintptr_t connect()                             override final;
+    virtual uintptr_t disconnect()                          override final;
+    virtual uintptr_t setConfiguration()                    override final;
+    virtual uintptr_t getConfiguration()     const noexcept override final;
+    virtual uintptr_t getState()             const noexcept override final;
     virtual void setIP(const QString& a_ip)       noexcept  override final;
-    virtual void setPort(const QString& a_port)   noexcept  override final;
+    virtual const QString& getIP()           const noexcept override final;
+    virtual void setPort(const QString& a_port)    noexcept override final;
+    virtual const QString& getPort()         const noexcept override final;
 
 protected:
-    virtual void setState(const unsigned int a_state)     override final;
+    virtual void setState(const unsigned int a_state)       override final;
 
 private:
     ZmSemaphore* m_disconnectSemaphore;

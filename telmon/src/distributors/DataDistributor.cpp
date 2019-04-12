@@ -18,7 +18,6 @@
  */
 
 
-#include "MxTelemetry.hpp"
 #include "DataDistributor.h"
 
 DataDistributor::DataDistributor()

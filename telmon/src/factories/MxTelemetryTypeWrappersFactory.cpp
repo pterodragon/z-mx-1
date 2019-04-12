@@ -25,6 +25,7 @@
 #include "src/factories/MxTelemetryTypeWrappersFactory.h"
 #include "QDebug"
 
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 #include "src/utilities/typeWrappers/MxTelemetryHeapWrapper.h"
 #include "src/utilities/typeWrappers/MxTelemetryHashTblWrapper.h"
 #include "src/utilities/typeWrappers/MxTelemetryZmThreadWrapper.h"

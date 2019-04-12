@@ -143,3 +143,16 @@ void NetworkManagerQThreadImpl::setPort(const QString& a_port)   noexcept
     *m_port = a_port;
 }
 
+const QString& NetworkManagerQThreadImpl::getIP() const noexcept
+{
+    return *m_ip;
+}
+
+const QString& NetworkManagerQThreadImpl::getPort() const noexcept
+{
+    return *m_port;
+}
+
+
+
+

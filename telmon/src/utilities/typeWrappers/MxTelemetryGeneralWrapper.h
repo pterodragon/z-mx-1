@@ -34,7 +34,7 @@ template <class T>
 class QVector;
 
 template <class T, class H>
-class QPair;
+struct QPair;
 
 template <class T>
 class QLinkedList;

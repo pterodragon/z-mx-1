@@ -172,12 +172,19 @@ void MainWindowController::createActions() noexcept
         qInfo() << "MainWindowController::settings ";
 
         bool l_ok;
+        const auto m_defaultIpPort = QString(this->m_mainWindowModel->getIP() +
+                                             ":" +
+                                             this->m_mainWindowModel->getPort());
+
         QString text = QInputDialog::getText(this,
                                              tr("Settings"),
-                                             tr("Please insert: [ip:port]: \n"
-                                                "(In case of invalid data will use: [127.0.0.1:19300])"),
+                                             tr(qPrintable(QString(
+                                                               "Please insert: [ip:port]: \n"
+                                                               "(In case of invalid data will use: ["  +
+                                                               m_defaultIpPort                         +
+                                                               "])"))),
                                              QLineEdit::Normal,
-                                             "127.0.0.1:19300",
+                                             m_defaultIpPort,
                                              &l_ok);
 
         if (!l_ok) {return;}

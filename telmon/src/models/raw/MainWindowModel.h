@@ -36,9 +36,10 @@ public:
 
     DataDistributor* getDataDistributor() const noexcept;
 
-
-    void setIP(const QString& a_ip) noexcept;
-    void setPort(const QString& a_port) noexcept;
+    void setIP(const QString& a_ip)               noexcept;
+    const QString& getIP()                  const noexcept;
+    void setPort(const QString& a_port)           noexcept;
+    const QString& getPort()                const noexcept;
 
 private:
     DataDistributor* m_dataDistributor;

@@ -47,7 +47,10 @@ void MxTelMonClient::process(ZmRef<MxTelemetry::Msg> msg) {
 
     if (m_dataDistributor)
     {
-        m_dataDistributor->notify( static_cast<void*>(msg.ptr()));
+        MxTelemetry::Msg* a_msg = static_cast<MxTelemetry::Msg*>(msg);
+        const int l_mxTelemetryType = static_cast<int>(a_msg->hdr().type);
+
+        m_dataDistributor->notify( static_cast<void*>(msg.ptr()), l_mxTelemetryType);
     }
 
 }

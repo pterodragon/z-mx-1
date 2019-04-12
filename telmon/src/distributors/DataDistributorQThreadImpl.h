@@ -42,7 +42,7 @@ public:
     virtual uintptr_t unsubscribeAll( DataSubscriber*  a_subscriber) override final;
     virtual uintptr_t subscribe(const int a_mxTelemetryType, DataSubscriber* a_subscriber) override final;
     virtual uintptr_t unsubscribe(const int a_mxTelemetryType, DataSubscriber* a_subscriber) override final;
-    virtual uintptr_t notify(void* a_mxTelemetryMsg) override final;
+    virtual uintptr_t notify(void* a_mxTelemetryMsg, const int a_mxType) override final;
 
 private:
     // Data Struture based on: https://stackoverflow.com/questions/471432/in-which-scenario-do-i-use-a-particular-stl-container
@@ -50,6 +50,9 @@ private:
 
     // mutexs array
     QList<QMutex*>* m_mutexList;
+
+private:
+    const int m_mxTelemetryTotalTypes;
 };
 
 #endif // DATADISTRIBUTORQTHREADIMPL_H

@@ -25,7 +25,6 @@
 #define DATADISTRIBUTOR_H
 
 #include <cstdint> // for uintptr_t
-#include <QString>
 
 class DataSubscriber;
 
@@ -43,7 +42,7 @@ public:
     virtual uintptr_t unsubscribeAll( DataSubscriber*  a_subscriber) = 0;
     virtual uintptr_t subscribe(const int a_mxTelemetryType, DataSubscriber*  a_subscriber) = 0;
     virtual uintptr_t unsubscribe(const int a_mxTelemetryType, DataSubscriber* a_subscriber) = 0;
-    virtual uintptr_t notify(void* a_mxTelemetryMsg) = 0;
+    virtual uintptr_t notify(void* a_mxTelemetryMsg, const int a_mxType) = 0;
 
 };
 

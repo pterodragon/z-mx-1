@@ -85,7 +85,7 @@ QAbstractItemView*  ChartWidgetDockWindowController::getView()
 // DockWindowController interface
 void ChartWidgetDockWindowController::handleUserSelection(unsigned int& a_action,
                                                           QDockWidget*& a_dockWidget,
-                                                          const QList<QDockWidget *>& a_currentDockList,
+                                                          const QList<QDockWidget *>& /*a_currentDockList*/,
                                                           const QString& a_mxTelemetryInstanceName,
                                                           const int a_mxTelemetryType) noexcept
 {

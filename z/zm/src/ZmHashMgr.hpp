@@ -64,13 +64,14 @@ private:
 };
 
 // display sequence:
-//   id, linear, bits, slots (*), cBits, locks (*), count,
+//   id, addr, linear, bits, slots (*), cBits, locks (*), count,
 //   resized, loadFactor, effLoadFactor, nodeSize
 // derived display fields:
 //   slots = 1<<bits
 //   locks = 1<<cBits
 struct ZmHashTelemetry {
   ZmIDString	id;		// primary key
+  uintptr_t	addr;		// primary key
   uint32_t	nodeSize;
   uint32_t	loadFactor;	// (double)N / 16.0
   uint32_t	count;		// graphable (*)

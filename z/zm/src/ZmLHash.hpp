@@ -1029,6 +1029,7 @@ public:
 
   void telemetry(ZmHashTelemetry &data) const {
     data.id = ID::id();
+    data.addr = (uintptr_t)this;
     data.nodeSize = sizeof(Node);
     data.loadFactor = loadFactor_();
     data.count = m_count; // deliberately unsafe

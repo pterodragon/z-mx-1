@@ -2090,10 +2090,13 @@ void ZdbAny::write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op)
   if (!(rec = rn2file(rn, true))) return;
     // any error is logged by getFile/openFile
 
+  unsigned prevOffset = trailerOffset + offsetof(ZdbTrailer, prevRN);
+
   if (op == ZdbOp::Delete && rec.file()->del(rec.offRN()))
     delFile(rec.file());
   else {
     ZiFile::Offset off = (ZiFile::Offset)rec.offRN() * m_recSize;
+    if (op != ZdbOp::New) *(ZdbRN *)(((char *)ptr) + prevOffset) = rn;
     if (ZuUnlikely((r = rec.file()->pwrite(off, ptr, m_recSize, &e)) != Zi::OK))
       fileWriteError_(rec.file(), off, e);
   }
@@ -2106,7 +2109,6 @@ void ZdbAny::write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op)
     if (!(rec = rn2file(rn, false))) return;
 
     {
-      unsigned prevOffset = trailerOffset + offsetof(ZdbTrailer, prevRN);
       ZiFile::Offset off =
 	(ZiFile::Offset)rec.offRN() * m_recSize + prevOffset;
       if (ZuUnlikely((r = rec.file()->pread(

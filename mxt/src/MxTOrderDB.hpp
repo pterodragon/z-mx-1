@@ -63,8 +63,10 @@ public:
   using OrderDB = Zdb<OrderData>;
   using OrderPOD = ZdbPOD<OrderData>;
 
-  using ClosedData =					// closed order
-    typename Types::template Txn<typename Types::OrderFiltered>;
+  struct ClosedData {					// closed order
+    OrderTxn		orderTxn;
+    Txn<Reject>		rejectTxn;
+  };
   using ClosedDB = Zdb<ClosedData>;
   using ClosedPOD = ZdbPOD<ClosedData>;
 
@@ -96,7 +98,15 @@ public:
   ZuInline OrderDB *orderDB() const { return m_orderDB; }
   ZuInline ClosedDB *closedDB() const { return m_closedDB; }
 
-  // FIXME - functions to move order from openDB to closedDB
+  void closeOrder(OrderPOD *pod) {
+    ZmRef<ClosedPOD> cpod = m_closedDB->push();
+    auto closed = new (cpod->ptr()) ClosedData();
+    closed->orderTxn = order->orderTxn.data<NewOrder>();
+    if ((int)order->exec().eventType == MxTEventType::Reject)
+      closed->rejectTxn = order->execTxn.data<Reject>();
+    m_closedDB->put(cpod);
+    m_orderDB->del(pod);
+  }
 
 private:
   ZmRef<OrderDB>	m_orderDB;

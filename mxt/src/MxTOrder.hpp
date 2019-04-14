@@ -1058,7 +1058,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     OrderTxn		orderTxn;	// new order
     ModifyTxn		modifyTxn;	// (pending) modify
     CancelTxn		cancelTxn;	// (pending) cancel
-    AckTxn		ackTxn;		// last ack/reject of above OMC
+    AckTxn		ackTxn;		// last ack of above OMC
     ExecTxn		execTxn;	// last execution
 
     inline NewOrder &newOrder() {

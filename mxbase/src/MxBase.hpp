@@ -48,6 +48,8 @@
 
 #include <ZeLog.hpp>
 
+#include <ZvCSV.hpp>
+
 // vocabulary types
 
 #ifndef MxBase_LongDouble
@@ -85,6 +87,7 @@ struct MxSeqNoCmp {
   ZuInline static uint64_t null() { return 0; }
 };
 typedef ZuBox<uint64_t, MxSeqNoCmp> MxSeqNo;
+typedef ZvCSVColumn<ZvCSVColType::Int, MxSeqNo> MxSeqNoCol;
 
 #define MxString ZuStringN
 

@@ -47,7 +47,9 @@ ChartDockWidget::ChartDockWidget(const int a_mxTelemetryType,
 
     // set close functionanility
     connect(a_setWidget, &BasicChartView::closeAction, this, [this](){
-        emit closeAction(m_closeActionType);
+        emit closeAction(m_closeActionType,
+                         static_cast<void*>(m_chartController),
+                         static_cast<void*>(this->widget()));
         delete this;
     });
 }
@@ -71,8 +73,8 @@ ChartDockWidget::~ChartDockWidget()
     }
 
     // Important: assign to QT smart pointer for later delete
-    // not using this way to delete will cause segmanation fault every time we close the view
-    // by deleting this way, we make sure we delete only when then event loop (of qt) has finished
+    // otherwise, delete causes segmanation fault if user closes view
+    // This way makes sure delete event will happen only after event loop (of qt) has finished
     QSharedPointer<BasicChartView>(l_view,  &QObject::deleteLater);
 
     setWidget(nullptr);

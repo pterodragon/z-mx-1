@@ -701,3 +701,8 @@ void BasicChartView::updateChart() noexcept
 }
 
 
+void BasicChartView::setXLablesVisibility(const bool a_visibility) noexcept
+{
+    getAxes(CHART_AXIS::X).setLabelsVisible(a_visibility);
+}
+

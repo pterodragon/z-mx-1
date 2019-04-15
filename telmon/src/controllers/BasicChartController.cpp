@@ -144,3 +144,14 @@ BasicChartView* BasicChartController::getChartView() noexcept
                               *this);
 }
 
+void BasicChartController::setChartXAxisVisibility(BasicChartView* a_view,
+                                                   const bool a_vis) noexcept
+{
+    if (a_view)
+    {
+        a_view->setXLablesVisibility(a_vis);
+    }
+}
+
+
+

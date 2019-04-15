@@ -23,6 +23,8 @@
 
 #include "DockWindowController.h"
 
+class ChartWidgetDockWindowModel;
+
 class BasicChartController;
 template<class T>
 class QVector;
@@ -48,7 +50,11 @@ public:
     virtual void initSubController(const int mxTelemetryType,
                                    const QString& mxTelemetryInstanceName) noexcept override final;
 
+    void rearrangeXAxisLablesOnAllViews() noexcept;
+
 private:
+    ChartWidgetDockWindowModel* m_model;
+
     // most important attribute: index lookup, QVector is O(1), that is,
     //    to access the correct MxTypeInsatnces *dataContainer*;
     // *dataContainer* will be made from QMap<Key=QString, T=BasicChartController*>

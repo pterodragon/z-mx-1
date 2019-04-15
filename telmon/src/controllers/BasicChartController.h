@@ -43,6 +43,7 @@ public:
     bool removeView(BasicChartView*) noexcept;
 
     bool isReachedMaxViewAllowed() const noexcept;
+    void setChartXAxisVisibility(BasicChartView*, const bool) noexcept;
 
 private:
     bool addView(BasicChartView*) noexcept;

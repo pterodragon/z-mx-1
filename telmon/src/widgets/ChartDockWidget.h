@@ -46,7 +46,10 @@ public:
     virtual void closeEvent(QCloseEvent *event) override;
 
 signals:
-    void closeAction(int);
+    void closeAction(int,
+                     void*, // controller
+                     void*  // view
+                     );
 
 private:
     bool m_isTitleBarHidden;

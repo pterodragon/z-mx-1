@@ -57,6 +57,8 @@ public:
 
     int getDrawChartFlag() const noexcept {return m_drawChartFlag;}
 
+    void setXLablesVisibility(const bool) noexcept;
+
 signals:
     void closeAction();
 

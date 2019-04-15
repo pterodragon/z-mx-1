@@ -27,12 +27,12 @@
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 #include "src/factories/MxTelemetryTypeWrappersFactory.h"
 #include "src/controllers/MainWindowController.h"
-
-
+#include "src/models/raw/ChartWidgetDockWindowModel.h"
 
 ChartWidgetDockWindowController::ChartWidgetDockWindowController(DataDistributor& a_dataDistributor,
                                                                  QObject* a_parent):
     DockWindowController(a_dataDistributor, " Chart", QString("ChartWidgetDockWindowController"), a_parent),
+    m_model(new ChartWidgetDockWindowModel() ),
     m_DB(new QVector<QMap<QString, BasicChartController*>*>)
 {
     qDebug() << "    ChartWidgetDockWindowController()";
@@ -66,6 +66,9 @@ ChartWidgetDockWindowController::~ChartWidgetDockWindowController()
     delete m_DB;
     m_DB = nullptr;
 
+    delete m_model;
+    m_model = nullptr;
+
     qDebug() << "    ~ChartWidgetDockWindowController() end";
 }
 
@@ -98,6 +101,9 @@ void ChartWidgetDockWindowController::handleUserSelection(unsigned int& a_action
         return;
     }
 
+    m_model->addToActiveCharts(qMakePair(l_controller, l_view));
+    rearrangeXAxisLablesOnAllViews();
+
     a_action = DockWindowController::ACTIONS::ADD_TO_RIGHT;
     a_dockWidget = new ChartDockWidget(a_mxTelemetryType,
                                        a_mxTelemetryInstanceName,
@@ -110,7 +116,12 @@ void ChartWidgetDockWindowController::handleUserSelection(unsigned int& a_action
     connect(static_cast<ChartDockWidget*>(a_dockWidget),
             &ChartDockWidget::closeAction,
             this,
-            [this](int a_type) {
+            [this](int a_type,
+                   void* a_controller,
+                   void* a_view)
+    {
+        this->m_model->removeFromActiveCharts(qMakePair(a_controller, a_view));
+        this->rearrangeXAxisLablesOnAllViews();
         static_cast<MainWindowController*>(this->parent())->closeDockWidget(a_type);
     });
 }
@@ -174,5 +185,15 @@ BasicChartController* ChartWidgetDockWindowController::getController(
     // get from continer
     return (*m_DB).at(a_mxTelemetryType)->value(a_mxTelemetryInstanceName, nullptr);
 }
+
+
+void ChartWidgetDockWindowController::rearrangeXAxisLablesOnAllViews() noexcept
+{
+    auto l_lastTwo = this->m_model->getLastTwoCharts();
+    l_lastTwo.first.first->setChartXAxisVisibility(l_lastTwo.first.second, false);
+    l_lastTwo.second.first->setChartXAxisVisibility(l_lastTwo.second.second, true);
+}
+
+
 
 

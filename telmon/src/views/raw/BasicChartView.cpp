@@ -20,6 +20,8 @@
 
 #include "BasicChartView.h"
 #include "src/controllers/BasicChartController.h"
+#include "src/widgets/ChartViewCustomizer.h"
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
 #include <stdlib.h> // abs
 
@@ -46,7 +48,14 @@ BasicChartView::BasicChartView(const BasicChartModel& a_model,
     m_chartTitleVisibility(false),
     m_chartTitle(new QString(a_chartTitle)),
     m_timer(new QTimer(this)),
+    m_designer(new ChartViewCustomizer(QString(
+                                           QString("ChartViewCustomizer::") +
+                                           MxTelemetryGeneralWrapper::fromMxTypeValueToName(
+                                               m_model.getAssociatedTelemetryType())) +
+                                           m_model.getAssociatedTelemetryInstanceName(),
+                                       *this)),
     m_controller(a_controller)
+
 {
     // connect the timer
     m_timer->setTimerType(Qt::VeryCoarseTimer);
@@ -60,35 +69,24 @@ BasicChartView::BasicChartView(const BasicChartModel& a_model,
     chart()->addAxis(l_axis, Qt::AlignBottom);
     l_axis->setLabelFormat("%d"); // set labels format
     l_axis->setRange(1, 60); // set number of points to track on the chart
-    l_axis->setLabelsVisible(false);
 
     l_axis = &getAxes(CHART_AXIS::Y_LEFT);
     l_axis->setTickCount(5); // divide Y axis to 4 parts
-    l_axis->setLabelFormat("%d");
 
     l_axis = &getAxes(CHART_AXIS::Y_RIGHT);
     l_axis->setTickCount(5);
-    l_axis->setLabelFormat("%d");
-    l_axis->setVisible(false);
 
     initSeries();
 
     setRenderHint(QPainter::Antialiasing); // make the chart look nicer
     setDragMode(DragMode::ScrollHandDrag); //set drag mode
 
-    // set theme
-    //chart()->setTheme(QChart::ChartThemeDark);
-
-    // no need for shadow in charts representation
-    chart()->setDropShadowEnabled(false);
-
-    // set not margin, so utilize all window size
-    chart()->setMargins(QMargins(0,0,0,0));
-
     initLegend();
     initChartLabel();
     initStartStopButton();
     createActions();
+
+    m_designer->init();
 
     m_timer->start(1000);
 }
@@ -98,6 +96,9 @@ BasicChartView::~BasicChartView()
 {
     qInfo() << QString("~" + *m_chartTitle);
     m_timer->stop();
+
+    delete m_designer;
+    m_designer = nullptr;
 
     delete m_chartTitle;
     m_chartTitle = nullptr;
@@ -595,13 +596,6 @@ void BasicChartView::initChartLabel() noexcept
     // we dont use the base chart title widget, because i could not
     // embed it in the chart, thereforem we use our own label
     setChartTitleVisiblity(m_chartTitleVisibility);
-
-    // scale content to avaiable size
-    m_titleLabel->setScaledContents(true);
-
-    // set same font
-    QFont font = chart()->legend()->font();
-    m_titleLabel->setFont(font);
 }
 
 

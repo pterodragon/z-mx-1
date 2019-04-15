@@ -26,10 +26,14 @@
 #include "src/models/raw/BasicChartModel.h"
 
 class BasicChartController;
+class ChartViewCustomizer;
 
 class BasicChartView : public QChartView
 {
     Q_OBJECT
+
+    friend class ChartViewCustomizer;
+
 public:
     BasicChartView(const BasicChartModel& a_model,
                    const QString& a_chartTitle,
@@ -211,6 +215,7 @@ private:
     QMenu* m_menuYRight;
     QMenu* m_refreshRateMenu;
     QTimer* m_timer;
+    ChartViewCustomizer* m_designer;
 
     BasicChartController& m_controller;
 };

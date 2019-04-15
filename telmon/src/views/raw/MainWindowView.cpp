@@ -137,6 +137,7 @@ void MainWindowView::initCentralLook() noexcept
         // after playing with it, for below values the tree widget looks good on strartup
         return  QSize(l_size.width() * 20 / 100, l_size.height() * 90 / 100);
     });
+    m_welcomeScreen->setObjectName("m_welcomeScreen");
 
     m_tablesWidgetSplitter->addWidget(m_welcomeScreen);
     m_chartAreaFiller = new BasicTextWidget(m_chartsWidgetSplitter,
@@ -151,6 +152,7 @@ void MainWindowView::initCentralLook() noexcept
           // after playing with it, for below values the tree widget looks good on strartup
           return  QSize(l_size.width() * 60 / 100, l_size.height() * 90 / 100);
       });
+    m_chartAreaFiller->setObjectName("m_chartAreaFiller");
 
     m_chartsWidgetSplitter->addWidget(m_chartAreaFiller);
     m_chartsWidgetSplitter->setOrientation(Qt::Vertical);

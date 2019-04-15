@@ -1,3 +1,4 @@
+
 /*
 	see:
 	https://doc.qt.io/qt-5/stylesheet-examples.html
@@ -29,7 +30,7 @@ QWidget#m_centralWidget {
 /* * * * * Customizing QMenu * * * * * */
 
 QMenu {
-    background-color: #ABABAB;
+    background-color: #2E2F30;
     border: 2px solid black;
 }
 
@@ -38,15 +39,16 @@ QMenu::item {
     /* sets background of menu item. set this to something non-transparent
         if you want menu color and menu item color to be different */
     background-color: transparent;
+    color: #bec0c2;
 }
 
 QMenu::item:selected {
 	background-color: #1E53E4;
-	color: white;
+	color: #bec0c2;
 }
 
 QMenu::item:disabled {
-        background-color: #ABABAB;
+        background-color: #2E2F30;
         color: #666666;
 }
 
@@ -55,19 +57,22 @@ QMenu::item:disabled {
 
 
 QMenuBar {
-    background-color: #ABABAB;
+    background-color: #404244;
 }
 
+QMenuBar::item {
+    color: #bec0c2;
+}
 
 
 QMenuBar::item:selected {
         background-color: #1E53E4;
-        color: white;
+        color: #bec0c2;
 }
 
 QMenuBar::item:pressed {
         background-color: #1E53E4;
-        color: white;
+        color: #bec0c2;
 }
 
 
@@ -76,8 +81,8 @@ QMenuBar::item:pressed {
 
 
 QSplitter::handle {
-	background-color: #ABABAB;
-	border: 1px solid black;
+	background-color: #404244;
+	border: 0px solid black;
 	margin: 0px;
 
 }
@@ -101,7 +106,7 @@ QSplitter::handle:pressed {
 /* * * * * Customizing QDockWidget * * * * */
 /*
 QDockWidget {
-    border: 1px solid lightgray;
+    border: 0px solid yellow;
     titlebar-close-icon: url(close.png);
     titlebar-normal-icon: url(undock.png);
 }
@@ -113,26 +118,27 @@ QDockWidget {
 
 QTreeView#m_treeView {
 	show-decoration-selected: 1;
-	background: #858585;
+	background: #2E2F30;
 }
 
 
 QTreeView#m_treeView::item {
-	border: 1px solid #d9d9d9;
+	color: #bec0c2;
+	border: 1px solid #2E2F30;
 	border-top-color: transparent;
 	border-bottom-color: transparent;
 }
 
 QTreeView#m_treeView::item:hover {
 	background: #1E53E4;
-	color: white;
-	border: 1px solid #bfcde4;
+	color: #bec0c2;
+	border: 1px solid #2E2F30;
 }
 
 QTreeView#m_treeView::item:selected {
         background: #1E53E4;
-        color: white;
-        border: 1px solid #bfcde4;
+        color: #bec0c2;
+        border: 1px solid #2E2F30;
 
 }
 
@@ -147,20 +153,77 @@ QTreeView#m_treeView::item:selected:!active {
 */
 
 QTreeView#m_treeView::branch:selected {
-        background: #858585;
-        color: white;
-        border: 0px solid #bfcde4;
+        background: #2E2F30;
+        color: #bec0c2;
+        border: 0px solid #2E2F30;
+
+}
+/*
+QTreeView#m_treeView::branch:closed {
+        image: url(branch-closed.png);
+	color: magenta;
+	background: black;
+
+}
+*/
+
+/* * * * * Customizing ChartViewHeader * * * * */
+QHeaderView {
+        background: #404244;
+	color: #bec0c2;
 
 }
 
+/* * * * * Customizing QScrollBar * * * * */
+/* see https://stackoverflow.com/questions/12368523/qtreeview-how-to-change-vertical-scroll-bar-stylesshape-and-color-etc*/
+
+QScrollBar#m_treeViewScrollBar {
+    border: 0px solid black;
+    background-color: #404244;
+    /*height: 15px;
+    margin: 0px 20px 0 20px;*/
+}
+
+QScrollBar#m_treeViewScrollBar::handle {
+    border: 1px solid black;
+    background: #505254;
+    /*min-width: 20px;*/
+}
 /*
-	stopped at trying to change the table header
-	after that need to change to table view
-	after that need to change the chart view
-	Huw would like it to be exactly like the lap app  
+QScrollBar::add-line:horizontal {
+    border: 2px solid grey;
+    background: #32CC99;
+    width: 20px;
+    subcontrol-position: right;
+    subcontrol-origin: margin;
+}
+
+QScrollBar::sub-line:horizontal {
+    border: 2px solid grey;
+    background: #32CC99;
+    width: 20px;
+    subcontrol-position: left;
+    subcontrol-origin: margin;
+}
 */
 
-/* * * * * Customizing QPushButton * * * * */
+/* * * * * Customizing BasicTextWidget * * * * */
+QTextEdit#m_welcomeScreen {
+	background-color: #2e2f30;
+}
+
+QTextEdit#m_chartAreaFiller
+ {
+        background-color: #2e2f30;
+}
+
+
+
+/*
+	stopped at trying to change the table header
+	after that need to change to table view  
+*/
+
 
 
 

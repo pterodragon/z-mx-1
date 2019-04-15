@@ -23,12 +23,15 @@
 #include "QMouseEvent"
 #include "QDebug"
 #include "src/widgets/BasicContextMenu.h"
+#include "QScrollBar"
 
 TreeView::TreeView():
     m_mainWindow(nullptr)
 {
     this->setContextMenuPolicy(Qt::CustomContextMenu);
     initContextMenu();
+
+    verticalScrollBar()->setObjectName("m_treeViewScrollBar");
 }
 
 TreeView::~TreeView()

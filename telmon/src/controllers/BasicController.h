@@ -33,7 +33,7 @@ class BasicController : public QObject
     Q_OBJECT
 public:
     BasicController(DataDistributor& a_dataDistributor,
-                    QString a_className,
+                    const QString& a_className,
                     QObject* a_parent);
     virtual ~BasicController();
     // Stop the compiler generating methods of copy the object
@@ -45,7 +45,7 @@ public:
 
 protected:
     DataDistributor& m_dataDistributor;
-    QString* m_className;
+    const QString* m_className;
 };
 
 #endif // BASICCONTROLLER_H

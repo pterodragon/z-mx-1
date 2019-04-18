@@ -65,6 +65,27 @@ protected:
     QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
 
+    // For  HTML Text
+    inline static const QString _padding   = _3S;
+    inline static const QString _title     = _Bold_begin + "Engine::";
+
+    inline static const QString _time      = _NewLine    + "time:"      + _6S + _padding;
+    inline static const QString _state     = _NewLine    + "state:"     + _5S + _padding;
+    inline static const QString _nLinks    = _NewLine    + "nLinks:"    + _4S + _padding;
+    inline static const QString _up        = _NewLine    + "up:"        + _Tab+ _padding;
+    inline static const QString _down      = _NewLine    + "down:"      + _6S + _padding;
+
+    inline static const QString _disabled  = _NewLine    + "disabled:"  + _2S + _padding;
+    inline static const QString _transient = _NewLine    + "transient:" + _S + _padding;
+    inline static const QString _reconn    = _NewLine    + "reconn:"    + _4S + _padding;
+    inline static const QString _failed    = _NewLine    + "failed:"    + _4S + _padding;
+    inline static const QString _mxID      = _NewLine    + "mxID:"      + _6S + _padding;
+
+    inline static const QString _rxThread  = _NewLine    + "rxThread:"  + _2S + _padding;
+    inline static const QString _txThread  = _NewLine    + "txThread:"  + _2S + _padding;
+
+    const QString& getColor(const int a_state) const noexcept;
+
 public:
     /**
      * @brief The EngineMxTelemetryStructIndex enum corresponds to following:
@@ -92,6 +113,7 @@ public:
     int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
 
     void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+    virtual const QString _getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept override final;
 };
 
 

@@ -17,21 +17,30 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+#include "TabelQLabelSubscriber.h"
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
-#include "src/controllers/BasicController.h"
-
-BasicController::BasicController(DataDistributor& a_dataDistributor,
-                                 const QString& a_className,
-                                 QObject* a_parent):
-    QObject(a_parent),
-    m_dataDistributor(a_dataDistributor),
-    m_className(new QString(a_className))
+TabelQLabelSubscriber::TabelQLabelSubscriber(const int a_mxTelemetryType,
+                                             const QString& a_instance):
+    OneMxTypeDataSubscriber(QString("TableSubscriber::" +
+                                    MxTelemetryGeneralWrapper::fromMxTypeValueToName(a_mxTelemetryType) +
+                                    "::" + a_instance),
+                            a_mxTelemetryType,
+                            a_instance)
 {
 
 }
 
-BasicController::~BasicController()
+
+TabelQLabelSubscriber::~TabelQLabelSubscriber()
 {
-    delete m_className;
-    m_className = nullptr;
+
+}
+
+
+void TabelQLabelSubscriber::update(void* a_mxTelemetryMsg)
+{
+    if (!isMsgInstanceMatchesSubscriberInstance(a_mxTelemetryMsg)) {return;}
+    auto l_result = m_wrapper.getDataForTabelQLabel(a_mxTelemetryMsg);
+    emit updateDone(l_result);
 }

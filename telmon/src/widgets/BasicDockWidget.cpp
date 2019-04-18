@@ -18,24 +18,18 @@
  */
 
 
-
 #include "BasicDockWidget.h"
-#include "QDebug"
-#include "QTableWidget"
-#include "QLayout"
-#include "src/models/wrappers/DockWidgetModelWrapper.h"
-#include "QCloseEvent"
 
-BasicDockWidget::BasicDockWidget(const QString &title,
-                               DockWidgetModelWrapper* a_tempModelWrapper,
-                               const QString& a_mxTelemetryTypeName,
-                               const QString& a_mxTelemetryInstanceNameQWidget,
-                               QWidget *parent):
-    QDockWidget (title, parent),
-    m_dockWidgetModelWrapper(a_tempModelWrapper),
-    m_mxTelemetryTypeName(a_mxTelemetryTypeName),
-    m_mxTelemetryInstanceName(a_mxTelemetryInstanceNameQWidget),
-    m_isTitleBarHidden(false)
+
+BasicDockWidget::BasicDockWidget(const int       a_mxTelemetryTypeName,
+                                 const QString&  a_mxTelemetryInstanceName,
+                                 const QString&  a_className,
+                                 QWidget*        a_parent,
+                                 Qt::WindowFlags a_flags):
+    QDockWidget(QString(), a_parent, a_flags),
+    m_mxTelemetryType(a_mxTelemetryTypeName),
+    m_mxTelemetryInstanceName(new QString(a_mxTelemetryInstanceName)),
+    m_className(new QString(a_className))
 {
 
 }
@@ -43,59 +37,31 @@ BasicDockWidget::BasicDockWidget(const QString &title,
 
 BasicDockWidget::~BasicDockWidget()
 {
-    qDebug() << "    ~BasicDockWidget() -BEGIN";
-    //unsubscribe
-    if (m_dockWidgetModelWrapper)
-    {
-        m_dockWidgetModelWrapper->unsubscribe(m_mxTelemetryTypeName, m_mxTelemetryInstanceName);
-        //m_tempModelWrapper = nullptr;
-    }
+    delete m_className;
+    m_className = nullptr;
 
-    // dont delete the table!
-    if (this->widget() != nullptr) {this->widget()->setParent(nullptr);}
-    setWidget(nullptr);
-    qDebug() << "    ~BasicDockWidget() -END";
-
+    delete m_mxTelemetryInstanceName;
+    m_mxTelemetryInstanceName = nullptr;
 }
 
 
-const QString& BasicDockWidget::getMxTelemetryTypeName() const noexcept
+const QString& BasicDockWidget::getClassName() const noexcept
 {
-    return m_mxTelemetryTypeName;
+    return *m_className;
+}
+
+
+int BasicDockWidget::getMxTelemetryType() const noexcept
+{
+    return m_mxTelemetryType;
 }
 
 
 const QString& BasicDockWidget::getMxTelemetryInstanceName() const noexcept
 {
-    return m_mxTelemetryInstanceName;
+    return *m_mxTelemetryInstanceName;
 }
 
 
-void BasicDockWidget::closeEvent(QCloseEvent *event)
-{
-    event->accept();
 
-    /**
-     * I had some wired problem, which may be related to linkage order
-     * even when i tell the program to close this DockWidget explicitly
-     * it will not call the destrcutor, but only in the end
-     */
-    delete this;
-}
 
-void BasicDockWidget::hideTitleBar() noexcept
-{
-    // set no title for the dock widget
-    // see https://stackoverflow.com/questions/18918496/qdockwidget-without-a-title-bar
-
-    // had a lot of issues with this one, eventually this one works
-    if (m_isTitleBarHidden == true)
-    {
-        qWarning() << "BasicDockWidget::hideTitleBar() title bar already hidden, doing nothing";
-        return;
-    }
-
-    m_isTitleBarHidden = true;
-    setTitleBarWidget(new QWidget(this));
-
-}

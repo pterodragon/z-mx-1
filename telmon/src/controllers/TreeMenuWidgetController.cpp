@@ -82,7 +82,7 @@ void TreeMenuWidgetController::createActions() noexcept
 
         const QString l_actionName = m_treeView->m_firstAction->text();
         handleContextMenuAction(l_actionName,
-                                ControllerFactory::CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER);
+                                ControllerFactory::CONTROLLER_TYPE::TABLE_LABEL_IMPL_DOCK_WINDOW_CONTROLLER);
 
     });
 
@@ -137,7 +137,7 @@ void TreeMenuWidgetController::handleContextMenuAction(const QString& a_actionNa
     //  get selected item in view
     QModelIndexList indexes = this->m_treeView->selectionModel()->selectedIndexes();
 
-    // get some parameters
+    // get some parameters, parent = mx type, child = instance name
     const QString      l_actionName = a_actionName;
     const QString&     l_childName  = this->m_treeMenuWidgetModelWrapper->getModel()->data(indexes.first()).toString();
     const QModelIndex& l_parent     = this->m_treeMenuWidgetModelWrapper->getModel()->parent(indexes.first());
@@ -161,7 +161,6 @@ void TreeMenuWidgetController::handleContextMenuAction(const QString& a_actionNa
 
     const int l_mxTelemetryType = MxTelemetryGeneralWrapper::fromMxTypeNameToValue(l_parentName);
     m_MainWindowController.dockWindowsManagerTreeWidgetContextMenuSequence(a_dockWindowType,
-                                                                           l_parentName,
                                                                            l_childName,
                                                                            l_mxTelemetryType);
 

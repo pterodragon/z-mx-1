@@ -213,7 +213,49 @@ const QString MxTelemetryDBHostWrapper::_getPrimaryKey(void* const a_mxTelemetry
 }
 
 
+const QString MxTelemetryDBHostWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
+{
+    const auto* const l_data = static_cast<const ZdbHost::Telemetry* const>(a_mxTelemetryMsg);
+
+    const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
+            + _time     +  getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)
+            + _priority +  QString::number(l_data->priority)
+
+            + getColor(l_data->state)
+            + _state    +  ZdbHost::stateName(l_data->state)
+            + _color_off
+
+            + _voted    +  QString::number(l_data->voted)
+            + _ip       +  streamToQString(*(static_cast<ZiIP*>(getMxTelemetryDataType(a_mxTelemetryMsg, DBHostMxTelemetryStructIndex::e_ip).first)))
+            + _port     +  ZdbHost::stateName(l_data->port)
+
+            ;
+
+    return l_result;
+}
 
 
-
+//ZdbHost::
+//    Instantiated = 0,	// Red - instantiated, init() not yet called
+//    Initialized,	    // Amber - init() called
+//    Stopped,		    // Amber - open() called
+//    Electing,		    // Amber - start() called, determining active/inactive
+//    Activating,		// Amber - activating application
+//    Active,		    // Green - active (master)
+//    Deactivating,	    // Amber - deactivating application
+//    Inactive,		    // Amber - inactive (client)
+//    Stopping		    // Amber - stop() called - stopping
+const QString& MxTelemetryDBHostWrapper::getColor(const int a_state) const noexcept{
+    switch (a_state) {
+    case ZdbHost::Active:
+        return _color_green;
+        break;
+    case ZdbHost::Instantiated:
+        return _color_red;
+        break;
+    default:
+        return _color_amber;
+        break;
+    }
+}
 

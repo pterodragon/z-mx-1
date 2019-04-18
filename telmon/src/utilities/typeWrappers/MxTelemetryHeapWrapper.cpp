@@ -311,3 +311,37 @@ const QString MxTelemetryHeapWrapper::_getPrimaryKey(void* const a_mxTelemetryMs
      }
 }
 
+
+const QString MxTelemetryHeapWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
+{
+    const auto* const l_data = static_cast<const ZmHeapTelemetry* const>(a_mxTelemetryMsg);
+
+    // for changing colors https://stackoverflow.com/questions/2749798/qlabel-set-color-of-text-and-background
+//   + "<font color=\"DeepPink\">"
+//    + "\n   alignment:\t"   + QString::number(l_data->alignment)
+//    + "</font>"
+//    adding spaces
+//    "<b>Heap::"             +  _getPrimaryKey(a_mxTelemetryMsg) + "</b>"
+    // <span style="font-size: .5em;">&nbsp;</span>
+
+    const auto l_result = _Title             +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
+            +  _Time       + getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)
+            + _Alignemnt   + QString::number(l_data->alignment)
+            + _Partition   + QString::number(l_data->partition)
+            + _Sharded     + QString::number(l_data->sharded)
+            + _CacheSize   + QString::number(l_data->cacheSize)
+            + _CacheAllocs + QString::number(l_data->cacheAllocs)
+            + _HeapAllocs  + QString::number(l_data->heapAllocs)
+            + _Frees       + QString::number(l_data->frees)
+            + _Allocated   + QString::number(l_data->cacheAllocs + l_data->heapAllocs - l_data->frees)
+    ;
+
+    return l_result;
+}
+
+
+
+
+
+
+

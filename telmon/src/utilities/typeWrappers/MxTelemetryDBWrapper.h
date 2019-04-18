@@ -66,6 +66,28 @@ protected:
     QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
 
+    // For  HTML Text
+    inline static const QString _padding     = "";
+    inline static const QString _title       = _Bold_begin + "DB::";
+    inline static const QString _time        = _NewLine + "time:"        + _Tab + _padding;
+    inline static const QString _id          = _NewLine + "id:"          + _Tab + _2S   + _padding;
+    inline static const QString _recSize     = _NewLine + "recSize:"     + _5S  + _padding;
+    inline static const QString _compress    = _NewLine + "compress:"    + _4S  + _padding;
+    inline static const QString _cacheMode   = _NewLine + "cacheMode:"   + _3S  + _padding;
+    inline static const QString _cacheSize   = _NewLine + "cacheSize:"   + _3S  + _padding;
+    inline static const QString _path        = _NewLine + "path:"        + _Tab + _padding;
+    inline static const QString _fileSize    = _NewLine + "fileSize:"    + _4S  + _padding;
+    inline static const QString _fileRecs    = _NewLine + "fileRecs:"    + _4S  + _padding;
+    inline static const QString _filesMax    = _NewLine + "filesMax:"    + _4S  + _padding;
+
+    inline static const QString _preAlloc    = _NewLine + "preAlloc:"    + _4S  + _padding;
+    inline static const QString _minRN       = _NewLine + "minRN:"       + _7S  + _padding;
+    inline static const QString _allocRN     = _NewLine + "allocRN:"     + _5S  + _padding;
+    inline static const QString _fileRN      = _NewLine + "fileRN:"      + _6S  + _padding;
+    inline static const QString _cacheLoads  = _NewLine + "cacheLoads:"  + _2S  + _padding;
+    inline static const QString _cacheMisses = _NewLine + "cacheMisses:" + _S   + _padding; // LONGEST
+    inline static const QString _fileLoads   = _NewLine + "fileLoads:"   + _3S  + _padding;
+    inline static const QString _fileMisses  = _NewLine + "fileMisses:"  + _2S  + _padding;
 
 public:
     /**
@@ -86,7 +108,28 @@ public:
      *    uint64_t	fileLoads;	       // dynamic
      *    uint64_t	fileMisses;	       // dynamic
      *    uint32_t	id;
-     *    uint32_t	preAlloc;
+     *    uint32_t	preAlloc;    // For  HTML Text
+    inline static const QString _padding          = "";
+    inline static const QString _title            = _Bold_begin + "DBEnv::";
+    inline static const QString _time             = _NewLine + "time:"             + _Tab + _4S  + _padding;
+    inline static const QString _self             = _NewLine + "self:"             + _Tab + _4S   + _padding;
+    inline static const QString _master           = _NewLine + "master:"           + _Tab + _2S   + _padding;
+    inline static const QString _prev             = _NewLine + "prev:"             + _Tab + _4S   + _padding;
+    inline static const QString _next             = _NewLine + "next:"             + _Tab + _4S   + _padding;
+    inline static const QString _state            = _NewLine + "state:"            + _Tab + _3S   + _padding;
+    inline static const QString _active           = _NewLine + "active:"           + _Tab + _3S    + _padding;
+    inline static const QString _recovering       = _NewLine + "recovering:"       + _7S         + _padding; // LONGEST
+    inline static const QString _replicating      = _NewLine + "replicating:"      + _6S    + _padding;
+    inline static const QString _nDBs             = _NewLine + "nDBs:"             + _Tab + _4S    + _padding;
+
+    inline static const QString _nHosts           = _NewLine + "nHosts:"           + _Tab + _2S + _padding;
+    inline static const QString _nPeers           = _NewLine + "nPeers:"           + _Tab + _2S   + _padding;
+    inline static const QString _nCxns            = _NewLine + "nCxns:"            + _Tab + _3S   + _padding;
+    inline static const QString _heartbeatFreq    = _NewLine + "heartbeatFreq:"    + _3S   + _padding;
+    inline static const QString _heartbeatTimeout = _NewLine + "heartbeatTimeout:" + _S    + _padding;
+    inline static const QString _reconnectFreq    = _NewLine + "reconnectFreq:"    + _3S    + _padding; // LONGEST
+    inline static const QString _electionTimeout  = _NewLine + "electionTimeout:"  + _2S    + _padding;
+    inline static const QString _writeThread      = _NewLine + "writeThread:"      + _6S    + _padding;
      *    uint32_t	recSize;
      *    uint32_t	fileRecs;
      *    uint32_t	cacheSize;
@@ -105,6 +148,7 @@ public:
 
     int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+    virtual const QString _getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept override final;
 };
 
 #endif // MXTELEMETRYDBWRAPPER_H

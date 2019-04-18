@@ -66,6 +66,16 @@ protected:
     QPair<void*, int> getMxTelemetryDataType(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
 
+    // For  HTML Text
+        inline static const QString _title       = _Bold_begin + "Link::";
+        inline static const QString _time        = _NewLine + "time:"        + _Tab + _2S;
+        inline static const QString _state       = _NewLine + "state:"       + _Tab + _S;
+        inline static const QString _reconnects  = _NewLine + "reconnects:"  + _4S; // LONGEST
+        inline static const QString _rxSeqNo     = _NewLine + "rxSeqNo:"     + _7S;
+        inline static const QString _txSeqNo     = _NewLine + "txSeqNo:"     + _7S;
+
+        const QString& getColor(const int a_state) const noexcept;
+
 public:
     /**
      * @brief The LinkMxTelemetryStructIndex enum corresponds to following:
@@ -82,6 +92,7 @@ public:
 
     int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+    virtual const QString _getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept override final;
 };
 
 

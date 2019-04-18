@@ -400,6 +400,66 @@ const QString MxTelemetryDBEnvWrapper::_getPrimaryKey(void* const a_mxTelemetryM
 }
 
 
+const QString MxTelemetryDBEnvWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
+{
+    const auto* const l_data = static_cast<const ZdbEnv::Telemetry* const>(a_mxTelemetryMsg);
+
+    const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
+            + _time             +  getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)
+            + _self             +  QString::number(l_data->self)
+            + _master           +  QString::number(l_data->master)
+            + _prev             +  QString::number(l_data->prev)
+            + _next             +  QString::number(l_data->next)
+
+            + getColor(l_data->state)
+            + _state            +  ZdbHost::stateName(l_data->state)
+            + _color_off
+
+            + _active           +  QString::number(l_data->active)
+            + _recovering       +  QString::number(l_data->recovering)
+            + _replicating      +  QString::number(l_data->replicating)
+            + _nDBs             +  QString::number(l_data->nDBs)
+
+            + _nHosts           +  QString::number(l_data->nHosts)
+            + _nPeers           +  QString::number(l_data->nPeers)
+            + _nCxns            +  QString::number(l_data->nCxns)
+            + _heartbeatFreq    +  QString::number(l_data->heartbeatFreq)
+            + _heartbeatTimeout +  QString::number(l_data->heartbeatTimeout)
+            + _reconnectFreq    +  QString::number(l_data->reconnectFreq)
+            + _electionTimeout  +  QString::number(l_data->electionTimeout)
+            + _writeThread      +  QString::number(l_data->writeThread)
+            ;
+
+    return l_result;
+}
+
+//ZdbHost::
+//    Instantiated = 0,	// Red - instantiated, init() not yet called
+//    Initialized,	    // Amber - init() called
+//    Stopped,		    // Amber - open() called
+//    Electing,		    // Amber - start() called, determining active/inactive
+//    Activating,		// Amber - activating application
+//    Active,		    // Green - active (master)
+//    Deactivating,	    // Amber - deactivating application
+//    Inactive,		    // Amber - inactive (client)
+//    Stopping		    // Amber - stop() called - stopping
+const QString& MxTelemetryDBEnvWrapper::getColor(const int a_state) const noexcept{
+    switch (a_state) {
+    case ZdbHost::Active:
+        return _color_green;
+        break;
+    case ZdbHost::Instantiated:
+        return _color_red;
+        break;
+    default:
+        return _color_amber;
+        break;
+    }
+}
+
+
+
+
 
 
 

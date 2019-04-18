@@ -70,6 +70,21 @@ protected:
 
     const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
 
+    // For  HTML Text
+    inline static const QString _padding    = _2S;
+    inline static const QString _Title         = _Bold_begin + "HashTbl::";
+    inline static const QString _Time          = _NewLine + "time:"          + _Tab + _2S + _padding;
+    inline static const QString _linear        = _NewLine + "linear:"        + _Tab       + _padding;
+    inline static const QString _bits          = _NewLine + "bits:"          + _Tab + _2S + _padding;
+    inline static const QString _slots         = _NewLine + "slots:"         + _Tab + _S  + _padding;
+    inline static const QString _cBits         = _NewLine + "cBits:"         + _Tab + _S  + _padding;
+    inline static const QString _locks         = _NewLine + "locks:"         + _Tab + _S  + _padding;
+    inline static const QString _count         = _NewLine + "count:"         + _Tab + _S  + _padding;
+    inline static const QString _resized       = _NewLine + "resized:"       + _7S + _padding;
+    inline static const QString _loadFactor    = _NewLine + "loadFactor:"    + _4S + _padding;
+    inline static const QString _effLoadFactor = _NewLine + "effLoadFactor:" + _S  + _padding; // LONGEST
+    inline static const QString _nodeSize      = _NewLine + "nodeSize:"      + _6S + _padding;
+
 public:
     /**
      * @brief The ZmHashTblTelemetryStructIndex enum corresponds to following:
@@ -93,6 +108,7 @@ public:
 
     int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+    virtual const QString _getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept override final;
 
 };
 

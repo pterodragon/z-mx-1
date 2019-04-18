@@ -18,34 +18,27 @@
  */
 
 
+#ifndef TABLEWIDGETDOCKWIDGET_H
+#define TABLEWIDGETDOCKWIDGET_H
 
-#ifndef BASICDOCKWIDGET_H
-#define BASICDOCKWIDGET_H
+#include "BasicDockWidget.h"
 
-#include "QDockWidget"
-
-class DockWidgetModelWrapper;
-
-class BasicDockWidget : public QDockWidget
+class TableWidgetDockWidget : public BasicDockWidget
 {
 public:
-    BasicDockWidget(const int       a_mxTelemetryTypeName,
-                    const QString&  a_mxTelemetryInstanceName,
-                    const QString&  a_className,
-                    QWidget*        a_parent,
-                    Qt::WindowFlags a_flags = Qt::WindowFlags());
-    virtual ~BasicDockWidget() override;
-
-    const QString& getClassName()               const noexcept;
-    int            getMxTelemetryType()         const noexcept;
-    const QString& getMxTelemetryInstanceName() const noexcept;
+    TableWidgetDockWidget(DockWidgetModelWrapper* a_dockWidgetModelWrapper,
+                          const int               a_mxTelemetryTypeName,
+                          const QString&          a_mxTelemetryInstanceName,
+                          QWidget*                a_parent);
+    virtual ~TableWidgetDockWidget() override;
 
 
+    virtual void closeEvent(QCloseEvent *event) override final;
+    void hideTitleBar() noexcept;
 
 protected:
-    const int m_mxTelemetryType;
-    const QString* m_mxTelemetryInstanceName;
-    const QString* m_className;
+    DockWidgetModelWrapper* m_dockWidgetModelWrapper;
+    bool m_isTitleBarHidden;
 };
 
-#endif // BASICDOCKWIDGET_H
+#endif // TABLEWIDGETDOCKWIDGET_H

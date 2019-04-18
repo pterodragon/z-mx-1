@@ -45,7 +45,7 @@ public:
     DockWidgetModelWrapper(DockWidgetModelWrapper const& copy);            // Not Implemented
     DockWidgetModelWrapper& operator=(DockWidgetModelWrapper const& copy); // Not Implemented
 
-    virtual void unsubscribe(const QString& a_mxTelemetryTypeName,
+    virtual void unsubscribe(const int      a_mxTelemetryTypeName,
                              const QString& a_mxTelemetryInstanceName) noexcept = 0;
 
 protected:

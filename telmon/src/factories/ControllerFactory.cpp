@@ -22,6 +22,7 @@
 #include "src/controllers/TreeMenuWidgetController.h"
 #include "src/controllers/TableWidgetDockWindowController.h"
 #include "src/controllers/ChartWidgetDockWindowController.h"
+#include "src/controllers/TableLabelImplDockWindowController.h"
 #include "QDebug"
 
 ControllerFactory::ControllerFactory()
@@ -38,20 +39,23 @@ BasicController* ControllerFactory::getController(const unsigned int a_type,
     BasicController* l_result = nullptr;
     switch (a_type)
     {
-        case CONTROLLER_TYPE::TREE_MENU_WIDGET_CONTROLLER:
-            l_result = new TreeMenuWidgetController(a_dataDistributor, a_mainWindowController, a_parent);
-            break;
-        case CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER:
-            l_result = new TableWidgetDockWindowController(a_dataDistributor, a_parent);
-            break;
-        case CONTROLLER_TYPE::CHART_DOCK_WINDOW_CONTROLLER:
-            l_result = new ChartWidgetDockWindowController(a_dataDistributor, a_parent);
-            break;
-        default:
-            qWarning() << "ControllerFactory::getController called with unknown type:"
-                       << a_type
-                       << "returning..." ;
-            break;
+    case CONTROLLER_TYPE::TREE_MENU_WIDGET_CONTROLLER:
+        l_result = new TreeMenuWidgetController(a_dataDistributor, a_mainWindowController, a_parent);
+        break;
+    case CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER:
+        l_result = new TableWidgetDockWindowController(a_dataDistributor, a_parent);
+        break;
+    case CONTROLLER_TYPE::TABLE_LABEL_IMPL_DOCK_WINDOW_CONTROLLER:
+        l_result = new TableLabelImplDockWindowController(a_dataDistributor, a_parent);
+        break;
+    case CONTROLLER_TYPE::CHART_DOCK_WINDOW_CONTROLLER:
+        l_result = new ChartWidgetDockWindowController(a_dataDistributor, a_parent);
+        break;
+    default:
+        qWarning() << "ControllerFactory::getController called with unknown type:"
+                   << a_type
+                   << "returning..." ;
+        break;
     }
     return l_result;
 }

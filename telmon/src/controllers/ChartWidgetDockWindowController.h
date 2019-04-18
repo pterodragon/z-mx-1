@@ -41,11 +41,10 @@ public:
     virtual QAbstractItemView* getView()   override final;
 
     // DockWindowController interface
-    virtual void handleUserSelection(unsigned int& a_action,
-                                     QDockWidget*& a_widget,
-                                     const QList<QDockWidget *>& a_currentDockList,
-                                     const QString& a_mxTelemetryInstanceName,
-                                     const int a_mxTelemetryType) noexcept override final;
+    virtual std::pair<QDockWidget*, int> handleUserSelection(const QList<QDockWidget *>& a_currentDockList,
+                                                             const QString& a_mxTelemetryInstanceName,
+                                                             const int a_mxTelemetryType) noexcept override final;
+
 
     virtual void initSubController(const int mxTelemetryType,
                                    const QString& mxTelemetryInstanceName) noexcept override final;

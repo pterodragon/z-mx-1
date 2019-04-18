@@ -17,35 +17,24 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+#ifndef TABELQLABELSUBSCRIBER_H
+#define TABELQLABELSUBSCRIBER_H
 
+#include "OneMxTypeDataSubscriber.h"
+#include "QObject"
 
-#ifndef BASICDOCKWIDGET_H
-#define BASICDOCKWIDGET_H
-
-#include "QDockWidget"
-
-class DockWidgetModelWrapper;
-
-class BasicDockWidget : public QDockWidget
+class TabelQLabelSubscriber :  public QObject, public OneMxTypeDataSubscriber
 {
+    Q_OBJECT
 public:
-    BasicDockWidget(const int       a_mxTelemetryTypeName,
-                    const QString&  a_mxTelemetryInstanceName,
-                    const QString&  a_className,
-                    QWidget*        a_parent,
-                    Qt::WindowFlags a_flags = Qt::WindowFlags());
-    virtual ~BasicDockWidget() override;
-
-    const QString& getClassName()               const noexcept;
-    int            getMxTelemetryType()         const noexcept;
-    const QString& getMxTelemetryInstanceName() const noexcept;
+    TabelQLabelSubscriber(const int a_mxTelemetryType,
+                          const QString& a_instance);
+    virtual ~TabelQLabelSubscriber() override;
+    virtual void update(void* a_mxTelemetryMsg) override final;
 
 
-
-protected:
-    const int m_mxTelemetryType;
-    const QString* m_mxTelemetryInstanceName;
-    const QString* m_className;
+signals:
+    void updateDone(const QString);
 };
 
-#endif // BASICDOCKWIDGET_H
+#endif // TABELQLABELSUBSCRIBER_H

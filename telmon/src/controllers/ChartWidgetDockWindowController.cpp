@@ -26,12 +26,11 @@
 #include "src/controllers/BasicChartController.h"
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 #include "src/factories/MxTelemetryTypeWrappersFactory.h"
-#include "src/controllers/MainWindowController.h"
 #include "src/models/raw/ChartWidgetDockWindowModel.h"
 
 ChartWidgetDockWindowController::ChartWidgetDockWindowController(DataDistributor& a_dataDistributor,
                                                                  QObject* a_parent):
-    DockWindowController(a_dataDistributor, " Chart", QString("ChartWidgetDockWindowController"), a_parent),
+    DockWindowController(a_dataDistributor, QString("ChartWidgetDockWindowController"), a_parent),
     m_model(new ChartWidgetDockWindowModel() ),
     m_DB(new QVector<QMap<QString, BasicChartController*>*>)
 {
@@ -86,26 +85,25 @@ QAbstractItemView*  ChartWidgetDockWindowController::getView()
 
 
 // DockWindowController interface
-void ChartWidgetDockWindowController::handleUserSelection(unsigned int& a_action,
-                                                          QDockWidget*& a_dockWidget,
-                                                          const QList<QDockWidget *>& /*a_currentDockList*/,
-                                                          const QString& a_mxTelemetryInstanceName,
-                                                          const int a_mxTelemetryType) noexcept
+std::pair<QDockWidget*, int> ChartWidgetDockWindowController::handleUserSelection(
+        const QList<QDockWidget *>&,
+        const QString& a_mxTelemetryInstanceName,
+        const int a_mxTelemetryType) noexcept
 {
     auto* l_controller = getController(a_mxTelemetryType, a_mxTelemetryInstanceName);
     auto* l_view = l_controller->initView();
 
     if (l_view == nullptr)
     {
-        a_action = ACTIONS::NO_ACTION;
-        return;
+        return std::make_pair(nullptr, ACTIONS::NO_ACTION);
     }
 
     m_model->addToActiveCharts(qMakePair(l_controller, l_view));
     rearrangeXAxisLablesOnAllViews();
 
-    a_action = DockWindowController::ACTIONS::ADD_TO_RIGHT;
-    a_dockWidget = new ChartDockWidget(a_mxTelemetryType,
+
+    const auto a_action = ACTIONS::ADD_TO_RIGHT;
+    auto* a_dockWidget = new ChartDockWidget(a_mxTelemetryType,
                                        a_mxTelemetryInstanceName,
                                        l_view,
                                        l_controller,
@@ -122,8 +120,10 @@ void ChartWidgetDockWindowController::handleUserSelection(unsigned int& a_action
     {
         this->m_model->removeFromActiveCharts(qMakePair(a_controller, a_view));
         this->rearrangeXAxisLablesOnAllViews();
-        static_cast<MainWindowController*>(this->parent())->closeDockWidget(a_type);
+        emit closeDockWidget(a_type);
     });
+
+    return std::make_pair(a_dockWidget, a_action);
 }
 
 

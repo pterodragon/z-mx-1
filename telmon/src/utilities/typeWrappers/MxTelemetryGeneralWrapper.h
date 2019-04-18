@@ -122,6 +122,7 @@ public:
 
     void getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept;
 
+    const QString getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept;
 
     /**
      * @brief isChartOptionEnabledInContextMenu
@@ -147,6 +148,8 @@ public:
     T typeConvertor(const QPair<void*, int>& a_param) const noexcept;
 
     std::string getCurrentTime() const noexcept;
+    static const QString getCurrentTimeQTImpl(const QString& a_format) noexcept;
+    inline static const QString TIME_FORMAT__hh_mm_ss = "hh:mm:ss";
 
     template <class T>
     QString streamToQString(const T& a_toStream) const noexcept;
@@ -166,6 +169,26 @@ public:
     static const char* getMsgHeaderName(void* const a_mxTelemetryMsg) noexcept;
 
     static int getMsgHeaderType(void* const a_mxTelemetryMsg) noexcept;
+
+    // For HTML Text
+    inline static const QString _S  = "&nbsp;";
+    inline static const QString _2S = _S  + _S;
+    inline static const QString _3S = _2S + _S;
+    inline static const QString _4S = _2S + _2S;
+    inline static const QString _5S = _4S + _S;
+    inline static const QString _6S = _4S + _2S;
+    inline static const QString _7S = _5S + _2S;
+    inline static const QString _Tab = _4S  + _4S;
+    inline static const QString _Bold_begin = "<b>";
+    inline static const QString _Bold_end   =  "</b>";
+    inline static const QString _NewLine   =  "<br>";
+
+    // colors
+    inline static const QString _color_off    =  "<font color=\"#bec0c2\">";
+    inline static const QString _color_green  =  "<font color=\"green\">";
+    inline static const QString _color_amber  =  "<font color=\"#FFBF00\">";
+    inline static const QString _color_red    =  "<font color=\"red\">";
+    inline static const QString _font_end     =  "</font>";
 
 
 protected:
@@ -252,6 +275,11 @@ protected:
      * @return
      */
     virtual const QString _getPrimaryKey(void* const) const noexcept = 0;
+
+    virtual const QString _getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
+    {
+        return nullptr;
+    }
 };
 
 // 1. supress warning Wunused template function

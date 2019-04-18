@@ -30,10 +30,10 @@ class QDockWidget;
 
 class DockWindowController : public BasicController
 {
+    Q_OBJECT
 public:
     DockWindowController(DataDistributor& a_dataDistributor,
-                         const char* a_name,
-                         QString a_className,
+                         const QString& a_className,
                          QObject* a_parent);
     virtual ~DockWindowController();
 
@@ -54,21 +54,19 @@ public:
                   REMOVE_FROM_CENTER,
                   REMOVE_FROM_RIGHT};
 
-    virtual void handleUserSelection(unsigned int& a_action,
-                                     QDockWidget*& a_widget,
-                                     const QList<QDockWidget *>& a_currentDockList,
-                                     const QString& a_mxTelemetryInstanceName,
-                                     const int a_mxTelemetryType) noexcept = 0;
+    virtual std::pair<QDockWidget*, int> handleUserSelection(const QList<QDockWidget *>& a_currentDockList,
+                                                             const QString& a_mxTelemetryInstanceName,
+                                                             const int a_mxTelemetryType) noexcept = 0;
 
     bool isDockWidgetExists(const QList<QDockWidget *>& a_currentDockList,
                             const QString& l_objectName,
                             QDockWidget*& a_dock) const noexcept;
 
     virtual void initSubController(const int mxTelemetryType,
-                                   const QString& mxTelemetryInstanceName) noexcept = 0;
+                                   const QString& mxTelemetryInstanceName) noexcept;
 
-protected:
-    const char* m_dockWindowName;
+signals:
+    void closeDockWidget(int);
 };
 
 #endif // DOCKWINDOWCONTROLLER_H

@@ -23,7 +23,6 @@
 #include "QDebug"
 #include "QLinkedList"
 
-
 MxTelemetryQueueWrapper::MxTelemetryQueueWrapper()
 {
     initTableList();
@@ -295,6 +294,41 @@ const QString MxTelemetryQueueWrapper::_getPrimaryKey(void* const a_mxTelemetryM
         return QString();
      }
 }
+
+
+const QString MxTelemetryQueueWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
+{
+   const auto* const l_data = static_cast<const MxTelemetry::Queue* const>(a_mxTelemetryMsg);
+
+    const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
+            + _time       + getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)
+            + _type       + MxTelemetry::QueueType::name(l_data->type)
+            + _full       + QString::number(l_data->full)
+            + _size       + QString::number(l_data->size)
+            + _count      + QString::number(l_data->count)
+            + _seqNo      + QString::number(l_data->seqNo)
+            + _inCount    + QString::number(l_data->inCount)
+            + _inBytes    + QString::number(l_data->inBytes)
+            + _outCount   + QString::number(l_data->outCount)
+            + _outBytes   + QString::number(l_data->outBytes)
+    ;
+
+    return l_result;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

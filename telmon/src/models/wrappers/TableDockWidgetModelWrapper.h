@@ -37,7 +37,8 @@ public:
     virtual ~TableDockWidgetModelWrapper();
 
     // # # # DockWidgetModelWrapper INTERFACE begin # # #
-    void unsubscribe(const QString& a_mxTelemetryTypeName, const QString& a_mxTelemetryInstanceName) noexcept;
+    void unsubscribe(const int a_mxTelemetryType,
+                     const QString& a_mxTelemetryInstanceName) noexcept;
     // # # # DockWidgetModelWrapper INTERFACE end # # #
 
     QTableWidget* getTable(const QString& a_mxTelemetryTypeName, const QString& a_mxTelemetryInstanceName);

@@ -18,34 +18,32 @@
  */
 
 
+#ifndef TABLEQLABELWIDGETDOCKWIDGET_H
+#define TABLEQLABELWIDGETDOCKWIDGET_H
 
-#ifndef BASICDOCKWIDGET_H
-#define BASICDOCKWIDGET_H
+class DataDistributor;
+class TabelQLabelSubscriber;
 
-#include "QDockWidget"
+#include "src/widgets/BasicDockWidget.h"
 
-class DockWidgetModelWrapper;
-
-class BasicDockWidget : public QDockWidget
+class TableQLabelWidgetDockWidget : public BasicDockWidget
 {
+    Q_OBJECT
 public:
-    BasicDockWidget(const int       a_mxTelemetryTypeName,
-                    const QString&  a_mxTelemetryInstanceName,
-                    const QString&  a_className,
-                    QWidget*        a_parent,
-                    Qt::WindowFlags a_flags = Qt::WindowFlags());
-    virtual ~BasicDockWidget() override;
+    TableQLabelWidgetDockWidget(const int       a_mxTelemetryTypeName,
+                                const QString&  a_mxTelemetryInstanceName,
+                                DataDistributor& a_dataDistributor,
+                                QWidget*        a_parent,
+                                Qt::WindowFlags a_flags = Qt::WindowFlags());
+    virtual ~TableQLabelWidgetDockWidget() override;
+    virtual void closeEvent(QCloseEvent *event) override final;
 
-    const QString& getClassName()               const noexcept;
-    int            getMxTelemetryType()         const noexcept;
-    const QString& getMxTelemetryInstanceName() const noexcept;
-
-
+signals:
+    void closeAction();
 
 protected:
-    const int m_mxTelemetryType;
-    const QString* m_mxTelemetryInstanceName;
-    const QString* m_className;
+    DataDistributor* m_dataDistributor;
+    TabelQLabelSubscriber* m_subscriber;
 };
 
-#endif // BASICDOCKWIDGET_H
+#endif // TABLEQLABELWIDGETDOCKWIDGET_H

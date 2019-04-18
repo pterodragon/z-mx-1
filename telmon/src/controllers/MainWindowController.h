@@ -38,7 +38,6 @@ public:
 
     void dockWindowsManagerTreeWidgetContextMenuSequence(
                             const unsigned int a_dockWindowType,
-                            const QString& a_mxTelemetryTypeName,
                             const QString& a_mxTelemetryInstanceName,
                             const int a_mxTelemetryType) noexcept;
 

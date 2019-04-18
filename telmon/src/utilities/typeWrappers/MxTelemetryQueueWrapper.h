@@ -71,6 +71,19 @@ protected:
      */
     const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
 
+    // For  HTML Text
+        inline static const QString _padding    = _4S;
+        inline static const QString _title     = _Bold_begin + "Queue::";
+        inline static const QString _time      = _NewLine + "time:"      + _5S + _padding;
+        inline static const QString _type      = _NewLine + "type:"      + _5S + _padding;
+        inline static const QString _full      = _NewLine + "full:"      + _5S + _padding;
+        inline static const QString _size      = _NewLine + "size:"      + _5S + _padding;
+        inline static const QString _count     = _NewLine + "count:"     + _4S + _padding;
+        inline static const QString _seqNo     = _NewLine + "seqNo:"     + _4S + _padding;
+        inline static const QString _inCount   = _NewLine + "inCount:"   + _2S + _padding;
+        inline static const QString _inBytes   = _NewLine + "inBytes:"   + _2S + _padding;
+        inline static const QString _outCount  = _NewLine + "outCount:"  + _S  + _padding;
+        inline static const QString _outBytes  = _NewLine + "outBytes:"  + _S  + _padding; // LONGEST
 
 public:
     /**
@@ -96,6 +109,7 @@ public:
 
     int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+    virtual const QString _getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept override final;
 
 };
 

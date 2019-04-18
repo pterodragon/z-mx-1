@@ -41,6 +41,7 @@ private:
 public:
     enum CONTROLLER_TYPE {TREE_MENU_WIDGET_CONTROLLER,
                           TABLE_DOCK_WINDOW_CONTROLLER,
+                          TABLE_LABEL_IMPL_DOCK_WINDOW_CONTROLLER,
                           CHART_DOCK_WINDOW_CONTROLLER,
                           SIZE };
 

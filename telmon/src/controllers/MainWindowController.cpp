@@ -33,6 +33,7 @@
 #include "QInputDialog"
 #include "QHostAddress"
 #include "QFile"
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
 #include "QDebug" // perhaps remove after testing
 
@@ -50,7 +51,7 @@ MainWindowController::MainWindowController(QWidget *parent) :
     m_mainWindowView->setWindowTitle();
 
     //init Tree Menu Widget
-    const unsigned int l_key = ControllerFactory::CONTROLLER_TYPE::TREE_MENU_WIDGET_CONTROLLER;
+    unsigned int l_key = ControllerFactory::CONTROLLER_TYPE::TREE_MENU_WIDGET_CONTROLLER;
 
     // create
     initController(l_key);
@@ -60,10 +61,20 @@ MainWindowController::MainWindowController(QWidget *parent) :
     setCentralWidget(m_mainWindowView->m_centralWidget);
 
     // init Table Dock Windows controller
-    initController(ControllerFactory::CONTROLLER_TYPE::TABLE_DOCK_WINDOW_CONTROLLER);
+    l_key = ControllerFactory::CONTROLLER_TYPE::TABLE_LABEL_IMPL_DOCK_WINDOW_CONTROLLER;
+    initController(l_key);
+
+    // set close functinality
+    auto* l_controller = static_cast<DockWindowController*>(m_controllersDB->value(l_key));
+    connect(l_controller, &DockWindowController::closeDockWidget, this, &MainWindowController::closeDockWidget);
 
     // init Chart Dock Windows controller
-    initController(ControllerFactory::CONTROLLER_TYPE::CHART_DOCK_WINDOW_CONTROLLER);
+    l_key = ControllerFactory::CONTROLLER_TYPE::CHART_DOCK_WINDOW_CONTROLLER;
+    initController(l_key);
+
+    // set close functinality
+    l_controller = static_cast<DockWindowController*>(m_controllersDB->value(l_key));
+    connect(l_controller, &DockWindowController::closeDockWidget, this, &MainWindowController::closeDockWidget);
 
     createActions();
 
@@ -217,38 +228,35 @@ void MainWindowController::createActions() noexcept
 
 
 void MainWindowController::dockWindowsManagerTreeWidgetContextMenuSequence(const unsigned int a_dockWindowType,
-                                                                           const QString& a_mxTelemetryTypeName,
                                                                            const QString& a_mxTelemetryInstanceName,
                                                                            const int a_mxTelemetryType) noexcept
 {
+    const auto l_mxTelemetryInstance = MxTelemetryGeneralWrapper::fromMxTypeValueToName(a_mxTelemetryType);
+
     // sanity check
     if (!m_controllersDB->contains(a_dockWindowType))
     {
-        qCritical() << "dockWindowsManager called with invalid a_dockWindowType:"
+        qCritical() << __PRETTY_FUNCTION__
+                    << "invalid a_dockWindowType:"
                     << a_dockWindowType
-                    << a_mxTelemetryTypeName
-                    << a_mxTelemetryInstanceName
-                    << "returning...";
+                    << "other params:"
+                    << l_mxTelemetryInstance
+                    << a_mxTelemetryInstanceName;
         return;
     }
 
     // only for readability
     DockWindowController* l_dockWindowController = static_cast<DockWindowController*>(m_controllersDB->value(a_dockWindowType));
 
-    // setting default values which will be set later by handleUserSelection()
-    unsigned int l_action = DockWindowController::ACTIONS::NO_ACTION;
-    QDockWidget* l_dockWidget = nullptr;
-
     // handleUserSelection, different behavior for table, chart etc...
-    l_dockWindowController->handleUserSelection(l_action,
-                                                l_dockWidget,
+    auto l_result = l_dockWindowController->handleUserSelection(
                                                 findChildren<QDockWidget *>(),
                                                 a_mxTelemetryInstanceName,
                                                 a_mxTelemetryType);
 
     QSplitter* l_parentWidget = nullptr;
 
-    switch (l_action) {
+    switch (l_result.second) {
     case DockWindowController::ACTIONS::NO_ACTION:
         return;
     case DockWindowController::ACTIONS::ADD_TO_CENTER:
@@ -261,32 +269,31 @@ void MainWindowController::dockWindowsManagerTreeWidgetContextMenuSequence(const
         break;
     default:
     {
-        qCritical() << __func__
+        qCritical() << __PRETTY_FUNCTION__
                     << "Recived unknown action:"
-                    << l_action
+                    << l_result.second
                     << "doing nothing!"
                     << a_dockWindowType
-                    << a_mxTelemetryTypeName
+                    << l_mxTelemetryInstance
                     << a_mxTelemetryInstanceName;
     }
         return;
     }
 
     // another sanity check
-    if (!l_dockWidget)
+    if (!l_result.first)
     {
-        qCritical() << __func__
-                    << "Action" << l_action
+        qCritical() << __PRETTY_FUNCTION__
+                    << "Action" << l_result.second
                     << "l_dockWidget=nullptr!, doing nothing!"
                     << a_dockWindowType
-                    << a_mxTelemetryTypeName
+                    << l_mxTelemetryInstance
                     << a_mxTelemetryInstanceName;
         return;
     }
 
-
-    l_parentWidget->addWidget(l_dockWidget);
-    l_dockWidget->setParent(l_parentWidget);
+    l_parentWidget->addWidget(l_result.first);
+    l_result.first->setParent(l_parentWidget);
 }
 
 void MainWindowController::dockWindowsManagerFirstTimeDataInsertionToTreeSequence(

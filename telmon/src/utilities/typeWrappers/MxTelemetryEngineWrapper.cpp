@@ -204,7 +204,7 @@ void MxTelemetryEngineWrapper::initChartList() noexcept
 {
     int i = 0;
 
-    // extra
+    // extrae_mxID
     m_chartList->insert(i++, "none");
 }
 
@@ -236,6 +236,7 @@ QPair<void*, int> MxTelemetryEngineWrapper::getMxTelemetryDataType(void* const a
         break;
     case EngineMxTelemetryStructIndex::e_mxID:
         l_result.first = l_data->mxID.data();
+
         l_result.second = CONVERT_FRON::type_c_char;
         break;
     case EngineMxTelemetryStructIndex::e_down:
@@ -291,6 +292,7 @@ QPair<void*, int> MxTelemetryEngineWrapper::getMxTelemetryDataType(void* const a
 }
 
 
+
 const QString MxTelemetryEngineWrapper::_getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept
 {
      MxEngine::Telemetry* l_data = static_cast<MxEngine::Telemetry*>(a_mxTelemetryMsg);
@@ -304,6 +306,49 @@ const QString MxTelemetryEngineWrapper::_getPrimaryKey(void* const a_mxTelemetry
      }
 }
 
+
+const QString MxTelemetryEngineWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
+{
+    const auto* const l_data = static_cast<const MxEngine::Telemetry* const>(a_mxTelemetryMsg);
+
+    const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
+            + _time     +  getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)
+
+            + getColor(l_data->state)
+            + _state     + MxEngineState::name(l_data->state)
+            + _color_off
+
+            + _nLinks    + QString::number(l_data->nLinks)
+            + _up        + QString::number(l_data->up)
+            + _down      + QString::number(l_data->down)
+
+            + _disabled  + QString::number(l_data->disabled)
+            + _transient + QString::number(l_data->transient)
+            + _reconn    + QString::number(l_data->reconn)
+            + _failed    + QString::number(l_data->failed)
+            + _mxID      + l_data->mxID.data()
+
+            + _rxThread  + QString::number(l_data->rxThread)
+            + _txThread  + QString::number(l_data->txThread)
+            ;
+
+    return l_result;
+}
+
+
+const QString& MxTelemetryEngineWrapper::getColor(const int a_state) const noexcept{
+    switch (a_state) {
+    case MxEngineState::Running:
+        return _color_green;
+        break;
+    case MxEngineState::Stopped:
+        return _color_red;
+        break;
+    default:
+        return _color_amber;
+        break;
+    }
+}
 
 
 

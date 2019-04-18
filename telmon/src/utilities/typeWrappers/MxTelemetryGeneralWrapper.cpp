@@ -23,6 +23,7 @@
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 #include "QPair"
 #include "QDebug"
+#include "QDateTime"
 
 
 const char* MxTelemetryGeneralWrapper::NAME_DELIMITER = " - ";
@@ -99,6 +100,12 @@ std::string MxTelemetryGeneralWrapper::getCurrentTime() const noexcept
     ZtDate::CSVFmt nowFmt;
     ZtDate now(ZtDate::Now);
     return (ZuStringN<512>() << now.csv(nowFmt)).data();
+}
+
+
+const QString MxTelemetryGeneralWrapper::getCurrentTimeQTImpl(const QString& a_format) noexcept
+{
+    return QDateTime::currentDateTime().toString(a_format);
 }
 
 
@@ -259,6 +266,11 @@ void MxTelemetryGeneralWrapper::getDataForTable(void* const a_mxTelemetryMsg, QL
     _getDataForTable(mxTelemetryMsgDataRetriever(a_mxTelemetryMsg), a_result);
 }
 
+
+const QString MxTelemetryGeneralWrapper::getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
+{
+    return _getDataForTabelQLabel(mxTelemetryMsgDataRetriever(a_mxTelemetryMsg));
+}
 
 const QString MxTelemetryGeneralWrapper::getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept
 {

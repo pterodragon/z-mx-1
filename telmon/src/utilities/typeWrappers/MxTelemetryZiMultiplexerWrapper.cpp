@@ -26,7 +26,6 @@
 
 
 
-
 MxTelemetryZiMultiplexerWrapper::MxTelemetryZiMultiplexerWrapper()
 {
     initTableList();
@@ -347,5 +346,46 @@ const QString MxTelemetryZiMultiplexerWrapper::_getPrimaryKey(void* const a_mxTe
 }
 
 
+const QString MxTelemetryZiMultiplexerWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
+{
+    const auto* const l_data = static_cast<const ZiMxTelemetry* const>(a_mxTelemetryMsg);
+
+    const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
+            + _time      + getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)
+
+            + getColor(l_data->state)
+            + _state     + ZmScheduler::stateName(l_data->state)
+            + _color_off
+
+            + _nThreads  +  QString::number(l_data->nThreads)
+            + _rxThread  +  QString::number(l_data->rxThread)
+            + _txThread  +  QString::number(l_data->txThread)
+            + _priority  +  QString::number(l_data->priority)
+            + _stackSize +  QString::number(l_data->stackSize)
+            + _partition +  QString::number(l_data->partition)
+            + _rxBufSize +  QString::number(l_data->rxBufSize)
+            + _txBufSize +  QString::number(l_data->txBufSize)
+            + _queueSize +  QString::number(l_data->queueSize)
+            + _ll        +  QString::number(l_data->ll)
+            + _spin      +  QString::number(l_data->spin)
+            + _timeout   +  QString::number(l_data->timeout)
+
+    ;
+    return l_result;
+}
+
+const QString& MxTelemetryZiMultiplexerWrapper::getColor(const int a_state) const noexcept{
+    switch (a_state) {
+    case ZmScheduler::Running:
+        return _color_green;
+        break;
+    case ZmScheduler::Stopped:
+        return _color_red;
+        break;
+    default:
+        return _color_amber;
+        break;
+    }
+}
 
 

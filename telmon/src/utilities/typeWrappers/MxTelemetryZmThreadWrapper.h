@@ -67,6 +67,21 @@ protected:
                                                      const int a_index,
                                                      void* a_otherResult) const noexcept override final;
 
+    // For  HTML Text
+    inline static const QString _padding    = _4S;
+    inline static const QString _title     = _Bold_begin + "Thread::";
+    inline static const QString _time      = _NewLine + "time:"      + _6S  + _padding;
+    inline static const QString _id        = _NewLine + "id:"        + _Tab + _padding;
+    inline static const QString _tid       = _NewLine + "tid:"       + _7S  + _padding;
+    inline static const QString _cpuUsage  = _NewLine + "cpuUsage:"  + _2S  + _padding;
+    inline static const QString _cpuset    = _NewLine + "cpuset:"    + _4S  + _padding;
+    inline static const QString _priority  = _NewLine + "priority:"  + _2S  + _padding;
+    inline static const QString _stackSize = _NewLine + "stackSize:" + _S   + _padding;
+    inline static const QString _partition = _NewLine + "partition:" + _S   + _padding;
+    inline static const QString _main      = _NewLine + "main:"      + _6S  + _padding;
+    inline static const QString _detached  = _NewLine + "detached:"  + _2S  + _padding;
+
+
 
 public:
     /**
@@ -101,6 +116,7 @@ public:
 
 protected:
     virtual const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
+    virtual const QString _getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept override final;
 
 };
 #endif // MXTELEMETRYZMTHREADWRAPPER_H

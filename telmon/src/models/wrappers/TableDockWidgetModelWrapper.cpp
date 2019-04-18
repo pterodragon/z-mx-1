@@ -136,16 +136,11 @@ QTableWidget* TableDockWidgetModelWrapper::getTable(const QString& a_mxTelemetry
 }
 
 
-void TableDockWidgetModelWrapper::unsubscribe(const QString& a_mxTelemetryTypeName, const QString& a_mxTelemetryInstanceName) noexcept
+void TableDockWidgetModelWrapper::unsubscribe(const int a_mxTelemetryType,
+                                              const QString& a_mxTelemetryInstanceName) noexcept
 {
-
-    //translate a_mxTelemetryTypeName to corresponding number
-    const int mxTelemetryTypeNameNumber = MxTelemetryGeneralWrapper::fromMxTypeNameToValue(a_mxTelemetryTypeName);
-
-    auto l_tableSubscriberInstance = getSubscriberPair(mxTelemetryTypeNameNumber, a_mxTelemetryInstanceName).second;
-
-    // to do --> transfer from string to enum
-    m_dataDistributor.unsubscribe(mxTelemetryTypeNameNumber, l_tableSubscriberInstance);
+    auto l_tableSubscriberInstance = getSubscriberPair(a_mxTelemetryType, a_mxTelemetryInstanceName).second;
+    m_dataDistributor.unsubscribe(a_mxTelemetryType, l_tableSubscriberInstance);
 }
 
 

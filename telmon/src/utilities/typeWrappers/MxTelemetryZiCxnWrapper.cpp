@@ -383,7 +383,7 @@ QPair<void*, int> MxTelemetryZiCxnWrapper::getMxTelemetryDataType(void* const a_
 }
 
 
-const std::string MxTelemetryZiCxnWrapper::__getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept
+const std::string MxTelemetryZiCxnWrapper::__getPrimaryKey(void* const a_mxTelemetryMsg, const int a_type) const noexcept
 {
     ZiIP l_otherResult;
     const std::string l_localIP = streamToStdString(*(static_cast<ZiIP*>(
@@ -418,11 +418,11 @@ const std::string MxTelemetryZiCxnWrapper::__getPrimaryKey(void* const a_mxTelem
     switch (l_type)
     {
     case ZiCxnType::TCPIn:   // primary key is localIP:localPort<remoteIP:remotePort
-        return std::string().append(l_localIP).append(":").append(l_localPort).append("<").append(l_remoteIP).append(":").append(l_remotePort);
+        return std::string().append(l_localIP).append(":").append(l_localPort).append(smallerThan(a_type)).append(l_remoteIP).append(":").append(l_remotePort);
         break;
     case ZiCxnType::UDP:     // primary key is remoteIP:remotePort<localIP:localPort
     case ZiCxnType::TCPOut:
-        return std::string().append(l_remoteIP).append(":").append(l_remotePort).append("<").append(l_localIP).append(":").append(l_localPort);
+        return std::string().append(l_remoteIP).append(":").append(l_remotePort).append(smallerThan(a_type)).append(l_localIP).append(":").append(l_localPort);
         break;
     default:
         qCritical() << *m_className << __PRETTY_FUNCTION__ << "unknown ZiCxnType";
@@ -442,5 +442,67 @@ const QString MxTelemetryZiCxnWrapper::_getPrimaryKey(void* const a_mxTelemetryM
         return QString::fromStdString(l_result);
      }
 }
+
+
+const QString MxTelemetryZiCxnWrapper::_getPrimaryKey(void* const a_mxTelemetryMsg, const int a_flag) const noexcept
+{
+     const auto l_result = __getPrimaryKey(a_mxTelemetryMsg, a_flag);
+     if (l_result.length() == 0)
+     {
+         return QString();
+     } else
+     {
+        return QString::fromStdString(l_result);
+     }
+}
+
+
+const QString MxTelemetryZiCxnWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
+{
+    const auto* const l_data = static_cast<const ZiCxnTelemetry* const>(a_mxTelemetryMsg);
+    ZiIP l_otherResult;
+
+    const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg, smallarThanSymbol::HTML) + _Bold_end
+            + _time        + getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)
+            + _type        + ZiCxnType::name(l_data->type)
+            + _remoteIP    + streamToQString(*(static_cast<ZiIP*>(getMxTelemetryDataType(a_mxTelemetryMsg, ZiCxnMxTelemetryStructIndex::e_remoteIP, &l_otherResult).first)))
+            + _remotePort  + QString::number(l_data->remotePort)
+            + _localIP     + streamToQString(*(static_cast<ZiIP*>(getMxTelemetryDataType(a_mxTelemetryMsg, ZiCxnMxTelemetryStructIndex::e_localIP, &l_otherResult).first)))
+            + _localPort   + QString::number(l_data->localPort)
+            + _fd          + QString::number(l_data->socket)
+
+            //            // Explanation of the following lambda:
+            //            // 1. return the convertion from flags to QString
+            //            // 2. it used only here, so no need to implement function for it
+            + _flags       + [this](const uint32_t a_ZiCxnFlags) noexcept -> const QString
+    {
+        this->getStream() << ZiCxnFlags::Flags::print(a_ZiCxnFlags);
+        const QString l_result = QString::fromStdString(m_stream->str());
+        this->getStream().str(std::string());
+        this->getStream().clear();
+        return l_result;
+    }(l_data->flags)
+
+            + _mreqAddr   + streamToQString(*(static_cast<ZiIP*>(getMxTelemetryDataType(a_mxTelemetryMsg, ZiCxnMxTelemetryStructIndex::e_mreqAddr, &l_otherResult).first)))
+            + _mreqIf     + streamToQString(*(static_cast<ZiIP*>(getMxTelemetryDataType(a_mxTelemetryMsg, ZiCxnMxTelemetryStructIndex::e_mreqIf, &l_otherResult).first)))
+            + _mif        + streamToQString(*(static_cast<ZiIP*>(getMxTelemetryDataType(a_mxTelemetryMsg, ZiCxnMxTelemetryStructIndex::e_mif, &l_otherResult).first)))
+            + _ttl        + QString::number(l_data->ttl)
+            + _rxBufSize  + QString::number(l_data->rxBufSize)
+            + _rxBufLen   + QString::number(l_data->rxBufLen)
+            + _txBufSize  + QString::number(l_data->txBufSize)
+            + _txBufLen   + QString::number(l_data->txBufLen)
+    ;
+    return l_result;
+}
+
+
+
+
+
+
+
+
+
+
 
 

@@ -34,6 +34,9 @@ ChartModelDataStructureQListImpl<T>::ChartModelDataStructureQListImpl(const int 
 template <class T>
 ChartModelDataStructureQListImpl<T>::~ChartModelDataStructureQListImpl()
 {
+    delete m_db;
+    m_db = nullptr;
+
     delete m_mutex;
     m_mutex = nullptr;
 }

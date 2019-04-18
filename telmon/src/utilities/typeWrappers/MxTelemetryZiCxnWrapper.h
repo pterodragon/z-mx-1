@@ -54,7 +54,7 @@ private:
      * @param a_list
      * @return
      */
-    const std::string __getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept;
+    const std::string __getPrimaryKey(void* const a_mxTelemetryMsg, const int a_type = smallarThanSymbol::defaultValue) const noexcept;
 
 protected:
     friend class MxTelemetryTypeWrappersFactory;
@@ -78,7 +78,56 @@ protected:
                                                      const int a_index,
                                                      void* a_otherResult) const noexcept override final;
     const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
+    const QString _getPrimaryKey(void* const a_mxTelemetryMsg, const int) const noexcept; // version for html
 
+    // For  HTML Text
+        inline static const QString _padding    = _3S;
+        inline static const QString _title      = _Bold_begin + "Socket::";
+        inline static const QString _time       = _NewLine + "time:"       + _7S  + _padding;
+        inline static const QString _type       = _NewLine + "type:"       + _7S  + _padding;
+        inline static const QString _remoteIP   = _NewLine + "remoteIP:"   + _3S  + _padding;
+        inline static const QString _remotePort = _NewLine + "remotePort:" + _S   + _padding; // LONGEST
+        inline static const QString _localIP    = _NewLine + "localIP:"    + _4S  + _padding;
+        inline static const QString _localPort  = _NewLine + "localPort:"  + _2S  + _padding;
+        inline static const QString _fd         = _NewLine + "fd:"         + _Tab + _S + _padding;
+        inline static const QString _flags      = _NewLine + "flags:"      + _6S  + _padding;
+        inline static const QString _mreqAddr   = _NewLine + "mreqAddr:"   + _3S  + _padding;
+        inline static const QString _mreqIf     = _NewLine + "mreqIf:"     + _5S  + _padding;
+        inline static const QString _mif        = _NewLine + "mif:"        + _Tab + _padding;
+        inline static const QString _ttl        = _NewLine + "ttl:"        + _Tab + _padding;
+        inline static const QString _rxBufSize  = _NewLine + "rxBufSize:"  + _2S  + _padding;
+        inline static const QString _rxBufLen   = _NewLine + "rxBufLen:"   + _3S  + _padding;
+        inline static const QString _txBufSize  = _NewLine + "txBufSize:"  + _2S  + _padding;
+        inline static const QString _txBufLen   = _NewLine + "txBufLen:"   + _3S  + _padding;
+
+        inline static const char _regularSmallarThan[]    = "<";
+        inline static const char _HTMLSmallarThan[]       = "&lt;";
+        enum smallarThanSymbol {defaultValue, HTML};
+
+        const char* smallerThan(const int arg) const noexcept {
+            switch (arg) {
+            case defaultValue:
+                return _regularSmallarThan;
+            case HTML:
+                return _HTMLSmallarThan;
+            default:
+                return _HTMLSmallarThan;
+            }
+        }
+
+
+    //    inline static const QString _title         = _Bold_begin + "HashTbl::";
+    //    inline static const QString _time          = _NewLine + "time:"          + _Tab;
+    //    inline static const QString _linear        = _NewLine + "linear:"        + _Tab;
+    //    inline static const QString _bits          = _NewLine + "bits:"          + _Tab;
+    //    inline static const QString _slots         = _NewLine + "slots:"         + _Tab;
+    //    inline static const QString _cBits         = _NewLine + "cBits:"         + _Tab;
+    //    inline static const QString _locks         = _NewLine + "locks:"         + _Tab;
+    //    inline static const QString _count         = _NewLine + "count:"         + _Tab;
+    //    inline static const QString _resized       = _NewLine + "resized:"       + _Tab;
+    //    inline static const QString _loadFactor    = _NewLine + "loadFactor:"    + _Tab;
+    //    inline static const QString _effLoadFactor = _NewLine + "effLoadFactor:" + _Tab; // LONGEST
+    //    inline static const QString _nodeSize      = _NewLine + "nodeSize:"      + _Tab;
 
 public:
     /**
@@ -113,6 +162,7 @@ public:
 
     int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+    virtual const QString _getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept override final;
 
 
 

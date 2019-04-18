@@ -425,6 +425,39 @@ const QString MxTelemetryDBWrapper::_getPrimaryKey(void* const a_mxTelemetryMsg)
 }
 
 
+const QString MxTelemetryDBWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
+{
+    const auto* const l_data = static_cast<const ZdbAny::Telemetry* const>(a_mxTelemetryMsg);
+
+    const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
+            + _time        +  getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)
+            + _id          +  QString::number(l_data->id)
+            + _recSize     +  QString::number(l_data->recSize)
+            + _compress    +  QString::number(l_data->compress)
+            + _cacheMode   +  (ZdbCacheMode::name(l_data->cacheMode))
+            + _cacheSize   +  QString::number(l_data->cacheSize)
+            + _path        +  (l_data->path)
+            + _fileSize    +  QString::number(l_data->fileSize)
+            + _fileRecs    +  QString::number(l_data->fileRecs)
+            + _filesMax    +  QString::number(l_data->filesMax)
+
+            + _preAlloc    +  QString::number(l_data->preAlloc)
+            + _minRN       +  QString::number(l_data->minRN)
+            + _allocRN     +  QString::number(l_data->allocRN)
+            + _fileRN      +  QString::number(l_data->fileRN)
+            + _cacheLoads  +  QString::number(l_data->cacheLoads)
+            + _cacheMisses +  QString::number(l_data->cacheMisses)
+            + _fileLoads   +  QString::number(l_data->fileLoads)
+            + _fileMisses  +  QString::number(l_data->fileMisses)
+            ;
+
+    return l_result;
+}
+
+
+
+
+
 
 
 

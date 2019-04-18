@@ -213,17 +213,18 @@ QTextEdit#m_welcomeScreen {
 }
 
 QTextEdit#m_chartAreaFiller
- {
+{
         background-color: #2e2f30;
 }
 
-
-
-/*
-	stopped at trying to change the table header
-	after that need to change to table view  
-*/
-
+/* * * * * Customizing TableQLabel * * * * */
+QLabel#TableQLabelWidget {
+	border: 0px solid green;
+	padding: 1px;
+	border-radius: 0px;
+	background-color: #2e2f30;
+	color: #bec0c2;
+}
 
 
 

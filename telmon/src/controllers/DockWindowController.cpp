@@ -21,13 +21,12 @@
 
 #include "src/controllers/DockWindowController.h"
 #include "QDockWidget"
+#include "QDebug"
 
 DockWindowController::DockWindowController(DataDistributor& a_dataDistributor,
-                                           const char* a_name,
-                                           QString a_className,
+                                           const QString& a_className,
                                            QObject* a_parent):
-    BasicController(a_dataDistributor, a_className, a_parent),
-    m_dockWindowName(a_name)
+    BasicController(a_dataDistributor, a_className, a_parent)
 {
 
 }
@@ -55,4 +54,19 @@ bool DockWindowController::isDockWidgetExists(const QList<QDockWidget *>& a_curr
     }
     return l_contains;
 }
+
+
+void DockWindowController::initSubController(const int mxTelemetryType,
+                               const QString& mxTelemetryInstanceName) noexcept
+{
+    qCritical() << __PRETTY_FUNCTION__
+                << "of base class"
+                << "mxTelemetryType:"
+                << mxTelemetryType
+                << "mxTelemetryInstanceName:"
+                << mxTelemetryInstanceName;
+}
+
+
+
 

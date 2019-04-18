@@ -67,6 +67,26 @@ protected:
     const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
 
 
+    // For  HTML Text
+    inline static const QString _padding    = _4S;
+    inline static const QString _title     = _Bold_begin + "Multiplexer::";
+    inline static const QString _time      = _NewLine + "time:"       + _6S  + _padding;
+    inline static const QString _state     = _NewLine + "state:"     + _5S   + _padding;
+    inline static const QString _nThreads  = _NewLine + "nThreads:"  + _2S   + _padding;
+    inline static const QString _rxThread  = _NewLine + "rxThread:"  + _2S   + _padding;
+    inline static const QString _txThread  = _NewLine + "txThread:"  + _2S   + _padding;
+    inline static const QString _priority  = _NewLine + "priority:"  + _2S   + _padding;
+    inline static const QString _stackSize = _NewLine + "stackSize:" + _S    + _padding;
+    inline static const QString _partition = _NewLine + "partition:" + _S    + _padding; // LONGEST
+    inline static const QString _rxBufSize = _NewLine + "rxBufSize:" + _S    + _padding;
+    inline static const QString _txBufSize = _NewLine + "txBufSize:" + _S    + _padding;
+    inline static const QString _queueSize = _NewLine + "queueSize:" + _S    + _padding;
+    inline static const QString _ll        = _NewLine + "ll:"        + _Tab  + _padding;
+    inline static const QString _spin      = _NewLine + "spin:"      + _6S   + _padding;
+    inline static const QString _timeout   = _NewLine + "timeout:"   + _3S   + _padding;
+
+    const QString& getColor(const int a_state) const noexcept;
+
 public:
     /**
      * @brief The ZiMxTelemetryStructIndex enum corresponds to following:
@@ -99,6 +119,7 @@ public:
 
     int _getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept override final;
     void _getDataForTable(void* const a_mxTelemetryMsg, QLinkedList<QString>& a_result) const noexcept override final;
+    virtual const QString _getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept override final;
 };
 
 

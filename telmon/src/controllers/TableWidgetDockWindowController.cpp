@@ -22,13 +22,13 @@
 #include "QTableWidget"
 #include "QDebug"
 #include "src/models/wrappers/TableDockWidgetModelWrapper.h"
-#include "src/widgets/BasicDockWidget.h"
+#include "src/widgets/TableWidgetDockWidget.h"
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
 
 TableWidgetDockWindowController::TableWidgetDockWindowController(DataDistributor& a_dataDistributor,
                                                                  QObject* a_parent):
-    DockWindowController(a_dataDistributor, " Table", QString("TableWidgetDockWindowController"), a_parent),
+    DockWindowController(a_dataDistributor, QString("TableWidgetDockWindowController"), a_parent),
     m_tableDockWidgetModelWrapper(new TableDockWidgetModelWrapper(a_dataDistributor))
     //m_modelWrapper(new TableWidgetDockWindowModelWrapper())
 {
@@ -60,8 +60,7 @@ QAbstractItemView*  TableWidgetDockWindowController::getView()
 
 
 // DockWindowController interface
-void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action,
-                                                          QDockWidget*& a_dockWidget,
+std::pair<QDockWidget*, int> TableWidgetDockWindowController::handleUserSelection(
                                                           const QList<QDockWidget *>& a_currentDockList,
                                                           const QString& a_mxTelemetryInstanceName,
                                                           const int a_mxTelemetryType) noexcept
@@ -69,7 +68,7 @@ void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action
     // constrct widget name
     const QString l_a_mxTelemetryTypeName = MxTelemetryGeneralWrapper::fromMxTypeValueToName(a_mxTelemetryType);
     // for now, using same name for object and table header
-    const QString l_objectName = l_a_mxTelemetryTypeName + "::" + a_mxTelemetryInstanceName + m_dockWindowName;
+    const QString l_objectName = l_a_mxTelemetryTypeName + "::" + a_mxTelemetryInstanceName + m_className;
 
     // is dock widget already exists?
     QDockWidget* l_dock = nullptr;
@@ -78,29 +77,20 @@ void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action
     // handle case that dock widget already exists
     if (l_contains)
     {
-        qDebug() << m_dockWindowName << l_objectName << "already exists";
+        qDebug() << m_className << l_objectName << "already exists";
         // out policy for table, only one at a time
-        a_action = DockWindowController::ACTIONS::NO_ACTION;
-        a_dockWidget = nullptr;
         l_dock->activateWindow();
-        return;
+        return std::make_pair(nullptr, ACTIONS::NO_ACTION);
     }
 
-    // we add tables to center of window
-    a_action = DockWindowController::ACTIONS::ADD_TO_CENTER;
-
     // construct the new dock
-    //a_widget = new QDockWidget(l_objectName, nullptr);
-    a_dockWidget = new BasicDockWidget(l_objectName,
-                                  m_tableDockWidgetModelWrapper,
-                                  l_a_mxTelemetryTypeName,
-                                  a_mxTelemetryInstanceName,
-                                  // notice: parent will be set later
-                                  nullptr);
+    auto* l_dockWidget = new TableWidgetDockWidget(m_tableDockWidgetModelWrapper,
+                                                   a_mxTelemetryType,
+                                                   a_mxTelemetryInstanceName,
+                                                   nullptr);
 
     // set dock properties
-    a_dockWidget->setAttribute(Qt::WA_DeleteOnClose);       // delete when user close the window
-    //a_dockWidget->setAllowedAreas(Qt::RightDockWidgetArea); // allocate to the right of the window
+    l_dockWidget->setAttribute(Qt::WA_DeleteOnClose);       // delete when user close the window
 
     // create the table
     QTableWidget* l_table = m_tableDockWidgetModelWrapper->getTable(l_a_mxTelemetryTypeName, a_mxTelemetryInstanceName);
@@ -109,23 +99,10 @@ void TableWidgetDockWindowController::handleUserSelection(unsigned int& a_action
     l_table->setParent(l_dock);
 
     // associate with l_dock;
-    a_dockWidget->setWidget(l_table);
+    l_dockWidget->setWidget(l_table);
+
+    return std::pair(l_dockWidget, ACTIONS::ADD_TO_CENTER);
 }
-
-
-
-void TableWidgetDockWindowController::initSubController(const int mxTelemetryType,
-                                                        const QString& mxTelemetryInstanceName) noexcept
-{
-    qCritical() << *m_className
-                << __PRETTY_FUNCTION__
-                << "was called, INVALID SEQUENCE"
-                << "mxTelemetryType"
-                << mxTelemetryType
-                << "mxTelemetryInstanceName"
-                << mxTelemetryInstanceName;
-}
-
 
 
 

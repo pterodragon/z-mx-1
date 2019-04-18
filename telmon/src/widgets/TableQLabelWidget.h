@@ -18,34 +18,27 @@
  */
 
 
+#ifndef TABLEQLABELWIDGET_H
+#define TABLEQLABELWIDGET_H
 
-#ifndef BASICDOCKWIDGET_H
-#define BASICDOCKWIDGET_H
+#include "QLabel"
+class QMenu;
 
-#include "QDockWidget"
-
-class DockWidgetModelWrapper;
-
-class BasicDockWidget : public QDockWidget
+class TableQLabelWidget : public QLabel
 {
+    Q_OBJECT
 public:
-    BasicDockWidget(const int       a_mxTelemetryTypeName,
-                    const QString&  a_mxTelemetryInstanceName,
-                    const QString&  a_className,
-                    QWidget*        a_parent,
-                    Qt::WindowFlags a_flags = Qt::WindowFlags());
-    virtual ~BasicDockWidget() override;
+    TableQLabelWidget(QWidget* a_parent);
+    virtual ~TableQLabelWidget() override;
 
-    const QString& getClassName()               const noexcept;
-    int            getMxTelemetryType()         const noexcept;
-    const QString& getMxTelemetryInstanceName() const noexcept;
-
-
+signals:
+    void closeAction();
 
 protected:
-    const int m_mxTelemetryType;
-    const QString* m_mxTelemetryInstanceName;
-    const QString* m_className;
+    void createActions() noexcept;
+    void initContextMenu() noexcept;
+
+    QMenu* m_contextMenu;
 };
 
-#endif // BASICDOCKWIDGET_H
+#endif // TABLEQLABELWIDGET_H

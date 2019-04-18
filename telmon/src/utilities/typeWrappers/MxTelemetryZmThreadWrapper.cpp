@@ -288,8 +288,24 @@ const QString MxTelemetryZmThreadWrapper::_getPrimaryKey(void* const a_mxTelemet
 }
 
 
+const QString MxTelemetryZmThreadWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
+{
+    const auto* const l_data = static_cast<const ZmThreadTelemetry* const>(a_mxTelemetryMsg);
 
-
+    const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
+            + _time      +  getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)
+            + _id        +  QString::number(l_data->id)
+            + _tid       +  QString::number(l_data->tid)
+            + _cpuUsage  +  QString::number(l_data->cpuUsage * 100.0, 'f', 2)
+            + _cpuset    +  (streamToQString(ZmBitmap(l_data->cpuset)))
+            + _priority  +  QString::number(l_data->priority)
+            + _stackSize +  QString::number(l_data->stackSize)
+            + _partition +  QString::number(l_data->partition)
+            + _main      +  QString::number(l_data->main)
+            + _detached  +  QString::number(l_data->detached)
+            ;
+    return l_result;
+}
 
 
 

@@ -27,12 +27,14 @@
 
 class BasicChartController;
 class ChartViewCustomizer;
+class ChartViewContextMenu;
 
 class BasicChartView : public QChartView
 {
     Q_OBJECT
 
     friend class ChartViewCustomizer;
+    friend class ChartViewContextMenu;
 
 public:
     BasicChartView(const BasicChartModel& a_model,
@@ -58,9 +60,6 @@ public:
 
     bool getChartTitleVisiblity() const noexcept;
     QString& getChartTitle() const noexcept;
-
-    int getDrawChartFlag() const noexcept {return m_drawChartFlag;}
-
     void setXLablesVisibility(const bool) noexcept;
 
 signals:
@@ -71,6 +70,15 @@ public slots:
     void updateChart() noexcept;
 
 protected:
+
+    // states
+    enum {DRAWING = 0,                   // regular state
+          MANUAL_STOP,                   // user press the "stop" button
+          DRAWING_L_MOUSE_CLICK_PRESS, // user pressed on graph, but still not released
+                                         // while graph is running
+          STOPPED_L_MOUSE_CLICK_PRESS  // user pressed on graph, but still not released
+                                         // while graph is stopped
+         };
 
     // * * * Attributes getters * * * //
     QValueAxis& getAxes(const unsigned int a_axe);
@@ -95,6 +103,7 @@ protected:
 
     void repaintChart() noexcept;
 
+    int m_state;
 private:
     // * * * Init Functons * * * //
     void initSeries() noexcept;
@@ -106,14 +115,6 @@ private:
 
     void initChartLabel() noexcept;
     void initStartStopButton() noexcept;
-
-    /**
-     * @brief init the menu bar for the dock
-     * i.e. "Settings" etc...
-     * virtual so inherent classes can change style
-     * for behavior change -> adjust createActions below
-     */
-    void initContextMenu() noexcept;
 
 
     /**
@@ -159,12 +160,6 @@ private:
                           const QMenu* a_menu) noexcept;
 
     /**
-     * @brief set to true/false to start/stop drawing the chart
-     * @param a_status
-     */
-    void setDrawChartFlag(const bool a_status) noexcept {m_drawChartFlag = a_status;}
-
-    /**
      * @brief if true, show chart title
      *        else, hide the chart
      */
@@ -202,21 +197,14 @@ private:
     std::array<int, BasicChartModel::NUMBER_OF_Y_AXIS> m_activeData;
     const QVector<QString>& m_chartFields; //  ordered by priority
     int m_delayIndicator; // indicator of delay
-    bool m_drawChartFlag; // indicates whether draw the chart
-    bool m_drawChartFlagStoreVariable; // should be used only by mouseReleaseEvent() and mouseReleaseEvent()
     int m_xReferenceCoordiante;
     bool m_chartTitleVisibility;
     QString* m_chartTitle;
     QLabel* m_titleLabel;
     QPushButton* m_startStopButton;
-    // member for context menu
-    QMenu* m_contextMenu;
-    QMenu* m_menuYLeft;
-    QMenu* m_menuYRight;
-    QMenu* m_refreshRateMenu;
     QTimer* m_timer;
     ChartViewCustomizer* m_designer;
-
+    ChartViewContextMenu* m_contextMenu;
     BasicChartController& m_controller;
 };
 

@@ -65,14 +65,14 @@ void ChartViewCustomizer::init() noexcept
     auto l_series = &m_view.getSeries(BasicChartView::SERIES::SERIES_LEFT);
     {
         QPen pen(QRgb(0x45c6d6));
-        pen.setWidth(4);
+        pen.setWidth(2);
         l_series->setPen(pen);
     }
 
     l_series = &m_view.getSeries(BasicChartView::SERIES::SERIES_RIGHT);
     {
         QPen pen(QRgb(0x4e9a06));
-        pen.setWidth(4);
+        pen.setWidth(2);
         l_series->setPen(pen);
     }
 

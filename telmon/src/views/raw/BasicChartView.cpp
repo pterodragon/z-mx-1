@@ -22,6 +22,7 @@
 #include "src/controllers/BasicChartController.h"
 #include "src/widgets/ChartViewCustomizer.h"
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
+#include "src/widgets/ChartViewContextMenu.h"
 
 #include <stdlib.h> // abs
 
@@ -32,6 +33,7 @@ BasicChartView::BasicChartView(const BasicChartModel& a_model,
     // no need to delete QChart()
     // from doc "the ownership of the chart is passed to the chart view"
     QChartView(new QChart(), a_parent),
+    m_state(DRAWING),
     m_model(a_model),
     // no need to delete, will be delete by QChart()
     m_axisArray   { new QValueAxis,    new QValueAxis, new QValueAxis},
@@ -39,7 +41,6 @@ BasicChartView::BasicChartView(const BasicChartModel& a_model,
     m_activeData(m_model.getActiveDataSet()),
     m_chartFields(m_model.getChartList()),
     m_delayIndicator(0),        // there is no delay on startup
-    m_drawChartFlag(true),      // we draw chart on widget start up
     m_xReferenceCoordiante(0),  // default value
 
     // do not show chart title visibiliy, because this build in feature
@@ -61,7 +62,8 @@ BasicChartView::BasicChartView(const BasicChartModel& a_model,
     m_timer->setTimerType(Qt::VeryCoarseTimer);
     connect(m_timer, SIGNAL(timeout()), this, SLOT(updateChart()));
 
-    initContextMenu();
+    m_contextMenu = new ChartViewContextMenu(*this, QString(), this);
+
 
     // Adds the axis to the chart aligned as specified by alignment.
     // The chart takes the ownership of the axis.
@@ -87,6 +89,7 @@ BasicChartView::BasicChartView(const BasicChartModel& a_model,
     createActions();
 
     m_designer->init();
+
 
     m_timer->start(1000);
 }
@@ -137,89 +140,16 @@ void BasicChartView::initSeries() noexcept
 
 void BasicChartView::handleStartStopFunctionality() noexcept
 {
-    if (this->getDrawChartFlag())
+    if (m_state == DRAWING)
     {
-        this->setDrawChartFlag(false);
+        m_state = MANUAL_STOP;
         m_startStopButton->setText("Start");
         this->m_contextMenu->actions().at(0)->setText("Start");
-    } else {
-        this->setDrawChartFlag(true);
+    } else { // MANUAL_STOP
+        m_state = DRAWING;
         m_startStopButton->setText("Stop");
         this->m_contextMenu->actions().at(0)->setText("Stop");
     }
-}
-
-
-void BasicChartView::initContextMenu() noexcept
-{
-    // init here and not in initilaizer list for readability
-    m_contextMenu = new QMenu(this); // no need to delete, we be deleted by parent
-
-    // init start/stop action
-    m_contextMenu->addAction("Stop", [this](){
-        this->handleStartStopFunctionality();
-    });
-
-    m_contextMenu->addSeparator();
-
-    // init "Data" menu
-    auto l_dataMenu = new QMenu(QObject::tr("Data"), m_contextMenu);
-
-    // init Y Axis
-    m_menuYLeft = new QMenu("Y Left", l_dataMenu);
-    l_dataMenu->addMenu(m_menuYLeft);
-
-    m_menuYRight = new QMenu("Y Right", l_dataMenu);
-    l_dataMenu->addMenu(m_menuYRight);
-
-    // init series menu actions
-    for (int i = 0; i < m_chartFields.size(); ++i) {
-
-        m_menuYLeft->addAction( m_chartFields.at(i), [this, i]() {
-            this->changeSeriesData(SERIES::SERIES_LEFT ,i, m_menuYLeft);
-        });
-
-        m_menuYRight->addAction( m_chartFields.at(i), [this, i]() {
-            this->changeSeriesData(SERIES::SERIES_RIGHT ,i, m_menuYRight);
-        });
-    }
-
-    // set default option disabled for each axis menu
-    for (unsigned int l_series = 0; l_series < SERIES::SERIES_N; l_series++)
-    {
-        (l_series == SERIES::SERIES_LEFT)
-                ? ( m_menuYLeft->actions(). at(m_activeData[l_series])->setDisabled(true))
-                : ( m_menuYRight->actions().at(m_activeData[l_series])->setDisabled(true));
-    }
-
-
-    m_contextMenu->addMenu(l_dataMenu);
-
-    // init "Refresh Rate"
-    m_refreshRateMenu = new QMenu(QObject::tr("Refresh Rate"), m_contextMenu);
-
-    m_refreshRateMenu->addAction("1 second", [this]() {
-        this->m_timer->start(1000);
-        m_refreshRateMenu->actions().at(0)->setDisabled(true);
-        m_refreshRateMenu->actions().at(1)->setDisabled(false);
-    });
-
-    m_refreshRateMenu->actions().at(0)->setDisabled(true);
-
-    m_refreshRateMenu->addAction("5 second", [this]() {
-        this->m_timer->start(5000);
-        m_refreshRateMenu->actions().at(0)->setDisabled(false);
-        m_refreshRateMenu->actions().at(1)->setDisabled(true);
-    });
-
-    m_contextMenu->addMenu(m_refreshRateMenu);
-
-    m_contextMenu->addSeparator();
-
-    // close action;
-    m_contextMenu->addAction("Close", [this]() {
-        emit closeAction();
-    });
 }
 
 
@@ -504,16 +434,14 @@ void BasicChartView::mousePressEvent(QMouseEvent * event)
 {
     if (event->button() ==  Qt::MouseButton::LeftButton)
     {
-        // store the current status of
-        m_drawChartFlagStoreVariable = getDrawChartFlag();
-
-        // stop drawing the chart according to data updates
-        setDrawChartFlag(false);
+        if (m_state == MANUAL_STOP)
+            {m_state = STOPPED_L_MOUSE_CLICK_PRESS;}
+        else
+            {m_state = DRAWING_L_MOUSE_CLICK_PRESS;}
 
         // store the current x position of the chart for reference
         setReferenceXCoordinate(static_cast<int>(chart()->mapToValue(event->pos()).x()));
     }
-
     QGraphicsView::mousePressEvent(event);
 }
 
@@ -522,7 +450,10 @@ void BasicChartView::mouseReleaseEvent(QMouseEvent * event)
 {
     if (event->button() ==  Qt::MouseButton::LeftButton)
     {
-        setDrawChartFlag(m_drawChartFlagStoreVariable); // set previous status
+        if (m_state == STOPPED_L_MOUSE_CLICK_PRESS)
+            {m_state = MANUAL_STOP;}
+        else if (m_state == DRAWING_L_MOUSE_CLICK_PRESS)
+            {m_state = DRAWING;}
     }
     QGraphicsView::mouseReleaseEvent(event);
 }
@@ -689,7 +620,7 @@ void BasicChartView::resizeEventStartStopButton() noexcept
 
 void BasicChartView::updateChart() noexcept
 {
-    if (!getDrawChartFlag()) {/* qDebug() << *m_chartTitle << "updateChart() END";*/return;}
+    if (m_state != DRAWING) {/* qDebug() << *m_chartTitle << "updateChart() END";*/return;}
 
     repaintChart();
 }
@@ -699,4 +630,7 @@ void BasicChartView::setXLablesVisibility(const bool a_visibility) noexcept
 {
     getAxes(CHART_AXIS::X).setLabelsVisible(a_visibility);
 }
+
+
+
 

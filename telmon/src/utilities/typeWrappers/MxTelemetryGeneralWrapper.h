@@ -276,10 +276,7 @@ protected:
      */
     virtual const QString _getPrimaryKey(void* const) const noexcept = 0;
 
-    virtual const QString _getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
-    {
-        return nullptr;
-    }
+    virtual const QString _getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept = 0;
 };
 
 // 1. supress warning Wunused template function

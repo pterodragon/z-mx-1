@@ -143,7 +143,7 @@ void BasicChartModel::update(void* mxTelemetryType) noexcept
     const int l_fields = l_wrapper->getChartList().size() - 1;
     for (int i = 0; i < l_fields; i++)
     {
-        int l_strcutData = l_wrapper->getDataForChart<int>(mxTelemetryType, i);
+        const auto l_strcutData = l_wrapper->getDataForChart<int>(mxTelemetryType, i);
                         // only for testing
         //const auto l_strcutData = rand() % 100;
 

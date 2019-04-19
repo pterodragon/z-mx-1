@@ -70,13 +70,13 @@ BasicChartView::BasicChartView(const BasicChartModel& a_model,
     QValueAxis* l_axis = &getAxes(CHART_AXIS::X);
     chart()->addAxis(l_axis, Qt::AlignBottom);
     l_axis->setLabelFormat("%d"); // set labels format
-    l_axis->setRange(1, 60); // set number of points to track on the chart
+    l_axis->setRange(DEFAULT_X_AXIS_MIN, DEFAULT_X_AXIS_MAX); // set number of points to track on the chart
 
     l_axis = &getAxes(CHART_AXIS::Y_LEFT);
-    l_axis->setTickCount(5); // divide Y axis to 4 parts
+    l_axis->setTickCount(DEFAULT_TICK_COUNT); // divide Y axis to 4 parts
 
     l_axis = &getAxes(CHART_AXIS::Y_RIGHT);
-    l_axis->setTickCount(5);
+    l_axis->setTickCount(DEFAULT_TICK_COUNT);
 
     initSeries();
 
@@ -121,14 +121,12 @@ void BasicChartView::initSeries() noexcept
 
         chart()->addSeries(&getSeries(a_series));
 
-        // init the series Y axis with same color
-        //auto l_rightSeriesColor = getSeries(a_series).color();
-        //getAxes(l_axis).setLinePenColor(l_rightSeriesColor);
-
         // attach to chart and associate with corresponding axis
         chart()->addAxis(&getAxes(l_axis), l_alignment);
         getSeries(a_series).attachAxis(&getAxes(l_axis));
         getSeries(a_series).attachAxis(&getAxes(CHART_AXIS::X));
+
+        // init series with default values
 
         m_axisArray[l_axis]->setRange(0, 100); // set default range
 
@@ -239,40 +237,115 @@ int BasicChartView::getActiveDataType(const unsigned int a_series) const noexcep
 }
 
 
-void BasicChartView::updateVerticalAxisRange(const int a_data) noexcept
+void BasicChartView::updateVerticalAxisRange(const int a_newMax) noexcept
 {
-    const auto l_maxValue = qMax(getAxes(CHART_AXIS::Y_LEFT).max(), getAxes(CHART_AXIS::Y_RIGHT).max());
+    const auto l_curMaxValue = qMax(getAxes(CHART_AXIS::Y_LEFT).max(), getAxes(CHART_AXIS::Y_RIGHT).max());
 
-    // if a_data is bigger than current top max value, we update accordingly
-    if (l_maxValue <= a_data)
+    // if a_newMax is bigger than current top max value
+    if (l_curMaxValue <= a_newMax)
     {
-        //qDebug() << "increase";
-        const auto l_newMax = a_data + floor(a_data / 10);
-        getAxes(CHART_AXIS::Y_LEFT).setMax(l_newMax);
-        m_axisArray[CHART_AXIS::Y_LEFT]->applyNiceNumbers();
-
-        getAxes(CHART_AXIS::Y_RIGHT).setMax(l_newMax);
-        m_axisArray[CHART_AXIS::Y_RIGHT]->applyNiceNumbers();
-
-        m_axisArray[CHART_AXIS::Y_LEFT]->setTickCount(5);
-        m_axisArray[CHART_AXIS::Y_RIGHT]->setTickCount(5);
+        const auto l_newMax = a_newMax + floor(a_newMax / 10);
+        updateYAxisMax(l_newMax, getAxes(CHART_AXIS::Y_LEFT),  DEFAULT_TICK_COUNT);
+        updateYAxisMax(l_newMax, getAxes(CHART_AXIS::Y_RIGHT), DEFAULT_TICK_COUNT);
     }
 
-    // on the other hand, if a_data is less than 10% of current max,
+    // on the other hand, if a_newMax is less than 10% of current max,
     // we decrease max value
-    const auto l_newMax = floor(l_maxValue * 0.10);
-    if (l_newMax > a_data)
+    const auto l_newMax = floor(l_curMaxValue * 0.10);
+    if (l_newMax > a_newMax)
     {
-
-        getAxes(CHART_AXIS::Y_LEFT).setMax(l_newMax);
-        m_axisArray[CHART_AXIS::Y_LEFT]->applyNiceNumbers();
-
-        getAxes(CHART_AXIS::Y_RIGHT).setMax(l_newMax);
-        m_axisArray[CHART_AXIS::Y_RIGHT]->applyNiceNumbers();
-
-        m_axisArray[CHART_AXIS::Y_LEFT]->setTickCount(5);
-        m_axisArray[CHART_AXIS::Y_RIGHT]->setTickCount(5);
+        updateYAxisMax(l_newMax, getAxes(CHART_AXIS::Y_LEFT),  DEFAULT_TICK_COUNT);
+        updateYAxisMax(l_newMax, getAxes(CHART_AXIS::Y_RIGHT), DEFAULT_TICK_COUNT);
     }
+}
+
+void BasicChartView::updateYAxisMin(const double a_newMin,
+                                    QValueAxis& a_axis,
+                                    const int a_tickCount) noexcept
+{
+    a_axis.setMin(a_newMin);
+    a_axis.applyNiceNumbers();
+    a_axis.setTickCount(a_tickCount);
+}
+
+
+void BasicChartView::updateYAxisMax(const double a_newMax,
+                                    QValueAxis& a_axis,
+                                    const int a_tickCount) noexcept
+{
+    a_axis.setMax(a_newMax);
+    a_axis.applyNiceNumbers();
+    a_axis.setTickCount(a_tickCount);
+}
+
+
+// called as part of zoom in sequence
+void BasicChartView::updateYRangesManually() noexcept
+{
+    const auto l_leftSeriesMax = getCurrentMaxAndMinYFromSeries(BasicChartView::SERIES_LEFT);
+    const auto l_rightSeriesMax = getCurrentMaxAndMinYFromSeries(BasicChartView::SERIES_RIGHT);
+    const auto l_newMax = qMax(l_leftSeriesMax.first, l_rightSeriesMax.first);
+    const auto l_newMin = qMax(l_leftSeriesMax.second, l_rightSeriesMax.second);
+
+    if (l_newMax > 0 )
+    {
+         updateYAxisMax(l_newMax + VERTICAL_AXIS_RANGE_FACTOR, getAxes(BasicChartView::CHART_AXIS::Y_RIGHT), DEFAULT_TICK_COUNT);
+         updateYAxisMax(l_newMax + VERTICAL_AXIS_RANGE_FACTOR, getAxes(BasicChartView::CHART_AXIS::Y_LEFT), DEFAULT_TICK_COUNT);
+    }
+    if (l_newMin > 0 )
+    {
+        updateYAxisMin(l_newMin - VERTICAL_AXIS_RANGE_FACTOR, getAxes(BasicChartView::CHART_AXIS::Y_RIGHT), DEFAULT_TICK_COUNT);
+        updateYAxisMin(l_newMin - VERTICAL_AXIS_RANGE_FACTOR, getAxes(BasicChartView::CHART_AXIS::Y_LEFT), DEFAULT_TICK_COUNT);
+    }
+}
+
+
+
+
+
+ QPair<qreal, qreal> BasicChartView::getCurrentMaxAndMinYFromSeries(const unsigned int a_seriesIndex) const noexcept
+{
+    // sanity check: is none?
+
+    QPair<qreal, qreal> l_result = qMakePair(-1, -1); // max and min
+    const int l_activeDataTypeIndex = getActiveDataType(a_seriesIndex);
+    if (m_model.isSeriesIsNull(l_activeDataTypeIndex)) { return l_result; }
+
+    // else get series
+    const auto& l_series = getSeries(a_seriesIndex);
+
+    // new
+    // get user input
+    const auto& l_axis = getAxes(CHART_AXIS::X);
+    const auto l_xBegin  = static_cast<int>(l_axis.min());
+    const auto l_xEnd    = static_cast<int>(l_axis.max());
+    int l_numberOfPointsMeasured = 0;
+
+    qreal l_curMaxY = -1; // -1 indicating do nothing
+    qreal l_curMinY = -1; // -1 indicating do nothing
+    bool l_minFlagSetFirstTime = true;
+    for (int i = 0; i < l_series.count(); i++) {
+        const int l_curPointX = static_cast<int>(l_series.at(i).x());
+        if (l_curPointX >= l_xBegin
+                and
+            l_curPointX <= l_xEnd)
+        {
+            if (l_minFlagSetFirstTime)
+            {
+                l_curMinY = l_series.at(i).y();
+                l_minFlagSetFirstTime = false;
+            }
+
+            l_numberOfPointsMeasured++;
+            l_curMaxY = qMax(l_curMaxY, l_series.at(i).y());
+            l_curMinY = qMin(l_curMinY, l_series.at(i).y());
+        }
+    }
+    // if there is only one point measured, dont change anything;
+    if (l_numberOfPointsMeasured < 2) {return l_result;}
+    l_result.first  = l_curMaxY;
+    l_result.second = l_curMinY;
+    return l_result;
 }
 
 

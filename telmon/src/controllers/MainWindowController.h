@@ -64,6 +64,7 @@ private:
     void setAppearance(const QString& a_pathToFile = QString()) noexcept;
 
     inline static const QString DEFAULT_STYLE_PATH = "src/styles/dark_default.qss";
+    inline static const QString CURRENT_VER = "1.0";
 
 };
 

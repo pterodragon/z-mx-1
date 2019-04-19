@@ -43,7 +43,7 @@ MainWindowController::MainWindowController(QWidget *parent) :
     m_mainWindowView(new MainWindowView(this)),
     m_controllersDB(new QMap<unsigned int, BasicController*>()) // key, value
 {
-    qDebug() << "MainWindowController() - Begin";
+    qInfo() << "MainWindowController() - Begin; VERSION" << CURRENT_VER;
     setAppearance(); // loading the css file
     m_mainWindowView->initCentralLook();
     m_mainWindowView->initMenuBar();
@@ -82,17 +82,17 @@ MainWindowController::MainWindowController(QWidget *parent) :
     // The default value is AnimatedDocks | AllowTabbedDocks.
     //setDockOptions(dockOptions() & VerticalTabs);
     setDockNestingEnabled(true);
-    qDebug() << "MainWindowController() - End";
+    qInfo() << "MainWindowController() - End";
 }
 
 MainWindowController::~MainWindowController()
 {
-    qDebug() << "~MainWindowController() - Begin";
+    qInfo() << "~MainWindowController() - Begin; VERSION" << CURRENT_VER;
 
     // destroy dock windows first
     foreach (auto child, findChildren<QDockWidget *>())
     {
-        qDebug() << "closing" << child << "status:" << child->close();
+        qInfo() << "closing" << child << "status:" << child->close();
     }
 
     for (auto i = m_controllersDB->begin(); i != m_controllersDB->end() ;i++) { delete i.value(); }
@@ -100,7 +100,7 @@ MainWindowController::~MainWindowController()
     delete m_controllersDB;
     delete m_mainWindowModel;
     delete m_mainWindowView;
-    qDebug() << "~MainWindowController() - End";
+    qInfo() << "~MainWindowController() - End";
 }
 
 

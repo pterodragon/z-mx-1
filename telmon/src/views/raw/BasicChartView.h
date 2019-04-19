@@ -79,6 +79,10 @@ protected:
           STOPPED_L_MOUSE_CLICK_PRESS  // user pressed on graph, but still not released
                                          // while graph is stopped
          };
+     static const int DEFAULT_TICK_COUNT = 5;
+     static const int DEFAULT_X_AXIS_MAX = 60;
+     static const int DEFAULT_X_AXIS_MIN = 1;
+     static const int VERTICAL_AXIS_RANGE_FACTOR = 10;
 
     // * * * Attributes getters * * * //
     QValueAxis& getAxes(const unsigned int a_axe);
@@ -104,6 +108,10 @@ protected:
     void repaintChart() noexcept;
 
     int m_state;
+
+    void updateYAxisMax(const double a_newMax, QValueAxis& a_axis, const int a_tickCount) noexcept;
+    QPair<qreal, qreal> getCurrentMaxAndMinYFromSeries(const unsigned int) const noexcept;
+    //void getCurrentMinYFromSeries() const noexcept;
 private:
     // * * * Init Functons * * * //
     void initSeries() noexcept;
@@ -128,6 +136,13 @@ private:
     void setReferenceXCoordinate(const int a_x) noexcept {m_xReferenceCoordiante = a_x;}
     int getReferenceX() const noexcept {return m_xReferenceCoordiante;}
     void updateVerticalAxisRange(const int a_data) noexcept;
+    void updateYAxisMin(const double a_newMin,
+                        QValueAxis& a_axis,
+                        const int a_tickCount) noexcept;
+    void updateYAxis(const QPair<qreal, qreal> a_pair,
+                     QValueAxis& a_axis,
+                     const int a_tickCount) noexcept;
+    void updateYRangesManually() noexcept;
     void handleMouseEventHelper(const int) noexcept;
 
     /**
@@ -174,6 +189,8 @@ private:
                           const int a_xAxisSize,
                           const int a_offset) noexcept
     {
+        qDebug() << "buildSeriesArray()" << "a_xAxisSize" << a_xAxisSize
+                 << "a_offset" << a_offset;;
         int l_maxY = 0;
 
         for (auto i = 0; i < a_data.size(); i++)
@@ -181,10 +198,12 @@ private:
             int l_x = a_xAxisSize - i + a_offset;
             int l_y = a_data.at(i);
             if (l_y == -1) {l_y = 0;} // another sanity check, should not happen
+            qDebug() << "append" << QPointF(l_x, l_y);
             a_series.append(QPointF(l_x, l_y));
 
             l_maxY = qMax(l_maxY, l_y);
         }
+        qDebug() << "Done";
 
         return l_maxY;
     }

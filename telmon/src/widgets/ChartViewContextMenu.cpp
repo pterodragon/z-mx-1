@@ -70,7 +70,7 @@ ChartViewContextMenu::ChartViewContextMenu(BasicChartView& a_view, const QString
 
     // Zoom In menu
     {
-        m_zoomInMenu = new QMenu(QObject::tr("Zoom In"), this);
+        m_zoomInMenu = new QMenu(QObject::tr("Zoom In/Out"), this);
 
 
         m_xMinMenu = new QMenu("x min", m_zoomInMenu);
@@ -87,7 +87,7 @@ ChartViewContextMenu::ChartViewContextMenu(BasicChartView& a_view, const QString
         m_xMaxMenu = new QMenu("x max", m_zoomInMenu);
         for (int i = X_AXIS_MAX_FIELD_MIN_VALUE; i <= X_AXIS_MAX_FIELD_MAX_VALUE;)
         {
-            auto l_action =  m_xMaxMenu->addAction(QString::number(i),this, &ChartViewContextMenu::setXAxisMinAction);
+            auto l_action =  m_xMaxMenu->addAction(QString::number(i),this, &ChartViewContextMenu::setXAxisMaxAction);
 
             l_action->setData(QVariant(i));
             i += X_AXIS_FACTOR;
@@ -146,6 +146,9 @@ void ChartViewContextMenu::setXAxisMinAction()
     const auto l_x_Max = static_cast<int>(l_axis.max());
     if (l_val >= l_x_Max) {l_val = l_x_Max - X_AXIS_FACTOR;}
     l_axis.setMin(l_val);
+
+    // updating the Y Axis
+    m_view.updateYRangesManually();
 }
 
 
@@ -158,9 +161,13 @@ void ChartViewContextMenu::setXAxisMaxAction()
     int l_val = l_sender->data().toInt();
     auto& l_axis = m_view.getAxes(BasicChartView::CHART_AXIS::X);
     //sanity check
-    const auto l_x_Min = static_cast<int>(l_axis.max());
+    const auto l_x_Min = static_cast<int>(l_axis.min());
     if (l_val <= l_x_Min) {l_val = l_x_Min + X_AXIS_FACTOR;}
     l_axis.setMax(l_val);
+
+
+    // updating the Y Axis
+    m_view.updateYRangesManually();
 }
 
 

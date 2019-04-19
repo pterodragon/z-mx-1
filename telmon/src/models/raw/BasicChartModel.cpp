@@ -145,7 +145,10 @@ void BasicChartModel::update(void* mxTelemetryType) noexcept
     {
         const auto l_strcutData = l_wrapper->getDataForChart<int>(mxTelemetryType, i);
                         // only for testing
-        //const auto l_strcutData = rand() % 100;
+//        auto l_strcutData = rand() % 100;
+//        if ( l_strcutData < 25) {l_strcutData = 175;}
+//        else if ( l_strcutData < 75) {l_strcutData = 400;}
+//        else {l_strcutData = 25;}
 
         m_chartDataContainer->at(i)->prependKeepingSize(l_strcutData);
     }

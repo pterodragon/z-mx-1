@@ -62,6 +62,21 @@ template <typename T> struct Rand<T, 8> {
     return t;
   }
 };
+template <typename T> struct Rand<T, 16> {
+  inline static T rand() {
+    T t;
+    uint16_t *ZuMayAlias(t_) = (uint16_t *)&t;
+    t_[0] = ::rand() & 0xffff;
+    t_[1] = ::rand() & 0xffff;
+    t_[2] = ::rand() & 0xffff;
+    t_[3] = ::rand() & 0xffff;
+    t_[4] = ::rand() & 0xffff;
+    t_[5] = ::rand() & 0xffff;
+    t_[6] = ::rand() & 0xffff;
+    t_[7] = ::rand() & 0xffff;
+    return t;
+  }
+};
 
 template <typename Bits, typename T> struct IntegerTest {
   static void run(const char *s) {
@@ -161,6 +176,10 @@ int main()
   IntegerTest<LoBits, long long>::run("Lo long long");
   IntegerTest<HiBits, unsigned long long>::run("Hi unsigned long long");
   IntegerTest<LoBits, unsigned long long>::run("Lo unsigned long long");
+  IntegerTest<HiBits, int128_t>::run("Hi int128_t");
+  IntegerTest<LoBits, int128_t>::run("Lo int128_t");
+  IntegerTest<HiBits, uint128_t>::run("Hi uint128_t");
+  IntegerTest<LoBits, uint128_t>::run("Lo uint128_t");
   IntegerTest<HiBits, wchar_t>::run("Hi wchar_t");
   IntegerTest<LoBits, wchar_t>::run("Lo wchar_t");
   FloatTest<HiBits, float>::run("Hi float");

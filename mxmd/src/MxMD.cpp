@@ -37,7 +37,7 @@ void MxMDPxLevel_::reset(MxDateTime transactTime)
 {
   {
     auto i = m_orders.iterator();
-    while (const ZmRef<MxMDOrder> &order = i.iterateKey()) {
+    while (MxMDOrder *order = i.iterate()) {
       deletedOrder_(order, transactTime);
       i.del();
     }
@@ -51,7 +51,7 @@ void MxMDPxLevel_::updateNDP(
     MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP)
 {
   auto i = m_orders.iterator();
-  while (const ZmRef<MxMDOrder> &order = i.iterateKey())
+  while (MxMDOrder *order = i.iterate())
     order->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP);
   if (qtyNDP != oldQtyNDP)
     m_data.qty = MxValNDP{m_data.qty, oldQtyNDP}.adjust(qtyNDP);
@@ -112,26 +112,32 @@ void MxMDPxLevel_::update(
 
 void MxMDPxLevel_::addOrder(MxMDOrder *order)
 {
+  if (!*order->data().rank) {
+    if (!m_orders.count())
+      order->data_().rank = 0;
+    else
+      order->data_().rank = m_orders.maximum()->data().rank + 1;
+  }
   if (obSide()->orderBook()->venue()->flags() &
       (1U<<MxMDVenueFlags::UniformRanks)) {
-    MxUInt rank = order->m_data.rank;
+    MxUInt rank = order->data().rank;
     auto i = m_orders.iterator<ZmRBTreeGreaterEqual>(rank);
-    typename Orders::Node *node;
-    while ((node = i.iterate()) && node->key()->m_data.rank == rank)
-      rank = ++node->key()->m_data.rank;
+    MxMDOrder *order_;
+    while ((order_ = i.iterate()) && order_->data().rank == rank)
+      rank = ++order_->data_().rank;
   }
   m_orders.add(order);
 }
 
 void MxMDPxLevel_::delOrder(MxUInt rank)
 {
-  m_orders.delVal(rank);
+  m_orders.del(rank);
   if (obSide()->orderBook()->venue()->flags() &
       (1U<<MxMDVenueFlags::UniformRanks)) {
     auto i = m_orders.iterator<ZmRBTreeGreater>(rank);
-    typename Orders::Node *node;
-    while ((node = i.iterate()) && node->key()->m_data.rank == ++rank)
-      --node->key()->m_data.rank;
+    MxMDOrder *order;
+    while ((order = i.iterate()) && order->data().rank == ++rank)
+      --order->data_().rank;
   }
 }
 
@@ -1024,7 +1030,7 @@ MxMDVenue::MxMDVenue(MxMDLib *md, MxMDFeed *feed, MxID id,
 {
   m_segments = new Segments(ZmHashParams().bits(2).
       init(ZmIDString() << "MxMDVenue." << id << ".Segments"));
-  m_orders = new Orders(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
+  m_orders1 = new Orders1(ZmHashParams().bits(4).loadFactor(1.0).cBits(4).
       init(ZmIDString() << "MxMDVenue." << id << ".Orders"));
   unsigned n = md->nShards();
   m_shards.length(n);

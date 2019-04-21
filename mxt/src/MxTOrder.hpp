@@ -468,7 +468,7 @@ template <typename AppTypes> struct MxTAppTypes {
       if (*px)
 	s << " pxNDP=" << pxNDP
 	  << " px=" << MxValNDP{px, pxNDP};
-      s << " cumValue=" << MxValNDP{cumValue, this->pxNDP} << ' ';
+      s << " cumValue=" << MxValNDP{cumValue, pxNDP} << ' ';
       CancelLeg_::print(s);
     }
   };

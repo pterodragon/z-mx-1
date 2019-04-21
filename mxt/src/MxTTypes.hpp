@@ -56,11 +56,13 @@ namespace MxOrdType {
       Mkt2Limit,	// market during auction, unfilled becomes limit at AP
       Pegged,
       BestLimit,
+      StopBL,		// stop best limit
       LIT,		// limit if touched
       BLIT);		// best limit if touched
   MxEnumNames(
       "Market", "Limit", "Stop", "StopLimit",
-      "Funari", "MIT", "Mkt2Limit", "Pegged", "BestLimit", "LIT", "BLIT");
+      "Funari", "MIT", "Mkt2Limit", "Pegged", "BestLimit",
+      "StopBL", "LIT", "BLIT");
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "1", Market,
@@ -72,12 +74,13 @@ namespace MxOrdType {
       "K", Mkt2Limit,
       "P", Pegged,
       "U", BestLimit,
-      "W", LIT,
-      "X", BLIT);
+      "W", StopBL,
+      "X", LIT,
+      "Y", BLIT);
 
   inline bool isLimit(int ordType) {
     if (ZuUnlikely(ordType < 0 || ordType >= N)) return 0;
-    static bool isLimit_[N] = { 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1 };
+    static bool isLimit_[N] = { 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1 };
     return isLimit_[ordType];
   }
 

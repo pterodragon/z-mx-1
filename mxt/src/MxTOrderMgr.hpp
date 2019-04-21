@@ -1459,6 +1459,8 @@ public:
     }
 applyFill:
     bool fillModify = false;
+    OrderLeg *leg;
+    ModifyLeg *modLeg;
     {
       // apply fill to order leg
 #if _NLegs > 1
@@ -1469,38 +1471,38 @@ applyFill:
 	app()->abnormal(order, in);
 	return;
       }
-      OrderLeg &leg = newOrder.legs[leg_];
+      leg = &newOrder.legs[leg_];
 #else
-      OrderLeg &leg = newOrder.legs[0];
+      leg = &newOrder.legs[0];
 #endif
-      leg.cumQty += fill.lastQty;
+      leg->cumQty += fill.lastQty;
       if (MxTEventState::matchHDQS(modify.eventState)) {
 #if _NLegs > 1
-	ModifyLeg &modLeg = modify.legs[leg_];
+	modLeg = &modify.legs[leg_];
 #else
-	ModifyLeg &modLeg = modify.legs[0];
+	modLeg = &modify.legs[0];
 #endif
-	if (*modLeg.orderQty && leg.cumQty > leg.orderQty) {
-	  if (leg.cumQty <= modLeg.orderQty)
+	if (*modLeg->orderQty && leg->cumQty > leg->orderQty) {
+	  if (leg->cumQty <= modLeg->orderQty)
 	    // modify qty up, fill implies modified
 	    fillModify = true;
-	} else if (*modLeg.px) {
-	  if (leg.side == MxSide::Buy) {
-	    if (fill.lastPx > leg.px && fill.lastPx <= modLeg.px)
+	} else if (*modLeg->px) {
+	  if (leg->side == MxSide::Buy) {
+	    if (fill.lastPx > leg->px && fill.lastPx <= modLeg->px)
 	      // modify bid price up, fill implies modified
 	      fillModify = true;
 	  } else {
-	    if (fill.lastPx < leg.px && fill.lastPx >= modLeg.px)
+	    if (fill.lastPx < leg->px && fill.lastPx >= modLeg->px)
 	      // modify ask price down, fill implies modified
 	      fillModify = true;
 	  }
 	}
       }
-      leg.updateLeavesQty();
-      leg.cumValue += (fill.lastQty * fill.lastPx);
+      leg->updateLeavesQty();
+      leg->cumValue += (fill.lastQty * fill.lastPx);
     }
     if (ZuUnlikely(fillModify)) {
-      // apply fill to modify - it is inconsistent with the unmodified order
+      modLeg->update(fill);
       modify.update(fill);
       modify.eventState = MxTEventState::Acknowledged;
       newOrder.update(modify);
@@ -1508,6 +1510,7 @@ applyFill:
       ackOut<MxTEventType::Modified, MxTEventState::Sent,
 	1, 0, 0, 0, 1, 1>(order); // OmcuSP
     } else {
+      leg->update(fill);
       newOrder.update(fill);
       fill.update(newOrder);
       if (MxTEventState::matchP(modify.eventState) &&

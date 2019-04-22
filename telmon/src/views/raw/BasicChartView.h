@@ -22,12 +22,25 @@
 #ifndef BASICCHARTVIEW_H
 #define BASICCHARTVIEW_H
 
-#include "QtCharts"
+#include "QtCharts/QChartView"
 #include "src/models/raw/BasicChartModel.h"
+
+
+QT_CHARTS_BEGIN_NAMESPACE
+class QChart;
+QT_CHARTS_END_NAMESPACE
+
+QT_CHARTS_USE_NAMESPACE
+
+#include "QValueAxis"
+#include "QSplineSeries"
 
 class BasicChartController;
 class ChartViewCustomizer;
 class ChartViewContextMenu;
+class QLabel;
+class QPushButton;
+class ChartViewLabelsManagerWidget;
 
 class BasicChartView : public QChartView
 {
@@ -35,6 +48,7 @@ class BasicChartView : public QChartView
 
     friend class ChartViewCustomizer;
     friend class ChartViewContextMenu;
+    friend class ChartViewLabelsManagerWidget;
 
 public:
     BasicChartView(const BasicChartModel& a_model,
@@ -189,8 +203,6 @@ private:
                           const int a_xAxisSize,
                           const int a_offset) noexcept
     {
-        qDebug() << "buildSeriesArray()" << "a_xAxisSize" << a_xAxisSize
-                 << "a_offset" << a_offset;;
         int l_maxY = 0;
 
         for (auto i = 0; i < a_data.size(); i++)
@@ -198,12 +210,10 @@ private:
             int l_x = a_xAxisSize - i + a_offset;
             int l_y = a_data.at(i);
             if (l_y == -1) {l_y = 0;} // another sanity check, should not happen
-            qDebug() << "append" << QPointF(l_x, l_y);
             a_series.append(QPointF(l_x, l_y));
 
             l_maxY = qMax(l_maxY, l_y);
         }
-        qDebug() << "Done";
 
         return l_maxY;
     }
@@ -225,6 +235,10 @@ private:
     ChartViewCustomizer* m_designer;
     ChartViewContextMenu* m_contextMenu;
     BasicChartController& m_controller;
+    QList<QDateTime> m_dataContainer;
+    ChartViewLabelsManagerWidget* m_labelManager;
+
+
 };
 
 #endif // BASICCHARTVIEW_H

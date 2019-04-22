@@ -20,6 +20,7 @@
 
 #include "ChartViewContextMenu.h"
 #include "src/views/raw/BasicChartView.h"
+#include "QTimer"
 
 ChartViewContextMenu::ChartViewContextMenu(BasicChartView& a_view, const QString &title, QWidget *parent):
     QMenu(title, parent),
@@ -82,6 +83,7 @@ ChartViewContextMenu::ChartViewContextMenu(BasicChartView& a_view, const QString
             l_action->setData(QVariant(k));
             i += X_AXIS_FACTOR;
         }
+        m_xMinMenu->actions().at(0)->setEnabled(false);
         m_zoomInMenu->addMenu(m_xMinMenu);
 
         m_xMaxMenu = new QMenu("x max", m_zoomInMenu);
@@ -92,6 +94,7 @@ ChartViewContextMenu::ChartViewContextMenu(BasicChartView& a_view, const QString
             l_action->setData(QVariant(i));
             i += X_AXIS_FACTOR;
         }
+        m_xMaxMenu->actions().at(m_xMaxMenu->actions().size()-1)->setEnabled(false);
         m_zoomInMenu->addMenu(m_xMaxMenu);
 
         addMenu(m_zoomInMenu);
@@ -149,6 +152,11 @@ void ChartViewContextMenu::setXAxisMinAction()
 
     // updating the Y Axis
     m_view.updateYRangesManually();
+
+    // enable all actions (including the previous disabled one)
+    // and disable current
+    setActionsStatus(*m_xMinMenu, true);
+    l_sender->setEnabled(false);
 }
 
 
@@ -165,9 +173,22 @@ void ChartViewContextMenu::setXAxisMaxAction()
     if (l_val <= l_x_Min) {l_val = l_x_Min + X_AXIS_FACTOR;}
     l_axis.setMax(l_val);
 
-
     // updating the Y Axis
     m_view.updateYRangesManually();
+
+    // enable all actions (including the previous disabled one)
+    // and disable current
+    setActionsStatus(*m_xMaxMenu, true);
+    l_sender->setEnabled(false);
+}
+
+
+void ChartViewContextMenu::setActionsStatus(QMenu& a_menu, const bool a_status) noexcept
+{
+    foreach (auto action, a_menu.actions())
+    {
+        action->setEnabled(a_status);
+    }
 }
 
 

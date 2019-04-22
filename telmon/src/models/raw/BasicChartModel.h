@@ -36,7 +36,7 @@ class ChartModelDataStructureInterface;
 
 class ChartSubscriber;
 class DataSubscriber;
-
+class QDateTime;
 
 class BasicChartModel
 {
@@ -45,7 +45,11 @@ public:
                     const QString& a_associatedTelemetryInstanceName);
     ~BasicChartModel();
 
+    enum {Data, Time};
     static const int NUMBER_OF_Y_AXIS = 2;
+
+    // no need to track time for each field but for a msg as a whole
+    static const int AVAILABLE_INDEX = 0;
 
     const QString getAssociatedTelemetryInstanceName() const noexcept;
     int getAssociatedTelemetryType() const noexcept;
@@ -53,8 +57,9 @@ public:
     const std::array<int, NUMBER_OF_Y_AXIS>& getActiveDataSet() const noexcept;
     const QVector<QString>& getChartList() const noexcept;
 
-    int getSize(const int a_index) const noexcept;
+    int getSize(const int a_containerType, const int a_index) const noexcept;
     QList<int> getData(const int a_index, const int a_beginBegin, const int a_endIndex) const noexcept;
+    QList<QDateTime> getDataTime(const int a_beginBegin, const int a_endIndex) const noexcept;
 
     bool isSeriesIsNull(const int a_series) const noexcept;
 
@@ -79,6 +84,9 @@ private:
     // for one type
     const int DATA_MAX_ALLOWED_SIZE = 86400;
     QVector<ChartModelDataStructureInterface<int>*>* m_chartDataContainer;
+
+    // QDateTime = 8 bytes
+    QVector<ChartModelDataStructureInterface<QDateTime>*>* m_chartTimeContainer;
 
 
 //    bool isReachedMax(const int) const noexcept;

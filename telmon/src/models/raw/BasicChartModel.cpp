@@ -40,6 +40,7 @@ BasicChartModel::BasicChartModel(const int a_associatedTelemetryType,
                             + "::" +
                             *m_associatedTelemetryInstanceName)),
     m_chartDataContainer(new QVector<ChartModelDataStructureInterface<int>*>),
+    m_chartTimeContainer(new QVector<ChartModelDataStructureInterface<QDateTime>*>),
 
     m_subscriber(new ChartSubscriber(a_associatedTelemetryType,
                                      a_associatedTelemetryInstanceName,
@@ -53,6 +54,9 @@ BasicChartModel::BasicChartModel(const int a_associatedTelemetryType,
     {
         m_chartDataContainer->insert(i, new ChartModelDataStructureQListImpl<int>(DATA_MAX_ALLOWED_SIZE));
     }
+
+    // no need to track time for each field, but for a msg
+    m_chartTimeContainer->insert(AVAILABLE_INDEX, new ChartModelDataStructureQListImpl<QDateTime>(DATA_MAX_ALLOWED_SIZE));
 }
 
 
@@ -72,6 +76,15 @@ BasicChartModel::~BasicChartModel()
 
     delete m_chartDataContainer;
     m_chartDataContainer = nullptr;
+
+    for (int i = 0; i < m_chartTimeContainer->size(); i++) {
+        delete (*m_chartTimeContainer)[i];
+        (*m_chartTimeContainer)[i] = nullptr;
+    }
+
+    delete m_chartTimeContainer;
+    m_chartTimeContainer = nullptr;
+
 
     delete m_associatedTelemetryInstanceName;
     m_associatedTelemetryInstanceName = nullptr;
@@ -104,12 +117,27 @@ const QVector<QString>& BasicChartModel::getChartList() const noexcept
 }
 
 
-int BasicChartModel::getSize(const int a_index) const noexcept
+int BasicChartModel::getSize(const int a_containerType, const int a_index) const noexcept
 {
     const int l_numberOfFields = getChartList().size() - 1; // -1 for "none"
     if (!(a_index < l_numberOfFields)) { return 0;}
 
-    return m_chartDataContainer->at(a_index)->size();
+    int l_result = 0;
+
+    switch (a_containerType) {
+    case Data:
+        l_result =  m_chartDataContainer->at(a_index)->size();
+        break;
+    case Time:
+        l_result =  m_chartTimeContainer->at(AVAILABLE_INDEX)->size();
+        break;
+    default:
+        qCritical() << __PRETTY_FUNCTION__
+                    << "unknown container type"
+                    << a_containerType;
+        break;
+    }
+    return l_result;
 }
 
 
@@ -117,6 +145,13 @@ QList<int> BasicChartModel::getData(const int a_index, const int a_beginBegin, c
 {
     return m_chartDataContainer->at(a_index)->getItems(a_beginBegin, a_endIndex);
 }
+
+
+QList<QDateTime> BasicChartModel::getDataTime(const int a_beginBegin, const int a_endIndex) const noexcept
+{
+    return m_chartTimeContainer->at(AVAILABLE_INDEX)->getItems(a_beginBegin, a_endIndex);
+}
+
 
 
 bool BasicChartModel::isSeriesIsNull(const int a_series) const noexcept
@@ -152,4 +187,6 @@ void BasicChartModel::update(void* mxTelemetryType) noexcept
 
         m_chartDataContainer->at(i)->prependKeepingSize(l_strcutData);
     }
+
+    m_chartTimeContainer->at(AVAILABLE_INDEX)->prependKeepingSize(QDateTime::currentDateTime());
 }

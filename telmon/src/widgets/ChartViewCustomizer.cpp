@@ -19,6 +19,9 @@
 
 #include "ChartViewCustomizer.h"
 #include "src/views/raw/BasicChartView.h"
+#include "QLabel"
+#include "QPushButton"
+#include "QGraphicsLayout"
 
 
 ChartViewCustomizer::ChartViewCustomizer(QString a_className,

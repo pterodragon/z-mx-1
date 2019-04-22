@@ -51,6 +51,8 @@ protected:
     QMenu* m_xMinMenu;
     QMenu* m_xMaxMenu;
     QMenu* m_refreshRateMenu;
+
+    void setActionsStatus(QMenu& a_menu, const bool a_status) noexcept;
 };
 
 #endif // CHARTVIEWCONTEXTMENU_H

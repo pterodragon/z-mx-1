@@ -19,10 +19,12 @@
 
 
 #include "BasicChartView.h"
+#include "QtCharts"
 #include "src/controllers/BasicChartController.h"
 #include "src/widgets/ChartViewCustomizer.h"
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 #include "src/widgets/ChartViewContextMenu.h"
+#include "src/widgets/ChartViewLabelsManagerWidget.h"
 
 #include <stdlib.h> // abs
 
@@ -55,7 +57,8 @@ BasicChartView::BasicChartView(const BasicChartModel& a_model,
                                                m_model.getAssociatedTelemetryType())) +
                                            m_model.getAssociatedTelemetryInstanceName(),
                                        *this)),
-    m_controller(a_controller)
+    m_controller(a_controller),
+    m_labelManager(new ChartViewLabelsManagerWidget(*this))
 
 {
     // connect the timer
@@ -73,7 +76,7 @@ BasicChartView::BasicChartView(const BasicChartModel& a_model,
     l_axis->setRange(DEFAULT_X_AXIS_MIN, DEFAULT_X_AXIS_MAX); // set number of points to track on the chart
 
     l_axis = &getAxes(CHART_AXIS::Y_LEFT);
-    l_axis->setTickCount(DEFAULT_TICK_COUNT); // divide Y axis to 4 parts
+    l_axis->setTickCount(DEFAULT_TICK_COUNT);
 
     l_axis = &getAxes(CHART_AXIS::Y_RIGHT);
     l_axis->setTickCount(DEFAULT_TICK_COUNT);
@@ -105,6 +108,9 @@ BasicChartView::~BasicChartView()
 
     delete m_chartTitle;
     m_chartTitle = nullptr;
+
+    delete m_labelManager;
+    m_labelManager = nullptr;
 }
 
 
@@ -127,7 +133,6 @@ void BasicChartView::initSeries() noexcept
         getSeries(a_series).attachAxis(&getAxes(CHART_AXIS::X));
 
         // init series with default values
-
         m_axisArray[l_axis]->setRange(0, 100); // set default range
 
         const auto l_seriesName = m_chartFields.at(m_activeData[a_series]);
@@ -164,6 +169,10 @@ void BasicChartView::createActions() noexcept
     {
         this->m_contextMenu->exec(mapToGlobal(a_pos));
     } );
+
+    // series hover functioanility
+//    connect(&getSeries(SERIES::SERIES_LEFT), &QSplineSeries::hovered,
+//            this, &BasicChartView::callout);
 }
 
 
@@ -263,7 +272,9 @@ void BasicChartView::updateYAxisMin(const double a_newMin,
                                     QValueAxis& a_axis,
                                     const int a_tickCount) noexcept
 {
-    a_axis.setMin(a_newMin);
+    auto l_newMin = a_newMin;
+    if (l_newMin < 0) {l_newMin = 0;}
+    a_axis.setMin(l_newMin);
     a_axis.applyNiceNumbers();
     a_axis.setTickCount(a_tickCount);
 }
@@ -358,6 +369,9 @@ void BasicChartView::mouseMoveEvent(QMouseEvent * event)
         const int l_newXCoordinate = static_cast<int>(chart()->mapToValue(event->pos()).x());
         handleMouseEventHelper(l_newXCoordinate);
     }
+
+    m_labelManager->drawLabels(*event);
+
     QGraphicsView::mouseMoveEvent(event);
 }
 
@@ -391,8 +405,7 @@ void BasicChartView::repaintChart() noexcept
         const int l_maxYForSeries = repaintOneSeries(l_curSeries);
         l_maxY = qMax(l_maxYForSeries, l_maxY);
     }
-
-     updateVerticalAxisRange(l_maxY);
+    updateVerticalAxisRange(l_maxY);
 }
 
 
@@ -451,7 +464,7 @@ int BasicChartView::repaintOneSeries(const unsigned int l_series) noexcept
     const int l_activeDataTypeIndex = getActiveDataType(l_series);
     if (m_model.isSeriesIsNull(l_activeDataTypeIndex)) { return l_maxY; }
 
-    const auto l_containerSize = m_model.getSize(l_activeDataTypeIndex);
+    const auto l_containerSize = m_model.getSize(BasicChartModel::Data, l_activeDataTypeIndex);
     if (l_containerSize == 0) {return l_maxY;} // container is empty, no data to pull
 
     int l_beginIndex = 0;
@@ -498,7 +511,14 @@ int BasicChartView::repaintOneSeries(const unsigned int l_series) noexcept
     }
 
     // Request and Build:
-    const auto l_requestedData = m_model.getData(l_activeDataTypeIndex, l_beginIndex,  l_endIndex);
+    const auto l_requestedData = m_model.getData(l_activeDataTypeIndex,
+                                                 l_beginIndex,
+                                                 l_endIndex);
+    // update only once
+    if (l_series == BasicChartView::SERIES::SERIES_LEFT)
+    {
+        m_dataContainer = m_model.getDataTime(l_beginIndex, l_endIndex);
+    }
     return buildSeriesArray(l_requestedData,  *m_seriesArray[l_series], l_xAxisSize, l_offset);
 }
 
@@ -703,7 +723,4 @@ void BasicChartView::setXLablesVisibility(const bool a_visibility) noexcept
 {
     getAxes(CHART_AXIS::X).setLabelsVisible(a_visibility);
 }
-
-
-
 

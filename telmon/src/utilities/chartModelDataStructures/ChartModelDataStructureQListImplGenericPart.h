@@ -20,6 +20,7 @@
 
 #include "ChartModelDataStructureQListImpl.h"
 #include "QMutex"
+#include "QDateTime"
 
 template <class T>
 ChartModelDataStructureQListImpl<T>::ChartModelDataStructureQListImpl(const int a_containerSize):
@@ -81,7 +82,7 @@ void ChartModelDataStructureQListImpl<T>::unlock() noexcept
 template <class T>
 T ChartModelDataStructureQListImpl<T>::at(const int a_index) const noexcept
 {
-    if (m_db->isEmpty()) {return -1;}
-    if (a_index >= m_db->size() or a_index < 0) {return -1;}
+    if (m_db->isEmpty()) {return T();}
+    if (a_index >= m_db->size() or a_index < 0) {return T();}
     return m_db->at(a_index);
 }

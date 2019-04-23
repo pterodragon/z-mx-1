@@ -30,6 +30,8 @@ class QMouseEvent;
 class BasicChartView;
 class QPointF;
 class QPoint;
+class QGraphicsLineItem;
+class QRectF;
 
 
 
@@ -43,6 +45,8 @@ public:
 
     static const int X_LABEL_LEFT_MARGIN = 5;
     static const int X_LABEL_BUTTON_EXTRA_MARGIN = 20;
+
+    static const int MARKER_WIDTH = 2;
 
 protected:
     BasicChartView& m_view;
@@ -59,6 +63,13 @@ protected:
 
     const QPoint getYLabelNewPos(const QPointF& a_curXPos) const noexcept;
     qreal getYLabelData(const int a_curXPos) const noexcept;
+
+    QGraphicsLineItem* m_horizontalLine;
+    QGraphicsLineItem* m_verticalLine;
+
+    void setLines(const int a_eventXPos,
+                  const QRectF& a_plotArea,
+                  const int a_yLabelPos) noexcept;
 };
 
 

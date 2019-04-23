@@ -34,7 +34,6 @@ ChartViewDataManager::ChartViewDataManager(BasicChartView& a_view):
 
 }
 
-
 ChartViewDataManager::~ChartViewDataManager()
 {
 
@@ -45,13 +44,6 @@ const QPair<const QDateTime, const QPointF> ChartViewDataManager::getData(const 
 {
     // translate to internal representation
     const auto l_internalX = toInternalXCoordinate(a_x);
-//    qDebug() << "toInternalXCoordinate a_x:" << a_x << "m_delayInd" << m_view.m_delayIndicator;
-//    qDebug() << "l_internalX" << l_internalX << "getOriginalMaxX()" << getOriginalMaxX();
-//    qDebug() << "m_view.m_dataContainer.count()" << m_view.m_dataContainer.count();
-//    qDebug() << "minoffset" <<m_zoomInXMinOffset << "maxOffset" << m_zoomInXMaxOffset;
-//    qDebug();
-    //qDebug();
-
 
     if (l_internalX < 0 or l_internalX > getOriginalMaxX()) {return qMakePair(QDateTime(), QPointF());}
 

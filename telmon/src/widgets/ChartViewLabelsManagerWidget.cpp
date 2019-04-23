@@ -31,12 +31,21 @@
 ChartViewLabelsManagerWidget::ChartViewLabelsManagerWidget(BasicChartView& a_view):
     m_view(a_view),
     m_Y_label(new QLabel(&a_view)),
-    m_X_label(new QLabel(&a_view))
+    m_X_label(new QLabel(&a_view)),
+    m_horizontalLine(new QGraphicsLineItem(a_view.chart())),
+    m_verticalLine(new QGraphicsLineItem(a_view.chart()))
 {
     m_Y_label->setObjectName("m_Y_label");
     m_Y_label->hide();
     m_X_label->setObjectName("m_X_label");
     m_X_label->hide();
+
+    // set lines width
+    QPen l_pen;
+    l_pen.setWidth(MARKER_WIDTH);
+    m_horizontalLine->setPen(l_pen);
+    m_verticalLine->setPen(l_pen);
+
 }
 
 
@@ -73,11 +82,12 @@ void ChartViewLabelsManagerWidget::drawLabels(const QMouseEvent& a_event) noexce
     m_X_label->show();
 
 
-    m_Y_label->move(getYLabelNewPos(l_result.second));
+    const auto l_newYLabelPos = getYLabelNewPos(l_result.second);
+    m_Y_label->move(l_newYLabelPos);
     m_Y_label->setText(QString::number(l_result.second.y()));
     m_Y_label->show();
 
-
+    setLines(a_event.pos().x(), m_view.chart()->plotArea(), l_newYLabelPos.y());
 }
 
 
@@ -97,6 +107,8 @@ void ChartViewLabelsManagerWidget::hide() noexcept
 {
     m_Y_label->hide();
     m_X_label->hide();
+    m_verticalLine->hide();
+    m_horizontalLine->hide();
 }
 
 
@@ -159,7 +171,20 @@ qreal ChartViewLabelsManagerWidget::getYLabelData(const int a_curXPos) const noe
 }
 
 
+void ChartViewLabelsManagerWidget::setLines(const int a_eventXPos,
+                                            const QRectF& a_plotArea,
+                                            const int a_yLabelPos) noexcept
+{
 
+    m_verticalLine->setLine(a_eventXPos, a_plotArea.y(),
+                            a_eventXPos, a_plotArea.y() + a_plotArea.height());
+
+    m_horizontalLine->setLine(a_plotArea.x(),                      a_yLabelPos,
+                              a_plotArea.x() + a_plotArea.width(), a_yLabelPos);
+
+    m_verticalLine->show();
+    m_horizontalLine->show();
+}
 
 
 

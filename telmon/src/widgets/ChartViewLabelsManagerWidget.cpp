@@ -25,13 +25,17 @@
 #include <math.h>       /* floor */
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 #include "QDateTime"
+#include "src/widgets/ChartViewDataManager.h"
+
 
 ChartViewLabelsManagerWidget::ChartViewLabelsManagerWidget(BasicChartView& a_view):
     m_view(a_view),
     m_Y_label(new QLabel(&a_view)),
     m_X_label(new QLabel(&a_view))
 {
+    m_Y_label->setObjectName("m_Y_label");
     m_Y_label->hide();
+    m_X_label->setObjectName("m_X_label");
     m_X_label->hide();
 }
 
@@ -47,49 +51,30 @@ void ChartViewLabelsManagerWidget::drawLabels(const QMouseEvent& a_event) noexce
     // continue only one move event
     if (!isMouseMoveEvent(a_event.type())) {return;}
 
-    // get the series value at pos
-    const auto valueGivenSeries = getSeriesValue(a_event);
+    // mouse pos in (x, y)
+    const auto l_mousePos = translateToCoordinateSystem(a_event);
 
     // hide the label if user goes out of borders
-    if (isOutOfChartBorders(valueGivenSeries.x(), valueGivenSeries.y()))
+    if (isOutOfChartBorders(l_mousePos.x(), l_mousePos.y()))
     {
         hide();
         return;
     }
 
-
-    const auto l_curXPos = BasicChartView::DEFAULT_X_AXIS_MAX - static_cast<int>(floor(valueGivenSeries.x()));
-
-    if (!isDataExistsForCurrentX(l_curXPos))
+    const auto l_result = m_view.m_dataManager->getData(static_cast<int>(floor(l_mousePos.x())));
+    if (l_result.second.isNull())
     {
         hide();
         return;
     }
-
 
     m_X_label->move(getXLabelNewPos(a_event.pos().x()));
-    m_X_label->setText(getXLabelData(l_curXPos));
+    m_X_label->setText(l_result.first.toString(MxTelemetryGeneralWrapper::TIME_FORMAT__hh_mm_ss));
     m_X_label->show();
 
 
-    // set X
-
-//    m_Y_label->move(getYLabelNewPos(l_curXPos));
-//    coordToPixel
-//            PxielToCord
-    //m_view.getSeries(BasicChartView::SERIES_LEFT).at()
-//    qDebug() << "valueGivenSeries" << valueGivenSeries;
-//    qDebug() << "" <<  m_view.chart()->mapToPosition(valueGivenSeries,
-//                                                     &m_view.getSeries(BasicChartView::SERIES_LEFT));
-
-//    const auto bla = m_view.getSeries(BasicChartView::SERIES_LEFT).at(l_curXPos);
-//    qDebug() << "bla" << bla;
-//    const auto bla2 =  m_view.chart()->mapToPosition(bla, &m_view.getSeries(BasicChartView::SERIES_LEFT));
-//    qDebug() <<  bla2;
-//    qDebug();
-//    m_Y_label->move(5, bla2.y());
-    m_Y_label->move(getYLabelNewPos(l_curXPos));
-    m_Y_label->setText(QString::number(getYLabelData(l_curXPos)));
+    m_Y_label->move(getYLabelNewPos(l_result.second));
+    m_Y_label->setText(QString::number(l_result.second.y()));
     m_Y_label->show();
 
 
@@ -102,23 +87,9 @@ bool ChartViewLabelsManagerWidget::isMouseMoveEvent(const QEvent::Type a_type) c
 }
 
 
-const QPointF ChartViewLabelsManagerWidget::getSeriesValue(const QMouseEvent& a_event) const noexcept
+const QPointF ChartViewLabelsManagerWidget::translateToCoordinateSystem(const QMouseEvent& a_event) const noexcept
 {
-    const auto l_widgetPos = a_event.localPos();
-    const auto l_scenePos = m_view.mapToScene(QPoint(static_cast<int>(l_widgetPos.x()),
-                                                   static_cast<int>(l_widgetPos.y())));
-    const auto l_chartItemPos = m_view.chart()->mapFromScene(l_scenePos);
-
-//    qDebug() << "l_widgetPos" << l_widgetPos;
-//    qDebug() << "l_scenePos" << l_scenePos;
-//    qDebug() << "l_chartItemPos" << l_chartItemPos;
-//    qDebug() << "m_view.chart()->mapToValue(l_chartItemPos);" <<
-//                m_view.chart()->mapToPosition(QPointF(0, 0),
-//                                           &m_view.getSeries(BasicChartView::SERIES_LEFT));
-//    qDebug();
-
-
-    return  m_view.chart()->mapToValue(l_chartItemPos);
+    return  m_view.chart()->mapToValue(a_event.localPos());;
 }
 
 
@@ -134,7 +105,7 @@ bool ChartViewLabelsManagerWidget::isOutOfChartBorders(const qreal a_x, const qr
     const auto& l_X_axis = &m_view.getAxes(BasicChartView::CHART_AXIS::X);
     if (a_x < l_X_axis->min()
             or
-        a_x > l_X_axis->max())
+        a_x > l_X_axis->max() + 0.2) // take also values on border
     {
         return true;
     }
@@ -166,26 +137,18 @@ bool ChartViewLabelsManagerWidget::isDataExistsForCurrentX(const qreal a_x) cons
 
 const QPoint ChartViewLabelsManagerWidget::getXLabelNewPos(const int a_curMouseXPos) const noexcept
 {
-    return QPoint(X_LABEL_LEFT_MARGIN + a_curMouseXPos,
+    auto l_xPos = (X_LABEL_LEFT_MARGIN + a_curMouseXPos);
+    const auto l_calc = l_xPos + m_X_label->width();
+    if (l_calc > m_view.width()) {l_xPos -= l_calc - m_view.width();}
+    return QPoint(l_xPos,
                   m_view.height() - X_LABEL_BUTTON_EXTRA_MARGIN);
 }
 
 
-const QString ChartViewLabelsManagerWidget::getXLabelData(const int a_curXPos) const noexcept
+const QPoint ChartViewLabelsManagerWidget::getYLabelNewPos(const QPointF& a_seriesPos) const noexcept
 {
-    return m_view.m_dataContainer.at(a_curXPos).toString(MxTelemetryGeneralWrapper::TIME_FORMAT__hh_mm_ss);
-}
-
-
-const QPoint ChartViewLabelsManagerWidget::getYLabelNewPos(const int a_curXPos) const noexcept
-{
-        auto& l_series = m_view.getSeries(BasicChartView::SERIES_LEFT);
-        const auto l_seriesDataPoint = l_series.at(a_curXPos);
-        const auto l_seriesDataCoordiante =  m_view.chart()->mapToPosition(l_seriesDataPoint,
-                                                         &l_series);
-
-
-
+    auto& l_series = m_view.getSeries(BasicChartView::SERIES_LEFT);
+    const auto l_seriesDataCoordiante =  m_view.chart()->mapToPosition(a_seriesPos, &l_series);
     return QPoint(X_LABEL_LEFT_MARGIN, static_cast<int>(l_seriesDataCoordiante.y()));
 }
 

@@ -21,6 +21,7 @@
 #include "ChartViewContextMenu.h"
 #include "src/views/raw/BasicChartView.h"
 #include "QTimer"
+#include "src/widgets/ChartViewDataManager.h"
 
 ChartViewContextMenu::ChartViewContextMenu(BasicChartView& a_view, const QString &title, QWidget *parent):
     QMenu(title, parent),
@@ -78,7 +79,7 @@ ChartViewContextMenu::ChartViewContextMenu(BasicChartView& a_view, const QString
         for (int i = X_AXIS_MIN_FIELD_MIN_VALUE; i <= X_AXIS_MIN_FIELD_MAX_VALUE;)
         {
             int k = i;
-            if (i == 0) { k = 1;}
+            //if (i == 0) { k = 1;}
             auto l_action =  m_xMinMenu->addAction(QString::number(i), this, &ChartViewContextMenu::setXAxisMinAction);
             l_action->setData(QVariant(k));
             i += X_AXIS_FACTOR;
@@ -150,6 +151,11 @@ void ChartViewContextMenu::setXAxisMinAction()
     if (l_val >= l_x_Max) {l_val = l_x_Max - X_AXIS_FACTOR;}
     l_axis.setMin(l_val);
 
+
+    m_view.m_dataManager->setZoomMinOffset(m_xMinMenu->actions().at(0)->data().toInt() // original
+                                           -                                           // -
+                                           l_val);                                     // current
+
     // updating the Y Axis
     m_view.updateYRangesManually();
 
@@ -172,6 +178,12 @@ void ChartViewContextMenu::setXAxisMaxAction()
     const auto l_x_Min = static_cast<int>(l_axis.min());
     if (l_val <= l_x_Min) {l_val = l_x_Min + X_AXIS_FACTOR;}
     l_axis.setMax(l_val);
+
+    m_view.m_dataManager->setZoomMaxOffset(m_xMaxMenu->actions().at
+                                           (m_xMaxMenu->actions().size()-1)
+                                           ->data().toInt()                            // original
+                                           -                                           // -
+                                           l_val);                                     // current
 
     // updating the Y Axis
     m_view.updateYRangesManually();

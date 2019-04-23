@@ -23,11 +23,15 @@
 
 #include "QEvent"
 
+
+class QString;
 class QLabel;
 class QMouseEvent;
 class BasicChartView;
 class QPointF;
 class QPoint;
+
+
 
 class ChartViewLabelsManagerWidget
 {
@@ -46,16 +50,17 @@ protected:
     QLabel* m_X_label; // will represent time
 
     bool isMouseMoveEvent(const QEvent::Type a_type) const noexcept;
-    const QPointF getSeriesValue(const QMouseEvent& a_event) const noexcept;
+    const QPointF translateToCoordinateSystem(const QMouseEvent& a_event) const noexcept;
     bool isOutOfChartBorders(const qreal a_x, const qreal a_y) const noexcept;
     void hide() noexcept;
     bool isDataExistsForCurrentX(const qreal a_x) const noexcept;
 
     const QPoint getXLabelNewPos(const int a_curMouseXPos) const noexcept;
-    const QString getXLabelData(const int a_curXPos) const noexcept;
 
-    const QPoint getYLabelNewPos(const int a_curXPos) const noexcept;
+    const QPoint getYLabelNewPos(const QPointF& a_curXPos) const noexcept;
     qreal getYLabelData(const int a_curXPos) const noexcept;
 };
+
+
 
 #endif // ChartViewLabelsManagerWidget_H

@@ -226,7 +226,22 @@ QLabel#TableQLabelWidget {
 	color: #bec0c2;
 }
 
+/* * * * * Customizing chart on mouse hover labels * * * * */
+QLabel#m_Y_label {
+        border: 0px solid green;
+        padding: 1px;
+        border-radius: 0px;
+        background-color: black;
+        color: #bec0c2;
+}
 
+QLabel#m_X_label {
+        border: 0px solid green;
+        padding: 1px;
+        border-radius: 0px;
+        background-color: black;
+        color: #bec0c2;
+}
 
 
 

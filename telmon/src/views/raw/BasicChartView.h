@@ -41,6 +41,7 @@ class ChartViewContextMenu;
 class QLabel;
 class QPushButton;
 class ChartViewLabelsManagerWidget;
+class ChartViewDataManager;
 
 class BasicChartView : public QChartView
 {
@@ -49,6 +50,7 @@ class BasicChartView : public QChartView
     friend class ChartViewCustomizer;
     friend class ChartViewContextMenu;
     friend class ChartViewLabelsManagerWidget;
+    friend class ChartViewDataManager;
 
 public:
     BasicChartView(const BasicChartModel& a_model,
@@ -95,7 +97,7 @@ protected:
          };
      static const int DEFAULT_TICK_COUNT = 5;
      static const int DEFAULT_X_AXIS_MAX = 60;
-     static const int DEFAULT_X_AXIS_MIN = 1;
+     static const int DEFAULT_X_AXIS_MIN = 0;
      static const int VERTICAL_AXIS_RANGE_FACTOR = 10;
 
     // * * * Attributes getters * * * //
@@ -125,7 +127,9 @@ protected:
 
     void updateYAxisMax(const double a_newMax, QValueAxis& a_axis, const int a_tickCount) noexcept;
     QPair<qreal, qreal> getCurrentMaxAndMinYFromSeries(const unsigned int) const noexcept;
-    //void getCurrentMinYFromSeries() const noexcept;
+
+
+
 private:
     // * * * Init Functons * * * //
     void initSeries() noexcept;
@@ -207,7 +211,7 @@ private:
 
         for (auto i = 0; i < a_data.size(); i++)
         {
-            int l_x = a_xAxisSize - i + a_offset;
+            int l_x = a_xAxisSize - i + a_offset - 1;
             int l_y = a_data.at(i);
             if (l_y == -1) {l_y = 0;} // another sanity check, should not happen
             a_series.append(QPointF(l_x, l_y));
@@ -218,6 +222,11 @@ private:
         return l_maxY;
     }
 
+    /**
+     * @brief check if series is active
+     * @return
+     */
+    bool isActive(const unsigned int a_series) const noexcept;
 
      // * * * Data Members * * * //
     const BasicChartModel& m_model;
@@ -237,6 +246,7 @@ private:
     BasicChartController& m_controller;
     QList<QDateTime> m_dataContainer;
     ChartViewLabelsManagerWidget* m_labelManager;
+    ChartViewDataManager* m_dataManager;
 
 
 };

@@ -25,6 +25,7 @@
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 #include "src/widgets/ChartViewContextMenu.h"
 #include "src/widgets/ChartViewLabelsManagerWidget.h"
+#include "src/widgets/ChartViewDataManager.h"
 
 #include <stdlib.h> // abs
 
@@ -58,7 +59,8 @@ BasicChartView::BasicChartView(const BasicChartModel& a_model,
                                            m_model.getAssociatedTelemetryInstanceName(),
                                        *this)),
     m_controller(a_controller),
-    m_labelManager(new ChartViewLabelsManagerWidget(*this))
+    m_labelManager(new ChartViewLabelsManagerWidget(*this)),
+    m_dataManager(new ChartViewDataManager(*this))
 
 {
     // connect the timer
@@ -111,6 +113,9 @@ BasicChartView::~BasicChartView()
 
     delete m_labelManager;
     m_labelManager = nullptr;
+
+    delete m_dataManager;
+    m_dataManager = nullptr;
 }
 
 
@@ -169,10 +174,6 @@ void BasicChartView::createActions() noexcept
     {
         this->m_contextMenu->exec(mapToGlobal(a_pos));
     } );
-
-    // series hover functioanility
-//    connect(&getSeries(SERIES::SERIES_LEFT), &QSplineSeries::hovered,
-//            this, &BasicChartView::callout);
 }
 
 
@@ -455,21 +456,22 @@ void BasicChartView::repaintChart() noexcept
   */
 int BasicChartView::repaintOneSeries(const unsigned int l_series) noexcept
 {
+    // set default max value
     int l_maxY = 0;
 
     // clear current series
     m_seriesArray[l_series]->clear();
 
-    // if current series is "none", then skip
-    const int l_activeDataTypeIndex = getActiveDataType(l_series);
-    if (m_model.isSeriesIsNull(l_activeDataTypeIndex)) { return l_maxY; }
+    // if current series is "none" --> skip
+    if (!isActive(l_series)) { return l_maxY; }
 
+    const auto l_activeDataTypeIndex = getActiveDataType(l_series);
     const auto l_containerSize = m_model.getSize(BasicChartModel::Data, l_activeDataTypeIndex);
     if (l_containerSize == 0) {return l_maxY;} // container is empty, no data to pull
 
     int l_beginIndex = 0;
     int l_endIndex = 0;
-    const int l_xAxisSize = getXAxisSpan();
+    const int l_xAxisSize = getXAxisSpan() + 1;
     int l_offset = 0;
 
     // user moved right
@@ -511,6 +513,7 @@ int BasicChartView::repaintOneSeries(const unsigned int l_series) noexcept
     }
 
     // Request and Build:
+
     const auto l_requestedData = m_model.getData(l_activeDataTypeIndex,
                                                  l_beginIndex,
                                                  l_endIndex);
@@ -519,8 +522,17 @@ int BasicChartView::repaintOneSeries(const unsigned int l_series) noexcept
     {
         m_dataContainer = m_model.getDataTime(l_beginIndex, l_endIndex);
     }
+
     return buildSeriesArray(l_requestedData,  *m_seriesArray[l_series], l_xAxisSize, l_offset);
 }
+
+
+bool BasicChartView::isActive(const unsigned int a_series) const noexcept
+{
+    const auto l_activeDataTypeIndex = getActiveDataType(a_series);
+    return !(m_model.isSeriesIsNull(l_activeDataTypeIndex));
+}
+
 
 
 void BasicChartView::mousePressEvent(QMouseEvent * event)
@@ -723,4 +735,8 @@ void BasicChartView::setXLablesVisibility(const bool a_visibility) noexcept
 {
     getAxes(CHART_AXIS::X).setLabelsVisible(a_visibility);
 }
+
+
+
+
 

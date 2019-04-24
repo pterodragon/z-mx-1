@@ -28,7 +28,6 @@ class TabelQLabelSubscriber;
 
 class TableQLabelWidgetDockWidget : public BasicDockWidget
 {
-    Q_OBJECT
 public:
     TableQLabelWidgetDockWidget(const int       a_mxTelemetryTypeName,
                                 const QString&  a_mxTelemetryInstanceName,
@@ -38,8 +37,6 @@ public:
     virtual ~TableQLabelWidgetDockWidget() override;
     virtual void closeEvent(QCloseEvent *event) override final;
 
-signals:
-    void closeAction();
 
 protected:
     DataDistributor* m_dataDistributor;

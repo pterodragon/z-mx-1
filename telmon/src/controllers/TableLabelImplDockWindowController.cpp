@@ -49,8 +49,8 @@ std::pair<QDockWidget*, int> TableLabelImplDockWindowController::handleUserSelec
                                                   m_dataDistributor,
                                                   nullptr);
 
-    // close action functioanility
-    connect(l_dock, &TableQLabelWidgetDockWidget::closeAction, this, [this](){
+    // close functioanility
+    connect(l_dock, &TableQLabelWidgetDockWidget::destroyed, this, [this](QObject* ){
         emit closeDockWidget(DockWindowController::ACTIONS::REMOVE_FROM_CENTER);
     });
 

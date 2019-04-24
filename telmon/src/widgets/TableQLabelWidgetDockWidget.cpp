@@ -54,8 +54,7 @@ TableQLabelWidgetDockWidget::TableQLabelWidgetDockWidget(const int       a_mxTel
 
     // connect to close functioanility
     connect(l_label, &TableQLabelWidget::closeAction, this, [this]() {
-        emit closeAction();
-        delete this;
+        delete this; // emitting QObject::destroyed as part of the delete process
     });
 
     // subscribe

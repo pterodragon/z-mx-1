@@ -39,6 +39,7 @@ public:
     virtual void popup(const QPoint &p,
                        const int a_mxTelemetryType,
                        const bool a_tableFlag,
+                       const bool a_chartFlag,
                        QAction *atAction = nullptr);
 
 protected:

@@ -20,6 +20,7 @@
 
 #include "TableLabelImplDockWindowController.h"
 #include "src/widgets/TableQLabelWidgetDockWidget.h"
+#include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
 
 #include "QLabel"
 #include "QDebug"
@@ -95,10 +96,14 @@ void TableLabelImplDockWindowController::dockWidgetDestroyed(QObject* a_obj)
 }
 
 
-bool TableLabelImplDockWindowController::showPolicy(const QString& a_name) const noexcept
+bool TableLabelImplDockWindowController::showPolicy(const int a_mxType,
+                                                    const QString& a_mxInstance) const noexcept
 {
+    const QString l_name = MxTelemetryGeneralWrapper::fromMxTypeValueToName(a_mxType) +
+                           MxTelemetryGeneralWrapper::MX_NAME_DELIMITER +
+                           a_mxInstance;
     // or show policy is only one table at a time
-    return !(m_activeTables->contains(a_name));
+    return !(m_activeTables->contains(l_name));
 }
 
 

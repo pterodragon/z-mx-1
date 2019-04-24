@@ -78,7 +78,7 @@ MainWindowController::MainWindowController(QWidget *parent) :
 
     createActions();
 
-    // set dock windows behavioe
+    // set dock windowcloseDockWidgets behavioe
     // The default value is AnimatedDocks | AllowTabbedDocks.
     //setDockOptions(dockOptions() & VerticalTabs);
     setDockNestingEnabled(true);
@@ -347,7 +347,6 @@ void MainWindowController::setAppearance(const QString& a_pathToFile) noexcept
 
 void MainWindowController::closeDockWidget(const int a_type) noexcept
 {
-    qDebug() << "closeDockWidget" << a_type;
     switch (a_type) {
     case DockWindowController::ACTIONS::REMOVE_FROM_CENTER:
         if (m_mainWindowView->m_tablesWidgetSplitter->count() == 2)
@@ -370,10 +369,17 @@ void MainWindowController::closeDockWidget(const int a_type) noexcept
 
 
 bool MainWindowController::showPolicy(const unsigned int a_controllerType,
-                                      const QString& a_objectName) const noexcept
+                                      const int a_mxType,
+                                      const QString& a_mxInstance) const noexcept
 {
-    auto l_dockWindowController = static_cast<DockWindowController*>(m_controllersDB->value(a_controllerType));
-    return l_dockWindowController->showPolicy(a_objectName);
+    auto l_dockWindowController = static_cast<DockWindowController*>(m_controllersDB->value(a_controllerType, nullptr));
+    if (!l_dockWindowController)
+    {
+        qCritical() << __PRETTY_FUNCTION__
+                    << "a_controllerType" << a_controllerType << "does not exist in DB";
+        return true;
+    }
+    return l_dockWindowController->showPolicy(a_mxType, a_mxInstance);
 }
 
 

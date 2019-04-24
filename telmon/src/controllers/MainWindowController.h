@@ -48,7 +48,8 @@ public:
 
 
     bool showPolicy(const unsigned int a_controllerType,
-                    const QString& a_objectName) const noexcept;
+                    const int a_mxType,
+                    const QString& a_mxInstance) const noexcept;
 
 public slots:
     void closeDockWidget(const int) noexcept;

@@ -40,7 +40,8 @@ public:
                                                              const QString& a_mxTelemetryInstanceName,
                                                              const int a_mxTelemetryType) noexcept override final;
 
-    virtual bool showPolicy(const QString&) const noexcept final override;
+    virtual bool showPolicy(const int a_mxType,
+                            const QString& a_mxInstance) const noexcept final override;
 
 protected slots:
     void dockWidgetDestroyed(QObject* a_obj);

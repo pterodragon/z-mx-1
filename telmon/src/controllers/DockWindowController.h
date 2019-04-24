@@ -51,7 +51,8 @@ public:
      * @brief showPolicy - to used by tree context menu, enable/disable X option
      * @return
      */
-    virtual bool showPolicy(const QString&) const noexcept = 0;
+    virtual bool showPolicy(const int a_mxType,
+                            const QString& a_mxInstance) const noexcept = 0;
 
 
     // DockWindowController interface

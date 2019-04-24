@@ -51,7 +51,8 @@ public:
 
     void rearrangeXAxisLablesOnAllViews() noexcept;
 
-    virtual bool showPolicy(const QString&) const noexcept final override {return true;}
+    virtual bool showPolicy(const int a_mxType,
+                            const QString& a_mxInstance) const noexcept final override;
 
 private:
     ChartWidgetDockWindowModel* m_model;
@@ -64,6 +65,9 @@ private:
 
     BasicChartController* getController(const int mxTelemetryType,
                                         const QString& mxTelemetryInstanceName) noexcept;
+
+    BasicChartController* getController(const int mxTelemetryType,
+                                        const QString& mxTelemetryInstanceName) const noexcept;
 };
 
 #endif // CHARTWIDGETDOCKWINDOWCONTROLLER_H

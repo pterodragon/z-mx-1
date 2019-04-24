@@ -169,12 +169,9 @@ BasicChartController* ChartWidgetDockWindowController::getController(
                             const QString& a_mxTelemetryInstanceName) noexcept
 {
     // sanity check
-    if (a_mxTelemetryType < 0
-            or
-        a_mxTelemetryType > MxTelemetryGeneralWrapper::mxTypeSize())
+    if (!MxTelemetryGeneralWrapper::isMxTypeValid(a_mxTelemetryType))
     {
-        qCritical() << *m_className
-                    << __PRETTY_FUNCTION__
+        qCritical() << __PRETTY_FUNCTION__
                     << "Invalid mxTelemetryType:"
                     << a_mxTelemetryType
                     << "mxTelemetryInstanceName:"
@@ -187,6 +184,24 @@ BasicChartController* ChartWidgetDockWindowController::getController(
 }
 
 
+BasicChartController* ChartWidgetDockWindowController::getController(const int a_mxTelemetryType,
+                                                                     const QString& a_mxTelemetryInstanceName) const noexcept
+{
+    // sanity check
+    if (!MxTelemetryGeneralWrapper::isMxTypeValid(a_mxTelemetryType))
+    {
+        qCritical() << __PRETTY_FUNCTION__
+                    << "Invalid mxTelemetryType:"
+                    << a_mxTelemetryType
+                    << "mxTelemetryInstanceName:"
+                    << a_mxTelemetryInstanceName;
+        return nullptr;
+    }
+
+    return (*m_DB).at(a_mxTelemetryType)->value(a_mxTelemetryInstanceName, nullptr);
+}
+
+
 void ChartWidgetDockWindowController::rearrangeXAxisLablesOnAllViews() noexcept
 {
     auto l_lastTwo = this->m_model->getLastTwoCharts();
@@ -195,5 +210,11 @@ void ChartWidgetDockWindowController::rearrangeXAxisLablesOnAllViews() noexcept
 }
 
 
-
+bool ChartWidgetDockWindowController::showPolicy(const int a_mxType,
+                                                 const QString& a_mxInstance) const noexcept
+{
+    const auto* const l_controller = getController(a_mxType, a_mxInstance);
+    if (!l_controller) {return true;}
+    return !(l_controller->isReachedMaxViewAllowed());
+}
 

@@ -156,6 +156,8 @@ public:
 
     static int fromMxTypeNameToValue(const QString& a_name) noexcept;
 
+    static bool isMxTypeValid(const int) noexcept;
+
     static int mxTypeSize() noexcept;
 
     static const char* getMsgHeaderName(void* const a_mxTelemetryMsg) noexcept;

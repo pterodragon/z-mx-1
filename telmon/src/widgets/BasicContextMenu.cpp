@@ -50,6 +50,7 @@ bool BasicContextMenu::event (QEvent * e)
 void BasicContextMenu::popup(const QPoint &p,
                              const int a_mxTelemetryType,
                              const bool a_tableFlag,
+                             const bool a_chartFlag,
                              QAction *atAction)
 {
     const auto* const l_typeWrapper = MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(a_mxTelemetryType);
@@ -69,8 +70,14 @@ void BasicContextMenu::popup(const QPoint &p,
     // 1 - show chart
     const auto l_chartPosbillityOption = l_typeWrapper->isChartOptionEnabledInContextMenu();
     if (l_chartPosbillityOption) {
+        if (a_chartFlag)
+        {
             actions().at(1)->setText(TreeView::CHART_ENABLE_LABEL);
             actions().at(1)->setEnabled(true);
+        } else {
+            actions().at(1)->setText(TreeView::CHART_DISABLE_LABEL);
+            actions().at(1)->setEnabled(false);
+        }
     } else {
             actions().at(1)->setText(TreeView::CHART_NOT_SUPPORTED_LABEL);
             actions().at(1)->setEnabled(false);

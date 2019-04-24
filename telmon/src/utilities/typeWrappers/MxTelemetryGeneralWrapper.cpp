@@ -292,3 +292,13 @@ int MxTelemetryGeneralWrapper::getMsgHeaderType(void* const a_mxTelemetryMsg) no
 }
 
 
+bool MxTelemetryGeneralWrapper::isMxTypeValid(const int a_mxType) noexcept
+{
+    return !(a_mxType < 0
+                or
+            a_mxType > MxTelemetryGeneralWrapper::mxTypeSize());
+}
+
+
+
+

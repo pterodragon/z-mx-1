@@ -112,15 +112,23 @@ void TreeMenuWidgetController::createActions() noexcept
         const auto l_mxIndex = MxTelemetryGeneralWrapper::fromMxTypeNameToValue(l_mxType);
 
         // get the showPolicy for table
-        const auto l_tableEnumField = ControllerFactory::CONTROLLER_TYPE::TABLE_LABEL_IMPL_DOCK_WINDOW_CONTROLLER;
+        auto l_tableEnumField = ControllerFactory::CONTROLLER_TYPE::TABLE_LABEL_IMPL_DOCK_WINDOW_CONTROLLER;
         const auto l_tableFlag = m_MainWindowController.showPolicy(l_tableEnumField,
-                                                                   l_mxType +
-                                                                   MxTelemetryGeneralWrapper::MX_NAME_DELIMITER +
+                                                                   l_mxIndex,
+                                                                   l_mxInstance);
+
+        // get the showPolicy for Chart
+        l_tableEnumField = ControllerFactory::CONTROLLER_TYPE::CHART_DOCK_WINDOW_CONTROLLER;
+        const auto l_chartFlag = m_MainWindowController.showPolicy(l_tableEnumField,
+                                                                   l_mxIndex,
                                                                    l_mxInstance);
 
         // pop up menu
         // Notice: static cast to call my own implementation of popup
-        static_cast<BasicContextMenu*>(this->m_treeView->m_contextMenu)->popup(QCursor::pos(), l_mxIndex, l_tableFlag);
+        static_cast<BasicContextMenu*>(this->m_treeView->m_contextMenu)->popup(QCursor::pos(),
+                                                                               l_mxIndex,
+                                                                               l_tableFlag,
+                                                                               l_chartFlag);
     } );
 
     // notify of any pair<MxTelemetryType, MxTelemetryInstance> insertion functionality
@@ -153,7 +161,7 @@ void TreeMenuWidgetController::handleContextMenuAction(const QString& a_actionNa
                                         this->m_treeMenuWidgetModelWrapper->getModel()->data(l_parent).toString()
                                         : QString();
     // some info for log
-    qInfo() << *m_className
+    qInfo() << __PRETTY_FUNCTION__
             << QString("user selected: (context menu)->" + l_actionName)
             << QString("(" + l_parentName + "::" + l_childName + ")");
 

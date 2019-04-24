@@ -244,6 +244,40 @@ QLabel#m_X_label {
 }
 
 
+/* * * * * Customizing Table QScrollArea * * * * */
+
+QScrollArea#TableQLabelScrollArea {
+    border: 0px solid black;
+    background: #2e2f30;
+    /*height: 15px;
+    margin: 0px 20px 0 20px;*/
+}
+
+QScrollBar#TableQLabelScrollAreaHorizontalBar {
+    border: 0px solid black;
+    background-color: #404244;
+    /*height: 15px;
+    margin: 0px 20px 0 20px;*/
+}
+
+QScrollBar#TableQLabelScrollAreaHorizontalBar::handle {
+    border: 1px solid black;
+    background: #505254;
+    /*min-width: 20px;*/
+}
+
+QScrollBar#TableQLabelScrollAreaVerticalBar {
+    border: 0px solid black;
+    background-color: #404244;
+    /*height: 15px;
+    margin: 0px 20px 0 20px;*/
+}
+
+QScrollBar#TableQLabelScrollAreaVerticalBar::handle {
+    border: 1px solid black;
+    background: #505254;
+    /*min-width: 20px;*/
+}
 
 
 
@@ -252,3 +286,6 @@ QLabel#m_X_label {
 
 
 
+
+
+l_scrollArea

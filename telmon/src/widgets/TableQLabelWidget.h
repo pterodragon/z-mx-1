@@ -31,6 +31,9 @@ public:
     TableQLabelWidget(QWidget* a_parent);
     virtual ~TableQLabelWidget() override;
 
+public Q_SLOTS:
+    void setText(const QString &);
+
 signals:
     void closeAction();
 

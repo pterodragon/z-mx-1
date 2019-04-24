@@ -35,7 +35,7 @@ TableQLabelWidget::TableQLabelWidget(QWidget* a_parent):
     fixedFont.setPixelSize(11);
     setFont(fixedFont);
 
-    // regarding scrolling https://forum.qt.io/topic/7363/qscrollbar-doesn-t-show-scroll-bar-on-qlabel/9
+    setMinimumSize(400, 300);
 
     createActions();
     initContextMenu();
@@ -66,3 +66,18 @@ void TableQLabelWidget::initContextMenu() noexcept
         emit closeAction();
     });
 }
+
+void TableQLabelWidget::setText(const QString& a_text)
+{
+    QLabel::setText(a_text);
+//    QFontMetrics fm(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+//    int width=fm.width(a_text.split("&nbsp;")[0]);
+//    qDebug() << "a_text.split()" << a_text.split("&nbsp;")[0]
+//             << "width:" << width;
+//    setMinimumSize(300, 300);
+}
+
+
+
+
+

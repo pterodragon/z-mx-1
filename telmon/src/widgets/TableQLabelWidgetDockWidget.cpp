@@ -23,6 +23,8 @@
 #include "src/subscribers/TabelQLabelSubscriber.h"
 #include "src/distributors/DataDistributor.h"
 #include "QCloseEvent"
+#include "QScrollArea"
+#include "QScrollBar"
 
 TableQLabelWidgetDockWidget::TableQLabelWidgetDockWidget(const int       a_mxTelemetryType,
                                                          const QString&  a_mxTelemetryInstanceName,
@@ -48,12 +50,21 @@ TableQLabelWidgetDockWidget::TableQLabelWidgetDockWidget(const int       a_mxTel
     // hide title
     setTitleBarWidget(new QWidget(this));
 
-    auto* l_label = new TableQLabelWidget(this);
+    auto l_scrollArea = new QScrollArea(this);
+    l_scrollArea->setObjectName(QString("TableQLabelScrollArea"));
+    l_scrollArea->horizontalScrollBar()->setObjectName(QString("TableQLabelScrollAreaHorizontalBar"));
+    l_scrollArea->verticalScrollBar()->setObjectName(QString("TableQLabelScrollAreaVerticalBar"));
+
+
+    auto* l_label = new TableQLabelWidget(l_scrollArea);
 
     connect(m_subscriber, &TabelQLabelSubscriber::updateDone,
             l_label,      &TableQLabelWidget::setText);
 
-    setWidget(l_label);
+
+    l_scrollArea->setWidget(l_label);
+
+    setWidget(l_scrollArea);
 
     // connect to close functioanility
     connect(l_label, &TableQLabelWidget::closeAction, this, [this]() {

@@ -24,6 +24,7 @@
 #include "QDebug"
 #include "src/factories/MxTelemetryTypeWrappersFactory.h"
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
+#include "src/views/raw/TreeView.h"
 
 BasicContextMenu::BasicContextMenu(const QString& a_title, QWidget* a_parent):
     QMenu(a_title, a_parent)
@@ -46,17 +47,35 @@ bool BasicContextMenu::event (QEvent * e)
      return QMenu::event(e);
 }
 
-void BasicContextMenu::popup(const QPoint &p, const int a_mxTelemetryType, QAction *atAction)
+void BasicContextMenu::popup(const QPoint &p,
+                             const int a_mxTelemetryType,
+                             const bool a_tableFlag,
+                             QAction *atAction)
 {
-    // get the wrapper
-    const MxTelemetryGeneralWrapper*  l_typeWrapper = MxTelemetryTypeWrappersFactory::getInstance().
-            getMxTelemetryWrapper(a_mxTelemetryType);
+    const auto* const l_typeWrapper = MxTelemetryTypeWrappersFactory::getInstance().getMxTelemetryWrapper(a_mxTelemetryType);
 
     // enable/disable context menu option according to telemetry
     // indexes:
     // 0 - show table
+    if (a_tableFlag)
+    {
+        actions().at(0)->setText(TreeView::TABLE_ENABLE_LABEL);
+        actions().at(0)->setEnabled(true);
+    } else {
+        actions().at(0)->setText(TreeView::TABLE_DISABLE_LABEL);
+        actions().at(0)->setEnabled(false);
+    }
+
     // 1 - show chart
-    actions().at(1)->setEnabled(l_typeWrapper->isChartOptionEnabledInContextMenu());
+    const auto l_chartPosbillityOption = l_typeWrapper->isChartOptionEnabledInContextMenu();
+    if (l_chartPosbillityOption) {
+            actions().at(1)->setText(TreeView::CHART_ENABLE_LABEL);
+            actions().at(1)->setEnabled(true);
+    } else {
+            actions().at(1)->setText(TreeView::CHART_NOT_SUPPORTED_LABEL);
+            actions().at(1)->setEnabled(false);
+    }
+
 
     // in the future, allow tooltip also in disabled menu, see:
     // msg "no dynamic data to show, so this option is disabled"

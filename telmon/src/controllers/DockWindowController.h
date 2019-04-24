@@ -47,6 +47,13 @@ public:
     virtual QAbstractItemView* getView()   = 0;
 
 
+    /**
+     * @brief showPolicy - to used by tree context menu, enable/disable X option
+     * @return
+     */
+    virtual bool showPolicy(const QString&) const noexcept = 0;
+
+
     // DockWindowController interface
     enum ACTIONS {NO_ACTION,
                   ADD_TO_CENTER,

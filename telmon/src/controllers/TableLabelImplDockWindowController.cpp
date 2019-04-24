@@ -22,12 +22,14 @@
 #include "src/widgets/TableQLabelWidgetDockWidget.h"
 
 #include "QLabel"
+#include "QDebug"
 
 TableLabelImplDockWindowController::TableLabelImplDockWindowController(DataDistributor& a_dataDistributor,
                                                                        QObject* a_parent):
     DockWindowController(a_dataDistributor,
                          QString("TableLabelImplDockWindowController"),
-                         a_parent)
+                         a_parent),
+    m_activeTables(new QSet<QString>)
 {
 
 }
@@ -35,7 +37,8 @@ TableLabelImplDockWindowController::TableLabelImplDockWindowController(DataDistr
 
 TableLabelImplDockWindowController::~TableLabelImplDockWindowController()
 {
-
+    delete m_activeTables;
+    m_activeTables = nullptr;
 }
 
 
@@ -49,13 +52,60 @@ std::pair<QDockWidget*, int> TableLabelImplDockWindowController::handleUserSelec
                                                   m_dataDistributor,
                                                   nullptr);
 
+    const QString l_dockName = l_dock->objectName();
+    if (m_activeTables->contains(l_dockName))
+    {
+        // this logic should not be executed because of table already exist
+        // user should not have the option to create another one from context menu
+        qCritical() << __PRETTY_FUNCTION__
+                    << "trying to create already existing table"
+                    << l_dockName;
+        delete l_dock;
+        return std::make_pair(nullptr, ACTIONS::NO_ACTION);
+    }
+
+    m_activeTables->insert(l_dockName);
+
     // close functioanility
-    connect(l_dock, &TableQLabelWidgetDockWidget::destroyed, this, [this](QObject* ){
-        emit closeDockWidget(DockWindowController::ACTIONS::REMOVE_FROM_CENTER);
-    });
+    connect(l_dock, &TableQLabelWidgetDockWidget::destroyed,
+            this, &TableLabelImplDockWindowController::dockWidgetDestroyed);
 
     return std::make_pair(l_dock, ACTIONS::ADD_TO_CENTER);
 }
+
+
+void TableLabelImplDockWindowController::dockWidgetDestroyed(QObject* a_obj)
+{
+    QString l_dockName;
+    if (a_obj) {l_dockName = a_obj->objectName();}
+
+    if (!l_dockName.isNull())
+    {
+        if (m_activeTables->contains(l_dockName)) {
+            m_activeTables->remove(l_dockName);
+        } else {
+            qCritical() << __PRETTY_FUNCTION__
+                        << "trying to remove dock which is not in DB"
+                           // which implies something went wrong,
+                           // because this is the only place dock should be removed
+                        << l_dockName;
+        }
+    }
+    emit closeDockWidget(DockWindowController::ACTIONS::REMOVE_FROM_CENTER);
+}
+
+
+bool TableLabelImplDockWindowController::showPolicy(const QString& a_name) const noexcept
+{
+    // or show policy is only one table at a time
+    return !(m_activeTables->contains(a_name));
+}
+
+
+
+
+
+
 
 
 

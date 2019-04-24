@@ -51,6 +51,8 @@ public:
 
     void rearrangeXAxisLablesOnAllViews() noexcept;
 
+    virtual bool showPolicy(const QString&) const noexcept final override {return true;}
+
 private:
     ChartWidgetDockWindowModel* m_model;
 

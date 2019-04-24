@@ -32,7 +32,7 @@ TableQLabelWidgetDockWidget::TableQLabelWidgetDockWidget(const int       a_mxTel
     BasicDockWidget (a_mxTelemetryType,
                      a_mxTelemetryInstanceName,
                      QString(MxTelemetryGeneralWrapper::fromMxTypeValueToName(a_mxTelemetryType) +
-                             "::" +
+                             MxTelemetryGeneralWrapper::MX_NAME_DELIMITER +
                              a_mxTelemetryInstanceName +
                              "TableQLabelWidgetDockWidget"),
                      a_parent,
@@ -40,6 +40,9 @@ TableQLabelWidgetDockWidget::TableQLabelWidgetDockWidget(const int       a_mxTel
     m_dataDistributor(&a_dataDistributor),
     m_subscriber(new TabelQLabelSubscriber(a_mxTelemetryType, a_mxTelemetryInstanceName))
 {
+    setObjectName(MxTelemetryGeneralWrapper::fromMxTypeValueToName(a_mxTelemetryType) +
+                  MxTelemetryGeneralWrapper::MX_NAME_DELIMITER +
+                  a_mxTelemetryInstanceName);
     setAttribute(Qt::WA_DeleteOnClose);
 
     // hide title

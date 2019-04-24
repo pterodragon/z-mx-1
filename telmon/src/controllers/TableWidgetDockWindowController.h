@@ -39,6 +39,8 @@ public:
                                      const QString& a_mxTelemetryInstanceName,
                                      const int a_mxTelemetryType) noexcept override final;
 
+    virtual bool showPolicy(const QString&) const noexcept final override {return true;}
+
 private:
     TableDockWidgetModelWrapper* m_tableDockWidgetModelWrapper;
 };

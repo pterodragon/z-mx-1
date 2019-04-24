@@ -45,6 +45,11 @@ public:
     void dockWindowsManagerFirstTimeDataInsertionToTreeSequence(
             const int a_mxTelemetryType,
             const QString& a_mxTelemetryInstanceName) noexcept;
+
+
+    bool showPolicy(const unsigned int a_controllerType,
+                    const QString& a_objectName) const noexcept;
+
 public slots:
     void closeDockWidget(const int) noexcept;
 

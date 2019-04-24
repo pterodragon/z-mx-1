@@ -36,11 +36,13 @@ public:
     explicit BasicContextMenu(QWidget* a_parent = nullptr) : BasicContextMenu(QString(), a_parent) {}
     explicit BasicContextMenu(const QString& a_title, QWidget* a_parent = nullptr);
 
-    virtual void popup(const QPoint &p, const int a_mxTelemetryType, QAction *atAction = nullptr);
+    virtual void popup(const QPoint &p,
+                       const int a_mxTelemetryType,
+                       const bool a_tableFlag,
+                       QAction *atAction = nullptr);
 
 protected:
     virtual bool event (QEvent * e) override;
-
 };
 
 #endif // BASICCONTEXTMENU_H

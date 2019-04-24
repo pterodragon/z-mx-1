@@ -25,6 +25,7 @@
 
 class TableLabelImplDockWindowController : public DockWindowController
 {
+    Q_OBJECT
 public:
     TableLabelImplDockWindowController(DataDistributor& a_dataDistributor,
                                        QObject* a_parent);
@@ -38,6 +39,17 @@ public:
     virtual std::pair<QDockWidget*, int> handleUserSelection(const QList<QDockWidget *>& a_currentDockList,
                                                              const QString& a_mxTelemetryInstanceName,
                                                              const int a_mxTelemetryType) noexcept override final;
+
+    virtual bool showPolicy(const QString&) const noexcept final override;
+
+protected slots:
+    void dockWidgetDestroyed(QObject* a_obj);
+
+protected:
+    /**
+     * @brief m_activeTables, holds the names of all active tables
+     */
+    QSet<QString>* m_activeTables;
 };
 
 #endif // TABLELABELIMPLDOCKWINDOWCONTROLLER_H

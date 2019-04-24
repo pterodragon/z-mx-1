@@ -44,6 +44,12 @@ public:
     virtual QSize sizeHint() const override;
     void setMainWindow(QWidget*) noexcept;
 
+    inline static const QString TABLE_ENABLE_LABEL          = "Show Table";
+    inline static const QString TABLE_DISABLE_LABEL         = "Table Already Active";
+
+    inline static const QString CHART_ENABLE_LABEL          = "Show Chart";
+    inline static const QString CHART_DISABLE_LABEL         = "Max Number of Charts Active";
+    inline static const QString CHART_NOT_SUPPORTED_LABEL   = "No Chart for this MxType";
 
 protected:
     QMenu* m_contextMenu;

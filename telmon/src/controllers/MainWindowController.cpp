@@ -369,4 +369,11 @@ void MainWindowController::closeDockWidget(const int a_type) noexcept
 }
 
 
+bool MainWindowController::showPolicy(const unsigned int a_controllerType,
+                                      const QString& a_objectName) const noexcept
+{
+    auto l_dockWindowController = static_cast<DockWindowController*>(m_controllersDB->value(a_controllerType));
+    return l_dockWindowController->showPolicy(a_objectName);
+}
+
 

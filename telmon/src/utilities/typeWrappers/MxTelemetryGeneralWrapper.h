@@ -69,15 +69,6 @@ public:
                         HEAP_MXTYPE_CALCULATE_ALLOCATED,
                         HASH_TBL_MXTYPE_CALCULATE_SLOTS, HASH_TBL_MXTYPE_CALCULATE_LOCKS};
 
-    //    MxTelemetry::Type::Heap
-
-//    MxEnumValues(Heap, HashTbl, Thread, Multiplexer, Socket, Queue,
-//    Engine, Link,
-//    DBEnv, DBHost, DB);
-//    MxEnumNames("Heap", "HashTbl", "Thread", "Multiplexer", "Socket", "Queue",
-//    "Engine", "Link",
-//    "DBEnv", "DBHost", "DB");
-
     enum Type {Heap,
                 HashTbl,
                 Thread,
@@ -161,6 +152,7 @@ public:
     const T getDataForChart(void* const a_mxTelemetryMsg, const int a_index) const noexcept;
 
     static QString fromMxTypeValueToName(const int a_type) noexcept;
+    inline static const QString MX_NAME_DELIMITER  = "::";
 
     static int fromMxTypeNameToValue(const QString& a_name) noexcept;
 

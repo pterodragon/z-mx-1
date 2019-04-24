@@ -43,10 +43,10 @@ void TreeView::initContextMenu() noexcept
 {
     m_contextMenu = new BasicContextMenu(this);
 
-    m_firstAction = new QAction(QObject::tr("Show Table"), this);
+    m_firstAction = new QAction(QObject::tr(qPrintable(TABLE_ENABLE_LABEL)), this);
     m_firstAction->setToolTip(QObject::tr("Open new window with table"));
 
-    m_secondAction = new QAction(QObject::tr("Show Chart"), this);
+    m_secondAction = new QAction(QObject::tr(qPrintable(CHART_ENABLE_LABEL)), this);
     m_secondAction->setToolTip(QObject::tr("Open new window with chart"));
 
     m_contextMenu->addAction(m_firstAction);

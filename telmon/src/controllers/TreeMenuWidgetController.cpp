@@ -107,12 +107,20 @@ void TreeMenuWidgetController::createActions() noexcept
         //  prevent displaying the menu to one of MxTelemetry::types (i.e. Heap, HashTbl..)
         if (!this->m_treeMenuWidgetModelWrapper->isMxTelemetryTypeSelected(indexes.first())) {return;};
 
-        // get the telemetryType index
-        const auto l_MxTelemetryTypeIndex = MxTelemetryGeneralWrapper::fromMxTypeNameToValue(indexes.first().parent().data().toString());
+        const auto l_mxInstance = indexes.first().data().toString();
+        const auto l_mxType = indexes.first().parent().data().toString();
+        const auto l_mxIndex = MxTelemetryGeneralWrapper::fromMxTypeNameToValue(l_mxType);
+
+        // get the showPolicy for table
+        const auto l_tableEnumField = ControllerFactory::CONTROLLER_TYPE::TABLE_LABEL_IMPL_DOCK_WINDOW_CONTROLLER;
+        const auto l_tableFlag = m_MainWindowController.showPolicy(l_tableEnumField,
+                                                                   l_mxType +
+                                                                   MxTelemetryGeneralWrapper::MX_NAME_DELIMITER +
+                                                                   l_mxInstance);
 
         // pop up menu
         // Notice: static cast to call my own implementation of popup
-        static_cast<BasicContextMenu*>(this->m_treeView->m_contextMenu)->popup(QCursor::pos(), l_MxTelemetryTypeIndex);
+        static_cast<BasicContextMenu*>(this->m_treeView->m_contextMenu)->popup(QCursor::pos(), l_mxIndex, l_tableFlag);
     } );
 
     // notify of any pair<MxTelemetryType, MxTelemetryInstance> insertion functionality

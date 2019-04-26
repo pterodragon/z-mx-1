@@ -152,7 +152,7 @@ public:
 
   // display sequence:
   //   id, state, reconnects, rxSeqNo, txSeqNo
-  struct Telemetry { // not graphable
+  struct Telemetry {		// not graphable
     MxID	id;
     uint64_t	rxSeqNo;
     uint64_t	txSeqNo;

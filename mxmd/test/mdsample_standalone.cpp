@@ -254,7 +254,7 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 
     // add a tick size table
 
-    ZmRef<MxMDTickSizeTbl> tickSizeTbl = venue->addTickSizeTbl("1", 0);
+    MxMDTickSizeTbl *tickSizeTbl = venue->addTickSizeTbl("1", 0);
     if (!tickSizeTbl) throw ZtString("MxMDVenue::addTickSizeTbl() failed");
     // tick size 1 from 0 to infinity
     tickSizeTbl->addTickSize(0, MxValueMax, 1);
@@ -367,10 +367,10 @@ void publish()
 
 	  MxMDL1Data l1Data;
 	  l1Data.stamp = MxDateTime(MxDateTime::Now);
-#if 0
+
 	  l1Data.last = MxValNDP{ZmRand::randExc(90) + 10, 2}.value; // 10-100
+	  l1Data.lastQty = 10;
 	  ob->l1(l1Data);
-#endif
 
 	  ob->addOrder("foo",
 	      l1Data.stamp, MxSide::Sell,

@@ -251,13 +251,13 @@ class ZmRBTreeReadIterator :
 
 public:
   inline ZmRBTreeReadIterator(const Tree &tree) :
-    ReadGuard(const_cast<Tree &>(tree).lock()),
+    ReadGuard(tree.lock()),
     ZmRBTreeIterator_<Tree, Direction>(
 	const_cast<Tree &>(tree)) { }
   template <typename Index_>
   inline ZmRBTreeReadIterator(const Tree &tree, const Index_ &index,
       int compare = Direction) :
-    ReadGuard(const_cast<Tree &>(tree).lock()),
+    ReadGuard(tree.lock()),
     ZmRBTreeIterator_<Tree, Direction>(
 	const_cast<Tree &>(tree), index, compare) { }
 };
@@ -379,7 +379,7 @@ public:
 
   ~ZmRBTree() { clean_(); }
 
-  inline Lock &lock() { return m_lock; }
+  inline Lock &lock() const { return m_lock; }
   inline unsigned count() const { return m_count; }
 
   inline void add(Node *newNode) {
@@ -1201,7 +1201,7 @@ protected:
     m_count = 0;
   }
 
-  Lock		m_lock;
+  mutable Lock	m_lock;
     Node	  *m_root;
     Node	  *m_minimum;
     Node	  *m_maximum;

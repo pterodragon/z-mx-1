@@ -367,8 +367,8 @@ friend class MxMDOBSide;
 friend class MxMDPxLevel_;
 
 private:
-  static ZmRef<MxMDOBSide> bids_(const MxMDOrderBook *);
-  static ZmRef<MxMDOBSide> asks_(const MxMDOrderBook *);
+  static MxMDOBSide *bids_(const MxMDOrderBook *);
+  static MxMDOBSide *asks_(const MxMDOrderBook *);
 
 protected:
   template <typename ID>
@@ -633,32 +633,38 @@ private:
     auto i = this->m_orders.iterator();
     while (MxMDOrder *contra = i.iterate()) {
       MxValue cQty = contra->data().qty;
+      MxValue nv;
       if (cQty <= qty) {
 	if (uintptr_t v = fill(qty, cumQty, cumValue, m_price, cQty, contra))
 	  return v;
 	cumQty += cQty;
-	cumValue +=
-	  (MxValNDP{m_price, m_pxNDP} * MxValNDP{cQty, m_qtyNDP}).value;
+	nv = (MxValNDP{m_price, m_pxNDP} * MxValNDP{cQty, m_qtyNDP}).value;
+	cumValue += nv;
 	deletedOrder_(contra, transactTime);
 	i.del();
 	--m_data.nOrders;
 	m_data.qty -= cQty;
 	qty -= cQty;
+	updateLast(transactTime, cQty, nv, qty);
 	if (!qty) return 0;
       } else {
 	if (uintptr_t v = fill(qty, cumQty, cumValue, m_price, qty, contra))
 	  return v;
 	cumQty += qty;
-	cumValue +=
-	  (MxValNDP{m_price, m_pxNDP} * MxValNDP{qty, m_qtyNDP}).value;
+	nv = (MxValNDP{m_price, m_pxNDP} * MxValNDP{qty, m_qtyNDP}).value;
+	cumValue += nv;
 	contra->updateQty_(cQty - qty);
 	m_data.qty -= qty;
 	qty = 0;
+	updateLast(transactTime, qty, nv, 0);
 	return 0;
       }
     }
     return 0;
   }
+
+  void updateLast(MxDateTime stamp,
+      MxValue lastQty, MxValue nv, MxValue openQty);
 
   void deletedOrder_(MxMDOrder *order, MxDateTime transactTime);
 
@@ -795,18 +801,18 @@ public:
   ZuInline const MxMDOBSideData &data() const { return m_data; }
   ZuInline MxValue vwap() const { return m_data.nv / m_data.qty; }
 
-  ZuInline ZmRef<MxMDPxLevel> mktLevel() { return m_mktLevel; }
+  ZuInline MxMDPxLevel *mktLevel() { return m_mktLevel; }
 
   // iterate over all price levels, best -> worst
   template <typename L> // (MxMDPxLevel *) -> uintptr_t
   uintptr_t allPxLevels(L l) const {
     if (m_side == MxSide::Buy) {
       auto i = m_pxLevels.readIterator<ZmRBTreeLessEqual>();
-      while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate())
+      while (MxMDPxLevel *pxLevel = i.iterate())
 	if (uintptr_t v = l(pxLevel)) return v;
     } else {
       auto i = m_pxLevels.readIterator<ZmRBTreeGreaterEqual>();
-      while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate())
+      while (MxMDPxLevel *pxLevel = i.iterate())
 	if (uintptr_t v = l(pxLevel)) return v;
     }
     return 0;
@@ -817,13 +823,13 @@ public:
   uintptr_t pxLevels(MxValue minPrice, MxValue maxPrice, L l) {
     if (m_side == MxSide::Buy) {
       auto i = m_pxLevels.readIterator<ZmRBTreeLessEqual>(maxPrice);
-      while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate()) {
+      while (MxMDPxLevel *pxLevel = i.iterate()) {
 	if (pxLevel->price() <= minPrice) break;
 	if (uintptr_t v = l(pxLevel)) return v;
       }
     } else {
       auto i = m_pxLevels.readIterator<ZmRBTreeGreaterEqual>(minPrice);
-      while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate()) {
+      while (MxMDPxLevel *pxLevel = i.iterate()) {
 	if (pxLevel->price() >= maxPrice) break;
 	if (uintptr_t v = l(pxLevel)) return v;
       }
@@ -833,6 +839,9 @@ public:
 
   MxNDP pxNDP();
   MxNDP qtyNDP();
+
+  ZuInline MxMDPxLevel *minimum() { return m_pxLevels.minimumPtr(); }
+  ZuInline MxMDPxLevel *maximum() { return m_pxLevels.maximumPtr(); }
 
   // returns NV available for matching up to qty (market orders)
   MxValue matchNV(MxValue qty) {
@@ -848,26 +857,27 @@ public:
     };
     if (m_side == MxSide::Buy) {
       auto i = m_pxLevels.readIterator<ZmRBTreeLessEqual>();
-      while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate()) l(pxLevel);
+      while (MxMDPxLevel *pxLevel = i.iterate()) l(pxLevel);
     } else {
       auto i = m_pxLevels.readIterator<ZmRBTreeGreaterEqual>();
-      while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate()) l(pxLevel);
+      while (MxMDPxLevel *pxLevel = i.iterate()) l(pxLevel);
     }
     return nv;
   }
+
   // returns qty available for matching at limit price or better (limit orders)
   MxValue matchQty(MxValue px) {
     MxValue qty = 0;
     if (m_side == MxSide::Buy) {
       auto i = m_pxLevels.readIterator<ZmRBTreeLessEqual>();
-      while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate()) {
+      while (MxMDPxLevel *pxLevel = i.iterate()) {
 	MxValue cPx = pxLevel->price();
 	if (px > cPx) break;
 	qty += pxLevel->data().qty;
       }
     } else {
       auto i = m_pxLevels.readIterator<ZmRBTreeGreaterEqual>();
-      while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate()) {
+      while (MxMDPxLevel *pxLevel = i.iterate()) {
 	MxValue cPx = pxLevel->price();
 	if (px < cPx) break;
 	qty += pxLevel->data().qty;
@@ -879,11 +889,11 @@ public:
 private:
   template <int Direction, typename Fill, typename Limit>
   uintptr_t match(
-      MxDateTime transactTime, MxValue px, MxValue qty,
+      MxDateTime transactTime, MxValue px, MxValue &qty,
       MxValue &cumQty, MxValue &cumValue,
       Fill &&fill, Limit &&limit) {
     auto i = m_pxLevels.readIterator<Direction>();
-    while (const ZmRef<MxMDPxLevel> &pxLevel = i.iterate()) {
+    while (MxMDPxLevel *pxLevel = i.iterate()) {
       if (!limit(px, pxLevel->price())) break;
       if (uintptr_t v = pxLevel->match(
 	    transactTime, qty, cumQty, cumValue, fill))
@@ -897,21 +907,24 @@ private:
   bool updateL1Bid(MxMDL1Data &l1Data, MxMDL1Data &delta);
   bool updateL1Ask(MxMDL1Data &l1Data, MxMDL1Data &delta);
 
+  void updateLast(MxDateTime stamp,
+      MxValue lastPx, MxValue lastQty, MxValue nv, MxValue openQty);
+
   void pxLevel_(
       MxDateTime transactTime, bool delta,
       MxValue price, MxValue qty, MxUInt nOrders, MxFlags flags,
       const MxMDInstrHandler *handler,
       MxValue &d_qty, MxUInt &d_nOrders,
-      const MxMDPxLevelFn *&, ZmRef<MxMDPxLevel> &);
+      const MxMDPxLevelFn *&, MxMDPxLevel *&);
 
   void addOrder_(
       MxMDOrder *order, MxDateTime transactTime,
       const MxMDInstrHandler *handler,
-      const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
+      const MxMDPxLevelFn *&fn, MxMDPxLevel *&pxLevel);
   void delOrder_(
       MxMDOrder *order, MxDateTime transactTime,
       const MxMDInstrHandler *handler,
-      const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
+      const MxMDPxLevelFn *&fn, MxMDPxLevel *&pxLevel);
 
   void reset(MxDateTime transactTime);
 
@@ -1008,8 +1021,8 @@ public:
 
   ZuInline const MxMDL1Data &l1Data() const { return m_l1Data; }
 
-  ZuInline ZmRef<MxMDOBSide> bids() const { return m_bids; };
-  ZuInline ZmRef<MxMDOBSide> asks() const { return m_asks; };
+  ZuInline MxMDOBSide *bids() const { return m_bids.ptr(); };
+  ZuInline MxMDOBSide *asks() const { return m_asks.ptr(); };
 
   void l1(MxMDL1Data &data);
   void pxLevel(MxEnum side, MxDateTime transactTime,
@@ -1064,13 +1077,13 @@ public:
   }
 
 private:
-  template <int Direction, typename Fill, typename Leaves,
+  template <int Direction, typename Fill, typename Leave,
 	   typename Limit, typename Side>
   uintptr_t match_(MxDateTime transactTime, MxValue px, MxValue qty,
-      Fill &&fill, Leaves &&leaves, Limit &&limit, Side &&side) {
+      Fill &&fill, Leave &&leave, Limit &&limit, Side &&side) {
     MxValue cumQty = 0;
     MxValue cumValue = 0;
-    auto l = [transactTime, px, qty, &cumQty, &cumValue, &fill, &limit, &side](
+    auto l = [transactTime, px, &qty, &cumQty, &cumValue, &fill, &limit, &side](
 	     auto &l, MxMDOrderBook *ob) mutable -> uintptr_t {
       if (ZuLikely(!ob->m_in))
 	return side(ob)->template match<Direction>(
@@ -1082,46 +1095,50 @@ private:
       return 0;
     };
     uintptr_t v = l(l, this); // recursive lambda
-    leaves(qty, cumQty, cumValue);
+    leave(qty, cumQty, cumValue);
     return v;
   }
 
 public:
   // fill(leavesQty, cumQty, cumValue, px, qty, MxMDOrder *contra) -> uintptr_t
   //   /* fill(...) is called repeatedly for each contra order */
-  // leaves(leavesQty, cumQty, cumValue) /* called on completion */
+  //   /* Note: leavesQty/cumQty/cumValue are pre-fill, not post-fill */
+  // leave(leavesQty, cumQty, cumValue) /* called on completion */
 
-  // match order
-  template <typename Fill, typename Leaves>
+  // match order (CLOB)
+  template <typename Fill, typename Leave>
   uintptr_t match(
       MxDateTime transactTime, MxEnum side, MxValue px, MxValue qty,
-      Fill &&fill, Leaves &&leaves) {
+      Fill &&fill, Leave &&leave) {
     if (ZuUnlikely(!*px)) {
       if (side == MxSide::Buy) {
 	return match_<ZmRBTreeLessEqual>(
-	    transactTime, px, qty, fill, leaves,
+	    transactTime, px, qty, fill, leave,
 	    [](MxValue, MxValue) -> bool { return true; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_asks; });
       } else {
 	return match_<ZmRBTreeGreaterEqual>(
-	    transactTime, px, qty, fill, leaves,
+	    transactTime, px, qty, fill, leave,
 	    [](MxValue, MxValue) -> bool { return true; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_bids; });
       }
     } else {
       if (side == MxSide::Buy) {
 	return match_<ZmRBTreeLessEqual>(
-	    transactTime, px, qty, fill, leaves,
+	    transactTime, px, qty, fill, leave,
 	    [](MxValue px, MxValue cPx) -> bool { return px >= cPx; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_asks; });
       } else {
 	return match_<ZmRBTreeGreaterEqual>(
-	    transactTime, px, qty, fill, leaves,
+	    transactTime, px, qty, fill, leave,
 	    [](MxValue px, MxValue cPx) -> bool { return px <= cPx; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_bids; });
       }
     }
   }
+
+  void updateLast(MxDateTime stamp, MxEnum makerSide,
+      MxValue lastPx, MxValue lastQty, MxValue nv, MxValue openQty);
 
 private:
   ZuInline static uint128_t venueSegment(MxID venue, MxID segment) {
@@ -1142,11 +1159,11 @@ private:
   void addOrder_(
     MxMDOrder *order, MxDateTime transactTime,
     const MxMDInstrHandler *handler,
-    const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
+    const MxMDPxLevelFn *&fn, MxMDPxLevel *&pxLevel);
   void delOrder_(
     MxMDOrder *order, MxDateTime transactTime,
     const MxMDInstrHandler *handler,
-    const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
+    const MxMDPxLevelFn *&fn, MxMDPxLevel *&pxLevel);
 
   void reset_(MxMDPxLevel *pxLevel, MxDateTime transactTime);
 
@@ -1192,12 +1209,12 @@ private:
   ZmAtomic<uintptr_t>		m_appData = 0;
 };
 
-ZuInline ZmRef<MxMDOBSide> MxMDOrder_::bids_(const MxMDOrderBook *ob)
+ZuInline MxMDOBSide *MxMDOrder_::bids_(const MxMDOrderBook *ob)
 {
   if (ZuLikely(ob)) return ob->bids();
   return 0;
 }
-ZuInline ZmRef<MxMDOBSide> MxMDOrder_::asks_(const MxMDOrderBook *ob)
+ZuInline MxMDOBSide *MxMDOrder_::asks_(const MxMDOrderBook *ob)
 {
   if (ZuLikely(ob)) return ob->asks();
   return 0;
@@ -1222,6 +1239,18 @@ ZuInline MxMDOrderID3Ref MxMDOrder_::OrderID3Accessor::value(
 
 ZuInline MxNDP MxMDOBSide::pxNDP() { return m_orderBook->pxNDP(); }
 ZuInline MxNDP MxMDOBSide::qtyNDP() { return m_orderBook->qtyNDP(); }
+
+ZuInline void MxMDPxLevel_::updateLast(
+    MxDateTime stamp, MxValue lastQty, MxValue nv, MxValue openQty)
+{
+  m_obSide->updateLast(stamp, m_price, lastQty, nv, openQty);
+}
+
+ZuInline void MxMDOBSide::updateLast(MxDateTime stamp,
+    MxValue lastPx, MxValue lastQty, MxValue nv, MxValue openQty)
+{
+  m_orderBook->updateLast(stamp, m_side, lastPx, lastQty, nv, openQty);
+}
 
 // instruments
 
@@ -1424,8 +1453,6 @@ friend class MxMDLib;
 public:
   MxMDFeed(MxMDLib *md, MxID id, unsigned level);
 
-  virtual ~MxMDFeed() { }
-
   struct IDAccessor : public ZuAccessor<MxMDFeed *, MxID> {
     inline static MxID value(const MxMDFeed *f) { return f->id(); }
   };
@@ -1568,7 +1595,6 @@ public:
   MxMDVenue(MxMDLib *md, MxMDFeed *feed, MxID id,
       MxEnum orderIDScope = MxMDOrderIDScope::Default,
       MxFlags flags = 0);
-  virtual ~MxMDVenue() { }
 
   struct IDAccessor : public ZuAccessor<MxMDVenue *, MxID> {
     inline static MxID value(const MxMDVenue *v) { return v->id(); }
@@ -1588,8 +1614,7 @@ public:
   ZuInline bool loaded() const { return m_loaded; }
 
   ZmRef<MxMDTickSizeTbl> addTickSizeTbl(ZuString id, MxNDP pxNDP);
-  template <typename ID>
-  ZuInline ZmRef<MxMDTickSizeTbl> tickSizeTbl(const ID &id) const {
+  ZuInline ZmRef<MxMDTickSizeTbl> tickSizeTbl(ZuString id) const {
     return m_tickSizeTbls.findKey(id);
   }
   uintptr_t allTickSizeTbls(ZmFn<MxMDTickSizeTbl *>) const;
@@ -1614,7 +1639,6 @@ public:
       ZmFn<MxMDOrder *> fn = ZmFn<MxMDOrder *>());
 
 private:
-  ZmRef<MxMDTickSizeTbl> findTickSizeTbl_(ZuString id);
   ZmRef<MxMDTickSizeTbl> addTickSizeTbl_(ZuString id, MxNDP pxNDP);
 
   inline void tradingSession_(const MxMDSegment &segment) {

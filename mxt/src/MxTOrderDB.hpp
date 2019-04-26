@@ -59,7 +59,9 @@ public:
   ZuInline const App *app() const { return static_cast<const App *>(this); }
   ZuInline App *app() { return static_cast<App *>(this); }
 
-  using OrderData = typename Types::Order;		// open order
+  MxTImport(Types);
+
+  using OrderData = Order;		// open order
   using OrderDB = Zdb<OrderData>;
   using OrderPOD = ZdbPOD<OrderData>;
 
@@ -99,11 +101,12 @@ public:
   ZuInline ClosedDB *closedDB() const { return m_closedDB; }
 
   void closeOrder(OrderPOD *pod) {
+    auto order = pod->ptr();
     ZmRef<ClosedPOD> cpod = m_closedDB->push();
     auto closed = new (cpod->ptr()) ClosedData();
-    closed->orderTxn = order->orderTxn.data<NewOrder>();
+    closed->orderTxn = order->orderTxn.template data<NewOrder>();
     if ((int)order->exec().eventType == MxTEventType::Reject)
-      closed->rejectTxn = order->execTxn.data<Reject>();
+      closed->rejectTxn = order->execTxn.template data<Reject>();
     m_closedDB->put(cpod);
     m_orderDB->del(pod);
   }

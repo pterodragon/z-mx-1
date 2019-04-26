@@ -301,10 +301,8 @@ private:
 	pxLevel->side(), (uint8_t)false);
   }
 
-  using MxMDLib::venue;
-
 private:
-  ZmRef<MxMDVenue> venue(MxID id, MxEnum orderIDScope, MxFlags flags);
+  ZmRef<MxMDVenue> venue_(MxID id, MxEnum orderIDScope, MxFlags flags);
 
 private:
   typedef ZmPLock Lock;

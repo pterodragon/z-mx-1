@@ -115,7 +115,7 @@
 #define ZuUnlikely(x) __builtin_expect(!!(x), 0)
 
 #define ZuInline inline __attribute__((always_inline))
-#define ZuNoInline __attribute__((noinline))
+#define ZuNoInline inline __attribute__((noinline))
 
 #else
 

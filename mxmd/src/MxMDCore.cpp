@@ -85,7 +85,7 @@ void MxMDCore::addTickSize_(ZuAnyPOD *pod)
   const auto &data = pod->as<MxMDTickSizeCSV::Data>();
   ZmRef<MxMDVenue> venue = this->venue(data.venue);
   if (!venue) throw ZtString() << "unknown venue: " << data.venue;
-  ZmRef<MxMDTickSizeTbl> tbl = venue->addTickSizeTbl(data.id, data.pxNDP);
+  MxMDTickSizeTbl *tbl = venue->addTickSizeTbl(data.id, data.pxNDP);
   tbl->addTickSize(data.minPrice, data.maxPrice, data.tickSize);
 }
 
@@ -114,8 +114,7 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
   if (!instrHandle) throw ZtString() << "unknown instrument: " << instrKey;
   ZmRef<MxMDVenue> venue = this->venue(data.venue);
   if (!venue) throw ZtString() << "unknown venue: " << data.venue;
-  ZmRef<MxMDTickSizeTbl> tbl =
-    venue->addTickSizeTbl(data.tickSizeTbl, data.pxNDP);
+  MxMDTickSizeTbl *tbl = venue->addTickSizeTbl(data.tickSizeTbl, data.pxNDP);
   instrHandle.invokeMv(
       [data, venue = ZuMv(venue), tbl = ZuMv(tbl)](
 	MxMDShard *shard, ZmRef<MxMDInstrument> instr) {
@@ -917,7 +916,7 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
     case Type::AddVenue:
       {
 	const AddVenue &obj = hdr.as<AddVenue>();
-	this->venue(obj.id, obj.orderIDScope, obj.flags);
+	this->venue_(obj.id, obj.orderIDScope, obj.flags);
       }
       break;
     case Type::AddTickSizeTbl:
@@ -1209,7 +1208,7 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
   }
 }
 
-ZmRef<MxMDVenue> MxMDCore::venue(MxID id, MxEnum orderIDScope, MxFlags flags)
+ZmRef<MxMDVenue> MxMDCore::venue_(MxID id, MxEnum orderIDScope, MxFlags flags)
 {
   ZmRef<MxMDVenue> venue;
   if (ZuLikely(venue = MxMDLib::venue(id))) return venue;

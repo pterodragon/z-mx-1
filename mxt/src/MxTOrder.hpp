@@ -339,17 +339,8 @@ template <typename AppTypes> struct MxTAppTypes {
     MxNDP		qtyNDP;
     uint8_t		pad_0[3];
 
-    // only update cumQty from an acknowledgment
     template <typename Update>
-    inline typename ZuIfT<
-	ZuConversion<CanceledLeg_, Update>::Is &&
-	ZuConversion<AckLeg__, Update>::Is>::T update(const Update &u) {
-      // MxValNDP::update(cumQty, qtyNDP, u.cumQty, u.qtyNDP);
-    }
-    template <typename Update>
-    inline typename ZuIfT<
-	!ZuConversion<CanceledLeg_, Update>::Is ||
-	!ZuConversion<AckLeg__, Update>::Is>::T update(const Update &u) { }
+    inline void update(const Update &) { }
 
     template <typename S> inline void print(S &s) const {
       if (*cumQty)
@@ -364,7 +355,7 @@ template <typename AppTypes> struct MxTAppTypes {
     template <typename Update>
     inline typename ZuIs<CancelLeg_, Update>::T update(const Update &u) {
       CanceledLeg_::update(u);
-      MxValNDP::update(orderQty, this->qtyNDP, u.orderQty, u.qtyNDP);
+      orderQty.update(u.orderQty);
     }
     template <typename Update>
     inline typename ZuIsNot<CancelLeg_, Update>::T update(const Update &u) {
@@ -429,15 +420,7 @@ template <typename AppTypes> struct MxTAppTypes {
 	   side == MxSide::SellShortExempt))
 	side = u.side;
       ordType.update(u.ordType);
-      if (!*u.px) {
-	if (ZuUnlikely(*u.pxNDP)) {
-	  px = MxValNDP{px, pxNDP}.adjust(u.pxNDP);
-	  pxNDP = u.pxNDP;
-	}
-      } else {
-	px = u.px;
-	pxNDP.update(u.pxNDP);
-      }
+      px.update(u.px);
     }
     template <typename Update>
     inline typename ZuIsNot<ModifyLeg_, Update>::T update(const Update &u) {

@@ -38,6 +38,13 @@ void test()
       printf("head: %d tail: %d size: %d\n", head, tail, tail - head);
     }
   }
+  unsigned c = 0;
+  map.all([&c](uint64_t i, unsigned v) {
+    ZmAssert(v == Value);
+    c++;
+    return 0;
+  });
+  ZmAssert(c == 10000);
 }
 
 int main()
@@ -49,4 +56,5 @@ int main()
   test<2, 3>();
   test<3, 5>();
   test<4, 10>();
+  test<5, 25>();
 }

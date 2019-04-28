@@ -1550,25 +1550,14 @@ applyFill:
 
   // returns true if transmission should proceed, false if aborted
   bool requestSend(Event &event) {
-    if (ZuUnlikely(!MxTEventState::matchQ(event.eventState))) {
-      event.eventState = MxTEventState::Rejected;
+    if (ZuUnlikely(!MxTEventState::matchQ(event.eventState)))
       return false;
-    }
     event.eventState = MxTEventState::Sent;
     return true;
   }
   bool orderSend(Order *order) { return requestSend(order->newOrder()); }
   bool modifySend(Order *order) { return requestSend(order->modify()); }
   bool cancelSend(Order *order) { return requestSend(order->cancel()); }
-
-  // processes recovered (possibly outdated) transmission
-  void requestTxAdded(Event &event) {
-    if (ZuLikely(MxTEventState::matchQ(event.eventState)))
-      event.eventState = MxTEventState::Sent;
-  }
-  void orderTxAdded(Order *order) { requestTxAdded(order->newOrder()); }
-  void modifyTxAdded(Order *order) { requestTxAdded(order->modify()); }
-  void cancelTxAdded(Order *order) { requestTxAdded(order->cancel()); }
 };
 
 #endif /* MxTOrderMgr_HPP */

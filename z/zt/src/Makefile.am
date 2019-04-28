@@ -4,7 +4,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src -I$(top_srcdir)/zm/src \
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
 include_HEADERS = \
-	ZtArray.hpp ZtDate.hpp \
+	ZtArray.hpp ZtBitWindow.hpp ZtDate.hpp \
 	ZtEnum.hpp ZtICmp.hpp ZtIconv.hpp ZtLib.hpp ZtPlatform.hpp \
 	ZtRegex.hpp ZtString.hpp
 lib_LTLIBRARIES = libZt.la

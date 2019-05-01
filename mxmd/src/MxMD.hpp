@@ -843,26 +843,27 @@ public:
   ZuInline MxMDPxLevel *minimum() { return m_pxLevels.minimumPtr(); }
   ZuInline MxMDPxLevel *maximum() { return m_pxLevels.maximumPtr(); }
 
-  // returns NV available for matching up to qty (market orders)
-  MxValue matchNV(MxValue qty) {
-    MxValue nv = 0;
+  // returns effective limit Px for matching up to qty (market orders)
+  MxValue matchPx(MxValue qty) {
+    MxValue px;
     MxNDP pxNDP = this->pxNDP();
     MxNDP qtyNDP = this->qtyNDP();
-    auto l = [&nv, &qty, pxNDP, qtyNDP](MxMDPxLevel *pxLevel) {
-      MxValue px = pxLevel->price();
+    auto l = [&px, &qty, pxNDP, qtyNDP](MxMDPxLevel *pxLevel) -> bool {
       MxValue lvlQty = pxLevel->data().qty;
       if (qty < lvlQty) lvlQty = qty;
-      nv += (MxValNDP{px, pxNDP} * MxValNDP{lvlQty, qtyNDP}).value;
-      qty -= lvlQty;
+      px = pxLevel->price();
+      return qty -= lvlQty;
     };
     if (m_side == MxSide::Buy) {
       auto i = m_pxLevels.readIterator<ZmRBTreeLessEqual>();
-      while (MxMDPxLevel *pxLevel = i.iterate()) l(pxLevel);
+      while (MxMDPxLevel *pxLevel = i.iterate())
+	if (!l(pxLevel)) break;
     } else {
       auto i = m_pxLevels.readIterator<ZmRBTreeGreaterEqual>();
-      while (MxMDPxLevel *pxLevel = i.iterate()) l(pxLevel);
+      while (MxMDPxLevel *pxLevel = i.iterate())
+	if (!l(pxLevel)) break;
     }
-    return nv;
+    return px;
   }
 
   // returns qty available for matching at limit price or better (limit orders)

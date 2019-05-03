@@ -619,7 +619,7 @@ template <typename AppTypes> struct MxTAppTypes {
 
   // generic reject data for new order / modify / cancel
   struct AnyReject : public AppTypes::Event {
-    MxInt		rejCode;	// source-specific numerical code
+    MxInt		rejCode = 0;	// source-specific numerical code
     MxEnum		rejReason;	// MxTRejReason
 
     template <typename Update>

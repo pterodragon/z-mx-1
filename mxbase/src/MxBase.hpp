@@ -123,15 +123,15 @@ template <bool Ref = 0> struct MxValNDPVFmt;	// internal
 
 struct MxValNDP {
   MxValue	value;
-  MxNDP		ndp;
+  unsigned	ndp;
 
   template <typename V>
-  ZuInline MxValNDP(V value_, MxNDP ndp_,
+  ZuInline MxValNDP(V value_, unsigned ndp_,
       typename ZuIsIntegral<V>::T *_ = 0) :
     value(value_), ndp(ndp_) { }
 
   template <typename V>
-  ZuInline MxValNDP(V value_, MxNDP ndp_,
+  ZuInline MxValNDP(V value_, unsigned ndp_,
       typename ZuIsFloatingPoint<V>::T *_ = 0) :
     value((MxFloat)value_ * ZuDecimal::pow10_64(ndp_)), ndp(ndp_) { }
 
@@ -159,7 +159,7 @@ struct MxValNDP {
 
   // scan from string, given NDP
   template <typename S>
-  inline MxValNDP(const S &s_, MxNDP ndp_,
+  inline MxValNDP(const S &s_, unsigned ndp_,
       typename ZuIsString<S>::T *_ = 0) : ndp(ndp_) {
     ZuString s(s_);
     if (ZuUnlikely(!s || ndp > 18)) goto null;
@@ -202,7 +202,7 @@ struct MxValNDP {
   }
 
   // adjust to another NDP
-  ZuInline MxValue adjust(MxNDP ndp) {
+  ZuInline MxValue adjust(unsigned ndp) {
     if (ZuLikely(ndp == this->ndp)) return value;
     return (MxValNDP{1.0, ndp} * (*this)).value;
   }

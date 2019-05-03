@@ -1111,7 +1111,7 @@ MxMDVenue::MxMDVenue(MxMDLib *md, MxMDFeed *feed, MxID id,
   unsigned n = md->nShards();
   m_shards.length(n);
   for (unsigned i = 0; i < n; i++)
-    m_shards[i] = new MxMDVenueShard(this, md->shard_(i)); // FIXME?
+    m_shards[i] = new MxMDVenueShard(this, md->shard_(i));
 }
 
 uintptr_t MxMDVenue::allTickSizeTbls(ZmFn<MxMDTickSizeTbl *> fn) const

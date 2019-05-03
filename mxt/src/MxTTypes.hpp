@@ -188,13 +188,14 @@ namespace MxTRejReason {
     ModifyPending,		// modify pending (in response to modify)
     CancelPending,		// cancel pending (in response to cancel)
     OrderClosed,		// order closed (in response to modify/cancel)
-    PriceNotRoundTick,		// price not round tick
-    PriceOutOfRange,		// price out of range
+    PxNotRoundTick,		// price not round tick
+    PxOutOfRange,		// price out of range
     QtyNotRoundLot,		// qty not round lot
     QtyOutOfRange,		// qty out of range
     BadSide,			// bad side
     BadOrderType,		// bad order type
     BadTimeInForce,		// bad time in force
+    BadPrice,			// bad price (inconsistent with order type)
     BadLocate,			// bad locate
     BadOrderCapacity,		// bad order capacity
     BadCashMargin,		// bad cash margin
@@ -207,7 +208,7 @@ namespace MxTRejReason {
     BadMaximumFloor,		// bad maximum floor
     BadPegType,			// bad peg type
     BadPegOffset,		// bad peg offset
-    BadPegPrice,		// bad peg price
+    BadPegPx,			// bad peg price
     TriggerPxNotRoundTick,	// trigger price not round tick
     TriggerPxOutOfRange,	// trigger price out of range
     BadCrossType,		// bad cross type
@@ -224,7 +225,8 @@ namespace MxTRejReason {
     NoAssets,			// cash trading - insufficient assets/funds
     NoCollateral,		// margining - insufficient collateral
     RiskBreach,			// risk limit breached
-    BadComAsset			// bad commission asset
+    BadComAsset,		// bad commission asset
+    NoPegPx			// no market data for peg price
     );
   enum { OK = Invalid };	// OK == Invalid == -1
   MxEnumNames(
@@ -233,13 +235,14 @@ namespace MxTRejReason {
     "ModifyPending",
     "CancelPending",
     "OrderClosed",
-    "PriceNotRoundTick",
-    "PriceOutOfRange",
+    "PxNotRoundTick",
+    "PxOutOfRange",
     "QtyNotRoundLot",
     "QtyOutOfRange",
     "BadSide",
     "BadOrderType",
     "BadTimeInForce",
+    "BadPrice",
     "BadLocate",
     "BadOrderCapacity",
     "BadCashMargin",
@@ -252,7 +255,7 @@ namespace MxTRejReason {
     "BadMaximumFloor",
     "BadPegType",
     "BadPegOffset",
-    "BadPegPrice",
+    "BadPegPx",
     "TriggerPxNotRoundTick",
     "TriggerPxOutOfRange",
     "BadCrossType",
@@ -269,7 +272,8 @@ namespace MxTRejReason {
     "NoAssets",
     "NoCollateral",
     "RiskBreach",
-    "BadComAsset"
+    "BadComAsset",
+    "NoPegPx"
   );
 }
 

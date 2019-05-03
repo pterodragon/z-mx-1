@@ -416,7 +416,7 @@ private:
   ZuInline MxMDOrderData &data_() { return m_data; }
 
   inline void update_(MxUInt rank, MxValue price, MxValue qty, MxFlags flags) {
-    if (*rank) m_data.rank = rank;
+    m_data.rank = rank;
     if (*price) m_data.price = price;
     if (*qty) m_data.qty = qty;
     m_data.flags = flags;

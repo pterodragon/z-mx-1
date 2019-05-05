@@ -209,6 +209,7 @@ namespace MxTRejReason {
     BadPegType,			// bad peg type
     BadPegOffset,		// bad peg offset
     BadPegPx,			// bad peg price
+    BadTriggerPx,		// bad trigger price
     TriggerPxNotRoundTick,	// trigger price not round tick
     TriggerPxOutOfRange,	// trigger price out of range
     BadCrossType,		// bad cross type
@@ -256,6 +257,7 @@ namespace MxTRejReason {
     "BadPegType",
     "BadPegOffset",
     "BadPegPx",
+    "BadTriggerPx",
     "TriggerPxNotRoundTick",
     "TriggerPxOutOfRange",
     "BadCrossType",

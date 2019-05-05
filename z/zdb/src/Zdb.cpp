@@ -1395,7 +1395,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::replicated_(
     }
     if (!pod) alloc(pod);
     if (ZuUnlikely(!pod)) return nullptr;
-    if (rn >= m_allocRN) m_allocRN = rn + 1;
+    if (m_allocRN <= rn) m_allocRN = rn + 1;
     if (op != ZdbOp::Delete) {
       pod->update(rn, prevRN, range, ZdbCommitted);
       cache(pod);
@@ -1759,6 +1759,29 @@ ZmRef<ZdbAnyPOD> ZdbAny::push_()
   return pod;
 }
 
+ZmRef<ZdbAnyPOD> ZdbAny::push(ZdbRN rn)
+{
+  if (ZuUnlikely(!m_fileRecs)) return nullptr;
+  if (ZuUnlikely(!m_env->active())) {
+    ZeLOG(Error, ZtString() <<
+	"Zdb inactive application attempted push on DBID " << m_id);
+    return nullptr;
+  }
+  return push_(rn);
+}
+
+ZmRef<ZdbAnyPOD> ZdbAny::push_(ZdbRN rn)
+{
+  ZmRef<ZdbAnyPOD> pod;
+  alloc(pod);
+  if (ZuUnlikely(!pod)) return nullptr;
+  Guard guard(m_lock);
+  if (m_allocRN > rn) return nullptr;
+  m_allocRN = rn + 1;
+  pod->init(rn, ZdbRange{0, m_dataSize});
+  return pod;
+}
+
 ZmRef<ZdbAnyPOD> ZdbAny::get(ZdbRN rn)
 {
   ZmRef<ZdbAnyPOD> pod;
@@ -1862,6 +1885,21 @@ ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *prev)
   {
     Guard guard(m_lock);
     rn = m_allocRN++;
+  }
+  memcpy(pod->ptr(), prev->ptr(), m_dataSize);
+  pod->update(rn, prev->rn(), ZdbRange{0, m_dataSize});
+  return pod;
+}
+
+ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *prev, ZdbRN rn)
+{
+  ZmRef<ZdbAnyPOD> pod;
+  alloc(pod);
+  if (ZuUnlikely(!pod)) return nullptr;
+  {
+    Guard guard(m_lock);
+    if (m_allocRN > rn) return nullptr;
+    m_allocRN = rn + 1;
   }
   memcpy(pod->ptr(), prev->ptr(), m_dataSize);
   pod->update(rn, prev->rn(), ZdbRange{0, m_dataSize});

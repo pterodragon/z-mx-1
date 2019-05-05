@@ -190,6 +190,7 @@ protected:
 
   void connected();
   void disconnected();
+  void reconnecting();	// transition direct from Up to Connecting
   void reconnect(bool immediate);
 
   virtual ZmTime reconnInterval(unsigned) { return ZmTime{1}; }

@@ -98,5 +98,11 @@ int main()
     puts(a[1]);
   }
 
+  {
+    ZtArray<ZtString> a = { "Foo", "Bar" };
+    puts(a[0]);
+    puts(a[1]);
+  }
+
   return 0;
 }

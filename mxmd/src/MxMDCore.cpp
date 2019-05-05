@@ -168,8 +168,7 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
     try {
       cf->fromFile(cf_, false);
     } catch (const ZvError &e) {
-      ZeLOG(Fatal, ZtString()
-	  << "MxMDLib - configuration error: \"" << cf_ << "\": " << e);
+      ZeLOG(Fatal, ZtString() << "MxMDLib - configuration error: " << e);
       return md;
     }
   else {

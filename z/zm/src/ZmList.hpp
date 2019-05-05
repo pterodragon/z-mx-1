@@ -331,21 +331,21 @@ friend class ReadIterator;
 	 node && !ICmp::equals(node->Node::item(), index);
 	 node = node->Fn::next());
 
-    NodeRef ret = node;
+    if (ZuLikely(node)) del_(node);
 
-    if (node) del_(node);
-
-    return ret;
+    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    return ZuMv(*ptr);
   }
   template <typename NodeRef_>
-  inline typename ZuConvertible<NodeRef_, NodeRef>::T
+  inline typename ZuConvertible<NodeRef_, NodeRef, NodeRef>::T
       del(const NodeRef_ &node_) {
     const NodeRef &node = node_;
     Guard guard(m_lock);
-    if (ZuLikely(node)) {
-      del_(node);
-      nodeDelete(node);
-    }
+
+    if (ZuLikely(node)) del_(node);
+
+    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    return ZuMv(*ptr);
   }
 
   template <typename NodeRef_>
@@ -585,6 +585,7 @@ protected:
 
     if (ZuLikely(node)) {
       del_(node);
+      nodeDeref(node);
       nodeDelete(node);
     }
   }
@@ -605,7 +606,6 @@ protected:
     else
       nextNode->Fn::prev(prevNode);
 
-    nodeDeref(node);
     --m_count;
   }
 

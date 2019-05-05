@@ -1767,6 +1767,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::push(ZdbRN rn)
 	"Zdb inactive application attempted push on DBID " << m_id);
     return nullptr;
   }
+  if (ZuUnlikely(rn == ZdbNullRN)) return push_();
   return push_(rn);
 }
 
@@ -1893,6 +1894,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *prev)
 
 ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *prev, ZdbRN rn)
 {
+  if (ZuUnlikely(rn == ZdbNullRN)) return update(prev);
   ZmRef<ZdbAnyPOD> pod;
   alloc(pod);
   if (ZuUnlikely(!pod)) return nullptr;

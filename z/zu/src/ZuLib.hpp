@@ -114,8 +114,13 @@
 #define ZuLikely(x) __builtin_expect(!!(x), 1)
 #define ZuUnlikely(x) __builtin_expect(!!(x), 0)
 
+#ifdef ZDEBUG
+#define ZuInline inline
+#define ZuNoInline inline
+#else
 #define ZuInline inline __attribute__((always_inline))
 #define ZuNoInline inline __attribute__((noinline))
+#endif
 
 #else
 

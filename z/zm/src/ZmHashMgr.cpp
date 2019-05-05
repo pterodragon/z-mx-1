@@ -95,15 +95,17 @@ friend class ZmHashMgr;
     }
     while (tbl) {
       fn(tbl);
+      ZmRef<ZmAnyHash> next;
       {
 	ZmGuard<ZmPLock> guard(m_lock);
 	// for (;;) {
-	  tbl = m_tables.readIterator<ZmRBTreeGreater>(
+	  next = m_tables.readIterator<ZmRBTreeGreater>(
 	      ZmAnyHash_PtrAccessor::value(*tbl)).iterate();
 	  // if (!tbl || tbl->refCount() > 2) break;
 	  // m_tables.del(tbl);
 	// }
       }
+      tbl = ZuMv(next);
     }
   }
 

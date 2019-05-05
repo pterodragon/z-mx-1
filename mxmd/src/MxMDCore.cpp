@@ -529,7 +529,10 @@ void MxMDCore::stop()
   }
 
   raise(ZeEVENT(Info, "stopping multiplexers..."));
-  m_mx->stop(false);
+  {
+    auto i = m_mxTbl->readIterator();
+    while (auto mx = i.iterateKey()) mx->stop(false);
+  }
 }
 
 void MxMDCore::final()

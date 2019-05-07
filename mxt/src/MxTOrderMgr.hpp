@@ -520,6 +520,14 @@ public:
       if (MxTEventState::matchHQ(newOrder.eventState)) {
 	// new order held/queued, modify-on-queue
 	newOrder.eventState = MxTEventState::Acknowledged;
+	auto filled = [](Order *order) -> uintptr_t {
+	  // modify-on-queue reduced qty so that order is filled
+	  auto &newOrder = order->newOrder();
+	  newOrder.modifyNew_clr();
+	  ackIn<MxTEventType::Modified, MxTEventState::Sent,
+	    1, 0, 0, 0, 1, 0>(order); // OmcuSp
+	  return 0;
+	};
 	if (!newOrder.modifyNew()) {
 	  // new order is original, not following a previous modify-on-queue
 	  ackIn<MxTEventType::Ordered, MxTEventState::Sent,
@@ -528,6 +536,7 @@ public:
 	    auto &newOrder = order->newOrder();
 	    newOrder.modifyNew_set();
 	    newOrder.update(in.template as<Modify>());
+	    if (newOrder.filled()) return filled(order);
 	    newOrderIn<MxTEventState::Queued>(order);
 	    return 0;
 	  };
@@ -539,13 +548,7 @@ public:
 	auto next = [](Order *order, In &in) -> uintptr_t {
 	  auto &newOrder = order->newOrder();
 	  newOrder.update(in.template as<Modify>());
-	  if (newOrder.filled()) {
-	    // modify-on-queue may have reduced qty so that order is now filled
-	    newOrder.modifyNew_clr();
-	    ackIn<MxTEventType::Modified, MxTEventState::Sent,
-	      1, 0, 0, 0, 1, 0>(order); // OmcuSp
-	    return 0;
-	  }
+	  if (newOrder.filled()) return filled(order);
 	  newOrderIn<MxTEventState::Queued>(order);
 	  return 0;
 	};
@@ -620,6 +623,14 @@ public:
       if (MxTEventState::matchHQ(newOrder.eventState)) {
 	// new order held/queued, modify-on-queue
 	newOrder.eventState = MxTEventState::Acknowledged;
+	auto filled = [](Order *order) -> uintptr_t {
+	  // modify-on-queue reduced qty so that order is filled
+	  auto &newOrder = order->newOrder();
+	  newOrder.modifyNew_clr();
+	  ackIn<MxTEventType::Modified, MxTEventState::Sent,
+	    1, 0, 0, 0, 1, 0>(order); // OmcuSp
+	  return 0;
+	};
 	if (!newOrder.modifyNew()) {
 	  // new order is original, not following a previous modify-on-queue
 	  newOrder.modifyNew_set();
@@ -628,6 +639,7 @@ public:
 	  auto next = [](Order *order, In &in) -> uintptr_t {
 	    auto &newOrder = order->newOrder();
 	    newOrder.update(in.template as<Modify>());
+	    if (newOrder.filled()) return filled();
 	    newOrderIn<MxTEventState::Queued>(order);
 	    return 0;
 	  };
@@ -639,13 +651,7 @@ public:
 	auto next = [](Order *order, In &in) -> uintptr_t {
 	  auto &newOrder = order->newOrder();
 	  newOrder.update(in.template as<Modify>());
-	  if (newOrder.filled()) {
-	    // modify-on-queue may have reduced qty so that order is now filled
-	    newOrder.modifyNew_clr();
-	    ackIn<MxTEventType::Modified, MxTEventState::Sent,
-	      1, 0, 0, 0, 1, 0>(order); // OmcuSp
-	    return 0;
-	  }
+	  if (newOrder.filled()) return filled();
 	  newOrderIn<MxTEventState::Queued>(order);
 	  return 0;
 	};

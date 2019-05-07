@@ -723,57 +723,57 @@ typedef ZmFn<MxMDTrade *, MxDateTime> MxMDTradeFn;
 typedef ZmFn<MxDateTime, MxDateTime &> MxMDTimerFn;
 
 struct MxMDLibHandler : public ZmObject {
-#define MxMDLib_Fn(Type, member) \
+#define MxMDLibHandler_Fn(Type, member) \
   template <typename Arg> \
   inline MxMDLibHandler & member##Fn(Arg &&arg) { \
     member = ZuFwd<Arg>(arg); \
     return *this; \
   } \
   Type	member
-  MxMDLib_Fn(MxMDExceptionFn,		exception);
-  MxMDLib_Fn(MxMDFeedFn,		connected);
-  MxMDLib_Fn(MxMDFeedFn,		disconnected);
-  MxMDLib_Fn(MxMDLibFn,			eof);
-  MxMDLib_Fn(MxMDVenueFn,		addVenue);
-  MxMDLib_Fn(MxMDVenueFn,		refDataLoaded);
-  MxMDLib_Fn(MxMDTickSizeTblFn,		addTickSizeTbl);
-  MxMDLib_Fn(MxMDTickSizeTblFn,		resetTickSizeTbl);
-  MxMDLib_Fn(MxMDTickSizeFn,		addTickSize);
-  MxMDLib_Fn(MxMDInstrumentFn,		addInstrument);
-  MxMDLib_Fn(MxMDInstrumentFn,		updatedInstrument);
-  MxMDLib_Fn(MxMDOrderBookFn,		addOrderBook);
-  MxMDLib_Fn(MxMDOrderBookFn,		updatedOrderBook);
-  MxMDLib_Fn(MxMDOrderBookFn,		deletedOrderBook);
-  MxMDLib_Fn(MxMDTradingSessionFn,	tradingSession);
-  MxMDLib_Fn(MxMDTimerFn,		timer);
-#undef MxMDLib_Fn
+  MxMDLibHandler_Fn(MxMDExceptionFn,		exception);
+  MxMDLibHandler_Fn(MxMDFeedFn,			connected);
+  MxMDLibHandler_Fn(MxMDFeedFn,			disconnected);
+  MxMDLibHandler_Fn(MxMDLibFn,			eof);
+  MxMDLibHandler_Fn(MxMDVenueFn,		addVenue);
+  MxMDLibHandler_Fn(MxMDVenueFn,		refDataLoaded);
+  MxMDLibHandler_Fn(MxMDTickSizeTblFn,		addTickSizeTbl);
+  MxMDLibHandler_Fn(MxMDTickSizeTblFn,		resetTickSizeTbl);
+  MxMDLibHandler_Fn(MxMDTickSizeFn,		addTickSize);
+  MxMDLibHandler_Fn(MxMDInstrumentFn,		addInstrument);
+  MxMDLibHandler_Fn(MxMDInstrumentFn,		updatedInstrument);
+  MxMDLibHandler_Fn(MxMDOrderBookFn,		addOrderBook);
+  MxMDLibHandler_Fn(MxMDOrderBookFn,		updatedOrderBook);
+  MxMDLibHandler_Fn(MxMDOrderBookFn,		deletedOrderBook);
+  MxMDLibHandler_Fn(MxMDTradingSessionFn,	tradingSession);
+  MxMDLibHandler_Fn(MxMDTimerFn,		timer);
+#undef MxMDLibHandler_Fn
 };
 
 struct MxMDInstrHandler : public ZuObject {
-#define MxMDInstrument_Fn(Type, member) \
+#define MxMDInstrHandler_Fn(Type, member) \
   template <typename Arg> \
   inline MxMDInstrHandler & member##Fn(Arg &&arg) { \
     member = ZuFwd<Arg>(arg); \
     return *this; \
   } \
   Type	member
-  MxMDInstrument_Fn(MxMDInstrumentFn,	updatedInstrument); // ref. data changed
-  MxMDInstrument_Fn(MxMDOrderBookFn,	updatedOrderBook); // ''
-  MxMDInstrument_Fn(MxMDLevel1Fn,	l1);
-  MxMDInstrument_Fn(MxMDPxLevelFn,	addMktLevel);
-  MxMDInstrument_Fn(MxMDPxLevelFn,	updatedMktLevel);
-  MxMDInstrument_Fn(MxMDPxLevelFn,	deletedMktLevel);
-  MxMDInstrument_Fn(MxMDPxLevelFn,	addPxLevel);
-  MxMDInstrument_Fn(MxMDPxLevelFn,	updatedPxLevel);
-  MxMDInstrument_Fn(MxMDPxLevelFn,	deletedPxLevel);
-  MxMDInstrument_Fn(MxMDOrderBookFn,	l2);
-  MxMDInstrument_Fn(MxMDOrderFn,	addOrder);
-  MxMDInstrument_Fn(MxMDOrderFn,	modifiedOrder);
-  MxMDInstrument_Fn(MxMDOrderFn,	deletedOrder);
-  MxMDInstrument_Fn(MxMDTradeFn,	addTrade);
-  MxMDInstrument_Fn(MxMDTradeFn,	correctedTrade);
-  MxMDInstrument_Fn(MxMDTradeFn,	canceledTrade);
-#undef MxMDInstrument_Fn
+  MxMDInstrHandler_Fn(MxMDInstrumentFn,	updatedInstrument); // ref. data changed
+  MxMDInstrHandler_Fn(MxMDOrderBookFn,	updatedOrderBook); // ''
+  MxMDInstrHandler_Fn(MxMDLevel1Fn,	l1);
+  MxMDInstrHandler_Fn(MxMDPxLevelFn,	addMktLevel);
+  MxMDInstrHandler_Fn(MxMDPxLevelFn,	updatedMktLevel);
+  MxMDInstrHandler_Fn(MxMDPxLevelFn,	deletedMktLevel);
+  MxMDInstrHandler_Fn(MxMDPxLevelFn,	addPxLevel);
+  MxMDInstrHandler_Fn(MxMDPxLevelFn,	updatedPxLevel);
+  MxMDInstrHandler_Fn(MxMDPxLevelFn,	deletedPxLevel);
+  MxMDInstrHandler_Fn(MxMDOrderBookFn,	l2);
+  MxMDInstrHandler_Fn(MxMDOrderFn,	addOrder);
+  MxMDInstrHandler_Fn(MxMDOrderFn,	modifiedOrder);
+  MxMDInstrHandler_Fn(MxMDOrderFn,	deletedOrder);
+  MxMDInstrHandler_Fn(MxMDTradeFn,	addTrade);
+  MxMDInstrHandler_Fn(MxMDTradeFn,	correctedTrade);
+  MxMDInstrHandler_Fn(MxMDTradeFn,	canceledTrade);
+#undef MxMDInstrHandler_Fn
 };
 
 // order books

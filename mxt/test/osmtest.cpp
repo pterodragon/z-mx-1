@@ -142,10 +142,6 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
   DeclType(Canceled, Ack);
   DeclType(CxlReject, Ack);
 
-  DeclType(Hold, Exec);
-  DeclType(Release, Exec);
-  DeclType(Deny, Exec);
-
   DeclType(Fill, Exec);
   DeclType(Closed, Exec);
 
@@ -325,17 +321,12 @@ void App::main()
 
   std::cout <<
     "sizeof(Reject): " << ZuBoxed(sizeof(Reject)) << '\n' <<
-    "sizeof(Hold): " << ZuBoxed(sizeof(Hold)) << '\n' <<
-    "sizeof(Release): " << ZuBoxed(sizeof(Release)) << '\n' <<
     "sizeof(NewOrder): " << ZuBoxed(sizeof(NewOrder)) << '\n' <<
     "sizeof(OrderLeg): " << ZuBoxed(sizeof(OrderLeg)) << '\n' <<
-    "sizeof(OrderFiltered): " << ZuBoxed(sizeof(OrderFiltered)) << '\n' <<
     "sizeof(Modify): " << ZuBoxed(sizeof(Modify)) << '\n' <<
     "sizeof(ModifyLeg): " << ZuBoxed(sizeof(ModifyLeg)) << '\n' <<
-    "sizeof(ModFiltered): " << ZuBoxed(sizeof(ModFiltered)) << '\n' <<
     "sizeof(Cancel): " << ZuBoxed(sizeof(Cancel)) << '\n' <<
     "sizeof(CancelLeg): " << ZuBoxed(sizeof(CancelLeg)) << '\n' <<
-    "sizeof(CxlFiltered): " << ZuBoxed(sizeof(CxlFiltered)) << '\n' <<
     "sizeof(OrderTxn): " << ZuBoxed(sizeof(OrderTxn)) << '\n' <<
     "sizeof(ModifyTxn): " << ZuBoxed(sizeof(ModifyTxn)) << '\n' <<
     "sizeof(CancelTxn): " << ZuBoxed(sizeof(CancelTxn)) << '\n' <<

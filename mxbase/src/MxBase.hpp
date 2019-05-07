@@ -48,6 +48,8 @@
 
 #include <ZeLog.hpp>
 
+#include <ZvCSV.hpp>
+
 // vocabulary types
 
 #ifndef MxBase_LongDouble
@@ -85,6 +87,7 @@ struct MxSeqNoCmp {
   ZuInline static uint64_t null() { return 0; }
 };
 typedef ZuBox<uint64_t, MxSeqNoCmp> MxSeqNo;
+typedef ZvCSVColumn<ZvCSVColType::Int, MxSeqNo> MxSeqNoCol;
 
 #define MxString ZuStringN
 
@@ -120,28 +123,15 @@ template <bool Ref = 0> struct MxValNDPVFmt;	// internal
 
 struct MxValNDP {
   MxValue	value;
-  MxNDP		ndp;
-
-  ZuInline static void update(
-      MxValue &value, MxNDP &ndp, 
-      const MxValue &u_value, const MxNDP &u_ndp) {
-    if (!*u_value) return;
-    if (u_value == MxValueReset) {
-      value = MxValue();
-      ndp = MxNDP();
-    } else {
-      value = u_value;
-      ndp = u_ndp;
-    }
-  }
+  unsigned	ndp;
 
   template <typename V>
-  ZuInline MxValNDP(V value_, MxNDP ndp_,
+  ZuInline MxValNDP(V value_, unsigned ndp_,
       typename ZuIsIntegral<V>::T *_ = 0) :
     value(value_), ndp(ndp_) { }
 
   template <typename V>
-  ZuInline MxValNDP(V value_, MxNDP ndp_,
+  ZuInline MxValNDP(V value_, unsigned ndp_,
       typename ZuIsFloatingPoint<V>::T *_ = 0) :
     value((MxFloat)value_ * ZuDecimal::pow10_64(ndp_)), ndp(ndp_) { }
 
@@ -169,7 +159,7 @@ struct MxValNDP {
 
   // scan from string, given NDP
   template <typename S>
-  inline MxValNDP(const S &s_, MxNDP ndp_,
+  inline MxValNDP(const S &s_, unsigned ndp_,
       typename ZuIsString<S>::T *_ = 0) : ndp(ndp_) {
     ZuString s(s_);
     if (ZuUnlikely(!s || ndp > 18)) goto null;
@@ -212,7 +202,7 @@ struct MxValNDP {
   }
 
   // adjust to another NDP
-  ZuInline MxValue adjust(MxNDP ndp) {
+  ZuInline MxValue adjust(unsigned ndp) {
     if (ZuLikely(ndp == this->ndp)) return value;
     return (MxValNDP{1.0, ndp} * (*this)).value;
   }

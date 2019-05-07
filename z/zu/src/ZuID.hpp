@@ -64,6 +64,15 @@ public:
     return *this;
   }
 
+  template <typename V>
+  ZuInline ZuID(V v, typename ZuIs<uint64_t, V>::T *_ = 0) : m_val(v) { }
+  template <typename V>
+  ZuInline typename ZuIs<uint64_t, V, ZuID &>::T operator =(V v) {
+    m_val = v;
+    return *this;
+  }
+
+
   ZuInline void init(ZuString s) {
     if (ZuLikely(s.length() == 8)) {
       const uint64_t *ZuMayAlias(ptr) = (const uint64_t *)s.data();

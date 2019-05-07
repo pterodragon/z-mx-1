@@ -8,7 +8,7 @@ LDADD = $(top_builddir)/zt/src/libZt.la $(top_builddir)/zm/src/libZm.la \
 	@Z_ZT_LIBS@ @Z_MT_LIBS@
 bin_PROGRAMS = \
 	ZtArrayTest ZtDateTest ZtDateFixTest ZtRegexTest \
-	ZtStringHash ZtStringTest vsntest ZtIconvTest
+	ZtStringHash ZtStringTest vsntest ZtIconvTest ZtBitWindowTest
 ZtArrayTest_SOURCES = ZtArrayTest.cpp
 ZtDateTest_SOURCES = ZtDateTest.cpp
 ZtDateFixTest_SOURCES = ZtDateFixTest.cpp
@@ -17,3 +17,4 @@ ZtStringHash_SOURCES = ZtStringHash.cpp
 ZtStringTest_SOURCES = ZtStringTest.cpp
 vsntest_SOURCES = vsntest.cpp
 ZtIconvTest_SOURCES = ZtIconvTest.cpp
+ZtBitWindowTest_SOURCES = ZtBitWindowTest.cpp

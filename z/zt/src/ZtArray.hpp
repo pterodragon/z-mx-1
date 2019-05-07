@@ -346,7 +346,7 @@ public:
   ZuInline ZtArray &operator =(const A &a) { assign(a); return *this; }
 
   ZuInline ZtArray &operator =(std::initializer_list<T> a) {
-    shadow(a.begin(), a.size());
+    shadow_(a.begin(), a.size());
     return *this;
   }
 

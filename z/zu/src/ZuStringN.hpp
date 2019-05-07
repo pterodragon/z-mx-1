@@ -472,11 +472,6 @@ public:
 
   // primitive real types
   template <typename R>
-  ZuInline ZuStringN(const R &r, typename MatchReal<R>::T *_ = 0) :
-      Base(Base::Nop) {
-    this->init(ZuBoxed(r));
-  }
-  template <typename R>
   ZuInline typename MatchReal<R, ZuStringN &>::T operator =(const R &r) {
     this->init(ZuBoxed(r));
     return *this;

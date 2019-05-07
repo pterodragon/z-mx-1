@@ -477,6 +477,31 @@ void MxAnyLink::disconnected()
 	ZmFn<>{this, [](MxAnyLink *link) { link->connect(); }});
 }
 
+void MxAnyLink::reconnecting()
+{
+  int prev, next;
+
+  // cancel reconnect
+  mx()->del(&m_reconnTimer);
+
+  {
+    StateGuard stateGuard(m_stateLock);
+
+    // state machine
+    prev = m_state;
+    switch (prev) {
+      case MxLinkState::Up:
+	m_state = MxLinkState::Connecting;
+	break;
+      default:
+	break;
+    }
+    next = m_state;
+  }
+
+  if (next != prev) engine()->linkState(this, prev, next);
+}
+
 void MxAnyLink::reconnect(bool immediate)
 {
   int prev, next;

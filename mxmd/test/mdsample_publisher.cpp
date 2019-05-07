@@ -267,7 +267,7 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 
     // add a tick size table
 
-    ZmRef<MxMDTickSizeTbl> tickSizeTbl = venue->addTickSizeTbl("1", 0);
+    MxMDTickSizeTbl *tickSizeTbl = venue->addTickSizeTbl("1", 0);
     if (!tickSizeTbl) throw ZtString("MxMDVenue::addTickSizeTbl() failed");
     // tick size 1 from 0 to infinity
     tickSizeTbl->addTickSize(0, MxValueMax, 1);

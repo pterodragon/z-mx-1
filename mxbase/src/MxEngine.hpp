@@ -152,7 +152,7 @@ public:
 
   // display sequence:
   //   id, state, reconnects, rxSeqNo, txSeqNo
-  struct Telemetry { // not graphable
+  struct Telemetry {		// not graphable
     MxID	id;
     uint64_t	rxSeqNo;
     uint64_t	txSeqNo;
@@ -190,6 +190,7 @@ protected:
 
   void connected();
   void disconnected();
+  void reconnecting();	// transition direct from Up to Connecting
   void reconnect(bool immediate);
 
   virtual ZmTime reconnInterval(unsigned) { return ZmTime{1}; }

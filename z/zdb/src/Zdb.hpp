@@ -568,6 +568,8 @@ public:
 
   // create new record
   ZmRef<ZdbAnyPOD> push();
+  // create new record (idempotent)
+  ZmRef<ZdbAnyPOD> push(ZdbRN rn);
   // commit record following push() - causes replication / sync
   void put(ZdbAnyPOD *);
   // abort push()
@@ -579,6 +581,8 @@ public:
 
   // update record
   ZmRef<ZdbAnyPOD> update(ZdbAnyPOD *prev);
+  // update record (idempotent)
+  ZmRef<ZdbAnyPOD> update(ZdbAnyPOD *prev, ZdbRN rn);
   // commit record following update(), potentially a partial update
   void putUpdate(ZdbAnyPOD *, bool replace = true);
 
@@ -628,6 +632,8 @@ private:
 
   // push initial record
   ZmRef<ZdbAnyPOD> push_();
+  // idempotent push
+  ZmRef<ZdbAnyPOD> push_(ZdbRN rn);
 
   // low-level get, does not filter deleted records
   ZmRef<ZdbAnyPOD> get__(ZdbRN rn);

@@ -45,7 +45,7 @@ struct Feed : public MxMDFeed {
 
       if (!md) throw ZtString("MxMDLib::instance() failed");
 
-      ZmRef<MxMDVenue> venue = new MxMDVenue(md, this,
+      MxMDVenue *venue = new MxMDVenue(md, this,
 	"JNITest",
 	MxMDOrderIDScope::OBSide,
 	0);
@@ -53,7 +53,7 @@ struct Feed : public MxMDFeed {
 
       // add a tick size table
 
-      ZmRef<MxMDTickSizeTbl> tickSizeTbl = venue->addTickSizeTbl("1", 0);
+      MxMDTickSizeTbl *tickSizeTbl = venue->addTickSizeTbl("1", 0);
       if (!tickSizeTbl) throw ZtString("MxMDVenue::addTickSizeTbl() failed");
       // tick size 1 from 0 to infinity
       tickSizeTbl->addTickSize(0, MxValueMax, 1);

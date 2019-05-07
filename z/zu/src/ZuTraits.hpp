@@ -142,6 +142,10 @@ struct ZuTraits<long long> : public ZuTraits_Signed<long long> { };
 template <>
 struct ZuTraits<unsigned long long> :
   public ZuTraits_Unsigned<unsigned long long> { };
+template <>
+struct ZuTraits<__int128_t> : public ZuTraits_Signed<__int128_t> { };
+template <>
+struct ZuTraits<__uint128_t> : public ZuTraits_Unsigned<__uint128_t> { };
 
 // primitive floating point types
 

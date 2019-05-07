@@ -159,6 +159,16 @@ public:
       m_object(static_cast<T *>(const_cast<typename R::T *>(r.m_object))) {
     if (T *o = m_object) ZmREF(o);
   }
+  template <typename R>
+  inline ZmRef(R &&r,
+      typename MatchOtherRef<typename ZuDeref<R>::T>::T *_ = 0) noexcept :
+      m_object(static_cast<T *>(const_cast<typename ZuDeref<R>::T::T *>(
+	      r.m_object))) {
+    r.m_object = 0;
+#ifdef ZmObject_DEBUG
+    if (T *o = m_object) ZmMVREF(o, &r, this);
+#endif
+  }
   inline ZmRef(T *o) : m_object(o) {
     if (o) ZmREF(o);
   }

@@ -524,18 +524,19 @@ public:
 	  // new order is original, not following a previous modify-on-queue
 	  ackIn<MxTEventType::Ordered, MxTEventState::Sent,
 	    1, 0, 0, 0, 1, 1>(order); // OmcuSP
-	  auto next = [](Order *order, In &in) {
+	  auto next = [](Order *order, In &in) -> uintptr_t {
 	    auto &newOrder = order->newOrder();
 	    newOrder.modifyNew_set();
 	    newOrder.update(in.template as<Modify>());
 	    newOrderIn<MxTEventState::Queued>(order);
+	    return 0;
 	  };
 	  return nextFn<In>(next);
 	}
 	// new order is synthetic, following a previous modify-on-queue
 	ackIn<MxTEventType::Modified, MxTEventState::Sent,
 	  1, 0, 0, 0, 1, 1>(order); // OmcuSP
-	auto next = [](Order *order, In &in) {
+	auto next = [](Order *order, In &in) -> uintptr_t {
 	  auto &newOrder = order->newOrder();
 	  newOrder.update(in.template as<Modify>());
 	  if (newOrder.filled()) {
@@ -543,9 +544,10 @@ public:
 	    newOrder.modifyNew_clr();
 	    ackIn<MxTEventType::Modified, MxTEventState::Sent,
 	      1, 0, 0, 0, 1, 0>(order); // OmcuSp
-	    return;
+	    return 0;
 	  }
 	  newOrderIn<MxTEventState::Queued>(order);
+	  return 0;
 	};
 	return nextFn<In>(next);
       }
@@ -557,7 +559,7 @@ public:
       modify.eventState = MxTEventState::Acknowledged;
       ackIn<MxTEventType::Modified, MxTEventState::Sent,
 	0, 1, 0, 0, 1, 1>(order); // oMcuSP
-      auto next = [](Order *order, In &in) {
+      auto next = [](Order *order, In &in) -> uintptr_t {
 	auto &newOrder = order->newOrder();
 	auto &modify = order->modify();
 	auto &cancel = order->cancel();
@@ -567,18 +569,19 @@ public:
 	  if (MxTEventState::matchSP(cancel.eventState)) {
 	    // cancel sent
 	    modifyIn<MxTEventState::Deferred>(order);
-	    return;
+	    return 0;
 	  }
 	  cancel.null();
 	  newOrder.modifyCxl_clr();
 	}
 	modifyIn<MxTEventState::Queued>(order);
+	return 0;
       };
       return nextFn<In>(next);
     }
     // should never happen; somehow this point was reached despite
     // filterModify() previously returning OK
-    MxEnum rejReason = filterModify(order, in);
+    MxEnum rejReason = filterModify(order);
     if (ZuUnlikely(rejReason == MxTRejReason::OK)) // should never happen
       rejReason = MxTRejReason::OSM;
     {
@@ -622,17 +625,18 @@ public:
 	  newOrder.modifyNew_set();
 	  ackIn<MxTEventType::Ordered, MxTEventState::Sent,
 	    1, 0, 0, 0, 1, 1>(order); // OmcuSP
-	  auto next = [](Order *order, In &in) {
+	  auto next = [](Order *order, In &in) -> uintptr_t {
 	    auto &newOrder = order->newOrder();
 	    newOrder.update(in.template as<Modify>());
 	    newOrderIn<MxTEventState::Queued>(order);
+	    return 0;
 	  };
 	  return nextFn<In>(next);
 	}
 	// new order is modify, following a previous modify-on-queue
 	ackIn<MxTEventType::Modified, MxTEventState::Sent,
 	  1, 0, 0, 0, 1, 1>(order); // OmcuSP
-	auto next = [](Order *order, In &in) {
+	auto next = [](Order *order, In &in) -> uintptr_t {
 	  auto &newOrder = order->newOrder();
 	  newOrder.update(in.template as<Modify>());
 	  if (newOrder.filled()) {
@@ -640,9 +644,10 @@ public:
 	    newOrder.modifyNew_clr();
 	    ackIn<MxTEventType::Modified, MxTEventState::Sent,
 	      1, 0, 0, 0, 1, 0>(order); // OmcuSp
-	    return;
+	    return 0;
 	  }
 	  newOrderIn<MxTEventState::Queued>(order);
+	  return 0;
 	};
 	return nextFn<In>(next);
       }
@@ -654,7 +659,7 @@ public:
       modify.eventState = MxTEventState::Acknowledged;
       ackIn<MxTEventType::Modified, MxTEventState::Sent,
 	0, 1, 0, 0, 1, 1>(order); // oMcuSP
-      auto next = [](Order *order, In &in) {
+      auto next = [](Order *order, In &in) -> uintptr_t {
 	auto &newOrder = order->newOrder();
 	auto &modify = order->modify();
 	auto &cancel = order->cancel();
@@ -663,18 +668,19 @@ public:
 	if (newOrder.modifyCxl()) {
 	  // simulated modify in process
 	  if (MxTEventState::matchQSP(cancel.eventState))
-	    return; // cancel already sent
+	    return 0; // cancel already sent
 	} else
 	  newOrder.modifyCxl_set();
 	order->cancelTxn.template initCancel<1>();
 	cancel.update(newOrder);
 	cancelIn<MxTEventState::Queued>(order);
+	return 0;
       };
       return nextFn<In>(next);
     }
     // should never happen; somehow this point was reached despite
     // filterModify() previously returning OK
-    MxEnum rejReason = filterModify(order, in);
+    MxEnum rejReason = filterModify(order);
     if (ZuUnlikely(rejReason == MxTRejReason::OK)) // should never happen
       rejReason = MxTRejReason::OSM;
     {
@@ -730,7 +736,7 @@ public:
 	  ackIn<MxTEventType::Modified, MxTEventState::Sent,
 	    1, 0, 0, 0, 1, 1>(order); // OmcuSP
 	}
-	auto next = [](Order *order, In &in) {
+	auto next = [](Order *order, In &in) -> uintptr_t {
 	  auto &newOrder = order->newOrder();
 	  newOrder.update(in.template request<ModHeld>());
 	  newOrderIn<MxTEventState::Held>(order);
@@ -740,6 +746,7 @@ public:
 	    hold.update(newOrder);
 	    execOut(hold);
 	  }
+	  return 0;
 	};
 	return nextFn<In>(next);
       }
@@ -751,7 +758,7 @@ public:
       modify.eventState = MxTEventState::Acknowledged;
       ackIn<MxTEventType::Modified, MxTEventState::Sent,
 	0, 1, 0, 0, 1, 1>(order); // oMcuSP
-      auto next = [](Order *order, In &in) {
+      auto next = [](Order *order, In &in) -> uintptr_t {
 	auto &newOrder = order->newOrder();
 	auto &modify = order->modify();
 	auto &cancel = order->cancel();
@@ -770,12 +777,13 @@ public:
 	  hold.update(modify);
 	  execOut(hold);
 	}
+	return 0;
       };
       return nextFn<In>(next);
     }
     // should never happen; somehow this point was reached despite
     // filterModify() previously returning OK
-    MxEnum rejReason = filterModify(order, in);
+    MxEnum rejReason = filterModify(order);
     if (ZuUnlikely(rejReason == MxTRejReason::OK)) // should never happen
       rejReason = MxTRejReason::OSM;
     {
@@ -957,6 +965,7 @@ public:
 	modified_<1>(order, in);
 	// send any cancel needed for cancel/replace
 	// deferred cancels are taken care of by modified_()
+	auto &cancel = order->cancel();
 	if (MxTEventState::matchX(cancel.eventState))
 	  cancelOut(order);
 	return 0;
@@ -1268,7 +1277,7 @@ public:
   typename ZuIsBase<Txn_, In, uintptr_t>::T
   cxlReject(Order *order, In &in) {
     auto &newOrder = order->newOrder();
-    auto &modify = order->modify();
+    // auto &modify = order->modify();
     auto &cancel = order->cancel();
     order->execTxn = in.template data<CxlReject>();
     auto &cxlReject = order->execTxn.template as<CxlReject>();
@@ -1284,7 +1293,7 @@ public:
     }
     // abnormal
     in.template as<Event>().unsolicited_set();
-    cxlReject.unsolicted_set();
+    cxlReject.unsolicited_set();
     app()->abnormal(order, in);
     execIn<MxTEventState::Received>(order);
     return 0;
@@ -1459,6 +1468,8 @@ public:
     }
 applyFill:
     bool fillModify = false;
+    OrderLeg *leg;
+    ModifyLeg *modLeg;
     {
       // apply fill to order leg
 #if _NLegs > 1
@@ -1469,38 +1480,38 @@ applyFill:
 	app()->abnormal(order, in);
 	return;
       }
-      OrderLeg &leg = newOrder.legs[leg_];
+      leg = &newOrder.legs[leg_];
 #else
-      OrderLeg &leg = newOrder.legs[0];
+      leg = &newOrder.legs[0];
 #endif
-      leg.cumQty += fill.lastQty;
+      leg->cumQty += fill.lastQty;
       if (MxTEventState::matchHDQS(modify.eventState)) {
 #if _NLegs > 1
-	ModifyLeg &modLeg = modify.legs[leg_];
+	modLeg = &modify.legs[leg_];
 #else
-	ModifyLeg &modLeg = modify.legs[0];
+	modLeg = &modify.legs[0];
 #endif
-	if (*modLeg.orderQty && leg.cumQty > leg.orderQty) {
-	  if (leg.cumQty <= modLeg.orderQty)
+	if (*modLeg->orderQty && leg->cumQty > leg->orderQty) {
+	  if (leg->cumQty <= modLeg->orderQty)
 	    // modify qty up, fill implies modified
 	    fillModify = true;
-	} else if (*modLeg.px) {
-	  if (leg.side == MxSide::Buy) {
-	    if (fill.lastPx > leg.px && fill.lastPx <= modLeg.px)
+	} else if (*modLeg->px) {
+	  if (leg->side == MxSide::Buy) {
+	    if (fill.lastPx > leg->px && fill.lastPx <= modLeg->px)
 	      // modify bid price up, fill implies modified
 	      fillModify = true;
 	  } else {
-	    if (fill.lastPx < leg.px && fill.lastPx >= modLeg.px)
+	    if (fill.lastPx < leg->px && fill.lastPx >= modLeg->px)
 	      // modify ask price down, fill implies modified
 	      fillModify = true;
 	  }
 	}
       }
-      leg.updateLeavesQty();
-      leg.cumValue += (fill.lastQty * fill.lastPx);
+      leg->updateLeavesQty();
+      leg->cumValue += (fill.lastQty * fill.lastPx);
     }
     if (ZuUnlikely(fillModify)) {
-      // apply fill to modify - it is inconsistent with the unmodified order
+      modLeg->update(fill);
       modify.update(fill);
       modify.eventState = MxTEventState::Acknowledged;
       newOrder.update(modify);
@@ -1508,6 +1519,7 @@ applyFill:
       ackOut<MxTEventType::Modified, MxTEventState::Sent,
 	1, 0, 0, 0, 1, 1>(order); // OmcuSP
     } else {
+      leg->update(fill);
       newOrder.update(fill);
       fill.update(newOrder);
       if (MxTEventState::matchP(modify.eventState) &&
@@ -1547,25 +1559,14 @@ applyFill:
 
   // returns true if transmission should proceed, false if aborted
   bool requestSend(Event &event) {
-    if (ZuUnlikely(!MxTEventState::matchQ(event.eventState))) {
-      event.eventState = MxTEventState::Rejected;
+    if (ZuUnlikely(!MxTEventState::matchQ(event.eventState)))
       return false;
-    }
     event.eventState = MxTEventState::Sent;
     return true;
   }
   bool orderSend(Order *order) { return requestSend(order->newOrder()); }
   bool modifySend(Order *order) { return requestSend(order->modify()); }
   bool cancelSend(Order *order) { return requestSend(order->cancel()); }
-
-  // processes recovered (possibly outdated) transmission
-  void requestTxAdded(Event &event) {
-    if (ZuLikely(MxTEventState::matchQ(event.eventState)))
-      event.eventState = MxTEventState::Sent;
-  }
-  void orderTxAdded(Order *order) { requestTxAdded(order->newOrder()); }
-  void modifyTxAdded(Order *order) { requestTxAdded(order->modify()); }
-  void cancelTxAdded(Order *order) { requestTxAdded(order->cancel()); }
 };
 
 #endif /* MxTOrderMgr_HPP */

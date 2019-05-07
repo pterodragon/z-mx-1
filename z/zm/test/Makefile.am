@@ -11,7 +11,6 @@ bin_PROGRAMS = \
 	ZmTTest ZmLHTest ZmHashCleanup ZmHashThread ZmPQueueTest \
 	ZmPQueueTest2 ZmPQueueTest3 ZmRingTest ZmBxRingTest ZmLockTest \
 	ZmTLSTest
-#bin_PROGRAMS = ZmBTTest ZmSchedTest
 ZmBTTest_SOURCES = ZmBTTest.cpp
 ZmFnTest_SOURCES = ZmFnTest.cpp
 ZmHeapTest_SOURCES = ZmHeapTest.cpp

@@ -230,17 +230,17 @@ protected:
   public:
     inline void reset() { m_list.startIterate(*this); }
 
-    inline NodeRef iterateNode() { return m_list.iterate(*this); }
+    inline Node *iterateNode() { return m_list.iterate(*this); }
 
     inline const Item &iterate() {
-      NodeRef node = m_list.iterate(*this);
+      Node *node = m_list.iterate(*this);
       if (ZuLikely(node)) return node->Node::item();
       return Cmp::null();
     }
 
   protected:
-    List			&m_list;
-    typename List::NodeRef	m_node;
+    List	&m_list;
+    Node	*m_node;
   };
 
 public:
@@ -271,8 +271,8 @@ friend class ReadIterator;
     typedef ZmList<Item, NTP> List;
 
   public:
-    inline ReadIterator(List &list) :
-      ReadGuard(list.m_lock), Iterator_(list) { }
+    inline ReadIterator(const List &list) :
+      ReadGuard(list.m_lock), Iterator_(const_cast<List &>(list)) { }
   };
 
   template <typename ...Args>
@@ -331,21 +331,21 @@ friend class ReadIterator;
 	 node && !ICmp::equals(node->Node::item(), index);
 	 node = node->Fn::next());
 
-    NodeRef ret = node;
+    if (ZuLikely(node)) del_(node);
 
-    if (node) del_(node);
-
-    return ret;
+    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    return ZuMv(*ptr);
   }
   template <typename NodeRef_>
-  inline typename ZuConvertible<NodeRef_, NodeRef>::T
+  inline typename ZuConvertible<NodeRef_, NodeRef, NodeRef>::T
       del(const NodeRef_ &node_) {
     const NodeRef &node = node_;
     Guard guard(m_lock);
-    if (ZuLikely(node)) {
-      del_(node);
-      nodeDelete(node);
-    }
+
+    if (ZuLikely(node)) del_(node);
+
+    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    return ZuMv(*ptr);
   }
 
   template <typename NodeRef_>
@@ -514,9 +514,9 @@ friend class ReadIterator;
 
 protected:
   inline void startIterate(Iterator_ &iterator) {
-    iterator.m_node = 0;
+    iterator.m_node = nullptr;
   }
-  inline NodeRef iterate(Iterator_ &iterator) {
+  inline Node *iterate(Iterator_ &iterator) {
     Node *node = iterator.m_node;
 
     if (!node)
@@ -581,10 +581,11 @@ protected:
   void delIterate(Iterator_ &iterator) {
     if (!m_count) return;
 
-    NodeRef node = iterator.m_node;
+    Node *node = iterator.m_node;
 
     if (ZuLikely(node)) {
       del_(node);
+      nodeDeref(node);
       nodeDelete(node);
     }
   }
@@ -605,7 +606,6 @@ protected:
     else
       nextNode->Fn::prev(prevNode);
 
-    nodeDeref(node);
     --m_count;
   }
 
@@ -625,8 +625,8 @@ protected:
   }
 
   Lock		m_lock;
-  unsigned	  m_count;
-  Node		  *m_head, *m_tail;
+    unsigned	  m_count;
+    Node	  *m_head, *m_tail;
 };
 
 #endif /* ZmList_HPP */

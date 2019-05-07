@@ -83,6 +83,17 @@ private:
     // 2^63 + 2^61 - 2^57 + 2^54 - 2^51 - 2^18 + 1
 };
 
+struct ZuHash_GoldenPrime128 {
+  inline static uint128_t hash(uint128_t i) {
+    uint128_t n = i;
+
+    n <<= 18; i -= n; n <<= 97; i -= n; n <<= 3; i += n;
+    n <<= 3;  i -= n; n <<= 4;	i += n; n <<= 2; i += n;
+
+    return i;
+  }
+};
+
 // Fowler / Noll / Vo (FNV) hash function (type FNV-1a)
 
 #if defined(__x86_64__) || defined(_WIN64)
@@ -139,9 +150,23 @@ template <typename T, int Size> struct ZuHash_Integral {
 
 template <typename T> struct ZuHash_Integral<T, 8> {
   inline static uint32_t hash(const T &t) {
+#if 0
     if ((uint64_t)t == (uint32_t)t)
       return ZuHash_GoldenPrime32::hash((uint32_t)t);
+#endif
     return (uint32_t)ZuHash_GoldenPrime64::hash(t);
+  }
+};
+
+template <typename T> struct ZuHash_Integral<T, 16> {
+  inline static uint32_t hash(const T &t) {
+#if 0
+    if ((uint128_t)t == (uint32_t)t)
+      return ZuHash_GoldenPrime32::hash((uint32_t)t);
+    if ((uint128_t)t == (uint64_t)t)
+      return (uint32_t)ZuHash_GoldenPrime64::hash((uint64_t)t);
+#endif
+    return (uint32_t)ZuHash_GoldenPrime128::hash(t);
   }
 };
 

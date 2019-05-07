@@ -56,11 +56,13 @@ namespace MxOrdType {
       Mkt2Limit,	// market during auction, unfilled becomes limit at AP
       Pegged,
       BestLimit,
+      StopBL,		// stop best limit
       LIT,		// limit if touched
       BLIT);		// best limit if touched
   MxEnumNames(
       "Market", "Limit", "Stop", "StopLimit",
-      "Funari", "MIT", "Mkt2Limit", "Pegged", "BestLimit", "LIT", "BLIT");
+      "Funari", "MIT", "Mkt2Limit", "Pegged", "BestLimit",
+      "StopBL", "LIT", "BLIT");
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "1", Market,
@@ -72,12 +74,13 @@ namespace MxOrdType {
       "K", Mkt2Limit,
       "P", Pegged,
       "U", BestLimit,
-      "W", LIT,
-      "X", BLIT);
+      "W", StopBL,
+      "X", LIT,
+      "Y", BLIT);
 
   inline bool isLimit(int ordType) {
     if (ZuUnlikely(ordType < 0 || ordType >= N)) return 0;
-    static bool isLimit_[N] = { 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1 };
+    static bool isLimit_[N] = { 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1 };
     return isLimit_[ordType];
   }
 
@@ -185,13 +188,14 @@ namespace MxTRejReason {
     ModifyPending,		// modify pending (in response to modify)
     CancelPending,		// cancel pending (in response to cancel)
     OrderClosed,		// order closed (in response to modify/cancel)
-    PriceNotRoundTick,		// price not round tick
-    PriceOutOfRange,		// price out of range
+    PxNotRoundTick,		// price not round tick
+    PxOutOfRange,		// price out of range
     QtyNotRoundLot,		// qty not round lot
     QtyOutOfRange,		// qty out of range
     BadSide,			// bad side
     BadOrderType,		// bad order type
     BadTimeInForce,		// bad time in force
+    BadPrice,			// bad price (inconsistent with order type)
     BadLocate,			// bad locate
     BadOrderCapacity,		// bad order capacity
     BadCashMargin,		// bad cash margin
@@ -204,7 +208,8 @@ namespace MxTRejReason {
     BadMaximumFloor,		// bad maximum floor
     BadPegType,			// bad peg type
     BadPegOffset,		// bad peg offset
-    BadPegPrice,		// bad peg price
+    BadPegPx,			// bad peg price
+    BadTriggerPx,		// bad trigger price
     TriggerPxNotRoundTick,	// trigger price not round tick
     TriggerPxOutOfRange,	// trigger price out of range
     BadCrossType,		// bad cross type
@@ -221,7 +226,8 @@ namespace MxTRejReason {
     NoAssets,			// cash trading - insufficient assets/funds
     NoCollateral,		// margining - insufficient collateral
     RiskBreach,			// risk limit breached
-    BadComAsset			// bad commission asset
+    BadComAsset,		// bad commission asset
+    NoPegPx			// no market data for peg price
     );
   enum { OK = Invalid };	// OK == Invalid == -1
   MxEnumNames(
@@ -230,13 +236,14 @@ namespace MxTRejReason {
     "ModifyPending",
     "CancelPending",
     "OrderClosed",
-    "PriceNotRoundTick",
-    "PriceOutOfRange",
+    "PxNotRoundTick",
+    "PxOutOfRange",
     "QtyNotRoundLot",
     "QtyOutOfRange",
     "BadSide",
     "BadOrderType",
     "BadTimeInForce",
+    "BadPrice",
     "BadLocate",
     "BadOrderCapacity",
     "BadCashMargin",
@@ -249,7 +256,8 @@ namespace MxTRejReason {
     "BadMaximumFloor",
     "BadPegType",
     "BadPegOffset",
-    "BadPegPrice",
+    "BadPegPx",
+    "BadTriggerPx",
     "TriggerPxNotRoundTick",
     "TriggerPxOutOfRange",
     "BadCrossType",
@@ -266,7 +274,8 @@ namespace MxTRejReason {
     "NoAssets",
     "NoCollateral",
     "RiskBreach",
-    "BadComAsset"
+    "BadComAsset",
+    "NoPegPx"
   );
 }
 

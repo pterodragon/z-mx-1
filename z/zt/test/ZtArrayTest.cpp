@@ -93,7 +93,8 @@ int main()
   {
     // typedef const char *P;
     // typedef P N[];
-    ZtArray<const char *> a { std::initializer_list<const char *>{ [1] = "Foo", [0] = "Bar" } };
+    ZtArray<const char *> a {
+      std::initializer_list<const char *>{ [1] = "Foo", [0] = "Bar" } };
     puts(a[0]);
     puts(a[1]);
   }

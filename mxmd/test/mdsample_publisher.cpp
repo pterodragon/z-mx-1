@@ -380,9 +380,10 @@ void publish()
 
 	  // generate random last traded price
 
-	  MxMDL1Data l1Data;
-	  l1Data.stamp = MxDateTime(MxDateTime::Now);
-	  l1Data.last = MxValNDP{ZmRand::randExc(90) + 10, 2}.value; // 10-100
+	  MxMDL1Data l1Data{
+	    .stamp = MxNow(),
+	    .last = MxValNDP{ZmRand::randExc(90) + 10, 2}.value // 10-100
+	  };
 	  ob->l1(l1Data);
 
 	  ob->addOrder("foo",
@@ -410,7 +411,7 @@ void publish()
       }
 
     // wait one second between ticks
-    } while (sem.timedwait(ZmTime(ZmTime::Now, 3)) < 0);
+    } while (sem.timedwait(ZmTimeNow(3)) < 0);
 
   } catch (const ZtString &s) {
     ZeLOG(Error, s);

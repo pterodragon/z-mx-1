@@ -202,7 +202,7 @@ struct MxValNDP {
   }
 
   // adjust to another NDP
-  ZuInline MxValue adjust(unsigned ndp) {
+  ZuInline MxValue adjust(unsigned ndp) const {
     if (ZuLikely(ndp == this->ndp)) return value;
     return (MxValNDP{1.0, ndp} * (*this)).value;
   }

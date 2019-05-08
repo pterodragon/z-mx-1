@@ -212,6 +212,7 @@ namespace MxTRejReason {
     BadTriggerPx,		// bad trigger price
     TriggerPxNotRoundTick,	// trigger price not round tick
     TriggerPxOutOfRange,	// trigger price out of range
+    TooManyTriggers,		// too many open trigger orders
     BadCrossType,		// bad cross type
     BadBookingType,		// bad booking type
     BadContraBroker,		// bad contra broker
@@ -227,7 +228,7 @@ namespace MxTRejReason {
     NoCollateral,		// margining - insufficient collateral
     RiskBreach,			// risk limit breached
     BadComAsset,		// bad commission asset
-    NoPegPx			// no market data for peg price
+    NoMktPx			// no market price
     );
   enum { OK = Invalid };	// OK == Invalid == -1
   MxEnumNames(
@@ -260,6 +261,7 @@ namespace MxTRejReason {
     "BadTriggerPx",
     "TriggerPxNotRoundTick",
     "TriggerPxOutOfRange",
+    "TooManyTriggers",
     "BadCrossType",
     "BadBookingType",
     "BadContraBroker",
@@ -275,7 +277,7 @@ namespace MxTRejReason {
     "NoCollateral",
     "RiskBreach",
     "BadComAsset",
-    "NoPegPx"
+    "NoMktPx"
   );
 }
 

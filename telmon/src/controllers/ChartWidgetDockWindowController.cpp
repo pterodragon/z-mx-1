@@ -146,12 +146,14 @@ void ChartWidgetDockWindowController::initSubController(const int a_mxTelemetryT
     // why ? because this function should be called only per controller
     if (getController(a_mxTelemetryType, a_mxTelemetryInstanceName) != nullptr)
     {
-        qCritical() << *m_className
-                    << __PRETTY_FUNCTION__
-                    << "Invalid sequence, container already exists! a_mxTelemetryType:"
-                    << a_mxTelemetryType
-                    << "mxTelemetryInstanceName:"
-                    << a_mxTelemetryInstanceName;
+        // OK - inside the if after disconnect sequence
+        // WRONG - any other sequence
+//        qCritical() << *m_className
+//                    << __PRETTY_FUNCTION__
+//                    << "Invalid sequence, container already exists! a_mxTelemetryType:"
+//                    << a_mxTelemetryType
+//                    << "mxTelemetryInstanceName:"
+//                    << a_mxTelemetryInstanceName;
         return;
     }
 

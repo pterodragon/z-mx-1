@@ -25,6 +25,7 @@
 class ZmSemaphore;
 class QMutex;
 class DataDistributor;
+class StatusBarWidget;
 
 class ConnectionQThread: public QThread {
     Q_OBJECT
@@ -33,7 +34,8 @@ public:
     ConnectionQThread(ZmSemaphore* a_disconnectSemaphore,
                       DataDistributor* a_dataDistributor,
                       QString& a_ip,
-                      QString& a_port);
+                      QString& a_port,
+                      StatusBarWidget& a_statusBar);
     ~ConnectionQThread();
 
     void run();
@@ -51,6 +53,8 @@ private:
 
     QString m_ip;
     QString m_port;
+
+    StatusBarWidget& m_statusBar;
 };
 
 #endif // CONNECTIONQTHREAD_H

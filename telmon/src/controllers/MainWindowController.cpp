@@ -34,8 +34,7 @@
 #include "QHostAddress"
 #include "QFile"
 #include "src/utilities/typeWrappers/MxTelemetryGeneralWrapper.h"
-
-#include "QDebug" // perhaps remove after testing
+#include "QDebug"
 
 MainWindowController::MainWindowController(QWidget *parent) :
     QMainWindow(parent),
@@ -82,6 +81,9 @@ MainWindowController::MainWindowController(QWidget *parent) :
     // The default value is AnimatedDocks | AllowTabbedDocks.
     //setDockOptions(dockOptions() & VerticalTabs);
     setDockNestingEnabled(true);
+
+    m_mainWindowView->setInitialStatusBarMsg(m_mainWindowModel->getInitialStatusBarMsg());
+
     qInfo() << "MainWindowController() - End";
 }
 
@@ -144,10 +146,9 @@ void MainWindowController::createActions() noexcept
     // File->Connect functionality
     QObject::connect(m_mainWindowView->m_connectSubMenu, &QAction::triggered, this, [this](){
         qInfo() << "MainWindowController::conncet ";
-        m_mainWindowModel->connect();
+        m_mainWindowModel->connect(*getStatusBar());
         this->m_mainWindowView->m_connectSubMenu->setEnabled(false);
         this->m_mainWindowView->m_disconnectSubMenu->setEnabled(true);
-
     });
 
     // File->Disconnect functionality
@@ -161,14 +162,8 @@ void MainWindowController::createActions() noexcept
         //terminateTreeMenuWidget();
         const unsigned int l_key = ControllerFactory::CONTROLLER_TYPE::TREE_MENU_WIDGET_CONTROLLER;
         terminateController(l_key);
-
-        // init again
-        // create
         initController(l_key);
-
-        // set as central
         this->m_mainWindowView->m_treeWidgetSplitter->addWidget(m_controllersDB->value(l_key)->getView());
-
         setCentralWidget( this->m_mainWindowView->m_centralWidget);
     });
 
@@ -381,5 +376,14 @@ bool MainWindowController::showPolicy(const unsigned int a_controllerType,
     }
     return l_dockWindowController->showPolicy(a_mxType, a_mxInstance);
 }
+
+
+StatusBarWidget* MainWindowController::getStatusBar() noexcept
+{
+    return m_mainWindowView->getStatusBar();
+}
+
+
+
 
 

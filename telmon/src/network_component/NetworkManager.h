@@ -22,12 +22,12 @@
 #define NETWORKMANAGER_H
 
 #include <cstdint> // for uintptr_t
-
+#include "QString"
 // based on
 // https://stackoverflow.com/questions/318064/how-do-you-declare-an-interface-in-c
 
 class DataDistributor;
-class QString;
+class StatusBarWidget;
 
 class NetworkManager
 {
@@ -40,18 +40,22 @@ public:
 
     // interface
     enum STATE {CONNECTED, CONNECTING, DISCONNECTING, DISCONNECTED};
-    virtual uintptr_t connect()                         = 0;
-    virtual uintptr_t disconnect()                      = 0;
-    virtual uintptr_t setConfiguration()                = 0;
-    virtual uintptr_t getConfiguration() const noexcept = 0;
-    virtual uintptr_t getState()         const noexcept = 0;
-    virtual void setIP(const QString& a_ip)    noexcept = 0;
-    virtual const QString& getIP()       const noexcept = 0;
-    virtual void setPort(const QString& a_ip)  noexcept = 0;
-    virtual const QString& getPort()     const noexcept = 0;
+    inline static const QString STATE_CONNECTED     = "Connected";
+    inline static const QString STATE_CONNECTING    = "Conntecting";
+    inline static const QString STATE_DISCONNECTING = "Disconnecting";
+    inline static const QString STATE_DISCONNECTED  = "Disconnected";
+    inline static const QString STATE_UNKNOWN       = "Unknown";
+
+    virtual uintptr_t connect(StatusBarWidget& a_statusBar) = 0;
+    virtual uintptr_t disconnect()                          = 0;
+    virtual void setIP(const QString& a_ip)    noexcept     = 0;
+    virtual const QString& getIP()       const noexcept     = 0;
+    virtual void setPort(const QString& a_ip)  noexcept     = 0;
+    virtual const QString& getPort()     const noexcept     = 0;
+
+    static const QString& stateToString(const unsigned int a_state) noexcept;
 
 protected:
-    virtual void setState(const unsigned int a_state) = 0;
     DataDistributor* m_dataDistributor;
 };
 

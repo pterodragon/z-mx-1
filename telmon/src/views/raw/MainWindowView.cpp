@@ -30,6 +30,7 @@
 #include "QSplitter"
 #include "QHBoxLayout"
 #include "src/widgets/BasicTextWidget.h"
+#include "src/widgets/StatusBarWidget.h"
 
 MainWindowView::MainWindowView(MainWindowController* a_mainWindowController):
     m_mainWindowController(a_mainWindowController),
@@ -39,6 +40,8 @@ MainWindowView::MainWindowView(MainWindowController* a_mainWindowController):
     m_settingsSubMenu(nullptr),
     m_exitSubMenu(nullptr)
 {
+    // init status bar
+    m_mainWindowController->setStatusBar(new StatusBarWidget(m_mainWindowController));
 
 }
 
@@ -62,14 +65,17 @@ void MainWindowView::initMenuBar()
 
     // disconnect functionaility
     m_disconnectSubMenu = new QAction(QObject::tr("&Disconnect"), m_mainWindowController);
+    m_disconnectSubMenu->setStatusTip(QObject::tr("Disconnect from server"));
     m_disconnectSubMenu->setEnabled(false); // by default disabled
 
     //settings functionality
     m_settingsSubMenu = new QAction(QObject::tr("&Settings"), m_mainWindowController);
+    m_settingsSubMenu->setStatusTip(QObject::tr("Set IP and Port"));
     //m_settingsSubMenu->setEnabled(false); // disabled until implemented
 
     // Exit functionaility
     m_exitSubMenu = new QAction(QObject::tr("&Exit"), m_mainWindowController);
+    m_exitSubMenu->setStatusTip(QObject::tr("Close the application"));
 
     m_fileMenu = m_mainWindowController->menuBar()->addMenu(QObject::tr("&File"));
     m_fileMenu->addAction(m_connectSubMenu);
@@ -166,4 +172,15 @@ void MainWindowView::initCentralLook() noexcept
 
 }
 
+
+StatusBarWidget* MainWindowView::getStatusBar() noexcept
+{
+    return static_cast<StatusBarWidget*>(m_mainWindowController->statusBar());
+}
+
+
+void MainWindowView::setInitialStatusBarMsg(const QString& a_msg) noexcept
+{
+    getStatusBar()->setPermanentMsg(a_msg);
+}
 

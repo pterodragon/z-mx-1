@@ -25,18 +25,22 @@
 #include "QMutex"
 #include <QMutexLocker>
 
+#include "src/widgets/StatusBarWidget.h"
+
 ConnectionQThread::ConnectionQThread(ZmSemaphore* a_disconnectSemaphore,
                                      DataDistributor* a_dataDistributor,
                                      QString& a_ip,
-                                     QString& a_port):
+                                     QString& a_port,
+                                     StatusBarWidget& a_statusBar):
     m_state(NetworkManager::STATE::DISCONNECTED),
     m_disconnectSemaphore(a_disconnectSemaphore),
     m_threadStateMutex(new QMutex()),
     m_dataDistributor(a_dataDistributor),
     m_ip(a_ip),
-    m_port(a_port)
+    m_port(a_port),
+    m_statusBar(a_statusBar)
 {
-
+    m_statusBar.setPermanentMsg(NetworkManager::stateToString(m_state));
 }
 
 ConnectionQThread::~ConnectionQThread()
@@ -68,22 +72,17 @@ void ConnectionQThread::run()
     qInfo() << "ConnectionThread::run(), Begin: ";
 
     setState(NetworkManager::STATE::CONNECTING);
+    m_statusBar.setPermanentMsg(NetworkManager::stateToString(m_state));
 
     ZmRef<ZvCf> cf = new ZvCf();
-//    cf->fromString(
-//                "telemetry {\n"
-//                "  ip 127.0.0.1\n"
-//                "  port 19300\n"
-//                "}\n",
-//                false);
 
     QString l_config =
             "telemetry {\n"
-            "  ip " +
-            m_ip +
+            "  ip "         +
+            m_ip            +
             "\n"
-            "  port " +
-            m_port +
+            "  port "       +
+            m_port          +
             "\n"
             "}\n";
 
@@ -102,16 +101,19 @@ void ConnectionQThread::run()
     app.start();
 
     setState(NetworkManager::STATE::CONNECTED);
+    m_statusBar.setPermanentMsg(NetworkManager::stateToString(m_state));
 
     waitForDisconnectSignal();
 
     setState(NetworkManager::STATE::DISCONNECTING);
+    m_statusBar.setPermanentMsg(NetworkManager::stateToString(m_state));
 
     app.stop();
     m_mx->stop(true);
     app.final();
 
     setState(NetworkManager::STATE::DISCONNECTED);
+    m_statusBar.setPermanentMsg(NetworkManager::stateToString(m_state));
 
     qInfo() << "ConnectionThread::run(), End: ";;
 }

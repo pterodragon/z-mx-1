@@ -26,6 +26,7 @@
 class MainWindowView;
 class MainWindowModel;
 class BasicController;
+class StatusBarWidget;
 
 
 class MainWindowController : public QMainWindow
@@ -53,6 +54,7 @@ public:
 
 public slots:
     void closeDockWidget(const int) noexcept;
+    StatusBarWidget* getStatusBar() noexcept;
 
 private:
     MainWindowModel *m_mainWindowModel;

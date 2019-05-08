@@ -38,7 +38,7 @@ NetworkManagerQThreadImpl::NetworkManagerQThreadImpl(DataDistributor* a_dataDist
 
 NetworkManagerQThreadImpl::~NetworkManagerQThreadImpl()
 {
-    qDebug() << "        ~NetworkManagerQThreadImpl() - begin";
+    qInfo() << "        ~NetworkManagerQThreadImpl() - begin";
     // If user close application while connection thread is still running,
     // terminate thread first
     if (m_connectionThread && m_connectionThread->isRunning())
@@ -58,11 +58,11 @@ NetworkManagerQThreadImpl::~NetworkManagerQThreadImpl()
 
     delete m_port;
     m_port = nullptr;
-    qDebug() << "        ~NetworkManagerQThreadImpl() - end";
+    qInfo() << "        ~NetworkManagerQThreadImpl() - end";
 }
 
 
-uintptr_t NetworkManagerQThreadImpl::connect()
+uintptr_t NetworkManagerQThreadImpl::connect(StatusBarWidget& a_statusBar)
 {
     if (!m_connectionThread)
     {
@@ -70,13 +70,14 @@ uintptr_t NetworkManagerQThreadImpl::connect()
         m_connectionThread = new ConnectionQThread(m_disconnectSemaphore,
                                                    m_dataDistributor,
                                                    *m_ip,
-                                                   *m_port);
+                                                   *m_port,
+                                                   a_statusBar);
     }
 
     m_connectionThread->start();
+
     return 1;
 }
-
 
 uintptr_t NetworkManagerQThreadImpl::disconnect()
 {
@@ -86,7 +87,7 @@ uintptr_t NetworkManagerQThreadImpl::disconnect()
     }
 
     if (m_connectionThread->getState() != STATE::CONNECTED) {
-        qWarning() << "disconnect called while thread is not running, returning..";
+        qWarning() << "disconnect called while thread is connected, returning..";
         return 0;
     }
 
@@ -103,32 +104,6 @@ uintptr_t NetworkManagerQThreadImpl::disconnect()
     m_connectionThread = nullptr;
 
     return 1;
-}
-
-uintptr_t NetworkManagerQThreadImpl::setConfiguration()
-{
-    //todo
-    return 0;
-}
-
-
-uintptr_t NetworkManagerQThreadImpl::getConfiguration() const noexcept
-{
-    //todo
-    return 0;
-}
-
-
-uintptr_t NetworkManagerQThreadImpl::getState() const noexcept
-{
-    return m_state;
-}
-
-
-void NetworkManagerQThreadImpl::setState(const unsigned int a_state)
-{
-    // todo -- add check for a_state verification... must be in ENUM range
-    m_state = a_state;
 }
 
 

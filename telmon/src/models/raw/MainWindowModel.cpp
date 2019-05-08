@@ -50,9 +50,9 @@ MainWindowModel::~MainWindowModel()
 }
 
 
-uintptr_t MainWindowModel::connect()
+uintptr_t MainWindowModel::connect(StatusBarWidget& a_statusBar)
 {
-    return m_networkManager->connect();
+    return m_networkManager->connect(a_statusBar);
 }
 
 
@@ -86,4 +86,10 @@ const QString& MainWindowModel::getIP() const noexcept
 const QString& MainWindowModel::getPort() const noexcept
 {
      return m_networkManager->getPort();
+}
+
+
+const QString& MainWindowModel::getInitialStatusBarMsg() const noexcept
+{
+    return NetworkManager::STATE_DISCONNECTED;
 }

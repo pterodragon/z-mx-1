@@ -25,21 +25,25 @@
 class NetworkManager;
 class DataDistributor;
 class QString;
+class StatusBarWidget;
 
 class MainWindowModel {
 
 public:
     MainWindowModel();
     virtual ~MainWindowModel();
-    uintptr_t connect();
+    uintptr_t connect(StatusBarWidget& a_statusBar);
     uintptr_t disconnect();
 
     DataDistributor* getDataDistributor() const noexcept;
 
     void setIP(const QString& a_ip)               noexcept;
     const QString& getIP()                  const noexcept;
+
     void setPort(const QString& a_port)           noexcept;
     const QString& getPort()                const noexcept;
+
+    const QString& getInitialStatusBarMsg() const noexcept;
 
 private:
     DataDistributor* m_dataDistributor;

@@ -31,3 +31,20 @@ NetworkManager::~NetworkManager()
 {
     // Do not delete m_dataDistributor
 }
+
+
+const QString& NetworkManager::stateToString(const unsigned int a_state) noexcept
+{
+    switch (a_state) {
+    case CONNECTED:
+        return STATE_CONNECTED;
+    case CONNECTING:
+        return STATE_CONNECTING;
+    case  DISCONNECTING:
+        return STATE_DISCONNECTING;
+    case DISCONNECTED:
+        return STATE_DISCONNECTED;
+    default:
+        return STATE_UNKNOWN;
+    }
+}

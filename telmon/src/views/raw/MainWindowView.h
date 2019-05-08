@@ -29,6 +29,8 @@ class QSplitter;
 class QHBoxLayout;
 class QWidget;
 class BasicTextWidget;
+class StatusBarWidget;
+class QString;
 
 class MainWindowView
 {
@@ -38,6 +40,9 @@ public:
     MainWindowView(MainWindowController* a_mainWindowController);
     ~MainWindowView();
 
+    StatusBarWidget* getStatusBar() noexcept;
+
+    void setInitialStatusBarMsg(const QString& a_msg) noexcept;
 
 private:
     MainWindowController* m_mainWindowController;

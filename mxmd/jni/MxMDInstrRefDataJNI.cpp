@@ -35,8 +35,8 @@ namespace MxMDInstrRefDataJNI {
 
   // MxMDInstrRefDataTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "of",
-      "(Z"				// tradeable
+    { "of", "("
+      "Z"				// tradeable
       "Lcom/shardmx/mxbase/MxInstrIDSrc;"	// idSrc
       "Lcom/shardmx/mxbase/MxInstrIDSrc;"	// altIDSrc
       "Lcom/shardmx/mxbase/MxPutCall;"	// putCall

@@ -32,8 +32,12 @@ namespace MxMDTradeDataJNI {
 
   // MxMDTradeDataTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "of",
-      "(Ljava/lang/String;Ljava/time/Instant;JJ)Lcom/shardmx/mxmd/MxMDTradeDataTuple;" }
+    { "of", "("
+      "Ljava/lang/String;"		// tradeID
+      "Ljava/time/Instant;"		// transactTime
+      "J"				// price
+      "J"				// qty
+      ")Lcom/shardmx/mxmd/MxMDTradeDataTuple;" }
   };
 }
 

@@ -222,13 +222,13 @@ void MxMDLibJNI::stopTimer(JNIEnv *env, jobject obj)
   md->stopTimer();
 }
 
-void MxMDLibJNI::subscribe(JNIEnv *env, jobject obj, jobject handler_)
+void MxMDLibJNI::subscribe(JNIEnv *env, jobject obj, jobject handler)
 {
   // (MxMDLibHandler) -> void
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
-  md->subscribe(MxMDLibHandlerJNI::j2c(env, handler_));
-  md->libData(env->NewGlobalRef(handler_));
+  md->subscribe(MxMDLibHandlerJNI::j2c(env, handler));
+  md->libData(env->NewGlobalRef(handler));
 }
 
 void MxMDLibJNI::unsubscribe(JNIEnv *env, jobject)
@@ -245,22 +245,22 @@ jobject MxMDLibJNI::handler(JNIEnv *env, jobject)
   return md->libData<jobject>();
 }
 
-jobject MxMDLibJNI::instrument(JNIEnv *env, jobject, jobject key_)
+jobject MxMDLibJNI::instrument(JNIEnv *env, jobject, jobject key)
 {
   // (MxInstrKey) -> MxMDInstrHandle
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
-  if (MxMDInstrHandle instr = md->instrument(MxInstrKeyJNI::j2c(env, key_)))
+  if (MxMDInstrHandle instr = md->instrument(MxInstrKeyJNI::j2c(env, key)))
     return MxMDInstrHandleJNI::ctor(env, ZuMv(instr));
   return 0;
 }
 
-void MxMDLibJNI::instrument(JNIEnv *env, jobject obj, jobject key_, jobject fn)
+void MxMDLibJNI::instrument(JNIEnv *env, jobject obj, jobject key, jobject fn)
 {
   // (MxInstrKey, MxMDInstrumentFn) -> void
   MxMDLib *md = md_;
   if (ZuUnlikely(!md || !fn)) return;
-  md->instrInvoke(MxInstrKeyJNI::j2c(env, key_),
+  md->instrInvoke(MxInstrKeyJNI::j2c(env, key),
       [fn = ZJNI::globalRef(env, fn)](MxMDInstrument *instr) {
     if (JNIEnv *env = ZJNI::env())
       env->CallVoidMethod(fn, instrumentFn[0].mid,
@@ -282,22 +282,22 @@ jlong MxMDLibJNI::allInstruments(JNIEnv *env, jobject, jobject fn)
   });
 }
 
-jobject MxMDLibJNI::orderBook(JNIEnv *env, jobject, jobject key_)
+jobject MxMDLibJNI::orderBook(JNIEnv *env, jobject, jobject key)
 {
   // (MxInstrKey) -> MxMDOBHandle
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return 0;
-  if (MxMDOBHandle ob = md->orderBook(MxInstrKeyJNI::j2c(env, key_)))
+  if (MxMDOBHandle ob = md->orderBook(MxInstrKeyJNI::j2c(env, key)))
     return MxMDOBHandleJNI::ctor(env, ZuMv(ob));
   return 0;
 }
 
-void MxMDLibJNI::orderBook(JNIEnv *env, jobject, jobject key_, jobject fn)
+void MxMDLibJNI::orderBook(JNIEnv *env, jobject, jobject key, jobject fn)
 {
   // (MxInstrKey, MxMDOrderBookFn) -> void
   MxMDLib *md = md_;
   if (ZuUnlikely(!md || !fn)) return;
-  md->obInvoke(MxInstrKeyJNI::j2c(env, key_),
+  md->obInvoke(MxInstrKeyJNI::j2c(env, key),
       [fn = ZJNI::globalRef(env, fn)](MxMDOrderBook *ob) {
     if (JNIEnv *env = ZJNI::env())
       env->CallVoidMethod(fn, orderBookFn[0].mid,

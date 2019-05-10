@@ -43,6 +43,7 @@ namespace MxMDVenueFlagsJNI {
 
 MxEnum MxMDVenueFlagsJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 {
+  if (ZuUnlikely(!obj)) return MxEnum();
   MxEnum v = env->CallIntMethod(obj, methods[0].mid);
   if (dlr) env->DeleteLocalRef(obj);
   return v;

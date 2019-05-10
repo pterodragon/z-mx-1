@@ -34,8 +34,8 @@ namespace MxMDExceptionJNI {
 
   // MxMDExceptionTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "of",
-      "(Ljava/time/Instant;"		// time
+    { "of", "("
+      "Ljava/time/Instant;"		// time
       "J"				// tid
       "Lcom/shardmx/mxmd/MxMDSeverity;"	// severity
       "Ljava/lang/String;"		// filename

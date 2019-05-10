@@ -34,8 +34,8 @@ namespace MxInstrKeyJNI {
 
   // MxInstrKeyTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "of",
-      "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)"
+    { "of", "("
+      "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)"
       "Lcom/shardmx/mxbase/MxInstrKeyTuple;" }
   };
 
@@ -47,8 +47,9 @@ namespace MxInstrKeyJNI {
   };
 }
 
-MxInstrKey MxInstrKeyJNI::j2c(JNIEnv *env, jobject obj)
+MxInstrKey MxInstrKeyJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 {
+  if (ZuUnlikely(!obj)) return MxInstrKey();
   jstring id = (jstring)(env->CallObjectMethod(obj, methods[0].mid));
   jstring venue = (jstring)(env->CallObjectMethod(obj, methods[1].mid));
   jstring segment = (jstring)(env->CallObjectMethod(obj, methods[2].mid));
@@ -57,6 +58,8 @@ MxInstrKey MxInstrKeyJNI::j2c(JNIEnv *env, jobject obj)
     ZJNI::j2s_ZuStringN<MxIDStrSize>(env, id, true),
     ZJNI::j2s_ZuStringN<8>(env, venue, true),
     ZJNI::j2s_ZuStringN<8>(env, segment, true)};
+
+  if (dlr) env->DeleteLocalRef(obj);
 
   return key;
 }

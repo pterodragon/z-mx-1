@@ -96,7 +96,7 @@ public:
       m_txDB->put(txPOD);
     else
       m_txDB->putUpdate(txPOD, false);
-    link->txRN(txPOD->rn());
+    link->txRN(txPOD->rn(), txData.msgID.seqNo);
   }
 
   // l(ZdbRN rn, int32_t type) -> ZmRef<MxQMsg>

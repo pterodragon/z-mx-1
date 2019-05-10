@@ -37,8 +37,8 @@ namespace MxUniKeyJNI {
 
   // MxUniKeyTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "of",
-      "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
+    { "of", "("
+      "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
       "Lcom/shardmx/mxbase/MxInstrIDSrc;ILcom/shardmx/mxbase/MxPutCall;J)"
       "Lcom/shardmx/mxbase/MxUniKeyTuple;" }
   };
@@ -55,23 +55,19 @@ namespace MxUniKeyJNI {
   };
 }
 
-MxUniKey MxUniKeyJNI::j2c(JNIEnv *env, jobject obj)
+MxUniKey MxUniKeyJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 {
+  if (ZuUnlikely(!obj)) return MxUniKey();
   jstring id = (jstring)(env->CallObjectMethod(obj, methods[0].mid));
   jstring venue = (jstring)(env->CallObjectMethod(obj, methods[1].mid));
   jstring segment = (jstring)(env->CallObjectMethod(obj, methods[2].mid));
-  MxEnum src;
-  if (jobject srcObj = env->CallObjectMethod(obj, methods[3].mid)) {
-    src = MxInstrIDSrcJNI::j2c(env, srcObj);
-    env->DeleteLocalRef(srcObj);
-  }
+  MxEnum src = MxInstrIDSrcJNI::j2c(env,
+      env->CallObjectMethod(obj, methods[3].mid), true);
   unsigned mat = env->CallIntMethod(obj, methods[4].mid);
-  MxEnum putCall;
-  if (jobject pcObj = env->CallObjectMethod(obj, methods[5].mid)) {
-    putCall = MxPutCallJNI::j2c(env, pcObj);
-    env->DeleteLocalRef(pcObj);
-  }
+  MxEnum putCall = MxPutCallJNI::j2c(env,
+      env->CallObjectMethod(obj, methods[5].mid), true);
   MxValue strike = env->CallLongMethod(obj, methods[6].mid);
+  if (dlr) env->DeleteLocalRef(obj);
   return MxUniKey{
     ZJNI::j2s_ZuStringN<MxIDStrSize>(env, id, true),
     ZJNI::j2s_ZuStringN<8>(env, venue, true),

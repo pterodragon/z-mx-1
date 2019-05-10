@@ -213,7 +213,7 @@ void MxMDOrderBook::unsubscribe()
 {
   if (MxMDFeedOB *feedOB = this->feedOB<>())
     feedOB->unsubscribe(this, m_handler);
-  m_handler = 0;
+  m_handler = nullptr;
 }
 
 static void updatePxNDP_(MxMDL1Data &l1, MxNDP pxNDP)

@@ -41,9 +41,12 @@ namespace MxFutKeyJNI {
   };
 }
 
-MxFutKey MxFutKeyJNI::j2c(JNIEnv *env, jobject obj)
+MxFutKey MxFutKeyJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 {
-  return MxFutKey{env->CallIntMethod(obj, methods[0].mid)};
+  if (ZuUnlikely(!obj)) return MxFutKey();
+  MxFutKey key{env->CallIntMethod(obj, methods[0].mid)};
+  if (dlr) env->DeleteLocalRef(obj);
+  return key;
 }
 
 jobject MxFutKeyJNI::ctor(JNIEnv *env, const MxFutKey &key)

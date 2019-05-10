@@ -33,7 +33,8 @@ namespace MxMDPxLvlDataJNI {
   // MxMDPxLvlDataTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
     { "of",
-      "(Ljava/time/Instant;JIJ)Lcom/shardmx/mxmd/MxMDPxLvlDataTuple;" }
+      "(Ljava/time/Instant;JIJ)"
+      "Lcom/shardmx/mxmd/MxMDPxLvlDataTuple;" }
   };
 }
 

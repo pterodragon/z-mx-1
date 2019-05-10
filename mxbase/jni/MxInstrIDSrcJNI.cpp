@@ -43,6 +43,7 @@ namespace MxInstrIDSrcJNI {
 
 MxEnum MxInstrIDSrcJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 {
+  if (ZuUnlikely(!obj)) return MxEnum();
   MxEnum v = env->CallIntMethod(obj, methods[0].mid) - 1;
   if (dlr) env->DeleteLocalRef(obj);
   return v;

@@ -180,14 +180,9 @@ ZmRef<MxMDLibHandler> MxMDLibHandlerJNI::j2c(JNIEnv *env, jobject handler_)
 	env, env->CallObjectMethod(handler_, timerFn[0].mid)))
     handler->timerFn(
 	[fn = ZJNI::globalRef(env, fn)](MxDateTime stamp, MxDateTime &next_) {
-      if (JNIEnv *env = ZJNI::env()) {
-	jobject next = env->CallObjectMethod(
-	    fn, timerFn[1].mid, ZJNI::t2j(env, stamp));
-	if (!next)
-	  next_ = MxDateTime();
-	else
-	  next_ = ZJNI::j2t(env, next);
-      }
+      if (JNIEnv *env = ZJNI::env())
+	next_ = ZJNI::j2t(env, env->CallObjectMethod(
+	      fn, timerFn[1].mid, ZJNI::t2j(env, stamp)), true);
     });
 
   return handler;

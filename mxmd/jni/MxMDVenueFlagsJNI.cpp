@@ -25,8 +25,6 @@
 
 #include <ZJNI.hpp>
 
-#include <MxBase.hpp>
-
 #include <MxMDVenueFlagsJNI.hpp>
 
 namespace MxMDVenueFlagsJNI {
@@ -43,9 +41,11 @@ namespace MxMDVenueFlagsJNI {
   };
 }
 
-MxEnum MxMDVenueFlagsJNI::j2c(JNIEnv *env, jobject obj)
+MxEnum MxMDVenueFlagsJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 {
-  return env->CallIntMethod(obj, methods[0].mid);
+  MxEnum v = env->CallIntMethod(obj, methods[0].mid);
+  if (dlr) env->DeleteLocalRef(obj);
+  return v;
 }
 
 jobject MxMDVenueFlagsJNI::ctor(JNIEnv *env, MxEnum v)

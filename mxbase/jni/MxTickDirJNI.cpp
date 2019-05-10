@@ -25,8 +25,6 @@
 
 #include <ZJNI.hpp>
 
-#include <MxBase.hpp>
-
 #include <MxTickDirJNI.hpp>
 
 namespace MxTickDirJNI {
@@ -43,9 +41,11 @@ namespace MxTickDirJNI {
   };
 }
 
-MxEnum MxTickDirJNI::j2c(JNIEnv *env, jobject obj)
+MxEnum MxTickDirJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 {
-  return env->CallIntMethod(obj, methods[0].mid) - 1;
+  MxEnum v = env->CallIntMethod(obj, methods[0].mid) - 1;
+  if (dlr) env->DeleteLocalRef(obj);
+  return v;
 }
 
 jobject MxTickDirJNI::ctor(JNIEnv *env, MxEnum v)

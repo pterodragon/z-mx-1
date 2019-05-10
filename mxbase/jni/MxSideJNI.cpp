@@ -19,13 +19,9 @@
 
 // MxMD JNI
 
-#include <iostream>
-
 #include <jni.h>
 
 #include <ZJNI.hpp>
-
-#include <MxBase.hpp>
 
 #include <MxSideJNI.hpp>
 
@@ -43,9 +39,11 @@ namespace MxSideJNI {
   };
 }
 
-MxEnum MxSideJNI::j2c(JNIEnv *env, jobject obj)
+MxEnum MxSideJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 {
-  return env->CallIntMethod(obj, methods[0].mid) - 1;
+  MxEnum v = env->CallIntMethod(obj, methods[0].mid) - 1;
+  if (dlr) env->DeleteLocalRef(obj);
+  return v;
 }
 
 jobject MxSideJNI::ctor(JNIEnv *env, MxEnum v)

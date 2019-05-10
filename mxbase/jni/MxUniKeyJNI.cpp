@@ -73,9 +73,9 @@ MxUniKey MxUniKeyJNI::j2c(JNIEnv *env, jobject obj)
   }
   MxValue strike = env->CallLongMethod(obj, methods[6].mid);
   return MxUniKey{
-    ZJNI::j2s_ZuStringN<MxIDStrSize>(env, id),
-    ZJNI::j2s_ZuStringN<8>(env, venue),
-    ZJNI::j2s_ZuStringN<8>(env, segment),
+    ZJNI::j2s_ZuStringN<MxIDStrSize>(env, id, true),
+    ZJNI::j2s_ZuStringN<8>(env, venue, true),
+    ZJNI::j2s_ZuStringN<8>(env, segment, true),
     src, mat, putCall, strike};
 }
 

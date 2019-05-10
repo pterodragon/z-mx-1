@@ -152,8 +152,8 @@ public:
 };
 template <> class ZtDate_time_t<8> {
 public:
-  ZuInline static constexpr bool isMinimum(int64_t t) { return false; }
-  ZuInline static constexpr bool isMaximum(int64_t t) { return false; }
+  ZuInline static constexpr bool isMinimum(int64_t) { return false; }
+  ZuInline static constexpr bool isMaximum(int64_t) { return false; }
   ZuInline static int64_t time(int julian, int second) {
     if (julian == ZtDate_NullJulian) return 0;
     return ((int64_t)julian - (int64_t)2440588) * (int64_t)86400 +
@@ -388,8 +388,8 @@ public:
     ctor(hour, minute, sec, nsec);
   }
 
-  // the tz parameter in the following ctors can be 0 for GMT, "" for the
-  // local timezone (as obtained by tzset()), or a specific timezone
+  // the tz parameter in the following ctors can be 0/nullptr for GMT, "" for
+  // the local timezone (as obtained by tzset()), or a specific timezone
   // name - the passed in date/time is converted from the date/time
   // in the specified timezone to the internal GMT representation
 

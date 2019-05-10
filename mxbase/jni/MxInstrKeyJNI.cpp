@@ -54,13 +54,9 @@ MxInstrKey MxInstrKeyJNI::j2c(JNIEnv *env, jobject obj)
   jstring segment = (jstring)(env->CallObjectMethod(obj, methods[2].mid));
 
   MxInstrKey key{
-    ZJNI::j2s_ZuStringN<MxIDStrSize>(env, id),
-    ZJNI::j2s_ZuStringN<8>(env, venue),
-    ZJNI::j2s_ZuStringN<8>(env, segment)};
-
-  env->DeleteLocalRef(id);
-  env->DeleteLocalRef(venue);
-  env->DeleteLocalRef(segment);
+    ZJNI::j2s_ZuStringN<MxIDStrSize>(env, id, true),
+    ZJNI::j2s_ZuStringN<8>(env, venue, true),
+    ZJNI::j2s_ZuStringN<8>(env, segment, true)};
 
   return key;
 }

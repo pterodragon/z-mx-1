@@ -66,7 +66,7 @@ extern "C" {
   MxMDExtern jint JNI_OnLoad(JavaVM *, void *);
 }
 
-jint JNI_OnLoad(JavaVM *jvm, void *)
+MxMDExtern jint JNI_OnLoad(JavaVM *jvm, void *)
 {
   // std::cout << "JNI_OnLoad()\n" << std::flush;
 
@@ -79,7 +79,7 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
   return v;
 }
 
-int MxMDJNI::bind(JNIEnv *env)
+MxMDExtern int MxMDJNI::bind(JNIEnv *env)
 {
   if (MxBaseJNI::bind(env) < 0) return -1;
 
@@ -159,6 +159,4 @@ void MxMDJNI::final(JNIEnv *env)
   MxMDOrderIDScopeJNI::final(env);
 
   MxBaseJNI::final(env);
-
-  ZJNI::final(env);
 }

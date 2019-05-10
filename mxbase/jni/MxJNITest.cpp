@@ -114,8 +114,8 @@ static jboolean helloWorld(JNIEnv *env, jobject obj, jstring text)
   ZJNI::env(env);
 
   {
-    ZtDate t(ZtDate::Now);
-    if (t != ZJNI::j2t(env, ZJNI::t2j(env, t))) return false;
+    ZtDate now{ZtDate::Now};
+    if (now != ZJNI::j2t(env, ZJNI::t2j(env, now))) return false;
     std::cout << "ZtDate / Instant conversion ok\n" << std::flush;
   }
 

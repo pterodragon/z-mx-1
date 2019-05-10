@@ -46,7 +46,7 @@ class MxMDAPI MxMDTelemetry : public ZmPolymorph, public MxTelemetry::Server {
   typedef ZmReadGuard<Lock> ReadGuard;
 
 public:
-  MxMDTelemetry() : m_time(ZmTime::Now) { }
+  MxMDTelemetry() : m_time{ZmTime::Now} { }
 
   void init(MxMDCore *core, ZvCf *cf);
   void final();

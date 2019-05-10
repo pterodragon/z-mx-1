@@ -366,7 +366,7 @@ void publish()
 	  // generate random last traded price
 
 	  MxMDL1Data l1Data;
-	  l1Data.stamp = MxDateTime(MxDateTime::Now);
+	  l1Data.stamp = MxNow();
 
 	  l1Data.last = MxValNDP{ZmRand::randExc(90) + 10, 2}.value; // 10-100
 	  l1Data.lastQty = 10;
@@ -424,7 +424,7 @@ void publish()
       }
 
     // wait one second between ticks
-    } while (sem.timedwait(ZmTime(ZmTime::Now, 1)) < 0);
+    } while (sem.timedwait(ZmTimeNow(1)) < 0);
 
   } catch (const ZtString &s) {
     ZeLOG(Error, s);

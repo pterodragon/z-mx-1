@@ -54,7 +54,7 @@ private:
 
     thread_local ZtDate::CSVFmt nowFmt;
 
-    ZtDate now(ZtDate::Now);
+    ZtDate now{ZtDate::Now};
 
     switch ((int)msg->hdr().type) {
       default:

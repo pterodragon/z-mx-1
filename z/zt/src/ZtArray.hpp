@@ -257,7 +257,7 @@ public:
     }
   }
   ZuInline ZtArray(std::initializer_list<T> a) {
-    shadow_(a.begin(), a.size());
+    copy_(a.begin(), a.size());
   }
 
   template <typename A> ZuInline ZtArray(A &&a) { ctor(ZuFwd<A>(a)); }
@@ -346,7 +346,10 @@ public:
   ZuInline ZtArray &operator =(const A &a) { assign(a); return *this; }
 
   ZuInline ZtArray &operator =(std::initializer_list<T> a) {
-    shadow_(a.begin(), a.size());
+    uint32_t oldLength = 0;
+    T *oldData = free_1(oldLength);
+    copy_(a.begin(), a.size());
+    free_2(oldData, oldLength);
     return *this;
   }
 

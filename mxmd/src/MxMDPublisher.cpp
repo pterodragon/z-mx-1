@@ -207,7 +207,7 @@ void MxMDPubLink::disconnect_1()
 
   if (m_tcpTbl) {
     auto i = m_tcpTbl->readIterator();
-    while (TCP *tcp = i.iterateKey()) tcp->disconnect();
+    while (TCP *tcp = i.iterateKey()) tcp->linkDisconnect();
   }
 
   txRun([](Tx *tx) {
@@ -308,12 +308,16 @@ void MxMDPubLink::tcpConnected(MxMDPubLink::TCP *tcp)
 {
   linkINFO("MxMDPubLink::tcpConnected(" << id << ") " <<
       tcp->info().remoteIP << ':' << ZuBoxed(tcp->info().remotePort));
-
   m_tcpTbl->add(tcp);
 }
 
 // TCP disconnect
 
+void MxMDPubLink::TCP::linkDisconnect()
+{
+  m_state = State::LinkDisconnect;
+  ZiConnection::disconnect();
+}
 void MxMDPubLink::TCP::disconnect()
 {
   m_state = State::Disconnect;
@@ -327,7 +331,7 @@ void MxMDPubLink::TCP::close()
 void MxMDPubLink::TCP::disconnected()
 {
   mx()->del(&m_loginTimer);
-  if (m_state != State::Disconnect) {
+  if (m_state != State::LinkDisconnect) {
     // tcpERROR(this, 0, "TCP disconnected");
     m_link->engine()->rxRun(ZmFn<>{ZmMkRef(this), [](ZmRef<TCP> tcp) {
       tcp->link()->tcpDisconnected(tcp);
@@ -336,7 +340,7 @@ void MxMDPubLink::TCP::disconnected()
 }
 void MxMDPubLink::tcpDisconnected(MxMDPubLink::TCP *tcp)
 {
-  if (m_tcpTbl) m_tcpTbl->del(tcp->info().socket);
+  if (m_tcpTbl) m_tcpTbl->del(tcp);
 }
 
 // TCP login, recv
@@ -820,15 +824,9 @@ void MxMDPubLink::status(ZtString &out)
     auto i = tcpTbl->readIterator();
     while (TCP *tcp = i.iterateKey()) {
       const ZiCxnInfo &info = tcp->info();
-      out << "  TCP " <<
-	info.remoteIP << ':' << ZuBoxed(info.remotePort) << ' ';
-      switch (tcp->state()) {
-	case TCP::State::Login: out << "Login"; break;
-	case TCP::State::Sending: out << "Sending"; break;
-	case TCP::State::Disconnect: out << "Disconnect"; break;
-	default: out << "Unknown"; break;
-      }
-      out << '\n';
+      out << "  TCP "
+	<< info.remoteIP << ':' << ZuBoxed(info.remotePort) << ' '
+	<< TCP::State::name(tcp->state()) << '\n';
     }
   } else {
     out << "  TCP Disconnected\n";

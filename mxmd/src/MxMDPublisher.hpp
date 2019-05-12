@@ -137,18 +137,21 @@ class MxMDAPI MxMDPubLink : public MxLink<MxMDPubLink> {
 friend class TCP;
   class TCP : public ZiConnection {
   public:
-    struct SocketAccessor : public ZuAccessor<TCP *, ZiPlatform::Socket> {
-      inline static ZiPlatform::Socket value(const TCP *tcp) {
-	return tcp->info().socket;
-      }
-    };
-
     struct State {
       enum _ {
 	Login = 0,
 	Sending,
-	Disconnect
+	Disconnect,
+	LinkDisconnect,
+	N
       };
+      static const char *name(int i) {
+	static const char *const names[] = {
+	  "Login", "Sending", "Disconnect", "LinkDisconnect"
+	};
+	if (ZuUnlikely(i < 0 || i >= N)) return "Unknown";
+	return names[i];
+      }
     };
 
     TCP(MxMDPubLink *link, const ZiCxnInfo &ci);
@@ -159,6 +162,7 @@ friend class TCP;
 
     void connected(ZiIOContext &);
     void close();
+    void linkDisconnect();
     void disconnect();
     void disconnected();
 
@@ -184,10 +188,9 @@ friend class TCP;
     inline static const char *id() { return "MxMDPublisher.TCP"; }
   };
   typedef ZmHash<TCP *,
-	    ZmHashIndex<TCP::SocketAccessor,
-	      ZmHashLock<ZmNoLock,
-		ZmHashObject<ZuObject,
-		  ZmHashHeapID<TCP_HeapID> > > > > TCPTbl;
+	    ZmHashLock<ZmNoLock,
+	      ZmHashObject<ZuObject,
+		ZmHashHeapID<TCP_HeapID> > > > TCPTbl;
 
   class UDP;
 friend class UDP;

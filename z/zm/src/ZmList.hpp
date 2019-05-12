@@ -320,7 +320,7 @@ friend class ReadIterator;
     return node;
   }
   template <typename Index_>
-  inline typename ZuNotConvertible<Index_, NodeRef, NodeRef>::T
+  inline typename ZuNotConvertible<Index_, Node *, NodeRef>::T
       del(const Index_ &index) {
     Guard guard(m_lock);
     Node *node;
@@ -336,10 +336,7 @@ friend class ReadIterator;
     NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
     return ZuMv(*ptr);
   }
-  template <typename NodeRef_>
-  inline typename ZuConvertible<NodeRef_, NodeRef, NodeRef>::T
-      del(const NodeRef_ &node_) {
-    const NodeRef &node = node_;
+  inline NodeRef del(Node *node) {
     Guard guard(m_lock);
 
     if (ZuLikely(node)) del_(node);

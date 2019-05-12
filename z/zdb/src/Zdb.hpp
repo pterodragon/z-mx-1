@@ -79,6 +79,10 @@ typedef uint64_t ZdbRN;		// record ID
 #define ZdbNullRN (~((uint64_t)0))
 #define ZdbMaxRN ZdbNullRN
 
+#define ZdbFileRecs	16384
+#define ZdbFileShift	14
+#define ZdbFileMask	0x3fffU
+
 namespace ZdbOp {
   enum { New = 0, Update, Delete };
   inline static const char *name(int op) {
@@ -190,22 +194,28 @@ class Zdb_File_ : public ZmPolymorph, public ZiFile {
 friend struct Zdb_File_IndexAccessor;
 
 public:
-  inline Zdb_File_(unsigned index, unsigned fileRecs) : m_index(index) {
-    m_undeleted.set(ZmBitmap::Range(0, fileRecs - 1));
+  inline Zdb_File_(unsigned index) : m_index(index) {
+    memset((void *)m_undeleted, 0xff, ZdbFileRecs>>3);
   }
 
   ZuInline unsigned index() const { return m_index; }
 
   ZuInline bool del(unsigned i) {
-    m_undeleted.clr(i);
-    return !m_undeleted;
+    uint64_t m = (((uint64_t)1)<<(i & 63U));
+    unsigned o = i>>6U;
+    if (m_undeleted[o] & m) {
+      --m_undelCount;
+      m_undeleted[o] &= ~m;
+    }
+    return !m_undelCount;
   }
 
   void checkpoint() { sync(); }
 
 private:
   unsigned	m_index = 0;
-  ZmBitmap	m_undeleted;
+  unsigned	m_undelCount = ZdbFileRecs;
+  uint64_t	m_undeleted[ZdbFileRecs>>6];
 };
 
 typedef ZmList<Zdb_File_,
@@ -686,7 +696,6 @@ private:
   unsigned			m_recSize = 0;
   unsigned			m_dataSize = 0;
   Lock				m_lock;
-    unsigned			  m_fileRecs;
     ZdbRN			  m_minRN = ZdbMaxRN;
     ZdbRN			  m_allocRN = 0;
     ZdbRN			  m_fileRN = 0;

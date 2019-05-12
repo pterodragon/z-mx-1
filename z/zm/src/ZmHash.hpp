@@ -810,7 +810,7 @@ private:
 
 public:
   template <typename Index__>
-  inline typename ZuNotConvertible<Index__, NodeRef, NodeRef>::T
+  inline typename ZuNotConvertible<Index__, Node *, NodeRef>::T
       del(const Index__ &index) {
     uint32_t code = IHashFn::hash(index);
     Guard guard(lockCode(code));

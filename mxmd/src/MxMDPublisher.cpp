@@ -212,7 +212,7 @@ void MxMDPubLink::disconnect_1()
 
   txRun([](Tx *tx) {
     tx->stop(); // stop sending
-    tx->app()->disconnect_2();
+    tx->impl()->disconnect_2();
   });
 }
 
@@ -461,7 +461,7 @@ void MxMDPubLink::udpConnected(MxMDPubLink::UDP *udp)
   if (ZuUnlikely(m_udp)) m_udp->disconnect();
   m_udp = udp;
   txRun([](Tx *tx) {
-    tx->app()->udpConnected_2();
+    tx->impl()->udpConnected_2();
     tx->start();
   });
 }
@@ -543,7 +543,7 @@ void MxMDPubLink::udpReceived(const MxMDStream::ResendReq &resendReq)
   MxQueue::Gap gap{resendReq.seqNo, resendReq.count};
   txRun([gap](Tx *tx) {
     if (gap.key() < tx->txQueue()->head()) return;
-    if (gap.length() > tx->app()->engine()->reReqMaxGap()) return;
+    if (gap.length() > tx->impl()->engine()->reReqMaxGap()) return;
     tx->resend(gap);
   });
 }
@@ -553,7 +553,7 @@ void MxMDPubLink::udpReceived(const MxMDStream::ResendReq &resendReq)
 void MxMDPubLink::snap(ZmRef<TCP> tcp)
 {
   txRun([tcp = ZuMv(tcp)](Tx *tx) mutable {
-    tx->app()->mx()->run(tx->app()->engine()->snapThread(),
+    tx->impl()->mx()->run(tx->impl()->engine()->snapThread(),
 	ZmFn<>{ZuMv(tcp),
 	  [seqNo = tx->txQueue()->tail()](MxMDPubLink::TCP *tcp) {
 	    tcp->snap(seqNo);

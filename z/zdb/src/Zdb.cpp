@@ -1725,6 +1725,15 @@ void ZdbAny::checkpoint_()
     file->checkpoint();
 }
 
+ZmRef<ZdbAnyPOD> ZdbAny::placeholder()
+{
+  ZmRef<ZdbAnyPOD> pod;
+  alloc(pod);
+  if (ZuUnlikely(!pod)) return nullptr;
+  pod->placeholder();
+  return pod;
+}
+
 ZmRef<ZdbAnyPOD> ZdbAny::push()
 {
   if (ZuUnlikely(!m_env->active())) {
@@ -1872,7 +1881,9 @@ ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *prev)
     rn = m_allocRN++;
   }
   memcpy(pod->ptr(), prev->ptr(), m_dataSize);
-  pod->update(rn, prev->rn(), ZdbRange{0, m_dataSize});
+  ZdbRN prevRN = prev->rn();
+  if (ZuUnlikely(prevRN == ZdbNullRN)) prevRN = rn;
+  pod->update(rn, prevRN, ZdbRange{0, m_dataSize});
   return pod;
 }
 
@@ -1888,7 +1899,9 @@ ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *prev, ZdbRN rn)
     m_allocRN = rn + 1;
   }
   memcpy(pod->ptr(), prev->ptr(), m_dataSize);
-  pod->update(rn, prev->rn(), ZdbRange{0, m_dataSize});
+  ZdbRN prevRN = prev->rn();
+  if (ZuUnlikely(prevRN == ZdbNullRN)) prevRN = rn;
+  pod->update(rn, prevRN, ZdbRange{0, m_dataSize});
   return pod;
 }
 

@@ -128,7 +128,7 @@ void MxMDRecLink::update(ZvCf *cf)
 
 void MxMDRecLink::reset(MxSeqNo rxSeqNo, MxSeqNo)
 {
-  rxInvoke([rxSeqNo](Rx *rx) { rx->rxReset(rx->app()->m_seqNo = rxSeqNo); });
+  rxInvoke([rxSeqNo](Rx *rx) { rx->rxReset(rx->impl()->m_seqNo = rxSeqNo); });
 }
 
 #define fileERROR(path__, code) \
@@ -199,11 +199,11 @@ void MxMDRecLink::connect()
 
   mx()->wakeFn(engine()->rxThread(),
       ZmFn<>{this, [](MxMDRecLink *link) {
-	link->rxRun_([](Rx *rx) { rx->app()->recv(rx); });
+	link->rxRun_([](Rx *rx) { rx->impl()->recv(rx); });
 	link->wake();
       }});
 
-  rxRun_([](Rx *rx) { rx->app()->recv(rx); });
+  rxRun_([](Rx *rx) { rx->impl()->recv(rx); });
 }
 
 void MxMDRecLink::disconnect()

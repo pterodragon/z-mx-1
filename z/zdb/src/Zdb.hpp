@@ -350,6 +350,13 @@ public:
   }
 
 private:
+  inline void placeholder() {
+    ZdbTrailer *trailer = this->trailer();
+    trailer->rn = trailer->prevRN = ZdbNullRN;
+    trailer->magic = ZdbAllocated;
+    this->range(ZdbRange{});
+  }
+
   inline void init(ZdbRN rn, ZdbRange range,
       uint32_t magic = ZdbAllocated) {
     ZdbTrailer *trailer = this->trailer();
@@ -575,6 +582,9 @@ public:
   inline ZdbRN minRN() { return m_minRN; }
   // next RN that will be allocated
   inline ZdbRN allocRN() { return m_allocRN; }
+
+  // create new placeholder record (null RN, in-memory only, never in DB)
+  ZmRef<ZdbAnyPOD> placeholder();
 
   // create new record
   ZmRef<ZdbAnyPOD> push();

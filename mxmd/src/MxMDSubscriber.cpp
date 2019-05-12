@@ -532,7 +532,7 @@ void MxMDSubLink::udpReceived(ZmRef<MxQMsg> msg)
     }
   }
   received(ZuMv(msg), [](Rx *rx) {
-    auto link = rx->app();
+    auto link = rx->impl();
     link->active();
     if (ZuUnlikely(rx->rxQueue()->count() > link->engine()->maxQueueSize())) {
       link->rxQueueTooBig(

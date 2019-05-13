@@ -498,8 +498,10 @@ struct ZdbConfig {
   inline ZdbConfig(ZuString name_, ZvCf *cf) {
     name = name_;
     path = cf->get("path", true);
+#if 0
     fileSize = cf->getInt("fileSize",
 	((int32_t)4)<<10, ((int32_t)1)<<30, false, 0); // range: 4K to 1G
+#endif
     preAlloc = cf->getInt("preAlloc", 0, 10<<24, false, 0);
     repMode = cf->getInt("repMode", 0, 1, false, 0);
     compress = cf->getInt("compress", 0, 1, false, 0);
@@ -509,7 +511,7 @@ struct ZdbConfig {
 
   ZtString		name;
   ZtString		path;
-  unsigned		fileSize = 0;
+  // unsigned		fileSize = 0;
   unsigned		preAlloc = 0;	// #records to pre-allocate
   uint8_t		repMode = 0;	// 0 - deferred, 1 - in put()
   bool			compress = false;
@@ -705,6 +707,7 @@ private:
   ZdbHandler			m_handler;
   unsigned			m_recSize = 0;
   unsigned			m_dataSize = 0;
+  unsigned			m_fileSize = 0;
   Lock				m_lock;
     ZdbRN			  m_minRN = ZdbMaxRN;
     ZdbRN			  m_allocRN = 0;

@@ -1323,9 +1323,9 @@ public:
     bool scheduleArchive;
     {
       Guard guard(m_lock);
-      ZmAssert(key <= m_sendKey); // FIXME
       m_ackdKey = key;
-      scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey;
+      if (key > m_sendKey) m_sendKey = key;
+      scheduleArchive = !m_archiving && key > m_archiveKey;
       if (scheduleArchive) m_archiving = true;
     }
     if (scheduleArchive) app->scheduleArchive();

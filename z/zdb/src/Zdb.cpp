@@ -1432,7 +1432,7 @@ ZdbAny::ZdbAny(ZdbEnv *env, ZuString name, uint32_t version, int cacheMode,
 	"Zdb misconfiguration for DB " << name << " - ZdbEnv::add() failed");
     return;
   }
-  m_config->fileSize = ((uint64_t)m_recSize)<<ZdbFileShift;
+  m_fileSize = ((uint64_t)m_recSize)<<ZdbFileShift;
 }
 
 ZdbAny::~ZdbAny()
@@ -1484,7 +1484,7 @@ bool ZdbAny::recover()
       }
       {
 	Schema f{
-	  ZdbSchema, m_version, m_config->fileSize, m_recSize, m_dataSize};
+	  ZdbSchema, m_version, m_fileSize, m_recSize, m_dataSize};
 	ZiFile::Path sName = ZiFile::append(m_config->path, "schema");
 	ZiFile sFile;
 	if (sFile.open(sName, ZiFile::Create | ZiFile::GC,
@@ -1502,7 +1502,7 @@ bool ZdbAny::recover()
       return true;
     }
     {
-      Schema p{ZdbSchema, m_version, m_config->fileSize, m_recSize, m_dataSize};
+      Schema p{ZdbSchema, m_version, m_fileSize, m_recSize, m_dataSize};
       Schema f;
       ZiFile::Path sName = ZiFile::append(m_config->path, "schema");
       ZiFile sFile;
@@ -1606,7 +1606,7 @@ bool ZdbAny::recover()
       fileName = ZiFile::append(subName, fileName_);
       ZmRef<Zdb_File> file = new Zdb_File(index);
       if (file->open(
-	    fileName, ZiFile::GC, 0666, m_config->fileSize, &e) != Zi::OK) {
+	    fileName, ZiFile::GC, 0666, m_fileSize, &e) != Zi::OK) {
 	ZeLOG(Error, ZtString() << fileName << ": " << e);
 	continue;
       }
@@ -1960,7 +1960,7 @@ void ZdbAny::telemetry(Telemetry &data) const
 {
   data.path = m_config->path;
   data.name = m_config->name;
-  data.fileSize = m_config->fileSize;
+  data.fileSize = m_fileSize;
   data.id = m_id;
   data.preAlloc = m_config->preAlloc;
   data.recSize = m_recSize;
@@ -2047,14 +2047,14 @@ ZmRef<Zdb_File> ZdbAny::openFile(unsigned index, bool create)
   if (create) ZiFile::mkdir(name); // pre-emptive idempotent
   name = fileName(name, index);
   ZmRef<Zdb_File> file = new Zdb_File(index);
-  if (file->open(name, ZiFile::GC, 0666, m_config->fileSize, 0) == Zi::OK) {
+  if (file->open(name, ZiFile::GC, 0666, m_fileSize, 0) == Zi::OK) {
     scan(file);
     return file;
   }
   if (!create) return nullptr;
   ZeError e;
   if (file->open(name, ZiFile::Create | ZiFile::GC,
-	0666, m_config->fileSize, &e) != Zi::OK) {
+	0666, m_fileSize, &e) != Zi::OK) {
     ZeLOG(Fatal, ZtString() <<
 	"Zdb could not open or create \"" << name << "\": " << e);
     return nullptr; 

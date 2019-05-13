@@ -36,8 +36,8 @@ namespace MxOptKeyJNI {
 
   // MxOptKeyTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "of",
-      "(ILcom/shardmx/mxbase/MxPutCall;J)"
+    { "of", "("
+      "ILcom/shardmx/mxbase/MxPutCall;J)"
       "Lcom/shardmx/mxbase/MxOptKeyTuple;" }
   };
 
@@ -49,15 +49,14 @@ namespace MxOptKeyJNI {
   };
 }
 
-MxOptKey MxOptKeyJNI::j2c(JNIEnv *env, jobject obj)
+MxOptKey MxOptKeyJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 {
+  if (ZuUnlikely(!obj)) return MxOptKey();
   unsigned mat = env->CallIntMethod(obj, methods[0].mid);
-  MxEnum putCall;
-  if (jobject pcObj = env->CallObjectMethod(obj, methods[1].mid)) {
-    putCall = MxPutCallJNI::j2c(env, pcObj);
-    env->DeleteLocalRef(pcObj);
-  }
+  MxEnum putCall = MxPutCallJNI::j2c(env,
+      env->CallObjectMethod(obj, methods[1].mid), true);
   MxValue strike = env->CallLongMethod(obj, methods[2].mid);
+  if (dlr) env->DeleteLocalRef(obj);
   return MxOptKey{mat, putCall, strike};
 }
 

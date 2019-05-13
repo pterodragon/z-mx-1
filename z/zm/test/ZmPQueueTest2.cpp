@@ -183,9 +183,11 @@ int main()
   // a.runDequeue();
   // a.runReRequest();
 
+  a.startQueuing();
   send(a, 1, 1);
   send(a, 2, 2);
   send(a, 4, 1);
+  a.stopQueuing(1);
 
   send(a, 7, 1);
   send(a, 8, 2);

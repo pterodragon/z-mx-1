@@ -34,11 +34,11 @@ namespace MxMDSegmentJNI {
 
   // MxMDSegmentTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "of",
-      "(Ljava/lang/String;"
+    { "of", "("
+      "Ljava/lang/String;"
       "Lcom/shardmx/mxbase/MxTradingSession;"
-      "Ljava/time/Instant;)"
-      "Lcom/shardmx/mxmd/MxMDSegmentTuple;" }
+      "Ljava/time/Instant;"
+      ")Lcom/shardmx/mxmd/MxMDSegmentTuple;" }
   };
 }
 

@@ -25,8 +25,6 @@
 
 #include <ZJNI.hpp>
 
-#include <MxBase.hpp>
-
 #include <MxMDSeverityJNI.hpp>
 
 namespace MxMDSeverityJNI {
@@ -43,9 +41,12 @@ namespace MxMDSeverityJNI {
   };
 }
 
-MxEnum MxMDSeverityJNI::j2c(JNIEnv *env, jobject obj)
+MxEnum MxMDSeverityJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 {
-  return env->CallIntMethod(obj, methods[0].mid) - 1;
+  if (ZuUnlikely(!obj)) return MxEnum();
+  MxEnum v= env->CallIntMethod(obj, methods[0].mid) - 1;
+  if (dlr) env->DeleteLocalRef(obj);
+  return v;
 }
 
 jobject MxMDSeverityJNI::ctor(JNIEnv *env, MxEnum v)

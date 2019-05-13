@@ -19,8 +19,6 @@
 
 // MxMD JNI
 
-#include <iostream>
-
 #include <jni.h>
 
 #include <ZJNI.hpp>

@@ -34,8 +34,8 @@ namespace MxMDL1DataJNI {
 
   // MxMDL1DataTuple named constructor
   ZJNI::JavaMethod ctorMethod[] = {
-    { "of",
-      "(Ljava/time/Instant;"		// stamp
+    { "of", "("
+      "Ljava/time/Instant;"		// stamp
       "I"				// pxNDP
       "I"				// qtyNDP
       "Lcom/shardmx/mxbase/MxTickDir;"	// tickDir

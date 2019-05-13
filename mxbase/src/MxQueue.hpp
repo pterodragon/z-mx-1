@@ -112,7 +112,7 @@ typedef MxQueue::Gap MxQGap;
 
 // CRTP - application must conform to the following interface:
 #if 0
-struct App : public MxQueueRx<App> {
+struct Impl : public MxQueueRx<Impl> {
   void process(MxQMsg *);		// rx process
 
   void scheduleDequeue();
@@ -127,9 +127,9 @@ struct App : public MxQueueRx<App> {
 };
 #endif
 
-template <class App, class Lock_ = ZmNoLock>
-class MxQueueRx : public ZmPQRx<App, MxQueue, Lock_> {
-  typedef ZmPQRx<App, MxQueue, Lock_> Rx;
+template <class Impl, class Lock_ = ZmNoLock>
+class MxQueueRx : public ZmPQRx<Impl, MxQueue, Lock_> {
+  typedef ZmPQRx<Impl, MxQueue, Lock_> Rx;
 
 public:
   typedef Lock_ Lock;
@@ -137,8 +137,8 @@ public:
 
   ZuInline MxQueueRx() : m_queue(new MxQueue(MxSeqNo())) { }
   
-  ZuInline const App *app() const { return static_cast<const App *>(this); }
-  ZuInline App *app() { return static_cast<App *>(this); }
+  ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
+  ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
   ZuInline const MxQueue *rxQueue() const { return m_queue; }
   ZuInline MxQueue *rxQueue() { return m_queue; }
@@ -154,11 +154,11 @@ private:
 
 #define MxQueueMaxPools 8	// max #pools a tx queue can be a member of
 
-template <class App, class Lock> class MxQueueTxPool;
+template <class Impl, class Lock> class MxQueueTxPool;
 
 // CRTP - application must conform to the following interface:
 #if 0
-struct App : public MxQueueTx<App> {
+struct Impl : public MxQueueTx<Impl> {
   void archive_(MxQMsg *);		// tx archive (persistent)
   ZmRef<MxQMsg> retrieve_(MxSeqNo);	// tx retrieve
 
@@ -192,7 +192,7 @@ struct App : public MxQueueTx<App> {
   bool resendGap_(const MxQueue::Gap &gap, bool more);
 };
 
-struct App : public MxQueueTxPool<App> {
+struct Impl : public MxQueueTxPool<Impl> {
   // Note: below member functions have same signature as above
   void scheduleSend();
   void rescheduleSend();
@@ -213,10 +213,10 @@ struct App : public MxQueueTxPool<App> {
 };
 #endif
 
-template <class App, class Lock_ = ZmNoLock>
-class MxQueueTx : public ZmPQTx<App, MxQueue, Lock_> {
-  typedef ZmPQTx<App, MxQueue, Lock_> Tx;
-  typedef MxQueueTxPool<App, Lock_> Pool;
+template <class Impl, class Lock_ = ZmNoLock>
+class MxQueueTx : public ZmPQTx<Impl, MxQueue, Lock_> {
+  typedef ZmPQTx<Impl, MxQueue, Lock_> Tx;
+  typedef MxQueueTxPool<Impl, Lock_> Pool;
 
   typedef ZuArrayN<Pool *, MxQueueMaxPools> Pools;
 
@@ -231,8 +231,8 @@ protected:
 public:
   ZuInline MxQueueTx() : m_queue(new MxQueue(MxSeqNo())) { }
 
-  ZuInline const App *app() const { return static_cast<const App *>(this); }
-  ZuInline App *app() { return static_cast<App *>(this); }
+  ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
+  ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
   ZuInline const MxSeqNo txSeqNo() const { return m_seqNo; }
 
@@ -244,24 +244,24 @@ public:
   }
 
   ZuInline void send() { Tx::send(); }
-  void send(MxQMsg *msg) {
+  void send(ZmRef<MxQMsg> msg) {
     if (ZuUnlikely(msg->flags & (1<<MxQFlags::NoQueue))) {
       Guard guard(m_lock);
       if (ZuUnlikely(!m_ready)) {
 	guard.unlock();
-	app()->aborted_(msg);
+	impl()->aborted_(ZuMv(msg));
 	return;
       }
     }
-    msg->load(MxMsgID{app()->id(), m_seqNo++});
-    app()->loaded_(msg);
-    Tx::send(msg);
+    msg->load(MxMsgID{impl()->id(), m_seqNo++});
+    impl()->loaded_(msg);
+    Tx::send(ZuMv(msg));
   }
   void abort(MxSeqNo seqNo) {
     ZmRef<MxQMsg> msg = Tx::abort(seqNo);
     if (msg) {
-      app()->aborted_(msg);
-      app()->unloaded_(msg);
+      impl()->aborted_(msg);
+      impl()->unloaded_(msg);
       msg->unload();
     }
   }
@@ -269,7 +269,7 @@ public:
   // unload all messages from queue
   void unload(ZmFn<MxQMsg *> fn) {
     while (ZmRef<MxQMsg> msg = m_queue->shift()) {
-      app()->unloaded_(msg);
+      impl()->unloaded_(msg);
       msg->unload();
       fn(msg);
     }
@@ -321,14 +321,14 @@ private:
     ZmTime		  m_ready;
 };
 
-template <class App, class Lock_ = ZmNoLock>
-class MxQueueTxPool : public MxQueueTx<App, Lock_> {
+template <class Impl, class Lock_ = ZmNoLock>
+class MxQueueTxPool : public MxQueueTx<Impl, Lock_> {
   struct Queues_HeapID {
     inline static const char *id() { return "MxQueueTxPool.Queues"; }
   };
 
   typedef MxQueue::Gap Gap;
-  typedef MxQueueTx<App, Lock_> Tx;
+  typedef MxQueueTx<Impl, Lock_> Tx;
 
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
@@ -340,7 +340,7 @@ class MxQueueTxPool : public MxQueueTx<App, Lock_> {
 		  ZmRBTreeHeapID<Queues_HeapID> > > > > Queues;
 
 public:
-  ZuInline void loaded_(MxQMsg *) { }   // may be overridden by App
+  ZuInline void loaded_(MxQMsg *) { }   // may be overridden by Impl
   ZuInline void unloaded_(MxQMsg *) { } // ''
 
   bool send_(MxQMsg *msg, bool more) {
@@ -375,7 +375,7 @@ public:
       if (m_queues.count() == 1) {
 	Tx::ready_(next);
 	guard.unlock();
-	this->app()->scheduleSend();
+	this->impl()->scheduleSend();
 	return;
       }
     } else {
@@ -396,8 +396,8 @@ public:
   Queues	m_queues;	// guarded by Tx::lock()
 };
 
-template <class App, class Lock_>
-void MxQueueTx<App, Lock_>::ready_(ZmTime next)
+template <class Impl, class Lock_>
+void MxQueueTx<Impl, Lock_>::ready_(ZmTime next)
 {
   unsigned i, n = m_pools.length();
   unsigned o = (m_poolOffset = (m_poolOffset + 1) % n);
@@ -406,8 +406,8 @@ void MxQueueTx<App, Lock_>::ready_(ZmTime next)
   m_ready = next;
 }
 
-template <class App, class Lock_>
-void MxQueueTx<App, Lock_>::unready_()
+template <class Impl, class Lock_>
+void MxQueueTx<Impl, Lock_>::unready_()
 {
   unsigned i, n = m_pools.length();
   unsigned o = (m_poolOffset = (m_poolOffset + 1) % n);

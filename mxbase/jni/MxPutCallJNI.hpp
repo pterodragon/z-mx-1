@@ -33,7 +33,7 @@
 #include <MxBase.hpp>
 
 namespace MxPutCallJNI {
-  MxBaseExtern MxEnum j2c(JNIEnv *, jobject);
+  MxBaseExtern MxEnum j2c(JNIEnv *, jobject, bool dlr = false);
   MxBaseExtern jobject ctor(JNIEnv *, MxEnum);
   int bind(JNIEnv *);
   void final(JNIEnv *);

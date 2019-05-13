@@ -33,7 +33,7 @@
 #include <MxBase.hpp>
 
 namespace MxUniKeyJNI {
-  MxBaseExtern MxUniKey j2c(JNIEnv *, jobject);
+  MxBaseExtern MxUniKey j2c(JNIEnv *, jobject, bool dlr = false);
   MxBaseExtern jobject ctor(JNIEnv *, const MxUniKey &key);
   int bind(JNIEnv *);
   void final(JNIEnv *);

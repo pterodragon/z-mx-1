@@ -79,6 +79,10 @@ typedef uint64_t ZdbRN;		// record ID
 #define ZdbNullRN (~((uint64_t)0))
 #define ZdbMaxRN ZdbNullRN
 
+#define ZdbFileRecs	16384
+#define ZdbFileShift	14
+#define ZdbFileMask	0x3fffU
+
 namespace ZdbOp {
   enum { New = 0, Update, Delete };
   inline static const char *name(int op) {
@@ -190,22 +194,28 @@ class Zdb_File_ : public ZmPolymorph, public ZiFile {
 friend struct Zdb_File_IndexAccessor;
 
 public:
-  inline Zdb_File_(unsigned index, unsigned fileRecs) : m_index(index) {
-    m_undeleted.set(ZmBitmap::Range(0, fileRecs - 1));
+  inline Zdb_File_(unsigned index) : m_index(index) {
+    memset((void *)m_undeleted, 0xff, ZdbFileRecs>>3);
   }
 
   ZuInline unsigned index() const { return m_index; }
 
   ZuInline bool del(unsigned i) {
-    m_undeleted.clr(i);
-    return !m_undeleted;
+    uint64_t m = (((uint64_t)1)<<(i & 63U));
+    unsigned o = i>>6U;
+    if (m_undeleted[o] & m) {
+      --m_undelCount;
+      m_undeleted[o] &= ~m;
+    }
+    return !m_undelCount;
   }
 
   void checkpoint() { sync(); }
 
 private:
   unsigned	m_index = 0;
-  ZmBitmap	m_undeleted;
+  unsigned	m_undelCount = ZdbFileRecs;
+  uint64_t	m_undeleted[ZdbFileRecs>>6];
 };
 
 typedef ZmList<Zdb_File_,
@@ -340,6 +350,13 @@ public:
   }
 
 private:
+  inline void placeholder() {
+    ZdbTrailer *trailer = this->trailer();
+    trailer->rn = trailer->prevRN = ZdbNullRN;
+    trailer->magic = ZdbAllocated;
+    this->range(ZdbRange{});
+  }
+
   inline void init(ZdbRN rn, ZdbRange range,
       uint32_t magic = ZdbAllocated) {
     ZdbTrailer *trailer = this->trailer();
@@ -481,8 +498,10 @@ struct ZdbConfig {
   inline ZdbConfig(ZuString name_, ZvCf *cf) {
     name = name_;
     path = cf->get("path", true);
+#if 0
     fileSize = cf->getInt("fileSize",
 	((int32_t)4)<<10, ((int32_t)1)<<30, false, 0); // range: 4K to 1G
+#endif
     preAlloc = cf->getInt("preAlloc", 0, 10<<24, false, 0);
     repMode = cf->getInt("repMode", 0, 1, false, 0);
     compress = cf->getInt("compress", 0, 1, false, 0);
@@ -492,7 +511,7 @@ struct ZdbConfig {
 
   ZtString		name;
   ZtString		path;
-  unsigned		fileSize = 0;
+  // unsigned		fileSize = 0;
   unsigned		preAlloc = 0;	// #records to pre-allocate
   uint8_t		repMode = 0;	// 0 - deferred, 1 - in put()
   bool			compress = false;
@@ -565,6 +584,9 @@ public:
   inline ZdbRN minRN() { return m_minRN; }
   // next RN that will be allocated
   inline ZdbRN allocRN() { return m_allocRN; }
+
+  // create new placeholder record (null RN, in-memory only, never in DB)
+  ZmRef<ZdbAnyPOD> placeholder();
 
   // create new record
   ZmRef<ZdbAnyPOD> push();
@@ -685,8 +707,8 @@ private:
   ZdbHandler			m_handler;
   unsigned			m_recSize = 0;
   unsigned			m_dataSize = 0;
+  unsigned			m_fileSize = 0;
   Lock				m_lock;
-    unsigned			  m_fileRecs;
     ZdbRN			  m_minRN = ZdbMaxRN;
     ZdbRN			  m_allocRN = 0;
     ZdbRN			  m_fileRN = 0;

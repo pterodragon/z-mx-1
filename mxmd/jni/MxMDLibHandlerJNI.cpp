@@ -104,9 +104,12 @@ namespace MxMDLibHandlerJNI {
   };
 }
 
-ZmRef<MxMDLibHandler> MxMDLibHandlerJNI::j2c(JNIEnv *env, jobject handler_)
+ZmRef<MxMDLibHandler> MxMDLibHandlerJNI::j2c(
+    JNIEnv *env, jobject obj, bool dlr)
 {
   ZmRef<MxMDLibHandler> handler = new MxMDLibHandler();
+
+  if (ZuUnlikely(!obj)) return handler;
 
 #ifdef lambda1
 #undef lambda1
@@ -116,14 +119,14 @@ ZmRef<MxMDLibHandler> MxMDLibHandlerJNI::j2c(JNIEnv *env, jobject handler_)
 #endif
 #define lambda1(method, arg1, ...) \
   if (auto fn = ZJNI::localRef( \
-	env, env->CallObjectMethod(handler_, method ## Fn[0].mid))) \
+	env, env->CallObjectMethod(obj, method ## Fn[0].mid))) \
     handler->method ## Fn( \
 	[fn = ZJNI::globalRef(env, fn)](arg1) { \
       if (JNIEnv *env = ZJNI::env()) \
 	env->CallVoidMethod(fn, method ## Fn[1].mid, __VA_ARGS__); })
 #define lambda2(method, arg1, arg2, ...) \
   if (auto fn = ZJNI::localRef( \
-	env, env->CallObjectMethod(handler_, method ## Fn[0].mid))) \
+	env, env->CallObjectMethod(obj, method ## Fn[0].mid))) \
     handler->method ## Fn( \
 	[fn = ZJNI::globalRef(env, fn)](arg1, arg2) { \
       if (JNIEnv *env = ZJNI::env()) \
@@ -177,19 +180,15 @@ ZmRef<MxMDLibHandler> MxMDLibHandlerJNI::j2c(JNIEnv *env, jobject handler_)
 #undef lambda2
 
   if (auto fn = ZJNI::localRef(
-	env, env->CallObjectMethod(handler_, timerFn[0].mid)))
+	env, env->CallObjectMethod(obj, timerFn[0].mid)))
     handler->timerFn(
 	[fn = ZJNI::globalRef(env, fn)](MxDateTime stamp, MxDateTime &next_) {
-      if (JNIEnv *env = ZJNI::env()) {
-	jobject next = env->CallObjectMethod(
-	    fn, timerFn[1].mid, ZJNI::t2j(env, stamp));
-	if (!next)
-	  next_ = MxDateTime();
-	else
-	  next_ = ZJNI::j2t(env, next);
-      }
+      if (JNIEnv *env = ZJNI::env())
+	next_ = ZJNI::j2t(env, env->CallObjectMethod(
+	      fn, timerFn[1].mid, ZJNI::t2j(env, stamp)), true);
     });
 
+  if (dlr) env->DeleteLocalRef(obj);
   return handler;
 }
 

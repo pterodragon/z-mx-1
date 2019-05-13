@@ -102,9 +102,12 @@ namespace MxMDInstrHandlerJNI {
   };
 }
 
-ZmRef<MxMDInstrHandler> MxMDInstrHandlerJNI::j2c(JNIEnv *env, jobject handler_)
+ZmRef<MxMDInstrHandler> MxMDInstrHandlerJNI::j2c(
+    JNIEnv *env, jobject obj, bool dlr)
 {
   ZmRef<MxMDInstrHandler> handler = new MxMDInstrHandler();
+
+  if (ZuUnlikely(!obj)) return handler;
 
 #ifdef lambda1
 #undef lambda1
@@ -114,14 +117,14 @@ ZmRef<MxMDInstrHandler> MxMDInstrHandlerJNI::j2c(JNIEnv *env, jobject handler_)
 #endif
 #define lambda1(method, arg1, ...) \
   if (auto fn = ZJNI::localRef( \
-	env, env->CallObjectMethod(handler_, method ## Fn[0].mid))) \
+	env, env->CallObjectMethod(obj, method ## Fn[0].mid))) \
     handler->method ## Fn( \
 	[fn = ZJNI::globalRef(env, fn)](arg1) { \
       if (JNIEnv *env = ZJNI::env()) \
 	env->CallVoidMethod(fn, method ## Fn[1].mid, __VA_ARGS__); })
 #define lambda2(method, arg1, arg2, ...) \
   if (auto fn = ZJNI::localRef( \
-	env, env->CallObjectMethod(handler_, method ## Fn[0].mid))) \
+	env, env->CallObjectMethod(obj, method ## Fn[0].mid))) \
     handler->method ## Fn( \
 	[fn = ZJNI::globalRef(env, fn)](arg1, arg2) { \
       if (JNIEnv *env = ZJNI::env()) \
@@ -179,6 +182,7 @@ ZmRef<MxMDInstrHandler> MxMDInstrHandlerJNI::j2c(JNIEnv *env, jobject handler_)
 #undef lambda1
 #undef lambda2
 
+  if (dlr) env->DeleteLocalRef(obj);
   return handler;
 }
 

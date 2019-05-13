@@ -680,14 +680,14 @@ public:
   // immediately returns node if key == head (head is incremented)
   // returns 0 if key < head or key is already present in queue
   // returns 0 and enqueues node if key > head
-  inline NodeRef rotate(Node *node) { return enqueue_<true>(node); }
+  inline NodeRef rotate(NodeRef node) { return enqueue_<true>(ZuMv(node)); }
 
   // enqueues node
-  inline void enqueue(Node *node) { enqueue_<false>(node); }
+  inline void enqueue(NodeRef node) { enqueue_<false>(ZuMv(node)); }
 
 private:
   template <bool Dequeue>
-  inline NodeRef enqueue_(Node *node) {
+  inline NodeRef enqueue_(NodeRef node) {
     Guard guard(m_lock);
 
     Fn item(node->Node::item());
@@ -697,7 +697,7 @@ private:
 
     unsigned addSeqNo = m_addSeqNo++;
 
-    if (ZuUnlikely(end <= m_headKey)) return 0; // already processed
+    if (ZuUnlikely(end <= m_headKey)) return nullptr; // already processed
 
     if (ZuUnlikely(key < m_headKey)) { // clip head
       length = item.clipHead(m_headKey - key);
@@ -706,7 +706,7 @@ private:
 
     if (ZuUnlikely(!length)) { // zero-length heartbeats etc.
       if (end > m_tailKey) m_tailKey = end;
-      return 0;
+      return nullptr;
     }
 
     unsigned bytes = item.bytes();
@@ -714,7 +714,7 @@ private:
     if (ZuLikely(key == m_headKey)) { // usual case - in-order
       clipHead_(end); // remove overlapping data from queue
 
-      return enqueue__<Dequeue>(node, end, length, bytes, addSeqNo);
+      return enqueue__<Dequeue>(ZuMv(node), end, length, bytes, addSeqNo);
     }
 
     ++m_inCount;
@@ -741,11 +741,11 @@ private:
 	// if the following item spans the new item, overwrite it and return
 	if (key_ == key && end_ >= end) {
 	  item_.write(item);
-	  return 0;
+	  return nullptr;
 	}
 
 	if (key_ == key)
-	  node_ = 0;	// don't process the same item twice
+	  node_ = nullptr;	// don't process the same item twice
 	else
 	  node_ = node_->NodeFn::prev(0);
       } else
@@ -763,7 +763,7 @@ private:
 	// if the preceding item spans the new item, overwrite it and return
 	if (end_ >= end) {
 	  item_.write(item);
-	  return 0;
+	  return nullptr;
 	}
 
 	// if the preceding item partially overlaps the new item, clip it
@@ -805,17 +805,18 @@ private:
 
     // add new item into list before following item
 
-    nodeRef(node);
-    add_<0>(node, next, addSeqNo);
+    Node *ptr;
+    new (&ptr) NodeRef(ZuMv(node));
+    add_<0>(ptr, next, addSeqNo);
     if (end > m_tailKey) m_tailKey = end;
     m_length += end - key;
     ++m_count;
 
-    return 0;
+    return nullptr;
   }
   template <bool Dequeue>
-  inline typename ZuIfT<Dequeue, NodeRef>::T enqueue__(
-      Node *node, Key end, unsigned, unsigned bytes, unsigned) {
+  inline typename ZuIfT<Dequeue, NodeRef>::T enqueue__(NodeRef node,
+      Key end, unsigned, unsigned bytes, unsigned) {
     m_headKey = end;
     if (end > m_tailKey) m_tailKey = end;
     ++m_inCount;
@@ -825,10 +826,11 @@ private:
     return node;
   }
   template <bool Dequeue>
-  inline typename ZuIfT<!Dequeue, NodeRef>::T enqueue__(
-      Node *node, Key end, unsigned length, unsigned bytes, unsigned addSeqNo) {
-    nodeRef(node);
-    addHead_<0>(node, addSeqNo);
+  inline typename ZuIfT<!Dequeue, NodeRef>::T enqueue__(NodeRef node,
+      Key end, unsigned length, unsigned bytes, unsigned addSeqNo) {
+    Node *ptr;
+    new (&ptr) NodeRef(ZuMv(node));
+    addHead_<0>(ptr, addSeqNo);
     if (end > m_tailKey) m_tailKey = end;
     m_length += length;
     ++m_count;
@@ -1082,10 +1084,10 @@ public:
     App *app = static_cast<App *>(this);
     Guard guard(m_lock);
     if (ZuUnlikely(m_queuing || m_dequeuing)) {
-      app->rxQueue()->enqueue(msg);
+      app->rxQueue()->enqueue(ZuMv(msg));
       return;
     }
-    msg = app->rxQueue()->rotate(msg);
+    msg = app->rxQueue()->rotate(ZuMv(msg));
     bool scheduleDequeue = msg && app->rxQueue()->count();
     if (scheduleDequeue) m_dequeuing = true;
     guard.unlock();
@@ -1222,7 +1224,7 @@ public:
     m_running(false), m_sending(false),
     m_archiving(false), m_resending(false) { }
 
-  // start sending
+  // start concurrent sending and re-sending
   void start() {
     App *app = static_cast<App *>(this);
     bool scheduleSend;
@@ -1244,6 +1246,36 @@ public:
     if (scheduleResend) app->scheduleResend(); else app->idleResend();
   }
 
+  // start re-sending (only) - caller's idleResend() calls startSending()
+  void startResending(const Gap &gap) {
+    App *app = static_cast<App *>(this);
+    bool scheduleResend;
+    {
+      Guard guard(m_lock);
+      if (m_running) { resend(gap); return; }
+      m_running = true;
+      scheduleResend = resend_(gap);
+    }
+    if (scheduleResend) app->scheduleResend(); else app->idleResend();
+  }
+
+  // start sending (only) - called by idleResend following startResending
+  void startSending() {
+    App *app = static_cast<App *>(this);
+    bool scheduleSend;
+    bool scheduleArchive;
+    {
+      Guard guard(m_lock);
+      if (!m_running) { start(); return; }
+      scheduleSend = !m_sending && m_sendKey < app->txQueue()->tail();
+      if (scheduleSend) m_sending = true;
+      scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey;
+      if (scheduleArchive) m_archiving = true;
+    }
+    if (scheduleSend) app->scheduleSend(); else app->idleSend();
+    if (scheduleArchive) app->scheduleArchive();
+  }
+
   // stop sending
   void stop() {
     Guard guard(m_lock);
@@ -1261,14 +1293,14 @@ public:
   }
 
   // send message (with key already allocated)
-  void send(Msg *msg) {
+  void send(ZmRef<Msg> msg) {
     App *app = static_cast<App *>(this);
     bool scheduleSend;
     {
       Guard guard(m_lock);
-      app->txQueue()->enqueue(msg);
       scheduleSend = m_running && !m_sending &&
 	m_sendKey <= Fn(msg->item()).key();
+      app->txQueue()->enqueue(ZuMv(msg));
       if (scheduleSend) m_sending = true;
     }
     if (scheduleSend) app->scheduleSend();
@@ -1292,34 +1324,42 @@ public:
     {
       Guard guard(m_lock);
       m_ackdKey = key;
-      scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey;
+      if (key > m_sendKey) m_sendKey = key;
+      scheduleArchive = !m_archiving && key > m_archiveKey;
       if (scheduleArchive) m_archiving = true;
     }
     if (scheduleArchive) app->scheduleArchive();
   }
 
   // resend messages (in response to a resend request)
+private:
+  bool resend_(const Gap &gap) {
+    bool scheduleResend = false;
+    if (!m_gap.length()) {
+      m_gap = gap;
+      scheduleResend = !m_resending;
+    } else {
+      if (gap.key() < m_gap.key()) {
+	m_gap.length() += (m_gap.key() - gap.key());
+	m_gap.key() = gap.key();
+	scheduleResend = !m_resending;
+      }
+      if ((gap.key() + gap.length()) > (m_gap.key() + m_gap.length())) {
+	m_gap.length() = (gap.key() - m_gap.key()) + gap.length();
+	if (!scheduleResend) scheduleResend = !m_resending;
+      }
+    }
+    if (scheduleResend) m_resending = true;
+    return scheduleResend;
+  }
+public:
   void resend(const Gap &gap) {
     if (!gap.length()) return;
     App *app = static_cast<App *>(this);
     bool scheduleResend = false;
     {
       Guard guard(m_lock);
-      if (!m_gap.length()) {
-	m_gap = gap;
-	scheduleResend = !m_resending;
-      } else {
-	if (gap.key() < m_gap.key()) {
-	  m_gap.length() += (m_gap.key() - gap.key());
-	  m_gap.key() = gap.key();
-	  scheduleResend = !m_resending;
-	}
-	if ((gap.key() + gap.length()) > (m_gap.key() + m_gap.length())) {
-	  m_gap.length() = (gap.key() - m_gap.key()) + gap.length();
-	  if (!scheduleResend) scheduleResend = !m_resending;
-	}
-      }
-      if (scheduleResend) m_resending = true;
+      scheduleResend = resend_(gap);
     }
     if (scheduleResend) app->scheduleResend();
   }

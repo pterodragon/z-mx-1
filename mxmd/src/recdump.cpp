@@ -143,27 +143,39 @@ public:
 	case Type::TradingSession:
 	  {
 	    const TradingSession &obj = hdr.as<TradingSession>();
-	    new (data) Data{hdr.shard, hdr.type,
-	      obj.venue, obj.segment, {},
-	      obj.session, { obj.stamp } };
+	    new (data) Data{hdr.shard, hdr.type};
+	    data->venue = obj.venue;
+	    data->segment = obj.segment;
+	    data->session = obj.session;
+	    data->l1Data.stamp = obj.stamp;
 	  }
 	  break;
 	case Type::L1:
 	  {
 	    const L1 &obj = hdr.as<L1>();
-	    new (data) Data{hdr.shard, hdr.type,
-	      obj.key.venue, obj.key.segment, obj.key.id,
-	      {}, obj.data};
+	    new (data) Data{hdr.shard, hdr.type};
+	    data->venue = obj.key.venue;
+	    data->segment = obj.key.segment;
+	    data->id = obj.key.id;
+	    data->l1Data = obj.data;
 	  }
 	  break;
 	case Type::PxLevel:
 	  {
 	    const PxLevel &obj = hdr.as<PxLevel>();
-	    new (data) Data{hdr.shard, hdr.type,
-	      obj.key.venue, obj.key.segment, obj.key.id,
-	      {}, { obj.transactTime, obj.pxNDP, obj.qtyNDP },
-	      { {}, {}, obj.side, {}, obj.delta, obj.price, obj.qty,
-		obj.nOrders, obj.flags } };
+	    new (data) Data{hdr.shard, hdr.type};
+	    data->venue = obj.key.venue;
+	    data->segment = obj.key.segment;
+	    data->id = obj.key.id;
+	    data->l1Data.stamp = obj.transactTime;
+	    data->l1Data.pxNDP = obj.pxNDP;
+	    data->l1Data.qtyNDP = obj.qtyNDP;
+	    data->l2Data.side = obj.side;
+	    data->l2Data.delta = obj.delta;
+	    data->l2Data.price = obj.price;
+	    data->l2Data.qty = obj.qty;
+	    data->l2Data.nOrders = obj.nOrders;
+	    data->l2Data.flags = obj.flags;
 	  }
 	  break;
 	case Type::AddOrder:

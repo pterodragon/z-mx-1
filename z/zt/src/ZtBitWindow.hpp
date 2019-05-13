@@ -187,6 +187,7 @@ public:
   inline uintptr_t all(L l) {
     for (unsigned i = 0, n = m_size; i < n; i++) {
       uint64_t w = m_data[index(i)];
+      if (!w) continue;
       uint64_t m = Mask;
       for (unsigned j = 0; j < (1U<<IndexShift); j++) {
 	if (uint64_t v = (w & m))

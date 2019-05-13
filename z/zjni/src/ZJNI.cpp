@@ -202,17 +202,18 @@ void ZJNI::final(JNIEnv *env)
   if (instant_class) env->DeleteGlobalRef(instant_class);
 }
 
-// Java Instant -> ZtDate
-ZJNIExtern ZtDate ZJNI::j2t(JNIEnv *env, jobject obj)
+ZtDate ZJNI::j2t(JNIEnv *env, jobject obj, bool dlr)
 {
-  return ZtDate(
+  if (ZuUnlikely(!obj)) return ZtDate();
+  ZtDate d{
       (time_t)env->CallLongMethod(obj, instant_getEpochSecond),
-      (int)env->CallIntMethod(obj, instant_getNano));
+      (int)env->CallIntMethod(obj, instant_getNano)};
+  if (dlr) env->DeleteLocalRef(obj);
+  return d;
 }
 
 // ZtDate -> Java Instant
-ZJNIExtern jobject ZJNI::t2j(JNIEnv *env, const ZtDate &t)
-{
+inline jobject ZJNI::t2j(JNIEnv *env, const ZtDate &t) {
   return env->CallStaticObjectMethod(instant_class,
       instant_ofEpochSecond, (jlong)t.time(), (jint)t.nsec());
 }

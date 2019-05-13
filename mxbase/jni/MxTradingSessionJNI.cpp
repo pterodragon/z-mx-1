@@ -25,8 +25,6 @@
 
 #include <ZJNI.hpp>
 
-#include <MxBase.hpp>
-
 #include <MxTradingSessionJNI.hpp>
 
 namespace MxTradingSessionJNI {
@@ -43,9 +41,12 @@ namespace MxTradingSessionJNI {
   };
 }
 
-MxEnum MxTradingSessionJNI::j2c(JNIEnv *env, jobject obj)
+MxEnum MxTradingSessionJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 {
-  return env->CallIntMethod(obj, methods[0].mid) - 1;
+  if (ZuUnlikely(!obj)) return MxEnum();
+  MxEnum v = env->CallIntMethod(obj, methods[0].mid) - 1;
+  if (dlr) env->DeleteLocalRef(obj);
+  return v;
 }
 
 jobject MxTradingSessionJNI::ctor(JNIEnv *env, MxEnum v)

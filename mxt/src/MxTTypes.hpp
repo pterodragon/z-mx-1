@@ -234,6 +234,7 @@ namespace MxTRejReason {
   MxEnumNames(
     "UnknownOrder",
     "DuplicateOrder",
+    "BadList",
     "ModifyPending",
     "CancelPending",
     "OrderClosed",

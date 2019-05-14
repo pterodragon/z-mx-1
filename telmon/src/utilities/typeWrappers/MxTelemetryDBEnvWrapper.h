@@ -66,25 +66,25 @@ protected:
     const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
 
     // For  HTML Text
-    inline static const QString _padding          = "";
+    inline static const QString _padding          = _2S;
     inline static const QString _title            = _Bold_begin + "DBHost::";
-    inline static const QString _time             = _NewLine + "time:"             + _Tab + _4S  + _padding;
-    inline static const QString _self             = _NewLine + "self:"             + _Tab + _4S   + _padding;
-    inline static const QString _master           = _NewLine + "master:"           + _Tab + _2S   + _padding;
-    inline static const QString _prev             = _NewLine + "prev:"             + _Tab + _4S   + _padding;
-    inline static const QString _next             = _NewLine + "next:"             + _Tab + _4S   + _padding;
-    inline static const QString _state            = _NewLine + "state:"            + _Tab + _3S   + _padding;
+    inline static const QString _time             = _NewLine + "time:"             + _Tab + _5S  + _padding;
+    inline static const QString _self             = _NewLine + "self:"             + _Tab + _5S   + _padding;
+    inline static const QString _master           = _NewLine + "master:"           + _Tab + _3S   + _padding;
+    inline static const QString _prev             = _NewLine + "prev:"             + _Tab + _5S   + _padding;
+    inline static const QString _next             = _NewLine + "next:"             + _Tab + _5S   + _padding;
+    inline static const QString _state            = _NewLine + "state:"            + _Tab + _4S   + _padding;
     inline static const QString _active           = _NewLine + "active:"           + _Tab + _3S    + _padding;
-    inline static const QString _recovering       = _NewLine + "recovering:"       + _7S         + _padding; // LONGEST
+    inline static const QString _recovering       = _NewLine + "recovering:"       + _7S         + _padding;
     inline static const QString _replicating      = _NewLine + "replicating:"      + _6S    + _padding;
-    inline static const QString _nDBs             = _NewLine + "nDBs:"             + _Tab + _4S    + _padding;
+    inline static const QString _nDBs             = _NewLine + "nDBs:"             + _Tab + _5S    + _padding;
 
-    inline static const QString _nHosts           = _NewLine + "nHosts:"           + _Tab + _2S + _padding;
-    inline static const QString _nPeers           = _NewLine + "nPeers:"           + _Tab + _2S   + _padding;
-    inline static const QString _nCxns            = _NewLine + "nCxns:"            + _Tab + _3S   + _padding;
-    inline static const QString _heartbeatFreq    = _NewLine + "heartbeatFreq:"    + _3S   + _padding;
+    inline static const QString _nHosts           = _NewLine + "nHosts:"           + _Tab + _3S + _padding;
+    inline static const QString _nPeers           = _NewLine + "nPeers:"           + _Tab + _3S   + _padding;
+    inline static const QString _nCxns            = _NewLine + "nCxns:"            + _Tab + _4S   + _padding;
+    inline static const QString _heartbeatFreq    = _NewLine + "heartbeatFreq:"    + _4S   + _padding;
     inline static const QString _heartbeatTimeout = _NewLine + "heartbeatTimeout:" + _S    + _padding;
-    inline static const QString _reconnectFreq    = _NewLine + "reconnectFreq:"    + _3S    + _padding; // LONGEST
+    inline static const QString _reconnectFreq    = _NewLine + "reconnectFreq:"    + _4S    + _padding;
     inline static const QString _electionTimeout  = _NewLine + "electionTimeout:"  + _2S    + _padding;
     inline static const QString _writeThread      = _NewLine + "writeThread:"      + _6S    + _padding;
 

@@ -66,14 +66,14 @@ protected:
     const QString _getPrimaryKey(void* const a_mxTelemetryMsg) const noexcept override final;
 
     // For  HTML Text
-    inline static const QString _padding  = "";
+    inline static const QString _padding  = _2S;
     inline static const QString _title    = _Bold_begin + "DBEnv::";
-    inline static const QString _time     = _NewLine    + "time:"     + _4S + _padding;
+    inline static const QString _time     = _NewLine    + "time:"     + _5S + _padding;
     inline static const QString _priority = _NewLine    + "priority:" + _S  + _padding;
     inline static const QString _state    = _NewLine    + "state:"    + _4S + _padding;
     inline static const QString _voted    = _NewLine    + "voted:"    + _4S + _padding;
     inline static const QString _ip       = _NewLine    + "ip:"       + _7S + _padding;
-    inline static const QString _port     = _NewLine    + "port:"     + _6S + _padding;
+    inline static const QString _port     = _NewLine    + "port:"     + _5S + _padding;
 
     const QString& getColor(const int a_state) const noexcept;
 

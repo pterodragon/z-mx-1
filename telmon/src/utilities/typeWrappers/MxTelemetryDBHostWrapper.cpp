@@ -206,7 +206,7 @@ const QString MxTelemetryDBHostWrapper::_getPrimaryKey(void* const a_mxTelemetry
     ZdbHost::Telemetry* l_data = static_cast<ZdbHost::Telemetry*>(a_mxTelemetryMsg);
     if (l_data)
     {
-        return QString(l_data->id);
+        return QString::number(l_data->id);
     } else {
         return QString();
     }

@@ -393,7 +393,7 @@ const QString MxTelemetryDBEnvWrapper::_getPrimaryKey(void* const a_mxTelemetryM
     ZdbEnv::Telemetry* l_data = static_cast<ZdbEnv::Telemetry*>(a_mxTelemetryMsg);
     if (l_data)
     {
-        return QString(l_data->self);
+        return QString::number(l_data->self);
     } else {
         return QString();
     }

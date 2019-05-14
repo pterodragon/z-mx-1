@@ -741,6 +741,9 @@ public:
   }
 
   void send(ZmRef<MxQMsg> msg) {
+    // permit callers to use code of the form send(mkMsg(...))
+    // (i.e. without needing to explicitly check mkMsg() success/failure)
+    if (!msg) return;
     msg->owner(tx());
     this->engine()->txInvoke(ZuMv(msg), [](ZmRef<MxQMsg> msg) {
       msg->owner<Tx *>()->send(ZuMv(msg));

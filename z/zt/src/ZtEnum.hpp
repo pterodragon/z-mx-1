@@ -95,9 +95,9 @@ typedef ZuBox_1(int8_t) ZtEnum;
     return ZuPair<const char *const *const, unsigned>( \
 	names, sizeof(names) / sizeof(names[0])); \
   } \
-  inline const char *name(const ZtEnum &i) { \
+  inline const char *name(int i) { \
     ZuPair<const char *const *const, unsigned> names_ = names(); \
-    if (!*i || i >= (int)names_.p2()) return "Unknown"; \
+    if (i >= (int)names_.p2()) return "Unknown"; \
     if (i < 0) return "Invalid"; \
     return names_.p1()[i]; \
   } \

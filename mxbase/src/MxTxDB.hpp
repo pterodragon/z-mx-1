@@ -95,18 +95,19 @@ public:
       m_txDB->putUpdate(txPOD, false);
   }
 
-  // l(ZdbRN rn, int32_t type) -> ZmRef<MxQMsg>
+  // l(ZdbRN rn, int32_t type, MxSeqNo seqNo) -> ZmRef<MxQMsg>
   template <typename Link, typename L>
   ZmRef<MxQMsg> txRetrieve(Link *link, MxSeqNo seqNo, L l) {
     auto txPOD = link->txPOD;
     while (txPOD) {
       auto &txData = txPOD->data();
       if (ZuUnlikely(txData.msgID.seqNo < seqNo)) return nullptr;
-      ZmRef<MxQMsg> msg = l(txData.msgRN, txData.msgType);
-      if (!msg) return nullptr;
-      msg->load(txData.msgID);
-      if (ZuUnlikely(txData.msgID.seqNo == seqNo)) return msg;
-      link->txQueue()->enqueue(msg);
+      ZmRef<MxQMsg> msg = l(txData.msgRN, txData.msgType, txData.msgID.seqNo);
+      if (msg) {
+	msg->load(txData.msgID);
+	if (ZuUnlikely(txData.msgID.seqNo == seqNo)) return msg;
+	link->txQueue()->enqueue(msg);
+      }
       ZdbRN prevRN = txPOD->prevRN();
       if (txPOD->rn() == prevRN) return nullptr;
       txPOD = m_txDB->get(prevRN);

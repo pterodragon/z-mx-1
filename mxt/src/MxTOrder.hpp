@@ -326,7 +326,7 @@ template <typename AppTypes> struct MxTAppTypes {
 
   // holds a cumulative quantity for a single leg
   struct CanceledLeg_ {
-    MxValue		cumQty;
+    MxValue		cumQty = 0;
     MxNDP		qtyNDP;
     uint8_t		pad_0[3];
 
@@ -338,9 +338,8 @@ template <typename AppTypes> struct MxTAppTypes {
     inline typename ZuIsNot<CanceledLeg_, Update>::T update(const Update &u) { }
 
     template <typename S> inline void print(S &s) const {
-      if (*cumQty)
-	s << "qtyNDP=" << qtyNDP
-	  << " cumQty=" << MxValNDP{cumQty, qtyNDP};
+      s << "qtyNDP=" << qtyNDP
+	<< " cumQty=" << MxValNDP{cumQty, qtyNDP};
     }
   };
 

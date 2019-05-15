@@ -51,14 +51,17 @@ struct ZuTraits<ZmFn<Args...> > : public ZuGenericTraits<ZmFn<Args...> > {
 class ZmAnyFn {
   struct Pass { };
 
+  // 64bit pointer-packing - uses bit 63
+  constexpr static const uintptr_t Owned = (((uintptr_t)1)<<63U);
+
 protected:
-  ZuInline static bool owned(uintptr_t o) { return o & (uintptr_t)1; }
-  ZuInline static void ref(uintptr_t &o) { o |= (uintptr_t)1; }
-  ZuInline static void deref(uintptr_t &o) { o &= ~(uintptr_t)1; }
+  ZuInline static bool owned(uintptr_t o) { return o & Owned; }
+  ZuInline static void ref(uintptr_t &o) { o |= Owned; }
+  ZuInline static void deref(uintptr_t &o) { o &= ~Owned; }
 
   template <typename O = ZmPolymorph>
   ZuInline static O *ptr(uintptr_t o) {
-    return (O *)(o & ~(uintptr_t)1);
+    return (O *)(o & ~Owned);
   }
 
 public:

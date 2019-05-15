@@ -62,12 +62,6 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
 
   struct AppRequest : public AppMsgID {
     template <typename Update>
-    inline typename ZuIs<AppRequest, Update>::T update(const Update &u) {
-      updateClOrdID(u);
-      // updateOrderID(u);
-      // updateExecID(u);
-    }
-    template <typename Update>
     inline typename ZuIs<AppAck, Update>::T update(const Update &u) {
       updateOrderID(u);
       updateExecID(u);
@@ -78,7 +72,6 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
     }
     template <typename Update>
     inline typename ZuIfT<
-      !ZuConversion<AppRequest, Update>::Is &&
       !ZuConversion<AppAck, Update>::Is &&
       !ZuConversion<AppExec, Update>::Is>::T update(const Update &) { }
   };
@@ -94,13 +87,67 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
     inline typename ZuIsNot<AppRequest, Update>::T update(const Update &) { }
   };
 
+  struct AppOrdered : public AppAck { };
+  struct AppCanceled : public AppAck { };
+  struct AppModified : public AppAck { };
+
   struct AppExec : public AppMsgID {
     template <typename Update>
     inline void update(const Update &) { }
   };
 
+  struct AppCancel : public AppRequest {
+    template <typename U>
+    inline typename ZuIfT<
+	ZuConversion<AppCancel, U>::Is>::T update(const U &u) {
+      AppMsgID::updateClOrdID(u);
+      AppRequest::update(u);
+    }
+    template <typename U>
+    inline typename ZuIfT<
+	!ZuConversion<AppCancel, U>::Is>::T update(const U &u) {
+      AppRequest::update(u);
+    }
+  };
+  struct AppModify : public AppRequest {
+    template <typename U>
+    inline typename ZuIfT<
+	ZuConversion<AppModify, U>::Is ||
+	ZuConversion<AppCancel, U>::Is ||
+	ZuConversion<AppCanceled, U>::Is>::T update(const U &u) {
+      AppMsgID::updateClOrdID(u);
+      AppRequest::update(u);
+    }
+    template <typename U>
+    inline typename ZuIfT<
+	!ZuConversion<AppModify, U>::Is &&
+	!ZuConversion<AppCancel, U>::Is &&
+	!ZuConversion<AppCanceled, U>::Is>::T update(const U &u) {
+      AppRequest::update(u);
+    }
+  };
   struct AppNewOrder : public AppRequest {
     MxIDString	account;	// account identifier
+
+    template <typename U>
+    inline typename ZuIfT<
+	ZuConversion<AppNewOrder, U>::Is ||
+	ZuConversion<AppModify, U>::Is ||
+	ZuConversion<AppModified, U>::Is ||
+	ZuConversion<AppCancel, U>::Is ||
+	ZuConversion<AppCanceled, U>::Is>::T update(const U &u) {
+      AppMsgID::updateClOrdID(u);
+      AppRequest::update(u);
+    }
+    template <typename U>
+    inline typename ZuIfT<
+	!ZuConversion<AppNewOrder, U>::Is &&
+	!ZuConversion<AppModify, U>::Is &&
+	!ZuConversion<AppModified, U>::Is &&
+	!ZuConversion<AppCancel, U>::Is &&
+	!ZuConversion<AppCanceled, U>::Is>::T update(const U &u) {
+      AppRequest::update(u);
+    }
 
     template <typename S> inline void print(S &s) const {
       AppRequest::print(s);
@@ -131,15 +178,15 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
   DeclType(OrderLeg, OrderLeg);
 
   DeclType(NewOrder, NewOrder);
-  DeclType(Ordered, Ack);
+  DeclType(Ordered, Ordered);
   DeclType(Reject, Ack);
 
-  DeclType(Modify, Request);
-  DeclType(Modified, Ack);
+  DeclType(Modify, Modify);
+  DeclType(Modified, Modified);
   DeclType(ModReject, Ack);
 
-  DeclType(Cancel, Request);
-  DeclType(Canceled, Ack);
+  DeclType(Cancel, Cancel);
+  DeclType(Canceled, Canceled);
   DeclType(CxlReject, Ack);
 
   DeclType(Fill, Exec);

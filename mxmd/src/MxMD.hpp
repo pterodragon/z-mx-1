@@ -799,7 +799,9 @@ public:
   ZuInline MxEnum side() const { return m_side; }
 
   ZuInline const MxMDOBSideData &data() const { return m_data; }
-  ZuInline MxValue vwap() const { return m_data.nv / m_data.qty; }
+  ZuInline MxValue vwap() const {
+    return !m_data.qty ? MxValue() : m_data.nv / m_data.qty;
+  }
 
   ZuInline MxMDPxLevel *mktLevel() { return m_mktLevel; }
 

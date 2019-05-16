@@ -461,8 +461,8 @@ void MxMDOBSide::matched(MxValue price, MxValue d_qty)
   if (d_qty) {
     m_data.qty -= d_qty;
     m_data.nv -=
-      (MxValNDP{price, m_data.pxNDP} *
-       MxValNDP{d_qty, m_data.qtyNDP}).value;
+      (MxValNDP{price, pxNDP()} *
+       MxValNDP{d_qty, qtyNDP()}).value;
   }
 }
 
@@ -526,7 +526,7 @@ void MxMDOBSide::pxLevel_(
   if (d_qty) {
     m_data.qty += d_qty;
     m_data.nv +=
-      (MxValNDP{price, m_data.pxNDP} * MxValNDP{d_qty, m_data.qtyNDP}).value;
+      (MxValNDP{price, pxNDP()} * MxValNDP{d_qty, qtyNDP()}).value;
   }
 }
 
@@ -592,8 +592,8 @@ void MxMDOBSide::addOrder_(
   order->pxLevel(pxLevel);
   pxLevel->addOrder(order);
   m_data.nv +=
-    (MxValNDP{orderData.price, m_data.pxNDP} *
-     MxValNDP{orderData.qty, m_data.qtyNDP}).value;
+    (MxValNDP{orderData.price, pxNDP()} *
+     MxValNDP{orderData.qty, qtyNDP()}).value;
   m_data.qty += orderData.qty;
 }
 
@@ -647,8 +647,8 @@ void MxMDOBSide::delOrder_(
   }
   order->pxLevel(nullptr);
   m_data.nv -=
-    (MxValNDP{orderData.price, m_data.pxNDP} *
-     MxValNDP{orderData.qty, m_data.qtyNDP}).value;
+    (MxValNDP{orderData.price, pxNDP()} *
+     MxValNDP{orderData.qty, qtyNDP()}).value;
   m_data.qty -= orderData.qty;
 }
 

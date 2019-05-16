@@ -629,39 +629,7 @@ private:
 
   template <typename Fill>
   uintptr_t match(MxDateTime transactTime,
-      MxValue &qty, MxValue &cumQty, MxValue &cumValue, Fill fill) {
-    auto i = this->m_orders.iterator();
-    while (MxMDOrder *contra = i.iterate()) {
-      MxValue cQty = contra->data().qty;
-      MxValue nv;
-      if (cQty <= qty) {
-	if (uintptr_t v = fill(qty, cumQty, cumValue, m_price, cQty, contra))
-	  return v;
-	cumQty += cQty;
-	nv = (MxValNDP{m_price, m_pxNDP} * MxValNDP{cQty, m_qtyNDP}).value;
-	cumValue += nv;
-	deletedOrder_(contra, transactTime);
-	i.del();
-	--m_data.nOrders;
-	m_data.qty -= cQty;
-	qty -= cQty;
-	updateLast(transactTime, cQty, nv, qty);
-	if (!qty) return 0;
-      } else {
-	if (uintptr_t v = fill(qty, cumQty, cumValue, m_price, qty, contra))
-	  return v;
-	cumQty += qty;
-	nv = (MxValNDP{m_price, m_pxNDP} * MxValNDP{qty, m_qtyNDP}).value;
-	cumValue += nv;
-	contra->updateQty_(cQty - qty);
-	m_data.qty -= qty;
-	qty = 0;
-	updateLast(transactTime, qty, nv, 0);
-	return 0;
-      }
-    }
-    return 0;
-  }
+      MxValue &qty, MxValue &cumQty, MxValue &cumValue, Fill fill);
 
   void updateLast(MxDateTime stamp,
       MxValue lastQty, MxValue nv, MxValue openQty);
@@ -799,7 +767,9 @@ public:
   ZuInline MxEnum side() const { return m_side; }
 
   ZuInline const MxMDOBSideData &data() const { return m_data; }
-  ZuInline MxValue vwap() const { return m_data.nv / m_data.qty; }
+  ZuInline MxValue vwap() const {
+    return !m_data.qty ? MxValue() : m_data.nv / m_data.qty;
+  }
 
   ZuInline MxMDPxLevel *mktLevel() { return m_mktLevel; }
 
@@ -910,6 +880,8 @@ private:
 
   void updateLast(MxDateTime stamp,
       MxValue lastPx, MxValue lastQty, MxValue nv, MxValue openQty);
+
+  void matched(MxValue price, MxValue qty);
 
   void pxLevel_(
       MxDateTime transactTime, bool delta,
@@ -1800,6 +1772,7 @@ class MxMDAPI MxMDLib {
 
 friend class MxMDCmd;
 friend class MxMDTickSizeTbl;
+friend class MxMDPxLevel_;
 friend class MxMDOrderBook;
 friend class MxMDInstrument;
 friend class MxMDFeed;
@@ -2243,6 +2216,63 @@ ZuInline MxMDVenueShard *MxMDVenue::shard(const MxMDShard *shard) const {
 
 ZuInline MxMDLib *MxMDVenueShard::md() const {
   return m_venue->md();
+}
+
+template <typename Fill>
+inline uintptr_t MxMDPxLevel_::match(MxDateTime transactTime,
+    MxValue &qty, MxValue &cumQty, MxValue &cumValue, Fill fill)
+{
+  auto ob = m_obSide->orderBook();
+  int side = m_obSide->side();
+  auto md = ob->md();
+  MxValue oldQty = m_data.qty;
+  MxValue oldNOrders = m_data.nOrders;
+
+  auto i = this->m_orders.iterator();
+  while (MxMDOrder *contra = i.iterate()) {
+    MxValue cQty = contra->data().qty;
+    MxValue nv;
+    if (cQty <= qty) {
+      if (uintptr_t v = fill(qty, cumQty, cumValue, m_price, cQty, contra))
+	return v;
+      cumQty += cQty;
+      nv = (MxValNDP{m_price, m_pxNDP} * MxValNDP{cQty, m_qtyNDP}).value;
+      cumValue += nv;
+      deletedOrder_(contra, transactTime);
+      i.del();
+      --m_data.nOrders;
+      m_data.qty -= cQty;
+      qty -= cQty;
+      updateLast(transactTime, cQty, nv, qty);
+      md->cancelOrder(ob, contra->id(), transactTime, side);
+      if (!qty) break;
+    } else {
+      if (uintptr_t v = fill(qty, cumQty, cumValue, m_price, qty, contra))
+	return v;
+      cumQty += qty;
+      nv = (MxValNDP{m_price, m_pxNDP} * MxValNDP{qty, m_qtyNDP}).value;
+      cumValue += nv;
+      contra->updateQty_(cQty -= qty);
+      m_data.qty -= qty;
+      updateLast(transactTime, qty, nv, 0);
+      {
+	const auto &contraData = contra->data();
+	md->modifyOrder(ob, contra->id(), transactTime,
+	    side, contraData.rank, m_price, cQty, contraData.flags);
+      }
+      break;
+    }
+  }
+  if (m_data.qty != oldQty) {
+    m_obSide->matched(m_price, m_data.qty - oldQty);
+    md->pxLevel(ob, side, transactTime,
+	false, m_price, m_data.qty, m_data.nOrders, m_data.flags);
+    if (MxMDOrderBook *out = ob->out())
+      out->pxLevel_(
+	  side, transactTime, true, m_price,
+	  m_data.qty - oldQty, m_data.nOrders - oldNOrders, m_data.flags, 0, 0);
+  }
+  return 0;
 }
 
 #endif /* MxMD_HPP */

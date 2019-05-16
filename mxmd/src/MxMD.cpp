@@ -456,6 +456,16 @@ void MxMDOrderBook::pxLevel(
 	side, transactTime, true, price, d_qty, d_nOrders, flags, 0, 0);
 }
 
+void MxMDOBSide::matched(MxValue price, MxValue d_qty)
+{
+  if (d_qty) {
+    m_data.qty -= d_qty;
+    m_data.nv -=
+      (MxValNDP{price, pxNDP()} *
+       MxValNDP{d_qty, qtyNDP()}).value;
+  }
+}
+
 void MxMDOBSide::pxLevel_(
   MxDateTime transactTime, bool delta,
   MxValue price, MxValue qty, MxUInt nOrders, MxFlags flags,
@@ -515,7 +525,8 @@ void MxMDOBSide::pxLevel_(
   }
   if (d_qty) {
     m_data.qty += d_qty;
-    m_data.nv += price * d_qty;
+    m_data.nv +=
+      (MxValNDP{price, pxNDP()} * MxValNDP{d_qty, qtyNDP()}).value;
   }
 }
 
@@ -580,7 +591,9 @@ void MxMDOBSide::addOrder_(
   }
   order->pxLevel(pxLevel);
   pxLevel->addOrder(order);
-  m_data.nv += orderData.price * orderData.qty;
+  m_data.nv +=
+    (MxValNDP{orderData.price, pxNDP()} *
+     MxValNDP{orderData.qty, qtyNDP()}).value;
   m_data.qty += orderData.qty;
 }
 
@@ -633,7 +646,9 @@ void MxMDOBSide::delOrder_(
     if (handler) pxLevelFn = &handler->updatedPxLevel;
   }
   order->pxLevel(nullptr);
-  m_data.nv -= orderData.price * orderData.qty;
+  m_data.nv -=
+    (MxValNDP{orderData.price, pxNDP()} *
+     MxValNDP{orderData.qty, qtyNDP()}).value;
   m_data.qty -= orderData.qty;
 }
 

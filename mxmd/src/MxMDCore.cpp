@@ -630,11 +630,11 @@ void MxMDCore::l2(ZvCmdServerCxn *,
 
 void MxMDCore::l2_side(MxMDOBSide *side, ZtString &out)
 {
-  out << "  vwap: " << side->vwap();
   MxMDOrderBook *ob = side->orderBook();
+  unsigned pxNDP = ob->pxNDP();
+  out << "  vwap: " << MxValNDP{side->vwap(), pxNDP};
   MxID venueID = ob->venueID();
-  side->allPxLevels([this, venueID,
-      pxNDP = ob->pxNDP(), qtyNDP = ob->qtyNDP(), &out](
+  side->allPxLevels([this, venueID, pxNDP, qtyNDP = ob->qtyNDP(), &out](
 	MxMDPxLevel *pxLevel) -> uintptr_t {
     const MxMDPxLvlData &pxLvlData = pxLevel->data();
     MxMDFlagsStr flags;

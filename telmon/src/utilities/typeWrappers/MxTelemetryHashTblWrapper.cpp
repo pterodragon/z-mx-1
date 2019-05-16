@@ -333,7 +333,7 @@ const QString  MxTelemetryHashTblWrapper::_getPrimaryKey(void* const a_mxTelemet
 
 const QString MxTelemetryHashTblWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
 {
-    const auto* const l_data = static_cast<const ZmHashTelemetry* const>(a_mxTelemetryMsg);
+    const auto* const l_data = static_cast<ZmHashTelemetry*>(a_mxTelemetryMsg);
 
     const auto l_result = _Title         +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
             + _Time           + getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)

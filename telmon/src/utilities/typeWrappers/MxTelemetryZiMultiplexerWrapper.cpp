@@ -348,7 +348,7 @@ const QString MxTelemetryZiMultiplexerWrapper::_getPrimaryKey(void* const a_mxTe
 
 const QString MxTelemetryZiMultiplexerWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
 {
-    const auto* const l_data = static_cast<const ZiMxTelemetry* const>(a_mxTelemetryMsg);
+    const auto* const l_data = static_cast<ZiMxTelemetry*>(a_mxTelemetryMsg);
 
     const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
             + _time      + getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)

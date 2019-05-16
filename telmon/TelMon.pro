@@ -82,9 +82,28 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 INCLUDEPATH += $${UNIX_Z_INCLUDE_PATH}
 DEPENDPATH  += $${UNIX_Z_INCLUDE_PATH}
 
-QMAKE_CFLAGS = -g -m64 -fno-math-errno -fno-trapping-math -fno-rounding-math -fno-signaling-nans -DZDEBUG
-QMAKE_CXXFLAGS = -std=gnu++2a -g -m64 -fno-math-errno -fno-trapping-math -fno-rounding-math -fno-signaling-nans -DZDEBUG
-QMAKE_LFLAGS = -Wall -Wno-parentheses -Wno-invalid-offsetof -Wno-misleading-indentation -fstrict-aliasing -std=gnu++2a -g -m64 -fno-math-errno -fno-trapping-math -fno-rounding-math -fno-signaling-nans -DZDEBUG -rdynamic
+QMAKE_CFLAGS   = -g -m64 -fno-math-errno -fno-trapping-math -fno-rounding-math -fno-signaling-nans -DZDEBUG
+QMAKE_CXXFLAGS = -std=gnu++2a -g -m64 -fno-math-errno -fno-trapping-math -fno-rounding-math \
+                 -fno-signaling-nans -DZDEBUG
+
+QMAKE_LFLAGS   = -Wall -Wno-parentheses -Wno-invalid-offsetof -Wno-misleading-indentation -fstrict-aliasing \
+                 -std=gnu++2a -g -m64 -fno-math-errno -fno-trapping-math -fno-rounding-math -fno-signaling-nans           \
+                 -DZDEBUG -rdynamic
+
+# no warning allowed
+# see more https://stackoverflow.com/questions/3014947/how-to-add-warnings-as-error-rule-to-qt-pro-file
+#QMAKE_CXXFLAGS += -Werror
+# eventually not used because no matter what did, could not remove the following warnning
+# cc1plus: warning: enumeral and non-enumeral type in conditional expression [-Wextra]
+
+# remove warning from third lib files
+# see more https://stackoverflow.com/questions/30513594/how-to-include-qts-headers-with-isystem-system-headers-with-qmake-and-qt5
+QMAKE_CXXFLAGS += -isystem $${UNIX_Z_LIBRARY_PATH}
+QMAKE_CXXFLAGS += -isystem $${UNIX_Z_INCLUDE_PATH}
+
+# read more
+# https://stackoverflow.com/questions/5088460/flags-to-enable-thorough-and-verbose-g-warnings/9862800#9862800
+# https://stackoverflow.com/questions/399850/best-compiler-warning-level-for-c-c-compilers
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../../sandbox/code/lib/release/ -lZv
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../../sandbox/code/lib/debug/ -lZv

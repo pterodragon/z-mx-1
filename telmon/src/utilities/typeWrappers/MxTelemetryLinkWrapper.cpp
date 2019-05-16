@@ -202,7 +202,7 @@ const QString MxTelemetryLinkWrapper::_getPrimaryKey(void* const a_mxTelemetryMs
 
 const QString MxTelemetryLinkWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
 {
-    const auto* const l_data = static_cast<const MxAnyLink::Telemetry* const>(a_mxTelemetryMsg);
+    const auto* const l_data = static_cast<MxAnyLink::Telemetry*>(a_mxTelemetryMsg);
 
     const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
             + _time       + getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)
@@ -233,11 +233,10 @@ const QString& MxTelemetryLinkWrapper::getColor(const int a_state) const noexcep
         break;
     case MxRAG::Off:
         break;
-        return _color_off;
     default:
-        return _color_off;
         break;
     }
+    return _color_off;
 }
 
 

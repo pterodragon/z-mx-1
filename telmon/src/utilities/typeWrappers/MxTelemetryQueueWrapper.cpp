@@ -298,7 +298,7 @@ const QString MxTelemetryQueueWrapper::_getPrimaryKey(void* const a_mxTelemetryM
 
 const QString MxTelemetryQueueWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
 {
-   const auto* const l_data = static_cast<const MxTelemetry::Queue* const>(a_mxTelemetryMsg);
+   const auto* const l_data = static_cast<MxTelemetry::Queue*>(a_mxTelemetryMsg);
 
     const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
             + _time       + getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)

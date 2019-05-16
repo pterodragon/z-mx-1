@@ -459,7 +459,7 @@ const QString MxTelemetryZiCxnWrapper::_getPrimaryKey(void* const a_mxTelemetryM
 
 const QString MxTelemetryZiCxnWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
 {
-    const auto* const l_data = static_cast<const ZiCxnTelemetry* const>(a_mxTelemetryMsg);
+    const auto* const l_data = static_cast<ZiCxnTelemetry*>(a_mxTelemetryMsg);
     ZiIP l_otherResult;
 
     const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg, smallarThanSymbol::HTML) + _Bold_end

@@ -314,7 +314,7 @@ const QString MxTelemetryHeapWrapper::_getPrimaryKey(void* const a_mxTelemetryMs
 
 const QString MxTelemetryHeapWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
 {
-    const auto* const l_data = static_cast<const ZmHeapTelemetry* const>(a_mxTelemetryMsg);
+    const auto* const l_data = static_cast<const ZmHeapTelemetry*>(a_mxTelemetryMsg);
 
     // for changing colors https://stackoverflow.com/questions/2749798/qlabel-set-color-of-text-and-background
 //   + "<font color=\"DeepPink\">"

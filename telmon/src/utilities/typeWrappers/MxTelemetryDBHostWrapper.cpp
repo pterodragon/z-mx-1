@@ -215,7 +215,7 @@ const QString MxTelemetryDBHostWrapper::_getPrimaryKey(void* const a_mxTelemetry
 
 const QString MxTelemetryDBHostWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
 {
-    const auto* const l_data = static_cast<const ZdbHost::Telemetry* const>(a_mxTelemetryMsg);
+    const auto* const l_data = static_cast<ZdbHost::Telemetry*>(a_mxTelemetryMsg);
 
     const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
             + _time     +  getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)

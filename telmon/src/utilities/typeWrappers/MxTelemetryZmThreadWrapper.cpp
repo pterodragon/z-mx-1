@@ -290,7 +290,7 @@ const QString MxTelemetryZmThreadWrapper::_getPrimaryKey(void* const a_mxTelemet
 
 const QString MxTelemetryZmThreadWrapper::_getDataForTabelQLabel(void* const a_mxTelemetryMsg) const noexcept
 {
-    const auto* const l_data = static_cast<const ZmThreadTelemetry* const>(a_mxTelemetryMsg);
+    const auto* const l_data = static_cast<ZmThreadTelemetry*>(a_mxTelemetryMsg);
 
     const auto l_result = _title     +  _getPrimaryKey(a_mxTelemetryMsg) + _Bold_end
             + _time      +  getCurrentTimeQTImpl(TIME_FORMAT__hh_mm_ss)

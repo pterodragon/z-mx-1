@@ -213,7 +213,7 @@ ZtDate ZJNI::j2t(JNIEnv *env, jobject obj, bool dlr)
 }
 
 // ZtDate -> Java Instant
-inline jobject ZJNI::t2j(JNIEnv *env, const ZtDate &t) {
+jobject ZJNI::t2j(JNIEnv *env, const ZtDate &t) {
   return env->CallStaticObjectMethod(instant_class,
       instant_ofEpochSecond, (jlong)t.time(), (jint)t.nsec());
 }

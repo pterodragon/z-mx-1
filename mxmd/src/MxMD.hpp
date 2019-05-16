@@ -1856,8 +1856,8 @@ public:
   void subscribe(MxMDLibHandler *);
   void unsubscribe();
 
-  ZuInline ZmRef<MxMDLibHandler> handler() {
-    SubGuard guard(m_subLock);
+  ZuInline ZmRef<MxMDLibHandler> handler() const {
+    SubReadGuard guard(m_subLock);
     return m_handler;
   }
 
@@ -1892,6 +1892,7 @@ private:
 
   typedef ZmPLock SubLock;
   typedef ZmGuard<SubLock> SubGuard;
+  typedef ZmReadGuard<SubLock> SubReadGuard;
 
 friend class ZmShard;
   template <typename ...Args>

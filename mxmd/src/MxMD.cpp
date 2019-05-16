@@ -341,13 +341,13 @@ void MxMDOrderBook::updateLast(
   m_l1Data.last = lastPx;
   m_l1Data.lastQty = lastQty;
   if (ZuUnlikely(!*m_l1Data.accVol))
-    m_l1Data.accVol = nv;
+    m_l1Data.accVol = l1Data.accVol = nv;
   else
-    m_l1Data.accVol += nv;
+    l1Data.accVol = (m_l1Data.accVol += nv);
   if (ZuUnlikely(!*m_l1Data.accVolQty))
-    m_l1Data.accVolQty = lastQty;
+    m_l1Data.accVolQty = l1Data.accVolQty = lastQty;
   else
-    m_l1Data.accVolQty += lastQty;
+    l1Data.accVolQty = (m_l1Data.accVolQty += lastQty);
 
   if (makerSide == MxSide::Buy) {
     if (openQty) {

@@ -175,16 +175,16 @@ public:
     return 0;
   }
   inline MxSeqNo txSeqNo() const {
-    if (const MxQueue *queue = txQueue()) return queue->head();
+    if (const MxQueue *queue = txQueue()) return queue->tail();
     return 0;
   }
 
-protected:
   virtual MxQueue *rxQueue() = 0;
   virtual const MxQueue *rxQueue() const = 0;
   virtual MxQueue *txQueue() = 0;
   virtual const MxQueue *txQueue() const = 0;
 
+protected:
   virtual void connect() = 0;
   virtual void disconnect() = 0;
 

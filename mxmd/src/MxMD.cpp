@@ -1066,7 +1066,7 @@ void MxMDInstrument::unsubscribe()
   auto i = m_orderBooks.iterator();
   while (ZmRef<MxMDOrderBook> ob = i.iterateKey())
     if (*(ob->venueID())) ob->unsubscribe();
-  m_handler = 0;
+  m_handler = nullptr;
 }
 
 ZmRef<MxMDOrderBook> MxMDInstrument::findOrderBook_(MxID venue, MxID segment)

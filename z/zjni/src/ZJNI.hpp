@@ -210,6 +210,19 @@ namespace ZJNI {
     if (dlr) env->DeleteLocalRef((jobject)s_);
     return o;
   }
+  template <typename Out, typename Alloc, typename Buf, typename SetLen>
+  inline Out &j2s(JNIEnv *env, jstring s_, bool dlr,
+      Out &o, Alloc alloc, Buf buf, SetLen setLen) {
+    if (ZuUnlikely(!s_)) return o;
+    unsigned n = env->GetStringLength(s_);
+    if (ZuUnlikely(!n)) return o;
+    ZuArray<const jchar> s(env->GetStringCritical(s_, 0), n);
+    alloc(o, ZuUTF<char, jchar>::len(s));
+    setLen(o, ZuUTF<char, jchar>::cvt(buf(o), s));
+    env->ReleaseStringCritical(s_, s.data()); // should be nop
+    if (dlr) env->DeleteLocalRef((jobject)s_);
+    return o;
+  }
   // Java String -> ZuID
   ZuInline ZuID j2s_ZuID(JNIEnv *env, jstring s, bool dlr = false) {
     return j2s(env, s, dlr,
@@ -218,8 +231,8 @@ namespace ZJNI {
 	[](ZuID &, unsigned) { });
   }
   ZuInline ZuID &j2s_ZuID(ZuID &out, JNIEnv *env, jstring s, bool dlr = false) {
-    j2s(env, s, dlr,
-	[&out](unsigned) { return out; },
+    j2s(env, s, dlr, out,
+	[](ZuID &, unsigned) { },
 	[](ZuID &s) { return ZuArray<char>(s.data(), 8); },
 	[](ZuID &, unsigned) { });
     return out;
@@ -236,8 +249,8 @@ namespace ZJNI {
   template <unsigned N>
   ZuInline ZuStringN<N> &j2s_ZuStringN(ZuStringN<N> &out,
       JNIEnv *env, jstring s, bool dlr = false) {
-    j2s(env, s, dlr,
-	[&out](unsigned) { return out; },
+    j2s(env, s, dlr, out,
+	[](ZuStringN<N> &, unsigned) { },
 	[](ZuStringN<N> &s) { return ZuArray<char>(s.data(), N - 1); },
 	[](ZuStringN<N> &s, unsigned n) { s.length(n); });
     return out;
@@ -251,8 +264,8 @@ namespace ZJNI {
   }
   ZuInline ZtString &j2s_ZtString(ZtString &out,
       JNIEnv *env, jstring s, bool dlr = false) {
-    j2s(env, s, dlr,
-	[&out](unsigned n) { out.size(n + 1); return out; },
+    j2s(env, s, dlr, out,
+	[](ZtString &s, unsigned n) { s.size(n + 1); },
 	[](ZtString &s) { return ZuArray<char>(s.data(), s.size() - 1); },
 	[](ZtString &s, unsigned n) { s.length(n); });
     return out;

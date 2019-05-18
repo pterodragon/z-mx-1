@@ -76,7 +76,7 @@ public:
   ZuInline RxDB *rxDB() const { return m_rxDB; }
 
   template <typename Link>
-  void rxStore(Link *link, MxQMsg *msg) {
+  void rxStore(Link *link, const MxMsgID &msgID) {
     auto &rxPOD = link->rxPOD;
     if (ZuUnlikely(!rxPOD))
       rxPOD = m_rxDB->push();
@@ -84,7 +84,7 @@ public:
       rxPOD = m_rxDB->update(rxPOD);
     if (ZuUnlikely(!rxPOD)) { app()->logError("rxDB update failed"); return; }
     auto &rxData = rxPOD->data();
-    rxData.msgID = msg->id;
+    rxData.msgID = msgID;
     if (ZuUnlikely(rxPOD->rn() == rxPOD->prevRN()))
       m_rxDB->put(rxPOD);
     else

@@ -143,7 +143,9 @@ public:
   ZuInline const MxQueue *rxQueue() const { return m_queue; }
   ZuInline MxQueue *rxQueue() { return m_queue; }
 
-  ZuInline void rxInit(MxSeqNo seqNo) { m_queue->head(seqNo); }
+  ZuInline void rxInit(MxSeqNo seqNo) {
+    if (seqNo > m_queue.head()) m_queue->head(seqNo);
+  }
 
 private:
   ZmRef<MxQueue>	m_queue;

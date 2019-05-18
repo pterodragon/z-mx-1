@@ -99,14 +99,20 @@ public:
   template <typename Link, typename L>
   ZmRef<MxQMsg> txRetrieve(Link *link, MxSeqNo seqNo, L l) {
     auto txPOD = link->txPOD;
+    auto txQueue = link->txQueue();
+    auto txHead = txQueue->head();
     while (txPOD) {
       auto &txData = txPOD->data();
-      if (ZuUnlikely(txData.msgID.seqNo < seqNo)) return nullptr;
-      ZmRef<MxQMsg> msg = l(txData.msgRN, txData.msgType, txData.msgID.seqNo);
+      auto txSeqNo = txData.msgID.seqNo;
+      if (ZuUnlikely(txSeqNo < seqNo)) return nullptr;
+      ZmRef<MxQMsg> msg = l(txData.msgRN, txData.msgType, txSeqNo);
       if (msg) {
 	msg->load(txData.msgID);
-	if (ZuUnlikely(txData.msgID.seqNo == seqNo)) return msg;
-	link->txQueue()->enqueue(msg);
+	if (ZuUnlikely(txSeqNo == seqNo)) return msg;
+	if (txSeqNo < txHead) {
+	  txQueue->head(txHead = txSeqNo);
+	  txQueue->enqueue(ZuMv(msg));
+	}
       }
       ZdbRN prevRN = txPOD->prevRN();
       if (txPOD->rn() == prevRN) return nullptr;

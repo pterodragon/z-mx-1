@@ -658,9 +658,8 @@ public:
   inline void head(Key key) {
     Guard guard(m_lock);
     if (key == m_headKey) return;
-    if (key < m_headKey) { // a rewind implies a reset
-      clean_();
-      m_headKey = m_tailKey = key;
+    if (key < m_headKey) {
+      m_headKey = key;
     } else {
       clipHead_(key);
       m_headKey = key;

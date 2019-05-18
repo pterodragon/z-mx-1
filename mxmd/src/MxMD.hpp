@@ -1085,24 +1085,24 @@ public:
       Fill &&fill, Leave &&leave) {
     if (ZuUnlikely(!*px)) {
       if (side == MxSide::Buy) {
-	return match_<ZmRBTreeLessEqual>(
+	return match_<ZmRBTreeGreaterEqual>(
 	    transactTime, px, qty, fill, leave,
 	    [](MxValue, MxValue) -> bool { return true; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_asks; });
       } else {
-	return match_<ZmRBTreeGreaterEqual>(
+	return match_<ZmRBTreeLessEqual>(
 	    transactTime, px, qty, fill, leave,
 	    [](MxValue, MxValue) -> bool { return true; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_bids; });
       }
     } else {
       if (side == MxSide::Buy) {
-	return match_<ZmRBTreeLessEqual>(
+	return match_<ZmRBTreeGreaterEqual>(
 	    transactTime, px, qty, fill, leave,
 	    [](MxValue px, MxValue cPx) -> bool { return px >= cPx; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_asks; });
       } else {
-	return match_<ZmRBTreeGreaterEqual>(
+	return match_<ZmRBTreeLessEqual>(
 	    transactTime, px, qty, fill, leave,
 	    [](MxValue px, MxValue cPx) -> bool { return px <= cPx; },
 	    [](MxMDOrderBook *ob) -> MxMDOBSide * { return ob->m_bids; });

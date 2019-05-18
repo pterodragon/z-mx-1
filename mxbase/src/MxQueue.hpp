@@ -144,7 +144,7 @@ public:
   ZuInline MxQueue *rxQueue() { return m_queue; }
 
   ZuInline void rxInit(MxSeqNo seqNo) {
-    if (seqNo > m_queue.head()) m_queue->head(seqNo);
+    if (seqNo > m_queue->head()) m_queue->head(seqNo);
   }
 
 private:

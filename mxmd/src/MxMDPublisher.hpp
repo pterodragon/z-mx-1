@@ -273,7 +273,7 @@ public:
   bool resendGap_(const MxQueue::Gap &gap, bool more);
 
   void archive_(MxQMsg *msg) { archived(msg->id.seqNo + 1); } // unused
-  ZmRef<MxQMsg> retrieve_(MxSeqNo) { return nullptr; } // unused
+  ZmRef<MxQMsg> retrieve_(MxSeqNo, MxSeqNo) { return nullptr; } // unused
 
   // broadcast
   void sendMsg(const Hdr *hdr);

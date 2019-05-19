@@ -161,8 +161,8 @@ template <class Impl, class Lock> class MxQueueTxPool;
 // CRTP - application must conform to the following interface:
 #if 0
 struct Impl : public MxQueueTx<Impl> {
-  void archive_(MxQMsg *);		// tx archive (persistent)
-  ZmRef<MxQMsg> retrieve_(MxSeqNo);	// tx retrieve
+  void archive_(MxQMsg *);			// tx archive (persistent)
+  ZmRef<MxQMsg> retrieve_(MxSeqNo, MxSeqNo);	// tx retrieve
 
   void scheduleSend();
   void rescheduleSend();
@@ -361,7 +361,9 @@ public:
 
   ZuInline void sent_(MxQMsg *msg) { Tx::ackd(msg->id.seqNo + 1); }
   ZuInline void archive_(MxQMsg *msg) { Tx::archived(msg->id.seqNo + 1); }
-  ZuInline ZmRef<MxQMsg> retrieve_(MxSeqNo) { return nullptr; } // unused
+  ZuInline ZmRef<MxQMsg> retrieve_(MxSeqNo, MxSeqNo) { // unused
+    return nullptr;
+  }
 
   inline ZmRef<Tx> next_() {
     Guard guard(this->lock());

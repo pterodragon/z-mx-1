@@ -658,8 +658,9 @@ public:
   inline void head(Key key) {
     Guard guard(m_lock);
     if (key == m_headKey) return;
-    if (key < m_headKey) {
-      m_headKey = key;
+    if (key < m_headKey) { // a rewind implies a reset
+      clean_();
+      m_headKey = m_tailKey = key;
     } else {
       clipHead_(key);
       m_headKey = key;
@@ -684,6 +685,38 @@ public:
   // enqueues node
   inline void enqueue(NodeRef node) { enqueue_<false>(ZuMv(node)); }
 
+  // unshift node onto head
+  inline void unshift(NodeRef node) {
+    Guard guard(m_lock);
+
+    Fn item(node->Node::item());
+    Key key = item.key();
+    unsigned length = item.length();
+    Key end = key + length;
+
+    if (ZuUnlikely(key >= m_headKey)) return;
+
+    if (ZuUnlikely(end > m_headKey)) { // clip tail
+      length = item.clipTail(end - m_headKey);
+      end = key + length;
+    }
+
+    if (ZuUnlikely(!length)) return;
+
+    unsigned addSeqNo = m_addSeqNo++;
+
+    Node *next[Levels];
+
+    findFwd_<0>(key, next);
+
+    Node *ptr;
+    new (&ptr) NodeRef(ZuMv(node));
+    add_<0>(ptr, next, addSeqNo);
+    m_headKey = key;
+    m_length += end - key;
+    ++m_count;
+  }
+
 private:
   template <bool Dequeue>
   inline NodeRef enqueue_(NodeRef node) {
@@ -693,8 +726,6 @@ private:
     Key key = item.key();
     unsigned length = item.length();
     Key end = key + length;
-
-    unsigned addSeqNo = m_addSeqNo++;
 
     if (ZuUnlikely(end <= m_headKey)) return nullptr; // already processed
 
@@ -707,6 +738,8 @@ private:
       if (end > m_tailKey) m_tailKey = end;
       return nullptr;
     }
+
+    unsigned addSeqNo = m_addSeqNo++;
 
     unsigned bytes = item.bytes();
 
@@ -1184,7 +1217,8 @@ struct App : public ZmPQTx<App, Queue> {
   void archive_(Msg *msg);
 
   // retrieve message from archive containing key (key may be within message)
-  ZmRef<Msg> retrieve_(Key key);
+  // - can optionally call unshift() for subsequent messages <head
+  ZmRef<Msg> retrieve_(Key key, Key head);
 
   // schedule send() to be called (possibly from different thread)
   void scheduleSend();
@@ -1455,12 +1489,17 @@ public:
       if (!m_running) { m_resending = false; return; }
       prevGap = m_gap;
       while (m_gap.length()) {
-	msg = app->txQueue()->find(m_gap.key());
-	if (!msg) msg = app->retrieve_(m_gap.key());
 	unsigned length;
-	if (msg) {
+	if (msg = app->txQueue()->find(m_gap.key())) {
 	  Fn item(msg->item());
-	  length = (item.key() + item.length()) - m_gap.key();
+	  auto end = item.key() + item.length();
+	  length = end - m_gap.key();
+	  if (end <= m_archiveKey)
+	    while (app->txQueue()->shift(end));
+	} else if (msg = app->retrieve_(m_gap.key(), app->txQueue()->head())) {
+	  Fn item(msg->item());
+	  auto end = item.key() + item.length();
+	  length = end - m_gap.key();
 	} else {
 	  if (!sendGap.length()) sendGap.key() = m_gap.key();
 	  sendGap.length() += (length = 1);

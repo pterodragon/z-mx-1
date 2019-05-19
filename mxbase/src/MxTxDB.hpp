@@ -81,13 +81,17 @@ public:
   template <typename Link, typename L>
   void txStore(Link *link, MxQMsg *msg, L l) {
     auto &txPOD = link->txPOD;
+    auto msgID = msg->id;
     if (ZuUnlikely(!txPOD))
       txPOD = m_txDB->push();
-    else
+    else {
+      // protect against rewinds
+      if (ZuUnlikely(msgID.seqNo <= txPOD->data().msgID.seqNo)) return;
       txPOD = m_txDB->update(txPOD);
+    }
     if (ZuUnlikely(!txPOD)) { app()->logError("txDB update failed"); return; }
     auto &txData = txPOD->data();
-    txData.msgID = msg->id;
+    txData.msgID = msgID;
     l(msg, txData.msgRN, txData.msgType);
     if (ZuUnlikely(txPOD->rn() == txPOD->prevRN()))
       m_txDB->put(txPOD);
@@ -97,21 +101,19 @@ public:
 
   // l(ZdbRN rn, int32_t type, MxSeqNo seqNo) -> ZmRef<MxQMsg>
   template <typename Link, typename L>
-  ZmRef<MxQMsg> txRetrieve(Link *link, MxSeqNo seqNo, L l) {
+  ZmRef<MxQMsg> txRetrieve(Link *link, MxSeqNo seqNo, MxSeqNo avail, L l) {
     auto txPOD = link->txPOD;
     auto txQueue = link->txQueue();
-    auto txHead = txQueue->head();
     while (txPOD) {
       auto &txData = txPOD->data();
       auto txSeqNo = txData.msgID.seqNo;
       if (ZuUnlikely(txSeqNo < seqNo)) return nullptr;
-      ZmRef<MxQMsg> msg = l(txData.msgRN, txData.msgType, txSeqNo);
-      if (msg) {
-	msg->load(txData.msgID);
-	if (ZuUnlikely(txSeqNo == seqNo)) return msg;
-	if (txSeqNo < txHead) {
-	  txQueue->head(txHead = txSeqNo);
-	  txQueue->enqueue(ZuMv(msg));
+      if (txSeqNo == seqNo || txSeqNo < avail) {
+	ZmRef<MxQMsg> msg = l(txData.msgRN, txData.msgType, txSeqNo);
+	if (msg) {
+	  msg->load(txData.msgID);
+	  if (ZuUnlikely(txSeqNo == seqNo)) return msg;
+	  txQueue->unshift(ZuMv(msg));
 	}
       }
       ZdbRN prevRN = txPOD->prevRN();

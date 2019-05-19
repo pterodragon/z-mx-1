@@ -127,7 +127,7 @@ public:
   }
 
   // retrieve message from archive
-  ZmRef<Msg> retrieve_(Key key) {
+  ZmRef<Msg> retrieve_(Key key, Key) {
     printf("retrieve %u\n", (unsigned)key);
     if (!m_ackd) return 0;
     Fn item(m_ackd->item());

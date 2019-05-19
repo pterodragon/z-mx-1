@@ -73,7 +73,8 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 	    const ZmScheduler::Ring &ring = mx->ring(tid);
 	    ring.stats(inCount, inBytes, outCount, outBytes);
 	    cxn->transmit(queue(
-		  mx->params().thread(tid).name(),
+		  MxIDString() << mx->params().id() << '.'
+		    << mx->params().thread(tid).name(),
 		  (uint64_t)0, (uint64_t)ring.count(),
 		  inCount, inBytes, outCount, outBytes,
 		  (uint32_t)ring.full(), (uint32_t)ring.params().size(),

@@ -122,7 +122,7 @@ public:
   bool resendGap_(const MxQueue::Gap &, bool) { return true; }
 
   void archive_(MxQMsg *msg) { archived(msg->id.seqNo + 1); }
-  ZmRef<MxQMsg> retrieve_(MxSeqNo) { return nullptr; }
+  ZmRef<MxQMsg> retrieve_(MxSeqNo, MxSeqNo) { return nullptr; }
 
 private:
   typedef ZmPLock Lock;

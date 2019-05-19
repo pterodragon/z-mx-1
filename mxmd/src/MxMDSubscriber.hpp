@@ -232,7 +232,7 @@ public:
   bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }
 
   void archive_(MxQMsg *msg) { archived(msg->id.seqNo + 1); }
-  ZmRef<MxQMsg> retrieve_(MxSeqNo) { return nullptr; }
+  ZmRef<MxQMsg> retrieve_(MxSeqNo, MxSeqNo) { return nullptr; }
 
   // command support
   void status(ZtString &out);

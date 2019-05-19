@@ -68,6 +68,19 @@ public:
   struct ClosedData {					// closed order
     OrderTxn		orderTxn;
     Txn<Reject>		rejectTxn;
+
+    inline NewOrder &newOrder() {
+      return orderTxn.template as<NewOrder>();
+    }
+    inline const NewOrder &newOrder() const {
+      return orderTxn.template as<NewOrder>();
+    }
+    inline Reject &reject() {
+      return rejectTxn.template as<Reject>();
+    }
+    inline const Reject &reject() const {
+      return rejectTxn.template as<Reject>();
+    }
   };
   using ClosedDB = Zdb<ClosedData>;
   using ClosedPOD = ZdbPOD<ClosedData>;
@@ -105,15 +118,55 @@ public:
     ZmRef<ClosedPOD> cpod = m_closedDB->push();
     auto closed = new (cpod->ptr()) ClosedData();
     closed->orderTxn = order->orderTxn.template data<NewOrder>();
+    {
+      const auto &newOrder = closed->orderTxn.template as<NewOrder>();
+      newOrder.execID = pod->rn();
+      newOrder.transactTime.now();
+    }
     if ((int)order->exec().eventType == MxTEventType::Reject)
       closed->rejectTxn = order->execTxn.template data<Reject>();
     m_closedDB->put(cpod);
-    m_orderDB->del(pod);
+  }
+
+  using PurgeLock = ZmLock;
+  using PurgeGuard = ZmGuard<PurgeLock>;
+
+  ZtDate lastPurge() {
+    PurgeGuard guard(m_purgeLock);
+    return m_lastPurge;
+  }
+  void purge() {
+    PurgeGuard guard(m_purgeLock);
+    m_lastPurge.now();
+    if (m_purgeClosedRN != ZdbNullRN)
+      m_closedDB->purge(m_purgeClosedRN);
+    if (m_purgeOrderRN != ZdbNullRN) {
+      ZdbRN minRN = m_purgeClosedRN;
+      if (minRN == ZdbNullRN) minRN = m_closedDB->minRN();
+      for (ZdbRN rn = minRN; rn < m_purgeOrderRN; rn++) {
+	if (ZmRef<ClosedPOD> cpod = m_closedDB->get_(rn)) {
+	  auto closed = cpod->ptr();
+	  const auto &newOrder = closed->orderTxn.template as<NewOrder>();
+	  if (ZmRef<OrderPOD> pod = m_orderDB->get_(newOrder.execID))
+	    m_orderDB->del(pod);
+	}
+      }
+    }
+    m_purgeClosedRN = m_purgeOrderRN;
+    m_purgeOrderRN = m_closedDB->allocRN();
+  }
+
+  void purge() {
   }
 
 private:
   ZmRef<OrderDB>	m_orderDB;
   ZmRef<ClosedDB>	m_closedDB;
+
+  PurgeLock		m_purgeLock;
+    ZtDate		  m_lastPurge;
+    ZdbRN		  m_purgeOrderRN = ZdbNullRN;
+    ZdbRN		  m_purgeClosedRN = ZdbNullRN;
 };
 
 #endif /* MxTOrderDB_HPP */

@@ -44,14 +44,14 @@ namespace MxMDSeverityJNI {
 MxEnum MxMDSeverityJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 {
   if (ZuUnlikely(!obj)) return MxEnum();
-  MxEnum v= env->CallIntMethod(obj, methods[0].mid) - 1;
+  MxEnum v= env->CallIntMethod(obj, methods[0].mid);
   if (dlr) env->DeleteLocalRef(obj);
   return v;
 }
 
 jobject MxMDSeverityJNI::ctor(JNIEnv *env, MxEnum v)
 {
-  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid, (jint)v + 1);
+  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid, (jint)v);
 }
 
 int MxMDSeverityJNI::bind(JNIEnv *env)

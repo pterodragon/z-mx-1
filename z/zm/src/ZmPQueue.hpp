@@ -1406,11 +1406,12 @@ public:
     ZmRef<Msg> msg;
     {
       Guard guard(m_lock);
+      auto txQueue = app->txQueue();
       if (!m_running) { m_sending = false; return; }
       prevKey = m_sendKey;
-      scheduleSend = m_sendKey < app->txQueue()->tail();
+      scheduleSend = m_sendKey < txQueue->tail();
       while (scheduleSend) {
-	msg = app->txQueue()->find(m_sendKey);
+	msg = txQueue->find(m_sendKey);
 	unsigned length;
 	if (msg)
 	  length = Fn(msg->item()).length();
@@ -1419,7 +1420,7 @@ public:
 	  sendGap.length() += (length = 1);
 	}
 	m_sendKey += length;
-	scheduleSend = m_sendKey < app->txQueue()->tail();
+	scheduleSend = m_sendKey < txQueue->tail();
 	if (msg) break;
       }
       if (!scheduleSend) m_sending = false;

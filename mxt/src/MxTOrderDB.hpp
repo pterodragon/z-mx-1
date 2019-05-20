@@ -119,7 +119,7 @@ public:
     auto closed = new (cpod->ptr()) ClosedData();
     closed->orderTxn = order->orderTxn.template data<NewOrder>();
     {
-      const auto &newOrder = closed->orderTxn.template as<NewOrder>();
+      auto &newOrder = closed->orderTxn.template as<NewOrder>();
       newOrder.execID = pod->rn();
       newOrder.transactTime.now();
     }

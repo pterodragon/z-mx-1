@@ -146,7 +146,7 @@ public:
       for (ZdbRN rn = minRN; rn < m_purgeOrderRN; rn++) {
 	if (ZmRef<ClosedPOD> cpod = m_closedDB->get_(rn)) {
 	  auto closed = cpod->ptr();
-	  const auto &newOrder = closed->orderTxn.template as<NewOrder>();
+	  auto &newOrder = closed->orderTxn.template as<NewOrder>();
 	  if (ZmRef<OrderPOD> pod = m_orderDB->get_(newOrder.execID))
 	    m_orderDB->del(pod);
 	}
@@ -154,9 +154,6 @@ public:
     }
     m_purgeClosedRN = m_purgeOrderRN;
     m_purgeOrderRN = m_closedDB->allocRN();
-  }
-
-  void purge() {
   }
 
 private:

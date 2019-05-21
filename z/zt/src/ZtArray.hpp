@@ -985,7 +985,8 @@ public:
       length_(n + 1);
     return (void *)(m_data + n);
   }
-  template <typename I> ZuInline void push(I &&i) {
+  template <typename I>
+  ZuInline typename ZuIfT<!ZuTraits<I>::IsArray>::T push(I &&i) {
     this->initItem(push(), ZuFwd<I>(i));
   }
   inline T pop() {

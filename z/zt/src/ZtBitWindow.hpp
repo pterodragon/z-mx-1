@@ -44,6 +44,7 @@ template <> struct ZtBitWindow_<5>  { enum { OK = 1, Pow2 = 0,   Mul = 12 }; };
 template <> struct ZtBitWindow_<8>  { enum { OK = 1, Pow2 = 1, Shift =  3 }; };
 template <> struct ZtBitWindow_<16> { enum { OK = 1, Pow2 = 1, Shift =  4 }; };
 template <> struct ZtBitWindow_<32> { enum { OK = 1, Pow2 = 1, Shift =  5 }; };
+template <> struct ZtBitWindow_<64> { enum { OK = 1, Pow2 = 1, Shift =  6 }; };
 
 template <unsigned Bits = 1,
 	 bool = ZtBitWindow_<Bits>::OK,
@@ -141,14 +142,13 @@ public:
     if (i < m_head) return;
     i -= m_head;
     if (i >= (m_size<<IndexShift)) return;
-    m_data[index(i>>IndexShift)] &=
-      ~(((uint64_t)Mask)<<((i & IndexMask)<<Shift));
+    if (m_data[index(i>>IndexShift)] &=
+	~(((uint64_t)Mask)<<((i & IndexMask)<<Shift))) return;
     if (i < (1U<<IndexShift)) {
       uint64_t j;
       for (j = 0; j < m_size && !m_data[index(j)]; j++);
       if (j) {
 	if (j < m_size)
-	  // memmove(m_data, m_data + j, ((m_size - j)<<3));
 	  if ((m_offset += j) >= m_size) m_offset -= m_size;
 	m_head += (j<<IndexShift);
       }
@@ -164,7 +164,6 @@ public:
       for (j = 0; j < m_size && !m_data[index(j)]; j++);
       if (j) {
 	if (j < m_size)
-	  // memmove(m_data, m_data + j, ((m_size - j)<<3));
 	  if ((m_offset += j) >= m_size) m_offset -= m_size;
 	m_head += (j<<IndexShift);
       }
@@ -296,13 +295,13 @@ public:
     if (i < m_head) return;
     i -= m_head;
     if (i >= m_size * IndexMul) return;
-    m_data[index(i / IndexMul)] &= ~(((uint64_t)Mask)<<((i % IndexMul) * Bits));
+    if (m_data[index(i / IndexMul)] &=
+	~(((uint64_t)Mask)<<((i % IndexMul) * Bits))) return;
     if (i < IndexMul) {
       uint64_t j;
       for (j = 0; j < m_size && !m_data[index(j)]; j++);
       if (j) {
 	if (j < m_size)
-	  // memmove(m_data, m_data + j, ((m_size - j)<<3));
 	  if ((m_offset += j) >= m_size) m_offset -= m_size;
 	m_head += j * IndexMul;
       }
@@ -318,7 +317,6 @@ public:
       for (j = 0; j < m_size && !m_data[index(j)]; j++);
       if (j) {
 	if (j < m_size)
-	  // memmove(m_data, m_data + j, ((m_size - j)<<3));
 	  if ((m_offset += j) >= m_size) m_offset -= m_size;
 	m_head += j * IndexMul;
       }
@@ -348,6 +346,147 @@ public:
 	    return r;
 	m <<= Bits;
       }
+    }
+    return 0;
+  }
+
+private:
+  uint64_t	*m_data;
+  uint64_t	m_size;
+  uint64_t	m_head;
+  uint64_t	m_offset;
+};
+
+template <> class ZtBitWindow<64U, true, true> {
+  ZtBitWindow(const ZtBitWindow &) = delete;
+  ZtBitWindow &operator =(const ZtBitWindow &) = delete;
+
+public:
+  enum { Bits = 64 };
+
+public:
+  inline ZtBitWindow() : m_data(nullptr), m_size(0), m_head(0), m_offset(0) { }
+  inline ~ZtBitWindow() { if (m_data) ::free(m_data); }
+
+  inline ZtBitWindow(ZtBitWindow &&q) :
+      m_data(q.m_data), m_size(q.m_size),
+      m_head(q.m_head), m_offset(q.m_offset) {
+    q.null();
+  }
+  inline ZtBitWindow &operator =(ZtBitWindow &&q) {
+    if (m_data) ::free(m_data);
+    m_data = q.m_data;
+    m_size = q.m_size;
+    m_head = q.m_head;
+    q.null();
+    return *this;
+  }
+
+  inline void null() {
+    if (m_data) ::free(m_data);
+    m_data = nullptr;
+    m_size = 0;
+    m_head = 0;
+    m_offset = 0;
+  }
+
+private:
+  inline uint64_t ensure(uint64_t i) {
+    if (ZuUnlikely(i < m_head)) {
+      uint64_t j = m_head - i;
+      uint64_t *data = (uint64_t *)::malloc((j + m_size)<<3);
+      memset(data, 0, j<<3);
+      uint64_t tailOffset = m_size - m_offset;
+      if (tailOffset) memcpy(data + j, m_data + m_offset, tailOffset<<3);
+      if (m_offset) memcpy(data + j + tailOffset, m_data, m_offset<<3);
+      if (m_data) ::free(m_data);
+      m_data = data;
+      m_size += j;
+      m_head -= j;
+      m_offset = 0;
+      return i - m_head;
+    }
+    i -= m_head;
+    if (ZuUnlikely(i >= m_size)) {
+      uint64_t j = (i + 1) - m_size;
+      if (j < (m_size>>3)) j = m_size>>3; // grow by at least 12.5%
+      uint64_t *data = (uint64_t *)::malloc((j + m_size)<<3);
+      uint64_t tailOffset = m_size - m_offset;
+      if (tailOffset) memcpy(data, m_data + m_offset, tailOffset<<3);
+      if (m_offset) memcpy(data + tailOffset, m_data, m_offset<<3);
+      memset(data + m_size, 0, j<<3);
+      if (m_data) ::free(m_data);
+      m_data = data;
+      m_size += j;
+      m_offset = 0;
+      return i;
+    }
+    return index(i);
+  }
+  ZuInline uint64_t index(uint64_t i) const {
+    i += m_offset;
+    if (i >= m_size) i -= m_size;
+    return i;
+  }
+
+public:
+  inline void set(uint64_t i) {
+    uint64_t j = ensure(i);
+    m_data[j] = ~((uint64_t)0);
+  }
+  inline void set(uint64_t i, uint64_t v) {
+    uint64_t j = ensure(i);
+    m_data[j] = v;
+  }
+  inline void clr(uint64_t i) {
+    if (i < m_head) return;
+    i -= m_head;
+    if (i >= m_size) return;
+    m_data[index(i)] = 0;
+    if (!i) {
+      uint64_t j;
+      for (j = 0; j < m_size && !m_data[index(j)]; j++);
+      if (j) {
+	if (j < m_size)
+	  if ((m_offset += j) >= m_size) m_offset -= m_size;
+	m_head += j;
+      }
+    }
+  }
+  inline void clr(uint64_t i, uint64_t v) {
+    if (i < m_head) return;
+    i -= m_head;
+    if (i >= m_size) return;
+    m_data[index(i)] = 0;
+    if (!i) {
+      uint64_t j;
+      for (j = 0; j < m_size && !m_data[index(j)]; j++);
+      if (j) {
+	if (j < m_size)
+	  if ((m_offset += j) >= m_size) m_offset -= m_size;
+	m_head += j;
+      }
+    }
+  }
+
+  inline uint64_t val(unsigned i) const {
+    if (i < m_head) return 0;
+    i -= m_head;
+    if (i >= m_size) return 0;
+    return m_data[index(i)];
+  }
+
+  inline unsigned head() const { return m_head; }
+  inline unsigned tail() const { return m_head + m_size; }
+  inline unsigned size() const { return m_size; }
+
+  // l(unsigned index, unsigned value) -> uintptr_t
+  template <typename L>
+  inline uintptr_t all(L l) {
+    for (unsigned i = 0, n = m_size; i < n; i++) {
+      uint64_t v = m_data[index(i)];
+      if (!v) continue;
+      if (uintptr_t r = l(m_head + i, v)) return r;
     }
     return 0;
   }

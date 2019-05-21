@@ -20,7 +20,7 @@ void shuffle(unsigned *sequence)
   }
 }
 
-template <unsigned Bits, unsigned Value>
+template <unsigned Bits, uint64_t Value>
 void test()
 {
   ZtBitWindow<Bits> map;
@@ -39,7 +39,7 @@ void test()
     }
   }
   unsigned c = 0;
-  map.all([&c](uint64_t i, unsigned v) {
+  map.all([&c](uint64_t i, uint64_t v) {
     ZmAssert(v == Value);
     c++;
     return 0;
@@ -57,4 +57,8 @@ int main()
   test<3, 5>();
   test<4, 10>();
   test<5, 25>();
+  test<8, 129>();
+  test<16, 32771>();
+  test<32, 1073741827>();
+  test<64, (uint64_t)1152921504606846979ULL>();
 }

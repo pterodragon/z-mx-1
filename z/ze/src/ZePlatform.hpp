@@ -78,7 +78,7 @@ namespace Ze {
 struct ZeAPI ZePlatform_ {
 #ifndef _WIN32
   typedef int ErrNo;
-  static constexpr const ErrNo OK = 0;
+  static constexpr ErrNo OK = 0;
 
   ZuInline static ErrNo errNo() { return errno; }
   ZuInline static ErrNo sockErrNo() { return errno; }
@@ -87,7 +87,7 @@ struct ZeAPI ZePlatform_ {
   }
 #else
   typedef DWORD ErrNo;				// <= sizeof(int)
-  static constexpr const ErrNo OK = ERROR_SUCCESS;	// == 0
+  static constexpr ErrNo OK = ERROR_SUCCESS;	// == 0
 
   ZuInline static ErrNo errNo() { return GetLastError(); }
   ZuInline static ErrNo sockErrNo() { return WSAGetLastError(); }

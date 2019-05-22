@@ -986,7 +986,11 @@ public:
     return (void *)(m_data + n);
   }
   template <typename I>
-  ZuInline typename ZuIfT<!ZuTraits<I>::IsArray>::T push(I &&i) {
+  ZuInline typename ZuIfT<
+    !(ZuConversion<ZtArray_<T>, I>::Base ||
+	(!ZuTraits<I>::IsString && ZuTraits<I>::IsArray &&
+	  ZuConversion<typename ZuTraits<I>::Elem, T>::Exists))>::T
+  push(I &&i) {
     this->initItem(push(), ZuFwd<I>(i));
   }
   inline T pop() {

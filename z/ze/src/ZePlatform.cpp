@@ -258,7 +258,7 @@ void ZePlatform::syslog(ZeEvent *e)
     logger->handle, eventlogtype(e->severity()), 0, 512, 0, 1, 0, &w, 0);
 }
 
-static constexpr const struct {
+static constexpr struct {
   ZePlatform::ErrNo	code;
   const char		*msg;
 } ZePlatform_WSAErrors_[] = {

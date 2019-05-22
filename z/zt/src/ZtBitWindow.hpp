@@ -60,7 +60,7 @@ public:
 
 private:
   enum { Shift = ZtBitWindow_<Bits>::Shift };
-  enum { Mask = (1<<Bits) - 1 };
+  static constexpr uint64_t Mask = (((uint64_t)1)<<Bits) - 1;
   enum { IndexShift = (6 - Shift) };
   enum { IndexMask = (1<<IndexShift) - 1 };
 

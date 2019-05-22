@@ -3,7 +3,7 @@
   <groupId>com.shardmx</groupId>
   <artifactId>mxbase</artifactId>
   <packaging>jar</packaging>
-  <version>1.0</version>
+  <version>2.0</version>
   <name>mxbase</name>
   <url>http://maven.apache.org</url>
   <properties>
@@ -40,6 +40,7 @@
         <!-- reference: https://stackoverflow.com/questions/50661648/spring-boot-fails-to-run-maven-surefire-plugin-classnotfoundexception-org-apache/50661649#50661649 -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
+	<version>2.12.4</version>
         <configuration>
           <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
         </configuration>

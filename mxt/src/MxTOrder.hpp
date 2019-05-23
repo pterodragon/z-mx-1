@@ -873,6 +873,11 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     Fill, Closed>::T Exec_Largest;
   typedef Txn<Exec_Largest> ExecTxn;
 
+  // ClosedTxn can contain a reject, cancel ack, or closed event
+  typedef typename ZuLargest<
+    Reject, Event, Closed>::T Closed_Largest;
+  typedef Txn<Closed_Largest> ClosedTxn;
+
   // AnyTxn can contain any request or event
   typedef typename ZuLargest<
     NewOrder, Modify, Cancel,
@@ -934,6 +939,47 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 	<< '}';
     }
   };
+
+  // ClosedOrder - closed order state including any rejection / expiry
+  struct ClosedOrder : public ZuPrintable {
+    inline ClosedOrder() { }
+
+    OrderTxn		orderTxn;
+    ClosedTxn		closedTxn;	// reject / canceled / closed
+
+    inline NewOrder &newOrder() {
+      return orderTxn.template as<NewOrder>();
+    }
+    inline const NewOrder &newOrder() const {
+      return orderTxn.template as<NewOrder>();
+    }
+
+    inline Event &closedEvent() {
+      return closedTxn.template as<Event>();
+    }
+    inline Event &closedEvent() const {
+      return closedTxn.template as<Event>();
+    }
+
+    inline Reject &reject() {
+      return closedTxn.template as<Reject>();
+    }
+    inline const Reject &reject() const {
+      return closedTxn.template as<Reject>();
+    }
+    inline Closed &closed() {
+      return closedTxn.template as<Closed>();
+    }
+    inline const Closed &closed() const {
+      return closedTxn.template as<Closed>();
+    }
+
+    template <typename S> inline void print(S &s) const {
+      s << "orderTxn={" << orderTxn
+	<< "} closedTxn={" << closedTxn
+	<< '}';
+    }
+  };
 };
 
 #define MxTImport(Scope) \
@@ -951,7 +997,9 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
  \
   using ExecTxn = typename Scope::ExecTxn; \
   using AnyTxn = typename Scope::AnyTxn; \
+  using ClosedTxn = typename Scope::ClosedTxn; \
  \
-  using Order = typename Scope::Order
+  using Order = typename Scope::Order; \
+  using ClosedOrder = typename Scope::ClosedOrder
 
 #endif /* MxTOrder_HPP */

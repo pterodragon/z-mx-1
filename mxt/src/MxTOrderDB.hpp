@@ -65,23 +65,7 @@ public:
   using OrderDB = Zdb<OrderData>;
   using OrderPOD = ZdbPOD<OrderData>;
 
-  struct ClosedData {					// closed order
-    OrderTxn		orderTxn;
-    Txn<Reject>		rejectTxn;
-
-    inline NewOrder &newOrder() {
-      return orderTxn.template as<NewOrder>();
-    }
-    inline const NewOrder &newOrder() const {
-      return orderTxn.template as<NewOrder>();
-    }
-    inline Reject &reject() {
-      return rejectTxn.template as<Reject>();
-    }
-    inline const Reject &reject() const {
-      return rejectTxn.template as<Reject>();
-    }
-  };
+  using ClosedData = ClosedOrder;
   using ClosedDB = Zdb<ClosedData>;
   using ClosedPOD = ZdbPOD<ClosedData>;
 
@@ -116,15 +100,19 @@ public:
   void closeOrder(OrderPOD *pod) {
     auto order = pod->ptr();
     ZmRef<ClosedPOD> cpod = m_closedDB->push();
-    auto closed = new (cpod->ptr()) ClosedData();
+    auto closed = new (cpod->ptr()) ClosedOrder();
     closed->orderTxn = order->orderTxn.template data<NewOrder>();
     {
-      auto &newOrder = closed->orderTxn.template as<NewOrder>();
+      auto &newOrder = closed->newOrder();
       newOrder.execID = pod->rn();
       newOrder.transactTime.now();
     }
-    if ((int)order->exec().eventType == MxTEventType::Reject)
-      closed->rejectTxn = order->execTxn.template data<Reject>();
+    if (order->exec().eventType == MxTEventType::Reject)
+      closed->closedTxn = order->execTxn.template data<Reject>();
+    else if (order->exec().eventType == MxTEventType::Closed)
+      closed->closedTxn = order->execTxn.template data<Closed>();
+    else if (order->ack().eventType == MxTEventType::Canceled)
+      closed->closedTxn = order->ackTxn.template data<Event>();
     m_closedDB->put(cpod);
   }
 

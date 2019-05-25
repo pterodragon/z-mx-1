@@ -946,6 +946,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 
     OrderTxn		orderTxn;
     ClosedTxn		closedTxn;	// reject / canceled / closed
+    uint64_t		openRN;		// final RN in open order DB
 
     inline NewOrder &newOrder() {
       return orderTxn.template as<NewOrder>();
@@ -954,10 +955,10 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
       return orderTxn.template as<NewOrder>();
     }
 
-    inline Event &closedEvent() {
+    inline Event &event() {
       return closedTxn.template as<Event>();
     }
-    inline Event &closedEvent() const {
+    inline Event &event() const {
       return closedTxn.template as<Event>();
     }
 

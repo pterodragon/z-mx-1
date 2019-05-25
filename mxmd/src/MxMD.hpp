@@ -629,7 +629,7 @@ private:
 
   template <typename Fill>
   uintptr_t match(MxDateTime transactTime,
-      MxValue &qty, MxValue &cumQty, MxValue &cumValue, Fill fill);
+      MxValue &qty, MxValue &cumQty, Fill fill);
 
   void updateLast(MxDateTime stamp,
       MxValue lastQty, MxValue nv, MxValue openQty);
@@ -860,14 +860,12 @@ public:
 private:
   template <int Direction, typename Fill, typename Limit>
   uintptr_t match(
-      MxDateTime transactTime, MxValue px, MxValue &qty,
-      MxValue &cumQty, MxValue &cumValue,
+      MxDateTime transactTime, MxValue px, MxValue &qty, MxValue &cumQty,
       Fill &&fill, Limit &&limit) {
     auto i = m_pxLevels.readIterator<Direction>();
     while (MxMDPxLevel *pxLevel = i.iterate()) {
       if (!limit(px, pxLevel->price())) break;
-      if (uintptr_t v = pxLevel->match(
-	    transactTime, qty, cumQty, cumValue, fill))
+      if (uintptr_t v = pxLevel->match(transactTime, qty, cumQty, fill))
 	return v;
       if (!qty) break;
     }
@@ -1055,12 +1053,11 @@ private:
   uintptr_t match_(MxDateTime transactTime, MxValue px, MxValue qty,
       Fill &&fill, Leave &&leave, Limit &&limit, Side &&side) {
     MxValue cumQty = 0;
-    MxValue cumValue = 0;
-    auto l = [transactTime, px, &qty, &cumQty, &cumValue, &fill, &limit, &side](
+    auto l = [transactTime, px, &qty, &cumQty, &fill, &limit, &side](
 	     auto &l, MxMDOrderBook *ob) mutable -> uintptr_t {
       if (ZuLikely(!ob->m_in))
 	return side(ob)->template match<Direction>(
-	    transactTime, px, qty, cumQty, cumValue, fill, limit);
+	    transactTime, px, qty, cumQty, fill, limit);
       for (MxMDOrderBook *inOB = ob->m_in; inOB; inOB = inOB->m_next) {
 	if (uintptr_t v = l(l, inOB)) return v;
 	if (!qty) break;
@@ -1068,15 +1065,15 @@ private:
       return 0;
     };
     uintptr_t v = l(l, this); // recursive lambda
-    leave(qty, cumQty, cumValue);
+    leave(qty, cumQty);
     return v;
   }
 
 public:
-  // fill(leavesQty, cumQty, cumValue, px, qty, MxMDOrder *contra) -> uintptr_t
+  // fill(leavesQty, cumQty, px, qty, MxMDOrder *contra) -> uintptr_t
   //   /* fill(...) is called repeatedly for each contra order */
-  //   /* Note: leavesQty/cumQty/cumValue are pre-fill, not post-fill */
-  // leave(leavesQty, cumQty, cumValue) /* called on completion */
+  //   /* Note: leavesQty/cumQty are pre-fill, not post-fill */
+  // leave(leavesQty, cumQty) /* called on completion */
 
   // match order (CLOB)
   template <typename Fill, typename Leave>
@@ -2221,7 +2218,7 @@ ZuInline MxMDLib *MxMDVenueShard::md() const {
 
 template <typename Fill>
 inline uintptr_t MxMDPxLevel_::match(MxDateTime transactTime,
-    MxValue &qty, MxValue &cumQty, MxValue &cumValue, Fill fill)
+    MxValue &qty, MxValue &cumQty, Fill fill)
 {
   auto ob = m_obSide->orderBook();
   int side = m_obSide->side();
@@ -2234,11 +2231,10 @@ inline uintptr_t MxMDPxLevel_::match(MxDateTime transactTime,
     MxValue cQty = contra->data().qty;
     MxValue nv;
     if (cQty <= qty) {
-      if (uintptr_t v = fill(qty, cumQty, cumValue, m_price, cQty, contra))
+      if (uintptr_t v = fill(qty, cumQty, m_price, cQty, contra))
 	return v;
       cumQty += cQty;
       nv = (MxValNDP{m_price, m_pxNDP} * MxValNDP{cQty, m_qtyNDP}).value;
-      cumValue += nv;
       deletedOrder_(contra, transactTime);
       i.del();
       --m_data.nOrders;
@@ -2248,11 +2244,10 @@ inline uintptr_t MxMDPxLevel_::match(MxDateTime transactTime,
       md->cancelOrder(ob, contra->id(), transactTime, side);
       if (!qty) break;
     } else {
-      if (uintptr_t v = fill(qty, cumQty, cumValue, m_price, qty, contra))
+      if (uintptr_t v = fill(qty, cumQty, m_price, qty, contra))
 	return v;
       cumQty += qty;
       nv = (MxValNDP{m_price, m_pxNDP} * MxValNDP{qty, m_qtyNDP}).value;
-      cumValue += nv;
       contra->updateQty_(cQty -= qty);
       m_data.qty -= qty;
       updateLast(transactTime, qty, nv, 0);

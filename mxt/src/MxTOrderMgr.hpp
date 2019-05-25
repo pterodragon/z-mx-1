@@ -1138,7 +1138,9 @@ applyFill:
 	}
       }
       leg->updateLeavesQty();
-      leg->cumValue += (fill.lastQty * fill.lastPx);
+      leg->cumValue +=
+	(MxValNDP{fill.lastPx, fill.pxNDP} *
+	 MxValNDP{fill.lastQty, fill.qtyNDP}).value;
     }
     if (ZuUnlikely(fillModify)) {
       modLeg->update(fill);

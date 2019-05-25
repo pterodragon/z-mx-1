@@ -97,23 +97,20 @@ public:
   ZuInline OrderDB *orderDB() const { return m_orderDB; }
   ZuInline ClosedDB *closedDB() const { return m_closedDB; }
 
-  void closeOrder(OrderPOD *pod) {
+  ZmRef<ClosedPOD> closeOrder(OrderPOD *pod) {
     auto order = pod->ptr();
     ZmRef<ClosedPOD> cpod = m_closedDB->push();
     auto closed = new (cpod->ptr()) ClosedOrder();
     closed->orderTxn = order->orderTxn.template data<NewOrder>();
-    {
-      auto &newOrder = closed->newOrder();
-      newOrder.execID = pod->rn();
-      newOrder.transactTime.now();
-    }
     if (order->exec().eventType == MxTEventType::Reject)
       closed->closedTxn = order->execTxn.template data<Reject>();
     else if (order->exec().eventType == MxTEventType::Closed)
       closed->closedTxn = order->execTxn.template data<Closed>();
     else if (order->ack().eventType == MxTEventType::Canceled)
       closed->closedTxn = order->ackTxn.template data<Event>();
+    closed->openRN = pod->rn();
     m_closedDB->put(cpod);
+    return cpod;
   }
 
   using PurgeLock = ZmLock;
@@ -123,6 +120,7 @@ public:
     PurgeGuard guard(m_purgeLock);
     return m_lastPurge;
   }
+  void purged(OrderPOD *) { } // default
   void purge() {
     PurgeGuard guard(m_purgeLock);
     m_lastPurge.now();
@@ -135,8 +133,10 @@ public:
 	if (ZmRef<ClosedPOD> cpod = m_closedDB->get_(rn)) {
 	  auto closed = cpod->ptr();
 	  auto &newOrder = closed->orderTxn.template as<NewOrder>();
-	  if (ZmRef<OrderPOD> pod = m_orderDB->get_(newOrder.execID))
+	  if (ZmRef<OrderPOD> pod = m_orderDB->get_(closed->openRN)) {
+	    app()->purged(pod);
 	    m_orderDB->del(pod);
+	  }
 	}
       }
     }

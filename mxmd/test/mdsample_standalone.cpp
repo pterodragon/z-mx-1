@@ -377,23 +377,21 @@ void publish()
 	      1, MxValNDP{100.0, 2}.value, MxValNDP{100.0, 2}.value, 0);
 	  ob->match(l1Data.stamp, MxSide::Buy,
 	      MxValNDP{101.0, 2}.value, MxValNDP{50.0, 2}.value,
-	      [](MxValue leavesQty, MxValue cumQty, MxValue cumValue,
+	      [](MxValue leavesQty, MxValue cumQty,
 		MxValue px, MxValue qty, MxMDOrder *contra) -> uintptr_t {
 		std::cout << "matched"
 		  << " leavesQty=" << MxValNDP{leavesQty, 2}
 		  << " cumQty=" << MxValNDP{cumQty, 2}
-		  << " cumValue=" << MxValNDP{cumValue, 2}
 		  << " px=" << MxValNDP{px, 2}
 		  << " qty=" << MxValNDP{qty, 2}
 		  << '\n' << std::flush;
 		return 0;
 	      },
 	      [ob, &l1Data](
-		  MxValue leavesQty, MxValue cumQty, MxValue cumValue) {
+		  MxValue leavesQty, MxValue cumQty) {
 		std::cout << "unmatched"
 		  << " leavesQty=" << MxValNDP{leavesQty, 2}
 		  << " cumQty=" << MxValNDP{cumQty, 2}
-		  << " cumValue=" << MxValNDP{cumValue, 2}
 		  << '\n' << std::flush;
 		ob->addOrder("baz",
 		    l1Data.stamp, MxSide::Buy,

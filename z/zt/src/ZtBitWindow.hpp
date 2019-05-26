@@ -42,6 +42,8 @@ template <> struct ZtBitWindow_<3>  { enum { OK = 1, Pow2 = 0,   Mul = 21 }; };
 template <> struct ZtBitWindow_<4>  { enum { OK = 1, Pow2 = 1, Shift =  2 }; };
 template <> struct ZtBitWindow_<5>  { enum { OK = 1, Pow2 = 0,   Mul = 12 }; };
 template <> struct ZtBitWindow_<8>  { enum { OK = 1, Pow2 = 1, Shift =  3 }; };
+template <> struct ZtBitWindow_<10> { enum { OK = 1, Pow2 = 0,   Mul =  6 }; };
+template <> struct ZtBitWindow_<12> { enum { OK = 1, Pow2 = 0,   Mul =  5 }; };
 template <> struct ZtBitWindow_<16> { enum { OK = 1, Pow2 = 1, Shift =  4 }; };
 template <> struct ZtBitWindow_<32> { enum { OK = 1, Pow2 = 1, Shift =  5 }; };
 template <> struct ZtBitWindow_<64> { enum { OK = 1, Pow2 = 1, Shift =  6 }; };

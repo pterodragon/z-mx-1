@@ -886,16 +886,16 @@ private:
       MxValue price, MxValue qty, MxUInt nOrders, MxFlags flags,
       const MxMDInstrHandler *handler,
       MxValue &d_qty, MxUInt &d_nOrders,
-      const MxMDPxLevelFn *&, MxMDPxLevel *&);
+      const MxMDPxLevelFn *&, ZmRef<MxMDPxLevel> &);
 
   void addOrder_(
       MxMDOrder *order, MxDateTime transactTime,
       const MxMDInstrHandler *handler,
-      const MxMDPxLevelFn *&fn, MxMDPxLevel *&pxLevel);
+      const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
   void delOrder_(
       MxMDOrder *order, MxDateTime transactTime,
       const MxMDInstrHandler *handler,
-      const MxMDPxLevelFn *&fn, MxMDPxLevel *&pxLevel);
+      const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
 
   void reset(MxDateTime transactTime);
 
@@ -1129,11 +1129,11 @@ private:
   void addOrder_(
     MxMDOrder *order, MxDateTime transactTime,
     const MxMDInstrHandler *handler,
-    const MxMDPxLevelFn *&fn, MxMDPxLevel *&pxLevel);
+    const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
   void delOrder_(
     MxMDOrder *order, MxDateTime transactTime,
     const MxMDInstrHandler *handler,
-    const MxMDPxLevelFn *&fn, MxMDPxLevel *&pxLevel);
+    const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
 
   void reset_(MxMDPxLevel *pxLevel, MxDateTime transactTime);
 

@@ -472,7 +472,7 @@ void MxMDOBSide::pxLevel_(
   const MxMDInstrHandler *handler,
   MxValue &d_qty, MxUInt &d_nOrders,
   const MxMDPxLevelFn *&pxLevelFn,
-  MxMDPxLevel *&pxLevel)
+  ZmRef<MxMDPxLevel> &pxLevel)
 {
   if (ZuUnlikely(!*price)) {
     if (!m_mktLevel) {
@@ -500,7 +500,7 @@ void MxMDOBSide::pxLevel_(
     if (d_qty) m_data.qty += d_qty;
     return;
   }
-  pxLevel = m_pxLevels.findPtr(price);
+  pxLevel = m_pxLevels.find(price);
   if (!pxLevel) {
     if (qty) {
       d_qty = qty, d_nOrders = nOrders;
@@ -538,7 +538,7 @@ void MxMDOrderBook::pxLevel_(
   MxValue d_qty;
   MxUInt d_nOrders;
   const MxMDPxLevelFn *pxLevelFn = 0;
-  MxMDPxLevel *pxLevel;
+  ZmRef<MxMDPxLevel> pxLevel;
 
   {
     MxMDOBSide *obSide = side == MxSide::Buy ? m_bids : m_asks;
@@ -559,7 +559,7 @@ void MxMDOrderBook::pxLevel_(
 void MxMDOBSide::addOrder_(
     MxMDOrder *order, MxDateTime transactTime,
     const MxMDInstrHandler *handler,
-    const MxMDPxLevelFn *&pxLevelFn, MxMDPxLevel *&pxLevel)
+    const MxMDPxLevelFn *&pxLevelFn, ZmRef<MxMDPxLevel> &pxLevel)
 {
   const MxMDOrderData &orderData = order->data();
   if (!*orderData.price) {
@@ -600,7 +600,7 @@ void MxMDOBSide::addOrder_(
 void MxMDOrderBook::addOrder_(
   MxMDOrder *order, MxDateTime transactTime,
   const MxMDInstrHandler *handler,
-  const MxMDPxLevelFn *&pxLevelFn, MxMDPxLevel *&pxLevel)
+  const MxMDPxLevelFn *&pxLevelFn, ZmRef<MxMDPxLevel> &pxLevel)
 {
   const MxMDOrderData &orderData = order->data();
   if (orderData.qty) {
@@ -612,7 +612,7 @@ void MxMDOrderBook::addOrder_(
 void MxMDOBSide::delOrder_(
     MxMDOrder *order, MxDateTime transactTime,
     const MxMDInstrHandler *handler,
-    const MxMDPxLevelFn *&pxLevelFn, MxMDPxLevel *&pxLevel)
+    const MxMDPxLevelFn *&pxLevelFn, ZmRef<MxMDPxLevel> &pxLevel)
 {
   const MxMDOrderData &orderData = order->data();
   if (!*orderData.price) {
@@ -655,7 +655,7 @@ void MxMDOBSide::delOrder_(
 void MxMDOrderBook::delOrder_(
   MxMDOrder *order, MxDateTime transactTime,
   const MxMDInstrHandler *handler,
-  const MxMDPxLevelFn *&pxLevelFn, MxMDPxLevel *&pxLevel)
+  const MxMDPxLevelFn *&pxLevelFn, ZmRef<MxMDPxLevel> &pxLevel)
 {
   const MxMDOrderData &orderData = order->data();
   if (orderData.qty) {
@@ -672,7 +672,7 @@ ZmRef<MxMDOrder> MxMDOrderBook::addOrder(
 
   ZmRef<MxMDOrder> order;
   const MxMDPxLevelFn *pxLevelFn = 0;
-  MxMDPxLevel *pxLevel;
+  ZmRef<MxMDPxLevel> pxLevel;
 
   if (ZmRef<MxMDOrder> order = m_venueShard->findOrder(key(), side, orderID))
     return modifyOrder(
@@ -744,7 +744,7 @@ void MxMDOrderBook::modifyOrder_(MxMDOrder *order, MxDateTime transactTime,
   MxEnum side, MxUInt rank, MxValue price, MxValue qty, MxFlags flags)
 {
   const MxMDPxLevelFn *pxLevelFn[2] = { 0 };
-  MxMDPxLevel *pxLevel[2];
+  ZmRef<MxMDPxLevel> pxLevel[2];
   delOrder_(order, transactTime, m_handler, pxLevelFn[0], pxLevel[0]);
 
   MxValue oldQty = order->data().qty;
@@ -813,7 +813,7 @@ void MxMDOrderBook::reduceOrder_(MxMDOrder *order,
   MxDateTime transactTime, MxValue reduceQty)
 {
   const MxMDPxLevelFn *pxLevelFn[2] = { 0 };
-  MxMDPxLevel *pxLevel[2];
+  ZmRef<MxMDPxLevel> pxLevel[2];
   delOrder_(order, transactTime, m_handler, pxLevelFn[0], pxLevel[0]);
 
   MxValue oldQty = order->data().qty;
@@ -873,7 +873,7 @@ void MxMDVenue::cancelOrder(
 void MxMDOrderBook::cancelOrder_(MxMDOrder *order, MxDateTime transactTime)
 {
   const MxMDPxLevelFn *pxLevelFn = 0;
-  MxMDPxLevel *pxLevel;
+  ZmRef<MxMDPxLevel> pxLevel;
   MxValue qty = order->data().qty;
 
   delOrder_(order, transactTime, m_handler, pxLevelFn, pxLevel);

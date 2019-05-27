@@ -34,15 +34,15 @@ case $build_os in
 		;;
 esac
 
-AX_PATH_LIB_Z(7, 0, [-lZv -lZi -lZe -lZt -lZm -lZu],,
-	      [AC_MSG_ERROR([ZLib >= 7.0 required])])
+AX_PATH_LIB_Z(8, 0, [-lZv -lZi -lZe -lZt -lZm -lZu],,
+	      [AC_MSG_ERROR([ZLib >= 8.0 required])])
 
 AC_SUBST(Z_CPPFLAGS)
 AC_SUBST(Z_CXXFLAGS)
 AC_SUBST(Z_LDFLAGS)
 AC_SUBST(Z_LIBS)
 
-AX_PATH_LIB_MXBASE(4, 0, [-lMxBase],, [AC_MSG_ERROR([MxBase >= 4.0 required])])
+AX_PATH_LIB_MXBASE(4, 1, [-lMxBase],, [AC_MSG_ERROR([MxBase >= 4.1 required])])
 
 AC_SUBST(MXBASE_CPPFLAGS)
 AC_SUBST(MXBASE_LDFLAGS)

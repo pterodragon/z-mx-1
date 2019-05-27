@@ -120,7 +120,7 @@ jobject MxMDVenueJNI::tickSizeTbl(JNIEnv *env, jobject obj, jstring id)
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue || !id)) return 0;
   if (ZmRef<MxMDTickSizeTbl> tbl =
-      venue->tickSizeTbl(ZJNI::j2s_ZuStringN<8>(env, id)))
+      venue->tickSizeTbl(ZJNI::j2s_ZuStringN<10>(env, id)))
     return MxMDTickSizeTblJNI::ctor(env, tbl);
   return 0;
 }
@@ -159,7 +159,7 @@ jobject MxMDVenueJNI::tradingSession(JNIEnv *env, jobject obj, jstring id)
   MxMDVenue *venue = ptr_(env, obj);
   if (ZuUnlikely(!venue || !id)) return 0;
   MxMDSegment seg =
-    venue->tradingSession(ZJNI::j2s_ZuStringN<8>(env, id));
+    venue->tradingSession(ZJNI::j2s_ZuStringN<10>(env, id));
   return MxMDSegmentJNI::ctor(env, seg);
 }
 

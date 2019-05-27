@@ -70,8 +70,8 @@ MxUniKey MxUniKeyJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
   if (dlr) env->DeleteLocalRef(obj);
   return MxUniKey{
     ZJNI::j2s_ZuStringN<MxIDStrSize>(env, id, true),
-    ZJNI::j2s_ZuStringN<8>(env, venue, true),
-    ZJNI::j2s_ZuStringN<8>(env, segment, true),
+    ZJNI::j2s_ZuStringN<10>(env, venue, true),
+    ZJNI::j2s_ZuStringN<10>(env, segment, true),
     src, mat, putCall, strike};
 }
 

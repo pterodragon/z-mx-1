@@ -41,6 +41,7 @@
 #include <ZmList.hpp>
 #include <ZmRBTree.hpp>
 #include <ZmNoLock.hpp>
+#include <ZmBackTrace.hpp>
 
 #include <ZtArray.hpp>
 #include <ZtString.hpp>
@@ -95,12 +96,28 @@ public:
   typedef ZuBox<uint32_t> Flags;
   typedef ZuBox<uint64_t> Flags64;
 
+private:
+  inline static ZtString fullKey(ZvCf *cf, ZtString key) {
+    while (ZvCf *parent = cf->parent()) {
+      ZvCf::Iterator i(parent);
+      ZuString key_;
+      while (ZmRef<ZvCf> cf_ = i.subset(key_)) {
+	if (cf == cf_.ptr()) {
+	  key = ZtString() << key_ << ':' << key;
+	  break;
+	}
+      }
+      cf = parent;
+    }
+    return key;
+  }
+
+public:
   // thrown by fromArgs() on error
   class ZvAPI Usage : public ZvError {
   public:
-    template <typename Cmd, typename Option>
-    inline Usage(Cmd &&cmd, Option &&option) :
-      m_cmd(ZuFwd<Cmd>(cmd)), m_option(ZuFwd<Option>(option)) { }
+    inline Usage(ZuString cmd, ZuString option) :
+      m_cmd(cmd), m_option(option) { }
     void print_(ZmStream &s) const {
       s << "\"" << m_cmd << "\": invalid option \"" << m_option << '"';
     }
@@ -120,14 +137,14 @@ public:
   // thrown by fromString() and fromFile() for an invalid key
   class ZvAPI Invalid : public ZvError {
   public:
-    template <typename Key, typename FileName>
-    inline Invalid(Key &&key, FileName &&fileName) :
-	m_key(ZuFwd<Key>(key)), m_fileName(ZuFwd<FileName>(fileName)) { }
+    inline Invalid(ZvCf *cf, ZuString key, ZuString fileName) :
+	m_key(fullKey(cf, key)), m_fileName(fileName) { }
     void print_(ZmStream &s) const {
       if (m_fileName) s << '"' << m_fileName << "\": ";
       s << "invalid key \"" << m_key << '"';
     }
     ZuInline const ZtString &key() const { return m_key; }
+
   private:
     ZtString	m_key;
     ZtString	m_fileName;
@@ -136,9 +153,8 @@ public:
   // thrown by fromString() and fromFile() on error
   class ZvAPI Syntax : public ZvError {
   public:
-    template <typename FileName>
-    inline Syntax(int line, char ch, FileName &&fileName) :
-      m_line(line), m_ch(ch), m_fileName(ZuFwd<FileName>(fileName)) { }
+    inline Syntax(int line, char ch, ZuString fileName) :
+      m_line(line), m_ch(ch), m_fileName(fileName) { }
     void print_(ZmStream &s) const {
       if (m_fileName)
 	s << '"' << m_fileName << "\":" << ZuBoxed(m_line) << " syntax error";
@@ -152,6 +168,7 @@ public:
 	    ZuFmt::Hex<0, ZuFmt::Alt<ZuFmt::Right<2> > >());
       s << '\'';
     }
+
   private:
     int		m_line;
     char	m_ch;
@@ -186,9 +203,7 @@ public:
   // thrown by fromFile() on error
   class ZvAPI File2Big : public ZvError {
   public:
-    template <typename FileName>
-    inline File2Big(FileName &&fileName) :
-      m_fileName(ZuFwd<FileName>(fileName)) { }
+    inline File2Big(ZuString fileName) : m_fileName(fileName) { }
     void print_(ZmStream &s) const {
       s << '"' << m_fileName << " file too big";
     };
@@ -198,9 +213,8 @@ public:
 
   class ZvAPI FileOpenError : public ZvError {
   public:
-    template <typename FileName>
-    FileOpenError(FileName &&fileName, ZeError e) :
-      m_fileName(ZuFwd<FileName>(fileName)), m_err(e) { }
+    FileOpenError(ZuString fileName, ZeError e) :
+      m_fileName(fileName), m_err(e) { }
 
     void print_(ZmStream &s) const {
       s << '"' << m_fileName << "\" " << m_err;
@@ -301,37 +315,41 @@ public:
   // thrown by all get methods for missing values when required is true
   class ZvAPI Required : public ZvError {
   public:
-    template <typename Key>
-    inline Required(const Key &key) : m_key(key) { }
+    inline Required(ZvCf *cf, ZuString key) :
+	m_key(fullKey(cf, key)), m_bt(1) { }
+    inline const ZtString &key() const { return m_key; }
     void print_(ZmStream &s) const {
-      s << m_key << " missing";
+      s << m_key << " missing at:\n" << m_bt;
     }
+
   private:
     ZtString	m_key;
+    ZmBackTrace	m_bt;
   };
 
   // template base class for NValues / RangeInt / RangeDbl exceptions
   template <typename T> class Range_ : public ZvError {
   public:
-    template <typename Key>
-    inline Range_(T minimum, T maximum, T value, const Key &key) :
-	m_minimum(minimum), m_maximum(maximum), m_value(value), m_key(key) { }
+    inline Range_(ZtString key, T minimum, T maximum, T value) :
+	m_key(ZuMv(key)),
+	m_minimum(minimum), m_maximum(maximum), m_value(value) { }
+    inline const ZtString &key() const { return m_key; }
     inline T minimum() const { return m_minimum; }
     inline T maximum() const { return m_maximum; }
     inline T value() const { return m_value; }
-    inline const ZtString &key() const { return m_key; }
+
   protected:
+    ZtString	m_key;
     T		m_minimum;
     T		m_maximum;
     T		m_value;
-    ZtString	m_key;
   };
   // thrown by getMultiple() on number of values error
   class ZvAPI NValues : public Range_<Int> {
   public:
-    template <typename Key>
-    inline NValues(Int minimum, Int maximum, Int value, Key &&key) :
-	Range_<Int>(minimum, maximum, value, ZuFwd<Key>(key)) { }
+    inline NValues(
+	ZvCf *cf, ZuString key, Int minimum, Int maximum, Int value) :
+	Range_<Int>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
       s << m_key << " invalid number of values "
 	"min(" << m_minimum << ") <= " << m_value <<
@@ -341,9 +359,9 @@ public:
   // thrown by getInt() on range error
   class ZvAPI RangeInt : public Range_<Int> {
   public:
-    template <typename Key>
-    inline RangeInt(Int minimum, Int maximum, Int value, Key &&key) :
-	Range_<Int>(minimum, maximum, value, ZuFwd<Key>(key)) { }
+    inline RangeInt(
+	ZvCf *cf, ZuString key, Int minimum, Int maximum, Int value) :
+	Range_<Int>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
       s << m_key << " out of range "
 	"min(" << m_minimum << ") <= " << m_value <<
@@ -353,10 +371,9 @@ public:
   // thrown by getInt64() on range error
   class ZvAPI RangeInt64 : public Range_<Int64> {
   public:
-    template <typename Key>
     inline RangeInt64(
-	Int64 minimum, Int64 maximum, Int64 value, Key &&key) :
-	Range_<Int64>(minimum, maximum, value, ZuFwd<Key>(key)) { }
+	ZvCf *cf, ZuString key, Int64 minimum, Int64 maximum, Int64 value) :
+	Range_<Int64>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
       s << m_key << " out of range "
 	"min(" << m_minimum << ") <= " << m_value <<
@@ -366,10 +383,9 @@ public:
   // thrown by getDbl() on range error
   class ZvAPI RangeDbl : public Range_<Double> {
   public:
-    template <typename Key>
     inline RangeDbl(
-	Double minimum, Double maximum, Double value, Key &&key) :
-      Range_<Double>(minimum, maximum, value, ZuFwd<Key>(key)) { }
+	ZvCf *cf, ZuString key, Double minimum, Double maximum, Double value) :
+      Range_<Double>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
       s << m_key << " out of range "
 	"min(" << m_minimum << ") <= " << m_value <<
@@ -379,13 +395,15 @@ public:
 
   class ZvAPI BadFmt : public ZvError {
   public:
-    template <typename Value, typename Fmt>
-    inline BadFmt(Value &&value, Fmt &&fmt) :
-	m_value(ZuFwd<Value>(value)), m_fmt(ZuFwd<Fmt>(fmt)) { }
+    inline BadFmt(ZvCf *cf, ZuString key, ZuString value, ZuString fmt) :
+	m_key(fullKey(cf, key)), m_value(value), m_fmt(fmt) { }
     void print_(ZmStream &s) const {
-      s << '"' << m_value << "\" not format " << m_fmt;
+      s << m_key << " invalid value \""
+	<< m_value << "\": not format " << m_fmt;
     }
+
   private:
+    ZtString		m_key;
     ZtString		m_value;
     ZtString		m_fmt;
   };
@@ -403,49 +421,49 @@ public:
 
   void merge(ZvCf *cf);
 
-  template <typename Key>
-  inline static Int toInt(const Key &key, ZuString value,
+  inline static Int toInt(ZvCf *cf, ZuString key, ZuString value,
       Int minimum, Int maximum, Int def = Int()) {
     if (!value) return def;
     Int i(value);
-    if (i < minimum || i > maximum) throw RangeInt(minimum, maximum, i, key);
+    if (i < minimum || i > maximum)
+      throw RangeInt(cf, key, minimum, maximum, i);
     return i;
   }
 
-  template <typename Key>
-  inline static Int64 toInt64(const Key &key, ZuString value,
+  inline static Int64 toInt64(ZvCf *cf, ZuString key, ZuString value,
       Int64 minimum, Int64 maximum, Int64 def = Int64()) {
     if (!value) return def;
     Int64 i(value);
-    if (i < minimum || i > maximum) throw RangeInt64(minimum, maximum, i, key);
+    if (i < minimum || i > maximum)
+      throw RangeInt64(cf, key, minimum, maximum, i);
     return i;
   }
 
-  template <typename Key>
-  inline static Double toDbl(const Key &key, ZuString value,
+  inline static Double toDbl(ZvCf *cf, ZuString key, ZuString value,
       Double minimum, Double maximum, Double def = Double()) {
     if (!value) return def;
     ZuBox<Double> d(value);
-    if (d < minimum || d > maximum) throw RangeDbl(minimum, maximum, d, key);
+    if (d < minimum || d > maximum)
+      throw RangeDbl(cf, key, minimum, maximum, d);
     return d;
   }
 
   template <typename Key>
   Int getInt(const Key &key, Int minimum, Int maximum, bool required,
       Int def = Int()) {
-    return toInt(key, get(key, required), minimum, maximum, def);
+    return toInt(this, key, get(key, required), minimum, maximum, def);
   }
 
   template <typename Key>
   Int64 getInt64(const Key &key, Int64 minimum, Int64 maximum,
       bool required, Int64 def = Int64()) {
-    return toInt64(key, get(key, required), minimum, maximum, def);
+    return toInt64(this, key, get(key, required), minimum, maximum, def);
   }
 
   template <typename Key>
   Double getDbl(const Key &key, Double minimum, Double maximum,
       bool required, Double def = Double()) {
-    return toDbl(key, get(key, required), minimum, maximum, def);
+    return toDbl(this, key, get(key, required), minimum, maximum, def);
   }
 
   template <typename Map, typename Key, typename Value>
@@ -507,7 +525,7 @@ public:
 friend class Iterator;
   class ZvAPI Iterator {
   public:
-    inline Iterator(ZvCf *cf) : m_iterator(cf->m_tree) { }
+    inline Iterator(ZvCf *cf) : m_cf(cf), m_iterator(cf->m_tree) { }
     inline Iterator(ZvCf *cf, ZuString prefix) :
 	m_iterator(cf->m_tree, prefix) { }
     ~Iterator();
@@ -518,15 +536,15 @@ friend class Iterator;
     ZmRef<ZvCf> subset(ZuString &key);
     inline Int getInt(ZuString &key, Int minimum, Int maximum,
 	Int def = Int()) {
-      return toInt(key, get(key), minimum, maximum, def);
+      return toInt(m_cf, key, get(key), minimum, maximum, def);
     }
     inline Int64 getInt64(ZuString &key, Int64 minimum, Int64 maximum,
 	Int64 def = Int64()) {
-      return toInt64(key, get(key), minimum, maximum, def);
+      return toInt64(m_cf, key, get(key), minimum, maximum, def);
     }
     inline Double getDbl(ZuString &key, Double minimum, Double maximum,
 	Double def = Double()) {
-      return toDbl(key, get(key), minimum, maximum, def);
+      return toDbl(m_cf, key, get(key), minimum, maximum, def);
     }
     template <typename Map>
     inline Enum getEnum(ZuString &key, Enum def = Enum()) {
@@ -534,6 +552,7 @@ friend class Iterator;
     }
 
   private:
+    ZvCf			*m_cf;
     Tree::ReadIterator<>	m_iterator;
   };
 

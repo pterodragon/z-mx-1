@@ -31,7 +31,7 @@ void MxMDReplay::init(MxMDCore *core, ZmRef<ZvCf> cf)
 
   Mx *mx = core->mx(cf->get("mx", false, "core"));
 
-  if (!mx) throw ZvCf::Required("replay:mx");
+  if (!mx) throw ZvCf::Required(cf, "mx");
 
   MxEngine::init(core, this, mx, cf);
 

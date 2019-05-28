@@ -752,7 +752,7 @@ template <> struct ZuPrint<Zdb_DBState> : public ZuPrintDelegate {
 
 struct ZdbHostConfig {
   inline ZdbHostConfig(const ZtString &key, ZvCf *cf) {
-    id = cf->toInt("ID", key, 0, 1<<30);
+    id = ZvCf::toInt(cf, "ID", key, 0, 1<<30);
     priority = cf->getInt("priority", 0, 1<<30, true);
     ip = cf->get("IP", true);
     port = cf->getInt("port", 1, (1<<16) - 1, true);

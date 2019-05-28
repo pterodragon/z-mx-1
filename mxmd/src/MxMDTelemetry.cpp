@@ -28,7 +28,7 @@ void MxMDTelemetry::init(MxMDCore *core, ZvCf *cf)
   using namespace MxTelemetry;
 
   MxMultiplex *mx = core->mx(cf->get("mx", false, "telemetry"));
-  if (!mx) throw ZvCf::Required("telemetry:mx");
+  if (!mx) throw ZvCf::Required(cf, "mx");
   m_core = core;
   Server::init(mx, cf);
 }

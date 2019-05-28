@@ -233,7 +233,7 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
       {
 	MxTbl::Node *node;
 	if (!(node = mxTbl->find(Mx::ID("core"))))
-	  throw ZvCf::Required("mx:core");
+	  throw ZvCf::Required(cf, "mx:core");
 	coreMx = node->key();
       }
 
@@ -379,7 +379,7 @@ void MxMDCore::init_(ZvCf *cf)
   if (ZmRef<ZvCf> cmdCf = cf->subset("cmd", false)) {
     m_cmd = new MxMDCmd();
     Mx *mx = this->mx(cmdCf->get("mx", false, "cmd"));
-    if (!mx) throw ZvCf::Required("cmd:mx");
+    if (!mx) throw ZvCf::Required(cf, "cmd:mx");
     m_cmd->init(mx, cmdCf);
     initCmds();
   }

@@ -29,7 +29,7 @@ void MxMDPublisher::init(MxMDCore *core, ZvCf *cf)
 
   Mx *mx = core->mx(cf->get("mx", false, "core"));
 
-  if (!mx) throw ZvCf::Required("publish:mx");
+  if (!mx) throw ZvCf::Required(cf, "mx");
 
   MxEngine::init(core, this, mx, cf);
 
@@ -95,7 +95,7 @@ ZmRef<MxAnyLink> MxMDPublisher::createLink(MxID id)
 void MxMDPubLink::update(ZvCf *)
 {
   engine()->channel(id(), [this](MxMDChannel *channel) {
-    if (ZuUnlikely(!channel)) throw ZvCf::Required(id());
+    if (ZuUnlikely(!channel)) return;
     m_channel = channel;
   });
   if (m_channel && m_channel->enabled)

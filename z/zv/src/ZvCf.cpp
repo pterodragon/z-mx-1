@@ -407,7 +407,7 @@ key:
     NodeRef node;
     if (key[0] != '%') {
       if (!(node = self->m_tree.findVal(key))) {
-	if (validate) throw Invalid(key, fileName);
+	if (validate) throw Invalid(self, key, fileName);
 	self->m_tree.add(key, node = new Node());
       }
     }
@@ -465,7 +465,7 @@ quoted:
 	values.length(0);
       }
       if (node && !node->m_cf) {
-	if (validate) throw Invalid(key, fileName);
+	if (validate) throw Invalid(self, key, fileName);
 	node->m_cf = new ZvCf(self);
       }
       self = node ? node->m_cf : self;
@@ -565,7 +565,7 @@ key:
     ZuString key = c[1];
     NodeRef node = self->m_tree.findVal(key);
     if (!node) {
-      if (validate) throw Invalid(key, 0);
+      if (validate) throw Invalid(self, key, ZuString());
       self->m_tree.add(key, node = new Node());
     }
     ZtArray<ZtString> values;
@@ -618,7 +618,7 @@ quoted:
 	values.length(0);
       }
       if (!node->m_cf) {
-	if (validate) throw Invalid(key, 0);
+	if (validate) throw Invalid(self, key, ZuString());
 	node->m_cf = new ZvCf(self);
       }
       self = node->m_cf;
@@ -798,12 +798,12 @@ ZuString ZvCf::get(ZuString fullKey, bool required, ZuString def)
   ZuString key;
   ZmRef<ZvCf> self = scope(fullKey, key, 1);
   if (!self) {
-    if (required) throw Required(fullKey);
+    if (required) throw Required(this, fullKey);
     return def;
   }
   NodeRef node = self->m_tree.findVal(key);
   if (!node || !node->m_values.length()) {
-    if (required) throw Required(fullKey);
+    if (required) throw Required(this, fullKey);
     return def;
   }
   return node->m_values[0];
@@ -815,16 +815,17 @@ const ZtArray<ZtString> *ZvCf::getMultiple(ZuString fullKey,
   ZuString key;
   ZmRef<ZvCf> self = scope(fullKey, key, 1);
   if (!self) {
-    if (required) throw Required(fullKey);
+    if (required) throw Required(this, fullKey);
     return 0;
   }
   NodeRef node = self->m_tree.findVal(key);
   if (!node) {
-    if (required) throw Required(fullKey);
+    if (required) throw Required(this, fullKey);
     return 0;
   }
   unsigned n = node->m_values.length();
-  if (n < minimum || n > maximum) throw NValues(minimum, maximum, n, fullKey);
+  if (n < minimum || n > maximum)
+    throw NValues(this, fullKey, minimum, maximum, n);
   return &node->m_values;
 }
 
@@ -861,15 +862,15 @@ ZmRef<ZvCf> ZvCf::subset(ZuString key, bool create, bool required)
     NodeRef node = self->m_tree.findVal(scope);
     if (!node) {
       if (!create) {
-	if (required) throw Required(scope);
-	return 0;
+	if (required) throw Required(this, key);
+	return nullptr;
       }
       self->m_tree.add(scope, node = new Node());
     }
     if (!node->m_cf) {
       if (!create) {
-	if (required) throw Required(scope);
-	return 0;
+	if (required) throw Required(this, key);
+	return nullptr;
       }
       node->m_cf = new ZvCf(self);
     }
@@ -958,7 +959,7 @@ const ZtArray<ZtString> *ZvCf::Iterator::getMultiple(
 
   unsigned n = node->val()->m_values.length();
   if (n < minimum || n > maximum)
-    throw NValues(minimum, maximum, n, node->key());
+    throw NValues(m_cf, node->key(), minimum, maximum, n);
   key = node->key();
   return &node->val()->m_values;
 }

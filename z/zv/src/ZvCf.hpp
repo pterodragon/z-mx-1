@@ -319,7 +319,7 @@ public:
 	m_key(fullKey(cf, key)), m_bt(1) { }
     inline const ZtString &key() const { return m_key; }
     void print_(ZmStream &s) const {
-      s << m_key << " missing at:\n" << m_bt;
+      s << '"' << m_key << "\" missing at:\n" << m_bt;
     }
 
   private:
@@ -351,7 +351,7 @@ public:
 	ZvCf *cf, ZuString key, Int minimum, Int maximum, Int value) :
 	Range_<Int>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
-      s << m_key << " invalid number of values "
+      s << '"' << m_key << "\" invalid number of values "
 	"min(" << m_minimum << ") <= " << m_value <<
 	" <= max(" << m_maximum << ")";
     }
@@ -363,7 +363,7 @@ public:
 	ZvCf *cf, ZuString key, Int minimum, Int maximum, Int value) :
 	Range_<Int>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
-      s << m_key << " out of range "
+      s << '"' << m_key << "\" out of range "
 	"min(" << m_minimum << ") <= " << m_value <<
 	" <= max(" << m_maximum << ")";
     }
@@ -375,7 +375,7 @@ public:
 	ZvCf *cf, ZuString key, Int64 minimum, Int64 maximum, Int64 value) :
 	Range_<Int64>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
-      s << m_key << " out of range "
+      s << '"' << m_key << "\" out of range "
 	"min(" << m_minimum << ") <= " << m_value <<
 	" <= max(" << m_maximum << ")";
     }
@@ -387,7 +387,7 @@ public:
 	ZvCf *cf, ZuString key, Double minimum, Double maximum, Double value) :
       Range_<Double>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
-      s << m_key << " out of range "
+      s << '"' << m_key << "\" out of range "
 	"min(" << m_minimum << ") <= " << m_value <<
 	" <= max(" << m_maximum << ")";
     }
@@ -398,7 +398,7 @@ public:
     inline BadFmt(ZvCf *cf, ZuString key, ZuString value, ZuString fmt) :
 	m_key(fullKey(cf, key)), m_value(value), m_fmt(fmt) { }
     void print_(ZmStream &s) const {
-      s << m_key << " invalid value \""
+      s << '"' << m_key << "\" invalid value \""
 	<< m_value << "\": not format " << m_fmt;
     }
 

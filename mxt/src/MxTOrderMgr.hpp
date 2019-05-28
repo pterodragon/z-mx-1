@@ -383,6 +383,9 @@ public:
     auto &cancel = order->cancel();
     auto next = [](Order *order, In &in) -> uintptr_t {
       auto &newOrder = order->newOrder();
+      bool unsolicited = false;
+      if (ZuUnlikely(MxTEventState::matchAX(newOrder.eventState)))
+	unsolicited = true;
       if (!MxTEventState::matchXC(newOrder.eventState))
 	newOrder.eventState = MxTEventState::Rejected;
       newOrder.modifyNew_clr();
@@ -392,8 +395,7 @@ public:
 	auto &reject = order->execTxn.template as<Reject>();
 	newOrder.update(reject);
 	reject.update(newOrder);
-	if (ZuUnlikely(MxTEventState::matchAX(newOrder.eventState)))
-	  reject.unsolicited_set();
+	if (ZuUnlikely(unsolicited)) reject.unsolicited_set();
       }
       return 0;
     };

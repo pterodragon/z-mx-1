@@ -62,7 +62,7 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
 };
 struct App : public MxTOrderMgr<App, AppTypes> {
   // log abnormal OSM transition
-  template <typename Txn> void abnormal(Order *, const Txn &);
+  template <typename Update> void abnormal(Order *, const Update &);
 
   // returns true if async. modify enabled for order
   bool asyncMod(Order *);
@@ -351,7 +351,7 @@ public:
       return 0;
     }
     // abnormal
-    app()->abnormal(order, in);
+    app()->abnormal(order, in.template as<Ordered>());
     ordered_<1>(order, in); // unsolicited
     return 0;
   }
@@ -427,7 +427,7 @@ public:
     }
     // abnormal
     in.template as<Reject>().unsolicited_set();
-    app()->abnormal(order, in);
+    app()->abnormal(order, in.template as<Reject>());
     return next(order, in);
   }
 
@@ -735,7 +735,7 @@ public:
       return nextFn<In>(next);
     }
     // abnormal
-    app()->abnormal(order, in);
+    app()->abnormal(order, in.template as<Modified>());
     newOrder.update(in.template as<Modified>());
     ackIn<MxTEventType::Modified, MxTEventState::Sent,
       1, 0, 0, 1, 0, 0>(order); // OmcUsp
@@ -769,7 +769,7 @@ public:
       modify.eventState = MxTEventState::Rejected;
       return 0;
     }
-    app()->abnormal(order, in);
+    app()->abnormal(order, in.template as<ModReject>());
     execIn<MxTEventState::Received>(order);
     return 0;
   }
@@ -813,7 +813,7 @@ public:
       modify.eventState = MxTEventState::Rejected;
       return 0;
     }
-    app()->abnormal(order, in);
+    app()->abnormal(order, in.template as<ModReject>());
     execIn<MxTEventState::Received>(order);
   }
 
@@ -1012,7 +1012,7 @@ public:
     }
     // abnormal
     in.template as<Event>().unsolicited_set();
-    app()->abnormal(order, in);
+    app()->abnormal(order, in.template as<Canceled>());
     if (!MxTEventState::matchXC(newOrder.eventState))
       newOrder.eventState = MxTEventState::Closed;
     ackIn<MxTEventType::Canceled, MxTEventState::Received,
@@ -1041,7 +1041,7 @@ public:
     // abnormal
     in.template as<Event>().unsolicited_set();
     cxlReject.unsolicited_set();
-    app()->abnormal(order, in);
+    app()->abnormal(order, in.template as<CxlReject>());
     execIn<MxTEventState::Received>(order);
     return 0;
   }
@@ -1109,7 +1109,7 @@ applyFill:
       if (leg_ >= _NLegs) {
 	// fill has been forwarded to client, but cannot be applied to order
 	// due to invalid leg
-	app()->abnormal(order, in);
+	app()->abnormal(order, in.template as<Fill>());
 	return;
       }
       leg = &newOrder.legs[leg_];

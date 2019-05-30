@@ -28,9 +28,9 @@ public abstract class MxMDInstrRefData {
   public abstract int pxNDP();
   public abstract int qtyNDP();
   @Value.Default
-  public long strike() { return 0L; }
+  public long strike() { return MxValue.NULL; }
   @Value.Default
-  public long outstandingShares() { return 0L; }
+  public long outstandingShares() { return MxValue.NULL; }
   @Value.Default
-  public long adv() { return 0L; }
+  public long adv() { return MxValue.NULL; }
 }

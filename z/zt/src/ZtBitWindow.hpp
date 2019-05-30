@@ -94,7 +94,9 @@ public:
 
 private:
   inline uint64_t ensure(uint64_t i) {
-    if (ZuUnlikely(i < m_head)) {
+    if (ZuUnlikely(!m_size))
+      m_head = (i & ~IndexMask);
+    else if (ZuUnlikely(i < m_head)) {
       uint64_t j = ((m_head - i) + IndexMask)>>IndexShift;
       uint64_t *data = (uint64_t *)::malloc((j + m_size)<<3);
       memset(data, 0, j<<3);
@@ -246,7 +248,9 @@ public:
 
 private:
   inline uint64_t ensure(uint64_t i) {
-    if (ZuUnlikely(i < m_head)) {
+    if (ZuUnlikely(!m_size))
+      m_head = i - (i % IndexMul);
+    else if (ZuUnlikely(i < m_head)) {
       uint64_t j = ((m_head - i) + (IndexMul - 1)) / IndexMul;
       uint64_t *data = (uint64_t *)::malloc((j + m_size)<<3);
       memset(data, 0, j<<3);
@@ -394,7 +398,9 @@ public:
 
 private:
   inline uint64_t ensure(uint64_t i) {
-    if (ZuUnlikely(i < m_head)) {
+    if (ZuUnlikely(!m_size))
+      m_head = i;
+    else if (ZuUnlikely(i < m_head)) {
       uint64_t j = m_head - i;
       uint64_t *data = (uint64_t *)::malloc((j + m_size)<<3);
       memset(data, 0, j<<3);

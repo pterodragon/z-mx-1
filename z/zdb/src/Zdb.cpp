@@ -54,7 +54,7 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <ZmBitmap.hpp>
+#include <ZtBitWindow.hpp>
 
 ZdbEnv::ZdbEnv() :
   m_mx(0), m_stateCond(m_lock),
@@ -1473,7 +1473,7 @@ bool ZdbAny::recover()
 {
   ZeError e;
   ZiDir::Path subName;
-  ZmBitmap subDirs;
+  ZtBitWindow<1> subDirs;
   {
     ZiDir dir;
     if (dir.open(m_config->path) != Zi::OK) {
@@ -1557,7 +1557,7 @@ bool ZdbAny::recover()
     }
     dir.close();
   }
-  for (int i = subDirs.first(); i >= 0; i = subDirs.next(i)) {
+  subDirs.all([&](unsigned i, bool) -> uintptr_t {
 #ifdef _WIN32
     ZtString subName_;
 #else
@@ -1566,12 +1566,12 @@ bool ZdbAny::recover()
     subName_ = ZuBox<unsigned>(i).hex(ZuFmt::Right<5>());
     subName = ZiFile::append(m_config->path, subName_);
     ZiDir::Path fileName;
-    ZmBitmap files;
+    ZtBitWindow<1> files;
     {
       ZiDir subDir;
       if (subDir.open(subName, &e) != Zi::OK) {
 	ZeLOG(Error, ZtString() << subName << ": " << e);
-	continue;
+	return 0;
       }
       while (subDir.read(fileName) == Zi::OK) {
 #ifdef _WIN32
@@ -1594,7 +1594,7 @@ bool ZdbAny::recover()
       }
       subDir.close();
     }
-    for (int j = files.first(); j >= 0; j = files.next(j)) {
+    files.all([&](unsigned j, bool) -> uintptr_t {
 #ifdef _WIN32
       ZtString fileName_;
 #else
@@ -1608,11 +1608,13 @@ bool ZdbAny::recover()
       if (file->open(
 	    fileName, ZiFile::GC, 0666, m_fileSize, &e) != Zi::OK) {
 	ZeLOG(Error, ZtString() << fileName << ": " << e);
-	continue;
+	return 0;
       }
       recover(file);
-    }
-  }
+      return 0;
+    });
+    return 0;
+  });
   return true;
 }
 

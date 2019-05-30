@@ -165,6 +165,7 @@ public:
 #ifdef _WIN32
     ZmSpecific_cleanup_del(o);
 #endif
+    o->dtorFn = nullptr;
     --m_count;
   }
 

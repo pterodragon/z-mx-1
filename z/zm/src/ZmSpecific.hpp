@@ -93,9 +93,6 @@ struct ZmSpecific_Object;
 extern "C" {
   ZmExtern void ZmSpecific_lock();
   ZmExtern void ZmSpecific_unlock();
-  ZmExtern void ZmSpecific_trace(
-      ZmSpecific_ *, ZmSpecific_Object *, const char *);
-  ZmExtern void ZmSpecific_dump();
 #ifdef _WIN32
   ZmExtern void ZmSpecific_cleanup();
   ZmExtern void ZmSpecific_cleanup_add(ZmSpecific_Object *);
@@ -106,17 +103,13 @@ extern "C" {
 struct ZmAPI ZmSpecific_Object {
   typedef void (*DtorFn)(ZmSpecific_Object *);
 
-  inline ZmSpecific_Object() {
-    ZmSpecific_trace(0, this, "ctor");
-  }
+  inline ZmSpecific_Object() { }
   inline ~ZmSpecific_Object() {
-    ZmSpecific_trace(0, this, "dtor pre-lock");
     ZmSpecific_lock();
     dtor();
   }
 
   inline void dtor() {
-    ZmSpecific_trace(0, this, "dtor post-lock");
     if (ZuLikely(dtorFn))
       (*dtorFn)(this);
     else
@@ -138,24 +131,18 @@ class ZmAPI ZmSpecific_ {
   using Object = ZmSpecific_Object;
 
 public:
-  ZmSpecific_() {
-    ZmSpecific_trace(this, 0, "mgr ctor");
-  }
+  ZmSpecific_() { }
   ~ZmSpecific_() {
-    ZmSpecific_trace(this, 0, "mgr dtor");
     Object *o = nullptr;
     for (;;) {
       ZmSpecific_lock();
-      // if (o == m_head) del(o);
       o = m_head; // LIFO
-      ZmSpecific_trace(this, o, "mgr dtor");
       if (!o) { ZmSpecific_unlock(); return; }
       o->dtor(); // unlocks
     }
   }
 
   void add(Object *o) {
-    ZmSpecific_trace(this, o, "mgr add");
     o->prev = nullptr;
     if (!(o->next = m_head))
       m_tail = o;
@@ -168,7 +155,6 @@ public:
     ++m_count;
   }
   void del(Object *o) {
-    ZmSpecific_trace(this, o, "mgr del");
     if (!o->prev)
       m_head = o->next;
     else

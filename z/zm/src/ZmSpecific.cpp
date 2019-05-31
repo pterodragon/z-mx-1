@@ -21,6 +21,64 @@
 
 #include <ZmSpecific.hpp>
 
+#include <ZmBackTrace.hpp>
+
+struct Trace : public ZuPrintable {
+  ZmSpecific_		*mgr = nullptr;
+  ZmSpecific_Object	*object = nullptr;
+  ZmSpecific_Object	data;
+  const char		*op = nullptr;
+  ZmBackTrace		bt;
+
+  template <typename S> inline void print(S &s) const {
+    s << "op=" << op
+      << " mgr=" << ZuBoxPtr(mgr).hex()
+      << " object=" << ZuBoxPtr(object).hex()
+      << " *object={" << data
+      << "}\n" << bt;
+  }
+};
+
+#define TraceMax 10000
+
+static char traces[TraceMax * sizeof(Trace)];
+static ZmAtomic<unsigned> traceCount = 0;
+
+ZmAPI void ZmSpecific_trace(
+    ZmSpecific_ *mgr, ZmSpecific_Object *object, const char *op)
+{
+  unsigned i = traceCount++;
+  if (i >= TraceMax) {
+    ::write(2, "GOT HERE\n", 9);
+    for (;;) ::sleep(1);
+  }
+  ZmBackTrace bt(1);
+  if (object)
+    new (&traces[i * sizeof(Trace)])
+      Trace{ { }, mgr, object, { *object }, op, ZuMv(bt)};
+  else
+    new (&traces[i * sizeof(Trace)])
+      Trace{ { }, mgr, nullptr, { }, op, ZuMv(bt)};
+}
+
+template <> struct ZuPrint<ZmSpecific_Object> : public ZuPrintDelegate {
+  template <typename S>
+  inline static void print(S &s, const ZmSpecific_Object &o) {
+    s << "dtorFn=" << ZuBoxPtr(o.dtorFn).hex()
+      << " ptr=" << ZuBoxPtr(o.ptr).hex()
+      << " prev=" << ZuBoxPtr(o.prev).hex()
+      << " next=" << ZuBoxPtr(o.next).hex();
+  }
+};
+
+ZmAPI void ZmSpecific_dump()
+{
+  for (unsigned i = 0; i < traceCount; i++) {
+    const auto &trace = *((const Trace *)(void *)(&traces[i * sizeof(Trace)]));
+    std::cerr << (ZuStringN<10240>() << trace) << std::flush;
+  }
+}
+
 // statically-initialized spinlock to guard initial singleton registration
 // and cleanup at exit; little if any contention is anticipated; access
 // intended to be exceptional, intermittent, almost exclusively during

@@ -332,45 +332,36 @@ private:
   static void dtor__(Object *o) { global()->dtor_(o); }
 
   inline T *create_() {
-#ifdef _WIN32
     T *ptr = nullptr;
     Object *o = local_();
     ZmSpecific_lock();
-    if (!o->ptr) {
-      o->dtorFn = dtor__;
-      o->tid = ZmPlatform::getTID_();
+    if (o->ptr) {
+      ptr = static_cast<T *>(o->ptr);
+      ZmSpecific_unlock();
+      return ptr;
     }
+    o->dtorFn = dtor__;
+#ifdef _WIN32
+    o->tid = ZmPlatform::getTID_();
+#endif
+    ZmSpecific_unlock();
+    ptr = CtorFn();
+    ZmSpecific_lock();
   retry:
-    if (o->ptr = get(o->tid = ZmPlatform::getTID_())) {
-      T *ptr_ = static_cast<T *>(o->ptr);
+    if (!o->ptr) {
+      o->ptr = ptr;
       add(o);
-      ZmREF(ptr_);
-      ZmSpecific_unlock();
-      if (ptr) delete ptr;
-      return ptr_;
-    }
-    if (!ptr) {
-      ZmSpecific_unlock();
-      ptr = CtorFn();
+      ZmREF(ptr);
+    } else {
+      dtor_(o); // unlocks
       ZmSpecific_lock();
       goto retry;
     }
-    o->ptr = ptr;
-    add(o);
-    ZmREF(ptr);
-    ZmSpecific_unlock();
-    return ptr;
-#else
-    T *ptr = CtorFn();
-    Object *o = local_();
-    ZmSpecific_lock();
-    o->dtorFn = dtor__;
-    o->ptr = ptr;
-    add(o);
-    ZmREF(ptr);
-    ZmSpecific_unlock();
-    return ptr;
+#ifdef _WIN32
+    set(o->tid, ptr);
 #endif
+    ZmSpecific_unlock();
+    return ptr;
   }
 
   inline T *instance_(T *ptr) {

@@ -64,7 +64,82 @@
 #pragma warning(disable:4251 4231 4660)
 #endif
 
-typedef ZmFn<ZeEvent *> ZeSinkFn;
+typedef ZmList<ZmPolymorph,
+	  ZmListObject<ZmPolymorph,
+	    ZmListNodeIsItem<true,
+	      ZmListLock<ZmPRWLock,
+		ZmListHeapID<ZuNull> > > > > ZeSinkList;
+namespace ZeSinkType {
+  ZtEnumValues(File, Debug, System);
+  ZtEnumNames("File", "Debug", "System");
+};
+struct ZeSink : public ZeSinkList::Node {
+  inline ZeSink(int type_) : type(type_) { }
+
+  virtual void log(ZeEvent *) = 0;
+  virtual void rotate() = 0;
+
+  int	type;	// ZeSinkType
+};
+
+class ZeAPI ZeFileSink : public ZeSink {
+  typedef ZmPLock Lock;
+  typedef ZmGuard<Lock> Guard;
+
+public:
+  inline ZeFileSink() :
+      ZeSink{ZeSinkType::File} { init(); }
+  inline ZeFileSink(ZuString name, unsigned age = 8, int tzOffset = 0) :
+      ZeSink{ZeSinkType::File},
+      m_filename(name), m_age(age), m_tzOffset(tzOffset) { init(); }
+
+  ~ZeFileSink();
+
+  void log(ZeEvent *e);
+  void rotate();
+
+private:
+  void init();
+  void rotate_();
+
+  ZtString	m_filename;
+  unsigned	m_age = 8;
+  int		m_tzOffset = 0;	// timezone offset
+
+  Lock		m_lock;
+    FILE *	  m_file = nullptr;
+};
+
+class ZeAPI ZeDebugSink : public ZeSink {
+  typedef ZmLock Lock;
+  typedef ZmGuard<Lock> Guard;
+
+public:
+  ZeDebugSink() : ZeSink{ZeSinkType::Debug},
+    m_started(ZmTime::Now) { init(); }
+  ZeDebugSink(ZuString name) : ZeSink{ZeSinkType::Debug},
+    m_filename(name), m_started(ZmTime::Now) { init(); }
+
+  ~ZeDebugSink();
+
+  void log(ZeEvent *e);
+  void rotate() { } // unused
+
+private:
+  void init();
+
+  ZtString	m_filename;
+  FILE *	m_file = nullptr;
+  ZmTime	m_started;
+};
+
+class ZeAPI ZeSysSink : public ZeSink {
+public:
+  ZeSysSink() : ZeSink{ZeSinkType::System} { }
+
+  void log(ZeEvent *e);
+  void rotate() { } // unused
+};
 
 class ZeLog;
 
@@ -83,93 +158,27 @@ friend struct ZmCleanup<ZeLog>;
   struct EventQueueID {
     inline static const char *id() { return "ZeLog.EventQueue"; }
   };
-  struct SinkListID {
-    inline static const char *id() { return "ZeLog.SinkList"; }
-  };
 
   typedef ZmList<ZmRef<ZeEvent>,
 	    ZmListObject<ZuNull,
 	      ZmListLock<ZmNoLock,
 		ZmListHeapID<EventQueueID> > > > EventQueue;
 
-  typedef ZmList<ZeSinkFn,
-	    ZmListObject<ZuNull,
-	      ZmListLock<ZmRWLock,
-		ZmListHeapID<SinkListID> > > > SinkList;
-
-  class ZeAPI FileSink : public ZmPolymorph {
-    typedef ZmLock Lock;
-    typedef ZmGuard<Lock> Guard;
-
-  public:
-    inline FileSink() : m_file(0) { init(8, 0); }
-    template <typename Name>
-    inline FileSink(Name &&name, unsigned age = 8, int tzOffset = 0) :
-	m_filename(ZuFwd<Name>(name)), m_file(0) { init(age, tzOffset); }
-
-    virtual ~FileSink();
-
-    void log(ZeEvent *e);
-
-  private:
-    void init(unsigned age, int tzOffset);
-
-    void log_(FILE *f, ZeEvent *e);
-
-    Lock		m_lock;
-    ZtString		m_filename;
-    FILE *		m_file;
-    int			m_tzOffset;	// timezone offset
-  };
-
-  class ZeAPI DebugSink : public ZmPolymorph {
-    typedef ZmLock Lock;
-    typedef ZmGuard<Lock> Guard;
-
-  public:
-    DebugSink() : m_file(0), m_started(ZmTime::Now) { init(); }
-    template <typename Name> DebugSink(Name &&name) :
-	m_filename(ZuFwd<Name>(name)), m_file(0), m_started(ZmTime::Now)
-      { init(); }
-
-    virtual ~DebugSink();
-
-    void log(ZeEvent *e);
-
-  private:
-    void init();
-
-    void log_(FILE *f, ZeEvent *e);
-
-    Lock		m_lock;
-    ZtString		m_filename;
-    FILE *		m_file;
-    ZmTime		m_started;
-  };
-
-  class ZeAPI SysSink : public ZmPolymorph {
-  public:
-    void log(ZeEvent *e) const;
-  };
-
   ZeLog();
 public:
   virtual ~ZeLog() { }
 
   template <typename ...Args>
-  inline static ZeSinkFn fileSink(Args &&... args) {
-    return ZeSinkFn::Member<&FileSink::log>::fn(
-	ZmMkRef(new FileSink(ZuFwd<Args>(args)...)));
+  inline static ZmRef<ZeSink> fileSink(Args &&... args) {
+    return new ZeFileSink(ZuFwd<Args>(args)...);
   }
   template <typename ...Args>
-  inline static ZeSinkFn debugSink(Args &&... args) {
-    return ZeSinkFn::Member<&DebugSink::log>::fn(
-	ZmMkRef(new DebugSink(ZuFwd<Args>(args)...)));
+  inline static ZmRef<ZeSink> debugSink(Args &&... args) {
+    return new ZeDebugSink(ZuFwd<Args>(args)...);
   }
   template <typename ...Args>
-  inline static ZeSinkFn sysSink(Args &&... args) {
-    return ZeSinkFn::Member<&SysSink::log>::fn(
-	ZmMkRef(new SysSink(ZuFwd<Args>(args)...)));
+  inline static ZmRef<ZeSink> sysSink(Args &&... args) {
+    return new ZeSysSink(ZuFwd<Args>(args)...);
   }
 
   template <typename ...Args>
@@ -182,27 +191,26 @@ public:
   inline static int level() { return instance()->level_(); }
   inline static void level(int l) { instance()->level_(l); }
 
-  inline static void add(ZeSinkFn sink) { instance()->add_(sink); }
-  inline static void del(ZeSinkFn sink) { instance()->del_(sink); }
+  inline static void add(ZmRef<ZeSink> sink) { instance()->add_(ZuMv(sink)); }
+  inline static void del(int sinkType) { instance()->del_(sinkType); }
 
   inline static void start() { instance()->start_(); }
   inline static void stop() { instance()->stop_(); }
   inline static void forked() { instance()->forked_(); }
 
   inline static void log(ZmRef<ZeEvent> e) { instance()->log_(ZuMv(e)); }
+  inline static void rotate() { instance()->rotate_(); }
 
 private:
   static ZeLog *instance();
 
-  template <typename Program>
-  inline void init_(Program &&program) {
-    m_program = ZuFwd<Program>(program);
+  void init_(ZuString program) {
+    m_program = program;
     ZePlatform::sysloginit(m_program, 0);
   }
-  template <typename Program, typename Facility>
-  inline void init_(Program &&program, Facility &&facility) {
-    m_program = ZuFwd<Program>(program);
-    ZePlatform::sysloginit(m_program, ZuFwd<Facility>(facility));
+  void init_(ZuString program, ZuString facility) {
+    m_program = program;
+    ZePlatform::sysloginit(m_program, facility);
   }
 
   ZuString program_();
@@ -210,8 +218,8 @@ private:
   inline int level_() const { return m_level; }
   inline void level_(int l) { m_level = l; }
 
-  void add_(ZeSinkFn sink);
-  inline void del_(ZeSinkFn sink) { m_sinks.del(sink); }
+  void add_(ZmRef<ZeSink> sink);
+  void del_(int sinkType);
 
   void start_();
   void start__();
@@ -222,8 +230,10 @@ private:
   void log_(ZmRef<ZeEvent> e);
   void log__(ZeEvent *e);
 
+  void rotate_();
+
 private:
-  SinkList	m_sinks;
+  ZeSinkList	m_sinks;
   ZtString	m_program;
   int		m_level;
   ZmSemaphore	m_work;
@@ -250,8 +260,7 @@ auto ZuInline Ze_BackTrace_fn(ZmBackTrace bt, Msg &&msg) {
 #define Ze_LOG_(sev, msg) ZeLog::log(ZeEVENT_(sev, msg))
 #define Ze_BackTrace_(sev, msg) \
   do { \
-    ZmBackTrace bt__; \
-    bt__.capture(0); \
+    ZmBackTrace bt__(0); \
     ZeLog::log(ZeEVENT_(sev, Ze_BackTrace_fn(bt__, msg))); \
   } while (0)
 

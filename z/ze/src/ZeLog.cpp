@@ -57,13 +57,24 @@ ZuString ZeLog::program_() {
   return m_program;
 }
 
-void ZeLog::add_(ZeSinkFn fn)
+void ZeLog::add_(ZmRef<ZeSink> sink)
 {
   {
-    SinkList::ReadIterator i(m_sinks);
-    while (ZeSinkFn fn_ = i.iterate()) if (fn == fn_) return;
+    ZeSinkList::ReadIterator i(m_sinks);
+    while (ZeSink *sink_ = static_cast<ZeSink *>(i.iterateNode()))
+      if (sink.ptr() == sink_) return;
   }
-  m_sinks.add(fn);
+  m_sinks.add(ZuMv(sink));
+}
+
+void ZeLog::del_(int sinkType)
+{
+  ZeSinkList::Iterator i(m_sinks);
+  while (ZeSink *sink = static_cast<ZeSink *>(i.iterateNode()))
+    if (sink->type == sinkType) {
+      i.del();
+      return;
+    }
 }
 
 void ZeLog::start_()
@@ -136,8 +147,14 @@ void ZeLog::log__(ZeEvent *e)
 #endif
   }
 
-  SinkList::ReadIterator i(m_sinks);
-  while (const ZeSinkFn &fn = i.iterate()) fn(e);
+  ZeSinkList::ReadIterator i(m_sinks);
+  while (ZeSink *sink = static_cast<ZeSink *>(i.iterateNode())) sink->log(e);
+}
+
+void ZeLog::rotate_()
+{
+  ZeSinkList::ReadIterator i(m_sinks);
+  while (ZeSink *sink = static_cast<ZeSink *>(i.iterateNode())) sink->rotate();
 }
 
 struct ZeLog_Buf;
@@ -164,24 +181,12 @@ static ZeLog_Buf *logBuf(int tzOffset)
   return buf;
 }
 
-void ZeLog::FileSink::init(unsigned age, int tzOffset)
+void ZeFileSink::init()
 {
-  m_tzOffset = tzOffset;
-
   if (!m_filename) m_filename << ZeLog::program() << ".log";
 
   if (m_filename != "&2") {
-    // age log files
-    unsigned size = m_filename.size() + ZuBoxed(age).length() + 1;
-    for (unsigned i = age; i > 0; i--) {
-      ZtString oldName(size);
-      oldName << m_filename;
-      if (i > 1) oldName << '.' << ZuBoxed(i - 1);
-      ZtString newName(size);
-      newName << m_filename << '.' << ZuBoxed(i);
-      if (i == age) ::remove(newName);
-      ::rename(oldName, newName);
-    }
+    rotate_();
     m_file = fopen(m_filename, "w");
   }
 
@@ -191,7 +196,7 @@ void ZeLog::FileSink::init(unsigned age, int tzOffset)
     setvbuf(m_file, 0, _IOLBF, ZeLog_BUFSIZ);
 }
 
-ZeLog::FileSink::~FileSink()
+ZeFileSink::~ZeFileSink()
 {
   if (m_file) fclose(m_file);
 }
@@ -202,13 +207,10 @@ ZeLog::FileSink::~FileSink()
 #pragma warning(disable:4996)
 #endif
 
-void ZeLog::FileSink::log(ZeEvent *e)
+void ZeFileSink::log(ZeEvent *e)
 {
-  log_(m_file, e);
-}
+  Guard guard(m_lock);
 
-void ZeLog::FileSink::log_(FILE *f, ZeEvent *e)
-{
   ZeLog_Buf *buf = logBuf(m_tzOffset);
 
   ZtDate d{e->time()};
@@ -229,17 +231,34 @@ void ZeLog::FileSink::log_(FILE *f, ZeEvent *e)
 
   if (buf->s[len - 1] != '\n') buf->s[len - 1] = '\n';
 
-  fwrite(buf->s.data(), 1, len, f);
-
-  if (e->severity() > Ze::Debug) fflush(f);
+  fwrite(buf->s.data(), 1, len, m_file);
+  if (e->severity() > Ze::Debug) fflush(m_file);
 }
 
-void ZeLog::SysSink::log(ZeEvent *e) const
+void ZeFileSink::rotate()
 {
-  ZePlatform::syslog(e);
+  Guard guard(m_lock);
+
+  fclose(m_file);
+  rotate_();
+  m_file = fopen(m_filename, "w");
 }
 
-void ZeLog::DebugSink::init()
+void ZeFileSink::rotate_()
+{
+  unsigned size = m_filename.length() + ZuBoxed(m_age).length() + 1;
+  for (unsigned i = m_age; i > 0; i--) {
+    ZtString oldName(size);
+    oldName << m_filename;
+    if (i > 1) oldName << '.' << ZuBoxed(i - 1);
+    ZtString newName(size);
+    newName << m_filename << '.' << ZuBoxed(i);
+    if (i == m_age) ::remove(newName);
+    ::rename(oldName, newName);
+  }
+}
+
+void ZeDebugSink::init()
 {
   m_filename << ZeLog::program() << ".log." << ZuBoxed(ZmPlatform::getPID());
 
@@ -251,21 +270,12 @@ void ZeLog::DebugSink::init()
     setvbuf(m_file, 0, _IOLBF, ZeLog_BUFSIZ);
 }
 
-ZeLog::DebugSink::~DebugSink()
+ZeDebugSink::~ZeDebugSink()
 {
   if (m_file) fclose(m_file);
 }
 
-void ZeLog::DebugSink::log(ZeEvent *e)
-{
-  log_(m_file, e);
-}
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-
-void ZeLog::DebugSink::log_(FILE *f, ZeEvent *e)
+void ZeDebugSink::log(ZeEvent *e)
 {
   ZeLog_Buf *buf = logBuf();
 
@@ -287,7 +297,15 @@ void ZeLog::DebugSink::log_(FILE *f, ZeEvent *e)
 
   if (buf->s[len - 1] != '\n') buf->s[len - 1] = '\n';
 
-  fwrite(buf->s.data(), 1, len, f);
+  fwrite(buf->s.data(), 1, len, m_file);
+  fflush(m_file);
+}
 
-  fflush(f);
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
+void ZeSysSink::log(ZeEvent *e)
+{
+  ZePlatform::syslog(e);
 }

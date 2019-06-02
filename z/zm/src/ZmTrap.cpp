@@ -148,7 +148,7 @@ LONG NTAPI ZmTrap_exHandler(EXCEPTION_POINTERS *exInfo)
   DWORD r;
   WriteConsoleA(h, "SIGSEGV\n", 8, &r, 0);
   {
-    ZuStringN<32768> buf;
+    ZuStringN<32736> buf;
     buf << bt;
     WriteConsoleA(h, buf.data(), buf.length(), &r, 0);
   }

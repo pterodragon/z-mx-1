@@ -147,7 +147,7 @@ void ZePlatform::syslog(ZeEvent *e)
 {
   ZePlatform_SyslogBuf *buf = syslogBuf();
 
-  buf->s << ZuBoxed(e->tid()) << " - ";
+  // buf->s << ZuBoxed(e->tid()) << " - ";
   if (e->severity() == Ze::Debug || e->severity() == Ze::Fatal)
     buf->s <<
       '\"' << ZePlatform::filename(e->filename()) << "\":" <<

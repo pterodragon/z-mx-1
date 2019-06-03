@@ -300,7 +300,7 @@ int main(int argc, char **argv)
 
   ZeLog::init("ZiNetlinkTest");
   ZeLog::level(0);
-  ZeLog::add(ZeLog::debugSink());
+  ZeLog::sink(ZeLog::debugSink());
   ZeLog::start();
 
   ZeError e;

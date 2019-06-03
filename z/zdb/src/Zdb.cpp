@@ -1046,15 +1046,15 @@ void ZdbEnv::recSend()
 	    pod->range(ZdbRange{0, db->dataSize()});
 	    cxn->repSend(
 		ZuMv(pod), Zdb_Msg::Rec,
-		ZdbOp::New, db->config().compress);
+		ZdbOp::Add, db->config().compress);
 	  } else {
 	    pod->del();
-	    cxn->repSend(ZuMv(pod), Zdb_Msg::Rec, ZdbOp::Delete, false);
+	    cxn->repSend(ZuMv(pod), Zdb_Msg::Rec, ZdbOp::Del, false);
 	  }
 	} else {
 	  db->alloc(pod);
 	  pod->init(rn, ZdbRange{}, ZdbDeleted);
-	  cxn->repSend(ZuMv(pod), Zdb_Msg::Rec, ZdbOp::Delete, false);
+	  cxn->repSend(ZuMv(pod), Zdb_Msg::Rec, ZdbOp::Del, false);
 	}
 	return;
       }
@@ -1383,7 +1383,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::replicated_(
   Guard guard(m_lock);
   if (ZuUnlikely(m_cache && (pod = m_cache->del(prevRN)))) {
     if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.del(pod);
-    if (op != ZdbOp::Delete) {
+    if (op != ZdbOp::Del) {
       pod->update(rn, prevRN, range, ZdbCommitted);
       cache_(pod);
     } else
@@ -1396,7 +1396,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::replicated_(
     if (!pod) alloc(pod);
     if (ZuUnlikely(!pod)) return nullptr;
     if (m_allocRN <= rn) m_allocRN = rn + 1;
-    if (op != ZdbOp::Delete) {
+    if (op != ZdbOp::Del) {
       pod->update(rn, prevRN, range, ZdbCommitted);
       cache(pod);
     } else
@@ -1411,9 +1411,9 @@ void ZdbAny::replicate(ZdbAnyPOD *pod, void *ptr, int op)
 #ifdef ZdbRep_DEBUG
   ZmAssert((!range || (range.off() + range.len()) <= pod->size()));
 #endif
-  if (op != ZdbOp::New) m_handler.delFn(pod, false);
+  if (op != ZdbOp::Add) m_handler.delFn(pod, false);
   if (range) memcpy((char *)pod->ptr() + range.off(), ptr, range.len());
-  if (op != ZdbOp::Delete) m_handler.addFn(pod, false);
+  if (op != ZdbOp::Del) m_handler.addFn(pod, false);
 }
 
 ZdbAny::ZdbAny(ZdbEnv *env, ZuString name, uint32_t version, int cacheMode,
@@ -1857,7 +1857,7 @@ void ZdbAny::abort(ZdbAnyPOD *pod) // aborts a push()
 {
   ZmAssert(!pod->committed());
   pod->del();
-  m_env->write(pod, Zdb_Msg::Rep, ZdbOp::Delete, false);
+  m_env->write(pod, Zdb_Msg::Rep, ZdbOp::Del, false);
 }
 
 void ZdbAny::put(ZdbAnyPOD *pod) // commits a push
@@ -1868,8 +1868,7 @@ void ZdbAny::put(ZdbAnyPOD *pod) // commits a push
     Guard guard(m_lock);
     cache(pod);
   }
-  this->copy(pod, ZdbOp::New);
-  m_env->write(pod, Zdb_Msg::Rep, ZdbOp::New, m_config->compress);
+  m_env->write(pod, Zdb_Msg::Rep, ZdbOp::Add, m_config->compress);
 }
 
 ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *prev)
@@ -1917,8 +1916,7 @@ void ZdbAny::putUpdate(ZdbAnyPOD *pod, bool replace)
     cacheDel_(pod->prevRN());
     cache(pod);
   }
-  int op = replace ? ZdbOp::Update : ZdbOp::New;
-  this->copy(pod, op);
+  int op = replace ? ZdbOp::Upd : ZdbOp::Add;
   m_env->write(pod, Zdb_Msg::Rep, op, m_config->compress);
 }
 
@@ -1932,8 +1930,7 @@ void ZdbAny::del(ZdbAnyPOD *pod)
     rn = m_allocRN++;
   }
   pod->update(rn, pod->rn(), ZdbRange{}, ZdbDeleted);
-  this->copy(pod, ZdbOp::Delete);
-  m_env->write(pod, Zdb_Msg::Rep, ZdbOp::Delete, false);
+  m_env->write(pod, Zdb_Msg::Rep, ZdbOp::Del, false);
 }
 
 void ZdbAny::purge(ZdbRN minRN)
@@ -1951,8 +1948,7 @@ void ZdbAny::purge(ZdbRN minRN)
       m_minRN = rn;
       guard.unlock();
       pod->del();
-      this->copy(pod, ZdbOp::Delete);
-      m_env->write(ZuMv(pod), Zdb_Msg::Rep, ZdbOp::Delete, false);
+      m_env->write(ZuMv(pod), Zdb_Msg::Rep, ZdbOp::Del, false);
     }
     ++rn;
   }
@@ -2003,13 +1999,16 @@ void ZdbEnv::write(ZmRef<ZdbAnyPOD> pod, int type, int op, bool compress)
 void ZdbAny::write(ZmRef<ZdbAnyPOD> pod)
 {
   if (!m_config->repMode) m_env->repSend(pod);
-  pod->write();
+  int op = pod->write();
+  m_handler.writeFn(pod, op);
 }
 
-void ZdbAnyPOD::write()
+int ZdbAnyPOD::write()
 {
   Zdb_Msg_Rep &rep = m_hdr.u.rep;
-  m_db->write_(rn(), prevRN(), ptr(), rep.op);
+  int op = rep.op;
+  m_db->write_(rn(), prevRN(), ptr(), op);
+  return op;
 }
 
 Zdb_FileRec ZdbAny::rn2file(ZdbRN rn, bool write)
@@ -2131,16 +2130,16 @@ void ZdbAny::write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op)
 
   unsigned prevOffset = trailerOffset + offsetof(ZdbTrailer, prevRN);
 
-  if (op == ZdbOp::Delete && rec.file()->del(rec.offRN()))
+  if (op == ZdbOp::Del && rec.file()->del(rec.offRN()))
     delFile(rec.file());
   else {
     ZiFile::Offset off = (ZiFile::Offset)rec.offRN() * m_recSize;
-    if (op != ZdbOp::New) *(ZdbRN *)(((char *)ptr) + prevOffset) = rn;
+    if (op != ZdbOp::Add) *(ZdbRN *)(((char *)ptr) + prevOffset) = rn;
     if (ZuUnlikely((r = rec.file()->pwrite(off, ptr, m_recSize, &e)) != Zi::OK))
       fileWriteError_(rec.file(), off, e);
   }
 
-  if (op == ZdbOp::New) return;
+  if (op == ZdbOp::Add) return;
 
   while (prevRN != rn) {
     rn = prevRN;

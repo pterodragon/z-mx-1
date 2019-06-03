@@ -1160,7 +1160,7 @@ public:
   static int		m_reformationDay;
 };
 
-inline ZtDate ZtDateNow() { return ZtDate(ZtDate::Now); }
+inline ZtDate ZtDateNow() { return ZtDate{ZtDate::Now}; }
 
 template <int Prec, class Null>
 struct ZuPrint<ZtDateFmt::FIX<Prec, Null> > : public ZuPrintDelegate {

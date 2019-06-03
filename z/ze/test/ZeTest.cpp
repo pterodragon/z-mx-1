@@ -25,9 +25,9 @@ int main(int argc, char **argv)
   ZeLog::level(0);
 
   if (argc == 2)
-    ZeLog::add(ZeLog::sysSink());
+    ZeLog::sink(ZeLog::sysSink());
   else
-    ZeLog::add(ZeLog::fileSink());
+    ZeLog::sink(ZeLog::fileSink());
 
   ZeLog::start();
 

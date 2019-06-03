@@ -1074,16 +1074,28 @@ error:
 void ZiFile::age(const Path &name_, unsigned max)
 {
   ZtString name = name_;
-  unsigned size = name.size() + ZuBoxed(max).length() + 1;
-  for (unsigned i = max; i > 0; --i) {
-    ZtString oldName(size);
-    oldName << name;
-    if (i > 1) oldName << '.' << ZuBoxed(i - 1);
-    ZtString newName(size);
-    newName << name << '.' << ZuBoxed(i);
-    if (i == max) remove(newName);
-    rename(oldName, newName);
+  unsigned size = name.size() + ZuBoxed(max).length() + 4;
+
+  ZtString prevName_(size), nextName_(size), sideName_(size);
+  ZtString *prevName = &prevName_;
+  ZtString *nextName = &nextName_;
+  ZtString *sideName = &sideName_;
+
+  *prevName << name;
+  bool last = false;
+  unsigned i;
+  for (i = 0; i < max && !last; i++) {
+    nextName->length(0);
+    *nextName << name << '.' << ZuBoxed(i + 1);
+    sideName->length(0);
+    *sideName << *nextName << '_';
+    last = (rename(*nextName, *sideName) == Zi::IOError);
+    rename(*prevName, *nextName);
+    ZtString *oldName = prevName;
+    prevName = sideName;
+    sideName = oldName;
   }
+  if (i == max) remove(*prevName);
 }
 
 ZiFile::Path ZiFile::cwd()

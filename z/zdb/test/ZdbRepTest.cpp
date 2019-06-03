@@ -146,7 +146,7 @@ int main(int argc, char **argv)
 
   ZeLog::init("ZdbRepTest");
   ZeLog::level(0);
-  ZeLog::add(ZeLog::debugSink());
+  ZeLog::sink(ZeLog::debugSink());
   ZeLog::start();
 
   App *app = App::instance();

@@ -202,7 +202,8 @@ int main(int argc, char **argv)
 
   ZeLog::init("zcmd");
   ZeLog::level(0);
-  ZeLog::add([](ZeEvent *e) { std::cerr << e->message() << '\n' << std::flush; });
+  ZeLog::sink(ZeLog::lambdaSink(
+	[](ZeEvent *e) { std::cerr << e->message() << '\n' << std::flush; }));
   ZeLog::start();
 
   try {

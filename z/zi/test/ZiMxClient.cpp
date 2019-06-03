@@ -326,7 +326,7 @@ int main(int argc, char **argv)
 
   ZeLog::init("ZiMxClient");
   ZeLog::level(0);
-  ZeLog::add(ZeLog::debugSink());
+  ZeLog::sink(ZeLog::debugSink());
   ZeLog::start();
 
   Mx mx(ip, port, options, nConnections, nConcurrent, maxRecv,

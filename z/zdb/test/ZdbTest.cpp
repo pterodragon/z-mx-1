@@ -255,7 +255,7 @@ int main(int argc, char **argv)
 
   ZeLog::init("ZdbTest");
   ZeLog::level(0);
-  ZeLog::add(ZeLog::debugSink());
+  ZeLog::sink(ZeLog::debugSink());
   ZeLog::start();
 
   ZmTrap::sigintFn(ZmFn<>::Ptr<&sigint>::fn());
@@ -302,10 +302,10 @@ int main(int argc, char **argv)
 		pod->rn(), pod->prevRN(), (Order *)pod->ptr());
 	  },
 	  [](ZdbAnyPOD *pod, int op) {
-	    if (op == ZdbOp::Delete)
-	      deleted("DC delete", pod->rn(), pod->prevRN());
-	    else if (op == ZdbOp::Update)
-	      dump("DC update", pod->rn(), pod->prevRN(), (Order *)pod->ptr());
+	    if (op == ZdbOp::Del)
+	      deleted("DC del", pod->rn(), pod->prevRN());
+	    else if (op == ZdbOp::Upd)
+	      dump("DC upd", pod->rn(), pod->prevRN(), (Order *)pod->ptr());
 	    else
 	      dump("DC new", pod->rn(), pod->prevRN(), (Order *)pod->ptr());
 	  }

@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 
   ZeLog::init("ZvCmdTest");
   ZeLog::level(0);
-  ZeLog::add(ZeLog::fileSink("&2"));
+  ZeLog::sink(ZeLog::fileSink("&2"));
   ZeLog::start();
 
   server->init(mx, ZmMkRef(new ZvCf()));

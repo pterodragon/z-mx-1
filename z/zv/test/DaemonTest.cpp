@@ -47,7 +47,7 @@ int main(int argc, char **argv)
 
   ZeLog::init("DaemonTest");
   ZeLog::level(0);
-  ZeLog::add(ZeLog::debugSink());
+  ZeLog::sink(ZeLog::debugSink());
 
   ZmTrap::sigintFn(ZmFn<>::Ptr<&sigint>::fn());
   ZmTrap::trap();

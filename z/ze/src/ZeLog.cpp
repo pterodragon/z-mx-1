@@ -57,29 +57,15 @@ ZuString ZeLog::program_() {
   return m_program;
 }
 
-void ZeLog::add_(ZmRef<ZeSink> sink)
+void ZeLog::sink_(ZmRef<ZeSink> sink)
 {
-  {
-    ZeSinkList::ReadIterator i(m_sinks);
-    while (ZeSink *sink_ = static_cast<ZeSink *>(i.iterateNode()))
-      if (sink.ptr() == sink_) return;
-  }
-  m_sinks.add(ZuMv(sink));
-}
-
-void ZeLog::del_(int sinkType)
-{
-  ZeSinkList::Iterator i(m_sinks);
-  while (ZeSink *sink = static_cast<ZeSink *>(i.iterateNode()))
-    if (sink->type == sinkType) {
-      i.del();
-      return;
-    }
+  Guard guard(m_lock);
+  m_sink = sink;
 }
 
 void ZeLog::start_()
 {
-  ZmGuard<ZmLock> guard(m_lock);
+  Guard guard(m_lock);
   if (!!m_thread) return;
   start__();
 }
@@ -94,7 +80,7 @@ void ZeLog::start__()
 
 void ZeLog::forked_()
 {
-  ZmGuard<ZmLock> guard(m_lock);
+  Guard guard(m_lock);
   start__();
 }
 
@@ -102,7 +88,7 @@ void ZeLog::stop_()
 {
   ZmThread thread;
   {
-    ZmGuard<ZmLock> guard(m_lock);
+    Guard guard(m_lock);
     thread = m_thread;
     m_thread = 0;
   }
@@ -118,7 +104,7 @@ void ZeLog::work_()
     m_work.wait();
     ZmRef<ZeEvent> event;
     {
-      ZmGuard<ZmLock> guard(m_lock);
+      Guard guard(m_lock);
       event = m_queue.shift();
     }
     if (!event) return;
@@ -131,7 +117,7 @@ void ZeLog::log_(ZmRef<ZeEvent> e)
   if (!e) return;
   if ((int)e->severity() < m_level) return;
   {
-    ZmGuard<ZmLock> guard(m_lock);
+    Guard guard(m_lock);
     m_queue.push(ZuMv(e));
   }
   m_work.post();
@@ -139,22 +125,29 @@ void ZeLog::log_(ZmRef<ZeEvent> e)
 
 void ZeLog::log__(ZeEvent *e)
 {
-  if (ZuUnlikely(!m_sinks.count())) {
+  ZmRef<ZeSink> sink;
+  {
+    Guard guard(m_lock);
+    sink = m_sink;
+    if (ZuUnlikely(!sink)) {
 #ifdef _WIN32
-    m_sinks.add(sysSink());	// on Windows, default to the event log
+      sink = m_sink = sysSink();	// on Windows, default to the event log
 #else
-    m_sinks.add(fileSink());	// on Unix, default to stderr
+      sink = m_sink = fileSink();	// on Unix, default to stderr
 #endif
+    }
   }
-
-  ZeSinkList::ReadIterator i(m_sinks);
-  while (ZeSink *sink = static_cast<ZeSink *>(i.iterateNode())) sink->log(e);
+  sink->log(e);
 }
 
-void ZeLog::rotate_()
+void ZeLog::age_()
 {
-  ZeSinkList::ReadIterator i(m_sinks);
-  while (ZeSink *sink = static_cast<ZeSink *>(i.iterateNode())) sink->rotate();
+  ZmRef<ZeSink> sink;
+  {
+    Guard guard(m_lock);
+    sink = m_sink;
+  }
+  if (sink) sink->age();
 }
 
 struct ZeLog_Buf;
@@ -186,7 +179,7 @@ void ZeFileSink::init()
   if (!m_filename) m_filename << ZeLog::program() << ".log";
 
   if (m_filename != "&2") {
-    rotate_();
+    age_();
     m_file = fopen(m_filename, "w");
   }
 
@@ -235,16 +228,16 @@ void ZeFileSink::log(ZeEvent *e)
   if (e->severity() > Ze::Debug) fflush(m_file);
 }
 
-void ZeFileSink::rotate()
+void ZeFileSink::age()
 {
   Guard guard(m_lock);
 
   fclose(m_file);
-  rotate_();
+  age_();
   m_file = fopen(m_filename, "w");
 }
 
-void ZeFileSink::rotate_()
+void ZeFileSink::age_()
 {
   unsigned size = m_filename.length() + ZuBoxed(m_age).length() + 1;
   for (unsigned i = m_age; i > 0; i--) {

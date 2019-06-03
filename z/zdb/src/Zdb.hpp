@@ -84,11 +84,11 @@ typedef uint64_t ZdbRN;		// record ID
 #define ZdbFileMask	0x3fffU
 
 namespace ZdbOp {
-  enum { New = 0, Update, Delete };
+  enum { Add = 0, Upd, Del };
   inline static const char *name(int op) {
-    static const char *names[] = { "New", "Update", "Delete" };
+    static const char *names[] = { "Add", "Upd", "Del" };
     if (ZuUnlikely(op < 0 || op >= (int)(sizeof(names) / sizeof(names[0]))))
-      return "Unknown";
+      return "Unk";
     return names[op];
   }
 };
@@ -386,7 +386,7 @@ private:
   void replicate(int type, int op, bool compress);
 
   void send(ZiIOContext &io);
-  void write();
+  int write();
 
   virtual ZmRef<ZdbAnyPOD_Cmpr> compress() = 0;
 
@@ -435,8 +435,8 @@ typedef ZmFn<ZdbAny *, ZmRef<ZdbAnyPOD> &> ZdbAllocFn;
 typedef ZmFn<ZdbAnyPOD *, bool> ZdbAddFn;
 // DelFn(pod, recovered) - record update/delete replicated
 typedef ZmFn<ZdbAnyPOD *, bool> ZdbDelFn;
-// CopyFn(pod, range, op) - (optional) called for app drop copy
-typedef ZmFn<ZdbAnyPOD *, int> ZdbCopyFn;
+// WriteFn(pod, op) - write drop copy
+typedef ZmFn<ZdbAnyPOD *, int> ZdbWriteFn;
 
 struct ZdbPOD_HeapID {
   inline static const char *id() { return "ZdbPOD"; }
@@ -528,7 +528,7 @@ struct ZdbHandler {
   ZdbAllocFn	allocFn;
   ZdbAddFn	addFn;
   ZdbDelFn	delFn;
-  ZdbCopyFn	copyFn;
+  ZdbWriteFn	writeFn;
 };
 
 class ZdbAPI ZdbAny : public ZmPolymorph {
@@ -650,7 +650,6 @@ private:
   inline void alloc(ZmRef<ZdbAnyPOD> &pod) { m_handler.allocFn(this, pod); }
   void recover(ZmRef<ZdbAnyPOD> pod);
   void replicate(ZdbAnyPOD *pod, void *ptr, int op);
-  inline void copy(ZdbAnyPOD *pod, int op) { m_handler.copyFn(pod, op); }
 
   // push initial record
   ZmRef<ZdbAnyPOD> push_();

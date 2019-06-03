@@ -7,7 +7,7 @@
 int main()
 {
   ZeLog::init("ZiFileTest");
-  ZeLog::add(ZeLog::fileSink());
+  ZeLog::sink(ZeLog::fileSink());
   ZeLog::start();
 
   ZeError e;

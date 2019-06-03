@@ -188,9 +188,8 @@ public:
   }
   ZmObject *get(ZmPlatform::ThreadID tid) {
     for (Object *o = m_head; o; o = o->next)
-      if (o->tid == tid && o->ptr) {
+      if (o->tid == tid && o->ptr)
 	return o->ptr;
-      }
     return nullptr;
   }
 #endif
@@ -368,11 +367,9 @@ private:
   inline T *instance_(T *ptr) {
     Object *o = local_();
     ZmSpecific_lock();
-    if (!o->ptr) {
 #ifdef _WIN32
-      o->tid = ZmPlatform::getTID_();
+    if (!o->ptr) o->tid = ZmPlatform::getTID_();
 #endif
-    }
   retry:
     if (!o->ptr) {
       o->ptr = ptr;

@@ -201,15 +201,9 @@ public:
   // MxAnyLink virtual
   void update(ZvCf *);
   void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo);
-  bool failover() const { return m_failover; }
-  void failover(bool v) {
-    if (v == m_failover) return;
-    m_failover = v;
-    reconnect(true);
-  }
 
-  void connect();			// Rx
-  void disconnect();			// Rx - calls disconnect_1()
+  void connect();		// Rx
+  void disconnect();		// Rx - calls disconnect_1()
 
   // MxLink CTRP
   ZmTime reconnInterval(unsigned) { return engine()->reconnInterval(); }
@@ -275,8 +269,6 @@ public:
 
 private:
   const MxMDChannel	*m_channel = 0;
-
-  bool			m_failover = false;
 
   // Rx
   ZmScheduler::Timer	m_timer;

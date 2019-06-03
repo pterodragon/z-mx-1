@@ -158,7 +158,7 @@ int main(int argc, char **argv)
   if (!argv[1]) usage();
 
   ZeLog::init("mdsample_interactive");	// program name
-  ZeLog::add(ZeLog::fileSink("&2"));	// log errors to stderr
+  ZeLog::sink(ZeLog::fileSink("&2"));	// log errors to stderr
   ZeLog::start();			// start logger thread
 
   keys = new Keys();

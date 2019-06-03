@@ -67,7 +67,7 @@ public:
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new RxPOD(db); },
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
 	    app->rxAdded(static_cast<RxPOD *>(pod)); }},
-	  ZdbDelFn{}, ZdbCopyFn{}});
+	  ZdbDelFn{}});
   }
   void final() {
     m_rxDB = nullptr;

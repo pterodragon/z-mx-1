@@ -251,7 +251,7 @@ void MxMDPubLink::tcpListen()
 {
   ZiIP ip;
   uint16_t port;
-  if (!m_failover) {
+  if (!(reconnects() & 1)) {
     ip = m_channel->tcpIP;
     port = m_channel->tcpPort;
   } else {
@@ -399,7 +399,7 @@ void MxMDPubLink::udpConnect()
   uint16_t port;
   ZiIP resendIP;
   uint16_t resendPort;
-  if (!m_failover) {
+  if (!(reconnects() & 1)) {
     ip = m_channel->udpIP;
     port = m_channel->udpPort;
     resendIP = m_channel->resendIP;

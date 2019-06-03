@@ -149,6 +149,7 @@ protected:
 
 public:
   ZuInline int state() const { return m_state.load_(); }
+  ZuInline unsigned reconnects() const { return m_reconnects.load_(); }
 
   // display sequence:
   //   id, state, reconnects, rxSeqNo, txSeqNo
@@ -167,8 +168,6 @@ public:
 
   virtual void update(ZvCf *cf) = 0;
   virtual void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) = 0;
-  virtual bool failover() const = 0;
-  virtual void failover(bool) = 0;
 
   inline MxSeqNo rxSeqNo() const {
     if (const MxQueue *queue = rxQueue()) return queue->head();
@@ -206,7 +205,7 @@ private:
 
   StateLock		m_stateLock;
     ZmAtomic<int>	  m_state = MxLinkState::Down;
-    unsigned		  m_reconnects;
+    ZmAtomic<unsigned>	  m_reconnects;
     bool		  m_enabled = true;
 };
 

@@ -158,8 +158,6 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
 
 MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
 {
-  ZeLog::start(); // ensure error reporting works
-
   ZmRef<ZvCf> cf = new ZvCf();
 
   ZmRef<MxMDCore> md;
@@ -168,8 +166,9 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
     try {
       cf->fromFile(cf_, false);
     } catch (const ZvError &e) {
-      ZeLOG(Fatal, ZtString() << "MxMDLib - configuration error: " << e);
-      return md;
+      std::cerr << (ZtString()
+	  << "MxMDLib - configuration error: " << e << '\n') << std::flush;
+      return nullptr;
     }
   else {
     cf->fromString(
@@ -197,23 +196,24 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
   }
 
   try {
-    if (ZtString heapCSV = cf->get("heap")) {
+    ZeLog::level(cf->getInt("log:level", 0, Ze::Fatal, false, Ze::Info));
+    if (ZuString logFile = cf->get("log:file")) {
+      ZeLog::sink(ZeLog::fileSink(logFile,
+	    cf->getInt("log:age", 0, 1000, false, 8),
+	    cf->getInt("log:offset", INT_MIN, INT_MAX, false, 0)));
+    }
+  } catch (...) { }
+  ZeLog::start();
+
+  try {
+    if (ZuString heapCSV = cf->get("heap")) {
       ZeLOG(Info, "MxMDLib - configuring heap...");
       ZvHeapCSV::init(heapCSV);
     }
 
-    if (ZtString hashCSV = cf->get("hash")) {
+    if (ZuString hashCSV = cf->get("hash")) {
       ZeLOG(Info, "MxMDLib - configuring hash tables...");
       ZvHashCSV::init(hashCSV);
-    }
-
-    if (ZmRef<ZvCf> logCf = cf->subset("log", false)) {
-      ZeLog::init("MxMD");
-      ZeLog::level(logCf->getInt("level", 0, 5, false, 0));
-      ZeLog::add(ZeLog::fileSink(
-	  logCf->get("file"),
-	  logCf->getInt("age", 0, INT_MAX, false, 8),
-	  logCf->getInt("offset", INT_MIN, INT_MAX, false, 0)));
     }
 
     {
@@ -462,6 +462,19 @@ void MxMDCore::initCmds()
       "Options:\n"
       "-s, --stop=ID\tstop subscribing - detach subscriber ID\n");
 #endif
+  addCmd(
+      "logAge", "",
+      ZvCmdFn{this, [](MxMDCore *, ZvCmdServerCxn *, ZvCf *args,
+	  ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &outMsg) {
+	ZuBox<int> argc = args->get("#");
+	if (argc != 1) throw ZvCmdUsage();
+	outMsg = new ZvCmdMsg();
+	auto &out = outMsg->cmd();
+	out << "ageing log files...\n";
+	ZeLog::age();
+      }},
+      "age log files",
+      "usage: logAge\n");
 }
 
 void MxMDCore::start()

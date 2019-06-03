@@ -69,7 +69,7 @@ public:
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new TxPOD(db); },
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
 	    app->txAdded(static_cast<TxPOD *>(pod)); }},
-	  ZdbDelFn{}, ZdbCopyFn{}});
+	  ZdbDelFn{}});
   }
   void final() {
     m_txDB = nullptr;

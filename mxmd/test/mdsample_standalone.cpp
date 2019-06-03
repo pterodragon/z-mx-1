@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 {
   // configure and start logging
   ZeLog::init("mdsample");		// program name
-  ZeLog::add(ZeLog::fileSink("&2"));	// log errors to stderr
+  ZeLog::sink(ZeLog::fileSink("&2"));	// log errors to stderr
   ZeLog::start();			// start logger thread
 
   signal(SIGINT, &sigint);		// handle CTRL-C

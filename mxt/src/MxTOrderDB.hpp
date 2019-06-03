@@ -77,8 +77,8 @@ public:
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
 	    app->orderAdded(static_cast<OrderPOD *>(pod)); }},
 	  ZdbDelFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
-	    app->orderDeleted(static_cast<OrderPOD *>(pod)); }},
-	  ZdbCopyFn{}});
+	    app->orderDeleted(static_cast<OrderPOD *>(pod)); }}
+	  app()->orderWriteFn()});
     m_closedDB = new ClosedDB(
 	dbEnv, "closedDB", Types::DBVersion, ZdbCacheMode::Normal,
 	ZdbHandler{
@@ -87,7 +87,7 @@ public:
 	    app->closedAdded(static_cast<ClosedPOD *>(pod)); }},
 	  ZdbDelFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
 	    app->closedDeleted(static_cast<ClosedPOD *>(pod)); }},
-	  ZdbCopyFn{}});
+	  app()->closedWriteFn()});
   }
   void final() {
     m_orderDB = nullptr;

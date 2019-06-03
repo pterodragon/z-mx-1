@@ -301,7 +301,7 @@ int main(int argc, char **argv)
 
   ZeLog::init("MxTelClient");
   ZeLog::level(0);
-  ZeLog::add(ZeLog::fileSink("&2"));
+  ZeLog::sink(ZeLog::fileSink("&2"));
   ZeLog::start();
 
   ZmRef<ZvCf> cf = new ZvCf();

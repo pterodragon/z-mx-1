@@ -242,12 +242,6 @@ public:
   // MxAnyLink virtual
   void update(ZvCf *);
   void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo);
-  bool failover() const { return m_failover; }
-  void failover(bool v) {
-    if (v == m_failover) return;
-    m_failover = v;
-    reconnect(true);
-  }
 
   void connect();		// Rx
   void disconnect();		// Rx

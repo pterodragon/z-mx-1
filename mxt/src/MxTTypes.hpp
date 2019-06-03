@@ -312,6 +312,13 @@ struct MxTTimeFmt {
 };
 template <> struct ZuPrint<MxTTimeFmt::Null> : public ZuPrintFn { };
 
+struct MxTCSVTimeFmt {
+  inline static ZtDateFmt::CSV &fmt() {
+    thread_local ZtDateFmt::CSV fmt_;
+    return fmt_;
+  }
+};
+
 struct MxTBoolFmt {
   template <typename S> inline void print(S &s) const {
     if (!*v) return;

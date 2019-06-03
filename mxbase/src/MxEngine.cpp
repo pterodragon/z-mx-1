@@ -52,19 +52,19 @@ void MxEngine::start()
 
     bool start = false;
 
-    prev = m_state;
+    prev = m_state.load_();
     switch (prev) {
       case MxEngineState::Stopped:
-	m_state = MxEngineState::Starting;
+	m_state.store_(MxEngineState::Starting);
 	start = true;
 	break;
       case MxEngineState::Stopping:
-	m_state = MxEngineState::StartPending;
+	m_state.store_(MxEngineState::StartPending);
 	break;
       default:
 	break;
     }
-    next = m_state;
+    next = m_state.load_();
 
     if (start) start_();
   }
@@ -81,19 +81,19 @@ void MxEngine::stop()
 
     bool stop = false;
 
-    prev = m_state;
+    prev = m_state.load_();
     switch (prev) {
       case MxEngineState::Running:
-	m_state = MxEngineState::Stopping;
+	m_state.store_(MxEngineState::Stopping);
 	stop = true;
 	break;
       case MxEngineState::Starting:
-	m_state = MxEngineState::StopPending;
+	m_state.store_(MxEngineState::StopPending);
 	break;
       default:
 	break;
     }
-    next = m_state;
+    next = m_state.load_();
 
     if (stop) stop_();
   }
@@ -188,7 +188,7 @@ void MxEngine::linkState(MxAnyLink *link, int prev, int next)
 
     bool start = false, stop = false;
 
-    enginePrev = m_state;
+    enginePrev = m_state.load_();
     switch (enginePrev) {
       case MxEngineState::Starting:
 	switch (prev) {
@@ -198,7 +198,7 @@ void MxEngine::linkState(MxAnyLink *link, int prev, int next)
 	  case MxLinkState::ConnectPending:
 	  case MxLinkState::DisconnectPending:
 	    if (!(m_down + m_transient))
-	      m_state = MxEngineState::Running;
+	      m_state.store_(MxEngineState::Running);
 	    break;
 	}
 	break;
@@ -210,7 +210,7 @@ void MxEngine::linkState(MxAnyLink *link, int prev, int next)
 	  case MxLinkState::ConnectPending:
 	  case MxLinkState::DisconnectPending:
 	    if (!(m_down + m_transient)) {
-	      m_state = MxEngineState::Stopping;
+	      m_state.store_(MxEngineState::Stopping);
 	      stop = true;
 	    }
 	    break;
@@ -224,7 +224,7 @@ void MxEngine::linkState(MxAnyLink *link, int prev, int next)
 	  case MxLinkState::DisconnectPending:
 	  case MxLinkState::Up:
 	    if (!(m_up + m_transient))
-	      m_state = MxEngineState::Stopped;
+	      m_state.store_(MxEngineState::Stopped);
 	    break;
 	}
 	break;
@@ -236,14 +236,14 @@ void MxEngine::linkState(MxAnyLink *link, int prev, int next)
 	  case MxLinkState::DisconnectPending:
 	  case MxLinkState::Up:
 	    if (!(m_up + m_transient)) {
-	      m_state = MxEngineState::Starting;
+	      m_state.store_(MxEngineState::Starting);
 	      start = true;
 	    }
 	    break;
 	}
 	break;
     }
-    engineNext = m_state;
+    engineNext = m_state.load_();
 
     if (start) start_();
     if (stop) stop_();
@@ -270,7 +270,7 @@ void MxEngine::telemetry(Telemetry &data) const
     data.up = m_up;
     data.reconn = m_reconn;
     data.failed = m_failed;
-    data.state = m_state;
+    data.state = m_state.load_();
   }
   {
     ReadGuard guard(m_lock);
@@ -321,29 +321,29 @@ void MxAnyLink::up_(bool enable)
     if (enable) m_enabled = true;
 
     // state machine
-    prev = m_state;
+    prev = m_state.load_();
     switch (prev) {
       case MxLinkState::Disabled:
       case MxLinkState::Down:
       case MxLinkState::Failed:
 	if (running) {
-	  m_state = MxLinkState::Connecting;
+	  m_state.store_(MxLinkState::Connecting);
 	  connect = true;
 	} else
-	  m_state = MxLinkState::Down;
+	  m_state.store_(MxLinkState::Down);
 	break;
       case MxLinkState::Disconnecting:
 	if (running && m_enabled)
-	  m_state = MxLinkState::ConnectPending;
+	  m_state.store_(MxLinkState::ConnectPending);
 	break;
       case MxLinkState::DisconnectPending:
 	if (m_enabled)
-	  m_state = MxLinkState::Connecting;
+	  m_state.store_(MxLinkState::Connecting);
 	break;
       default:
 	break;
     }
-    next = m_state;
+    next = m_state.load_();
   }
 
   if (next != prev) engine()->linkState(this, prev, next);
@@ -365,27 +365,27 @@ void MxAnyLink::down_(bool disable)
     if (disable) m_enabled = false;
 
     // state machine
-    prev = m_state;
+    prev = m_state.load_();
     switch (prev) {
       case MxLinkState::Down:
-	if (!m_enabled) m_state = MxLinkState::Disabled;
+	if (!m_enabled) m_state.store_(MxLinkState::Disabled);
 	break;
       case MxLinkState::Up:
       case MxLinkState::ReconnectPending:
       case MxLinkState::Reconnecting:
-	m_state = MxLinkState::Disconnecting;
+	m_state.store_(MxLinkState::Disconnecting);
 	disconnect = true;
 	break;
       case MxLinkState::Connecting:
-	m_state = MxLinkState::DisconnectPending;
+	m_state.store_(MxLinkState::DisconnectPending);
 	break;
       case MxLinkState::ConnectPending:
-	m_state = MxLinkState::Disconnecting;
+	m_state.store_(MxLinkState::Disconnecting);
 	break;
       default:
 	break;
     }
-    next = m_state;
+    next = m_state.load_();
   }
 
   if (next != prev) engine()->linkState(this, prev, next);
@@ -405,24 +405,24 @@ void MxAnyLink::connected()
     StateGuard stateGuard(m_stateLock);
 
     // state machine
-    prev = m_state;
+    prev = m_state.load_();
     switch (prev) {
       case MxLinkState::Connecting:
       case MxLinkState::ReconnectPending:
       case MxLinkState::Reconnecting:
-	m_state = MxLinkState::Up;
+	m_state.store_(MxLinkState::Up);
       case MxLinkState::Up:
-	m_reconnects = 0;
+	m_reconnects.store_(0);
 	break;
       case MxLinkState::DisconnectPending:
-	m_state = MxLinkState::Disconnecting;
+	m_state.store_(MxLinkState::Disconnecting);
 	disconnect = true;
-	m_reconnects = 0;
+	m_reconnects.store_(0);
 	break;
       default:
 	break;
     }
-    next = m_state;
+    next = m_state.load_();
   }
 
   if (next != prev) engine()->linkState(this, prev, next);
@@ -443,32 +443,32 @@ void MxAnyLink::disconnected()
     StateGuard stateGuard(m_stateLock);
 
     // state machine
-    prev = m_state;
+    prev = m_state.load_();
     switch (prev) {
       case MxLinkState::Connecting:
       case MxLinkState::DisconnectPending:
       case MxLinkState::ReconnectPending:
       case MxLinkState::Reconnecting:
       case MxLinkState::Up:
-	m_state = m_enabled ? MxLinkState::Failed : MxLinkState::Disabled;
-	m_reconnects = 0;
+	m_state.store_(m_enabled ? MxLinkState::Failed : MxLinkState::Disabled);
+	m_reconnects.store_(0);
 	break;
       case MxLinkState::Disconnecting:
-	m_state = m_enabled ? MxLinkState::Down : MxLinkState::Disabled;
-	m_reconnects = 0;
+	m_state.store_(m_enabled ? MxLinkState::Down : MxLinkState::Disabled);
+	m_reconnects.store_(0);
 	break;
       case MxLinkState::ConnectPending:
 	if (m_enabled) {
-	  m_state = MxLinkState::Connecting;
+	  m_state.store_(MxLinkState::Connecting);
 	  connect = true;
 	} else
-	  m_state = MxLinkState::Disabled;
-	m_reconnects = 0;
+	  m_state.store_(MxLinkState::Disabled);
+	m_reconnects.store_(0);
 	break;
       default:
 	break;
     }
-    next = m_state;
+    next = m_state.load_();
   }
 
   if (next != prev) engine()->linkState(this, prev, next);
@@ -488,15 +488,15 @@ void MxAnyLink::reconnecting()
     StateGuard stateGuard(m_stateLock);
 
     // state machine
-    prev = m_state;
+    prev = m_state.load_();
     switch (prev) {
       case MxLinkState::Up:
-	m_state = MxLinkState::Connecting;
+	m_state.store_(MxLinkState::Connecting);
 	break;
       default:
 	break;
     }
-    next = m_state;
+    next = m_state.load_();
   }
 
   if (next != prev) engine()->linkState(this, prev, next);
@@ -515,12 +515,12 @@ void MxAnyLink::reconnect(bool immediate)
     StateGuard stateGuard(m_stateLock);
 
     // state machine
-    prev = m_state;
+    prev = m_state.load_();
     switch (prev) {
       case MxLinkState::Connecting:
       case MxLinkState::Reconnecting:
       case MxLinkState::Up:
-	m_state = MxLinkState::ReconnectPending;
+	m_state.store_(MxLinkState::ReconnectPending);
 	reconnect = true;
 	break;
       case MxLinkState::DisconnectPending:
@@ -529,11 +529,11 @@ void MxAnyLink::reconnect(bool immediate)
       default:
 	break;
     }
-    next = m_state;
+    next = m_state.load_();
 
     if (reconnect) {
-      ++m_reconnects;
-      reconnTime.now(reconnInterval(m_reconnects));
+      m_reconnects.store_(m_reconnects.load_() + 1);
+      reconnTime.now(reconnInterval(m_reconnects.load_()));
     }
   }
 
@@ -561,16 +561,16 @@ void MxAnyLink::reconnect_()
     StateGuard stateGuard(m_stateLock);
 
     // state machine
-    prev = m_state;
+    prev = m_state.load_();
     switch (prev) {
       case MxLinkState::ReconnectPending:
-	m_state = MxLinkState::Reconnecting;
+	m_state.store_(MxLinkState::Reconnecting);
 	connect = true;
 	break;
       default:
 	break;
     }
-    next = m_state;
+    next = m_state.load_();
   }
 
   if (next != prev) engine()->linkState(this, prev, next);
@@ -584,9 +584,6 @@ void MxAnyLink::telemetry(Telemetry &data) const
   data.id = id();
   data.rxSeqNo = rxSeqNo();
   data.txSeqNo = txSeqNo();
-  {
-    StateReadGuard guard(m_stateLock);
-    data.reconnects = m_reconnects;
-    data.state = m_state;
-  }
+  data.reconnects = m_reconnects.load_();
+  data.state = m_state.load_();
 }

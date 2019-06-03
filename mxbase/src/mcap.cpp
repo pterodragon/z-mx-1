@@ -379,7 +379,7 @@ int main(int argc, const char *argv[])
 
   ZeLog::init("mcap");
   ZeLog::level(0);
-  ZeLog::add(ZeLog::fileSink("&2"));
+  ZeLog::sink(ZeLog::fileSink("&2"));
   ZeLog::start();
 
   {

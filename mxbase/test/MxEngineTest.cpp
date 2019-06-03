@@ -104,8 +104,6 @@ public:
   // MxAnyLink virtual
   void update(ZvCf *cf) { }
   void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) { }
-  bool failover() const { return false; }
-  void failover(bool) { }
 
   void connect() {
     linkINFO("connect(): " << id);
@@ -170,7 +168,7 @@ int main()
 {
   ZeLog::init("MxEngineTest");
   ZeLog::level(0);
-  ZeLog::add(ZeLog::fileSink("&2"));
+  ZeLog::sink(ZeLog::fileSink("&2"));
   ZeLog::start();
 
   ZmRef<ZvCf> cf = new ZvCf();

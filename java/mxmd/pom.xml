@@ -3,7 +3,7 @@
   <groupId>com.shardmx</groupId>
   <artifactId>mxmd</artifactId>
   <packaging>jar</packaging>
-  <version>8.3.0</version>
+  <version>8.4.0</version>
   <name>mxmd</name>
   <url>http://maven.apache.org</url>
   <properties>
@@ -36,7 +36,7 @@
     <dependency>
       <groupId>com.shardmx</groupId>
       <artifactId>mxbase</artifactId>
-      <version>4.1.0</version>
+      <version>4.2.0</version>
     </dependency>
   </dependencies>
   <build>

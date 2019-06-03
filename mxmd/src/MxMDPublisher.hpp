@@ -313,8 +313,6 @@ private:
 
   const MxMDChannel	*m_channel = 0;
 
-  bool			m_failover = false;
-
   ZiSockAddr		m_udpAddr;
 
   // Engine Rx thread exclusive

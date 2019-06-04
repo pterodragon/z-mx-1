@@ -77,7 +77,7 @@ public:
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
 	    app->orderAdded(static_cast<OrderPOD *>(pod)); }},
 	  ZdbDelFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
-	    app->orderDeleted(static_cast<OrderPOD *>(pod)); }}
+	    app->orderDeleted(static_cast<OrderPOD *>(pod)); }},
 	  app()->orderWriteFn()});
     m_closedDB = new ClosedDB(
 	dbEnv, "closedDB", Types::DBVersion, ZdbCacheMode::Normal,

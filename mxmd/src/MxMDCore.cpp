@@ -415,8 +415,9 @@ void MxMDCore::initCmds()
       ZvCmdFn::Member<&MxMDCore::l1>::fn(this),
       "dump L1 data",
       ZtString("usage: l1 OPTIONS SYMBOL [SYMBOL...]\n"
-	"Display level 1 market data for SYMBOL(s)\n\nOptions:\n"
-	"    -c, --csv\t\toutput CSV format\n") <<
+	"Display level 1 market data for SYMBOL(s)\n\n"
+	"Options:\n"
+	"  -c, --csv\t\toutput CSV format\n") <<
 	lookupOptions());
   addCmd(
       "l2", lookupSyntax(),
@@ -430,8 +431,8 @@ void MxMDCore::initCmds()
       ZvCmdFn::Member<&MxMDCore::instrument_>::fn(this),
       "dump instrument reference data",
       ZtString("usage: instrument OPTIONS SYMBOL\n"
-	"Display instrument reference data (\"static data\") for SYMBOL\n"
-	"\nOptions:\n") << lookupOptions());
+	"Display instrument reference data (\"static data\") for SYMBOL\n\n"
+	"Options:\n") << lookupOptions());
   addCmd(
       "ticksizes", "",
       ZvCmdFn::Member<&MxMDCore::ticksizes>::fn(this),
@@ -450,6 +451,7 @@ void MxMDCore::initCmds()
       "dump order books in CSV format",
       "usage: orderbooks [VENUE [SEGMENT]]\n"
       "dump order books in CSV format");
+
 #if 0
   addCmd(
       "subscribe",
@@ -460,8 +462,9 @@ void MxMDCore::initCmds()
       "       subscribe -s ID\n"
       "subscribe to market data, receiving snapshot via ring buffer IPCRING\n"
       "Options:\n"
-      "-s, --stop=ID\tstop subscribing - detach subscriber ID\n");
+      "  -s, --stop=ID\tstop subscribing - detach subscriber ID\n");
 #endif
+
   addCmd(
       "logAge", "",
       ZvCmdFn{this, [](MxMDCore *, ZvCmdServerCxn *, ZvCf *args,

@@ -55,7 +55,7 @@ void MxMDRecord::init(MxMDCore *core, ZvCf *cf)
       "       record -s\n"
       "record market data to FILE\n\n"
       "Options:\n"
-      "-s, --stop\tstop recording\n");
+      "  -s, --stop\tstop recording\n");
 }
 
 void MxMDRecord::final() { }

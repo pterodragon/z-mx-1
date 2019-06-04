@@ -1518,11 +1518,11 @@ int main(int argc, char **argv)
     "usage: zproxy [OPTIONS]\n"
     "\n"
     "Options:\n"
-    "  -v --verbose\t- log connection setup and teardown events\n"
-    "  -i --cmd:localIP=IP\t- set local IP for zcmd\n"
-    "  -p --cmd:localPort=PORT\t- set local port for zcmd\n"
-    "  -n --cmd:nAccepts=N\t- set number of simultaneous accepts for zcmd\n"
-    "  -t --mx:nThreads=N\t- set number of threads\n";
+    "  -v, --verbose\t- log connection setup and teardown events\n"
+    "  -i, --cmd:localIP=IP\t- set local IP for zcmd\n"
+    "  -p, --cmd:localPort=PORT\t- set local port for zcmd\n"
+    "  -n, --cmd:nAccepts=N\t- set number of simultaneous accepts for zcmd\n"
+    "  -t, --mx:nThreads=N\t- set number of threads\n";
 
   ZeLog::init("zproxy");
   ZeLog::level(0);

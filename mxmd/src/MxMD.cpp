@@ -1906,14 +1906,14 @@ ZtString MxMDLib::lookupSyntax()
 ZtString MxMDLib::lookupOptions()
 {
   return
-    "    -S, --src=SRC\t- symbol ID source is SRC\n"
+    "  -S, --src=SRC\t- symbol ID source is SRC\n"
     "\t(CUSIP|SEDOL|QUIK|ISIN|RIC|EXCH|CTA|BSYM|BBGID|FX|CRYPTO)\n"
-    "    -v, --venue=MIC\t - market MIC, e.g. XTKS\n"
-    "    -s, --segment=SEGMENT\t- market segment SEGMENT\n"
-    "    -m, --maturity=MAT\t- maturity (YYYYMMDD - DD is normally 00)\n"
-    "    -p, --put\t\t- put option\n"
-    "    -c, --call\t\t- call option\n"
-    "    -x, --strike\t- strike price (as integer, per instrument convention)\n";
+    "  -v, --venue=MIC\t - market MIC, e.g. XTKS\n"
+    "  -s, --segment=SEGMENT\t- market segment SEGMENT\n"
+    "  -m, --maturity=MAT\t- maturity (YYYYMMDD - DD is normally 00)\n"
+    "  -p, --put\t\t- put option\n"
+    "  -c, --call\t\t- call option\n"
+    "  -x, --strike\t- strike price (as integer, per instrument convention)\n";
 }
 
 MxUniKey MxMDLib::parseInstrument(ZvCf *args, unsigned index) const

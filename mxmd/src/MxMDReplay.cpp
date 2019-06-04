@@ -51,7 +51,7 @@ void MxMDReplay::init(MxMDCore *core, ZmRef<ZvCf> cf)
       "       replay -s\n"
       "replay market data from FILE\n\n"
       "Options:\n"
-      "-s, --stop\tstop replaying\n");
+      "  -s, --stop\tstop replaying\n");
 }
 
 void MxMDReplay::final() { }

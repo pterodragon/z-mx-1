@@ -239,16 +239,28 @@ void ZeFileSink::age()
 
 void ZeFileSink::age_()
 {
-  unsigned size = m_filename.length() + ZuBoxed(m_age).length() + 1;
-  for (unsigned i = m_age; i > 0; i--) {
-    ZtString oldName(size);
-    oldName << m_filename;
-    if (i > 1) oldName << '.' << ZuBoxed(i - 1);
-    ZtString newName(size);
-    newName << m_filename << '.' << ZuBoxed(i);
-    if (i == m_age) ::remove(newName);
-    ::rename(oldName, newName);
+  unsigned size = m_filename.length() + ZuBoxed(m_age).length() + 4;
+
+  ZtString prevName_(size), nextName_(size), sideName_(size);
+  ZtString *prevName = &prevName_;
+  ZtString *nextName = &nextName_;
+  ZtString *sideName = &sideName_;
+
+  *prevName << m_filename;
+  bool last = false;
+  unsigned i;
+  for (i = 0; i < m_age && !last; i++) {
+    nextName->length(0);
+    *nextName << m_filename << '.' << ZuBoxed(i + 1);
+    sideName->length(0);
+    *sideName << *nextName << '_';
+    last = (::rename(*nextName, *sideName) < 0);
+    ::rename(*prevName, *nextName);
+    ZtString *oldName = prevName;
+    prevName = sideName;
+    sideName = oldName;
   }
+  if (i == m_age) ::remove(*prevName);
 }
 
 void ZeDebugSink::init()

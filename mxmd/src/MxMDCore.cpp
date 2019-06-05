@@ -200,7 +200,7 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
     if (ZuString logFile = cf->get("log:file")) {
       ZeLog::sink(ZeLog::fileSink(logFile,
 	    cf->getInt("log:age", 0, 1000, false, 8),
-	    cf->getInt("log:offset", INT_MIN, INT_MAX, false, 0)));
+	    cf->getInt("log:tzOffset", INT_MIN, INT_MAX, false, 0)));
     }
   } catch (...) { }
   ZeLog::start();

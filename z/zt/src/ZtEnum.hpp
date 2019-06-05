@@ -98,7 +98,7 @@ typedef ZuBox_1(int8_t) ZtEnum;
   inline const char *name(int i) { \
     ZuPair<const char *const *const, unsigned> names_ = names(); \
     if (i >= (int)names_.p2()) return "Unknown"; \
-    if (i < 0) return "Invalid"; \
+    if (i < 0) return ""; \
     return names_.p1()[i]; \
   } \
   struct Map : public Map_<Map> { \

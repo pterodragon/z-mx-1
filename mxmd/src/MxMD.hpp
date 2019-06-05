@@ -767,8 +767,10 @@ public:
   ZuInline MxEnum side() const { return m_side; }
 
   ZuInline const MxMDOBSideData &data() const { return m_data; }
-  ZuInline MxValue vwap() const {
-    return !m_data.qty ? MxValue() : m_data.nv / m_data.qty;
+  MxValue vwap() const {
+    return !m_data.qty ? MxValue() :
+      (MxValNDP{m_data.nv, pxNDP()} /
+       MxValNDP{m_data.qty, qtyNDP()}).value;
   }
 
   ZuInline MxMDPxLevel *mktLevel() { return m_mktLevel; }
@@ -807,8 +809,8 @@ public:
     return 0;
   }
 
-  MxNDP pxNDP();
-  MxNDP qtyNDP();
+  MxNDP pxNDP() const;
+  MxNDP qtyNDP() const;
 
   ZuInline MxMDPxLevel *minimum() { return m_pxLevels.minimumPtr(); }
   ZuInline MxMDPxLevel *maximum() { return m_pxLevels.maximumPtr(); }
@@ -1207,8 +1209,8 @@ ZuInline MxMDOrderID3Ref MxMDOrder_::OrderID3Accessor::value(
   return MxMDOrderID3Ref(o->orderBook()->key(), o->m_data.side, o->m_id);
 }
 
-ZuInline MxNDP MxMDOBSide::pxNDP() { return m_orderBook->pxNDP(); }
-ZuInline MxNDP MxMDOBSide::qtyNDP() { return m_orderBook->qtyNDP(); }
+ZuInline MxNDP MxMDOBSide::pxNDP() const { return m_orderBook->pxNDP(); }
+ZuInline MxNDP MxMDOBSide::qtyNDP() const { return m_orderBook->qtyNDP(); }
 
 ZuInline void MxMDPxLevel_::updateLast(
     MxDateTime stamp, MxValue lastQty, MxValue nv, MxValue openQty)

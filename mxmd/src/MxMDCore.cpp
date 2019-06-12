@@ -414,7 +414,7 @@ void MxMDCore::initCmds()
       "l1", ZtString("c csv csv { type flag }\n") + lookupSyntax(),
       ZvCmdFn::Member<&MxMDCore::l1>::fn(this),
       "dump L1 data",
-      ZtString("usage: l1 OPTIONS SYMBOL [SYMBOL...]\n"
+      ZtString("usage: l1 SYMBOL [SYMBOL]... [OPTION]...\n"
 	"Display level 1 market data for SYMBOL(s)\n\n"
 	"Options:\n"
 	"  -c, --csv\t\toutput CSV format\n") <<
@@ -423,14 +423,14 @@ void MxMDCore::initCmds()
       "l2", lookupSyntax(),
       ZvCmdFn::Member<&MxMDCore::l2>::fn(this),
       "dump L2 data",
-      ZtString("usage: l2 OPTIONS SYMBOL\n"
+      ZtString("usage: l2 SYMBOL [OPTION]...\n"
 	"Display level 2 market data for SYMBOL\n\nOptions:\n") <<
 	lookupOptions());
   addCmd(
       "instrument", lookupSyntax(),
       ZvCmdFn::Member<&MxMDCore::instrument_>::fn(this),
       "dump instrument reference data",
-      ZtString("usage: instrument OPTIONS SYMBOL\n"
+      ZtString("usage: instrument SYMBOL [OPTION]...\n"
 	"Display instrument reference data (\"static data\") for SYMBOL\n\n"
 	"Options:\n") << lookupOptions());
   addCmd(
@@ -568,7 +568,7 @@ void MxMDCore::l1(ZvCmdServerCxn *,
     ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
 {
   unsigned argc = ZuBox<unsigned>(args->get("#"));
-  if (argc < 2) throw ZvCmdUsage();
+  if (argc != 2) throw ZvCmdUsage();
   outMsg = new ZvCmdMsg();
   auto &out = outMsg->cmd();
   bool csv = !!args->get("csv");
@@ -580,8 +580,8 @@ void MxMDCore::l1(ZvCmdServerCxn *,
     lookupOrderBook(key, 1, 1,
 	[this, &out, csv](MxMDInstrument *, MxMDOrderBook *ob) -> bool {
       const MxMDL1Data &l1Data = ob->l1Data();
-      MxNDP pxNDP = l1Data.pxNDP;
-      MxNDP qtyNDP = l1Data.qtyNDP;
+      unsigned pxNDP = l1Data.pxNDP;
+      unsigned qtyNDP = l1Data.qtyNDP;
       MxMDFlagsStr flags;
       MxMDL1Flags::print(flags, ob->venueID(), l1Data.flags);
       if (csv) out <<
@@ -958,7 +958,7 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.venue))
 	  if (ZmRef<MxMDTickSizeTbl> tbl = venue->tickSizeTbl(obj.id)) {
 	    if (ZuUnlikely(tbl->pxNDP() != obj.pxNDP)) {
-	      MxNDP oldNDP = obj.pxNDP, newNDP = tbl->pxNDP();
+	      unsigned oldNDP = obj.pxNDP, newNDP = tbl->pxNDP();
 #ifdef adjustNDP
 #undef adjustNDP
 #endif
@@ -1006,9 +1006,10 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	  if (ZmRef<MxMDVenue> venue = shard->md()->venue(obj.key.venue))
 	    if (ZmRef<MxMDTickSizeTbl> tbl =
 		    venue->tickSizeTbl(obj.tickSizeTbl))
-	      if (ZmRef<MxMDInstrument> instr = shard->instrument(obj.instrument)) {
+	      if (ZmRef<MxMDInstrument> instr =
+		  shard->instrument(obj.instrument)) {
 		if (ZuUnlikely(instr->refData().qtyNDP != obj.qtyNDP)) {
-		  MxNDP newNDP = instr->refData().qtyNDP;
+		  unsigned newNDP = instr->refData().qtyNDP;
 #ifdef adjustNDP
 #undef adjustNDP
 #endif
@@ -1019,7 +1020,8 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 #undef adjustNDP
 		  obj.qtyNDP = newNDP;
 		}
-		instr->addOrderBook(obj.key, tbl, obj.lotSizes, obj.transactTime);
+		instr->addOrderBook(
+		    obj.key, tbl, obj.lotSizes, obj.transactTime);
 	      }
 	});
       }
@@ -1107,7 +1109,8 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	const L2 &obj = hdr.as<L2>();
 	shard(hdr.shard, [obj = obj, filter](MxMDShard *shard) mutable {
 	  ZmRef<MxMDOrderBook> ob = shard->orderBook(obj.key);
-	  if (ob && (!filter || ob->handler())) ob->l2(obj.stamp, obj.updateL1);
+	  if (ob && (!filter || ob->handler()))
+	    ob->l2(obj.stamp, obj.updateL1);
 	});
       }
       break;
@@ -1188,7 +1191,8 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	      obj.price = MxValNDP{obj.price, obj.pxNDP}.adjust(ob->pxNDP());
 	    if (ZuUnlikely(ob->qtyNDP() != obj.qtyNDP))
 	      obj.qty = MxValNDP{obj.qty, obj.qtyNDP}.adjust(ob->qtyNDP());
-	    ob->correctTrade(obj.tradeID, obj.transactTime, obj.price, obj.qty);
+	    ob->correctTrade(
+		obj.tradeID, obj.transactTime, obj.price, obj.qty);
 	  }
 	});
       }

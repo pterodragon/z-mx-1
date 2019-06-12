@@ -324,7 +324,7 @@ jobject MxMDLibJNI::feed(JNIEnv *env, jobject obj, jstring id)
   // (String) -> MxMDFeed
   MxMDLib *md = md_;
   if (ZuUnlikely(!md || !id)) return 0;
-  if (ZmRef<MxMDFeed> feed = md->feed(ZJNI::j2s_ZuStringN<10>(env, id)))
+  if (ZmRef<MxMDFeed> feed = md->feed(ZJNI::j2s_ZuID(env, id)))
     return MxMDFeedJNI::ctor(env, ZuMv(feed));
   return 0;
 }
@@ -348,7 +348,7 @@ jobject MxMDLibJNI::venue(JNIEnv *env, jobject obj, jstring id)
   // (String) -> MxMDVenue
   MxMDLib *md = md_;
   if (ZuUnlikely(!md || !id)) return 0;
-  if (ZmRef<MxMDVenue> venue = md->venue(ZJNI::j2s_ZuStringN<10>(env, id)))
+  if (ZmRef<MxMDVenue> venue = md->venue(ZJNI::j2s_ZuID(env, id)))
     return MxMDVenueJNI::ctor(env, ZuMv(venue));
   return 0;
 }

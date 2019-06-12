@@ -126,7 +126,7 @@ void inactive() { puts("INACTIVE"); }
 void usage()
 {
   static const char *help =
-    "usage: ZdbTest [OPTIONS] nThreads maxRN\n\n"
+    "usage: ZdbTest nThreads maxRN [OPTION]...\n\n"
     "Options:\n"
     "  -D, --del=N\t\t- delete first N sequences\n"
     "  -a, --append=N\t\t- append to N sequences\n"

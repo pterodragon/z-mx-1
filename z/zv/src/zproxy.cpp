@@ -499,7 +499,7 @@ public:
 	ZvCmdFn::Member<&App::proxy>::fn(this),
 	"establish TCP proxy",
 	"usage: proxy [LOCALIP:]LOCALPORT [REMOTEIP:]REMOTEPORT "
-	    "[[SRCIP:][SRCPORT]] [OPTIONS]\n\n"
+	    "[[SRCIP:][SRCPORT]] [OPTION]...\n\n"
 	    "Options:\n"
 	    "  --tag=TAG\t- apply name tag (\"#default\" if unspecified)\n"
 	    "  --suspend\t- suspend I/O initially\n"
@@ -1515,7 +1515,7 @@ int main(int argc, char **argv)
   };
 
   static const char *usage =
-    "usage: zproxy [OPTIONS]\n"
+    "usage: zproxy [OPTION]...\n"
     "\n"
     "Options:\n"
     "  -v, --verbose\t- log connection setup and teardown events\n"

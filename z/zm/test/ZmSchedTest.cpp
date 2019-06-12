@@ -88,7 +88,7 @@ void segv(int s)
 void usage()
 {
   fputs(
-    "usage: ZmSchedTest [OPTIONS]...\n\n"
+    "usage: ZmSchedTest [OPTION]...\n\n"
     "Options:\n"
     "  -n N\tset number of threads to N\n"
     "  -c ID=CPUSET\tset thread ID affinity to CPUSET (e.g. 1=2,4)\n"

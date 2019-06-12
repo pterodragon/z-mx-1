@@ -183,7 +183,7 @@ jobject MxMDInstrumentJNI::orderBook(JNIEnv *env, jobject obj, jstring venue)
   MxMDInstrument *instr = ptr_(env, obj);
   if (ZuUnlikely(!instr || !venue)) return 0;
   return MxMDOrderBookJNI::ctor(env, instr->orderBook(
-	ZJNI::j2s_ZuStringN<10>(env, venue)));
+	ZJNI::j2s_ZuID(env, venue)));
 }
 
 jobject MxMDInstrumentJNI::orderBook(
@@ -193,8 +193,8 @@ jobject MxMDInstrumentJNI::orderBook(
   MxMDInstrument *instr = ptr_(env, obj);
   if (ZuUnlikely(!instr || !venue)) return 0;
   return MxMDOrderBookJNI::ctor(env, instr->orderBook(
-	ZJNI::j2s_ZuStringN<10>(env, venue),
-	ZJNI::j2s_ZuStringN<10>(env, segment)));
+	ZJNI::j2s_ZuID(env, venue),
+	ZJNI::j2s_ZuID(env, segment)));
 }
 
 jlong MxMDInstrumentJNI::allOrderBooks(JNIEnv *env, jobject obj, jobject fn)

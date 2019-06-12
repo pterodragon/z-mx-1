@@ -56,8 +56,8 @@ MxInstrKey MxInstrKeyJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 
   MxInstrKey key{
     ZJNI::j2s_ZuStringN<MxIDStrSize>(env, id, true),
-    ZJNI::j2s_ZuStringN<10>(env, venue, true),
-    ZJNI::j2s_ZuStringN<10>(env, segment, true)};
+    ZJNI::j2s_ZuID(env, venue, true),
+    ZJNI::j2s_ZuID(env, segment, true)};
 
   if (dlr) env->DeleteLocalRef(obj);
 

@@ -3,7 +3,7 @@
   <groupId>com.shardmx</groupId>
   <artifactId>mxbase</artifactId>
   <packaging>jar</packaging>
-  <version>4.2.0</version>
+  <version>4.2.1</version>
   <name>mxbase</name>
   <url>http://maven.apache.org</url>
   <properties>

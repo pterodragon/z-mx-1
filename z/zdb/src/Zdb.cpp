@@ -1906,6 +1906,37 @@ ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *prev, ZdbRN rn)
   return pod;
 }
 
+ZmRef<ZdbAnyPOD> ZdbAny::update_(ZdbRN prevRN)
+{
+  ZmRef<ZdbAnyPOD> pod;
+  alloc(pod);
+  if (ZuUnlikely(!pod)) return nullptr;
+  ZdbRN rn;
+  {
+    Guard guard(m_lock);
+    rn = m_allocRN++;
+  }
+  if (ZuUnlikely(prevRN == ZdbNullRN)) prevRN = rn;
+  pod->update(rn, prevRN, ZdbRange{0, m_dataSize});
+  return pod;
+}
+
+ZmRef<ZdbAnyPOD> ZdbAny::update_(ZdbRN prevRN, ZdbRN rn)
+{
+  if (ZuUnlikely(rn == ZdbNullRN)) return update_(prevRN);
+  ZmRef<ZdbAnyPOD> pod;
+  alloc(pod);
+  if (ZuUnlikely(!pod)) return nullptr;
+  {
+    Guard guard(m_lock);
+    if (m_allocRN > rn) return nullptr;
+    m_allocRN = rn + 1;
+  }
+  if (ZuUnlikely(prevRN == ZdbNullRN)) prevRN = rn;
+  pod->update(rn, prevRN, ZdbRange{0, m_dataSize});
+  return pod;
+}
+
 // commits an update - if replace, previous versions are deleted
 void ZdbAny::putUpdate(ZdbAnyPOD *pod, bool replace)
 {

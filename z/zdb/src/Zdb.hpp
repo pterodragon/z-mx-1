@@ -605,6 +605,10 @@ public:
   ZmRef<ZdbAnyPOD> update(ZdbAnyPOD *prev);
   // update record (idempotent)
   ZmRef<ZdbAnyPOD> update(ZdbAnyPOD *prev, ZdbRN rn);
+  // update record (with prevRN, without prev POD)
+  ZmRef<ZdbAnyPOD> update_(ZdbRN prevRN);
+  // update record (idempotent) (with prevRN, without prev POD)
+  ZmRef<ZdbAnyPOD> update_(ZdbRN prevRN, ZdbRN rn);
   // commit record following update(), potentially a partial update
   void putUpdate(ZdbAnyPOD *, bool replace = true);
 

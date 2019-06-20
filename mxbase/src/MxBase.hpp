@@ -125,6 +125,8 @@ struct MxValNDP {
   MxValue	value;
   unsigned	ndp;
 
+  ZuInline MxValNDP() : ndp(0) { }
+
   template <typename V>
   ZuInline MxValNDP(V value_, unsigned ndp_,
       typename ZuIsIntegral<V>::T *_ = 0) :

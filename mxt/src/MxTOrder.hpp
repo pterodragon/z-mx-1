@@ -405,16 +405,10 @@ template <typename AppTypes> struct MxTAppTypes {
     template <typename Update>
     inline typename ZuIs<ModifyLeg_, Update>::T update(const Update &u) {
       CancelLeg_::update(u);
-      if (*u.side &&
-	  (u.side == MxSide::Sell ||
-	   u.side == MxSide::SellShort ||
-	   u.side == MxSide::SellShortExempt) &&
-	  (side == MxSide::Sell ||
-	   side == MxSide::SellShort ||
-	   side == MxSide::SellShortExempt))
-	side = u.side;
-      ordType.update(u.ordType);
       px.update(u.px);
+      side.update(u.side);
+      ordType.update(u.ordType);
+      pxNDP.update(u.pxNDP);
     }
     template <typename Update>
     inline typename ZuIsNot<ModifyLeg_, Update>::T update(const Update &u) {
@@ -423,13 +417,7 @@ template <typename AppTypes> struct MxTAppTypes {
 
     template <typename Update> inline void expose(const Update &u) {
       CancelLeg_::expose(u);
-      // shorts are riskier than sells, but other side changes are invalid
-      if ((u.side == MxSide::SellShort ||
-	   u.side == MxSide::SellShortExempt) &&
-	  (side == MxSide::Sell ||
-	   side == MxSide::SellShort ||
-	   side == MxSide::SellShortExempt))
-	side = u.side;
+      side.update(u.side);
       // ordType changes do not impact exposure
       // adjust price to most exposed, depending on side
       if (side == MxSide::Buy) {

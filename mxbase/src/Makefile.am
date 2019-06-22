@@ -5,6 +5,7 @@ AM_LDFLAGS = @MXBASE_LDFLAGS@ @MXBASE_SO_LDFLAGS@ @Z_LDFLAGS@
 include_HEADERS = \
 	MxBase.hpp MxBaseLib.hpp MxBaseVersion.hpp \
 	MxCSV.hpp MxMsgID.hpp MxQueue.hpp MxMultiplex.hpp MxScheduler.hpp \
+	MxValWindow.hpp \
 	MxEngine.hpp MxTelemetry.hpp \
 	MxTxDB.hpp MxRxDB.hpp
 lib_LTLIBRARIES = libMxBase.la

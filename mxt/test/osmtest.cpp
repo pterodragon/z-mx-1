@@ -206,6 +206,9 @@ struct App : public MxTOrderMgr<App, TxnTypes> {
   // returns true if async. cancel enabled for order
   bool asyncCxl(Order *) { return true; }
 
+  // initialize synthetic cancel
+  void synCancel(Order *) { }
+
   // process messages
   void sendNewOrder(Order *) { }
   void sendModify(Order *) { }

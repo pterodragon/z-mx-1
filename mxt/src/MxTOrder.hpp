@@ -85,18 +85,18 @@ namespace MxTEventFlags { // event flags
       C, ModifyCxl = C,	// synthetic cancel/replace in progress
       M, ModifyNew = M,	// new order/ack following modify-on-queue
       Unsolicited,	// unsolicited modified/canceled from market
-      Synthesized,	// synthesized - not received from market
-      Pending		// synthesized and pending ordered/modified
+      Synthetic,	// synthetic - not received from market
+      Pending		// synthetic and pending ordered/modified
   );
   MxEnumNames(
       "Rx", "Tx", "Ack",
       "ModifyCxl", "ModifyNew",
-      "Unsolicited", "Synthesized", "Pending");
+      "Unsolicited", "Synthetic", "Pending");
   MxEnumFlags(Flags,
       "Rx", Rx, "Tx", Tx, "Ack", Ack,
       "ModifyCxl", ModifyCxl, "ModifyNew", ModifyNew,
       "Unsolicited", Unsolicited,
-      "Synthesized", Synthesized,
+      "Synthetic", Synthetic,
       "Pending", Pending);
 
   inline bool matchC(const MxFlags &v) { return v & (1U<<C); }
@@ -237,7 +237,7 @@ template <typename AppTypes> struct MxTAppTypes {
     Event_Flag(ModifyNew, modifyNew)
     Event_Flag(ModifyCxl, modifyCxl)
     Event_Flag(Unsolicited, unsolicited)
-    Event_Flag(Synthesized, synthesized)
+    Event_Flag(Synthetic, synthetic)
     Event_Flag(Pending, pending)
 
     template <typename Update>
@@ -811,7 +811,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 #endif
 
 #define Txn_Init(Type) \
-    template <bool Synthesized = false> \
+    template <bool Synthetic = false> \
     inline Type &init##Type(unsigned flags = 0U, unsigned leg = 0) { \
       static Type blank; \
       { \
@@ -820,7 +820,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 	event.eventType = Type::EventType; \
 	event.eventState = MxTEventState::Received; \
 	event.eventFlags = flags | \
-	  ((unsigned)Synthesized)<<MxTEventFlags::Synthesized; \
+	  ((unsigned)Synthetic)<<MxTEventFlags::Synthetic; \
 	event.eventLeg = leg; \
       } \
       return this->template as<Type>(); \

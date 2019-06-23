@@ -200,6 +200,7 @@ struct MxValNDP {
 
   // convert to floating point (MxFloat)
   ZuInline MxFloat fp() const {
+    if (ZuUnlikely(!*value)) return MxFloat();
     return (MxFloat)value / (MxFloat)ZuDecimal::pow10_64(ndp);
   }
 

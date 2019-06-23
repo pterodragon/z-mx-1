@@ -984,9 +984,10 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
   using ModifyTxn = typename Scope::ModifyTxn; \
   using CancelTxn = typename Scope::CancelTxn; \
  \
+  using AckTxn = typename Scope::AckTxn; \
   using ExecTxn = typename Scope::ExecTxn; \
-  using AnyTxn = typename Scope::AnyTxn; \
   using ClosedTxn = typename Scope::ClosedTxn; \
+  using AnyTxn = typename Scope::AnyTxn; \
  \
   using Order = typename Scope::Order; \
   using ClosedOrder = typename Scope::ClosedOrder

@@ -2227,14 +2227,14 @@ inline uintptr_t MxMDPxLevel_::match(MxDateTime transactTime,
   auto md = ob->md();
   MxValue oldQty = m_data.qty;
   MxValue oldNOrders = m_data.nOrders;
+  uintptr_t v = 0;
 
   auto i = this->m_orders.iterator();
   while (MxMDOrder *contra = i.iterate()) {
     MxValue cQty = contra->data().qty;
     MxValue nv;
     if (cQty <= qty) {
-      if (uintptr_t v = fill(qty, cumQty, m_price, cQty, contra))
-	return v;
+      if (v = fill(qty, cumQty, m_price, cQty, contra)) break;
       cumQty += cQty;
       nv = (MxValNDP{m_price, m_pxNDP} * MxValNDP{cQty, m_qtyNDP}).value;
       deletedOrder_(contra, transactTime);
@@ -2246,8 +2246,7 @@ inline uintptr_t MxMDPxLevel_::match(MxDateTime transactTime,
       md->cancelOrder(ob, contra->id(), transactTime, side);
       if (!qty) break;
     } else {
-      if (uintptr_t v = fill(qty, cumQty, m_price, qty, contra))
-	return v;
+      if (v = fill(qty, cumQty, m_price, qty, contra)) break;
       cumQty += qty;
       nv = (MxValNDP{m_price, m_pxNDP} * MxValNDP{qty, m_qtyNDP}).value;
       contra->updateQty_(cQty -= qty);
@@ -2270,7 +2269,7 @@ inline uintptr_t MxMDPxLevel_::match(MxDateTime transactTime,
 	  side, transactTime, true, m_price,
 	  m_data.qty - oldQty, m_data.nOrders - oldNOrders, m_data.flags, 0, 0);
   }
-  return 0;
+  return v;
 }
 
 #endif /* MxMD_HPP */

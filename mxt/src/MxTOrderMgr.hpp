@@ -171,6 +171,14 @@ private:
       leg.cumValue = 0;
     }
   }
+  inline static void closed__(Order *order) {
+    auto &newOrder = order->newOrder();
+    unsigned n = newOrder.nLegs();
+    for (unsigned i = 0; i < n; i++) {
+      OrderLeg &leg = newOrder.legs[i];
+      leg.leavesQty = 0;
+    }
+  }
   template <int State>
   inline static void newOrderIn_(Order *order) {
     auto &newOrder = order->newOrder();
@@ -403,6 +411,7 @@ public:
 	reject.update(newOrder);
 	if (ZuUnlikely(unsolicited)) reject.unsolicited_set();
       }
+      closed__(order);
       return 0;
     };
     if (ZuLikely(!newOrder.modifyCxl() &&
@@ -965,6 +974,7 @@ public:
 	  modReject_(order, MxTRejReason::OrderClosed);
 	  execOut(order);
 	}
+	closed__(order);
 	return 0;
       };
       // acknowledge any pending new order
@@ -1026,6 +1036,7 @@ public:
       newOrder.eventState = MxTEventState::Closed;
     ackIn<MxTEventType::Canceled, MxTEventState::Received,
       1, 0, 0, 1, 0, 0>(order); // OmcUsp
+    closed__(order);
     return 0;
   }
 
@@ -1197,6 +1208,7 @@ applyFill:
     newOrder.eventState = MxTEventState::Closed;
     newOrder.update(closed);
     closed.update(newOrder);
+    closed__(order);
     return 0;
   }
 

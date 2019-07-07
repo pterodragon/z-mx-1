@@ -478,11 +478,25 @@ template <typename AppTypes> struct MxTAppTypes {
     }
   };
 
-  struct Ordered : public AppTypes::Event {
+  struct OrderedLeg : public AckLeg__ {
+    template <typename Update> inline void update(const Update &) { }
+
+    template <typename S> inline void print(S &) const { }
+  };
+
+  struct Ordered : public AppTypes::Event,
+      public Legs<typename AppTypes::OrderedLeg> {
     enum { EventType = MxTEventType::Ordered };
 
     template <typename Update> inline void update(const Update &u) {
       AppTypes::Event::update(u);
+      Legs<typename AppTypes::OrderedLeg>::update(u);
+    }
+
+    template <typename S> inline void print(S &s) const {
+      AppTypes::Event::print(s);
+      s << ' ';
+      Legs<typename AppTypes::OrderedLeg>::print(s);
     }
   };
 
@@ -647,6 +661,10 @@ template <typename AppTypes> struct MxTAppTypes {
   using OrderLeg = typename Scope::OrderLeg; \
   using ModifyLeg = typename Scope::ModifyLeg; \
   using CancelLeg = typename Scope::CancelLeg; \
+ \
+  using OrderedLeg = typename Scope::OrderedLeg; \
+  using ModifiedLeg = typename Scope::ModifiedLeg; \
+  using CanceledLeg = typename Scope::CanceledLeg; \
  \
   using AnyReject = typename Scope::AnyReject; \
  \

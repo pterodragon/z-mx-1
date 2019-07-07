@@ -176,6 +176,7 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
   DeclType(ModifiedLeg, ModLeg);
 
   DeclType(OrderLeg, OrderLeg);
+  // DeclType(OrderedLeg, OrderedLeg);
 
   DeclType(NewOrder, NewOrder);
   DeclType(Ordered, Ordered);

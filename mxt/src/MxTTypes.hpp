@@ -104,21 +104,20 @@ namespace MxTimeInForce {
 
 namespace MxPegType { // peg type
   MxEnumValues(
-      Last, Mid, Open, Mkt, Primary, VWAP, TrailingStop, Limit, AltMid, Short);
+      Last, Mid, Open, Mkt, Primary, VWAP, TrailingStop, AltMid, Short);
   MxEnumNames(
       "Last", "Mid", "Open", "Mkt", "Primary", "VWAP",
-      "TrailingStop", "Limit", "AltMid", "Short");
+      "TrailingStop", "AltMid", "Short");
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "1", Last,
       "2", Mid,
-      "3", Open,
-      "4", Mkt,
-      "5", Primary,
+      "3", Open,	// base price for continously traded instruments
+      "4", Mkt,		// aggressive; buy - best ask; sell - best bid
+      "5", Primary,	// passive;    buy - best bid; sell - best ask
       "7", VWAP,
-      "8", TrailingStop,
-      "9", Limit,
-      "A", AltMid,	// aggressive mid pegging
+      "8", TrailingStop,// last; buy - ratchets down; sell - ratchets up
+      "A", AltMid,	// mid +/- one tick
       "S", Short);	// short-sell limit pegging (e.g. JPX/TSE)
 }
 

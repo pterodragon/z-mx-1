@@ -2238,12 +2238,12 @@ inline uintptr_t MxMDPxLevel_::match(MxDateTime transactTime,
       cumQty += cQty;
       nv = (MxValNDP{m_price, m_pxNDP} * MxValNDP{cQty, m_qtyNDP}).value;
       deletedOrder_(contra, transactTime);
-      i.del();
       --m_data.nOrders;
       m_data.qty -= cQty;
       qty -= cQty;
       updateLast(transactTime, cQty, nv, qty);
       md->cancelOrder(ob, contra->id(), transactTime, side);
+      i.del();
       if (!qty) break;
     } else {
       if (v = fill(qty, cumQty, m_price, qty, contra)) break;

@@ -102,11 +102,11 @@ public:
     ZmRef<ClosedPOD> cpod = m_closedDB->push();
     auto closed = new (cpod->ptr()) ClosedOrder();
     closed->orderTxn = order->orderTxn.template data<NewOrder>();
-    if (order->exec().eventType == MxTEventType::Reject)
+    if (order->exec() && order->exec().eventType == MxTEventType::Reject)
       closed->closedTxn = order->execTxn.template data<Reject>();
-    else if (order->exec().eventType == MxTEventType::Closed)
+    else if (order->exec() && order->exec().eventType == MxTEventType::Closed)
       closed->closedTxn = order->execTxn.template data<Closed>();
-    else if (order->ack().eventType == MxTEventType::Canceled)
+    else if (order->ack() && order->ack().eventType == MxTEventType::Canceled)
       closed->closedTxn = order->ackTxn.template data<Event>();
     closed->openRN = pod->rn();
     m_closedDB->put(cpod);

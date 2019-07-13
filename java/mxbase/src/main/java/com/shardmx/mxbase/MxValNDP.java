@@ -1,6 +1,7 @@
 package com.shardmx.mxbase;
 
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
 
 // BigDecimal wrapper that handles MxValue.NULL sentinel value
 
@@ -30,6 +31,10 @@ public class MxValNDP {
   }
   public String toString() {
     if (bd == null) return "";
-    return bd.toString();
+    DecimalFormat df = new DecimalFormat();
+    df.setMaximumFractionDigits(bd.scale());
+    df.setMinimumFractionDigits(0);
+    df.setGroupingUsed(false);
+    return df.format(bd);
   }
 }

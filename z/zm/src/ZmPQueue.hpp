@@ -1409,7 +1409,7 @@ public:
       auto txQueue = app->txQueue();
       if (!m_running) { m_sending = false; return; }
       prevKey = m_sendKey;
-      scheduleSend = m_sendKey < txQueue->tail();
+      scheduleSend = prevKey < txQueue->tail();
       while (scheduleSend) {
 	msg = txQueue->find(m_sendKey);
 	unsigned length;

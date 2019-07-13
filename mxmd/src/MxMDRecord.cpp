@@ -329,13 +329,13 @@ void MxMDRecLink::recv(Rx *rx)
       } break;
       default: {
 	ZuRef<Msg> msg = new Msg();
-	unsigned msgLen = sizeof(Hdr) + hdr->len;
-	memcpy((void *)msg->ptr(), (void *)hdr, msgLen);
+	unsigned len = sizeof(Hdr) + hdr->len;
+	memcpy((void *)msg->ptr(), (void *)hdr, len);
 	broadcast.shift2();
 	MxSeqNo seqNo = m_seqNo++;
 	Hdr &msgHdr = msg->as<Hdr>();
 	msgHdr.seqNo = seqNo;
-	rx->received(new MxQMsg(ZuMv(msg), msgLen, MxMsgID{id(), seqNo}));
+	rx->received(new MxQMsg(ZuMv(msg), len, MxMsgID{id(), seqNo}));
       } break;
     }
   }

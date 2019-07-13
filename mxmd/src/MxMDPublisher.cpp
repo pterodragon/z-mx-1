@@ -585,8 +585,8 @@ void *MxMDPubLink::TCP::out(
 }
 void MxMDPubLink::TCP::push2()
 {
-  unsigned msgLen = m_snapMsg->length();
-  ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(m_snapMsg), msgLen);
+  unsigned len = m_snapMsg->length();
+  ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(m_snapMsg), len);
   MxMDStream::TCP::send(this, ZuMv(qmsg));
 }
 
@@ -729,9 +729,9 @@ void MxMDPubLink::sendMsg(const Hdr *hdr)
       return;
   }
   ZuRef<Msg> msg = new Msg();
-  unsigned msgLen = sizeof(Hdr) + hdr->len;
-  memcpy((void *)msg->ptr(), (void *)hdr, msgLen);
-  send(new MxQMsg(msg, msgLen)); // MxLink::send()
+  unsigned len = sizeof(Hdr) + hdr->len;
+  memcpy((void *)msg->ptr(), (void *)hdr, len);
+  send(new MxQMsg(msg, len)); // MxLink::send()
 }
 
 void MxMDPubLink::loaded_(MxQMsg *msg)

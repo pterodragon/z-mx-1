@@ -310,8 +310,8 @@ ZmRef<MxQMsg> MxMDSubLink::tcpLogin()
       (uint64_t)0, (uint32_t)0,
       (uint16_t)sizeof(Login), (uint8_t)Login::Code};
   new (hdr->body()) Login{m_channel->tcpUsername, m_channel->tcpPassword};
-  unsigned msgLen = msg->length();
-  return new MxQMsg(ZuMv(msg), msgLen);
+  unsigned len = msg->length();
+  return new MxQMsg(ZuMv(msg), len);
 }
 void MxMDSubLink::TCP::sendLogin()
 {
@@ -569,8 +569,8 @@ void MxMDSubLink::reRequest(const MxQueue::Gap &now)
       (uint64_t)0, (uint32_t)0,
       (uint16_t)sizeof(ResendReq), (uint8_t)ResendReq::Code};
   new (hdr->body()) ResendReq{now.key(), now.length()};
-  unsigned msgLen = msg->length();
-  ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(msg), msgLen);
+  unsigned len = msg->length();
+  ZmRef<MxQMsg> qmsg = new MxQMsg(ZuMv(msg), len);
   if (ZuLikely(m_udp))
     MxMDStream::UDP::send(m_udp.ptr(), ZuMv(qmsg), m_udpResendAddr);
 }

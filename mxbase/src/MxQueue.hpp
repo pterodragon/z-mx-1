@@ -43,32 +43,20 @@
 
 #include <MxMsgID.hpp>
 
-namespace MxQFlags {
-  MxEnumValues(
-      SessionLvl,	// session level
-      NoQueue,		// no queuing (no throttling)
-      NoResend,		// no resending (following drop/reconnect)
-      CxlOnDisc,	// cancel on disconnect (implies NoResend)
-      PossDup,		// possible duplicate (same sequence number)
-      PossResend);	// possible resend (different sequence number)
-  MxEnumNames(
-      "SessionLvl", "NoQueue", "NoResend", "CxlOnDisc",
-      "PossDup", "PossResend");
-  MxEnumFlags(Flags,
-      "SessionLvl", SessionLvl,
-      "NoQueue", NoQueue,
-      "NoResend", NoResend,
-      "CxlOnDisc", CxlOnDisc,
-      "PossDup", PossDup,
-      "PossResend", PossResend);
-}
-
 struct MxQMsgData {
   ZuRef<ZuPolymorph>	payload;
-  unsigned		length = 0;
-  MxMsgID		id;
-  MxFlags		flags;		// MxQFlags
   void			*owner_ = 0;
+  MxMsgID		id;
+  int32_t		skip = 0; // -ve - no queuing permitted; +ve - gap fill
+  uint32_t		length = 0; // occupied length of payload in bytes
+
+  ZuInline MxQMsgData(ZuRef<ZuPolymorph> payload_) :
+      payload(ZuMv(payload_)) { }
+  ZuInline MxQMsgData(ZuRef<ZuPolymorph> payload_, unsigned length_) :
+      payload(ZuMv(payload_)), length(length_) { }
+  ZuInline MxQMsgData(
+      ZuRef<ZuPolymorph> payload_, unsigned length_, MxMsgID id_) :
+      payload(ZuMv(payload_)), id(id_), length(length_) { }
 
   template <typename T>
   ZuInline const T *ptr() const { return payload.ptr<T>(); }
@@ -87,9 +75,11 @@ public:
   typedef MxSeqNo Key;
   ZuInline MxQFn(MxQMsgData &item) : m_item(item) { }
   ZuInline MxSeqNo key() const { return m_item.id.seqNo; }
-  ZuInline unsigned length() const { return 1; }
-  ZuInline unsigned clipHead(unsigned n) { return 1; }
-  ZuInline unsigned clipTail(unsigned n) { return 1; }
+  ZuInline unsigned length() const {
+    return m_item.skip <= 0 ? 1U : (unsigned)m_item.skip;
+  }
+  ZuInline unsigned clipHead(unsigned n) { return length(); }
+  ZuInline unsigned clipTail(unsigned n) { return length(); }
   ZuInline void write(const MxQFn &) { }
   ZuInline unsigned bytes() const { return m_item.length; }
 
@@ -247,7 +237,7 @@ public:
 
   ZuInline void send() { Tx::send(); }
   void send(ZmRef<MxQMsg> msg) {
-    if (ZuUnlikely(msg->flags & (1<<MxQFlags::NoQueue))) {
+    if (ZuUnlikely(msg->skip < 0)) {
       Guard guard(m_lock);
       if (ZuUnlikely(!m_ready)) {
 	guard.unlock();

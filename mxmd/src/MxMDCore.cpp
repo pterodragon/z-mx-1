@@ -562,6 +562,8 @@ void MxMDCore::final()
 
   raise(ZeEVENT(Info, "finalizing telemetry..."));
   if (m_telemetry) m_telemetry->final();
+
+  unsubscribe();
 }
 
 void MxMDCore::l1(ZvCmdServerCxn *,

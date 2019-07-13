@@ -47,7 +47,7 @@ struct MxQMsgData {
   ZuRef<ZuPolymorph>	payload;
   void			*owner_ = 0;
   MxMsgID		id;
-  int32_t		skip = 0; // -ve - no queuing permitted; +ve - gap fill
+  int32_t		skip_ = 0; // -ve - no queuing; +ve - gap fill
   uint32_t		length = 0; // occupied length of payload in bytes
 
   ZuInline MxQMsgData(ZuRef<ZuPolymorph> payload_) :
@@ -63,11 +63,17 @@ struct MxQMsgData {
   template <typename T>
   ZuInline T *ptr() { return payload.ptr<T>(); }
 
+  template <typename T = void *> ZuInline T owner() const { return (T)owner_; }
+  template <typename T> ZuInline void owner(T v) { owner_ = (void *)v; }
+
   ZuInline void load(const MxMsgID &id_) { id = id_; }
   ZuInline void unload() { id = MxMsgID{}; }
 
-  template <typename T = void *> ZuInline T owner() const { return (T)owner_; }
-  template <typename T> ZuInline void owner(T v) { owner_ = (void *)v; }
+  ZuInline unsigned skip() const { return skip_ <= 0 ? 1 : skip_; }
+  ZuInline void skip(unsigned n) { skip_ = n; }
+
+  ZuInline bool noQueue() const { return skip_ < 0; }
+  ZuInline void noQueue(int b) { skip_ = -b; }
 };
 
 class MxQFn {
@@ -75,9 +81,7 @@ public:
   typedef MxSeqNo Key;
   ZuInline MxQFn(MxQMsgData &item) : m_item(item) { }
   ZuInline MxSeqNo key() const { return m_item.id.seqNo; }
-  ZuInline unsigned length() const {
-    return m_item.skip <= 0 ? 1U : (unsigned)m_item.skip;
-  }
+  ZuInline unsigned length() const { return m_item.skip(); }
   ZuInline unsigned clipHead(unsigned n) { return length(); }
   ZuInline unsigned clipTail(unsigned n) { return length(); }
   ZuInline void write(const MxQFn &) { }
@@ -237,7 +241,7 @@ public:
 
   ZuInline void send() { Tx::send(); }
   void send(ZmRef<MxQMsg> msg) {
-    if (ZuUnlikely(msg->skip < 0)) {
+    if (ZuUnlikely(msg->noQueue())) {
       Guard guard(m_lock);
       if (ZuUnlikely(!m_ready)) {
 	guard.unlock();

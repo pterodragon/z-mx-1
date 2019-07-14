@@ -135,7 +135,7 @@ jobject MxMDLibJNI::init(JNIEnv *env, jclass c, jstring cf)
       MxMDLibJNI::close(env, nullptr);
     }
     fn();
-  }
+  });
   ZJNI::trap();
 
   return obj_;

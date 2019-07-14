@@ -22,6 +22,7 @@
 #include <ZmSpecific.hpp>
 #include <ZmCleanup.hpp>
 #include <ZmThread.hpp>
+#include <ZmSemaphore.hpp>
 
 #include <ZJNI.hpp>
 

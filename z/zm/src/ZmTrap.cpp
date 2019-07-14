@@ -78,14 +78,14 @@ void ZmTrap::trap_()
 }
 
 #ifndef _WIN32
-void ZmTrap_sigint(int s)
+void ZmTrap_sigint(int)
 {
   ZmFn<> sigintFn = ZmTrap::sigintFn();
 
   if (sigintFn) sigintFn();
 }
 
-void ZmTrap_sighup(int s)
+void ZmTrap_sighup(int)
 {
   ZmFn<> sighupFn = ZmTrap::sighupFn();
 

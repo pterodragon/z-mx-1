@@ -48,11 +48,18 @@
 namespace ZJNI {
   // called from JNI_OnLoad(JavaVM *, void *)
   ZJNIExtern jint load(JavaVM *);
+  // called from JNI_OnUnload(JavaVM *, void *)
+  ZJNIExtern void unload(JavaVM *);
+
   ZJNIExtern void final(JNIEnv *);
 
   ZJNIExtern JavaVM *vm();
   ZJNIExtern JNIEnv *env();		// retrieves the env from TLS
   ZJNIExtern void env(JNIEnv *);	// stores the env in TLS
+
+  ZJNIExtern ZmFn<> sigFn();		// get signal handler
+  ZJNIExtern void sigFn(ZmFn<>);	// set signal handler
+  ZJNIExtern void trap();		// trap signals
 
   // bind C++ methods to Java (wrapper of RegisterNatives)
   ZJNIExtern int bind(JNIEnv *, const char *cname,
@@ -136,20 +143,25 @@ namespace ZJNI {
     ZuInline GlobalRef(JNIEnv *env, T obj) :
       m_obj(env->NewGlobalRef(obj)) { }
     ZuInline ~GlobalRef() {
-      if (m_obj) ZJNI::env()->DeleteGlobalRef((jobject)m_obj);
+      if (m_obj)
+	if (auto env = ZJNI::env())
+	  env->DeleteGlobalRef((jobject)m_obj);
     }
     ZuInline GlobalRef(GlobalRef &&r) : m_obj(r.m_obj) {
       r.m_obj = 0;
     }
     ZuInline GlobalRef &operator =(GlobalRef &&r) {
-      if (m_obj) ZJNI::env()->DeleteGlobalRef((jobject)m_obj);
+      if (m_obj)
+	if (auto env = ZJNI::env())
+	  env->DeleteGlobalRef((jobject)m_obj);
       m_obj = r.m_obj;
       r.m_obj = 0;
       return *this;
     }
     ZuInline void null() {
       if (m_obj) {
-	ZJNI::env()->DeleteGlobalRef((jobject)m_obj);
+	if (auto env = ZJNI::env())
+	  env->DeleteGlobalRef((jobject)m_obj);
 	m_obj = 0;
       }
     }
@@ -177,9 +189,10 @@ namespace ZJNI {
 
   // C++ any string -> Java String
   inline jstring s2j(JNIEnv *env, ZuString s) {
-    if (ZuUnlikely(!s)) return env->NewStringUTF("");
+    if (ZuUnlikely(!env)) return nullptr;
+    if (ZuUnlikely(!s)) { jchar c = 0; return env->NewString(&c, 0); }
     unsigned n = ZuUTF<jchar, char>::len(s);
-    if (ZuUnlikely(!n)) return env->NewStringUTF("");
+    if (ZuUnlikely(!n)) { jchar c = 0; return env->NewString(&c, 0); }
     jchar *buf;
 #ifdef _MSC_VER
     __try {

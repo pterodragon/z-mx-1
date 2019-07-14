@@ -20,13 +20,122 @@
 // Z JNI library
 
 #include <ZmSpecific.hpp>
+#include <ZmCleanup.hpp>
 #include <ZmThread.hpp>
 
 #include <ZJNI.hpp>
 
 #include <jni.h>
 
-static JavaVM *jvm = 0;
+extern "C" {
+  extern void ZJNI_atexit();
+#ifndef _WIN32
+  extern void ZJNI_sig(int);
+#else
+  extern BOOL WINAPI ZJNI_handler(DWORD event);
+#endif
+};
+
+static ZmSemaphore ZJNI_sem;
+
+static uint32_t ZJNI_lock_ = 0;
+void ZJNI_lock()
+{
+  ZmAtomic<uint32_t> *ZuMayAlias(lock) =
+    (ZmAtomic<uint32_t> *)&ZJNI_lock_;
+  while (ZuUnlikely(lock->cmpXch(1, 0))) ZmPlatform::yield();
+}
+void ZJNI_unlock()
+{
+  ZmAtomic<uint32_t> *ZuMayAlias(lock) =
+    (ZmAtomic<uint32_t> *)&ZJNI_lock_;
+  *lock = 0;
+}
+
+static unsigned ZJNI_exiting = 0;
+static unsigned ZJNI_trapped = 0;
+static ZmFn<> ZJNI_sigFn;
+
+#ifndef _WIN32
+static void (*ZJNI_oldint)(int) = nullptr;
+static void (*ZJNI_oldterm)(int) = nullptr;
+
+void ZJNI_sig(int s)
+{
+  ZJNI_sem.post();
+  void (*fn)(int) = nullptr;
+  if (s == SIGINT) fn = ZJNI_oldint;
+  if (s == SIGTERM) fn = ZJNI_oldterm;
+  if (fn) (*fn)(s);
+}
+#else
+BOOL WINAPI ZJNI_handler(DWORD)
+{
+  ZJNI_sem.post();
+}
+#endif
+
+void ZJNI_sig()
+{
+  ZJNI_sem.wait();
+  if (!ZJNI_exiting) {
+    ZJNI_lock();
+    ZmFn<> fn = ZuMv(ZJNI_sigFn);
+    ZJNI_unlock();
+    fn();
+  }
+}
+
+void ZJNI_atexit()
+{
+  ZJNI_exiting = 1;
+  ZJNI_sem.post();
+}
+
+ZmFn<> ZJNI::sigFn()
+{
+  ZJNI_lock();
+  ZmFn<> fn = ZuMv(ZJNI_sigFn);
+  ZJNI_unlock();
+  return fn;
+}
+
+void ZJNI::sigFn(ZmFn<> fn)
+{
+  ZJNI_lock();
+  ZJNI_sigFn = ZuMv(fn);
+  ZJNI_unlock();
+}
+
+void ZJNI::trap()
+{
+  ZJNI_lock();
+  if (ZJNI_trapped) return;
+  ZJNI_trapped = 1;
+  ZJNI_unlock();
+  ::atexit(ZJNI_atexit);
+  ZmThread(0, []() { ZJNI_sig(); }, ZmThreadParams().name("ZJNI_sig"));
+#ifndef _WIN32
+  struct sigaction s, o;
+  memset(&s, 0, sizeof(struct sigaction));
+  memset(&o, 0, sizeof(struct sigaction));
+  s.sa_handler = ZJNI_sig;
+  sigaction(SIGINT, &s, &o);
+  ZJNI_oldint = o.sa_handler;
+  sigaction(SIGTERM, &s, &o);
+  ZJNI_oldterm = o.sa_handler;
+#else
+  SetConsoleCtrlHandler(&ZJNI_handler, TRUE);
+#endif
+}
+
+static JavaVM *jvm = nullptr;
+
+class TLS;
+
+template <> struct ZmCleanup<TLS> {
+  enum { Level = ZmCleanupLevel::Platform };
+};
 
 class TLS : public ZmObject {
 public:
@@ -37,6 +146,7 @@ public:
     jvm->AttachCurrentThread((void **)&m_env, &args);
   }
   inline TLS(JNIEnv *env) : m_env(env) { }
+  inline ~TLS() { m_env = nullptr; }
 
   inline static void attach() {
     ZmSpecific<TLS>::instance();
@@ -81,6 +191,7 @@ void ZJNI::detach()
 
 void ZJNI::throwNPE(JNIEnv *env, ZuString s)
 {
+  if (ZuUnlikely(!env)) return;
   env->Throw((jthrowable)env->NewObject(
 	nullptrex_class, nullptrex_ctor, ZJNI::s2j(env, s)));
 }
@@ -196,6 +307,13 @@ jint ZJNI::load(JavaVM *jvm_)
   return JNI_VERSION_1_4;
 }
 
+void ZJNI::unload(JavaVM *jvm_)
+{
+  jvm = jvm_;
+  TLS::detach();
+  jvm = nullptr;
+}
+
 void ZJNI::final(JNIEnv *env)
 {
   if (nullptrex_class) env->DeleteGlobalRef(nullptrex_class);
@@ -204,7 +322,7 @@ void ZJNI::final(JNIEnv *env)
 
 ZtDate ZJNI::j2t(JNIEnv *env, jobject obj, bool dlr)
 {
-  if (ZuUnlikely(!obj)) return ZtDate();
+  if (ZuUnlikely(!env || !obj)) return ZtDate();
   ZtDate d{
       (time_t)env->CallLongMethod(obj, instant_getEpochSecond),
       (int)env->CallIntMethod(obj, instant_getNano)};
@@ -214,6 +332,7 @@ ZtDate ZJNI::j2t(JNIEnv *env, jobject obj, bool dlr)
 
 // ZtDate -> Java Instant
 jobject ZJNI::t2j(JNIEnv *env, const ZtDate &t) {
+  if (ZuUnlikely(!env)) return nullptr;
   return env->CallStaticObjectMethod(instant_class,
       instant_ofEpochSecond, (jlong)t.time(), (jint)t.nsec());
 }

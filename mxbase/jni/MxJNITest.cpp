@@ -38,6 +38,7 @@
 
 extern "C" {
   MxBaseExtern jint JNI_OnLoad(JavaVM *, void *);
+  MxBaseExtern void JNI_OnUnload(JavaVM *, void *);
 }
 
 struct Msg {
@@ -166,4 +167,9 @@ jint JNI_OnLoad(JavaVM *jvm, void *)
   if (MxJNITestObject_bind(ZJNI::env()) < 0) return -1;
 
   return v;
+}
+
+void JNI_OnUnload(JavaVM *jvm, void *)
+{
+  ZJNI::unload(jvm);
 }

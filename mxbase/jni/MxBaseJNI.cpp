@@ -39,6 +39,7 @@
 
 extern "C" {
   MxBaseExtern jint JNI_OnLoad(JavaVM *, void *);
+  MxBaseExtern void JNI_OnUnload(JavaVM *, void *);
 }
 
 MxBaseExtern jint JNI_OnLoad(JavaVM *jvm, void *)
@@ -52,6 +53,11 @@ MxBaseExtern jint JNI_OnLoad(JavaVM *jvm, void *)
   if (!env || MxBaseJNI::bind(env) < 0) return -1;
 
   return v;
+}
+
+MxBaseExtern void JNI_OnUnload(JavaVM *jvm, void *)
+{
+  ZJNI::unload(jvm);
 }
 
 MxBaseExtern int MxBaseJNI::bind(JNIEnv *env)

@@ -575,7 +575,7 @@ void MxMDCore::l1(ZvCmdServerCxn *,
   auto &out = outMsg->cmd();
   bool csv = !!args->get("csv");
   if (csv)
-    out << "stamp,status,last,lastQty,bid,bidQty,ask,askQty,tickDir,"
+    out << "stamp,status,base,last,lastQty,bid,bidQty,ask,askQty,tickDir,"
       "high,low,accVol,accVolQty,match,matchQty,surplusQty,flags\n";
   for (unsigned i = 1; i < argc; i++) {
     MxUniKey key = parseOrderBook(args, i);
@@ -589,6 +589,7 @@ void MxMDCore::l1(ZvCmdServerCxn *,
       if (csv) out <<
 	timeFmt(l1Data.stamp) << ',' <<
 	MxTradingStatus::name(l1Data.status) << ',' <<
+	MxValNDP{l1Data.base, pxNDP} << ',' <<
 	MxValNDP{l1Data.last, pxNDP} << ',' <<
 	MxValNDP{l1Data.lastQty, qtyNDP} << ',' <<
 	MxValNDP{l1Data.bid, pxNDP} << ',' <<
@@ -607,6 +608,7 @@ void MxMDCore::l1(ZvCmdServerCxn *,
       else out <<
 	"stamp: " << timeFmt(l1Data.stamp) <<
 	"\nstatus: " << MxTradingStatus::name(l1Data.status) <<
+	"\nbase: " << MxValNDP{l1Data.base, pxNDP} <<
 	"\nlast: " << MxValNDP{l1Data.last, pxNDP} <<
 	"\nlastQty: " << MxValNDP{l1Data.lastQty, qtyNDP} <<
 	"\nbid: " << MxValNDP{l1Data.bid, pxNDP} <<

@@ -58,16 +58,16 @@ static unsigned ZJNI_trapped = 0;
 static ZmFn<> ZJNI_sigFn;
 
 #ifndef _WIN32
+static int ZJNI_signal = 0;
 static void (*ZJNI_oldint)(int) = nullptr;
 static void (*ZJNI_oldterm)(int) = nullptr;
 
 void ZJNI_sig(int s)
 {
+  ZJNI_lock();
+  ZJNI_signal = s;
+  ZJNI_unlock();
   ZJNI_sem.post();
-  void (*fn)(int) = nullptr;
-  if (s == SIGINT) fn = ZJNI_oldint;
-  if (s == SIGTERM) fn = ZJNI_oldterm;
-  if (fn) (*fn)(s);
 }
 #else
 BOOL WINAPI ZJNI_handler(DWORD)
@@ -80,10 +80,23 @@ void ZJNI_sig()
 {
   ZJNI_sem.wait();
   if (!ZJNI_exiting) {
-    ZJNI_lock();
-    ZmFn<> fn = ZuMv(ZJNI_sigFn);
-    ZJNI_unlock();
-    fn();
+    {
+      ZJNI_lock();
+      ZmFn<> fn = ZuMv(ZJNI_sigFn);
+      ZJNI_unlock();
+      fn();
+    }
+#ifndef _WIN32
+    {
+      void (*fn)(int) = nullptr;
+      ZJNI_lock();
+      int s = ZJNI_signal;
+      ZJNI_unlock();
+      if (s == SIGINT) fn = ZJNI_oldint;
+      if (s == SIGTERM) fn = ZJNI_oldterm;
+      if (fn) (*fn)(s);
+    }
+#endif
   }
 }
 
@@ -111,7 +124,10 @@ void ZJNI::sigFn(ZmFn<> fn)
 void ZJNI::trap()
 {
   ZJNI_lock();
-  if (ZJNI_trapped) return;
+  if (ZJNI_trapped) {
+    ZJNI_unlock();
+    return;
+  }
   ZJNI_trapped = 1;
   ZJNI_unlock();
   ::atexit(ZJNI_atexit);

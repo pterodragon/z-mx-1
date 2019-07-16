@@ -426,9 +426,9 @@ private:
   }
   inline void updateNDP(
       MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP) {
-    if (pxNDP != oldPxNDP)
+    if (*pxNDP && pxNDP != oldPxNDP)
       m_data.price = MxValNDP{m_data.price, oldPxNDP}.adjust(pxNDP);
-    if (qtyNDP != oldQtyNDP)
+    if (*qtyNDP && qtyNDP != oldQtyNDP)
       m_data.qty = MxValNDP{m_data.qty, oldQtyNDP}.adjust(qtyNDP);
   }
 
@@ -470,6 +470,9 @@ struct MxMDOrders2_HeapID {
 struct MxMDOrders3_HeapID {
   inline static const char *id() { return "MxMDOrders3"; }
 };
+
+// order, oldPxNDP, oldQtyNDP, pxNDP, qtyNDP
+using MxMDOrderNDPFn = ZmFn<MxMDOrder *, MxNDP, MxNDP, MxNDP, MxNDP>;
 
 // price levels
 
@@ -636,7 +639,9 @@ private:
 
   void deletedOrder_(MxMDOrder *order, MxDateTime transactTime);
 
-  void updateNDP(MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP);
+  void updateNDP(
+      MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP,
+      const MxMDOrderNDPFn &);
 
   MxMDOBSide		*m_obSide;
   MxNDP			m_pxNDP;
@@ -901,7 +906,9 @@ private:
 
   void reset(MxDateTime transactTime);
 
-  void updateNDP(MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP);
+  void updateNDP(
+      MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP,
+      const MxMDOrderNDPFn &);
 
   MxMDOrderBook		*m_orderBook;
   MxEnum		m_side;
@@ -1146,7 +1153,7 @@ private:
     if (m_handler) m_handler->deletedPxLevel(pxLevel, transactTime);
   }
 
-  void updateNDP(MxNDP pxNDP, MxNDP qtyNDP);
+  void updateNDP(MxNDP pxNDP, MxNDP qtyNDP, const MxMDOrderNDPFn &);
 
   void map(unsigned inRank, MxMDOrderBook *outOB);
 
@@ -1306,7 +1313,9 @@ public:
   ZuInline MxMDInstrument *underlying() const { return m_underlying; }
   ZuInline MxMDDerivatives *derivatives() const { return m_derivatives; }
 
-  void update(const MxMDInstrRefData &refData, MxDateTime transactTime);
+  void update(
+      const MxMDInstrRefData &refData, MxDateTime transactTime,
+      MxMDOrderNDPFn = MxMDOrderNDPFn());
 
   void subscribe(MxMDInstrHandler *);
   void unsubscribe();
@@ -1396,7 +1405,7 @@ private:
     m_derivatives->del(d);
   }
 
-  void update_(const MxMDInstrRefData &, MxDateTime transactTime);
+  void update_(const MxMDInstrRefData &, const MxMDOrderNDPFn &);
 
   MxInstrKey			m_key;
 
@@ -1918,7 +1927,7 @@ friend class ZmShard;
 
   void updateInstrument(
       MxMDInstrument *instrument, const MxMDInstrRefData &refData,
-      MxDateTime transactTime);
+      MxDateTime transactTime, const MxMDOrderNDPFn &);
   void addInstrIndices(
       MxMDInstrument *, const MxMDInstrRefData &, MxDateTime transactTime);
   void delInstrIndices(

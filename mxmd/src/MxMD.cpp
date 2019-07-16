@@ -48,12 +48,15 @@ void MxMDPxLevel_::reset(MxDateTime transactTime)
 }
 
 void MxMDPxLevel_::updateNDP(
-    MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP)
+    MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP,
+    const MxMDOrderNDPFn &fn)
 {
   auto i = m_orders.iterator();
-  while (MxMDOrder *order = i.iterate())
+  while (MxMDOrder *order = i.iterate()) {
     order->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP);
-  if (qtyNDP != oldQtyNDP)
+    fn(order, oldPxNDP, oldQtyNDP, pxNDP, qtyNDP);
+  }
+  if (*qtyNDP && qtyNDP != oldQtyNDP)
     m_data.qty = MxValNDP{m_data.qty, oldQtyNDP}.adjust(qtyNDP);
 }
 
@@ -945,23 +948,25 @@ void MxMDOrderBook::reset(MxDateTime transactTime)
 }
 
 void MxMDOBSide::updateNDP(
-    MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP)
+    MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP,
+    const MxMDOrderNDPFn &fn)
 {
   if (m_mktLevel)
-    m_mktLevel->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP);
+    m_mktLevel->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP, fn);
   auto i = m_pxLevels.readIterator();
   while (MxMDPxLevel *pxLevel = i.iterate())
-    pxLevel->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP);
+    pxLevel->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP, fn);
 }
 
-void MxMDOrderBook::updateNDP(MxNDP pxNDP, MxNDP qtyNDP)
+void MxMDOrderBook::updateNDP(
+    MxNDP pxNDP, MxNDP qtyNDP, const MxMDOrderNDPFn &fn)
 {
   MxValue oldPxNDP = m_l1Data.pxNDP;
   MxValue oldQtyNDP = m_l1Data.qtyNDP;
-  if (pxNDP != oldPxNDP) updatePxNDP_(m_l1Data, pxNDP);
-  if (qtyNDP != oldQtyNDP) updateQtyNDP_(m_l1Data, qtyNDP);
-  m_bids->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP);
-  m_asks->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP);
+  if (*pxNDP && pxNDP != oldPxNDP) updatePxNDP_(m_l1Data, pxNDP);
+  if (*qtyNDP && qtyNDP != oldQtyNDP) updateQtyNDP_(m_l1Data, qtyNDP);
+  m_bids->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP, fn);
+  m_asks->updateNDP(oldPxNDP, oldQtyNDP, pxNDP, qtyNDP, fn);
 }
 
 void MxMDOrderBook::addTrade(
@@ -1098,9 +1103,10 @@ ZmRef<MxMDOrderBook> MxMDInstrument::delOrderBook_(MxID venue, MxID segment)
 }
 
 void MxMDInstrument::update(
-    const MxMDInstrRefData &refData, MxDateTime transactTime)
+    const MxMDInstrRefData &refData, MxDateTime transactTime,
+    MxMDOrderNDPFn orderNDPFn)
 {
-  md()->updateInstrument(this, refData, transactTime);
+  md()->updateInstrument(this, refData, transactTime, ZuMv(orderNDPFn));
   if (m_handler) m_handler->updatedInstrument(this, transactTime);
 }
 
@@ -1482,7 +1488,7 @@ ZmRef<MxMDInstrument> MxMDLib::addInstrument(
 }
 
 void MxMDInstrument::update_(
-    const MxMDInstrRefData &refData, MxDateTime transactTime)
+    const MxMDInstrRefData &refData, const MxMDOrderNDPFn &orderNDPFn)
 {
   m_refData.tradeable.update(refData.tradeable);
   m_refData.idSrc.update(refData.idSrc);
@@ -1495,9 +1501,9 @@ void MxMDInstrument::update_(
   m_refData.mat.update(refData.mat);
   if ((*refData.pxNDP && refData.pxNDP != m_refData.pxNDP) ||
       (*refData.qtyNDP && refData.qtyNDP != m_refData.qtyNDP)) {
-    allOrderBooks([pxNDP = refData.pxNDP, qtyNDP = refData.qtyNDP](
+    allOrderBooks([pxNDP = refData.pxNDP, qtyNDP = refData.qtyNDP, &orderNDPFn](
 	  MxMDOrderBook *ob) -> uintptr_t {
-      ob->updateNDP(pxNDP, qtyNDP);
+      ob->updateNDP(pxNDP, qtyNDP, orderNDPFn);
       return 0;
     });
 #define adjustNDP(v, n) if (*m_refData.v && !*refData.v) m_refData.v = \
@@ -1518,7 +1524,7 @@ void MxMDInstrument::update_(
 
 void MxMDLib::updateInstrument(
   MxMDInstrument *instrument, const MxMDInstrRefData &refData,
-  MxDateTime transactTime)
+  MxDateTime transactTime, const MxMDOrderNDPFn &orderNDPFn)
 {
   {
     Guard guard(m_refDataLock);
@@ -1526,7 +1532,7 @@ void MxMDLib::updateInstrument(
     MxMDInstrRefData oldRefData;
 
     oldRefData = instrument->refData();
-    instrument->update_(refData, transactTime);
+    instrument->update_(refData, orderNDPFn);
 
     delInstrIndices(instrument, oldRefData);
     addInstrIndices(instrument, instrument->refData(), transactTime);

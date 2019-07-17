@@ -556,11 +556,13 @@ public:
     return ZuMv(*ptr);
   }
   inline void delNode_(Node *node) {
+    Node *parent = node->Fn::parent();
     Node *dup = node->Fn::dup();
 
-    if (dup) {
-      Node *parent = node->Fn::parent();
-
+    if (parent && parent->Fn::dup() == node) {
+      parent->Fn::dup(dup);
+      if (dup) dup->Fn::parent(parent);
+    } else if (dup) {
       {
 	Node *child;
 
@@ -651,11 +653,9 @@ ret:
     for (;;) {
       if (!node) return nullptr;
 
-      const auto &nodeKey = node->Node::key();
-
-      if (!(c = ICmp::cmp(nodeKey, index))) {
+      if (!(c = ICmp::cmp(node->Node::key(), index))) {
 	do {
-	  if (Cmp::equals(nodeKey, key)) goto ret;
+	  if (node->Node::key() == key) goto ret; // not Cmp::equals()
 	} while (node = node->Fn::dup());
 	return nullptr;
       } else if (c > 0)

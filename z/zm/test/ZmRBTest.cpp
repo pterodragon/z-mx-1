@@ -53,10 +53,13 @@ template <> struct ZuTraits<Z> {
 typedef ZmRBTree<ZmRef<Z>, ZmRBTreeCmp<ZCmp> > Tree;
 
 static void delptr(Tree *tree, Z *z) {
+  tree->del(z, z);
+#if 0
   auto iter = tree->iterator<ZmRBTreeEqual>(z);
   Tree::NodeRef node;
 
   while (node = iter.iterate()) if (z == node->key()) { iter.del(); return; }
+#endif
 }
 
 int main()

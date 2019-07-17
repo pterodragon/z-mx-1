@@ -517,17 +517,18 @@ public:
   }
 
   template <typename Index_>
-  inline typename ZuNotConvertible<Index_, Node *, NodeRef>::T
+  inline typename ZuIfT<
+    !ZuConversion<Index_, Node *>::Exists, NodeRef>::T
       del(const Index_ &index) {
     Guard guard(m_lock);
     Node *node;
 
-    if (!(node = m_root)) return 0;
+    if (!(node = m_root)) return nullptr;
 
     int c;
 
     for (;;) {
-      if (!node) return 0;
+      if (!node) return nullptr;
 
       if (!(c = ICmp::cmp(node->Node::key(), index))) break;
 
@@ -542,7 +543,7 @@ public:
     return ZuMv(*ptr);
   }
   inline NodeRef del(Node *node) {
-    if (ZuUnlikely(!node)) return 0;
+    if (ZuUnlikely(!node)) return nullptr;
     Guard guard(m_lock);
     Node *parent = node->Fn::parent();
     if (parent && parent->Fn::dup() == node) {
@@ -604,73 +605,67 @@ public:
   }
 
   template <typename Index_, typename Val_>
-  inline NodeRef del(const Index_ &index, const Val_ &val) {
+  inline typename ZuIfT<
+    !ZuConversion<Index_, Node *>::Exists &&
+    ZuConversion<Val_, Val>::Exists, NodeRef>::T
+      del(const Index_ &index, const Val_ &val) {
     Guard guard(m_lock);
     Node *node;
 
-    if (!(node = m_root)) return 0;
+    if (!(node = m_root)) return nullptr;
 
     int c;
 
     for (;;) {
-      if (!node) return 0;
+      if (!node) return nullptr;
 
-      if (!(c = ICmp::cmp(node->Node::key(), index))) break;
-
-      if (c > 0)
+      if (!(c = ICmp::cmp(node->Node::key(), index))) {
+	do {
+	  if (ValCmp::equals(node->Node::val(), val)) goto ret;
+	} while (node = node->Fn::dup());
+	return nullptr;
+      } else if (c > 0)
 	node = node->Fn::left();
       else
 	node = node->Fn::right();
     }
 
-    Node *dup = node->Fn::dup();
+ret:
+    delNode_(node);
+    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    return ZuMv(*ptr);
+  }
+  template <typename Index_, typename Key__>
+  inline typename ZuIfT<
+    !ZuConversion<Index_, Node *>::Exists &&
+    ZuConversion<Key__, Key>::Exists &&
+    !ZuConversion<Key__, Val>::Exists, NodeRef>::T
+      del(const Index_ &index, const Key__ &key) {
+    Guard guard(m_lock);
+    Node *node;
 
-    if (dup) {
-      if (ValCmp::equals(node->Node::val(), val)) {
-	Node *parent = node->Fn::parent();
+    if (!(node = m_root)) return nullptr;
 
-	{
-	  Node *child;
+    int c;
 
-	  dup->Fn::left(child = node->Fn::left());
-	  if (child) child->Fn::parent(dup);
-	  dup->Fn::right(child = node->Fn::right());
-	  if (child) child->Fn::parent(dup);
-	}
-	if (!parent) {
-	  m_root = dup;
-	  dup->Fn::parent(0);
-	} else if (node == parent->Fn::right()) {
-	  parent->Fn::right(dup);
-	  dup->Fn::parent(parent);
-	} else {
-	  parent->Fn::left(dup);
-	  dup->Fn::parent(parent);
-	}
-	dup->black(node->black());
-	if (node == m_minimum) m_minimum = dup;
-	if (node == m_maximum) m_maximum = dup;
-      } else {
+    for (;;) {
+      if (!node) return nullptr;
+
+      const auto &nodeKey = node->Node::key();
+
+      if (!(c = ICmp::cmp(nodeKey, index))) {
 	do {
-	  if (!(node = node->Fn::dup())) return 0;
-	} while (!ValCmp::equals(node->Node::val(), val));
-
-	Node *parent = node->Fn::parent();
-
-	dup = node->Fn::dup();
-	parent->Fn::dup(dup);
-	if (dup) dup->Fn::parent(parent);
-      }
-      --m_count;
-      NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
-      return ZuMv(*ptr);
+	  if (Cmp::equals(nodeKey, key)) goto ret;
+	} while (node = node->Fn::dup());
+	return nullptr;
+      } else if (c > 0)
+	node = node->Fn::left();
+      else
+	node = node->Fn::right();
     }
 
-    if (!ValCmp::equals(node->Node::val(), val)) return 0;
-
-    delRebalance(node);
-
-    --m_count;
+ret:
+    delNode_(node);
     NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
     return ZuMv(*ptr);
   }
@@ -703,12 +698,12 @@ protected:
   inline Node *find_(const Index_ &index) const {
     Node *node;
 
-    if (!(node = m_root)) return 0;
+    if (!(node = m_root)) return nullptr;
 
     int c;
 
     for (;;) {
-      if (!node) return 0;
+      if (!node) return nullptr;
 
       if (!(c = ICmp::cmp(node->Node::key(), index))) return node;
 
@@ -723,12 +718,12 @@ protected:
     if (compare == ZmRBTreeEqual) {
       Node *node;
 
-      if (!(node = m_root)) return 0;
+      if (!(node = m_root)) return nullptr;
 
       int c;
 
       for (;;) {
-	if (!node) return 0;
+	if (!node) return nullptr;
 
 	if (!(c = ICmp::cmp(node->Node::key(), index))) return node;
 
@@ -746,7 +741,7 @@ protected:
       bool less =
 	(compare == ZmRBTreeLessEqual || compare == ZmRBTreeLess);
 
-      if (!(node = m_root)) return 0;
+      if (!(node = m_root)) return nullptr;
 
       int c;
 
@@ -1035,11 +1030,11 @@ protected:
       return next;
     }
 
-    if (!(next = node->Fn::parent())) return 0;
+    if (!(next = node->Fn::parent())) return nullptr;
 
     while (node == next->Fn::right()) {
       node = next;
-      if (!(next = node->Fn::parent())) return 0;
+      if (!(next = node->Fn::parent())) return nullptr;
     }
 
     return next;
@@ -1062,11 +1057,11 @@ protected:
       return prev;
     }
 
-    if (!(prev = node->Fn::parent())) return 0;
+    if (!(prev = node->Fn::parent())) return nullptr;
 
     while (node == prev->Fn::left()) {
       node = prev;
-      if (!(prev = node->Fn::parent())) return 0;
+      if (!(prev = node->Fn::parent())) return nullptr;
     }
 
     return prev;
@@ -1100,7 +1095,7 @@ protected:
   inline typename ZuIfT<(Direction > 0), Node *>::T iterate(
       Iterator_<Direction> &iterator) {
     Node *node = iterator.m_node;
-    if (!node) return 0;
+    if (!node) return nullptr;
     iterator.m_node = next(node);
     return iterator.m_last = node;
   }
@@ -1108,7 +1103,7 @@ protected:
   inline typename ZuIfT<(!Direction), Node *>::T iterate(
       Iterator_<Direction> &iterator) {
     Node *node = iterator.m_node;
-    if (!node) return 0;
+    if (!node) return nullptr;
     iterator.m_node = node->Fn::dup();
     return iterator.m_last = node;
   }
@@ -1116,7 +1111,7 @@ protected:
   inline typename ZuIfT<(Direction < 0), Node *>::T iterate(
       Iterator_<Direction> &iterator) {
     Node *node = iterator.m_node;
-    if (!node) return 0;
+    if (!node) return nullptr;
     iterator.m_node = prev(node);
     return iterator.m_last = node;
   }

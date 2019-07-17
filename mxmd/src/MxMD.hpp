@@ -580,6 +580,9 @@ struct MxMDL2Flags : public MxMDFlags<MxMDL2Flags> {
   typedef Liffe XTKD;
 };
 
+// order, time stamp
+typedef ZmFn<MxMDOrder *, MxDateTime> MxMDOrderFn;
+
 class MxMDPxLevel_ : public ZmObject {
   MxMDPxLevel_(const MxMDPxLevel_ &) = delete;
   MxMDPxLevel_ &operator =(const MxMDPxLevel_ &) = delete;
@@ -613,7 +616,7 @@ public:
   }
 
 private:
-  void reset(MxDateTime transactTime);
+  void reset(MxDateTime transactTime, MxMDOrderFn);
 
   void updateAbs(
       MxDateTime transactTime, MxValue qty, MxUInt nOrders, MxFlags flags,
@@ -688,8 +691,6 @@ typedef ZmFn<MxMDOrderBook *, MxDateTime> MxMDOrderBookFn;
 typedef ZmFn<MxMDOrderBook *, const MxMDL1Data &> MxMDLevel1Fn;
 // price level, time stamp
 typedef ZmFn<MxMDPxLevel *, MxDateTime> MxMDPxLevelFn;
-// order, time stamp
-typedef ZmFn<MxMDOrder *, MxDateTime> MxMDOrderFn;
 // trade, time stamp
 typedef ZmFn<MxMDTrade *, MxDateTime> MxMDTradeFn;
 // time stamp, next time stamp
@@ -904,7 +905,7 @@ private:
       const MxMDInstrHandler *handler,
       const MxMDPxLevelFn *&fn, ZmRef<MxMDPxLevel> &pxLevel);
 
-  void reset(MxDateTime transactTime);
+  void reset(MxDateTime transactTime, MxMDOrderFn);
 
   void updateNDP(
       MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP,
@@ -1022,7 +1023,7 @@ public:
   ZmRef<MxMDOrder> cancelOrder(
     ZuString orderID, MxDateTime transactTime, MxEnum side);
 
-  void reset(MxDateTime transactTime);
+  void reset(MxDateTime transactTime, MxMDOrderFn = MxMDOrderFn());
 
   void addTrade(ZuString tradeID,
       MxDateTime transactTime, MxValue price, MxValue qty);

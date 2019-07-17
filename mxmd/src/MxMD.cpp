@@ -33,12 +33,13 @@ void MxMDTickSizeTbl::addTickSize(
   m_venue->md()->addTickSize(this, minPrice, maxPrice, tickSize);
 }
 
-void MxMDPxLevel_::reset(MxDateTime transactTime)
+void MxMDPxLevel_::reset(MxDateTime transactTime, MxMDOrderFn fn)
 {
   {
     auto i = m_orders.iterator();
     while (MxMDOrder *order = i.iterate()) {
       deletedOrder_(order, transactTime);
+      fn(order, transactTime);
       i.del();
     }
   }
@@ -893,10 +894,10 @@ void MxMDOrderBook::cancelOrder_(MxMDOrder *order, MxDateTime transactTime)
   if (m_handler) m_handler->deletedOrder(order, transactTime);
 }
 
-void MxMDOBSide::reset(MxDateTime transactTime)
+void MxMDOBSide::reset(MxDateTime transactTime, MxMDOrderFn fn)
 {
   if (m_mktLevel) {
-    m_mktLevel->reset(transactTime);
+    m_mktLevel->reset(transactTime, fn);
     m_orderBook->deletedPxLevel_(m_mktLevel, transactTime);
     m_mktLevel = 0;
   }
@@ -905,7 +906,7 @@ void MxMDOBSide::reset(MxDateTime transactTime)
     while (MxMDPxLevel *pxLevel = i.iterate()) {
       MxValue d_qty = -pxLevel->data().qty;
       MxUInt d_nOrders = -pxLevel->data().nOrders;
-      pxLevel->reset(transactTime);
+      pxLevel->reset(transactTime, fn);
       m_orderBook->deletedPxLevel_(pxLevel, transactTime);
       if (MxMDOrderBook *out = m_orderBook->out())
 	out->pxLevel_(
@@ -917,7 +918,7 @@ void MxMDOBSide::reset(MxDateTime transactTime)
   m_data.nv = m_data.qty = 0;
 }
 
-void MxMDOrderBook::reset(MxDateTime transactTime)
+void MxMDOrderBook::reset(MxDateTime transactTime, MxMDOrderFn fn)
 {
   MxMDL1Data delta{.pxNDP = m_l1Data.pxNDP, .qtyNDP = m_l1Data.qtyNDP};
   bool l1Updated = false;
@@ -936,8 +937,8 @@ void MxMDOrderBook::reset(MxDateTime transactTime)
     m_l1Data.stamp = delta.stamp = transactTime;
   }
 
-  m_bids->reset(transactTime);
-  m_asks->reset(transactTime);
+  m_bids->reset(transactTime, fn);
+  m_asks->reset(transactTime, fn);
 
   md()->resetOB(this, transactTime);
 

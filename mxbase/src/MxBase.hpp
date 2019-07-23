@@ -211,8 +211,10 @@ struct MxValNDP {
     return (MxValNDP{1.0, ndp} * (*this)).value;
   }
 
-  // ! is null, unary * is !null
-  ZuInline bool operator !() const { return !*value; }
+  // ! is zero, unary * is !null
+  ZuInline bool operator !() const { return !value; }
+  ZuOpBool
+
   ZuInline bool operator *() const { return *value; }
 
   template <typename S> void print(S &s) const;
@@ -258,6 +260,7 @@ struct MxValNDPVFmt : public ZuVFmtWrapper<MxValNDPVFmt<Ref>, Ref> {
 
   template <typename S> inline void print(S &s) const {
     MxValue iv = fixedNDP.value;
+    if (ZuUnlikely(!*iv)) return;
     if (ZuUnlikely(iv < 0)) { s << '-'; iv = -iv; }
     uint64_t factor = ZuDecimal::pow10_64(fixedNDP.ndp);
     MxValue fv = iv % factor;

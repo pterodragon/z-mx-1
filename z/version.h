@@ -21,9 +21,9 @@
 
 #define Z_VULONG(major, minor, build) (((major)<<24) | ((minor)<<16) | (build))
 
-#define Z_VERSION Z_VULONG(8,4,2)	// <-- manually maintained
-#define Z_VERNAME "8.4.2"		// <-- ''
-#define Z_VERMSRC 8,4,2,0		// <-- ''
+#define Z_VERSION Z_VULONG(8,4,3)	// <-- manually maintained
+#define Z_VERNAME "8.4.3"		// <-- ''
+#define Z_VERMSRC 8,4,3,0		// <-- ''
 
 #define Z_VMAJOR(n) (((unsigned long)n)>>24)
 #define Z_VMINOR(n) ((((unsigned long)n)>>16) & 0xff)

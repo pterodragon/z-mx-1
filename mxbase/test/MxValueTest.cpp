@@ -55,13 +55,13 @@ int main()
     CHECK((double)(MxValNDP{v, 2}.fp()) == .01);
   }
   // check overflow strings
-  CHECK((!MxValNDP{"", 4}));
+  CHECK((!*MxValNDP{"", 4}));
   CHECK((!*MxValNDP{"1", 19}));
   CHECK((!*MxValNDP{"100", 17}));
+  CHECK((!*MxValNDP{"1", 18}));
   // check underflow strings
-  CHECK((!MxValNDP{"1", 18}));
-  CHECK((!MxValNDP{".1", 0}.value));
-  CHECK((!MxValNDP{"000.010", 1}.value));
+  CHECK((!MxValNDP{".1", 0}));
+  CHECK((!MxValNDP{"000.010", 1}));
   // check formatted printing
   {
     ZuStringN<32> s;

@@ -299,7 +299,7 @@ typedef Zdb_Cache::Node Zdb_CacheNode;
 class ZdbAnyPOD_Cmpr;
 class ZdbAnyPOD_Send__;
 
-class ZdbAPI ZdbAnyPOD : public Zdb_CacheNode {
+class ZdbAPI ZdbAnyPOD : public Zdb_CacheNode, public ZuPrintable {
 friend class ZdbAny;
 friend class Zdb_Cxn;
 friend class ZdbAnyPOD_Send__;
@@ -382,6 +382,13 @@ private:
     this->range(ZdbRange{});
   }
 
+public:
+  template <typename S> inline void print(S &s) const {
+    s << "rn=" << rn()
+      << " prevRN=" << prevRN()
+      << " magic=" << ZuBoxed(magic()).hex();
+  }
+
 private:
   void replicate(int type, int op, bool compress);
 
@@ -398,13 +405,6 @@ private:
   ZdbAny		*m_db;
   ZmRef<ZdbAnyPOD_Cmpr>	m_compressed;
   Zdb_Msg_Hdr		m_hdr;
-};
-
-template <> struct ZuPrint<ZdbAnyPOD> : public ZuPrintDelegate {
-  template <typename S>
-  inline static void print(S &s, const ZdbAnyPOD &v) {
-    s << ZtHexDump("", v.ptr(), v.size());
-  }
 };
 
 inline ZdbRN ZdbLRUNode_RNAccessor::value(const ZdbLRUNode &pod)
@@ -471,6 +471,12 @@ public:
     return static_cast<ZdbPOD_ *>(Base::pod(ptr));
   }
 
+  template <typename S>
+  inline void print(S &s) const {
+    ZdbAnyPOD::print(s);
+    s << ' ' << this->data();
+  }
+
 private:
   template <class Heap_> class Cmpr_ : public Heap_, public ZdbAnyPOD_Cmpr {
   public:
@@ -487,11 +493,6 @@ private:
 };
 template <typename T, class HeapID = ZdbPOD_HeapID>
 using ZdbPOD = ZdbPOD_<T, ZmHeap<HeapID, sizeof(ZdbPOD_<T, ZuNull>)> >;
-template <typename T, class HeapID>
-struct ZuPrint<ZdbPOD<T, HeapID> > : public ZuPrintDelegate {
-  template <typename S>
-  inline static void print(S &s, const ZdbPOD<T, HeapID> &v) { s << v.data(); }
-};
 
 struct ZdbConfig {
   inline ZdbConfig() { }

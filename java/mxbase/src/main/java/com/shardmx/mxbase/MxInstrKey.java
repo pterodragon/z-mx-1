@@ -21,4 +21,9 @@ public abstract class MxInstrKey implements Comparable<MxInstrKey> {
     if (k.segment() == null) return 1;
     return segment().compareTo(k.segment());
   }
+
+  @Override
+  public String toString() {
+    return new String() + venue() + '|' + segment() + '|' + id();
+  }
 }

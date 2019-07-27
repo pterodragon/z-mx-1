@@ -32,6 +32,15 @@ public class MxMDInstrument implements AutoCloseable {
   public native MxMDOrderBook orderBook(String venueID);
   public native MxMDOrderBook orderBook(String venueID, String segmentID);
   public native long allOrderBooks(MxMDAllOrderBooksFn fn);
+
+  @Override
+  public String toString() {
+    if (ptr == 0L) { return ""; }
+    return new String()
+      + "{key=" + key()
+      + ", refData=" + refData()
+      + "}";
+  }
  
   // data members
 

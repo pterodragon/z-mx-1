@@ -90,7 +90,13 @@ struct MxMDLotSizes {
 
   ZuInline bool operator !() const { return !*lotSize; }
   ZuOpBool
+
+  template <typename S> inline void print(S &s) const {
+    s << '[' << oddLotSize << ", " << lotSize << ", " << blockLotSize << ']';
+  }
 };
+
+template <> struct ZuPrint<MxMDLotSizes> : public ZuPrintFn { };
 
 struct MxMDL1Data {
   MxDateTime	stamp;

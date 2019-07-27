@@ -14,6 +14,16 @@ public class MxMDOrder {
   public native String id();
   public native MxMDOrderData data();
 
+  @Override
+  public String toString() {
+    if (ptr == 0L) { return ""; }
+    OrderBook ob = orderBook();
+    return new String()
+      + "{id=" + id()
+      + ", data=" + data().toString_(ob.pxNDP(), ob.qtyNDP())
+      + "}";
+  }
+ 
   // data members
 
   private long ptr;

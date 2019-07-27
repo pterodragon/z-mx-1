@@ -8,7 +8,7 @@ import java.text.DecimalFormat;
 public class MxValNDP {
   public BigDecimal bd;
   public MxValNDP(long value, int ndp) {
-    if (value == MxValue.NULL)
+    if (value == MxValue.NULL || value == MxValue.RESET)
       bd = null;
     else
       bd = (new BigDecimal(value)).scaleByPowerOfTen(-ndp);
@@ -29,12 +29,20 @@ public class MxValNDP {
     if (v instanceof MxValNDP) return bd.compareTo(((MxValNDP)v).bd);
     throw new RuntimeException("invalid object " + v.getClass());
   }
+
+  private static final ThreadLocal<DecimalFormat> df =
+    ThreadLocal.withInitial(() -> {
+      DecimalFormat df_ = new DecimalFormat();
+      df_.setMinimumFractionDigits(0);
+      df_.setGroupingUsed(false);
+      return df_;
+    });
+
+  @Override
   public String toString() {
     if (bd == null) return "";
-    DecimalFormat df = new DecimalFormat();
-    df.setMaximumFractionDigits(bd.scale());
-    df.setMinimumFractionDigits(0);
-    df.setGroupingUsed(false);
-    return df.format(bd);
+    DecimalFormat df_ = df.get();
+    df_.setMaximumFractionDigits(bd.scale());
+    return df_.format(bd);
   }
 }

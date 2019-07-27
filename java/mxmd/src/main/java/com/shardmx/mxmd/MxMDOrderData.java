@@ -18,5 +18,16 @@ public abstract class MxMDOrderData {
   public long price() { return MxValue.NULL; }
   public abstract long qty();
   @Value.Default
-  public long flags() { return 0; }
+  public long flags() { return 0L; }
+
+  public String toString_(int pxNDP, int qtyNDP) {
+    String s = new String() + "{transactTime=";
+    if (transactTime != null) s += transactTime();
+    s += ", side=" + side()
+      + ", rank=" + rank()
+      + ", px=" + new MxValNDP(price(), pxNDP)
+      + ", qty=" + new MxValNDP(qty(), qtyNDP)
+      + "}";
+    return s;
+  }
 }

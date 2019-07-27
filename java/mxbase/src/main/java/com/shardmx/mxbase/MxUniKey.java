@@ -17,7 +17,7 @@ public abstract class MxUniKey implements Comparable<MxUniKey> {
   @Value.Default @Nullable
   public MxPutCall putCall() { return MxPutCall.NULL; }
   @Value.Default
-  public long strike() { return 0; }
+  public long strike() { return 0L; }
 
   public int compareTo(MxUniKey k) {
     int i;

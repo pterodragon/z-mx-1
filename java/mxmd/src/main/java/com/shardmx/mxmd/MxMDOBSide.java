@@ -24,6 +24,17 @@ public class MxMDOBSide implements AutoCloseable {
   public native long allPxLevels(
       long minPrice, long maxPrice, MxMDAllPxLevelsFn fn);
 
+  @Override
+  public String toString() {
+    if (ptr == 0L) { return ""; }
+    OrderBook ob = orderBook();
+    String s = new String()
+      + "{side=" + side()
+      + ", data=" + data().toString_(ob.pxNDP(), ob.qtyNDP())
+      + ", vwap=" + new MxValNDP(vwap(), ob.pxNDP())
+      + "}";
+  }
+
   // data members
 
   private long ptr;

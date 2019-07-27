@@ -20,4 +20,13 @@ public abstract class MxMDException {
   public String function() { return null; }
   @Value.Default @Nullable
   public String message() { return null; }
+
+  @Override
+  public String toString() {
+    String s = new String() + time() + " [" + tid() + "] " + severity();
+    if (filename() != null) { s += " " + filename() + ":" + lineNumber(); }
+    if (function() != null) { s += " " + function() + "()"; }
+    if (message() != null) { s += " " + message(); }
+    return s;
+  }
 }

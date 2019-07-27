@@ -26,6 +26,7 @@
 #include <ZJNI.hpp>
 
 #include <MxTickDirJNI.hpp>
+#include <MxTradingStatusJNI.hpp>
 
 #include <MxMDL1DataJNI.hpp>
 
@@ -36,9 +37,6 @@ namespace MxMDL1DataJNI {
   ZJNI::JavaMethod ctorMethod[] = {
     { "of", "("
       "Ljava/time/Instant;"		// stamp
-      "I"				// pxNDP
-      "I"				// qtyNDP
-      "Lcom/shardmx/mxbase/MxTickDir;"	// tickDir
       "J"				// base
       "J"				// open
       "J"				// close
@@ -55,8 +53,12 @@ namespace MxMDL1DataJNI {
       "J"				// match
       "J"				// matchQty
       "J"				// surplusQty
-      "J)"				// flags
-      "Lcom/shardmx/mxmd/MxMDL1DataTuple;" }
+      "J"				// flags
+      "I"				// pxNDP
+      "I"				// qtyNDP
+      "Lcom/shardmx/mxbase/MxTickDir;"	// tickDir
+      "Lcom/shardmx/mxbase/MxTradingStatus;"// status
+      ")Lcom/shardmx/mxmd/MxMDL1DataTuple;" }
   };
 }
 
@@ -64,9 +66,6 @@ jobject MxMDL1DataJNI::ctor(JNIEnv *env, const MxMDL1Data &l1Data)
 {
   return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
       ZJNI::t2j(env, l1Data.stamp),
-      (jint)l1Data.pxNDP,
-      (jint)l1Data.qtyNDP,
-      MxTickDirJNI::ctor(env, l1Data.tickDir),
       (jlong)l1Data.base,
       (jlong)l1Data.open,
       (jlong)l1Data.close,
@@ -83,7 +82,11 @@ jobject MxMDL1DataJNI::ctor(JNIEnv *env, const MxMDL1Data &l1Data)
       (jlong)l1Data.match,
       (jlong)l1Data.matchQty,
       (jlong)l1Data.surplusQty,
-      (jlong)l1Data.flags);
+      (jlong)l1Data.flags,
+      (jint)l1Data.pxNDP,
+      (jint)l1Data.qtyNDP,
+      MxTickDirJNI::ctor(env, l1Data.tickDir),
+      MxTradingStatusJNI::ctor(env, l1Data.status));
 }
 
 int MxMDL1DataJNI::bind(JNIEnv *env)

@@ -129,7 +129,7 @@ jobject MxMDLibJNI::init(JNIEnv *env, jclass c, jstring cf)
     env->DeleteLocalRef(obj);
   }
 
-  ZJNI::sigFn([fn = ZuMv(ZJNI::sigFn())]() {
+  ZJNI::sigFn([fn = ZJNI::sigFn()]() {
     if (auto env = ZJNI::env()) {
       MxMDLibJNI::stop(env, nullptr);
       MxMDLibJNI::close(env, nullptr);

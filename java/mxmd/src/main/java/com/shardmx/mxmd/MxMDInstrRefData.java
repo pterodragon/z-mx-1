@@ -33,4 +33,31 @@ public abstract class MxMDInstrRefData {
   public long outstandingShares() { return MxValue.NULL; }
   @Value.Default
   public long adv() { return MxValue.NULL; }
+
+  @Override
+  public String toString() {
+    String s = new String()
+      + "{tradeable=" + tradeable()
+      + ", idSrc=" + idSrc()
+      + ", symbol=" + symbol();
+    if (altIDSrc() != null) { s += ", altIDSrc=" + altIDSrc(); }
+    if (altSymbol() != null) { s += ", altSymbol=" + altSymbol(); }
+    if (underlying() != null) {
+      if (underVenue() != null) { s += underVenue(); } s += "|";
+      if (underSegment() != null) { s += underSegment(); } s += "|";
+      s += underlying();
+    }
+    if (putCall() != null) { s += ", putCall=" + putCall(); }
+    if (mat() != 0) { s += ", mat=" + mat(); }
+    if (putCall() != null && strike() != MxValue.NULL) {
+      s += ", strike=" + new MxValNDP(strike(), pxNDP());
+    }
+    if (outstandingShares() != MxValue.NULL) {
+      s += ", outstandingShares=" + new MxValNDP(outstandingShares(), qtyNDP());
+    }
+    if (adv() != MxValue.NULL) {
+      s += ", adv=" + new MxValNDP(adv(), pxNDP());
+    }
+    return s;
+  }
 }

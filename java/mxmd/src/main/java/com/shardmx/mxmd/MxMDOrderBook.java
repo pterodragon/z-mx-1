@@ -45,6 +45,19 @@ public class MxMDOrderBook implements AutoCloseable {
   public native void unsubscribe();
   public native MxMDInstrHandler handler();
 
+  @Override
+  public String toString() {
+    if (ptr == 0L) { return ""; }
+    return new String()
+      + "{key=" + key()
+      + ", pxNDP=" + pxNDP()
+      + ", qtyNDP=" + qtyNDP()
+      + ", tickSizeTbl=" + tickSizeTbl().id()
+      + ", lotSizes=" + lotSizes().toString_(qtyNDP())
+      + ", l1Data=" + l1Data()
+      + "}";
+  }
+
   // data members
 
   private long ptr;

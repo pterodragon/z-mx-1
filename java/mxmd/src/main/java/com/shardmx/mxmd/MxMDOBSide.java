@@ -27,8 +27,8 @@ public class MxMDOBSide implements AutoCloseable {
   @Override
   public String toString() {
     if (ptr == 0L) { return ""; }
-    OrderBook ob = orderBook();
-    String s = new String()
+    MxMDOrderBook ob = orderBook();
+    return new String()
       + "{side=" + side()
       + ", data=" + data().toString_(ob.pxNDP(), ob.qtyNDP())
       + ", vwap=" + new MxValNDP(vwap(), ob.pxNDP())

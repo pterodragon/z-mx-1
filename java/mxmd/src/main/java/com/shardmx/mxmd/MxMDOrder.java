@@ -17,7 +17,7 @@ public class MxMDOrder {
   @Override
   public String toString() {
     if (ptr == 0L) { return ""; }
-    OrderBook ob = orderBook();
+    MxMDOrderBook ob = orderBook();
     return new String()
       + "{id=" + id()
       + ", data=" + data().toString_(ob.pxNDP(), ob.qtyNDP())

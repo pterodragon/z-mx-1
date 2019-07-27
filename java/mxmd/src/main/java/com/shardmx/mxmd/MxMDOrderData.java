@@ -22,7 +22,7 @@ public abstract class MxMDOrderData {
 
   public String toString_(int pxNDP, int qtyNDP) {
     String s = new String() + "{transactTime=";
-    if (transactTime != null) s += transactTime();
+    if (transactTime() != null) s += transactTime();
     s += ", side=" + side()
       + ", rank=" + rank()
       + ", px=" + new MxValNDP(price(), pxNDP)

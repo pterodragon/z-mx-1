@@ -57,7 +57,7 @@ void MxMDOrderJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
   ZmRef<MxMDOrder> *ZuMayAlias(ptr) = (ZmRef<MxMDOrder> *)&ptr_;
-  ptr->~ZmRef<MxMDOrder>();
+  if (ptr) ptr->~ZmRef<MxMDOrder>();
 }
 
 jobject MxMDOrderJNI::orderBook(JNIEnv *env, jobject obj)

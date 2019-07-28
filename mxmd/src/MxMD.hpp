@@ -2129,6 +2129,7 @@ public:
     }
   }
   uintptr_t allInstruments(ZmFn<MxMDInstrument *>) const;
+  ZuInline unsigned instrCount() const { return m_allInstruments->count(); }
 
   ZuInline MxMDOBHandle orderBook(const MxInstrKey &key) const {
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks->findKey(key))

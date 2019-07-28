@@ -1382,11 +1382,13 @@ void MxMDLib::loaded(MxMDVenue *venue)
   sync();
   venue->loaded_(1);
   handler()->refDataLoaded(venue);
+#if 0
   {
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::refDataLoaded(core->broadcast(), venue->id());
   }
+#endif
 }
 
 void MxMDLib::addVenueMapping(MxMDVenueMapKey key, MxMDVenueMapping map)
@@ -1510,7 +1512,6 @@ void MxMDInstrument::update_(
 #define adjustNDP(v, n) if (*m_refData.v && !*refData.v) m_refData.v = \
     MxValNDP{m_refData.v, m_refData.n ## NDP}.adjust(refData.n ## NDP)
     adjustNDP(strike, px);
-    adjustNDP(outstandingShares, qty);
     adjustNDP(adv, px);
 #undef adjustNDP
     m_refData.pxNDP = refData.pxNDP;
@@ -1518,8 +1519,7 @@ void MxMDInstrument::update_(
   }
   m_refData.putCall.update(refData.putCall);
   m_refData.strike.update(refData.strike);
-  m_refData.outstandingShares.update(
-      refData.outstandingShares, MxValueReset);
+  m_refData.outstandingShares.update(refData.outstandingShares);
   m_refData.adv.update(refData.adv, MxValueReset);
 }
 

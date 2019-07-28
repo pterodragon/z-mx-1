@@ -76,8 +76,10 @@ void MxMDInstrumentJNI::dtor_(JNIEnv *env, jobject, jlong ptr_)
 {
   // (long) -> void
   ZmRef<MxMDInstrument> *ZuMayAlias(ptr) = (ZmRef<MxMDInstrument> *)&ptr_;
-  if (MxMDInstrument *instr = *ptr) unsubscribe_(env, instr);
-  ptr->~ZmRef<MxMDInstrument>();
+  if (ptr) {
+    if (MxMDInstrument *instr = *ptr) unsubscribe_(env, instr);
+    ptr->~ZmRef<MxMDInstrument>();
+  }
 }
 
 jobject MxMDInstrumentJNI::md(JNIEnv *env, jobject obj)

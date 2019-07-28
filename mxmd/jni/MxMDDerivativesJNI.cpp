@@ -62,7 +62,7 @@ void MxMDDerivativesJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
   ZmRef<MxMDDerivatives> *ZuMayAlias(ptr) = (ZmRef<MxMDDerivatives> *)&ptr_;
-  ptr->~ZmRef<MxMDDerivatives>();
+  if (ptr) ptr->~ZmRef<MxMDDerivatives>();
 }
 
 jobject MxMDDerivativesJNI::future(JNIEnv *env, jobject obj, jobject key)

@@ -166,11 +166,12 @@ void MxMDLibJNI::stop(JNIEnv *env, jobject)
   if (ZuUnlikely(!md)) return;
   {
     thread_local ZmSemaphore sem;
+    unsigned n = md->instrCount();
     md->allInstruments([env, sem = &sem](MxMDInstrument *instr) {
       unsubscribe_(env, instr);
       sem->post();
     });
-    sem.wait();
+    for (unsigned i = 0; i < n; i++) sem.wait();
     unsubscribe_(env, md);
   }
   {
@@ -504,4 +505,6 @@ void MxMDLibJNI::final(JNIEnv *env)
     }
     md->final();
   }
+
+  ZeLog::stop();
 }

@@ -63,7 +63,7 @@ void MxMDPxLevelJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
   ZmRef<MxMDPxLevel> *ZuMayAlias(ptr) = (ZmRef<MxMDPxLevel> *)&ptr_;
-  ptr->~ZmRef<MxMDPxLevel>();
+  if (ptr) ptr->~ZmRef<MxMDPxLevel>();
 }
 
 jobject MxMDPxLevelJNI::obSide(JNIEnv *env, jobject obj)

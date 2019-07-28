@@ -1,62 +1,94 @@
 package com.shardmx.mxmd;
 
+import java.time.Instant;
+
+import java.math.BigDecimal;
+
+import java.util.*;
+import java.util.concurrent.*;
+
 import com.shardmx.mxbase.*;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
-import java.util.*;
-
 public class MxMDJNITest extends TestCase {
   public MxMDJNITest(String testName) { super(testName); }
 
   public static Test suite() { return new TestSuite(MxMDJNITest.class); }
 
-  public native void init();
-  public native void publish();
-
   public void testApp() {
     System.loadLibrary("MxMDJNI");
 
-    MxMDLib md = MxMDLib.init(null);
+    MxMDLib md = MxMDLib.init("subscriber.cf");
     assertTrue(md != null);
+
+    Semaphore sem = new Semaphore(0);
 
     md.subscribe(new MxMDLibHandlerTuple.Builder().
 	exception((MxMDLib md_, MxMDException e) -> {
-	  System.out.format("%s %s\n", e.severity().toString(), e.message());
+	  if (e.message().equals("MxMDJNITest end")) {
+	    sem.release();
+	    sem.release(); // twice to ensure exit
+	  }
+	  System.out.println(e.toString());
+	}).
+        timer((Instant stamp1) -> {
+          System.out.println("timer fn");
+          return stamp1;
+        }).
+	refDataLoaded((MxMDVenue venue) -> {
+          System.out.println(new String() + "ref data loaded " + venue.id());
+	  sem.release();
 	}).
 	build());
 
-    System.loadLibrary("MxMDJNITest");
-
-    init();
-
     md.start();
+
+    try {
+      sem.acquire(); // wait for ref data load to complete
+    } catch (InterruptedException e) { }
 
     MxMDInstrHandler instrHandler = new MxMDInstrHandlerTuple.Builder().
       l1((MxMDOrderBook ob, MxMDL1Data l1) -> {
-	System.out.format("tick %s -> %f\n",
-	    ob.id(), ((double)l1.last()) / 100.0);
+	if (l1.last() != MxValue.NULL) {
+	  System.out.println(new String()
+	      + "l1 tick " + ob.id() + " -> "
+	      + new MxValNDP(l1.last(), l1.pxNDP()));
+	}
+      }).
+      addOrder((MxMDOrder order, Instant stamp) -> {
+	System.out.println(new String() + "add order " + order);
+      }).
+      deletedOrder((MxMDOrder order, Instant stamp) -> {
+	System.out.println(new String() + "del order " + order);
       }).
       build();
 
     MxMDInstrumentFn fn = (MxMDInstrument instr) -> {
-      if (instr != null) instr.subscribe(instrHandler);
+      instr.subscribe(instrHandler);
     };
 
-    md.instrument(MxInstrKeyTuple.of("ETHBTC", "JNITest", null), fn);
-
+    md.allInstruments((MxMDInstrument instrument) -> {
+	System.out.println(new String() + instrument);
+	return 0;
+    });
+    md.instrument(MxInstrKeyTuple.of("6502", "XTKS", null), fn);
     {
       MxMDInstrHandle instr = 
-	md.instrument(MxInstrKeyTuple.of("LTCBTC", "JNITest", null));
+	md.instrument(MxInstrKeyTuple.of("2914", "XTKS", null));
       if (instr != null) instr.invoke(fn);
     }
 
-    publish();
+    try {
+      sem.acquire(); // wait for "log MxMDJNITest end" zcmd
+    } catch (InterruptedException e) { }
 
     md.stop();
 
     md.close();
+
+    System.gc();
   }
 }

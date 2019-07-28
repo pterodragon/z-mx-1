@@ -52,7 +52,7 @@ void MxMDInstrHandleJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
   MxMDInstrHandle *ZuMayAlias(ptr) = (MxMDInstrHandle *)&ptr_;
-  ptr->~MxMDInstrHandle();
+  if (ptr) ptr->~MxMDInstrHandle();
 }
 
 void MxMDInstrHandleJNI::invoke(JNIEnv *env, jobject obj, jobject fn)

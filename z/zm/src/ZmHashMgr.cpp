@@ -45,7 +45,15 @@ friend class ZmHashMgr;
 		  ZmRBTreeLock<ZmNoLock> > > > > ID2Params;
 
   ZmHashMgr_() { }
+public:
+  ~ZmHashMgr_() {
+    ZmAssert(!m_tables.count());
+    // FIXME - m_tables.clean() causes recursion via del()
+    // if hash tables still extant in m_tables,
+    // due to refCount being one below what it "should" be
+  }
 
+private:
   static ZmHashMgr_ *instance() {
     return ZmSingleton<ZmHashMgr_>::instance();
   }

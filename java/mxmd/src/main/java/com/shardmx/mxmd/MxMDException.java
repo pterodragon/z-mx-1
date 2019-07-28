@@ -24,9 +24,9 @@ public abstract class MxMDException {
   @Override
   public String toString() {
     String s = new String() + time() + " [" + tid() + "] " + severity();
-    if (filename() != null) { s += " " + filename() + ":" + lineNumber(); }
-    if (function() != null) { s += " " + function() + "()"; }
-    if (message() != null) { s += " " + message(); }
+    if (!"".equals(filename())) { s += " " + filename() + ":" + lineNumber(); }
+    if (!"".equals(function())) { s += " " + function() + "()"; }
+    if (!"".equals(message())) { s += " " + message(); }
     return s;
   }
 }

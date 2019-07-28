@@ -52,7 +52,7 @@ void MxMDFeedJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
   ZmRef<MxMDFeed> *ZuMayAlias(ptr) = (ZmRef<MxMDFeed> *)&ptr_;
-  ptr->~ZmRef<MxMDFeed>();
+  if (ptr) ptr->~ZmRef<MxMDFeed>();
 }
 
 jobject MxMDFeedJNI::md(JNIEnv *env, jobject obj)

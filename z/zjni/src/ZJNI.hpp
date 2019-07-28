@@ -125,6 +125,7 @@ namespace ZJNI {
 	m_obj = 0;
       }
     }
+    ZuInline T object() const { return m_obj; }
     ZuInline operator T() const { return m_obj; }
     ZuInline bool operator !() const { return !m_obj; }
   private:
@@ -165,6 +166,7 @@ namespace ZJNI {
 	m_obj = 0;
       }
     }
+    ZuInline T object() const { return m_obj; }
     ZuInline operator T() const { return m_obj; }
     ZuInline bool operator !() const { return !m_obj; }
   private:

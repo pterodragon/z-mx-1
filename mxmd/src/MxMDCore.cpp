@@ -282,7 +282,7 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
     return md = nullptr;
   }
 
-  return ZmSingleton<MxMDCore, 0>::instance(md);
+  return ZmSingleton<MxMDCore, false>::instance(md);
 }
 
 MxMDLib *MxMDLib::instance()
@@ -478,6 +478,25 @@ void MxMDCore::initCmds()
       }},
       "age log files",
       "usage: logAge\n");
+  addCmd(
+      "log", "",
+      ZvCmdFn{this, [](MxMDCore *md, ZvCmdServerCxn *, ZvCf *args,
+	  ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &outMsg) {
+	ZuBox<int> argc = args->get("#");
+	if (argc < 2) throw ZvCmdUsage();
+	outMsg = new ZvCmdMsg();
+	auto &out = outMsg->cmd();
+	ZtString message;
+	for (ZuBox<int> i = 1; i < argc; i++) {
+	  if (i > 1) message << ' ';
+	  message << args->get(ZuStringN<16>(i));
+	}
+	md->raise(ZeEVENT(Info,
+	  ([message](const ZeEvent &, ZmStream &s) { s << message; })));
+	out << message << '\n';
+      }},
+      "log informational message",
+      "usage: log MESSAGE\n");
 }
 
 void MxMDCore::start()
@@ -694,8 +713,7 @@ void MxMDCore::instrument_(ZvCmdServerCxn *,
 	  "\nstrike: " << MxValNDP{refData.strike, refData.pxNDP};
     }
     if (*refData.outstandingShares)
-      out << "\noutstandingShares: " <<
-	MxValNDP{refData.outstandingShares, refData.qtyNDP};
+      out << "\noutstandingShares: " << refData.outstandingShares;
     if (*refData.adv)
       out << "\nADV: " << MxValNDP{refData.adv, refData.pxNDP};
     if (ob) {
@@ -1222,6 +1240,7 @@ void MxMDCore::apply(const Hdr &hdr, bool filter)
 	if (ZmRef<MxMDVenue> venue = this->venue(obj.venue))
 	  this->loaded(venue);
       }
+      break;
     case Type::HeartBeat:
     case Type::Wake:
     case Type::EndOfSnapshot:

@@ -545,13 +545,7 @@ public:
   inline NodeRef del(Node *node) {
     if (ZuUnlikely(!node)) return nullptr;
     Guard guard(m_lock);
-    Node *parent = node->Fn::parent();
-    if (parent && parent->Fn::dup() == node) {
-      Node *dup = node->Fn::dup();
-      parent->Fn::dup(dup);
-      if (dup) dup->Fn::parent(parent);
-    } else
-      delNode_(node);
+    delNode_(node);
     NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
     return ZuMv(*ptr);
   }
@@ -621,21 +615,22 @@ public:
     for (;;) {
       if (!node) return nullptr;
 
-      if (!(c = ICmp::cmp(node->Node::key(), index))) {
-	do {
-	  if (ValCmp::equals(node->Node::val(), val)) goto ret;
-	} while (node = node->Fn::dup());
-	return nullptr;
-      } else if (c > 0)
+      if (!(c = ICmp::cmp(node->Node::key(), index))) break;
+
+      if (c > 0)
 	node = node->Fn::left();
       else
 	node = node->Fn::right();
     }
 
-ret:
-    delNode_(node);
-    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
-    return ZuMv(*ptr);
+    do {
+      if (ValCmp::equals(node->Node::val(), val)) {
+	delNode_(node);
+	NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+	return ZuMv(*ptr);
+      }
+    } while (node = node->Fn::dup());
+    return nullptr;
   }
   template <typename Index_, typename Key__>
   inline typename ZuIfT<
@@ -653,21 +648,22 @@ ret:
     for (;;) {
       if (!node) return nullptr;
 
-      if (!(c = ICmp::cmp(node->Node::key(), index))) {
-	do {
-	  if (node->Node::key() == key) goto ret; // not Cmp::equals()
-	} while (node = node->Fn::dup());
-	return nullptr;
-      } else if (c > 0)
+      if (!(c = ICmp::cmp(node->Node::key(), index))) break;
+
+      if (c > 0)
 	node = node->Fn::left();
       else
 	node = node->Fn::right();
     }
 
-ret:
-    delNode_(node);
-    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
-    return ZuMv(*ptr);
+    do {
+      if (node->Node::key() == key) { // not Cmp::equals()
+	delNode_(node);
+	NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+	return ZuMv(*ptr);
+      }
+    } while (node = node->Fn::dup());
+    return nullptr;
   }
 
   template <int Direction = ZmRBTreeGreaterEqual>

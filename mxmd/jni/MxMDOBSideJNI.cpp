@@ -63,7 +63,7 @@ void MxMDOBSideJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
   ZmRef<MxMDOBSide> *ZuMayAlias(ptr) = (ZmRef<MxMDOBSide> *)&ptr_;
-  ptr->~ZmRef<MxMDOBSide>();
+  if (ptr) ptr->~ZmRef<MxMDOBSide>();
 }
 
 jobject MxMDOBSideJNI::orderBook(JNIEnv *env, jobject obj)

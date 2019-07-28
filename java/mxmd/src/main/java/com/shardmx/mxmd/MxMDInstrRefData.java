@@ -24,13 +24,13 @@ public abstract class MxMDInstrRefData {
   @Value.Default @Nullable
   public String underlying() { return null; }
   @Value.Default
-  public int mat() { return 0; }
+  public int mat() { return -1; }
   public abstract int pxNDP();
   public abstract int qtyNDP();
   @Value.Default
   public long strike() { return MxValue.NULL; }
   @Value.Default
-  public long outstandingShares() { return MxValue.NULL; }
+  public int outstandingShares() { return -1; }
   @Value.Default
   public long adv() { return MxValue.NULL; }
 
@@ -40,20 +40,21 @@ public abstract class MxMDInstrRefData {
       + "{tradeable=" + tradeable()
       + ", idSrc=" + idSrc()
       + ", symbol=" + symbol();
-    if (altIDSrc() != null) { s += ", altIDSrc=" + altIDSrc(); }
-    if (altSymbol() != null) { s += ", altSymbol=" + altSymbol(); }
-    if (underlying() != null) {
-      if (underVenue() != null) { s += underVenue(); } s += "|";
-      if (underSegment() != null) { s += underSegment(); } s += "|";
+    if (altIDSrc() != MxInstrIDSrc.NULL) { s += ", altIDSrc=" + altIDSrc(); }
+    if (!"".equals(altSymbol())) { s += ", altSymbol=" + altSymbol(); }
+    if (!"".equals(underlying())) {
+      s += "underlying=";
+      if (!"".equals(underVenue())) { s += underVenue(); } s += "|";
+      if (!"".equals(underSegment())) { s += underSegment(); } s += "|";
       s += underlying();
     }
-    if (putCall() != null) { s += ", putCall=" + putCall(); }
-    if (mat() != 0) { s += ", mat=" + mat(); }
-    if (putCall() != null && strike() != MxValue.NULL) {
+    if (putCall() != MxPutCall.NULL) { s += ", putCall=" + putCall(); }
+    if (mat() > 0) { s += ", mat=" + mat(); }
+    if (putCall() != MxPutCall.NULL && strike() != MxValue.NULL) {
       s += ", strike=" + new MxValNDP(strike(), pxNDP());
     }
-    if (outstandingShares() != MxValue.NULL) {
-      s += ", outstandingShares=" + new MxValNDP(outstandingShares(), qtyNDP());
+    if (outstandingShares() > 0) {
+      s += ", outstandingShares=" + outstandingShares();
     }
     if (adv() != MxValue.NULL) {
       s += ", adv=" + new MxValNDP(adv(), pxNDP());

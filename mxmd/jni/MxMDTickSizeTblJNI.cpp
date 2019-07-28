@@ -61,7 +61,7 @@ void MxMDTickSizeTblJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
   ZmRef<MxMDTickSizeTbl> *ZuMayAlias(ptr) = (ZmRef<MxMDTickSizeTbl> *)&ptr_;
-  ptr->~ZmRef<MxMDTickSizeTbl>();
+  if (ptr) ptr->~ZmRef<MxMDTickSizeTbl>();
 }
 
 jobject MxMDTickSizeTblJNI::venue(JNIEnv *env, jobject obj)

@@ -56,7 +56,7 @@ void MxMDTradeJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
   ZmRef<MxMDTrade> *ZuMayAlias(ptr) = (ZmRef<MxMDTrade> *)&ptr_;
-  ptr->~ZmRef<MxMDTrade>();
+  if (ptr) ptr->~ZmRef<MxMDTrade>();
 }
 
 jobject MxMDTradeJNI::instrument(JNIEnv *env, jobject obj)

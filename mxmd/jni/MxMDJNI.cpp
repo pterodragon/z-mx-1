@@ -67,6 +67,12 @@ extern "C" {
   MxMDExtern void JNI_OnUnload(JavaVM *, void *);
 }
 
+void mxmd_jvm_debug()
+{
+  static volatile int cont = 0;
+  while (!cont) ZmPlatform::sleep(1);
+}
+
 MxMDExtern jint JNI_OnLoad(JavaVM *jvm, void *)
 {
   // std::cout << "JNI_OnLoad()\n" << std::flush;
@@ -76,6 +82,16 @@ MxMDExtern jint JNI_OnLoad(JavaVM *jvm, void *)
   JNIEnv *env = ZJNI::env();
 
   if (!env || MxMDJNI::bind(env) < 0) return -1;
+
+  {
+    const char *s = ::getenv("MXMD_JVM_DEBUG");
+    if (s && atoi(s)) {
+      std::cerr << (ZuStringN<100>()
+	  << "MXMD_JVM_DEBUG - attach debugger to PID "
+	  << ZuBoxed(ZmPlatform::getPID()) << '\n') << std::flush;
+      mxmd_jvm_debug();
+    }
+  }
 
   return v;
 }

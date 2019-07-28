@@ -69,8 +69,10 @@ void MxMDOrderBookJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
   ZmRef<MxMDOrderBook> *ZuMayAlias(ptr) = (ZmRef<MxMDOrderBook> *)&ptr_;
-  if (MxMDOrderBook *ob = *ptr) unsubscribe_(env, ob);
-  ptr->~ZmRef<MxMDOrderBook>();
+  if (ptr) {
+    if (MxMDOrderBook *ob = *ptr) unsubscribe_(env, ob);
+    ptr->~ZmRef<MxMDOrderBook>();
+  }
 }
 
 jobject MxMDOrderBookJNI::md(JNIEnv *env, jobject obj)

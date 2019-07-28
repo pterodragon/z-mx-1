@@ -64,7 +64,7 @@ void MxMDVenueJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
   ZmRef<MxMDVenue> *ZuMayAlias(ptr) = (ZmRef<MxMDVenue> *)&ptr_;
-  ptr->~ZmRef<MxMDVenue>();
+  if (ptr) ptr->~ZmRef<MxMDVenue>();
 }
 
 jobject MxMDVenueJNI::md(JNIEnv *env, jobject obj)

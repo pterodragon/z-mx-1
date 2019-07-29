@@ -47,10 +47,14 @@ friend class ZmHashMgr;
   ZmHashMgr_() { }
 public:
   ~ZmHashMgr_() {
-    ZmAssert(!m_tables.count());
-    // FIXME - m_tables.clean() causes recursion via del()
-    // if hash tables still extant in m_tables,
-    // due to refCount being one below what it "should" be
+    if (ZuLikely(!m_tables.count())) return;
+    ZmGuard<ZmPLock> guard(m_lock);
+    auto i = m_tables.iterator();
+    while (auto tbl = i.iterate()) {
+      tbl->ref2_();
+      i.del();
+      tbl->deref_();
+    }
   }
 
 private:
@@ -85,8 +89,8 @@ private:
     ZmGuard<ZmPLock> guard(m_lock);
     // double ref prevents m_tables.del() from recursing into dtor
     tbl->ref2_();
-    m_tables.del(ZmAnyHash_PtrAccessor::value(*tbl));
-    ZmAssert(tbl->deref_()); // check refCount is returned to 0
+    if (!m_tables.del(ZmAnyHash_PtrAccessor::value(*tbl))) tbl->deref_();
+    tbl->deref_();
   }
 
   typedef ZmHashMgr_Tables Tables;

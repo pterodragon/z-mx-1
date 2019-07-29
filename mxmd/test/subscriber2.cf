@@ -14,12 +14,12 @@ mx {
   cmd { nThreads 3 }
 }
 broadcast {
-  name RMD_sub
+  name RMD_sub2
   size 131072
 }
 cmd {
   mx cmd
-  localPort 19401
+  localPort 19402
 }
 record {
   rxThread record
@@ -38,11 +38,11 @@ subscriber {
   reconnInterval 1
   reReqInterval 1
   reReqMaxGap 10
-  channels channels.csv
+  channels channels2.csv
 }
 telemetry {
   mx cmd
   ip 127.0.0.1
-  port 19301
+  port 19302
   freq 1000000
 }

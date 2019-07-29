@@ -25,8 +25,15 @@ void sigint(int sig) { sem.post(); }	// CTRL-C signal handler
 
 int subscribe();	// subscribe to events
 
+void usage() {
+  std::cerr << "usage: mdsample_subscriber CONFIG\n" << std::flush;
+  ::exit(1);
+}
+
 int main(int argc, char **argv)
 {
+  if (argc != 2) usage();
+
   // configure and start logging
   ZeLog::init("mdsample_subscriber");	// program name
   ZeLog::sink(ZeLog::fileSink("&2"));	// log errors to stderr
@@ -35,8 +42,7 @@ int main(int argc, char **argv)
   signal(SIGINT, &sigint);		// handle CTRL-C
 
   try {
-    MxMDLib *md =
-      MxMDLib::init("subscriber.cf");	// initialize market data library
+    MxMDLib *md = MxMDLib::init(argv[1]); // initialize market data library
 
     if (!md) return 1;
 

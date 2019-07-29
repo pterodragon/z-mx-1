@@ -38,6 +38,9 @@ public class MxMDJNITest extends TestCase {
           System.out.println("timer fn");
           return stamp1;
         }).
+	connected((MxMDFeed feed) -> {
+          System.out.println(new String() + "connected " + feed.id());
+	}).
 	refDataLoaded((MxMDVenue venue) -> {
           System.out.println(new String() + "ref data loaded " + venue.id());
 	  sem.release();

@@ -2268,6 +2268,7 @@ inline uintptr_t MxMDPxLevel_::match(MxDateTime transactTime,
 	md->modifyOrder(ob, contra->id(), transactTime,
 	    side, contraData.rank, m_price, cQty, contraData.flags);
       }
+      qty = 0;
       break;
     }
   }

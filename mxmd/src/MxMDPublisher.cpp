@@ -701,7 +701,6 @@ void MxMDPublisher::recv()
 	  m_ring->shift2();
 	}
 	break;
-      case Type::RefDataLoaded:
       case Type::EndOfSnapshot: // ignored
 	m_ring->shift2();
 	break;

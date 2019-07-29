@@ -1382,13 +1382,11 @@ void MxMDLib::loaded(MxMDVenue *venue)
   sync();
   venue->loaded_(1);
   handler()->refDataLoaded(venue);
-#if 0
   {
     MxMDCore *core = static_cast<MxMDCore *>(this);
     if (ZuUnlikely(core->streaming()))
       MxMDStream::refDataLoaded(core->broadcast(), venue->id());
   }
-#endif
 }
 
 void MxMDLib::addVenueMapping(MxMDVenueMapKey key, MxMDVenueMapping map)

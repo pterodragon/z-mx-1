@@ -581,8 +581,10 @@ public:
       msg->owner<Tx *>()->send(ZuMv(msg));
     });
   }
-  void abort(MxSeqNo seqNo)
-    { this->txInvoke([seqNo](Tx *tx) { tx->abort(seqNo); }); }
+  template <typename L>
+  void abort(MxSeqNo seqNo, L l) {
+    this->txInvoke([seqNo, l = ZuMv(l)](Tx *tx) { l(tx->abort(seqNo)); });
+  }
 
 private:
   // prevent direct call from Impl - must be called via txRun/txInvoke
@@ -748,8 +750,10 @@ public:
       msg->owner<Tx *>()->send(ZuMv(msg));
     });
   }
-  void abort(MxSeqNo seqNo)
-    { this->txInvoke([seqNo](Tx *tx) { tx->abort(seqNo); }); }
+  template <typename L>
+  void abort(MxSeqNo seqNo, L l) {
+    this->txInvoke([seqNo, l = ZuMv(l)](Tx *tx) { l(tx->abort(seqNo)); });
+  }
   void archived(MxSeqNo seqNo)
     { this->txInvoke([seqNo](Tx *tx) { tx->archived(seqNo); }); }
 

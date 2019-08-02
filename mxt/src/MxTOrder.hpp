@@ -112,13 +112,14 @@ namespace MxTEventState { // event state
       H, Held = H,
       D, Deferred = D, // deferred awaiting ack of pending order or modify
       Q, Queued = Q,
+      T, Aborted = T, // transient state, equivalent to Q
       S, Sent = S,
       P, PendingFill = P, // ack before fill
       A, Acknowledged = A,
       X, Rejected = X,
       C, Closed = C);
   MxEnumNames(
-      "Unset", "Received", "Held", "Deferred", "Queued", "Sent",
+      "Unset", "Received", "Held", "Deferred", "Queued", "Aborted", "Sent",
       "PendingFill", "Acknowledged", "Rejected", "Closed");
   MxEnumMap(CSVMap,
       "Unset", Unset,
@@ -126,6 +127,7 @@ namespace MxTEventState { // event state
       "Held", Held,
       "Deferred", Deferred,
       "Queued", Queued,
+      "Aborted", Aborted,
       "Sent", Sent,
       "PendingFill", PendingFill,
       "Acknowledged", Acknowledged,
@@ -139,25 +141,32 @@ namespace MxTEventState { // event state
   inline bool matchR(const MxEnum &v) { return v == R; }
   inline bool matchH(const MxEnum &v) { return v == H; }
   inline bool matchHD(const MxEnum &v) { return v == H || v == D; }
-  inline bool matchHDQ(const MxEnum &v)
-    { return v == H || v == D || v == Q; }
-  inline bool matchHQ(const MxEnum &v) { return v == H || v == Q; }
-  inline bool matchHQS(const MxEnum &v)
-    { return v == H || v == Q || v == S; }
+  inline bool matchHDT(const MxEnum &v)
+    { return v == H || v == D || v == T; }
+  inline bool matchHT(const MxEnum &v) { return v == H || v == T; }
+  inline bool matchHTS(const MxEnum &v)
+    { return v == H || v == T || v == S; }
   inline bool matchHQSA(const MxEnum &v)
     { return v == H || v == Q || v == S || v == A; }
-  inline bool matchHDQS(const MxEnum &v) { return v >= H && v <= S; }
-  inline bool matchHDQSP(const MxEnum &v) { return v >= H && v <= P; }
-  inline bool matchHDQSPA(const MxEnum &v) { return v >= H && v <= A; }
+  inline bool matchHDQS(const MxEnum &v)
+    { return v == H || v == D || v == Q || v == S; }
+  inline bool matchHDQSP(const MxEnum &v)
+    { return v == H || v == D || v == Q || v == S || v == P; }
+  inline bool matchHDQSPA(const MxEnum &v)
+    { return v == H || v == D || v == Q || v == S || v == P || v == A; }
   inline bool matchHQSAX(const MxEnum &v)
     { return v == H || v == Q || v == S || v == A || v == X; }
   inline bool matchD(const MxEnum &v) { return v == D; }
-  inline bool matchDQ(const MxEnum &v) { return v == D || v == Q; }
-  inline bool matchDQS(const MxEnum &v) { return v >= D && v <= S; }
-  inline bool matchDQSP(const MxEnum &v) { return v >= D && v <= P; }
-  inline bool matchDQSPA(const MxEnum &v) { return v >= D && v <= A; }
+  inline bool matchDT(const MxEnum &v) { return v == D || v == T; }
+  inline bool matchDTS(const MxEnum &v) { return v == D || v == T || v == S; }
+  inline bool matchDTSP(const MxEnum &v)
+    { return v == D || v == T || v == S || v == P; }
+  inline bool matchDQSP(const MxEnum &v)
+    { return v == D || v == Q || v == S || v == P; }
+  inline bool matchDQSPA(const MxEnum &v)
+    { return v == D || v == Q || v == S || v == P || v == A; }
   inline bool matchDQSPX(const MxEnum &v)
-    { return (v >= D && v <= P) || v == X; }
+    { return v == D || v == Q || v == S || v == P || v == X; }
   inline bool matchDSP(const MxEnum &v)
     { return v == D || v == S || v == P; }
   inline bool matchDX(const MxEnum &v) { return v == D || v == X; }
@@ -369,7 +378,7 @@ template <typename AppTypes> struct MxTAppTypes {
   struct CancelLeg : public CancelLeg_ { };
 
   template <typename Leg> struct Cancel_ : public Legs<Leg> {
-    MxFlags		ackFlags;	// pending ack - EventFlags
+    MxUInt8		ackFlags;	// pending ack - EventFlags
 
     template <typename S> inline void print(S &s) const {
       Legs<Leg>::print(s);
@@ -721,7 +730,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     ZuInline const Event &event() const { return as<Event>(); }
 
     ZuInline const MxEnum &type() const { return as<Event>().eventType; }
-    ZuInline const MxFlags &flags() const { return as<Event>().eventFlags; }
+    ZuInline const MxUInt8 &flags() const { return as<Event>().eventFlags; }
 
     ZuInline bool operator !() const { return !as<Event>(); }
     ZuOpBool;

@@ -56,7 +56,7 @@ public:
   struct TxData {
     MxMsgID	msgID;
     ZdbRN	msgRN = ZdbNullRN;
-    int32_t	msgType = -1;
+    MxInt	msgType;
   };
 
   using TxDB = Zdb<TxData>;
@@ -79,9 +79,8 @@ public:
 
   // l(MxQMsg *msg, ZdbRN &rn, int32_t &type) -> void
   template <typename Link, typename L>
-  void txStore(Link *link, MxQMsg *msg, L l) {
+  void txStore(Link *link, const MxMsgID &msgID, L l) {
     auto &txPOD = link->txPOD;
-    auto msgID = msg->id;
     if (ZuUnlikely(!txPOD))
       txPOD = m_txDB->push();
     else {
@@ -92,7 +91,7 @@ public:
     if (ZuUnlikely(!txPOD)) { app()->logError("txDB update failed"); return; }
     auto &txData = txPOD->data();
     txData.msgID = msgID;
-    l(msg, txData.msgRN, txData.msgType);
+    l(txData.msgRN, txData.msgType);
     if (ZuUnlikely(txPOD->rn() == txPOD->prevRN()))
       m_txDB->put(txPOD);
     else

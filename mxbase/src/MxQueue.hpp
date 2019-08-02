@@ -253,13 +253,15 @@ public:
     impl()->loaded_(msg);
     Tx::send(ZuMv(msg));
   }
-  void abort(MxSeqNo seqNo) {
+  bool abort(MxSeqNo seqNo) {
     ZmRef<MxQMsg> msg = Tx::abort(seqNo);
     if (msg) {
       impl()->aborted_(msg);
       impl()->unloaded_(msg);
       msg->unload();
+      return true;
     }
+    return false;
   }
 
   // unload all messages from queue

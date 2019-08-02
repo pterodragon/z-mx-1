@@ -76,6 +76,8 @@ private:
   Lock		*m_lock;
 };
 
+template <typename Lock> ZmGuard(Lock &) -> ZmGuard<Lock>;
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

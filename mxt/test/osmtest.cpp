@@ -261,13 +261,6 @@ void App::main()
     std::cout << *order << '\n';
   }
   {
-    if (orderSend(order))
-      std::cout << "send OK\n";
-    else
-      std::cout << "send FAILED\n";
-    std::cout << *order << '\n';
-  }
-  {
     Txn<Ordered> txn;
 
     Ordered &ordered = txn.initOrdered();

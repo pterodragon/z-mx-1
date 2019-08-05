@@ -144,8 +144,8 @@ namespace MxTEventState { // event state
   inline bool matchHDT(const MxEnum &v)
     { return v == H || v == D || v == T; }
   inline bool matchHT(const MxEnum &v) { return v == H || v == T; }
-  inline bool matchHTS(const MxEnum &v)
-    { return v == H || v == T || v == S; }
+  inline bool matchHQS(const MxEnum &v)
+    { return v == H || v == Q || v == S; }
   inline bool matchHQSA(const MxEnum &v)
     { return v == H || v == Q || v == S || v == A; }
   inline bool matchHDQS(const MxEnum &v)
@@ -157,10 +157,8 @@ namespace MxTEventState { // event state
   inline bool matchHQSAX(const MxEnum &v)
     { return v == H || v == Q || v == S || v == A || v == X; }
   inline bool matchD(const MxEnum &v) { return v == D; }
-  inline bool matchDT(const MxEnum &v) { return v == D || v == T; }
-  inline bool matchDTS(const MxEnum &v) { return v == D || v == T || v == S; }
-  inline bool matchDTSP(const MxEnum &v)
-    { return v == D || v == T || v == S || v == P; }
+  inline bool matchDQ(const MxEnum &v) { return v == D || v == Q; }
+  inline bool matchDQS(const MxEnum &v) { return v == D || v == Q || v == S; }
   inline bool matchDQSP(const MxEnum &v)
     { return v == D || v == Q || v == S || v == P; }
   inline bool matchDQSPA(const MxEnum &v)
@@ -378,7 +376,7 @@ template <typename AppTypes> struct MxTAppTypes {
   struct CancelLeg : public CancelLeg_ { };
 
   template <typename Leg> struct Cancel_ : public Legs<Leg> {
-    MxUInt8		ackFlags;	// pending ack - EventFlags
+    MxUInt8		ackFlags = 0;	// pending ack - EventFlags
 
     template <typename S> inline void print(S &s) const {
       Legs<Leg>::print(s);

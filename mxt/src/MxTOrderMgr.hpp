@@ -338,7 +338,7 @@ public:
     auto &modify = order->modify();
     auto &cancel = order->cancel();
     if (ZuLikely(!newOrder.modifyCxl() &&
-	  MxTEventState::matchHTS(newOrder.eventState))) {
+	  MxTEventState::matchHQS(newOrder.eventState))) {
       // usual case - solicited
       ordered_<0>(order, in); // solicited
       if (ZuUnlikely(MxTEventState::matchD(cancel.eventState)))
@@ -418,11 +418,11 @@ public:
     if (ZuLikely(!newOrder.modifyCxl() &&
 	  MxTEventState::matchHQSAX(newOrder.eventState))) {
       // usual case
-      if (ZuUnlikely(MxTEventState::matchDT(cancel.eventState))) {
+      if (ZuUnlikely(MxTEventState::matchDQ(cancel.eventState))) {
 	cxlReject_(order, MxTRejReason::OrderClosed);
 	execIn<MxTEventState::Sent>(order);
 	return nextFn<In>(next);
-      } else if (ZuUnlikely(MxTEventState::matchDT(modify.eventState))) {
+      } else if (ZuUnlikely(MxTEventState::matchDQ(modify.eventState))) {
 	modReject_(order, MxTRejReason::OrderClosed);
 	execIn<MxTEventState::Sent>(order);
 	return nextFn<In>(next);
@@ -435,9 +435,8 @@ public:
 	  MxTEventState::matchHD(modify.eventState) &&
 	  MxTEventState::matchDQSPX(cancel.eventState))) {
       // simulated modify in process
-      if (ZuUnlikely(MxTEventState::matchDT(cancel.eventState))) {
+      if (ZuUnlikely(MxTEventState::matchDQ(cancel.eventState)))
 	cancel.null();
-      }
       modReject_(order, MxTRejReason::OrderClosed);
       execIn<MxTEventState::Sent>(order);
       return nextFn<In>(next);
@@ -702,7 +701,7 @@ public:
     auto &modify = order->modify();
     auto &cancel = order->cancel();
     if (MxTEventState::matchSA(newOrder.eventState) &&
-	MxTEventState::matchDTS(modify.eventState)) {
+	MxTEventState::matchDQS(modify.eventState)) {
       // usual case
       auto next = [](App *, Order *order, In &in) -> uintptr_t {
 	modified_<0>(order, in); // solicited
@@ -725,7 +724,7 @@ public:
       };
       // acknowledge any pending new order (unless simulating modify)
       if (!newOrder.modifyCxl() &&
-	  MxTEventState::matchHTS(newOrder.eventState)) {
+	  MxTEventState::matchHQS(newOrder.eventState)) {
 	newOrder.eventState = MxTEventState::Acknowledged;
 	ackIn<MxTEventType::Ordered, MxTEventState::Sent,
 	  1, 0, 0, 0, 1, 0>(order); // OmcuSp
@@ -771,7 +770,7 @@ public:
     auto &modReject = order->execTxn.template as<ModReject>();
     if (ZuLikely(
 	  MxTEventState::matchSA(newOrder.eventState) &&
-	  MxTEventState::matchDTSP(modify.eventState))) {
+	  MxTEventState::matchDQSP(modify.eventState))) {
       // usual case
       execIn<MxTEventState::Sent>(order);
       modReject.update(modify);
@@ -803,7 +802,7 @@ public:
     auto &modReject = order->execTxn.template as<ModReject>();
     if (ZuLikely(
 	  MxTEventState::matchSA(newOrder.eventState) &&
-	  MxTEventState::matchDTSP(modify.eventState))) {
+	  MxTEventState::matchDQSP(modify.eventState))) {
       // usual case
       execIn<MxTEventState::Sent>(order);
       newOrder.modifyCxl_clr();
@@ -968,12 +967,12 @@ public:
       auto next = [](App *, Order *order, In &in) -> uintptr_t {
 	auto &modify = order->modify();
 	auto &cancel = order->cancel();
-	if (ZuLikely(MxTEventState::matchDTS(cancel.eventState))) {
+	if (ZuLikely(MxTEventState::matchDQS(cancel.eventState)))
 	  canceled_<0>(order, in); // solicited
-	} else
+	else
 	  canceled_<1>(order, in); // unsolicited
 	// reject any pending modify
-	if (MxTEventState::matchDT(modify.eventState)) {
+	if (MxTEventState::matchDQ(modify.eventState)) {
 	  modReject_(order, MxTRejReason::OrderClosed);
 	  execOut(order);
 	}
@@ -981,7 +980,7 @@ public:
 	return 0;
       };
       // acknowledge any pending new order
-      if (MxTEventState::matchHTS(newOrder.eventState)) {
+      if (MxTEventState::matchHQS(newOrder.eventState)) {
 	newOrder.eventState = MxTEventState::Acknowledged;
 	ackIn<MxTEventType::Ordered, MxTEventState::Sent,
 	  1, 0, 0, 0, 1, 0>(order); // OmcuSp
@@ -991,7 +990,7 @@ public:
     }
     if (ZuUnlikely(MxTEventState::matchXC(newOrder.eventState))) {
       // late - order already closed
-      if (MxTEventState::matchDTS(cancel.eventState)) {
+      if (MxTEventState::matchDQS(cancel.eventState)) {
 	// solicited
 	cancel.eventState = MxTEventState::Acknowledged;
 	ackIn<MxTEventType::Canceled, MxTEventState::Received,
@@ -1011,7 +1010,7 @@ public:
 	auto &newOrder = order->newOrder();
 	auto &cancel = order->cancel();
 	// apply simulated modify to order
-	if (MxTEventState::matchDTS(cancel.eventState))
+	if (MxTEventState::matchDQS(cancel.eventState))
 	  modCanceled_<0>(order, in); // solicited
 	else
 	  modCanceled_<1>(order, in); // unsolicited
@@ -1051,7 +1050,7 @@ public:
     auto &cancel = order->cancel();
     order->execTxn = in.template data<CxlReject>();
     auto &cxlReject = order->execTxn.template as<CxlReject>();
-    if (ZuLikely(MxTEventState::matchDTS(cancel.eventState))) {
+    if (ZuLikely(MxTEventState::matchDQS(cancel.eventState))) {
       // usual case
       cancel.eventState = MxTEventState::Rejected;
       if (newOrder.modifyCxl())
@@ -1102,7 +1101,7 @@ public:
       // order already acknowledged / closed
       goto applyFill;
     if (ZuLikely(!newOrder.modifyCxl() &&
-	  MxTEventState::matchHTS(newOrder.eventState))) {
+	  MxTEventState::matchHQS(newOrder.eventState))) {
       // order unacknowledged, possible pending cancel or modify
       fillOrdered_(order, in); // solicited
       if (ZuUnlikely(MxTEventState::matchD(cancel.eventState)))

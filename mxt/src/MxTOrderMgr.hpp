@@ -705,7 +705,6 @@ public:
 	MxTEventState::matchDTS(modify.eventState)) {
       // usual case
       auto next = [](App *, Order *order, In &in) -> uintptr_t {
-	auto &modify = order->modify();
 	modified_<0>(order, in); // solicited
 	return 0;
       };

@@ -22,9 +22,9 @@
 #define MXBASE_VULONG(major, minor, build) \
 	(((major)<<24) | ((minor)<<16) | (build))
 
-#define MXBASE_VERSION MXBASE_VULONG(4,3,0)	// <-- manually maintained
-#define MXBASE_VERNAME "4.3.0"		// <-- ''
-#define MXBASE_VERMSRC 4,3,0,0		// <-- ''
+#define MXBASE_VERSION MXBASE_VULONG(4,4,0)	// <-- manually maintained
+#define MXBASE_VERNAME "4.4.0"		// <-- ''
+#define MXBASE_VERMSRC 4,4,0,0		// <-- ''
 
 #define MXBASE_VMAJOR(n) (((unsigned long)n)>>24)
 #define MXBASE_VMINOR(n) ((((unsigned long)n)>>16) & 0xff)

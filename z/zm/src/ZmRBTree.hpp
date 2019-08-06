@@ -1170,25 +1170,12 @@ protected:
 // clean tree
 
   void clean_() {
-    if (Node *node = m_minimum) {
-      Node *nextNode;
-
-      do {
-	nextNode = this->next(node);
-	node->Fn::left(nextNode);
-	node = nextNode;
-      } while (node);
-
-      node = m_minimum;
-      do {
-	nextNode = node->Fn::left();
-	nodeDeref(node);
-	nodeDelete(node);
-	node = nextNode;
-      } while (node);
+    {
+      auto i = iterator();
+      while (i.iterate()) i.del();
     }
 
-    m_minimum = m_maximum = m_root = 0;
+    m_minimum = m_maximum = m_root = nullptr;
     m_count = 0;
   }
 

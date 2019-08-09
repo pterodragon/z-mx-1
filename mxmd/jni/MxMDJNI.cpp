@@ -77,12 +77,6 @@ MxMDExtern jint JNI_OnLoad(JavaVM *jvm, void *)
 {
   // std::cout << "JNI_OnLoad()\n" << std::flush;
 
-  jint v = ZJNI::load(jvm);
-
-  JNIEnv *env = ZJNI::env();
-
-  if (!env || MxMDJNI::bind(env) < 0) return -1;
-
   {
     const char *s = ::getenv("MXMD_JVM_DEBUG");
     if (s && atoi(s)) {
@@ -92,6 +86,12 @@ MxMDExtern jint JNI_OnLoad(JavaVM *jvm, void *)
       mxmd_jvm_debug();
     }
   }
+
+  jint v = ZJNI::load(jvm);
+
+  JNIEnv *env = ZJNI::env();
+
+  if (!env || MxMDJNI::bind(env) < 0) return -1;
 
   return v;
 }

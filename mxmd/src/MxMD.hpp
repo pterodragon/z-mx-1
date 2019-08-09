@@ -993,8 +993,8 @@ public:
   ZuInline MxEnum side(unsigned leg) const { return m_sides[leg]; }
   ZuInline MxRatio ratio(unsigned leg) const { return m_ratios[leg]; }
 
-  ZuInline MxNDP pxNDP() const { return m_l1Data.pxNDP; }
-  ZuInline MxNDP qtyNDP() const { return m_l1Data.qtyNDP; }
+  ZuInline unsigned pxNDP() const { return m_l1Data.pxNDP; }
+  ZuInline unsigned qtyNDP() const { return m_l1Data.qtyNDP; }
 
   ZuInline MxMDTickSizeTbl *tickSizeTbl() const { return m_tickSizeTbl; }
 

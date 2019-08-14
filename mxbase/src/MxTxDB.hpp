@@ -57,6 +57,24 @@ public:
     MxMsgID	msgID;
     ZdbRN	msgRN = ZdbNullRN;
     MxInt	msgType;
+
+    struct MsgRN : public ZuPrintable {
+      ZdbRN	rn;
+      ZuInline MsgRN(ZdbRN rn_) : rn(rn_) { }
+      template <typename S>
+      ZuInline void print(S &s) const {
+	if (rn != ZdbNullRN) s << ZuBoxed(rn);
+      }
+    };
+    template <typename S> inline static void csvHdr(S &s) {
+      s << "linkID,seqNo,msgRN,msgType\n";
+    }
+    template <typename S> inline void csv(S &s) const {
+      s << msgID.linkID
+	<< ',' << msgID.seqNo
+	<< ',' << MsgRN{msgRN}
+	<< ',' << msgType << '\n';
+    }
   };
 
   using TxDB = Zdb<TxData>;
@@ -69,7 +87,7 @@ public:
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new TxPOD(db); },
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
 	    app->txAdded(static_cast<TxPOD *>(pod)); }},
-	  ZdbDelFn{}});
+	  ZdbDelFn{}, app()->txWriteFn()});
   }
   void final() {
     m_txDB = nullptr;

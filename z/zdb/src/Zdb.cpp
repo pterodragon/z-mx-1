@@ -1774,8 +1774,12 @@ ZmRef<ZdbAnyPOD> ZdbAny::push_(ZdbRN rn)
   alloc(pod);
   if (ZuUnlikely(!pod)) return nullptr;
   Guard guard(m_lock);
-  if (m_allocRN > rn) return nullptr;
-  m_allocRN = rn + 1;
+  if (ZuLikely(m_allocRN <= rn))
+    m_allocRN = rn + 1;
+  else {
+    ZmRef<ZdbAnyPOD> pod_ = get__(rn);
+    if (ZuUnlikely(pod_ && pod_->committed())) return nullptr;
+  }
   pod->init(rn, ZdbRange{0, m_dataSize});
   return pod;
 }

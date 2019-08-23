@@ -4,10 +4,10 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src -I$(top_srcdir)/zm/src \
 	-DZTLS_EXPORTS @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
-include_HEADERS = ZTLSLib.hpp
-lib_LTLIBRARIES = libZi.la
-libZi_la_SOURCES = ZTLSLib.cpp
-libZi_la_LIBADD = $(top_builddir)/ze/src/libZi.la \
+include_HEADERS = ZTLSLib.hpp ZTLS.hpp
+lib_LTLIBRARIES = libZTLS.la
+libZTLS_la_SOURCES = ZTLSLib.cpp ZTLS.cpp
+libZTLS_la_LIBADD = $(top_builddir)/ze/src/libZi.la \
 	$(top_builddir)/ze/src/libZe.la \
 	$(top_builddir)/zt/src/libZt.la \
 	$(top_builddir)/zm/src/libZm.la \

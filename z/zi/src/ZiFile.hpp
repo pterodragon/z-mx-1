@@ -159,6 +159,7 @@ public:
   }
 
   static ZmTime mtime(const Path &name, ZeError *e = 0);
+  static bool isdir(const Path &name, ZeError *e = 0);
 
   static int remove(const Path &name, ZeError *e = 0);
   static int rename(const Path &oldName, const Path &newName, ZeError *e = 0);

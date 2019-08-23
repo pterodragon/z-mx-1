@@ -972,6 +972,23 @@ error:
   return ZmTime();
 }
 
+bool ZiFile::isdir(const Path &name, ZeError *e)
+{
+#ifndef _WIN32
+  struct stat s;
+  if (::stat(name, &s) < 0) goto error;
+  return S_ISDIR(s.st_mode);
+#else
+  DWORD a = GetFileAttributes(name);
+  if (a == INVALID_FILE_ATTRIBUTES) goto error;
+  return a & FILE_ATTRIBUTE_DIRECTORY;
+#endif
+
+error:
+  if (e) *e = ZeLastError;
+  return false;
+}
+
 int ZiFile::remove(const Path &name, ZeError *e)
 {
 #ifndef _WIN32

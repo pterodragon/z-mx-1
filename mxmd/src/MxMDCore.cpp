@@ -23,6 +23,8 @@
 
 #include <stddef.h>
 
+#include <ZmAtomic.hpp>
+
 #include <ZeLog.hpp>
 
 #include <ZiModule.hpp>
@@ -156,8 +158,19 @@ void MxMDCore::addOrderBook_(ZuAnyPOD *pod)
   });
 }
 
+static unsigned init_called_ = 0;
+
 MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
 {
+  {
+    auto init_called = reinterpret_cast<ZmAtomic<unsigned> *>(&init_called_);
+
+    if (init_called->cmpXch(0, 1)) {
+      ZeLOG(Fatal, "MxMDLib::init() called twice");
+      return nullptr;
+    }
+  }
+
   ZmRef<ZvCf> cf = new ZvCf();
 
   ZmRef<MxMDCore> md;
@@ -570,8 +583,19 @@ void MxMDCore::stop()
   }
 }
 
+static unsigned final_called_ = 0;
+
 void MxMDCore::final()
 {
+  {
+    auto final_called = reinterpret_cast<ZmAtomic<unsigned> *>(&final_called_);
+
+    if (final_called->cmpXch(0, 1)) {
+      raise(ZeEVENT(Fatal, "MxMDCore::final() called twice"));
+      return;
+    }
+  }
+
   raise(ZeEVENT(Info, "finalizing cmd server..."));
 
   if (m_cmd) m_cmd->final();

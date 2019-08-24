@@ -1775,7 +1775,7 @@ typedef ZmHandle<MxMDOrderBook> MxMDOBHandle;
 // library
 
 class MxMDLib_JNI;
-class MxMDAPI MxMDLib {
+class MxMDAPI MxMDLib : public ZmPolymorph {
   MxMDLib(const MxMDLib &) = delete;
   MxMDLib &operator =(const MxMDLib &) = delete;
 
@@ -1799,8 +1799,6 @@ protected:
   static MxMDLib *init(ZuString cf, ZmFn<ZmScheduler *> schedInitFn);
 
 public:
-  virtual ~MxMDLib() { }
-
   static MxMDLib *instance();
 
   inline static MxMDLib *init(ZuString cf) {

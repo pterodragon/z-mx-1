@@ -30,6 +30,8 @@
 #include <MxMDLib.hpp>
 #endif
 
+#include <ZmLock.hpp>
+
 #include <jni.h>
 
 namespace MxMDLibJNI {

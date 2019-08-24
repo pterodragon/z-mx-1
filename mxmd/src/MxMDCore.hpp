@@ -67,8 +67,7 @@ extern "C" {
 
 class MxMDAPI MxMDCmd : public ZmPolymorph, public ZvCmdServer { };
 
-class MxMDAPI MxMDCore :
-  public ZmPolymorph, public MxMDLib, public MxEngineMgr {
+class MxMDAPI MxMDCore : public MxMDLib, public MxEngineMgr {
 friend class MxMDLib;
 
 public:

@@ -523,19 +523,17 @@ public:
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
-  ZuInline void scheduleSend() { if (!m_sending.xch(1)) rescheduleSend(); }
+  ZuInline void scheduleSend() { txInvoke([](Tx *tx) { tx->send(); }); }
   ZuInline void rescheduleSend() { txRun([](Tx *tx) { tx->send(); }); }
-  ZuInline void idleSend() { m_sending = 0; }
+  ZuInline void idleSend() { }
 
-  ZuInline void scheduleResend()
-    { if (!m_resending.xch(1)) rescheduleResend(); }
+  ZuInline void scheduleResend() { txInvoke([](Tx *tx) { tx->resend(); }); }
   ZuInline void rescheduleResend() { txRun([](Tx *tx) { tx->resend(); }); }
-  ZuInline void idleResend() { m_resending = 0; }
+  ZuInline void idleResend() { }
 
-  ZuInline void scheduleArchive()
-    { if (!m_archiving.xch(1)) rescheduleArchive(); }
+  ZuInline void scheduleArchive() { rescheduleArchive(); }
   ZuInline void rescheduleArchive() { txRun([](Tx *tx) { tx->archive(); }); }
-  ZuInline void idleArchive() { m_archiving = 0; }
+  ZuInline void idleArchive() { }
 
   template <typename L> ZuInline void txRun(L &&l)
     { this->engine()->txRun(ZmFn<>{impl()->tx(), ZuFwd<L>(l)}); }
@@ -545,11 +543,6 @@ public:
     { this->engine()->txInvoke(impl()->tx(), ZuFwd<L>(l)); }
   template <typename L> ZuInline void txInvoke(L &&l) const
     { this->engine()->txInvoke(impl()->tx(), ZuFwd<L>(l)); }
-
-private:
-  ZmAtomic<unsigned>	m_sending;
-  ZmAtomic<unsigned>	m_resending;
-  ZmAtomic<unsigned>	m_archiving;
 };
 
 // CRTP - implementation must conform to the following interface:
@@ -656,11 +649,9 @@ public:
 
   inline void init(MxEngine *engine) { Base::init(engine); }
 
-  ZuInline void scheduleDequeue() {
-    if (!m_dequeuing.xch(1)) rescheduleDequeue();
-  }
+  ZuInline void scheduleDequeue() { rescheduleDequeue(); }
   ZuInline void rescheduleDequeue() { rxRun([](Rx *rx) { rx->dequeue(); }); }
-  ZuInline void idleDequeue() { m_dequeuing = 0; }
+  ZuInline void idleDequeue() { }
 
   typedef ZmPLock RRLock;
   typedef ZmGuard<RRLock> RRGuard;
@@ -789,8 +780,6 @@ private:
 
   RRLock		m_rrLock;
     ZmTime		  m_rrTime;
-
-  ZmAtomic<unsigned>	m_dequeuing = 0;
 };
 
 #endif /* MxEngine_HPP */

@@ -1253,81 +1253,103 @@ public:
   void start() {
     App *app = static_cast<App *>(this);
     bool scheduleSend = false;
-    bool rescheduleSend = false;
     bool scheduleArchive = false;
     bool scheduleResend = false;
-    bool rescheduleResend = false;
     {
       Guard guard(m_lock);
+#if 0
+      std::cerr << (ZuStringN<100>()
+	  << "start PRE  "
+	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
+	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+	<< std::flush;
+#endif
       bool alreadyRunning = m_running;
       if (!alreadyRunning) m_running = true;
-      if (alreadyRunning && m_sendFailed) {
-	rescheduleSend = true;
-      } else if (!alreadyRunning) {
+      if (alreadyRunning && m_sendFailed)
+	scheduleSend = true;
+      else if (!alreadyRunning)
 	if (scheduleSend = !m_sending && m_sendKey < app->txQueue()->tail())
 	  m_sending = true;
-      }
-      if (!alreadyRunning) {
+      if (!alreadyRunning)
 	if (scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey)
 	  m_archiving = true;
-      }
-      if (alreadyRunning && m_resendFailed) {
-	rescheduleResend = true;
-      } else if (!alreadyRunning) {
+      if (alreadyRunning && m_resendFailed)
+	scheduleResend = true;
+      else if (!alreadyRunning)
 	if (scheduleResend = !m_resending && m_gap.length())
 	  m_resending = true;
-      }
       m_sendFailed = false;
       m_resendFailed = false;
+#if 0
+      std::cerr << (ZuStringN<100>()
+	  << "start POST "
+	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
+	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+	<< std::flush;
+#endif
     }
-    if (scheduleSend) app->scheduleSend();
-    else if (rescheduleSend) app->rescheduleSend();
-    else app->idleSend();
+    if (scheduleSend)
+      app->scheduleSend();
+    else
+      app->idleSend();
     if (scheduleArchive) app->scheduleArchive();
-    if (scheduleResend) app->scheduleResend();
-    else if (rescheduleResend) app->rescheduleResend();
-    else app->idleResend();
+    if (scheduleResend)
+      app->scheduleResend();
+    else
+      app->idleResend();
   }
 
   // start concurrent sending and re-sending, from key onwards (streams)
   void start(Key key) {
     App *app = static_cast<App *>(this);
     bool scheduleSend = false;
-    bool rescheduleSend = false;
     bool scheduleArchive = false;
     bool scheduleResend = false;
-    bool rescheduleResend = false;
     {
       Guard guard(m_lock);
+#if 0
+      std::cerr << (ZuStringN<100>()
+	  << "start PRE  "
+	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
+	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+	<< std::flush;
+#endif
       bool alreadyRunning = m_running;
       if (!alreadyRunning) m_running = true;
       m_sendKey = m_ackdKey = key;
-      if (alreadyRunning && m_sendFailed) {
-	rescheduleSend = true;
-      } else if (!alreadyRunning) {
+      if (alreadyRunning && m_sendFailed)
+	scheduleSend = true;
+      else if (!alreadyRunning)
 	if (scheduleSend = !m_sending && key < app->txQueue()->tail())
 	  m_sending = true;
-      }
-      if (!alreadyRunning) {
+      if (!alreadyRunning)
 	if (scheduleArchive = !m_archiving && key > m_archiveKey)
 	  m_archiving = true;
-      }
-      if (alreadyRunning && m_resendFailed) {
-	rescheduleResend = true;
-      } else if (!alreadyRunning) {
+      if (alreadyRunning && m_resendFailed)
+	scheduleResend = true;
+      else if (!alreadyRunning)
 	if (scheduleResend = !m_resending && m_gap.length())
 	  m_resending = true;
-      }
       m_sendFailed = false;
       m_resendFailed = false;
+#if 0
+      std::cerr << (ZuStringN<100>()
+	  << "start POST "
+	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
+	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+	<< std::flush;
+#endif
     }
-    if (scheduleSend) app->scheduleSend();
-    else if (rescheduleSend) app->rescheduleSend();
-    else app->idleSend();
+    if (scheduleSend)
+      app->scheduleSend();
+    else
+      app->idleSend();
     if (scheduleArchive) app->scheduleArchive();
-    if (scheduleResend) app->scheduleResend();
-    else if (rescheduleResend) app->rescheduleResend();
-    else app->idleResend();
+    if (scheduleResend)
+      app->scheduleResend();
+    else
+      app->idleResend();
   }
 
   // stop sending
@@ -1428,6 +1450,13 @@ public:
     {
       Guard guard(m_lock);
       auto txQueue = app->txQueue();
+#if 0
+      std::cerr << (ZuStringN<100>()
+	  << "send "
+	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
+	  << ' ' << m_sendKey << ' ' << txQueue->tail() << '\n')
+	<< std::flush;
+#endif
       if (!m_running) { m_sending = false; return; }
       prevKey = m_sendKey;
       scheduleSend = prevKey < txQueue->tail();
@@ -1463,6 +1492,13 @@ public:
       m_sending = true;
       m_sendFailed = true;
       m_sendKey = prevKey;
+#if 0
+      std::cerr << (ZuStringN<100>()
+	  << "sendFailed "
+	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
+	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+	<< std::flush;
+#endif
     }
   }
 

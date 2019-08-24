@@ -1079,8 +1079,6 @@ public:
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
 
-  inline ZmPQRx() : m_queuing(false), m_dequeuing(false) { }
-
   // reset sequence number
   void rxReset(Key key) {
     App *app = static_cast<App *>(this);
@@ -1177,8 +1175,8 @@ private:
   }
 
   Lock		m_lock;
-  bool		  m_queuing;
-  bool		  m_dequeuing;
+  bool		  m_queuing = false;
+  bool		  m_dequeuing = false;
   Gap		  m_gap;
 };
 
@@ -1198,9 +1196,7 @@ struct App : public ZmPQTx<App, Queue> {
   // Note: *send*_()
   // - more indicates if messages are queued and will be sent immediately
   //   after this one - used to support message blocking by low-level sender
-  // - if the function returns false (failure) due to a transient delay or
-  //   throttling, the sender *must* re-invoke send() at the appropriate
-  //   time; the message can be aborted if it should not be delayed (in
+  // - the message can be aborted if it should not be delayed (in
   //   which case the function should return true as if successful); if the
   //   failure was not transient the application should call stop() and
   //   optionally shift() all messages to re-process them
@@ -1253,60 +1249,85 @@ public:
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
 
-  ZmPQTx() :
-    m_running(false), m_sending(false),
-    m_archiving(false), m_resending(false) { }
-
-  // start concurrent sending and re-sending
+  // start concurrent sending and re-sending (datagrams)
   void start() {
     App *app = static_cast<App *>(this);
-    bool scheduleSend;
-    bool scheduleArchive;
-    bool scheduleResend;
+    bool scheduleSend = false;
+    bool rescheduleSend = false;
+    bool scheduleArchive = false;
+    bool scheduleResend = false;
+    bool rescheduleResend = false;
     {
       Guard guard(m_lock);
-      if (m_running) return;
-      m_running = true;
-      scheduleSend = !m_sending && m_sendKey < app->txQueue()->tail();
-      if (scheduleSend) m_sending = true;
-      scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey;
-      if (scheduleArchive) m_archiving = true;
-      scheduleResend = !m_resending && m_gap.length();
-      if (scheduleResend) m_resending = true;
+      bool alreadyRunning = m_running;
+      if (!alreadyRunning) m_running = true;
+      if (alreadyRunning && m_sendFailed) {
+	rescheduleSend = true;
+      } else if (!alreadyRunning) {
+	if (scheduleSend = !m_sending && m_sendKey < app->txQueue()->tail())
+	  m_sending = true;
+      }
+      if (!alreadyRunning) {
+	if (scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey)
+	  m_archiving = true;
+      }
+      if (alreadyRunning && m_resendFailed) {
+	rescheduleResend = true;
+      } else if (!alreadyRunning) {
+	if (scheduleResend = !m_resending && m_gap.length())
+	  m_resending = true;
+      }
+      m_sendFailed = false;
+      m_resendFailed = false;
     }
-    if (scheduleSend) app->scheduleSend(); else app->idleSend();
+    if (scheduleSend) app->scheduleSend();
+    else if (rescheduleSend) app->rescheduleSend();
+    else app->idleSend();
     if (scheduleArchive) app->scheduleArchive();
-    if (scheduleResend) app->scheduleResend(); else app->idleResend();
+    if (scheduleResend) app->scheduleResend();
+    else if (rescheduleResend) app->rescheduleResend();
+    else app->idleResend();
   }
 
-  // start re-sending (only) - caller's idleResend() calls startSending()
-  void startResending(const Gap &gap) {
+  // start concurrent sending and re-sending, from key onwards (streams)
+  void start(Key key) {
     App *app = static_cast<App *>(this);
-    bool scheduleResend;
+    bool scheduleSend = false;
+    bool rescheduleSend = false;
+    bool scheduleArchive = false;
+    bool scheduleResend = false;
+    bool rescheduleResend = false;
     {
       Guard guard(m_lock);
-      if (m_running) { resend(gap); return; }
-      m_running = true;
-      scheduleResend = resend_(gap);
+      bool alreadyRunning = m_running;
+      if (!alreadyRunning) m_running = true;
+      m_sendKey = m_ackdKey = key;
+      if (alreadyRunning && m_sendFailed) {
+	rescheduleSend = true;
+      } else if (!alreadyRunning) {
+	if (scheduleSend = !m_sending && key < app->txQueue()->tail())
+	  m_sending = true;
+      }
+      if (!alreadyRunning) {
+	if (scheduleArchive = !m_archiving && key > m_archiveKey)
+	  m_archiving = true;
+      }
+      if (alreadyRunning && m_resendFailed) {
+	rescheduleResend = true;
+      } else if (!alreadyRunning) {
+	if (scheduleResend = !m_resending && m_gap.length())
+	  m_resending = true;
+      }
+      m_sendFailed = false;
+      m_resendFailed = false;
     }
-    if (scheduleResend) app->scheduleResend(); else app->idleResend();
-  }
-
-  // start sending (only) - called by idleResend following startResending
-  void startSending() {
-    App *app = static_cast<App *>(this);
-    bool scheduleSend;
-    bool scheduleArchive;
-    {
-      Guard guard(m_lock);
-      if (!m_running) { start(); return; }
-      scheduleSend = !m_sending && m_sendKey < app->txQueue()->tail();
-      if (scheduleSend) m_sending = true;
-      scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey;
-      if (scheduleArchive) m_archiving = true;
-    }
-    if (scheduleSend) app->scheduleSend(); else app->idleSend();
+    if (scheduleSend) app->scheduleSend();
+    else if (rescheduleSend) app->rescheduleSend();
+    else app->idleSend();
     if (scheduleArchive) app->scheduleArchive();
+    if (scheduleResend) app->scheduleResend();
+    else if (rescheduleResend) app->rescheduleResend();
+    else app->idleResend();
   }
 
   // stop sending
@@ -1440,6 +1461,7 @@ public:
     {
       Guard guard(m_lock);
       m_sending = true;
+      m_sendFailed = true;
       m_sendKey = prevKey;
     }
   }
@@ -1519,7 +1541,7 @@ public:
     }
     if (ZuUnlikely(sendGap.length())) {
       if (ZuUnlikely(!app->resendGap_(sendGap, scheduleResend)))
-	goto sendFailed;
+	goto resendFailed;
       unsigned length = sendGap.length();
       if (ZuLikely(prevGap.length() > length)) {
 	prevGap.key() += length;
@@ -1528,29 +1550,32 @@ public:
 	prevGap = Gap();
     }
     if (ZuLikely(msg))
-      if (ZuUnlikely(!app->resend_(msg, scheduleResend))) goto sendFailed;
+      if (ZuUnlikely(!app->resend_(msg, scheduleResend))) goto resendFailed;
     if (scheduleResend)
       app->rescheduleResend();
     else
       app->idleResend();
     return;
-  sendFailed:
+  resendFailed:
     {
       Guard guard(m_lock);
       m_resending = true;
+      m_resendFailed = true;
       m_gap = prevGap;
     }
   }
 
 private:
   Lock		m_lock;
-  bool		  m_running;
-  bool		  m_sending;
+  bool		  m_running = false;
+  bool		  m_sending = false;
+  bool		  m_sendFailed = false;
   Key		  m_sendKey = 0;
-  bool		  m_archiving;
+  bool		  m_archiving = false;
   Key		  m_ackdKey = 0;
   Key		  m_archiveKey = 0;
-  bool		  m_resending;
+  bool		  m_resending = false;
+  bool		  m_resendFailed = false;
   Gap		  m_gap;
 };
 

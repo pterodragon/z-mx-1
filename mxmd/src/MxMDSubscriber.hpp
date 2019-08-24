@@ -218,12 +218,12 @@ public:
   void loaded_(MxQMsg *) { }
   void unloaded_(MxQMsg *) { }
 
-  bool send_(MxQMsg *msg, bool more) { return true; }
-  bool resend_(MxQMsg *msg, bool more) { return true; }
+  bool send_(MxQMsg *, bool) { return true; }
+  bool resend_(MxQMsg *, bool) { return true; }
   void aborted_(MxQMsg *msg) { }
 
-  bool sendGap_(const MxQueue::Gap &gap, bool more) { return true; }
-  bool resendGap_(const MxQueue::Gap &gap, bool more) { return true; }
+  bool sendGap_(const MxQueue::Gap &, bool) { return true; }
+  bool resendGap_(const MxQueue::Gap &, bool) { return true; }
 
   void archive_(MxQMsg *msg) { archived(msg->id.seqNo + 1); }
   ZmRef<MxQMsg> retrieve_(MxSeqNo, MxSeqNo) { return nullptr; }

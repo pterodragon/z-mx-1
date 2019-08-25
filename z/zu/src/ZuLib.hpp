@@ -175,6 +175,17 @@ constexpr typename ZuDeref<T>::T &&ZuMv(T &&t) noexcept {
 }
 #endif
 
+// generic RAII guard
+template <typename L> struct ZuGuard {
+  ZuInline ZuGuard(L fn_) : fn(ZuMv(fn_)) { }
+  ZuInline ~ZuGuard() { fn(); }
+  ZuGuard(const ZuGuard &) = delete;
+  ZuGuard &operator =(const ZuGuard &) = delete;
+  ZuGuard(ZuGuard &&) = default;
+  ZuGuard &operator =(ZuGuard &&) = default;
+  L fn;
+};
+
 #if defined(linux) || defined(__mips64)
 #include <endian.h>
 #if __BYTE_ORDER == __BIG_ENDIAN

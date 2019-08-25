@@ -50,10 +50,11 @@
 #include <MxMDLibJNI.hpp>
 
 namespace MxMDLibJNI {
-  ZmLock	lock; // only used to serialize initialization
-    jobject	  obj_;
-    MxMDLib	  *md_;
-    bool	  running = false;
+  jobject	obj_;
+  MxMDLib	*md_;
+
+  ZmLock	lock_;
+    bool	  running_ = false;
 
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "()V" } };
 
@@ -96,20 +97,25 @@ public:
 jobject MxMDLibJNI::instance(JNIEnv *env, jclass c)
 {
   // () -> MxMDLib
-  // ZmReadGuard<ZmLock> guard(lock);
   return obj_;
 }
+
+static unsigned init_called_ = 0;
 
 jobject MxMDLibJNI::init(JNIEnv *env, jclass c, jstring cf)
 {
   // (String) -> MxMDLib
-  ZmGuard<ZmLock> guard(lock);
-
-  if (ZuUnlikely(obj_)) return obj_;
+  auto init_called = reinterpret_cast<ZmAtomic<unsigned> *>(&init_called_);
+  if (init_called->cmpXch(1, 0)) {
+    ZeLOG(Error, "MxMDLibJNI::init() called twice");
+    while (*init_called < 2) ZmPlatform::yield();
+    return obj_;
+  }
+  ZuGuard guard([init_called]() { *init_called = 2; });
 
   ZJNI::env(env);
 
-  if (ZuLikely(!md_)) {
+  {
     MxMDLib *md = MxMDLib_JNI::init(ZJNI::j2s_ZtString(env, cf),
 	[](ZmScheduler *mx) {
       mx->threadInit([]() { ZJNI::attach(); });
@@ -152,9 +158,9 @@ void MxMDLibJNI::start(JNIEnv *env, jobject obj)
   MxMDLib *md = md_;
   if (ZuUnlikely(!md)) return;
   {
-    ZmGuard<ZmLock> guard(lock);
-    if (running) return;
-    running = true;
+    ZmGuard<ZmLock> guard(lock_);
+    if (running_) return;
+    running_ = true;
     md->start();
   }
 }
@@ -175,9 +181,9 @@ void MxMDLibJNI::stop(JNIEnv *env, jobject)
     unsubscribe_(env, md);
   }
   {
-    ZmGuard<ZmLock> guard(lock);
-    if (!running) return;
-    running = false;
+    ZmGuard<ZmLock> guard(lock_);
+    if (!running_) return;
+    running_ = false;
     md->stop();
   }
 }
@@ -488,9 +494,17 @@ int MxMDLibJNI::bind(JNIEnv *env)
   return 0;
 }
 
+static unsigned final_called_ = 0;
+
 void MxMDLibJNI::final(JNIEnv *env)
 {
-  ZmGuard<ZmLock> guard(lock);
+  {
+    auto final_called = reinterpret_cast<ZmAtomic<unsigned> *>(&final_called_);
+    if (final_called->cmpXch(0, 1)) {
+      ZeLOG(Fatal, "MxMDLibJNI::final() called twice");
+      return;
+    }
+  }
 
   if (obj_) {
     env->DeleteGlobalRef(obj_);
@@ -499,9 +513,12 @@ void MxMDLibJNI::final(JNIEnv *env)
 
   if (MxMDLib *md = md_) {
     md_ = 0;
-    if (running) {
-      running = false;
-      md->stop();
+    {
+      ZmGuard<ZmLock> guard(lock_);
+      if (running_) {
+	running_ = false;
+	md->stop();
+      }
     }
     md->final();
   }

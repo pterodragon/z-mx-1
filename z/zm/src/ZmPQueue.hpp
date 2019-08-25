@@ -1070,8 +1070,34 @@ struct App : public ZmPQRx<App, Queue> {
 };
 #endif
 
-template <class App, class Queue, class Lock_ = ZmNoLock> class ZmPQRx {
+template <class App, class Queue, class Lock_ = ZmNoLock>
+class ZmPQRx : public ZuPrintable {
+  enum {
+    Queuing	= 0x01,
+    Dequeuing	= 0x02
+  };
+
 public:
+  template <typename S> static void printFlags(S &s, unsigned v) {
+    static const char *flagNames[] = { "Queuing", "Dequeuing" };
+    bool comma = false;
+    for (unsigned i = 0; i < sizeof(flagNames) / sizeof(flagNames[0]); i++)
+      if (v & (1U<<i)) {
+	if (comma) s << ',';
+	comma = true;
+	s << flagNames[i];
+      }
+  }
+  struct PrintFlags : public ZuPrintable {
+    inline PrintFlags(unsigned v_) : v(v_) { }
+    PrintFlags(const PrintFlags &) = default;
+    PrintFlags &operator =(const PrintFlags &) = default;
+    PrintFlags(PrintFlags &&) = default;
+    PrintFlags &operator =(PrintFlags &&) = default;
+    template <typename S> inline void print(S &s) { printFlags(s, v); }
+    unsigned v;
+  };
+
   typedef typename Queue::Node Msg;
   typedef typename Queue::Key Key;
   typedef typename Queue::Gap Gap;
@@ -1079,14 +1105,12 @@ public:
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
 
-  inline ZmPQRx() : m_queuing(false), m_dequeuing(false) { }
-
   // reset sequence number
   void rxReset(Key key) {
     App *app = static_cast<App *>(this);
     Guard guard(m_lock);
     app->cancelReRequest();
-    m_queuing = m_dequeuing = false;
+    m_flags &= ~(Queuing | Dequeuing);
     m_gap = Gap();
     app->rxQueue()->reset(key);
   }
@@ -1094,7 +1118,7 @@ public:
   // start queueing (during snapshot recovery)
   void startQueuing() {
     Guard guard(m_lock);
-    m_queuing = true;
+    m_flags |= Queuing;
   }
 
   // stop queueing and begin processing messages from key onwards
@@ -1103,10 +1127,10 @@ public:
     bool scheduleDequeue;
     {
       Guard guard(m_lock);
-      m_queuing = false;
+      m_flags &= ~Queuing;
       app->rxQueue()->head(key);
-      scheduleDequeue = !m_dequeuing && app->rxQueue()->count();
-      if (scheduleDequeue) m_dequeuing = true;
+      scheduleDequeue = !(m_flags & Dequeuing) && app->rxQueue()->count();
+      if (scheduleDequeue) m_flags |= Dequeuing;
     }
     if (scheduleDequeue) app->scheduleDequeue();
   }
@@ -1115,13 +1139,13 @@ public:
   void received(ZmRef<Msg> msg) {
     App *app = static_cast<App *>(this);
     Guard guard(m_lock);
-    if (ZuUnlikely(m_queuing || m_dequeuing)) {
+    if (ZuUnlikely(m_flags & (Queuing | Dequeuing))) {
       app->rxQueue()->enqueue(ZuMv(msg));
       return;
     }
     msg = app->rxQueue()->rotate(ZuMv(msg));
     bool scheduleDequeue = msg && app->rxQueue()->count();
-    if (scheduleDequeue) m_dequeuing = true;
+    if (scheduleDequeue) m_flags |= Dequeuing;
     guard.unlock();
     if (ZuUnlikely(!msg)) { stalled(); return; }
     app->process(msg);
@@ -1134,7 +1158,7 @@ public:
     Guard guard(m_lock);
     ZmRef<Msg> msg = app->rxQueue()->dequeue();
     bool scheduleDequeue = msg && app->rxQueue()->count();
-    if (!scheduleDequeue) m_dequeuing = false;
+    if (!scheduleDequeue) m_flags &= ~Dequeuing;
     guard.unlock();
     if (ZuUnlikely(!msg)) { stalled(); return; }
     app->process(msg);
@@ -1157,6 +1181,17 @@ public:
     app->rescheduleReRequest();
   }
 
+  ZuInline unsigned flags() const {
+    ReadGuard guard(m_lock);
+    return m_flags;
+  }
+
+  template <typename S> inline void print(S &s) {
+    ReadGuard guard(m_lock);
+    s << "gap: (" << m_gap.key() << " +" m_gap.length()
+      << ")  flags: " << PrintFlags{m_flags};
+  }
+
 private:
   // receiver stalled, may schedule resend request if due to gap
   void stalled() {
@@ -1177,9 +1212,8 @@ private:
   }
 
   Lock		m_lock;
-  bool		  m_queuing;
-  bool		  m_dequeuing;
   Gap		  m_gap;
+  uint8_t	  m_flags = 0;
 };
 
 // template resend-requesting sender using ZmPQueue
@@ -1198,9 +1232,7 @@ struct App : public ZmPQTx<App, Queue> {
   // Note: *send*_()
   // - more indicates if messages are queued and will be sent immediately
   //   after this one - used to support message blocking by low-level sender
-  // - if the function returns false (failure) due to a transient delay or
-  //   throttling, the sender *must* re-invoke send() at the appropriate
-  //   time; the message can be aborted if it should not be delayed (in
+  // - the message can be aborted if it should not be delayed (in
   //   which case the function should return true as if successful); if the
   //   failure was not transient the application should call stop() and
   //   optionally shift() all messages to re-process them
@@ -1243,7 +1275,42 @@ struct App : public ZmPQTx<App, Queue> {
 };
 #endif
 
-template <class App, class Queue, class Lock_ = ZmNoLock> class ZmPQTx {
+template <class App, class Queue, class Lock_ = ZmNoLock>
+class ZmPQTx : public ZuPrintable {
+private:
+  enum {
+    Running		= 0x01,
+    Sending		= 0x02,
+    SendFailed		= 0x04,
+    Archiving		= 0x08,
+    Resending		= 0x10,
+    ResendFailed	= 0x20
+  };
+
+public:
+  template <typename S> static void printFlags(S &s, unsigned v) {
+    static const char *flagNames[] = {
+      "Running", "Sending", "SendFailed", "Archiving",
+      "Resending", "ResendFailed"
+    };
+    bool comma = false;
+    for (unsigned i = 0; i < sizeof(flagNames) / sizeof(flagNames[0]); i++)
+      if (v & (1U<<i)) {
+	if (comma) s << ',';
+	comma = true;
+	s << flagNames[i];
+      }
+  }
+  struct PrintFlags : public ZuPrintable {
+    inline PrintFlags(unsigned v_) : v(v_) { }
+    PrintFlags(const PrintFlags &) = default;
+    PrintFlags &operator =(const PrintFlags &) = default;
+    PrintFlags(PrintFlags &&) = default;
+    PrintFlags &operator =(PrintFlags &&) = default;
+    template <typename S> inline void print(S &s) { printFlags(s, v); }
+    unsigned v;
+  };
+
 public:
   typedef typename Queue::Node Msg;
   typedef typename Queue::Fn Fn;
@@ -1253,67 +1320,113 @@ public:
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
 
-  ZmPQTx() :
-    m_running(false), m_sending(false),
-    m_archiving(false), m_resending(false) { }
-
-  // start concurrent sending and re-sending
+  // start concurrent sending and re-sending (datagrams)
   void start() {
     App *app = static_cast<App *>(this);
-    bool scheduleSend;
-    bool scheduleArchive;
-    bool scheduleResend;
+    bool scheduleSend = false;
+    bool scheduleArchive = false;
+    bool scheduleResend = false;
     {
       Guard guard(m_lock);
-      if (m_running) return;
-      m_running = true;
-      scheduleSend = !m_sending && m_sendKey < app->txQueue()->tail();
-      if (scheduleSend) m_sending = true;
-      scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey;
-      if (scheduleArchive) m_archiving = true;
-      scheduleResend = !m_resending && m_gap.length();
-      if (scheduleResend) m_resending = true;
+#if 0
+      std::cerr << (ZuStringN<100>()
+	  << "start PRE  "
+	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
+	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+	<< std::flush;
+#endif
+      bool alreadyRunning = m_flags & Running;
+      if (!alreadyRunning) m_flags |= Running;
+      if (alreadyRunning && (m_flags & SendFailed))
+	scheduleSend = true;
+      else if (!alreadyRunning)
+	if (scheduleSend = !(m_flags & Sending) &&
+	    m_sendKey < app->txQueue()->tail())
+	  m_flags |= Sending;
+      if (!alreadyRunning)
+	if (scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey)
+	  m_flags |= Archiving;
+      if (alreadyRunning && (m_flags & ResendFailed))
+	scheduleResend = true;
+      else if (!alreadyRunning)
+	if (scheduleResend = !(m_flags & Resending) && m_gap.length())
+	  m_flags |= Resending;
+      m_flags &= ~(SendFailed | ResendFailed);
+#if 0
+      std::cerr << (ZuStringN<100>()
+	  << "start POST "
+	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
+	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+	<< std::flush;
+#endif
     }
-    if (scheduleSend) app->scheduleSend(); else app->idleSend();
+    if (scheduleSend)
+      app->scheduleSend();
+    else
+      app->idleSend();
     if (scheduleArchive) app->scheduleArchive();
-    if (scheduleResend) app->scheduleResend(); else app->idleResend();
+    if (scheduleResend)
+      app->scheduleResend();
+    else
+      app->idleResend();
   }
 
-  // start re-sending (only) - caller's idleResend() calls startSending()
-  void startResending(const Gap &gap) {
+  // start concurrent sending and re-sending, from key onwards (streams)
+  void start(Key key) {
     App *app = static_cast<App *>(this);
-    bool scheduleResend;
+    bool scheduleSend = false;
+    bool scheduleArchive = false;
+    bool scheduleResend = false;
     {
       Guard guard(m_lock);
-      if (m_running) { resend(gap); return; }
-      m_running = true;
-      scheduleResend = resend_(gap);
+#if 0
+      std::cerr << (ZuStringN<100>()
+	  << "start PRE  "
+	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
+	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+	<< std::flush;
+#endif
+      bool alreadyRunning = m_flags & Running;
+      if (!alreadyRunning) m_flags |= Running;
+      m_sendKey = m_ackdKey = key;
+      if (alreadyRunning && (m_flags & SendFailed))
+	scheduleSend = true;
+      else if (!alreadyRunning)
+	if (scheduleSend = !(m_flags & Sending) && key < app->txQueue()->tail())
+	  m_flags |= Sending;
+      if (!alreadyRunning)
+	if (scheduleArchive = !m_archiving && key > m_archiveKey)
+	  m_flags |= Archiving;
+      if (alreadyRunning && (m_flags & ResendFailed))
+	scheduleResend = true;
+      else if (!alreadyRunning)
+	if (scheduleResend = !(m_flags & Resending) && m_gap.length())
+	  m_flags |= Resending;
+      m_flags &= ~(SendFailed | ResendFailed);
+#if 0
+      std::cerr << (ZuStringN<100>()
+	  << "start POST "
+	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
+	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+	<< std::flush;
+#endif
     }
-    if (scheduleResend) app->scheduleResend(); else app->idleResend();
-  }
-
-  // start sending (only) - called by idleResend following startResending
-  void startSending() {
-    App *app = static_cast<App *>(this);
-    bool scheduleSend;
-    bool scheduleArchive;
-    {
-      Guard guard(m_lock);
-      if (!m_running) { start(); return; }
-      scheduleSend = !m_sending && m_sendKey < app->txQueue()->tail();
-      if (scheduleSend) m_sending = true;
-      scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey;
-      if (scheduleArchive) m_archiving = true;
-    }
-    if (scheduleSend) app->scheduleSend(); else app->idleSend();
+    if (scheduleSend)
+      app->scheduleSend();
+    else
+      app->idleSend();
     if (scheduleArchive) app->scheduleArchive();
+    if (scheduleResend)
+      app->scheduleResend();
+    else
+      app->idleResend();
   }
 
   // stop sending
   void stop() {
     Guard guard(m_lock);
-    if (!m_running) return;
-    m_running = m_sending = m_resending = false;
+    if (!(m_flags & Running)) return;
+    m_flags &= ~(Running | Sending | Resending);
   }
 
   // reset sequence number
@@ -1331,10 +1444,10 @@ public:
     bool scheduleSend;
     {
       Guard guard(m_lock);
-      scheduleSend = m_running && !m_sending &&
+      scheduleSend = (m_flags & (Running | Sending)) == Running &&
 	m_sendKey <= Fn(msg->item()).key();
       app->txQueue()->enqueue(ZuMv(msg));
-      if (scheduleSend) m_sending = true;
+      if (scheduleSend) m_flags |= Sending;
     }
     if (scheduleSend) app->scheduleSend();
   }
@@ -1359,7 +1472,7 @@ public:
       m_ackdKey = key;
       if (key > m_sendKey) m_sendKey = key;
       scheduleArchive = !m_archiving && key > m_archiveKey;
-      if (scheduleArchive) m_archiving = true;
+      if (scheduleArchive) m_flags |= Archiving;
     }
     if (scheduleArchive) app->scheduleArchive();
   }
@@ -1370,19 +1483,19 @@ private:
     bool scheduleResend = false;
     if (!m_gap.length()) {
       m_gap = gap;
-      scheduleResend = !m_resending;
+      scheduleResend = !(m_flags & Resending);
     } else {
       if (gap.key() < m_gap.key()) {
 	m_gap.length() += (m_gap.key() - gap.key());
 	m_gap.key() = gap.key();
-	scheduleResend = !m_resending;
+	scheduleResend = !(m_flags & Resending);
       }
       if ((gap.key() + gap.length()) > (m_gap.key() + m_gap.length())) {
 	m_gap.length() = (gap.key() - m_gap.key()) + gap.length();
-	if (!scheduleResend) scheduleResend = !m_resending;
+	if (!scheduleResend) scheduleResend = !(m_flags & Resending);
       }
     }
-    if (scheduleResend) m_resending = true;
+    if (scheduleResend) m_flags |= Resending;
     return scheduleResend;
   }
 public:
@@ -1407,7 +1520,14 @@ public:
     {
       Guard guard(m_lock);
       auto txQueue = app->txQueue();
-      if (!m_running) { m_sending = false; return; }
+#if 0
+      std::cerr << (ZuStringN<100>()
+	  << "send "
+	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
+	  << ' ' << m_sendKey << ' ' << txQueue->tail() << '\n')
+	<< std::flush;
+#endif
+      if (!(m_flags & Running)) { m_flags &= ~Sending; return; }
       prevKey = m_sendKey;
       scheduleSend = prevKey < txQueue->tail();
       while (scheduleSend) {
@@ -1423,7 +1543,7 @@ public:
 	scheduleSend = m_sendKey < txQueue->tail();
 	if (msg) break;
       }
-      if (!scheduleSend) m_sending = false;
+      if (!scheduleSend) m_flags &= ~Sending;
     }
     if (ZuUnlikely(sendGap.length())) {
       if (ZuUnlikely(!app->sendGap_(sendGap, scheduleSend))) goto sendFailed;
@@ -1439,8 +1559,15 @@ public:
   sendFailed:
     {
       Guard guard(m_lock);
-      m_sending = true;
+      m_flags |= Sending | SendFailed;
       m_sendKey = prevKey;
+#if 0
+      std::cerr << (ZuStringN<100>()
+	  << "sendFailed "
+	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
+	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+	<< std::flush;
+#endif
     }
   }
 
@@ -1451,7 +1578,7 @@ public:
     ZmRef<Msg> msg;
     {
       Guard guard(m_lock);
-      if (!m_running) { m_archiving = false; return; }
+      if (!(m_flags & Running)) { m_flags &= ~Archiving; return; }
       scheduleArchive = m_archiveKey < m_ackdKey;
       while (scheduleArchive) {
 	msg = app->txQueue()->find(m_archiveKey);
@@ -1487,7 +1614,7 @@ public:
     ZmRef<Msg> msg;
     {
       Guard guard(m_lock);
-      if (!m_running) { m_resending = false; return; }
+      if (!(m_flags & Running)) { m_flags &= ~Resending; return; }
       prevGap = m_gap;
       while (m_gap.length()) {
 	unsigned length;
@@ -1515,11 +1642,11 @@ public:
 	}
 	if (msg) break;
       }
-      if (!scheduleResend) m_resending = false;
+      if (!scheduleResend) m_flags &= ~Resending;
     }
     if (ZuUnlikely(sendGap.length())) {
       if (ZuUnlikely(!app->resendGap_(sendGap, scheduleResend)))
-	goto sendFailed;
+	goto resendFailed;
       unsigned length = sendGap.length();
       if (ZuLikely(prevGap.length() > length)) {
 	prevGap.key() += length;
@@ -1528,30 +1655,41 @@ public:
 	prevGap = Gap();
     }
     if (ZuLikely(msg))
-      if (ZuUnlikely(!app->resend_(msg, scheduleResend))) goto sendFailed;
+      if (ZuUnlikely(!app->resend_(msg, scheduleResend))) goto resendFailed;
     if (scheduleResend)
       app->rescheduleResend();
     else
       app->idleResend();
     return;
-  sendFailed:
+  resendFailed:
     {
       Guard guard(m_lock);
-      m_resending = true;
+      m_flags |= Resending | ResendFailed;
       m_gap = prevGap;
     }
   }
 
+  ZuInline unsigned flags() const {
+    ReadGuard guard(m_lock);
+    return m_flags;
+  }
+
+  template <typename S> inline void print(S &s) {
+    ReadGuard guard(m_lock);
+    s << "gap: (" << m_gap.key() << " +" m_gap.length()
+      << ")  flags: " << PrintFlags{m_flags}
+      << "  send: " << m_sendKey
+      << "  ackd: " << m_ackdKey
+      << "  archive: " << m_archiveKey;
+  }
+
 private:
   Lock		m_lock;
-  bool		  m_running;
-  bool		  m_sending;
   Key		  m_sendKey = 0;
-  bool		  m_archiving;
   Key		  m_ackdKey = 0;
   Key		  m_archiveKey = 0;
-  bool		  m_resending;
   Gap		  m_gap;
+  uint8_t	  m_flags = 0;
 };
 
 #endif /* ZmPQueue_HPP */

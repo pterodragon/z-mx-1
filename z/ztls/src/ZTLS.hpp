@@ -36,6 +36,8 @@
 
 #include <ZuString.hpp>
 
+#include <ZeLog.hpp>
+
 namespace ZTLS {
 
 class Conf {
@@ -57,7 +59,18 @@ public:
 
 protected:
   bool init() {
-    mbedtls_ssl_conf_dbg(&m_conf, my_debug, stdout); // FIXME
+    mbedtls_ssl_conf_dbg(&m_conf, [](
+	  void *, int level, const char *file, int line, const char *message) {
+      int sev;
+      switch (level) {
+	case 0: sev = Ze::Error;
+	case 1: sev = Ze::Warning;
+	case 2: sev = Ze::Info;
+	case 3: sev = Ze::Info;
+	default: sev = Ze::Debug;
+      }
+      ZeLog::log(new ZeEvent(sev, file, line, "", ZtString{message}));
+    }, nullptr);
     if (mbedtls_ctr_drbg_seed(
 	  &m_ctr_drbg, mbedtls_entropy_func, &m_entropy, 0, 0)) return false;
     mbedtls_ssl_conf_rng(&m_conf, mbedtls_ctr_drbg_random, &m_ctr_drbg );
@@ -67,6 +80,7 @@ protected:
 
   // Arch - /etc/ssl/cert.pem
   // Ubuntu - /etc/ssl/certs
+  // Windows - ROOT certificate store (using Cert* API)
   inline bool loadCA(ZuString path) {
     if (ZiFile::isdir(path))
       ret = mbedtls_x509_crt_parse_path(&m_cacert, path);
@@ -88,23 +102,67 @@ public:
   inline SSL(Conf *conf, ZiConnection *cxn) {
     mbedtls_ssl_init(&m_ssl);
     mbedtls_ssl_setup(&m_ssl, conf->conf());
-  // FIXME - client side - need to set hostname to verify server
-    if( ( ret = mbedtls_ssl_set_hostname( &ssl, opt.server_name ) ) != 0 )
   }
   inline ~SSL() {
     mbedtls_ssl_free(&m_ssl);
   }
 
-  // FIXME - handshake,read, write, etc.
+  class TCP : public ZiConnection {
+  public:
+    TCP(SSL *ssl, const ZiCxnInfo &ci) :
+      ZiConnection(ssl->mx(), ci), m_ssl(ssl) { }
+
+    void connected(ZiIOContext &io) {
+      ssl->recv(io);
+    }
+
+  private:
+    SSL	*m_ssl;
+  };
+
+  void connect() {
+  }
+
+  // common API is up_(), down_(), send(data) and process(data)
+
+  // FIXME - handshake, read, write, etc.
+
+  void send(void *data, unsigned len) {
+    unsigned written = 0;
+    do {
+      ret = mbedtls_ssl_write(m_ssl, buf + written, len - written);
+      if (ret < 0) {
+	switch (ret) {
+	  case MBEDTLS_ERR_SSL_WANT_READ:
+	  case MBEDTLS_ERR_SSL_WANT_WRITE:
+	  case MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS:
+	    break;
+	  default:
+	    ZeLOG(Error, "mbedtls_ssl_write() returned ", ret);
+	    return;
+	}
+      } else {
+	written += ret;
+      }
+    } while (written < len);
+  }
 
 protected:
   mbedtls_ssl_context	m_ssl;
   ZiConnection		*m_cxn; // FIXME
 };
 
-// FIXME Cl - equivalent to CliLink
-// FIXME CliSSL - equivalent to CliLink - includes connect, etc.
-// FIXME SrvSSL - equivalent to SrvLink
+// FIXME CliSSL - connect() / disconnect()
+//   (can be reconnected, re-using ticket on next handshake)
+
+// FIXME SrvSSL - accept() / disconnect()
+//   (is never reconnected, ticket is sent to client)
+
+  inline void verify(ZuString server) { // called by client
+    if (ret = mbedtls_ssl_set_hostname(&m_ssl, server)) {
+      // FIXME
+    }
+  }
 
 class Client : public Conf {
 public:
@@ -126,7 +184,9 @@ public:
     return true;
   }
 
-  // FIXME - mkLink(host, port, etc.) -> CliSSL etc.
+  inline void final() { }
+
+  // FIXME - connect(host, port, lambda(CliSSL))
 };
 
 class Server : public Conf {
@@ -145,7 +205,8 @@ public:
   }
 
   inline bool init(ZuString caPath, const char **alpn,
-      ZuString certPath, ZuString keyPath) {
+      ZuString certPath, ZuString keyPath,
+      int cacheMax = -1, int cacheTimeout = -1) {
     mbedtls_ssl_config_defaults(&m_conf,
 	MBEDTLS_SSL_IS_SERVER,
 	MBEDTLS_SSL_TRANSPORT_STREAM,
@@ -153,8 +214,11 @@ public:
 
     Conf::init();
 
-    mbedtls_ssl_cache_set_max_entries(&m_cache, opt.cache_max); // FIXME
-    mbedtls_ssl_cache_set_timeout(&m_cache, opt.cache_timeout); // FIXME
+    if (cacheMax >= 0) // library default is 50
+      mbedtls_ssl_cache_set_max_entries(&m_cache, cacheMax);
+    if (cacheTimeout >= 0) // library default is 86400, i.e. one day
+      mbedtls_ssl_cache_set_timeout(&m_cache, cacheTimeout);
+
     mbedtls_ssl_conf_session_cache(&m_conf, &m_cache,
 	mbedtls_ssl_cache_get, mbedtls_ssl_cache_set);
 
@@ -178,9 +242,10 @@ public:
     return true;
   }
 
-  // FIXME - listen(), accept() -> SSL etc.
-  // FIXME - host, port, etc.
- 
+  inline void final() { }
+
+  // FIXME - listen(host, port, lambda(SrvSSL))
+
 protected:
   mbedtls_x509_crt		m_cert;
   mbedtls_pk_context		m_key;

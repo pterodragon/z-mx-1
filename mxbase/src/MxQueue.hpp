@@ -375,7 +375,7 @@ public:
       if (m_queues.count() == 1) {
 	Tx::ready_(next);
 	guard.unlock();
-	this->impl()->scheduleSend();
+	Tx::start();
 	return;
       }
     } else {

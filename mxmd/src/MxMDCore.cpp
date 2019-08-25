@@ -162,14 +162,13 @@ static unsigned init_called_ = 0;
 
 MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
 {
-  {
-    auto init_called = reinterpret_cast<ZmAtomic<unsigned> *>(&init_called_);
-
-    if (init_called->cmpXch(0, 1)) {
-      ZeLOG(Fatal, "MxMDLib::init() called twice");
-      return nullptr;
-    }
+  auto init_called = reinterpret_cast<ZmAtomic<unsigned> *>(&init_called_);
+  if (init_called->cmpXch(1, 0)) {
+    ZeLOG(Error, "MxMDLib::init() called twice");
+    while (*init_called < 2) ZmPlatform::yield();
+    return ZmSingleton<MxMDCore, false>::instance();
   }
+  ZuGuard guard([init_called]() { *init_called = 2; });
 
   ZmRef<ZvCf> cf = new ZvCf();
 
@@ -589,7 +588,6 @@ void MxMDCore::final()
 {
   {
     auto final_called = reinterpret_cast<ZmAtomic<unsigned> *>(&final_called_);
-
     if (final_called->cmpXch(0, 1)) {
       raise(ZeEVENT(Fatal, "MxMDCore::final() called twice"));
       return;

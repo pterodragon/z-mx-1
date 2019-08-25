@@ -105,14 +105,13 @@ static unsigned init_called_ = 0;
 jobject MxMDLibJNI::init(JNIEnv *env, jclass c, jstring cf)
 {
   // (String) -> MxMDLib
-  {
-    auto init_called = reinterpret_cast<ZmAtomic<unsigned> *>(&init_called_);
-
-    if (init_called->cmpXch(0, 1)) {
-      ZeLOG(Fatal, "MxMDLibJNI::init() called twice");
-      return nullptr;
-    }
+  auto init_called = reinterpret_cast<ZmAtomic<unsigned> *>(&init_called_);
+  if (init_called->cmpXch(1, 0)) {
+    ZeLOG(Error, "MxMDLibJNI::init() called twice");
+    while (*init_called < 2) ZmPlatform::yield();
+    return obj_;
   }
+  ZuGuard guard([init_called]() { *init_called = 2; });
 
   ZJNI::env(env);
 
@@ -501,7 +500,6 @@ void MxMDLibJNI::final(JNIEnv *env)
 {
   {
     auto final_called = reinterpret_cast<ZmAtomic<unsigned> *>(&final_called_);
-
     if (final_called->cmpXch(0, 1)) {
       ZeLOG(Fatal, "MxMDLibJNI::final() called twice");
       return;

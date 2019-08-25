@@ -173,7 +173,6 @@ template <typename T>
 constexpr typename ZuDeref<T>::T &&ZuMv(T &&t) noexcept {
   return static_cast<typename ZuDeref<T>::T &&>(t);
 }
-#endif
 
 // generic RAII guard
 template <typename L> struct ZuGuard {
@@ -185,6 +184,7 @@ template <typename L> struct ZuGuard {
   ZuGuard &operator =(ZuGuard &&) = default;
   L fn;
 };
+#endif
 
 #if defined(linux) || defined(__mips64)
 #include <endian.h>

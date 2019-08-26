@@ -113,15 +113,12 @@ public:
       ZiConnection(ssl->mx(), ci), m_ssl(ssl) { }
 
     void connected(ZiIOContext &io) {
-      ssl->recv(io);
+      m_ssl->recv(this, io);
     }
 
   private:
     SSL	*m_ssl;
   };
-
-  void connect() {
-  }
 
   // common API is up_(), down_(), send(data) and process(data)
 
@@ -149,6 +146,7 @@ public:
 
 protected:
   mbedtls_ssl_context	m_ssl;
+  ZiMultiplex		*m_mx;
   ZiConnection		*m_cxn; // FIXME
 };
 
@@ -158,11 +156,25 @@ protected:
 // FIXME SrvSSL - accept() / disconnect()
 //   (is never reconnected, ticket is sent to client)
 
-  inline void verify(ZuString server) { // called by client
+class CliSSL : public SSL {
+  // RecvFn is called post-handshake to handle incoming data
+  void connect(ZuString host, uint16_t port, RecvFn) {
+    ZiIP ip = host;
+    if (!ip) {
+      // FIXME
+    }
     if (ret = mbedtls_ssl_set_hostname(&m_ssl, server)) {
       // FIXME
     }
+    mx()->connect(
+	ZiConnectFn{this, [](CliSSL *ssl, const ZiCxnInfo &info) -> uintptr_t {
+	}},
+	ZiFailFn{this, [](CliSSL *ssl, bool transient) {
+	  if (transient)
+	}},
+	ZiIP(), 0, ip, port);
   }
+};
 
 class Client : public Conf {
 public:

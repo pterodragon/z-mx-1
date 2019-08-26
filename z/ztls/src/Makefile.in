@@ -137,13 +137,13 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libZi_la_DEPENDENCIES = $(top_builddir)/ze/src/libZi.la \
+libZTLS_la_DEPENDENCIES = $(top_builddir)/ze/src/libZi.la \
 	$(top_builddir)/ze/src/libZe.la \
 	$(top_builddir)/zt/src/libZt.la \
 	$(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la
-am_libZi_la_OBJECTS = ZTLSLib.lo
-libZi_la_OBJECTS = $(am_libZi_la_OBJECTS)
+am_libZTLS_la_OBJECTS = ZTLSLib.lo ZTLS.lo
+libZTLS_la_OBJECTS = $(am_libZTLS_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -163,7 +163,7 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/ZTLSLib.Plo
+am__depfiles_remade = ./$(DEPDIR)/ZTLS.Plo ./$(DEPDIR)/ZTLSLib.Plo
 am__mv = mv -f
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
@@ -183,8 +183,8 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(libZi_la_SOURCES)
-DIST_SOURCES = $(libZi_la_SOURCES)
+SOURCES = $(libZTLS_la_SOURCES)
+DIST_SOURCES = $(libZTLS_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -355,10 +355,10 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src -I$(top_srcdir)/zm/src \
 
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
-include_HEADERS = ZTLSLib.hpp
-lib_LTLIBRARIES = libZi.la
-libZi_la_SOURCES = ZTLSLib.cpp
-libZi_la_LIBADD = $(top_builddir)/ze/src/libZi.la \
+include_HEADERS = ZTLSLib.hpp ZTLS.hpp
+lib_LTLIBRARIES = libZTLS.la
+libZTLS_la_SOURCES = ZTLSLib.cpp ZTLS.cpp
+libZTLS_la_LIBADD = $(top_builddir)/ze/src/libZi.la \
 	$(top_builddir)/ze/src/libZe.la \
 	$(top_builddir)/zt/src/libZt.la \
 	$(top_builddir)/zm/src/libZm.la \
@@ -434,8 +434,8 @@ clean-libLTLIBRARIES:
 	  rm -f $${locs}; \
 	}
 
-libZi.la: $(libZi_la_OBJECTS) $(libZi_la_DEPENDENCIES) $(EXTRA_libZi_la_DEPENDENCIES) 
-	$(AM_V_CXXLD)$(CXXLINK) -rpath $(libdir) $(libZi_la_OBJECTS) $(libZi_la_LIBADD) $(LIBS)
+libZTLS.la: $(libZTLS_la_OBJECTS) $(libZTLS_la_DEPENDENCIES) $(EXTRA_libZTLS_la_DEPENDENCIES) 
+	$(AM_V_CXXLD)$(CXXLINK) -rpath $(libdir) $(libZTLS_la_OBJECTS) $(libZTLS_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -443,6 +443,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ZTLS.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ZTLSLib.Plo@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -627,7 +628,8 @@ clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/ZTLSLib.Plo
+		-rm -f ./$(DEPDIR)/ZTLS.Plo
+	-rm -f ./$(DEPDIR)/ZTLSLib.Plo
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -673,7 +675,8 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/ZTLSLib.Plo
+		-rm -f ./$(DEPDIR)/ZTLS.Plo
+	-rm -f ./$(DEPDIR)/ZTLSLib.Plo
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

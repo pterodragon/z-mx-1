@@ -1104,6 +1104,7 @@ public:
 
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
 
   // reset sequence number
   void rxReset(Key key) {
@@ -1188,7 +1189,7 @@ public:
 
   template <typename S> inline void print(S &s) {
     ReadGuard guard(m_lock);
-    s << "gap: (" << m_gap.key() << " +" m_gap.length()
+    s << "gap: (" << m_gap.key() << " +" << m_gap.length()
       << ")  flags: " << PrintFlags{m_flags};
   }
 
@@ -1319,6 +1320,7 @@ public:
 
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
 
   // start concurrent sending and re-sending (datagrams)
   void start() {
@@ -1344,7 +1346,8 @@ public:
 	    m_sendKey < app->txQueue()->tail())
 	  m_flags |= Sending;
       if (!alreadyRunning)
-	if (scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey)
+	if (scheduleArchive = !(m_flags & Archiving) &&
+	    m_ackdKey > m_archiveKey)
 	  m_flags |= Archiving;
       if (alreadyRunning && (m_flags & ResendFailed))
 	scheduleResend = true;
@@ -1395,7 +1398,7 @@ public:
 	if (scheduleSend = !(m_flags & Sending) && key < app->txQueue()->tail())
 	  m_flags |= Sending;
       if (!alreadyRunning)
-	if (scheduleArchive = !m_archiving && key > m_archiveKey)
+	if (scheduleArchive = !(m_flags & Archiving) && key > m_archiveKey)
 	  m_flags |= Archiving;
       if (alreadyRunning && (m_flags & ResendFailed))
 	scheduleResend = true;
@@ -1471,7 +1474,7 @@ public:
       Guard guard(m_lock);
       m_ackdKey = key;
       if (key > m_sendKey) m_sendKey = key;
-      scheduleArchive = !m_archiving && key > m_archiveKey;
+      scheduleArchive = !(m_flags & Archiving) && key > m_archiveKey;
       if (scheduleArchive) m_flags |= Archiving;
     }
     if (scheduleArchive) app->scheduleArchive();
@@ -1586,7 +1589,7 @@ public:
 	scheduleArchive = m_archiveKey < m_ackdKey;
 	if (msg) break;
       }
-      if (!scheduleArchive) m_archiving = false;
+      if (!scheduleArchive) m_flags &= ~Archiving;
     }
     if (msg)
       app->archive_(msg);
@@ -1676,7 +1679,7 @@ public:
 
   template <typename S> inline void print(S &s) {
     ReadGuard guard(m_lock);
-    s << "gap: (" << m_gap.key() << " +" m_gap.length()
+    s << "gap: (" << m_gap.key() << " +" << m_gap.length()
       << ")  flags: " << PrintFlags{m_flags}
       << "  send: " << m_sendKey
       << "  ackd: " << m_ackdKey

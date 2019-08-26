@@ -1385,6 +1385,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::replicated_(
     if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.del(pod);
     if (op != ZdbOp::Del) {
       pod->update(rn, prevRN, range, ZdbCommitted);
+      pod->pin();
       cache_(pod);
     } else
       pod->update(rn, prevRN, ZdbRange{}, ZdbDeleted);
@@ -1398,6 +1399,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::replicated_(
     if (m_allocRN <= rn) m_allocRN = rn + 1;
     if (op != ZdbOp::Del) {
       pod->update(rn, prevRN, range, ZdbCommitted);
+      pod->pin();
       cache(pod);
     } else
       pod->update(rn, prevRN, ZdbRange{}, ZdbDeleted);
@@ -1660,7 +1662,7 @@ void ZdbAny::recover(ZmRef<ZdbAnyPOD> pod)
       if (rec) prevPOD = read_(rec);
     }
   }
-  if (prevPOD) m_handler.delFn(prevPOD, true);
+  if (prevPOD && prevPOD->magic()) m_handler.delFn(prevPOD, true);
   m_handler.addFn(pod, true);
   cache(ZuMv(pod));
 }
@@ -1837,6 +1839,12 @@ void ZdbAny::cache(ZdbAnyPOD *pod)
     ZmRef<ZdbLRUNode> lru_ = m_lru.shiftNode();
     if (ZuLikely(lru_)) {
       ZdbAnyPOD *lru = static_cast<ZdbAnyPOD *>(lru_.ptr());
+      if (lru->pinned()) {
+	m_lru.push(ZuMv(lru_));
+	cache_(pod);
+	m_cacheSize = m_cache->size();
+	return;
+      }
       m_cache->del(lru->rn());
     }
   }
@@ -1870,6 +1878,7 @@ void ZdbAny::put(ZdbAnyPOD *pod) // commits a push
   pod->commit();
   {
     Guard guard(m_lock);
+    pod->pin();
     cache(pod);
   }
   m_env->write(pod, Zdb_Msg::Rep, ZdbOp::Add, m_config->compress);
@@ -1949,6 +1958,7 @@ void ZdbAny::putUpdate(ZdbAnyPOD *pod, bool replace)
   {
     Guard guard(m_lock);
     cacheDel_(pod->prevRN());
+    pod->pin();
     cache(pod);
   }
   int op = replace ? ZdbOp::Upd : ZdbOp::Add;
@@ -2035,6 +2045,10 @@ void ZdbAny::write(ZmRef<ZdbAnyPOD> pod)
 {
   if (!m_config->repMode) m_env->repSend(pod);
   int op = pod->write();
+  {
+    Guard guard(m_lock);
+    pod->unpin();
+  }
   m_handler.writeFn(pod, op);
 }
 
@@ -2123,7 +2137,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::read_(const Zdb_FileRec &rec)
   if (ZuUnlikely((r = rec.file()->pread(
 	    off, pod->ptr(), m_recSize)) < (int)m_recSize)) {
     fileReadError_(rec.file(), off, r, e);
-    return 0;
+    return nullptr;
   }
   return pod;
 }

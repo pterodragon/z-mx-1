@@ -137,13 +137,13 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libZi_la_DEPENDENCIES = $(top_builddir)/ze/src/libZi.la \
+libZTLS_la_DEPENDENCIES = $(top_builddir)/ze/src/libZi.la \
 	$(top_builddir)/ze/src/libZe.la \
 	$(top_builddir)/zt/src/libZt.la \
 	$(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la
-am_libZi_la_OBJECTS = ZTLSLib.lo
-libZi_la_OBJECTS = $(am_libZi_la_OBJECTS)
+am_libZTLS_la_OBJECTS = ZTLSLib.lo ZTLS.lo
+libZTLS_la_OBJECTS = $(am_libZTLS_la_OBJECTS)
 AM_V_lt = $(am__v_lt_$(V))
 am__v_lt_ = $(am__v_lt_$(AM_DEFAULT_VERBOSITY))
 am__v_lt_0 = --silent
@@ -163,7 +163,7 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I. -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/ZTLSLib.Plo
+am__depfiles_remade = ./$(DEPDIR)/ZTLS.Plo ./$(DEPDIR)/ZTLSLib.Plo
 am__mv = mv -f
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
@@ -183,8 +183,8 @@ AM_V_CXXLD = $(am__v_CXXLD_$(V))
 am__v_CXXLD_ = $(am__v_CXXLD_$(AM_DEFAULT_VERBOSITY))
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(libZi_la_SOURCES)
-DIST_SOURCES = $(libZi_la_SOURCES)
+SOURCES = $(libZTLS_la_SOURCES)
+DIST_SOURCES = $(libZTLS_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -212,14 +212,14 @@ ETAGS = etags
 CTAGS = ctags
 am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/depcomp
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} /home/count0/raptor/src/z/missing aclocal-1.16
+ACLOCAL = ${SHELL} /home/count0/raptor/src/new/code/z/missing aclocal-1.16
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 1
 AR = ar
 AS = as
-AUTOCONF = ${SHELL} /home/count0/raptor/src/z/missing autoconf
-AUTOHEADER = ${SHELL} /home/count0/raptor/src/z/missing autoheader
-AUTOMAKE = ${SHELL} /home/count0/raptor/src/z/missing automake-1.16
+AUTOCONF = ${SHELL} /home/count0/raptor/src/new/code/z/missing autoconf
+AUTOHEADER = ${SHELL} /home/count0/raptor/src/new/code/z/missing autoheader
+AUTOMAKE = ${SHELL} /home/count0/raptor/src/new/code/z/missing automake-1.16
 AWK = gawk
 CC = clang
 CCDEPMODE = depmode=gcc3
@@ -261,7 +261,7 @@ LIPO =
 LN_S = ln -s
 LTLIBOBJS = 
 LT_SYS_LIBRARY_PATH = 
-MAKEINFO = ${SHELL} /home/count0/raptor/src/z/missing makeinfo
+MAKEINFO = ${SHELL} /home/count0/raptor/src/new/code/z/missing makeinfo
 MANIFEST_TOOL = :
 MKDIR_P = /bin/mkdir -p
 NM = /bin/nm -B
@@ -273,10 +273,10 @@ OTOOL64 =
 PACKAGE = zlib
 PACKAGE_BUGREPORT = 
 PACKAGE_NAME = ZLib
-PACKAGE_STRING = ZLib 8.5.3
+PACKAGE_STRING = ZLib 8.7.0
 PACKAGE_TARNAME = zlib
 PACKAGE_URL = 
-PACKAGE_VERSION = 8.5.3
+PACKAGE_VERSION = 8.7.0
 PATH_SEPARATOR = :
 RANLIB = ranlib
 READLINE_CPPFLAGS = -I/usr/local/include
@@ -286,19 +286,19 @@ SED = /bin/sed
 SET_MAKE = 
 SHELL = /bin/sh
 STRIP = strip
-VERSION = 8.5.3
+VERSION = 8.7.0
 Z_CPPFLAGS = -D_REENTRANT -D_GNU_SOURCE
 Z_CXXFLAGS =  -Wall -Wno-parentheses -Wno-invalid-offsetof -Wno-misleading-indentation -fstrict-aliasing
 Z_IO_LIBS = -ldl
 Z_LDFLAGS = -rdynamic
 Z_MT_LIBS = -lck -lhwloc -lpthread -lrt
-Z_SO_LDFLAGS = -release 8.5.3
+Z_SO_LDFLAGS = -release 8.7.0
 Z_ZP_LIBS = -lpcap
 Z_ZT_LIBS = -lpcre
-abs_builddir = /home/count0/raptor/src/z/ztls/src
-abs_srcdir = /home/count0/raptor/src/z/ztls/src
-abs_top_builddir = /home/count0/raptor/src/z
-abs_top_srcdir = /home/count0/raptor/src/z
+abs_builddir = /home/count0/raptor/src/new/code/z/ztls/src
+abs_srcdir = /home/count0/raptor/src/new/code/z/ztls/src
+abs_top_builddir = /home/count0/raptor/src/new/code/z
+abs_top_srcdir = /home/count0/raptor/src/new/code/z
 ac_ct_AR = ar
 ac_ct_CC = clang
 ac_ct_CXX = 
@@ -328,7 +328,7 @@ host_vendor = pc
 htmldir = ${docdir}
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /home/count0/raptor/src/z/install-sh
+install_sh = ${SHELL} /home/count0/raptor/src/new/code/z/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
@@ -354,11 +354,11 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src -I$(top_srcdir)/zm/src \
 	-DZTLS_EXPORTS -D_REENTRANT -D_GNU_SOURCE
 
 AM_CXXFLAGS =  -Wall -Wno-parentheses -Wno-invalid-offsetof -Wno-misleading-indentation -fstrict-aliasing
-AM_LDFLAGS = -rdynamic -release 8.5.3
-include_HEADERS = ZTLSLib.hpp
-lib_LTLIBRARIES = libZi.la
-libZi_la_SOURCES = ZTLSLib.cpp
-libZi_la_LIBADD = $(top_builddir)/ze/src/libZi.la \
+AM_LDFLAGS = -rdynamic -release 8.7.0
+include_HEADERS = ZTLSLib.hpp ZTLS.hpp
+lib_LTLIBRARIES = libZTLS.la
+libZTLS_la_SOURCES = ZTLSLib.cpp ZTLS.cpp
+libZTLS_la_LIBADD = $(top_builddir)/ze/src/libZi.la \
 	$(top_builddir)/ze/src/libZe.la \
 	$(top_builddir)/zt/src/libZt.la \
 	$(top_builddir)/zm/src/libZm.la \
@@ -434,8 +434,8 @@ clean-libLTLIBRARIES:
 	  rm -f $${locs}; \
 	}
 
-libZi.la: $(libZi_la_OBJECTS) $(libZi_la_DEPENDENCIES) $(EXTRA_libZi_la_DEPENDENCIES) 
-	$(AM_V_CXXLD)$(CXXLINK) -rpath $(libdir) $(libZi_la_OBJECTS) $(libZi_la_LIBADD) $(LIBS)
+libZTLS.la: $(libZTLS_la_OBJECTS) $(libZTLS_la_DEPENDENCIES) $(EXTRA_libZTLS_la_DEPENDENCIES) 
+	$(AM_V_CXXLD)$(CXXLINK) -rpath $(libdir) $(libZTLS_la_OBJECTS) $(libZTLS_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -443,6 +443,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+include ./$(DEPDIR)/ZTLS.Plo # am--include-marker
 include ./$(DEPDIR)/ZTLSLib.Plo # am--include-marker
 
 $(am__depfiles_remade):
@@ -627,7 +628,8 @@ clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/ZTLSLib.Plo
+		-rm -f ./$(DEPDIR)/ZTLS.Plo
+	-rm -f ./$(DEPDIR)/ZTLSLib.Plo
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -673,7 +675,8 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/ZTLSLib.Plo
+		-rm -f ./$(DEPDIR)/ZTLS.Plo
+	-rm -f ./$(DEPDIR)/ZTLSLib.Plo
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

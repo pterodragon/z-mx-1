@@ -75,9 +75,11 @@ void push() {
   if (orders->allocRN() >= maxRN) return;
   ZmRef<ZdbPOD<Order> > pod;
   if (append) {
-    ZdbRN rn = append == 1 ? 0 : ZmRand::randInt(append - 1);
-    pod = orders->get_(rn);
-    pod = orders->update(pod);
+    do {
+      ZdbRN rn = append == 1 ? 0 : ZmRand::randInt(append - 1);
+      if (pod = orders->get_(rn))
+	pod = orders->update(pod);
+    } while (!pod);
   } else {
     pod = orders->push();
   }
@@ -89,12 +91,8 @@ void push() {
   order->m_quantity = 100;
   if (!append)
     orders->put(ZdbPOD<Order>::pod(order));
-  else {
-    orders->putUpdate(pod);
-    if (orders->allocRN() >= maxRN) return;
-    if (pod = orders->get(pod->rn()))
-      orders->update(pod);
-  }
+  else
+    orders->putUpdate(pod, false);
   appMx->add(ZmFn<>::Ptr<&push>::fn());
 }
 

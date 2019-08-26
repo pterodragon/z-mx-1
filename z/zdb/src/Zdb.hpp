@@ -349,6 +349,10 @@ public:
     return ZdbRange{rep.range};
   }
 
+  ZuInline void pin() { m_pinned = true; }
+  ZuInline void unpin() { m_pinned = false; }
+  ZuInline bool pinned() const { return m_pinned; }
+
 private:
   inline void placeholder() {
     ZdbTrailer *trailer = this->trailer();
@@ -405,6 +409,7 @@ private:
   ZdbAny		*m_db;
   ZmRef<ZdbAnyPOD_Cmpr>	m_compressed;
   Zdb_Msg_Hdr		m_hdr;
+  bool			m_pinned = false;
 };
 
 inline ZdbRN ZdbLRUNode_RNAccessor::value(const ZdbLRUNode &pod)

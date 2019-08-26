@@ -526,8 +526,8 @@ struct ZdbConfig {
 };
 
 namespace ZdbCacheMode {
-  ZtEnumValues(Normal, NoCache, FullCache);
-  ZtEnumNames("Normal", "NoCache", "FullCache");
+  ZtEnumValues(Normal, FullCache);
+  ZtEnumNames("Normal", "FullCache");
 };
 
 struct ZdbHandler {

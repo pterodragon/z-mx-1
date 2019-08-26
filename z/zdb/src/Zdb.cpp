@@ -1381,7 +1381,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::replicated_(
 {
   ZmRef<ZdbAnyPOD> pod;
   Guard guard(m_lock);
-  if (ZuUnlikely(m_cache && (pod = m_cache->del(prevRN)))) {
+  if (ZuUnlikely(pod = m_cache->del(prevRN))) {
     if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.del(pod);
     if (op != ZdbOp::Del) {
       pod->update(rn, prevRN, range, ZdbCommitted);
@@ -1446,10 +1446,8 @@ void ZdbAny::init(ZdbConfig *config, ZdbID id)
 {
   m_config = config;
   m_id = id;
-  if (m_cacheMode != ZdbCacheMode::NoCache) {
-    m_cache = new Zdb_Cache(m_config->cache);
-    m_cacheSize = m_cache->size();
-  }
+  m_cache = new Zdb_Cache(m_config->cache);
+  m_cacheSize = m_cache->size();
   m_files = new FileHash(m_config->fileHash);
   m_filesMax = m_files->size();
 }
@@ -1656,7 +1654,7 @@ void ZdbAny::recover(ZmRef<ZdbAnyPOD> pod)
   ZdbRN prevRN = pod->prevRN();
   ZmRef<ZdbAnyPOD> prevPOD;
   if (pod->rn() != prevRN) {
-    if (ZuLikely(m_cache)) prevPOD = m_cache->del(prevRN);
+    prevPOD = m_cache->del(prevRN);
     if (ZuUnlikely(!prevPOD)) {
       Zdb_FileRec rec = rn2file(prevRN, false);
       if (rec) prevPOD = read_(rec);
@@ -1792,7 +1790,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::get(ZdbRN rn)
   Guard guard(m_lock);
   if (ZuUnlikely(rn >= m_allocRN)) return nullptr;
   ++m_cacheLoads;
-  if (ZuLikely(m_cache && (pod = m_cache->find(rn)))) {
+  if (ZuLikely(pod = m_cache->find(rn))) {
     if (m_cacheMode != ZdbCacheMode::FullCache) {
       m_lru.del(pod);
       m_lru.push(pod);
@@ -1822,7 +1820,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::get__(ZdbRN rn)
 {
   ZmRef<ZdbAnyPOD> pod;
   ++m_cacheLoads;
-  if (ZuLikely(m_cache && (pod = m_cache->find(rn)))) return pod;
+  if (ZuLikely(pod = m_cache->find(rn))) return pod;
   ++m_cacheMisses;
   {
     Zdb_FileRec rec = rn2file(rn, false);
@@ -1833,7 +1831,6 @@ ZmRef<ZdbAnyPOD> ZdbAny::get__(ZdbRN rn)
 
 void ZdbAny::cache(ZdbAnyPOD *pod)
 {
-  if (!m_cache) return;
   if (m_cacheMode != ZdbCacheMode::FullCache &&
       m_cache->count() >= m_cacheSize) {
     ZmRef<ZdbLRUNode> lru_ = m_lru.shiftNode();
@@ -1853,14 +1850,12 @@ void ZdbAny::cache(ZdbAnyPOD *pod)
 
 void ZdbAny::cache_(ZdbAnyPOD *pod)
 {
-  if (!m_cache) return;
   m_cache->add(pod);
   if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.push(pod);
 }
 
 void ZdbAny::cacheDel_(ZdbRN rn)
 {
-  if (!m_cache) return;
   if (ZmRef<Zdb_CacheNode> pod = m_cache->del(rn))
     if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.del(pod);
 }

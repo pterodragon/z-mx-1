@@ -54,9 +54,14 @@ ZmSemaphore done;
 ZmScheduler *appMx = 0;
 ZiMultiplex *dbMx = 0;
 unsigned del = 0;
-unsigned append = 0;
+bool append = false;
+unsigned skip = 0;
+unsigned stride = 1;
+unsigned chain = 0;
 unsigned nThreads = 1;
-ZdbRN maxRN;
+ZdbRN initRN;
+unsigned nOps = 0;
+ZmAtomic<unsigned> opCount = 0;
 
 void sigint()
 {
@@ -72,18 +77,18 @@ inline ZmRef<ZvCf> inlineCf(ZuString s)
 }
 
 void push() {
-  if (orders->allocRN() >= maxRN) return;
+  unsigned op = opCount++;
+  if (op >= nOps) return;
+  ZdbRN rn = initRN + skip + op * (stride + chain);
   ZmRef<ZdbPOD<Order> > pod;
   if (append) {
     do {
-      ZdbRN rn = append == 1 ? 0 : ZmRand::randInt(append - 1);
-      if (pod = orders->get_(rn))
-	pod = orders->update(pod);
+      ZdbRN prevRN = initRN - nOps + op;
+      if (pod = orders->get(prevRN))
+	if (!(pod = orders->update(pod, rn))) return;
     } while (!pod);
-  } else {
-    pod = orders->push();
-  }
-  if (!pod) return;
+  } else
+    if (!(pod = orders->push(rn))) return;
   Order *order = pod->ptr();
   order->m_side = Buy;
   strncpy(order->m_symbol, "IBM", 32);
@@ -93,6 +98,15 @@ void push() {
     orders->put(ZdbPOD<Order>::pod(order));
   else
     orders->putUpdate(pod, false);
+  if (chain) {
+    ++rn;
+    for (unsigned i = 0; i < chain; i++) {
+      pod = orders->update(pod, rn + i);
+      order = pod->ptr();
+      ++order->m_price;
+      orders->putUpdate(pod, false);
+    }
+  }
   appMx->add(ZmFn<>::Ptr<&push>::fn());
 }
 
@@ -103,11 +117,11 @@ void active() {
       if (ZmRef<ZdbPOD<Order> > pod = orders->get_(i))
 	orders->del(pod);
   }
+  initRN = orders->allocRN();
   if (append) {
-    for (unsigned i = 0; i < append; i++) {
-      if (orders->allocRN() >= maxRN) return;
-      ZmRef<ZdbPOD<Order> > pod = orders->push();
-      if (!pod) return;
+    for (unsigned i = 0; i < nOps; i++) {
+      ZmRef<ZdbPOD<Order> > pod = orders->push(initRN++);
+      if (!pod) break;
       Order *order = pod->ptr();
       order->m_side = Buy;
       strcpy(order->m_symbol, "IBM");
@@ -124,11 +138,13 @@ void inactive() { puts("INACTIVE"); }
 void usage()
 {
   static const char *help =
-    "usage: ZdbTest nThreads maxRN [OPTION]...\n\n"
+    "usage: ZdbTest nThreads nOps [OPTION]...\n\n"
     "Options:\n"
     "  -D, --del=N\t\t- delete first N sequences\n"
-    "  -a, --append=N\t\t- append to N sequences\n"
-    "  -s, --dbs:0:fileSize=N\t- file size\n"
+    "  -k, --skip=N\t\t- skip N RNs before first\n"
+    "  -s, --stride=N\t\t- increment RNs by N with each operation\n"
+    "  -a, --append\t\t- append\n"
+    "  -c, --chain=N\t\t- append chains of N records\n"
     "  -f, --dbs:0:path=PATH\t\t- file path\n"
     "  -p, --dbs:0:preAlloc=N\t- number of records to pre-allocate\n"
     "  -h, --hostID=N\t\t- host ID\n"
@@ -176,8 +192,10 @@ int main(int argc, char **argv)
 {
   static ZvOpt opts[] = {
     { "del", "D", ZvOptScalar },
-    { "append", "a", ZvOptScalar },
-    { "orders:fileSize", "s", ZvOptScalar, "4096" },
+    { "skip", "k", ZvOptScalar, "0" },
+    { "stride", "s", ZvOptScalar, "1" },
+    { "append", "a", ZvOptFlag },
+    { "chain", "c", ZvOptScalar, "0" },
     { "orders:path", "f", ZvOptScalar, "orders" },
     { "orders:preAlloc", "p", ZvOptScalar, "1" },
     { "orders:cache:bits", 0, ZvOptScalar, "8" },
@@ -230,15 +248,17 @@ int main(int argc, char **argv)
       "hosts { 2 { priority 75 IP 127.0.0.1 port 9944 } }\n"
       "hosts { 3 { priority 50 IP 127.0.0.1 port 9945 } }\n"
       "dbs orders\n"
-      "orders { fileSize 4096 path orders preAlloc 0 }\n"
     );
 
     if (cf->fromArgs(opts, argc, argv) != 3) usage();
 
     del = cf->getInt("del", 1, INT_MAX, false, 0);
-    append = cf->getInt("append", 1, INT_MAX, false, 0);
+    skip = cf->getInt("skip", 0, INT_MAX, false, 0);
+    stride = cf->getInt("stride", 1, INT_MAX, false, 1);
+    append = cf->getInt("append", 0, 1, false, 0);
+    chain = cf->getInt("chain", 0, INT_MAX, false, 0);
     nThreads = cf->getInt("1", 1, 1<<10, true);
-    maxRN = cf->getInt("2", 0, 1<<20, true);
+    nOps = cf->getInt("2", 0, 1<<20, true);
     hashOut = cf->get("hashOut");
 
   } catch (const ZvError &e) {

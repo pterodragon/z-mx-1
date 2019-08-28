@@ -1184,10 +1184,7 @@ void ZdbEnv::hbSend_(Zdb_Cxn *cxn_)
     auto j = m_cxns->readIterator();
     while (i < n && (cxn = j.iterateKey())) if (cxn->up()) ++i, cxns.push(cxn);
   }
-  for (unsigned j = 0; j < i; j++) {
-    cxns[j]->hbSend();
-    cxns[j] = 0;
-  }
+  for (unsigned j = 0; j < i; j++) cxns[j]->hbSend();
 }
 
 // send heartbeat on a specific connection
@@ -1305,6 +1302,8 @@ void Zdb_Cxn::repDataRcvd(ZiIOContext &io)
 {
   if (!m_host || m_host->cxn().ptr() != this) { io.disconnect(); return; }
 
+  if ((io.offset += io.length) < io.size) return;
+
   Zdb_Msg_Rep &rep = m_recvHdr.u.rep;
 
   if (rep.clen) {
@@ -1380,30 +1379,25 @@ ZmRef<ZdbAnyPOD> ZdbAny::replicated_(
     ZdbRN rn, ZdbRN prevRN, ZdbRange range, int op)
 {
   ZmRef<ZdbAnyPOD> pod;
+  alloc(pod);
+  if (ZuUnlikely(!pod)) return nullptr;
   Guard guard(m_lock);
-  if (ZuUnlikely(m_cache && (pod = m_cache->del(prevRN)))) {
-    if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.del(pod);
-    if (op != ZdbOp::Del) {
-      pod->update(rn, prevRN, range, ZdbCommitted);
-      pod->pin();
-      cache_(pod);
-    } else
-      pod->update(rn, prevRN, ZdbRange{}, ZdbDeleted);
-  } else {
-    if (prevRN < m_allocRN) {
-      Zdb_FileRec rec = rn2file(prevRN, false);
-      if (rec) pod = read_(rec);
+  if (m_allocRN <= rn) m_allocRN = rn + 1;
+  if (op != ZdbOp::Del) {
+    if (prevRN != rn && (range.off() || range.len() < m_dataSize)) {
+      ZmRef<ZdbAnyPOD> prev = m_cache->find(prevRN);
+      if (ZuUnlikely(!prev) && prevRN < m_allocRN) {
+	Zdb_FileRec rec = rn2file(prevRN, false);
+	if (rec) prev = read_(rec);
+      }
+      if (prev && prev->magic())
+	memcpy(pod->ptr(), prev->ptr(), m_dataSize);
     }
-    if (!pod) alloc(pod);
-    if (ZuUnlikely(!pod)) return nullptr;
-    if (m_allocRN <= rn) m_allocRN = rn + 1;
-    if (op != ZdbOp::Del) {
-      pod->update(rn, prevRN, range, ZdbCommitted);
-      pod->pin();
-      cache(pod);
-    } else
-      pod->update(rn, prevRN, ZdbRange{}, ZdbDeleted);
-  }
+    pod->update(rn, prevRN, range, ZdbCommitted);
+  } else
+    pod->update(rn, prevRN, ZdbRange{}, ZdbDeleted);
+  pod->pin();
+  cache(pod);
   return pod;
 }
 
@@ -1446,10 +1440,8 @@ void ZdbAny::init(ZdbConfig *config, ZdbID id)
 {
   m_config = config;
   m_id = id;
-  if (m_cacheMode != ZdbCacheMode::NoCache) {
-    m_cache = new Zdb_Cache(m_config->cache);
-    m_cacheSize = m_cache->size();
-  }
+  m_cache = new Zdb_Cache(m_config->cache);
+  m_cacheSize = m_cache->size();
   m_files = new FileHash(m_config->fileHash);
   m_filesMax = m_files->size();
 }
@@ -1656,7 +1648,7 @@ void ZdbAny::recover(ZmRef<ZdbAnyPOD> pod)
   ZdbRN prevRN = pod->prevRN();
   ZmRef<ZdbAnyPOD> prevPOD;
   if (pod->rn() != prevRN) {
-    if (ZuLikely(m_cache)) prevPOD = m_cache->del(prevRN);
+    prevPOD = m_cache->del(prevRN);
     if (ZuUnlikely(!prevPOD)) {
       Zdb_FileRec rec = rn2file(prevRN, false);
       if (rec) prevPOD = read_(rec);
@@ -1669,10 +1661,9 @@ void ZdbAny::recover(ZmRef<ZdbAnyPOD> pod)
 
 void ZdbAny::scan(Zdb_File *file)
 {
-  ZdbRN rn = ((ZdbRN)(file->index()))<<ZdbFileShift;
   unsigned magicOffset =
     m_recSize - sizeof(ZdbTrailer) + offsetof(ZdbTrailer, magic);
-  for (unsigned j = 0; j < ZdbFileRecs; j++, rn++) {
+  for (unsigned j = 0; j < ZdbFileRecs; j++) {
     ZiFile::Offset off = (ZiFile::Offset)j * m_recSize + magicOffset;
     uint32_t magic;
     int r;
@@ -1691,9 +1682,6 @@ void ZdbAny::scan(Zdb_File *file)
       default:
 	return;
     }
-    // below should never be needed - recover() takes care of it
-    // if (m_allocRN <= rn) m_allocRN = rn + 1;
-    // if (m_fileRN <= rn) m_fileRN = rn + 1;
   }
 }
 
@@ -1775,12 +1763,14 @@ ZmRef<ZdbAnyPOD> ZdbAny::push_(ZdbRN rn)
   ZmRef<ZdbAnyPOD> pod;
   alloc(pod);
   if (ZuUnlikely(!pod)) return nullptr;
-  Guard guard(m_lock);
-  if (ZuLikely(m_allocRN <= rn))
-    m_allocRN = rn + 1;
-  else {
-    ZmRef<ZdbAnyPOD> pod_ = get__(rn);
-    if (ZuUnlikely(pod_ && pod_->committed())) return nullptr;
+  {
+    Guard guard(m_lock);
+    if (ZuLikely(m_allocRN <= rn))
+      m_allocRN = rn + 1;
+    else {
+      ZmRef<ZdbAnyPOD> pod_ = get__(rn);
+      if (ZuUnlikely(pod_ && pod_->committed())) return nullptr;
+    }
   }
   pod->init(rn, ZdbRange{0, m_dataSize});
   return pod;
@@ -1792,7 +1782,8 @@ ZmRef<ZdbAnyPOD> ZdbAny::get(ZdbRN rn)
   Guard guard(m_lock);
   if (ZuUnlikely(rn >= m_allocRN)) return nullptr;
   ++m_cacheLoads;
-  if (ZuLikely(m_cache && (pod = m_cache->find(rn)))) {
+  if (ZuLikely(pod = m_cache->find(rn))) {
+    if (!pod->committed()) return nullptr;
     if (m_cacheMode != ZdbCacheMode::FullCache) {
       m_lru.del(pod);
       m_lru.push(pod);
@@ -1822,7 +1813,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::get__(ZdbRN rn)
 {
   ZmRef<ZdbAnyPOD> pod;
   ++m_cacheLoads;
-  if (ZuLikely(m_cache && (pod = m_cache->find(rn)))) return pod;
+  if (ZuLikely(pod = m_cache->find(rn))) return pod;
   ++m_cacheMisses;
   {
     Zdb_FileRec rec = rn2file(rn, false);
@@ -1833,7 +1824,6 @@ ZmRef<ZdbAnyPOD> ZdbAny::get__(ZdbRN rn)
 
 void ZdbAny::cache(ZdbAnyPOD *pod)
 {
-  if (!m_cache) return;
   if (m_cacheMode != ZdbCacheMode::FullCache &&
       m_cache->count() >= m_cacheSize) {
     ZmRef<ZdbLRUNode> lru_ = m_lru.shiftNode();
@@ -1853,14 +1843,12 @@ void ZdbAny::cache(ZdbAnyPOD *pod)
 
 void ZdbAny::cache_(ZdbAnyPOD *pod)
 {
-  if (!m_cache) return;
   m_cache->add(pod);
   if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.push(pod);
 }
 
 void ZdbAny::cacheDel_(ZdbRN rn)
 {
-  if (!m_cache) return;
   if (ZmRef<Zdb_CacheNode> pod = m_cache->del(rn))
     if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.del(pod);
 }
@@ -1909,8 +1897,12 @@ ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *prev, ZdbRN rn)
   if (ZuUnlikely(!pod)) return nullptr;
   {
     Guard guard(m_lock);
-    if (m_allocRN > rn) return nullptr;
-    m_allocRN = rn + 1;
+    if (ZuLikely(m_allocRN <= rn))
+      m_allocRN = rn + 1;
+    else {
+      ZmRef<ZdbAnyPOD> pod_ = get__(rn);
+      if (ZuUnlikely(pod_ && pod_->committed())) return nullptr;
+    }
   }
   memcpy(pod->ptr(), prev->ptr(), m_dataSize);
   ZdbRN prevRN = prev->rn();
@@ -2177,18 +2169,21 @@ void ZdbAny::write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op)
   if (!(rec = rn2file(rn, true))) return;
     // any error is logged by getFile/openFile
 
-  unsigned prevOffset = trailerOffset + offsetof(ZdbTrailer, prevRN);
+  // unsigned prevOffset = trailerOffset + offsetof(ZdbTrailer, prevRN);
 
   if (op == ZdbOp::Del && rec.file()->del(rec.offRN()))
     delFile(rec.file());
   else {
     ZiFile::Offset off = (ZiFile::Offset)rec.offRN() * m_recSize;
-    if (op != ZdbOp::Add) *(ZdbRN *)(((char *)ptr) + prevOffset) = rn;
     if (ZuUnlikely((r = rec.file()->pwrite(off, ptr, m_recSize, &e)) != Zi::OK))
       fileWriteError_(rec.file(), off, e);
   }
 
   if (op == ZdbOp::Add) return;
+
+  ZdbTrailer trailer;
+  uint32_t magicDeleted = ZdbDeleted;
+  unsigned magicOffset = trailerOffset + offsetof(ZdbTrailer, magic);
 
   while (prevRN != rn) {
     rn = prevRN;
@@ -2197,21 +2192,24 @@ void ZdbAny::write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op)
 
     {
       ZiFile::Offset off =
-	(ZiFile::Offset)rec.offRN() * m_recSize + prevOffset;
-      if (ZuUnlikely((r = rec.file()->pread(
-		off, &prevRN, sizeof(ZdbRN), &e)) < (int)sizeof(ZdbRN)))
-	prevRN = rn;
+	(ZiFile::Offset)rec.offRN() * m_recSize + trailerOffset;
+      r = rec.file()->pread(off, &trailer, sizeof(ZdbTrailer), &e);
+      if (ZuUnlikely(r < (int)sizeof(ZdbTrailer)))
+	break;
+      if (trailer.magic != ZdbCommitted) break;
+      prevRN = trailer.prevRN;
     }
 
     if (rec.file()->del(rec.offRN()))
       delFile(rec.file());
     else {
-      uint32_t magic = ZdbDeleted;
-      unsigned magicOffset = trailerOffset + offsetof(ZdbTrailer, magic);
       ZiFile::Offset off =
 	(ZiFile::Offset)rec.offRN() * m_recSize + magicOffset;
-      if (ZuUnlikely((r = rec.file()->pwrite(off, &magic, 4, &e)) != Zi::OK))
+      r = rec.file()->pwrite(off, &magicDeleted, 4, &e);
+      if (ZuUnlikely(r != Zi::OK)) {
 	fileWriteError_(rec.file(), off, e);
+	break;
+      }
     }
   }
 }

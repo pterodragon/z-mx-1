@@ -55,6 +55,14 @@ public:
 
   struct RxData {
     MxMsgID	msgID;
+
+    template <typename S> inline static void csvHdr(S &s) {
+      s << "linkID,seqNo\n";
+    }
+    template <typename S> inline void csv(S &s) const {
+      s << msgID.linkID
+	<< ',' << msgID.seqNo << '\n';
+    }
   };
 
   using RxDB = Zdb<RxData>;
@@ -67,7 +75,7 @@ public:
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new RxPOD(db); },
 	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
 	    app->rxAdded(static_cast<RxPOD *>(pod)); }},
-	  ZdbDelFn{}});
+	  ZdbDelFn{}, app()->rxWriteFn()});
   }
   void final() {
     m_rxDB = nullptr;

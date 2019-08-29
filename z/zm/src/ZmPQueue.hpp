@@ -1268,17 +1268,14 @@ public:
       if (!alreadyRunning) m_running = true;
       if (alreadyRunning && m_sendFailed)
 	scheduleSend = true;
-      else if (!alreadyRunning)
-	if (scheduleSend = !m_sending && m_sendKey < app->txQueue()->tail())
-	  m_sending = true;
-      if (!alreadyRunning)
-	if (scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey)
-	  m_archiving = true;
+      else if (scheduleSend = !m_sending && m_sendKey < app->txQueue()->tail())
+	m_sending = true;
+      if (scheduleArchive = !m_archiving && m_ackdKey > m_archiveKey)
+	m_archiving = true;
       if (alreadyRunning && m_resendFailed)
 	scheduleResend = true;
-      else if (!alreadyRunning)
-	if (scheduleResend = !m_resending && m_gap.length())
-	  m_resending = true;
+      else if (scheduleResend = !m_resending && m_gap.length())
+	m_resending = true;
       m_sendFailed = false;
       m_resendFailed = false;
 #if 0
@@ -1320,17 +1317,14 @@ public:
       m_sendKey = m_ackdKey = key;
       if (alreadyRunning && m_sendFailed)
 	scheduleSend = true;
-      else if (!alreadyRunning)
-	if (scheduleSend = !m_sending && key < app->txQueue()->tail())
-	  m_sending = true;
-      if (!alreadyRunning)
-	if (scheduleArchive = !m_archiving && key > m_archiveKey)
-	  m_archiving = true;
+      else if (scheduleSend = !m_sending && key < app->txQueue()->tail())
+	m_sending = true;
+      if (scheduleArchive = !m_archiving && key > m_archiveKey)
+	m_archiving = true;
       if (alreadyRunning && m_resendFailed)
 	scheduleResend = true;
-      else if (!alreadyRunning)
-	if (scheduleResend = !m_resending && m_gap.length())
-	  m_resending = true;
+      else if (scheduleResend = !m_resending && m_gap.length())
+	m_resending = true;
       m_sendFailed = false;
       m_resendFailed = false;
 #if 0
@@ -1461,9 +1455,10 @@ public:
       prevKey = m_sendKey;
       scheduleSend = prevKey < txQueue->tail();
       while (scheduleSend) {
-	msg = txQueue->find(m_sendKey);
 	unsigned length;
-	if (msg)
+	if (msg = txQueue->find(m_sendKey))
+	  length = Fn(msg->item()).length();
+	else if (msg = app->retrieve_(m_sendKey, txQueue->head()))
 	  length = Fn(msg->item()).length();
 	else {
 	  if (!sendGap.length()) sendGap.key() = m_sendKey;

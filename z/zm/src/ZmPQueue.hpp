@@ -1341,19 +1341,16 @@ public:
       if (!alreadyRunning) m_flags |= Running;
       if (alreadyRunning && (m_flags & SendFailed))
 	scheduleSend = true;
-      else if (!alreadyRunning)
-	if (scheduleSend = !(m_flags & Sending) &&
-	    m_sendKey < app->txQueue()->tail())
-	  m_flags |= Sending;
-      if (!alreadyRunning)
-	if (scheduleArchive = !(m_flags & Archiving) &&
-	    m_ackdKey > m_archiveKey)
-	  m_flags |= Archiving;
+      else if (scheduleSend = !(m_flags & Sending) &&
+	  m_sendKey < app->txQueue()->tail())
+	m_flags |= Sending;
+      if (scheduleArchive = !(m_flags & Archiving) &&
+	  m_ackdKey > m_archiveKey)
+	m_flags |= Archiving;
       if (alreadyRunning && (m_flags & ResendFailed))
 	scheduleResend = true;
-      else if (!alreadyRunning)
-	if (scheduleResend = !(m_flags & Resending) && m_gap.length())
-	  m_flags |= Resending;
+      else if (scheduleResend = !(m_flags & Resending) && m_gap.length())
+	m_flags |= Resending;
       m_flags &= ~(SendFailed | ResendFailed);
 #if 0
       std::cerr << (ZuStringN<100>()
@@ -1394,17 +1391,16 @@ public:
       m_sendKey = m_ackdKey = key;
       if (alreadyRunning && (m_flags & SendFailed))
 	scheduleSend = true;
-      else if (!alreadyRunning)
-	if (scheduleSend = !(m_flags & Sending) && key < app->txQueue()->tail())
-	  m_flags |= Sending;
-      if (!alreadyRunning)
-	if (scheduleArchive = !(m_flags & Archiving) && key > m_archiveKey)
-	  m_flags |= Archiving;
+      else if (scheduleSend = !(m_flags & Sending) &&
+	  key < app->txQueue()->tail())
+	m_flags |= Sending;
+      if (scheduleArchive = !(m_flags & Archiving) &&
+	  key > m_archiveKey)
+	m_flags |= Archiving;
       if (alreadyRunning && (m_flags & ResendFailed))
 	scheduleResend = true;
-      else if (!alreadyRunning)
-	if (scheduleResend = !(m_flags & Resending) && m_gap.length())
-	  m_flags |= Resending;
+      else if (scheduleResend = !(m_flags & Resending) && m_gap.length())
+	m_flags |= Resending;
       m_flags &= ~(SendFailed | ResendFailed);
 #if 0
       std::cerr << (ZuStringN<100>()

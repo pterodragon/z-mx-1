@@ -181,6 +181,9 @@ protected:
 	case MBEDTLS_ERR_SSL_WANT_READ:
 	case MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS:
 	  break;
+	case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+	case MBEDTLS_ERR_SSL_CONN_EOF:
+	  break;
 	case MBEDTLS_ERR_X509_CERT_VERIFY_FAILED: {
 	  const char *hostname = m_ssl.hostname;
 	  if (!hostname) hostname = "(null)";
@@ -199,7 +202,7 @@ protected:
     impl()->verify_(); // client only - verify server cert
     impl()->save_(); // client only - save session for subsequent reconnect
 
-    impl()->connected(mbedtls_ssl_get_alpn_protocol(&m_ssl));
+    impl()->connected(m_ssl.hostname, mbedtls_ssl_get_alpn_protocol(&m_ssl));
 
     return recv();
   }
@@ -214,6 +217,9 @@ private:
       switch (n) {
 	case MBEDTLS_ERR_SSL_WANT_READ:
 	case MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS:
+	  break;
+	case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+	case MBEDTLS_ERR_SSL_CONN_EOF:
 	  break;
 	default:
 	  app()->logError("mbedtls_ssl_read() returned ", n);
@@ -257,12 +263,16 @@ public:
   }
 
 private:
-  void txIn(ZmRef<IOBuf> buf) { // TLS thread exclusive
-    auto data = (const unsigned char *)(buf->data);
-    auto len = buf->length;
+  void txIn(ZmRef<IOBuf> buf) { // TLS thread
+    send_(buf->data, buf->length);
+  }
+
+public:
+  void send_(const char *data, unsigned len) { // TLS thread
     unsigned offset = 0;
     do {
-      int n = mbedtls_ssl_write(&m_ssl, data + offset, len - offset);
+      int n = mbedtls_ssl_write(&m_ssl,
+	  (unsigned char *)data + offset, len - offset);
       if (n < 0) {
 	app()->logError("mbedtls_ssl_write() returned ", n);
 	return;
@@ -271,11 +281,12 @@ private:
     } while (offset < len);
   }
 
-  // ssl bio f_send function - TLS thread exclusive
+private:
+  // ssl bio f_send function - TLS thread
   static int txOut_(void *link_, const unsigned char *data, size_t len) {
     return static_cast<Link *>(link_)->txOut(data, len);
   }
-  int txOut(const void *data_, size_t len) { // TLS thread exclusive
+  int txOut(const void *data_, size_t len) { // TLS thread
     if (ZuUnlikely(!len)) return 0;
     auto data = static_cast<const char *>(data_);
     unsigned offset = 0;
@@ -319,10 +330,10 @@ private:
   ZmRef<TCP>		m_tcp;
   mbedtls_ssl_context	m_ssl;
 
-  // I/O Tx thread exclusive
+  // I/O Tx thread
   ZmRef<IOBuf>		m_rxBuf;
 
-  // TLS thread exclusive - Rx
+  // TLS thread
   ZmRef<IOBuf>		m_rxInBuf;
   unsigned		m_rxInOffset;
   char			m_rxOutBuf[MBEDTLS_SSL_MAX_CONTENT_LEN];
@@ -451,7 +462,7 @@ private:
 	    }
 	}
 	this->app()->logError(s);
-	this->disconnect_();
+	// this->disconnect_();
       }
     }
   }
@@ -658,7 +669,8 @@ friend Base;
       mbedtls_ssl_conf_session_tickets(this->conf(),
 	  MBEDTLS_SSL_SESSION_TICKETS_ENABLED);
 
-      mbedtls_ssl_conf_authmode(this->conf(), MBEDTLS_SSL_VERIFY_REQUIRED);
+      mbedtls_ssl_conf_authmode(this->conf(), MBEDTLS_SSL_VERIFY_OPTIONAL);
+      // MBEDTLS_SSL_VERIFY_REQUIRED
       if (!this->loadCA(caPath)) return false;
       if (alpn) mbedtls_ssl_conf_alpn_protocols(this->conf(), alpn);
       return true;
@@ -674,13 +686,15 @@ friend Base;
     void exception(ZmRef<ZeEvent>); // optional
 
     struct Link : public SrvLink<App, Link> {
+      void connected(const char *, const char *alpn); // TLS handshake completed
+      void disconnected();
       void process(const char *data, unsigned len); // process received data
     };
 
-    inline Link::TCP *accepted(ZiCxnInfo &ci) {
+    inline Link::TCP *accepted(const ZiCxnInfo &ci) {
       // ... potentially return nullptr if too many open connections
       ZmRef<Link> link = new Link(this);
-      auto tcp = new TCP(link, ci);
+      auto tcp = new Link::TCP(link, ci);
       // ... store link in server's container
       return tcp;
     }
@@ -737,7 +751,8 @@ friend Base;
 	  mbedtls_ssl_ticket_parse,
 	  &m_ticket_ctx);
 
-      mbedtls_ssl_conf_authmode(this->conf(), MBEDTLS_SSL_VERIFY_REQUIRED);
+      mbedtls_ssl_conf_authmode(this->conf(), MBEDTLS_SSL_VERIFY_OPTIONAL);
+      // MBEDTLS_SSL_VERIFY_REQUIRED
       if (!this->loadCA(caPath)) return false;
       if (alpn) mbedtls_ssl_conf_alpn_protocols(this->conf(), alpn);
 

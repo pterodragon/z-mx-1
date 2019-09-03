@@ -257,7 +257,7 @@ public:
     else
       m_ctrl = hwloc_alloc_membind(
 	  ZmTopology::hwloc(), sizeof(Ctrl),
-	  m_params.cpuset(), HWLOC_MEMBIND_BIND, 0);
+	  m_params.cpuset(), HWLOC_MEMBIND_BIND, HWLOC_MEMBIND_MIGRATE);
     if (!m_ctrl) { if (!m_params.ll()) ZmRing_::close(); return Error; }
     memset(m_ctrl, 0, sizeof(Ctrl));
     if (!m_params.cpuset())
@@ -265,7 +265,7 @@ public:
     else
       m_data = hwloc_alloc_membind(
 	  ZmTopology::hwloc(), size(),
-	  m_params.cpuset(), HWLOC_MEMBIND_BIND, 0);
+	  m_params.cpuset(), HWLOC_MEMBIND_BIND, HWLOC_MEMBIND_MIGRATE);
     if (!m_data) {
       hwloc_free(ZmTopology::hwloc(), m_ctrl, sizeof(Ctrl));
       m_ctrl = 0;

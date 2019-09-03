@@ -633,24 +633,24 @@ private:
   ZiCxnInfo			m_info;
 
 #ifdef ZiMultiplex_IOCP
-    Zi_Overlapped		  m_disconnectOverlapped;
+  Zi_Overlapped		 	 m_discOverlapped;
 #endif
 
-  // below fields only accessed from rxThread
-    unsigned			  m_rxUp;
-    uint64_t			  m_rxRequests;
-    uint64_t			  m_rxBytes;
-    ZiIOContext			  m_rxContext;
+  // Rx thread exclusive
+  unsigned			m_rxUp;
+  uint64_t			m_rxRequests;
+  uint64_t			m_rxBytes;
+  ZiIOContext			m_rxContext;
 #ifdef ZiMultiplex_IOCP
-    Zi_Overlapped		  m_rxOverlapped;
-    DWORD			  m_rxFlags;		// flags for WSARecv()
+  Zi_Overlapped			m_rxOverlapped;
+  DWORD				m_rxFlags;		// flags for WSARecv()
 #endif
 
-  // below fields only accessed from txThread
-    unsigned			  m_txUp;
-    uint64_t			  m_txRequests;
-    uint64_t			  m_txBytes;
-    ZiIOContext			  m_txContext;
+  // Tx thread exclusive
+  unsigned			m_txUp;
+  uint64_t			m_txRequests;
+  uint64_t			m_txBytes;
+  ZiIOContext			m_txContext;
 };
 
 // named parameter list for configuring ZiMultiplex

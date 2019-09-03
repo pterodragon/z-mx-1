@@ -195,7 +195,7 @@ public:
 
 private:
   App			*m_app;
-  ZmRef<Connection>	m_cxn;
+  ZmRef<Connection>	m_cxn;	// FIXME - should not need to be a ZmRef
   MxMCapHdr		m_hdr;
   char			m_buf[Size];
 };

@@ -172,7 +172,7 @@ public:
   void write();
 
 private:
-  ZmRef<Connection>	m_cxn;
+  ZmRef<Connection>	m_cxn; // FIXME - should not need to be a ZmRef
   MxMCapHdr		m_hdr;
   ZiSockAddr		m_addr;
   char			m_buf[Size];

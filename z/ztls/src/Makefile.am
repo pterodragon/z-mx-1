@@ -6,8 +6,8 @@ AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
 include_HEADERS = ZTLSLib.hpp ZTLS.hpp
 lib_LTLIBRARIES = libZTLS.la
-libZTLS_la_SOURCES = ZTLSLib.cpp ZTLS.cpp
-libZTLS_la_LIBADD = $(top_builddir)/ze/src/libZi.la \
+libZTLS_la_SOURCES = ZTLSLib.cpp
+libZTLS_la_LIBADD = $(top_builddir)/zi/src/libZi.la \
 	$(top_builddir)/ze/src/libZe.la \
 	$(top_builddir)/zt/src/libZt.la \
 	$(top_builddir)/zm/src/libZm.la \

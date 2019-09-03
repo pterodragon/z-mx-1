@@ -365,9 +365,9 @@ template <typename ID, unsigned Size_> class ZmHeap {
   typedef ZmHeapCacheT<ID, Size> Cache;
 
 public:
-  inline void *operator new(size_t) { return Cache::alloc(); }
-  inline void *operator new(size_t, void *p) { return p; }
-  inline void operator delete(void *p) { Cache::free(p); }
+  ZuInline void *operator new(size_t) { return Cache::alloc(); }
+  ZuInline void *operator new(size_t, void *p) { return p; }
+  ZuInline void operator delete(void *p) { Cache::free(p); }
 
 private:
   static ZmHeap_Init<ZmHeap>	m_init;

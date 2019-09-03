@@ -308,7 +308,7 @@ public:
     return m_threads[tid - 1].ring;
   }
 
-  template <typename S> inline unsigned tid(const S &s) {
+  inline unsigned tid(ZuString s) {
     if (unsigned tid = ZuBox0(unsigned)(s))
       return tid;
     for (unsigned tid = 0, n = m_params.nThreads(); tid <= n; tid++)

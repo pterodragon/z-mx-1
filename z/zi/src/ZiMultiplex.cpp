@@ -1527,7 +1527,7 @@ retry:
 
 void ZiConnection::errorSend(int status, ZeError e)
 {
-  if (m_txUp) close();
+  close_1();
   if (status == Zi::IOError &&
       (e.errNo() == ZiENOTCONN || e.errNo() == ZiECONNRESET)) return;
   Error(
@@ -1781,7 +1781,7 @@ void ZiConnection::disconnect_2()
   
 #ifdef ZiMultiplex_IOCP
   typedef Zi_Overlapped::Executed Executed;
-  Zi_Overlapped &overlapped = m_disconnectOverlapped;
+  Zi_Overlapped &overlapped = m_discOverlapped;
   ZeError e;
   overlapped.init(
       Executed::Member<&ZiConnection::overlappedDisconnect>::fn(this));

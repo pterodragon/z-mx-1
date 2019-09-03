@@ -30,7 +30,7 @@ case $build_os in
     Z_ZT_LIBS="-lpcre"
     Z_IO_LIBS="-ldl"
     Z_ZP_LIBS="-lpcap"
-    Z_TLS_LIBS = "-lmbedtls"
+    Z_TLS_LIBS="-lmbedtls -lmbedcrypto -lmbedx509"
     ;;
   mingw*)
     mingw=yes
@@ -46,7 +46,7 @@ case $build_os in
     Z_ZT_LIBS="-lpcre -liconv"
     Z_IO_LIBS="-lws2_32 -lwsock32"
     Z_ZP_LIBS="-lwpcap"
-    Z_TLS_LIBS="-lmbedtls"
+    Z_TLS_LIBS="-lmbedtls -lmbedcrypto -lmbedx509"
     ;;
   *)
     AX_PATH_LIB_CK(, [AC_MSG_ERROR([libck required])])
@@ -59,7 +59,7 @@ case $build_os in
     Z_ZT_LIBS="-lpcre"
     Z_IO_LIBS="-ldl"
     Z_ZP_LIBS="-lpcap"
-    Z_TLS_LIBS="-lmbedtls"
+    Z_TLS_LIBS="-lmbedtls -lmbedcrypto -lmbedx509"
     ;;
 esac
 AC_MSG_RESULT([${Z_MT_LIBS}])
@@ -123,6 +123,7 @@ AC_SUBST(Z_MT_LIBS)
 AC_SUBST(Z_ZT_LIBS)
 AC_SUBST(Z_IO_LIBS)
 AC_SUBST(Z_ZP_LIBS)
+AC_SUBST(Z_TLS_LIBS)
 
 AC_OUTPUT(Makefile \
 	zu/Makefile zu/src/Makefile zu/test/Makefile \

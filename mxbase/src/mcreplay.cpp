@@ -176,7 +176,7 @@ private:
 
 template <typename Heap> class Msg_ : public Heap, public ZmPolymorph {
 public:
-  // UDP over Ethernet maximum payload is 1472 without Jumbo frames
+  // UDP over Ethernet maximum payload is 1472 (without Jumbo frames)
   enum { Size = 1472 };
 
   inline Msg_(App *app) : m_app(app) { }
@@ -195,7 +195,7 @@ public:
 
 private:
   App			*m_app;
-  ZmRef<Connection>	m_cxn;	// FIXME - should not need to be a ZmRef
+  Connection		*m_cxn;
   MxMCapHdr		m_hdr;
   char			m_buf[Size];
 };
@@ -269,8 +269,8 @@ void App::read()
     if (msg->read(&m_file) != Zi::OK) { post(); return; }
   }
 
-  if (ZmRef<Connection> cxn = m_cxns->findKey(msg->group()))
-    msg->send(cxn);
+  if (auto node = m_cxns->findPtr(msg->group()))
+    msg->send(node->key());
 
   ZuBox<double> delay;
 
@@ -339,7 +339,7 @@ void Msg_<Heap>::send_(ZiIOContext &io)
 {
   io.init(ZiIOFn::Member<&Msg_<Heap>::sent_>::fn(ZmMkRef(this)),
       m_buf, m_hdr.len, 0, m_cxn->dest());
-  m_cxn = 0;
+  m_cxn = nullptr;
 }
 template <typename Heap>
 void Msg_<Heap>::sent_(ZiIOContext &io)

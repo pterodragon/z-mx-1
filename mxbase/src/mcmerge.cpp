@@ -45,7 +45,7 @@ void usage()
 
 class File : public ZuObject {
 public:
-  // UDP over Ethernet maximum payload is 1472 without Jumbo frames
+  // UDP over Ethernet maximum payload is 1472 (without Jumbo frames)
   enum { MsgSize = 1472 };
 
   template <typename Path>

@@ -161,10 +161,10 @@ private:
 
 template <typename Heap> class Msg_ : public Heap, public ZmPolymorph {
 public:
-  // UDP over Ethernet maximum payload is 1472 without Jumbo frames
+  // UDP over Ethernet maximum payload is 1472 (without Jumbo frames)
   enum { Size = 1472 };
 
-  template <typename Cxn> inline Msg_(Cxn &&cxn) : m_cxn(ZuFwd<Cxn>(cxn)) { }
+  inline Msg_(Connection *cxn) : m_cxn(cxn) { }
   ~Msg_() { }
 
   void recv(ZiIOContext &io);
@@ -172,7 +172,7 @@ public:
   void write();
 
 private:
-  ZmRef<Connection>	m_cxn; // FIXME - should not need to be a ZmRef
+  Connection		*m_cxn;
   MxMCapHdr		m_hdr;
   ZiSockAddr		m_addr;
   char			m_buf[Size];

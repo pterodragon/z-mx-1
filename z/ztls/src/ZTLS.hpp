@@ -55,7 +55,7 @@ namespace ZTLS {
 
 template <typename Heap> class IOBuf_ : public Heap, public ZmPolymorph {
 public:
-  // TCP over Ethernet maximum payload is 1460 without Jumbo frames
+  // TCP over Ethernet maximum payload is 1460 (without Jumbo frames)
   enum { Size = 1460 };
 
   inline IOBuf_(void *owner_, unsigned length_) :
@@ -233,7 +233,11 @@ private:
 
     do {
       n = impl()->process(m_rxOutBuf, m_rxOutOffset);
-      if (n < 0) { m_rxOutOffset = 0; return false; }
+      if (n < 0) {
+	m_rxOutOffset = 0;
+	disconnect_();
+	return false;
+      }
       if (!n) break;
       if (n < m_rxOutOffset)
 	memmove(m_rxOutBuf, m_rxOutBuf + n, m_rxOutOffset -= n);
@@ -316,7 +320,6 @@ public:
   void disconnect() { // App thread(s)
     app()->invoke(this, [](Link *link) { link->disconnect_(); });
   }
-protected:
   void disconnect_() { // TLS thread
     int n = mbedtls_ssl_close_notify(&m_ssl);
     if (n) app()->logWarning("mbedtls_ssl_close_notify() returned ", n);
@@ -462,7 +465,7 @@ private:
 	    }
 	}
 	this->app()->logError(s);
-	// this->disconnect_();
+	this->disconnect_();
       }
     }
   }
@@ -645,7 +648,12 @@ private:
       void connected(const char *alpn); // TLS handshake completed
       void disconnected();
       void connectFailed(bool transient);
-      void process(const char *data, unsigned len); // process received data
+      
+      // process() should return:
+      // +ve - the number of bytes processed
+      // 0   - more data needed - continue appending to Rx output buffer
+      // -ve - disconnect, abandon any remaining Rx dats
+      int process(const char *data, unsigned len); // process received data
     };
 
   };
@@ -669,8 +677,7 @@ friend Base;
       mbedtls_ssl_conf_session_tickets(this->conf(),
 	  MBEDTLS_SSL_SESSION_TICKETS_ENABLED);
 
-      mbedtls_ssl_conf_authmode(this->conf(), MBEDTLS_SSL_VERIFY_OPTIONAL);
-      // MBEDTLS_SSL_VERIFY_REQUIRED
+      mbedtls_ssl_conf_authmode(this->conf(), MBEDTLS_SSL_VERIFY_REQUIRED);
       if (!this->loadCA(caPath)) return false;
       if (alpn) mbedtls_ssl_conf_alpn_protocols(this->conf(), alpn);
       return true;
@@ -688,7 +695,12 @@ friend Base;
     struct Link : public SrvLink<App, Link> {
       void connected(const char *, const char *alpn); // TLS handshake completed
       void disconnected();
-      void process(const char *data, unsigned len); // process received data
+      
+      // process() should return:
+      // +ve - the number of bytes processed
+      // 0   - more data needed - continue appending to Rx output buffer
+      // -ve - disconnect, abandon any remaining Rx dats
+      int process(const char *data, unsigned len); // process received data
     };
 
     inline Link::TCP *accepted(const ZiCxnInfo &ci) {
@@ -751,8 +763,7 @@ friend Base;
 	  mbedtls_ssl_ticket_parse,
 	  &m_ticket_ctx);
 
-      mbedtls_ssl_conf_authmode(this->conf(), MBEDTLS_SSL_VERIFY_OPTIONAL);
-      // MBEDTLS_SSL_VERIFY_REQUIRED
+      mbedtls_ssl_conf_authmode(this->conf(), MBEDTLS_SSL_VERIFY_REQUIRED);
       if (!this->loadCA(caPath)) return false;
       if (alpn) mbedtls_ssl_conf_alpn_protocols(this->conf(), alpn);
 
@@ -783,7 +794,7 @@ friend Base;
 protected:
   inline unsigned nAccepts() { return 8; } // default
   inline void listening(const ZiListenInfo &info) { // default
-    this->logInfo("listening(", info.ip, ':', info.port);
+    this->logInfo("listening(", info.ip, ':', info.port, ')');
   }
   inline void listenFailed(bool transient) { // default
     this->logWarning("listen() failed ", transient ? "(transient)" : "");

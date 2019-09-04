@@ -30,7 +30,7 @@ public abstract class MxMDInstrRefData {
   @Value.Default
   public long strike() { return MxValue.NULL; }
   @Value.Default
-  public int outstandingShares() { return -1; }
+  public int outstandingUnits() { return -1; }
   @Value.Default
   public long adv() { return MxValue.NULL; }
 
@@ -53,12 +53,13 @@ public abstract class MxMDInstrRefData {
     if (putCall() != MxPutCall.NULL && strike() != MxValue.NULL) {
       s += ", strike=" + new MxValNDP(strike(), pxNDP());
     }
-    if (outstandingShares() > 0) {
-      s += ", outstandingShares=" + outstandingShares();
+    if (outstandingUnits() > 0) {
+      s += ", outstandingUnits=" + outstandingUnits();
     }
     if (adv() != MxValue.NULL) {
       s += ", adv=" + new MxValNDP(adv(), pxNDP());
     }
+    s += ", pxNDP=" + pxNDP() + ", qtyNDP=" + qtyNDP() + "}";
     return s;
   }
 }

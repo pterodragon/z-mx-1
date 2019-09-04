@@ -49,7 +49,7 @@ namespace MxMDInstrRefDataJNI {
       "I"				// pxNDP
       "I"				// qtyNDP
       "J"				// strike
-      "I"				// outstandingShares
+      "I"				// outstandingUnits
       "J"				// adv
       ")Lcom/shardmx/mxmd/MxMDInstrRefDataTuple;"
     }
@@ -72,7 +72,7 @@ jobject MxMDInstrRefDataJNI::ctor(JNIEnv *env, const MxMDInstrRefData &data)
       (jint)data.pxNDP,
       (jint)data.qtyNDP,
       (jlong)data.strike,
-      (jint)data.outstandingShares,
+      (jint)data.outstandingUnits,
       (jlong)data.adv);
 }
 

@@ -846,12 +846,8 @@ void MxMDPubLink::status(ZtString &out)
     thread_local ZmSemaphore sem;
     rxInvoke([&out, sem = &sem](Rx *rx) {
       const MxQueue *queue = rx->rxQueue();
-      MxQueue::Gap gap = queue->gap();
-      out <<
-	"head: " << queue->head() << 
-	"  gap: (" << gap.key() << ")," << gap.length() <<
-	"  length: " << queue->length() << 
-	"  count: " << queue->count();
+      out << *rx;
+      out << "\n    " << *queue;
       sem->post();
     });
     sem.wait();

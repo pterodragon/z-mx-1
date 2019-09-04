@@ -448,7 +448,7 @@ void MxMDCore::initCmds()
   addCmd(
       "ticksizes", "",
       ZvCmdFn::Member<&MxMDCore::ticksizes>::fn(this),
-      "dump ticksizes in CSV format",
+      "dump tick sizes in CSV format",
       "usage: ticksizes [VENUE [SEGMENT]]\n"
       "dump tick sizes in CSV format");
   addCmd(
@@ -734,8 +734,8 @@ void MxMDCore::instrument_(ZvCmdServerCxn *,
 	  "\nputCall: " << MxPutCall::name(refData.putCall) <<
 	  "\nstrike: " << MxValNDP{refData.strike, refData.pxNDP};
     }
-    if (*refData.outstandingShares)
-      out << "\noutstandingShares: " << refData.outstandingShares;
+    if (*refData.outstandingUnits)
+      out << "\noutstandingUnits: " << refData.outstandingUnits;
     if (*refData.adv)
       out << "\nADV: " << MxValNDP{refData.adv, refData.pxNDP};
     if (ob) {

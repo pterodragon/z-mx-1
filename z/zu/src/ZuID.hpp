@@ -42,7 +42,8 @@
 // An ZuID is a union of a 64bit unsigned integer with an 8-byte
 // zero-padded string; this permits short human-readable string identifiers
 // to be compared and hashed very rapidly using integer 64bit operations
-// without needing a facility such as DNS to map between names and numbers
+// without needing a map between names and numbers
+
 // Note: the string will not be null-terminated if all 8 bytes are in use
 
 // the implementation assumes the architecture supports misaligned 64bit loads

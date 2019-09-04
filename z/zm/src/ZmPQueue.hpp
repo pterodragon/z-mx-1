@@ -1673,7 +1673,7 @@ public:
     return m_flags;
   }
 
-  template <typename S> inline void print(S &s) {
+  template <typename S> inline void print(S &s) const {
     ReadGuard guard(m_lock);
     s << "gap: (" << m_gap.key() << " +" << m_gap.length()
       << ")  flags: " << PrintFlags{m_flags}

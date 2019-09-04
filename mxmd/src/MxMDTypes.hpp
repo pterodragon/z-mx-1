@@ -59,10 +59,12 @@ struct MxMDTickSize_MinPxAccessor : public ZuAccessor<MxMDTickSize, MxValue> {
 struct MxMDInstrRefData {	// instrument reference data ("static data")
   MxValue	strike;		// strike (null if not option)
   MxValue	adv;		// average daily volume (often null)
+  MxID		baseAsset;	// base asset (often same as symbol)
+  MxID		quoteAsset;	// quote asset (currency)
   MxID		underVenue;	// underlying venue (null if no underlying)
   MxID		underSegment;	// underlying segment (can be null)
   MxUInt	mat;		// maturity (null if not future/option)
-  MxUInt	outstandingShares; // (null if not stock)
+  MxUInt	outstandingUnits; // (null if not an issued security/asset)
   MxIDString	symbol;		// symbol
   MxIDString	altSymbol;	// alternative symbol
   MxIDString	underlying;	// underlying ID (null if no underlying)

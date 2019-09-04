@@ -37,6 +37,8 @@ namespace MxMDInstrRefDataJNI {
   ZJNI::JavaMethod ctorMethod[] = {
     { "of", "("
       "Z"				// tradeable
+      "Ljava/lang/String;"		// baseAsset
+      "Ljava/lang/String;"		// quoteAsset
       "Lcom/shardmx/mxbase/MxInstrIDSrc;"	// idSrc
       "Lcom/shardmx/mxbase/MxInstrIDSrc;"	// altIDSrc
       "Lcom/shardmx/mxbase/MxPutCall;"	// putCall
@@ -60,6 +62,8 @@ jobject MxMDInstrRefDataJNI::ctor(JNIEnv *env, const MxMDInstrRefData &data)
 {
   return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
       (jboolean)data.tradeable,
+      ZJNI::s2j(env, data.baseAsset),
+      ZJNI::s2j(env, data.quoteAsset),
       MxInstrIDSrcJNI::ctor(env, data.idSrc),
       MxInstrIDSrcJNI::ctor(env, data.altIDSrc),
       MxPutCallJNI::ctor(env, data.putCall),

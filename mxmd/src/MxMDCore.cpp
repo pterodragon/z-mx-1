@@ -722,6 +722,8 @@ void MxMDCore::instrument_(ZvCmdServerCxn *,
     const MxMDInstrRefData &refData = instr->refData();
     out <<
       "ID: " << instr->id() <<
+      "\nbaseAsset: " << refData.baseAsset <<
+      "\nquoteAsset: " << refData.quoteAsset <<
       "\nIDSrc: " << refData.idSrc <<
       "\nsymbol: " << refData.symbol <<
       "\naltIDSrc: " << refData.altIDSrc <<

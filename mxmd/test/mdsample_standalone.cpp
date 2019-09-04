@@ -277,6 +277,8 @@ int startFeed(MxMDLib *md, MxMDFeed *feed)
 
       // minimal reference data (just the native symbol and RIC)
 
+      refData.baseAsset = *ticker;
+      refData.quoteAsset = "JPY";
       refData.idSrc = MxInstrIDSrc::EXCH;
       refData.symbol = *ticker;
       refData.altIDSrc = MxInstrIDSrc::RIC;

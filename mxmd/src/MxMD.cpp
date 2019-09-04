@@ -1492,6 +1492,8 @@ void MxMDInstrument::update_(
     const MxMDInstrRefData &refData, const MxMDOrderNDPFn &orderNDPFn)
 {
   m_refData.tradeable.update(refData.tradeable);
+  m_refData.baseAsset.update(refData.baseAsset);
+  m_refData.quoteAsset.update(refData.quoteAsset);
   m_refData.idSrc.update(refData.idSrc);
   m_refData.symbol.update(refData.symbol);
   m_refData.altIDSrc.update(refData.altIDSrc);
@@ -1517,7 +1519,7 @@ void MxMDInstrument::update_(
   }
   m_refData.putCall.update(refData.putCall);
   m_refData.strike.update(refData.strike);
-  m_refData.outstandingShares.update(refData.outstandingShares);
+  m_refData.outstandingUnits.update(refData.outstandingUnits);
   m_refData.adv.update(refData.adv, MxValueReset);
 }
 

@@ -248,6 +248,8 @@ public:
 #undef Offset
 #define Offset(x) offsetof(Data, refData) + offsetof(MxMDInstrRefData, x)
     add(new MxBoolCol("tradeable", Offset(tradeable), -1, 1));
+    add(new MxIDCol("baseAsset", Offset(baseAsset)));
+    add(new MxIDCol("quoteAsset", Offset(quoteAsset)));
     add(new MxEnumCol<MxInstrIDSrc::CSVMap>("idSrc", Offset(idSrc)));
     add(new MxIDStrCol("symbol", Offset(symbol)));
     add(new MxEnumCol<MxInstrIDSrc::CSVMap>("altIDSrc", Offset(altIDSrc)));
@@ -260,7 +262,7 @@ public:
     add(new MxNDPCol("pxNDP", Offset(pxNDP)));
     add(new MxNDPCol("qtyNDP", Offset(qtyNDP)));
     this->addValCol(app, "strike", Offset(strike), Offset(pxNDP));
-    add(new MxUIntCol("outstandingShares", Offset(outstandingShares)));
+    add(new MxUIntCol("outstandingUnits", Offset(outstandingUnits)));
     this->addValCol(app, "adv", Offset(adv), Offset(pxNDP));
 #undef Offset
   }

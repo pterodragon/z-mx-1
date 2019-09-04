@@ -182,7 +182,7 @@ namespace ZmPQueue_ {
 ZuTupleFields(ZmPQueue_Gap, 1, key, 2, length);
 
 template <typename Item_, class NTP = ZmPQueue_Defaults>
-class ZmPQueue : public NTP::Base {
+class ZmPQueue : public ZuPrintable, public NTP::Base {
   ZmPQueue(const ZmPQueue &);
   ZmPQueue &operator =(const ZmPQueue &);	// prevent mis-use
 
@@ -1009,6 +1009,15 @@ public:
     }
     m_length = 0;
     m_count = 0;
+  }
+
+public:
+  template <typename S> void print(S &s) const {
+    ReadGuard guard(m_lock);
+    s << "head: " << m_headKey
+      << "  tail: " << m_tailKey
+      << "  length: " << m_length
+      << "  count: " << m_count;
   }
 
 private:

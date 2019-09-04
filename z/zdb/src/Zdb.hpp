@@ -589,7 +589,7 @@ public:
   // first RN that is committed (will be ZdbMaxRN if DB is empty)
   inline ZdbRN minRN() { return m_minRN; }
   // next RN that will be allocated
-  inline ZdbRN allocRN() { return m_allocRN; }
+  inline ZdbRN nextRN() { return m_nextRN; }
 
   // create new placeholder record (null RN, in-memory only, never in DB)
   ZmRef<ZdbAnyPOD> placeholder();
@@ -598,6 +598,8 @@ public:
   ZmRef<ZdbAnyPOD> push();
   // create new record (idempotent)
   ZmRef<ZdbAnyPOD> push(ZdbRN rn);
+  // allocate RN only for new record, for later use with push(rn)
+  ZdbRN pushRN();
   // commit record following push() - causes replication / sync
   void put(ZdbAnyPOD *);
   // abort push()
@@ -627,7 +629,7 @@ public:
   // display sequence: 
   //   name, id, recSize, compress, cacheMode, cacheSize,
   //   path, fileSize, fileRecs, filesMax, preAlloc,
-  //   minRN, allocRN, fileRN,
+  //   minRN, nextRN, fileRN,
   //   cacheLoads, cacheMisses, fileLoads, fileMisses
   struct Telemetry {
     typedef ZuStringN<124> Path;
@@ -637,7 +639,7 @@ public:
     Name	name;		// primary key
     uint64_t	fileSize;
     uint64_t	minRN;
-    uint64_t	allocRN;	// graphable
+    uint64_t	nextRN;	// graphable
     uint64_t	fileRN;
     uint64_t	cacheLoads;	// graphable (*)
     uint64_t	cacheMisses;	// graphable (*)
@@ -719,7 +721,7 @@ private:
   unsigned			m_fileSize = 0;
   Lock				m_lock;
     ZdbRN			  m_minRN = ZdbMaxRN;
-    ZdbRN			  m_allocRN = 0;
+    ZdbRN			  m_nextRN = 0;
     ZdbRN			  m_fileRN = 0;
     ZdbLRU			  m_lru;
     ZmRef<Zdb_Cache>		  m_cache;

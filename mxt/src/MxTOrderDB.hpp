@@ -140,7 +140,7 @@ public:
       }
     }
     m_purgeClosedRN = m_purgeOrderRN;
-    m_purgeOrderRN = m_closedDB->allocRN();
+    m_purgeOrderRN = m_closedDB->nextRN();
   }
 
 private:

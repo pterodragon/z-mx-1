@@ -1251,7 +1251,7 @@ void ZdbEnv::dbStateRefresh_()
   unsigned i, n = m_dbs.length();
   for (i = 0; i < n; i++) {
     ZdbAny *db = m_dbs[i];
-    dbState[i] = db ? db->allocRN() : (ZdbRN)0;
+    dbState[i] = db ? db->nextRN() : (ZdbRN)0;
   }
 }
 
@@ -1382,11 +1382,11 @@ ZmRef<ZdbAnyPOD> ZdbAny::replicated_(
   alloc(pod);
   if (ZuUnlikely(!pod)) return nullptr;
   Guard guard(m_lock);
-  if (m_allocRN <= rn) m_allocRN = rn + 1;
+  if (m_nextRN <= rn) m_nextRN = rn + 1;
   if (op != ZdbOp::Del) {
     if (prevRN != rn && (range.off() || range.len() < m_dataSize)) {
       ZmRef<ZdbAnyPOD> prev = m_cache->find(prevRN);
-      if (ZuUnlikely(!prev) && prevRN < m_allocRN) {
+      if (ZuUnlikely(!prev) && prevRN < m_nextRN) {
 	Zdb_FileRec rec = rn2file(prevRN, false);
 	if (rec) prev = read_(rec);
       }
@@ -1638,7 +1638,7 @@ void ZdbAny::recover(Zdb_File *file)
       default:
 	return;
     }
-    if (m_allocRN <= rn) m_allocRN = rn + 1;
+    if (m_nextRN <= rn) m_nextRN = rn + 1;
     if (m_fileRN <= rn) m_fileRN = rn + 1;
   }
 }
@@ -1742,7 +1742,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::push_()
   alloc(pod);
   if (ZuUnlikely(!pod)) return nullptr;
   Guard guard(m_lock);
-  ZdbRN rn = m_allocRN++;
+  ZdbRN rn = m_nextRN++;
   pod->init(rn, ZdbRange{0, m_dataSize});
   return pod;
 }
@@ -1765,8 +1765,8 @@ ZmRef<ZdbAnyPOD> ZdbAny::push_(ZdbRN rn)
   if (ZuUnlikely(!pod)) return nullptr;
   {
     Guard guard(m_lock);
-    if (ZuLikely(m_allocRN <= rn))
-      m_allocRN = rn + 1;
+    if (ZuLikely(m_nextRN <= rn))
+      m_nextRN = rn + 1;
     else {
       ZmRef<ZdbAnyPOD> pod_ = get__(rn);
       if (ZuUnlikely(pod_ && pod_->committed())) return nullptr;
@@ -1776,11 +1776,17 @@ ZmRef<ZdbAnyPOD> ZdbAny::push_(ZdbRN rn)
   return pod;
 }
 
+ZdbRN ZdbAny::pushRN()
+{
+  Guard guard(m_lock);
+  return m_nextRN++;
+}
+
 ZmRef<ZdbAnyPOD> ZdbAny::get(ZdbRN rn)
 {
   ZmRef<ZdbAnyPOD> pod;
   Guard guard(m_lock);
-  if (ZuUnlikely(rn >= m_allocRN)) return nullptr;
+  if (ZuUnlikely(rn >= m_nextRN)) return nullptr;
   ++m_cacheLoads;
   if (ZuLikely(pod = m_cache->find(rn))) {
     if (!pod->committed()) return nullptr;
@@ -1803,7 +1809,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::get(ZdbRN rn)
 ZmRef<ZdbAnyPOD> ZdbAny::get_(ZdbRN rn)
 {
   Guard guard(m_lock);
-  if (ZuUnlikely(rn >= m_allocRN)) return nullptr;
+  if (ZuUnlikely(rn >= m_nextRN)) return nullptr;
   ZmRef<ZdbAnyPOD> pod = get__(rn);
   if (ZuUnlikely(!pod || !pod->committed())) return nullptr;
   return pod;
@@ -1880,7 +1886,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *prev)
   ZdbRN rn;
   {
     Guard guard(m_lock);
-    rn = m_allocRN++;
+    rn = m_nextRN++;
   }
   memcpy(pod->ptr(), prev->ptr(), m_dataSize);
   ZdbRN prevRN = prev->rn();
@@ -1897,8 +1903,8 @@ ZmRef<ZdbAnyPOD> ZdbAny::update(ZdbAnyPOD *prev, ZdbRN rn)
   if (ZuUnlikely(!pod)) return nullptr;
   {
     Guard guard(m_lock);
-    if (ZuLikely(m_allocRN <= rn))
-      m_allocRN = rn + 1;
+    if (ZuLikely(m_nextRN <= rn))
+      m_nextRN = rn + 1;
     else {
       ZmRef<ZdbAnyPOD> pod_ = get__(rn);
       if (ZuUnlikely(pod_ && pod_->committed())) return nullptr;
@@ -1919,7 +1925,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::update_(ZdbRN prevRN)
   ZdbRN rn;
   {
     Guard guard(m_lock);
-    rn = m_allocRN++;
+    rn = m_nextRN++;
   }
   if (ZuUnlikely(prevRN == ZdbNullRN)) prevRN = rn;
   pod->update(rn, prevRN, ZdbRange{0, m_dataSize});
@@ -1934,8 +1940,8 @@ ZmRef<ZdbAnyPOD> ZdbAny::update_(ZdbRN prevRN, ZdbRN rn)
   if (ZuUnlikely(!pod)) return nullptr;
   {
     Guard guard(m_lock);
-    if (m_allocRN > rn) return nullptr;
-    m_allocRN = rn + 1;
+    if (m_nextRN > rn) return nullptr;
+    m_nextRN = rn + 1;
   }
   if (ZuUnlikely(prevRN == ZdbNullRN)) prevRN = rn;
   pod->update(rn, prevRN, ZdbRange{0, m_dataSize});
@@ -1964,7 +1970,7 @@ void ZdbAny::del(ZdbAnyPOD *pod)
   {
     Guard guard(m_lock);
     cacheDel_(pod->rn());
-    rn = m_allocRN++;
+    rn = m_nextRN++;
   }
   pod->update(rn, pod->rn(), ZdbRange{}, ZdbDeleted);
   m_env->write(pod, Zdb_Msg::Rep, ZdbOp::Del, false);
@@ -1979,7 +1985,7 @@ void ZdbAny::purge(ZdbRN minRN)
   }
   while (rn < minRN) {
     Guard guard(m_lock);
-    if (rn >= m_allocRN) return;
+    if (rn >= m_nextRN) return;
     if (ZmRef<ZdbAnyPOD> pod = get__(rn)) {
       cacheDel_(rn);
       m_minRN = rn;
@@ -2004,7 +2010,7 @@ void ZdbAny::telemetry(Telemetry &data) const
   {
     ReadGuard guard(m_lock);
     data.minRN = m_minRN;
-    data.allocRN = m_allocRN;
+    data.nextRN = m_nextRN;
     data.fileRN = m_fileRN;
     data.cacheLoads = m_cacheLoads;
     data.cacheMisses = m_cacheMisses;

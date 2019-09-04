@@ -35,7 +35,7 @@ public:
     open_(m_dbhost, "dbhost");
     write_(m_dbhost, "time,id,priority,state,voted,ip,port\n");
     open_(m_db, "db");
-    write_(m_db, "time,name,id,recSize,compress,cacheMode,cacheSize,path,fileSize,fileRecs,filesMax,preAlloc,minRN,allocRN,fileRN,cacheLoads,cacheMisses,fileLoads,fileMisses\n");
+    write_(m_db, "time,name,id,recSize,compress,cacheMode,cacheSize,path,fileSize,fileRecs,filesMax,preAlloc,minRN,nextRN,fileRN,cacheLoads,cacheMisses,fileLoads,fileMisses\n");
   }
 
 private:
@@ -228,7 +228,7 @@ private:
 	  << ',' << data.filesMax
 	  << ',' << data.preAlloc
 	  << ',' << data.minRN
-	  << ',' << data.allocRN
+	  << ',' << data.nextRN
 	  << ',' << data.fileRN
 	  << ',' << data.cacheLoads
 	  << ',' << data.cacheMisses

@@ -117,7 +117,7 @@ void active() {
       if (ZmRef<ZdbPOD<Order> > pod = orders->get_(i))
 	orders->del(pod);
   }
-  initRN = orders->allocRN();
+  initRN = orders->nextRN();
   if (append) {
     for (unsigned i = 0; i < nOps; i++) {
       ZmRef<ZdbPOD<Order> > pod = orders->push(initRN++);

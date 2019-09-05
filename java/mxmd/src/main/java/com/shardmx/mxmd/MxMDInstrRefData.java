@@ -9,6 +9,8 @@ import com.shardmx.mxbase.*;
 public abstract class MxMDInstrRefData {
   @Value.Default
   public boolean tradeable() { return true; }
+  public abstract String baseAsset();
+  public abstract String quoteAsset();
   public abstract MxInstrIDSrc idSrc();
   @Value.Default @Nullable
   public MxInstrIDSrc altIDSrc() { return MxInstrIDSrc.NULL; }
@@ -38,6 +40,8 @@ public abstract class MxMDInstrRefData {
   public String toString() {
     String s = new String()
       + "{tradeable=" + tradeable()
+      + ", baseAsset=" + baseAsset()
+      + ", quoteAsset=" + quoteAsset()
       + ", idSrc=" + idSrc()
       + ", symbol=" + symbol();
     if (altIDSrc() != MxInstrIDSrc.NULL) { s += ", altIDSrc=" + altIDSrc(); }

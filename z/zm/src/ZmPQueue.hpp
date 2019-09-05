@@ -1340,10 +1340,8 @@ public:
     {
       Guard guard(m_lock);
 #if 0
-      std::cerr << (ZuStringN<100>()
-	  << "start PRE  "
-	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
-	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+      std::cerr << (ZuStringN<200>()
+	  << "start() PRE  " << *this << "\n  " << *(app->txQueue()) << '\n')
 	<< std::flush;
 #endif
       bool alreadyRunning = m_flags & Running;
@@ -1362,10 +1360,8 @@ public:
 	m_flags |= Resending;
       m_flags &= ~(SendFailed | ResendFailed);
 #if 0
-      std::cerr << (ZuStringN<100>()
-	  << "start POST "
-	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
-	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+      std::cerr << (ZuStringN<200>()
+	  << "start() POST " << *this << "\n  " << *(app->txQueue()) << '\n')
 	<< std::flush;
 #endif
     }
@@ -1389,10 +1385,8 @@ public:
     {
       Guard guard(m_lock);
 #if 0
-      std::cerr << (ZuStringN<100>()
-	  << "start PRE  "
-	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
-	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+      std::cerr << (ZuStringN<200>()
+	  << "start() PRE  " << *this << "\n  " << *(app->txQueue()) << '\n')
 	<< std::flush;
 #endif
       bool alreadyRunning = m_flags & Running;
@@ -1412,10 +1406,8 @@ public:
 	m_flags |= Resending;
       m_flags &= ~(SendFailed | ResendFailed);
 #if 0
-      std::cerr << (ZuStringN<100>()
-	  << "start POST "
-	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
-	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+      std::cerr << (ZuStringN<200>()
+	  << "start() POST " << *this << "\n  " << *(app->txQueue()) << '\n')
 	<< std::flush;
 #endif
     }
@@ -1444,6 +1436,11 @@ public:
     m_sendKey = m_ackdKey = m_archiveKey = key;
     m_gap = Gap();
     app->txQueue()->reset(key);
+#if 0
+      std::cerr << (ZuStringN<200>()
+	  << "txReset() " << *this << "\n  " << *(app->txQueue()) << '\n')
+	<< std::flush;
+#endif
   }
 
   // send message (with key already allocated)
@@ -1456,6 +1453,11 @@ public:
 	m_sendKey <= Fn(msg->item()).key();
       app->txQueue()->enqueue(ZuMv(msg));
       if (scheduleSend) m_flags |= Sending;
+#if 0
+      std::cerr << (ZuStringN<200>()
+	  << "send(Msg) " << *this << "\n  " << *(app->txQueue()) << '\n')
+	<< std::flush;
+#endif
     }
     if (scheduleSend) app->scheduleSend();
   }
@@ -1481,6 +1483,11 @@ public:
       if (key > m_sendKey) m_sendKey = key;
       scheduleArchive = !(m_flags & Archiving) && key > m_archiveKey;
       if (scheduleArchive) m_flags |= Archiving;
+#if 0
+      std::cerr << (ZuStringN<200>()
+	  << "ackd(Key) " << *this << "\n  " << *(app->txQueue()) << '\n')
+	<< std::flush;
+#endif
     }
     if (scheduleArchive) app->scheduleArchive();
   }
@@ -1529,10 +1536,8 @@ public:
       Guard guard(m_lock);
       auto txQueue = app->txQueue();
 #if 0
-      std::cerr << (ZuStringN<100>()
-	  << "send "
-	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
-	  << ' ' << m_sendKey << ' ' << txQueue->tail() << '\n')
+      std::cerr << (ZuStringN<200>()
+	  << "send() " << *this << "\n  " << *(app->txQueue()) << '\n')
 	<< std::flush;
 #endif
       if (!(m_flags & Running)) { m_flags &= ~Sending; return; }
@@ -1570,10 +1575,8 @@ public:
       m_flags |= Sending | SendFailed;
       m_sendKey = prevKey;
 #if 0
-      std::cerr << (ZuStringN<100>()
-	  << "sendFailed "
-	  << (int)m_running << ' ' << (int)m_sending << ' ' << (int)m_sendFailed
-	  << ' ' << m_sendKey << ' ' << app->txQueue()->tail() << '\n')
+      std::cerr << (ZuStringN<200>()
+	  << "send() FAIL " << *this << "\n  " << *(app->txQueue()) << '\n')
 	<< std::flush;
 #endif
     }
@@ -1595,6 +1598,11 @@ public:
 	if (msg) break;
       }
       if (!scheduleArchive) m_flags &= ~Archiving;
+#if 0
+      std::cerr << (ZuStringN<200>()
+	  << "archive() " << *this << "\n  " << *(app->txQueue()) << '\n')
+	<< std::flush;
+#endif
     }
     if (msg)
       app->archive_(msg);

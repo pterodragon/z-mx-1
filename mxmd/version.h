@@ -24,9 +24,9 @@
 	 (((unsigned long)(minor))<<16) | \
 	 ((unsigned long)(build)))
 
-#define MXMD_VERSION MXMD_VULONG(8,8,0)	// <-- manually maintained
-#define MXMD_VERNAME "8.8.0"		// <-- ''
-#define MXMD_VERMSRC 8,8,0,0		// <-- ''
+#define MXMD_VERSION MXMD_VULONG(8,9,0)	// <-- manually maintained
+#define MXMD_VERNAME "8.9.0"		// <-- ''
+#define MXMD_VERMSRC 8,9,0,0		// <-- ''
 
 #define MXMD_VMAJOR(n) (((unsigned long)n)>>24)
 #define MXMD_VMINOR(n) ((((unsigned long)n)>>16) & 0xff)

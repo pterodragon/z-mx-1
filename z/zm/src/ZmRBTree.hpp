@@ -307,27 +307,29 @@ public:
   template <typename, typename> friend class ZmRBTree;
 
   protected:
-    inline NodeFn() : m_right(0), m_left(0), m_dup(0), m_parent(0) { }
+    ZuInline NodeFn() { this->init(); }
 
   private:
-    inline bool black() {
+    ZuInline void init() { memset(this, 0, sizeof(NodeFn)); }
+
+    ZuInline bool black() {
       return m_parent & (uintptr_t)1;
     }
-    inline void black(bool black) {
+    ZuInline void black(bool black) {
       black ? (m_parent |= (uintptr_t)1) : (m_parent &= ~(uintptr_t)1);
     }
 
     // access to these methods is always guarded, so no need to protect
     // the returned object against concurrent deletion; these are private
-    inline Node *right() const { return m_right; }
-    inline Node *left() const { return m_left; }
-    inline Node *dup() const { return m_dup; }
-    inline Node *parent() const { return (Node *)(m_parent & ~(uintptr_t)1); }
+    ZuInline Node *right() const { return m_right; }
+    ZuInline Node *left() const { return m_left; }
+    ZuInline Node *dup() const { return m_dup; }
+    ZuInline Node *parent() const { return (Node *)(m_parent & ~(uintptr_t)1); }
 
-    inline void right(Node *n) { m_right = n; }
-    inline void left(Node *n) { m_left = n; }
-    inline void dup(Node *n) { m_dup = n; }
-    inline void parent(Node *n) {
+    ZuInline void right(Node *n) { m_right = n; }
+    ZuInline void left(Node *n) { m_left = n; }
+    ZuInline void dup(Node *n) { m_dup = n; }
+    ZuInline void parent(Node *n) {
       m_parent = (uintptr_t)n | (m_parent & (uintptr_t)1);
     }
 
@@ -581,6 +583,7 @@ public:
     } else
       delRebalance(node);
 
+    node->Fn::init();
     --m_count;
   }
   template <typename Index_>
@@ -1127,6 +1130,7 @@ protected:
       if (parent && parent->Fn::dup() == node) {
 	parent->Fn::dup(dup);
 	if (dup) dup->Fn::parent(parent);
+	node->Fn::init();
 	nodeDeref(node);
 	nodeDelete(node);
 	--m_count;
@@ -1153,6 +1157,7 @@ protected:
 	dup->black(node->black());
 	if (node == m_minimum) m_minimum = dup;
 	if (node == m_maximum) m_maximum = dup;
+	node->Fn::init();
 	nodeDeref(node);
 	nodeDelete(node);
 	--m_count;
@@ -1162,6 +1167,7 @@ protected:
 
     delRebalance(node);
 
+    node->Fn::init();
     nodeDeref(node);
     nodeDelete(node);
     --m_count;

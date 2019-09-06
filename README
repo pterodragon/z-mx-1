@@ -1,9 +1,11 @@
 Debian / Ubuntu setup:
 
+For Clang 8+ on Ubuntu 16.04 (Xenial), see http://apt.llvm.org
+
 As root:
 
 # apt install openjdk-8-jdk maven
-# apt install autoconf automake libtool gcc g++ clang gdb valgrind libhwloc-dev libpcre3-dev libreadline-dev libpcap-dev
+# apt install autoconf automake libtool gcc g++ gdb valgrind libhwloc-dev libpcre3-dev libreadline-dev libpcap-dev libmbedtls-dev
 
 # tar xvJf libck-ubuntu_18.04LTS-x86_64.tar.xz -C /usr/local
 

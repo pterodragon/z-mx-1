@@ -179,7 +179,9 @@ protected:
     if (n) {
       switch (n) {
 	case MBEDTLS_ERR_SSL_WANT_READ:
+#ifdef MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS
 	case MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS:
+#endif
 	  break;
 	case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
 	case MBEDTLS_ERR_SSL_CONN_EOF:
@@ -216,7 +218,9 @@ private:
     if (n < 0) {
       switch (n) {
 	case MBEDTLS_ERR_SSL_WANT_READ:
+#ifdef MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS
 	case MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS:
+#endif
 	  break;
 	case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
 	case MBEDTLS_ERR_SSL_CONN_EOF:

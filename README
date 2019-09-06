@@ -3,7 +3,7 @@ Debian / Ubuntu setup:
 As root:
 
 # apt install openjdk-8-jdk maven
-# apt install autoconf automake libtool gcc g++ clang gdb valgrind libhwloc-dev libpcre3-dev libreadline-dev
+# apt install autoconf automake libtool gcc g++ clang gdb valgrind libhwloc-dev libpcre3-dev libreadline-dev libpcap-dev
 
 # tar xvJf libck-ubuntu_18.04LTS-x86_64.tar.xz -C /usr/local
 

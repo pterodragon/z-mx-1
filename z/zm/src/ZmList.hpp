@@ -170,16 +170,18 @@ public:
   friend class ZmList<Item, NTP>::Iterator_;
 
   protected:
-    inline NodeFn() : m_next(0), m_prev(0) { }
+    ZuInline NodeFn() { init(); }
 
   private:
+    ZuInline void init() { memset(this, 0, sizeof(NodeFn)); }
+
     // access to Node instances is always guarded, so no need to protect
     // the returned object against concurrent deletion
-    inline Node *next() { return m_next; }
-    inline Node *prev() { return m_prev; }
+    ZuInline Node *next() { return m_next; }
+    ZuInline Node *prev() { return m_prev; }
 
-    inline void next(Node *n) { m_next = n; }
-    inline void prev(Node *n) { m_prev = n; }
+    ZuInline void next(Node *n) { m_next = n; }
+    ZuInline void prev(Node *n) { m_prev = n; }
 
     Node	*m_next, *m_prev;
   };
@@ -379,6 +381,7 @@ friend class ReadIterator;
 
     NodeRef ret = node;
 
+    node->Fn::init();
     nodeDeref(node);
     --m_count;
 
@@ -445,6 +448,7 @@ friend class ReadIterator;
 
     NodeRef ret = node;
 
+    node->Fn::init();
     nodeDeref(node);
     --m_count;
 
@@ -603,6 +607,7 @@ protected:
     else
       nextNode->Fn::prev(prevNode);
 
+    node->Fn::init();
     --m_count;
   }
 

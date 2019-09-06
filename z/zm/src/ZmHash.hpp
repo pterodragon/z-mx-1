@@ -391,9 +391,11 @@ public:
   template <typename> friend class ZmHash<Key, NTP>::Iterator_;
 
   protected:
-    inline NodeFn() : m_next(0) { }
+    ZuInline NodeFn() : m_next(0) { }
 
   private:
+    ZuInline void init() { m_next = 0; }
+
     // access to these methods is always guarded, so no need to protect
     // the returned object against concurrent deletion; these are private
     ZuInline Node *next() const { return m_next; }
@@ -851,6 +853,7 @@ private:
     else
       prevNode->Fn::next(node->Fn::next());
 
+    node->Fn::init();
     --m_count;
 
     NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
@@ -885,6 +888,7 @@ private:
     else
       prevNode->Fn::next(node->Fn::next());
 
+    node->Fn::init();
     --m_count;
 
     NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
@@ -1000,6 +1004,7 @@ private:
     } else
       prevNode->Fn::next(node->Fn::next());
 
+    node->Fn::init();
     nodeDeref(node);
     nodeDelete(node);
     --m_count;

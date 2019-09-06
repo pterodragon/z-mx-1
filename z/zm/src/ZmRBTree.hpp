@@ -307,10 +307,10 @@ public:
   template <typename, typename> friend class ZmRBTree;
 
   protected:
-    ZuInline NodeFn() { this->init(); }
+    ZuInline NodeFn() { }
 
   private:
-    ZuInline void init() { memset(this, 0, sizeof(NodeFn)); }
+    ZuInline void init() { m_right = m_left = m_dup = 0; m_parent = 0; }
 
     ZuInline bool black() {
       return m_parent & (uintptr_t)1;
@@ -385,6 +385,8 @@ public:
   inline unsigned count() const { return m_count; }
 
   inline void add(Node *newNode) {
+    newNode->init();
+
     Guard guard(m_lock);
     Node *node;
 
@@ -583,7 +585,6 @@ public:
     } else
       delRebalance(node);
 
-    node->Fn::init();
     --m_count;
   }
   template <typename Index_>
@@ -1130,7 +1131,6 @@ protected:
       if (parent && parent->Fn::dup() == node) {
 	parent->Fn::dup(dup);
 	if (dup) dup->Fn::parent(parent);
-	node->Fn::init();
 	nodeDeref(node);
 	nodeDelete(node);
 	--m_count;
@@ -1157,7 +1157,6 @@ protected:
 	dup->black(node->black());
 	if (node == m_minimum) m_minimum = dup;
 	if (node == m_maximum) m_maximum = dup;
-	node->Fn::init();
 	nodeDeref(node);
 	nodeDelete(node);
 	--m_count;
@@ -1167,7 +1166,6 @@ protected:
 
     delRebalance(node);
 
-    node->Fn::init();
     nodeDeref(node);
     nodeDelete(node);
     --m_count;

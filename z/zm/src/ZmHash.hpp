@@ -391,7 +391,7 @@ public:
   template <typename> friend class ZmHash<Key, NTP>::Iterator_;
 
   protected:
-    ZuInline NodeFn() : m_next(0) { }
+    ZuInline NodeFn() { }
 
   private:
     ZuInline void init() { m_next = 0; }
@@ -637,6 +637,7 @@ public:
 private:
   template <typename NodeRef_>
   inline void addNode_(NodeRef_ &&node, uint32_t code) {
+    node->Fn::init();
     {
       unsigned bits = m_bits;
 
@@ -853,7 +854,6 @@ private:
     else
       prevNode->Fn::next(node->Fn::next());
 
-    node->Fn::init();
     --m_count;
 
     NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
@@ -888,7 +888,6 @@ private:
     else
       prevNode->Fn::next(node->Fn::next());
 
-    node->Fn::init();
     --m_count;
 
     NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
@@ -1004,7 +1003,6 @@ private:
     } else
       prevNode->Fn::next(node->Fn::next());
 
-    node->Fn::init();
     nodeDeref(node);
     nodeDelete(node);
     --m_count;

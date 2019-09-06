@@ -173,7 +173,7 @@ public:
     ZuInline NodeFn() { init(); }
 
   private:
-    ZuInline void init() { memset(this, 0, sizeof(NodeFn)); }
+    ZuInline void init() { m_next = m_prev = 0; }
 
     // access to Node instances is always guarded, so no need to protect
     // the returned object against concurrent deletion
@@ -381,7 +381,6 @@ friend class ReadIterator;
 
     NodeRef ret = node;
 
-    node->Fn::init();
     nodeDeref(node);
     --m_count;
 
@@ -448,7 +447,6 @@ friend class ReadIterator;
 
     NodeRef ret = node;
 
-    node->Fn::init();
     nodeDeref(node);
     --m_count;
 
@@ -607,7 +605,6 @@ protected:
     else
       nextNode->Fn::prev(prevNode);
 
-    node->Fn::init();
     --m_count;
   }
 

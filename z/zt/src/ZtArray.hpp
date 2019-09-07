@@ -674,7 +674,16 @@ public:
 // set length
 
   ZuInline void length(unsigned length) {
-    this->length(length, !ZuTraits<T>::IsPrimitive);
+    if (!owned() || length > size()) size(length);
+    if constexpr (!ZuTraits<T>::IsPrimitive) {
+      unsigned n = this->length();
+      if (length > n) {
+	this->initItems(m_data + n, length - n);
+      } else if (length < n) {
+	this->destroyItems(m_data + length, n - length);
+      }
+    }
+    length_(length);
   }
   inline void length(unsigned length, bool initItems) {
     if (!owned() || length > size()) size(length);

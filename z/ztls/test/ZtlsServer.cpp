@@ -8,19 +8,28 @@
 #include <ZtRegex.hpp>
 #include <ZtArray.hpp>
 
-#include <ZTLS.hpp>
+#include <Ztls.hpp>
 
-const char *Request =
-  "GET / HTTP/1.1\r\n"
-  "Host: ";
-const char *Request2 = "\r\n"
-  "User-Agent: ZTLSClient/1.0\r\n"
+const char *Content =
+  "<html><head>\n"
+  "<meta http-equiv=\"content-type\" content=\"text/html;charset=utf-8\">\n"
+  "<title>200 OK</title>\n"
+  "</head><body>\n"
+  "<h1>OK</h1>\n"
+  "Test document\n"
+  "</body></html>";
+
+const char *Response =
+  "HTTP/1.1 200 OK\r\n"
+  "Content-Type: text/html\r\n"
+  "Content-Length: ";
+const char *Response2 = "\r\n"
   "Accept: */*\r\n"
   "\r\n";
 
-struct App : public ZTLS::Client<App> {
-  struct Link : public ZTLS::CliLink<App, Link> {
-    inline Link(App *app) : ZTLS::CliLink<App, Link>(app) { }
+struct App : public Ztls::Server<App> {
+  struct Link : public ZmPolymorph, public Ztls::SrvLink<App, Link> {
+    inline Link(App *app) : Ztls::SrvLink<App, Link>(app) { }
 
     void connected(const char *hostname, const char *alpn) {
       if (!hostname) hostname = "(null)";
@@ -28,51 +37,55 @@ struct App : public ZTLS::Client<App> {
 	  << "TLS handshake completed (hostname: " << hostname
 	  << " ALPN: " << alpn << ")\n")
 	<< std::flush;
-      ZtString request;
-      request << Request << hostname << Request2;
-      send(request.data(), request.length());
     }
     void disconnected() {
       std::cerr << "disconnected\n" << std::flush;
       app()->done();
     }
 
-    void connectFailed(bool transient) {
-      if (transient)
-	std::cerr << "failed to connect (transient)\n" << std::flush;
-      else
-	std::cerr << "failed to connect\n" << std::flush;
-    }
-
     int process(const char *data, unsigned len) {
       std::cout << ZuString{data, len} << std::flush;
-      // disconnect_();
-      // return -1; // would return len to continue
+      ZtString response;
+      ZtString content = Content;
+      response << Response << content.length() << Response2;
+      send_(response.data(), response.length());
+      send_(content.data(), content.length());
       return len;
     }
   };
 
+  inline Link::TCP *accepted(const ZiCxnInfo &ci) {
+    link = new Link(this);
+    return new Link::TCP(link, ci);
+  }
+
+  void listenFailed(bool transient) {
+    logError("listen() failed ", transient ? "(transient)" : "");
+    done();
+  }
+
   void done() { sem.post(); }
 
-  ZmSemaphore sem;
+  ZmSemaphore	sem;
+  ZmRef<Link>	link;
 };
 
 void usage()
 {
-  std::cerr << "usage: ZTLSClient server port\n" << std::flush;
+  std::cerr << "usage: ZtlsServer server port cert key\n" << std::flush;
   ::exit(1);
 }
 
 int main(int argc, char **argv)
 {
-  if (argc != 3) usage();
+  if (argc != 5) usage();
 
   ZuString server = argv[1];
   unsigned port = ZuBox<unsigned>(argv[2]);
 
   if (!port) usage();
 
-  ZeLog::init("ZTLSClient");
+  ZeLog::init("ZtlsServer");
   ZeLog::level(0);
   ZeLog::sink(ZeLog::fileSink("&2"));
   ZeLog::start();
@@ -95,18 +108,12 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  if (!app.init(&mx, "3", "/etc/ssl/certs", alpn)) {
-    std::cerr << "TLS client initialization failed\n" << std::flush;
+  if (!app.init(&mx, "3", "/etc/ssl/certs", alpn, argv[3], argv[4])) {
+    std::cerr << "TLS server initialization failed\n" << std::flush;
     return 1;
   }
 
-  App::Link link(&app);
-
-  if (!link.connect(server, port)) {
-    std::cerr << "failed to connect to "
-      << server << ':' << port << '\n' << std::flush;
-    return 1;
-  }
+  app.listen(server, port);
 
   app.sem.wait();
 

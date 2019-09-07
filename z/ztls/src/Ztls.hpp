@@ -17,16 +17,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// ZTLS - mbedtls C++ wrapper
+// mbedtls C++ wrapper - main SSL component
 
-#ifndef ZTLS_HPP
-#define ZTLS_HPP
+#ifndef Ztls_HPP
+#define Ztls_HPP
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZTLSLib.hpp>
+#include <ZtlsLib.hpp>
 
 #include <mbedtls/ssl.h>
 #include <mbedtls/entropy.h>
@@ -41,17 +41,29 @@
 #include <ZiFile.hpp>
 #include <ZiMultiplex.hpp>
 
-namespace ZTLS {
+namespace Ztls {
 
-// mbedtls runs within a dedicated thread; IOBuf buffers are used
-// to transport data between threads (-+> arrows below)
-//
+// mbedtls runs sharded within a dedicated thread, without lock contention
+
+// API functions: listen, connect, disconnect/disconnect_, send/send_
+// API callbacks: accepted, connected, disconnected, process
+
+// Function Category | I/O Threads |        TLS thread          | App threads
+// ------------------|-------------|----------------------------|------------
+// Server            | accepted()  | connected() disconnected() | listen()
+// Client            |             | connected() disconnected() | connect()
+// Disconnect        |             | disconnect_()              | disconnect()
+// Transmission (Tx) |             | send_()                    | send()
+// Reception    (Rx) |             | process()                  |
+
+// IOBuf buffers are used to transport data between threads (-+> arrows below)
+
 // I/O Threads |                    TLS thread                   | App threads
 // ------------|-------------------------------------------------|------------
 //     I/O Rx -+> Rx input  -> Decryption -> Rx output -> App Rx |
 // ------------|                                                 |
 //     I/O Tx <+- Tx output <- Encryption <- Tx input           <+- App Tx
-// ---------------------------------------------------------------------------
+// ------------|-------------------------------------------------|------------
 
 template <typename Heap> class IOBuf_ : public Heap, public ZmPolymorph {
 public:
@@ -276,11 +288,12 @@ private:
   }
 
 public:
-  void send_(const char *data, unsigned len) { // TLS thread
+  void send_(const void *data_, unsigned len) { // TLS thread
+    if (ZuUnlikely(!len)) return;
+    auto data = static_cast<const unsigned char *>(data_);
     unsigned offset = 0;
     do {
-      int n = mbedtls_ssl_write(&m_ssl,
-	  (unsigned char *)data + offset, len - offset);
+      int n = mbedtls_ssl_write(&m_ssl, data + offset, len - offset);
       if (n < 0) {
 	app()->logError("mbedtls_ssl_write() returned ", n);
 	return;
@@ -374,7 +387,7 @@ friend Base;
     sem.wait();
     return ok;
   }
-private:
+
   bool connect_(ZuString server, uint16_t port) { // TLS thread
     ZiIP ip = server;
     if (!ip) {
@@ -649,9 +662,11 @@ private:
     void exception(ZmRef<ZeEvent>); // optional
 
     struct Link : public CliLink<App, Link> {
-      void connected(const char *alpn); // TLS handshake completed
-      void disconnected();
-      void connectFailed(bool transient);
+      // TLS thread - handshake completed
+      void connected(const char *hostname, const char *alpn);
+
+      void disconnected(); // TLS thread
+      void connectFailed(bool transient); // I/O Tx thread
       
       // process() should return:
       // +ve - the number of bytes processed
@@ -659,7 +674,6 @@ private:
       // -ve - disconnect, abandon any remaining Rx dats
       int process(const char *data, unsigned len); // process received data
     };
-
   };
 #endif
 template <typename App> class Client : public Engine<App> {
@@ -697,8 +711,11 @@ friend Base;
     void exception(ZmRef<ZeEvent>); // optional
 
     struct Link : public SrvLink<App, Link> {
-      void connected(const char *, const char *alpn); // TLS handshake completed
-      void disconnected();
+      // TLS thread - handshake completed
+      void connected(const char *, const char *alpn);
+
+      void disconnected(); // TLS thread
+      void connectFailed(bool transient); // I/O Tx thread
       
       // process() should return:
       // +ve - the number of bytes processed
@@ -813,4 +830,4 @@ private:
 
 }
 
-#endif /* ZTLS_HPP */
+#endif /* Ztls_HPP */

@@ -17,10 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// ZTLS library main header
+// mbedtls C++ wrapper
 
-#ifndef ZTLSLib_HPP
-#define ZTLSLib_HPP
+#ifndef ZtlsLib_HPP
+#define ZtlsLib_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -31,20 +31,20 @@
 #ifdef _WIN32
 
 #ifdef ZI_EXPORTS
-#define ZTLSAPI ZuExport_API
-#define ZTLSExplicit ZuExport_Explicit
+#define ZtlsAPI ZuExport_API
+#define ZtlsExplicit ZuExport_Explicit
 #else
-#define ZTLSAPI ZuImport_API
-#define ZTLSExplicit ZuImport_Explicit
+#define ZtlsAPI ZuImport_API
+#define ZtlsExplicit ZuImport_Explicit
 #endif
-#define ZTLSExtern extern ZTLSAPI
+#define ZtlsExtern extern ZtlsAPI
 
 #else
 
-#define ZTLSAPI
-#define ZTLSExplicit
-#define ZTLSExtern extern
+#define ZtlsAPI
+#define ZtlsExplicit
+#define ZtlsExtern extern
 
 #endif
 
-#endif /* ZTLSLib_HPP */
+#endif /* ZtlsLib_HPP */

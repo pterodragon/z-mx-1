@@ -17,10 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Zi interface to mbedtls
+// mbedtls C++ wrapper
 
-#include <ZTLSLib.hpp>
+#include <ZtlsLib.hpp>
 
 #include "../../version.h"
 
-ZTLSExtern const char ZTLSLib[] = "@(#) Zero Copy TLS Library v" Z_VERNAME;
+ZtlsExtern const char ZtlsLib[] = "@(#) Zero Copy TLS Library v" Z_VERNAME;

@@ -34,8 +34,8 @@ case $build_os in
 		;;
 esac
 
-AX_PATH_LIB_Z(8, 12, [-lZdb -lZv -lZi -lZe -lZt -lZm -lZu],,
-	      [AC_MSG_ERROR([ZLib >= 8.12 required])])
+AX_PATH_LIB_Z(8, 13, [-lZdb -lZv -lZi -lZe -lZt -lZm -lZu],,
+	      [AC_MSG_ERROR([ZLib >= 8.13 required])])
 
 AC_SUBST(Z_CPPFLAGS)
 AC_SUBST(Z_CXXFLAGS)

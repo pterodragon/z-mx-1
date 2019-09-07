@@ -514,7 +514,7 @@ void MxMDOBSide::pxLevel_(
       m_pxLevels.add(pxLevel);
       if (handler) pxLevelFn = &handler->addPxLevel;
     } else {
-      pxLevel = 0;
+      pxLevel = nullptr;
       d_qty = 0, d_nOrders = 0;
     }
   } else {
@@ -524,7 +524,7 @@ void MxMDOBSide::pxLevel_(
       if (handler) pxLevelFn = &handler->updatedPxLevel;
     } else {
       if (handler) pxLevelFn = &handler->deletedPxLevel;
-      m_pxLevels.delVal(price);
+      m_pxLevels.del(pxLevel);
     }
   }
   if (d_qty) {
@@ -629,7 +629,7 @@ void MxMDOBSide::delOrder_(
     pxLevel = m_mktLevel;
     if (!m_mktLevel->data().qty) {
       if (handler) pxLevelFn = &handler->deletedMktLevel;
-      m_mktLevel = 0;
+      m_mktLevel = nullptr;
     } else
       if (handler) pxLevelFn = &handler->updatedMktLevel;
     order->pxLevel(nullptr);
@@ -645,7 +645,7 @@ void MxMDOBSide::delOrder_(
   pxLevel->delOrder(orderData.rank);
   if (!pxLevel->data().qty) {
     if (handler) pxLevelFn = &handler->deletedPxLevel;
-    m_pxLevels.delVal(pxLevel->price());
+    m_pxLevels.del(pxLevel);
   } else {
     if (handler) pxLevelFn = &handler->updatedPxLevel;
   }
@@ -1514,8 +1514,8 @@ void MxMDInstrument::update_(
     adjustNDP(strike, px);
     adjustNDP(adv, px);
 #undef adjustNDP
-    m_refData.pxNDP = refData.pxNDP;
-    m_refData.qtyNDP = refData.qtyNDP;
+    m_refData.pxNDP.update(refData.pxNDP);
+    m_refData.qtyNDP.update(refData.qtyNDP);
   }
   m_refData.putCall.update(refData.putCall);
   m_refData.strike.update(refData.strike);

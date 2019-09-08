@@ -449,13 +449,13 @@ template <typename AppTypes> struct MxTAppTypes {
   struct Modify__ { };
   template <typename Leg>
   struct Modify_ : public Modify__, public Cancel_<Leg> {
-    MxEnum		timeInForce;	// MxTimeInForce
+    MxEnum		tif;	// MxTimeInForce
     uint8_t		pad_0[3];
 
     template <typename Update>
     inline typename ZuIs<Modify__, Update>::T update(const Update &u) {
       Cancel_<Leg>::update(u); // takes care of legs
-      timeInForce.update(u.timeInForce);
+      tif.update(u.tif);
     }
     template <typename Update>
     inline typename ZuIsNot<Modify__, Update>::T update(const Update &u) {
@@ -464,7 +464,7 @@ template <typename AppTypes> struct MxTAppTypes {
 
     template <typename S> inline void print(S &s) const {
       Cancel_<Leg>::print(s);
-      s << " timeInForce=" << MxTimeInForce::name(timeInForce);
+      s << " tif=" << MxTimeInForce::name(tif);
     }
   };
 

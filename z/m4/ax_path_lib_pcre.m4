@@ -38,6 +38,7 @@ AC_DEFUN([AX_PATH_LIB_PCRE], [
     CPPFLAGS="$OLDCPPFLAGS"
     LDFLAGS="$OLDLDFLAGS"
     if test "$ac_cv_lib_pcre_pcre_compile2" = "yes"; then
+      PCRE_LIBS="-lpcre"
       PCRE_LDFLAGS=""
       PCRE_CPPFLAGS=""
       if test ".$with_pcre" != "." -a ".$with_pcre" != ".yes"; then
@@ -49,7 +50,7 @@ AC_DEFUN([AX_PATH_LIB_PCRE], [
 	fi
       fi
       AC_MSG_CHECKING([lib pcre])
-      AC_MSG_RESULT([yes])
+      AC_MSG_RESULT([$PCRE_LIBS])
       m4_ifval($1,$1)
     else
       AC_MSG_CHECKING([lib pcre])

@@ -26,4 +26,4 @@ libZp_la_LIBADD = \
 	$(top_builddir)/zt/src/libZt.la \
 	$(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la \
-	@Z_IO_LIBS@ @Z_ZP_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
+	@PCAP_LIBS@ @Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@

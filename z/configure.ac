@@ -12,25 +12,27 @@ AC_PROG_CXX
 AC_LIBTOOL_WIN32_DLL
 AC_PROG_LIBTOOL
 
-MX_CHECK_CLANG
+AX_PATH_LIB_CK(, [AC_MSG_ERROR([libck required])])
+CPPFLAGS="$CK_CPPFLAGS $CPPFLAGS"
+LDFLAGS="$CK_LDFLAGS $LDFLAGS"
+
 AX_PATH_LIB_HWLOC(, [AC_MSG_ERROR([libhwloc required])])
 CPPFLAGS="$HWLOC_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$HWLOC_LDFLAGS $LDFLAGS"
 
+AX_PATH_LIB_PCRE(, [AC_MSG_ERROR([libpcre required])])
+CPPFLAGS="$PCRE_CPPFLAGS $CPPFLAGS"
+LDFLAGS="$PCRE_LDFLAGS $LDFLAGS"
+
 AC_MSG_CHECKING([system multithreading libraries])
 case $build_os in
   linux-*) 
-    AX_PATH_LIB_CK(, [AC_MSG_ERROR([libck required])])
-    CPPFLAGS="$CK_CPPFLAGS $CPPFLAGS"
-    LDFLAGS="$CK_LDFLAGS $LDFLAGS"
     Z_CXXFLAGS=""
     Z_LDFLAGS="-rdynamic"
     Z_SO_LDFLAGS="-release $Z_VERSION"
     Z_MT_LIBS="$CK_LIBS $HWLOC_LIBS -lpthread -lrt"
-    Z_ZT_LIBS="-lpcre"
+    Z_ZT_LIBS="$PCRE_LIBS"
     Z_IO_LIBS="-ldl"
-    Z_ZP_LIBS="-lpcap"
-    Z_TLS_LIBS="-lmbedtls -lmbedcrypto -lmbedx509"
     ;;
   mingw*)
     mingw=yes
@@ -42,33 +44,30 @@ case $build_os in
     Z_CXXFLAGS="-mthreads"
     Z_LDFLAGS="-Wl,--enable-auto-import"
     Z_SO_LDFLAGS="-no-undefined"
-    Z_MT_LIBS="$HWLOC_LIBS"
-    Z_ZT_LIBS="-lpcre -liconv"
+    Z_MT_LIBS="$CK_LIBS $HWLOC_LIBS"
+    Z_ZT_LIBS="$PCRE_LIBS -liconv"
     Z_IO_LIBS="-lws2_32 -lwsock32"
-    Z_ZP_LIBS="-lwpcap"
-    Z_TLS_LIBS="-lmbedtls -lmbedcrypto -lmbedx509"
     ;;
   *)
-    AX_PATH_LIB_CK(, [AC_MSG_ERROR([libck required])])
-    CPPFLAGS="$CK_CPPFLAGS $CPPFLAGS"
-    LDFLAGS="$CK_LDFLAGS $LDFLAGS"
     Z_CXXFLAGS=""
     Z_LDFLAGS=""
     Z_SO_LDFLAGS=""
     Z_MT_LIBS="$CK_LIBS $HWLOC_LIBS -lpthread"
-    Z_ZT_LIBS="-lpcre"
+    Z_ZT_LIBS="$PCRE_LIBS"
     Z_IO_LIBS="-ldl"
-    Z_ZP_LIBS="-lpcap"
-    Z_TLS_LIBS="-lmbedtls -lmbedcrypto -lmbedx509"
     ;;
 esac
 AC_MSG_RESULT([${Z_MT_LIBS}])
 
 AX_C_VA_LIST_IS_ARRAY
 
-AX_PATH_LIB_PCRE(, [AC_MSG_ERROR([libpcre required])])
-CPPFLAGS="$PCRE_CPPFLAGS $CPPFLAGS"
-LDFLAGS="$PCRE_LDFLAGS $LDFLAGS"
+AX_PATH_LIB_PCAP(, [AC_MSG_ERROR([libpcap required])])
+CPPFLAGS="$PCAP_CPPFLAGS $CPPFLAGS"
+LDFLAGS="$PCAP_LDFLAGS $LDFLAGS"
+
+AX_PATH_LIB_MBEDTLS(, [AC_MSG_ERROR([libmbedtls required])])
+CPPFLAGS="$MBEDTLS_CPPFLAGS $CPPFLAGS"
+LDFLAGS="$MBEDTLS_LDFLAGS $LDFLAGS"
 
 if test ".$mingw" != ".yes"; then
   AC_ARG_ENABLE([netlink],
@@ -79,7 +78,6 @@ if test ".$mingw" != ".yes"; then
       *) AC_MSG_ERROR([bad value ${enableval} for --enable-netlink]) ;;
     esac], [netlink=false])
 fi
-
 AM_CONDITIONAL([NETLINK], [test x$netlink = xtrue])
 
 AX_PATH_LIB_READLINE(, [AC_MSG_ERROR([libreadline required])])
@@ -103,17 +101,8 @@ if test ".$MX_CLANG" = ".yes"; then
   Z_CXXFLAGS="$Z_CXXFLAGS -Wno-unused-local-typedef -Wno-empty-body -Wno-c++11-extensions"
 fi
 
+CPPFLAGS=`echo $CPPFLAGS | perl -pe 's/-I(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$I{$1}++ ? "" : "-I${1}${2}"/ge;'`
 LDFLAGS=`echo $LDFLAGS | perl -pe 's/-L(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$L{$1}++ ? "" : "-L${1}${2}"/ge; s/(-Wl,)?-R,(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$R{$2}++ ? "" : "${1}-R,${2}${3}"/ge'`
-
-AC_SUBST(HWLOC_CPPFLAGS)
-AC_SUBST(HWLOC_LIBS)
-AC_SUBST(HWLOC_LDFLAGS)
-
-AC_SUBST(READLINE_CPPFLAGS)
-AC_SUBST(READLINE_LIBS)
-AC_SUBST(READLINE_LDFLAGS)
-
-AC_SUBST(JNI_CPPFLAGS)
 
 AC_SUBST(Z_CPPFLAGS)
 AC_SUBST(Z_CXXFLAGS)
@@ -122,8 +111,11 @@ AC_SUBST(Z_SO_LDFLAGS)
 AC_SUBST(Z_MT_LIBS)
 AC_SUBST(Z_ZT_LIBS)
 AC_SUBST(Z_IO_LIBS)
-AC_SUBST(Z_ZP_LIBS)
-AC_SUBST(Z_TLS_LIBS)
+
+AC_SUBST(PCAP_LIBS)
+AC_SUBST(MBEDTLS_LIBS)
+AC_SUBST(READLINE_LIBS)
+AC_SUBST(JNI_CPPFLAGS)
 
 AC_OUTPUT(Makefile \
 	zu/Makefile zu/src/Makefile zu/test/Makefile \

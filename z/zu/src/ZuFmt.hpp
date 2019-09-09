@@ -63,14 +63,14 @@ namespace ZuFmt {
   template <unsigned Width, char Pad = '0', class NTP = Default>
   struct Right : public NTP {
     enum { Justification_ = Just::Right };
-    enum { Width_ = Width > MaxWidth ? MaxWidth : Width };
+    enum { Width_ = (int)Width > MaxWidth ? MaxWidth : (int)Width };
     enum { Pad_ = Pad };
   };
   // NTP - justify a fixed-point value within a fixed-width field
   template <unsigned NDP, char Trim = '\0', class NTP = Default>
   struct Frac : public NTP {
     enum { Justification_ = Just::Frac };
-    enum { NDP_ = NDP > MaxNDP ? MaxNDP : NDP };
+    enum { NDP_ = (int)NDP > MaxNDP ? MaxNDP : (int)NDP };
     enum { Trim_ = Trim };
   };
   // NTP - specify hexadecimal

@@ -82,7 +82,7 @@ protected:
 
     inline static const QString _preAlloc    = _NewLine + "preAlloc:"    + _4S  + _padding;
     inline static const QString _minRN       = _NewLine + "minRN:"       + _7S  + _padding;
-    inline static const QString _allocRN     = _NewLine + "allocRN:"     + _5S  + _padding;
+    inline static const QString _nextRN      = _NewLine + "nextRN:"      + _6S  + _padding;
     inline static const QString _fileRN      = _NewLine + "fileRN:"      + _6S  + _padding;
     inline static const QString _cacheLoads  = _NewLine + "cacheLoads:"  + _2S  + _padding;
     inline static const QString _cacheMisses = _NewLine + "cacheMisses:" + _S   + _padding; // LONGEST
@@ -101,7 +101,7 @@ public:
      *    Name		name;               // primary key
      *    uint64_t	fileSize;
      *    uint64_t	minRN;
-     *    uint64_t	allocRN;           // dynamic
+     *    uint64_t	nextRN;           // dynamic
      *    uint64_t	fileRN;
      *    uint64_t	cacheLoads;	       // dynamic(*)
      *    uint64_t	cacheMisses;	   // dynamic(*)
@@ -140,7 +140,7 @@ public:
      *
      */
     enum DBMxTelemetryStructIndex { e_path,        e_name,         e_fileSize,
-                                    e_minRN,       e_allocRN,      e_fileRN,
+                                    e_minRN,       e_nextRN,       e_fileRN,
                                     e_cacheLoads,  e_cacheMisses,  e_fileLoads,
                                     e_fileMisses,  e_id,           e_preAlloc,
                                     e_recSize,     e_fileRecs,     e_cacheSize,

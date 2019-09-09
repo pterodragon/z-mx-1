@@ -87,8 +87,8 @@ void MxTelemetryDBWrapper::initTableList() noexcept
     m_tableList->insert(i, "minRN");
     m_tablePriorityToStructIndex->insert(i++, DBMxTelemetryStructIndex::e_minRN);
 
-    m_tableList->insert(i, "allocRN");
-    m_tablePriorityToStructIndex->insert(i++, DBMxTelemetryStructIndex::e_allocRN);
+    m_tableList->insert(i, "nextRN");
+    m_tablePriorityToStructIndex->insert(i++, DBMxTelemetryStructIndex::e_nextRN);
 
     m_tableList->insert(i, "fileRN");
     m_tablePriorityToStructIndex->insert(i++, DBMxTelemetryStructIndex::e_fileRN);
@@ -215,7 +215,7 @@ void MxTelemetryDBWrapper::_getDataForTable(void* const a_mxTelemetryMsg, QLinke
                                 )
                             );
             break;
-        case DBMxTelemetryStructIndex::e_allocRN:
+        case DBMxTelemetryStructIndex::e_nextRN:
             l_dataPair = getMxTelemetryDataType(a_mxTelemetryMsg, l_index);
             a_result.append(QString::number(
                                 typeConvertor<uint64_t>(
@@ -283,8 +283,8 @@ void MxTelemetryDBWrapper::_getDataForTable(void* const a_mxTelemetryMsg, QLinke
 void MxTelemetryDBWrapper::initChartList() noexcept
 {
     int i = 0;
-    m_chartList->insert(i, "allocRN");
-    m_chartPriorityToStructIndex->insert(i++, DBMxTelemetryStructIndex::e_allocRN);
+    m_chartList->insert(i, "nextRN");
+    m_chartPriorityToStructIndex->insert(i++, DBMxTelemetryStructIndex::e_nextRN);
 
     m_chartList->insert(i, "fileRN");
     m_chartPriorityToStructIndex->insert(i++, DBMxTelemetryStructIndex::e_fileRN);
@@ -343,8 +343,8 @@ QPair<void*, int> MxTelemetryDBWrapper::getMxTelemetryDataType(void* const a_mxT
         l_result.first = &l_data->minRN;
         l_result.second = CONVERT_FRON::type_uint64_t;
         break;
-    case DBMxTelemetryStructIndex::e_allocRN:
-        l_result.first = &l_data->allocRN;
+    case DBMxTelemetryStructIndex::e_nextRN:
+        l_result.first = &l_data->nextRN;
         l_result.second = CONVERT_FRON::type_uint64_t;
         break;
     case DBMxTelemetryStructIndex::e_fileRN:                // 6
@@ -443,7 +443,7 @@ const QString MxTelemetryDBWrapper::_getDataForTabelQLabel(void* const a_mxTelem
 
             + _preAlloc    +  QString::number(l_data->preAlloc)
             + _minRN       +  QString::number(l_data->minRN)
-            + _allocRN     +  QString::number(l_data->allocRN)
+            + _nextRN      +  QString::number(l_data->nextRN)
             + _fileRN      +  QString::number(l_data->fileRN)
             + _cacheLoads  +  QString::number(l_data->cacheLoads)
             + _cacheMisses +  QString::number(l_data->cacheMisses)

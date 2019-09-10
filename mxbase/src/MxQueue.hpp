@@ -273,6 +273,11 @@ public:
     }
   }
 
+  ZuInline void ackd(MxSeqNo seqNo) {
+    if (m_seqNo < seqNo) m_seqNo = seqNo;
+    Tx::ackd(seqNo);
+  }
+
   ZuInline void txReset(MxSeqNo seqNo = MxSeqNo()) {
     Tx::txReset(m_seqNo = seqNo);
   }

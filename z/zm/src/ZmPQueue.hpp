@@ -930,8 +930,10 @@ public:
   // shifts up to but not including item containing key
   inline NodeRef shift(Key key) {
     Guard guard(m_lock);
-    if (m_headKey >= key) return 0;
-    return shift_();
+    if (m_headKey >= key) return nullptr;
+    if (NodeRef node = shift_()) return node;
+    m_headKey = key;
+    return nullptr;
   }
 
   // aborts an item (leaving a gap in the queue)
@@ -1606,6 +1608,7 @@ public:
 	if (msg) break;
       }
       if (!scheduleArchive) m_flags &= ~Archiving;
+      if (!msg) while (app->txQueue()->shift(m_archiveKey));
 #if 0
       std::cerr << (ZuStringN<200>()
 	  << "archive() " << *this << "\n  " << *(app->txQueue()) << '\n')

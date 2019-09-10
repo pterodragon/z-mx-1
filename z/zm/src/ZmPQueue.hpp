@@ -932,7 +932,6 @@ public:
     Guard guard(m_lock);
     if (m_headKey >= key) return nullptr;
     if (NodeRef node = shift_()) return node;
-    m_headKey = key;
     return nullptr;
   }
 
@@ -1449,25 +1448,30 @@ public:
   void send(ZmRef<Msg> msg) {
     App *app = static_cast<App *>(this);
     bool scheduleSend = false;
-    bool scheduleArchive = false;
     auto key = Fn(msg->item()).key();
     {
       Guard guard(m_lock);
-      if (key <= m_archiveKey) return;
+      if (ZuUnlikely(key < m_ackdKey)) {
+#if 0
+	std::cerr << (ZuStringN<200>()
+	    << "send(" << key << ") outdated "
+	    << *this << "\n  " << *(app->txQueue()) << '\n')
+	  << std::flush;
+#endif
+	return;
+      }
       app->txQueue()->enqueue(ZuMv(msg));
       if (scheduleSend = (m_flags & (Running | Sending)) == Running &&
 	  m_sendKey <= key)
 	m_flags |= Sending;
-      else if (scheduleArchive = !(m_flags & Archiving) && key > m_archiveKey)
-	m_flags |= Archiving;
 #if 0
       std::cerr << (ZuStringN<200>()
-	  << "send(Msg) " << *this << "\n  " << *(app->txQueue()) << '\n')
+	  << "send(" << key <<") "
+	  << *this << "\n  " << *(app->txQueue()) << '\n')
 	<< std::flush;
 #endif
     }
     if (scheduleSend) app->scheduleSend();
-    if (scheduleArchive) app->scheduleArchive();
   }
 
   // abort message
@@ -1484,10 +1488,18 @@ public:
   // acknowlege (archive) messages up to, but not including, key
   void ackd(Key key) {
     App *app = static_cast<App *>(this);
-    bool scheduleArchive;
+    bool scheduleArchive = false;
     {
       Guard guard(m_lock);
-      if (key <= m_ackdKey) return;
+      if (ZuUnlikely(key < m_ackdKey)) {
+#if 0
+	std::cerr << (ZuStringN<200>()
+	    << "ackd(" << key << ") outdated "
+	    << *this << "\n  " << *(app->txQueue()) << '\n')
+	  << std::flush;
+#endif
+	return;
+      }
       m_ackdKey = key;
       if (key > m_sendKey) m_sendKey = key;
       if (scheduleArchive = !(m_flags & Archiving) && key > m_archiveKey)
@@ -1608,7 +1620,6 @@ public:
 	if (msg) break;
       }
       if (!scheduleArchive) m_flags &= ~Archiving;
-      if (!msg) while (app->txQueue()->shift(m_archiveKey));
 #if 0
       std::cerr << (ZuStringN<200>()
 	  << "archive() " << *this << "\n  " << *(app->txQueue()) << '\n')

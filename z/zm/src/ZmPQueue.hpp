@@ -1446,13 +1446,18 @@ public:
   // send message (with key already allocated)
   void send(ZmRef<Msg> msg) {
     App *app = static_cast<App *>(this);
-    bool scheduleSend;
+    bool scheduleSend = false;
+    bool scheduleArchive = false;
+    auto key = Fn(msg->item()).key();
     {
       Guard guard(m_lock);
-      scheduleSend = (m_flags & (Running | Sending)) == Running &&
-	m_sendKey <= Fn(msg->item()).key();
+      if (key <= m_archiveKey) return;
       app->txQueue()->enqueue(ZuMv(msg));
-      if (scheduleSend) m_flags |= Sending;
+      if (scheduleSend = (m_flags & (Running | Sending)) == Running &&
+	  m_sendKey <= key)
+	m_flags |= Sending;
+      else if (scheduleArchive = !(m_flags & Archiving) && key > m_archiveKey)
+	m_flags |= Archiving;
 #if 0
       std::cerr << (ZuStringN<200>()
 	  << "send(Msg) " << *this << "\n  " << *(app->txQueue()) << '\n')
@@ -1460,6 +1465,7 @@ public:
 #endif
     }
     if (scheduleSend) app->scheduleSend();
+    if (scheduleArchive) app->scheduleArchive();
   }
 
   // abort message
@@ -1479,10 +1485,11 @@ public:
     bool scheduleArchive;
     {
       Guard guard(m_lock);
+      if (key <= m_ackdKey) return;
       m_ackdKey = key;
       if (key > m_sendKey) m_sendKey = key;
-      scheduleArchive = !(m_flags & Archiving) && key > m_archiveKey;
-      if (scheduleArchive) m_flags |= Archiving;
+      if (scheduleArchive = !(m_flags & Archiving) && key > m_archiveKey)
+	m_flags |= Archiving;
 #if 0
       std::cerr << (ZuStringN<200>()
 	  << "ackd(Key) " << *this << "\n  " << *(app->txQueue()) << '\n')

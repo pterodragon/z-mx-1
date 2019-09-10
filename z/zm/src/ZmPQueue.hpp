@@ -1544,9 +1544,10 @@ public:
       prevKey = m_sendKey;
       scheduleSend = prevKey < txQueue->tail();
       while (scheduleSend) {
-	msg = txQueue->find(m_sendKey);
 	unsigned length;
-	if (msg)
+	if (msg = txQueue->find(m_sendKey))
+	  length = Fn(msg->item()).length();
+	else if (msg = app->retrieve_(m_sendKey, txQueue->head()))
 	  length = Fn(msg->item()).length();
 	else {
 	  if (!sendGap.length()) sendGap.key() = m_sendKey;

@@ -462,12 +462,11 @@ void MxMDOrderBook::pxLevel(
 
 void MxMDOBSide::matched(MxValue price, MxValue d_qty)
 {
-  if (d_qty) {
-    m_data.qty -= d_qty;
-    m_data.nv -=
-      (MxValNDP{price, pxNDP()} *
-       MxValNDP{d_qty, qtyNDP()}).value;
-  }
+  if (ZuLikely(d_qty))
+    if (m_data.qty += d_qty)
+      m_data.nv += (MxValNDP{price, pxNDP()} * MxValNDP{d_qty, qtyNDP()}).value;
+    else
+      m_data.nv = 0;
 }
 
 void MxMDOBSide::pxLevel_(

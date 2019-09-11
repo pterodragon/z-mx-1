@@ -870,11 +870,12 @@ private:
   uintptr_t match(
       MxDateTime transactTime, MxValue px, MxValue &qty, MxValue &cumQty,
       Fill &&fill, Limit &&limit) {
-    auto i = m_pxLevels.readIterator<Direction>();
+    auto i = m_pxLevels.iterator<Direction>();
     while (MxMDPxLevel *pxLevel = i.iterate()) {
       if (!limit(px, pxLevel->price())) break;
-      if (uintptr_t v = pxLevel->match(transactTime, qty, cumQty, fill))
-	return v;
+      uintptr_t v = pxLevel->match(transactTime, qty, cumQty, fill);
+      if (!pxLevel->data().qty) i.del();
+      if (v) return v;
       if (!qty) break;
     }
     return 0;

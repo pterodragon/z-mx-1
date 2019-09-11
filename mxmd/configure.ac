@@ -34,8 +34,8 @@ case $build_os in
 		;;
 esac
 
-AX_PATH_LIB_Z(8, 13, [-lZdb -lZv -lZi -lZe -lZt -lZm -lZu],,
-	      [AC_MSG_ERROR([ZLib >= 8.13 required])])
+AX_PATH_LIB_Z(8, 17, [-lZdb -lZv -lZi -lZe -lZt -lZm -lZu],,
+	      [AC_MSG_ERROR([ZLib >= 8.17 required])])
 
 AC_SUBST(Z_CPPFLAGS)
 AC_SUBST(Z_CXXFLAGS)
@@ -46,7 +46,7 @@ AX_PATH_JNI(, [AC_MSG_ERROR([JNI required])])
 
 AC_SUBST(JNI_CPPFLAGS)
 
-AX_PATH_LIB_MXBASE(4, 5, [-lMxBase],, [AC_MSG_ERROR([MxBase >= 4.3 required])])
+AX_PATH_LIB_MXBASE(4, 6, [-lMxBase],, [AC_MSG_ERROR([MxBase >= 4.6 required])])
 
 AC_SUBST(MXBASE_CPPFLAGS)
 AC_SUBST(MXBASE_LDFLAGS)

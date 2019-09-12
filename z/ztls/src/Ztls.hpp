@@ -276,18 +276,22 @@ public:
       memcpy(buf->data, data + offset, n);
       app()->invoke([buf = ZuMv(buf)]() mutable {
 	auto link = static_cast<Link *>(buf->owner);
-	link->txIn(ZuMv(buf));
+	link->send_(ZuMv(buf));
       });
       offset += n;
     } while (offset < len);
   }
-
-private:
-  void txIn(ZmRef<IOBuf> buf) { // TLS thread
-    send_(buf->data, buf->length);
+  void send(ZmRef<IOBuf> buf) {
+    if (ZuUnlikely(!buf->length)) return;
+    app()->invoke([buf = ZuMv(buf)]() mutable {
+      auto link = static_cast<Link *>(buf->owner);
+      link->send_(ZuMv(buf));
+    });
   }
 
-public:
+  void send_(ZmRef<IOBuf> buf) { // TLS thread
+    send_(buf->data, buf->length);
+  }
   void send_(const void *data_, unsigned len) { // TLS thread
     if (ZuUnlikely(!len)) return;
     auto data = static_cast<const unsigned char *>(data_);

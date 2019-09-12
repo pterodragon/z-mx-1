@@ -69,6 +69,10 @@ AX_PATH_LIB_MBEDTLS(, [AC_MSG_ERROR([libmbedtls required])])
 CPPFLAGS="$MBEDTLS_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$MBEDTLS_LDFLAGS $LDFLAGS"
 
+AX_PATH_LIB_FLATBUFFERS(, [AC_MSG_ERROR([libflatbuffers required])])
+CPPFLAGS="$FLATBUFFERS_CPPFLAGS $CPPFLAGS"
+LDFLAGS="$FLATBUFFERS_LDFLAGS $LDFLAGS"
+
 if test ".$mingw" != ".yes"; then
   AC_ARG_ENABLE([netlink],
     [  --enable-netlink        enable netlink],
@@ -114,6 +118,7 @@ AC_SUBST(Z_IO_LIBS)
 
 AC_SUBST(PCAP_LIBS)
 AC_SUBST(MBEDTLS_LIBS)
+AC_SUBST(FLATBUFFERS_LIBS)
 AC_SUBST(READLINE_LIBS)
 AC_SUBST(JNI_CPPFLAGS)
 
@@ -125,6 +130,7 @@ AC_OUTPUT(Makefile \
 	ze/Makefile ze/src/Makefile ze/test/Makefile \
 	zi/Makefile zi/src/Makefile zi/test/Makefile \
 	ztls/Makefile ztls/src/Makefile ztls/test/Makefile \
+	zfb/Makefile zfb/src/Makefile \
 	zv/Makefile zv/src/Makefile zv/test/Makefile \
 	zlz4/Makefile zlz4/src/Makefile zlz4/test/Makefile \
 	zp/Makefile zp/src/Makefile \

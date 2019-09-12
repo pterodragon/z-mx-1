@@ -40,6 +40,7 @@
 
 #include <ZiFile.hpp>
 #include <ZiMultiplex.hpp>
+#include <ZiIOBuf.hpp>
 
 namespace Ztls {
 
@@ -65,24 +66,7 @@ namespace Ztls {
 //     I/O Tx <+- Tx output <- Encryption <- Tx input           <+- App Tx
 // ------------|-------------------------------------------------|------------
 
-template <typename Heap> class IOBuf_ : public Heap, public ZmPolymorph {
-public:
-  // TCP over Ethernet maximum payload is 1460 (without Jumbo frames)
-  enum { Size = 1460 };
-
-  inline IOBuf_(void *owner_, unsigned length_) :
-      owner(owner_), length(length_) { }
-  ~IOBuf_() { }
-
-  void		*owner;
-  unsigned	length;
-  char		data[Size];
-};
-struct IOBuf_HeapID {
-  inline static const char *id() { return "TLS.IOBuf"; }
-};
-typedef ZmHeap<IOBuf_HeapID, sizeof(IOBuf_<ZuNull>)> IOBuf_Heap;
-typedef IOBuf_<IOBuf_Heap> IOBuf;
+using IOBuf = ZiIOBuf;
 
 template <typename Link_> class LinkTCP : public ZiConnection {
 public:

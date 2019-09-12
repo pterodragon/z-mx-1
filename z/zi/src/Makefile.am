@@ -5,7 +5,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src -I$(top_srcdir)/zm/src \
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
 include_HEADERS = ZiDir.hpp ZiFile.hpp ZiIP.hpp ZiLib.hpp ZiModule.hpp \
-	ZiMultiplex.hpp ZiPlatform.hpp ZiSocket.hpp ZiRing.hpp
+	ZiMultiplex.hpp ZiPlatform.hpp ZiSocket.hpp ZiRing.hpp ZiIOBuf.hpp
 if NETLINK
 include_HEADERS += ZiNetlinkMsg.hpp ZiNetlink.hpp zi_netlink.h
 endif

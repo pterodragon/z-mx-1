@@ -36,9 +36,9 @@ int main() {
   FlatBufferBuilder builder;
   return 0;
 }])],
-      [ax_cv_lib_flatbuffers_ok=false],
-      [ax_cv_lib_flatbuffers_ok=true],
-      [ax_cv_lib_flatbuffers_ok=false])])
+      [ax_cv_lib_flatbuffers_ok=yes],
+      [ax_cv_lib_flatbuffers_ok=no],
+      [ax_cv_lib_flatbuffers_ok=no])])
     CPPFLAGS="$OLDCPPFLAGS"
     LDFLAGS="$OLDLDFLAGS"
     LIBS="$OLDLIBS"

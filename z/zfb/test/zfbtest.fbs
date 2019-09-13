@@ -1,3 +1,4 @@
+include "user.fbs";
 namespace zfbtest;
 table Perm {
   id:uint8 (key);	// index in bitmap
@@ -11,13 +12,6 @@ table Key {
   key:string (key);	// 16 byte API key, base64 encoded
   secret:[ubyte];	// 32 byte HMAC-SHA256 API secret
   userID:uint64;
-}
-table User {
-  id:uint64 (key);
-  name:string;
-  passwd:[ubyte];	// output of HMAC-SHA256 with password key
-  passwdKey:[ubyte];	// 32 byte password key (to hash plaintext password)
-  roles:[string];	// roles
 }
 table UserDB {
   perms:[Perm];

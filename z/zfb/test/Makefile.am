@@ -12,7 +12,7 @@ LDADD = $(top_builddir)/zfb/src/libZfb.la \
 	$(top_builddir)/zu/src/libZu.la \
 	@FLATBUFFERS_LIBS@ @Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
 bin_PROGRAMS = zfbtest
-BUILT_SOURCES = zfbtest_generated.h
-zfbtest_generated.h: zfbtest.fbs
+%_generated.h: %.fbs
 	flatc --cpp $<
-zfbtest_SOURCES = zfbtest.cpp zfbtest_generated.h
+BUILT_SOURCES = user_generated.h zfbtest_generated.h
+zfbtest_SOURCES = zfbtest.cpp user_generated.h zfbtest_generated.h

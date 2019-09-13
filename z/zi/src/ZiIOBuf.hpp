@@ -33,20 +33,23 @@
 #include <ZmPolymorph.hpp>
 #include <ZmHeap.hpp>
 
+#pragma pack(push, 2)
 template <typename Heap> class ZiIOBuf_ : public Heap, public ZmPolymorph {
 public:
   // TCP over Ethernet maximum payload is 1460 (without Jumbo frames)
   enum { Size = 1460 };
 
-  inline ZiIOBuf_() : owner(nullptr), length(0) { }
+  inline ZiIOBuf_() : owner(nullptr), length(0), skip(0) { }
   inline ZiIOBuf_(void *owner_, unsigned length_) :
-      owner(owner_), length(length_) { }
+      owner(owner_), length(length_), skip(0) { }
   ~ZiIOBuf_() { }
 
   void		*owner;
-  unsigned	length;
+  uint16_t	length;
+  uint16_t	skip;
   char		data[Size];
 };
+#pragma pack(pop)
 struct ZiIOBuf_HeapID {
   inline static const char *id() { return "ZiIOBuf"; }
 };

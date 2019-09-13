@@ -4,59 +4,115 @@
 
 #include <ZtString.hpp>
 
+using namespace Zfb;
+using namespace zfbtest;
+
+template <typename Vector, typename L>
+inline void push_(Vector &, L &) { }
+template <typename Vector, typename L, typename Arg1, typename ...Args>
+inline void push_(Vector &v, L &l, Arg1 &&arg1, Args &&... args) {
+  v.push_back(l(ZuFwd<Arg1>(arg1)));
+  push_(v, l, ZuFwd<Args>(args)...);
+}
+template <typename T, typename B, typename L, typename ...Args>
+inline auto vector_(B &b, L l, Args &&... args) {
+  std::vector<Offset<T> > v;
+  push_(v, l, ZuFwd<Args>(args)...);
+  return b.CreateVector(v);
+}
+template <typename T, typename B, typename ...Args>
+inline auto vector(B &b, Args &&... args) {
+  return vector_<T>(b, [](auto p) { return p; }, ZuFwd<Args>(args)...);
+}
+template <typename T, typename B, typename L, typename ...Args>
+inline auto keyVec_(B &b, L l, Args &&... args) {
+  std::vector<Offset<T> > v;
+  push_(v, l, ZuFwd<Args>(args)...);
+  return b.CreateVectorOfSortedTables(&v);
+}
+template <typename T, typename B, typename ...Args>
+inline auto keyVec(B &b, Args &&... args) {
+  return keyVec_<T>(b, [](auto p) { return p; }, ZuFwd<Args>(args)...);
+}
+template <typename B, typename S>
+inline auto str(B &b, S &&s) {
+  return b.CreateString(ZuFwd<S>(s));
+}
+template <typename B, typename ...Args>
+inline auto strVec(B &b, Args &&... args) {
+  return vector_<String>(b, [&b](const auto &s) {
+    return str(b, s);
+  }, ZuFwd<Args>(args)...);
+}
+template <typename B>
+inline auto byteVec(B &b, const void *data, unsigned len) {
+  return b.CreateVector(static_cast<const uint8_t *>(data), len);
+}
+template <typename B>
+inline auto byteVec(B &b, ZuString s) {
+  return b.CreateVector(
+      reinterpret_cast<const uint8_t *>(s.data()), s.length());
+}
+
 int main()
 {
-  using namespace Zfb;
-  using namespace zfbtest;
+  ZmRef<IOBuf> iobuf;
 
-  IOBuilder builder;
+  {
+    IOBuilder b;
 
-  auto weapon_one_name = builder.CreateString("Sword");
-  short weapon_one_damage = 3;
-  auto weapon_two_name = builder.CreateString("Axe");
-  short weapon_two_damage = 5;
+    auto perms = keyVec<Perm>(b,
+	CreatePerm(b, 0, str(b, "useradd")),
+	CreatePerm(b, 1, str(b, "usermod")),
+	CreatePerm(b, 2, str(b, "userdel")),
+	CreatePerm(b, 3, str(b, "login")));
+    uint64_t userPerms = 0x80;
+    uint64_t adminPerms = 0x8f;
+    auto roles = keyVec<Role>(b,
+	CreateRole(b, str(b, "user"), b.CreateVector(&userPerms, 1)),
+	CreateRole(b, str(b, "admin"), b.CreateVector(&adminPerms, 1)));
+    auto users = keyVec<User>(b,
+	CreateUser(b, 0, str(b, "user1"),
+	  byteVec(b, "", 0), byteVec(b, "", 0), strVec(b, "admin")),
+	CreateUser(b, 1, str(b, "user2"),
+	  byteVec(b, "", 0), byteVec(b, "", 0), strVec(b, "user", "admin")));
+    auto keys = keyVec<Key>(b,
+	CreateKey(b, str(b, "1"), byteVec(b, "2", 1), 0),
+	CreateKey(b, str(b, "3"), byteVec(b, "4", 1), 1));
 
-  // Use the `CreateWeapon` shortcut to create Weapons with all the fields set.
-  auto sword = CreateWeapon(builder, weapon_one_name, weapon_one_damage);
-  auto axe = CreateWeapon(builder, weapon_two_name, weapon_two_damage);
+    auto db = CreateUserDB(b, perms, roles, users, keys);
 
-  // Serialize a name for our monster, called "Orc".
-  auto name = builder.CreateString("Orc");
-  // Create a `vector` representing the inventory of the Orc. Each number
-  // could correspond to an item that can be claimed after he is slain.
-  unsigned char treasure[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  auto inventory = builder.CreateVector(treasure, 10);
+    b.Finish(db);
 
-  // Place the weapons into a `std::vector`, then convert that into a FlatBuffer `vector`.
-  std::vector<flatbuffers::Offset<Weapon>> weapons_vector;
-  weapons_vector.push_back(sword);
-  weapons_vector.push_back(axe);
-  auto weapons = builder.CreateVector(weapons_vector);
+    uint8_t *buf = b.GetBufferPointer();
+    int len = b.GetSize();
 
-  Vec3 points[] = { Vec3(1.0f, 2.0f, 3.0f), Vec3(4.0f, 5.0f, 6.0f) };
-  auto path = builder.CreateVectorOfStructs(points, 2);
+    std::cout << ZtHexDump("", buf, len);
 
-  // Create the position struct
-  auto position = Vec3(1.0f, 2.0f, 3.0f);
-  // Set his hit points to 300 and his mana to 150.
-  int hp = 300;
-  int mana = 150;
-  // Finally, create the monster using the `CreateMonster` helper function
-  // to set all fields.
-  auto orc = CreateMonster(builder, &position, mana, hp, name, inventory,
-			  Color_Red, weapons, Equipment_Weapon, axe.Union(),
-			  path);
+    iobuf = b.buf();
 
-  // Call `Finish()` to instruct the builder that this monster is complete.
-  // Note: Regardless of how you created the `orc`, you still need to call
-  // `Finish()` on the `FlatBufferBuilder`.
-  builder.Finish(orc);
+    std::cout << ZtHexDump("\n\n", iobuf->data + iobuf->skip, iobuf->length);
 
-  // This must be called after `Finish()`.
-  uint8_t *buf = builder.GetBufferPointer();
-  int size = builder.GetSize(); // Returns the size of the buffer that
-				// `GetBufferPointer()` points to.
+    if ((void *)buf != (void *)(iobuf->data + iobuf->skip) ||
+	len != iobuf->length) {
+      std::cerr << "FAILED - inconsistent buffers\n" << std::flush;
+      return 1;
+    }
+  }
 
-  std::cout << ZtHexDump("", buf, size);
+  auto db = GetUserDB(iobuf->data + iobuf->skip);
+
+  auto perm = db->perms()->LookupByKey(1);
+
+  if (!perm) {
+    std::cerr << "FAILED - key lookup failed\n" << std::flush;
+    return 1;
+  }
+
+  if (string(perm->name()) != "usermod") {
+    std::cerr << "FAILED - wrong key\n" << std::flush;
+    return 1;
+  }
+
   return 0;
 }

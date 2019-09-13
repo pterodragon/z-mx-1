@@ -274,7 +274,7 @@ public:
   }
 
   void send_(ZmRef<IOBuf> buf) { // TLS thread
-    send_(buf->data, buf->length);
+    send_(buf->data + buf->skip, buf->length);
   }
   void send_(const void *data_, unsigned len) { // TLS thread
     if (ZuUnlikely(!len)) return;
@@ -631,6 +631,16 @@ protected:
       return false;
     }
     mbedtls_ssl_conf_ca_chain(&m_conf, &m_cacert, nullptr);
+    return true;
+  }
+
+  bool random(void *data_, unsigned len) {
+    auto data = static_cast<unsigned char *>(data_);
+    int i = mbedtls_ctr_drbg_random(&m_ctr_drbg, data, len);
+    if (i < 0) {
+      logError("mbedtls_ctr_drbg_random() returned ", n);
+      return false;
+    }
     return true;
   }
 

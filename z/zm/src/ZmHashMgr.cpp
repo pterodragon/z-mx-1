@@ -47,9 +47,9 @@ friend class ZmHashMgr;
   ZmHashMgr_() { }
 public:
   ~ZmHashMgr_() {
-    if (ZuLikely(!m_tables.count())) return;
     ZmGuard<ZmPLock> guard(m_lock);
     auto i = m_tables.iterator();
+    if (ZuLikely(!i.count())) return;
     while (auto tbl = i.iterate()) {
       tbl->ref2_();
       i.del();

@@ -1,0 +1,15 @@
+namespace zfbtest;
+table KeyID {
+  key:string;
+}
+table KeyIDList {
+  list:[string];
+}
+table Key {
+  key:string (key);	// 16 byte API key, base64 encoded
+  secret:[ubyte];	// 32 byte HMAC-SHA256 API secret
+  userID:uint64;
+}
+table KeyList {
+  list:[Key];
+}

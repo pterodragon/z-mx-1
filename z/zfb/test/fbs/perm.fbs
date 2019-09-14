@@ -1,0 +1,11 @@
+namespace zfbtest;
+table PermID {
+  id:uint8;
+}
+table Perm {
+  id:uint8 (key);	// index in bitmap
+  name:string;
+}
+table PermList {
+  list:[Perm];
+}

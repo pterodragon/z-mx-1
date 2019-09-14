@@ -468,6 +468,8 @@ protected:
       return m_hash.iterate(static_cast<I &>(*this));
     }
 
+    ZuInline unsigned count() const { return m_hash.count_(); }
+
   protected:
     Hash			&m_hash;
     int				m_slot;
@@ -605,12 +607,13 @@ public:
     delete [] m_table;
   }
 
-  inline unsigned count() const { return m_count; }
-  inline unsigned loadFactor_() const { return m_loadFactor; }
-  inline double loadFactor() const { return (double)m_loadFactor / 16.0; }
-  inline unsigned size() const {
+  ZuInline unsigned loadFactor_() const { return m_loadFactor; }
+  ZuInline double loadFactor() const { return (double)m_loadFactor / 16.0; }
+  ZuInline unsigned size() const {
     return (double)(((uint64_t)1)<<m_bits) * loadFactor();
   }
+
+  ZuInline unsigned count_() const { return m_count; }
 
   template <typename Key__>
   inline typename ZuNotConvertible<

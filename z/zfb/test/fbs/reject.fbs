@@ -1,0 +1,7 @@
+namespace zfbtest;
+table Reject {
+  id:uint64;		// request ID being rejected
+  code:uint32;		// reject code
+  message:string;	// reject text
+}
+root_type Reject;

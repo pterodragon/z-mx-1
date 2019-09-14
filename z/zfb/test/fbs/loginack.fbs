@@ -1,0 +1,5 @@
+namespace zfbtest;
+table LoginAck {
+  token:[ubyte];	// 16 byte random token (to be HMAC'd by client)
+}
+root_type LoginAck;

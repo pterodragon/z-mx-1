@@ -638,7 +638,7 @@ protected:
     auto data = static_cast<unsigned char *>(data_);
     int i = mbedtls_ctr_drbg_random(&m_ctr_drbg, data, len);
     if (i < 0) {
-      logError("mbedtls_ctr_drbg_random() returned ", n);
+      logError("mbedtls_ctr_drbg_random() returned ", i);
       return false;
     }
     return true;

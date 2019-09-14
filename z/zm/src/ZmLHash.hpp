@@ -341,9 +341,10 @@ template <typename Key, typename NTP> class ZmLHash__ : public ZmAnyHash {
   typedef typename NTP::Lock Lock;
 
 public:
-  inline unsigned count() const { return m_count; }
   inline unsigned loadFactor_() const { return m_loadFactor; }
   inline double loadFactor() const { return (double)m_loadFactor / 16.0; }
+
+  inline unsigned count_() const { return m_count; }
 
 protected:
   inline ZmLHash__(const ZmHashParams &params) : ZmAnyHash(params.telFreq()) {
@@ -513,6 +514,8 @@ friend class Iterator_;
     inline KeyValRef iterate() { return m_hash.iterate(*this); }
     inline const Key &iterateKey() { return m_hash.iterateKey(*this); }
     inline const Val &iterateVal() { return m_hash.iterateVal(*this); }
+
+    ZuInline unsigned count() const { return m_hash.count_(); }
 
   protected:
     Hash	&m_hash;

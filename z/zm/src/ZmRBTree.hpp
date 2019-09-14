@@ -214,6 +214,8 @@ public:
     return ValCmp::null();
   }
 
+  ZuInline unsigned count() const { return m_tree.count_(); }
+
 protected:
   Tree	&m_tree;
   Node	*m_node;
@@ -382,7 +384,9 @@ public:
   ~ZmRBTree() { clean_(); }
 
   inline Lock &lock() const { return m_lock; }
-  inline unsigned count() const { return m_count; }
+
+  inline unsigned count() const { ReadGuard guard(m_lock); return m_count; }
+  inline unsigned count_() const { return m_count; }
 
   inline void add(Node *newNode) {
     newNode->init();

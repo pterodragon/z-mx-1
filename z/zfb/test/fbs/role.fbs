@@ -1,0 +1,11 @@
+namespace zfbtest;
+table RoleID {
+  name:string;
+}
+table Role {
+  name:string (key);
+  perms:[uint64];	// bitmap
+}
+table RoleList {
+  list:[Role];
+}

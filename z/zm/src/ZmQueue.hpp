@@ -330,7 +330,7 @@ public:
     m_id2key->clean();
   }
 
-  inline int count() const { return m_key2id->count(); }
+  inline unsigned count() const { return m_key2id->count(); }
 
   inline ID head() const { return m_head; }
   inline ID tail() const { return m_tail; }

@@ -178,14 +178,18 @@ public:
     free(m_data);
   }
 
-  inline unsigned size() const { return m_size; }
-  inline unsigned length() const { return m_length; }
-  inline unsigned count() const { return m_count; }
   inline unsigned initial() const { return m_initial; }
   inline unsigned increment() const { return m_increment; }
   inline unsigned maxFrag() const {
     return (unsigned)((1.0 - m_defrag) * 100.0);
   }
+
+  inline unsigned size() const { ReadGuard guard(m_lock); return m_size; }
+  inline unsigned length() const { ReadGuard guard(m_lock); return m_length; }
+  inline unsigned count() const { ReadGuard guard(m_lock); return m_count; }
+  inline unsigned size_() const { return m_size; }
+  inline unsigned length_() const { return m_length; }
+  inline unsigned count_() const { return m_count; }
 
 private:
   inline void lazy() {

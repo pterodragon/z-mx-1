@@ -1,9 +1,14 @@
 namespace zfbtest;
+table UserID {
+  id:uint64;
+}
 table User {
   id:uint64 (key);
   name:string;
   passwd:[ubyte];	// output of HMAC-SHA256 with password key
-  passwdKey:[ubyte];	// 32 byte password key (to hash plaintext password)
+  passwdKey:[ubyte];	// hash secret (random at time of passwd setting)
   roles:[string];	// roles
 }
-root_type User;
+table UserList {
+  list:[User];
+}

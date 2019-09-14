@@ -1,0 +1,33 @@
+include "perm.fbs";
+include "role.fbs";
+include "user.fbs";
+include "key.fbs";
+namespace zfbtest;
+union ReqData {
+  UserGet:UserID,
+  UserAdd:User,
+  UserMod:User,
+  UserDel:UserID,
+  
+  RoleGet:RoleID,
+  RoleAdd:Role,
+  RoleMod:Role,
+  RoleDel:RoleID,
+  
+  PermGet:PermID,
+  PermAdd:Perm,
+  PermMod:Perm,
+  PermDel:PermID,
+
+  KeyGet:UserID,	// returns KeyIDs valid for user
+  KeyAdd:UserID,	// adds new key to user (returns key+secret)
+  KeyClr:UserID,	// deletes all keys for user
+  KeyDel:KeyID		// deletes specific key
+}
+// the hmac is computed once per session, when LoginAck is received
+table Request {
+  hmac:[ubyte];		// 32 byte HMAC-SHA256 (secret, token)
+  id:uint64;		// request ID (re-starts at 0 with each session)
+  data:ReqData;
+}
+root_type Request;

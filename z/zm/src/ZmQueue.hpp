@@ -189,7 +189,7 @@ friend class Iterator;
     inline void reset() { m_id = m_queue.m_head; }
 
     inline const Key &iterate() {
-      if (!m_queue.m_key2id->count() || m_id == m_queue.m_tail)
+      if (!m_queue.m_key2id->count_() || m_id == m_queue.m_tail)
 	return Cmp::null();
       typename ID2Key::NodeRef node;
       do {
@@ -249,7 +249,7 @@ friend class Iterator;
 
   inline Key shift() {
     Guard guard(m_lock);
-    if (!m_key2id->count() || m_head == m_tail) return Cmp::null();
+    if (!m_key2id->count_() || m_head == m_tail) return Cmp::null();
     typename ID2Key::NodeRef node;
     do { node = m_id2key->del(m_head++); } while (!node && m_head != m_tail);
     if (!node) return Cmp::null();
@@ -258,7 +258,7 @@ friend class Iterator;
   }
   inline Key shift(ID &id) {
     Guard guard(m_lock);
-    if (!m_key2id->count() || m_head == m_tail) return Cmp::null();
+    if (!m_key2id->count_() || m_head == m_tail) return Cmp::null();
     typename ID2Key::NodeRef node;
     do { node = m_id2key->del(m_head++); } while (!node && m_head != m_tail);
     if (!node) return Cmp::null();
@@ -330,7 +330,7 @@ public:
     m_id2key->clean();
   }
 
-  inline unsigned count() const { return m_key2id->count(); }
+  inline unsigned count() const { return m_key2id->count_(); }
 
   inline ID head() const { return m_head; }
   inline ID tail() const { return m_tail; }

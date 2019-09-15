@@ -38,19 +38,17 @@ namespace Hex {
 // -ve - bytes that would have been written (destination buffer is too small)
 
 // does not null-terminate dst
+ZuInline unsigned enclen(unsigned slen) { return slen<<1; }
 ZuInline int encode(char *dst, unsigned dlen, const void *src, unsigned slen) {
   using hex = cppcodec::hex_upper;
-  unsigned olen = slen<<1;
-  if (dlen < olen) return -(int)olen;
-  return hex::encode(dst, olen, sec, slen);
+  return hex::encode(dst, dlen, (const uint8_t *)src, slen);
 }
 
 // does not null-terminate dst
-ZuInline int decode(void *dst, unsigned dlen, const void *src, unsigned slen) {
+ZuInline unsigned declen(unsigned slen) { return (slen + 1)>>1; }
+ZuInline int decode(void *dst, unsigned dlen, const char *src, unsigned slen) {
   using hex = cppcodec::hex_upper;
-  unsigned olen = (slen + 1)>>1;
-  if (dlen < olen) return -(int)olen;
-  return hex::decode(dst, olen, sec, slen);
+  return hex::decode((uint8_t *)dst, dlen, src, slen);
 }
 
 }

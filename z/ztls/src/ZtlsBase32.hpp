@@ -38,19 +38,17 @@ namespace Base32 {
 // -ve - bytes that would have been written (destination buffer is too small)
 
 // does not null-terminate dst
+ZuInline unsigned enclen(unsigned slen) { return ((slen + 4)/5)<<3; }
 ZuInline int encode(char *dst, unsigned dlen, const void *src, unsigned slen) {
   using base32 = cppcodec::base32_rfc4648;
-  unsigned olen = ((slen + 4)/5)<<3;
-  if (dlen < olen) return -(int)olen;
-  return base32::encode(dst, olen, sec, slen);
+  return base32::encode(dst, dlen, (const uint8_t *)src, slen);
 }
 
 // does not null-terminate dst
-ZuInline int decode(void *dst, unsigned dlen, const void *src, unsigned slen) {
+ZuInline unsigned declen(unsigned slen) { return ((slen + 7)>>3)*5; }
+ZuInline int decode(void *dst, unsigned dlen, const char *src, unsigned slen) {
   using base32 = cppcodec::base32_rfc4648;
-  unsigned olen = ((slen + 7)>>3)*5;
-  if (dlen < olen) return -(int)olen;
-  return base32::decode(dst, olen, sec, slen);
+  return base32::decode((uint8_t *)dst, dlen, src, slen);
 }
 
 }

@@ -308,7 +308,7 @@ retry:
 bool ZdbEnv::disconnectAll()
 {
   m_lock.lock();
-  unsigned n = m_cxns->count();
+  unsigned n = m_cxns->count_();
   ZtArray<ZmRef<Zdb_Cxn> > cxns(n);
   unsigned i = 0;
   {
@@ -474,7 +474,7 @@ void ZdbEnv::telemetry(Telemetry &data) const
   data.writeThread = m_config.writeTID;
 
   ReadGuard guard(m_lock);
-  data.nCxns = m_cxns ? m_cxns->count() : 0;
+  data.nCxns = m_cxns ? m_cxns->count_() : 0;
   data.self = m_self->id();
   data.master = m_master ? m_master->id() : 0;
   data.prev = m_prev ? m_prev->id() : 0;
@@ -1178,7 +1178,7 @@ void ZdbEnv::hbSend_(Zdb_Cxn *cxn_)
     return;
   }
   ZmRef<Zdb_Cxn> cxn;
-  unsigned i = 0, n = m_cxns->count();
+  unsigned i = 0, n = m_cxns->count_();
   ZtArray<ZmRef<Zdb_Cxn> > cxns(n);
   {
     auto j = m_cxns->readIterator();
@@ -1831,7 +1831,7 @@ ZmRef<ZdbAnyPOD> ZdbAny::get__(ZdbRN rn)
 void ZdbAny::cache(ZdbAnyPOD *pod)
 {
   if (m_cacheMode != ZdbCacheMode::FullCache &&
-      m_cache->count() >= m_cacheSize) {
+      m_cache->count_() >= m_cacheSize) {
     ZmRef<ZdbLRUNode> lru_ = m_lru.shiftNode();
     if (ZuLikely(lru_)) {
       ZdbAnyPOD *lru = static_cast<ZdbAnyPOD *>(lru_.ptr());
@@ -2080,7 +2080,7 @@ ZmRef<Zdb_File> ZdbAny::getFile(unsigned index, bool create)
   ++m_fileMisses;
   file = openFile(index, create);
   if (ZuUnlikely(!file)) return nullptr;
-  if (m_files->count() >= m_filesMax)
+  if (m_files->count_() >= m_filesMax)
     if (ZmRef<Zdb_File> lru = m_filesLRU.shiftNode())
       m_files->del(lru->index());
   m_files->add(file);

@@ -661,7 +661,7 @@ public:
 #undef ZmTLock_ID2LOCK
 #undef ZmTLock_TID2THREAD
 
-  unsigned count() { ReadGuard guard(m_lock); return m_locks->count_(); }
+  unsigned count() { ReadGuard_ guard(m_lock); return m_locks->count_(); }
   unsigned count_() { return m_locks->count_(); }
 
 private:

@@ -19,8 +19,8 @@
 
 // mbedtls C++ wrapper - HMAC message digest
 
-#ifndef ZtlsDigest_HPP
-#define ZtlsDigest_HPP
+#ifndef ZtlsHMAC_HPP
+#define ZtlsHMAC_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -32,14 +32,14 @@
 
 namespace Ztls {
 
-class Digest {
+class HMAC {
 public:
   // mbedtls_md_type_t, e.g. MBEDTLS_MD_SHA256
-  inline Digest(int type) {
+  inline HMAC(mbedtls_md_type_t type) {
     mbedtls_md_init(&m_ctx);
     mbedtls_md_setup(&m_ctx, mbedtls_md_info_from_type(type), 1);
   }
-  inline ~Digest() {
+  inline ~HMAC() {
     mbedtls_md_free(&m_ctx);
   }
 
@@ -60,4 +60,4 @@ private:
 
 }
 
-#endif /* ZtlsDigest_HPP */
+#endif /* ZtlsHMAC_HPP */

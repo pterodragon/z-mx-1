@@ -162,6 +162,7 @@ public:
   typedef typename NTP::template IndexT<Val>::Index Index;
   typedef typename NTP::Lock Lock;
   typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
 
   template <typename ...Args>
   inline ZmDRing(ZmDRingParams params = ZmDRingParams(), Args &&... args) :

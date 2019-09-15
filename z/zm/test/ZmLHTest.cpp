@@ -193,7 +193,7 @@ void funcTest_(int bits, double loadFactor)
   add(h), iter(h, 42+43+44);
   puts("DEL 42 43 44");
   del(h, 42), iter(h, 43+44), del(h, 43), iter(h, 44), del(h, 44), iter(h, 0);
-  CHECK(h.count() == 1);
+  CHECK(h.count_() == 1);
   add(h), iter(h, 42+43+44);
   puts("DEL 42 44 43");
   del(h, 42), iter(h, 43+44), del(h, 44), iter(h, 43), del(h, 43), iter(h, 0);

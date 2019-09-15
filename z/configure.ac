@@ -73,6 +73,10 @@ AX_PATH_LIB_FLATBUFFERS(, [AC_MSG_ERROR([libflatbuffers required])])
 CPPFLAGS="$FLATBUFFERS_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$FLATBUFFERS_LDFLAGS $LDFLAGS"
 
+AX_PATH_LIB_CPPCODEC(, [AC_MSG_ERROR([libcppcodec required])])
+CPPFLAGS="$CPPCODEC_CPPFLAGS $CPPFLAGS"
+LDFLAGS="$CPPCODEC_LDFLAGS $LDFLAGS"
+
 if test ".$mingw" != ".yes"; then
   AC_ARG_ENABLE([netlink],
     [  --enable-netlink        enable netlink],

@@ -49,8 +49,8 @@ public:
   ZuBitmap(ZuBitmap &&b) = default;
   ZuBitmap &operator =(ZuBitmap &&b) = default;
 
-  void zero() { memset(0, data, Bytes); }
-  void fill() { memset(0xff, data, Bytes); }
+  void zero() { memset(data, 0, Bytes); }
+  void fill() { memset(data, 0xff, Bytes); }
 
   ZuInline void set(unsigned i) {
     data[i>>Shift] |= ((uint64_t)1)<<(i & Mask);
@@ -60,6 +60,54 @@ public:
   }
   ZuInline bool val(unsigned i) const {
     return data[i>>Shift] & ((uint64_t)1)<<(i & Mask);
+  }
+
+  template <unsigned I> struct Index { enum { OK = I < Words }; };
+  template <typename Fn, unsigned I>
+  ZuInline static typename ZuIfT<Index<I>::OK>::T
+  opFn(uint64_t *v1) {
+    Fn::fn(v1[I]);
+    opFn<Fn, I + 1>(v1);
+  }
+  template <typename Fn, unsigned I>
+  ZuInline static typename ZuIfT<Index<I>::OK>::T
+  opFn(uint64_t *v1, const uint64_t *v2) {
+    Fn::fn(v1[I], v2[I]);
+    opFn<Fn, I + 1>(v1, v2);
+  }
+  template <typename, unsigned I>
+  ZuInline static typename ZuIfT<!Index<I>::OK>::T
+  opFn(uint64_t *) { }
+  template <typename, unsigned I>
+  ZuInline static typename ZuIfT<!Index<I>::OK>::T
+  opFn(uint64_t *, const uint64_t *) { }
+
+  struct Not {
+    ZuInline static void fn(uint64_t &v1) { v1 = ~v1; }
+  };
+  struct Or {
+    ZuInline static void fn(uint64_t &v1, const uint64_t &v2) { v1 |= v2; }
+  };
+  struct And {
+    ZuInline static void fn(uint64_t &v1, const uint64_t &v2) { v1 &= v2; }
+  };
+  struct Xor {
+    ZuInline static void fn(uint64_t &v1, const uint64_t &v2) { v1 ^= v2; }
+  };
+
+  inline void flip() { opFn<Not, 0>(data); }
+
+  inline ZuBitmap &operator |=(const ZuBitmap &b) {
+    opFn<Or, 0>(data, b.data);
+    return *this;
+  }
+  inline ZuBitmap &operator &=(const ZuBitmap &b) {
+    opFn<And, 0>(data, b.data);
+    return *this;
+  }
+  inline ZuBitmap &operator ^=(const ZuBitmap &b) {
+    opFn<Xor, 0>(data, b.data);
+    return *this;
   }
 
   uint64_t	data[Words];

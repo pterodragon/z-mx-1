@@ -163,7 +163,9 @@ public:
   typedef typename NTP::template ICmpT<Val>::ICmp ICmp;
   typedef typename NTP::template IndexT<Val>::Index Index;
   typedef typename NTP::Lock Lock;
+
   typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
 
   template <typename ...Args>
   inline ZmStack(ZmStackParams params = ZmStackParams(), Args &&... args) :

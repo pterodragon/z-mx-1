@@ -3,55 +3,133 @@
 #include "userdb_generated.h"
 
 #include <ZuBitmap.hpp>
+#include <ZuObject.hpp>
+#include <ZuPolymorph.hpp>
+#include <ZuRef.hpp>
+
+#include <ZmHash.hpp>
+#include <ZmRBTree.hpp>
 
 #include <ZtString.hpp>
 
 using namespace Zfb;
 
-#if 0
 using Bitmap = ZuBitmap<256>;
 
-using RoleTree =
-  ZmRBTree<ZtString,
-    ZmRBTreeVal<Bitmap,
-      ZmRBTreeLock<ZmNoLock> > >;
+struct Role_ : public ZuObject {
+private:
+  inline void perm_() { }
+  template <typename Arg1, typename ...Args>
+  inline void perm_(Arg1 &&arg1, Args &&... args) {
+    perms.set(ZuFwd<Arg1>(arg1));
+    perm_(ZuFwd<Args>(args)...);
+  }
+public:
+  template <typename ...Args>
+  inline Role_(ZuString name_, Args &&... args) : name(name_) {
+    perm_(ZuFwd<Args>(args)...);
+  }
 
-struct User__ : ZuObject {
+  ZtString		name;
+  Bitmap		perms;
+
+  template <typename B> auto save(B &b) {
+    using namespace zfbtest;
+    using namespace Save;
+    return CreateRole(b, str(b, name),
+	b.CreateVector(perms.data, Bitmap::Words));
+  }
+};
+struct RoleNameAccessor : public ZuAccessor<Role_, ZtString> {
+  inline static const ZtString &value(const Role_ &r) { return r.name; }
+};
+using RoleTree =
+  ZmRBTree<Role_,
+    ZmRBTreeObject<ZuNull,
+      ZmRBTreeIndex<RoleNameAccessor,
+	ZmRBTreeNodeIsKey<true,
+	  ZmRBTreeLock<ZmNoLock> > > > >;
+using Role = RoleTree::Node;
+template <typename T> inline ZmRef<Role> loadRole(T *role_) {
+  using namespace Load;
+  ZmRef<Role> role = new Role(str(role_->name()));
+  all(role_->perms(), [role](unsigned i, uint64_t v) {
+    if (i < Bitmap::Words) role->perms.data[i] = v;
+  });
+  return role;
+}
+
+struct User__ : public ZuPolymorph {
+  User__(uint64_t id_, ZuString name_) : id(id_), name(name_) { }
+
   uint64_t		id;
   ZtString		name;
   char			passwd[32];
   char			passwdKey[32];
   ZtArray<Role *>	roles;
   Bitmap		perms;		// effective permisions
+
+  template <typename B> auto save(B &b) {
+    using namespace zfbtest;
+    using namespace Save;
+    return CreateUser(b, id,
+	str(b, name), bytes(b, passwd, 32), bytes(b, passwdKey, 32),
+	strVecIter(b, roles.length(), [this](B &b, unsigned k) {
+	  return roles[k]->name;
+	}));
+  }
 };
-struct UserIDAccessor : public ZuAccessor<User__ *, uint64_t> {
-  inline static uint64_t value(const User__ *u) { return u->id; }
+struct UserIDAccessor : public ZuAccessor<User__, uint64_t> {
+  inline static uint64_t value(const User__ &u) { return u.id; }
 };
 using UserIDHash =
   ZmHash<User__,
     ZmHashObject<ZuNull,
       ZmHashIndex<UserIDAccessor,
 	ZmHashNodeIsKey<true,
-	  ZmHashLock<ZmNoLock> > > > >;
+	  ZmHashHeapID<ZuNull,
+	    ZmHashLock<ZmNoLock> > > > > >;
 using User_ = UserIDHash::Node;
-struct UserNameAccessor : public ZuAccessor<User_ *, ZtString> {
-  inline static ZtString value(const User_ *u) { return u->name; }
+struct UserNameAccessor : public ZuAccessor<User_, ZtString> {
+  inline static ZtString value(const User_ &u) { return u.name; }
 };
 using UserNameHash =
   ZmHash<User_,
-    ZmHashObject<ZuObject,
+    ZmHashObject<ZuPolymorph,
       ZmHashIndex<UserNameAccessor,
 	ZmHashNodeIsKey<true,
 	  ZmHashLock<ZmNoLock> > > > >;
 using User = UserNameHash::Node;
+template <typename Roles, typename T>
+inline ZmRef<User> loadUser(const Roles &roles, T *user_) {
+  using namespace Load;
+  ZmRef<User> user = new User(user_->id(), str(user_->name()));
+  if (!cpy(user->passwd, user_->passwd())) return nullptr;
+  if (!cpy(user->passwdKey, user_->passwdKey())) return nullptr;
+  all(user_->roles(), [&roles, &user](unsigned, auto roleName) {
+    if (auto role = roles.findPtr(str(roleName))) {
+      user->roles.push(role);
+      user->perms |= role->perms;
+    }
+  });
+  return user;
+}
 
-struct Key_ : ZuObject {
+struct Key_ : public ZuObject {
+  inline Key_(ZuString id_, uint64_t userID_) : id(id_), userID(userID_) { }
+
   ZtString	id;
   char		secret[32];
   uint64_t	userID;
+
+  template <typename B> auto save(B &b) {
+    using namespace zfbtest;
+    using namespace Save;
+    return CreateKey(b, str(b, id), bytes(b, secret, 32), userID);
+  }
 };
-struct KeyIDAccessor : public ZuAccessor<Key_ *, ZtString> {
-  inline static ZtString value(const Key_ *k) { return k->id; }
+struct KeyIDAccessor : public ZuAccessor<Key_, ZtString> {
+  inline static ZtString value(const Key_ &k) { return k.id; }
 };
 using KeyHash =
   ZmHash<Key_,
@@ -60,6 +138,12 @@ using KeyHash =
 	ZmHashNodeIsKey<true,
 	  ZmHashLock<ZmNoLock> > > > >;
 using Key = KeyHash::Node;
+template <typename T> inline ZmRef<Key> loadKey(T *key_) {
+  using namespace Load;
+  ZmRef<Key> key = new Key(str(key_->key()), key_->userID());
+  if (!cpy(key->secret, key_->secret())) return nullptr;
+  return key;
+}
 
 struct UserDB {
   ZtArray<ZtString>	perms; // indexed by permission ID
@@ -68,58 +152,100 @@ struct UserDB {
   UserNameHash		userNames;
   KeyHash		keys;
 
-  template <typename B>
-  void build(B &b) const {
-    using namespace Zfb::Build;
-    auto perms = keyVecIter<zfbtest::Perm>(b, perms.count(),
-	[&b](unsigned i) {
+  void permAdd() { }
+  template <typename Arg1, typename ...Args>
+  void permAdd(Arg1 &&arg1, Args &&... args) {
+    perms.push(ZuFwd<Arg1>(arg1));
+    permAdd(ZuFwd<Args>(args)...);
+  }
+  template <typename ...Args>
+  void roleAdd(ZuString name, Args &&... args) {
+    ZmRef<Role> role = new Role(name, ZuFwd<Args>(args)...);
+    roles.add(role);
+  }
+  void userAdd(uint64_t id, ZuString name, ZuString role) {
+    ZmRef<User> user = new User(id, name);
+    memset(user->passwd, 0, 32);
+    memset(user->passwdKey, 0, 32);
+    if (auto node = roles.find(role)) {
+      user->roles.push(node);
+      user->perms = node->perms;
+    }
+    users.add(user);
+    userNames.add(user);
+  }
+  void keyAdd(ZuString id, uint64_t userID) {
+    ZmRef<Key> key = new Key(id, userID);
+    memset(key->secret, 0, 32);
+    keys.add(key);
+  }
+
+  template <typename B> auto save(B &b) const {
+    using namespace Save;
+    auto perms_ = keyVecIter<zfbtest::Perm>(b, perms.length(),
+	[this](B &b, unsigned i) {
 	  return zfbtest::CreatePerm(b, i, str(b, perms[i]));
 	});
+    Offset<Vector<Offset<zfbtest::Role>>> roles_;
     {
-      RoleTree::ReadIterator i(roles);
-      auto roles = keyVecIter<zdbtest::Role>(b, i.count(),
-	  [&b, &i](unsigned j) {
-	    auto node = i.iterate();
-	    return zfbtest::CreateRole(b, str(b, node->key()),
-		b.CreateVector(node->val().data(), Bitmap::Words));
-	  });
+      auto i = roles.readIterator();
+      roles_ = keyVecIter<zfbtest::Role>(b, i.count(),
+	  [&i](B &b, unsigned j) { return i.iterate()->save(b); });
     }
+    Offset<Vector<Offset<zfbtest::User>>> users_;
+    {
+      auto i = users.readIterator();
+      users_ = keyVecIter<zfbtest::User>(b, i.count(),
+	  [&i](B &b, unsigned) { return i.iterate()->save(b); });
+    }
+    Offset<Vector<Offset<zfbtest::Key>>> keys_;
+    {
+      auto i = keys.readIterator();
+      keys_ = keyVecIter<zfbtest::Key>(b, i.count(),
+	  [&i](B &b, unsigned) { return i.iterate()->save(b); });
+    }
+    return zfbtest::CreateUserDB(b, perms_, roles_, users_, keys_);
+  }
+
+  void load(const void *buf) {
+    using namespace Load;
+    auto userDB = zfbtest::GetUserDB(buf);
+    all(userDB->perms(), [this](unsigned, auto perm_) {
+      unsigned j = perm_->id();
+      if (j >= Bitmap::Bits) return;
+      if (perms.length() < j + 1) perms.length(j + 1);
+      perms[j] = str(perm_->name());
+    });
+    all(userDB->roles(), [this](unsigned, auto role_) {
+      if (auto role = loadRole(role_)) roles.add(ZuMv(role));
+    });
+    all(userDB->users(), [this](unsigned, auto user_) {
+      if (auto user = loadUser(roles, user_)) users.add(ZuMv(user));
+    });
+    all(userDB->keys(), [this](unsigned, auto key_) {
+      if (auto key = loadKey(key_)) keys.add(ZuMv(key));
+    });
   }
 };
-#endif
 
 int main()
 {
   ZmRef<IOBuf> iobuf;
 
   {
+    UserDB userDB;
+
+    userDB.permAdd("useradd", "usermod", "userdel", "login");
+    userDB.roleAdd("admin", 0, 1, 2, 3);
+    userDB.roleAdd("user", 3);
+    userDB.userAdd(0, "user1", "admin");
+    userDB.userAdd(0, "user2", "user");
+    userDB.keyAdd("1", 0);
+    userDB.keyAdd("2", 1);
+
     IOBuilder b;
 
-    {
-      using namespace Zfb::Build;
-      using namespace zfbtest;
-
-      auto perms = keyVec<Perm>(b,
-	  CreatePerm(b, 0, str(b, "useradd")),
-	  CreatePerm(b, 1, str(b, "usermod")),
-	  CreatePerm(b, 2, str(b, "userdel")),
-	  CreatePerm(b, 3, str(b, "login")));
-      auto roles = keyVec<Role>(b,
-	  CreateRole(b, str(b, "user"), pvector<uint64_t>(b, 0x80)),
-	  CreateRole(b, str(b, "admin"), pvector<uint64_t>(b, 0x8f)));
-      auto users = keyVec<User>(b,
-	  CreateUser(b, 0, str(b, "user1"),
-	    bytes(b, "", 0), bytes(b, "", 0), strVec(b, "admin")),
-	  CreateUser(b, 1, str(b, "user2"),
-	    bytes(b, "", 0), bytes(b, "", 0), strVec(b, "user", "admin")));
-      auto keys = keyVec<Key>(b,
-	  CreateKey(b, str(b, "1"), bytes(b, "2", 1), 0),
-	  CreateKey(b, str(b, "3"), bytes(b, "4", 1), 1));
-
-      auto db = CreateUserDB(b, perms, roles, users, keys);
-
-      b.Finish(db);
-    }
+    b.Finish(userDB.save(b));
 
     uint8_t *buf = b.GetBufferPointer();
     int len = b.GetSize();
@@ -138,20 +264,32 @@ int main()
   }
 
   {
-    using namespace Parse;
-    using namespace zfbtest;
+    using namespace Load;
 
-    auto db = GetUserDB(iobuf->data + iobuf->skip);
+    {
+      using namespace zfbtest;
 
-    auto perm = db->perms()->LookupByKey(1);
+      auto db = GetUserDB(iobuf->data + iobuf->skip);
 
-    if (!perm) {
-      std::cerr << "FAILED - key lookup failed\n" << std::flush;
-      return 1;
+      auto perm = db->perms()->LookupByKey(1);
+
+      if (!perm) {
+	std::cerr << "READ FAILED - key lookup failed\n" << std::flush;
+	return 1;
+      }
+
+      if (str(perm->name()) != "usermod") {
+	std::cerr << "READ FAILED - wrong key\n" << std::flush;
+	return 1;
+      }
     }
 
-    if (str(perm->name()) != "usermod") {
-      std::cerr << "FAILED - wrong key\n" << std::flush;
+    UserDB userDB;
+
+    userDB.load(iobuf->data + iobuf->skip);
+
+    if (userDB.perms[1] != "usermod") {
+      std::cerr << "LOAD FAILED - wrong key\n" << std::flush;
       return 1;
     }
   }

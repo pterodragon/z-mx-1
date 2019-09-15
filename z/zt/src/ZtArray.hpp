@@ -700,6 +700,10 @@ public:
 
 // set size
 
+  inline Char *ensure(unsigned z) {
+    if (ZuLikely(z <= size())) return m_data;
+    return size(z);
+  }
   inline T *size(unsigned z) {
     if (!z) { null(); return 0; }
     if (owned() && z == size()) return m_data;

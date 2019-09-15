@@ -17,10 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// cppcodec C++ wrapper - Base 64 encode/decode
+// cppcodec C++ wrapper - Base 32 encode/decode
 
-#ifndef ZtlsBase64_HPP
-#define ZtlsBase64_HPP
+#ifndef ZtlsBase32_HPP
+#define ZtlsBase32_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -28,10 +28,10 @@
 
 #include <ZtlsLib.hpp>
 
-#include <cppcodec/base64_rfc4648.hpp>
+#include <cppcodec/base32_rfc4648.hpp>
 
 namespace Ztls {
-namespace Base64 {
+namespace Base32 {
 
 // both encode and decode return:
 // +ve - bytecount written
@@ -39,21 +39,21 @@ namespace Base64 {
 
 // does not null-terminate dst
 ZuInline int encode(char *dst, unsigned dlen, const void *src, unsigned slen) {
-  using base64 = cppcodec::base64_rfc4648;
-  unsigned olen = ((slen + 2)/3)<<2;
+  using base32 = cppcodec::base32_rfc4648;
+  unsigned olen = ((slen + 4)/5)<<3;
   if (dlen < olen) return -(int)olen;
-  return base64::encode(dst, olen, sec, slen);
+  return base32::encode(dst, olen, sec, slen);
 }
 
 // does not null-terminate dst
 ZuInline int decode(void *dst, unsigned dlen, const void *src, unsigned slen) {
-  using base64 = cppcodec::base64_rfc4648;
-  unsigned olen = ((slen + 3)>>2)*3;
+  using base32 = cppcodec::base32_rfc4648;
+  unsigned olen = ((slen + 7)>>3)*5;
   if (dlen < olen) return -(int)olen;
-  return base64::decode(dst, olen, sec, slen);
+  return base32::decode(dst, olen, sec, slen);
 }
 
 }
 }
 
-#endif /* ZtlsBase64_HPP */
+#endif /* ZtlsBase32_HPP */

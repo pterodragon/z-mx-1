@@ -64,8 +64,8 @@ struct User__ : public ZuPolymorph {
 
   uint64_t		id;
   ZtString		name;
-  char			passwd[32];
-  char			passwdKey[32];
+  char			passwd[32];	// HMAC(passwdKey, passwdPlainTxt)
+  char			passwdKey[32];	// TOTP and passwd hash secret
   ZtArray<Role *>	roles;
   Bitmap		perms;		// effective permisions
 

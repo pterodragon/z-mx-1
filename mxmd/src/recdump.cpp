@@ -373,7 +373,7 @@ public:
 
   inline void instrID(const MxInstrKey &key) { m_instrIDs->add(key); }
   inline bool filterID(MxInstrKey key) {
-    if (!m_instrIDs->count()) return false;
+    if (!m_instrIDs->count_()) return false;
     if (m_instrIDs->exists(key)) return false;
     if (*key.segment) {
       key.segment = MxID();

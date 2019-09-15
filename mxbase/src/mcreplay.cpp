@@ -152,7 +152,7 @@ public:
 
   void connected_(Connection *cxn) { m_cxns->add(cxn); }
   void disconnected_(Connection *cxn) { delete m_cxns->del(cxn->groupID()); }
-  inline int nCxns() { return m_cxns->count(); }
+  inline int nCxns() { return m_cxns->count_(); }
 
 private:
   ZmSemaphore	m_sem;

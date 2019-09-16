@@ -23,6 +23,36 @@
 
 namespace ZvUserDB {
 
+Zfb::Offset<fbs::UserDB> UserDB::save(Zfb::FlatBufferBuilder &b) const
+{
+  using namespace Zfb;
+  using namespace Save;
+  using B = FlatBufferBuilder;
+  auto perms_ = keyVecIter<fbs::Perm>(b, perms.length(),
+      [this](B &b, unsigned i) {
+	return fbs::CreatePerm(b, i, str(b, perms[i]));
+      });
+  Offset<Vector<Offset<fbs::Role>>> roles_;
+  {
+    auto i = roles.readIterator();
+    roles_ = keyVecIter<fbs::Role>(b, i.count(),
+	[&i](B &b, unsigned j) { return i.iterate()->save(b); });
+  }
+  Offset<Vector<Offset<fbs::User>>> users_;
+  {
+    auto i = users.readIterator();
+    users_ = keyVecIter<fbs::User>(b, i.count(),
+	[&i](B &b, unsigned) { return i.iterate()->save(b); });
+  }
+  Offset<Vector<Offset<fbs::Key>>> keys_;
+  {
+    auto i = keys.readIterator();
+    keys_ = keyVecIter<fbs::Key>(b, i.count(),
+	[&i](B &b, unsigned) { return i.iterate()->save(b); });
+  }
+  return fbs::CreateUserDB(b, perms_, roles_, users_, keys_);
+}
+
 void UserDB::load(const void *buf)
 {
   using namespace Zfb::Load;

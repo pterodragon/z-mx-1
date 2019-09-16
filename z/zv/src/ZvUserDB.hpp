@@ -65,7 +65,7 @@ public:
   ZtString		name;
   Bitmap		perms;
 
-  template <typename B> auto save(B &b) {
+  Zfb::Offset<fbs::Role> save(Zfb::FlatBufferBuilder &b) {
     using namespace fbs;
     using namespace Zfb::Save;
     return CreateRole(b, str(b, name),
@@ -101,12 +101,12 @@ struct User__ : public ZuPolymorph {
   ZtArray<Role *>	roles;
   Bitmap		perms;		// effective permisions
 
-  template <typename B> auto save(B &b) {
+  Zfb::Offset<fbs::User> save(Zfb::FlatBufferBuilder &b) {
     using namespace fbs;
     using namespace Zfb::Save;
     return CreateUser(b, id,
 	str(b, name), bytes(b, passwd, 32), bytes(b, secret, 32),
-	strVecIter(b, roles.length(), [this](B &b, unsigned k) {
+	strVecIter(b, roles.length(), [this](auto &b, unsigned k) {
 	  return roles[k]->name;
 	}));
   }
@@ -154,7 +154,7 @@ struct Key_ : public ZuObject {
   char		secret[32];
   uint64_t	userID;
 
-  template <typename B> auto save(B &b) {
+  Zfb::Offset<fbs::Key> save(Zfb::FlatBufferBuilder &b) {
     using namespace fbs;
     using namespace Zfb::Save;
     return CreateKey(b, str(b, id), bytes(b, secret, 32), userID);
@@ -177,7 +177,7 @@ template <typename T> inline ZmRef<Key> loadKey(T *key_) {
   return key;
 }
 
-struct UserDB {
+struct ZvAPI UserDB {
   ZtArray<ZtString>	perms; // indexed by permission ID
   RoleTree		roles; // name -> permissions
   UserIDHash		users;
@@ -242,38 +242,8 @@ struct UserDB {
   // KeyDel:KeyID		// deletes specific key
   //
 
-  // FIXME - move to .cpp
-  auto save(Zfb::FlatBufferBuilder &b) const {
-    using namespace Zfb;
-    using namespace Save;
-    using B = Zfb::FlatBufferBuilder;
-    auto perms_ = keyVecIter<fbs::Perm>(b, perms.length(),
-	[this](B &b, unsigned i) {
-	  return fbs::CreatePerm(b, i, str(b, perms[i]));
-	});
-    Offset<Vector<Offset<fbs::Role>>> roles_;
-    {
-      auto i = roles.readIterator();
-      roles_ = keyVecIter<fbs::Role>(b, i.count(),
-	  [&i](B &b, unsigned j) { return i.iterate()->save(b); });
-    }
-    Offset<Vector<Offset<fbs::User>>> users_;
-    {
-      auto i = users.readIterator();
-      users_ = keyVecIter<fbs::User>(b, i.count(),
-	  [&i](B &b, unsigned) { return i.iterate()->save(b); });
-    }
-    Offset<Vector<Offset<fbs::Key>>> keys_;
-    {
-      auto i = keys.readIterator();
-      keys_ = keyVecIter<fbs::Key>(b, i.count(),
-	  [&i](B &b, unsigned) { return i.iterate()->save(b); });
-    }
-    return fbs::CreateUserDB(b, perms_, roles_, users_, keys_);
-  }
-
+  Zfb::Offset<fbs::UserDB> save(Zfb::FlatBufferBuilder &b) const;
   void load(const void *buf);
-
 };
 
 }

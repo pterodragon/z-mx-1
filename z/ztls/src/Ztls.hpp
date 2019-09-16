@@ -273,7 +273,7 @@ public:
   }
 
   void send_(ZmRef<IOBuf> buf) { // TLS thread
-    send_(buf->data() + buf->skip, buf->length);
+    send_(buf->data(), buf->length);
   }
   void send_(const void *data_, unsigned len) { // TLS thread
     if (ZuUnlikely(!len)) return;

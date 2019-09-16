@@ -33,9 +33,9 @@ int main()
 
     iobuf = b.buf();
 
-    std::cout << ZtHexDump("\n", iobuf->data() + iobuf->skip, iobuf->length);
+    std::cout << ZtHexDump("\n", iobuf->data(), iobuf->length);
 
-    if ((void *)buf != (void *)(iobuf->data() + iobuf->skip) ||
+    if ((void *)buf != (void *)(iobuf->data()) ||
 	len != iobuf->length) {
       std::cerr << "FAILED - inconsistent buffers\n" << std::flush;
       return 1;
@@ -48,7 +48,7 @@ int main()
     {
       using namespace ZvUserDB::fbs;
 
-      auto db = GetUserDB(iobuf->data + iobuf->skip);
+      auto db = GetUserDB(iobuf->data());
 
       auto perm = db->perms()->LookupByKey(17);
 
@@ -65,7 +65,7 @@ int main()
 
     UserDB userDB;
 
-    userDB.load(iobuf->data + iobuf->skip);
+    userDB.load(iobuf->data());
 
     if (userDB.perm(17) != "keyClr") {
       std::cerr << "LOAD FAILED - wrong key\n" << std::flush;

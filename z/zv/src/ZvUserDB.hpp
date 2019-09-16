@@ -236,7 +236,7 @@ public:
   // '' for each user (OR of all roles)
   // ok(user, interactive, perm) gives true/false can proceed
   //
-  userList
+  //userList
 
 private:
   void permAdd_() { }

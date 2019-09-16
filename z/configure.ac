@@ -138,7 +138,7 @@ AC_OUTPUT(Makefile \
 	ze/Makefile ze/src/Makefile ze/test/Makefile \
 	zi/Makefile zi/src/Makefile zi/test/Makefile \
 	ztls/Makefile ztls/src/Makefile ztls/test/Makefile \
-	zfb/Makefile zfb/src/Makefile \
+	zfb/Makefile zfb/src/Makefile zfb/test/Makefile \
 	zv/Makefile zv/src/Makefile zv/test/Makefile \
 	zlz4/Makefile zlz4/src/Makefile zlz4/test/Makefile \
 	zp/Makefile zp/src/Makefile \

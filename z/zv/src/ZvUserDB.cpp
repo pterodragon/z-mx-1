@@ -25,21 +25,23 @@
 
 namespace ZvUserDB {
 
-bool UserDB::init(Ztls::Random *rng, ZtString &passwd, ZtString &secret)
+bool UserDB::init(
+    Ztls::Random *rng, unsigned passLen, ZtString &passwd, ZtString &secret)
 {
   Guard guard(m_lock);
   if (!m_perms.length())
     permAdd_(
 	"login",
-	"userList", "userAdd", "userMod", "userDel",
+	"userList", "userAdd", "userMod", "pwReset", "userDel",
 	"roleList", "roleAdd", "roleMod", "roleDel",
 	"permList", "permAdd", "permMod", "permDel",
 	"keyList", "keyAdd", "keyDel", "keyClr");
   if (!m_roles.count())
-    roleAdd_("admin", Role::Immutable, 0x1ffff);
+    roleAdd_("admin", Role::Immutable, 0x3ffff);
   if (!m_users.count_()) {
-    ZmRef<User> user = userAdd_(rng,
-	0, "admin", "admin", User::Immutable | User::Enabled, passwd);
+    ZmRef<User> user = userAdd_(
+	0, "admin", "admin", User::Immutable | User::Enabled,
+	rng, passLen, passwd);
     secret.length(Ztls::Base32::enclen(user->secret.length()));
     Ztls::Base32::encode(
 	secret.data(), secret.length(),
@@ -47,6 +49,40 @@ bool UserDB::init(Ztls::Random *rng, ZtString &passwd, ZtString &secret)
     return true;
   }
   return false;
+}
+
+ZmRef<User> UserDB::userAdd_(
+    uint64_t id, ZuString name, ZuString role, User::Flags flags,
+    Ztls::Random *rng, unsigned passLen, ZtString &passwd)
+{
+  ZmRef<User> user = new User(id, name, flags);
+  {
+    User::KeyData passwd_;
+    passLen = Ztls::Base64::declen(passLen);
+    if (passLen > passwd_.size()) passLen = passwd_.size();
+    passwd_.length(passLen);
+    rng->random(passwd_.data(), passLen);
+    passwd.length(Ztls::Base64::enclen(passLen));
+    Ztls::Base64::encode(
+	passwd.data(), passwd.length(), passwd_.data(), passwd_.length());
+  }
+  user->secret.length(user->secret.size());
+  rng->random(user->secret.data(), user->secret.length());
+  {
+    Ztls::HMAC hmac(MBEDTLS_MD_SHA256);
+    hmac.start(passwd.data(), passwd.length());
+    hmac.update(user->secret.data(), user->secret.length());
+    user->hmac.length(user->hmac.size());
+    hmac.finish(user->hmac.data());
+  }
+  if (auto node = m_roles.find(role)) {
+    user->roles.push(node);
+    user->perms = node->perms;
+  }
+  user->flags = flags;
+  m_users.add(user);
+  m_userNames.add(user);
+  return user;
 }
 
 void UserDB::load(const void *buf)

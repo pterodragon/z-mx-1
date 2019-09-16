@@ -39,15 +39,33 @@ public:
   // TCP over Ethernet maximum payload is 1460 (without Jumbo frames)
   enum { Size = 1460 };
 
-  inline ZiIOBuf_() : owner(nullptr), length(0), skip(0) { }
-  inline ZiIOBuf_(void *owner_, unsigned length_) :
-      owner(owner_), length(length_), skip(0) { }
-  ~ZiIOBuf_() { }
+  ZuInline ZiIOBuf_() { }
+  ZuInline ZiIOBuf_(void *owner_) : owner(owner_) { }
+  ZuInline ZiIOBuf_(void *owner_, unsigned length_) :
+      owner(owner_), length(length_) { }
+  ZuInline ~ZiIOBuf_() { if (ZuUnlikely(jumbo)) ::free(jumbo); }
 
-  void		*owner;
-  uint16_t	length;
-  uint16_t	skip;
-  char		data[Size];
+  ZuInline uint8_t *alloc(unsigned len) {
+    if (ZuLikely(len <= Size)) return data_;
+    return jumbo = (uint8_t *)::malloc(len);
+  }
+  ZuInline void free(uint8_t *ptr) {
+    if (ZuUnlikely(ptr != data_)) {
+      if (ZuUnlikely(jumbo == ptr)) jumbo = nullptr;
+      ::free(ptr);
+    }
+  }
+
+  ZuInline uint8_t *data() {
+    uint8_t *ptr = ZuUnlikely(jumbo) ? jumbo : data_;
+    return ptr + skip;
+  }
+
+  void		*owner = nullptr;
+  uint8_t	*jumbo = nullptr;
+  uint32_t	length = 0;
+  uint32_t	skip = 0;
+  uint8_t	data_[Size];
 };
 #pragma pack(pop)
 struct ZiIOBuf_HeapID {

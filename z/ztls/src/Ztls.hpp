@@ -113,7 +113,7 @@ private:
     io.init(ZiIOFn{this, [](Link *link, ZiIOContext &io) -> uintptr_t {
       link->rx(io);
       return 0;
-    }}, m_rxBuf->data, IOBuf::Size, 0);
+    }}, m_rxBuf->data_, IOBuf::Size, 0);
     impl()->connected__();
   }
 
@@ -133,7 +133,7 @@ private:
       link->recv_(ZuMv(buf));
     });
     m_rxBuf = new IOBuf(this, 0);
-    io.ptr = m_rxBuf->data;
+    io.ptr = m_rxBuf->data_;
     io.length = IOBuf::Size;
     io.offset = 0;
   }
@@ -162,8 +162,7 @@ recv:
     int avail = m_rxInBuf->length - offset;
     if (avail <= 0) return MBEDTLS_ERR_SSL_WANT_READ;
     if (len > (size_t)avail) len = avail;
-    auto data = static_cast<const char *>(m_rxInBuf->data);
-    memcpy(ptr, data + offset, len);
+    memcpy(ptr, m_rxInBuf->data_ + offset, len);
     m_rxInOffset = offset + len;
     return len;
   }
@@ -257,7 +256,7 @@ public:
       unsigned n = len - offset;
       if (ZuUnlikely(n > IOBuf::Size)) n = IOBuf::Size;
       ZmRef<IOBuf> buf = new IOBuf(this, n);
-      memcpy(buf->data, data + offset, n);
+      memcpy(buf->data_, data + offset, n);
       app()->invoke([buf = ZuMv(buf)]() mutable {
 	auto link = static_cast<Link *>(buf->owner);
 	link->send_(ZuMv(buf));
@@ -274,7 +273,7 @@ public:
   }
 
   void send_(ZmRef<IOBuf> buf) { // TLS thread
-    send_(buf->data + buf->skip, buf->length);
+    send_(buf->data() + buf->skip, buf->length);
   }
   void send_(const void *data_, unsigned len) { // TLS thread
     if (ZuUnlikely(!len)) return;
@@ -304,7 +303,7 @@ private:
       unsigned n = len - offset;
       if (ZuUnlikely(n > IOBuf::Size)) n = IOBuf::Size;
       ZmRef<IOBuf> buf = new IOBuf(this, n);
-      memcpy(buf->data, data + offset, n);
+      memcpy(buf->data_, data + offset, n);
       mx->txRun([buf = ZuMv(buf)]() mutable {
 	auto link = static_cast<Link *>(buf->owner);
 	if (ZuUnlikely(!link->m_tcp)) return;
@@ -313,7 +312,7 @@ private:
 	    io.init(ZiIOFn{io.fn.mvObject<IOBuf>(),
 	      [](IOBuf *buf, ZiIOContext &io) {
 		if (ZuUnlikely((io.offset += io.length) < io.size)) return;
-	      }}, buf->data, buf->length, 0);
+	      }}, buf->data_, buf->length, 0);
 	  }});
       });
       offset += n;

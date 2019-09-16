@@ -215,13 +215,28 @@ public:
   void load(const void *buf);
   Zfb::Offset<fbs::UserDB> save(Zfb::Builder &b) const;
 
-  bool init(Ztls::Random *rng, ZtString &passwd, ZtString &secret);
+  bool init(Ztls::Random *rng,
+      unsigned passLen,
+      ZtString &passwd,
+      ZtString &secret);
 
   ZtString perm(unsigned i) {
     ReadGuard guard(m_lock);
     if (i >= m_perms.length()) return ZtString();
     return m_perms[i];
   }
+
+  // interactive login
+  ZmRef<User> login(ZuString user, ZuString passwd, unsigned totp);
+  // API key access
+  ZmRef<User> access(
+      ZuString keyID, ZuArray<uint8_t> data, ZuArray<uint8_t> hmac);
+
+  // FIXME - each role needs two perms - interactive/non-interactive
+  // '' for each user (OR of all roles)
+  // ok(user, interactive, perm) gives true/false can proceed
+  //
+  userList
 
 private:
   void permAdd_() { }
@@ -235,36 +250,9 @@ private:
     ZmRef<Role> role = new Role(name, flags, ZuFwd<Args>(args)...);
     m_roles.add(role);
   }
-  ZmRef<User> userAdd_(Ztls::Random *rng,
+  ZmRef<User> userAdd_(
       uint64_t id, ZuString name, ZuString role, User::Flags flags,
-      ZtString &passwd) {
-    ZmRef<User> user = new User(id, name, flags);
-    {
-      User::KeyData passwd_;
-      passwd_.length(passwd_.size());
-      rng->random(passwd_.data(), passwd_.length());
-      passwd.length(Ztls::Base64::enclen(passwd_.length()));
-      Ztls::Base64::encode(
-	  passwd.data(), passwd.length(), passwd_.data(), passwd_.length());
-    }
-    user->secret.length(user->secret.size());
-    rng->random(user->secret.data(), user->secret.length());
-    {
-      Ztls::HMAC hmac(MBEDTLS_MD_SHA256);
-      hmac.start(passwd.data(), passwd.length());
-      hmac.update(user->secret.data(), user->secret.length());
-      user->hmac.length(user->hmac.size());
-      hmac.finish(user->hmac.data());
-    }
-    if (auto node = m_roles.find(role)) {
-      user->roles.push(node);
-      user->perms = node->perms;
-    }
-    user->flags = flags;
-    m_users.add(user);
-    m_userNames.add(user);
-    return user;
-  }
+      Ztls::Random *rng, unsigned passLen, ZtString &passwd);
 
   // add login verify (passwd, totp)
   // add key verify (key, token, hmac) // hmac is hmac(secret, token)

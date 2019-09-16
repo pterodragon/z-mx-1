@@ -18,7 +18,7 @@ int main()
 
     ZtString passwd, secret;
 
-    userDB.init(&rng, passwd, secret);
+    userDB.init(&rng, 12, passwd, secret);
 
     std::cout << "passwd: " << passwd << "\nsecret: " << secret << '\n';
 
@@ -33,9 +33,9 @@ int main()
 
     iobuf = b.buf();
 
-    std::cout << ZtHexDump("\n", iobuf->data + iobuf->skip, iobuf->length);
+    std::cout << ZtHexDump("\n", iobuf->data() + iobuf->skip, iobuf->length);
 
-    if ((void *)buf != (void *)(iobuf->data + iobuf->skip) ||
+    if ((void *)buf != (void *)(iobuf->data() + iobuf->skip) ||
 	len != iobuf->length) {
       std::cerr << "FAILED - inconsistent buffers\n" << std::flush;
       return 1;
@@ -50,7 +50,7 @@ int main()
 
       auto db = GetUserDB(iobuf->data + iobuf->skip);
 
-      auto perm = db->perms()->LookupByKey(16);
+      auto perm = db->perms()->LookupByKey(17);
 
       if (!perm) {
 	std::cerr << "READ FAILED - key lookup failed\n" << std::flush;
@@ -67,7 +67,7 @@ int main()
 
     userDB.load(iobuf->data + iobuf->skip);
 
-    if (userDB.perm(16) != "keyClr") {
+    if (userDB.perm(17) != "keyClr") {
       std::cerr << "LOAD FAILED - wrong key\n" << std::flush;
       return 1;
     }

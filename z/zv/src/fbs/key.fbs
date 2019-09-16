@@ -1,4 +1,4 @@
-namespace zfbtest;
+namespace ZvUserDB.fbs;
 table KeyID {
   key:string;
 }

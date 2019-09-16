@@ -1,8 +1,10 @@
 ACLOCAL_AMFLAGS = -I m4
 METASOURCES = AUTO
-SUBDIRS = zu zm zt ze zi zv
+SUBDIRS = zu zm zt ze zi ztls zfb zv
 if !MINGW
 SUBDIRS += zp
 endif
-SUBDIRS += ztls zfb
-SUBDIRS += zjni zrl zlz4 zdb
+if JNI
+SUBDIRS += zjni
+endif
+SUBDIRS += zrl zlz4 zdb

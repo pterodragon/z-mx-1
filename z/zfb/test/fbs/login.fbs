@@ -1,7 +1,0 @@
-namespace zfbtest;
-table Login {
-  key:[ubyte];		// 16 byte API key
-  token:[ubyte];	// 16 byte random token
-  hmac:[ubyte];		// 32 byte HMAC-SHA256 (secret, key + token)
-}
-root_type Login;

@@ -92,7 +92,10 @@ AX_PATH_LIB_READLINE(, [AC_MSG_ERROR([libreadline required])])
 CPPFLAGS="$READLINE_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$READLINE_LDFLAGS $LDFLAGS"
 
-AX_PATH_JNI(, [AC_MSG_ERROR([JNI required])])
+AX_PATH_JNI([jni="yes"], [dnl
+  AC_MSG_NOTICE([JNI unavailable])
+  jni="no"
+])
 
 Z_CPPFLAGS="-D_REENTRANT -D_GNU_SOURCE"
 
@@ -100,6 +103,7 @@ AM_CONDITIONAL([GXX], [test ".$GXX" = ".yes"])
 AM_CONDITIONAL([MINGW], [test ".$mingw" = ".yes"])
 AM_CONDITIONAL([MINGW32], [test ".$mingw32" = ".yes"])
 AM_CONDITIONAL([MINGW64], [test ".$mingw64" = ".yes"])
+AM_CONDITIONAL([JNI], [test ".$jni" = ".yes"])
 
 if test ".$GXX" = ".yes"; then
   Z_CXXFLAGS="$Z_CXXFLAGS -Wall -Wno-parentheses -Wno-invalid-offsetof -Wno-misleading-indentation -fstrict-aliasing"
@@ -134,7 +138,7 @@ AC_OUTPUT(Makefile \
 	ze/Makefile ze/src/Makefile ze/test/Makefile \
 	zi/Makefile zi/src/Makefile zi/test/Makefile \
 	ztls/Makefile ztls/src/Makefile ztls/test/Makefile \
-	zfb/Makefile zfb/src/Makefile zfb/test/Makefile \
+	zfb/Makefile zfb/src/Makefile \
 	zv/Makefile zv/src/Makefile zv/test/Makefile \
 	zlz4/Makefile zlz4/src/Makefile zlz4/test/Makefile \
 	zp/Makefile zp/src/Makefile \

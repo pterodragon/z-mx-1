@@ -1,0 +1,14 @@
+namespace ZvUserDB.fbs;
+table UserID {
+  id:uint64;
+}
+table User {
+  id:uint64 (key);
+  name:string;
+  passwd:[ubyte];	// output of HMAC-SHA256 of password with secret
+  secret:[ubyte];	// secret (random at time of user creation)
+  roles:[string];	// roles
+}
+table UserList {
+  list:[User];
+}

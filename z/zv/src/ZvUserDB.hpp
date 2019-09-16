@@ -1,6 +1,34 @@
-#include <Zfb.hpp>
+//  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
+//  vi: noet ts=8 sw=2
 
-#include "userdb_generated.h"
+/*
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
+
+// server-side user DB with MFA, API keys, etc.
+
+#ifndef ZvUserDB_HPP
+#define ZvUserDB_HPP
+
+#ifdef _MSC_VER
+#pragma once
+#endif
+
+#ifndef ZvLib_HPP
+#include <ZvLib.hpp>
+#endif
 
 #include <ZuBitmap.hpp>
 #include <ZuObject.hpp>
@@ -12,7 +40,11 @@
 
 #include <ZtString.hpp>
 
-using namespace Zfb;
+#include <Zfb.hpp>
+
+#include "userdb_generated.h"
+
+namespace ZvUserDB {
 
 using Bitmap = ZuBitmap<256>;
 
@@ -34,7 +66,7 @@ public:
   Bitmap		perms;
 
   template <typename B> auto save(B &b) {
-    using namespace zfbtest;
+    using namespace fbs;
     using namespace Save;
     return CreateRole(b, str(b, name),
 	b.CreateVector(perms.data, Bitmap::Words));
@@ -70,7 +102,7 @@ struct User__ : public ZuPolymorph {
   Bitmap		perms;		// effective permisions
 
   template <typename B> auto save(B &b) {
-    using namespace zfbtest;
+    using namespace fbs;
     using namespace Save;
     return CreateUser(b, id,
 	str(b, name), bytes(b, passwd, 32), bytes(b, passwdKey, 32),
@@ -123,7 +155,7 @@ struct Key_ : public ZuObject {
   uint64_t	userID;
 
   template <typename B> auto save(B &b) {
-    using namespace zfbtest;
+    using namespace fbs;
     using namespace Save;
     return CreateKey(b, str(b, id), bytes(b, secret, 32), userID);
   }
@@ -155,18 +187,21 @@ struct UserDB {
   void permAdd() { }
   template <typename Arg1, typename ...Args>
   void permAdd(Arg1 &&arg1, Args &&... args) {
+    // FIXME - idempotent
     perms.push(ZuFwd<Arg1>(arg1));
     permAdd(ZuFwd<Args>(args)...);
   }
   template <typename ...Args>
   void roleAdd(ZuString name, Args &&... args) {
+    // FIXME - idempotent
     ZmRef<Role> role = new Role(name, ZuFwd<Args>(args)...);
     roles.add(role);
   }
   void userAdd(uint64_t id, ZuString name, ZuString role) {
+    // FIXME - idempotent
     ZmRef<User> user = new User(id, name);
-    memset(user->passwd, 0, 32);
-    memset(user->passwdKey, 0, 32);
+    memset(user->passwd, 0, 32); // FIXME
+    memset(user->secret, 0, 32); // FIXME
     if (auto node = roles.find(role)) {
       user->roles.push(node);
       user->perms = node->perms;
@@ -175,142 +210,70 @@ struct UserDB {
     userNames.add(user);
   }
   void keyAdd(ZuString id, uint64_t userID) {
+    // FIXME - idempotent
     ZmRef<Key> key = new Key(id, userID);
-    memset(key->secret, 0, 32);
+    memset(key->secret, 0, 32); // FIXME
     keys.add(key);
   }
 
-  template <typename B> auto save(B &b) const {
+  // FIXME -
+  // add login verify (passwd, totp)
+  // add key verify (key, token, hmac) // hmac is hmac(secret, token)
+  // Note: hmac is re-used during session, token is re-issued each session
+  //
+  // UserGet:UserID, -> UserList
+  // UserAdd:User,
+  // UserMod:User,
+  // UserDel:UserID,
+  
+  // RoleGet:RoleID, -> RoleList
+  // RoleAdd:Role,
+  // RoleMod:Role,
+  // RoleDel:RoleID,
+  
+  // PermGet:PermID, -> PermList
+  // PermAdd:Perm,
+  // PermMod:Perm,
+  // PermDel:PermID,
+
+  // KeyGet:UserID,	// returns KeyIDs valid for user
+  // KeyAdd:UserID,	// adds new key to user (returns key+secret)
+  // KeyClr:UserID,	// deletes all keys for user
+  // KeyDel:KeyID		// deletes specific key
+  //
+
+  // FIXME - move to .cpp
+  auto save(FlatBufferBuilder &b) const {
     using namespace Save;
-    auto perms_ = keyVecIter<zfbtest::Perm>(b, perms.length(),
+    auto perms_ = keyVecIter<fbs::Perm>(b, perms.length(),
 	[this](B &b, unsigned i) {
-	  return zfbtest::CreatePerm(b, i, str(b, perms[i]));
+	  return fbs::CreatePerm(b, i, str(b, perms[i]));
 	});
-    Offset<Vector<Offset<zfbtest::Role>>> roles_;
+    Offset<Vector<Offset<fbs::Role>>> roles_;
     {
       auto i = roles.readIterator();
-      roles_ = keyVecIter<zfbtest::Role>(b, i.count(),
+      roles_ = keyVecIter<fbs::Role>(b, i.count(),
 	  [&i](B &b, unsigned j) { return i.iterate()->save(b); });
     }
-    Offset<Vector<Offset<zfbtest::User>>> users_;
+    Offset<Vector<Offset<fbs::User>>> users_;
     {
       auto i = users.readIterator();
-      users_ = keyVecIter<zfbtest::User>(b, i.count(),
+      users_ = keyVecIter<fbs::User>(b, i.count(),
 	  [&i](B &b, unsigned) { return i.iterate()->save(b); });
     }
-    Offset<Vector<Offset<zfbtest::Key>>> keys_;
+    Offset<Vector<Offset<fbs::Key>>> keys_;
     {
       auto i = keys.readIterator();
-      keys_ = keyVecIter<zfbtest::Key>(b, i.count(),
+      keys_ = keyVecIter<fbs::Key>(b, i.count(),
 	  [&i](B &b, unsigned) { return i.iterate()->save(b); });
     }
-    return zfbtest::CreateUserDB(b, perms_, roles_, users_, keys_);
+    return fbs::CreateUserDB(b, perms_, roles_, users_, keys_);
   }
 
-  void load(const void *buf) {
-    using namespace Load;
-    auto userDB = zfbtest::GetUserDB(buf);
-    all(userDB->perms(), [this](unsigned, auto perm_) {
-      unsigned j = perm_->id();
-      if (j >= Bitmap::Bits) return;
-      if (perms.length() < j + 1) perms.length(j + 1);
-      perms[j] = str(perm_->name());
-    });
-    all(userDB->roles(), [this](unsigned, auto role_) {
-      if (auto role = loadRole(role_)) roles.add(ZuMv(role));
-    });
-    all(userDB->users(), [this](unsigned, auto user_) {
-      if (auto user = loadUser(roles, user_)) users.add(ZuMv(user));
-    });
-    all(userDB->keys(), [this](unsigned, auto key_) {
-      if (auto key = loadKey(key_)) keys.add(ZuMv(key));
-    });
-  }
+  void load(const void *buf);
+
 };
 
-int main()
-{
-  ZmRef<IOBuf> iobuf;
-
-  {
-    UserDB userDB;
-
-    userDB.permAdd("useradd", "usermod", "userdel", "login");
-    userDB.roleAdd("admin", 0, 1, 2, 3);
-    userDB.roleAdd("user", 3);
-    userDB.userAdd(0, "user1", "admin");
-    userDB.userAdd(0, "user2", "user");
-    userDB.keyAdd("1", 0);
-    userDB.keyAdd("2", 1);
-
-    IOBuilder b;
-
-    b.Finish(userDB.save(b));
-
-    uint8_t *buf = b.GetBufferPointer();
-    int len = b.GetSize();
-
-    std::cout << ZtHexDump("", buf, len);
-
-    iobuf = b.buf();
-
-    std::cout << ZtHexDump("\n\n", iobuf->data + iobuf->skip, iobuf->length);
-
-    if ((void *)buf != (void *)(iobuf->data + iobuf->skip) ||
-	len != iobuf->length) {
-      std::cerr << "FAILED - inconsistent buffers\n" << std::flush;
-      return 1;
-    }
-  }
-
-  {
-    using namespace Load;
-
-    {
-      using namespace zfbtest;
-
-      auto db = GetUserDB(iobuf->data + iobuf->skip);
-
-      auto perm = db->perms()->LookupByKey(1);
-
-      if (!perm) {
-	std::cerr << "READ FAILED - key lookup failed\n" << std::flush;
-	return 1;
-      }
-
-      if (str(perm->name()) != "usermod") {
-	std::cerr << "READ FAILED - wrong key\n" << std::flush;
-	return 1;
-      }
-    }
-
-    UserDB userDB;
-
-    userDB.load(iobuf->data + iobuf->skip);
-
-    if (userDB.perms[1] != "usermod") {
-      std::cerr << "LOAD FAILED - wrong key\n" << std::flush;
-      return 1;
-    }
-  }
-
-  return 0;
 }
 
-#if 0
-void read(ZuString path, ZtArray<char> &buf) {
-  ZiFile f;
-  if (f.open(path, ZiFile::ReadOnly, 0666, &e) != Zi::OK) {
-    logError("open(", path, "): ", e);
-    return;
-  }
-  auto o = f.size();
-  if (o > (ZiFile::Offset)(1<<20)) {
-    logError("\"", path, "\" too large");
-    return;
-  }
-  buf.size(o);
-
-  FlatBufferBuilder b(f.size());
-}
-#endif
+#endif /* ZvUserDB_HPP */

@@ -41,7 +41,24 @@ public:
   enum { Mask = ((1<<Shift) - 1) };
   enum { Words = (Bits>>Shift) };
 
+private:
+  template <unsigned> inline void init_() { }
+  template <unsigned I> struct Index_ { enum { OK = I < Words }; };
+  template <unsigned I, typename ...Args>
+  inline typename ZuIfT<!Index_<I>::OK>::T init_(Args &&...) { }
+  template <unsigned I, typename Arg0, typename ...Args>
+  inline typename ZuIfT<Index_<I>::OK>::T
+  init_(Arg0 &&arg0, Args &&... args) {
+    data[I] = ZuFwd<Arg0>(arg0);
+    init_<I + 1>(ZuFwd<Args>(args)...);
+  }
+
+public:
   ZuBitmap() { zero(); }
+  template <typename Arg0, typename ...Args>
+  inline ZuBitmap(Arg0 &&arg0, Args &&... args) {
+    init_<0>(ZuFwd<Arg0>(arg0), ZuFwd<Args>(args)...);
+  }
   ZuBitmap(const ZuBitmap &b) { memcpy(data, b.data, Bytes); }
   ZuBitmap &operator =(const ZuBitmap &b) {
     if (ZuLikely(this != &b)) memcpy(data, b.data, Bytes);
@@ -50,8 +67,8 @@ public:
   ZuBitmap(ZuBitmap &&b) = default;
   ZuBitmap &operator =(ZuBitmap &&b) = default;
 
-  void zero() { memset(data, 0, Bytes); }
-  void fill() { memset(data, 0xff, Bytes); }
+  ZuInline ZuBitmap &zero() { memset(data, 0, Bytes); return *this; }
+  ZuInline ZuBitmap &fill() { memset(data, 0xff, Bytes); return *this; }
 
   ZuInline void set(unsigned i) {
     data[i>>Shift] |= ((uint64_t)1)<<(i & Mask);
@@ -59,7 +76,8 @@ public:
   ZuInline void clr(unsigned i) {
     data[i>>Shift] &= ~(((uint64_t)1)<<(i & Mask));
   }
-  ZuInline bool val(unsigned i) const {
+
+  ZuInline bool operator &&(unsigned i) const {
     return data[i>>Shift] & ((uint64_t)1)<<(i & Mask);
   }
 

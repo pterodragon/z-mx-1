@@ -5,6 +5,7 @@ table RoleID {
 table Role {
   name:string (key);
   perms:[uint64];	// bitmap
+  apiperms:[uint64];	// API permissions
   flags:uint8;
 }
 table RoleList {

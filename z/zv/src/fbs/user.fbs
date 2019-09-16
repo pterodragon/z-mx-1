@@ -7,7 +7,7 @@ table User {
   name:string;
   hmac:[ubyte];		// HMAC-SHA256 of secret, password
   secret:[ubyte];	// secret (random at user creation)
-  roles:[string];	// roles
+  roles:[string];	// interactive roles
   flags:uint8;
 }
 table UserList {

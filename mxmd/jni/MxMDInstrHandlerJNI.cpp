@@ -115,22 +115,22 @@ ZmRef<MxMDInstrHandler> MxMDInstrHandlerJNI::j2c(
 #ifdef lambda2
 #undef lambda2
 #endif
-#define lambda1(method, arg1, ...) \
+#define lambda1(method, arg0, ...) \
   if (auto fn = ZJNI::localRef( \
 	env, env->CallObjectMethod(obj, method ## Fn[0].mid))) \
     handler->method ## Fn( \
-	[fn = ZJNI::globalRef(env, fn)](arg1) { \
+	[fn = ZJNI::globalRef(env, fn)](arg0) { \
       if (JNIEnv *env = ZJNI::env()) { \
 	env->PushLocalFrame(1); \
 	env->CallVoidMethod(fn, method ## Fn[1].mid, __VA_ARGS__); \
 	env->PopLocalFrame(0); \
       } \
     })
-#define lambda2(method, arg1, arg2, ...) \
+#define lambda2(method, arg0, arg1, ...) \
   if (auto fn = ZJNI::localRef( \
 	env, env->CallObjectMethod(obj, method ## Fn[0].mid))) \
     handler->method ## Fn( \
-	[fn = ZJNI::globalRef(env, fn)](arg1, arg2) { \
+	[fn = ZJNI::globalRef(env, fn)](arg0, arg1) { \
       if (JNIEnv *env = ZJNI::env()) { \
 	env->PushLocalFrame(2); \
 	env->CallVoidMethod(fn, method ## Fn[1].mid, __VA_ARGS__); \

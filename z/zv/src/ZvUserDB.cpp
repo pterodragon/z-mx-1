@@ -22,6 +22,7 @@
 #include <ZvUserDB.hpp>
 
 #include <ZtlsBase32.hpp>
+#include <ZtlsTOTP.hpp>
 
 namespace ZvUserDB {
 
@@ -37,7 +38,7 @@ bool UserDB::init(
 	"permList", "permAdd", "permMod", "permDel",
 	"keyList", "keyAdd", "keyDel", "keyClr");
   if (!m_roles.count())
-    roleAdd_("admin", Role::Immutable, 0x3ffff);
+    roleAdd_("admin", Role::Immutable, Bitmap().fill(), Bitmap());
   if (!m_users.count_()) {
     ZmRef<User> user = userAdd_(
 	0, "admin", "admin", User::Immutable | User::Enabled,
@@ -146,4 +147,68 @@ Zfb::Offset<fbs::UserDB> UserDB::save(Zfb::Builder &b) const
   return fbs::CreateUserDB(b, perms_, roles_, users_, keys_);
 }
 
+ZmRef<User> UserDB::login(
+    ZuString userName, ZuString passwd, unsigned totp, unsigned totpRange)
+{
+  ReadGuard guard(m_lock);
+  ZmRef<User> user = m_userNames.find(userName);
+  if (!user) return nullptr;
+  {
+    Ztls::HMAC hmac(User::keyType());
+    User::KeyData verify;
+    hmac.start(passwd.data(), passwd.length());
+    hmac.update(user->secret.data(), user->secret.length());
+    verify.length(verify.size());
+    hmac.finish(verify.data());
+    if (verify != user->secret) return nullptr;
+  }
+  for (int i = -(int)totpRange; i <= (int)totpRange; i++) {
+    if (totp ==
+	Ztls::TOTP::google(user->secret.data(), user->secret.length(), i))
+      return user;
+  }
+  return nullptr;
 }
+
+ZmRef<User> UserDB::access(
+    ZuString keyID, ZuArray<uint8_t> data, ZuArray<uint8_t> hmac)
+{
+  ReadGuard guard(m_lock);
+  Key *key = m_keys.find(keyID);
+  if (!key) return nullptr;
+  ZmRef<User> user = m_users.find(key->userID);
+  if (!user) return nullptr; // LATER - log warning about key w/ invalid userID
+  {
+    Ztls::HMAC hmac_(Key::keyType());
+    Key::KeyData verify;
+    hmac_.start(user->secret.data(), user->secret.length());
+    hmac_.update(data.data(), data.length());
+    verify.length(verify.size());
+    hmac_.finish(verify.data());
+    if (verify != hmac) return nullptr;
+  }
+  return user;
+}
+
+template <typename T> using Offset = Zfb::Offset<T>;
+template <typename T> using Vector = Zfb::Vector<T>;
+
+Offset<Vector<Offset<fbs::User>>> UserDB::userGet(
+    Zfb::Builder &b, fbs::UserID *id)
+{
+  ReadGuard guard(m_lock);
+  using namespace Zfb;
+  using namespace Save;
+  if (id->id() == nullID()) {
+    auto i = m_users.readIterator();
+    return keyVecIter<fbs::User>(b, i.count(),
+	[&i](Builder &b, unsigned) { return i.iterate()->save(b); });
+  } else {
+    if (auto user = m_users.findPtr(id->id()))
+      return keyVec<fbs::User>(b, user->save(b));
+    else
+      return keyVec<fbs::User>(b);
+  }
+}
+
+} // namespace ZvUserDB

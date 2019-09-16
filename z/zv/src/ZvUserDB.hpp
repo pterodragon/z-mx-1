@@ -54,40 +54,31 @@ namespace ZvUserDB {
 
 using Bitmap = ZuBitmap<256>;
 
-struct Role_ : public ZuObject {
-private:
-  template <unsigned> inline void perm_() { }
-  template <unsigned I> struct PermIndex { enum { OK = I < Bitmap::Words }; };
-  template <unsigned I, typename ...Args>
-  inline typename ZuIfT<!PermIndex<I>::OK>::T perm_(Args &&...) { }
-  template <unsigned I, typename Arg1, typename ...Args>
-  inline typename ZuIfT<PermIndex<I>::OK>::T
-  perm_(Arg1 &&arg1, Args &&... args) {
-    perms.data[I] = ZuFwd<Arg1>(arg1);
-    perm_<I + 1>(ZuFwd<Args>(args)...);
-  }
+inline constexpr const uint64_t nullID() { return ~((uint64_t)0); }
 
+struct Role_ : public ZuObject {
 public:
-  // flags
   using Flags = uint8_t;
   enum {
     Immutable =	0x01
   };
 
-  template <typename ...Args>
-  inline Role_(ZuString name_, Flags flags_, Args &&... args) :
-      name(name_), flags(flags_) {
-    perm_<0>(ZuFwd<Args>(args)...);
-  }
+  Role_(ZuString name_, Flags flags_) :
+      name(name_), flags(flags_) { }
+  Role_(ZuString name_, Flags flags_,
+	const Bitmap &perms_, const Bitmap &apiperms_) :
+      name(name_), perms(perms_), apiperms(apiperms_), flags(flags_) { }
 
   ZtString		name;
   Bitmap		perms;
+  Bitmap		apiperms;
   Flags			flags;
 
   Zfb::Offset<fbs::Role> save(Zfb::Builder &b) {
     using namespace Zfb::Save;
     return fbs::CreateRole(b, str(b, name),
-	b.CreateVector(perms.data, Bitmap::Words));
+	b.CreateVector(perms.data, Bitmap::Words),
+	b.CreateVector(apiperms.data, Bitmap::Words));
   }
 };
 struct RoleNameAccessor : public ZuAccessor<Role_, ZtString> {
@@ -106,11 +97,13 @@ template <typename T> inline ZmRef<Role> loadRole(T *role_) {
   all(role_->perms(), [role](unsigned i, uint64_t v) {
     if (i < Bitmap::Words) role->perms.data[i] = v;
   });
+  all(role_->apiperms(), [role](unsigned i, uint64_t v) {
+    if (i < Bitmap::Words) role->apiperms.data[i] = v;
+  });
   return role;
 }
 
 struct User__ : public ZuPolymorph {
-  // flags
   using Flags = uint8_t;
   enum {
     Immutable =	0x01,
@@ -120,6 +113,9 @@ struct User__ : public ZuPolymorph {
   User__(uint64_t id_, ZuString name_, Flags flags_) :
       id(id_), name(name_), flags(flags_) { }
 
+  static constexpr const mbedtls_md_type_t keyType() {
+    return MBEDTLS_MD_SHA256;
+  }
   using KeyData = ZuArrayN<uint8_t, 32>;	// 256 bit key
 
   uint64_t		id;
@@ -127,7 +123,8 @@ struct User__ : public ZuPolymorph {
   KeyData		hmac;		// HMAC-SHA256 of secret, password
   KeyData		secret;		// secret (random at user creation)
   ZtArray<Role *>	roles;
-  Bitmap		perms;		// effective permisions
+  Bitmap		perms;		// permissions
+  Bitmap		apiperms;	// API permissions
   Flags			flags;
 
   Zfb::Offset<fbs::User> save(Zfb::Builder &b) {
@@ -170,6 +167,7 @@ inline ZmRef<User> loadUser(const Roles &roles, T *user_) {
     if (auto role = roles.findPtr(str(roleName))) {
       user->roles.push(role);
       user->perms |= role->perms;
+      user->apiperms |= role->apiperms;
     }
   });
   return user;
@@ -178,6 +176,9 @@ inline ZmRef<User> loadUser(const Roles &roles, T *user_) {
 struct Key_ : public ZuObject {
   inline Key_(ZuString id_, uint64_t userID_) : id(id_), userID(userID_) { }
 
+  static constexpr const mbedtls_md_type_t keyType() {
+    return MBEDTLS_MD_SHA256;
+  }
   using KeyData = ZuArrayN<uint8_t, 32>;	// 256 bit key
 
   ZtString	id;
@@ -227,40 +228,21 @@ public:
   }
 
   // interactive login
-  ZmRef<User> login(ZuString user, ZuString passwd, unsigned totp);
-  // API key access
+  // - totpRange is the number of adjacent 30sec time periods to accept
+  ZmRef<User> login(
+      ZuString user, ZuString passwd, unsigned totp, unsigned totpRange);
+  // API access
   ZmRef<User> access(
       ZuString keyID, ZuArray<uint8_t> data, ZuArray<uint8_t> hmac);
-
-  // FIXME - each role needs two perms - interactive/non-interactive
-  // '' for each user (OR of all roles)
-  // ok(user, interactive, perm) gives true/false can proceed
-  //
-  //userList
-
-private:
-  void permAdd_() { }
-  template <typename Arg1, typename ...Args>
-  void permAdd_(Arg1 &&arg1, Args &&... args) {
-    m_perms.push(ZuFwd<Arg1>(arg1));
-    permAdd_(ZuFwd<Args>(args)...);
+  // ok(user, interactive, perm)
+  bool ok(User *user, bool interactive, unsigned perm) {
+    return interactive ? (user->perms && perm) : (user->apiperms && perm);
   }
-  template <typename ...Args>
-  void roleAdd_(ZuString name, Role::Flags flags, Args &&... args) {
-    ZmRef<Role> role = new Role(name, flags, ZuFwd<Args>(args)...);
-    m_roles.add(role);
-  }
-  ZmRef<User> userAdd_(
-      uint64_t id, ZuString name, ZuString role, User::Flags flags,
-      Ztls::Random *rng, unsigned passLen, ZtString &passwd);
 
-  // add login verify (passwd, totp)
-  // add key verify (key, token, hmac) // hmac is hmac(secret, token)
-  // Note: hmac is re-used during session, token is re-issued each session
-  //
-  // FIXME - encode below ops into fbs, provide apply() function?
-  //
-  // UserGet:UserID, -> UserList
+  template <typename T> using Offset = Zfb::Offset<T>;
+  template <typename T> using Vector = Zfb::Vector<T>;
+
+  Offset<Vector<Offset<fbs::User>>> userGet(Zfb::Builder &b, fbs::UserID *id);
   // UserAdd:User,
   // UserMod:User,
   // UserDel:UserID,
@@ -278,8 +260,23 @@ private:
   // KeyGet:UserID,	// returns KeyIDs valid for user
   // KeyAdd:UserID,	// adds new key to user (returns key+secret)
   // KeyClr:UserID,	// deletes all keys for user
-  // KeyDel:KeyID		// deletes specific key
-  //
+  // KeyDel:KeyID	// deletes specific key
+
+private:
+  void permAdd_() { }
+  template <typename Arg0, typename ...Args>
+  void permAdd_(Arg0 &&arg0, Args &&... args) {
+    m_perms.push(ZuFwd<Arg0>(arg0));
+    permAdd_(ZuFwd<Args>(args)...);
+  }
+  template <typename ...Args>
+  void roleAdd_(ZuString name, Role::Flags flags, Args &&... args) {
+    ZmRef<Role> role = new Role(name, flags, ZuFwd<Args>(args)...);
+    m_roles.add(role);
+  }
+  ZmRef<User> userAdd_(
+      uint64_t id, ZuString name, ZuString role, User::Flags flags,
+      Ztls::Random *rng, unsigned passLen, ZtString &passwd);
 
 private:
   Lock			m_lock;

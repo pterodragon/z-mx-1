@@ -576,9 +576,9 @@ protected:
   void exception(ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); } // default
 
   inline static void log__(ZmStream &s) { }
-  template <typename Arg1, typename ...Args>
-  inline static void log__(ZmStream &s, Arg1 &&arg1, Args &&... args) {
-    s << ZuFwd<Arg1>(arg1);
+  template <typename Arg0, typename ...Args>
+  inline static void log__(ZmStream &s, Arg0 &&arg0, Args &&... args) {
+    s << ZuFwd<Arg0>(arg0);
     log__(s, ZuMv(args)...);
   }
   template <int Level, typename ...Args> void log_(Args &&... args) {

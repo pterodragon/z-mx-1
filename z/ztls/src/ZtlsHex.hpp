@@ -33,20 +33,20 @@
 namespace Ztls {
 namespace Hex {
 
-// both encode and decode return:
-// +ve - bytecount written
-// -ve - bytes that would have been written (destination buffer is too small)
+// both encode and decode return count of bytes written
 
 // does not null-terminate dst
-ZuInline unsigned enclen(unsigned slen) { return slen<<1; }
-ZuInline int encode(char *dst, unsigned dlen, const void *src, unsigned slen) {
+ZuInline constexpr unsigned enclen(unsigned slen) { return slen<<1; }
+ZuInline unsigned encode(
+    char *dst, unsigned dlen, const void *src, unsigned slen) {
   using hex = cppcodec::hex_upper;
   return hex::encode(dst, dlen, (const uint8_t *)src, slen);
 }
 
 // does not null-terminate dst
-ZuInline unsigned declen(unsigned slen) { return (slen + 1)>>1; }
-ZuInline int decode(void *dst, unsigned dlen, const char *src, unsigned slen) {
+ZuInline constexpr unsigned declen(unsigned slen) { return (slen + 1)>>1; }
+ZuInline unsigned decode(
+    void *dst, unsigned dlen, const char *src, unsigned slen) {
   using hex = cppcodec::hex_upper;
   return hex::decode((uint8_t *)dst, dlen, src, slen);
 }

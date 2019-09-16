@@ -6,7 +6,7 @@ AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
 include_HEADERS = ZtlsLib.hpp Ztls.hpp \
 	ZtlsBase32.hpp ZtlsBase64.hpp ZtlsHMAC.hpp ZtlsHex.hpp \
-	ZtlsTOTP.hpp
+	ZtlsTOTP.hpp ZtlsRandom.hpp
 lib_LTLIBRARIES = libZtls.la
 libZtls_la_SOURCES = ZtlsLib.cpp
 libZtls_la_LIBADD = $(top_builddir)/zi/src/libZi.la \

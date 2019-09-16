@@ -17,10 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// cppcodec C++ wrapper - Base 64 encode/decode
+// mbedtls C++ wrapper - random number generator
 
-#ifndef ZtlsBase64_HPP
-#define ZtlsBase64_HPP
+#ifndef ZtlsRandom_HPP
+#define ZtlsRandom_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -28,30 +28,42 @@
 
 #include <ZtlsLib.hpp>
 
-#include <cppcodec/base64_rfc4648.hpp>
+#include <mbedtls/entropy.h>
+#include <mbedtls/ctr_drbg.h>
 
 namespace Ztls {
-namespace Base64 {
 
-// both encode and decode return count of bytes written
+class Random {
+public:
+  inline Random() {
+    mbedtls_entropy_init(&m_entropy);
+    mbedtls_ctr_drbg_init(&m_ctr_drbg);
+  }
+  inline ~Random() {
+    mbedtls_ctr_drbg_free(&m_ctr_drbg);
+    mbedtls_entropy_free(&m_entropy);
+  }
 
-// does not null-terminate dst
-ZuInline constexpr unsigned enclen(unsigned slen) { return ((slen + 2)/3)<<2; }
-ZuInline unsigned encode(
-    char *dst, unsigned dlen, const void *src, unsigned slen) {
-  using base64 = cppcodec::base64_rfc4648;
-  return base64::encode(dst, dlen, (const uint8_t *)src, slen);
+  bool init() {
+    int n = mbedtls_ctr_drbg_seed(
+	&m_ctr_drbg, mbedtls_entropy_func, &m_entropy, 0, 0);
+    return !n;
+  }
+
+  bool random(void *data_, unsigned len) {
+    auto data = static_cast<unsigned char *>(data_);
+    int i = mbedtls_ctr_drbg_random(&m_ctr_drbg, data, len);
+    return i >= 0;
+  }
+
+protected:
+  ZuInline mbedtls_ctr_drbg_context *ctr_drbg() { return &m_ctr_drbg; }
+
+private:
+  mbedtls_entropy_context	m_entropy;
+  mbedtls_ctr_drbg_context	m_ctr_drbg;
+};
+
 }
 
-// does not null-terminate dst
-ZuInline constexpr unsigned declen(unsigned slen) { return ((slen + 3)>>2)*3; }
-ZuInline unsigned decode(
-    void *dst, unsigned dlen, const char *src, unsigned slen) {
-  using base64 = cppcodec::base64_rfc4648;
-  return base64::decode((uint8_t *)dst, dlen, src, slen);
-}
-
-}
-}
-
-#endif /* ZtlsBase64_HPP */
+#endif /* ZtlsRandom_HPP */

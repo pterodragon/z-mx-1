@@ -5,9 +5,10 @@ table UserID {
 table User {
   id:uint64 (key);
   name:string;
-  passwd:[ubyte];	// HMAC-SHA256 of secret, password
+  hmac:[ubyte];		// HMAC-SHA256 of secret, password
   secret:[ubyte];	// secret (random at user creation)
   roles:[string];	// roles
+  flags:uint8;
 }
 table UserList {
   list:[User];

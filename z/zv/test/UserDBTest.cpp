@@ -1,3 +1,5 @@
+#include <ZtlsRandom.hpp>
+
 #include <ZvUserDB.hpp>
 
 using namespace Zfb;
@@ -8,15 +10,17 @@ int main()
   ZmRef<IOBuf> iobuf;
 
   {
+    Ztls::Random rng;
+
+    rng.init();
+
     UserDB userDB;
 
-    userDB.permAdd("useradd", "usermod", "userdel", "login");
-    userDB.roleAdd("admin", 0, 1, 2, 3);
-    userDB.roleAdd("user", 3);
-    userDB.userAdd(0, "user1", "admin");
-    userDB.userAdd(0, "user2", "user");
-    userDB.keyAdd("1", 0);
-    userDB.keyAdd("2", 1);
+    ZtString passwd, secret;
+
+    userDB.init(&rng, passwd, secret);
+
+    std::cout << "passwd: " << passwd << "\nsecret: " << secret << '\n';
 
     IOBuilder b;
 
@@ -25,11 +29,11 @@ int main()
     uint8_t *buf = b.GetBufferPointer();
     int len = b.GetSize();
 
-    std::cout << ZtHexDump("", buf, len);
+    // std::cout << ZtHexDump("", buf, len);
 
     iobuf = b.buf();
 
-    std::cout << ZtHexDump("\n\n", iobuf->data + iobuf->skip, iobuf->length);
+    std::cout << ZtHexDump("\n", iobuf->data + iobuf->skip, iobuf->length);
 
     if ((void *)buf != (void *)(iobuf->data + iobuf->skip) ||
 	len != iobuf->length) {
@@ -46,14 +50,14 @@ int main()
 
       auto db = GetUserDB(iobuf->data + iobuf->skip);
 
-      auto perm = db->perms()->LookupByKey(1);
+      auto perm = db->perms()->LookupByKey(16);
 
       if (!perm) {
 	std::cerr << "READ FAILED - key lookup failed\n" << std::flush;
 	return 1;
       }
 
-      if (str(perm->name()) != "usermod") {
+      if (str(perm->name()) != "keyClr") {
 	std::cerr << "READ FAILED - wrong key\n" << std::flush;
 	return 1;
       }
@@ -63,7 +67,7 @@ int main()
 
     userDB.load(iobuf->data + iobuf->skip);
 
-    if (userDB.perms[1] != "usermod") {
+    if (userDB.perm(16) != "keyClr") {
       std::cerr << "LOAD FAILED - wrong key\n" << std::flush;
       return 1;
     }

@@ -43,12 +43,20 @@ public:
     mbedtls_md_free(&m_ctx);
   }
 
+  ZuInline void start(ZuArray<uint8_t> a) {
+    mbedtls_md_hmac_starts(&m_ctx, (const unsigned char *)a.data(), a.length());
+  }
   ZuInline void start(const void *key, unsigned length) {
     mbedtls_md_hmac_starts(&m_ctx, (const unsigned char *)key, length);
+  }
+
+  ZuInline void update(ZuArray<uint8_t> a) {
+    mbedtls_md_hmac_update(&m_ctx, (const unsigned char *)a.data(), a.length());
   }
   ZuInline void update(const void *data, unsigned length) {
     mbedtls_md_hmac_update(&m_ctx, (const unsigned char *)data, length);
   }
+
   // MBEDTLS_MD_MAX_SIZE is max size of output buffer (i.e. 64 for SHA512)
   ZuInline void finish(void *output) {
     mbedtls_md_hmac_finish(&m_ctx, (unsigned char *)output);

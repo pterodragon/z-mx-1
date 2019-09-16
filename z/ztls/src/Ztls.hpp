@@ -29,8 +29,6 @@
 #include <ZtlsLib.hpp>
 
 #include <mbedtls/ssl.h>
-#include <mbedtls/entropy.h>
-#include <mbedtls/ctr_drbg.h>
 #include <mbedtls/ssl_cache.h>
 #include <mbedtls/ssl_ticket.h>
 
@@ -41,6 +39,8 @@
 #include <ZiFile.hpp>
 #include <ZiMultiplex.hpp>
 #include <ZiIOBuf.hpp>
+
+#include <ZtlsRandom.hpp>
 
 namespace Ztls {
 
@@ -499,7 +499,7 @@ private:
   void verify_() { } // unused
 };
 
-template <typename App_> class Engine {
+template <typename App_> class Engine : public Random {
 public:
   using App = App_;
 template <typename, typename, typename> friend class Link;
@@ -510,16 +510,12 @@ template <typename, typename> friend class SrvLink;
   ZuInline App *app() { return static_cast<App *>(this); }
 
   inline Engine() {
-    mbedtls_entropy_init(&m_entropy);
-    mbedtls_ctr_drbg_init(&m_ctr_drbg);
     mbedtls_x509_crt_init(&m_cacert);
     mbedtls_ssl_config_init(&m_conf);
   }
   inline ~Engine() {
     mbedtls_ssl_config_free(&m_conf);
     mbedtls_x509_crt_free(&m_cacert);
-    mbedtls_ctr_drbg_free(&m_ctr_drbg);
-    mbedtls_entropy_free(&m_entropy);
   }
 
   template <typename L>
@@ -555,13 +551,11 @@ private:
       }
       app->exception(new ZeEvent(sev, file, line, "", ZtString{message}));
     }, app());
-    int n = mbedtls_ctr_drbg_seed(
-	&m_ctr_drbg, mbedtls_entropy_func, &m_entropy, 0, 0);
-    if (n) {
-      app()->logError("mbedtls_ctr_drbg_seed() returned ", n);
+    if (!Random::init()) {
+      app()->logError("mbedtls_ctr_drbg_seed() failed");
       return false;
     }
-    mbedtls_ssl_conf_rng(&m_conf, mbedtls_ctr_drbg_random, &m_ctr_drbg);
+    mbedtls_ssl_conf_rng(&m_conf, mbedtls_ctr_drbg_random, ctr_drbg());
     mbedtls_ssl_conf_renegotiation(&m_conf, MBEDTLS_SSL_RENEGOTIATION_ENABLED);
     return l();
   }
@@ -579,7 +573,6 @@ public:
 protected:
   // TLS thread
   ZuInline mbedtls_ssl_config *conf() { return &m_conf; }
-  ZuInline mbedtls_ctr_drbg_context *ctr_drbg() { return &m_ctr_drbg; }
 
   void exception(ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); } // default
 
@@ -634,22 +627,10 @@ protected:
     return true;
   }
 
-  bool random(void *data_, unsigned len) {
-    auto data = static_cast<unsigned char *>(data_);
-    int i = mbedtls_ctr_drbg_random(&m_ctr_drbg, data, len);
-    if (i < 0) {
-      logError("mbedtls_ctr_drbg_random() returned ", i);
-      return false;
-    }
-    return true;
-  }
-
 private:
   ZiMultiplex			*m_mx = nullptr;
   unsigned			m_thread = 0;
 
-  mbedtls_entropy_context	m_entropy;
-  mbedtls_ctr_drbg_context	m_ctr_drbg;
   mbedtls_x509_crt		m_cacert;
   mbedtls_ssl_config		m_conf;
 };

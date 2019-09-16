@@ -17,10 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// cppcodec C++ wrapper - Base 64 encode/decode
+// time-based one time password
 
-#ifndef ZtlsBase64_HPP
-#define ZtlsBase64_HPP
+#ifndef ZtlsTOTP_HPP
+#define ZtlsTOTP_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -28,30 +28,31 @@
 
 #include <ZtlsLib.hpp>
 
-#include <cppcodec/base64_rfc4648.hpp>
+#include <stdlib.h>
+
+#include <ZuByteSwap.hpp>
+
+#include <ZmTime.hpp>
+
+#include <ZtlsHMAC.hpp>
 
 namespace Ztls {
-namespace Base64 {
+namespace TOTP {
 
-// both encode and decode return count of bytes written
-
-// does not null-terminate dst
-ZuInline constexpr unsigned enclen(unsigned slen) { return ((slen + 2)/3)<<2; }
-ZuInline unsigned encode(
-    char *dst, unsigned dlen, const void *src, unsigned slen) {
-  using base64 = cppcodec::base64_rfc4648;
-  return base64::encode(dst, dlen, (const uint8_t *)src, slen);
-}
-
-// does not null-terminate dst
-ZuInline constexpr unsigned declen(unsigned slen) { return ((slen + 3)>>2)*3; }
-ZuInline unsigned decode(
-    void *dst, unsigned dlen, const char *src, unsigned slen) {
-  using base64 = cppcodec::base64_rfc4648;
-  return base64::decode((uint8_t *)dst, dlen, src, slen);
+// Google Authenticator
+inline unsigned google(const void *data, unsigned len, int timeOffset = 0) {
+  ZuBigEndian<uint64_t> t = (ZmTimeNow().sec() / 30) + timeOffset;
+  HMAC hmac(MBEDTLS_MD_SHA1);
+  uint8_t sha1[20];
+  hmac.start(data, len);
+  hmac.update(&t, 8);
+  hmac.finish(sha1);
+  ZuBigEndian<uint32_t> code;
+  memcpy(&code, sha1 + (sha1[19] & 0xf), 4);
+  return code % (uint32_t)1000000;
 }
 
 }
 }
 
-#endif /* ZtlsBase64_HPP */
+#endif /* ZtlsTOTP_HPP */

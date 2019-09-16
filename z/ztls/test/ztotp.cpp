@@ -2,9 +2,10 @@
 
 #include <ZuBox.hpp>
 
+#include <ZtArray.hpp>
+
 #include <ZtlsBase32.hpp>
 #include <ZtlsTOTP.hpp>
-
 
 static void usage() {
   std::cout
@@ -16,11 +17,11 @@ static void usage() {
 
 int main(int argc, char **argv)
 {
-  char secret[20];
+  ZtArray<uint8_t> secret;
   if (argc != 2) usage();
   int n = strlen(argv[1]);
-  if (n > 32) usage();
-  auto code =
-    Ztls::TOTP::google(secret, Ztls::Base32::decode(secret, 20, argv[1], n));
+  secret.length(Ztls::Base32::declen(n));
+  Ztls::Base32::decode(secret.data(), secret.length(), argv[1], n);
+  auto code = Ztls::TOTP::google(secret.data(), secret.length());
   std::cout << ZuBoxed(code).fmt(ZuFmt::Right<6>()) << '\n';
 }

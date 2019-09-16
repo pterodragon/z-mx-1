@@ -33,20 +33,20 @@
 namespace Ztls {
 namespace Base32 {
 
-// both encode and decode return:
-// +ve - bytecount written
-// -ve - bytes that would have been written (destination buffer is too small)
+// both encode and decode return count of bytes written
 
 // does not null-terminate dst
-ZuInline unsigned enclen(unsigned slen) { return ((slen + 4)/5)<<3; }
-ZuInline int encode(char *dst, unsigned dlen, const void *src, unsigned slen) {
+ZuInline constexpr unsigned enclen(unsigned slen) { return ((slen + 4)/5)<<3; }
+ZuInline unsigned encode(
+    char *dst, unsigned dlen, const void *src, unsigned slen) {
   using base32 = cppcodec::base32_rfc4648;
   return base32::encode(dst, dlen, (const uint8_t *)src, slen);
 }
 
 // does not null-terminate dst
-ZuInline unsigned declen(unsigned slen) { return ((slen + 7)>>3)*5; }
-ZuInline int decode(void *dst, unsigned dlen, const char *src, unsigned slen) {
+ZuInline constexpr unsigned declen(unsigned slen) { return ((slen + 7)>>3)*5; }
+ZuInline unsigned decode(
+    void *dst, unsigned dlen, const char *src, unsigned slen) {
   using base32 = cppcodec::base32_rfc4648;
   return base32::decode((uint8_t *)dst, dlen, src, slen);
 }

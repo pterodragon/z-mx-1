@@ -34,13 +34,19 @@
 #include <ZuObject.hpp>
 #include <ZuPolymorph.hpp>
 #include <ZuRef.hpp>
+#include <ZuArrayN.hpp>
 
 #include <ZmHash.hpp>
 #include <ZmRBTree.hpp>
+#include <ZmRWLock.hpp>
 
 #include <ZtString.hpp>
 
 #include <Zfb.hpp>
+
+#include <ZtlsBase64.hpp>
+#include <ZtlsHMAC.hpp>
+#include <ZtlsRandom.hpp>
 
 #include "userdb_generated.h"
 
@@ -50,25 +56,37 @@ using Bitmap = ZuBitmap<256>;
 
 struct Role_ : public ZuObject {
 private:
-  inline void perm_() { }
-  template <typename Arg1, typename ...Args>
-  inline void perm_(Arg1 &&arg1, Args &&... args) {
-    perms.set(ZuFwd<Arg1>(arg1));
-    perm_(ZuFwd<Args>(args)...);
+  template <unsigned> inline void perm_() { }
+  template <unsigned I> struct PermIndex { enum { OK = I < Bitmap::Words }; };
+  template <unsigned I, typename ...Args>
+  inline typename ZuIfT<!PermIndex<I>::OK>::T perm_(Args &&...) { }
+  template <unsigned I, typename Arg1, typename ...Args>
+  inline typename ZuIfT<PermIndex<I>::OK>::T
+  perm_(Arg1 &&arg1, Args &&... args) {
+    perms.data[I] = ZuFwd<Arg1>(arg1);
+    perm_<I + 1>(ZuFwd<Args>(args)...);
   }
+
 public:
+  // flags
+  using Flags = uint8_t;
+  enum {
+    Immutable =	0x01
+  };
+
   template <typename ...Args>
-  inline Role_(ZuString name_, Args &&... args) : name(name_) {
-    perm_(ZuFwd<Args>(args)...);
+  inline Role_(ZuString name_, Flags flags_, Args &&... args) :
+      name(name_), flags(flags_) {
+    perm_<0>(ZuFwd<Args>(args)...);
   }
 
   ZtString		name;
   Bitmap		perms;
+  Flags			flags;
 
-  Zfb::Offset<fbs::Role> save(Zfb::FlatBufferBuilder &b) {
-    using namespace fbs;
+  Zfb::Offset<fbs::Role> save(Zfb::Builder &b) {
     using namespace Zfb::Save;
-    return CreateRole(b, str(b, name),
+    return fbs::CreateRole(b, str(b, name),
 	b.CreateVector(perms.data, Bitmap::Words));
   }
 };
@@ -84,7 +102,7 @@ using RoleTree =
 using Role = RoleTree::Node;
 template <typename T> inline ZmRef<Role> loadRole(T *role_) {
   using namespace Zfb::Load;
-  ZmRef<Role> role = new Role(str(role_->name()));
+  ZmRef<Role> role = new Role(str(role_->name()), role_->flags());
   all(role_->perms(), [role](unsigned i, uint64_t v) {
     if (i < Bitmap::Words) role->perms.data[i] = v;
   });
@@ -92,20 +110,30 @@ template <typename T> inline ZmRef<Role> loadRole(T *role_) {
 }
 
 struct User__ : public ZuPolymorph {
-  User__(uint64_t id_, ZuString name_) : id(id_), name(name_) { }
+  // flags
+  using Flags = uint8_t;
+  enum {
+    Immutable =	0x01,
+    Enabled =	0x02
+  };
+
+  User__(uint64_t id_, ZuString name_, Flags flags_) :
+      id(id_), name(name_), flags(flags_) { }
+
+  using KeyData = ZuArrayN<uint8_t, 32>;	// 256 bit key
 
   uint64_t		id;
   ZtString		name;
-  char			passwd[32];	// HMAC-SHA256 of secret, password
-  char			secret[32];	// secret (random at user creation)
+  KeyData		hmac;		// HMAC-SHA256 of secret, password
+  KeyData		secret;		// secret (random at user creation)
   ZtArray<Role *>	roles;
   Bitmap		perms;		// effective permisions
+  Flags			flags;
 
-  Zfb::Offset<fbs::User> save(Zfb::FlatBufferBuilder &b) {
-    using namespace fbs;
+  Zfb::Offset<fbs::User> save(Zfb::Builder &b) {
     using namespace Zfb::Save;
-    return CreateUser(b, id,
-	str(b, name), bytes(b, passwd, 32), bytes(b, secret, 32),
+    return fbs::CreateUser(b, id,
+	str(b, name), bytes(b, hmac), bytes(b, secret),
 	strVecIter(b, roles.length(), [this](auto &b, unsigned k) {
 	  return roles[k]->name;
 	}));
@@ -135,9 +163,9 @@ using User = UserNameHash::Node;
 template <typename Roles, typename T>
 inline ZmRef<User> loadUser(const Roles &roles, T *user_) {
   using namespace Zfb::Load;
-  ZmRef<User> user = new User(user_->id(), str(user_->name()));
-  if (!cpy(user->passwd, user_->passwd())) return nullptr;
-  if (!cpy(user->secret, user_->secret())) return nullptr;
+  ZmRef<User> user = new User(user_->id(), str(user_->name()), user_->flags());
+  user->hmac = bytes(user_->hmac());
+  user->secret = bytes(user_->secret());
   all(user_->roles(), [&roles, &user](unsigned, auto roleName) {
     if (auto role = roles.findPtr(str(roleName))) {
       user->roles.push(role);
@@ -150,14 +178,15 @@ inline ZmRef<User> loadUser(const Roles &roles, T *user_) {
 struct Key_ : public ZuObject {
   inline Key_(ZuString id_, uint64_t userID_) : id(id_), userID(userID_) { }
 
+  using KeyData = ZuArrayN<uint8_t, 32>;	// 256 bit key
+
   ZtString	id;
-  char		secret[32];
+  KeyData	secret;
   uint64_t	userID;
 
-  Zfb::Offset<fbs::Key> save(Zfb::FlatBufferBuilder &b) {
-    using namespace fbs;
+  Zfb::Offset<fbs::Key> save(Zfb::Builder &b) {
     using namespace Zfb::Save;
-    return CreateKey(b, str(b, id), bytes(b, secret, 32), userID);
+    return fbs::CreateKey(b, str(b, id), bytes(b, secret), userID);
   }
 };
 struct KeyIDAccessor : public ZuAccessor<Key_, ZtString> {
@@ -173,53 +202,75 @@ using Key = KeyHash::Node;
 template <typename T> inline ZmRef<Key> loadKey(T *key_) {
   using namespace Zfb::Load;
   ZmRef<Key> key = new Key(str(key_->key()), key_->userID());
-  if (!cpy(key->secret, key_->secret())) return nullptr;
+  key->secret = bytes(key_->secret());
   return key;
 }
 
-struct ZvAPI UserDB {
-  ZtArray<ZtString>	perms; // indexed by permission ID
-  RoleTree		roles; // name -> permissions
-  UserIDHash		users;
-  UserNameHash		userNames;
-  KeyHash		keys;
+class ZvAPI UserDB {
+public:
+  using Lock = ZmRWLock;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
-  void permAdd() { }
+  void load(const void *buf);
+  Zfb::Offset<fbs::UserDB> save(Zfb::Builder &b) const;
+
+  bool init(Ztls::Random *rng, ZtString &passwd, ZtString &secret);
+
+  ZtString perm(unsigned i) {
+    ReadGuard guard(m_lock);
+    if (i >= m_perms.length()) return ZtString();
+    return m_perms[i];
+  }
+
+private:
+  void permAdd_() { }
   template <typename Arg1, typename ...Args>
-  void permAdd(Arg1 &&arg1, Args &&... args) {
-    // FIXME - idempotent
-    perms.push(ZuFwd<Arg1>(arg1));
-    permAdd(ZuFwd<Args>(args)...);
+  void permAdd_(Arg1 &&arg1, Args &&... args) {
+    m_perms.push(ZuFwd<Arg1>(arg1));
+    permAdd_(ZuFwd<Args>(args)...);
   }
   template <typename ...Args>
-  void roleAdd(ZuString name, Args &&... args) {
-    // FIXME - idempotent
-    ZmRef<Role> role = new Role(name, ZuFwd<Args>(args)...);
-    roles.add(role);
+  void roleAdd_(ZuString name, Role::Flags flags, Args &&... args) {
+    ZmRef<Role> role = new Role(name, flags, ZuFwd<Args>(args)...);
+    m_roles.add(role);
   }
-  void userAdd(uint64_t id, ZuString name, ZuString role) {
-    // FIXME - idempotent
-    ZmRef<User> user = new User(id, name);
-    memset(user->passwd, 0, 32); // FIXME
-    memset(user->secret, 0, 32); // FIXME
-    if (auto node = roles.find(role)) {
+  ZmRef<User> userAdd_(Ztls::Random *rng,
+      uint64_t id, ZuString name, ZuString role, User::Flags flags,
+      ZtString &passwd) {
+    ZmRef<User> user = new User(id, name, flags);
+    {
+      User::KeyData passwd_;
+      passwd_.length(passwd_.size());
+      rng->random(passwd_.data(), passwd_.length());
+      passwd.length(Ztls::Base64::enclen(passwd_.length()));
+      Ztls::Base64::encode(
+	  passwd.data(), passwd.length(), passwd_.data(), passwd_.length());
+    }
+    user->secret.length(user->secret.size());
+    rng->random(user->secret.data(), user->secret.length());
+    {
+      Ztls::HMAC hmac(MBEDTLS_MD_SHA256);
+      hmac.start(passwd.data(), passwd.length());
+      hmac.update(user->secret.data(), user->secret.length());
+      user->hmac.length(user->hmac.size());
+      hmac.finish(user->hmac.data());
+    }
+    if (auto node = m_roles.find(role)) {
       user->roles.push(node);
       user->perms = node->perms;
     }
-    users.add(user);
-    userNames.add(user);
-  }
-  void keyAdd(ZuString id, uint64_t userID) {
-    // FIXME - idempotent
-    ZmRef<Key> key = new Key(id, userID);
-    memset(key->secret, 0, 32); // FIXME
-    keys.add(key);
+    user->flags = flags;
+    m_users.add(user);
+    m_userNames.add(user);
+    return user;
   }
 
-  // FIXME -
   // add login verify (passwd, totp)
   // add key verify (key, token, hmac) // hmac is hmac(secret, token)
   // Note: hmac is re-used during session, token is re-issued each session
+  //
+  // FIXME - encode below ops into fbs, provide apply() function?
   //
   // UserGet:UserID, -> UserList
   // UserAdd:User,
@@ -242,8 +293,13 @@ struct ZvAPI UserDB {
   // KeyDel:KeyID		// deletes specific key
   //
 
-  Zfb::Offset<fbs::UserDB> save(Zfb::FlatBufferBuilder &b) const;
-  void load(const void *buf);
+private:
+  Lock			m_lock;
+    ZtArray<ZtString>	  m_perms; // indexed by permission ID
+    RoleTree		  m_roles; // name -> permissions
+    UserIDHash		  m_users;
+    UserNameHash	  m_userNames;
+    KeyHash		  m_keys;
 };
 
 }

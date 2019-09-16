@@ -3,7 +3,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src -I$(top_srcdir)/zm/src
 	-DZFB_EXPORTS @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
-include_HEADERS = ZfbLib.hpp
+include_HEADERS = ZfbLib.hpp Zfb.hpp
 lib_LTLIBRARIES = libZfb.la
 libZfb_la_SOURCES = ZfbLib.cpp
 libZfb_la_LIBADD = \

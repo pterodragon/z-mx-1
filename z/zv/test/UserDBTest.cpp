@@ -1,6 +1,7 @@
 #include <ZvUserDB.hpp>
 
 using namespace Zfb;
+using namespace ZvUserDB;
 
 int main()
 {
@@ -41,7 +42,7 @@ int main()
     using namespace Load;
 
     {
-      using namespace zfbtest;
+      using namespace ZvUserDB::fbs;
 
       auto db = GetUserDB(iobuf->data + iobuf->skip);
 

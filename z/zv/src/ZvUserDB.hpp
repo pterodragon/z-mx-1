@@ -67,7 +67,7 @@ public:
 
   template <typename B> auto save(B &b) {
     using namespace fbs;
-    using namespace Save;
+    using namespace Zfb::Save;
     return CreateRole(b, str(b, name),
 	b.CreateVector(perms.data, Bitmap::Words));
   }
@@ -83,7 +83,7 @@ using RoleTree =
 	  ZmRBTreeLock<ZmNoLock> > > > >;
 using Role = RoleTree::Node;
 template <typename T> inline ZmRef<Role> loadRole(T *role_) {
-  using namespace Load;
+  using namespace Zfb::Load;
   ZmRef<Role> role = new Role(str(role_->name()));
   all(role_->perms(), [role](unsigned i, uint64_t v) {
     if (i < Bitmap::Words) role->perms.data[i] = v;
@@ -96,16 +96,16 @@ struct User__ : public ZuPolymorph {
 
   uint64_t		id;
   ZtString		name;
-  char			passwd[32];	// HMAC(passwdKey, passwdPlainTxt)
-  char			passwdKey[32];	// TOTP and passwd hash secret
+  char			passwd[32];	// HMAC-SHA256 of secret, password
+  char			secret[32];	// secret (random at user creation)
   ZtArray<Role *>	roles;
   Bitmap		perms;		// effective permisions
 
   template <typename B> auto save(B &b) {
     using namespace fbs;
-    using namespace Save;
+    using namespace Zfb::Save;
     return CreateUser(b, id,
-	str(b, name), bytes(b, passwd, 32), bytes(b, passwdKey, 32),
+	str(b, name), bytes(b, passwd, 32), bytes(b, secret, 32),
 	strVecIter(b, roles.length(), [this](B &b, unsigned k) {
 	  return roles[k]->name;
 	}));
@@ -134,10 +134,10 @@ using UserNameHash =
 using User = UserNameHash::Node;
 template <typename Roles, typename T>
 inline ZmRef<User> loadUser(const Roles &roles, T *user_) {
-  using namespace Load;
+  using namespace Zfb::Load;
   ZmRef<User> user = new User(user_->id(), str(user_->name()));
   if (!cpy(user->passwd, user_->passwd())) return nullptr;
-  if (!cpy(user->passwdKey, user_->passwdKey())) return nullptr;
+  if (!cpy(user->secret, user_->secret())) return nullptr;
   all(user_->roles(), [&roles, &user](unsigned, auto roleName) {
     if (auto role = roles.findPtr(str(roleName))) {
       user->roles.push(role);
@@ -156,7 +156,7 @@ struct Key_ : public ZuObject {
 
   template <typename B> auto save(B &b) {
     using namespace fbs;
-    using namespace Save;
+    using namespace Zfb::Save;
     return CreateKey(b, str(b, id), bytes(b, secret, 32), userID);
   }
 };
@@ -171,7 +171,7 @@ using KeyHash =
 	  ZmHashLock<ZmNoLock> > > > >;
 using Key = KeyHash::Node;
 template <typename T> inline ZmRef<Key> loadKey(T *key_) {
-  using namespace Load;
+  using namespace Zfb::Load;
   ZmRef<Key> key = new Key(str(key_->key()), key_->userID());
   if (!cpy(key->secret, key_->secret())) return nullptr;
   return key;
@@ -243,8 +243,10 @@ struct UserDB {
   //
 
   // FIXME - move to .cpp
-  auto save(FlatBufferBuilder &b) const {
+  auto save(Zfb::FlatBufferBuilder &b) const {
+    using namespace Zfb;
     using namespace Save;
+    using B = Zfb::FlatBufferBuilder;
     auto perms_ = keyVecIter<fbs::Perm>(b, perms.length(),
 	[this](B &b, unsigned i) {
 	  return fbs::CreatePerm(b, i, str(b, perms[i]));

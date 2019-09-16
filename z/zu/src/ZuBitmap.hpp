@@ -31,6 +31,7 @@
 #endif
 
 #include <ZuInt.hpp>
+#include <ZuIfT.hpp>
 
 template <unsigned Bits_> class ZuBitmap {
 public:

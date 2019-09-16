@@ -25,7 +25,7 @@ namespace ZvUserDB {
 
 void UserDB::load(const void *buf)
 {
-  using namespace Load;
+  using namespace Zfb::Load;
   auto userDB = fbs::GetUserDB(buf);
   all(userDB->perms(), [this](unsigned, auto perm_) {
     unsigned j = perm_->id();

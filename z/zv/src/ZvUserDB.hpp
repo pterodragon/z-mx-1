@@ -56,8 +56,6 @@ namespace ZvUserDB {
 
 using Bitmap = ZuBitmap<256>;
 
-inline constexpr const uint64_t nullID() { return ~((uint64_t)0); }
-
 struct Role_ : public ZuObject {
 public:
   using Flags = uint8_t;
@@ -93,7 +91,7 @@ using RoleTree =
 	ZmRBTreeNodeIsKey<true,
 	  ZmRBTreeLock<ZmNoLock> > > > >;
 using Role = RoleTree::Node;
-template <typename T> inline ZmRef<Role> loadRole(T *role_) {
+inline ZmRef<Role> loadRole(const fbs::Role *role_) {
   using namespace Zfb::Load;
   ZmRef<Role> role = new Role(str(role_->name()), role_->flags());
   all(role_->perms(), [role](unsigned i, uint64_t v) {
@@ -105,6 +103,7 @@ template <typename T> inline ZmRef<Role> loadRole(T *role_) {
   return role;
 }
 
+struct Key_;
 struct User__ : public ZuPolymorph {
   using Flags = uint8_t;
   enum {
@@ -126,6 +125,7 @@ struct User__ : public ZuPolymorph {
   KeyData		hmac;		// HMAC-SHA256 of secret, password
   KeyData		secret;		// secret (random at user creation)
   ZtArray<Role *>	roles;
+  Key_			*keyList = nullptr; // head of list of keys
   Bitmap		perms;		// permissions
   Bitmap		apiperms;	// API permissions
   Flags			flags;
@@ -160,8 +160,8 @@ using UserNameHash =
 	ZmHashNodeIsKey<true,
 	  ZmHashLock<ZmNoLock> > > > >;
 using User = UserNameHash::Node;
-template <typename Roles, typename T>
-inline ZmRef<User> loadUser(const Roles &roles, T *user_) {
+template <typename Roles>
+ZmRef<User> loadUser(const Roles &roles, const fbs::User *user_) {
   using namespace Zfb::Load;
   ZmRef<User> user = new User(user_->id(), str(user_->name()), user_->flags());
   user->hmac = bytes(user_->hmac());
@@ -177,8 +177,10 @@ inline ZmRef<User> loadUser(const Roles &roles, T *user_) {
 }
 
 struct Key_ : public ZuObject {
-  inline Key_(ZuString id_, uint64_t userID_) : id(id_), userID(userID_) { }
+  inline Key_(ZuString id_, Key_ *nextKey_, uint64_t userID_) :
+      id(id_), nextKey(nextKey_), userID(userID_) { }
 
+  using IDData = ZuArrayN<uint8_t, 16>;
   static constexpr const mbedtls_md_type_t keyType() {
     return MBEDTLS_MD_SHA256;
   }
@@ -186,6 +188,7 @@ struct Key_ : public ZuObject {
 
   ZtString	id;
   KeyData	secret;
+  Key_		*nextKey;// next in per-user list
   uint64_t	userID;
 
   Zfb::Offset<fbs::Key> save(Zfb::Builder &b) {
@@ -203,9 +206,9 @@ using KeyHash =
 	ZmHashNodeIsKey<true,
 	  ZmHashLock<ZmNoLock> > > > >;
 using Key = KeyHash::Node;
-template <typename T> inline ZmRef<Key> loadKey(T *key_) {
+inline ZmRef<Key> loadKey(const fbs::Key *key_, Key_ *next) {
   using namespace Zfb::Load;
-  ZmRef<Key> key = new Key(str(key_->key()), key_->userID());
+  ZmRef<Key> key = new Key(str(key_->id()), next, key_->userID());
   key->secret = bytes(key_->secret());
   return key;
 }
@@ -262,42 +265,62 @@ public:
 
   // query users
   Offset<Vector<Offset<fbs::User>>> userGet(
-      Zfb::Builder &b, fbs::UserID *id);
+      Zfb::Builder &, fbs::UserID *id);
   // add a new user
   Offset<fbs::UserPass> userAdd(
-      Zfb::Builder &b, fbs::User *user, Ztls::Random *rng, unsigned passLen);
+      Zfb::Builder &, fbs::User *user, Ztls::Random *rng, unsigned passLen);
   // reset password (also clears all API keys)
   Offset<fbs::UserPass> resetPass(
-      Zfb::Builder &b, fbs::UserID *id, Ztls::Random *rng, unsigned passLen);
+      Zfb::Builder &, fbs::UserID *id, Ztls::Random *rng, unsigned passLen);
   // change password
   Offset<fbs::UserAck> chPass(
-      Zfb::Builder &b, User *user, fbs::UserChPass *userChPass);
+      Zfb::Builder &, User *user, fbs::UserChPass *userChPass);
   // modify user name, roles, flags
   Offset<fbs::UserUpdAck> userMod(
-      Zfb::Builder &b, fbs::User *user);
+      Zfb::Builder &, fbs::User *user);
   // clear all API keys for user
   Offset<fbs::UserAck> keyClr(
-      Zfb::Builder &b, fbs::UserID *id);
+      Zfb::Builder &, fbs::UserID *id);
   // delete user
   Offset<fbs::UserUpdAck> userDel(
-      Zfb::Builder &b, fbs::UserID *id);
+      Zfb::Builder &, fbs::UserID *id);
   
-  // FIXME - save/load to/from file
-
-  // RoleGet:RoleID, -> RoleList
-  // RoleAdd:Role,
-  // RoleMod:Role,
-  // RoleDel:RoleID,
+  // query roles
+  Offset<Vector<Offset<fbs::Role>>> roleGet(
+      Zfb::Builder &, fbs::RoleID *id);
+  // add role
+  Offset<fbs::RoleUpdAck> roleAdd(
+      Zfb::Builder &, fbs::Role *role);
+  // modify role perms, apiperms, flags
+  Offset<fbs::RoleUpdAck> roleMod(
+      Zfb::Builder &, fbs::Role *role);
+  // delete role
+  Offset<fbs::RoleUpdAck> roleDel(
+      Zfb::Builder &, fbs::Role *role);
   
-  // PermGet:PermID, -> PermList
-  // PermAdd:Perm,
-  // PermMod:Perm,
-  // PermDel:PermID,
+  // query permissions 
+  Offset<Vector<Offset<fbs::Perm>>> permGet(
+      Zfb::Builder &, fbs::PermID *perm);
+  // add permission
+  Offset<fbs::PermUpdAck> permAdd(
+      Zfb::Builder &, fbs::Perm *perm);
+  // modify permission name
+  Offset<fbs::PermUpdAck> permMod(
+      Zfb::Builder &, fbs::Perm *perm);
+  // delete permission
+  Offset<fbs::PermUpdAck> permDel(
+      Zfb::Builder &, fbs::PermID *id);
 
-  // KeyGet:UserID,	// returns KeyIDs valid for user
-  // KeyAdd:UserID,	// adds new key to user (returns key+secret)
-  // KeyClr:UserID,	// deletes all keys for user
-  // KeyDel:KeyID	// deletes specific key
+  // query API keys for user
+  Offset<Vector<Offset<fbs::Key>>> keyGet(
+      Zfb::Builder &, fbs::UserID *userID);
+  // add API key for user
+  Offset<fbs::KeyUpdAck> keyAdd(
+      Zfb::Builder &, fbs::UserID *userID,
+      Ztls::Random *rng);
+  // delete API key
+  Offset<fbs::KeyUpdAck> keyDel(
+      Zfb::Builder &, fbs::KeyID *id);
 
 private:
   void permAdd_() { }

@@ -1,14 +1,18 @@
 namespace ZvUserDB.fbs;
 table KeyID {
-  key:string;
+  id:string;
 }
 table KeyIDList {
   list:[string];
 }
 table Key {
-  key:string (key);	// 16 byte API key, base64 encoded
+  id:string (key);	// 16 byte API key ID, base64 encoded
   secret:[ubyte];	// 32 byte HMAC-SHA256 API secret
   userID:uint64;
+}
+table KeyUpdAck {
+  key:Key;
+  ok:uint8;
 }
 table KeyList {
   list:[Key];

@@ -78,21 +78,3 @@ int main()
 
   return 0;
 }
-
-#if 0
-void read(ZuString path, ZtArray<char> &buf) {
-  ZiFile f;
-  if (f.open(path, ZiFile::ReadOnly, 0666, &e) != Zi::OK) {
-    logError("open(", path, "): ", e);
-    return;
-  }
-  auto o = f.size();
-  if (o > (ZiFile::Offset)(1<<20)) {
-    logError("\"", path, "\" too large");
-    return;
-  }
-  buf.size(o);
-
-  FlatBufferBuilder b(f.size());
-}
-#endif

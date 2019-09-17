@@ -42,16 +42,21 @@ public:
   ZuInline ZiIOBuf_() { }
   ZuInline ZiIOBuf_(void *owner_) : owner(owner_) { }
   ZuInline ZiIOBuf_(void *owner_, unsigned length_) :
-      owner(owner_), length(length_) { }
+      owner(owner_), length(length_) { alloc(length); }
   ZuInline ~ZiIOBuf_() { if (ZuUnlikely(jumbo)) ::free(jumbo); }
 
-  ZuInline uint8_t *alloc(unsigned len) {
-    if (ZuLikely(len <= Size)) return data_;
-    return jumbo = (uint8_t *)::malloc(len);
+  ZuInline uint8_t *alloc(unsigned size_) {
+    if (ZuLikely(size_ <= Size)) return data_;
+    size = size_;
+    return jumbo = (uint8_t *)::malloc(size_);
   }
   ZuInline void free(uint8_t *ptr) {
     if (ZuUnlikely(ptr != data_)) {
-      if (ZuUnlikely(jumbo == ptr)) jumbo = nullptr;
+      if (ZuUnlikely(jumbo == ptr)) {
+	jumbo = nullptr;
+	size = Size;
+	length = 0;
+      }
       ::free(ptr);
     }
   }
@@ -63,6 +68,7 @@ public:
 
   void		*owner = nullptr;
   uint8_t	*jumbo = nullptr;
+  uint32_t	size = Size;
   uint32_t	length = 0;
   uint32_t	skip = 0;
   uint8_t	data_[Size];

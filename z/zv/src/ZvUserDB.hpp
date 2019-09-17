@@ -42,6 +42,8 @@
 
 #include <ZtString.hpp>
 
+#include <ZiFile.hpp>
+
 #include <Zfb.hpp>
 
 #include <ZtlsBase64.hpp>
@@ -222,13 +224,17 @@ public:
     };
   };
 
-  void load(const void *buf);
-  Zfb::Offset<fbs::UserDB> save(Zfb::Builder &b) const;
-
+  // one-time initialization (idempotent)
   bool init(Ztls::Random *rng,
       unsigned passLen,
       ZtString &passwd,
       ZtString &secret);
+
+  bool load(const uint8_t *buf, unsigned len);
+  Zfb::Offset<fbs::UserDB> save(Zfb::Builder &b) const;
+
+  int load(ZuString path, ZeError *e = 0);
+  int save(ZuString path, unsigned maxAge = 8, ZeError *e = 0);
 
   ZtString perm(unsigned i) {
     ReadGuard guard(m_lock);
@@ -242,7 +248,7 @@ public:
       ZuString user, ZuString passwd, unsigned totp, unsigned totpRange);
   // API access
   ZmRef<User> access(
-      ZuString keyID, ZuArray<uint8_t> data, ZuArray<uint8_t> hmac);
+      ZuString keyID, ZuArray<uint8_t> token, ZuArray<uint8_t> hmac);
   // ok(user, interactive, perm)
   bool ok(User *user, bool interactive, unsigned perm) {
     if ((user->flags & User::ChPass) &&
@@ -276,6 +282,8 @@ public:
   Offset<fbs::UserUpdAck> userDel(
       Zfb::Builder &b, fbs::UserID *id);
   
+  // FIXME - save/load to/from file
+
   // RoleGet:RoleID, -> RoleList
   // RoleAdd:Role,
   // RoleMod:Role,

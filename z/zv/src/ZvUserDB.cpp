@@ -89,8 +89,12 @@ ZmRef<User> UserDB::userAdd_(
   return user;
 }
 
-void UserDB::load(const void *buf)
+bool UserDB::load(const uint8_t *buf, unsigned len)
 {
+  {
+    Zfb::Verifier verifier(buf, len);
+    if (!fbs::VerifyUserDBBuffer(verifier)) return false;
+  }
   Guard guard(m_lock);
   using namespace Zfb::Load;
   auto userDB = fbs::GetUserDB(buf);
@@ -118,6 +122,7 @@ void UserDB::load(const void *buf)
       m_keys.add(ZuMv(key));
     }
   });
+  return true;
 }
 
 Zfb::Offset<fbs::UserDB> UserDB::save(Zfb::Builder &b) const
@@ -150,6 +155,67 @@ Zfb::Offset<fbs::UserDB> UserDB::save(Zfb::Builder &b) const
   return fbs::CreateUserDB(b, perms_, roles_, users_, keys_);
 }
 
+int UserDB::load(ZuString path, ZeError *e)
+{
+  ZiFile f;
+  int i;
+  
+  if ((i = f.open(path, ZiFile::ReadOnly, 0, e)) != Zi::OK) return i;
+  ZiFile::Offset len = f.size();
+  if (!len || len >= (ZiFile::Offset)INT_MAX) {
+    f.close();
+    if (e) *e = ZiENOMEM;
+    return Zi::IOError;
+  }
+  uint8_t *buf = (uint8_t *)::malloc(len);
+  if (!buf) {
+    f.close();
+    if (e) *e = ZiENOMEM;
+    return Zi::IOError;
+  }
+  if ((i = f.read(buf, len, e)) != Zi::OK) {
+    ::free(buf);
+    f.close();
+    return i;
+  }
+  f.close();
+  if (!load(buf, len)) {
+    ::free(buf);
+    if (e) *e = ZiEINVAL;
+    return Zi::IOError;
+  }
+  ::free(buf);
+  return Zi::OK;
+}
+
+int UserDB::save(ZuString path, unsigned maxAge, ZeError *e)
+{
+  Zfb::Builder b;
+  b.Finish(save(b));
+
+  ZiFile::age(path, maxAge);
+
+  ZiFile f;
+  int i;
+  
+  if ((i = f.open(path, ZiFile::WriteOnly, 0666, e)) != Zi::OK) return i;
+
+  uint8_t *buf = b.GetBufferPointer();
+  int len = b.GetSize();
+
+  if (!buf || len <= 0) {
+    f.close();
+    if (e) *e = ZiENOMEM;
+    return Zi::IOError;
+  }
+  if ((i = f.write(buf, len, e)) != Zi::OK) {
+    f.close();
+    return i;
+  }
+  f.close();
+  return Zi::OK;
+}
+
 ZmRef<User> UserDB::login(
     ZuString name, ZuString passwd, unsigned totp, unsigned totpRange)
 {
@@ -174,7 +240,7 @@ ZmRef<User> UserDB::login(
 }
 
 ZmRef<User> UserDB::access(
-    ZuString keyID, ZuArray<uint8_t> data, ZuArray<uint8_t> hmac)
+    ZuString keyID, ZuArray<uint8_t> token, ZuArray<uint8_t> hmac)
 {
   ReadGuard guard(m_lock);
   Key *key = m_keys.find(keyID);
@@ -187,7 +253,7 @@ ZmRef<User> UserDB::access(
     Ztls::HMAC hmac_(Key::keyType());
     Key::KeyData verify;
     hmac_.start(user->secret.data(), user->secret.length());
-    hmac_.update(data.data(), data.length());
+    hmac_.update(token.data(), token.length());
     verify.length(verify.size());
     hmac_.finish(verify.data());
     if (verify != hmac) return nullptr;

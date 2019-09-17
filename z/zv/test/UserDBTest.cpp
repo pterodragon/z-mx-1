@@ -65,7 +65,10 @@ int main()
 
     UserDB userDB;
 
-    userDB.load(iobuf->data());
+    if (!userDB.load(iobuf->data(), iobuf->length)) {
+      std::cerr << "LOAD FAILED - failed to verify\n" << std::flush;
+      return 1;
+    }
 
     if (userDB.perm(UserDB::Perm::ChPass) != "chPass") {
       std::cerr << "LOAD FAILED - wrong key\n" << std::flush;

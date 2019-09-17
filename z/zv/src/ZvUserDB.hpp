@@ -107,7 +107,8 @@ struct User__ : public ZuPolymorph {
   using Flags = uint8_t;
   enum {
     Immutable =	0x01,
-    Enabled =	0x02
+    Enabled =	0x02,
+    ChPass =	0x04	// user must change password
   };
 
   User__(uint64_t id_, ZuString name_, Flags flags_) :
@@ -213,6 +214,14 @@ public:
   using Guard = ZmGuard<Lock>;
   using ReadGuard = ZmReadGuard<Lock>;
 
+  struct Perm {
+    enum {
+      Login = 0,
+      Access,
+      ChPass
+    };
+  };
+
   void load(const void *buf);
   Zfb::Offset<fbs::UserDB> save(Zfb::Builder &b) const;
 
@@ -236,16 +245,36 @@ public:
       ZuString keyID, ZuArray<uint8_t> data, ZuArray<uint8_t> hmac);
   // ok(user, interactive, perm)
   bool ok(User *user, bool interactive, unsigned perm) {
+    if ((user->flags & User::ChPass) &&
+	interactive && perm != Perm::ChPass)
+      return false;
     return interactive ? (user->perms && perm) : (user->apiperms && perm);
   }
 
   template <typename T> using Offset = Zfb::Offset<T>;
   template <typename T> using Vector = Zfb::Vector<T>;
 
-  Offset<Vector<Offset<fbs::User>>> userGet(Zfb::Builder &b, fbs::UserID *id);
-  // UserAdd:User,
-  // UserMod:User,
-  // UserDel:UserID,
+  // query users
+  Offset<Vector<Offset<fbs::User>>> userGet(
+      Zfb::Builder &b, fbs::UserID *id);
+  // add a new user
+  Offset<fbs::UserPass> userAdd(
+      Zfb::Builder &b, fbs::User *user, Ztls::Random *rng, unsigned passLen);
+  // reset password (also clears all API keys)
+  Offset<fbs::UserPass> resetPass(
+      Zfb::Builder &b, fbs::UserID *id, Ztls::Random *rng, unsigned passLen);
+  // change password
+  Offset<fbs::UserAck> chPass(
+      Zfb::Builder &b, User *user, fbs::UserChPass *userChPass);
+  // modify user name, roles, flags
+  Offset<fbs::UserUpdAck> userMod(
+      Zfb::Builder &b, fbs::User *user);
+  // clear all API keys for user
+  Offset<fbs::UserAck> keyClr(
+      Zfb::Builder &b, fbs::UserID *id);
+  // delete user
+  Offset<fbs::UserUpdAck> userDel(
+      Zfb::Builder &b, fbs::UserID *id);
   
   // RoleGet:RoleID, -> RoleList
   // RoleAdd:Role,

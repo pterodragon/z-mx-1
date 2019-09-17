@@ -62,6 +62,10 @@ public:
     mbedtls_md_hmac_finish(&m_ctx, (unsigned char *)output);
   }
 
+  ZuInline void reset() {
+    mbedtls_md_hmac_reset(&m_ctx);
+  }
+
 private:
   mbedtls_md_context_t	m_ctx;
 };

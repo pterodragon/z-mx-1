@@ -19,31 +19,31 @@
 
 // time-based one time password (Google Authenticator compatible)
 
-#ifndef ZtlsTOTP_HPP
-#define ZtlsTOTP_HPP
-
-#ifdef _MSC_VER
-#pragma once
-#endif
-
-#include <ZtlsLib.hpp>
-
-#include <stdlib.h>
-
-#include <ZuByteSwap.hpp>
-
-#include <ZmTime.hpp>
-
-#include <ZtlsHMAC.hpp>
+#include <ZtlsTOTP.hpp>
 
 namespace Ztls {
 namespace TOTP {
 
-ZtlsExtern unsigned calc(const void *data, unsigned len, int offset = 0);
+ZtlsExtern unsigned calc(const void *data, unsigned len, int offset)
+{
+  ZuBigEndian<uint64_t> t = (ZmTimeNow().sec() / 30) + offset;
+  HMAC hmac(MBEDTLS_MD_SHA1);
+  uint8_t sha1[20];
+  hmac.start(data, len);
+  hmac.update(&t, 8);
+  hmac.finish(sha1);
+  ZuBigEndian<uint32_t> code;
+  memcpy(&code, sha1 + (sha1[19] & 0xf), 4);
+  return code % (uint32_t)1000000;
+}
+
 ZtlsExtern bool verify(
-    const void *data, unsigned len, unsigned code, unsigned range);
+    const void *data, unsigned len, unsigned code, unsigned range)
+{
+  for (int i = -(int)range; i <= (int)range; i++)
+    if (code == calc(data, len, i)) return true;
+  return false;
+}
 
 }
 }
-
-#endif /* ZtlsTOTP_HPP */

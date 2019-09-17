@@ -8,7 +8,7 @@ include_HEADERS = ZtlsLib.hpp Ztls.hpp \
 	ZtlsBase32.hpp ZtlsBase64.hpp ZtlsHMAC.hpp ZtlsHex.hpp \
 	ZtlsTOTP.hpp ZtlsRandom.hpp
 lib_LTLIBRARIES = libZtls.la
-libZtls_la_SOURCES = ZtlsLib.cpp
+libZtls_la_SOURCES = ZtlsLib.cpp ZtlsTOTP.cpp
 libZtls_la_LIBADD = $(top_builddir)/zi/src/libZi.la \
 	$(top_builddir)/ze/src/libZe.la \
 	$(top_builddir)/zt/src/libZt.la \

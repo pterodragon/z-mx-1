@@ -46,18 +46,18 @@ int main()
     using namespace Load;
 
     {
-      using namespace ZvUserDB::fbs;
+      using namespace ZvUserDB;
 
-      auto db = GetUserDB(iobuf->data());
+      auto db = fbs::GetUserDB(iobuf->data());
 
-      auto perm = db->perms()->LookupByKey(17);
+      auto perm = db->perms()->LookupByKey(UserDB::Perm::ChPass);
 
       if (!perm) {
 	std::cerr << "READ FAILED - key lookup failed\n" << std::flush;
 	return 1;
       }
 
-      if (str(perm->name()) != "keyClr") {
+      if (str(perm->name()) != "chPass") {
 	std::cerr << "READ FAILED - wrong key\n" << std::flush;
 	return 1;
       }
@@ -67,7 +67,7 @@ int main()
 
     userDB.load(iobuf->data());
 
-    if (userDB.perm(17) != "keyClr") {
+    if (userDB.perm(UserDB::Perm::ChPass) != "chPass") {
       std::cerr << "LOAD FAILED - wrong key\n" << std::flush;
       return 1;
     }

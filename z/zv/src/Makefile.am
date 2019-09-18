@@ -11,10 +11,13 @@ FBS = \
 	role.fbs \
 	user.fbs \
 	userdb.fbs \
-	login.fbs \
 	loginack.fbs \
+	loginreq.fbs \
 	userdbreq.fbs \
-	userdback.fbs
+	userdback.fbs \
+	zcmd.fbs \
+	zcmdreq.fbs \
+	zcmdack.fbs
 FBS_H = ${FBS:%.fbs=%_generated.h}
 ${FBS_H}: %_generated.h: fbs/%.fbs
 	flatc -c -I fbs $<

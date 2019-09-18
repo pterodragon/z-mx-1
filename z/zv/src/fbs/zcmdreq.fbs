@@ -1,0 +1,7 @@
+include "zcmd.fbs";
+namespace ZvCmd.fbs;
+table Req {
+  type:MsgType;
+  data:[uint8];
+}
+root_type Req;

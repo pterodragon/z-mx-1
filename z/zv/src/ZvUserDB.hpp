@@ -51,6 +51,9 @@
 #include <ZtlsRandom.hpp>
 
 #include "userdb_generated.h"
+#include "loginreq_generated.h"
+#include "userdbreq_generated.h"
+#include "userdback_generated.h"
 
 namespace ZvUserDB {
 
@@ -74,11 +77,11 @@ public:
   Bitmap		apiperms;
   Flags			flags;
 
-  Zfb::Offset<fbs::Role> save(Zfb::Builder &b) {
+  Zfb::Offset<fbs::Role> save(Zfb::Builder &fbb) {
     using namespace Zfb::Save;
-    return fbs::CreateRole(b, str(b, name),
-	b.CreateVector(perms.data, Bitmap::Words),
-	b.CreateVector(apiperms.data, Bitmap::Words));
+    return fbs::CreateRole(fbb, str(fbb, name),
+	fbb.CreateVector(perms.data, Bitmap::Words),
+	fbb.CreateVector(apiperms.data, Bitmap::Words));
   }
 };
 struct RoleNameAccessor : public ZuAccessor<Role_, ZtString> {
@@ -130,11 +133,11 @@ struct User__ : public ZuPolymorph {
   Bitmap		apiperms;	// API permissions
   Flags			flags;
 
-  Zfb::Offset<fbs::User> save(Zfb::Builder &b) {
+  Zfb::Offset<fbs::User> save(Zfb::Builder &fbb) {
     using namespace Zfb::Save;
-    return fbs::CreateUser(b, id,
-	str(b, name), bytes(b, hmac), bytes(b, secret),
-	strVecIter(b, roles.length(), [this](auto &b, unsigned k) {
+    return fbs::CreateUser(fbb, id,
+	str(fbb, name), bytes(fbb, hmac), bytes(fbb, secret),
+	strVecIter(fbb, roles.length(), [this](Zfb::Builder &, unsigned k) {
 	  return roles[k]->name;
 	}));
   }
@@ -191,9 +194,9 @@ struct Key_ : public ZuObject {
   Key_		*nextKey;// next in per-user list
   uint64_t	userID;
 
-  Zfb::Offset<fbs::Key> save(Zfb::Builder &b) {
+  Zfb::Offset<fbs::Key> save(Zfb::Builder &fbb) {
     using namespace Zfb::Save;
-    return fbs::CreateKey(b, str(b, id), bytes(b, secret), userID);
+    return fbs::CreateKey(fbb, str(fbb, id), bytes(fbb, secret), userID);
   }
 };
 struct KeyIDAccessor : public ZuAccessor<Key_, ZtString> {
@@ -223,18 +226,20 @@ public:
     enum {
       Login = 0,
       Access,
-      ChPass
+      N
+    };
+    enum {
+      Offset = N - (fbs::ReqData_NONE + 1);
     };
   };
 
+  UserDB(Ztls::Random *rng, unsigned passLen, unsigned totpRange);
+
   // one-time initialization (idempotent)
-  bool init(Ztls::Random *rng,
-      unsigned passLen,
-      ZtString &passwd,
-      ZtString &secret);
+  bool bootstrap(ZtString &passwd, ZtString &secret);
 
   bool load(const uint8_t *buf, unsigned len);
-  Zfb::Offset<fbs::UserDB> save(Zfb::Builder &b) const;
+  Zfb::Offset<fbs::UserDB> save(Zfb::Builder &) const;
 
   int load(ZuString path, ZeError *e = 0);
   int save(ZuString path, unsigned maxAge = 8, ZeError *e = 0);
@@ -244,14 +249,31 @@ public:
     if (i >= m_perms.length()) return ZtString();
     return m_perms[i];
   }
+  int findPerm(ZuString s) { // returns -1 if not found
+    ReadGuard guard(m_lock);
+    unsigned i, n = perms.length();
+    for (i = 0; i < n; i++) if (perms[i] == s) return i;
+    return -1;
+  }
 
+  template <typename T> using Offset = Zfb::Offset<T>;
+  template <typename T> using Vector = Zfb::Vector<T>;
+
+  // user, interactive
+  ZuPair<ZmRef<User>, bool> loginReq(fbs::LoginReq *loginReq);
+
+  Offset<fbs::ReqAck> request(User *user, bool interactive,
+      Zfb::Builder &, fbs::Request *request);
+
+private:
   // interactive login
-  // - totpRange is the number of adjacent 30sec time periods to accept
   ZmRef<User> login(
-      ZuString user, ZuString passwd, unsigned totp, unsigned totpRange);
+      ZuString user, ZuString passwd, unsigned totp);
   // API access
   ZmRef<User> access(
       ZuString keyID, ZuArray<uint8_t> token, ZuArray<uint8_t> hmac);
+
+public:
   // ok(user, interactive, perm)
   bool ok(User *user, bool interactive, unsigned perm) {
     if ((user->flags & User::ChPass) &&
@@ -260,27 +282,23 @@ public:
     return interactive ? (user->perms && perm) : (user->apiperms && perm);
   }
 
-  template <typename T> using Offset = Zfb::Offset<T>;
-  template <typename T> using Vector = Zfb::Vector<T>;
+private:
+  // change password
+  Offset<fbs::UserAck> chPass(
+      Zfb::Builder &, User *user, fbs::UserChPass *userChPass);
 
   // query users
   Offset<Vector<Offset<fbs::User>>> userGet(
       Zfb::Builder &, fbs::UserID *id);
   // add a new user
   Offset<fbs::UserPass> userAdd(
-      Zfb::Builder &, fbs::User *user, Ztls::Random *rng, unsigned passLen);
+      Zfb::Builder &, fbs::User *user);
   // reset password (also clears all API keys)
   Offset<fbs::UserPass> resetPass(
-      Zfb::Builder &, fbs::UserID *id, Ztls::Random *rng, unsigned passLen);
-  // change password
-  Offset<fbs::UserAck> chPass(
-      Zfb::Builder &, User *user, fbs::UserChPass *userChPass);
+      Zfb::Builder &, fbs::UserID *id);
   // modify user name, roles, flags
   Offset<fbs::UserUpdAck> userMod(
       Zfb::Builder &, fbs::User *user);
-  // clear all API keys for user
-  Offset<fbs::UserAck> keyClr(
-      Zfb::Builder &, fbs::UserID *id);
   // delete user
   Offset<fbs::UserUpdAck> userDel(
       Zfb::Builder &, fbs::UserID *id);
@@ -296,7 +314,7 @@ public:
       Zfb::Builder &, fbs::Role *role);
   // delete role
   Offset<fbs::RoleUpdAck> roleDel(
-      Zfb::Builder &, fbs::Role *role);
+      Zfb::Builder &, fbs::RoleID *role);
   
   // query permissions 
   Offset<Vector<Offset<fbs::Perm>>> permGet(
@@ -312,15 +330,33 @@ public:
       Zfb::Builder &, fbs::PermID *id);
 
   // query API keys for user
+  Offset<Vector<Offset<fbs::Key>>> ownKeyGet(
+      Zfb::Builder &, User *user, fbs::UserID *userID);
   Offset<Vector<Offset<fbs::Key>>> keyGet(
       Zfb::Builder &, fbs::UserID *userID);
+  Offset<Vector<Offset<fbs::Key>>> keyGet_(
+      Zfb::Builder &, User *user);
   // add API key for user
+  Offset<fbs::KeyUpdAck> ownKeyAdd(
+      Zfb::Builder &, User *user, fbs::UserID *userID);
   Offset<fbs::KeyUpdAck> keyAdd(
-      Zfb::Builder &, fbs::UserID *userID,
-      Ztls::Random *rng);
+      Zfb::Builder &, fbs::UserID *userID);
+  Offset<fbs::KeyUpdAck> keyAdd_(
+      Zfb::Builder &, User *user);
+  // clear all API keys for user
+  Offset<fbs::UserAck> ownKeyClr(
+      Zfb::Builder &, User *user, fbs::UserID *id);
+  Offset<fbs::UserAck> keyClr(
+      Zfb::Builder &, fbs::UserID *id);
+  Offset<fbs::UserAck> keyClr_(
+      Zfb::Builder &, User *user_);
   // delete API key
+  Offset<fbs::KeyUpdAck> ownKeyDel(
+      Zfb::Builder &, User *user, fbs::KeyID *id);
   Offset<fbs::KeyUpdAck> keyDel(
       Zfb::Builder &, fbs::KeyID *id);
+  Offset<fbs::KeyUpdAck> keyDel_(
+      Zfb::Builder &, User *user, fbs::KeyID *id);
 
 private:
   void permAdd_() { }
@@ -339,8 +375,13 @@ private:
       Ztls::Random *rng, unsigned passLen, ZtString &passwd);
 
 private:
+  Ztls::Random		*m_rng;
+  unsigned		m_passLen;
+  unsigned		m_totpRange;
+
   Lock			m_lock;
     ZtArray<ZtString>	  m_perms; // indexed by permission ID
+    unsigned		  m_permIndex[Perm::Offset + fbs::ReqData_MAX + 1];
     RoleTree		  m_roles; // name -> permissions
     UserIDHash		  m_users;
     UserNameHash	  m_userNames;

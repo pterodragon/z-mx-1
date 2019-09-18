@@ -26,25 +26,30 @@
 
 namespace ZvUserDB {
 
-bool UserDB::init(
-    Ztls::Random *rng, unsigned passLen, ZtString &passwd, ZtString &secret)
+UserDB::UserDB(Ztls::Random *rng, unsigned passLen, unsigned totpRange) :
+  m_rng(rng),
+  m_passLen(passLen),
+  m_totpRange(totpRange)
 {
-  Guard guard(m_lock);
-  if (!m_perms.length())
-    permAdd_(
-	"login",		// == UserDB::Perm::Login
-	"access",		// == UserDB::Perm::Access
-	"chPass",		// == UserDB::Perm::ChPass
-	"userGet", "userAdd", "userMod", "resetPass", "keyClr", "userDel",
-	"roleGet", "roleAdd", "roleMod", "roleDel",
-	"permGet", "permAdd", "permMod", "permDel",
-	"keyGet", "keyAdd", "keyDel");
+}
+
+bool UserDB::bootstrap(ZtString &passwd, ZtString &secret)
+{
+  if (!m_perms.length()) {
+    permAdd_("UserDB.Login", "UserDB.Access");
+    m_permIndex[Perm::Login] = 0;
+    m_permIndex[Perm::Access] = 1;
+    for (unsigned i = fbs::ReqData_NONE + 1; i <= fbs::ReqData_MAX; i++) {
+      m_perms.push(ZtString{"UserDB."} + fbs::EnumNamesReqData()[i]);
+      m_permIndex[i + Perm::Offset] = i + Perm::Offset;
+    }
+  }
   if (!m_roles.count())
     roleAdd_("admin", Role::Immutable, Bitmap().fill(), Bitmap());
   if (!m_users.count_()) {
     ZmRef<User> user = userAdd_(
 	0, "admin", "admin", User::Immutable | User::Enabled | User::ChPass,
-	rng, passLen, passwd);
+	passwd);
     secret.length(Ztls::Base32::enclen(user->secret.length()));
     Ztls::Base32::encode(
 	secret.data(), secret.length(),
@@ -56,21 +61,21 @@ bool UserDB::init(
 
 ZmRef<User> UserDB::userAdd_(
     uint64_t id, ZuString name, ZuString role, User::Flags flags,
-    Ztls::Random *rng, unsigned passLen, ZtString &passwd)
+    ZtString &passwd)
 {
   ZmRef<User> user = new User(id, name, flags);
   {
     User::KeyData passwd_;
-    passLen = Ztls::Base64::declen(passLen);
-    if (passLen > passwd_.size()) passLen = passwd_.size();
-    passwd_.length(passLen);
-    rng->random(passwd_.data(), passLen);
-    passwd.length(Ztls::Base64::enclen(passLen));
+    auto passLen_ = Ztls::Base64::declen(m_passLen);
+    if (passLen_ > passwd_.size()) passLen_ = passwd_.size();
+    passwd_.length(passLen_);
+    m_rng->random(passwd_.data(), passLen_);
+    passwd.length(m_passLen);
     Ztls::Base64::encode(
 	passwd.data(), passwd.length(), passwd_.data(), passwd_.length());
   }
   user->secret.length(user->secret.size());
-  rng->random(user->secret.data(), user->secret.length());
+  m_rng->random(user->secret.data(), user->secret.length());
   {
     Ztls::HMAC hmac(User::keyType());
     hmac.start(user->secret.data(), user->secret.length());
@@ -104,6 +109,11 @@ bool UserDB::load(const uint8_t *buf, unsigned len)
     if (m_perms.length() < j + 1) m_perms.length(j + 1);
     m_perms[j] = str(perm_->name());
   });
+  m_permIndex[Perm::Login] = findPerm("UserDB.Login");
+  m_permIndex[Perm::Access] = findPerm("UserDB.Access");
+  for (unsigned i = fbs::ReqData_NONE + 1; i <= fbs::ReqData_MAX; i++)
+    m_permIndex[i + Perm::Offset] =
+      findPerm(ZtString{"UserDB."} + fbs::EnumNamesReqData()[i]);
   all(userDB->roles(), [this](unsigned, auto role_) {
     if (auto role = loadRole(role_)) {
       m_roles.del(role->name);
@@ -128,34 +138,34 @@ bool UserDB::load(const uint8_t *buf, unsigned len)
   return true;
 }
 
-Zfb::Offset<fbs::UserDB> UserDB::save(Zfb::Builder &b) const
+Zfb::Offset<fbs::UserDB> UserDB::save(Zfb::Builder &fbb) const
 {
   ReadGuard guard(m_lock);
   using namespace Zfb;
   using namespace Save;
-  auto perms_ = keyVecIter<fbs::Perm>(b, m_perms.length(),
-      [this](Builder &b, unsigned i) {
-	return fbs::CreatePerm(b, i, str(b, m_perms[i]));
+  auto perms_ = keyVecIter<fbs::Perm>(fbb, m_perms.length(),
+      [this](Builder &fbb, unsigned i) {
+	return fbs::CreatePerm(fbb, i, str(fbb, m_perms[i]));
       });
   Offset<Vector<Offset<fbs::Role>>> roles_;
   {
     auto i = m_roles.readIterator();
-    roles_ = keyVecIter<fbs::Role>(b, i.count(),
-	[&i](Builder &b, unsigned j) { return i.iterate()->save(b); });
+    roles_ = keyVecIter<fbs::Role>(fbb, i.count(),
+	[&i](Builder &fbb, unsigned j) { return i.iterate()->save(fbb); });
   }
   Offset<Vector<Offset<fbs::User>>> users_;
   {
     auto i = m_users.readIterator();
-    users_ = keyVecIter<fbs::User>(b, i.count(),
-	[&i](Builder &b, unsigned) { return i.iterate()->save(b); });
+    users_ = keyVecIter<fbs::User>(fbb, i.count(),
+	[&i](Builder &fbb, unsigned) { return i.iterate()->save(fbb); });
   }
   Offset<Vector<Offset<fbs::Key>>> keys_;
   {
     auto i = m_keys.readIterator();
-    keys_ = keyVecIter<fbs::Key>(b, i.count(),
-	[&i](Builder &b, unsigned) { return i.iterate()->save(b); });
+    keys_ = keyVecIter<fbs::Key>(fbb, i.count(),
+	[&i](Builder &fbb, unsigned) { return i.iterate()->save(fbb); });
   }
-  return fbs::CreateUserDB(b, perms_, roles_, users_, keys_);
+  return fbs::CreateUserDB(fbb, perms_, roles_, users_, keys_);
 }
 
 int UserDB::load(ZuString path, ZeError *e)
@@ -194,7 +204,7 @@ int UserDB::load(ZuString path, ZeError *e)
 int UserDB::save(ZuString path, unsigned maxAge, ZeError *e)
 {
   Zfb::Builder b;
-  b.Finish(save(b));
+  fbb.Finish(save(fbb));
 
   ZiFile::age(path, maxAge);
 
@@ -203,8 +213,8 @@ int UserDB::save(ZuString path, unsigned maxAge, ZeError *e)
   
   if ((i = f.open(path, ZiFile::WriteOnly, 0666, e)) != Zi::OK) return i;
 
-  uint8_t *buf = b.GetBufferPointer();
-  int len = b.GetSize();
+  uint8_t *buf = fbb.GetBufferPointer();
+  int len = fbb.GetSize();
 
   if (!buf || len <= 0) {
     f.close();
@@ -219,8 +229,163 @@ int UserDB::save(ZuString path, unsigned maxAge, ZeError *e)
   return Zi::OK;
 }
 
+bool ZvUserDB::loginReq(
+    fbs::LoginReq *loginReq, ZmRef<User> &user, bool &interactive)
+{
+  bool ok;
+  switch ((int)loginReq->data_type()) {
+    case fbs::LoginReqData_Access: {
+      auto access = static_cast<const fbs::Access *>(loginReq->data());
+      user = this->access(str(access->keyID()),
+	  bytes(access->token()), bytes(access->hmac()));
+      ok = !!user;
+      interactive = false;
+    } break;
+    case fbs::LoginReqData_Login: {
+      auto login = static_cast<const fbs::Login *>(loginReq->data());
+      user = this->login(str(login->user()),
+	  str(login->passwd()), login->totp());
+      ok = !!user;
+      interactive = true;
+    } break;
+    default:
+      ok = false;
+      user = nullptr;
+      break;
+  }
+  return ok;
+}
+
+Offset<fbs::ReqAck> ZvUserDB::request(User *user, bool interactive,
+    Zfb::Builder &fbb, fbs::Request *request_)
+{
+  uint64_t seqNo = request_->seqNo();
+  void *reqData = request_->data();
+  fbs::ReqAckData ackType = ReqAckData_NONE;
+  Offset<void> ackData = 0;
+  unsigned rejCode = 0;
+  ZuString rejText;
+
+  int reqType = request_->data_type();
+
+  if (!ok(user, interactive, m_permIndex[Perm::Offset + reqType])) {
+    using namespace Save;
+    fbs::ReqAckBuilder fbb_(fbb);
+    fbb_.add_seqNo(seqNo);
+    fbb_.add_rejCode(__LINE__);
+    fbb_.add_rejText(str(fbb, "permission denied"));
+    return fbb_.Finish();
+  }
+
+  switch ((int)request_->data_type()) {
+    case fbs::ReqData_ChPass:
+      ackType = fbs::ReqAckData_ChPass;
+      ackData = chPass(fbb, user, static_cast<fbs::UserChPass *>(reqData));
+      break;
+    case fbs::ReqData_OwnKeyGet:
+      ackType = fbs::ReqAckData_KeyGet;
+      ackData = fbs::CreateKeyList(fbb,
+	  ownKeyGet(fbb, user, static_cast<fbs::UserID *>(reqData)));
+      break;
+    case fbs::ReqData_OwnKeyAdd:
+      ackType = fbs::ReqAckData_KeyAdd;
+      ackData = ownKeyAdd(fbb, user, static_cast<fbs::UserID *>(reqData));
+      break;
+    case fbs::ReqData_OwnKeyClr:
+      ackType = fbs::ReqAckData_KeyClr;
+      ackData = ownKeyClr(fbb, user, static_cast<fbs::UserID *>(reqData));
+      break;
+    case fbs::ReqData_OwnKeyDel:
+      ackType = fbs::ReqAckData_KeyDel;
+      ackData = ownKeyDel(fbb, user, static_cast<fbs::KeyID *>(reqData));
+      break;
+
+    case fbs::ReqData_UserGet:
+      ackType = fbs::ReqAckData_UserGet;
+      ackData = fbs::CreateUserList(fbb,
+	  userGet(fbb, static_cast<fbs::UserID *>(reqData)));
+      break;
+    case fbs::ReqData_UserAdd:
+      ackType = fbs::ReqAckData_UserAdd;
+      ackData = userAdd(fbb, static_cast<fbs::User *>(reqData));
+      break;
+    case fbs::ReqData_ResetPass:
+      ackType = fbs::ReqAckData_ResetPass;
+      ackData = resetPass(fbb, static_cast<fbs::UserID *>(reqData));
+      break;
+    case fbs::ReqData_UserMod:
+      ackType = fbs::ReqAckData_UserMod;
+      ackData = userMod(fbb, static_cast<fbs::User *>(reqData));
+      break;
+    case fbs::ReqData_UserDel:
+      ackType = fbs::ReqAckData_UserDel;
+      ackData = userDel(fbb, static_cast<fbs::UserID *>(reqData));
+      break;
+
+    case fbs::ReqData_RoleGet:
+      ackType = fbs::ReqAckData_RoleGet;
+      ackData = fbs::CreateRoleList(fbb,
+	  roleGet(fbb, static_cast<fbs::RoleID *>(reqData)));
+      break;
+    case fbs::ReqData_RoleAdd:
+      ackType = fbs::ReqAckData_RoleAdd;
+      ackData = roleAdd(fbb, static_cast<fbs::Role *>(reqData));
+      break;
+    case fbs::ReqData_RoleMod:
+      ackType = fbs::ReqAckData_RoleMod;
+      ackData = roleMod(fbb, static_cast<fbs::Role *>(reqData));
+      break;
+    case fbs::ReqData_RoleDel:
+      ackType = fbs::ReqAckData_RoleDel;
+      ackData = roleDel(fbb, static_cast<fbs::RoleID *>(reqData));
+      break;
+
+    case fbs::ReqData_PermGet:
+      ackType = fbs::ReqAckData_PermGet;
+      ackData = fbs::CreatePermList(fbb,
+	  permGet(fbb, static_cast<fbs::PermID *>(reqData)));
+      break;
+    case fbs::ReqData_PermAdd:
+      ackType = fbs::ReqAckData_PermAdd;
+      ackData = permAdd(fbb, static_cast<fbs::Perm *>(reqData));
+      break;
+    case fbs::ReqData_PermMod:
+      ackType = fbs::ReqAckData_PermMod;
+      ackData = permMod(fbb, static_cast<fbs::Perm *>(reqData));
+      break;
+    case fbs::ReqData_PermDel:
+      ackType = fbs::ReqAckData_PermDel;
+      ackData = permDel(fbb, static_cast<fbs::PermID *>(reqData));
+      break;
+
+    case fbs::ReqData_KeyGet:
+      ackType = fbs::ReqAckData_KeyGet;
+      ackData = fbs::CreateKeyList(fbb,
+	  keyGet(fbb, static_cast<fbs::UserID *>(reqData)));
+      break;
+    case fbs::ReqData_KeyAdd:
+      ackType = fbs::ReqAckData_KeyAdd;
+      ackData = keyAdd(fbb, static_cast<fbs::UserID *>(reqData));
+      break;
+    case fbs::ReqData_KeyClr:
+      ackType = fbs::ReqAckData_KeyClr;
+      ackData = keyClr(fbb, static_cast<fbs::UserID *>(reqData));
+      break;
+    case fbs::ReqData_KeyDel:
+      ackType = fbs::ReqAckData_KeyDel;
+      ackData = keyDel(fbb, static_cast<fbs::KeyID *>(reqData));
+      break;
+  }
+
+  fbs::ReqAckBuilder fbb_(fbb);
+  fbb_.add_seqNo(seqNo);
+  fbb_.add_data_type(ackType);
+  fbb_.add_data(ackData);
+  return fbb_.Finish();
+}
+
 ZmRef<User> UserDB::login(
-    ZuString name, ZuString passwd, unsigned totp, unsigned totpRange)
+    ZuString name, ZuString passwd, unsigned totp)
 {
   ReadGuard guard(m_lock);
   ZmRef<User> user = m_userNames.find(name);
@@ -237,7 +402,7 @@ ZmRef<User> UserDB::login(
     if (verify != user->hmac) return nullptr;
   }
   if (!Ztls::TOTP::verify(
-	user->secret.data(), user->secret.length(), totp, totpRange))
+	user->secret.data(), user->secret.length(), totp, m_totpRange))
     return nullptr;
   return user;
 }
@@ -270,37 +435,55 @@ template <typename T> using Vector = Zfb::Vector<T>;
 using namespace Zfb;
 using namespace Save;
 
+Offset<fbs::UserAck> UserDB::chPass(
+    Zfb::Builder &fbb, User *user, fbs::UserChPass *userChPass_)
+{
+  Guard guard(m_lock);
+  ZuString oldPass = Load::str(userChPass_->oldpass());
+  ZuString newPass = Load::str(userChPass_->newpass());
+  Ztls::HMAC hmac(User::keyType());
+  User::KeyData verify;
+  hmac.start(user->secret.data(), user->secret.length());
+  hmac.update(oldPass.data(), oldPass.length());
+  verify.length(verify.size());
+  hmac.finish(verify.data());
+  if (verify != user->hmac)
+    return fbs::CreateUserAck(fbb, 0);
+  hmac.reset();
+  hmac.update(newPass.data(), newPass.length());
+  hmac.finish(user->hmac.data());
+  return fbs::CreateUserAck(fbb, 1);
+}
+
 Offset<Vector<Offset<fbs::User>>> UserDB::userGet(
-    Zfb::Builder &b, fbs::UserID *id_)
+    Zfb::Builder &fbb, fbs::UserID *id_)
 {
   ReadGuard guard(m_lock);
   if (!Zfb::IsFieldPresent(id_, fbs::UserID::VT_ID)) {
     auto i = m_users.readIterator();
-    return keyVecIter<fbs::User>(b, i.count(),
-	[&i](Builder &b, unsigned) { return i.iterate()->save(b); });
+    return keyVecIter<fbs::User>(fbb, i.count(),
+	[&i](Builder &fbb, unsigned) { return i.iterate()->save(fbb); });
   } else {
     auto id = id_->id();
     if (auto user = m_users.findPtr(id))
-      return keyVec<fbs::User>(b, user->save(b));
+      return keyVec<fbs::User>(fbb, user->save(fbb));
     else
-      return keyVec<fbs::User>(b);
+      return keyVec<fbs::User>(fbb);
   }
 }
 
-Offset<fbs::UserPass> UserDB::userAdd(Zfb::Builder &b, fbs::User *user_,
-    Ztls::Random *rng, unsigned passLen)
+Offset<fbs::UserPass> UserDB::userAdd(Zfb::Builder &fbb, fbs::User *user_)
 {
   Guard guard(m_lock);
   if (m_users.findPtr(user_->id())) {
-    fbs::UserPassBuilder b_(b);
-    b_.add_ok(0);
-    return b_.Finish();
+    fbs::UserPassBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
   }
   ZtString passwd;
   ZmRef<User> user = userAdd_(
       user_->id(), Load::str(user_->name()), ZuString(),
-      user_->flags() | User::ChPass,
-      rng, passLen, passwd);
+      user_->flags() | User::ChPass, passwd);
   Load::all(user_->roles(), [this, &user](unsigned, auto roleName) {
     if (auto role = m_roles.findPtr(Load::str(roleName))) {
       user->roles.push(role);
@@ -308,29 +491,28 @@ Offset<fbs::UserPass> UserDB::userAdd(Zfb::Builder &b, fbs::User *user_,
       user->apiperms |= role->apiperms;
     }
   });
-  return fbs::CreateUserPass(b, user->save(b), str(b, passwd), 1);
+  return fbs::CreateUserPass(fbb, user->save(fbb), str(fbb, passwd), 1);
 }
 
 Offset<fbs::UserPass> UserDB::resetPass(
-    Zfb::Builder &b, fbs::UserID *id_,
-    Ztls::Random *rng, unsigned passLen)
+    Zfb::Builder &fbb, fbs::UserID *id_)
 {
   Guard guard(m_lock);
   auto id = id_->id();
   auto user = m_users.findPtr(id);
   if (!user) {
-    fbs::UserPassBuilder b_(b);
-    b_.add_ok(0);
-    return b_.Finish();
+    fbs::UserPassBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
   }
   ZtString passwd;
   {
     User::KeyData passwd_;
-    passLen = Ztls::Base64::declen(passLen);
-    if (passLen > passwd_.size()) passLen = passwd_.size();
-    passwd_.length(passLen);
-    rng->random(passwd_.data(), passLen);
-    passwd.length(Ztls::Base64::enclen(passLen));
+    passLen_ = Ztls::Base64::declen(m_passLen);
+    if (passLen_ > passwd_.size()) passLen_ = passwd_.size();
+    passwd_.length(passLen_);
+    m_rng->random(passwd_.data(), passLen_);
+    passwd.length(m_passLen);
     Ztls::Base64::encode(
 	passwd.data(), passwd.length(), passwd_.data(), passwd_.length());
   }
@@ -346,40 +528,20 @@ Offset<fbs::UserPass> UserDB::resetPass(
     while (auto key = i.iterate())
       if (key->userID == id) i.del();
   }
-  return fbs::CreateUserPass(b, user->save(b), str(b, passwd), 1);
-}
-
-Offset<fbs::UserAck> UserDB::chPass(
-    Zfb::Builder &b, User *user, fbs::UserChPass *userChPass_)
-{
-  Guard guard(m_lock);
-  ZuString oldPass = Load::str(userChPass_->oldpass());
-  ZuString newPass = Load::str(userChPass_->newpass());
-  Ztls::HMAC hmac(User::keyType());
-  User::KeyData verify;
-  hmac.start(user->secret.data(), user->secret.length());
-  hmac.update(oldPass.data(), oldPass.length());
-  verify.length(verify.size());
-  hmac.finish(verify.data());
-  if (verify != user->hmac)
-    return fbs::CreateUserAck(b, 0);
-  hmac.reset();
-  hmac.update(newPass.data(), newPass.length());
-  hmac.finish(user->hmac.data());
-  return fbs::CreateUserAck(b, 1);
+  return fbs::CreateUserPass(fbb, user->save(fbb), str(fbb, passwd), 1);
 }
 
 // only id, name, roles, flags are processed
 Offset<fbs::UserUpdAck> UserDB::userMod(
-    Zfb::Builder &b, fbs::User *user_)
+    Zfb::Builder &fbb, fbs::User *user_)
 {
   Guard guard(m_lock);
   auto id = user_->id();
   auto user = m_users.findPtr(id);
   if (!user || (user->flags & User::Immutable)) {
-    fbs::UserUpdAckBuilder b_(b);
-    b_.add_ok(0);
-    return b_.Finish();
+    fbs::UserUpdAckBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
   }
   if (auto name = Load::str(user_->name())) user->name = name;
   if (user_->roles()->size()) {
@@ -396,87 +558,71 @@ Offset<fbs::UserUpdAck> UserDB::userMod(
   }
   if (Zfb::IsFieldPresent(user_, fbs::User::VT_FLAGS))
     user->flags = user_->flags();
-  return fbs::CreateUserUpdAck(b, user->save(b), 1);
-}
-
-Offset<fbs::UserAck> UserDB::keyClr(
-    Zfb::Builder &b, fbs::UserID *id_)
-{
-  Guard guard(m_lock);
-  auto id = id_->id();
-  ZmRef<User> user = m_users.del(id);
-  if (!user) return fbs::CreateUserAck(b, 0);
-  {
-    auto i = m_keys.iterator();
-    while (auto key = i.iterate())
-      if (key->userID == id) i.del();
-  }
-  user->keyList = nullptr;
-  return fbs::CreateUserAck(b, 1);
+  return fbs::CreateUserUpdAck(fbb, user->save(fbb), 1);
 }
 
 Offset<fbs::UserUpdAck> UserDB::userDel(
-    Zfb::Builder &b, fbs::UserID *id_)
+    Zfb::Builder &fbb, fbs::UserID *id_)
 {
   Guard guard(m_lock);
   auto id = id_->id();
   ZmRef<User> user = m_users.del(id);
   if (!user || (user->flags & User::Immutable)) {
-    fbs::UserUpdAckBuilder b_(b);
-    b_.add_ok(0);
-    return b_.Finish();
+    fbs::UserUpdAckBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
   }
   {
     auto i = m_keys.iterator();
     while (auto key = i.iterate())
       if (key->userID == id) i.del();
   }
-  return fbs::CreateUserUpdAck(b, user->save(b), 1);
+  return fbs::CreateUserUpdAck(fbb, user->save(fbb), 1);
 }
 
 Offset<Vector<Offset<fbs::Role>>> UserDB::roleGet(
-    Zfb::Builder &b, fbs::RoleID *id_)
+    Zfb::Builder &fbb, fbs::RoleID *id_)
 {
   ReadGuard guard(m_lock);
   auto name = Load::str(id_->name());
   if (!name) {
     auto i = m_roles.readIterator();
-    return keyVecIter<fbs::Role>(b, i.count(),
-	[&i](Builder &b, unsigned) { return i.iterate()->save(b); });
+    return keyVecIter<fbs::Role>(fbb, i.count(),
+	[&i](Builder &fbb, unsigned) { return i.iterate()->save(fbb); });
   } else {
     if (auto role = m_roles.findPtr(name))
-      return keyVec<fbs::Role>(b, role->save(b));
+      return keyVec<fbs::Role>(fbb, role->save(fbb));
     else
-      return keyVec<fbs::Role>(b);
+      return keyVec<fbs::Role>(fbb);
   }
 }
 
 Offset<fbs::RoleUpdAck> UserDB::roleAdd(
-    Zfb::Builder &b, fbs::Role *role_)
+    Zfb::Builder &fbb, fbs::Role *role_)
 {
   Guard guard(m_lock);
   auto name = Load::str(role_->name());
   if (m_roles.findPtr(name)) {
-    fbs::RoleUpdAckBuilder b_(b);
-    b_.add_ok(0);
-    return b_.Finish();
+    fbs::RoleUpdAckBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
   }
   auto role = loadRole(role_);
   m_roles.add(role);
-  return fbs::CreateRoleUpdAck(b, role->save(b), 1);
+  return fbs::CreateRoleUpdAck(fbb, role->save(fbb), 1);
 }
 
 // only perms, apiperms, flags are processed
 Offset<fbs::RoleUpdAck> UserDB::roleMod(
-    Zfb::Builder &b, fbs::Role *role_)
+    Zfb::Builder &fbb, fbs::Role *role_)
 {
   Guard guard(m_lock);
   auto name = Load::str(role_->name());
   auto role = m_roles.findPtr(name);
   if (!role || (role->flags & Role::Immutable)) {
-    fbs::RoleUpdAckBuilder b_(b);
-    b_.add_ok(0);
-    return b_.Finish();
+    fbs::RoleUpdAckBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
   }
   if (role_->perms()->size()) {
     role->perms.zero();
@@ -492,151 +638,224 @@ Offset<fbs::RoleUpdAck> UserDB::roleMod(
   }
   if (Zfb::IsFieldPresent(role_, fbs::Role::VT_FLAGS))
     role->flags = role_->flags();
-  return fbs::CreateRoleUpdAck(b, role->save(b), 1);
+  return fbs::CreateRoleUpdAck(fbb, role->save(fbb), 1);
 }
 
 Offset<fbs::RoleUpdAck> UserDB::roleDel(
-    Zfb::Builder &b, fbs::Role *role_)
+    Zfb::Builder &fbb, fbs::RoleID *role_)
 {
   Guard guard(m_lock);
   auto name = Load::str(role_->name());
   auto role = m_roles.findPtr(name);
   if (!role || (role->flags & Role::Immutable)) {
-    fbs::RoleUpdAckBuilder b_(b);
-    b_.add_ok(0);
-    return b_.Finish();
+    fbs::RoleUpdAckBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
   }
   {
     auto i = m_users.iterator();
     while (auto user = i.iterate())
       user->roles.grep([role](Role *role_) { return role == role_; });
   }
-  return fbs::CreateRoleUpdAck(b, role->save(b), 1);
+  return fbs::CreateRoleUpdAck(fbb, role->save(fbb), 1);
 }
 
 Offset<Vector<Offset<fbs::Perm>>> UserDB::permGet(
-    Zfb::Builder &b, fbs::PermID *id_)
+    Zfb::Builder &fbb, fbs::PermID *id_)
 {
   ReadGuard guard(m_lock);
   if (!Zfb::IsFieldPresent(id_, fbs::PermID::VT_ID)) {
-    return keyVecIter<fbs::Perm>(b, m_perms.length(),
-	[this](Builder &b, unsigned i) {
-	  return fbs::CreatePerm(b, i, str(b, m_perms[i]));
+    return keyVecIter<fbs::Perm>(fbb, m_perms.length(),
+	[this](Builder &fbb, unsigned i) {
+	  return fbs::CreatePerm(fbb, i, str(fbb, m_perms[i]));
 	});
   } else {
     auto id = id_->id();
     if (id < m_perms.length())
-      return keyVec<fbs::Perm>(b, fbs::CreatePerm(b, id, str(b, m_perms[id])));
+      return keyVec<fbs::Perm>(fbb,
+	  fbs::CreatePerm(fbb, id, str(fbb, m_perms[id])));
     else
-      return keyVec<fbs::Perm>(b);
+      return keyVec<fbs::Perm>(fbb);
   }
 }
 
 Offset<fbs::PermUpdAck> UserDB::permAdd(
-    Zfb::Builder &b, fbs::Perm *perm_)
+    Zfb::Builder &fbb, fbs::Perm *perm_)
 {
   Guard guard(m_lock);
   auto id = perm_->id();
   if (id < m_perms.length()) {
-    fbs::PermUpdAckBuilder b_(b);
-    b_.add_ok(0);
-    return b_.Finish();
+    fbs::PermUpdAckBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
   }
   if (m_perms.length() < id + 1) m_perms.length(id + 1);
   m_perms[id] = Load::str(perm_->name());
-  return fbs::CreatePermUpdAck(b,
-      fbs::CreatePerm(b, id, str(b, m_perms[id])), 1);
+  return fbs::CreatePermUpdAck(fbb,
+      fbs::CreatePerm(fbb, id, str(fbb, m_perms[id])), 1);
 }
 
 Offset<fbs::PermUpdAck> UserDB::permMod(
-    Zfb::Builder &b, fbs::Perm *perm_)
+    Zfb::Builder &fbb, fbs::Perm *perm_)
 {
   Guard guard(m_lock);
   auto id = perm_->id();
   if (id >= m_perms.length()) {
-    fbs::PermUpdAckBuilder b_(b);
-    b_.add_ok(0);
-    return b_.Finish();
+    fbs::PermUpdAckBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
   }
   m_perms[id] = Load::str(perm_->name());
-  return fbs::CreatePermUpdAck(b,
-      fbs::CreatePerm(b, id, str(b, m_perms[id])), 1);
+  return fbs::CreatePermUpdAck(fbb,
+      fbs::CreatePerm(fbb, id, str(fbb, m_perms[id])), 1);
 }
 
 Offset<fbs::PermUpdAck> UserDB::permDel(
-    Zfb::Builder &b, fbs::PermID *id_)
+    Zfb::Builder &fbb, fbs::PermID *id_)
 {
   Guard guard(m_lock);
   auto id = id_->id();
   if (id >= m_perms.length()) {
-    fbs::PermUpdAckBuilder b_(b);
-    b_.add_ok(0);
-    return b_.Finish();
+    fbs::PermUpdAckBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
   }
   ZtString name = ZuMv(m_perms[id]);
   if (id == m_perms.length() - 1) {
     unsigned i = id;
     do { m_perms.length(i); } while (!m_perms[--i]);
   }
-  return fbs::CreatePermUpdAck(b,
-      fbs::CreatePerm(b, id, str(b, name)), 1);
+  return fbs::CreatePermUpdAck(fbb,
+      fbs::CreatePerm(fbb, id, str(fbb, name)), 1);
 }
 
-Offset<Vector<Offset<fbs::Key>>> UserDB::keyGet(
-    Zfb::Builder &b, fbs::UserID *userID_)
+Offset<Vector<Offset<fbs::Key>>> UserDB::ownKeyGet(
+    Zfb::Builder &fbb, User *user, fbs::UserID *userID_)
 {
   ReadGuard guard(m_lock);
-  auto user = m_users.findPtr(userID_->id());
-  if (!user) return keyVec<fbs::Key>(b);
+  if (user->id != userID_->id()) user = nullptr;
+  return keyGet_(fbb, user);
+}
+Offset<Vector<Offset<fbs::Key>>> UserDB::keyGet(
+    Zfb::Builder &fbb, fbs::UserID *userID_)
+{
+  ReadGuard guard(m_lock);
+  return keyGet_(fbb, m_users.findPtr(userID_->id()));
+}
+Offset<Vector<Offset<fbs::Key>>> UserDB::keyGet_(
+    Zfb::Builder &fbb, User *user)
+{
+  if (!user) return keyVec<fbs::Key>(fbb);
   unsigned n = 0;
   for (auto key = user->keyList; key; key = key->nextKey) ++n;
-  return keyVecIter<fbs::Key>(b, n,
-      [key = user->keyList](Zfb::Builder &b, unsigned) mutable {
-	auto key_ = key->save(b);
+  return keyVecIter<fbs::Key>(fbb, n,
+      [key = user->keyList](Zfb::Builder &fbb, unsigned) mutable {
+	auto key_ = key->save(fbb);
 	key = key->nextKey;
 	return key_;
       });
 }
 
-Offset<fbs::KeyUpdAck> UserDB::keyAdd(
-    Zfb::Builder &b, fbs::UserID *userID_,
-    Ztls::Random *rng)
+Offset<fbs::KeyUpdAck> UserDB::ownKeyAdd(
+    Zfb::Builder &fbb, User *user, fbs::UserID *userID_)
 {
   Guard guard(m_lock);
-  auto user = m_users.findPtr(userID_->id());
+  if (user->id != userID_->id()) user = nullptr;
+  return keyAdd_(fbb, user);
+}
+Offset<fbs::KeyUpdAck> UserDB::keyAdd(
+    Zfb::Builder &fbb, fbs::UserID *userID_)
+{
+  Guard guard(m_lock);
+  return keyAdd_(fbb, m_users.findPtr(userID_->id()));
+}
+Offset<fbs::KeyUpdAck> UserDB::keyAdd_(
+    Zfb::Builder &fbb, User *user)
+{
   if (!user) {
-    fbs::KeyUpdAckBuilder b_(b);
-    b_.add_ok(0);
-    return b_.Finish();
+    fbs::KeyUpdAckBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
   }
   ZtString keyID;
   do {
     Key::IDData keyID_;
     keyID_.length(keyID_.size());
-    rng->random(keyID_.data(), keyID_.length());
+    m_rng->random(keyID_.data(), keyID_.length());
     keyID.length(Ztls::Base64::enclen(keyID_.length()));
     Ztls::Base64::encode(
 	keyID.data(), keyID.length(), keyID_.data(), keyID_.length());
   } while (m_keys.findPtr(keyID));
   ZmRef<Key> key = new Key(ZuMv(keyID), user->keyList, user->id);
   key->secret.length(key->secret.size());
-  rng->random(key->secret.data(), key->secret.length());
+  m_rng->random(key->secret.data(), key->secret.length());
   user->keyList = key;
   m_keys.add(key);
-  return fbs::CreateKeyUpdAck(b, key->save(b), 1);
+  return fbs::CreateKeyUpdAck(fbb, key->save(fbb), 1);
 }
 
-Offset<fbs::KeyUpdAck> UserDB::keyDel(
-    Zfb::Builder &b, fbs::KeyID *id_)
+Offset<fbs::UserAck> UserDB::ownKeyClr(
+    Zfb::Builder &fbb, User *user, fbs::UserID *userID_)
 {
   Guard guard(m_lock);
-  ZmRef<Key> key = m_keys.del(Load::str(id_->id()));
-  if (!key) {
-    fbs::KeyUpdAckBuilder b_(b);
-    b_.add_ok(0);
-    return b_.Finish();
+  if (user->id != userID_->id()) user = nullptr;
+  return keyClr_(fbb, user);
+}
+Offset<fbs::UserAck> UserDB::keyClr(
+    Zfb::Builder &fbb, fbs::UserID *userID_)
+{
+  Guard guard(m_lock);
+  return keyClr_(fbb, m_users.findPtr(userID_->id()));
+}
+Offset<fbs::UserAck> UserDB::keyClr_(
+    Zfb::Builder &fbb, User *user)
+{
+  if (!user) return fbs::CreateUserAck(fbb, 0);
+  auto id = user->id;
+  {
+    auto i = m_keys.iterator();
+    while (auto key = i.iterate())
+      if (key->userID == id) i.del();
   }
-  auto user = m_users.findPtr(key->userID);
+  user->keyList = nullptr;
+  return fbs::CreateUserAck(fbb, 1);
+}
+
+Offset<fbs::KeyUpdAck> UserDB::ownKeyDel(
+    Zfb::Builder &fbb, User *user, fbs::KeyID *id_)
+{
+  Guard guard(m_lock);
+  auto keyID = Load::str(id_->id())
+  Key *key = m_keys.findPtr(keyID);
+  if (!key || user->id != key->userID) {
+    fbs::KeyUpdAckBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
+  }
+  return keyDel_(fbb, user, keyID);
+}
+Offset<fbs::KeyUpdAck> UserDB::keyDel(
+    Zfb::Builder &fbb, fbs::KeyID *id_)
+{
+  Guard guard(m_lock);
+  auto keyID = Load::str(id_->id())
+  Key *key = m_keys.findPtr(keyID);
+  if (!key) {
+    fbs::KeyUpdAckBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
+  }
+  return keyDel_(fbb, m_users.findPtr(key->userID), keyID);
+}
+Offset<fbs::KeyUpdAck> UserDB::keyDel_(
+    Zfb::Builder &fbb, User *user, ZuString keyID)
+{
+  ZmRef<Key> key = m_keys.del(keyID);
+  if (!key) {
+    fbs::KeyUpdAckBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
+  }
   if (user) {
     auto prev = user->keyList;
     if (prev == key)
@@ -650,7 +869,7 @@ Offset<fbs::KeyUpdAck> UserDB::keyDel(
 	prev = prev->nextKey;
       }
   }
-  return fbs::CreateKeyUpdAck(b, key->save(b), 1);
+  return fbs::CreateKeyUpdAck(fbb, key->save(fbb), 1);
 }
 
 } // namespace ZvUserDB

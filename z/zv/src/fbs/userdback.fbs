@@ -4,12 +4,16 @@ include "user.fbs";
 include "key.fbs";
 namespace ZvUserDB.fbs;
 union ReqAckData {
+  ChPass:UserAck,
+  OwnKeyGet:KeyList,
+  OwnKeyAdd:KeyUpdAck,
+  OwnKeyClr:UserAck,
+  OwnKeyDel:KeyUpdAck,
+
   UserGet:UserList,
   UserAdd:UserPass,
   ResetPass:UserPass,
-  ChPass:UserAck,
   UserMod:UserUpdAck,
-  KeyClr:UserAck,
   UserDel:UserUpdAck,
 
   RoleGet:RoleList,
@@ -24,10 +28,13 @@ union ReqAckData {
 
   KeyGet:KeyList,
   KeyAdd:KeyUpdAck,
+  KeyClr:UserAck,
   KeyDel:KeyUpdAck
 }
 table ReqAck {
   seqNo:uint64;		// request ID (restarts at 0 with each session)
   data:ReqAckData;
+  rejCode:uint32 = 0;
+  rejText:string;
 }
 root_type ReqAck;

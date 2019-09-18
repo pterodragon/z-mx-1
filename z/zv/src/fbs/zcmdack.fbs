@@ -1,0 +1,7 @@
+include "zcmd.fbs";
+namespace ZvCmd.fbs;
+table Ack {
+  type:MsgType;
+  data:[uint8];
+}
+root_type Ack;

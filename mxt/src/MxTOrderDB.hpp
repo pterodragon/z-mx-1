@@ -45,8 +45,8 @@ struct App : public MxTOrderDB<App> {
   using OrderPOD = MxTOrderDB<App>::OrderPOD;
   using ClosedPOD = MxTOrderDB<App>::ClosedPOD;
 
-  void orderAdded(OrderPOD *);		// order recovered/replicated
-  void closedAdded(ClosedPOD *);	// closed order recovered/replicated
+  void orderAdded(OrderPOD *, ZdbRN);	// order recovered/replicated
+  void closedAdded(ClosedPOD *, ZdbRN);	// closed order recovered/replicated
 };
 #endif
 
@@ -74,19 +74,19 @@ public:
 	dbEnv, "orderDB", Types::DBVersion, ZdbCacheMode::FullCache,
 	ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new OrderPOD(db); },
-	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
-	    app->orderAdded(static_cast<OrderPOD *>(pod)); }},
-	  ZdbDelFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
-	    app->orderDeleted(static_cast<OrderPOD *>(pod)); }},
+	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, ZdbRN rn, bool) {
+	    app->orderAdded(static_cast<OrderPOD *>(pod), rn); }},
+	  ZdbDelFn{app(), [](App *app, ZdbAnyPOD *pod, ZdbRN rn, bool) {
+	    app->orderDeleted(static_cast<OrderPOD *>(pod), rn); }},
 	  app()->orderWriteFn()});
     m_closedDB = new ClosedDB(
 	dbEnv, "closedDB", Types::DBVersion, ZdbCacheMode::Normal,
 	ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new ClosedPOD(db); },
-	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
-	    app->closedAdded(static_cast<ClosedPOD *>(pod)); }},
-	  ZdbDelFn{app(), [](App *app, ZdbAnyPOD *pod, bool) {
-	    app->closedDeleted(static_cast<ClosedPOD *>(pod)); }},
+	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, ZdbRN rn, bool) {
+	    app->closedAdded(static_cast<ClosedPOD *>(pod), rn); }},
+	  ZdbDelFn{app(), [](App *app, ZdbAnyPOD *pod, ZdbRN rn, bool) {
+	    app->closedDeleted(static_cast<ClosedPOD *>(pod), rn); }},
 	  app()->closedWriteFn()});
   }
   void final() {

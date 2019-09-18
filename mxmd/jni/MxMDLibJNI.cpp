@@ -172,12 +172,17 @@ void MxMDLibJNI::stop(JNIEnv *env, jobject)
   if (ZuUnlikely(!md)) return;
   {
     thread_local ZmSemaphore sem;
-    unsigned n = md->instrCount();
-    md->allInstruments([env, sem = &sem](MxMDInstrument *instr) {
+    unsigned i = 0, n = md->instrCount();
+    md->allInstruments(
+	[env, &i, n, sem = &sem](MxMDInstrument *instr) -> uintptr_t {
       unsubscribe_(env, instr);
-      sem->post();
+      if (ZuLikely(++i <= n)) {
+	sem->post();
+	return 0;
+      }
+      return 1;
     });
-    for (unsigned i = 0; i < n; i++) sem.wait();
+    for (i = 0; i < n; i++) sem.wait();
     unsubscribe_(env, md);
   }
   {

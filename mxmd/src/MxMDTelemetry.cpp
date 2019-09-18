@@ -121,7 +121,7 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 	uint64_t inCount, inBytes, outCount, outBytes;
 	queue_->stats(inCount, inBytes, outCount, outBytes);
 	cxn->transmit(queue(
-	      key.p1(), queue_->head(), queue_->count(),
+	      key.p1(), queue_->head(), queue_->count_(),
 	      inCount, inBytes, outCount, outBytes,
 	      (uint32_t)0, (uint32_t)0,
 	      (uint8_t)(key.p2() ? QueueType::Tx : QueueType::Rx)));

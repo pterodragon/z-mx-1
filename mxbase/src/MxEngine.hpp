@@ -471,7 +471,10 @@ public:
     }
     return link;
   }
-  ZuInline unsigned nLinks() const { return m_links.count(); }
+  ZuInline unsigned nLinks() const {
+    ReadGuard guard(m_lock);
+    return m_links.count();
+  }
   template <typename Link, typename L> uintptr_t allLinks(L l) {
     auto i = m_links.readIterator();
     while (MxAnyLink *link = i.iterateKey())

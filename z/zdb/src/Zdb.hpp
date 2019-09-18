@@ -436,10 +436,10 @@ private:
 
 // AllocFn - called to allocate/initialize new record from memory
 typedef ZmFn<ZdbAny *, ZmRef<ZdbAnyPOD> &> ZdbAllocFn;
-// AddFn(pod, recovered) - record is recovered, or new/update replicated
-typedef ZmFn<ZdbAnyPOD *, bool> ZdbAddFn;
-// DelFn(pod, recovered) - record update/delete replicated
-typedef ZmFn<ZdbAnyPOD *, bool> ZdbDelFn;
+// AddFn(pod, RN, recovered) - record is recovered, or new/update replicated
+typedef ZmFn<ZdbAnyPOD *, ZdbRN, bool> ZdbAddFn;
+// DelFn(pod, RN, recovered) - record update/delete replicated
+typedef ZmFn<ZdbAnyPOD *, ZdbRN, bool> ZdbDelFn; // pod can be null
 // WriteFn(pod, op) - write drop copy
 typedef ZmFn<ZdbAnyPOD *, int> ZdbWriteFn;
 

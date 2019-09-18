@@ -700,6 +700,10 @@ public:
 
 // set size
 
+  inline Char *ensure(unsigned z) {
+    if (ZuLikely(z <= size())) return m_data;
+    return size(z);
+  }
   inline T *size(unsigned z) {
     if (!z) { null(); return 0; }
     if (owned() && z == size()) return m_data;
@@ -1125,21 +1129,14 @@ public:
 
 // grep
 
-  template <typename Fn> T grep(
-      Fn fn, unsigned &i, unsigned end, bool del = false) {
-    unsigned n = length();
-    do {
-      if (i >= n) i = 0;
-      if (fn(m_data[i])) {
-	if (del) {
-	  T t = ZuMv(m_data[i]);
-	  splice__(0, i, 1, 0, 0);
-	  return t;
-	}
-	return m_data[i];
+  // l(item) -> bool // item is spliced out if true
+  template <typename L> void grep(L l) {
+    for (unsigned i = 0, n = length(); i < n; i++) {
+      if (l(m_data[i])) {
+	splice__(0, i, 1, 0, 0);
+	--i, --n;
       }
-    } while (++i != end);
-    return ZuCmp<T>::null();
+    }
   }
 
 // growth algorithm

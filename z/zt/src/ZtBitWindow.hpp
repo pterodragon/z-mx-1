@@ -174,7 +174,7 @@ public:
     }
   }
 
-  inline unsigned val(unsigned i) const {
+  inline uint64_t val(uint64_t i) const {
     if (i < m_head) return 0;
     i -= m_head;
     if (i >= (m_size<<IndexShift)) return 0;
@@ -329,7 +329,7 @@ public:
     }
   }
 
-  inline unsigned val(unsigned i) const {
+  inline uint64_t val(uint64_t i) const {
     if (i < m_head) return 0;
     i -= m_head;
     if (i >= m_size * IndexMul) return 0;
@@ -477,7 +477,7 @@ public:
     }
   }
 
-  inline uint64_t val(unsigned i) const {
+  inline uint64_t val(uint64_t i) const {
     if (i < m_head) return 0;
     i -= m_head;
     if (i >= m_size) return 0;

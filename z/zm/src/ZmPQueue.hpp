@@ -577,10 +577,12 @@ private:
   }
 
 public:
-  inline unsigned count() const { return m_count; }
-  inline unsigned length() const { return m_length; }
+  inline unsigned count() const { ReadGuard guard(m_lock); return m_count; }
+  inline unsigned length() const { ReadGuard guard(m_lock); return m_length; }
+  inline unsigned count_() const { return m_count; }
+  inline unsigned length_() const { return m_length; }
 
-  inline bool empty() const { return (!m_count); }
+  inline bool empty_() const { return (!m_count); }
 
   inline void stats(
       uint64_t &inCount, uint64_t &inBytes, 

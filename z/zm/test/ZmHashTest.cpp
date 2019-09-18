@@ -174,7 +174,7 @@ int main(int argc, char **argv)
 	ZmHashParams().bits(2).loadFactor(1.0).cBits(1));
 
     printf("hash count, bits, cbits: %d, %d, %d\n",
-      hash2->count(), hash2->bits(), hash2->cBits());
+      hash2->count_(), hash2->bits(), hash2->cBits());
     printf("spawning %d threads...\n", n);
 
     ZmTime start, end;
@@ -191,7 +191,7 @@ int main(int argc, char **argv)
     printf("hash time: %d.%.3d\n", (int)end.sec(), (int)(end.nsec() / 1000000));
 
     printf("%d threads finished\n", n);
-    printf("hash count, bits: %d, %d\n", hash2->count(), hash2->bits());
+    printf("hash count, bits: %d, %d\n", hash2->count_(), hash2->bits());
   }
 
   for (k = 0; k < 10; k++) {
@@ -199,7 +199,7 @@ int main(int argc, char **argv)
 	ZmHashParams().bits(4).loadFactor(1.0).cBits(4));
 
     printf("hash count, bits, cbits: %d, %d, %d\n",
-      hash2->count(), hash2->bits(), hash2->cBits());
+      hash2->count_(), hash2->bits(), hash2->cBits());
     printf("spawning %d threads...\n", n);
 
     ZmTime start, end;
@@ -216,7 +216,7 @@ int main(int argc, char **argv)
     printf("hash time: %d.%.3d\n", (int)end.sec(), (int)(end.nsec() / 1000000));
 
     printf("%d threads finished\n", n);
-    printf("hash count, bits: %d, %d\n", hash2->count(), hash2->bits());
+    printf("hash count, bits: %d, %d\n", hash2->count_(), hash2->bits());
   }
 
   overallEnd.now();

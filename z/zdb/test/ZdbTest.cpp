@@ -37,16 +37,32 @@ template <> struct ZuPrint<Order> : public ZuPrintFn { };
 
 typedef Zdb<Order> OrderDB;
 
-static void deleted(const char *prefix, ZdbRN rn, ZdbRN prev)
+template <typename S>
+static void dump_(S &s, const char *prefix, ZdbAnyPOD *pod, ZdbRN rn)
 {
-  std::cout << prefix << " RN: " << ZuBoxed(rn) <<
-    " prev: " << ZuBoxed(prev) << "  DELETED\n" << std::flush;
+  s << prefix << " RN=" << ZuBoxed(rn) << " pod={";
+  if (!pod)
+    s << "(null)}";
+  else
+    s << "RN=" << ZuBoxed(pod->rn())
+      << ", prevRN=" << ZuBoxed(pod->prevRN())
+      << ", data={" << *(Order *)pod->ptr() << "}}";
 }
 
-static void dump(const char *prefix, ZdbRN rn, ZdbRN prev, Order *o)
+static void deleted(const char *prefix, ZdbAnyPOD *pod, ZdbRN rn)
 {
-  std::cout << prefix << " RN: " << ZuBoxed(rn) <<
-    " prev: " << ZuBoxed(prev) << "  " << *o << '\n' << std::flush;
+  ZuStringN<200> s;
+  dump_(s, prefix, pod, rn);
+  s << " DELETED\n";
+  std::cout << s << std::flush;
+}
+
+static void dump(const char *prefix, ZdbAnyPOD *pod, ZdbRN rn)
+{
+  ZuStringN<200> s;
+  dump_(s, prefix, pod, rn);
+  s << "\n";
+  std::cout << s << std::flush;
 }
 
 ZmRef<OrderDB> orders;
@@ -311,21 +327,19 @@ int main(int argc, char **argv)
 	    pod = new ZdbPOD<Order>(db);
 	    // new (pod->ptr()) Order();
 	  },
-	  [](ZdbAnyPOD *pod, bool recovered) {
-	    dump(recovered ? "recovered (add)" : "replicated (add)",
-		pod->rn(), pod->prevRN(), (Order *)pod->ptr());
+	  [](ZdbAnyPOD *pod, ZdbRN rn, bool recovered) {
+	    dump(recovered ? "recovered (add)" : "replicated (add)", pod, rn);
 	  },
-	  [](ZdbAnyPOD *pod, bool recovered) {
-	    dump(recovered ? "recovered (del)" : "replicated (del)",
-		pod->rn(), pod->prevRN(), (Order *)pod->ptr());
+	  [](ZdbAnyPOD *pod, ZdbRN rn, bool recovered) {
+	    dump(recovered ? "recovered (del)" : "replicated (del)", pod, rn);
 	  },
 	  [](ZdbAnyPOD *pod, int op) {
 	    if (op == ZdbOp::Del)
-	      deleted("DC del", pod->rn(), pod->prevRN());
+	      deleted("DC del", pod, pod->rn());
 	    else if (op == ZdbOp::Upd)
-	      dump("DC upd", pod->rn(), pod->prevRN(), (Order *)pod->ptr());
+	      dump("DC upd", pod, pod->rn());
 	    else
-	      dump("DC new", pod->rn(), pod->prevRN(), (Order *)pod->ptr());
+	      dump("DC new", pod, pod->rn());
 	  }
 	});
 

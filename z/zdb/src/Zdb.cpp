@@ -1407,9 +1407,9 @@ void ZdbAny::replicate(ZdbAnyPOD *pod, void *ptr, int op)
 #ifdef ZdbRep_DEBUG
   ZmAssert((!range || (range.off() + range.len()) <= pod->size()));
 #endif
-  if (op != ZdbOp::Add) m_handler.delFn(pod, false);
+  if (op != ZdbOp::Add) m_handler.delFn(pod, pod->prevRN(), false);
   if (range) memcpy((char *)pod->ptr() + range.off(), ptr, range.len());
-  if (op != ZdbOp::Del) m_handler.addFn(pod, false);
+  if (op != ZdbOp::Del) m_handler.addFn(pod, pod->rn(), false);
 }
 
 ZdbAny::ZdbAny(ZdbEnv *env, ZuString name, uint32_t version, int cacheMode,
@@ -1646,16 +1646,16 @@ void ZdbAny::recover(Zdb_File *file)
 void ZdbAny::recover(ZmRef<ZdbAnyPOD> pod)
 {
   ZdbRN prevRN = pod->prevRN();
-  ZmRef<ZdbAnyPOD> prevPOD;
   if (pod->rn() != prevRN) {
-    prevPOD = m_cache->del(prevRN);
+    ZmRef<ZdbAnyPOD> prevPOD = m_cache->del(prevRN);
     if (ZuUnlikely(!prevPOD)) {
       Zdb_FileRec rec = rn2file(prevRN, false);
       if (rec) prevPOD = read_(rec);
     }
+    if (!prevPOD->magic()) prevPOD = nullptr;
+    m_handler.delFn(prevPOD, prevRN, true);
   }
-  if (prevPOD && prevPOD->magic()) m_handler.delFn(prevPOD, true);
-  m_handler.addFn(pod, true);
+  m_handler.addFn(pod, pod->rn(), true);
   cache(ZuMv(pod));
 }
 

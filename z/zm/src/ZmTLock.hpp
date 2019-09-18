@@ -661,7 +661,8 @@ public:
 #undef ZmTLock_ID2LOCK
 #undef ZmTLock_TID2THREAD
 
-  int count() { return m_locks->count(); }
+  unsigned count() { ReadGuard_ guard(m_lock); return m_locks->count_(); }
+  unsigned count_() { return m_locks->count_(); }
 
 private:
   template <typename ID_>
@@ -676,9 +677,9 @@ private:
   void freeLock(Lock *lock) { m_freeLocks.push(lock); }
 
   Lock_			m_lock;		// global lock
-  ZmRef<LockHash>	m_locks;	// locks
-  ZmRef<ThreadHash>	m_threads;	// threads
-  LockList		m_freeLocks;	// free list
+    ZmRef<LockHash>	  m_locks;	// locks
+    ZmRef<ThreadHash>	  m_threads;	// threads
+    LockList		  m_freeLocks;	// free list
 };
 
 #ifdef _MSC_VER

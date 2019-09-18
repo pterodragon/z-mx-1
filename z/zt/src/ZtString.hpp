@@ -718,8 +718,12 @@ public:
 
 // set size
 
+  inline Char *ensure(unsigned z) {
+    if (ZuLikely(owned() && z <= size_())) return data_();
+    return size(z);
+  }
   inline Char *size(unsigned z) {
-    if (!z) { null(); return 0; }
+    if (ZuUnlikely(!z)) { null(); return 0; }
     if (owned() && z == size_()) return data_();
     Char *oldData = data_();
     Char *newData;

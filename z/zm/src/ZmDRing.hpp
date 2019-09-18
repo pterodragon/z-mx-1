@@ -162,6 +162,7 @@ public:
   typedef typename NTP::template IndexT<Val>::Index Index;
   typedef typename NTP::Lock Lock;
   typedef ZmGuard<Lock> Guard;
+  typedef ZmReadGuard<Lock> ReadGuard;
 
   template <typename ...Args>
   inline ZmDRing(ZmDRingParams params = ZmDRingParams(), Args &&... args) :
@@ -175,15 +176,18 @@ public:
     free(m_data);
   }
 
-  inline unsigned offset() const { return m_offset; }
-  inline unsigned size() const { return m_size; }
-  inline unsigned length() const { return m_length; }
-  inline unsigned count() const { return m_count; }
-  inline unsigned initial() const { return m_initial; }
-  inline unsigned increment() const { return m_increment; }
-  inline unsigned maxFrag() const {
+  ZuInline unsigned initial() const { return m_initial; }
+  ZuInline unsigned increment() const { return m_increment; }
+  ZuInline unsigned maxFrag() const {
     return (unsigned)((1.0 - m_defrag) * 100.0);
   }
+
+  ZuInline unsigned size() const { ReadGuard guard(m_lock); return m_size; }
+  ZuInline unsigned length() const { ReadGuard guard(m_lock); return m_length; }
+  ZuInline unsigned count() const { ReadGuard guard(m_lock); return m_count; }
+  ZuInline unsigned size_() const { return m_size; }
+  ZuInline unsigned length_() const { return m_length; }
+  ZuInline unsigned count_() const { return m_count; }
 
 private:
   inline void lazy() {

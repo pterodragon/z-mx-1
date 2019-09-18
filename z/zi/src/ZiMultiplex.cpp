@@ -1851,7 +1851,7 @@ void ZiMultiplex::disconnected(ZiConnection *cxn)
 
   cxnDel(s);
   
-  if (ZuUnlikely(m_stopping && !m_cxns->count())) stop_2();
+  if (ZuUnlikely(m_stopping && !m_cxns->count_())) stop_2();
 }
 
 void ZiConnection::close()
@@ -2049,7 +2049,7 @@ void ZiMultiplex::stop(bool drain)
 
 void ZiMultiplex::stop_1()
 {
-  if (!m_cxns->count()) { stop_2(); return; }
+  if (!m_cxns->count_()) { stop_2(); return; }
 
   CxnHash::ReadIterator i(*m_cxns);
   while (ZmRef<ZiConnection> cxn = i.iterateKey())
@@ -2166,9 +2166,9 @@ void ZiMultiplex::rx()
     ZiDEBUG(this, ZtSprintf(
 	  "wait() nThreads: % 2d nConnections: % 4d epollFD: % 3d "
 	  "wakeFD: % 3d wakeFD2: % 3d nListeners: % 3d",
-	  params().nThreads(), m_cxns->count(),
+	  params().nThreads(), m_cxns->count_(),
 	  m_epollFD, m_wakeFD, m_wakeFD2,
-	  m_listeners->count()));
+	  m_listeners->count_()));
 
 #if 0
 #ifdef ZiMultiplex_DEBUG

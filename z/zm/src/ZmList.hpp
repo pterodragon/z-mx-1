@@ -240,6 +240,8 @@ protected:
       return Cmp::null();
     }
 
+    ZuInline unsigned count() const { return m_list.count_(); }
+
   protected:
     List	&m_list;
     Node	*m_node;
@@ -284,8 +286,10 @@ friend class ReadIterator;
 
   ~ZmList() { clean_(); }
 
-  inline unsigned count() const { return m_count; }
-  inline bool empty() const { return (!m_count); }
+  inline unsigned count() const { ReadGuard guard(m_lock); return m_count; }
+  inline bool empty() const { ReadGuard guard(m_lock); return !m_count; }
+  inline unsigned count_() const { return m_count; }
+  inline bool empty_() const { return !m_count; }
 
   void join(ZmList &list) { // join lists (the other is left empty)
     int count;

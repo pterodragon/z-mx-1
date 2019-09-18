@@ -125,13 +125,19 @@ private:
 	    return -1; // disconnect
 	  }
 	}
-	auto login = fbs::GetLoginReq(msgPtr);
-	// FIXME - interpret LoginReq union
-	// FIXME - accept both login and access, set interactive accordingly
-	m_interactive = true;
-	m_user = app()->login(
-	    str(login->user()), str(login->passwd()), login->totp());
-	if (!m_user) { // on failure, sleep then disconnect
+	auto loginReq = fbs::GetLoginReq(msgPtr);
+	switch ((int)loginReq->data_type()) {
+	  case LoginReqData_Access: {
+	    auto access = loginReq->data_as_Access();
+	  } break;
+	  case LoginReqData_Login: {
+	    auto login = loginReq->data_as_Login();
+	    m_interactive = true;
+	    m_user = app()->login(
+		str(login->user()), str(login->passwd()), login->totp());
+	  } break;
+	}
+	if (!m_user) { // on failure, sleep then disconnect to defend vs DOS
 	  // FIXME
 	} else {
 	  // FIXME

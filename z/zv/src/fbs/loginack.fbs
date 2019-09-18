@@ -1,0 +1,5 @@
+namespace ZvUserDB.fbs;
+table LoginAck {
+  ok:uint8;
+}
+root_type LoginAck;

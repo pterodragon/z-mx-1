@@ -50,6 +50,7 @@ public:
     size = size_;
     return jumbo = (uint8_t *)::malloc(size_);
   }
+
   ZuInline void free(uint8_t *ptr) {
     if (ZuUnlikely(ptr != data_)) {
       if (ZuUnlikely(jumbo == ptr)) {
@@ -64,6 +65,22 @@ public:
   ZuInline uint8_t *data() {
     uint8_t *ptr = ZuUnlikely(jumbo) ? jumbo : data_;
     return ptr + skip;
+  }
+
+  ZuInline uint8_t *ensure(unsigned size_) {
+    if (ZuLikely(size_ <= Size)) return data_;
+    if (ZuUnlikely(size_ <= size)) return jumbo;
+    uint8_t *old = jumbo;
+    jumbo = (uint8_t *)::malloc(size_);
+    size = size_;
+    if (!length) return jumbo;
+    if (ZuLikely(!old)) {
+      memcpy(jumbo, data_, length);
+      return jumbo;
+    }
+    memcpy(jumbo, old, length);
+    ::free(old);
+    return jumbo;
   }
 
   void		*owner = nullptr;

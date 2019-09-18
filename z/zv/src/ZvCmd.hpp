@@ -38,142 +38,232 @@
 #include <ZtArray.hpp>
 #include <ZtString.hpp>
 
+#include <ZeLog.hpp>
+
 #include <ZiMultiplex.hpp>
 #include <ZiFile.hpp>
 
-#include <ZeLog.hpp>
+#include <Ztls.hpp>
 
 #include <ZvCf.hpp>
+
+#include <login_generated.h>
+#include <loginack_generated.h>
+#include <userdbreq_generated.h>
+#include <userdback_generated.h>
 
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
 
-struct ZvCmd_Hdr {
-  typedef typename ZuBigEndian<int32_t>::T Int32N;
-  typedef typename ZuBigEndian<uint32_t>::T UInt32N;
-
-  UInt32N	seqNo = 0;
-  Int32N	code = 0;	// result code (0 = OK)
-  UInt32N	cmdLen = 0;	// length of command/stderr portion
-  UInt32N	dataLen = 0;	// length of stdin/stdout portion
-};
-
-class ZvAPI ZvCmdMsg : public ZmPolymorph {
-public:
-  typedef ZvCmd_Hdr Hdr;
-
-  inline ZvCmdMsg() { }
-  inline ZvCmdMsg(uint32_t seqNo) : m_hdr{seqNo} { }
-  inline ZvCmdMsg(uint32_t seqNo, int32_t code) : m_hdr{seqNo, code} { }
-  inline ZvCmdMsg(uint32_t seqNo, int32_t code, ZtString cmd) :
-    m_hdr{seqNo, code}, m_cmd(ZuMv(cmd)) { }
-
-  inline uint32_t seqNo() const { return m_hdr.seqNo; }
-  inline int32_t code() const { return m_hdr.code; }
-  inline const ZtString &cmd() const { return m_cmd; }
-  inline const ZtArray<char> &data() const { return m_data; }
-
-  inline void seqNo(uint32_t i) { m_hdr.seqNo = i; }
-  inline void code(int32_t i) { m_hdr.code = i; }
-  inline ZtString &cmd() { return m_cmd; }
-  inline ZtArray<char> &data() { return m_data; }
-
-  int redirectIn(ZmRef<ZeEvent> *e = 0);
-  int redirectOut(ZiFile &, ZmRef<ZeEvent> *e = 0);
-
-  template <typename Cxn> void recv(ZiIOContext &io) {
-    io.init(ZiIOFn{ZmMkRef(this),
-      [](ZvCmdMsg *msg, ZiIOContext &io) {
-	if ((io.offset += io.length) < io.size) return;
-	auto &hdr = msg->m_hdr;
-	msg->m_cmd.length(hdr.cmdLen);
-	msg->m_data.length(hdr.dataLen);
-	if (msg->m_cmd.length())
-	  msg->recvCmd<Cxn>(io);
-	else if (msg->m_data.length())
-	  msg->recvData<Cxn>(io);
-	else
-	  static_cast<Cxn *>(io.cxn)->rcvd(io.fn.mvObject<ZvCmdMsg>(), io);
-      }}, &m_hdr, sizeof(Hdr), 0);
-  }
-
-  void send(ZiConnection *);
-
-private:
-  template <typename Cxn> void recvCmd(ZiIOContext &io) {
-    io.init(ZiIOFn{io.fn.mvObject<ZvCmdMsg>(),
-      [](ZvCmdMsg *msg, ZiIOContext &io) {
-	if ((io.offset += io.length) < io.size) return;
-	if (msg->m_data.length())
-	  msg->recvData<Cxn>(io);
-	else
-	  static_cast<Cxn *>(io.cxn)->rcvd(io.fn.mvObject<ZvCmdMsg>(), io);
-      }}, m_cmd.data(), m_cmd.length(), 0);
-  }
-  template <typename Cxn> void recvData(ZiIOContext &io) {
-    io.init(ZiIOFn{io.fn.mvObject<ZvCmdMsg>(),
-      [](ZvCmdMsg *msg, ZiIOContext &io) {
-	if ((io.offset += io.length) < io.size) return;
-	static_cast<Cxn *>(io.cxn)->rcvd(io.fn.mvObject<ZvCmdMsg>(), io);
-      }}, m_data.data(), m_data.length(), 0);
-  }
-
-  void sendCmd(ZiIOContext &);
-  void sendData(ZiIOContext &);
-
-  ZvCmd_Hdr		m_hdr;
-  ZtString		m_cmd;
-  ZtArray<char>		m_data;
-};
-
 // client
 
-template <typename Impl, typename Mgr>
-class ZvCmdCxn : public ZiConnection {
+template <typename App>
+class ZvCmdCliLink : public ZmPolymorph, public Ztls::CliLink<App, Link> {
 public:
-  ZvCmdCxn(Mgr *mgr, const ZiConnectionInfo &info) :
-    ZiConnection(mgr->mx(), info), m_mgr(mgr) { }
+  using Hdr = ZvCmd_Hdr;
 
-  ZuInline Mgr *mgr() const { return m_mgr; }
+  struct State {
+    enum {
+      Down = 0,
+      Login,
+      Up
+    };
+  };
 
-  void send(ZmRef<ZvCmdMsg> msg) {
-    msg->send(this);
-    static_cast<Impl *>(this)->sent();
-  }
+  ZvCmdCliLink(App *app) : Ztls::CliLink<App, Link>(app) { }
 
 private:
-  void connected(ZiIOContext &io) {
-    (new ZvCmdMsg())->recv<ZvCmdCxn>(io);
-    static_cast<Impl *>(this)->connected_();
+  void connected(const char *, const char *alpn) {
+    if (strcmp(alpn, "zcmd")) disconnect();
+    scheduleTimeout();
+    m_state = State::Login;
+    m_rxBuf = new ZiIOBuf(this);
+    ZmRef<IOBuf> buf;
+    {
+      using namespace Zfb;
+      using namespace Save;
+      IOBuilder b;
+      b.FinishSizePrefixed(fbs::CreateLoginReq(b,
+	  fbs::CreateLogin(b, str(b, m_user), str(b, m_passwd), m_totp)));
+      buf = b.buf();
+    }
+    send_(buf);
   }
   void disconnected() {
-    static_cast<Impl *>(this)->disconnected_();
+    cancelTimeout();
   }
+  int process(const char *data, unsigned rxLen) {
+    if (m_state == State::Down) return -1; // disconnect
 
-public:
-  void rcvd(ZmRef<ZvCmdMsg> msg, ZiIOContext &io) {
-    mx()->add([cxn = ZmMkRef(this), msg = ZuMv(msg)]() mutable {
-      static_cast<Impl *>(cxn.ptr())->rcvd(ZuMv(msg));
-    });
-    (new ZvCmdMsg())->recv<ZvCmdCxn>(io);
+    scheduleTimeout();
+
+    unsigned oldLen = m_rxBuf->length;
+    unsigned newLen = oldLen + rxLen;
+    memcpy(m_rxBuf->ensure(newLen) + oldLen, data, rxLen);
+    m_rxBuf->length = newLen;
+
+    while (newLen >= 4) {
+      auto rxData = m_rxBuf->data();
+      auto hdr = reinterpret_cast<ZuLittleEndian<uint32_t> *>(rxData);
+      unsigned frameLen = *hdr + 4;
+
+      if (newLen < frameLen) break;
+
+      auto msgPtr = rxData + 4;
+      auto msgLen = frameLen - 4;
+
+      if (ZuUnlikely(m_state == State::Login)) {
+	using namespace ZvUserDB;
+	using namespace Zfb;
+	using namespace Load;
+	{
+	  Verifier verifier(msgPtr, msgLen);
+	  if (!fbs::VerifyLoginReqBuffer(verifier)) {
+	    m_state = State::Down;
+	    return -1; // disconnect
+	  }
+	}
+	auto login = fbs::GetLoginReq(msgPtr);
+	// FIXME - interpret LoginReq union
+	// FIXME - accept both login and access, set interactive accordingly
+	m_interactive = true;
+	m_user = app()->login(
+	    str(login->user()), str(login->passwd()), login->totp());
+	if (!m_user) { // on failure, sleep then disconnect
+	  // FIXME
+	} else {
+	  // FIXME
+	  m_state = State::Up;
+	}
+      } else {
+	// FIXME
+	// up - app messages, including:
+	// 1] ZvUserDB messages (individually permitted)
+	// 2] ZvCmd commands (permitted as "zcmd.X" where X is command)
+	// 3] App requests (forwarded to app as opaque buffer)
+      }
+
+      memmove(rxData, rxData + frameLen, newLen);
+      m_rxBuf->length = (newLen -= frameLen);
+    }
+    return rxLen;
   }
 
 protected:
   void scheduleTimeout() {
-    if (m_mgr->timeout())
-      mx()->add(ZmFn<>{ZmMkRef(this), [](ZvCmdCxn *cxn) { cxn->disconnect(); }},
-	  ZmTimeNow(m_mgr->timeout()), &m_timer);
+    if (this->app()->timeout())
+      this->app()->mx()->add(ZmFn<>{ZmMkRef(this), [](ZvCmdLink *link) {
+	link->disconnect();
+      }}, ZmTimeNow(this->app()->timeout()), &m_timer);
   }
-  void cancelTimeout() { mx()->del(&m_timer); }
+  void cancelTimeout() { this->app()->mx()->del(&m_timer); }
 
 private:
-  Mgr			*m_mgr = 0;
-  ZmScheduler::Timer	m_timer;
+  ZmScheduler::Timer		m_timer;
+  int				m_state = State::Down;
+  ZmRef<ZiIOBuf>		m_rxBuf;
+  ZmRef<ZvUserDB::User>		m_user;
+  bool				m_interactive = false;
 };
 
-class ZvCmdClient;
+template <typename App>
+class ZvCmdSrvLink : public ZmPolymorph, public Ztls::SrvLink<App, Link> {
+public:
+  using Hdr = ZvCmd_Hdr;
+
+  struct State {
+    enum {
+      Down = 0,
+      Login,
+      Up
+    };
+  };
+
+  ZvCmdSrvLink(App *app) : Ztls::SrvLink<App, Link>(app) { }
+
+private:
+  void connected(const char *, const char *alpn) {
+    if (strcmp(alpn, "zcmd")) disconnect();
+    scheduleTimeout();
+    m_state = State::Login;
+    m_rxBuf = new ZiIOBuf(this);
+  }
+  void disconnected() {
+    cancelTimeout();
+  }
+  int process(const char *data, unsigned len) {
+    if (m_state == State::Down) return -1; // disconnect
+
+    scheduleTimeout();
+
+    unsigned oldLen = m_rxBuf->length;
+    m_rxBuf->length = oldLen + len;
+    memcpy(m_rxBuf->ensure(m_rxBuf->length) + oldLen, data, len);
+
+    while (m_rxBuf->length >= sizeof(ZvCmd_Hdr)) {
+      auto hdr = reinterpret_cast<const ZvCmd_Hdr *>(m_rxBuf->data());
+      unsigned frameLen = sizeof(ZvCmd_Hdr) + hdr->length;
+
+      if (m_rxBuf->length < frameLen) break;
+
+      auto msgPtr = m_rxBuf->data() + sizeof(ZvCmd_Hdr);
+      auto msgLen = frameLen - sizeof(ZvCmd_Hdr);
+
+      if (ZuUnlikely(m_state == State::Login)) {
+	using namespace ZvUserDB;
+	using namespace Zfb;
+	using namespace Load;
+	{
+	  Verifier verifier(msgPtr, msgLen);
+	  if (!fbs::VerifyLoginReqBuffer(verifier)) {
+	    m_state = State::Down;
+	    return -1; // disconnect
+	  }
+	}
+	auto login = fbs::GetLoginReq(msgPtr);
+	// FIXME - interpret LoginReq union
+	// FIXME - accept both login and access, set interactive accordingly
+	m_interactive = true;
+	m_user = app()->login(
+	    str(login->user()), str(login->passwd()), login->totp());
+	if (!m_user) { // on failure, sleep then disconnect
+	  // FIXME
+	} else {
+	  // FIXME
+	  m_state = State::Up;
+	}
+      } else {
+	// FIXME
+	// up - app messages, including:
+	// 1] ZvUserDB messages (individually permitted)
+	// 2] ZvCmd commands (permitted as "zcmd.X" where X is command)
+	// 3] App requests (forwarded to app as opaque buffer)
+      }
+
+      m_rxBuf->length -= frameLen;
+      memmove(m_rxBuf->data(), m_rxBuf->data() + frameLen, m_rxBuf->length);
+    }
+    return len;
+  }
+
+protected:
+  void scheduleTimeout() {
+    if (this->app()->timeout())
+      this->app()->mx()->add(ZmFn<>{ZmMkRef(this), [](ZvCmdLink *link) {
+	link->disconnect();
+      }}, ZmTimeNow(this->app()->timeout()), &m_timer);
+  }
+  void cancelTimeout() { this->app()->mx()->del(&m_timer); }
+
+private:
+  ZmScheduler::Timer		m_timer;
+  int				m_state = State::Down;
+  ZmRef<ZiIOBuf>		m_rxBuf;
+  ZmRef<ZvUserDB::User>		m_user;
+  bool				m_interactive = false;
+};
 
 class ZvAPI ZvCmdClientCxn : public ZvCmdCxn<ZvCmdClientCxn, ZvCmdClient> {
   typedef ZvCmdCxn<ZvCmdClientCxn, ZvCmdClient> Base;

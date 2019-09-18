@@ -5,12 +5,17 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src -I$(top_srcdir)/zm/src \
 	-DZV_EXPORTS @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@
-FBS_H = \
-	key_generated.h \
-	perm_generated.h \
-	role_generated.h \
-	user_generated.h \
-	userdb_generated.h
+FBS = \
+	key.fbs \
+	perm.fbs \
+	role.fbs \
+	user.fbs \
+	userdb.fbs \
+	login.fbs \
+	loginack.fbs \
+	userdbreq.fbs \
+	userdback.fbs
+FBS_H = ${FBS:%.fbs=%_generated.h}
 ${FBS_H}: %_generated.h: fbs/%.fbs
 	flatc -c -I fbs $<
 BUILT_SOURCES = ${FBS_H}

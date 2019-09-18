@@ -1,0 +1,33 @@
+include "perm.fbs";
+include "role.fbs";
+include "user.fbs";
+include "key.fbs";
+namespace ZvUserDB.fbs;
+union ReqData {
+  UserGet:UserID,
+  UserAdd:User,
+  ResetPass:UserID,
+  ChPass:UserChPass,
+  UserMod:User,
+  KeyClr:UserID,
+  UserDel:UserID,
+
+  RoleGet:RoleID,
+  RoleAdd:Role,
+  RoleMod:Role,
+  RoleDel:Role,
+
+  PermGet:PermID,
+  PermAdd:Perm,
+  PermMod:Perm,
+  PermDel:Perm,
+
+  KeyGet:UserID,
+  KeyAdd:UserID,
+  KeyDel:KeyID
+}
+table Request {
+  seqNo:uint64;		// request ID (restarts at 0 with each session)
+  data:ReqData;
+}
+root_type Request;

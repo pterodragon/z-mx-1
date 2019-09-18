@@ -1,0 +1,19 @@
+namespace ZvUserDB.fbs;
+table Access {
+  keyID:string;
+  token:[uint8];
+  hmac:[uint8];
+}
+table Login {
+  user:string;
+  passwd:string;
+  totp:uint32;
+}
+union LoginReqData {
+  Access:Access,
+  Login:Login
+}
+table LoginReq {
+  data:LoginReqData;
+}
+root_type LoginReq;

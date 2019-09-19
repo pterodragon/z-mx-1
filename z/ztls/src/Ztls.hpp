@@ -66,20 +66,23 @@ namespace Ztls {
 //     I/O Tx <+- Tx output <- Encryption <- Tx input           <+- App Tx
 // ------------|-------------------------------------------------|------------
 
+// FIXME - move to uint8_t * for all data ptrs (from char *)
+
 using IOBuf = ZiIOBuf;
 
-template <typename Link_> class LinkTCP : public ZiConnection {
+template <typename Link_, typename LinkRef>
+class LinkTCP : public ZiConnection {
 public:
   using Link = Link_;
 
-  inline LinkTCP(Link *link, const ZiCxnInfo &ci) :
-    ZiConnection(link->app()->mx(), ci), m_link(link) { }
+  inline LinkTCP(LinkRef link, const ZiCxnInfo &ci) :
+    ZiConnection(link->app()->mx(), ci), m_link(ZuMv(link)) { }
 
   void connected(ZiIOContext &io) { m_link->connected_(this, io); }
   void disconnected() { m_link->disconnected_(this); }
 
 private:
-  Link	*m_link;
+  LinkRef	m_link;
 };
 
 template <typename App, typename Impl, typename TCP_> class Link {
@@ -248,9 +251,8 @@ private:
   }
 
 public:
-  void send(const void *data_, unsigned len) { // App thread(s)
+  void send(const uint8_t *data, unsigned len) { // App thread(s)
     if (ZuUnlikely(!len)) return;
-    auto data = static_cast<const char *>(data_);
     unsigned offset = 0;
     do {
       unsigned n = len - offset;
@@ -275,9 +277,8 @@ public:
   void send_(ZmRef<IOBuf> buf) { // TLS thread
     send_(buf->data(), buf->length);
   }
-  void send_(const void *data_, unsigned len) { // TLS thread
+  void send_(const uint8_t *data, unsigned len) { // TLS thread
     if (ZuUnlikely(!len)) return;
-    auto data = static_cast<const unsigned char *>(data_);
     unsigned offset = 0;
     do {
       int n = mbedtls_ssl_write(&m_ssl, data + offset, len - offset);
@@ -294,9 +295,8 @@ private:
   static int txOut_(void *link_, const unsigned char *data, size_t len) {
     return static_cast<Link *>(link_)->txOut(data, len);
   }
-  int txOut(const void *data_, size_t len) { // TLS thread
+  int txOut(const uint8_t *data, size_t len) { // TLS thread
     if (ZuUnlikely(!len)) return 0;
-    auto data = static_cast<const char *>(data_);
     unsigned offset = 0;
     auto mx = app()->mx();
     do {
@@ -343,12 +343,12 @@ private:
   // TLS thread
   ZmRef<IOBuf>		m_rxInBuf;
   unsigned		m_rxInOffset;
-  char			m_rxOutBuf[MBEDTLS_SSL_MAX_CONTENT_LEN];
+  uint8_t		m_rxOutBuf[MBEDTLS_SSL_MAX_CONTENT_LEN];
   unsigned		m_rxOutOffset;
 };
 
 template <typename App, typename Impl>
-class CliLink : public Link<App, Impl, LinkTCP<Impl> > {
+class CliLink : public Link<App, Impl, LinkTCP<Impl, Impl *> > {
 public:
   using TCP = LinkTCP<Impl>;
   using Base = Link<App, Impl, TCP>;
@@ -480,7 +480,7 @@ private:
 };
 
 template <typename App, typename Impl>
-class SrvLink : public Link<App, Impl, LinkTCP<Impl> > {
+class SrvLink : public Link<App, Impl, LinkTCP<Impl, ZmRef<Impl> > > {
 public:
   using TCP = LinkTCP<Impl>;
   using Base = Link<App, Impl, TCP>;

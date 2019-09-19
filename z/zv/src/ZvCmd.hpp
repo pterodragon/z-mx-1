@@ -68,10 +68,11 @@ struct ZvCmdUsage { };
 // client
 
 template <typename App>
-class ZvCmdCliLink : public ZmPolymorph, public Ztls::CliLink<App, Link> {
+class ZvCmdCliLink :
+    public ZmPolymorph,
+    public Ztls::CliLink<App, ZvCmdCliLink>,
+    public Zfb::Rx {
 public:
-  using Hdr = ZvCmd_Hdr;
-
   struct State {
     enum {
       Down = 0,
@@ -84,26 +85,119 @@ public:
 
 private:
   void connected(const char *, const char *alpn) {
-    if (strcmp(alpn, "zcmd")) disconnect();
+    if (strcmp(alpn, "zcmd")) {
+      disconnect();
+      return;
+    }
     scheduleTimeout();
     m_state = State::Login;
-    m_rxBuf = new ZiIOBuf(this);
-    ZmRef<IOBuf> buf;
-    {
-      using namespace Zfb;
-      using namespace Save;
-      IOBuilder b;
-      b.FinishSizePrefixed(fbs::CreateLoginReq(b,
-	  fbs::CreateLogin(b, str(b, m_user), str(b, m_passwd), m_totp)));
-      buf = b.buf();
-    }
-    send_(buf);
+    Zfb::Rx::connected();
+
+    m_fbb.Clear();
+    if (m_interactive)
+      m_fbb.FinishSizePrefixed(fbs::CreateLoginReq(m_fbb,
+	    LoginReqData_Login,
+	    fbs::CreateLogin(m_fbb,
+	      str(m_fbb, m_user), str(m_fbb, m_passwd), m_totp)));
+    else
+      m_fbb.FinishSizePrefixed(fbs::CreateLoginReq(m_fbb,
+	    LoginReqData_Access,
+	    fbs::CreateAccess(m_fbb, str(m_fbb, m_keyID),
+	      bytes(m_fbb, m_token), bytes(m_fbb, m_hmac))));
+    send_(m_fbb.buf());
   }
+
   void disconnected() {
+    m_state = State::Down;
     cancelTimeout();
+    Zfb::Rx::disconnected();
   }
-  int process(const char *data, unsigned rxLen) {
+
+private:
+  int processLoginAck(const uint8_t *data, unsigned len) {
+    using namespace Zfb;
+    using namespace Load;
+    using namespace ZvUserDB;
+    {
+      Verifier verifier(data, len);
+      if (!fbs::VerifyLoginAckBuffer(verifier)) {
+	m_state = State::Down;
+	return -1;
+      }
+    }
+    auto loginAck = fbs::GetLoginAck(data);
+    if (!loginAck->ok) {
+      m_state = State::Down;
+      return -1;
+    }
+    m_state = State::Up;
+    return len;
   }
+
+  int processReqAck(const uint8_t *data, unsigned len) {
+    // lookup seqNo in outstanding requests
+    // - call corresponding completion with response/ack
+    // - pending request is auto-removed for RPC calls,
+    //   remains in place for pub/sub unless explicitly removed by app
+    using namespace Zfb;
+    using namespace Load;
+    using namespace ZvCmd;
+    {
+      Verifier verifier(data, len);
+      if (!fbs::VerifyReqAckBuffer(verifier)) {
+	m_state = State::Down;
+	return -1;
+      }
+    }
+    auto reqAck = fbs::GetReqAck(data);
+    auto buf = bytes(reqAck->data());
+    switch ((int)reqAck->type()) {
+      case MsgType_userdb: {
+	{
+	  Verifier verifier(buf.data(), buf.length());
+	  if (!UserDB::fbs::VerifyReqAckBuffer(verifier)) {
+	    m_state = State::Down;
+	    return -1;
+	  }
+	}
+	auto reqAck = UserDB::fbs::GetReqAck(buf.data());
+	// FIXME
+      } break;
+      case MsgType_zcmd: {
+      } break;
+      case MsgType_app: {
+      } break;
+    }
+    return len;
+  }
+
+public:
+  // FIXME send request, register CB for response
+  void request() {
+    if (m_state != State::Up) {
+      // FIXME
+      return;
+    }
+    m_fbb.Clear();
+    m_fbb.FinishSizePrefixed(...);
+    send_(m_fbb.buf());
+  }
+
+  int process(const uint8_t *data, unsigned len) {
+    if (ZuUnlikely(m_state == State::Down))
+      return -1; // disconnect
+
+    scheduleTimeout();
+
+    return processRx(data, len,
+	[this](const uint8_t *data, unsigned len) -> int {
+	  if (ZuUnlikely(m_state == State::Login))
+	    return processLoginAck(data, len);
+	  else
+	    return processReqAck(data, len);
+	});
+  }
+
 
 protected:
   void scheduleTimeout() {
@@ -120,6 +214,10 @@ private:
   ZmRef<ZiIOBuf>		m_rxBuf;
   ZmRef<ZvUserDB::User>		m_user;
   bool				m_interactive = false;
+
+  // FIXME - container of outstanding requests / subscriptions
+  // keyed on seqNo (request ID), with associated completion functions
+  // (callbacks), which are passed the response/reject in each case
 };
 
 class ZvCmdClient : public Ztls::Client<ZvCmdClient> {
@@ -134,9 +232,11 @@ class ZvCmdClient : public Ztls::Client<ZvCmdClient> {
 }
 
 // server
-
 template <typename App>
-class ZvCmdSrvLink : public ZmPolymorph, public Ztls::SrvLink<App, Link> {
+class ZvCmdSrvLink :
+    public ZmPolymorph,
+    public Ztls::SrvLink<App, ZvCmdSrvLink>,
+    public Zfb::Rx {
 public:
   using Hdr = ZvCmd_Hdr;
 
@@ -159,102 +259,93 @@ private:
       return;
     }
     m_state = State::Login;
-    m_rxBuf = new ZiIOBuf(this);
+    Zfb::Rx::connected();
   }
 
   void disconnected() {
+    m_state = State::Down;
     cancelTimeout();
+    Zfb::Rx::disconnected();
   }
 
-  int process(const char *data, unsigned rxLen) {
-    if (ZuUnlikely(m_state == State::Down))
-      return -1; // disconnect
+private:
+  int processLogin(const uint8_t *data, unsigned len) {
+    using namespace Zfb;
+    using namespace Load;
+    using namespace ZvUserDB;
+    {
+      Verifier verifier(data, len);
+      if (!fbs::VerifyLoginReqBuffer(verifier)) {
+	m_state = State::LoginFailed;
+	return 0;
+      }
+    }
+    if (!app()->userDB()->loginReq(
+	fbs::GetLoginReq(data), app()->totpRange(),
+	m_user, m_interactive)) {
+      m_state = State::LoginFailed;
+      return 0;
+    }
+    m_fbb.Clear();
+    m_fbb.FinishSizePrefixed(fbs::CreateLoginAck(m_fbb, 1));
+    send_(m_fbb.buf());
+    m_state = State::Up;
+    return len;
+  }
 
-    if (ZuUnlikely(m_state == State::LoginFailed))
-      return rxLen; // timeout then disc.
-
-    scheduleTimeout();
-
-    unsigned oldLen = m_rxBuf->length;
-    unsigned len = oldLen + rxLen;
-    auto rxData = m_rxBuf->ensure(len);
-    memcpy(rxData + oldLen, data, rxLen);
-    m_rxBuf->length = len;
-
-    auto rxPtr = rxData;
-    while (len >= 4) {
-      auto hdr = reinterpret_cast<ZuLittleEndian<uint32_t> *>(rxPtr);
-      unsigned frameLen = *hdr + 4;
-
-      if (len < frameLen) break;
-
-      auto msgPtr = rxPtr + 4;
-      auto msgLen = frameLen - 4;
-
-      using namespace Zfb;
-      using namespace Load;
-
-      if (ZuUnlikely(m_state == State::Login)) {
-	using namespace ZvUserDB;
+  int processReq(const uint8_t *data, unsigned len) {
+    using namespace Zfb;
+    using namespace Load;
+    using namespace ZvCmd;
+    {
+      Verifier verifier(data, len);
+      if (!fbs::VerifyReqBuffer(verifier)) {
+	m_state = State::Down;
+	return -1;
+      }
+    }
+    m_fbb.Clear();
+    auto req = fbs::GetReq(data);
+    auto buf = bytes(req->data());
+    switch ((int)req->type()) {
+      case MsgType_userdb: {
 	{
-	  Verifier verifier(msgPtr, msgLen);
-	  if (!fbs::VerifyLoginReqBuffer(verifier)) {
-	    m_state = State::LoginFailed;
-	    return rxLen;
-	  }
-	}
-	bool ok = app()->userDB()->loginReq(
-	    fbs::GetLoginReq(msgPtr), app()->totpRange(),
-	    m_user, m_interactive);
-	if (!ok) {
-	  m_state = State::LoginFailed;
-	  return rxLen;
-	}
-	{
-	  m_fbb.Clear();
-	  m_fbb.Finish(fbs::CreateLoginAck(m_fbb, 1));
-	  send_(m_fbb.buf());
-	}
-	m_state = State::Up;
-      } else {
-	using namespace ZvCmd;
-	{
-	  Verifier verifier(msgPtr, msgLen);
-	  if (!fbs::VerifyReqBuffer(verifier)) {
+	  Verifier verifier(buf.data(), buf.length());
+	  if (!UserDB::fbs::VerifyRequestBuffer(verifier)) {
 	    m_state = State::Down;
 	    return -1;
 	  }
 	}
-	m_fbb.Clear();
-	auto req = fbs::GetReq(msgPtr);
-	switch ((int)req->type()) {
-	  case MsgType_userdb: {
-	    auto buf = Load::bytes(req->data());
-	    {
-	      Verifier verifier(buf.data(), buf.length());
-	      if (!UserDB::fbs::VerifyRequestBuffer(verifier)) {
-		m_state = State::Down;
-		return -1;
-	      }
-	    }
-	    m_fbb.Finish(userDB()->request(m_user, m_interactive,
-		  m_fbb, UserDB::fbs::GetRequest(buf.data()));
-	  } break;
-	  case MsgType_zcmd:
-	  case MsgType_app:
-	}
-	send_(m_fbb.buf());
-      }
-
-      rxPtr += frameLen;
-      len -= frameLen;
+	m_fbb.FinishSizePrefixed(
+	    userDB()->request(m_user, m_interactive,
+	      m_fbb, UserDB::fbs::GetRequest(buf.data()));
+      } break;
+      case MsgType_zcmd: {
+      } break;
+      case MsgType_app: {
+      } break;
     }
-    if (len && (rxPtr - rxData)) {
-      memmove(rxData, rxPtr - rxData, len);
-      m_rxBuf->length = len;
-    } else
-      m_rxBuf->length = 0;
-    return rxLen;
+    send_(m_fbb.buf());
+    return len;
+  }
+
+public:
+  int process(const uint8_t *data, unsigned len) {
+    if (ZuUnlikely(m_state == State::Down))
+      return -1; // disconnect
+
+    if (ZuUnlikely(m_state == State::LoginFailed))
+      return len; // timeout then disc.
+
+    scheduleTimeout();
+
+    return processRx(data, len,
+	[this](const uint8_t *data, unsigned len) -> int {
+	  if (ZuUnlikely(m_state == State::Login))
+	    return processLogin(data, len);
+	  else
+	    return processReq(data, len);
+	});
   }
 
 protected:
@@ -269,7 +360,6 @@ protected:
 private:
   ZmScheduler::Timer		m_timer;
   int				m_state = State::Down;
-  ZmRef<ZiIOBuf>		m_rxBuf;
   Zfb::IOBuilder		m_fbb;
   ZmRef<ZvUserDB::User>		m_user;
   bool				m_interactive = false;
@@ -277,7 +367,8 @@ private:
 
 class ZvCmdServer : public Ztls::Server<ZvCmdServer> {
 
-  // FIXME
+  using Link = ZvCmdSrvLink<ZvCmdServer>;
+
   inline unsigned timeout() const { return m_timeout; }
 
   void addCmd(ZuString name,
@@ -287,6 +378,8 @@ class ZvCmdServer : public Ztls::Server<ZvCmdServer> {
   void stop();
 
   void rcvd(ZvCmdServerCxn *cxn, ZmRef<ZvCmdMsg>);
+
+  // FIXME - app can register handler for incoming app data
 
 private:
   void listen();
@@ -316,6 +409,8 @@ private:
 
   ZmRef<ZvCf>		m_syntax;
   Cmds			m_cmds;
+
+  // FIXME - UserDB
 };
 
 #ifdef _MSC_VER

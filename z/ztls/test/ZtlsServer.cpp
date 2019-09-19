@@ -55,8 +55,7 @@ struct App : public Ztls::Server<App> {
   };
 
   inline Link::TCP *accepted(const ZiCxnInfo &ci) {
-    link = new Link(this);
-    return new Link::TCP(link, ci);
+    return new Link::TCP(new Link(this), ci);
   }
 
   void listenFailed(bool transient) {
@@ -67,7 +66,6 @@ struct App : public Ztls::Server<App> {
   void done() { sem.post(); }
 
   ZmSemaphore	sem;
-  ZmRef<Link>	link;
 };
 
 void usage()

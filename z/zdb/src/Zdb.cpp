@@ -1407,9 +1407,8 @@ void ZdbAny::replicate(ZdbAnyPOD *pod, void *ptr, int op)
 #ifdef ZdbRep_DEBUG
   ZmAssert((!range || (range.off() + range.len()) <= pod->size()));
 #endif
-  if (op != ZdbOp::Add) m_handler.delFn(pod, pod->prevRN(), false);
   if (range) memcpy((char *)pod->ptr() + range.off(), ptr, range.len());
-  if (op != ZdbOp::Del) m_handler.addFn(pod, pod->rn(), false);
+  m_handler.addFn(pod, op, false);
 }
 
 ZdbAny::ZdbAny(ZdbEnv *env, ZuString name, uint32_t version, int cacheMode,
@@ -1627,12 +1626,17 @@ void ZdbAny::recover(Zdb_File *file)
       continue;
     }
     switch (pod->magic()) {
-      case ZdbCommitted:
+      case ZdbCommitted: {
 	if (rn < m_minRN) m_minRN = rn;
-	this->recover(ZuMv(pod));
+	int op = rn != pod->prevRN() ? ZdbOp::Upd : ZdbOp::Add;
+	this->recover(ZuMv(pod), op);
+      } break;
+      case ZdbDeleted:
+	if (rn < m_minRN) m_minRN = rn;
+	this->recover(ZuMv(pod), ZdbOp::Del);
+	file->del(j);
 	break;
       case ZdbAllocated:
-      case ZdbDeleted:
 	file->del(j);
 	break;
       default:
@@ -1643,19 +1647,12 @@ void ZdbAny::recover(Zdb_File *file)
   }
 }
 
-void ZdbAny::recover(ZmRef<ZdbAnyPOD> pod)
+void ZdbAny::recover(ZmRef<ZdbAnyPOD> pod, int op)
 {
   ZdbRN prevRN = pod->prevRN();
-  if (pod->rn() != prevRN) {
-    ZmRef<ZdbAnyPOD> prevPOD = m_cache->del(prevRN);
-    if (ZuUnlikely(!prevPOD)) {
-      Zdb_FileRec rec = rn2file(prevRN, false);
-      if (rec) prevPOD = read_(rec);
-    }
-    if (!prevPOD->magic()) prevPOD = nullptr;
-    m_handler.delFn(prevPOD, prevRN, true);
-  }
-  m_handler.addFn(pod, pod->rn(), true);
+
+  if (pod->rn() != prevRN) m_cache->del(prevRN);
+  m_handler.addFn(pod, op, true);
   cache(ZuMv(pod));
 }
 
@@ -1959,8 +1956,7 @@ void ZdbAny::putUpdate(ZdbAnyPOD *pod, bool replace)
     pod->pin();
     cache(pod);
   }
-  int op = replace ? ZdbOp::Upd : ZdbOp::Add;
-  m_env->write(pod, Zdb_Msg::Rep, op, m_config->compress);
+  m_env->write(pod, Zdb_Msg::Rep, ZdbOp::Upd, m_config->compress);
 }
 
 void ZdbAny::del(ZdbAnyPOD *pod)

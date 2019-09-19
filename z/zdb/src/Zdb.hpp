@@ -436,10 +436,8 @@ private:
 
 // AllocFn - called to allocate/initialize new record from memory
 typedef ZmFn<ZdbAny *, ZmRef<ZdbAnyPOD> &> ZdbAllocFn;
-// AddFn(pod, RN, recovered) - record is recovered, or new/update replicated
-typedef ZmFn<ZdbAnyPOD *, ZdbRN, bool> ZdbAddFn;
-// DelFn(pod, RN, recovered) - record update/delete replicated
-typedef ZmFn<ZdbAnyPOD *, ZdbRN, bool> ZdbDelFn; // pod can be null
+// AddFn(pod, op, recovered) - record is recovered, or new/update replicated
+typedef ZmFn<ZdbAnyPOD *, int, bool> ZdbAddFn;
 // WriteFn(pod, op) - write drop copy
 typedef ZmFn<ZdbAnyPOD *, int> ZdbWriteFn;
 
@@ -533,7 +531,6 @@ namespace ZdbCacheMode {
 struct ZdbHandler {
   ZdbAllocFn	allocFn;
   ZdbAddFn	addFn;
-  ZdbDelFn	delFn;
   ZdbWriteFn	writeFn;
 };
 
@@ -660,7 +657,7 @@ public:
 private:
   // application call handlers
   inline void alloc(ZmRef<ZdbAnyPOD> &pod) { m_handler.allocFn(this, pod); }
-  void recover(ZmRef<ZdbAnyPOD> pod);
+  void recover(ZmRef<ZdbAnyPOD> pod, int op);
   void replicate(ZdbAnyPOD *pod, void *ptr, int op);
 
   // push initial record

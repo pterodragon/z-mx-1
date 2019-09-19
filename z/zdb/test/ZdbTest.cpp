@@ -38,29 +38,26 @@ template <> struct ZuPrint<Order> : public ZuPrintFn { };
 typedef Zdb<Order> OrderDB;
 
 template <typename S>
-static void dump_(S &s, const char *prefix, ZdbAnyPOD *pod, ZdbRN rn)
+static void dump_(S &s, const char *prefix, ZdbAnyPOD *pod)
 {
-  s << prefix << " RN=" << ZuBoxed(rn) << " pod={";
-  if (!pod)
-    s << "(null)}";
-  else
-    s << "RN=" << ZuBoxed(pod->rn())
-      << ", prevRN=" << ZuBoxed(pod->prevRN())
-      << ", data={" << *(Order *)pod->ptr() << "}}";
+  s << prefix
+    << " RN=" << ZuBoxed(pod->rn())
+    << ", prevRN=" << ZuBoxed(pod->prevRN())
+    << ", data={" << *(Order *)pod->ptr() << "}}";
 }
 
-static void deleted(const char *prefix, ZdbAnyPOD *pod, ZdbRN rn)
+static void deleted(const char *prefix, ZdbAnyPOD *pod)
 {
   ZuStringN<200> s;
-  dump_(s, prefix, pod, rn);
+  dump_(s, prefix, pod);
   s << " DELETED\n";
   std::cout << s << std::flush;
 }
 
-static void dump(const char *prefix, ZdbAnyPOD *pod, ZdbRN rn)
+static void dump(const char *prefix, ZdbAnyPOD *pod)
 {
   ZuStringN<200> s;
-  dump_(s, prefix, pod, rn);
+  dump_(s, prefix, pod);
   s << "\n";
   std::cout << s << std::flush;
 }
@@ -327,19 +324,16 @@ int main(int argc, char **argv)
 	    pod = new ZdbPOD<Order>(db);
 	    // new (pod->ptr()) Order();
 	  },
-	  [](ZdbAnyPOD *pod, ZdbRN rn, bool recovered) {
-	    dump(recovered ? "recovered (add)" : "replicated (add)", pod, rn);
-	  },
-	  [](ZdbAnyPOD *pod, ZdbRN rn, bool recovered) {
-	    dump(recovered ? "recovered (del)" : "replicated (del)", pod, rn);
+	  [](ZdbAnyPOD *pod, bool recovered) {
+	    dump(recovered ? "recovered " : "replicated ", pod);
 	  },
 	  [](ZdbAnyPOD *pod, int op) {
 	    if (op == ZdbOp::Del)
-	      deleted("DC del", pod, pod->rn());
+	      deleted("DC del", pod);
 	    else if (op == ZdbOp::Upd)
-	      dump("DC upd", pod, pod->rn());
+	      dump("DC upd", pod);
 	    else
-	      dump("DC new", pod, pod->rn());
+	      dump("DC new", pod);
 	  }
 	});
 

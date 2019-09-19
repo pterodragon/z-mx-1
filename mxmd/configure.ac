@@ -46,7 +46,7 @@ AX_PATH_JNI(, [AC_MSG_ERROR([JNI required])])
 
 AC_SUBST(JNI_CPPFLAGS)
 
-AX_PATH_LIB_MXBASE(4, 7, [-lMxBase],, [AC_MSG_ERROR([MxBase >= 4.7 required])])
+AX_PATH_LIB_MXBASE(4, 8, [-lMxBase],, [AC_MSG_ERROR([MxBase >= 4.8 required])])
 
 AC_SUBST(MXBASE_CPPFLAGS)
 AC_SUBST(MXBASE_LDFLAGS)

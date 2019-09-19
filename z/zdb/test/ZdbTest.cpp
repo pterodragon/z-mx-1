@@ -37,28 +37,13 @@ template <> struct ZuPrint<Order> : public ZuPrintFn { };
 
 typedef Zdb<Order> OrderDB;
 
-template <typename S>
-static void dump_(S &s, const char *prefix, ZdbAnyPOD *pod)
+static void dump(const char *prefix, int op, ZdbAnyPOD *pod)
 {
-  s << prefix
+  ZuStringN<200> s;
+  s << prefix << ZdbOp::name(op)
     << " RN=" << ZuBoxed(pod->rn())
     << ", prevRN=" << ZuBoxed(pod->prevRN())
     << ", data={" << *(Order *)pod->ptr() << "}}";
-}
-
-static void deleted(const char *prefix, ZdbAnyPOD *pod)
-{
-  ZuStringN<200> s;
-  dump_(s, prefix, pod);
-  s << " DELETED\n";
-  std::cout << s << std::flush;
-}
-
-static void dump(const char *prefix, ZdbAnyPOD *pod)
-{
-  ZuStringN<200> s;
-  dump_(s, prefix, pod);
-  s << "\n";
   std::cout << s << std::flush;
 }
 
@@ -324,16 +309,11 @@ int main(int argc, char **argv)
 	    pod = new ZdbPOD<Order>(db);
 	    // new (pod->ptr()) Order();
 	  },
-	  [](ZdbAnyPOD *pod, bool recovered) {
-	    dump(recovered ? "recovered " : "replicated ", pod);
+	  [](ZdbAnyPOD *pod, int op, bool recovered) {
+	    dump(recovered ? "recovered " : "replicated ", op, pod);
 	  },
 	  [](ZdbAnyPOD *pod, int op) {
-	    if (op == ZdbOp::Del)
-	      deleted("DC del", pod);
-	    else if (op == ZdbOp::Upd)
-	      dump("DC upd", pod);
-	    else
-	      dump("DC new", pod);
+	    dump("DC ", op, pod);
 	  }
 	});
 

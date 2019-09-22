@@ -36,6 +36,7 @@ Mgr::Mgr(Ztls::Random *rng, unsigned passLen, unsigned totpRange) :
 bool Mgr::bootstrap(
     ZtString name, ZtString role, ZtString &passwd, ZtString &secret)
 {
+  Guard guard(m_lock);
   if (!m_perms.length()) {
     permAdd_("UserDB.Login", "UserDB.Access");
     m_permIndex[Perm::Login] = 0;
@@ -175,7 +176,7 @@ int Mgr::load(ZuString path, ZeError *e)
 {
   ZiFile f;
   int i;
-  
+
   if ((i = f.open(path, ZiFile::ReadOnly, 0, e)) != Zi::OK) return i;
   ZiFile::Offset len = f.size();
   if (!len || len >= (ZiFile::Offset)INT_MAX) {
@@ -189,10 +190,10 @@ int Mgr::load(ZuString path, ZeError *e)
     if (e) *e = ZiENOMEM;
     return Zi::IOError;
   }
-  if ((i = f.read(buf, len, e)) != Zi::OK) {
+  if ((i = f.read(buf, len, e)) < len) {
     ::free(buf);
     f.close();
-    return i;
+    return Zi::IOError;
   }
   f.close();
   if (!load(buf, len)) {
@@ -369,7 +370,7 @@ Zfb::Offset<fbs::ReqAck> Mgr::request(User *user, bool interactive,
     case fbs::ReqData_PermAdd:
       ackType = fbs::ReqAckData_PermAdd;
       ackData =
-	permAdd(fbb, static_cast<const fbs::Perm *>(reqData)).Union();
+	permAdd(fbb, static_cast<const fbs::PermAdd *>(reqData)).Union();
       break;
     case fbs::ReqData_PermMod:
       ackType = fbs::ReqAckData_PermMod;
@@ -714,18 +715,12 @@ Offset<Vector<Offset<fbs::Perm>>> Mgr::permGet(
 }
 
 Offset<fbs::PermUpdAck> Mgr::permAdd(
-    Zfb::Builder &fbb, const fbs::Perm *perm_)
+    Zfb::Builder &fbb, const fbs::PermAdd *permAdd_)
 {
   Guard guard(m_lock);
-  auto id = perm_->id();
-  if (id < m_perms.length()) {
-    fbs::PermUpdAckBuilder fbb_(fbb);
-    fbb_.add_ok(0);
-    return fbb_.Finish();
-  }
+  m_perms.push(Load::str(permAdd_->name()));
+  auto id = m_perms.length() - 1;
   m_modified = true;
-  if (m_perms.length() < id + 1) m_perms.length(id + 1);
-  m_perms[id] = Load::str(perm_->name());
   return fbs::CreatePermUpdAck(fbb,
       fbs::CreatePerm(fbb, id, str(fbb, m_perms[id])), 1);
 }

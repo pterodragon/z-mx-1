@@ -22,7 +22,7 @@ union ReqData {
   RoleDel:RoleID,
 
   PermGet:PermID,
-  PermAdd:Perm,
+  PermAdd:PermAdd,
   PermMod:Perm,
   PermDel:PermID,
 

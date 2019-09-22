@@ -1564,6 +1564,7 @@ int main(int argc, char **argv)
     for (;;) {
       try {
 	auto cmd = Zrl::readline_("zproxy] ");
+	if (!cmd) continue;
 	ZtString out;
 	app->processCmd(nullptr, cmd, out);
 	fwrite(out.data(), 1, out.length(), stdout);
@@ -1574,8 +1575,10 @@ int main(int argc, char **argv)
     }
   } else {
     ZuArrayN<char, 1024> cmd;
-    while (fgets(cmd.data(), cmd.size(), stdin)) {
+    while (fgets(cmd, cmd.size() - 1, stdin)) {
       cmd.calcLength();
+      cmd.chomp();
+      if (!cmd) continue;
       ZtString out;
       app->processCmd(nullptr, cmd, out);
       fwrite(out.data(), 1, out.length(), stdout);

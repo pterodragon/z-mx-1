@@ -196,9 +196,9 @@ private:
     }
   }
 
+  // FIXME - need to sendCmd()
   void prompt() {
-    ZmRef<ZvCmdMsg> msg = new ZvCmdMsg();
-    auto &cmd = msg->cmd();
+    ZtString cmd;
 next:
     if (m_interactive) {
       try {
@@ -208,8 +208,8 @@ next:
 	return;
       }
     } else {
-      cmd.length(4096);
-      if (!fgets(cmd, 4096, stdin)) {
+      cmd.size(4096);
+      if (!fgets(cmd, cmd.size() - 1, stdin)) {
 	post();
 	return;
       }
@@ -226,7 +226,14 @@ next:
       if (e) std::cerr << *e << '\n' << std::flush;
       goto next;
     }
-    send(ZuMv(msg));
+    // FIXME - seqNo;
+    {
+      IOBuilder fbb; // FIXME - re-use
+      fbb.Clear();
+      fbb.Finish(ZvCmd::fbs::CreateRequest(fbb,
+	    seqNo, Save::str(fbb, cmd)));
+      sendCmd(fbb, seqNo, [](ZuString s) { /* output in s */ });
+    }
   }
 
   void disconnected() {
@@ -256,7 +263,7 @@ int main(int argc, char **argv)
   ZeLog::init("zcmd");
   ZeLog::level(0);
   ZeLog::sink(ZeLog::lambdaSink(
-	[](ZeEvent *e) { std::cerr << e->message() << '\n' << std::flush; }));
+	[](ZeEvent *e) { std::cerr << *e << '\n' << std::flush; }));
   ZeLog::start();
 
   try {

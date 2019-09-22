@@ -51,6 +51,8 @@ int main(int argc, char **argv)
 
   mgr.bootstrap(argv[2], argv[3], passwd, secret);
 
+  mgr.permAdd("Zcmd");
+
   ZeError e;
   if (mgr.save(path, 0, &e) != Zi::OK) {
     std::cerr << path << ": " << e;

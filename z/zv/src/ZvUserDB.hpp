@@ -329,7 +329,7 @@ private:
       Zfb::Builder &, const fbs::PermID *perm);
   // add permission
   Offset<fbs::PermUpdAck> permAdd(
-      Zfb::Builder &, const fbs::Perm *perm);
+      Zfb::Builder &, const fbs::PermAdd *permAdd);
   // modify permission name
   Offset<fbs::PermUpdAck> permMod(
       Zfb::Builder &, const fbs::Perm *perm);
@@ -366,21 +366,42 @@ private:
   Offset<fbs::KeyUpdAck> keyDel_(
       Zfb::Builder &, User *user, ZuString id);
 
-private:
   void permAdd_() { }
   template <typename Arg0, typename ...Args>
   void permAdd_(Arg0 &&arg0, Args &&... args) {
     m_perms.push(ZuFwd<Arg0>(arg0));
     permAdd_(ZuFwd<Args>(args)...);
   }
+public:
+  template <typename ...Args>
+  unsigned permAdd(Args &&... args) {
+    Guard guard(m_lock);
+    unsigned i = m_perms.length();
+    permAdd_(ZuFwd<Args>(args)...);
+    return i;
+  }
+private:
   template <typename ...Args>
   void roleAdd_(ZuString name, Role::Flags flags, Args &&... args) {
     ZmRef<Role> role = new Role(name, flags, ZuFwd<Args>(args)...);
     m_roles.add(role);
   }
+public:
+  template <typename ...Args>
+  void roleAdd(Args &&... args) {
+    Guard guard(m_lock);
+    roleAdd_(ZuFwd<Args>(args)...);
+  }
+private:
   ZmRef<User> userAdd_(
       uint64_t id, ZuString name, ZuString role, User::Flags flags,
       ZtString &passwd);
+public:
+  template <typename ...Args>
+  ZmRef<User> userAdd(Args &&... args) {
+    Guard guard(m_lock);
+    return userAdd_(ZuFwd<Args>(args)...);
+  }
 
 private:
   Ztls::Random		*m_rng;

@@ -24,13 +24,6 @@
 #include <ZmTrap.hpp>
 
 #include <ZvCmdServer.hpp>
-#include <ZvMultiplexCf.hpp>
-
-class Mx : public ZuPolymorph, public ZiMultiplex {
-public:
-  inline Mx() : ZiMultiplex(ZvMxParams()) { }
-  inline Mx(ZvCf *cf) : ZiMultiplex(ZvMxParams(cf)) { }
-};
 
 class ZvCmdTest :
     public ZmPolymorph, public ZvCmdServer<ZvCmdTest> {
@@ -61,32 +54,85 @@ public:
   void post() { m_done.post(); }
 
 private:
-
   ZmSemaphore m_done;
 };
 
+void usage()
+{
+  std::cerr << "usage: CmdTest "
+    "CERTPATH KEYPATH USERDB IP PORT\n"
+    "    CERTPATH\tTLS/SSL certificate path\n"
+    "    KEYPATH\tTLS/SSL private key path\n"
+    "    USERDB\tuser DB path\n"
+    "    IP\t\tlistener IP address\n"
+    "    PORT\tlistener port\n\n"
+    "Options:\n"
+    "    --caPath=CAPATH\t\tset CA path (default: /etc/ssl/certs)\n"
+    "    --userDB:passLen=N\t\tset default password length (default: 12)\n"
+    "    --userDB:totpRange=N\tset TOTP accepted range (default: 6)\n"
+    "    --userDB::maxAge=N\t\tset user DB file backups (default: 8)\n"
+    << std::flush;
+  ::exit(1);
+}
+
 int main(int argc, char **argv)
 {
-  ZmRef<Mx> mx = new Mx();
-  ZmRef<ZvCmdTest> server = new ZvCmdTest();
-
-  ZmTrap::sigintFn(ZmFn<>::Member<&ZvCmdTest::post>::fn(server));
-  ZmTrap::trap();
+  static ZvOpt opts[] = {
+    { "caPath", "C", ZvOptScalar },
+    { "userDB:passLen", nullptr, ZvOptScalar },
+    { "userDB:totpRange", nullptr, ZvOptScalar },
+    { "userDB::maxAge", nullptr, ZvOptScalar },
+    { nullptr }
+  };
 
   ZeLog::init("ZvCmdTest");
   ZeLog::level(0);
   ZeLog::sink(ZeLog::fileSink("&2"));
   ZeLog::start();
 
-  server->init(mx, ZmMkRef(new ZvCf())); // FIXME - certs, etc.
+  ZiMultiplex *mx = new ZiMultiplex(
+      ZiMxParams()
+	.scheduler([](auto &s) {
+	  s.nThreads(4)
+	  .thread(1, [](auto &t) { t.isolated(1); })
+	  .thread(2, [](auto &t) { t.isolated(1); })
+	  .thread(3, [](auto &t) { t.isolated(1); }); })
+	.rxThread(1).txThread(2));
+
+  ZmRef<ZvCmdTest> server = new ZvCmdTest();
+
+  ZmTrap::sigintFn(ZmFn<>{server, [](ZvCmdTest *server) { server->post(); }});
+  ZmTrap::trap();
+
+  ZmRef<ZvCf> cf = new ZvCf();
+  cf->fromString(
+      "thread 3\n"
+      "caPath /etc/ssl/certs\n"
+      "userDB {\n"
+      "  passLen 12\n"
+      "  totpRange 6\n"
+      "  maxAge 8\n"
+      "}\n", false);
+  if (cf->fromArgs(opts, argc, argv) != 6) usage();
+  cf->set("certPath", cf->get("1"));
+  cf->set("keyPath", cf->get("2"));
+  cf->set("userDB:path", cf->get("3"));
+  cf->set("localIP", cf->get("4"));
+  cf->set("localPort", cf->get("5"));
 
   mx->start();
+
+  server->init(mx, cf);
+
   server->start();
 
   server->wait();
 
   server->stop();
   mx->stop(true);
+
+  delete mx;
+
   ZeLog::stop();
 
   return 0;

@@ -234,8 +234,8 @@ template <typename App_>
 class ZvCmdServer : public ZvCmdHost, public Ztls::Server<App_> {
 public:
   using App = App_;
-  using Base = Ztls::Server<App>;
-friend Base;
+  using TLS = Ztls::Server<App>;
+friend TLS;
   using Link = ZvCmdSrvLink<App>;
   using User = ZvUserDB::User;
 
@@ -257,7 +257,8 @@ friend Base;
 
   void init(ZiMultiplex *mx, ZvCf *cf) {
     static const char *alpn[] = { "zcmd", 0 };
-    Base::init(mx,
+    ZvCmdHost::init();
+    TLS::init(mx,
 	cf->get("thread", true), cf->get("caPath", true), alpn,
 	cf->get("certPath", true), cf->get("keyPath", true));
     m_ip = cf->get("localIP", false, "127.0.0.1");
@@ -266,27 +267,28 @@ friend Base;
     m_rebindFreq = cf->getInt("rebindFreq", 0, 3600, false, 0);
     m_timeout = cf->getInt("timeout", 0, 3600, false, 0);
     unsigned passLen = 12, totpRange = 6;
-    if (ZmRef<ZvCf> userDBCf = cf->subset("userDB", false, true)) {
-      passLen = cf->getInt("passLen", 6, 60, false, 12);
-      totpRange = cf->getInt("totpRange", 0, 100, false, 6);
-      m_userDBPath = cf->get("path", true);
-      m_userDBMaxAge = cf->getInt("maxAge", 0, INT_MAX, false, 8);
+    if (ZmRef<ZvCf> mgrCf = cf->subset("userDB", false, true)) {
+      passLen = mgrCf->getInt("passLen", 6, 60, false, 12);
+      totpRange = mgrCf->getInt("totpRange", 0, 100, false, 6);
+      m_userDBPath = mgrCf->get("path", true);
+      m_userDBMaxAge = mgrCf->getInt("maxAge", 0, INT_MAX, false, 8);
     }
     m_userDB = new UserDB(this, passLen, totpRange);
   }
 
   void final() {
-    Base::final();
     m_userDB = nullptr;
+    TLS::final();
+    ZvCmdHost::final();
   }
 
   bool start() {
     if (!loadUserDB()) return false;
-    Base::listen();
+    TLS::listen();
     return true;
   }
   void stop() {
-    Base::stopListening();
+    TLS::stopListening();
     this->app()->run(ZmFn<>{this, [](ZvCmdServer *server) {
       server->stop_();
     }});
@@ -318,16 +320,17 @@ private:
   bool loadUserDB() {
     ZeError e;
     if (m_userDB->load(m_userDBPath, &e) != Zi::OK) {
+      this->logWarning("load(\"", m_userDBPath, "\"): ", e);
       ZtString backup{m_userDBPath.length() + 3};
       backup << m_userDBPath << ".1";
       if (m_userDB->load(backup, &e) != Zi::OK) {
-	this->logError(); // FIXME
+	this->logError("load(\"", m_userDBPath, ".1\"): ", e);
 	return false;
       }
     }
     m_cmdPerm = m_userDB->findPerm("Zcmd");
     if (m_cmdPerm < 0) {
-      this->logError(); // FIXME
+      this->logError(m_userDBPath, ": Zcmd permission missing");
       return false;
     }
     return true;
@@ -335,7 +338,7 @@ private:
   bool saveUserDB() {
     ZeError e;
     if (m_userDB->save(m_userDBPath, m_userDBMaxAge, &e) != Zi::OK) {
-      this->logError(); // FIXME
+      this->logError("save(\"", m_userDBPath, "\"): ", e);
       return false;
     }
     return true;

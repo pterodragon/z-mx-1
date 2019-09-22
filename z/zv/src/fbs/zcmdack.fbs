@@ -1,7 +1,7 @@
-include "zcmd.fbs";
 namespace ZvCmd.fbs;
-table Ack {
-  type:MsgType;
-  data:[uint8];
+table ReqAck {
+  seqNo:uint32;
+  code:int32;
+  out:string;
 }
-root_type Ack;
+root_type ReqAck;

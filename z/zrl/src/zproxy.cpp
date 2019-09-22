@@ -17,10 +17,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include <ZuString.hpp>
 #include <ZuPrint.hpp>
 #include <ZuPolymorph.hpp>
 
+#include <ZmPlatform.hpp>
 #include <ZmHash.hpp>
 #include <ZmList.hpp>
 #include <ZmObject.hpp>
@@ -37,6 +41,20 @@
 #include <ZvCf.hpp>
 #include <ZvCmd.hpp>
 #include <ZvMultiplexCf.hpp>
+
+#include <Zrl.hpp>
+
+#ifdef _WIN32
+#include <io.h>		// for _isatty
+#ifndef isatty
+#define isatty _isatty
+#endif
+#ifndef fileno
+#define fileno _fileno
+#endif
+#else
+#include <unistd.h>	// for isatty
+#endif
 
 class IOBuf;		// I/O buffer
 class Connection;	// ZiConnection, owns queue of IO buffers
@@ -458,7 +476,7 @@ namespace IOOp {
   ZtEnumNames("send", "recv", "*");
 }
 
-class App : public ZmPolymorph, public ZvCmdServer {
+class App : public ZmPolymorph, public ZvCmdHost {
 
   class Mx : public ZuObject, public ZiMultiplex {
   public:
@@ -482,8 +500,8 @@ public:
 
   void init(ZvCf *cf) {
     // cf->set("mx:debug", "1");
+    ZvCmdHost::init();
     m_mx = new Mx(cf->subset("mx", true));
-    ZvCmdServer::init(m_mx, cf->subset("cmd", true));
     m_verbose = cf->getInt("verbose", 0, 1, false, 0);
     addCmd("proxy",
 	"tag { type scalar } "
@@ -557,7 +575,7 @@ public:
 	"shutdown and exit", "");
   }
   void final() {
-    ZvCmdServer::final();
+    ZvCmdHost::final();
     m_listeners->clean();
     m_proxies->clean();
   }
@@ -1507,9 +1525,6 @@ int main(int argc, char **argv)
 {
   static ZvOpt opts[] = {
     { "verbose", "v", ZvOptFlag },
-    { "cmd:localIP", "i", ZvOptScalar, },
-    { "cmd:localPort", "p", ZvOptScalar },
-    { "cmd:nAccepts", "n", ZvOptScalar },
     { "mx:nThreads", "t", ZvOptScalar },
     { 0 }
   };
@@ -1519,9 +1534,6 @@ int main(int argc, char **argv)
     "\n"
     "Options:\n"
     "  -v, --verbose\t- log connection setup and teardown events\n"
-    "  -i, --cmd:localIP=IP\t- set local IP for zcmd\n"
-    "  -p, --cmd:localPort=PORT\t- set local port for zcmd\n"
-    "  -n, --cmd:nAccepts=N\t- set number of simultaneous accepts for zcmd\n"
     "  -t, --mx:nThreads=N\t- set number of threads\n";
 
   ZeLog::init("zproxy");
@@ -1548,7 +1560,29 @@ int main(int argc, char **argv)
 
   app->start();
 
-  app->wait();
+  if (isatty(fileno(stdin))) {
+    for (;;) {
+      try {
+	auto cmd = Zrl::readline_("zproxy] ");
+	ZtString out;
+	app->processCmd(nullptr, cmd, out);
+	fwrite(out.data(), 1, out.length(), stdout);
+	fflush(stdout);
+      } catch (const Zrl::EndOfFile &) {
+	break;
+      }
+    }
+  } else {
+    ZuArrayN<char, 1024> cmd;
+    while (fgets(cmd.data(), cmd.size(), stdin)) {
+      cmd.calcLength();
+      ZtString out;
+      app->processCmd(nullptr, cmd, out);
+      fwrite(out.data(), 1, out.length(), stdout);
+      fflush(stdout);
+    }
+    app->wait();
+  }
 
   app->stop();
 

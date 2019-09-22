@@ -14,11 +14,11 @@ int main()
 
     rng.init();
 
-    UserDB userDB;
+    UserDB userDB(&rng, 12, 6);
 
     ZtString passwd, secret;
 
-    userDB.init(&rng, 12, passwd, secret);
+    userDB.bootstrap(passwd, secret);
 
     std::cout << "passwd: " << passwd << "\nsecret: " << secret << '\n';
 
@@ -50,27 +50,28 @@ int main()
 
       auto db = fbs::GetUserDB(iobuf->data());
 
-      auto perm = db->perms()->LookupByKey(UserDB::Perm::ChPass);
+      auto perm = db->perms()->LookupByKey(fbs::ReqData_ChPass + 1);
 
       if (!perm) {
 	std::cerr << "READ FAILED - key lookup failed\n" << std::flush;
 	return 1;
       }
 
-      if (str(perm->name()) != "chPass") {
+      if (str(perm->name()) != "UserDB.ChPass") {
 	std::cerr << "READ FAILED - wrong key\n" << std::flush;
 	return 1;
       }
     }
 
-    UserDB userDB;
+    Ztls::Random rng;
+    UserDB userDB(&rng, 12, 6);
 
     if (!userDB.load(iobuf->data(), iobuf->length)) {
       std::cerr << "LOAD FAILED - failed to verify\n" << std::flush;
       return 1;
     }
 
-    if (userDB.perm(UserDB::Perm::ChPass) != "chPass") {
+    if (userDB.perm(2) != "UserDB.ChPass") {
       std::cerr << "LOAD FAILED - wrong key\n" << std::flush;
       return 1;
     }

@@ -1,5 +1,6 @@
 namespace ZvUserDB.fbs;
 table LoginAck {
+  perms:[uint64];	// bitmap
   ok:uint8;
 }
 root_type LoginAck;

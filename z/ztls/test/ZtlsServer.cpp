@@ -43,29 +43,34 @@ struct App : public Ztls::Server<App> {
       app()->done();
     }
 
-    int process(const char *data, unsigned len) {
-      std::cout << ZuString{data, len} << std::flush;
+    int process(const uint8_t *data, unsigned len) {
+      std::cout << ZuString{(const char *)data, len} << std::flush;
       ZtString response;
       ZtString content = Content;
       response << Response << content.length() << Response2;
-      send_(response.data(), response.length());
-      send_(content.data(), content.length());
+      send_((const uint8_t *)response.data(), response.length());
+      send_((const uint8_t *)content.data(), content.length());
       return len;
     }
   };
 
-  inline Link::TCP *accepted(const ZiCxnInfo &ci) {
-    return new Link::TCP(new Link(this), ci);
+  using TCP = typename Link::TCP;
+  inline TCP *accepted(const ZiCxnInfo &ci) {
+    return new TCP(new Link(this), ci);
   }
 
-  void listenFailed(bool transient) {
-    logError("listen() failed ", transient ? "(transient)" : "");
-    done();
-  }
+  App(ZtString server, unsigned port) : m_localIP(server), m_localPort(port) { }
 
-  void done() { sem.post(); }
+  ZiIP localIP() const { return m_localIP; }
+  unsigned localPort() const { return m_localPort; }
 
-  ZmSemaphore	sem;
+  void done() { m_sem.post(); }
+  void wait() { m_sem.wait(); }
+
+private:
+  ZmSemaphore	m_sem;
+  ZiIP		m_localIP;
+  unsigned	m_localPort;
 };
 
 void usage()
@@ -90,7 +95,7 @@ int main(int argc, char **argv)
 
   static const char *alpn[] = { "http/1.1", 0 };
 
-  App app;
+  App app(server, port);
 
   ZiMultiplex mx(
       ZiMxParams()
@@ -111,9 +116,9 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  app.listen(server, port);
+  app.listen();
 
-  app.sem.wait();
+  app.wait();
 
   mx.stop(true);
 

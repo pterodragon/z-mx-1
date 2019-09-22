@@ -29,375 +29,95 @@
 #endif
 
 #include <ZuString.hpp>
-#include <ZuByteSwap.hpp>
 
 #include <ZmObject.hpp>
 #include <ZmRef.hpp>
+#include <ZmRBTree.hpp>
 #include <ZmPLock.hpp>
-
-#include <ZtArray.hpp>
-#include <ZtString.hpp>
-
-#include <ZeLog.hpp>
-
-#include <ZiMultiplex.hpp>
-#include <ZiFile.hpp>
-
-#include <Ztls.hpp>
 
 #include <ZvCf.hpp>
 
-#include <loginreq_generated.h>
-#include <loginack_generated.h>
-#include <userdbreq_generated.h>
-#include <userdback_generated.h>
-#include <zcmdreq_generated.h>
-#include <zcmdack_generated.h>
-
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-
-// cxn, args, in, out
-typedef ZmFn<ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &>
-  ZvCmdFn;
-
+// command handler (context, command, output)
+using ZvCmdFn = ZmFn<void *, ZvCf *, ZtString &>;
+// can be thrown by command function
 struct ZvCmdUsage { };
 
-// client
-
-template <typename App>
-class ZvCmdCliLink :
-    public ZmPolymorph,
-    public Ztls::CliLink<App, ZvCmdCliLink>,
-    public Zfb::Rx {
+class ZvCmdHost {
 public:
-  struct State {
-    enum {
-      Down = 0,
-      Login,
-      Up
-    };
-  };
-
-  ZvCmdCliLink(App *app) : Ztls::CliLink<App, Link>(app) { }
-
-private:
-  void connected(const char *, const char *alpn) {
-    if (strcmp(alpn, "zcmd")) {
-      disconnect();
-      return;
-    }
-    scheduleTimeout();
-    m_state = State::Login;
-    Zfb::Rx::connected();
-
-    m_fbb.Clear();
-    if (m_interactive)
-      m_fbb.FinishSizePrefixed(fbs::CreateLoginReq(m_fbb,
-	    LoginReqData_Login,
-	    fbs::CreateLogin(m_fbb,
-	      str(m_fbb, m_user), str(m_fbb, m_passwd), m_totp)));
-    else
-      m_fbb.FinishSizePrefixed(fbs::CreateLoginReq(m_fbb,
-	    LoginReqData_Access,
-	    fbs::CreateAccess(m_fbb, str(m_fbb, m_keyID),
-	      bytes(m_fbb, m_token), bytes(m_fbb, m_hmac))));
-    send_(m_fbb.buf());
+  void init() {
+    m_syntax = new ZvCf();
+    addCmd("help", "", ZvCmdFn::Member<&ZvCmdHost::help>::fn(this),
+	"list commands", "usage: help [COMMAND]");
   }
 
-  void disconnected() {
-    m_state = State::Down;
-    cancelTimeout();
-    Zfb::Rx::disconnected();
+  void final() {
+    m_syntax = nullptr;
+    m_cmds.clean();
   }
-
-private:
-  int processLoginAck(const uint8_t *data, unsigned len) {
-    using namespace Zfb;
-    using namespace Load;
-    using namespace ZvUserDB;
-    {
-      Verifier verifier(data, len);
-      if (!fbs::VerifyLoginAckBuffer(verifier)) {
-	m_state = State::Down;
-	return -1;
-      }
-    }
-    auto loginAck = fbs::GetLoginAck(data);
-    if (!loginAck->ok) {
-      m_state = State::Down;
-      return -1;
-    }
-    m_state = State::Up;
-    return len;
-  }
-
-  int processReqAck(const uint8_t *data, unsigned len) {
-    // lookup seqNo in outstanding requests
-    // - call corresponding completion with response/ack
-    // - pending request is auto-removed for RPC calls,
-    //   remains in place for pub/sub unless explicitly removed by app
-    using namespace Zfb;
-    using namespace Load;
-    using namespace ZvCmd;
-    {
-      Verifier verifier(data, len);
-      if (!fbs::VerifyReqAckBuffer(verifier)) {
-	m_state = State::Down;
-	return -1;
-      }
-    }
-    auto reqAck = fbs::GetReqAck(data);
-    auto buf = bytes(reqAck->data());
-    switch ((int)reqAck->type()) {
-      case MsgType_userdb: {
-	{
-	  Verifier verifier(buf.data(), buf.length());
-	  if (!UserDB::fbs::VerifyReqAckBuffer(verifier)) {
-	    m_state = State::Down;
-	    return -1;
-	  }
-	}
-	auto reqAck = UserDB::fbs::GetReqAck(buf.data());
-	// FIXME
-      } break;
-      case MsgType_zcmd: {
-      } break;
-      case MsgType_app: {
-      } break;
-    }
-    return len;
-  }
-
-public:
-  // FIXME send request, register CB for response
-  void request() {
-    if (m_state != State::Up) {
-      // FIXME
-      return;
-    }
-    m_fbb.Clear();
-    m_fbb.FinishSizePrefixed(...);
-    send_(m_fbb.buf());
-  }
-
-  int process(const uint8_t *data, unsigned len) {
-    if (ZuUnlikely(m_state == State::Down))
-      return -1; // disconnect
-
-    scheduleTimeout();
-
-    return processRx(data, len,
-	[this](const uint8_t *data, unsigned len) -> int {
-	  if (ZuUnlikely(m_state == State::Login))
-	    return processLoginAck(data, len);
-	  else
-	    return processReqAck(data, len);
-	});
-  }
-
-
-protected:
-  void scheduleTimeout() {
-    if (this->app()->timeout())
-      this->app()->mx()->add(ZmFn<>{ZmMkRef(this), [](ZvCmdLink *link) {
-	link->disconnect();
-      }}, ZmTimeNow(this->app()->timeout()), &m_timer);
-  }
-  void cancelTimeout() { this->app()->mx()->del(&m_timer); }
-
-private:
-  ZmScheduler::Timer		m_timer;
-  int				m_state = State::Down;
-  ZmRef<ZiIOBuf>		m_rxBuf;
-  ZmRef<ZvUserDB::User>		m_user;
-  bool				m_interactive = false;
-
-  // FIXME - container of outstanding requests / subscriptions
-  // keyed on seqNo (request ID), with associated completion functions
-  // (callbacks), which are passed the response/reject in each case
-};
-
-class ZvCmdClient : public Ztls::Client<ZvCmdClient> {
-  unsigned		m_reconnFreq = 0;
-  ZiIP			m_localIP;
-  uint16_t		m_localPort = 0;
-  ZiIP			m_remoteIP;
-  uint16_t		m_remotePort = 0;
-  unsigned		m_timeout = 0;
-
-  ZmScheduler::Timer	m_reconnTimer;
-}
-
-// server
-template <typename App>
-class ZvCmdSrvLink :
-    public ZmPolymorph,
-    public Ztls::SrvLink<App, ZvCmdSrvLink>,
-    public Zfb::Rx {
-public:
-  using Hdr = ZvCmd_Hdr;
-
-  struct State {
-    enum {
-      Down = 0,
-      Login,
-      LoginFailed,
-      Up
-    };
-  };
-
-  ZvCmdSrvLink(App *app) : Ztls::SrvLink<App, Link>(app) { }
-
-private:
-  void connected(const char *, const char *alpn) {
-    scheduleTimeout();
-    if (strcmp(alpn, "zcmd")) {
-      m_state = State::LoginFailed;
-      return;
-    }
-    m_state = State::Login;
-    Zfb::Rx::connected();
-  }
-
-  void disconnected() {
-    m_state = State::Down;
-    cancelTimeout();
-    Zfb::Rx::disconnected();
-  }
-
-private:
-  int processLogin(const uint8_t *data, unsigned len) {
-    using namespace Zfb;
-    using namespace Load;
-    using namespace ZvUserDB;
-    {
-      Verifier verifier(data, len);
-      if (!fbs::VerifyLoginReqBuffer(verifier)) {
-	m_state = State::LoginFailed;
-	return 0;
-      }
-    }
-    if (!app()->userDB()->loginReq(
-	fbs::GetLoginReq(data), app()->totpRange(),
-	m_user, m_interactive)) {
-      m_state = State::LoginFailed;
-      return 0;
-    }
-    m_fbb.Clear();
-    m_fbb.FinishSizePrefixed(fbs::CreateLoginAck(m_fbb, 1));
-    send_(m_fbb.buf());
-    m_state = State::Up;
-    return len;
-  }
-
-  int processReq(const uint8_t *data, unsigned len) {
-    using namespace Zfb;
-    using namespace Load;
-    using namespace ZvCmd;
-    {
-      Verifier verifier(data, len);
-      if (!fbs::VerifyReqBuffer(verifier)) {
-	m_state = State::Down;
-	return -1;
-      }
-    }
-    m_fbb.Clear();
-    auto req = fbs::GetReq(data);
-    auto buf = bytes(req->data());
-    switch ((int)req->type()) {
-      case MsgType_userdb: {
-	{
-	  Verifier verifier(buf.data(), buf.length());
-	  if (!UserDB::fbs::VerifyRequestBuffer(verifier)) {
-	    m_state = State::Down;
-	    return -1;
-	  }
-	}
-	m_fbb.FinishSizePrefixed(
-	    userDB()->request(m_user, m_interactive,
-	      m_fbb, UserDB::fbs::GetRequest(buf.data()));
-      } break;
-      case MsgType_zcmd: {
-      } break;
-      case MsgType_app: {
-      } break;
-    }
-    send_(m_fbb.buf());
-    return len;
-  }
-
-public:
-  int process(const uint8_t *data, unsigned len) {
-    if (ZuUnlikely(m_state == State::Down))
-      return -1; // disconnect
-
-    if (ZuUnlikely(m_state == State::LoginFailed))
-      return len; // timeout then disc.
-
-    scheduleTimeout();
-
-    return processRx(data, len,
-	[this](const uint8_t *data, unsigned len) -> int {
-	  if (ZuUnlikely(m_state == State::Login))
-	    return processLogin(data, len);
-	  else
-	    return processReq(data, len);
-	});
-  }
-
-protected:
-  void scheduleTimeout() {
-    if (this->app()->timeout())
-      this->app()->mx()->add(ZmFn<>{ZmMkRef(this), [](ZvCmdLink *link) {
-	link->disconnect();
-      }}, ZmTimeNow(this->app()->timeout()), &m_timer);
-  }
-  void cancelTimeout() { this->app()->mx()->del(&m_timer); }
-
-private:
-  ZmScheduler::Timer		m_timer;
-  int				m_state = State::Down;
-  Zfb::IOBuilder		m_fbb;
-  ZmRef<ZvUserDB::User>		m_user;
-  bool				m_interactive = false;
-};
-
-class ZvCmdServer : public Ztls::Server<ZvCmdServer> {
-
-  using Link = ZvCmdSrvLink<ZvCmdServer>;
-
-  inline unsigned timeout() const { return m_timeout; }
 
   void addCmd(ZuString name,
-      ZuString syntax, ZvCmdFn fn, ZtString brief, ZtString usage);
+      ZuString syntax, ZvCmdFn fn, ZtString brief, ZtString usage) {
+    {
+      ZmRef<ZvCf> cf = m_syntax->subset(name, true);
+      cf->fromString(syntax, false);
+      cf->set("help:type", "flag");
+    }
+    if (auto cmd = m_cmds.find(name))
+      cmd->val() = CmdData{ZuMv(fn), ZuMv(brief), ZuMv(usage)};
+    else
+      m_cmds.add(name, CmdData{ZuMv(fn), ZuMv(brief), ZuMv(usage)});
+  }
 
-  void start();
-  void stop();
-
-  void rcvd(ZvCmdServerCxn *cxn, ZmRef<ZvCmdMsg>);
-
-  // FIXME - app can register handler for incoming app data
+  int processCmd(void *context, ZuString in, ZtString &out) {
+    ZtString name;
+    typename Cmds::NodeRef cmd;
+    try {
+      ZmRef<ZvCf> cf = new ZvCf();
+      cf->fromCLI(m_syntax, in);
+      name = cf->get("0");
+      cmd = m_cmds.find(name);
+      if (!cmd) throw ZtString("unknown command");
+      if (cf->getInt("help", 0, 1, false, 0)) {
+	out << cmd->val().usage << '\n';
+	return 0;
+      }
+      return (cmd->val().fn)(context, cf, out);
+    } catch (const ZvCmdUsage &) {
+      out << cmd->val().usage << '\n';
+    } catch (const ZvError &e) {
+      out << e << '\n';
+    } catch (const ZeError &e) {
+      out << '"' << name << "\": " << e << '\n';
+    } catch (const ZtString &s) {
+      out << '"' << name << "\": " << s << '\n';
+    } catch (const ZtArray<char> &s) {
+      out << '"' << name << "\": " << s << '\n';
+    } catch (...) {
+      out << '"' << name << "\": unknown exception\n";
+    }
+    return -1;
+  }
 
 private:
-  void listen();
-  void listening();
-  void failed(bool transient);
+  void help(void *, ZvCf *args, ZtString &out) {
+    int argc = ZuBox<int>(args->get("#"));
+    if (argc > 2) throw ZvCmdUsage();
+    if (ZuUnlikely(argc == 2)) {
+      auto cmd = m_cmds.find(args->get("1"));
+      if (!cmd) throw ZvCmdUsage();
+      out << cmd->val().usage << '\n';
+      return;
+    }
+    out.size(m_cmds.count() * 80 + 40);
+    out << "commands:\n\n";
+    {
+      auto i = m_cmds.readIterator();
+      while (auto cmd = i.iterate())
+	out << cmd->key() << " -- " << cmd->val().brief << '\n';
+    }
+  }
 
-  void help(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &out);
-
-  unsigned		m_rebindFreq = 0;
-  ZiIP			m_ip;
-  uint16_t		m_port = 0;
-  unsigned		m_nAccepts = 0;
-  unsigned		m_timeout = 0;
-
-  bool			m_listening = false;
-
-  ZmScheduler::Timer	m_rebindTimer;
-
+private:
   struct CmdData {
     ZvCmdFn	fn;
     ZtString	brief;
@@ -409,12 +129,6 @@ private:
 
   ZmRef<ZvCf>		m_syntax;
   Cmds			m_cmds;
-
-  // FIXME - UserDB
 };
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 #endif /* ZvCmd_HPP */

@@ -66,8 +66,6 @@ namespace Ztls {
 //     I/O Tx <+- Tx output <- Encryption <- Tx input           <+- App Tx
 // ------------|-------------------------------------------------|------------
 
-// FIXME - move to uint8_t * for all data ptrs (from char *)
-
 using IOBuf = ZiIOBuf;
 
 template <typename Link_, typename LinkRef>
@@ -325,6 +323,7 @@ public:
     app()->invoke(this, [](Link *link) { link->disconnect_(); });
   }
   void disconnect_() { // TLS thread
+    app()->mx()->del(&m_reconnTimer);
     int n = mbedtls_ssl_close_notify(&m_ssl);
     if (n) app()->logWarning("mbedtls_ssl_close_notify() returned ", n);
     app()->mx()->txInvoke(this, [](Link *link) {
@@ -336,24 +335,24 @@ private:
   App			*m_app = nullptr;
   ZmRef<TCP>		m_tcp;
   mbedtls_ssl_context	m_ssl;
+  ZmScheduler::Timer	m_reconnTimer;
 
   // I/O Tx thread
   ZmRef<IOBuf>		m_rxBuf;
 
   // TLS thread
+  unsigned		m_rxInOffset = 0;
   ZmRef<IOBuf>		m_rxInBuf;
-  unsigned		m_rxInOffset;
+  unsigned		m_rxOutOffset = 0;
   uint8_t		m_rxOutBuf[MBEDTLS_SSL_MAX_CONTENT_LEN];
-  unsigned		m_rxOutOffset;
 };
 
 template <typename App, typename Impl>
 class CliLink : public Link<App, Impl, LinkTCP<Impl, Impl *> > {
 public:
-  using TCP = LinkTCP<Impl>;
+  using TCP = LinkTCP<Impl, Impl *>;
   using Base = Link<App, Impl, TCP>;
 friend Base;
-
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
@@ -364,30 +363,33 @@ friend Base;
     mbedtls_ssl_session_free(&m_session);
   }
 
-  bool connect(ZuString server, uint16_t port) { // App thread(s)
-    thread_local ZmSemaphore sem;
-    bool ok;
-    this->app()->invoke([&, sem = &sem]() mutable {
-      ok = connect_(server, port);
-      sem->post();
+  void connect(ZtString server, uint16_t port) { // App thread(s)
+    this->app()->invoke([this, server = ZuMv(server), port]() mutable {
+      connect_(ZuMv(server), port);
     });
-    sem.wait();
-    return ok;
   }
 
-  bool connect_(ZuString server, uint16_t port) { // TLS thread
-    ZiIP ip = server;
+  void connect_(ZtString server, uint16_t port) { // TLS thread
+    m_server = ZuMv(server);
+    m_port = port;
+    connect_();
+  }
+
+  void connect_() {
+    ZiIP ip = m_server;
     if (!ip) {
-      this->app()->logError('"', server, "\": hostname lookup failure");
-      return false;
+      this->app()->logError('"', m_server, "\": hostname lookup failure");
+      impl()->connectFailed(true);
+      return;
     }
     {
       int n;
-      n = mbedtls_ssl_set_hostname(this->ssl(), server);
+      n = mbedtls_ssl_set_hostname(this->ssl(), m_server);
       if (n) {
 	this->app()->logError(
-	    "mbedtls_ssl_set_hostname(\"", server, "\") returned ", n);
-	return false;
+	    "mbedtls_ssl_set_hostname(\"", m_server, "\") returned ", n);
+	impl()->connectFailed(true);
+	return;
       }
     }
 
@@ -400,9 +402,7 @@ friend Base;
 	ZiFailFn{impl(), [](Impl *impl, bool transient) {
 	  impl->connectFailed(transient);
 	}},
-	ZiIP(), 0, ip, port);
-
-    return true;
+	ZiIP(), 0, ip, m_port);
   }
 
 private:
@@ -474,15 +474,29 @@ private:
     }
   }
 
+public:
+  void connectFailed(bool transient) {
+    unsigned reconnFreq = this->app()->reconnFreq();
+    if (transient && reconnFreq > 0)
+      this->app()->run(
+	  ZmFn<>{this, [](CliLink *link) { link->connect_(); }},
+	  ZmTimeNow(reconnFreq), ZmScheduler::Update, &m_reconnTimer);
+    else
+      this->app()->logError("could not connect");
+  }
+
 private:
   mbedtls_ssl_session	m_session;
+  ZmScheduler::Timer	m_reconnTimer;
   bool			m_saved = false;
+  ZtString		m_server;
+  uint16_t		m_port;
 };
 
 template <typename App, typename Impl>
 class SrvLink : public Link<App, Impl, LinkTCP<Impl, ZmRef<Impl> > > {
 public:
-  using TCP = LinkTCP<Impl>;
+  using TCP = LinkTCP<Impl, ZmRef<Impl> >;
   using Base = Link<App, Impl, TCP>;
 friend Base;
 
@@ -645,12 +659,14 @@ private:
 
       void disconnected(); // TLS thread
       void connectFailed(bool transient); // I/O Tx thread
-      
+
       // process() should return:
       // +ve - the number of bytes processed
       // 0   - more data needed - continue appending to Rx output buffer
       // -ve - disconnect, abandon any remaining Rx dats
-      int process(const char *data, unsigned len); // process received data
+      int process(const uint8_t *data, unsigned len); // process received data
+
+      unsigned reconnFreq() const; // optional
     };
   };
 #endif
@@ -681,6 +697,9 @@ friend Base;
   }
 
   inline void final() { Base::final(); }
+
+protected:
+  inline unsigned reconnFreq() const { return 0; } // default
 };
 
 // CRTP - implementation must conform to the following interface:
@@ -699,24 +718,27 @@ friend Base;
       // +ve - the number of bytes processed
       // 0   - more data needed - continue appending to Rx output buffer
       // -ve - disconnect, abandon any remaining Rx dats
-      int process(const char *data, unsigned len); // process received data
+      int process(const uint8_t *data, unsigned len); // process received data
     };
 
     inline Link::TCP *accepted(const ZiCxnInfo &ci) {
       // ... potentially return nullptr if too many open connections
-      ZmRef<Link> link = new Link(this);
-      auto tcp = new Link::TCP(link, ci);
-      // ... store link in server's container
-      return tcp;
+      return new Link::TCP(new Link(this), ci);
     }
 
-    unsigned nAccepts(); // optional
+    ZiIP localIP() const;
+    unsigned localPort() const;
+    unsigned nAccepts() const; // optional
+    unsigned rebindFreq() const; // optional
+
     void listening(const ZiListenInfo &info); // optional
     void listenFailed(bool transient); // optional - can re-schedule listen()
   };
 #endif
-template <typename App> class Server : public Engine<App> {
+template <typename App_>
+class Server : public Engine<App_> {
 public:
+  using App = App_;
   using Base = Engine<App>;
 friend Base;
 
@@ -776,7 +798,7 @@ friend Base;
 
   inline void final() { Base::final(); }
 
-  void listen(ZiIP ip, unsigned port) {
+  void listen() {
     this->mx()->listen(
 	  ZiListenFn(app(), [](App *app, const ZiListenInfo &info) {
 	    app->listening(info);
@@ -787,16 +809,33 @@ friend Base;
 	  ZiConnectFn(app(), [](App *app, const ZiCxnInfo &ci) -> uintptr_t {
 	    return (uintptr_t)app->accepted(ci);
 	  }),
-	  ip, port, app()->nAccepts(), ZiCxnOptions());
+	  app()->localIP(), app()->localPort(),
+	  app()->nAccepts(), ZiCxnOptions());
+  }
+
+  void stopListening() {
+    this->mx()->del(&m_rebindTimer);
+    if (m_listening)
+      this->mx()->stopListening(app()->localIP(), app()->localPort());
+    m_listening = false;
   }
 
 protected:
-  inline unsigned nAccepts() { return 8; } // default
+  inline unsigned nAccepts() const { return 8; } // default
+  inline unsigned rebindFreq() const { return 0; } // default
+
   inline void listening(const ZiListenInfo &info) { // default
-    this->logInfo("listening(", info.ip, ':', info.port, ')');
+    m_listening = true;
+    app()->logInfo("listening(", info.ip, ':', info.port, ')');
   }
   inline void listenFailed(bool transient) { // default
-    this->logWarning("listen() failed ", transient ? "(transient)" : "");
+    unsigned rebindFreq = app()->rebindFreq();
+    if (transient && rebindFreq > 0)
+      app()->run(
+	  ZmFn<>{this, [](Server *server) { server->listen(); }},
+	  ZmTimeNow(rebindFreq), ZmScheduler::Update, &m_rebindTimer);
+    else
+      app()->logError("listen() failed ", transient ? "(transient)" : "");
   }
 
 private:
@@ -804,6 +843,8 @@ private:
   mbedtls_pk_context		m_key;
   mbedtls_ssl_cache_context	m_cache;
   mbedtls_ssl_ticket_context	m_ticket_ctx;
+  ZmScheduler::Timer		m_rebindTimer;
+  bool				m_listening = false;
 };
 
 }

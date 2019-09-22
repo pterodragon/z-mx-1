@@ -17,19 +17,21 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include <ZuPolymorph.hpp>
 
-#include <ZmTrap.hpp>
 #include <ZmPlatform.hpp>
+#include <ZmTrap.hpp>
+
+#include <ZiMultiplex.hpp>
 
 #include <ZvCf.hpp>
-#include <ZvCmd.hpp>
+#include <ZvCmdClient.hpp>
 #include <ZvMultiplexCf.hpp>
 
 #include <Zrl.hpp>
-
-#include <stdio.h>
-#include <stdlib.h>
 
 #ifdef _WIN32
 #include <io.h>		// for _isatty
@@ -65,6 +67,57 @@ static unsigned getTimeout()
 {
   const char *txt = getenv("ZCMD_TIMEOUT");
   return (txt && *txt) ? atoi(txt) : 10;
+}
+
+  //
+  // FIXME - container seqNo->outputFile (ZiFile)
+  //
+int ZvCmdMsg::redirectIn(ZmRef<ZeEvent> *e)
+{
+  const auto &redirect = ZtStaticRegexUTF8("\\s*<\\s*");
+  ZtRegex::Captures c;
+  unsigned pos = 0, n = 0;
+  ZtString cmd = ZuMv(m_cmd);
+  if (n = redirect.m(cmd, c, pos)) {
+    m_cmd = c[0];
+    ZiFile f;
+    ZeError e_;
+    int r = f.open(c[2], ZiFile::ReadOnly | ZiFile::GC, 0777, &e_);
+    if (r == Zi::OK) {
+      m_data.length(f.size());
+      if (f.read(m_data.data(), m_data.length()) != (int)m_data.length())
+	m_data.null();
+    } else {
+      if (e) *e = ZeEVENT(Error, ([file = ZtString(c[2]), e = e_]
+	  (const ZeEvent &, ZmStream &s) { s << file << ": " << e; }));
+    }
+    return r;
+  } else {
+    m_cmd = ZuMv(cmd);
+    return Zi::OK;
+  }
+}
+
+int ZvCmdMsg::redirectOut(ZiFile &f, ZmRef<ZeEvent> *e)
+{
+  const auto &redirect = ZtStaticRegexUTF8("\\s*>\\s*");
+  ZtRegex::Captures c;
+  unsigned pos = 0, n = 0;
+  ZtString cmd = ZuMv(m_cmd);
+  if (n = redirect.m(cmd, c, pos)) {
+    m_cmd = c[0];
+    ZeError e_;
+    int r = f.open(c[2],
+	ZiFile::Create | ZiFile::WriteOnly | ZiFile::GC, 0777, &e_);
+    if (r != Zi::OK) {
+      if (e) *e = ZeEVENT(Error, ([file = ZtString(c[2]), e = e_]
+	  (const ZeEvent &, ZmStream &s) { s << file << ": " << e; }));
+    }
+    return r;
+  } else {
+    m_cmd = ZuMv(cmd);
+    return Zi::OK;
+  }
 }
 
 class Mx : public ZuObject, public ZiMultiplex {

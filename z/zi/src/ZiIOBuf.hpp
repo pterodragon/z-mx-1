@@ -97,4 +97,53 @@ struct ZiIOBuf_HeapID {
 typedef ZmHeap<ZiIOBuf_HeapID, sizeof(ZiIOBuf_<ZuNull>)> ZiIOBuf_Heap;
 typedef ZiIOBuf_<ZiIOBuf_Heap> ZiIOBuf;
 
+// generic ZiIOBuf receiver
+class ZiIORx {
+public:
+  void connected() {
+    m_buf = new ZiIOBuf(this);
+  }
+
+  void disconnected() { }
+
+  // hdr(const uint8_t *ptr, unsigned len) should adjust ptr, len and return:
+  //   +ve - length of hdr+body, or INT_MAX if insufficient data
+  // body(const uint8_t *ptr, unsigned len) should return:
+  //   0   - skip remaining data (used to defend against DOS)
+  //   -ve - disconnect immediately
+  //   +ve - length of hdr+body (can be <= that originally returned by hdr())
+  template <typename Hdr, typename Body>
+  int process(const uint8_t *data, unsigned rxLen, Hdr hdr, Body body) {
+    unsigned oldLen = m_buf->length;
+    unsigned len = oldLen + rxLen;
+    auto rxData = m_buf->ensure(len);
+    memcpy(rxData + oldLen, data, rxLen);
+    m_buf->length = len;
+
+    auto rxPtr = rxData;
+    while (len >= 4) {
+      auto frameLen = hdr(rxPtr, len);
+
+      if (len < frameLen) break;
+
+      frameLen = body(rxPtr, frameLen);
+
+      if (ZuUnlikely(frameLen < 0)) return -1;
+      if (!frameLen) return rxLen;
+
+      rxPtr += frameLen;
+      len -= frameLen;
+    }
+    if (len && rxPtr != rxData) {
+      memmove(rxData, rxPtr, len);
+      m_buf->length = len;
+    } else
+      m_buf->length = 0;
+    return rxLen;
+  }
+
+private:
+  ZmRef<ZiIOBuf>		m_buf;
+};
+
 #endif /* ZiIOBuf_HPP */

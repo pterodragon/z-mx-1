@@ -30,7 +30,7 @@ struct App : public Ztls::Client<App> {
 	<< std::flush;
       ZtString request;
       request << Request << hostname << Request2;
-      send_(request.data(), request.length()); // in TLS thread
+      send_((const uint8_t *)request.data(), request.length()); // in TLS thread
     }
     void disconnected() {
       std::cerr << "disconnected\n" << std::flush;
@@ -42,10 +42,11 @@ struct App : public Ztls::Client<App> {
 	std::cerr << "failed to connect (transient)\n" << std::flush;
       else
 	std::cerr << "failed to connect\n" << std::flush;
+      app()->done();
     }
 
-    int process(const char *data, unsigned len) {
-      std::cout << ZuString{data, len} << std::flush;
+    int process(const uint8_t *data, unsigned len) {
+      std::cout << ZuString{(const char *)data, len} << std::flush;
       // disconnect_();
       // return -1; // would return len to continue
       return len;
@@ -102,11 +103,7 @@ int main(int argc, char **argv)
 
   App::Link link(&app);
 
-  if (!link.connect(server, port)) {
-    std::cerr << "failed to connect to "
-      << server << ':' << port << '\n' << std::flush;
-    return 1;
-  }
+  link.connect(server, port);
 
   app.sem.wait();
 

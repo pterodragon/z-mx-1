@@ -121,7 +121,7 @@ private:
       }
     }
     if (!this->app()->processLogin(
-	  ZvUserDB::fbs::GetLoginReq(data), m_user, m_interactive) ||
+	  fbs::GetLoginReq(data), m_user, m_interactive) ||
 	ZuUnlikely(!m_user)) {
       m_state = State::LoginFailed;
       return 0;
@@ -226,7 +226,7 @@ private:
   ZmScheduler::Timer	m_timer;
   int			m_state = State::Down;
   Zfb::IOBuilder	m_fbb;
-  ZmRef<ZvUserDB::User>	m_user;
+  ZmRef<User>		m_user;
   bool			m_interactive = false;
 };
 
@@ -239,10 +239,10 @@ friend Base;
   using Link = ZvCmdSrvLink<App>;
   using User = ZvUserDB::User;
 
-  struct UserDB : public ZuObject, public ZvUserDB::UserDB {
+  struct UserDB : public ZuObject, public ZvUserDB::Mgr {
     template <typename ...Args>
     ZuInline UserDB(Args &&... args) :
-	ZvUserDB::UserDB(ZuFwd<Args>(args)...) { }
+	ZvUserDB::Mgr(ZuFwd<Args>(args)...) { }
   };
 
   struct Context {

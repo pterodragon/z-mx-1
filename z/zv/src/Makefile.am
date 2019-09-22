@@ -30,6 +30,7 @@ include_HEADERS = ZvLib.hpp \
 	ZvRingCf.hpp ZvThreadCf.hpp ZvUserDB.hpp \
 	ZvCmdClient.hpp ZvCmdServer.hpp ${FBS_H}
 lib_LTLIBRARIES = libZv.la
+bin_PROGRAMS = zuserdb
 libZv_la_LDFLAGS = @Z_SO_LDFLAGS@
 libZv_la_SOURCES = ZvLib.cpp \
 	ZvCf.cpp ZvCSV.cpp ZvDaemon.cpp ZvUserDB.cpp
@@ -39,3 +40,6 @@ libZv_la_LIBADD = $(top_builddir)/zfb/src/libZfb.la \
 	$(top_builddir)/zt/src/libZt.la $(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la \
 	@Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
+zuserdb_AM_CPPFLAGS = @Z_CPPFLAGS@
+zuserdb_LDADD = libZv.la $(libZv_la_LIBADD)
+zuserdb_SOURCES = zuserdb.cpp

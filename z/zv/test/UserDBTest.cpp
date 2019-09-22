@@ -7,24 +7,24 @@ using namespace ZvUserDB;
 
 int main()
 {
+  Ztls::Random rng;
+
+  rng.init();
+
   ZmRef<IOBuf> iobuf;
 
   {
-    Ztls::Random rng;
-
-    rng.init();
-
-    UserDB userDB(&rng, 12, 6);
+    Mgr mgr(&rng, 12, 6);
 
     ZtString passwd, secret;
 
-    userDB.bootstrap(passwd, secret);
+    mgr.bootstrap("admin", "admin", passwd, secret);
 
     std::cout << "passwd: " << passwd << "\nsecret: " << secret << '\n';
 
     IOBuilder b;
 
-    b.Finish(userDB.save(b));
+    b.Finish(mgr.save(b));
 
     uint8_t *buf = b.GetBufferPointer();
     int len = b.GetSize();
@@ -63,15 +63,14 @@ int main()
       }
     }
 
-    Ztls::Random rng;
-    UserDB userDB(&rng, 12, 6);
+    Mgr mgr(&rng, 12, 6);
 
-    if (!userDB.load(iobuf->data(), iobuf->length)) {
+    if (!mgr.load(iobuf->data(), iobuf->length)) {
       std::cerr << "LOAD FAILED - failed to verify\n" << std::flush;
       return 1;
     }
 
-    if (userDB.perm(2) != "UserDB.ChPass") {
+    if (mgr.perm(2) != "UserDB.ChPass") {
       std::cerr << "LOAD FAILED - wrong key\n" << std::flush;
       return 1;
     }

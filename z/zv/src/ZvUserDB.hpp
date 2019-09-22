@@ -216,7 +216,7 @@ inline ZmRef<Key> loadKey(const fbs::Key *key_, Key_ *next) {
   return key;
 }
 
-class ZvAPI UserDB {
+class ZvAPI Mgr {
 public:
   using Lock = ZmRWLock;
   using Guard = ZmGuard<Lock>;
@@ -233,10 +233,11 @@ public:
     };
   };
 
-  UserDB(Ztls::Random *rng, unsigned passLen, unsigned totpRange);
+  Mgr(Ztls::Random *rng, unsigned passLen, unsigned totpRange);
 
   // one-time initialization (idempotent)
-  bool bootstrap(ZtString &passwd, ZtString &secret);
+  bool bootstrap(
+      ZtString user, ZtString role, ZtString &passwd, ZtString &secret);
 
   bool load(const uint8_t *buf, unsigned len);
   Zfb::Offset<fbs::UserDB> save(Zfb::Builder &) const;

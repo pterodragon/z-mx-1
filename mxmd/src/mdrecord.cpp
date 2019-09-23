@@ -86,7 +86,8 @@ int main(int argc, char **argv)
       int i = 0;
       do {
 	MxIDString sym;
-	if (!fgets(sym, MxIDString::N - 1, f)) break;
+	if (!fgets(sym.data(), sym.size() - 1, f)) break;
+	sym[sym.size() - 1] = 0;
 	sym.calcLength();
 	sym.chomp();
 	syms->add(sym);

@@ -85,9 +85,10 @@ int main(int argc, char **argv)
     { nullptr }
   };
 
-  ZeLog::init("ZvCmdTest");
+  ZeLog::init("CmdTest");
   ZeLog::level(0);
-  ZeLog::sink(ZeLog::fileSink("&2"));
+  ZeLog::sink(ZeLog::lambdaSink(
+	[](ZeEvent *e) { std::cerr << e->message() << '\n' << std::flush; }));
   ZeLog::start();
 
   ZiMultiplex *mx = new ZiMultiplex(
@@ -104,25 +105,26 @@ int main(int argc, char **argv)
   ZmTrap::sigintFn(ZmFn<>{server, [](ZvCmdTest *server) { server->post(); }});
   ZmTrap::trap();
 
-  ZmRef<ZvCf> cf = new ZvCf();
-  cf->fromString(
-      "thread 3\n"
-      "caPath /etc/ssl/certs\n"
-      "userDB {\n"
-      "  passLen 12\n"
-      "  totpRange 6\n"
-      "  maxAge 8\n"
-      "}\n", false);
-  if (cf->fromArgs(opts, argc, argv) != 6) usage();
-  cf->set("certPath", cf->get("1"));
-  cf->set("keyPath", cf->get("2"));
-  cf->set("userDB:path", cf->get("3"));
-  cf->set("localIP", cf->get("4"));
-  cf->set("localPort", cf->get("5"));
-
   mx->start();
 
-  server->init(mx, cf);
+  {
+    ZmRef<ZvCf> cf = new ZvCf();
+    cf->fromString(
+	"thread 3\n"
+	"caPath /etc/ssl/certs\n"
+	"userDB {\n"
+	"  passLen 12\n"
+	"  totpRange 6\n"
+	"  maxAge 8\n"
+	"}\n", false);
+    if (cf->fromArgs(opts, argc, argv) != 6) usage();
+    cf->set("certPath", cf->get("1"));
+    cf->set("keyPath", cf->get("2"));
+    cf->set("userDB:path", cf->get("3"));
+    cf->set("localIP", cf->get("4"));
+    cf->set("localPort", cf->get("5"));
+    server->init(mx, cf);
+  }
 
   server->start();
 

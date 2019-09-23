@@ -139,9 +139,9 @@ int main(int argc, char **argv)
     if (f) {
       int i = 0;
       do {
-	char s[MxIDString::N];
-	if (!fgets(s, MxIDString::N - 1, f)) break;
-	MxIDString sym(s);
+	MxIDString sym;
+	if (!fgets(sym.data(), sym.size() - 1, f)) break;
+	sym[sym.size() - 1] = 0;
 	sym.calcLength();
 	sym.chomp();
 	syms->add(sym);

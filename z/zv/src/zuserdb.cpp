@@ -27,13 +27,13 @@ using namespace ZvUserDB;
 
 void usage()
 {
-  std::cerr << "usage: zuserdb FILE USER ROLE PASSLEN\n";
+  std::cerr << "usage: zuserdb FILE USER ROLE PASSLEN [PERMS...]\n";
   exit(1);
 }
 
 int main(int argc, char **argv)
 {
-  if (argc != 5) usage();
+  if (argc < 5) usage();
 
   int passlen = atoi(argv[4]);
 
@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 
   mgr.bootstrap(argv[2], argv[3], passwd, secret);
 
-  mgr.permAdd("Zcmd");
+  for (unsigned i = 5; i < argc; i++) mgr.permAdd(argv[i]);
 
   ZeError e;
   if (mgr.save(path, 0, &e) != Zi::OK) {

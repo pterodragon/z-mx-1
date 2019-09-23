@@ -63,12 +63,12 @@
 // userDB response
 using ZvCmdUserDBAckFn = ZmFn<const ZvUserDB::fbs::ReqAck *>;
 // command response
-using ZvCmdAckFn = ZmFn<ZuString>;
+using ZvCmdAckFn = ZmFn<const ZvCmd::fbs::ReqAck *>;
 
 struct ZvCmd_Login {
   ZtString		user;
   ZtString		passwd;
-  unsigned		totp;
+  unsigned		totp = 0;
 };
 struct ZvCmd_Access {
   ZtString		keyID;
@@ -92,11 +92,13 @@ friend Base;
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
 private:
-  using SeqNo = ZvCmdSeqNo;
   using Credentials = ZvCmd_Credentials;
+public:
+  using SeqNo = ZvCmdSeqNo;
   using KeyData = ZvUserDB::KeyData;
   using Bitmap = ZvUserDB::Bitmap;
 
+private:
   // containers of pending requests
   using UserDBReqs =
     ZmRBTree<SeqNo, ZmRBTreeVal<ZvCmdUserDBAckFn, ZmRBTreeLock<ZmPLock> > >;
@@ -122,28 +124,42 @@ public:
   }
   void access(
       ZtString server, unsigned port,
-      ZtString keyID, const KeyData &token, const KeyData &hmac) {
+      ZtString keyID, ZtString secret_) {
+    ZtArray<uint8_t> secret;
+    secret.length(Ztls::Base64::declen(secret_.length()));
+    Ztls::Base64::decode(
+	secret.data(), secret.length(), secret_.data(), secret_.length());
+    ZvUserDB::KeyData token, hmac;
+    token.length(token.size());
+    hmac.length(hmac.size());
+    this->app()->random(token.data(), token.length());
+    {
+      Ztls::HMAC hmac_(ZvUserDB::Key::keyType());
+      hmac_.start(secret.data(), secret.length());
+      hmac_.update(token.data(), token.length());
+      hmac_.finish(hmac.data());
+    }
     new (m_credentials.new2()) ZvCmd_Access{ZuMv(keyID), token, hmac};
     this->connect(ZuMv(server), port);
   }
 
 public:
   // send userDB request
-  bool sendUserDB(Zfb::IOBuilder &fbb, SeqNo seqNo, ZvCmdUserDBAckFn fn) {
+  void sendUserDB(Zfb::IOBuilder &fbb, SeqNo seqNo, ZvCmdUserDBAckFn fn) {
     using namespace ZvCmd;
     m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_UserDB));
     m_userDBReqs.add(seqNo, ZuMv(fn));
     this->send(fbb.buf());
   }
   // send command
-  bool sendCmd(Zfb::IOBuilder &fbb, SeqNo seqNo, ZvCmdAckFn fn) {
+  void sendCmd(Zfb::IOBuilder &fbb, SeqNo seqNo, ZvCmdAckFn fn) {
     using namespace ZvCmd;
     m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Cmd));
     m_cmdReqs.add(seqNo, ZuMv(fn));
     this->send(fbb.buf());
   }
   // send app message
-  bool sendApp(Zfb::IOBuilder &fbb) {
+  void sendApp(Zfb::IOBuilder &fbb) {
     using namespace ZvCmd;
     m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_App));
     this->send(fbb.buf());
@@ -156,7 +172,6 @@ public:
   //  <0 - disconnect
   int processApp(ZuArray<const uint8_t>) { return -1; } // default
 
-private:
   void connected(const char *, const char *alpn) {
     if (strcmp(alpn, "zcmd")) {
       this->disconnect();
@@ -173,21 +188,27 @@ private:
     m_fbb.Clear();
     if (m_credentials.type() == 1) {
       using namespace ZvUserDB;
+      using namespace Zfb::Save;
       const auto &data = m_credentials.p1();
       m_fbb.Finish(fbs::CreateLoginReq(m_fbb,
 	    fbs::LoginReqData_Login,
 	    fbs::CreateLogin(m_fbb,
-	      str(m_fbb, data.user), str(m_fbb, data.passwd), data.totp)));
+	      str(m_fbb, data.user),
+	      str(m_fbb, data.passwd),
+	      data.totp).Union()));
     } else {
       using namespace ZvUserDB;
+      using namespace Zfb::Save;
       const auto &data = m_credentials.p2();
       m_fbb.Finish(fbs::CreateLoginReq(m_fbb,
 	    fbs::LoginReqData_Access,
-	    fbs::CreateAccess(m_fbb, str(m_fbb, data.keyID),
-	      bytes(m_fbb, data.token), bytes(m_fbb, data.hmac))));
+	    fbs::CreateAccess(m_fbb,
+	      str(m_fbb, data.keyID),
+	      bytes(m_fbb, data.token),
+	      bytes(m_fbb, data.hmac)).Union()));
     }
     m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Login));
-    send_(m_fbb.buf());
+    this->send_(m_fbb.buf());
   }
 
   void disconnected() {
@@ -201,6 +222,7 @@ private:
     ZiIORx::disconnected();
   }
 
+private:
   int processLoginAck(const uint8_t *data, unsigned len) {
     using namespace Zfb;
     using namespace Load;
@@ -214,7 +236,7 @@ private:
     m_state = State::Up;
     {
       Bitmap perms;
-      all(loginAck->perms(), [this, &perms](unsigned i, uint64_t v) {
+      all(loginAck->perms(), [&perms](unsigned i, uint64_t v) {
 	if (i < Bitmap::Words) perms.data[i] = v;
       });
       impl()->loggedIn(perms);
@@ -254,6 +276,7 @@ private:
     return len;
   }
 
+public:
   int process(const uint8_t *data, unsigned len) {
     if (ZuUnlikely(m_state == State::Down))
       return -1; // disconnect
@@ -286,6 +309,7 @@ private:
     return i;
   }
 
+private:
   void scheduleTimeout() {
     if (this->app()->timeout())
       this->app()->mx()->add(

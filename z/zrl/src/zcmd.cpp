@@ -42,7 +42,9 @@
 #define fileno _fileno
 #endif
 #else
+#include <termios.h>
 #include <unistd.h>	// for isatty
+#include <fcntl.h>
 #endif
 
 #ifdef _MSC_VER
@@ -63,129 +65,64 @@ static void usage()
   ZmPlatform::exit(1);
 }
 
-static unsigned getTimeout()
-{
-  const char *txt = getenv("ZCMD_TIMEOUT");
-  return (txt && *txt) ? atoi(txt) : 10;
-}
-
-  //
-  // FIXME - container seqNo->outputFile (ZiFile)
-  //
-int ZvCmdMsg::redirectIn(ZmRef<ZeEvent> *e)
-{
-  const auto &redirect = ZtStaticRegexUTF8("\\s*<\\s*");
-  ZtRegex::Captures c;
-  unsigned pos = 0, n = 0;
-  ZtString cmd = ZuMv(m_cmd);
-  if (n = redirect.m(cmd, c, pos)) {
-    m_cmd = c[0];
-    ZiFile f;
-    ZeError e_;
-    int r = f.open(c[2], ZiFile::ReadOnly | ZiFile::GC, 0777, &e_);
-    if (r == Zi::OK) {
-      m_data.length(f.size());
-      if (f.read(m_data.data(), m_data.length()) != (int)m_data.length())
-	m_data.null();
-    } else {
-      if (e) *e = ZeEVENT(Error, ([file = ZtString(c[2]), e = e_]
-	  (const ZeEvent &, ZmStream &s) { s << file << ": " << e; }));
-    }
-    return r;
-  } else {
-    m_cmd = ZuMv(cmd);
-    return Zi::OK;
-  }
-}
-
-int ZvCmdMsg::redirectOut(ZiFile &f, ZmRef<ZeEvent> *e)
-{
-  const auto &redirect = ZtStaticRegexUTF8("\\s*>\\s*");
-  ZtRegex::Captures c;
-  unsigned pos = 0, n = 0;
-  ZtString cmd = ZuMv(m_cmd);
-  if (n = redirect.m(cmd, c, pos)) {
-    m_cmd = c[0];
-    ZeError e_;
-    int r = f.open(c[2],
-	ZiFile::Create | ZiFile::WriteOnly | ZiFile::GC, 0777, &e_);
-    if (r != Zi::OK) {
-      if (e) *e = ZeEVENT(Error, ([file = ZtString(c[2]), e = e_]
-	  (const ZeEvent &, ZmStream &s) { s << file << ": " << e; }));
-    }
-    return r;
-  } else {
-    m_cmd = ZuMv(cmd);
-    return Zi::OK;
-  }
-}
-
-class Mx : public ZuObject, public ZiMultiplex {
+class ZCmd : public ZmPolymorph, public ZvCmdClient<ZCmd> {
 public:
-  inline Mx() : ZiMultiplex(ZvMxParams()) { }
-};
+  using Base = ZvCmdClient<ZCmd>;
 
-class ZCmd : public ZmPolymorph, public ZvCmdClient {
-public:
-  void init(ZiMultiplex *mx) {
-    ZvCmdClient::init(mx, getTimeout());
-
-    m_interactive = isatty(fileno(stdin));
-    if (!m_interactive && m_solo) {
-      auto &data = m_soloMsg->data();
-      ZuArrayN<char, 10240> buf;
-      size_t length;
-      while ((length = fread(buf.data(), 1, 10240, stdin)) > 0) {
-	buf.length(length);
-	data << buf;
-      }
+  struct Link : public ZvCmdCliLink<ZCmd, Link> {
+  using Base = ZvCmdCliLink<ZCmd, Link>;
+    Link(ZCmd *app) : Base(app) { }
+    void loggedIn(const Bitmap &perms) {
+      this->app()->loggedIn();
     }
+    void disconnected() {
+      this->app()->disconnected();
+      Base::disconnected();
+    }
+  };
+
+  void init(ZiMultiplex *mx, ZvCf *cf, bool interactive) {
+    Base::init(mx, cf);
+    m_interactive = interactive;
   }
   void final() {
-    ZvCmdClient::final();
+    m_link = nullptr;
+    Base::final();
   }
 
-  inline bool interactive() const { return m_interactive; }
+  bool interactive() const { return m_interactive; }
 
-  inline void solo(ZuString s) {
+  void solo(ZtString s) {
     m_solo = true;
-    m_soloMsg = new ZvCmdMsg();
-    m_soloMsg->cmd() = s;
+    m_soloMsg = ZuMv(s);
   }
-  inline void target(ZuString s) {
+  void target(ZuString s) {
     m_prompt.null();
     m_prompt << s << "] ";
   }
 
+  template <typename ...Args>
+  void login(Args &&... args) {
+    m_link = new Link(this);
+    m_link->login(ZuFwd<Args>(args)...);
+  }
+  template <typename ...Args>
+  void access(Args &&... args) {
+    m_link = new Link(this);
+    m_link->access(ZuFwd<Args>(args)...);
+  }
+
+  void disconnect() { m_link->disconnect(); }
+
   void wait() { m_done.wait(); }
   void post() { m_done.post(); }
 
-  inline int status() const { return m_status; }
+  int code() const { return m_code; }
 
   void exiting() { m_exiting = true; }
 
 private:
-  void process(ZmRef<ZvCmdMsg> ack) {
-    std::cout << ack->cmd() << std::flush;
-    if (m_out) {
-      m_out.write(ack->data().data(), ack->data().length());
-      m_out.close();
-    } else {
-      std::cout << ack->data() << std::flush;
-    }
-    m_status = ack->code();
-    if (m_solo)
-      post();
-    else
-      prompt();
-  }
-
-  void error(ZmRef<ZeEvent> e) {
-    ZeLog::log(ZuMv(e));
-    post();
-  }
-
-  void connected() {
+  void loggedIn() {
     if (m_solo) {
       send(ZuMv(m_soloMsg));
     } else {
@@ -196,7 +133,15 @@ private:
     }
   }
 
-  // FIXME - need to sendCmd()
+  void disconnected() {
+    if (m_exiting) return;
+    if (m_interactive) {
+      Zrl::stop();
+      std::cerr << "\nserver disconnected\n" << std::flush;
+    }
+    ZmPlatform::exit(1);
+  }
+
   void prompt() {
     ZtString cmd;
 next:
@@ -213,110 +158,200 @@ next:
 	post();
 	return;
       }
+      cmd[cmd.size() - 1] = 0;
       cmd.calcLength();
       cmd.chomp();
     }
     if (!cmd) goto next;
-    ZmRef<ZeEvent> e;
-    if (msg->redirectIn(&e) != Zi::OK) {
-      if (e) std::cerr << *e << '\n' << std::flush;
-      goto next;
-    }
-    if (msg->redirectOut(m_out, &e) != Zi::OK) {
-      if (e) std::cerr << *e << '\n' << std::flush;
-      goto next;
-    }
-    // FIXME - seqNo;
-    {
-      IOBuilder fbb; // FIXME - re-use
-      fbb.Clear();
-      fbb.Finish(ZvCmd::fbs::CreateRequest(fbb,
-	    seqNo, Save::str(fbb, cmd)));
-      sendCmd(fbb, seqNo, [](ZuString s) { /* output in s */ });
-    }
+    send(cmd);
   }
 
-  void disconnected() {
-    if (m_exiting) return;
-    if (m_interactive) {
-      Zrl::stop();
-      std::cerr << "\nserver disconnected\n" << std::flush;
+  void send(ZtString cmd) {
+    FILE *out = stdout;
+    const auto &redirect = ZtStaticRegexUTF8("\\s*>\\s*");
+    ZtRegex::Captures c;
+    unsigned pos = 0, n = 0;
+    ZtString cmd_ = ZuMv(cmd);
+    if (n = redirect.m(cmd, c, pos)) {
+      if (!(out = fopen(c[2], "w"))) {
+	logError(ZtString{c[2]}, ": ", ZeLastError);
+	return;
+      }
+      cmd = c[0];
+    } else {
+      cmd = ZuMv(cmd_);
     }
-    ZmPlatform::exit(1);
+    auto seqNo = m_seqNo++;
+    m_fbb.Clear();
+    m_fbb.Finish(ZvCmd::fbs::CreateRequest(m_fbb,
+	  seqNo, Zfb::Save::str(m_fbb, cmd)));
+    m_link->sendCmd(m_fbb, seqNo, [this, out](const ZvCmd::fbs::ReqAck *ack) {
+      m_code = ack->code();
+      using namespace Zfb::Load;
+      {
+	auto s = str(ack->out());
+	fwrite(s.data(), 1, s.length(), out);
+	if (out != stdout) fclose(out);
+      }
+      if (m_solo)
+	post();
+      else
+	prompt();
+    });
   }
 
+private:
   ZmSemaphore		m_done;
+  ZtString		m_prompt;
+  ZtString		m_soloMsg;
+  ZmRef<Link>		m_link;
+  ZvCmdSeqNo		m_seqNo = 0;
+  Zfb::IOBuilder	m_fbb;
+  int			m_code = 0;
   bool			m_interactive = true;
   bool			m_solo = false;
   bool			m_exiting = false;
-  ZmRef<ZvCmdMsg>	m_soloMsg;
-  ZtString		m_prompt;
-  int			m_status = 0;
-  ZiFile		m_out;
 };
+
+static ZtString getpass_(const ZtString &prompt, unsigned passLen)
+{
+  ZtString passwd;
+  passwd.size(passLen + 4); // allow for \r\n and null terminator
+#ifdef _WIN32
+  HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+  DWORD omode, nmode;
+  GetConsoleMode(h, &omode);
+  nmode = (omode | ENABLE_LINE_INPUT) & ~ENABLE_ECHO_INPUT;
+  SetConsoleMode(h, nmode);
+  DWORD n = 0;
+  WriteConsole(h, prompt.data(), prompt.length(), &n, nullptr);
+  n = 0;
+  ReadConsole(h, passwd.data(), passwd.size() - 1, &n, nullptr);
+  if (n < passwd.size()) passwd.length(n);
+  WriteConsole(h, "\r\n", 2, &n, nullptr);
+  mode |= ENABLE_ECHO_INPUT;
+  SetConsoleMode(h, omode);
+#else
+  int fd = ::open("/dev/tty", O_RDWR, 0);
+  if (fd < 0) return passwd;
+  struct termios oflags, nflags;
+  memset(&oflags, 0, sizeof(termios));
+  tcgetattr(fd, &oflags);
+  memcpy(&nflags, &oflags, sizeof(termios));
+  nflags.c_lflag = (nflags.c_lflag & ~ECHO) | ECHONL;
+  if (tcsetattr(fd, TCSANOW, &nflags)) return passwd;
+  ::write(fd, prompt.data(), prompt.length());
+  FILE *in = fdopen(fd, "r");
+  if (!fgets(passwd, passwd.size() - 1, in)) return passwd;
+  passwd[passwd.size() - 1] = 0;
+  passwd.calcLength();
+  tcsetattr(fd, TCSANOW, &oflags);
+  fclose(in);
+  ::close(fd);
+#endif
+  passwd.chomp();
+  return passwd;
+}
 
 int main(int argc, char **argv)
 {
-  ZmRef<Mx> mx = new Mx();
-  ZmRef<ZCmd> client = new ZCmd();
+  if (argc < 2) usage();
 
   ZeLog::init("zcmd");
   ZeLog::level(0);
   ZeLog::sink(ZeLog::lambdaSink(
-	[](ZeEvent *e) { std::cerr << *e << '\n' << std::flush; }));
+	[](ZeEvent *e) { std::cerr << e->message() << '\n' << std::flush; }));
   ZeLog::start();
 
-  try {
-    if (argc < 2) usage();
+  bool interactive = isatty(fileno(stdin));
+  auto keyID = ::getenv("ZCMD_KEY_ID");
+  auto secret = ::getenv("ZCMD_KEY_SECRET");
+  ZtString user, passwd, server;
+  ZuBox<unsigned> totp;
+  ZuBox<unsigned> port;
 
-    ZiIP ip("127.0.0.1");
-    ZuBox<int> port;
+  try {
+    ZtString user, server;
+    ZuBox<unsigned> port;
 
     {
       ZtRegex::Captures c;
-      const auto &r = ZtStaticRegexUTF8("^([^:]+):(\\d+)$");
-      if (r.m(argv[1], c) >= 2) {
-	ip = c[2];
-	if (!port.scan(c[3]) || !*port || !port) usage();
-      } else {
-	if (!port.scan(argv[1]) || !*port || !port) usage();
+      const auto &r = ZtStaticRegexUTF8("^([^@]+)@([^:]+):(\\d+)$");
+      if (r.m(argv[1], c) == 3) {
+	user = c[2];
+	server = c[3];
+	port = c[4];
       }
     }
-
-    if (mx->start() != Zi::OK) throw ZtString("multiplexer start failed");
-
-    if (argc > 2) {
-      ZtArray<char> solo;
-      for(int i = 2; i < argc; i++) {
-	solo << argv[i];
-	if (ZuLikely(i < argc - 1)) solo << ' ';
+    if (!user) {
+      ZtRegex::Captures c;
+      const auto &r = ZtStaticRegexUTF8("^([^:]+):(\\d+)$");
+      if (r.m(argv[1], c) == 2) {
+	server = c[2];
+	port = c[3];
       }
-      client->solo(ZuMv(solo));
-    } else
-      client->target(argv[1]);
-
-    client->init(mx);
-
-    ZmTrap::sigintFn(ZmFn<>::Member<&ZCmd::post>::fn(client));
-    ZmTrap::trap();
-
-    client->connect(ip, port);
-
+    }
+    if (!server) {
+      server = "localhost";
+      port = argv[1];
+    }
+    if (!*port || !port) usage();
   } catch (const ZtRegex::Error &) {
     usage();
-  } catch (const ZeError &e) {
-    std::cerr << e << '\n' << std::flush;
-    ZeLog::stop();
-    ZmPlatform::exit(1);
-  } catch (const ZtString &s) {
-    std::cerr << s << '\n' << std::flush;
-    ZeLog::stop();
-    ZmPlatform::exit(1);
-  } catch (...) {
-    std::cerr << "unknown exception\n" << std::flush;
-    ZeLog::stop();
-    ZmPlatform::exit(1);
   }
+  if (user) keyID = secret = nullptr;
+  if (keyID) {
+    if (!secret) {
+      std::cerr << "set ZCMD_KEY_SECRET "
+	"to use with ZCMD_KEY_ID\n" << std::flush;
+      ::exit(1);
+    }
+  } else {
+    if (!interactive || argc > 2) {
+      std::cerr << "set ZCMD_KEY_ID and ZCMD_KEY_SECRET "
+	"to use non-interactively\n" << std::flush;
+      ::exit(1);
+    }
+    passwd = getpass_("password: ", 100);
+    totp = getpass_("totp: ", 6);
+  }
+
+  ZiMultiplex *mx = new ZiMultiplex(
+      ZiMxParams()
+	.scheduler([](auto &s) {
+	  s.nThreads(4)
+	  .thread(1, [](auto &t) { t.isolated(1); })
+	  .thread(2, [](auto &t) { t.isolated(1); })
+	  .thread(3, [](auto &t) { t.isolated(1); }); })
+	.rxThread(1).txThread(2));
+
+  mx->start();
+
+  ZmRef<ZCmd> client = new ZCmd();
+
+  ZmTrap::sigintFn(ZmFn<>{client, [](ZCmd *client) { client->post(); }});
+  ZmTrap::trap();
+
+  {
+    ZmRef<ZvCf> cf = new ZvCf();
+    cf->set("thread", "3");
+    client->init(mx, cf, interactive);
+  }
+
+  if (argc > 2) {
+    ZtString solo;
+    for (int i = 2; i < argc; i++) {
+      solo << argv[i];
+      if (ZuLikely(i < argc - 1)) solo << ' ';
+    }
+    client->solo(ZuMv(solo));
+  } else
+    client->target(argv[1]);
+
+  if (keyID)
+    client->access(server, port, keyID, secret);
+  else
+    client->login(server, port, user, passwd, totp);
 
   client->wait();
 
@@ -327,10 +362,12 @@ int main(int argc, char **argv)
 
   client->exiting();
   client->disconnect();
+
   mx->stop(true);
+
   ZeLog::stop();
 
   client->final();
 
-  return client->status();
+  return client->code();
 }

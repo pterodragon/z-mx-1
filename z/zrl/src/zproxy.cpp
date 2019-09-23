@@ -586,12 +586,10 @@ public:
   int start() {
     int r;
     if ((r = m_mx->start()) != Zi::OK) return r;
-    ZvCmdServer::start();
     return Zi::OK;
   }
 
   void stop() {
-    ZvCmdServer::stop();
     m_mx->stop(true);
   }
 
@@ -605,8 +603,7 @@ public:
     delete m_proxies->del(Proxy::SrcPortAccessor::value(proxy));
   }
 
-  void proxy(ZvCmdServerCxn *cxn,
-      ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &outMsg) {
+  int proxy(void *, ZvCf *args, ZtString &out) {
     ZmRef<Listener> listener;
     ZiIP localIP, remoteIP, srcIP;
     ZuString tag;
@@ -645,26 +642,24 @@ public:
     } catch (...) {
       throw ZvCmdUsage();
     }
-    outMsg = new ZvCmdMsg();
-    auto &out = outMsg->cmd();
     if (m_listeners->findKey(localPort)) {
-      outMsg->code(1);
       out << "already listening on port " << ZuBoxed(localPort) << '\n';
-      return;
+      return 1;
     }
     listener = new Listener(
 	this, cxnFlags, cxnLatency, cxnFrag, cxnPack, cxnDelay,
 	localIP, localPort, remoteIP, remotePort, srcIP, srcPort, tag,
 	reconnectFreq);
+    int code = 0;
     if (listener->start() == Zi::OK)
       m_listeners->add(listener);
     else
-      outMsg->code(1);
+      code = 1;
     out << listener->status() << '\n';
+    return code;
   }
 
-  void stopListening(ZvCmdServerCxn *cxn,
-      ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg) {
+  int stopListening(void *, ZvCf *args, ZtString &out) {
     ZuString tag;
     ZmRef<Listener> listener;
     unsigned localPort;
@@ -678,8 +673,6 @@ public:
     } catch (...) {
       throw ZvCmdUsage();
     }
-    outMsg = new ZvCmdMsg();
-    auto &out = outMsg->cmd();
     if (isTag) {
       auto i = m_listeners->iterator();
       while (ZmRef<Listener> listener = i.iterateKey()) {
@@ -687,23 +680,22 @@ public:
         listener->stop();
         delete m_listeners->del(listener->localPort());
         out << listener->status() << '\n';
-        status(cxn, args, ZuMv(inMsg), outMsg);
+        status(nullptr, args, out);
       }
     } else {
       ZmRef<Listener> listener = m_listeners->findKey(localPort);
       if (!listener) {
-	outMsg->code(1);
 	out << "no listener on port " << ZuBoxed(localPort) << '\n';
-	return;
+	return 1;
       }
       listener->stop();
       out << listener->status() << '\n';
       delete m_listeners->del(localPort);
     }
+    return 0;
   }
 
-  void hold(ZvCmdServerCxn *cxn,
-      ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg) {
+  int hold(void *, ZvCf *args, ZtString &out) {
     unsigned srcPort;
     int side;
     bool allProxies = false, isTag = false;
@@ -733,15 +725,12 @@ public:
 	    (connection = proxy->out()))
 	  connection->hold();
       }
-      status(cxn, args, ZuMv(inMsg), outMsg);
+      return status(nullptr, args, out);
     } else {
-      outMsg = new ZvCmdMsg();
-      auto &out = outMsg->cmd();
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
-	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
-	return;
+	return 1;
       }
       ZmRef<Connection> connection;
       if ((side == Side::In || side == Side::Both) &&
@@ -752,10 +741,10 @@ public:
 	connection->hold();
       out << proxy->status() << '\n';
     }
+    return 0;
   }
 
-  void release(ZvCmdServerCxn *cxn,
-      ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg) {
+  int release(void *, ZvCf *args, ZtString &out) {
     ZuString tag;
     unsigned srcPort;
     int side;
@@ -785,15 +774,12 @@ public:
 	    (connection = proxy->out()))
 	  connection->release();
       }
-      status(cxn, args, ZuMv(inMsg), outMsg);
+      return status(nullptr, args, out);
     } else {
-      outMsg = new ZvCmdMsg();
-      auto &out = outMsg->cmd();
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
-	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
-	return;
+	return 1;
       }
       ZmRef<Connection> connection;
       if ((side == Side::In || side == Side::Both) &&
@@ -804,10 +790,10 @@ public:
 	connection->release();
       out << proxy->status() << '\n';
     }
+    return 0;
   }
 
-  void disc(ZvCmdServerCxn *cxn,
-      ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg) {
+  int disc(void *, ZvCf *args, ZtString &out) {
     ZuString tag;
     unsigned srcPort;
     bool isTag = false, allProxies = false;
@@ -831,25 +817,22 @@ public:
 	if (connection = proxy->in()) connection->disconnect();
 	if (connection = proxy->out()) connection->disconnect();
       }
-      status(cxn, args, ZuMv(inMsg), outMsg);
+      return status(nullptr, args, out);
     } else {
-      outMsg = new ZvCmdMsg();
-      auto &out = outMsg->cmd();
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
-	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
-	return;
+	return 1;
       }
       ZmRef<Connection> connection;
       if (connection = proxy->in()) connection->disconnect();
       if (connection = proxy->out()) connection->disconnect();
       out << proxy->status() << '\n';
     }
+    return 0;
   }
 
-  void suspend(ZvCmdServerCxn *cxn,
-      ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg) {
+  int suspend(void *, ZvCf *args, ZtString &out) {
     ZuString tag;
     unsigned srcPort;
     int side, op;
@@ -888,15 +871,12 @@ public:
 	    connection->suspRecv();
 	}
       }
-      status(cxn, args, ZuMv(inMsg), outMsg);
+      return status(nullptr, args, out);
     } else {
-      outMsg = new ZvCmdMsg();
-      auto &out = outMsg->cmd();
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
-	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
-	return;
+	return 1;
       }
       ZmRef<Connection> connection;
       if ((side == Side::In || side == Side::Both) &&
@@ -911,10 +891,10 @@ public:
       }
       out << proxy->status() << '\n';
     }
+    return 0;
   }
 
-  void resume(ZvCmdServerCxn *cxn,
-      ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg) {
+  int resume(void *, ZvCf *args, ZtString &out) {
     ZuString tag;
     unsigned srcPort;
     int side, op;
@@ -949,15 +929,12 @@ public:
 	  if (op == IOOp::Recv || op == IOOp::Both) connection->resRecv();
 	}
       }
-      status(cxn, args, ZuMv(inMsg), outMsg);
+      return status(nullptr, args, out);
     } else {
-      outMsg = new ZvCmdMsg();
-      auto &out = outMsg->cmd();
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
-	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
-	return;
+	return 1;
       }
       ZmRef<Connection> connection;
       if ((side == Side::In || side == Side::Both) &&
@@ -972,10 +949,10 @@ public:
       }
       out << proxy->status() << '\n';
     }
+    return 0;
   }
 
-  void trace(ZvCmdServerCxn *cxn,
-      ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg) {
+  int trace(void *, ZvCf *args, ZtString &out) {
     ZuString tag;
     unsigned srcPort;
     int side;
@@ -1007,15 +984,12 @@ public:
 	    (connection = proxy->out()))
 	  connection->trace(on);
       }
-      status(cxn, args, ZuMv(inMsg), outMsg);
+      return status(nullptr, args, out);
     } else {
-      outMsg = new ZvCmdMsg();
-      auto &out = outMsg->cmd();
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
-	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
-	return;
+	return 1;
       }
       ZmRef<Connection> connection;
       if ((side == Side::In || side == Side::Both) &&
@@ -1026,10 +1000,10 @@ public:
 	connection->trace(on);
       out << proxy->status() << '\n';
     }
+    return 0;
   }
 
-  void drop(ZvCmdServerCxn *cxn,
-      ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg) {
+  int drop(void *, ZvCf *args, ZtString &out) {
     ZuString tag;
     unsigned srcPort;
     int side;
@@ -1061,15 +1035,12 @@ public:
 	    (connection = proxy->out()))
 	  connection->drop(on);
       }
-      status(cxn, args, ZuMv(inMsg), outMsg);
+      return status(nullptr, args, out);
     } else {
-      outMsg = new ZvCmdMsg();
-      auto &out = outMsg->cmd();
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
-	outMsg->code(1);
 	out << "no proxy on source port " << ZuBoxed(srcPort) << '\n';
-	return;
+	return 1;
       }
       ZmRef<Connection> connection;
       if ((side == Side::In || side == Side::Both) &&
@@ -1080,10 +1051,10 @@ public:
 	connection->drop(on);
       out << proxy->status() << '\n';
     }
+    return 0;
   }
 
-  void verboseCmd(ZvCmdServerCxn *cxn,
-      ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &outMsg) {
+  int verboseCmd(void *, ZvCf *args, ZtString &out) {
     bool on;
     try {
       on = args->getInt("1", 0, 1, false, 1);
@@ -1091,13 +1062,11 @@ public:
       throw ZvCmdUsage();
     }
     m_verbose = on;
-    outMsg = new ZvCmdMsg();
-    auto &out = outMsg->cmd();
     out = on ? "verbose on\n" : "verbose off\n";
+    return 0;
   }
 
-  void status(ZvCmdServerCxn *cxn,
-      ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &outMsg) {
+  int status(void *, ZvCf *args, ZtString &out) {
     ZuString tag;
     bool isTag = false;
     try {
@@ -1106,8 +1075,6 @@ public:
     } catch (...) {
       throw ZvCmdUsage();
     }
-    if (!outMsg) outMsg = new ZvCmdMsg();
-    auto &out = outMsg->cmd();
     {
       auto i = m_listeners->iterator();
       while (ZmRef<Listener> listener = i.iterateKey()) {
@@ -1124,14 +1091,13 @@ public:
 	out << proxy->status();
       }
     }
+    return 0;
   }
 
-  void quit(ZvCmdServerCxn *cxn,
-      ZvCf *args, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &outMsg) {
+  int quit(void *, ZvCf *args, ZtString &out) {
     post();
-    outMsg = new ZvCmdMsg();
-    auto &out = outMsg->cmd();
-    out = "shutting down\n";
+    out << "shutting down\n";
+    return 0;
   }
 
 private:
@@ -1574,8 +1540,9 @@ int main(int argc, char **argv)
       }
     }
   } else {
-    ZuArrayN<char, 1024> cmd;
-    while (fgets(cmd, cmd.size() - 1, stdin)) {
+    ZtString cmd(1024);
+    while (fgets(cmd.data(), cmd.size() - 1, stdin)) {
+      cmd[cmd.size() - 1] = 0;
       cmd.calcLength();
       cmd.chomp();
       if (!cmd) continue;

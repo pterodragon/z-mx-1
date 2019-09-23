@@ -32,8 +32,10 @@ ZtlsExtern unsigned calc(const void *data, unsigned len, int offset)
   hmac.start(data, len);
   hmac.update(&t, 8);
   hmac.finish(sha1);
-  ZuBigEndian<uint32_t> code;
-  memcpy(&code, sha1 + (sha1[19] & 0xf), 4);
+  ZuBigEndian<uint32_t> code_;
+  memcpy(&code_, sha1 + (sha1[19] & 0xf), 4);
+  uint32_t code = code_;
+  code &= ~(((uint32_t)1)<<31);
   return code % (uint32_t)1000000;
 }
 

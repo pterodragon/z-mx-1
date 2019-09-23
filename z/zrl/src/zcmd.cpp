@@ -137,7 +137,7 @@ private:
     if (m_exiting) return;
     if (m_interactive) {
       Zrl::stop();
-      std::cerr << "\nserver disconnected\n" << std::flush;
+      std::cerr << "server disconnected\n" << std::flush;
     }
     ZmPlatform::exit(1);
   }
@@ -271,13 +271,10 @@ int main(int argc, char **argv)
   ZuBox<unsigned> port;
 
   try {
-    ZtString user, server;
-    ZuBox<unsigned> port;
-
     {
       ZtRegex::Captures c;
       const auto &r = ZtStaticRegexUTF8("^([^@]+)@([^:]+):(\\d+)$");
-      if (r.m(argv[1], c) == 3) {
+      if (r.m(argv[1], c) == 4) {
 	user = c[2];
 	server = c[3];
 	port = c[4];
@@ -286,7 +283,7 @@ int main(int argc, char **argv)
     if (!user) {
       ZtRegex::Captures c;
       const auto &r = ZtStaticRegexUTF8("^([^:]+):(\\d+)$");
-      if (r.m(argv[1], c) == 2) {
+      if (r.m(argv[1], c) == 3) {
 	server = c[2];
 	port = c[3];
       }
@@ -335,7 +332,19 @@ int main(int argc, char **argv)
   {
     ZmRef<ZvCf> cf = new ZvCf();
     cf->set("thread", "3");
-    client->init(mx, cf, interactive);
+    cf->set("caPath", "/etc/ssl/certs");
+    try {
+      client->init(mx, cf, interactive);
+    } catch (const ZvError &e) {
+      std::cerr << e << '\n' << std::flush;
+      ::exit(1);
+    } catch (const ZtString &e) {
+      std::cerr << e << '\n' << std::flush;
+      ::exit(1);
+    } catch (...) {
+      std::cerr << "unknown exception\n" << std::flush;
+      ::exit(1);
+    }
   }
 
   if (argc > 2) {
@@ -348,6 +357,7 @@ int main(int argc, char **argv)
   } else
     client->target(argv[1]);
 
+  std::cout << server << ':' << port << ' ' << user << ' ' << passwd << ' ' << totp << '\n' << std::flush;
   if (keyID)
     client->access(server, port, keyID, secret);
   else

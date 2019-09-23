@@ -62,7 +62,6 @@
 
 template <typename App_>
 class ZvCmdSrvLink :
-    public ZmPolymorph,
     public Ztls::SrvLink<App_, ZvCmdSrvLink<App_> >,
     public ZiIORx {
 public:
@@ -90,7 +89,7 @@ public:
   void connected(const char *, const char *alpn) {
     scheduleTimeout();
 
-    if (strcmp(alpn, "zcmd")) {
+    if (!alpn || strcmp(alpn, "zcmd")) {
       m_state = State::LoginFailed;
       return;
     }
@@ -106,6 +105,13 @@ public:
     cancelTimeout();
 
     ZiIORx::disconnected();
+  }
+
+  // send app message
+  void sendApp(Zfb::IOBuilder &fbb) {
+    using namespace ZvCmd;
+    fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), fbs::MsgType_App));
+    this->send(fbb.buf());
   }
 
 private:
@@ -135,10 +141,10 @@ private:
     return len;
   }
 
+  // userDB and zcmd requests are synchronously responded within the TLS thread
   int processMsg(int type, const uint8_t *data, unsigned len) {
     using namespace Zfb;
     using namespace Load;
-    m_fbb.Clear();
     switch (type) {
       default:
 	return -1;
@@ -147,11 +153,13 @@ private:
 	  Verifier verifier(data, len);
 	  if (!ZvUserDB::fbs::VerifyRequestBuffer(verifier)) return -1;
 	}
+	m_fbb.Clear();
 	int i = this->app()->processUserDB(
 	    m_user, m_interactive, ZvUserDB::fbs::GetRequest(data), m_fbb);
 	if (ZuUnlikely(i < 0)) return -1;
 	if (!i) return len;
 	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_UserDB));
+	this->send_(m_fbb.buf());
       } break;
       case ZvCmd::fbs::MsgType_Cmd: {
 	using namespace ZvCmd;
@@ -159,21 +167,20 @@ private:
 	  Verifier verifier(data, len);
 	  if (!ZvCmd::fbs::VerifyRequestBuffer(verifier)) return -1;
 	}
+	m_fbb.Clear();
 	int i = this->app()->processCmd(this, m_user, m_interactive,
 	    ZvCmd::fbs::GetRequest(data), m_fbb);
 	if (ZuUnlikely(i < 0)) return -1;
 	if (!i) return len;
 	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_Cmd));
+	this->send_(m_fbb.buf());
       } break;
       case ZvCmd::fbs::MsgType_App: {
 	int i = this->app()->processApp(this, m_user, m_interactive,
-	    ZuArray<const uint8_t>(data, len), m_fbb);
+	    ZuArray<const uint8_t>(data, len));
 	if (ZuUnlikely(i < 0)) return -1;
-	if (!i) return len;
-	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_App));
       } break;
     }
-    this->send_(m_fbb.buf());
     return len;
   }
 
@@ -195,7 +202,7 @@ public:
 	  type = ZvCmd_bodyType(hdr_);
 	  return ZvCmd_hdrLen() + ZvCmd_bodyLen(hdr_);
 	},
-	[this, type](const uint8_t *data, unsigned len) -> int {
+	[this, &type](const uint8_t *data, unsigned len) -> int {
 	  data += ZvCmd_hdrLen(), len -= ZvCmd_hdrLen();
 	  int i;
 	  if (ZuUnlikely(m_state == State::Login)) {
@@ -364,7 +371,8 @@ public:
       const ZvCmd::fbs::Request *in, Zfb::Builder &fbb) {
     if (m_cmdPerm < 0 || !m_userDB->ok(user, interactive, m_cmdPerm)) {
       fbb.Finish(ZvCmd::fbs::CreateReqAck(fbb,
-	    in->seqNo(), __LINE__, Zfb::Save::str(fbb, "permission denied")));
+	    in->seqNo(), __LINE__,
+	    Zfb::Save::str(fbb, "permission denied\n")));
       return fbb.GetSize();
     }
     thread_local ZtString out(8192); // FIXME - #define
@@ -376,11 +384,10 @@ public:
   }
 
   // default app msg handler simply disconnects
-  // +ve - response written to fbb
-  // 0   - no response required
-  // -ve - disconnect
+  // >=0 - message processed
+  //  <0 - disconnect
   int processApp(Link *, User *, bool interactive,
-      ZuArray<const uint8_t> data, Zfb::Builder &fbb) { return -1; }
+      ZuArray<const uint8_t> data) { return -1; }
 
 private:
   ZiIP			m_ip;

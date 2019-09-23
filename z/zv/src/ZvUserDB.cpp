@@ -90,7 +90,6 @@ ZmRef<User> Mgr::userAdd_(
       user->roles.push(node);
       user->perms = node->perms;
     }
-  user->flags = flags;
   m_users.add(user);
   m_userNames.add(user);
   return user;
@@ -126,7 +125,9 @@ bool Mgr::load(const uint8_t *buf, unsigned len)
   all(userDB->users(), [this](unsigned, auto user_) {
     if (auto user = loadUser(m_roles, user_)) {
       m_users.del(user->id);
-      m_users.add(ZuMv(user));
+      m_users.add(user);
+      m_userNames.del(user->name);
+      m_userNames.add(ZuMv(user));
     }
   });
   all(userDB->keys(), [this](unsigned, auto key_) {

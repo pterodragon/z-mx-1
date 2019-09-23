@@ -33,6 +33,8 @@
 #include <ZmPolymorph.hpp>
 #include <ZmHeap.hpp>
 
+#include <ZtString.hpp>
+
 #pragma pack(push, 2)
 template <typename Heap> class ZiIOBuf_ : public Heap, public ZmPolymorph {
 public:
@@ -114,6 +116,7 @@ public:
   //   +ve - length of hdr+body (can be <= that originally returned by hdr())
   template <typename Hdr, typename Body>
   int process(const uint8_t *data, unsigned rxLen, Hdr hdr, Body body) {
+    std::cerr << ZtHexDump("process()", data, rxLen) << std::flush;
     unsigned oldLen = m_buf->length;
     unsigned len = oldLen + rxLen;
     auto rxData = m_buf->ensure(len);

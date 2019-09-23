@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 
   mx->start();
 
-  {
+  try {
     ZmRef<ZvCf> cf = new ZvCf();
     cf->fromString(
 	"thread 3\n"
@@ -124,6 +124,17 @@ int main(int argc, char **argv)
     cf->set("localIP", cf->get("4"));
     cf->set("localPort", cf->get("5"));
     server->init(mx, cf);
+  } catch (const ZvCf::Usage &e) {
+    usage();
+  } catch (const ZvError &e) {
+    std::cerr << e << '\n' << std::flush;
+    ::exit(1);
+  } catch (const ZtString &e) {
+    std::cerr << e << '\n' << std::flush;
+    ::exit(1);
+  } catch (...) {
+    std::cerr << "unknown exception\n" << std::flush;
+    ::exit(1);
   }
 
   server->start();

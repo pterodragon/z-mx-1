@@ -28,7 +28,7 @@ const char *Response2 = "\r\n"
   "\r\n";
 
 struct App : public Ztls::Server<App> {
-  struct Link : public ZmPolymorph, public Ztls::SrvLink<App, Link> {
+  struct Link : public Ztls::SrvLink<App, Link> {
     inline Link(App *app) : Ztls::SrvLink<App, Link>(app) { }
 
     void connected(const char *hostname, const char *alpn) {

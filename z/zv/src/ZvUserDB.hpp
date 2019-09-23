@@ -140,7 +140,7 @@ struct User__ : public ZuPolymorph {
 	str(fbb, name), bytes(fbb, hmac), bytes(fbb, secret),
 	strVecIter(fbb, roles.length(), [this](Zfb::Builder &, unsigned k) {
 	  return roles[k]->name;
-	}));
+	}), flags);
   }
 };
 struct UserIDAccessor : public ZuAccessor<User__, uint64_t> {

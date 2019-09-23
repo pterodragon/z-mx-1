@@ -68,24 +68,33 @@ namespace Ztls {
 
 using IOBuf = ZiIOBuf;
 
-template <typename Link_, typename LinkRef>
+template <typename Link_, typename LinkRef_>
 class LinkTCP : public ZiConnection {
 public:
   using Link = Link_;
+  using LinkRef = LinkRef_;
 
   inline LinkTCP(LinkRef link, const ZiCxnInfo &ci) :
     ZiConnection(link->app()->mx(), ci), m_link(ZuMv(link)) { }
 
   void connected(ZiIOContext &io) { m_link->connected_(this, io); }
-  void disconnected() { m_link->disconnected_(this); }
+  void disconnected() { m_link->disconnected_(this, ZuMv(m_link)); }
 
 private:
-  LinkRef	m_link;
+  LinkRef	m_link = nullptr;
 };
 
-template <typename App, typename Impl, typename TCP_> class Link {
+// client links are persistent, own the (transient) connection
+template <typename Link> using CliLinkTCP = LinkTCP<Link, Link *>;
+// server links are transient, are owned by the connection
+template <typename Link> using SrvLinkTCP = LinkTCP<Link, ZmRef<Link> >;
+
+template <typename App, typename Impl, typename TCP_, typename TCPRef_>
+class Link : public ZmPolymorph {
 public:
   using TCP = TCP_;
+  using TCPRef = TCPRef_;
+  using ImplRef = typename TCP::LinkRef;
 friend TCP;
 
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
@@ -108,22 +117,37 @@ protected:
 
 private:
   void connected_(TCP *tcp, ZiIOContext &io) {
-    if (ZuUnlikely(m_tcp && m_tcp != tcp)) m_tcp->close();
-    m_tcp = tcp;
     m_rxBuf = new IOBuf(this, 0);
     io.init(ZiIOFn{this, [](Link *link, ZiIOContext &io) -> uintptr_t {
       link->rx(io);
       return 0;
     }}, m_rxBuf->data_, IOBuf::Size, 0);
+    ZmRef<Impl> impl{this};
+    this->app()->run([impl = ZuMv(impl), tcp = ZmMkRef(tcp)]() {
+      impl->connected_2(ZuMv(tcp));
+    });
+  }
+  void connected_2(ZmRef<TCP> tcp) {
+    if (ZuUnlikely(m_tcp == tcp)) return;
+    if (ZuUnlikely(m_tcp)) { auto tcp_ = ZuMv(m_tcp); tcp_->close(); }
+    m_tcp = ZuMv(tcp);
     impl()->connected__();
   }
 
-  void disconnected_(TCP *tcp) {
-    if (m_tcp == tcp) m_tcp = nullptr;
-    app()->invoke(impl(), [](Impl *impl) {
-      mbedtls_ssl_session_reset(&impl->m_ssl);
-      impl->disconnected();
+  template <typename ImplRef_>
+  void disconnected_(TCP *tcp, ImplRef_ impl_) {
+    ZmRef<Impl> impl{ZuMv(impl_)};
+    this->app()->run([impl = ZuMv(impl), tcp = ZmMkRef(tcp)]() {
+      impl->disconnected_2(tcp);
+      auto mx = tcp->mx();
+      // drain Tx while keeping tcp referenced
+      mx->txRun(ZmFn<>{ZuMv(tcp), [](TCP *) { }});
     });
+  }
+  void disconnected_2(TCP *tcp) {
+    if (m_tcp == tcp) m_tcp = nullptr;
+    mbedtls_ssl_session_reset(&m_ssl);
+    impl()->disconnected();
   }
 
   void rx(ZiIOContext &io) { // I/O Rx thread
@@ -181,6 +205,7 @@ protected:
 	  break;
 	case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
 	case MBEDTLS_ERR_SSL_CONN_EOF:
+	case MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE: // remote verification failure
 	  break;
 	case MBEDTLS_ERR_X509_CERT_VERIFY_FAILED: {
 	  const char *hostname = m_ssl.hostname;
@@ -190,7 +215,7 @@ protected:
 	  disconnect_();
 	} break;
 	default:
-	  app()->logError("mbedtls_ssl_handshake() returned ", n);
+	  app()->logError("mbedtls_ssl_handshake(): ", strerror_(n));
 	  disconnect_();
 	  break;
       }
@@ -222,7 +247,7 @@ private:
 	case MBEDTLS_ERR_SSL_CONN_EOF:
 	  break;
 	default:
-	  app()->logError("mbedtls_ssl_read() returned ", n);
+	  app()->logError("mbedtls_ssl_read(): ", strerror_(n));
 	  disconnect_();
 	  break;
       }
@@ -266,6 +291,7 @@ public:
   }
   void send(ZmRef<IOBuf> buf) {
     if (ZuUnlikely(!buf->length)) return;
+    buf->owner = this;
     app()->invoke([buf = ZuMv(buf)]() mutable {
       auto link = static_cast<Link *>(buf->owner);
       link->send_(ZuMv(buf));
@@ -276,12 +302,13 @@ public:
     send_(buf->data(), buf->length);
   }
   void send_(const uint8_t *data, unsigned len) { // TLS thread
+    std::cerr << ZtHexDump("send_()", data, len) << std::flush;
     if (ZuUnlikely(!len)) return;
     unsigned offset = 0;
     do {
       int n = mbedtls_ssl_write(&m_ssl, data + offset, len - offset);
       if (n < 0) {
-	app()->logError("mbedtls_ssl_write() returned ", n);
+	app()->logError("mbedtls_ssl_write(): ", strerror_(n));
 	return;
       }
       offset += n;
@@ -295,17 +322,17 @@ private:
   }
   int txOut(const uint8_t *data, size_t len) { // TLS thread
     if (ZuUnlikely(!len)) return 0;
+    if (ZuUnlikely(!m_tcp)) return len; // discard late Tx
     unsigned offset = 0;
     auto mx = app()->mx();
     do {
       unsigned n = len - offset;
       if (ZuUnlikely(n > IOBuf::Size)) n = IOBuf::Size;
-      ZmRef<IOBuf> buf = new IOBuf(this, n);
+      ZmRef<IOBuf> buf = new IOBuf(static_cast<TCP *>(m_tcp), n);
       memcpy(buf->data_, data + offset, n);
       mx->txRun([buf = ZuMv(buf)]() mutable {
-	auto link = static_cast<Link *>(buf->owner);
-	if (ZuUnlikely(!link->m_tcp)) return;
-	link->m_tcp->send_(ZiIOFn{ZuMv(buf),
+	auto tcp = static_cast<TCP *>(buf->owner);
+	tcp->send_(ZiIOFn{ZuMv(buf),
 	  [](IOBuf *buf, ZiIOContext &io) {
 	    io.init(ZiIOFn{io.fn.mvObject<IOBuf>(),
 	      [](IOBuf *buf, ZiIOContext &io) {
@@ -325,33 +352,44 @@ public:
   void disconnect_() { // TLS thread
     app()->mx()->del(&m_reconnTimer);
     int n = mbedtls_ssl_close_notify(&m_ssl);
-    if (n) app()->logWarning("mbedtls_ssl_close_notify() returned ", n);
-    app()->mx()->txInvoke(this, [](Link *link) {
-      if (auto tcp = ZuMv(link->m_tcp)) tcp->disconnect();
-    });
+    if (n) app()->logWarning("mbedtls_ssl_close_notify(): ", strerror_(n));
+    auto tcp = ZmRef<TCP>{ZuMv(m_tcp)};
+    m_tcp = nullptr;
+    if (tcp) {
+      auto mx = tcp->mx();
+      // drain Tx while keeping tcp referenced
+      mx->txRun(ZmFn<>{ZuMv(tcp), [](TCP *tcp) { tcp->disconnect(); }});
+    }
   }
 
 private:
   App			*m_app = nullptr;
-  ZmRef<TCP>		m_tcp;
-  mbedtls_ssl_context	m_ssl;
   ZmScheduler::Timer	m_reconnTimer;
 
   // I/O Tx thread
   ZmRef<IOBuf>		m_rxBuf;
 
   // TLS thread
+  mbedtls_ssl_context	m_ssl;
+  TCPRef		m_tcp = nullptr;
   unsigned		m_rxInOffset = 0;
   ZmRef<IOBuf>		m_rxInBuf;
   unsigned		m_rxOutOffset = 0;
   uint8_t		m_rxOutBuf[MBEDTLS_SSL_MAX_CONTENT_LEN];
 };
 
+// client links are persistent, own the (transient) connection
+template <typename App, typename Impl, typename TCP>
+using CliLink_ = Link<App, Impl, TCP, ZmRef<TCP> >;
+// server links are transient, are owned by the connection
+template <typename App, typename Impl, typename TCP>
+using SrvLink_ = Link<App, Impl, TCP, TCP *>;
+
 template <typename App, typename Impl>
-class CliLink : public Link<App, Impl, LinkTCP<Impl, Impl *> > {
+class CliLink : public CliLink_<App, Impl, CliLinkTCP<Impl> > {
 public:
-  using TCP = LinkTCP<Impl, Impl *>;
-  using Base = Link<App, Impl, TCP>;
+  using TCP = CliLinkTCP<Impl>;
+  using Base = CliLink_<App, Impl, TCP>;
 friend Base;
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
@@ -387,7 +425,7 @@ friend Base;
       n = mbedtls_ssl_set_hostname(this->ssl(), m_server);
       if (n) {
 	this->app()->logError(
-	    "mbedtls_ssl_set_hostname(\"", m_server, "\") returned ", n);
+	    "mbedtls_ssl_set_hostname(\"", m_server, "\"): ", strerror_(n));
 	impl()->connectFailed(true);
 	return;
       }
@@ -409,7 +447,7 @@ private:
   void save_() {
     int n = mbedtls_ssl_get_session(this->ssl(), &m_session);
     if (n) {
-      this->app()->logError("mbedtls_ssl_get_session() returned ", n);
+      this->app()->logError("mbedtls_ssl_get_session(): ", strerror_(n));
       return;
     }
     m_saved = true;
@@ -419,15 +457,13 @@ private:
     if (!m_saved) return;
     int n = mbedtls_ssl_set_session(this->ssl(), &m_session);
     if (n) {
-      this->app()->logWarning("mbedtls_ssl_set_session() returned ", n);
+      this->app()->logWarning("mbedtls_ssl_set_session(): ", strerror_(n));
       return;
     }
   }
 
-  void connected__() { // Tx thread
-    this->app()->invoke(this, [](CliLink *link) {
-      while (link->handshake());
-    });
+  void connected__() {
+    while (this->handshake());
   }
 
   void verify_() {
@@ -482,7 +518,7 @@ public:
 	  ZmFn<>{this, [](CliLink *link) { link->connect_(); }},
 	  ZmTimeNow(reconnFreq), ZmScheduler::Update, &m_reconnTimer);
     else
-      this->app()->logError("could not connect");
+      this->app()->logError("connect failed");
   }
 
 private:
@@ -494,10 +530,10 @@ private:
 };
 
 template <typename App, typename Impl>
-class SrvLink : public Link<App, Impl, LinkTCP<Impl, ZmRef<Impl> > > {
+class SrvLink : public SrvLink_<App, Impl, SrvLinkTCP<Impl> > {
 public:
-  using TCP = LinkTCP<Impl, ZmRef<Impl> >;
-  using Base = Link<App, Impl, TCP>;
+  using TCP = SrvLinkTCP<Impl>;
+  using Base = SrvLink_<App, Impl, TCP>;
 friend Base;
 
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
@@ -515,7 +551,7 @@ private:
 template <typename App_> class Engine : public Random {
 public:
   using App = App_;
-template <typename, typename, typename> friend class Link;
+template <typename, typename, typename, typename> friend class Link;
 template <typename, typename> friend class CliLink;
 template <typename, typename> friend class SrvLink;
 
@@ -633,7 +669,7 @@ protected:
       n = mbedtls_x509_crt_parse_file(&m_cacert, path);
     }
     if (n < 0) {
-      logError(function, "() returned ", n);
+      logError(function, "(): ", strerror_(n));
       return false;
     }
     mbedtls_ssl_conf_ca_chain(&m_conf, &m_cacert, nullptr);
@@ -784,7 +820,7 @@ friend Base;
 	  mbedtls_ssl_ticket_parse,
 	  &m_ticket_ctx);
 
-      mbedtls_ssl_conf_authmode(this->conf(), MBEDTLS_SSL_VERIFY_REQUIRED);
+      mbedtls_ssl_conf_authmode(this->conf(), MBEDTLS_SSL_VERIFY_NONE);
       if (!this->loadCA(caPath)) return false;
       if (alpn) mbedtls_ssl_conf_alpn_protocols(this->conf(), alpn);
 

@@ -79,7 +79,6 @@ using ZvCmd_Credentials = ZuUnion<ZvCmd_Login, ZvCmd_Access>;
 
 template <typename App_, typename Impl_>
 class ZvCmdCliLink :
-    public ZmPolymorph,
     public Ztls::CliLink<App_, Impl_>,
     public ZiIORx {
 public:
@@ -147,21 +146,21 @@ public:
   // send userDB request
   void sendUserDB(Zfb::IOBuilder &fbb, SeqNo seqNo, ZvCmdUserDBAckFn fn) {
     using namespace ZvCmd;
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_UserDB));
+    fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), fbs::MsgType_UserDB));
     m_userDBReqs.add(seqNo, ZuMv(fn));
     this->send(fbb.buf());
   }
   // send command
   void sendCmd(Zfb::IOBuilder &fbb, SeqNo seqNo, ZvCmdAckFn fn) {
     using namespace ZvCmd;
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Cmd));
+    fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), fbs::MsgType_Cmd));
     m_cmdReqs.add(seqNo, ZuMv(fn));
     this->send(fbb.buf());
   }
   // send app message
   void sendApp(Zfb::IOBuilder &fbb) {
     using namespace ZvCmd;
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_App));
+    fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), fbs::MsgType_App));
     this->send(fbb.buf());
   }
 
@@ -173,7 +172,7 @@ public:
   int processApp(ZuArray<const uint8_t>) { return -1; } // default
 
   void connected(const char *, const char *alpn) {
-    if (strcmp(alpn, "zcmd")) {
+    if (!alpn || strcmp(alpn, "zcmd")) {
       this->disconnect();
       return;
     }
@@ -185,30 +184,30 @@ public:
     ZiIORx::connected();
 
     // send login
-    m_fbb.Clear();
+    Zfb::IOBuilder fbb;
     if (m_credentials.type() == 1) {
       using namespace ZvUserDB;
       using namespace Zfb::Save;
       const auto &data = m_credentials.p1();
-      m_fbb.Finish(fbs::CreateLoginReq(m_fbb,
+      fbb.Finish(fbs::CreateLoginReq(fbb,
 	    fbs::LoginReqData_Login,
-	    fbs::CreateLogin(m_fbb,
-	      str(m_fbb, data.user),
-	      str(m_fbb, data.passwd),
+	    fbs::CreateLogin(fbb,
+	      str(fbb, data.user),
+	      str(fbb, data.passwd),
 	      data.totp).Union()));
     } else {
       using namespace ZvUserDB;
       using namespace Zfb::Save;
       const auto &data = m_credentials.p2();
-      m_fbb.Finish(fbs::CreateLoginReq(m_fbb,
+      fbb.Finish(fbs::CreateLoginReq(fbb,
 	    fbs::LoginReqData_Access,
-	    fbs::CreateAccess(m_fbb,
-	      str(m_fbb, data.keyID),
-	      bytes(m_fbb, data.token),
-	      bytes(m_fbb, data.hmac)).Union()));
+	    fbs::CreateAccess(fbb,
+	      str(fbb, data.keyID),
+	      bytes(fbb, data.token),
+	      bytes(fbb, data.hmac)).Union()));
     }
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Login));
-    this->send_(m_fbb.buf());
+    fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), ZvCmd::fbs::MsgType_Login));
+    this->send_(fbb.buf());
   }
 
   void disconnected() {
@@ -291,7 +290,7 @@ public:
 	  type = ZvCmd_bodyType(hdr_);
 	  return ZvCmd_hdrLen() + ZvCmd_bodyLen(hdr_);
 	},
-	[this, type](const uint8_t *data, unsigned len) -> int {
+	[this, &type](const uint8_t *data, unsigned len) -> int {
 	  data += ZvCmd_hdrLen(), len -= ZvCmd_hdrLen();
 	  int i;
 	  if (ZuUnlikely(m_state == State::Login)) {
@@ -324,7 +323,6 @@ private:
 private:
   ZmScheduler::Timer	m_timer;
   int			m_state = State::Down;
-  Zfb::IOBuilder	m_fbb;
   ZvCmd_Credentials	m_credentials;
   UserDBReqs		m_userDBReqs;
   CmdReqs		m_cmdReqs;

@@ -79,6 +79,10 @@ public:
       this->app()->disconnected();
       Base::disconnected();
     }
+    void connectFailed(bool transient) {
+      this->app()->connectFailed();
+      // Base::connectFailed(transient);
+    }
   };
 
   void init(ZiMultiplex *mx, ZvCf *cf, bool interactive) {
@@ -141,6 +145,13 @@ private:
     }
     ZmPlatform::exit(1);
   }
+  void connectFailed() {
+    if (m_interactive) {
+      Zrl::stop();
+      std::cerr << "connect failed\n" << std::flush;
+    }
+    ZmPlatform::exit(1);
+  }
 
   void prompt() {
     ZtString cmd;
@@ -168,6 +179,7 @@ next:
 
   void send(ZtString cmd) {
     FILE *out = stdout;
+    // FIXME - add >> as well as >, check for >> first, use "a" for append
     const auto &redirect = ZtStaticRegexUTF8("\\s*>\\s*");
     ZtRegex::Captures c;
     unsigned pos = 0, n = 0;
@@ -181,6 +193,12 @@ next:
     } else {
       cmd = ZuMv(cmd_);
     }
+    // FIXME - add userDB mgmt commands, starting with passwd to change pw
+    // passwd
+    // users, useradd, usermod, userdel
+    // roles, roleadd, rolemod, roledel
+    // perms, permadd, permmod, permdel
+    // keys, keyadd, keydel, keyclr
     auto seqNo = m_seqNo++;
     m_fbb.Clear();
     m_fbb.Finish(ZvCmd::fbs::CreateRequest(m_fbb,
@@ -332,7 +350,10 @@ int main(int argc, char **argv)
   {
     ZmRef<ZvCf> cf = new ZvCf();
     cf->set("thread", "3");
-    cf->set("caPath", "/etc/ssl/certs");
+    if (auto caPath = ::getenv("ZCMD_CAPATH"))
+      cf->set("caPath", caPath);
+    else
+      cf->set("caPath", "/etc/ssl/certs");
     try {
       client->init(mx, cf, interactive);
     } catch (const ZvError &e) {
@@ -357,7 +378,6 @@ int main(int argc, char **argv)
   } else
     client->target(argv[1]);
 
-  std::cout << server << ':' << port << ' ' << user << ' ' << passwd << ' ' << totp << '\n' << std::flush;
   if (keyID)
     client->access(server, port, keyID, secret);
   else

@@ -44,10 +44,16 @@ inline uint32_t ZvCmd_getHdr(const uint8_t *data) {
 // return hdr length
 inline constexpr unsigned ZvCmd_hdrLen() { return sizeof(uint32_t); }
 // construct hdr from body size, type
-inline uint32_t ZvCmd_mkHdr(uint32_t size, uint32_t type) {
+inline uint32_t ZvCmd_mkHdr_(uint32_t size, uint32_t type) {
   ZmAssert(size < (1U<<28));
   ZmAssert(type < (1U<<3));
   return size | (type<<28);
+}
+inline uint32_t ZvCmd_mkHdr(uint32_t size, uint32_t type) {
+  auto i = ZvCmd_mkHdr_(size, type);
+  std::cerr << "ZvCmd_mKHdr("
+    << size << ", " << type << "): " << ZuBoxed(i).hex() << '\n' << std::flush;
+  return i;
 }
 // return body length
 inline uint32_t ZvCmd_bodyLen(uint32_t hdr) {

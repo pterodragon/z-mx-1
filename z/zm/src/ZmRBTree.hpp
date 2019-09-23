@@ -381,7 +381,7 @@ public:
       NTP::Base{ZuFwd<Args>(args)...},
       m_root(0), m_minimum(0), m_maximum(0), m_count(0) { };
 
-  ~ZmRBTree() { clean_(); }
+  ~ZmRBTree() { clean(); }
 
   inline Lock &lock() const { return m_lock; }
 
@@ -691,10 +691,13 @@ public:
     return ReadIterator<Direction>(*this, ZuFwd<Index_>(index));
   }
 
-  void clean() {
-    Guard guard(m_lock);
+// clean tree
 
-    clean_();
+  void clean() {
+    auto i = iterator();
+    while (i.iterate()) i.del();
+    m_minimum = m_maximum = m_root = nullptr;
+    m_count = 0;
   }
 
 protected:
@@ -1173,18 +1176,6 @@ protected:
     nodeDeref(node);
     nodeDelete(node);
     --m_count;
-  }
-
-// clean tree
-
-  void clean_() {
-    {
-      auto i = iterator();
-      while (i.iterate()) i.del();
-    }
-
-    m_minimum = m_maximum = m_root = nullptr;
-    m_count = 0;
   }
 
   mutable Lock	m_lock;

@@ -40,7 +40,7 @@
 
 #include <ZiFile.hpp>
 
-#include <ZvCmd.hpp>
+#include <ZvCmdHost.hpp>
 
 #include <MxEngine.hpp>
 

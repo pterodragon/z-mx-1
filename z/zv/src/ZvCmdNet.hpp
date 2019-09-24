@@ -51,8 +51,6 @@ inline uint32_t ZvCmd_mkHdr_(uint32_t size, uint32_t type) {
 }
 inline uint32_t ZvCmd_mkHdr(uint32_t size, uint32_t type) {
   auto i = ZvCmd_mkHdr_(size, type);
-  std::cerr << "ZvCmd_mKHdr("
-    << size << ", " << type << "): " << ZuBoxed(i).hex() << '\n' << std::flush;
   return i;
 }
 // return body length

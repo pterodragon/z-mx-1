@@ -302,7 +302,6 @@ public:
     send_(buf->data(), buf->length);
   }
   void send_(const uint8_t *data, unsigned len) { // TLS thread
-    std::cerr << ZtHexDump("send_()", data, len) << std::flush;
     if (ZuUnlikely(!len)) return;
     unsigned offset = 0;
     do {

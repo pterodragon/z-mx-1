@@ -57,7 +57,6 @@
 #include <zcmdreq_generated.h>
 #include <zcmdack_generated.h>
 
-#include <ZvCmd.hpp>
 #include <ZvCmdNet.hpp>
 
 // userDB response

@@ -57,7 +57,7 @@
 #include <zcmdreq_generated.h>
 #include <zcmdack_generated.h>
 
-#include <ZvCmd.hpp>
+#include <ZvCmdHost.hpp>
 #include <ZvCmdNet.hpp>
 
 template <typename App_>
@@ -246,6 +246,8 @@ friend TLS;
   using Link = ZvCmdSrvLink<App>;
   using User = ZvUserDB::User;
 
+  enum { OutBufSize = 8000 }; // initial TLS buffer size
+
   struct UserDB : public ZuObject, public ZvUserDB::Mgr {
     template <typename ...Args>
     ZuInline UserDB(Args &&... args) :
@@ -375,7 +377,8 @@ public:
 	    Zfb::Save::str(fbb, "permission denied\n")));
       return fbb.GetSize();
     }
-    thread_local ZtString out(8192); // FIXME - #define
+    thread_local ZtString out(OutBufSize);
+    out.length(0);
     Context context{app(), link, user, interactive};
     int code = ZvCmdHost::processCmd(&context, Zfb::Load::str(in->cmd()), out);
     fbb.Finish(ZvCmd::fbs::CreateReqAck(

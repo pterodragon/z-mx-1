@@ -29,6 +29,7 @@
 
 #include <ZvCf.hpp>
 #include <ZvCmdClient.hpp>
+#include <ZvCmdHost.hpp>
 #include <ZvMultiplexCf.hpp>
 
 #include <Zrl.hpp>
@@ -65,7 +66,47 @@ static void usage()
   ZmPlatform::exit(1);
 }
 
-class ZCmd : public ZmPolymorph, public ZvCmdClient<ZCmd> {
+static ZtString getpass_(const ZtString &prompt, unsigned passLen)
+{
+  ZtString passwd;
+  passwd.size(passLen + 4); // allow for \r\n and null terminator
+#ifdef _WIN32
+  HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+  DWORD omode, nmode;
+  GetConsoleMode(h, &omode);
+  nmode = (omode | ENABLE_LINE_INPUT) & ~ENABLE_ECHO_INPUT;
+  SetConsoleMode(h, nmode);
+  DWORD n = 0;
+  WriteConsole(h, prompt.data(), prompt.length(), &n, nullptr);
+  n = 0;
+  ReadConsole(h, passwd.data(), passwd.size() - 1, &n, nullptr);
+  if (n < passwd.size()) passwd.length(n);
+  WriteConsole(h, "\r\n", 2, &n, nullptr);
+  mode |= ENABLE_ECHO_INPUT;
+  SetConsoleMode(h, omode);
+#else
+  int fd = ::open("/dev/tty", O_RDWR, 0);
+  if (fd < 0) return passwd;
+  struct termios oflags, nflags;
+  memset(&oflags, 0, sizeof(termios));
+  tcgetattr(fd, &oflags);
+  memcpy(&nflags, &oflags, sizeof(termios));
+  nflags.c_lflag = (nflags.c_lflag & ~ECHO) | ECHONL;
+  if (tcsetattr(fd, TCSANOW, &nflags)) return passwd;
+  ::write(fd, prompt.data(), prompt.length());
+  FILE *in = fdopen(fd, "r");
+  if (!fgets(passwd, passwd.size() - 1, in)) return passwd;
+  passwd[passwd.size() - 1] = 0;
+  passwd.calcLength();
+  tcsetattr(fd, TCSANOW, &oflags);
+  fclose(in);
+  ::close(fd);
+#endif
+  passwd.chomp();
+  return passwd;
+}
+
+class ZCmd : public ZmPolymorph, public ZvCmdClient<ZCmd>, public ZvCmdHost {
 public:
   using Base = ZvCmdClient<ZCmd>;
 
@@ -88,9 +129,12 @@ public:
   void init(ZiMultiplex *mx, ZvCf *cf, bool interactive) {
     Base::init(mx, cf);
     m_interactive = interactive;
+    ZvCmdHost::init();
+    initCmds();
   }
   void final() {
     m_link = nullptr;
+    ZvCmdHost::final();
     Base::final();
   }
 
@@ -154,6 +198,9 @@ private:
   }
 
   void prompt() {
+    mx()->add(ZmFn<>{this, [](ZCmd *app) { app->prompt_(); }});
+  }
+  void prompt_() {
     ZtString cmd;
 next:
     if (m_interactive) {
@@ -178,45 +225,122 @@ next:
   }
 
   void send(ZtString cmd) {
-    FILE *out = stdout;
-    // FIXME - add >> as well as >, check for >> first, use "a" for append
-    const auto &redirect = ZtStaticRegexUTF8("\\s*>\\s*");
-    ZtRegex::Captures c;
-    unsigned pos = 0, n = 0;
+    FILE *file = stdout;
     ZtString cmd_ = ZuMv(cmd);
-    if (n = redirect.m(cmd, c, pos)) {
-      if (!(out = fopen(c[2], "w"))) {
-	logError(ZtString{c[2]}, ": ", ZeLastError);
-	return;
+    {
+      ZtRegex::Captures c;
+      const auto &append = ZtStaticRegexUTF8("\\s*>>\\s*");
+      const auto &output = ZtStaticRegexUTF8("\\s*>\\s*");
+      unsigned pos = 0, n = 0;
+      if (n = append.m(cmd, c, pos)) {
+	if (!(file = fopen(c[2], "a"))) {
+	  logError(ZtString{c[2]}, ": ", ZeLastError);
+	  return;
+	}
+	cmd = c[0];
+      } else if (n = output.m(cmd, c, pos)) {
+	if (!(file = fopen(c[2], "w"))) {
+	  logError(ZtString{c[2]}, ": ", ZeLastError);
+	  return;
+	}
+	cmd = c[0];
+      } else {
+	cmd = ZuMv(cmd_);
       }
-      cmd = c[0];
-    } else {
-      cmd = ZuMv(cmd_);
     }
-    // FIXME - add userDB mgmt commands, starting with passwd to change pw
-    // passwd
-    // users, useradd, usermod, userdel
-    // roles, roleadd, rolemod, roledel
-    // perms, permadd, permmod, permdel
-    // keys, keyadd, keydel, keyclr
+    {
+      const auto &help = ZtStaticRegexUTF8("^\\s*help\\b");
+      if (help.m(cmd)) {
+	ZtString out;
+	out << "Local commands:\n";
+	processCmd(file, cmd, out);
+	out << "\nRemote commands:\n";
+	fwrite(out.data(), 1, out.length(), file);
+      } else {
+	ZtString out;
+	int code = processCmd(file, cmd, out, true);
+	if (code != ZvCmdHost::Unknown) {
+	  if (code) executed(code, file, out);
+	  return;
+	}
+      }
+    }
     auto seqNo = m_seqNo++;
     m_fbb.Clear();
     m_fbb.Finish(ZvCmd::fbs::CreateRequest(m_fbb,
 	  seqNo, Zfb::Save::str(m_fbb, cmd)));
-    m_link->sendCmd(m_fbb, seqNo, [this, out](const ZvCmd::fbs::ReqAck *ack) {
-      m_code = ack->code();
+    m_link->sendCmd(m_fbb, seqNo, [this, file](const ZvCmd::fbs::ReqAck *ack) {
       using namespace Zfb::Load;
-      {
-	auto s = str(ack->out());
-	fwrite(s.data(), 1, s.length(), out);
-	if (out != stdout) fclose(out);
-      }
-      if (m_solo)
-	post();
-      else
-	prompt();
+      executed(ack->code(), file, str(ack->out()));
     });
   }
+
+  int executed(int code, FILE *file, ZuString out) {
+    m_code = code;
+    if (out) fwrite(out.data(), 1, out.length(), file);
+    if (file != stdout) fclose(file);
+    if (m_solo)
+      post();
+    else
+      prompt();
+    return code;
+  }
+
+private:
+  // built-in commands
+
+  void initCmds() {
+    addCmd("passwd", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->passwdCmd(static_cast<FILE *>(file), args, out);
+	}},  "change passwd", "usage: passwd");
+  }
+
+  int passwdCmd(FILE *file, ZvCf *args, ZtString &out) {
+    ZuBox<int> argc = args->get("#");
+    if (argc != 1) throw ZvCmdUsage();
+    ZtString oldpw = getpass_("Current password: ", 100);
+    ZtString newpw = getpass_("New password: ", 100);
+    ZtString checkpw = getpass_("Retype new password: ", 100);
+    if (checkpw != newpw) {
+      out << "passwords do not match\npassword unchanged!\n";
+      return 1;
+    }
+    auto seqNo = m_seqNo++;
+    using namespace ZvUserDB;
+    {
+      using namespace Zfb::Save;
+      m_fbb.Clear();
+      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	    fbs::ReqData_ChPass,
+	    fbs::CreateUserChPass(m_fbb,
+	      str(m_fbb, oldpw),
+	      str(m_fbb, newpw)).Union()));
+    }
+    m_link->sendUserDB(m_fbb, seqNo, [this, file = static_cast<FILE *>(file)](
+	  const fbs::ReqAck *ack) {
+      ZtString out;
+      if (ack->data_type() != fbs::ReqAckData_ChPass) {
+	logError("mismatched ack from server: ",
+	    fbs::EnumNameReqAckData(ack->data_type()));
+	out << "password change failed\n";
+	return executed(1, file, out);
+      }
+      auto ackData = static_cast<const fbs::UserAck *>(ack->data());
+      if (!ackData->ok()) {
+	out << "password change rejected\n";
+	return executed(1, file, out);
+      }
+      out << "password changed\n";
+      return executed(0, file, out);
+    });
+    return 0;
+  }
+  // FIXME -
+  // users, useradd, usermod, userdel
+  // roles, roleadd, rolemod, roledel
+  // perms, permadd, permmod, permdel
+  // keys, keyadd, keydel, keyclr
 
 private:
   ZmSemaphore		m_done;
@@ -230,46 +354,6 @@ private:
   bool			m_solo = false;
   bool			m_exiting = false;
 };
-
-static ZtString getpass_(const ZtString &prompt, unsigned passLen)
-{
-  ZtString passwd;
-  passwd.size(passLen + 4); // allow for \r\n and null terminator
-#ifdef _WIN32
-  HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
-  DWORD omode, nmode;
-  GetConsoleMode(h, &omode);
-  nmode = (omode | ENABLE_LINE_INPUT) & ~ENABLE_ECHO_INPUT;
-  SetConsoleMode(h, nmode);
-  DWORD n = 0;
-  WriteConsole(h, prompt.data(), prompt.length(), &n, nullptr);
-  n = 0;
-  ReadConsole(h, passwd.data(), passwd.size() - 1, &n, nullptr);
-  if (n < passwd.size()) passwd.length(n);
-  WriteConsole(h, "\r\n", 2, &n, nullptr);
-  mode |= ENABLE_ECHO_INPUT;
-  SetConsoleMode(h, omode);
-#else
-  int fd = ::open("/dev/tty", O_RDWR, 0);
-  if (fd < 0) return passwd;
-  struct termios oflags, nflags;
-  memset(&oflags, 0, sizeof(termios));
-  tcgetattr(fd, &oflags);
-  memcpy(&nflags, &oflags, sizeof(termios));
-  nflags.c_lflag = (nflags.c_lflag & ~ECHO) | ECHONL;
-  if (tcsetattr(fd, TCSANOW, &nflags)) return passwd;
-  ::write(fd, prompt.data(), prompt.length());
-  FILE *in = fdopen(fd, "r");
-  if (!fgets(passwd, passwd.size() - 1, in)) return passwd;
-  passwd[passwd.size() - 1] = 0;
-  passwd.calcLength();
-  tcsetattr(fd, TCSANOW, &oflags);
-  fclose(in);
-  ::close(fd);
-#endif
-  passwd.chomp();
-  return passwd;
-}
 
 int main(int argc, char **argv)
 {

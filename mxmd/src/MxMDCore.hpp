@@ -41,7 +41,7 @@
 #include <ZePlatform.hpp>
 
 #include <ZvCf.hpp>
-#include <ZvCmd.hpp>
+#include <ZvCmdHost.hpp>
 
 #include <MxMultiplex.hpp>
 #include <MxEngine.hpp>

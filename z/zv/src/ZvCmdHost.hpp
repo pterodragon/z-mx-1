@@ -17,8 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#ifndef ZvCmd_HPP
-#define ZvCmd_HPP
+#ifndef ZvCmdHost_HPP
+#define ZvCmdHost_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -68,7 +68,17 @@ public:
       m_cmds.add(name, CmdData{ZuMv(fn), ZuMv(brief), ZuMv(usage)});
   }
 
-  int processCmd(void *context, ZuString in, ZtString &out) {
+  enum {
+    Exception = -1,
+    Unknown = -2
+  };
+
+  // processCmd() returns:
+  // +ve - code returned by command function
+  //   0 - OK
+  // -ve - exception, unknown command, etc.
+  int processCmd(void *context, ZuString in, ZtString &out,
+      bool fallback = false) {
     ZtString name;
     typename Cmds::NodeRef cmd;
     try {
@@ -76,12 +86,17 @@ public:
       cf->fromCLI(m_syntax, in);
       name = cf->get("0");
       cmd = m_cmds.find(name);
-      if (!cmd) throw ZtString("unknown command");
+      if (!cmd) {
+	if (fallback) return Unknown;
+	throw ZtString("unknown command");
+      }
       if (cf->getInt("help", 0, 1, false, 0)) {
 	out << cmd->val().usage << '\n';
 	return 0;
       }
-      return (cmd->val().fn)(context, cf, out);
+      uint32_t r = (cmd->val().fn)(context, cf, out);
+      r &= ~(((uint32_t)1)<<31); // ensure +ve
+      return r;
     } catch (const ZvCmdUsage &) {
       out << cmd->val().usage << '\n';
     } catch (const ZvError &e) {
@@ -95,18 +110,18 @@ public:
     } catch (...) {
       out << '"' << name << "\": unknown exception\n";
     }
-    return -1;
+    return Exception;
   }
 
 private:
-  void help(void *, ZvCf *args, ZtString &out) {
+  int help(void *, ZvCf *args, ZtString &out) {
     int argc = ZuBox<int>(args->get("#"));
     if (argc > 2) throw ZvCmdUsage();
     if (ZuUnlikely(argc == 2)) {
       auto cmd = m_cmds.find(args->get("1"));
       if (!cmd) throw ZvCmdUsage();
       out << cmd->val().usage << '\n';
-      return;
+      return 0;
     }
     out.size(m_cmds.count() * 80 + 40);
     out << "commands:\n\n";
@@ -115,6 +130,7 @@ private:
       while (auto cmd = i.iterate())
 	out << cmd->key() << " -- " << cmd->val().brief << '\n';
     }
+    return 0;
   }
 
 private:
@@ -131,4 +147,4 @@ private:
   Cmds			m_cmds;
 };
 
-#endif /* ZvCmd_HPP */
+#endif /* ZvCmdHost_HPP */

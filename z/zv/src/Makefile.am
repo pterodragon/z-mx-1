@@ -26,7 +26,7 @@ CLEANFILES = ${FBS_H}
 include_HEADERS = ZvLib.hpp \
 	ZvCf.hpp ZvCSV.hpp ZvError.hpp ZvEnum.hpp ZvHashCSV.hpp \
 	ZvHeapCSV.hpp ZvMultiplexCf.hpp ZvSchedulerCf.hpp ZvCxnOptionsCf.hpp \
-	ZvDaemon.hpp ZvRegexError.hpp ZvCmd.hpp ZvDateError.hpp \
+	ZvDaemon.hpp ZvRegexError.hpp ZvCmdHost.hpp ZvDateError.hpp \
 	ZvRingCf.hpp ZvThreadCf.hpp ZvUserDB.hpp \
 	ZvCmdClient.hpp ZvCmdServer.hpp ${FBS_H}
 lib_LTLIBRARIES = libZv.la

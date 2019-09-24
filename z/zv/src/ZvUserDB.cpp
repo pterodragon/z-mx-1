@@ -478,6 +478,7 @@ Offset<fbs::UserAck> Mgr::chPass(
   hmac.finish(verify.data());
   if (verify != user->hmac)
     return fbs::CreateUserAck(fbb, 0);
+  user->flags &= ~User::ChPass;
   m_modified = true;
   hmac.reset();
   hmac.update(newPass.data(), newPass.length());

@@ -704,10 +704,9 @@ public:
 
 // set length
 
-  inline void length(unsigned length) {
-    if (!owned() || length >= size_())
-      size(length + 1);
-    length_(length);
+  inline void length(unsigned n) {
+    if (!owned() || n >= size_()) size(n + 1);
+    length_(n);
   }
   inline void calcLength() {
     if (null__())

@@ -39,7 +39,7 @@
 #include <ZiMultiplex.hpp>
 
 #include <ZvCf.hpp>
-#include <ZvCmd.hpp>
+#include <ZvCmdHost.hpp>
 #include <ZvMultiplexCf.hpp>
 
 #include <Zrl.hpp>

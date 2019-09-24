@@ -45,7 +45,7 @@
 #include <ZmShard.hpp>
 #include <ZmScheduler.hpp>
 
-#include <ZvCmd.hpp>
+#include <ZvCmdHost.hpp>
 
 #include <MxBase.hpp>
 

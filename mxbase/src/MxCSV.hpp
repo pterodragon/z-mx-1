@@ -195,6 +195,7 @@ public:
     add(new MxUIntCol("mat", Offset(mat)));
     add(new MxEnumCol<MxInstrIDSrc::CSVMap>("src", Offset(src)));
     add(new MxEnumCol<MxPutCall::CSVMap>("putCall", Offset(putCall)));
+#undef Offset
   }
 
   void alloc(ZuRef<ZuAnyPOD> &pod) { pod = m_pod; }

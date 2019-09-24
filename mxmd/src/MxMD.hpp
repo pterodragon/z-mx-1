@@ -1876,8 +1876,8 @@ public:
       ZvCmdFn fn, ZtString brief, ZtString usage) = 0;
 
   // single instrument / order book lookup
-  static ZtString lookupSyntax();
-  static ZtString lookupOptions();
+  static ZuString lookupSyntax();
+  static ZuString lookupOptions();
 
   MxUniKey parseInstrument(ZvCf *args, unsigned index) const;
   bool lookupInstrument(

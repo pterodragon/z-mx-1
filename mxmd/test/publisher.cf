@@ -12,7 +12,7 @@ mx {
     rxThread ioRx
     txThread ioTx
   }
-  cmd { nThreads 3 }
+  cmd { nThreads 4 threads { 3 { name cmd isolated 1 } } }
 }
 broadcast {
   name RMD_pub
@@ -20,7 +20,12 @@ broadcast {
 }
 cmd {
   mx cmd
+  thread cmd
   localPort 19400
+  caPath mdtest.crt
+  certPath mdtest.crt
+  keyPath mdtest.key
+  userDB { path mdtest.userdb }
 }
 record {
   rxThread record

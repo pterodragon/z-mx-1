@@ -235,6 +235,9 @@ public:
 
   Mgr(Ztls::Random *rng, unsigned passLen, unsigned totpRange);
 
+  void init();
+  void final();
+
   // one-time initialization (idempotent)
   bool bootstrap(
       ZtString user, ZtString role, ZtString &passwd, ZtString &secret);
@@ -412,9 +415,9 @@ private:
     ZtArray<ZtString>	  m_perms; // indexed by permission ID
     unsigned		  m_permIndex[Perm::Offset + fbs::ReqData_MAX + 1];
     RoleTree		  m_roles; // name -> permissions
-    UserIDHash		  m_users;
-    UserNameHash	  m_userNames;
-    KeyHash		  m_keys;
+    ZmRef<UserIDHash>	  m_users;
+    ZmRef<UserNameHash>	  m_userNames;
+    ZmRef<KeyHash>	  m_keys;
     mutable bool	  m_modified = false;	// cleared by save()
 };
 

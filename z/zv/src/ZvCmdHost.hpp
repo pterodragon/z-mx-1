@@ -68,17 +68,9 @@ public:
       m_cmds.add(name, CmdData{ZuMv(fn), ZuMv(brief), ZuMv(usage)});
   }
 
-  enum {
-    Exception = -1,
-    Unknown = -2
-  };
+  bool hasCmd(ZuString name) { return m_cmds.find(name); }
 
-  // processCmd() returns:
-  // +ve - code returned by command function
-  //   0 - OK
-  // -ve - exception, unknown command, etc.
-  int processCmd(void *context, ZuString in, ZtString &out,
-      bool fallback = false) {
+  int processCmd(void *context, ZuString in, ZtString &out) {
     ZtString name;
     typename Cmds::NodeRef cmd;
     try {
@@ -86,10 +78,7 @@ public:
       cf->fromCLI(m_syntax, in);
       name = cf->get("0");
       cmd = m_cmds.find(name);
-      if (!cmd) {
-	if (fallback) return Unknown;
-	throw ZtString("unknown command");
-      }
+      if (!cmd) throw ZtString("unknown command");
       if (cf->getInt("help", 0, 1, false, 0)) {
 	out << cmd->val().usage << '\n';
 	return 0;
@@ -110,7 +99,7 @@ public:
     } catch (...) {
       out << '"' << name << "\": unknown exception\n";
     }
-    return Exception;
+    return -1;
   }
 
 private:

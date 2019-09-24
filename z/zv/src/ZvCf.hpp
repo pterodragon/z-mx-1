@@ -126,7 +126,7 @@ public:
     ZtString	m_option;
   };
 
-  void parseCLI(ZuString line, ZtArray<ZtString> &args);
+  static void parseCLI(ZuString line, ZtArray<ZtString> &args);
   // fromCLI() and fromArgs() return the number of positional arguments
   int fromCLI(ZvCf *syntax, ZuString line);
   int fromArgs(ZvCf *options, const ZtArray<ZtString> &args);

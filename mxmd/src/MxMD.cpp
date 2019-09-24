@@ -1897,7 +1897,7 @@ void MxMDLib::cancelTrade(const MxMDOrderBook *ob,
 
 // commands
 
-ZtString MxMDLib::lookupSyntax()
+ZuString MxMDLib::lookupSyntax()
 {
   return 
     "S src src { type scalar } "
@@ -1909,7 +1909,7 @@ ZtString MxMDLib::lookupSyntax()
     "x strike strike { type scalar }";
 }
 
-ZtString MxMDLib::lookupOptions()
+ZuString MxMDLib::lookupOptions()
 {
   return
     "  -S, --src=SRC\t- symbol ID source is SRC\n"

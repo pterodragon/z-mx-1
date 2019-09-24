@@ -31,6 +31,9 @@ Mgr::Mgr(Ztls::Random *rng, unsigned passLen, unsigned totpRange) :
   m_passLen(passLen),
   m_totpRange(totpRange)
 {
+  m_users = new UserIDHash();
+  m_userNames = new UserNameHash();
+  m_keys = new KeyHash();
 }
 
 bool Mgr::bootstrap(
@@ -48,7 +51,7 @@ bool Mgr::bootstrap(
   }
   if (!m_roles.count())
     roleAdd_(role, Role::Immutable, Bitmap().fill(), Bitmap());
-  if (!m_users.count_()) {
+  if (!m_users->count_()) {
     ZmRef<User> user = userAdd_(
 	0, name, role, User::Immutable | User::Enabled | User::ChPass,
 	passwd);
@@ -90,8 +93,8 @@ ZmRef<User> Mgr::userAdd_(
       user->roles.push(node);
       user->perms = node->perms;
     }
-  m_users.add(user);
-  m_userNames.add(user);
+  m_users->add(user);
+  m_userNames->add(user);
   return user;
 }
 
@@ -124,19 +127,19 @@ bool Mgr::load(const uint8_t *buf, unsigned len)
   });
   all(userDB->users(), [this](unsigned, auto user_) {
     if (auto user = loadUser(m_roles, user_)) {
-      m_users.del(user->id);
-      m_users.add(user);
-      m_userNames.del(user->name);
-      m_userNames.add(ZuMv(user));
+      m_users->del(user->id);
+      m_users->add(user);
+      m_userNames->del(user->name);
+      m_userNames->add(ZuMv(user));
     }
   });
   all(userDB->keys(), [this](unsigned, auto key_) {
-    auto user = m_users.findPtr(key_->userID());
+    auto user = m_users->findPtr(key_->userID());
     if (!user) return;
     if (auto key = loadKey(key_, user->keyList)) {
       user->keyList = key;
-      m_keys.del(key->id);
-      m_keys.add(ZuMv(key));
+      m_keys->del(key->id);
+      m_keys->add(ZuMv(key));
     }
   });
   return true;
@@ -160,13 +163,13 @@ Zfb::Offset<fbs::UserDB> Mgr::save(Zfb::Builder &fbb) const
   }
   Offset<Vector<Offset<fbs::User>>> users_;
   {
-    auto i = m_users.readIterator();
+    auto i = m_users->readIterator();
     users_ = keyVecIter<fbs::User>(fbb, i.count(),
 	[&i](Builder &fbb, unsigned) { return i.iterate()->save(fbb); });
   }
   Offset<Vector<Offset<fbs::Key>>> keys_;
   {
-    auto i = m_keys.readIterator();
+    auto i = m_keys->readIterator();
     keys_ = keyVecIter<fbs::Key>(fbb, i.count(),
 	[&i](Builder &fbb, unsigned) { return i.iterate()->save(fbb); });
   }
@@ -417,7 +420,7 @@ ZmRef<User> Mgr::login(
     ZuString name, ZuString passwd, unsigned totp)
 {
   ReadGuard guard(m_lock);
-  ZmRef<User> user = m_userNames.find(name);
+  ZmRef<User> user = m_userNames->find(name);
   if (!user) return nullptr;
   if (!(user->flags & User::Enabled)) return nullptr;
   if (!(user->perms && Perm::Login)) return nullptr;
@@ -440,9 +443,9 @@ ZmRef<User> Mgr::access(
     ZuString keyID, ZuArray<uint8_t> token, ZuArray<uint8_t> hmac)
 {
   ReadGuard guard(m_lock);
-  Key *key = m_keys.findPtr(keyID);
+  Key *key = m_keys->findPtr(keyID);
   if (!key) return nullptr;
-  ZmRef<User> user = m_users.find(key->userID);
+  ZmRef<User> user = m_users->find(key->userID);
   if (!user) return nullptr; // LATER - log warning about key w/ invalid userID
   if (!(user->flags & User::Enabled)) return nullptr;
   if (!(user->perms && Perm::Access)) return nullptr;
@@ -491,12 +494,12 @@ Offset<Vector<Offset<fbs::User>>> Mgr::userGet(
 {
   ReadGuard guard(m_lock);
   if (!Zfb::IsFieldPresent(id_, fbs::UserID::VT_ID)) {
-    auto i = m_users.readIterator();
+    auto i = m_users->readIterator();
     return keyVecIter<fbs::User>(fbb, i.count(),
 	[&i](Builder &fbb, unsigned) { return i.iterate()->save(fbb); });
   } else {
     auto id = id_->id();
-    if (auto user = m_users.findPtr(id))
+    if (auto user = m_users->findPtr(id))
       return keyVec<fbs::User>(fbb, user->save(fbb));
     else
       return keyVec<fbs::User>(fbb);
@@ -506,7 +509,7 @@ Offset<Vector<Offset<fbs::User>>> Mgr::userGet(
 Offset<fbs::UserPass> Mgr::userAdd(Zfb::Builder &fbb, const fbs::User *user_)
 {
   Guard guard(m_lock);
-  if (m_users.findPtr(user_->id())) {
+  if (m_users->findPtr(user_->id())) {
     fbs::UserPassBuilder fbb_(fbb);
     fbb_.add_ok(0);
     return fbb_.Finish();
@@ -531,7 +534,7 @@ Offset<fbs::UserPass> Mgr::resetPass(
 {
   Guard guard(m_lock);
   auto id = id_->id();
-  auto user = m_users.findPtr(id);
+  auto user = m_users->findPtr(id);
   if (!user) {
     fbs::UserPassBuilder fbb_(fbb);
     fbb_.add_ok(0);
@@ -556,7 +559,7 @@ Offset<fbs::UserPass> Mgr::resetPass(
     hmac.finish(user->hmac.data());
   }
   {
-    auto i = m_keys.iterator();
+    auto i = m_keys->iterator();
     while (auto key = i.iterate())
       if (key->userID == id) i.del();
   }
@@ -569,7 +572,7 @@ Offset<fbs::UserUpdAck> Mgr::userMod(
 {
   Guard guard(m_lock);
   auto id = user_->id();
-  auto user = m_users.findPtr(id);
+  auto user = m_users->findPtr(id);
   if (!user || (user->flags & User::Immutable)) {
     fbs::UserUpdAckBuilder fbb_(fbb);
     fbb_.add_ok(0);
@@ -599,7 +602,7 @@ Offset<fbs::UserUpdAck> Mgr::userDel(
 {
   Guard guard(m_lock);
   auto id = id_->id();
-  ZmRef<User> user = m_users.del(id);
+  ZmRef<User> user = m_users->del(id);
   if (!user || (user->flags & User::Immutable)) {
     fbs::UserUpdAckBuilder fbb_(fbb);
     fbb_.add_ok(0);
@@ -607,7 +610,7 @@ Offset<fbs::UserUpdAck> Mgr::userDel(
   }
   m_modified = true;
   {
-    auto i = m_keys.iterator();
+    auto i = m_keys->iterator();
     while (auto key = i.iterate())
       if (key->userID == id) i.del();
   }
@@ -690,7 +693,7 @@ Offset<fbs::RoleUpdAck> Mgr::roleDel(
   }
   m_modified = true;
   {
-    auto i = m_users.iterator();
+    auto i = m_users->iterator();
     while (auto user = i.iterate())
       user->roles.grep([role](Role *role_) { return role == role_; });
   }
@@ -775,7 +778,7 @@ Offset<Vector<Offset<fbs::Key>>> Mgr::keyGet(
 {
   ReadGuard guard(m_lock);
   return keyGet_(fbb,
-      static_cast<const User *>(m_users.findPtr(userID_->id())));
+      static_cast<const User *>(m_users->findPtr(userID_->id())));
 }
 Offset<Vector<Offset<fbs::Key>>> Mgr::keyGet_(
     Zfb::Builder &fbb, const User *user)
@@ -803,7 +806,7 @@ Offset<fbs::KeyUpdAck> Mgr::keyAdd(
 {
   Guard guard(m_lock);
   return keyAdd_(fbb,
-      static_cast<User *>(m_users.findPtr(userID_->id())));
+      static_cast<User *>(m_users->findPtr(userID_->id())));
 }
 Offset<fbs::KeyUpdAck> Mgr::keyAdd_(
     Zfb::Builder &fbb, User *user)
@@ -822,12 +825,12 @@ Offset<fbs::KeyUpdAck> Mgr::keyAdd_(
     keyID.length(Ztls::Base64::enclen(keyID_.length()));
     Ztls::Base64::encode(
 	keyID.data(), keyID.length(), keyID_.data(), keyID_.length());
-  } while (m_keys.findPtr(keyID));
+  } while (m_keys->findPtr(keyID));
   ZmRef<Key> key = new Key(ZuMv(keyID), user->keyList, user->id);
   key->secret.length(key->secret.size());
   m_rng->random(key->secret.data(), key->secret.length());
   user->keyList = key;
-  m_keys.add(key);
+  m_keys->add(key);
   return fbs::CreateKeyUpdAck(fbb, key->save(fbb), 1);
 }
 
@@ -843,7 +846,7 @@ Offset<fbs::UserAck> Mgr::keyClr(
 {
   Guard guard(m_lock);
   return keyClr_(fbb,
-      static_cast<User *>(m_users.findPtr(userID_->id())));
+      static_cast<User *>(m_users->findPtr(userID_->id())));
 }
 Offset<fbs::UserAck> Mgr::keyClr_(
     Zfb::Builder &fbb, User *user)
@@ -852,7 +855,7 @@ Offset<fbs::UserAck> Mgr::keyClr_(
   m_modified = true;
   auto id = user->id;
   {
-    auto i = m_keys.iterator();
+    auto i = m_keys->iterator();
     while (auto key = i.iterate())
       if (key->userID == id) i.del();
   }
@@ -865,7 +868,7 @@ Offset<fbs::KeyUpdAck> Mgr::ownKeyDel(
 {
   Guard guard(m_lock);
   auto keyID = Load::str(id_->id());
-  Key *key = m_keys.findPtr(keyID);
+  Key *key = m_keys->findPtr(keyID);
   if (!key || user->id != key->userID) {
     fbs::KeyUpdAckBuilder fbb_(fbb);
     fbb_.add_ok(0);
@@ -878,20 +881,20 @@ Offset<fbs::KeyUpdAck> Mgr::keyDel(
 {
   Guard guard(m_lock);
   auto keyID = Load::str(id_->id());
-  Key *key = m_keys.findPtr(keyID);
+  Key *key = m_keys->findPtr(keyID);
   if (!key) {
     fbs::KeyUpdAckBuilder fbb_(fbb);
     fbb_.add_ok(0);
     return fbb_.Finish();
   }
   return keyDel_(fbb,
-      static_cast<User *>(m_users.findPtr(key->userID)), keyID);
+      static_cast<User *>(m_users->findPtr(key->userID)), keyID);
 }
 Offset<fbs::KeyUpdAck> Mgr::keyDel_(
     Zfb::Builder &fbb, User *user, ZuString keyID)
 {
   m_modified = true;
-  ZmRef<Key> key = m_keys.del(keyID);
+  ZmRef<Key> key = m_keys->del(keyID);
   if (!key) {
     fbs::KeyUpdAckBuilder fbb_(fbb);
     fbb_.add_ok(0);

@@ -55,7 +55,8 @@
 static void usage()
 {
   static const char *usage =
-    "usage: zcmd [HOST:]PORT [CMD [ARGS]]\n"
+    "usage: zcmd USER@[HOST:]PORT [CMD [ARGS]]\n"
+    "\tUSER\t- user\n"
     "\tHOST\t- target host (default localhost)\n"
     "\tPORT\t- target port\n"
     "\tCMD\t- command to send to target\n"
@@ -249,20 +250,22 @@ next:
       }
     }
     {
-      const auto &help = ZtStaticRegexUTF8("^\\s*help\\b");
-      if (help.m(cmd)) {
-	ZtString out;
-	out << "Local commands:\n";
-	processCmd(file, cmd, out);
-	out << "\nRemote commands:\n";
-	fwrite(out.data(), 1, out.length(), file);
-      } else {
-	ZtString out;
-	int code = processCmd(file, cmd, out, true);
-	if (code != ZvCmdHost::Unknown) {
-	  if (code) executed(code, file, out);
-	  return;
+      ZtArray<ZtString> args;
+      ZvCf::parseCLI(cmd, args);
+      if (args[0] == "help") {
+	if (args.length() == 1) {
+	  ZtString out;
+	  out << "Local commands:\n";
+	  processCmd(file, cmd, out);
+	  out << "\nRemote commands:\n";
+	  fwrite(out.data(), 1, out.length(), file);
+	} else {
 	}
+      } else if (hasCmd(args[0])) {
+	ZtString out;
+	int code = processCmd(file, cmd, out);
+	if (code || out) executed(code, file, out);
+	return;
       }
     }
     auto seqNo = m_seqNo++;
@@ -317,8 +320,7 @@ private:
 	      str(m_fbb, oldpw),
 	      str(m_fbb, newpw)).Union()));
     }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file = static_cast<FILE *>(file)](
-	  const fbs::ReqAck *ack) {
+    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
       ZtString out;
       if (ack->data_type() != fbs::ReqAckData_ChPass) {
 	logError("mismatched ack from server: ",

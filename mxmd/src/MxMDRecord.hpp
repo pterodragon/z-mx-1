@@ -66,8 +66,7 @@ protected:
   ZmRef<MxAnyLink> createLink(MxID id);
 
   // commands
-  void recordCmd(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg);
+  int recordCmd(void *, ZvCf *args, ZtString &out);
 
 private:
   unsigned	m_snapThread = 0;

@@ -471,8 +471,8 @@ public:
   inline ZvCSVWriteFn writeFile(const char *fileName) {
     return writeFile(fileName, ColNames());
   }
-  ZvCSVWriteFn writeData(ZtArray<char> &data, const ColNames &columns);
-  inline ZvCSVWriteFn writeData(ZtArray<char> &data) {
+  ZvCSVWriteFn writeData(ZtString &data, const ColNames &columns);
+  inline ZvCSVWriteFn writeData(ZtString &data) {
     return writeData(data, ColNames());
   }
 
@@ -484,7 +484,7 @@ private:
       FILE *file, ZuAnyPOD *pod);
   void writeData_(
       CColArray colArray, ZtArray<char> *row,
-      ZtArray<char> &data, ZuAnyPOD *pod);
+      ZtString &data, ZuAnyPOD *pod);
 
   ColArray	m_colArray;
   ColTree	m_colTree;

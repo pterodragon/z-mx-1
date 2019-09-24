@@ -92,10 +92,8 @@ public:
   void process(MxQMsg *);
 
   // commands
-  void statusCmd(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg);
-  void resendCmd(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg);
+  void statusCmd(void *, ZvCf *args, ZtString &out);
+  void resendCmd(void *, ZvCf *args, ZtString &out);
 
 private:
   ZiIP			m_interface;

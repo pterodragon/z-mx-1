@@ -624,13 +624,10 @@ void MxMDSubLink::heartbeat()
 
 // commands
 
-void MxMDSubscriber::statusCmd(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
+void MxMDSubscriber::statusCmd(void *, ZvCf *args, ZtString &out)
 {
   int argc = ZuBox<int>(args->get("#"));
   if (argc != 1) throw ZvCmdUsage();
-  outMsg = new ZvCmdMsg();
-  auto &out = outMsg->cmd();
   out.size(512 * nLinks());
   out << "State: " << MxEngineState::name(state()) << '\n';
   allLinks<MxMDSubLink>([&out](MxMDSubLink *link) -> uintptr_t {
@@ -700,14 +697,11 @@ void MxMDSubLink::status(ZtString &out)
   out << '\n';
 }
 
-void MxMDSubscriber::resendCmd(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
+void MxMDSubscriber::resendCmd(void *, ZvCf *args, ZtString &out)
 {
   using namespace MxMDStream;
   ZuBox<int> argc(args->get("#"));
   if (argc != 4) throw ZvCmdUsage();
-  outMsg = new ZvCmdMsg();
-  auto &out = outMsg->cmd();
   auto id = args->get("1");
   ZmRef<MxAnyLink> link_ = link(id);
   if (!link_) throw ZtString() << id << " - unknown link";

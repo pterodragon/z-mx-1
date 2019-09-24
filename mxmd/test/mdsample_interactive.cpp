@@ -129,13 +129,10 @@ void addInstrument(MxMDInstrument *instr, MxDateTime)
   if (matched) instr->subscribe(instrHandler);
 }
 
-void subscribe(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
+void subscribe(void *, ZvCf *args, ZtString &out)
 {
   MxMDLib *md = MxMDLib::instance();
   if (!md) throw ZtString("MxMDLib::instance() failed");
-  outMsg = new ZvCmdMsg();
-  auto &out = outMsg->cmd();
   ZmRef<MxMDInstrument> instrument;
   unsigned argc = ZuBox<unsigned>(args->get("#"));
   if (argc != 2) throw ZvCmdUsage();

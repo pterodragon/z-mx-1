@@ -479,12 +479,9 @@ void MxMDCore::initCmds()
 
   addCmd(
       "logAge", "",
-      ZvCmdFn{this, [](MxMDCore *, ZvCmdServerCxn *, ZvCf *args,
-	  ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &outMsg) {
+      ZvCmdFn{this, [](MxMDCore *, void *, ZvCf *args, ZtString &out) {
 	ZuBox<int> argc = args->get("#");
 	if (argc != 1) throw ZvCmdUsage();
-	outMsg = new ZvCmdMsg();
-	auto &out = outMsg->cmd();
 	out << "ageing log files...\n";
 	ZeLog::age();
       }},
@@ -492,12 +489,9 @@ void MxMDCore::initCmds()
       "usage: logAge\n");
   addCmd(
       "log", "",
-      ZvCmdFn{this, [](MxMDCore *md, ZvCmdServerCxn *, ZvCf *args,
-	  ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &outMsg) {
+      ZvCmdFn{this, [](MxMDCore *md, void *, ZvCf *args, ZtString &out) {
 	ZuBox<int> argc = args->get("#");
 	if (argc < 2) throw ZvCmdUsage();
-	outMsg = new ZvCmdMsg();
-	auto &out = outMsg->cmd();
 	ZtString message;
 	for (ZuBox<int> i = 1; i < argc; i++) {
 	  if (i > 1) message << ' ';
@@ -607,13 +601,10 @@ void MxMDCore::final()
   unsubscribe();
 }
 
-void MxMDCore::l1(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
+void MxMDCore::l1(void *, ZvCf *args, ZtString &out)
 {
   unsigned argc = ZuBox<unsigned>(args->get("#"));
   if (argc != 2) throw ZvCmdUsage();
-  outMsg = new ZvCmdMsg();
-  auto &out = outMsg->cmd();
   bool csv = !!args->get("csv");
   if (csv)
     out << "stamp,status,base,last,lastQty,bid,bidQty,ask,askQty,tickDir,"
@@ -670,13 +661,10 @@ void MxMDCore::l1(ZvCmdServerCxn *,
   }
 }
 
-void MxMDCore::l2(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
+void MxMDCore::l2(void *, ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc != 2) throw ZvCmdUsage();
-  outMsg = new ZvCmdMsg();
-  auto &out = outMsg->cmd();
   MxUniKey key = parseOrderBook(args, 1);
   lookupOrderBook(key, 1, 1,
       [this, &out](MxMDInstrument *, MxMDOrderBook *ob) -> bool {
@@ -709,13 +697,10 @@ void MxMDCore::l2_side(MxMDOBSide *side, ZtString &out)
   });
 }
 
-void MxMDCore::instrument_(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
+void MxMDCore::instrument_(void *, ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc != 2) throw ZvCmdUsage();
-  outMsg = new ZvCmdMsg();
-  auto &out = outMsg->cmd();
   MxUniKey key = parseOrderBook(args, 1);
   lookupOrderBook(key, 1, 0,
       [&out](MxMDInstrument *instr, MxMDOrderBook *ob) -> bool {
@@ -795,13 +780,10 @@ void MxMDCore::dumpTickSizes(ZuString path, MxID venueID)
   writeTickSizes(this, csv, csv.writeFile(path), venueID);
 }
 
-void MxMDCore::ticksizes(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
+void MxMDCore::ticksizes(void *, ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc < 1 || argc > 3) throw ZvCmdUsage();
-  outMsg = new ZvCmdMsg();
-  auto &out = outMsg->data();
   MxID venueID;
   if (argc == 2) venueID = args->get("1");
   MxMDTickSizeCSV csv;
@@ -833,13 +815,10 @@ void MxMDCore::dumpInstruments(ZuString path, MxID venueID, MxID segment)
   writeInstruments(this, csv, csv.writeFile(path), venueID, segment);
 }
 
-void MxMDCore::instruments(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
+void MxMDCore::instruments(void *, ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc < 1 || argc > 3) throw ZvCmdUsage();
-  outMsg = new ZvCmdMsg();
-  auto &out = outMsg->data();
   MxID venueID, segment;
   if (argc == 2) venueID = args->get("1");
   if (argc == 3) segment = args->get("2");
@@ -883,13 +862,10 @@ void MxMDCore::dumpOrderBooks(ZuString path, MxID venueID, MxID segment)
   writeOrderBooks(this, csv, csv.writeFile(path), venueID, segment);
 }
 
-void MxMDCore::orderbooks(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
+void MxMDCore::orderbooks(void *, ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc < 1 || argc > 3) throw ZvCmdUsage();
-  outMsg = new ZvCmdMsg();
-  auto &out = outMsg->data();
   MxID venueID, segment;
   if (argc == 2) venueID = args->get("1");
   if (argc == 3) segment = args->get("2");

@@ -252,13 +252,10 @@ eof:
 
 // commands
 
-void MxMDReplay::replayCmd(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
+void MxMDReplay::replayCmd(void *, ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc < 1 || argc > 2) throw ZvCmdUsage();
-  outMsg = new ZvCmdMsg();
-  auto &out = outMsg->cmd();
   if (!!args->get("stop")) {
     if (ZtString path = stopReplaying())
       out << "stopped replaying to \"" << path << "\"\n";

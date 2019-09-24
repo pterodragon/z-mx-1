@@ -100,8 +100,7 @@ public:
   ZuInline unsigned snapThread() const { return m_snapThread; }
 
   // commands
-  void statusCmd(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg);
+  void statusCmd(void *, ZvCf *args, ZtString &out);
 
 private:
   unsigned		m_snapThread = 0;

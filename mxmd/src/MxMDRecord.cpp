@@ -372,26 +372,23 @@ void MxMDRecLink::process(MxQMsg *qmsg)
 
 // commands
 
-void MxMDRecord::recordCmd(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
+int MxMDRecord::recordCmd(void *context, ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc < 1 || argc > 2) throw ZvCmdUsage();
-  outMsg = new ZvCmdMsg();
-  auto &out = outMsg->cmd();
   if (!!args->get("stop")) {
     if (argc == 2) throw ZvCmdUsage();
     if (ZtString path = stopRecording())
       out << "stopped recording to \"" << path << "\"\n";
-    return;
+    return 0;
   }
   if (argc != 2) throw ZvCmdUsage();
   ZtString path = args->get("1");
   if (!path) ZvCmdUsage();
-  if (record(path))
-    out << "started recording to \"" << path << "\"\n";
-  else {
-    outMsg->code(1);
+  if (!record(path)) {
     out << "failed to record to \"" << path << "\"\n";
+    return 1;
   }
+  out << "started recording to \"" << path << "\"\n";
+  return 0;
 }

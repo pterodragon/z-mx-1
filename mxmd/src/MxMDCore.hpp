@@ -41,7 +41,7 @@
 #include <ZePlatform.hpp>
 
 #include <ZvCf.hpp>
-#include <ZvCmdHost.hpp>
+#include <ZvCmdServer.hpp>
 
 #include <MxMultiplex.hpp>
 #include <MxEngine.hpp>
@@ -65,7 +65,7 @@ extern "C" {
   typedef void (*MxMDFeedPluginFn)(MxMDCore *md, ZvCf *cf);
 };
 
-class MxMDAPI MxMDCmd : public ZmPolymorph, public ZvCmdServer { };
+class MxMDAPI MxMDCmd : public ZmPolymorph, public ZvCmdServer<MxMDCmd> { };
 
 class MxMDAPI MxMDCore : public MxMDLib, public MxEngineMgr {
 friend class MxMDLib;
@@ -138,25 +138,21 @@ public:
 private:
   void initCmds();
 
-  void l1(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
-  void l2(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void l1(void *, ZvCf *, ZtString &);
+  void l2(void *, ZvCf *, ZtString &);
   void l2_side(MxMDOBSide *, ZtString &);
-  void instrument_(
-      ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void instrument_(void *, ZvCf *, ZtString &);
 
-  void ticksizes(
-      ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
-  void instruments(
-      ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
-  void orderbooks(
-      ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void ticksizes(void *, ZvCf *, ZtString &);
+  void instruments(void *, ZvCf *, ZtString &);
+  void orderbooks(void *, ZvCf *, ZtString &);
 
 #if 0
-  void tick(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
-  void update(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void tick(void *, ZvCf *, ZtString &);
+  void update(void *, ZvCf *, ZtString &);
 
-  void feeds(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
-  void venues(ZvCmdServerCxn *, ZvCf *, ZmRef<ZvCmdMsg>, ZmRef<ZvCmdMsg> &);
+  void feeds(void *, ZvCf *, ZtString &);
+  void venues(void *, ZvCf *, ZtString &);
 #endif
 
   void addVenueMapping_(ZuAnyPOD *);

@@ -790,13 +790,10 @@ void MxMDPubLink::ack()
 
 // commands
 
-void MxMDPublisher::statusCmd(ZvCmdServerCxn *,
-    ZvCf *args, ZmRef<ZvCmdMsg> inMsg, ZmRef<ZvCmdMsg> &outMsg)
+void MxMDPublisher::statusCmd(void *, ZvCf *args, ZtString &out)
 {
   int argc = ZuBox<int>(args->get("#"));
   if (argc != 1) throw ZvCmdUsage();
-  outMsg = new ZvCmdMsg();
-  auto &out = outMsg->cmd();
   out.size(512 * nLinks());
   out << "State: " << MxEngineState::name(state()) << '\n';
   allLinks<MxMDPubLink>([&out](MxMDPubLink *link) -> uintptr_t {

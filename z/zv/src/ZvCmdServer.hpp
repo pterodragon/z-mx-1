@@ -144,7 +144,7 @@ private:
 		return roles[k]->name;
 	      }),
 	    m_fbb.CreateVector(m_user->perms.data, Bitmap::Words),
-	    m_user->flags(), 1));
+	    m_user->flags, 1));
     }
     m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Login));
     this->send_(m_fbb.buf());

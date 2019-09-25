@@ -147,11 +147,11 @@ public:
   ZuInline int state() const { return m_state; }
 
   // available once logged in
-  ZuInline inline uint64_t userID() const { return m_userID; }
-  ZuInline inline const ZtString &userName() const { return m_userName; }
-  ZuInline inline const ZtArray<ZtString> &roles() const { return m_roles; }
-  ZuInline inline const Bitmap &perms() const { return m_perms; }
-  ZuInline inline uint8_t flags() const { return m_flags; }
+  ZuInline uint64_t userID() const { return m_userID; }
+  ZuInline const ZtString &userName() const { return m_userName; }
+  ZuInline const ZtArray<ZtString> &roles() const { return m_roles; }
+  ZuInline const Bitmap &perms() const { return m_perms; }
+  ZuInline uint8_t flags() const { return m_userFlags; }
 
 public:
   // send userDB request
@@ -251,7 +251,7 @@ private:
     all(loginAck->perms(), [this](unsigned i, uint64_t v) {
       if (i < Bitmap::Words) m_perms.data[i] = v;
     });
-    m_flags = loginAck->flags();
+    m_userFlags = loginAck->flags();
     m_state = State::Up;
     impl()->loggedIn();
     return len;

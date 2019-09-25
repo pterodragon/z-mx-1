@@ -341,11 +341,11 @@ private:
       Zfb::Builder &, const fbs::PermID *id);
 
   // query API keys for user
-  Offset<Vector<Offset<fbs::Key>>> ownKeyGet(
+  Offset<Vector<Offset<Zfb::String>>> ownKeyGet(
       Zfb::Builder &, const User *user, const fbs::UserID *userID);
-  Offset<Vector<Offset<fbs::Key>>> keyGet(
+  Offset<Vector<Offset<Zfb::String>>> keyGet(
       Zfb::Builder &, const fbs::UserID *userID);
-  Offset<Vector<Offset<fbs::Key>>> keyGet_(
+  Offset<Vector<Offset<Zfb::String>>> keyGet_(
       Zfb::Builder &, const User *user);
   // add API key for user
   Offset<fbs::KeyUpdAck> ownKeyAdd(
@@ -362,11 +362,11 @@ private:
   Offset<fbs::UserAck> keyClr_(
       Zfb::Builder &, User *user);
   // delete API key
-  Offset<fbs::KeyUpdAck> ownKeyDel(
+  Offset<fbs::UserAck> ownKeyDel(
       Zfb::Builder &, User *user, const fbs::KeyID *id);
-  Offset<fbs::KeyUpdAck> keyDel(
+  Offset<fbs::UserAck> keyDel(
       Zfb::Builder &, const fbs::KeyID *id);
-  Offset<fbs::KeyUpdAck> keyDel_(
+  Offset<fbs::UserAck> keyDel_(
       Zfb::Builder &, User *user, ZuString id);
 
   void permAdd_() { }

@@ -300,7 +300,7 @@ Zfb::Offset<fbs::ReqAck> Mgr::request(User *user, bool interactive,
       break;
     case fbs::ReqData_OwnKeyGet:
       ackType = fbs::ReqAckData_KeyGet;
-      ackData = fbs::CreateKeyList(fbb, ownKeyGet(
+      ackData = fbs::CreateKeyIDList(fbb, ownKeyGet(
 	    fbb, user, static_cast<const fbs::UserID *>(reqData))).Union();
       break;
     case fbs::ReqData_OwnKeyAdd:
@@ -389,7 +389,7 @@ Zfb::Offset<fbs::ReqAck> Mgr::request(User *user, bool interactive,
 
     case fbs::ReqData_KeyGet:
       ackType = fbs::ReqAckData_KeyGet;
-      ackData = fbs::CreateKeyList(fbb,
+      ackData = fbs::CreateKeyIDList(fbb,
 	  keyGet(fbb, static_cast<const fbs::UserID *>(reqData))).Union();
       break;
     case fbs::ReqData_KeyAdd:
@@ -766,31 +766,31 @@ Offset<fbs::PermUpdAck> Mgr::permDel(
       fbs::CreatePerm(fbb, id, str(fbb, name)), 1);
 }
 
-Offset<Vector<Offset<fbs::Key>>> Mgr::ownKeyGet(
+Offset<Vector<Offset<Zfb::String>>> Mgr::ownKeyGet(
     Zfb::Builder &fbb, const User *user, const fbs::UserID *userID_)
 {
   ReadGuard guard(m_lock);
   if (user->id != userID_->id()) user = nullptr;
   return keyGet_(fbb, user);
 }
-Offset<Vector<Offset<fbs::Key>>> Mgr::keyGet(
+Offset<Vector<Offset<Zfb::String>>> Mgr::keyGet(
     Zfb::Builder &fbb, const fbs::UserID *userID_)
 {
   ReadGuard guard(m_lock);
   return keyGet_(fbb,
       static_cast<const User *>(m_users->findPtr(userID_->id())));
 }
-Offset<Vector<Offset<fbs::Key>>> Mgr::keyGet_(
+Offset<Vector<Offset<Zfb::String>>> Mgr::keyGet_(
     Zfb::Builder &fbb, const User *user)
 {
-  if (!user) return keyVec<fbs::Key>(fbb);
+  if (!user) return strVec(fbb);
   unsigned n = 0;
   for (auto key = user->keyList; key; key = key->nextKey) ++n;
-  return keyVecIter<fbs::KeyID>(fbb, n,
+  return strVecIter(fbb, n,
       [key = user->keyList](Zfb::Builder &fbb, unsigned) mutable {
-	auto key_ = Zfb::Save::str(fbb, key->id);
+	auto id = key->id;
 	key = key->nextKey;
-	return key_;
+	return id;
       });
 }
 
@@ -863,40 +863,40 @@ Offset<fbs::UserAck> Mgr::keyClr_(
   return fbs::CreateUserAck(fbb, 1);
 }
 
-Offset<fbs::KeyUpdAck> Mgr::ownKeyDel(
+Offset<fbs::UserAck> Mgr::ownKeyDel(
     Zfb::Builder &fbb, User *user, const fbs::KeyID *id_)
 {
   Guard guard(m_lock);
   auto keyID = Load::str(id_->id());
   Key *key = m_keys->findPtr(keyID);
   if (!key || user->id != key->userID) {
-    fbs::KeyUpdAckBuilder fbb_(fbb);
+    fbs::UserAckBuilder fbb_(fbb);
     fbb_.add_ok(0);
     return fbb_.Finish();
   }
   return keyDel_(fbb, user, keyID);
 }
-Offset<fbs::KeyUpdAck> Mgr::keyDel(
+Offset<fbs::UserAck> Mgr::keyDel(
     Zfb::Builder &fbb, const fbs::KeyID *id_)
 {
   Guard guard(m_lock);
   auto keyID = Load::str(id_->id());
   Key *key = m_keys->findPtr(keyID);
   if (!key) {
-    fbs::KeyUpdAckBuilder fbb_(fbb);
+    fbs::UserAckBuilder fbb_(fbb);
     fbb_.add_ok(0);
     return fbb_.Finish();
   }
   return keyDel_(fbb,
       static_cast<User *>(m_users->findPtr(key->userID)), keyID);
 }
-Offset<fbs::KeyUpdAck> Mgr::keyDel_(
+Offset<fbs::UserAck> Mgr::keyDel_(
     Zfb::Builder &fbb, User *user, ZuString keyID)
 {
   m_modified = true;
   ZmRef<Key> key = m_keys->del(keyID);
   if (!key) {
-    fbs::KeyUpdAckBuilder fbb_(fbb);
+    fbs::UserAckBuilder fbb_(fbb);
     fbb_.add_ok(0);
     return fbb_.Finish();
   }

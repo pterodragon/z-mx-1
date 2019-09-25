@@ -358,11 +358,13 @@ private:
       if (argc == 1)
 	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	      fbs::ReqData_OwnKeyGet,
-	      fbs::CreateUserID(m_fbb, m_link->userID()).Union());
-      else
+	      fbs::CreateUserID(m_fbb, m_link->userID()).Union()));
+      else {
+	auto userID = ZuBox<uint64_t>(args->get("1"));
 	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	      fbs::ReqData_KeyGet,
-	      fbs::CreateUserID(m_fbb, ZuBox<uint64_t>(argv[1])).Union());
+	      fbs::CreateUserID(m_fbb, userID).Union()));
+      }
     }
     m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
       ZtString out;
@@ -394,11 +396,13 @@ private:
       if (argc == 1)
 	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	      fbs::ReqData_OwnKeyAdd,
-	      fbs::CreateUserID(m_fbb, m_link->userID()).Union());
-      else
+	      fbs::CreateUserID(m_fbb, m_link->userID()).Union()));
+      else {
+	auto userID = ZuBox<uint64_t>(args->get("1"));
 	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	      fbs::ReqData_KeyAdd,
-	      fbs::CreateUserID(m_fbb, ZuBox<uint64_t>(argv[1])).Union());
+	      fbs::CreateUserID(m_fbb, userID).Union()));
+      }
     }
     m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
       ZtString out;

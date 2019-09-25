@@ -1626,11 +1626,10 @@ void ZdbAny::recover(Zdb_File *file)
       continue;
     }
     switch (pod->magic()) {
-      case ZdbCommitted: {
+      case ZdbCommitted:
 	if (rn < m_minRN) m_minRN = rn;
-	int op = rn != pod->prevRN() ? ZdbOp::Upd : ZdbOp::Add;
-	this->recover(ZuMv(pod), op);
-      } break;
+	this->recover(ZuMv(pod), ZdbOp::Add);
+	break;
       case ZdbDeleted:
 	if (rn < m_minRN) m_minRN = rn;
 	this->recover(ZuMv(pod), ZdbOp::Del);
@@ -1650,7 +1649,6 @@ void ZdbAny::recover(Zdb_File *file)
 void ZdbAny::recover(ZmRef<ZdbAnyPOD> pod, int op)
 {
   ZdbRN prevRN = pod->prevRN();
-
   if (pod->rn() != prevRN) m_cache->del(prevRN);
   m_handler.addFn(pod, op, true);
   cache(ZuMv(pod));
@@ -1956,7 +1954,8 @@ void ZdbAny::putUpdate(ZdbAnyPOD *pod, bool replace)
     pod->pin();
     cache(pod);
   }
-  m_env->write(pod, Zdb_Msg::Rep, ZdbOp::Upd, m_config->compress);
+  m_env->write(pod, Zdb_Msg::Rep,
+      replace ? ZdbOp::Upd : ZdbOp::Add, m_config->compress);
 }
 
 void ZdbAny::del(ZdbAnyPOD *pod)
@@ -2170,8 +2169,6 @@ void ZdbAny::write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op)
 
   if (!(rec = rn2file(rn, true))) return;
     // any error is logged by getFile/openFile
-
-  // unsigned prevOffset = trailerOffset + offsetof(ZdbTrailer, prevRN);
 
   if (op == ZdbOp::Del && rec.file()->del(rec.offRN()))
     delFile(rec.file());

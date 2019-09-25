@@ -73,8 +73,9 @@ public:
 	dbEnv, "rxDB", DBVersion, ZdbCacheMode::Normal,
 	ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new RxPOD(db); },
-	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, int, bool) {
-	    app->rxAdded(static_cast<RxPOD *>(pod)); }},
+	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, int op, bool) {
+	    if (op != ZdbOp::Del)
+	      app->rxAdded(static_cast<RxPOD *>(pod)); }},
 	  app()->rxWriteFn()});
   }
   void final() {

@@ -85,8 +85,9 @@ public:
 	dbEnv, "txDB", DBVersion, ZdbCacheMode::Normal,
 	ZdbHandler{
 	  [](ZdbAny *db, ZmRef<ZdbAnyPOD> &pod) { pod = new TxPOD(db); },
-	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, int, bool) {
-	    app->txAdded(static_cast<TxPOD *>(pod)); }},
+	  ZdbAddFn{app(), [](App *app, ZdbAnyPOD *pod, int op, bool) {
+	    if (op != ZdbOp::Del)
+	      app->txAdded(static_cast<TxPOD *>(pod)); }},
 	  app()->txWriteFn()});
   }
   void final() {

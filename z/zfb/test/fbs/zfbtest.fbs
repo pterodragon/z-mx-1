@@ -1,0 +1,5 @@
+namespace zfbtest.fbs;
+table Buf {
+  data:[ubyte];
+}
+root_type Buf;

@@ -38,7 +38,7 @@
 
 template <unsigned Bits_> class ZuBitmap : public ZuPrintable {
 public:
-  enum { Bits = Bits_ };
+  enum { Bits = ((Bits_ + 63) & ~63) };
   enum { Bytes = (Bits>>3) };
   enum { Shift = 6 };
   enum { Mask = ((1<<Shift) - 1) };

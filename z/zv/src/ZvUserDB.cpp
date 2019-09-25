@@ -700,6 +700,7 @@ Offset<fbs::RoleUpdAck> Mgr::roleDel(
     while (auto user = i.iterate())
       user->roles.grep([role](Role *role_) { return role == role_; });
   }
+  m_roles.del(role);
   return fbs::CreateRoleUpdAck(fbb, role->save(fbb), 1);
 }
 

@@ -195,11 +195,13 @@ namespace Load {
 
   // inline zero-copy conversion of a FB string to a ZuString
   ZuInline ZuString str(const flatbuffers::String *s) {
+    if (!s) return ZuString();
     return ZuString{reinterpret_cast<const char *>(s->Data()), s->size()};
   }
 
   // inline zero-copy conversion of a [uint8] to a ZuArray<uint8_t>
   ZuInline ZuArray<const uint8_t> bytes(const Vector<uint8_t> *v) {
+    if (!v) return ZuArray<const uint8_t>();
     return ZuArray<const uint8_t>(v->data(), v->size());
   }
 }

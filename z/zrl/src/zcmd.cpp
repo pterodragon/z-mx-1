@@ -21,6 +21,7 @@
 #include <stdlib.h>
 
 #include <ZuPolymorph.hpp>
+#include <ZuByteSwap.hpp>
 
 #include <ZmPlatform.hpp>
 #include <ZmTrap.hpp>
@@ -175,9 +176,10 @@ private:
     if (m_solo) {
       send(ZuMv(m_soloMsg));
     } else {
-      std::cout <<
-	"For a list of valid commands: help\n"
-	"For help on a particular command: COMMAND --help\n" << std::flush;
+      if (m_interactive)
+	std::cout <<
+	  "For a list of valid commands: help\n"
+	  "For help on a particular command: COMMAND --help\n" << std::flush;
       prompt();
     }
   }
@@ -439,9 +441,94 @@ private:
   }
 
   int rolesCmd(FILE *file, ZvCf *args, ZtString &out) {
-    return executed(0, file, out); // FIXME
+    ZuBox<int> argc = args->get("#");
+    if (argc < 1 || argc > 2) throw ZvCmdUsage();
+    auto seqNo = m_seqNo++;
+    using namespace ZvUserDB;
+    {
+      using namespace Zfb::Save;
+      m_fbb.Clear();
+      Zfb::Offset<Zfb::String> name_;
+      if (argc == 2) name_ = str(m_fbb, args->get("1"));
+      fbs::RoleIDBuilder fbb_(m_fbb);
+      if (argc == 2) fbb_.add_name(name_);
+      auto roleID = fbb_.Finish();
+      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	    fbs::ReqData_RoleGet, roleID.Union()));
+    }
+    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
+      ZtString out;
+      if (int code = filterAck(
+	    file, ack, fbs::ReqAckData_RoleGet, -1,
+	    "role get", out))
+	return executed(code, file, out);
+      auto roleList = static_cast<const fbs::RoleList *>(ack->data());
+      using namespace Zfb::Load;
+      all(roleList->list(), [&out](unsigned i, auto role_) {
+	out << str(role_->name());
+	auto l = [&out](auto perms_) {
+	  for (int i = perms_->size(); --i >= 0; ) {
+	    uint64_t w = perms_->Get(i);
+	    w = *reinterpret_cast<ZuBigEndian<uint64_t> *>(&w);
+	    out << ZuBoxed(w).fmt(ZuFmt::Hex<0, ZuFmt::Right<16, ' '>>());
+	    if (i) out << ' ';
+	  }
+	};
+	out << "\n  perms:    "; l(role_->perms());
+	out << "\n  apiperms: "; l(role_->apiperms());
+	out << "\n  flags: " << ZuBoxed(role_->flags()).hex() << '\n';
+      });
+      return executed(0, file, out);
+    });
+    return 0;
   }
   int roleAddCmd(FILE *file, ZvCf *args, ZtString &out) {
+#if 0
+    ZuBox<int> argc = args->get("#");
+    if (argc < 1 || argc > 2) throw ZvCmdUsage();
+    // FIXME - parse role
+    auto seqNo = m_seqNo++;
+    using namespace ZvUserDB;
+    {
+      using namespace Zfb::Save;
+
+    uint64_t w = ZuBox<uint64_t>(ZuFmt::Hex(), s);
+
+      m_fbb.Clear();
+      Zfb::Offset<Zfb::String> name_;
+      if (argc == 2) name_ = str(m_fbb, args->get("1"));
+      fbs::RoleIDBuilder fbb_(m_fbb);
+      if (argc == 2) fbb_.add_name(name_);
+      auto roleID = fbb_.Finish();
+      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	    fbs::ReqData_RoleGet, roleID.Union()));
+    }
+    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
+      ZtString out;
+      if (int code = filterAck(
+	    file, ack, fbs::ReqAckData_RoleGet, -1,
+	    "role get", out))
+	return executed(code, file, out);
+      auto roleList = static_cast<const fbs::RoleList *>(ack->data());
+      using namespace Zfb::Load;
+      all(roleList->list(), [&out](unsigned i, auto role_) {
+	out << str(role_->name());
+	auto l = [&out](auto perms_) {
+	  for (int i = perms_->size(); --i >= 0; ) {
+	    uint64_t w = perms_->Get(i);
+	    w = *reinterpret_cast<ZuBigEndian<uint64_t> *>(&w);
+	    out << ZuBoxed(w).fmt(ZuFmt::Hex<0, ZuFmt::Right<16, ' '>>());
+	    if (i) out << ' ';
+	  }
+	};
+	out << "\n  perms:    "; l(role_->perms());
+	out << "\n  apiperms: "; l(role_->apiperms());
+	out << "\n  flags: " << ZuBoxed(role_->flags()).hex() << '\n';
+      });
+      return executed(0, file, out);
+    });
+    return 0;
+#endif
     return executed(0, file, out); // FIXME
   }
   int roleModCmd(FILE *file, ZvCf *args, ZtString &out) {
@@ -474,20 +561,106 @@ private:
       auto permList = static_cast<const fbs::PermList *>(ack->data());
       using namespace Zfb::Load;
       all(permList->list(), [&out](unsigned, auto perm_) {
-	out << perm_->id() << ' ' << str(perm_->name()) << '\n';
+	out << ZuBoxed(perm_->id()).fmt(ZuFmt::Right<3, ' '>()) << ' '
+	  << str(perm_->name()) << '\n';
       });
       return executed(0, file, out);
     });
     return 0;
   }
   int permAddCmd(FILE *file, ZvCf *args, ZtString &out) {
-    return executed(0, file, out); // FIXME
+    ZuBox<int> argc = args->get("#");
+    if (argc != 2) throw ZvCmdUsage();
+    auto seqNo = m_seqNo++;
+    using namespace ZvUserDB;
+    {
+      using namespace Zfb::Save;
+      m_fbb.Clear();
+      auto name = args->get("1");
+      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	    fbs::ReqData_PermAdd,
+	    fbs::CreatePermAdd(m_fbb, str(m_fbb, name)).Union()));
+    }
+    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
+      ZtString out;
+      if (int code = filterAck(
+	    file, ack, fbs::ReqAckData_PermAdd, -1,
+	    "permission add", out))
+	return executed(code, file, out);
+      using namespace Zfb::Load;
+      auto permUpdAck = static_cast<const fbs::PermUpdAck *>(ack->data());
+      if (!permUpdAck->ok()) {
+	out << "permission add rejected\n";
+	return executed(1, file, out);
+      }
+      auto perm = permUpdAck->perm();
+      out << "added " << perm->id() << ' ' << str(perm->name()) << '\n';
+      return executed(0, file, out);
+    });
+    return 0;
   }
   int permModCmd(FILE *file, ZvCf *args, ZtString &out) {
-    return executed(0, file, out); // FIXME
+    ZuBox<int> argc = args->get("#");
+    if (argc != 3) throw ZvCmdUsage();
+    auto seqNo = m_seqNo++;
+    using namespace ZvUserDB;
+    {
+      using namespace Zfb::Save;
+      m_fbb.Clear();
+      auto permID = args->getInt("1", 0, Bitmap::Bits, true);
+      auto permName = args->get("2");
+      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	    fbs::ReqData_PermMod,
+	    fbs::CreatePerm(m_fbb, permID, str(m_fbb, permName)).Union()));
+    }
+    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
+      ZtString out;
+      if (int code = filterAck(
+	    file, ack, fbs::ReqAckData_PermMod, -1,
+	    "permission modify", out))
+	return executed(code, file, out);
+      using namespace Zfb::Load;
+      auto permUpdAck = static_cast<const fbs::PermUpdAck *>(ack->data());
+      if (!permUpdAck->ok()) {
+	out << "permission modify rejected\n";
+	return executed(1, file, out);
+      }
+      auto perm = permUpdAck->perm();
+      out << "modified " << perm->id() << ' ' << str(perm->name()) << '\n';
+      return executed(0, file, out);
+    });
+    return 0;
   }
   int permDelCmd(FILE *file, ZvCf *args, ZtString &out) {
-    return executed(0, file, out); // FIXME
+    ZuBox<int> argc = args->get("#");
+    if (argc != 2) throw ZvCmdUsage();
+    auto seqNo = m_seqNo++;
+    using namespace ZvUserDB;
+    {
+      using namespace Zfb::Save;
+      m_fbb.Clear();
+      auto permID = args->getInt("1", 0, Bitmap::Bits, true);
+      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	    fbs::ReqData_PermDel,
+	    fbs::CreatePermID(m_fbb, permID).Union()));
+    }
+    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
+      ZtString out;
+      if (int code = filterAck(
+	    file, ack, fbs::ReqAckData_PermDel, -1,
+	    "permission delete", out))
+	return executed(code, file, out);
+      using namespace Zfb::Load;
+      auto permUpdAck = static_cast<const fbs::PermUpdAck *>(ack->data());
+      if (!permUpdAck->ok()) {
+	out << "permission delete rejected\n";
+	return executed(1, file, out);
+      }
+      auto perm = permUpdAck->perm();
+      out << "deleted " << perm->id() << ' ' << str(perm->name()) << '\n';
+      return executed(0, file, out);
+    });
+    return 0;
   }
 
   int keysCmd(FILE *file, ZvCf *args, ZtString &out) {

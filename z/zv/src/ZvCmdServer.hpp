@@ -116,26 +116,36 @@ public:
 
 private:
   int processLogin(const uint8_t *data, unsigned len) {
-    using namespace Zfb;
-    using namespace Load;
     using namespace ZvUserDB;
+    using namespace Zfb;
     {
-      Verifier verifier(data, len);
-      if (!fbs::VerifyLoginReqBuffer(verifier)) {
+      using namespace Load;
+      {
+	Verifier verifier(data, len);
+	if (!fbs::VerifyLoginReqBuffer(verifier)) {
+	  m_state = State::LoginFailed;
+	  return 0;
+	}
+      }
+      if (!this->app()->processLogin(
+	    fbs::GetLoginReq(data), m_user, m_interactive) ||
+	  ZuUnlikely(!m_user)) {
 	m_state = State::LoginFailed;
 	return 0;
       }
     }
-    if (!this->app()->processLogin(
-	  fbs::GetLoginReq(data), m_user, m_interactive) ||
-	ZuUnlikely(!m_user)) {
-      m_state = State::LoginFailed;
-      return 0;
+    {
+      using namespace Save;
+      m_fbb.Clear();
+      m_fbb.Finish(fbs::CreateLoginAck(m_fbb,
+	    m_user->id, str(m_fbb, m_user->name),
+	    strVecIter(m_fbb, m_user->roles.length(),
+	      [&roles = m_user->roles](Zfb::Builder &, unsigned k) {
+		return roles[k]->name;
+	      }),
+	    m_fbb.CreateVector(m_user->perms.data, Bitmap::Words),
+	    m_user->flags(), 1));
     }
-    m_fbb.Clear();
-    // FIXME - add id, roles, flags to below
-    m_fbb.Finish(fbs::CreateLoginAck(m_fbb,
-	  m_fbb.CreateVector(m_user->perms.data, Bitmap::Words), 1));
     m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Login));
     this->send_(m_fbb.buf());
     m_state = State::Up;

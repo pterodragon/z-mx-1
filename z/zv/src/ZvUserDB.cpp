@@ -786,9 +786,9 @@ Offset<Vector<Offset<fbs::Key>>> Mgr::keyGet_(
   if (!user) return keyVec<fbs::Key>(fbb);
   unsigned n = 0;
   for (auto key = user->keyList; key; key = key->nextKey) ++n;
-  return keyVecIter<fbs::Key>(fbb, n,
+  return keyVecIter<fbs::KeyID>(fbb, n,
       [key = user->keyList](Zfb::Builder &fbb, unsigned) mutable {
-	auto key_ = key->save(fbb);
+	auto key_ = Zfb::Save::str(fbb, key->id);
 	key = key->nextKey;
 	return key_;
       });
@@ -913,7 +913,7 @@ Offset<fbs::KeyUpdAck> Mgr::keyDel_(
 	prev = prev->nextKey;
       }
   }
-  return fbs::CreateKeyUpdAck(fbb, key->save(fbb), 1);
+  return fbs::CreateUserAck(fbb, 1);
 }
 
 } // namespace ZvUserDB

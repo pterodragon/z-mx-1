@@ -114,6 +114,9 @@ public:
 
   ZvCmdCliLink(App *app) : Base(app) { }
 
+  // Note: the calling app must ensure that calls to login()/access()
+  // are not overlapped - until loggedIn()/connectFailed()/disconnected()
+  // no further calls must be made
   void login(
       ZtString server, unsigned port,
       ZtString user, ZtString passwd, unsigned totp) {
@@ -140,6 +143,15 @@ public:
     new (m_credentials.new2()) ZvCmd_Access{ZuMv(keyID), token, hmac};
     this->connect(ZuMv(server), port);
   }
+
+  ZuInline int state() const { return m_state; }
+
+  // available once logged in
+  ZuInline inline uint64_t userID() const { return m_userID; }
+  ZuInline inline const ZtString &userName() const { return m_userName; }
+  ZuInline inline const ZtArray<ZtString> &roles() const { return m_roles; }
+  ZuInline inline const Bitmap &perms() const { return m_perms; }
+  ZuInline inline uint8_t flags() const { return m_flags; }
 
 public:
   // send userDB request
@@ -221,7 +233,6 @@ public:
   }
 
 private:
-  // FIXME - cache user ID, roles, perms, flags from LoginAck locally in link
   int processLoginAck(const uint8_t *data, unsigned len) {
     using namespace Zfb;
     using namespace Load;
@@ -232,14 +243,17 @@ private:
     }
     auto loginAck = fbs::GetLoginAck(data);
     if (!loginAck->ok()) return -1;
+    m_userID = loginAck->id();
+    m_userName = str(loginAck->name());
+    all(loginAck->roles(), [this](unsigned i, auto role_) {
+      m_roles.push(str(role_));
+    });
+    all(loginAck->perms(), [this](unsigned i, uint64_t v) {
+      if (i < Bitmap::Words) m_perms.data[i] = v;
+    });
+    m_flags = loginAck->flags();
     m_state = State::Up;
-    {
-      Bitmap perms;
-      all(loginAck->perms(), [&perms](unsigned i, uint64_t v) {
-	if (i < Bitmap::Words) perms.data[i] = v;
-      });
-      impl()->loggedIn(perms);
-    }
+    impl()->loggedIn();
     return len;
   }
 
@@ -277,7 +291,7 @@ private:
 
 public:
   int process(const uint8_t *data, unsigned len) {
-    if (ZuUnlikely(m_state == State::Down))
+    if (ZuUnlikely(m_state.load_() == State::Down))
       return -1; // disconnect
 
     scheduleTimeout();
@@ -293,7 +307,7 @@ public:
 	[this, &type](const uint8_t *data, unsigned len) -> int {
 	  data += ZvCmd_hdrLen(), len -= ZvCmd_hdrLen();
 	  int i;
-	  if (ZuUnlikely(m_state == State::Login)) {
+	  if (ZuUnlikely(m_state.load_() == State::Login)) {
 	    if (type != ZvCmd::fbs::MsgType_Login) return -1;
 	    i = processLoginAck(data, len);
 	  } else if (ZuUnlikely(type < 0))
@@ -322,10 +336,15 @@ private:
 
 private:
   ZmScheduler::Timer	m_timer;
-  int			m_state = State::Down;
+  ZmAtomic<int>		m_state = State::Down;
   ZvCmd_Credentials	m_credentials;
   UserDBReqs		m_userDBReqs;
   CmdReqs		m_cmdReqs;
+  uint64_t		m_userID = 0;
+  ZtString		m_userName;
+  ZtArray<ZtString>	m_roles;
+  Bitmap		m_perms;
+  uint8_t		m_userFlags = 0;
 };
 
 template <typename App_>

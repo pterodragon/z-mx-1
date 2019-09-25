@@ -114,7 +114,7 @@ public:
   struct Link : public ZvCmdCliLink<ZCmd, Link> {
   using Base = ZvCmdCliLink<ZCmd, Link>;
     Link(ZCmd *app) : Base(app) { }
-    void loggedIn(const Bitmap &perms) {
+    void loggedIn() {
       this->app()->loggedIn();
     }
     void disconnected() {
@@ -301,6 +301,10 @@ private:
 	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->keysCmd(static_cast<FILE *>(file), args, out);
 	}},  "list keys", "usage: keys [USER]");
+    addCmd("keyadd", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->keysCmd(static_cast<FILE *>(file), args, out);
+	}},  "add key", "usage: keyadd[USER]");
   }
 
   int passwdCmd(FILE *file, ZvCf *args, ZtString &out) {
@@ -332,8 +336,8 @@ private:
 	out << "password change failed\n";
 	return executed(1, file, out);
       }
-      auto ackData = static_cast<const fbs::UserAck *>(ack->data());
-      if (!ackData->ok()) {
+      auto userAck = static_cast<const fbs::UserAck *>(ack->data());
+      if (!userAck->ok()) {
 	out << "password change rejected\n";
 	return executed(1, file, out);
       }
@@ -351,33 +355,78 @@ private:
     {
       using namespace Zfb::Save;
       m_fbb.Clear();
-      if (argc == 1) {
+      if (argc == 1)
 	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	      fbs::ReqData_OwnKeyGet,
-	      fbs::CreateUserID(m_fbb,
-		str(m_fbb, oldpw),
-		str(m_fbb, newpw)).Union()));
-      } else {
-      }
+	      fbs::CreateUserID(m_fbb, m_link->userID()).Union());
+      else
+	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	      fbs::ReqData_KeyGet,
+	      fbs::CreateUserID(m_fbb, ZuBox<uint64_t>(argv[1])).Union());
     }
     m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
       ZtString out;
-      if (ack->data_type() != fbs::ReqAckData_ChPass) {
+      if (ack->data_type() != fbs::ReqAckData_OwnKeyGet &&
+	  ack->data_type() != fbs::ReqAckData_KeyGet) {
 	logError("mismatched ack from server: ",
 	    fbs::EnumNameReqAckData(ack->data_type()));
-	out << "password change failed\n";
+	out << "key get failed\n";
 	return executed(1, file, out);
       }
-      auto ackData = static_cast<const fbs::UserAck *>(ack->data());
-      if (!ackData->ok()) {
-	out << "password change rejected\n";
-	return executed(1, file, out);
-      }
-      out << "password changed\n";
+      auto keyIDList = static_cast<const fbs::KeyIDList *>(ack->data());
+      using namespace Zfb::Load;
+      all(keyIDList->list(), [&out](unsigned, auto key_) {
+	out << str(key_);
+      });
       return executed(0, file, out);
     });
     return 0;
   }
+
+  int keyAddCmd(FILE *file, ZvCf *args, ZtString &out) {
+    ZuBox<int> argc = args->get("#");
+    if (argc < 1 || argc > 2) throw ZvCmdUsage();
+    auto seqNo = m_seqNo++;
+    using namespace ZvUserDB;
+    {
+      using namespace Zfb::Save;
+      m_fbb.Clear();
+      if (argc == 1)
+	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	      fbs::ReqData_OwnKeyAdd,
+	      fbs::CreateUserID(m_fbb, m_link->userID()).Union());
+      else
+	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	      fbs::ReqData_KeyAdd,
+	      fbs::CreateUserID(m_fbb, ZuBox<uint64_t>(argv[1])).Union());
+    }
+    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
+      ZtString out;
+      if (ack->data_type() != fbs::ReqAckData_OwnKeyAdd &&
+	  ack->data_type() != fbs::ReqAckData_KeyAdd) {
+	logError("mismatched ack from server: ",
+	    fbs::EnumNameReqAckData(ack->data_type()));
+	out << "key add failed\n";
+	return executed(1, file, out);
+      }
+      using namespace Zfb::Load;
+      auto keyUpdAck = static_cast<const fbs::KeyUpdAck *>(ack->data());
+      if (!keyUpdAck->ok()) {
+	out << "key add rejected\n";
+	return executed(1, file, out);
+      }
+      auto secret_ = bytes(keyUpdAck->key()->secret());
+      ZtString secret;
+      secret.length(Ztls::Base64::enclen(secret_.length()));
+      Ztls::Base64::encode(
+	  secret.data(), secret.length(), secret_.data(), secret_.length());
+      out << "id: " << str(keyUpdAck->key()->id())
+	<< "\nsecret: " << secret << '\n';
+      return executed(0, file, out);
+    });
+    return 0;
+  }
+
   // FIXME -
   // users, useradd, usermod, userdel
   // roles, roleadd, rolemod, roledel

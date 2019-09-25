@@ -452,8 +452,6 @@ private:
   }
 
   int permsCmd(FILE *file, ZvCf *args, ZtString &out) {
-    return executed(0, file, out); // FIXME
-#if 0
     ZuBox<int> argc = args->get("#");
     if (argc < 1 || argc > 2) throw ZvCmdUsage();
     auto seqNo = m_seqNo++;
@@ -461,32 +459,26 @@ private:
     {
       using namespace Zfb::Save;
       m_fbb.Clear();
-      if (argc == 1)
-	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	      fbs::ReqData_OwnKeyGet,
-	      fbs::CreateUserID(m_fbb, m_link->userID()).Union()));
-      else {
-	auto userID = ZuBox<uint64_t>(args->get("1"));
-	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	      fbs::ReqData_KeyGet,
-	      fbs::CreateUserID(m_fbb, userID).Union()));
-      }
+      fbs::PermIDBuilder fbb_(m_fbb);
+      if (argc == 2) fbb_.add_id(args->getInt("1", 0, Bitmap::Bits, true));
+      auto permID = fbb_.Finish();
+      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	    fbs::ReqData_PermGet, permID.Union()));
     }
     m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
       ZtString out;
       if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_OwnKeyGet, fbs::ReqAckData_KeyGet,
-	    "key get", out))
+	    file, ack, fbs::ReqAckData_PermGet, -1,
+	    "perm get", out))
 	return executed(code, file, out);
-      auto keyIDList = static_cast<const fbs::KeyIDList *>(ack->data());
+      auto permList = static_cast<const fbs::PermList *>(ack->data());
       using namespace Zfb::Load;
-      all(keyIDList->list(), [&out](unsigned, auto key_) {
-	out << str(key_) << '\n';
+      all(permList->list(), [&out](unsigned, auto perm_) {
+	out << perm_->id() << ' ' << str(perm_->name()) << '\n';
       });
       return executed(0, file, out);
     });
     return 0;
-#endif
   }
   int permAddCmd(FILE *file, ZvCf *args, ZtString &out) {
     return executed(0, file, out); // FIXME

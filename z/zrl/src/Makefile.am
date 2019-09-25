@@ -16,7 +16,7 @@ libZrl_la_LIBADD = \
 	$(top_builddir)/zv/src/libZv.la $(top_builddir)/zi/src/libZi.la \
 	$(top_builddir)/ze/src/libZe.la $(top_builddir)/zt/src/libZt.la \
 	$(top_builddir)/zm/src/libZm.la $(top_builddir)/zu/src/libZu.la \
-	@READLINE_LIBS@ @Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
+	@READLINE_LIBS@ @MBEDTLS_LIBS@ @Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
 zcmd_AM_CPPFLAGS = @Z_CPPFLAGS@
 zcmd_LDADD = libZrl.la $(libZrl_la_LIBADD)
 zcmd_SOURCES = zcmd.cpp

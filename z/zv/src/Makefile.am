@@ -39,7 +39,7 @@ libZv_la_LIBADD = $(top_builddir)/zfb/src/libZfb.la \
 	$(top_builddir)/zi/src/libZi.la $(top_builddir)/ze/src/libZe.la \
 	$(top_builddir)/zt/src/libZt.la $(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la \
-	@Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
+	@FLATBUFFERS_LIBS@ @MBDEDTLS_LIBS@ @Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
 zuserdb_AM_CPPFLAGS = @Z_CPPFLAGS@
 zuserdb_LDADD = libZv.la $(libZv_la_LIBADD)
 zuserdb_SOURCES = zuserdb.cpp

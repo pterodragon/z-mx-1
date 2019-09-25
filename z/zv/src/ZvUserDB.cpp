@@ -299,7 +299,7 @@ Zfb::Offset<fbs::ReqAck> Mgr::request(User *user, bool interactive,
 	  fbb, user, static_cast<const fbs::UserChPass *>(reqData)).Union();
       break;
     case fbs::ReqData_OwnKeyGet:
-      ackType = fbs::ReqAckData_KeyGet;
+      ackType = fbs::ReqAckData_OwnKeyGet;
       ackData = fbs::CreateKeyIDList(fbb, ownKeyGet(
 	    fbb, user, static_cast<const fbs::UserID *>(reqData))).Union();
       break;

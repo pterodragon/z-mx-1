@@ -255,9 +255,9 @@ next:
       if (args[0] == "help") {
 	if (args.length() == 1) {
 	  ZtString out;
-	  out << "Local commands:\n";
+	  out << "Local ";
 	  processCmd(file, cmd, out);
-	  out << "\nRemote commands:\n";
+	  out << "\nRemote ";
 	  fwrite(out.data(), 1, out.length(), file);
 	} else {
 	}
@@ -297,14 +297,74 @@ private:
 	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->passwdCmd(static_cast<FILE *>(file), args, out);
 	}},  "change passwd", "usage: passwd");
+
+    addCmd("users", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->usersCmd(static_cast<FILE *>(file), args, out);
+	}},  "list users", "usage: users");
+    addCmd("useradd", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->userAddCmd(static_cast<FILE *>(file), args, out);
+	}},  "add user", "usage: useradd ID NAME ROLE");
+    addCmd("usermod", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->userModCmd(static_cast<FILE *>(file), args, out);
+	}},  "modify user", "usage: usermod FIXME");
+    addCmd("userdel", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->userDelCmd(static_cast<FILE *>(file), args, out);
+	}},  "delete user", "usage: userdel ID");
+
+    addCmd("roles", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->rolesCmd(static_cast<FILE *>(file), args, out);
+	}},  "list roles", "usage: roles");
+    addCmd("roleadd", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->roleAddCmd(static_cast<FILE *>(file), args, out);
+	}},  "add role", "usage: roleadd FIXME");
+    addCmd("rolemod", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->roleModCmd(static_cast<FILE *>(file), args, out);
+	}},  "modify role", "usage: rolemod FIXME");
+    addCmd("roledel", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->roleDelCmd(static_cast<FILE *>(file), args, out);
+	}},  "delete role", "usage: roledel NAME");
+
+    addCmd("perms", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->permsCmd(static_cast<FILE *>(file), args, out);
+	}},  "list permissions", "usage: perms");
+    addCmd("permadd", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->permAddCmd(static_cast<FILE *>(file), args, out);
+	}},  "add permission", "usage: permadd ID NAME");
+    addCmd("permmod", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->permModCmd(static_cast<FILE *>(file), args, out);
+	}},  "modify permission", "usage: permmod ID NAME");
+    addCmd("permdel", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->permDelCmd(static_cast<FILE *>(file), args, out);
+	}},  "delete permission", "usage: permdel ID");
+
     addCmd("keys", "",
 	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->keysCmd(static_cast<FILE *>(file), args, out);
-	}},  "list keys", "usage: keys [USER]");
+	}},  "list keys", "usage: keys [USERID]");
     addCmd("keyadd", "",
 	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->keysCmd(static_cast<FILE *>(file), args, out);
-	}},  "add key", "usage: keyadd[USER]");
+	  return app->keyAddCmd(static_cast<FILE *>(file), args, out);
+	}},  "add key", "usage: keyadd [USERID]");
+    addCmd("keydel", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->keyDelCmd(static_cast<FILE *>(file), args, out);
+	}},  "delete key", "usage: keydel ID");
+    addCmd("keyclr", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->keyClrCmd(static_cast<FILE *>(file), args, out);
+	}},  "clear all keys", "usage: keyclr [USERID]");
   }
 
   int passwdCmd(FILE *file, ZvCf *args, ZtString &out) {
@@ -345,6 +405,45 @@ private:
       return executed(0, file, out);
     });
     return 0;
+  }
+
+  int usersCmd(FILE *file, ZvCf *args, ZtString &out) {
+    return executed(0, file, out); // FIXME
+  }
+  int userAddCmd(FILE *file, ZvCf *args, ZtString &out) {
+    return executed(0, file, out); // FIXME
+  }
+  int userModCmd(FILE *file, ZvCf *args, ZtString &out) {
+    return executed(0, file, out); // FIXME
+  }
+  int userDelCmd(FILE *file, ZvCf *args, ZtString &out) {
+    return executed(0, file, out); // FIXME
+  }
+
+  int rolesCmd(FILE *file, ZvCf *args, ZtString &out) {
+    return executed(0, file, out); // FIXME
+  }
+  int roleAddCmd(FILE *file, ZvCf *args, ZtString &out) {
+    return executed(0, file, out); // FIXME
+  }
+  int roleModCmd(FILE *file, ZvCf *args, ZtString &out) {
+    return executed(0, file, out); // FIXME
+  }
+  int roleDelCmd(FILE *file, ZvCf *args, ZtString &out) {
+    return executed(0, file, out); // FIXME
+  }
+
+  int permsCmd(FILE *file, ZvCf *args, ZtString &out) {
+    return executed(0, file, out); // FIXME
+  }
+  int permAddCmd(FILE *file, ZvCf *args, ZtString &out) {
+    return executed(0, file, out); // FIXME
+  }
+  int permModCmd(FILE *file, ZvCf *args, ZtString &out) {
+    return executed(0, file, out); // FIXME
+  }
+  int permDelCmd(FILE *file, ZvCf *args, ZtString &out) {
+    return executed(0, file, out); // FIXME
   }
 
   int keysCmd(FILE *file, ZvCf *args, ZtString &out) {
@@ -431,11 +530,43 @@ private:
     return 0;
   }
 
-  // FIXME -
-  // users, useradd, usermod, userdel
-  // roles, roleadd, rolemod, roledel
-  // perms, permadd, permmod, permdel
-  // keys, keyadd, keydel, keyclr
+  int keyDelCmd(FILE *file, ZvCf *args, ZtString &out) {
+    ZuBox<int> argc = args->get("#");
+    if (argc != 2) throw ZvCmdUsage();
+    auto seqNo = m_seqNo++;
+    using namespace ZvUserDB;
+    {
+      using namespace Zfb::Save;
+      m_fbb.Clear();
+      auto keyID = args->get("1");
+      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	    fbs::ReqData_KeyDel,
+	    fbs::CreateKeyID(m_fbb, str(m_fbb, keyID)).Union()));
+    }
+    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
+      ZtString out;
+      if (ack->data_type() != fbs::ReqAckData_OwnKeyDel &&
+	  ack->data_type() != fbs::ReqAckData_KeyDel) {
+	logError("mismatched ack from server: ",
+	    fbs::EnumNameReqAckData(ack->data_type()));
+	out << "key delete failed\n";
+	return executed(1, file, out);
+      }
+      using namespace Zfb::Load;
+      auto userAck = static_cast<const fbs::UserAck *>(ack->data());
+      if (!userAck->ok()) {
+	out << "key delete rejected\n";
+	return executed(1, file, out);
+      }
+      out << "key deleted\n";
+      return executed(0, file, out);
+    });
+    return 0;
+  }
+
+  int keyClrCmd(FILE *file, ZvCf *args, ZtString &out) {
+    return executed(0, file, out); // FIXME
+  }
 
 private:
   ZmSemaphore		m_done;

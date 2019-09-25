@@ -130,6 +130,7 @@ public:
     secret.length(Ztls::Base64::declen(secret_.length()));
     Ztls::Base64::decode(
 	secret.data(), secret.length(), secret_.data(), secret_.length());
+    secret.length(32);
     ZvUserDB::KeyData token, hmac;
     token.length(token.size());
     hmac.length(hmac.size());

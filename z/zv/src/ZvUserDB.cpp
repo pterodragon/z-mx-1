@@ -50,7 +50,7 @@ bool Mgr::bootstrap(
     }
   }
   if (!m_roles.count())
-    roleAdd_(role, Role::Immutable, Bitmap().fill(), Bitmap());
+    roleAdd_(role, Role::Immutable, Bitmap().fill(), Bitmap().fill());
   if (!m_users->count_()) {
     ZmRef<User> user = userAdd_(
 	0, name, role, User::Immutable | User::Enabled | User::ChPass,
@@ -285,10 +285,13 @@ Zfb::Offset<fbs::ReqAck> Mgr::request(User *user, bool interactive,
 
   if (!ok(user, interactive, m_permIndex[Perm::Offset + reqType])) {
     using namespace Zfb::Save;
+    ZtString text = "permission denied";
+    if (user->flags & User::ChPass) text << " (user must change password)";
+    auto text_ = str(fbb, text);
     fbs::ReqAckBuilder fbb_(fbb);
     fbb_.add_seqNo(seqNo);
     fbb_.add_rejCode(__LINE__);
-    fbb_.add_rejText(str(fbb, "permission denied"));
+    fbb_.add_rejText(text_);
     return fbb_.Finish();
   }
 
@@ -452,7 +455,7 @@ ZmRef<User> Mgr::access(
   {
     Ztls::HMAC hmac_(Key::keyType());
     KeyData verify;
-    hmac_.start(user->secret.data(), user->secret.length());
+    hmac_.start(key->secret.data(), key->secret.length());
     hmac_.update(token.data(), token.length());
     verify.length(verify.size());
     hmac_.finish(verify.data());

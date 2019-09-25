@@ -292,6 +292,26 @@ next:
 private:
   // built-in commands
 
+  int filterAck(
+      FILE *file, const ZvUserDB::fbs::ReqAck *ack, int ackType1, int ackType2,
+      const char *op, ZtString &out) {
+    using namespace ZvUserDB;
+    if (ack->rejCode()) {
+      out << '[' << ZuBox<unsigned>(ack->rejCode()) << "] "
+	<< Zfb::Load::str(ack->rejText()) << '\n';
+      return 1;
+    }
+    auto ackType = ack->data_type();
+    if ((int)ackType != ackType1 &&
+	ackType2 >= fbs::ReqAckData_MIN && (int)ackType != ackType2) {
+      logError("mismatched ack from server: ",
+	  fbs::EnumNameReqAckData(ackType));
+      out << op << " failed\n";
+      return 1;
+    }
+    return 0;
+  }
+
   void initCmds() {
     addCmd("passwd", "",
 	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
@@ -390,12 +410,9 @@ private:
     }
     m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
       ZtString out;
-      if (ack->data_type() != fbs::ReqAckData_ChPass) {
-	logError("mismatched ack from server: ",
-	    fbs::EnumNameReqAckData(ack->data_type()));
-	out << "password change failed\n";
-	return executed(1, file, out);
-      }
+      if (int code = filterAck(
+	    file, ack, fbs::ReqAckData_ChPass, -1, "password change", out))
+	return executed(code, file, out);
       auto userAck = static_cast<const fbs::UserAck *>(ack->data());
       if (!userAck->ok()) {
 	out << "password change rejected\n";
@@ -467,17 +484,14 @@ private:
     }
     m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
       ZtString out;
-      if (ack->data_type() != fbs::ReqAckData_OwnKeyGet &&
-	  ack->data_type() != fbs::ReqAckData_KeyGet) {
-	logError("mismatched ack from server: ",
-	    fbs::EnumNameReqAckData(ack->data_type()));
-	out << "key get failed\n";
-	return executed(1, file, out);
-      }
+      if (int code = filterAck(
+	    file, ack, fbs::ReqAckData_OwnKeyGet, fbs::ReqAckData_KeyGet,
+	    "key get", out))
+	return executed(code, file, out);
       auto keyIDList = static_cast<const fbs::KeyIDList *>(ack->data());
       using namespace Zfb::Load;
       all(keyIDList->list(), [&out](unsigned, auto key_) {
-	out << str(key_);
+	out << str(key_) << '\n';
       });
       return executed(0, file, out);
     });
@@ -505,13 +519,10 @@ private:
     }
     m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
       ZtString out;
-      if (ack->data_type() != fbs::ReqAckData_OwnKeyAdd &&
-	  ack->data_type() != fbs::ReqAckData_KeyAdd) {
-	logError("mismatched ack from server: ",
-	    fbs::EnumNameReqAckData(ack->data_type()));
-	out << "key add failed\n";
-	return executed(1, file, out);
-      }
+      if (int code = filterAck(
+	    file, ack, fbs::ReqAckData_OwnKeyAdd, fbs::ReqAckData_KeyAdd,
+	    "key add", out))
+	return executed(code, file, out);
       using namespace Zfb::Load;
       auto keyUpdAck = static_cast<const fbs::KeyUpdAck *>(ack->data());
       if (!keyUpdAck->ok()) {
@@ -545,13 +556,10 @@ private:
     }
     m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
       ZtString out;
-      if (ack->data_type() != fbs::ReqAckData_OwnKeyDel &&
-	  ack->data_type() != fbs::ReqAckData_KeyDel) {
-	logError("mismatched ack from server: ",
-	    fbs::EnumNameReqAckData(ack->data_type()));
-	out << "key delete failed\n";
-	return executed(1, file, out);
-      }
+      if (int code = filterAck(
+	    file, ack, fbs::ReqAckData_OwnKeyDel, fbs::ReqAckData_KeyDel,
+	    "key delete", out))
+	return executed(code, file, out);
       using namespace Zfb::Load;
       auto userAck = static_cast<const fbs::UserAck *>(ack->data());
       if (!userAck->ok()) {
@@ -600,31 +608,50 @@ int main(int argc, char **argv)
 
   try {
     {
+      const auto &remote = ZtStaticRegexUTF8("^([^@]+)@([^:]+):(\\d+)$");
       ZtRegex::Captures c;
-      const auto &r = ZtStaticRegexUTF8("^([^@]+)@([^:]+):(\\d+)$");
-      if (r.m(argv[1], c) == 4) {
+      if (remote.m(argv[1], c) == 4) {
 	user = c[2];
 	server = c[3];
 	port = c[4];
       }
     }
     if (!user) {
+      const auto &local = ZtStaticRegexUTF8("^([^@]+)@(\\d+)$");
       ZtRegex::Captures c;
-      const auto &r = ZtStaticRegexUTF8("^([^:]+):(\\d+)$");
-      if (r.m(argv[1], c) == 3) {
+      if (local.m(argv[1], c) == 3) {
+	user = c[2];
+	server = "localhost";
+	port = c[3];
+      }
+    }
+    if (!user) {
+      const auto &local = ZtStaticRegexUTF8("^([^:]+):(\\d+)$");
+      ZtRegex::Captures c;
+      if (local.m(argv[1], c) == 3) {
 	server = c[2];
 	port = c[3];
       }
     }
     if (!server) {
-      server = "localhost";
-      port = argv[1];
+      const auto &local = ZtStaticRegexUTF8("^(\\d+)$");
+      ZtRegex::Captures c;
+      if (local.m(argv[1], c) == 2) {
+	server = "localhost";
+	port = c[2];
+      }
     }
-    if (!*port || !port) usage();
   } catch (const ZtRegex::Error &) {
     usage();
   }
-  if (user) keyID = secret = nullptr;
+  if (!server || !*port || !port) usage();
+  if (user)
+    keyID = secret = nullptr;
+  else if (!keyID) {
+    std::cerr << "set ZCMD_KEY_ID and ZCMD_KEY_SECRET "
+      "to use without username\n" << std::flush;
+    ::exit(1);
+  }
   if (keyID) {
     if (!secret) {
       std::cerr << "set ZCMD_KEY_SECRET "

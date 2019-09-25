@@ -6,7 +6,7 @@ AM_LDFLAGS = @Z_LDFLAGS@
 LDADD = $(top_builddir)/zu/src/libZu.la
 bin_PROGRAMS = \
 	ZuConversionTest ZuHashTest ZuCmpTest ZuBoxTest ZuNetworkTest \
-	ZuCanTest ZuArrayTest ZuPairTest ZuIDTest ZuUTFTest
+	ZuCanTest ZuArrayTest ZuPairTest ZuIDTest ZuUTFTest ZuBitmapTest
 ZuConversionTest_SOURCES = ZuConversionTest.cpp
 ZuHashTest_SOURCES = ZuHashTest.cpp Analyze.hpp
 ZuCmpTest_SOURCES = ZuCmpTest.cpp
@@ -17,3 +17,4 @@ ZuArrayTest_SOURCES = ZuArrayTest.cpp
 ZuPairTest_SOURCES = ZuPairTest.cpp
 ZuIDTest_SOURCES = ZuIDTest.cpp
 ZuUTFTest_SOURCES = ZuUTFTest.cpp
+ZuBitmapTest_SOURCES = ZuBitmapTest.cpp

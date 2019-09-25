@@ -31,9 +31,12 @@
 #endif
 
 #include <ZuInt.hpp>
+#include <ZuString.hpp>
+#include <ZuBox.hpp>
+#include <ZuPrint.hpp>
 #include <ZuIfT.hpp>
 
-template <unsigned Bits_> class ZuBitmap {
+template <unsigned Bits_> class ZuBitmap : public ZuPrintable {
 public:
   enum { Bits = Bits_ };
   enum { Bytes = (Bits>>3) };
@@ -41,24 +44,7 @@ public:
   enum { Mask = ((1<<Shift) - 1) };
   enum { Words = (Bits>>Shift) };
 
-private:
-  template <unsigned> inline void init_() { }
-  template <unsigned I> struct Index_ { enum { OK = I < Words }; };
-  template <unsigned I, typename ...Args>
-  inline typename ZuIfT<!Index_<I>::OK>::T init_(Args &&...) { }
-  template <unsigned I, typename Arg0, typename ...Args>
-  inline typename ZuIfT<Index_<I>::OK>::T
-  init_(Arg0 &&arg0, Args &&... args) {
-    data[I] = ZuFwd<Arg0>(arg0);
-    init_<I + 1>(ZuFwd<Args>(args)...);
-  }
-
-public:
   ZuBitmap() { zero(); }
-  template <typename Arg0, typename ...Args>
-  inline ZuBitmap(Arg0 &&arg0, Args &&... args) {
-    init_<0>(ZuFwd<Arg0>(arg0), ZuFwd<Args>(args)...);
-  }
   ZuBitmap(const ZuBitmap &b) { memcpy(data, b.data, Bytes); }
   ZuBitmap &operator =(const ZuBitmap &b) {
     if (ZuLikely(this != &b)) memcpy(data, b.data, Bytes);
@@ -66,6 +52,8 @@ public:
   }
   ZuBitmap(ZuBitmap &&b) = default;
   ZuBitmap &operator =(ZuBitmap &&b) = default;
+
+  ZuBitmap(ZuString s) { zero(); scan(s); }
 
   ZuInline ZuBitmap &zero() { memset(data, 0, Bytes); return *this; }
   ZuInline ZuBitmap &fill() { memset(data, 0xff, Bytes); return *this; }
@@ -127,6 +115,130 @@ public:
   inline ZuBitmap &operator ^=(const ZuBitmap &b) {
     opFn<Xor, 0>(data, b.data);
     return *this;
+  }
+
+  inline void set(int begin, int end) {
+    if (begin < 0)
+      begin = 0;
+    else if (begin >= Bits)
+      begin = Bits - 1;
+    if (end < 0)
+      end = Bits - 1;
+    else if (end >= Bits)
+      end = Bits - 1;
+    while (begin <= end) {
+      uint64_t mask = (~((uint64_t)0));
+      unsigned i = (begin>>Shift);
+      if (i == (end>>Shift))
+	mask >>= (63 - (end - begin));
+      if (uint64_t begin_ = (begin & Mask)) {
+	mask <<= begin_;
+	begin -= begin_;
+      }
+      data[i] |= mask;
+      begin += 64;
+    }
+  }
+  inline void clr(int begin, int end) {
+    if (begin < 0)
+      begin = 0;
+    else if (begin >= Bits)
+      begin = Bits - 1;
+    if (end < 0)
+      end = Bits - 1;
+    else if (end >= Bits)
+      end = Bits - 1;
+    while (begin <= end) {
+      uint64_t mask = (~((uint64_t)0));
+      unsigned i = (begin>>Shift);
+      if (i == (end>>Shift))
+	mask >>= (63 - (end - begin));
+      if (uint64_t begin_ = (begin & Mask)) {
+	mask <<= begin_;
+	begin -= begin_;
+      }
+      data[i] &= ~mask;
+      begin += 64;
+    }
+  }
+
+  inline bool operator !() const {
+    for (unsigned i = 0; i < Words; i++)
+      if (data[i]) return false;
+    return true;
+  }
+
+  inline int first() const {
+    for (unsigned i = 0; i < Words; i++)
+      if (uint64_t w = data[i])
+	return (i<<Shift) + __builtin_ctzll(w);
+    return -1;
+  }
+  inline int last() const {
+    for (int i = Words; --i >= 0; )
+      if (uint64_t w = data[i])
+	return (i<<Shift) + (63 - __builtin_clzll(w));
+    return -1;
+  }
+
+  inline int next(int i) const {
+    if (ZuUnlikely(i == -1)) return first();
+    do {
+      if (++i >= Bits) return -1;
+    } while (!(*this && i));
+    return i;
+  }
+  inline int prev(int i) const {
+    if (ZuUnlikely(i == -1)) return last();
+    do {
+      if (--i < 0) return -1;
+    } while (!(*this && i));
+    return i;
+  }
+
+  inline unsigned scan(ZuString s) {
+    const char *data = s.data();
+    unsigned length = s.length(), offset = 0;
+    if (!length) return 0;
+    ZuBox<int> begin, end;
+    int j;
+    while (offset < length) {
+      if (data[offset] == ',') { ++offset; continue; }
+      if ((j = begin.scan(data + offset, length - offset)) <= 0) break;
+      offset += j;
+      if (offset < length && data[offset] == '-') {
+	if ((j = end.scan(data + offset + 1, length - offset - 1)) > 0)
+	  offset += j + 1;
+	else {
+	  end = -1;
+	  ++offset;
+	}
+      } else
+	end = begin;
+      set(begin, end);
+    }
+    return offset;
+  }
+
+  template <typename S> inline void print(S &s) const {
+    if (!*this) return;
+    ZuBox<int> begin = first();
+    bool first = true;
+    while (begin >= 0) {
+      if (!first)
+	s << ',';
+      else
+	first = false;
+      ZuBox<int> end = begin, next;
+      while ((next = this->next(end)) == end + 1) end = next;
+      if (end == begin)
+	s << begin;
+      else if (end == Bits - 1)
+	s << begin << '-';
+      else
+	s << begin << '-' << end;
+      begin = next;
+    }
   }
 
   uint64_t	data[Words];

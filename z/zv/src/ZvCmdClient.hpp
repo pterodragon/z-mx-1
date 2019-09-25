@@ -221,6 +221,7 @@ public:
   }
 
 private:
+  // FIXME - cache user ID, roles, perms, flags from LoginAck locally in link
   int processLoginAck(const uint8_t *data, unsigned len) {
     using namespace Zfb;
     using namespace Load;

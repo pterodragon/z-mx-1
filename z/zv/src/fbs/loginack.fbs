@@ -1,6 +1,9 @@
 namespace ZvUserDB.fbs;
 table LoginAck {
+  id:uint64
+  roles:[string];
   perms:[uint64];	// bitmap
+  flags:uint8;
   ok:uint8;
 }
 root_type LoginAck;

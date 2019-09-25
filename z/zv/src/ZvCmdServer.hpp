@@ -133,6 +133,7 @@ private:
       return 0;
     }
     m_fbb.Clear();
+    // FIXME - add id, roles, flags to below
     m_fbb.Finish(fbs::CreateLoginAck(m_fbb,
 	  m_fbb.CreateVector(m_user->perms.data, Bitmap::Words), 1));
     m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Login));

@@ -297,6 +297,10 @@ private:
 	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->passwdCmd(static_cast<FILE *>(file), args, out);
 	}},  "change passwd", "usage: passwd");
+    addCmd("keys", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->keysCmd(static_cast<FILE *>(file), args, out);
+	}},  "list keys", "usage: keys [USER]");
   }
 
   int passwdCmd(FILE *file, ZvCf *args, ZtString &out) {
@@ -319,6 +323,42 @@ private:
 	    fbs::CreateUserChPass(m_fbb,
 	      str(m_fbb, oldpw),
 	      str(m_fbb, newpw)).Union()));
+    }
+    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
+      ZtString out;
+      if (ack->data_type() != fbs::ReqAckData_ChPass) {
+	logError("mismatched ack from server: ",
+	    fbs::EnumNameReqAckData(ack->data_type()));
+	out << "password change failed\n";
+	return executed(1, file, out);
+      }
+      auto ackData = static_cast<const fbs::UserAck *>(ack->data());
+      if (!ackData->ok()) {
+	out << "password change rejected\n";
+	return executed(1, file, out);
+      }
+      out << "password changed\n";
+      return executed(0, file, out);
+    });
+    return 0;
+  }
+
+  int keysCmd(FILE *file, ZvCf *args, ZtString &out) {
+    ZuBox<int> argc = args->get("#");
+    if (argc < 1 || argc > 2) throw ZvCmdUsage();
+    auto seqNo = m_seqNo++;
+    using namespace ZvUserDB;
+    {
+      using namespace Zfb::Save;
+      m_fbb.Clear();
+      if (argc == 1) {
+	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	      fbs::ReqData_OwnKeyGet,
+	      fbs::CreateUserID(m_fbb,
+		str(m_fbb, oldpw),
+		str(m_fbb, newpw)).Union()));
+      } else {
+      }
     }
     m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
       ZtString out;

@@ -293,7 +293,8 @@ private:
   // built-in commands
 
   int filterAck(
-      FILE *file, const ZvUserDB::fbs::ReqAck *ack, int ackType1, int ackType2,
+      FILE *file, const ZvUserDB::fbs::ReqAck *ack,
+      int ackType1, int ackType2,
       const char *op, ZtString &out) {
     using namespace ZvUserDB;
     if (ack->rejCode()) {
@@ -452,6 +453,40 @@ private:
 
   int permsCmd(FILE *file, ZvCf *args, ZtString &out) {
     return executed(0, file, out); // FIXME
+#if 0
+    ZuBox<int> argc = args->get("#");
+    if (argc < 1 || argc > 2) throw ZvCmdUsage();
+    auto seqNo = m_seqNo++;
+    using namespace ZvUserDB;
+    {
+      using namespace Zfb::Save;
+      m_fbb.Clear();
+      if (argc == 1)
+	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	      fbs::ReqData_OwnKeyGet,
+	      fbs::CreateUserID(m_fbb, m_link->userID()).Union()));
+      else {
+	auto userID = ZuBox<uint64_t>(args->get("1"));
+	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	      fbs::ReqData_KeyGet,
+	      fbs::CreateUserID(m_fbb, userID).Union()));
+      }
+    }
+    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
+      ZtString out;
+      if (int code = filterAck(
+	    file, ack, fbs::ReqAckData_OwnKeyGet, fbs::ReqAckData_KeyGet,
+	    "key get", out))
+	return executed(code, file, out);
+      auto keyIDList = static_cast<const fbs::KeyIDList *>(ack->data());
+      using namespace Zfb::Load;
+      all(keyIDList->list(), [&out](unsigned, auto key_) {
+	out << str(key_) << '\n';
+      });
+      return executed(0, file, out);
+    });
+    return 0;
+#endif
   }
   int permAddCmd(FILE *file, ZvCf *args, ZtString &out) {
     return executed(0, file, out); // FIXME
@@ -573,7 +608,39 @@ private:
   }
 
   int keyClrCmd(FILE *file, ZvCf *args, ZtString &out) {
-    return executed(0, file, out); // FIXME
+    ZuBox<int> argc = args->get("#");
+    if (argc < 1 || argc > 2) throw ZvCmdUsage();
+    auto seqNo = m_seqNo++;
+    using namespace ZvUserDB;
+    {
+      using namespace Zfb::Save;
+      m_fbb.Clear();
+      if (argc == 1)
+	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	      fbs::ReqData_OwnKeyClr,
+	      fbs::CreateUserID(m_fbb, m_link->userID()).Union()));
+      else {
+	auto userID = ZuBox<uint64_t>(args->get("1"));
+	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
+	      fbs::ReqData_KeyClr,
+	      fbs::CreateUserID(m_fbb, userID).Union()));
+      }
+    }
+    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
+      ZtString out;
+      if (int code = filterAck(
+	    file, ack, fbs::ReqAckData_OwnKeyGet, fbs::ReqAckData_KeyGet,
+	    "key clear", out))
+	return executed(code, file, out);
+      auto userAck = static_cast<const fbs::UserAck *>(ack->data());
+      if (!userAck->ok()) {
+	out << "key clear rejected\n";
+	return executed(1, file, out);
+      }
+      out << "keys cleared\n";
+      return executed(0, file, out);
+    });
+    return 0;
   }
 
 private:

@@ -30,6 +30,7 @@
 
 #include <ZuString.hpp>
 #include <ZuByteSwap.hpp>
+#include <ZuUnion.hpp>
 
 #include <ZmObject.hpp>
 #include <ZmRef.hpp>

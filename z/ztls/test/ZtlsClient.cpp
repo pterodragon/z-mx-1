@@ -46,9 +46,13 @@ struct App : public Ztls::Client<App> {
     }
 
     int process(const uint8_t *data, unsigned len) {
-      std::cout << ZuString{(const char *)data, len} << std::flush;
-      // disconnect_();
-      // return -1; // would return len to continue
+      auto s = ZuString{(const char *)data, len};
+      std::cout << s << std::flush;
+      const auto &htmlend = ZtStaticRegexUTF8("</html>");
+      if (htmlend.m(s)) {
+	disconnect_();
+	return -1;
+      }
       return len;
     }
   };
@@ -60,16 +64,19 @@ struct App : public Ztls::Client<App> {
 
 void usage()
 {
-  std::cerr << "usage: ZtlsClient server port\n" << std::flush;
+  std::cerr <<
+    "usage: ZtlsClient CA SERVER PORT\n\n"
+    "Note: use /etc/ssl/certs as CA for public servers\n"
+    << std::flush;
   ::exit(1);
 }
 
 int main(int argc, char **argv)
 {
-  if (argc != 3) usage();
+  if (argc != 4) usage();
 
-  ZuString server = argv[1];
-  unsigned port = ZuBox<unsigned>(argv[2]);
+  ZuString server = argv[2];
+  unsigned port = ZuBox<unsigned>(argv[3]);
 
   if (!port) usage();
 
@@ -96,16 +103,18 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  if (!app.init(&mx, "3", "/etc/ssl/certs", alpn)) {
+  if (!app.init(&mx, "3", argv[1], alpn)) {
     std::cerr << "TLS client initialization failed\n" << std::flush;
     return 1;
   }
 
-  App::Link link(&app);
+  {
+    ZmRef<App::Link> link = new App::Link(&app);
 
-  link.connect(server, port);
+    link->connect(server, port);
 
-  app.sem.wait();
+    app.sem.wait();
+  }
 
   mx.stop(true);
 

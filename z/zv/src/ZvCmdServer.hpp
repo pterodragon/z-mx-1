@@ -140,7 +140,7 @@ private:
       m_fbb.Finish(fbs::CreateLoginAck(m_fbb,
 	    m_user->id, str(m_fbb, m_user->name),
 	    strVecIter(m_fbb, m_user->roles.length(),
-	      [&roles = m_user->roles](Zfb::Builder &, unsigned k) {
+	      [&roles = m_user->roles](unsigned k) {
 		return roles[k]->name;
 	      }),
 	    m_fbb.CreateVector(m_user->perms.data, Bitmap::Words),
@@ -391,7 +391,12 @@ public:
     thread_local ZtString out(OutBufSize);
     out.length(0);
     Context context{app(), link, user, interactive};
-    int code = ZvCmdHost::processCmd(&context, Zfb::Load::str(in->cmd()), out);
+    auto cmd_ = in->cmd();
+    ZtArray<ZtString> args;
+    args.length(cmd_->size());
+    Zfb::Load::all(cmd_,
+	[&args](unsigned i, auto arg_) { args[i] = Zfb::Load::str(arg_); });
+    int code = ZvCmdHost::processCmd(&context, args, out);
     fbb.Finish(ZvCmd::fbs::CreateReqAck(
 	  fbb, in->seqNo(), code, Zfb::Save::str(fbb, out)));
     return fbb.GetSize();

@@ -33,6 +33,9 @@
 #include <ZvCmdHost.hpp>
 #include <ZvMultiplexCf.hpp>
 
+#include <ZtlsBase32.hpp>
+#include <ZtlsBase64.hpp>
+
 #include <Zrl.hpp>
 
 #ifdef _WIN32
@@ -251,29 +254,34 @@ next:
 	cmd = ZuMv(cmd_);
       }
     }
+    ZtArray<ZtString> args;
+    ZvCf::parseCLI(cmd, args);
     {
-      ZtArray<ZtString> args;
-      ZvCf::parseCLI(cmd, args);
       if (args[0] == "help") {
 	if (args.length() == 1) {
 	  ZtString out;
 	  out << "Local ";
-	  processCmd(file, cmd, out);
+	  processCmd(file, args, out);
 	  out << "\nRemote ";
 	  fwrite(out.data(), 1, out.length(), file);
-	} else {
+	} else if (args.length() == 2 && hasCmd(args[1])) {
+	  ZtString out;
+	  int code = processCmd(file, args, out);
+	  if (code || out) executed(code, file, out);
+	  return;
 	}
       } else if (hasCmd(args[0])) {
 	ZtString out;
-	int code = processCmd(file, cmd, out);
+	int code = processCmd(file, args, out);
 	if (code || out) executed(code, file, out);
 	return;
       }
     }
     auto seqNo = m_seqNo++;
     m_fbb.Clear();
-    m_fbb.Finish(ZvCmd::fbs::CreateRequest(m_fbb,
-	  seqNo, Zfb::Save::str(m_fbb, cmd)));
+    m_fbb.Finish(ZvCmd::fbs::CreateRequest(m_fbb, seqNo,
+	  Zfb::Save::strVecIter(m_fbb, args.length(),
+	    [&args](unsigned i) { return args[i]; })));
     m_link->sendCmd(m_fbb, seqNo, [this, file](const ZvCmd::fbs::ReqAck *ack) {
       using namespace Zfb::Load;
       executed(ack->code(), file, str(ack->out()));
@@ -460,8 +468,8 @@ private:
 	hmac.data(), hmac.length(), hmac_.data(), hmac_.length());
     auto secret_ = bytes(user_->secret());
     ZtString secret;
-    secret.length(Ztls::Base64::enclen(secret_.length()));
-    Ztls::Base64::encode(
+    secret.length(Ztls::Base32::enclen(secret_.length()));
+    Ztls::Base32::encode(
 	secret.data(), secret.length(), secret_.data(), secret_.length());
     out << user_->id() << ' ' << str(user_->name()) << " roles=[";
     all(user_->roles(), [&out](unsigned i, auto role_) {
@@ -535,7 +543,7 @@ private:
 	      args->getInt64("1", 0, LLONG_MAX, true),
 	      str(m_fbb, args->get("2")), 0, 0,
 	      strVecIter(m_fbb, roles.length(),
-		[&roles](Zfb::IOBuilder &, unsigned i) { return roles[i]; }),
+		[&roles](unsigned i) { return roles[i]; }),
 	      flags).Union()));
     }
     m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
@@ -607,7 +615,7 @@ private:
 	      args->getInt64("1", 0, LLONG_MAX, true),
 	      str(m_fbb, args->get("2")), 0, 0,
 	      strVecIter(m_fbb, roles.length(),
-		[&roles](Zfb::IOBuilder &, unsigned i) { return roles[i]; }),
+		[&roles](unsigned i) { return roles[i]; }),
 	      flags).Union()));
     }
     m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {

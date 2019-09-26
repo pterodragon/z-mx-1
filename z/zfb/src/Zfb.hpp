@@ -170,7 +170,7 @@ namespace Save {
   template <typename B, typename L>
   inline auto strVecIter(B &b, unsigned n, L l) {
     return vectorIter<String>(b, n, [l = ZuMv(l)](B &b, unsigned i) mutable {
-      return str(b, l(b, i));
+      return str(b, l(i));
     });
   }
 

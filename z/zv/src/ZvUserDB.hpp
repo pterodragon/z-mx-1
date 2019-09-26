@@ -138,7 +138,7 @@ struct User__ : public ZuPolymorph {
     using namespace Zfb::Save;
     return fbs::CreateUser(fbb, id,
 	str(fbb, name), bytes(fbb, hmac), bytes(fbb, secret),
-	strVecIter(fbb, roles.length(), [this](Zfb::Builder &, unsigned k) {
+	strVecIter(fbb, roles.length(), [this](unsigned k) {
 	  return roles[k]->name;
 	}), flags);
   }

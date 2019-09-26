@@ -596,6 +596,16 @@ public:
   void wait() { m_done.wait(); }
   void post() { m_done.post(); }
 
+  void processCmd(ZuString cmd) {
+    if (!cmd) return;
+    ZtArray<ZtString> args;
+    ZvCf::parseCLI(cmd, args);
+    ZtString out;
+    ZvCmdHost::processCmd(nullptr, args, out);
+    fwrite(out.data(), 1, out.length(), stdout);
+    fflush(stdout);
+  }
+
   void add(Proxy *proxy) {
     m_proxies->add(proxy);
   }
@@ -1530,11 +1540,7 @@ int main(int argc, char **argv)
     for (;;) {
       try {
 	auto cmd = Zrl::readline_("zproxy] ");
-	if (!cmd) continue;
-	ZtString out;
-	app->processCmd(nullptr, cmd, out);
-	fwrite(out.data(), 1, out.length(), stdout);
-	fflush(stdout);
+	app->processCmd(cmd);
       } catch (const Zrl::EndOfFile &) {
 	break;
       }
@@ -1545,11 +1551,7 @@ int main(int argc, char **argv)
       cmd[cmd.size() - 1] = 0;
       cmd.calcLength();
       cmd.chomp();
-      if (!cmd) continue;
-      ZtString out;
-      app->processCmd(nullptr, cmd, out);
-      fwrite(out.data(), 1, out.length(), stdout);
-      fflush(stdout);
+      app->processCmd(cmd);
     }
     app->wait();
   }

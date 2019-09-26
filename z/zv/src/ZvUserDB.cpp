@@ -791,7 +791,7 @@ Offset<Vector<Offset<Zfb::String>>> Mgr::keyGet_(
   unsigned n = 0;
   for (auto key = user->keyList; key; key = key->nextKey) ++n;
   return strVecIter(fbb, n,
-      [key = user->keyList](Zfb::Builder &fbb, unsigned) mutable {
+      [key = user->keyList](unsigned) mutable {
 	auto id = key->id;
 	key = key->nextKey;
 	return id;

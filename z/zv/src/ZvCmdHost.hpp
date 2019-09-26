@@ -70,15 +70,15 @@ public:
 
   bool hasCmd(ZuString name) { return m_cmds.find(name); }
 
-  int processCmd(void *context, ZuString in, ZtString &out) {
-    ZtString name;
+  int processCmd(void *context, const ZtArray<ZtString> &args, ZtString &out) {
+    if (!args) return 0;
+    const ZtString &name = args[0];
     typename Cmds::NodeRef cmd;
     try {
       ZmRef<ZvCf> cf = new ZvCf();
-      cf->fromCLI(m_syntax, in);
-      name = cf->get("0");
       cmd = m_cmds.find(name);
       if (!cmd) throw ZtString("unknown command");
+      cf->fromArgs(m_syntax->subset(name, false), args);
       if (cf->getInt("help", 0, 1, false, 0)) {
 	out << cmd->val().usage << '\n';
 	return 0;
@@ -108,7 +108,10 @@ private:
     if (argc > 2) throw ZvCmdUsage();
     if (ZuUnlikely(argc == 2)) {
       auto cmd = m_cmds.find(args->get("1"));
-      if (!cmd) throw ZvCmdUsage();
+      if (!cmd) {
+	out << args->get("1") << ": unknown command\n";
+	return 1;
+      }
       out << cmd->val().usage << '\n';
       return 0;
     }

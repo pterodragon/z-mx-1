@@ -49,13 +49,13 @@
 #include <zlib/ZvCf.hpp>
 #include <zlib/ZvUserDB.hpp>
 
-#include <zlib/loginreq_generated.h>
-#include <zlib/loginack_generated.h>
-#include <zlib/userdbreq_generated.h>
-#include <zlib/userdback_generated.h>
-#include <zlib/zcmd_generated.h>
-#include <zlib/zcmdreq_generated.h>
-#include <zlib/zcmdack_generated.h>
+#include <zlib/loginreq_fbs.h>
+#include <zlib/loginack_fbs.h>
+#include <zlib/userdbreq_fbs.h>
+#include <zlib/userdback_fbs.h>
+#include <zlib/zcmd_fbs.h>
+#include <zlib/zcmdreq_fbs.h>
+#include <zlib/zcmdack_fbs.h>
 
 #include <zlib/ZvCmdHost.hpp>
 #include <zlib/ZvCmdNet.hpp>

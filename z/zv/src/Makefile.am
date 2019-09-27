@@ -18,10 +18,11 @@ FBS = \
 	zcmd.fbs \
 	zcmdreq.fbs \
 	zcmdack.fbs
-FBS_H = ${FBS:%.fbs=%_generated.h}
-${FBS_H}: %_generated.h: fbs/%.fbs
+FBS_H = ${FBS:%.fbs=%_fbs.h}
+${FBS_H}: %_fbs.h: fbs/%.fbs
 	flatc -c -I fbs $<
-	perl -pi -e 's|^#include "(\w+)_generated\.h"|#include <zlib/$${1}_generated.h>|; s|^#include "flatbuffers/flatbuffers.h"|#include <flatbuffers/flatbuffers.h>|;' $@
+	mv ${@:%_fbs.h=%_generated.h} $@
+	perl -pi -e 's|^#include "(\w+)_generated\.h"|#include <zlib/$${1}_fbs.h>|; s|^#include "flatbuffers/flatbuffers.h"|#include <flatbuffers/flatbuffers.h>|;' $@
 BUILT_SOURCES = ${FBS_H}
 CLEANFILES = ${FBS_H}
 pkginclude_HEADERS = ZvLib.hpp \

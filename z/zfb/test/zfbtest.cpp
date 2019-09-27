@@ -9,7 +9,7 @@
 
 #include <zlib/Zfb.hpp>
 
-#include "zfbtest_generated.h"
+#include "zfbtest_fbs.h"
 
 std::vector<ZmRef<ZiIOBuf>> bufs;
 

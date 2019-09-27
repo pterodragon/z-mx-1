@@ -50,10 +50,10 @@
 #include <zlib/ZtlsHMAC.hpp>
 #include <zlib/ZtlsRandom.hpp>
 
-#include "userdb_generated.h"
-#include "loginreq_generated.h"
-#include "userdbreq_generated.h"
-#include "userdback_generated.h"
+#include <zlib/userdb_fbs.h>
+#include <zlib/loginreq_fbs.h>
+#include <zlib/userdbreq_fbs.h>
+#include <zlib/userdback_fbs.h>
 
 namespace ZvUserDB {
 

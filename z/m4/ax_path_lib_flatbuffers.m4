@@ -28,8 +28,10 @@ AC_DEFUN([AX_PATH_LIB_FLATBUFFERS], [
       CPPFLAGS="-I$with_flatbuffers/include $CPPFLAGS"
       LDFLAGS="-L$with_flatbuffers/lib -L$with_flatbuffers/lib64 -Wl,-R,$with_flatbuffers/lib -Wl,-R,$with_flatbuffers/lib64 $LDFLAGS"
     fi
+    LIBS="-lflatbuffers"
     AC_CACHE_CHECK([whether flatbuffers library is installed],
       ax_cv_lib_flatbuffers_ok, [AC_RUN_IFELSE([AC_LANG_SOURCE([
+#include <stdio.h>
 #include <flatbuffers/flatbuffers.h>
 int main() {
   using namespace flatbuffers;

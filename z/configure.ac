@@ -61,9 +61,18 @@ AC_MSG_RESULT([${Z_MT_LIBS}])
 
 AX_C_VA_LIST_IS_ARRAY
 
+AX_PATH_JNI([jni="yes"], [dnl
+  AC_MSG_NOTICE([JNI unavailable])
+  jni="no"
+])
+
 AX_PATH_LIB_PCAP(, [AC_MSG_ERROR([libpcap required])])
 CPPFLAGS="$PCAP_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$PCAP_LDFLAGS $LDFLAGS"
+
+AX_PATH_LIB_LZ4(, [AC_MSG_ERROR([liblz4 required])])
+CPPFLAGS="$LZ4_CPPFLAGS $CPPFLAGS"
+LDFLAGS="$LZ4_LDFLAGS $LDFLAGS"
 
 AX_PATH_LIB_MBEDTLS(, [AC_MSG_ERROR([libmbedtls required])])
 CPPFLAGS="$MBEDTLS_CPPFLAGS $CPPFLAGS"
@@ -75,7 +84,6 @@ LDFLAGS="$FLATBUFFERS_LDFLAGS $LDFLAGS"
 
 AX_PATH_LIB_CPPCODEC(, [AC_MSG_ERROR([libcppcodec required])])
 CPPFLAGS="$CPPCODEC_CPPFLAGS $CPPFLAGS"
-LDFLAGS="$CPPCODEC_LDFLAGS $LDFLAGS"
 
 if test ".$mingw" != ".yes"; then
   AC_ARG_ENABLE([netlink],
@@ -91,11 +99,6 @@ AM_CONDITIONAL([NETLINK], [test x$netlink = xtrue])
 AX_PATH_LIB_READLINE(, [AC_MSG_ERROR([libreadline required])])
 CPPFLAGS="$READLINE_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$READLINE_LDFLAGS $LDFLAGS"
-
-AX_PATH_JNI([jni="yes"], [dnl
-  AC_MSG_NOTICE([JNI unavailable])
-  jni="no"
-])
 
 Z_CPPFLAGS="-D_REENTRANT -D_GNU_SOURCE"
 
@@ -126,13 +129,14 @@ AC_SUBST(Z_MT_LIBS)
 AC_SUBST(Z_ZT_LIBS)
 AC_SUBST(Z_IO_LIBS)
 
+AC_SUBST(JNI_CPPFLAGS)
 AC_SUBST(PCAP_LIBS)
+AC_SUBST(LZ4_LIBS)
 AC_SUBST(MBEDTLS_LIBS)
 AC_SUBST(FLATBUFFERS_LIBS)
 AC_SUBST(READLINE_LIBS)
-AC_SUBST(JNI_CPPFLAGS)
 
-for i in zu zm zjni zt ze zi ztls zfb zv zlz4 zp zdb zrl
+for i in zu zm zjni zt ze zi ztls zfb zv zp zdb zrl
 do ( cd $i/src; test ! -e AC_PACKAGE_NAME && ln -s . AC_PACKAGE_NAME )
 done
 
@@ -146,7 +150,6 @@ AC_OUTPUT(Makefile \
 	ztls/Makefile ztls/src/Makefile ztls/test/Makefile \
 	zfb/Makefile zfb/src/Makefile zfb/test/Makefile \
 	zv/Makefile zv/src/Makefile zv/test/Makefile \
-	zlz4/Makefile zlz4/src/Makefile zlz4/test/Makefile \
 	zp/Makefile zp/src/Makefile \
 	zdb/Makefile zdb/src/Makefile zdb/test/Makefile \
 	zrl/Makefile zrl/src/Makefile zrl/test/Makefile)

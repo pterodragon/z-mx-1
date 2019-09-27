@@ -7,4 +7,4 @@ endif
 if JNI
 SUBDIRS += zjni
 endif
-SUBDIRS += zrl zlz4 zdb
+SUBDIRS += zrl zdb

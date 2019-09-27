@@ -1150,9 +1150,10 @@ void ZdbAnyPOD::sent3(ZiIOContext &io)
   io.complete();
 }
 
-int ZdbAnyPOD_Cmpr::compress(const char *src, unsigned size)
+int ZdbAnyPOD_Cmpr::compress(const char *src, unsigned srcSize)
 {
-  return LZ4_compress((const char *)src, (char *)ptr(), size);
+  return LZ4_compress_fast((const char *)src, (char *)ptr(),
+      srcSize, this->size(), 1);
 }
 
 // broadcast heartbeat
@@ -1309,8 +1310,8 @@ void Zdb_Cxn::repDataRcvd(ZiIOContext &io)
   if (rep.clen) {
     ZdbAny *db = m_env->db(rep.db);
     m_recvData.length(db->recSize());
-    int n = LZ4_uncompress(
-	m_recvData2.data(), m_recvData.data(), db->recSize());
+    int n = LZ4_decompress_safe(
+	m_recvData2.data(), m_recvData.data(), rep.clen, db->recSize());
     if (ZuUnlikely(n < 0)) {
       ZeLOG(Fatal, ZtHexDump(ZtString() << 
 	    "decompress failed with rcode " << n << " (RN: " << rep.rn <<

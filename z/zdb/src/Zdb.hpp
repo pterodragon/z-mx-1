@@ -484,10 +484,10 @@ private:
   template <class Heap_> class Cmpr_ : public Heap_, public ZdbAnyPOD_Cmpr {
   public:
     inline Cmpr_() : 
-      ZdbAnyPOD_Cmpr(m_data, LZ4_compressBound(sizeof(Data))) { }
+      ZdbAnyPOD_Cmpr(m_data, LZ4_COMPRESSBOUND(sizeof(Data))) { }
 
   private:
-    char	m_data[LZ4_compressBound(sizeof(Data))];
+    char	m_data[LZ4_COMPRESSBOUND(sizeof(Data))];
   };
   using Cmpr_Heap = ZmHeap<ZdbPOD_Cmpr_HeapID<T_>, sizeof(Cmpr_<ZuNull>)>;
   typedef Cmpr_<Cmpr_Heap> Cmpr;

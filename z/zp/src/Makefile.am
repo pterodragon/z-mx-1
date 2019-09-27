@@ -15,7 +15,6 @@ pkginclude_HEADERS = \
 	ZpLib.hpp \
 	ZpPcap.hpp \
 	ZpPcapFile.hpp
-
 lib_LTLIBRARIES = libZp.la
 libZp_la_SOURCES = \
 	ZpPcap.cpp

@@ -23,15 +23,15 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxMDVenueJNI.hpp>
+#include <mxmd/MxMDVenueJNI.hpp>
 
-#include <MxMDTickSizeJNI.hpp>
+#include <mxmd/MxMDTickSizeJNI.hpp>
 
-#include <MxMDTickSizeTblJNI.hpp>
+#include <mxmd/MxMDTickSizeTblJNI.hpp>
 
 namespace MxMDTickSizeTblJNI {
   jclass	class_;

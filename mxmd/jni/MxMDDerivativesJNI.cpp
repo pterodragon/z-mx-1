@@ -23,16 +23,16 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxFutKeyJNI.hpp>
-#include <MxOptKeyJNI.hpp>
+#include <mxbase/MxFutKeyJNI.hpp>
+#include <mxbase/MxOptKeyJNI.hpp>
 
-#include <MxMDInstrumentJNI.hpp>
+#include <mxmd/MxMDInstrumentJNI.hpp>
 
-#include <MxMDDerivativesJNI.hpp>
+#include <mxmd/MxMDDerivativesJNI.hpp>
 
 namespace MxMDDerivativesJNI {
   jclass	class_;

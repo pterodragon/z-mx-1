@@ -27,14 +27,14 @@
 #endif
 
 #ifndef MxMDLib_HPP
-#include <MxMDLib.hpp>
+#include <mxmd/MxMDLib.hpp>
 #endif
 
-#include <ZmRBTree.hpp>
+#include <zlib/ZmRBTree.hpp>
 
-#include <MxBase.hpp>
-#include <MxQueue.hpp>
-#include <MxTelemetry.hpp>
+#include <mxbase/MxBase.hpp>
+#include <mxbase/MxQueue.hpp>
+#include <mxbase/MxTelemetry.hpp>
 
 class MxEngine;
 class MxAnyLink;

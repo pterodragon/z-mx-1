@@ -23,9 +23,9 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMDTickSizeJNI.hpp>
+#include <mxmd/MxMDTickSizeJNI.hpp>
 
 namespace MxMDTickSizeJNI {
   jclass	class_;

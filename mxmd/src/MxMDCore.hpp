@@ -27,37 +27,37 @@
 #endif
 
 #ifndef MxMDLib_HPP
-#include <MxMDLib.hpp>
+#include <mxmd/MxMDLib.hpp>
 #endif
 
-#include <ZuPOD.hpp>
+#include <zlib/ZuPOD.hpp>
 
-#include <ZmObject.hpp>
-#include <ZmDRing.hpp>
-#include <ZmRBTree.hpp>
-#include <ZmRef.hpp>
-#include <ZmThread.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmDRing.hpp>
+#include <zlib/ZmRBTree.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmThread.hpp>
 
-#include <ZePlatform.hpp>
+#include <zlib/ZePlatform.hpp>
 
-#include <ZvCf.hpp>
-#include <ZvCmdServer.hpp>
+#include <zlib/ZvCf.hpp>
+#include <zlib/ZvCmdServer.hpp>
 
-#include <MxMultiplex.hpp>
-#include <MxEngine.hpp>
+#include <mxbase/MxMultiplex.hpp>
+#include <mxbase/MxEngine.hpp>
 
-#include <MxMD.hpp>
-#include <MxMDStream.hpp>
+#include <mxmd/MxMD.hpp>
+#include <mxmd/MxMDStream.hpp>
 
-#include <MxMDBroadcast.hpp>
+#include <mxmd/MxMDBroadcast.hpp>
 
-#include <MxMDRecord.hpp>
-#include <MxMDReplay.hpp>
+#include <mxmd/MxMDRecord.hpp>
+#include <mxmd/MxMDReplay.hpp>
 
-#include <MxMDPublisher.hpp>
-#include <MxMDSubscriber.hpp>
+#include <mxmd/MxMDPublisher.hpp>
+#include <mxmd/MxMDSubscriber.hpp>
 
-#include <MxMDTelemetry.hpp>
+#include <mxmd/MxMDTelemetry.hpp>
 
 class MxMDCore;
 

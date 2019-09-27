@@ -27,10 +27,10 @@
 #endif
 
 #ifndef MxBaseLib_HPP
-#include <MxMDLib.hpp>
+#include <mxmd/MxMDLib.hpp>
 #endif
 
-#include <MxMDTypes.hpp>
+#include <mxmd/MxMDTypes.hpp>
 
 namespace MxMDOrderIDScopeJNI {
   MxMDExtern MxEnum j2c(JNIEnv *, jobject, bool dlr = false);

@@ -3,8 +3,8 @@
 
 // #define MxT_NLegs 4
 
-#include <MxTOrder.hpp>
-#include <MxTOrderMgr.hpp>
+#include <mxt/MxTOrder.hpp>
+#include <mxt/MxTOrderMgr.hpp>
 
 struct AppTypes : public MxTAppTypes<AppTypes> {
   typedef MxTAppTypes<AppTypes> Base;

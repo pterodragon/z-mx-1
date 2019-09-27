@@ -27,14 +27,14 @@
 #endif
 
 #ifndef MxMDLib_HPP
-#include <MxMDLib.hpp>
+#include <mxmd/MxMDLib.hpp>
 #endif
 
 #include <jni.h>
 
-#include <ZePlatform.hpp>
+#include <zlib/ZePlatform.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
 namespace MxMDExceptionJNI {
   jobject ctor(JNIEnv *, const ZeEvent *data);

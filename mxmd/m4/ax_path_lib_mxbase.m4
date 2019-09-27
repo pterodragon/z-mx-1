@@ -24,7 +24,7 @@ else
     AC_LANG_SOURCE([[
 #include <stdlib.h>
 #include <stdio.h>
-#include <MxBaseVersion.hpp>
+#include <mxbase/MxBaseVersion.hpp>
 int main(int argc, char **argv)
 {
   if (argc <= 1) return 0;

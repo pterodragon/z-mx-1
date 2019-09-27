@@ -23,11 +23,11 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxSideJNI.hpp>
+#include <mxbase/MxSideJNI.hpp>
 
-#include <MxMDOrderDataJNI.hpp>
+#include <mxmd/MxMDOrderDataJNI.hpp>
 
 namespace MxMDOrderDataJNI {
   jclass	class_;

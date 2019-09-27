@@ -23,11 +23,11 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxTradingSessionJNI.hpp>
+#include <mxbase/MxTradingSessionJNI.hpp>
 
-#include <MxMDSegmentJNI.hpp>
+#include <mxmd/MxMDSegmentJNI.hpp>
 
 namespace MxMDSegmentJNI {
   jclass	class_;

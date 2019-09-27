@@ -21,17 +21,17 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxMDOrderIDScopeJNI.hpp>
-#include <MxMDLibJNI.hpp>
-#include <MxMDFeedJNI.hpp>
-#include <MxMDTickSizeTblJNI.hpp>
-#include <MxMDSegmentJNI.hpp>
+#include <mxmd/MxMDOrderIDScopeJNI.hpp>
+#include <mxmd/MxMDLibJNI.hpp>
+#include <mxmd/MxMDFeedJNI.hpp>
+#include <mxmd/MxMDTickSizeTblJNI.hpp>
+#include <mxmd/MxMDSegmentJNI.hpp>
 
-#include <MxMDVenueJNI.hpp>
+#include <mxmd/MxMDVenueJNI.hpp>
 
 namespace MxMDVenueJNI {
   jclass	class_;

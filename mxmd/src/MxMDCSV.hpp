@@ -27,18 +27,18 @@
 #endif
 
 #ifndef MxMDLib_HPP
-#include <MxMDLib.hpp>
+#include <mxmd/MxMDLib.hpp>
 #endif
 
-#include <ZiIP.hpp>
+#include <zlib/ZiIP.hpp>
 
-#include <ZvCSV.hpp>
+#include <zlib/ZvCSV.hpp>
 
-#include <MxBase.hpp>
-#include <MxCSV.hpp>
+#include <mxbase/MxBase.hpp>
+#include <mxbase/MxCSV.hpp>
 
-#include <MxMDTypes.hpp>
-#include <MxMDStream.hpp>
+#include <mxmd/MxMDTypes.hpp>
+#include <mxmd/MxMDStream.hpp>
 
 template <typename Flags>
 class MxMDVenueFlagsCol : public ZvCSVColumn<ZvCSVColType::Func, MxFlags> {

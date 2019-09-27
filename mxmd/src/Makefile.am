@@ -3,7 +3,7 @@ AM_CPPFLAGS = -DMXMD_EXPORTS @MXMD_CPPFLAGS@ @MXBASE_CPPFLAGS@ @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @MXMD_LDFLAGS@ @MXMD_SO_LDFLAGS@ \
 	@MXBASE_LDFLAGS@ @Z_LDFLAGS@
-include_HEADERS = \
+pkginclude_HEADERS = \
 	MxMD.hpp MxMDLib.hpp MxMDVersion.hpp MxMDTypes.hpp \
 	MxMDCore.hpp MxMDCSV.hpp MxMDStream.hpp \
 	MxMDChannel.hpp \

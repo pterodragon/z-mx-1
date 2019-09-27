@@ -27,23 +27,23 @@
 #endif
 
 #ifndef MxMDLib_HPP
-#include <MxMDLib.hpp>
+#include <mxmd/MxMDLib.hpp>
 #endif
 
-#include <ZmTime.hpp>
-#include <ZmPLock.hpp>
-#include <ZmGuard.hpp>
-#include <ZmRef.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmPLock.hpp>
+#include <zlib/ZmGuard.hpp>
+#include <zlib/ZmRef.hpp>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
-#include <ZiFile.hpp>
+#include <zlib/ZiFile.hpp>
 
-#include <ZvCmdHost.hpp>
+#include <zlib/ZvCmdHost.hpp>
 
-#include <MxEngine.hpp>
+#include <mxbase/MxEngine.hpp>
 
-#include <MxMDTypes.hpp>
+#include <mxmd/MxMDTypes.hpp>
 
 class MxMDCore;
 

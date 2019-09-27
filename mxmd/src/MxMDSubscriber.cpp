@@ -19,9 +19,9 @@
 
 // MxMD TCP/UDP subscriber
 
-#include <MxMDCore.hpp>
+#include <mxmd/MxMDCore.hpp>
 
-#include <MxMDSubscriber.hpp>
+#include <mxmd/MxMDSubscriber.hpp>
 
 void MxMDSubscriber::init(MxMDCore *core, ZvCf *cf)
 {

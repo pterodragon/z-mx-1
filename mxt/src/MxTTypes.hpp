@@ -27,12 +27,12 @@
 #endif
 
 #ifndef MxTLib_HPP
-#include <MxTLib.hpp>
+#include <mxt/MxTLib.hpp>
 #endif
 
-#include <ZuPair.hpp>
+#include <zlib/ZuPair.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
 namespace MxTMktNoticeType {
   MxEnumValues(

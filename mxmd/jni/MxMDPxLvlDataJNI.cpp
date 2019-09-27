@@ -23,9 +23,9 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMDPxLvlDataJNI.hpp>
+#include <mxmd/MxMDPxLvlDataJNI.hpp>
 
 namespace MxMDPxLvlDataJNI {
   jclass	class_;

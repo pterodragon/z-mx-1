@@ -23,9 +23,9 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMDTradeDataJNI.hpp>
+#include <mxmd/MxMDTradeDataJNI.hpp>
 
 namespace MxMDTradeDataJNI {
   jclass	class_;

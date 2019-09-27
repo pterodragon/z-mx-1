@@ -23,15 +23,15 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxMDInstrumentJNI.hpp>
-#include <MxMDOrderBookJNI.hpp>
-#include <MxMDTradeDataJNI.hpp>
+#include <mxmd/MxMDInstrumentJNI.hpp>
+#include <mxmd/MxMDOrderBookJNI.hpp>
+#include <mxmd/MxMDTradeDataJNI.hpp>
 
-#include <MxMDTradeJNI.hpp>
+#include <mxmd/MxMDTradeJNI.hpp>
 
 namespace MxMDTradeJNI {
   jclass	class_;

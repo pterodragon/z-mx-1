@@ -27,10 +27,10 @@
 #endif
 
 #ifndef MxMDLib_HPP
-#include <MxMDLib.hpp>
+#include <mxmd/MxMDLib.hpp>
 #endif
 
-#include <ZmLock.hpp>
+#include <zlib/ZmLock.hpp>
 
 #include <jni.h>
 

@@ -27,15 +27,15 @@
 #endif
 
 #ifndef MxTLib_HPP
-#include <MxTLib.hpp>
+#include <mxt/MxTLib.hpp>
 #endif
 
-#include <Zdb.hpp>
+#include <zlib/Zdb.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
-#include <MxTTypes.hpp>
-#include <MxTOrder.hpp>
+#include <mxt/MxTTypes.hpp>
+#include <mxt/MxTOrder.hpp>
 
 // CRTP - implementation must conform to the following interface:
 #if 0

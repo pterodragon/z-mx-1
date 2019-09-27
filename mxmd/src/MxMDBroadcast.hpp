@@ -27,18 +27,18 @@
 #endif
 
 #ifndef MxMDLib_HPP
-#include <MxMDLib.hpp>
+#include <mxmd/MxMDLib.hpp>
 #endif
 
-#include <ZmPLock.hpp>
-#include <ZmRef.hpp>
+#include <zlib/ZmPLock.hpp>
+#include <zlib/ZmRef.hpp>
 
-#include <ZiRing.hpp>
+#include <zlib/ZiRing.hpp>
 
-#include <ZvRingCf.hpp>
+#include <zlib/ZvRingCf.hpp>
 
-#include <MxMDTypes.hpp>
-#include <MxMDStream.hpp>
+#include <mxmd/MxMDTypes.hpp>
+#include <mxmd/MxMDStream.hpp>
 
 class MxMDCore;
 

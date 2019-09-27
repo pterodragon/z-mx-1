@@ -23,13 +23,13 @@
 
 #include <jni.h>
 
-#include <ZmRandom.hpp>
+#include <zlib/ZmRandom.hpp>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxMDJNITest.hpp>
+#include <mxmd/MxMDJNITest.hpp>
 
 static const char *tickers[] = {
   "ETHBTC", // base-quote

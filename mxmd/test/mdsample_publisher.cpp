@@ -1,14 +1,14 @@
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <signal.h>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <ZmRandom.hpp>
-#include <ZmThread.hpp>
+#include <zlib/ZmRandom.hpp>
+#include <zlib/ZmThread.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
 // the tickers to use
 

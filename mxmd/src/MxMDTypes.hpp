@@ -27,10 +27,10 @@
 #endif
 
 #ifndef MxMDLib_HPP
-#include <MxMDLib.hpp>
+#include <mxmd/MxMDLib.hpp>
 #endif
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
 #ifndef MxMDNLegs
 #define MxMDNLegs 4	// up to MxNLegs legs per order

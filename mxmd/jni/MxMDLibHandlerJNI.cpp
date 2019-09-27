@@ -21,23 +21,23 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxMDLibJNI.hpp>
-#include <MxMDFeedJNI.hpp>
-#include <MxMDVenueJNI.hpp>
-#include <MxMDTickSizeTblJNI.hpp>
+#include <mxmd/MxMDLibJNI.hpp>
+#include <mxmd/MxMDFeedJNI.hpp>
+#include <mxmd/MxMDVenueJNI.hpp>
+#include <mxmd/MxMDTickSizeTblJNI.hpp>
 
-#include <MxMDInstrumentJNI.hpp>
-#include <MxMDOrderBookJNI.hpp>
+#include <mxmd/MxMDInstrumentJNI.hpp>
+#include <mxmd/MxMDOrderBookJNI.hpp>
 
-#include <MxMDExceptionJNI.hpp>
-#include <MxMDTickSizeJNI.hpp>
-#include <MxMDSegmentJNI.hpp>
+#include <mxmd/MxMDExceptionJNI.hpp>
+#include <mxmd/MxMDTickSizeJNI.hpp>
+#include <mxmd/MxMDSegmentJNI.hpp>
 
-#include <MxMDLibHandlerJNI.hpp>
+#include <mxmd/MxMDLibHandlerJNI.hpp>
 
 namespace MxMDLibHandlerJNI {
   // event handlers

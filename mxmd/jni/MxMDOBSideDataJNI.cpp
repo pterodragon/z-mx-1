@@ -21,9 +21,9 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMDOBSideDataJNI.hpp>
+#include <mxmd/MxMDOBSideDataJNI.hpp>
 
 namespace MxMDOBSideDataJNI {
   jclass	class_;

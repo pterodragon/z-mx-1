@@ -19,14 +19,14 @@
 
 // MxMD sample subscriber application
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <signal.h>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
 #include <iostream>
 

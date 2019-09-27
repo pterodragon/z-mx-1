@@ -3,7 +3,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/src -DMXMD_EXPORTS \
 	@JNI_CPPFLAGS@ @MXMD_CPPFLAGS@ @MXBASE_CPPFLAGS@ @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @MXMD_LDFLAGS@ @MXMD_SO_LDFLAGS@ @MXBASE_LDFLAGS@ @Z_LDFLAGS@
-include_HEADERS = MxMDJNI.hpp \
+pkginclude_HEADERS = MxMDJNI.hpp \
 	MxMDSeverityJNI.hpp MxMDOrderIDScopeJNI.hpp MxMDVenueFlagsJNI.hpp \
 	MxMDLibJNI.hpp MxMDFeedJNI.hpp MxMDVenueJNI.hpp MxMDTickSizeTblJNI.hpp \
 	MxMDInstrumentJNI.hpp MxMDDerivativesJNI.hpp \

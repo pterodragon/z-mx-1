@@ -27,23 +27,23 @@
 #endif
 
 #ifndef MxMDLib_HPP
-#include <MxMDLib.hpp>
+#include <mxmd/MxMDLib.hpp>
 #endif
 
-#include <ZuLargest.hpp>
-#include <ZuPOD.hpp>
+#include <zlib/ZuLargest.hpp>
+#include <zlib/ZuPOD.hpp>
 
-#include <ZmFn.hpp>
+#include <zlib/ZmFn.hpp>
 
-#include <ZiFile.hpp>
-#include <ZiMultiplex.hpp>
+#include <zlib/ZiFile.hpp>
+#include <zlib/ZiMultiplex.hpp>
 
 #include <lz4.h>
 
-#include <MxBase.hpp>
-#include <MxQueue.hpp>
+#include <mxbase/MxBase.hpp>
+#include <mxbase/MxQueue.hpp>
 
-#include <MxMDTypes.hpp>
+#include <mxmd/MxMDTypes.hpp>
 
 // App must conform to the following interface:
 #if 0

@@ -23,12 +23,12 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxInstrIDSrcJNI.hpp>
-#include <MxPutCallJNI.hpp>
+#include <mxbase/MxInstrIDSrcJNI.hpp>
+#include <mxbase/MxPutCallJNI.hpp>
 
-#include <MxMDInstrRefDataJNI.hpp>
+#include <mxmd/MxMDInstrRefDataJNI.hpp>
 
 namespace MxMDInstrRefDataJNI {
   jclass	class_;

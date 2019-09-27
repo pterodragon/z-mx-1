@@ -27,29 +27,29 @@
 #endif
 
 #ifndef MxMDLib_HPP
-#include <MxMDLib.hpp>
+#include <mxmd/MxMDLib.hpp>
 #endif
 
-#include <ZuIndex.hpp>
-#include <ZuObject.hpp>
-#include <ZuRef.hpp>
+#include <zlib/ZuIndex.hpp>
+#include <zlib/ZuObject.hpp>
+#include <zlib/ZuRef.hpp>
 
-#include <ZmFn.hpp>
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmHash.hpp>
-#include <ZmLHash.hpp>
-#include <ZmRBTree.hpp>
-#include <ZmRWLock.hpp>
-#include <ZmHeap.hpp>
-#include <ZmShard.hpp>
-#include <ZmScheduler.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmHash.hpp>
+#include <zlib/ZmLHash.hpp>
+#include <zlib/ZmRBTree.hpp>
+#include <zlib/ZmRWLock.hpp>
+#include <zlib/ZmHeap.hpp>
+#include <zlib/ZmShard.hpp>
+#include <zlib/ZmScheduler.hpp>
 
-#include <ZvCmdHost.hpp>
+#include <zlib/ZvCmdHost.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
-#include <MxMDTypes.hpp>
+#include <mxmd/MxMDTypes.hpp>
 
 // exceptions
 

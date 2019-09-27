@@ -19,9 +19,9 @@
 
 // MxMD TCP/UDP publisher
 
-#include <MxMDCore.hpp>
+#include <mxmd/MxMDCore.hpp>
 
-#include <MxMDPublisher.hpp>
+#include <mxmd/MxMDPublisher.hpp>
 
 void MxMDPublisher::init(MxMDCore *core, ZvCf *cf)
 {

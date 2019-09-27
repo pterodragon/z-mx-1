@@ -27,12 +27,12 @@
 #endif
 
 #ifndef MxMDLib_HPP
-#include <MxMDLib.hpp>
+#include <mxmd/MxMDLib.hpp>
 #endif
 
 #include <jni.h>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
 namespace MxMDL1DataJNI {
   jobject ctor(JNIEnv *, const MxMDL1Data &l1Data);

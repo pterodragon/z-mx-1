@@ -36,16 +36,16 @@
 #endif
 
 #ifndef MxTLib_HPP
-#include <MxTLib.hpp>
+#include <mxt/MxTLib.hpp>
 #endif
 
 #include <new>
 
-#include <ZuLargest.hpp>
+#include <zlib/ZuLargest.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
-#include <MxTTypes.hpp>
+#include <mxt/MxTTypes.hpp>
 
 #ifndef MxT_NLegs
 #define MxT_NLegs 1

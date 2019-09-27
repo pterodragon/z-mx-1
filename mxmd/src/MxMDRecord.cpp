@@ -19,9 +19,9 @@
 
 // MxMD recorder
 
-#include <MxMDCore.hpp>
+#include <mxmd/MxMDCore.hpp>
 
-#include <MxMDRecord.hpp>
+#include <mxmd/MxMDRecord.hpp>
 
 void MxMDRecord::init(MxMDCore *core, ZvCf *cf)
 {

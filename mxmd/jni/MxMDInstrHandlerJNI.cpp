@@ -21,18 +21,18 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxMDInstrumentJNI.hpp>
-#include <MxMDOrderBookJNI.hpp>
-#include <MxMDPxLevelJNI.hpp>
-#include <MxMDOrderJNI.hpp>
-#include <MxMDTradeJNI.hpp>
-#include <MxMDL1DataJNI.hpp>
+#include <mxmd/MxMDInstrumentJNI.hpp>
+#include <mxmd/MxMDOrderBookJNI.hpp>
+#include <mxmd/MxMDPxLevelJNI.hpp>
+#include <mxmd/MxMDOrderJNI.hpp>
+#include <mxmd/MxMDTradeJNI.hpp>
+#include <mxmd/MxMDL1DataJNI.hpp>
 
-#include <MxMDInstrHandlerJNI.hpp>
+#include <mxmd/MxMDInstrHandlerJNI.hpp>
 
 namespace MxMDInstrHandlerJNI {
   // event handlers

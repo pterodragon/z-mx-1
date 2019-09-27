@@ -23,9 +23,9 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMDLotSizesJNI.hpp>
+#include <mxmd/MxMDLotSizesJNI.hpp>
 
 namespace MxMDLotSizesJNI {
   jclass	class_;

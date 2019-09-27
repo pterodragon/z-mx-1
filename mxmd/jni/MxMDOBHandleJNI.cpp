@@ -23,13 +23,13 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxMDOrderBookJNI.hpp>
+#include <mxmd/MxMDOrderBookJNI.hpp>
 
-#include <MxMDOBHandleJNI.hpp>
+#include <mxmd/MxMDOBHandleJNI.hpp>
 
 namespace MxMDOBHandleJNI {
   jclass	class_;

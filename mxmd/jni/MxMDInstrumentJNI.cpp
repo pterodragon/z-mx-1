@@ -23,22 +23,22 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxInstrKeyJNI.hpp>
-#include <MxUniKeyJNI.hpp>
+#include <mxbase/MxInstrKeyJNI.hpp>
+#include <mxbase/MxUniKeyJNI.hpp>
 
-#include <MxMDLibJNI.hpp>
-#include <MxMDDerivativesJNI.hpp>
-#include <MxMDOrderBookJNI.hpp>
+#include <mxmd/MxMDLibJNI.hpp>
+#include <mxmd/MxMDDerivativesJNI.hpp>
+#include <mxmd/MxMDOrderBookJNI.hpp>
 
-#include <MxMDInstrRefDataJNI.hpp>
+#include <mxmd/MxMDInstrRefDataJNI.hpp>
 
-#include <MxMDInstrHandlerJNI.hpp>
+#include <mxmd/MxMDInstrHandlerJNI.hpp>
 
-#include <MxMDInstrumentJNI.hpp>
+#include <mxmd/MxMDInstrumentJNI.hpp>
 
 namespace MxMDInstrumentJNI {
   jclass	class_;

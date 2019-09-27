@@ -21,46 +21,46 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxBaseJNI.hpp>
+#include <mxbase/MxBaseJNI.hpp>
 
-#include <MxMDSeverityJNI.hpp>
-#include <MxMDOrderIDScopeJNI.hpp>
+#include <mxmd/MxMDSeverityJNI.hpp>
+#include <mxmd/MxMDOrderIDScopeJNI.hpp>
 
-#include <MxMDLibJNI.hpp>
-#include <MxMDFeedJNI.hpp>
-#include <MxMDVenueJNI.hpp>
-#include <MxMDTickSizeTblJNI.hpp>
+#include <mxmd/MxMDLibJNI.hpp>
+#include <mxmd/MxMDFeedJNI.hpp>
+#include <mxmd/MxMDVenueJNI.hpp>
+#include <mxmd/MxMDTickSizeTblJNI.hpp>
 
-#include <MxMDInstrumentJNI.hpp>
-#include <MxMDDerivativesJNI.hpp>
+#include <mxmd/MxMDInstrumentJNI.hpp>
+#include <mxmd/MxMDDerivativesJNI.hpp>
 
-#include <MxMDOrderBookJNI.hpp>
-#include <MxMDOBSideJNI.hpp>
-#include <MxMDOrderJNI.hpp>
-#include <MxMDPxLevelJNI.hpp>
+#include <mxmd/MxMDOrderBookJNI.hpp>
+#include <mxmd/MxMDOBSideJNI.hpp>
+#include <mxmd/MxMDOrderJNI.hpp>
+#include <mxmd/MxMDPxLevelJNI.hpp>
 
-#include <MxMDTradeJNI.hpp>
+#include <mxmd/MxMDTradeJNI.hpp>
 
-#include <MxMDLibHandlerJNI.hpp>
-#include <MxMDInstrHandlerJNI.hpp>
+#include <mxmd/MxMDLibHandlerJNI.hpp>
+#include <mxmd/MxMDInstrHandlerJNI.hpp>
 
-#include <MxMDInstrHandleJNI.hpp>
-#include <MxMDOBHandleJNI.hpp>
+#include <mxmd/MxMDInstrHandleJNI.hpp>
+#include <mxmd/MxMDOBHandleJNI.hpp>
 
-#include <MxMDExceptionJNI.hpp>
-#include <MxMDTickSizeJNI.hpp>
-#include <MxMDSegmentJNI.hpp>
-#include <MxMDInstrRefDataJNI.hpp>
-#include <MxMDLotSizesJNI.hpp>
-#include <MxMDL1DataJNI.hpp>
-#include <MxMDOBSideDataJNI.hpp>
-#include <MxMDPxLvlDataJNI.hpp>
-#include <MxMDOrderDataJNI.hpp>
-#include <MxMDTradeDataJNI.hpp>
+#include <mxmd/MxMDExceptionJNI.hpp>
+#include <mxmd/MxMDTickSizeJNI.hpp>
+#include <mxmd/MxMDSegmentJNI.hpp>
+#include <mxmd/MxMDInstrRefDataJNI.hpp>
+#include <mxmd/MxMDLotSizesJNI.hpp>
+#include <mxmd/MxMDL1DataJNI.hpp>
+#include <mxmd/MxMDOBSideDataJNI.hpp>
+#include <mxmd/MxMDPxLvlDataJNI.hpp>
+#include <mxmd/MxMDOrderDataJNI.hpp>
+#include <mxmd/MxMDTradeDataJNI.hpp>
 
-#include <MxMDJNI.hpp>
+#include <mxmd/MxMDJNI.hpp>
 
 extern "C" {
   MxMDExtern jint JNI_OnLoad(JavaVM *, void *);

@@ -23,17 +23,17 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxSideJNI.hpp>
+#include <mxbase/MxSideJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxMDOrderBookJNI.hpp>
-#include <MxMDPxLevelJNI.hpp>
-#include <MxMDOBSideDataJNI.hpp>
+#include <mxmd/MxMDOrderBookJNI.hpp>
+#include <mxmd/MxMDPxLevelJNI.hpp>
+#include <mxmd/MxMDOBSideDataJNI.hpp>
 
-#include <MxMDOBSideJNI.hpp>
+#include <mxmd/MxMDOBSideJNI.hpp>
 
 namespace MxMDOBSideJNI {
   jclass	class_;

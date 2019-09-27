@@ -19,9 +19,9 @@
 
 // MxMD in-memory broadcast
 
-#include <MxMDBroadcast.hpp>
+#include <mxmd/MxMDBroadcast.hpp>
 
-#include <MxMDCore.hpp>
+#include <mxmd/MxMDCore.hpp>
 
 MxMDBroadcast::MxMDBroadcast()
 {

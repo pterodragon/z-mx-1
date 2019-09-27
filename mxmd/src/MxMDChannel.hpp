@@ -27,16 +27,16 @@
 #endif
 
 #ifndef MxMDLib_HPP
-#include <MxMDLib.hpp>
+#include <mxmd/MxMDLib.hpp>
 #endif
 
-#include <ZuInt.hpp>
-#include <ZuBox.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZiIP.hpp>
+#include <zlib/ZiIP.hpp>
 
-#include <MxBase.hpp>
-#include <MxCSV.hpp>
+#include <mxbase/MxBase.hpp>
+#include <mxbase/MxCSV.hpp>
 
 struct MxMDChannel {
   MxID			id;

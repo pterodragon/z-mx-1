@@ -19,7 +19,7 @@
 
 // MxMD
 
-#include <MxMDVersion.hpp>
+#include <mxmd/MxMDVersion.hpp>
 
 #include "../version.h"
 

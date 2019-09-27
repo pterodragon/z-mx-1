@@ -19,21 +19,21 @@
 
 // MxMD internal API
 
-#include <MxMDCore.hpp>
+#include <mxmd/MxMDCore.hpp>
 
 #include <stddef.h>
 
-#include <ZmAtomic.hpp>
+#include <zlib/ZmAtomic.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZiModule.hpp>
+#include <zlib/ZiModule.hpp>
 
-#include <ZvCf.hpp>
-#include <ZvHeapCSV.hpp>
-#include <ZvHashCSV.hpp>
+#include <zlib/ZvCf.hpp>
+#include <zlib/ZvHeapCSV.hpp>
+#include <zlib/ZvHashCSV.hpp>
 
-#include <MxMDCSV.hpp>
+#include <mxmd/MxMDCSV.hpp>
 
 #include <version.h>
 

@@ -23,31 +23,31 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxInstrKeyJNI.hpp>
+#include <mxbase/MxInstrKeyJNI.hpp>
 
-#include <MxMD.hpp>
-#include <MxMDCore.hpp>
+#include <mxmd/MxMD.hpp>
+#include <mxmd/MxMDCore.hpp>
 
-#include <MxMDJNI.hpp>
+#include <mxmd/MxMDJNI.hpp>
 
-#include <MxMDFeedJNI.hpp>
-#include <MxMDVenueJNI.hpp>
-#include <MxMDTickSizeTblJNI.hpp>
+#include <mxmd/MxMDFeedJNI.hpp>
+#include <mxmd/MxMDVenueJNI.hpp>
+#include <mxmd/MxMDTickSizeTblJNI.hpp>
 
-#include <MxMDInstrumentJNI.hpp>
-#include <MxMDOrderBookJNI.hpp>
+#include <mxmd/MxMDInstrumentJNI.hpp>
+#include <mxmd/MxMDOrderBookJNI.hpp>
 
-#include <MxMDLibHandlerJNI.hpp>
+#include <mxmd/MxMDLibHandlerJNI.hpp>
 
-#include <MxMDInstrHandleJNI.hpp>
-#include <MxMDOBHandleJNI.hpp>
+#include <mxmd/MxMDInstrHandleJNI.hpp>
+#include <mxmd/MxMDOBHandleJNI.hpp>
 
-#include <MxMDTickSizeJNI.hpp>
-#include <MxMDSegmentJNI.hpp>
+#include <mxmd/MxMDTickSizeJNI.hpp>
+#include <mxmd/MxMDSegmentJNI.hpp>
 
-#include <MxMDLibJNI.hpp>
+#include <mxmd/MxMDLibJNI.hpp>
 
 namespace MxMDLibJNI {
   jobject	obj_;

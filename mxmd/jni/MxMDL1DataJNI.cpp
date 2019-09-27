@@ -23,12 +23,12 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxTickDirJNI.hpp>
-#include <MxTradingStatusJNI.hpp>
+#include <mxbase/MxTickDirJNI.hpp>
+#include <mxbase/MxTradingStatusJNI.hpp>
 
-#include <MxMDL1DataJNI.hpp>
+#include <mxmd/MxMDL1DataJNI.hpp>
 
 namespace MxMDL1DataJNI {
   jclass	class_;

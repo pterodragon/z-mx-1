@@ -23,13 +23,13 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxMDInstrumentJNI.hpp>
+#include <mxmd/MxMDInstrumentJNI.hpp>
 
-#include <MxMDInstrHandleJNI.hpp>
+#include <mxmd/MxMDInstrHandleJNI.hpp>
 
 namespace MxMDInstrHandleJNI {
   jclass	class_;

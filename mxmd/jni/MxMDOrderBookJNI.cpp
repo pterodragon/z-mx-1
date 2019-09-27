@@ -23,25 +23,25 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxSideJNI.hpp>
-#include <MxInstrKeyJNI.hpp>
+#include <mxbase/MxSideJNI.hpp>
+#include <mxbase/MxInstrKeyJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxMDLibJNI.hpp>
-#include <MxMDVenueJNI.hpp>
-#include <MxMDTickSizeTblJNI.hpp>
-#include <MxMDInstrumentJNI.hpp>
-#include <MxMDOBSideJNI.hpp>
+#include <mxmd/MxMDLibJNI.hpp>
+#include <mxmd/MxMDVenueJNI.hpp>
+#include <mxmd/MxMDTickSizeTblJNI.hpp>
+#include <mxmd/MxMDInstrumentJNI.hpp>
+#include <mxmd/MxMDOBSideJNI.hpp>
 
-#include <MxMDLotSizesJNI.hpp>
-#include <MxMDL1DataJNI.hpp>
+#include <mxmd/MxMDLotSizesJNI.hpp>
+#include <mxmd/MxMDL1DataJNI.hpp>
 
-#include <MxMDInstrHandlerJNI.hpp>
+#include <mxmd/MxMDInstrHandlerJNI.hpp>
 
-#include <MxMDOrderBookJNI.hpp>
+#include <mxmd/MxMDOrderBookJNI.hpp>
 
 namespace MxMDOrderBookJNI {
   jclass	class_;

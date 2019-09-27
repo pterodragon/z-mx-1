@@ -1,5 +1,5 @@
 m4_define([MXT_VERSION_], m4_esyscmd([grep MXT_VERNAME version.h | sed 's/[^0-9\.]//g;1q' | tr -d '\n']))
-AC_INIT(MxT, MXT_VERSION_)
+AC_INIT(mxt, MXT_VERSION_)
 MXT_VERSION=MXT_VERSION_
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -54,5 +54,9 @@ AC_SUBST(MXT_CPPFLAGS)
 AC_SUBST(MXT_LDFLAGS)
 AC_SUBST(MXT_SO_LDFLAGS)
 AC_SUBST(MXT_XLIBS)
+
+for i in src
+do ( cd $i; test ! -e AC_PACKAGE_NAME && ln -s . AC_PACKAGE_NAME )
+done
 
 AC_OUTPUT(Makefile src/Makefile test/Makefile)

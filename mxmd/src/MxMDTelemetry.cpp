@@ -19,9 +19,9 @@
 
 // MxMD telemetry
 
-#include <MxMDTelemetry.hpp>
+#include <mxmd/MxMDTelemetry.hpp>
 
-#include <MxMDCore.hpp>
+#include <mxmd/MxMDCore.hpp>
 
 void MxMDTelemetry::init(MxMDCore *core, ZvCf *cf)
 {

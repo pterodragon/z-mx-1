@@ -23,16 +23,16 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxMDOrderBookJNI.hpp>
-#include <MxMDOBSideJNI.hpp>
-#include <MxMDPxLevelJNI.hpp>
-#include <MxMDOrderDataJNI.hpp>
+#include <mxmd/MxMDOrderBookJNI.hpp>
+#include <mxmd/MxMDOBSideJNI.hpp>
+#include <mxmd/MxMDPxLevelJNI.hpp>
+#include <mxmd/MxMDOrderDataJNI.hpp>
 
-#include <MxMDOrderJNI.hpp>
+#include <mxmd/MxMDOrderJNI.hpp>
 
 namespace MxMDOrderJNI {
   jclass	class_;

@@ -19,23 +19,23 @@
 
 // MxMD recording dump tool
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <stddef.h>
 
-#include <ZmTime.hpp>
-#include <ZmTrap.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmTrap.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZiFile.hpp>
+#include <zlib/ZiFile.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
-#include <MxMDStream.hpp>
-#include <MxMDCSV.hpp>
-#include <MxMD.hpp>
+#include <mxmd/MxMDStream.hpp>
+#include <mxmd/MxMDCSV.hpp>
+#include <mxmd/MxMD.hpp>
 
 #include <version.h>
 

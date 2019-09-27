@@ -19,8 +19,8 @@
 
 // MxMD library
 
-#include <MxMD.hpp>
-#include <MxMDCore.hpp>
+#include <mxmd/MxMD.hpp>
+#include <mxmd/MxMDCore.hpp>
 
 void MxMDTickSizeTbl::reset()
 {

@@ -23,11 +23,11 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMDSeverityJNI.hpp>
+#include <mxmd/MxMDSeverityJNI.hpp>
 
-#include <MxMDExceptionJNI.hpp>
+#include <mxmd/MxMDExceptionJNI.hpp>
 
 namespace MxMDExceptionJNI {
   jclass	class_;

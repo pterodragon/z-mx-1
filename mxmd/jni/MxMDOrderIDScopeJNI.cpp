@@ -23,9 +23,9 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMDOrderIDScopeJNI.hpp>
+#include <mxmd/MxMDOrderIDScopeJNI.hpp>
 
 namespace MxMDOrderIDScopeJNI {
   jclass	class_; // MxMDOrderIDScope

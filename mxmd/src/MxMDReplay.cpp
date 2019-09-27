@@ -19,9 +19,9 @@
 
 // MxMD replay
 
-#include <MxMDCore.hpp>
+#include <mxmd/MxMDCore.hpp>
 
-#include <MxMDReplay.hpp>
+#include <mxmd/MxMDReplay.hpp>
 
 void MxMDReplay::init(MxMDCore *core, ZmRef<ZvCf> cf)
 {

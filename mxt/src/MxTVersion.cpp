@@ -19,7 +19,7 @@
 
 // MxT
 
-#include <MxTVersion.hpp>
+#include <mxt/MxTVersion.hpp>
 
 #include "../version.h"
 

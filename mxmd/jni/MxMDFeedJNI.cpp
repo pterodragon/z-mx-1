@@ -21,13 +21,13 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxMD.hpp>
+#include <mxmd/MxMD.hpp>
 
-#include <MxMDLibJNI.hpp>
+#include <mxmd/MxMDLibJNI.hpp>
 
-#include <MxMDFeedJNI.hpp>
+#include <mxmd/MxMDFeedJNI.hpp>
 
 namespace MxMDFeedJNI {
   jclass	class_;

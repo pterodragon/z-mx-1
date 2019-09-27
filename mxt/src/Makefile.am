@@ -3,7 +3,7 @@ AM_CPPFLAGS = -DMXT_EXPORTS @MXT_CPPFLAGS@ @MXBASE_CPPFLAGS@ @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @MXT_LDFLAGS@ @MXT_SO_LDFLAGS@ \
 	@MXBASE_LDFLAGS@ @Z_LDFLAGS@
-include_HEADERS = \
+pkginclude_HEADERS = \
 	MxTLib.hpp MxTTypes.hpp MxTOrder.hpp MxTOrderMgr.hpp \
 	MxTOrderDB.hpp MxTVersion.hpp
 lib_LTLIBRARIES = libMxT.la

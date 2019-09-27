@@ -19,7 +19,7 @@
 
 // Zero Copy Error Library
 
-#include <ZeLib.hpp>
+#include <zlib/ZeLib.hpp>
 
 #include "../../version.h"
 

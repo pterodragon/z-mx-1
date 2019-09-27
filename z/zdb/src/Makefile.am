@@ -5,7 +5,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src -I$(top_srcdir)/zm/src \
 	-DZDB_EXPORTS @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
-include_HEADERS = Zdb.hpp ZdbLib.hpp
+pkginclude_HEADERS = Zdb.hpp ZdbLib.hpp
 lib_LTLIBRARIES = libZdb.la
 libZdb_la_SOURCES = Zdb.cpp ZdbLib.cpp
 libZdb_la_LIBADD = $(top_builddir)/zlz4/src/libZlz4.la \

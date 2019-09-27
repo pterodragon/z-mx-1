@@ -25,17 +25,17 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZuString.hpp>
+#include <zlib/ZuString.hpp>
 
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmRBTree.hpp>
-#include <ZmPLock.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmRBTree.hpp>
+#include <zlib/ZmPLock.hpp>
 
-#include <ZvCf.hpp>
+#include <zlib/ZvCf.hpp>
 
 // command handler (context, command, output)
 using ZvCmdFn = ZmFn<void *, ZvCf *, ZtString &>;

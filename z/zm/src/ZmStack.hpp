@@ -28,13 +28,13 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 // see ZmStack_.hpp for the implementation
 
-#include <ZmStack_.hpp>
-#include <ZmLock.hpp>
-#include <ZmNoLock.hpp>
+#include <zlib/ZmStack_.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmNoLock.hpp>
 
 #endif /* ZmStack_HPP */

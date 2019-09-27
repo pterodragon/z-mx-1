@@ -1,20 +1,20 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <signal.h>
 
-#include <ZmTime.hpp>
-#include <ZmTrap.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmTrap.hpp>
 
-#include <ZtArray.hpp>
-#include <ZtRegex.hpp>
+#include <zlib/ZtArray.hpp>
+#include <zlib/ZtRegex.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZiMultiplex.hpp>
+#include <zlib/ZiMultiplex.hpp>
 
 #include "Global.hpp"
 

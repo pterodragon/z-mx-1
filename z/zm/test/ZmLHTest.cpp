@@ -19,27 +19,27 @@
 
 /* test program */
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ZuTraits.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
 
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmLock.hpp>
-#include <ZmHash.hpp>
-#include <ZmLHash.hpp>
-#include <ZmNoLock.hpp>
-#include <ZmRWLock.hpp>
-#include <ZmTime.hpp>
-#include <ZmSemaphore.hpp>
-#include <ZmThread.hpp>
-#include <ZmSingleton.hpp>
-#include <ZmSpecific.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmHash.hpp>
+#include <zlib/ZmLHash.hpp>
+#include <zlib/ZmNoLock.hpp>
+#include <zlib/ZmRWLock.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmSemaphore.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmSingleton.hpp>
+#include <zlib/ZmSpecific.hpp>
 
 template <int N> struct String {
   inline String() { }

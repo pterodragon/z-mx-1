@@ -22,25 +22,25 @@
 #include <stdio.h>
 #include <signal.h>
 
-#include <ZuPOD.hpp>
+#include <zlib/ZuPOD.hpp>
 
-#include <ZmAtomic.hpp>
-#include <ZmSemaphore.hpp>
-#include <ZmTime.hpp>
-#include <ZmTrap.hpp>
-#include <ZmHash.hpp>
+#include <zlib/ZmAtomic.hpp>
+#include <zlib/ZmSemaphore.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmTrap.hpp>
+#include <zlib/ZmHash.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZiMultiplex.hpp>
-#include <ZiFile.hpp>
+#include <zlib/ZiMultiplex.hpp>
+#include <zlib/ZiFile.hpp>
 
-#include <ZvCf.hpp>
-#include <ZvMultiplexCf.hpp>
-#include <ZvHeapCSV.hpp>
+#include <zlib/ZvCf.hpp>
+#include <zlib/ZvMultiplexCf.hpp>
+#include <zlib/ZvHeapCSV.hpp>
 
-#include <MxCSV.hpp>
-#include <MxMCapHdr.hpp>
+#include <mxbase/MxCSV.hpp>
+#include <mxbase/MxMCapHdr.hpp>
 
 struct Group {
   uint16_t		id;

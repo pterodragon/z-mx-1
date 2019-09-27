@@ -19,18 +19,18 @@
 
 // application configuration
 
-#include <ZuNew.hpp>
+#include <zlib/ZuNew.hpp>
 
-#include <ZuBox.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZmAssert.hpp>
+#include <zlib/ZmAssert.hpp>
 
-#include <ZePlatform.hpp>
+#include <zlib/ZePlatform.hpp>
 
-#include <ZtICmp.hpp>
-#include <ZtRegex.hpp>
+#include <zlib/ZtICmp.hpp>
+#include <zlib/ZtRegex.hpp>
 
-#include <ZvCf.hpp>
+#include <zlib/ZvCf.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

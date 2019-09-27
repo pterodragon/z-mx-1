@@ -19,17 +19,17 @@
 
 /* test program */
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ZmLock.hpp>
-#include <ZmAtomic.hpp>
-#include <ZmThread.hpp>
-#include <ZmRandom.hpp>
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmAtomic.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmRandom.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
 
 struct Lock : public ZmObject {
   inline Lock(unsigned rn) : m_rn(rn), m_nThreads(0) { }

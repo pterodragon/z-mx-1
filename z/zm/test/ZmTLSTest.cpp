@@ -1,6 +1,6 @@
-#include <ZuBox.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZmPlatform.hpp>
+#include <zlib/ZmPlatform.hpp>
 
 ZmPlatform::ThreadID getTID() {
   return ZmPlatform::getTID();

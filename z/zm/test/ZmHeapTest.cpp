@@ -28,10 +28,10 @@
 #include <alloca.h>
 #endif
 
-#include <ZmTime.hpp>
-#include <ZmHeap.hpp>
-#include <ZmThread.hpp>
-#include <ZmFn.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmHeap.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmFn.hpp>
 
 static bool verbose = false;
 

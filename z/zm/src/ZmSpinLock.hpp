@@ -27,11 +27,11 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZmPlatform.hpp>
-#include <ZmLockTraits.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmLockTraits.hpp>
 
 #ifdef _WIN32
 typedef ZmPLock ZmSpinLock;

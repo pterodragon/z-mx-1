@@ -26,21 +26,21 @@
 #pragma once
 #endif
 
-#include <ZtlsLib.hpp>
+#include <zlib/ZtlsLib.hpp>
 
 #include <mbedtls/ssl.h>
 #include <mbedtls/ssl_cache.h>
 #include <mbedtls/ssl_ticket.h>
 
-#include <ZuString.hpp>
+#include <zlib/ZuString.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZiFile.hpp>
-#include <ZiMultiplex.hpp>
-#include <ZiIOBuf.hpp>
+#include <zlib/ZiFile.hpp>
+#include <zlib/ZiMultiplex.hpp>
+#include <zlib/ZiIOBuf.hpp>
 
-#include <ZtlsRandom.hpp>
+#include <zlib/ZtlsRandom.hpp>
 
 namespace Ztls {
 

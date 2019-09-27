@@ -19,7 +19,7 @@
 
 // Meyers / Phoenix TLS Multiton
 
-#include <ZmSpecific.hpp>
+#include <zlib/ZmSpecific.hpp>
 
 // statically-initialized spinlock to guard initial singleton registration
 // and cleanup at exit; little if any contention is anticipated; access

@@ -19,13 +19,13 @@
 
 // assertions
 
-#include <ZuBox.hpp>
-#include <ZuStringN.hpp>
+#include <zlib/ZuBox.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <ZmAssert.hpp>
+#include <zlib/ZmAssert.hpp>
 
-#include <ZmPlatform.hpp>
-#include <ZmTime.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmTime.hpp>
 
 #include <stdio.h>
 

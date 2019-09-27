@@ -19,7 +19,7 @@
 
 // command line interface using a readline-compatible library
 
-#include <Zrl.hpp>
+#include <zlib/Zrl.hpp>
 
 // #ifndef _WIN32
 #include <readline/readline.h>
@@ -44,7 +44,7 @@ extern "C" {
 #endif
 #endif
 
-#include <ZmSingleton.hpp>
+#include <zlib/ZmSingleton.hpp>
 
 struct Zrl_ {
   Zrl_() { }

@@ -27,14 +27,14 @@
 #endif
 
 #ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
-#include <ZuPrint.hpp>
+#include <zlib/ZuPrint.hpp>
 
-#include <ZmTime.hpp>
+#include <zlib/ZmTime.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
 // generic message ID
 

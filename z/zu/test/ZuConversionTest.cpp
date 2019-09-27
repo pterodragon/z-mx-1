@@ -1,11 +1,11 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 
-#include <ZuConversion.hpp>
+#include <zlib/ZuConversion.hpp>
 
 struct A { };
 struct B : public A { };

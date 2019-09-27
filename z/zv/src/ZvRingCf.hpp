@@ -27,12 +27,12 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZiRing.hpp>
+#include <zlib/ZiRing.hpp>
 
-#include <ZvCf.hpp>
+#include <zlib/ZvCf.hpp>
 
 struct ZvRingParams : public ZiRingParams {
   inline ZvRingParams() { }

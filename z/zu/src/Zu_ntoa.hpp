@@ -68,7 +68,7 @@
 #define Zu_ntoa_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
@@ -77,11 +77,11 @@
 
 #include <string.h>
 
-#include <ZuInt.hpp>
-#include <ZuIfT.hpp>
-#include <ZuFP.hpp>
-#include <ZuFmt.hpp>
-#include <ZuDecimal.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuIfT.hpp>
+#include <zlib/ZuFP.hpp>
+#include <zlib/ZuFmt.hpp>
+#include <zlib/ZuDecimal.hpp>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push

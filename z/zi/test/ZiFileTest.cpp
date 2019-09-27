@@ -1,8 +1,8 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZeLog.hpp>
-#include <ZiFile.hpp>
+#include <zlib/ZeLog.hpp>
+#include <zlib/ZiFile.hpp>
 
 int main()
 {

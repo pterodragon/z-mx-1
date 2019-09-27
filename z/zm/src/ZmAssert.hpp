@@ -30,7 +30,7 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 // need to export regardless of NDEBUG to support debug build application
@@ -46,7 +46,7 @@ extern "C" {
 #ifdef NDEBUG
 #define ZmAssert(x) ((void)0)
 #else
-#include <ZuFnName.hpp>
+#include <zlib/ZuFnName.hpp>
 #define ZmAssert(x) \
   ((x) ? (void)0 : ZmAssert_fail(#x, __FILE__, __LINE__, ZuFnName))
 #endif

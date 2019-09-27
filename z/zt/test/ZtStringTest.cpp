@@ -3,14 +3,14 @@
 
 #include <stdio.h>
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
-#include <ZuBox.hpp>
-#include <ZuStringN.hpp>
+#include <zlib/ZuBox.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <ZmList.hpp>
+#include <zlib/ZmList.hpp>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
 #include <string>
 #include <sstream>

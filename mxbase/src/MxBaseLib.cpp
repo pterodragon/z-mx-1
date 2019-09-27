@@ -19,7 +19,7 @@
 
 // MxBase
 
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 
 #include "../version.h"
 

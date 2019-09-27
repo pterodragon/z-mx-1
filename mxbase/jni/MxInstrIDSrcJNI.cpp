@@ -23,9 +23,9 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxInstrIDSrcJNI.hpp>
+#include <mxbase/MxInstrIDSrcJNI.hpp>
 
 namespace MxInstrIDSrcJNI {
   jclass	class_; // MxInstrIDSrc

@@ -27,28 +27,28 @@
 #endif
 
 #ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
-#include <ZuInt.hpp>
-#include <ZuBox.hpp>
-#include <ZuPair.hpp>
-#include <ZuTuple.hpp>
-#include <ZuStringN.hpp>
-#include <ZuPrint.hpp>
-#include <ZuID.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuBox.hpp>
+#include <zlib/ZuPair.hpp>
+#include <zlib/ZuTuple.hpp>
+#include <zlib/ZuStringN.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuID.hpp>
 
-#include <ZmRef.hpp>
-#include <ZmLHash.hpp>
-#include <ZmStream.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmLHash.hpp>
+#include <zlib/ZmStream.hpp>
 
-#include <ZtDate.hpp>
-#include <ZtString.hpp>
-#include <ZtEnum.hpp>
+#include <zlib/ZtDate.hpp>
+#include <zlib/ZtString.hpp>
+#include <zlib/ZtEnum.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZvCSV.hpp>
+#include <zlib/ZvCSV.hpp>
 
 // vocabulary types
 

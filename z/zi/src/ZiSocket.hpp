@@ -27,10 +27,10 @@
 #endif
 
 #ifndef ZiLib_HPP
-#include <ZiLib.hpp>
+#include <zlib/ZiLib.hpp>
 #endif
 
-#include <ZiPlatform.hpp>
+#include <zlib/ZiPlatform.hpp>
 
 class ZiAPI ZiSocket {
 public:

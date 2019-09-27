@@ -19,11 +19,11 @@
 
 // socket I/O multiplexing
 
-#include <ZiMultiplex.hpp>
+#include <zlib/ZiMultiplex.hpp>
 
-#include <ZmAssert.hpp>
+#include <zlib/ZmAssert.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
 #ifndef _WIN32
 #include <alloca.h>
@@ -31,7 +31,7 @@
 
 #ifdef ZiMultiplex_IOCP
 
-#include <ZmSingleton.hpp>
+#include <zlib/ZmSingleton.hpp>
 
 extern "C" {
   typedef BOOL (PASCAL *PConnectEx)(
@@ -192,7 +192,7 @@ ZiMultiplex_WSExt::~ZiMultiplex_WSExt()
 #endif /* ZiMultiplex_IOCP */
 
 #if !defined(_WIN32) && defined(ZiMultiplex_Netlink)
-#include <ZiNetlink.hpp>  // support netlink for Unix only
+#include <zlib/ZiNetlink.hpp>  // support netlink for Unix only
 #endif
 
 #ifdef ZiMultiplex_EPoll

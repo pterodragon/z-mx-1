@@ -21,11 +21,11 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
-#include <MxFutKeyJNI.hpp>
+#include <mxbase/MxFutKeyJNI.hpp>
 
 namespace MxFutKeyJNI {
   jclass	class_; // MxFutKeyTuple

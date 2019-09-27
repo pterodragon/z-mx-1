@@ -21,21 +21,21 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxSideJNI.hpp>
-#include <MxInstrIDSrcJNI.hpp>
-#include <MxPutCallJNI.hpp>
-#include <MxTickDirJNI.hpp>
-#include <MxTradingSessionJNI.hpp>
-#include <MxTradingStatusJNI.hpp>
+#include <mxbase/MxSideJNI.hpp>
+#include <mxbase/MxInstrIDSrcJNI.hpp>
+#include <mxbase/MxPutCallJNI.hpp>
+#include <mxbase/MxTickDirJNI.hpp>
+#include <mxbase/MxTradingSessionJNI.hpp>
+#include <mxbase/MxTradingStatusJNI.hpp>
 
-#include <MxInstrKeyJNI.hpp>
-#include <MxFutKeyJNI.hpp>
-#include <MxOptKeyJNI.hpp>
-#include <MxUniKeyJNI.hpp>
+#include <mxbase/MxInstrKeyJNI.hpp>
+#include <mxbase/MxFutKeyJNI.hpp>
+#include <mxbase/MxOptKeyJNI.hpp>
+#include <mxbase/MxUniKeyJNI.hpp>
 
-#include <MxBaseJNI.hpp>
+#include <mxbase/MxBaseJNI.hpp>
 
 extern "C" {
   MxBaseExtern jint JNI_OnLoad(JavaVM *, void *);

@@ -23,18 +23,18 @@
 #define ZuBitmap_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuInt.hpp>
-#include <ZuString.hpp>
-#include <ZuBox.hpp>
-#include <ZuPrint.hpp>
-#include <ZuIfT.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuBox.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuIfT.hpp>
 
 template <unsigned Bits_> class ZuBitmap : public ZuPrintable {
 public:

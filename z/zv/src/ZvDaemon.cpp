@@ -19,10 +19,10 @@
 
 // daemon-ization
 
-#include <ZvDaemon.hpp>
+#include <zlib/ZvDaemon.hpp>
 
-#include <ZeLog.hpp>
-#include <ZiFile.hpp>
+#include <zlib/ZeLog.hpp>
+#include <zlib/ZiFile.hpp>
 
 #ifndef _WIN32
 #include <sys/types.h>

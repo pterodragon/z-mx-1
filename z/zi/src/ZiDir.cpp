@@ -19,7 +19,7 @@
 
 // directory scanning
 
-#include <ZiDir.hpp>
+#include <zlib/ZiDir.hpp>
 
 int ZiDir::open(const Path &name, ZeError *e)
 {

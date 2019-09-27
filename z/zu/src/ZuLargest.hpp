@@ -25,15 +25,15 @@
 #define ZuLargest_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuIf.hpp>
-#include <ZuNull.hpp>
+#include <zlib/ZuIf.hpp>
+#include <zlib/ZuNull.hpp>
 
 template <typename T1, typename T2 = ZuNull, typename T3 = ZuNull,
 	  typename T4 = ZuNull, typename T5 = ZuNull, typename T6 = ZuNull,

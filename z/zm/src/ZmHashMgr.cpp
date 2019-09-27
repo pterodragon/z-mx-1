@@ -19,11 +19,11 @@
 
 // hash table
 
-#include <ZmHashMgr.hpp>
+#include <zlib/ZmHashMgr.hpp>
 
-#include <ZuStringN.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <ZmSingleton.hpp>
+#include <zlib/ZmSingleton.hpp>
 
 template <>
 struct ZmCleanup<ZmHashMgr_> {

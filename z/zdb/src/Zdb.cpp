@@ -47,14 +47,14 @@
 // if master and not replicating, then no host is a replica, so master runs
 // as standalone until peers have recovered
 
-#include <Zdb.hpp>
+#include <zlib/Zdb.hpp>
 
-#include <ZiDir.hpp>
+#include <zlib/ZiDir.hpp>
 
 #include <assert.h>
 #include <errno.h>
 
-#include <ZtBitWindow.hpp>
+#include <zlib/ZtBitWindow.hpp>
 
 ZdbEnv::ZdbEnv() :
   m_mx(0), m_stateCond(m_lock),

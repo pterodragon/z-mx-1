@@ -92,12 +92,12 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 // implementation moved to ZmFn_.hpp to avoid circular dependency w/ ZmHeap
 
-#include <ZmFn_.hpp>
-#include <ZmFn_Lambda.hpp>
+#include <zlib/ZmFn_.hpp>
+#include <zlib/ZmFn_Lambda.hpp>
 
 #endif /* ZmFn_HPP */

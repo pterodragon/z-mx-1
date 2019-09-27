@@ -19,10 +19,10 @@
 
 // server-side user DB with MFA, API keys, etc.
 
-#include <ZvUserDB.hpp>
+#include <zlib/ZvUserDB.hpp>
 
-#include <ZtlsBase32.hpp>
-#include <ZtlsTOTP.hpp>
+#include <zlib/ZtlsBase32.hpp>
+#include <zlib/ZtlsTOTP.hpp>
 
 namespace ZvUserDB {
 

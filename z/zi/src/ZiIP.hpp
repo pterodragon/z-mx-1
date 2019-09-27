@@ -27,19 +27,19 @@
 #endif
 
 #ifndef ZiLib_HPP
-#include <ZiLib.hpp>
+#include <zlib/ZiLib.hpp>
 #endif
 
-#include <ZuTraits.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
-#include <ZuTraits.hpp>
-#include <ZuString.hpp>
-#include <ZuPrint.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuPrint.hpp>
 
-#include <ZePlatform.hpp>
+#include <zlib/ZePlatform.hpp>
 
-#include <ZiPlatform.hpp>
+#include <zlib/ZiPlatform.hpp>
 
 class ZiAPI ZiIP : public in_addr {
 public:

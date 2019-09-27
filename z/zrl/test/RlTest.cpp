@@ -1,12 +1,12 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 
-#include <ZvCf.hpp>
-#include <Zrl.hpp>
+#include <zlib/ZvCf.hpp>
+#include <zlib/Zrl.hpp>
 
 static const char *syntax_ =
 "help { }\n"

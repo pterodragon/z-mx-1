@@ -27,18 +27,18 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 #include <stddef.h>
 #include <stdlib.h>
 
-#include <ZuObject_.hpp>
+#include <zlib/ZuObject_.hpp>
 
-#include <ZmAtomic.hpp>
+#include <zlib/ZmAtomic.hpp>
 
 #ifdef ZmObject_DEBUG
-#include <ZmBackTrace_.hpp>
+#include <zlib/ZmBackTrace_.hpp>
 #endif
 
 class ZmObject_Debug;

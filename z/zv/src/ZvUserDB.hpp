@@ -27,28 +27,28 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZuBitmap.hpp>
-#include <ZuObject.hpp>
-#include <ZuPolymorph.hpp>
-#include <ZuRef.hpp>
-#include <ZuArrayN.hpp>
+#include <zlib/ZuBitmap.hpp>
+#include <zlib/ZuObject.hpp>
+#include <zlib/ZuPolymorph.hpp>
+#include <zlib/ZuRef.hpp>
+#include <zlib/ZuArrayN.hpp>
 
-#include <ZmHash.hpp>
-#include <ZmRBTree.hpp>
-#include <ZmRWLock.hpp>
+#include <zlib/ZmHash.hpp>
+#include <zlib/ZmRBTree.hpp>
+#include <zlib/ZmRWLock.hpp>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
-#include <ZiFile.hpp>
+#include <zlib/ZiFile.hpp>
 
-#include <Zfb.hpp>
+#include <zlib/Zfb.hpp>
 
-#include <ZtlsBase64.hpp>
-#include <ZtlsHMAC.hpp>
-#include <ZtlsRandom.hpp>
+#include <zlib/ZtlsBase64.hpp>
+#include <zlib/ZtlsHMAC.hpp>
+#include <zlib/ZtlsRandom.hpp>
 
 #include "userdb_generated.h"
 #include "loginreq_generated.h"

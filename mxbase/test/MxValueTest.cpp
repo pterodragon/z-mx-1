@@ -1,6 +1,6 @@
-#include <ZuStringN.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
 #include <iostream>
 

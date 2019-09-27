@@ -27,12 +27,12 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZmScheduler.hpp>
+#include <zlib/ZmScheduler.hpp>
 
-#include <ZvCf.hpp>
+#include <zlib/ZvCf.hpp>
 
 namespace ZvSchedulerPriorities {
   ZtEnumValues(

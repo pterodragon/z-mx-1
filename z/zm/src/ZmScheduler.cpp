@@ -19,9 +19,9 @@
 
 // scheduler with thread pool
 
-#include <ZuBox.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZmScheduler.hpp>
+#include <zlib/ZmScheduler.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

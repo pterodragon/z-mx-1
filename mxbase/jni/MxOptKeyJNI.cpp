@@ -23,13 +23,13 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
-#include <MxPutCallJNI.hpp>
+#include <mxbase/MxPutCallJNI.hpp>
 
-#include <MxOptKeyJNI.hpp>
+#include <mxbase/MxOptKeyJNI.hpp>
 
 namespace MxOptKeyJNI {
   jclass	class_; // MxOptKeyTuple

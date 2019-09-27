@@ -28,11 +28,11 @@
 #pragma warning(disable:4251 4800)
 #endif
 
-#include <ZuAssert.hpp>
+#include <zlib/ZuAssert.hpp>
 
-#include <ZmTime.hpp>
+#include <zlib/ZmTime.hpp>
 
-#include <ZpLib.hpp>
+#include <zlib/ZpLib.hpp>
 
 #define ZPCAP_VULONG(major, minor) (((major)<<16) | (minor))
 #define ZPCAP_VMAJOR(n) (((u_int32_t)n)>>16)

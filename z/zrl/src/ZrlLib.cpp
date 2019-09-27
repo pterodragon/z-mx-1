@@ -19,7 +19,7 @@
 
 // Zero Copy Command Line Interface Library
 
-#include <ZrlLib.hpp>
+#include <zlib/ZrlLib.hpp>
 
 #include "../../version.h"
 

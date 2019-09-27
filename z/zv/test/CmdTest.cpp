@@ -17,13 +17,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include <ZuTuple.hpp>
-#include <ZuPrint.hpp>
-#include <ZuPolymorph.hpp>
+#include <zlib/ZuTuple.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuPolymorph.hpp>
 
-#include <ZmTrap.hpp>
+#include <zlib/ZmTrap.hpp>
 
-#include <ZvCmdServer.hpp>
+#include <zlib/ZvCmdServer.hpp>
 
 class ZvCmdTest :
     public ZmPolymorph, public ZvCmdServer<ZvCmdTest> {

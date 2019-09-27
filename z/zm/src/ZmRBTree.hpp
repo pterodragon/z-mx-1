@@ -27,21 +27,21 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuIf.hpp>
-#include <ZuNull.hpp>
-#include <ZuCmp.hpp>
-#include <ZuIndex.hpp>
-#include <ZuConversion.hpp>
+#include <zlib/ZuIf.hpp>
+#include <zlib/ZuNull.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuIndex.hpp>
+#include <zlib/ZuConversion.hpp>
 
-#include <ZmGuard.hpp>
-#include <ZmLock.hpp>
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmHeap.hpp>
-#include <ZmKVNode.hpp>
+#include <zlib/ZmGuard.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmHeap.hpp>
+#include <zlib/ZmKVNode.hpp>
 
 // uses NTP (named template parameters):
 //

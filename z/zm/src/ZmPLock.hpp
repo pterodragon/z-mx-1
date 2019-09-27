@@ -28,12 +28,12 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZmPlatform.hpp>
-#include <ZmLockTraits.hpp>
-#include <ZmAtomic.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmLockTraits.hpp>
+#include <zlib/ZmAtomic.hpp>
 
 // Linux x86 - uses Nick Piggin's 2008 reference implementation of ticket
 // spinlocks for the Linux kernel, see http://lwn.net/Articles/267968/

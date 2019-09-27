@@ -33,7 +33,7 @@
 #define ZuTraits_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
@@ -45,7 +45,7 @@
 #include <limits.h>
 #include <string.h>
 
-#include <ZuFP.hpp>
+#include <zlib/ZuFP.hpp>
 
 // generic traits (overridden by specializations)
 
@@ -379,7 +379,7 @@ template <> struct ZuTraits<void> : public ZuGenericTraits<void> {
   enum { IsPrimitive = 1, IsPOD = 1, IsVoid = 1 };
 };
 
-#include <ZuIfT.hpp>
+#include <zlib/ZuIfT.hpp>
 
 // SFINAE techniques...
 #define ZuTraits_SFINAE(R) \
@@ -464,7 +464,7 @@ struct ZuStdArrayTraits : public ZuStdArrayTraits_<T, Elem> {
 #endif
 };
 
-#include <ZuStdString.hpp>
+#include <zlib/ZuStdString.hpp>
 
 namespace std {
   template <typename, class> class vector;

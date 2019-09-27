@@ -33,7 +33,7 @@
 #endif
 
 #ifndef ZtLib_HPP
-#include <ZtLib.hpp>
+#include <zlib/ZtLib.hpp>
 #endif
 
 #include <string.h>
@@ -42,24 +42,24 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include <ZuIfT.hpp>
-#include <ZuInt.hpp>
-#include <ZuNull.hpp>
-#include <ZuTraits.hpp>
-#include <ZuConversion.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
-#include <ZuStringFn.hpp>
-#include <ZuUTF.hpp>
-#include <ZuPrint.hpp>
-#include <ZuBox.hpp>
+#include <zlib/ZuIfT.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuNull.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuStringFn.hpp>
+#include <zlib/ZuUTF.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZmAssert.hpp>
-#include <ZmStream.hpp>
+#include <zlib/ZmAssert.hpp>
+#include <zlib/ZmStream.hpp>
 
-#include <ZtPlatform.hpp>
-#include <ZtArray.hpp>
-#include <ZtIconv.hpp>
+#include <zlib/ZtPlatform.hpp>
+#include <zlib/ZtArray.hpp>
+#include <zlib/ZtIconv.hpp>
 
 // built-in buffer size (before falling back to malloc())
 // Note: must be a multiple of sizeof(uintptr_t)

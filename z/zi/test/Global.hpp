@@ -1,9 +1,9 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZmAtomic.hpp>
-#include <ZmSemaphore.hpp>
-#include <ZmTimeInterval.hpp>
+#include <zlib/ZmAtomic.hpp>
+#include <zlib/ZmSemaphore.hpp>
+#include <zlib/ZmTimeInterval.hpp>
 
 class Global {
   Global(const Global &);

@@ -27,16 +27,16 @@
 #endif
 
 #ifndef ZtLib_HPP
-#include <ZtLib.hpp>
+#include <zlib/ZtLib.hpp>
 #endif
 
 #include <stdlib.h>	// for size_t
 
 #include <iconv.h>
 
-#include <ZuIf.hpp>
+#include <zlib/ZuIf.hpp>
 
-#include <ZmLock.hpp>
+#include <zlib/ZmLock.hpp>
 
 // specialize ZtIconvFn for any output buffer type
 template <class Out> struct ZtIconvFn {

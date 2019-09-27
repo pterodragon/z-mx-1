@@ -65,7 +65,7 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 #ifndef _WIN32
@@ -74,18 +74,18 @@
 
 #include <stdlib.h>
 
-#include <ZuCmp.hpp>
-#include <ZuConversion.hpp>
-#include <ZuCan.hpp>
-#include <ZuPair.hpp>
-#include <ZuIfT.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuCan.hpp>
+#include <zlib/ZuPair.hpp>
+#include <zlib/ZuIfT.hpp>
 
-#include <ZmRef.hpp>
-#include <ZmObject.hpp>
-#include <ZmFn_.hpp>
-#include <ZmCleanup.hpp>
-#include <ZmGlobal.hpp>
-#include <ZmStack_.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmFn_.hpp>
+#include <zlib/ZmCleanup.hpp>
+#include <zlib/ZmGlobal.hpp>
+#include <zlib/ZmStack_.hpp>
 
 class ZmSpecific_;
 struct ZmSpecific_Object;

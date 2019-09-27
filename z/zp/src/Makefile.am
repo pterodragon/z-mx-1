@@ -9,7 +9,7 @@ AM_CPPFLAGS = \
 	-DZP_EXPORTS @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
-include_HEADERS = \
+pkginclude_HEADERS = \
 	ZpExtract.hpp \
 	ZpLayers.hpp \
 	ZpLib.hpp \

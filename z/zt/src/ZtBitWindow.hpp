@@ -27,13 +27,13 @@
 #endif
 
 #ifndef ZtLib_HPP
-#include <ZtLib.hpp>
+#include <zlib/ZtLib.hpp>
 #endif
 
 #include <stdlib.h>
 #include <string.h>
 
-#include <ZuInt.hpp>
+#include <zlib/ZuInt.hpp>
 
 template <unsigned> struct ZtBitWindow_ { enum { OK = 0 }; };
 template <> struct ZtBitWindow_<1>  { enum { OK = 1, Pow2 = 1, Shift =  0 }; };

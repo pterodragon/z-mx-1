@@ -19,12 +19,12 @@
 
 // high resolution timer
 
-#include <ZmTime.hpp>
-#include <ZmAtomic.hpp>
-#include <ZmLock.hpp>
-#include <ZmTime.hpp>
-#include <ZmThread.hpp>
-#include <ZmSingleton.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmAtomic.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmSingleton.hpp>
 
 #ifdef _WIN32
 

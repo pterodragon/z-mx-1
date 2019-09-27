@@ -25,15 +25,15 @@
 #endif
 
 #ifndef ZiLib_HPP
-#include <ZiLib.hpp>
+#include <zlib/ZiLib.hpp>
 #endif
 
-#include <ZmAssert.hpp>
+#include <zlib/ZmAssert.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZiIP.hpp>
-#include <ZiPlatform.hpp>
+#include <zlib/ZiIP.hpp>
+#include <zlib/ZiPlatform.hpp>
 
 class ZiNetlinkSockAddr {
   struct sockaddr_nl  m_snl;

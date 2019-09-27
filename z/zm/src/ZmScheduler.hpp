@@ -27,32 +27,32 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 #include <stdarg.h>
 
-#include <ZuNew.hpp>
-#include <ZuNull.hpp>
-#include <ZuString.hpp>
-#include <ZuStringN.hpp>
-#include <ZuMvArray.hpp>
-#include <ZuPrint.hpp>
-#include <ZuID.hpp>
+#include <zlib/ZuNew.hpp>
+#include <zlib/ZuNull.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuStringN.hpp>
+#include <zlib/ZuMvArray.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuID.hpp>
 
-#include <ZmAtomic.hpp>
-#include <ZmObject.hpp>
-#include <ZmNoLock.hpp>
-#include <ZmLock.hpp>
-#include <ZmCondition.hpp>
-#include <ZmSemaphore.hpp>
-#include <ZmRing.hpp>
-#include <ZmRBTree.hpp>
-#include <ZmPQueue.hpp>
-#include <ZmThread.hpp>
-#include <ZmTime.hpp>
-#include <ZmFn.hpp>
-#include <ZmSpinLock.hpp>
+#include <zlib/ZmAtomic.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmNoLock.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmCondition.hpp>
+#include <zlib/ZmSemaphore.hpp>
+#include <zlib/ZmRing.hpp>
+#include <zlib/ZmRBTree.hpp>
+#include <zlib/ZmPQueue.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmSpinLock.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

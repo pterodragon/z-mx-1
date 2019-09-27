@@ -27,12 +27,12 @@
 #endif
 
 #ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
-#include <ZtArray.hpp>
+#include <zlib/ZtArray.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
 class MxBaseAPI MxValWindow {
 public:

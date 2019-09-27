@@ -23,7 +23,7 @@
 #define ZuFP_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
@@ -40,7 +40,7 @@
 #define isnan _isnan
 #endif
 
-#include <ZuInt.hpp>
+#include <zlib/ZuInt.hpp>
 
 // floating point support for all IEEE 754 sizes
 // - number of decimal places in each type's mantissa

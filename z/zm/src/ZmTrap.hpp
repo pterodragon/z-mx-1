@@ -27,11 +27,11 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZmFn.hpp>
-#include <ZmCleanup.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmCleanup.hpp>
 
 extern "C" {
   ZmExtern void ZmTrap_sleep();

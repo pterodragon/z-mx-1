@@ -27,12 +27,12 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZuPrint.hpp>
+#include <zlib/ZuPrint.hpp>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
 class ZvAPI ZvError {
 public:

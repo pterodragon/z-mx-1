@@ -19,23 +19,23 @@
 
 /* test program */
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ZuTraits.hpp>
-#include <ZuHash.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuHash.hpp>
 
-#include <ZmRef.hpp>
-#include <ZmObject.hpp>
-#include <ZmHash.hpp>
-#include <ZmList.hpp>
-#include <ZmTime.hpp>
-#include <ZmSemaphore.hpp>
-#include <ZmThread.hpp>
-#include <ZmSingleton.hpp>
-#include <ZmSpecific.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmHash.hpp>
+#include <zlib/ZmList.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmSemaphore.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmSingleton.hpp>
+#include <zlib/ZmSpecific.hpp>
 
 #define mb() __asm__ __volatile__("":::"memory")
 

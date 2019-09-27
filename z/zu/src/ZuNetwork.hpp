@@ -28,8 +28,8 @@
 #pragma once
 #endif
 
-#include <ZuAssert.hpp>
-#include <ZuByteSwap.hpp>
+#include <zlib/ZuAssert.hpp>
+#include <zlib/ZuByteSwap.hpp>
 
 #if Zu_BIGENDIAN
 template <typename T, int N> struct ZuTwiddleFn {

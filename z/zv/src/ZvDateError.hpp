@@ -27,13 +27,13 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZtArray.hpp>
-#include <ZtDate.hpp>
+#include <zlib/ZtArray.hpp>
+#include <zlib/ZtDate.hpp>
 
-#include <ZvError.hpp>
+#include <zlib/ZvError.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

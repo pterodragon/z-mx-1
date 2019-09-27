@@ -19,7 +19,7 @@
 
 // Zero Copy DB Library
 
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 
 #include "../../version.h"
 

@@ -46,10 +46,10 @@
 
 #include <stddef.h>
 
-#include <ZuTraits.hpp>
-#include <ZuConversion.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuConversion.hpp>
 
-#include <ZuInt.hpp>
+#include <zlib/ZuInt.hpp>
 
 // use optimized compiler built-ins wherever possible
 #if !defined(__mips64) && defined(__GNUC__)

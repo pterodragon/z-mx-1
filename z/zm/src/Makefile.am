@@ -3,7 +3,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src \
 	-DZM_EXPORTS @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
-include_HEADERS = \
+pkginclude_HEADERS = \
 	ZmAssert.hpp ZmAtomic.hpp \
 	ZmBackTrace.hpp ZmBackTrace_.hpp ZmBackTrace_print.hpp \
 	ZmBackTracer.hpp ZmBackoff.hpp ZmBitmap.hpp ZmBxRing.hpp ZmCleanup.hpp \

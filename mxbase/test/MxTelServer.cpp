@@ -1,8 +1,8 @@
-#include <MxTelemetry.hpp>
+#include <mxbase/MxTelemetry.hpp>
 
-#include <ZmTrap.hpp>
+#include <zlib/ZmTrap.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
 static ZmSemaphore sem;
 

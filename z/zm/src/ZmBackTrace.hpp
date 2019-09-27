@@ -39,10 +39,10 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZmBackTrace_.hpp>
-#include <ZmBackTrace_print.hpp>
+#include <zlib/ZmBackTrace_.hpp>
+#include <zlib/ZmBackTrace_print.hpp>
 
 #endif /* ZmBackTrace_HPP */

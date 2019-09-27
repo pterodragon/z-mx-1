@@ -23,14 +23,14 @@
 #define ZuFmt_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuIf.hpp>
+#include <zlib/ZuIf.hpp>
 
 // compile-time formatting
 namespace ZuFmt {

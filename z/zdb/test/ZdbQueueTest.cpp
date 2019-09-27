@@ -1,13 +1,13 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZmTrap.hpp>
+#include <zlib/ZmTrap.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZvCf.hpp>
+#include <zlib/ZvCf.hpp>
 
-#include <Zdb.hpp>
+#include <zlib/Zdb.hpp>
 
 enum Side { Buy, Sell };
 

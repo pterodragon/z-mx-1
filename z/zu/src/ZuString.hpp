@@ -23,14 +23,14 @@
 #define ZuString_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuArray.hpp>
+#include <zlib/ZuArray.hpp>
 
 typedef ZuArray<const char> ZuString;
 typedef ZuArray<const wchar_t> ZuWString;

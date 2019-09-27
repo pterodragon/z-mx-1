@@ -19,17 +19,17 @@
 
 // platform-specific
 
-#include <ZuUTF.hpp>
+#include <zlib/ZuUTF.hpp>
 
-#include <ZmSingleton.hpp>
-#include <ZmLock.hpp>
-#include <ZmGuard.hpp>
+#include <zlib/ZmSingleton.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmGuard.hpp>
 
-#include <ZtPlatform.hpp>
-#include <ZtString.hpp>
-#include <ZtRegex.hpp>
+#include <zlib/ZtPlatform.hpp>
+#include <zlib/ZtString.hpp>
+#include <zlib/ZtRegex.hpp>
 
-#include <ZePlatform.hpp>
+#include <zlib/ZePlatform.hpp>
 
 ZuString ZePlatform::severity(unsigned i)
 {

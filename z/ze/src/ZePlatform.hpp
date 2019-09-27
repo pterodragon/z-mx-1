@@ -27,7 +27,7 @@
 #endif
 
 #ifndef ZeLib_HPP
-#include <ZeLib.hpp>
+#include <zlib/ZeLib.hpp>
 #endif
 
 #ifndef _WIN32
@@ -41,19 +41,19 @@
 #include <ws2tcpip.h>
 #endif
 
-#include <ZuTraits.hpp>
-#include <ZuFnName.hpp>
-#include <ZuStringN.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuFnName.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmSingleton.hpp>
-#include <ZmHeap.hpp>
-#include <ZmStream.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmSingleton.hpp>
+#include <zlib/ZmHeap.hpp>
+#include <zlib/ZmStream.hpp>
 
-#include <ZtDate.hpp>
-#include <ZtString.hpp>
-#include <ZtEnum.hpp>
+#include <zlib/ZtDate.hpp>
+#include <zlib/ZtString.hpp>
+#include <zlib/ZtEnum.hpp>
 
 // ZePlatform::ErrNo is a regular native OS error code
 //

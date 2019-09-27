@@ -27,10 +27,10 @@
 #endif
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
-#include <ZuInt.hpp>
+#include <zlib/ZuInt.hpp>
 
 // generic run-time access to a reference-counted POD type
 
@@ -81,7 +81,7 @@ public:
   using ZuAnyPOD_Data::as;
 };
 
-#include <ZuPolymorph.hpp>
+#include <zlib/ZuPolymorph.hpp>
 
 typedef ZuAnyPOD_<ZuPolymorph> ZuAnyPOD;
 

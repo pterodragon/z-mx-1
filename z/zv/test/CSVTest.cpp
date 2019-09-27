@@ -1,17 +1,17 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stddef.h>
 
-#include <ZmList.hpp>
+#include <zlib/ZmList.hpp>
 
-#include <ZtEnum.hpp>
+#include <zlib/ZtEnum.hpp>
 
-#include <ZiFile.hpp>
+#include <zlib/ZiFile.hpp>
 
-#include <ZvCSV.hpp>
+#include <zlib/ZvCSV.hpp>
 
 // 2011/11/11 12:00:00
 // 2011/11/11 12:12:12

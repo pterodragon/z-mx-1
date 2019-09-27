@@ -1,11 +1,11 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
 #ifdef _WIN32
 #define TestError ERROR_FILE_NOT_FOUND

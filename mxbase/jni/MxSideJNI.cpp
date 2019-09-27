@@ -21,9 +21,9 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxSideJNI.hpp>
+#include <mxbase/MxSideJNI.hpp>
 
 namespace MxSideJNI {
   jclass	class_; // MxSide

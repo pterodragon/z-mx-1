@@ -27,13 +27,13 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZmStack.hpp>
+#include <zlib/ZmStack.hpp>
 
-#include <ZvCf.hpp>
-#include <ZvCSV.hpp>
+#include <zlib/ZvCf.hpp>
+#include <zlib/ZvCSV.hpp>
 
 struct ZvStackParams : public ZmStackParams {
   inline ZvStackParams() : ZmStackParams() { }

@@ -27,14 +27,14 @@
 #endif
 
 #ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
-#include <ZmObject.hpp>
-#include <ZmScheduler.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmScheduler.hpp>
 
-#include <ZvCf.hpp>
-#include <ZvSchedulerCf.hpp>
+#include <zlib/ZvCf.hpp>
+#include <zlib/ZvSchedulerCf.hpp>
 
 class MxScheduler : public ZuObject, public ZmScheduler {
 public:

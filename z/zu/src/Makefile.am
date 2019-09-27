@@ -2,7 +2,7 @@ METASOURCES = AUTO
 AM_CPPFLAGS = -DZU_EXPORTS @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
-include_HEADERS = \
+pkginclude_HEADERS = \
 	ZuArrayFn.hpp ZuArray.hpp ZuArrayN.hpp ZuAssert.hpp ZuBox.hpp \
 	ZuBitmap.hpp ZuByteSwap.hpp ZuCan.hpp ZuCmp.hpp ZuConversion.hpp \
 	ZuFnName.hpp ZuFmt.hpp ZuFP.hpp ZuHash.hpp ZuID.hpp ZuIf.hpp \

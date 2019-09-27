@@ -19,18 +19,18 @@
 
 /* ZmPQueueTx unit test */
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ZuTraits.hpp>
-#include <ZuPair.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuPair.hpp>
 
-#include <ZmPQueue.hpp>
-#include <ZmNoLock.hpp>
-#include <ZmTime.hpp>
-#include <ZmHash.hpp>
+#include <zlib/ZmPQueue.hpp>
+#include <zlib/ZmNoLock.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmHash.hpp>
 
 typedef ZuPair<uint32_t, unsigned> Msg_Data;
 struct Msg_ : public Msg_Data {

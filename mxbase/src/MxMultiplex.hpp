@@ -27,17 +27,17 @@
 #endif
 
 #ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
-#include <ZuPolymorph.hpp>
+#include <zlib/ZuPolymorph.hpp>
 
-#include <ZiMultiplex.hpp>
+#include <zlib/ZiMultiplex.hpp>
 
-#include <ZvCf.hpp>
-#include <ZvMultiplexCf.hpp>
+#include <zlib/ZvCf.hpp>
+#include <zlib/ZvMultiplexCf.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
 class MxMultiplex : public ZuPolymorph, public ZiMultiplex {
 public:

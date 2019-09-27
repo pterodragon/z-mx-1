@@ -27,11 +27,11 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZmTime.hpp>
-#include <ZmRandom.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmRandom.hpp>
 
 // ZmBackoff(minimum, maximum, backoff multiplier, random offset)
 

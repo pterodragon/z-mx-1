@@ -1,7 +1,7 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <assert.h>
 #include <stdio.h>
@@ -9,10 +9,10 @@
 #include <unistd.h>
 #include <time.h>
 
-#include <ZuInt.hpp>
-#include <ZuTraits.hpp>
-#include <ZuBox.hpp>
-#include <ZuStringN.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuBox.hpp>
+#include <zlib/ZuStringN.hpp>
 
 #include <string>
 #include <sstream>

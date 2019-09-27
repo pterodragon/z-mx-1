@@ -27,13 +27,13 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZmPlatform.hpp>
-#include <ZmTime.hpp>
-#include <ZmObject.hpp>
-#include <ZmPLock.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmPLock.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -66,9 +66,9 @@ inline static int ZmCondition_timedwait_(
 #endif
 
 #if ZmCondition_Native == 0
-#include <ZmGuard.hpp>
-#include <ZmSpecific.hpp>
-#include <ZmSemaphore.hpp>
+#include <zlib/ZmGuard.hpp>
+#include <zlib/ZmSpecific.hpp>
+#include <zlib/ZmSemaphore.hpp>
 
 class ZmCondition_;
 

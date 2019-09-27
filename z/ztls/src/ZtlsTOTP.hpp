@@ -26,15 +26,15 @@
 #pragma once
 #endif
 
-#include <ZtlsLib.hpp>
+#include <zlib/ZtlsLib.hpp>
 
 #include <stdlib.h>
 
-#include <ZuByteSwap.hpp>
+#include <zlib/ZuByteSwap.hpp>
 
-#include <ZmTime.hpp>
+#include <zlib/ZmTime.hpp>
 
-#include <ZtlsHMAC.hpp>
+#include <zlib/ZtlsHMAC.hpp>
 
 namespace Ztls {
 namespace TOTP {

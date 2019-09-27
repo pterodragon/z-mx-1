@@ -1,12 +1,12 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuStringN.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
 // #define ZiRing_STRESSTEST
-#include <ZiRing.hpp>
+#include <zlib/ZiRing.hpp>
 
 void usage()
 {

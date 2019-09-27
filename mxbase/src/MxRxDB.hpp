@@ -27,12 +27,12 @@
 #endif
 
 #ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
-#include <Zdb.hpp>
+#include <zlib/Zdb.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
 // CRTP - implementation must conform to the following interface:
 #if 0

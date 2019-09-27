@@ -27,15 +27,15 @@
 #endif
 
 #ifndef ZiLib_HPP
-#include <ZiLib.hpp>
+#include <zlib/ZiLib.hpp>
 #endif
 
-#include <ZmLock.hpp>
-#include <ZmGuard.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmGuard.hpp>
 
-#include <ZePlatform.hpp>
+#include <zlib/ZePlatform.hpp>
 
-#include <ZiPlatform.hpp>
+#include <zlib/ZiPlatform.hpp>
 
 #ifndef _WIN32
 #include <sys/mman.h>

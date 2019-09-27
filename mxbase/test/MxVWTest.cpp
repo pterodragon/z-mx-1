@@ -1,7 +1,7 @@
-#include <ZuStringN.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <MxBase.hpp>
-#include <MxValWindow.hpp>
+#include <mxbase/MxBase.hpp>
+#include <mxbase/MxValWindow.hpp>
 
 #include <iostream>
 

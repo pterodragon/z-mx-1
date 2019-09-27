@@ -26,8 +26,8 @@
 #pragma once
 #endif
 
-#include <ZiIP.hpp>
-#include <ZpExtract.hpp>
+#include <zlib/ZiIP.hpp>
+#include <zlib/ZpExtract.hpp>
 
 struct ZpLayer {
   struct Protocol { enum { TCP = 0x06 }; };

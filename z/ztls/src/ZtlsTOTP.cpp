@@ -19,7 +19,7 @@
 
 // time-based one time password (Google Authenticator compatible)
 
-#include <ZtlsTOTP.hpp>
+#include <zlib/ZtlsTOTP.hpp>
 
 namespace Ztls {
 namespace TOTP {

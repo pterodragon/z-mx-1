@@ -23,17 +23,17 @@
 #define Zu_aton_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuInt.hpp>
-#include <ZuFP.hpp>
-#include <ZuFmt.hpp>
-#include <ZuDecimal.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuFP.hpp>
+#include <zlib/ZuFmt.hpp>
+#include <zlib/ZuDecimal.hpp>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push

@@ -27,14 +27,14 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuBox.hpp>
-#include <ZuPrint.hpp>
+#include <zlib/ZuBox.hpp>
+#include <zlib/ZuPrint.hpp>
 
-#include <ZmLock.hpp>
-#include <ZmTime.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmTime.hpp>
 
 #include <stdio.h>
 #include <limits.h>

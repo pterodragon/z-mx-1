@@ -30,28 +30,28 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 // undefine to debug infinite recursion
 // #define ZmTLock_DebugInfiniteRecursion
 
-#include <ZuNull.hpp>
-#include <ZuTraits.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
-#include <ZuIndex.hpp>
-#include <ZuStringN.hpp>
+#include <zlib/ZuNull.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuIndex.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <ZmLock.hpp>
-#include <ZmCondition.hpp>
-#include <ZmGuard.hpp>
-#include <ZmTime.hpp>
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmHash.hpp>
-#include <ZmStack.hpp>
-#include <ZmList.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmCondition.hpp>
+#include <zlib/ZmGuard.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmHash.hpp>
+#include <zlib/ZmStack.hpp>
+#include <zlib/ZmList.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -61,7 +61,7 @@
 #ifdef ZmTLock_DebugInfiniteRecursion
 #include <stdio.h>
 
-#include <ZmSpecific.hpp>
+#include <zlib/ZmSpecific.hpp>
 
 struct ZmTLock_Depth;
 

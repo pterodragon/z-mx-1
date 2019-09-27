@@ -19,9 +19,9 @@
 
 // Mersenne Twister RNG
 
-#include <ZmSpecific.hpp>
+#include <zlib/ZmSpecific.hpp>
 
-#include <ZmRandom.hpp>
+#include <zlib/ZmRandom.hpp>
 
 template <> struct ZmCleanup<ZmRand> {
   enum { Level = ZmCleanupLevel::Library };

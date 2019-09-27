@@ -40,7 +40,7 @@
 #define ZuHash_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
@@ -49,8 +49,8 @@
 
 #include <math.h>
 
-#include <ZuTraits.hpp>
-#include <ZuInt.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuInt.hpp>
 
 template <typename T> struct ZuHash;
 

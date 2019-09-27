@@ -19,7 +19,7 @@
 
 // Zu library version
 
-#include <ZuVersion.hpp>
+#include <zlib/ZuVersion.hpp>
 
 #include "../../version.h"
 

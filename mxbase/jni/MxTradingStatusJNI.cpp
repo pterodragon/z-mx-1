@@ -23,9 +23,9 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxTradingStatusJNI.hpp>
+#include <mxbase/MxTradingStatusJNI.hpp>
 
 namespace MxTradingStatusJNI {
   jclass	class_; // MxTradingStatus

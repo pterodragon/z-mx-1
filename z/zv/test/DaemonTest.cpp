@@ -1,15 +1,15 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZmPlatform.hpp>
-#include <ZmTime.hpp>
-#include <ZmSemaphore.hpp>
-#include <ZmTrap.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmSemaphore.hpp>
+#include <zlib/ZmTrap.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZvDaemon.hpp>
-#include <ZvCf.hpp>
+#include <zlib/ZvDaemon.hpp>
+#include <zlib/ZvCf.hpp>
 
 namespace {
   void usage() {

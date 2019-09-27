@@ -1,15 +1,15 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
-#include <ZuUTF.hpp>
-#include <ZuArrayN.hpp>
-#include <ZuStringN.hpp>
+#include <zlib/ZuUTF.hpp>
+#include <zlib/ZuArrayN.hpp>
+#include <zlib/ZuStringN.hpp>
 
 #define CHECK(x) ((x) ? puts("OK  " #x) : puts("NOK " #x))
 

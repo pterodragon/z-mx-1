@@ -27,13 +27,13 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuStringN.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <ZmPlatform.hpp>
-#include <ZmLockTraits.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmLockTraits.hpp>
 
 #ifdef ZDEBUG
 #define ZmRWLock_DEBUG	// enable testing / debugging
@@ -134,7 +134,7 @@ private:
 #pragma warning(disable:4251)
 #endif
 
-#include <ZmAssert.hpp>
+#include <zlib/ZmAssert.hpp>
 
 class ZmPRWLock { // non-recursive
   ZmPRWLock(const ZmPRWLock &);

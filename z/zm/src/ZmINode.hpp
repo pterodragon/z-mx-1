@@ -29,10 +29,10 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuNull.hpp>
+#include <zlib/ZuNull.hpp>
 
 template <
   class Heap, bool NodeIsItem,

@@ -19,9 +19,9 @@
 
 // shared memory ring buffer IPC with fan-out to multiple readers (up to 64)
 
-#include <ZuStringN.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <ZiRing.hpp>
+#include <zlib/ZiRing.hpp>
 
 void ZiRing_::getpinfo(uint32_t &pid, ZmTime &start)
 {

@@ -27,17 +27,17 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuTraits.hpp>
-#include <ZuConversion.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
-#include <ZuNull.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuNull.hpp>
 
-#include <ZmRef.hpp>
-#include <ZmPolymorph.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmPolymorph.hpp>
 
 template <typename ...Args> class ZmFn;
 

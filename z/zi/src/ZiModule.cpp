@@ -19,7 +19,7 @@
 
 // dynamic loading of shared objects / DLLs
 
-#include <ZiModule.hpp>
+#include <zlib/ZiModule.hpp>
 
 #ifdef _WIN32
 

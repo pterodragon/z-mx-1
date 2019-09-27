@@ -19,11 +19,11 @@
 
 // file I/O
 
-#include <ZiFile.hpp>
+#include <zlib/ZiFile.hpp>
 
-#include <ZtArray.hpp>
+#include <zlib/ZtArray.hpp>
 
-#include <ZtRegex.hpp>
+#include <zlib/ZtRegex.hpp>
 
 #define ZiFile_CopyBufSize	(128<<10)	// 128k
 
@@ -32,9 +32,9 @@
 #include <ctype.h>
 #include <stdlib.h>
 
-#include <ZmRBTree.hpp>
-#include <ZmSingleton.hpp>
-#include <ZmNoLock.hpp>
+#include <zlib/ZmRBTree.hpp>
+#include <zlib/ZmSingleton.hpp>
+#include <zlib/ZmNoLock.hpp>
 
 extern "C" {
   typedef struct {

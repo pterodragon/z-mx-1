@@ -27,13 +27,13 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuTraits.hpp>
-#include <ZuConversion.hpp>
-#include <ZuObject_.hpp>
-#include <ZuRef.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuObject_.hpp>
+#include <zlib/ZuRef.hpp>
 
 // rules for using ZmRef
 

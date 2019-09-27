@@ -27,39 +27,39 @@
 #endif
 
 #ifndef ZiLib_HPP
-#include <ZiLib.hpp>
+#include <zlib/ZiLib.hpp>
 #endif
 
 #include <math.h>
 
-#include <ZuCmp.hpp>
-#include <ZuIndex.hpp>
-#include <ZuHash.hpp>
-#include <ZuLargest.hpp>
-#include <ZuArrayN.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuIndex.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuLargest.hpp>
+#include <zlib/ZuArrayN.hpp>
 
-#include <ZmAtomic.hpp>
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmScheduler.hpp>
-#include <ZmHash.hpp>
-#include <ZmLHash.hpp>
-#include <ZmDRing.hpp>
-#include <ZmFn.hpp>
-#include <ZmLock.hpp>
-#include <ZmPolymorph.hpp>
+#include <zlib/ZmAtomic.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmScheduler.hpp>
+#include <zlib/ZmHash.hpp>
+#include <zlib/ZmLHash.hpp>
+#include <zlib/ZmDRing.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmPolymorph.hpp>
 
-#include <ZtEnum.hpp>
+#include <zlib/ZtEnum.hpp>
 
-#include <ZePlatform.hpp>
-#include <ZeLog.hpp>
+#include <zlib/ZePlatform.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZiPlatform.hpp>
-#include <ZiIP.hpp>
+#include <zlib/ZiPlatform.hpp>
+#include <zlib/ZiIP.hpp>
 
 #ifdef ZDEBUG
 #define ZiMultiplex_DEBUG	// enable testing / debugging
-#include <ZmBackTracer.hpp>
+#include <zlib/ZmBackTracer.hpp>
 #endif
 
 #ifdef _WIN32

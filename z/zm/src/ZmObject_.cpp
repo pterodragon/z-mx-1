@@ -19,14 +19,14 @@
 
 // object base class
 
-#include <ZmObject.hpp>
+#include <zlib/ZmObject.hpp>
 
 #ifdef ZmObject_DEBUG
-#include <ZuNew.hpp>
+#include <zlib/ZuNew.hpp>
 
-#include <ZmBackTrace.hpp>
-#include <ZmRBTree.hpp>
-#include <ZmPLock.hpp>
+#include <zlib/ZmBackTrace.hpp>
+#include <zlib/ZmRBTree.hpp>
+#include <zlib/ZmPLock.hpp>
 
 typedef ZmRBTree<const void *,
 	  ZmRBTreeVal<const ZmBackTrace *,

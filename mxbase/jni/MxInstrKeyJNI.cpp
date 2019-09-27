@@ -23,11 +23,11 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
-#include <MxInstrKeyJNI.hpp>
+#include <mxbase/MxInstrKeyJNI.hpp>
 
 namespace MxInstrKeyJNI {
   jclass	class_; // MxInstrKeyTuple

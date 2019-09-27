@@ -27,10 +27,10 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZmScheduler.hpp>
+#include <zlib/ZmScheduler.hpp>
 
 class ZmShard {
 public:

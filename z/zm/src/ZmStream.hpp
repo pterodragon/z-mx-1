@@ -29,14 +29,14 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuTraits.hpp>
-#include <ZuPrint.hpp>
-#include <ZuString.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuString.hpp>
 
-#include <ZmFn.hpp>
+#include <zlib/ZmFn.hpp>
 
 class ZmStreamBuf {
 public:

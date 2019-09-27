@@ -28,7 +28,7 @@
 #define ZuStringN_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
@@ -39,15 +39,15 @@
 #include <wchar.h>
 #include <stdio.h>
 
-#include <ZuTraits.hpp>
-#include <ZuConversion.hpp>
-#include <ZuIfT.hpp>
-#include <ZuStringFn.hpp>
-#include <ZuString.hpp>
-#include <ZuPrint.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
-#include <ZuBox.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuIfT.hpp>
+#include <zlib/ZuStringFn.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuBox.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

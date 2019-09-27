@@ -19,7 +19,7 @@
 
 // Z JNI Library
 
-#include <ZJNILib.hpp>
+#include <zlib/ZJNILib.hpp>
 
 #include "../../version.h"
 

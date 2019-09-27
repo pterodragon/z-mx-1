@@ -27,28 +27,28 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuNull.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
-#include <ZuIndex.hpp>
-#include <ZuTuple.hpp>
-#include <ZuIf.hpp>
-#include <ZuConversion.hpp>
+#include <zlib/ZuNull.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuIndex.hpp>
+#include <zlib/ZuTuple.hpp>
+#include <zlib/ZuIf.hpp>
+#include <zlib/ZuConversion.hpp>
 
-#include <ZmAtomic.hpp>
-#include <ZmGuard.hpp>
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmHeap.hpp>
-#include <ZmLock.hpp>
-#include <ZmNoLock.hpp>
-#include <ZmLockTraits.hpp>
-#include <ZmKVNode.hpp>
+#include <zlib/ZmAtomic.hpp>
+#include <zlib/ZmGuard.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmHeap.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmNoLock.hpp>
+#include <zlib/ZmLockTraits.hpp>
+#include <zlib/ZmKVNode.hpp>
 
-#include <ZmHashMgr.hpp>
+#include <zlib/ZmHashMgr.hpp>
 
 // hash bits function
 

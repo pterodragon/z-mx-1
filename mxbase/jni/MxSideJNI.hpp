@@ -27,10 +27,10 @@
 #endif
 
 #ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
 namespace MxSideJNI {
   MxBaseExtern MxEnum j2c(JNIEnv *, jobject, bool dlr = false);

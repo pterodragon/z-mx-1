@@ -19,7 +19,7 @@
 
 // MxEngine - Connectivity Framework
 
-#include <MxEngine.hpp>
+#include <mxbase/MxEngine.hpp>
 
 void MxEngine::start_()
 {

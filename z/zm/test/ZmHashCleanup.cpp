@@ -19,7 +19,7 @@
 
 /* test program */
 
-#include <ZmHash.hpp>
+#include <zlib/ZmHash.hpp>
 
 struct Object : public ZmObject {
   Object(int val) : m_val(val) { }

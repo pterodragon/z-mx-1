@@ -23,13 +23,13 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include <ZuBox.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZmSingleton.hpp>
+#include <zlib/ZmSingleton.hpp>
 
-#include <ZtPlatform.hpp>
+#include <zlib/ZtPlatform.hpp>
 
-#include <ZtDate.hpp>
+#include <zlib/ZtDate.hpp>
 
 int ZtDate::m_reformationYear = 1752;
 int ZtDate::m_reformationMonth = 9;

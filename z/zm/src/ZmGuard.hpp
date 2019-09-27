@@ -27,10 +27,10 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZmLockTraits.hpp>
+#include <zlib/ZmLockTraits.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

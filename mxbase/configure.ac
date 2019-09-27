@@ -1,5 +1,5 @@
 m4_define([MXBASE_VERSION_], m4_esyscmd([grep MXBASE_VERNAME version.h | sed 's/[^0-9\.]//g;1q' | tr -d '\n']))
-AC_INIT(MxBase, MXBASE_VERSION_)
+AC_INIT(mxbase, MXBASE_VERSION_)
 MXBASE_VERSION=MXBASE_VERSION_
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -52,5 +52,9 @@ AC_SUBST(MXBASE_CPPFLAGS)
 AC_SUBST(MXBASE_LDFLAGS)
 AC_SUBST(MXBASE_SO_LDFLAGS)
 AC_SUBST(MXBASE_XLIBS)
+
+for i in src jni
+do ( cd $i; test ! -e AC_PACKAGE_NAME && ln -s . AC_PACKAGE_NAME )
+done
 
 AC_OUTPUT(Makefile src/Makefile test/Makefile jni/Makefile)

@@ -27,7 +27,7 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 #ifndef _WIN32
@@ -49,9 +49,9 @@
 
 #include <stdarg.h>
 
-#include <ZuNew.hpp>
-#include <ZuInt.hpp>
-#include <ZuStringN.hpp>
+#include <zlib/ZuNew.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuStringN.hpp>
 
 #ifdef linux
 #include <sys/types.h>

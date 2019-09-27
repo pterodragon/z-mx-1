@@ -27,15 +27,15 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuTuple.hpp>
-#include <ZuUnion.hpp>
+#include <zlib/ZuTuple.hpp>
+#include <zlib/ZuUnion.hpp>
 
-#include <ZmBackTrace.hpp>
-#include <ZmThread.hpp>
-#include <ZmPLock.hpp>
+#include <zlib/ZmBackTrace.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmPLock.hpp>
 
 template <unsigned N = 64> class ZmBackTracer {
 public:

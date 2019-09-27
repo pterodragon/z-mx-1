@@ -27,12 +27,12 @@
 #endif
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #include <stddef.h>
 
-#include <ZuObject_.hpp>
+#include <zlib/ZuObject_.hpp>
 
 class ZuObject : public ZuObject_ {
   ZuObject(const ZuObject &) = delete;

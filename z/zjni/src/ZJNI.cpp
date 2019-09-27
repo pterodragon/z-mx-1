@@ -19,12 +19,12 @@
 
 // Z JNI library
 
-#include <ZmSpecific.hpp>
-#include <ZmCleanup.hpp>
-#include <ZmThread.hpp>
-#include <ZmSemaphore.hpp>
+#include <zlib/ZmSpecific.hpp>
+#include <zlib/ZmCleanup.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmSemaphore.hpp>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
 #include <jni.h>
 

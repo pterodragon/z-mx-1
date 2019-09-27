@@ -19,9 +19,9 @@
 
 // fast, lightweight string class
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
-#include <ZuStringN.hpp>
+#include <zlib/ZuStringN.hpp>
 
 template class ZtString_<char, wchar_t>;
 template class ZtString_<wchar_t, char>;

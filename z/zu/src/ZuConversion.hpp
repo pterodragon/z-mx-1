@@ -32,14 +32,14 @@
 #define ZuConversion_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuIfT.hpp>
+#include <zlib/ZuIfT.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

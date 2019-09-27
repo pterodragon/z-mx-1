@@ -21,15 +21,15 @@
 
 #include <stdlib.h>
 
-#include <ZmHeap.hpp>
+#include <zlib/ZmHeap.hpp>
 
-#include <ZuPair.hpp>
-#include <ZuStringN.hpp>
+#include <zlib/ZuPair.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <ZmThread.hpp>
-#include <ZmTopology.hpp>
-#include <ZmRBTree.hpp>
-#include <ZmNoLock.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmTopology.hpp>
+#include <zlib/ZmRBTree.hpp>
+#include <zlib/ZmNoLock.hpp>
 
 template <>
 struct ZmCleanup<ZmHeapMgr_> {

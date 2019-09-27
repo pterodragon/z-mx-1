@@ -31,19 +31,19 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuTraits.hpp>
-#include <ZuNull.hpp>
-#include <ZuArrayFn.hpp>
-#include <ZuCmp.hpp>
-#include <ZuIndex.hpp>
-#include <ZuConversion.hpp>
-#include <ZuIfT.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuNull.hpp>
+#include <zlib/ZuArrayFn.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuIndex.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuIfT.hpp>
 
-#include <ZmAssert.hpp>
-#include <ZmGuard.hpp>
+#include <zlib/ZmAssert.hpp>
+#include <zlib/ZmGuard.hpp>
 
 class ZmLock;
 class ZmNoLock;

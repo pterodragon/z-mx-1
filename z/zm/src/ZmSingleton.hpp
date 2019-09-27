@@ -43,17 +43,17 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuCmp.hpp>
-#include <ZuCan.hpp>
-#include <ZuConversion.hpp>
-#include <ZuIfT.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuCan.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuIfT.hpp>
 
-#include <ZmRef.hpp>
-#include <ZmCleanup.hpp>
-#include <ZmGlobal.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmCleanup.hpp>
+#include <zlib/ZmGlobal.hpp>
 
 extern "C" {
   ZmExtern void ZmSingleton_ctor();

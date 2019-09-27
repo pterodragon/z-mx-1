@@ -19,18 +19,18 @@
 
 /* red/black tree test program */
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <time.h>
 
-#include <ZuCmp.hpp>
-#include <ZmRef.hpp>
-#include <ZmObject.hpp>
-#include <ZmRBTree.hpp>
-#include <ZmNoLock.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRBTree.hpp>
+#include <zlib/ZmNoLock.hpp>
 
 class Z : public ZmObject {
 public:

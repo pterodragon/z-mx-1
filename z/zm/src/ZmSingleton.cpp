@@ -19,7 +19,7 @@
 
 // Phoenix / Double-Checked Locking Singleton
 
-#include <ZmSingleton.hpp>
+#include <zlib/ZmSingleton.hpp>
 
 void ZmSingleton_ctor()
 {

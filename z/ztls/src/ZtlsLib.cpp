@@ -19,7 +19,7 @@
 
 // mbedtls C++ wrapper
 
-#include <ZtlsLib.hpp>
+#include <zlib/ZtlsLib.hpp>
 
 #include "../../version.h"
 

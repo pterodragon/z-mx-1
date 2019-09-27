@@ -27,7 +27,7 @@
 #endif
 
 #ifndef ZfbLib_HPP
-#include <ZfbLib.hpp>
+#include <zlib/ZfbLib.hpp>
 #endif
 
 #include <flatbuffers/flatbuffers.h>
@@ -35,7 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ZiIOBuf.hpp>
+#include <zlib/ZiIOBuf.hpp>
 
 namespace Zfb {
 

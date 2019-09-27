@@ -38,26 +38,26 @@
 #endif
 
 #ifndef ZeLib_HPP
-#include <ZeLib.hpp>
+#include <zlib/ZeLib.hpp>
 #endif
 
 #include <stdio.h>
 
-#include <ZuCmp.hpp>
-#include <ZuString.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuString.hpp>
 
-#include <ZmBackTrace.hpp>
-#include <ZmCleanup.hpp>
-#include <ZmList.hpp>
-#include <ZmRWLock.hpp>
-#include <ZmSemaphore.hpp>
-#include <ZmThread.hpp>
-#include <ZmTime.hpp>
-#include <ZmNoLock.hpp>
+#include <zlib/ZmBackTrace.hpp>
+#include <zlib/ZmCleanup.hpp>
+#include <zlib/ZmList.hpp>
+#include <zlib/ZmRWLock.hpp>
+#include <zlib/ZmSemaphore.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmNoLock.hpp>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
-#include <ZePlatform.hpp>
+#include <zlib/ZePlatform.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

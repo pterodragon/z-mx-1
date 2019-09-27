@@ -1,11 +1,11 @@
 #include <iostream>
 
-#include <ZuBox.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZtArray.hpp>
+#include <zlib/ZtArray.hpp>
 
-#include <ZtlsBase32.hpp>
-#include <ZtlsTOTP.hpp>
+#include <zlib/ZtlsBase32.hpp>
+#include <zlib/ZtlsTOTP.hpp>
 
 static void usage() {
   std::cout

@@ -27,14 +27,14 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuPrint.hpp>
+#include <zlib/ZuPrint.hpp>
 
-#include <ZmFn.hpp>
-#include <ZmNoLock.hpp>
-#include <ZmRBTree.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmNoLock.hpp>
+#include <zlib/ZmRBTree.hpp>
 
 class ZmHashParams {
 public:

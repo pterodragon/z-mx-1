@@ -27,15 +27,15 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZuStringN.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <ZmHeap.hpp>
-#include <ZuPOD.hpp>
+#include <zlib/ZmHeap.hpp>
+#include <zlib/ZuPOD.hpp>
 
-#include <ZvCSV.hpp>
+#include <zlib/ZvCSV.hpp>
 
 struct ZvAPI ZvHeapCSV {
   struct Data {

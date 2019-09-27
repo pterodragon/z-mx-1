@@ -40,21 +40,21 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuNull.hpp>
-#include <ZuCmp.hpp>
-#include <ZuIndex.hpp>
-#include <ZuPair.hpp>
-#include <ZuBox.hpp>
+#include <zlib/ZuNull.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuIndex.hpp>
+#include <zlib/ZuPair.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZmLock.hpp>
-#include <ZmGuard.hpp>
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmHeap.hpp>
-#include <ZmINode.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmGuard.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmHeap.hpp>
+#include <zlib/ZmINode.hpp>
 
 // the application will normally substitute ZmPQueueDefaultFn with
 // a type that is specific to the queued Item; it must conform to the

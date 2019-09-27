@@ -27,7 +27,7 @@
 #endif
 
 #ifndef ZJNILib_HPP
-#include <ZJNILib.hpp>
+#include <zlib/ZJNILib.hpp>
 #endif
 
 #ifndef _WIN32
@@ -36,14 +36,14 @@
 
 #include <jni.h>
 
-#include <ZuArray.hpp>
-#include <ZuString.hpp>
-#include <ZuUTF.hpp>
-#include <ZuStringN.hpp>
-#include <ZuID.hpp>
+#include <zlib/ZuArray.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuUTF.hpp>
+#include <zlib/ZuStringN.hpp>
+#include <zlib/ZuID.hpp>
 
-#include <ZtDate.hpp>
-#include <ZtString.hpp>
+#include <zlib/ZtDate.hpp>
+#include <zlib/ZtString.hpp>
 
 namespace ZJNI {
   // called from JNI_OnLoad(JavaVM *, void *)

@@ -22,7 +22,7 @@
 #ifndef ZmULock_HPP
 #define ZmULock_HPP
 
-#include <ZmLockTraits.hpp>
+#include <zlib/ZmLockTraits.hpp>
 
 #define ZmULock ZmLockTraits
 

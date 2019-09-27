@@ -30,29 +30,29 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZuBox.hpp>
-#include <ZuString.hpp>
+#include <zlib/ZuBox.hpp>
+#include <zlib/ZuString.hpp>
 
-#include <ZuPOD.hpp>
-#include <ZuRef.hpp>
+#include <zlib/ZuPOD.hpp>
+#include <zlib/ZuRef.hpp>
 
-#include <ZmObject.hpp>
-#include <ZmRBTree.hpp>
-#include <ZmFn.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRBTree.hpp>
+#include <zlib/ZmFn.hpp>
 
-#include <ZtArray.hpp>
-#include <ZtDate.hpp>
-#include <ZtString.hpp>
-#include <ZtRegex.hpp>
+#include <zlib/ZtArray.hpp>
+#include <zlib/ZtDate.hpp>
+#include <zlib/ZtString.hpp>
+#include <zlib/ZtRegex.hpp>
 
-#include <ZePlatform.hpp>
+#include <zlib/ZePlatform.hpp>
 
-#include <ZvError.hpp>
-#include <ZvDateError.hpp>
-#include <ZvEnum.hpp>
+#include <zlib/ZvError.hpp>
+#include <zlib/ZvDateError.hpp>
+#include <zlib/ZvEnum.hpp>
 
 #define ZvCSV_MaxLineSize	(8<<10)	// 8K
 

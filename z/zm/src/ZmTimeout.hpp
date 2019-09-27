@@ -27,12 +27,12 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZmFn.hpp>
-#include <ZmScheduler.hpp>
-#include <ZmBackoff.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmScheduler.hpp>
+#include <zlib/ZmBackoff.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

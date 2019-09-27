@@ -27,10 +27,10 @@
 #endif
 
 #ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
 // balance (deposited assets, loaned assets, traded/confirmed assets)
 struct MxBalance {

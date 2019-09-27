@@ -23,7 +23,7 @@ ${FBS_H}: %_generated.h: fbs/%.fbs
 	flatc -c -I fbs $<
 BUILT_SOURCES = ${FBS_H}
 CLEANFILES = ${FBS_H}
-include_HEADERS = ZvLib.hpp \
+pkginclude_HEADERS = ZvLib.hpp \
 	ZvCf.hpp ZvCSV.hpp ZvError.hpp ZvEnum.hpp ZvHashCSV.hpp \
 	ZvHeapCSV.hpp ZvMultiplexCf.hpp ZvSchedulerCf.hpp ZvCxnOptionsCf.hpp \
 	ZvDaemon.hpp ZvRegexError.hpp ZvDateError.hpp \

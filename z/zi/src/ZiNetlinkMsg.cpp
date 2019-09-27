@@ -17,8 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include <ZiNetlinkMsg.hpp>
-#include <ZiMultiplex.hpp>
+#include <zlib/ZiNetlinkMsg.hpp>
+#include <zlib/ZiMultiplex.hpp>
 
 ZiGenericNetlinkHdr::ZiGenericNetlinkHdr(
     ZiConnection *connection, uint32_t seqNo, uint32_t len) :

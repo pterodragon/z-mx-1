@@ -1,17 +1,17 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 
-#include <ZtEnum.hpp>
+#include <zlib/ZtEnum.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZiFile.hpp>
+#include <zlib/ZiFile.hpp>
 
-#include <ZvCf.hpp>
+#include <zlib/ZvCf.hpp>
 
 static const char *testdata =
 "#\n"

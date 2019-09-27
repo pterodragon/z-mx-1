@@ -27,21 +27,21 @@
 #endif
 
 #ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
-#include <ZuArrayN.hpp>
-#include <ZuPOD.hpp>
-#include <ZuRef.hpp>
+#include <zlib/ZuArrayN.hpp>
+#include <zlib/ZuPOD.hpp>
+#include <zlib/ZuRef.hpp>
 
-#include <ZmPQueue.hpp>
-#include <ZmFn.hpp>
-#include <ZmRBTree.hpp>
+#include <zlib/ZmPQueue.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmRBTree.hpp>
 
-#include <ZiIP.hpp>
-#include <ZiMultiplex.hpp>
+#include <zlib/ZiIP.hpp>
+#include <zlib/ZiMultiplex.hpp>
 
-#include <MxMsgID.hpp>
+#include <mxbase/MxMsgID.hpp>
 
 struct MxQMsgData {
   ZuRef<ZuPolymorph>	payload;

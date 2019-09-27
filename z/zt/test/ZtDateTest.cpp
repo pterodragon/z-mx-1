@@ -1,7 +1,7 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <time.h>
@@ -9,7 +9,7 @@
 #include <limits.h>
 #include <math.h>
 
-#include <ZtDate.hpp>
+#include <zlib/ZtDate.hpp>
 
 #define CHECK(x) ((x) ? puts("OK  " #x) : puts("NOK " #x))
 

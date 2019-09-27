@@ -19,18 +19,18 @@
 
 /* read/write transaction monitor test program */
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
 
-#include <ZmAssert.hpp>
-#include <ZmGuard.hpp>
-#include <ZmThread.hpp>
-#include <ZmTLock.hpp>
-#include <ZmSingleton.hpp>
+#include <zlib/ZmAssert.hpp>
+#include <zlib/ZmGuard.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmTLock.hpp>
+#include <zlib/ZmSingleton.hpp>
 
 ZmAtomic<int> threads;
 

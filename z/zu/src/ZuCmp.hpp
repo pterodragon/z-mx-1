@@ -74,7 +74,7 @@
 #define ZuCmp_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
@@ -84,8 +84,8 @@
 #include <string.h>
 #include <wchar.h>
 
-#include <ZuTraits.hpp>
-#include <ZuInt.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuInt.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

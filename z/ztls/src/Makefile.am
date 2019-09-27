@@ -4,7 +4,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src -I$(top_srcdir)/zm/src \
 	-DZTLS_EXPORTS @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
-include_HEADERS = ZtlsLib.hpp Ztls.hpp \
+pkginclude_HEADERS = ZtlsLib.hpp Ztls.hpp \
 	ZtlsBase32.hpp ZtlsBase64.hpp ZtlsHMAC.hpp ZtlsHex.hpp \
 	ZtlsTOTP.hpp ZtlsRandom.hpp
 lib_LTLIBRARIES = libZtls.la

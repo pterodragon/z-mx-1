@@ -27,7 +27,7 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 #ifdef _MSC_VER
@@ -36,9 +36,9 @@
 #pragma warning(disable:4996 4311 4312)
 #endif
 
-#include <ZuInt.hpp>
-#include <ZuTraits.hpp>
-#include <ZuAssert.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuAssert.hpp>
 
 // Memory Barriers
 // ---------------

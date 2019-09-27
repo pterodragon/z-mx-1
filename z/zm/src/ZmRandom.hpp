@@ -68,7 +68,7 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 #include <limits.h>
@@ -77,10 +77,10 @@
 #include <stdio.h>
 #endif
 
-#include <ZuInt.hpp>
+#include <zlib/ZuInt.hpp>
 
-#include <ZmObject.hpp>
-#include <ZmTime.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmTime.hpp>
 
 class ZmAPI ZmRandom {
   ZmRandom(const ZmRandom &);

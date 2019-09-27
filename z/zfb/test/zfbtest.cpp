@@ -4,10 +4,10 @@
 #include <iostream>
 #include <string>
 
-#include <ZuBox.hpp>
-#include <ZuByteSwap.hpp>
+#include <zlib/ZuBox.hpp>
+#include <zlib/ZuByteSwap.hpp>
 
-#include <Zfb.hpp>
+#include <zlib/Zfb.hpp>
 
 #include "zfbtest_generated.h"
 

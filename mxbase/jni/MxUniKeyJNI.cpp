@@ -23,14 +23,14 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
-#include <MxInstrIDSrcJNI.hpp>
-#include <MxPutCallJNI.hpp>
+#include <mxbase/MxInstrIDSrcJNI.hpp>
+#include <mxbase/MxPutCallJNI.hpp>
 
-#include <MxUniKeyJNI.hpp>
+#include <mxbase/MxUniKeyJNI.hpp>
 
 namespace MxUniKeyJNI {
   jclass	class_; // MxUniKeyTuple

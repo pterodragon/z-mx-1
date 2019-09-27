@@ -23,7 +23,7 @@
 #define ZuPrint_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
@@ -34,8 +34,8 @@
 #include <alloca.h>
 #endif
 
-#include <ZuTraits.hpp>
-#include <ZuConversion.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuConversion.hpp>
 
 struct ZuPrintable { };
 
@@ -115,7 +115,7 @@ template <typename S> struct ZuStdStream__ {
 
 #include <iostream>
 
-#include <ZuStdString.hpp>
+#include <zlib/ZuStdString.hpp>
 
 template <typename, bool> struct ZuStdStream_ { enum { Is = 0 }; };
 template <typename S> struct ZuStdStream_<S, true> : public ZuStdStream__<S> {

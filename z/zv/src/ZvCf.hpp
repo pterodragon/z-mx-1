@@ -27,31 +27,31 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
 #ifndef _MSC_VER
 #include <unistd.h>
 #endif
 
-#include <ZuBox.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmList.hpp>
-#include <ZmRBTree.hpp>
-#include <ZmNoLock.hpp>
-#include <ZmBackTrace.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmList.hpp>
+#include <zlib/ZmRBTree.hpp>
+#include <zlib/ZmNoLock.hpp>
+#include <zlib/ZmBackTrace.hpp>
 
-#include <ZtArray.hpp>
-#include <ZtString.hpp>
-#include <ZtRegex.hpp>
+#include <zlib/ZtArray.hpp>
+#include <zlib/ZtString.hpp>
+#include <zlib/ZtRegex.hpp>
 
-#include <ZiFile.hpp>
+#include <zlib/ZiFile.hpp>
 
-#include <ZvError.hpp>
-#include <ZvRegexError.hpp>
-#include <ZvEnum.hpp>
+#include <zlib/ZvError.hpp>
+#include <zlib/ZvRegexError.hpp>
+#include <zlib/ZvEnum.hpp>
 
 #define ZvCfMaxFileSize	(1<<20)	// 1Mb
 

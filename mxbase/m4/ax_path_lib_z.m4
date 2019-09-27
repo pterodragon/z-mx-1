@@ -26,7 +26,7 @@ AC_DEFUN([AX_PATH_LIB_Z], [dnl
       AC_LANG_SOURCE([[
 #include <stdlib.h>
 #include <stdio.h>
-#include <ZuVersion.hpp>
+#include <zlib/ZuVersion.hpp>
 int main(int argc, char **argv)
 {
   if (argc <= 1) return 0;

@@ -19,9 +19,9 @@
 
 // IP address
 
-#include <ZiIP.hpp>
+#include <zlib/ZiIP.hpp>
 
-#include <ZmSingleton.hpp>
+#include <zlib/ZmSingleton.hpp>
 
 #ifdef _WIN32
 

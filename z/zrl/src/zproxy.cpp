@@ -20,29 +20,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ZuString.hpp>
-#include <ZuPrint.hpp>
-#include <ZuPolymorph.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuPolymorph.hpp>
 
-#include <ZmPlatform.hpp>
-#include <ZmHash.hpp>
-#include <ZmList.hpp>
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmTrap.hpp>
-#include <ZmSemaphore.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmHash.hpp>
+#include <zlib/ZmList.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmTrap.hpp>
+#include <zlib/ZmSemaphore.hpp>
 
-#include <ZtString.hpp>
-#include <ZtArray.hpp>
-#include <ZtRegex.hpp>
+#include <zlib/ZtString.hpp>
+#include <zlib/ZtArray.hpp>
+#include <zlib/ZtRegex.hpp>
 
-#include <ZiMultiplex.hpp>
+#include <zlib/ZiMultiplex.hpp>
 
-#include <ZvCf.hpp>
-#include <ZvCmdHost.hpp>
-#include <ZvMultiplexCf.hpp>
+#include <zlib/ZvCf.hpp>
+#include <zlib/ZvCmdHost.hpp>
+#include <zlib/ZvMultiplexCf.hpp>
 
-#include <Zrl.hpp>
+#include <zlib/Zrl.hpp>
 
 #ifdef _WIN32
 #include <io.h>		// for _isatty

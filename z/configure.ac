@@ -1,5 +1,5 @@
 m4_define([Z_VERSION_], m4_esyscmd([grep Z_VERNAME version.h | sed 's/[^0-9\.]//g;1q' | tr -d '\n']))
-AC_INIT(ZLib, Z_VERSION_)
+AC_INIT(zlib, Z_VERSION_)
 Z_VERSION=Z_VERSION_
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -113,6 +113,8 @@ if test ".$MX_CLANG" = ".yes"; then
   Z_CXXFLAGS="$Z_CXXFLAGS -Wno-unused-local-typedef -Wno-empty-body -Wno-c++11-extensions"
 fi
 
+AC_CHECK_PROG(PERL, "perl")
+
 CPPFLAGS=`echo $CPPFLAGS | perl -pe 's/-I(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$I{$1}++ ? "" : "-I${1}${2}"/ge;'`
 LDFLAGS=`echo $LDFLAGS | perl -pe 's/-L(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$L{$1}++ ? "" : "-L${1}${2}"/ge; s/(-Wl,)?-R,(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$R{$2}++ ? "" : "${1}-R,${2}${3}"/ge'`
 
@@ -129,6 +131,10 @@ AC_SUBST(MBEDTLS_LIBS)
 AC_SUBST(FLATBUFFERS_LIBS)
 AC_SUBST(READLINE_LIBS)
 AC_SUBST(JNI_CPPFLAGS)
+
+for i in zu zm zjni zt ze zi ztls zfb zv zlz4 zp zdb zrl
+do ( cd $i/src; test ! -e AC_PACKAGE_NAME && ln -s . AC_PACKAGE_NAME )
+done
 
 AC_OUTPUT(Makefile \
 	zu/Makefile zu/src/Makefile zu/test/Makefile \

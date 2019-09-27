@@ -27,11 +27,11 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZmPlatform.hpp>
-#include <ZmTime.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmTime.hpp>
 
 class
 #ifndef _WIN32

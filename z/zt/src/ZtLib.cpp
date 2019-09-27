@@ -19,7 +19,7 @@
 
 // Zero Copy Type Library
 
-#include <ZtLib.hpp>
+#include <zlib/ZtLib.hpp>
 
 #include "../../version.h"
 

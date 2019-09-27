@@ -27,18 +27,18 @@
 #endif
 
 #ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
-#include <ZmFn.hpp>
-#include <ZmPolymorph.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmPolymorph.hpp>
 
-#include <ZvCf.hpp>
+#include <zlib/ZvCf.hpp>
 
-#include <MxBase.hpp>
-#include <MxQueue.hpp>
-#include <MxScheduler.hpp>
-#include <MxMultiplex.hpp>
+#include <mxbase/MxBase.hpp>
+#include <mxbase/MxQueue.hpp>
+#include <mxbase/MxScheduler.hpp>
+#include <mxbase/MxMultiplex.hpp>
 
 namespace MxEngineState {
   MxEnumValues(Stopped, Starting, Running, Stopping,

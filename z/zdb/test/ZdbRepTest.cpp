@@ -1,25 +1,25 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
 
-#include <ZmSemaphore.hpp>
-#include <ZmSingleton.hpp>
-#include <ZmTrap.hpp>
+#include <zlib/ZmSemaphore.hpp>
+#include <zlib/ZmSingleton.hpp>
+#include <zlib/ZmTrap.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZiMultiplex.hpp>
+#include <zlib/ZiMultiplex.hpp>
 
-#include <ZvCf.hpp>
-#include <ZvMultiplexCf.hpp>
+#include <zlib/ZvCf.hpp>
+#include <zlib/ZvMultiplexCf.hpp>
 
-#include <Zdb.hpp>
-#include <ZdbRep.hpp>
+#include <zlib/Zdb.hpp>
+#include <zlib/ZdbRep.hpp>
 
 // application context and I/O multiplexer
 

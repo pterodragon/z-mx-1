@@ -21,16 +21,16 @@
 
 #include <stdio.h>
 
-#include <ZmTime.hpp>
-#include <ZmTrap.hpp>
-#include <ZmRBTree.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmTrap.hpp>
+#include <zlib/ZmRBTree.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZiFile.hpp>
+#include <zlib/ZiFile.hpp>
 
-#include <MxBase.hpp>
-#include <MxMCapHdr.hpp>
+#include <mxbase/MxBase.hpp>
+#include <mxbase/MxMCapHdr.hpp>
 
 void usage()
 {

@@ -27,14 +27,14 @@
 #endif
 
 #ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
-#include <ZiIP.hpp>
+#include <zlib/ZiIP.hpp>
 
-#include <ZvCSV.hpp>
+#include <zlib/ZvCSV.hpp>
 
-#include <MxBase.hpp>
+#include <mxbase/MxBase.hpp>
 
 typedef ZvCSVColumn<ZvCSVColType::Int, MxBool> MxBoolCol;
 typedef ZvCSVColumn<ZvCSVColType::Int, MxInt> MxIntCol;

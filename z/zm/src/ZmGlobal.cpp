@@ -25,10 +25,10 @@
 
 // #include <stdio.h>
 
-#include <ZmGlobal.hpp>
+#include <zlib/ZmGlobal.hpp>
 
 #ifdef ZDEBUG
-#include <ZmStream.hpp>
+#include <zlib/ZmStream.hpp>
 #endif
 
 // statically-initialized spinlock to guard initial singleton registration

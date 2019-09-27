@@ -27,18 +27,18 @@
 #endif
 
 #ifndef ZtLib_HPP
-#include <ZtLib.hpp>
+#include <zlib/ZtLib.hpp>
 #endif
 
-#include <ZuBox.hpp>
-#include <ZuPair.hpp>
-#include <ZuAssert.hpp>
-#include <ZuObject.hpp>
+#include <zlib/ZuBox.hpp>
+#include <zlib/ZuPair.hpp>
+#include <zlib/ZuAssert.hpp>
+#include <zlib/ZuObject.hpp>
 
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmLHash.hpp>
-#include <ZmNoLock.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmLHash.hpp>
+#include <zlib/ZmNoLock.hpp>
 
 typedef ZuBox_1(int8_t) ZtEnum;
 

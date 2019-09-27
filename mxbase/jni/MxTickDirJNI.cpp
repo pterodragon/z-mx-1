@@ -23,9 +23,9 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxTickDirJNI.hpp>
+#include <mxbase/MxTickDirJNI.hpp>
 
 namespace MxTickDirJNI {
   jclass	class_; // MxTickDir

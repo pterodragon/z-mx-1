@@ -1,12 +1,12 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuStringN.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <ZmBxRing.hpp>
-#include <ZmThread.hpp>
-#include <ZmSpinLock.hpp>
-#include <ZmTimeInterval.hpp>
+#include <zlib/ZmBxRing.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmSpinLock.hpp>
+#include <zlib/ZmTimeInterval.hpp>
 
 void usage()
 {

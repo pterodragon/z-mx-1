@@ -3,7 +3,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/src -DMXBASE_EXPORTS \
 	@JNI_CPPFLAGS@ @MXBASE_CPPFLAGS@ @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @MXBASE_LDFLAGS@ @MXBASE_SO_LDFLAGS@ @Z_LDFLAGS@
-include_HEADERS = MxBaseJNI.hpp \
+pkginclude_HEADERS = MxBaseJNI.hpp \
 	MxSideJNI.hpp MxInstrIDSrcJNI.hpp MxPutCallJNI.hpp MxTickDirJNI.hpp \
 	MxTradingSessionJNI.hpp MxTradingStatusJNI.hpp \
 	MxInstrKeyJNI.hpp MxFutKeyJNI.hpp MxOptKeyJNI.hpp MxUniKeyJNI.hpp

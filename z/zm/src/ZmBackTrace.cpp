@@ -19,16 +19,16 @@
 
 // stack backtrace
 
-#include <ZmBackTrace.hpp>
+#include <zlib/ZmBackTrace.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <ZmCleanup.hpp>
-#include <ZmSingleton.hpp>
-#include <ZmPLock.hpp>
-#include <ZmGuard.hpp>
+#include <zlib/ZmCleanup.hpp>
+#include <zlib/ZmSingleton.hpp>
+#include <zlib/ZmPLock.hpp>
+#include <zlib/ZmGuard.hpp>
 
 #ifdef linux
 #include <execinfo.h>

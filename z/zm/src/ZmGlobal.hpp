@@ -27,7 +27,7 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 #include <stdlib.h>
@@ -35,9 +35,9 @@
 #include <typeinfo>
 #include <typeindex>
 
-#include <ZmPlatform.hpp>
-#include <ZmAtomic.hpp>
-#include <ZmCleanup.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmAtomic.hpp>
+#include <zlib/ZmCleanup.hpp>
 
 extern "C" {
   ZmExtern void ZmGlobal_atexit();

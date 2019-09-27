@@ -19,11 +19,11 @@
 
 // ZmLock debugging
 
-#include <ZmLock.hpp>
+#include <zlib/ZmLock.hpp>
 
 #ifdef ZmLock_DEBUG
-#include <ZmBackTracer.hpp>
-#include <ZmSingleton.hpp>
+#include <zlib/ZmBackTracer.hpp>
+#include <zlib/ZmSingleton.hpp>
 
 class ZmLock_Debug_;
 

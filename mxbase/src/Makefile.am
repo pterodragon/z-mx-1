@@ -2,7 +2,7 @@ METASOURCES = AUTO
 AM_CPPFLAGS = -DMXBASE_EXPORTS @MXBASE_CPPFLAGS@ @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @MXBASE_LDFLAGS@ @MXBASE_SO_LDFLAGS@ @Z_LDFLAGS@
-include_HEADERS = \
+pkginclude_HEADERS = \
 	MxBase.hpp MxBaseLib.hpp MxBaseVersion.hpp \
 	MxCSV.hpp MxMsgID.hpp MxQueue.hpp MxMultiplex.hpp MxScheduler.hpp \
 	MxValWindow.hpp \

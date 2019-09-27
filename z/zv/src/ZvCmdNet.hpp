@@ -25,14 +25,14 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZuInt.hpp>
-#include <ZuByteSwap.hpp>
-#include <ZuBox.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuByteSwap.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZmAssert.hpp>
+#include <zlib/ZmAssert.hpp>
 
 // userDB request / command sequence number
 using ZvCmdSeqNo = ZuBox<uint64_t>;

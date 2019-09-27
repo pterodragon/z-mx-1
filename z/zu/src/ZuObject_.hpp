@@ -27,12 +27,12 @@
 #endif
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #include <stddef.h>
 
-#include <ZuConversion.hpp>
+#include <zlib/ZuConversion.hpp>
 
 struct ZuObject_ { }; // tag
 

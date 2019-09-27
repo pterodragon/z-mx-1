@@ -27,14 +27,14 @@
 #endif
 
 #ifndef ZiLib_HPP
-#include <ZiLib.hpp>
+#include <zlib/ZiLib.hpp>
 #endif
 
-#include <ZmLock.hpp>
+#include <zlib/ZmLock.hpp>
 
-#include <ZePlatform.hpp>
+#include <zlib/ZePlatform.hpp>
 
-#include <ZiPlatform.hpp>
+#include <zlib/ZiPlatform.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

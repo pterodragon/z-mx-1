@@ -20,23 +20,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ZuPolymorph.hpp>
-#include <ZuByteSwap.hpp>
+#include <zlib/ZuPolymorph.hpp>
+#include <zlib/ZuByteSwap.hpp>
 
-#include <ZmPlatform.hpp>
-#include <ZmTrap.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmTrap.hpp>
 
-#include <ZiMultiplex.hpp>
+#include <zlib/ZiMultiplex.hpp>
 
-#include <ZvCf.hpp>
-#include <ZvCmdClient.hpp>
-#include <ZvCmdHost.hpp>
-#include <ZvMultiplexCf.hpp>
+#include <zlib/ZvCf.hpp>
+#include <zlib/ZvCmdClient.hpp>
+#include <zlib/ZvCmdHost.hpp>
+#include <zlib/ZvMultiplexCf.hpp>
 
-#include <ZtlsBase32.hpp>
-#include <ZtlsBase64.hpp>
+#include <zlib/ZtlsBase32.hpp>
+#include <zlib/ZtlsBase64.hpp>
 
-#include <Zrl.hpp>
+#include <zlib/Zrl.hpp>
 
 #ifdef _WIN32
 #include <io.h>		// for _isatty

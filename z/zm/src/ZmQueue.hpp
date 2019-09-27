@@ -27,13 +27,13 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuAssert.hpp>
-#include <ZuTraits.hpp>
+#include <zlib/ZuAssert.hpp>
+#include <zlib/ZuTraits.hpp>
 
-#include <ZmHash.hpp>
+#include <zlib/ZmHash.hpp>
 
 // NTP (named template parameters):
 //

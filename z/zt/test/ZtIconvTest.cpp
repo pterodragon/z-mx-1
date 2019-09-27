@@ -1,17 +1,17 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <iostream>
 
-#include <ZuString.hpp>
-#include <ZuTraits.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuTraits.hpp>
 
-#include <ZmAssert.hpp>
+#include <zlib/ZmAssert.hpp>
 
-#include <ZtString.hpp>
-#include <ZtIconv.hpp>
+#include <zlib/ZtString.hpp>
+#include <zlib/ZtIconv.hpp>
 
 int main(int argc, char **argv) {
   //"UTF-8", "SHIFT_JIS"

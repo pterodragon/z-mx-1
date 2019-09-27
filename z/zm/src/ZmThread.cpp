@@ -32,11 +32,11 @@
 
 #include <iostream>
 
-#include <ZmSingleton.hpp>
-#include <ZmSpecific.hpp>
-#include <ZmTopology.hpp>
+#include <zlib/ZmSingleton.hpp>
+#include <zlib/ZmSpecific.hpp>
+#include <zlib/ZmTopology.hpp>
 
-#include <ZmThread.hpp>
+#include <zlib/ZmThread.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

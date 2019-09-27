@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <limits.h>
 
-#include <ZmRandom.hpp>
-#include <ZmAssert.hpp>
+#include <zlib/ZmRandom.hpp>
+#include <zlib/ZmAssert.hpp>
 
-#include <ZtBitWindow.hpp>
+#include <zlib/ZtBitWindow.hpp>
 
 unsigned head[1000];
 unsigned tail[1000];

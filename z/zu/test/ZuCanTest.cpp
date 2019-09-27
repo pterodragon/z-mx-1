@@ -1,14 +1,14 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ZuCan.hpp>
-#include <ZuIfT.hpp>
+#include <zlib/ZuCan.hpp>
+#include <zlib/ZuIfT.hpp>
 
 struct A {
   void foo(int i) { printf("foo %d\n", i); }

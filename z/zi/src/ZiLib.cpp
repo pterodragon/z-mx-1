@@ -19,7 +19,7 @@
 
 // Zero Copy I/O Library
 
-#include <ZiLib.hpp>
+#include <zlib/ZiLib.hpp>
 
 #include "../../version.h"
 

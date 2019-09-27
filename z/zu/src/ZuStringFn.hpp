@@ -23,7 +23,7 @@
 #define ZuStringFn_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
@@ -35,10 +35,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include <ZuAssert.hpp>
-#include <ZuTraits.hpp>
-#include <ZuConversion.hpp>
-#include <ZuIfT.hpp>
+#include <zlib/ZuAssert.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuIfT.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

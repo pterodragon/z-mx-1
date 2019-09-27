@@ -19,10 +19,10 @@
 
 /* test program */
 
-#include <ZmHash.hpp>
-#include <ZmThread.hpp>
-#include <ZmSemaphore.hpp>
-#include <ZmTrap.hpp>
+#include <zlib/ZmHash.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmSemaphore.hpp>
+#include <zlib/ZmTrap.hpp>
 
 struct Connection : public ZmObject { };
 

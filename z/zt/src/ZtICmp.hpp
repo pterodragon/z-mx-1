@@ -29,15 +29,15 @@
 #endif
 
 #ifndef ZtLib_HPP
-#include <ZtLib.hpp>
+#include <zlib/ZtLib.hpp>
 #endif
 
-#include <ZuTraits.hpp>
-#include <ZuCmp.hpp>
-#include <ZuString.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuString.hpp>
 
-#include <ZtPlatform.hpp>
-#include <ZtString.hpp>
+#include <zlib/ZtPlatform.hpp>
+#include <zlib/ZtString.hpp>
 
 struct ZtICmp {
 public:

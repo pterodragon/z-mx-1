@@ -27,7 +27,7 @@
 #endif
 
 #ifndef ZtLib_HPP
-#include <ZtLib.hpp>
+#include <zlib/ZtLib.hpp>
 #endif
 
 #include <locale.h>
@@ -42,7 +42,7 @@
 #include <sys/types.h>
 #endif
 
-#include <ZuInt.hpp>
+#include <zlib/ZuInt.hpp>
 
 class ZtAPI ZtPlatform {
   ZtPlatform();

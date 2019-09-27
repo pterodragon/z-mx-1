@@ -28,19 +28,19 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuTraits.hpp>
-#include <ZuNull.hpp>
-#include <ZuArrayFn.hpp>
-#include <ZuCmp.hpp>
-#include <ZuIndex.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuNull.hpp>
+#include <zlib/ZuArrayFn.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuIndex.hpp>
 
-#include <ZmAssert.hpp>
-#include <ZmGuard.hpp>
-#include <ZmLock.hpp>
-#include <ZmNoLock.hpp>
+#include <zlib/ZmAssert.hpp>
+#include <zlib/ZmGuard.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmNoLock.hpp>
 
 // defaults
 #define ZmDRingInitial		4

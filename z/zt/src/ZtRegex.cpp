@@ -21,7 +21,7 @@
 
 #define ZtRegex_CPP
 
-#include <ZtRegex.hpp>
+#include <zlib/ZtRegex.hpp>
 
 ZtRegex::ZtRegex(const char *pattern, int options) : m_extra(0)
 {

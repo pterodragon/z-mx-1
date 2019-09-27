@@ -19,16 +19,16 @@
 
 /* backtrace test program */
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ZmBackTrace.hpp>
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
+#include <zlib/ZmBackTrace.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
 #ifdef ZDEBUG
-#include <ZmTrap.hpp>
+#include <zlib/ZmTrap.hpp>
 #endif
 
 template <bool X> struct Foo;

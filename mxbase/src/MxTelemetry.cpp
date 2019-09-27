@@ -19,7 +19,7 @@
 
 // Mx Telemetry
 
-#include <MxTelemetry.hpp>
+#include <mxbase/MxTelemetry.hpp>
 
 using namespace MxTelemetry;
 

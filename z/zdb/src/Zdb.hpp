@@ -27,37 +27,37 @@
 #endif
 
 #ifndef ZdbLib_HPP
-#include <ZdbLib.hpp>
+#include <zlib/ZdbLib.hpp>
 #endif
 
 #include <lz4.h>
 
-#include <ZuTraits.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
-#include <ZuPrint.hpp>
-#include <ZuPOD.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuPOD.hpp>
 
-#include <ZmAssert.hpp>
-#include <ZmBackTrace.hpp>
-#include <ZmRef.hpp>
-#include <ZmGuard.hpp>
-#include <ZmSpecific.hpp>
-#include <ZmFn.hpp>
-#include <ZmHeap.hpp>
-#include <ZmSemaphore.hpp>
-#include <ZmPLock.hpp>
+#include <zlib/ZmAssert.hpp>
+#include <zlib/ZmBackTrace.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmGuard.hpp>
+#include <zlib/ZmSpecific.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmHeap.hpp>
+#include <zlib/ZmSemaphore.hpp>
+#include <zlib/ZmPLock.hpp>
 
-#include <ZtString.hpp>
-#include <ZtEnum.hpp>
+#include <zlib/ZtString.hpp>
+#include <zlib/ZtEnum.hpp>
 
-#include <ZePlatform.hpp>
-#include <ZeLog.hpp>
+#include <zlib/ZePlatform.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZiFile.hpp>
-#include <ZiMultiplex.hpp>
+#include <zlib/ZiFile.hpp>
+#include <zlib/ZiMultiplex.hpp>
 
-#include <ZvCf.hpp>
+#include <zlib/ZvCf.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

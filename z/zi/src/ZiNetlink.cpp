@@ -17,8 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include <ZiNetlink.hpp>
-#include <ZiNetlinkMsg.hpp>
+#include <zlib/ZiNetlink.hpp>
+#include <zlib/ZiNetlinkMsg.hpp>
 
 int ZiNetlink::connect(Socket sock,
     ZuString familyName, unsigned int &familyID, uint32_t &portID) 

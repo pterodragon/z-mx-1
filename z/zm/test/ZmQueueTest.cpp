@@ -1,14 +1,14 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <string.h>
 
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmQueue.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmQueue.hpp>
 
 typedef ZmQueue<int, ZmQueueID<unsigned char> > Queue;
 typedef ZmQueue<int> Queue2;

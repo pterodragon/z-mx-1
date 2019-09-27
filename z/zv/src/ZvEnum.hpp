@@ -27,16 +27,16 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
 
-#include <ZtString.hpp>
-#include <ZtEnum.hpp>
+#include <zlib/ZtString.hpp>
+#include <zlib/ZtEnum.hpp>
 
-#include <ZvError.hpp>
+#include <zlib/ZvError.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

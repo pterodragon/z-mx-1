@@ -29,16 +29,16 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 #include <hwloc.h>
 
-#include <ZuPrint.hpp>
-#include <ZuBox.hpp>
-#include <ZuPair.hpp>
-#include <ZuString.hpp>
-#include <ZuConversion.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuBox.hpp>
+#include <zlib/ZuPair.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuConversion.hpp>
 
 class ZmBitmap;
 

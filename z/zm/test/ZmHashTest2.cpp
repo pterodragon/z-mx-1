@@ -22,16 +22,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ZuIndex.hpp>
-#include <ZuHash.hpp>
-#include <ZuObject.hpp>
+#include <zlib/ZuIndex.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuObject.hpp>
 
-#include <ZmRef.hpp>
-#include <ZmHash.hpp>
-#include <ZmTime.hpp>
-#include <ZmThread.hpp>
-#include <ZmSingleton.hpp>
-#include <ZmSpecific.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmHash.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmSingleton.hpp>
+#include <zlib/ZmSpecific.hpp>
 
 struct Orders_HeapID { inline static const char *id() { return "Orders"; } };
 

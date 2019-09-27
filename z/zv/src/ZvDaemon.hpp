@@ -27,7 +27,7 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
 class ZvAPI ZvDaemon {

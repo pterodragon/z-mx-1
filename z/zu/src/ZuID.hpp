@@ -24,20 +24,20 @@
 #define ZuID_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuInt.hpp>
-#include <ZuTraits.hpp>
-#include <ZuConversion.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
-#include <ZuPrint.hpp>
-#include <ZuString.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuString.hpp>
 
 // An ZuID is a union of a 64bit unsigned integer with an 8-byte
 // zero-padded string; this permits short human-readable string identifiers

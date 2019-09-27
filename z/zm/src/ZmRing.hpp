@@ -27,18 +27,18 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZmPlatform.hpp>
-#include <ZmAssert.hpp>
-#include <ZmBitmap.hpp>
-#include <ZmTopology.hpp>
-#include <ZmLock.hpp>
-#include <ZmGuard.hpp>
-#include <ZmAtomic.hpp>
-#include <ZmTime.hpp>
-#include <ZmBackTrace.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmAssert.hpp>
+#include <zlib/ZmBitmap.hpp>
+#include <zlib/ZmTopology.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmGuard.hpp>
+#include <zlib/ZmAtomic.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmBackTrace.hpp>
 
 // ring buffer parameters
 class ZmRingParams {

@@ -27,10 +27,10 @@
 #endif
 
 #ifndef ZrlLib_HPP
-#include <ZrlLib.hpp>
+#include <zlib/ZrlLib.hpp>
 #endif
 
-#include <ZvCf.hpp>
+#include <zlib/ZvCf.hpp>
 
 extern "C" {
   ZrlExtern char *Zrl_complete(char *prefix, int state);

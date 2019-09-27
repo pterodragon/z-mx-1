@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include <ZpPcap.hpp>
+#include <zlib/ZpPcap.hpp>
 
 // pcap dispatch callback fn
 extern "C" void dispatch_cb(u_char *userarg, const pcap_pkthdr *pkthdr,

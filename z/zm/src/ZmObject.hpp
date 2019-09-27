@@ -28,13 +28,13 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 #include <stddef.h>
 
-#include <ZmObject_.hpp>
-#include <ZmAtomic.hpp>
+#include <zlib/ZmObject_.hpp>
+#include <zlib/ZmAtomic.hpp>
 
 class ZmObject : public ZmObject_Debug {
   ZmObject(const ZmObject &) = delete;

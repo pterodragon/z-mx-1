@@ -27,21 +27,21 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuNew.hpp>
-#include <ZuTuple.hpp>
-#include <ZuPrint.hpp>
-#include <ZuStringN.hpp>
+#include <zlib/ZuNew.hpp>
+#include <zlib/ZuTuple.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <ZmPlatform.hpp>
-#include <ZmObject.hpp>
-#include <ZmBitmap.hpp>
-#include <ZmSingleton.hpp>
-#include <ZmSpecific.hpp>
-#include <ZmPLock.hpp>
-#include <ZmFn_.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmBitmap.hpp>
+#include <zlib/ZmSingleton.hpp>
+#include <zlib/ZmSpecific.hpp>
+#include <zlib/ZmPLock.hpp>
+#include <zlib/ZmFn_.hpp>
 
 #ifdef ZDEBUG
 #define ZmHeap_DEBUG
@@ -381,7 +381,7 @@ ZmHeap_Init<ZmHeap<ID, Size_> > ZmHeap<ID, Size_>::m_init;
 
 template <unsigned Size> class ZmHeap<ZuNull, Size> { };
 
-#include <ZmFn_Lambda.hpp>
+#include <zlib/ZmFn_Lambda.hpp>
 
 template <class ID, unsigned Size>
 inline void ZmHeapCacheT<ID, Size>::allStats(StatsFn fn)

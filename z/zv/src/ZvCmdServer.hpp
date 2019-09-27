@@ -25,29 +25,29 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZuString.hpp>
-#include <ZuByteSwap.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuByteSwap.hpp>
 
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmPLock.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmPLock.hpp>
 
-#include <ZtArray.hpp>
-#include <ZtString.hpp>
+#include <zlib/ZtArray.hpp>
+#include <zlib/ZtString.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZiMultiplex.hpp>
-#include <ZiFile.hpp>
+#include <zlib/ZiMultiplex.hpp>
+#include <zlib/ZiFile.hpp>
 
-#include <Zfb.hpp>
-#include <Ztls.hpp>
+#include <zlib/Zfb.hpp>
+#include <zlib/Ztls.hpp>
 
-#include <ZvCf.hpp>
-#include <ZvUserDB.hpp>
+#include <zlib/ZvCf.hpp>
+#include <zlib/ZvUserDB.hpp>
 
 #include <loginreq_generated.h>
 #include <loginack_generated.h>
@@ -57,8 +57,8 @@
 #include <zcmdreq_generated.h>
 #include <zcmdack_generated.h>
 
-#include <ZvCmdHost.hpp>
-#include <ZvCmdNet.hpp>
+#include <zlib/ZvCmdHost.hpp>
+#include <zlib/ZvCmdNet.hpp>
 
 template <typename App_>
 class ZvCmdSrvLink :

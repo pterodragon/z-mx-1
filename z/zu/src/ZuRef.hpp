@@ -27,11 +27,11 @@
 #endif
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
-#include <ZuTraits.hpp>
-#include <ZuConversion.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuConversion.hpp>
 
 // rules for using ZuRef
 

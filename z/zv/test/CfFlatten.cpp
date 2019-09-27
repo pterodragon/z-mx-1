@@ -1,6 +1,6 @@
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
-#include <ZvCf.hpp>
+#include <zlib/ZvCf.hpp>
 
 int main(int argc, char **argv)
 {

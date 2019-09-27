@@ -27,19 +27,19 @@
 #endif
 
 #ifndef ZtLib_HPP
-#include <ZtLib.hpp>
+#include <zlib/ZtLib.hpp>
 #endif
 
 #include <pcre.h>
 
-#include <ZuAssert.hpp>
-#include <ZuTraits.hpp>
-#include <ZuString.hpp>
-#include <ZuPrint.hpp>
+#include <zlib/ZuAssert.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuPrint.hpp>
 
-#include <ZmCleanup.hpp>
+#include <zlib/ZmCleanup.hpp>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
 // ZtRegex is used by ZeLog
 class ZtRegex;

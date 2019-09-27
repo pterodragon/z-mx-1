@@ -19,17 +19,17 @@
 
 // read/write lock stress test program
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 
-#include <ZmGuard.hpp>
-#include <ZmThread.hpp>
-#include <ZmFn.hpp>
-#include <ZmRWLock.hpp>
-#include <ZmAtomic.hpp>
-#include <ZmSpecific.hpp>
-#include <ZmTime.hpp>
+#include <zlib/ZmGuard.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmRWLock.hpp>
+#include <zlib/ZmAtomic.hpp>
+#include <zlib/ZmSpecific.hpp>
+#include <zlib/ZmTime.hpp>
 
 ZmAtomic<int> gc = 0;
 

@@ -19,18 +19,18 @@
 
 // SIGINT/SIGTERM/SIGSEGV trapping (and the Windows equivalent)
 
-#include <ZmTrap.hpp>
+#include <zlib/ZmTrap.hpp>
 
 #include <stdio.h>
 #include <signal.h>
 
-#include <ZuStringN.hpp>
-#include <ZuBox.hpp>
+#include <zlib/ZuStringN.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZmAssert.hpp>
-#include <ZmBackTrace.hpp>
-#include <ZmSingleton.hpp>
-#include <ZmTime.hpp>
+#include <zlib/ZmAssert.hpp>
+#include <zlib/ZmBackTrace.hpp>
+#include <zlib/ZmSingleton.hpp>
+#include <zlib/ZmTime.hpp>
 
 ZmTrap *ZmTrap::instance()
 {

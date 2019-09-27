@@ -27,21 +27,21 @@
 #endif
 
 #ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
-#include <ZuConversion.hpp>
+#include <zlib/ZuConversion.hpp>
 
-#include <ZmFn.hpp>
+#include <zlib/ZmFn.hpp>
 
-#include <ZiIP.hpp>
-#include <ZiMultiplex.hpp>
+#include <zlib/ZiIP.hpp>
+#include <zlib/ZiMultiplex.hpp>
 
-#include <Zdb.hpp>
+#include <zlib/Zdb.hpp>
 
-#include <MxBase.hpp>
-#include <MxMultiplex.hpp>
-#include <MxEngine.hpp>
+#include <mxbase/MxBase.hpp>
+#include <mxbase/MxMultiplex.hpp>
+#include <mxbase/MxEngine.hpp>
 
 #pragma pack(push, 1)
 

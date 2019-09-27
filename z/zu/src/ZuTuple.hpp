@@ -23,17 +23,17 @@
 #define ZuTuple_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuTraits.hpp>
-#include <ZuPair.hpp>
-#include <ZuNull.hpp>
-#include <ZuPP.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuPair.hpp>
+#include <zlib/ZuNull.hpp>
+#include <zlib/ZuPP.hpp>
 
 #define ZuTuple_TemplateArgDef(I) typename T##I
 #define ZuTuple_TemplateArg(I) T##I

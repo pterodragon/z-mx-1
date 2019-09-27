@@ -1,13 +1,13 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ZuArrayN.hpp>
+#include <zlib/ZuArrayN.hpp>
 
 class I {
 public:

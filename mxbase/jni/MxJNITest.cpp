@@ -20,21 +20,21 @@
 // MxBase JNI test
 
 #ifndef MxBaseLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
 #include <iostream>
 
 #include <jni.h>
 
-#include <ZuBox.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZmThread.hpp>
-#include <ZmRing.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmRing.hpp>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
 extern "C" {
   MxBaseExtern jint JNI_OnLoad(JavaVM *, void *);

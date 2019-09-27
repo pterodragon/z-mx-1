@@ -44,24 +44,24 @@
 #define ZuUnion_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuNew.hpp>
-#include <ZuIfT.hpp>
-#include <ZuCan.hpp>
-#include <ZuTraits.hpp>
-#include <ZuLargest.hpp>
-#include <ZuNull.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
-#include <ZuConversion.hpp>
-#include <ZuTuple.hpp>
-#include <ZuPP.hpp>
+#include <zlib/ZuNew.hpp>
+#include <zlib/ZuIfT.hpp>
+#include <zlib/ZuCan.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuLargest.hpp>
+#include <zlib/ZuNull.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuTuple.hpp>
+#include <zlib/ZuPP.hpp>
 
 template <typename T, bool CanStar> class ZuUnion_OpStar;
 template <typename T> class ZuUnion_OpStar<T, 1> {

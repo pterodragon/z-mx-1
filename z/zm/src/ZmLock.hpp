@@ -27,14 +27,14 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZmPLock.hpp>
+#include <zlib/ZmPLock.hpp>
 
 #ifdef ZDEBUG
 #define ZmLock_DEBUG	// enable testing / debugging
-#include <ZmBackTracer.hpp>
+#include <zlib/ZmBackTracer.hpp>
 #endif
 
 template <class Lock> class ZmCondition;

@@ -1,14 +1,14 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <iostream>
 
-#include <ZtRegex.hpp>
-#include <ZtArray.hpp>
+#include <zlib/ZtRegex.hpp>
+#include <zlib/ZtArray.hpp>
 
-#include <Ztls.hpp>
+#include <zlib/Ztls.hpp>
 
 const char *Content =
   "<html><head>\n"

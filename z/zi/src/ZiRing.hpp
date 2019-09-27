@@ -48,18 +48,18 @@
 #endif
 
 #ifndef ZiLib_HPP
-#include <ZiLib.hpp>
+#include <zlib/ZiLib.hpp>
 #endif
 
-#include <ZmPlatform.hpp>
-#include <ZmBitmap.hpp>
-#include <ZmTopology.hpp>
-#include <ZmAtomic.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmBitmap.hpp>
+#include <zlib/ZmTopology.hpp>
+#include <zlib/ZmAtomic.hpp>
 
-#include <ZePlatform.hpp>
+#include <zlib/ZePlatform.hpp>
 
-#include <ZiPlatform.hpp>
-#include <ZiFile.hpp>
+#include <zlib/ZiPlatform.hpp>
+#include <zlib/ZiFile.hpp>
 
 #ifdef ZiRing_FUNCTEST
 #define ZiRing_bp(x) (bp_##x.reached(#x))

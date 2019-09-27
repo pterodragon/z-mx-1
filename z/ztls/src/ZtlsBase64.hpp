@@ -26,7 +26,7 @@
 #pragma once
 #endif
 
-#include <ZtlsLib.hpp>
+#include <zlib/ZtlsLib.hpp>
 
 #include <cppcodec/base64_rfc4648.hpp>
 

@@ -22,11 +22,11 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#include <ZePlatform.hpp>
+#include <zlib/ZePlatform.hpp>
 
-#include <ZvCSV.hpp>
-#include <ZvRegexError.hpp>
-#include <ZvDateError.hpp>
+#include <zlib/ZvCSV.hpp>
+#include <zlib/ZvRegexError.hpp>
+#include <zlib/ZvDateError.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(disable:4996)

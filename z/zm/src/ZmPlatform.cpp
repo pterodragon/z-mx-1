@@ -23,8 +23,8 @@
 #include <syscall.h>
 #endif
 
-#include <ZmPlatform.hpp>
-#include <ZmThread.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmThread.hpp>
 
 ZmPlatform::ThreadID ZmPlatform::getTID_()
 {

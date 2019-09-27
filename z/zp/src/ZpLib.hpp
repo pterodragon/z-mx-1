@@ -26,7 +26,7 @@
 #pragma once
 #endif
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #ifdef _WIN32
 

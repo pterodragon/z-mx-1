@@ -23,14 +23,14 @@
 #define ZuNull_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuTraits.hpp>
+#include <zlib/ZuTraits.hpp>
 
 class ZuNull { public: ZuNull() { } };
 

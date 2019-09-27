@@ -23,21 +23,21 @@
 #define ZpPcap_HPP
 
 #ifndef ZpLib_HPP
-#include <ZpLib.hpp>
+#include <zlib/ZpLib.hpp>
 #endif
 
 #include <pcap.h>
 
-#include <ZmObject.hpp>
-#include <ZmHash.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmHash.hpp>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
-#include <ZiMultiplex.hpp>
+#include <zlib/ZiMultiplex.hpp>
 
-#include <ZvCf.hpp>
+#include <zlib/ZvCf.hpp>
 
-#include <ZpLib.hpp>
+#include <zlib/ZpLib.hpp>
 
 #ifdef ZDEBUG
 #define ZpPcap_DEBUG

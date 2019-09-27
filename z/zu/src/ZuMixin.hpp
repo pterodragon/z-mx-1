@@ -44,15 +44,15 @@
 #define ZuMixin_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuNull.hpp>
-#include <ZuAssert.hpp>
+#include <zlib/ZuNull.hpp>
+#include <zlib/ZuAssert.hpp>
 
 template <class, template <class> class> class ZuMixin;
 

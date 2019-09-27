@@ -26,7 +26,7 @@
 #pragma once
 #endif
 
-#include <ZtlsLib.hpp>
+#include <zlib/ZtlsLib.hpp>
 
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>

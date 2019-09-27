@@ -25,7 +25,7 @@
 #define ZuArrayN_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
@@ -34,15 +34,15 @@
 
 #include <initializer_list>
 
-#include <ZuAssert.hpp>
-#include <ZuTraits.hpp>
-#include <ZuConversion.hpp>
-#include <ZuArray.hpp>
-#include <ZuArrayFn.hpp>
-#include <ZuCmp.hpp>
-#include <ZuString.hpp>
-#include <ZuPrint.hpp>
-#include <ZuCan.hpp>
+#include <zlib/ZuAssert.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuArray.hpp>
+#include <zlib/ZuArrayFn.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuCan.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

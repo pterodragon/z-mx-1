@@ -27,16 +27,16 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZuInt.hpp>
-#include <ZuTraits.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
-#include <ZuConversion.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuConversion.hpp>
 
-#include <ZmPlatform.hpp>
+#include <zlib/ZmPlatform.hpp>
 
 #include <time.h>
 

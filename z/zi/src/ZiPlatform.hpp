@@ -27,7 +27,7 @@
 #endif
 
 #ifndef ZiLib_HPP
-#include <ZiLib.hpp>
+#include <zlib/ZiLib.hpp>
 #endif
 
 #ifndef _WIN32
@@ -59,12 +59,12 @@
 
 #endif /* !_WIN32 */
 
-#include <ZuInt.hpp>
-#include <ZuTraits.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuTraits.hpp>
 
-#include <ZePlatform.hpp>
+#include <zlib/ZePlatform.hpp>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
 struct ZiAPI ZiPlatform {
 #ifndef _WIN32
@@ -134,7 +134,7 @@ typedef u_long ZiVecLen;
 
 #ifndef _WIN32
 #include <dlfcn.h>	// dlerror()
-#include <ZePlatform.hpp>
+#include <zlib/ZePlatform.hpp>
 #endif
 
 #endif /*  ZiPlatform_HPP */

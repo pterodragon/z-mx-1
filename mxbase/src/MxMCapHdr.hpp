@@ -27,7 +27,7 @@
 #endif
 
 #ifndef MxMDLib_HPP
-#include <MxBaseLib.hpp>
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
 #pragma pack(push, 1)

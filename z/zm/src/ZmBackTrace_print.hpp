@@ -27,18 +27,18 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 #ifndef ZmBackTrace__HPP
-#include <ZmBackTrace_.hpp>
+#include <zlib/ZmBackTrace_.hpp>
 #endif
 
-#include <ZuTraits.hpp>
-#include <ZuPrint.hpp>
-#include <ZuStringN.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuStringN.hpp>
 
-#include <ZmStream.hpp>
+#include <zlib/ZmStream.hpp>
 
 ZmExtern void ZmBackTrace_print(ZmStream &s, const ZmBackTrace &bt);
 

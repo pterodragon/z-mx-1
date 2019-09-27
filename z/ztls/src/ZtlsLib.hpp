@@ -26,7 +26,7 @@
 #pragma once
 #endif
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #ifdef _WIN32
 
@@ -49,7 +49,7 @@
 
 #include <mbedtls/error.h>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
 namespace Ztls {
   inline ZtString strerror_(int n) {

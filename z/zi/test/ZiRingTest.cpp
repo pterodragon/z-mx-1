@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <ZmSemaphore.hpp>
-#include <ZmSingleton.hpp>
-#include <ZmThread.hpp>
+#include <zlib/ZmSemaphore.hpp>
+#include <zlib/ZmSingleton.hpp>
+#include <zlib/ZmThread.hpp>
 
 class ZiRing_Breakpoint {
 public:
@@ -34,7 +34,7 @@ private:
 };
 
 #define ZiRing_FUNCTEST
-#include <ZiRing.hpp>
+#include <zlib/ZiRing.hpp>
 
 void fail()
 {

@@ -29,14 +29,14 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 #include <hwloc.h>
 
-#include <ZmPLock.hpp>
-#include <ZmAtomic.hpp>
-#include <ZmCleanup.hpp>
+#include <zlib/ZmPLock.hpp>
+#include <zlib/ZmAtomic.hpp>
+#include <zlib/ZmCleanup.hpp>
 
 class ZmTopology;
 

@@ -19,7 +19,7 @@
 
 // ring buffer
 
-#include <ZmRing.hpp>
+#include <zlib/ZmRing.hpp>
 
 #ifdef linux
 

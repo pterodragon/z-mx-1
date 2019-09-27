@@ -27,25 +27,25 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
 #include <cstddef>
 
-#include <ZuTraits.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
-#include <ZuBox.hpp>
-#include <ZuStringN.hpp>
-#include <ZuPrint.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuBox.hpp>
+#include <zlib/ZuStringN.hpp>
+#include <zlib/ZuPrint.hpp>
 
-#include <ZmPlatform.hpp>
-#include <ZmBitmap.hpp>
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmCleanup.hpp>
-#include <ZmFn.hpp>
-#include <ZmTime.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmBitmap.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmCleanup.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmTime.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -411,7 +411,7 @@ template <> struct ZuPrint<ZmThread::CSV> : public ZuPrintFn { };
 #pragma warning(pop)
 #endif
 
-#include <ZmSpecific.hpp>
+#include <zlib/ZmSpecific.hpp>
 
 inline ZmThreadContext *ZmThreadContext::self() {
   return ZmSpecific<ZmThreadContext>::instance();

@@ -27,13 +27,13 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZiMultiplex.hpp>
+#include <zlib/ZiMultiplex.hpp>
 
-#include <ZvCf.hpp>
-#include <ZvSchedulerCf.hpp>
+#include <zlib/ZvCf.hpp>
+#include <zlib/ZvSchedulerCf.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

@@ -23,21 +23,21 @@
 #define ZuPair_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuAssert.hpp>
-#include <ZuIfT.hpp>
-#include <ZuTraits.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
-#include <ZuNull.hpp>
-#include <ZuConversion.hpp>
-#include <ZuPrint.hpp>
+#include <zlib/ZuAssert.hpp>
+#include <zlib/ZuIfT.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuNull.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuPrint.hpp>
 
 // SFINAE technique...
 struct ZuPair_ { };

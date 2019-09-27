@@ -19,7 +19,7 @@
 
 // Zero Copy Universal Library
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include "../../version.h"
 
@@ -32,7 +32,7 @@ ZuExtern const char ZuLib[] = "@(#) Zero Copy Universal Library v" Z_VERNAME;
 #include <stdarg.h>
 #include <stdio.h>
 
-#include <ZuStringFn.hpp>
+#include <zlib/ZuStringFn.hpp>
 
 #ifndef va_copy
 #ifdef __va_copy

@@ -1,4 +1,4 @@
-#include <MxEngine.hpp>
+#include <mxbase/MxEngine.hpp>
 
 // MxEngine connectivity framework unit smoke test
 

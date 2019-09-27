@@ -19,16 +19,16 @@
 
 // scheduler test program
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <ZmFn.hpp>
-#include <ZmScheduler.hpp>
-#include <ZmSpecific.hpp>
-#include <ZmBackoff.hpp>
-#include <ZmTimeout.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmScheduler.hpp>
+#include <zlib/ZmSpecific.hpp>
+#include <zlib/ZmBackoff.hpp>
+#include <zlib/ZmTimeout.hpp>
 
 struct TLS : public ZmObject {
   TLS() : m_ping(0) { }

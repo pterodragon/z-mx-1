@@ -23,7 +23,7 @@
 #define ZuBox_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
@@ -34,21 +34,21 @@
 #include <math.h>
 #include <float.h>
 
-#include <ZuAssert.hpp>
-#include <ZuIfT.hpp>
-#include <ZuTraits.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
-#include <ZuInt.hpp>
-#include <ZuConversion.hpp>
-#include <ZuPrint.hpp>
-#include <ZuString.hpp>
+#include <zlib/ZuAssert.hpp>
+#include <zlib/ZuIfT.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuString.hpp>
 
-#include <ZuFP.hpp>
-#include <ZuFmt.hpp>
+#include <zlib/ZuFP.hpp>
+#include <zlib/ZuFmt.hpp>
 
-#include <Zu_ntoa.hpp>
-#include <Zu_aton.hpp>
+#include <zlib/Zu_ntoa.hpp>
+#include <zlib/Zu_aton.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)

@@ -1,7 +1,7 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,7 +9,7 @@
 #include <limits.h>
 #include <float.h>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
 #include "../../zu/test/Analyze.hpp"
 

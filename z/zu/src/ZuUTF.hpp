@@ -23,15 +23,15 @@
 #define ZuUTF_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuInt.hpp>
-#include <ZuString.hpp>
+#include <zlib/ZuInt.hpp>
+#include <zlib/ZuString.hpp>
 
 struct ZuUTF8 {
   typedef uint8_t Elem;

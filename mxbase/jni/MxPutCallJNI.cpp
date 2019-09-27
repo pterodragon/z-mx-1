@@ -23,9 +23,9 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxPutCallJNI.hpp>
+#include <mxbase/MxPutCallJNI.hpp>
 
 namespace MxPutCallJNI {
   jclass	class_; // MxPutCall

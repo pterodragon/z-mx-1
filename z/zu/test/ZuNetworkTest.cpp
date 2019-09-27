@@ -17,13 +17,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <cstdio>
 #include <assert.h>
 
-#include <ZuNetwork.hpp>
-#include <ZuAssert.hpp>
+#include <zlib/ZuNetwork.hpp>
+#include <zlib/ZuAssert.hpp>
 
 template <typename T>
 void assertS(T value, T swapped) {

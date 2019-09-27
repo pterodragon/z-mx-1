@@ -1,14 +1,14 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 
-#include <ZmRef.hpp>
-#include <ZmFn.hpp>
-#include <ZmTime.hpp>
-#include <ZmAtomic.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmAtomic.hpp>
 
 struct A {
   A(int i) : m_i(i) { }

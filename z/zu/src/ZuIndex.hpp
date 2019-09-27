@@ -35,17 +35,17 @@
 #define ZuIndex_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuTraits.hpp>
-#include <ZuConversion.hpp>
-#include <ZuCmp.hpp>
-#include <ZuHash.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuCmp.hpp>
+#include <zlib/ZuHash.hpp>
 
 template <typename T_, typename I_, bool Is> struct ZuAccessor_ {
   enum { Same = 0 };

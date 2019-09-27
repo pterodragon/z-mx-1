@@ -27,14 +27,14 @@
 #endif
 
 #ifndef ZvLib_HPP
-#include <ZvLib.hpp>
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <ZmThread.hpp>
+#include <zlib/ZmThread.hpp>
 
-#include <ZtEnum.hpp>
+#include <zlib/ZtEnum.hpp>
 
-#include <ZvCf.hpp>
+#include <zlib/ZvCf.hpp>
 
 namespace ZvThreadPriorities {
   ZtEnumValues(

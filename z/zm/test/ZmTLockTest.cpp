@@ -1,18 +1,18 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
 //  vi: noet ts=8 sw=2
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 
-#include <ZmObject.hpp>
-#include <ZmRef.hpp>
-#include <ZmTLock.hpp>
-#include <ZmSingleton.hpp>
-#include <ZmList.hpp>
-#include <ZmFn.hpp>
-#include <ZmThread.hpp>
-#include <ZmSemaphore.hpp>
+#include <zlib/ZmObject.hpp>
+#include <zlib/ZmRef.hpp>
+#include <zlib/ZmTLock.hpp>
+#include <zlib/ZmSingleton.hpp>
+#include <zlib/ZmList.hpp>
+#include <zlib/ZmFn.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmSemaphore.hpp>
 
 class Thread;
 

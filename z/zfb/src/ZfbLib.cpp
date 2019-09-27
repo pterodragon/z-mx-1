@@ -19,7 +19,7 @@
 
 // flatbuffers integration
 
-#include <ZfbLib.hpp>
+#include <zlib/ZfbLib.hpp>
 
 #include "../../version.h"
 

@@ -23,9 +23,9 @@
 
 #include <jni.h>
 
-#include <ZJNI.hpp>
+#include <zlib/ZJNI.hpp>
 
-#include <MxTradingSessionJNI.hpp>
+#include <mxbase/MxTradingSessionJNI.hpp>
 
 namespace MxTradingSessionJNI {
   jclass	class_; // MxTradingSession

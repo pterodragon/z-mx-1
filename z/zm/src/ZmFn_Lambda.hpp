@@ -27,10 +27,10 @@
 #endif
 
 #ifndef ZmLib_HPP
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 #endif
 
-#include <ZmHeap.hpp>
+#include <zlib/ZmHeap.hpp>
 
 // lambda wrapper object (heap-allocated)
 template <typename L, typename HeapID> struct ZmLambda {

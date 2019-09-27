@@ -99,27 +99,27 @@
 #endif
 
 #ifndef ZtLib_HPP
-#include <ZtLib.hpp>
+#include <zlib/ZtLib.hpp>
 #endif
 
 #include <time.h>
 #include <limits.h>
 
-#include <ZuIfT.hpp>
-#include <ZuTraits.hpp>
-#include <ZuString.hpp>
-#include <ZuConversion.hpp>
-#include <ZuString.hpp>
-#include <ZuStringN.hpp>
-#include <ZuPrint.hpp>
-#include <ZuBox.hpp>
+#include <zlib/ZuIfT.hpp>
+#include <zlib/ZuTraits.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuConversion.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuStringN.hpp>
+#include <zlib/ZuPrint.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZmLock.hpp>
-#include <ZmGuard.hpp>
-#include <ZmTime.hpp>
-#include <ZmSpecific.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmGuard.hpp>
+#include <zlib/ZmTime.hpp>
+#include <zlib/ZmSpecific.hpp>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
 #define ZtDate_NullJulian	INT_MIN
 #define ZtDate_MaxJulian	(0x1fffffff - 68572)

@@ -23,15 +23,15 @@
 #define ZuMvArray_HPP
 
 #ifndef ZuLib_HPP
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <ZuArray.hpp>
-#include <ZuArrayFn.hpp>
+#include <zlib/ZuArray.hpp>
+#include <zlib/ZuArrayFn.hpp>
 
 template <typename T_> class ZuMvArray : public ZuArrayFn<T_> {
 public:

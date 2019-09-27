@@ -19,17 +19,17 @@
 
 // singleton logger
 
-#include <ZuBox.hpp>
+#include <zlib/ZuBox.hpp>
 
-#include <ZmPlatform.hpp>
-#include <ZmSingleton.hpp>
+#include <zlib/ZmPlatform.hpp>
+#include <zlib/ZmSingleton.hpp>
 
-#include <ZtArray.hpp>
-#include <ZtDate.hpp>
-#include <ZtString.hpp>
-#include <ZtRegex.hpp>
+#include <zlib/ZtArray.hpp>
+#include <zlib/ZtDate.hpp>
+#include <zlib/ZtString.hpp>
+#include <zlib/ZtRegex.hpp>
 
-#include <ZeLog.hpp>
+#include <zlib/ZeLog.hpp>
 
 void ZmCleanup<ZeLog>::final(ZeLog *log)
 {

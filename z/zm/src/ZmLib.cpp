@@ -19,7 +19,7 @@
 
 // Zero Copy Multithreading Library
 
-#include <ZmLib.hpp>
+#include <zlib/ZmLib.hpp>
 
 #include "../../version.h"
 
@@ -28,5 +28,5 @@ ZmExtern const char ZmLib[] = "@(#) Zero Copy Multithreading Library v"
 
 // force DLL inclusion of ZmBackoff and ZmTimeout
 
-#include <ZmBackoff.hpp>
-#include <ZmTimeout.hpp>
+#include <zlib/ZmBackoff.hpp>
+#include <zlib/ZmTimeout.hpp>

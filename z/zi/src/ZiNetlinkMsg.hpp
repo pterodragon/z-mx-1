@@ -28,11 +28,11 @@
 
 #include <zi_netlink.h>
 
-#include <ZuAssert.hpp>
+#include <zlib/ZuAssert.hpp>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
-#include <ZiPlatform.hpp>
+#include <zlib/ZiPlatform.hpp>
 
 class ZiConnection;
 

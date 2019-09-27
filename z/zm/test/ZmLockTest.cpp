@@ -19,7 +19,7 @@
 
 /* test program */
 
-#include <ZuLib.hpp>
+#include <zlib/ZuLib.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,12 +29,12 @@
 #include <ck_spinlock.h>
 #endif
 
-#include <ZmPLock.hpp>
-#include <ZmLock.hpp>
-#include <ZmSpinLock.hpp>
-#include <ZmSpecific.hpp>
-#include <ZmThread.hpp>
-#include <ZmTime.hpp>
+#include <zlib/ZmPLock.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmSpinLock.hpp>
+#include <zlib/ZmSpecific.hpp>
+#include <zlib/ZmThread.hpp>
+#include <zlib/ZmTime.hpp>
 
 struct NoLock {
   ZuInline NoLock() { }

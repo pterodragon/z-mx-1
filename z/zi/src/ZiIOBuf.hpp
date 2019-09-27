@@ -27,13 +27,13 @@
 #endif
 
 #ifndef ZiLib_HPP
-#include <ZiLib.hpp>
+#include <zlib/ZiLib.hpp>
 #endif
 
-#include <ZmPolymorph.hpp>
-#include <ZmHeap.hpp>
+#include <zlib/ZmPolymorph.hpp>
+#include <zlib/ZmHeap.hpp>
 
-#include <ZtString.hpp>
+#include <zlib/ZtString.hpp>
 
 #pragma pack(push, 2)
 template <typename Heap> class ZiIOBuf_ : public Heap, public ZmPolymorph {

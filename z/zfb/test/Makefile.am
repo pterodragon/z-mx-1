@@ -17,6 +17,5 @@ LDADD = $(top_builddir)/zfb/src/libZfb.la \
 	$(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la \
 	@FLATBUFFERS_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
-bin_PROGRAMS = zfbtest
-noinst_HEADERS =
+noinst_PROGRAMS = zfbtest
 zfbtest_SOURCES = zfbtest.cpp zfbtest_generated.h

@@ -5,7 +5,7 @@ AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@
 LDADD = $(top_builddir)/zm/src/libZm.la $(top_builddir)/zu/src/libZu.la \
 	@Z_MT_LIBS@
-bin_PROGRAMS = \
+noinst_PROGRAMS = \
 	ZmBTTest ZmFnTest ZmHeapTest ZmQueueTest ZmRBTest ZmRWTest \
 	ZmSchedTest ZmStackTest ZmTest ZmHashTest ZmHashTest2 ZmTLockTest \
 	ZmTTest ZmLHTest ZmHashCleanup ZmHashThread ZmPQueueTest \

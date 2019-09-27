@@ -8,12 +8,12 @@ LDADD = $(top_builddir)/zi/src/libZi.la $(top_builddir)/ze/src/libZe.la \
 	$(top_builddir)/zt/src/libZt.la $(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la \
 	@Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
-bin_PROGRAMS = \
+noinst_PROGRAMS = \
 	ZiFileTest ZiFileAgeTest ZiRingTest ZiRingTest2 \
 	ZiMxClient ZiMxServer ZiMxUDPClient ZiMxUDPServer
 noinst_HEADERS = Global.hpp HttpHeader.hpp
 if NETLINK
-bin_PROGRAMS += ZiNetlinkTest
+noinst_PROGRAMS += ZiNetlinkTest
 endif
 ZiFileTest_SOURCES = ZiFileTest.cpp
 ZiFileAgeTest_SOURCES = ZiFileAgeTest.cpp

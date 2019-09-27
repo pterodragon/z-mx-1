@@ -20,7 +20,7 @@
 // heap-allocated dynamic string class
 //
 // * fast, lightweight
-// * short circuits heap allocation for small strings below a built-in size
+// * short-circuits heap allocation for small strings below a built-in size
 // * supports both zero-copy and deep-copy
 // * thin layer on ANSI C string functions
 // * no locale or character set overhead except where explicitly requested

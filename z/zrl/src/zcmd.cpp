@@ -256,26 +256,24 @@ next:
     }
     ZtArray<ZtString> args;
     ZvCf::parseCLI(cmd, args);
-    {
-      if (args[0] == "help") {
-	if (args.length() == 1) {
-	  ZtString out;
-	  out << "Local ";
-	  processCmd(file, args, out);
-	  out << "\nRemote ";
-	  fwrite(out.data(), 1, out.length(), file);
-	} else if (args.length() == 2 && hasCmd(args[1])) {
-	  ZtString out;
-	  int code = processCmd(file, args, out);
-	  if (code || out) executed(code, file, out);
-	  return;
-	}
-      } else if (hasCmd(args[0])) {
+    if (args[0] == "help") {
+      if (args.length() == 1) {
+	ZtString out;
+	out << "Local ";
+	processCmd(file, args, out);
+	out << "\nRemote ";
+	fwrite(out.data(), 1, out.length(), file);
+      } else if (args.length() == 2 && hasCmd(args[1])) {
 	ZtString out;
 	int code = processCmd(file, args, out);
 	if (code || out) executed(code, file, out);
 	return;
       }
+    } else if (hasCmd(args[0])) {
+      ZtString out;
+      int code = processCmd(file, args, out);
+      if (code || out) executed(code, file, out);
+      return;
     }
     auto seqNo = m_seqNo++;
     m_fbb.Clear();

@@ -6,7 +6,7 @@ AM_LDFLAGS = @Z_LDFLAGS@
 LDADD = $(top_builddir)/zt/src/libZt.la $(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la \
 	@Z_ZT_LIBS@ @Z_MT_LIBS@
-bin_PROGRAMS = \
+noinst_PROGRAMS = \
 	ZtArrayTest ZtDateTest ZtDateFixTest ZtRegexTest \
 	ZtStringHash ZtStringTest vsntest ZtIconvTest ZtBitWindowTest
 ZtArrayTest_SOURCES = ZtArrayTest.cpp

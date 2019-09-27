@@ -4,7 +4,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src \
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@
 LDADD = $(top_builddir)/zu/src/libZu.la
-bin_PROGRAMS = \
+noinst_PROGRAMS = \
 	ZuConversionTest ZuHashTest ZuCmpTest ZuBoxTest ZuNetworkTest \
 	ZuCanTest ZuArrayTest ZuPairTest ZuIDTest ZuUTFTest ZuBitmapTest
 ZuConversionTest_SOURCES = ZuConversionTest.cpp

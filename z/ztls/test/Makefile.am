@@ -12,8 +12,7 @@ LDADD = $(top_builddir)/ztls/src/libZtls.la \
 	$(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la \
 	@MBEDTLS_LIBS@ @Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
-bin_PROGRAMS = ZtlsClient ZtlsServer ztotp
-noinst_HEADERS =
+noinst_PROGRAMS = ZtlsClient ZtlsServer ztotp
 ZtlsClient_SOURCES = ZtlsClient.cpp
 ZtlsServer_SOURCES = ZtlsServer.cpp
 ztotp_SOURCES = ztotp.cpp

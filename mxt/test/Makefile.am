@@ -4,5 +4,5 @@ AM_CPPFLAGS = -I$(top_srcdir)/src \
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @MXT_LDFLAGS@ @MXBASE_LDFLAGS@ @Z_LDFLAGS@
 LDADD = $(top_builddir)/src/libMxT.la @MXBASE_LIBS@ @Z_LIBS@ @MXT_XLIBS@
-bin_PROGRAMS = osmtest
+noinst_PROGRAMS = osmtest
 osmtest_SOURCES = osmtest.cpp

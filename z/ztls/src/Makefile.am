@@ -15,3 +15,7 @@ libZtls_la_LIBADD = $(top_builddir)/zi/src/libZi.la \
 	$(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la \
 	@MBEDTLS_LIBS@ @Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
+bin_PROGRAMS = ztotp
+ztotp_AM_CPPFLAGS = @Z_CPPFLAGS@
+ztotp_LDADD = libZtls.la $(libZtls_la_LIBADD)
+ztotp_SOURCES = ztotp.cpp

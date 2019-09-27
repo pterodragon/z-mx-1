@@ -50,13 +50,13 @@
 #include <zlib/ZvCf.hpp>
 #include <zlib/ZvUserDB.hpp>
 
-#include <loginreq_generated.h>
-#include <loginack_generated.h>
-#include <userdbreq_generated.h>
-#include <userdback_generated.h>
-#include <zcmd_generated.h>
-#include <zcmdreq_generated.h>
-#include <zcmdack_generated.h>
+#include <zlib/loginreq_generated.h>
+#include <zlib/loginack_generated.h>
+#include <zlib/userdbreq_generated.h>
+#include <zlib/userdback_generated.h>
+#include <zlib/zcmd_generated.h>
+#include <zlib/zcmdreq_generated.h>
+#include <zlib/zcmdack_generated.h>
 
 #include <zlib/ZvCmdNet.hpp>
 

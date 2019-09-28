@@ -389,10 +389,10 @@ void MxMDCore::init_(ZvCf *cf)
   m_broadcast.init(this);
 
   if (ZmRef<ZvCf> cmdCf = cf->subset("cmd", false)) {
-    m_cmd = new MxMDCmd();
+    m_cmdServer = new MxMDCmdServer();
     Mx *mx = this->mx(cmdCf->get("mx", false, "cmd"));
     if (!mx) throw ZvCf::Required(cf, "cmd:mx");
-    m_cmd->init(mx, cmdCf);
+    m_cmdServer->init(mx, cmdCf);
     initCmds();
   }
 
@@ -413,16 +413,11 @@ void MxMDCore::init_(ZvCf *cf)
   ZeLOG(Info, "MxMDLib - initialized...");
 }
 
-void MxMDCore::addCmd(ZuString name, ZuString syntax,
-  ZvCmdFn fn, ZtString brief, ZtString usage)
-{
-  if (!m_cmd) return;
-  m_cmd->addCmd(name, syntax, ZuMv(fn), ZuMv(brief), ZuMv(usage));
-}
-
 void MxMDCore::initCmds()
 {
-  addCmd(
+  if (!m_cmdServer) return;
+
+  m_cmdServer->addCmd(
       "l1", ZtString("c csv csv { type flag }\n") + lookupSyntax(),
       ZvCmdFn::Member<&MxMDCore::l1>::fn(this),
       "dump L1 data",
@@ -431,33 +426,33 @@ void MxMDCore::initCmds()
 	"Options:\n"
 	"  -c, --csv\t\toutput CSV format\n") <<
 	lookupOptions());
-  addCmd(
+  m_cmdServer->addCmd(
       "l2", lookupSyntax(),
       ZvCmdFn::Member<&MxMDCore::l2>::fn(this),
       "dump L2 data",
       ZtString("usage: l2 SYMBOL [OPTION]...\n"
 	"Display level 2 market data for SYMBOL\n\nOptions:\n") <<
 	lookupOptions());
-  addCmd(
+  m_cmdServer->addCmd(
       "instrument", lookupSyntax(),
       ZvCmdFn::Member<&MxMDCore::instrument_>::fn(this),
       "dump instrument reference data",
       ZtString("usage: instrument SYMBOL [OPTION]...\n"
 	"Display instrument reference data (\"static data\") for SYMBOL\n\n"
 	"Options:\n") << lookupOptions());
-  addCmd(
+  m_cmdServer->addCmd(
       "ticksizes", "",
       ZvCmdFn::Member<&MxMDCore::ticksizes>::fn(this),
       "dump tick sizes in CSV format",
       "usage: ticksizes [VENUE [SEGMENT]]\n"
       "dump tick sizes in CSV format");
-  addCmd(
+  m_cmdServer->addCmd(
       "instruments", "",
       ZvCmdFn::Member<&MxMDCore::instruments>::fn(this),
       "dump instruments in CSV format",
       "usage: instruments [VENUE [SEGMENT]]\n"
       "dump instruments in CSV format");
-  addCmd(
+  m_cmdServer->addCmd(
       "orderbooks", "",
       ZvCmdFn::Member<&MxMDCore::orderbooks>::fn(this),
       "dump order books in CSV format",
@@ -465,7 +460,7 @@ void MxMDCore::initCmds()
       "dump order books in CSV format");
 
 #if 0
-  addCmd(
+  m_cmdServer->addCmd(
       "subscribe",
       "s stop stop { type scalar }",
       ZvCmdFn::Member<&MxMDCore::subscribeCmd>::fn(this),
@@ -477,7 +472,7 @@ void MxMDCore::initCmds()
       "  -s, --stop=ID\tstop subscribing - detach subscriber ID\n");
 #endif
 
-  addCmd(
+  m_cmdServer->addCmd(
       "logAge", "",
       ZvCmdFn{this, [](MxMDCore *, void *, ZvCf *args, ZtString &out) {
 	ZuBox<int> argc = args->get("#");
@@ -487,7 +482,7 @@ void MxMDCore::initCmds()
       }},
       "age log files",
       "usage: logAge\n");
-  addCmd(
+  m_cmdServer->addCmd(
       "log", "",
       ZvCmdFn{this, [](MxMDCore *md, void *, ZvCf *args, ZtString &out) {
 	ZuBox<int> argc = args->get("#");
@@ -514,9 +509,9 @@ void MxMDCore::start()
     m_telemetry->start();
   }
 
-  if (m_cmd) {
+  if (m_cmdServer) {
     raise(ZeEVENT(Info, "starting cmd server..."));
-    m_cmd->start();
+    m_cmdServer->start();
   }
 
   if (m_publisher) {
@@ -559,9 +554,9 @@ void MxMDCore::stop()
   stopReplaying();
   stopRecording();
 
-  if (m_cmd) {
+  if (m_cmdServer) {
     raise(ZeEVENT(Info, "stopping command server..."));
-    m_cmd->stop();
+    m_cmdServer->stop();
   }
 
   if (m_telemetry) {
@@ -590,7 +585,7 @@ void MxMDCore::final()
 
   raise(ZeEVENT(Info, "finalizing cmd server..."));
 
-  if (m_cmd) m_cmd->final();
+  if (m_cmdServer) m_cmdServer->final();
 
   raise(ZeEVENT(Info, "finalizing feeds..."));
   allFeeds([](MxMDFeed *feed) { try { feed->final(); } catch (...) { } });

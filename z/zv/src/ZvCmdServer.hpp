@@ -336,6 +336,13 @@ public:
 
   ZuInline int cmdPerm() const { return m_cmdPerm; } // -1 if unset
 
+  ZuInline int findPerm(ZuString name) const {
+    return m_userDB->findPerm(name);
+  }
+  ZuInline bool ok(User *user, bool interactive, unsigned perm) const {
+    return m_userDB->ok(user, interactive, perm);
+  }
+
 private:
   bool loadUserDB() {
     ZeError e;

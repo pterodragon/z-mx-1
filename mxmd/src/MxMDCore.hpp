@@ -65,23 +65,46 @@ extern "C" {
   typedef void (*MxMDFeedPluginFn)(MxMDCore *md, ZvCf *cf);
 };
 
-class MxMDAPI MxMDCmd : public ZmPolymorph, public ZvCmdServer<MxMDCmd> { };
+class MxMDAPI MxMDCmdServer :
+    public ZmPolymorph, public ZvCmdServer<MxMDCmdServer> {
+public:
+  using Base = ZvCmdServer<MxMDCmdServer>;
+  using Link = typename Base::Link;
+  using User = typename Base::User;
+
+  using AppFn =
+    ZmFn<MxMDCmdServer *, Link *, User *, bool, ZuArray<const uint8_t>>;
+
+  void final() { m_appFn = AppFn(); Base::final(); }
+
+  void appFn(AppFn fn) { m_appFn = fn; }
+
+  ZuInline int processApp(Link *link, User *user, bool interactive,
+      ZuArray<const uint8_t> data) {
+    return m_appFn(this, link, user, interactive, data);
+  }
+
+private:
+  AppFn		m_appFn;
+};
 
 class MxMDAPI MxMDCore : public MxMDLib, public MxEngineMgr {
 friend class MxMDLib;
+friend class MxMDCmdServer;
 
 public:
   static unsigned vmajor();
   static unsigned vminor();
 
-  typedef MxMultiplex Mx;
+  using Mx = MxMultiplex;
 
 private:
-  typedef ZmRBTree<ZmRef<Mx>,
-	    ZmRBTreeIndex<Mx::IDAccessor,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmNoLock,
-		  ZmRBTreeBase<ZmObject> > > > > MxTbl;
+  using MxTbl =
+    ZmRBTree<ZmRef<Mx>,
+      ZmRBTreeIndex<Mx::IDAccessor,
+	ZmRBTreeObject<ZuNull,
+	  ZmRBTreeLock<ZmNoLock,
+	    ZmRBTreeBase<ZmObject> > > > >;
 
   MxMDCore(ZmRef<MxTbl> mxTbl, Mx *mx);
 
@@ -125,9 +148,15 @@ public:
   void dumpOrderBooks(
       ZuString path, MxID venue = MxID(), MxID segment = MxID());
 
+  // null if unconfigured
+  ZuInline MxMDCmdServer *cmdServer() { return m_cmdServer; }
   void addCmd(ZuString name, ZuString syntax,
-      ZvCmdFn fn, ZtString brief, ZtString usage);
+      ZvCmdFn fn, ZtString brief, ZtString usage) {
+    if (!m_cmdServer) return;
+    m_cmdServer->addCmd(name, syntax, ZuMv(fn), brief, usage);
+  }
 
+public:
   // for use by replay
 
   using Hdr = MxMDStream::Hdr;
@@ -313,7 +342,7 @@ private:
   Mx			*m_mx = 0;
 
   ZmRef<MxMDTelemetry>	m_telemetry;
-  ZmRef<MxMDCmd>	m_cmd;
+  ZmRef<MxMDCmdServer>	m_cmdServer;
 
   MxMDBroadcast		m_broadcast;	// broadcasts updates
 

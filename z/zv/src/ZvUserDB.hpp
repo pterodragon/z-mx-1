@@ -286,7 +286,7 @@ private:
 
 public:
   // ok(user, interactive, perm)
-  bool ok(User *user, bool interactive, unsigned perm) {
+  bool ok(User *user, bool interactive, unsigned perm) const {
     if ((user->flags & User::ChPass) && interactive &&
 	perm != m_permIndex[Perm::Offset + fbs::ReqData_ChPass])
       return false;

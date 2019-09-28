@@ -1780,7 +1780,6 @@ class MxMDAPI MxMDLib : public ZmPolymorph {
   MxMDLib(const MxMDLib &) = delete;
   MxMDLib &operator =(const MxMDLib &) = delete;
 
-friend class MxMDCmd;
 friend class MxMDTickSizeTbl;
 friend class MxMDPxLevel_;
 friend class MxMDOrderBook;

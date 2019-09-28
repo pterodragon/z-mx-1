@@ -283,19 +283,22 @@ Zfb::Offset<fbs::ReqAck> Mgr::request(User *user, bool interactive,
 
   int reqType = request_->data_type();
 
-  if (!ok(user, interactive, m_permIndex[Perm::Offset + reqType])) {
-    using namespace Zfb::Save;
-    ZtString text = "permission denied";
-    if (user->flags & User::ChPass) text << " (user must change password)";
-    auto text_ = str(fbb, text);
-    fbs::ReqAckBuilder fbb_(fbb);
-    fbb_.add_seqNo(seqNo);
-    fbb_.add_rejCode(__LINE__);
-    fbb_.add_rejText(text_);
-    return fbb_.Finish();
+  {
+    auto perm = m_permIndex[Perm::Offset + reqType]
+    if (perm < 0 || !ok(user, interactive, perm)) {
+      using namespace Zfb::Save;
+      ZtString text = "permission denied";
+      if (user->flags & User::ChPass) text << " (user must change password)";
+      auto text_ = str(fbb, text);
+      fbs::ReqAckBuilder fbb_(fbb);
+      fbb_.add_seqNo(seqNo);
+      fbb_.add_rejCode(__LINE__);
+      fbb_.add_rejText(text_);
+      return fbb_.Finish();
+    }
   }
 
-  switch ((int)request_->data_type()) {
+  switch (reqType) {
     case fbs::ReqData_ChPass:
       ackType = fbs::ReqAckData_ChPass;
       ackData = chPass(

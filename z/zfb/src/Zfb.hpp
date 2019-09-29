@@ -155,7 +155,7 @@ namespace Save {
 
   // inline creation of a string (shorthand alias for CreateString)
   template <typename B>
-  inline auto str(B &b, ZuString s) {
+  ZuInline auto str(B &b, ZuString s) {
     return b.CreateString(s.data(), s.length());
   }
 
@@ -176,12 +176,12 @@ namespace Save {
 
   // inline creation of a vector of bytes from raw data
   template <typename B>
-  inline auto bytes(B &b, const void *data, unsigned len) {
+  ZuInline auto bytes(B &b, const void *data, unsigned len) {
     return b.CreateVector(static_cast<const uint8_t *>(data), len);
   }
   // inline creation of a vector of bytes from raw data as a ZuArray<uint8_t>
   template <typename B>
-  inline auto bytes(B &b, ZuArray<uint8_t> a) {
+  ZuInline auto bytes(B &b, ZuArray<uint8_t> a) {
     return b.CreateVector(a.data(), a.length());
   }
 }

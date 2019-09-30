@@ -1133,9 +1133,9 @@ int main(int argc, char **argv)
       }
     }
     if (!user) {
-      const auto &local = ZtStaticRegexUTF8("^([^:]+):(\\d+)$");
+      const auto &remote = ZtStaticRegexUTF8("^([^:]+):(\\d+)$");
       ZtRegex::Captures c;
-      if (local.m(argv[1], c) == 3) {
+      if (remote.m(argv[1], c) == 3) {
 	server = c[2];
 	port = c[3];
       }

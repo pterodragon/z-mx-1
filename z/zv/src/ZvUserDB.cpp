@@ -284,7 +284,7 @@ Zfb::Offset<fbs::ReqAck> Mgr::request(User *user, bool interactive,
   int reqType = request_->data_type();
 
   {
-    auto perm = m_permIndex[Perm::Offset + reqType]
+    auto perm = m_permIndex[Perm::Offset + reqType];
     if (perm < 0 || !ok(user, interactive, perm)) {
       using namespace Zfb::Save;
       ZtString text = "permission denied";

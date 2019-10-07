@@ -46,7 +46,6 @@
 //   >= 4.7 - use atomic builtins
 // Visual Studio -
 //   >= 2013 - use atomic intrinsics
-//   <  2013 - use _ReadWriteBarrier()
 #ifdef __GNUC__
 #define ZmAtomic_load(ptr) __atomic_load_n(ptr, __ATOMIC_RELAXED)
 #define ZmAtomic_store(ptr, val) __atomic_store_n(ptr, val, __ATOMIC_RELAXED)
@@ -57,9 +56,11 @@
 #ifdef _MSC_VER
 #include <atomic>
 #define ZmAtomic_load(ptr) \
-  ((std::atomic<decltype(*ptr)> *)ptr)->load(std::memory_order_relaxed)
+  (reinterpret_cast<const std::atomic<decltype(*ptr)> *>(ptr)->load( \
+	std::memory_order_relaxed))
 #define ZmAtomic_store(ptr, val) \
-  ((std::atomic<decltype(*ptr)> *)ptr)->store(val, std::memory_order_relaxed)
+  (reinterpret_cast<std::atomic<decltype(*ptr)> *>(ptr)->store( \
+	val, std::memory_order_relaxed))
 #define ZmAtomic_acquire() std::atomic_thread_fence(std::memory_order_acquire)
 #define ZmAtomic_release() std::atomic_thread_fence(std::memory_order_release)
 #endif

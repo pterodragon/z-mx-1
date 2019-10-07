@@ -27,6 +27,7 @@
 #include <zlib/ZmTrap.hpp>
 
 #include <zlib/ZiMultiplex.hpp>
+#include <zlib/ZiModule.hpp>
 
 #include <zlib/ZvCf.hpp>
 #include <zlib/ZvCmdClient.hpp>
@@ -37,6 +38,7 @@
 #include <zlib/ZtlsBase64.hpp>
 
 #include <zlib/Zrl.hpp>
+#include <zlib/ZCmd.hpp>
 
 #ifdef _WIN32
 #include <io.h>		// for _isatty
@@ -65,7 +67,10 @@ static void usage()
     "\tPORT\t- target port\n"
     "\tCMD\t- command to send to target\n"
     "\t\t  (reads commands from standard input if none specified)\n"
-    "\tARGS\t- command arguments\n";
+    "\tARGS\t- command arguments\n\n"
+    "Environment Variables:\n"
+    "\tZCMD_KEY_ID\tAPI key ID\n"
+    "\tZCMD_KEY_SECRET\tAPI key secret\n";
   std::cerr << usage << std::flush;
   ZeLog::stop();
   ZmPlatform::exit(1);
@@ -111,7 +116,7 @@ static ZtString getpass_(const ZtString &prompt, unsigned passLen)
   return passwd;
 }
 
-class ZCmd : public ZmPolymorph, public ZvCmdClient<ZCmd>, public ZvCmdHost {
+class ZCmd : public ZmPolymorph, public ZvCmdClient<ZCmd>, public ZCmdHost {
 public:
   using Base = ZvCmdClient<ZCmd>;
 
@@ -174,6 +179,8 @@ public:
 
   void exiting() { m_exiting = true; }
 
+  void sendApp(Zfb::IOBuilder &fbb) { return m_link->sendApp(fbb); }
+
 private:
   void loggedIn() {
     if (m_solo) {
@@ -185,6 +192,11 @@ private:
 	  "For help on a particular command: COMMAND --help\n" << std::flush;
       prompt();
     }
+  }
+
+  int processApp(ZuArray<const uint8_t> data) {
+    if (!processAppFn) return -1;
+    return processAppFn(data);
   }
 
   void disconnected() {
@@ -417,6 +429,11 @@ private:
 	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->keyClrCmd(static_cast<FILE *>(file), args, out);
 	}},  "clear all keys", "usage: keyclr [USERID]");
+
+    addCmd("loadmod", "",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->loadModCmd(static_cast<FILE *>(file), args, out);
+	}},  "load application-specific module", "usage: loadmod MODULE");
   }
 
   int passwdCmd(FILE *file, ZvCf *args, ZtString &out) {
@@ -1080,6 +1097,28 @@ private:
       out << "keys cleared\n";
       return executed(0, file, out);
     });
+    return 0;
+  }
+
+  int loadModCmd(FILE *file, ZvCf *args, ZtString &out) {
+    ZuBox<int> argc = args->get("#");
+    if (argc != 2) throw ZvCmdUsage();
+    ZiModule module;
+    ZiModule::Path name = args->get("1", true);
+    ZtString e;
+    if (module.load(name, false, &e) < 0) {
+      out << "failed to load \"" << name << "\": " << ZuMv(e) << '\n';
+      return 1;
+    }
+    ZCmdInitFn initFn = (ZCmdInitFn)module.resolve("ZCmd_plugin", &e);
+    if (!initFn) {
+      module.unload();
+      out << "failed to resolve \"ZCmd_plugin\" in \"" <<
+	name << "\": " << ZuMv(e) << '\n';
+      return 1;
+    }
+    (*initFn)(static_cast<ZCmdHost *>(this));
+    out << "module \"" << name << "\" loaded\n";
     return 0;
   }
 

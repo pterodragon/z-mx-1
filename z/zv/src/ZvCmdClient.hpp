@@ -177,7 +177,7 @@ public:
     this->send(fbb.buf());
   }
 
-  void loggedIn(const Bitmap &perms) { } // default
+  void loggedIn() { } // default
 
   // default app handler simply disconnects
   // >=0 - messaged consumed, continue

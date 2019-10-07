@@ -79,11 +79,11 @@ public:
 
   inline Handle handle() { return m_handle; }
 
-  inline int flags() { return m_flags; }
+  inline unsigned flags() { return m_flags; }
   inline void setFlags(int f) { Guard guard(m_lock); m_flags |= f; }
   inline void clrFlags(int f) { Guard guard(m_lock); m_flags &= ~f; }
 
-  int init(Handle handle, int flags, ZtString *e = 0) {
+  int init(Handle handle, unsigned flags, ZtString *e = 0) {
     Guard guard(m_lock);
 
     if (m_flags & GC) unload();
@@ -101,7 +101,7 @@ public:
       m_handle = 0;
   }
 
-  int load(const Path &name, int flags, ZtString *e = 0);
+  int load(const Path &name, unsigned flags, ZtString *e = 0);
   int unload(ZtString *e = 0);
 
   void *resolve(const char *symbol, ZtString *e = 0);
@@ -109,7 +109,7 @@ public:
 private:
   ZmLock	m_lock;
   Handle	m_handle;
-  int		m_flags;
+  unsigned	m_flags;
 };
 
 #ifdef _MSC_VER

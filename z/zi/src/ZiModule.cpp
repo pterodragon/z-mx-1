@@ -23,7 +23,7 @@
 
 #ifdef _WIN32
 
-int ZiModule::load(const Path &name, int flags, ZtString *e)
+int ZiModule::load(const Path &name, unsigned flags, ZtString *e)
 {
   Guard guard(m_lock);
 
@@ -62,7 +62,7 @@ void *ZiModule::resolve(const char *symbol, ZtString *e)
 
 #include <dlfcn.h>
 
-int ZiModule::load(const Path &name, int flags, ZtString *e)
+int ZiModule::load(const Path &name, unsigned flags, ZtString *e)
 {
   Guard guard(m_lock);
 

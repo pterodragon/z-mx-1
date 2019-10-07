@@ -7,7 +7,7 @@ AM_CPPFLAGS = \
 	-DZRL_EXPORTS @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
-pkginclude_HEADERS = ZrlLib.hpp Zrl.hpp
+pkginclude_HEADERS = ZrlLib.hpp Zrl.hpp ZCmd.hpp
 lib_LTLIBRARIES = libZrl.la
 bin_PROGRAMS = zcmd zproxy
 libZrl_la_SOURCES = ZrlLib.cpp Zrl.cpp

@@ -613,7 +613,7 @@ public:
     return (double)(((uint64_t)1)<<m_bits) * loadFactor();
   }
 
-  ZuInline unsigned count_() const { return m_count; }
+  ZuInline unsigned count_() const { return m_count.load_(); }
 
   template <typename Key__>
   inline typename ZuNotConvertible<
@@ -640,11 +640,13 @@ public:
 private:
   template <typename NodeRef_>
   inline void addNode_(NodeRef_ &&node, uint32_t code) {
+    unsigned count = m_count.load_();
+
     node->Fn::init();
     {
       unsigned bits = m_bits;
 
-      if (m_count < (1U<<28) && ((m_count<<4)>>bits) >= m_loadFactor) {
+      if (count < (1U<<28) && ((count<<4)>>bits) >= m_loadFactor) {
 	Lock &lock = lockCode(code);
 
 	LockTraits::unlock(lock);
@@ -658,7 +660,7 @@ private:
     nodeRef(node);
     node->Fn::next(m_table[slot]);
     m_table[slot] = ZuFwd<NodeRef_>(node);
-    ++m_count;
+    m_count.store_(count + 1);
   }
 
 public:
@@ -841,7 +843,8 @@ public:
 private:
   template <typename Index_>
   inline NodeRef del_(const Index_ &index, uint32_t code) {
-    if (!m_count) return 0;
+    unsigned count = m_count.load_();
+    if (!count) return 0;
 
     Node *node, *prevNode = 0;
     unsigned slot = ZmHash_Bits::hashBits(code, m_bits);
@@ -857,7 +860,7 @@ private:
     else
       prevNode->Fn::next(node->Fn::next());
 
-    --m_count;
+    m_count.store_(count - 1);
 
     NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
     return ZuMv(*ptr);
@@ -874,7 +877,8 @@ private:
   template <typename Index_, typename Val_>
   inline NodeRef delKeyVal_(
       const Index_ &index, const Val_ &val, uint32_t code) {
-    if (!m_count) return 0;
+    unsigned count = m_count.load_();
+    if (!count) return 0;
 
     Node *node, *prevNode = 0;
     unsigned slot = ZmHash_Bits::hashBits(code, m_bits);
@@ -891,7 +895,7 @@ private:
     else
       prevNode->Fn::next(node->Fn::next());
 
-    --m_count;
+    m_count.store_(count - 1);
 
     NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
     return ZuMv(*ptr);
@@ -998,7 +1002,8 @@ private:
   void delIterate(I &iterator) {
     Node *node = iterator.m_node, *prevNode = iterator.m_prev;
 
-    if (!m_count || !node) return;
+    unsigned count = m_count.load_();
+    if (!count || !node) return;
 
     if (!prevNode) {
       m_table[iterator.m_slot] = node->Fn::next();
@@ -1008,7 +1013,7 @@ private:
 
     nodeDeref(node);
     nodeDelete(node);
-    --m_count;
+    m_count.store_(count - 1);
   }
 
 public:
@@ -1043,10 +1048,10 @@ public:
     data.addr = (uintptr_t)this;
     data.nodeSize = sizeof(Node);
     data.loadFactor = loadFactor_();
-    data.count = m_count; // deliberately unsafe
+    data.count = m_count.load_();
     unsigned bits = m_bits;
     data.effLoadFactor = ((double)data.count) / ((double)(1<<bits));
-    data.resized = m_resized; // deliberately unsafe
+    data.resized = m_resized.load_();
     data.bits = bits;
     data.cBits = cBits();
     data.linear = false;
@@ -1056,7 +1061,7 @@ private:
   void resize(unsigned bits) {
     if (lockAllResize(bits)) return;
 
-    ++m_resized;
+    m_resized.store_(m_resized.load_() + 1);
 
     unsigned n = (1U<<bits);
 
@@ -1080,10 +1085,10 @@ private:
     unlockAll();
   }
 
-  unsigned	m_loadFactor = 0;
-  unsigned	m_count = 0;
-  unsigned	m_resized = 0;
-  NodePtr	*m_table;
+  unsigned		m_loadFactor = 0;
+  ZmAtomic<unsigned>	m_count = 0;
+  ZmAtomic<unsigned>	m_resized = 0;
+  NodePtr		*m_table;
 };
 
 #endif /* ZmHash_HPP */

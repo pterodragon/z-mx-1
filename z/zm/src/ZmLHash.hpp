@@ -344,7 +344,7 @@ public:
   inline unsigned loadFactor_() const { return m_loadFactor; }
   inline double loadFactor() const { return (double)m_loadFactor / 16.0; }
 
-  inline unsigned count_() const { return m_count; }
+  inline unsigned count_() const { return m_count.load_(); }
 
 protected:
   inline ZmLHash__(const ZmHashParams &params) : ZmAnyHash(params.telFreq()) {
@@ -354,9 +354,9 @@ protected:
     m_loadFactor = (unsigned)(loadFactor * 16.0);
   }
 
-  unsigned	m_loadFactor = 0;
-  unsigned	m_count = 0;
-  Lock		m_lock;
+  unsigned		m_loadFactor = 0;
+  ZmAtomic<unsigned>	m_count = 0;
+  Lock			m_lock;
 };
 
 // statically allocated hash table base class
@@ -399,7 +399,7 @@ public:
 
 protected:
   inline ZmLHash_(const ZmHashParams &params) : Base(params),
-    m_resized(0), m_bits(params.bits()), m_table(0) { }
+    m_bits(params.bits()) { }
 
   inline void init() {
     unsigned size = 1U<<m_bits;
@@ -430,11 +430,11 @@ protected:
     Ops::free(oldTable);
   }
 
-  unsigned resized() const { return m_resized; }
+  unsigned resized() const { return m_resized.load_(); }
 
-  unsigned	m_resized;
-  unsigned	m_bits;
-  Node	 	*m_table;
+  ZmAtomic<unsigned>	m_resized = 0;
+  unsigned		m_bits;
+  Node	 		*m_table = nullptr;
 };
 
 template <typename Key_, class NTP = ZmLHash_Defaults>
@@ -667,15 +667,15 @@ private:
   inline int add_(Key__ &&key, Val_ &&val, uint32_t code) {
     unsigned size = 1U<<bits();
 
-    if (m_count < (1U<<28) &&
-	((m_count<<4)>>bits()) >= loadFactor_()) {
+    unsigned count = m_count.load_();
+    if (count < (1U<<28) && ((count<<4)>>bits()) >= loadFactor_()) {
       Base::resize();
       size = 1U<<bits();
     }
 
-    if (m_count >= size) return -1;
+    if (count >= size) return -1;
 
-    ++m_count;
+    m_count.store_(count + 1);
 
     return add__(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code);
   }
@@ -947,7 +947,8 @@ private:
 
     if (!m_table[slot]) return;
 
-    --m_count;
+    if (unsigned count = m_count.load_())
+      m_count.store_(count - 1);
 
     if (m_table[slot].head()) {
       ZmAssert(prev < 0);
@@ -1035,10 +1036,10 @@ public:
     data.addr = (uintptr_t)this;
     data.nodeSize = sizeof(Node);
     data.loadFactor = loadFactor_();
-    data.count = m_count; // deliberately unsafe
+    data.count = m_count.load_();
     unsigned bits = this->bits();
     data.effLoadFactor = ((double)data.count) / ((double)(1<<bits));
-    data.resized = resized(); // deliberately unsafe
+    data.resized = resized();
     data.bits = bits;
     data.cBits = 0;
     data.linear = true;

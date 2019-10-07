@@ -374,12 +374,9 @@ private:
   template <typename O>
   ZuInline typename ZuNotObject<O>::T nodeDelete(const O *o) { delete o; }
 
-protected:
 public:
   template <typename ...Args>
-  ZmRBTree(Args &&... args) :
-      NTP::Base{ZuFwd<Args>(args)...},
-      m_root(0), m_minimum(0), m_maximum(0), m_count(0) { };
+  ZmRBTree(Args &&... args) : NTP::Base{ZuFwd<Args>(args)...} { }
 
   ~ZmRBTree() { clean(); }
 
@@ -1179,10 +1176,10 @@ protected:
   }
 
   mutable Lock	m_lock;
-    Node	  *m_root;
-    Node	  *m_minimum;
-    Node	  *m_maximum;
-    unsigned	  m_count;
+    Node	  *m_root = nullptr;
+    Node	  *m_minimum = nullptr;
+    Node	  *m_maximum = nullptr;
+    unsigned	  m_count = 0;
 };
 
 #endif /* ZmRBTree_HPP */

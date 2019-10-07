@@ -65,14 +65,20 @@ public:
     return *this;
   }
 
+  template <typename V> struct IsUInt64 {
+    enum { OK = !ZuTraits<V>::IsString &&
+      ZuConversion<V, uint64_t>::Exists };
+  };
+  template <typename V, typename R = void>
+  struct MatchUInt64 : public ZuIfT<IsUInt64<V>::OK, R> { };
+
   template <typename V>
-  ZuInline ZuID(V v, typename ZuIs<uint64_t, V>::T *_ = 0) : m_val(v) { }
+  ZuInline ZuID(V v, typename MatchUInt64<V>::T *_ = 0) : m_val(v) { }
   template <typename V>
-  ZuInline typename ZuIs<uint64_t, V, ZuID &>::T operator =(V v) {
+  ZuInline typename MatchUInt64<V, ZuID &>::T operator =(V v) {
     m_val = v;
     return *this;
   }
-
 
   ZuInline void init(ZuString s) {
     if (ZuLikely(s.length() == 8)) {

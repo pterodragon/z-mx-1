@@ -500,13 +500,18 @@ namespace MxTradingSession {
 namespace MxSide {
   MxEnumValues(Buy, Sell, SellShort, SellShortExempt, Cross);
   MxEnumNames("Buy", "Sell", "SellShort", "SellShortExempt", "Cross");
+  MxEnumMap(CSVMap,
+      "Buy", Buy, "1", Buy,
+      "Sell", Sell, "2", Sell,
+      "SellShort", SellShort, "5", SellShort,
+      "SellShortExempt", SellShortExempt, "6", SellShortExempt,
+      "Cross", Cross, "8", Cross);
   MxEnumMap(FixMap,
       "1", Buy,
       "2", Sell,
       "5", SellShort,
       "6", SellShortExempt,
       "8", Cross);
-  typedef FixMap CSVMap;
 }
 
 // instruments are fundamentally identified either by

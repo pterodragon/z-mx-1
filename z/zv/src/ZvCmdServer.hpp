@@ -294,6 +294,8 @@ friend TLS;
       m_userDBMaxAge = mgrCf->getInt("maxAge", 0, INT_MAX, false, 8);
     }
     m_userDB = new UserDB(this, passLen, totpRange);
+    if (!loadUserDB())
+      throw ZtString() << "failed to load \"" << m_userDBPath << '"';
   }
 
   void final() {
@@ -303,7 +305,6 @@ friend TLS;
   }
 
   bool start() {
-    if (!loadUserDB()) return false;
     TLS::listen();
     return true;
   }
@@ -355,9 +356,9 @@ private:
 	return false;
       }
     }
-    m_cmdPerm = m_userDB->findPerm("Zcmd");
+    m_cmdPerm = m_userDB->findPerm("ZCmd");
     if (m_cmdPerm < 0) {
-      this->logError(m_userDBPath, ": Zcmd permission missing");
+      this->logError(m_userDBPath, ": ZCmd permission missing");
       return false;
     }
     return true;

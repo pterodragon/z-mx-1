@@ -134,6 +134,9 @@ public:
       this->app()->connectFailed();
       // Base::connectFailed(transient);
     }
+    int processApp(ZuArray<const uint8_t> data) {
+      return this->app()->processApp(data);
+    }
   };
 
   void init(ZiMultiplex *mx, ZvCf *cf, bool interactive) {
@@ -403,7 +406,7 @@ private:
     addCmd("permadd", "",
 	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->permAddCmd(static_cast<FILE *>(file), args, out);
-	}},  "add permission", "usage: permadd ID NAME");
+	}},  "add permission", "usage: permadd NAME");
     addCmd("permmod", "",
 	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->permModCmd(static_cast<FILE *>(file), args, out);

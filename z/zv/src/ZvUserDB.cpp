@@ -117,7 +117,7 @@ bool Mgr::load(const uint8_t *buf, unsigned len)
   m_permIndex[Perm::Login] = findPerm_("UserDB.Login");
   m_permIndex[Perm::Access] = findPerm_("UserDB.Access");
   for (unsigned i = fbs::ReqData_NONE + 1; i <= fbs::ReqData_MAX; i++)
-    m_permIndex[i + Perm::Offset] =
+    m_permIndex[Perm::Offset + i] =
       findPerm_(ZtString{"UserDB."} + fbs::EnumNamesReqData()[i]);
   all(userDB->roles(), [this](unsigned, auto role_) {
     if (auto role = loadRole(role_)) {
@@ -284,8 +284,13 @@ Zfb::Offset<fbs::ReqAck> Mgr::request(User *user, bool interactive,
   int reqType = request_->data_type();
 
   {
+    ReadGuard guard(m_lock);
     auto perm = m_permIndex[Perm::Offset + reqType];
-    if (perm < 0 || !ok(user, interactive, perm)) {
+    if (ZuUnlikely(perm < 0))
+      perm = m_permIndex[Perm::Offset + reqType] = findPerm_(
+	  ZtString{"UserDB."} + fbs::EnumNamesReqData()[reqType]);
+    guard.unlock();
+    if (ZuUnlikely(perm < 0) || !ok(user, interactive, perm)) {
       using namespace Zfb::Save;
       ZtString text = "permission denied";
       if (user->flags & User::ChPass) text << " (user must change password)";
@@ -568,6 +573,7 @@ Offset<fbs::UserPass> Mgr::resetPass(
     auto i = m_keys->iterator();
     while (auto key = i.iterate())
       if (key->userID == id) i.del();
+    user->keyList = nullptr;
   }
   return fbs::CreateUserPass(fbb, user->save(fbb), str(fbb, passwd), 1);
 }

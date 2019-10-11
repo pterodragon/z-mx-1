@@ -47,12 +47,10 @@ bool Mgr::bootstrap(
     m_permIndex[Perm::Access] = 1;
     for (unsigned i = fbs::ReqData_NONE + 1; i <= fbs::ReqData_MAX; i++) {
       m_perms.push(ZtString{"UserDB."} + fbs::EnumNamesReqData()[i]);
-      m_permIndex[i + Perm::Offset] = i + Perm::Offset;
+      unsigned id = i + Perm::Offset;
+      m_permNames->add(m_perms[id], id);
+      m_permIndex[id] = id;
     }
-  }
-  if (!m_permNames->count_()) {
-    for (unsigned i = 0, n = m_perms.length(); i < n; i++)
-      m_permNames->add(m_perms[i], i);
   }
   if (!m_roles.count())
     roleAdd_(role, Role::Immutable, Bitmap().fill(), Bitmap().fill());
@@ -117,7 +115,9 @@ bool Mgr::load(const uint8_t *buf, unsigned len)
     unsigned j = perm_->id();
     if (j >= Bitmap::Bits) return;
     if (m_perms.length() < j + 1) m_perms.length(j + 1);
+    if (ZuUnlikely(m_perms[j])) m_permNames->del(m_perms[j]);
     m_perms[j] = str(perm_->name());
+    m_permNames->add(m_perms[j], j);
   });
   m_permIndex[Perm::Login] = findPerm_("UserDB.Login");
   m_permIndex[Perm::Access] = findPerm_("UserDB.Access");
@@ -744,7 +744,7 @@ Offset<fbs::PermUpdAck> Mgr::permAdd(
   auto name = Load::str(permAdd_->name());
   m_perms.push(name);
   auto id = m_perms.length() - 1;
-  m_permNames->add(name, id);
+  m_permNames->add(m_perms[id], id);
   m_modified = true;
   return fbs::CreatePermUpdAck(fbb,
       fbs::CreatePerm(fbb, id, str(fbb, m_perms[id])), 1);

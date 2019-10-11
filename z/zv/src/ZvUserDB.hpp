@@ -381,6 +381,10 @@ private:
   template <typename Arg0, typename ...Args>
   void permAdd_(Arg0 &&arg0, Args &&... args) {
     m_perms.push(ZuFwd<Arg0>(arg0));
+    {
+      auto id = m_perms.length() - 1;
+      m_permNames->add(m_perms[id], id);
+    }
     permAdd_(ZuFwd<Args>(args)...);
   }
 public:

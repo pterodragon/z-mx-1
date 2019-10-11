@@ -47,7 +47,7 @@ bool Mgr::bootstrap(
     m_permIndex[Perm::Access] = 1;
     for (unsigned i = fbs::ReqData_NONE + 1; i <= fbs::ReqData_MAX; i++) {
       m_perms.push(ZtString{"UserDB."} + fbs::EnumNamesReqData()[i]);
-      unsigned id = i + Perm::Offset;
+      unsigned id = Perm::Offset + i;
       m_permNames->add(m_perms[id], id);
       m_permIndex[id] = id;
     }
@@ -291,11 +291,25 @@ Zfb::Offset<fbs::ReqAck> Mgr::request(User *user, bool interactive,
   {
     ReadGuard guard(m_lock);
     auto perm = m_permIndex[Perm::Offset + reqType];
-    if (ZuUnlikely(perm < 0))
-      perm = m_permIndex[Perm::Offset + reqType] = findPerm_(
-	  ZtString{"UserDB."} + fbs::EnumNamesReqData()[reqType]);
+    if (ZuUnlikely(perm < 0)) {
+      ZtString permName;
+      permName << "UserDB." << fbs::EnumNamesReqData()[reqType];
+      perm = m_permIndex[Perm::Offset + reqType] = findPerm_(permName);
+      guard.unlock();
+      if (ZuUnlikely(perm < 0)) {
+	using namespace Zfb::Save;
+	ZtString text;
+	text << "permission denied (\"" << permName << "\" missing)";
+	auto text_ = str(fbb, text);
+	fbs::ReqAckBuilder fbb_(fbb);
+	fbb_.add_seqNo(seqNo);
+	fbb_.add_rejCode(__LINE__);
+	fbb_.add_rejText(text_);
+	return fbb_.Finish();
+      }
+    }
     guard.unlock();
-    if (ZuUnlikely(perm < 0) || !ok(user, interactive, perm)) {
+    if (ZuUnlikely(!ok(user, interactive, perm))) {
       using namespace Zfb::Save;
       ZtString text = "permission denied";
       if (user->flags & User::ChPass) text << " (user must change password)";

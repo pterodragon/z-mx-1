@@ -127,9 +127,10 @@ private:
 	  return 0;
 	}
       }
-      if (!this->app()->processLogin(
+      if (int failures = this->app()->processLogin(
 	    fbs::GetLoginReq(data), m_user, m_interactive) ||
 	  ZuUnlikely(!m_user)) {
+	if (failures > 0 && failures <= 3) return -1;
 	m_state = State::LoginFailed;
 	return 0;
       }
@@ -373,7 +374,7 @@ private:
   }
 
 public:
-  bool processLogin(const ZvUserDB::fbs::LoginReq *login,
+  int processLogin(const ZvUserDB::fbs::LoginReq *login,
       ZmRef<User> &user, bool &interactive) {
     return m_userDB->loginReq(login, user, interactive);
   }

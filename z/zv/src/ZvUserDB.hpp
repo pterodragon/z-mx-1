@@ -126,6 +126,7 @@ struct User__ : public ZuPolymorph {
   }
 
   uint64_t		id;
+  unsigned		failures = 0;
   ZtString		name;
   KeyData		hmac;		// HMAC-SHA256 of secret, password
   KeyData		secret;		// secret (random at user creation)
@@ -253,7 +254,7 @@ public:
 
   ZtString perm(unsigned i) {
     ReadGuard guard(m_lock);
-    if (i >= m_perms.length()) return ZtString();
+    if (ZuUnlikely(i >= Bitmap::Bits)) return ZtString();
     return m_perms[i];
   }
   int findPerm(ZuString s) { // returns -1 if not found
@@ -279,17 +280,17 @@ public:
   template <typename T> using Vector = Zfb::Vector<T>;
 
   // request, user, interactive
-  bool loginReq(const fbs::LoginReq *, ZmRef<User> &, bool &interactive);
+  int loginReq(const fbs::LoginReq *, ZmRef<User> &, bool &interactive);
 
   Offset<fbs::ReqAck> request(User *, bool interactive,
       const fbs::Request *, Zfb::Builder &);
 
 private:
   // interactive login
-  ZmRef<User> login(
+  ZmRef<User> login(int &failures,
       ZuString user, ZuString passwd, unsigned totp);
   // API access
-  ZmRef<User> access(
+  ZmRef<User> access(int &failures,
       ZuString keyID, ZuArray<uint8_t> token, ZuArray<uint8_t> hmac);
 
 public:
@@ -380,20 +381,18 @@ private:
   void permAdd_() { }
   template <typename Arg0, typename ...Args>
   void permAdd_(Arg0 &&arg0, Args &&... args) {
-    m_perms.push(ZuFwd<Arg0>(arg0));
-    {
-      auto id = m_perms.length() - 1;
-      m_permNames->add(m_perms[id], id);
-    }
+    unsigned id = m_permCount++;
+    m_perms[id] = ZuFwd<Arg0>(arg0);
+    m_permNames->add(m_perms[id], id);
     permAdd_(ZuFwd<Args>(args)...);
   }
 public:
   template <typename ...Args>
   unsigned permAdd(Args &&... args) {
     Guard guard(m_lock);
-    unsigned i = m_perms.length();
+    unsigned id = m_permCount;
     permAdd_(ZuFwd<Args>(args)...);
-    return i;
+    return id;
   }
 private:
   template <typename ...Args>
@@ -424,7 +423,8 @@ private:
   unsigned		m_totpRange;
 
   mutable Lock		m_lock;
-    ZtArray<ZtString>	  m_perms; // indexed by permission ID
+    unsigned		  m_permCount = 0;
+    ZtString		  m_perms[Bitmap::Bits]; // indexed by permission ID
     ZmRef<PermNames>	  m_permNames;
     unsigned		  m_permIndex[Perm::Offset + fbs::ReqData_MAX + 1];
     RoleTree		  m_roles; // name -> permissions

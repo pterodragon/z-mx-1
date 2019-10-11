@@ -21,6 +21,8 @@
 
 #include <zlib/ZvUserDB.hpp>
 
+#include <zlib/ZeLog.hpp>
+
 #include <zlib/ZtlsBase32.hpp>
 #include <zlib/ZtlsTOTP.hpp>
 
@@ -41,13 +43,14 @@ bool Mgr::bootstrap(
     ZtString name, ZtString role, ZtString &passwd, ZtString &secret)
 {
   Guard guard(m_lock);
-  if (!m_perms.length()) {
+  if (!m_permCount) {
     permAdd_("UserDB.Login", "UserDB.Access");
     m_permIndex[Perm::Login] = 0;
     m_permIndex[Perm::Access] = 1;
     for (unsigned i = fbs::ReqData_NONE + 1; i <= fbs::ReqData_MAX; i++) {
-      m_perms.push(ZtString{"UserDB."} + fbs::EnumNamesReqData()[i]);
-      unsigned id = Perm::Offset + i;
+      if (ZuUnlikely(m_permCount >= Bitmap::Bits)) break;
+      unsigned id = m_permCount++;
+      m_perms[id] = ZtString{"UserDB."} + fbs::EnumNamesReqData()[i];
       m_permNames->add(m_perms[id], id);
       m_permIndex[id] = id;
     }
@@ -112,12 +115,12 @@ bool Mgr::load(const uint8_t *buf, unsigned len)
   using namespace Zfb::Load;
   auto userDB = fbs::GetUserDB(buf);
   all(userDB->perms(), [this](unsigned, auto perm_) {
-    unsigned j = perm_->id();
-    if (j >= Bitmap::Bits) return;
-    if (m_perms.length() < j + 1) m_perms.length(j + 1);
-    if (ZuUnlikely(m_perms[j])) m_permNames->del(m_perms[j]);
-    m_perms[j] = str(perm_->name());
-    m_permNames->add(m_perms[j], j);
+    unsigned id = perm_->id();
+    if (ZuUnlikely(id >= Bitmap::Bits)) return;
+    if (id <= m_permCount) m_permCount = id + 1;
+    if (ZuUnlikely(m_perms[id])) m_permNames->del(m_perms[id]);
+    m_perms[id] = str(perm_->name());
+    m_permNames->add(m_perms[id], id);
   });
   m_permIndex[Perm::Login] = findPerm_("UserDB.Login");
   m_permIndex[Perm::Access] = findPerm_("UserDB.Access");
@@ -156,7 +159,7 @@ Zfb::Offset<fbs::UserDB> Mgr::save(Zfb::Builder &fbb) const
   m_modified = false;
   using namespace Zfb;
   using namespace Save;
-  auto perms_ = keyVecIter<fbs::Perm>(fbb, m_perms.length(),
+  auto perms_ = keyVecIter<fbs::Perm>(fbb, m_permCount,
       [this](Builder &fbb, unsigned i) {
 	return fbs::CreatePerm(fbb, i, str(fbb, m_perms[i]));
       });
@@ -250,32 +253,30 @@ bool Mgr::modified() const
   return m_modified;
 }
 
-bool Mgr::loginReq(
+int Mgr::loginReq(
     const fbs::LoginReq *loginReq_, ZmRef<User> &user, bool &interactive)
 {
   using namespace Zfb::Load;
-  bool ok;
+  int failures;
   switch ((int)loginReq_->data_type()) {
     case fbs::LoginReqData_Access: {
       auto access = static_cast<const fbs::Access *>(loginReq_->data());
-      user = this->access(str(access->keyID()),
-	  bytes(access->token()), bytes(access->hmac()));
-      ok = !!user;
+      user = this->access(failures,
+	  str(access->keyID()), bytes(access->token()), bytes(access->hmac()));
       interactive = false;
     } break;
     case fbs::LoginReqData_Login: {
       auto login = static_cast<const fbs::Login *>(loginReq_->data());
-      user = this->login(str(login->user()),
-	  str(login->passwd()), login->totp());
-      ok = !!user;
+      user = this->login(failures,
+	  str(login->user()), str(login->passwd()), login->totp());
       interactive = true;
     } break;
     default:
-      ok = false;
+      failures = -1;
       user = nullptr;
       break;
   }
-  return ok;
+  return failures;
 }
 
 Zfb::Offset<fbs::ReqAck> Mgr::request(User *user, bool interactive,
@@ -298,9 +299,8 @@ Zfb::Offset<fbs::ReqAck> Mgr::request(User *user, bool interactive,
       guard.unlock();
       if (ZuUnlikely(perm < 0)) {
 	using namespace Zfb::Save;
-	ZtString text;
-	text << "permission denied (\"" << permName << "\" missing)";
-	auto text_ = str(fbb, text);
+	auto text_ = str(fbb, ZtString() <<
+	    "permission denied (\"" << permName << "\" missing)");
 	fbs::ReqAckBuilder fbb_(fbb);
 	fbb_.add_seqNo(seqNo);
 	fbb_.add_rejCode(__LINE__);
@@ -446,14 +446,32 @@ Zfb::Offset<fbs::ReqAck> Mgr::request(User *user, bool interactive,
   return fbb_.Finish();
 }
 
-ZmRef<User> Mgr::login(
+ZmRef<User> Mgr::login(int &failures,
     ZuString name, ZuString passwd, unsigned totp)
 {
-  ReadGuard guard(m_lock);
+  Guard guard(m_lock);
   ZmRef<User> user = m_userNames->find(name);
-  if (!user) return nullptr;
-  if (!(user->flags & User::Enabled)) return nullptr;
-  if (!(user->perms && Perm::Login)) return nullptr;
+  if (!user) {
+    failures = -1;
+    return nullptr;
+  }
+  if (!(user->flags & User::Enabled)) {
+    if (++user->failures < 3) {
+      ZeLOG(Warning, ZtString() << "authentication failure: "
+	  "disabled user \"" << user->name << "\" attempted login");
+    }
+    failures = user->failures;
+    return nullptr;
+  }
+  if (!(user->perms && Perm::Login)) {
+    if (++user->failures < 3) {
+      ZeLOG(Warning, ZtString() << "authentication failure: "
+	  "user without login permission \"" << user->name <<
+	  "\" attempted login");
+    }
+    failures = user->failures;
+    return nullptr;
+  }
   {
     Ztls::HMAC hmac(User::keyType());
     KeyData verify;
@@ -461,24 +479,59 @@ ZmRef<User> Mgr::login(
     hmac.update(passwd.data(), passwd.length());
     verify.length(verify.size());
     hmac.finish(verify.data());
-    if (verify != user->hmac) return nullptr;
+    if (verify != user->hmac) {
+      if (++user->failures < 3) {
+	ZeLOG(Warning, ZtString() << "authentication failure: "
+	    "user \"" << user->name << "\" provided invalid password");
+      }
+      failures = user->failures;
+      return nullptr;
+    }
   }
   if (!Ztls::TOTP::verify(
-	user->secret.data(), user->secret.length(), totp, m_totpRange))
+	user->secret.data(), user->secret.length(), totp, m_totpRange)) {
+    if (++user->failures < 3) {
+      ZeLOG(Warning, ZtString() << "authentication failure: "
+	  "user \"" << user->name << "\" provided invalid OTP");
+    }
+    failures = user->failures;
     return nullptr;
+  }
+  failures = 0;
   return user;
 }
 
-ZmRef<User> Mgr::access(
+ZmRef<User> Mgr::access(int &failures,
     ZuString keyID, ZuArray<uint8_t> token, ZuArray<uint8_t> hmac)
 {
   ReadGuard guard(m_lock);
   Key *key = m_keys->findPtr(keyID);
-  if (!key) return nullptr;
+  if (!key) {
+    failures = -1;
+    return nullptr;
+  }
   ZmRef<User> user = m_users->find(key->userID);
-  if (!user) return nullptr; // LATER - log warning about key w/ invalid userID
-  if (!(user->flags & User::Enabled)) return nullptr;
-  if (!(user->perms && Perm::Access)) return nullptr;
+  if (!user) {
+    failures = -1;
+    return nullptr;
+  }
+  if (!(user->flags & User::Enabled)) {
+    if (++user->failures < 3) {
+      ZeLOG(Warning, ZtString() << "authentication failure: "
+	  "disabled user \"" << user->name << "\" attempted login");
+    }
+    failures = user->failures;
+    return nullptr;
+  }
+  if (!(user->perms && Perm::Access)) {
+    if (++user->failures < 3) {
+      ZeLOG(Warning, ZtString() << "authentication failure: "
+	  "user without API access permission \"" << user->name <<
+	  "\" attempted access");
+    }
+    failures = user->failures;
+    return nullptr;
+  }
   {
     Ztls::HMAC hmac_(Key::keyType());
     KeyData verify;
@@ -486,8 +539,16 @@ ZmRef<User> Mgr::access(
     hmac_.update(token.data(), token.length());
     verify.length(verify.size());
     hmac_.finish(verify.data());
-    if (verify != hmac) return nullptr;
+    if (verify != hmac) {
+      if (++user->failures < 3) {
+	ZeLOG(Warning, ZtString() << "authentication failure: "
+	    "user \"" << user->name << "\" provided invalid API key secret");
+      }
+      failures = user->failures;
+      return nullptr;
+    }
   }
+  failures = 0;
   return user;
 }
 
@@ -737,13 +798,13 @@ Offset<Vector<Offset<fbs::Perm>>> Mgr::permGet(
 {
   ReadGuard guard(m_lock);
   if (!Zfb::IsFieldPresent(id_, fbs::PermID::VT_ID)) {
-    return keyVecIter<fbs::Perm>(fbb, m_perms.length(),
+    return keyVecIter<fbs::Perm>(fbb, m_permCount,
 	[this](Builder &fbb, unsigned i) {
 	  return fbs::CreatePerm(fbb, i, str(fbb, m_perms[i]));
 	});
   } else {
     auto id = id_->id();
-    if (id < m_perms.length())
+    if (id < m_permCount)
       return keyVec<fbs::Perm>(fbb,
 	  fbs::CreatePerm(fbb, id, str(fbb, m_perms[id])));
     else
@@ -755,9 +816,14 @@ Offset<fbs::PermUpdAck> Mgr::permAdd(
     Zfb::Builder &fbb, const fbs::PermAdd *permAdd_)
 {
   Guard guard(m_lock);
+  if (m_permCount >= Bitmap::Bits) {
+    fbs::PermUpdAckBuilder fbb_(fbb);
+    fbb_.add_ok(0);
+    return fbb_.Finish();
+  }
   auto name = Load::str(permAdd_->name());
-  m_perms.push(name);
-  auto id = m_perms.length() - 1;
+  auto id = m_permCount++;
+  m_perms[id] = name;
   m_permNames->add(m_perms[id], id);
   m_modified = true;
   return fbs::CreatePermUpdAck(fbb,
@@ -769,7 +835,7 @@ Offset<fbs::PermUpdAck> Mgr::permMod(
 {
   Guard guard(m_lock);
   auto id = perm_->id();
-  if (id >= m_perms.length()) {
+  if (id >= m_permCount) {
     fbs::PermUpdAckBuilder fbb_(fbb);
     fbb_.add_ok(0);
     return fbb_.Finish();
@@ -786,17 +852,17 @@ Offset<fbs::PermUpdAck> Mgr::permDel(
 {
   Guard guard(m_lock);
   auto id = id_->id();
-  if (id >= m_perms.length()) {
+  if (id >= m_permCount) {
     fbs::PermUpdAckBuilder fbb_(fbb);
     fbb_.add_ok(0);
     return fbb_.Finish();
   }
   m_modified = true;
+  m_permNames->del(m_perms[id]);
   ZtString name = ZuMv(m_perms[id]);
-  m_permNames->del(name);
-  if (id == m_perms.length() - 1) {
+  if (id == m_permCount - 1) {
     unsigned i = id;
-    do { m_perms.length(i); } while (!m_perms[--i]);
+    do { m_permCount = i; } while (i && !m_perms[--i]);
   }
   return fbs::CreatePermUpdAck(fbb,
       fbs::CreatePerm(fbb, id, str(fbb, name)), 1);

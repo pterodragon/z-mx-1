@@ -37,6 +37,7 @@
 #include <zlib/ZuArrayN.hpp>
 
 #include <zlib/ZmHash.hpp>
+#include <zlib/ZmLHash.hpp>
 #include <zlib/ZmRBTree.hpp>
 #include <zlib/ZmRWLock.hpp>
 
@@ -260,11 +261,18 @@ public:
     return findPerm_(s);
   }
 private:
-  int findPerm_(ZuString s) {
-    unsigned i, n = m_perms.length();
-    for (i = 0; i < n; i++) if (m_perms[i] == s) return i;
-    return -1;
-  }
+  enum { N = Bitmap::Bits };
+  ZuAssert(N <= 1024);
+  enum { PermBits =
+    N <= 2 ? 1 : N <= 4 ? 2 : N <= 8 ? 3 : N <= 16 ? 4 : N <= 32 ? 5 :
+    N <= 64 ? 6 : N <= 128 ? 7 : N <= 256 ? 8 : N <= 512 ? 9 : 10
+  };
+  typedef ZmLHash<ZuString,
+	    ZmLHashVal<ZuBox_1(int),
+	      ZmLHashStatic<PermBits,
+		ZmLHashLock<ZmNoLock> > > > PermNames;
+
+  int findPerm_(ZuString s) { return m_permNames->findVal(s); }
 
 public:
   template <typename T> using Offset = Zfb::Offset<T>;
@@ -413,6 +421,7 @@ private:
 
   mutable Lock		m_lock;
     ZtArray<ZtString>	  m_perms; // indexed by permission ID
+    ZmRef<PermNames>	  m_permNames;
     unsigned		  m_permIndex[Perm::Offset + fbs::ReqData_MAX + 1];
     RoleTree		  m_roles; // name -> permissions
     ZmRef<UserIDHash>	  m_users;

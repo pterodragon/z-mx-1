@@ -34,6 +34,7 @@ Mgr::Mgr(Ztls::Random *rng, unsigned passLen, unsigned totpRange) :
   m_users = new UserIDHash();
   m_userNames = new UserNameHash();
   m_keys = new KeyHash();
+  m_permNames = new PermNames();
 }
 
 bool Mgr::bootstrap(
@@ -48,6 +49,10 @@ bool Mgr::bootstrap(
       m_perms.push(ZtString{"UserDB."} + fbs::EnumNamesReqData()[i]);
       m_permIndex[i + Perm::Offset] = i + Perm::Offset;
     }
+  }
+  if (!m_permNames->count_()) {
+    for (unsigned i = 0, n = m_perms.length(); i < n; i++)
+      m_permNames->add(m_perms[i], i);
   }
   if (!m_roles.count())
     roleAdd_(role, Role::Immutable, Bitmap().fill(), Bitmap().fill());
@@ -736,8 +741,10 @@ Offset<fbs::PermUpdAck> Mgr::permAdd(
     Zfb::Builder &fbb, const fbs::PermAdd *permAdd_)
 {
   Guard guard(m_lock);
-  m_perms.push(Load::str(permAdd_->name()));
+  auto name = Load::str(permAdd_->name());
+  m_perms.push(name);
   auto id = m_perms.length() - 1;
+  m_permNames->add(name, id);
   m_modified = true;
   return fbs::CreatePermUpdAck(fbb,
       fbs::CreatePerm(fbb, id, str(fbb, m_perms[id])), 1);
@@ -754,7 +761,8 @@ Offset<fbs::PermUpdAck> Mgr::permMod(
     return fbb_.Finish();
   }
   m_modified = true;
-  m_perms[id] = Load::str(perm_->name());
+  m_permNames->del(m_perms[id]);
+  m_permNames->add(m_perms[id] = Load::str(perm_->name()), id);
   return fbs::CreatePermUpdAck(fbb,
       fbs::CreatePerm(fbb, id, str(fbb, m_perms[id])), 1);
 }
@@ -771,6 +779,7 @@ Offset<fbs::PermUpdAck> Mgr::permDel(
   }
   m_modified = true;
   ZtString name = ZuMv(m_perms[id]);
+  m_permNames->del(name);
   if (id == m_perms.length() - 1) {
     unsigned i = id;
     do { m_perms.length(i); } while (!m_perms[--i]);

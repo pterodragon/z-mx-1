@@ -43,13 +43,13 @@ bool Mgr::bootstrap(
     ZtString name, ZtString role, ZtString &passwd, ZtString &secret)
 {
   Guard guard(m_lock);
-  if (!m_permCount) {
+  if (!m_nPerms) {
     permAdd_("UserDB.Login", "UserDB.Access");
     m_permIndex[Perm::Login] = 0;
     m_permIndex[Perm::Access] = 1;
     for (unsigned i = fbs::ReqData_NONE + 1; i <= fbs::ReqData_MAX; i++) {
-      if (ZuUnlikely(m_permCount >= Bitmap::Bits)) break;
-      unsigned id = m_permCount++;
+      if (ZuUnlikely(m_nPerms >= Bitmap::Bits)) break;
+      unsigned id = m_nPerms++;
       m_perms[id] = ZtString{"UserDB."} + fbs::EnumNamesReqData()[i];
       m_permNames->add(m_perms[id], id);
       m_permIndex[id] = id;
@@ -117,7 +117,7 @@ bool Mgr::load(const uint8_t *buf, unsigned len)
   all(userDB->perms(), [this](unsigned, auto perm_) {
     unsigned id = perm_->id();
     if (ZuUnlikely(id >= Bitmap::Bits)) return;
-    if (id <= m_permCount) m_permCount = id + 1;
+    if (id <= m_nPerms) m_nPerms = id + 1;
     if (ZuUnlikely(m_perms[id])) m_permNames->del(m_perms[id]);
     m_perms[id] = str(perm_->name());
     m_permNames->add(m_perms[id], id);
@@ -159,7 +159,7 @@ Zfb::Offset<fbs::UserDB> Mgr::save(Zfb::Builder &fbb) const
   m_modified = false;
   using namespace Zfb;
   using namespace Save;
-  auto perms_ = keyVecIter<fbs::Perm>(fbb, m_permCount,
+  auto perms_ = keyVecIter<fbs::Perm>(fbb, m_nPerms,
       [this](Builder &fbb, unsigned i) {
 	return fbs::CreatePerm(fbb, i, str(fbb, m_perms[i]));
       });
@@ -798,13 +798,13 @@ Offset<Vector<Offset<fbs::Perm>>> Mgr::permGet(
 {
   ReadGuard guard(m_lock);
   if (!Zfb::IsFieldPresent(id_, fbs::PermID::VT_ID)) {
-    return keyVecIter<fbs::Perm>(fbb, m_permCount,
+    return keyVecIter<fbs::Perm>(fbb, m_nPerms,
 	[this](Builder &fbb, unsigned i) {
 	  return fbs::CreatePerm(fbb, i, str(fbb, m_perms[i]));
 	});
   } else {
     auto id = id_->id();
-    if (id < m_permCount)
+    if (id < m_nPerms)
       return keyVec<fbs::Perm>(fbb,
 	  fbs::CreatePerm(fbb, id, str(fbb, m_perms[id])));
     else
@@ -816,13 +816,13 @@ Offset<fbs::PermUpdAck> Mgr::permAdd(
     Zfb::Builder &fbb, const fbs::PermAdd *permAdd_)
 {
   Guard guard(m_lock);
-  if (m_permCount >= Bitmap::Bits) {
+  if (m_nPerms >= Bitmap::Bits) {
     fbs::PermUpdAckBuilder fbb_(fbb);
     fbb_.add_ok(0);
     return fbb_.Finish();
   }
   auto name = Load::str(permAdd_->name());
-  auto id = m_permCount++;
+  auto id = m_nPerms++;
   m_perms[id] = name;
   m_permNames->add(m_perms[id], id);
   m_modified = true;
@@ -835,7 +835,7 @@ Offset<fbs::PermUpdAck> Mgr::permMod(
 {
   Guard guard(m_lock);
   auto id = perm_->id();
-  if (id >= m_permCount) {
+  if (id >= m_nPerms) {
     fbs::PermUpdAckBuilder fbb_(fbb);
     fbb_.add_ok(0);
     return fbb_.Finish();
@@ -852,7 +852,7 @@ Offset<fbs::PermUpdAck> Mgr::permDel(
 {
   Guard guard(m_lock);
   auto id = id_->id();
-  if (id >= m_permCount) {
+  if (id >= m_nPerms) {
     fbs::PermUpdAckBuilder fbb_(fbb);
     fbb_.add_ok(0);
     return fbb_.Finish();
@@ -860,9 +860,9 @@ Offset<fbs::PermUpdAck> Mgr::permDel(
   m_modified = true;
   m_permNames->del(m_perms[id]);
   ZtString name = ZuMv(m_perms[id]);
-  if (id == m_permCount - 1) {
+  if (id == m_nPerms - 1) {
     unsigned i = id;
-    do { m_permCount = i; } while (i && !m_perms[--i]);
+    do { m_nPerms = i; } while (i && !m_perms[--i]);
   }
   return fbs::CreatePermUpdAck(fbb,
       fbs::CreatePerm(fbb, id, str(fbb, name)), 1);

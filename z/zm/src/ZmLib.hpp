@@ -47,7 +47,7 @@
 
 #endif
 
-#ifdef ZDEBUG
+#if defined(ZDEBUG) && (ZmObject_DEBUG)
 #define ZmObject_DEBUG
 #endif
 

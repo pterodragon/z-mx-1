@@ -64,7 +64,7 @@
 #pragma warning(disable:4800)
 #endif
 
-#ifdef ZDEBUG
+#if defined(ZDEBUG) && !defined(ZdbRep_DEBUG)
 #define ZdbRep_DEBUG
 #endif
 

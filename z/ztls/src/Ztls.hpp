@@ -632,13 +632,8 @@ protected:
   }
   template <int Level, typename ...Args> void log_(Args &&... args) {
     app()->exception(ZeEVENT_(Level, (
-      [args...]
-#if 0
-	// LATER - uncomment this when C++20 P0780R2 is implemented
-      [...args = ZuMv(args)]
-#endif
-	  (const ZeEvent &, ZmStream &s) mutable {
-	log__(s, ZuFwd<Args>(args)...);
+      [...args = ZuMv(args)](const ZeEvent &, ZmStream &s) mutable {
+	log__(s, ZuMv(args)...);
       })));
   }
   template <typename ...Args> void logInfo(Args &&... args)

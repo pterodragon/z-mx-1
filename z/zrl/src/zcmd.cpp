@@ -70,7 +70,8 @@ static void usage()
     "\tARGS\t- command arguments\n\n"
     "Environment Variables:\n"
     "\tZCMD_KEY_ID\tAPI key ID\n"
-    "\tZCMD_KEY_SECRET\tAPI key secret\n";
+    "\tZCMD_KEY_SECRET\tAPI key secret\n"
+    "\tZCMD_PLUGIN\tzcmd plugin module\n";
   std::cerr << usage << std::flush;
   ZeLog::stop();
   ZmPlatform::exit(1);
@@ -186,6 +187,14 @@ public:
 
 private:
   void loggedIn() {
+    if (auto plugin = ::getenv("ZCMD_PLUGIN")) {
+      ZvCf *args = new ZvCf();
+      args->set("1", plugin);
+      args->set("#", "2");
+      ZtString out;
+      loadModCmd(stdout, args, out);
+      fwrite(out.data(), 1, out.length(), stdout);
+    }
     if (m_solo) {
       send(ZuMv(m_soloMsg));
     } else {
@@ -1103,7 +1112,7 @@ private:
     return 0;
   }
 
-  int loadModCmd(FILE *file, ZvCf *args, ZtString &out) {
+  int loadModCmd(FILE *, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
     if (argc != 2) throw ZvCmdUsage();
     ZiModule module;

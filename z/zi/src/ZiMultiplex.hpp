@@ -57,7 +57,7 @@
 #include <zlib/ZiPlatform.hpp>
 #include <zlib/ZiIP.hpp>
 
-#ifdef ZDEBUG
+#if defined(ZDEBUG) && !defined(ZiMultiplex_DEBUG)
 #define ZiMultiplex_DEBUG	// enable testing / debugging
 #include <zlib/ZmBackTracer.hpp>
 #endif

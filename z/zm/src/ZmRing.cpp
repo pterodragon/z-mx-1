@@ -44,7 +44,7 @@ int ZmRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
 	      FUTEX_WAIT_BITSET | FUTEX_PRIVATE_FLAG | FUTEX_CLOCK_REALTIME,
 	      (int)val, &out, 0, FUTEX_BITSET_MATCH_ANY) >= 0) return OK;
 	switch (errno) {
-	  case EINTR:		break;
+	  case EINTR:	  break;
 	  case EAGAIN:	  addr.cmpXch(val & ~Waiting, val); return OK;
 	  case ETIMEDOUT: addr.cmpXch(val & ~Waiting, val); return NotReady;
 	  default:	  addr.cmpXch(val & ~Waiting, val); return Error;
@@ -61,9 +61,9 @@ int ZmRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
 	      FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
 	      (int)val, 0, 0, 0) >= 0) return OK;
 	switch (errno) {
-	  case EINTR:		break;
-	  case EAGAIN:	  addr.cmpXch(val & ~Waiting, val); return OK;
-	  default:	  addr.cmpXch(val & ~Waiting, val); return Error;
+	  case EINTR:	break;
+	  case EAGAIN:	addr.cmpXch(val & ~Waiting, val); return OK;
+	  default:	addr.cmpXch(val & ~Waiting, val); return Error;
 	}
 	i = 0;
       } else

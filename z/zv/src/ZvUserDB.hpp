@@ -381,7 +381,7 @@ private:
   void permAdd_() { }
   template <typename Arg0, typename ...Args>
   void permAdd_(Arg0 &&arg0, Args &&... args) {
-    unsigned id = m_permCount++;
+    unsigned id = m_nPerms++;
     m_perms[id] = ZuFwd<Arg0>(arg0);
     m_permNames->add(m_perms[id], id);
     permAdd_(ZuFwd<Args>(args)...);
@@ -390,7 +390,7 @@ public:
   template <typename ...Args>
   unsigned permAdd(Args &&... args) {
     Guard guard(m_lock);
-    unsigned id = m_permCount;
+    unsigned id = m_nPerms;
     permAdd_(ZuFwd<Args>(args)...);
     return id;
   }
@@ -423,15 +423,15 @@ private:
   unsigned		m_totpRange;
 
   mutable Lock		m_lock;
-    unsigned		  m_permCount = 0;
-    ZtString		  m_perms[Bitmap::Bits]; // indexed by permission ID
+    mutable bool	  m_modified = false;	// cleared by save()
     ZmRef<PermNames>	  m_permNames;
     unsigned		  m_permIndex[Perm::Offset + fbs::ReqData_MAX + 1];
     RoleTree		  m_roles; // name -> permissions
     ZmRef<UserIDHash>	  m_users;
     ZmRef<UserNameHash>	  m_userNames;
     ZmRef<KeyHash>	  m_keys;
-    mutable bool	  m_modified = false;	// cleared by save()
+    unsigned		  m_nPerms = 0;
+    ZtString		  m_perms[Bitmap::Bits]; // indexed by permission ID
 };
 
 }

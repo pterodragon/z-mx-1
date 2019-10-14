@@ -182,11 +182,12 @@ namespace Zu_ntoa {
 
   // returns the number of decimal digits in the integer and fractional
   // portions of a floating point number, given:
+  // Bits - the number of bits in the FP mantissa (compile-time constant)
   // v - the integer portion of the number
-  // bits - the number of bits in the FP mantissa (compile-time constant)
   // return value is ((integer digits)<<8) | (fractional digits)
   struct Log10FP {
-    inline static unsigned log(uint64_t v, unsigned bits) {
+    template <unsigned Bits>
+    static unsigned log(uint64_t v) {
       static constexpr uint8_t clz10[] = {
 	 2,  2,  2,  3,  4,  4,  5,  6,  6,  7,
 	 8,  8,  8,  9, 10, 10, 11, 12, 12, 13,
@@ -196,7 +197,7 @@ namespace Zu_ntoa {
 	32, 32, 32, 33, 34, 34, 35, 36, 36, 37,
 	38, 38, 38, 39, 40
       };
-      unsigned digits = clz10[bits];
+      unsigned digits = clz10[Bits];
       digits = (digits>>1U) + (digits & 1U);
       unsigned l;
       if (ZuLikely(v)) {
@@ -204,8 +205,8 @@ namespace Zu_ntoa {
 	unsigned i = clz10[f - 1];
 	i = (i>>1U) +
 	  ((ZuUnlikely(i & 1U)) && (v >= ZuDecimal::pow10_64(i>>1U)));
-	if (ZuLikely(f < bits)) {
-	  f = clz10[(bits - f) - 1];
+	if (ZuLikely(f < Bits)) {
+	  f = clz10[(Bits - f) - 1];
 	  f = (f>>1U) + (f & 1U);
 	} else
 	  f = 0U;
@@ -680,7 +681,7 @@ namespace Zu_ntoa {
       return negative + 3U;
     }
     uint64_t iv = (uint64_t)v;
-    unsigned i = Log10FP::log(iv, FP::Bits);
+    unsigned i = Log10FP::log<FP::Bits>(iv);
     {
       unsigned j = i & 0xffU;
       if (f > j) f = j;
@@ -741,7 +742,7 @@ namespace Zu_ntoa {
       int f = NDP;
       unsigned i;
       if constexpr (!Fixed) {
-	i = Log10FP::log(iv, FP::Bits);
+	i = Log10FP::log<FP::Bits>(iv);
 	unsigned j = i & 0xffU;
 	if ((unsigned)(f = -f) > j) f = j;
 	i >>= 8U;
@@ -1169,7 +1170,7 @@ struct Zu_vprint {
     bool fixed = f >= 0;
     unsigned i;
     if (!fixed) {
-      i = Zu_ntoa::Log10FP::log(iv, FP::Bits);
+      i = Zu_ntoa::Log10FP::log<FP::Bits>(iv);
       unsigned j = i & 0xffU;
       if ((unsigned)(f = -f) > j) f = j;
       i >>= 8U;

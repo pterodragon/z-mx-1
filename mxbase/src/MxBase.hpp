@@ -159,9 +159,9 @@ struct MxValNDP {
     return MxValNDP{(int64_t)i, ndp};
   }
 
-  // scan from string, given NDP
+  // scan from string
   template <typename S>
-  inline MxValNDP(const S &s_, unsigned ndp_,
+  inline MxValNDP(const S &s_, int ndp_ = -1,
       typename ZuIsString<S>::T *_ = 0) : ndp(ndp_) {
     ZuString s(s_);
     if (ZuUnlikely(!s || ndp > 18)) goto null;
@@ -171,6 +171,7 @@ struct MxValNDP {
 	s.offset(1);
 	if (ZuUnlikely(!s)) goto null;
       }
+      while (s[0] == '0') s.offset(1);
       uint64_t iv = 0, fv = 0;
       unsigned n = s.length();
       if (ZuUnlikely(s[0] == '.')) {
@@ -179,9 +180,9 @@ struct MxValNDP {
       }
       n = Zu_atou(iv, s.data(), n);
       if (ZuUnlikely(!n)) goto null;
+      if (ZuUnlikely(n > (18 - (ndp < 0 ? 0 : ndp)))) goto null; // overflow
       s.offset(n);
-      if (ZuUnlikely(iv >= ZuDecimal::pow10_64(18 - ndp))) // overflow
-	goto null;
+      if (ndp < 0) ndp = 18 - n;
       if ((n = s.length()) > 1 && s[0] == '.') {
   frac:
 	if (--n > ndp) n = ndp;
@@ -527,8 +528,8 @@ namespace MxSide {
 //
 // MxInstrKey - market-native ID
 // MxSymKey - industry standard symbology
-// MxInstrKey or MxSymKey, with MxFutKey - future specified by maturity
-// MxInstrKey or MxSymKey, with MxOptKey - option specified by mat/putCall/strike
+// MxInstrKey or MxSymKey, with MxFutKey - future by maturity
+// MxInstrKey or MxSymKey, with MxOptKey - option by mat/putCall/strike
 //
 // for cases (FIX message parsing, etc.) where the type of key cannot be
 // pre-determined at compile time, MxUniKey ("universal key") can be used -

@@ -123,9 +123,7 @@ template <bool Ref = 0> struct MxValNDPVFmt;	// internal
 
 struct MxValNDP {
   MxValue	value;
-  unsigned	ndp;
-
-  ZuInline MxValNDP() : ndp(0) { }
+  unsigned	ndp = 0;
 
   template <typename V>
   ZuInline MxValNDP(V value_, unsigned ndp_,
@@ -162,9 +160,9 @@ struct MxValNDP {
   // scan from string
   template <typename S>
   inline MxValNDP(const S &s_, int ndp_ = -1,
-      typename ZuIsString<S>::T *_ = 0) : ndp(ndp_) {
+      typename ZuIsString<S>::T *_ = 0) {
     ZuString s(s_);
-    if (ZuUnlikely(!s || ndp > 18)) goto null;
+    if (ZuUnlikely(!s || ndp_ > 18)) goto null;
     {
       bool negative = s[0] == '-';
       if (ZuUnlikely(negative)) {
@@ -175,24 +173,26 @@ struct MxValNDP {
       uint64_t iv = 0, fv = 0;
       unsigned n = s.length();
       if (ZuUnlikely(s[0] == '.')) {
-	if (ZuUnlikely(n == 1)) goto null;
+	if (ZuUnlikely(n == 1)) { value = 0; return; }
+	if (ndp_ < 0) ndp_ = n - 1;
 	goto frac;
       }
       n = Zu_atou(iv, s.data(), n);
       if (ZuUnlikely(!n)) goto null;
-      if (ZuUnlikely(n > (18 - (ndp < 0 ? 0 : ndp)))) goto null; // overflow
+      if (ZuUnlikely(n > (18 - (ndp_ < 0 ? 0 : ndp_)))) goto null; // overflow
       s.offset(n);
-      if (ndp < 0) ndp = 18 - n;
+      if (ndp_ < 0) ndp_ = 18 - n;
       if ((n = s.length()) > 1 && s[0] == '.') {
   frac:
-	if (--n > ndp) n = ndp;
+	if (--n > ndp_) n = ndp_;
 	n = Zu_atou(fv, &s[1], n);
-	if (fv && ndp > n)
-	  fv *= ZuDecimal::pow10_64(ndp - n);
+	if (fv && ndp_ > n)
+	  fv *= ZuDecimal::pow10_64(ndp_ - n);
       }
-      value = iv * ZuDecimal::pow10_64(ndp) + fv;
+      value = iv * ZuDecimal::pow10_64(ndp_) + fv;
       if (ZuUnlikely(negative)) value = -value;
     }
+    ndp = ndp_;
     return;
   null:
     value = MxValue();

@@ -9,6 +9,24 @@
 int main()
 {
   // check basic string scan
+  CHECK((double)(MxValNDP{"."}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{".0"}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"0."}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"0.0"}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"-."}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"-.0"}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"-0."}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"-0.0"}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{".", 3}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{".0", 3}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"0.", 3}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"0.0", 3}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"-.", 3}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"-.0", 3}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"-0.", 3}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"-0.0", 3}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"1000.42"}.fp()) == 1000.42);
+  CHECK((double)(MxValNDP{"-1000.42"}.fp()) == -1000.42);
   CHECK((double)(MxValNDP{"1000.42", 4}.fp()) == 1000.42);
   CHECK((double)(MxValNDP{"-1000.42", 4}.fp()) == -1000.42);
   // check basic value/ndp scanning

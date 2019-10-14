@@ -188,7 +188,7 @@ public:
 private:
   void loggedIn() {
     if (auto plugin = ::getenv("ZCMD_PLUGIN")) {
-      ZvCf *args = new ZvCf();
+      ZmRef<ZvCf> args = new ZvCf();
       args->set("1", plugin);
       args->set("#", "2");
       ZtString out;

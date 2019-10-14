@@ -12,10 +12,12 @@ lib_LTLIBRARIES = libMxBase.la
 libMxBase_la_SOURCES = MxBaseLib.cpp MxBaseVersion.cpp MxEngine.cpp \
 	MxTelemetry.cpp
 libMxBase_la_LIBADD = @Z_LIBS@ @MXBASE_XLIBS@
-bin_PROGRAMS = mcap mcmerge mcreplay
+bin_PROGRAMS = mcap mcmerge mcreplay telcap
 mcap_LDADD = libMxBase.la @Z_LIBS@ @MXBASE_XLIBS@
 mcmerge_LDADD = libMxBase.la @Z_LIBS@ @MXBASE_XLIBS@
 mcreplay_LDADD = libMxBase.la @Z_LIBS@ @MXBASE_XLIBS@
+telcap_LDADD = libMxBase.la -lZdb @Z_LIBS@ @MXBASE_XLIBS@
 mcap_SOURCES = mcap.cpp
 mcmerge_SOURCES = mcmerge.cpp
 mcreplay_SOURCES = mcreplay.cpp
+telcap_SOURCES = telcap.cpp

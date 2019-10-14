@@ -43,7 +43,7 @@
 #include <zlib/ZmPLock.hpp>
 #include <zlib/ZmFn_.hpp>
 
-#if defined(ZDEBUG) && (ZmHeap_DEBUG)
+#if defined(ZDEBUG) && !defined(ZmHeap_DEBUG)
 #define ZmHeap_DEBUG
 #endif
 

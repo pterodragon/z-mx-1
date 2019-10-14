@@ -32,8 +32,11 @@
 
 #include <zlib/ZmPLock.hpp>
 
-#ifdef ZDEBUG
+#if defined(ZDEBUG) && !defined(ZmLock_DEBUG)
 #define ZmLock_DEBUG	// enable testing / debugging
+#endif
+
+#ifdef ZmLock_DEBUG
 #include <zlib/ZmBackTracer.hpp>
 #endif
 

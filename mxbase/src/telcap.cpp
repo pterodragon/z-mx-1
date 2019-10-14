@@ -256,7 +256,7 @@ private:
 static void usage()
 {
   std::cerr <<
-    "usage: MxTelClient DIR [PORT]\n"
+    "usage: telcap DIR [PORT]\n"
     "  capture telemetry in directory DIR\n"
     "\tPORT\t- UDP port (defaults to 19300)\n"
     "Options:\n"
@@ -299,7 +299,7 @@ int main(int argc, char **argv)
   ZmTrap::sigintFn([]() { sem.post(); });
   ZmTrap::trap();
 
-  ZeLog::init("MxTelClient");
+  ZeLog::init("telcap");
   ZeLog::level(0);
   ZeLog::sink(ZeLog::fileSink("&2"));
   ZeLog::start();

@@ -39,7 +39,7 @@
 
 #include <zlib/ZpLib.hpp>
 
-#if defined(ZDEBUG) && (ZpPcap_DEBUG)
+#if defined(ZDEBUG) && !defined(ZpPcap_DEBUG)
 #define ZpPcap_DEBUG
 #endif
 

@@ -35,7 +35,7 @@
 #include <zlib/ZmPlatform.hpp>
 #include <zlib/ZmLockTraits.hpp>
 
-#ifdef ZDEBUG
+#if defined(ZDEBUG) && !defined(ZmRWLock_DEBUG)
 #define ZmRWLock_DEBUG	// enable testing / debugging
 #endif
 

@@ -296,8 +296,6 @@ public:
     if (ZuUnlikely(m_state.load_() == State::Down))
       return -1; // disconnect
 
-    scheduleTimeout();
-
     int type = -1;
     int i = ZiIORx::process(data, len,
 	[&type](const uint8_t *data, unsigned len) -> int {

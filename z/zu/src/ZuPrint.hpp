@@ -137,12 +137,19 @@ struct ZuStdStream<std::basic_string<char, T, A> > :
   }
 };
 
+template <typename S, typename P, bool>
+struct ZuStdStreamable_ { enum { OK = 0 }; };
 template <typename S, typename P>
-inline typename ZuIfT<ZuStdStream<S>::Is && ZuPrint<P>::OK, S &>::T
+struct ZuStdStreamable_<S, P, true> { enum { OK = ZuPrint<P>::OK }; };
+template <typename S, typename P>
+struct ZuStdStreamable : public ZuStdStreamable_<S, P, ZuStdStream<S>::Is> { };
+
+template <typename S, typename P>
+inline typename ZuIfT<ZuStdStreamable<S, P>::OK, S &>::T
 operator <<(S &s, const P &p) { ZuStdStream<S>::print(s, p); return s; }
 
 template <typename S, typename P>
-inline typename ZuIfT<ZuStdStream<S>::Is && ZuPrint<P>::OK, S &>::T
+inline typename ZuIfT<ZuStdStreamable<S, P>::OK, S &>::T
 operator +=(S &s, const P &p) { ZuStdStream<S>::print(s, p); return s; }
 
 #endif /* ZuPrint_HPP */

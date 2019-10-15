@@ -192,7 +192,7 @@ protected:
   // block until woken or timeout while addr == val
   int wait(unsigned index, ZmAtomic<uint32_t> &addr, uint32_t val);
   // wake up waiters on addr (up to n waiters are woken)
-  int wake(unsigned index, unsigned n);
+  int wake(unsigned index, int n);
 #endif
 
   static void getpinfo(uint32_t &pid, ZmTime &start);

@@ -97,13 +97,8 @@ int ZiRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
       if (ZuUnlikely(i >= n)) {
 	if (syscall(SYS_futex, (volatile int *)&addr,
 	      FUTEX_WAIT_BITSET | FUTEX_CLOCK_REALTIME,
-	      (int)val, &out, 0, FUTEX_BITSET_MATCH_ANY) >= 0) return Zi::OK;
-	switch (errno) {
-	  case EINTR:    break;
-	  case EAGAIN:   addr.cmpXch(val & ~Waiting, val); return Zi::OK;
-	  case ETIMEDOUT:addr.cmpXch(val & ~Waiting, val); return Zi::NotReady;
-	  default:       addr.cmpXch(val & ~Waiting, val); return Zi::IOError;
-	}
+	      (int)val, &out, 0, FUTEX_BITSET_MATCH_ANY) < 0)
+	  if (errno == ETIMEDOUT) return Zi::NotReady;
 	i = 0;
       } else
 	++i;
@@ -112,13 +107,8 @@ int ZiRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
     unsigned i = 0, n = params().spin();
     do {
       if (ZuUnlikely(i >= n)) {
-	if (syscall(SYS_futex, (volatile int *)&addr,
-	      FUTEX_WAIT, (int)val, 0, 0, 0) >= 0) return Zi::OK;
-	switch (errno) {
-	  case EINTR:		break;
-	  case EAGAIN:	 addr.cmpXch(val & ~Waiting, val); return Zi::OK;
-	  default:	 addr.cmpXch(val & ~Waiting, val); return Zi::IOError;
-	}
+	syscall(SYS_futex, (volatile int *)&addr,
+	    FUTEX_WAIT, (int)val, 0, 0, 0);
 	i = 0;
       } else
 	++i;
@@ -129,9 +119,8 @@ int ZiRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
 
 int ZiRing_::wake(ZmAtomic<uint32_t> &addr, uint32_t n)
 {
-  if (syscall(SYS_futex, (volatile int *)&addr,
-	FUTEX_WAKE, (int)n, 0, 0, 0) < 0)
-    return Zi::IOError;
+  addr &= ~Waiting;
+  syscall(SYS_futex, (volatile int *)&addr, FUTEX_WAKE, (int)n, 0, 0, 0);
   return Zi::OK;
 }
 
@@ -176,7 +165,6 @@ int ZiRing_::wait(unsigned index, ZmAtomic<uint32_t> &addr, uint32_t val)
   do {
     if (ZuUnlikely(i >= n)) {
       DWORD r = WaitForSingleObject(m_sem[index], timeout);
-      addr.cmpXch(val & ~Waiting, val);
       switch ((int)r) {
 	case WAIT_OBJECT_0:	return Zi::OK;
 	case WAIT_TIMEOUT:	return Zi::NotReady;
@@ -191,6 +179,7 @@ int ZiRing_::wait(unsigned index, ZmAtomic<uint32_t> &addr, uint32_t val)
 
 int ZiRing_::wake(unsigned index, unsigned n)
 {
+  addr &= ~Waiting;
   ReleaseSemaphore(m_sem[index], n, 0);
   return Zi::OK;
 }

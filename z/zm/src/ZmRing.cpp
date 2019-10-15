@@ -42,13 +42,8 @@ int ZmRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
       if (ZuUnlikely(i >= n)) {
 	if (syscall(SYS_futex, (volatile int *)&addr,
 	      FUTEX_WAIT_BITSET | FUTEX_PRIVATE_FLAG | FUTEX_CLOCK_REALTIME,
-	      (int)val, &out, 0, FUTEX_BITSET_MATCH_ANY) >= 0) return OK;
-	switch (errno) {
-	  case EINTR:	  break;
-	  case EAGAIN:	  addr.cmpXch(val & ~Waiting, val); return OK;
-	  case ETIMEDOUT: addr.cmpXch(val & ~Waiting, val); return NotReady;
-	  default:	  addr.cmpXch(val & ~Waiting, val); return Error;
-	}
+	      (int)val, &out, 0, FUTEX_BITSET_MATCH_ANY) < 0)
+	  if (errno == ETIMEDOUT) return NotReady;
 	i = 0;
       } else
 	++i;
@@ -57,14 +52,8 @@ int ZmRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
     unsigned i = 0, n = params().spin();
     do {
       if (ZuUnlikely(i >= n)) {
-	if (syscall(SYS_futex, (volatile int *)&addr,
-	      FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
-	      (int)val, 0, 0, 0) >= 0) return OK;
-	switch (errno) {
-	  case EINTR:	break;
-	  case EAGAIN:	addr.cmpXch(val & ~Waiting, val); return OK;
-	  default:	addr.cmpXch(val & ~Waiting, val); return Error;
-	}
+	syscall(SYS_futex, (volatile int *)&addr,
+	    FUTEX_WAIT | FUTEX_PRIVATE_FLAG, (int)val, 0, 0, 0);
 	i = 0;
       } else
 	++i;
@@ -73,12 +62,12 @@ int ZmRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
   return OK;
 }
 
-int ZmRing_::wake(ZmAtomic<uint32_t> &addr, unsigned n)
+int ZmRing_::wake(ZmAtomic<uint32_t> &addr, int n)
 {
   // fprintf(stderr, "WAKE addr: %#.8x (%#.8x) n:%u\n", (unsigned)(uintptr_t)(void *)&addr, (unsigned)addr.load_(), (unsigned)n);
-  if (syscall(SYS_futex, (volatile int *)&addr,
-	FUTEX_WAKE | FUTEX_PRIVATE_FLAG, (int)n, 0, 0, 0) < 0)
-    return Error;
+  addr &= ~Waiting;
+  syscall(SYS_futex, (volatile int *)&addr,
+      FUTEX_WAKE | FUTEX_PRIVATE_FLAG, n, 0, 0, 0);
   return OK;
 }
 
@@ -117,7 +106,6 @@ int ZmRing_::wait(unsigned index, ZmAtomic<uint32_t> &addr, uint32_t val)
   do {
     if (ZuUnlikely(i >= n)) {
       DWORD r = WaitForSingleObject(m_sem[index], timeout);
-      addr.cmpXch(val & ~Waiting, val);
       switch ((int)r) {
 	case WAIT_OBJECT_0:	return OK;
 	case WAIT_TIMEOUT:	return NotReady;
@@ -130,8 +118,9 @@ int ZmRing_::wait(unsigned index, ZmAtomic<uint32_t> &addr, uint32_t val)
   return OK;
 }
 
-int ZmRing_::wake(unsigned index, unsigned n)
+int ZmRing_::wake(unsigned index, int n)
 {
+  addr &= ~Waiting;
   ReleaseSemaphore(m_sem[index], n, 0);
   return OK;
 }

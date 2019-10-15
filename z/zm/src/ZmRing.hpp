@@ -109,7 +109,7 @@ protected:
   // block until woken or timeout while addr == val
   int wait(ZmAtomic<uint32_t> &addr, uint32_t val);
   // wake up waiters on addr (up to n waiters are woken)
-  int wake(ZmAtomic<uint32_t> &addr, unsigned n);
+  int wake(ZmAtomic<uint32_t> &addr, int n);
 #endif
 
 #ifdef _WIN32
@@ -118,7 +118,7 @@ protected:
   // block until woken or timeout while addr == val
   int wait(unsigned index, ZmAtomic<uint32_t> &addr, uint32_t val);
   // wake up waiters on addr (up to n waiters are woken)
-  int wake(unsigned index, unsigned n);
+  int wake(unsigned index, int n);
 #endif
 
 public:

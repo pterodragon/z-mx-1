@@ -117,10 +117,10 @@ int ZiRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
   return Zi::OK;
 }
 
-int ZiRing_::wake(ZmAtomic<uint32_t> &addr, uint32_t n)
+int ZiRing_::wake(ZmAtomic<uint32_t> &addr, int n)
 {
   addr &= ~Waiting;
-  syscall(SYS_futex, (volatile int *)&addr, FUTEX_WAKE, (int)n, 0, 0, 0);
+  syscall(SYS_futex, (volatile int *)&addr, FUTEX_WAKE, n, 0, 0, 0);
   return Zi::OK;
 }
 

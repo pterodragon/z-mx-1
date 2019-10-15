@@ -1244,6 +1244,7 @@ int main(int argc, char **argv)
 
   {
     ZmRef<ZvCf> cf = new ZvCf();
+    cf->set("timeout", "1");
     cf->set("thread", "3");
     if (auto caPath = ::getenv("ZCMD_CAPATH"))
       cf->set("caPath", caPath);

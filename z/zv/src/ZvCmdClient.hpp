@@ -310,6 +310,7 @@ public:
 	  data += ZvCmd_hdrLen(), len -= ZvCmd_hdrLen();
 	  int i;
 	  if (ZuUnlikely(m_state.load_() == State::Login)) {
+	    cancelTimeout();
 	    if (type != ZvCmd::fbs::MsgType_Login) return -1;
 	    i = processLoginAck(data, len);
 	  } else if (ZuUnlikely(type < 0))

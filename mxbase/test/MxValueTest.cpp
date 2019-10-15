@@ -9,10 +9,12 @@
 int main()
 {
   // check basic string scan
+  CHECK((double)(MxValNDP{"0"}.fp()) == 0.0);
   CHECK((double)(MxValNDP{"."}.fp()) == 0.0);
   CHECK((double)(MxValNDP{".0"}.fp()) == 0.0);
   CHECK((double)(MxValNDP{"0."}.fp()) == 0.0);
   CHECK((double)(MxValNDP{"0.0"}.fp()) == 0.0);
+  CHECK((double)(MxValNDP{"-0"}.fp()) == 0.0);
   CHECK((double)(MxValNDP{"-."}.fp()) == 0.0);
   CHECK((double)(MxValNDP{"-.0"}.fp()) == 0.0);
   CHECK((double)(MxValNDP{"-0."}.fp()) == 0.0);

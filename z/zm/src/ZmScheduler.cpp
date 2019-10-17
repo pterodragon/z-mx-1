@@ -418,6 +418,7 @@ bool ZmScheduler::tryRunWake_(Thread *thread, ZmFn<> &fn)
 
 bool ZmScheduler::run__(Thread *thread, ZmFn<> fn)
 {
+retry:
   {
     ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
     void *ptr;
@@ -429,6 +430,7 @@ bool ZmScheduler::run__(Thread *thread, ZmFn<> fn)
   }
   int status = thread->ring.writeStatus();
   if (status == ZmRing_::EndOfFile) return false;
+  if (status >= 0) { ZmPlatform::yield(); goto retry; }
   // should never happen - the enqueuing thread will normally
   // be forced to wait for the dequeuing thread to drain the ring,
   // i.e. a slower consumer will apply back-pressure to the producer

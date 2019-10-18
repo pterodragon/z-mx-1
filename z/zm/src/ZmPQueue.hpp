@@ -1124,8 +1124,8 @@ public:
     Guard guard(m_lock);
     app->cancelReRequest();
     m_flags &= ~(Queuing | Dequeuing);
-    m_gap = Gap();
     app->rxQueue()->reset(key);
+    m_gap = Gap();
   }
 
   // start queueing (during snapshot recovery)
@@ -1142,6 +1142,7 @@ public:
       Guard guard(m_lock);
       m_flags &= ~Queuing;
       app->rxQueue()->head(key);
+      m_gap = app->rxQueue()->gap();
       scheduleDequeue = !(m_flags & Dequeuing) && app->rxQueue()->count();
       if (scheduleDequeue) m_flags |= Dequeuing;
     }

@@ -97,8 +97,10 @@ int ZiRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
       if (ZuUnlikely(i >= n)) {
 	if (syscall(SYS_futex, (volatile int *)&addr,
 	      FUTEX_WAIT_BITSET | FUTEX_CLOCK_REALTIME,
-	      (int)val, &out, 0, FUTEX_BITSET_MATCH_ANY) < 0)
+	      (int)val, &out, 0, FUTEX_BITSET_MATCH_ANY) < 0) {
 	  if (errno == ETIMEDOUT) return Zi::NotReady;
+	  if (errno == EAGAIN) return Zi::OK;
+	}
 	i = 0;
       } else
 	++i;

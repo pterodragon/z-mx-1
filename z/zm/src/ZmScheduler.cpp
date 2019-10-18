@@ -420,7 +420,7 @@ bool ZmScheduler::run__(Thread *thread, ZmFn<> fn)
 {
 retry:
   {
-    ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
+    Thread::Guard guard(thread->lock); // ensure serialized ring push()
     void *ptr;
     if (ZuLikely(ptr = thread->ring.push())) {
       new (ptr) ZmFn<>(ZuMv(fn));
@@ -452,9 +452,9 @@ retry:
 bool ZmScheduler::tryRun__(Thread *thread, ZmFn<> &fn)
 {
   {
-    ZmGuard<ZmSpinLock> guard(thread->lock); // ensure serialized ring push()
+    Thread::Guard guard(thread->lock); // ensure serialized ring push()
     void *ptr;
-    if (ZuLikely(ptr = thread->ring.push())) {
+    if (ZuLikely(ptr = thread->ring.tryPush())) {
       new (ptr) ZmFn<>(ZuMv(fn));
       thread->ring.push2(ptr);
       return true;

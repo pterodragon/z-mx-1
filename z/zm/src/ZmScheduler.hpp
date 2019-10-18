@@ -324,7 +324,10 @@ protected:
 
 private:
   struct Thread {
-    ZmSpinLock	lock;
+    using Lock = ZmPLock;
+    using Guard = ZmGuard<Lock>;
+
+    Lock	lock;
     Ring	ring;
     ZmFn<>	wakeFn;
     ZmThreadID	tid = 0;

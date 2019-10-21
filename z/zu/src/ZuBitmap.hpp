@@ -129,7 +129,7 @@ public:
     while (begin <= end) {
       uint64_t mask = (~((uint64_t)0));
       unsigned i = (begin>>Shift);
-      if (i == (end>>Shift))
+      if (i == (((unsigned)end)>>Shift))
 	mask >>= (63 - (end - begin));
       if (uint64_t begin_ = (begin & Mask)) {
 	mask <<= begin_;

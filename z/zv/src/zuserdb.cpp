@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 
   mgr.bootstrap(argv[2], argv[3], passwd, secret);
 
-  for (unsigned i = 5; i < argc; i++) mgr.permAdd(argv[i]);
+  for (unsigned i = 5; i < (unsigned)argc; i++) mgr.permAdd(argv[i]);
 
   ZeError e;
   if (mgr.save(path, 0, &e) != Zi::OK) {

@@ -628,7 +628,7 @@ namespace MxMDStream {
       cxn->send(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
 	io.init(ZiIOFn{io.fn.mvObject<MxQMsg>(),
 	  [](MxQMsg *msg, ZiIOContext &io) {
-	    if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+	    io.offset += io.length;
 	  }}, msg->ptr<Msg>()->ptr(), msg->length, 0);
       }});
     }

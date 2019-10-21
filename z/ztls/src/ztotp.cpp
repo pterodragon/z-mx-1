@@ -21,7 +21,8 @@ int main(int argc, char **argv)
   if (argc != 2) usage();
   int n = strlen(argv[1]);
   secret.length(Ztls::Base32::declen(n));
-  Ztls::Base32::decode(secret.data(), secret.length(), argv[1], n);
+  secret.length(
+      Ztls::Base32::decode(secret.data(), secret.length(), argv[1], n));
   auto code = Ztls::TOTP::calc(secret.data(), secret.length());
   std::cout << ZuBoxed(code).fmt(ZuFmt::Right<6>()) << '\n';
 }

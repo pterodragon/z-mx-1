@@ -63,6 +63,8 @@ ZmScheduler::ZmScheduler(ZmSchedParams params) :
     if ((r = ring.open(Ring::Read | Ring::Write)) != Ring::OK)
       throw ZmRingError(r);
     // if ((r = ring.attach()) != Ring::OK) throw ZmRingError(r);
+    m_threads[i].overRing.init(
+	ZmDRingParams().initial(0).increment(OverRing_Increment));
     if (!m_params.thread(tid).isolated())
       m_workers[m_nWorkers++] = &m_threads[i];
   }
@@ -90,7 +92,7 @@ void ZmScheduler::runThreads()
 
   {
     unsigned n = m_params.nThreads();
-    ZmGuard<ZmSpinLock> spawnGuard(m_spawnLock);
+    SpawnGuard spawnGuard(m_spawnLock);
     while (m_runThreads < n) {
       ZmBitmap cpuset;
       unsigned tid = ++m_runThreads;
@@ -214,7 +216,7 @@ void ZmScheduler::stop()
 
   {
     unsigned n = m_params.nThreads();
-    ZmGuard<ZmSpinLock> spawnGuard(m_spawnLock);
+    SpawnGuard spawnGuard(m_spawnLock);
     for (unsigned i = 0; i < n; i++)
       m_threads[i].ring.eof(true);
     for (unsigned i = 0; i < n; i++) {
@@ -250,7 +252,7 @@ void ZmScheduler::reset()
 
   {
     unsigned n = m_params.nThreads();
-    ZmGuard<ZmSpinLock> spawnGuard(m_spawnLock);
+    SpawnGuard spawnGuard(m_spawnLock);
     for (unsigned i = 0; i < n; i++)
       if (!m_threads[i].thread) m_threads[i].ring.reset();
   }
@@ -399,7 +401,7 @@ void ZmScheduler::add(ZmFn<> fn)
   unsigned first = m_next++;
   unsigned next = first;
   do {
-    Thread *thread = m_workers[next % m_nWorkers];
+    auto thread = m_workers[next % m_nWorkers];
     if (tryRunWake_(thread, fn)) return;
   } while (((next = m_next++) - first) < m_nWorkers);
   runWake_(m_workers[first % m_nWorkers], ZuMv(fn));
@@ -418,19 +420,24 @@ bool ZmScheduler::tryRunWake_(Thread *thread, ZmFn<> &fn)
 
 bool ZmScheduler::run__(Thread *thread, ZmFn<> fn)
 {
-retry:
+  if (ZuLikely(!thread->overCount.load_())) goto push;
+overflow:
+  ++thread->overCount;
+  thread->overRing.push(ZuMv(fn));
+  return true;
+push:
   {
-    Thread::Guard guard(thread->lock); // ensure serialized ring push()
+    // Thread::Guard guard(thread->lock); // ensure serialized ring push()
     void *ptr;
-    if (ZuLikely(ptr = thread->ring.push())) {
+    if (ZuLikely(ptr = thread->ring.tryPush())) {
       new (ptr) ZmFn<>(ZuMv(fn));
       thread->ring.push2(ptr);
       return true;
     }
   }
   int status = thread->ring.writeStatus();
-  if (status == ZmRing_::EndOfFile) return false;
-  if (status >= 0) { ZmPlatform::yield(); goto retry; }
+  if (status == Ring::EndOfFile) return false;
+  if (status >= 0) goto overflow;
   // should never happen - the enqueuing thread will normally
   // be forced to wait for the dequeuing thread to drain the ring,
   // i.e. a slower consumer will apply back-pressure to the producer
@@ -452,7 +459,7 @@ retry:
 bool ZmScheduler::tryRun__(Thread *thread, ZmFn<> &fn)
 {
   {
-    Thread::Guard guard(thread->lock); // ensure serialized ring push()
+    // Thread::Guard guard(thread->lock); // ensure serialized ring push()
     void *ptr;
     if (ZuLikely(ptr = thread->ring.tryPush())) {
       new (ptr) ZmFn<>(ZuMv(fn));
@@ -473,6 +480,18 @@ void ZmScheduler::work()
   m_threadInitFn();
 
   for (;;) {
+    if (ZuLikely(!thread->overCount.load_())) goto shift;
+    if (ZmFn<> fn = thread->overRing.shift()) {
+      void *ptr;
+      if (ZuLikely(ptr = thread->ring.tryPush())) {
+	new (ptr) ZmFn<>(ZuMv(fn));
+	thread->ring.push2(ptr);
+	--thread->overCount;
+      } else {
+	thread->overRing.unshift(ZuMv(fn));
+      }
+    }
+shift:
     if (ZmFn<> *ptr = thread->ring.shift()) {
       ZmFn<> fn = ZuMv(*ptr);
       ptr->~ZmFn<>();

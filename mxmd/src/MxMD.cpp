@@ -496,6 +496,7 @@ void MxMDOBSide::pxLevel_(
       if (m_mktLevel->data().qty) {
 	if (handler) pxLevelFn = &handler->updatedMktLevel;
       } else {
+	m_mktLevel->reset(transactTime, [](MxMDOrder *, MxDateTime) { });
 	m_mktLevel = 0;
 	if (handler) pxLevelFn = &handler->deletedMktLevel;
       }
@@ -523,6 +524,7 @@ void MxMDOBSide::pxLevel_(
       if (handler) pxLevelFn = &handler->updatedPxLevel;
     } else {
       if (handler) pxLevelFn = &handler->deletedPxLevel;
+      pxLevel->reset(transactTime, [](MxMDOrder *, MxDateTime) { });
       m_pxLevels.del(pxLevel);
     }
   }
@@ -628,6 +630,7 @@ void MxMDOBSide::delOrder_(
     pxLevel = m_mktLevel;
     if (!m_mktLevel->data().qty) {
       if (handler) pxLevelFn = &handler->deletedMktLevel;
+      m_mktLevel->reset(transactTime, [](MxMDOrder *, MxDateTime) { });
       m_mktLevel = nullptr;
     } else
       if (handler) pxLevelFn = &handler->updatedMktLevel;
@@ -644,6 +647,7 @@ void MxMDOBSide::delOrder_(
   pxLevel->delOrder(orderData.rank);
   if (!pxLevel->data().qty) {
     if (handler) pxLevelFn = &handler->deletedPxLevel;
+    pxLevel->reset(transactTime, [](MxMDOrder *, MxDateTime) { });
     m_pxLevels.del(pxLevel);
   } else {
     if (handler) pxLevelFn = &handler->updatedPxLevel;

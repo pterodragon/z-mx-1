@@ -40,7 +40,7 @@ void MxMDSubscriber::init(MxMDCore *core, ZvCf *cf)
   m_timeout = cf->getDbl("timeout", 0, 3600, false, 3);
   m_reconnInterval = cf->getDbl("reconnInterval", 0, 3600, false, 10);
   m_reReqInterval = cf->getDbl("reReqInterval", 0, 3600, false, 1);
-  m_reReqMaxGap = cf->getInt("reReqMaxGap", 0, 1000, false, 10);
+  m_reReqMaxGap = cf->getInt("reReqMaxGap", 0, 1000000, false, 10);
 
   if (ZuString channels = cf->get("channels"))
     updateLinks(channels);

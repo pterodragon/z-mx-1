@@ -363,6 +363,8 @@ void App::main()
     std::cout << *order << '\n';
   }
 
+  delete order;
+
   std::cout <<
     "sizeof(Reject): " << ZuBoxed(sizeof(Reject)) << '\n' <<
     "sizeof(NewOrder): " << ZuBoxed(sizeof(NewOrder)) << '\n' <<

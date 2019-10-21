@@ -148,5 +148,7 @@ int main(int argc, char **argv)
 
   ZeLog::stop();
 
+  ZmTrap::sigintFn(ZmFn<>{});
+
   return 0;
 }

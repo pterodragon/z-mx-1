@@ -35,17 +35,24 @@
 #include <zlib/ZuInt.hpp>
 #include <zlib/ZuArray.hpp>
 
+#include <zlib/ZmPolymorph.hpp>
+#include <zlib/ZmRef.hpp>
+
 #include <zlib/Zfb.hpp>
 
 #include <zlib/ZvCmdHost.hpp>
 
+struct ZCmdPlugin : public ZmPolymorph {
+  virtual void final() = 0;
+  virtual int processApp(ZuArray<const uint8_t> data) = 0;
+};
+
 struct ZCmdHost : public ZvCmdHost {
   using AppFn = ZmFn<ZuArray<const uint8_t> >;
 
+  virtual void plugin(ZmRef<ZCmdPlugin>) = 0;
   virtual void sendApp(Zfb::IOBuilder &) = 0;
   virtual int executed(int code, FILE *file, ZuString out) = 0;
-
-  AppFn		processAppFn;
 };
 
 // loadable module must export void ZCmd_plugin(ZCmdHost *)

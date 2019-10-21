@@ -75,7 +75,10 @@ public:
     uint8_t *old = jumbo;
     jumbo = (uint8_t *)::malloc(size_);
     size = size_;
-    if (!length) return jumbo;
+    if (!length) {
+      if (ZuUnlikely(old)) ::free(old);
+      return jumbo;
+    }
     if (ZuLikely(!old)) {
       memcpy(jumbo, data_, length);
       return jumbo;
@@ -124,9 +127,9 @@ public:
 
     auto rxPtr = rxData;
     while (len >= 4) {
-      auto frameLen = hdr(rxPtr, len);
+      int frameLen = hdr(rxPtr, len);
 
-      if (len < frameLen) break;
+      if (frameLen < 0 || len < (unsigned)frameLen) break;
 
       frameLen = body(rxPtr, frameLen);
 

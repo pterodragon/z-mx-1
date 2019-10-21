@@ -148,6 +148,10 @@ public:
   }
   void final() {
     m_link = nullptr;
+    if (m_plugin) {
+      m_plugin->final();
+      m_plugin = nullptr;
+    }
     ZvCmdHost::final();
     Base::final();
   }
@@ -183,6 +187,10 @@ public:
 
   void exiting() { m_exiting = true; }
 
+  void plugin(ZmRef<ZCmdPlugin> plugin) {
+    if (ZuUnlikely(m_plugin)) m_plugin->final();
+    m_plugin = ZuMv(plugin);
+  }
   void sendApp(Zfb::IOBuilder &fbb) { return m_link->sendApp(fbb); }
 
 private:
@@ -207,8 +215,8 @@ private:
   }
 
   int processApp(ZuArray<const uint8_t> data) {
-    if (!processAppFn) return -1;
-    return processAppFn(data);
+    if (ZuUnlikely(!m_plugin)) return -1;
+    return m_plugin->processApp(ZuMv(data));
   }
 
   void disconnected() {
@@ -1145,6 +1153,7 @@ private:
   bool			m_interactive = true;
   bool			m_solo = false;
   bool			m_exiting = false;
+  ZmRef<ZCmdPlugin>	m_plugin;
 };
 
 int main(int argc, char **argv)
@@ -1294,6 +1303,10 @@ int main(int argc, char **argv)
   ZeLog::stop();
 
   client->final();
+
+  delete mx;
+
+  ZmTrap::sigintFn(ZmFn<>{});
 
   return client->code();
 }

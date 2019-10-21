@@ -264,7 +264,7 @@ private:
 	return false;
       }
       if (!n) break;
-      if (n < m_rxOutOffset)
+      if (n < (int)m_rxOutOffset)
 	memmove(m_rxOutBuf, m_rxOutBuf + n, m_rxOutOffset -= n);
       else
 	m_rxOutOffset = 0;

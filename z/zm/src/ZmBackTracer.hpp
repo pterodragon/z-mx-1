@@ -45,9 +45,13 @@ public:
 private:
   typedef ZuTuple<ZmThreadID, ZmThreadName, ZmBackTrace> Data;
 
+  using Lock = ZmPLock;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
+
 public:
   inline void capture(unsigned skip = 0) {
-    ZmGuard<ZmPLock> guard(m_lock);
+    Guard guard(m_lock);
     unsigned i = m_offset;
     m_offset = (i + 1) & 63;
     Data *data = new (m_captures[i].new1()) Data();
@@ -58,7 +62,7 @@ public:
   }
 
   template <typename S> void dump(S &s) const {
-    ZmGuard<ZmPLock> guard(m_lock);
+    ReadGuard guard(m_lock);
     bool first = true;
     for (unsigned i = 0; i < N; i++) {
       unsigned j = (m_offset + (N - 1) - i) % N;

@@ -148,6 +148,9 @@ public:
     ref(m_object);
   }
 
+  // access invoker
+  ZuInline uintptr_t invoker() const { return m_invoker; }
+
   ZuInline bool operator ==(const ZmAnyFn &fn) const {
     return m_invoker == fn.m_invoker && m_object == fn.m_object;
   }

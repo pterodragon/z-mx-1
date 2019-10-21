@@ -211,8 +211,7 @@ public:
 
   template <typename S> inline void print(S &s) const {
     ZmPRWLock::print(s);
-    s << " tid=" << ZuBox<ZmPlatform::ThreadID>(m_tid) <<
-      " count=" << m_count;
+    s << " tid=" << ZuBoxed(m_tid.load_()) << " count=" << m_count;
   }
 
 private:

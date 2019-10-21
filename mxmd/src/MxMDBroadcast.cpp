@@ -118,7 +118,6 @@ void MxMDBroadcast::heartbeat_()
 {
   using namespace MxMDStream;
   if (ZuUnlikely(!m_ring)) return;
-  m_lastTime.now();
   if (void *ptr = m_ring->push(sizeof(Hdr) + sizeof(HeartBeat))) {
     Hdr *hdr = new (ptr) Hdr{
 	(uint64_t)m_seqNo++, (uint32_t)0,
@@ -126,6 +125,7 @@ void MxMDBroadcast::heartbeat_()
     new (hdr->body()) HeartBeat{MxDateTime{m_lastTime}};
     m_ring->push2();
   }
+  m_lastTime.now();
   m_core->mx()->add(ZmFn<>::Member<&MxMDBroadcast::heartbeat>::fn(this),
       m_lastTime + ZmTime{(time_t)1, 0}, &m_hbTimer);
 }

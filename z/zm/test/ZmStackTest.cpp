@@ -121,6 +121,17 @@ void doit2(S &s)
   test(s.pop().value() == 5);
   test(s.pop().value() == 9);
   test(ZuCmp<C>::null(s.pop()));
+  s.clean();
+  int n = s.size();
+  s.push(C(0));
+  for (i = 1; i < n; i++) { s.push(C(i)); s.shift(); }
+  for (i = 0; i < n - 1; i++) s.push(C(i));
+  s.clean();
+  n = s.size();
+  s.push(C(0));
+  for (i = 1; i < n; i++) { s.push(C(i)); s.shift(); }
+  n = s.size() + 1;
+  for (i = 0; i < n; i++) s.push(C(i));
 }
 
 ZmAtomic<uint32_t> C::m_count = 0;

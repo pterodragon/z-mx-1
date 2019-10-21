@@ -37,7 +37,6 @@
 #include <zlib/ZuString.hpp>
 #include <zlib/ZuStringN.hpp>
 #include <zlib/ZuMvArray.hpp>
-#include <zlib/ZuPrint.hpp>
 #include <zlib/ZuID.hpp>
 
 #include <zlib/ZmAtomic.hpp>
@@ -47,8 +46,8 @@
 #include <zlib/ZmCondition.hpp>
 #include <zlib/ZmSemaphore.hpp>
 #include <zlib/ZmRing.hpp>
+#include <zlib/ZmDRing.hpp>
 #include <zlib/ZmRBTree.hpp>
-#include <zlib/ZmPQueue.hpp>
 #include <zlib/ZmThread.hpp>
 #include <zlib/ZmTime.hpp>
 #include <zlib/ZmFn.hpp>
@@ -82,7 +81,7 @@ public:
   using Thread = ZmSchedTParams;
   using Threads = ZuMvArray<Thread>;
 
-  typedef ZuID ID;
+  using ID = ZuID;
 
   template <typename S> inline ZmSchedParams &&id(const S &s)
     { m_id = s; return ZuMv(*this); }
@@ -167,15 +166,18 @@ class ZmAPI ZmScheduler {
     void	*ptr;
   };
 
-  typedef ZmRBTree<ZmTime,
-	    ZmRBTreeVal<Timer_,
-	      ZmRBTreeLock<ZmNoLock,
-		ZmRBTreeHeapID<ScheduleTree_HeapID> > > > ScheduleTree;
+  using ScheduleTree =
+    ZmRBTree<ZmTime,
+      ZmRBTreeVal<Timer_,
+	ZmRBTreeLock<ZmNoLock,
+	  ZmRBTreeHeapID<ScheduleTree_HeapID>>>>;
 
 public:
-  typedef ZmRing<ZmFn<> > Ring;
-  typedef ZmRef<ScheduleTree::Node> Timer;
-  typedef ZmSchedParams::ID ID;
+  using Ring = ZmRing<ZmFn<>>;
+  using OverRing = ZmDRing<ZmFn<>, ZmDRingLock<ZmPLock> >;
+  enum { OverRing_Increment = 128 };
+  using Timer = ZmRef<ScheduleTree::Node>;
+  using ID = ZmSchedParams::ID;
   enum { Stopped = 0, Starting, Running, Draining, Drained, Stopping, N };
   inline static const char *stateName(int i) {
     static const char *names[] =
@@ -323,15 +325,16 @@ protected:
   void idle();
 
 private:
-  struct Thread {
-    using Lock = ZmPLock;
-    using Guard = ZmGuard<Lock>;
+  using SpawnLock = ZmPLock;
+  using SpawnGuard = ZmGuard<SpawnLock>;
 
-    Lock	lock;
-    Ring	ring;
-    ZmFn<>	wakeFn;
-    ZmThreadID	tid = 0;
-    ZmThread	thread;
+  struct Thread {
+    Ring		ring;
+    ZmFn<>		wakeFn;
+    ZmThreadID		tid = 0;
+    ZmThread		thread;
+    ZmAtomic<unsigned>	overCount;
+    OverRing		overRing;	// fallback overflow ring
   };
 
   ZuInline void wake(Thread *thread) { (thread->wakeFn)(); }
@@ -365,7 +368,7 @@ private:
   unsigned			m_nWorkers = 0;
   Thread			**m_workers;
 
-  ZmSpinLock			m_spawnLock;
+  SpawnLock			m_spawnLock;
     unsigned			  m_runThreads = 0;
 
   ZmSemaphore			m_stopped;

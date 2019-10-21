@@ -2272,8 +2272,6 @@ inline uintptr_t MxMDPxLevel_::match(MxDateTime transactTime,
   }
   if (m_data.qty != oldQty) {
     m_obSide->matched(m_price, m_data.qty - oldQty);
-    md->pxLevel(ob, side, transactTime,
-	false, m_price, m_data.qty, m_data.nOrders, m_data.flags);
     if (MxMDOrderBook *out = ob->out())
       out->pxLevel_(
 	  side, transactTime, true, m_price,

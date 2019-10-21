@@ -278,7 +278,8 @@ public:
   void telemetry(ZmThreadTelemetry &data) const;
 
   template <typename S> inline void print(S &s) const {
-    s << this->name() << " (" << ZuBoxed(tid()) << ") [" << m_cpuset << "]";
+    s << this->name() << " (" << ZuBoxed(tid()) << ") [" << m_cpuset << "] "
+      << ZuBoxed(cpuUsage() * 100.0).fmt(ZuFmt::FP<2>()) << '%';
   }
 
 private:

@@ -188,6 +188,7 @@ public:
   ZuInline unsigned size_() const { return m_size; }
   ZuInline unsigned length_() const { return m_length; }
   ZuInline unsigned count_() const { return m_count; }
+  ZuInline unsigned offset_() const { return m_offset; }
 
 private:
   inline void lazy() {

@@ -86,7 +86,7 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 	    if (queueID.length() < MxIDStrSize - 1)
 	      queueID << '_';
 	    else
-	      queueID[MxIDStrSize - 1] = '_';
+	      queueID[MxIDStrSize - 2] = '_';
 	    {
 	      const auto &overRing = mx->overRing(tid);
 	      overRing.stats(inCount, outCount);

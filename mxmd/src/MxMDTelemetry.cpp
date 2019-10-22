@@ -70,15 +70,34 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
 	{
 	  uint64_t inCount, inBytes, outCount, outBytes;
 	  for (unsigned tid = 1, n = mx->params().nThreads(); tid <= n; tid++) {
-	    const ZmScheduler::Ring &ring = mx->ring(tid);
-	    ring.stats(inCount, inBytes, outCount, outBytes);
-	    cxn->transmit(queue(
-		  MxIDString() << mx->params().id() << '.'
-		    << mx->params().thread(tid).name(),
-		  (uint64_t)0, (uint64_t)ring.count(),
-		  inCount, inBytes, outCount, outBytes,
-		  (uint32_t)ring.full(), (uint32_t)ring.params().size(),
-		  (uint8_t)QueueType::Thread));
+	    MxIDString queueID;
+	    queueID << mx->params().id() << '.'
+	      << mx->params().thread(tid).name();
+	    {
+	      const auto &ring = mx->ring(tid);
+	      ring.stats(inCount, inBytes, outCount, outBytes);
+	      cxn->transmit(queue(
+		    queueID,
+		    (uint64_t)0, (uint64_t)ring.count(),
+		    inCount, inBytes, outCount, outBytes,
+		    (uint32_t)ring.full(), (uint32_t)ring.params().size(),
+		    (uint8_t)QueueType::Thread));
+	    }
+	    if (queueID.length() < MxIDStrSize - 1)
+	      queueID << '_';
+	    else
+	      queueID[MxIDStrSize - 1] = '_';
+	    {
+	      const auto &overRing = mx->overRing(tid);
+	      overRing.stats(inCount, outCount);
+	      cxn->transmit(queue(
+		    queueID,
+		    (uint64_t)0, (uint64_t)overRing.count_(),
+		    inCount, inCount * sizeof(ZmFn<>),
+		    outCount, outCount * sizeof(ZmFn<>),
+		    (uint32_t)0, (uint32_t)overRing.size_(),
+		    (uint8_t)QueueType::Thread));
+	    }
 	  }
 	}
 	mx->allCxns([cxn](ZiConnection *cxn_) {

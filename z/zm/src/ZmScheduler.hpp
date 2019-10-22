@@ -174,7 +174,38 @@ class ZmAPI ZmScheduler {
 
 public:
   using Ring = ZmRing<ZmFn<>>;
-  using OverRing = ZmDRing<ZmFn<>, ZmDRingLock<ZmPLock> >;
+  using OverRing_ =  ZmDRing<ZmFn<>, ZmDRingLock<ZmNoLock>>;
+  struct OverRing : public OverRing_ {
+    using Lock = ZmPLock;
+    using Guard = ZmGuard<Lock>;
+    using ReadGuard = ZmReadGuard<Lock>;
+
+    ZuInline void push(ZmFn<> fn) {
+      Guard guard(m_lock);
+      OverRing_::push(ZuMv(fn));
+      ++m_inCount;
+    }
+    ZuInline void unshift(ZmFn<> fn) {
+      Guard guard(m_lock);
+      OverRing_::unshift(ZuMv(fn));
+      --m_outCount;
+    }
+    ZuInline ZmFn<> shift() {
+      Guard guard(m_lock);
+      ZmFn<> fn = OverRing_::shift();
+      if (fn) ++m_outCount;
+      return fn;
+    }
+    void stats(uint64_t &inCount, uint64_t &outCount) const {
+      ReadGuard guard(m_lock);
+      inCount = m_inCount;
+      outCount = m_outCount;
+    }
+
+    Lock	m_lock;
+    unsigned	  m_inCount = 0;
+    unsigned	  m_outCount = 0;
+  };
   enum { OverRing_Increment = 128 };
   using Timer = ZmRef<ScheduleTree::Node>;
   using ID = ZmSchedParams::ID;
@@ -308,6 +339,9 @@ public:
   }
   inline const Ring &ring(unsigned tid) const {
     return m_threads[tid - 1].ring;
+  }
+  inline const OverRing &overRing(unsigned tid) const {
+    return m_threads[tid - 1].overRing;
   }
 
   inline unsigned tid(ZuString s) {

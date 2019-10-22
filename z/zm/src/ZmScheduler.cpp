@@ -420,6 +420,7 @@ bool ZmScheduler::tryRunWake_(Thread *thread, ZmFn<> &fn)
 
 bool ZmScheduler::run__(Thread *thread, ZmFn<> fn)
 {
+  // Note: the MPSC requirement is to serialize within the producing thread
   if (ZuLikely(!thread->overCount.load_())) goto push;
 overflow:
   ++thread->overCount;

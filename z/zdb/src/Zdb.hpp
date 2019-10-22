@@ -450,7 +450,9 @@ template <typename T> struct ZdbPOD_Cmpr_HeapID {
 };
 
 template <typename T_>
-struct ZdbData : public T_, public ZdbTrailer { };
+struct ZdbData : public T_, public ZdbTrailer {
+  using T = T_;
+};
 
 template <typename T_, class Heap>
 class ZdbPOD_ : public Heap, public ZuPOD_<ZdbData<T_>, ZdbAnyPOD> {

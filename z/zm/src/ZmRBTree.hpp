@@ -1080,19 +1080,19 @@ protected:
   inline typename ZuIfT<(Direction >= 0)>::T startIterate(
       Iterator_<Direction> &iterator) {
     iterator.m_node = m_minimum;
-    iterator.m_last = 0;
+    iterator.m_last = nullptr;
   }
   template <int Direction>
   inline typename ZuIfT<(Direction < 0)>::T startIterate(
       Iterator_<Direction> &iterator) {
     iterator.m_node = m_maximum;
-    iterator.m_last = 0;
+    iterator.m_last = nullptr;
   }
   template <int Direction, typename Index_>
   inline void startIterate(
       Iterator_<Direction> &iterator, const Index_ &index, int compare) {
     iterator.m_node = find_(index, compare);
-    iterator.m_last = 0;
+    iterator.m_last = nullptr;
   }
 
   template <int Direction>
@@ -1127,6 +1127,8 @@ protected:
     Node *node = iterator.m_last;
 
     if (!node) return;
+
+    iterator.m_last = nullptr;
 
     {
       Node *parent = node->Fn::parent();

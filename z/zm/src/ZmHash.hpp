@@ -1005,12 +1005,12 @@ private:
     unsigned count = m_count.load_();
     if (!count || !node) return;
 
-    if (!prevNode) {
+    if (!prevNode)
       m_table[iterator.m_slot] = node->Fn::next();
-      iterator.m_node = 0;
-    } else
+    else
       prevNode->Fn::next(node->Fn::next());
 
+    iterator.m_node = prevNode;
     nodeDeref(node);
     nodeDelete(node);
     m_count.store_(count - 1);

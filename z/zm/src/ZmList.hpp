@@ -587,6 +587,7 @@ protected:
     Node *node = iterator.m_node;
 
     if (ZuLikely(node)) {
+      iterator.m_node = node->Fn::prev(node);
       del_(node);
       nodeDeref(node);
       nodeDelete(node);

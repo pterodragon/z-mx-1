@@ -133,17 +133,14 @@ public:
 
       frameLen = body(rxPtr, frameLen);
 
-      if (ZuUnlikely(frameLen < 0)) return -1;
-      if (!frameLen) return rxLen;
+      if (ZuUnlikely(frameLen < 0)) return -1; // error
+      if (!frameLen) return rxLen; // EOF - discard remainder
 
       rxPtr += frameLen;
       len -= frameLen;
     }
-    if (len && rxPtr != rxData) {
-      memmove(rxData, rxPtr, len);
-      m_buf->length = len;
-    } else
-      m_buf->length = 0;
+    if (len && rxPtr != rxData) memmove(rxData, rxPtr, len);
+    m_buf->length = len;
     return rxLen;
   }
 

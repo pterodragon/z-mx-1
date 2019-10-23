@@ -144,9 +144,18 @@ private:
       mx->txRun(ZmFn<>{ZuMv(tcp), [](TCP *) { }});
     });
   }
-  void disconnected_2(TCP *tcp) {
-    if (m_tcp == tcp) m_tcp = nullptr;
+  void disconnected_2(TCP *tcp) { // TLS thread
     mbedtls_ssl_session_reset(&m_ssl);
+    if (m_tcp == tcp) m_tcp = nullptr;
+    m_rxInOffset = 0;
+    for (unsigned i = 0; i < m_rxRingCount; i++) {
+      unsigned j = m_rxRingOffset + i;
+      if (j >= RxRingSize) j -= RxRingSize;
+      m_rxRing[j] = nullptr;
+    }
+    m_rxRingOffset = 0;
+    m_rxRingCount = 0;
+    m_rxOutOffset = 0;
     impl()->disconnected();
   }
 
@@ -164,8 +173,31 @@ private:
   }
 
   void recv_(ZmRef<IOBuf> buf) { // TLS thread
-    m_rxInBuf = ZuMv(buf); // f_recv reads out of rxInBuf
-    m_rxInOffset = 0;
+    if (ZuUnlikely(!buf->length)) return;
+    if (ZuUnlikely(m_rxRingCount)) {
+      unsigned i = m_rxRingOffset + m_rxRingCount - 1;
+      if (ZuUnlikely(i >= RxRingSize)) i -= RxRingSize;
+      unsigned len = m_rxRing[i]->length;
+      if (ZuUnlikely(len < ZiIOBuf::Size)) {
+	unsigned n = buf->length;
+	unsigned o = ZiIOBuf::Size - len;
+	if (n > o) n = o;
+	memcpy(m_rxRing[i]->data() + len, buf->data(), n);
+	m_rxRing[i]->length = len + n;
+	buf->length -= n;
+	if (buf->length) memmove(buf->data(), buf->data() + n, buf->length);
+      }
+    }
+    if (buf->length) {
+      if (ZuUnlikely(m_rxRingCount >= RxRingSize)) {
+	app()->logError("TLS Rx buffer overflow");
+	disconnect_(false);
+	return;
+      }
+      unsigned i = m_rxRingOffset + m_rxRingCount++;
+      if (ZuUnlikely(i >= RxRingSize)) i -= RxRingSize;
+      m_rxRing[i] = ZuMv(buf);
+    }
     if (ZuLikely(m_ssl.state == MBEDTLS_SSL_HANDSHAKE_OVER)) {
 recv:
       while (recv());
@@ -174,7 +206,6 @@ recv:
 	if (ZuLikely(m_ssl.state == MBEDTLS_SSL_HANDSHAKE_OVER))
 	  goto recv;
     }
-    m_rxInBuf = nullptr;
   }
 
   // ssl bio f_recv function - TLS thread
@@ -182,13 +213,23 @@ recv:
     return static_cast<Link *>(link_)->rxIn(ptr, len);
   }
   int rxIn(void *ptr, size_t len) { // TLS thread
-    if (!m_rxInBuf) return MBEDTLS_ERR_SSL_WANT_READ;
+    if (ZuUnlikely(!m_rxRingCount)) {
+      if (ZuUnlikely(!m_tcp)) return MBEDTLS_ERR_SSL_CONN_EOF;
+      return MBEDTLS_ERR_SSL_WANT_READ;
+    }
+    auto *inBuf = m_rxRing[m_rxRingOffset].ptr();
     unsigned offset = m_rxInOffset;
-    int avail = m_rxInBuf->length - offset;
+    int avail = inBuf->length - offset;
     if (avail <= 0) return MBEDTLS_ERR_SSL_WANT_READ;
     if (len > (size_t)avail) len = avail;
-    memcpy(ptr, m_rxInBuf->data_ + offset, len);
-    m_rxInOffset = offset + len;
+    memcpy(ptr, inBuf->data() + offset, len);
+    if (len == avail) {
+      m_rxInOffset = 0;
+      m_rxRing[m_rxRingOffset++] = nullptr;
+      if (!--m_rxRingCount || m_rxRingOffset >= RxRingSize)
+	m_rxRingOffset = 0;
+    } else
+      m_rxInOffset = offset + len;
     return len;
   }
 
@@ -212,11 +253,11 @@ protected:
 	  if (!hostname) hostname = "(null)";
 	  app()->logError(
 	      "server \"", hostname, "\": unable to verify X.509 cert");
-	  disconnect_();
+	  disconnect_(false);
 	} break;
 	default:
 	  app()->logError("mbedtls_ssl_handshake(): ", strerror_(n));
-	  disconnect_();
+	  disconnect_(false);
 	  break;
       }
       return false;
@@ -236,7 +277,11 @@ private:
 	(unsigned char *)(m_rxOutBuf + m_rxOutOffset),
 	MBEDTLS_SSL_MAX_CONTENT_LEN - m_rxOutOffset);
 
-    if (n < 0) {
+    if (n <= 0) {
+      if (ZuUnlikely(!n)) {
+	app()->logError("mbedtls_ssl_read(): unknown error");
+	return false;
+      }
       switch (n) {
 	case MBEDTLS_ERR_SSL_WANT_READ:
 #ifdef MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS
@@ -248,7 +293,7 @@ private:
 	  break;
 	default:
 	  app()->logError("mbedtls_ssl_read(): ", strerror_(n));
-	  disconnect_();
+	  disconnect_(false);
 	  break;
       }
       return false;
@@ -306,7 +351,16 @@ public:
     unsigned offset = 0;
     do {
       int n = mbedtls_ssl_write(&m_ssl, data + offset, len - offset);
-      if (n < 0) {
+      if (n <= 0) {
+	if (ZuUnlikely(!n)) {
+	  app()->logError("mbedtls_ssl_write(): unknown error");
+	  return;
+	}
+	switch (n) {
+	  case MBEDTLS_ERR_SSL_WANT_READ:
+	  case MBEDTLS_ERR_SSL_WANT_WRITE:
+	    continue;
+	}
 	app()->logError("mbedtls_ssl_write(): ", strerror_(n));
 	return;
       }
@@ -335,7 +389,7 @@ private:
 	  [](IOBuf *buf, ZiIOContext &io) {
 	    io.init(ZiIOFn{io.fn.mvObject<IOBuf>(),
 	      [](IOBuf *buf, ZiIOContext &io) {
-		if (ZuUnlikely((io.offset += io.length) < io.size)) return;
+		io.offset += io.length;
 	      }}, buf->data_, buf->length, 0);
 	  }});
       });
@@ -348,10 +402,12 @@ public:
   void disconnect() { // App thread(s)
     app()->invoke(this, [](Link *link) { link->disconnect_(); });
   }
-  void disconnect_() { // TLS thread
+  void disconnect_(bool notify = true) { // TLS thread
     app()->mx()->del(&m_reconnTimer);
-    int n = mbedtls_ssl_close_notify(&m_ssl);
-    if (n) app()->logWarning("mbedtls_ssl_close_notify(): ", strerror_(n));
+    if (notify) {
+      int n = mbedtls_ssl_close_notify(&m_ssl);
+      if (n) app()->logWarning("mbedtls_ssl_close_notify(): ", strerror_(n));
+    }
     auto tcp = ZmRef<TCP>{ZuMv(m_tcp)};
     m_tcp = nullptr;
     if (tcp) {
@@ -362,6 +418,11 @@ public:
   }
 
 private:
+  enum {
+    RxRingSize =
+      (MBEDTLS_SSL_MAX_CONTENT_LEN + ZiIOBuf::Size - 1) / ZiIOBuf::Size
+  };
+
   App			*m_app = nullptr;
   ZmScheduler::Timer	m_reconnTimer;
 
@@ -372,7 +433,9 @@ private:
   mbedtls_ssl_context	m_ssl;
   TCPRef		m_tcp = nullptr;
   unsigned		m_rxInOffset = 0;
-  ZmRef<IOBuf>		m_rxInBuf;
+  unsigned		m_rxRingOffset = 0;
+  unsigned		m_rxRingCount = 0;
+  ZmRef<IOBuf>		m_rxRing[RxRingSize];
   unsigned		m_rxOutOffset = 0;
   uint8_t		m_rxOutBuf[MBEDTLS_SSL_MAX_CONTENT_LEN];
 };
@@ -504,7 +567,7 @@ private:
 	    }
 	}
 	this->app()->logError(s);
-	this->disconnect_();
+	this->disconnect_(false);
       }
     }
   }
@@ -636,6 +699,8 @@ protected:
 	log__(s, ZuMv(args)...);
       })));
   }
+  template <typename ...Args> void logDebug(Args &&... args)
+    { log_<Ze::Debug>(ZuFwd<Args>(args)...); }
   template <typename ...Args> void logInfo(Args &&... args)
     { log_<Ze::Info>(ZuFwd<Args>(args)...); }
   template <typename ...Args> void logWarning(Args &&... args)

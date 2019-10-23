@@ -33,6 +33,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+// #include <iostream>
+
 #include <zlib/ZuInt.hpp>
 
 template <unsigned> struct ZtBitWindow_ { enum { OK = 0 }; };
@@ -67,15 +69,15 @@ private:
   enum { IndexMask = (1<<IndexShift) - 1 };
 
 public:
-  inline ZtBitWindow() : m_data(nullptr), m_size(0), m_head(0), m_offset(0) { }
-  inline ~ZtBitWindow() { if (m_data) ::free(m_data); }
+  ZtBitWindow() { }
+  ~ZtBitWindow() { if (m_data) ::free(m_data); }
 
-  inline ZtBitWindow(ZtBitWindow &&q) :
+  ZtBitWindow(ZtBitWindow &&q) :
       m_data(q.m_data), m_size(q.m_size),
       m_head(q.m_head), m_offset(q.m_offset) {
     q.null();
   }
-  inline ZtBitWindow &operator =(ZtBitWindow &&q) {
+  ZtBitWindow &operator =(ZtBitWindow &&q) {
     if (m_data) ::free(m_data);
     m_data = q.m_data;
     m_size = q.m_size;
@@ -84,7 +86,7 @@ public:
     return *this;
   }
 
-  inline void null() {
+  void null() {
     if (m_data) ::free(m_data);
     m_data = nullptr;
     m_size = 0;
@@ -92,36 +94,77 @@ public:
     m_offset = 0;
   }
 
+#if 0
+  void debug() { m_debug = true; }
+
+  void dump_() { }
+  template <typename Arg0, typename ...Args>
+  void dump_(Arg0 &&arg0, Args &&... args) {
+    std::cerr << ZuMv(arg0);
+    dump_(ZuMv(args)...);
+  }
+  template <typename ...Args>
+  void dump(Args &&... args) {
+    dump_(ZuMv(args)...);
+    std::cerr
+      << " size=" << m_size
+      << " head=" << m_head
+      << " tail=" << m_tail
+      << " offset=" << m_offset << '\n' << std::flush;
+  }
+#endif
+
 private:
-  inline uint64_t ensure(uint64_t i) {
+#if 0
+  uint64_t ensure(uint64_t i) {
+    if (m_debug) dump("PRE  ensure(", i, ")");
+    uint64_t v = ensure_(i);
+    if (m_debug) dump("POST ensure(", i, ")");
+    return v;
+  }
+#endif
+  uint64_t ensure(uint64_t i) {
     if (ZuUnlikely(!m_size))
       m_head = (i & ~IndexMask);
     else if (ZuUnlikely(i < m_head)) {
-      uint64_t j = ((m_head - i) + IndexMask)>>IndexShift;
-      uint64_t *data = (uint64_t *)::malloc((j + m_size)<<3);
-      memset(data, 0, j<<3);
+      uint64_t required = ((m_head - i) + IndexMask)>>IndexShift;
+      {
+	uint64_t avail = m_size -
+	  (((m_tail + IndexMask)>>IndexShift) - (m_head>>IndexShift));
+	if (required <= avail) {
+	  m_head -= (required<<IndexShift);
+	  m_offset += (m_size - required);
+	  if (m_offset >= m_size) m_offset -= m_size;
+	  return 0;
+	}
+      }
+      uint64_t *data = (uint64_t *)::malloc((m_size + required)<<3);
+      memset(data, 0, required<<3);
       uint64_t tailOffset = m_size - m_offset;
-      if (tailOffset) memcpy(data + j, m_data + m_offset, tailOffset<<3);
-      if (m_offset) memcpy(data + j + tailOffset, m_data, m_offset<<3);
+      if (tailOffset) memcpy(data + required, m_data + m_offset, tailOffset<<3);
+      if (m_offset) memcpy(data + required + tailOffset, m_data, m_offset<<3);
       if (m_data) ::free(m_data);
       m_data = data;
-      m_size += j;
-      m_head -= (j<<IndexShift);
+      m_size += required;
+      m_head -= (required<<IndexShift);
       m_offset = 0;
       return (i - m_head)>>IndexShift;
     }
+    if (i >= m_tail) m_tail = i + 1;
     i -= m_head;
     if (ZuUnlikely(i >= (m_size<<IndexShift))) {
-      uint64_t j = (((i + 1) - (m_size<<IndexShift)) + IndexMask)>>IndexShift;
-      if (j < (m_size>>3)) j = m_size>>3; // grow by at least 12.5%
-      uint64_t *data = (uint64_t *)::malloc((j + m_size)<<3);
+      uint64_t required =
+	(((i + 1) - (m_size<<IndexShift)) + IndexMask)>>IndexShift;
+      if (required < (m_size>>3))
+	required = m_size>>3; // grow by at least 12.5%
+      uint64_t *data = (uint64_t *)::malloc((m_size + required)<<3);
       uint64_t tailOffset = m_size - m_offset;
       if (tailOffset) memcpy(data, m_data + m_offset, tailOffset<<3);
       if (m_offset) memcpy(data + tailOffset, m_data, m_offset<<3);
-      memset(data + m_size, 0, j<<3);
+      memset(data + m_size, 0, required<<3);
       if (m_data) ::free(m_data);
       m_data = data;
-      m_size += j;
+      m_size += required;
       m_offset = 0;
       return i>>IndexShift;
     }
@@ -134,60 +177,89 @@ private:
   }
 
 public:
-  inline void set(uint64_t i) {
+#if 0
+  void set(uint64_t i) {
+    if (m_debug) dump("PRE  set(", i, ")");
+    set_(i);
+    if (m_debug) dump("POST set(", i, ")");
+  }
+#endif
+  void set(uint64_t i) {
     uint64_t j = ensure(i);
     m_data[j] |= (((uint64_t)Mask)<<((i & IndexMask)<<Shift));
   }
-  inline void set(uint64_t i, uint64_t v) {
+#if 0
+  void set(uint64_t i, uint64_t v) {
+    if (m_debug) dump("PRE  set(", i, ", ", v, ")");
+    set_(i, v);
+    if (m_debug) dump("POST set(", i, ", ", v, ")");
+  }
+#endif
+  void set(uint64_t i, uint64_t v) {
     uint64_t j = ensure(i);
     m_data[j] |= (v<<((i & IndexMask)<<Shift));
   }
-  inline void clr(uint64_t i) {
+#if 0
+  void clr(uint64_t i) {
+    if (m_debug) dump("PRE  clr(", i, ")");
+    clr_(i);
+    if (m_debug) dump("POST clr(", i, ")");
+  }
+#endif
+  void clr(uint64_t i) {
     if (i < m_head) return;
     i -= m_head;
     if (i >= (m_size<<IndexShift)) return;
     if (m_data[index(i>>IndexShift)] &=
 	~(((uint64_t)Mask)<<((i & IndexMask)<<Shift))) return;
-    if (i < (1U<<IndexShift)) {
+    if (i <= IndexMask) {
       uint64_t j;
-      for (j = 0; j < m_size && !m_data[index(j)]; j++);
+      uint64_t k = (m_tail>>IndexShift) - (m_head>>IndexShift);
+      for (j = 0; j < k && !m_data[index(j)]; j++);
       if (j) {
-	if (j < m_size)
+	if (j < k)
 	  if ((m_offset += j) >= m_size) m_offset -= m_size;
 	m_head += (j<<IndexShift);
       }
     }
   }
-  inline void clr(uint64_t i, uint64_t v) {
+#if 0
+  void clr(uint64_t i, uint64_t v) {
+    if (m_debug) dump("PRE  clr(", i, ", ", v, ")");
+    clr_(i, v);
+    if (m_debug) dump("POST clr(", i, ", ", v, ")");
+  }
+#endif
+  void clr(uint64_t i, uint64_t v) {
     if (i < m_head) return;
     i -= m_head;
     if (i >= (m_size<<IndexShift)) return;
     if (m_data[index(i>>IndexShift)] &= ~(v<<((i & IndexMask)<<Shift))) return;
-    if (i < (1U<<IndexShift)) {
+    if (i <= IndexMask) {
       uint64_t j;
-      for (j = 0; j < m_size && !m_data[index(j)]; j++);
+      uint64_t k = (m_tail>>IndexShift) - (m_head>>IndexShift);
+      for (j = 0; j < k && !m_data[index(j)]; j++);
       if (j) {
-	if (j < m_size)
+	if (j < k)
 	  if ((m_offset += j) >= m_size) m_offset -= m_size;
 	m_head += (j<<IndexShift);
       }
     }
   }
 
-  inline uint64_t val(uint64_t i) const {
-    if (i < m_head) return 0;
+  uint64_t val(uint64_t i) const {
+    if (i < m_head || i >= m_tail) return 0;
     i -= m_head;
-    if (i >= (m_size<<IndexShift)) return 0;
     return (m_data[index(i>>IndexShift)]>>((i & IndexMask)<<Shift)) & Mask;
   }
 
-  inline unsigned head() const { return m_head; }
-  inline unsigned tail() const { return m_head + (m_size<<IndexShift); }
-  inline unsigned size() const { return m_size<<IndexShift; }
+  ZuInline unsigned head() const { return m_head; }
+  ZuInline unsigned tail() const { return m_tail; }
+  ZuInline unsigned size() const { return m_size<<IndexShift; }
 
   // l(unsigned index, unsigned value) -> uintptr_t
   template <typename L>
-  inline uintptr_t all(L l) {
+  uintptr_t all(L l) {
     for (unsigned i = 0, n = m_size; i < n; i++) {
       uint64_t w = m_data[index(i)];
       if (!w) continue;
@@ -203,10 +275,12 @@ public:
   }
 
 private:
-  uint64_t	*m_data;
-  uint64_t	m_size;
-  uint64_t	m_head;
-  uint64_t	m_offset;
+  uint64_t	*m_data = nullptr;
+  uint64_t	m_size = 0;
+  uint64_t	m_head = 0;
+  uint64_t	m_tail = 0;
+  uint64_t	m_offset = 0;
+  // bool		m_debug = false;
 };
 
 template <unsigned Bits_> class ZtBitWindow<Bits_, true, false> {
@@ -221,15 +295,15 @@ private:
   enum { IndexMul = ZtBitWindow_<Bits>::Mul };
 
 public:
-  inline ZtBitWindow() : m_data(nullptr), m_size(0), m_head(0), m_offset(0) { }
-  inline ~ZtBitWindow() { if (m_data) ::free(m_data); }
+  ZtBitWindow() { }
+  ~ZtBitWindow() { if (m_data) ::free(m_data); }
 
-  inline ZtBitWindow(ZtBitWindow &&q) :
+  ZtBitWindow(ZtBitWindow &&q) :
       m_data(q.m_data), m_size(q.m_size),
       m_head(q.m_head), m_offset(q.m_offset) {
     q.null();
   }
-  inline ZtBitWindow &operator =(ZtBitWindow &&q) {
+  ZtBitWindow &operator =(ZtBitWindow &&q) {
     if (m_data) ::free(m_data);
     m_data = q.m_data;
     m_size = q.m_size;
@@ -238,7 +312,7 @@ public:
     return *this;
   }
 
-  inline void null() {
+  void null() {
     if (m_data) ::free(m_data);
     m_data = nullptr;
     m_size = 0;
@@ -246,37 +320,77 @@ public:
     m_offset = 0;
   }
 
+#if 0
+  void debug() { m_debug = true; }
+
+  void dump_() { }
+  template <typename Arg0, typename ...Args>
+  void dump_(Arg0 &&arg0, Args &&... args) {
+    std::cerr << ZuMv(arg0);
+    dump_(ZuMv(args)...);
+  }
+  template <typename ...Args>
+  void dump(Args &&... args) {
+    dump_(ZuMv(args)...);
+    std::cerr
+      << " size=" << m_size
+      << " head=" << m_head
+      << " tail=" << m_tail
+      << " offset=" << m_offset << '\n' << std::flush;
+  }
+#endif
+
 private:
-  inline uint64_t ensure(uint64_t i) {
+#if 0
+  uint64_t ensure(uint64_t i) {
+    if (m_debug) dump("PRE  ensure(", i, ")");
+    uint64_t v = ensure_(i);
+    if (m_debug) dump("POST ensure(", i, ")");
+    return v;
+  }
+#endif
+  uint64_t ensure(uint64_t i) {
     if (ZuUnlikely(!m_size))
       m_head = i - (i % IndexMul);
     else if (ZuUnlikely(i < m_head)) {
-      uint64_t j = ((m_head - i) + (IndexMul - 1)) / IndexMul;
-      uint64_t *data = (uint64_t *)::malloc((j + m_size)<<3);
-      memset(data, 0, j<<3);
+      uint64_t required = ((m_head - i) + (IndexMul - 1)) / IndexMul;
+      {
+	uint64_t avail = m_size -
+	  ((m_tail + (IndexMul - 1)) / IndexMul - m_head / IndexMul);
+	if (required <= avail) {
+	  m_head -= required * IndexMul;
+	  m_offset += (m_size - required);
+	  if (m_offset >= m_size) m_offset -= m_size;
+	  return 0;
+	}
+      }
+      uint64_t *data = (uint64_t *)::malloc((m_size + required)<<3);
+      memset(data, 0, required<<3);
       uint64_t tailOffset = m_size - m_offset;
-      if (tailOffset) memcpy(data + j, m_data + m_offset, tailOffset<<3);
-      if (m_offset) memcpy(data + j + tailOffset, m_data, m_offset<<3);
+      if (tailOffset) memcpy(data + required, m_data + m_offset, tailOffset<<3);
+      if (m_offset) memcpy(data + required + tailOffset, m_data, m_offset<<3);
       ::free(m_data);
       m_data = data;
-      m_size += j;
-      m_head -= j * IndexMul;
+      m_size += required;
+      m_head -= required * IndexMul;
       m_offset = 0;
       return (i - m_head) / IndexMul;
     }
+    if (i >= m_tail) m_tail = i + 1;
     i -= m_head;
     uint64_t size = m_size * IndexMul;
     if (ZuUnlikely(i >= size)) {
-      uint64_t j = (((i + 1) - size) + (IndexMul - 1)) / IndexMul;
-      if (j < (m_size>>3)) j = m_size>>3; // grow by at least 12.5%
-      uint64_t *data = (uint64_t *)::malloc((j + m_size)<<3);
+      uint64_t required = (((i + 1) - size) + (IndexMul - 1)) / IndexMul;
+      if (required < (m_size>>3))
+	required = m_size>>3; // grow by at least 12.5%
+      uint64_t *data = (uint64_t *)::malloc((m_size + required)<<3);
       uint64_t tailOffset = m_size - m_offset;
       if (tailOffset) memcpy(data, m_data + m_offset, tailOffset<<3);
       if (m_offset) memcpy(data + tailOffset, m_data, m_offset<<3);
-      memset(data + m_size, 0, j<<3);
+      memset(data + m_size, 0, required<<3);
       ::free(m_data);
       m_data = data;
-      m_size += j;
+      m_size += required;
       m_offset = 0;
       return i / IndexMul;
     }
@@ -289,15 +403,36 @@ private:
   }
 
 public:
-  inline void set(uint64_t i) {
+#if 0
+  void set(uint64_t i) {
+    if (m_debug) dump("PRE  set(", i, ")");
+    set_(i);
+    if (m_debug) dump("POST set(", i, ")");
+  }
+#endif
+  void set(uint64_t i) {
     uint64_t j = ensure(i);
     m_data[j] |= (((uint64_t)Mask)<<((i % IndexMul) * Bits));
   }
-  inline void set(uint64_t i, uint64_t v) {
+#if 0
+  void set(uint64_t i, uint64_t v) {
+    if (m_debug) dump("PRE  set(", i, ", ", v, ")");
+    set_(i, v);
+    if (m_debug) dump("POST set(", i, ", ", v, ")");
+  }
+#endif
+  void set(uint64_t i, uint64_t v) {
     uint64_t j = ensure(i);
     m_data[j] |= (v<<((i % IndexMul) * Bits));
   }
-  inline void clr(uint64_t i) {
+#if 0
+  void clr(uint64_t i) {
+    if (m_debug) dump("PRE  clr(", i, ")");
+    clr_(i);
+    if (m_debug) dump("POST clr(", i, ")");
+  }
+#endif
+  void clr(uint64_t i) {
     if (i < m_head) return;
     i -= m_head;
     if (i >= m_size * IndexMul) return;
@@ -305,44 +440,53 @@ public:
 	~(((uint64_t)Mask)<<((i % IndexMul) * Bits))) return;
     if (i < IndexMul) {
       uint64_t j;
-      for (j = 0; j < m_size && !m_data[index(j)]; j++);
+      uint64_t k = (m_tail / IndexMul) - (m_head / IndexMul);
+      for (j = 0; j < k && !m_data[index(j)]; j++);
       if (j) {
-	if (j < m_size)
+	if (j < k)
 	  if ((m_offset += j) >= m_size) m_offset -= m_size;
 	m_head += j * IndexMul;
       }
     }
   }
-  inline void clr(uint64_t i, uint64_t v) {
+#if 0
+  void clr(uint64_t i, uint64_t v) {
+    if (m_debug) dump("PRE  clr(", i, ", ", v, ")");
+    clr_(i, v);
+    if (m_debug) dump("POST clr(", i, ", ", v, ")");
+  }
+#endif
+  void clr(uint64_t i, uint64_t v) {
     if (i < m_head) return;
     i -= m_head;
     if (i >= m_size * IndexMul) return;
     if (m_data[index(i / IndexMul)] &= ~(v<<((i % IndexMul) * Bits))) return;
     if (i < IndexMul) {
       uint64_t j;
-      for (j = 0; j < m_size && !m_data[index(j)]; j++);
+      uint64_t k = (m_tail / IndexMul) - (m_head / IndexMul);
+      for (j = 0; j < k && !m_data[index(j)]; j++);
       if (j) {
-	if (j < m_size)
+	if (j < k)
 	  if ((m_offset += j) >= m_size) m_offset -= m_size;
 	m_head += j * IndexMul;
       }
     }
   }
 
-  inline uint64_t val(uint64_t i) const {
-    if (i < m_head) return 0;
+  uint64_t val(uint64_t i) const {
+    if (i < m_head || i >= m_tail) return 0;
     i -= m_head;
     if (i >= m_size * IndexMul) return 0;
     return (m_data[index(i / IndexMul)]>>((i % IndexMul) * Bits)) & Mask;
   }
 
-  inline unsigned head() const { return m_head; }
-  inline unsigned tail() const { return m_head + m_size * IndexMul; }
-  inline unsigned size() const { return m_size * IndexMul; }
+  ZuInline unsigned head() const { return m_head; }
+  ZuInline unsigned tail() const { return m_tail; }
+  ZuInline unsigned size() const { return m_size * IndexMul; }
 
   // l(unsigned index, unsigned value) -> uintptr_t
   template <typename L>
-  inline uintptr_t all(L l) {
+  uintptr_t all(L l) {
     for (unsigned i = 0, k = 0, n = m_size; i < n; i++) {
       uint64_t w = m_data[index(i)];
       uint64_t m = Mask;
@@ -357,10 +501,12 @@ public:
   }
 
 private:
-  uint64_t	*m_data;
-  uint64_t	m_size;
-  uint64_t	m_head;
-  uint64_t	m_offset;
+  uint64_t	*m_data = nullptr;
+  uint64_t	m_size = 0;
+  uint64_t	m_head = 0;
+  uint64_t	m_tail = 0;
+  uint64_t	m_offset = 0;
+  // bool		m_debug = false;
 };
 
 template <> class ZtBitWindow<64U, true, true> {
@@ -371,15 +517,15 @@ public:
   enum { Bits = 64 };
 
 public:
-  inline ZtBitWindow() : m_data(nullptr), m_size(0), m_head(0), m_offset(0) { }
-  inline ~ZtBitWindow() { if (m_data) ::free(m_data); }
+  ZtBitWindow() { }
+  ~ZtBitWindow() { if (m_data) ::free(m_data); }
 
-  inline ZtBitWindow(ZtBitWindow &&q) :
+  ZtBitWindow(ZtBitWindow &&q) :
       m_data(q.m_data), m_size(q.m_size),
       m_head(q.m_head), m_offset(q.m_offset) {
     q.null();
   }
-  inline ZtBitWindow &operator =(ZtBitWindow &&q) {
+  ZtBitWindow &operator =(ZtBitWindow &&q) {
     if (m_data) ::free(m_data);
     m_data = q.m_data;
     m_size = q.m_size;
@@ -388,7 +534,7 @@ public:
     return *this;
   }
 
-  inline void null() {
+  void null() {
     if (m_data) ::free(m_data);
     m_data = nullptr;
     m_size = 0;
@@ -396,36 +542,75 @@ public:
     m_offset = 0;
   }
 
+#if 0
+  void debug() { m_debug = true; }
+
+  void dump_() { }
+  template <typename Arg0, typename ...Args>
+  void dump_(Arg0 &&arg0, Args &&... args) {
+    std::cerr << ZuMv(arg0);
+    dump_(ZuMv(args)...);
+  }
+  template <typename ...Args>
+  void dump(Args &&... args) {
+    dump_(ZuMv(args)...);
+    std::cerr
+      << " size=" << m_size
+      << " head=" << m_head
+      << " tail=" << m_tail
+      << " offset=" << m_offset << '\n' << std::flush;
+  }
+#endif
+
 private:
-  inline uint64_t ensure(uint64_t i) {
+#if 0
+  uint64_t ensure(uint64_t i) {
+    if (m_debug) dump("PRE  ensure(", i, ")");
+    uint64_t v = ensure_(i);
+    if (m_debug) dump("POST ensure(", i, ")");
+    return v;
+  }
+#endif
+  uint64_t ensure(uint64_t i) {
     if (ZuUnlikely(!m_size))
       m_head = i;
     else if (ZuUnlikely(i < m_head)) {
-      uint64_t j = m_head - i;
-      uint64_t *data = (uint64_t *)::malloc((j + m_size)<<3);
-      memset(data, 0, j<<3);
+      uint64_t required = m_head - i;
+      {
+	uint64_t avail = m_size - (m_tail - m_head);
+	if (required <= avail) {
+	  m_head -= required;
+	  m_offset += (m_size - required);
+	  if (m_offset >= m_size) m_offset -= m_size;
+	  return 0;
+	}
+      }
+      uint64_t *data = (uint64_t *)::malloc((m_size + required)<<3);
+      memset(data, 0, required<<3);
       uint64_t tailOffset = m_size - m_offset;
-      if (tailOffset) memcpy(data + j, m_data + m_offset, tailOffset<<3);
-      if (m_offset) memcpy(data + j + tailOffset, m_data, m_offset<<3);
+      if (tailOffset) memcpy(data + required, m_data + m_offset, tailOffset<<3);
+      if (m_offset) memcpy(data + required + tailOffset, m_data, m_offset<<3);
       if (m_data) ::free(m_data);
       m_data = data;
-      m_size += j;
-      m_head -= j;
+      m_size += required;
+      m_head -= required;
       m_offset = 0;
       return i - m_head;
     }
+    if (i >= m_tail) m_tail = i + 1;
     i -= m_head;
     if (ZuUnlikely(i >= m_size)) {
-      uint64_t j = (i + 1) - m_size;
-      if (j < (m_size>>3)) j = m_size>>3; // grow by at least 12.5%
-      uint64_t *data = (uint64_t *)::malloc((j + m_size)<<3);
+      uint64_t required = (i + 1) - m_size;
+      if (required < (m_size>>3))
+	required = m_size>>3; // grow by at least 12.5%
+      uint64_t *data = (uint64_t *)::malloc((m_size + required)<<3);
       uint64_t tailOffset = m_size - m_offset;
       if (tailOffset) memcpy(data, m_data + m_offset, tailOffset<<3);
       if (m_offset) memcpy(data + tailOffset, m_data, m_offset<<3);
-      memset(data + m_size, 0, j<<3);
+      memset(data + m_size, 0, required<<3);
       if (m_data) ::free(m_data);
       m_data = data;
-      m_size += j;
+      m_size += required;
       m_offset = 0;
       return i;
     }
@@ -438,59 +623,89 @@ private:
   }
 
 public:
-  inline void set(uint64_t i) {
+#if 0
+  void set(uint64_t i) {
+    if (m_debug) dump("PRE  set(", i, ")");
+    set_(i);
+    if (m_debug) dump("POST set(", i, ")");
+  }
+#endif
+  void set(uint64_t i) {
     uint64_t j = ensure(i);
     m_data[j] = ~((uint64_t)0);
   }
-  inline void set(uint64_t i, uint64_t v) {
+#if 0
+  void set(uint64_t i, uint64_t v) {
+    if (m_debug) dump("PRE  set(", i, ", ", v, ")");
+    set_(i, v);
+    if (m_debug) dump("POST set(", i, ", ", v, ")");
+  }
+#endif
+  void set(uint64_t i, uint64_t v) {
     uint64_t j = ensure(i);
     m_data[j] = v;
   }
-  inline void clr(uint64_t i) {
+#if 0
+  void clr(uint64_t i) {
+    if (m_debug) dump("PRE  clr(", i, ")");
+    clr_(i);
+    if (m_debug) dump("POST clr(", i, ")");
+  }
+#endif
+  void clr(uint64_t i) {
     if (i < m_head) return;
     i -= m_head;
     if (i >= m_size) return;
     m_data[index(i)] = 0;
     if (!i) {
       uint64_t j;
-      for (j = 0; j < m_size && !m_data[index(j)]; j++);
+      uint64_t k = m_tail - m_head;
+      for (j = 0; j < k && !m_data[index(j)]; j++);
       if (j) {
-	if (j < m_size)
+	if (j < k)
 	  if ((m_offset += j) >= m_size) m_offset -= m_size;
 	m_head += j;
       }
     }
   }
-  inline void clr(uint64_t i, uint64_t v) {
+#if 0
+  void clr(uint64_t i, uint64_t v) {
+    if (m_debug) dump("PRE  clr(", i, ", ", v, ")");
+    clr_(i, v);
+    if (m_debug) dump("POST clr(", i, ", ", v, ")");
+  }
+#endif
+  void clr(uint64_t i, uint64_t v) {
     if (i < m_head) return;
     i -= m_head;
     if (i >= m_size) return;
     m_data[index(i)] = 0;
     if (!i) {
       uint64_t j;
-      for (j = 0; j < m_size && !m_data[index(j)]; j++);
+      uint64_t k = m_tail - m_head;
+      for (j = 0; j < k && !m_data[index(j)]; j++);
       if (j) {
-	if (j < m_size)
+	if (j < k)
 	  if ((m_offset += j) >= m_size) m_offset -= m_size;
 	m_head += j;
       }
     }
   }
 
-  inline uint64_t val(uint64_t i) const {
+  uint64_t val(uint64_t i) const {
     if (i < m_head) return 0;
     i -= m_head;
     if (i >= m_size) return 0;
     return m_data[index(i)];
   }
 
-  inline unsigned head() const { return m_head; }
-  inline unsigned tail() const { return m_head + m_size; }
-  inline unsigned size() const { return m_size; }
+  ZuInline unsigned head() const { return m_head; }
+  ZuInline unsigned tail() const { return m_tail; }
+  ZuInline unsigned size() const { return m_size; }
 
   // l(unsigned index, unsigned value) -> uintptr_t
   template <typename L>
-  inline uintptr_t all(L l) {
+  uintptr_t all(L l) {
     for (unsigned i = 0, n = m_size; i < n; i++) {
       uint64_t v = m_data[index(i)];
       if (!v) continue;
@@ -500,10 +715,12 @@ public:
   }
 
 private:
-  uint64_t	*m_data;
-  uint64_t	m_size;
-  uint64_t	m_head;
-  uint64_t	m_offset;
+  uint64_t	*m_data = nullptr;
+  uint64_t	m_size = 0;
+  uint64_t	m_head = 0;
+  uint64_t	m_tail = 0;
+  uint64_t	m_offset = 0;
+  // bool		m_debug = false;
 };
 
 #endif /* ZtBitWindow_HPP */

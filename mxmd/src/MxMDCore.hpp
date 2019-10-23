@@ -221,7 +221,7 @@ public:
 
 private:
   // Exception handling
-  void exception(ZmRef<ZeEvent> e) { raise(ZuMv(e)); }
+  void exception(ZmRef<ZeEvent> e) const { raise(ZuMv(e)); }
 
   // Traffic Logging (logThread)
   /* Example usage:

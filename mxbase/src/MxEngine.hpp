@@ -232,7 +232,7 @@ struct MxBaseAPI MxEngineMgr {
   virtual void delQueue(MxID id, bool tx) = 0;
 
   // Exception handling
-  virtual void exception(ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
+  virtual void exception(ZmRef<ZeEvent> e) const { ZeLog::log(ZuMv(e)); }
 
   // Traffic Logging (logThread)
   /* Example usage:
@@ -368,9 +368,13 @@ public:
     };
   }
 
-  ZuInline void appException(ZmRef<ZeEvent> e) { mgr()->exception(ZuMv(e)); }
+  ZuInline void appException(ZmRef<ZeEvent> e) const {
+    mgr()->exception(ZuMv(e));
+  }
 
-  ZuInline void log(MxMsgID id, MxTraffic traffic) { mgr()->log(id, traffic); }
+  ZuInline void log(MxMsgID id, MxTraffic traffic) const {
+    mgr()->log(id, traffic);
+  }
 
   // display sequence:
   //   id, state, nLinks, up, down, disabled, transient, reconn, failed,

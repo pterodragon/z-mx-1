@@ -674,7 +674,7 @@ typedef MxMDPxLevels::Node MxMDPxLevel;
 // event handlers (callbacks)
 
 typedef ZmFn<MxMDLib *> MxMDLibFn;
-typedef ZmFn<MxMDLib *, ZmRef<ZeEvent> > MxMDExceptionFn;
+typedef ZmFn<const MxMDLib *, ZmRef<ZeEvent> > MxMDExceptionFn;
 typedef ZmFn<MxMDFeed *> MxMDFeedFn;
 typedef ZmFn<MxMDVenue *> MxMDVenueFn;
 
@@ -1850,7 +1850,7 @@ public:
 
   void sync(); // synchronize with all shards
 
-  void raise(ZmRef<ZeEvent> e);
+  void raise(ZmRef<ZeEvent> e) const;
 
   void addFeed(MxMDFeed *feed);
   void addVenue(MxMDVenue *venue);

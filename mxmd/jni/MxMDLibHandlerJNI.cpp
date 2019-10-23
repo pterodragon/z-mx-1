@@ -141,7 +141,7 @@ ZmRef<MxMDLibHandler> MxMDLibHandlerJNI::j2c(
     })
 
   lambda2(exception,
-      MxMDLib *md, ZmRef<ZeEvent> e,
+      const MxMDLib *md, ZmRef<ZeEvent> e,
       MxMDLibJNI::instance_(),
       MxMDExceptionJNI::ctor(env, e));
   lambda1(connected,

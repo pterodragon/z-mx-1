@@ -1274,7 +1274,10 @@ uintptr_t MxMDLib::allVenues(ZmFn<MxMDVenue *> fn) const
   return 0;
 }
 
-static void exception(MxMDLib *, ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
+static void exception(const MxMDLib *, ZmRef<ZeEvent> e)
+{
+  ZeLog::log(ZuMv(e));
+}
 
 MxMDLib::MxMDLib(ZmScheduler *scheduler) :
   m_scheduler(scheduler),
@@ -1358,7 +1361,7 @@ void MxMDLib::sync()
   for (unsigned i = 0; i < n; i++) sem.wait();
 }
 
-void MxMDLib::raise(ZmRef<ZeEvent> e)
+void MxMDLib::raise(ZmRef<ZeEvent> e) const
 {
   handler()->exception(this, ZuMv(e));
 }

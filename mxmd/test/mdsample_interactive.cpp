@@ -103,7 +103,7 @@ void l2(MxMDOrderBook *ob, MxDateTime stamp)
   std::cout << "L2 updated\n";
 }
 
-void exception(MxMDLib *, ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
+void exception(const MxMDLib *, ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 
 typedef ZmHash<MxUniKey> Keys; // hash table of keys
 static ZmRef<Keys> keys;

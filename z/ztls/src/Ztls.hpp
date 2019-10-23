@@ -689,25 +689,25 @@ protected:
 
   inline static void log__(ZmStream &s) { }
   template <typename Arg0, typename ...Args>
-  inline static void log__(ZmStream &s, Arg0 &&arg0, Args &&... args) {
-    s << ZuFwd<Arg0>(arg0);
+  inline static void log__(ZmStream &s, Arg0 arg0, Args... args) {
+    s << ZuMv(arg0);
     log__(s, ZuMv(args)...);
   }
-  template <int Level, typename ...Args> void log_(Args &&... args) {
+  template <int Level, typename ...Args> void log_(Args... args) const {
     app()->exception(ZeEVENT_(Level, (
       [...args = ZuMv(args)](const ZeEvent &, ZmStream &s) mutable {
 	log__(s, ZuMv(args)...);
       })));
   }
-  template <typename ...Args> void logDebug(Args &&... args)
+  template <typename ...Args> void logDebug(Args &&... args) const
     { log_<Ze::Debug>(ZuFwd<Args>(args)...); }
-  template <typename ...Args> void logInfo(Args &&... args)
+  template <typename ...Args> void logInfo(Args &&... args) const
     { log_<Ze::Info>(ZuFwd<Args>(args)...); }
-  template <typename ...Args> void logWarning(Args &&... args)
+  template <typename ...Args> void logWarning(Args &&... args) const
     { log_<Ze::Warning>(ZuFwd<Args>(args)...); }
-  template <typename ...Args> void logError(Args &&... args)
+  template <typename ...Args> void logError(Args &&... args) const
     { log_<Ze::Error>(ZuFwd<Args>(args)...); }
-  template <typename ...Args> void logFatal(Args &&... args)
+  template <typename ...Args> void logFatal(Args &&... args) const
     { log_<Ze::Fatal>(ZuFwd<Args>(args)...); }
 
   // Arch/Ubuntu/Debian/SLES - /etc/ssl/certs

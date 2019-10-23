@@ -35,7 +35,7 @@ public:
   void delQueue(MxID id, bool tx) { }
 
   // Exception handling
-  void exception(ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
+  void exception(ZmRef<ZeEvent> e) const { ZeLog::log(ZuMv(e)); }
 
   // Traffic Logging
   void log(MxMsgID, MxTraffic) { }

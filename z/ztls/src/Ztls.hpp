@@ -685,7 +685,7 @@ protected:
   // TLS thread
   ZuInline mbedtls_ssl_config *conf() { return &m_conf; }
 
-  void exception(ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); } // default
+  void exception(ZmRef<ZeEvent> e) const { ZeLog::log(ZuMv(e)); } // default
 
   inline static void log__(ZmStream &s) { }
   template <typename Arg0, typename ...Args>

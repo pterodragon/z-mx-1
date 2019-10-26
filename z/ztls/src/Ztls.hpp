@@ -78,7 +78,10 @@ public:
     ZiConnection(link->app()->mx(), ci), m_link(ZuMv(link)) { }
 
   void connected(ZiIOContext &io) { m_link->connected_(this, io); }
-  void disconnected() { m_link->disconnected_(this, ZuMv(m_link)); }
+  void disconnected() {
+    Link *link = m_link;
+    link->disconnected_(this, ZuMv(m_link));
+  }
 
 private:
   LinkRef	m_link = nullptr;

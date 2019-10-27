@@ -144,10 +144,10 @@ void ZmThreadContext::telemetry(ZmThreadTelemetry &data) const {
   data.name = m_name;
   data.tid = tid();
   data.stackSize = m_stackSize;
-  data.cpuset = m_cpuset.uint64();
+  data.cpuset = m_cpuset.uint64(); // FIXME
   data.cpuUsage = cpuUsage();
-  data.id = m_id;
   data.sysPriority = sysPriority();
+  data.index = m_index;
   data.priority = m_priority;
   data.partition = m_partition;
   data.main = this->main();

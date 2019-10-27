@@ -382,15 +382,15 @@ public:
   struct Telemetry { // not graphable
     MxID	id;		// primary key
     MxID	mxID;
-    uint32_t	down;
-    uint32_t	disabled;
-    uint32_t	transient;
-    uint32_t	up;
-    uint32_t	reconn;
-    uint32_t	failed;
+    uint16_t	down;
+    uint16_t	disabled;
+    uint16_t	transient;
+    uint16_t	up;
+    uint16_t	reconn;
+    uint16_t	failed;
     uint16_t	nLinks;
-    uint8_t	rxThread;
-    uint8_t	txThread;
+    uint16_t	rxThread;
+    uint16_t	txThread;
     uint8_t	state;		// MxEngineState::rag(i) - MxRAG
   };
 

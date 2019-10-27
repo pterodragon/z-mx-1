@@ -33,7 +33,7 @@
 struct TLS : public ZmObject {
   TLS() : m_ping(0) { }
   ~TLS() {
-    printf("~TLS(%u) [%d]\n", m_ping, (int)ZmThreadContext::self()->id());
+    printf("~TLS(%u) [%d]\n", m_ping, (int)ZmThreadContext::self()->index());
   }
   void ping() { ++m_ping; }
   unsigned	m_ping;
@@ -44,13 +44,13 @@ public:
   inline Job(const char *message, ZmTime timeout) :
 	m_message(message), m_timeout(timeout) { }
   inline ~Job() {
-    printf("~%s [%d]\n", m_message, (int)ZmThreadContext::self()->id());
+    printf("~%s [%d]\n", m_message, (int)ZmThreadContext::self()->index());
     ::free((void *)m_message);
   }
 
   void *operator()() {
     ZmSpecific<TLS>::instance()->ping();
-    printf("%s [%d]\n", m_message, (int)ZmThreadContext::self()->id());
+    printf("%s [%d]\n", m_message, (int)ZmThreadContext::self()->index());
     return 0;
   }
 

@@ -28,6 +28,8 @@
 #pragma warning(disable:4800)
 #endif
 
+using namespace ZmSchedState;
+
 ZmScheduler::ZmScheduler(ZmSchedParams params) :
   m_params(ZuMv(params)),
   m_stateCond(m_stateLock),
@@ -473,8 +475,8 @@ bool ZmScheduler::tryRun__(Thread *thread, ZmFn<> &fn)
 
 void ZmScheduler::work()
 {
-  unsigned id = ZmThreadContext::self()->id();
-  Thread *thread = &m_threads[id - 1];
+  unsigned index = ZmThreadContext::self()->index();
+  Thread *thread = &m_threads[index - 1];
 
   thread->tid = ZmPlatform::getTID();
 

@@ -54,7 +54,7 @@
 
 typedef ZmPlatform::ThreadID ZmThreadID;
 
-struct ZmThreadPriority {
+namespace ZmThreadPriority {
   enum _ {		// thread priorities
     Unset = -1,
     RealTime = 0,
@@ -62,7 +62,7 @@ struct ZmThreadPriority {
     Normal = 2,
     Low = 3
   };
-};
+}
 
 typedef ZuStringN<28> ZmThreadName;
 
@@ -73,10 +73,10 @@ struct ZmThreadTelemetry {
   ZmThreadName	name;
   uint64_t	tid;		// primary key
   uint64_t	stackSize;
-  uint64_t	cpuset;
+  uint64_t	cpuset;		// FIXME
   double	cpuUsage;	// graphable (*)
-  int32_t	id;
   int32_t	sysPriority;
+  int16_t	index;		// index within thread pool (ZmScheduler, ...)
   uint16_t	partition;
   int8_t	priority;
   uint8_t	main;
@@ -230,9 +230,9 @@ class ZmAPI ZmThreadContext : public ZmObject, public ZmThreadContext_ {
   inline ZmThreadContext() // only called via self() for unmanaged threads
     { init(); }
   template <typename Fn>
-  inline ZmThreadContext(int id, Fn &&fn, const ZmThreadParams &params) :
+  inline ZmThreadContext(int index, Fn &&fn, const ZmThreadParams &params) :
       m_fn(ZuFwd<Fn>(fn)),
-      m_id(id), m_name(params.name()),
+      m_index(index), m_name(params.name()),
       m_stackSize(params.stackSize()), m_priority(params.priority()),
       m_partition(params.partition()), m_cpuset(params.cpuset()),
       m_result(nullptr),
@@ -262,7 +262,7 @@ public:
 
   ZuInline const ZmFn<> &fn() const { return m_fn; }
 
-  ZuInline int id() const { return m_id; }
+  ZuInline int index() const { return m_index; }
   ZuInline const ZmThreadName &name() const { return m_name; }
 
   ZuInline unsigned stackSize() const { return m_stackSize; }
@@ -290,7 +290,7 @@ private:
 
   ZmFn<>	m_fn;
 
-  int		m_id = -1;
+  int		m_index = -1;	// index within thread pool/group
   ZmThreadName	m_name;
   unsigned	m_stackSize = 0;
   int		m_priority = -1;

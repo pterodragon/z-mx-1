@@ -651,7 +651,7 @@ public:
     uint32_t	cacheSize;
     uint32_t	filesMax;
     uint8_t	compress;
-    int8_t	cacheMode;
+    int8_t	cacheMode;	// ZdbCacheMode
   };
 
   void telemetry(Telemetry &data) const;
@@ -829,8 +829,8 @@ public:
     uint32_t	id;
     uint32_t	priority;
     uint16_t	port;
-    uint8_t	voted;
     uint8_t	state; // RAG: Instantiated - Red; Active - Green; * - Amber
+    uint8_t	voted;
   };
 
   void telemetry(Telemetry &data) const;

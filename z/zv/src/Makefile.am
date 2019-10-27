@@ -17,7 +17,8 @@ FBS = \
 	userdback.fbs \
 	zcmd.fbs \
 	zcmdreq.fbs \
-	zcmdack.fbs
+	zcmdack.fbs \
+	telemetry.fbs
 FBS_H = ${FBS:%.fbs=%_fbs.h}
 ${FBS_H}: %_fbs.h: fbs/%.fbs
 	flatc -c -I fbs $<

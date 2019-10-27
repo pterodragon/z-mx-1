@@ -152,6 +152,16 @@ private:
   bool		m_ll = false;
 };
 
+namespace ZmSchedState {
+  enum _ { Stopped = 0, Starting, Running, Draining, Drained, Stopping, N };
+  inline const char *name(int i) {
+    static const char *names[] =
+      { "Stopped", "Starting", "Running", "Draining", "Drained", "Stopping" };
+    if (i < 0 || i >= N) return "Unknown";
+    return names[i];
+  }
+}
+
 class ZmAPI ZmScheduler {
   ZmScheduler(const ZmScheduler &) = delete;
   ZmScheduler &operator =(const ZmScheduler &) = delete;
@@ -173,6 +183,7 @@ class ZmAPI ZmScheduler {
 	  ZmRBTreeHeapID<ScheduleTree_HeapID>>>>;
 
 public:
+  using ID = ZmSchedParams::ID;
   using Ring = ZmRing<ZmFn<>>;
   using OverRing_ =  ZmDRing<ZmFn<>, ZmDRingLock<ZmNoLock>>;
   struct OverRing : public OverRing_ {
@@ -208,14 +219,6 @@ public:
   };
   enum { OverRing_Increment = 128 };
   using Timer = ZmRef<ScheduleTree::Node>;
-  using ID = ZmSchedParams::ID;
-  enum { Stopped = 0, Starting, Running, Draining, Drained, Stopping, N };
-  inline static const char *stateName(int i) {
-    static const char *names[] =
-      { "Stopped", "Starting", "Running", "Draining", "Drained", "Stopping" };
-    if (i < 0 || i >= N) return "Unknown";
-    return names[i];
-  }
 
   // might throw ZmRingError
   ZmScheduler(ZmSchedParams params = ZmSchedParams());

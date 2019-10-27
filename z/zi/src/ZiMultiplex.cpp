@@ -258,7 +258,7 @@ void ZiMultiplex::udp(ZiConnectFn fn, ZiFailFn failFn,
 {
   StateGuard guard(m_stateLock);
 
-  if (ZuUnlikely(state() != ZmScheduler::Running)) {
+  if (ZuUnlikely(state() != ZmSchedState::Running)) {
     guard.unlock();
     Error("udp", Zi::NotReady, ZeOK);
     failFn(false);
@@ -518,7 +518,7 @@ void ZiMultiplex::connect(
 {
   StateGuard guard(m_stateLock);
 
-  if (ZuUnlikely(state() != ZmScheduler::Running)) {
+  if (ZuUnlikely(state() != ZmSchedState::Running)) {
     guard.unlock();
     Error("connect", Zi::NotReady, ZeOK);
     failFn(false);
@@ -783,7 +783,6 @@ void ZiConnection::telemetry(ZiCxnTelemetry &data) const
   data.rxBufLen = rxBufLen;
   data.txBufSize = txBufSize;
   data.txBufLen = txBufLen;
-  data.flags = m_info.options.flags();
   data.mreqAddr = mreqAddr;
   data.mreqIf = mreqIf;
   data.mif = m_info.options.mif();
@@ -792,6 +791,7 @@ void ZiConnection::telemetry(ZiCxnTelemetry &data) const
   data.remoteIP = m_info.remoteIP;
   data.localPort = m_info.localPort;
   data.remotePort = m_info.remotePort;
+  data.flags = m_info.options.flags();
   data.type = m_info.type;
 }
 
@@ -813,7 +813,7 @@ void ZiMultiplex::listen(
 {
   StateGuard guard(m_stateLock);
 
-  if (ZuUnlikely(state() != ZmScheduler::Running)) {
+  if (ZuUnlikely(state() != ZmSchedState::Running)) {
     guard.unlock();
     Error("listen", Zi::NotReady, ZeOK);
     failFn(false);
@@ -972,7 +972,7 @@ void ZiMultiplex::stopListening(ZiIP localIP, uint16_t localPort)
 {
   StateGuard guard(m_stateLock);
 
-  if (ZuUnlikely(state() != ZmScheduler::Running)) return;
+  if (ZuUnlikely(state() != ZmSchedState::Running)) return;
 
   rxInvoke(
       [this, localIP, localPort]() {
@@ -1930,11 +1930,11 @@ int ZiMultiplex::start()
   // deal with multiple, potentially overlapping invocations
 
   switch (state()) {
-    case ZmScheduler::Stopping:
+    case ZmSchedState::Stopping:
       ZmScheduler::stop();
-    case ZmScheduler::Stopped:
+    case ZmSchedState::Stopped:
       break;
-    case ZmScheduler::Running:
+    case ZmSchedState::Running:
       return Zi::OK;
     default:
       ZmScheduler::start();
@@ -2018,12 +2018,12 @@ void ZiMultiplex::stop(bool drain)
 
   // deal with multiple, potentially overlapping invocations
   switch (state()) {
-    case ZmScheduler::Draining:
-    case ZmScheduler::Drained:
-    case ZmScheduler::Stopping:
+    case ZmSchedState::Draining:
+    case ZmSchedState::Drained:
+    case ZmSchedState::Stopping:
       wake();
       ZmScheduler::stop();
-    case ZmScheduler::Stopped:
+    case ZmSchedState::Stopped:
       return;
     default:
       break;

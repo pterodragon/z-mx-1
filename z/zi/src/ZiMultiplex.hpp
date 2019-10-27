@@ -507,7 +507,6 @@ struct ZiCxnTelemetry {
   uint32_t	rxBufLen;	// graphable (*) - ioctl(..., SIOCINQ, ...)
   uint32_t	txBufSize;	// graphable - getsockopt(..., SO_SNDBUF, ...)
   uint32_t	txBufLen;	// graphable (*) - ioctl(..., SIOCOUTQ, ...)
-  uint32_t	flags;		// ZiCxnFlags
   ZiIP		mreqAddr;	// mreqs[0]
   ZiIP		mreqIf;		// mreqs[0]
   ZiIP		mif;
@@ -516,6 +515,7 @@ struct ZiCxnTelemetry {
   ZiIP		remoteIP;	// primary key
   uint16_t	localPort;	// primary key
   uint16_t	remotePort;	// primary key
+  uint8_t	flags;		// ZiCxnFlags
   uint8_t	type;		// ZiCxnType
 };
 

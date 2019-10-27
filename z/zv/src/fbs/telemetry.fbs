@@ -1,0 +1,240 @@
+namespace ZvTelemetry.fbs;
+table Heap {
+  id:string;
+  cacheSize:uint64;
+  cpuset:[uint64];
+  cacheAllocs:uint64;
+  heapAllocs:uint64;
+  frees:uint64;
+  size:uint32;
+  partition:uint16;
+  sharded:uint8;
+  alignment:uint8;
+}
+table HashTbl {
+  id:string;
+  addr:uint64;
+  nodeSize:uint32;
+  loadFactor:float;
+  count:uint32;
+  effLoadFactor:float;
+  resized:uint32;
+  bits:uint8;
+  cBits:uint8;
+  linear:uint8;
+}
+enum ThreadPriority:uint8 {	// ZmThreadPriority
+  RealTime = 0,
+  High = 1,
+  Normal = 2,
+  Low = 3
+}
+table Thread {
+  name:string;
+  tid:uint64;
+  stackSize:uint64;
+  cpuset:[uint64];
+  cpuUsage:float;
+  sysPriority:int32;
+  index:int16;
+  partition:uint16;
+  priority:ThreadPriority;
+  main:uint8;
+  detached:uint8;
+}
+enum MxState:uint8 {		// == ZmSchedState
+  Stopped = 0,
+  Starting,
+  Running,
+  Draining,
+  Drained,
+  Stopping
+}
+table Mx {
+  id:string;
+  stackSize:uint32;
+  queueSize:uint32;
+  spin:uint32;
+  timeout:uint32;
+  rxBufSize:uint32;
+  txBufSize:uint32;
+  rxThreadIndex:uint16;
+  txThreadIndex:uint16;
+  partition:uint16;
+  state:MxState;
+  ll:uint8;
+  priority:uint8;
+  nThreads:uint8;
+}
+enum SocketFlags:uint8 {	// == 1<<ZiCxnFlags
+  UDP		= 0x01,
+  Multicast	= 0x02,
+  LoopBack	= 0x04,
+  KeepAlive	= 0x08,
+  NetLink	= 0x10,
+  Nagle		= 0x20
+}
+enum SocketType:uint8 {		// == ZiCxnType
+  TCPIn = 0,
+  TCPOut,
+  UDP
+}
+table Socket {
+  mxID:string;
+  socket:uint64;
+  rxBufSize:uint32;
+  rxBufLen:uint32;
+  txBufSize:uint32;
+  txBufLen:uint32;
+  mreqAddr:uint32;
+  mreqIf:uint32;
+  mif:uint32;
+  ttl:uint32;
+  localIP:uint32;
+  remoteIP:uint32;
+  localPort:uint16;
+  remotePort:uint16;
+  flags:uint8;			// SocketFlags
+  type:SocketType;
+}
+enum QueueType:uint8 {
+  Thread = 0,
+  IPC,
+  Rx,
+  Tx
+}
+table Queue {
+  id:string;
+  seqNo:uint64;
+  count:uint64;
+  inCount:uint64;
+  inBytes:uint64;
+  outCount:uint64;
+  outBytes:uint64;
+  full:uint32;
+  size:uint32;
+  type:QueueType;
+}
+enum LinkState:uint8 {
+  Down = 0,		// down (engine not started)
+  Disabled,		// intentionally down (admin/ops disabled)
+  Connecting,		// connecting (being brought up)
+  Up,			// up/running
+  ReconnectPending,	// reconnect pending following transient failure
+  Reconnecting,		// reconnecting following transient failure
+  Failed,		// failed (non-transient)
+  Disconnecting,	// disconnecting (being brought down)
+  ConnectPending,	// brought up while disconnecting
+  DisconnectPending	// brought down while connecting
+}
+table Link {
+  id:string;
+  rxSeqNo:uint64;
+  txSeqNo:uint64;
+  reconnects:uint32;
+  state:LinkState;
+}
+enum EngineState:uint8 {
+  Stopped = 0,
+  Starting,
+  Running,
+  Stopping,
+  StartPending,	// started while stopping
+  StopPending	// stopped while starting
+}
+table Engine {	// FIXME - add type (as string)
+  id:string;
+  mxID:string;
+  down:uint16;
+  disabled:uint16;
+  transient:uint16;
+  up:uint16;
+  reconn:uint16;
+  failed:uint16;
+  nLinks:uint16;
+  rxThreadIndex:uint16;
+  txThreadIndex:uint16;
+  state:EngineState;
+  links:[Link];
+}
+enum DBCacheMode:uint8 {
+  Normal = 0,
+  FullCache
+}
+table DB {
+  path:string;
+  name:string;
+  fileSize:uint64;
+  minRN:uint64;
+  nextRN:uint64;
+  fileRN:uint64;
+  cacheLoads:uint64;
+  fileLoads:uint64;
+  fileMisses:uint64;
+  id:uint32;
+  preAlloc:uint32;
+  recSize:uint32;
+  fileRecs:uint32;
+  cacheSize:uint32;
+  filesMax:uint32;
+  compress:uint8;
+  cacheMode:DBCacheMode;
+}
+enum DBHostState:uint8 {
+  Instantiated = 0,	// instantiated, init() not yet called
+  Initialized,		// init() called
+  Stopped,		// open() called
+  Electing,		// start() called, determining active/inactive
+  Activating,		// activating application
+  Active,		// active (master)
+  Deactivating,		// deactivating application
+  Inactive,		// inactive (client)
+  Stopping		// stop() called - stopping
+}
+table DBHost {
+  ip:uint32;
+  id:uint32;
+  priority:uint32;
+  port:uint16;
+  state:DBHostState;
+  voted:uint8;
+}
+table DBEnv {		// FIXME - add appID (to match App id)
+  nCxns:uint32;
+  heartbeatFreq:uint32;
+  heartbeatTimeout:uint32;
+  reconnectFreq:uint32;
+  electionTimeout:uint32;
+  self:uint32;		// primary key - host ID 
+  master:uint32;	// ''
+  prev:uint32;		// ''
+  next:uint32;		// ''
+  writeThread:uint16;
+  nHosts:uint8;
+  nPeers:uint8;
+  nDBs:uint8;
+  state:uint8;		// same as hosts[hostID].state
+  active:uint8;
+  recovering:uint8;
+  replicating:uint8;
+  hosts:[DBHost];
+  dbs:[DB];
+}
+table App {		// FIXME - add uptime, role (prod/dev/test), version
+  id:string;
+}
+union TelData {
+  Heap:Heap,
+  HashTbl:HashTbl,
+  Thread:Thread,
+  Mx:Mx,
+  Socket:Socket,
+  Queue:Queue,
+  Engine:Engine,
+  DBEnv:DBEnv,
+  App:App
+}
+table Telemetry {
+  data:TelData;
+}
+root_type Telemetry;

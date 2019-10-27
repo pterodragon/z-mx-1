@@ -87,7 +87,7 @@ struct ZmHeapStats {
 struct ZmHeapTelemetry {
   ZmIDString	id;		// primary key
   uint64_t	cacheSize;
-  uint64_t	cpuset;	
+  uint64_t	cpuset;		// FIXME
   uint64_t	cacheAllocs;	// graphable (*)
   uint64_t	heapAllocs;	// graphable (*)
   uint64_t	frees;		// graphable

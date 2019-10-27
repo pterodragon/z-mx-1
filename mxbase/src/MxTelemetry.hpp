@@ -68,15 +68,15 @@ namespace MxTelemetry {
     ZuInline const void *body() const { return (const void *)&this[1]; }
   };
 
-  typedef ZmHeapTelemetry Heap;
+  using Heap = ZmHeapTelemetry;
 
-  typedef ZmHashTelemetry HashTbl;
+  using HashTbl = ZmHashTelemetry;
 
-  typedef ZmThreadTelemetry Thread;
+  using Thread = ZmThreadTelemetry;
 
-  typedef ZiMxTelemetry Multiplexer;
+  using Multiplexer = ZiMxTelemetry;
 
-  typedef ZiCxnTelemetry Socket;
+  using Socket = ZiCxnTelemetry;
 
   namespace QueueType {
     MxEnumValues(
@@ -228,7 +228,7 @@ namespace MxTelemetry {
   template <typename Cxn, typename L, bool = IOLambda_<Cxn, L>::OK>
   struct IOLambda;
   template <typename Cxn, typename L> struct IOLambda<Cxn, L, true> {
-    typedef void T;
+    using T = void;
     ZuInline static void invoke(ZiIOContext &io) {
       (*(L *)(void *)0)(static_cast<Cxn *>(io.cxn), io.fn.mvObject<Msg>(), io);
     }
@@ -258,7 +258,7 @@ namespace MxTelemetry {
   }
 
   class MxBaseAPI Client {
-    typedef ZmPLock Lock;
+    using Lock = ZmPLock;
     typedef ZmGuard<Lock> Guard;
     typedef ZmReadGuard<Lock> ReadGuard;
 
@@ -318,7 +318,7 @@ namespace MxTelemetry {
   };
 
   class MxBaseAPI Server {
-    typedef ZmPLock Lock;
+    using Lock = ZmPLock;
     typedef ZmGuard<Lock> Guard;
     typedef ZmReadGuard<Lock> ReadGuard;
 

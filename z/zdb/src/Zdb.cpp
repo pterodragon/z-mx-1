@@ -514,8 +514,8 @@ void ZdbHost::telemetry(Telemetry &data) const
   data.id = m_config->id;
   data.priority = m_config->priority;
   data.port = m_config->port;
-  data.voted = m_voted;
   data.state = m_state;
+  data.voted = m_voted;
 }
 
 void ZdbHost::reactivate()

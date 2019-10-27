@@ -357,7 +357,7 @@ void ZmHeapCache::telemetry(ZmHeapTelemetry &data) const
   const ZmHeapStats &stats = this->stats();
   data.id = info.id;
   data.cacheSize = info.config.cacheSize;
-  data.cpuset = info.config.cpuset.uint64();
+  data.cpuset = info.config.cpuset.uint64(); // FIXME
   data.cacheAllocs = stats.cacheAllocs;
   data.heapAllocs = stats.heapAllocs;
   data.frees = stats.frees;

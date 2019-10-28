@@ -233,6 +233,7 @@ union TelData {
   Engine:Engine,
   DBEnv:DBEnv,
   App:App
+  // FIXME - alerts (log events)
 }
 table Telemetry {
   data:TelData;

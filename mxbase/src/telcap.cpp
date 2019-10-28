@@ -94,7 +94,7 @@ private:
 	const auto &data = msg->as<Thread>();
 	write_(m_thread, ZuStringN<512>() << now.csv(nowFmt)
 	  << ',' << data.name
-	  << ',' << data.id
+	  << ',' << data.index
 	  << ',' << data.tid
 	  << ',' << ZuBoxed(data.cpuUsage * 100.0).fmt(ZuFmt::FP<2>())
 	  << ",\"" << ZmBitmap(data.cpuset) << '"'
@@ -109,7 +109,7 @@ private:
 	const auto &data = msg->as<Multiplexer>();
 	write_(m_multiplexer, ZuStringN<512>() << now.csv(nowFmt)
 	  << ',' << data.id
-	  << ',' << ZmScheduler::stateName(data.state)
+	  << ',' << ZmSchedState::name(data.state)
 	  << ',' << ZuBoxed(data.nThreads)
 	  << ',' << ZuBoxed(data.rxThread)
 	  << ',' << ZuBoxed(data.txThread)

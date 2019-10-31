@@ -870,17 +870,17 @@ private:
     ++m_count;
     ++m_inCount;
     m_inBytes += bytes;
-    return 0;
+    return nullptr;
   }
 
   inline NodeRef dequeue_() {
   loop:
     NodeRef node = m_head[0];
-    if (!node) return 0;
+    if (!node) return nullptr;
     Fn item(node->Node::item());
     Key key = item.key();
     ZmAssert(key >= m_headKey);
-    if (key != m_headKey) return 0;
+    if (key != m_headKey) return nullptr;
     unsigned length = item.length();
     delHead_<0>();
     nodeDeref(node);
@@ -901,7 +901,7 @@ public:
   // dequeues up to, but not including, item containing key
   inline NodeRef dequeue(Key key) {
     Guard guard(m_lock);
-    if (m_headKey >= key) return 0;
+    if (m_headKey >= key) return nullptr;
     return dequeue_();
   }
 
@@ -910,7 +910,7 @@ private:
   inline NodeRef shift_() {
   loop:
     NodeRef node = m_head[0];
-    if (!node) return 0;
+    if (!node) return nullptr;
     Fn item(node->Node::item());
     unsigned length = item.length();
     delHead_<0>();
@@ -947,11 +947,11 @@ public:
 
     NodeRef node = next[0];
 
-    if (!node) return 0;
+    if (!node) return nullptr;
 
     Fn item(node->Node::item());
 
-    if (item.key() != key) return 0;
+    if (item.key() != key) return nullptr;
 
     del_<0>(next);
     nodeDeref(node);
@@ -1479,6 +1479,7 @@ public:
 
   // abort message
   ZmRef<Msg> abort(Key key) {
+    if (key < m_sendKey) return nullptr;
     App *app = static_cast<App *>(this);
     ZmRef<Msg> msg;
     {

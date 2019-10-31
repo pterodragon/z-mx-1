@@ -583,7 +583,9 @@ public:
   }
   template <typename L>
   void abort(MxSeqNo seqNo, L l) {
-    this->txInvoke([seqNo, l = ZuMv(l)](Tx *tx) { l(tx->abort(seqNo)); });
+    this->txInvoke([seqNo, l = ZuMv(l)](Tx *tx) mutable {
+      l(tx->abort(seqNo));
+    });
   }
 
 private:

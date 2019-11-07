@@ -557,15 +557,6 @@ public:
     }
     // should never happen; somehow this point was reached despite
     // filterModify() previously returning OK
-    MxEnum rejReason = filterModify(order);
-    if (ZuUnlikely(rejReason == MxTRejReason::OK)) // should never happen
-      rejReason = MxTRejReason::OSM;
-    {
-      auto &modReject = order->execTxn.template initModReject<1>();
-      execIn<MxTEventState::Sent>(order);
-      modReject.rejReason = rejReason;
-      modReject.update(in.template as<Modify>());
-    }
     return 0;
   }
 
@@ -653,15 +644,6 @@ public:
     }
     // should never happen; somehow this point was reached despite
     // filterModify() previously returning OK
-    MxEnum rejReason = filterModify(order);
-    if (ZuUnlikely(rejReason == MxTRejReason::OK)) // should never happen
-      rejReason = MxTRejReason::OSM;
-    {
-      auto &modReject = order->execTxn.template initModReject<1>();
-      execIn<MxTEventState::Sent>(order);
-      modReject.rejReason = rejReason;
-      modReject.update(in.template as<Modify>());
-    }
     return 0;
   }
 
@@ -890,15 +872,6 @@ public:
     }
     // should never happen; somehow this point was reached despite
     // filterCancel() previously returning OK when app called cancelIn()
-    MxEnum rejReason = filterCancel(order);
-    if (ZuUnlikely(rejReason == MxTRejReason::OK)) // should never happen
-      rejReason = MxTRejReason::OSM;
-    {
-      auto &cxlReject = order->execTxn.template initCxlReject<1>();
-      execIn<MxTEventState::Sent>(order);
-      cxlReject.rejReason = rejReason;
-      cxlReject.update(in.template as<Cancel>());
-    }
     return 0;
   }
 

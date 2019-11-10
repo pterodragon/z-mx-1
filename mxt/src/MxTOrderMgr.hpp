@@ -459,7 +459,7 @@ public:
       else
 	return MxTRejReason::ModifyPending;
     }
-    if (ZuUnlikely(MxTEventState::matchDSP(modify.eventState)))
+    if (ZuUnlikely(MxTEventState::matchDQSP(modify.eventState)))
       return MxTRejReason::ModifyPending;
     if (ZuUnlikely(
 	  !MxTEventState::matchA(newOrder.eventState) &&

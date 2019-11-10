@@ -376,6 +376,10 @@ public:
 	hwloc_set_area_membind(
 	    ZmTopology::hwloc(), m_data.addr(), (m_data.mmapLength())<<1,
 	    m_params.cpuset(), HWLOC_MEMBIND_BIND, HWLOC_MEMBIND_MIGRATE);
+      if (flags & Write) {
+	gc();
+	this->head() = this->head().load_() & ~EndOfFile;
+      }
       if (flags & Read) {
 	if (!incRdrCount()) {
 	  m_ctrl.close();
@@ -383,10 +387,6 @@ public:
 	  if (e) *e = ZiEADDRINUSE;
 	  return Zi::IOError;
 	}
-      }
-      if (flags & Write) {
-	gc();
-	this->head() = this->head().load_() & ~EndOfFile;
       }
     }
     return Zi::OK;
@@ -563,6 +563,7 @@ public:
  
     unsigned freed = 0;
     uint64_t dead;
+    unsigned rdrCount;
 
     // below loop is a probe - as long as any concurrent attach() or
     // detach() overlap with our discovery of dead readers, the results
@@ -570,11 +571,16 @@ public:
     // give up and return 0
     for (unsigned i = 0;; ) {
       uint64_t attSeqNo = this->attSeqNo().load_();
-      dead = this->rdrMask(); // assume all dead
-      if (!dead) return -1;
-      for (unsigned id = 0; id < 64; id++) {
-	if (!(dead & (1ULL<<id))) continue;
-	if (alive(rdrPID()[id], rdrTime()[id])) dead &= ~(1ULL<<id);
+      dead = rdrMask(); // assume all dead
+      rdrCount = 0;
+      if (dead) {
+	for (unsigned id = 0; id < 64; id++) {
+	  if (!(dead & (1ULL<<id))) continue;
+	  if (alive(rdrPID()[id], rdrTime()[id])) {
+	    dead &= ~(1ULL<<id);
+	    ++rdrCount;
+	  }
+	}
       }
       if (attSeqNo == this->attSeqNo()) break;
       ZmPlatform::yield();
@@ -607,9 +613,8 @@ public:
 	if (rdrPID()[id]) {
 	  this->rdrMask() &= ~(1ULL<<id);
 	  rdrPID()[id] = 0, rdrTime()[id] = ZmTime();
-	  --rdrCount();
 	}
-
+    this->rdrCount() = rdrCount;
     if (!(attMask() &= ~dead)) return -1; // no readers left
     return freed;
   }

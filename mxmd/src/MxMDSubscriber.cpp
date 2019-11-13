@@ -166,7 +166,7 @@ void MxMDSubLink::udpError(UDP *udp, ZiIOContext *io)
 
 void MxMDSubLink::connect()
 {
-  linkINFO("MxMDSubLink::connect(" << id << ')');
+  // linkINFO("MxMDSubLink::connect(" << id << ')');
 
   reset(0, 0);
 
@@ -183,7 +183,7 @@ void MxMDSubLink::disconnect()
 
 void MxMDSubLink::reconnect(bool immediate)
 {
-  linkINFO("MxMDSubLink::reconnect(" << id << ')');
+  // linkINFO("MxMDSubLink::reconnect(" << id << ')');
 
   engine()->rxInvoke([this, immediate]() { reconnect_(immediate); });
 }

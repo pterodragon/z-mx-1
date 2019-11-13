@@ -325,7 +325,7 @@ void ZiMultiplex::udp_(ZiConnectFn fn, ZiFailFn failFn,
     if (::connect(s, remote.sa(), remote.len()) < 0) {
       ZeError e(errno);
       ::close(s);
-      Warning("connect", Zi::IOError, e);
+      // Warning("connect", Zi::IOError, e);
       failFn(true);
       return;
     }
@@ -425,7 +425,7 @@ void ZiMultiplex::udp_(ZiConnectFn fn, ZiFailFn failFn,
     if (::connect(s, remote.sa(), remote.len())) {
       ZeError e(WSAGetLastError());
       ::closesocket(s);
-      Warning("connect", Zi::IOError, e);
+      // Warning("connect", Zi::IOError, e);
       failFn(true);
       return;
     }
@@ -690,7 +690,7 @@ retry:
 	s, ci.options.familyName(), ci.familyID, ci.portID)) != ZeOK) {
       connectDel(s);
       ::close(s);
-      Warning("connect", Zi::IOError, e);
+      // Warning("connect", Zi::IOError, e);
       request->fail(true);
       return;
     }
@@ -704,7 +704,7 @@ retry:
       if (e.errNo() == EINTR) goto retry;
       connectDel(s);
       ::close(s);
-      Warning("connect", Zi::IOError, e);
+      // Warning("connect", Zi::IOError, e);
       request->fail(true);
       return;
     }
@@ -2247,7 +2247,7 @@ void ZiMultiplex::rx()
 	  }
 	  connectDel(s);
 	  ::close(s);
-	  Warning("connect", Zi::IOError, e);
+	  // Warning("connect", Zi::IOError, e);
 	  request->fail(true);
 	  continue;
 	}

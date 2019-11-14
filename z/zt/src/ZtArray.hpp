@@ -245,7 +245,7 @@ public:
   ZuInline ZtArray() { null_(); }
 private:
   enum NoInit_ { NoInit };
-  inline ZtArray(NoInit_ _) { }
+  ZuInline ZtArray(NoInit_ _) { }
 public:
   ZuInline ZtArray(const ZtArray &a) { ctor(a); }
   ZuInline ZtArray(ZtArray &&a) noexcept {

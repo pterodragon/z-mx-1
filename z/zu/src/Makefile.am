@@ -11,6 +11,6 @@ pkginclude_HEADERS = \
 	ZuObject.hpp ZuPolymorph.hpp ZuPOD.hpp ZuPP.hpp ZuPair.hpp \
 	ZuPrint.hpp ZuRef.hpp ZuStdString.hpp ZuString.hpp ZuStringFn.hpp \
 	ZuStringN.hpp ZuTraits.hpp ZuTuple.hpp ZuUnion.hpp ZuVersion.hpp \
-	Zu_aton.hpp Zu_ntoa.hpp ZuDecimal.hpp ZuUTF.hpp
+	Zu_aton.hpp Zu_ntoa.hpp ZuDecimal.hpp ZuUTF.hpp ZuFixed.hpp
 lib_LTLIBRARIES = libZu.la
 libZu_la_SOURCES = ZuLib.cpp ZuVersion.cpp

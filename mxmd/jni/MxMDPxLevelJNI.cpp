@@ -54,11 +54,6 @@ namespace MxMDPxLevelJNI {
   };
 }
 
-void MxMDPxLevelJNI::ctor_(JNIEnv *env, jobject obj, jlong)
-{
-  // (long) -> void
-}
-
 void MxMDPxLevelJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
@@ -140,6 +135,9 @@ int MxMDPxLevelJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
+    { "dtor_",
+      "(J)V",
+      (void *)&MxMDPxLevelJNI::dtor_ },
     { "obSide",
       "()Lcom/shardmx/mxmd/MxMDOBSide;",
       (void *)&MxMDPxLevelJNI::obSide },
@@ -165,6 +163,8 @@ int MxMDPxLevelJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic pop
 
   class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDPxLevel");
+  if (!class_) return -1;
+
   if (ZJNI::bind(env, class_,
         methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
 

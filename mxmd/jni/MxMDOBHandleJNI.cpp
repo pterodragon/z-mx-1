@@ -43,11 +43,6 @@ namespace MxMDOBHandleJNI {
   };
 }
 
-void MxMDOBHandleJNI::ctor_(JNIEnv *env, jobject obj, jlong)
-{
-  // (long) -> void
-}
-
 void MxMDOBHandleJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
@@ -82,9 +77,6 @@ int MxMDOBHandleJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
-    { "ctor_",
-      "(J)V",
-      (void *)&MxMDOBHandleJNI::ctor_ },
     { "dtor_",
       "(J)V",
       (void *)&MxMDOBHandleJNI::dtor_ },
@@ -95,6 +87,8 @@ int MxMDOBHandleJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic pop
 
   class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDOBHandle");
+  if (!class_) return -1;
+
   if (ZJNI::bind(env, class_,
         methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
 

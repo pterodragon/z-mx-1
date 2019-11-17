@@ -53,11 +53,6 @@ namespace MxMDDerivativesJNI {
   };
 }
 
-void MxMDDerivativesJNI::ctor_(JNIEnv *env, jobject obj, jlong)
-{
-  // (long) -> void
-}
-
 void MxMDDerivativesJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
@@ -121,6 +116,9 @@ int MxMDDerivativesJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
+    { "dtor_",
+      "(J)V",
+      (void *)&MxMDOrderBookJNI::dtor_ },
     { "future",
       "(Lcom/shardmx/mxbase/MxFutKey;)Lcom/shardmx/mxmd/MxMDInstrument;",
       (void *)&MxMDDerivativesJNI::future },
@@ -137,6 +135,8 @@ int MxMDDerivativesJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic pop
 
   class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDDerivatives");
+  if (!class_) return -1;
+
   if (ZJNI::bind(env, class_,
         methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
 

@@ -43,11 +43,6 @@ namespace MxMDFeedJNI {
   }
 }
 
-void MxMDFeedJNI::ctor_(JNIEnv *env, jobject obj, jlong)
-{
-  // (long) -> void
-}
-
 void MxMDFeedJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
@@ -89,9 +84,6 @@ int MxMDFeedJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
-    { "ctor_",
-      "(J)V",
-      (void *)&MxMDFeedJNI::ctor_ },
     { "dtor_",
       "(J)V",
       (void *)&MxMDFeedJNI::dtor_ },

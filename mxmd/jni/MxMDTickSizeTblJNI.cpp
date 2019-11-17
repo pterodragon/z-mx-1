@@ -52,11 +52,6 @@ namespace MxMDTickSizeTblJNI {
   };
 }
 
-void MxMDTickSizeTblJNI::ctor_(JNIEnv *env, jobject obj, jlong)
-{
-  // (long) -> void
-}
-
 void MxMDTickSizeTblJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
@@ -122,9 +117,6 @@ int MxMDTickSizeTblJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
-    { "ctor_",
-      "(J)V",
-      (void *)&MxMDTickSizeTblJNI::ctor_ },
     { "dtor_",
       "(J)V",
       (void *)&MxMDTickSizeTblJNI::dtor_ },
@@ -147,6 +139,8 @@ int MxMDTickSizeTblJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic pop
 
   class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDTickSizeTbl");
+  if (!class_) return -1;
+
   if (ZJNI::bind(env, class_,
         methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
 

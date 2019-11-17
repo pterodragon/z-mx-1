@@ -1,0 +1,5 @@
+namespace ZvDecimal.fbs;
+struct Decimal {
+  h:uint64;
+  l:uint64;
+}

@@ -106,8 +106,6 @@ int init(JNIEnv *, jobject)
   return 0;
 }
 
-static void ctor_(JNIEnv *, jobject) { }
-
 static void dtor_(JNIEnv *, jobject) { }
 
 static jboolean helloWorld(JNIEnv *env, jobject obj, jstring text)
@@ -148,7 +146,6 @@ int MxJNITestObject_bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
-    { "ctor_", "()V", (void *)&ctor_ },
     { "dtor_", "()V", (void *)&dtor_ },
     { "helloWorld", "(Ljava/lang/String;)Z", (void *)&helloWorld }
   };

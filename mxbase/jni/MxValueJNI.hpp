@@ -17,51 +17,33 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// MxMD JNI
+// MxBase JNI
 
-#ifndef MxMDPxLevelJNI_HPP
-#define MxMDPxLevelJNI_HPP
+#ifndef MxValueJNI_HPP
+#define MxValueJNI_HPP
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#ifndef MxMDLib_HPP
-#include <mxmd/MxMDLib.hpp>
+#ifndef MxBaseLib_HPP
+#include <mxbase/MxBaseLib.hpp>
 #endif
 
-#include <jni.h>
+#include <mxbase/MxBase.hpp>
 
-#include <mxmd/MxMD.hpp>
+namespace MxValueJNI {
+  MxBaseExtern MxValue j2c(JNIEnv *, jobject, bool dlr = false);
+  MxBaseExtern jobject ctor(JNIEnv *, const MxValue &);
 
-namespace MxMDPxLevelJNI {
-  // (long) -> void
-  void dtor_(JNIEnv *, jobject, jlong);
+  jstring toString(JNIEnv *, jobject);
+  void scan(JNIEnv *, jobject, jstring s);
 
-  // () -> MxMDOBSide
-  jobject obSide(JNIEnv *, jobject);
+  jboolean equals(JNIEnv *, jobject, jobject v);
+  jint compareTo(JNIEnv *, jobject, jobject v);
 
-  // () -> MxSide
-  jobject side(JNIEnv *, jobject);
-
-  // () -> int
-  jint pxNDP(JNIEnv *, jobject);
-
-  // () -> int
-  jint qtyNDP(JNIEnv *, jobject);
-
-  // () -> long
-  jlong price(JNIEnv *, jobject);
-
-  // () -> MxMDPxLvlData
-  jobject data(JNIEnv *, jobject);
-
-  // (MxMDAllOrdersFn) -> long
-  jlong allOrders(JNIEnv *, jobject, jobject);
-
-  jobject ctor(JNIEnv *, ZmRef<MxMDPxLevel>);
   int bind(JNIEnv *);
   void final(JNIEnv *);
 }
 
-#endif /* MxMDPxLevelJNI_HPP */
+#endif /* MxValueJNI_HPP */

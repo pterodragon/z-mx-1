@@ -36,8 +36,6 @@
 
 namespace MxMDInstrHandleJNI {
   // (long) -> void
-  void ctor_(JNIEnv *, jobject, jlong);
-  // (long) -> void
   void dtor_(JNIEnv *, jobject, jlong);
 
   // (MxMDInstrumentFn) -> void

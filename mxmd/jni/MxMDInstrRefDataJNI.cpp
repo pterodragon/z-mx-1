@@ -84,6 +84,7 @@ int MxMDInstrRefDataJNI::bind(JNIEnv *env)
 {
   class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDInstrRefDataTuple");
   if (!class_) return -1;
+
   if (ZJNI::bindStatic(env, class_, ctorMethod, 1) < 0) return -1;
   return 0;
 }

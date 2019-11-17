@@ -17,51 +17,35 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// MxMD JNI
+// flatbuffer load/save for ZuDecimal
 
-#ifndef MxMDPxLevelJNI_HPP
-#define MxMDPxLevelJNI_HPP
+#ifndef ZvDecimal_HPP
+#define ZvDecimal_HPP
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#ifndef MxMDLib_HPP
-#include <mxmd/MxMDLib.hpp>
+#ifndef ZvLib_HPP
+#include <zlib/ZvLib.hpp>
 #endif
 
-#include <jni.h>
+#include <zlib/ZuDecimal.hpp>
 
-#include <mxmd/MxMD.hpp>
+#include <zlib/Zfb.hpp>
 
-namespace MxMDPxLevelJNI {
-  // (long) -> void
-  void dtor_(JNIEnv *, jobject, jlong);
+#include <zlib/decimal_fbs.h>
 
-  // () -> MxMDOBSide
-  jobject obSide(JNIEnv *, jobject);
-
-  // () -> MxSide
-  jobject side(JNIEnv *, jobject);
-
-  // () -> int
-  jint pxNDP(JNIEnv *, jobject);
-
-  // () -> int
-  jint qtyNDP(JNIEnv *, jobject);
-
-  // () -> long
-  jlong price(JNIEnv *, jobject);
-
-  // () -> MxMDPxLvlData
-  jobject data(JNIEnv *, jobject);
-
-  // (MxMDAllOrdersFn) -> long
-  jlong allOrders(JNIEnv *, jobject, jobject);
-
-  jobject ctor(JNIEnv *, ZmRef<MxMDPxLevel>);
-  int bind(JNIEnv *);
-  void final(JNIEnv *);
+namespace Zfb::Save {
+  template <typename B>
+  ZuInline auto decimal(B &b, const ZuDecimal &v) {
+    return fbs::CreateDecimal(b, (uint64_t)(v>>64), (uint64_t)v);
+  }
+}
+namespace Zfb::Load {
+  ZuInline ZuDecimal decimal(const fbs::Decimal *v) {
+    return ZuDecimal{ZuDecimal::NoScale, (((int128_t)(v->h()))<<64) | v->l()};
+  }
 }
 
-#endif /* MxMDPxLevelJNI_HPP */
+#endif /* ZvDecimal_HPP */

@@ -81,7 +81,7 @@
 #include <zlib/ZuIfT.hpp>
 #include <zlib/ZuFP.hpp>
 #include <zlib/ZuFmt.hpp>
-#include <zlib/ZuDecimal.hpp>
+#include <zlib/ZuDecimalFn.hpp>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -135,7 +135,7 @@ namespace Zu_ntoa {
 	  l = n>>1U;
 	else {
 	  n >>= 1U;
-	  l = n + (v >= ZuDecimal::pow10_32(n));
+	  l = n + (v >= ZuDecimalFn::pow10_32(n));
 	}
       }
       return l;
@@ -162,7 +162,7 @@ namespace Zu_ntoa {
 	  l = n>>1U;
 	else {
 	  n >>= 1U;
-	  l = n + (v >= ZuDecimal::pow10_64(n));
+	  l = n + (v >= ZuDecimalFn::pow10_64(n));
 	}
       }
       return l;
@@ -204,7 +204,7 @@ namespace Zu_ntoa {
 	unsigned f = 64U - __builtin_clzll(v);
 	unsigned i = clz10[f - 1];
 	i = (i>>1U) +
-	  ((ZuUnlikely(i & 1U)) && (v >= ZuDecimal::pow10_64(i>>1U)));
+	  ((ZuUnlikely(i & 1U)) && (v >= ZuDecimalFn::pow10_64(i>>1U)));
 	if (ZuLikely(f < Bits)) {
 	  f = clz10[(Bits - f) - 1];
 	  f = (f>>1U) + (f & 1U);
@@ -225,13 +225,13 @@ namespace Zu_ntoa {
   ZuInline uint64_t frac(T v, uint64_t &iv, unsigned &i, unsigned f) {
     uint64_t fv = 0;
     if (ZuLikely(f)) {
-      uint64_t pow10 = ZuDecimal::pow10_64(f);
+      uint64_t pow10 = ZuDecimalFn::pow10_64(f);
       v = (v - (T)iv) * (T)pow10;
       if (ZuLikely(v >= (T)0.5)) {
 	fv = (uint64_t)v;
 	if (ZuUnlikely((T)0.5 < (v - (T)fv))) ++fv;
 	if (ZuUnlikely(fv >= pow10)) {
-	  if (ZuUnlikely(++iv >= ZuDecimal::pow10_64(i))) ++i;
+	  if (ZuUnlikely(++iv >= ZuDecimalFn::pow10_64(i))) ++i;
 	  fv = 0;
 	}
       }

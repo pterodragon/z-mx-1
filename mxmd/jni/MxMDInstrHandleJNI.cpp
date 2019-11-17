@@ -43,11 +43,6 @@ namespace MxMDInstrHandleJNI {
   };
 }
 
-void MxMDInstrHandleJNI::ctor_(JNIEnv *env, jobject obj, jlong)
-{
-  // (long) -> void
-}
-
 void MxMDInstrHandleJNI::dtor_(JNIEnv *env, jobject obj, jlong ptr_)
 {
   // (long) -> void
@@ -82,9 +77,6 @@ int MxMDInstrHandleJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
-    { "ctor_",
-      "(J)V",
-      (void *)&MxMDInstrHandleJNI::ctor_ },
     { "dtor_",
       "(J)V",
       (void *)&MxMDInstrHandleJNI::dtor_ },
@@ -95,6 +87,8 @@ int MxMDInstrHandleJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic pop
 
   class_ = ZJNI::globalClassRef(env, "com/shardmx/mxmd/MxMDInstrHandle");
+  if (!class_) return -1;
+
   if (ZJNI::bind(env, class_,
         methods, sizeof(methods) / sizeof(methods[0])) < 0) return -1;
 

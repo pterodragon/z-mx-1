@@ -118,7 +118,7 @@ int MxMDDerivativesJNI::bind(JNIEnv *env)
   static JNINativeMethod methods[] = {
     { "dtor_",
       "(J)V",
-      (void *)&MxMDOrderBookJNI::dtor_ },
+      (void *)&MxMDDerivativesJNI::dtor_ },
     { "future",
       "(Lcom/shardmx/mxbase/MxFutKey;)Lcom/shardmx/mxmd/MxMDInstrument;",
       (void *)&MxMDDerivativesJNI::future },

@@ -1,6 +1,7 @@
 package com.shardmx.mxbase;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.text.DecimalFormat;
 
 public class MxDecimal {

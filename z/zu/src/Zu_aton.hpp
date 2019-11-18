@@ -33,7 +33,7 @@
 #include <zlib/ZuInt.hpp>
 #include <zlib/ZuFP.hpp>
 #include <zlib/ZuFmt.hpp>
-#include <zlib/ZuDecimal.hpp>
+#include <zlib/ZuDecimalFn.hpp>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -291,12 +291,12 @@ template <class Fmt> struct Zu_nscan_ {
 	return o;
       }
       o += i;
-      T v = (T)(fv * ZuDecimal::pow10_64(FP::MaxDigits - 1 - i));
+      T v = (T)(fv * ZuDecimalFn::pow10_64(FP::MaxDigits - 1 - i));
       if (o < n && (c = buf[o]) >= '0' && c <= '9') {
 	++o;
 	v += (T)0.1 * (T)(c - '0');
       }
-      v_ = (T)iv + v / (T)ZuDecimal::Pow10<FP::MaxDigits - 1>::pow10();
+      v_ = (T)iv + v / (T)ZuDecimalFn::Pow10<FP::MaxDigits - 1>::pow10();
       if (negative) v_ = -v_;
       return o;
     }

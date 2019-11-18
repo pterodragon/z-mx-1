@@ -18,7 +18,8 @@ FBS = \
 	zcmd.fbs \
 	zcmdreq.fbs \
 	zcmdack.fbs \
-	telemetry.fbs
+	telemetry.fbs \
+	decimal.fbs
 FBS_H = ${FBS:%.fbs=%_fbs.h}
 ${FBS_H}: %_fbs.h: fbs/%.fbs
 	flatc -c -I fbs $<
@@ -31,7 +32,8 @@ pkginclude_HEADERS = ZvLib.hpp \
 	ZvHeapCSV.hpp ZvMultiplexCf.hpp ZvSchedulerCf.hpp ZvCxnOptionsCf.hpp \
 	ZvDaemon.hpp ZvRegexError.hpp ZvDateError.hpp \
 	ZvRingCf.hpp ZvThreadCf.hpp ZvUserDB.hpp \
-	ZvCmdNet.hpp ZvCmdHost.hpp ZvCmdClient.hpp ZvCmdServer.hpp ${FBS_H}
+	ZvCmdNet.hpp ZvCmdHost.hpp ZvCmdClient.hpp ZvCmdServer.hpp \
+	ZvDecimal.hpp ${FBS_H}
 lib_LTLIBRARIES = libZv.la
 bin_PROGRAMS = zuserdb
 libZv_la_LDFLAGS = @Z_SO_LDFLAGS@

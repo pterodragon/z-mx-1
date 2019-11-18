@@ -41,7 +41,7 @@ MxDecimal MxDecimalJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
   uint64_t h = env->GetLongField(obj, fields[0].fid);
   uint64_t l = env->GetLongField(obj, fields[1].fid);
   if (dlr) env->DeleteLocalRef(obj);
-  return MxDecimal{MxDecimal::Unscaled, (((uint128_t)h)<<64) | l};
+  return MxDecimal{MxDecimal::Unscaled, (int128_t)((((uint128_t)h)<<64) | l)};
 }
 
 jobject MxDecimalJNI::ctor(JNIEnv *env, const MxDecimal &v)

@@ -31,6 +31,8 @@
 #endif
 
 #include <zlib/ZuInt.hpp>
+#include <zlib/ZuDecimal.hpp>
+#include <zlib/ZuDecimalFn.hpp>
 #include <zlib/ZuBox.hpp>
 #include <zlib/ZuPair.hpp>
 #include <zlib/ZuTuple.hpp>
@@ -93,6 +95,8 @@ typedef ZvCSVColumn<ZvCSVColType::Int, MxSeqNo> MxSeqNoCol;
 
 typedef ZuID MxID; // Note: different than MxIDString
 
+typedef ZuDecimal MxDecimal;
+
 // MxValue value range is +/- 10^18
 typedef MxInt64 MxValue;	// fixed point value (numerator)
 typedef MxUInt8 MxNDP;		// number of decimal places (log10(denominator))
@@ -135,14 +139,14 @@ struct MxValNDP {
   template <typename V>
   ZuInline MxValNDP(V value_, unsigned ndp_,
       typename ZuIsFloatingPoint<V>::T *_ = 0) :
-    value((MxFloat)value_ * ZuDecimal::pow10_64(ndp_)), ndp(ndp_) { }
+    value((MxFloat)value_ * ZuDecimalFn::pow10_64(ndp_)), ndp(ndp_) { }
 
   // multiply: NDP of result is taken from the LHS
   // a 128bit integer intermediary is used to avoid overflow
   inline MxValNDP operator *(const MxValNDP &v) const {
     int128_t i = (typename MxValue::T)value;
     i *= (typename MxValue::T)v.value;
-    i /= ZuDecimal::pow10_64(v.ndp);
+    i /= ZuDecimalFn::pow10_64(v.ndp);
     if (ZuUnlikely(i >= 1000000000000000000ULL))
       return MxValNDP{MxValue(), ndp};
     return MxValNDP{(int64_t)i, ndp};
@@ -152,7 +156,7 @@ struct MxValNDP {
   // a 128bit integer intermediary is used to avoid overflow
   inline MxValNDP operator /(const MxValNDP &v) const {
     int128_t i = (typename MxValue::T)value;
-    i *= ZuDecimal::pow10_64(v.ndp);
+    i *= ZuDecimalFn::pow10_64(v.ndp);
     i /= (typename MxValue::T)v.value;
     if (ZuUnlikely(i >= 1000000000000000000ULL))
       return MxValNDP{MxValue(), ndp};
@@ -190,9 +194,9 @@ struct MxValNDP {
 	if (--n > ndp_) n = ndp_;
 	n = Zu_atou(fv, &s[1], n);
 	if (fv && ndp_ > n)
-	  fv *= ZuDecimal::pow10_64(ndp_ - n);
+	  fv *= ZuDecimalFn::pow10_64(ndp_ - n);
       }
-      value = iv * ZuDecimal::pow10_64(ndp_) + fv;
+      value = iv * ZuDecimalFn::pow10_64(ndp_) + fv;
       if (ZuUnlikely(negative)) value = -value;
     }
     ndp = ndp_;
@@ -205,7 +209,7 @@ struct MxValNDP {
   // convert to floating point (MxFloat)
   ZuInline MxFloat fp() const {
     if (ZuUnlikely(!*value)) return MxFloat();
-    return (MxFloat)value / (MxFloat)ZuDecimal::pow10_64(ndp);
+    return (MxFloat)value / (MxFloat)ZuDecimalFn::pow10_64(ndp);
   }
 
   // adjust to another NDP
@@ -234,7 +238,7 @@ template <typename Fmt> struct MxValNDPFmt {
     MxValue iv = fixedNDP.value;
     if (ZuUnlikely(!*iv)) return;
     if (ZuUnlikely(iv < 0)) { s << '-'; iv = -iv; }
-    uint64_t factor = ZuDecimal::pow10_64(fixedNDP.ndp);
+    uint64_t factor = ZuDecimalFn::pow10_64(fixedNDP.ndp);
     MxValue fv = iv % factor;
     iv /= factor;
     s << ZuBoxed(iv).fmt(Fmt());
@@ -266,7 +270,7 @@ struct MxValNDPVFmt : public ZuVFmtWrapper<MxValNDPVFmt<Ref>, Ref> {
     MxValue iv = fixedNDP.value;
     if (ZuUnlikely(!*iv)) return;
     if (ZuUnlikely(iv < 0)) { s << '-'; iv = -iv; }
-    uint64_t factor = ZuDecimal::pow10_64(fixedNDP.ndp);
+    uint64_t factor = ZuDecimalFn::pow10_64(fixedNDP.ndp);
     MxValue fv = iv % factor;
     iv /= factor;
     s << ZuBoxed(iv).vfmt(this->fmt);

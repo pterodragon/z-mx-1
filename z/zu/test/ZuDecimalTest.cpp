@@ -56,7 +56,7 @@ int main()
     CHECK(!*ZuBoxed(v));
     f = 10;
     v = (f * f).value;
-    CHECK((double)(ZuDecimal{ZuDecimal::NoScale, v}.fp()) == 100.0);
+    CHECK((double)(ZuDecimal{ZuDecimal::Unscaled, v}.fp()) == 100.0);
   }
   {
     // check underflow multiply
@@ -67,7 +67,7 @@ int main()
     ZuDecimal g{".00000000000000001"};
     CHECK((int)g.value == 10);
     v = (g * ZuDecimal{".1"}).value;
-    CHECK((ZuDecimal{ZuDecimal::NoScale, v}.fp() == .000000000000000001L));
+    CHECK((ZuDecimal{ZuDecimal::Unscaled, v}.fp() == .000000000000000001L));
     v = (g * ZuDecimal{".01"}).value;
     CHECK(!(int)v);
   }

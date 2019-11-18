@@ -3,21 +3,21 @@ package com.shardmx.mxbase;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 
-public class MxValue {
-  public MxValue(long h, long l) { this.h = h; this.l = l; }
+public class MxDecimal {
+  public MxDecimal(long h, long l) { this.h = h; this.l = l; }
 
-  public MxValue(String s) { scan(s); }
+  public MxDecimal(String s) { scan(s); }
 
   // methods
 
   // FIXME - need isNull(), isReset(), etc.
   // FIXME - add(), sub(), div(), mul()
 
-  public static final MxValue valueOf(BigDecimal bd) {
+  public static final MxDecimal valueOf(BigDecimal bd) {
     BigInteger bi = bd.setScale(18).unscaledValue();
     long zero = 0;
     BigInteger mask = BigInteger.valueOf(~zero);
-    return new MxValue(
+    return new MxDecimal(
       bi.shiftRight(64).longValue(),
       bi.and(mask).longValue());
   }
@@ -32,8 +32,8 @@ public class MxValue {
   public native String toString();
   private native void scan(String s);
 
-  public native boolean equals(MxValue v);
-  public native int compareTo(MxValue v);
+  public native boolean equals(MxDecimal v);
+  public native int compareTo(MxDecimal v);
 
   // data members
 

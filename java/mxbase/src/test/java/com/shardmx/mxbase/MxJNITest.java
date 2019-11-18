@@ -19,7 +19,5 @@ public class MxJNITest extends TestCase {
     MxJNITestObject o = new MxJNITestObject();
     o.helloWorld("Hello World");
     assertTrue(o.ptr != 0L);
-
-    MxValue v = new MxValue(); // FIXME
   }
 }

@@ -23,7 +23,7 @@
 
 #include <zlib/ZJNI.hpp>
 
-#include <mxbase/MxValueJNI.hpp>
+#include <mxbase/MxDecimalJNI.hpp>
 
 #include <mxbase/MxSideJNI.hpp>
 #include <mxbase/MxInstrIDSrcJNI.hpp>
@@ -64,7 +64,7 @@ MxBaseExtern void JNI_OnUnload(JavaVM *jvm, void *)
 
 MxBaseExtern int MxBaseJNI::bind(JNIEnv *env)
 {
-  if (MxValueJNI::bind(env) < 0) return -1;
+  if (MxDecimalJNI::bind(env) < 0) return -1;
 
   if (MxSideJNI::bind(env) < 0) return -1;
   if (MxInstrIDSrcJNI::bind(env) < 0) return -1;
@@ -95,7 +95,7 @@ void MxBaseJNI::final(JNIEnv *env)
   MxTradingSessionJNI::final(env);
   MxTradingStatusJNI::final(env);
 
-  MxValueJNI::final(env);
+  MxDecimalJNI::final(env);
 
   ZJNI::final(env);
 }

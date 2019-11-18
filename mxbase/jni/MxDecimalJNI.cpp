@@ -23,10 +23,10 @@
 
 #include <zlib/ZJNI.hpp>
 
-#include <mxbase/MxValueJNI.hpp>
+#include <mxbase/MxDecimalJNI.hpp>
 
-namespace MxValueJNI {
-  jclass	class_; // MxValue
+namespace MxDecimalJNI {
+  jclass	class_; // MxDecimal
 
   ZJNI::JavaMethod ctorMethod[] = { { "<init>", "(JJ)V" } };
   ZJNI::JavaField fields[] = {
@@ -35,67 +35,67 @@ namespace MxValueJNI {
   };
 }
 
-MxValue MxValueJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
+MxDecimal MxDecimalJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 {
   if (ZuUnlikely(!obj)) return MxEnum();
   uint64_t h = env->GetLongField(obj, fields[0].fid);
   uint64_t l = env->GetLongField(obj, fields[1].fid);
   if (dlr) env->DeleteLocalRef(obj);
-  return MxValue{MxValue::Unscaled, (((uint128_t)h)<<64) | l};
+  return MxDecimal{MxDecimal::Unscaled, (((uint128_t)h)<<64) | l};
 }
 
-jobject MxValueJNI::ctor(JNIEnv *env, const MxValue &v)
+jobject MxDecimalJNI::ctor(JNIEnv *env, const MxDecimal &v)
 {
   return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
       (jlong)(int64_t)(v.value>>64), (jlong)(int64_t)v.value);
 }
 
-jstring MxValueJNI::toString(JNIEnv *env, jobject obj)
+jstring MxDecimalJNI::toString(JNIEnv *env, jobject obj)
 {
   if (!obj) return ZJNI::s2j(env, ZuString());
   return ZJNI::s2j(env, ZuStringN<44>() << j2c(env, obj, true));
 }
 
-void MxValueJNI::scan(JNIEnv *env, jobject obj, jstring s_)
+void MxDecimalJNI::scan(JNIEnv *env, jobject obj, jstring s_)
 {
   ZuStringN<44> s;
   ZJNI::j2s_ZuStringN(s, env, s_, true);
-  MxValue v{s};
+  MxDecimal v{s};
   env->SetLongField(obj, fields[0].fid, (int64_t)(v.value));
   env->SetLongField(obj, fields[1].fid, (int64_t)(v.value>>64));
 }
 
-jboolean MxValueJNI::equals(JNIEnv *env, jobject obj, jobject v_)
+jboolean MxDecimalJNI::equals(JNIEnv *env, jobject obj, jobject v_)
 {
   return j2c(env, obj, true) == j2c(env, v_, true);
 }
 
-jint MxValueJNI::compareTo(JNIEnv *env, jobject obj, jobject v_)
+jint MxDecimalJNI::compareTo(JNIEnv *env, jobject obj, jobject v_)
 {
   return j2c(env, obj, true).cmp(j2c(env, v_, true));
 }
 
-int MxValueJNI::bind(JNIEnv *env)
+int MxDecimalJNI::bind(JNIEnv *env)
 {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
     { "toString",
       "()Ljava/lang/String;",
-      (void *)&MxValueJNI::toString },
+      (void *)&MxDecimalJNI::toString },
     { "scan",
       "(Ljava/lang/String;)V",
-      (void *)&MxValueJNI::scan },
+      (void *)&MxDecimalJNI::scan },
     { "equals",
-      "(Lcom/shardmx/mxbase/MxValue;)Z",
-      (void *)&MxValueJNI::equals },
+      "(Lcom/shardmx/mxbase/MxDecimal;)Z",
+      (void *)&MxDecimalJNI::equals },
     { "compareTo",
-      "(Lcom/shardmx/mxbase/MxValue;)I",
-      (void *)&MxValueJNI::compareTo }
+      "(Lcom/shardmx/mxbase/MxDecimal;)I",
+      (void *)&MxDecimalJNI::compareTo }
   };
 #pragma GCC diagnostic pop
 
-  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxValue");
+  class_ = ZJNI::globalClassRef(env, "com/shardmx/mxbase/MxDecimal");
   if (!class_) return -1;
 
   if (ZJNI::bind(env, class_, ctorMethod, 1) < 0) return -1;
@@ -108,7 +108,7 @@ int MxValueJNI::bind(JNIEnv *env)
   return 0;
 }
 
-void MxValueJNI::final(JNIEnv *env)
+void MxDecimalJNI::final(JNIEnv *env)
 {
   if (class_) env->DeleteGlobalRef(class_);
 }

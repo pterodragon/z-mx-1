@@ -19,8 +19,8 @@
 
 // MxBase JNI
 
-#ifndef MxValueJNI_HPP
-#define MxValueJNI_HPP
+#ifndef MxDecimalJNI_HPP
+#define MxDecimalJNI_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -32,9 +32,9 @@
 
 #include <mxbase/MxBase.hpp>
 
-namespace MxValueJNI {
-  MxBaseExtern MxValue j2c(JNIEnv *, jobject, bool dlr = false);
-  MxBaseExtern jobject ctor(JNIEnv *, const MxValue &);
+namespace MxDecimalJNI {
+  MxBaseExtern MxDecimal j2c(JNIEnv *, jobject, bool dlr = false);
+  MxBaseExtern jobject ctor(JNIEnv *, const MxDecimal &);
 
   jstring toString(JNIEnv *, jobject);
   void scan(JNIEnv *, jobject, jstring s);
@@ -46,4 +46,4 @@ namespace MxValueJNI {
   void final(JNIEnv *);
 }
 
-#endif /* MxValueJNI_HPP */
+#endif /* MxDecimalJNI_HPP */

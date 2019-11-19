@@ -57,7 +57,7 @@ struct ZuDecimal {
   static constexpr const int128_t null() {
     return ((int128_t)1)<<127;
   }
-  static constexpr const uint128_t scale() { // 10^18
+  static constexpr const uint64_t scale() { // 10^18
     return Pow10<18U>::pow10();
   }
   static constexpr const long double scale_fp() { // 10^18
@@ -81,6 +81,15 @@ struct ZuDecimal {
   template <typename V>
   ZuInline ZuDecimal(V v, typename ZuIsFloatingPoint<V>::T *_ = 0) :
       value((long double)v * scale_fp()) { }
+
+  template <typename V>
+  ZuInline ZuDecimal(V v, unsigned ndp, typename ZuIsIntegral<V>::T *_ = 0) :
+      value(((int128_t)v) * ZuDecimalFn::pow10_64(18 - ndp)) { }
+
+  ZuInline int128_t adjust(unsigned ndp) const {
+    if (ZuUnlikely(ndp == 18)) return value;
+    return value / ZuDecimalFn::pow10_64(18 - ndp);
+  }
 
   ZuInline ZuDecimal operator -() { return ZuDecimal{Unscaled, -value}; }
 
@@ -219,7 +228,7 @@ struct ZuDecimal {
   // q = u1:u0 * 10^-18
   static uint128_t div256scale(const uint128_t u1, const uint128_t u0) {
     const uint128_t b = ((uint128_t)1)<<64;
-    const uint128_t v = scale()<<68;
+    const uint128_t v = ((uint128_t)scale())<<68;
 
     uint128_t un1, un0, vn1, vn0, q1, q0, un128, un21, un10, rhat, left, right;
 

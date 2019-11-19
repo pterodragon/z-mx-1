@@ -39,12 +39,13 @@
 namespace Zfb::Save {
   template <typename B>
   ZuInline auto decimal(B &b, const ZuDecimal &v) {
-    return fbs::CreateDecimal(b, (uint64_t)(v>>64), (uint64_t)v);
+    return b.CreateStruct(ZvDecimal::fbs::Decimal{
+	(uint64_t)(v.value>>64), (uint64_t)v.value});
   }
 }
 namespace Zfb::Load {
   ZuInline ZuDecimal decimal(const fbs::Decimal *v) {
-    return ZuDecimal{ZuDecimal::NoScale, (((int128_t)(v->h()))<<64) | v->l()};
+    return ZuDecimal{ZuDecimal::Unscaled, (((int128_t)(v->h()))<<64) | v->l()};
   }
 }
 

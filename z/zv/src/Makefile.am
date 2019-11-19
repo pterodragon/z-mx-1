@@ -34,6 +34,8 @@ pkginclude_HEADERS = ZvLib.hpp \
 	ZvRingCf.hpp ZvThreadCf.hpp ZvUserDB.hpp \
 	ZvCmdNet.hpp ZvCmdHost.hpp ZvCmdClient.hpp ZvCmdServer.hpp \
 	ZvDecimal.hpp ${FBS_H}
+fbsdir = $(datarootdir)/${PACKAGE}/fbs
+dist_fbs_DATA = fbs/decimal.fbs
 lib_LTLIBRARIES = libZv.la
 bin_PROGRAMS = zuserdb
 libZv_la_LDFLAGS = @Z_SO_LDFLAGS@

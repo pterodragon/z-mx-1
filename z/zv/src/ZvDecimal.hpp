@@ -37,14 +37,12 @@
 #include <zlib/decimal_fbs.h>
 
 namespace Zfb::Save {
-  template <typename B>
-  ZuInline auto decimal(B &b, const ZuDecimal &v) {
-    return b.CreateStruct(ZvDecimal::fbs::Decimal{
-	(uint64_t)(v.value>>64), (uint64_t)v.value});
+  ZuInline auto decimal(const ZuDecimal &v) {
+    return Zv::fbs::Decimal{(uint64_t)(v.value>>64), (uint64_t)v.value};
   }
 }
 namespace Zfb::Load {
-  ZuInline ZuDecimal decimal(const fbs::Decimal *v) {
+  ZuInline ZuDecimal decimal(const Zv::fbs::Decimal *v) {
     return ZuDecimal{ZuDecimal::Unscaled, (((int128_t)(v->h()))<<64) | v->l()};
   }
 }

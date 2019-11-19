@@ -11,9 +11,6 @@ public class MxDecimal {
 
   // methods
 
-  // FIXME - need isNull(), isReset(), etc.
-  // FIXME - add(), sub(), div(), mul()
-
   public static final MxDecimal valueOf(BigDecimal bd) {
     BigInteger bi = bd.setScale(18).unscaledValue();
     long zero = 0;
@@ -29,6 +26,14 @@ public class MxDecimal {
     bi = bi.or(BigInteger.valueOf(this.l));
     return new BigDecimal(bi, 18);
   }
+
+  public native boolean isNull();
+  public native boolean isReset();
+
+  public native MxDecimal add(MxDecimal v);
+  public native MxDecimal subtract(MxDecimal v);
+  public native MxDecimal multiply(MxDecimal v);
+  public native MxDecimal divide(MxDecimal v);
 
   public native String toString();
   private native void scan(String s);

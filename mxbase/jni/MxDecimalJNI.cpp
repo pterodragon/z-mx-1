@@ -46,8 +46,38 @@ MxDecimal MxDecimalJNI::j2c(JNIEnv *env, jobject obj, bool dlr)
 
 jobject MxDecimalJNI::ctor(JNIEnv *env, const MxDecimal &v)
 {
-  return env->CallStaticObjectMethod(class_, ctorMethod[0].mid,
+  return env->NewObject(class_, ctorMethod[0].mid,
       (jlong)(int64_t)(v.value>>64), (jlong)(int64_t)v.value);
+}
+
+jboolean MxDecimalJNI::isNull(JNIEnv *env, jobject obj)
+{
+  return j2c(env, obj, true) == MxDecimal::null();
+}
+
+jboolean MxDecimalJNI::isReset(JNIEnv *env, jobject obj)
+{
+  return j2c(env, obj, true) == MxDecimal::reset();
+}
+
+jobject MxDecimalJNI::add(JNIEnv *env, jobject obj, jobject v)
+{
+  return ctor(env, j2c(env, obj, true) + j2c(env, v, true));
+}
+
+jobject MxDecimalJNI::subtract(JNIEnv *env, jobject obj, jobject v)
+{
+  return ctor(env, j2c(env, obj, true) - j2c(env, v, true));
+}
+
+jobject MxDecimalJNI::multiply(JNIEnv *env, jobject obj, jobject v)
+{
+  return ctor(env, j2c(env, obj, true) * j2c(env, v, true));
+}
+
+jobject MxDecimalJNI::divide(JNIEnv *env, jobject obj, jobject v)
+{
+  return ctor(env, j2c(env, obj, true) / j2c(env, v, true));
 }
 
 jstring MxDecimalJNI::toString(JNIEnv *env, jobject obj)
@@ -61,8 +91,8 @@ void MxDecimalJNI::scan(JNIEnv *env, jobject obj, jstring s_)
   ZuStringN<44> s;
   ZJNI::j2s_ZuStringN(s, env, s_, true);
   MxDecimal v{s};
-  env->SetLongField(obj, fields[0].fid, (int64_t)(v.value));
-  env->SetLongField(obj, fields[1].fid, (int64_t)(v.value>>64));
+  env->SetLongField(obj, fields[0].fid, (int64_t)(v.value>>64));
+  env->SetLongField(obj, fields[1].fid, (int64_t)(v.value));
 }
 
 jboolean MxDecimalJNI::equals(JNIEnv *env, jobject obj, jobject v_)
@@ -80,6 +110,24 @@ int MxDecimalJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
+    { "isNull",
+      "()Z",
+      (void *)&MxDecimalJNI::isNull },
+    { "isReset",
+      "()Z",
+      (void *)&MxDecimalJNI::isReset },
+    { "add",
+      "(Lcom/shardmx/mxbase/MxDecimal;)Lcom/shardmx/mxbase/MxDecimal;",
+      (void *)&MxDecimalJNI::add },
+    { "subtract",
+      "(Lcom/shardmx/mxbase/MxDecimal;)Lcom/shardmx/mxbase/MxDecimal;",
+      (void *)&MxDecimalJNI::subtract },
+    { "multiply",
+      "(Lcom/shardmx/mxbase/MxDecimal;)Lcom/shardmx/mxbase/MxDecimal;",
+      (void *)&MxDecimalJNI::multiply },
+    { "divide",
+      "(Lcom/shardmx/mxbase/MxDecimal;)Lcom/shardmx/mxbase/MxDecimal;",
+      (void *)&MxDecimalJNI::divide },
     { "toString",
       "()Ljava/lang/String;",
       (void *)&MxDecimalJNI::toString },

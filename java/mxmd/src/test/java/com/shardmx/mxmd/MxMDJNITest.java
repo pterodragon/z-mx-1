@@ -26,6 +26,14 @@ public class MxMDJNITest extends TestCase {
 
     Semaphore sem = new Semaphore(0);
 
+    {
+      MxDecimal v = new MxDecimal("100000.000001");
+      System.out.println(new String() + v);
+      MxDecimal w = v.multiply(v);
+      System.out.println(new String() + w);
+      assertTrue(w.equals(new MxDecimal("10000000000.200000000001")));
+    }
+
     md.subscribe(new MxMDLibHandlerTuple.Builder().
 	exception((MxMDLib md_, MxMDException e) -> {
 	  if (e.message().equals("MxMDJNITest end")) {

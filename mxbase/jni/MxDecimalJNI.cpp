@@ -50,6 +50,13 @@ jobject MxDecimalJNI::ctor(JNIEnv *env, const MxDecimal &v)
       (jlong)(int64_t)(v.value>>64), (jlong)(int64_t)v.value);
 }
 
+void MxDecimalJNI::init(JNIEnv *env, jobject obj, jlong v_)
+{
+  MxDecimal v{v_};
+  env->SetLongField(obj, fields[0].fid, (int64_t)(v.value>>64));
+  env->SetLongField(obj, fields[1].fid, (int64_t)(v.value));
+}
+
 jboolean MxDecimalJNI::isNull(JNIEnv *env, jobject obj)
 {
   return j2c(env, obj, true) == MxDecimal::null();
@@ -110,6 +117,9 @@ int MxDecimalJNI::bind(JNIEnv *env)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
   static JNINativeMethod methods[] = {
+    { "init",
+      "(J)V",
+      (void *)&MxDecimalJNI::init },
     { "isNull",
       "()Z",
       (void *)&MxDecimalJNI::isNull },

@@ -5,6 +5,8 @@ import java.math.BigInteger;
 import java.text.DecimalFormat;
 
 public class MxDecimal {
+  public MxDecimal(long v) { init(v); }
+
   public MxDecimal(long h, long l) { this.h = h; this.l = l; }
 
   public MxDecimal(String s) { scan(s); }
@@ -26,6 +28,8 @@ public class MxDecimal {
     bi = bi.or(BigInteger.valueOf(this.l));
     return new BigDecimal(bi, 18);
   }
+
+  public native void init(long v);
 
   public native boolean isNull();
   public native boolean isReset();

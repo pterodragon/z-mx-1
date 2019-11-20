@@ -36,6 +36,8 @@ namespace MxDecimalJNI {
   MxBaseExtern MxDecimal j2c(JNIEnv *, jobject, bool dlr = false);
   MxBaseExtern jobject ctor(JNIEnv *, const MxDecimal &);
 
+  void init(JNIEnv *env, jobject obj, jlong v);
+
   jboolean isNull(JNIEnv *env, jobject obj);
   jboolean isReset(JNIEnv *env, jobject obj);
 

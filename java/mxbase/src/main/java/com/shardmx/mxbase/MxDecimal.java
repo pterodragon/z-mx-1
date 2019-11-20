@@ -5,6 +5,10 @@ import java.math.BigInteger;
 import java.text.DecimalFormat;
 
 public class MxDecimal {
+
+  public MxDecimal() { init(); }
+
+  public MxDecimal(int v) { init(v); }
   public MxDecimal(long v) { init(v); }
 
   public MxDecimal(long h, long l) { this.h = h; this.l = l; }
@@ -29,6 +33,7 @@ public class MxDecimal {
     return new BigDecimal(bi, 18);
   }
 
+  public native void init();
   public native void init(long v);
 
   public native boolean isNull();

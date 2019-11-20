@@ -154,6 +154,26 @@ private:
   int	m_ndpOffset;
 };
 
+class MxDecimalCol : public ZvCSVColumn<ZvCSVColType::Func, MxDecimal> {
+  typedef ZvCSVColumn<ZvCSVColType::Func, MxDecimal> Base;
+  typedef typename Base::ParseFn ParseFn;
+  typedef typename Base::PlaceFn PlaceFn;
+public:
+  template <typename ID>
+  inline MxDecimalCol(ID &&id, int offset) :
+    Base(ZuFwd<ID>(id), offset,
+	ParseFn::Member<&MxDecimalCol::parse_>::fn(this),
+	PlaceFn::Member<&MxDecimalCol::place_>::fn(this)) { }
+  virtual ~MxDecimalCol() { }
+
+  void parse_(MxDecimal *f, ZuString b) {
+    *f = MxDecimal{b};
+  }
+  void place_(ZtArray<char> &b, const MxDecimal *f) {
+    if (**f) b << *f;
+  }
+};
+
 struct MxCSVApp {
   inline static bool hhmmss() { return false; }
   inline static unsigned yyyymmdd() { return 0; }

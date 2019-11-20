@@ -67,6 +67,14 @@ struct ZuDecimal {
   int128_t	value;
 
   ZuInline ZuDecimal() : value{null()} { }
+  ZuInline ZuDecimal(const ZuDecimal &v) : value(v.value) { }
+  ZuInline ZuDecimal &operator =(const ZuDecimal &v) {
+    value = v.value;
+    return *this;
+  }
+  ZuInline ZuDecimal(ZuDecimal &&) = default;
+  ZuInline ZuDecimal &operator =(ZuDecimal &&) = default;
+  ZuInline ~ZuDecimal() = default;
 
   enum NoInit_ { NoInit };
   ZuInline ZuDecimal(NoInit_ _) { }

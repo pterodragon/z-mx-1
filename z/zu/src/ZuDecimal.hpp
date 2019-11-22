@@ -443,7 +443,8 @@ public:
 
   ZuInline bool operator *() const {
     // return value != null(); // disabled due to compiler bug
-    return (bool)(uint64_t)(value - null());
+    int128_t v = value - null();
+    return (bool)(uint64_t)(v>>64) || (bool)(uint64_t)(v);
   }
 
   template <typename S> void print(S &s) const;

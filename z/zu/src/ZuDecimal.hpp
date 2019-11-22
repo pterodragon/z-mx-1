@@ -72,9 +72,12 @@ struct ZuDecimal {
     value = v.value;
     return *this;
   }
-  ZuInline ZuDecimal(ZuDecimal &&) = default;
-  ZuInline ZuDecimal &operator =(ZuDecimal &&) = default;
-  ZuInline ~ZuDecimal() = default;
+  ZuInline ZuDecimal(ZuDecimal &&v) : value(v.value) { }
+  ZuInline ZuDecimal &operator =(ZuDecimal &&v) {
+    value = v.value;
+    return *this;
+  }
+  ZuInline ~ZuDecimal() { }
 
   enum NoInit_ { NoInit };
   ZuInline ZuDecimal(NoInit_ _) { }
@@ -102,7 +105,7 @@ struct ZuDecimal {
   ZuInline ZuDecimal operator -() { return ZuDecimal{Unscaled, -value}; }
 
   ZuInline ZuDecimal operator +(const ZuDecimal &v) const {
-    return ZuDecimal{value + v.value};
+    return ZuDecimal{Unscaled, value + v.value};
   }
   ZuInline ZuDecimal &operator +=(const ZuDecimal &v) {
     value += v.value;
@@ -110,7 +113,7 @@ struct ZuDecimal {
   }
 
   ZuInline ZuDecimal operator -(const ZuDecimal &v) const {
-    return ZuDecimal{value - v.value};
+    return ZuDecimal{Unscaled, value - v.value};
   }
   ZuInline ZuDecimal &operator -=(const ZuDecimal &v) {
     value -= v.value;
@@ -438,7 +441,10 @@ public:
   ZuInline bool operator !() const { return !value; }
   ZuOpBool
 
-  ZuInline bool operator *() const { return value != null(); }
+  ZuInline bool operator *() const {
+    // return value != null(); // disabled due to compiler bug
+    return (bool)(uint64_t)(value - null());
+  }
 
   template <typename S> void print(S &s) const;
 

@@ -692,7 +692,8 @@ protected:
 
   inline static void log__(ZmStream &s) { }
   template <typename Arg0, typename ...Args>
-  inline static void log__(ZmStream &s, Arg0 arg0, Args... args) {
+  inline static typename ZuIsNot<ZuString, Arg0>::T
+  log__(ZmStream &s, Arg0 arg0, Args... args) {
     s << ZuMv(arg0);
     log__(s, ZuMv(args)...);
   }

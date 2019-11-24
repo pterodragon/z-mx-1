@@ -444,7 +444,7 @@ public:
   ZuInline bool operator *() const {
     // return value != null(); // disabled due to compiler bug
     int128_t v = value - null();
-    return (bool)(uint64_t)(v>>64) || (bool)(uint64_t)(v);
+    return (bool)((uint64_t)(v>>64) | (uint64_t)(v));
   }
 
   template <typename S> void print(S &s) const;

@@ -636,7 +636,7 @@ template <typename, typename> friend class SrvLink;
   bool init(ZiMultiplex *mx, ZuString thread, L l) {
     m_mx = mx;
     if (!(m_thread = m_mx->tid(thread))) {
-      logError("invalid Rx thread ID \"", thread, '"');
+      logError("invalid Rx thread ID \"", ZtString{thread}, '"');
       return false;
     }
     thread_local ZmSemaphore sem;

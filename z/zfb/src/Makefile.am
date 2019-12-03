@@ -3,7 +3,18 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src -I$(top_srcdir)/zm/src
 	-DZFB_EXPORTS @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
-pkginclude_HEADERS = ZfbLib.hpp Zfb.hpp
+FBS = \
+	types.fbs
+FBS_H = ${FBS:%.fbs=%_fbs.h}
+${FBS_H}: %_fbs.h: fbs/%.fbs
+	flatc -c -I fbs $<
+	mv ${@:%_fbs.h=%_generated.h} $@
+	perl -pi -e 's|^#include "(\w+)_generated\.h"|#include <zlib/$${1}_fbs.h>|; s|^#include "flatbuffers/flatbuffers.h"|#include <flatbuffers/flatbuffers.h>|;' $@
+BUILT_SOURCES = ${FBS_H}
+CLEANFILES = ${FBS_H}
+pkginclude_HEADERS = ZfbLib.hpp Zfb.hpp ${FBS_H}
+fbsdir = $(datarootdir)/${PACKAGE}/fbs
+dist_fbs_DATA = fbs/types.fbs
 lib_LTLIBRARIES = libZfb.la
 libZfb_la_SOURCES = ZfbLib.cpp
 libZfb_la_LIBADD = \

@@ -37,6 +37,8 @@
 
 #include <zlib/ZiIOBuf.hpp>
 
+#include <zlib/types_fbs.h>
+
 namespace Zfb {
 
 using namespace flatbuffers;
@@ -184,6 +186,17 @@ namespace Save {
   ZuInline auto bytes(B &b, ZuArray<uint8_t> a) {
     return b.CreateVector(a.data(), a.length());
   }
+
+  // decimal
+  ZuInline auto decimal(const ZuDecimal &v) {
+    return fbs::Decimal{(uint64_t)(v.value>>64), (uint64_t)v.value};
+  }
+
+  // date/time
+  template <typename B>
+  ZuInline auto dateTime(B &b, const ZtDate &v) {
+    return fbs::CreateDateTime(b, v.julian(), v.sec(), v.nsec());
+  }
 }
 
 namespace Load {
@@ -203,6 +216,16 @@ namespace Load {
   ZuInline ZuArray<const uint8_t> bytes(const Vector<uint8_t> *v) {
     if (!v) return ZuArray<const uint8_t>();
     return ZuArray<const uint8_t>(v->data(), v->size());
+  }
+
+  // decimal
+  ZuInline ZuDecimal decimal(const fbs::Decimal *v) {
+    return ZuDecimal{ZuDecimal::Unscaled, (((int128_t)(v->h()))<<64) | v->l()};
+  }
+
+  // date/time
+  ZuInline ZtDate dateTime(const fbs::DateTime *v) {
+    return ZtDate{ZtDate::Julian, v->julian(), v->sec(), v->nsec()};
   }
 }
 

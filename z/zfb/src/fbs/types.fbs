@@ -1,0 +1,10 @@
+namespace Zfb.fbs;
+struct Decimal {
+  h:uint64;
+  l:uint64;
+}
+table DateTime {
+  julian:int32;
+  sec:int32;
+  nsec:int32;
+}

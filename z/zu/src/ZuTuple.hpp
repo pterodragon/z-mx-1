@@ -35,221 +35,211 @@
 #include <zlib/ZuNull.hpp>
 #include <zlib/ZuPP.hpp>
 
-#define ZuTuple_TemplateArgDef(I) typename T##I
-#define ZuTuple_TemplateArg(I) T##I
-template <ZuPP_CList(ZuTuple_TemplateArgDef, ZuPP_N)> struct ZuTuple;
-template <ZuPP_CList(ZuTuple_TemplateArgDef, ZuPP_N)> struct ZuTuple_;
-template <ZuPP_CList(ZuTuple_TemplateArgDef, ZuPP_N)> struct ZuTuple_T {
-  typedef ZuTuple_<ZuPP_CList(ZuTuple_TemplateArg, ZuPP_N)> T;
-};
+template <typename ...Args> class ZuTuple;
 
-#undef ZuTuple_TemplateArgDef
-#define ZuTuple_TemplateArgDef(I) ZuNull
-#undef ZuPP_CList_3
-#define ZuPP_CList_3(L) L(3)
-template <typename T1, typename T2>
-struct ZuTuple_T<T1, T2, ZuPP_CList(ZuTuple_TemplateArgDef, ZuPP_N)> {
-#undef ZuPP_CList_3
-#define ZuPP_CList_3(L) ZuPP_CList_2(L), L(3)
-  typedef ZuPair<T1, T2> T;
-};
-
-#undef ZuTuple_TemplateArgDef
-#define ZuTuple_TemplateArgDef(I) typename T##I##_
-template <ZuPP_CList(ZuTuple_TemplateArgDef, ZuPP_N)> struct ZuTuple_ :
-#undef ZuTuple_TemplateArg
-#define ZuTuple_TemplateArg(I) T##I##_
-#undef ZuPP_CList_2
-#define ZuPP_CList_2(L) L(2)
-    public ZuPair<T1_,
-      ZuTuple<ZuPP_CList(ZuTuple_TemplateArg, ZuPP_N), ZuNull> > {
-  typedef ZuTuple<ZuPP_CList(ZuTuple_TemplateArg, ZuPP_N), ZuNull> R;
-#undef ZuPP_CList_2
-#define ZuPP_CList_2(L) ZuPP_CList_1(L), L(2)
-  typedef ZuPair<T1_, R> P;
-
-#define ZuTuple_Typedef(I, _) typedef typename ZuDeref<T##I##_>::T T##I;
-ZuPP_List1(ZuTuple_Typedef, _, ZuPP_N)
-
-  ZuInline ZuTuple_() { }
-
-  ZuInline ZuTuple_(const ZuTuple_ &t) : P(t) { }
-  ZuInline ZuTuple_ &operator =(const ZuTuple_ &t) {
-    if (this != &t) P::operator =(t);
-    return *this;
-  }
-
-  ZuInline ZuTuple_(ZuTuple_ &&t) noexcept : P(static_cast<P &&>(t)) { }
-  ZuInline ZuTuple_ &operator =(ZuTuple_ &&t) noexcept {
-    P::operator =(static_cast<P &&>(t));
-    return *this;
-  }
-
-  template <typename T>
-  ZuInline ZuTuple_(T &&t, typename ZuNotSame<ZuTuple_, T>::T *_ = 0) :
-    P(ZuFwd<T>(t)) { }
-  template <typename T>
-  ZuInline typename ZuNotSame<ZuTuple_, T, ZuTuple_ &>::T operator =(T &&t) {
-    P::operator =(ZuFwd<T>(t));
-    return *this;
-  }
-
-  template <typename T>
-  ZuInline bool operator ==(T &&t) const { return equals(ZuFwd<T>(t)); }
-  template <typename T>
-  ZuInline bool operator !=(T &&t) const { return !equals(ZuFwd<T>(t)); }
-  template <typename T>
-  ZuInline bool operator >(T &&t) const { return cmp(ZuFwd<T>(t)) > 0; }
-  template <typename T>
-  ZuInline bool operator >=(T &&t) const { return cmp(ZuFwd<T>(t)) >= 0; }
-  template <typename T>
-  ZuInline bool operator <(T &&t) const { return cmp(ZuFwd<T>(t)) < 0; }
-  template <typename T>
-  ZuInline bool operator <=(T &&t) const { return cmp(ZuFwd<T>(t)) <= 0; }
-
-  template <typename T>
-  ZuInline bool equals(T &&t) const { return P::equals(ZuFwd<T>(t)); }
-
-  template <typename T>
-  ZuInline int cmp(T &&t) const { return P::cmp(ZuFwd<T>(t)); }
-
-  ZuInline bool operator !() const { return P::operator !(); }
-  ZuOpBool
-
-  ZuInline uint32_t hash() const { return P::hash(); }
-
-#undef ZuTuple_TemplateArgDef
-#define ZuTuple_TemplateArgDef(I) typename P##I
-#define ZuTuple_ArgParam(I)	 P##I &&p##I
-#define ZuTuple_Arg(I)	ZuFwd<P##I>(p##I)
-#undef ZuPP_List1_2
-#define ZuPP_List1_2(L, C) L(2, C)
-#undef ZuPP_CList_2
-#define ZuPP_CList_2(L) L(2)
-#define ZuTuple_Ctor(N, C) \
-  template <typename P1, ZuPP_CList(ZuTuple_TemplateArgDef, N)> \
-  ZuInline ZuTuple_(P1 &&p1, ZuPP_CList(ZuTuple_ArgParam, N)) : \
-      P(ZuFwd<P1>(p1), R(ZuPP_CList(ZuTuple_Arg, N))) { }
-ZuPP_List1(ZuTuple_Ctor, _, ZuPP_N)
-
-#undef ZuPP_List1_2
-#define ZuPP_List1_2(L, C) ZuPP_List1_1(L, C) L(2, C)
-#undef ZuPP_CList_2
-#define ZuPP_CList_2(L) ZuPP_CList_1(L), L(2)
-
-#define ZuTuple_Method(N, O) \
-  ZuInline const T##O &p##O() const { return P::p2().p##N(); } \
-  ZuInline T##O &p##O() { return P::p2().p##N(); } \
-  template <typename Q> \
-  ZuInline auto &p##O(Q &&q) { P::p2().p##N(ZuFwd<Q>(q)); return *this; }
-ZuPP_SList(ZuTuple_Method, ZuPP_N)
-};
-
-#undef ZuTuple_TemplateArgDef
-#define ZuTuple_TemplateArgDef(I) typename T##I##_ = ZuNull
-#undef ZuPP_CList_2
-#define ZuPP_CList_2(L) L(2)
-template <typename T1_, ZuPP_CList(ZuTuple_TemplateArgDef, ZuPP_N)>
-#undef ZuPP_CList_2
-#define ZuPP_CList_2(L) ZuPP_CList_1(L), L(2)
-#undef ZuTuple_TemplateArg
-#define ZuTuple_TemplateArg(I) T##I##_
-struct ZuTuple : public ZuTuple_T<ZuPP_CList(ZuTuple_TemplateArg, ZuPP_N)>::T {
-  typedef typename ZuTuple_T<ZuPP_CList(ZuTuple_TemplateArg, ZuPP_N)>::T T;
-
-#undef ZuTuple_Typedef
-#define ZuTuple_Typedef(I, _) typedef T##I##_ T##I;
-ZuPP_List1(ZuTuple_Typedef, _, ZuPP_N)
+template <typename T0>
+class ZuTuple<T0> {
+public:
+  using U0 = typename ZuDeref<T0>::T;
+  template <unsigned> struct Type;
+  template <unsigned> struct Type_;
+  template <> struct Type<0> { using T = T0; };
+  template <> struct Type_<0> { using T = U0; };
+  using Traits = ZuTraits<T0>;
+  enum { N = 1 };
 
   ZuInline ZuTuple() { }
 
-  ZuInline ZuTuple(const ZuTuple &t) : T(t) { }
+  ZuInline ZuTuple(const ZuTuple &p) : m_p0(p.m_p0) { }
 
-  ZuInline ZuTuple(ZuTuple &&t) : T(static_cast<T &&>(t)) { }
+  ZuInline ZuTuple(ZuTuple &&p) : m_p0(static_cast<T0 &&>(p.m_p0)) { }
 
-  ZuInline ZuTuple &operator =(const ZuTuple &t) {
-    if (this != &t) T::operator =(t);
+  ZuInline ZuTuple &operator =(const ZuTuple &p) {
+    if (this != &p) m_p0 = p.m_p0;
     return *this;
   }
 
-  ZuInline ZuTuple &operator =(ZuTuple &&t) {
-    if (this != &t) T::operator =(static_cast<T &&>(t));
+  ZuInline ZuTuple &operator =(ZuTuple &&p) noexcept {
+    m_p0 = static_cast<T0 &&>(p.m_p0);
     return *this;
   }
 
-  template <typename P> ZuInline ZuTuple(P &&p) : T(ZuFwd<P>(p)) { }
+  template <typename T> ZuInline ZuTuple(T &&v,
+      typename ZuIfT<
+	  (!ZuTraits<T0>::IsReference ||
+	    ZuConversion<typename ZuTraits<U0>::T,
+			 typename ZuTraits<T>::T>::Is)>::T *_ = 0) :
+    m_p0(ZuFwd<T>(v)) { }
 
-  template <typename P> ZuInline ZuTuple &operator =(P &&p) {
-    T::operator =(ZuFwd<P>(p));
+  template <typename T> inline
+      typename ZuIfT<
+	  (!ZuTraits<T0>::IsReference ||
+	    ZuConversion<typename ZuTraits<U0>::T,
+			 typename ZuTraits<T>::T>::Is), ZuTuple &>::T
+  operator =(T &&v) noexcept {
+    m_p0 = ZuFwd<T>(v);
     return *this;
   }
 
-#undef ZuTuple_TemplateArgDef
-#define ZuTuple_TemplateArgDef(I) typename P##I
-#undef ZuPP_List1_2
-#define ZuPP_List1_2(L, C) L(2, C)
-#undef ZuPP_CList_2
-#define ZuPP_CList_2(L) L(2)
-#undef ZuTuple_Ctor
-#define ZuTuple_Ctor(N, C) \
-  template <typename P1, ZuPP_CList(ZuTuple_TemplateArgDef, N)> \
-  ZuInline ZuTuple(P1 &&p1, ZuPP_CList(ZuTuple_ArgParam, N)) : \
-      T(ZuFwd<P1>(p1), ZuPP_CList(ZuTuple_Arg, N)) { }
-ZuPP_List1(ZuTuple_Ctor, _, ZuPP_N)
-#undef ZuPP_List1_2
-#define ZuPP_List1_2(L, C) ZuPP_List1_1(L, C) L(2, C)
-#undef ZuPP_CList_2
-#define ZuPP_CList_2(L) ZuPP_CList_1(L), L(2)
+  template <typename P0>
+  ZuInline bool operator ==(const ZuTuple<P0> &p) const { return equals(p); }
+  template <typename P0>
+  ZuInline bool operator !=(const ZuTuple<P0> &p) const { return !equals(p); }
+  template <typename P0>
+  ZuInline bool operator >(const ZuTuple<P0> &p) const { return cmp(p) > 0; }
+  template <typename P0>
+  ZuInline bool operator >=(const ZuTuple<P0> &p) const { return cmp(p) >= 0; }
+  template <typename P0>
+  ZuInline bool operator <(const ZuTuple<P0> &p) const { return cmp(p) < 0; }
+  template <typename P0>
+  ZuInline bool operator <=(const ZuTuple<P0> &p) const { return cmp(p) <= 0; }
+
+  template <typename P0>
+  ZuInline bool equals(const ZuTuple<P0> &p) const {
+    return ZuCmp<T0>::equals(m_p0, p.template p<0>());
+  }
+
+  template <typename P0>
+  ZuInline int cmp(const ZuTuple<P0> &p) const {
+    return ZuCmp<T0>::cmp(m_p0, p.template p<0>());
+  }
+
+  ZuInline bool operator !() const { return !m_p0; }
+  ZuOpBool
+
+  ZuInline uint32_t hash() const {
+    return ZuHash<T0>::hash(m_p0);
+  }
+
+  template <unsigned I>
+  ZuInline typename ZuIfT<!I, const U0 &>::T p() const {
+    return m_p0;
+  }
+  template <unsigned I>
+  ZuInline typename ZuIfT<!I, U0 &>::T p() {
+    return m_p0;
+  }
+  template <unsigned I, typename P>
+  ZuInline typename ZuIfT<!I, ZuTuple &>::T p(P &&p) {
+    m_p0 = ZuFwd<P>(p);
+    return *this;
+  }
+
+private:
+  T0		m_p0;
 };
 
-#undef ZuTuple_TemplateArgDef
-#define ZuTuple_TemplateArgDef(I) typename T##I
-template <ZuPP_CList(ZuTuple_TemplateArgDef, ZuPP_N)>
-#undef ZuTuple_TemplateArg
-#define ZuTuple_TemplateArg(I) T##I
-struct ZuTraits<ZuTuple<ZuPP_CList(ZuTuple_TemplateArg, ZuPP_N)> > :
-    public ZuTraits<
-      typename ZuTuple_T<ZuPP_CList(ZuTuple_TemplateArg, ZuPP_N)>::T> {
-  typedef ZuTuple<ZuPP_CList(ZuTuple_TemplateArg, ZuPP_N)> T;
+template <typename T0, typename T1>
+class ZuTuple<T0, T1> : public ZuPair<T0, T1> {
+  using Pair = ZuPair<T0, T1>;
+
+public:
+  template <unsigned I> struct Type : public Pair::template Type<I> { };
+  template <unsigned I> struct Type_ : public Pair::template Type_<I> { };
+  using Traits = ZuTraits<Pair>;
+  enum { N = 2 };
+
+  using Pair::Pair;
+  using Pair::operator =;
+
+  ZuInline ZuTuple(const Pair &v) : Pair(v) { };
+  ZuInline ZuTuple(Pair &&v) : Pair(ZuMv(v)) { };
+
+  template <unsigned I>
+  ZuInline const typename Type_<I>::T &p() const {
+    return Pair::template p<I>();
+  }
+  template <unsigned I>
+  ZuInline typename Type_<I>::T &p() {
+    return Pair::template p<I>();
+  }
+  template <unsigned I, typename P>
+  ZuInline ZuTuple &p(P &&p) {
+    Pair::template p<I>(ZuFwd<P>(p));
+    return *this;
+  }
 };
 
-#undef ZuTuple_TemplateArgDef
-#define ZuTuple_TemplateArgDef(I) typename T##I
-template <ZuPP_CList(ZuTuple_TemplateArgDef, ZuPP_N)>
-#undef ZuTuple_TemplateArg
-#define ZuTuple_TemplateArg(I) T##I
-struct ZuTraits<ZuTuple_<ZuPP_CList(ZuTuple_TemplateArg, ZuPP_N)> > :
-#undef ZuPP_CList_2
-#define ZuPP_CList_2(L) L(2)
-    public ZuTraits<
-      ZuPair<T1, ZuTuple<ZuPP_CList(ZuTuple_TemplateArg, ZuPP_N)> > > {
-#undef ZuPP_CList_2
-#define ZuPP_CList_2(L) ZuPP_CList_1(L), L(2)
-  typedef ZuTuple_<ZuPP_CList(ZuTuple_TemplateArg, ZuPP_N)> T;
+template <typename T0, typename T1, typename ...Args>
+class ZuTuple<T0, T1, Args...> : public ZuPair<T0, ZuTuple<T1, Args...>> {
+  using Left = T0;
+  using Right = ZuTuple<T1, Args...>;
+  using Pair = ZuPair<Left, Right>;
+
+public:
+  template <unsigned I> struct Type : public Right::template Type<I - 1> { };
+  template <unsigned I> struct Type_ : public Right::template Type_<I - 1> { };
+  template <> struct Type<0> : public Pair::template Type<0> { };
+  template <> struct Type_<0> : public Pair::template Type_<0> { };
+  using Traits = ZuTraits<Pair>;
+  enum { N = Right::N + 1 };
+
+  using Pair::Pair;
+  using Pair::operator =;
+
+  ZuInline ZuTuple(const Pair &v) : Pair(v) { };
+  ZuInline ZuTuple(Pair &&v) : Pair(ZuMv(v)) { };
+
+  template <typename P0, typename P1, typename ...Args_>
+  ZuInline ZuTuple(P0 &&p0, P1 &&p1, Args_ &&... args) :
+      Pair{ZuFwd<P0>(p0), Right{ZuFwd<P1>(p1), ZuFwd<Args_>(args)...}} { }
+
+  template <unsigned I>
+  ZuInline typename ZuIfT<!I, const typename Type_<I>::T &>::T p() const {
+    return Pair::template p<0>();
+  }
+  template <unsigned I>
+  ZuInline typename ZuIfT<!I, typename Type_<I>::T &>::T p() {
+    return Pair::template p<0>();
+  }
+  template <unsigned I, typename P>
+  ZuInline typename ZuIfT<!I, ZuTuple &>::T p(P &&p) {
+    Pair::template p<0>(ZuFwd<P>(p));
+    return *this;
+  }
+
+  template <unsigned I>
+  ZuInline typename ZuIfT<!!I, const typename Type_<I>::T &>::T p() const {
+    return Pair::template p<1>().template p<I - 1>();
+  }
+  template <unsigned I>
+  ZuInline typename ZuIfT<!!I, typename Type_<I>::T &>::T p() {
+    return Pair::template p<1>().template p<I - 1>();
+  }
+  template <unsigned I, typename P>
+  ZuInline typename ZuIfT<!!I, ZuTuple &>::T p(P &&p) {
+    Pair::template p<1>().template p<I - 1>(ZuFwd<P>(p));
+    return *this;
+  }
 };
 
 template <typename ...Args>
-auto ZuInline ZuMkTuple(Args... args) {
-  return ZuTuple<Args...>{ZuMv(args)...};
+struct ZuTraits<ZuTuple<Args...>> : public ZuTuple<Args...>::Traits {
+  using T = ZuTuple<Args...>;
+};
+
+template <typename ...Args>
+auto ZuInline ZuMkTuple(Args &&... args) {
+  return ZuTuple<Args...>{ZuFwd<Args>(args)...};
 }
 
 template <typename... Args> ZuTuple(Args...) -> ZuTuple<Args...>;
 
-// ZuTupleFields(Type, 1, Fn1, 2, Fn2, ...) creates
-// a ZuTuple<Args>-derived Type with named member functions Fn1, Fn2, etc.
-// that alias p1, p2, etc.
+// ZuTupleFields(Type, Fn0, Fn1, ...) creates
+// a ZuTuple<Args>-derived Type with named member functions Fn0, Fn1, etc.
+// that alias p<0>, p<1>, etc.
 //
-// ZuTupleFields(PersonTuple, 1, name, 2, age, 3, gender);
+// ZuTupleFields(PersonTuple, name, age, gender);
 // typedef PersonTuple<ZtString, unsigned, bool> Person;
 // Person p = Person().name("Fred").age(1).gender(1);
 // p.age() = 42;
 // std::cout << p.name() << '\n';
 
 #define ZuTuple_Field(N, Fn) \
-  ZuInline const auto &Fn() const { return this->p##N(); } \
-  ZuInline auto &Fn() { return this->p##N(); } \
+  ZuInline const auto &Fn() const { return this->template p<N>(); } \
+  ZuInline auto &Fn() { return this->template p<N>(); } \
   template <typename P> \
-  ZuInline auto &Fn(P &&v) { this->p##N(ZuFwd<P>(v)); return *this; }
+  ZuInline auto &Fn(P &&v) { this->template p<N>(ZuFwd<P>(v)); return *this; }
 
 #define ZuTupleFields(T, ...) \
 template <typename ...Args> class T : public ZuTuple<Args...> { \
@@ -259,7 +249,7 @@ public: \
   using Tuple::operator =; \
   ZuInline T(const Tuple &v) : Tuple(v) { }; \
   ZuInline T(Tuple &&v) : Tuple(ZuMv(v)) { }; \
-  ZuPP_Eval(ZuPP_Map2(ZuTuple_Field, __VA_ARGS__)) \
+  ZuPP_Eval(ZuPP_MapIndex(ZuTuple_Field, 0, __VA_ARGS__)) \
 }; \
 template <typename ...Args> \
 struct ZuTraits<T<Args...> > : public ZuTraits<ZuTuple<Args...> > { }

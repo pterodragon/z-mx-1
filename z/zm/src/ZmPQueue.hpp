@@ -179,7 +179,7 @@ namespace ZmPQueue_ {
   struct Last<Levels, Levels, T_> { typedef void T; };
 };
 
-ZuTupleFields(ZmPQueue_Gap, 1, key, 2, length);
+ZuTupleFields(ZmPQueue_Gap, key, length);
 
 template <typename Item_, class NTP = ZmPQueue_Defaults>
 class ZmPQueue : public ZuPrintable, public NTP::Base {

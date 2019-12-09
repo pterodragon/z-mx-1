@@ -39,7 +39,7 @@
 #include <zlib/ZuConversion.hpp>
 #include <zlib/ZuPrint.hpp>
 
-// SFINAE technique...
+// SFINAE...
 struct ZuPair_ { };
 
 template <typename T, typename P, bool IsPair> struct ZuPair_Cvt_;
@@ -48,163 +48,189 @@ template <typename T, typename P> struct ZuPair_Cvt_<T, P, 0> {
 };
 template <typename T, typename P> struct ZuPair_Cvt_<T, P, 1> {
   enum {
-    OK = ZuConversion<typename T::T1, typename P::T1>::Exists &&
-	 ZuConversion<typename T::T2, typename P::T2>::Exists
+    OK = ZuConversion<typename T::T0, typename P::T0>::Exists &&
+	 ZuConversion<typename T::T1, typename P::T1>::Exists
   };
 };
 template <typename T, typename P> struct ZuPair_Cvt :
   public ZuPair_Cvt_<typename ZuDeref<T>::T, P,
     ZuConversion<ZuPair_, typename ZuDeref<T>::T>::Base> { };
 
-template <typename T1, typename T2> class ZuPair;
+template <typename T0, typename T1> class ZuPair;
 
-template <typename T1, typename T2>
-struct ZuTraits<ZuPair<T1, T2> > : public ZuGenericTraits<ZuPair<T1, T2> > {
+template <typename T0, typename T1>
+struct ZuTraits<ZuPair<T0, T1> > : public ZuGenericTraits<ZuPair<T0, T1> > {
   enum {
-    IsPOD = ZuTraits<T1>::IsPOD && ZuTraits<T2>::IsPOD,
-    IsComparable = ZuTraits<T1>::IsComparable && ZuTraits<T2>::IsComparable,
-    IsHashable = ZuTraits<T1>::IsHashable && ZuTraits<T2>::IsHashable
+    IsPOD = ZuTraits<T0>::IsPOD && ZuTraits<T1>::IsPOD,
+    IsComparable = ZuTraits<T0>::IsComparable && ZuTraits<T1>::IsComparable,
+    IsHashable = ZuTraits<T0>::IsHashable && ZuTraits<T1>::IsHashable
   };
 };
 
-template <typename T1_, typename T2_> class ZuPair : public ZuPair_ {
+template <typename T0_, typename T1_> class ZuPair : public ZuPair_ {
+  template <typename, typename> friend class ZuPair;
+
 public:
-  typedef T1_ T1;
-  typedef T2_ T2;
-  typedef typename ZuDeref<T1_>::T U1;
-  typedef typename ZuDeref<T2_>::T U2;
+  using T0 = T0_;
+  using T1 = T1_;
+  using U0 = typename ZuDeref<T0_>::T;
+  using U1 = typename ZuDeref<T1_>::T;
+  template <unsigned> struct Type;
+  template <> struct Type<0> { using T = T0; };
+  template <> struct Type<1> { using T = T1; };
+  template <unsigned> struct Type_;
+  template <> struct Type_<0> { using T = U0; };
+  template <> struct Type_<1> { using T = U1; };
 
   ZuInline ZuPair() { }
 
-  ZuInline ZuPair(const ZuPair &p) : m_p1(p.m_p1), m_p2(p.m_p2) { }
+  ZuInline ZuPair(const ZuPair &p) : m_p0(p.m_p0), m_p1(p.m_p1) { }
 
   ZuInline ZuPair(ZuPair &&p) :
-    m_p1(static_cast<T1 &&>(p.m_p1)), m_p2(static_cast<T2 &&>(p.m_p2)) { }
+    m_p0(static_cast<T0 &&>(p.m_p0)), m_p1(static_cast<T1 &&>(p.m_p1)) { }
 
   ZuInline ZuPair &operator =(const ZuPair &p) {
-    if (this != &p) m_p1 = p.m_p1, m_p2 = p.m_p2;
+    if (this != &p) m_p0 = p.m_p0, m_p1 = p.m_p1;
     return *this;
   }
 
-  ZuInline ZuPair &operator =(ZuPair &&p) {
-    m_p1 = static_cast<T1 &&>(p.m_p1), m_p2 = static_cast<T2 &&>(p.m_p2);
+  ZuInline ZuPair &operator =(ZuPair &&p) noexcept {
+    m_p0 = static_cast<T0 &&>(p.m_p0), m_p1 = static_cast<T1 &&>(p.m_p1);
     return *this;
   }
 
-  template <typename T> ZuInline ZuPair(const T &t,
+  template <typename T> ZuInline ZuPair(const T &p,
       typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK>::T *_ = 0) :
-    m_p1(t.m_p1), m_p2(t.m_p2) { }
-  template <typename T> ZuInline ZuPair(T &&t,
+    m_p0(p.m_p0), m_p1(p.m_p1) { }
+  template <typename T> ZuInline ZuPair(T &&p,
       typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK>::T *_ = 0) noexcept :
-    m_p1(ZuFwd<decltype(t.m_p1)>(t.m_p1)),
-    m_p2(ZuFwd<decltype(t.m_p2)>(t.m_p2)) { }
-  template <typename T> ZuInline ZuPair(T &&t,
+    m_p0(ZuFwd<decltype(p.m_p0)>(p.m_p0)),
+    m_p1(ZuFwd<decltype(p.m_p1)>(p.m_p1)) { }
+  template <typename T> ZuInline ZuPair(T &&v,
       typename ZuIfT<
 	!ZuPair_Cvt<T, ZuPair>::OK &&
-	  (!ZuTraits<T1>::IsReference ||
-	    ZuConversion<typename ZuTraits<U1>::T,
+	  (!ZuTraits<T0>::IsReference ||
+	    ZuConversion<typename ZuTraits<U0>::T,
 			 typename ZuTraits<T>::T>::Is)>::T *_ = 0) :
-    m_p1(ZuFwd<T>(t)), m_p2(ZuCmp<U2>::null()) { }
+    m_p0(ZuFwd<T>(v)), m_p1(ZuCmp<U1>::null()) { }
 
 private:
   template <typename T> inline
-      typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK>::T assign(const T &t)
-    { m_p1 = t.m_p1, m_p2 = t.m_p2; }
+      typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK>::T assign(const T &p)
+    { m_p0 = p.m_p0, m_p1 = p.m_p1; }
   template <typename T> inline
-      typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK>::T assign(T &&t) {
-    m_p1 = ZuFwd<decltype(t.m_p1)>(t.m_p1);
-    m_p2 = ZuFwd<decltype(t.m_p2)>(t.m_p2);
+      typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK>::T assign(T &&p) {
+    m_p0 = ZuFwd<decltype(p.m_p0)>(p.m_p0);
+    m_p1 = ZuFwd<decltype(p.m_p1)>(p.m_p1);
   }
   template <typename T> inline
       typename ZuIfT<
 	!ZuPair_Cvt<T, ZuPair>::OK &&
-	  (!ZuTraits<T1>::IsReference ||
-	    ZuConversion<typename ZuTraits<U1>::T,
+	  (!ZuTraits<T0>::IsReference ||
+	    ZuConversion<typename ZuTraits<U0>::T,
 			 typename ZuTraits<T>::T>::Is)
-      >::T assign(T &&t) { m_p1 = ZuFwd<T>(t), m_p2 = ZuCmp<U2>::null(); }
+      >::T assign(T &&v) { m_p0 = ZuFwd<T>(v), m_p1 = ZuCmp<U1>::null(); }
 
 public:
-  template <typename T> ZuInline ZuPair &operator =(T &&t) noexcept {
-    assign(ZuFwd<T>(t));
+  template <typename T> ZuInline ZuPair &operator =(T &&v) noexcept {
+    assign(ZuFwd<T>(v));
     return *this;
   }
 
-  template <typename P1, typename P2>
-  ZuInline ZuPair(P1 &&p1, P2 &&p2,
+  template <typename P0, typename P1>
+  ZuInline ZuPair(P0 &&p0, P1 &&p1,
       typename ZuIfT<
+	(!ZuTraits<T0>::IsReference ||
+	  ZuConversion<typename ZuTraits<U0>::T,
+		       typename ZuTraits<P0>::T>::Is) && 
 	(!ZuTraits<T1>::IsReference ||
 	  ZuConversion<typename ZuTraits<U1>::T,
-		       typename ZuTraits<P1>::T>::Is) && 
-	(!ZuTraits<T2>::IsReference ||
-	  ZuConversion<typename ZuTraits<U2>::T,
-		       typename ZuTraits<P2>::T>::Is)>::T *_ = 0) :
-    m_p1(ZuFwd<P1>(p1)), m_p2(ZuFwd<P2>(p2)) { }
+		       typename ZuTraits<P1>::T>::Is)>::T *_ = 0) :
+    m_p0(ZuFwd<P0>(p0)), m_p1(ZuFwd<P1>(p1)) { }
 
-  template <typename P1, typename P2>
-  ZuInline bool operator ==(const ZuPair<P1, P2> &p) const
+  template <typename P0, typename P1>
+  ZuInline bool operator ==(const ZuPair<P0, P1> &p) const
     { return equals(p); }
-  template <typename P1, typename P2>
-  ZuInline bool operator !=(const ZuPair<P1, P2> &p) const
+  template <typename P0, typename P1>
+  ZuInline bool operator !=(const ZuPair<P0, P1> &p) const
     { return !equals(p); }
-  template <typename P1, typename P2>
-  ZuInline bool operator >(const ZuPair<P1, P2> &p) const
+  template <typename P0, typename P1>
+  ZuInline bool operator >(const ZuPair<P0, P1> &p) const
     { return cmp(p) > 0; }
-  template <typename P1, typename P2>
-  ZuInline bool operator >=(const ZuPair<P1, P2> &p) const
+  template <typename P0, typename P1>
+  ZuInline bool operator >=(const ZuPair<P0, P1> &p) const
     { return cmp(p) >= 0; }
-  template <typename P1, typename P2>
-  ZuInline bool operator <(const ZuPair<P1, P2> &p) const
+  template <typename P0, typename P1>
+  ZuInline bool operator <(const ZuPair<P0, P1> &p) const
     { return cmp(p) < 0; }
-  template <typename P1, typename P2>
-  ZuInline bool operator <=(const ZuPair<P1, P2> &p) const
+  template <typename P0, typename P1>
+  ZuInline bool operator <=(const ZuPair<P0, P1> &p) const
     { return cmp(p) <= 0; }
 
-  template <typename P1, typename P2>
-  ZuInline bool equals(const ZuPair<P1, P2> &p) const {
-    return ZuCmp<T1>::equals(m_p1, p.p1()) && ZuCmp<T2>::equals(m_p2, p.p2());
+  template <typename P0, typename P1>
+  ZuInline bool equals(const ZuPair<P0, P1> &p) const {
+    return
+      ZuCmp<T0>::equals(m_p0, p.template p<0>()) &&
+      ZuCmp<T1>::equals(m_p1, p.template p<1>());
   }
 
-  template <typename P1, typename P2>
-  ZuInline int cmp(const ZuPair<P1, P2> &p) const {
+  template <typename P0, typename P1>
+  ZuInline int cmp(const ZuPair<P0, P1> &p) const {
     int i;
-    if (i = ZuCmp<T1>::cmp(m_p1, p.p1())) return i;
-    return ZuCmp<T2>::cmp(m_p2, p.p2());
+    if (i = ZuCmp<T0>::cmp(m_p0, p.template p<0>())) return i;
+    return ZuCmp<T1>::cmp(m_p1, p.template p<1>());
   }
 
-  ZuInline bool operator !() const { return !m_p1 || !m_p2; }
+  ZuInline bool operator !() const { return !m_p0 || !m_p1; }
   ZuOpBool
 
   ZuInline uint32_t hash() const {
-    return ZuHash<T1>::hash(m_p1) ^ ZuHash<T2>::hash(m_p2);
+    return ZuHash<T0>::hash(m_p0) ^ ZuHash<T1>::hash(m_p1);
   }
 
-  ZuInline const U1 &p1() const { return m_p1; }
-  ZuInline U1 &p1() { return m_p1; }
-  template <typename P1> ZuInline auto &p1(P1 &&p1) {
-    m_p1 = ZuFwd<P1>(p1);
-    return *this;
+  template <unsigned I>
+  ZuInline typename ZuIfT<I == 0, const U0 &>::T p() const {
+    return m_p0;
   }
-  ZuInline const U2 &p2() const { return m_p2; }
-  ZuInline U2 &p2() { return m_p2; }
-  template <typename P2> ZuInline auto &p2(P2 &&p2) {
-    m_p2 = ZuFwd<P2>(p2);
+  template <unsigned I>
+  ZuInline typename ZuIfT<I == 0, U0 &>::T p() {
+    return m_p0;
+  }
+  template <unsigned I, typename P>
+  ZuInline typename ZuIfT<I == 0, ZuPair &>::T p(P &&p) {
+    m_p0 = ZuFwd<P>(p);
     return *this;
   }
 
+  template <unsigned I>
+  ZuInline typename ZuIfT<I == 1, const U1 &>::T p() const {
+    return m_p1;
+  }
+  template <unsigned I>
+  ZuInline typename ZuIfT<I == 1, U1 &>::T p() {
+    return m_p1;
+  }
+  template <unsigned I, typename P>
+  ZuInline typename ZuIfT<I == 1, ZuPair &>::T p(P &&p) {
+    m_p1 = ZuFwd<P>(p);
+    return *this;
+  }
+
+private:
+  T0		m_p0;
   T1		m_p1;
-  T2		m_p2;
 };
 
-template <typename T1, typename T2>
-auto ZuInline ZuMkPair(T1 t1, T2 t2) {
-  return ZuPair<T1, T2>(ZuMv(t1), ZuMv(t2));
+template <typename T0, typename T1>
+auto ZuInline ZuMkPair(T0 t1, T1 t2) {
+  return ZuPair<T0, T1>(ZuMv(t1), ZuMv(t2));
 }
 
-template <typename T1, typename T2>
-struct ZuPrint<ZuPair<T1, T2> > : public ZuPrintDelegate {
+template <typename T0, typename T1>
+struct ZuPrint<ZuPair<T0, T1> > : public ZuPrintDelegate {
   template <typename S>
-  inline static void print(S &s, const ZuPair<T1, T2> &p) {
-    s << p.p1() << ':' << p.p2();
+  inline static void print(S &s, const ZuPair<T0, T1> &p) {
+    s << p.template p<0>() << ':' << p.template p<1>();
   }
 };
 

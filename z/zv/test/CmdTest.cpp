@@ -17,7 +17,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include <zlib/ZuTuple.hpp>
 #include <zlib/ZuPrint.hpp>
 #include <zlib/ZuPolymorph.hpp>
 

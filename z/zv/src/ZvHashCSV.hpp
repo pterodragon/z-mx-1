@@ -35,48 +35,43 @@
 #include <zlib/ZmHeap.hpp>
 #include <zlib/ZmHash.hpp>
 
+#include <zlib/ZvFields.hpp>
 #include <zlib/ZvCSV.hpp>
 
-struct ZvAPI ZvHashCSV {
-  struct Data {
+struct ZvHashCSV {
+  struct Data : public ZvFieldObject<Data> {
+    static const ZvFields<Data> fields() noexcept;
+
     ZmIDString		id;
     ZuBox<unsigned>	bits;
     ZuBox<double>	loadFactor;
     ZuBox<unsigned>	cBits;
   };
+  const ZvFields<Data> Data::fields() noexcept {
+    using namespace ZvFieldFlags;
+    return ZvFields<Data>{std::initializer_list<ZvField<Data>>{
+      ZvFieldString(Data, id, Primary),
+      ZvFieldScalar(Data, bits, 0),
+      ZvFieldScalar(Data, loadFactor, 0),
+      ZvFieldScalar(Data, cBits, 0)
+    } };
+  }
 
-  typedef ZvCSVColumn<ZvCSVColType::String, ZmIDString> IDCol;
-  typedef ZvCSVColumn<ZvCSVColType::Int, ZuBox<unsigned> > UIntCol;
-  typedef ZvCSVColumn<ZvCSVColType::Float, ZuBox<double> > DblCol;
-
-  struct CSV : public ZvCSV {
+  class CSV : public ZvCSV<Data> {
   public:
-    typedef ZuPOD<Data> POD;
-
-    CSV() : m_pod(new POD()) {
-      new (m_pod->ptr()) Data();
-      add(new IDCol("id", offsetof(Data, id)));
-      add(new UIntCol("bits", offsetof(Data, bits)));
-      add(new DblCol("loadFactor", offsetof(Data, loadFactor)));
-      add(new UIntCol("cBits", offsetof(Data, cBits)));
-    }
-
-    void alloc(ZuRef<ZuAnyPOD> &pod) { pod = m_pod; }
-
     void read(ZuString file) {
       ZvCSV::readFile(file,
-	  ZvCSVAllocFn::Member<&CSV::alloc>::fn(this),
-	  ZvCSVReadFn::Member<&CSV::row>::fn(this));
-    }
-
-    void row(ZuAnyPOD *pod) {
-      const Data *data = (const Data *)(pod->ptr());
-      ZmHashMgr::init(data->id, ZmHashParams().
-	  bits(data->bits).loadFactor(data->loadFactor).cBits(data->cBits));
+	  [this]() { return &m_data; },
+	  [](Data *data) {
+	    ZmHashMgr::init(data->id, ZmHashParams().
+		bits(data->bits).
+		loadFactor(data->loadFactor).
+		cBits(data->cBits));
+	  });
     }
 
   private:
-    ZuRef<POD>	m_pod;
+    Data	m_data;
   };
 
   static void init(ZuString file) {

@@ -87,7 +87,7 @@ struct ZmHeapStats {
 struct ZmHeapTelemetry {
   ZmIDString	id;		// primary key
   uint64_t	cacheSize;
-  uint64_t	cpuset;		// FIXME
+  ZmBitmap	cpuset;
   uint64_t	cacheAllocs;	// graphable (*)
   uint64_t	heapAllocs;	// graphable (*)
   uint64_t	frees;		// graphable
@@ -244,7 +244,7 @@ template <class, unsigned> friend class ZmHeapCacheT;
 	ZuBoxed(data.sharded) << ',' <<
 	ZuBoxed(data.alignment) << ',' <<
 	ZuBoxed(data.cacheSize) << ',' <<
-	ZmBitmap(data.cpuset) << ',' <<
+	data.cpuset << ',' <<
 	ZuBoxed(data.cacheAllocs) << ',' <<
 	ZuBoxed(data.heapAllocs) << ',' <<
 	ZuBoxed(data.frees) << '\n';

@@ -35,7 +35,6 @@
 #include <zlib/ZuDecimalFn.hpp>
 #include <zlib/ZuBox.hpp>
 #include <zlib/ZuPair.hpp>
-#include <zlib/ZuTuple.hpp>
 #include <zlib/ZuStringN.hpp>
 #include <zlib/ZuPrint.hpp>
 #include <zlib/ZuID.hpp>
@@ -421,10 +420,6 @@ typedef MxString<MxTxtSize> MxTxtString;
 #define MxEnumFlags ZtEnumFlags
 
 // application types
-
-namespace MxRAG {
-  MxEnumValues(Off, Red, Amber, Green);
-}
 
 namespace MxInstrIDSrc {
   MxEnumValues(CUSIP, SEDOL, QUIK, ISIN, RIC, EXCH, CTA, BSYM, BBGID,

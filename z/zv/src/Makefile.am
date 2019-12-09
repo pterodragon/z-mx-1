@@ -18,24 +18,23 @@ FBS = \
 	zcmd.fbs \
 	zcmdreq.fbs \
 	zcmdack.fbs \
-	telemetry.fbs \
-	decimal.fbs
+	telemetry.fbs
 FBS_H = ${FBS:%.fbs=%_fbs.h}
 ${FBS_H}: %_fbs.h: fbs/%.fbs
-	flatc -c -I fbs $<
+	flatc -c -I fbs -I $(top_srcdir)/zfb/src/fbs $<
 	mv ${@:%_fbs.h=%_generated.h} $@
 	perl -pi -e 's|^#include "(\w+)_generated\.h"|#include <zlib/$${1}_fbs.h>|; s|^#include "flatbuffers/flatbuffers.h"|#include <flatbuffers/flatbuffers.h>|;' $@
 BUILT_SOURCES = ${FBS_H}
 CLEANFILES = ${FBS_H}
 pkginclude_HEADERS = ZvLib.hpp \
-	ZvCf.hpp ZvCSV.hpp ZvError.hpp ZvEnum.hpp ZvHashCSV.hpp \
+	ZvCf.hpp ZvFields.hpp ZvCSV.hpp ZvError.hpp ZvEnum.hpp ZvHashCSV.hpp \
 	ZvHeapCSV.hpp ZvMultiplexCf.hpp ZvSchedulerCf.hpp ZvCxnOptionsCf.hpp \
-	ZvDaemon.hpp ZvRegexError.hpp ZvDateError.hpp \
+	ZvDaemon.hpp \
 	ZvRingCf.hpp ZvThreadCf.hpp ZvUserDB.hpp \
 	ZvCmdNet.hpp ZvCmdHost.hpp ZvCmdClient.hpp ZvCmdServer.hpp \
-	ZvDecimal.hpp ${FBS_H}
-fbsdir = $(datarootdir)/${PACKAGE}/fbs
-dist_fbs_DATA = fbs/decimal.fbs
+	ZvDecimal.hpp ZvTelemetry.hpp ${FBS_H}
+#fbsdir = $(datarootdir)/${PACKAGE}/fbs
+#dist_fbs_DATA = fbs/telemetry.fbs
 lib_LTLIBRARIES = libZv.la
 bin_PROGRAMS = zuserdb
 libZv_la_LDFLAGS = @Z_SO_LDFLAGS@

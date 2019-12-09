@@ -38,34 +38,13 @@
 
 #include <zlib/ZvError.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-
 template <typename T> class ZvEnum;
 
 class ZvAPI ZvInvalidEnum : public ZvError {
 public:
-  // inline ZvInvalidEnum() { }
   template <typename Key, typename Value>
   inline ZvInvalidEnum(Key &&key, Value &&value) :
     m_key(ZuFwd<Key>(key)), m_value(ZuFwd<Value>(value)) { }
-
-#if 0
-  inline ZvInvalidEnum(const ZvInvalidEnum &i) :
-    m_key(i.m_key), m_value(i.m_value) { }
-  inline ZvInvalidEnum &operator =(const ZvInvalidEnum &i) {
-    if (this != &i) m_key = i.m_key, m_value = i.m_value;
-    return *this;
-  }
-  inline ZvInvalidEnum(ZvInvalidEnum &&i) :
-    m_key(ZuMv(i.m_key)), m_value(ZuMv(i.m_value)) { }
-  inline ZvInvalidEnum &operator =(ZvInvalidEnum &&i) {
-    m_key = ZuMv(i.m_key), m_value = ZuMv(i.m_value);
-    return *this;
-  }
-#endif
 
   inline const ZtString &key() const { return m_key; }
   inline const ZtString &value() const { return m_value; }
@@ -82,8 +61,6 @@ public:
     ZvInvalidEnum(ZuFwd<Key>(key), ZuFwd<Value>(value)), m_enum(enum_) { }
 
   void print_(ZmStream &s) const;
-
-  // inline const ZvEnum<T> *enum_() const { return m_enum; }
 
 private:
   const ZvEnum<T>	*m_enum;
@@ -143,12 +120,6 @@ public:
       ZuString key, S &s, const Flags &v, char delim = '|') const {
     if (!v) return 0;
     return T::print(s, v, delim);
-#if 0
-    if (unsigned n = T::print(s, v, delim)) return n;
-    throw ZvInvalidEnumT<T>(
-	key, ZuBoxed(v).hex(), static_cast<const ZvEnum<T> *>(this));
-    // not reached
-#endif
   }
 
   template <typename Flags>
@@ -160,9 +131,5 @@ public:
     // not reached
   }
 };
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 #endif /* ZvEnum_HPP */

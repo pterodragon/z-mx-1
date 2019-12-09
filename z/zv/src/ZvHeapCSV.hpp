@@ -33,67 +33,49 @@
 #include <zlib/ZuStringN.hpp>
 
 #include <zlib/ZmHeap.hpp>
-#include <zlib/ZuPOD.hpp>
 
+#include <zlib/ZvFields.hpp>
 #include <zlib/ZvCSV.hpp>
 
 struct ZvAPI ZvHeapCSV {
-  struct Data {
+  struct Data : public ZvFieldObject<Data> {
+    static const ZvFields<Data> fields() noexcept;
+
     ZmIDString		id;
-    ZuBox<unsigned>	alignment;
     ZuBox<unsigned>	partition;
+    ZuBox<unsigned>	alignment;
     ZuBox<uint64_t>	cacheSize;
     ZmBitmap		cpuset;
     ZuBox<unsigned>	telFreq;
   };
+  const ZvFields<Data> Data::fields() noexcept {
+    using namespace ZvFieldFlags;
+    return ZvFields<Data>{std::initializer_list<ZvField<Data>>{
+      ZvFieldString(Data, id, Primary),
+      ZvFieldScalar(Data, partition, 0),
+      ZvFieldScalar(Data, alignment, 0),
+      ZvFieldScalar(Data, cacheSize, 0),
+      ZvFieldString(Data, cpuset, 0),
+      ZvFieldScalar(Data, telFreq, 0)
+    } };
+  }
 
-  typedef ZvCSVColumn<ZvCSVColType::String, ZmIDString> IDCol;
-  typedef ZvCSVColumn<ZvCSVColType::Int, ZuBox<unsigned> > UIntCol;
-  typedef ZvCSVColumn<ZvCSVColType::Int, ZuBox<uint64_t> > UInt64Col;
-  class BitmapCol : public ZvCSVColumn<ZvCSVColType::Func, ZmBitmap> {
-    typedef ZvCSVColumn<ZvCSVColType::Func, ZmBitmap> Base;
-    typedef Base::ParseFn ParseFn;
-    typedef Base::PlaceFn PlaceFn;
+  class CSV : public ZvCSV<Data> {
   public:
-    template <typename ID>
-    inline BitmapCol(const ID &id, int offset) :
-	Base(id, offset,
-	     ParseFn::Ptr<&BitmapCol::parse_>::fn(),
-	     PlaceFn::Ptr<&BitmapCol::place_>::fn()) { }
-    static void parse_(ZmBitmap *i, ZuString b) { *i = ZmBitmap(b); }
-    static void place_(ZtArray<char> &b, const ZmBitmap *i) { b << *i; }
-  };
-
-  struct CSV : public ZvCSV {
-  public:
-    typedef ZuPOD<Data> POD;
-
-    CSV() : m_pod(new POD()) {
-      new (m_pod->ptr()) Data();
-      add(new IDCol("id", offsetof(Data, id)));
-      add(new UIntCol("alignment", offsetof(Data, alignment)));
-      add(new UIntCol("partition", offsetof(Data, partition)));
-      add(new UInt64Col("cacheSize", offsetof(Data, cacheSize)));
-      add(new BitmapCol("cpuset", offsetof(Data, cpuset)));
-      add(new UIntCol("telFreq", offsetof(Data, telFreq)));
-    }
-
     void read(ZuString file) {
       ZvCSV::readFile(file,
-	  ZvCSVAllocFn::Member<&CSV::alloc>::fn(this),
-	  ZvCSVReadFn::Member<&CSV::row>::fn(this));
-    }
-
-    void alloc(ZuRef<ZuAnyPOD> &pod) { pod = m_pod; }
-
-    void row(ZuAnyPOD *pod) {
-      const Data *data = (const Data *)(pod->ptr());
-      ZmHeapMgr::init(data->id, data->partition, ZmHeapConfig{
-	  data->alignment, data->cacheSize, data->cpuset, data->telFreq});
+	  [this]() { return &m_data; },
+	  [](Data *data) {
+	    ZmHeapMgr::init(data->id, data->partition, ZmHeapConfig{
+		data->alignment,
+		data->cacheSize,
+		data->cpuset,
+		data->telFreq});
+	  });
     }
 
   private:
-    ZuRef<POD>	m_pod;
+    Data	m_data;
   };
 
   static void init(ZuString file) {

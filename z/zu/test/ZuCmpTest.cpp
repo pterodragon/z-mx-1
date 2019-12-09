@@ -66,7 +66,7 @@ template <typename T1, typename T2> void checkNull() {
   CHECK(!*u && !*v && !*w);
 }
 
-ZuTupleFields(T1_Fields, 1, id, 2, age, 3, height);
+ZuTupleFields(T1_Fields, id, age, height);
 namespace T1 {
   typedef ZuBox<int> I;
   typedef const ZuBox<int> &R;
@@ -74,7 +74,7 @@ namespace T1 {
   typedef T1_Fields<R, R, R> T;
 }
 
-ZuUnionFields(T2_Fields, 1, id, 2, income, 3, name, 4, dependents, 5, foo);
+ZuUnionFields(T2_Fields, id, income, name, dependents, foo);
 namespace T2 {
   typedef int I;
   typedef double D;
@@ -84,7 +84,7 @@ namespace T2 {
   typedef T2_Fields<I, D, S, P, CP> V;
 }
 
-ZuTupleFields(T3_Fields, 1, id, 2, age, 3, height);
+ZuTupleFields(T3_Fields, id, age, height);
 namespace T3 {
   typedef ZuBox<int> I;
   typedef T3_Fields<I, I, I> V;
@@ -153,8 +153,8 @@ int main()
     ZuTuple<int, int, int, int> s(1, 2, 3, 4);
     ZuTuple<int, int, int, int> t;
     t = s;
-    printf("%d %d %d %d\n", (int)s.p1(), (int)s.p2(), (int)s.p3(), (int)s.p4());
-    printf("%d %d %d %d\n", (int)t.p1(), (int)t.p2(), (int)t.p3(), (int)t.p4());
+    printf("%d %d %d %d\n", (int)s.p<0>(), (int)s.p<1>(), (int)s.p<2>(), (int)s.p<3>());
+    printf("%d %d %d %d\n", (int)t.p<0>(), (int)t.p<1>(), (int)t.p<2>(), (int)t.p<3>());
   }
 
   {
@@ -210,6 +210,7 @@ int main()
       CHECK(ZuCmp<V>::cmp(i, j) > 0);
       i.foo(&c);
       CHECK(*(i.foo()) == 42);
+      ++*(i.foo());
     }
     CHECK(c == 43);
   }
@@ -218,8 +219,8 @@ int main()
     ZuTuple<char, char, char, char> t;
     char *p = (char *)&t;
     printf("%d %d %d %d\n",
-	   (int)(&t.p1() - p), (int)(&t.p2() - p),
-	   (int)(&t.p3() - p), (int)(&t.p4() - p));
+	   (int)(&t.p<0>() - p), (int)(&t.p<1>() - p),
+	   (int)(&t.p<2>() - p), (int)(&t.p<3>() - p));
   }
 
   {
@@ -242,17 +243,17 @@ int main()
   {
     using namespace T3;
     T t, s;
-    t.p1().length(1);
-    t.p1()[0] = ZuMkTuple(1, 2, 3);
-    t.p1() += ZuMkTuple(1, 2, 3);
-    t.p1() << ZuMkTuple(1, 2, 3);
-    t.p2().length(3);
-    t.p2()[0] = 42;
-    t.p2()[2] = 42;
+    t.p<0>().length(1);
+    t.p<0>()[0] = ZuMkTuple(1, 2, 3);
+    t.p<0>() += ZuMkTuple(1, 2, 3);
+    t.p<0>() << ZuMkTuple(1, 2, 3);
+    t.p<1>().length(3);
+    t.p<1>()[0] = 42;
+    t.p<1>()[2] = 42;
     s = t;
-    CHECK((s.p1()[1] == s.p1()[0]));
+    CHECK((s.p<0>()[1] == s.p<0>()[0]));
     // below deliberately triggers use of uninitialized memory
-    printf("%d\n", (int)t.p2()[1]);
+    printf("%d\n", (int)t.p<1>()[1]);
   }
 
   {

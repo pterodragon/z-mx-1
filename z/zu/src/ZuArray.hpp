@@ -270,7 +270,7 @@ private:
 };
 
 template <typename T> class ZuArray_Null {
-  ZuInline const T *data() const { return 0; }
+  ZuInline const T *data() const { return nullptr; }
   ZuInline unsigned length() const { return 0; }
 
   ZuInline T operator [](int i) const { return ZuCmp<T>::null(); }

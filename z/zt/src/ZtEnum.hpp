@@ -52,7 +52,7 @@ typedef ZuBox_1(int8_t) ZtEnum;
     N <= 64 ? 6 : N <= 128 ? 7 : N <= 256 ? 8 : N <= 512 ? 9 : 10 \
   }; \
   template <typename T> struct Map_ : public ZuObject { \
-  protected: \
+  private: \
     typedef ZmLHash<ZtEnum, \
 	      ZmLHashVal<ZuString, \
 		ZmLHashStatic<Bits, \
@@ -61,6 +61,7 @@ typedef ZuBox_1(int8_t) ZtEnum;
 	      ZmLHashVal<ZtEnum, \
 		ZmLHashStatic<Bits, \
 		  ZmLHashLock<ZmNoLock> > > > S2V; \
+  protected: \
     void init(const char *s, int v, ...) { \
       if (ZuUnlikely(!s)) return; \
       add(s, v); \
@@ -81,11 +82,11 @@ typedef ZuBox_1(int8_t) ZtEnum;
       auto i = m_s2v->readIterator(); \
       for (;;) { \
 	auto kv = i.iterate(); \
-	if (!kv.p1()) break; \
-	l(kv.p1(), kv.p2()); \
+	if (!kv.template p<0>()) break; \
+	l(kv.template p<0>(), kv.template p<1>()); \
       } \
     } \
-  protected: \
+  private: \
     ZmRef<S2V>	m_s2v; \
     ZmRef<V2S>	m_v2s; \
   }
@@ -97,9 +98,9 @@ typedef ZuBox_1(int8_t) ZtEnum;
   } \
   inline const char *name(int i) { \
     ZuPair<const char *const *const, unsigned> names_ = names(); \
-    if (i >= (int)names_.p2()) return "Unknown"; \
+    if (i >= (int)names_.p<1>()) return "Unknown"; \
     if (i < 0) return ""; \
-    return names_.p1()[i]; \
+    return names_.template p<0>()[i]; \
   } \
   struct Map : public Map_<Map> { \
     Map() { for (unsigned i = 0; i < N; i++) this->add(name(i), i); } \

@@ -1,5 +1,0 @@
-namespace Zv.fbs;
-struct Decimal {
-  h:uint64;
-  l:uint64;
-}

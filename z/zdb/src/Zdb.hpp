@@ -525,10 +525,12 @@ struct ZdbConfig {
   ZmHashParams		fileHash;
 };
 
+#if 0
 namespace ZdbCacheMode {
   ZtEnumValues(Normal, FullCache);
   ZtEnumNames("Normal", "FullCache");
 };
+#endif
 
 struct ZdbHandler {
   ZdbAllocFn	allocFn;
@@ -788,6 +790,7 @@ template <typename> friend struct ZuPrint;
   typedef ZmReadGuard<Lock> ReadGuard;
 
 public:
+#if 0
   enum State {
     Instantiated = 0,	// instantiated, init() not yet called
     Initialized,	// init() called
@@ -799,6 +802,7 @@ public:
     Inactive,		// inactive (client)
     Stopping		// stop() called - stopping
   };
+#endif
 
 private:
   struct IDAccessor;

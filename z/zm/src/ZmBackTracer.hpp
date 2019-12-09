@@ -54,11 +54,11 @@ public:
     Guard guard(m_lock);
     unsigned i = m_offset;
     m_offset = (i + 1) & 63;
-    Data *data = new (m_captures[i].new1()) Data();
+    Data *data = new (m_captures[i].template new_<0>()) Data();
     ZmThreadContext *self = ZmThreadContext::self();
-    data->p1() = self->tid();
-    data->p2() = self->name();
-    data->p3().capture(skip + 1);
+    data->p<0>() = self->tid();
+    data->p<1>() = self->name();
+    data->p<2>().capture(skip + 1);
   }
 
   template <typename S> void dump(S &s) const {
@@ -67,10 +67,12 @@ public:
     for (unsigned i = 0; i < N; i++) {
       unsigned j = (m_offset + (N - 1) - i) % N;
       if (m_captures[j].type() == 1) {
-	const Data &data = m_captures[j].p1();
+	const Data &data = m_captures[j].template p<0>();
 	if (!first) s << "---\n";
 	first = false;
-	s << data.p2() << " (TID " << data.p1() << ")\n" << data.p3();
+	s << data.template p<1>()
+	  << " (TID " << data.template p<0>()
+	  << ")\n" << data.template p<2>();
       }
     }
   }

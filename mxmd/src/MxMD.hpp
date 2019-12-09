@@ -202,7 +202,7 @@ struct MxMDL1Flags : public MxMDFlags<MxMDL1Flags> {
 
 // venue mapping
 
-ZuTupleFields(MxMDVenueMapKey_, 1, venue, 2, segment);
+ZuTupleFields(MxMDVenueMapKey_, venue, segment);
 typedef MxMDVenueMapKey_<MxID, MxID> MxMDVenueMapKey;
 struct MxMDVenueMapping {
   MxID		venue;
@@ -348,10 +348,10 @@ struct MxMDOrderData {
   MxFlags	flags;		// MxMDOrderFlags
 };
 
-ZuTupleFields(MxMDOrderID2_, 1, obKey, 2, orderID);
+ZuTupleFields(MxMDOrderID2_, obKey, orderID);
 typedef MxMDOrderID2_<MxInstrKey, MxIDString> MxMDOrderID2;
 typedef MxMDOrderID2_<const MxInstrKey &, const MxIDString &> MxMDOrderID2Ref;
-ZuTupleFields(MxMDOrderID3_, 1, obKey, 2, side, 3, orderID);
+ZuTupleFields(MxMDOrderID3_, obKey, side, orderID);
 typedef MxMDOrderID3_<MxInstrKey, MxEnum, MxIDString> MxMDOrderID3;
 typedef MxMDOrderID3_<const MxInstrKey &, const MxEnum &, const MxIDString &>
   MxMDOrderID3Ref;

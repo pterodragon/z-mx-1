@@ -229,11 +229,7 @@ public:
   ZuInline POD *pod() { return m_pod.ptr(); }
   ZuInline Data *ptr() { return m_pod->ptr(); }
 
-  ZuInline static MxUniKey key(const ZuAnyPOD *pod) {
-    const Data &data = pod->as<Data>();
-    return MxUniKey{data.id, data.venue, data.segment, data.src,
-      data.mat, data.putCall, data.strike};
-  }
+  ZuInline static MxUniKey key(const ZuAnyPOD *pod) { return pod->as<Data>(); }
 
 private:
   ZuRef<POD>	m_pod;

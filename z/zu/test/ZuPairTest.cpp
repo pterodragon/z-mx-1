@@ -28,7 +28,7 @@ template <typename P> P mkpair() {
 
 template <typename P> P mvpair() {
   static int i = 42, j = 42;
-  P p(static_cast<typename P::T1>(i), static_cast<typename P::T2>(j));
+  P p(static_cast<typename P::T0>(i), static_cast<typename P::T1>(j));
   P q = ZuMv(p);
   return q;
 }
@@ -37,16 +37,16 @@ static unsigned copied = 0;
 static unsigned moved = 0;
 
 struct A {
-  inline A() : i(0) { }
-  inline A(int i_) : i(i_) { }
-  inline A(const A &a) : i(a.i) { ++copied; }
-  inline A &operator =(const A &a) { i = a.i; ++copied; return *this; }
-  inline A(A &&a) : i(a.i) { ++moved; }
-  inline A &operator =(A &&a) { i = a.i; ++moved; return *this; }
-  inline int cmp(const A &a) const { return ZuCmp<int>::cmp(i, a.i); }
-  inline int hash() const { return ZuHash<int>::hash(i); }
-  inline bool operator !() const { return !i; }
-  inline bool operator ==(const A &a) const { return i == a.i; }
+  A() : i(0) { }
+  A(int i_) : i(i_) { }
+  A(const A &a) : i(a.i) { ++copied; }
+  A &operator =(const A &a) { i = a.i; ++copied; return *this; }
+  A(A &&a) : i(a.i) { ++moved; }
+  A &operator =(A &&a) { i = a.i; ++moved; return *this; }
+  int cmp(const A &a) const { return ZuCmp<int>::cmp(i, a.i); }
+  int hash() const { return ZuHash<int>::hash(i); }
+  bool operator !() const { return !i; }
+  bool operator ==(const A &a) const { return i == a.i; }
   int i;
 };
 template <> struct ZuTraits<A> : public ZuGenericTraits<A> {
@@ -59,57 +59,57 @@ ZuPair<A, A> passapair(ZuPair<A, A> a) { return a; }
 ZuTuple<A, A, A> mkatuple() { return ZuMkTuple(A(42), A(42), A(42)); }
 ZuTuple<A, A, A> passatuple(ZuTuple<A, A, A> a) { return a; }
 
-ZuTupleFields(B_, 1, foo);
+ZuTupleFields(B_, foo);
 typedef B_<A, A, A> B;
 
 int main()
 {
-  { VPair p = mkpair<VPair>(); CHECK(p.p1() == 42); }
-  { RVPair p = mkpair<RVPair>(); CHECK(p.p1() == 42); }
-  { LVPair p = mkpair<LVPair>(); CHECK(p.p1() == 42); }
-  { MVPair p = mvpair<MVPair>(); CHECK(p.p1() == 42); }
+  { VPair p = mkpair<VPair>(); CHECK(p.p<0>() == 42); }
+  { RVPair p = mkpair<RVPair>(); CHECK(p.p<0>() == 42); }
+  { LVPair p = mkpair<LVPair>(); CHECK(p.p<0>() == 42); }
+  { MVPair p = mvpair<MVPair>(); CHECK(p.p<0>() == 42); }
   {
     copied = moved = 0;
     ZuPair<A, A> p = mkapair();
-    CHECK(!copied && moved == 2 && p.p1().i == 42);
+    CHECK(!copied && moved == 2 && p.p<0>().i == 42);
   }
   {
     copied = moved = 0;
     ZuPair<A, A> p(mkapair());
-    CHECK(!copied && moved == 2 && p.p1().i == 42);
+    CHECK(!copied && moved == 2 && p.p<0>().i == 42);
   }
   {
     copied = moved = 0;
     ZuPair<A, A> p(passapair(mkapair()));
-    CHECK(!copied && moved == 4 && p.p1().i == 42);
+    CHECK(!copied && moved == 4 && p.p<0>().i == 42);
   }
   {
     copied = moved = 0;
     ZuTuple<A, A, A> p = mkatuple();
-    CHECK(!copied && moved == 3 && p.p1().i == 42);
+    CHECK(!copied && moved == 5 && p.p<0>().i == 42);
   }
   {
     copied = moved = 0;
     ZuTuple<A, A, A> p(mkatuple());
-    CHECK(!copied && moved == 3 && p.p1().i == 42);
+    CHECK(!copied && moved == 5 && p.p<0>().i == 42);
   }
   {
     copied = moved = 0;
     ZuTuple<A, A, A> p(passatuple(mkatuple()));
-    CHECK(!copied && moved == 6 && p.p1().i == 42);
+    CHECK(!copied && moved == 8 && p.p<0>().i == 42);
   }
   {
     copied = moved = 0;
     ZuTuple<A, A, A> p(passatuple(mkatuple()));
-    A a = ZuMv(p.p1()), b = ZuMv(p.p2()), c = ZuMv(p.p3());
-    CHECK(!copied && moved == 9);
+    A a = ZuMv(p.p<0>()), b = ZuMv(p.p<1>()), c = ZuMv(p.p<2>());
+    CHECK(!copied && moved == 11);
     CHECK(a.i == 42 && b.i == 42 && c.i == 42);
   }
   {
     copied = moved = 0;
     B p(passatuple(mkatuple()));
-    A a = ZuMv(p.foo()), b = ZuMv(p.p2()), c = ZuMv(p.p3());
-    CHECK(!copied && moved == 12);
+    A a = ZuMv(p.foo()), b = ZuMv(p.p<1>()), c = ZuMv(p.p<2>());
+    CHECK(!copied && moved == 14);
     CHECK(a.i == 42 && b.i == 42 && c.i == 42);
     B q = B().foo(42), r{p};
     p = q;

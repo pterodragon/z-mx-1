@@ -122,10 +122,10 @@ template <typename H>
 struct LHashAdapter {
   typedef ZuPair<typename H::Key, typename H::Val> Ret;
   inline static const typename H::Key &key(const Ret &n) {
-    return n.p1();
+    return n.template p<0>();
   }
   inline static const typename H::Val &value(const Ret &n) {
-    return n.p2();
+    return n.template p<1>();
   }
 };
 

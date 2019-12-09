@@ -73,7 +73,7 @@ template <typename T> struct Print {
   // Error wrapper
   template <typename S, typename T_ = T>
   inline typename ZuIs<T_, Error>::T print(S &s) const {
-    s << v.p1() << "() - " << Zi::resultName(v.p2()) << " - " << v.p3();
+    s << v.p<0>() << "() - " << Zi::resultName(v.p<1>()) << " - " << v.p<2>();
   }
   // ZiCxnInfo
   template <typename S, typename T_ = T>

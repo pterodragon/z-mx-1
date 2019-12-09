@@ -121,7 +121,7 @@ public:
   void login(
       ZtString server, unsigned port,
       ZtString user, ZtString passwd, unsigned totp) {
-    new (m_credentials.new1()) ZvCmd_Login{ZuMv(user), ZuMv(passwd), totp};
+    new (m_credentials.new_<1>()) ZvCmd_Login{ZuMv(user), ZuMv(passwd), totp};
     this->connect(ZuMv(server), port);
   }
   void access(
@@ -142,7 +142,7 @@ public:
       hmac_.update(token.data(), token.length());
       hmac_.finish(hmac.data());
     }
-    new (m_credentials.new2()) ZvCmd_Access{ZuMv(keyID), token, hmac};
+    new (m_credentials.new_<2>()) ZvCmd_Access{ZuMv(keyID), token, hmac};
     this->connect(ZuMv(server), port);
   }
 
@@ -201,7 +201,7 @@ public:
     if (m_credentials.type() == 1) {
       using namespace ZvUserDB;
       using namespace Zfb::Save;
-      const auto &data = m_credentials.p1();
+      const auto &data = m_credentials.p<1>();
       fbb.Finish(fbs::CreateLoginReq(fbb,
 	    fbs::LoginReqData_Login,
 	    fbs::CreateLogin(fbb,
@@ -211,7 +211,7 @@ public:
     } else {
       using namespace ZvUserDB;
       using namespace Zfb::Save;
-      const auto &data = m_credentials.p2();
+      const auto &data = m_credentials.p<2>();
       fbb.Finish(fbs::CreateLoginReq(fbb,
 	    fbs::LoginReqData_Access,
 	    fbs::CreateAccess(fbb,
@@ -338,7 +338,7 @@ private:
 private:
   ZmScheduler::Timer	m_timer;
   ZmAtomic<int>		m_state = State::Down;
-  ZvCmd_Credentials	m_credentials;
+  Credentials		m_credentials;
   UserDBReqs		m_userDBReqs;
   CmdReqs		m_cmdReqs;
   uint64_t		m_userID = 0;

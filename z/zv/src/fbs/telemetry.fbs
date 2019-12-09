@@ -1,5 +1,6 @@
+include "types.fbs";
 namespace ZvTelemetry.fbs;
-table Heap {
+table Heap {			// == ZmHeapTelemetry
   id:string;
   cacheSize:uint64;
   cpuset:[uint64];
@@ -11,7 +12,7 @@ table Heap {
   sharded:uint8;
   alignment:uint8;
 }
-table HashTbl {
+table HashTbl {			// == ZmHashTelemetry
   id:string;
   addr:uint64;
   nodeSize:uint32;
@@ -23,13 +24,13 @@ table HashTbl {
   cBits:uint8;
   linear:uint8;
 }
-enum ThreadPriority:uint8 {	// ZmThreadPriority
+enum ThreadPriority:int8 {	// == ZmThreadPriority
   RealTime = 0,
   High = 1,
   Normal = 2,
   Low = 3
 }
-table Thread {
+table Thread {			// == ZmThreadTelemetry
   name:string;
   tid:uint64;
   stackSize:uint64;
@@ -42,7 +43,7 @@ table Thread {
   main:uint8;
   detached:uint8;
 }
-enum MxState:uint8 {		// == ZmSchedState
+enum MxState:int8 {		// == ZmSchedState
   Stopped = 0,
   Starting,
   Running,
@@ -50,7 +51,7 @@ enum MxState:uint8 {		// == ZmSchedState
   Drained,
   Stopping
 }
-table Mx {
+table Mx {			// == ZiMxTelemetry
   id:string;
   stackSize:uint32;
   queueSize:uint32;
@@ -74,12 +75,12 @@ enum SocketFlags:uint8 {	// == 1<<ZiCxnFlags
   NetLink	= 0x10,
   Nagle		= 0x20
 }
-enum SocketType:uint8 {		// == ZiCxnType
+enum SocketType:int8 {		// == ZiCxnType
   TCPIn = 0,
   TCPOut,
   UDP
 }
-table Socket {
+table Socket {			// == ZiCxnTelemetry
   mxID:string;
   socket:uint64;
   rxBufSize:uint32;
@@ -97,7 +98,7 @@ table Socket {
   flags:uint8;			// SocketFlags
   type:SocketType;
 }
-enum QueueType:uint8 {
+enum QueueType:int8 {
   Thread = 0,
   IPC,
   Rx,
@@ -115,7 +116,7 @@ table Queue {
   size:uint32;
   type:QueueType;
 }
-enum LinkState:uint8 {
+enum LinkState:int8 {
   Down = 0,		// down (engine not started)
   Disabled,		// intentionally down (admin/ops disabled)
   Connecting,		// connecting (being brought up)
@@ -134,7 +135,7 @@ table Link {
   reconnects:uint32;
   state:LinkState;
 }
-enum EngineState:uint8 {
+enum EngineState:int8 {
   Stopped = 0,
   Starting,
   Running,
@@ -142,8 +143,9 @@ enum EngineState:uint8 {
   StartPending,	// started while stopping
   StopPending	// stopped while starting
 }
-table Engine {	// FIXME - add type (as string)
+table Engine {
   id:string;
+  type:string;
   mxID:string;
   down:uint16;
   disabled:uint16;
@@ -157,7 +159,7 @@ table Engine {	// FIXME - add type (as string)
   state:EngineState;
   links:[Link];
 }
-enum DBCacheMode:uint8 {
+enum DBCacheMode:int8 {
   Normal = 0,
   FullCache
 }
@@ -180,7 +182,7 @@ table DB {
   compress:uint8;
   cacheMode:DBCacheMode;
 }
-enum DBHostState:uint8 {
+enum DBHostState:int8 {
   Instantiated = 0,	// instantiated, init() not yet called
   Initialized,		// init() called
   Stopped,		// open() called
@@ -199,7 +201,8 @@ table DBHost {
   state:DBHostState;
   voted:uint8;
 }
-table DBEnv {		// FIXME - add appID (to match App id)
+table DBEnv {
+  appID:string;
   nCxns:uint32;
   heartbeatFreq:uint32;
   heartbeatTimeout:uint32;
@@ -220,8 +223,29 @@ table DBEnv {		// FIXME - add appID (to match App id)
   hosts:[DBHost];
   dbs:[DB];
 }
-table App {		// FIXME - add uptime, role (prod/dev/test), version
+enum AppRole:int8 {
+  Dev = 0,
+  Test,
+  Prod
+}
+table App {
   id:string;
+  version:string;
+  role:AppRole;
+  uptime:DateTime;	// absolute start time
+}
+enum Severity:int8 {	// == Ze
+  Debug = 0,
+  Info,
+  Warning,
+  Error,
+  Fatal
+}
+table Alert {
+  time:DateTime;
+  tid:uint32;
+  severity:Severity;
+  message:string;
 }
 union TelData {
   Heap:Heap,
@@ -232,8 +256,8 @@ union TelData {
   Queue:Queue,
   Engine:Engine,
   DBEnv:DBEnv,
-  App:App
-  // FIXME - alerts (log events)
+  App:App,
+  Alert:Alert
 }
 table Telemetry {
   data:TelData;

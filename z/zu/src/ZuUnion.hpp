@@ -20,25 +20,20 @@
 // generic discriminated union
 //
 // ZuUnion<int, double> u, v;
-// *(u.new1()) = 42;
-// u.p1(42);
-// u.p1() = 42;
+// *(u.new_<0>()) = 42;
+// u.p<0>(42);
+// u.p<0>() = 42;
 // v = u;
-// if (v.type() == 1) { printf("%d\n", v.p1()); }
-// v.p2(42.0);
-// if (v.type() == 2) { printf("%g\n", v.p2()); }
+// if (v.type() == 0) { printf("%d\n", v.p<0>()); }
+// v.p<1>(42.0);
+// if (v.type() == 1) { printf("%g\n", v.p<1>()); }
 //
-// struct Fn : public ZuUnionFn<> {
+// struct Fn {
 //   inline void operator()(int i) const { printf("%d\n", i); }
 //   inline void operator()(double d) const { printf("%g\n", d); }
 //   inline void operator()(const ZuNull &) const { puts("(null)"); }
 // };
-// v.fn(Fn());
-//
-// // ZuUnionFn<ReturnType, Const, PConst>
-// //   ReturnType - type returned by functor (default: void)
-// //   Const - if functor is const (default: true)
-// //   PConst - if (optional) parameter is const (default: true)
+// ZuSwitch::dispatch(i, [&u](auto i) { Fn()(u.p<i>()); });
 
 #ifndef ZuUnion_HPP
 #define ZuUnion_HPP
@@ -60,7 +55,7 @@
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuHash.hpp>
 #include <zlib/ZuConversion.hpp>
-#include <zlib/ZuTuple.hpp>
+#include <zlib/ZuSwitch.hpp>
 #include <zlib/ZuPP.hpp>
 
 template <typename T, bool CanStar> class ZuUnion_OpStar;
@@ -126,351 +121,233 @@ struct ZuUnion_Ops :
     { return ZuHash<T>::hash(*(const T *)t); }
 };
 
-#define ZuUnion_TemplateArgDef(I) typename T##I##_ = ZuNull
-#define ZuUnion_TemplateArg(I) T##I##_
-template <ZuPP_CList(ZuUnion_TemplateArgDef, ZuPP_N), int _ = 0> struct ZuUnion;
-
-#undef ZuUnion_TemplateArgDef
-#define ZuUnion_TemplateArgDef(I) typename T##I##_
-template <ZuPP_CList(ZuUnion_TemplateArgDef, ZuPP_N)>
-struct ZuTraits<ZuUnion<ZuPP_CList(ZuUnion_TemplateArg, ZuPP_N)> > :
-    public ZuTraits<ZuTuple<ZuPP_CList(ZuUnion_TemplateArg, ZuPP_N)> > {
-  typedef ZuUnion<ZuPP_CList(ZuUnion_TemplateArg, ZuPP_N)> T;
+template <typename ...Args> struct ZuUnion_;
+template <typename Arg0> struct ZuUnion_<Arg0> {
+  template <unsigned I> struct Type;
+  template <unsigned I> struct Type_;
+  template <> struct Type<0> { using T = Arg0; };
+  template <> struct Type_<0> { using T = typename ZuDeref<Arg0>::T; };
+  enum { N = 1 };
+};
+template <typename Arg0, typename ...Args> struct ZuUnion_<Arg0, Args...> {
+  template <unsigned I>
+  struct Type : public ZuUnion_<Args...>::template Type<I - 1> { };
+  template <unsigned I>
+  struct Type_ : public ZuUnion_<Args...>::template Type_<I - 1> { };
+  template <> struct Type<0> { using T = Arg0; };
+  template <> struct Type_<0> { using T = typename ZuDeref<Arg0>::T; };
+  enum { N = ZuUnion_<Args...>::N + 1 };
 };
 
-// SFINAE techniques...
-#define ZuUnion_TemplateArgNull(I) ZuNull
-#define ZuUnion_Typedef(I, _) typedef typename ZuDeref<T##I##_>::T T##I;
-#define ZuUnion_Dtor(I, _) \
-      case I: ZuUnion_Ops<T##I>::dtor(m_u); break;
-#define ZuUnion_Ctor(I, _) \
-      case I: { \
-	const T##I *ZuMayAlias(ptr) = (const T##I *)u.m_u; \
-	ZuUnion_Ops<T##I>::ctor(m_u, *ptr); \
-      } break;
-#define ZuUnion_Assign(I, _) \
-      case I: { \
-	const T##I *ZuMayAlias(ptr) = (const T##I *)u.m_u; \
-	ZuUnion_Ops<T##I>::assign(m_u, *ptr); \
-      } break;
-#define ZuUnion_Equals(I, _) \
-      case I: { \
-	const T##I *ZuMayAlias(ptr) = (const T##I *)p.m_u; \
-	return ZuUnion_Ops<T##I>::equals(m_u, *ptr); \
-      }
-#define ZuUnion_Equals2(I, _) \
-      case I: return ZuUnion_Ops<T##I>::equals(m_u, p);
-#define ZuUnion_Cmp(I, _) \
-      case I: { \
-	const T##I *ZuMayAlias(ptr) = (const T##I *)p.m_u; \
-	return ZuUnion_Ops<T##I>::cmp(m_u, *ptr); \
-      }
-#define ZuUnion_Cmp2(I, _) \
-      case I: return ZuUnion_Ops<T##I>::cmp(m_u, p);
-#define ZuUnion_Star(I, _) \
-      case I: return ZuUnion_Ops<T##I>::star(m_u);
-#define ZuUnion_Bang(I, _) \
-      case I: return ZuUnion_Ops<T##I>::bang(m_u);
-#define ZuUnion_Hash(I, _) \
-      case I: return ZuHash<uint8_t>::hash(this->type()) ^ ZuUnion_Ops<T##I>::hash(m_u);
-#define ZuUnion_ConstFn(I, _) \
-      case I: { \
-	const T##I *ZuMayAlias(ptr) = (const T##I *)m_u; \
-	return f(*ptr); \
-      }
-#define ZuUnion_Fn(I, _) \
-      case I: return f(*(T##I *)m_u);
-#define ZuUnion_ConstFnP(I, _) \
-      case I: { \
-	const T##I *ZuMayAlias(ptr) = (const T##I *)m_u; \
-	return f(p, *ptr); \
-      }
-#define ZuUnion_FnP(I, _) \
-      case I: { \
-	T##I *ZuMayAlias(ptr) = (T##I *)m_u; \
-	return f(p, *ptr); \
-      }
-#define ZuUnion_Method(I, _) \
-  inline const T##I &p##I() const { \
-    static const T##I null = ZuCmp<T##I>::null(); \
-    if (this->type() != I) return null; \
-    const T##I *ZuMayAlias(ptr) = (const T##I *)(const void *)m_u; \
-    return *ptr; \
-  } \
-  template <typename P> inline ZuUnion &p##I(P &&p) { \
-    if (this->type() == I) { \
-      T##I *ZuMayAlias(ptr) = (T##I *)(void *)m_u; \
-      *ptr = ZuFwd<P>(p); \
-      return *this; \
-    } \
-    this->~ZuUnion(); \
-    this->type(I); \
-    ZuUnion_Ops<T##I>::ctor(m_u, ZuFwd<P>(p)); \
-    return *this; \
-  } \
-  inline T##I &p##I() { \
-    T##I *ZuMayAlias(ptr) = (T##I *)(void *)m_u; \
-    if (this->type() == I) return *ptr; \
-    this->~ZuUnion(); \
-    this->type(I); \
-    ZuUnion_Ops<T##I>::ctor(m_u); \
-    return *ptr; \
-  } \
-  inline T##I *ptr##I() { \
-    if (this->type() != I) return 0; \
-    T##I *ZuMayAlias(ptr) = (T##I *)(void *)m_u; \
-    return ptr; \
-  } \
-  inline T##I *new##I() { \
-    this->~ZuUnion(); \
-    this->type(I); \
-    T##I *ZuMayAlias(ptr) = (T##I *)(void *)m_u; \
-    return ptr; \
+template <typename ...Args> class ZuUnion {
+public:
+  using Largest = typename ZuLargest<Args...>::T;
+  enum { Size = sizeof(Largest) };
+  template <unsigned I>
+  using Type = typename ZuUnion_<ZuNull, Args...>::template Type<I>;
+  template <unsigned I>
+  using Type_ = typename ZuUnion_<ZuNull, Args...>::template Type_<I>;
+  enum { N = ZuUnion_<ZuNull, Args...>::N };
+
+  inline ZuUnion() { this->type(0); }
+
+  inline ~ZuUnion() {
+    ZuSwitch::dispatch<N>(this->type(), [this](auto i) {
+      using T = typename Type<i>::T;
+      ZuUnion_Ops<T>::dtor(m_u);
+    });
   }
 
-struct ZuUnionFn_ { };
-template <typename T_ = void, bool Const_ = true, bool PConst_ = true>
-struct ZuUnionFn : public ZuUnionFn_ {
-  typedef T_ T;
-  enum _ { Const = Const_, PConst = PConst_ };
+  inline ZuUnion(const ZuUnion &u) {
+    ZuSwitch::dispatch<N>(this->type(u.type()), [this, &u](auto i) {
+      using T = typename Type<i>::T;
+      const T *ZuMayAlias(ptr) = (const T *)u.m_u;
+      ZuUnion_Ops<T>::ctor(m_u, *ptr);
+    });
+  }
+
+  inline ZuUnion &operator =(const ZuUnion &u) {
+    if (this == &u) return *this;
+    if (this->type() != u.type()) {
+      this->~ZuUnion();
+      new (this) ZuUnion(u);
+      return *this;
+    }
+    ZuSwitch::dispatch<N>(this->type(u.type()), [this, &u](auto i) {
+      using T = typename Type<i>::T;
+      const T *ZuMayAlias(ptr) = (const T *)u.m_u;
+      ZuUnion_Ops<T>::assign(m_u, *ptr);
+    });
+    return *this;
+  }
+
+  inline void null() {
+    ZuSwitch::dispatch<N>(this->type(), [this](auto i) {
+      using T = typename Type<i>::T;
+      ZuUnion_Ops<T>::dtor(m_u);
+    });
+    this->type(0);
+  }
+
+  template <typename P>
+  inline bool operator ==(const P &p) const { return equals(p); }
+  template <typename P>
+  inline bool operator !=(const P &p) const { return !equals(p); }
+  template <typename P>
+  inline bool operator >(const P &p) const { return cmp(p) > 0; }
+  template <typename P>
+  inline bool operator >=(const P &p) const { return cmp(p) >= 0; }
+  template <typename P>
+  inline bool operator <(const P &p) const { return cmp(p) < 0; }
+  template <typename P>
+  inline bool operator <=(const P &p) const { return cmp(p) <= 0; }
+
+  template <typename P>
+  inline typename ZuIs<ZuUnion, P, bool>::T equals(const P &p) const {
+    if (this == &p) return true;
+    if (this->type() != p.type()) return false;
+    return ZuSwitch::dispatch<N>(this->type(), [this, &p](auto i) -> bool {
+      using T = typename Type<i>::T;
+      const T *ZuMayAlias(ptr) = (const T *)p.m_u;
+      return ZuUnion_Ops<T>::equals(m_u, *ptr);
+    });
+  }
+  template <typename P>
+  inline typename ZuIsNot<ZuUnion, P, bool>::T equals(const P &p) const {
+    return ZuSwitch::dispatch<N>(this->type(), [this, &p](auto i) -> bool {
+      using T = typename Type<i>::T;
+      return ZuUnion_Ops<T>::equals(m_u, p);
+    });
+  }
+
+  template <typename P>
+  inline typename ZuIs<ZuUnion, P, int>::T cmp(const P &p) const {
+    if (this == &p) return true;
+    if (int i = ZuCmp<uint8_t>::cmp(this->type(), p.type())) return i;
+    return ZuSwitch::dispatch<N>(this->type(), [this, &p](auto i) -> int {
+      using T = typename Type<i>::T;
+      const T *ZuMayAlias(ptr) = (const T *)p.m_u;
+      return ZuUnion_Ops<T>::cmp(m_u, *ptr);
+    });
+  }
+  template <typename P>
+  inline typename ZuIsNot<ZuUnion, P, int>::T cmp(const P &p) const {
+    return ZuSwitch::dispatch<N>(this->type(), [this, &p](auto i) -> int {
+      using T = typename Type<i>::T;
+      return ZuUnion_Ops<T>::cmp(m_u, p);
+    });
+  }
+
+  inline bool operator *() const {
+    return ZuSwitch::dispatch<N>(this->type(), [this](auto i) -> bool {
+      using T = typename Type<i>::T;
+      return ZuUnion_Ops<T>::star(m_u);
+    });
+  }
+
+  inline bool operator !() const {
+    return ZuSwitch::dispatch<N>(this->type(), [this](auto i) -> bool {
+      using T = typename Type<i>::T;
+      return ZuUnion_Ops<T>::bang(m_u);
+    });
+  }
+
+  inline uint32_t hash() const {
+    return ZuSwitch::dispatch<N>(this->type(), [this](auto i) -> uint32_t {
+      using T = typename Type<i>::T;
+      return ZuHash<uint8_t>::hash(i) ^ ZuUnion_Ops<T>::hash(m_u);
+    });
+  }
+
+  ZuInline unsigned type() const { return m_u[Size]; }
+
+  template <unsigned I>
+  inline const typename Type_<I>::T &p() const {
+    using T = typename Type<I>::T;
+    static const T null = ZuCmp<T>::null();
+    if (this->type() != I) return null;
+    const T *ZuMayAlias(ptr) = (const T *)(const void *)m_u;
+    return *ptr;
+  }
+  template <unsigned I, typename P>
+  inline ZuUnion &p(P &&p) {
+    using T = typename Type<I>::T;
+    if (this->type() == I) {
+      T *ZuMayAlias(ptr) = (T *)(void *)m_u;
+      *ptr = ZuFwd<P>(p);
+      return *this;
+    }
+    this->~ZuUnion();
+    this->type(I);
+    ZuUnion_Ops<T>::ctor(m_u, ZuFwd<P>(p));
+    return *this;
+  }
+  template <unsigned I>
+  inline typename Type_<I>::T &p() {
+    using T = typename Type<I>::T;
+    T *ZuMayAlias(ptr) = (T *)(void *)m_u;
+    if (this->type() == I) return *ptr;
+    this->~ZuUnion();
+    this->type(I);
+    ZuUnion_Ops<T>::ctor(m_u);
+    return *ptr;
+  }
+  template <unsigned I>
+  inline typename Type<I>::T *ptr() {
+    using T = typename Type<I>::T;
+    if (this->type() != I) return 0;
+    T *ZuMayAlias(ptr) = (T *)(void *)m_u;
+    return ptr;
+  }
+  template <unsigned I>
+  inline typename Type<I>::T *new_() {
+    using T = typename Type<I>::T;
+    this->~ZuUnion();
+    this->type(I);
+    T *ZuMayAlias(ptr) = (T *)(void *)m_u;
+    return ptr;
+  }
+
+private:
+  ZuInline unsigned type(unsigned i) { return m_u[Size] = i; }
+
+  uint8_t	m_u[Size + 1];
 };
 
-#define ZuUnion_Specialization(N) \
-template <ZuPP_CList(ZuUnion_TemplateArgDef, N)> \
-struct ZuUnion<ZuPP_CList(ZuUnion_TemplateArg, N) \
-               ZuPP_CListT(ZuUnion_TemplateArgNull, N), 0> { \
-ZuPP_List1(ZuUnion_Typedef, _, N) \
- \
-  typedef typename ZuLargest<ZuPP_CList(ZuUnion_TemplateArg, N)>::T Largest; \
-  enum _ { Size = sizeof(Largest) }; \
- \
-  inline ZuUnion() { this->type(0); } \
- \
-  inline ~ZuUnion() { \
-    switch ((int)this->type()) { \
-      default: return; \
-      ZuPP_List1(ZuUnion_Dtor, _, N) \
-    } \
-  } \
- \
-  inline ZuUnion(const ZuUnion &u) { \
-    switch ((int)(this->type(u.type()))) { \
-      default: return; \
-      ZuPP_List1(ZuUnion_Ctor, _, N) \
-    } \
-  } \
-  inline ZuUnion &operator =(const ZuUnion &u) { \
-    if (this == &u) return *this; \
-    if (this->type() != u.type()) { \
-      this->~ZuUnion(); \
-      new (this) ZuUnion(u); \
-      return *this; \
-    } \
-    switch ((int)this->type()) { \
-      default: return *this; \
-      ZuPP_List1(ZuUnion_Assign, _, N) \
-    } \
-    return *this; \
-  } \
- \
-  inline void null() { \
-    switch ((int)this->type()) { \
-      ZuPP_List1(ZuUnion_Dtor, _, N) \
-    } \
-    this->type(0); \
-  } \
- \
-  template <class F> \
-  inline typename ZuIfT<ZuConversion<ZuUnionFn_, F>::Base && F::Const, \
-			      typename F::T>::T fn(const F &f) const { \
-    switch ((int)this->type()) { \
-      default: return f(ZuNull()); \
-      ZuPP_List1(ZuUnion_ConstFn, _, N) \
-    } \
-  } \
-  template <class F> \
-  inline typename ZuIfT<ZuConversion<ZuUnionFn_, F>::Base && !F::Const, \
-			      typename F::T>::T fn(F &f) const { \
-    switch ((int)this->type()) { \
-      default: return f(ZuNull()); \
-      ZuPP_List1(ZuUnion_ConstFn, _, N) \
-    } \
-  } \
-  template <class F> \
-  inline typename ZuIfT<ZuConversion<ZuUnionFn_, F>::Base && F::Const, \
-			      typename F::T>::T fn(const F &f) { \
-    switch ((int)this->type()) { \
-      default: return f(ZuNull()); \
-      ZuPP_List1(ZuUnion_Fn, _, N) \
-    } \
-  } \
-  template <class F> \
-  inline typename ZuIfT<ZuConversion<ZuUnionFn_, F>::Base && !F::Const, \
-			      typename F::T>::T fn(F &f) { \
-    switch ((int)this->type()) { \
-      default: return f(ZuNull()); \
-      ZuPP_List1(ZuUnion_Fn, _, N) \
-    } \
-  } \
-  template <class F, typename P> \
-  inline typename ZuIfT<ZuConversion<ZuUnionFn_, F>::Base && \
-		 	F::Const && F::PConst, typename F::T>::T \
-		  fn(const F &f, const P &p) const { \
-    switch ((int)this->type()) { \
-      default: return f(p, ZuNull()); \
-      ZuPP_List1(ZuUnion_ConstFnP, _, N) \
-    } \
-  } \
-  template <class F, typename P> \
-  inline typename ZuIfT<ZuConversion<ZuUnionFn_, F>::Base && \
-		 	!F::Const && F::PConst, typename F::T>::T \
-		  fn(F &f, const P &p) const { \
-    switch ((int)this->type()) { \
-      default: return f(p, ZuNull()); \
-      ZuPP_List1(ZuUnion_ConstFnP, _, N) \
-    } \
-  } \
-  template <class F, typename P> \
-  inline typename ZuIfT<ZuConversion<ZuUnionFn_, F>::Base && \
-			F::Const && F::PConst, typename F::T>::T \
-		  fn(const F &f, const P &p) { \
-    switch ((int)this->type()) { \
-      default: return f(p, ZuNull()); \
-      ZuPP_List1(ZuUnion_FnP, _, N) \
-    } \
-  } \
-  template <class F, typename P> \
-  inline typename ZuIfT<ZuConversion<ZuUnionFn_, F>::Base && \
-			!F::Const && F::PConst, typename F::T>::T \
-		  fn(F &f, const P &p) { \
-    switch ((int)this->type()) { \
-      default: return f(p, ZuNull()); \
-      ZuPP_List1(ZuUnion_FnP, _, N) \
-    } \
-  } \
-  template <class F, typename P> \
-  inline typename ZuIfT<ZuConversion<ZuUnionFn_, F>::Base && \
-		 	F::Const && !F::PConst, typename F::T>::T \
-		  fn(const F &f, P &p) const { \
-    switch ((int)this->type()) { \
-      default: return f(p, ZuNull()); \
-      ZuPP_List1(ZuUnion_ConstFnP, _, N) \
-    } \
-  } \
-  template <class F, typename P> \
-  inline typename ZuIfT<ZuConversion<ZuUnionFn_, F>::Base && \
-		 	!F::Const && !F::PConst, typename F::T>::T \
-		  fn(F &f, P &p) const { \
-    switch ((int)this->type()) { \
-      default: return f(p, ZuNull()); \
-      ZuPP_List1(ZuUnion_ConstFnP, _, N) \
-    } \
-  } \
-  template <class F, typename P> \
-  inline typename ZuIfT<ZuConversion<ZuUnionFn_, F>::Base && \
-		 	F::Const && !F::PConst, typename F::T>::T \
-		  fn(const F &f, P &p) { \
-    switch ((int)this->type()) { \
-      default: return f(p, ZuNull()); \
-      ZuPP_List1(ZuUnion_FnP, _, N) \
-    } \
-  } \
-  template <class F, typename P> \
-  inline typename ZuIfT<ZuConversion<ZuUnionFn_, F>::Base && \
-		 	!F::Const && !F::PConst, typename F::T>::T \
-		  fn(F &f, P &p) { \
-    switch ((int)this->type()) { \
-      default: return f(p, ZuNull()); \
-      ZuPP_List1(ZuUnion_FnP, _, N) \
-    } \
-  } \
- \
-  template <typename P> \
-  inline bool operator ==(const P &p) const { return equals(p); } \
-  template <typename P> \
-  inline bool operator !=(const P &p) const { return !equals(p); } \
-  template <typename P> \
-  inline bool operator >(const P &p) const { return cmp(p) > 0; } \
-  template <typename P> \
-  inline bool operator >=(const P &p) const { return cmp(p) >= 0; } \
-  template <typename P> \
-  inline bool operator <(const P &p) const { return cmp(p) < 0; } \
-  template <typename P> \
-  inline bool operator <=(const P &p) const { return cmp(p) <= 0; } \
- \
-  template <typename P> \
-  inline typename ZuIs<ZuUnion, P, bool>::T equals(const P &p) const { \
-    if (this == &p) return true; \
-    if (this->type() != p.type()) return false; \
-    switch ((int)this->type()) { \
-      default: return true; \
-      ZuPP_List1(ZuUnion_Equals, _, N) \
-    } \
-  } \
-  template <typename P> \
-  inline typename ZuIsNot<ZuUnion, P, bool>::T equals(const P &p) const { \
-    switch ((int)this->type()) { \
-      default: return false; \
-      ZuPP_List1(ZuUnion_Equals2, _, N) \
-    } \
-  } \
- \
-  template <typename P> \
-  inline typename ZuIs<ZuUnion, P, int>::T cmp(const P &p) const { \
-    if (this == &p) return true; \
-    if (int i = ZuCmp<uint8_t>::cmp(this->type(), p.type())) return i; \
-    switch ((int)this->type()) { \
-      default: return 0; \
-      ZuPP_List1(ZuUnion_Cmp, _, N) \
-    } \
-  } \
-  template <typename P> \
-  inline typename ZuIsNot<ZuUnion, P, int>::T cmp(const P &p) const { \
-    switch ((int)this->type()) { \
-      default: return -1; \
-      ZuPP_List1(ZuUnion_Cmp2, _, N) \
-    } \
-  } \
- \
-  inline bool operator *() const { \
-    switch ((int)this->type()) { \
-      default: return true; \
-      ZuPP_List1(ZuUnion_Star, _, N) \
-    } \
-  } \
- \
-  inline bool operator !() const { \
-    switch ((int)this->type()) { \
-      default: return true; \
-      ZuPP_List1(ZuUnion_Bang, _, N) \
-    } \
-  } \
- \
-  inline uint32_t hash() const { \
-    switch ((int)this->type()) { \
-      default: return ZuHash<uint8_t>::hash(type()); \
-      ZuPP_List1(ZuUnion_Hash, _, N) \
-    } \
-  } \
- \
-  inline uint8_t type() const { return m_u[Size]; } \
- \
-ZuPP_List1(ZuUnion_Method, _, N) \
- \
-private: \
-  inline uint8_t type(uint8_t i) { return m_u[Size] = i; } \
- \
-  uint8_t	m_u[Size + 1]; \
+template <typename Union, typename ...Args> struct ZuUnion_Traits;
+template <typename Union>
+struct ZuUnion_Traits<Union> : public ZuGenericTraits<Union> { };
+template <typename Union, typename Arg0>
+struct ZuUnion_Traits<Union, Arg0> : public ZuGenericTraits<Union> {
+  enum {
+    IsPOD = ZuTraits<Arg0>::IsPOD,
+    IsComparable = ZuTraits<Arg0>::IsComparable,
+    IsHashable = ZuTraits<Arg0>::IsHashable
+  };
 };
-ZuPP_List(ZuUnion_Specialization, ZuPP_N)
+template <typename Union, typename Arg0, typename ...Args>
+struct ZuUnion_Traits<Union, Arg0, Args...> : public ZuGenericTraits<Union> {
+private:
+  using Left = ZuTraits<Arg0>;
+  using Right = ZuUnion_Traits<Union, Args...>;
+public:
+  enum {
+    IsPOD = Left::IsPOD && Right::IsPOD,
+    IsComparable = Left::IsComparable && Right::IsComparable,
+    IsHashable = Left::IsHashable && Right::IsHashable
+  };
+};
+template <typename ...Args>
+struct ZuTraits<ZuUnion<Args...>> :
+    public ZuUnion_Traits<ZuUnion<Args...>, Args...> { };
 
 #define ZuUnion_Field(N, Fn) \
-  ZuInline const auto &Fn() const { return this->p##N(); } \
-  ZuInline auto &Fn() { return this->p##N(); } \
+  ZuInline const auto &Fn() const { return this->template p<N>(); } \
+  ZuInline auto &Fn() { return this->template p<N>(); } \
   template <typename P> \
-  ZuInline auto &Fn(P &&v) { this->p##N(ZuFwd<P>(v)); return *this; } \
-  ZuInline auto ptr_##Fn() { return this->ptr##N(); } \
-  ZuInline auto new_##Fn() { return this->new##N(); }
+  ZuInline auto &Fn(P &&v) { this->template p<N>(ZuFwd<P>(v)); return *this; } \
+  ZuInline auto ptr_##Fn() { return this->template ptr<N>(); } \
+  ZuInline auto new_##Fn() { return this->template new_<N>(); }
 
 #define ZuUnionFields(T, ...) \
 template <typename ...Args> struct T : public ZuUnion<Args...> { \
@@ -480,7 +357,7 @@ public: \
   using Union::operator =; \
   ZuInline T(const Union &v) : Union(v) { }; \
   ZuInline T(Union &&v) : Union(ZuMv(v)) { }; \
-  ZuPP_Eval(ZuPP_Map2(ZuUnion_Field, __VA_ARGS__)) \
+  ZuPP_Eval(ZuPP_MapIndex(ZuUnion_Field, 1, __VA_ARGS__)) \
 }; \
 template <typename ...Args> \
 struct ZuTraits<T<Args...> > : public ZuTraits<ZuUnion<Args...> > { }

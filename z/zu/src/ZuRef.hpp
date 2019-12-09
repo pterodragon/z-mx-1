@@ -40,7 +40,7 @@
 // * be careful to maintain a positive reference count when mixing
 //   with real pointers - objects will delete themselves from
 //   under you if they think they are referenced by nothing!
-// * pass by raw pointer and return by ZuRef value
+// * pass by raw pointer (unless moving), and return by ZuRef value
 
 struct ZuRef_ { }; // compile-time tag
 

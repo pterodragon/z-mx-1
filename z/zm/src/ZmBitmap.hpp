@@ -219,7 +219,7 @@ public:
   inline Iterator iterator() const { return Iterator(*this); }
 
   // hwloc_bitmap_t is a pointer
-  inline operator hwloc_bitmap_t() const {
+  inline operator hwloc_bitmap_t() {
     lazy();
     return m_map;
   }

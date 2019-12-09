@@ -35,6 +35,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <zlib/ZuDecimal.hpp>
+
+#include <zlib/ZmBitmap.hpp>
+
+#include <zlib/ZtDate.hpp>
+
 #include <zlib/ZiIOBuf.hpp>
 
 #include <zlib/types_fbs.h>
@@ -192,6 +198,21 @@ namespace Save {
     return fbs::Decimal{(uint64_t)(v.value>>64), (uint64_t)v.value};
   }
 
+  // bitmap
+  template <typename B>
+  ZuInline auto bitmap(B &b, const ZmBitmap &m) {
+    thread_local std::vector<uint64_t> v;
+    v.clear();
+    int n = m.last();
+    if (n > 0) {
+      n = (n>>6) + 1;
+      v.reserve(n);
+      for (unsigned i = 0; i < n; i++)
+	v.push_back(hwloc_bitmap_to_ith_ulong(m, i))
+    }
+    return b.CreateVector(v);
+  }
+
   // date/time
   template <typename B>
   ZuInline auto dateTime(B &b, const ZtDate &v) {
@@ -223,6 +244,21 @@ namespace Load {
     return ZuDecimal{ZuDecimal::Unscaled, (((int128_t)(v->h()))<<64) | v->l()};
   }
 
+  // bitmap
+  ZuInline ZmBitmap bitmap(const fbs::Vector<uint64_t> *m_) {
+    ZmBitmap m;
+    unsigned n = m_ ? m_->size() : 0;
+    if (n) {
+      --n;
+      hwloc_bitmap_from_ith_ulong(m, n, (*m_)[n]);
+      while (n) {
+	--n;
+	hwloc_bitmap_set_ith_ulong(m, n, (*m_)[n]);
+      }
+    }
+    return m;
+  }
+
   // date/time
   ZuInline ZtDate dateTime(const fbs::DateTime *v) {
     return ZtDate{ZtDate::Julian, v->julian(), v->sec(), v->nsec()};
@@ -230,5 +266,54 @@ namespace Load {
 }
 
 } // Zfb
+
+#define ZfbEnum_Value(Enum, Value) Value = Enum##_##Value
+#define ZfbEnumValues(Enum, ...) \
+  enum _ { Invalid = -1, \
+    ZuPP_Eval(ZuPP_MapArg(ZfbEnum_Value, Enum, __VA_ARGS__)), \
+    N = Enum##_MAX + 1 }; \
+  ZuAssert(N <= 1024); \
+  enum { Bits = \
+    N <= 2 ? 1 : N <= 4 ? 2 : N <= 8 ? 3 : N <= 16 ? 4 : N <= 32 ? 5 : \
+    N <= 64 ? 6 : N <= 128 ? 7 : N <= 256 ? 8 : N <= 512 ? 9 : 10 \
+  }; \
+  template <typename T> struct Map_ : public ZuObject { \
+  private: \
+    typedef ZmLHash<ZuString, \
+	      ZmLHashVal<ZtEnum, \
+		ZmLHashStatic<Bits, \
+		  ZmLHashLock<ZmNoLock> > > > S2V; \
+    void init(const char *s, int v, ...) { \
+      if (ZuUnlikely(!s)) return; \
+      add(s, v); \
+      va_list args; \
+      va_start(args, v); \
+      while (s = va_arg(args, const char *)) \
+	add(s, v = va_arg(args, int)); \
+      va_end(args); \
+    } \
+    inline void add(ZuString s, ZtEnum v) { m_s2v->add(s, v); } \
+  public: \
+    inline Map_() { m_s2v = new S2V(); } \
+    inline static T *instance() { return ZmSingleton<T>::instance(); } \
+    inline ZtEnum s2v(ZuString s) const { return m_s2v->findVal(s); } \
+    template <typename L> inline void all(L l) const { \
+      auto i = m_s2v->readIterator(); \
+      for (;;) { \
+	auto kv = i.iterate(); \
+	if (!kv.template p<0>()) break; \
+	l(kv.template p<0>(), kv.template p<1>()); \
+      } \
+    } \
+  private: \
+    ZmRef<S2V>	m_s2v; \
+  }; \
+  struct Map : public Map_<Map> { \
+    Map() { for (unsigned i = 0; i < N; i++) this->add(name(i), i); } \
+  }; \
+  template <typename S> inline ZtEnum lookup(const S &s) { \
+    return Map::instance()->s2v(s); \
+  } \
+  inline const char *name(int i) { return EnumName##name(v); }
 
 #endif /* Zfb_HPP */

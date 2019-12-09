@@ -46,7 +46,6 @@ struct MxMsgID {
     linkID.update(u.linkID);
     seqNo.update(u.seqNo);
   }
-
   template <typename S> inline void print(S &s) const {
     s << "linkID=" << linkID << " seqNo=" << seqNo;
   }

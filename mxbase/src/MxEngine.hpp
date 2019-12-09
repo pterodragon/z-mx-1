@@ -34,59 +34,12 @@
 #include <zlib/ZmPolymorph.hpp>
 
 #include <zlib/ZvCf.hpp>
+#include <zlib/ZvTelemetry.hpp>
 
 #include <mxbase/MxBase.hpp>
 #include <mxbase/MxQueue.hpp>
 #include <mxbase/MxScheduler.hpp>
 #include <mxbase/MxMultiplex.hpp>
-
-namespace MxEngineState {
-  MxEnumValues(Stopped, Starting, Running, Stopping,
-      StartPending,		// started while stopping
-      StopPending);		// stopped while starting
-  MxEnumNames("Stopped", "Starting", "Running", "Stopping",
-      "StartPending", "StopPending");
-
-  inline int rag(int i) {
-    using namespace MxRAG;
-    if (i < 0 || i >= N) return Off;
-    static const int values[N] = { Red, Amber, Green, Amber, Amber, Amber };
-    return values[i];
-  }
-}
-
-namespace MxLinkState {
-  MxEnumValues(
-      Down,			// down (engine not started)
-      Disabled,			// intentionally down (admin/ops disabled)
-      Connecting,		// connecting (being brought up)
-      Up,			// up/running
-      ReconnectPending,		// reconnect pending following transient failure
-      Reconnecting,		// reconnecting following transient failure
-      Failed,			// failed (non-transient)
-      Disconnecting,		// disconnecting (being brought down)
-      ConnectPending,		// brought up while disconnecting
-      DisconnectPending);	// brought down while connecting
-  MxEnumNames(
-      "Down",
-      "Disabled",
-      "Connecting",
-      "Up",
-      "ReconnectPending",
-      "Reconnecting",
-      "Failed",
-      "Disconnecting",
-      "ConnectPending",
-      "DisconnectPending");
-
-  inline int rag(int i) {
-    using namespace MxRAG;
-    if (i < 0 || i >= N) return Off;
-    static const int values[N] =
-      { Red, Off, Amber, Green, Amber, Amber, Red, Amber, Amber, Amber };
-    return values[i];
-  }
-}
 
 class MxEngine;
 
@@ -151,15 +104,7 @@ public:
   ZuInline int state() const { return m_state.load_(); }
   ZuInline unsigned reconnects() const { return m_reconnects.load_(); }
 
-  // display sequence:
-  //   id, state, reconnects, rxSeqNo, txSeqNo
-  struct Telemetry {		// not graphable
-    MxID	id;
-    uint64_t	rxSeqNo;
-    uint64_t	txSeqNo;
-    uint32_t	reconnects;
-    uint8_t	state;		// MxLinkState::rag(i) - MxRAG
-  };
+  using Telemetry = ZvTelemetry::Link;
 
   void telemetry(Telemetry &data) const;
 
@@ -376,24 +321,11 @@ public:
     mgr()->log(id, traffic);
   }
 
+  using Telemetry = ZvTelemetry::Engine;
+
   // display sequence:
   //   id, state, nLinks, up, down, disabled, transient, reconn, failed,
   //   mxID, rxThread, txThread
-  struct Telemetry { // not graphable
-    MxID	id;		// primary key
-    MxID	mxID;
-    uint16_t	down;
-    uint16_t	disabled;
-    uint16_t	transient;
-    uint16_t	up;
-    uint16_t	reconn;
-    uint16_t	failed;
-    uint16_t	nLinks;
-    uint16_t	rxThread;
-    uint16_t	txThread;
-    uint8_t	state;		// MxEngineState::rag(i) - MxRAG
-  };
-
   void telemetry(Telemetry &data) const;
 
 private:

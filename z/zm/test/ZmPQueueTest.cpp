@@ -36,14 +36,14 @@ struct Msg : public Msg_Data {
   using Msg_Data::operator =;
   inline Msg(const Msg_Data &v) : Msg_Data(v) { }
   inline Msg(Msg_Data &&v) : Msg_Data(ZuMv(v)) { }
-  inline uint32_t key() const { return p1(); }
-  inline unsigned length() const { return p2(); }
+  inline uint32_t key() const { return p<0>(); }
+  inline unsigned length() const { return p<1>(); }
   inline unsigned clipHead(unsigned length) {
-    p1() += length;
-    return p2() -= length;
+    p<0>() += length;
+    return p<1>() -= length;
   }
   inline unsigned clipTail(unsigned length) {
-    return p2() -= length;
+    return p<1>() -= length;
   }
   template <typename I>
   inline void write(const I &i) { }

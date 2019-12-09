@@ -260,7 +260,7 @@ private:
 
 template <typename Msg>
 auto ZuInline Ze_BackTrace_fn(ZmBackTrace bt, Msg &&msg) {
-  return [bt, fn = ZeMessageFn(ZuFwd<Msg>(msg))](
+  return [bt = ZuMv(bt), fn = ZeMessageFn(ZuFwd<Msg>(msg))](
       const ZeEvent &e, ZmStream &s) {
     fn(e, s);
     s << '\n' << bt;

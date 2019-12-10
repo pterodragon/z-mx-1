@@ -208,7 +208,7 @@ namespace Save {
       n = (n>>6) + 1;
       v.reserve(n);
       for (unsigned i = 0; i < n; i++)
-	v.push_back(hwloc_bitmap_to_ith_ulong(m, i))
+	v.push_back(hwloc_bitmap_to_ith_ulong(m, i));
     }
     return b.CreateVector(v);
   }
@@ -235,7 +235,7 @@ namespace Load {
 
   // inline zero-copy conversion of a [uint8] to a ZuArray<uint8_t>
   ZuInline ZuArray<const uint8_t> bytes(const Vector<uint8_t> *v) {
-    if (!v) return ZuArray<const uint8_t>();
+    if (!v) return ZuArray<const uint8_t>{};
     return ZuArray<const uint8_t>(v->data(), v->size());
   }
 
@@ -245,15 +245,15 @@ namespace Load {
   }
 
   // bitmap
-  ZuInline ZmBitmap bitmap(const fbs::Vector<uint64_t> *m_) {
+  ZuInline ZmBitmap bitmap(const Vector<uint64_t> *v) {
+    if (!v) return ZmBitmap{};
     ZmBitmap m;
-    unsigned n = m_ ? m_->size() : 0;
-    if (n) {
+    if (unsigned n = v->size()) {
       --n;
-      hwloc_bitmap_from_ith_ulong(m, n, (*m_)[n]);
+      hwloc_bitmap_from_ith_ulong(m, n, (*v)[n]);
       while (n) {
 	--n;
-	hwloc_bitmap_set_ith_ulong(m, n, (*m_)[n]);
+	hwloc_bitmap_set_ith_ulong(m, n, (*v)[n]);
       }
     }
     return m;

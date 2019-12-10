@@ -62,19 +62,11 @@
 namespace ZvCSV_ {
   ZvExtern void split(ZuString row, ZtArray<ZtArray<char>> &a);
 
-  template <typename T, typename Fmt, typename Row>
-  inline void quote(Row &row, ZvField<T> *field, T *object, const Fmt &fmt) {
-    switch ((int)field->type) {
-      case ZvFieldType::String:
-      case ZvFieldType::Enum:
-      case ZvFieldType::Flags: {
-	ZtString s;
-	field->print(s, object, fmt);
-	quote_(row, s);
-      } break;
-      default:
-	field->print(row, object, fmt);
-	break;
+  template <typename Row> inline void quote_2(Row &row, ZuString s) {
+    for (unsigned i = 0, n = s.length(); i < n; i++) {
+      char ch = s[i];
+      row << ch;
+      if (ZuUnlikely(ch == '"')) row << '"'; // double-up quotes within quotes
     }
   }
   template <typename Row> inline void quote_(Row &row, ZuString s) {
@@ -82,11 +74,22 @@ namespace ZvCSV_ {
     quote_2(row, s);
     row << '"';
   }
-  template <typename Row> inline void quote_2(Row &row, ZuString s) {
-    for (unsigned i = 0, n = s.length(); i < n; i++) {
-      char ch = s[i];
-      row << ch;
-      if (ZuUnlikely(ch == '"')) row << '"'; // double-up quotes within quotes
+  template <typename T, typename Fmt, typename Row>
+  inline void quote(
+      Row &row, const ZvField<T> *field, const T *object, const Fmt &fmt) {
+    switch ((int)field->type) {
+      case ZvFieldType::String:
+      case ZvFieldType::Enum:
+      case ZvFieldType::Flags: {
+	ZtString s_;
+	ZmStream s{s_};
+	field->print(s, object, fmt);
+	quote_(row, s_);
+      } break;
+      default: {
+	ZmStream s{row};
+	field->print(s, object, fmt);
+      } break;
     }
   }
 }
@@ -123,7 +126,7 @@ public:
 
   struct FieldFmt : public ZvFieldFmt {
     FieldFmt() { new (time.new_csv()) ZtDateFmt::CSV{}; }
-  }
+  };
   FieldFmt &fmt() {
     thread_local FieldFmt fmt;
     return fmt;
@@ -148,15 +151,15 @@ private:
 
   void header(ColIndex &colIndex, ZuString hdr) const {
     ZtArray<ZtArray<char>> a;
-    split(hdr, a);
+    ZvCSV_::split(hdr, a);
     unsigned n = m_fields.length();
     colIndex.null();
     colIndex.length(n);
-    for (unsigned i = 0; i < n; i++) colIndex[i] = nullptr;
+    for (unsigned i = 0; i < n; i++) colIndex[i] = -1;
     n = a.length();
     for (unsigned i = 0; i < n; i++)
       if (const Field *field = find(a[i]))
-	colIndex[field - &m_fields[0]] = i;
+	colIndex[(int)(field - &m_fields[0])] = i;
   }
 
   void scan(
@@ -169,12 +172,12 @@ private:
     for (unsigned i = 0; i < m; i++) {
       int j;
       if ((j = colIndex[i]) < 0 || j >= (int)n)
-        m_fields[i]->scan(ZuString(), object, fmt);
+        m_fields[i].scan(ZuString(), object, fmt);
     }
     for (unsigned i = 0; i < m; i++) {
       int j;
       if ((j = colIndex[i]) >= 0 && j < (int)n)
-        m_fields[i]->scan(a[j], object, fmt);
+        m_fields[i].scan(a[j], object, fmt);
     }
   }
 
@@ -244,28 +247,24 @@ public:
     ColIndex colIndex;
     const auto &fmt = this->fmt();
 
-    try {
-      const auto &newLine = ZtStaticRegexUTF8("\\n");
-      ZtArray<ZtArray<char>> rows;
-      if (!newLine.split(data, rows)) return;
-      ZtString row{ZvCSV_MaxLineSize};
-      row.init(rows[0].data(), rows[0].length());
+    const auto &newLine = ZtStaticRegexUTF8("\\n");
+    ZtArray<ZtArray<char>> rows;
+    if (!newLine.split(data, rows)) return;
+    ZtString row{ZvCSV_MaxLineSize};
+    row.init(rows[0].data(), rows[0].length());
+    row.chomp();
+    header(colIndex, row);
+    row.length(0);
+    for (unsigned i = 1; i < rows.length(); i++) {
+      row.init(rows[i].data(), rows[i].length());
       row.chomp();
-      header(colIndex, row);
-      row.length(0);
-      for (unsigned i = 1; i < rows.length(); i++) {
-	row.init(rows[i].data(), rows[i].length());
-	row.chomp();
-	if (row.length()) {
-	  auto object = alloc();
-	  if (!object) break;
-	  scan(colIndex, row, fmt, object);
-	  read(ZuMv(object));
-	  row.length(0);
-	}
+      if (row.length()) {
+	auto object = alloc();
+	if (!object) break;
+	scan(colIndex, row, fmt, object);
+	read(ZuMv(object));
+	row.length(0);
       }
-    } catch (const ZtRegex::Error &e) {
-      throw ZvRegexError(e);
     }
   }
 
@@ -286,12 +285,12 @@ public:
 
     for (unsigned i = 0, n = colArray.length(); i < n; i++) {
       if (ZuLikely(i)) *row << ',';
-      *row << colArray[i]->id();
+      *row << colArray[i]->id;
     }
     *row << '\n';
     fwrite(row->data(), 1, row->length(), file);
 
-    return [this, colArray = ZuMv(colArray), row, &fmt, file](T *object) {
+    return [colArray = ZuMv(colArray), row, &fmt, file](T *object) {
       if (ZuUnlikely(!object)) {
 	delete row;
 	fclose(file);

@@ -40,7 +40,7 @@
 #include <zlib/ZuBox.hpp>
 
 template <typename Fmt> struct ZuDecimalFmt;	// internal
-template <bool Ref = 0> struct ZuDecimalVFmt;	// internal
+class ZuDecimalVFmt;	// internal
 
 struct ZuDecimal {
   template <unsigned N> using Pow10 = ZuDecimalFn::Pow10<N>;
@@ -450,8 +450,8 @@ public:
   template <typename S> void print(S &s) const;
 
   template <typename Fmt> ZuDecimalFmt<Fmt> fmt(Fmt) const;
-  ZuDecimalVFmt<> vfmt() const;
-  ZuDecimalVFmt<1> vfmt(ZuVFmt &) const;
+  ZuDecimalVFmt vfmt() const;
+  ZuDecimalVFmt vfmt(const ZuVFmt &) const;
 };
 template <typename Fmt> struct ZuDecimalFmt {
   const ZuDecimal	&fixed;
@@ -482,39 +482,39 @@ template <typename S> inline void ZuDecimal::print(S &s) const
   s << ZuDecimalFmt<ZuFmt::Default>{*this};
 }
 template <> struct ZuPrint<ZuDecimal> : public ZuPrintFn { };
-template <bool Ref>
-struct ZuDecimalVFmt : public ZuVFmtWrapper<ZuDecimalVFmt<Ref>, Ref> {
-  const ZuDecimal	&fixed;
-
-  ZuInline ZuDecimalVFmt(const ZuDecimal &fixed_) :
-    fixed{fixed_} { }
-  ZuInline ZuDecimalVFmt(const ZuDecimal &fixed_, ZuVFmt &fmt_) :
-    ZuVFmtWrapper<ZuDecimalVFmt, Ref>{fmt_}, fixed{fixed_} { }
+class ZuDecimalVFmt {
+public:
+  ZuInline ZuDecimalVFmt(const ZuDecimal &decimal, const ZuVFmt &fmt) :
+      m_decimal{decimal}, m_fmt{fmt} { }
 
   template <typename S> inline void print(S &s) const {
-    if (ZuUnlikely(!*fixed)) return;
+    if (ZuUnlikely(!*m_decimal)) return;
     uint128_t iv, fv;
-    if (ZuUnlikely(fixed.value < 0)) {
+    if (ZuUnlikely(m_decimal.value < 0)) {
       s << '-';
-      iv = -fixed.value;
+      iv = -m_decimal.value;
     } else
-      iv = fixed.value;
+      iv = m_decimal.value;
     fv = iv % ZuDecimal::scale();
     iv /= ZuDecimal::scale();
-    s << ZuBoxed(iv).vfmt(this->fmt);
+    s << ZuBoxed(iv).vfmt(m_fmt);
     if (fv) s << '.' << ZuBoxed(fv).fmt(ZuFmt::Frac<18>());
   }
+
+private:
+  const ZuDecimal	&m_decimal;
+  const ZuVFmt		&m_fmt;
 };
-ZuInline ZuDecimalVFmt<> ZuDecimal::vfmt() const
+ZuInline ZuDecimalVFmt ZuDecimal::vfmt() const
 {
-  return ZuDecimalVFmt<>{*this};
+  static const ZuVFmt fmt;
+  return ZuDecimalVFmt{*this, fmt};
 }
-ZuInline ZuDecimalVFmt<1> ZuDecimal::vfmt(ZuVFmt &fmt) const
+ZuInline ZuDecimalVFmt ZuDecimal::vfmt(const ZuVFmt &fmt) const
 {
-  return ZuDecimalVFmt<1>{*this, fmt};
+  return ZuDecimalVFmt{*this, fmt};
 }
-template <bool Ref>
-struct ZuPrint<ZuDecimalVFmt<Ref> > : public ZuPrintFn { };
+template <> struct ZuPrint<ZuDecimalVFmt> : public ZuPrintFn { };
 
 template <> struct ZuTraits<ZuDecimal> : public ZuTraits<int128_t> {
   typedef ZuDecimal T;

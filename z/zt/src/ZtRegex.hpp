@@ -41,6 +41,24 @@
 
 #include <zlib/ZtString.hpp>
 
+struct ZtRegexError {
+  const char	*message = 0;
+  int		code;
+  int		offset;
+
+  static const char *strerror(int);
+
+  template <typename S> inline void print(S &s) const {
+    if (message) {
+      s << "ZtRegex Error \"" << message << "\" (" << ZuBoxed(code) << ")"
+	" at offset " << ZuBoxed(offset);
+    } else {
+      s << "ZtRegex pcre_exec() Error: " << strerror(code);
+    }
+  }
+};
+template <> struct ZuPrint<ZtRegexError> : public ZuPrintFn { };
+
 // ZtRegex is used by ZeLog
 class ZtRegex;
 template <> struct ZmCleanup<ZtRegex> {
@@ -55,22 +73,6 @@ class ZtAPI ZtRegex {
 public:
   typedef ZuString Capture;
   typedef ZtArray<Capture> Captures;
-
-  struct Error {
-    const char	*message = 0;
-    int		code;
-    int		offset;
-
-    template <typename S> inline void print(S &s) const {
-      if (message) {
-	s << "ZtRegex Error \"" << message << "\" (" << ZuBoxed(code) << ")"
-	  " at offset " << ZuBoxed(offset);
-      } else {
-	s << "ZtRegex pcre_exec() Error: " << exec_strerror(code);
-      }
-    }
-  };
-  static const char *exec_strerror(int);
 
   ZtRegex(const char *pattern, int options = 0); // pcre_compile() options
 
@@ -199,7 +201,7 @@ private:
 
     if (c == PCRE_ERROR_NOMATCH) return 0;
 
-    throw ZtRegex::Error{nullptr, c, -1};
+    throw ZtRegexError{nullptr, c, -1};
   }
   template <typename S> void capture(
       const S &s, const ZtArray<int> &ovector, Captures &captures) const {
@@ -227,7 +229,6 @@ private:
   pcre_extra	*m_extra;
   unsigned	m_captureCount;
 };
-template <> struct ZuPrint<ZtRegex::Error> : public ZuPrintFn { };
 
 #define ZtStaticRegex(...) ZmStatic([]() { return new ZtRegex(__VA_ARGS__); })
 #define ZtStaticRegexUTF8(x) \

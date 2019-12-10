@@ -142,27 +142,26 @@ private:
 };
 
 // run-time formatting
-template <class Boxed, bool Ref = 0>
-class ZuBoxVFmt : public ZuVFmtWrapper<ZuBoxVFmt<Boxed, Ref>, Ref> {
+template <class Boxed> class ZuBoxVFmt {
 template <typename, class> friend class ZuBox;
 
   typedef ZuBox_VPrint<typename Boxed::T> Print;
 
 public:
-  ZuInline ZuBoxVFmt(const Boxed &v) : m_value(v) { }
-  ZuInline ZuBoxVFmt(const Boxed &v, ZuVFmt &fmt_) :
-    ZuVFmtWrapper<ZuBoxVFmt, Ref>{fmt_}, m_value{v} { }
+  ZuInline ZuBoxVFmt(const Boxed &v, const ZuVFmt &fmt) :
+    m_value{v}, m_fmt(fmt) { }
 
   // print
   ZuInline unsigned length() const {
-    return Print::length(this->fmt, m_value);
+    return Print::length(m_fmt, m_value);
   }
   ZuInline unsigned print(char *buf) const {
-    return Print::print(this->fmt, m_value, buf);
+    return Print::print(m_fmt, m_value, buf);
   }
 
 private:
   const Boxed	&m_value;
+  const ZuVFmt	&m_fmt;
 };
 
 struct ZuBox_Approx_ { };
@@ -224,7 +223,7 @@ template <typename T_, class Cmp_ = ZuCmp<typename ZuBox_Unbox<T_>::T> >
 class ZuBox {
 template <typename, class> friend class ZuBox;
 template <class, class> friend class ZuBoxFmt;
-template <class, bool> friend class ZuBoxVFmt;
+template <class> friend class ZuBoxVFmt;
 public:
   typedef typename ZuBox_Unbox<T_>::T T;
   typedef Cmp_ Cmp;
@@ -368,10 +367,11 @@ public:
   }
   // run-time formatting
   ZuInline ZuBoxVFmt<ZuBox> vfmt() const {
-    return ZuBoxVFmt<ZuBox>{*this};
+    static const ZuVFmt fmt;
+    return ZuBoxVFmt<ZuBox>{*this, fmt};
   }
-  ZuInline ZuBoxVFmt<ZuBox, 1> vfmt(ZuVFmt &fmt) const {
-    return ZuBoxVFmt<ZuBox, 1>{*this, fmt};
+  ZuInline ZuBoxVFmt<ZuBox> vfmt(const ZuVFmt &fmt) const {
+    return ZuBoxVFmt<ZuBox>{*this, fmt};
   }
 
   template <typename S>
@@ -591,8 +591,8 @@ template <typename T, class Cmp>
 struct ZuPrint<ZuBox<T, Cmp> > : public ZuBoxPrint<ZuBox<T, Cmp> > { };
 template <typename T, class Fmt>
 struct ZuPrint<ZuBoxFmt<T, Fmt> > : public ZuBoxPrint<ZuBoxFmt<T, Fmt> > { };
-template <typename T, bool Ref>
-struct ZuPrint<ZuBoxVFmt<T, Ref> > : public ZuBoxPrint<ZuBoxVFmt<T, Ref> > { };
+template <typename T>
+struct ZuPrint<ZuBoxVFmt<T>> : public ZuBoxPrint<ZuBoxVFmt<T>> { };
 
 // ZuBoxT<T>::T is T if T is already boxed, ZuBox<T> otherwise
 template <typename T_>

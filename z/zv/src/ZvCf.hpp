@@ -50,7 +50,6 @@
 #include <zlib/ZiFile.hpp>
 
 #include <zlib/ZvError.hpp>
-#include <zlib/ZvRegexError.hpp>
 #include <zlib/ZvEnum.hpp>
 
 #define ZvCfMaxFileSize	(1<<20)	// 1Mb

@@ -232,7 +232,7 @@ table App {
   id:string;
   version:string;
   role:AppRole;
-  uptime:DateTime;	// absolute start time
+  uptime:Zfb.fbs.DateTime;	// absolute start time
 }
 enum Severity:int8 {	// == Ze
   Debug = 0,
@@ -242,7 +242,7 @@ enum Severity:int8 {	// == Ze
   Fatal
 }
 table Alert {
-  time:DateTime;
+  time:Zfb.fbs.DateTime;
   tid:uint32;
   severity:Severity;
   message:string;

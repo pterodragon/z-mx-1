@@ -22,34 +22,6 @@ static const char *testdata =
   "\"-,>\"\"<,-\",2,,0.0000002,\"\"\"\"girlfriend,,Flag1|Flag2,,,\n"
   "-->\",\"<--,3,N,3.1415926,\"experience\"\"\",,Flag1,,,\n";
 
-struct Row {
-  ZuStringN<24>	m_string;
-  int		m_int;
-  int		m_bool;
-  double	m_float;
-  int		m_enum;
-  ZtDate	m_time;
-  int		m_flags;
-  int	        m_func;
-};
-
-struct CSVWrite {
-  typedef ZmList<ZuRef<ZuPOD<Row> > > VList;
-  CSVWrite() { }
-
-  VList m_list;
-};
-
-struct RowSet {
-  void alloc(ZuRef<ZuAnyPOD> &obj) {
-    ZuRef<ZuPOD<Row> > row = new ZuPOD<Row>();
-    new (row->ptr()) Row();
-    m_rows.push(row);
-    obj = row;
-  }
-  ZmList<ZuRef<ZuPOD<Row> > >	m_rows;
-};
-
 namespace Enums {
   ZtEnumValues(Sasha = 1, Grey, Girlfriend = 43, Experience, __);
   ZtEnumMap(Map,
@@ -60,6 +32,47 @@ namespace DaFlags {
   ZtEnumValues(Flag1, Flag2, P, SUP);
   ZtEnumFlags(Map, "Flag1", 0, "Flag2", 1, "P", 2, "SUP", 3);
 }
+
+struct Row {
+  static const ZvFields<Row> fields() noexcept;
+
+  ZuStringN<24>	m_string;
+  int		m_int;
+  int		m_bool;
+  double	m_float;
+  int		m_enum;
+  ZtDate	m_time;
+  int		m_flags;
+};
+inline const ZvFields<Row> Row::fields() noexcept {
+  using namespace ZvFieldFlags;
+  return ZvFields<Row>{std::initializer_list<ZvField<Row>>{
+    ZvFieldString(Row, m_string, Primary),
+    ZvFieldScalar(Row, m_int, 0),
+    ZvFieldBool(Row, m_bool, 0),
+    ZvFieldScalar(Row, m_float, 0),
+    ZvFieldEnum(Row, m_enum, 0, Enums::Map),
+    ZvFieldTime(Row, m_time, 0),
+    ZvFieldFlags(Row, m_flags, 0, DaFlags::Map),
+  } };
+}
+
+struct CSVWrite {
+  typedef ZmList<ZuRef<ZuPOD<Row> > > VList;
+  CSVWrite() { }
+
+  VList m_list;
+};
+
+struct RowSet {
+  Row *alloc() {
+    ZuRef<ZuPOD<Row> > row = new ZuPOD<Row>();
+    new (row->ptr()) Row();
+    m_rows.push(row);
+    return row->ptr();
+  }
+  ZmList<ZuRef<ZuPOD<Row> > >	m_rows;
+};
 
 int main()
 {
@@ -74,28 +87,13 @@ int main()
 	throw e;
     }
     {
-      ZvCSV csv;
-
-      csv.add(new ZvCSVColumn<ZvCSVColType::String, ZuStringN<24> >(
-	    "string", offsetof(Row, m_string)));
-      csv.add(new ZvCSVColumn<ZvCSVColType::Int, int>(
-	    "int", offsetof(Row, m_int)));
-      csv.add(new ZvCSVColumn<ZvCSVColType::Bool, bool>(
-	    "bool", offsetof(Row, m_bool)));
-      csv.add(new ZvCSVColumn<ZvCSVColType::Float, double>(
-	    "float", offsetof(Row, m_float)));
-      csv.add(new ZvCSVEnumColumn<int, Enums::Map>(
-	    "enum", offsetof(Row, m_enum)));
-      csv.add(new ZvCSVColumn<ZvCSVColType::Time, ZtDate>(
-	    "time", offsetof(Row, m_time), ""));
-      csv.add(new ZvCSVFlagsColumn<int, DaFlags::Map>(
-	    "flags", offsetof(Row, m_flags)));
-      // csv.add(new ZvCSVColumn<ZvCSVColType::Func,
-      // 			      ZtDate>("func", offsetof(Row, m_func), ""));
+      ZvCSV<Row> csv;
 
       RowSet rowSet;
       csv.readFile("in.csv",
-	  ZvCSVAllocFn::Member<&RowSet::alloc>::fn(&rowSet));
+	  [&rowSet]() { return rowSet.alloc(); },
+	  [](Row *) { });
+
       ZuRef<ZuPOD<Row> > row;
 
       CSVWrite filtList;
@@ -118,16 +116,20 @@ int main()
 
       ZtArray<ZtString> filter;
       filter.push("*");
-      if (ZvCSVWriteFn fn = csv.writeFile("all.written.csv", filter)) {
-	while (ZuRef<ZuAnyPOD> pod = unFiltList.m_list.shift()) fn(pod);
-	fn((ZuAnyPOD *)0);
+      {
+	auto fn = csv.writeFile("all.written.csv", filter);
+	while (ZuRef<ZuPOD<Row>> pod = unFiltList.m_list.shift())
+	  fn(pod->ptr());
+	fn(nullptr);
       }
       filter.null();
       filter.push("string");
       filter.push("flags");
-      if (ZvCSVWriteFn fn = csv.writeFile("filt.written.csv", filter)) {
-	while (ZuRef<ZuAnyPOD> pod = filtList.m_list.shift()) fn(pod);
-	fn((ZuAnyPOD *)0);
+      {
+	auto fn = csv.writeFile("filt.written.csv", filter);
+	while (ZuRef<ZuPOD<Row>> pod = unFiltList.m_list.shift())
+	  fn(pod->ptr());
+	fn(nullptr);
       }
     }
   } catch (const ZvError &e) {

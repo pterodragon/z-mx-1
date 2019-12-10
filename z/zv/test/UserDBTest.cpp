@@ -4,6 +4,7 @@
 
 using namespace Zfb;
 using namespace ZvUserDB;
+namespace fbs = ZvUserDB::fbs;
 
 int main()
 {
@@ -45,22 +46,18 @@ int main()
   {
     using namespace Load;
 
-    {
-      using namespace ZvUserDB;
+    auto db = fbs::GetUserDB(iobuf->data());
 
-      auto db = fbs::GetUserDB(iobuf->data());
+    auto perm = db->perms()->LookupByKey(fbs::ReqData_ChPass + 1);
 
-      auto perm = db->perms()->LookupByKey(fbs::ReqData_ChPass + 1);
+    if (!perm) {
+      std::cerr << "READ FAILED - key lookup failed\n" << std::flush;
+      return 1;
+    }
 
-      if (!perm) {
-	std::cerr << "READ FAILED - key lookup failed\n" << std::flush;
-	return 1;
-      }
-
-      if (str(perm->name()) != "UserDB.ChPass") {
-	std::cerr << "READ FAILED - wrong key\n" << std::flush;
-	return 1;
-      }
+    if (str(perm->name()) != "UserDB.ChPass") {
+      std::cerr << "READ FAILED - wrong key\n" << std::flush;
+      return 1;
     }
 
     Mgr mgr(&rng, 12, 6);

@@ -68,86 +68,82 @@ int ZvCf::fromCLI(const ZvOpt *opts, ZuString line)
 void ZvCf::parseCLI(ZuString line, ZtArray<ZtString> &args)
 {
   args.length(0);
-  try {
-    ZtString val;
-    const auto &cliValue = ZtStaticRegexUTF8("\\G[^\"'`#;\\s]+");// \G[^"'`#;\s]+
-    const auto &cliSglQuote = ZtStaticRegexUTF8("\\G'");	// \G'
-    const auto &cliSglQuotedValue = ZtStaticRegexUTF8("\\G[^'`]+"); // \G[^'`]+
-    const auto &cliDblQuote = ZtStaticRegexUTF8("\\G\"");	// \G"
-    const auto &cliDblQuotedValue = ZtStaticRegexUTF8("\\G[^\"`]+"); // \G[^"`]+
-    const auto &cliQuoted = ZtStaticRegexUTF8("\\G`.");		// \G`.
-    const auto &cliWhiteSpace = ZtStaticRegexUTF8("\\G\\s+");	// \G\s+
-    const auto &cliComment = ZtStaticRegexUTF8("\\G#");		// \G#
-    const auto &cliSemicolon = ZtStaticRegexUTF8("\\G;");	// \G;
-    ZtRegex::Captures c;
-    unsigned pos = 0;
+  ZtString val;
+  const auto &cliValue = ZtStaticRegexUTF8("\\G[^\"'`#;\\s]+");// \G[^"'`#;\s]+
+  const auto &cliSglQuote = ZtStaticRegexUTF8("\\G'");	// \G'
+  const auto &cliSglQuotedValue = ZtStaticRegexUTF8("\\G[^'`]+"); // \G[^'`]+
+  const auto &cliDblQuote = ZtStaticRegexUTF8("\\G\"");	// \G"
+  const auto &cliDblQuotedValue = ZtStaticRegexUTF8("\\G[^\"`]+"); // \G[^"`]+
+  const auto &cliQuoted = ZtStaticRegexUTF8("\\G`.");		// \G`.
+  const auto &cliWhiteSpace = ZtStaticRegexUTF8("\\G\\s+");	// \G\s+
+  const auto &cliComment = ZtStaticRegexUTF8("\\G#");		// \G#
+  const auto &cliSemicolon = ZtStaticRegexUTF8("\\G;");	// \G;
+  ZtRegex::Captures c;
+  unsigned pos = 0;
 
-    while (pos < line.length()) {
-      if (cliValue.m(line, c, pos)) {
-	pos += c[1].length();
-	val += c[1];
-	continue;
-      }
-      if (cliSglQuote.m(line, c, pos)) {
-	pos += c[1].length();
-	while (pos < line.length()) {
-	  if (cliSglQuotedValue.m(line, c, pos)) {
-	    pos += c[1].length();
-	    val += c[1];
-	    continue;
-	  }
-	  if (cliQuoted.m(line, c, pos)) {
-	    pos += c[1].length();
-	    val += c[1];
-	    continue;
-	  }
-	  if (cliSglQuote.m(line, c, pos)) {
-	    pos += c[1].length();
-	    break;
-	  }
-	}
-	continue;
-      }
-      if (cliDblQuote.m(line, c, pos)) {
-	pos += c[1].length();
-	while (pos < line.length()) {
-	  if (cliDblQuotedValue.m(line, c, pos)) {
-	    pos += c[1].length();
-	    val += c[1];
-	    continue;
-	  }
-	  if (cliQuoted.m(line, c, pos)) {
-	    pos += c[1].length();
-	    val += c[1];
-	    continue;
-	  }
-	  if (cliDblQuote.m(line, c, pos)) {
-	    pos += c[1].length();
-	    break;
-	  }
-	}
-	continue;
-      }
-      if (cliQuoted.m(line, c, pos)) {
-	pos += c[1].length();
-	val += c[1];
-	continue;
-      }
-      if (cliWhiteSpace.m(line, c, pos)) {
-	pos += c[1].length();
-	args.push(ZuMv(val));
-	val.null();
-	continue;
-      }
-      if (cliComment.m(line, c, pos)) break;
-      if (cliSemicolon.m(line, c, pos)) break;
-      ZmAssert(false);	// should not get here
-      break;
+  while (pos < line.length()) {
+    if (cliValue.m(line, c, pos)) {
+      pos += c[1].length();
+      val += c[1];
+      continue;
     }
-    if (val) args.push(ZuMv(val));
-  } catch (const ZtRegex::Error &e) {
-    throw ZvRegexError(e);
+    if (cliSglQuote.m(line, c, pos)) {
+      pos += c[1].length();
+      while (pos < line.length()) {
+	if (cliSglQuotedValue.m(line, c, pos)) {
+	  pos += c[1].length();
+	  val += c[1];
+	  continue;
+	}
+	if (cliQuoted.m(line, c, pos)) {
+	  pos += c[1].length();
+	  val += c[1];
+	  continue;
+	}
+	if (cliSglQuote.m(line, c, pos)) {
+	  pos += c[1].length();
+	  break;
+	}
+      }
+      continue;
+    }
+    if (cliDblQuote.m(line, c, pos)) {
+      pos += c[1].length();
+      while (pos < line.length()) {
+	if (cliDblQuotedValue.m(line, c, pos)) {
+	  pos += c[1].length();
+	  val += c[1];
+	  continue;
+	}
+	if (cliQuoted.m(line, c, pos)) {
+	  pos += c[1].length();
+	  val += c[1];
+	  continue;
+	}
+	if (cliDblQuote.m(line, c, pos)) {
+	  pos += c[1].length();
+	  break;
+	}
+      }
+      continue;
+    }
+    if (cliQuoted.m(line, c, pos)) {
+      pos += c[1].length();
+      val += c[1];
+      continue;
+    }
+    if (cliWhiteSpace.m(line, c, pos)) {
+      pos += c[1].length();
+      args.push(ZuMv(val));
+      val.null();
+      continue;
+    }
+    if (cliComment.m(line, c, pos)) break;
+    if (cliSemicolon.m(line, c, pos)) break;
+    ZmAssert(false);	// should not get here
+    break;
   }
+  if (val) args.push(ZuMv(val));
 }
 
 #ifdef _MSC_VER
@@ -169,84 +165,80 @@ int ZvCf::fromArgs(const ZvOpt *opts, int argc, char **argv)
 
 int ZvCf::fromArgs(ZvCf *options, const ZtArray<ZtString> &args)
 {
-  try {
-    int i, j, n, l, p;
-    const auto &argShort = ZtStaticRegexUTF8("^-(\\w+)$");	// -a
-    const auto &argLongFlag = ZtStaticRegexUTF8("^--([\\w:]+)$"); // --arg
-    const auto &argLongValue = ZtStaticRegexUTF8("^--([\\w:]+)="); // --arg=val
-    ZtRegex::Captures c;
-    ZmRef<ZvCf> option;
+  int i, j, n, l, p;
+  const auto &argShort = ZtStaticRegexUTF8("^-(\\w+)$");	// -a
+  const auto &argLongFlag = ZtStaticRegexUTF8("^--([\\w:]+)$"); // --arg
+  const auto &argLongValue = ZtStaticRegexUTF8("^--([\\w:]+)="); // --arg=val
+  ZtRegex::Captures c;
+  ZmRef<ZvCf> option;
 
-    p = 0;
-    l = args.length();
-    for (i = 0; i < l; i = n) {
-      n = i + 1;
-      if (argShort.m(args[i], c)) {
-	int m = c[2].length();
-	for (j = 0; j < m; j++) {
-	  ZtString shortOpt(ZtString::Copy, c[2].data() + j, 1);
-	  ZuString longOpt;
-	  if (!options ||
-	      !(longOpt = options->get(shortOpt)) ||
-	      !(option = options->subset(longOpt, false)))
-	    throw Usage(args[0], shortOpt);
-	  int type = option->getEnum<ZvOptTypes::Map>("type", true);
-	  if (type == ZvOptFlag) {
-	    fromArg(longOpt, ZvOptFlag, "1");
-	  } else {
-	    ZuString deflt = option->get("default");
-	    if (deflt) {
-	      if (n < l && args[n][0] != '-') {
-		fromArg(longOpt, type,
-			args[n].data() +
-			  (args[n][0] == '`' && args[n][1] == '-'));
-		n++;
-	      } else {
-		fromArg(longOpt, type, deflt);
-	      }
-	    } else {
-	      if (n == l) throw Usage(args[0], shortOpt);
-	      fromArg(longOpt, type,
-		      args[n].data() +
-			(args[n][0] == '`' && args[n][1] == '-'));
-	      n++;
-	    }
-	  }
-	}
-      } else if (argLongFlag.m(args[i], c)) {
-	ZtString longOpt = c[2];
+  p = 0;
+  l = args.length();
+  for (i = 0; i < l; i = n) {
+    n = i + 1;
+    if (argShort.m(args[i], c)) {
+      int m = c[2].length();
+      for (j = 0; j < m; j++) {
+	ZtString shortOpt(ZtString::Copy, c[2].data() + j, 1);
+	ZuString longOpt;
 	if (!options ||
+	    !(longOpt = options->get(shortOpt)) ||
 	    !(option = options->subset(longOpt, false)))
-	  throw Usage(args[0], longOpt);
+	  throw Usage(args[0], shortOpt);
 	int type = option->getEnum<ZvOptTypes::Map>("type", true);
 	if (type == ZvOptFlag) {
 	  fromArg(longOpt, ZvOptFlag, "1");
 	} else {
 	  ZuString deflt = option->get("default");
-	  if (!deflt) throw Usage(args[0], longOpt);
-	  fromArg(longOpt, type, deflt);
+	  if (deflt) {
+	    if (n < l && args[n][0] != '-') {
+	      fromArg(longOpt, type,
+		      args[n].data() +
+			(args[n][0] == '`' && args[n][1] == '-'));
+	      n++;
+	    } else {
+	      fromArg(longOpt, type, deflt);
+	    }
+	  } else {
+	    if (n == l) throw Usage(args[0], shortOpt);
+	    fromArg(longOpt, type,
+		    args[n].data() +
+		      (args[n][0] == '`' && args[n][1] == '-'));
+	    n++;
+	  }
 	}
-      } else if (argLongValue.m(args[i], c)) {
-	ZtString longOpt = c[2];
-	if (!options ||
-	    !(option = options->subset(longOpt, false)))
-	  throw Usage(args[0], longOpt);
-	fromArg(longOpt,
-	    option->getEnum<ZvOptTypes::Map>("type", false, ZvOptScalar), c[3]);
-      } else {
-	fromArg(ZtString(ZuBox<int>(p++)), ZvOptScalar, args[i]);
       }
+    } else if (argLongFlag.m(args[i], c)) {
+      ZtString longOpt = c[2];
+      if (!options ||
+	  !(option = options->subset(longOpt, false)))
+	throw Usage(args[0], longOpt);
+      int type = option->getEnum<ZvOptTypes::Map>("type", true);
+      if (type == ZvOptFlag) {
+	fromArg(longOpt, ZvOptFlag, "1");
+      } else {
+	ZuString deflt = option->get("default");
+	if (!deflt) throw Usage(args[0], longOpt);
+	fromArg(longOpt, type, deflt);
+      }
+    } else if (argLongValue.m(args[i], c)) {
+      ZtString longOpt = c[2];
+      if (!options ||
+	  !(option = options->subset(longOpt, false)))
+	throw Usage(args[0], longOpt);
+      fromArg(longOpt,
+	  option->getEnum<ZvOptTypes::Map>("type", false, ZvOptScalar), c[3]);
+    } else {
+      fromArg(ZtString(ZuBox<int>(p++)), ZvOptScalar, args[i]);
     }
-    {
-      NodeRef node = m_tree.findVal("#");
-      if (!node) m_tree.add("#", node = new Node());
-      node->m_values.null();
-      node->m_values.push(ZuBox<int>(p));
-    }
-    return p;
-  } catch (const ZtRegex::Error &e) {
-    throw ZvRegexError(e);
   }
+  {
+    NodeRef node = m_tree.findVal("#");
+    if (!node) m_tree.add("#", node = new Node());
+    node->m_values.null();
+    node->m_values.push(ZuBox<int>(p));
+  }
+  return p;
 }
 
 int ZvCf::fromArgs(const ZvOpt *opts, const ZtArray<ZtString> &args)
@@ -357,157 +349,153 @@ append:
 void ZvCf::fromString(ZuString in,
     bool validate, ZuString fileName, ZmRef<Defines> defines)
 {
-  try {
-    unsigned n = in.length();
+  unsigned n = in.length();
 
-    if (!n) return;
+  if (!n) return;
 
-    ZmRef<ZvCf> self = this;
+  ZmRef<ZvCf> self = this;
 
-    const auto &fileSkip = ZtStaticRegexUTF8(
-	"\\G(?:#[^\\n]*\\n|\\s+)"); // \G(?:#[^\n]*\n|\s+)
-    const auto &fileEndScope = ZtStaticRegexUTF8("\\G\\}");	// \G\}
-    const auto &fileKey = ZtStaticRegexUTF8(
-	"\\G(?:[^$#%`\"{},:=\\s]+|[%=]\\w+)"); // \G(?:[^$#%`"{},:=\s]+|[%=]\w+)
-    const auto &fileLine = ZtStaticRegexUTF8("\\G[^\\n]*\\n");	// \G[^\n]*\n1
-    const auto &fileValue = ZtStaticRegexUTF8(
-	"\\G[^$#`\"{},\\s]+"); // \G[^#`"{},\s]+
-    const auto &fileValueQuoted = ZtStaticRegexUTF8("\\G`(.)");	// \G`(.)
-    const auto &fileDblQuote = ZtStaticRegexUTF8("\\G\"");	// \G"
-    const auto &fileValueDblQuoted = ZtStaticRegexUTF8(
-	"\\G[^`\"]+"); // \G[^`"]+
-    const auto &fileBeginScope = ZtStaticRegexUTF8("\\G\\{");	// \G\{
-    const auto &fileComma = ZtStaticRegexUTF8("\\G,");		// \G,
-    const auto &fileDefine = ZtStaticRegexUTF8(
-	"([^$#%`\"{},:=\\s]+)=(.+)"); // ([^$#%`"{},:=\s]+)=(.+)
-    const auto &fileValueVar = ZtStaticRegexUTF8(
-	"\\G\\${([^$#%`\"{},:=\\s]+)}"); // \G\${([^$#%`"{},:=\s]+)}
-    ZtRegex::Captures c;
-    unsigned pos = 0;
+  const auto &fileSkip = ZtStaticRegexUTF8(
+      "\\G(?:#[^\\n]*\\n|\\s+)"); // \G(?:#[^\n]*\n|\s+)
+  const auto &fileEndScope = ZtStaticRegexUTF8("\\G\\}");	// \G\}
+  const auto &fileKey = ZtStaticRegexUTF8(
+      "\\G(?:[^$#%`\"{},:=\\s]+|[%=]\\w+)"); // \G(?:[^$#%`"{},:=\s]+|[%=]\w+)
+  const auto &fileLine = ZtStaticRegexUTF8("\\G[^\\n]*\\n");	// \G[^\n]*\n1
+  const auto &fileValue = ZtStaticRegexUTF8(
+      "\\G[^$#`\"{},\\s]+"); // \G[^#`"{},\s]+
+  const auto &fileValueQuoted = ZtStaticRegexUTF8("\\G`(.)");	// \G`(.)
+  const auto &fileDblQuote = ZtStaticRegexUTF8("\\G\"");	// \G"
+  const auto &fileValueDblQuoted = ZtStaticRegexUTF8(
+      "\\G[^`\"]+"); // \G[^`"]+
+  const auto &fileBeginScope = ZtStaticRegexUTF8("\\G\\{");	// \G\{
+  const auto &fileComma = ZtStaticRegexUTF8("\\G,");		// \G,
+  const auto &fileDefine = ZtStaticRegexUTF8(
+      "([^$#%`\"{},:=\\s]+)=(.+)"); // ([^$#%`"{},:=\s]+)=(.+)
+  const auto &fileValueVar = ZtStaticRegexUTF8(
+      "\\G\\${([^$#%`\"{},:=\\s]+)}"); // \G\${([^$#%`"{},:=\s]+)}
+  ZtRegex::Captures c;
+  unsigned pos = 0;
 
 key:
-    while (fileSkip.m(in, c, pos))
-      pos += c[1].length();
-    if (self->m_parent && fileEndScope.m(in, c, pos)) {
-      pos += c[1].length();
-      self = self->m_parent;
-      goto key;
-    }
-    if (!fileKey.m(in, c, pos)) {
-      if (pos < n - 1) {
-	unsigned lpos = 0, line = 1;
-	while (lpos < pos &&
-	       fileLine.m(in, c, lpos)) {
-	  lpos += c[1].length();
-	  line++;
-	}
-	if (line > 1) --line;
-	throw Syntax(line, in[pos], fileName);
-      }
-      return;
-    }
+  while (fileSkip.m(in, c, pos))
     pos += c[1].length();
-    ZuString key = c[1];
-    NodeRef node;
-    if (key[0] != '%') {
-      if (!(node = self->m_tree.findVal(key))) {
-	if (validate) throw Invalid(self, key, fileName);
-	self->m_tree.add(key, node = new Node());
+  if (self->m_parent && fileEndScope.m(in, c, pos)) {
+    pos += c[1].length();
+    self = self->m_parent;
+    goto key;
+  }
+  if (!fileKey.m(in, c, pos)) {
+    if (pos < n - 1) {
+      unsigned lpos = 0, line = 1;
+      while (lpos < pos &&
+	     fileLine.m(in, c, lpos)) {
+	lpos += c[1].length();
+	line++;
       }
+      if (line > 1) --line;
+      throw Syntax(line, in[pos], fileName);
     }
-    ZtArray<ZtString> values;
+    return;
+  }
+  pos += c[1].length();
+  ZuString key = c[1];
+  NodeRef node;
+  if (key[0] != '%') {
+    if (!(node = self->m_tree.findVal(key))) {
+      if (validate) throw Invalid(self, key, fileName);
+      self->m_tree.add(key, node = new Node());
+    }
+  }
+  ZtArray<ZtString> values;
 
 val:
-    while (fileSkip.m(in, c, pos))
-      pos += c[1].length();
+  while (fileSkip.m(in, c, pos))
+    pos += c[1].length();
 
-    ZtString val;
-    bool multi = false;
+  ZtString val;
+  bool multi = false;
 
 append:
-    if (fileValue.m(in, c, pos)) {
+  if (fileValue.m(in, c, pos)) {
+    pos += c[1].length();
+    val += c[1];
+  }
+  if (fileValueQuoted.m(in, c, pos)) {
+    pos += c[1].length();
+    val += c[2];
+    goto append;
+  }
+  if (fileValueVar.m(in, c, pos)) {
+    pos += c[1].length();
+    ZuString d = defines->findVal(c[2]);
+    if (!d) d = getenv(c[2]);
+    if (!!d) val += d;
+    goto append;
+  }
+  if (fileDblQuote.m(in, c, pos)) {
+    pos += c[1].length();
+quoted:
+    if (fileValueDblQuoted.m(in, c, pos)) {
       pos += c[1].length();
       val += c[1];
     }
     if (fileValueQuoted.m(in, c, pos)) {
       pos += c[1].length();
       val += c[2];
+      goto quoted;
+    }
+    if (pos < n - 1) {
+      pos++;
       goto append;
     }
-    if (fileValueVar.m(in, c, pos)) {
-      pos += c[1].length();
-      ZuString d = defines->findVal(c[2]);
-      if (!d) d = getenv(c[2]);
-      if (!!d) val += d;
-      goto append;
-    }
-    if (fileDblQuote.m(in, c, pos)) {
-      pos += c[1].length();
-quoted:
-      if (fileValueDblQuoted.m(in, c, pos)) {
-	pos += c[1].length();
-	val += c[1];
-      }
-      if (fileValueQuoted.m(in, c, pos)) {
-	pos += c[1].length();
-	val += c[2];
-	goto quoted;
-      }
-      if (pos < n - 1) {
-	pos++;
-	goto append;
-      }
-      values.push(ZuMv(val));
-      node->m_values = ZuMv(values);
-      return;
-    }
-    if (fileBeginScope.m(in, c, pos)) {
-      pos += c[1].length();
-      if (val) values.push(ZuMv(val));
-      if (node && values.length()) {
-	node->m_values = ZuMv(values);
-	values.length(0);
-      }
-      if (node && !node->m_cf) {
-	if (validate) throw Invalid(self, key, fileName);
-	node->m_cf = new ZvCf(self);
-      }
-      self = node ? node->m_cf : self;
-      goto key;
-    }
-    if (fileComma.m(in, c, pos)) {
-      pos += c[1].length();
-      multi = true;
-    }
-
     values.push(ZuMv(val));
-    if (multi) goto val;
-    if (node) {
+    node->m_values = ZuMv(values);
+    return;
+  }
+  if (fileBeginScope.m(in, c, pos)) {
+    pos += c[1].length();
+    if (val) values.push(ZuMv(val));
+    if (node && values.length()) {
       node->m_values = ZuMv(values);
       values.length(0);
-    } else {
-      if (key == "%include") {
-	unsigned n = values.length();
-	for (unsigned i = 0; i < n; i++) {
-	  ZmRef<ZvCf> incCf = new ZvCf();
-	  incCf->fromFile(values[i], false);
-	  self->merge(incCf);
-	}
-      } else if (key == "%define") {
-	unsigned n = values.length();
-	for (unsigned i = 0; i < n; i++) {
-	  if (!fileDefine.m(values[i], c, 0))
-	    throw BadDefine(values[i], fileName);
-	  defines->del(c[2]);
-	  defines->add(c[2], c[3]);
-	}
-      }
-      // other % directives here
     }
+    if (node && !node->m_cf) {
+      if (validate) throw Invalid(self, key, fileName);
+      node->m_cf = new ZvCf(self);
+    }
+    self = node ? node->m_cf : self;
     goto key;
-  } catch (const ZtRegex::Error &e) {
-    throw ZvRegexError(e);
   }
+  if (fileComma.m(in, c, pos)) {
+    pos += c[1].length();
+    multi = true;
+  }
+
+  values.push(ZuMv(val));
+  if (multi) goto val;
+  if (node) {
+    node->m_values = ZuMv(values);
+    values.length(0);
+  } else {
+    if (key == "%include") {
+      unsigned n = values.length();
+      for (unsigned i = 0; i < n; i++) {
+	ZmRef<ZvCf> incCf = new ZvCf();
+	incCf->fromFile(values[i], false);
+	self->merge(incCf);
+      }
+    } else if (key == "%define") {
+      unsigned n = values.length();
+      for (unsigned i = 0; i < n; i++) {
+	if (!fileDefine.m(values[i], c, 0))
+	  throw BadDefine(values[i], fileName);
+	defines->del(c[2]);
+	defines->add(c[2], c[3]);
+      }
+    }
+    // other % directives here
+  }
+  goto key;
 }
 
 // suppress security warning about getenv()
@@ -518,130 +506,126 @@ quoted:
 
 void ZvCf::fromEnv(const char *name, bool validate)
 {
-  try {
-    ZuString data = getenv(name);
-    unsigned n = data.length();
+  ZuString data = getenv(name);
+  unsigned n = data.length();
 
-    if (!data) return;
+  if (!data) return;
 
-    ZmRef<ZvCf> self = this;
-    bool first = true;
+  ZmRef<ZvCf> self = this;
+  bool first = true;
 
-    unsigned pos = 0;
-    const auto &envEndScope = ZtStaticRegexUTF8("\\G\\}");	// \G\}
-    const auto &envColon = ZtStaticRegexUTF8("\\G:");		// \G:
-    const auto &envKey = ZtStaticRegexUTF8(
-	"\\G[^#`\"{},:=\\s]+"); // \G[^#`"{},:=\s]+
-    const auto &envEquals = ZtStaticRegexUTF8("\\G=");		// \G=
-    const auto &envValue = ZtStaticRegexUTF8(
-	"\\G[^`\"{},:]+");	// \G[^`"{},:]+
-    const auto &envValueQuoted = ZtStaticRegexUTF8(
-	"\\G`([`\"{},:\\s])"); // \G\\([`"{},:\s])
-    const auto &envDblQuote = ZtStaticRegexUTF8("\\G\"");	// \G"
-    const auto &envValueDblQuoted = ZtStaticRegexUTF8(
-	"\\G[^`\"]+");	// \G[^`"]+
-    const auto &envBeginScope = ZtStaticRegexUTF8("\\G\\{");	// \G\{
-    const auto &envComma = ZtStaticRegexUTF8("\\G,");		// \G,
-    ZtRegex::Captures c;
+  unsigned pos = 0;
+  const auto &envEndScope = ZtStaticRegexUTF8("\\G\\}");	// \G\}
+  const auto &envColon = ZtStaticRegexUTF8("\\G:");		// \G:
+  const auto &envKey = ZtStaticRegexUTF8(
+      "\\G[^#`\"{},:=\\s]+"); // \G[^#`"{},:=\s]+
+  const auto &envEquals = ZtStaticRegexUTF8("\\G=");		// \G=
+  const auto &envValue = ZtStaticRegexUTF8(
+      "\\G[^`\"{},:]+");	// \G[^`"{},:]+
+  const auto &envValueQuoted = ZtStaticRegexUTF8(
+      "\\G`([`\"{},:\\s])"); // \G\\([`"{},:\s])
+  const auto &envDblQuote = ZtStaticRegexUTF8("\\G\"");	// \G"
+  const auto &envValueDblQuoted = ZtStaticRegexUTF8(
+      "\\G[^`\"]+");	// \G[^`"]+
+  const auto &envBeginScope = ZtStaticRegexUTF8("\\G\\{");	// \G\{
+  const auto &envComma = ZtStaticRegexUTF8("\\G,");		// \G,
+  ZtRegex::Captures c;
 
 key:
-    if (self->m_parent &&
-	envEndScope.m(data, c, pos)) {
-      pos += c[1].length();
-      self = self->m_parent;
-      goto key;
-    }
-    if (!first) {
-      if (!envColon.m(data, c, pos)) {
-	if (pos < n - 1) throw EnvSyntax(pos, data[pos]);
-	return;
-      }
-      pos += c[1].length();
-    }
-    if (!envKey.m(data, c, pos)) {
-      if (pos < n - 1 || !first) throw EnvSyntax(pos, data[pos]);
+  if (self->m_parent &&
+      envEndScope.m(data, c, pos)) {
+    pos += c[1].length();
+    self = self->m_parent;
+    goto key;
+  }
+  if (!first) {
+    if (!envColon.m(data, c, pos)) {
+      if (pos < n - 1) throw EnvSyntax(pos, data[pos]);
       return;
     }
     pos += c[1].length();
+  }
+  if (!envKey.m(data, c, pos)) {
+    if (pos < n - 1 || !first) throw EnvSyntax(pos, data[pos]);
+    return;
+  }
+  pos += c[1].length();
 
-    first = false;
+  first = false;
 
-    ZuString key = c[1];
-    NodeRef node = self->m_tree.findVal(key);
-    if (!node) {
-      if (validate) throw Invalid(self, key, ZuString());
-      self->m_tree.add(key, node = new Node());
-    }
-    ZtArray<ZtString> values;
+  ZuString key = c[1];
+  NodeRef node = self->m_tree.findVal(key);
+  if (!node) {
+    if (validate) throw Invalid(self, key, ZuString());
+    self->m_tree.add(key, node = new Node());
+  }
+  ZtArray<ZtString> values;
 
 val:
-    if (!values.length()) {
-      if (!envEquals.m(data, c, pos))
-	throw EnvSyntax(pos, data[pos]);
-      pos += c[1].length();
-    }
+  if (!values.length()) {
+    if (!envEquals.m(data, c, pos))
+      throw EnvSyntax(pos, data[pos]);
+    pos += c[1].length();
+  }
 
-    ZtString val;
-    bool multi = false;
+  ZtString val;
+  bool multi = false;
 
 append:
-    if (envValue.m(data, c, pos)) {
+  if (envValue.m(data, c, pos)) {
+    pos += c[1].length();
+    val += c[1];
+  }
+  if (envValueQuoted.m(data, c, pos)) {
+    pos += c[1].length();
+    val += c[2];
+    goto append;
+  }
+  if (envDblQuote.m(data, c, pos)) {
+    pos += c[1].length();
+quoted:
+    if (envValueDblQuoted.m(data, c, pos)) {
       pos += c[1].length();
       val += c[1];
     }
     if (envValueQuoted.m(data, c, pos)) {
       pos += c[1].length();
       val += c[2];
+      goto quoted;
+    }
+    if (pos < n - 1) {
+      pos++;
       goto append;
     }
-    if (envDblQuote.m(data, c, pos)) {
-      pos += c[1].length();
-quoted:
-      if (envValueDblQuoted.m(data, c, pos)) {
-	pos += c[1].length();
-	val += c[1];
-      }
-      if (envValueQuoted.m(data, c, pos)) {
-	pos += c[1].length();
-	val += c[2];
-	goto quoted;
-      }
-      if (pos < n - 1) {
-	pos++;
-	goto append;
-      }
-      values.push(ZuMv(val));
-      node->m_values = ZuMv(values);
-      return;
-    }
-    if (envBeginScope.m(data, c, pos)) {
-      pos += c[1].length();
-      if (val) values.push(ZuMv(val));
-      if (values.length()) {
-	node->m_values = ZuMv(values);
-	values.length(0);
-      }
-      if (!node->m_cf) {
-	if (validate) throw Invalid(self, key, ZuString());
-	node->m_cf = new ZvCf(self);
-      }
-      self = node->m_cf;
-      first = true;
-      goto key;
-    }
-    if (envComma.m(data, c, pos)) {
-      pos += c[1].length();
-      multi = true;
-    }
-
     values.push(ZuMv(val));
-    if (multi) goto val;
     node->m_values = ZuMv(values);
-    values.length(0);
-    goto key;
-  } catch (const ZtRegex::Error &e) {
-    throw ZvRegexError(e);
+    return;
   }
+  if (envBeginScope.m(data, c, pos)) {
+    pos += c[1].length();
+    if (val) values.push(ZuMv(val));
+    if (values.length()) {
+      node->m_values = ZuMv(values);
+      values.length(0);
+    }
+    if (!node->m_cf) {
+      if (validate) throw Invalid(self, key, ZuString());
+      node->m_cf = new ZvCf(self);
+    }
+    self = node->m_cf;
+    first = true;
+    goto key;
+  }
+  if (envComma.m(data, c, pos)) {
+    pos += c[1].length();
+    multi = true;
+  }
+
+  values.push(ZuMv(val));
+  if (multi) goto val;
+  node->m_values = ZuMv(values);
+  values.length(0);
+  goto key;
 }
 
 #ifdef _MSC_VER
@@ -698,19 +682,15 @@ ZtString ZvCf::quoteArgValue(ZuString in)
 
   ZtString out = in;
 
-  try {
-    const auto &argQuote = ZtStaticRegexUTF8("[`,]");	// [`,]
-    ZtRegex::Captures c;
-    unsigned pos = 0;
+  const auto &argQuote = ZtStaticRegexUTF8("[`,]");	// [`,]
+  ZtRegex::Captures c;
+  unsigned pos = 0;
 
-    while (pos < out.length() && argQuote.m(out, c, pos)) {
-      pos = c[0].length();
-      out.splice(pos, 0, "`", 1);
-      pos += c[1].length() + 1;
-      pos++;
-    }
-  } catch (const ZtRegex::Error &e) {
-    throw ZvRegexError(e);
+  while (pos < out.length() && argQuote.m(out, c, pos)) {
+    pos = c[0].length();
+    out.splice(pos, 0, "`", 1);
+    pos += c[1].length() + 1;
+    pos++;
   }
 
   return out;
@@ -751,39 +731,35 @@ ZtString ZvCf::quoteValue(ZuString in)
 
   ZtString out = in;
 
-  try {
-    const auto &quote1 = ZtStaticRegexUTF8("[#`\"{},\\s]");	// [#`"{},\s]
-    const auto &quote2 = ZtStaticRegexUTF8("[#`\",\\s]");	// [#`",\s]
-    const auto &quoteValueDbl = ZtStaticRegexUTF8("[`\"]");	// [`"]
-    const auto &quoteValue = ZtStaticRegexUTF8("[#`\"{},\\s]"); // [#`"{},\s]
-    ZtRegex::Captures c;
-    bool doubleQuote = false;
-    unsigned pos = 0;
+  const auto &quote1 = ZtStaticRegexUTF8("[#`\"{},\\s]");	// [#`"{},\s]
+  const auto &quote2 = ZtStaticRegexUTF8("[#`\",\\s]");	// [#`",\s]
+  const auto &quoteValueDbl = ZtStaticRegexUTF8("[`\"]");	// [`"]
+  const auto &quoteValue = ZtStaticRegexUTF8("[#`\"{},\\s]"); // [#`"{},\s]
+  ZtRegex::Captures c;
+  bool doubleQuote = false;
+  unsigned pos = 0;
 
-    if (quote1.m(out, c, pos)) {
-      pos = c[0].length() + c[1].length();
-      if (quote2.m(out, c, pos))
-	doubleQuote = true;
-    }
+  if (quote1.m(out, c, pos)) {
+    pos = c[0].length() + c[1].length();
+    if (quote2.m(out, c, pos))
+      doubleQuote = true;
+  }
 
-    pos = 0;
-    if (doubleQuote) {
-      while (quoteValueDbl.m(out, c, pos)) {
-	pos = c[0].length();
-	out.splice(pos, 0, "`", 1);
-	pos += c[1].length() + 1;
-      }
-      out.splice(0, 0, "\"", 1);
-      out.splice(out.length(), 0, "\"", 1);
-    } else {
-      while (quoteValue.m(out, c, pos)) {
-	pos = c[0].length();
-	out.splice(pos, 0, "`", 1);
-	pos += c[1].length() + 1;
-      }
+  pos = 0;
+  if (doubleQuote) {
+    while (quoteValueDbl.m(out, c, pos)) {
+      pos = c[0].length();
+      out.splice(pos, 0, "`", 1);
+      pos += c[1].length() + 1;
     }
-  } catch (const ZtRegex::Error &e) {
-    throw ZvRegexError(e);
+    out.splice(0, 0, "\"", 1);
+    out.splice(out.length(), 0, "\"", 1);
+  } else {
+    while (quoteValue.m(out, c, pos)) {
+      pos = c[0].length();
+      out.splice(pos, 0, "`", 1);
+      pos += c[1].length() + 1;
+    }
   }
 
   return out;

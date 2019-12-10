@@ -25,7 +25,7 @@
 
 ZtRegex::ZtRegex(const char *pattern, int options) : m_extra(0)
 {
-  Error error;
+  ZtRegexError error;
 
   m_regex = pcre_compile2(
     pattern, options, &error.code, &error.message, &error.offset, 0);
@@ -46,7 +46,7 @@ ZtRegex::~ZtRegex()
 
 void ZtRegex::study()
 {
-  Error error;
+  ZtRegexError error;
 
   error.offset = -1;
   error.code = -1;
@@ -96,7 +96,7 @@ static const char *exec_errors[] = {
   "UNSET"
 };
 
-const char *ZtRegex::exec_strerror(int i)
+const char *ZtRegexError::strerror(int i)
 {
   if (i < -33 || i > -1) return "UNKNOWN";
   return exec_errors[-i - 1];

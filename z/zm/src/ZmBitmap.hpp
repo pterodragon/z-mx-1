@@ -50,7 +50,7 @@ class ZmBitmap {
 public:
   ZuInline ZmBitmap() : m_map(0) { }
   ZuInline ZmBitmap(const ZmBitmap &b) :
-    m_map(b.m_map ? hwloc_bitmap_dup(b.m_map) : (hwloc_bitmap_t)0) { }
+    m_map(b.m_map ? hwloc_bitmap_dup(b.m_map) : (hwloc_bitmap_t)nullptr) { }
   ZuInline ZmBitmap(ZmBitmap &&b) : m_map(b.m_map) { b.m_map = 0; }
   ZuInline ZmBitmap &operator =(const ZmBitmap &b) {
     if (this == &b) return *this;
@@ -222,6 +222,9 @@ public:
   inline operator hwloc_bitmap_t() {
     lazy();
     return m_map;
+  }
+  inline operator const hwloc_bitmap_t() const {
+    return const_cast<ZmBitmap *>(this)->operator hwloc_bitmap_t();
   }
 
   inline ZmBitmap(uint64_t v) :

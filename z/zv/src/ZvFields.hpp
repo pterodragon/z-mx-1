@@ -56,9 +56,20 @@ namespace ZvFieldFlags {
 }
 
 ZuUnionFields(ZvTimeFmt_, csv, fix, iso);
-using ZvTimeFmt = ZvTimeFmt_<ZtDateFmt::CSV, ZtDateFmt::FIX, ZtDateFmt::ISO>;
+struct ZvTimeNull : public ZuPrintable {
+  template <typename S> inline void print(S &) const { }
+};
+using ZvTimeFmt =
+  ZvTimeFmt_<ZtDateFmt::CSV, ZtDateFmt::FIX<-9, ZvTimeNull>, ZtDateFmt::ISO>;
 
 struct ZvFieldFmt {
+  ZvFieldFmt() { new (time.new_csv()) ZtDateFmt::CSV{}; }
+  ZvFieldFmt(const ZvFieldFmt &) = default;
+  ZvFieldFmt &operator =(const ZvFieldFmt &) = default;
+  ZvFieldFmt(ZvFieldFmt &&) = default;
+  ZvFieldFmt &operator =(ZvFieldFmt &&) = default;
+  ~ZvFieldFmt() = default;
+
   ZuVFmt	scalar;			// scalar format (print only)
   ZvTimeFmt	time;			// date/time format
   char		flagsDelim = '|';	// flags delimiter
@@ -66,8 +77,8 @@ struct ZvFieldFmt {
 
 template <typename T> struct ZvField {
   const char	*id;
-  uint32_t	type;		// FieldType
-  uint32_t	flags;		// FieldFlags
+  uint32_t	type;		// ZvFieldType
+  uint32_t	flags;		// ZvFieldFlags
   void		(*print)(ZmStream &, const T *, const ZvFieldFmt &);
   void		(*scan)(ZuString, T *, const ZvFieldFmt &);
   double	(*scalar)(const T *) = nullptr;
@@ -83,31 +94,32 @@ template <typename T> struct ZvField {
       s << (get(o, member) ? '1' : '0'); }, \
     [](ZuString s, T *o, const ZvFieldFmt &) { \
       set(o, member, (s && s.length() == 1 && s[0] == '1')); } }
-#define ZvFieldScalar_(T, id, flags, member, get, set) \
+#define ZvFieldScalar_(T_, id, flags, member, get, set) \
   { #id, ZvFieldType::Scalar, flags, \
-    [](ZmStream &s, const T *o, const ZvFieldFmt &fmt) { \
+    [](ZmStream &s, const T_ *o, const ZvFieldFmt &fmt) { \
       s << ZuBoxed(get(o, member)).vfmt(fmt.scalar); }, \
-    [](ZuString s, T *o, const ZvFieldFmt &) { \
-      set(o, member, (typename ZuBoxT<decltype(get(o, member))>::T{s})); }, \
-    [](const T *o) { return (double)get(o, member); } }
+    [](ZuString s, T_ *o, const ZvFieldFmt &) { \
+      using V = typename ZuTraits<decltype(get(o, member))>::T; \
+      set(o, member, (typename ZuBoxT<V>::T{s})); }, \
+    [](const T_ *o) { return (double)get(o, member); } }
 #define ZvFieldEnum_(T, id, flags, map, member, get, set) \
   { #id, ZvFieldType::Enum, flags, \
     [](ZmStream &s, const T *o, const ZvFieldFmt &) { \
       s << map::instance()->v2s(get(o, member)); }, \
     [](ZuString s, T *o, const ZvFieldFmt &) { \
       set(o, member, (map::instance()->s2v(s))); } }
-#define ZvFieldFlags_(T, id, flags, map, member, get, set) \
-  { #id, flags, \
-    [](ZmStream &s, const T *o, const ZvFieldFmt &fmt) { \
+#define ZvFieldFlags_(T_, id, flags, map, member, get, set) \
+  { #id, ZvFieldType::Flags, flags, \
+    [](ZmStream &s, const T_ *o, const ZvFieldFmt &fmt) { \
       map::instance()->print(s, get(o, member), fmt.flagsDelim); }, \
-    [](ZuString s, T *o, const ZvFieldFmt &fmt) { \
-      set(o, member, (map::instance()->scan(s, fmt.flagsDelim))); } }
+    [](ZuString s, T_ *o, const ZvFieldFmt &fmt) { \
+      using V = typename ZuTraits<decltype(get(o, member))>::T; \
+      set(o, member, (map::instance()->scan<V>(s, fmt.flagsDelim))); } }
 #define ZvFieldTime_(T, id, flags, member, get, set) \
-  { #id, flags, \
+  { #id, ZvFieldType::Time, flags, \
     [](ZmStream &s, const T *o, const ZvFieldFmt &fmt) { \
       switch (fmt.time.type()) { \
 	default: \
-	  new (fmt.time.new_<1>()) ZtDateFmt::CSV{}; \
 	case 1: \
 	  s << get(o, member).csv(fmt.time.csv()); \
 	  break; \
@@ -129,7 +141,7 @@ template <typename T> struct ZvField {
 	  set(o, member, (ZtDate{ZtDate::FIX, s})); \
 	  break; \
 	case 3: \
-	  set(o, member, (ZtDate{ZtDate::ISO, s})); \
+	  set(o, member, (ZtDate{s})); \
 	  break; \
       } \
     } }

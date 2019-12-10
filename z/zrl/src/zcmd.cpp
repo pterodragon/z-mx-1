@@ -1208,7 +1208,7 @@ int main(int argc, char **argv)
 	port = c[2];
       }
     }
-  } catch (const ZtRegex::Error &) {
+  } catch (const ZtRegexError &) {
     usage();
   }
   if (!server || !*port || !port) usage();

@@ -182,13 +182,17 @@ private:
   }
 
   ColArray columns(const ColNames &names) const {
-    if (!names.length() || (names.length() == 1 && names[0] == "*"))
-      return ColArray{m_fields};
     ColArray colArray;
-    unsigned n = names.length();
-    colArray.size(n);
-    for (unsigned i = 0; i < n; i++)
-      if (const Field *field = find(names[i])) colArray.push(field);
+    if (!names.length() || (names.length() == 1 && names[0] == "*")) {
+      unsigned n = m_fields.length();
+      colArray.size(n);
+      for (unsigned i = 0; i < n; i++) colArray.push(&m_fields[i]);
+    } else {
+      unsigned n = names.length();
+      colArray.size(n);
+      for (unsigned i = 0; i < n; i++)
+	if (const Field *field = find(names[i])) colArray.push(field);
+    }
     return colArray;
   }
 

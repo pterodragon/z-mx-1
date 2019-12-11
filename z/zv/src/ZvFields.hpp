@@ -163,6 +163,19 @@ template <typename T> struct ZvField {
 	ZvFieldFlags_(T, id, flags, map, id, ZvField_Get, ZvField_Set)
 #define ZvFieldTime(T, id, flags) \
 	ZvFieldTime_(T, id, flags, id, ZvField_Get, ZvField_Set)
+// alias fields (id different than data member)
+#define ZvFieldStringAlias(T, id, alias, flags) \
+	ZvFieldString_(T, id, flags, alias, ZvField_Get, ZvField_Set)
+#define ZvFieldBoolAlias(T, id, alias, flags) \
+	ZvFieldBool_(T, id, flags, alias, ZvField_Get, ZvField_Set)
+#define ZvFieldScalarAlias(T, id, alias, flags) \
+	ZvFieldScalar_(T, id, flags, alias, ZvField_Get, ZvField_Set)
+#define ZvFieldEnumAlias(T, id, alias, flags, map) \
+	ZvFieldEnum_(T, id, flags, map, alias, ZvField_Get, ZvField_Set)
+#define ZvFieldFlagsAlias(T, id, alias, flags, map) \
+	ZvFieldFlags_(T, id, flags, map, alias, ZvField_Get, ZvField_Set)
+#define ZvFieldTimeAlias(T, id, alias, flags) \
+	ZvFieldTime_(T, id, flags, alias, ZvField_Get, ZvField_Set)
 
 // function member get/set
 #define ZvField_GetFn(o, member) (o->member())
@@ -189,9 +202,9 @@ template <typename T> struct ZvField {
 	ZvFieldBool_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldScalarAccessor(T, id, fn, flags) \
 	ZvFieldScalar_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
-#define ZvFieldEnumAccessor(T, id, flags, map) \
+#define ZvFieldEnumAccessor(T, id, fn, flags, map) \
 	ZvFieldEnum_(T, id, flags, map, fn, ZvField_GetFn, ZvField_SetFn)
-#define ZvFieldFlagsAccessor(T, id, flags, map) \
+#define ZvFieldFlagsAccessor(T, id, fn, flags, map) \
 	ZvFieldFlags_(T, id, flags, map, fn, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldTimeAccessor(T, id, fn, flags) \
 	ZvFieldTime_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)

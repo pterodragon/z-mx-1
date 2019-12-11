@@ -57,12 +57,11 @@
 #include <zlib/ZiFile.hpp>
 #include <zlib/ZiMultiplex.hpp>
 
+#include <zlib/Zfb.hpp>
+
 #include <zlib/ZvCf.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4800)
-#endif
+#include <zlib/telemetry_fbs.h>
 
 #if defined(ZDEBUG) && !defined(ZdbRep_DEBUG)
 #define ZdbRep_DEBUG
@@ -182,11 +181,6 @@ private:
   uint32_t	m_val;
 };
 template <> struct ZuPrint<ZdbRange> : public ZuPrintFn { };
-
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
 
 struct Zdb_File_IndexAccessor;
 
@@ -531,6 +525,11 @@ namespace ZdbCacheMode {
   ZtEnumNames("Normal", "FullCache");
 };
 #endif
+
+namespace ZdbCacheMode {
+  using namespace ZvTelemetry::fbs;
+  ZfbEnumValues(DBCacheMode, Normal, FullCache);
+}
 
 struct ZdbHandler {
   ZdbAllocFn	allocFn;
@@ -1243,9 +1242,5 @@ private:
   HostTree			m_hosts;
   ZmRef<CxnHash>		m_cxns;
 };
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 #endif /* Zdb_HPP */

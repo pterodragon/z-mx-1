@@ -46,32 +46,28 @@ struct Row {
 };
 inline const ZvFields<Row> Row::fields() noexcept {
   using namespace ZvFieldFlags;
-  return ZvFields<Row>{std::initializer_list<ZvField<Row>>{
-    ZvFieldString(Row, m_string, Primary),
-    ZvFieldScalar(Row, m_int, 0),
-    ZvFieldBool(Row, m_bool, 0),
-    ZvFieldScalar(Row, m_float, 0),
-    ZvFieldEnum(Row, m_enum, 0, Enums::Map),
-    ZvFieldTime(Row, m_time, 0),
-    ZvFieldFlags(Row, m_flags, 0, DaFlags::Map),
-  } };
+  static const ZvField<Row> fields[] = {
+    ZvFieldStringAlias(Row, string, m_string, Primary),
+    ZvFieldScalarAlias(Row, int, m_int, 0),
+    ZvFieldBoolAlias(Row, bool, m_bool, 0),
+    ZvFieldScalarAlias(Row, float, m_float, 0),
+    ZvFieldEnumAlias(Row, enum, m_enum, 0, Enums::Map),
+    ZvFieldTimeAlias(Row, time, m_time, 0),
+    ZvFieldFlagsAlias(Row, flags, m_flags, 0, DaFlags::Map),
+  };
+  return ZvFields<Row>{fields};
 }
 
-struct CSVWrite {
-  typedef ZmList<ZuRef<ZuPOD<Row> > > VList;
-  CSVWrite() { }
-
-  VList m_list;
-};
+using CSVWrite = ZmList<ZuRef<ZuPOD<Row> > >;
 
 struct RowSet {
   Row *alloc() {
     ZuRef<ZuPOD<Row> > row = new ZuPOD<Row>();
     new (row->ptr()) Row();
-    m_rows.push(row);
+    rows.push(row);
     return row->ptr();
   }
-  ZmList<ZuRef<ZuPOD<Row> > >	m_rows;
+  ZmList<ZuRef<ZuPOD<Row> > >	rows;
 };
 
 int main()
@@ -96,29 +92,28 @@ int main()
 
       ZuRef<ZuPOD<Row> > row;
 
-      CSVWrite filtList;
       CSVWrite unFiltList;
+      CSVWrite filtList;
 
-      while (row = rowSet.m_rows.shift()) {
+      while (row = rowSet.rows.shift()) {
 	printf("%s, %d, %c, %f, %s (%d:%d) %i\n", 
 	       row->ptr()->m_string.data(),
 	       (int)row->ptr()->m_int,
 	       row->ptr()->m_bool ? 'Y' : 'N',
 	       (double)row->ptr()->m_float,
-	       (const char *)ZvEnum<Enums::Map>::instance()->v2s(
-		 "enum", row->ptr()->m_enum),
+	       (const char *)Enums::Map::instance()->v2s(row->ptr()->m_enum),
 	       (row->ptr()->m_time).yyyymmdd(),
 	       (row->ptr()->m_time).hhmmss(),
 	       (int)row->ptr()->m_flags);
-	filtList.m_list.push(row);
-	unFiltList.m_list.push(row);
+	unFiltList.push(row);
+	filtList.push(row);
       }
 
       ZtArray<ZtString> filter;
       filter.push("*");
       {
 	auto fn = csv.writeFile("all.written.csv", filter);
-	while (ZuRef<ZuPOD<Row>> pod = unFiltList.m_list.shift())
+	while (ZuRef<ZuPOD<Row>> pod = unFiltList.shift())
 	  fn(pod->ptr());
 	fn(nullptr);
       }
@@ -127,7 +122,7 @@ int main()
       filter.push("flags");
       {
 	auto fn = csv.writeFile("filt.written.csv", filter);
-	while (ZuRef<ZuPOD<Row>> pod = unFiltList.m_list.shift())
+	while (ZuRef<ZuPOD<Row>> pod = filtList.shift())
 	  fn(pod->ptr());
 	fn(nullptr);
       }

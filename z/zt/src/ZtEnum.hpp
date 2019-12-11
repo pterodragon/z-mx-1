@@ -82,7 +82,7 @@ typedef ZuBox_1(int8_t) ZtEnum;
       auto i = m_s2v->readIterator(); \
       for (;;) { \
 	auto kv = i.iterate(); \
-	if (!kv.template p<0>()) break; \
+	if (!i) break; \
 	l(kv.template p<0>(), kv.template p<1>()); \
       } \
     } \

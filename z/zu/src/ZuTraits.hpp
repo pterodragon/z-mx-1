@@ -205,10 +205,15 @@ struct ZuTraits<const volatile T *> :
 
 template <typename T, typename Elem_>
 struct ZuTraits_Array : public ZuGenericTraits<T> {
+  using Elem = Elem_;
+  using ElemTraits = ZuTraits<Elem>;
   enum {
-    IsPrimitive = 1, IsPOD = 1, IsArray = 1, IsHashable = 1, IsComparable = 1
+    IsPrimitive = 1, // the array is primitive, the element might not be
+    IsPOD = ElemTraits::IsPOD,
+    IsArray = 1,
+    IsHashable = ElemTraits::IsHashable,
+    IsComparable = ElemTraits::IsComparable
   };
-  typedef Elem_ Elem;
   inline static const Elem *data(const T &a) { return &a[0]; }
   inline static unsigned length(const T &a) { return sizeof(a) / sizeof(a[0]); }
 };

@@ -517,6 +517,9 @@ friend class Iterator_;
 
     ZuInline unsigned count() const { return m_hash.count_(); }
 
+    ZuInline bool operator !() const { return m_slot < 0; }
+    ZuOpBool
+
   protected:
     Hash	&m_hash;
     int		m_slot;

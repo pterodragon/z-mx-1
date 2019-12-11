@@ -1,4 +1,4 @@
-namespace Zfb.fbs;
+namespace Zfb;
 struct Decimal {
   h:uint64;
   l:uint64;

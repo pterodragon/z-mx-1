@@ -195,7 +195,7 @@ namespace Save {
 
   // decimal
   ZuInline auto decimal(const ZuDecimal &v) {
-    return fbs::Decimal{(uint64_t)(v.value>>64), (uint64_t)v.value};
+    return Decimal{(uint64_t)(v.value>>64), (uint64_t)v.value};
   }
 
   // bitmap
@@ -216,7 +216,7 @@ namespace Save {
   // date/time
   template <typename B>
   ZuInline auto dateTime(B &b, const ZtDate &v) {
-    return fbs::CreateDateTime(b, v.julian(), v.sec(), v.nsec());
+    return CreateDateTime(b, v.julian(), v.sec(), v.nsec());
   }
 }
 
@@ -240,7 +240,7 @@ namespace Load {
   }
 
   // decimal
-  ZuInline ZuDecimal decimal(const fbs::Decimal *v) {
+  ZuInline ZuDecimal decimal(const Decimal *v) {
     return ZuDecimal{ZuDecimal::Unscaled, (((int128_t)(v->h()))<<64) | v->l()};
   }
 
@@ -260,7 +260,7 @@ namespace Load {
   }
 
   // date/time
-  ZuInline ZtDate dateTime(const fbs::DateTime *v) {
+  ZuInline ZtDate dateTime(const DateTime *v) {
     return ZtDate{ZtDate::Julian, v->julian(), v->sec(), v->nsec()};
   }
 }
@@ -283,6 +283,7 @@ namespace Load {
 	      ZmLHashVal<ZtEnum, \
 		ZmLHashStatic<Bits, \
 		  ZmLHashLock<ZmNoLock> > > > S2V; \
+  protected: \
     void init(const char *s, int v, ...) { \
       if (ZuUnlikely(!s)) return; \
       add(s, v); \
@@ -308,12 +309,14 @@ namespace Load {
   private: \
     ZmRef<S2V>	m_s2v; \
   }; \
+  inline const char *name(int i) { \
+    return EnumName##Enum(static_cast<Enum>(i)); \
+  } \
   struct Map : public Map_<Map> { \
     Map() { for (unsigned i = 0; i < N; i++) this->add(name(i), i); } \
   }; \
   template <typename S> inline ZtEnum lookup(const S &s) { \
     return Map::instance()->s2v(s); \
-  } \
-  inline const char *name(int i) { return EnumName##name(v); }
+  }
 
 #endif /* Zfb_HPP */

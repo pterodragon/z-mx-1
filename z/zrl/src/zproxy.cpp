@@ -64,16 +64,18 @@ class App;		// the app (singleton) owns mx, listeners and proxies
 
 #define BufSize (32<<10)
 
-// wrapper for { op, result, errno }
-typedef ZuTuple<const char *, int, ZeError> Error;
+ZuTupleFields(Error_, op, result, error);
+typedef Error_<const char *, int, ZeError> Error;
 // overloaded print for various types
-template <typename T> struct Print {
+template <typename T> struct Print : public ZuPrintable {
   Print(const T &v_) : v(v_) { }
 
   // Error wrapper
   template <typename S, typename T_ = T>
   inline typename ZuIs<T_, Error>::T print(S &s) const {
-    s << v.p<0>() << "() - " << Zi::resultName(v.p<1>()) << " - " << v.p<2>();
+    s << v.op()
+      << "() - " << Zi::resultName(v.result()) << " - "
+      << v.error();
   }
   // ZiCxnInfo
   template <typename S, typename T_ = T>
@@ -85,7 +87,6 @@ template <typename T> struct Print {
 
   const T &v;
 };
-template <typename T> struct ZuPrint<Print<T> > : public ZuPrintFn { };
 template <typename T> inline Print<T> print(const T &v) { return Print<T>(v); }
 
 class IOBuf : public ZmPolymorph {

@@ -141,7 +141,6 @@ public:
   template <typename A>
   ZuInline typename MatchStrLiteral<A, ZuArray &>::T operator =(A &&a) {
     m_data = &a[0];
-    m_length = !sizeof(a) ? 0U : !a[0] ? 0U : (sizeof(a) / sizeof(a[0])) - 1U;
     m_length = (ZuUnlikely(!(sizeof(a) / sizeof(a[0])) || !a[0])) ? 0U :
       (sizeof(a) / sizeof(a[0])) - 1U;
     return *this;
@@ -151,14 +150,11 @@ public:
   template <typename A>
   ZuInline ZuArray(A &&a, typename MatchPrimitiveArray<A>::T *_ = 0) :
     m_data(&a[0]),
-    m_length((ZuUnlikely(!(sizeof(a) / sizeof(a[0])) || !a[0])) ? 0U :
-      sizeof(a) / sizeof(a[0])) { }
+    m_length(sizeof(a) / sizeof(a[0])) { }
   template <typename A>
   ZuInline typename MatchPrimitiveArray<A, ZuArray &>::T operator =(A &&a) {
     m_data = &a[0];
-    m_length = !sizeof(a) ? 0U : !a[0] ? 0U : (sizeof(a) / sizeof(a[0])) - 1U;
-    m_length = (ZuUnlikely(!(sizeof(a) / sizeof(a[0])) || !a[0])) ? 0U :
-      sizeof(a) / sizeof(a[0]);
+    m_length = sizeof(a) / sizeof(a[0]);
     return *this;
   }
 
@@ -216,7 +212,7 @@ public:
   // if (ZuString s = "") { } else { puts("ok"); }
   // if (ZuString s = 0) { } else { puts("ok"); }
   ZuInline operator const T *() const {
-    return !length() ? (const T *)0 : m_data;
+    return !length() ? (const T *)nullptr : m_data;
   }
 
   ZuInline bool operator !() const { return !length(); }

@@ -519,13 +519,6 @@ struct ZdbConfig {
   ZmHashParams		fileHash;
 };
 
-#if 0
-namespace ZdbCacheMode {
-  ZtEnumValues(Normal, FullCache);
-  ZtEnumNames("Normal", "FullCache");
-};
-#endif
-
 namespace ZdbCacheMode {
   using namespace ZvTelemetry::fbs;
   ZfbEnumValues(DBCacheMode, Normal, FullCache);
@@ -779,6 +772,13 @@ struct ZdbHostConfig {
   ZtString	down;
 };
 
+namespace ZdbHostState {
+  using namespace ZvTelemetry::fbs;
+  ZfbEnumValues(DBHostState,
+      Instantiated, Initialized, Stopped, Electing,
+      Activating, Active, Deactivating, Inactive, Stopping);
+}
+
 class ZdbAPI ZdbHost : public ZmPolymorph {
 friend class ZdbEnv;
 friend class Zdb_Cxn;
@@ -788,22 +788,6 @@ template <typename> friend struct ZuPrint;
   typedef ZmGuard<Lock> Guard;
   typedef ZmReadGuard<Lock> ReadGuard;
 
-public:
-#if 0
-  enum State {
-    Instantiated = 0,	// instantiated, init() not yet called
-    Initialized,	// init() called
-    Stopped,		// open() called
-    Electing,		// start() called, determining active/inactive
-    Activating,		// activating application
-    Active,		// active (master)
-    Deactivating,	// deactivating application
-    Inactive,		// inactive (client)
-    Stopping		// stop() called - stopping
-  };
-#endif
-
-private:
   struct IDAccessor;
 friend struct IDAccessor;
   struct IDAccessor : public ZuAccessor<ZdbHost *, int> {
@@ -847,9 +831,10 @@ private:
   inline Zdb_DBState &dbState() { return m_dbState; }
 
   inline bool active() const {
+    using namespace ZdbHostState;
     switch (m_state) {
-      case ZdbHost::Activating:
-      case ZdbHost::Active:
+      case Activating:
+      case Active:
 	return true;
     }
     return false;
@@ -1086,7 +1071,7 @@ public:
   inline ZiMultiplex *mx() const { return m_mx; }
 
   inline int state() const {
-    return m_self ? m_self->state() : ZdbHost::Instantiated;
+    return m_self ? m_self->state() : ZdbHostState::Instantiated;
   }
   inline void state(int n) {
     if (!m_self) {
@@ -1097,20 +1082,22 @@ public:
     m_self->state(n);
   }
   inline bool running() {
+    using namespace ZdbHostState;
     switch (state()) {
-      case ZdbHost::Electing:
-      case ZdbHost::Activating:
-      case ZdbHost::Active:
-      case ZdbHost::Deactivating:
-      case ZdbHost::Inactive:
+      case Electing:
+      case Activating:
+      case Active:
+      case Deactivating:
+      case Inactive:
 	return true;
     }
     return false;
   }
   inline bool active() {
+    using namespace ZdbHostState;
     switch (state()) {
-      case ZdbHost::Activating:
-      case ZdbHost::Active:
+      case Activating:
+      case Active:
 	return true;
     }
     return false;

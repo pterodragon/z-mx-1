@@ -267,10 +267,10 @@ namespace Load {
 
 } // Zfb
 
-#define ZfbEnum_Value(Enum, Value) Value = Enum##_##Value
+#define ZfbEnum_Value(Enum, Value) Value = Enum##_##Value,
 #define ZfbEnumValues(Enum, ...) \
   enum _ { Invalid = -1, \
-    ZuPP_Eval(ZuPP_MapArg(ZfbEnum_Value, Enum, __VA_ARGS__)), \
+    ZuPP_Eval(ZuPP_MapArg(ZfbEnum_Value, Enum, __VA_ARGS__)) \
     N = Enum##_MAX + 1 }; \
   ZuAssert(N <= 1024); \
   enum { Bits = \

@@ -9,7 +9,7 @@ pkginclude_HEADERS = Zdb.hpp ZdbLib.hpp
 lib_LTLIBRARIES = libZdb.la
 libZdb_la_SOURCES = Zdb.cpp ZdbLib.cpp
 libZdb_la_LIBADD = \
-	$(top_builddir)/zv/src/libZv.la $(top_builddir)/zv/src/libZfb.la \
+	$(top_builddir)/zv/src/libZv.la $(top_builddir)/zfb/src/libZfb.la \
 	$(top_builddir)/zi/src/libZi.la $(top_builddir)/ze/src/libZe.la \
 	$(top_builddir)/zt/src/libZt.la $(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la \

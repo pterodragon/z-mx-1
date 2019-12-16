@@ -293,12 +293,15 @@ namespace Load {
 	add(s, v = va_arg(args, int)); \
       va_end(args); \
     } \
-    inline void add(ZuString s, ZtEnum v) { m_s2v->add(s, v); } \
+    void add(ZuString s, ZtEnum v) { m_s2v->add(s, v); } \
   public: \
-    inline Map_() { m_s2v = new S2V(); } \
-    inline static T *instance() { return ZmSingleton<T>::instance(); } \
-    inline ZtEnum s2v(ZuString s) const { return m_s2v->findVal(s); } \
-    template <typename L> inline void all(L l) const { \
+    Map_() { m_s2v = new S2V(); } \
+    static T *instance() { return ZmSingleton<T>::instance(); } \
+    static ZuString v2s(int v) { \
+      return fbs::EnumName##Enum(static_cast<fbs::Enum>(v)); \
+    } \
+    ZtEnum s2v(ZuString s) const { return m_s2v->findVal(s); } \
+    template <typename L> void all(L l) const { \
       auto i = m_s2v->readIterator(); \
       for (;;) { \
 	auto kv = i.iterate(); \
@@ -309,13 +312,13 @@ namespace Load {
   private: \
     ZmRef<S2V>	m_s2v; \
   }; \
-  inline const char *name(int i) { \
+  const char *name(int i) { \
     return fbs::EnumName##Enum(static_cast<fbs::Enum>(i)); \
   } \
   struct Map : public Map_<Map> { \
     Map() { for (unsigned i = 0; i < N; i++) this->add(name(i), i); } \
   }; \
-  template <typename S> inline ZtEnum lookup(const S &s) { \
+  template <typename S> ZtEnum lookup(const S &s) { \
     return Map::instance()->s2v(s); \
   }
 

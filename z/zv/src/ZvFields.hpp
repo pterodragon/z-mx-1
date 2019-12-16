@@ -177,26 +177,6 @@ template <typename T> struct ZvField {
 #define ZvFieldTimeAlias(T, id, alias, flags) \
 	ZvFieldTime_(T, id, flags, alias, ZvField_Get, ZvField_Set)
 
-#define ZvDataField(T, args) \
-  ZuPP_Defer(ZvDataField_)()(T, ZuPP_Strip1 ZuPP_Strip2(args))
-#define ZvDataField_() ZvDataField__
-#define ZvDataField__(T, type, ...) ZvField##type(T, __VA_ARGS__),
-#define ZvDataFields(T, ...)  \
-  using namespace ZvFieldFlags; \
-  return ZvFields<T>{std::initializer_list<ZvField<T>>{ \
-    ZuPP_Eval(ZuPP_MapArg(ZvDataField, T, __VA_ARGS__)) \
-  } }
-
-#define ZvAliasField(T, args) \
-  ZuPP_Defer(ZvAliasField_)()(T, ZuPP_Strip1 ZuPP_Strip2(args))
-#define ZvAliasField_() ZvAliasField__
-#define ZvAliasField__(T, type, ...) ZvField##type##Alias(T, __VA_ARGS__),
-#define ZvAliasFields(T, ...)  \
-  using namespace ZvFieldFlags; \
-  return ZvFields<T>{std::initializer_list<ZvField<T>>{ \
-    ZuPP_Eval(ZuPP_MapArg(ZvAliasField, T, __VA_ARGS__)) \
-  } }
-
 // function member get/set
 #define ZvField_GetFn(o, member) (o->member())
 #define ZvField_SetFn(o, member, v) (o->member(v))
@@ -229,24 +209,14 @@ template <typename T> struct ZvField {
 #define ZvFieldTimeAliasFn(T, id, fn, flags) \
 	ZvFieldTime_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
 
-#define ZvFnField(T, args) \
-  ZuPP_Defer(ZvFnField_)()(T, ZuPP_Strip1 ZuPP_Strip2(args))
-#define ZvFnField_() ZvFnField__
-#define ZvFnField__(T, type, ...) ZvField##type##Fn(T, __VA_ARGS__),
-#define ZvFnFields(T, ...)  \
+#define ZvDeclField(T, args) \
+  ZuPP_Defer(ZvDeclField_)()(T, ZuPP_Strip1 ZuPP_Strip2(args))
+#define ZvDeclField_() ZvDeclField__
+#define ZvDeclField__(T, type, ...) ZvField##type(T, __VA_ARGS__),
+#define ZvDeclFields(T, ...)  \
   using namespace ZvFieldFlags; \
   return ZvFields<T>{std::initializer_list<ZvField<T>>{ \
-    ZuPP_Eval(ZuPP_MapArg(ZvFnField, T, __VA_ARGS__)) \
-  } }
-
-#define ZvAliasFnField(T, args) \
-  ZuPP_Defer(ZvAliasFnField_)()(T, ZuPP_Strip1 ZuPP_Strip2(args))
-#define ZvAliasFnField_() ZvAliasFnField__
-#define ZvAliasFnField__(T, type, ...) ZvField##type##AliasFn(T, __VA_ARGS__),
-#define ZvAliasFnFields(T, ...)  \
-  using namespace ZvFieldFlags; \
-  return ZvFields<T>{std::initializer_list<ZvField<T>>{ \
-    ZuPP_Eval(ZuPP_MapArg(ZvAliasFnField, T, __VA_ARGS__)) \
+    ZuPP_Eval(ZuPP_MapArg(ZvDeclField, T, __VA_ARGS__)) \
   } }
 
 template <typename T> using ZvFields = ZuArray<ZvField<T>>;

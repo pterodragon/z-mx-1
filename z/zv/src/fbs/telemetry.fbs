@@ -154,8 +154,8 @@ table Engine {
   reconn:uint16;
   failed:uint16;
   nLinks:uint16;
-  rxThreadIndex:uint16;
-  txThreadIndex:uint16;
+  rxThread:uint16;
+  txThread:uint16;
   state:EngineState;
   links:[Link];
 }

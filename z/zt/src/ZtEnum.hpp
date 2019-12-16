@@ -71,14 +71,13 @@ typedef ZuBox_1(int8_t) ZtEnum;
 	add(s, v = va_arg(args, int)); \
       va_end(args); \
     } \
-    inline void add(ZuString s, ZtEnum v) \
-      { m_s2v->add(s, v); m_v2s->add(v, s); } \
+    void add(ZuString s, ZtEnum v) { m_s2v->add(s, v); m_v2s->add(v, s); } \
   public: \
-    inline Map_() { m_s2v = new S2V(); m_v2s = new V2S(); } \
-    inline static T *instance() { return ZmSingleton<T>::instance(); } \
-    inline ZtEnum s2v(ZuString s) const { return m_s2v->findVal(s); } \
-    inline ZuString v2s(ZtEnum v) const { return m_v2s->findVal(v); } \
-    template <typename L> inline void all(L l) const { \
+    Map_() { m_s2v = new S2V(); m_v2s = new V2S(); } \
+    static T *instance() { return ZmSingleton<T>::instance(); } \
+    ZtEnum s2v(ZuString s) const { return m_s2v->findVal(s); } \
+    ZuString v2s(ZtEnum v) const { return m_v2s->findVal(v); } \
+    template <typename L> void all(L l) const { \
       auto i = m_s2v->readIterator(); \
       for (;;) { \
 	auto kv = i.iterate(); \
@@ -116,7 +115,7 @@ typedef ZuBox_1(int8_t) ZtEnum;
   struct Map : public Map_<Map> { \
     Map() { this->init(__VA_ARGS__, (const char *)0); } \
     template <typename S, typename Flags_> \
-    inline unsigned print(S &s, const Flags_ &v, char delim = '|') const { \
+    unsigned print(S &s, const Flags_ &v, char delim = '|') const { \
       if (!v) return 0; \
       bool first = true; \
       unsigned n = 0; \
@@ -133,7 +132,7 @@ typedef ZuBox_1(int8_t) ZtEnum;
       return n; \
     } \
     template <typename Flags_> \
-    inline Flags_ scan(ZuString s, char delim = '|') const { \
+    Flags_ scan(ZuString s, char delim = '|') const { \
       if (!s) return 0; \
       Flags_ v = 0; \
       bool end = false; \
@@ -155,16 +154,16 @@ typedef ZuBox_1(int8_t) ZtEnum;
     } \
     template <typename Flags_> \
     struct Print : public ZuPrintable { \
-      inline Print(const Flags_ &v_, char delim_ = '|') : \
+      Print(const Flags_ &v_, char delim_ = '|') : \
 	v(v_), delim(delim_) { } \
-      template <typename S> inline void print(S &s) const { \
+      template <typename S> void print(S &s) const { \
 	ZmSingleton<Map>::instance()->print(s, v, delim); \
       } \
       const Flags_	&v; \
       char		delim; \
     }; \
     template <typename Flags_> \
-    inline static Print<Flags_> print(const Flags_ &v) { \
+    static Print<Flags_> print(const Flags_ &v) { \
       return Print<Flags_>(v); \
     } \
   };

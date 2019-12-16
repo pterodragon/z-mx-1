@@ -60,6 +60,7 @@
 #include <zlib/Zfb.hpp>
 
 #include <zlib/ZvCf.hpp>
+#include <zlib/ZvTelemetry.hpp>
 
 #include <zlib/telemetry_fbs.h>
 
@@ -745,10 +746,7 @@ struct ZdbHostConfig {
 };
 
 namespace ZdbHostState {
-  using namespace ZvTelemetry::fbs;
-  ZfbEnumValues(DBHostState,
-      Instantiated, Initialized, Stopped, Electing,
-      Activating, Active, Deactivating, Inactive, Stopping);
+  using namespace ZvTelemetry::DBHostState;
 }
 
 class ZdbAPI ZdbHost : public ZmPolymorph {

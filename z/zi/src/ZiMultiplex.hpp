@@ -498,7 +498,7 @@ template <> struct ZuPrint<ZiCxnInfo> : public ZuPrintFn { };
 
 // display sequence:
 //   mxID, type, remoteIP, remotePort, localIP, localPort,
-//   fd, flags, mreqAddr, mreqIf, mif, ttl,
+//   socket, flags, mreqAddr, mreqIf, mif, ttl,
 //   rxBufSize, rxBufLen, txBufSize, txBufLen
 struct ZiCxnTelemetry {
   ZuID		mxID;		// multiplexer ID
@@ -763,7 +763,7 @@ struct ZiMxTelemetry { // not graphable
   uint16_t	rxThread;
   uint16_t	txThread;
   uint16_t	partition;
-  uint8_t	state;	// RAG: Running - Green; Stopped - Red; * - Amber
+  int8_t	state;	// RAG: Running - Green; Stopped - Red; * - Amber
   uint8_t	ll;
   uint8_t	priority;
   uint8_t	nThreads;

@@ -45,17 +45,14 @@ struct Row {
   int		m_flags;
 };
 inline const ZvFields<Row> Row::fields() noexcept {
-  using namespace ZvFieldFlags;
-  static const ZvField<Row> fields[] = {
-    ZvFieldStringAlias(Row, string, m_string, Primary),
-    ZvFieldScalarAlias(Row, int, m_int, 0),
-    ZvFieldBoolAlias(Row, bool, m_bool, 0),
-    ZvFieldScalarAlias(Row, float, m_float, 0),
-    ZvFieldEnumAlias(Row, enum, m_enum, 0, Enums::Map),
-    ZvFieldTimeAlias(Row, time, m_time, 0),
-    ZvFieldFlagsAlias(Row, flags, m_flags, 0, DaFlags::Map),
-  };
-  return ZvFields<Row>{fields};
+  ZvMkFields(Row,
+      (StringAlias, string, m_string, Primary),
+      (ScalarAlias, int, m_int, 0),
+      (BoolAlias, bool, m_bool, 0),
+      (ScalarAlias, float, m_float, 0),
+      (EnumAlias, enum, m_enum, 0, Enums::Map),
+      (TimeAlias, time, m_time, 0),
+      (FlagsAlias, flags, m_flags, 0, DaFlags::Map));
 }
 
 using CSVWrite = ZmList<ZuRef<ZuPOD<Row> > >;

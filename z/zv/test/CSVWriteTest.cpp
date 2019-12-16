@@ -38,16 +38,13 @@ struct Row {
   int		flags;
 };
 inline const ZvFields<Row> Row::fields() noexcept {
-  using namespace ZvFieldFlags;
-  static const ZvField<Row> fields[] = {
-    ZvFieldString(Row, foo, Primary),
-    ZvFieldBool(Row, bar, 0),
-    ZvFieldScalar(Row, baz, 0),
-    ZvFieldScalar(Row, snafu, 0),
-    ZvFieldTime(Row, mabbit, 0),
-    ZvFieldFlags(Row, flags, 0, DaFlags::Map),
-  };
-  return ZvFields<Row>{fields};
+  ZvMkFields(Row,
+      (String, foo, Primary),
+      (Bool, bar, 0),
+      (Scalar, baz, 0),
+      (Scalar, snafu, 0),
+      (Time, mabbit, 0),
+      (Flags, flags, 0, DaFlags::Map));
 }
 
 using CSVWrite = ZmList<ZuRef<ZuPOD<Row> > >;

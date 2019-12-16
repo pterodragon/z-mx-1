@@ -51,8 +51,9 @@ namespace ZvFieldFlags {
     Primary	= 0x01,		// primary key
     Secondary	= 0x02,		// secondary key
     TimeSeries	= 0x04,		// scalar that varies over time
-    Derived	= 0x08,		// derived scalar
-    ColorRAG	= 0x10		// red/amber/green
+    Synthetic	= 0x08,		// synthetic scalar
+    Cumulative	= 0x10,		// first derivative should be logged/graphed
+    ColorRAG	= 0x20		// red/amber/green
   };
 }
 
@@ -210,19 +211,19 @@ template <typename T> struct ZvField {
 #define ZvFieldTimeAliasFn(T, id, fn, flags) \
 	ZvFieldTime_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
 
-#define ZvDeclField(T, args) \
-  ZuPP_Defer(ZvDeclField_)()(T, ZuPP_Strip1 ZuPP_Strip2(args))
-#define ZvDeclField_() ZvDeclField__
-#define ZvDeclField__(T, type, ...) ZvField##type(T, __VA_ARGS__),
-#define ZvDeclFields(T, ...)  \
+#define ZvMkField(T, args) \
+  ZuPP_Defer(ZvMkField_)()(T, ZuPP_Strip1 ZuPP_Strip2(args))
+#define ZvMkField_() ZvMkField__
+#define ZvMkField__(T, type, ...) ZvField##type(T, __VA_ARGS__),
+#define ZvMkFields(T, ...)  \
   using namespace ZvFieldFlags; \
   return ZvFields<T>{std::initializer_list<ZvField<T>>{ \
-    ZuPP_Eval(ZuPP_MapArg(ZvDeclField, T, __VA_ARGS__)) \
+    ZuPP_Eval(ZuPP_MapArg(ZvMkField, T, __VA_ARGS__)) \
   } }
 
 template <typename T> using ZvFields = ZuArray<ZvField<T>>;
 
-template <typename Impl> struct ZvFieldObject : public ZuPrintable {
+template <typename Impl> struct ZvFieldTuple : public ZuPrintable {
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
@@ -231,7 +232,7 @@ template <typename Impl> struct ZvFieldObject : public ZuPrintable {
     auto fields = Impl::fields();
     for (unsigned i = 0, n = fields.length(); i < n; i++) {
       const auto &field = fields[i];
-      if (field.flags & ZvFieldFlags::Derived) break;
+      if (field.flags & ZvFieldFlags::Synthetic) break;
       if (i) s << ' ';
       s << fields[i].id << '=';
       fields[i].print(s);

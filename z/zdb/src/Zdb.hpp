@@ -520,8 +520,7 @@ struct ZdbConfig {
 };
 
 namespace ZdbCacheMode {
-  using namespace ZvTelemetry::fbs;
-  ZfbEnumValues(DBCacheMode, Normal, FullCache);
+  using namespace ZvTelemetry::DBCacheMode;
 }
 
 struct ZdbHandler {
@@ -619,34 +618,7 @@ public:
   // delete all records < minRN
   void purge(ZdbRN minRN);
 
-  // display sequence: 
-  //   name, id, recSize, compress, cacheMode, cacheSize,
-  //   path, fileSize, fileRecs, filesMax, preAlloc,
-  //   minRN, nextRN, fileRN,
-  //   cacheLoads, cacheMisses, fileLoads, fileMisses
-  struct Telemetry {
-    typedef ZuStringN<124> Path;
-    typedef ZuStringN<28> Name;
-
-    Path	path;
-    Name	name;		// primary key
-    uint64_t	fileSize;
-    uint64_t	minRN;
-    uint64_t	nextRN;	// graphable
-    uint64_t	fileRN;
-    uint64_t	cacheLoads;	// graphable (*)
-    uint64_t	cacheMisses;	// graphable (*)
-    uint64_t	fileLoads;	// graphable
-    uint64_t	fileMisses;	// graphable
-    uint32_t	id;
-    uint32_t	preAlloc;
-    uint32_t	recSize;
-    uint32_t	fileRecs;
-    uint32_t	cacheSize;
-    uint32_t	filesMax;
-    uint8_t	compress;
-    int8_t	cacheMode;	// ZdbCacheMode
-  };
+  using Telemetry = ZvTelemetry::DB;
 
   void telemetry(Telemetry &data) const;
 
@@ -809,16 +781,7 @@ public:
 
   static const char *stateName(int);
 
-  // display sequence:
-  //   id, priority, state, voted, ip, port
-  struct Telemetry { // not graphable
-    ZiIP	ip;
-    uint32_t	id;
-    uint32_t	priority;
-    uint16_t	port;
-    uint8_t	state; // RAG: Instantiated - Red; Active - Green; * - Amber
-    uint8_t	voted;
-  };
+  using Telemetry = ZvTelemetry::DBHost;
 
   void telemetry(Telemetry &data) const;
 
@@ -1119,30 +1082,7 @@ public:
       if (m_dbs[i]) l(m_dbs[i]);
   }
 
-  // display sequence: 
-  //   self, master, prev, next, state, active, recovering, replicating,
-  //   nDBs, nHosts, nPeers, nCxns,
-  //   heartbeatFreq, heartbeatTimeout, reconnectFreq, electionTimeout,
-  //   writeThread
-  struct Telemetry { // not graphable
-    uint32_t	nCxns;
-    uint32_t	heartbeatFreq;
-    uint32_t	heartbeatTimeout;
-    uint32_t	reconnectFreq;
-    uint32_t	electionTimeout;
-    uint32_t	self;		// primary key - host ID 
-    uint32_t	master;		// ''
-    uint32_t	prev;		// ''
-    uint32_t	next;		// ''
-    uint16_t	writeThread;
-    uint8_t	nHosts;
-    uint8_t	nPeers;
-    uint8_t	nDBs;
-    uint8_t	state;		// same as hosts[hostID].state
-    uint8_t	active;
-    uint8_t	recovering;
-    uint8_t	replicating;
-  };
+  using Telemetry = ZvTelemetry::DBEnv;
 
   void telemetry(Telemetry &data) const;
 

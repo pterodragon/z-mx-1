@@ -75,7 +75,7 @@ enum SocketFlags:uint8 {	// == 1<<ZiCxnFlags
   NetLink	= 0x10,
   Nagle		= 0x20
 }
-enum SocketType:int8 {		// == ZiCxnType
+enum SocketType:uint8 {		// == ZiCxnType
   TCPIn = 0,
   TCPOut,
   UDP
@@ -98,7 +98,7 @@ table Socket {			// == ZiCxnTelemetry
   flags:uint8;			// SocketFlags
   type:SocketType;
 }
-enum QueueType:int8 {
+enum QueueType:uint8 {
   Thread = 0,
   IPC,
   Rx,
@@ -112,8 +112,8 @@ table Queue {
   inBytes:uint64;
   outCount:uint64;
   outBytes:uint64;
-  full:uint32;
   size:uint32;
+  full:uint32;
   type:QueueType;
 }
 enum LinkState:int8 {
@@ -159,7 +159,7 @@ table Engine {
   state:EngineState;
   links:[Link];
 }
-enum DBCacheMode:int8 {
+enum DBCacheMode:uint8 {
   Normal = 0,
   FullCache
 }
@@ -171,6 +171,7 @@ table DB {
   nextRN:uint64;
   fileRN:uint64;
   cacheLoads:uint64;
+  cacheMisses:uint64;
   fileLoads:uint64;
   fileMisses:uint64;
   id:uint32;
@@ -223,7 +224,7 @@ table DBEnv {
   hosts:[DBHost];
   dbs:[DB];
 }
-enum AppRole:int8 {
+enum AppRole:uint8 {
   Dev = 0,
   Test,
   Prod
@@ -234,7 +235,7 @@ table App {
   role:AppRole;
   uptime:Zfb.DateTime;	// absolute start time
 }
-enum Severity:int8 {	// == Ze
+enum Severity:uint8 {	// == Ze
   Debug = 0,
   Info,
   Warning,

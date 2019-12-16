@@ -64,6 +64,9 @@ public:
     return *this;
   }
 
+  ZuInline ZiIP(uint32_t n) { s_addr = htonl(n); }
+  ZuInline ZiIP &operator =(uint32_t n) { s_addr = htonl(n); return *this; }
+
   template <typename S>
   inline ZiIP(S &&s, typename ZuIsString<S>::T *_ = 0) {
     if (!s) { s_addr = 0; return; }
@@ -88,10 +91,9 @@ public:
   ZuInline bool operator !() const { return !s_addr; }
   ZuOpBool
 
-  ZuInline uint32_t hash() const {
-    uint32_t *ZuMayAlias(ptr) = (uint32_t *)&s_addr;
-    return *ptr;
-  }
+  ZuInline operator uint32_t() const { return ntohl(s_addr); }
+
+  ZuInline uint32_t hash() const { return s_addr; }
 
   template <typename S> void print(S &s) const {
     uint32_t addr = (uint32_t)ntohl(s_addr);

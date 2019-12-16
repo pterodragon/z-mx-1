@@ -64,18 +64,18 @@ private:
 };
 
 // display sequence:
-//   id, addr, linear, bits, slots (*), cBits, locks (*), count,
-//   resized, loadFactor, effLoadFactor, nodeSize
+//   id, addr, linear, bits, cBits, loadFactor, nodeSize,
+//   count, effLoadFactor, resized
 // derived display fields:
 //   slots = 1<<bits
 //   locks = 1<<cBits
 struct ZmHashTelemetry {
   ZmIDString	id;		// primary key
   uintptr_t	addr;		// primary key
+  double	loadFactor;	// (double)N / 16.0
+  double	effLoadFactor;	// graphable (*)
   uint32_t	nodeSize;
-  uint32_t	loadFactor;	// (double)N / 16.0
   uint32_t	count;		// graphable (*)
-  uint32_t	effLoadFactor;	// graphable (*) - (double)N / 16.0
   uint32_t	resized;	// dynamic
   uint8_t	bits;
   uint8_t	cBits;
@@ -128,21 +128,22 @@ template <class, typename, class, unsigned> friend class ZmLHash_;
   template <class S> struct CSV_ {
     CSV_(S &stream) : m_stream(stream) {
       m_stream <<
-	"id,linear,nodeSize,bits,cBits,"
-	"loadFactor,count,effLoadFactor,resized\n";
+	"id,addr,linear,bits,cBits,loadFactor,nodeSize,"
+	"count,effLoadFactor,resized\n";
     }
     void print(ZmAnyHash *tbl) {
       ZmHashTelemetry data;
       tbl->telemetry(data);
       m_stream
 	<< data.id << ','
+	<< ZuBoxPtr(data.addr).hex() << ','
 	<< (unsigned)data.linear << ','
-	<< data.nodeSize << ','
 	<< (unsigned)data.bits << ','
 	<< (unsigned)data.cBits << ','
-	<< ZuBoxed((double)data.loadFactor / 16.0) << ','
+	<< ZuBoxed(data.loadFactor) << ','
+	<< data.nodeSize << ','
 	<< data.count << ','
-	<< ZuBoxed((double)data.effLoadFactor / 16.0) << ','
+	<< ZuBoxed(data.effLoadFactor) << ','
 	<< data.resized << '\n';
     }
     S &stream() { return m_stream; }

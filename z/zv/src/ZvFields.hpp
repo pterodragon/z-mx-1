@@ -163,7 +163,7 @@ template <typename T> struct ZvField {
 	ZvFieldFlags_(T, id, flags, map, id, ZvField_Get, ZvField_Set)
 #define ZvFieldTime(T, id, flags) \
 	ZvFieldTime_(T, id, flags, id, ZvField_Get, ZvField_Set)
-// alias fields (id different than data member)
+// alias fields (id different than name of data member)
 #define ZvFieldStringAlias(T, id, alias, flags) \
 	ZvFieldString_(T, id, flags, alias, ZvField_Get, ZvField_Set)
 #define ZvFieldBoolAlias(T, id, alias, flags) \
@@ -176,6 +176,26 @@ template <typename T> struct ZvField {
 	ZvFieldFlags_(T, id, flags, map, alias, ZvField_Get, ZvField_Set)
 #define ZvFieldTimeAlias(T, id, alias, flags) \
 	ZvFieldTime_(T, id, flags, alias, ZvField_Get, ZvField_Set)
+
+#define ZvDataField(T, args) \
+  ZuPP_Defer(ZvDataField_)()(T, ZuPP_Strip1 ZuPP_Strip2(args))
+#define ZvDataField_() ZvDataField__
+#define ZvDataField__(T, type, ...) ZvField##type(T, __VA_ARGS__),
+#define ZvDataFields(T, ...)  \
+  using namespace ZvFieldFlags; \
+  return ZvFields<T>{std::initializer_list<ZvField<T>>{ \
+    ZuPP_Eval(ZuPP_MapArg(ZvDataField, T, __VA_ARGS__)) \
+  } }
+
+#define ZvAliasField(T, args) \
+  ZuPP_Defer(ZvAliasField_)()(T, ZuPP_Strip1 ZuPP_Strip2(args))
+#define ZvAliasField_() ZvAliasField__
+#define ZvAliasField__(T, type, ...) ZvField##type##Alias(T, __VA_ARGS__),
+#define ZvAliasFields(T, ...)  \
+  using namespace ZvFieldFlags; \
+  return ZvFields<T>{std::initializer_list<ZvField<T>>{ \
+    ZuPP_Eval(ZuPP_MapArg(ZvAliasField, T, __VA_ARGS__)) \
+  } }
 
 // function member get/set
 #define ZvField_GetFn(o, member) (o->member())
@@ -195,19 +215,39 @@ template <typename T> struct ZvField {
 #define ZvFieldTimeFn(T, id, flags) \
 	ZvFieldTime_(T, id, flags, id, ZvField_GetFn, ZvField_SetFn)
 
-// accessor fields (id different than function, e.g. a nested field)
-#define ZvFieldStringAccessor(T, id, fn, flags) \
+// alias function fields (id different than function name, e.g. a nested field)
+#define ZvFieldStringAliasFn(T, id, fn, flags) \
 	ZvFieldString_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
-#define ZvFieldBoolAccessor(T, id, fn, flags) \
+#define ZvFieldBoolAliasFn(T, id, fn, flags) \
 	ZvFieldBool_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
-#define ZvFieldScalarAccessor(T, id, fn, flags) \
+#define ZvFieldScalarAliasFn(T, id, fn, flags) \
 	ZvFieldScalar_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
-#define ZvFieldEnumAccessor(T, id, fn, flags, map) \
+#define ZvFieldEnumAliasFn(T, id, fn, flags, map) \
 	ZvFieldEnum_(T, id, flags, map, fn, ZvField_GetFn, ZvField_SetFn)
-#define ZvFieldFlagsAccessor(T, id, fn, flags, map) \
+#define ZvFieldFlagsAliasFn(T, id, fn, flags, map) \
 	ZvFieldFlags_(T, id, flags, map, fn, ZvField_GetFn, ZvField_SetFn)
-#define ZvFieldTimeAccessor(T, id, fn, flags) \
+#define ZvFieldTimeAliasFn(T, id, fn, flags) \
 	ZvFieldTime_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
+
+#define ZvFnField(T, args) \
+  ZuPP_Defer(ZvFnField_)()(T, ZuPP_Strip1 ZuPP_Strip2(args))
+#define ZvFnField_() ZvFnField__
+#define ZvFnField__(T, type, ...) ZvField##type##Fn(T, __VA_ARGS__),
+#define ZvFnFields(T, ...)  \
+  using namespace ZvFieldFlags; \
+  return ZvFields<T>{std::initializer_list<ZvField<T>>{ \
+    ZuPP_Eval(ZuPP_MapArg(ZvFnField, T, __VA_ARGS__)) \
+  } }
+
+#define ZvAliasFnField(T, args) \
+  ZuPP_Defer(ZvAliasFnField_)()(T, ZuPP_Strip1 ZuPP_Strip2(args))
+#define ZvAliasFnField_() ZvAliasFnField__
+#define ZvAliasFnField__(T, type, ...) ZvField##type##AliasFn(T, __VA_ARGS__),
+#define ZvAliasFnFields(T, ...)  \
+  using namespace ZvFieldFlags; \
+  return ZvFields<T>{std::initializer_list<ZvField<T>>{ \
+    ZuPP_Eval(ZuPP_MapArg(ZvAliasFnField, T, __VA_ARGS__)) \
+  } }
 
 template <typename T> using ZvFields = ZuArray<ZvField<T>>;
 

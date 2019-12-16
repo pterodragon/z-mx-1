@@ -49,15 +49,13 @@ struct ZvAPI ZvHeapCSV {
     ZuBox<unsigned>	telFreq;
   };
   const ZvFields<Data> Data::fields() noexcept {
-    using namespace ZvFieldFlags;
-    return ZvFields<Data>{std::initializer_list<ZvField<Data>>{
-      ZvFieldString(Data, id, Primary),
-      ZvFieldScalar(Data, partition, 0),
-      ZvFieldScalar(Data, alignment, 0),
-      ZvFieldScalar(Data, cacheSize, 0),
-      ZvFieldString(Data, cpuset, 0),
-      ZvFieldScalar(Data, telFreq, 0)
-    } };
+    ZvDataFields(Data,
+	(String, id, Primary),
+	(Scalar, partition, 0),
+	(Scalar, alignment, 0),
+	(Scalar, cacheSize, 0),
+	(String, cpuset, 0),
+	(Scalar, telFreq, 0));
   }
 
   class CSV : public ZvCSV<Data> {

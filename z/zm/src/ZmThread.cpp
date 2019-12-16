@@ -144,7 +144,7 @@ void ZmThreadContext::telemetry(ZmThreadTelemetry &data) const {
   data.name = m_name;
   data.tid = tid();
   data.stackSize = m_stackSize;
-  data.cpuset = m_cpuset.uint64(); // FIXME
+  data.cpuset = m_cpuset;
   data.cpuUsage = cpuUsage();
   data.sysPriority = sysPriority();
   data.index = m_index;

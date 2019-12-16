@@ -48,13 +48,11 @@ struct ZvHashCSV {
     ZuBox<unsigned>	cBits;
   };
   const ZvFields<Data> Data::fields() noexcept {
-    using namespace ZvFieldFlags;
-    return ZvFields<Data>{std::initializer_list<ZvField<Data>>{
-      ZvFieldString(Data, id, Primary),
-      ZvFieldScalar(Data, bits, 0),
-      ZvFieldScalar(Data, loadFactor, 0),
-      ZvFieldScalar(Data, cBits, 0)
-    } };
+    ZvDataFields(Data,
+	(String, id, Primary),
+	(Scalar, bits, 0),
+	(Scalar, loadFactor, 0),
+	(Scalar, cBits, 0));
   }
 
   class CSV : public ZvCSV<Data> {

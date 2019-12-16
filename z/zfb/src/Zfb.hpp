@@ -267,11 +267,11 @@ namespace Load {
 
 } // Zfb
 
-#define ZfbEnum_Value(Enum, Value) Value = Enum##_##Value,
+#define ZfbEnum_Value(Enum, Value) Value = fbs::Enum##_##Value,
 #define ZfbEnumValues(Enum, ...) \
   enum _ { Invalid = -1, \
     ZuPP_Eval(ZuPP_MapArg(ZfbEnum_Value, Enum, __VA_ARGS__)) \
-    N = Enum##_MAX + 1 }; \
+    N = fbs::Enum##_MAX + 1 }; \
   ZuAssert(N <= 1024); \
   enum { Bits = \
     N <= 2 ? 1 : N <= 4 ? 2 : N <= 8 ? 3 : N <= 16 ? 4 : N <= 32 ? 5 : \
@@ -310,7 +310,7 @@ namespace Load {
     ZmRef<S2V>	m_s2v; \
   }; \
   inline const char *name(int i) { \
-    return EnumName##Enum(static_cast<Enum>(i)); \
+    return fbs::EnumName##Enum(static_cast<fbs::Enum>(i)); \
   } \
   struct Map : public Map_<Map> { \
     Map() { for (unsigned i = 0; i < N; i++) this->add(name(i), i); } \

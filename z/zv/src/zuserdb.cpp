@@ -22,6 +22,7 @@
 #include <iostream>
 
 #include <zlib/ZvUserDB.hpp>
+#include <zlib/ZvTelemetry.hpp>
 
 using namespace ZvUserDB;
 

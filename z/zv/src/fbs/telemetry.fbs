@@ -15,10 +15,10 @@ table Heap {			// == ZmHeapTelemetry
 table HashTbl {			// == ZmHashTelemetry
   id:string;
   addr:uint64;
-  nodeSize:uint32;
   loadFactor:float;
-  count:uint32;
   effLoadFactor:float;
+  nodeSize:uint32;
+  count:uint32;
   resized:uint32;
   bits:uint8;
   cBits:uint8;

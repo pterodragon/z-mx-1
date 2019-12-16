@@ -73,7 +73,7 @@ struct ZmThreadTelemetry {
   ZmThreadName	name;
   uint64_t	tid;		// primary key
   uint64_t	stackSize;
-  uint64_t	cpuset;		// FIXME
+  ZmBitmap	cpuset;
   double	cpuUsage;	// graphable (*)
   int32_t	sysPriority;
   int16_t	index;		// index within thread pool (ZmScheduler, ...)

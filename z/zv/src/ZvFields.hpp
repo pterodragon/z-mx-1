@@ -51,7 +51,8 @@ namespace ZvFieldFlags {
     Primary	= 0x01,		// primary key
     Secondary	= 0x02,		// secondary key
     TimeSeries	= 0x04,		// scalar that varies over time
-    Derived	= 0x08		// derived (virtual) scalar
+    Derived	= 0x08,		// derived scalar
+    ColorRAG	= 0x10		// red/amber/green
   };
 }
 

@@ -59,8 +59,8 @@ table Mx {			// == ZiMxTelemetry
   timeout:uint32;
   rxBufSize:uint32;
   txBufSize:uint32;
-  rxThreadIndex:uint16;
-  txThreadIndex:uint16;
+  rxThread:uint16;
+  txThread:uint16;
   partition:uint16;
   state:MxState;
   ll:uint8;

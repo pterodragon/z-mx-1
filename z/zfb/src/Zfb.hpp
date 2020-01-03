@@ -51,7 +51,7 @@ using namespace flatbuffers;
 
 using Builder = FlatBufferBuilder;
 
-using IOBuf = ZiIOBuf;
+using IOBuf = ZiIOBuf<>;
 
 // IOBuilder customizes FlatBufferBuilder with an allocator that
 // builds directly into a detachable IOBuf for transmission
@@ -80,6 +80,12 @@ protected:
 
   void deallocate(uint8_t *ptr, size_t size) {
     if (m_buf) m_buf->free(ptr);
+  }
+
+  uint8_t *reallocate_downward(
+      uint8_t *old_p, size_t old_size, size_t new_size,
+      size_t in_use_back, size_t in_use_front) {
+    return m_buf->realloc(old_size, new_size, in_use_front, in_use_back);
   }
 
 private:

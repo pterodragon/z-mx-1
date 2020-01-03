@@ -202,8 +202,7 @@ struct MxMDL1Flags : public MxMDFlags<MxMDL1Flags> {
 
 // venue mapping
 
-ZuTupleFields(MxMDVenueMapKey_, venue, segment);
-typedef MxMDVenueMapKey_<MxID, MxID> MxMDVenueMapKey;
+ZuDeclTuple(MxMDVenueMapKey, (MxID, venue), (MxID, segment));
 struct MxMDVenueMapping {
   MxID		venue;
   MxID		segment;
@@ -348,13 +347,20 @@ struct MxMDOrderData {
   MxFlags	flags;		// MxMDOrderFlags
 };
 
-ZuTupleFields(MxMDOrderID2_, obKey, orderID);
-typedef MxMDOrderID2_<MxInstrKey, MxIDString> MxMDOrderID2;
-typedef MxMDOrderID2_<const MxInstrKey &, const MxIDString &> MxMDOrderID2Ref;
-ZuTupleFields(MxMDOrderID3_, obKey, side, orderID);
-typedef MxMDOrderID3_<MxInstrKey, MxEnum, MxIDString> MxMDOrderID3;
-typedef MxMDOrderID3_<const MxInstrKey &, const MxEnum &, const MxIDString &>
-  MxMDOrderID3Ref;
+ZuDeclTuple(MxMDOrderID2,
+    (MxInstrKey, obKey),
+    (MxIDString, orderID));
+ZuDeclTuple(MxMDOrderID2Ref,
+    (const MxInstrKey &, obKey),
+    (const MxIDString &, orderID));
+ZuDeclTuple(MxMDOrderID3,
+    (MxInstrKey, obKey),
+    (MxEnum, side),
+    (MxIDString, orderID));
+ZuDeclTuple(MxMDOrderID3Ref,
+    (const MxInstrKey &, obKey),
+    (const MxEnum &, side),
+    (const MxIDString &, orderID));
 
 class MxMDAPI MxMDOrder_ {
   MxMDOrder_(const MxMDOrder_ &) = delete;

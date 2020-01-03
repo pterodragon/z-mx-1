@@ -99,14 +99,7 @@ public:
   using Mx = MxMultiplex;
 
 private:
-  using MxTbl =
-    ZmRBTree<ZmRef<Mx>,
-      ZmRBTreeIndex<Mx::IDAccessor,
-	ZmRBTreeObject<ZuNull,
-	  ZmRBTreeLock<ZmNoLock,
-	    ZmRBTreeBase<ZmObject> > > > >;
-
-  MxMDCore(ZmRef<MxTbl> mxTbl, Mx *mx);
+  MxMDCore(Mx *mx);
 
   void init_(ZvCf *cf);
 
@@ -116,16 +109,6 @@ public:
   ZuInline ZvCf *cf() { return m_cf.ptr(); }
 
   ZuInline Mx *mx() const { return m_mx; }
-  ZuInline Mx *mx(const Mx::ID &id) const {
-    MxTbl::Node *node = m_mxTbl->find(id);
-    if (!node) return nullptr;
-    return node->key();
-  }
-  template <typename L>
-  ZuInline void allMx(L l) const {
-    auto i = m_mxTbl->readIterator();
-    while (MxTbl::Node *node = i.iterate()) l(node->key());
-  }
 
   void start();
   void stop();
@@ -220,9 +203,6 @@ public:
   }
 
 private:
-  // Exception handling
-  void exception(ZmRef<ZeEvent> e) const { raise(ZuMv(e)); }
-
   // Traffic Logging (logThread)
   /* Example usage:
   app.log(id, MxTraffic([](const Msg *msg, ZmTime &stamp, ZuString &data) {
@@ -338,11 +318,10 @@ private:
 
   ZmRef<ZvCf>		m_cf;
 
-  ZmRef<MxTbl>		m_mxTbl;
   Mx			*m_mx = 0;
 
   ZmRef<MxMDTelemetry>	m_telemetry;
-  ZmRef<MxMDCmdServer>	m_cmdServer;
+  ZmRef<MxMDCmdServer>	m_cmdServer; // FIXME
 
   MxMDBroadcast		m_broadcast;	// broadcasts updates
 

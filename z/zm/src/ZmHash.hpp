@@ -596,7 +596,7 @@ private:
 
 public:
   inline ZmHash(ZmHashParams params = ZmHashParams(ID::id())) :
-      ZmAnyHash(params.telFreq()), ZmHash_LockMgr<Lock>(params) {
+      ZmHash_LockMgr<Lock>(params) {
     init(params);
   }
 

@@ -62,7 +62,6 @@ struct ZmHeapConfig {
   unsigned	alignment;
   uint64_t	cacheSize;
   ZmBitmap	cpuset;
-  unsigned	telFreq;
 };
 
 struct ZmHeapInfo {
@@ -146,14 +145,7 @@ public:
 
   ZuInline const ZmHeapInfo &info() const { return m_info; }
   ZuInline const ZmHeapStats &stats() const { return m_stats; }
-  ZuInline unsigned telCount() const {
-    unsigned v = m_telCount;
-    if (!v)
-      m_telCount = m_info.config.telFreq;
-    else
-      m_telCount = v - 1;
-    return v;
-  }
+
   void telemetry(ZmHeapTelemetry &data) const;
 
 #ifdef ZmHeap_DEBUG
@@ -209,7 +201,6 @@ private:
   ZmHeapInfo		m_info;
   ZmHeapCache		*m_next;	// next in partition list
   AllStatsFn		m_allStatsFn;	// aggregates stats from TLS
-  mutable unsigned	m_telCount = 0;	// telemetry count
 
   void			*m_cache = 0;	// bound memory region
   void			*m_end = 0;	// end of memory region

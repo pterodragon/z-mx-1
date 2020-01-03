@@ -1901,7 +1901,6 @@ ZiMultiplex::ZiMultiplex(ZiMxParams mxParams) :
   m_frag(mxParams.frag()),
   m_yield(mxParams.yield())
 #endif
-  , m_telFreq(mxParams.telFreq())
 {
   m_listeners =
     new ListenerHash(ZmHashParams().bits(4).loadFactor(1).cBits(4).

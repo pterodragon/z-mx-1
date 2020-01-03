@@ -268,10 +268,11 @@ private:
     N <= 2 ? 1 : N <= 4 ? 2 : N <= 8 ? 3 : N <= 16 ? 4 : N <= 32 ? 5 :
     N <= 64 ? 6 : N <= 128 ? 7 : N <= 256 ? 8 : N <= 512 ? 9 : 10
   };
-  typedef ZmLHash<ZuString,
-	    ZmLHashVal<ZuBox_1(int),
-	      ZmLHashStatic<PermBits,
-		ZmLHashLock<ZmNoLock> > > > PermNames;
+  using PermNames =
+    ZmLHash<ZuString,
+      ZmLHashVal<ZuBox_1(int),
+	ZmLHashStatic<PermBits,
+	  ZmLHashLock<ZmNoLock> > > >;
 
   int findPerm_(ZuString s) { return m_permNames->findVal(s); }
 

@@ -64,8 +64,7 @@ class App;		// the app (singleton) owns mx, listeners and proxies
 
 #define BufSize (32<<10)
 
-ZuTupleFields(Error_, op, result, error);
-typedef Error_<const char *, int, ZeError> Error;
+ZuDeclTuple(Error, (const char *, op), (int, result), (ZeError, error));
 // overloaded print for various types
 template <typename T> struct Print : public ZuPrintable {
   Print(const T &v_) : v(v_) { }

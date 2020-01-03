@@ -19,7 +19,7 @@ private:
 
     ZmHashMgr::all(ZmFn<ZmAnyHash *>{
 	cxn, [](Cxn *cxn, ZmAnyHash *h) {
-	  if (!h->telCount()) cxn->transmit(hashTbl(h));
+	  cxn->transmit(hashTbl(h));
 	}});
 
     ZmSpecific<ZmThreadContext>::all([cxn](ZmThreadContext *tc) {

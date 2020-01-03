@@ -50,19 +50,20 @@ namespace ZvFieldFlags {
   enum _ {
     Primary	= 0x01,		// primary key
     Secondary	= 0x02,		// secondary key
-    TimeSeries	= 0x04,		// scalar that varies over time
+    Dynamic	= 0x04,		// scalar that varies over time
     Synthetic	= 0x08,		// synthetic scalar
     Cumulative	= 0x10,		// first derivative should be logged/graphed
     ColorRAG	= 0x20		// red/amber/green
   };
 }
 
-ZuUnionFields(ZvTimeFmt_, csv, fix, iso);
 struct ZvTimeNull : public ZuPrintable {
   template <typename S> inline void print(S &) const { }
 };
-using ZvTimeFmt =
-  ZvTimeFmt_<ZtDateFmt::CSV, ZtDateFmt::FIX<-9, ZvTimeNull>, ZtDateFmt::ISO>;
+ZuDeclUnion(ZvTimeFmt,
+    (ZtDateFmt::CSV, csv),
+    (ZtDateFmt::FIX<-9, ZvTimeNull>, fix),
+    (ZtDateFmt::ISO, iso));
 
 struct ZvFieldFmt {
   ZvFieldFmt() { new (time.new_csv()) ZtDateFmt::CSV{}; }

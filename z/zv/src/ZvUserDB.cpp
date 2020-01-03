@@ -228,7 +228,7 @@ int Mgr::save(ZuString path, unsigned maxAge, ZeError *e)
   int i;
   
   if ((i = f.open(path,
-	  ZiFile::Create | ZiFile::WriteOnly, 0666, e)) != Zi::OK)
+	  ZiFile::Create | ZiFile::WriteOnly, 0600, e)) != Zi::OK)
     return i;
 
   uint8_t *buf = fbb.GetBufferPointer();

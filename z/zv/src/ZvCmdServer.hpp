@@ -48,6 +48,7 @@
 
 #include <zlib/ZvCf.hpp>
 #include <zlib/ZvUserDB.hpp>
+#include <zlib/ZvTelemetry.hpp>
 
 #include <zlib/loginreq_fbs.h>
 #include <zlib/loginack_fbs.h>
@@ -105,6 +106,8 @@ public:
     cancelTimeout();
 
     ZiIORx::disconnected();
+
+    this->app()->disconnected(this);
   }
 
   // send app message
@@ -153,7 +156,8 @@ private:
     return len;
   }
 
-  // userDB and zcmd requests are synchronously responded within the TLS thread
+  // userDB, zcmd and telemetry requests are synchronously
+  // responded within the TLS thread
   int processMsg(int type, const uint8_t *data, unsigned len) {
     using namespace Zfb;
     using namespace Load;
@@ -161,13 +165,14 @@ private:
       default:
 	return -1;
       case ZvCmd::fbs::MsgType_UserDB: {
+	using namespace ZvUserDB;
 	{
 	  Verifier verifier(data, len);
-	  if (!ZvUserDB::fbs::VerifyRequestBuffer(verifier)) return -1;
+	  if (!fbs::VerifyRequestBuffer(verifier)) return -1;
 	}
 	m_fbb.Clear();
 	int i = this->app()->processUserDB(
-	    m_user, m_interactive, ZvUserDB::fbs::GetRequest(data), m_fbb);
+	    m_user, m_interactive, fbs::GetRequest(data), m_fbb);
 	if (ZuUnlikely(i < 0)) return -1;
 	if (!i) return len;
 	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_UserDB));
@@ -177,14 +182,28 @@ private:
 	using namespace ZvCmd;
 	{
 	  Verifier verifier(data, len);
-	  if (!ZvCmd::fbs::VerifyRequestBuffer(verifier)) return -1;
+	  if (!fbs::VerifyRequestBuffer(verifier)) return -1;
 	}
 	m_fbb.Clear();
 	int i = this->app()->processCmd(this, m_user, m_interactive,
-	    ZvCmd::fbs::GetRequest(data), m_fbb);
+	    fbs::GetRequest(data), m_fbb);
 	if (ZuUnlikely(i < 0)) return -1;
 	if (!i) return len;
 	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_Cmd));
+	this->send_(m_fbb.buf());
+      } break;
+      case ZvCmd::fbs::MsgType_Telemetry: {
+	using namespace ZvTelemetry;
+	{
+	  Verifier verifier(data, len);
+	  if (!fbs::VerifyRequestBuffer(verifier)) return -1;
+	}
+	m_fbb.Clear();
+	int i = this->app()->processTel(this, m_user, m_interactive,
+	    fbs::GetRequest(data), m_fbb);
+	if (ZuUnlikely(i < 0)) return -1;
+	if (!i) return len;
+	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_Telemetry));
 	this->send_(m_fbb.buf());
       } break;
       case ZvCmd::fbs::MsgType_App: {
@@ -250,13 +269,17 @@ private:
 };
 
 template <typename App_>
-class ZvCmdServer : public ZvCmdHost, public Ztls::Server<App_> {
+class ZvCmdServer :
+    public ZvCmdHost,
+    public Ztls::Server<App_>,
+    public ZvTelemetry::Server<App_, ZvCmdSrvLink<App_> > {
 public:
   using App = App_;
   using TLS = Ztls::Server<App>;
 friend TLS;
   using Link = ZvCmdSrvLink<App>;
   using User = ZvUserDB::User;
+  using TelServer = ZvTelemetry::Server;
 
   enum { OutBufSize = 8000 }; // initial TLS buffer size
 
@@ -297,27 +320,27 @@ friend TLS;
     m_userDB = new UserDB(this, passLen, totpRange);
     if (!loadUserDB())
       throw ZtString() << "failed to load \"" << m_userDBPath << '"';
+    TelServer::init(mx, cf->subset("telemetry", false));
   }
 
   void final() {
+    TelServer::final();
     m_userDB = nullptr;
     TLS::final();
     ZvCmdHost::final();
   }
 
   bool start() {
-    TLS::listen();
+    this->listen();
     return true;
   }
   void stop() {
-    TLS::stopListening();
-    this->app()->run(ZmFn<>{this, [](ZvCmdServer *server) {
-      server->stop_();
-    }});
+    this->stopListening();
+    this->run(ZmFn<>{this, [](ZvCmdServer *server) { server->stop_(); }});
   }
 private:
   void stop_() {
-    this->app()->mx()->del(&m_userDBTimer);
+    this->mx()->del(&m_userDBTimer);
     if (m_userDB->modified()) saveUserDB();
   }
 
@@ -362,6 +385,7 @@ private:
       this->logError(m_userDBPath, ": ZCmd permission missing");
       return false;
     }
+    m_telPerm = m_userDB->findPerm("ZTel"); // optional
     return true;
   }
   bool saveUserDB() {
@@ -383,7 +407,7 @@ public:
       const ZvUserDB::fbs::Request *in, Zfb::Builder &fbb) {
     fbb.Finish(m_userDB->request(user, interactive, in, fbb));
     if (m_userDB->modified())
-      this->app()->run(
+      this->run(
 	  ZmFn<>{this, [](ZvCmdServer *server) { server->saveUserDB(); }},
 	  ZmTimeNow(m_userDBFreq), ZmScheduler::Advance, &m_userDBTimer);
     return fbb.GetSize();
@@ -411,11 +435,31 @@ public:
     return fbb.GetSize();
   }
 
+  int processTel(Link *link, User *user, bool interactive,
+      const ZvTelemetry::fbs::Request *in, Zfb::Builder &fbb) {
+    using namespace ZvTelemetry;
+    if (m_telPerm < 0 || !m_userDB->ok(user, interactive, m_telPerm)) {
+      fbb.Finish(fbs::CreateTelemetry(fbb,
+	    fbs::TelData_Alert,
+	    fbs::CreateAlert(fbb,
+	      Zfb::Save::dateTime(fbb, ZtDateNow),
+	      ZmPlatform::getTID(),
+	      fbs::Severity_Error,
+	      Zfb::Save::str(fbb, "permission denied")).Union()));
+      return fbb.GetSize();
+    }
+    return TelServer::process((void *)link, in, fbb);
+  }
+
   // default app msg handler simply disconnects
   // >=0 - message processed
   //  <0 - disconnect
   int processApp(Link *, User *, bool interactive,
       ZuArray<const uint8_t> data) { return -1; }
+
+  void disconnected(Link *link) {
+    TelServer::disconnected((void *)link);
+  }
 
 private:
   ZiIP			m_ip;
@@ -431,7 +475,8 @@ private:
   ZmScheduler::Timer	m_userDBTimer;
 
   ZuRef<UserDB>		m_userDB;
-  int			m_cmdPerm = -1;		// "Zcmd" permission
+  int			m_cmdPerm = -1;		// "ZCmd"
+  int			m_telPerm = -1;		// "ZTel"
 };
 
 #endif /* ZvCmdServer_HPP */

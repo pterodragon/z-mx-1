@@ -66,29 +66,26 @@ template <typename T1, typename T2> void checkNull() {
   CHECK(!*u && !*v && !*w);
 }
 
-ZuTupleFields(T1_Fields, id, age, height);
 namespace T1 {
-  typedef ZuBox<int> I;
-  typedef const ZuBox<int> &R;
-  typedef T1_Fields<I, I, I> V;
-  typedef T1_Fields<R, R, R> T;
+  using I = ZuBox<int>;
+  using R = const ZuBox<int> &;
+  ZuDeclTuple(V, (I, id), (I, age), (I, height));
+  ZuDeclTuple(T, (R, id), (R, age), (R, height));
 }
 
-ZuUnionFields(T2_Fields, id, income, name, dependents, foo);
 namespace T2 {
   typedef int I;
   typedef double D;
   typedef const char *S;
   typedef ZuPair<int, int> P;
   typedef int *CP;
-  typedef T2_Fields<I, D, S, P, CP> V;
+  ZuDeclUnion(V, (I, id), (D, income), (S, name), (P, dependents), (CP, foo));
 }
 
-ZuTupleFields(T3_Fields, id, age, height);
 namespace T3 {
   typedef ZuBox<int> I;
-  typedef T3_Fields<I, I, I> V;
-  typedef ZuTuple<ZuArrayN<V, 3>, ZuArrayN<int, 3> > T;
+  ZuDeclTuple(V, (I, id), (I, age), (I, height));
+  using T = ZuTuple<ZuArrayN<V, 3>, ZuArrayN<int, 3> >;
 }
 
 int main()

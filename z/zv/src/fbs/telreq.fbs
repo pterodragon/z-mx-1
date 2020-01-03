@@ -1,0 +1,20 @@
+include "types.fbs";
+namespace ZvTelemetry.fbs;
+enum ReqType:uint8 {
+  Heap = 0,
+  HashTbl,
+  Thread,
+  Mx,
+  Queue,
+  Engine,
+  DBEnv,
+  App,
+  Alert
+}
+table Request {
+  freq:uint32;		// 0 for one-time snapshot, otherwise (un)subscribe
+  filter:string;	// * for all; otherwise exact match
+  type:ReqType;		// together with filter, primary key for subscription
+  subscribe:bool;	// true - subscribe; false - unsubscribe
+}
+root_type Request;

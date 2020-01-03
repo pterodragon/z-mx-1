@@ -347,7 +347,7 @@ public:
   inline unsigned count_() const { return m_count.load_(); }
 
 protected:
-  inline ZmLHash__(const ZmHashParams &params) : ZmAnyHash(params.telFreq()) {
+  inline ZmLHash__(const ZmHashParams &params) {
     double loadFactor = params.loadFactor();
     if (loadFactor < 0.5) loadFactor = 0.5;
     else if (loadFactor > 1.0) loadFactor = 1.0;

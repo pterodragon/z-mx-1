@@ -46,7 +46,6 @@ struct ZvAPI ZvHeapCSV {
     ZuBox<unsigned>	alignment;
     ZuBox<uint64_t>	cacheSize;
     ZmBitmap		cpuset;
-    ZuBox<unsigned>	telFreq;
   };
   const ZvFields<Data> Data::fields() noexcept {
     ZvDataFields(Data,
@@ -54,8 +53,7 @@ struct ZvAPI ZvHeapCSV {
 	(Scalar, partition, 0),
 	(Scalar, alignment, 0),
 	(Scalar, cacheSize, 0),
-	(String, cpuset, 0),
-	(Scalar, telFreq, 0));
+	(String, cpuset, 0)
   }
 
   class CSV : public ZvCSV<Data> {
@@ -67,8 +65,7 @@ struct ZvAPI ZvHeapCSV {
 	    ZmHeapMgr::init(data->id, data->partition, ZmHeapConfig{
 		data->alignment,
 		data->cacheSize,
-		data->cpuset,
-		data->telFreq});
+		data->cpuset});
 	  });
     }
 

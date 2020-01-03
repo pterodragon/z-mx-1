@@ -157,7 +157,6 @@ table Engine {
   rxThread:uint16;
   txThread:uint16;
   state:EngineState;
-  links:[Link];
 }
 enum DBCacheMode:uint8 {
   Normal = 0,
@@ -221,8 +220,6 @@ table DBEnv {
   active:uint8;
   recovering:uint8;
   replicating:uint8;
-  hosts:[DBHost];
-  dbs:[DB];
 }
 enum AppRole:uint8 {
   Dev = 0,
@@ -255,7 +252,10 @@ union TelData {
   Mx:Mx,
   Socket:Socket,
   Queue:Queue,
+  Link:Link,
   Engine:Engine,
+  DB:DB,
+  DBHost:DBHost,
   DBEnv:DBEnv,
   App:App,
   Alert:Alert

@@ -266,22 +266,33 @@ private:
       default:
 	return -1;
       case ZvCmd::fbs::MsgType_UserDB: {
+	using namespace ZvUserDB;
 	{
 	  Verifier verifier(data, len);
-	  if (!ZvUserDB::fbs::VerifyReqAckBuffer(verifier)) return -1;
+	  if (!fbs::VerifyReqAckBuffer(verifier)) return -1;
 	}
-	auto reqAck = ZvUserDB::fbs::GetReqAck(data);
+	auto reqAck = fbs::GetReqAck(data);
 	if (ZvCmdUserDBAckFn fn = m_userDBReqs.delVal(reqAck->seqNo()))
 	  fn(reqAck);
       } break;
       case ZvCmd::fbs::MsgType_Cmd: {
+	using namespace ZvCmd;
 	{
 	  Verifier verifier(data, len);
-	  if (!ZvCmd::fbs::VerifyReqAckBuffer(verifier)) return -1;
+	  if (!fbs::VerifyReqAckBuffer(verifier)) return -1;
 	}
-	auto cmdAck = ZvCmd::fbs::GetReqAck(data);
+	auto cmdAck = fbs::GetReqAck(data);
 	if (ZvCmdAckFn fn = m_cmdReqs.delVal(cmdAck->seqNo()))
 	  fn(cmdAck);
+      } break;
+      case ZvCmd::fbs::MsgType_Telemetry: {
+	using namespace ZvTelemetry;
+	{
+	  Verifier verifier(data, len);
+	  if (!fbs::VerifyTelemetryBuffer(verifier)) return -1;
+	}
+	auto telemetry = fbs::GetTelemetry(data);
+	// FIXME - migrate MxTelemetry::Client into this
       } break;
       case ZvCmd::fbs::MsgType_App: {
 	int i = impl()->processApp(ZuArray<const uint8_t>(data, len));

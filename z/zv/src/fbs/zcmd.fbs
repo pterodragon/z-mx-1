@@ -1,2 +1,8 @@
 namespace ZvCmd.fbs;
-enum MsgType : uint8 { Login = 0, UserDB = 1, Cmd = 2, App = 3 }
+enum MsgType : uint8 {
+  Login = 0,
+  UserDB,
+  Cmd,
+  Telemetry,
+  App
+}

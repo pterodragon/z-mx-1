@@ -341,25 +341,35 @@ template <typename ...Args>
 struct ZuTraits<ZuUnion<Args...>> :
     public ZuUnion_Traits<ZuUnion<Args...>, Args...> { };
 
-#define ZuUnion_Field(N, Fn) \
-  ZuInline const auto &Fn() const { return this->template p<N>(); } \
-  ZuInline auto &Fn() { return this->template p<N>(); } \
-  template <typename P> \
-  ZuInline auto &Fn(P &&v) { this->template p<N>(ZuFwd<P>(v)); return *this; } \
-  ZuInline auto ptr_##Fn() { return this->template ptr<N>(); } \
-  ZuInline auto new_##Fn() { return this->template new_<N>(); }
+#define ZuUnion_FieldType(args) \
+  ZuPP_Defer(ZuUnion_FieldType_)()(ZuPP_Strip1 ZuPP_Strip2(args))
+#define ZuUnion_FieldType_() ZuUnion_FieldType__
+#define ZuUnion_FieldType__(type, fn) ZuPP_Strip1 ZuPP_Strip2(type)
 
-#define ZuUnionFields(T, ...) \
-template <typename ...Args> struct T : public ZuUnion<Args...> { \
-  typedef ZuUnion<Args...> Union; \
+#define ZuUnion_FieldFn(N, args) \
+  ZuPP_Defer(ZuUnion_FieldFn_)()(N, ZuPP_Strip1 ZuPP_Strip2(args))
+#define ZuUnion_FieldFn_() ZuUnion_FieldFn__
+#define ZuUnion_FieldFn__(N, type, fn) \
+  ZuInline const auto &fn() const { return this->template p<N>(); } \
+  ZuInline auto &fn() { return this->template p<N>(); } \
+  template <typename P> \
+  ZuInline auto &fn(P &&v) { this->template p<N>(ZuFwd<P>(v)); return *this; } \
+  ZuInline auto ptr_##fn() { return this->template ptr<N>(); } \
+  ZuInline auto new_##fn() { return this->template new_<N>(); }
+
+#define ZuDeclUnion(Type, ...) \
+using Type##_ = \
+  ZuUnion<ZuPP_Eval(ZuPP_MapComma(ZuUnion_FieldType, __VA_ARGS__))>; \
+class Type : public Type##_ { \
+  using Union = Type##_; \
 public: \
   using Union::Union; \
   using Union::operator =; \
-  ZuInline T(const Union &v) : Union(v) { }; \
-  ZuInline T(Union &&v) : Union(ZuMv(v)) { }; \
-  ZuPP_Eval(ZuPP_MapIndex(ZuUnion_Field, 1, __VA_ARGS__)) \
+  ZuInline Type(const Union &v) : Union(v) { }; \
+  ZuInline Type(Union &&v) : Union(ZuMv(v)) { }; \
+  ZuPP_Eval(ZuPP_MapIndex(ZuUnion_FieldFn, 1, __VA_ARGS__)) \
 }; \
-template <typename ...Args> \
-struct ZuTraits<T<Args...> > : public ZuTraits<ZuUnion<Args...> > { }
+struct Type##_Traits : public ZuTraits<Type##_> { using T = Type; }; \
+Type##_Traits ZuTraitsFn(const Type *)
 
 #endif /* ZuUnion_HPP */

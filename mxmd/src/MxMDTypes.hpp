@@ -48,8 +48,10 @@ struct MxMDSegment { // venue segment
   ZuOpBool
 };
 
-ZuTupleFields(MxMDTickSize_, minPrice, maxPrice, tickSize);
-typedef MxMDTickSize_<MxValue, MxValue, MxValue> MxMDTickSize;
+ZuDeclTuple(MxMDTickSize,
+    (MxValue, minPrice),
+    (MxValue, maxPrice),
+    (MxValue, tickSize));
 struct MxMDTickSize_MinPxAccessor : public ZuAccessor<MxMDTickSize, MxValue> {
   inline static MxValue value(const MxMDTickSize &t) { return t.minPrice(); }
 };

@@ -49,18 +49,15 @@ public:
   inline ZmHashParams &bits(unsigned v) { m_bits = v; return *this; }
   inline ZmHashParams &loadFactor(double v) { m_loadFactor = v; return *this; }
   inline ZmHashParams &cBits(unsigned v) { m_cBits = v; return *this; }
-  inline ZmHashParams &telFreq(unsigned v) { m_telFreq = v; return *this; }
 
   ZuInline unsigned bits() const { return m_bits; }
   ZuInline double loadFactor() const { return m_loadFactor; }
   ZuInline unsigned cBits() const { return m_cBits; }
-  ZuInline unsigned telFreq() const { return m_telFreq; }
 
 private:
   unsigned	m_bits;
   double	m_loadFactor;
   unsigned	m_cBits;
-  unsigned	m_telFreq;
 };
 
 // display sequence:
@@ -84,22 +81,7 @@ struct ZmHashTelemetry {
 
 class ZmAPI ZmAnyHash_ : public ZmPolymorph {
 public:
-  inline ZmAnyHash_(unsigned telFreq) : m_telFreq(telFreq) { }
-
-  ZuInline unsigned telCount() const {
-    unsigned v = m_telCount;
-    if (!v)
-      m_telCount = telFreq();
-    else
-      m_telCount = v - 1;
-    return v;
-  }
-  virtual unsigned telFreq() const { return 0; }
   virtual void telemetry(ZmHashTelemetry &) const { }
-
-private:
-  unsigned		m_telFreq = 0;
-  mutable unsigned	m_telCount = 0;
 };
 struct ZmAnyHash_PtrAccessor : public ZuAccessor<ZmAnyHash_, uintptr_t> {
   ZuInline static uintptr_t value(const ZmAnyHash_ &h) {

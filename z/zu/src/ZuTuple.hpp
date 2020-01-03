@@ -225,33 +225,42 @@ auto ZuInline ZuMkTuple(Args &&... args) {
 
 template <typename... Args> ZuTuple(Args...) -> ZuTuple<Args...>;
 
-// ZuTupleFields(Type, Fn0, Fn1, ...) creates
-// a ZuTuple<Args>-derived Type with named member functions Fn0, Fn1, etc.
+// ZuDeclTuple(Type, (Type0, Fn0), (Type1, Fn1), ...) creates
+// a ZuTuple<Type0, ...> with named member functions Fn0, Fn1, etc.
 // that alias p<0>, p<1>, etc.
 //
-// ZuTupleFields(PersonTuple, name, age, gender);
-// typedef PersonTuple<ZtString, unsigned, bool> Person;
+// ZuDeclTuple(Person, (ZtString, name), (unsigned, age), (bool, gender));
 // Person p = Person().name("Fred").age(1).gender(1);
 // p.age() = 42;
 // std::cout << p.name() << '\n';
 
-#define ZuTuple_Field(N, Fn) \
-  ZuInline const auto &Fn() const { return this->template p<N>(); } \
-  ZuInline auto &Fn() { return this->template p<N>(); } \
-  template <typename P> \
-  ZuInline auto &Fn(P &&v) { this->template p<N>(ZuFwd<P>(v)); return *this; }
+#define ZuTuple_FieldType(args) \
+  ZuPP_Defer(ZuTuple_FieldType_)()(ZuPP_Strip1 ZuPP_Strip2(args))
+#define ZuTuple_FieldType_() ZuTuple_FieldType__
+#define ZuTuple_FieldType__(type, fn) ZuPP_Strip1 ZuPP_Strip2(type)
 
-#define ZuTupleFields(T, ...) \
-template <typename ...Args> class T : public ZuTuple<Args...> { \
-  typedef ZuTuple<Args...> Tuple; \
+#define ZuTuple_FieldFn(N, args) \
+  ZuPP_Defer(ZuTuple_FieldFn_)()(N, ZuPP_Strip1 ZuPP_Strip2(args))
+#define ZuTuple_FieldFn_() ZuTuple_FieldFn__
+#define ZuTuple_FieldFn__(N, type, fn) \
+  ZuInline const auto &fn() const { return this->template p<N>(); } \
+  ZuInline auto &fn() { return this->template p<N>(); } \
+  template <typename P> \
+  ZuInline auto &fn(P &&v) { this->template p<N>(ZuFwd<P>(v)); return *this; }
+
+#define ZuDeclTuple(Type, ...) \
+using Type##_ = \
+  ZuTuple<ZuPP_Eval(ZuPP_MapComma(ZuTuple_FieldType, __VA_ARGS__))>; \
+class Type : public Type##_ { \
+  using Tuple = Type##_; \
 public: \
   using Tuple::Tuple; \
   using Tuple::operator =; \
-  ZuInline T(const Tuple &v) : Tuple(v) { }; \
-  ZuInline T(Tuple &&v) : Tuple(ZuMv(v)) { }; \
-  ZuPP_Eval(ZuPP_MapIndex(ZuTuple_Field, 0, __VA_ARGS__)) \
+  ZuInline Type(const Tuple &v) : Tuple(v) { }; \
+  ZuInline Type(Tuple &&v) : Tuple(ZuMv(v)) { }; \
+  ZuPP_Eval(ZuPP_MapIndex(ZuTuple_FieldFn, 0, __VA_ARGS__)) \
 }; \
-template <typename ...Args> \
-struct ZuTraits<T<Args...> > : public ZuTraits<ZuTuple<Args...> > { }
+struct Type##_Traits : public ZuTraits<Type##_> { using T = Type; }; \
+Type##_Traits ZuTraitsFn(const Type *)
 
 #endif /* ZuTuple_HPP */

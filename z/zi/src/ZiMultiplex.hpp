@@ -703,7 +703,6 @@ public:
   inline ZiMxParams &&frag(bool b) { m_frag = b; return ZuMv(*this); }
   inline ZiMxParams &&yield(bool b) { m_yield = b; return ZuMv(*this); }
 #endif
-  inline ZiMxParams &&telFreq(unsigned v) { m_telFreq = v; return ZuMv(*this); }
 
   inline ZmSchedParams &scheduler() { return m_scheduler; }
 
@@ -724,7 +723,6 @@ public:
   inline bool frag() const { return m_frag; }
   inline bool yield() const { return m_yield; }
 #endif
-  inline unsigned telFreq() const { return m_telFreq; }
 
 private:
   ZmSchedParams		m_scheduler;
@@ -745,7 +743,6 @@ private:
   bool			m_frag = false;
   bool			m_yield = false;
 #endif
-  unsigned		m_telFreq = 0;
 };
 
 // display sequence:
@@ -1058,14 +1055,6 @@ public:
   ZuInline unsigned rxBufSize() const { return m_rxBufSize; }
   ZuInline unsigned txBufSize() const { return m_txBufSize; }
 
-  ZuInline unsigned telCount() const {
-    unsigned v = m_telCount;
-    if (!v)
-      m_telCount = m_telFreq;
-    else
-      m_telCount = v - 1;
-    return v;
-  }
   void telemetry(ZiMxTelemetry &data) const;
 
 private:
@@ -1154,9 +1143,6 @@ public:
 private:
   ZmBackTracer<64>	m_tracer;
 #endif
-
-  unsigned		m_telFreq = 0;
-  mutable unsigned	m_telCount = 0;
 };
 
 #endif /* ZiMultiplex_HPP */

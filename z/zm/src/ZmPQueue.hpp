@@ -179,8 +179,6 @@ namespace ZmPQueue_ {
   struct Last<Levels, Levels, T_> { typedef void T; };
 };
 
-ZuTupleFields(ZmPQueue_Gap, key, length);
-
 template <typename Item_, class NTP = ZmPQueue_Defaults>
 class ZmPQueue : public ZuPrintable, public NTP::Base {
   ZmPQueue(const ZmPQueue &);
@@ -197,10 +195,12 @@ public:
   enum { Bits = NTP::Bits };
   enum { Levels = NTP::Levels };
 
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
-  typedef ZmPQueue_Gap<ZuBox0(Key), ZuBox0(unsigned)> Gap;
+  ZuDeclTuple(Gap,
+      ((ZuBox0(Key)), key),
+      ((ZuBox0(unsigned)), length));
 
   struct NullObject { }; // deconflict with ZuNull
   template <typename Node, typename Heap, bool NodeIsItem> class NodeFn_ :

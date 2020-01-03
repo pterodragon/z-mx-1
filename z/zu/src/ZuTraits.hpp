@@ -81,7 +81,11 @@ template <typename T_, bool Enum> struct ZuGenericTraits_ {
 template <typename T>
 struct ZuGenericTraits : public ZuGenericTraits_<T, ZuTraits_Enum<T>::Is> { };
 
-template <typename T> struct ZuTraits : public ZuGenericTraits<T> { };
+template <typename T> ZuGenericTraits<T> inline ZuTraitsFn(const T *);
+template <typename T>
+using ZuDefaultTraits = decltype(ZuTraitsFn((const T *)(const void *)0));
+
+template <typename T> struct ZuTraits : public ZuDefaultTraits<T> { };
 
 template <typename T> struct ZuTraits<const T> : public ZuTraits<T> { };
 template <typename T> struct ZuTraits<volatile T> : public ZuTraits<T> { };

@@ -17,10 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// socket connection options configuration
+// Mx Multiplex
 
-#ifndef ZvCxnOptionsCf_HPP
-#define ZvCxnOptionsCf_HPP
+#ifndef ZvMultiplex_HPP
+#define ZvMultiplex_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -30,32 +30,16 @@
 #include <zlib/ZvLib.hpp>
 #endif
 
+#include <zlib/ZuPolymorph.hpp>
+
 #include <zlib/ZiMultiplex.hpp>
 
 #include <zlib/ZvCf.hpp>
-
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4800)
-#endif
+#include <zlib/ZvError.hpp>
 
 class ZvAPI ZvInvalidMulticastIP : public ZvError {
 public:
   inline ZvInvalidMulticastIP(ZuString s) : m_addr(s) { }
-#if 0
-  inline ZvInvalidMulticastIP(const ZvInvalidMulticastIP &e) :
-    m_addr(e.m_addr) { }
-  inline ZvInvalidMulticastIP &operator =(const ZvInvalidMulticastIP &e) {
-    if (this != &e) m_addr = e.m_addr;
-    return *this;
-  }
-  inline ZvInvalidMulticastIP(ZvInvalidMulticastIP &&e) :
-    m_addr(ZuMv(e.m_addr)) { }
-  inline ZvInvalidMulticastIP &operator =(ZvInvalidMulticastIP &&e) {
-    m_addr = ZuMv(e.m_addr);
-    return *this;
-  }
-#endif
 
   void print_(ZmStream &s) const {
     s << "invalid multicast IP \"" << m_addr << '"';
@@ -107,15 +91,62 @@ struct ZvCxnOptions : public ZiCxnOptions {
     }
     if (netlink())
       familyName(cf->get("familyName", true));
-#if 0
-    if (netmap())
-      if (ZuString s = cf->get("netmapInterface", true)) nif(s);
+  }
+};
+
+struct ZvMxParams : public ZiMxParams {
+  inline ZvMxParams() : ZiMxParams() { }
+
+  using ZiMxParams::ZiMxParams;
+
+  inline ZvMxParams(ZvCf *cf) { init(cf); }
+
+  inline ZvMxParams(ZvCf *cf, ZiMxParams &&deflt) :
+    ZiMxParams(ZuMv(deflt)) { init(cf); }
+
+  inline ZvSchedParams &scheduler() {
+    return static_cast<ZvSchedParams &>(ZiMxParams::scheduler());
+  }
+
+  inline void init(ZvCf *cf) {
+    if (!cf) return;
+
+    scheduler().init(cf);
+    if (ZuString s = cf->get("rxThread")) rxThread(scheduler().tid(s));
+    if (ZuString s = cf->get("txThread")) txThread(scheduler().tid(s));
+#ifdef ZiMultiplex_EPoll
+    epollMaxFDs(cf->getInt("epollMaxFDs", 1, 100000, false, epollMaxFDs()));
+    epollQuantum(cf->getInt("epollQuantum", 1, 1024, false, epollQuantum()));
+#endif
+    rxBufSize(cf->getInt("rcvBufSize", 0, INT_MAX, false, rxBufSize()));
+    txBufSize(cf->getInt("sndBufSize", 0, INT_MAX, false, txBufSize()));
+#ifdef ZiMultiplex_DEBUG
+    trace(cf->getInt("trace", 0, 1, false, trace()));
+    debug(cf->getInt("debug", 0, 1, false, debug()));
+    frag(cf->getInt("frag", 0, 1, false, frag()));
+    yield(cf->getInt("yield", 0, 1, false, yield()));
 #endif
   }
 };
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+class ZvMultiplex : public ZuPolymorph, public ZiMultiplex {
+public:
+  typedef ZmScheduler::ID ID;
 
-#endif /* ZvCxnOptionsCf_HPP */
+  struct IDAccessor : public ZuAccessor<ZvMultiplex *, ID> {
+    ZuInline static ID value(const ZvMultiplex *mx) {
+      return mx->params().id();
+    }
+  };
+
+  template <typename ID_>
+  inline ZvMultiplex(const ID_ &id) :
+      ZiZvParams(
+	  ZiZvParams().scheduler([&](auto &s) { s.id(id); })) { }
+  template <typename ID_>
+  inline ZvMultiplex(const ID_ &id, ZvCf *cf) :
+    ZiMultiplex(ZvZvParams(cf,
+	  ZiZvParams().scheduler([&](auto &s) { s.id(id); }))) { }
+};
+
+#endif /* ZvMultiplex_HPP */

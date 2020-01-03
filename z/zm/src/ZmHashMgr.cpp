@@ -99,23 +99,15 @@ private:
     ZmRef<ZmAnyHash> tbl;
     {
       ZmGuard<ZmPLock> guard(m_lock);
-      // for (;;) {
-	tbl = m_tables.minimum();
-	// if (!tbl || tbl->refCount() > 2) break;
-	// m_tables.del(tbl);
-      // }
+      tbl = m_tables.minimum();
     }
     while (tbl) {
       fn(tbl);
       ZmRef<ZmAnyHash> next;
       {
 	ZmGuard<ZmPLock> guard(m_lock);
-	// for (;;) {
-	  next = m_tables.readIterator<ZmRBTreeGreater>(
-	      ZmAnyHash_PtrAccessor::value(*tbl)).iterate();
-	  // if (!tbl || tbl->refCount() > 2) break;
-	  // m_tables.del(tbl);
-	// }
+	next = m_tables.readIterator<ZmRBTreeGreater>(
+	    ZmAnyHash_PtrAccessor::value(*tbl)).iterate();
       }
       tbl = ZuMv(next);
     }

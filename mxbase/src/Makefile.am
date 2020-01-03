@@ -4,9 +4,8 @@ AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @MXBASE_LDFLAGS@ @MXBASE_SO_LDFLAGS@ @Z_LDFLAGS@
 pkginclude_HEADERS = \
 	MxBase.hpp MxBaseLib.hpp MxBaseVersion.hpp \
-	MxCSV.hpp MxMsgID.hpp MxQueue.hpp MxMultiplex.hpp MxScheduler.hpp \
+	MxCSV.hpp MxMultiplex.hpp MxScheduler.hpp \
 	MxValWindow.hpp \
-	MxEngine.hpp MxTelemetry.hpp \
 	MxTxDB.hpp MxRxDB.hpp
 lib_LTLIBRARIES = libMxBase.la
 libMxBase_la_SOURCES = MxBaseLib.cpp MxBaseVersion.cpp MxEngine.cpp \

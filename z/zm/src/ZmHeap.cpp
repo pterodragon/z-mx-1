@@ -45,6 +45,9 @@ friend class ZmHeapCache;
   typedef ZmGuard<Lock> Guard;
   typedef ZmReadGuard<Lock> ReadGuard;
 
+  typedef ZmHeapCache::IDPartSize IDSize;
+  typedef ZmHeapCache::IDPartSize IDPartSize;
+
   typedef ZmRBTree<ZuPair<ZmIDString, unsigned>,
 	    ZmRBTreeVal<ZmHeapConfig,
 	      ZmRBTreeHeapID<ZuNull,
@@ -114,6 +117,21 @@ private:
 	c = m_caches3.readIterator<ZmRBTreeGreater>(
 	    ZmHeapCache::IDPartSizeAccessor::value(c)).iterateKey();
       }
+    }
+  }
+
+  void all(const char *id, ZmFn<ZmHeapCache *> fn) {
+    IDPartSize key{id, 0, 0};
+    ZmRef<ZmHeapCache> c;
+    for (;;) {
+      {
+	ReadGuard guard(m_lock);
+	c = m_caches3.readIterator<ZmRBTreeGreater>(key).iterateKey();
+      }
+      if (!c) return;
+      if (strcmp(id, c->info().id)) return;
+      key = ZmHeapCache::IDPartSizeAccessor::value(c);
+      fn(c);
     }
   }
 

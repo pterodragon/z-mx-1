@@ -44,17 +44,33 @@
 
 #define ZuPP_Defer(x) x ZuPP_Empty ZuPP_Empty()()
 
+// map expansions - the *Comma versions suppress trailing commas
+
 #define ZuPP_Map(map, first, ...) \
   map(first) __VA_OPT__(ZuPP_Defer(ZuPP_Map_)()(map, __VA_ARGS__))
 #define ZuPP_Map_() ZuPP_Map
+
+#define ZuPP_MapComma(map, first, ...) \
+  map(first) __VA_OPT__(, ZuPP_Defer(ZuPP_MapComma_)()(map, __VA_ARGS__))
+#define ZuPP_MapComma_() ZuPP_MapComma
 
 #define ZuPP_MapArg(map, arg, first, ...) \
   map(arg, first) __VA_OPT__(ZuPP_Defer(ZuPP_MapArg_)()(map, arg, __VA_ARGS__))
 #define ZuPP_MapArg_() ZuPP_MapArg
 
+#define ZuPP_MapArgComma(map, arg, first, ...) \
+  map(arg, first) \
+  __VA_OPT__(, ZuPP_Defer(ZuPP_MapArgComma_)()(map, arg, __VA_ARGS__))
+#define ZuPP_MapArgComma_() ZuPP_MapArgComma
+
 #define ZuPP_MapIndex(map, i, first, ...) \
   map(i, first) \
   __VA_OPT__(ZuPP_Defer(ZuPP_MapIndex_)()(map, (i + 1), __VA_ARGS__))
 #define ZuPP_MapIndex_() ZuPP_MapIndex
+
+#define ZuPP_MapIndexComma(map, i, first, ...) \
+  map(i, first) \
+  __VA_OPT__(, ZuPP_Defer(ZuPP_MapIndexComma_)()(map, (i + 1), __VA_ARGS__))
+#define ZuPP_MapIndexCommaComma_() ZuPP_MapIndexComma
 
 #endif /* ZuPP_HPP */

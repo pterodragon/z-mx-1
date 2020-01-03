@@ -36,10 +36,10 @@
 #include <zlib/ZtString.hpp>
 
 #pragma pack(push, 2)
-template <typename Heap> class ZiIOBuf_ : public Heap, public ZmPolymorph {
+template <unsigned Size_, typename Heap>
+class ZiIOBuf_ : public Heap, public ZmPolymorph {
 public:
-  // TCP over Ethernet maximum payload is 1460 (without Jumbo frames)
-  enum { Size = 1460 };
+  enum { Size = Size_ };
 
   ZuInline ZiIOBuf_() { }
   ZuInline ZiIOBuf_(void *owner_) : owner(owner_) { }
@@ -69,22 +69,24 @@ public:
     return ptr + skip;
   }
 
-  ZuInline uint8_t *ensure(unsigned size_) {
-    if (ZuLikely(size_ <= Size)) return data_;
-    if (ZuUnlikely(size_ <= size)) return jumbo;
+  // reallocate (while building buffer), preserving head and tail bytes
+  ZuInline uint8_t *realloc(
+      unsigned oldLen, unsigned newLen,
+      unsigned head, unsigned tail) {
+    if (ZuLikely(newLen <= Size)) {
+      if (tail) memmove(data_ + newLen - tail, data + oldLen - tail, tail);
+      return data_;
+    }
+    if (ZuUnlikely(newLen <= size)) {
+      if (tail) memmove(jumbo + newLen - tail, jumbo + oldLen - tail, tail);
+      return jumbo;
+    }
     uint8_t *old = jumbo;
-    jumbo = (uint8_t *)::malloc(size_);
-    size = size_;
-    if (!length) {
-      if (ZuUnlikely(old)) ::free(old);
-      return jumbo;
-    }
-    if (ZuLikely(!old)) {
-      memcpy(jumbo, data_, length);
-      return jumbo;
-    }
-    memcpy(jumbo, old, length);
-    ::free(old);
+    jumbo = (uint8_t *)::malloc(size = newLen);
+    if (ZuLikely(!old)) old = data_;
+    if (head) memcpy(jumbo, old, head);
+    if (tail) memcpy(jumbo + newLen - tail, old + oldLen - tail, tail);
+    if (ZuUnlikely(old != data_)) ::free(old);
     return jumbo;
   }
 
@@ -96,19 +98,24 @@ public:
   uint8_t	data_[Size];
 };
 #pragma pack(pop)
+
 struct ZiIOBuf_HeapID {
   inline static const char *id() { return "ZiIOBuf"; }
 };
-typedef ZmHeap<ZiIOBuf_HeapID, sizeof(ZiIOBuf_<ZuNull>)> ZiIOBuf_Heap;
-typedef ZiIOBuf_<ZiIOBuf_Heap> ZiIOBuf;
+template <unsigned Size>
+using ZiIOBuf_Heap =
+  ZmHeap<Size, ZiIOBuf_HeapID, sizeof(ZiIOBuf_<Size, ZuNull>)>;
+ 
+// TCP over Ethernet maximum payload is 1460 (without Jumbo frames)
+template <unsigned Size = 1460>
+using ZiIOBuf = ZiIOBuf_<Size, ZiIOBuf_Heap<Size> >;
 
 // generic ZiIOBuf receiver
-class ZiIORx {
+template <typename Buf_> class ZiIORx {
 public:
-  void connected() {
-    m_buf = new ZiIOBuf(this);
-  }
+  using Buf = Buf_;
 
+  void connected() { m_buf = new Buf(this); }
   void disconnected() { }
 
   // hdr(const uint8_t *ptr, unsigned len) should adjust ptr, len and return:
@@ -145,7 +152,7 @@ public:
   }
 
 private:
-  ZmRef<ZiIOBuf>		m_buf;
+  ZmRef<Buf>		m_buf;
 };
 
 #endif /* ZiIOBuf_HPP */

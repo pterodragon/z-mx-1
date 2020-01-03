@@ -59,8 +59,7 @@ ZuPair<A, A> passapair(ZuPair<A, A> a) { return a; }
 ZuTuple<A, A, A> mkatuple() { return ZuMkTuple(A(42), A(42), A(42)); }
 ZuTuple<A, A, A> passatuple(ZuTuple<A, A, A> a) { return a; }
 
-ZuTupleFields(B_, foo);
-typedef B_<A, A, A> B;
+ZuDeclTuple(B, (A, foo), (A, foo2), (A, foo3));
 
 int main()
 {

@@ -17,10 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// scheduler configuration
+// Mx Scheduler
 
-#ifndef ZvSchedulerCf_HPP
-#define ZvSchedulerCf_HPP
+#ifndef ZvScheduler_HPP
+#define ZvScheduler_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -30,6 +30,7 @@
 #include <zlib/ZvLib.hpp>
 #endif
 
+#include <zlib/ZmObject.hpp>
 #include <zlib/ZmScheduler.hpp>
 
 #include <zlib/ZvCf.hpp>
@@ -109,4 +110,15 @@ struct ZvSchedParams : public ZmSchedParams {
   }
 };
 
-#endif /* ZvSchedulerCf_HPP */
+class ZvScheduler : public ZuObject, public ZmScheduler {
+public:
+  template <typename ID>
+  inline ZvScheduler(const ID &id) :
+    ZmScheduler(ZmSchedParams().nThreads(1).id(id)) { }
+  template <typename ID>
+  inline ZvScheduler(const ID &id, ZvCf *cf) :
+    ZmScheduler(ZvSchedParams(cf,
+	  ZmSchedParams().nThreads(1).id(id))) { }
+};
+
+#endif /* ZvScheduler_HPP */

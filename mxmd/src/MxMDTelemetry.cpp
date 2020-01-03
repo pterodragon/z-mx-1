@@ -48,13 +48,13 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
   // heaps
   ZmHeapMgr::all(ZmFn<ZmHeapCache *>{
       cxn, [](Cxn *cxn, ZmHeapCache *h) {
-	if (!h->telCount()) cxn->transmit(heap(h));
+	cxn->transmit(heap(h));
       }});
 
   // hash tables
   ZmHashMgr::all(ZmFn<ZmAnyHash *>{
       cxn, [](Cxn *cxn, ZmAnyHash *h) {
-	if (!h->telCount()) cxn->transmit(hashTbl(h));
+	cxn->transmit(hashTbl(h));
       }});
 
   // threads
@@ -65,7 +65,6 @@ void MxMDTelemetry::run(MxTelemetry::Server::Cxn *cxn)
   // mutiplexers, thread queues, sockets
   m_core->allMx(ZmFn<MxMultiplex *>{
       cxn, [](Cxn *cxn, MxMultiplex *mx) {
-	if (mx->telCount()) return;
 	cxn->transmit(multiplexer(mx));
 	{
 	  uint64_t inCount, inBytes, outCount, outBytes;

@@ -232,22 +232,8 @@ MxMDLib *MxMDLib::init(ZuString cf_, ZmFn<ZmScheduler *> schedInitFn)
       using MxTbl = MxMDCore::MxTbl;
       using Mx = MxMDCore::Mx;
 
-      ZmRef<MxTbl> mxTbl = new MxTbl();
-
-      if (ZmRef<ZvCf> mxCf = cf->subset("mx", false, true)) {
-	ZvCf::Iterator i(mxCf);
-	ZuString key;
-	while (ZmRef<ZvCf> mxCf_ = i.subset(key))
-	  mxTbl->add(new Mx(key, mxCf_));
-      }
-
-      Mx *coreMx;
-      {
-	MxTbl::Node *node;
-	if (!(node = mxTbl->find(Mx::ID("core"))))
-	  throw ZvCf::Required(cf, "mx:core");
-	coreMx = node->key();
-      }
+      Mx *coreMx = this->mx("core");
+      if (!coreMx) throw ZvCf::Required(cf, "mx:core");
 
       ZeLOG(Info, "starting multiplexers...");
       {

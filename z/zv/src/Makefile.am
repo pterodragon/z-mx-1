@@ -18,6 +18,7 @@ FBS = \
 	zcmd.fbs \
 	zcmdreq.fbs \
 	zcmdack.fbs \
+	telreq.fbs \
 	telemetry.fbs
 FBS_H = ${FBS:%.fbs=%_fbs.h}
 ${FBS_H}: %_fbs.h: fbs/%.fbs
@@ -28,10 +29,10 @@ BUILT_SOURCES = ${FBS_H}
 CLEANFILES = ${FBS_H}
 pkginclude_HEADERS = ZvLib.hpp \
 	ZvCf.hpp ZvFields.hpp ZvCSV.hpp ZvError.hpp ZvEnum.hpp ZvHashCSV.hpp \
-	ZvHeapCSV.hpp ZvMultiplexCf.hpp ZvSchedulerCf.hpp ZvCxnOptionsCf.hpp \
-	ZvDaemon.hpp \
+	ZvHeapCSV.hpp ZvDaemon.hpp \
 	ZvRingCf.hpp ZvThreadCf.hpp ZvUserDB.hpp \
 	ZvCmdNet.hpp ZvCmdHost.hpp ZvCmdClient.hpp ZvCmdServer.hpp \
+	ZvScheduler.hpp ZvMultiplex.hpp ZvQueue.hpp ZvEngine.hpp \
 	ZvTelemetry.hpp ${FBS_H}
 #fbsdir = $(datarootdir)/${PACKAGE}/fbs
 #dist_fbs_DATA = fbs/telemetry.fbs
@@ -39,7 +40,7 @@ lib_LTLIBRARIES = libZv.la
 bin_PROGRAMS = zuserdb
 libZv_la_LDFLAGS = @Z_SO_LDFLAGS@
 libZv_la_SOURCES = ZvLib.cpp \
-	ZvCf.cpp ZvCSV.cpp ZvDaemon.cpp ZvUserDB.cpp
+	ZvCf.cpp ZvCSV.cpp ZvDaemon.cpp ZvUserDB.cpp ZvEngine.cpp
 libZv_la_LIBADD = $(top_builddir)/zfb/src/libZfb.la \
 	$(top_builddir)/ztls/src/libZtls.la \
 	$(top_builddir)/zi/src/libZi.la $(top_builddir)/ze/src/libZe.la \

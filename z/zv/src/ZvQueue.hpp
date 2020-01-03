@@ -19,15 +19,15 @@
 
 // Mx Queue
 
-#ifndef MxQueue_HPP
-#define MxQueue_HPP
+#ifndef ZvQueue_HPP
+#define ZvQueue_HPP
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#ifndef MxBaseLib_HPP
-#include <mxbase/MxBaseLib.hpp>
+#ifndef ZvLib_HPP
+#include <zlib/ZvLib.hpp>
 #endif
 
 #include <zlib/ZuArrayN.hpp>
@@ -41,73 +41,91 @@
 #include <zlib/ZiIP.hpp>
 #include <zlib/ZiMultiplex.hpp>
 
-#include <mxbase/MxMsgID.hpp>
+#include <mxbase/ZvQMsgID.hpp>
 
-struct MxQMsgData {
-  ZuRef<ZuPolymorph>	payload;
-  void			*owner_ = 0;
-  MxMsgID		id;
-  int32_t		skip_ = 0; // -ve - no queuing; +ve - gap fill
-  uint32_t		length = 0; // occupied length of payload in bytes
+struct ZvQMsgID {
+  MxID		linkID;
+  MxSeqNo	seqNo;
 
-  ZuInline MxQMsgData(ZuRef<ZuPolymorph> payload_) :
-      payload(ZuMv(payload_)) { }
-  ZuInline MxQMsgData(ZuRef<ZuPolymorph> payload_, unsigned length_) :
-      payload(ZuMv(payload_)), length(length_) { }
-  ZuInline MxQMsgData(
-      ZuRef<ZuPolymorph> payload_, unsigned length_, MxMsgID id_) :
-      payload(ZuMv(payload_)), id(id_), length(length_) { }
+  void update(const ZvQMsgID &u) {
+    linkID.update(u.linkID);
+    seqNo.update(u.seqNo);
+  }
+  template <typename S> inline void print(S &s) const {
+    s << "linkID=" << linkID << " seqNo=" << seqNo;
+  }
+};
+template <> struct ZuPrint<ZvQMsgID> : public ZuPrintFn { };
+
+struct ZvQItem {
+  ZuInline ZvQItem(ZmRef<ZmPolymorph> payload) :
+      m_payload(ZuMv(payload)) { }
+  ZuInline ZvQItem(ZmRef<ZmPolymorph> payload, unsigned length) :
+      m_payload(ZuMv(payload)), m_length(length) { }
+  ZuInline ZvQItem(
+      ZmRef<ZmPolymorph> payload, unsigned length, ZvQMsgID id) :
+      m_payload(ZuMv(payload)), m_id(id), m_length(length) { }
 
   template <typename T>
-  ZuInline const T *ptr() const { return payload.ptr<T>(); }
+  ZuInline const T *ptr() const { return m_buf.ptr<T>(); }
   template <typename T>
-  ZuInline T *ptr() { return payload.ptr<T>(); }
+  ZuInline T *ptr() { return m_buf.ptr<T>(); }
 
-  template <typename T = void *> ZuInline T owner() const { return (T)owner_; }
-  template <typename T> ZuInline void owner(T v) { owner_ = (void *)v; }
+  template <typename T = void *> ZuInline T owner() const { return (T)m_owner; }
+  template <typename T> ZuInline void owner(T v) { m_owner = (void *)v; }
 
-  ZuInline void load(const MxMsgID &id_) { id = id_; }
-  ZuInline void unload() { id = MxMsgID{}; }
+  ZuInline void load(const ZvQMsgID &id_) { m_id = id; }
+  ZuInline void unload() { m_id = ZvQMsgID{}; }
 
-  ZuInline unsigned skip() const { return skip_ <= 0 ? 1 : skip_; }
-  ZuInline void skip(unsigned n) { skip_ = n; }
+  ZuInline unsigned skip() const { return m_skip <= 0 ? 1 : m_skip; }
+  ZuInline void skip(unsigned n) { m_skip = n; }
 
-  ZuInline bool noQueue() const { return skip_ < 0; }
-  ZuInline void noQueue(int b) { skip_ = -b; }
+  ZuInline bool noQueue() const { return m_skip < 0; }
+  ZuInline void noQueue(int b) { m_skip = -b; }
+
+  ZuInline unsigned length() const { return m_length; }
+  ZuInline void length(unsigned n) { m_length = n; }
+
+private:
+  ZmRef<ZmPolymorph>	m_buf;		// usually ZiIOBuf
+  void			*m_owner = 0;
+  ZvQMsgID		m_id;
+  int32_t		m_skip = 0;   // -ve - no queuing; +ve - gap fill
+  uint32_t		m_length = 0; // occupied length of payload in bytes
 };
 
-class MxQFn {
+class ZvQFn {
 public:
-  typedef MxSeqNo Key;
-  ZuInline MxQFn(MxQMsgData &item) : m_item(item) { }
-  ZuInline MxSeqNo key() const { return m_item.id.seqNo; }
+  typedef ZvSeqNo Key;
+  ZuInline ZvQFn(ZvQItem &item) : m_item(item) { }
+  ZuInline ZvSeqNo key() const { return m_item.id.seqNo; }
   ZuInline unsigned length() const { return m_item.skip(); }
   ZuInline unsigned clipHead(unsigned n) { return length(); }
   ZuInline unsigned clipTail(unsigned n) { return length(); }
-  ZuInline void write(const MxQFn &) { }
-  ZuInline unsigned bytes() const { return m_item.length; }
+  ZuInline void write(const ZvQFn &) { }
+  ZuInline unsigned bytes() const { return m_item.length(); }
 
 private:
-  MxQMsgData	&m_item;
+  ZvQItem	&m_item;
 };
 
-struct MxQMsg_HeapID { inline static const char *id() { return "MxQMsg"; } };
-typedef ZmPQueue<MxQMsgData,
+struct ZvQMsg_HeapID { inline static const char *id() { return "ZvQMsg"; } };
+typedef ZmPQueue<ZvQItem,
 	  ZmPQueueNodeIsItem<true,
 	    ZmPQueueObject<ZmPolymorph,
-	      ZmPQueueFn<MxQFn,
+	      ZmPQueueFn<ZvQFn,
 		ZmPQueueLock<ZmNoLock,
-		  ZmPQueueHeapID<MxQMsg_HeapID,
-		    ZmPQueueBase<ZmObject> > > > > > > MxQueue;
-typedef MxQueue::Node MxQMsg;
-typedef MxQueue::Gap MxQGap;
+		  ZmPQueueHeapID<ZvQMsg_HeapID,
+		    ZmPQueueBase<ZmObject> > > > > > > ZvQueue;
+typedef ZvQueue::Node ZvQMsg;
+typedef ZvQueue::Gap ZvQGap;
 
-// MxQueueRx - receive queue
+// ZvQueueRx - receive queue
 
 // CRTP - application must conform to the following interface:
 #if 0
-struct Impl : public MxQueueRx<Impl> {
-  void process(MxQMsg *);		// rx process
+struct Impl : public ZvQueueRx<Impl> {
+  void process(ZvQMsg *);		// rx process
 
   void scheduleDequeue();
   void rescheduleDequeue();
@@ -116,47 +134,47 @@ struct Impl : public MxQueueRx<Impl> {
   void scheduleReRequest();
   void cancelReRequest();
 
-  void request(const MxQueue::Gap &prev, const MxQueue::Gap &now);
-  void reRequest(const MxQueue::Gap &now);
+  void request(const ZvQueue::Gap &prev, const ZvQueue::Gap &now);
+  void reRequest(const ZvQueue::Gap &now);
 };
 #endif
 
 template <class Impl, class Lock_ = ZmNoLock>
-class MxQueueRx : public ZmPQRx<Impl, MxQueue, Lock_> {
-  typedef ZmPQRx<Impl, MxQueue, Lock_> Rx;
+class ZvQueueRx : public ZmPQRx<Impl, ZvQueue, Lock_> {
+  typedef ZmPQRx<Impl, ZvQueue, Lock_> Rx;
 
 public:
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
 
-  ZuInline MxQueueRx() : m_queue(new MxQueue(MxSeqNo())) { }
+  ZuInline ZvQueueRx() : m_queue(new ZvQueue(ZvSeqNo())) { }
   
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
-  ZuInline const MxQueue *rxQueue() const { return m_queue; }
-  ZuInline MxQueue *rxQueue() { return m_queue; }
+  ZuInline const ZvQueue *rxQueue() const { return m_queue; }
+  ZuInline ZvQueue *rxQueue() { return m_queue; }
 
-  ZuInline void rxInit(MxSeqNo seqNo) {
+  ZuInline void rxInit(ZvSeqNo seqNo) {
     if (seqNo > m_queue->head()) m_queue->head(seqNo);
   }
 
 private:
-  ZmRef<MxQueue>	m_queue;
+  ZmRef<ZvQueue>	m_queue;
 };
 
-// MxQueueTx - transmit queue
-// MxQueueTxPool - transmit fan-out queue
+// ZvQueueTx - transmit queue
+// ZvQueueTxPool - transmit fan-out queue
 
-#define MxQueueMaxPools 8	// max #pools a tx queue can be a member of
+#define ZvQueueMaxPools 8	// max #pools a tx queue can be a member of
 
-template <class Impl, class Lock> class MxQueueTxPool;
+template <class Impl, class Lock> class ZvQueueTxPool;
 
 // CRTP - application must conform to the following interface:
 #if 0
-struct Impl : public MxQueueTx<Impl> {
-  void archive_(MxQMsg *);			// tx archive (persistent)
-  ZmRef<MxQMsg> retrieve_(MxSeqNo, MxSeqNo);	// tx retrieve
+struct Impl : public ZvQueueTx<Impl> {
+  void archive_(ZvQMsg *);			// tx archive (persistent)
+  ZmRef<ZvQMsg> retrieve_(ZvSeqNo, ZvSeqNo);	// tx retrieve
 
   void scheduleSend();
   void rescheduleSend();
@@ -170,25 +188,25 @@ struct Impl : public MxQueueTx<Impl> {
   void rescheduleArchive();
   void idleArchive();
 
-  void loaded_(MxQMsg *msg);		// may adjust readiness
-  void unloaded_(MxQMsg *msg);		// ''
+  void loaded_(ZvQMsg *msg);		// may adjust readiness
+  void unloaded_(ZvQMsg *msg);		// ''
 
   // send_() must perform one of
   // 1] usual case (successful send): persist seqNo, return true
   // 2] stale message: abort message, return true
   // 3] transient failure (throttling, I/O, etc.): return false
-  bool send_(MxQMsg *msg, bool more);
+  bool send_(ZvQMsg *msg, bool more);
   // resend_() must perform one of
   // 1] usual case (successful resend): return true
   // 2] transient failure (throttling, I/O, etc.): return false
-  bool resend_(MxQMsg *msg, bool more);
+  bool resend_(ZvQMsg *msg, bool more);
 
   // sendGap_() and resendGap_() return true, or false on transient failure
-  bool sendGap_(const MxQueue::Gap &gap, bool more);
-  bool resendGap_(const MxQueue::Gap &gap, bool more);
+  bool sendGap_(const ZvQueue::Gap &gap, bool more);
+  bool resendGap_(const ZvQueue::Gap &gap, bool more);
 };
 
-struct Impl : public MxQueueTxPool<Impl> {
+struct Impl : public ZvQueueTxPool<Impl> {
   // Note: below member functions have same signature as above
   void scheduleSend();
   void rescheduleSend();
@@ -202,19 +220,19 @@ struct Impl : public MxQueueTxPool<Impl> {
   void rescheduleArchive();
   void idleArchive();
 
-  void aborted_(MxQMsg *msg);
+  void aborted_(ZvQMsg *msg);
 
-  void loaded_(MxQMsg *msg);		// may adjust readiness
-  void unloaded_(MxQMsg *msg);		// ''
+  void loaded_(ZvQMsg *msg);		// may adjust readiness
+  void unloaded_(ZvQMsg *msg);		// ''
 };
 #endif
 
 template <class Impl, class Lock_ = ZmNoLock>
-class MxQueueTx : public ZmPQTx<Impl, MxQueue, Lock_> {
-  typedef ZmPQTx<Impl, MxQueue, Lock_> Tx;
-  typedef MxQueueTxPool<Impl, Lock_> Pool;
+class ZvQueueTx : public ZmPQTx<Impl, ZvQueue, Lock_> {
+  typedef ZmPQTx<Impl, ZvQueue, Lock_> Tx;
+  typedef ZvQueueTxPool<Impl, Lock_> Pool;
 
-  typedef ZuArrayN<Pool *, MxQueueMaxPools> Pools;
+  typedef ZuArrayN<Pool *, ZvQueueMaxPools> Pools;
 
 public:
   typedef Lock_ Lock;
@@ -225,22 +243,22 @@ protected:
   ZuInline Lock &lock() { return m_lock; }
 
 public:
-  ZuInline MxQueueTx() : m_queue(new MxQueue(MxSeqNo())) { }
+  ZuInline ZvQueueTx() : m_queue(new ZvQueue(ZvSeqNo())) { }
 
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
-  ZuInline const MxSeqNo txSeqNo() const { return m_seqNo; }
+  ZuInline const ZvSeqNo txSeqNo() const { return m_seqNo; }
 
-  ZuInline const MxQueue *txQueue() const { return m_queue; }
-  ZuInline MxQueue *txQueue() { return m_queue; }
+  ZuInline const ZvQueue *txQueue() const { return m_queue; }
+  ZuInline ZvQueue *txQueue() { return m_queue; }
 
-  ZuInline void txInit(MxSeqNo seqNo) {
+  ZuInline void txInit(ZvSeqNo seqNo) {
     if (seqNo > m_seqNo) m_queue->head(m_seqNo = seqNo);
   }
 
   ZuInline void send() { Tx::send(); }
-  void send(ZmRef<MxQMsg> msg) {
+  void send(ZmRef<ZvQMsg> msg) {
     if (ZuUnlikely(msg->noQueue())) {
       Guard guard(m_lock);
       if (ZuUnlikely(!m_ready)) {
@@ -249,12 +267,12 @@ public:
 	return;
       }
     }
-    msg->load(MxMsgID{impl()->id(), m_seqNo++});
+    msg->load(ZvQMsgID{impl()->id(), m_seqNo++});
     impl()->loaded_(msg);
     Tx::send(ZuMv(msg));
   }
-  bool abort(MxSeqNo seqNo) {
-    ZmRef<MxQMsg> msg = Tx::abort(seqNo);
+  bool abort(ZvSeqNo seqNo) {
+    ZmRef<ZvQMsg> msg = Tx::abort(seqNo);
     if (msg) {
       impl()->aborted_(msg);
       impl()->unloaded_(msg);
@@ -265,24 +283,24 @@ public:
   }
 
   // unload all messages from queue
-  void unload(ZmFn<MxQMsg *> fn) {
-    while (ZmRef<MxQMsg> msg = m_queue->shift()) {
+  void unload(ZmFn<ZvQMsg *> fn) {
+    while (ZmRef<ZvQMsg> msg = m_queue->shift()) {
       impl()->unloaded_(msg);
       msg->unload();
       fn(msg);
     }
   }
 
-  ZuInline void ackd(MxSeqNo seqNo) {
+  ZuInline void ackd(ZvSeqNo seqNo) {
     if (m_seqNo < seqNo) m_seqNo = seqNo;
     Tx::ackd(seqNo);
   }
 
-  ZuInline void txReset(MxSeqNo seqNo = MxSeqNo()) {
+  ZuInline void txReset(ZvSeqNo seqNo = ZvSeqNo()) {
     Tx::txReset(m_seqNo = seqNo);
   }
 
-  // fails silently if MxQueueMaxPools exceeded
+  // fails silently if ZvQueueMaxPools exceeded
   void join(Pool *g) {
     Guard guard(m_lock);
     m_pools << g;
@@ -315,8 +333,8 @@ protected:
 
 private:
 
-  MxSeqNo		m_seqNo;
-  ZmRef<MxQueue>	m_queue;
+  ZvSeqNo		m_seqNo;
+  ZmRef<ZvQueue>	m_queue;
 
   Lock			m_lock;
     Pools		  m_pools;
@@ -325,13 +343,13 @@ private:
 };
 
 template <class Impl, class Lock_ = ZmNoLock>
-class MxQueueTxPool : public MxQueueTx<Impl, Lock_> {
+class ZvQueueTxPool : public ZvQueueTx<Impl, Lock_> {
   struct Queues_HeapID {
-    inline static const char *id() { return "MxQueueTxPool.Queues"; }
+    inline static const char *id() { return "ZvQueueTxPool.Queues"; }
   };
 
-  typedef MxQueue::Gap Gap;
-  typedef MxQueueTx<Impl, Lock_> Tx;
+  typedef ZvQueue::Gap Gap;
+  typedef ZvQueueTx<Impl, Lock_> Tx;
 
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
@@ -343,10 +361,10 @@ class MxQueueTxPool : public MxQueueTx<Impl, Lock_> {
 		  ZmRBTreeHeapID<Queues_HeapID> > > > > Queues;
 
 public:
-  ZuInline void loaded_(MxQMsg *) { }   // may be overridden by Impl
-  ZuInline void unloaded_(MxQMsg *) { } // ''
+  ZuInline void loaded_(ZvQMsg *) { }   // may be overridden by Impl
+  ZuInline void unloaded_(ZvQMsg *) { } // ''
 
-  bool send_(MxQMsg *msg, bool more) {
+  bool send_(ZvQMsg *msg, bool more) {
     if (ZmRef<Tx> next = next_()) {
       next->send(msg);
       sent_(msg);
@@ -354,15 +372,15 @@ public:
     }
     return false;
   }
-  ZuInline bool resend_(MxQMsg *, bool) { return true; } // unused
-  ZuInline void aborted_(MxQMsg *) { } // unused
+  ZuInline bool resend_(ZvQMsg *, bool) { return true; } // unused
+  ZuInline void aborted_(ZvQMsg *) { } // unused
 
   ZuInline bool sendGap_(const Gap &, bool) { return true; } // unused
   ZuInline bool resendGap_(const Gap &, bool) { return true; } // unused
 
-  ZuInline void sent_(MxQMsg *msg) { Tx::ackd(msg->id.seqNo + 1); }
-  ZuInline void archive_(MxQMsg *msg) { Tx::archived(msg->id.seqNo + 1); }
-  ZuInline ZmRef<MxQMsg> retrieve_(MxSeqNo, MxSeqNo) { // unused
+  ZuInline void sent_(ZvQMsg *msg) { Tx::ackd(msg->id.seqNo + 1); }
+  ZuInline void archive_(ZvQMsg *msg) { Tx::archived(msg->id.seqNo + 1); }
+  ZuInline ZmRef<ZvQMsg> retrieve_(ZvSeqNo, ZvSeqNo) { // unused
     return nullptr;
   }
 
@@ -402,7 +420,7 @@ public:
 };
 
 template <class Impl, class Lock_>
-void MxQueueTx<Impl, Lock_>::ready_(ZmTime next)
+void ZvQueueTx<Impl, Lock_>::ready_(ZmTime next)
 {
   unsigned i, n = m_pools.length();
   unsigned o = (m_poolOffset = (m_poolOffset + 1) % n);
@@ -412,7 +430,7 @@ void MxQueueTx<Impl, Lock_>::ready_(ZmTime next)
 }
 
 template <class Impl, class Lock_>
-void MxQueueTx<Impl, Lock_>::unready_()
+void ZvQueueTx<Impl, Lock_>::unready_()
 {
   unsigned i, n = m_pools.length();
   unsigned o = (m_poolOffset = (m_poolOffset + 1) % n);
@@ -421,4 +439,4 @@ void MxQueueTx<Impl, Lock_>::unready_()
   m_ready = ZmTime();
 }
 
-#endif /* MxQueue_HPP */
+#endif /* ZvQueue_HPP */

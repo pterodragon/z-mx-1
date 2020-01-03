@@ -332,7 +332,7 @@ public:
       if (flags & Create) mmapFlags |= ZiFile::Create;
       int r;
       if ((r = m_ctrl.mmap(m_params.name() + ".ctrl",
-	      mmapFlags, sizeof(Ctrl), true, 0, 0777, e)) != Zi::OK)
+	      mmapFlags, sizeof(Ctrl), true, 0, 0666, e)) != Zi::OK)
 	return r;
       if (m_params.size()) {
 	uint32_t reqSize = (uint32_t)m_params.size() | (uint32_t)m_params.ll();
@@ -367,7 +367,7 @@ public:
       }
       mmapFlags |= ZiFile::ShmDbl;
       if ((r = m_data.mmap(m_params.name() + ".data",
-	      mmapFlags, m_params.size(), true, 0, 0777, e)) != Zi::OK) {
+	      mmapFlags, m_params.size(), true, 0, 0666, e)) != Zi::OK) {
 	m_ctrl.close();
 	if (!m_params.ll()) ZiRing_::close();
 	return r;

@@ -371,6 +371,8 @@ public:
 #else
   ZuInline bool netlink() const { return false; }
   ZuInline ZiCxnOptions &netlink(bool) { return *this; }
+  ZuInline ZuString familyName() const { return ZuString{}; }
+  ZuInline ZiCxnOptions &familyName(ZuString) { return *this; }
 #endif
   ZuInline bool nagle() const {
     using namespace ZiCxnFlags;

@@ -195,7 +195,7 @@ public:
 #endif
 
   template <typename T>
-  inline void all_(ZmFn<T *> fn) {
+  void all_(ZmFn<T *> fn) {
     all_2(&fn);
   }
 

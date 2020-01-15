@@ -11,11 +11,11 @@
 
 #include "zfbtest_fbs.h"
 
-std::vector<ZmRef<ZiIOBuf>> bufs;
+std::vector<ZmRef<Zfb::IOBuf>> bufs;
 
 void build(Zfb::IOBuilder &fbb, unsigned n, bool detach)
 {
-  ZmRef<ZiIOBuf> buf;
+  ZmRef<Zfb::IOBuf> buf;
   {
     uint8_t *zero = (uint8_t *)::malloc(n);
     memset(zero, 0, n);

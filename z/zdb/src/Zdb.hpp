@@ -506,8 +506,8 @@ struct ZdbConfig {
     preAlloc = cf->getInt("preAlloc", 0, 10<<24, false, 0);
     repMode = cf->getInt("repMode", 0, 1, false, 0);
     compress = cf->getInt("compress", 0, 1, false, 0);
-    cache.init(cf->get("cache", false, "Zdb.Cache"));
-    fileHash.init(cf->get("fileHash", false, "Zdb.FileHash"));
+    // cache.init(cf->get("cache", false, "Zdb.Cache"));
+    // fileHash.init(cf->get("fileHash", false, "Zdb.FileHash"));
   }
 
   ZtString		name;
@@ -516,8 +516,8 @@ struct ZdbConfig {
   unsigned		preAlloc = 0;	// #records to pre-allocate
   uint8_t		repMode = 0;	// 0 - deferred, 1 - in put()
   bool			compress = false;
-  ZmHashParams		cache;
-  ZmHashParams		fileHash;
+  // ZmHashParams	cache;
+  // ZmHashParams	fileHash;
 };
 
 namespace ZdbCacheMode {

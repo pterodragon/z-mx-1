@@ -1436,9 +1436,9 @@ void ZdbAny::init(ZdbConfig *config, ZdbID id)
 {
   m_config = config;
   m_id = id;
-  m_cache = new Zdb_Cache(m_config->cache);
+  m_cache = new Zdb_Cache{}; // (m_config->cache);
   m_cacheSize = m_cache->size();
-  m_files = new FileHash(m_config->fileHash);
+  m_files = new FileHash{}; // (m_config->fileHash);
   m_filesMax = m_files->size();
 }
 

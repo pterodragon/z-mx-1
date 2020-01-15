@@ -56,8 +56,8 @@ class ZiFile_WindowsDrives {
 friend struct ZmSingletonCtor<ZiFile_WindowsDrives>;
 
 public:
-  inline static int blkSize(const ZtWString &path) {
-    return instance()->blkSize_path(path);
+  inline static int blkSize(ZtWString path) {
+    return instance()->blkSize_path(ZuMv(path));
   }
   inline static int blkSize(HANDLE handle) {
     return instance()->blkSize_handle(handle);
@@ -75,7 +75,7 @@ public:
   ~ZiFile_WindowsDrives();
 
 private:
-  int blkSize_path(const ZtWString &path);
+  int blkSize_path(ZtWString path);
   int blkSize_handle(HANDLE handle);
 
 #if 0
@@ -197,10 +197,9 @@ void ZiFile_WindowsDrives::dump_()
 }
 #endif
 
-int ZiFile_WindowsDrives::blkSize_path(const ZtWString &path_)
+int ZiFile_WindowsDrives::blkSize_path(ZtWString path)
 {
-  ZtWString path =
-    !path_.cmp(L"\\\\?\\", 4) ? path_.splice(4) : ZuArray<wchar_t>{path_};
+  if (!path.cmp(L"\\\\?\\", 4)) path = path.splice(4);
 
   int dl = 0;
   if (path[1] == ':')

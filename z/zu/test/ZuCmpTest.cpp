@@ -69,9 +69,16 @@ template <typename T1, typename T2> void checkNull() {
 namespace T1 {
   using I = ZuBox<int>;
   using R = const ZuBox<int> &;
-  ZuDeclTuple(V, (I, id), (I, age), (I, height));
-  ZuDeclTuple(T, (R, id), (R, age), (R, height));
+  struct _ {
+    ZuDeclTuple(V, (I, id), (I, age), (I, height));
+    ZuDeclTuple(T, (R, id), (R, age), (R, height));
+  };
+  using V = _::V;
+  using T = _::T;
 }
+
+ZuAssert(ZuTraits<T1::V>::IsHashable);
+ZuAssert(ZuTraits<T1::T>::IsHashable);
 
 namespace T2 {
   typedef int I;
@@ -81,6 +88,8 @@ namespace T2 {
   typedef int *CP;
   ZuDeclUnion(V, (I, id), (D, income), (S, name), (P, dependents), (CP, foo));
 }
+
+ZuAssert(ZuTraits<T2::V>::IsHashable);
 
 namespace T3 {
   typedef ZuBox<int> I;

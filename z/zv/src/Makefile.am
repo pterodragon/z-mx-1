@@ -33,7 +33,7 @@ pkginclude_HEADERS = ZvLib.hpp \
 	ZvRingCf.hpp ZvThreadCf.hpp ZvUserDB.hpp \
 	ZvCmdNet.hpp ZvCmdHost.hpp ZvCmdClient.hpp ZvCmdServer.hpp \
 	ZvScheduler.hpp ZvMultiplex.hpp ZvQueue.hpp ZvEngine.hpp \
-	ZvTelemetry.hpp ${FBS_H}
+	ZvTelemetry.hpp ZvTelClient.hpp ZvTelServer.hpp ${FBS_H}
 #fbsdir = $(datarootdir)/${PACKAGE}/fbs
 #dist_fbs_DATA = fbs/telemetry.fbs
 lib_LTLIBRARIES = libZv.la

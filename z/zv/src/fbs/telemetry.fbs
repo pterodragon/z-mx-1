@@ -1,5 +1,11 @@
 include "types.fbs";
 namespace ZvTelemetry.fbs;
+enum RAG:uint8 {
+  Off = 0,
+  Red,
+  Amber,
+  Green
+}
 table Heap {			// == ZmHeapTelemetry
   id:string;
   cacheSize:uint64;
@@ -119,6 +125,7 @@ table Queue {
 enum LinkState:int8 {
   Down = 0,		// down (engine not started)
   Disabled,		// intentionally down (admin/ops disabled)
+  Deleted,		// deleted (transient state, used to remove links)
   Connecting,		// connecting (being brought up)
   Up,			// up/running
   ReconnectPending,	// reconnect pending following transient failure
@@ -229,8 +236,9 @@ enum AppRole:uint8 {
 table App {
   id:string;
   version:string;
-  role:AppRole;
   uptime:Zfb.DateTime;	// absolute start time
+  role:AppRole;
+  rag:RAG;
 }
 enum Severity:uint8 {	// == Ze
   Debug = 0,
@@ -241,6 +249,7 @@ enum Severity:uint8 {	// == Ze
 }
 table Alert {
   time:Zfb.DateTime;
+  seqNo:uint32;
   tid:uint32;
   severity:Severity;
   message:string;

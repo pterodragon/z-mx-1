@@ -34,14 +34,15 @@
 #include <zlib/ZmPolymorph.hpp>
 
 #include <zlib/ZvCf.hpp>
-#include <zlib/ZvTelemetry.hpp>
-
 #include <zlib/ZvQueue.hpp>
 #include <zlib/ZvScheduler.hpp>
 #include <zlib/ZvMultiplex.hpp>
 #include <zlib/ZvTelemetry.hpp>
 
 class ZvEngine;
+namespace ZvEngineState = ZvTelemetry::EngineState;
+namespace ZvLinkState = ZvTelemetry::LinkState;
+using ZvTraffic = ZvTelemetry::Traffic;
 
 class ZvAPI ZvAnyTx : public ZmPolymorph {
   ZvAnyTx(const ZvAnyTx &);	//prevent mis-use
@@ -101,7 +102,6 @@ protected:
   ZvAnyLink(ZuID id);
 
 public:
-  namespace LinkState = ZvTelemetry::LinkState;
   ZuInline int state() const { return m_state.load_(); }
   ZuInline unsigned reconnects() const { return m_reconnects.load_(); }
 
@@ -146,43 +146,15 @@ private:
 
   void reconnect_();
 
+  void deleted_();	// called from ZvEngine::delLink
+
 private:
   ZmScheduler::Timer	m_reconnTimer;
 
   StateLock		m_stateLock;
-    ZmAtomic<int>	  m_state = LinkState::Down;
+    ZmAtomic<int>	  m_state = ZvLinkState::Down;
     ZmAtomic<unsigned>	  m_reconnects;
     bool		  m_enabled = true;
-};
-
-// Traffic Logging (timestamp, payload)
-using ZvTraffic = ZmFn<ZmTime &, ZuString &>;
-
-// FIXME - CRTP ZvEngineMgr?
-struct ZvAPI ZvEngineMgr {
-  // Engine Management
-  virtual void addEngine(ZvEngine *) = 0;
-  virtual void delEngine(ZvEngine *) = 0;
-  virtual void updEngine(ZvEngine *) const = 0;
-
-  // Link Management
-  virtual void delLink(ZvAnyLink *) = 0;
-  virtual void updLink(ZvAnyLink *) const = 0;
-
-  // Queue Management
-  virtual void addQueue(ZuID id, bool tx, ZvQueue *) = 0;
-  virtual void delQueue(ZuID id, bool tx) = 0;
-
-  // Alert handling
-  virtual void alert(ZmRef<ZeEvent> e) const { ZeLog::log(ZuMv(e)); }
-
-  // Traffic Logging (logThread)
-  /* Example usage:
-  app.log(id, ZvTraffic([](const Msg *msg, ZmTime &stamp, ZuString &data) {
-      stamp = msg->stamp();
-      data = msg->buf();
-    }, msg)); */
-  virtual void log(ZvQMsgID, ZvTraffic) = 0;
 };
 
 // Callbacks to the application from the engine implementation
@@ -229,18 +201,16 @@ friend class ZvAnyLink;
   using StateReadGuard = ZmReadGuard<StateLock>;
 
 public:
-  namespace EngineState = ZvTelemetry::EngineState;
-
   struct IDAccessor : public ZuAccessor<ZvEngine *, ZuID> {
     ZuInline static ZuID value(const ZvEngine *e) { return e->id(); }
   };
 
   using Sched = ZvScheduler;
   using Mx = ZvMultiplex;
-  using Mgr = ZvEngineMgr;
+  using Mgr = ZvTelemetry::EngineMgr;
   using App = ZvEngineApp;
 
-  inline ZvEngine() : m_state(EngineState::Stopped) { }
+  inline ZvEngine() : m_state(ZvEngineState::Stopped) { }
 
   void init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf) {
     m_mgr = mgr,
@@ -258,7 +228,7 @@ public:
   }
   void final();
 
-  ZuInline ZvEngineMgr *mgr() const { return m_mgr; }
+  ZuInline Mgr *mgr() const { return m_mgr; }
   ZuInline ZvEngineApp *app() const { return m_app; }
   ZuInline ZuID id() const { return m_id; }
   ZuInline Mx *mx() const { return m_mx; }
@@ -281,20 +251,19 @@ public:
   template <typename ...Args> ZuInline void txInvoke(Args &&... args)
     { m_mx->invoke(m_txThread, ZuFwd<Args>(args)...); }
 
-  ZuInline void appAddEngine() { mgr()->addEngine(this); }
-  ZuInline void appDelEngine() { mgr()->delEngine(this); }
-  ZuInline void appUpdEngine() { mgr()->updEngine(this); }
+  ZuInline void mgrAddEngine() { mgr()->addEngine(this); }
+  ZuInline void mgrDelEngine() { mgr()->delEngine(this); }
+  ZuInline void mgrUpdEngine() { mgr()->updEngine(this); }
 
   ZuInline ZmRef<ZvAnyLink> appCreateLink(ZuID id) {
     return app()->createLink(id);
   }
-  ZuInline void appDelLink(ZvAnyLink *link) { mgr()->delLink(link); }
-  ZuInline void appUpdLink(ZvAnyLink *link) { mgr()->updLink(link); }
+  ZuInline void mgrUpdLink(ZvAnyLink *link) { mgr()->updLink(link); }
 
   // Note: ZvQueues are contained in Link and TxPool
-  ZuInline void appAddQueue(ZuID id, bool tx, ZvQueue *queue)
+  ZuInline void mgrAddQueue(ZuID id, bool tx, ZvQueue *queue)
     { mgr()->addQueue(id, tx, queue); }
-  ZuInline void appDelQueue(ZuID id, bool tx)
+  ZuInline void mgrDelQueue(ZuID id, bool tx)
     { mgr()->delQueue(id, tx); }
 
   // generic O.S. error logging
@@ -304,7 +273,7 @@ public:
     };
   }
 
-  ZuInline void appAlert(ZmRef<ZeEvent> e) const {
+  ZuInline void mgrAlert(ZmRef<ZeEvent> e) const {
     mgr()->alert(ZuMv(e));
   }
 
@@ -323,11 +292,11 @@ private:
   using TxPools = ZmRBTree<ZmRef<ZvAnyTxPool>,
 	    ZmRBTreeIndex<ZvAnyTxPool::IDAccessor,
 	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmNoLock> > > > TxPools;
+		ZmRBTreeLock<ZmNoLock> > > >;
   using Links = ZmRBTree<ZmRef<ZvAnyLink>,
 	    ZmRBTreeIndex<ZvAnyLink::IDAccessor,
 	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmNoLock> > > > Links;
+		ZmRBTreeLock<ZmNoLock> > > >;
 
 public:
   ZmRef<ZvAnyTxPool> txPool(ZuID id) {
@@ -347,7 +316,7 @@ public:
     m_txPools.add(pool);
     guard.unlock();
     pool->update(cf);
-    appAddQueue(id, 1, pool->txQueuePtr());
+    mgrAddQueue(id, 1, pool->txQueuePtr());
     return pool;
   }
   ZmRef<ZvAnyTxPool> delTxPool(ZuID id) {
@@ -355,8 +324,7 @@ public:
     ZmRef<ZvAnyTxPool> txPool;
     if (txPool = m_txPools.delKey(id)) {
       guard.unlock();
-      appDelQueue(id, 1);
-      appDelTxPool(txPool);
+      mgrDelQueue(id, 1);
     }
     return txPool;
   }
@@ -371,7 +339,7 @@ public:
     if (link = m_links.findKey(id)) {
       guard.unlock();
       link->update(cf);
-      appUpdLink(link);
+      mgrUpdLink(link);
       return link;
     }
     link = appCreateLink(id);
@@ -380,9 +348,9 @@ public:
     guard.unlock();
     linkState(link, -1, link->state());
     link->update(cf);
-    appUpdLink(link);
-    appAddQueue(id, 0, link->rxQueue());
-    appAddQueue(id, 1, link->txQueue());
+    mgrUpdLink(link);
+    mgrAddQueue(id, 0, link->rxQueue());
+    mgrAddQueue(id, 1, link->txQueue());
     return link;
   }
   ZmRef<ZvAnyLink> delLink(ZuID id) {
@@ -390,9 +358,9 @@ public:
     ZmRef<ZvAnyLink> link;
     if (link = m_links.delKey(id)) {
       guard.unlock();
-      appDelQueue(id, 0);
-      appDelQueue(id, 1);
-      appDelLink(link);
+      mgrDelQueue(id, 0);
+      mgrDelQueue(id, 1);
+      link->deleted_();	// calls linkState(), mgrUpdLink()
     }
     return link;
   }
@@ -437,7 +405,7 @@ private:
 
 template <typename Impl, typename Base>
 class ZvTx : public Base {
-  using Tx = ZvQueueTx<Impl> Tx;
+  using Tx = ZvQueueTx<Impl>;
 
 public:
   using Mx = ZvMultiplex;
@@ -488,7 +456,7 @@ template <typename Impl> class ZvTxPool :
 
 public:
   using Tx_ = ZmPQTx<Impl, ZvQueue, ZmNoLock>;
-  using Tx = ZvQueueTxPool<Impl> Tx;
+  using Tx = ZvQueueTxPool<Impl>;
 
   inline ZvTxPool(ZuID id) : Base(id) { }
 
@@ -561,7 +529,7 @@ template <typename Impl> class ZvLink :
   public ZvTx<Impl, ZvAnyLink>,
   public ZvQueueRx<Impl>, public ZvQueueTx<Impl> {
 
-  using Base = ZvTx<Impl, ZvAnyLink> Base;
+  using Base = ZvTx<Impl, ZvAnyLink>;
 
 public:
   using Rx_ = ZmPQRx<Impl, ZvQueue, ZmNoLock>;
@@ -569,7 +537,7 @@ public:
   using Tx_ = ZmPQTx<Impl, ZvQueue, ZmNoLock>;
   using Tx = ZvQueueTx<Impl>;
 
-  using AbortFn = ZvAnyTx::AbortFn AbortFn;
+  using AbortFn = ZvAnyTx::AbortFn;
 
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
@@ -587,8 +555,8 @@ public:
   ZuInline void rescheduleDequeue() { rxRun([](Rx *rx) { rx->dequeue(); }); }
   ZuInline void idleDequeue() { }
 
-  using RRLock = ZmPLock RRLock;
-  using RRGuard = ZmGuard<RRLock> RRGuard;
+  using RRLock = ZmPLock;
+  using RRGuard = ZmGuard<RRLock>;
 
   ZuInline void scheduleReRequest() {
     RRGuard guard(m_rrLock);

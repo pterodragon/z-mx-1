@@ -42,6 +42,7 @@
 
 #include <zlib/ZiMultiplex.hpp>
 #include <zlib/ZiFile.hpp>
+#include <zlib/ZiIOBuf.hpp>
 
 #include <zlib/Zfb.hpp>
 #include <zlib/Ztls.hpp>
@@ -49,6 +50,7 @@
 #include <zlib/ZvCf.hpp>
 #include <zlib/ZvUserDB.hpp>
 #include <zlib/ZvTelemetry.hpp>
+#include <zlib/ZvTelServer.hpp>
 
 #include <zlib/loginreq_fbs.h>
 #include <zlib/loginack_fbs.h>
@@ -64,13 +66,14 @@
 template <typename App_>
 class ZvCmdSrvLink :
     public Ztls::SrvLink<App_, ZvCmdSrvLink<App_> >,
-    public ZiIORx {
+    public ZiIORx<Ztls::IOBuf> {
 public:
   using App = App_;
   using Base = Ztls::SrvLink<App, ZvCmdSrvLink<App_> >;
 friend Base;
 
 private:
+  using IORx = ZiIORx<Ztls::IOBuf>;
   using SeqNo = ZvCmdSeqNo;
   using User = ZvUserDB::User;
   using Bitmap = ZvUserDB::Bitmap;
@@ -97,7 +100,7 @@ public:
 
     m_state = State::Login;
 
-    ZiIORx::connected();
+    IORx::connected();
   }
 
   void disconnected() {
@@ -105,7 +108,7 @@ public:
 
     cancelTimeout();
 
-    ZiIORx::disconnected();
+    IORx::disconnected();
 
     this->app()->disconnected(this);
   }
@@ -198,13 +201,10 @@ private:
 	  Verifier verifier(data, len);
 	  if (!fbs::VerifyRequestBuffer(verifier)) return -1;
 	}
-	m_fbb.Clear();
-	int i = this->app()->processTel(this, m_user, m_interactive,
-	    fbs::GetRequest(data), m_fbb);
+	int i = this->app()->processTel(
+	    this, m_user, m_interactive, fbs::GetRequest(data));
 	if (ZuUnlikely(i < 0)) return -1;
 	if (!i) return len;
-	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_Telemetry));
-	this->send_(m_fbb.buf());
       } break;
       case ZvCmd::fbs::MsgType_App: {
 	int i = this->app()->processApp(this, m_user, m_interactive,
@@ -226,7 +226,7 @@ public:
     scheduleTimeout();
 
     int type = -1;
-    int i = ZiIORx::process(data, len,
+    int i = IORx::process(data, len,
 	[&type](const uint8_t *data, unsigned len) -> int {
 	  if (ZuUnlikely(len < ZvCmd_hdrLen())) return INT_MAX;
 	  uint32_t hdr_ = ZvCmd_getHdr(data);
@@ -436,19 +436,23 @@ public:
   }
 
   int processTel(Link *link, User *user, bool interactive,
-      const ZvTelemetry::fbs::Request *in, Zfb::Builder &fbb) {
+      const ZvTelemetry::fbs::Request *in) {
     using namespace ZvTelemetry;
     if (m_telPerm < 0 || !m_userDB->ok(user, interactive, m_telPerm)) {
-      fbb.Finish(fbs::CreateTelemetry(fbb,
+      using namespace Zfb::Save;
+      m_fbb.Clear();
+      m_fbb.Finish(fbs::CreateTelemetry(fbb,
 	    fbs::TelData_Alert,
 	    fbs::CreateAlert(fbb,
-	      Zfb::Save::dateTime(fbb, ZtDateNow),
+	      date(fbb, ZtDateNow),
 	      ZmPlatform::getTID(),
 	      fbs::Severity_Error,
-	      Zfb::Save::str(fbb, "permission denied")).Union()));
-      return fbb.GetSize();
+	      str(fbb, "permission denied")).Union()));
+      m_fbb.PushElement(
+	  ZvCmd_mkHdr(m_fbb.GetSize(), /*ZvCmd::*/fbs::MsgType_Telemetry));
+      this->send_(m_fbb.buf());
     }
-    return TelServer::process((void *)link, in, fbb);
+    return TelServer::process((void *)link, in);
   }
 
   // default app msg handler simply disconnects

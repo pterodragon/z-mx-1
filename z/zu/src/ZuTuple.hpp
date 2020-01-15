@@ -235,12 +235,12 @@ template <typename... Args> ZuTuple(Args...) -> ZuTuple<Args...>;
 // std::cout << p.name() << '\n';
 
 #define ZuTuple_FieldType(args) \
-  ZuPP_Defer(ZuTuple_FieldType_)()(ZuPP_Strip1 ZuPP_Strip2(args))
+  ZuPP_Defer(ZuTuple_FieldType_)()(ZuPP_Strip(args))
 #define ZuTuple_FieldType_() ZuTuple_FieldType__
-#define ZuTuple_FieldType__(type, fn) ZuPP_Strip1 ZuPP_Strip2(type)
+#define ZuTuple_FieldType__(type, fn) ZuPP_Strip(type)
 
 #define ZuTuple_FieldFn(N, args) \
-  ZuPP_Defer(ZuTuple_FieldFn_)()(N, ZuPP_Strip1 ZuPP_Strip2(args))
+  ZuPP_Defer(ZuTuple_FieldFn_)()(N, ZuPP_Strip(args))
 #define ZuTuple_FieldFn_() ZuTuple_FieldFn__
 #define ZuTuple_FieldFn__(N, type, fn) \
   ZuInline const auto &fn() const { return this->template p<N>(); } \
@@ -259,8 +259,8 @@ public: \
   ZuInline Type(const Tuple &v) : Tuple(v) { }; \
   ZuInline Type(Tuple &&v) : Tuple(ZuMv(v)) { }; \
   ZuPP_Eval(ZuPP_MapIndex(ZuTuple_FieldFn, 0, __VA_ARGS__)) \
-}; \
-struct Type##_Traits : public ZuTraits<Type##_> { using T = Type; }; \
-Type##_Traits ZuTraitsFn(const Type *)
+  struct Traits : public ZuTraits<Type##_> { using T = Type; }; \
+  friend Traits ZuTraitsFn(const Type *); \
+}
 
 #endif /* ZuTuple_HPP */

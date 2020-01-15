@@ -342,12 +342,12 @@ struct ZuTraits<ZuUnion<Args...>> :
     public ZuUnion_Traits<ZuUnion<Args...>, Args...> { };
 
 #define ZuUnion_FieldType(args) \
-  ZuPP_Defer(ZuUnion_FieldType_)()(ZuPP_Strip1 ZuPP_Strip2(args))
+  ZuPP_Defer(ZuUnion_FieldType_)()(ZuPP_Strip(args))
 #define ZuUnion_FieldType_() ZuUnion_FieldType__
-#define ZuUnion_FieldType__(type, fn) ZuPP_Strip1 ZuPP_Strip2(type)
+#define ZuUnion_FieldType__(type, fn) ZuPP_Strip(type)
 
 #define ZuUnion_FieldFn(N, args) \
-  ZuPP_Defer(ZuUnion_FieldFn_)()(N, ZuPP_Strip1 ZuPP_Strip2(args))
+  ZuPP_Defer(ZuUnion_FieldFn_)()(N, ZuPP_Strip(args))
 #define ZuUnion_FieldFn_() ZuUnion_FieldFn__
 #define ZuUnion_FieldFn__(N, type, fn) \
   ZuInline const auto &fn() const { return this->template p<N>(); } \
@@ -368,8 +368,8 @@ public: \
   ZuInline Type(const Union &v) : Union(v) { }; \
   ZuInline Type(Union &&v) : Union(ZuMv(v)) { }; \
   ZuPP_Eval(ZuPP_MapIndex(ZuUnion_FieldFn, 1, __VA_ARGS__)) \
-}; \
-struct Type##_Traits : public ZuTraits<Type##_> { using T = Type; }; \
-Type##_Traits ZuTraitsFn(const Type *)
+  struct Traits : public ZuTraits<Type##_> { using T = Type; }; \
+  friend Traits ZuTraitsFn(const Type *); \
+}
 
 #endif /* ZuUnion_HPP */

@@ -490,16 +490,16 @@ public:
     return ZvFlags<Map>::instance()->template scan<Flags64>(key, value);
   }
 
-  template <typename Flags_, typename Key>
+  template <typename Map, typename Key>
   inline Flags getFlags(
       const Key &key, bool required = false, Flags def = 0) {
-    return toFlags<Flags_>(key, get(key, required), def);
+    return toFlags<Map>(key, get(key, required), def);
   }
 
-  template <typename Flags_, typename Key>
+  template <typename Map, typename Key>
   inline Flags64 getFlags64(
       const Key &key, bool required = false, Flags64 def = 0) {
-    return toFlags64<Flags_>(key, get(key, required), def);
+    return toFlags64<Map>(key, get(key, required), def);
   }
 
 private:

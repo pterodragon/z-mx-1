@@ -111,7 +111,7 @@ struct ZmPQueue_Defaults {
     inline static const char *id() { return "ZmPQueue"; }
   };
   struct Base { };
-  enum { Bits = 4, Levels = 4 };
+  enum { Bits = 3, Levels = 3 };
   template <typename Item> struct ZmPQueueFnT {
     typedef ZmPQueueDefaultFn<Item> T;
   };

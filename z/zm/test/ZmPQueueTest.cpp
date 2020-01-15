@@ -46,17 +46,18 @@ struct Msg : public Msg_Data {
     return p<1>() -= length;
   }
   template <typename I>
-  inline void write(const I &i) { }
+  inline void write(const I &) { }
   inline unsigned bytes() const { return 1; }
 };
 
-typedef ZmPQueue<Msg,
-	  ZmPQueueLock<ZmNoLock,
-	    ZmPQueueBits<1,
-	      ZmPQueueLevels<4,
-		ZmPQueueNodeIsItem<true> > > > > PQueue;
+using PQueue =
+  ZmPQueue<Msg,
+    ZmPQueueLock<ZmNoLock,
+      ZmPQueueBits<1,
+	ZmPQueueLevels<4,
+	  ZmPQueueNodeIsItem<true> > > > >;
 
-typedef PQueue::Node QMsg;
+using QMsg = PQueue::Node;
 
 void head(PQueue &q, uint32_t seqNo)
 {

@@ -62,7 +62,7 @@ struct ZvTimeNull : public ZuPrintable {
 };
 ZuDeclUnion(ZvTimeFmt,
     (ZtDateFmt::CSV, csv),
-    (ZtDateFmt::FIX<-9, ZvTimeNull>, fix),
+    ((ZtDateFmt::FIX<-9, ZvTimeNull>), fix),
     (ZtDateFmt::ISO, iso));
 
 struct ZvFieldFmt {
@@ -213,7 +213,7 @@ template <typename T> struct ZvField {
 	ZvFieldTime_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
 
 #define ZvMkField(T, args) \
-  ZuPP_Defer(ZvMkField_)()(T, ZuPP_Strip1 ZuPP_Strip2(args))
+  ZuPP_Defer(ZvMkField_)()(T, ZuPP_Strip(args))
 #define ZvMkField_() ZvMkField__
 #define ZvMkField__(T, type, ...) ZvField##type(T, __VA_ARGS__),
 #define ZvMkFields(T, ...)  \

@@ -43,7 +43,7 @@
 #include <zlib/ZmNoLock.hpp>
 
 // defaults
-#define ZmDRingInitial		4
+#define ZmDRingInitial		8
 #define ZmDRingIncrement	8
 #define ZmDRingMaxFrag		50.0
 
@@ -471,6 +471,7 @@ friend class Iterator;
       return this->m_ring.m_data[o];
     }
   };
+  inline auto iterator() { return Iterator(*this); }
   class RevIterator;
 friend class RevIterator;
   class RevIterator : private Iterator_ {
@@ -494,6 +495,7 @@ friend class RevIterator;
       return this->m_ring.m_data[o];
     }
   };
+  inline auto revIterator() { return RevIterator(*this); }
 
 private:
   Lock		m_lock;

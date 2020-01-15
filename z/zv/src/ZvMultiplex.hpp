@@ -36,6 +36,7 @@
 
 #include <zlib/ZvCf.hpp>
 #include <zlib/ZvError.hpp>
+#include <zlib/ZvScheduler.hpp>
 
 class ZvAPI ZvInvalidMulticastIP : public ZvError {
 public:
@@ -66,7 +67,7 @@ struct ZvCxnOptions : public ZiCxnOptions {
   inline void init(ZvCf *cf) {
     if (!cf) return;
 
-    flags(cf->getFlags<ZiCxnOptions::Flags>("options", false, 0));
+    flags(cf->getFlags<ZiCxnFlags::Flags>("options", false, 0));
 
     // multicastInterface is the IP address of the interface used for sending
     // multicastTTL is the TTL (number of hops) used for sending
@@ -141,12 +142,11 @@ public:
 
   template <typename ID_>
   inline ZvMultiplex(const ID_ &id) :
-      ZiZvParams(
-	  ZiZvParams().scheduler([&](auto &s) { s.id(id); })) { }
+      ZiMultiplex(ZiMxParams().scheduler([&](auto &s) { s.id(id); })) { }
   template <typename ID_>
   inline ZvMultiplex(const ID_ &id, ZvCf *cf) :
-    ZiMultiplex(ZvZvParams(cf,
-	  ZiZvParams().scheduler([&](auto &s) { s.id(id); }))) { }
+      ZiMultiplex(ZvMxParams(cf,
+	    ZiMxParams().scheduler([&](auto &s) { s.id(id); }))) { }
 };
 
 #endif /* ZvMultiplex_HPP */

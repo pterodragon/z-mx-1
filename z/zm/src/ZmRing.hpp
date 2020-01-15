@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// FIFO ring buffer with fan-in (MPSC)
+// FIFO ring buffer of fixed-size items with fan-in (MPSC)
 
 #ifndef ZmRing_HPP
 #define ZmRing_HPP

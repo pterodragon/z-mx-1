@@ -368,6 +368,7 @@ friend class Iterator;
     Stack	&m_stack;
     int		m_i;
   };
+  inline auto iterator() { return Iterator(*this); }
 
 private:
   Lock		m_lock;

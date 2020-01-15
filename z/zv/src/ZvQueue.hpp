@@ -33,48 +33,58 @@
 #include <zlib/ZuArrayN.hpp>
 #include <zlib/ZuPOD.hpp>
 #include <zlib/ZuRef.hpp>
+#include <zlib/ZuID.hpp>
 
 #include <zlib/ZmPQueue.hpp>
 #include <zlib/ZmFn.hpp>
 #include <zlib/ZmRBTree.hpp>
 
 #include <zlib/ZiIP.hpp>
+#include <zlib/ZiIOBuf.hpp>
 #include <zlib/ZiMultiplex.hpp>
 
-#include <mxbase/ZvQMsgID.hpp>
+struct ZvSeqNoCmp {
+  ZuInline static int cmp(uint64_t v1, uint64_t v2) {
+    int64_t d = v1 - v2; // handles wraparound ok
+    return d < 0 ? -1 : d > 0 ? 1 : 0;
+  }
+  ZuInline static bool equals(uint64_t v1, uint64_t v2) { return v1 == v2; }
+  ZuInline static bool null(uint64_t v) { return !v; }
+  ZuInline static uint64_t null() { return 0; }
+};
+typedef ZuBox<uint64_t, ZvSeqNoCmp> ZvSeqNo;
 
 struct ZvQMsgID {
-  MxID		linkID;
-  MxSeqNo	seqNo;
+  ZuID		linkID;
+  ZvSeqNo	seqNo;
 
   void update(const ZvQMsgID &u) {
     linkID.update(u.linkID);
     seqNo.update(u.seqNo);
   }
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << "linkID=" << linkID << " seqNo=" << seqNo;
   }
 };
 template <> struct ZuPrint<ZvQMsgID> : public ZuPrintFn { };
 
 struct ZvQItem {
-  ZuInline ZvQItem(ZmRef<ZmPolymorph> payload) :
-      m_payload(ZuMv(payload)) { }
-  ZuInline ZvQItem(ZmRef<ZmPolymorph> payload, unsigned length) :
-      m_payload(ZuMv(payload)), m_length(length) { }
-  ZuInline ZvQItem(
-      ZmRef<ZmPolymorph> payload, unsigned length, ZvQMsgID id) :
-      m_payload(ZuMv(payload)), m_id(id), m_length(length) { }
+  ZuInline ZvQItem(ZmRef<ZiAnyIOBuf> buf) :
+      m_buf(ZuMv(buf)) { }
+  ZuInline ZvQItem(ZmRef<ZiAnyIOBuf> buf, ZvQMsgID id) :
+      m_buf(ZuMv(buf)), m_id(id) { }
 
-  template <typename T>
-  ZuInline const T *ptr() const { return m_buf.ptr<T>(); }
-  template <typename T>
-  ZuInline T *ptr() { return m_buf.ptr<T>(); }
+  template <typename T = ZiAnyIOBuf>
+  ZuInline const T *buf() const { return m_buf.ptr<T>(); }
+  template <typename T = ZiAnyIOBuf>
+  ZuInline T *buf() { return m_buf.ptr<T>(); }
 
   template <typename T = void *> ZuInline T owner() const { return (T)m_owner; }
   template <typename T> ZuInline void owner(T v) { m_owner = (void *)v; }
 
-  ZuInline void load(const ZvQMsgID &id_) { m_id = id; }
+  ZuInline const ZvQMsgID id() const { return m_id; }
+
+  ZuInline void load(const ZvQMsgID &id) { m_id = id; }
   ZuInline void unload() { m_id = ZvQMsgID{}; }
 
   ZuInline unsigned skip() const { return m_skip <= 0 ? 1 : m_skip; }
@@ -83,27 +93,23 @@ struct ZvQItem {
   ZuInline bool noQueue() const { return m_skip < 0; }
   ZuInline void noQueue(int b) { m_skip = -b; }
 
-  ZuInline unsigned length() const { return m_length; }
-  ZuInline void length(unsigned n) { m_length = n; }
-
 private:
-  ZmRef<ZmPolymorph>	m_buf;		// usually ZiIOBuf
+  ZmRef<ZiAnyIOBuf>	m_buf;
   void			*m_owner = 0;
   ZvQMsgID		m_id;
-  int32_t		m_skip = 0;   // -ve - no queuing; +ve - gap fill
-  uint32_t		m_length = 0; // occupied length of payload in bytes
+  int32_t		m_skip = 0;	// -ve - no queuing; +ve - gap fill
 };
 
 class ZvQFn {
 public:
   typedef ZvSeqNo Key;
   ZuInline ZvQFn(ZvQItem &item) : m_item(item) { }
-  ZuInline ZvSeqNo key() const { return m_item.id.seqNo; }
+  ZuInline ZvSeqNo key() const { return m_item.id().seqNo; }
   ZuInline unsigned length() const { return m_item.skip(); }
   ZuInline unsigned clipHead(unsigned n) { return length(); }
   ZuInline unsigned clipTail(unsigned n) { return length(); }
   ZuInline void write(const ZvQFn &) { }
-  ZuInline unsigned bytes() const { return m_item.length(); }
+  ZuInline unsigned bytes() const { return m_item.buf()->length; }
 
 private:
   ZvQItem	&m_item;
@@ -147,7 +153,7 @@ public:
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
 
-  ZuInline ZvQueueRx() : m_queue(new ZvQueue(ZvSeqNo())) { }
+  ZuInline ZvQueueRx() : m_queue(new ZvQueue(ZvSeqNo{})) { }
   
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
@@ -243,7 +249,7 @@ protected:
   ZuInline Lock &lock() { return m_lock; }
 
 public:
-  ZuInline ZvQueueTx() : m_queue(new ZvQueue(ZvSeqNo())) { }
+  ZuInline ZvQueueTx() : m_queue(new ZvQueue(ZvSeqNo{})) { }
 
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
@@ -296,7 +302,7 @@ public:
     Tx::ackd(seqNo);
   }
 
-  ZuInline void txReset(ZvSeqNo seqNo = ZvSeqNo()) {
+  ZuInline void txReset(ZvSeqNo seqNo = ZvSeqNo{}) {
     Tx::txReset(m_seqNo = seqNo);
   }
 
@@ -378,8 +384,8 @@ public:
   ZuInline bool sendGap_(const Gap &, bool) { return true; } // unused
   ZuInline bool resendGap_(const Gap &, bool) { return true; } // unused
 
-  ZuInline void sent_(ZvQMsg *msg) { Tx::ackd(msg->id.seqNo + 1); }
-  ZuInline void archive_(ZvQMsg *msg) { Tx::archived(msg->id.seqNo + 1); }
+  ZuInline void sent_(ZvQMsg *msg) { Tx::ackd(msg->id().seqNo + 1); }
+  ZuInline void archive_(ZvQMsg *msg) { Tx::archived(msg->id().seqNo + 1); }
   ZuInline ZmRef<ZvQMsg> retrieve_(ZvSeqNo, ZvSeqNo) { // unused
     return nullptr;
   }

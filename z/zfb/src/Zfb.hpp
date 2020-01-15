@@ -235,7 +235,7 @@ namespace Load {
 
   // inline zero-copy conversion of a FB string to a ZuString
   ZuInline ZuString str(const flatbuffers::String *s) {
-    if (!s) return ZuString();
+    if (!s) return ZuString{};
     return ZuString{reinterpret_cast<const char *>(s->Data()), s->size()};
   }
 

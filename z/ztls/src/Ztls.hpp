@@ -66,7 +66,7 @@ namespace Ztls {
 //     I/O Tx <+- Tx output <- Encryption <- Tx input           <+- App Tx
 // ------------|-------------------------------------------------|------------
 
-using IOBuf = ZiIOBuf;
+using IOBuf = ZiIOBuf<>;
 
 template <typename Link_, typename LinkRef_>
 class LinkTCP : public ZiConnection {
@@ -181,9 +181,9 @@ private:
       unsigned i = m_rxRingOffset + m_rxRingCount - 1;
       if (ZuUnlikely(i >= RxRingSize)) i -= RxRingSize;
       unsigned len = m_rxRing[i]->length;
-      if (ZuUnlikely(len < ZiIOBuf::Size)) {
+      if (ZuUnlikely(len < IOBuf::Size)) {
 	unsigned n = buf->length;
-	unsigned o = ZiIOBuf::Size - len;
+	unsigned o = IOBuf::Size - len;
 	if (n > o) n = o;
 	memcpy(m_rxRing[i]->data() + len, buf->data(), n);
 	m_rxRing[i]->length = len + n;
@@ -423,7 +423,7 @@ public:
 private:
   enum {
     RxRingSize =
-      (MBEDTLS_SSL_MAX_CONTENT_LEN + ZiIOBuf::Size - 1) / ZiIOBuf::Size
+      (MBEDTLS_SSL_MAX_CONTENT_LEN + IOBuf::Size - 1) / IOBuf::Size
   };
 
   App			*m_app = nullptr;

@@ -36,15 +36,22 @@
 #include <zlib/ZtString.hpp>
 
 #pragma pack(push, 2)
+struct ZiAnyIOBuf : public ZmPolymorph {
+  ZuInline ZiAnyIOBuf(uint32_t size_, uint32_t length_ = 0) :
+      size(size_), length(length_) { }
+
+  uint32_t	size;
+  uint32_t	length;
+};
 template <unsigned Size_, typename Heap>
-class ZiIOBuf_ : public Heap, public ZmPolymorph {
+class ZiIOBuf_ : public Heap, public ZiAnyIOBuf {
 public:
   enum { Size = Size_ };
 
-  ZuInline ZiIOBuf_() { }
-  ZuInline ZiIOBuf_(void *owner_) : owner(owner_) { }
+  ZuInline ZiIOBuf_() : ZiAnyIOBuf{Size} { }
+  ZuInline ZiIOBuf_(void *owner_) : ZiAnyIOBuf{Size}, owner(owner_) { }
   ZuInline ZiIOBuf_(void *owner_, unsigned length_) :
-      owner(owner_), length(length_) { alloc(length); }
+      ZiAnyIOBuf{Size, length_}, owner(owner_) { alloc(length_); }
   ZuInline ~ZiIOBuf_() { if (ZuUnlikely(jumbo)) ::free(jumbo); }
 
   ZuInline uint8_t *alloc(unsigned size_) {
@@ -74,7 +81,7 @@ public:
       unsigned oldLen, unsigned newLen,
       unsigned head, unsigned tail) {
     if (ZuLikely(newLen <= Size)) {
-      if (tail) memmove(data_ + newLen - tail, data + oldLen - tail, tail);
+      if (tail) memmove(data_ + newLen - tail, data_ + oldLen - tail, tail);
       return data_;
     }
     if (ZuUnlikely(newLen <= size)) {
@@ -92,8 +99,6 @@ public:
 
   void		*owner = nullptr;
   uint8_t	*jumbo = nullptr;
-  uint32_t	size = Size;
-  uint32_t	length = 0;
   uint32_t	skip = 0;
   uint8_t	data_[Size];
 };
@@ -103,8 +108,7 @@ struct ZiIOBuf_HeapID {
   inline static const char *id() { return "ZiIOBuf"; }
 };
 template <unsigned Size>
-using ZiIOBuf_Heap =
-  ZmHeap<Size, ZiIOBuf_HeapID, sizeof(ZiIOBuf_<Size, ZuNull>)>;
+using ZiIOBuf_Heap = ZmHeap<ZiIOBuf_HeapID, sizeof(ZiIOBuf_<Size, ZuNull>)>;
  
 // TCP over Ethernet maximum payload is 1460 (without Jumbo frames)
 template <unsigned Size = 1460>

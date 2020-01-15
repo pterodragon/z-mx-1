@@ -22,10 +22,6 @@
 #ifndef ZuPP_HPP
 #define ZuPP_HPP
 
-// use "ZuPP_Strip1 ZuPP_Strip2(x)" to strip x of parentheses
-#define ZuPP_Strip1(...) __VA_ARGS__ 
-#define ZuPP_Strip2(x) x 
-
 #define ZuPP_Eval(...) ZuPP_Eval32(__VA_ARGS__)
 // #define ZuPP_Eval(...) ZuPP_Eval1024(__VA_ARGS__)
 // #define ZuPP_Eval1024(...) ZuPP_Eval512(ZuPP_Eval512(__VA_ARGS__))
@@ -43,6 +39,14 @@
 #define ZuPP_Empty()
 
 #define ZuPP_Defer(x) x ZuPP_Empty ZuPP_Empty()()
+
+// use "ZuPP_Strip(x)" to strip x of any parentheses
+
+#define ZuPP_Strip__(...) ZuPP_Strip__ __VA_ARGS__
+#define ZuPP_Strip_Null_ZuPP_Strip__
+#define ZuPP_Strip_Concat_(x, ...) x ## __VA_ARGS__
+#define ZuPP_Strip_Concat(x, ...) ZuPP_Strip_Concat_(x, __VA_ARGS__)
+#define ZuPP_Strip(x) ZuPP_Strip_Concat(ZuPP_Strip_Null_, ZuPP_Strip__ x)
 
 // map expansions - the *Comma versions suppress trailing commas
 

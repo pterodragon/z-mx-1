@@ -12,8 +12,8 @@ enum ReqType:uint8 {
   Alert
 }
 table Request {
-  freq:uint32;		// 0 for one-time snapshot, otherwise (un)subscribe
   filter:string;	// * for all; otherwise exact match
+  interval:uint32;	// 0 for one-time snapshot, otherwise (un)subscribe
   type:ReqType;		// together with filter, primary key for subscription
   subscribe:bool;	// true - subscribe; false - unsubscribe
 }

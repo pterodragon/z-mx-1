@@ -30,7 +30,6 @@
 #include <zlib/ZvLib.hpp>
 #endif
 
-#include <zlib/ZmObject.hpp>
 #include <zlib/ZmScheduler.hpp>
 
 #include <zlib/ZvCf.hpp>

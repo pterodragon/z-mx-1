@@ -54,8 +54,8 @@ public:
   void run(MxTelemetry::Server::Cxn *);
 
   void addEngine(MxEngine *);
-  void addQueue(MxID, bool tx, MxQueue *queue);
-  void delQueue(MxID, bool tx);
+  void addQueue(unsigned type, MxID, QueueFn);
+  void delQueue(unsigned type, MxID);
   void addDBEnv(ZdbEnv *);
 
 private:

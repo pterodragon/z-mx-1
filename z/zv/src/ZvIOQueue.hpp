@@ -17,10 +17,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Mx Queue
+// Concrete generic I/O queue based on ZmPQueue skip lists, used by ZvEngine
+//
+// Key / SeqNo - uint64
+// Link ID - ZuID (union of 8-byte string with uint64)
 
-#ifndef ZvQueue_HPP
-#define ZvQueue_HPP
+#ifndef ZvIOQueue_HPP
+#define ZvIOQueue_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -122,15 +125,15 @@ typedef ZmPQueue<ZvQItem,
 	      ZmPQueueFn<ZvQFn,
 		ZmPQueueLock<ZmNoLock,
 		  ZmPQueueHeapID<ZvQMsg_HeapID,
-		    ZmPQueueBase<ZmObject> > > > > > > ZvQueue;
-typedef ZvQueue::Node ZvQMsg;
-typedef ZvQueue::Gap ZvQGap;
+		    ZmPQueueBase<ZmObject> > > > > > > ZvIOQueue;
+typedef ZvIOQueue::Node ZvQMsg;
+typedef ZvIOQueue::Gap ZvQGap;
 
-// ZvQueueRx - receive queue
+// ZvIOQueueRx - receive queue
 
 // CRTP - application must conform to the following interface:
 #if 0
-struct Impl : public ZvQueueRx<Impl> {
+struct Impl : public ZvIOQueueRx<Impl> {
   void process(ZvQMsg *);		// rx process
 
   void scheduleDequeue();
@@ -140,45 +143,45 @@ struct Impl : public ZvQueueRx<Impl> {
   void scheduleReRequest();
   void cancelReRequest();
 
-  void request(const ZvQueue::Gap &prev, const ZvQueue::Gap &now);
-  void reRequest(const ZvQueue::Gap &now);
+  void request(const ZvIOQueue::Gap &prev, const ZvIOQueue::Gap &now);
+  void reRequest(const ZvIOQueue::Gap &now);
 };
 #endif
 
 template <class Impl, class Lock_ = ZmNoLock>
-class ZvQueueRx : public ZmPQRx<Impl, ZvQueue, Lock_> {
-  typedef ZmPQRx<Impl, ZvQueue, Lock_> Rx;
+class ZvIOQueueRx : public ZmPQRx<Impl, ZvIOQueue, Lock_> {
+  typedef ZmPQRx<Impl, ZvIOQueue, Lock_> Rx;
 
 public:
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
 
-  ZuInline ZvQueueRx() : m_queue(new ZvQueue(ZvSeqNo{})) { }
+  ZuInline ZvIOQueueRx() : m_queue(new ZvIOQueue(ZvSeqNo{})) { }
   
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
-  ZuInline const ZvQueue *rxQueue() const { return m_queue; }
-  ZuInline ZvQueue *rxQueue() { return m_queue; }
+  ZuInline const ZvIOQueue *rxQueue() const { return m_queue; }
+  ZuInline ZvIOQueue *rxQueue() { return m_queue; }
 
   ZuInline void rxInit(ZvSeqNo seqNo) {
     if (seqNo > m_queue->head()) m_queue->head(seqNo);
   }
 
 private:
-  ZmRef<ZvQueue>	m_queue;
+  ZmRef<ZvIOQueue>	m_queue;
 };
 
-// ZvQueueTx - transmit queue
-// ZvQueueTxPool - transmit fan-out queue
+// ZvIOQueueTx - transmit queue
+// ZvIOQueueTxPool - transmit fan-out queue
 
-#define ZvQueueMaxPools 8	// max #pools a tx queue can be a member of
+#define ZvIOQueueMaxPools 8	// max #pools a tx queue can be a member of
 
-template <class Impl, class Lock> class ZvQueueTxPool;
+template <class Impl, class Lock> class ZvIOQueueTxPool;
 
 // CRTP - application must conform to the following interface:
 #if 0
-struct Impl : public ZvQueueTx<Impl> {
+struct Impl : public ZvIOQueueTx<Impl> {
   void archive_(ZvQMsg *);			// tx archive (persistent)
   ZmRef<ZvQMsg> retrieve_(ZvSeqNo, ZvSeqNo);	// tx retrieve
 
@@ -208,11 +211,11 @@ struct Impl : public ZvQueueTx<Impl> {
   bool resend_(ZvQMsg *msg, bool more);
 
   // sendGap_() and resendGap_() return true, or false on transient failure
-  bool sendGap_(const ZvQueue::Gap &gap, bool more);
-  bool resendGap_(const ZvQueue::Gap &gap, bool more);
+  bool sendGap_(const ZvIOQueue::Gap &gap, bool more);
+  bool resendGap_(const ZvIOQueue::Gap &gap, bool more);
 };
 
-struct Impl : public ZvQueueTxPool<Impl> {
+struct Impl : public ZvIOQueueTxPool<Impl> {
   // Note: below member functions have same signature as above
   void scheduleSend();
   void rescheduleSend();
@@ -234,11 +237,11 @@ struct Impl : public ZvQueueTxPool<Impl> {
 #endif
 
 template <class Impl, class Lock_ = ZmNoLock>
-class ZvQueueTx : public ZmPQTx<Impl, ZvQueue, Lock_> {
-  typedef ZmPQTx<Impl, ZvQueue, Lock_> Tx;
-  typedef ZvQueueTxPool<Impl, Lock_> Pool;
+class ZvIOQueueTx : public ZmPQTx<Impl, ZvIOQueue, Lock_> {
+  typedef ZmPQTx<Impl, ZvIOQueue, Lock_> Tx;
+  typedef ZvIOQueueTxPool<Impl, Lock_> Pool;
 
-  typedef ZuArrayN<Pool *, ZvQueueMaxPools> Pools;
+  typedef ZuArrayN<Pool *, ZvIOQueueMaxPools> Pools;
 
 public:
   typedef Lock_ Lock;
@@ -249,15 +252,15 @@ protected:
   ZuInline Lock &lock() { return m_lock; }
 
 public:
-  ZuInline ZvQueueTx() : m_queue(new ZvQueue(ZvSeqNo{})) { }
+  ZuInline ZvIOQueueTx() : m_queue(new ZvIOQueue(ZvSeqNo{})) { }
 
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
   ZuInline const ZvSeqNo txSeqNo() const { return m_seqNo; }
 
-  ZuInline const ZvQueue *txQueue() const { return m_queue; }
-  ZuInline ZvQueue *txQueue() { return m_queue; }
+  ZuInline const ZvIOQueue *txQueue() const { return m_queue; }
+  ZuInline ZvIOQueue *txQueue() { return m_queue; }
 
   ZuInline void txInit(ZvSeqNo seqNo) {
     if (seqNo > m_seqNo) m_queue->head(m_seqNo = seqNo);
@@ -306,7 +309,7 @@ public:
     Tx::txReset(m_seqNo = seqNo);
   }
 
-  // fails silently if ZvQueueMaxPools exceeded
+  // fails silently if ZvIOQueueMaxPools exceeded
   void join(Pool *g) {
     Guard guard(m_lock);
     m_pools << g;
@@ -340,7 +343,7 @@ protected:
 private:
 
   ZvSeqNo		m_seqNo;
-  ZmRef<ZvQueue>	m_queue;
+  ZmRef<ZvIOQueue>	m_queue;
 
   Lock			m_lock;
     Pools		  m_pools;
@@ -349,13 +352,13 @@ private:
 };
 
 template <class Impl, class Lock_ = ZmNoLock>
-class ZvQueueTxPool : public ZvQueueTx<Impl, Lock_> {
+class ZvIOQueueTxPool : public ZvIOQueueTx<Impl, Lock_> {
   struct Queues_HeapID {
-    inline static const char *id() { return "ZvQueueTxPool.Queues"; }
+    inline static const char *id() { return "ZvIOQueueTxPool.Queues"; }
   };
 
-  typedef ZvQueue::Gap Gap;
-  typedef ZvQueueTx<Impl, Lock_> Tx;
+  typedef ZvIOQueue::Gap Gap;
+  typedef ZvIOQueueTx<Impl, Lock_> Tx;
 
   typedef Lock_ Lock;
   typedef ZmGuard<Lock> Guard;
@@ -426,7 +429,7 @@ public:
 };
 
 template <class Impl, class Lock_>
-void ZvQueueTx<Impl, Lock_>::ready_(ZmTime next)
+void ZvIOQueueTx<Impl, Lock_>::ready_(ZmTime next)
 {
   unsigned i, n = m_pools.length();
   unsigned o = (m_poolOffset = (m_poolOffset + 1) % n);
@@ -436,7 +439,7 @@ void ZvQueueTx<Impl, Lock_>::ready_(ZmTime next)
 }
 
 template <class Impl, class Lock_>
-void ZvQueueTx<Impl, Lock_>::unready_()
+void ZvIOQueueTx<Impl, Lock_>::unready_()
 {
   unsigned i, n = m_pools.length();
   unsigned o = (m_poolOffset = (m_poolOffset + 1) % n);
@@ -445,4 +448,4 @@ void ZvQueueTx<Impl, Lock_>::unready_()
   m_ready = ZmTime();
 }
 
-#endif /* ZvQueue_HPP */
+#endif /* ZvIOQueue_HPP */

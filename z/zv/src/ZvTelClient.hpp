@@ -30,7 +30,9 @@
 
 #include <zlib/ZvTelemetry.hpp>
 
+//#include <zlib/zcmd_fbs.h>
 #include <zlib/telreq_fbs.h>
+#include <zlib/telack_fbs.h>
 
 namespace ZvTelemetry {
 

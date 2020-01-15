@@ -1,0 +1,6 @@
+include "types.fbs";
+namespace ZvTelemetry.fbs;
+table Ack {
+  ok:bool;
+}
+root_type Ack;

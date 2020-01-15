@@ -189,10 +189,11 @@ private:
   void delTxPool(MxAnyTxPool *) { }
 
   // Queue Management
-  void addQueue(MxID id, bool tx, MxQueue *queue) {
-    if (m_telemetry) m_telemetry->addQueue(id, tx, queue);
+  using QueueFn = ZvTelemetry::QueueFn;
+  void addQueue(unsigned type, MxID id, QueueFn queueFn) {
+    if (m_telemetry) m_telemetry->addQueue(type, id, ZuMv(queueFn));
   }
-  void delQueue(MxID id, bool tx) {
+  void delQueue(unsigned type, MxID id) {
     if (m_telemetry) m_telemetry->delQueue(id, tx);
   }
 

@@ -29,8 +29,11 @@
 #endif
 
 #include <zlib/ZvTelemetry.hpp>
+#include <zlib/ZvEngine.hpp>
 
+#include <zlib/zcmd_fbs.h>
 #include <zlib/telreq_fbs.h>
+#include <zlib/telack_fbs.h>
 
 namespace ZvTelemetry {
 
@@ -52,25 +55,25 @@ public:
 private:
   // do not call ZeLOG since that may well recurse back here, print to stderr
   template <typename Message>
-  static void error(ZuString path, const Message &message) {
+  void error(bool index, const Message &message) {
     struct Fmt : public ZtDate::CSVFmt { Fmt() { offset(timezone); } };
     thread_local Fmt dateFmt;
     std::cerr << ZtDateNow().csv(dateFmt)
-      << " FATAL " << path << ": " << message << '\n' << std::flush;
+      << " FATAL " << m_path << (index ? ".idx" : "")
+      << ": " << message << '\n' << std::flush;
   }
 
-  void open(ZuString path_, unsigned date, unsigned flags) {
+  void open(ZuString prefix, unsigned date, unsigned flags) {
     m_date = date;
     m_seqNo = 0;
-    if (!path_) return;
-    ZtString path = path_;
-    path << '_' << m_date;
+    if (!prefix) return;
+    m_path = prefix;
+    m_path << '_' << m_date;
     ZeError e;
-    int i = m_file.open(path, flags, 0666, &e);
-    if (i != Zi::OK) { error(path, e); return; }
-    path << ".idx";
-    i = m_index.open(path, flags, 0666, &e);
-    if (i != Zi::OK) { m_file.close(); error(path, e); return; }
+    int i = m_file.open(m_path, flags, 0666, &e);
+    if (i != Zi::OK) { error(false, e); return; }
+    i = m_index.open(m_path + ".idx", flags, 0666, &e);
+    if (i != Zi::OK) { m_file.close(); error(true, e); return; }
     m_offset = m_file.size();
     m_seqNo = m_index.size() / sizeof(size_t);
   }
@@ -79,6 +82,7 @@ public:
   void close() {
     m_file.close();
     m_index.close();
+    m_path.null();
     m_date = 0;
     m_offset = 0;
     m_seqNo = 0;
@@ -91,29 +95,31 @@ public:
   bool isOpen() const { return m_file; }
 
   // returns seqNo
-  unsigned write(ZuString path, unsigned date, const BufPtr buf) {
+  unsigned alloc(ZuString prefix, unsigned date) {
     if (date != m_date) {
       close();
-      open(path, date, ZiFile::Create);
+      open(prefix, date, ZiFile::Create);
     }
+    return m_seqNo;
+  }
+  void write(const BufPtr buf) {
     if (m_file) {
       ZeError e;
       if (m_file.pwrite(m_offset, buf->data(), buf->length, &e) != Zi::OK)
-	error(ZtString() << path << '_' << m_date, e);
+	error(false, e);
       else if (m_index.pwrite(m_seqNo * sizeof(size_t),
 	    &m_offset, sizeof(size_t), &e) != Zi::OK)
-	error(ZtString() << path << '_' << m_date << ".idx", e);
+	error(true, e);
     }
-    unsigned seqNo = m_seqNo++;
+    m_seqNo++;
     m_offset += buf->length;
-    return seqNo;
   }
 
   template <typename L>
-  BufRef read(ZuString path, unsigned date, unsigned seqNo, void *bufOwner) {
+  BufRef read(ZuString prefix, unsigned date, unsigned seqNo, void *bufOwner) {
     if (date != m_date) {
       close();
-      open(path, date, ZiFile::ReadOnly);
+      open(prefix, date, ZiFile::ReadOnly);
     }
     if (!m_file) return BufRef{};
     if (seqNo >= m_seqNo) return BufRef{};
@@ -121,11 +127,11 @@ public:
     ZeError e;
     if (m_index.pread(seqNo * sizeof(size_t),
 	  &offset, sizeof(size_t), &e) != Zi::OK) {
-      error(ZtString() << path << '_' << m_date << ".idx", e);
+      error(true, e);
       return BufRef{};
     }
     if (offset >= m_offset) {
-      error(ZtString() << path << '_' << m_date << ".idx", "corrupt");
+      error(true, "corrupt");
       return BufRef{};
     }
     if (seqNo == m_seqNo - 1)
@@ -133,17 +139,17 @@ public:
     else {
       if (m_index.pread((seqNo + 1) * sizeof(size_t),
 	    &next, sizeof(size_t), &e) != Zi::OK) {
-	error(ZtString() << path << '_' << m_date << ".idx", e);
+	error(true, e);
 	return BufRef{};
       }
     }
     if (next < offset || next > m_offset) {
-      error(ZtString() << path << '_' << m_date << ".idx", "corrupt");
+      error(true, "corrupt");
       return BufRef{};
     }
     ZmRef<IOBuf> buf = new IOBuf(bufOwner, next - offset);
     if (m_file.pread(offset, buf->data(), buf->length, &e) != Zi::OK) {
-      error(ZtString() << path << '_' << m_date, e);
+      error(false, e);
       return BufRef{};
     }
     return buf;
@@ -153,6 +159,7 @@ private:
   unsigned		m_date = 0; // YYYYMMDD
   size_t		m_offset = 0;
   unsigned		m_seqNo = 0;
+  ZtString		m_path;
   ZiFile		m_file;
   ZiFile		m_index;
 };
@@ -160,7 +167,7 @@ private:
 using AlertRing = ZmDRing<ZmRef<IOBuf> >;
 
 template <typename App_, typename Link_>
-class Server : public EngineMgr {
+class Server : public ZvEngineMgr {
 public:
   using App = App_;
   using Link = Link_;
@@ -188,11 +195,10 @@ public:
       m_thread = mx->txThread();
 
     if (ZmRef<ZvCf> mxCf = cf->subset("mx", false, true)) {
-      Guard guard(m_lock);
       ZvCf::Iterator i(mxCf);
       ZuString key;
       while (ZmRef<ZvCf> mxCf_ = i.subset(key))
-	mxTbl.add(new Mx(key, mxCf_));
+	m_mxTbl.add(new ZvMultiplex(key, mxCf_));
     }
 
     m_minInterval = cf->getInt("telemetry:minInterval", 10, 1000000, 100);
@@ -204,7 +210,7 @@ public:
     m_mxTbl.clean();
     m_queues.clean();
     m_engines.clean();
-    m_dbEnv = nullptr;
+    m_dbEnvFn = DBEnvFn{};
   }
 
   void start() {
@@ -224,7 +230,7 @@ public:
     while (MxTbl::Node *node = i.iterate()) l(node->key());
   }
 
-  int process(Link *link, const fbs::Request *in) {
+  void process(Link *link, const fbs::Request *in) {
     int reqType = in->type();
     unsigned interval = in->interval();
     if (interval < m_minInterval) interval = m_minInterval;
@@ -256,10 +262,9 @@ public:
       case fbs::ReqType_Alert:
 	alertQuery(link, in->subscribe(), in->filter(), interval);
 	break;
+      default:
+	break;
     }
-    fbb.Finish(fbs::CreateReqAck(
-	  fbb, in->seqNo(), code, Zfb::Save::str(fbb, out)));
-    return fbb.GetSize();
   }
   void disconnected(Link *link);
 
@@ -276,9 +281,9 @@ public:
     });
   }
 
-  void addEngine(ZmRef<ZvEngine> engine) {
+  void addEngine(ZvEngine *engine) {
     m_mx->invoke(m_thread, this,
-	[engine = ZuMv(engine)](Server *server) mutable {
+	[engine = ZmMkRef(engine)](Server *server) mutable {
 	  if (!server->m_engines.find(engine->id()))
 	    server->m_engines.add(ZuMv(engine));
 	});
@@ -288,26 +293,31 @@ public:
       delete server->m_engines.del(id);
     });
   }
-  void addQueue(unsigned type, ZuID id, ZmFn<Queue &> queueFn) {
+  void addQueue(unsigned type, ZuID id, QueueFn queueFn) {
     m_mx->invoke(m_thread, this,
 	[type, id, queueFn = ZuMv(queueFn)](Server *server) mutable {
 	  auto key = ZuMkPair(type, id);
-	  Guard guard(m_lock);
-	  if (!m_queues.find(key)) m_queues.add(key, ZuMv(queueFn));
+	  if (!server->m_queues.find(key))
+	    server->m_queues.add(key, ZuMv(queueFn));
 	});
   }
   void delQueue(unsigned type, ZuID id) {
     m_mx->invoke(m_thread, this, [type, id](Server *server) {
       auto key = ZuMkPair(type, id);
-      delete m_queues.del(key);
+      delete server->m_queues.del(key);
     });
   }
 
   // ZdbEnv registration
  
-  void addDBEnv(ZdbEnv *env) {
-    m_mx->invoke(m_thread, this, [env](Server *server) {
-      server->m_dbEnv = env;
+  void addDBEnv(DBEnvFn fn) {
+    m_mx->invoke(m_thread, this, [fn = ZuMv(fn)](Server *server) mutable {
+      server->m_dbEnvFn = ZuMv(fn);
+    });
+  }
+  void delDBEnv() {
+    m_mx->invoke(m_thread, this, [](Server *server) {
+      server->m_dbEnvFn = DBEnvFn{};
     });
   }
 
@@ -378,23 +388,25 @@ private:
   void alert_(ZmRef<ZeEvent> alert) {
     m_alertBuf.length(0);
     m_alertBuf << alert->message();
+    ZtDate date{alert->time()};
+    unsigned yyyymmdd = date.yyyymmdd();
+    unsigned seqNo = m_alertFile.alloc(m_alertPrefix, yyyymmdd);
     using namespace Zfb::Save;
     m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Alert,
 	  fbs::CreateAlert(m_fbb,
-	    date(m_fbb, alert->time()), alert->tid(),
+	    date(m_fbb, date), seqNo, alert->tid(),
 	    static_cast<fbs::Severity>(alert->severity()),
 	    str(m_fbb, m_alertBuf)).Union()));
     ZmRef<IOBuf> buf = m_fbb.buf();
-    unsigned date = alert->time().yyyymmdd();
-    unsigned seqNo = m_alertFile.write(m_alertPrefix, date, buf);
+    m_alertFile.write(buf);
     m_alertRing.push(ZuMv(buf));
   }
 
   using Queues =
     ZmRBTree<ZuPair<ZuID, bool>,
-      ZmRBTreeVal<ZmFn<Queue &>,
+      ZmRBTreeVal<QueueFn,
 	ZmRBTreeObject<ZuNull,
 	  ZmRBTreeLock<ZmNoLock> > > >;
 
@@ -414,9 +426,9 @@ private:
   using WatchList_ =
     ZmList<Watch_,
       ZmListObject<ZuNull,
-	ZmListNodeIsKey<true,
+	ZmListNodeIsItem<true,
 	  ZmListLock<ZmNoLock> > > >;
-  using Watch = WatchList_::Node;
+  using Watch = typename WatchList_::Node;
   struct WatchList {
     WatchList_		list;
     unsigned		interval = 0;	// in microseconds
@@ -483,7 +495,8 @@ private:
     m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Heap, data.save(m_fbb).Union()));
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+    m_fbb.PushElement(
+	ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
     watch->link->send(m_fbb.buf());
   }
 
@@ -503,7 +516,8 @@ private:
       m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Heap, data.saveDelta(m_fbb).Union()));
-      m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+      m_fbb.PushElement(
+	  ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
       watch->link->send(m_fbb.buf());
     }
   }
@@ -531,7 +545,8 @@ private:
     m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_HashTbl, data.save(m_fbb).Union()));
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+    m_fbb.PushElement(
+	ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
     watch->link->send(m_fbb.buf());
   }
 
@@ -551,7 +566,8 @@ private:
       m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_HashTbl, data.saveDelta(m_fbb).Union()));
-      m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+      m_fbb.PushElement(
+	  ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
       watch->link->send(m_fbb.buf());
     }
   }
@@ -579,7 +595,8 @@ private:
     m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Thread, data.save(m_fbb).Union()));
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+    m_fbb.PushElement(
+	ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
     watch->link->send(m_fbb.buf());
   }
 
@@ -599,7 +616,8 @@ private:
       m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Thread, data.saveDelta(m_fbb).Union()));
-      m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+      m_fbb.PushElement(
+	  ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
       watch->link->send(m_fbb.buf());
     }
   }
@@ -620,13 +638,14 @@ private:
     if (!interval) delete watch;
   }
   void mxQuery_(Watch *watch, const ZvMultiplex *mx) {
-    Thread data;
+    Mx data;
     mx->telemetry(data);
     if (!match(watch->filter, data.id)) return;
     m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Mx, data.save(m_fbb).Union()));
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+    m_fbb.PushElement(
+	ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
     watch->link->send(m_fbb.buf());
     {
       using namespace Zfb::Save;
@@ -647,13 +666,13 @@ private:
 		  ring.params().size(), ring.full(),
 		  QueueType::Thread).Union()));
 	  m_fbb.PushElement(
-	      ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+	      ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
 	  watch->link->send(m_fbb.buf());
 	}
-	if (queueID.length() < MxIDStrSize - 1)
+	if (queueID.length() < ZmIDStrSize - 1)
 	  queueID << '_';
 	else
-	  queueID[MxIDStrSize - 2] = '_';
+	  queueID[ZmIDStrSize - 2] = '_';
 	{
 	  const auto &overRing = mx->overRing(tid);
 	  overRing.stats(inCount, outCount);
@@ -667,18 +686,19 @@ private:
 		  overRing.size_(), false,
 		  QueueType::Thread).Union()));
 	  m_fbb.PushElement(
-	      ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+	      ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
 	  watch->link->send(m_fbb.buf());
 	}
       }
     }
-    mx->allCxns([this](ZiConnection *cxn) {
+    mx->allCxns([this, watch](ZiConnection *cxn) {
       Socket data;
-      cxn->telemetry(&data);
+      cxn->telemetry(data);
       m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Socket, data.save(m_fbb).Union()));
-      m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+      m_fbb.PushElement(
+	  ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
       watch->link->send(m_fbb.buf());
     });
   }
@@ -698,7 +718,8 @@ private:
       m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Mx, data.saveDelta(m_fbb).Union()));
-      m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+      m_fbb.PushElement(
+	  ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
       watch->link->send(m_fbb.buf());
       {
 	uint64_t inCount, inBytes, outCount, outBytes;
@@ -720,15 +741,15 @@ private:
 	    b.add_outBytes(outBytes);
 	    b.add_full(ring.full());
 	    m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
-		  fbs::TelData_Queue, b.Union()));
+		  fbs::TelData_Queue, b.Finish().Union()));
 	    m_fbb.PushElement(
-		ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+		ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
 	    watch->link->send(m_fbb.buf());
 	  }
-	  if (queueID.length() < MxIDStrSize - 1)
+	  if (queueID.length() < ZmIDStrSize - 1)
 	    queueID << '_';
 	  else
-	    queueID[MxIDStrSize - 2] = '_';
+	    queueID[ZmIDStrSize - 2] = '_';
 	  {
 	    const auto &overRing = mx->overRing(tid);
 	    overRing.stats(inCount, outCount);
@@ -743,20 +764,21 @@ private:
 	    b.add_outBytes(outCount * sizeof(ZmFn<>));
 	    b.add_full(0);
 	    m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
-		  fbs::TelData_Queue, b.Union()));
+		  fbs::TelData_Queue, b.Finish().Union()));
 	    m_fbb.PushElement(
-		ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+		ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
 	    watch->link->send(m_fbb.buf());
 	  }
 	}
       }
       mx->allCxns([this](ZiConnection *cxn) {
 	Socket data;
-	cxn->telemetry(&data);
+	cxn->telemetry(data);
 	m_fbb.Clear();
 	m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	      fbs::TelData_Socket, data.saveDelta(m_fbb).Union()));
-	m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+	m_fbb.PushElement(
+	    ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
 	watch->link->send(m_fbb.buf());
       });
     }
@@ -790,26 +812,27 @@ private:
     if (interval)
       subscribe(list, watch, interval,
 	  ZmFn<>{this, [](Server *server) { server->queueScan(); }});
-    auto i = m_queues.readIterate();
+    auto i = m_queues.readIterator();
     while (auto node = i.iterate()) queueQuery_(watch, node->val());
     if (!interval) delete watch;
   }
-  void queueQuery_(Watch *watch, const ZmFn<Queue &> &fn) {
+  void queueQuery_(Watch *watch, const QueueFn &fn) {
     Queue data;
     fn(data);
-    if (!matchQueue(watch->filter, data.type, data.id)) continue;
+    if (!matchQueue(watch->filter, data.type, data.id)) return;
     m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Queue, data.save(m_fbb).Union()));
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+    m_fbb.PushElement(
+	ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
     watch->link->send(m_fbb.buf());
   }
   void queueScan() {
     if (!m_watchLists[ReqType::Queue].list.count()) return;
-    auto i = m_queues.readIterate();
+    auto i = m_queues.readIterator();
     while (auto node = i.iterate()) queueScan(node->val());
   }
-  void queueScan(const ZmFn<Queue &> &fn) {
+  void queueScan(const QueueFn &fn) {
     Queue data;
     fn(data);
     auto i = m_watchLists[ReqType::Queue].list.readIterate();
@@ -818,7 +841,8 @@ private:
       m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Queue, data.saveDelta(m_fbb).Union()));
-      m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+      m_fbb.PushElement(
+	  ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
       watch->link->send(m_fbb.buf());
     }
   }
@@ -840,47 +864,50 @@ private:
   void engineQuery_(Watch *watch, const ZvEngine *engine) {
     Engine data;
     engine->telemetry(data);
-    if (!match(watch->filter, data.id)) continue;
+    if (!match(watch->filter, data.id)) return;
     m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Engine, data.save(m_fbb).Union()));
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+    m_fbb.PushElement(
+	ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
     watch->link->send(m_fbb.buf());
-    engine->allLinks<MxAnyLink>([cxn](MxAnyLink *link) -> uintptr_t {
+    engine->allLinks<ZvAnyLink>([this, watch](ZvAnyLink *link) -> uintptr_t {
       Link data;
       link->telemetry(data);
       m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Link, data.save(m_fbb).Union()));
-      m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+      m_fbb.PushElement(
+	  ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
       watch->link->send(m_fbb.buf());
       return 0;
     });
   }
   void engineScan() {
     if (!m_watchLists[ReqType::Engine].list.count()) return;
-    auto i = m_engines.readIterate();
-    while (Engines::Node *node = i.iterate()) engineScan(node->key());
+    auto i = m_engines.readIterator();
+    while (auto node = i.iterate()) engineScan(node->key());
   }
   void engineScan(const ZvEngine *engine) {
     Engine data;
     engine->telemetry(data);
-    auto i = m_watchLists[ReqType::Engine].list.readIterate();
+    auto i = m_watchLists[ReqType::Engine].list.readIterator();
     while (auto watch = i.iterateNode()) {
       if (!match(watch->filter, data.id)) continue;
       m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Engine, data.saveDelta(m_fbb).Union()));
-      m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+      m_fbb.PushElement(
+	  ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
       watch->link->send(m_fbb.buf());
-      engine->allLinks<MxAnyLink>([this, watch](MxAnyLink *link) -> uintptr_t {
+      engine->allLinks<ZvAnyLink>([this, watch](ZvAnyLink *link) -> uintptr_t {
 	linkScan(link, watch);
 	return 0;
       });
     }
   }
   void linkScan(const ZvAnyLink *link) {
-    auto i = m_watchLists[ReqType::Engine].list.readIterate();
+    auto i = m_watchLists[ReqType::Engine].list.readIterator();
     while (auto watch = i.iterateNode()) linkScan(link, watch);
   }
   void linkScan(const ZvAnyLink *link, Watch *watch) {
@@ -889,7 +916,8 @@ private:
     m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Link, data.saveDelta(m_fbb).Union()));
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+    m_fbb.PushElement(
+	ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
     watch->link->send(m_fbb.buf());
   }
 
@@ -907,61 +935,55 @@ private:
     if (!interval) delete watch;
   }
   void dbEnvQuery_(Watch *watch) {
-    if (!m_dbEnv) return;
-    DBEnv data;
-    m_dbEnv->telemetry(data);
-    m_fbb.Clear();
-    m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
-	  fbs::TelData_DBEnv, data.save(m_fbb).Union()));
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
-    watch->link->send(m_fbb.buf());
-    m_dbEnv->allHosts([this](const ZdbHost *host) {
-      DBHost data;
-      host->telemetry(data);
+    if (!m_dbEnvFn) return;
+    m_dbEnvFn([this, watch](const DBEnv &data) {
+      m_fbb.Clear();
+      m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
+	    fbs::TelData_DBEnv, data.save(m_fbb).Union()));
+      m_fbb.PushElement(
+	  ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
+      watch->link->send(m_fbb.buf());
+    }, [this, watch](const DBHost &data) {
       m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_DBHost, data.save(m_fbb).Union()));
-      m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+      m_fbb.PushElement(
+	  ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
       watch->link->send(m_fbb.buf());
-    });
-    m_dbEnv->allDBs([this](const ZdbAny *db) {
-      DB data;
-      host->telemetry(data);
+    }, [this, watch](const DB &data) {
       m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_DB, data.save(m_fbb).Union()));
-      m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+      m_fbb.PushElement(
+	  ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
       watch->link->send(m_fbb.buf());
     });
   }
   void dbEnvScan() {
     if (!m_watchLists[ReqType::DBEnv].list.count()) return;
-    if (!m_dbEnv) return;
-    DBEnv data;
-    m_dbEnv->telemetry(data);
-    auto i = m_watchLists[ReqType::DBEnv].list.readIterate();
+    if (!m_dbEnvFn) return;
+    auto i = m_watchLists[ReqType::DBEnv].list.readIterator();
     while (auto watch = i.iterateNode()) {
-      m_fbb.Clear();
-      m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
-	    fbs::TelData_DBEnv, data.saveDelta(m_fbb).Union()));
-      m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
-      watch->link->send(m_fbb.buf());
-      m_dbEnv->allHosts([this](const ZdbHost *host) {
-	DBHost data;
-	host->telemetry(data);
+      m_dbEnvFn([this, watch](const DBEnv &data) {
+	m_fbb.Clear();
+	m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
+	      fbs::TelData_DBEnv, data.saveDelta(m_fbb).Union()));
+	m_fbb.PushElement(
+	    ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
+	watch->link->send(m_fbb.buf());
+      }, [this, watch](const DBHost &data) {
 	m_fbb.Clear();
 	m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	      fbs::TelData_DBHost, data.saveDelta(m_fbb).Union()));
-	m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+	m_fbb.PushElement(
+	    ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
 	watch->link->send(m_fbb.buf());
-      });
-      m_dbEnv->allDBs([this](const ZdbAny *db) {
-	DB data;
-	host->telemetry(data);
+      }, [this, watch](const DB &data) {
 	m_fbb.Clear();
 	m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	      fbs::TelData_DB, data.saveDelta(m_fbb).Union()));
-	m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+	m_fbb.PushElement(
+	    ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
 	watch->link->send(m_fbb.buf());
       });
     }
@@ -986,7 +1008,8 @@ private:
     m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_App, data.save(m_fbb).Union()));
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+    m_fbb.PushElement(
+	ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
     watch->link->send(m_fbb.buf());
   }
   void appScan() {
@@ -995,12 +1018,13 @@ private:
     if (!m_watchLists[ReqType::App].list.count()) return;
     ZvTelemetry::App data;
     app()->telemetry(data);
-    auto i = m_watchLists[ReqType::App].list.readIterate();
+    auto i = m_watchLists[ReqType::App].list.readIterator();
     while (auto watch = i.iterateNode()) {
       m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_App, data.saveDelta(m_fbb).Union()));
-      m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), fbs::MsgType_Telemetry));
+      m_fbb.PushElement(
+	  ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
       watch->link->send(m_fbb.buf());
     }
   }
@@ -1020,7 +1044,7 @@ private:
   }
   void alertQuery_(Watch *watch) {
     // parse filter - yyyymmdd:seqNo
-    const auto &alertFilter = ZtStaticRegexUTF8("^(\d{8}):(\d+)$");
+    const auto &alertFilter = ZtStaticRegexUTF8("^(\\d{8}):(\\d+)$");
     ZtRegex::Captures c;
     ZuBox<unsigned> date = 0, seqNo = 0;
     if (alertFilter.m(watch->filter, c) == 3) {
@@ -1041,7 +1065,7 @@ private:
       if (buf = m_alertRing.head()) {
 	auto alert = fbs::GetTelemetry(buf->data())->data_as_Alert();
 	if (ZuLikely(alert)) {
-	  headDate = Zfb::Load::dateTime(alert->time())->yyyymmdd();
+	  headDate = Zfb::Load::dateTime(alert->time()).yyyymmdd();
 	  headSeqNo = alert->seqNo();
 	}
       }
@@ -1066,7 +1090,7 @@ private:
       while (buf = i.iterate()) {
 	auto alert = fbs::GetTelemetry(buf->data())->data_as_Alert();
 	if (ZuLikely(alert)) {
-	  unsigned alertDate = Zfb::Load::dateTime(alert->time())->yyyymmdd();
+	  unsigned alertDate = Zfb::Load::dateTime(alert->time()).yyyymmdd();
 	  unsigned alertSeqNo = alert->seqNo();
 	  if (alertDate > date || (alertDate == date && alertSeqNo >= seqNo))
 	    watch->link->send(ZuMv(buf));
@@ -1076,10 +1100,9 @@ private:
   }
   void alertScan() {
     // dequeue all alerts in-memory, send to all watchers
-    while (buf = m_alertRing.shift()) {
-      auto i = m_watchLists[ReqType::HashTbl].list.readIterate();
-      while (auto watch = i.iterateNode())
-	watch->link->send(ZuMv(buf));
+    while (ZmRef<IOBuf> buf = m_alertRing.shift()) {
+      auto i = m_watchLists[ReqType::HashTbl].list.readIterator();
+      while (auto watch = i.iterateNode()) watch->link->send(buf);
     }
   }
 
@@ -1094,31 +1117,13 @@ private:
   MxTbl			m_mxTbl;
   Queues		m_queues;
   Engines		m_engines;
-  ZuRef<ZdbEnv>		m_dbEnv = nullptr;
+  DBEnvFn		m_dbEnvFn;
   WatchList		m_watchLists[ReqType::N];
   AlertRing		m_alertRing;		// in-memory ring of alerts
   AlertFile		m_alertFile;		// current file being written
   ZtString		m_alertBuf;		// alert message buffer
   bool			m_appUpdated = false;
 };
-
-using CliFn = ZmFn<const fbs::Telemetry *>;
-struct CliWatch_ {
-  WatchKey		key;
-  void			*link;	// ZvCmdCliLink<App> *
-  CliFn			fn;
-};
-struct CliWatchKeyAccessor : public ZuAccessor<CliWatch_, WatchKey> {
-  static const WatchKey &value(const CliWatch_ &watch) {
-    return watch.key;
-  }
-};
-using CliWatchTree =
-  ZmRBTree<CliWatch_,
-    ZmRBTreeIndex<CliWatchKeyAccessor,
-      ZmRBTreeNodeIsKey<true,
-	ZmRBTreeLock<ZmRWLock> > > >;
-using CliWatch = CliWatchTree::Node;
 
 } // ZvTelemetry
 

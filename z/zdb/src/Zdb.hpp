@@ -85,7 +85,7 @@ typedef uint64_t ZdbRN;		// record ID
 
 namespace ZdbOp {
   enum { Add = 0, Upd, Del };
-  inline static const char *name(int op) {
+  static const char *name(int op) {
     static const char *names[] = { "Add", "Upd", "Del" };
     if (ZuUnlikely(op < 0 || op >= (int)(sizeof(names) / sizeof(names[0]))))
       return "Unk";
@@ -153,7 +153,7 @@ public:
     m_val = (off<<16) | len;
   }
 
-  inline void merge(unsigned off, unsigned len) {
+  void merge(unsigned off, unsigned len) {
     unsigned old = m_val;
     unsigned newOff, newLen;
     if (!old) {
@@ -171,7 +171,7 @@ public:
     m_val = (newOff<<16) | newLen;
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     if (!m_val)
       s << "null";
     else
@@ -189,7 +189,7 @@ class Zdb_File_ : public ZmPolymorph, public ZiFile {
 friend struct Zdb_File_IndexAccessor;
 
 public:
-  inline Zdb_File_(unsigned index) : m_index(index) {
+  Zdb_File_(unsigned index) : m_index(index) {
     memset((void *)m_undeleted, 0xff, ZdbFileRecs>>3);
   }
 
@@ -221,13 +221,13 @@ typedef ZmList<Zdb_File_,
 typedef Zdb_FileLRU::Node Zdb_FileLRUNode;
 
 struct Zdb_FileIndexAccessor : public ZuAccessor<Zdb_FileLRUNode, unsigned> {
-  inline static unsigned value(const Zdb_FileLRUNode &node) {
+  static unsigned value(const Zdb_FileLRUNode &node) {
     return node.index();
   }
 };
 
 struct Zdb_FileHeapID {
-  inline static const char *id() { return "Zdb_File"; }
+  static const char *id() { return "Zdb_File"; }
 };
 typedef ZmHash<Zdb_FileLRUNode,
 	  ZmHashObject<ZmPolymorph,
@@ -279,7 +279,7 @@ struct ZdbLRUNode_RNAccessor : public ZuAccessor<ZdbLRUNode, ZdbRN> {
 };
 
 struct Zdb_Cache_ID {
-  inline static const char *id() { return "Zdb.Cache"; }
+  static const char *id() { return "Zdb.Cache"; }
 };
 
 typedef ZmHash<ZdbLRUNode,
@@ -349,14 +349,14 @@ public:
   ZuInline bool pinned() const { return m_pinned; }
 
 private:
-  inline void placeholder() {
+  void placeholder() {
     ZdbTrailer *trailer = this->trailer();
     trailer->rn = trailer->prevRN = ZdbNullRN;
     trailer->magic = ZdbAllocated;
     this->range(ZdbRange{});
   }
 
-  inline void init(ZdbRN rn, ZdbRange range,
+  void init(ZdbRN rn, ZdbRange range,
       uint32_t magic = ZdbAllocated) {
     ZdbTrailer *trailer = this->trailer();
     trailer->rn = trailer->prevRN = rn;
@@ -364,7 +364,7 @@ private:
     this->range(range);
   }
 
-  inline void update(ZdbRN rn, ZdbRN prevRN, ZdbRange range,
+  void update(ZdbRN rn, ZdbRN prevRN, ZdbRange range,
       uint32_t magic = ZdbAllocated) {
     ZdbTrailer *trailer = this->trailer();
     trailer->rn = rn;
@@ -382,7 +382,7 @@ private:
   }
 
 public:
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << "rn=" << rn()
       << " prevRN=" << prevRN()
       << " magic=" << ZuBoxed(magic()).hex();
@@ -437,11 +437,11 @@ typedef ZmFn<ZdbAnyPOD *, int, bool> ZdbAddFn;
 typedef ZmFn<ZdbAnyPOD *, int> ZdbWriteFn;
 
 struct ZdbPOD_HeapID {
-  inline static const char *id() { return "ZdbPOD"; }
+  static const char *id() { return "ZdbPOD"; }
 };
 // heap ID can be specialized by app
 template <typename T> struct ZdbPOD_Cmpr_HeapID {
-  inline static const char *id() { return "ZdbPOD_Cmpr"; }
+  static const char *id() { return "ZdbPOD_Cmpr"; }
 };
 
 template <typename T_>
@@ -460,7 +460,7 @@ public:
   typedef T_ T;
   typedef ZdbData<T> Data;
 
-  inline ZdbPOD_(ZdbAny *db) : Base(db) { }
+  ZdbPOD_(ZdbAny *db) : Base(db) { }
 
   ZuInline static const ZdbPOD_ *pod(const T *data) {
     const Data *ZuMayAlias(ptr) = (const Data *)data;
@@ -471,8 +471,7 @@ public:
     return static_cast<ZdbPOD_ *>(Base::pod(ptr));
   }
 
-  template <typename S>
-  inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     ZdbAnyPOD::print(s);
     s << ' ' << this->data();
   }
@@ -480,8 +479,7 @@ public:
 private:
   template <class Heap_> class Cmpr_ : public Heap_, public ZdbAnyPOD_Cmpr {
   public:
-    inline Cmpr_() : 
-      ZdbAnyPOD_Cmpr(m_data, LZ4_COMPRESSBOUND(sizeof(Data))) { }
+    Cmpr_() : ZdbAnyPOD_Cmpr(m_data, LZ4_COMPRESSBOUND(sizeof(Data))) { }
 
   private:
     char	m_data[LZ4_COMPRESSBOUND(sizeof(Data))];
@@ -495,8 +493,8 @@ template <typename T, class HeapID = ZdbPOD_HeapID>
 using ZdbPOD = ZdbPOD_<T, ZmHeap<HeapID, sizeof(ZdbPOD_<T, ZuNull>)> >;
 
 struct ZdbConfig {
-  inline ZdbConfig() { }
-  inline ZdbConfig(ZuString name_, ZvCf *cf) {
+  ZdbConfig() { }
+  ZdbConfig(ZuString name_, ZvCf *cf) {
     name = name_;
     path = cf->get("path", true);
 #if 0
@@ -537,7 +535,7 @@ friend class ZdbAnyPOD;
   struct IDAccessor;
 friend struct IDAccessor;
   struct IDAccessor : public ZuAccessor<ZdbAny *, ZdbID> {
-    inline static ZdbID value(const ZdbAny *db) { return db->m_id; }
+    static ZdbID value(const ZdbAny *db) { return db->m_id; }
   };
 
   typedef Zdb_Cache Cache;
@@ -570,19 +568,19 @@ private:
   void checkpoint_();
 
 public:
-  inline const ZdbConfig &config() const { return *m_config; }
+  ZuInline const ZdbConfig &config() const { return *m_config; }
 
-  inline ZdbEnv *env() const { return m_env; }
-  inline ZdbID id() const { return m_id; }
-  inline unsigned recSize() { return m_recSize; }
-  inline unsigned dataSize() { return m_dataSize; }
-  inline unsigned cacheSize() { return m_cacheSize; } // unclean read
-  inline unsigned filesMax() { return m_filesMax; }
+  ZuInline ZdbEnv *env() const { return m_env; }
+  ZuInline ZdbID id() const { return m_id; }
+  ZuInline unsigned recSize() { return m_recSize; }
+  ZuInline unsigned dataSize() { return m_dataSize; }
+  ZuInline unsigned cacheSize() { return m_cacheSize; } // unclean read
+  ZuInline unsigned filesMax() { return m_filesMax; }
 
   // first RN that is committed (will be ZdbMaxRN if DB is empty)
-  inline ZdbRN minRN() { return m_minRN; }
+  ZuInline ZdbRN minRN() { return m_minRN; }
   // next RN that will be allocated
-  inline ZdbRN nextRN() { return m_nextRN; }
+  ZuInline ZdbRN nextRN() { return m_nextRN; }
 
   // create new placeholder record (null RN, in-memory only, never in DB)
   ZmRef<ZdbAnyPOD> placeholder();
@@ -625,7 +623,7 @@ public:
 
 private:
   // application call handlers
-  inline void alloc(ZmRef<ZdbAnyPOD> &pod) { m_handler.allocFn(this, pod); }
+  void alloc(ZmRef<ZdbAnyPOD> &pod) { m_handler.allocFn(this, pod); }
   void recover(ZmRef<ZdbAnyPOD> pod, int op);
   void replicate(ZdbAnyPOD *pod, void *ptr, int op);
 
@@ -644,15 +642,15 @@ private:
   // apply received replication data
   ZmRef<ZdbAnyPOD> replicated_(ZdbRN rn, ZdbRN prevRN, ZdbRange range, int op);
 
-  inline ZiFile::Path dirName(unsigned i) const {
+  ZiFile::Path dirName(unsigned i) const {
     return ZiFile::append(m_config->path, ZuStringN<8>() <<
 	ZuBox<unsigned>(i>>20).hex(ZuFmt::Right<5>()));
   }
-  inline ZiFile::Path fileName(ZiFile::Path dir, unsigned i) const {
+  ZiFile::Path fileName(ZiFile::Path dir, unsigned i) const {
     return ZiFile::append(dir, ZuStringN<12>() <<
 	ZuBox<unsigned>(i & 0xfffffU).hex(ZuFmt::Right<5>()) << ".zdb");
   }
-  inline ZiFile::Path fileName(unsigned i) const {
+  ZiFile::Path fileName(unsigned i) const {
     return fileName(dirName(i), i);
   }
 
@@ -709,7 +707,7 @@ public:
   typedef T_ T;
 
   template <typename Handler>
-  inline Zdb(ZdbEnv *env, ZuString name, uint32_t version, int cacheMode,
+  Zdb(ZdbEnv *env, ZuString name, uint32_t version, int cacheMode,
       Handler &&handler) :
     ZdbAny(env, name, version, cacheMode, ZuFwd<Handler>(handler),
 	sizeof(typename ZdbPOD<T, ZuNull>::Data), sizeof(T)) { }
@@ -719,7 +717,7 @@ typedef ZtArray<ZdbRN> Zdb_DBState;
 
 template <> struct ZuPrint<Zdb_DBState> : public ZuPrintDelegate {
   template <typename P, typename S>
-  inline static void print(S &s, const P &p) {
+  static void print(S &s, const P &p) {
     unsigned i = 0, n = p.length();
     if (ZuUnlikely(!n)) return;
     s << ZuBoxed(p[0]);
@@ -728,7 +726,7 @@ template <> struct ZuPrint<Zdb_DBState> : public ZuPrintDelegate {
 };
 
 struct ZdbHostConfig {
-  inline ZdbHostConfig(const ZtString &key, ZvCf *cf) {
+  ZdbHostConfig(const ZtString &key, ZvCf *cf) {
     id = ZvCf::toInt(cf, "ID", key, 0, 1<<30);
     priority = cf->getInt("priority", 0, 1<<30, true);
     ip = cf->get("IP", true);
@@ -761,21 +759,21 @@ template <typename> friend struct ZuPrint;
   struct IDAccessor;
 friend struct IDAccessor;
   struct IDAccessor : public ZuAccessor<ZdbHost *, int> {
-    inline static int value(ZdbHost *h) { return h->id(); }
+    static int value(ZdbHost *h) { return h->id(); }
   };
 
   ZdbHost(ZdbEnv *env, const ZdbHostConfig *config);
 
 public:
-  inline const ZdbHostConfig &config() const { return *m_config; }
+  ZuInline const ZdbHostConfig &config() const { return *m_config; }
 
-  inline unsigned id() const { return m_config->id; }
-  inline unsigned priority() const { return m_config->priority; }
-  inline ZiIP ip() const { return m_config->ip; }
-  inline uint16_t port() const { return m_config->port; }
+  ZuInline unsigned id() const { return m_config->id; }
+  ZuInline unsigned priority() const { return m_config->priority; }
+  ZuInline ZiIP ip() const { return m_config->ip; }
+  ZuInline uint16_t port() const { return m_config->port; }
 
-  inline bool voted() const { return m_voted; }
-  inline int state() const { return m_state; }
+  ZuInline bool voted() const { return m_voted; }
+  ZuInline int state() const { return m_state; }
 
   static const char *stateName(int);
 
@@ -784,14 +782,14 @@ public:
   void telemetry(Telemetry &data) const;
 
 private:
-  inline ZmRef<Zdb_Cxn> cxn() const { return m_cxn; }
+  ZuInline ZmRef<Zdb_Cxn> cxn() const { return m_cxn; }
 
-  inline void state(int s) { m_state = s; }
+  ZuInline void state(int s) { m_state = s; }
 
-  inline const Zdb_DBState &dbState() const { return m_dbState; }
-  inline Zdb_DBState &dbState() { return m_dbState; }
+  ZuInline const Zdb_DBState &dbState() const { return m_dbState; }
+  ZuInline Zdb_DBState &dbState() { return m_dbState; }
 
-  inline bool active() const {
+  bool active() const {
     using namespace ZdbHostState;
     switch (m_state) {
       case Activating:
@@ -801,14 +799,14 @@ private:
     return false;
   }
 
-  inline int cmp(const ZdbHost *host) const {
+  ZuInline int cmp(const ZdbHost *host) const {
     int i = m_dbState.cmp(host->m_dbState); if (i) return i;
     if (i = ZuCmp<bool>::cmp(active(), host->active())) return i;
     return ZuCmp<int>::cmp(priority(), host->priority());
   }
 
 #if 0
-  inline int cmp(const ZdbHost *host) {
+  int cmp(const ZdbHost *host) {
     int i = cmp_(host);
 
     printf("cmp(host %d priority %d dbState %d, "
@@ -822,7 +820,7 @@ private:
   }
 #endif
 
-  inline void voted(bool v) { m_voted = v; }
+  ZuInline void voted(bool v) { m_voted = v; }
 
   void connect();
   void connectFailed(bool transient);
@@ -850,7 +848,7 @@ private:
 };
 template <> struct ZuPrint<ZdbHost> : public ZuPrintDelegate {
   template <typename S>
-  inline static void print(S &s, const ZdbHost &v) {
+  static void print(S &s, const ZdbHost &v) {
     s << "[ID:" << v.id() << " PRI:" << v.priority() << " V:" << v.voted() <<
       " S:" << v.state() << "] " << v.dbState();
   }
@@ -858,7 +856,7 @@ template <> struct ZuPrint<ZdbHost> : public ZuPrintDelegate {
 template <> struct ZuPrint<ZdbHost *> : public ZuPrintDelegate {
   typedef ZdbHost *Zdb_HostPtr;
   template <typename S>
-  inline static void print(S &s, const Zdb_HostPtr &v) {
+  static void print(S &s, const Zdb_HostPtr &v) {
     if (!v)
       s << "null";
     else
@@ -878,10 +876,10 @@ friend class ZdbAnyPOD_Send__;
 
   Zdb_Cxn(ZdbEnv *env, ZdbHost *host, const ZiCxnInfo &ci);
 
-  inline ZdbEnv *env() const { return m_env; }
-  inline void host(ZdbHost *host) { m_host = host; }
-  inline ZdbHost *host() const { return m_host; }
-  inline ZiMultiplex *mx() const { return m_mx; }
+  ZuInline ZdbEnv *env() const { return m_env; }
+  ZuInline void host(ZdbHost *host) { m_host = host; }
+  ZuInline ZdbHost *host() const { return m_host; }
+  ZuInline ZiMultiplex *mx() const { return m_mx; }
 
   void connected(ZiIOContext &);
   void disconnected();
@@ -931,7 +929,7 @@ struct ZdbEnvConfig {
   ZdbEnvConfig(ZdbEnvConfig &&) = default;
   ZdbEnvConfig &operator =(ZdbEnvConfig &&) = default;
 
-  inline ZdbEnvConfig(ZvCf *cf) {
+  ZdbEnvConfig(ZvCf *cf) {
     writeThread = cf->get("writeThread", true);
     const ZtArray<ZtString> *names = cf->getMultiple("dbs", 0, 100, true);
     dbCfs.size(names->length());
@@ -987,7 +985,7 @@ friend class ZdbAnyPOD;
 friend class ZdbAnyPOD_Send__;
 
   struct HostTree_HeapID {
-    inline static const char *id() { return "ZdbEnv.HostTree"; }
+    static const char *id() { return "ZdbEnv.HostTree"; }
   };
   typedef ZmRBTree<ZmRef<ZdbHost>,
 	    ZmRBTreeIndex<ZdbHost::IDAccessor,
@@ -996,7 +994,7 @@ friend class ZdbAnyPOD_Send__;
 		  ZmRBTreeHeapID<HostTree_HeapID> > > > > HostTree;
 
   struct CxnHash_HeapID {
-    inline static const char *id() { return "ZdbEnv.CxnHash"; }
+    static const char *id() { return "ZdbEnv.CxnHash"; }
   };
   typedef ZmHash<ZmRef<Zdb_Cxn>,
 	    ZmHashLock<ZmPLock,
@@ -1009,7 +1007,7 @@ friend class ZdbAnyPOD_Send__;
   typedef ZmCondition<Lock> StateCond;
 
 #ifdef ZdbRep_DEBUG
-  inline bool debug() const { return m_config.debug; }
+  bool debug() const { return m_config.debug; }
 #endif
 
 public:
@@ -1028,13 +1026,13 @@ public:
 
   void checkpoint();
 
-  inline const ZdbEnvConfig &config() const { return m_config; }
-  inline ZiMultiplex *mx() const { return m_mx; }
+  ZuInline const ZdbEnvConfig &config() const { return m_config; }
+  ZuInline ZiMultiplex *mx() const { return m_mx; }
 
-  inline int state() const {
+  int state() const {
     return m_self ? m_self->state() : ZdbHostState::Instantiated;
   }
-  inline void state(int n) {
+  void state(int n) {
     if (!m_self) {
       ZeLOG(Fatal, ZtString() <<
 	  "ZdbEnv::state(" << ZuBoxed(n) << ") called out of order");
@@ -1042,7 +1040,7 @@ public:
     }
     m_self->state(n);
   }
-  inline bool running() {
+  bool running() {
     using namespace ZdbHostState;
     switch (state()) {
       case Electing:
@@ -1054,7 +1052,7 @@ public:
     }
     return false;
   }
-  inline bool active() {
+  bool active() {
     using namespace ZdbHostState;
     switch (state()) {
       case Activating:
@@ -1064,18 +1062,18 @@ public:
     return false;
   }
 
-  inline ZdbHost *self() const { return m_self; }
-  inline ZdbHost *host(unsigned id) const { return m_hosts.findKey(id); }
-  template <typename L> inline void allHosts(L l) const {
+  ZuInline ZdbHost *self() const { return m_self; }
+  ZdbHost *host(unsigned id) const { return m_hosts.findKey(id); }
+  template <typename L> void allHosts(L l) const {
     auto i = m_hosts.readIterator();
     while (auto node = i.iterate()) { l(node->key()); }
   }
 
-  inline ZdbAny *db(ZdbID id) const {
+  ZdbAny *db(ZdbID id) const {
     if (id >= (ZdbID)m_dbs.length()) return nullptr;
     return m_dbs[id];
   }
-  template <typename L> inline void allDBs(L l) const {
+  template <typename L> void allDBs(L l) const {
     for (unsigned i = 0, n = m_dbs.length(); i < n; i++)
       if (m_dbs[i]) l(m_dbs[i]);
   }
@@ -1084,13 +1082,37 @@ public:
 
   void telemetry(Telemetry &data) const;
 
+  ZvTelemetry::DBEnvFn telFn() const {
+    return ZvTelemetry::DBEnvFn{ZmMkRef(this), [](
+	const ZdbEnv *dbEnv,
+	ZmFn<const ZvTelemetry::DBEnv &> envFn,
+	ZmFn<const ZvTelemetry::DBHost &> hostFn,
+	ZmFn<const ZvTelemetry::DB &> dbFn) {
+      {
+	ZvTelemetry::DBEnv data;
+	dbEnv->telemetry(data);
+	envFn(data);
+      }
+      dbEnv->allHosts([this, &hostFn](const ZdbHost *host) {
+	ZvTelemetry::DBHost data;
+	host->telemetry(data);
+	hostFn(data);
+      });
+      dbEnv->allDBs([this, &dbFn](const ZdbAny *db) {
+	ZvTelemetry::DB data;
+	db->telemetry(data);
+	dbFn(data);
+      });
+    }};
+  }
+
 private:
   void add(ZdbAny *db, ZuString name);
-  inline ZdbAny *db(ZdbID id) {
+  ZdbAny *db(ZdbID id) {
     if (id >= (ZdbID)m_dbs.length()) return 0;
     return m_dbs[id];
   }
-  inline unsigned dbCount() { return m_dbs.length(); }
+  ZuInline unsigned dbCount() { return m_dbs.length(); }
 
   void listen();
   void listening(const ZiListenInfo &);

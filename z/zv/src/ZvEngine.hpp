@@ -34,7 +34,7 @@
 #include <zlib/ZmPolymorph.hpp>
 
 #include <zlib/ZvCf.hpp>
-#include <zlib/ZvQueue.hpp>
+#include <zlib/ZvIOQueue.hpp>
 #include <zlib/ZvScheduler.hpp>
 #include <zlib/ZvMultiplex.hpp>
 #include <zlib/ZvTelemetry.hpp>
@@ -42,7 +42,6 @@
 class ZvEngine;
 namespace ZvEngineState = ZvTelemetry::EngineState;
 namespace ZvLinkState = ZvTelemetry::LinkState;
-using ZvTraffic = ZvTelemetry::Traffic;
 
 class ZvAPI ZvAnyTx : public ZmPolymorph {
   ZvAnyTx(const ZvAnyTx &);	//prevent mis-use
@@ -85,7 +84,7 @@ protected:
   inline ZvAnyTxPool(ZuID id) : ZvAnyTx(id) { }
 
 public:
-  virtual ZvQueue *txQueuePtr() = 0;
+  virtual ZvIOQueue *txQueuePtr() = 0;
 };
 
 class ZvAPI ZvAnyLink : public ZvAnyTx {
@@ -116,18 +115,18 @@ public:
   virtual void reset(ZvSeqNo rxSeqNo, ZvSeqNo txSeqNo) = 0;
 
   inline ZvSeqNo rxSeqNo() const {
-    if (const ZvQueue *queue = rxQueue()) return queue->head();
+    if (const ZvIOQueue *queue = rxQueue()) return queue->head();
     return 0;
   }
   inline ZvSeqNo txSeqNo() const {
-    if (const ZvQueue *queue = txQueue()) return queue->tail();
+    if (const ZvIOQueue *queue = txQueue()) return queue->tail();
     return 0;
   }
 
-  virtual ZvQueue *rxQueue() = 0;
-  virtual const ZvQueue *rxQueue() const = 0;
-  virtual ZvQueue *txQueue() = 0;
-  virtual const ZvQueue *txQueue() const = 0;
+  virtual ZvIOQueue *rxQueue() = 0;
+  virtual const ZvIOQueue *rxQueue() const = 0;
+  virtual ZvIOQueue *txQueue() = 0;
+  virtual const ZvIOQueue *txQueue() const = 0;
 
 protected:
   virtual void connect() = 0;
@@ -186,6 +185,25 @@ struct ZvAPI ZvEngineApp {
 // 5] Destroy the link/engine, safe in the knowledge that no pending functions
 //    that reference it can remain in existence
 
+struct ZvEngineMgr {
+  using QueueFn = ZvTelemetry::QueueFn;
+
+  // Engine Management
+  virtual void addEngine(ZvEngine *) { }
+  virtual void delEngine(ZvEngine *) { }
+  virtual void updEngine(ZvEngine *) const { }
+
+  // Link Management
+  virtual void updLink(ZvAnyLink *) const { }
+
+  // Queue Management
+  virtual void addQueue(unsigned type, ZuID id, QueueFn queueFn) { }
+  virtual void delQueue(unsigned type, ZuID id) { }
+
+  // Alert handling
+  virtual void alert(ZmRef<ZeEvent> e) const { ZeLog::log(ZuMv(e)); }
+};
+
 class ZvAPI ZvEngine : public ZmPolymorph {
   ZvEngine(const ZvEngine &);	//prevent mis-use
   ZvEngine &operator =(const ZvEngine &);
@@ -207,8 +225,9 @@ public:
 
   using Sched = ZvScheduler;
   using Mx = ZvMultiplex;
-  using Mgr = ZvTelemetry::EngineMgr;
+  using Mgr = ZvEngineMgr;
   using App = ZvEngineApp;
+  using QueueFn = ZvTelemetry::QueueFn;
 
   inline ZvEngine() : m_state(ZvEngineState::Stopped) { }
 
@@ -260,11 +279,11 @@ public:
   }
   ZuInline void mgrUpdLink(ZvAnyLink *link) { mgr()->updLink(link); }
 
-  // Note: ZvQueues are contained in Link and TxPool
-  ZuInline void mgrAddQueue(ZuID id, bool tx, ZvQueue *queue)
-    { mgr()->addQueue(id, tx, queue); }
-  ZuInline void mgrDelQueue(ZuID id, bool tx)
-    { mgr()->delQueue(id, tx); }
+  // Note: ZvIOQueues are contained in Link and TxPool
+  ZuInline void mgrAddQueue(unsigned type, ZuID id, QueueFn queueFn)
+    { mgr()->addQueue(type, id, ZuMv(queueFn)); }
+  ZuInline void mgrDelQueue(unsigned type, ZuID id)
+    { mgr()->delQueue(type, id); }
 
   // generic O.S. error logging
   inline auto osError(const char *op, int result, ZeError e) {
@@ -275,10 +294,6 @@ public:
 
   ZuInline void mgrAlert(ZmRef<ZeEvent> e) const {
     mgr()->alert(ZuMv(e));
-  }
-
-  ZuInline void log(ZvQMsgID id, ZvTraffic traffic) const {
-    mgr()->log(id, traffic);
   }
 
   using Telemetry = ZvTelemetry::Engine;
@@ -349,8 +364,8 @@ public:
     linkState(link, -1, link->state());
     link->update(cf);
     mgrUpdLink(link);
-    mgrAddQueue(id, 0, link->rxQueue());
-    mgrAddQueue(id, 1, link->txQueue());
+    mgrAddQueue(QueueType::id, link->rxQueue());
+    mgrAddQueue(id, link->txQueue());
     return link;
   }
   ZmRef<ZvAnyLink> delLink(ZuID id) {
@@ -405,11 +420,11 @@ private:
 
 template <typename Impl, typename Base>
 class ZvTx : public Base {
-  using Tx = ZvQueueTx<Impl>;
+  using Tx = ZvIOQueueTx<Impl>;
 
 public:
   using Mx = ZvMultiplex;
-  using Gap = ZvQueue::Gap;
+  using Gap = ZvIOQueue::Gap;
   using AbortFn = ZvAnyTx::AbortFn;
 
   inline ZvTx(ZuID id) : Base(id) { }
@@ -450,18 +465,18 @@ struct TxPoolImpl : public ZvTxPool<TxPoolImpl> {
 
 template <typename Impl> class ZvTxPool :
   public ZvTx<Impl, ZvAnyTxPool>,
-  public ZvQueueTxPool<Impl> {
+  public ZvIOQueueTxPool<Impl> {
 
   using Base = ZvTx<Impl, ZvAnyTxPool>;
 
 public:
-  using Tx_ = ZmPQTx<Impl, ZvQueue, ZmNoLock>;
-  using Tx = ZvQueueTxPool<Impl>;
+  using Tx_ = ZmPQTx<Impl, ZvIOQueue, ZmNoLock>;
+  using Tx = ZvIOQueueTxPool<Impl>;
 
   inline ZvTxPool(ZuID id) : Base(id) { }
 
-  const ZvQueue *txQueue() const { return ZvQueueTxPool<Impl>::txQueue(); }
-  ZvQueue *txQueue() { return ZvQueueTxPool<Impl>::txQueue(); }
+  const ZvIOQueue *txQueue() const { return ZvIOQueueTxPool<Impl>::txQueue(); }
+  ZvIOQueue *txQueue() { return ZvIOQueueTxPool<Impl>::txQueue(); }
 
   ZuInline const Tx *tx() const { return static_cast<const Tx *>(this); }
   ZuInline Tx *tx() { return static_cast<Tx *>(this); }
@@ -490,14 +505,14 @@ private:
   using Tx::join;		// Tx - join pool
   using Tx::leave;		// Tx - leave pool
   // should not be called from Impl at all
-  using Tx_::ackd;		// handled by ZvQueueTxPool
+  using Tx_::ackd;		// handled by ZvIOQueueTxPool
   using Tx_::resend;		// handled by ZvTx
   using Tx_::archive;		// handled by ZvTx
-  using Tx_::archived;		// handled by ZvQueueTxPool
-  using Tx::ready;		// handled by ZvQueueTxPool
-  using Tx::unready;		// handled by ZvQueueTxPool
-  using Tx::ready_;		// internal to ZvQueueTxPool
-  using Tx::unready_;		// internal to ZvQueueTxPool
+  using Tx_::archived;		// handled by ZvIOQueueTxPool
+  using Tx::ready;		// handled by ZvIOQueueTxPool
+  using Tx::unready;		// handled by ZvIOQueueTxPool
+  using Tx::ready_;		// internal to ZvIOQueueTxPool
+  using Tx::unready_;		// internal to ZvIOQueueTxPool
 };
 
 // CRTP - implementation must conform to the following interface:
@@ -509,8 +524,8 @@ struct Link : public ZvLink<Link> {
   // Rx
   void process(ZvQMsg *);
   ZmTime reReqInterval(); // resend request interval
-  void request(const ZvQueue::Gap &prev, const ZvQueue::Gap &now);
-  void reRequest(const ZvQueue::Gap &now);
+  void request(const ZvIOQueue::Gap &prev, const ZvIOQueue::Gap &now);
+  void reRequest(const ZvIOQueue::Gap &now);
 
   // Tx
   void loaded_(ZvQMsg *msg);
@@ -520,22 +535,22 @@ struct Link : public ZvLink<Link> {
   bool resend_(ZvQMsg *msg, bool more); // true on success
   void aborted_(ZvQMsg *msg);
 
-  bool sendGap_(const ZvQueue::Gap &gap, bool more); // true on success
-  bool resendGap_(const ZvQueue::Gap &gap, bool more); // true on success
+  bool sendGap_(const ZvIOQueue::Gap &gap, bool more); // true on success
+  bool resendGap_(const ZvIOQueue::Gap &gap, bool more); // true on success
 };
 #endif
 
 template <typename Impl> class ZvLink :
   public ZvTx<Impl, ZvAnyLink>,
-  public ZvQueueRx<Impl>, public ZvQueueTx<Impl> {
+  public ZvIOQueueRx<Impl>, public ZvIOQueueTx<Impl> {
 
   using Base = ZvTx<Impl, ZvAnyLink>;
 
 public:
-  using Rx_ = ZmPQRx<Impl, ZvQueue, ZmNoLock>;
-  using Rx = ZvQueueRx<Impl>;
-  using Tx_ = ZmPQTx<Impl, ZvQueue, ZmNoLock>;
-  using Tx = ZvQueueTx<Impl>;
+  using Rx_ = ZmPQRx<Impl, ZvIOQueue, ZmNoLock>;
+  using Rx = ZvIOQueueRx<Impl>;
+  using Tx_ = ZmPQTx<Impl, ZvIOQueue, ZmNoLock>;
+  using Tx = ZvIOQueueTx<Impl>;
 
   using AbortFn = ZvAnyTx::AbortFn;
 
@@ -582,10 +597,10 @@ public:
     }
   }
 
-  const ZvQueue *rxQueue() const { return ZvQueueRx<Impl>::rxQueue(); }
-  ZvQueue *rxQueue() { return ZvQueueRx<Impl>::rxQueue(); }
-  const ZvQueue *txQueue() const { return ZvQueueTx<Impl>::txQueue(); }
-  ZvQueue *txQueue() { return ZvQueueTx<Impl>::txQueue(); }
+  const ZvIOQueue *rxQueue() const { return ZvIOQueueRx<Impl>::rxQueue(); }
+  ZvIOQueue *rxQueue() { return ZvIOQueueRx<Impl>::rxQueue(); }
+  const ZvIOQueue *txQueue() const { return ZvIOQueueTx<Impl>::txQueue(); }
+  ZvIOQueue *txQueue() { return ZvIOQueueTx<Impl>::txQueue(); }
 
   using ZvAnyLink::rxSeqNo;
   using ZvAnyLink::txSeqNo;
@@ -675,8 +690,8 @@ private:
   using Rx_::reRequest;		// handled by ZvLink
   using Tx_::resend;		// handled by ZvTx
   using Tx_::archive;		// handled by ZvTx
-  using Tx::ready_;		// internal to ZvQueueTx
-  using Tx::unready_;		// internal to ZvQueueTx
+  using Tx::ready_;		// internal to ZvIOQueueTx
+  using Tx::unready_;		// internal to ZvIOQueueTx
 
   ZmScheduler::Timer	m_rrTimer;
 

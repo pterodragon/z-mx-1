@@ -63,9 +63,9 @@
 #pragma warning(disable:4251 4800 4996)
 #endif
 
-#define ZmIDSize	60	// max size of a heap/hash ID incl. terminator
+#define ZmIDStrSize	60	// max size of a heap/hash ID incl. terminator
 
-typedef ZuStringN<ZmIDSize> ZmIDString;
+typedef ZuStringN<ZmIDStrSize> ZmIDString;
 
 class ZmTime;
 

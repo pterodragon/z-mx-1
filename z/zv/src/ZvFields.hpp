@@ -231,12 +231,13 @@ template <typename Impl> struct ZvFieldTuple : public ZuPrintable {
   template <typename S> void print(S &s_) const {
     ZmStream s{s_};
     auto fields = Impl::fields();
+    thread_local ZvFieldFmt fmt;
     for (unsigned i = 0, n = fields.length(); i < n; i++) {
       const auto &field = fields[i];
       if (field.flags & ZvFieldFlags::Synthetic) break;
       if (i) s << ' ';
       s << fields[i].id << '=';
-      fields[i].print(s);
+      fields[i].print(s, impl(), fmt);
     }
   }
 };

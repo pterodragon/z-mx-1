@@ -201,10 +201,13 @@ private:
 	  Verifier verifier(data, len);
 	  if (!fbs::VerifyRequestBuffer(verifier)) return -1;
 	}
+	m_fbb.Clear();
 	int i = this->app()->processTel(
-	    this, m_user, m_interactive, fbs::GetRequest(data));
+	    this, m_user, m_interactive, fbs::GetRequest(data), m_fbb);
 	if (ZuUnlikely(i < 0)) return -1;
 	if (!i) return len;
+	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_Telemetry));
+	this->send_(m_fbb.buf());
       } break;
       case ZvCmd::fbs::MsgType_App: {
 	int i = this->app()->processApp(this, m_user, m_interactive,
@@ -279,7 +282,7 @@ public:
 friend TLS;
   using Link = ZvCmdSrvLink<App>;
   using User = ZvUserDB::User;
-  using TelServer = ZvTelemetry::Server;
+  using TelServer = ZvTelemetry::Server<App, Link>;
 
   enum { OutBufSize = 8000 }; // initial TLS buffer size
 
@@ -436,23 +439,17 @@ public:
   }
 
   int processTel(Link *link, User *user, bool interactive,
-      const ZvTelemetry::fbs::Request *in) {
+      const ZvTelemetry::fbs::Request *in, Zfb::Builder &fbb) {
     using namespace ZvTelemetry;
     if (m_telPerm < 0 || !m_userDB->ok(user, interactive, m_telPerm)) {
       using namespace Zfb::Save;
-      m_fbb.Clear();
-      m_fbb.Finish(fbs::CreateTelemetry(fbb,
-	    fbs::TelData_Alert,
-	    fbs::CreateAlert(fbb,
-	      date(fbb, ZtDateNow),
-	      ZmPlatform::getTID(),
-	      fbs::Severity_Error,
-	      str(fbb, "permission denied")).Union()));
-      m_fbb.PushElement(
-	  ZvCmd_mkHdr(m_fbb.GetSize(), /*ZvCmd::*/fbs::MsgType_Telemetry));
-      this->send_(m_fbb.buf());
+      fbb.Finish(fbs::CreateAck(fbb, false));
+      return fbb.GetSize();
     }
-    return TelServer::process((void *)link, in);
+    TelServer::process((void *)link, in);
+    using namespace Zfb::Save;
+    fbb.Finish(fbs::CreateAck(fbb, true));
+    return fbb.GetSize();
   }
 
   // default app msg handler simply disconnects

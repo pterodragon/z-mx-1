@@ -19,6 +19,7 @@ FBS = \
 	zcmdreq.fbs \
 	zcmdack.fbs \
 	telreq.fbs \
+	telack.fbs \
 	telemetry.fbs
 FBS_H = ${FBS:%.fbs=%_fbs.h}
 ${FBS_H}: %_fbs.h: fbs/%.fbs
@@ -32,7 +33,7 @@ pkginclude_HEADERS = ZvLib.hpp \
 	ZvHeapCSV.hpp ZvDaemon.hpp \
 	ZvRingCf.hpp ZvThreadCf.hpp ZvUserDB.hpp \
 	ZvCmdNet.hpp ZvCmdHost.hpp ZvCmdClient.hpp ZvCmdServer.hpp \
-	ZvScheduler.hpp ZvMultiplex.hpp ZvQueue.hpp ZvEngine.hpp \
+	ZvScheduler.hpp ZvMultiplex.hpp ZvIOQueue.hpp ZvEngine.hpp \
 	ZvTelemetry.hpp ZvTelClient.hpp ZvTelServer.hpp ${FBS_H}
 #fbsdir = $(datarootdir)/${PACKAGE}/fbs
 #dist_fbs_DATA = fbs/telemetry.fbs

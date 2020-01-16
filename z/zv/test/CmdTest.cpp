@@ -28,6 +28,7 @@ class ZvCmdTest :
     public ZmPolymorph, public ZvCmdServer<ZvCmdTest> {
 public:
   void init(ZiMultiplex *mx, ZvCf *cf) {
+    m_uptime.now();
     ZvCmdServer::init(mx, cf);
     addCmd("ackme", "", ZvCmdFn{[](void *context_, ZvCf *args, ZtString &out) {
       auto context = static_cast<Context *>(context_);
@@ -52,8 +53,18 @@ public:
   void wait() { m_done.wait(); }
   void post() { m_done.post(); }
 
+  void telemetry(ZvTelemetry::App &data) {
+    using namespace ZvTelemetry;
+    data.id = "CmdTest";
+    data.version = "1.0";
+    data.uptime = m_uptime;
+    data.role = AppRole::Dev;
+    data.rag = RAG::Green;
+  }
+
 private:
-  ZmSemaphore m_done;
+  ZtDate	m_uptime;
+  ZmSemaphore	m_done;
 };
 
 void usage()

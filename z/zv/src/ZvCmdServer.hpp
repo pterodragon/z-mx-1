@@ -446,7 +446,7 @@ public:
       fbb.Finish(fbs::CreateAck(fbb, false));
       return fbb.GetSize();
     }
-    TelServer::process((void *)link, in);
+    TelServer::process(link, in);
     using namespace Zfb::Save;
     fbb.Finish(fbs::CreateAck(fbb, true));
     return fbb.GetSize();
@@ -459,7 +459,7 @@ public:
       ZuArray<const uint8_t> data) { return -1; }
 
   void disconnected(Link *link) {
-    TelServer::disconnected((void *)link);
+    TelServer::disconnected(link);
   }
 
 private:

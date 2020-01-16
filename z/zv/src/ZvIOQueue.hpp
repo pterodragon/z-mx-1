@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Concrete generic I/O queue based on ZmPQueue skip lists, used by ZvEngine
+// concrete generic I/O queue based on ZmPQueue skip lists, used by ZvEngine
 //
 // Key / SeqNo - uint64
 // Link ID - ZuID (union of 8-byte string with uint64)
@@ -46,35 +46,13 @@
 #include <zlib/ZiIOBuf.hpp>
 #include <zlib/ZiMultiplex.hpp>
 
-struct ZvSeqNoCmp {
-  ZuInline static int cmp(uint64_t v1, uint64_t v2) {
-    int64_t d = v1 - v2; // handles wraparound ok
-    return d < 0 ? -1 : d > 0 ? 1 : 0;
-  }
-  ZuInline static bool equals(uint64_t v1, uint64_t v2) { return v1 == v2; }
-  ZuInline static bool null(uint64_t v) { return !v; }
-  ZuInline static uint64_t null() { return 0; }
-};
-typedef ZuBox<uint64_t, ZvSeqNoCmp> ZvSeqNo;
+#include <zlib/ZvSeqNo.hpp>
+#include <zlib/ZvMsgID.hpp>
 
-struct ZvQMsgID {
-  ZuID		linkID;
-  ZvSeqNo	seqNo;
-
-  void update(const ZvQMsgID &u) {
-    linkID.update(u.linkID);
-    seqNo.update(u.seqNo);
-  }
-  template <typename S> void print(S &s) const {
-    s << "linkID=" << linkID << " seqNo=" << seqNo;
-  }
-};
-template <> struct ZuPrint<ZvQMsgID> : public ZuPrintFn { };
-
-struct ZvQItem {
-  ZuInline ZvQItem(ZmRef<ZiAnyIOBuf> buf) :
+struct ZvIOQItem {
+  ZuInline ZvIOQItem(ZmRef<ZiAnyIOBuf> buf) :
       m_buf(ZuMv(buf)) { }
-  ZuInline ZvQItem(ZmRef<ZiAnyIOBuf> buf, ZvQMsgID id) :
+  ZuInline ZvIOQItem(ZmRef<ZiAnyIOBuf> buf, ZvMsgID id) :
       m_buf(ZuMv(buf)), m_id(id) { }
 
   template <typename T = ZiAnyIOBuf>
@@ -85,10 +63,10 @@ struct ZvQItem {
   template <typename T = void *> ZuInline T owner() const { return (T)m_owner; }
   template <typename T> ZuInline void owner(T v) { m_owner = (void *)v; }
 
-  ZuInline const ZvQMsgID id() const { return m_id; }
+  ZuInline const ZvMsgID id() const { return m_id; }
 
-  ZuInline void load(const ZvQMsgID &id) { m_id = id; }
-  ZuInline void unload() { m_id = ZvQMsgID{}; }
+  ZuInline void load(const ZvMsgID &id) { m_id = id; }
+  ZuInline void unload() { m_id = ZvMsgID{}; }
 
   ZuInline unsigned skip() const { return m_skip <= 0 ? 1 : m_skip; }
   ZuInline void skip(unsigned n) { m_skip = n; }
@@ -99,42 +77,44 @@ struct ZvQItem {
 private:
   ZmRef<ZiAnyIOBuf>	m_buf;
   void			*m_owner = 0;
-  ZvQMsgID		m_id;
+  ZvMsgID		m_id;
   int32_t		m_skip = 0;	// -ve - no queuing; +ve - gap fill
 };
 
-class ZvQFn {
+class ZvIOQFn {
 public:
   typedef ZvSeqNo Key;
-  ZuInline ZvQFn(ZvQItem &item) : m_item(item) { }
+  ZuInline ZvIOQFn(ZvIOQItem &item) : m_item(item) { }
   ZuInline ZvSeqNo key() const { return m_item.id().seqNo; }
   ZuInline unsigned length() const { return m_item.skip(); }
   ZuInline unsigned clipHead(unsigned n) { return length(); }
   ZuInline unsigned clipTail(unsigned n) { return length(); }
-  ZuInline void write(const ZvQFn &) { }
+  ZuInline void write(const ZvIOQFn &) { }
   ZuInline unsigned bytes() const { return m_item.buf()->length; }
 
 private:
-  ZvQItem	&m_item;
+  ZvIOQItem	&m_item;
 };
 
-struct ZvQMsg_HeapID { inline static const char *id() { return "ZvQMsg"; } };
-typedef ZmPQueue<ZvQItem,
+struct ZvIOMsg_HeapID {
+  inline static const char *id() { return "ZvIOMsg"; }
+};
+typedef ZmPQueue<ZvIOQItem,
 	  ZmPQueueNodeIsItem<true,
 	    ZmPQueueObject<ZmPolymorph,
-	      ZmPQueueFn<ZvQFn,
+	      ZmPQueueFn<ZvIOQFn,
 		ZmPQueueLock<ZmNoLock,
-		  ZmPQueueHeapID<ZvQMsg_HeapID,
+		  ZmPQueueHeapID<ZvIOMsg_HeapID,
 		    ZmPQueueBase<ZmObject> > > > > > > ZvIOQueue;
-typedef ZvIOQueue::Node ZvQMsg;
-typedef ZvIOQueue::Gap ZvQGap;
+typedef ZvIOQueue::Node ZvIOMsg;
+typedef ZvIOQueue::Gap ZvIOQGap;
 
 // ZvIOQueueRx - receive queue
 
 // CRTP - application must conform to the following interface:
 #if 0
 struct Impl : public ZvIOQueueRx<Impl> {
-  void process(ZvQMsg *);		// rx process
+  void process(ZvIOMsg *);		// rx process
 
   void scheduleDequeue();
   void rescheduleDequeue();
@@ -182,8 +162,8 @@ template <class Impl, class Lock> class ZvIOQueueTxPool;
 // CRTP - application must conform to the following interface:
 #if 0
 struct Impl : public ZvIOQueueTx<Impl> {
-  void archive_(ZvQMsg *);			// tx archive (persistent)
-  ZmRef<ZvQMsg> retrieve_(ZvSeqNo, ZvSeqNo);	// tx retrieve
+  void archive_(ZvIOMsg *);			// tx archive (persistent)
+  ZmRef<ZvIOMsg> retrieve_(ZvSeqNo, ZvSeqNo);	// tx retrieve
 
   void scheduleSend();
   void rescheduleSend();
@@ -197,18 +177,18 @@ struct Impl : public ZvIOQueueTx<Impl> {
   void rescheduleArchive();
   void idleArchive();
 
-  void loaded_(ZvQMsg *msg);		// may adjust readiness
-  void unloaded_(ZvQMsg *msg);		// ''
+  void loaded_(ZvIOMsg *msg);		// may adjust readiness
+  void unloaded_(ZvIOMsg *msg);		// ''
 
   // send_() must perform one of
   // 1] usual case (successful send): persist seqNo, return true
   // 2] stale message: abort message, return true
   // 3] transient failure (throttling, I/O, etc.): return false
-  bool send_(ZvQMsg *msg, bool more);
+  bool send_(ZvIOMsg *msg, bool more);
   // resend_() must perform one of
   // 1] usual case (successful resend): return true
   // 2] transient failure (throttling, I/O, etc.): return false
-  bool resend_(ZvQMsg *msg, bool more);
+  bool resend_(ZvIOMsg *msg, bool more);
 
   // sendGap_() and resendGap_() return true, or false on transient failure
   bool sendGap_(const ZvIOQueue::Gap &gap, bool more);
@@ -229,10 +209,10 @@ struct Impl : public ZvIOQueueTxPool<Impl> {
   void rescheduleArchive();
   void idleArchive();
 
-  void aborted_(ZvQMsg *msg);
+  void aborted_(ZvIOMsg *msg);
 
-  void loaded_(ZvQMsg *msg);		// may adjust readiness
-  void unloaded_(ZvQMsg *msg);		// ''
+  void loaded_(ZvIOMsg *msg);		// may adjust readiness
+  void unloaded_(ZvIOMsg *msg);		// ''
 };
 #endif
 
@@ -267,7 +247,7 @@ public:
   }
 
   ZuInline void send() { Tx::send(); }
-  void send(ZmRef<ZvQMsg> msg) {
+  void send(ZmRef<ZvIOMsg> msg) {
     if (ZuUnlikely(msg->noQueue())) {
       Guard guard(m_lock);
       if (ZuUnlikely(!m_ready)) {
@@ -276,12 +256,12 @@ public:
 	return;
       }
     }
-    msg->load(ZvQMsgID{impl()->id(), m_seqNo++});
+    msg->load(ZvMsgID{impl()->id(), m_seqNo++});
     impl()->loaded_(msg);
     Tx::send(ZuMv(msg));
   }
   bool abort(ZvSeqNo seqNo) {
-    ZmRef<ZvQMsg> msg = Tx::abort(seqNo);
+    ZmRef<ZvIOMsg> msg = Tx::abort(seqNo);
     if (msg) {
       impl()->aborted_(msg);
       impl()->unloaded_(msg);
@@ -292,8 +272,8 @@ public:
   }
 
   // unload all messages from queue
-  void unload(ZmFn<ZvQMsg *> fn) {
-    while (ZmRef<ZvQMsg> msg = m_queue->shift()) {
+  void unload(ZmFn<ZvIOMsg *> fn) {
+    while (ZmRef<ZvIOMsg> msg = m_queue->shift()) {
       impl()->unloaded_(msg);
       msg->unload();
       fn(msg);
@@ -370,10 +350,10 @@ class ZvIOQueueTxPool : public ZvIOQueueTx<Impl, Lock_> {
 		  ZmRBTreeHeapID<Queues_HeapID> > > > > Queues;
 
 public:
-  ZuInline void loaded_(ZvQMsg *) { }   // may be overridden by Impl
-  ZuInline void unloaded_(ZvQMsg *) { } // ''
+  ZuInline void loaded_(ZvIOMsg *) { }   // may be overridden by Impl
+  ZuInline void unloaded_(ZvIOMsg *) { } // ''
 
-  bool send_(ZvQMsg *msg, bool more) {
+  bool send_(ZvIOMsg *msg, bool more) {
     if (ZmRef<Tx> next = next_()) {
       next->send(msg);
       sent_(msg);
@@ -381,15 +361,15 @@ public:
     }
     return false;
   }
-  ZuInline bool resend_(ZvQMsg *, bool) { return true; } // unused
-  ZuInline void aborted_(ZvQMsg *) { } // unused
+  ZuInline bool resend_(ZvIOMsg *, bool) { return true; } // unused
+  ZuInline void aborted_(ZvIOMsg *) { } // unused
 
   ZuInline bool sendGap_(const Gap &, bool) { return true; } // unused
   ZuInline bool resendGap_(const Gap &, bool) { return true; } // unused
 
-  ZuInline void sent_(ZvQMsg *msg) { Tx::ackd(msg->id().seqNo + 1); }
-  ZuInline void archive_(ZvQMsg *msg) { Tx::archived(msg->id().seqNo + 1); }
-  ZuInline ZmRef<ZvQMsg> retrieve_(ZvSeqNo, ZvSeqNo) { // unused
+  ZuInline void sent_(ZvIOMsg *msg) { Tx::ackd(msg->id().seqNo + 1); }
+  ZuInline void archive_(ZvIOMsg *msg) { Tx::archived(msg->id().seqNo + 1); }
+  ZuInline ZmRef<ZvIOMsg> retrieve_(ZvSeqNo, ZvSeqNo) { // unused
     return nullptr;
   }
 

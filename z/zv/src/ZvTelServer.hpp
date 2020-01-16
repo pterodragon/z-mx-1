@@ -30,6 +30,7 @@
 
 #include <zlib/ZvTelemetry.hpp>
 #include <zlib/ZvEngine.hpp>
+#include <zlib/ZvCmdNet.hpp>
 
 #include <zlib/zcmd_fbs.h>
 #include <zlib/telreq_fbs.h>
@@ -115,7 +116,6 @@ public:
     m_offset += buf->length;
   }
 
-  template <typename L>
   BufRef read(ZuString prefix, unsigned date, unsigned seqNo, void *bufOwner) {
     if (date != m_date) {
       close();
@@ -206,6 +206,10 @@ public:
     m_alertMaxReplay = cf->getInt("telemetry:alertMaxReplay", 1, 1000, 10);
   }
   void final() {
+    stop_();
+    for (unsigned i = 0; i < ReqType::N; i++)
+      m_watchLists[i].clean();
+    m_alertRing.clean();
     m_alertFile.close();
     m_mxTbl.clean();
     m_queues.clean();
@@ -214,14 +218,15 @@ public:
   }
 
   void start() {
-    m_mx->invoke(m_thread, this, [](Server *server) { server->start_(); });
+    m_mx->invoke(
+	m_thread, this, [](Server *server) { server->start_(); });
   }
   void stop() {
-    m_mx->invoke(m_thread, this, [](Server *server) { server->stop_(); });
+    m_mx->invoke(
+	m_thread, this, [](Server *server) { server->stop_(); });
   }
 
-  ZuInline ZvMultiplex *mx() const { return m_mx; }
-  ZuInline ZvMultiplex *mx(const ZuID &id) const {
+  ZuInline ZvMultiplex *mxLookup(const ZuID &id) const {
     return m_mxTbl.findKey(id);
   }
   template <typename L>
@@ -234,51 +239,60 @@ public:
     int reqType = in->type();
     unsigned interval = in->interval();
     if (interval < m_minInterval) interval = m_minInterval;
+    auto filter = Zfb::Load::str(in->filter());
     switch (reqType) {
       case fbs::ReqType_Heap:
-	heapQuery(link, in->subscribe(), in->filter(), interval);
+	heapQuery(link, in->subscribe(), filter, interval);
 	break;
       case fbs::ReqType_HashTbl:
-	hashQuery(link, in->subscribe(), in->filter(), interval);
+	hashQuery(link, in->subscribe(), filter, interval);
 	break;
       case fbs::ReqType_Thread:
-	threadQuery(link, in->subscribe(), in->filter(), interval);
+	threadQuery(link, in->subscribe(), filter, interval);
 	break;
       case fbs::ReqType_Mx:
-	mxQuery(link, in->subscribe(), in->filter(), interval);
+	mxQuery(link, in->subscribe(), filter, interval);
 	break;
       case fbs::ReqType_Queue:
-	queueQuery(link, in->subscribe(), in->filter(), interval);
+	queueQuery(link, in->subscribe(), filter, interval);
 	break;
       case fbs::ReqType_Engine:
-	engineQuery(link, in->subscribe(), in->filter(), interval);
+	engineQuery(link, in->subscribe(), filter, interval);
 	break;
       case fbs::ReqType_DBEnv:
-	dbEnvQuery(link, in->subscribe(), in->filter(), interval);
+	dbEnvQuery(link, in->subscribe(), filter, interval);
 	break;
       case fbs::ReqType_App:
-	appQuery(link, in->subscribe(), in->filter(), interval);
+	appQuery(link, in->subscribe(), filter, interval);
 	break;
       case fbs::ReqType_Alert:
-	alertQuery(link, in->subscribe(), in->filter(), interval);
+	alertQuery(link, in->subscribe(), filter, interval);
 	break;
       default:
 	break;
     }
   }
-  void disconnected(Link *link);
+
+  void disconnected(Link *link) {
+    m_mx->invoke(m_thread, this,
+	[link = ZmMkRef(link)](Server *server) {
+	  server->disconnected_(link);
+	});
+  }
 
   // EngineMgr functions
 
-  void updEngine(ZvEngine *engine) const {
-    m_mx->invoke(m_thread, this, [engine = ZmMkRef(engine)](Server *server) {
-      server->engineScan(engine);
-    });
+  void updEngine(ZvEngine *engine) {
+    m_mx->invoke(m_thread, this,
+	[engine = ZmMkRef(engine)](Server *server) {
+	  server->engineScan(engine);
+	});
   }
-  void updLink(ZvAnyLink *link) const {
-    m_mx->invoke(m_thread, this, [link = ZmMkRef(link)](Server *server) {
-      server->linkScan(link);
-    });
+  void updLink(ZvAnyLink *link) {
+    m_mx->invoke(m_thread, this,
+	[link = ZmMkRef(link)](Server *server) {
+	  server->linkScan(link);
+	});
   }
 
   void addEngine(ZvEngine *engine) {
@@ -311,9 +325,10 @@ public:
   // ZdbEnv registration
  
   void addDBEnv(DBEnvFn fn) {
-    m_mx->invoke(m_thread, this, [fn = ZuMv(fn)](Server *server) mutable {
-      server->m_dbEnvFn = ZuMv(fn);
-    });
+    m_mx->invoke(m_thread, this,
+	[fn = ZuMv(fn)](Server *server) mutable {
+	  server->m_dbEnvFn = ZuMv(fn);
+	});
   }
   void delDBEnv() {
     m_mx->invoke(m_thread, this, [](Server *server) {
@@ -332,9 +347,10 @@ public:
   // alerts
 
   void alert(ZmRef<ZeEvent> e) {
-    m_mx->invoke(m_thread, this, [e = ZuMv(e)](Server *server) mutable {
-      server->alert_(ZuMv(e));
-    });
+    m_mx->invoke(m_thread, this,
+	[e = ZuMv(e)](Server *server) mutable {
+	  server->alert_(ZuMv(e));
+	});
   }
 
 private:
@@ -396,7 +412,7 @@ private:
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Alert,
 	  fbs::CreateAlert(m_fbb,
-	    date(m_fbb, date), seqNo, alert->tid(),
+	    dateTime(m_fbb, date), seqNo, alert->tid(),
 	    static_cast<fbs::Severity>(alert->severity()),
 	    str(m_fbb, m_alertBuf)).Union()));
     ZmRef<IOBuf> buf = m_fbb.buf();
@@ -434,17 +450,12 @@ private:
     unsigned		interval = 0;	// in microseconds
     ZmScheduler::Timer	timer;
 
-    template <typename ...Args>
-    Watch *add(Args &&... args) {
-      auto watch = new Watch{ZuFwd<Args>(args)...};
-      list.add(watch);
-      return watch;
-    }
-    void del(const Link *link) {
-      auto i = list.iterator();
-      while (auto watch = i.iterate())
-	if (watch->link == link) { i.del(); break; }
-    }
+    template <typename T>
+    ZuInline void push(T &&v) { return list.push(ZuFwd<T>(v)); }
+    ZuInline void clean() { return list.clean(); }
+    ZuInline auto count() { return list.count(); }
+    ZuInline auto iterator() { return list.iterator(); }
+    ZuInline auto readIterator() { return list.readIterator(); }
   };
 
   void subscribe(WatchList &list, Watch *watch, unsigned interval, ZmFn<> fn) {
@@ -462,14 +473,69 @@ private:
   }
 
   void unsubscribe(WatchList &list, Link *link, ZuString filter) {
-    auto i = list.iterate();
-    while (auto watch = i.iterateNode())
-      if (watch->link == link && (!filter || watch->filter == filter))
-	i.del();
+    {
+      auto i = list.iterator();
+      while (auto watch = i.iterateNode())
+	if (watch->link == link && (!filter || watch->filter == filter))
+	  i.del();
+    }
     if (!list.count() && list.interval) {
       list.interval = 0;
       m_mx->del(&list.timer);
     }
+  }
+
+  void disconnected_(Link *link) {
+    for (unsigned i = 0; i < ReqType::N; i++)
+      unsubscribe(m_watchLists[i], link, ZuString{});
+  }
+
+  bool match(ZuString filter, ZuString id) {
+    if (!filter || filter[0] == '*') return true; // null or "*"
+    unsigned n = filter.length() - 1;
+    if (filter[n] == '*') { // "prefix*"
+      if (id.length() < n) return false;
+      return !memcmp(&filter[0], &id[0], n);
+    }
+    return filter == id;
+  }
+  bool matchThread(ZuString filter, ZuString name, unsigned tid) {
+    if (!filter || filter[0] == '*') return true; // null or "*"
+    unsigned n = filter.length() - 1;
+    if (filter[n] == '*') { // "prefix*"
+      if (name.length() < n) return false;
+      return !memcmp(&filter[0], &name[0], n);
+    }
+    if (filter == name) return true;
+    return ZuBox<unsigned>(filter) == tid;
+  }
+  bool matchQueue(ZuString filter, unsigned type, ZuString id) {
+    if (!filter || filter[0] == '*') return true; // null or "*"
+    unsigned n = filter.length() - 1;
+    for (unsigned i = 0; i <= n; i++)
+      if (filter[i] == ':') { // "type:id"
+	if (!i || (i == 1 && filter[0] == '*')) { // ":id" or "*:id"
+	  if (i == n || (i == n - 1 && filter[n] == '*'))
+	    return true; // ":" or ":*" or "*:" or "*:*"
+	  return ZuString{&filter[i + 1], n - i} == id;
+	}
+	int ftype = QueueType::lookup(ZuString{&filter[0], i});
+	if (ftype != type) return false;
+	if (i == n || (i == n - 1 && filter[n] == '*'))
+	  return true; // "type:" or "type:*"
+	if (filter[n] == '*') { // "type:prefix*"
+	  n -= (i + 1);
+	  if (id.length() < n) return false;
+	  return !memcmp(&filter[i + 1], &id[0], n);
+	}
+	n -= i;
+	return ZuString{&filter[i + 1], n} == id;
+      }
+    if (filter[n] == '*') { // id*
+      if (id.length() < n) return false;
+      return !memcmp(&filter[0], &id[0], n);
+    }
+    return filter == id; // id
   }
 
   // heap processing
@@ -478,9 +544,9 @@ private:
       bool subscribe, ZuString filter, unsigned interval) {
     auto &list = m_watchLists[ReqType::Heap];
     if (interval && !subscribe) { unsubscribe(list, link, filter); return; }
-    auto watch = new Watch{ filter, link };
+    auto watch = new Watch{ link, filter };
     if (interval)
-      subscribe(list, watch, interval,
+      this->subscribe(list, watch, interval,
 	  ZmFn<>{this, [](Server *server) { server->heapScan(); }});
     ZmHeapMgr::all(ZmFn<ZmHeapCache *>{
       watch, [](Watch *watch, ZmHeapCache *heap) {
@@ -510,7 +576,7 @@ private:
   void heapScan(const ZmHeapCache *heap) {
     Heap data;
     heap->telemetry(data);
-    auto i = m_watchLists[ReqType::HashTbl].list.readIterate();
+    auto i = m_watchLists[ReqType::HashTbl].list.readIterator();
     while (auto watch = i.iterateNode()) {
       if (!match(watch->filter, data.id)) continue;
       m_fbb.Clear();
@@ -528,9 +594,9 @@ private:
       bool subscribe, ZuString filter, unsigned interval) {
     auto &list = m_watchLists[ReqType::HashTbl];
     if (interval && !subscribe) { unsubscribe(list, link, filter); return; }
-    auto watch = new Watch{ filter, link };
+    auto watch = new Watch{link, filter};
     if (interval)
-      subscribe(list, watch, interval,
+      this->subscribe(list, watch, interval,
 	  ZmFn<>{this, [](Server *server) { server->hashScan(); }});
     ZmHashMgr::all(ZmFn<ZmAnyHash *>{
       watch, [](Watch *watch, ZmAnyHash *tbl) {
@@ -560,7 +626,7 @@ private:
   void hashScan(const ZmAnyHash *tbl) {
     HashTbl data;
     tbl->telemetry(data);
-    auto i = m_watchLists[ReqType::HashTbl].list.readIterate();
+    auto i = m_watchLists[ReqType::HashTbl].list.readIterator();
     while (auto watch = i.iterateNode()) {
       if (!match(watch->filter, data.id)) continue;
       m_fbb.Clear();
@@ -578,9 +644,9 @@ private:
       bool subscribe, ZuString filter, unsigned interval) {
     auto &list = m_watchLists[ReqType::Thread];
     if (interval && !subscribe) { unsubscribe(list, link, filter); return; }
-    auto watch = new Watch{ filter, link };
+    auto watch = new Watch{link, filter};
     if (interval)
-      subscribe(list, watch, interval,
+      this->subscribe(list, watch, interval,
 	  ZmFn<>{this, [](Server *server) { server->threadScan(); }});
     ZmSpecific<ZmThreadContext>::all(ZmFn<ZmThreadContext *>{
       watch, [](Watch *watch, ZmThreadContext *tc) {
@@ -610,9 +676,9 @@ private:
   void threadScan(const ZmThreadContext *tc) {
     Thread data;
     tc->telemetry(data);
-    auto i = m_watchLists[ReqType::Thread].list.readIterate();
+    auto i = m_watchLists[ReqType::Thread].list.readIterator();
     while (auto watch = i.iterateNode()) {
-      if (!match(watch->filter, data.name, data.tid)) continue;
+      if (!matchThread(watch->filter, data.name, data.tid)) continue;
       m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Thread, data.saveDelta(m_fbb).Union()));
@@ -628,16 +694,16 @@ private:
       bool subscribe, ZuString filter, unsigned interval) {
     auto &list = m_watchLists[ReqType::Mx];
     if (interval && !subscribe) { unsubscribe(list, link, filter); return; }
-    auto watch = new Watch{ filter, link };
+    auto watch = new Watch{link, filter};
     if (interval)
-      subscribe(list, watch, interval,
+      this->subscribe(list, watch, interval,
 	  ZmFn<>{this, [](Server *server) { server->mxScan(); }});
     allMx(ZmFn<ZvMultiplex *>{watch, [](Watch *watch, ZvMultiplex *mx) {
 	watch->link->app()->mxQuery_(watch, mx);
       }});
     if (!interval) delete watch;
   }
-  void mxQuery_(Watch *watch, const ZvMultiplex *mx) {
+  void mxQuery_(Watch *watch, ZvMultiplex *mx) {
     Mx data;
     mx->telemetry(data);
     if (!match(watch->filter, data.id)) return;
@@ -664,7 +730,7 @@ private:
 		  str(m_fbb, queueID), 0, ring.count(),
 		  inCount, inBytes, outCount, outBytes,
 		  ring.params().size(), ring.full(),
-		  QueueType::Thread).Union()));
+		  fbs::QueueType_Thread).Union()));
 	  m_fbb.PushElement(
 	      ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
 	  watch->link->send(m_fbb.buf());
@@ -684,7 +750,7 @@ private:
 		  inCount, inCount * sizeof(ZmFn<>),
 		  outCount, outCount * sizeof(ZmFn<>),
 		  overRing.size_(), false,
-		  QueueType::Thread).Union()));
+		  fbs::QueueType_Thread).Union()));
 	  m_fbb.PushElement(
 	      ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
 	  watch->link->send(m_fbb.buf());
@@ -712,7 +778,7 @@ private:
   void mxScan(ZvMultiplex *mx) {
     Mx data;
     mx->telemetry(data);
-    auto i = m_watchLists[ReqType::Mx].list.readIterate();
+    auto i = m_watchLists[ReqType::Mx].list.readIterator();
     while (auto watch = i.iterateNode()) {
       if (!match(watch->filter, data.id)) continue;
       m_fbb.Clear();
@@ -731,7 +797,7 @@ private:
 	    const auto &ring = mx->ring(tid);
 	    ring.stats(inCount, inBytes, outCount, outBytes);
 	    m_fbb.Clear();
-	    auto id_ = str(m_fbb, queueID);
+	    auto id_ = Zfb::Save::str(m_fbb, queueID);
 	    fbs::QueueBuilder b(m_fbb);
 	    b.add_id(id_);
 	    b.add_count(ring.count());
@@ -754,7 +820,7 @@ private:
 	    const auto &overRing = mx->overRing(tid);
 	    overRing.stats(inCount, outCount);
 	    m_fbb.Clear();
-	    auto id_ = str(m_fbb, queueID);
+	    auto id_ = Zfb::Save::str(m_fbb, queueID);
 	    fbs::QueueBuilder b(m_fbb);
 	    b.add_id(id_);
 	    b.add_count(overRing.count());
@@ -771,7 +837,7 @@ private:
 	  }
 	}
       }
-      mx->allCxns([this](ZiConnection *cxn) {
+      mx->allCxns([this, watch](ZiConnection *cxn) {
 	Socket data;
 	cxn->telemetry(data);
 	m_fbb.Clear();
@@ -792,10 +858,6 @@ private:
 
     // I/O queues (link, etc.)
 	  cxn->transmit(queue(
-		key.p<0>(), queue_->head(), queue_->count_(),
-		inCount, inBytes, outCount, outBytes,
-		(uint32_t)0, (uint32_t)0,
-		(uint8_t)(key.p<1>() ? QueueType::Tx : QueueType::Rx)));
 
 	    // IPC queues (ZiRing)
 	    ring->params().name(), (uint64_t)0, (uint64_t)count,
@@ -808,9 +870,9 @@ private:
       bool subscribe, ZuString filter, unsigned interval) {
     auto &list = m_watchLists[ReqType::Queue];
     if (interval && !subscribe) { unsubscribe(list, link, filter); return; }
-    auto watch = new Watch{ filter, link };
+    auto watch = new Watch{link, filter};
     if (interval)
-      subscribe(list, watch, interval,
+      this->subscribe(list, watch, interval,
 	  ZmFn<>{this, [](Server *server) { server->queueScan(); }});
     auto i = m_queues.readIterator();
     while (auto node = i.iterate()) queueQuery_(watch, node->val());
@@ -835,7 +897,7 @@ private:
   void queueScan(const QueueFn &fn) {
     Queue data;
     fn(data);
-    auto i = m_watchLists[ReqType::Queue].list.readIterate();
+    auto i = m_watchLists[ReqType::Queue].list.readIterator();
     while (auto watch = i.iterateNode()) {
       if (!matchQueue(watch->filter, data.type, data.id)) continue;
       m_fbb.Clear();
@@ -853,15 +915,17 @@ private:
       bool subscribe, ZuString filter, unsigned interval) {
     auto &list = m_watchLists[ReqType::Engine];
     if (interval && !subscribe) { unsubscribe(list, link, filter); return; }
-    auto watch = new Watch{ filter, link };
+    auto watch = new Watch{link, filter};
     if (interval)
-      subscribe(list, watch, interval,
+      this->subscribe(list, watch, interval,
 	  ZmFn<>{this, [](Server *server) { server->engineScan(); }});
-    auto i = m_engines.readIterate();
-    while (auto node = i.iterate()) engineQuery_(watch, node->val());
+    {
+      auto i = m_engines.readIterator();
+      while (auto node = i.iterate()) engineQuery_(watch, node->key());
+    }
     if (!interval) delete watch;
   }
-  void engineQuery_(Watch *watch, const ZvEngine *engine) {
+  void engineQuery_(Watch *watch, ZvEngine *engine) {
     Engine data;
     engine->telemetry(data);
     if (!match(watch->filter, data.id)) return;
@@ -872,7 +936,7 @@ private:
 	ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Telemetry));
     watch->link->send(m_fbb.buf());
     engine->allLinks<ZvAnyLink>([this, watch](ZvAnyLink *link) -> uintptr_t {
-      Link data;
+      ZvTelemetry::Link data;
       link->telemetry(data);
       m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
@@ -888,7 +952,7 @@ private:
     auto i = m_engines.readIterator();
     while (auto node = i.iterate()) engineScan(node->key());
   }
-  void engineScan(const ZvEngine *engine) {
+  void engineScan(ZvEngine *engine) {
     Engine data;
     engine->telemetry(data);
     auto i = m_watchLists[ReqType::Engine].list.readIterator();
@@ -927,9 +991,9 @@ private:
       bool subscribe, ZuString filter, unsigned interval) {
     auto &list = m_watchLists[ReqType::DBEnv];
     if (interval && !subscribe) { unsubscribe(list, link, filter); return; }
-    auto watch = new Watch{ filter, link };
+    auto watch = new Watch{link, filter};
     if (interval)
-      subscribe(list, watch, interval,
+      this->subscribe(list, watch, interval,
 	  ZmFn<>{this, [](Server *server) { server->dbEnvScan(); }});
     dbEnvQuery_(watch);
     if (!interval) delete watch;
@@ -995,9 +1059,9 @@ private:
       bool subscribe, ZuString filter, unsigned interval) {
     auto &list = m_watchLists[ReqType::App];
     if (interval && !subscribe) { unsubscribe(list, link, filter); return; }
-    auto watch = new Watch{ filter, link };
+    auto watch = new Watch{link, filter};
     if (interval)
-      subscribe(list, watch, interval,
+      this->subscribe(list, watch, interval,
 	  ZmFn<>{this, [](Server *server) { server->appScan(); }});
     appQuery_(watch);
     if (!interval) delete watch;
@@ -1035,9 +1099,9 @@ private:
       bool subscribe, ZuString filter, unsigned interval) {
     auto &list = m_watchLists[ReqType::Alert];
     if (interval && !subscribe) { unsubscribe(list, link, filter); return; }
-    auto watch = new Watch{ filter, link };
+    auto watch = new Watch{link, filter};
     if (interval)
-      subscribe(list, watch, interval,
+      this->subscribe(list, watch, interval,
 	  ZmFn<>{this, [](Server *server) { server->alertScan(); }});
     alertQuery_(watch);
     if (!interval) delete watch;
@@ -1121,7 +1185,7 @@ private:
   WatchList		m_watchLists[ReqType::N];
   AlertRing		m_alertRing;		// in-memory ring of alerts
   AlertFile		m_alertFile;		// current file being written
-  ZtString		m_alertBuf;		// alert message buffer
+  mutable ZtString	m_alertBuf;		// alert message buffer
   bool			m_appUpdated = false;
 };
 

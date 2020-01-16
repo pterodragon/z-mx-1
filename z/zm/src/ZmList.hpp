@@ -177,8 +177,8 @@ public:
 
     // access to Node instances is always guarded, so no need to protect
     // the returned object against concurrent deletion
-    ZuInline Node *next() { return m_next; }
-    ZuInline Node *prev() { return m_prev; }
+    ZuInline Node *next() const { return m_next; }
+    ZuInline Node *prev() const { return m_prev; }
 
     ZuInline void next(Node *n) { m_next = n; }
     ZuInline void prev(Node *n) { m_prev = n; }
@@ -587,7 +587,7 @@ protected:
     Node *node = iterator.m_node;
 
     if (ZuLikely(node)) {
-      iterator.m_node = node->Fn::prev(node);
+      iterator.m_node = node->Fn::prev();
       del_(node);
       nodeDeref(node);
       nodeDelete(node);

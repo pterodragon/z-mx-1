@@ -54,13 +54,13 @@ public:
       ZiAnyIOBuf{Size, length_}, owner(owner_) { alloc(length_); }
   ZuInline ~ZiIOBuf_() { if (ZuUnlikely(jumbo)) ::free(jumbo); }
 
-  ZuInline uint8_t *alloc(unsigned size_) {
+  uint8_t *alloc(unsigned size_) {
     if (ZuLikely(size_ <= Size)) return data_;
     size = size_;
     return jumbo = (uint8_t *)::malloc(size_);
   }
 
-  ZuInline void free(uint8_t *ptr) {
+  void free(uint8_t *ptr) {
     if (ZuUnlikely(ptr != data_)) {
       if (ZuUnlikely(jumbo == ptr)) {
 	jumbo = nullptr;
@@ -77,7 +77,7 @@ public:
   }
 
   // reallocate (while building buffer), preserving head and tail bytes
-  ZuInline uint8_t *realloc(
+  uint8_t *realloc(
       unsigned oldLen, unsigned newLen,
       unsigned head, unsigned tail) {
     if (ZuLikely(newLen <= Size)) {
@@ -94,6 +94,23 @@ public:
     if (head) memcpy(jumbo, old, head);
     if (tail) memcpy(jumbo + newLen - tail, old + oldLen - tail, tail);
     if (ZuUnlikely(old != data_)) ::free(old);
+    return jumbo;
+  }
+
+  // ensure at least size_ bytes in buffer, preserving any existing data
+  uint8_t *ensure(unsigned size_) {
+    if (ZuLikely(size_ <= Size)) return data_;
+    if (ZuUnlikely(size_ <= size)) return jumbo;
+    uint8_t *old = jumbo;
+    jumbo = (uint8_t *)::malloc(size_);
+    size = size_;
+    if (!length) return jumbo;
+    if (ZuLikely(!old)) {
+      memcpy(jumbo, data_, length);
+      return jumbo;
+    }
+    memcpy(jumbo, old, length);
+    ::free(old);
     return jumbo;
   }
 

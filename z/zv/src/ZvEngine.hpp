@@ -40,6 +40,7 @@
 #include <zlib/ZvTelemetry.hpp>
 
 class ZvEngine;
+namespace ZvQueueType = ZvTelemetry::QueueType;
 namespace ZvEngineState = ZvTelemetry::EngineState;
 namespace ZvLinkState = ZvTelemetry::LinkState;
 
@@ -54,7 +55,7 @@ protected:
 
 public:
   using Mx = ZvMultiplex;
-  using AbortFn = ZmFn<ZvQMsg *>;
+  using AbortFn = ZmFn<ZvIOMsg *>;
 
   struct IDAccessor : public ZuAccessor<ZvAnyTx *, ZuID> {
     inline static ZuID value(const ZvAnyTx *t) { return t->id(); }
@@ -84,7 +85,7 @@ protected:
   inline ZvAnyTxPool(ZuID id) : ZvAnyTx(id) { }
 
 public:
-  virtual ZvIOQueue *txQueuePtr() = 0;
+  virtual ZvIOQueue *txQueue() = 0;
 };
 
 class ZvAPI ZvAnyLink : public ZvAnyTx {
@@ -191,17 +192,17 @@ struct ZvEngineMgr {
   // Engine Management
   virtual void addEngine(ZvEngine *) { }
   virtual void delEngine(ZvEngine *) { }
-  virtual void updEngine(ZvEngine *) const { }
+  virtual void updEngine(ZvEngine *) { }
 
   // Link Management
-  virtual void updLink(ZvAnyLink *) const { }
+  virtual void updLink(ZvAnyLink *) { }
 
   // Queue Management
   virtual void addQueue(unsigned type, ZuID id, QueueFn queueFn) { }
   virtual void delQueue(unsigned type, ZuID id) { }
 
   // Alert handling
-  virtual void alert(ZmRef<ZeEvent> e) const { ZeLog::log(ZuMv(e)); }
+  virtual void alert(ZmRef<ZeEvent> e) { ZeLog::log(ZuMv(e)); }
 };
 
 class ZvAPI ZvEngine : public ZmPolymorph {
@@ -331,7 +332,15 @@ public:
     m_txPools.add(pool);
     guard.unlock();
     pool->update(cf);
-    mgrAddQueue(id, 1, pool->txQueuePtr());
+    mgrAddQueue(ZvQueueType::Tx, id, [pool](ZvTelemetry::Queue &data) {
+      const ZvIOQueue *queue = pool->txQueue();
+      data.id = pool->id();
+      data.seqNo = queue->head();
+      data.count = queue->count_();
+      queue->stats(data.inCount, data.inBytes, data.outCount, data.outBytes);
+      data.size = data.full = 0;
+      data.type = ZvQueueType::Tx;
+    });
     return pool;
   }
   ZmRef<ZvAnyTxPool> delTxPool(ZuID id) {
@@ -364,8 +373,24 @@ public:
     linkState(link, -1, link->state());
     link->update(cf);
     mgrUpdLink(link);
-    mgrAddQueue(QueueType::id, link->rxQueue());
-    mgrAddQueue(id, link->txQueue());
+    mgrAddQueue(ZvQueueType::Rx, id, [link](ZvTelemetry::Queue &data) {
+      const ZvIOQueue *queue = link->rxQueue();
+      data.id = link->id();
+      data.seqNo = queue->head();
+      data.count = queue->count_();
+      queue->stats(data.inCount, data.inBytes, data.outCount, data.outBytes);
+      data.size = data.full = 0;
+      data.type = ZvQueueType::Rx;
+    });
+    mgrAddQueue(ZvQueueType::Tx, id, [link](ZvTelemetry::Queue &data) {
+      const ZvIOQueue *queue = link->txQueue();
+      data.id = link->id();
+      data.seqNo = queue->head();
+      data.count = queue->count_();
+      queue->stats(data.inCount, data.inBytes, data.outCount, data.outBytes);
+      data.size = data.full = 0;
+      data.type = ZvQueueType::Tx;
+    });
     return link;
   }
   ZmRef<ZvAnyLink> delLink(ZuID id) {
@@ -481,9 +506,9 @@ public:
   ZuInline const Tx *tx() const { return static_cast<const Tx *>(this); }
   ZuInline Tx *tx() { return static_cast<Tx *>(this); }
 
-  void send(ZmRef<ZvQMsg> msg) {
+  void send(ZmRef<ZvIOMsg> msg) {
     msg->owner(tx());
-    this->engine()->txInvoke(ZuMv(msg), [](ZmRef<ZvQMsg> msg) {
+    this->engine()->txInvoke(ZuMv(msg), [](ZmRef<ZvIOMsg> msg) {
       msg->owner<Tx *>()->send(ZuMv(msg));
     });
   }
@@ -522,18 +547,18 @@ struct Link : public ZvLink<Link> {
   ZmTime reconnInterval(unsigned reconnects); // optional - defaults to 1sec
 
   // Rx
-  void process(ZvQMsg *);
+  void process(ZvIOMsg *);
   ZmTime reReqInterval(); // resend request interval
   void request(const ZvIOQueue::Gap &prev, const ZvIOQueue::Gap &now);
   void reRequest(const ZvIOQueue::Gap &now);
 
   // Tx
-  void loaded_(ZvQMsg *msg);
-  void unloaded_(ZvQMsg *msg);
+  void loaded_(ZvIOMsg *msg);
+  void unloaded_(ZvIOMsg *msg);
 
-  bool send_(ZvQMsg *msg, bool more); // true on success
-  bool resend_(ZvQMsg *msg, bool more); // true on success
-  void aborted_(ZvQMsg *msg);
+  bool send_(ZvIOMsg *msg, bool more); // true on success
+  bool resend_(ZvIOMsg *msg, bool more); // true on success
+  void aborted_(ZvIOMsg *msg);
 
   bool sendGap_(const ZvIOQueue::Gap &gap, bool more); // true on success
   bool resendGap_(const ZvIOQueue::Gap &gap, bool more); // true on success
@@ -633,28 +658,28 @@ public:
   };
 
   template <typename L>
-  typename RcvdLambda<L>::T received(ZmRef<ZvQMsg> msg, L) {
+  typename RcvdLambda<L>::T received(ZmRef<ZvIOMsg> msg, L) {
     msg->owner(rx());
-    this->engine()->rxInvoke(ZuMv(msg), [](ZmRef<ZvQMsg> msg) {
+    this->engine()->rxInvoke(ZuMv(msg), [](ZmRef<ZvIOMsg> msg) {
       Rx *rx = msg->owner<Rx *>();
       rx->received(ZuMv(msg));
       RcvdLambda<L>::invoke(rx);
     });
   }
-  void received(ZmRef<ZvQMsg> msg) {
+  void received(ZmRef<ZvIOMsg> msg) {
     msg->owner(rx());
-    this->engine()->rxInvoke(ZuMv(msg), [](ZmRef<ZvQMsg> msg) {
+    this->engine()->rxInvoke(ZuMv(msg), [](ZmRef<ZvIOMsg> msg) {
       Rx *rx = msg->owner<Rx *>();
       rx->received(ZuMv(msg));
     });
   }
 
-  void send(ZmRef<ZvQMsg> msg) {
+  void send(ZmRef<ZvIOMsg> msg) {
     // permit callers to use code of the form send(mkMsg(...))
     // (i.e. without needing to explicitly check mkMsg() success/failure)
     if (ZuUnlikely(!msg)) return;
     msg->owner(tx());
-    this->engine()->txInvoke(ZuMv(msg), [](ZmRef<ZvQMsg> msg) {
+    this->engine()->txInvoke(ZuMv(msg), [](ZmRef<ZvIOMsg> msg) {
       msg->owner<Tx *>()->send(ZuMv(msg));
     });
   }

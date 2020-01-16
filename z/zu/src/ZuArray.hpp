@@ -207,7 +207,7 @@ private:
 public:
   ZuInline const T &operator [](int i) const { return m_data[i]; }
 
-  // operator T *() must return 0 if the string is empty, oherwise
+  // operator T *() must return nullptr if the string is empty, oherwise
   // these usages stop working:
   // if (ZuString s = "") { } else { puts("ok"); }
   // if (ZuString s = 0) { } else { puts("ok"); }

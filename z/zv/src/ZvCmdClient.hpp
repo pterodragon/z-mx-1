@@ -49,6 +49,9 @@
 
 #include <zlib/ZvCf.hpp>
 #include <zlib/ZvUserDB.hpp>
+#include <zlib/ZvSeqNo.hpp>
+#include <zlib/ZvTelemetry.hpp>
+#include <zlib/ZvTelClient.hpp>
 
 #include <zlib/loginreq_fbs.h>
 #include <zlib/loginack_fbs.h>
@@ -80,29 +83,31 @@ using ZvCmd_Credentials = ZuUnion<ZvCmd_Login, ZvCmd_Access>;
 template <typename App_, typename Impl_>
 class ZvCmdCliLink :
     public Ztls::CliLink<App_, Impl_>,
-    public ZiIORx {
+    public ZiIORx<Ztls::IOBuf> {
 public:
   using App = App_;
   using Impl = Impl_;
   using Base = Ztls::CliLink<App, Impl>;
 friend Base;
 
+private:
+  using IORx = ZiIORx<Ztls::IOBuf>;
+
+public:
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
 private:
   using Credentials = ZvCmd_Credentials;
-public:
-  using SeqNo = ZvCmdSeqNo;
   using KeyData = ZvUserDB::KeyData;
   using Bitmap = ZvUserDB::Bitmap;
 
 private:
   // containers of pending requests
   using UserDBReqs =
-    ZmRBTree<SeqNo, ZmRBTreeVal<ZvCmdUserDBAckFn, ZmRBTreeLock<ZmPLock> > >;
+    ZmRBTree<ZvSeqNo, ZmRBTreeVal<ZvCmdUserDBAckFn, ZmRBTreeLock<ZmPLock> > >;
   using CmdReqs =
-    ZmRBTree<SeqNo, ZmRBTreeVal<ZvCmdAckFn, ZmRBTreeLock<ZmPLock> > >;
+    ZmRBTree<ZvSeqNo, ZmRBTreeVal<ZvCmdAckFn, ZmRBTreeLock<ZmPLock> > >;
 
 public:
   struct State {
@@ -157,14 +162,14 @@ public:
 
 public:
   // send userDB request
-  void sendUserDB(Zfb::IOBuilder &fbb, SeqNo seqNo, ZvCmdUserDBAckFn fn) {
+  void sendUserDB(Zfb::IOBuilder &fbb, ZvSeqNo seqNo, ZvCmdUserDBAckFn fn) {
     using namespace ZvCmd;
     fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), fbs::MsgType_UserDB));
     m_userDBReqs.add(seqNo, ZuMv(fn));
     this->send(fbb.buf());
   }
   // send command
-  void sendCmd(Zfb::IOBuilder &fbb, SeqNo seqNo, ZvCmdAckFn fn) {
+  void sendCmd(Zfb::IOBuilder &fbb, ZvSeqNo seqNo, ZvCmdAckFn fn) {
     using namespace ZvCmd;
     fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), fbs::MsgType_Cmd));
     m_cmdReqs.add(seqNo, ZuMv(fn));
@@ -183,6 +188,11 @@ public:
   // >=0 - messaged consumed, continue
   //  <0 - disconnect
   int processApp(ZuArray<const uint8_t>) { return -1; } // default
+
+  // default telemetry handler does nothing
+  // >=0 - messaged consumed, continue
+  //  <0 - disconnect
+  int processTel(const ZvTelemetry::fbs::Telemetry *) { return 0; } // default
 
   void connected(const char *, const char *alpn) {
     if (!alpn || strcmp(alpn, "zcmd")) {
@@ -291,8 +301,8 @@ private:
 	  Verifier verifier(data, len);
 	  if (!fbs::VerifyTelemetryBuffer(verifier)) return -1;
 	}
-	auto telemetry = fbs::GetTelemetry(data);
-	// FIXME - migrate MxTelemetry::Client into this
+	int i = impl()->processTel(fbs::GetTelemetry(data));
+	if (ZuUnlikely(i < 0)) return -1;
       } break;
       case ZvCmd::fbs::MsgType_App: {
 	int i = impl()->processApp(ZuArray<const uint8_t>(data, len));

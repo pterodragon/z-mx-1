@@ -45,6 +45,7 @@
 struct ZCmdPlugin : public ZmPolymorph {
   virtual void final() = 0;
   virtual int processApp(ZuArray<const uint8_t> data) = 0;
+  virtual int processTel(const ZvTelemetry::fbs::Telemetry *) = 0;
 };
 
 struct ZCmdHost : public ZvCmdHost {

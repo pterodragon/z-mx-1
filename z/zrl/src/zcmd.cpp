@@ -32,7 +32,7 @@
 #include <zlib/ZvCf.hpp>
 #include <zlib/ZvCmdClient.hpp>
 #include <zlib/ZvCmdHost.hpp>
-#include <zlib/ZvMultiplexCf.hpp>
+#include <zlib/ZvMultiplex.hpp>
 
 #include <zlib/ZtlsBase32.hpp>
 #include <zlib/ZtlsBase64.hpp>
@@ -138,6 +138,9 @@ public:
     int processApp(ZuArray<const uint8_t> data) {
       return this->app()->processApp(data);
     }
+    int processTel(const ZvTelemetry::fbs::Telemetry *data) {
+      return this->app()->processTel(data);
+    }
   };
 
   void init(ZiMultiplex *mx, ZvCf *cf, bool interactive) {
@@ -216,7 +219,12 @@ private:
 
   int processApp(ZuArray<const uint8_t> data) {
     if (ZuUnlikely(!m_plugin)) return -1;
-    return m_plugin->processApp(ZuMv(data));
+    return m_plugin->processApp(data);
+  }
+
+  int processTel(const ZvTelemetry::fbs::Telemetry *data) {
+    if (ZuUnlikely(!m_plugin)) return 0;
+    return m_plugin->processTel(data);
   }
 
   void disconnected() {
@@ -1147,7 +1155,7 @@ private:
   ZtString		m_prompt;
   ZtString		m_soloMsg;
   ZmRef<Link>		m_link;
-  ZvCmdSeqNo		m_seqNo = 0;
+  ZvSeqNo		m_seqNo = 0;
   Zfb::IOBuilder	m_fbb;
   int			m_code = 0;
   bool			m_interactive = true;

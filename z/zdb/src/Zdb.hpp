@@ -974,7 +974,7 @@ struct ZdbEnvConfig {
 #endif
 };
 
-class ZdbAPI ZdbEnv : public ZuObject {
+class ZdbAPI ZdbEnv : public ZmPolymorph {
   ZdbEnv(const ZdbEnv &);
   ZdbEnv &operator =(const ZdbEnv &);		// prevent mis-use
 
@@ -1082,9 +1082,9 @@ public:
 
   void telemetry(Telemetry &data) const;
 
-  ZvTelemetry::DBEnvFn telFn() const {
+  ZvTelemetry::DBEnvFn telFn() {
     return ZvTelemetry::DBEnvFn{ZmMkRef(this), [](
-	const ZdbEnv *dbEnv,
+	ZdbEnv *dbEnv,
 	ZmFn<const ZvTelemetry::DBEnv &> envFn,
 	ZmFn<const ZvTelemetry::DBHost &> hostFn,
 	ZmFn<const ZvTelemetry::DB &> dbFn) {
@@ -1093,12 +1093,12 @@ public:
 	dbEnv->telemetry(data);
 	envFn(data);
       }
-      dbEnv->allHosts([this, &hostFn](const ZdbHost *host) {
+      dbEnv->allHosts([&hostFn](const ZdbHost *host) {
 	ZvTelemetry::DBHost data;
 	host->telemetry(data);
 	hostFn(data);
       });
-      dbEnv->allDBs([this, &dbFn](const ZdbAny *db) {
+      dbEnv->allDBs([&dbFn](const ZdbAny *db) {
 	ZvTelemetry::DB data;
 	db->telemetry(data);
 	dbFn(data);

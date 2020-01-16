@@ -34,9 +34,6 @@
 
 #include <zlib/ZmAssert.hpp>
 
-// command sequence number
-using ZvCmdSeqNo = ZuBox<uint64_t>;
-
 // get hdr from buffer
 inline uint32_t ZvCmd_getHdr(const uint8_t *data) {
   return *reinterpret_cast<const ZuLittleEndian<uint32_t> *>(data);

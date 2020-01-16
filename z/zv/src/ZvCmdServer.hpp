@@ -74,7 +74,6 @@ friend Base;
 
 private:
   using IORx = ZiIORx<Ztls::IOBuf>;
-  using SeqNo = ZvCmdSeqNo;
   using User = ZvUserDB::User;
   using Bitmap = ZvUserDB::Bitmap;
 

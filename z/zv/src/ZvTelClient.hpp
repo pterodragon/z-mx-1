@@ -30,12 +30,13 @@
 
 #include <zlib/ZvTelemetry.hpp>
 
-//#include <zlib/zcmd_fbs.h>
 #include <zlib/telreq_fbs.h>
 #include <zlib/telack_fbs.h>
 
 namespace ZvTelemetry {
 
+// FIXME
+#if 0
 using CliFn = ZmFn<const fbs::Telemetry *>;
 struct CliWatch_ {
   WatchKey		key;
@@ -53,6 +54,7 @@ using CliWatchTree =
       ZmRBTreeNodeIsKey<true,
 	ZmRBTreeLock<ZmRWLock> > > >;
 using CliWatch = CliWatchTree::Node;
+#endif
 
 } // ZvTelemetry
 

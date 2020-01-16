@@ -73,7 +73,7 @@ private:
   Lock		m_lock;
     Engines	  m_engines;
     Queues	  m_queues;
-    ZuRef<ZdbEnv> m_dbEnv = nullptr;
+    ZmRef<ZdbEnv> m_dbEnv = nullptr;
   ZmTime	m_time;
 };
 

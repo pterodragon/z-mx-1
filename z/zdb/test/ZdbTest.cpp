@@ -299,7 +299,7 @@ int main(int argc, char **argv)
     appMx->start();
     if (dbMx->start() != Zi::OK) throw ZtString("multiplexer start failed");
 
-    ZuRef<ZdbEnv> env = new ZdbEnv();
+    ZmRef<ZdbEnv> env = new ZdbEnv();
 
     env->init(ZdbEnvConfig(cf),
       dbMx, ZmFn<>::Ptr<&active>::fn(), ZmFn<>::Ptr<&inactive>::fn());

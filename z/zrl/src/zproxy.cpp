@@ -40,7 +40,7 @@
 
 #include <zlib/ZvCf.hpp>
 #include <zlib/ZvCmdHost.hpp>
-#include <zlib/ZvMultiplexCf.hpp>
+#include <zlib/ZvMultiplex.hpp>
 
 #include <zlib/Zrl.hpp>
 

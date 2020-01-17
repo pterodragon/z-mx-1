@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -104,7 +104,7 @@ public:
     r.m_object = 0;
   }
   template <typename R>
-  inline ZuRef(const R &r, typename MatchOtherRef<R>::T *_ = 0) :
+  ZuRef(const R &r, typename MatchOtherRef<R>::T *_ = 0) :
       m_object(static_cast<T *>(const_cast<typename R::T *>(r.m_object))) {
     if (T *o = m_object) o->ref();
   }
@@ -112,7 +112,7 @@ public:
     if (o) o->ref();
   }
   template <typename O>
-  inline ZuRef(O *o, typename MatchPtr<O>::T *_ = 0) :
+  ZuRef(O *o, typename MatchPtr<O>::T *_ = 0) :
       m_object(static_cast<T *>(o)) {
     if (o) o->ref();
   }

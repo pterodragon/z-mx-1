@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -74,7 +74,7 @@ public:
   using Link = Link_;
   using LinkRef = LinkRef_;
 
-  inline LinkTCP(LinkRef link, const ZiCxnInfo &ci) :
+  LinkTCP(LinkRef link, const ZiCxnInfo &ci) :
     ZiConnection(link->app()->mx(), ci), m_link(ZuMv(link)) { }
 
   void connected(ZiIOContext &io) { m_link->connected_(this, io); }
@@ -777,7 +777,7 @@ friend Base;
   ZuInline const App *app() const { return static_cast<const App *>(this); }
   ZuInline App *app() { return static_cast<App *>(this); }
 
-  inline bool init(ZiMultiplex *mx, ZuString thread,
+  bool init(ZiMultiplex *mx, ZuString thread,
       ZuString caPath, const char **alpn) {
     return Base::init(mx, thread, [&]() -> bool {
       mbedtls_ssl_config_defaults(this->conf(),
@@ -857,7 +857,7 @@ friend Base;
     mbedtls_x509_crt_free(&m_cert);
   }
 
-  inline bool init(ZiMultiplex *mx, ZuString thread,
+  bool init(ZiMultiplex *mx, ZuString thread,
       ZuString caPath, const char **alpn, ZuString certPath,
       ZuString keyPath, int cacheMax = -1, int cacheTimeout = -1) {
     return Base::init(mx, thread, [&]() -> bool {

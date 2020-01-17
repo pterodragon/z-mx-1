@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -43,10 +43,10 @@
 // ring buffer parameters
 class ZmRingParams {
 public:
-  inline ZmRingParams(unsigned size) :
+  ZmRingParams(unsigned size) :
     m_size(size), m_ll(false), m_spin(1000), m_timeout(1) { }
 
-  inline ZmRingParams(const ZmRingParams &p) :
+  ZmRingParams(const ZmRingParams &p) :
     m_size(p.m_size), m_ll(p.m_ll), m_spin(p.m_spin), m_timeout(p.m_timeout) { }
   ZmRingParams &operator =(const ZmRingParams &p) {
     if (this != &p) {
@@ -94,7 +94,7 @@ protected:
 
   enum { Head = 0, Tail };
 
-  inline ZmRing_(const ZmRingParams &params) : m_params(params)
+  ZmRing_(const ZmRingParams &params) : m_params(params)
 #ifdef _WIN32
     , m_sem{0, 0}
 #endif
@@ -185,12 +185,12 @@ public:
   enum { Size = ZmRingAlign(sizeof(T)) };
 
   template <typename ...Args>
-  inline ZmRing(ZmRingParams params = ZmRingParams(0), Args &&... args) :
+  ZmRing(ZmRingParams params = ZmRingParams(0), Args &&... args) :
       NTP::Base{ZuFwd<Args>(args)...},
       ZmRing_(params),
       m_flags(0), m_ctrl(0), m_data(0), m_full(0) { }
 
-  inline ZmRing(const ZmRing &ring) :
+  ZmRing(const ZmRing &ring) :
       ZmRing_(ring.m_params), m_flags(Shadow),
       m_ctrl(ring.m_ctrl), m_data(ring.m_data), m_full(0) { }
 
@@ -457,7 +457,7 @@ public:
     return i / Size;
   }
 
-  inline void stats(
+  void stats(
       uint64_t &inCount, uint64_t &inBytes, 
       uint64_t &outCount, uint64_t &outBytes) const {
     ZmAssert(m_ctrl);

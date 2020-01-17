@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -72,7 +72,7 @@ public:
       << " count=" << count;
   }
 
-  inline void stats(
+  void stats(
       ZmTime &min, ZmTime &max, ZmTime &total,
       double &mean, unsigned &count) const {
     ReadGuard guard(m_lock);

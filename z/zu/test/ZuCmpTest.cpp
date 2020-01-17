@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 #include <zlib/ZuLib.hpp>
 
@@ -35,23 +35,23 @@ template <typename T> struct A : public T {
 struct S {
   S() { m_data[0] = 0; }
   S(const S &s) { strcpy(m_data, s.m_data); }
-  inline S &operator =(const S &s)
+  S &operator =(const S &s)
     { if (this != &s) strcpy(m_data, s.m_data); return *this; }
   S(const char *s) { strcpy(m_data, s); }
   S &operator =(const char *s) { strcpy(m_data, s); return *this; }
   operator char *() { return m_data; }
   operator const char *() const { return m_data; }
   bool operator !() const { return !m_data[0]; }
-  inline bool operator ==(const S &s) const
+  bool operator ==(const S &s) const
     { return !strcmp(m_data, s.m_data); }
   bool operator ==(const char *s) const { return !strcmp(m_data, s); }
-  inline bool operator !=(const S &s) const
+  bool operator !=(const S &s) const
     { return strcmp(m_data, s.m_data); }
   bool operator !=(const char *s) const { return strcmp(m_data, s); }
-  inline bool operator >(const S &s) const
+  bool operator >(const S &s) const
     { return strcmp(m_data, s.m_data) > 0; }
   bool operator >(const char *s) const { return strcmp(m_data, s) > 0; }
-  inline bool operator <(const S &s) const
+  bool operator <(const S &s) const
     { return strcmp(m_data, s.m_data) < 0; }
   bool operator <(const char *s) const { return strcmp(m_data, s) < 0; }
   char m_data[32];

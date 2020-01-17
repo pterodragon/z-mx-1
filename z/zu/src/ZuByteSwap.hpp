@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -140,47 +140,47 @@ public:
 
   ZuByteSwap operator -() { return ZuByteSwap(-get<I>()); }
 
-  template <typename R> inline ZuByteSwap operator +(const R &r) const
+  template <typename R> ZuByteSwap operator +(const R &r) const
     { return ZuByteSwap(get<I>() + r); }
-  template <typename R> inline ZuByteSwap operator -(const R &r) const
+  template <typename R> ZuByteSwap operator -(const R &r) const
     { return ZuByteSwap(get<I>() - r); }
-  template <typename R> inline ZuByteSwap operator *(const R &r) const
+  template <typename R> ZuByteSwap operator *(const R &r) const
     { return ZuByteSwap(get<I>() * r); }
-  template <typename R> inline ZuByteSwap operator /(const R &r) const
+  template <typename R> ZuByteSwap operator /(const R &r) const
     { return ZuByteSwap(get<I>() / r); }
-  template <typename R> inline ZuByteSwap operator %(const R &r) const
+  template <typename R> ZuByteSwap operator %(const R &r) const
     { return ZuByteSwap(get<I>() % r); }
-  template <typename R> inline ZuByteSwap operator |(const R &r) const
+  template <typename R> ZuByteSwap operator |(const R &r) const
     { return ZuByteSwap(get<I>() | r); }
-  template <typename R> inline ZuByteSwap operator &(const R &r) const
+  template <typename R> ZuByteSwap operator &(const R &r) const
     { return ZuByteSwap(get<I>() & r); }
-  template <typename R> inline ZuByteSwap operator ^(const R &r) const
+  template <typename R> ZuByteSwap operator ^(const R &r) const
     { return ZuByteSwap(get<I>() ^ r); }
 
-  inline ZuByteSwap operator ++(int)
+  ZuByteSwap operator ++(int)
     { ZuByteSwap o = *this; set(get<I>() + 1); return o; }
-  inline ZuByteSwap &operator ++()
+  ZuByteSwap &operator ++()
     { set(get<I>() + 1); return *this; }
-  inline ZuByteSwap operator --(int)
+  ZuByteSwap operator --(int)
     { ZuByteSwap o = *this; set(get<I>() - 1); return o; }
-  inline ZuByteSwap &operator --()
+  ZuByteSwap &operator --()
     { set(get<I>() - 1); return *this; }
 
-  template <typename R> inline ZuByteSwap &operator +=(const R &r)
+  template <typename R> ZuByteSwap &operator +=(const R &r)
     { set(get<I>() + r); return *this; }
-  template <typename R> inline ZuByteSwap &operator -=(const R &r)
+  template <typename R> ZuByteSwap &operator -=(const R &r)
     { set(get<I>() - r); return *this; }
-  template <typename R> inline ZuByteSwap &operator *=(const R &r)
+  template <typename R> ZuByteSwap &operator *=(const R &r)
     { set(get<I>() * r); return *this; }
-  template <typename R> inline ZuByteSwap &operator /=(const R &r)
+  template <typename R> ZuByteSwap &operator /=(const R &r)
     { set(get<I>() / r); return *this; }
-  template <typename R> inline ZuByteSwap &operator %=(const R &r)
+  template <typename R> ZuByteSwap &operator %=(const R &r)
     { set(get<I>() % r); return *this; }
-  template <typename R> inline ZuByteSwap &operator |=(const R &r)
+  template <typename R> ZuByteSwap &operator |=(const R &r)
     { set(get<I>() | r); return *this; }
-  template <typename R> inline ZuByteSwap &operator &=(const R &r)
+  template <typename R> ZuByteSwap &operator &=(const R &r)
     { set(get<I>() & r); return *this; }
-  template <typename R> inline ZuByteSwap &operator ^=(const R &r)
+  template <typename R> ZuByteSwap &operator ^=(const R &r)
     { set(get<I>() ^ r); return *this; }
 
 private:
@@ -189,13 +189,13 @@ private:
     m_i = i.m_i;
   }
   template <typename T>
-  inline typename ZuIfT<
+  typename ZuIfT<
       !ZuConversion<T, ZuByteSwap>::Is &&
       ZuConversion<T, I>::Exists>::T set(const T &i) {
     m_i = B::bswap((I)i);
   }
   template <typename T>
-  inline typename ZuIfT<
+  typename ZuIfT<
       !ZuConversion<T, ZuByteSwap>::Is &&
       !ZuConversion<T, I>::Exists &&
       sizeof(T) == sizeof(I)>::T set(const T &i) {
@@ -207,13 +207,13 @@ private:
     return *this;
   }
   template <typename T>
-  inline typename ZuIfT<
+  typename ZuIfT<
       !ZuConversion<T, ZuByteSwap>::Is &&
       ZuConversion<T, I>::Exists, T>::T get() const {
     return (T)B::bswap(m_i);
   }
   template <typename T>
-  inline typename ZuIfT<
+  typename ZuIfT<
       !ZuConversion<T, ZuByteSwap>::Is &&
       !ZuConversion<T, I>::Exists &&
       sizeof(T) == sizeof(I), T>::T get() const {

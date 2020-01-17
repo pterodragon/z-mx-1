@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 #include <zlib/ZuStringN.hpp>
 
@@ -35,7 +35,7 @@ void usage()
 typedef ZiRing<ZiRingMsg> Ring;
 
 struct App {
-  inline App() :
+  App() :
     flags(Ring::Write | Ring::Create), gc(false), ring(0),
     count(1), msgsize(1024), interval((time_t)0), slow(false) { }
 

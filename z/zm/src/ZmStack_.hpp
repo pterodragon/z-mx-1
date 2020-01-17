@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -55,7 +55,7 @@ class ZmNoLock;
 
 class ZmStackParams {
 public:
-  inline ZmStackParams() :
+  ZmStackParams() :
     m_initial(ZmStackInitial),
     m_increment(ZmStackIncrement),
     m_maxFrag(ZmStackMaxFrag) { }
@@ -168,7 +168,7 @@ public:
   typedef ZmReadGuard<Lock> ReadGuard;
 
   template <typename ...Args>
-  inline ZmStack(ZmStackParams params = ZmStackParams(), Args &&... args) :
+  ZmStack(ZmStackParams params = ZmStackParams(), Args &&... args) :
       NTP::Base{ZuFwd<Args>(args)...},
       m_data(0), m_size(0), m_length(0), m_count(0),
       m_initial(params.initial()),
@@ -349,7 +349,7 @@ friend class Iterator;
     typedef ZmStack<Val, NTP> Stack;
 
   public:
-    inline Iterator(Stack &stack) :
+    Iterator(Stack &stack) :
       Guard(stack.m_lock), m_stack(stack), m_i(stack.m_length) { }
     Val *iteratePtr() {
       do {

@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -80,7 +80,7 @@ template <typename T> struct ZiRingTraits {
 class ZiRingMsg {
 public:
   ZiRingMsg() : m_type(0), m_length(0) { }
-  inline ZiRingMsg(unsigned type, unsigned length) :
+  ZiRingMsg(unsigned type, unsigned length) :
     m_type(type), m_length(length) { }
 
   ZuInline unsigned type() const { return m_type; }
@@ -105,18 +105,18 @@ class ZiAPI ZiRingParams {
 public:
   typedef ZiPlatform::Path Path;
 
-  inline ZiRingParams() :
+  ZiRingParams() :
     m_size(0),
     m_ll(false), m_spin(1000),
     m_timeout(1), m_killWait(1), m_coredump(false) { }
 
   template <typename Name>
-  inline ZiRingParams(const Name &name) :
+  ZiRingParams(const Name &name) :
     m_name(name), m_size(0),
     m_ll(false), m_spin(1000),
     m_timeout(1), m_killWait(1), m_coredump(false) { }
   template <typename Name>
-  inline ZiRingParams(const Name &name, const ZiRingParams &p) :
+  ZiRingParams(const Name &name, const ZiRingParams &p) :
     m_name(name), m_size(p.m_size),
     m_ll(p.m_ll), m_spin(p.m_spin),
     m_timeout(p.m_timeout),
@@ -124,8 +124,8 @@ public:
     m_killWait(p.m_killWait),
     m_coredump(p.m_coredump) { }
 
-  inline ZiRingParams(const ZiRingParams &p) = default;
-  inline ZiRingParams &operator =(const ZiRingParams &p) = default;
+  ZiRingParams(const ZiRingParams &p) = default;
+  ZiRingParams &operator =(const ZiRingParams &p) = default;
 
   template <typename Name>
   ZiRingParams &name(const Name &s) { m_name = s; return *this; }
@@ -831,7 +831,7 @@ public:
     return size() - (tail - head);
   }
 
-  inline void stats(
+  void stats(
       uint64_t &inCount, uint64_t &inBytes, 
       uint64_t &outCount, uint64_t &outBytes) const {
     ZmAssert(m_ctrl);

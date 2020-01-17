@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -121,7 +121,7 @@ namespace MxMDStream {
       Magic = 0xc0def17e		// "code file"
     };
 
-    inline FileHdr(ZuString id_, uint16_t vmajor_, uint16_t vminor_) :
+    FileHdr(ZuString id_, uint16_t vmajor_, uint16_t vminor_) :
 	magic(Magic), vmajor(vmajor_), vminor(vminor_) {
       unsigned n = id_.length();
       if (n >= sizeof(id)) n = sizeof(id) - 1;
@@ -458,7 +458,7 @@ namespace MxMDStream {
 namespace MxMDStream {
 
   struct Msg_HeapID {
-    static const char *id() { return "MxMDStream.Msg"; }
+    ZuInline static const char *id() { return "MxMDStream.Msg"; }
   };
 
   struct MsgData : public ZuPolymorph {
@@ -534,7 +534,7 @@ namespace MxMDStream {
   // special processing for AddCombination's instruments/sides/ratios fields
   template <typename App,
 	   typename Key_, typename Instrument, typename TickSizeTbl>
-  inline bool addCombination(App &app, MxInt shardID, MxDateTime transactTime,
+  bool addCombination(App &app, MxInt shardID, MxDateTime transactTime,
       const Key_ &key, unsigned legs, const Instrument *instruments,
       const MxRatio *ratios, const MxMDLotSizes &lotSizes,
       const TickSizeTbl &tickSizeTbl,
@@ -597,7 +597,7 @@ namespace MxMDStream {
       }});
     }
     template <typename Cxn, typename L>
-    inline typename IOLambda<Cxn, L>::T send(
+    typename IOLambda<Cxn, L>::T send(
 	Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr, L l) {
       msg->ptr<Msg>()->addr = addr;
       cxn->send(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
@@ -610,7 +610,7 @@ namespace MxMDStream {
       }});
     }
     template <typename Cxn, typename L>
-    inline typename IOLambda<Cxn, L>::T recv(
+    typename IOLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       MxQMsg *msg_ = msg.ptr();
       io.init(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
@@ -633,7 +633,7 @@ namespace MxMDStream {
       }});
     }
     template <typename Cxn, typename L>
-    inline typename IOLambda<Cxn, L>::T send(
+    typename IOLambda<Cxn, L>::T send(
 	Cxn *cxn, ZmRef<MxQMsg> msg, L l) {
       cxn->send(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
 	io.init(ZiIOFn{io.fn.mvObject<MxQMsg>(),
@@ -645,7 +645,7 @@ namespace MxMDStream {
     }
 
     template <typename Cxn, typename L>
-    inline typename IOLambda<Cxn, L>::T recv(
+    typename IOLambda<Cxn, L>::T recv(
 	ZmRef<MxQMsg> msg, ZiIOContext &io, L l) {
       MxQMsg *msg_ = msg.ptr();
       io.init(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) -> uintptr_t {

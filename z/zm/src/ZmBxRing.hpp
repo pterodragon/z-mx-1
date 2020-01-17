@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -83,7 +83,7 @@ public:
   enum { Size = ZmBxRingAlign(sizeof(T)) };
 
   template <typename ...Args>
-  inline ZmBxRing(ZmRingParams params = ZmRingParams(0), Args &&... args) :
+  ZmBxRing(ZmRingParams params = ZmRingParams(0), Args &&... args) :
       NTP::Base{ZuFwd<Args>(args)...},
       ZmRing_(params),
       m_flags(0), m_id(-1), m_ctrl(0), m_data(0),
@@ -470,7 +470,7 @@ public:
     return i / Size;
   }
 
-  inline void stats(
+  void stats(
       uint64_t &inCount, uint64_t &inBytes, 
       uint64_t &outCount, uint64_t &outBytes) const {
     ZmAssert(m_ctrl);

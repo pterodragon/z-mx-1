@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -39,8 +39,7 @@
 class ZmHashParams {
 public:
   ZmHashParams() : m_bits(8), m_loadFactor(1.0), m_cBits(5) { }
-  inline ZmHashParams(ZuString id) :
-      m_bits(8), m_loadFactor(1.0), m_cBits(5) {
+  ZmHashParams(ZuString id) : m_bits(8), m_loadFactor(1.0), m_cBits(5) {
     init(id);
   }
 
@@ -89,7 +88,7 @@ struct ZmAnyHash_PtrAccessor : public ZuAccessor<ZmAnyHash_, uintptr_t> {
   }
 };
 struct ZmHashMgr_HeapID {
-  static const char *id() { return "ZmHashMgr_"; }
+  ZuInline static const char *id() { return "ZmHashMgr_"; }
 };
 typedef ZmRBTree<ZmAnyHash_,
 	  ZmRBTreeNodeIsKey<true,

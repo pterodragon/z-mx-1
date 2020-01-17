@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -259,7 +259,7 @@ public:
     m_snaplen(-1), m_timeout(-1), m_bufferSize(-1), m_nonBlocking(false),
     m_asFile(false) { }
 
-  inline ZpHandleInfo(const ZpHandleInfo &hi) :
+  ZpHandleInfo(const ZpHandleInfo &hi) :
     m_pcap(hi.m_pcap), m_iface(hi.m_iface), m_filter(hi.m_filter),
     m_priority(hi.m_priority), m_promisc(hi.m_promisc), 
     m_snaplen(hi.m_snaplen), m_timeout(hi.m_timeout), 
@@ -338,14 +338,16 @@ class ZpAPI ZpHandle : public ZmPolymorph {
   struct FilterAccessor;
   friend struct FilterAccessor;
   struct FilterAccessor : public ZuAccessor<ZpHandle *, const ZtString &> {
-    static const ZtString &value(ZpHandle *h) { return h->m_info.filter(); }
+    ZuInline static const ZtString &value(ZpHandle *h) {
+      return h->m_info.filter();
+    }
   };
 
 public:
   struct DrainBounce {
     DrainBounce() { }
 
-    inline void bounce(
+    void bounce(
 	u_char *userarg, const pcap_pkthdr *pkthdr, const u_char *packet) {
 #ifdef ZpPcap_DEBUG
       if (m_handle->m_debugDrain)

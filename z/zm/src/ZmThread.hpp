@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -100,20 +100,20 @@ extern "C" {
 
 class ZmThreadParams {
 public:
-  inline ZmThreadParams &&name(ZuString s)
+  ZmThreadParams &&name(ZuString s)
     { m_name = s; return ZuMv(*this); }
-  inline ZmThreadParams &&stackSize(unsigned v)
+  ZmThreadParams &&stackSize(unsigned v)
     { m_stackSize = v; return ZuMv(*this); }
-  inline ZmThreadParams &&priority(int v)
+  ZmThreadParams &&priority(int v)
     { m_priority = v; return ZuMv(*this); }
-  inline ZmThreadParams &&partition(unsigned v)
+  ZmThreadParams &&partition(unsigned v)
     { m_partition = v; return ZuMv(*this); }
-  inline ZmThreadParams &&cpuset(const ZmBitmap &b)
+  ZmThreadParams &&cpuset(const ZmBitmap &b)
     { m_cpuset = b; return ZuMv(*this); }
-  inline ZmThreadParams &&detached(bool b)
+  ZmThreadParams &&detached(bool b)
     { m_detached = b; return ZuMv(*this); }
 #ifndef _WIN32
-  inline ZmThreadParams &&createFn(ZmThread_CreateFn fn)
+  ZmThreadParams &&createFn(ZmThread_CreateFn fn)
     { m_createFn = fn; return ZuMv(*this); }
 #endif
 
@@ -229,10 +229,10 @@ class ZmAPI ZmThreadContext : public ZmObject, public ZmThreadContext_ {
 #endif
   friend class ZmThread;
 
-  inline ZmThreadContext() // only called via self() for unmanaged threads
+  ZmThreadContext() // only called via self() for unmanaged threads
     { init(); }
   template <typename Fn>
-  inline ZmThreadContext(int index, Fn &&fn, const ZmThreadParams &params) :
+  ZmThreadContext(int index, Fn &&fn, const ZmThreadParams &params) :
       m_fn(ZuFwd<Fn>(fn)),
       m_index(index), m_name(params.name()),
       m_stackSize(params.stackSize()), m_priority(params.priority()),

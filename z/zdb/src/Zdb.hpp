@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -221,13 +221,13 @@ typedef ZmList<Zdb_File_,
 typedef Zdb_FileLRU::Node Zdb_FileLRUNode;
 
 struct Zdb_FileIndexAccessor : public ZuAccessor<Zdb_FileLRUNode, unsigned> {
-  static unsigned value(const Zdb_FileLRUNode &node) {
+  ZuInline static unsigned value(const Zdb_FileLRUNode &node) {
     return node.index();
   }
 };
 
 struct Zdb_FileHeapID {
-  static const char *id() { return "Zdb_File"; }
+  ZuInline static const char *id() { return "Zdb_File"; }
 };
 typedef ZmHash<Zdb_FileLRUNode,
 	  ZmHashObject<ZmPolymorph,
@@ -279,7 +279,7 @@ struct ZdbLRUNode_RNAccessor : public ZuAccessor<ZdbLRUNode, ZdbRN> {
 };
 
 struct Zdb_Cache_ID {
-  static const char *id() { return "Zdb.Cache"; }
+  ZuInline static const char *id() { return "Zdb.Cache"; }
 };
 
 typedef ZmHash<ZdbLRUNode,
@@ -407,7 +407,7 @@ private:
   bool			m_pinned = false;
 };
 
-inline ZdbRN ZdbLRUNode_RNAccessor::value(const ZdbLRUNode &pod)
+ZuInline ZdbRN ZdbLRUNode_RNAccessor::value(const ZdbLRUNode &pod)
 {
   return static_cast<const ZdbAnyPOD &>(pod).rn();
 }
@@ -437,11 +437,11 @@ typedef ZmFn<ZdbAnyPOD *, int, bool> ZdbAddFn;
 typedef ZmFn<ZdbAnyPOD *, int> ZdbWriteFn;
 
 struct ZdbPOD_HeapID {
-  static const char *id() { return "ZdbPOD"; }
+  ZuInline static const char *id() { return "ZdbPOD"; }
 };
 // heap ID can be specialized by app
 template <typename T> struct ZdbPOD_Cmpr_HeapID {
-  static const char *id() { return "ZdbPOD_Cmpr"; }
+  ZuInline static const char *id() { return "ZdbPOD_Cmpr"; }
 };
 
 template <typename T_>
@@ -535,7 +535,7 @@ friend class ZdbAnyPOD;
   struct IDAccessor;
 friend struct IDAccessor;
   struct IDAccessor : public ZuAccessor<ZdbAny *, ZdbID> {
-    static ZdbID value(const ZdbAny *db) { return db->m_id; }
+    ZuInline static ZdbID value(const ZdbAny *db) { return db->m_id; }
   };
 
   typedef Zdb_Cache Cache;
@@ -759,7 +759,7 @@ template <typename> friend struct ZuPrint;
   struct IDAccessor;
 friend struct IDAccessor;
   struct IDAccessor : public ZuAccessor<ZdbHost *, int> {
-    static int value(ZdbHost *h) { return h->id(); }
+    ZuInline static int value(ZdbHost *h) { return h->id(); }
   };
 
   ZdbHost(ZdbEnv *env, const ZdbHostConfig *config);
@@ -985,7 +985,7 @@ friend class ZdbAnyPOD;
 friend class ZdbAnyPOD_Send__;
 
   struct HostTree_HeapID {
-    static const char *id() { return "ZdbEnv.HostTree"; }
+    ZuInline static const char *id() { return "ZdbEnv.HostTree"; }
   };
   typedef ZmRBTree<ZmRef<ZdbHost>,
 	    ZmRBTreeIndex<ZdbHost::IDAccessor,
@@ -994,7 +994,7 @@ friend class ZdbAnyPOD_Send__;
 		  ZmRBTreeHeapID<HostTree_HeapID> > > > > HostTree;
 
   struct CxnHash_HeapID {
-    static const char *id() { return "ZdbEnv.CxnHash"; }
+    ZuInline static const char *id() { return "ZdbEnv.CxnHash"; }
   };
   typedef ZmHash<ZmRef<Zdb_Cxn>,
 	    ZmHashLock<ZmPLock,

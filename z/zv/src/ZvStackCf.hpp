@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -45,7 +45,7 @@ struct ZvStackParams : public ZmStackParams {
   }
 
   ZvStackParams(ZvCf *cf) : ZmStackParams() { init(cf); }
-  inline ZvStackParams(ZvCf *cf, const ZmStackParams &deflt) :
+  ZvStackParams(ZvCf *cf, const ZmStackParams &deflt) :
       ZmStackParams(deflt) { init(cf); }
 
   void init(ZvCf *cf) {

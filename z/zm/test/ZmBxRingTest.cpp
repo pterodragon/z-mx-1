@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 #include <zlib/ZuStringN.hpp>
 
@@ -36,7 +36,7 @@ struct Msg {
 typedef ZmBxRing<Msg> Ring;
 
 struct App {
-  inline App() :
+  App() :
     ring(0), count(1), readers(1), writers(1),
     interval((time_t)0), slow(false) { }
 

@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -37,9 +37,10 @@
 
 class ZmAPI ZmBackoff {
 public:
-  inline ZmBackoff(const ZmTime &minimum, const ZmTime &maximum,
-		   double backoff, double random) :
-    m_min(minimum), m_max(maximum), m_backoff(backoff), m_random(random) { }
+  ZmBackoff(
+      const ZmTime &minimum, const ZmTime &maximum,
+      double backoff, double random) :
+      m_min(minimum), m_max(maximum), m_backoff(backoff), m_random(random) { }
 
   ZmTime minimum() { return(m_min); }
   ZmTime maximum() { return(m_max); }

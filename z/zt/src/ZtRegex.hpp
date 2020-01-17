@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -77,7 +77,7 @@ public:
   ZtRegex(const char *pattern, int options = 0); // pcre_compile() options
 
   // ZtRegex is move-only (by design)
-  inline ZtRegex(ZtRegex &&r) noexcept :
+  ZtRegex(ZtRegex &&r) noexcept :
       m_regex(r.m_regex), m_extra(r.m_extra), m_captureCount(r.m_captureCount) {
     r.m_regex = 0;
     r.m_extra = 0;
@@ -122,7 +122,7 @@ public:
     ZtArray<int> ovector;
     return exec(s, offset, options, ovector);
   }
-  inline int m(ZuString s,
+  int m(ZuString s,
       Captures &captures, int offset = 0, int options = 0) const {
     ZtArray<int> ovector;
     int i = exec(s, offset, options, ovector);
@@ -130,7 +130,7 @@ public:
     return i;
   }
 
-  template <typename S> inline typename ZuIfT<
+  template <typename S> typename ZuIfT<
     ZuConversion<ZtString, S>::Is ||
     ZuConversion<ZtArray<char>, S>::Is, int>::T s(
 	S &s, ZuString r, int offset = 0, int options = 0) const {
@@ -141,7 +141,7 @@ public:
     return i;
   }
 
-  template <typename S> inline typename ZuIfT<
+  template <typename S> typename ZuIfT<
     ZuConversion<ZtString, S>::Is ||
     ZuConversion<ZtArray<char>, S>::Is, int>::T sg(
 	S &s, ZuString r, int offset = 0, int options = 0) const {

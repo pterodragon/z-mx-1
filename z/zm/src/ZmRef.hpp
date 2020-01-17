@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -155,12 +155,12 @@ public:
 #endif
   }
   template <typename R>
-  inline ZmRef(const R &r, typename MatchOtherRef<R>::T *_ = 0) :
+  ZmRef(const R &r, typename MatchOtherRef<R>::T *_ = 0) :
       m_object(static_cast<T *>(const_cast<typename R::T *>(r.m_object))) {
     if (T *o = m_object) ZmREF(o);
   }
   template <typename R>
-  inline ZmRef(R &&r,
+  ZmRef(R &&r,
       typename MatchOtherRef<typename ZuDeref<R>::T>::T *_ = 0) noexcept :
       m_object(static_cast<T *>(const_cast<typename ZuDeref<R>::T::T *>(
 	      r.m_object))) {
@@ -173,7 +173,7 @@ public:
     if (o) ZmREF(o);
   }
   template <typename O>
-  inline ZmRef(O *o, typename MatchPtr<O>::T *_ = 0) :
+  ZmRef(O *o, typename MatchPtr<O>::T *_ = 0) :
       m_object(static_cast<T *>(o)) {
     if (o) ZmREF(o);
   }

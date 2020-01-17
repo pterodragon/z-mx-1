@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 #include <zlib/ZuLib.hpp>
 
@@ -29,7 +29,7 @@ class Mx;
 
 class Connection : public ZiConnection {
 public:
-  inline Connection(
+  Connection(
       ZiMultiplex *mx, const ZiConnectionInfo &ci, const ZiSockAddr &dest) :
     ZiConnection(mx, ci), m_counter(0), m_dest(dest) { }
   ~Connection() { }

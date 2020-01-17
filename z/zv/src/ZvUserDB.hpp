@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -86,7 +86,7 @@ public:
   }
 };
 struct RoleNameAccessor : public ZuAccessor<Role_, ZtString> {
-  static const ZtString &value(const Role_ &r) { return r.name; }
+  ZuInline static const ZtString &value(const Role_ &r) { return r.name; }
 };
 using RoleTree =
   ZmRBTree<Role_,
@@ -146,7 +146,7 @@ struct User__ : public ZuPolymorph {
   }
 };
 struct UserIDAccessor : public ZuAccessor<User__, uint64_t> {
-  static uint64_t value(const User__ &u) { return u.id; }
+  ZuInline static uint64_t value(const User__ &u) { return u.id; }
 };
 using UserIDHash =
   ZmHash<User__,
@@ -157,7 +157,7 @@ using UserIDHash =
 	    ZmHashLock<ZmNoLock> > > > > >;
 using User_ = UserIDHash::Node;
 struct UserNameAccessor : public ZuAccessor<User_, ZtString> {
-  static ZtString value(const User_ &u) { return u.name; }
+  ZuInline static ZtString value(const User_ &u) { return u.name; }
 };
 using UserNameHash =
   ZmHash<User_,
@@ -183,7 +183,7 @@ ZmRef<User> loadUser(const Roles &roles, const fbs::User *user_) {
 }
 
 struct Key_ : public ZuObject {
-  inline Key_(ZuString id_, Key_ *nextKey_, uint64_t userID_) :
+  Key_(ZuString id_, Key_ *nextKey_, uint64_t userID_) :
       id(id_), nextKey(nextKey_), userID(userID_) { }
 
   using IDData = ZuArrayN<uint8_t, 16>;
@@ -202,7 +202,7 @@ struct Key_ : public ZuObject {
   }
 };
 struct KeyIDAccessor : public ZuAccessor<Key_, ZtString> {
-  static ZtString value(const Key_ &k) { return k.id; }
+  ZuInline static ZtString value(const Key_ &k) { return k.id; }
 };
 using KeyHash =
   ZmHash<Key_,

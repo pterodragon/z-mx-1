@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -178,7 +178,7 @@ private:
   char			m_buf[Size];
 };
 struct Msg_HeapID {
-  static const char *id() { return "Msg"; }
+  ZuInline static const char *id() { return "Msg"; }
 };
 typedef ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> Msg_Heap;
 typedef Msg_<Msg_Heap> Msg;

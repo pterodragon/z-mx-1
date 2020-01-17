@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -43,7 +43,7 @@ extern "C" {
 
 struct Msg {
   Msg() { }
-  inline Msg(JNIEnv *env, jobject obj, jstring text) :
+  Msg(JNIEnv *env, jobject obj, jstring text) :
     m_obj(env->NewGlobalRef(obj)) {
     m_text = ZJNI::j2s_ZtString(env, text);
   }

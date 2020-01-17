@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -61,7 +61,7 @@ struct ZvCxnOptions : public ZiCxnOptions {
 
   ZvCxnOptions(ZvCf *cf) : ZiCxnOptions() { init(cf); }
 
-  inline ZvCxnOptions(ZvCf *cf, const ZiCxnOptions &deflt) :
+  ZvCxnOptions(ZvCf *cf, const ZiCxnOptions &deflt) :
       ZiCxnOptions(deflt) { init(cf); }
 
   void init(ZvCf *cf) {
@@ -102,7 +102,7 @@ struct ZvMxParams : public ZiMxParams {
 
   ZvMxParams(ZvCf *cf) { init(cf); }
 
-  inline ZvMxParams(ZvCf *cf, ZiMxParams &&deflt) :
+  ZvMxParams(ZvCf *cf, ZiMxParams &&deflt) :
     ZiMxParams(ZuMv(deflt)) { init(cf); }
 
   ZvSchedParams &scheduler() {
@@ -141,10 +141,10 @@ public:
   };
 
   template <typename ID_>
-  inline ZvMultiplex(const ID_ &id) :
+  ZvMultiplex(const ID_ &id) :
       ZiMultiplex(ZiMxParams().scheduler([&](auto &s) { s.id(id); })) { }
   template <typename ID_>
-  inline ZvMultiplex(const ID_ &id, ZvCf *cf) :
+  ZvMultiplex(const ID_ &id, ZvCf *cf) :
       ZiMultiplex(ZvMxParams(cf,
 	    ZiMxParams().scheduler([&](auto &s) { s.id(id); }))) { }
 };

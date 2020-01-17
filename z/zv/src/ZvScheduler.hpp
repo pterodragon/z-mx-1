@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -112,10 +112,10 @@ struct ZvSchedParams : public ZmSchedParams {
 class ZvScheduler : public ZuObject, public ZmScheduler {
 public:
   template <typename ID>
-  inline ZvScheduler(const ID &id) :
+  ZvScheduler(const ID &id) :
     ZmScheduler(ZmSchedParams().nThreads(1).id(id)) { }
   template <typename ID>
-  inline ZvScheduler(const ID &id, ZvCf *cf) :
+  ZvScheduler(const ID &id, ZvCf *cf) :
     ZmScheduler(ZvSchedParams(cf,
 	  ZmSchedParams().nThreads(1).id(id))) { }
 };

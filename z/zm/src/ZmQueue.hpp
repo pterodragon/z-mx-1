@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -50,7 +50,7 @@ struct ZmQueue_Defaults {
   template <typename T> struct IHashFnT { typedef ZuHash<T> IHashFn; };
   template <typename T> struct IndexT { typedef T Index; };
   typedef ZmLock Lock;
-  struct HeapID { static const char *id() { return "ZmQueue"; } };
+  struct HeapID { ZuInline static const char *id() { return "ZmQueue"; } };
   struct Base { };
 };
 

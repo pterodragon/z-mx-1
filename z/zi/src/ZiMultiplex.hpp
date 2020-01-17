@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -565,8 +565,7 @@ public:
   // index on socket
   struct SocketAccessor;
 friend struct SocketAccessor;
-  struct SocketAccessor :
-      public ZuAccessor<ZiConnection *, Socket> {
+  struct SocketAccessor : public ZuAccessor<ZiConnection *, Socket> {
     ZuInline static Socket value(const ZiConnection *c) {
       return c->info().socket;
     }
@@ -684,20 +683,20 @@ public:
     return ZuMv(*this);
   }
 #ifdef ZiMultiplex_EPoll
-  inline ZiMxParams &&epollMaxFDs(unsigned n)
+  ZiMxParams &&epollMaxFDs(unsigned n)
     { m_epollMaxFDs = n; return ZuMv(*this); }
-  inline ZiMxParams &&epollQuantum(unsigned n)
+  ZiMxParams &&epollQuantum(unsigned n)
     { m_epollQuantum = n; return ZuMv(*this); }
 #endif
-  inline ZiMxParams &&rxBufSize(unsigned v)
+  ZiMxParams &&rxBufSize(unsigned v)
     { m_rxBufSize = v; return ZuMv(*this); }
-  inline ZiMxParams &&txBufSize(unsigned v)
+  ZiMxParams &&txBufSize(unsigned v)
     { m_txBufSize = v; return ZuMv(*this); }
-  inline ZiMxParams &&listenerHash(ZuString id)
+  ZiMxParams &&listenerHash(ZuString id)
     { m_listenerHash = id; return ZuMv(*this); }
-  inline ZiMxParams &&requestHash(ZuString id)
+  ZiMxParams &&requestHash(ZuString id)
     { m_requestHash = id; return ZuMv(*this); }
-  inline ZiMxParams &&cxnHash(ZuString id)
+  ZiMxParams &&cxnHash(ZuString id)
     { m_cxnHash = id; return ZuMv(*this); }
 #ifdef ZiMultiplex_DEBUG
   ZiMxParams &&trace(bool b) { m_trace = b; return ZuMv(*this); }
@@ -799,8 +798,7 @@ friend class ZiConnection;
   public:
     struct SocketAccessor;
   friend struct SocketAccessor;
-    struct SocketAccessor :
-	public ZuAccessor<Listener_ *, Socket> {
+    struct SocketAccessor : public ZuAccessor<Listener_ *, Socket> {
       ZuInline static Socket value(const Listener_ &l) {
 	return l.info().socket;
       }
@@ -824,7 +822,7 @@ friend class ZiConnection;
     ZiListenInfo	m_info;
   };
   struct Listener_HeapID : public ZmHeapSharded {
-    static const char *id() { return "ZiMultiplex.Listener"; }
+    ZuInline static const char *id() { return "ZiMultiplex.Listener"; }
   };
   typedef ZmHash<Listener_,
 	    ZmHashNodeIsKey<true,
@@ -865,7 +863,7 @@ template <typename> friend class Accept_;
     char		m_buf[(sizeof(struct sockaddr_in) + 16) * 2];
   };
   struct Accept_HeapID {
-    static const char *id() { return "ZiMultiplex.Accept"; }
+    ZuInline static const char *id() { return "ZiMultiplex.Accept"; }
   };
   typedef ZmHeap<Accept_HeapID, sizeof(Accept_<ZuNull>)> Accept_Heap;
   typedef Accept_<Accept_Heap> Accept; 
@@ -888,8 +886,7 @@ template <typename> friend class Connect_;
   public:
     struct SocketAccessor;
   friend struct SocketAccessor;
-    struct SocketAccessor :
-	public ZuAccessor<Connect_ *, Socket> {
+    struct SocketAccessor : public ZuAccessor<Connect_ *, Socket> {
       ZuInline static Socket value(const Connect_ &c) {
 	return c.info().socket;
       }
@@ -931,7 +928,7 @@ template <typename> friend class Connect_;
 #endif
   };
   struct Connect_HeapID : public ZmHeapSharded {
-    static const char *id() { return "ZiMultiplex.Connect"; }
+    ZuInline static const char *id() { return "ZiMultiplex.Connect"; }
   };
 #if ZiMultiplex__ConnectHash
   typedef ZmHash<Connect_,
@@ -947,7 +944,7 @@ template <typename> friend class Connect_;
 #endif
 
   struct CxnHash_HeapID : public ZmHeapSharded {
-    static const char *id() { return "ZiMultiplex.CxnHash"; }
+    ZuInline static const char *id() { return "ZiMultiplex.CxnHash"; }
   };
   typedef ZmHash<ZmRef<ZiConnection>,
             ZmHashIndex<ZiConnection::SocketAccessor,

@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -97,7 +97,7 @@ private:
 };
 
 struct ZvIOMsg_HeapID {
-  static const char *id() { return "ZvIOMsg"; }
+  ZuInline static const char *id() { return "ZvIOMsg"; }
 };
 typedef ZmPQueue<ZvIOQItem,
 	  ZmPQueueNodeIsItem<true,
@@ -334,7 +334,7 @@ private:
 template <class Impl, class Lock_ = ZmNoLock>
 class ZvIOQueueTxPool : public ZvIOQueueTx<Impl, Lock_> {
   struct Queues_HeapID {
-    static const char *id() { return "ZvIOQueueTxPool.Queues"; }
+    ZuInline static const char *id() { return "ZvIOQueueTxPool.Queues"; }
   };
 
   typedef ZvIOQueue::Gap Gap;

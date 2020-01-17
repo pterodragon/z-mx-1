@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -42,12 +42,12 @@ public:
 
   ZuMvArray() = default;
 
-  inline ZuMvArray(unsigned n) :
+  ZuMvArray(unsigned n) :
       m_length{n}, m_data{!n ? (T *)nullptr : (T *)::malloc(n * sizeof(T))} {
     if (ZuUnlikely(n && !m_data)) throw std::bad_alloc();
     this->initItems(m_data, n);
   }
-  inline ZuMvArray(T *data, unsigned n) :
+  ZuMvArray(T *data, unsigned n) :
       m_length{n}, m_data{!n ? (T *)nullptr : (T *)::malloc(n * sizeof(T))} {
     if (ZuUnlikely(n && !m_data)) throw std::bad_alloc();
     this->moveItems(m_data, data, n);

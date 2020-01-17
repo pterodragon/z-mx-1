@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -115,7 +115,7 @@ public:
   // thrown by fromArgs() on error
   class ZvAPI Usage : public ZvError {
   public:
-    inline Usage(ZuString cmd, ZuString option) :
+    Usage(ZuString cmd, ZuString option) :
       m_cmd(cmd), m_option(option) { }
     void print_(ZmStream &s) const {
       s << "\"" << m_cmd << "\": invalid option \"" << m_option << '"';
@@ -136,7 +136,7 @@ public:
   // thrown by fromString() and fromFile() for an invalid key
   class ZvAPI Invalid : public ZvError {
   public:
-    inline Invalid(ZvCf *cf, ZuString key, ZuString fileName) :
+    Invalid(ZvCf *cf, ZuString key, ZuString fileName) :
 	m_key(fullKey(cf, key)), m_fileName(fileName) { }
     void print_(ZmStream &s) const {
       if (m_fileName) s << '"' << m_fileName << "\": ";
@@ -152,7 +152,7 @@ public:
   // thrown by fromString() and fromFile() on error
   class ZvAPI Syntax : public ZvError {
   public:
-    inline Syntax(int line, char ch, ZuString fileName) :
+    Syntax(int line, char ch, ZuString fileName) :
       m_line(line), m_ch(ch), m_fileName(fileName) { }
     void print_(ZmStream &s) const {
       if (m_fileName)
@@ -177,7 +177,7 @@ public:
   class ZvAPI BadDefine : public ZvError {
   public:
     template <typename Define, typename FileName>
-    inline BadDefine(Define &&define, FileName &&fileName) :
+    BadDefine(Define &&define, FileName &&fileName) :
       m_define(ZuFwd<Define>(define)), m_fileName(ZuFwd<FileName>(fileName)) { }
     void print_(ZmStream &s) const {
       if (m_fileName) s << '"' << m_fileName << "\": ";
@@ -193,7 +193,7 @@ public:
 	      ZmRBTreeBase<ZuObject,
 		ZmRBTreeLock<ZmNoLock> > > > Defines;
 
-  inline void fromString(
+  void fromString(
       ZuString in, bool validate,
       ZmRef<Defines> defines = new Defines()) {
     fromString(in, validate, ZuString(), defines);
@@ -225,7 +225,7 @@ public:
   };
 
   template <typename FileName>
-  inline void fromFile(const FileName &fileName, bool validate,
+  void fromFile(const FileName &fileName, bool validate,
       ZmRef<Defines> defines = new Defines()) {
     ZtString in;
     {
@@ -314,7 +314,7 @@ public:
   // thrown by all get methods for missing values when required is true
   class ZvAPI Required : public ZvError {
   public:
-    inline Required(ZvCf *cf, ZuString key) :
+    Required(ZvCf *cf, ZuString key) :
 	m_key(fullKey(cf, key)), m_bt(1) { }
     const ZtString &key() const { return m_key; }
     void print_(ZmStream &s) const {
@@ -329,7 +329,7 @@ public:
   // template base class for NValues / RangeInt / RangeDbl exceptions
   template <typename T> class Range_ : public ZvError {
   public:
-    inline Range_(ZtString key, T minimum, T maximum, T value) :
+    Range_(ZtString key, T minimum, T maximum, T value) :
 	m_key(ZuMv(key)),
 	m_minimum(minimum), m_maximum(maximum), m_value(value) { }
     const ZtString &key() const { return m_key; }
@@ -346,7 +346,7 @@ public:
   // thrown by getMultiple() on number of values error
   class ZvAPI NValues : public Range_<Int> {
   public:
-    inline NValues(
+    NValues(
 	ZvCf *cf, ZuString key, Int minimum, Int maximum, Int value) :
 	Range_<Int>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
@@ -358,7 +358,7 @@ public:
   // thrown by getInt() on range error
   class ZvAPI RangeInt : public Range_<Int> {
   public:
-    inline RangeInt(
+    RangeInt(
 	ZvCf *cf, ZuString key, Int minimum, Int maximum, Int value) :
 	Range_<Int>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
@@ -370,7 +370,7 @@ public:
   // thrown by getInt64() on range error
   class ZvAPI RangeInt64 : public Range_<Int64> {
   public:
-    inline RangeInt64(
+    RangeInt64(
 	ZvCf *cf, ZuString key, Int64 minimum, Int64 maximum, Int64 value) :
 	Range_<Int64>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
@@ -382,7 +382,7 @@ public:
   // thrown by getDbl() on range error
   class ZvAPI RangeDbl : public Range_<Double> {
   public:
-    inline RangeDbl(
+    RangeDbl(
 	ZvCf *cf, ZuString key, Double minimum, Double maximum, Double value) :
       Range_<Double>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
@@ -394,7 +394,7 @@ public:
 
   class ZvAPI BadFmt : public ZvError {
   public:
-    inline BadFmt(ZvCf *cf, ZuString key, ZuString value, ZuString fmt) :
+    BadFmt(ZvCf *cf, ZuString key, ZuString value, ZuString fmt) :
 	m_key(fullKey(cf, key)), m_value(value), m_fmt(fmt) { }
     void print_(ZmStream &s) const {
       s << '"' << m_key << "\" invalid value \""
@@ -408,7 +408,7 @@ public:
   };
 
   ZuString get(ZuString key, bool required, ZuString def);
-  inline ZuString get(ZuString key, bool required = false)
+  ZuString get(ZuString key, bool required = false)
     { return get(key, required, ZuString()); }
   const ZtArray<ZtString> *getMultiple(ZuString key,
       unsigned minimum, unsigned maximum, bool required = false);
@@ -491,13 +491,13 @@ public:
   }
 
   template <typename Map, typename Key>
-  inline Flags getFlags(
+  Flags getFlags(
       const Key &key, bool required = false, Flags def = 0) {
     return toFlags<Map>(key, get(key, required), def);
   }
 
   template <typename Map, typename Key>
-  inline Flags64 getFlags64(
+  Flags64 getFlags64(
       const Key &key, bool required = false, Flags64 def = 0) {
     return toFlags64<Map>(key, get(key, required), def);
   }
@@ -510,7 +510,7 @@ private:
 
   typedef ZmRef<Node> NodeRef;
 
-  struct HeapID { static const char *id() { return "ZvCf"; } };
+  struct HeapID { ZuInline static const char *id() { return "ZvCf"; } };
 
   typedef ZmRBTree<ZtString,
 	    ZmRBTreeVal<NodeRef,
@@ -525,7 +525,7 @@ friend class Iterator;
   class ZvAPI Iterator {
   public:
     Iterator(ZvCf *cf) : m_cf(cf), m_iterator(cf->m_tree) { }
-    inline Iterator(ZvCf *cf, ZuString prefix) :
+    Iterator(ZvCf *cf, ZuString prefix) :
 	m_iterator(cf->m_tree, prefix) { }
     ~Iterator();
 
@@ -533,15 +533,15 @@ friend class Iterator;
     const ZtArray<ZtString> *getMultiple(ZuString &key,
 	unsigned minimum, unsigned maximum);
     ZmRef<ZvCf> subset(ZuString &key);
-    inline Int getInt(ZuString &key, Int minimum, Int maximum,
+    Int getInt(ZuString &key, Int minimum, Int maximum,
 	Int def = Int()) {
       return toInt(m_cf, key, get(key), minimum, maximum, def);
     }
-    inline Int64 getInt64(ZuString &key, Int64 minimum, Int64 maximum,
+    Int64 getInt64(ZuString &key, Int64 minimum, Int64 maximum,
 	Int64 def = Int64()) {
       return toInt64(m_cf, key, get(key), minimum, maximum, def);
     }
-    inline Double getDbl(ZuString &key, Double minimum, Double maximum,
+    Double getDbl(ZuString &key, Double minimum, Double maximum,
 	Double def = Double()) {
       return toDbl(m_cf, key, get(key), minimum, maximum, def);
     }

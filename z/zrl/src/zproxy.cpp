@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -90,9 +90,9 @@ template <typename T> Print<T> print(const T &v) { return Print<T>(v); }
 
 class IOBuf : public ZmPolymorph {
 public:
-  inline IOBuf(Connection *connection) :
+  IOBuf(Connection *connection) :
     m_connection(connection), m_buf(BufSize) { }
-  inline IOBuf(Connection *connection, const ZmTime &stamp) :
+  IOBuf(Connection *connection, const ZmTime &stamp) :
     m_connection(connection), m_stamp(stamp), m_buf(BufSize) { }
 
   Connection *connection() const { return m_connection; }
@@ -319,7 +319,9 @@ public:
   struct LocalPortAccessor;
 friend struct LocalPortAccessor;
   struct LocalPortAccessor : public ZuAccessor<Listener *, int> {
-    static int value(Listener *listener) { return listener->m_localPort; }
+    ZuInline static int value(Listener *listener) {
+      return listener->m_localPort;
+    }
   };
 
   Listener(App *app, uint32_t cxnFlags,
@@ -1325,7 +1327,7 @@ void Connection::release()
   }
 }
 
-inline unsigned Proxy::SrcPortAccessor::value(Proxy *proxy)
+ZuInline unsigned Proxy::SrcPortAccessor::value(Proxy *proxy)
 {
   if (!proxy->m_out) return 0;
   return proxy->m_out->info().localPort;

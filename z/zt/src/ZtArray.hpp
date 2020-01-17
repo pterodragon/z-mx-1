@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -317,7 +317,7 @@ public:
   template <typename A> ZtArray(Copy_ _, A &&a) { copy(ZuFwd<A>(a)); }
 
 private:
-  template <typename A> inline typename MatchZtArray<A>::T copy(const A &a)
+  template <typename A> typename MatchZtArray<A>::T copy(const A &a)
     { copy_(a.m_data, a.length()); }
   template <typename A> typename MatchArray<A>::T copy(A &&a_) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
@@ -418,7 +418,7 @@ private:
   }
 
 public:
-  template <typename A> inline ZtArray &operator -=(A &&a)
+  template <typename A> ZtArray &operator -=(A &&a)
     { shadow(ZuFwd<A>(a)); return *this; }
 
 private:
@@ -449,7 +449,7 @@ public:
     convert_(s, iconv);
   }
 
-  inline ZtArray(unsigned length, unsigned size,
+  ZtArray(unsigned length, unsigned size,
       bool initItems = !ZuTraits<T>::IsPrimitive) {
     if (!size) { null_(); return; }
     alloc_(size, length);
@@ -467,7 +467,7 @@ public:
     if (!size) { null_(); return; }
     own_(data, length, size, true);
   }
-  inline explicit ZtArray(
+  explicit ZtArray(
       const T *data, unsigned length, unsigned size, bool mallocd) {
     if (!size) { null_(); return; }
     own_(data, length, size, mallocd);
@@ -483,7 +483,7 @@ public:
   template <typename A> void init(A &&a) { assign(ZuFwd<A>(a)); }
   template <typename A> void init_(A &&a) { ctor(ZuFwd<A>(a)); }
 
-  inline void init(
+  void init(
       unsigned length, unsigned size,
       bool initItems = !ZuTraits<T>::IsPrimitive) {
     if (this->size() < size || initItems) {
@@ -493,7 +493,7 @@ public:
       length_(length);
     if (initItems) this->initItems(m_data, length);
   }
-  inline void init_(
+  void init_(
       unsigned length, unsigned size,
       bool initItems = !ZuTraits<T>::IsPrimitive) {
     if (!size) { null_(); return; }
@@ -526,12 +526,12 @@ public:
     if (!size) { null_(); return; }
     own_(data, length, size, true);
   }
-  inline void init(
+  void init(
       const T *data, unsigned length, unsigned size, bool mallocd) {
     free_();
     init_(data, length, size, mallocd);
   }
-  inline void init_(
+  void init_(
       const T *data, unsigned length, unsigned size, bool mallocd) {
     if (!size) { null_(); return; }
     own_(data, length, size, mallocd);
@@ -546,7 +546,7 @@ private:
     length_mallocd(0, 0);
   }
 
-  inline void own_(
+  void own_(
       const T *data, unsigned length, unsigned size, bool mallocd) {
     ZmAssert(size >= length);
     if (!size) {
@@ -927,7 +927,7 @@ public:
 
 private:
   template <typename A>
-  inline typename MatchZtArray<A>::T splice_(
+  typename MatchZtArray<A>::T splice_(
       ZtArray *removed, int offset, int length, const A &a) {
     if (this == &a) {
       ZtArray a_ = a;
@@ -1035,9 +1035,9 @@ public:
     length_(n);
     return v;
   }
-  template <typename A> inline typename MatchZtArray<A>::T unshift(A &&a)
+  template <typename A> typename MatchZtArray<A>::T unshift(A &&a)
     { splice(0, 0, ZuFwd<A>(a)); }
-  template <typename A> inline typename MatchArray<A>::T unshift(A &&a)
+  template <typename A> typename MatchArray<A>::T unshift(A &&a)
     { splice(0, 0, ZuFwd<A>(a)); }
   void *unshift() {
     unsigned n = length();
@@ -1061,7 +1061,7 @@ public:
   }
 
 private:
-  inline void splice__(
+  void splice__(
       ZtArray *removed,
       int offset,
       int length,

@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -60,7 +60,7 @@
 
 class ZmSchedTParams : public ZmThreadParams {
 public:
-  inline ZmSchedTParams &&isolated(bool b)
+  ZmSchedTParams &&isolated(bool b)
     { m_isolated = b; return ZuMv(*this); }
 
   ZuInline bool isolated() const { return m_isolated; }
@@ -83,26 +83,26 @@ public:
 
   using ID = ZuID;
 
-  template <typename S> inline ZmSchedParams &&id(const S &s)
+  template <typename S> ZmSchedParams &&id(const S &s)
     { m_id = s; return ZuMv(*this); }
-  inline ZmSchedParams &&nThreads(unsigned v)
+  ZmSchedParams &&nThreads(unsigned v)
     { m_threads.length((m_nThreads = v) + 1); return ZuMv(*this); }
-  inline ZmSchedParams &&stackSize(unsigned v)
+  ZmSchedParams &&stackSize(unsigned v)
     { m_stackSize = v; return ZuMv(*this); }
-  inline ZmSchedParams &&priority(unsigned v)
+  ZmSchedParams &&priority(unsigned v)
     { m_priority = v; return ZuMv(*this); }
-  inline ZmSchedParams &&partition(unsigned v)
+  ZmSchedParams &&partition(unsigned v)
     { m_partition = v; return ZuMv(*this); }
-  template <typename T> inline ZmSchedParams &&quantum(T &&v)
+  template <typename T> ZmSchedParams &&quantum(T &&v)
     { m_quantum = ZuFwd<T>(v); return ZuMv(*this); }
 
-  inline ZmSchedParams &&queueSize(unsigned v)
+  ZmSchedParams &&queueSize(unsigned v)
     { m_queueSize = v; return ZuMv(*this); }
-  inline ZmSchedParams &&ll(bool v)
+  ZmSchedParams &&ll(bool v)
     { m_ll = v; return ZuMv(*this); }
-  inline ZmSchedParams &&spin(unsigned v)
+  ZmSchedParams &&spin(unsigned v)
     { m_spin = v; return ZuMv(*this); }
-  inline ZmSchedParams &&timeout(unsigned v)
+  ZmSchedParams &&timeout(unsigned v)
     { m_timeout = v; return ZuMv(*this); }
 
   template <typename L>
@@ -167,7 +167,7 @@ class ZmAPI ZmScheduler {
   ZmScheduler &operator =(const ZmScheduler &) = delete;
 
   struct ScheduleTree_HeapID {
-    static const char *id() { return "ZmScheduler.ScheduleTree"; }
+    ZuInline static const char *id() { return "ZmScheduler.ScheduleTree"; }
   };
 
   struct Timer_ {

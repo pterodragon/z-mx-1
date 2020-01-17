@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -53,9 +53,9 @@ struct K {
   K() { m_key = TlsAlloc(); }
   ~K() { TlsFree(m_key); }
 
-  inline int set(void *value) const
+  int set(void *value) const
     { return TlsSetValue(m_key, value) ? 0 : -1; }
-  inline void *get() const
+  void *get() const
     { return TlsGetValue(m_key); }
 
   DWORD	m_key;

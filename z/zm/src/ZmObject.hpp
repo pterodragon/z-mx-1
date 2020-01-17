@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -52,7 +52,7 @@ public:
   ZuInline int refCount() const { return m_refCount.load_(); }
 
 #ifdef ZmObject_DEBUG
-  inline void ref(const void *referrer = 0) const
+  void ref(const void *referrer = 0) const
 #else
   ZuInline void ref() const
 #endif
@@ -64,7 +64,7 @@ public:
     this->ref_();
   }
 #ifdef ZmObject_DEBUG
-  inline bool deref(const void *referrer = 0) const
+  bool deref(const void *referrer = 0) const
 #else
   ZuInline bool deref() const
 #endif

@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -71,10 +71,10 @@ protected:
   typedef enum { Nop } Nop_;
   ZuArrayN__(Nop_ _) { }
 
-  inline ZuArrayN__(unsigned size) :
+  ZuArrayN__(unsigned size) :
     m_size(size), m_length(0) { }
 
-  inline ZuArrayN__(unsigned size, unsigned length) :
+  ZuArrayN__(unsigned size, unsigned length) :
     m_size(size), m_length(length) { }
 
   uint32_t	m_size;
@@ -197,7 +197,7 @@ public:
 
 // set length
 
-  inline void length(
+  void length(
       unsigned length, bool initItems = !ZuTraits<T>::IsPrimitive) {
     if (length > Base::m_size) length = Base::m_size;
     if (initItems) {
@@ -289,15 +289,15 @@ private:
     Base::m_length -= length;
   }
   template <typename U>
-  inline typename SpliceVoid<U>::T
+  typename SpliceVoid<U>::T
       splice__(const T *, unsigned, U *) { }
   template <typename U>
-  inline typename SpliceAppend<U>::T
+  typename SpliceAppend<U>::T
       splice__(const T *data, unsigned length, U *removed) {
     removed->append_(data, length);
   }
   template <typename U>
-  inline typename SpliceDefault<U>::T
+  typename SpliceDefault<U>::T
       splice__(const T *data, unsigned length, U *removed) {
     for (unsigned i = 0; i < length; i++) *removed << data[i];
   }

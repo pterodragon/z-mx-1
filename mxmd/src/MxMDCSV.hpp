@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -47,7 +47,7 @@ class MxMDVenueFlagsCol : public ZvCSVColumn<ZvCSVColType::Func, MxFlags> {
   typedef typename Base::PlaceFn PlaceFn;
 public:
   template <typename ID>
-  inline MxMDVenueFlagsCol(ID &&id, int offset, int venueOffset) :
+  MxMDVenueFlagsCol(ID &&id, int offset, int venueOffset) :
     Base(ZuFwd<ID>(id), offset,
 	ParseFn::Member<&MxMDVenueFlagsCol::parse_>::fn(this),
 	PlaceFn::Member<&MxMDVenueFlagsCol::place_>::fn(this)),

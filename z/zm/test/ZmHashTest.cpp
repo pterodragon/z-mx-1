@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -131,7 +131,7 @@ struct S : public ZmObject {
 struct I {
   I(int i) : m_i(i) { }
   I(const I &i) : m_i(i.m_i) { }
-  inline I &operator =(const I &i)
+  I &operator =(const I &i)
     { if (this != &i) m_i = i.m_i; return *this; }
   int hash() const { return m_i; }
   int cmp(const I &i) const { return ZuCmp<int>::cmp(m_i, i.m_i); }
@@ -146,7 +146,7 @@ template <> struct ZuTraits<I> : public ZuGenericTraits<I> {
 
 struct J : public ZmObject {
   struct IAccessor : public ZuAccessor<J *, const I &> {
-    static const ::I &value(const J *j) { return j->m_i; }
+    ZuInline static const ::I &value(const J *j) { return j->m_i; }
   };
   J(int i) : m_i(i) { }
   J(const J &j) : m_i(j.m_i.m_i) { }

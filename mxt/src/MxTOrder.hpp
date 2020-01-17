@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -101,7 +101,7 @@ namespace MxTEventFlags { // event flags
 
   bool matchC(const MxFlags &v) { return v & (1U<<C); }
   bool matchM(const MxFlags &v) { return v & (1U<<M); }
-  inline bool matchCM(const MxFlags &v)
+  bool matchCM(const MxFlags &v)
     { return (v & ((1U<<C) | (1U<<M))) == ((1U<<C) | (1U<<M)); }
 }
 
@@ -136,53 +136,53 @@ namespace MxTEventState { // event state
 
   // convenient short-hand pattern matches
   bool matchU(const MxEnum &v) { return v == U; }
-  inline bool matchUAX(const MxEnum &v)
+  bool matchUAX(const MxEnum &v)
     { return v == U || v == A || v == X; }
   bool matchR(const MxEnum &v) { return v == R; }
   bool matchH(const MxEnum &v) { return v == H; }
   bool matchHD(const MxEnum &v) { return v == H || v == D; }
-  inline bool matchHDT(const MxEnum &v)
+  bool matchHDT(const MxEnum &v)
     { return v == H || v == D || v == T; }
   bool matchHT(const MxEnum &v) { return v == H || v == T; }
-  inline bool matchHQS(const MxEnum &v)
+  bool matchHQS(const MxEnum &v)
     { return v == H || v == Q || v == S; }
-  inline bool matchHQSA(const MxEnum &v)
+  bool matchHQSA(const MxEnum &v)
     { return v == H || v == Q || v == S || v == A; }
-  inline bool matchHDQS(const MxEnum &v)
+  bool matchHDQS(const MxEnum &v)
     { return v == H || v == D || v == Q || v == S; }
-  inline bool matchHDQSP(const MxEnum &v)
+  bool matchHDQSP(const MxEnum &v)
     { return v == H || v == D || v == Q || v == S || v == P; }
-  inline bool matchHDQSPA(const MxEnum &v)
+  bool matchHDQSPA(const MxEnum &v)
     { return v == H || v == D || v == Q || v == S || v == P || v == A; }
-  inline bool matchHQSAX(const MxEnum &v)
+  bool matchHQSAX(const MxEnum &v)
     { return v == H || v == Q || v == S || v == A || v == X; }
   bool matchD(const MxEnum &v) { return v == D; }
   bool matchDQ(const MxEnum &v) { return v == D || v == Q; }
   bool matchDQS(const MxEnum &v) { return v == D || v == Q || v == S; }
-  inline bool matchDQSP(const MxEnum &v)
+  bool matchDQSP(const MxEnum &v)
     { return v == D || v == Q || v == S || v == P; }
-  inline bool matchDQSPA(const MxEnum &v)
+  bool matchDQSPA(const MxEnum &v)
     { return v == D || v == Q || v == S || v == P || v == A; }
-  inline bool matchDQSPX(const MxEnum &v)
+  bool matchDQSPX(const MxEnum &v)
     { return v == D || v == Q || v == S || v == P || v == X; }
-  inline bool matchDSP(const MxEnum &v)
+  bool matchDSP(const MxEnum &v)
     { return v == D || v == S || v == P; }
   bool matchDX(const MxEnum &v) { return v == D || v == X; }
   bool matchDQX(const MxEnum &v) { return v == D || v == Q || v == X; }
   bool matchQ(const MxEnum &v) { return v == Q; }
   bool matchQS(const MxEnum &v) { return v == Q || v == S; }
-  inline bool matchQSP(const MxEnum &v)
+  bool matchQSP(const MxEnum &v)
     { return v == Q || v == S || v == P; }
   bool matchQX(const MxEnum &v) { return v == Q || v == X; }
   bool matchS(const MxEnum &v) { return v == S; }
   bool matchSP(const MxEnum &v) { return v == S || v == P; }
-  inline bool matchSPX(const MxEnum &v)
+  bool matchSPX(const MxEnum &v)
     { return v == S || v == P || v == X; }
   bool matchSA(const MxEnum &v) { return v == S || v == A; }
   bool matchP(const MxEnum &v) { return v == P; }
   bool matchA(const MxEnum &v) { return v == A; }
   bool matchAC(const MxEnum &v) { return v == A || v == C; }
-  inline bool matchACX(const MxEnum &v)
+  bool matchACX(const MxEnum &v)
     { return v == A || v == C || v == X; }
   bool matchAX(const MxEnum &v) { return v == A || v == X; }
   bool matchX(const MxEnum &v) { return v == X; }
@@ -817,7 +817,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
       memcpy((void *)this, &data.txn, sizeof(typename Data_::T));
     }
   public:
-    template <typename Data_> inline Txn(const Data_ &data,
+    template <typename Data_> Txn(const Data_ &data,
 	typename ZuIfT<ZuConversion<Data__, Data_>::Base &&
 	  sizeof(typename Data_::T) <= sizeof(Largest)>::T *_ = 0) {
       initData(data);

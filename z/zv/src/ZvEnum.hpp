@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -43,7 +43,7 @@ template <typename T> class ZvEnum;
 class ZvAPI ZvInvalidEnum : public ZvError {
 public:
   template <typename Key, typename Value>
-  inline ZvInvalidEnum(Key &&key, Value &&value) :
+  ZvInvalidEnum(Key &&key, Value &&value) :
     m_key(ZuFwd<Key>(key)), m_value(ZuFwd<Value>(value)) { }
 
   const ZtString &key() const { return m_key; }
@@ -56,7 +56,7 @@ private:
 template <typename T> class ZvInvalidEnumT : public ZvInvalidEnum {
 public:
   template <typename Key, typename Value>
-  inline ZvInvalidEnumT(
+  ZvInvalidEnumT(
       Key &&key, Value &&value, const ZvEnum<T> *enum_) :
     ZvInvalidEnum(ZuFwd<Key>(key), ZuFwd<Value>(value)), m_enum(enum_) { }
 
@@ -74,7 +74,7 @@ public:
     return static_cast<ZvEnum *>(T::instance());
   }
 
-  inline ZtEnum s2v(ZuString key, ZuString s,
+  ZtEnum s2v(ZuString key, ZuString s,
       int def = ZtEnum(), bool noThrow = false) const {
     if (ZuUnlikely(!s)) return def;
     ZtEnum v = T::s2v(s);
@@ -116,7 +116,7 @@ public:
     return static_cast<ZvFlags *>(T::instance());
   }
 
-  template <typename S, typename Flags> inline unsigned print(
+  template <typename S, typename Flags> unsigned print(
       ZuString key, S &s, const Flags &v, char delim = '|') const {
     if (!v) return 0;
     return T::print(s, v, delim);

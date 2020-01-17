@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -472,8 +472,7 @@ template <typename Fmt> struct ZuDecimalFmt {
 };
 template <typename Fmt>
 struct ZuPrint<ZuDecimalFmt<Fmt> > : public ZuPrintFn { };
-template <class Fmt>
-ZuInline ZuDecimalFmt<Fmt> ZuDecimal::fmt(Fmt) const
+template <class Fmt> inline ZuDecimalFmt<Fmt> ZuDecimal::fmt(Fmt) const
 {
   return ZuDecimalFmt<Fmt>{*this};
 }
@@ -505,12 +504,12 @@ private:
   const ZuDecimal	&m_decimal;
   const ZuVFmt		&m_fmt;
 };
-ZuInline ZuDecimalVFmt ZuDecimal::vfmt() const
+inline ZuDecimalVFmt ZuDecimal::vfmt() const
 {
   static const ZuVFmt fmt;
   return ZuDecimalVFmt{*this, fmt};
 }
-ZuInline ZuDecimalVFmt ZuDecimal::vfmt(const ZuVFmt &fmt) const
+inline ZuDecimalVFmt ZuDecimal::vfmt(const ZuVFmt &fmt) const
 {
   return ZuDecimalVFmt{*this, fmt};
 }

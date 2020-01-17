@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -41,7 +41,7 @@ struct TLS : public ZmObject {
 
 class Job : public ZmPolymorph {
 public:
-  inline Job(const char *message, ZmTime timeout) :
+  Job(const char *message, ZmTime timeout) :
 	m_message(message), m_timeout(timeout) { }
   ~Job() {
     printf("~%s [%d]\n", m_message, (int)ZmThreadContext::self()->index());

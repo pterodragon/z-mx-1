@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -82,9 +82,9 @@ class ZeAPI ZeFileSink : public ZeSink {
   typedef ZmGuard<Lock> Guard;
 
 public:
-  inline ZeFileSink() :
+  ZeFileSink() :
       ZeSink{ZeSinkType::File} { init(); }
-  inline ZeFileSink(ZuString name, unsigned age = 8, int tzOffset = 0) :
+  ZeFileSink(ZuString name, unsigned age = 8, int tzOffset = 0) :
       ZeSink{ZeSinkType::File},
       m_filename(name), m_age(age), m_tzOffset(tzOffset) { init(); }
 
@@ -158,7 +158,7 @@ friend struct ZmSingletonCtor<ZeLog>;
 friend struct ZmCleanup<ZeLog>;
 
   struct EventQueueID {
-    static const char *id() { return "ZeLog.EventQueue"; }
+    ZuInline static const char *id() { return "ZeLog.EventQueue"; }
   };
 
   typedef ZmList<ZmRef<ZeEvent>,

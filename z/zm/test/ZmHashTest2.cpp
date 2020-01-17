@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -33,11 +33,11 @@
 #include <zlib/ZmSingleton.hpp>
 #include <zlib/ZmSpecific.hpp>
 
-struct Orders_HeapID { static const char *id() { return "Orders"; } };
+struct Orders_HeapID { ZuInline static const char *id() { return "Orders"; } };
 
 struct Order : public ZuObject {
   struct IDAccessor : public ZuAccessor<Order *, unsigned> {
-    static unsigned value(const Order *o) { return o->id; }
+    ZuInline static unsigned value(const Order *o) { return o->id; }
   };
   Order(unsigned id_) : id(id_) { }
   unsigned id;

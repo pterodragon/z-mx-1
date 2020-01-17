@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -205,7 +205,7 @@ public:
 
   class Iterator {
   public:
-    inline Iterator(const ZmBitmap &b) :
+    Iterator(const ZmBitmap &b) :
 	m_b(b), m_i(b.count() < 0 ? -1 : b.first()) { }
     int iterate() {
       int i = m_i;
@@ -227,14 +227,13 @@ public:
     return const_cast<ZmBitmap *>(this)->operator hwloc_bitmap_t();
   }
 
-  inline ZmBitmap(uint64_t v) :
+  ZmBitmap(uint64_t v) :
       m_map(hwloc_bitmap_alloc()) { hwloc_bitmap_from_ulong(m_map, v); }
   uint64_t uint64() const {
     if (ZuLikely(!m_map)) return 0;
     return hwloc_bitmap_to_ulong(m_map);
   }
-  inline ZmBitmap(uint128_t v) :
-      m_map(hwloc_bitmap_alloc()) {
+  ZmBitmap(uint128_t v) : m_map(hwloc_bitmap_alloc()) {
     hwloc_bitmap_from_ith_ulong(m_map, 0, (uint64_t)v);
     hwloc_bitmap_from_ith_ulong(m_map, 1, (uint64_t)(v >> 64U));
   }
@@ -244,7 +243,7 @@ public:
       ((uint128_t)hwloc_bitmap_to_ith_ulong(m_map, 1) << 64U);
   }
   template <typename S>
-  inline ZmBitmap(const S &s, typename ZuIsCharString<S>::T *_ = 0) :
+  ZmBitmap(const S &s, typename ZuIsCharString<S>::T *_ = 0) :
       m_map(hwloc_bitmap_alloc()) { scan(s); }
   template <typename S>
   typename ZuIsCharString<S, ZmBitmap &>::T operator =(const S &s) {

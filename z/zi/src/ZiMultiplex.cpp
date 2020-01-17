@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -79,20 +79,20 @@ friend struct ZmSingletonCtor<ZiMultiplex_WSExt>;
 public:
   ~ZiMultiplex_WSExt();
 
-  inline BOOL connectEx(
+  BOOL connectEx(
       SOCKET s, const struct sockaddr *sa, int salen, void *ptr, DWORD len,
       DWORD *count, OVERLAPPED *overlapped) {
     if (!m_connectEx) { WSASetLastError(WSASYSNOTREADY); return FALSE; }
     return (*m_connectEx)(s, sa, salen, ptr, len, count, overlapped);
   }
-  inline BOOL acceptEx(
+  BOOL acceptEx(
       SOCKET l, SOCKET s, void *ptr, DWORD len, int localsalen, int remotesalen,
       DWORD *count, OVERLAPPED *overlapped) {
     if (!m_acceptEx) { WSASetLastError(WSASYSNOTREADY); return FALSE; }
     return (*m_acceptEx)(l, s, ptr, len, localsalen, remotesalen,
 			 count, overlapped);
   }
-  inline void getAcceptExSockaddrs(
+  void getAcceptExSockaddrs(
       void *buf, DWORD len, DWORD localaddrlen, DWORD remoteaddrlen,
       struct sockaddr **localsa, int *localsalen,
       struct sockaddr **remotesa, int *remotesalen) {
@@ -100,7 +100,7 @@ public:
     (*m_getAcceptExSockaddrs)(buf, len, localaddrlen, remoteaddrlen,
 			      localsa, localsalen, remotesa, remotesalen);
   }
-  inline BOOL disconnectEx(
+  BOOL disconnectEx(
       SOCKET s, OVERLAPPED *overlapped, DWORD flags, DWORD reserved) {
     if (!m_disconnectEx) { WSASetLastError(WSASYSNOTREADY); return FALSE; }
     return (*m_disconnectEx)(s, overlapped, flags, reserved);

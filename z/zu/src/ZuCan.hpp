@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -23,10 +23,10 @@
 //
 // ZuCan(toString, CanToString); // defines CanToString template
 // ...
-// template <typename U> inline static typename
+// template <typename U> static typename
 //   ZuIfT<CanToString<U, std::string (U::*)() const>::OK, std::string>::T
 //     toString(U *u) { return u->toString(); } // can
-// template <typename U> inline static typename
+// template <typename U> static typename
 //   ZuIfT<!CanToString<U, std::string (U::*)() const>::OK, std::string>::T
 //     toString(U *) { return ""; } // cannot
 // ...

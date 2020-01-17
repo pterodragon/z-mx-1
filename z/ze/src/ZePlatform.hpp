@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -211,7 +211,7 @@ public:
 
   // from anything else
   template <typename Msg>
-  inline ZeEvent_(int severity, const char *filename, int lineNumber,
+  ZeEvent_(int severity, const char *filename, int lineNumber,
       const char *function, Msg &&msg) :
     m_time(ZmTime::Now), m_tid(ZmPlatform::getTID()),
     m_severity(severity), m_filename(filename),
@@ -246,7 +246,7 @@ private:
   MessageFn	m_messageFn;
 };
 struct ZeEvent_HeapID {
-  static const char *id() { return "ZeEvent"; }
+  ZuInline static const char *id() { return "ZeEvent"; }
 };
 typedef ZmHeap<ZeEvent_HeapID, sizeof(ZeEvent_<ZuNull>)> ZeEvent_Heap;
 typedef ZeEvent_<ZeEvent_Heap> ZeEvent;

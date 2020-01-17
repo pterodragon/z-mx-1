@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -55,10 +55,10 @@ class MxIPCol : public ZvCSVColumn<ZvCSVColType::Func, ZiIP> {
   typedef typename Base::ParseFn ParseFn;
   typedef typename Base::PlaceFn PlaceFn;
 public:
-  template <typename ID> inline MxIPCol(ID &&id, int offset) :
-    Base(ZuFwd<ID>(id), offset,
-	ParseFn::Ptr<&MxIPCol::parse_>::fn(),
-	PlaceFn::Ptr<&MxIPCol::place_>::fn()) { }
+  template <typename ID> MxIPCol(ID &&id, int offset) :
+      Base(ZuFwd<ID>(id), offset,
+	  ParseFn::Ptr<&MxIPCol::parse_>::fn(),
+	  PlaceFn::Ptr<&MxIPCol::place_>::fn()) { }
   static void parse_(ZiIP *i, ZuString b) { *i = b; }
   static void place_(ZtArray<char> &b, const ZiIP *i) { b << *i; }
 };
@@ -70,11 +70,10 @@ class MxIDCol : public ZvCSVColumn<ZvCSVColType::Func, MxID>  {
   typedef typename Base::ParseFn ParseFn;
   typedef typename Base::PlaceFn PlaceFn;
 public:
-  template <typename ID>
-  inline MxIDCol(ID &&id, int offset) :
+  template <typename ID> MxIDCol(ID &&id, int offset) :
       Base(ZuFwd<ID>(id), offset,
-	   ParseFn::Ptr<&MxIDCol::parse_>::fn(),
-	   PlaceFn::Ptr<&MxIDCol::place_>::fn()) { }
+	  ParseFn::Ptr<&MxIDCol::parse_>::fn(),
+	  PlaceFn::Ptr<&MxIDCol::place_>::fn()) { }
   static void parse_(MxID *i, ZuString b) { *i = b; }
   static void place_(ZtArray<char> &b, const MxID *i) { b << *i; }
 };
@@ -85,10 +84,10 @@ class MxHHMMSSCol : public ZvCSVColumn<ZvCSVColType::Func, MxDateTime>  {
   typedef typename Base::PlaceFn PlaceFn;
 public:
   template <typename ID>
-  inline MxHHMMSSCol(ID &&id, int offset, unsigned yyyymmdd, int tzOffset) :
-    Base(ZuFwd<ID>(id), offset,
-	ParseFn::Member<&MxHHMMSSCol::parse_>::fn(this),
-	PlaceFn::Member<&MxHHMMSSCol::place_>::fn(this)),
+  MxHHMMSSCol(ID &&id, int offset, unsigned yyyymmdd, int tzOffset) :
+      Base(ZuFwd<ID>(id), offset,
+	  ParseFn::Member<&MxHHMMSSCol::parse_>::fn(this),
+	  PlaceFn::Member<&MxHHMMSSCol::place_>::fn(this)),
       m_yyyymmdd(yyyymmdd), m_tzOffset(tzOffset) { }
   virtual ~MxHHMMSSCol() { }
 
@@ -113,10 +112,10 @@ class MxNSecCol : public ZvCSVColumn<ZvCSVColType::Func, MxDateTime> {
   typedef typename Base::PlaceFn PlaceFn;
 public:
   template <typename ID>
-  inline MxNSecCol(ID &&id, int offset) :
-    Base(ZuFwd<ID>(id), offset,
-	ParseFn::Ptr<&MxNSecCol::parse_>::fn(),
-	PlaceFn::Ptr<&MxNSecCol::place_>::fn()) { }
+  MxNSecCol(ID &&id, int offset) :
+      Base(ZuFwd<ID>(id), offset,
+	  ParseFn::Ptr<&MxNSecCol::parse_>::fn(),
+	  PlaceFn::Ptr<&MxNSecCol::place_>::fn()) { }
 
   static void parse_(MxDateTime *t, ZuString b) {
     t->nsec() = MxUInt(b);
@@ -132,11 +131,11 @@ class MxValueCol : public ZvCSVColumn<ZvCSVColType::Func, MxValue> {
   typedef typename Base::PlaceFn PlaceFn;
 public:
   template <typename ID>
-  inline MxValueCol(ID &&id, int offset, int ndpOffset) :
-    Base(ZuFwd<ID>(id), offset,
-	ParseFn::Member<&MxValueCol::parse_>::fn(this),
-	PlaceFn::Member<&MxValueCol::place_>::fn(this)),
-    m_ndpOffset(ndpOffset - offset) { }
+  MxValueCol(ID &&id, int offset, int ndpOffset) :
+      Base(ZuFwd<ID>(id), offset,
+	  ParseFn::Member<&MxValueCol::parse_>::fn(this),
+	  PlaceFn::Member<&MxValueCol::place_>::fn(this)),
+      m_ndpOffset(ndpOffset - offset) { }
   virtual ~MxValueCol() { }
 
   void parse_(MxValue *f, ZuString b) {
@@ -160,10 +159,10 @@ class MxDecimalCol : public ZvCSVColumn<ZvCSVColType::Func, MxDecimal> {
   typedef typename Base::PlaceFn PlaceFn;
 public:
   template <typename ID>
-  inline MxDecimalCol(ID &&id, int offset) :
-    Base(ZuFwd<ID>(id), offset,
-	ParseFn::Member<&MxDecimalCol::parse_>::fn(this),
-	PlaceFn::Member<&MxDecimalCol::place_>::fn(this)) { }
+  MxDecimalCol(ID &&id, int offset) :
+      Base(ZuFwd<ID>(id), offset,
+	  ParseFn::Member<&MxDecimalCol::parse_>::fn(this),
+	  PlaceFn::Member<&MxDecimalCol::place_>::fn(this)) { }
   virtual ~MxDecimalCol() { }
 
   void parse_(MxDecimal *f, ZuString b) {

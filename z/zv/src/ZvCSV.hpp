@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -75,7 +75,7 @@ namespace ZvCSV_ {
     row << '"';
   }
   template <typename T, typename Fmt, typename Row>
-  inline void quote(
+  void quote(
       Row &row, const ZvField<T> *field, const T *object, const Fmt &fmt) {
     switch ((int)field->type) {
       case ZvFieldType::String:
@@ -108,7 +108,7 @@ public:
 
 private:
   struct ColTree_HeapID {
-    static const char *id() { return "ZvCSV.ColTree"; }
+    ZuInline static const char *id() { return "ZvCSV.ColTree"; }
   };
   using ColTree =
     ZmRBTree<ZuString,

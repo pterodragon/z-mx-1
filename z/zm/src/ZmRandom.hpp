@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 // ZmRandom.hh - modified version of
 // http://www-personal.engin.umich.edu/~wagnerr/MersenneTwister.h
@@ -98,9 +98,9 @@ protected:
 
 public:
   ZmRandom() { seed(); } // auto-initialize with /dev/urandom or time
-  inline ZmRandom(uint32_t oneSeed ) // initialize with a simple uint32
+  ZmRandom(uint32_t oneSeed ) // initialize with a simple uint32
     { seed(oneSeed); }
-  inline ZmRandom(uint32_t *const bigSeed, int seedLength = N ) // or array
+  ZmRandom(uint32_t *const bigSeed, int seedLength = N ) // or array
     { seed(bigSeed, seedLength); }
 
   // Do NOT use for CRYPTOGRAPHY without securely hashing several returned
@@ -108,19 +108,19 @@ public:
   // reading 624 consecutive values.
 
   // Access to 32-bit random numbers
-  inline double rand()				// real number in [0,1]
+  ZuInline double rand()			// real number in [0,1]
     { return double(randInt()) * (1.0/4294967295.0); }
-  inline double rand(double n)			// real number in [0,n]
+  ZuInline double rand(double n)		// real number in [0,n]
     { return double(randInt()) * (n/4294967295.0); }
-  inline double randExc()			// real number in [0,1)
+  ZuInline double randExc()			// real number in [0,1)
     { return double(randInt()) * (1.0/4294967296.0); }
-  inline double randExc(double n)		// real number in [0,n)
+  ZuInline double randExc(double n)		// real number in [0,n)
     { return double(randInt()) * (n/4294967296.0); }
-  inline double randDblExc()			// real number in (0,1)
+  ZuInline double randDblExc()			// real number in (0,1)
     { return (double(randInt()) + 0.5) * (1.0/4294967296.0); }
-  inline double randDblExc(double n)		// real number in (0,n)
+  ZuInline double randDblExc(double n)		// real number in (0,n)
     { return (double(randInt()) + 0.5) * (n/4294967296.0); }
-  uint32_t randInt() {			// integer in [0,2^32-1]
+  uint32_t randInt() {				// integer in [0,2^32-1]
     // Pull a 32-bit integer from the generator state
     // Every other access function simply transforms the numbers extracted here
 
@@ -265,9 +265,9 @@ protected:
   uint32_t hiBit(const uint32_t &u) const { return u & 0x80000000; }
   uint32_t loBit(const uint32_t &u) const { return u & 0x00000001; }
   uint32_t loBits(const uint32_t &u) const { return u & 0x7fffffff; }
-  inline uint32_t mixBits(const uint32_t &u, const uint32_t &v) const
+  uint32_t mixBits(const uint32_t &u, const uint32_t &v) const
     { return hiBit(u) | loBits(v); }
-  inline uint32_t twist(
+  uint32_t twist(
     const uint32_t &m, const uint32_t &s0, const uint32_t &s1) const
       { return m ^ (mixBits(s0,s1)>>1) ^ (-(int32_t)loBit(s1) & 0x9908b0df); }
 };

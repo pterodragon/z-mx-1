@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -45,7 +45,7 @@ template <typename Heap> struct S_ : public Heap {
   int m_i;
 };
 struct ID {
-  static const char *id() { return "S"; }
+  ZuInline static const char *id() { return "S"; }
 };
 typedef S_<ZmHeap<ID, sizeof(S_<ZuNull>)> > S;
 

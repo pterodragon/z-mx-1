@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -241,12 +241,12 @@ namespace Zu_ntoa {
 
   // decimal handling for each log10 0..20
   template <typename T>
-  typename Is64Bit<T>::T Base10_print(T v_, unsigned n, char *buf) {
+  inline typename Is64Bit<T>::T Base10_print(T v_, unsigned n, char *buf) {
     uint64_t v = v_;
     do { buf[--n] = (v % 10) + '0'; v /= 10; } while (ZuLikely(n));
   }
   template <typename T>
-  typename Is128Bit<T>::T Base10_print(T v_, unsigned n, char *buf) {
+  inline typename Is128Bit<T>::T Base10_print(T v_, unsigned n, char *buf) {
     uint128_t v = v_;
     if (ZuLikely(v < 10000000000000000000ULL))
       Base10_print((uint64_t)v, n, buf);
@@ -419,13 +419,13 @@ namespace Zu_ntoa {
       do { buf[--n] = hexDigit<0>(v & 0xf); v >>= 4U; } while (ZuLikely(n));
   }
   template <typename T>
-  inline typename Is64Bit<T>::T Base16_print_upper(
+  typename Is64Bit<T>::T Base16_print_upper(
       T v_, unsigned n, char *buf) {
     uint64_t v = v_;
     do { buf[--n] = hexDigit<1>(v & 0xf); v >>= 4U; } while (ZuLikely(n));
   }
   template <typename T>
-  inline typename Is128Bit<T>::T Base16_print_upper(
+  typename Is128Bit<T>::T Base16_print_upper(
       T v_, unsigned n, char *buf) {
     uint128_t v = v_;
     if (ZuLikely(!(v>>64U)))

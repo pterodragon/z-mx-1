@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -213,7 +213,7 @@ namespace ZJNI {
 
   // Java String -> C++ any string
   template <typename Alloc, typename Buf, typename SetLen>
-  inline auto j2s(JNIEnv *env, jstring s_, bool dlr,
+  auto j2s(JNIEnv *env, jstring s_, bool dlr,
       Alloc alloc, Buf buf, SetLen setLen) {
     if (ZuUnlikely(!s_)) return alloc(0);
     unsigned n = env->GetStringLength(s_);
@@ -226,7 +226,7 @@ namespace ZJNI {
     return o;
   }
   template <typename Out, typename Alloc, typename Buf, typename SetLen>
-  inline Out &j2s(JNIEnv *env, jstring s_, bool dlr,
+  Out &j2s(JNIEnv *env, jstring s_, bool dlr,
       Out &o, Alloc alloc, Buf buf, SetLen setLen) {
     if (ZuUnlikely(!s_)) return o;
     unsigned n = env->GetStringLength(s_);

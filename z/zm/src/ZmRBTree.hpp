@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -60,7 +60,7 @@ struct ZmRBTree_Defaults {
   enum { NodeIsVal = 0 };
   typedef ZmLock Lock;
   typedef ZmObject Object;
-  struct HeapID { static const char *id() { return "ZmRBTree"; } };
+  struct HeapID { ZuInline static const char *id() { return "ZmRBTree"; } };
   struct Base { };
 };
 

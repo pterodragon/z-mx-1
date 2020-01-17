@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -49,7 +49,7 @@
 
 class ZmDRingParams {
 public:
-  inline ZmDRingParams() :
+  ZmDRingParams() :
     m_initial(ZmDRingInitial),
     m_increment(ZmDRingIncrement),
     m_maxFrag(ZmDRingMaxFrag) { }
@@ -165,7 +165,7 @@ public:
   typedef ZmReadGuard<Lock> ReadGuard;
 
   template <typename ...Args>
-  inline ZmDRing(ZmDRingParams params = ZmDRingParams(), Args &&... args) :
+  ZmDRing(ZmDRingParams params = ZmDRingParams(), Args &&... args) :
       NTP::Base{ZuFwd<Args>(args)...},
       m_data(0), m_offset(0), m_size(0), m_length(0), m_count(0),
       m_initial(params.initial()), m_increment(params.increment()),
@@ -443,7 +443,7 @@ friend class Iterator_;
   protected:
     typedef ZmDRing<Val, NTP> Ring;
 
-    inline Iterator_(Ring &ring, unsigned i) :
+    Iterator_(Ring &ring, unsigned i) :
 	Guard(ring.m_lock), m_ring(ring), m_i(i) { }
 
     Ring	&m_ring;
@@ -476,7 +476,7 @@ friend class Iterator;
 friend class RevIterator;
   class RevIterator : private Iterator_ {
   public:
-    inline RevIterator(typename Iterator_::Ring &ring) :
+    RevIterator(typename Iterator_::Ring &ring) :
 	Iterator_(ring, ring.m_length) { }
     Val *iteratePtr() {
       unsigned o;

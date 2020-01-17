@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -65,7 +65,7 @@ public:
   typedef ZuArrayFn<T, Cmp> Ops;
 
   ZuArray() : m_data(0), m_length(0) { }
-  inline ZuArray(const ZuArray &a) :
+  ZuArray(const ZuArray &a) :
       m_data(a.m_data), m_length(a.m_length) { }
   ZuArray &operator =(const ZuArray &a) {
     if (this == &a) return *this;
@@ -74,7 +74,7 @@ public:
     return *this;
   }
 
-  inline ZuArray(std::initializer_list<T> a) :
+  ZuArray(std::initializer_list<T> a) :
     m_data(a.begin()), m_length(a.size()) { }
   ZuArray &operator =(std::initializer_list<T> a) {
     m_data = a.begin();

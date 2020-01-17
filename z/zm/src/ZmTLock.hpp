@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -84,7 +84,7 @@ struct ZmTLock_Depth : public ZmObject {
 #endif
 
 struct ZmTLockParams {
-  inline ZmTLockParams() :
+  ZmTLockParams() :
     m_idHash(ZmHashParams().bits(8)),
     m_tidHash(ZmHashParams().bits(8)) { }
   ZmTLockParams &idHash(ZmHashParams p) { m_idHash = p; return *this; }
@@ -113,7 +113,7 @@ struct ZuTraits<ZmTLock_Held> : public ZuGenericTraits<ZmTLock_Held> {
 };
 
 struct ZmTLock_Held_ThreadAccessor : public ZuAccessor<ZmTLock_Held, void *> {
-  static void *value(ZmTLock_Held h) { return h.m_thread; }
+  ZuInline static void *value(ZmTLock_Held h) { return h.m_thread; }
 };
 
 template <typename ID, typename TID> class ZmTLock {
@@ -140,7 +140,7 @@ friend struct ZmTLock_Test;
   struct Lock;
 friend struct Lock;
   struct Lock : public ZmObject {
-    template <typename ID_> inline Lock(ID_ &&id, Lock_ &l) :
+    template <typename ID_> Lock(ID_ &&id, Lock_ &l) :
       m_id(ZuFwd<ID_>(id)),
       m_useCount(0),
       m_readOK(l),
@@ -182,7 +182,7 @@ friend struct Lock;
 
   typedef ZmRef<Lock> LockRef;
 
-  struct HeapID { static const char *id() { return "ZmTLock"; } };
+  struct HeapID { ZuInline static const char *id() { return "ZmTLock"; } };
 
   typedef ZmHash<ID,
 	    ZmHashVal<LockRef,
@@ -510,23 +510,23 @@ unused:
 
 public:
   template <typename ID_, typename TID_>
-  inline int readLock(ID_ &&id, TID_ &&tid)
+  ZuInline int readLock(ID_ &&id, TID_ &&tid)
     { return readLock_(ZuFwd<ID_>(id), ZuFwd<TID_>(tid), 0, ZmTime()); }
   template <typename ID_, typename TID_>
-  inline int tryReadLock(ID_ &&id, TID_ &&tid)
+  ZuInline int tryReadLock(ID_ &&id, TID_ &&tid)
     { return readLock_(ZuFwd<ID_>(id), ZuFwd<TID_>(tid), Try, ZmTime()); }
   template <typename ID_, typename TID_, typename T>
-  inline int timedReadLock(ID_ &&id, TID_ &&tid, T &&t)
+  ZuInline int timedReadLock(ID_ &&id, TID_ &&tid, T &&t)
     { return readLock_(ZuFwd<ID_>(id), ZuFwd<TID_>(tid), Timed, ZuFwd<T>(t)); }
 
   template <typename ID_, typename TID_>
-  inline int writeLock(ID_ &&id, TID_ &&tid)
+  ZuInline int writeLock(ID_ &&id, TID_ &&tid)
     { return writeLock_(ZuFwd<ID_>(id), ZuFwd<TID_>(tid), 0, ZmTime()); }
   template <typename ID_, typename TID_>
-  inline int tryWriteLock(ID_ &&id, TID_ &&tid)
+  ZuInline int tryWriteLock(ID_ &&id, TID_ &&tid)
     { return writeLock_(ZuFwd<ID_>(id), ZuFwd<TID_>(tid), Try, ZmTime()); }
   template <typename ID_, typename TID_, typename T>
-  inline int timedWriteLock(ID_ &&id, TID_ &&tid, T &&t)
+  ZuInline int timedWriteLock(ID_ &&id, TID_ &&tid, T &&t)
     { return writeLock_(ZuFwd<ID_>(id), ZuFwd<TID_>(tid), Timed, ZuFwd<T>(t)); }
 
 #define ZmTLock_ID2LOCK(id, lock, ret) do { \

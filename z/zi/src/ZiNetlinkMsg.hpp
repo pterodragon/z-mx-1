@@ -1,5 +1,5 @@
 // -*- mode: c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-// vi: noet ts=8 sw=2
+// vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -69,7 +69,7 @@ public:
 protected:
   ZiNetlinkHdr() { memset(&m_n, 0, sizeof(struct nlmsghdr)); }
 
-  inline ZiNetlinkHdr(uint32_t len, uint16_t type,
+  ZiNetlinkHdr(uint32_t len, uint16_t type,
       uint16_t flags, uint32_t seqNo, uint32_t portID) :
     m_n{(len + NLMSG_HDRLEN), type, flags, seqNo, portID} { }
 
@@ -164,7 +164,7 @@ public:
   }
 		
 protected:	   
-  inline ZiNetlinkAttr(uint16_t type, uint16_t len) :
+  ZiNetlinkAttr(uint16_t type, uint16_t len) :
     m_na{NLA_HDRLEN + PADDING + len, type} { }
 
 private:
@@ -177,7 +177,7 @@ class ZiNetlinkFamilyName : public ZiNetlinkAttr {
   enum _ { PADDING = NLA_ALIGN(GENL_NAMSIZ) - GENL_NAMSIZ };
 
 public:
-  inline ZiNetlinkFamilyName(ZuString s) :
+  ZiNetlinkFamilyName(ZuString s) :
     ZiNetlinkAttr(CTRL_ATTR_FAMILY_NAME,
 	s.length() >= GENL_NAMSIZ ? GENL_NAMSIZ : (s.length() + 1)) {
     unsigned len = s.length() >= GENL_NAMSIZ ? GENL_NAMSIZ : (s.length() + 1);

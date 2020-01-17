@@ -1,5 +1,5 @@
 //  -*- mode:c++; indent-tabs-mode:t; tab-width:8; c-basic-offset:2; -*-
-//  vi: noet ts=8 sw=2
+//  vi: noet ts=8 sw=2 cino=l1,g0,N-s,j1,U1,i4
 
 /*
  * This library is free software; you can redistribute it and/or
@@ -136,8 +136,7 @@ template <class T> struct MxMDFlags {
     print(out, venue, flags);
     return out;
   }
-  inline static void scan(
-      const MxMDFlagsStr &in, MxID venue, MxFlags &flags) {
+  static void scan(const MxMDFlagsStr &in, MxID venue, MxFlags &flags) {
     static FnMap<ScanFn> map;
     ScanFn fn = map.fn(venue);
     if (fn) (*fn)(in, flags);
@@ -222,7 +221,7 @@ friend class MxMDLib;
 friend class MxMDVenue;
 
   struct TickSizes_HeapID {
-    static const char *id() { return "MxMDTickSizeTbl.TickSizes"; }
+    ZuInline static const char *id() { return "MxMDTickSizeTbl.TickSizes"; }
   };
   typedef ZmRBTree<MxMDTickSize,
 	    ZmRBTreeIndex<MxMDTickSize_MinPxAccessor,
@@ -283,7 +282,7 @@ struct MxMDTradeData {
 };
 
 struct MxMDTrade_HeapID {
-  static const char *id() { return "MxMDTrade"; }
+  ZuInline static const char *id() { return "MxMDTrade"; }
 };
 template <class Heap> class MxMDTrade_ : public Heap, public ZmObject {
   MxMDTrade_(const MxMDTrade_ &) = delete;
@@ -293,9 +292,9 @@ friend class MxMDOrderBook;
 friend class MxMDLib;
 
   template <typename TradeID>
-  inline MxMDTrade_(MxMDInstrument *instrument, MxMDOrderBook *ob,
-	const TradeID &tradeID, MxDateTime transactTime,
-	MxValue price, MxValue qty) :
+  MxMDTrade_(MxMDInstrument *instrument, MxMDOrderBook *ob,
+      const TradeID &tradeID, MxDateTime transactTime,
+      MxValue price, MxValue qty) :
       m_instrument(instrument), m_orderBook(ob),
       m_data{tradeID, transactTime, price, qty} { }
 
@@ -378,9 +377,9 @@ private:
 
 protected:
   template <typename ID>
-  inline MxMDOrder_(MxMDOrderBook *ob,
-    ID &&id, MxDateTime transactTime, MxEnum side,
-    MxUInt rank, MxValue price, MxValue qty, MxFlags flags) :
+  MxMDOrder_(MxMDOrderBook *ob,
+      ID &&id, MxDateTime transactTime, MxEnum side,
+      MxUInt rank, MxValue price, MxValue qty, MxFlags flags) :
       m_orderBook(ob),
       m_id(ZuFwd<ID>(id)),
       m_data{transactTime, side, rank, price, qty, flags} { }
@@ -430,7 +429,7 @@ private:
   void updateQty_(MxValue qty) {
     if (*qty) m_data.qty = qty;
   }
-  inline void updateNDP(
+  void updateNDP(
       MxNDP oldPxNDP, MxNDP oldQtyNDP, MxNDP pxNDP, MxNDP qtyNDP) {
     if (*pxNDP && pxNDP != oldPxNDP)
       m_data.price = MxValNDP{m_data.price, oldPxNDP}.adjust(pxNDP);
@@ -456,7 +455,7 @@ struct MxMDOrder_RankAccessor : public ZuAccessor<MxMDOrder_, MxUInt> {
 };
 
 struct MxMDOrder_HeapID {
-  static const char *id() { return "MxMDOrder"; }
+  ZuInline static const char *id() { return "MxMDOrder"; }
 };
 using MxMDOrders =
 	ZmRBTree<MxMDOrder_,
@@ -468,13 +467,13 @@ using MxMDOrders =
 using MxMDOrder = MxMDOrders::Node;
 
 struct MxMDOrders1_HeapID {
-  static const char *id() { return "MxMDOrders1"; }
+  ZuInline static const char *id() { return "MxMDOrders1"; }
 };
 struct MxMDOrders2_HeapID {
-  static const char *id() { return "MxMDOrders2"; }
+  ZuInline static const char *id() { return "MxMDOrders2"; }
 };
 struct MxMDOrders3_HeapID {
-  static const char *id() { return "MxMDOrders3"; }
+  ZuInline static const char *id() { return "MxMDOrders3"; }
 };
 
 // order, oldPxNDP, oldQtyNDP, pxNDP, qtyNDP
@@ -597,7 +596,7 @@ friend class MxMDOrderBook;
 friend class MxMDOBSide;
 
 protected:
-  inline MxMDPxLevel_(MxMDOBSide *obSide,
+  MxMDPxLevel_(MxMDOBSide *obSide,
       MxDateTime transactTime, MxNDP pxNDP, MxNDP qtyNDP,
       MxValue price, MxValue qty, MxUInt nOrders, MxFlags flags) :
     m_obSide(obSide), m_pxNDP(pxNDP), m_qtyNDP(qtyNDP),
@@ -661,7 +660,7 @@ private:
 };
 
 struct MxMDPxLevels_HeapID : public ZmHeapSharded {
-  static const char *id() { return "MxMDPxLevel"; }
+  ZuInline static const char *id() { return "MxMDPxLevel"; }
 };
 
 struct MxMDPxLevel_PxAccessor : public ZuAccessor<MxMDPxLevel_, MxValue> {
@@ -771,7 +770,7 @@ friend class MxMDOrderBook;
 friend class MxMDPxLevel_;
 
 private:
-  inline MxMDOBSide(MxMDOrderBook *ob, MxEnum side) :
+  MxMDOBSide(MxMDOrderBook *ob, MxEnum side) :
     m_orderBook(ob), m_side(side), m_data{0, 0} { }
 
 public:
@@ -948,13 +947,13 @@ friend class MxMDOBSide;
 friend class MxMDPxLevel_;
 
   struct KeyAccessor : public ZuAccessor<MxMDOrderBook *, MxInstrKey> {
-    static const MxInstrKey &value(const MxMDOrderBook *ob) {
+    ZuInline static const MxInstrKey &value(const MxMDOrderBook *ob) {
       return ob->key();
     }
   };
 
   struct VenueSegmentAccessor : public ZuAccessor<MxMDOrderBook *, uint128_t> {
-    static uint128_t value(const MxMDOrderBook *ob) {
+    ZuInline static uint128_t value(const MxMDOrderBook *ob) {
       return venueSegment(ob->venueID(), ob->segment());
     }
   };
@@ -1248,7 +1247,7 @@ class MxMDAPI MxMDDerivatives : public ZmObject {
 friend class MxMDInstrument;
 
   struct Futures_HeapID {
-    static const char *id() { return "MxMDLib.Futures"; }
+    ZuInline static const char *id() { return "MxMDLib.Futures"; }
   };
   typedef ZmRBTree<MxFutKey,			// mat
 	    ZmRBTreeVal<MxMDInstrument *,
@@ -1256,7 +1255,7 @@ friend class MxMDInstrument;
 		ZmRBTreeHeapID<Futures_HeapID,
 		  ZmRBTreeLock<ZmPLock> > > > > Futures;
   struct Options_HeapID {
-    static const char *id() { return "MxMDLib.Options"; }
+    ZuInline static const char *id() { return "MxMDLib.Options"; }
   };
   typedef ZmRBTree<MxOptKey,			// mat, putCall, strike
 	    ZmRBTreeVal<MxMDInstrument *,
@@ -1297,7 +1296,7 @@ friend class MxMDShard;
   };
 
   struct OrderBooks_HeapID : public ZmHeapSharded {
-    static const char *id() { return "MxMDInstrument.OrderBooks"; }
+    ZuInline static const char *id() { return "MxMDInstrument.OrderBooks"; }
   };
   typedef ZmRBTree<ZmRef<MxMDOrderBook>,
 	    ZmRBTreeIndex<MxMDOrderBook::VenueSegmentAccessor,
@@ -1443,7 +1442,7 @@ public:
   MxMDFeed(MxMDLib *md, MxID id, unsigned level);
 
   struct IDAccessor : public ZuAccessor<MxMDFeed *, MxID> {
-    static MxID value(const MxMDFeed *f) { return f->id(); }
+    ZuInline static MxID value(const MxMDFeed *f) { return f->id(); }
   };
 
   ZuInline MxMDLib *md() const { return m_md; }
@@ -1552,7 +1551,7 @@ friend class MxMDOrderBook;
   typedef ZtArray<ZuRef<MxMDVenueShard> > Shards;
 
   struct TickSizeTbls_HeapID {
-    static const char *id() { return "MxMDVenue.TickSizeTbls"; }
+    ZuInline static const char *id() { return "MxMDVenue.TickSizeTbls"; }
   };
   typedef ZmRBTree<ZmRef<MxMDTickSizeTbl>,
 	    ZmRBTreeIndex<MxMDTickSizeTbl::IDAccessor,
@@ -1560,10 +1559,10 @@ friend class MxMDOrderBook;
 		ZmRBTreeLock<ZmPRWLock,
 		  ZmRBTreeHeapID<TickSizeTbls_HeapID> > > > > TickSizeTbls;
   struct Segment_IDAccessor : public ZuAccessor<MxMDSegment, MxID> {
-    static MxID value(const MxMDSegment &s) { return s.id; }
+    ZuInline static MxID value(const MxMDSegment &s) { return s.id; }
   };
   struct Segments_ID {
-    static const char *id() { return "MxMDVenue.Segments"; }
+    ZuInline static const char *id() { return "MxMDVenue.Segments"; }
   };
   typedef ZmHash<MxMDSegment,
 	    ZmHashIndex<Segment_IDAccessor,
@@ -1586,7 +1585,7 @@ public:
       MxFlags flags = 0);
 
   struct IDAccessor : public ZuAccessor<MxMDVenue *, MxID> {
-    static MxID value(const MxMDVenue *v) { return v->id(); }
+    ZuInline static MxID value(const MxMDVenue *v) { return v->id(); }
   };
 
   ZuInline MxMDLib *md() const { return m_md; }
@@ -1710,7 +1709,7 @@ class MxMDAPI MxMDShard : public ZuObject, public ZmShard {
 friend class MxMDLib;
 
   struct Instruments_HeapID : public ZmHeapSharded {
-    static const char *id() { return "MxMDShard.Instruments"; }
+    ZuInline static const char *id() { return "MxMDShard.Instruments"; }
   };
   typedef ZmHash<MxMDInstrument *,
 	    ZmHashIndex<MxMDInstrument::KeyAccessor,
@@ -1719,7 +1718,7 @@ friend class MxMDLib;
 		  ZmHashHeapID<Instruments_HeapID> > > > > Instruments;
 
   struct OrderBooks_HeapID : public ZmHeapSharded {
-    static const char *id() { return "MxMDShard.OrderBooks"; }
+    ZuInline static const char *id() { return "MxMDShard.OrderBooks"; }
   };
   typedef ZmHash<MxMDOrderBook *,
 	    ZmHashIndex<MxMDOrderBook::KeyAccessor,
@@ -1990,7 +1989,7 @@ friend class ZmShard;
   // primary indices
 
   struct AllInstruments_HeapID {
-    static const char *id() { return "MxMDLib.AllInstruments"; }
+    ZuInline static const char *id() { return "MxMDLib.AllInstruments"; }
   };
   typedef ZmHash<ZmRef<MxMDInstrument>,
 	    ZmHashIndex<MxMDInstrument::KeyAccessor,
@@ -1999,7 +1998,7 @@ friend class ZmShard;
 		  ZmHashHeapID<AllInstruments_HeapID> > > > > AllInstruments;
 
   struct AllOrderBooks_HeapID {
-    static const char *id() { return "MxMDLib.AllOrderBooks"; }
+    ZuInline static const char *id() { return "MxMDLib.AllOrderBooks"; }
   };
   typedef ZmHash<ZmRef<MxMDOrderBook>,
 	    ZmHashIndex<MxMDOrderBook::KeyAccessor,
@@ -2010,7 +2009,7 @@ friend class ZmShard;
   // secondary indices
 
   struct Instruments_HeapID {
-    static const char *id() { return "MxMDLib.Instruments"; }
+    ZuInline static const char *id() { return "MxMDLib.Instruments"; }
   };
   typedef ZmHash<MxSymKey,
 	    ZmHashVal<MxMDInstrument *,
@@ -2021,7 +2020,7 @@ friend class ZmShard;
   // feeds, venues
 
   struct Feeds_HeapID {
-    static const char *id() { return "MxMDLib.Feeds"; }
+    ZuInline static const char *id() { return "MxMDLib.Feeds"; }
   };
   typedef ZmRBTree<ZmRef<MxMDFeed>,
 	    ZmRBTreeIndex<MxMDFeed::IDAccessor,
@@ -2030,7 +2029,7 @@ friend class ZmShard;
 		  ZmRBTreeHeapID<Feeds_HeapID> > > > > Feeds;
 
   struct Venues_HeapID {
-    static const char *id() { return "MxMDLib.Venues"; }
+    ZuInline static const char *id() { return "MxMDLib.Venues"; }
   };
   typedef ZmRBTree<ZmRef<MxMDVenue>,
 	    ZmRBTreeIndex<MxMDVenue::IDAccessor,
@@ -2039,7 +2038,7 @@ friend class ZmShard;
 		  ZmRBTreeHeapID<Venues_HeapID> > > > > Venues;
 
   struct VenueMap_HeapID {
-    static const char *id() { return "MxMDLib.VenueMap"; }
+    ZuInline static const char *id() { return "MxMDLib.VenueMap"; }
   };
   typedef ZmRBTree<MxMDVenueMapKey,
 	    ZmRBTreeVal<MxMDVenueMapping,

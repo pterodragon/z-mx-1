@@ -50,7 +50,7 @@ struct ZmQueue_Defaults {
   template <typename T> struct IHashFnT { typedef ZuHash<T> IHashFn; };
   template <typename T> struct IndexT { typedef T Index; };
   typedef ZmLock Lock;
-  struct HeapID { inline static const char *id() { return "ZmQueue"; } };
+  struct HeapID { static const char *id() { return "ZmQueue"; } };
   struct Base { };
 };
 
@@ -162,10 +162,10 @@ public:
 		ZmHashLock<ZmNoLock,
 		  ZmHashHeapID<HeapID> > > > > ID2Key;
 
-  inline ZmQueue() : m_head(0), m_tail(0) { }
+  ZmQueue() : m_head(0), m_tail(0) { }
 
   template <typename ...Args>
-  inline ZmQueue(ID initialID, const ZmHashParams &params, Args &&... args) :
+  ZmQueue(ID initialID, const ZmHashParams &params, Args &&... args) :
       NTP::Base{ZuFwd<Args>(args)...},
       m_head(initialID), m_tail(initialID) {
     m_key2id = new Key2ID(params);
@@ -183,12 +183,12 @@ friend class Iterator;
     typedef ZmQueue<Key, NTP> Queue;
 
   public:
-    inline Iterator(Queue &queue) :
+    Iterator(Queue &queue) :
 	Guard(queue.m_lock), m_queue(queue), m_id(queue.m_head) { }
 
-    inline void reset() { m_id = m_queue.m_head; }
+    void reset() { m_id = m_queue.m_head; }
 
-    inline const Key &iterate() {
+    const Key &iterate() {
       if (!m_queue.m_key2id->count_() || m_id == m_queue.m_tail)
 	return Cmp::null();
       typename ID2Key::NodeRef node;
@@ -199,7 +199,7 @@ friend class Iterator;
       return node->val();
     }
 
-    inline void del() {
+    void del() {
       ID prevID = m_id - 1;
       typename ID2Key::NodeRef node = m_queue.m_id2key->del(prevID);
       if (!node) return;
@@ -211,14 +211,14 @@ friend class Iterator;
       }
     }
 
-    inline ID id() const { return m_id; }
+    ID id() const { return m_id; }
 
   private:
     Queue		&m_queue;
     ID			m_id;
   };
 
-  inline void push(const Key &key, bool possDup = true) {
+  void push(const Key &key, bool possDup = true) {
     Guard guard(m_lock);
     ID id = m_tail++;
     if (possDup) {
@@ -231,7 +231,7 @@ friend class Iterator;
     m_key2id->add(key, id);
     m_id2key->add(id, key);
   }
-  inline void push(ID id, const Key &key, bool possDup) {
+  void push(ID id, const Key &key, bool possDup) {
     Guard guard(m_lock);
     if (m_tail <= id) m_tail = id + 1;
     if (m_head > id) m_head = id;
@@ -247,7 +247,7 @@ friend class Iterator;
     m_id2key->add(id, key);
   }
 
-  inline Key shift() {
+  Key shift() {
     Guard guard(m_lock);
     if (!m_key2id->count_() || m_head == m_tail) return Cmp::null();
     typename ID2Key::NodeRef node;
@@ -256,7 +256,7 @@ friend class Iterator;
     m_key2id->del(node->val());
     return ZuMv(node->val());
   }
-  inline Key shift(ID &id) {
+  Key shift(ID &id) {
     Guard guard(m_lock);
     if (!m_key2id->count_() || m_head == m_tail) return Cmp::null();
     typename ID2Key::NodeRef node;
@@ -267,28 +267,28 @@ friend class Iterator;
     return ZuMv(node->val());
   }
 
-  inline void unshift(const Key &key) {
+  void unshift(const Key &key) {
     Guard guard(m_lock);
     ID id = --m_head;
     m_key2id->add(key, id);
     m_id2key->add(id, key);
   }
 
-  inline bool find(const Key &key, ID &id) {
+  bool find(const Key &key, ID &id) {
     Guard guard(m_lock);
     typename Key2ID::NodeRef node = m_key2id->find(key);
     if (!node) return false;
     id = node->val();
     return true;
   }
-  inline const Key &findID(ID id) {
+  const Key &findID(ID id) {
     Guard guard(m_lock);
     typename ID2Key::NodeRef node = m_id2key->find(id);
     if (!node) return Cmp::null();
     return node->val();
   }
 
-  inline bool del(const Key &key) {
+  bool del(const Key &key) {
     Guard guard(m_lock);
     typename Key2ID::NodeRef node = m_key2id->del(key);
     if (!node) return false;
@@ -296,7 +296,7 @@ friend class Iterator;
     if (m_id2key->del(id)) del_(id);
     return true;
   }
-  inline bool del(const Key &key, ID &id) {
+  bool del(const Key &key, ID &id) {
     Guard guard(m_lock);
     typename Key2ID::NodeRef node = m_key2id->del(key);
     if (!node) return false;
@@ -304,7 +304,7 @@ friend class Iterator;
     if (m_id2key->del(id)) del_(id);
     return true;
   }
-  inline Key delID(ID id) {
+  Key delID(ID id) {
     Guard guard(m_lock);
     typename ID2Key::NodeRef node = m_id2key->del(id);
     if (!node) return Cmp::null();
@@ -314,7 +314,7 @@ friend class Iterator;
   }
 
 private:
-  inline void del_(ID id) {
+  void del_(ID id) {
     if (id == m_tail - 1) {
       if (id != m_head - 1) m_tail = id;
     } else if (id == m_head && id != m_tail) {
@@ -323,17 +323,17 @@ private:
   }
 
 public:
-  inline void clean(ID initialID = 0) {
+  void clean(ID initialID = 0) {
     Guard guard(m_lock);
     m_head = m_tail = initialID;
     m_key2id->clean();
     m_id2key->clean();
   }
 
-  inline unsigned count() const { return m_key2id->count_(); }
+  unsigned count() const { return m_key2id->count_(); }
 
-  inline ID head() const { return m_head; }
-  inline ID tail() const { return m_tail; }
+  ID head() const { return m_head; }
+  ID tail() const { return m_tail; }
 
 private:
   Lock			m_lock;

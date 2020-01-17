@@ -35,23 +35,23 @@
 #include <zlib/ZmAssert.hpp>
 
 // get hdr from buffer
-inline uint32_t ZvCmd_getHdr(const uint8_t *data) {
+uint32_t ZvCmd_getHdr(const uint8_t *data) {
   return *reinterpret_cast<const ZuLittleEndian<uint32_t> *>(data);
 }
 // return hdr length
-inline constexpr unsigned ZvCmd_hdrLen() { return sizeof(uint32_t); }
+constexpr unsigned ZvCmd_hdrLen() { return sizeof(uint32_t); }
 // construct hdr from body size, type
-inline uint32_t ZvCmd_mkHdr(uint32_t size, uint32_t type) {
+uint32_t ZvCmd_mkHdr(uint32_t size, uint32_t type) {
   ZmAssert(size < (1U<<28));
   ZmAssert(type < (1U<<3));
   return size | (type<<28);
 }
 // return body length
-inline uint32_t ZvCmd_bodyLen(uint32_t hdr) {
+uint32_t ZvCmd_bodyLen(uint32_t hdr) {
   return hdr &~ (((uint32_t)0xf)<<28);
 }
 // return body type
-inline uint32_t ZvCmd_bodyType(uint32_t hdr) {
+uint32_t ZvCmd_bodyType(uint32_t hdr) {
   return hdr>>28;
 }
 

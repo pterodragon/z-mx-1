@@ -60,7 +60,7 @@ struct ZmRBTree_Defaults {
   enum { NodeIsVal = 0 };
   typedef ZmLock Lock;
   typedef ZmObject Object;
-  struct HeapID { inline static const char *id() { return "ZmRBTree"; } };
+  struct HeapID { static const char *id() { return "ZmRBTree"; } };
   struct Base { };
 };
 
@@ -179,11 +179,11 @@ public:
   typedef typename Tree::NodeRef NodeRef;
 
 protected:
-  inline ZmRBTreeIterator_(Tree &tree) : m_tree(tree) {
+  ZmRBTreeIterator_(Tree &tree) : m_tree(tree) {
     tree.startIterate(*this);
   }
   template <typename Index>
-  inline ZmRBTreeIterator_(
+  ZmRBTreeIterator_(
       Tree &tree, const Index &index,
       int compare = Tree::GreaterEqual) :
     m_tree(tree) {
@@ -191,24 +191,22 @@ protected:
   }
 
 public:
-  inline void reset() {
-    m_tree.startIterate(*this);
-  }
+  void reset() { m_tree.startIterate(*this); }
   template <typename Index>
-  inline void reset(
+  void reset(
       const Index &index,
       int compare = Tree::GreaterEqual) {
     m_tree.startIterate(*this, index, compare);
   }
 
-  inline Node *iterate() { return m_tree.iterate(*this); }
+  ZuInline Node *iterate() { return m_tree.iterate(*this); }
 
-  inline const Key &iterateKey() {
+  const Key &iterateKey() {
     Node *node = m_tree.iterate(*this);
     if (ZuLikely(node)) return node->Node::key();
     return Cmp::null();
   }
-  inline const Val &iterateVal() {
+  const Val &iterateVal() {
     Node *node = m_tree.iterate(*this);
     if (ZuLikely(node)) return node->Node::val();
     return ValCmp::null();
@@ -231,11 +229,11 @@ class ZmRBTreeIterator :
   typedef typename Tree::Guard Guard;
 
 public:
-  inline ZmRBTreeIterator(Tree &tree) :
+  ZmRBTreeIterator(Tree &tree) :
     Guard(tree.lock()),
     ZmRBTreeIterator_<Tree, Direction>(tree) { }
   template <typename Index_>
-  inline ZmRBTreeIterator(Tree &tree, const Index_ &index,
+  ZmRBTreeIterator(Tree &tree, const Index_ &index,
       int compare = Direction) :
     Guard(tree.lock()),
     ZmRBTreeIterator_<Tree, Direction>(tree, index, compare) { }
@@ -252,12 +250,12 @@ class ZmRBTreeReadIterator :
   typedef typename Tree::ReadGuard ReadGuard;
 
 public:
-  inline ZmRBTreeReadIterator(const Tree &tree) :
+  ZmRBTreeReadIterator(const Tree &tree) :
     ReadGuard(tree.lock()),
     ZmRBTreeIterator_<Tree, Direction>(
 	const_cast<Tree &>(tree)) { }
   template <typename Index_>
-  inline ZmRBTreeReadIterator(const Tree &tree, const Index_ &index,
+  ZmRBTreeReadIterator(const Tree &tree, const Index_ &index,
       int compare = Direction) :
     ReadGuard(tree.lock()),
     ZmRBTreeIterator_<Tree, Direction>(
@@ -380,12 +378,12 @@ public:
 
   ~ZmRBTree() { clean(); }
 
-  inline Lock &lock() const { return m_lock; }
+  ZuInline Lock &lock() const { return m_lock; }
 
-  inline unsigned count() const { ReadGuard guard(m_lock); return m_count; }
-  inline unsigned count_() const { return m_count; }
+  unsigned count() const { ReadGuard guard(m_lock); return m_count; }
+  ZuInline unsigned count_() const { return m_count; }
 
-  inline void add(Node *newNode) {
+  void add(Node *newNode) {
     newNode->init();
 
     Guard guard(m_lock);
@@ -444,7 +442,7 @@ public:
     ++m_count;
   }
   template <typename Key__>
-  inline typename ZuNotConvertible<
+  typename ZuNotConvertible<
 	typename ZuDeref<Key__>::T, NodeRef, NodeRef>::T
       add(Key__ &&key) {
     NodeRef node = new Node(ZuFwd<Key__>(key));
@@ -452,77 +450,77 @@ public:
     return node;
   }
   template <typename Key__, typename Val_>
-  inline NodeRef add(Key__ &&key, Val_ &&val) {
+  NodeRef add(Key__ &&key, Val_ &&val) {
     NodeRef node = new Node(ZuFwd<Key__>(key), ZuFwd<Val_>(val));
     this->add(node);
     return node;
   }
 
   template <typename Index_>
-  inline NodeRef find(const Index_ &index) const {
+  NodeRef find(const Index_ &index) const {
     ReadGuard guard(m_lock);
     return find_(index);
   }
   template <typename Index_>
-  inline Node *findPtr(const Index_ &index) const {
+  Node *findPtr(const Index_ &index) const {
     ReadGuard guard(m_lock);
     return find_(index);
   }
   template <typename Index_>
-  inline const Key &findKey(const Index_ &index) const {
+  const Key &findKey(const Index_ &index) const {
     ReadGuard guard(m_lock);
     Node *node = find_(index);
     if (ZuUnlikely(!node)) return Cmp::null();
     return node->Node::key();
   }
   template <typename Index_>
-  inline const Val &findVal(const Index_ &index) const {
+  const Val &findVal(const Index_ &index) const {
     ReadGuard guard(m_lock);
     Node *node = find_(index);
     if (ZuUnlikely(!node)) return ValCmp::null();
     return node->Node::val();
   }
 
-  inline NodeRef minimum() const {
+  NodeRef minimum() const {
     ReadGuard guard(m_lock);
     return m_minimum;
   }
-  inline Node *minimumPtr() const {
+  Node *minimumPtr() const {
     ReadGuard guard(m_lock);
     return m_minimum;
   }
-  inline const Key &minimumKey() const {
+  const Key &minimumKey() const {
     NodeRef node = minimum();
     if (ZuUnlikely(!node)) return Cmp::null();
     return node->Node::key();
   }
-  inline const Val &minimumVal() const {
+  const Val &minimumVal() const {
     NodeRef node = minimum();
     if (ZuUnlikely(!node)) return ValCmp::null();
     return node->Node::val();
   }
 
-  inline NodeRef maximum() const {
+  NodeRef maximum() const {
     ReadGuard guard(m_lock);
     return m_maximum;
   }
-  inline Node *maximumPtr() const {
+  Node *maximumPtr() const {
     ReadGuard guard(m_lock);
     return m_maximum;
   }
-  inline const Key &maximumKey() const {
+  const Key &maximumKey() const {
     NodeRef node = maximum();
     if (ZuUnlikely(!node)) return Cmp::null();
     return node->Node::key();
   }
-  inline const Val &maximumVal() const {
+  const Val &maximumVal() const {
     NodeRef node = maximum();
     if (ZuUnlikely(!node)) return ValCmp::null();
     return node->Node::val();
   }
 
   template <typename Index_>
-  inline typename ZuIfT<
+  typename ZuIfT<
     !ZuConversion<Index_, Node *>::Exists, NodeRef>::T
       del(const Index_ &index) {
     Guard guard(m_lock);
@@ -547,14 +545,14 @@ public:
     NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
     return ZuMv(*ptr);
   }
-  inline NodeRef del(Node *node) {
+  NodeRef del(Node *node) {
     if (ZuUnlikely(!node)) return nullptr;
     Guard guard(m_lock);
     delNode_(node);
     NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
     return ZuMv(*ptr);
   }
-  inline void delNode_(Node *node) {
+  void delNode_(Node *node) {
     Node *parent = node->Fn::parent();
     Node *dup = node->Fn::dup();
 
@@ -589,7 +587,7 @@ public:
     --m_count;
   }
   template <typename Index_>
-  inline Key delKey(const Index_ &index) {
+  Key delKey(const Index_ &index) {
     NodeRef node = del(index);
     if (ZuUnlikely(!node)) return Cmp::null();
     Key key = ZuMv(node->Node::key());
@@ -597,7 +595,7 @@ public:
     return key;
   }
   template <typename Index_>
-  inline Val delVal(const Index_ &index) {
+  Val delVal(const Index_ &index) {
     NodeRef node = del(index);
     if (ZuUnlikely(!node)) return ValCmp::null();
     Val val = ZuMv(node->Node::val());
@@ -606,7 +604,7 @@ public:
   }
 
   template <typename Index_, typename Val_>
-  inline typename ZuIfT<
+  typename ZuIfT<
     !ZuConversion<Index_, Node *>::Exists &&
     ZuConversion<Val_, Val>::Exists, NodeRef>::T
       del(const Index_ &index, const Val_ &val) {
@@ -638,7 +636,7 @@ public:
     return nullptr;
   }
   template <typename Index_, typename Key__>
-  inline typename ZuIfT<
+  typename ZuIfT<
     !ZuConversion<Index_, Node *>::Exists &&
     ZuConversion<Key__, Key>::Exists &&
     !ZuConversion<Key__, Val>::Exists, NodeRef>::T
@@ -672,19 +670,19 @@ public:
   }
 
   template <int Direction = ZmRBTreeGreaterEqual>
-  inline auto iterator() {
+  auto iterator() {
     return Iterator<Direction>(*this);
   }
   template <int Direction, typename Index_>
-  inline auto iterator(Index_ &&index) {
+  auto iterator(Index_ &&index) {
     return Iterator<Direction>(*this, ZuFwd<Index_>(index));
   }
   template <int Direction = ZmRBTreeGreaterEqual>
-  inline auto readIterator() const {
+  auto readIterator() const {
     return ReadIterator<Direction>(*this);
   }
   template <int Direction, typename Index_>
-  inline auto readIterator(Index_ &&index) const {
+  auto readIterator(Index_ &&index) const {
     return ReadIterator<Direction>(*this, ZuFwd<Index_>(index));
   }
 
@@ -699,7 +697,7 @@ public:
 
 protected:
   template <typename Index_>
-  inline Node *find_(const Index_ &index) const {
+  Node *find_(const Index_ &index) const {
     Node *node;
 
     if (!(node = m_root)) return nullptr;
@@ -718,7 +716,7 @@ protected:
     }
   }
   template <typename Index_>
-  inline Node *find_(const Index_ &index, int compare) const {
+  Node *find_(const Index_ &index, int compare) const {
     if (compare == ZmRBTreeEqual) {
       Node *node;
 
@@ -1077,26 +1075,26 @@ protected:
   using Iterator_ = ZmRBTreeIterator_<ZmRBTree, Direction>;
 
   template <int Direction>
-  inline typename ZuIfT<(Direction >= 0)>::T startIterate(
+  typename ZuIfT<(Direction >= 0)>::T startIterate(
       Iterator_<Direction> &iterator) {
     iterator.m_node = m_minimum;
     iterator.m_last = nullptr;
   }
   template <int Direction>
-  inline typename ZuIfT<(Direction < 0)>::T startIterate(
+  typename ZuIfT<(Direction < 0)>::T startIterate(
       Iterator_<Direction> &iterator) {
     iterator.m_node = m_maximum;
     iterator.m_last = nullptr;
   }
   template <int Direction, typename Index_>
-  inline void startIterate(
+  void startIterate(
       Iterator_<Direction> &iterator, const Index_ &index, int compare) {
     iterator.m_node = find_(index, compare);
     iterator.m_last = nullptr;
   }
 
   template <int Direction>
-  inline typename ZuIfT<(Direction > 0), Node *>::T iterate(
+  typename ZuIfT<(Direction > 0), Node *>::T iterate(
       Iterator_<Direction> &iterator) {
     Node *node = iterator.m_node;
     if (!node) return nullptr;
@@ -1104,7 +1102,7 @@ protected:
     return iterator.m_last = node;
   }
   template <int Direction>
-  inline typename ZuIfT<(!Direction), Node *>::T iterate(
+  typename ZuIfT<(!Direction), Node *>::T iterate(
       Iterator_<Direction> &iterator) {
     Node *node = iterator.m_node;
     if (!node) return nullptr;
@@ -1112,7 +1110,7 @@ protected:
     return iterator.m_last = node;
   }
   template <int Direction>
-  inline typename ZuIfT<(Direction < 0), Node *>::T iterate(
+  typename ZuIfT<(Direction < 0), Node *>::T iterate(
       Iterator_<Direction> &iterator) {
     Node *node = iterator.m_node;
     if (!node) return nullptr;

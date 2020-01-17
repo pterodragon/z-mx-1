@@ -117,14 +117,14 @@ public:
     { m_createFn = fn; return ZuMv(*this); }
 #endif
 
-  inline const ZmThreadName &name() const { return m_name; }
-  inline unsigned stackSize() const { return m_stackSize; }
-  inline int priority() const { return m_priority; }
-  inline unsigned partition() const { return m_partition; }
-  inline const ZmBitmap &cpuset() const { return m_cpuset; }
-  inline bool detached() const { return m_detached; }
+  const ZmThreadName &name() const { return m_name; }
+  unsigned stackSize() const { return m_stackSize; }
+  int priority() const { return m_priority; }
+  unsigned partition() const { return m_partition; }
+  const ZmBitmap &cpuset() const { return m_cpuset; }
+  bool detached() const { return m_detached; }
 #ifndef _WIN32
-  inline const ZmThread_CreateFn &createFn() const { return m_createFn; }
+  const ZmThread_CreateFn &createFn() const { return m_createFn; }
 #endif
 
 private:
@@ -159,16 +159,17 @@ public:
   ZuInline pthread_t tid() const { return m_pthread; }
 #endif
   ZuInline clockid_t cid() const { return m_cid; }
-  inline double cpuUsage() const {
+  double cpuUsage() const {
     ZmTime cpuLast = m_cpuLast;
     ZmTime rtLast = m_rtLast;
     clock_gettime(m_cid, &m_cpuLast);
     m_rtLast.now();
+    if (ZuUnlikely(!cpuLast || !rtLast)) return 0.0;
     double cpuDelta = (m_cpuLast - cpuLast).dtime();
     double rtDelta = (m_rtLast - rtLast).dtime();
     return cpuDelta / rtDelta;
   }
-  inline int32_t sysPriority() const {
+  int32_t sysPriority() const {
     struct sched_param p;
 #ifdef linux
     sched_getparam(m_tid, &p);
@@ -180,14 +181,15 @@ public:
 #else /* !_WIN32 */
   ZuInline unsigned tid() const { return m_tid; }
   ZuInline HANDLE handle() const { return m_handle; }
-  inline double cpuUsage() const {
+  double cpuUsage() const {
     ULONG64 cpuLast = m_cpuLast;
     ULONG64 rtLast = m_rtLast;
     QueryThreadCycleTime(m_handle, &m_cpuLast);
     m_rtLast = __rdtsc();
+    if (ZuUnlikely(!cpuLast || !rtLast)) return 0.0;
     return (double)(m_cpuLast - cpuLast) / (double)(m_rtLast - rtLast);
   }
-  inline int32_t sysPriority() {
+  int32_t sysPriority() {
     return GetThreadPriority(m_handle);
   }
 #endif /* !_WIN32 */
@@ -277,7 +279,7 @@ public:
 
   void telemetry(ZmThreadTelemetry &data) const;
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << this->name() << " (" << ZuBoxed(tid()) << ") [" << m_cpuset << "] "
       << ZuBoxed(cpuUsage() * 100.0).fmt(ZuFmt::FP<2>()) << '%';
   }
@@ -305,7 +307,7 @@ private:
 template <> struct ZuPrint<ZmThreadContext> : public ZuPrintFn { };
 template <> struct ZuPrint<ZmThreadContext *> : public ZuPrintDelegate {
   template <typename S>
-  inline static void print(S &s, const ZmThreadContext *v) {
+  static void print(S &s, const ZmThreadContext *v) {
     if (!v)
       s << "null";
     else
@@ -320,9 +322,9 @@ public:
   typedef ZmThreadContext Context;
   typedef ZmThreadID ID;
 
-  inline ZmThread() { }
+  ZmThread() { }
   template <typename Fn>
-  inline ZmThread(int id, Fn &&fn, ZmThreadParams params = ZmThreadParams()) {
+  ZmThread(int id, Fn &&fn, ZmThreadParams params = ZmThreadParams()) {
     run(id, ZuFwd<Fn>(fn), params); // sets m_context
   }
 
@@ -342,7 +344,7 @@ public:
 
   int join(void **status = 0);
 
-  inline ZmRef<Context> context() { return m_context; }
+  ZmRef<Context> context() { return m_context; }
 
   ZuInline operator ID() const { return tid(); }
 
@@ -396,7 +398,7 @@ public:
 	  [](CSV_<S> *csv, ZmThreadContext *tc) { csv->print(tc); }});
     }
   };
-  inline static CSV csv() { return CSV(); }
+  ZuInline static CSV csv() { return CSV(); }
 
 private:
   ZmRef<Context>	m_context;

@@ -81,7 +81,7 @@ public:
   }
 
 #ifdef ZmObject_DEBUG
-  inline void mvref(const void *prev, const void *next) const {
+  void mvref(const void *prev, const void *next) const {
     if (ZuUnlikely(this->debugging_())) {
       ZmObject_ref(this, next);
       ZmObject_deref(this, prev);

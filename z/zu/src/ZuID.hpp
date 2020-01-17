@@ -150,7 +150,7 @@ template <> struct ZuTraits<ZuID> : public ZuTraits<uint64_t> {
   enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
 };
 template <> struct ZuCmp<ZuID> : public ZuCmp0<uint64_t> {
-  inline static const ZuID &null() { static const ZuID v; return v; }
+  ZuInline static const ZuID &null() { static const ZuID v; return v; }
   ZuInline static bool null(uint64_t id) { return !id; }
 };
 template <> struct ZuPrint<ZuID> : public ZuPrintFn { };

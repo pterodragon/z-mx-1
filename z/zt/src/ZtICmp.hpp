@@ -42,7 +42,7 @@
 struct ZtICmp {
 public:
   template <typename S1, typename S2>
-  inline static int cmp(S1 &&s1_, S2 &&s2_) {
+  static int cmp(S1 &&s1_, S2 &&s2_) {
     ZuString s1(ZuFwd<S1>(s1_));
     ZuString s2(ZuFwd<S2>(s2_));
     int l1 = s1.length(), l2 = s2.length();
@@ -53,7 +53,7 @@ public:
     return l1 > l2 ? 1 : l1 < l2 ? -1 : 0;
   }
   template <typename S1, typename S2>
-  inline static int equals(S1 &&s1_, S2 &&s2_) {
+  static int equals(S1 &&s1_, S2 &&s2_) {
     ZuString s1(ZuFwd<S1>(s1_));
     ZuString s2(ZuFwd<S2>(s2_));
     int l1 = s1.length(), l2 = s2.length();
@@ -61,7 +61,7 @@ public:
     return !Zu::stricmp_(s1.data(), s2.data(), l1);
   }
   template <typename S>
-  inline static int null(S &&s_) {
+  static int null(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     return !s;
   }

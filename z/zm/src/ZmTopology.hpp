@@ -61,7 +61,7 @@ private:
   static ZmTopology *instance();
 
 public:
-  inline static hwloc_topology_t hwloc() { return instance()->m_hwloc; }
+  static hwloc_topology_t hwloc() { return instance()->m_hwloc; }
 
   typedef void (*ErrorFn)(int);
   static void errorFn(ErrorFn fn);

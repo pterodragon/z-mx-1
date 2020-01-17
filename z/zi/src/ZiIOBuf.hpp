@@ -30,6 +30,8 @@
 #include <zlib/ZiLib.hpp>
 #endif
 
+#include <zlib/ZuPrint.hpp>
+
 #include <zlib/ZmPolymorph.hpp>
 #include <zlib/ZmHeap.hpp>
 
@@ -114,6 +116,103 @@ public:
     return jumbo;
   }
 
+private:
+  void append(const uint8_t *data, unsigned length_) {
+    unsigned total = length + length_;
+    memcpy(ensure(total) + length, data, length_);
+    length = total;
+  }
+
+  template <typename U, typename R = void,
+    bool B = ZuPrint<U>::Delegate> struct MatchPDelegate;
+  template <typename U, typename R>
+  struct MatchPDelegate<U, R, true> { typedef R T; };
+  template <typename U, typename R = void,
+    bool B = ZuPrint<U>::Buffer> struct MatchPBuffer;
+  template <typename U, typename R>
+  struct MatchPBuffer<U, R, true> { typedef R T; };
+
+  template <typename P>
+  typename MatchPDelegate<P>::T append(const P &p) {
+    ZuPrint<P>::print(*this, p);
+  }
+  template <typename P>
+  typename MatchPBuffer<P>::T append(const P &p) {
+    unsigned length_ = ZuPrint<P>::length(p);
+    length += ZuPrint<P>::print(
+	reinterpret_cast<char *>(ensure(length + length_) + length),
+	length_, p);
+  }
+
+  template <typename U, typename R = void,
+    bool B = ZuConversion<U, char>::Same> struct MatchChar;
+  template <typename U, typename R>
+  struct MatchChar<U, R, true> { typedef R T; };
+
+  template <typename U, typename R = void,
+    bool S = ZuTraits<U>::IsString &&
+	     !ZuTraits<U>::IsWString &&
+	     !ZuTraits<U>::IsPrimitive
+    > struct MatchString;
+  template <typename U, typename R>
+  struct MatchString<U, R, true> { typedef R T; };
+
+  template <typename U, typename R = void,
+    bool B = ZuTraits<U>::IsPrimitive &&
+	     ZuTraits<U>::IsReal &&
+	     !ZuConversion<U, char>::Same
+    > struct MatchReal;
+  template <typename U, typename R>
+  struct MatchReal<U, R, true> { typedef R T; };
+
+  template <typename U, typename R = void,
+    bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct MatchPrint;
+  template <typename U, typename R>
+  struct MatchPrint<U, R, true> { typedef R T; };
+
+public:
+  template <typename C>
+  ZuInline typename MatchChar<C, ZiIOBuf_ &>::T operator <<(C c) {
+    this->append(&c, 1);
+    return *this;
+  }
+  template <typename S>
+  ZuInline typename MatchString<S, ZiIOBuf_ &>::T operator <<(S &&s_) {
+    ZuString s(ZuFwd<S>(s_));
+    append(s.data(), s.length());
+    return *this;
+  }
+  ZuInline ZiIOBuf_ &operator <<(const char *s_) {
+    ZuString s(s_);
+    append(s.data(), s.length());
+    return *this;
+  }
+  template <typename R>
+  ZuInline typename MatchReal<R, ZiIOBuf_ &>::T operator <<(const R &r) {
+    append(ZuBoxed(r));
+    return *this;
+  }
+  template <typename P>
+  ZuInline typename MatchPrint<P, ZiIOBuf_ &>::T operator <<(const P &p) {
+    append(p);
+    return *this;
+  }
+
+  struct Traits : public ZuGenericTraits<ZiIOBuf_> {
+    using Elem = char;
+    enum {
+      IsCString = 0, IsString = 1, IsWString = 0,
+      IsHashable = 1, IsComparable = 1
+    };
+    static const char *data(const ZiIOBuf_ &buf) {
+      return reinterpret_cast<const char *>(buf.data());
+    }
+    static unsigned length(const ZiIOBuf_ &buf) {
+      return buf.length;
+    }
+  };
+  friend Traits ZuTraitsFn(const ZiIOBuf_ *);
+
   void		*owner = nullptr;
   uint8_t	*jumbo = nullptr;
   uint32_t	skip = 0;
@@ -122,7 +221,7 @@ public:
 #pragma pack(pop)
 
 struct ZiIOBuf_HeapID {
-  inline static const char *id() { return "ZiIOBuf"; }
+  static const char *id() { return "ZiIOBuf"; }
 };
 template <unsigned Size>
 using ZiIOBuf_Heap = ZmHeap<ZiIOBuf_HeapID, sizeof(ZiIOBuf_<Size, ZuNull>)>;

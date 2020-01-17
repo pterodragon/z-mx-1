@@ -78,13 +78,13 @@ namespace MxOrdType {
       "X", LIT,
       "Y", BLIT);
 
-  inline bool isLimit(int ordType) {
+  bool isLimit(int ordType) {
     if (ZuUnlikely(ordType < 0 || ordType >= N)) return 0;
     static bool isLimit_[N] = { 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1 };
     return isLimit_[ordType];
   }
 
-  inline bool isMkt(int ordType) { return !isLimit(ordType); }
+  bool isMkt(int ordType) { return !isLimit(ordType); }
 }
 
 namespace MxTimeInForce {
@@ -303,12 +303,12 @@ namespace MxBookingType {
 }
 
 struct MxTTimeFmt {
-  struct Null { template <typename S> inline void print(S &) const { } };
-  inline static ZtDateFmt::FIX<-9, Null> &fix() {
+  struct Null { template <typename S> void print(S &) const { } };
+  static ZtDateFmt::FIX<-9, Null> &fix() {
     thread_local ZtDateFmt::FIX<-9, Null> fix_;
     return fix_;
   }
-  inline static ZtDateFmt::CSV &csv() {
+  static ZtDateFmt::CSV &csv() {
     thread_local ZtDateFmt::CSV csv_;
     return csv_;
   }
@@ -316,14 +316,14 @@ struct MxTTimeFmt {
 template <> struct ZuPrint<MxTTimeFmt::Null> : public ZuPrintFn { };
 
 struct MxTCSVTimeFmt {
-  inline static ZtDateFmt::CSV &fmt() {
+  static ZtDateFmt::CSV &fmt() {
     thread_local ZtDateFmt::CSV fmt_;
     return fmt_;
   }
 };
 
 struct MxTBoolFmt {
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     if (!*v) return;
     s << (v ? '1' : '0');
   }

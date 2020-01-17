@@ -48,22 +48,22 @@ namespace ZvSchedulerPriorities {
 }
 
 struct ZvSchedParams : public ZmSchedParams {
-  inline ZvSchedParams() { }
+  ZvSchedParams() { }
 
   using ZmSchedParams::ZmSchedParams;
 #if 0
-  inline ZvSchedParams(ZmSchedParams &&p) : ZmSchedParams(ZuMv(p)) { }
-  inline ZvSchedParams &operator =(ZmSchedParams &&p) {
+  ZvSchedParams(ZmSchedParams &&p) : ZmSchedParams(ZuMv(p)) { }
+  ZvSchedParams &operator =(ZmSchedParams &&p) {
     ZmSchedParams::operator =(ZuMv(p));
     return *this;
   }
 #endif
 
-  inline ZvSchedParams(ZvCf *cf) { init(cf); }
+  ZvSchedParams(ZvCf *cf) { init(cf); }
   inline ZvSchedParams(ZvCf *cf, ZmSchedParams &&deflt) :
     ZmSchedParams(ZuMv(deflt)) { init(cf); }
 
-  inline void init(ZvCf *cf) {
+  void init(ZvCf *cf) {
     if (!cf) return;
 
     static unsigned ncpu = ZmPlatform::getncpu();

@@ -19,8 +19,8 @@ struct E {
 
   E(const E &e) : m_ptr((void *)this), m_copied(e.m_copied + 1) { }
 
-  inline void *ptr() const { return m_ptr; }
-  inline int copied() const { return m_copied; }
+  void *ptr() const { return m_ptr; }
+  int copied() const { return m_copied; }
 
   void	*m_ptr;
   int	m_copied;
@@ -38,8 +38,8 @@ void validate(const ZtArray<E> &a, unsigned length)
 }
 
 struct Foo {
-  inline Foo() { }
-  template <typename S> inline Foo(const S &s) : bar(s) { }
+  Foo() { }
+  template <typename S> Foo(const S &s) : bar(s) { }
   ZtString bar;
 };
 

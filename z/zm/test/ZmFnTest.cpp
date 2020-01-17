@@ -112,25 +112,25 @@ struct X {
 };
 
 struct Base {
-  inline Base(ZmAtomic<uint64_t> &i_) : i(i_) { }
-  inline void foo_() { i.xch(i.load_() + 1); }
+  Base(ZmAtomic<uint64_t> &i_) : i(i_) { }
+  void foo_() { i.xch(i.load_() + 1); }
   void foo() { foo_(); }
   virtual void bar() { }
   ZmAtomic<uint64_t> &i;
 };
 
 struct Derived : public Base {
-  inline Derived(ZmAtomic<uint64_t> &i) : Base(i) { }
+  Derived(ZmAtomic<uint64_t> &i) : Base(i) { }
   void bar() { Base::foo_(); }
 };
 
 struct MoveOnly {
-  inline MoveOnly() : i(42) { }
-  inline ~MoveOnly() { }
+  MoveOnly() : i(42) { }
+  ~MoveOnly() { }
   MoveOnly(const MoveOnly &) = delete;
   MoveOnly &operator =(const MoveOnly &) = delete;
-  inline MoveOnly(MoveOnly &&m) : i(m.i) { m.i = 0; }
-  inline MoveOnly &operator =(MoveOnly &&m) { i = m.i; m.i = 0; return *this; }
+  MoveOnly(MoveOnly &&m) : i(m.i) { m.i = 0; }
+  MoveOnly &operator =(MoveOnly &&m) { i = m.i; m.i = 0; return *this; }
   int	i;
 };
 

@@ -48,9 +48,9 @@ class ZmTimeInterval {
   typedef ZmReadGuard<Lock> ReadGuard;
 
 public:
-  inline ZmTimeInterval() : m_min(INT_MAX), m_max(0), m_total(0), m_count(0) { }
+  ZmTimeInterval() : m_min(INT_MAX), m_max(0), m_total(0), m_count(0) { }
 
-  inline void add(ZmTime t) {
+  void add(ZmTime t) {
     Guard guard(m_lock);
     if (t < m_min) m_min = t;
     if (t > m_max) m_max = t;
@@ -58,7 +58,7 @@ public:
     m_count++;
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     ZmTime min, max, total;
     ZuBox<double> mean;
     ZuBox<unsigned> count;

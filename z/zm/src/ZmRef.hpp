@@ -144,11 +144,11 @@ private:
   struct MatchPtr<U, R, true> { typedef R T; };
 
 public:
-  inline ZmRef() : m_object(0) { }
-  inline ZmRef(const ZmRef &r) : m_object(r.m_object) {
+  ZmRef() : m_object(0) { }
+  ZmRef(const ZmRef &r) : m_object(r.m_object) {
     if (T *o = m_object) ZmREF(o);
   }
-  inline ZmRef(ZmRef &&r) noexcept : m_object(r.m_object) {
+  ZmRef(ZmRef &&r) noexcept : m_object(r.m_object) {
     r.m_object = 0;
 #ifdef ZmObject_DEBUG
     if (T *o = m_object) ZmMVREF(o, &r, this);
@@ -169,7 +169,7 @@ public:
     if (T *o = m_object) ZmMVREF(o, &r, this);
 #endif
   }
-  inline ZmRef(T *o) : m_object(o) {
+  ZmRef(T *o) : m_object(o) {
     if (o) ZmREF(o);
   }
   template <typename O>
@@ -177,11 +177,11 @@ public:
       m_object(static_cast<T *>(o)) {
     if (o) ZmREF(o);
   }
-  inline ~ZmRef() {
+  ~ZmRef() {
     if (T *o = m_object) ZmDEREF(o);
   }
 
-  template <typename R> inline typename MatchRef<R>::T swap(R &r) noexcept {
+  template <typename R> typename MatchRef<R>::T swap(R &r) noexcept {
     T *o = m_object;
     m_object = static_cast<T *>(r.m_object);
     r.m_object = static_cast<typename R::T *>(o);
@@ -192,22 +192,22 @@ public:
   }
 
   template <typename R>
-  friend inline typename MatchRef<R>::T swap(ZmRef &r1, R &r2) noexcept {
+  friend typename MatchRef<R>::T swap(ZmRef &r1, R &r2) noexcept {
     r1.swap(r2);
   }
 
-  inline ZmRef &operator =(ZmRef r) noexcept {
+  ZmRef &operator =(ZmRef r) noexcept {
     swap(r);
     return *this;
   }
   template <typename R>
-  inline typename MatchOtherRef<R, ZmRef &>::T operator =(R r) {
+  typename MatchOtherRef<R, ZmRef &>::T operator =(R r) {
     swap(r);
     return *this;
   }
 
   template <typename O>
-  inline typename MatchPtr<O, ZmRef &>::T operator =(O *n) {
+  typename MatchPtr<O, ZmRef &>::T operator =(O *n) {
     if (m_object != n) {
       if (n) ZmREF(n);
       T *o = m_object;
@@ -241,10 +241,10 @@ struct ZuTraits<ZmRef<T_> > : public ZuTraits<T_ *> {
 template <typename T> struct ZuCmp;
 template <typename T>
 struct ZuCmp<ZmRef<T> > : public ZuCmp<T *> {
-  inline static bool null(const ZmRef<T> &r) {
+  ZuInline static bool null(const ZmRef<T> &r) {
     return !r;
   }
-  inline static const ZmRef<T> &null() {
+  ZuInline static const ZmRef<T> &null() {
     static const ZmRef<T> r;
     return r;
   }

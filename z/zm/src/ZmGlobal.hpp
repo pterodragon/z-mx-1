@@ -57,7 +57,7 @@ public:
   virtual ~ZmGlobal() { }
 
 protected:
-  inline ZmGlobal() :
+  ZmGlobal() :
     m_type(typeid(void)),
 #ifdef ZDEBUG
     m_name(0),
@@ -90,7 +90,7 @@ private:
   };
 
 protected:
-  template <typename T> inline static T *global() {
+  template <typename T> static T *global() {
     static uintptr_t addr_ = 0;
     ZmAtomic<uintptr_t> *ZuMayAlias(addr) = (ZmAtomic<uintptr_t> *)&addr_;
     uintptr_t ptr;

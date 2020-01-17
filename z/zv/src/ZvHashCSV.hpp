@@ -48,7 +48,7 @@ struct ZvHashCSV {
     ZuBox<unsigned>	cBits;
   };
   const ZvFields<Data> Data::fields() noexcept {
-    ZvDataFields(Data,
+    ZvMkFields(Data,
 	(String, id, Primary),
 	(Scalar, bits, 0),
 	(Scalar, loadFactor, 0),

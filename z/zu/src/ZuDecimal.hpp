@@ -382,7 +382,7 @@ public:
 
   // scan from string
   template <typename S>
-  inline ZuDecimal(const S &s_, typename ZuIsString<S>::T *_ = 0) {
+  ZuDecimal(const S &s_, typename ZuIsString<S>::T *_ = 0) {
     ZuString s(s_);
     if (ZuUnlikely(!s)) goto null;
     {
@@ -456,7 +456,7 @@ public:
 template <typename Fmt> struct ZuDecimalFmt {
   const ZuDecimal	&fixed;
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     if (ZuUnlikely(!*fixed)) return;
     uint128_t iv, fv;
     if (ZuUnlikely(fixed.value < 0)) {
@@ -487,7 +487,7 @@ public:
   ZuInline ZuDecimalVFmt(const ZuDecimal &decimal, const ZuVFmt &fmt) :
       m_decimal{decimal}, m_fmt{fmt} { }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     if (ZuUnlikely(!*m_decimal)) return;
     uint128_t iv, fv;
     if (ZuUnlikely(m_decimal.value < 0)) {

@@ -213,9 +213,9 @@ private:
   void log(MxMsgID, MxTraffic) { }
 
 public:
-  inline MxMDBroadcast &broadcast() { return m_broadcast; }
+  MxMDBroadcast &broadcast() { return m_broadcast; }
 
-  inline bool streaming() { return m_broadcast.active(); }
+  bool streaming() { return m_broadcast.active(); }
 
   template <typename Snapshot>
   bool snapshot(Snapshot &snapshot, MxID id, MxSeqNo seqNo) {

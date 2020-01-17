@@ -102,22 +102,22 @@ public:
     ZuInline static void fn(uint64_t &v1, const uint64_t &v2) { v1 ^= v2; }
   };
 
-  inline void flip() { opFn<Not, 0>(data); }
+  void flip() { opFn<Not, 0>(data); }
 
-  inline ZuBitmap &operator |=(const ZuBitmap &b) {
+  ZuBitmap &operator |=(const ZuBitmap &b) {
     opFn<Or, 0>(data, b.data);
     return *this;
   }
-  inline ZuBitmap &operator &=(const ZuBitmap &b) {
+  ZuBitmap &operator &=(const ZuBitmap &b) {
     opFn<And, 0>(data, b.data);
     return *this;
   }
-  inline ZuBitmap &operator ^=(const ZuBitmap &b) {
+  ZuBitmap &operator ^=(const ZuBitmap &b) {
     opFn<Xor, 0>(data, b.data);
     return *this;
   }
 
-  inline void set(int begin, int end) {
+  void set(int begin, int end) {
     if (begin < 0)
       begin = 0;
     else if (begin >= Bits)
@@ -139,7 +139,7 @@ public:
       begin += 64;
     }
   }
-  inline void clr(int begin, int end) {
+  void clr(int begin, int end) {
     if (begin < 0)
       begin = 0;
     else if (begin >= Bits)
@@ -162,33 +162,33 @@ public:
     }
   }
 
-  inline bool operator !() const {
+  bool operator !() const {
     for (unsigned i = 0; i < Words; i++)
       if (data[i]) return false;
     return true;
   }
 
-  inline int first() const {
+  int first() const {
     for (unsigned i = 0; i < Words; i++)
       if (uint64_t w = data[i])
 	return (i<<Shift) + __builtin_ctzll(w);
     return -1;
   }
-  inline int last() const {
+  int last() const {
     for (int i = Words; --i >= 0; )
       if (uint64_t w = data[i])
 	return (i<<Shift) + (63 - __builtin_clzll(w));
     return -1;
   }
 
-  inline int next(int i) const {
+  int next(int i) const {
     if (ZuUnlikely(i == -1)) return first();
     do {
       if (++i >= Bits) return -1;
     } while (!(*this && i));
     return i;
   }
-  inline int prev(int i) const {
+  int prev(int i) const {
     if (ZuUnlikely(i == -1)) return last();
     do {
       if (--i < 0) return -1;
@@ -196,7 +196,7 @@ public:
     return i;
   }
 
-  inline unsigned scan(ZuString s) {
+  unsigned scan(ZuString s) {
     const char *data = s.data();
     unsigned length = s.length(), offset = 0;
     if (!length) return 0;
@@ -220,7 +220,7 @@ public:
     return offset;
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     if (!*this) return;
     ZuBox<int> begin = first();
     bool first = true;

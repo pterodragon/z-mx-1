@@ -37,46 +37,45 @@ class ZmNoLock {
   ZmNoLock &operator =(const ZmNoLock &);	// prevent mis-use
 
 public:
-  inline ZmNoLock() { }
-  inline ~ZmNoLock() { }
+  ZuInline ZmNoLock() { }
 
-  inline void lock() { }
-  inline int trylock() { return 0; }
-  inline void unlock() { }
+  ZuInline void lock() { }
+  ZuInline int trylock() { return 0; }
+  ZuInline void unlock() { }
 };
 
 template <>
 struct ZmLockTraits<ZmNoLock> : public ZmGenericLockTraits<ZmNoLock> {
-  inline static void lock(ZmNoLock &l) { }
-  inline static int trylock(ZmNoLock &l) { return 0; }
-  inline static void unlock(ZmNoLock &l) { }
-  inline static void readlock(ZmNoLock &l) { }
-  inline static int readtrylock(ZmNoLock &l) { return 0; }
-  inline static void readunlock(ZmNoLock &l) { }
+  ZuInline static void lock(ZmNoLock &l) { }
+  ZuInline static int trylock(ZmNoLock &l) { return 0; }
+  ZuInline static void unlock(ZmNoLock &l) { }
+  ZuInline static void readlock(ZmNoLock &l) { }
+  ZuInline static int readtrylock(ZmNoLock &l) { return 0; }
+  ZuInline static void readunlock(ZmNoLock &l) { }
 };
 
 template <class Lock> class ZmGuard;
 template <class Lock> class ZmReadGuard;
 template <> class ZmGuard<ZmNoLock> {
 public:
-  inline ZmGuard(ZmNoLock &l) { }
-  inline ZmGuard(const ZmGuard &guard) { }
-  inline ~ZmGuard() { }
+  ZuInline ZmGuard(ZmNoLock &) { }
+  ZuInline ZmGuard(const ZmGuard &guard) { }
+  ZuInline ~ZmGuard() { }
 
-  inline void unlock() { }
+  ZuInline void unlock() { }
 
-  inline ZmGuard &operator =(const ZmGuard &guard) { return *this; }
+  ZuInline ZmGuard &operator =(const ZmGuard &guard) { return *this; }
 };
 
 template <> class ZmReadGuard<ZmNoLock> {
 public:
-  inline ZmReadGuard(const ZmNoLock &l) { }
-  inline ZmReadGuard(const ZmReadGuard &guard) { }
-  inline ~ZmReadGuard() { }
+  ZuInline ZmReadGuard(const ZmNoLock &) { }
+  ZuInline ZmReadGuard(const ZmReadGuard &guard) { }
+  ZuInline ~ZmReadGuard() { }
 
-  inline void unlock() { }
+  ZuInline void unlock() { }
 
-  inline ZmReadGuard &operator =(const ZmReadGuard &guard) { return *this; }
+  ZuInline ZmReadGuard &operator =(const ZmReadGuard &guard) { return *this; }
 };
 
 #endif /* ZmNoLock_HPP */

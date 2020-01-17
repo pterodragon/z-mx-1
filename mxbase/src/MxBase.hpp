@@ -130,7 +130,7 @@ struct MxValNDP {
 
   // multiply: NDP of result is taken from the LHS
   // a 128bit integer intermediary is used to avoid overflow
-  inline MxValNDP operator *(const MxValNDP &v) const {
+  MxValNDP operator *(const MxValNDP &v) const {
     int128_t i = (typename MxValue::T)value;
     i *= (typename MxValue::T)v.value;
     i /= ZuDecimalFn::pow10_64(v.ndp);
@@ -141,7 +141,7 @@ struct MxValNDP {
 
   // divide: NDP of result is taken from the LHS
   // a 128bit integer intermediary is used to avoid overflow
-  inline MxValNDP operator /(const MxValNDP &v) const {
+  MxValNDP operator /(const MxValNDP &v) const {
     int128_t i = (typename MxValue::T)value;
     i *= ZuDecimalFn::pow10_64(v.ndp);
     i /= (typename MxValue::T)v.value;
@@ -221,7 +221,7 @@ struct MxValNDP {
 template <typename Fmt> struct MxValNDPFmt {
   const MxValNDP	&fixedNDP;
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     MxValue iv = fixedNDP.value;
     if (ZuUnlikely(!*iv)) return;
     if (ZuUnlikely(iv < 0)) { s << '-'; iv = -iv; }
@@ -253,7 +253,7 @@ struct MxValNDPVFmt : public ZuVFmtWrapper<MxValNDPVFmt<Ref>, Ref> {
   ZuInline MxValNDPVFmt(const MxValNDP &fixedNDP_, ZuVFmt &fmt_) :
     ZuVFmtWrapper<MxValNDPVFmt, Ref>{fmt_}, fixedNDP{fixedNDP_} { }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     MxValue iv = fixedNDP.value;
     if (ZuUnlikely(!*iv)) return;
     if (ZuUnlikely(iv < 0)) { s << '-'; iv = -iv; }
@@ -533,27 +533,27 @@ struct MxInstrKey {
   MxID		venue;
   MxID		segment;
 
-  inline bool operator ==(const MxInstrKey &v) const {
+  bool operator ==(const MxInstrKey &v) const {
     return id == v.id && venue == v.venue && segment == v.segment;
   }
-  inline bool operator !=(const MxInstrKey &v) const { return !operator ==(v); }
+  bool operator !=(const MxInstrKey &v) const { return !operator ==(v); }
 
-  inline int cmp(const MxInstrKey &v) const {
+  int cmp(const MxInstrKey &v) const {
     int i;
     if (i = id.cmp(v.id)) return i;
     if (i = venue.cmp(v.venue)) return i;
     return segment.cmp(v.segment);
   }
-  inline bool operator >(const MxInstrKey &v) { return cmp(v) > 0; }
-  inline bool operator >=(const MxInstrKey &v) { return cmp(v) >= 0; }
-  inline bool operator <(const MxInstrKey &v) { return cmp(v) < 0; }
-  inline bool operator <=(const MxInstrKey &v) { return cmp(v) <= 0; }
+  bool operator >(const MxInstrKey &v) { return cmp(v) > 0; }
+  bool operator >=(const MxInstrKey &v) { return cmp(v) >= 0; }
+  bool operator <(const MxInstrKey &v) { return cmp(v) < 0; }
+  bool operator <=(const MxInstrKey &v) { return cmp(v) <= 0; }
 
-  inline uint32_t hash() const {
+  uint32_t hash() const {
     return id.hash() ^ venue.hash() ^ segment.hash();
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << venue << '|' << segment << '|' << id;
   }
 };
@@ -566,26 +566,26 @@ struct MxSymKey {
   MxIDString	id;
   MxEnum	src;
 
-  inline bool operator ==(const MxSymKey &v) const {
+  bool operator ==(const MxSymKey &v) const {
     return id == v.id && src == v.src;
   }
-  inline bool operator !=(const MxSymKey &v) const { return !operator ==(v); }
+  bool operator !=(const MxSymKey &v) const { return !operator ==(v); }
 
-  inline int cmp(const MxSymKey &v) const {
+  int cmp(const MxSymKey &v) const {
     int i;
     if (i = id.cmp(v.id)) return i;
     return src.cmp(v.src);
   }
-  inline bool operator >(const MxSymKey &v) { return cmp(v) > 0; }
-  inline bool operator >=(const MxSymKey &v) { return cmp(v) >= 0; }
-  inline bool operator <(const MxSymKey &v) { return cmp(v) < 0; }
-  inline bool operator <=(const MxSymKey &v) { return cmp(v) <= 0; }
+  bool operator >(const MxSymKey &v) { return cmp(v) > 0; }
+  bool operator >=(const MxSymKey &v) { return cmp(v) >= 0; }
+  bool operator <(const MxSymKey &v) { return cmp(v) < 0; }
+  bool operator <=(const MxSymKey &v) { return cmp(v) <= 0; }
 
-  inline uint32_t hash() const {
+  uint32_t hash() const {
     return id.hash() ^ src.hash();
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << src << '|' << id;
   }
 };
@@ -601,27 +601,27 @@ struct MxOptKey {
   MxUInt	mat;
   MxEnum	putCall;
 
-  inline bool operator ==(const MxOptKey &v) const {
+  bool operator ==(const MxOptKey &v) const {
     return strike == v.strike && mat == v.mat && putCall == v.putCall;
   }
-  inline bool operator !=(const MxOptKey &v) const { return !operator ==(v); }
+  bool operator !=(const MxOptKey &v) const { return !operator ==(v); }
 
-  inline int cmp(const MxOptKey &v) const {
+  int cmp(const MxOptKey &v) const {
     int i;
     if (i = strike.cmp(v.strike)) return i;
     if (i = mat.cmp(v.mat)) return i;
     return putCall.cmp(v.putCall);
   }
-  inline bool operator >(const MxOptKey &v) { return cmp(v) > 0; }
-  inline bool operator >=(const MxOptKey &v) { return cmp(v) >= 0; }
-  inline bool operator <(const MxOptKey &v) { return cmp(v) < 0; }
-  inline bool operator <=(const MxOptKey &v) { return cmp(v) <= 0; }
+  bool operator >(const MxOptKey &v) { return cmp(v) > 0; }
+  bool operator >=(const MxOptKey &v) { return cmp(v) >= 0; }
+  bool operator <(const MxOptKey &v) { return cmp(v) < 0; }
+  bool operator <=(const MxOptKey &v) { return cmp(v) <= 0; }
 
-  inline uint32_t hash() const {
+  uint32_t hash() const {
     return strike.hash() ^ mat.hash() ^ putCall.hash();
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << mat << '|' << MxPutCall::name(putCall) << '|' << strike;
   }
 };
@@ -642,7 +642,7 @@ struct MxUniKey {
   ZuInline bool operator !() const { return !id; }
   ZuOpBool
 
-  inline bool operator ==(const MxUniKey &v) const {
+  bool operator ==(const MxUniKey &v) const {
     if (id != v.id || src != v.src) return false;
     if (!*src && (venue != v.venue || segment != v.venue)) return false;
     if (mat != v.mat) return false;
@@ -652,9 +652,9 @@ struct MxUniKey {
     }
     return true;
   }
-  inline bool operator !=(const MxUniKey &v) const { return !operator ==(v); }
+  bool operator !=(const MxUniKey &v) const { return !operator ==(v); }
 
-  inline int cmp(const MxUniKey &v) const {
+  int cmp(const MxUniKey &v) const {
     int i;
     if (i = id.cmp(v.id)) return i;
     if (i = src.cmp(v.src)) return i;
@@ -668,12 +668,12 @@ struct MxUniKey {
     if (!*strike) return 0;
     return putCall.cmp(v.putCall);
   }
-  inline bool operator >(const MxUniKey &v) { return cmp(v) > 0; }
-  inline bool operator >=(const MxUniKey &v) { return cmp(v) >= 0; }
-  inline bool operator <(const MxUniKey &v) { return cmp(v) < 0; }
-  inline bool operator <=(const MxUniKey &v) { return cmp(v) <= 0; }
+  bool operator >(const MxUniKey &v) { return cmp(v) > 0; }
+  bool operator >=(const MxUniKey &v) { return cmp(v) >= 0; }
+  bool operator <(const MxUniKey &v) { return cmp(v) < 0; }
+  bool operator <=(const MxUniKey &v) { return cmp(v) <= 0; }
 
-  inline uint32_t hash() const {
+  uint32_t hash() const {
     uint32_t code = id.hash();
     if (*src)
       code ^= src.hash();
@@ -685,7 +685,7 @@ struct MxUniKey {
     return code ^ strike.hash() ^ (uint32_t)putCall;
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     if (*src)
       s << MxSymKey{id, src};
     else

@@ -54,10 +54,10 @@ template <> struct ZuTraits<Z> : public ZuGenericTraits<Z> {
 };
 
 struct ZCmp {
-  inline static int cmp(Z *z1, Z *z2) { return z1->m_z - z2->m_z; }
-  inline static bool equals(Z *z1, Z *z2) { return z1->m_z == z2->m_z; }
-  inline static bool null(Z *z) { return !z; }
-  inline static Z *null() { return 0; }
+  static int cmp(Z *z1, Z *z2) { return z1->m_z - z2->m_z; }
+  static bool equals(Z *z1, Z *z2) { return z1->m_z == z2->m_z; }
+  static bool null(Z *z) { return !z; }
+  static Z *null() { return 0; }
 };
 
 typedef ZmList<ZmRef<Z>, ZmListCmp<ZCmp> > ZList;
@@ -98,7 +98,7 @@ void semWait(ZmSemaphore *sema) {
 struct S : public ZmObject {
   S() { m_i = 0; }
 
-  inline void foo() { m_i++; }
+  void foo() { m_i++; }
 
   static void meyers() {
     for (int i = 0; i < 100000; i++) {
@@ -129,14 +129,14 @@ struct S : public ZmObject {
 };
 
 struct I {
-  inline I(int i) : m_i(i) { }
-  inline I(const I &i) : m_i(i.m_i) { }
+  I(int i) : m_i(i) { }
+  I(const I &i) : m_i(i.m_i) { }
   inline I &operator =(const I &i)
     { if (this != &i) m_i = i.m_i; return *this; }
-  inline int hash() const { return m_i; }
-  inline int cmp(const I &i) const { return ZuCmp<int>::cmp(m_i, i.m_i); }
-  inline bool operator ==(const I &i) const { return m_i == i.m_i; }
-  inline bool operator !() const { return !m_i; }
+  int hash() const { return m_i; }
+  int cmp(const I &i) const { return ZuCmp<int>::cmp(m_i, i.m_i); }
+  bool operator ==(const I &i) const { return m_i == i.m_i; }
+  bool operator !() const { return !m_i; }
   int	m_i;
 };
 
@@ -146,11 +146,11 @@ template <> struct ZuTraits<I> : public ZuGenericTraits<I> {
 
 struct J : public ZmObject {
   struct IAccessor : public ZuAccessor<J *, const I &> {
-    inline static const ::I &value(const J *j) { return j->m_i; }
+    static const ::I &value(const J *j) { return j->m_i; }
   };
-  inline J(int i) : m_i(i) { }
-  inline J(const J &j) : m_i(j.m_i.m_i) { }
-  inline J &operator =(const J &j) {
+  J(int i) : m_i(i) { }
+  J(const J &j) : m_i(j.m_i.m_i) { }
+  J &operator =(const J &j) {
     if (this != &j) m_i.m_i = j.m_i.m_i;
     return *this;
   }

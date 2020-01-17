@@ -23,11 +23,11 @@
 
 struct Object : public ZmObject {
   Object(int val) : m_val(val) { }
-  inline int hash() const { return m_val; }
+  int hash() const { return m_val; }
   inline int cmp(const Object &i) const
     { return ZuCmp<int>::cmp(m_val, i.m_val); }
-  inline bool operator ==(const Object &i) const { return m_val == i.m_val; }
-  inline bool operator !() const { return !m_val; }
+  bool operator ==(const Object &i) const { return m_val == i.m_val; }
+  bool operator !() const { return !m_val; }
 
   int m_val;
 };

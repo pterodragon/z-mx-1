@@ -43,7 +43,7 @@
 class MxMDCore;
 
 template <> struct ZiRingTraits<MxMDStream::Hdr> {
-  inline static unsigned size(const MxMDStream::Hdr &hdr) {
+  static unsigned size(const MxMDStream::Hdr &hdr) {
     return sizeof(MxMDStream::Hdr) + hdr.len;
   }
 };
@@ -59,7 +59,7 @@ public:
 
   void init(MxMDCore *core);
 
-  inline const ZiRingParams &params() const { return m_params; }
+  const ZiRingParams &params() const { return m_params; }
 
   bool open(); // returns true if successful, false otherwise
   void close();
@@ -67,23 +67,23 @@ public:
   ZmRef<Ring> shadow(ZeError *e = 0);
   void close(ZmRef<Ring> ring);
 
-  inline bool active() { return m_openCount; }
+  bool active() { return m_openCount; }
 
-  inline ZmRef<Ring> ring() { Guard guard(m_lock); return m_ring; }
+  ZmRef<Ring> ring() { Guard guard(m_lock); return m_ring; }
 
   // caller must ensure ring is open during Rx/Tx
 
   // Rx
 
-  inline int attach() { return m_ring->attach(); }
-  inline int detach() { return m_ring->detach(); }
+  int attach() { return m_ring->attach(); }
+  int detach() { return m_ring->detach(); }
 
-  inline int id() { return m_ring->id(); }
+  int id() { return m_ring->id(); }
 
-  inline const Hdr *shift() { return m_ring->shift(); }
-  inline void shift2() { m_ring->shift2(); }
+  const Hdr *shift() { return m_ring->shift(); }
+  void shift2() { m_ring->shift2(); }
 
-  inline int readStatus() { return m_ring->readStatus(); }
+  int readStatus() { return m_ring->readStatus(); }
 
   // Tx
 

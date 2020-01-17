@@ -73,7 +73,7 @@ class ZtIconv {
 public:
   inline ZtIconv(const char *tocode, const char *fromcode) :
     m_cd(iconv_open(tocode, fromcode)) { }
-  inline ~ZtIconv() {
+  ~ZtIconv() {
     if (m_cd != (iconv_t)-1) iconv_close(m_cd);
   }
 

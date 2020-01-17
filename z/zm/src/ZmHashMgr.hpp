@@ -38,7 +38,7 @@
 
 class ZmHashParams {
 public:
-  inline ZmHashParams() : m_bits(8), m_loadFactor(1.0), m_cBits(5) { }
+  ZmHashParams() : m_bits(8), m_loadFactor(1.0), m_cBits(5) { }
   inline ZmHashParams(ZuString id) :
       m_bits(8), m_loadFactor(1.0), m_cBits(5) {
     init(id);
@@ -46,9 +46,9 @@ public:
 
   const ZmHashParams &init(ZuString id);
 
-  inline ZmHashParams &bits(unsigned v) { m_bits = v; return *this; }
-  inline ZmHashParams &loadFactor(double v) { m_loadFactor = v; return *this; }
-  inline ZmHashParams &cBits(unsigned v) { m_cBits = v; return *this; }
+  ZmHashParams &bits(unsigned v) { m_bits = v; return *this; }
+  ZmHashParams &loadFactor(double v) { m_loadFactor = v; return *this; }
+  ZmHashParams &cBits(unsigned v) { m_cBits = v; return *this; }
 
   ZuInline unsigned bits() const { return m_bits; }
   ZuInline double loadFactor() const { return m_loadFactor; }
@@ -89,7 +89,7 @@ struct ZmAnyHash_PtrAccessor : public ZuAccessor<ZmAnyHash_, uintptr_t> {
   }
 };
 struct ZmHashMgr_HeapID {
-  inline static const char *id() { return "ZmHashMgr_"; }
+  static const char *id() { return "ZmHashMgr_"; }
 };
 typedef ZmRBTree<ZmAnyHash_,
 	  ZmRBTreeNodeIsKey<true,

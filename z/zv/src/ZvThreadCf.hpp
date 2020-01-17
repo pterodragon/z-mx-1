@@ -47,19 +47,19 @@ namespace ZvThreadPriorities {
 }
 
 struct ZvThreadParams : public ZmThreadParams {
-  inline ZvThreadParams() { }
+  ZvThreadParams() { }
 
-  inline ZvThreadParams(const ZmThreadParams &p) : ZmThreadParams(p) { }
-  inline ZvThreadParams &operator =(const ZmThreadParams &p) {
+  ZvThreadParams(const ZmThreadParams &p) : ZmThreadParams(p) { }
+  ZvThreadParams &operator =(const ZmThreadParams &p) {
     ZmThreadParams::operator =(p);
     return *this;
   }
 
-  inline ZvThreadParams(ZvCf *cf) { init(cf); }
+  ZvThreadParams(ZvCf *cf) { init(cf); }
   inline ZvThreadParams(ZvCf *cf, const ZmThreadParams &deflt) :
       ZmThreadParams(deflt) { init(cf); }
 
-  inline void init(ZvCf *cf) {
+  void init(ZvCf *cf) {
     ZmThreadParams::operator =(ZmThreadParams());
 
     if (!cf) return;

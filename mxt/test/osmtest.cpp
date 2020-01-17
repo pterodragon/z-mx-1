@@ -10,14 +10,14 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
   typedef MxTAppTypes<AppTypes> Base;
 
   struct AppCxlLeg {
-    template <typename S> inline void print(S &) const { }
-    template <typename Update> inline void update(const Update &) { }
+    template <typename S> void print(S &) const { }
+    template <typename Update> void update(const Update &) { }
   };
   struct AppModLeg : public AppCxlLeg { };
   struct AppOrderLeg : public AppModLeg {
     MxIDString	instrument;	// instrument symbol
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       AppModLeg::print(s);
       s << "instrument=" << instrument;
     }
@@ -29,18 +29,18 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
     MxIDString	orderID;
     MxIDString	execID;
 
-    template <typename U> inline void updateClOrdID(const U &u) {
+    template <typename U> void updateClOrdID(const U &u) {
       origClOrdID = clOrdID;
       clOrdID = u.clOrdID;
     }
-    template <typename U> inline void updateOrderID(const U &u) {
+    template <typename U> void updateOrderID(const U &u) {
       orderID = u.orderID;
     }
-    template <typename U> inline void updateExecID(const U &u) {
+    template <typename U> void updateExecID(const U &u) {
       execID = u.execID;
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       s << "clOrdID=" << clOrdID
 	<< " origClOrdID=" << origClOrdID
 	<< " orderID=" << orderID
@@ -51,7 +51,7 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
   struct AppExecID {
     MxIDString	execID;
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       s << "execID=" << execID;
     }
   };
@@ -62,12 +62,12 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
 
   struct AppRequest : public AppMsgID {
     template <typename Update>
-    inline typename ZuIs<AppAck, Update>::T update(const Update &u) {
+    typename ZuIs<AppAck, Update>::T update(const Update &u) {
       updateOrderID(u);
       updateExecID(u);
     }
     template <typename Update>
-    inline typename ZuIs<AppExec, Update>::T update(const Update &u) {
+    typename ZuIs<AppExec, Update>::T update(const Update &u) {
       updateExecID(u);
     }
     template <typename Update>
@@ -78,13 +78,13 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
 
   struct AppAck : public AppMsgID {
     template <typename Update>
-    inline typename ZuIs<AppRequest, Update>::T update(const Update &u) {
+    typename ZuIs<AppRequest, Update>::T update(const Update &u) {
       // updateClOrdID(u);
       updateOrderID(u);
       updateExecID(u);
     }
     template <typename Update>
-    inline typename ZuIsNot<AppRequest, Update>::T update(const Update &) { }
+    typename ZuIsNot<AppRequest, Update>::T update(const Update &) { }
   };
 
   struct AppOrdered : public AppAck { };
@@ -93,7 +93,7 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
 
   struct AppExec : public AppMsgID {
     template <typename Update>
-    inline void update(const Update &) { }
+    void update(const Update &) { }
   };
 
   struct AppCancel : public AppRequest {
@@ -149,7 +149,7 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
       AppRequest::update(u);
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       AppRequest::print(s);
       s << " account=" << account;
     }
@@ -160,11 +160,11 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
 #endif
 #define DeclType(Type, AppType) \
   struct Type : public Base::Type, public App ## AppType { \
-    template <typename Update> inline void update(const Update &u) { \
+    template <typename Update> void update(const Update &u) { \
       Base::Type::update(u); \
       App ## AppType::update(u); \
     } \
-    template <typename S> inline void print(S &s) const { \
+    template <typename S> void print(S &s) const { \
       Base::Type::print(s); s << ' '; App ## AppType::print(s); \
     } \
   }

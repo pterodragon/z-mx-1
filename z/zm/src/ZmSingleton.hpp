@@ -86,31 +86,31 @@ public:
 
 private:
   ZuCan(final, CanFinal);
-  template <typename U> inline static typename
+  template <typename U> ZuInline static typename
     ZuIfT<CanFinal<ZmCleanup<U>, void (*)(U *)>::OK>::T
       final(U *u) { ZmCleanup<U>::final(u); }
-  template <typename U> inline static typename
+  template <typename U> ZuInline static typename
     ZuIfT<!CanFinal<ZmCleanup<U>, void (*)(U *)>::OK>::T
       final(U *u) { }
 
   template <bool Construct = Construct_>
-  inline typename ZuIfT<Construct>::T ctor() {
+  typename ZuIfT<Construct>::T ctor() {
     T *ptr = CtorFn();
     this->ref(ptr);
     m_instance = ptr;
   }
   template <bool Construct = Construct_>
-  inline typename ZuIfT<!Construct>::T ctor() { }
+  typename ZuIfT<!Construct>::T ctor() { }
 
 public:
-  inline ZmSingleton() {
+  ZmSingleton() {
 #ifdef ZDEBUG
     ZmSingleton_ctor();
 #endif
     ctor<>();
   };
 
-  inline ~ZmSingleton() {
+  ~ZmSingleton() {
 #ifdef ZDEBUG
     ZmSingleton_dtor();
 #endif
@@ -127,7 +127,7 @@ private:
     return ZmGlobal::global<ZmSingleton>();
   }
 
-  inline T *instance_(T *ptr) {
+  T *instance_(T *ptr) {
     this->ref(ptr);
     if (T *old = m_instance.xch(ptr)) {
       final(old);
@@ -137,10 +137,10 @@ private:
   }
 
 public:
-  inline static T *instance() {
+  static T *instance() {
     return global()->m_instance.load_();
   }
-  inline static T *instance(T *ptr) {
+  static T *instance(T *ptr) {
     return global()->instance_(ptr);
   }
 };

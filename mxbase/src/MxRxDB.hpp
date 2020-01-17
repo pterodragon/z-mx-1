@@ -56,10 +56,10 @@ public:
   struct RxData {
     MxMsgID	msgID;
 
-    template <typename S> inline static void csvHdr(S &s) {
+    template <typename S> static void csvHdr(S &s) {
       s << "linkID,seqNo\n";
     }
-    template <typename S> inline void csv(S &s) const {
+    template <typename S> void csv(S &s) const {
       s << msgID.linkID
 	<< ',' << msgID.seqNo << '\n';
     }

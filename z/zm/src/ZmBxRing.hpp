@@ -89,7 +89,7 @@ public:
       m_flags(0), m_id(-1), m_ctrl(0), m_data(0),
       m_tail(0), m_size(0), m_full(0) { }
 
-  inline ~ZmBxRing() { close(); }
+  ~ZmBxRing() { close(); }
 
 private:
   struct Ctrl {
@@ -216,8 +216,8 @@ public:
     return OK;
   }
 
-  inline unsigned ctrlSize() const { return sizeof(Ctrl); }
-  inline unsigned size() const { return m_size; }
+  unsigned ctrlSize() const { return sizeof(Ctrl); }
+  unsigned size() const { return m_size; }
 
   unsigned length() {
     uint32_t head = this->head().load_() & ~Mask;
@@ -234,7 +234,7 @@ public:
 
   ZuInline void *push() { return push_<1>(); }
   ZuInline void *tryPush() { return push_<0>(); }
-  template <bool Wait> inline void *push_() {
+  template <bool Wait> void *push_() {
     ZmAssert(m_ctrl);
     ZmAssert(m_flags & Write);
 
@@ -258,7 +258,7 @@ public:
     *(uint64_t *)ptr = rdrMask;
     return (void *)&ptr[8];
   }
-  inline void push2() {
+  void push2() {
     ZmAssert(m_ctrl);
     ZmAssert(m_flags & Write);
 
@@ -407,7 +407,7 @@ public:
     return OK;
   }
 
-  inline T *shift() {
+  T *shift() {
     ZmAssert(m_ctrl);
     ZmAssert(m_flags & Read);
     ZmAssert(m_id >= 0);
@@ -426,7 +426,7 @@ public:
     uint8_t *ptr = &((uint8_t *)data())[tail & ~Wrapped];
     return (T *)&ptr[8];
   }
-  inline void shift2() {
+  void shift2() {
     ZmAssert(m_ctrl);
     ZmAssert(m_flags & Read);
     ZmAssert(m_id >= 0);
@@ -464,7 +464,7 @@ public:
     return size() - (tail - head);
   }
 
-  inline unsigned count() const {
+  unsigned count() const {
     int i = readStatus();
     if (i < 0) return 0;
     return i / Size;

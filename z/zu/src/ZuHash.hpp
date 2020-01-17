@@ -61,7 +61,7 @@ template <typename T> struct ZuHash_Cannot;
 // golden prime function, specialized for 32bit and 64bit types
 
 struct ZuHash_GoldenPrime32 {
-  inline static uint32_t hash(uint32_t i) { return i * m_goldenPrime; }
+  ZuInline static uint32_t hash(uint32_t i) { return i * m_goldenPrime; }
 
 private:
   static const uint32_t m_goldenPrime = 0x9e370001UL;
@@ -69,7 +69,7 @@ private:
 };
 
 struct ZuHash_GoldenPrime64 {
-  inline static uint64_t hash(uint64_t i) {
+  static uint64_t hash(uint64_t i) {
     uint64_t n = i; // most compilers don't optimize a 64bit constant multiply
 
     n <<= 18; i -= n; n <<= 33; i -= n; n <<= 3; i += n;
@@ -84,7 +84,7 @@ private:
 };
 
 struct ZuHash_GoldenPrime128 {
-  inline static uint128_t hash(uint128_t i) {
+  static uint128_t hash(uint128_t i) {
     uint128_t n = i;
 
     n <<= 18; i -= n; n <<= 97; i -= n; n <<= 3; i += n;
@@ -100,9 +100,9 @@ struct ZuHash_GoldenPrime128 {
 struct ZuHash_FNV_ {
   typedef uint64_t Value;
 
-  inline static Value initial_() { return 0xcbf29ce484222325ULL; }
+  ZuInline static Value initial_() { return 0xcbf29ce484222325ULL; }
 
-  inline static Value hash_(Value v, Value i) {
+  ZuInline static Value hash_(Value v, Value i) {
     v ^= i;
     v *= 0x100000001b3ULL;
     return v;
@@ -112,9 +112,9 @@ struct ZuHash_FNV_ {
 struct ZuHash_FNV_ {
   typedef uint32_t Value;
 
-  inline static Value initial_() { return 0x811c9dc5UL; }
+  ZuInline static Value initial_() { return 0x811c9dc5UL; }
 
-  inline static Value hash_(Value v, Value i) {
+  ZuInline static Value hash_(Value v, Value i) {
     v ^= i;
     v *= 0x1000193UL;
     return v;
@@ -125,7 +125,7 @@ struct ZuHash_FNV_ {
 struct ZuHash_FNV : public ZuHash_FNV_ {
   typedef ZuHash_FNV_::Value Value;
 
-  inline static uint32_t hash(const unsigned char *p, int n) {
+  ZuInline static uint32_t hash(const unsigned char *p, int n) {
     Value v = initial_();
     while (--n >= 0) v = hash_(v, *p++);
     return (uint32_t)v;
@@ -135,7 +135,7 @@ struct ZuHash_FNV : public ZuHash_FNV_ {
 // hashing of floats, doubles and long doubles
 
 template <typename T> struct ZuHash_Floating {
-  inline static uint32_t hash(T t) {
+  ZuInline static uint32_t hash(T t) {
     return ZuHash_FNV::hash((const unsigned char *)&t, sizeof(T));
   }
 };
@@ -143,29 +143,19 @@ template <typename T> struct ZuHash_Floating {
 // hashing of integral types
 
 template <typename T, int Size> struct ZuHash_Integral {
-  inline static uint32_t hash(const T &t) {
+  ZuInline static uint32_t hash(const T &t) {
     return ZuHash_GoldenPrime32::hash((uint32_t)t);
   }
 };
 
 template <typename T> struct ZuHash_Integral<T, 8> {
-  inline static uint32_t hash(const T &t) {
-#if 0
-    if ((uint64_t)t == (uint32_t)t)
-      return ZuHash_GoldenPrime32::hash((uint32_t)t);
-#endif
+  ZuInline static uint32_t hash(const T &t) {
     return (uint32_t)ZuHash_GoldenPrime64::hash(t);
   }
 };
 
 template <typename T> struct ZuHash_Integral<T, 16> {
-  inline static uint32_t hash(const T &t) {
-#if 0
-    if ((uint128_t)t == (uint32_t)t)
-      return ZuHash_GoldenPrime32::hash((uint32_t)t);
-    if ((uint128_t)t == (uint64_t)t)
-      return (uint32_t)ZuHash_GoldenPrime64::hash((uint64_t)t);
-#endif
+  ZuInline static uint32_t hash(const T &t) {
     return (uint32_t)ZuHash_GoldenPrime128::hash(t);
   }
 };
@@ -198,16 +188,16 @@ struct ZuHash_NonPrimitive___<P, true> : public ZuHash<P> { };
 template <typename T, typename P> struct ZuHash_NonPrimitive__ :
     public ZuHash_NonPrimitive___<P, ZuTraits<P>::IsPrimitive> { };
 template <typename T> struct ZuHash_NonPrimitive__<T, T> {
-  inline static uint32_t hash(const T &t) { return t.hash(); }
+  ZuInline static uint32_t hash(const T &t) { return t.hash(); }
 };
 template <typename T, typename P, bool Fwd>
 struct ZuHash_NonPrimitive_ : public ZuHash_NonPrimitive__<T, P> { };
 template <typename T, typename P> struct ZuHash_NonPrimitive_<T, P, false> {
-  inline static uint32_t hash(const T &t) { return t.hash(); }
+  ZuInline static uint32_t hash(const T &t) { return t.hash(); }
 };
 template <typename T, bool Fwd> struct ZuHash_NonPrimitive<T, true, Fwd> {
   template <typename P>
-  inline static uint32_t hash(const P &p) {
+  ZuInline static uint32_t hash(const P &p) {
     return ZuHash_NonPrimitive_<T, P, Fwd>::hash(p);
   }
 };
@@ -222,7 +212,7 @@ struct ZuHash_Pointer : public ZuHash_Cannot<T> { };
 #pragma warning(disable:4311)
 #endif
 template <typename T> struct ZuHash_Pointer<T, 4> {
-  inline static uint32_t hash(T t) {
+  ZuInline static uint32_t hash(T t) {
     return ZuHash_GoldenPrime32::hash((uint32_t)t);
   }
 };
@@ -231,7 +221,7 @@ template <typename T> struct ZuHash_Pointer<T, 4> {
 #endif
 
 template <typename T> struct ZuHash_Pointer<T, 8> {
-  inline static uint32_t hash(T t) {
+  ZuInline static uint32_t hash(T t) {
     return (uint32_t)ZuHash_GoldenPrime64::hash((uint64_t)t);
   }
 };
@@ -271,7 +261,7 @@ template <typename T> struct ZuHash_NonString<T, true, true> :
 
 template <typename T> struct ZuStringHash;
 template <> struct ZuStringHash<char> {
-  inline static uint32_t hash(const char *data, size_t len) {
+  static uint32_t hash(const char *data, size_t len) {
     uint32_t hash = (uint32_t)len;
 
     if (len <= 0 || !data) return 0;
@@ -331,7 +321,7 @@ template <> struct ZuStringHash<char> {
 };
 template <int WCharSize> struct ZuWStringHash;
 template <> struct ZuWStringHash<2> {
-  inline static uint32_t hash(const wchar_t *data, size_t len) {
+  static uint32_t hash(const wchar_t *data, size_t len) {
     uint32_t hash = (uint32_t)len;
 
     if (len <= 0 || !data) return 0;
@@ -364,7 +354,7 @@ template <> struct ZuWStringHash<2> {
   }
 };
 template <> struct ZuWStringHash<4> {
-  inline static uint32_t hash(const wchar_t *data, size_t len) {
+  static uint32_t hash(const wchar_t *data, size_t len) {
     uint32_t hash = (uint32_t)len;
 
     if (len <= 0 || !data) return 0;
@@ -402,7 +392,7 @@ template <typename T> struct ZuHash_<T, false> :
 
 template <typename T> struct ZuHash_<T, true> {
   template <typename S>
-  inline static uint32_t hash(const S &s) {
+  ZuInline static uint32_t hash(const S &s) {
     typedef ZuTraits<S> Traits;
     typedef typename ZuTraits<typename Traits::Elem>::T Char;
     return ZuStringHash<Char>::hash(Traits::data(s), Traits::length(s));

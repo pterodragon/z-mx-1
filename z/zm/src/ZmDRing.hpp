@@ -54,13 +54,13 @@ public:
     m_increment(ZmDRingIncrement),
     m_maxFrag(ZmDRingMaxFrag) { }
 
-  inline ZmDRingParams &initial(unsigned v) { m_initial = v; return *this; }
-  inline ZmDRingParams &increment(unsigned v) { m_increment = v; return *this; }
-  inline ZmDRingParams &maxFrag(double v) { m_maxFrag = v; return *this; }
+  ZmDRingParams &initial(unsigned v) { m_initial = v; return *this; }
+  ZmDRingParams &increment(unsigned v) { m_increment = v; return *this; }
+  ZmDRingParams &maxFrag(double v) { m_maxFrag = v; return *this; }
 
-  inline unsigned initial() const { return m_initial; }
-  inline unsigned increment() const { return m_increment; }
-  inline double maxFrag() const { return m_maxFrag; }
+  unsigned initial() const { return m_initial; }
+  unsigned increment() const { return m_increment; }
+  double maxFrag() const { return m_maxFrag; }
 
 private:
   unsigned	m_initial;
@@ -132,10 +132,10 @@ struct ZmDRing_Unlocked<ZmDRing<Val, NTP> > {
   typedef ZmDRing<Val, NTP> Ring;
 
   template <typename Index_>
-  inline Val *findPtr(const Index_ &index) {
+  Val *findPtr(const Index_ &index) {
     return static_cast<Ring *>(this)->findPtr_(index);
   }
-  inline void delPtr(Val *val) {
+  void delPtr(Val *val) {
     return static_cast<Ring *>(this)->delPtr_(val);
   }
 };
@@ -191,7 +191,7 @@ public:
   ZuInline unsigned offset_() const { return m_offset; }
 
 private:
-  inline void lazy() {
+  void lazy() {
     if (ZuUnlikely(!m_data)) extend(m_initial);
   }
 
@@ -225,7 +225,7 @@ private:
   }
 
 public:
-  inline void init(ZmDRingParams params = ZmDRingParams()) {
+  void init(ZmDRingParams params = ZmDRingParams()) {
     Guard guard(m_lock);
 
     if ((m_initial = params.initial()) > m_size) extend(params.initial());
@@ -241,17 +241,17 @@ public:
   }
 
 private:
-  inline void push() {
+  void push() {
     if (m_count >= m_size) extend(m_size + m_increment);
   }
-  inline unsigned offset(unsigned i) {
+  unsigned offset(unsigned i) {
     if ((i += m_offset) >= m_size) i -= m_size;
     return i;
   }
 
 public:
   template <typename Val_>
-  inline void push(Val_ &&v) {
+  void push(Val_ &&v) {
     Guard guard(m_lock);
 
     lazy();
@@ -262,7 +262,7 @@ public:
 
   // idempotent push
   template <typename Val_>
-  inline void findPush(Val_ &&v) {
+  void findPush(Val_ &&v) {
     Guard guard(m_lock);
 
     for (int i = m_length; --i >= 0; ) {
@@ -296,7 +296,7 @@ public:
   }
 
   template <typename Val_>
-  inline void unshift(Val_ &&v) {
+  void unshift(Val_ &&v) {
     Guard guard(m_lock);
 
     lazy();
@@ -309,7 +309,7 @@ public:
 
   // idempotent unshift
   template <typename Val_>
-  inline void findUnshift(Val_ &&v) {
+  void findUnshift(Val_ &&v) {
     Guard guard(m_lock);
 
     for (unsigned i = 0; i < m_length; i++) {
@@ -453,8 +453,8 @@ friend class Iterator_;
 friend class Iterator;
   class Iterator : private Iterator_ {
   public:
-    inline Iterator(typename Iterator_::Ring &ring) : Iterator_(ring, 0) { }
-    inline Val *iteratePtr() {
+    Iterator(typename Iterator_::Ring &ring) : Iterator_(ring, 0) { }
+    Val *iteratePtr() {
       unsigned o;
       do {
 	if (this->m_i >= this->m_ring.m_length) return 0;
@@ -462,7 +462,7 @@ friend class Iterator;
       } while (Cmp::null(this->m_ring.m_data[o]));
       return this->m_ring.m_data + o;
     }
-    inline const Val &iterate() {
+    const Val &iterate() {
       unsigned o;
       do {
 	if (this->m_i >= (int)this->m_ring.m_length) return Cmp::null();
@@ -471,14 +471,14 @@ friend class Iterator;
       return this->m_ring.m_data[o];
     }
   };
-  inline auto iterator() { return Iterator(*this); }
+  auto iterator() { return Iterator(*this); }
   class RevIterator;
 friend class RevIterator;
   class RevIterator : private Iterator_ {
   public:
     inline RevIterator(typename Iterator_::Ring &ring) :
 	Iterator_(ring, ring.m_length) { }
-    inline Val *iteratePtr() {
+    Val *iteratePtr() {
       unsigned o;
       do {
 	if (this->m_i <= 0) return 0;
@@ -486,7 +486,7 @@ friend class RevIterator;
       } while (Cmp::null(this->m_ring.m_data[o]));
       return this->m_ring.m_data + o;
     }
-    inline const Val &iterate() {
+    const Val &iterate() {
       unsigned o;
       do {
 	if (this->m_i <= 0) return Cmp::null();
@@ -495,7 +495,7 @@ friend class RevIterator;
       return this->m_ring.m_data[o];
     }
   };
-  inline auto revIterator() { return RevIterator(*this); }
+  auto revIterator() { return RevIterator(*this); }
 
 private:
   Lock		m_lock;

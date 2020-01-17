@@ -84,7 +84,7 @@ public:
 #endif
   }
 
-  inline ZmAnyFn &operator =(const ZmAnyFn &fn) {
+  ZmAnyFn &operator =(const ZmAnyFn &fn) {
     if (this == &fn) return *this;
     if (ZuUnlikely(owned(fn.m_object))) ZmREF(ptr(fn.m_object));
     if (ZuUnlikely(owned(m_object))) ZmDEREF(ptr(m_object));
@@ -93,7 +93,7 @@ public:
     return *this;
   }
 
-  inline ZmAnyFn &operator =(ZmAnyFn &&fn) noexcept {
+  ZmAnyFn &operator =(ZmAnyFn &&fn) noexcept {
 #ifdef ZmObject_DEBUG
     if (ZuUnlikely(owned(m_object))) ZmDEREF(ptr(m_object));
 #endif
@@ -175,7 +175,7 @@ protected:
 };
 
 struct ZmLambda_HeapID {
-  inline static const char *id() { return "ZmLambda"; }
+  static const char *id() { return "ZmLambda"; }
 };
 template <typename L, class HeapID> struct ZmLambda;
 
@@ -202,9 +202,9 @@ template <typename ...Args> class ZmFn : public ZmAnyFn {
   struct MatchFunctor<T_, R, 1> { typedef R T; };
 
 public:
-  inline ZmFn() : ZmAnyFn() { }
-  inline ZmFn(const ZmFn &fn) : ZmAnyFn(fn) { }
-  inline ZmFn(ZmFn &&fn) noexcept : ZmAnyFn(static_cast<ZmAnyFn &&>(fn)) { }
+  ZuInline ZmFn() : ZmAnyFn() { }
+  ZuInline ZmFn(const ZmFn &fn) : ZmAnyFn(fn) { }
+  ZuInline ZmFn(ZmFn &&fn) noexcept : ZmAnyFn(static_cast<ZmAnyFn &&>(fn)) { }
 
 private:
   class Pass {
@@ -225,21 +225,21 @@ public:
   ZuInline ZmFn(O &&o, L &&l, typename MatchFunctor<L>::T *_ = 0) :
     ZmAnyFn(fn(ZuFwd<O>(o), ZuFwd<L>(l))) { }
 
-  inline ZmFn &operator =(const ZmFn &fn) {
+  ZuInline ZmFn &operator =(const ZmFn &fn) {
     ZmAnyFn::operator =(fn);
     return *this;
   }
-  inline ZmFn &operator =(ZmFn &&fn) noexcept {
+  ZuInline ZmFn &operator =(ZmFn &&fn) noexcept {
     ZmAnyFn::operator =(static_cast<ZmAnyFn &&>(fn));
     return *this;
   }
 
 private:
-  inline ZmFn &operator =(const ZmAnyFn &fn) {
+  ZuInline ZmFn &operator =(const ZmAnyFn &fn) {
     ZmAnyFn::operator =(fn);
     return *this;
   }
-  inline ZmFn &operator =(ZmAnyFn &&fn) noexcept {
+  ZuInline ZmFn &operator =(ZmAnyFn &&fn) noexcept {
     ZmAnyFn::operator =(static_cast<ZmAnyFn &&>(fn));
     return *this;
   }

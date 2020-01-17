@@ -35,12 +35,12 @@ class ZmLock_Debug_ {
 public:
   ZmLock_Debug_() : m_enabled(0) { }
 
-  inline void enable() { m_enabled = 1; }
-  inline void disable() { m_enabled = 0; }
-  inline void capture(unsigned skip = 1) {
+  void enable() { m_enabled = 1; }
+  void disable() { m_enabled = 0; }
+  void capture(unsigned skip = 1) {
     if (m_enabled) m_tracer.capture(skip);
   }
-  inline ZmBackTracer<64> *tracer() { return &m_tracer; }
+  ZmBackTracer<64> *tracer() { return &m_tracer; }
 
 private:
   ZmAtomic<uint32_t>	m_enabled;

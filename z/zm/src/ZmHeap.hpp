@@ -164,7 +164,7 @@ private:
 
   // lock-free MPMC LIFO slist
 
-  inline void *alloc_() {
+  void *alloc_() {
     uintptr_t p;
   loop:
     p = m_head.load_();
@@ -178,7 +178,7 @@ private:
     m_head = ((ZmAtomic<uintptr_t> *)p)->load_();
     return (void *)p;
   }
-  inline void free__(void *p) {
+  void free__(void *p) {
     uintptr_t n;
   loop:
     n = m_head.load_();
@@ -186,7 +186,7 @@ private:
     ((ZmAtomic<uintptr_t> *)p)->store_(n);
     if (m_head.cmpXch((uintptr_t)p, n) != n) goto loop;
   }
-  inline void free__sharded(void *p) { // sharded - no contention
+  void free__sharded(void *p) { // sharded - no contention
     *(uintptr_t *)p = m_head.load_();
     m_head.store_((uintptr_t)p);
   }
@@ -218,7 +218,7 @@ friend class ZmHeapCache;
 template <class, unsigned> friend class ZmHeapCacheT; 
 
   template <class S> struct CSV_ {
-    inline CSV_(S &stream) : m_stream(stream) { }
+    CSV_(S &stream) : m_stream(stream) { }
     void print() {
       m_stream <<
 	"ID,size,partition,sharded,alignment,cacheSize,cpuset,"
@@ -365,7 +365,7 @@ private:
 };
 
 template <typename Heap>
-inline ZmHeap_Init<Heap>::ZmHeap_Init() { delete new Heap(); }
+ZmHeap_Init<Heap>::ZmHeap_Init() { delete new Heap(); }
 
 template <class ID, unsigned Size_>
 ZmHeap_Init<ZmHeap<ID, Size_> > ZmHeap<ID, Size_>::m_init;

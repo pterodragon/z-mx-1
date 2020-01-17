@@ -98,9 +98,9 @@ public:
 
 // process ID
 #ifndef _WIN32
-  inline static ProcessID getPID() { return getpid(); }
+  static ProcessID getPID() { return getpid(); }
 #else
-  inline static ProcessID getPID() { return GetCurrentProcessId(); }
+  static ProcessID getPID() { return GetCurrentProcessId(); }
 #endif
 
 // thread ID

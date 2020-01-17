@@ -40,10 +40,10 @@ template <> struct ZuTraits<ZuNull> : public ZuGenericTraits<ZuNull> {
 
 template <typename T> struct ZuCmp;
 template <> struct ZuCmp<ZuNull> {
-  inline static int cmp(ZuNull n1, ZuNull n2) { return 0; }
-  inline static bool equals(ZuNull n1, ZuNull n2) { return true; }
-  inline static bool null(ZuNull n) { return true; }
-  inline static const ZuNull &null() { static const ZuNull _; return _; }
+  ZuInline static int cmp(ZuNull n1, ZuNull n2) { return 0; }
+  ZuInline static bool equals(ZuNull n1, ZuNull n2) { return true; }
+  ZuInline static bool null(ZuNull n) { return true; }
+  ZuInline static const ZuNull &null() { static const ZuNull _; return _; }
 };
 
 #endif /* ZuNull_HPP */

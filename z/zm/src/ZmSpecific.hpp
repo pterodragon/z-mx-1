@@ -103,13 +103,13 @@ extern "C" {
 struct ZmAPI ZmSpecific_Object {
   typedef void (*DtorFn)(ZmSpecific_Object *);
 
-  inline ZmSpecific_Object() { }
-  inline ~ZmSpecific_Object() {
+  ZmSpecific_Object() { }
+  ~ZmSpecific_Object() {
     ZmSpecific_lock();
     dtor();
   }
 
-  inline void dtor() {
+  void dtor() {
     if (ZuLikely(dtorFn))
       (*dtorFn)(this);
     else
@@ -290,10 +290,10 @@ public:
 
 private:
   ZuCan(final, CanFinal);
-  template <typename U> inline static typename
+  template <typename U> ZuInline static typename
     ZuIfT<CanFinal<ZmCleanup<U>, void (*)(U *)>::OK, void>::T
       final(U *u) { ZmCleanup<U>::final(u); }
-  template <typename U> inline static typename
+  template <typename U> ZuInline static typename
     ZuIfT<!CanFinal<ZmCleanup<U>, void (*)(U *)>::OK, void>::T
       final(U *u) { }
 
@@ -331,7 +331,7 @@ private:
 
   static void dtor__(Object *o) { global()->dtor_(o); }
 
-  inline T *create_() {
+  T *create_() {
     T *ptr = nullptr;
     Object *o = local_();
     ZmSpecific_lock();
@@ -364,7 +364,7 @@ private:
     return ptr;
   }
 
-  inline T *instance_(T *ptr) {
+  T *instance_(T *ptr) {
     Object *o = local_();
     ZmSpecific_lock();
 #ifdef _WIN32
@@ -406,11 +406,11 @@ public:
     if (ZuLikely(ptr = local_()->ptr)) return static_cast<T *>(ptr);
     return create();
   }
-  inline static T *instance(T *ptr) {
+  static T *instance(T *ptr) {
     return global()->instance_(ptr);
   }
 
-  inline static void all(ZmFn<T *> fn) { return global()->all_(fn); }
+  static void all(ZmFn<T *> fn) { return global()->all_(fn); }
 };
 
 template <typename L> struct ZmTLS_Ctor {

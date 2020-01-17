@@ -100,7 +100,7 @@ struct Zrl_ {
     return m_completions.shift();
   }
 
-  inline ZmRef<ZvCf> cf() { return m_cf; }
+  ZmRef<ZvCf> cf() { return m_cf; }
 
   ZtString readline_(const char *prompt) {
     Guard guard(m_lock);

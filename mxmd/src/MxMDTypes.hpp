@@ -53,7 +53,7 @@ ZuDeclTuple(MxMDTickSize,
     (MxValue, maxPrice),
     (MxValue, tickSize));
 struct MxMDTickSize_MinPxAccessor : public ZuAccessor<MxMDTickSize, MxValue> {
-  inline static MxValue value(const MxMDTickSize &t) { return t.minPrice(); }
+  static MxValue value(const MxMDTickSize &t) { return t.minPrice(); }
 };
 
 #pragma pack(push, 4)
@@ -95,7 +95,7 @@ struct MxMDLotSizes {
   ZuInline bool operator !() const { return !*lotSize; }
   ZuOpBool
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << '[' << oddLotSize << ", " << lotSize << ", " << blockLotSize << ']';
   }
 };

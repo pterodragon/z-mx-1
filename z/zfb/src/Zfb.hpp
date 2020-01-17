@@ -95,25 +95,25 @@ private:
 namespace Save {
   // compile-time-recursive vector push
   template <typename Vector>
-  inline void push_(Vector &) { }
+  void push_(Vector &) { }
   template <typename Vector, typename Arg0, typename ...Args>
-  inline void push_(Vector &v, Arg0 &&arg0, Args &&... args) {
+  void push_(Vector &v, Arg0 &&arg0, Args &&... args) {
     v.push_back(ZuFwd<Arg0>(arg0));
     push_(v, ZuFwd<Args>(args)...);
   }
 
   // compile-time-recursive vector push, with a lambda element transformation
   template <typename Vector, typename L>
-  inline void lpush_(Vector &, L &) { }
+  void lpush_(Vector &, L &) { }
   template <typename Vector, typename L, typename Arg0, typename ...Args>
-  inline void lpush_(Vector &v, L &l, Arg0 &&arg0, Args &&... args) {
+  void lpush_(Vector &v, L &l, Arg0 &&arg0, Args &&... args) {
     v.push_back(l(ZuFwd<Arg0>(arg0)));
     lpush_(v, l, ZuFwd<Args>(args)...);
   }
 
   // inline creation of a vector of primitive scalars
   template <typename T, typename B, typename ...Args>
-  inline auto pvector(B &b, Args &&... args) {
+  auto pvector(B &b, Args &&... args) {
     thread_local std::vector<T> v;
     v.clear();
     v.reserve(sizeof...(args));
@@ -123,7 +123,7 @@ namespace Save {
 
   // inline creation of a vector of lambda-transformed non-primitive types
   template <typename T, typename B, typename L, typename ...Args>
-  inline auto lvector(B &b, L l, Args &&... args) {
+  auto lvector(B &b, L l, Args &&... args) {
     thread_local std::vector<Offset<T> > v;
     v.clear();
     v.reserve(sizeof...(args));
@@ -132,7 +132,7 @@ namespace Save {
   }
   // inline creation of a vector of non-primitive types
   template <typename T, typename B, typename ...Args>
-  inline auto vector(B &b, Args &&... args) {
+  auto vector(B &b, Args &&... args) {
     thread_local std::vector<Offset<T> > v;
     v.clear();
     v.reserve(sizeof...(args));
@@ -141,7 +141,7 @@ namespace Save {
   }
   // iterated creation of a vector of non-primitive types
   template <typename T, typename B, typename L>
-  inline auto vectorIter(B &b, unsigned n, L l) {
+  auto vectorIter(B &b, unsigned n, L l) {
     thread_local std::vector<Offset<T> > v;
     v.clear();
     v.reserve(n);
@@ -151,7 +151,7 @@ namespace Save {
 
   // inline creation of a vector of keyed items
   template <typename T, typename B, typename ...Args>
-  inline auto keyVec(B &b, Args &&... args) {
+  auto keyVec(B &b, Args &&... args) {
     thread_local std::vector<Offset<T> > v;
     v.reserve(sizeof...(args));
     push_(v, ZuFwd<Args>(args)...);
@@ -159,7 +159,7 @@ namespace Save {
   }
   // iterated creation of a vector of keyed items
   template <typename T, typename B, typename L>
-  inline auto keyVecIter(B &b, unsigned n, L l) {
+  auto keyVecIter(B &b, unsigned n, L l) {
     thread_local std::vector<Offset<T> > v;
     v.clear();
     v.reserve(n);
@@ -175,14 +175,14 @@ namespace Save {
 
   // inline creation of a vector of strings
   template <typename B, typename ...Args>
-  inline auto strVec(B &b, Args &&... args) {
+  auto strVec(B &b, Args &&... args) {
     return lvector<String>(b, [&b](const auto &s) {
       return str(b, s);
     }, ZuFwd<Args>(args)...);
   }
   // iterated creation of a vector of strings
   template <typename B, typename L>
-  inline auto strVecIter(B &b, unsigned n, L l) {
+  auto strVecIter(B &b, unsigned n, L l) {
     return vectorIter<String>(b, n, [l = ZuMv(l)](B &b, unsigned i) mutable {
       return str(b, l(i));
     });

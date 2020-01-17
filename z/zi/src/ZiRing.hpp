@@ -73,20 +73,20 @@
 
 // default traits for a (fixed-length) item in a ring buffer
 template <typename T> struct ZiRingTraits {
-  inline static unsigned size(const T &t) { return sizeof(T); }
+  static unsigned size(const T &t) { return sizeof(T); }
 };
 
 // ZiRingMsg - variable length message (discriminated union)
 class ZiRingMsg {
 public:
-  inline ZiRingMsg() : m_type(0), m_length(0) { }
+  ZiRingMsg() : m_type(0), m_length(0) { }
   inline ZiRingMsg(unsigned type, unsigned length) :
     m_type(type), m_length(length) { }
 
-  inline unsigned type() const { return m_type; }
-  inline unsigned length() const { return m_length; }
-  inline void *ptr() { return (void *)&this[1]; }
-  inline const void *ptr() const { return (const void *)&this[1]; }
+  ZuInline unsigned type() const { return m_type; }
+  ZuInline unsigned length() const { return m_length; }
+  ZuInline void *ptr() { return (void *)&this[1]; }
+  ZuInline const void *ptr() const { return (const void *)&this[1]; }
 
 private:
   uint32_t	m_type;
@@ -95,7 +95,7 @@ private:
 
 // traits for ZiRingMsg
 template <> struct ZiRingTraits<ZiRingMsg> {
-  inline static unsigned size(const ZiRingMsg &msg) {
+  ZuInline static unsigned size(const ZiRingMsg &msg) {
     return sizeof(ZiRingMsg) + msg.length();
   }
 };
@@ -128,14 +128,14 @@ public:
   inline ZiRingParams &operator =(const ZiRingParams &p) = default;
 
   template <typename Name>
-  inline ZiRingParams &name(const Name &s) { m_name = s; return *this; }
-  inline ZiRingParams &size(unsigned n) { m_size = n; return *this; }
-  inline ZiRingParams &ll(bool b) { m_ll = b; return *this; }
-  inline ZiRingParams &spin(unsigned n) { m_spin = n; return *this; }
-  inline ZiRingParams &timeout(unsigned n) { m_timeout = n; return *this; }
-  inline ZiRingParams &cpuset(const ZmBitmap &b) { m_cpuset = b; return *this; }
-  inline ZiRingParams &killWait(unsigned n) { m_killWait = n; return *this; }
-  inline ZiRingParams &coredump(bool b) { m_coredump = b; return *this; }
+  ZiRingParams &name(const Name &s) { m_name = s; return *this; }
+  ZiRingParams &size(unsigned n) { m_size = n; return *this; }
+  ZiRingParams &ll(bool b) { m_ll = b; return *this; }
+  ZiRingParams &spin(unsigned n) { m_spin = n; return *this; }
+  ZiRingParams &timeout(unsigned n) { m_timeout = n; return *this; }
+  ZiRingParams &cpuset(const ZmBitmap &b) { m_cpuset = b; return *this; }
+  ZiRingParams &killWait(unsigned n) { m_killWait = n; return *this; }
+  ZiRingParams &coredump(bool b) { m_coredump = b; return *this; }
 
   ZuInline const ZtString &name() const { return m_name; }
   ZuInline unsigned size() const { return m_size; }
@@ -426,7 +426,7 @@ public:
   }
 
 private:
-  inline bool incRdrCount() {
+  bool incRdrCount() {
     uint32_t rdrCount;
     do {
       rdrCount = this->rdrCount();
@@ -482,7 +482,7 @@ public:
 
   ZuInline void *push(unsigned size = sizeof(T)) { return push_<1>(size); }
   ZuInline void *tryPush(unsigned size = sizeof(T)) { return push_<0>(size); }
-  template <bool Wait> inline void *push_(unsigned size) {
+  template <bool Wait> void *push_(unsigned size) {
     ZmAssert(m_ctrl.addr());
     ZmAssert(m_flags & Write);
 
@@ -514,7 +514,7 @@ public:
     *(uint64_t *)ptr = rdrMask;
     return (void *)&ptr[8];
   }
-  inline void push2() {
+  void push2() {
     ZmAssert(m_ctrl.addr());
     ZmAssert(m_flags & Write);
 
@@ -772,7 +772,7 @@ public:
     return Zi::OK;
   }
 
-  inline T *shift() {
+  T *shift() {
     ZmAssert(m_ctrl.addr());
     ZmAssert(m_flags & Read);
     ZmAssert(m_id >= 0);
@@ -792,7 +792,7 @@ public:
     uint8_t *ptr = &((uint8_t *)data())[tail & ~Wrapped];
     return (T *)&ptr[8];
   }
-  inline void shift2() {
+  void shift2() {
     ZmAssert(m_ctrl.addr());
     ZmAssert(m_flags & Read);
     ZmAssert(m_id >= 0);

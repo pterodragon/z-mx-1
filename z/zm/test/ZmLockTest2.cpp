@@ -32,11 +32,11 @@
 #include <zlib/ZmRef.hpp>
 
 struct Lock : public ZmObject {
-  inline Lock(unsigned rn) : m_rn(rn), m_nThreads(0) { }
-  inline int incThreads() { return ++m_nThreads; }
-  inline int decThreads() { return --m_nThreads; }
-  inline void lock() { m_lock.lock(); }
-  inline void unlock() { m_lock.unlock(); }
+  Lock(unsigned rn) : m_rn(rn), m_nThreads(0) { }
+  int incThreads() { return ++m_nThreads; }
+  int decThreads() { return --m_nThreads; }
+  void lock() { m_lock.lock(); }
+  void unlock() { m_lock.unlock(); }
   ZmLock		m_lock;
   unsigned		m_rn;
   int			m_nThreads;

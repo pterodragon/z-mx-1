@@ -30,12 +30,12 @@ public:
 
   inline static void start(int nThreads, int nLocks)
     { instance()->start_(nThreads, nLocks); }
-  inline static void stop() { instance()->stop_(); }
+  static void stop() { instance()->stop_(); }
 
-  inline static ZmTime &started() { return instance()->m_started; }
+  static ZmTime &started() { return instance()->m_started; }
 
-  inline static Thread *thread(int i) { return instance()->m_threads[i]; }
-  inline static ZmRWLock &lock(int i) { return instance()->m_locks[i]; }
+  static Thread *thread(int i) { return instance()->m_threads[i]; }
+  static ZmRWLock &lock(int i) { return instance()->m_locks[i]; }
 
   static Global *instance();
 

@@ -64,10 +64,10 @@ public:
   typedef T Elem;
   typedef ZuArrayFn<T, Cmp> Ops;
 
-  inline ZuArray() : m_data(0), m_length(0) { }
+  ZuArray() : m_data(0), m_length(0) { }
   inline ZuArray(const ZuArray &a) :
       m_data(a.m_data), m_length(a.m_length) { }
-  inline ZuArray &operator =(const ZuArray &a) {
+  ZuArray &operator =(const ZuArray &a) {
     if (this == &a) return *this;
     m_data = a.m_data;
     m_length = a.m_length;
@@ -76,7 +76,7 @@ public:
 
   inline ZuArray(std::initializer_list<T> a) :
     m_data(a.begin()), m_length(a.size()) { }
-  inline ZuArray &operator =(std::initializer_list<T> a) {
+  ZuArray &operator =(std::initializer_list<T> a) {
     m_data = a.begin();
     m_length = a.size();
     return *this;
@@ -329,13 +329,13 @@ struct ZuTraits<ZuArray<Elem_> > : public ZuGenericTraits<ZuArray<Elem_> > {
     IsHashable = 1, IsComparable = 1
   };
 #if 0
-  inline static T make(const Elem *data, unsigned length) {
+  static T make(const Elem *data, unsigned length) {
     if (!data) return T();
     return T(data, length);
   }
 #endif
-  inline static const Elem *data(const T &a) { return a.data(); }
-  inline static unsigned length(const T &a) { return a.length(); }
+  static const Elem *data(const T &a) { return a.data(); }
+  static unsigned length(const T &a) { return a.length(); }
 };
 
 template <> struct ZuPrint<ZuArray<char> > : public ZuPrintString { };
@@ -347,11 +347,11 @@ struct ZuPrint<ZuArray<const volatile char> > : public ZuPrintString { };
 template <typename T> using ZuArrayT = ZuArray<typename ZuTraits<T>::Elem>;
 
 template <typename T>
-inline ZuArrayT<T> ZuMkArray(T &&t) {
+ZuArrayT<T> ZuMkArray(T &&t) {
   return ZuArrayT<T>(ZuFwd<T>(t));
 }
 template <typename T>
-inline ZuArray<T> ZuMkArray(std::initializer_list<T> &&t) {
+ZuArray<T> ZuMkArray(std::initializer_list<T> &&t) {
   return ZuArray<T>(ZuFwd<std::initializer_list<T> >(t));
 }
 

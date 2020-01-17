@@ -48,28 +48,28 @@ class ZpLayerIP {
   };
 
 public:
-  inline static int version(const uint8_t *ip) {
+  static int version(const uint8_t *ip) {
     return (((const Data *)ip)->m_vhl & 0xf0) >> 4;
   }
 
-  inline static int len(const uint8_t *ip) {
+  static int len(const uint8_t *ip) {
     return ZpExtract_16BITS(&((const Data *)ip)->m_len);
   }
   
   // in number of bytes
-  inline static int headLen(const uint8_t *ip) {
+  static int headLen(const uint8_t *ip) {
     return (((const Data *)ip)->m_vhl & 0x0f) * 4;
   }
 
-  inline static int transport(const uint8_t *ip) {
+  static int transport(const uint8_t *ip) {
     return ((const Data *)ip)->m_proto;
   }
 
-  inline static ZiIP src(const uint8_t *ip) {
+  static ZiIP src(const uint8_t *ip) {
     return ZiIP(((const Data *)ip)->m_src);
   }
 
-  inline static ZiIP dst(const uint8_t *ip) {
+  static ZiIP dst(const uint8_t *ip) {
     return ZiIP(((const Data *)ip)->m_dst);
   }
 };
@@ -91,22 +91,22 @@ public:
   struct CtrlFlags { enum  { FIN = 0, SYN, RST, PSH, ACK, URG, ECE, CWR  }; };
 
   // in number of bytes
-  inline static int offset(const uint8_t *tcp) {
+  static int offset(const uint8_t *tcp) {
     return ((((const Data *)tcp)->m_offx2 & 0xf0) >> 4) * 4;
   }
 
-  inline static int seq(const uint8_t *tcp) {
+  static int seq(const uint8_t *tcp) {
     return ZpExtract_32BITS(&((const Data *)tcp)->m_seq);
   }
 
-  inline static int sport(const uint8_t *tcp) {
+  static int sport(const uint8_t *tcp) {
     return ZpExtract_16BITS(&((const Data *)tcp)->m_sport);
   }
 
-  inline static int dport(const uint8_t *tcp) {
+  static int dport(const uint8_t *tcp) {
     return ZpExtract_16BITS(&((const Data *)tcp)->m_dport);
   }
-  inline static int flags(const uint8_t *tcp) {
+  int flags(const uint8_t *tcp) {
     return ((const Data *)tcp)->m_flags; }
 };
 

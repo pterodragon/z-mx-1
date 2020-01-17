@@ -44,14 +44,14 @@ ZmAPI void ZmSpecific_unlock()
 // Win32 voodoo to force TLS support in linked image
 extern "C" { extern DWORD _tls_used; }
 struct R {
-  inline R() : m_value(_tls_used) { };
+  R() : m_value(_tls_used) { };
   volatile DWORD	m_value;
 };
 
 // use TLS API from within DLL to be safe on 2K and XP
 struct K {
-  inline K() { m_key = TlsAlloc(); }
-  inline ~K() { TlsFree(m_key); }
+  K() { m_key = TlsAlloc(); }
+  ~K() { TlsFree(m_key); }
 
   inline int set(void *value) const
     { return TlsSetValue(m_key, value) ? 0 : -1; }
@@ -65,18 +65,12 @@ struct K {
 using O = ZmSpecific_Object;
 
 struct C {
-  inline static K &head_() {
-    static K key_;
-    return key_;
-  }
-  inline static K &tail_() {
-    static K key_;
-    return key_;
-  }
-  inline static O *head() { return (O *)head_().get(); }
-  inline static void head(O *o) { head_().set(o); }
-  inline static O *tail() { return (O *)tail_().get(); }
-  inline static void tail(O *o) { tail_().set(o); }
+  static K &head_() { static K key_; return key_; }
+  static K &tail_() { static K key_; return key_; }
+  static O *head() { return (O *)head_().get(); }
+  static void head(O *o) { head_().set(o); }
+  static O *tail() { return (O *)tail_().get(); }
+  static void tail(O *o) { tail_().set(o); }
 
   static R		m_ref;
 };

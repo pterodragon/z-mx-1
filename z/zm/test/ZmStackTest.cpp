@@ -10,18 +10,18 @@
 #include <zlib/ZmDRing.hpp>
 
 struct C {
-  inline C() : m_i(0) { m_count++; }
-  inline C(int i) : m_i(i) { m_count++; }
-  inline C(const C &c) : m_i(c.m_i) { m_count++; }
-  inline C &operator =(const C &c) {
+  C() : m_i(0) { m_count++; }
+  C(int i) : m_i(i) { m_count++; }
+  C(const C &c) : m_i(c.m_i) { m_count++; }
+  C &operator =(const C &c) {
     if (this != &c) m_i = c.m_i;
     return *this;
   }
-  inline ~C() { --m_count; }
-  inline int value() const { return m_i; }
-  inline int cmp(const C &c) const { return m_i - c.m_i; }
-  inline bool operator ==(const C &c) const { return m_i == c.m_i; }
-  inline bool operator !() const { return !m_i; }
+  ~C() { --m_count; }
+  int value() const { return m_i; }
+  int cmp(const C &c) const { return m_i - c.m_i; }
+  bool operator ==(const C &c) const { return m_i == c.m_i; }
+  bool operator !() const { return !m_i; }
   int				m_i;
   static ZmAtomic<uint32_t>	m_count;
 };

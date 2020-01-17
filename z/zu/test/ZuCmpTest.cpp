@@ -27,33 +27,33 @@
   CHECK(!ZuCmp<t>::null((t)1))
 
 template <typename T> struct A : public T {
-  inline int id() const { return T::ptr()->p1(); }
-  inline int age() const { return T::ptr()->p2(); }
-  inline int height() const { return T::ptr()->p3(); }
+  int id() const { return T::ptr()->p1(); }
+  int age() const { return T::ptr()->p2(); }
+  int height() const { return T::ptr()->p3(); }
 };
 
 struct S {
-  inline S() { m_data[0] = 0; }
-  inline S(const S &s) { strcpy(m_data, s.m_data); }
+  S() { m_data[0] = 0; }
+  S(const S &s) { strcpy(m_data, s.m_data); }
   inline S &operator =(const S &s)
     { if (this != &s) strcpy(m_data, s.m_data); return *this; }
-  inline S(const char *s) { strcpy(m_data, s); }
-  inline S &operator =(const char *s) { strcpy(m_data, s); return *this; }
-  inline operator char *() { return m_data; }
-  inline operator const char *() const { return m_data; }
-  inline bool operator !() const { return !m_data[0]; }
+  S(const char *s) { strcpy(m_data, s); }
+  S &operator =(const char *s) { strcpy(m_data, s); return *this; }
+  operator char *() { return m_data; }
+  operator const char *() const { return m_data; }
+  bool operator !() const { return !m_data[0]; }
   inline bool operator ==(const S &s) const
     { return !strcmp(m_data, s.m_data); }
-  inline bool operator ==(const char *s) const { return !strcmp(m_data, s); }
+  bool operator ==(const char *s) const { return !strcmp(m_data, s); }
   inline bool operator !=(const S &s) const
     { return strcmp(m_data, s.m_data); }
-  inline bool operator !=(const char *s) const { return strcmp(m_data, s); }
+  bool operator !=(const char *s) const { return strcmp(m_data, s); }
   inline bool operator >(const S &s) const
     { return strcmp(m_data, s.m_data) > 0; }
-  inline bool operator >(const char *s) const { return strcmp(m_data, s) > 0; }
+  bool operator >(const char *s) const { return strcmp(m_data, s) > 0; }
   inline bool operator <(const S &s) const
     { return strcmp(m_data, s.m_data) < 0; }
-  inline bool operator <(const char *s) const { return strcmp(m_data, s) < 0; }
+  bool operator <(const char *s) const { return strcmp(m_data, s) < 0; }
   char m_data[32];
 };
 

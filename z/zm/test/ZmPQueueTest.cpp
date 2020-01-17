@@ -34,20 +34,20 @@ typedef ZuPair<uint32_t, unsigned> Msg_Data;
 struct Msg : public Msg_Data {
   using Msg_Data::Msg_Data;
   using Msg_Data::operator =;
-  inline Msg(const Msg_Data &v) : Msg_Data(v) { }
-  inline Msg(Msg_Data &&v) : Msg_Data(ZuMv(v)) { }
-  inline uint32_t key() const { return p<0>(); }
-  inline unsigned length() const { return p<1>(); }
-  inline unsigned clipHead(unsigned length) {
+  Msg(const Msg_Data &v) : Msg_Data(v) { }
+  Msg(Msg_Data &&v) : Msg_Data(ZuMv(v)) { }
+  uint32_t key() const { return p<0>(); }
+  unsigned length() const { return p<1>(); }
+  unsigned clipHead(unsigned length) {
     p<0>() += length;
     return p<1>() -= length;
   }
-  inline unsigned clipTail(unsigned length) {
+  unsigned clipTail(unsigned length) {
     return p<1>() -= length;
   }
   template <typename I>
-  inline void write(const I &) { }
-  inline unsigned bytes() const { return 1; }
+  void write(const I &) { }
+  unsigned bytes() const { return 1; }
 };
 
 using PQueue =

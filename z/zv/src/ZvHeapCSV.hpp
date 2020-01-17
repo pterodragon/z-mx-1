@@ -48,7 +48,7 @@ struct ZvAPI ZvHeapCSV {
     ZmBitmap		cpuset;
   };
   const ZvFields<Data> Data::fields() noexcept {
-    ZvDataFields(Data,
+    ZvMkFields(Data,
 	(String, id, Primary),
 	(Scalar, partition, 0),
 	(Scalar, alignment, 0),

@@ -36,7 +36,7 @@
 struct ZuUTF8 {
   typedef uint8_t Elem;
 
-  inline static unsigned in(const uint8_t *s, unsigned n, uint32_t &u_) {
+  static unsigned in(const uint8_t *s, unsigned n, uint32_t &u_) {
     if (ZuUnlikely(n < 1)) return 0;
     uint8_t c = *s;
     if (ZuLikely(c < 0x80)) {
@@ -71,14 +71,14 @@ struct ZuUTF8 {
     return 0;
   }
 
-  inline static unsigned out(uint32_t u) {
+  static unsigned out(uint32_t u) {
     if (ZuLikely(u < 0x80)) return 1;
     if (ZuLikely(u < 0x800)) return 2;
     if (ZuLikely(u < 0x10000)) return 3;
     return 4;
   }
 
-  inline static unsigned out(uint8_t *s, unsigned n, uint32_t u) {
+  static unsigned out(uint8_t *s, unsigned n, uint32_t u) {
     if (ZuUnlikely(n < 1)) return 0;
     if (ZuLikely(u < 0x80)) {
       *s = u;
@@ -109,7 +109,7 @@ struct ZuUTF8 {
 struct ZuUTF16 {
   typedef uint16_t Elem;
 
-  inline static unsigned in(const uint16_t *s, unsigned n, uint32_t &u_) {
+  static unsigned in(const uint16_t *s, unsigned n, uint32_t &u_) {
     uint16_t c = *s;
     if (ZuUnlikely(n < 1)) return 0;
     if (ZuLikely(c < 0xd800 || c >= 0xc000)) {
@@ -124,12 +124,12 @@ struct ZuUTF16 {
     return 2;
   }
 
-  inline static unsigned out(uint32_t u) {
+  static unsigned out(uint32_t u) {
     if (ZuLikely(u < 0xd800 || (u >= 0xc000 && u < 0x10000))) return 1;
     return 2;
   }
 
-  inline static unsigned out(uint16_t *s, unsigned n, uint32_t u) {
+  static unsigned out(uint16_t *s, unsigned n, uint32_t u) {
     if (ZuUnlikely(n < 1)) return 0;
     if (ZuLikely(u < 0xd800 || (u >= 0xc000 && u < 0x10000))) {
       *s = u;
@@ -145,15 +145,15 @@ struct ZuUTF16 {
 struct ZuUTF32 {
   typedef uint32_t Elem;
 
-  inline static unsigned in(const uint32_t *s, unsigned n, uint32_t &u) {
+  static unsigned in(const uint32_t *s, unsigned n, uint32_t &u) {
     if (ZuUnlikely(n < 1)) return 0;
     u = *s;
     return 1;
   }
 
-  inline constexpr static unsigned out(uint32_t) { return 1; }
+  constexpr static unsigned out(uint32_t) { return 1; }
 
-  inline static unsigned out(uint32_t *s, unsigned n, uint32_t u) {
+  static unsigned out(uint32_t *s, unsigned n, uint32_t u) {
     if (ZuUnlikely(n < 1)) return 0;
     *s = u;
     return 1;
@@ -171,7 +171,7 @@ template <typename OutChar, typename InChar> struct ZuUTF {
   typedef typename ZuUTF_<sizeof(InChar)>::T InUTF;
   typedef typename InUTF::Elem InElem;
 
-  inline static unsigned len(ZuArray<const InChar> s_) {
+  static unsigned len(ZuArray<const InChar> s_) {
     const InElem *s = (const InElem *)s_.data();
     unsigned n = s_.length();
     uint32_t u;
@@ -185,7 +185,7 @@ template <typename OutChar, typename InChar> struct ZuUTF {
     return l;
   }
 
-  inline static unsigned cvt(ZuArray<OutChar> o_, ZuArray<const InChar> s_) {
+  static unsigned cvt(ZuArray<OutChar> o_, ZuArray<const InChar> s_) {
     OutElem *o = (OutElem *)o_.data();
     unsigned l = o_.length();
     const InElem *s = (const InElem *)s_.data();

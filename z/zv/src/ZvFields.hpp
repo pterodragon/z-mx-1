@@ -58,7 +58,7 @@ namespace ZvFieldFlags {
 }
 
 struct ZvTimeNull : public ZuPrintable {
-  template <typename S> inline void print(S &) const { }
+  template <typename S> void print(S &) const { }
 };
 ZuDeclUnion(ZvTimeFmt,
     (ZtDateFmt::CSV, csv),

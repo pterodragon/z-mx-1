@@ -181,7 +181,7 @@ namespace ZJNI {
     return GlobalRef<T>(env, (T)obj);
   }
   // return global ref to Java class
-  inline jclass globalClassRef(JNIEnv *env, const char *cname) {
+  jclass globalClassRef(JNIEnv *env, const char *cname) {
     jclass c = env->FindClass(cname);
     if (!c) return 0;
     jclass g = (jclass)env->NewGlobalRef((jobject)c);
@@ -190,7 +190,7 @@ namespace ZJNI {
   }
 
   // C++ any string -> Java String
-  inline jstring s2j(JNIEnv *env, ZuString s) {
+  jstring s2j(JNIEnv *env, ZuString s) {
     if (ZuUnlikely(!env)) return nullptr;
     if (ZuUnlikely(!s)) { jchar c = 0; return env->NewString(&c, 0); }
     unsigned n = ZuUTF<jchar, char>::len(s);

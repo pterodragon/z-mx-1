@@ -64,24 +64,24 @@ public:
 
   struct Error {
 #ifdef _WIN32
-    inline static void clear() { }
-    inline static ZtString last() {
+    static void clear() { }
+    static ZtString last() {
       return ZePlatform_::strerror(GetLastError());
     }
 #else
-    inline static void clear() { dlerror(); }
-    inline static ZtString last() { return dlerror(); }
+    static void clear() { dlerror(); }
+    static ZtString last() { return dlerror(); }
 #endif
   };
 
-  inline ZiModule() : m_handle(0), m_flags(0) { }
-  inline ~ZiModule() { finalize(); }
+  ZiModule() : m_handle(0), m_flags(0) { }
+  ~ZiModule() { finalize(); }
 
-  inline Handle handle() { return m_handle; }
+  Handle handle() { return m_handle; }
 
-  inline unsigned flags() { return m_flags; }
-  inline void setFlags(int f) { Guard guard(m_lock); m_flags |= f; }
-  inline void clrFlags(int f) { Guard guard(m_lock); m_flags &= ~f; }
+  unsigned flags() { return m_flags; }
+  void setFlags(int f) { Guard guard(m_lock); m_flags |= f; }
+  void clrFlags(int f) { Guard guard(m_lock); m_flags &= ~f; }
 
   int init(Handle handle, unsigned flags, ZtString *e = 0) {
     Guard guard(m_lock);
@@ -92,7 +92,7 @@ public:
     return Zi::OK;
   }
 
-  inline void finalize() {
+  void finalize() {
     Guard guard(m_lock);
 
     if (m_flags & GC)

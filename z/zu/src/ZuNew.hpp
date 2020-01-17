@@ -37,16 +37,16 @@
 #define ZuNew_delete_Failed(N) extern void ZuNew_##N##_FAILED(); \
   ZuNew_##N##_FAILED(); return
 
-inline void *operator new(size_t sz) { ZuNew_new_Failed(new); }
-inline void *operator new[](size_t sz) { ZuNew_new_Failed(new_array); }
-inline void operator delete(void *ptr) { ZuNew_delete_Failed(delete); }
-inline void operator delete[](void *ptr) { ZuNew_delete_Failed(delete_array); }
+void *operator new(size_t sz) { ZuNew_new_Failed(new); }
+void *operator new[](size_t sz) { ZuNew_new_Failed(new_array); }
+void operator delete(void *ptr) { ZuNew_delete_Failed(delete); }
+void operator delete[](void *ptr) { ZuNew_delete_Failed(delete_array); }
 
 // placement new
-inline void *operator new(size_t sz, void *ptr) { return ptr; }
-inline void *operator new[](size_t sz, void *ptr) { return ptr; }
-inline void operator delete(void *ptr, void *place) { }
-inline void operator delete[](void *ptr, void *place) { }
+void *operator new(size_t sz, void *ptr) { return ptr; }
+void *operator new[](size_t sz, void *ptr) { return ptr; }
+void operator delete(void *ptr, void *place) { }
+void operator delete[](void *ptr, void *place) { }
 #endif
 
 #endif /* ZuNew_HPP */

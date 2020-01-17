@@ -91,18 +91,18 @@ public:
 #endif
   { }
 
-  inline ~ZiFile() { final(); }
+  ~ZiFile() { final(); }
 
-  inline Handle handle() { return m_handle; }
-  inline void *addr() const { return m_addr; }
-  inline Offset mmapLength() const { return m_mmapLength; }
+  ZuInline Handle handle() { return m_handle; }
+  ZuInline void *addr() const { return m_addr; }
+  ZuInline Offset mmapLength() const { return m_mmapLength; }
 
-  inline unsigned flags() { return m_flags; }
-  inline void setFlags(int f) { Guard guard(m_lock); m_flags |= f; }
-  inline void clrFlags(int f) { Guard guard(m_lock); m_flags &= ~f; }
+  ZuInline unsigned flags() { return m_flags; }
+  void setFlags(int f) { Guard guard(m_lock); m_flags |= f; }
+  void clrFlags(int f) { Guard guard(m_lock); m_flags &= ~f; }
 
   int init(Handle handle, unsigned flags, ZeError *e = 0);
-  inline void final() {
+  void final() {
     Guard guard(m_lock);
 
     if (m_flags & GC) {
@@ -132,10 +132,10 @@ public:
   void close();
 
   Offset size();
-  inline int blkSize() { return m_blkSize; }
+  int blkSize() { return m_blkSize; }
 
-  inline Offset offset() { ReadGuard guard(m_lock); return m_offset; }
-  inline void seek(Offset offset) { Guard guard(m_lock); m_offset = offset; }
+  Offset offset() { ReadGuard guard(m_lock); return m_offset; }
+  void seek(Offset offset) { Guard guard(m_lock); m_offset = offset; }
 
   int sync(ZeError *e = 0);
   int msync(void *addr = 0, Offset length = 0, ZeError *e = 0);
@@ -153,7 +153,7 @@ public:
   int pwritev(Offset offset, const ZiVec *vecs, unsigned nVecs, ZeError *e = 0);
 
   // Note: unbuffered!
-  template <typename V> inline ZiFile &operator <<(V &&v) {
+  template <typename V> ZiFile &operator <<(V &&v) {
     append(ZuFwd<V>(v));
     return *this;
   }
@@ -194,17 +194,17 @@ private:
   template <typename U, typename R>
   struct MatchPBuffer<U, R, 1> { typedef R T; };
 
-  template <typename S> inline typename ZuIsString<S>::T append(S &&s_) {
+  template <typename S> typename ZuIsString<S>::T append(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     if (ZuUnlikely(!s)) return;
     ZeError e;
     if (ZuUnlikely(write(s.data(), s.length(), &e) != Zi::OK))
       throw e;
   }
-  template <typename P> inline typename MatchPDelegate<P>::T append(P &&p) {
+  template <typename P> typename MatchPDelegate<P>::T append(P &&p) {
     ZuPrint<P>::print(*this, ZuFwd<P>(p));
   }
-  template <typename P> inline typename MatchPBuffer<P>::T append(const P &p) {
+  template <typename P> typename MatchPBuffer<P>::T append(const P &p) {
     unsigned len = ZuPrint<P>::length(p);
     char *buf;
 #ifdef _MSC_VER

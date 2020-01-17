@@ -42,25 +42,25 @@ extern "C" {
 }
 
 struct Msg {
-  inline Msg() { }
+  Msg() { }
   inline Msg(JNIEnv *env, jobject obj, jstring text) :
     m_obj(env->NewGlobalRef(obj)) {
     m_text = ZJNI::j2s_ZtString(env, text);
   }
-  inline ~Msg() {
+  ~Msg() {
     if (m_obj) ZJNI::env()->DeleteGlobalRef(m_obj);
   }
-  inline Msg(Msg &&msg) : m_obj(msg.m_obj), m_text(ZuMv(msg.m_text)) {
+  Msg(Msg &&msg) : m_obj(msg.m_obj), m_text(ZuMv(msg.m_text)) {
     msg.m_obj = 0;
   }
-  inline Msg &operator =(Msg &&msg) {
+  Msg &operator =(Msg &&msg) {
     if (m_obj) ZJNI::env()->DeleteGlobalRef(m_obj);
     m_obj = msg.m_obj; msg.m_obj = 0;
     m_text = ZuMv(msg.m_text);
     return *this;
   }
 
-  inline void operator ()(JNIEnv *env, jmethodID mid) {
+  void operator ()(JNIEnv *env, jmethodID mid) {
     jstring text = ZJNI::s2j(env, m_text);
     env->CallVoidMethod(m_obj, mid, text);
     env->DeleteLocalRef(text);

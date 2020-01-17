@@ -41,8 +41,8 @@ public:
 		   double backoff, double random) :
     m_min(minimum), m_max(maximum), m_backoff(backoff), m_random(random) { }
 
-  inline ZmTime minimum() { return(m_min); }
-  inline ZmTime maximum() { return(m_max); }
+  ZmTime minimum() { return(m_min); }
+  ZmTime maximum() { return(m_max); }
 
   ZmTime initial() {
     double d = m_min.dtime();

@@ -282,7 +282,7 @@ private:
     alloc_(o, 0);
     length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(m_data, o), s));
   }
-  template <typename C> inline typename MatchChar2<C>::T ctor(C c) {
+  template <typename C> typename MatchChar2<C>::T ctor(C c) {
     ZuArray<const Char2> s{&c, 1};
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null_(); return; }
@@ -314,12 +314,12 @@ private:
 
 public:
   enum Copy_ { Copy };
-  template <typename A> inline ZtArray(Copy_ _, A &&a) { copy(ZuFwd<A>(a)); }
+  template <typename A> ZtArray(Copy_ _, A &&a) { copy(ZuFwd<A>(a)); }
 
 private:
   template <typename A> inline typename MatchZtArray<A>::T copy(const A &a)
     { copy_(a.m_data, a.length()); }
-  template <typename A> inline typename MatchArray<A>::T copy(A &&a_) {
+  template <typename A> typename MatchArray<A>::T copy(A &&a_) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     copy_(a.data(), a.length());
   }
@@ -354,14 +354,14 @@ public:
   }
 
 private:
-  template <typename A> inline typename MatchZtArray<A>::T assign(const A &a) {
+  template <typename A> typename MatchZtArray<A>::T assign(const A &a) {
     if (this == &a) return;
     uint32_t oldLength = 0;
     T *oldData = free_1(oldLength);
     copy_(a.m_data, a.length());
     free_2(oldData, oldLength);
   }
-  template <typename A> inline typename MatchArray<A>::T assign(A &&a_) {
+  template <typename A> typename MatchArray<A>::T assign(A &&a_) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     uint32_t oldLength = 0;
     T *oldData = free_1(oldLength);
@@ -369,12 +369,12 @@ private:
     free_2(oldData, oldLength);
   }
 
-  template <typename S> inline typename MatchStrLiteral<S>::T assign(S &&s_) {
+  template <typename S> typename MatchStrLiteral<S>::T assign(S &&s_) {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     free_();
     shadow_(s.data(), s.length());
   }
-  template <typename S> inline typename MatchString<S>::T assign(S &&s_) {
+  template <typename S> typename MatchString<S>::T assign(S &&s_) {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     uint32_t oldLength = 0;
     T *oldData = free_1(oldLength);
@@ -382,14 +382,14 @@ private:
     free_2(oldData, oldLength);
   }
 
-  template <typename S> inline typename MatchChar2String<S>::T assign(S &&s_) {
+  template <typename S> typename MatchChar2String<S>::T assign(S &&s_) {
     ZuArray<Char2> s(ZuFwd<S>(s_));
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null(); return; }
     if (!owned() || size() < o) size(o);
     length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(m_data, o), s));
   }
-  template <typename C> inline typename MatchChar2<C>::T assign(C c) {
+  template <typename C> typename MatchChar2<C>::T assign(C c) {
     ZuArray<Char2> s{&c, 1};
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null(); return; }
@@ -422,13 +422,13 @@ public:
     { shadow(ZuFwd<A>(a)); return *this; }
 
 private:
-  template <typename A> inline typename MatchZtArray<A>::T shadow(const A &a) {
+  template <typename A> typename MatchZtArray<A>::T shadow(const A &a) {
     if (this == &a) return;
     free_();
     shadow_(a.m_data, a.length());
   }
   template <typename A>
-  inline typename MatchSameArray<A>::T shadow(A &&a_) {
+  typename MatchSameArray<A>::T shadow(A &&a_) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     free_();
     shadow_(a.data(), a.length());
@@ -436,15 +436,15 @@ private:
 
 public:
   template <typename S>
-  inline ZtArray(S &&s_, ZtIconv *iconv, typename ZuIsString<S>::T *_ = 0) {
+  ZtArray(S &&s_, ZtIconv *iconv, typename ZuIsString<S>::T *_ = 0) {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     convert_(s, iconv);
   }
-  inline ZtArray(const Char *data, unsigned length, ZtIconv *iconv) {
+  ZtArray(const Char *data, unsigned length, ZtIconv *iconv) {
     ZuArray<Char> s(data, length);
     convert_(s, iconv);
   }
-  inline ZtArray(const Char2 *data, unsigned length, ZtIconv *iconv) {
+  ZtArray(const Char2 *data, unsigned length, ZtIconv *iconv) {
     ZuArray<Char2> s(data, length);
     convert_(s, iconv);
   }
@@ -455,15 +455,15 @@ public:
     alloc_(size, length);
     if (initItems) this->initItems(m_data, length);
   }
-  inline explicit ZtArray(const T *data, unsigned length) {
+  explicit ZtArray(const T *data, unsigned length) {
     if (!length) { null_(); return; }
     shadow_(data, length);
   }
-  inline explicit ZtArray(Copy_ _, const T *data, unsigned length) {
+  explicit ZtArray(Copy_ _, const T *data, unsigned length) {
     if (!length) { null_(); return; }
     copy_(data, length);
   }
-  inline explicit ZtArray(const T *data, unsigned length, unsigned size) {
+  explicit ZtArray(const T *data, unsigned length, unsigned size) {
     if (!size) { null_(); return; }
     own_(data, length, size, true);
   }
@@ -473,15 +473,15 @@ public:
     own_(data, length, size, mallocd);
   }
 
-  inline ~ZtArray() { free_(); }
+  ~ZtArray() { free_(); }
 
 // re-initializers
 
-  inline void init() { free_(); init_(); }
-  inline void init_() { null_(); }
+  void init() { free_(); init_(); }
+  void init_() { null_(); }
 
-  template <typename A> inline void init(A &&a) { assign(ZuFwd<A>(a)); }
-  template <typename A> inline void init_(A &&a) { ctor(ZuFwd<A>(a)); }
+  template <typename A> void init(A &&a) { assign(ZuFwd<A>(a)); }
+  template <typename A> void init_(A &&a) { ctor(ZuFwd<A>(a)); }
 
   inline void init(
       unsigned length, unsigned size,
@@ -500,29 +500,29 @@ public:
     alloc_(size, length);
     if (initItems) this->initItems(m_data, length);
   }
-  inline void init(const T *data, unsigned length) {
+  void init(const T *data, unsigned length) {
     free_();
     init_(data, length);
   }
-  inline void init_(const T *data, unsigned length) {
+  void init_(const T *data, unsigned length) {
     if (!length) { null_(); return; }
     shadow_(data, length);
   }
-  inline void init(Copy_ _, const T *data, unsigned length) {
+  void init(Copy_ _, const T *data, unsigned length) {
     uint32_t oldLength = 0;
     T *oldData = free_1(oldLength);
     init_(_, data, length);
     free_2(oldData, oldLength);
   }
-  inline void init_(Copy_ _, const T *data, unsigned length) {
+  void init_(Copy_ _, const T *data, unsigned length) {
     if (!length) { null_(); return; }
     copy_(data, length);
   }
-  inline void init(const T *data, unsigned length, unsigned size) {
+  void init(const T *data, unsigned length, unsigned size) {
     free_();
     init_(data, length, size);
   }
-  inline void init_(const T *data, unsigned length, unsigned size) {
+  void init_(const T *data, unsigned length, unsigned size) {
     if (!size) { null_(); return; }
     own_(data, length, size, true);
   }
@@ -540,7 +540,7 @@ public:
 // internal initializers / finalizer
 
 private:
-  inline void null_() {
+  void null_() {
     m_data = 0;
     size_owned(0, 0);
     length_mallocd(0, 0);
@@ -559,21 +559,21 @@ private:
     length_mallocd(length, mallocd);
   }
 
-  inline void shadow_(const T *data, unsigned length) {
+  void shadow_(const T *data, unsigned length) {
     if (!length) { null_(); return; }
     m_data = (T *)data;
     size_owned(length, 0);
     length_mallocd(length, 0);
   }
 
-  inline void alloc_(unsigned size, unsigned length) {
+  void alloc_(unsigned size, unsigned length) {
     if (!size) { null_(); return; }
     m_data = (T *)::malloc(size * sizeof(T));
     size_owned(size, 1);
     length_mallocd(length, 1);
   }
 
-  template <typename S> inline void copy_(const S *data, unsigned length) {
+  template <typename S> void copy_(const S *data, unsigned length) {
     if (!length) { null_(); return; }
     m_data = (T *)::malloc(length * sizeof(T));
     if (length) this->copyItems(m_data, data, length);
@@ -583,18 +583,18 @@ private:
 
   template <typename S> void convert_(const S &s, ZtIconv *iconv);
 
-  inline void free_() {
+  void free_() {
     if (m_data && owned()) {
       this->destroyItems(m_data, length());
       if (mallocd()) ::free(m_data);
     }
   }
-  inline T *free_1(uint32_t &length_mallocd) {
+  T *free_1(uint32_t &length_mallocd) {
     if (!m_data || !owned()) return 0;
     length_mallocd = m_length_mallocd;
     return m_data;
   }
-  inline void free_2(T *data, uint32_t length_mallocd) {
+  void free_2(T *data, uint32_t length_mallocd) {
     if (data) {
       this->destroyItems(data, length_mallocd & ~(1U<<31U));
       if (length_mallocd>>31U) ::free(data);
@@ -604,7 +604,7 @@ private:
 public:
 // truncation (to minimum size)
 
-  inline void truncate() {
+  void truncate() {
     size(length());
     unsigned n = length();
     if (!m_data || size() <= n) return;
@@ -666,7 +666,7 @@ public:
 
 // reset to null array
 
-  inline void null() {
+  void null() {
     free_();
     null_();
   }
@@ -685,7 +685,7 @@ public:
     }
     length_(length);
   }
-  inline void length(unsigned length, bool initItems) {
+  void length(unsigned length, bool initItems) {
     if (!owned() || length > size()) size(length);
     if (initItems) {
       unsigned n = this->length();
@@ -700,11 +700,11 @@ public:
 
 // set size
 
-  inline Char *ensure(unsigned z) {
+  Char *ensure(unsigned z) {
     if (ZuLikely(z <= size())) return m_data;
     return size(z);
   }
-  inline T *size(unsigned z) {
+  T *size(unsigned z) {
     if (!z) { null(); return 0; }
     if (owned() && z == size()) return m_data;
     T *newData = (T *)::malloc(z * sizeof(T));
@@ -749,7 +749,7 @@ public:
     return cmp(ZtArray(s));
   }
 
-  inline int cmp(const T *a, int64_t n) const {
+  int cmp(const T *a, int64_t n) const {
     if (!a) return !!m_data;
     if (!m_data) return -1;
     int64_t l = length();
@@ -838,7 +838,7 @@ private:
     return ZtArray<T, Cmp>(newData, n + 1, z);
   }
 
-  inline ZtArray<T, Cmp> add(const T *data, unsigned length) const {
+  ZtArray<T, Cmp> add(const T *data, unsigned length) const {
     unsigned n = this->length();
     unsigned z = n + length;
     if (ZuUnlikely(!z)) return ZtArray<T, Cmp>();
@@ -856,7 +856,7 @@ public:
 
 private:
   template <typename A>
-  inline typename MatchZtArray<A>::T append_(const A &a) {
+  typename MatchZtArray<A>::T append_(const A &a) {
     if (this == &a) {
       ZtArray a_ = a;
       splice__(0, length(), 0, a_.m_data, a_.length());
@@ -885,7 +885,7 @@ private:
     ZuPrint<P>::print(*this, p);
   }
   template <typename P>
-  inline typename MatchPBuffer<P>::T append_(const P &p) {
+  typename MatchPBuffer<P>::T append_(const P &p) {
     unsigned n = length();
     unsigned o = ZuPrint<P>::length(p);
     if (!owned() || size() < n + o) size(n + o);
@@ -983,7 +983,7 @@ public:
     { splice(length(), 0, ZuFwd<A>(a)); }
   template <typename A> ZuInline typename MatchArray<A>::T push(A &&a)
     { splice(length(), 0, ZuFwd<A>(a)); }
-  inline void *push() {
+  void *push() {
     unsigned n = length();
     unsigned z = size();
     if (!owned() || n + 1 > z) {
@@ -1006,7 +1006,7 @@ public:
   push(I &&i) {
     this->initItem(push(), ZuFwd<I>(i));
   }
-  inline T pop() {
+  T pop() {
     unsigned n = length();
     if (!n) return ZuCmp<T>::null();
     T v;
@@ -1019,7 +1019,7 @@ public:
     length_(n);
     return v;
   }
-  inline T shift() {
+  T shift() {
     unsigned n = length();
     if (!n) return ZuCmp<T>::null();
     T v;
@@ -1039,7 +1039,7 @@ public:
     { splice(0, 0, ZuFwd<A>(a)); }
   template <typename A> inline typename MatchArray<A>::T unshift(A &&a)
     { splice(0, 0, ZuFwd<A>(a)); }
-  inline void *unshift() {
+  void *unshift() {
     unsigned n = length();
     unsigned z = size();
     if (!owned() || n + 1 > z) {
@@ -1056,7 +1056,7 @@ public:
     }
     return (void *)m_data;
   }
-  template <typename I> inline void unshift(I &&i) {
+  template <typename I> void unshift(I &&i) {
     this->initItem(unshift(), ZuFwd<I>(i));
   }
 
@@ -1122,7 +1122,7 @@ private:
 // iterate
 
 public:
-  template <typename Fn> inline void iterate(Fn fn) {
+  template <typename Fn> void iterate(Fn fn) {
     unsigned n = length();
     for (unsigned i = 0; i < n; i++) fn(m_data[i]);
   }
@@ -1186,14 +1186,8 @@ struct ZuTraits<ZtArray<Elem_, Cmp> > :
     IsWString = ZuConversion<wchar_t, Elem>::Same,
     IsHashable = 1, IsComparable = 1
   };
-#if 0
-  inline static T make(const Elem *data, unsigned length) {
-    if (!data) return T();
-    return T(data, length);
-  }
-#endif
-  inline static const Elem *data(const T &a) { return a.data(); }
-  inline static unsigned length(const T &a) { return a.length(); }
+  static const Elem *data(const T &a) { return a.data(); }
+  static unsigned length(const T &a) { return a.length(); }
 };
 
 // generic printing

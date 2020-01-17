@@ -99,8 +99,8 @@ namespace MxTEventFlags { // event flags
       "Synthetic", Synthetic,
       "Pending", Pending);
 
-  inline bool matchC(const MxFlags &v) { return v & (1U<<C); }
-  inline bool matchM(const MxFlags &v) { return v & (1U<<M); }
+  bool matchC(const MxFlags &v) { return v & (1U<<C); }
+  bool matchM(const MxFlags &v) { return v & (1U<<M); }
   inline bool matchCM(const MxFlags &v)
     { return (v & ((1U<<C) | (1U<<M))) == ((1U<<C) | (1U<<M)); }
 }
@@ -135,15 +135,15 @@ namespace MxTEventState { // event state
       "Closed", Closed);
 
   // convenient short-hand pattern matches
-  inline bool matchU(const MxEnum &v) { return v == U; }
+  bool matchU(const MxEnum &v) { return v == U; }
   inline bool matchUAX(const MxEnum &v)
     { return v == U || v == A || v == X; }
-  inline bool matchR(const MxEnum &v) { return v == R; }
-  inline bool matchH(const MxEnum &v) { return v == H; }
-  inline bool matchHD(const MxEnum &v) { return v == H || v == D; }
+  bool matchR(const MxEnum &v) { return v == R; }
+  bool matchH(const MxEnum &v) { return v == H; }
+  bool matchHD(const MxEnum &v) { return v == H || v == D; }
   inline bool matchHDT(const MxEnum &v)
     { return v == H || v == D || v == T; }
-  inline bool matchHT(const MxEnum &v) { return v == H || v == T; }
+  bool matchHT(const MxEnum &v) { return v == H || v == T; }
   inline bool matchHQS(const MxEnum &v)
     { return v == H || v == Q || v == S; }
   inline bool matchHQSA(const MxEnum &v)
@@ -156,9 +156,9 @@ namespace MxTEventState { // event state
     { return v == H || v == D || v == Q || v == S || v == P || v == A; }
   inline bool matchHQSAX(const MxEnum &v)
     { return v == H || v == Q || v == S || v == A || v == X; }
-  inline bool matchD(const MxEnum &v) { return v == D; }
-  inline bool matchDQ(const MxEnum &v) { return v == D || v == Q; }
-  inline bool matchDQS(const MxEnum &v) { return v == D || v == Q || v == S; }
+  bool matchD(const MxEnum &v) { return v == D; }
+  bool matchDQ(const MxEnum &v) { return v == D || v == Q; }
+  bool matchDQS(const MxEnum &v) { return v == D || v == Q || v == S; }
   inline bool matchDQSP(const MxEnum &v)
     { return v == D || v == Q || v == S || v == P; }
   inline bool matchDQSPA(const MxEnum &v)
@@ -167,26 +167,26 @@ namespace MxTEventState { // event state
     { return v == D || v == Q || v == S || v == P || v == X; }
   inline bool matchDSP(const MxEnum &v)
     { return v == D || v == S || v == P; }
-  inline bool matchDX(const MxEnum &v) { return v == D || v == X; }
-  inline bool matchDQX(const MxEnum &v) { return v == D || v == Q || v == X; }
-  inline bool matchQ(const MxEnum &v) { return v == Q; }
-  inline bool matchQS(const MxEnum &v) { return v == Q || v == S; }
+  bool matchDX(const MxEnum &v) { return v == D || v == X; }
+  bool matchDQX(const MxEnum &v) { return v == D || v == Q || v == X; }
+  bool matchQ(const MxEnum &v) { return v == Q; }
+  bool matchQS(const MxEnum &v) { return v == Q || v == S; }
   inline bool matchQSP(const MxEnum &v)
     { return v == Q || v == S || v == P; }
-  inline bool matchQX(const MxEnum &v) { return v == Q || v == X; }
-  inline bool matchS(const MxEnum &v) { return v == S; }
-  inline bool matchSP(const MxEnum &v) { return v == S || v == P; }
+  bool matchQX(const MxEnum &v) { return v == Q || v == X; }
+  bool matchS(const MxEnum &v) { return v == S; }
+  bool matchSP(const MxEnum &v) { return v == S || v == P; }
   inline bool matchSPX(const MxEnum &v)
     { return v == S || v == P || v == X; }
-  inline bool matchSA(const MxEnum &v) { return v == S || v == A; }
-  inline bool matchP(const MxEnum &v) { return v == P; }
-  inline bool matchA(const MxEnum &v) { return v == A; }
-  inline bool matchAC(const MxEnum &v) { return v == A || v == C; }
+  bool matchSA(const MxEnum &v) { return v == S || v == A; }
+  bool matchP(const MxEnum &v) { return v == P; }
+  bool matchA(const MxEnum &v) { return v == A; }
+  bool matchAC(const MxEnum &v) { return v == A || v == C; }
   inline bool matchACX(const MxEnum &v)
     { return v == A || v == C || v == X; }
-  inline bool matchAX(const MxEnum &v) { return v == A || v == X; }
-  inline bool matchX(const MxEnum &v) { return v == X; }
-  inline bool matchXC(const MxEnum &v) { return v == X || v == C; }
+  bool matchAX(const MxEnum &v) { return v == A || v == X; }
+  bool matchX(const MxEnum &v) { return v == X; }
+  bool matchXC(const MxEnum &v) { return v == X || v == C; }
 }
 
 #pragma pack(push, 4)
@@ -200,7 +200,7 @@ template <typename AppTypes> struct MxTAppTypes {
     MxUInt8	eventFlags = 0;				// MxTEventFlags
     MxUInt8	eventLeg = 0;
 
-    inline void null() {
+    void null() {
       eventType = MxTEventType::Invalid;
       eventState = MxTEventState::Unset;
       eventFlags = 0;
@@ -213,7 +213,7 @@ template <typename AppTypes> struct MxTAppTypes {
     ZuOpBool;
 
     template <bool Rx, bool Tx, bool Ack>
-    inline void rxtx() {
+    void rxtx() {
       eventFlags = (eventFlags &
 	~((1U<<MxTEventFlags::Rx) |
 	  (1U<<MxTEventFlags::Tx) |
@@ -223,7 +223,7 @@ template <typename AppTypes> struct MxTAppTypes {
 	(((unsigned)Ack)<<MxTEventFlags::Ack);
     }
     template <bool M, bool C>
-    inline void mc() {
+    void mc() {
       eventFlags = (eventFlags &
 	~((1U<<MxTEventFlags::M) |
 	  (1U<<MxTEventFlags::C))) |
@@ -232,11 +232,11 @@ template <typename AppTypes> struct MxTAppTypes {
     }
 
 #define Event_Flag(Bit, Fn) \
-    inline bool Fn() const { \
+    bool Fn() const { \
       return eventFlags & (1U<<MxTEventFlags::Bit); \
     } \
-    inline void Fn##_set() { eventFlags |=  (1U<<MxTEventFlags::Bit); } \
-    inline void Fn##_clr() { eventFlags &= ~(1U<<MxTEventFlags::Bit); }
+    void Fn##_set() { eventFlags |=  (1U<<MxTEventFlags::Bit); } \
+    void Fn##_clr() { eventFlags &= ~(1U<<MxTEventFlags::Bit); }
 
     Event_Flag(Rx, rx)
     Event_Flag(Tx, tx)
@@ -248,9 +248,9 @@ template <typename AppTypes> struct MxTAppTypes {
     Event_Flag(Pending, pending)
 
     template <typename Update>
-    inline void update(const Update &u) { }
+    void update(const Update &u) { }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       if (!*this) return;
       s << "eventType=" << MxTEventType::name(eventType)
 	<< " eventState=" << MxTEventState::name(eventState)
@@ -277,29 +277,29 @@ template <typename AppTypes> struct MxTAppTypes {
     Leg		legs[MxT_NLegs];
 #if MxT_NLegs > 1
     NLegs	nLegs_;
-    inline unsigned nLegs() const { return nLegs_; }
+    unsigned nLegs() const { return nLegs_; }
 #else
-    inline unsigned nLegs() const { return 1; }
+    unsigned nLegs() const { return 1; }
 #endif
 
     template <typename Update>
-    inline typename ZuIs<Legs_, Update>::T update(const Update &u) {
+    typename ZuIs<Legs_, Update>::T update(const Update &u) {
       unsigned n = nLegs();
       for (unsigned i = 0; i < n; i++) legs[i].update(u.legs[i]);
     }
     template <typename Update>
-    inline typename ZuIsNot<Legs_, Update>::T update(const Update &u) { }
+    typename ZuIsNot<Legs_, Update>::T update(const Update &u) { }
 
     // calculates worst-case exposure due to potential modification/update
     template <typename Update>
-    inline typename ZuIs<Legs_, Update>::T expose(const Update &u) {
+    typename ZuIs<Legs_, Update>::T expose(const Update &u) {
       unsigned n = nLegs();
       for (unsigned i = 0; i < n; i++) legs[i].expose(u.legs[i]);
     }
 
     // returns true if update u is pending on fills
     template <typename Update>
-    inline typename ZuIs<Legs_, Update, bool>::T pendingFill(const Update &u) {
+    typename ZuIs<Legs_, Update, bool>::T pendingFill(const Update &u) {
       unsigned n = nLegs();
       for (unsigned i = 0; i < n; i++)
 	if (legs[i].cumQty < u.legs[i].cumQty) return true;
@@ -307,14 +307,14 @@ template <typename AppTypes> struct MxTAppTypes {
     }
 
     // returns true if order has been fully filled
-    inline bool filled() {
+    bool filled() {
       unsigned n = nLegs();
       for (unsigned i = 0; i < n; i++)
 	if (legs[i].cumQty < legs[i].orderQty) return false;
       return true;
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       s << "nLegs=" << nLegs() << " legs=[";
       bool first = true;
       unsigned n = nLegs();
@@ -338,13 +338,13 @@ template <typename AppTypes> struct MxTAppTypes {
     uint8_t		pad_0[3];
 
     template <typename Update>
-    inline typename ZuIs<CanceledLeg_, Update>::T update(const Update &u) {
+    typename ZuIs<CanceledLeg_, Update>::T update(const Update &u) {
       qtyNDP.update(u.qtyNDP);
     }
     template <typename Update>
-    inline typename ZuIsNot<CanceledLeg_, Update>::T update(const Update &u) { }
+    typename ZuIsNot<CanceledLeg_, Update>::T update(const Update &u) { }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       s << "qtyNDP=" << qtyNDP
 	<< " cumQty=" << MxValNDP{cumQty, qtyNDP};
     }
@@ -354,20 +354,20 @@ template <typename AppTypes> struct MxTAppTypes {
     MxValue		orderQty;
 
     template <typename Update>
-    inline typename ZuIs<CancelLeg_, Update>::T update(const Update &u) {
+    typename ZuIs<CancelLeg_, Update>::T update(const Update &u) {
       CanceledLeg_::update(u);
       orderQty.update(u.orderQty);
     }
     template <typename Update>
-    inline typename ZuIsNot<CancelLeg_, Update>::T update(const Update &u) {
+    typename ZuIsNot<CancelLeg_, Update>::T update(const Update &u) {
       CanceledLeg_::update(u);
     }
 
-    template <typename Update> inline void expose(const Update &u) {
+    template <typename Update> void expose(const Update &u) {
       if (orderQty < u.orderQty) orderQty = u.orderQty;
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       CanceledLeg_::print(s);
       if (*orderQty)
 	s << " orderQty=" << MxValNDP{orderQty, this->qtyNDP};
@@ -378,7 +378,7 @@ template <typename AppTypes> struct MxTAppTypes {
   template <typename Leg> struct Cancel_ : public Legs<Leg> {
     MxUInt8		ackFlags = 0;	// pending ack - EventFlags
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       Legs<Leg>::print(s);
       s << " ackFlags=";
       MxTEventFlags::Flags::instance()->print(s, ackFlags);
@@ -390,11 +390,11 @@ template <typename AppTypes> struct MxTAppTypes {
       public AppTypes::Event, public Cancel_<typename AppTypes::CancelLeg> {
     enum { EventType = MxTEventType::Cancel };
 
-    template <typename Update> inline void update(const Update &u) {
+    template <typename Update> void update(const Update &u) {
       AppTypes::Event::update(u);
       Cancel_<typename AppTypes::CancelLeg>::update(u);
     }
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       AppTypes::Event::print(s);
       s << ' ';
       Cancel_<typename AppTypes::CancelLeg>::print(s);
@@ -410,7 +410,7 @@ template <typename AppTypes> struct MxTAppTypes {
     uint8_t		pad_0[1];
 
     template <typename Update>
-    inline typename ZuIs<ModifyLeg_, Update>::T update(const Update &u) {
+    typename ZuIs<ModifyLeg_, Update>::T update(const Update &u) {
       CancelLeg_::update(u);
       px.update(u.px);
       side.update(u.side);
@@ -418,11 +418,11 @@ template <typename AppTypes> struct MxTAppTypes {
       pxNDP.update(u.pxNDP);
     }
     template <typename Update>
-    inline typename ZuIsNot<ModifyLeg_, Update>::T update(const Update &u) {
+    typename ZuIsNot<ModifyLeg_, Update>::T update(const Update &u) {
       CancelLeg_::update(u);
     }
 
-    template <typename Update> inline void expose(const Update &u) {
+    template <typename Update> void expose(const Update &u) {
       CancelLeg_::expose(u);
       side.update(u.side);
       // ordType changes do not impact exposure
@@ -434,7 +434,7 @@ template <typename AppTypes> struct MxTAppTypes {
       }
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       s << "side=" << MxSide::name(side)
 	<< " ordType=" << MxOrdType::name(ordType);
       if (*px)
@@ -453,16 +453,16 @@ template <typename AppTypes> struct MxTAppTypes {
     uint8_t		pad_0[3];
 
     template <typename Update>
-    inline typename ZuIs<Modify__, Update>::T update(const Update &u) {
+    typename ZuIs<Modify__, Update>::T update(const Update &u) {
       Cancel_<Leg>::update(u); // takes care of legs
       tif.update(u.tif);
     }
     template <typename Update>
-    inline typename ZuIsNot<Modify__, Update>::T update(const Update &u) {
+    typename ZuIsNot<Modify__, Update>::T update(const Update &u) {
       Cancel_<Leg>::update(u);
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       Cancel_<Leg>::print(s);
       s << " tif=" << MxTimeInForce::name(tif);
     }
@@ -473,12 +473,12 @@ template <typename AppTypes> struct MxTAppTypes {
       public AppTypes::Event, public Modify_<typename AppTypes::ModifyLeg> {
     enum { EventType = MxTEventType::Modify };
 
-    template <typename Update> inline void update(const Update &u) {
+    template <typename Update> void update(const Update &u) {
       AppTypes::Event::update(u);
       Modify_<typename AppTypes::ModifyLeg>::update(u);
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       AppTypes::Event::print(s);
       s << ' ';
       Modify_<typename AppTypes::ModifyLeg>::print(s);
@@ -486,21 +486,21 @@ template <typename AppTypes> struct MxTAppTypes {
   };
 
   struct OrderedLeg : public AckLeg__ {
-    template <typename Update> inline void update(const Update &) { }
+    template <typename Update> void update(const Update &) { }
 
-    template <typename S> inline void print(S &) const { }
+    template <typename S> void print(S &) const { }
   };
 
   struct Ordered : public AppTypes::Event,
       public Legs<typename AppTypes::OrderedLeg> {
     enum { EventType = MxTEventType::Ordered };
 
-    template <typename Update> inline void update(const Update &u) {
+    template <typename Update> void update(const Update &u) {
       AppTypes::Event::update(u);
       Legs<typename AppTypes::OrderedLeg>::update(u);
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       AppTypes::Event::print(s);
       s << ' ';
       Legs<typename AppTypes::OrderedLeg>::print(s);
@@ -513,12 +513,12 @@ template <typename AppTypes> struct MxTAppTypes {
       public Modify_<typename AppTypes::ModifiedLeg> {
     enum { EventType = MxTEventType::Modified };
 
-    template <typename Update> inline void update(const Update &u) {
+    template <typename Update> void update(const Update &u) {
       AppTypes::Event::update(u);
       Modify_<typename AppTypes::ModifiedLeg>::update(u);
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       AppTypes::Event::print(s);
       s << ' ';
       Modify_<typename AppTypes::ModifiedLeg>::print(s);
@@ -531,12 +531,12 @@ template <typename AppTypes> struct MxTAppTypes {
       public Cancel_<typename AppTypes::CanceledLeg> {
     enum { EventType = MxTEventType::Canceled };
 
-    template <typename Update> inline void update(const Update &u) {
+    template <typename Update> void update(const Update &u) {
       AppTypes::Event::update(u);
       Cancel_<typename AppTypes::CanceledLeg>::update(u);
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       AppTypes::Event::print(s);
       s << ' ';
       Cancel_<typename AppTypes::CanceledLeg>::print(s);
@@ -546,22 +546,22 @@ template <typename AppTypes> struct MxTAppTypes {
   struct OrderLeg_ : public ModifyLeg_ {
     MxValue		leavesQty = 0;
 
-    template <typename Update> inline void update(const Update &u) {
+    template <typename Update> void update(const Update &u) {
       ModifyLeg_::update(u);
       updateLeavesQty();
     }
 
-    template <typename Update> inline void expose(const Update &u) {
+    template <typename Update> void expose(const Update &u) {
       ModifyLeg_::expose(u);
       updateLeavesQty();
     }
 
-    inline void updateLeavesQty() {
+    void updateLeavesQty() {
       leavesQty = this->orderQty > this->cumQty ?
 	(this->orderQty - this->cumQty) : (MxValue)0;
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       ModifyLeg_::print(s);
       s << " leavesQty=" << MxValNDP{leavesQty, this->qtyNDP};
     }
@@ -570,7 +570,7 @@ template <typename AppTypes> struct MxTAppTypes {
   struct OrderLeg : public OrderLeg_ { };
   template <typename Leg> struct Order_ : public Modify_<Leg> {
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       Modify_<Leg>::print(s);
     }
   };
@@ -580,17 +580,17 @@ template <typename AppTypes> struct MxTAppTypes {
       public AppTypes::Event, public Order_<typename AppTypes::OrderLeg> {
     enum { EventType = MxTEventType::NewOrder };
 
-    inline NewOrder &operator =(const NewOrder &v) {
+    NewOrder &operator =(const NewOrder &v) {
       if (this != &v) memcpy((void *)this, &v, sizeof(NewOrder));
       return *this;
     }
 
-    template <typename Update> inline void update(const Update &u) {
+    template <typename Update> void update(const Update &u) {
       AppTypes::Event::update(u);
       Order_<typename AppTypes::OrderLeg>::update(u);
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       AppTypes::Event::print(s);
       s << ' ';
       Order_<typename AppTypes::OrderLeg>::print(s);
@@ -607,7 +607,7 @@ template <typename AppTypes> struct MxTAppTypes {
     MxNDP		qtyNDP;
     uint8_t		pad_0[2];
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       AppTypes::Event::print(s);
       s << " pxNDP=" << pxNDP
 	<< " qtyNDP=" << qtyNDP
@@ -626,17 +626,17 @@ template <typename AppTypes> struct MxTAppTypes {
     MxEnum		rejReason;	// MxTRejReason
 
     template <typename Update>
-    inline typename ZuIs<AnyReject, Update>::T update(const Update &u) {
+    typename ZuIs<AnyReject, Update>::T update(const Update &u) {
       AppTypes::Event::update(u);
       rejCode = u.rejCode;
       rejReason = u.rejReason;
     }
     template <typename Update>
-    inline typename ZuIsNot<AnyReject, Update>::T update(const Update &u) {
+    typename ZuIsNot<AnyReject, Update>::T update(const Update &u) {
       AppTypes::Event::update(u);
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       AppTypes::Event::print(s);
       s << " rejReason=" << MxTRejReason::name(rejReason)
 	<< " rejCode=" << rejCode;
@@ -733,7 +733,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     ZuInline bool operator !() const { return !as<Event>(); }
     ZuOpBool;
 
-    inline size_t size() {
+    size_t size() {
       if (!*this) return 0;
       switch ((int)this->type()) {
 	case MxTEventType::NewOrder: return sizeof(NewOrder);
@@ -758,7 +758,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
       }
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       if (!*this) return;
       switch ((int)this->type()) {
 	default: break;
@@ -799,21 +799,21 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     typedef typename Txn_::Reject__ Reject__;
 
   public:
-    inline Txn() { }
+    Txn() { }
 
     // Txn m1, m2;
     // m1 = m2.data<NewOrder>(); // copy m2 (containing NewOrder) to m1
     template <typename Txn_, typename T_> struct Data : public Data__ {
       typedef Txn_ Txn;
       typedef T_ T;
-      inline Data(const Txn &txn_) : txn(txn_) { }
+      Data(const Txn &txn_) : txn(txn_) { }
       const Txn	&txn;
     };
-    template <typename T> inline Data<Txn, T> data() const {
+    template <typename T> Data<Txn, T> data() const {
       return Data<Txn, T>(*this);
     }
   private:
-    template <typename Data_> inline void initData(const Data_ &data) {
+    template <typename Data_> void initData(const Data_ &data) {
       memcpy((void *)this, &data.txn, sizeof(typename Data_::T));
     }
   public:
@@ -837,7 +837,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 
 #define Txn_Init(Type) \
     template <bool Synthetic = false> \
-    inline Type &init##Type(unsigned flags = 0U, unsigned leg = 0) { \
+    Type &init##Type(unsigned flags = 0U, unsigned leg = 0) { \
       static Type blank; \
       { \
 	Event &event = this->template as<Event>(); \
@@ -900,7 +900,7 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 
   // Order - open order state including pending modify/cancel
   struct Order : public ZuPrintable {
-    inline Order() { }
+    Order() { }
 
     // following each state transition, outgoing messages are
     // transmitted/processed in the following sequence:
@@ -912,38 +912,38 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     AckTxn		ackTxn;		// last ack of above OMC
     ExecTxn		execTxn;	// last execution
 
-    inline NewOrder &newOrder() {
+    NewOrder &newOrder() {
       return orderTxn.template as<NewOrder>();
     }
-    inline const NewOrder &newOrder() const {
+    const NewOrder &newOrder() const {
       return orderTxn.template as<NewOrder>();
     }
-    inline Modify &modify() {
+    Modify &modify() {
       return modifyTxn.template as<Modify>();
     }
-    inline const Modify &modify() const {
+    const Modify &modify() const {
       return modifyTxn.template as<Modify>();
     }
-    inline Cancel &cancel() {
+    Cancel &cancel() {
       return cancelTxn.template as<Cancel>();
     }
-    inline const Cancel &cancel() const {
+    const Cancel &cancel() const {
       return cancelTxn.template as<Cancel>();
     }
-    inline Event &ack() {
+    Event &ack() {
       return ackTxn.template as<Event>();
     }
-    inline const Event &ack() const {
+    const Event &ack() const {
       return ackTxn.template as<Event>();
     }
-    inline Event &exec() {
+    Event &exec() {
       return execTxn.template as<Event>();
     }
-    inline const Event &exec() const {
+    const Event &exec() const {
       return execTxn.template as<Event>();
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       s << "orderTxn={" << orderTxn
 	<< "} modifyTxn={" << modifyTxn
 	<< "} cancelTxn={" << cancelTxn
@@ -955,40 +955,40 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 
   // ClosedOrder - closed order state including any rejection / expiry
   struct ClosedOrder : public ZuPrintable {
-    inline ClosedOrder() { }
+    ClosedOrder() { }
 
     OrderTxn		orderTxn;
     ClosedTxn		closedTxn;	// reject / canceled / closed
     uint64_t		openRN;		// final RN in open order DB
 
-    inline NewOrder &newOrder() {
+    NewOrder &newOrder() {
       return orderTxn.template as<NewOrder>();
     }
-    inline const NewOrder &newOrder() const {
+    const NewOrder &newOrder() const {
       return orderTxn.template as<NewOrder>();
     }
 
-    inline Event &event() {
+    Event &event() {
       return closedTxn.template as<Event>();
     }
-    inline Event &event() const {
+    Event &event() const {
       return closedTxn.template as<Event>();
     }
 
-    inline Reject &reject() {
+    Reject &reject() {
       return closedTxn.template as<Reject>();
     }
-    inline const Reject &reject() const {
+    const Reject &reject() const {
       return closedTxn.template as<Reject>();
     }
-    inline Closed &closed() {
+    Closed &closed() {
       return closedTxn.template as<Closed>();
     }
-    inline const Closed &closed() const {
+    const Closed &closed() const {
       return closedTxn.template as<Closed>();
     }
 
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       s << "orderTxn={" << orderTxn
 	<< "} closedTxn={" << closedTxn
 	<< '}';

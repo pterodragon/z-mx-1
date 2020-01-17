@@ -55,7 +55,7 @@ struct ZmList_Defaults {
   enum { NodeIsItem = 0 };
   typedef ZmLock Lock;
   typedef ZmObject Object;
-  struct HeapID { inline static const char *id() { return "ZmList"; } };
+  struct HeapID { static const char *id() { return "ZmList"; } };
   struct Base { };
 };
 
@@ -225,16 +225,16 @@ protected:
   friend class ZmList<Item, NTP>;
 
   protected:
-    inline Iterator_(List &list) : m_list(list) {
+    Iterator_(List &list) : m_list(list) {
       list.startIterate(*this);
     }
 
   public:
-    inline void reset() { m_list.startIterate(*this); }
+    void reset() { m_list.startIterate(*this); }
 
-    inline Node *iterateNode() { return m_list.iterate(*this); }
+    Node *iterateNode() { return m_list.iterate(*this); }
 
-    inline const Item &iterate() {
+    const Item &iterate() {
       Node *node = m_list.iterate(*this);
       if (ZuLikely(node)) return node->Node::item();
       return Cmp::null();
@@ -257,7 +257,7 @@ friend class Iterator;
     typedef ZmList<Item, NTP> List;
 
   public:
-    inline Iterator(List &list) : Guard(list.m_lock), Iterator_(list) { }
+    Iterator(List &list) : Guard(list.m_lock), Iterator_(list) { }
 
     template <typename Item_> void push(Item_ &&item)
       { this->m_list.pushIterate(*this, ZuFwd<Item_>(item)); }
@@ -275,7 +275,7 @@ friend class ReadIterator;
     typedef ZmList<Item, NTP> List;
 
   public:
-    inline ReadIterator(const List &list) :
+    ReadIterator(const List &list) :
       ReadGuard(list.m_lock), Iterator_(const_cast<List &>(list)) { }
   };
 
@@ -286,10 +286,10 @@ friend class ReadIterator;
 
   ~ZmList() { clean_(); }
 
-  inline unsigned count() const { ReadGuard guard(m_lock); return m_count; }
-  inline bool empty() const { ReadGuard guard(m_lock); return !m_count; }
-  inline unsigned count_() const { return m_count; }
-  inline bool empty_() const { return !m_count; }
+  unsigned count() const { ReadGuard guard(m_lock); return m_count; }
+  bool empty() const { ReadGuard guard(m_lock); return !m_count; }
+  ZuInline unsigned count_() const { return m_count; }
+  ZuInline bool empty_() const { return !m_count; }
 
   void join(ZmList &list) { // join lists (the other is left empty)
     int count;
@@ -310,10 +310,10 @@ friend class ReadIterator;
     }
   }
  
-  template <typename Item_> inline void add(Item_ &&item) {
+  template <typename Item_> void add(Item_ &&item) {
     push(ZuFwd<Item_>(item));
   }
-  template <typename Index_> inline NodeRef find(const Index_ &index) {
+  template <typename Index_> NodeRef find(const Index_ &index) {
     Guard guard(m_lock);
     Node *node;
 
@@ -326,7 +326,7 @@ friend class ReadIterator;
     return node;
   }
   template <typename Index_>
-  inline typename ZuNotConvertible<Index_, Node *, NodeRef>::T
+  typename ZuNotConvertible<Index_, Node *, NodeRef>::T
       del(const Index_ &index) {
     Guard guard(m_lock);
     Node *node;
@@ -342,7 +342,7 @@ friend class ReadIterator;
     NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
     return ZuMv(*ptr);
   }
-  inline NodeRef del(Node *node) {
+  NodeRef del(Node *node) {
     Guard guard(m_lock);
 
     if (ZuLikely(node)) del_(node);
@@ -352,7 +352,7 @@ friend class ReadIterator;
   }
 
   template <typename NodeRef_>
-  inline typename ZuConvertible<NodeRef_, NodeRef>::T
+  typename ZuConvertible<NodeRef_, NodeRef>::T
       push(const NodeRef_ &node_) {
     const NodeRef &node = node_;
     Guard guard(m_lock);
@@ -368,11 +368,11 @@ friend class ReadIterator;
     ++m_count;
   }
   template <typename Item_>
-  inline typename ZuNotConvertible<typename ZuDeref<Item_>::T, NodeRef>::T
+  typename ZuNotConvertible<typename ZuDeref<Item_>::T, NodeRef>::T
       push(Item_ &&item) {
     push(NodeRef(new Node(ZuFwd<Item_>(item))));
   }
-  inline NodeRef popNode() {
+  NodeRef popNode() {
     Guard guard(m_lock);
     Node *node;
 
@@ -390,12 +390,12 @@ friend class ReadIterator;
 
     return ret;
   }
-  inline Item pop() {
+  Item pop() {
     NodeRef node = popNode();
     if (ZuUnlikely(!node)) return Cmp::null();
     return ZuMv(node->Node::item());
   }
-  inline NodeRef rpopNode() {
+  NodeRef rpopNode() {
     Guard guard(m_lock);
     Node *node;
 
@@ -418,7 +418,7 @@ friend class ReadIterator;
     return node->Node::item();
   }
   template <typename NodeRef_>
-  inline typename ZuConvertible<NodeRef_, NodeRef>::T
+  typename ZuConvertible<NodeRef_, NodeRef>::T
       unshift(const NodeRef_ &node_) {
     const NodeRef &node = node_;
     Guard guard(m_lock);
@@ -434,11 +434,11 @@ friend class ReadIterator;
     ++m_count;
   }
   template <typename Item_>
-  inline typename ZuNotConvertible<typename ZuDeref<Item_>::T, NodeRef>::T
+  typename ZuNotConvertible<typename ZuDeref<Item_>::T, NodeRef>::T
   unshift(Item_ &&item) {
     unshift(NodeRef(new Node(ZuFwd<Item_>(item))));
   }
-  inline NodeRef shiftNode() {
+  NodeRef shiftNode() {
     Guard guard(m_lock);
     Node *node;
 
@@ -456,14 +456,14 @@ friend class ReadIterator;
 
     return ret;
   }
-  inline Item shift() {
+  Item shift() {
     NodeRef node = shiftNode();
     if (ZuUnlikely(!node)) return Cmp::null();
     Item item = ZuMv(node->Node::item());
     nodeDelete(node);
     return item;
   }
-  inline NodeRef rshiftNode() {
+  NodeRef rshiftNode() {
     Guard guard(m_lock);
     Node *node;
 
@@ -480,7 +480,7 @@ friend class ReadIterator;
 
     return node;
   }
-  inline Item rshift() {
+  Item rshift() {
     NodeRef node = rshiftNode();
     if (ZuUnlikely(!node)) return Cmp::null();
     Item item = ZuMv(node->Node::item());
@@ -488,21 +488,21 @@ friend class ReadIterator;
     return item;
   }
 
-  inline Item head() const {
+  Item head() const {
     ReadGuard guard(m_lock);
     if (ZuUnlikely(!m_head)) return Cmp::null();
     return m_head->Node::item();
   }
-  inline NodeRef headNode() const {
+  NodeRef headNode() const {
     ReadGuard guard(m_lock);
     return m_head;
   }
-  inline Item tail() const {
+  Item tail() const {
     ReadGuard guard(m_lock);
     if (ZuUnlikely(!m_tail)) return Cmp::null();
     return m_tail->Node::item();
   }
-  inline NodeRef tailNode() const {
+  NodeRef tailNode() const {
     ReadGuard guard(m_lock);
     return m_tail;
   }
@@ -512,14 +512,14 @@ friend class ReadIterator;
     clean_();
   }
 
-  inline auto iterator() { return Iterator(*this); }
-  inline auto readIterator() const { return ReadIterator(*this); }
+  auto iterator() { return Iterator(*this); }
+  auto readIterator() const { return ReadIterator(*this); }
 
 protected:
-  inline void startIterate(Iterator_ &iterator) {
+  void startIterate(Iterator_ &iterator) {
     iterator.m_node = nullptr;
   }
-  inline Node *iterate(Iterator_ &iterator) {
+  Node *iterate(Iterator_ &iterator) {
     Node *node = iterator.m_node;
 
     if (!node)
@@ -532,7 +532,7 @@ protected:
     return iterator.m_node = node;
   }
   template <typename NodeRef_>
-  inline typename ZuConvertible<NodeRef_, NodeRef>::T
+  typename ZuConvertible<NodeRef_, NodeRef>::T
       pushIterate(Iterator_ &iterator, const NodeRef_ &node_) {
     const NodeRef &node = node_;
     Node *prevNode = iterator.m_node;
@@ -552,12 +552,12 @@ protected:
     ++m_count;
   }
   template <typename Item_>
-  inline typename ZuNotConvertible<typename ZuDeref<Item_>::T, NodeRef>::T
+  typename ZuNotConvertible<typename ZuDeref<Item_>::T, NodeRef>::T
       pushIterate(Iterator_ &iterator, Item_ &&item) {
     pushIterate(iterator, NodeRef(new Node(ZuFwd<Item_>(item))));
   }
   template <typename NodeRef_>
-  inline typename ZuConvertible<NodeRef, NodeRef_>::T
+  typename ZuConvertible<NodeRef, NodeRef_>::T
       unshiftIterate(Iterator_ &iterator, const NodeRef_ &node_) {
     const NodeRef &node = node_;
     Node *nextNode = iterator.m_node;
@@ -577,7 +577,7 @@ protected:
     ++m_count;
   }
   template <typename Item_>
-  inline typename ZuNotConvertible<typename ZuDeref<Item_>::T, NodeRef>::T
+  typename ZuNotConvertible<typename ZuDeref<Item_>::T, NodeRef>::T
       unshiftIterate(Iterator_ &iterator, Item_ &&item) {
     unshiftIterate(iterator, NodeRef(new Node(ZuFwd<Item_>(item))));
   }

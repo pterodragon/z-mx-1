@@ -106,28 +106,28 @@ public:
     { m_timeout = v; return ZuMv(*this); }
 
   template <typename L>
-  inline ZmSchedParams &&thread(unsigned tid, L l) {
+  ZmSchedParams &&thread(unsigned tid, L l) {
     l(m_threads[tid]);
     return ZuMv(*this);
   }
-  inline Thread &thread(unsigned tid) { return m_threads[tid]; }
+  Thread &thread(unsigned tid) { return m_threads[tid]; }
 
-  inline ID id() const { return m_id; }
-  inline unsigned nThreads() const { return m_nThreads; }
-  inline unsigned stackSize() const { return m_stackSize; }
-  inline int priority() const { return m_priority; }
-  inline unsigned partition() const { return m_partition; }
-  inline const ZmTime &quantum() const { return m_quantum; }
+  ID id() const { return m_id; }
+  unsigned nThreads() const { return m_nThreads; }
+  unsigned stackSize() const { return m_stackSize; }
+  int priority() const { return m_priority; }
+  unsigned partition() const { return m_partition; }
+  const ZmTime &quantum() const { return m_quantum; }
 
-  inline unsigned queueSize() const { return m_queueSize; }
-  inline bool ll() const { return m_ll; }
-  inline unsigned spin() const { return m_spin; }
-  inline unsigned timeout() const { return m_timeout; }
+  unsigned queueSize() const { return m_queueSize; }
+  bool ll() const { return m_ll; }
+  unsigned spin() const { return m_spin; }
+  unsigned timeout() const { return m_timeout; }
 
-  inline const Thread &thread(unsigned tid) const { return m_threads[tid]; }
+  const Thread &thread(unsigned tid) const { return m_threads[tid]; }
 
 public:
-  template <typename S> inline unsigned tid(const S &s) {
+  template <typename S> unsigned tid(const S &s) {
     unsigned tid;
     if (tid = ZuBox0(unsigned)(s)) return tid;
     for (tid = 0; tid <= m_nThreads; tid++)
@@ -167,7 +167,7 @@ class ZmAPI ZmScheduler {
   ZmScheduler &operator =(const ZmScheduler &) = delete;
 
   struct ScheduleTree_HeapID {
-    inline static const char *id() { return "ZmScheduler.ScheduleTree"; }
+    static const char *id() { return "ZmScheduler.ScheduleTree"; }
   };
 
   struct Timer_ {
@@ -234,7 +234,7 @@ public:
   void stop();
   void reset(); // reset while stopped
 
-  inline int state() const {
+  int state() const {
     ZmReadGuard<ZmLock> stateGuard(m_stateLock);
     return m_state;
   }
@@ -331,23 +331,23 @@ public:
     return 0;
   }
 
-  inline unsigned size() const {
+  unsigned size() const {
     return m_threads[0].ring.size() * m_params.nThreads();
   }
-  inline unsigned count() const {
+  unsigned count() const {
     unsigned count = 0;
     for (unsigned i = 0, n = m_params.nThreads(); i < n; i++)
       count += m_threads[i].ring.count();
     return count;
   }
-  inline const Ring &ring(unsigned tid) const {
+  const Ring &ring(unsigned tid) const {
     return m_threads[tid - 1].ring;
   }
-  inline const OverRing &overRing(unsigned tid) const {
+  const OverRing &overRing(unsigned tid) const {
     return m_threads[tid - 1].overRing;
   }
 
-  inline unsigned tid(ZuString s) {
+  unsigned tid(ZuString s) {
     if (unsigned tid = ZuBox0(unsigned)(s))
       return tid;
     for (unsigned tid = 0, n = m_params.nThreads(); tid <= n; tid++)

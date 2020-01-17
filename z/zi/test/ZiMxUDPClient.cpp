@@ -34,7 +34,7 @@ public:
     ZiConnection(mx, ci), m_counter(0), m_dest(dest) { }
   ~Connection() { }
 
-  inline Mx *mx() { return (Mx *)ZiConnection::mx(); }
+  Mx *mx() { return (Mx *)ZiConnection::mx(); }
 
   void disconnected() { Global::post(); }
 
@@ -62,7 +62,7 @@ public:
   }
   void sendComplete(ZiIOContext &io) { io.complete(); }
 
-  inline unsigned index() {
+  unsigned index() {
     return m_counter % (sizeof(Messages) / sizeof(Messages[0]));
   }
 
@@ -106,7 +106,7 @@ public:
       Global::post();
   }
 
-  inline unsigned nMessages() const { return m_nMessages; }
+  unsigned nMessages() const { return m_nMessages; }
 
 private:
   ZiIP		m_localIP;

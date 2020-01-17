@@ -18,16 +18,16 @@ static int count[256] = { 0 };
 template <int Size> struct HiBits_;
 
 struct HiBits {
-  inline static uint32_t hashBits(uint32_t i) { return i>>24; }
+  static uint32_t hashBits(uint32_t i) { return i>>24; }
 };
 
 struct LoBits {
-  inline static uint32_t hashBits(uint32_t i) { return i & 0xff; }
+  static uint32_t hashBits(uint32_t i) { return i & 0xff; }
 };
 
 template <typename T, int Size> struct Rand;
 template <typename T> struct Rand<T, 1> {
-  inline static T rand() {
+  static T rand() {
     T t;
     uint8_t *ZuMayAlias(t_) = (uint8_t *)&t;
     *t_ = ::rand() & 0xff;
@@ -35,7 +35,7 @@ template <typename T> struct Rand<T, 1> {
   }
 };
 template <typename T> struct Rand<T, 2> {
-  inline static T rand() {
+  static T rand() {
     T t;
     uint16_t *ZuMayAlias(t_) = (uint16_t *)&t;
     *t_ = ::rand() & 0xffff;
@@ -43,7 +43,7 @@ template <typename T> struct Rand<T, 2> {
   }
 };
 template <typename T> struct Rand<T, 4> {
-  inline static T rand() {
+  static T rand() {
     T t;
     uint16_t *ZuMayAlias(t_) = (uint16_t *)&t;
     t_[0] = ::rand() & 0xffff;
@@ -52,7 +52,7 @@ template <typename T> struct Rand<T, 4> {
   }
 };
 template <typename T> struct Rand<T, 8> {
-  inline static T rand() {
+  static T rand() {
     T t;
     uint16_t *ZuMayAlias(t_) = (uint16_t *)&t;
     t_[0] = ::rand() & 0xffff;
@@ -63,7 +63,7 @@ template <typename T> struct Rand<T, 8> {
   }
 };
 template <typename T> struct Rand<T, 16> {
-  inline static T rand() {
+  static T rand() {
     T t;
     uint16_t *ZuMayAlias(t_) = (uint16_t *)&t;
     t_[0] = ::rand() & 0xffff;

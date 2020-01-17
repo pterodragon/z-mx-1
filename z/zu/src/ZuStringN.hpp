@@ -85,17 +85,17 @@ private:
   struct ToString<U, R, wchar_t, true, true> { typedef R T; };
 
 protected:
-  inline ZuStringN_() : m_length(0) { data()[0] = 0; }
+  ZuStringN_() : m_length(0) { data()[0] = 0; }
 
   typedef enum { Nop } Nop_;
   ZuInline ZuStringN_(Nop_ _) { }
 
-  inline ZuStringN_(unsigned length) : m_length(length) {
+  ZuStringN_(unsigned length) : m_length(length) {
     if (m_length >= N) m_length = N - 1;
     data()[m_length] = 0;
   }
 
-  inline void init(const Char *s) {
+  void init(const Char *s) {
     if (!s) { null(); return; }
     unsigned i;
     for (i = 0; i < N - 1U; i++) if (!(data()[i] = *s++)) break;
@@ -103,18 +103,18 @@ protected:
     m_length = i;
   }
 
-  inline void init(const Char *s, unsigned length) {
+  void init(const Char *s, unsigned length) {
     if (ZuUnlikely(length >= N)) length = N - 1;
     if (ZuLikely(s && length)) memcpy(data(), s, length * sizeof(Char));
     memset(data() + (m_length = length), 0, (N - length) * sizeof(Char));
     // data()[m_length = length] = 0;
   }
 
-  template <typename P> inline typename MatchPDelegate<P>::T init(const P &p) {
+  template <typename P> typename MatchPDelegate<P>::T init(const P &p) {
     m_length = 0;
     ZuPrint<P>::print(*static_cast<StringN *>(this), p);
   }
-  template <typename P> inline typename MatchPBuffer<P>::T init(const P &p) {
+  template <typename P> typename MatchPBuffer<P>::T init(const P &p) {
     unsigned length = ZuPrint<P>::length(p);
     if (length >= N)
       data()[m_length = 0] = 0;
@@ -122,18 +122,18 @@ protected:
       data()[m_length = ZuPrint<P>::print(data(), length, p)] = 0;
   }
 
-  inline void append(const Char *s, unsigned length) {
+  void append(const Char *s, unsigned length) {
     if (m_length + length >= N) length = N - m_length - 1;
     if (s && length) memcpy(data() + m_length, s, length * sizeof(Char));
     data()[m_length += length] = 0;
   }
 
   template <typename P>
-  inline typename MatchPDelegate<P>::T append(const P &p) {
+  typename MatchPDelegate<P>::T append(const P &p) {
     ZuPrint<P>::print(*static_cast<StringN *>(this), p);
   }
   template <typename P>
-  inline typename MatchPBuffer<P>::T append(const P &p) {
+  typename MatchPBuffer<P>::T append(const P &p) {
     unsigned length = ZuPrint<P>::length(p);
     if (m_length + length >= N) return;
     data()[m_length += ZuPrint<P>::print(data() + m_length, length, p)] = 0;
@@ -167,7 +167,7 @@ public:
 
 private:
   // match whitespace
-  inline auto matchS() {
+  auto matchS() {
     return [](int c) {
       return c == ' ' || c == '\t' || c == '\n' || c == '\t';
     };
@@ -175,7 +175,7 @@ private:
 public:
   // remove trailing characters
   template <typename Match>
-  inline void chomp(Match &&match) noexcept {
+  void chomp(Match &&match) noexcept {
     int o = m_length;
     if (!o) return;
     while (--o >= 0 && match(data()[0]));
@@ -185,7 +185,7 @@ public:
 
   // remove leading characters
   template <typename Match>
-  inline void trim(Match &&match) noexcept {
+  void trim(Match &&match) noexcept {
     int o;
     for (o = 0; o < (int)m_length && match(data()[0]); o++);
     if (!o) return;
@@ -197,7 +197,7 @@ public:
 
   // remove leading & trailing characters
   template <typename Match>
-  inline void strip(Match &&match) noexcept {
+  void strip(Match &&match) noexcept {
     int o = m_length;
     if (!o) return;
     while (--o >= 0 && match(data()[o]));
@@ -213,7 +213,7 @@ public:
 
 // sprintf
 
-  inline StringN &sprintf(const Char *format, ...) {
+  StringN &sprintf(const Char *format, ...) {
     va_list args;
 
     va_start(args, format);
@@ -221,7 +221,7 @@ public:
     va_end(args);
     return *static_cast<StringN *>(this);
   }
-  inline StringN &vsprintf(const Char *format, va_list args) {
+  StringN &vsprintf(const Char *format, va_list args) {
     vsnprintf(format, args);
     return *static_cast<StringN *>(this);
   }
@@ -250,12 +250,12 @@ public:
 
 // set length
 
-  inline void length(unsigned length) {
+  void length(unsigned length) {
     if (length >= N) length = N - 1;
     data()[m_length = length] = 0;
   }
 
-  inline void calcLength() {
+  void calcLength() {
     data()[N - 1] = 0;
     m_length = Zu::strlen_(data());
   }
@@ -321,16 +321,6 @@ struct ZuStringN_Traits : public ZuGenericTraits<T_> {
     IsWString = ZuConversion<Elem, wchar_t>::Same,
     IsHashable = 1, IsComparable = 1
   };
-#if 0
-  inline static T make(const Elem *data, unsigned length) {
-    if (ZuUnlikely(!data)) return T();
-    return T(data, length);
-  }
-  inline static T &append(T &s, const Elem *data, unsigned length) {
-    if (ZuLikely(data)) s.append(data, length);
-    return s;
-  }
-#endif
   ZuInline static const Elem *data(const T &s) { return s.data(); }
   ZuInline static unsigned length(const T &s) { return s.length(); }
 };
@@ -346,9 +336,17 @@ public:
 
 private:
   template <typename U, typename R = void,
-    bool B = ZuConversion<U, char>::Same> struct MatchChar;
+    bool S = ZuTraits<U>::IsString &&
+	     !ZuTraits<U>::IsWString &&
+	     !ZuTraits<U>::IsPrimitive
+    > struct MatchString;
   template <typename U, typename R>
-  struct MatchChar<U, R, true> { typedef R T; };
+  struct MatchString<U, R, true> { typedef R T; };
+
+  template <typename U, typename R = void,
+    bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct MatchPrint;
+  template <typename U, typename R>
+  struct MatchPrint<U, R, true> { typedef R T; };
 
   template <typename U, typename R = void,
     bool B = ZuTraits<U>::IsPrimitive &&
@@ -359,25 +357,17 @@ private:
   struct MatchReal<U, R, true> { typedef R T; };
 
   template <typename U, typename R = void,
-    bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct MatchPrint;
-  template <typename U, typename R>
-  struct MatchPrint<U, R, true> { typedef R T; };
-
-  template <typename U, typename R = void,
-    bool S = ZuTraits<U>::IsString &&
-	     !ZuTraits<U>::IsWString &&
-	     !ZuTraits<U>::IsPrimitive
-    > struct MatchString;
-  template <typename U, typename R>
-  struct MatchString<U, R, true> { typedef R T; };
-
-  template <typename U, typename R = void,
     bool E = ZuConversion<U, unsigned>::Same ||
 	     ZuConversion<U, int>::Same ||
 	     ZuConversion<U, size_t>::Same
     > struct CtorLength;
   template <typename U, typename R>
   struct CtorLength<U, R, true> { typedef R T; };
+
+  template <typename U, typename R = void,
+    bool B = ZuConversion<U, char>::Same> struct MatchChar;
+  template <typename U, typename R>
+  struct MatchChar<U, R, true> { typedef R T; };
 
 public:
   ZuInline ZuStringN() { }
@@ -623,15 +613,15 @@ public:
   // wchar_t is dangerously ambiguous
 #if 0
   // element types
-  inline ZuWStringN &operator =(const wchar_t &c) {
+  ZuWStringN &operator =(const wchar_t &c) {
     this->init(&c, 1);
     return *this;
   }
-  inline ZuWStringN &operator +=(const wchar_t &c) {
+  ZuWStringN &operator +=(const wchar_t &c) {
     this->append(&c, 1);
     return *this;
   }
-  inline ZuWStringN &operator <<(const wchar_t &c) {
+  ZuWStringN &operator <<(const wchar_t &c) {
     this->append(&c, 1);
     return *this;
   }

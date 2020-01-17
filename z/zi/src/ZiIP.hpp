@@ -68,13 +68,13 @@ public:
   ZuInline ZiIP &operator =(uint32_t n) { s_addr = htonl(n); return *this; }
 
   template <typename S>
-  inline ZiIP(S &&s, typename ZuIsString<S>::T *_ = 0) {
+  ZiIP(S &&s, typename ZuIsString<S>::T *_ = 0) {
     if (!s) { s_addr = 0; return; }
     ZeError e;
     if (resolve(ZuFwd<S>(s), &e) != OK) throw e;
   }
   template <typename S>
-  inline typename ZuIsString<S, ZiIP &>::T &operator =(S &&s) {
+  typename ZuIsString<S, ZiIP &>::T &operator =(S &&s) {
     if (!s) { s_addr = 0; return *this; }
     ZeError e;
     if (resolve(ZuFwd<S>(s), &e) != OK) throw e;
@@ -116,7 +116,7 @@ private:
 #endif
 public:
   template <typename S>
-  inline typename ZuIsString<S, int>::T resolve(S &&s, ZeError *e = 0) {
+  typename ZuIsString<S, int>::T resolve(S &&s, ZeError *e = 0) {
     return resolve_(ZuString{ZuFwd<S>(s)}, e);
   }
   Hostname name(ZeError *e = 0);
@@ -132,10 +132,10 @@ template <> struct ZuPrint<ZiIP> : public ZuPrintFn { };
 class ZiSockAddr {
 public:
   ZuInline ZiSockAddr() { null(); }
-  inline ZiSockAddr(ZiIP ip, uint16_t port) { init(ip, port); }
+  ZiSockAddr(ZiIP ip, uint16_t port) { init(ip, port); }
 
   ZuInline void null() { m_sin.sin_family = AF_UNSPEC; }
-  inline void init(ZiIP ip, uint16_t port) {
+  void init(ZiIP ip, uint16_t port) {
     m_sin.sin_family = AF_INET;
     m_sin.sin_port = htons(port);
     m_sin.sin_addr = ip;

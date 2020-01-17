@@ -347,7 +347,7 @@ private:
   }
 
   using TCP = typename Link::TCP;
-  inline TCP *accepted(const ZiCxnInfo &ci) {
+  TCP *accepted(const ZiCxnInfo &ci) {
     return new TCP(new Link(app()), ci);
   }
 public:

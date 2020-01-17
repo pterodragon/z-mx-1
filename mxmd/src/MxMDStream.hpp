@@ -131,7 +131,7 @@ namespace MxMDStream {
 
     struct IOError { };
     struct InvalidFmt { };
-    inline FileHdr(ZiFile &file, ZeError *e) {
+    FileHdr(ZiFile &file, ZeError *e) {
       int n;
       if ((n = file.read(this, sizeof(FileHdr), e)) < (int)sizeof(FileHdr)) {
 	if (n != Zi::EndOfFile) throw IOError();
@@ -458,7 +458,7 @@ namespace MxMDStream {
 namespace MxMDStream {
 
   struct Msg_HeapID {
-    inline static const char *id() { return "MxMDStream.Msg"; }
+    static const char *id() { return "MxMDStream.Msg"; }
   };
 
   struct MsgData : public ZuPolymorph {
@@ -480,7 +480,7 @@ namespace MxMDStream {
   typedef Msg_<ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> > Msg;
 
   template <typename T, typename App>
-  inline void *push(App &app, int shardID) {
+  void *push(App &app, int shardID) {
     void *ptr = app.push(sizeof(Hdr) + sizeof(T));
     if (ZuUnlikely(!ptr)) return 0;
     return app.out(ptr, sizeof(T), T::Code, shardID);
@@ -491,7 +491,7 @@ namespace MxMDStream {
 #endif
 #define DeclFn(Fn, Type) \
   template <typename App, typename ...Args> \
-  inline bool Fn(App &app, Args &&... args) { \
+  bool Fn(App &app, Args &&... args) { \
     void *ptr = push<Type>(app, -1); \
     if (ZuUnlikely(!ptr)) return false; \
     new (ptr) Type{ZuFwd<Args>(args)...}; \
@@ -518,7 +518,7 @@ namespace MxMDStream {
 #undef DeclFn
 #define DeclFn(Fn, Type) \
   template <typename App, typename ...Args> \
-  inline bool Fn(App &app, MxInt shardID, Args &&... args) { \
+  bool Fn(App &app, MxInt shardID, Args &&... args) { \
     void *ptr = push<Type>(app, shardID); \
     if (ZuUnlikely(!ptr)) return false; \
     new (ptr) Type{ZuFwd<Args>(args)...}; \
@@ -586,7 +586,7 @@ namespace MxMDStream {
 
   namespace UDP {
     template <typename Cxn>
-    inline void send(Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr) {
+    void send(Cxn *cxn, ZmRef<MxQMsg> msg, const ZiSockAddr &addr) {
       msg->ptr<Msg>()->addr = addr;
       cxn->send(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
 	io.init(ZiIOFn{io.fn.mvObject<MxQMsg>(),
@@ -624,7 +624,7 @@ namespace MxMDStream {
 
   namespace TCP {
     template <typename Cxn>
-    inline void send(Cxn *cxn, ZmRef<MxQMsg> msg) {
+    void send(Cxn *cxn, ZmRef<MxQMsg> msg) {
       cxn->send(ZiIOFn{ZuMv(msg), [](MxQMsg *msg, ZiIOContext &io) {
 	io.init(ZiIOFn{io.fn.mvObject<MxQMsg>(),
 	  [](MxQMsg *msg, ZiIOContext &io) {

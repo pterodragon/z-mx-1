@@ -55,29 +55,29 @@ template <typename T, class Cmp, bool IsPrimitive> class ZuArrayFn_ItemOps_;
 
 template <typename T, class Cmp> class ZuArrayFn_ItemOps_<T, Cmp, false> {
 public:
-  inline static void initItem(void *dst) { new (dst) T(Cmp::null()); }
+  ZuInline static void initItem(void *dst) { new (dst) T(Cmp::null()); }
   template <typename P>
-  inline static void initItem(void *dst, P &&p) {
+  ZuInline static void initItem(void *dst, P &&p) {
     new (dst) T(ZuFwd<P>(p));
   }
-  inline static void destroyItem(T *dst) { (*dst).~T(); }
+  ZuInline static void destroyItem(T *dst) { (*dst).~T(); }
 };
 
 template <typename T, class Cmp> class ZuArrayFn_ItemOps_<T, Cmp, true> {
 public:
-  inline static void initItem(void *dst) { *(T *)dst = Cmp::null(); }
+  ZuInline static void initItem(void *dst) { *(T *)dst = Cmp::null(); }
   template <typename P>
-  inline static void initItem(void *dst, P &&p) {
+  ZuInline static void initItem(void *dst, P &&p) {
     *(T *)dst = ZuFwd<P>(p);
   }
-  inline static void destroyItem(T *dst) { }
+  ZuInline static void destroyItem(T *dst) { }
 };
 
 template <typename T, class Cmp> class ZuArrayFn_ItemOps :
     public ZuArrayFn_ItemOps_<T, Cmp, ZuTraits<T>::IsPrimitive> {
   typedef ZuArrayFn_ItemOps_<T, Cmp, ZuTraits<T>::IsPrimitive> Base;
 public:
-  inline static void initItems(T *dst, unsigned length) {
+  static void initItems(T *dst, unsigned length) {
     if (ZuLikely(length))
       do { Base::initItem((void *)dst++); } while (--length > 0);
   }
@@ -86,18 +86,18 @@ public:
 template <typename T, class Cmp, bool IsPOD>
 class ZuArrayFn_Ops : public ZuArrayFn_ItemOps<T, Cmp> {
 public:
-  inline static void destroyItems(T *dst, unsigned length) {
+  static void destroyItems(T *dst, unsigned length) {
     if (ZuLikely(length))
       do { (*dst++).~T(); } while (--length > 0);
   }
 
   template <typename S>
-  inline static void copyItems(T *dst, const S *src, unsigned length) {
+  static void copyItems(T *dst, const S *src, unsigned length) {
     if (ZuUnlikely(!length || (void *)dst == (void *)src)) return;
     do { new ((void *)dst++) T(*src++); } while (--length > 0);
   }
 
-  inline static void moveItems(T *dst, T *src, unsigned length) {
+  static void moveItems(T *dst, T *src, unsigned length) {
     if (ZuUnlikely(!length || dst == src)) return;
     if (src > dst || length < (unsigned)(dst - src)) {
       do {
@@ -116,30 +116,30 @@ public:
 template <typename T, class Cmp>
 class ZuArrayFn_Ops<T, Cmp, true> : public ZuArrayFn_ItemOps<T, Cmp> {
 public:
-  inline static void destroyItems(T *dst, unsigned length) { }
+  ZuInline static void destroyItems(T *dst, unsigned length) { }
   template <typename S>
-  inline static typename ZuNotSame<T, S>::T copyItem(T *dst, const S &src) {
+  ZuInline static typename ZuNotSame<T, S>::T copyItem(T *dst, const S &src) {
     new ((void *)dst) T(src);
   }
   template <typename S>
-  inline static typename ZuNotSame<T, S>::T copyItems(
+  static typename ZuNotSame<T, S>::T copyItems(
       T *dst, const S *src, unsigned length) {
     if (ZuUnlikely(!length || (void *)dst == (void *)src)) return;
     do { new ((void *)dst++) T(*src++); } while (--length > 0);
   }
   template <typename S>
-  inline static typename ZuSame<T, S>::T copyItem(T *dst, const S &src) {
+  ZuInline static typename ZuSame<T, S>::T copyItem(T *dst, const S &src) {
     memcpy((void *)dst, &src, sizeof(T));
   }
   template <typename S>
-  inline static typename ZuSame<T, S>::T copyItems(
+  ZuInline static typename ZuSame<T, S>::T copyItems(
       T *dst, const S *src, unsigned length) {
     memcpy((void *)dst, src, length * sizeof(T));
   }
-  inline static void moveItem(T *dst, T *src) {
+  ZuInline static void moveItem(T *dst, T *src) {
     memmove((void *)dst, src, sizeof(T));
   }
-  inline static void moveItems(T *dst, const T *src, unsigned length) {
+  ZuInline static void moveItems(T *dst, const T *src, unsigned length) {
     memmove((void *)dst, src, length * sizeof(T));
   }
 };
@@ -148,13 +148,13 @@ public:
 
 template <typename T, class Cmp, class DefltCmp, bool IsIntegral, unsigned Size>
 struct ZuArrayFn_Cmp {
-  inline static int cmp(const T *dst, const T *src, unsigned length) {
+  static int cmp(const T *dst, const T *src, unsigned length) {
     while (ZuLikely(length--))
       if (int i = Cmp::cmp(*dst++, *src++)) return i;
     return 0;
   }
 
-  inline static bool equals(const T *dst, const T *src, unsigned length) {
+  static bool equals(const T *dst, const T *src, unsigned length) {
     while (ZuLikely(length--))
       if (!Cmp::equals(*dst++, *src++)) return false;
     return true;
@@ -162,16 +162,16 @@ struct ZuArrayFn_Cmp {
 };
 
 template <typename T, class Cmp> struct ZuArrayFn_Cmp<T, Cmp, Cmp, true, 1> {
-  inline static int cmp(const T *dst, const T *src, unsigned length) {
+  ZuInline static int cmp(const T *dst, const T *src, unsigned length) {
     return memcmp(dst, src, length * sizeof(T));
   }
-  inline static bool equals(const T *dst, const T *src, unsigned length) {
+  ZuInline static bool equals(const T *dst, const T *src, unsigned length) {
     return !memcmp(dst, src, length * sizeof(T));
   }
 };
 
 template <typename T> struct ZuArrayFn_Hash {
-  inline static uint32_t hash(const T *data, unsigned length) {
+  static uint32_t hash(const T *data, unsigned length) {
     ZuHash_FNV::Value v = ZuHash_FNV::initial_();
     if (ZuLikely(length))
       do {
@@ -181,7 +181,7 @@ template <typename T> struct ZuArrayFn_Hash {
   }
 };
 template <typename T> struct ZuArrayFn_StringHash {
-  inline static uint32_t hash(const T *data, unsigned length) {
+  ZuInline static uint32_t hash(const T *data, unsigned length) {
     return ZuStringHash<T>::hash(data, length);
   }
 };
@@ -199,22 +199,22 @@ template <typename T, class Cmp = ZuCmp<T> > class ZuArrayFn :
 
 template <typename T> class ZuArrayFn_Null {
 public:
-  inline static void initItem(T *dst) { }
-  template <typename P> inline static void initItem(T *dst, P &&p) { }
-  inline static void destroyItem(T *dst) { }
-  inline static void initItems(T *dst, unsigned length) { }
-  inline static void destroyItems(T *dst, unsigned length) { }
+  ZuInline static void initItem(T *dst) { }
+  template <typename P> ZuInline static void initItem(T *dst, P &&p) { }
+  ZuInline static void destroyItem(T *dst) { }
+  ZuInline static void initItems(T *dst, unsigned length) { }
+  ZuInline static void destroyItems(T *dst, unsigned length) { }
   template <typename S>
-  inline static void copyItem(T *dst, const S &src) { }
+  ZuInline static void copyItem(T *dst, const S &src) { }
   template <typename S>
-  inline static void copyItems(T *dst, const S *src, unsigned length) { }
-  inline static void moveItem(T *dst, T *src) { }
-  inline static void moveItems(T *dst, const T *src, unsigned length) { }
-  inline static int cmp(const T *dst, const T *src, unsigned length)
+  ZuInline static void copyItems(T *dst, const S *src, unsigned length) { }
+  ZuInline static void moveItem(T *dst, T *src) { }
+  ZuInline static void moveItems(T *dst, const T *src, unsigned length) { }
+  ZuInline static int cmp(const T *dst, const T *src, unsigned length)
     { return 0; }
-  inline static bool equals(const T *dst, const T *src, unsigned length)
+  ZuInline static bool equals(const T *dst, const T *src, unsigned length)
     { return true; }
-  inline static uint32_t hash(const T *data, unsigned length)
+  ZuInline static uint32_t hash(const T *data, unsigned length)
     { return 0; }
 };
 

@@ -48,48 +48,48 @@
 namespace Zu {
 // length
 
-  inline unsigned strlen_(const char *s) { return strlen(s); }
-  inline unsigned strlen_(const wchar_t *w) { return wcslen(w); }
+  ZuInline unsigned strlen_(const char *s) { return strlen(s); }
+  ZuInline unsigned strlen_(const wchar_t *w) { return wcslen(w); }
 
 // comparison
 
-  inline int strcmp_(const char *s1, const char *s2)
+  ZuInline int strcmp_(const char *s1, const char *s2)
     { return strcmp(s1, s2); }
-  inline int strcmp_(const wchar_t *w1, const wchar_t *w2)
+  ZuInline int strcmp_(const wchar_t *w1, const wchar_t *w2)
     { return wcscmp(w1, w2); }
-  inline int strcmp_(const char *s1, const char *s2, unsigned n)
+  ZuInline int strcmp_(const char *s1, const char *s2, unsigned n)
     { return strncmp(s1, s2, n); }
-  inline int strcmp_(const wchar_t *w1, const wchar_t *w2, unsigned n)
+  ZuInline int strcmp_(const wchar_t *w1, const wchar_t *w2, unsigned n)
     { return wcsncmp(w1, w2, n); }
 
 #ifdef _WIN32
-  inline int stricmp_(const char *s1, const char *s2)
+  ZuInline int stricmp_(const char *s1, const char *s2)
     { return stricmp(s1, s2); }
-  inline int stricmp_(const wchar_t *w1, const wchar_t *w2)
+  ZuInline int stricmp_(const wchar_t *w1, const wchar_t *w2)
     { return wcsicmp(w1, w2); }
-  inline int stricmp_(const char *s1, const char *s2, unsigned n)
+  ZuInline int stricmp_(const char *s1, const char *s2, unsigned n)
     { return strnicmp(s1, s2, n); }
-  inline int stricmp_(const wchar_t *w1, const wchar_t *w2, unsigned n)
+  ZuInline int stricmp_(const wchar_t *w1, const wchar_t *w2, unsigned n)
     { return wcsnicmp(w1, w2, n); }
 #else
-  inline int stricmp_(const char *s1, const char *s2)
+  ZuInline int stricmp_(const char *s1, const char *s2)
     { return strcasecmp(s1, s2); }
 #if !defined(MIPS_NO_WCHAR)
-  inline int stricmp_(const wchar_t *w1, const wchar_t *w2)
+  ZuInline int stricmp_(const wchar_t *w1, const wchar_t *w2)
     { return wcscasecmp(w1, w2); }
 #endif
-  inline int stricmp_(const char *s1, const char *s2, unsigned n)
+  ZuInline int stricmp_(const char *s1, const char *s2, unsigned n)
     { return strncasecmp(s1, s2, n); }
 #if !defined(MIPS_NO_WCHAR)
-  inline int stricmp_(const wchar_t *w1, const wchar_t *w2, unsigned n)
+  ZuInline int stricmp_(const wchar_t *w1, const wchar_t *w2, unsigned n)
     { return wcsncasecmp(w1, w2, n); }
 #endif
 #endif
 
 // padding
 
-  inline void strpad(char *s, unsigned n) { memset(s, ' ', n); }
-  inline void strpad(wchar_t *w, unsigned n) { wmemset(w, L' ', n); }
+  ZuInline void strpad(char *s, unsigned n) { memset(s, ' ', n); }
+  ZuInline void strpad(wchar_t *w, unsigned n) { wmemset(w, L' ', n); }
 
 // vsnprintf
 
@@ -100,7 +100,7 @@ namespace Zu {
 
 // null wchar_t string
 
-  inline const wchar_t *nullWString() {
+  ZuInline const wchar_t *nullWString() {
 #ifdef _MSC_VER
     return L"";
 #else

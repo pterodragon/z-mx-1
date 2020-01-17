@@ -60,13 +60,13 @@ public:
     m_increment(ZmStackIncrement),
     m_maxFrag(ZmStackMaxFrag) { }
 
-  inline ZmStackParams &initial(unsigned v) { m_initial = v; return *this; }
-  inline ZmStackParams &increment(unsigned v) { m_increment = v; return *this; }
-  inline ZmStackParams &maxFrag(double v) { m_maxFrag = v; return *this; }
+  ZmStackParams &initial(unsigned v) { m_initial = v; return *this; }
+  ZmStackParams &increment(unsigned v) { m_increment = v; return *this; }
+  ZmStackParams &maxFrag(double v) { m_maxFrag = v; return *this; }
 
-  inline unsigned initial() const { return m_initial; }
-  inline unsigned increment() const { return m_increment; }
-  inline double maxFrag() const { return m_maxFrag; }
+  unsigned initial() const { return m_initial; }
+  unsigned increment() const { return m_increment; }
+  double maxFrag() const { return m_maxFrag; }
 
 private:
   unsigned	m_initial;
@@ -134,10 +134,10 @@ struct ZmStack_Unlocked<ZmStack<Val, NTP> > {
   typedef ZmStack<Val, NTP> Stack;
 
   template <typename Index_>
-  inline Val *findPtr(const Index_ &index) {
+  Val *findPtr(const Index_ &index) {
     return static_cast<Stack *>(this)->findPtr_(index);
   }
-  inline void delPtr(Val *val) {
+  void delPtr(Val *val) {
     return static_cast<Stack *>(this)->delPtr_(val);
   }
 };
@@ -180,21 +180,21 @@ public:
     free(m_data);
   }
 
-  inline unsigned initial() const { return m_initial; }
-  inline unsigned increment() const { return m_increment; }
-  inline unsigned maxFrag() const {
+  unsigned initial() const { return m_initial; }
+  unsigned increment() const { return m_increment; }
+  unsigned maxFrag() const {
     return (unsigned)((1.0 - m_defrag) * 100.0);
   }
 
-  inline unsigned size() const { ReadGuard guard(m_lock); return m_size; }
-  inline unsigned length() const { ReadGuard guard(m_lock); return m_length; }
-  inline unsigned count() const { ReadGuard guard(m_lock); return m_count; }
-  inline unsigned size_() const { return m_size; }
-  inline unsigned length_() const { return m_length; }
-  inline unsigned count_() const { return m_count; }
+  unsigned size() const { ReadGuard guard(m_lock); return m_size; }
+  unsigned length() const { ReadGuard guard(m_lock); return m_length; }
+  unsigned count() const { ReadGuard guard(m_lock); return m_count; }
+  unsigned size_() const { return m_size; }
+  unsigned length_() const { return m_length; }
+  unsigned count_() const { return m_count; }
 
 private:
-  inline void lazy() {
+  void lazy() {
     if (ZuUnlikely(!m_data)) extend(m_initial);
   }
 
@@ -214,7 +214,7 @@ private:
   }
 
 public:
-  inline void init(ZmStackParams params = ZmStackParams()) {
+  void init(ZmStackParams params = ZmStackParams()) {
     Guard guard(m_lock);
 
     if ((m_initial = params.initial()) > m_size) extend(params.initial());
@@ -230,7 +230,7 @@ public:
   }
 
   template <typename Val_>
-  inline void push(Val_ &&v) {
+  void push(Val_ &&v) {
     Guard guard(m_lock);
 
     lazy();
@@ -351,13 +351,13 @@ friend class Iterator;
   public:
     inline Iterator(Stack &stack) :
       Guard(stack.m_lock), m_stack(stack), m_i(stack.m_length) { }
-    inline Val *iteratePtr() {
+    Val *iteratePtr() {
       do {
 	if (m_i <= 0) return 0;
       } while (Cmp::null(m_stack.m_data[--m_i]));
       return m_stack.m_data + m_i;
     }
-    inline const Val &iterate() {
+    const Val &iterate() {
       do {
 	if (m_i <= 0) return Cmp::null();
       } while (Cmp::null(m_stack.m_data[--m_i]));
@@ -368,7 +368,7 @@ friend class Iterator;
     Stack	&m_stack;
     int		m_i;
   };
-  inline auto iterator() { return Iterator(*this); }
+  auto iterator() { return Iterator(*this); }
 
 private:
   Lock		m_lock;

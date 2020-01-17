@@ -69,7 +69,7 @@ namespace ZeSinkType {
   ZtEnumNames("File", "Debug", "System", "Lambda");
 };
 struct ZeSink : public ZmPolymorph {
-  inline ZeSink(int type_) : type(type_) { }
+  ZeSink(int type_) : type(type_) { }
 
   virtual void log(ZeEvent *) = 0;
   virtual void age() = 0;
@@ -158,7 +158,7 @@ friend struct ZmSingletonCtor<ZeLog>;
 friend struct ZmCleanup<ZeLog>;
 
   struct EventQueueID {
-    inline static const char *id() { return "ZeLog.EventQueue"; }
+    static const char *id() { return "ZeLog.EventQueue"; }
   };
 
   typedef ZmList<ZmRef<ZeEvent>,
@@ -175,43 +175,43 @@ public:
   virtual ~ZeLog() { }
 
   template <typename ...Args>
-  inline static ZmRef<ZeSink> fileSink(Args &&... args) {
+  static ZmRef<ZeSink> fileSink(Args &&... args) {
     return new ZeFileSink(ZuFwd<Args>(args)...);
   }
   template <typename ...Args>
-  inline static ZmRef<ZeSink> debugSink(Args &&... args) {
+  static ZmRef<ZeSink> debugSink(Args &&... args) {
     return new ZeDebugSink(ZuFwd<Args>(args)...);
   }
   template <typename ...Args>
-  inline static ZmRef<ZeSink> sysSink(Args &&... args) {
+  static ZmRef<ZeSink> sysSink(Args &&... args) {
     return new ZeSysSink(ZuFwd<Args>(args)...);
   }
   template <typename L>
-  inline static ZmRef<ZeSink> lambdaSink(L l) {
+  static ZmRef<ZeSink> lambdaSink(L l) {
     return new ZeLambdaSink<L>(ZuMv(l));
   }
 
   template <typename ...Args>
-  inline static void init(Args &&... args) {
+  static void init(Args &&... args) {
     instance()->init_(ZuFwd<Args>(args)...);
   }
 
-  inline static ZuString program() { return instance()->program_(); }
+  static ZuString program() { return instance()->program_(); }
 
-  inline static int level() { return instance()->level_(); }
-  inline static void level(int l) { instance()->level_(l); }
+  static int level() { return instance()->level_(); }
+  static void level(int l) { instance()->level_(l); }
 
   template <typename ...Args>
-  inline static void sink(Args &&... args) {
+  static void sink(Args &&... args) {
     instance()->sink_(ZuFwd<Args>(args)...);
   }
 
-  inline static void start() { instance()->start_(); }
-  inline static void stop() { instance()->stop_(); }
-  inline static void forked() { instance()->forked_(); }
+  static void start() { instance()->start_(); }
+  static void stop() { instance()->stop_(); }
+  static void forked() { instance()->forked_(); }
 
-  inline static void log(ZmRef<ZeEvent> e) { instance()->log_(ZuMv(e)); }
-  inline static void age() { instance()->age_(); }
+  static void log(ZmRef<ZeEvent> e) { instance()->log_(ZuMv(e)); }
+  static void age() { instance()->age_(); }
 
 private:
   static ZeLog *instance();
@@ -227,8 +227,8 @@ private:
 
   ZuString program_();
 
-  inline int level_() const { return m_level; }
-  inline void level_(int l) { m_level = l; }
+  int level_() const { return m_level; }
+  void level_(int l) { m_level = l; }
 
   void sink_(ZmRef<ZeSink> sink);
 

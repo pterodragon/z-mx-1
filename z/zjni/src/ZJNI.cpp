@@ -156,27 +156,27 @@ template <> struct ZmCleanup<TLS> {
 
 class TLS : public ZmObject {
 public:
-  inline TLS() {
+  TLS() {
     ZmThreadName name = ZmThreadContext::self()->name();
     JavaVMAttachArgs args{
       JNI_VERSION_1_4, const_cast<char *>(name.data()), 0 };
     jvm->AttachCurrentThread((void **)&m_env, &args);
   }
-  inline TLS(JNIEnv *env) : m_env(env) { }
-  inline ~TLS() { m_env = nullptr; }
+  TLS(JNIEnv *env) : m_env(env) { }
+  ~TLS() { m_env = nullptr; }
 
-  inline static void attach() {
+  static void attach() {
     ZmSpecific<TLS>::instance();
   }
-  inline static void detach() {
+  static void detach() {
     ZmSpecific<TLS>::instance()->m_env = nullptr;
     jvm->DetachCurrentThread();
   }
 
-  inline static void env(JNIEnv *env) {
+  static void env(JNIEnv *env) {
     ZmSpecific<TLS>::instance(new TLS(env));
   }
-  inline static JNIEnv *env() {
+  static JNIEnv *env() {
     return ZmSpecific<TLS>::instance()->m_env;
   }
 

@@ -29,7 +29,7 @@
 // class Class { ... };	// this is the class to be extended
 //
 // template <typename T> class Foo : public T {
-//   inline void foo() { T::ptr()->bar(42); } // adds a foo() method
+//   void foo() { T::ptr()->bar(42); } // adds a foo() method
 // };
 //
 // typedef ZuMixin<Class, Foo> Mixed;	// Class, with Foo mixed in

@@ -34,14 +34,14 @@
 
 class Z : public ZmObject {
 public:
-  inline Z(int z) : m_z(z) { } int m_z;
+  Z(int z) : m_z(z) { } int m_z;
 };
 
 struct ZCmp {
-  inline static int cmp(Z *z1, Z *z2) {
+  static int cmp(Z *z1, Z *z2) {
     return z1->m_z - z2->m_z;
   }
-  inline static ZmRef<Z> null() { 
+  static ZmRef<Z> null() { 
     static ZmRef<Z> tmp = new Z(0); return tmp; 
   }
 };

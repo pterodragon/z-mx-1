@@ -81,15 +81,15 @@ class App;
 
 class Source : public ZmPolymorph {
 public:
-  inline Source(App *app, const Group &group) : m_app(app), m_group(group) { }
+  Source(App *app, const Group &group) : m_app(app), m_group(group) { }
   ~Source() { }
 
   void connect();
   ZiConnection *connected(const ZiCxnInfo &ci);
   void connectFailed(bool transient);
 
-  inline App *app() const { return m_app; }
-  inline const Group &group() const { return m_group; }
+  App *app() const { return m_app; }
+  const Group &group() const { return m_group; }
 
 private:
   App		*m_app;
@@ -101,8 +101,8 @@ public:
   Connection(Source *source, const ZiCxnInfo &ci);
   ~Connection() { }
 
-  inline App *app() { return m_app; }
-  inline const Group &group() const { return m_group; }
+  App *app() { return m_app; }
+  const Group &group() const { return m_group; }
 
   void connected(ZiIOContext &io);
   void disconnected();
@@ -133,14 +133,14 @@ public:
   void connect(ZuAnyPOD *group_);
   void write(const MxMCapHdr *hdr, const char *buf);
 
-  inline const ZtString &path() const { return m_path; }
-  inline const ZtString &groups() const { return m_groups; }
-  inline bool raw() const { return m_raw; }
-  inline ZiIP interface_() const { return m_interface; }
-  inline unsigned reconnectFreq() const { return m_reconnectFreq; }
+  ZuInline const ZtString &path() const { return m_path; }
+  ZuInline const ZtString &groups() const { return m_groups; }
+  ZuInline bool raw() const { return m_raw; }
+  ZuInline ZiIP interface_() const { return m_interface; }
+  ZuInline unsigned reconnectFreq() const { return m_reconnectFreq; }
 
-  inline Mx *mx() { return m_mx; }
-  inline Mx *mx2() { return m_mx2; }
+  ZuInline Mx *mx() { return m_mx; }
+  ZuInline Mx *mx2() { return m_mx2; }
 
 private:
   ZmSemaphore	m_sem;
@@ -164,7 +164,7 @@ public:
   // UDP over Ethernet maximum payload is 1472 (without Jumbo frames)
   enum { Size = 1472 };
 
-  inline Msg_(Connection *cxn) : m_cxn(cxn) { }
+  Msg_(Connection *cxn) : m_cxn(cxn) { }
   ~Msg_() { }
 
   void recv(ZiIOContext &io);
@@ -178,7 +178,7 @@ private:
   char			m_buf[Size];
 };
 struct Msg_HeapID {
-  inline static const char *id() { return "Msg"; }
+  static const char *id() { return "Msg"; }
 };
 typedef ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> Msg_Heap;
 typedef Msg_<Msg_Heap> Msg;

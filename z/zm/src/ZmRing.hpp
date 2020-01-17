@@ -48,7 +48,7 @@ public:
 
   inline ZmRingParams(const ZmRingParams &p) :
     m_size(p.m_size), m_ll(p.m_ll), m_spin(p.m_spin), m_timeout(p.m_timeout) { }
-  inline ZmRingParams &operator =(const ZmRingParams &p) {
+  ZmRingParams &operator =(const ZmRingParams &p) {
     if (this != &p) {
       m_size = p.m_size;
       m_ll = p.m_ll;
@@ -59,11 +59,11 @@ public:
     return *this;
   }
 
-  inline ZmRingParams &size(unsigned n) { m_size = n; return *this; }
-  inline ZmRingParams &ll(bool b) { m_ll = b; return *this; }
-  inline ZmRingParams &spin(unsigned n) { m_spin = n; return *this; }
-  inline ZmRingParams &timeout(unsigned n) { m_timeout = n; return *this; }
-  inline ZmRingParams &cpuset(const ZmBitmap &b) { m_cpuset = b; return *this; }
+  ZmRingParams &size(unsigned n) { m_size = n; return *this; }
+  ZmRingParams &ll(bool b) { m_ll = b; return *this; }
+  ZmRingParams &spin(unsigned n) { m_spin = n; return *this; }
+  ZmRingParams &timeout(unsigned n) { m_timeout = n; return *this; }
+  ZmRingParams &cpuset(const ZmBitmap &b) { m_cpuset = b; return *this; }
 
   ZuInline unsigned size() const { return m_size; }
   ZuInline bool ll() const { return m_ll; }
@@ -122,7 +122,7 @@ protected:
 #endif
 
 public:
-  inline void init(const ZmRingParams &params) { m_params = params; }
+  void init(const ZmRingParams &params) { m_params = params; }
 
   ZuInline const ZmRingParams &params() const { return m_params; }
 
@@ -136,7 +136,7 @@ private:
 
 struct ZmRingError {
   ZuInline ZmRingError(int code_) : code(code_) { }
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     switch (code) {
       case ZmRing_::OK:		s << "OK"; break;
       case ZmRing_::EndOfFile:	s << "EndOfFile"; break;
@@ -292,8 +292,8 @@ public:
     return OK;
   }
 
-  inline unsigned ctrlSize() const { return sizeof(Ctrl); }
-  inline unsigned size() const { return m_size; }
+  unsigned ctrlSize() const { return sizeof(Ctrl); }
+  unsigned size() const { return m_size; }
 
   unsigned length() {
     uint32_t head = this->head().load_() & ~Mask;
@@ -310,7 +310,7 @@ public:
 
   ZuInline void *push() { return push_<1>(); }
   ZuInline void *tryPush() { return push_<0>(); }
-  template <bool Wait> inline void *push_() {
+  template <bool Wait> void *push_() {
     ZmAssert(m_ctrl);
     ZmAssert(m_flags & Write);
 
@@ -338,7 +338,7 @@ public:
       (ZmAtomic<uint32_t> *)&((uint8_t *)data())[head_ & ~(Wrapped | Mask)];
     return (void *)&ptr[2];
   }
-  inline void push2(void *ptr_) {
+  void push2(void *ptr_) {
     ZmAssert(m_ctrl);
     ZmAssert(m_flags & Write);
 
@@ -394,7 +394,7 @@ public:
 
   // reader
 
-  inline T *shift() {
+  T *shift() {
     ZmAssert(m_ctrl);
     ZmAssert(m_flags & Read);
 
@@ -413,7 +413,7 @@ public:
     ptr->store_(0);
     return (T *)&ptr[2];
   }
-  inline void shift2() {
+  void shift2() {
     ZmAssert(m_ctrl);
     ZmAssert(m_flags & Read);
 
@@ -451,7 +451,7 @@ public:
     return size() - (tail - head);
   }
 
-  inline unsigned count() const {
+  unsigned count() const {
     int i = readStatus();
     if (i < 0) return 0;
     return i / Size;

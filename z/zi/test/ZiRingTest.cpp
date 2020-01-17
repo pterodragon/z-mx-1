@@ -10,15 +10,15 @@
 
 class ZiRing_Breakpoint {
 public:
-  inline ZiRing_Breakpoint() : m_enabled(false), m_oneshot(false) { }
-  inline void enable(bool oneshot = true) {
+  ZiRing_Breakpoint() : m_enabled(false), m_oneshot(false) { }
+  void enable(bool oneshot = true) {
     m_enabled = true;
     m_oneshot = oneshot;
   }
-  inline void disable() { m_enabled = false; }
-  inline void wait() { m_reached.wait(); }
-  inline void proceed() { m_proceed.post(); }
-  inline void reached(const char *name) {
+  void disable() { m_enabled = false; }
+  void wait() { m_reached.wait(); }
+  void proceed() { m_proceed.post(); }
+  void reached(const char *name) {
     std::cout << "\t       " << name << std::flush;
     if (!m_enabled) return;
     if (m_oneshot) m_enabled = false;
@@ -58,8 +58,8 @@ public:
   App() : m_nThreads(0), m_threads(0) { }
   ~App() { if (m_threads) delete [] m_threads; }
 
-  inline const Thread *thread(unsigned i) const { return m_threads[i]; }
-  inline Thread *thread(unsigned i) { return m_threads[i]; }
+  const Thread *thread(unsigned i) const { return m_threads[i]; }
+  Thread *thread(unsigned i) { return m_threads[i]; }
 
   void start(unsigned nThreads, const ZiRingParams &params);
   void stop();
@@ -82,10 +82,10 @@ public:
 
   void operator ()();
 
-  inline App *app() const { return m_app; }
-  inline unsigned id() const { return m_id; }
-  inline const Ring &ring() const { return m_ring; }
-  inline Ring &ring() { return m_ring; }
+  App *app() const { return m_app; }
+  unsigned id() const { return m_id; }
+  const Ring &ring() const { return m_ring; }
+  Ring &ring() { return m_ring; }
 
   void start() {
     m_thread = ZmThread(0, ZmFn<>::Member<&Thread::operator()>::fn(this));

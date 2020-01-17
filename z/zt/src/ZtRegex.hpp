@@ -48,7 +48,7 @@ struct ZtRegexError {
 
   static const char *strerror(int);
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     if (message) {
       s << "ZtRegex Error \"" << message << "\" (" << ZuBoxed(code) << ")"
 	" at offset " << ZuBoxed(offset);
@@ -83,7 +83,7 @@ public:
     r.m_extra = 0;
     r.m_captureCount = 0;
   }
-  inline ZtRegex &operator =(ZtRegex &&r) noexcept {
+  ZtRegex &operator =(ZtRegex &&r) noexcept {
     if (this == &r) return *this;
     m_regex = r.m_regex;
     m_extra = r.m_extra;
@@ -98,7 +98,7 @@ public:
 
   void study();
 
-  inline unsigned captureCount() const { return m_captureCount; }
+  unsigned captureCount() const { return m_captureCount; }
 
   // options below are pcre_exec() options
 
@@ -118,7 +118,7 @@ public:
      $' returns everything after the matched string.
   */
 
-  inline int m(ZuString s, int offset = 0, int options = 0) const {
+  int m(ZuString s, int offset = 0, int options = 0) const {
     ZtArray<int> ovector;
     return exec(s, offset, options, ovector);
   }
@@ -178,7 +178,7 @@ public:
     return a.length();
   }
 
-  inline int index(const char *name) const {
+  int index(const char *name) const {
     int i = pcre_get_stringnumber(m_regex, name);
     if (i < 0) return -1;
     return i + 1;

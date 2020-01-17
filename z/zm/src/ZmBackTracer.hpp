@@ -39,8 +39,8 @@
 
 template <unsigned N = 64> class ZmBackTracer {
 public:
-  inline ZmBackTracer() { }
-  inline ~ZmBackTracer() { }
+  ZmBackTracer() { }
+  ~ZmBackTracer() { }
 
 private:
   typedef ZuTuple<ZmThreadID, ZmThreadName, ZmBackTrace> Data;
@@ -50,7 +50,7 @@ private:
   using ReadGuard = ZmReadGuard<Lock>;
 
 public:
-  inline void capture(unsigned skip = 0) {
+  void capture(unsigned skip = 0) {
     Guard guard(m_lock);
     unsigned i = m_offset;
     m_offset = (i + 1) & 63;

@@ -201,7 +201,7 @@ template <typename L> struct ZuGuard {
 
 // safe bool idiom
 #define ZuOpBool \
-  inline operator const void *() const { \
+  operator const void *() const { \
     return !*this ? (const void *)0 : (const void *)this; \
   }
 

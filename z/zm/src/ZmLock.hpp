@@ -67,7 +67,7 @@ class ZmLock {
 friend class ZmCondition<ZmLock>;
 
 public:
-  inline ZmLock()
+  ZmLock()
 #if ZmPLock_Recursive == 0 || defined(ZmLock_DEBUG)
     : m_count(0), m_tid(0)
 #ifdef ZmLock_DEBUG
@@ -75,9 +75,9 @@ public:
 #endif
 #endif
     { ZmPLock_init(m_lock); }
-  inline ~ZmLock() { ZmPLock_final(m_lock); }
+  ~ZmLock() { ZmPLock_final(m_lock); }
 
-  inline void lock() {
+  void lock() {
 #if ZmPLock_Recursive == 1 && !defined(ZmLock_DEBUG)
     ZmPLock_lock(m_lock);
 #else
@@ -93,7 +93,7 @@ public:
     m_count = 1;
 #endif
   }
-  inline int trylock() {
+  int trylock() {
 #if ZmPLock_Recursive == 1 && !defined(ZmLock_DEBUG)
     return ZmPLock_trylock(m_lock);
 #else
@@ -105,7 +105,7 @@ public:
     return 0;
 #endif
   }
-  inline void unlock() {
+  void unlock() {
 #if ZmPLock_Recursive == 1 && !defined(ZmLock_DEBUG)
     ZmPLock_unlock(m_lock);
 #else
@@ -120,29 +120,29 @@ public:
   }
 
 #ifdef ZmLock_DEBUG
-  inline static void traceEnable() { ZmLock_Debug::enable(); }
-  inline static void traceDisable() { ZmLock_Debug::disable(); }
-  inline static ZmBackTracer<64> *tracer() { return ZmLock_Debug::tracer(); }
+  static void traceEnable() { ZmLock_Debug::enable(); }
+  static void traceDisable() { ZmLock_Debug::disable(); }
+  static ZmBackTracer<64> *tracer() { return ZmLock_Debug::tracer(); }
 #endif
 
 private:
 #if ZmPLock_Recursive == 1 && !defined(ZmLock_DEBUG)
   class Wait { };
 
-  inline Wait wait() { return Wait(); }
+  Wait wait() { return Wait(); }
 #else
   class Wait;
 friend class Wait;
   class Wait {
   friend class ZmLock;
   private:
-    inline Wait(ZmLock &lock) :
+    Wait(ZmLock &lock) :
 	m_lock(lock), m_count(lock.m_count), m_tid(lock.m_tid) {
       m_lock.m_count = 0;
       m_lock.m_tid = 0;
     }
   public:
-    inline ~Wait() {
+    ~Wait() {
       m_lock.m_count = m_count;
       m_lock.m_tid = m_tid;
     }
@@ -152,7 +152,7 @@ friend class Wait;
     ZmPlatform::ThreadID	m_tid;
   };
 
-  inline Wait wait() { return Wait(*this); }
+  Wait wait() { return Wait(*this); }
 #endif
 
   ZmPLock_				m_lock;

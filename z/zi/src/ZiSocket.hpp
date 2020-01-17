@@ -50,7 +50,7 @@ public:
   };
   enum Protocol { UDP = 0, TCP = 1 };
 
-  inline ZiSocket() { }
+  ZiSocket() { }
 
   Result socket(Protocol protocol);
   Result connect(const Hostname &hostname, int port, Error *Error = 0);

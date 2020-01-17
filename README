@@ -9,7 +9,7 @@ As root:
 
 # tar xvJf libck-ubuntu_18.04LTS-x86_64.tar.xz -C /usr/local
 
-As user:
+As a user:
 
 OPTIONS should include -c and possibly -d for initial setup; --help gives help
 PREFIX should be the installation directory, $HOME is fine if uncertain;

@@ -29,7 +29,7 @@ const char *Response2 = "\r\n"
 
 struct App : public Ztls::Server<App> {
   struct Link : public Ztls::SrvLink<App, Link> {
-    inline Link(App *app) : Ztls::SrvLink<App, Link>(app) { }
+    Link(App *app) : Ztls::SrvLink<App, Link>(app) { }
 
     void connected(const char *hostname, const char *alpn) {
       if (!hostname) hostname = "(null)";
@@ -55,7 +55,7 @@ struct App : public Ztls::Server<App> {
   };
 
   using TCP = typename Link::TCP;
-  inline TCP *accepted(const ZiCxnInfo &ci) {
+  TCP *accepted(const ZiCxnInfo &ci) {
     return new TCP(new Link(this), ci);
   }
 

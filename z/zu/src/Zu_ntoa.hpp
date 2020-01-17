@@ -119,7 +119,7 @@ namespace Zu_ntoa {
     }
   };
   template <> struct Log10<4> {
-    inline static unsigned log(unsigned v) {
+    static unsigned log(unsigned v) {
       static constexpr uint8_t clz10[] = {
 	20, 20, 19, 18, 18, 17, 16, 16, 15, 14,
 	14, 14, 13, 12, 12, 11, 10, 10,  9,  8,
@@ -143,7 +143,7 @@ namespace Zu_ntoa {
   };
   template <> struct Log10<2> : public Log10<4> { };
   template <> struct Log10<8> {
-    inline static unsigned log(uint64_t v) {
+    static unsigned log(uint64_t v) {
       static constexpr uint8_t clz10[] = {
 	39, 38, 38, 38, 37, 36, 36, 35, 34, 34,
 	33, 32, 32, 32, 31, 30, 30, 29, 28, 28,
@@ -169,7 +169,7 @@ namespace Zu_ntoa {
     }
   };
   template <> struct Log10<16> {
-    inline static unsigned log(uint128_t v) {
+    static unsigned log(uint128_t v) {
       constexpr uint128_t f = (uint128_t)10000000000000000000ULL;
       unsigned l;
       if (ZuLikely(v < f))
@@ -241,12 +241,12 @@ namespace Zu_ntoa {
 
   // decimal handling for each log10 0..20
   template <typename T>
-  inline typename Is64Bit<T>::T Base10_print(T v_, unsigned n, char *buf) {
+  typename Is64Bit<T>::T Base10_print(T v_, unsigned n, char *buf) {
     uint64_t v = v_;
     do { buf[--n] = (v % 10) + '0'; v /= 10; } while (ZuLikely(n));
   }
   template <typename T>
-  inline typename Is128Bit<T>::T Base10_print(T v_, unsigned n, char *buf) {
+  typename Is128Bit<T>::T Base10_print(T v_, unsigned n, char *buf) {
     uint128_t v = v_;
     if (ZuLikely(v < 10000000000000000000ULL))
       Base10_print((uint64_t)v, n, buf);
@@ -406,12 +406,12 @@ namespace Zu_ntoa {
     // return v < 10 ? v + '0' : v - 10 + 'a';
   }
   template <typename T>
-  inline typename Is64Bit<T>::T Base16_print(T v_, unsigned n, char *buf) {
+  typename Is64Bit<T>::T Base16_print(T v_, unsigned n, char *buf) {
     uint64_t v = v_;
     do { buf[--n] = hexDigit<0>(v & 0xf); v >>= 4U; } while (ZuLikely(n));
   }
   template <typename T>
-  inline typename Is128Bit<T>::T Base16_print(T v_, unsigned n, char *buf) {
+  typename Is128Bit<T>::T Base16_print(T v_, unsigned n, char *buf) {
     uint128_t v = v_;
     if (ZuLikely(!(v>>64U)))
       Base16_print((uint64_t)v, n, buf);
@@ -668,7 +668,7 @@ namespace Zu_ntoa {
 
   template <typename T> ZuInline constexpr T ftoa_max() { return (T)(~0ULL); }
   template <typename T>
-  inline unsigned ftoa_variable(T v, unsigned f, char *buf) {
+  unsigned ftoa_variable(T v, unsigned f, char *buf) {
     typedef ZuFP<T> FP;
     if (ZuUnlikely(FP::nan(v))) {
       *buf++ = 'n', *buf++ = 'a', *buf = 'n';
@@ -700,7 +700,7 @@ namespace Zu_ntoa {
       Base10_print_frac_truncate(fv, f, buf);
   }
   template <typename T>
-  inline static unsigned ftoa_fixed(T v, unsigned f, char *buf) {
+  static unsigned ftoa_fixed(T v, unsigned f, char *buf) {
     typedef ZuFP<T> FP;
     if (ZuUnlikely(FP::nan(v))) {
       *buf++ = 'n', *buf++ = 'a', *buf = 'n';
@@ -726,7 +726,7 @@ namespace Zu_ntoa {
   template <char Comma, int NDP, char Trim, bool Fixed = NDP >= 0>
   struct FPrint {
     template <typename T>
-    inline static unsigned ftoa(T v, char *buf) {
+    static unsigned ftoa(T v, char *buf) {
       typedef ZuFP<T> FP;
       if (ZuUnlikely(FP::nan(v))) {
 	*buf++ = 'n', *buf++ = 'a', *buf = 'n';
@@ -805,9 +805,9 @@ struct Zu_nprint {
   using Log = Zu_ntoa::LogN<Fmt::Hex_, sizeof(T)>;
 
   template <typename T>
-  inline static constexpr unsigned ulen() { return MaxLen<0, T>::N; }
+  static constexpr unsigned ulen() { return MaxLen<0, T>::N; }
   template <typename T>
-  inline static constexpr unsigned ulen(T) { return MaxLen<0, T>::N; }
+  static constexpr unsigned ulen(T) { return MaxLen<0, T>::N; }
   template <typename T>
   static unsigned utoa(T v_, char *buf) {
     typename Zu_ntoa::Unsigned<T>::T v = v_;
@@ -815,9 +815,9 @@ struct Zu_nprint {
   }
 
   template <typename T>
-  inline static constexpr unsigned ilen() { return MaxLen<1, T>::N; }
+  static constexpr unsigned ilen() { return MaxLen<1, T>::N; }
   template <typename T>
-  inline static constexpr unsigned ilen(T) { return MaxLen<1, T>::N; }
+  static constexpr unsigned ilen(T) { return MaxLen<1, T>::N; }
   template <typename T>
   static unsigned itoa(T v_, char *buf) {
     unsigned n;
@@ -835,11 +835,11 @@ struct Zu_nprint {
 
   // 20 integer digits with commas, with negative and .0, gives 26+3 = 29
   template <typename T>
-  inline static constexpr unsigned flen() {
+  static constexpr unsigned flen() {
     return 29U + (Fmt::Trim_ ? (Fmt::NDP_ > 1 ? (Fmt::NDP_ - 1) : 0) : 0);
   }
   template <typename T>
-  inline static constexpr unsigned flen(T) {
+  static constexpr unsigned flen(T) {
     return flen<T>();
   }
   template <typename T>
@@ -849,13 +849,13 @@ struct Zu_nprint {
 };
 template <unsigned NDP> struct Zu_nprint_frac_ {
   template <typename T>
-  inline static constexpr unsigned ulen() { return NDP; }
+  static constexpr unsigned ulen() { return NDP; }
   template <typename T>
-  inline static constexpr unsigned ulen(T) { return NDP; }
+  static constexpr unsigned ulen(T) { return NDP; }
   template <typename T>
-  inline static constexpr unsigned ilen() { return NDP; }
+  static constexpr unsigned ilen() { return NDP; }
   template <typename T>
-  inline static constexpr unsigned ilen(T) { return NDP; }
+  static constexpr unsigned ilen(T) { return NDP; }
 };
 template <unsigned NDP, char Trim>
 struct Zu_nprint_frac : public Zu_nprint_frac_<NDP> {
@@ -927,7 +927,7 @@ ZuInline unsigned Zu_ftoa(T v, char *buf) { return Zu_nprint<>::ftoa(v, buf); }
 // variable run-time formatted utoa/itoa/ftoa
 struct Zu_vprint {
   template <typename T>
-  inline static unsigned ulen(const ZuVFmt &fmt) {
+  static unsigned ulen(const ZuVFmt &fmt) {
     switch (fmt.justification()) {
       default:
 	break;
@@ -948,7 +948,7 @@ struct Zu_vprint {
     return ulen<T>(fmt);
   }
   template <typename T>
-  inline static unsigned utoa_hex(const ZuVFmt &fmt, T v, char *buf) {
+  static unsigned utoa_hex(const ZuVFmt &fmt, T v, char *buf) {
     unsigned n = Zu_ntoa::Log16<sizeof(T)>::log(v);
     unsigned a = ((unsigned)fmt.alt())<<1U;
     if (ZuLikely(fmt.justification() == ZuFmt::Just::None)) {
@@ -985,7 +985,7 @@ struct Zu_vprint {
     return 0;
   }
   template <typename T>
-  inline static unsigned utoa(const ZuVFmt &fmt, T v, char *buf) {
+  static unsigned utoa(const ZuVFmt &fmt, T v, char *buf) {
     if (ZuUnlikely(fmt.hex())) return utoa_hex(fmt, v, buf);
     if (ZuUnlikely(fmt.justification() == ZuFmt::Just::Frac)) {
       unsigned w = fmt.ndp();
@@ -1041,7 +1041,7 @@ struct Zu_vprint {
     return ulen<T>(fmt) + 1;
   }
   template <typename T>
-  inline static unsigned itoa_hex(const ZuVFmt &fmt, T v_, char *buf) {
+  static unsigned itoa_hex(const ZuVFmt &fmt, T v_, char *buf) {
     bool m = v_ < 0;
     typename Zu_ntoa::Unsigned<T>::T v = v_;
     if (ZuUnlikely(m)) v = ~v + 1;
@@ -1087,7 +1087,7 @@ struct Zu_vprint {
     return 0;
   }
   template <typename T>
-  inline static unsigned itoa(const ZuVFmt &fmt, T v_, char *buf) {
+  static unsigned itoa(const ZuVFmt &fmt, T v_, char *buf) {
     if (ZuUnlikely(fmt.hex())) return itoa_hex(fmt, v_, buf);
     if (ZuUnlikely(fmt.justification() == ZuFmt::Just::Frac)) {
       unsigned w = fmt.ndp();
@@ -1145,15 +1145,15 @@ struct Zu_vprint {
     return 0;
   }
   template <typename T>
-  inline static unsigned flen(const ZuVFmt &fmt) {
+  static unsigned flen(const ZuVFmt &fmt) {
     return 29U + (fmt.trim() ? (fmt.ndp() > 1 ? (fmt.ndp() - 1) : 0) : 0);
   }
   template <typename T>
-  inline static unsigned flen(const ZuVFmt &fmt, T) {
+  static unsigned flen(const ZuVFmt &fmt, T) {
     return flen<T>(fmt);
   }
   template <typename T>
-  inline static unsigned ftoa(const ZuVFmt &fmt, T v, char *buf) {
+  static unsigned ftoa(const ZuVFmt &fmt, T v, char *buf) {
     typedef ZuFP<T> FP;
     if (ZuUnlikely(FP::nan(v))) {
       *buf++ = 'n', *buf++ = 'a', *buf = 'n';

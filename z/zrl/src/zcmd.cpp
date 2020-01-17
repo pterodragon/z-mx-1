@@ -222,9 +222,13 @@ private:
     return m_plugin->processApp(data);
   }
 
+  // FIXME - need built-in telcap command to open capture CSV files,
+  // write headers, begin capturing, run queries; telcap -e ends capture
+  // telcap can be given optional filters and intervals for each
+  // type, and can enable/disable each type
   int processTel(const ZvTelemetry::fbs::Telemetry *data) {
-    if (ZuUnlikely(!m_plugin)) return 0;
-    return m_plugin->processTel(data);
+    // FIXME - capture
+    return 0;
   }
 
   void disconnected() {

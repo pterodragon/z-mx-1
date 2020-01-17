@@ -108,7 +108,7 @@ struct ZmPQueue_Defaults {
   typedef ZmLock Lock;
   typedef ZmObject Object;
   struct HeapID {
-    inline static const char *id() { return "ZmPQueue"; }
+    static const char *id() { return "ZmPQueue"; }
   };
   struct Base { };
   enum { Bits = 3, Levels = 3 };
@@ -214,7 +214,7 @@ public:
   friend class ZmPQueue<Item, NTP>;
 
   protected:
-    inline NodeFn_() {
+    NodeFn_() {
       memset(m_next, 0, sizeof(Node *) * Levels);
       memset(m_prev, 0, sizeof(Node *) * Levels);
     }
@@ -222,11 +222,11 @@ public:
   private:
     // access to Node instances is always guarded, so no need to protect
     // the returned object against concurrent deletion
-    inline Node *next(unsigned i) { return m_next[i]; }
-    inline Node *prev(unsigned i) { return m_prev[i]; }
+    Node *next(unsigned i) { return m_next[i]; }
+    Node *prev(unsigned i) { return m_prev[i]; }
 
-    inline void next(unsigned i, Node *n) { m_next[i] = n; }
-    inline void prev(unsigned i, Node *n) { m_prev[i] = n; }
+    void next(unsigned i, Node *n) { m_next[i] = n; }
+    void prev(unsigned i, Node *n) { m_prev[i] = n; }
 
     Node	*m_next[Levels];
     Node	*m_prev[Levels];
@@ -577,14 +577,14 @@ private:
   }
 
 public:
-  inline unsigned count() const { ReadGuard guard(m_lock); return m_count; }
-  inline unsigned length() const { ReadGuard guard(m_lock); return m_length; }
-  inline unsigned count_() const { return m_count; }
-  inline unsigned length_() const { return m_length; }
+  unsigned count() const { ReadGuard guard(m_lock); return m_count; }
+  unsigned length() const { ReadGuard guard(m_lock); return m_length; }
+  ZuInline unsigned count_() const { return m_count; }
+  ZuInline unsigned length_() const { return m_length; }
 
-  inline bool empty_() const { return (!m_count); }
+  ZuInline bool empty_() const { return (!m_count); }
 
-  inline void stats(
+  void stats(
       uint64_t &inCount, uint64_t &inBytes, 
       uint64_t &outCount, uint64_t &outBytes) const {
     inCount = m_inCount;
@@ -593,30 +593,30 @@ public:
     outBytes = m_outBytes;
   }
 
-  inline void reset(Key head) {
+  void reset(Key head) {
     Guard guard(m_lock);
     m_headKey = m_tailKey = head;
     clean_();
   }
 
-  inline void skip() {
+  void skip() {
     Guard guard(m_lock);
     m_headKey = m_tailKey;
     clean_();
   }
 
-  inline Key head() const {
+  Key head() const {
     ReadGuard guard(m_lock);
     return m_headKey;
   }
 
-  inline Key tail() const {
+  Key tail() const {
     ReadGuard guard(m_lock);
     return m_tailKey;
   }
 
   // returns the first gap that needs to be filled, or { 0, 0 } if none
-  inline Gap gap() const {
+  Gap gap() const {
     ReadGuard guard(m_lock);
     Node *node = m_head[0];
     Key tail = m_headKey;
@@ -633,7 +633,7 @@ public:
   };
 
 private:
-  inline void clipHead_(Key key) {
+  void clipHead_(Key key) {
     while (Node *node = m_head[0]) {
       Fn item(node->Node::item());
       Key key_ = item.key();
@@ -657,7 +657,7 @@ public:
   // override head key (sequence number); used to manually
   // advance past an unrecoverable gap or to rewind in order to
   // force re-processing of earlier items
-  inline void head(Key key) {
+  void head(Key key) {
     Guard guard(m_lock);
     if (key == m_headKey) return;
     if (key < m_headKey) { // a rewind implies a reset
@@ -682,13 +682,13 @@ public:
   // immediately returns node if key == head (head is incremented)
   // returns 0 if key < head or key is already present in queue
   // returns 0 and enqueues node if key > head
-  inline NodeRef rotate(NodeRef node) { return enqueue_<true>(ZuMv(node)); }
+  NodeRef rotate(NodeRef node) { return enqueue_<true>(ZuMv(node)); }
 
   // enqueues node
-  inline void enqueue(NodeRef node) { enqueue_<false>(ZuMv(node)); }
+  void enqueue(NodeRef node) { enqueue_<false>(ZuMv(node)); }
 
   // unshift node onto head
-  inline void unshift(NodeRef node) {
+  void unshift(NodeRef node) {
     Guard guard(m_lock);
 
     Fn item(node->Node::item());
@@ -721,7 +721,7 @@ public:
 
 private:
   template <bool Dequeue>
-  inline NodeRef enqueue_(NodeRef node) {
+  NodeRef enqueue_(NodeRef node) {
     Guard guard(m_lock);
 
     Fn item(node->Node::item());
@@ -849,7 +849,7 @@ private:
     return nullptr;
   }
   template <bool Dequeue>
-  inline typename ZuIfT<Dequeue, NodeRef>::T enqueue__(NodeRef node,
+  typename ZuIfT<Dequeue, NodeRef>::T enqueue__(NodeRef node,
       Key end, unsigned, unsigned bytes, unsigned) {
     m_headKey = end;
     if (end > m_tailKey) m_tailKey = end;
@@ -860,7 +860,7 @@ private:
     return node;
   }
   template <bool Dequeue>
-  inline typename ZuIfT<!Dequeue, NodeRef>::T enqueue__(NodeRef node,
+  typename ZuIfT<!Dequeue, NodeRef>::T enqueue__(NodeRef node,
       Key end, unsigned length, unsigned bytes, unsigned addSeqNo) {
     Node *ptr;
     new (&ptr) NodeRef(ZuMv(node));
@@ -873,7 +873,7 @@ private:
     return nullptr;
   }
 
-  inline NodeRef dequeue_() {
+  NodeRef dequeue_() {
   loop:
     NodeRef node = m_head[0];
     if (!node) return nullptr;
@@ -894,12 +894,12 @@ private:
     return node;
   }
 public:
-  inline NodeRef dequeue() {
+  NodeRef dequeue() {
     Guard guard(m_lock);
     return dequeue_();
   }
   // dequeues up to, but not including, item containing key
-  inline NodeRef dequeue(Key key) {
+  NodeRef dequeue(Key key) {
     Guard guard(m_lock);
     if (m_headKey >= key) return nullptr;
     return dequeue_();
@@ -907,7 +907,7 @@ public:
 
   // shift, unlike dequeue, ignores gaps
 private:
-  inline NodeRef shift_() {
+  NodeRef shift_() {
   loop:
     NodeRef node = m_head[0];
     if (!node) return nullptr;
@@ -925,12 +925,12 @@ private:
     return node;
   }
 public:
-  inline NodeRef shift() {
+  NodeRef shift() {
     Guard guard(m_lock);
     return shift_();
   }
   // shifts up to but not including item containing key
-  inline NodeRef shift(Key key) {
+  NodeRef shift(Key key) {
     Guard guard(m_lock);
     if (m_headKey >= key) return nullptr;
     if (NodeRef node = shift_()) return node;
@@ -938,7 +938,7 @@ public:
   }
 
   // aborts an item (leaving a gap in the queue)
-  inline NodeRef abort(Key key) {
+  NodeRef abort(Key key) {
     Guard guard(m_lock);
 
     Node *next[Levels];
@@ -962,7 +962,7 @@ public:
   }
 
   // find item containing key
-  inline NodeRef find(Key key) const {
+  NodeRef find(Key key) const {
     ReadGuard guard(m_lock);
 
     Node *next[Levels];
@@ -1101,12 +1101,12 @@ public:
       }
   }
   struct PrintFlags : public ZuPrintable {
-    inline PrintFlags(unsigned v_) : v(v_) { }
+    PrintFlags(unsigned v_) : v(v_) { }
     PrintFlags(const PrintFlags &) = default;
     PrintFlags &operator =(const PrintFlags &) = default;
     PrintFlags(PrintFlags &&) = default;
     PrintFlags &operator =(PrintFlags &&) = default;
-    template <typename S> inline void print(S &s) const { printFlags(s, v); }
+    template <typename S> void print(S &s) const { printFlags(s, v); }
     unsigned v;
   };
 
@@ -1200,7 +1200,7 @@ public:
     return m_flags;
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     ReadGuard guard(m_lock);
     s << "gap: (" << m_gap.key() << " +" << m_gap.length()
       << ")  flags: " << PrintFlags{m_flags};
@@ -1316,12 +1316,12 @@ public:
       }
   }
   struct PrintFlags : public ZuPrintable {
-    inline PrintFlags(unsigned v_) : v(v_) { }
+    PrintFlags(unsigned v_) : v(v_) { }
     PrintFlags(const PrintFlags &) = default;
     PrintFlags &operator =(const PrintFlags &) = default;
     PrintFlags(PrintFlags &&) = default;
     PrintFlags &operator =(PrintFlags &&) = default;
-    template <typename S> inline void print(S &s) const { printFlags(s, v); }
+    template <typename S> void print(S &s) const { printFlags(s, v); }
     unsigned v;
   };
 
@@ -1716,7 +1716,7 @@ public:
     return m_flags;
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     ReadGuard guard(m_lock);
     s << "gap: (" << m_gap.key() << " +" << m_gap.length()
       << ")  flags: " << PrintFlags{m_flags}

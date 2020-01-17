@@ -40,20 +40,20 @@ typedef ZuPair<uint32_t, unsigned> Msg_Data;
 struct Msg_ : public Msg_Data {
   using Msg_Data::Msg_Data;
   using Msg_Data::operator =;
-  inline Msg_(const Msg_Data &v) : Msg_Data(v) { }
-  inline Msg_(Msg_Data &&v) : Msg_Data(ZuMv(v)) { }
-  inline uint32_t key() const { return p<0>(); }
-  inline unsigned length() const { return p<1>(); }
-  inline unsigned clipHead(unsigned length) {
+  Msg_(const Msg_Data &v) : Msg_Data(v) { }
+  Msg_(Msg_Data &&v) : Msg_Data(ZuMv(v)) { }
+  uint32_t key() const { return p<0>(); }
+  unsigned length() const { return p<1>(); }
+  unsigned clipHead(unsigned length) {
     p<0>() += length;
     return p<1>() -= length;
   }
-  inline unsigned clipTail(unsigned length) {
+  unsigned clipTail(unsigned length) {
     return p<1>() -= length;
   }
   template <typename I>
-  inline void write(const I &i) { }
-  inline unsigned bytes() const { return 1; }
+  void write(const I &i) { }
+  unsigned bytes() const { return 1; }
 };
 
 typedef ZmPQueue<Msg_, ZmPQueueNodeIsItem<true> > Queue;
@@ -109,7 +109,7 @@ public:
 
   /* -- receiver callback interface -- */
 
-  inline Queue *rxQueue() { return &m_queue; }
+  Queue *rxQueue() { return &m_queue; }
 
   // process message
   void process(Msg *msg) {

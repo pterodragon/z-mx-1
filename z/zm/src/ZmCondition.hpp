@@ -84,7 +84,7 @@ friend void ZmCondition_wait_(ZmCondition_ &, ZmPLock_ &);
 friend int ZmCondition_timedwait_(ZmCondition_ &, ZmPLock_ &, const ZmTime &);
 friend void ZmCondition_signal_(ZmCondition_ &);
 friend void ZmCondition_broadcast_(ZmCondition_ &);
-  inline ZmCondition_Thread() : m_waiting(false), m_next(0), m_prev(0) { }
+  ZmCondition_Thread() : m_waiting(false), m_next(0), m_prev(0) { }
   ZmSemaphore		m_sem;
   bool			m_waiting;
   ZmCondition_Thread	*m_next;
@@ -97,7 +97,7 @@ friend void ZmCondition_wait_(ZmCondition_ &, ZmPLock_ &);
 friend int ZmCondition_timedwait_(ZmCondition_ &, ZmPLock_ &, const ZmTime &);
 friend void ZmCondition_signal_(ZmCondition_ &);
 friend void ZmCondition_broadcast_(ZmCondition_ &);
-  inline ZmCondition_() : m_head(0), m_tail(0) { }
+  ZmCondition_() : m_head(0), m_tail(0) { }
   ZmPLock		m_lock;
   ZmCondition_Thread	*m_head;
   ZmCondition_Thread	*m_tail;
@@ -199,23 +199,23 @@ template <class Lock> class ZmCondition {
   typedef typename Lock::Wait Wait;
 
 public:
-  inline ZmCondition(Lock &lock) : m_lock(lock) { ZmCondition_init(m_cond); }
-  inline ~ZmCondition() { ZmCondition_final(m_cond); }
+  ZuInline ZmCondition(Lock &lock) : m_lock(lock) { ZmCondition_init(m_cond); }
+  ZuInline ~ZmCondition() { ZmCondition_final(m_cond); }
 
-  inline void wait() {
+  void wait() {
     Wait wait(m_lock.wait());
 
     ZmCondition_wait(m_cond, m_lock.m_lock);
   }
-  inline int timedWait(ZmTime timeout) {
+  int timedWait(ZmTime timeout) {
     Wait wait(m_lock.wait());
 
     return ZmCondition_timedwait(m_cond, m_lock.m_lock, timeout);
   }
-  inline void signal() { ZmCondition_signal(m_cond); }
-  inline void broadcast() { ZmCondition_broadcast(m_cond); }
+  void signal() { ZmCondition_signal(m_cond); }
+  void broadcast() { ZmCondition_broadcast(m_cond); }
 
-  inline Lock &lock() { return(m_lock); }
+  Lock &lock() { return(m_lock); }
 
 private:
   Lock		&m_lock;

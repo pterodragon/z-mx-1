@@ -40,7 +40,7 @@
 
 class ZvAPI ZvInvalidMulticastIP : public ZvError {
 public:
-  inline ZvInvalidMulticastIP(ZuString s) : m_addr(s) { }
+  ZvInvalidMulticastIP(ZuString s) : m_addr(s) { }
 
   void print_(ZmStream &s) const {
     s << "invalid multicast IP \"" << m_addr << '"';
@@ -51,20 +51,20 @@ private:
 };
 
 struct ZvCxnOptions : public ZiCxnOptions {
-  inline ZvCxnOptions() : ZiCxnOptions() { }
+  ZvCxnOptions() : ZiCxnOptions() { }
 
-  inline ZvCxnOptions(const ZiCxnOptions &p) : ZiCxnOptions(p) { }
-  inline ZvCxnOptions &operator =(const ZiCxnOptions &p) {
+  ZvCxnOptions(const ZiCxnOptions &p) : ZiCxnOptions(p) { }
+  ZvCxnOptions &operator =(const ZiCxnOptions &p) {
     ZiCxnOptions::operator =(p);
     return *this;
   }
 
-  inline ZvCxnOptions(ZvCf *cf) : ZiCxnOptions() { init(cf); }
+  ZvCxnOptions(ZvCf *cf) : ZiCxnOptions() { init(cf); }
 
   inline ZvCxnOptions(ZvCf *cf, const ZiCxnOptions &deflt) :
       ZiCxnOptions(deflt) { init(cf); }
 
-  inline void init(ZvCf *cf) {
+  void init(ZvCf *cf) {
     if (!cf) return;
 
     flags(cf->getFlags<ZiCxnFlags::Flags>("options", false, 0));
@@ -96,20 +96,20 @@ struct ZvCxnOptions : public ZiCxnOptions {
 };
 
 struct ZvMxParams : public ZiMxParams {
-  inline ZvMxParams() : ZiMxParams() { }
+  ZvMxParams() : ZiMxParams() { }
 
   using ZiMxParams::ZiMxParams;
 
-  inline ZvMxParams(ZvCf *cf) { init(cf); }
+  ZvMxParams(ZvCf *cf) { init(cf); }
 
   inline ZvMxParams(ZvCf *cf, ZiMxParams &&deflt) :
     ZiMxParams(ZuMv(deflt)) { init(cf); }
 
-  inline ZvSchedParams &scheduler() {
+  ZvSchedParams &scheduler() {
     return static_cast<ZvSchedParams &>(ZiMxParams::scheduler());
   }
 
-  inline void init(ZvCf *cf) {
+  void init(ZvCf *cf) {
     if (!cf) return;
 
     scheduler().init(cf);

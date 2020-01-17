@@ -97,7 +97,7 @@ protected:
   int		m_left;		// number of values left before reload needed
 
 public:
-  inline ZmRandom() { seed(); } // auto-initialize with /dev/urandom or time
+  ZmRandom() { seed(); } // auto-initialize with /dev/urandom or time
   inline ZmRandom(uint32_t oneSeed ) // initialize with a simple uint32
     { seed(oneSeed); }
   inline ZmRandom(uint32_t *const bigSeed, int seedLength = N ) // or array
@@ -120,7 +120,7 @@ public:
     { return (double(randInt()) + 0.5) * (1.0/4294967296.0); }
   inline double randDblExc(double n)		// real number in (0,n)
     { return (double(randInt()) + 0.5) * (n/4294967296.0); }
-  inline uint32_t randInt() {			// integer in [0,2^32-1]
+  uint32_t randInt() {			// integer in [0,2^32-1]
     // Pull a 32-bit integer from the generator state
     // Every other access function simply transforms the numbers extracted here
 
@@ -135,7 +135,7 @@ public:
     s1 ^= (s1 << 15) & 0xefc60000;
     return s1 ^ (s1 >> 18);
   }
-  inline uint32_t randInt(uint32_t n) {		// integer in [0,n] n < 2^32
+  uint32_t randInt(uint32_t n) {		// integer in [0,n] n < 2^32
     // Find which bits are used in n
     // Optimized by Magnus Jonsson (magnus@smartelectronix.com)
     uint32_t used = n;
@@ -156,14 +156,14 @@ public:
   }
 
   // Access to 53-bit random numbers (capacity of IEEE double precision)
-  inline double rand53() {			// real number in [0,1)
+  double rand53() {			// real number in [0,1)
     uint32_t a = randInt() >> 5, b = randInt() >> 6;
 
     return (a * 67108864.0 + b) * (1.0/9007199254740992.0);  // by Isaku Wada
   }
 
   // Access to nonuniform random number distributions
-  inline double randNorm(double mean = 0.0, double variance = 0.0) {
+  double randNorm(double mean = 0.0, double variance = 0.0) {
     // Return a real number from a normal (Gaussian) distribution with given
     // mean and variance by Box-Muller method
     double r = sqrt(-2.0 * log(1.0-randDblExc())) * variance;
@@ -262,9 +262,9 @@ protected:
 
     m_left = N, m_next = m_state;
   }
-  inline uint32_t hiBit(const uint32_t &u) const { return u & 0x80000000; }
-  inline uint32_t loBit(const uint32_t &u) const { return u & 0x00000001; }
-  inline uint32_t loBits(const uint32_t &u) const { return u & 0x7fffffff; }
+  uint32_t hiBit(const uint32_t &u) const { return u & 0x80000000; }
+  uint32_t loBit(const uint32_t &u) const { return u & 0x00000001; }
+  uint32_t loBits(const uint32_t &u) const { return u & 0x7fffffff; }
   inline uint32_t mixBits(const uint32_t &u, const uint32_t &v) const
     { return hiBit(u) | loBits(v); }
   inline uint32_t twist(
@@ -285,34 +285,34 @@ friend struct ZmSpecificCtor<ZmRand, true>;
   static ZmRandom *instance();
 
 public:
-  inline static double rand()			// real number in [0,1]
+  ZuInline static double rand()			// real number in [0,1]
     { return instance()->rand(); }
-  inline static double rand(double n)		// real number in [0,n]
+  ZuInline static double rand(double n)		// real number in [0,n]
     { return instance()->rand(n); }
-  inline static double randExc()		// real number in [0,1)
+  ZuInline static double randExc()		// real number in [0,1)
     { return instance()->randExc(); }
-  inline static double randExc(double n)	// real number in [0,n)
+  ZuInline static double randExc(double n)	// real number in [0,n)
     { return instance()->randExc(n); }
-  inline static double randDblExc()		// real number in (0,1)
+  ZuInline static double randDblExc()		// real number in (0,1)
     { return instance()->randDblExc(); }
-  inline static double randDblExc(double n)	// real number in (0,n)
+  ZuInline static double randDblExc(double n)	// real number in (0,n)
     { return instance()->randDblExc(n); }
-  inline static uint32_t randInt()		// integer in [0,2^32-1]
+  ZuInline static uint32_t randInt()		// integer in [0,2^32-1]
     { return instance()->randInt(); }
-  inline static uint32_t randInt(uint32_t n)	// integer in [0,n] n < 2^32
+  ZuInline static uint32_t randInt(uint32_t n)	// integer in [0,n] n < 2^32
     { return instance()->randInt(n); }
 
-  inline static double rand53()			// real number in [0,1)
+  ZuInline static double rand53()			// real number in [0,1)
     { return instance()->rand53(); }
 
-  inline static double randNorm(double mean = 0.0, double variance = 0.0)
+  ZuInline static double randNorm(double mean = 0.0, double variance = 0.0)
     { return instance()->randNorm(mean, variance); }
 
-  inline static void seed()
+  static void seed()
     { instance()->seed(); }
-  inline static void seed(uint32_t oneSeed)
+  static void seed(uint32_t oneSeed)
     { instance()->seed(oneSeed); }
-  inline static void seed(uint32_t *const bigSeed, int seedLength = ZmRandom::N)
+  static void seed(uint32_t *const bigSeed, int seedLength = ZmRandom::N)
     { instance()->seed(bigSeed, seedLength); }
 };
 

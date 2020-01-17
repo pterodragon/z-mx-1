@@ -97,7 +97,7 @@ private:
 };
 
 struct ZvIOMsg_HeapID {
-  inline static const char *id() { return "ZvIOMsg"; }
+  static const char *id() { return "ZvIOMsg"; }
 };
 typedef ZmPQueue<ZvIOQItem,
 	  ZmPQueueNodeIsItem<true,
@@ -304,15 +304,15 @@ public:
       }
   }
 
-  inline void ready() { // ready to send immediately
+  void ready() { // ready to send immediately
     Guard guard(m_lock);
     ready_(ZmTime(0, 1));
   }
-  inline void ready(ZmTime next) { // ready to send at time next
+  void ready(ZmTime next) { // ready to send at time next
     Guard guard(m_lock);
     ready_(next);
   }
-  inline void unready() { // not ready to send
+  void unready() { // not ready to send
     Guard guard(m_lock);
     unready_();
   }
@@ -334,7 +334,7 @@ private:
 template <class Impl, class Lock_ = ZmNoLock>
 class ZvIOQueueTxPool : public ZvIOQueueTx<Impl, Lock_> {
   struct Queues_HeapID {
-    inline static const char *id() { return "ZvIOQueueTxPool.Queues"; }
+    static const char *id() { return "ZvIOQueueTxPool.Queues"; }
   };
 
   typedef ZvIOQueue::Gap Gap;
@@ -373,7 +373,7 @@ public:
     return nullptr;
   }
 
-  inline ZmRef<Tx> next_() {
+  ZmRef<Tx> next_() {
     Guard guard(this->lock());
     return m_queues.minimumVal();
   }

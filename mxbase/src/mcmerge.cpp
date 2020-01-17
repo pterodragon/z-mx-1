@@ -49,7 +49,7 @@ public:
   enum { MsgSize = 1472 };
 
   template <typename Path>
-  inline File(const Path &path) : m_path(path) { }
+  File(const Path &path) : m_path(path) { }
 
   void open() {
     ZeError e;

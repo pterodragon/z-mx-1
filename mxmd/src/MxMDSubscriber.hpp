@@ -69,7 +69,7 @@ public:
 
 private:
   struct ChannelIDAccessor : public ZuAccessor<MxMDChannel, MxID> {
-    inline static MxID value(const MxMDChannel &channel) {
+    static MxID value(const MxMDChannel &channel) {
       return channel.id;
     }
   };
@@ -131,7 +131,7 @@ friend class TCP;
 
     ZuInline MxMDSubLink *link() const { return m_link; }
 
-    inline unsigned state() const { return m_state.load_(); }
+    unsigned state() const { return m_state.load_(); }
 
     void connected(ZiIOContext &);
     void close();
@@ -168,7 +168,7 @@ friend class UDP;
 
     ZuInline MxMDSubLink *link() const { return m_link; }
 
-    inline unsigned state() const { return m_state.load_(); }
+    unsigned state() const { return m_state.load_(); }
 
     void connected(ZiIOContext &);
     void close();

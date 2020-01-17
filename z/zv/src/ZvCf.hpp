@@ -96,7 +96,7 @@ public:
   typedef ZuBox<uint64_t> Flags64;
 
 private:
-  inline static ZtString fullKey(ZvCf *cf, ZtString key) {
+  static ZtString fullKey(ZvCf *cf, ZtString key) {
     while (ZvCf *parent = cf->parent()) {
       ZvCf::Iterator i(parent);
       ZuString key_;
@@ -202,7 +202,7 @@ public:
   // thrown by fromFile() on error
   class ZvAPI File2Big : public ZvError {
   public:
-    inline File2Big(ZuString fileName) : m_fileName(fileName) { }
+    File2Big(ZuString fileName) : m_fileName(fileName) { }
     void print_(ZmStream &s) const {
       s << '"' << m_fileName << " file too big";
     };
@@ -252,7 +252,7 @@ public:
   // thrown by fromEnv() on error
   class ZvAPI EnvSyntax : public ZvError {
   public:
-    inline EnvSyntax(int pos, char ch) : m_pos(pos), m_ch(ch) { }
+    EnvSyntax(int pos, char ch) : m_pos(pos), m_ch(ch) { }
     void print_(ZmStream &s) const {
       s << "syntax error at position " << ZuBoxed(m_pos) << " near '";
       if (m_ch >= 0x20 && m_ch < 0x7f)
@@ -275,14 +275,14 @@ public:
 
   void print(ZmStream &s, ZtString prefix) const;
 
-  inline void print(ZmStream &s) const { print(s, ""); }
-  template <typename S> inline void print(S &s_) const {
+  void print(ZmStream &s) const { print(s, ""); }
+  template <typename S> void print(S &s_) const {
     ZmStream s(s_);
     print(s, "");
   }
 
   struct Prefixed {
-    inline void print(ZmStream &s) const {
+    void print(ZmStream &s) const {
       cf.print(s, ZuMv(prefix));
     }
     template <typename S> void print(S &s_) const {
@@ -293,13 +293,13 @@ public:
     mutable ZtString	prefix;
   };
   template <typename Prefix>
-  inline Prefixed prefixed(Prefix &&prefix) {
+  Prefixed prefixed(Prefix &&prefix) {
     return Prefixed{*this, ZuFwd<Prefix>(prefix)};
   }
 
   // toFile() will throw ZeError on I/O error
   template <typename FileName>
-  inline void toFile(const FileName &fileName) {
+  void toFile(const FileName &fileName) {
     ZiFile file;
     ZeError e;
     if (file.open(fileName, ZiFile::Create | ZiFile::Truncate, 0777, &e) < 0)
@@ -316,7 +316,7 @@ public:
   public:
     inline Required(ZvCf *cf, ZuString key) :
 	m_key(fullKey(cf, key)), m_bt(1) { }
-    inline const ZtString &key() const { return m_key; }
+    const ZtString &key() const { return m_key; }
     void print_(ZmStream &s) const {
       s << '"' << m_key << "\" missing at:\n" << m_bt;
     }
@@ -332,10 +332,10 @@ public:
     inline Range_(ZtString key, T minimum, T maximum, T value) :
 	m_key(ZuMv(key)),
 	m_minimum(minimum), m_maximum(maximum), m_value(value) { }
-    inline const ZtString &key() const { return m_key; }
-    inline T minimum() const { return m_minimum; }
-    inline T maximum() const { return m_maximum; }
-    inline T value() const { return m_value; }
+    const ZtString &key() const { return m_key; }
+    T minimum() const { return m_minimum; }
+    T maximum() const { return m_maximum; }
+    T value() const { return m_value; }
 
   protected:
     ZtString	m_key;
@@ -420,7 +420,7 @@ public:
 
   void merge(ZvCf *cf);
 
-  inline static Int toInt(ZvCf *cf, ZuString key, ZuString value,
+  static Int toInt(ZvCf *cf, ZuString key, ZuString value,
       Int minimum, Int maximum, Int def = Int()) {
     if (!value) return def;
     Int i(value);
@@ -429,7 +429,7 @@ public:
     return i;
   }
 
-  inline static Int64 toInt64(ZvCf *cf, ZuString key, ZuString value,
+  static Int64 toInt64(ZvCf *cf, ZuString key, ZuString value,
       Int64 minimum, Int64 maximum, Int64 def = Int64()) {
     if (!value) return def;
     Int64 i(value);
@@ -438,7 +438,7 @@ public:
     return i;
   }
 
-  inline static Double toDbl(ZvCf *cf, ZuString key, ZuString value,
+  static Double toDbl(ZvCf *cf, ZuString key, ZuString value,
       Double minimum, Double maximum, Double def = Double()) {
     if (!value) return def;
     ZuBox<Double> d(value);
@@ -466,25 +466,25 @@ public:
   }
 
   template <typename Map, typename Key, typename Value>
-  inline static Enum toEnum(
+  static Enum toEnum(
       const Key &key, const Value &value, Enum def = Enum()) {
     return ZvEnum<Map>::instance()->s2v(key, value, def);
   }
 
   template <typename Map, typename Key>
-  inline Enum getEnum(const Key &key, bool required, Enum def = Enum()) {
+  Enum getEnum(const Key &key, bool required, Enum def = Enum()) {
     return toEnum<Map>(key, get(key, required), def);
   }
 
   template <typename Map, typename Key, typename Value>
-  inline static Flags toFlags(
+  static Flags toFlags(
       const Key &key, const Value &value, Flags def = 0) {
     if (!value) return def;
     return ZvFlags<Map>::instance()->template scan<Flags>(key, value);
   }
 
   template <typename Map, typename Key, typename Value>
-  inline static Flags64 toFlags64(
+  static Flags64 toFlags64(
       const Key &key, const Value &value, Flags64 def = 0) {
     if (!value) return def;
     return ZvFlags<Map>::instance()->template scan<Flags64>(key, value);
@@ -510,21 +510,21 @@ private:
 
   typedef ZmRef<Node> NodeRef;
 
-  struct HeapID { inline static const char *id() { return "ZvCf"; } };
+  struct HeapID { static const char *id() { return "ZvCf"; } };
 
   typedef ZmRBTree<ZtString,
 	    ZmRBTreeVal<NodeRef,
 	      ZmRBTreeHeapID<HeapID> > > Tree;
 
 public:
-  inline unsigned count() const { return m_tree.count(); }
-  inline ZmRef<ZvCf> parent() const { return m_parent; }
+  unsigned count() const { return m_tree.count(); }
+  ZmRef<ZvCf> parent() const { return m_parent; }
 
   class Iterator;
 friend class Iterator;
   class ZvAPI Iterator {
   public:
-    inline Iterator(ZvCf *cf) : m_cf(cf), m_iterator(cf->m_tree) { }
+    Iterator(ZvCf *cf) : m_cf(cf), m_iterator(cf->m_tree) { }
     inline Iterator(ZvCf *cf, ZuString prefix) :
 	m_iterator(cf->m_tree, prefix) { }
     ~Iterator();
@@ -546,7 +546,7 @@ friend class Iterator;
       return toDbl(m_cf, key, get(key), minimum, maximum, def);
     }
     template <typename Map>
-    inline Enum getEnum(ZuString &key, Enum def = Enum()) {
+    Enum getEnum(ZuString &key, Enum def = Enum()) {
       return toEnum<Map>(key, get(key), def);
     }
 

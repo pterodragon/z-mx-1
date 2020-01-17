@@ -68,7 +68,7 @@ public:
     b.m_map = 0;
     return *this;
   }
-  inline ~ZmBitmap() { if (m_map) hwloc_bitmap_free(m_map); }
+  ~ZmBitmap() { if (m_map) hwloc_bitmap_free(m_map); }
 
 private:
   ZuInline void lazy() const {
@@ -77,15 +77,15 @@ private:
   }
 
 public:
-  inline bool operator ==(const ZmBitmap &b) const {
+  bool operator ==(const ZmBitmap &b) const {
     if (this == &b || m_map == b.m_map) return true;
     if (!m_map || !b.m_map) return false;
     return hwloc_bitmap_isequal(m_map, b.m_map);
   }
 
-  inline bool operator !=(const ZmBitmap &b) { return !operator ==(b); }
+  bool operator !=(const ZmBitmap &b) { return !operator ==(b); }
   
-  inline int cmp(const ZmBitmap &b) const {
+  int cmp(const ZmBitmap &b) const {
     if (this == &b || m_map == b.m_map) return 0;
     if (!m_map) return -1;
     if (!b.m_map) return 1;
@@ -94,112 +94,112 @@ public:
 
   typedef ZuPair<unsigned, unsigned> Range;
 
-  inline ZmBitmap &set(unsigned i) {
+  ZmBitmap &set(unsigned i) {
     lazy();
     hwloc_bitmap_set(m_map, i);
     return *this;
   }
-  inline ZmBitmap &clr(unsigned i) {
+  ZmBitmap &clr(unsigned i) {
     lazy();
     hwloc_bitmap_clr(m_map, i);
     return *this;
   }
   template <typename T>
-  inline typename ZuSame<Range, T, ZmBitmap &>::T set(const T &v) {
+  typename ZuSame<Range, T, ZmBitmap &>::T set(const T &v) {
     lazy();
     hwloc_bitmap_set_range(m_map, v.p1(), v.p2());
     return *this;
   }
   template <typename T>
-  inline typename ZuSame<Range, T, ZmBitmap &>::T clr(const T &v) {
+  typename ZuSame<Range, T, ZmBitmap &>::T clr(const T &v) {
     lazy();
     hwloc_bitmap_clr_range(m_map, v.p1(), v.p2());
     return *this;
   }
 
-  inline bool operator &&(unsigned i) const {
+  bool operator &&(unsigned i) const {
     if (!m_map) return false;
     return hwloc_bitmap_isset(m_map, i);
   }
-  inline bool operator &&(const ZmBitmap &b) const {
+  bool operator &&(const ZmBitmap &b) const {
     if (!m_map) return !b.m_map;
     return hwloc_bitmap_isincluded(b.m_map, m_map);
   }
-  inline bool operator ||(const ZmBitmap &b) const {
+  bool operator ||(const ZmBitmap &b) const {
     if (!m_map) return false;
     return hwloc_bitmap_intersects(b.m_map, m_map);
   }
 
-  inline ZmBitmap operator |(const ZmBitmap &b) const {
+  ZmBitmap operator |(const ZmBitmap &b) const {
     lazy(); b.lazy();
     ZmBitmap r;
     hwloc_bitmap_or(r.m_map, m_map, b.m_map);
     return r;
   }
-  inline ZmBitmap operator &(const ZmBitmap &b) const {
+  ZmBitmap operator &(const ZmBitmap &b) const {
     lazy(); b.lazy();
     ZmBitmap r;
     hwloc_bitmap_and(r.m_map, m_map, b.m_map);
     return r;
   }
-  inline ZmBitmap operator ^(const ZmBitmap &b) const {
+  ZmBitmap operator ^(const ZmBitmap &b) const {
     lazy(); b.lazy();
     ZmBitmap r;
     hwloc_bitmap_xor(r.m_map, m_map, b.m_map);
     return r;
   }
-  inline ZmBitmap operator ~() const {
+  ZmBitmap operator ~() const {
     lazy();
     ZmBitmap r;
     hwloc_bitmap_not(r.m_map, m_map);
     return r;
   }
 
-  inline ZmBitmap &operator |=(const ZmBitmap &b) {
+  ZmBitmap &operator |=(const ZmBitmap &b) {
     lazy(); b.lazy();
     hwloc_bitmap_or(m_map, m_map, b.m_map);
     return *this;
   }
-  inline ZmBitmap &operator &=(const ZmBitmap &b) {
+  ZmBitmap &operator &=(const ZmBitmap &b) {
     lazy(); b.lazy();
     hwloc_bitmap_and(m_map, m_map, b.m_map);
     return *this;
   }
-  inline ZmBitmap &operator ^=(const ZmBitmap &b) {
+  ZmBitmap &operator ^=(const ZmBitmap &b) {
     lazy(); b.lazy();
     hwloc_bitmap_xor(m_map, m_map, b.m_map);
     return *this;
   }
 
-  inline ZmBitmap &zero() {
+  ZmBitmap &zero() {
     lazy();
     hwloc_bitmap_zero(m_map);
     return *this;
   }
-  inline ZmBitmap &fill() {
+  ZmBitmap &fill() {
     lazy();
     hwloc_bitmap_fill(m_map);
     return *this;
   }
 
-  inline bool operator !() const {
+  bool operator !() const {
     return !m_map || hwloc_bitmap_iszero(m_map);
   }
 
-  inline bool full() const {
+  bool full() const {
     return m_map ? hwloc_bitmap_isfull(m_map) : false;
   }
 
-  inline int first() const {
+  int first() const {
     return !m_map ? -1 : hwloc_bitmap_first(m_map);
   }
-  inline int next(int i) const {
+  int next(int i) const {
     return !m_map ? -1 : hwloc_bitmap_next(m_map, i);
   }
-  inline int last() const {
+  int last() const {
     return !m_map ? -1 : hwloc_bitmap_last(m_map);
   }
-  inline int count() const {
+  int count() const {
     return !m_map ? 0 : hwloc_bitmap_weight(m_map);
   }
 
@@ -207,7 +207,7 @@ public:
   public:
     inline Iterator(const ZmBitmap &b) :
 	m_b(b), m_i(b.count() < 0 ? -1 : b.first()) { }
-    inline int iterate() {
+    int iterate() {
       int i = m_i;
       if (i >= 0) m_i = m_b.next(i);
       return i;
@@ -216,20 +216,20 @@ public:
     const ZmBitmap	&m_b;
     int			m_i;
   };
-  inline Iterator iterator() const { return Iterator(*this); }
+  Iterator iterator() const { return Iterator(*this); }
 
   // hwloc_bitmap_t is a pointer
-  inline operator hwloc_bitmap_t() {
+  operator hwloc_bitmap_t() {
     lazy();
     return m_map;
   }
-  inline operator const hwloc_bitmap_t() const {
+  operator const hwloc_bitmap_t() const {
     return const_cast<ZmBitmap *>(this)->operator hwloc_bitmap_t();
   }
 
   inline ZmBitmap(uint64_t v) :
       m_map(hwloc_bitmap_alloc()) { hwloc_bitmap_from_ulong(m_map, v); }
-  inline uint64_t uint64() const {
+  uint64_t uint64() const {
     if (ZuLikely(!m_map)) return 0;
     return hwloc_bitmap_to_ulong(m_map);
   }
@@ -238,7 +238,7 @@ public:
     hwloc_bitmap_from_ith_ulong(m_map, 0, (uint64_t)v);
     hwloc_bitmap_from_ith_ulong(m_map, 1, (uint64_t)(v >> 64U));
   }
-  inline uint128_t uint128() const {
+  uint128_t uint128() const {
     if (ZuLikely(!m_map)) return 0;
     return (uint128_t)hwloc_bitmap_to_ith_ulong(m_map, 0) |
       ((uint128_t)hwloc_bitmap_to_ith_ulong(m_map, 1) << 64U);
@@ -247,12 +247,12 @@ public:
   inline ZmBitmap(const S &s, typename ZuIsCharString<S>::T *_ = 0) :
       m_map(hwloc_bitmap_alloc()) { scan(s); }
   template <typename S>
-  inline typename ZuIsCharString<S, ZmBitmap &>::T operator =(const S &s) {
+  typename ZuIsCharString<S, ZmBitmap &>::T operator =(const S &s) {
     if (m_map) hwloc_bitmap_zero(m_map);
     scan(s);
     return *this;
   }
-  inline unsigned scan(ZuString s) {
+  unsigned scan(ZuString s) {
     lazy();
     const char *data = s.data();
     unsigned length = s.length(), offset = 0;
@@ -276,7 +276,7 @@ public:
     }
     return offset;
   }
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     if (!m_map || hwloc_bitmap_iszero(m_map)) return;
     ZmBitmap tmp = *this;
     ZuBox<int> begin = hwloc_bitmap_first(m_map);

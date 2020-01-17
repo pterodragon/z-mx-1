@@ -58,7 +58,7 @@ public:
   using AbortFn = ZmFn<ZvIOMsg *>;
 
   struct IDAccessor : public ZuAccessor<ZvAnyTx *, ZuID> {
-    inline static ZuID value(const ZvAnyTx *t) { return t->id(); }
+    static ZuID value(const ZvAnyTx *t) { return t->id(); }
   };
 
   ZuInline ZvEngine *engine() const { return m_engine; }
@@ -82,7 +82,7 @@ class ZvAPI ZvAnyTxPool : public ZvAnyTx {
   ZvAnyTxPool &operator =(const ZvAnyTxPool &) = delete;
 
 protected:
-  inline ZvAnyTxPool(ZuID id) : ZvAnyTx(id) { }
+  ZvAnyTxPool(ZuID id) : ZvAnyTx(id) { }
 
 public:
   virtual ZvIOQueue *txQueue() = 0;
@@ -109,17 +109,17 @@ public:
 
   void telemetry(Telemetry &data) const;
 
-  inline void up() { up_(true); }
-  inline void down() { down_(true); }
+  void up() { up_(true); }
+  void down() { down_(true); }
 
   virtual void update(ZvCf *cf) = 0;
   virtual void reset(ZvSeqNo rxSeqNo, ZvSeqNo txSeqNo) = 0;
 
-  inline ZvSeqNo rxSeqNo() const {
+  ZvSeqNo rxSeqNo() const {
     if (const ZvIOQueue *queue = rxQueue()) return queue->head();
     return 0;
   }
-  inline ZvSeqNo txSeqNo() const {
+  ZvSeqNo txSeqNo() const {
     if (const ZvIOQueue *queue = txQueue()) return queue->tail();
     return 0;
   }
@@ -230,7 +230,7 @@ public:
   using App = ZvEngineApp;
   using QueueFn = ZvTelemetry::QueueFn;
 
-  inline ZvEngine() : m_state(ZvEngineState::Stopped) { }
+  ZvEngine() : m_state(ZvEngineState::Stopped) { }
 
   void init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf) {
     m_mgr = mgr,
@@ -287,7 +287,7 @@ public:
     { mgr()->delQueue(type, id); }
 
   // generic O.S. error logging
-  inline auto osError(const char *op, int result, ZeError e) {
+  auto osError(const char *op, int result, ZeError e) {
     return [id = m_id, op, result, e](const ZeEvent &, ZmStream &s) {
       s << id << " - " << op << " - " << Zi::resultName(result) << " - " << e;
     };
@@ -452,9 +452,9 @@ public:
   using Gap = ZvIOQueue::Gap;
   using AbortFn = ZvAnyTx::AbortFn;
 
-  inline ZvTx(ZuID id) : Base(id) { }
+  ZvTx(ZuID id) : Base(id) { }
   
-  inline void init(ZvEngine *engine) { Base::init(engine); }
+  void init(ZvEngine *engine) { Base::init(engine); }
 
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
@@ -498,7 +498,7 @@ public:
   using Tx_ = ZmPQTx<Impl, ZvIOQueue, ZmNoLock>;
   using Tx = ZvIOQueueTxPool<Impl>;
 
-  inline ZvTxPool(ZuID id) : Base(id) { }
+  ZvTxPool(ZuID id) : Base(id) { }
 
   const ZvIOQueue *txQueue() const { return ZvIOQueueTxPool<Impl>::txQueue(); }
   ZvIOQueue *txQueue() { return ZvIOQueueTxPool<Impl>::txQueue(); }
@@ -587,9 +587,9 @@ public:
   ZuInline const Tx *tx() const { return static_cast<const Tx *>(this); }
   ZuInline Tx *tx() { return static_cast<Tx *>(this); }
 
-  inline ZvLink(ZuID id) : Base(id) { }
+  ZvLink(ZuID id) : Base(id) { }
 
-  inline void init(ZvEngine *engine) { Base::init(engine); }
+  void init(ZvEngine *engine) { Base::init(engine); }
 
   ZuInline void scheduleDequeue() { rescheduleDequeue(); }
   ZuInline void rescheduleDequeue() { rxRun([](Rx *rx) { rx->dequeue(); }); }

@@ -71,14 +71,14 @@ template <typename T> struct Print : public ZuPrintable {
 
   // Error wrapper
   template <typename S, typename T_ = T>
-  inline typename ZuIs<T_, Error>::T print(S &s) const {
+  typename ZuIs<T_, Error>::T print(S &s) const {
     s << v.op()
       << "() - " << Zi::resultName(v.result()) << " - "
       << v.error();
   }
   // ZiCxnInfo
   template <typename S, typename T_ = T>
-  inline typename ZuIs<T_, ZiCxnInfo>::T print(S &s) const {
+  typename ZuIs<T_, ZiCxnInfo>::T print(S &s) const {
     s << (v.type() == ZiCxnType::TCPIn ? "IN  " : "OUT ") <<
       v.localIP << ':' << ZuBoxed(v.localPort) << " -> " <<
       v.remoteIP << ':' << ZuBoxed(v.remotePort);
@@ -86,7 +86,7 @@ template <typename T> struct Print : public ZuPrintable {
 
   const T &v;
 };
-template <typename T> inline Print<T> print(const T &v) { return Print<T>(v); }
+template <typename T> Print<T> print(const T &v) { return Print<T>(v); }
 
 class IOBuf : public ZmPolymorph {
 public:
@@ -95,22 +95,22 @@ public:
   inline IOBuf(Connection *connection, const ZmTime &stamp) :
     m_connection(connection), m_stamp(stamp), m_buf(BufSize) { }
 
-  inline Connection *connection() const { return m_connection; }
-  inline void connection(Connection *connection) { m_connection = connection; }
+  Connection *connection() const { return m_connection; }
+  void connection(Connection *connection) { m_connection = connection; }
 
-  inline const ZmTime &stamp() const { return m_stamp; }
-  inline ZmTime &stamp() { return m_stamp; }
+  const ZmTime &stamp() const { return m_stamp; }
+  ZmTime &stamp() { return m_stamp; }
 
-  inline const ZtArray<char> &buf() const { return m_buf; }
-  inline ZtArray<char> &buf() { return m_buf; }
+  const ZtArray<char> &buf() const { return m_buf; }
+  ZtArray<char> &buf() { return m_buf; }
 
-  inline const char *data() const { return m_buf.data(); }
-  inline char *data() { return m_buf.data(); }
-  inline unsigned length() const { return m_buf.length(); }
+  const char *data() const { return m_buf.data(); }
+  char *data() { return m_buf.data(); }
+  unsigned length() const { return m_buf.length(); }
   template <typename ...Args>
-  inline void append(Args &&... args) { m_buf.append(ZuFwd<Args>(args)...); }
+  void append(Args &&... args) { m_buf.append(ZuFwd<Args>(args)...); }
   template <typename ...Args>
-  inline void splice(Args &&... args) { m_buf.splice(ZuFwd<Args>(args)...); }
+  void splice(Args &&... args) { m_buf.splice(ZuFwd<Args>(args)...); }
 
   void recv(ZiIOContext *io);
   void recv_(ZiIOContext &io);
@@ -129,29 +129,29 @@ typedef ZmList<ZmRef<IOBuf>, ZmListLock<ZmNoLock> > IOList;
 
 class IOQueue : protected IOList {
 public:
-  inline IOQueue() : m_size(0) { }
+  IOQueue() : m_size(0) { }
 
-  inline uint32_t size() const { return m_size; }
+  uint32_t size() const { return m_size; }
 
-  inline unsigned count() const { return IOList::count(); }
+  unsigned count() const { return IOList::count(); }
 
-  inline ZmRef<IOBuf> head() const { return IOList::head(); }
-  inline ZmRef<IOBuf> tail() const { return IOList::tail(); }
+  ZmRef<IOBuf> head() const { return IOList::head(); }
+  ZmRef<IOBuf> tail() const { return IOList::tail(); }
 
-  inline void push(ZmRef<IOBuf> &&ioBuf) {
+  void push(ZmRef<IOBuf> &&ioBuf) {
     m_size += ioBuf->length();
     IOList::push(ZuMv(ioBuf));
   }
-  inline void unshift(ZmRef<IOBuf> &&ioBuf) {
+  void unshift(ZmRef<IOBuf> &&ioBuf) {
     m_size += ioBuf->length();
     IOList::unshift(ZuMv(ioBuf));
   }
-  inline ZmRef<IOBuf> pop() {
+  ZmRef<IOBuf> pop() {
     ZmRef<IOBuf> ioBuf = IOList::pop();
     if (ioBuf) m_size -= ioBuf->length();
     return ioBuf;
   }
-  inline ZmRef<IOBuf> shift() {
+  ZmRef<IOBuf> shift() {
     ZmRef<IOBuf> ioBuf = IOList::shift();
     if (ioBuf) m_size -= ioBuf->length();
     return ioBuf;
@@ -179,20 +179,20 @@ public:
       uint32_t flags, double latency, uint32_t frag,
       uint32_t pack, double delay, const ZiConnectionInfo &ci);
 
-  inline ZiMultiplex *mx() const { return m_mx; }
+  ZiMultiplex *mx() const { return m_mx; }
 
-  inline ZmRef<Proxy> proxy() const { return m_proxy; }
-  inline void proxy(Proxy *p) { m_proxy = p; }
+  ZmRef<Proxy> proxy() const { return m_proxy; }
+  void proxy(Proxy *p) { m_proxy = p; }
 
-  inline Connection *peer() const { return m_peer; }
-  inline void peer(Connection *peer) { m_peer = peer; }
+  Connection *peer() const { return m_peer; }
+  void peer(Connection *peer) { m_peer = peer; }
 
-  inline uint32_t queueSize() const { return m_queue.size(); }
-  inline uint32_t flags() const { return m_flags; }
-  inline double latency() const { return m_latency; }
-  inline uint32_t frag() const { return m_frag; }
-  inline uint32_t pack() const { return m_pack; }
-  inline double delay() const { return m_delay; }
+  uint32_t queueSize() const { return m_queue.size(); }
+  uint32_t flags() const { return m_flags; }
+  double latency() const { return m_latency; }
+  uint32_t frag() const { return m_frag; }
+  uint32_t pack() const { return m_pack; }
+  double delay() const { return m_delay; }
 
   void connected(ZiIOContext &io);
   void connected_();
@@ -253,15 +253,15 @@ friend struct SrcPortAccessor;
   Proxy(Listener *listener);
   virtual ~Proxy() { }
 
-  inline ZiMultiplex *mx() const { return m_mx; }
-  inline App *app() const { return m_app; }
+  ZiMultiplex *mx() const { return m_mx; }
+  App *app() const { return m_app; }
 
-  inline ZmRef<Listener> listener() const { return m_listener; }
+  ZmRef<Listener> listener() const { return m_listener; }
 
-  inline ZmRef<Connection> in() { return m_in; }
-  inline ZmRef<Connection> out() { return m_out; }
+  ZmRef<Connection> in() { return m_in; }
+  ZmRef<Connection> out() { return m_out; }
 
-  inline ZuString tag() const { return m_tag; }
+  ZuString tag() const { return m_tag; }
 
   void connected(Connection *connection);
   void connect2();
@@ -271,7 +271,7 @@ friend struct SrcPortAccessor;
 
 private:
   void status_(ZmStream &) const;
-  template <typename S> inline void status_(S &s_) const {
+  template <typename S> void status_(S &s_) const {
     ZmStream s(s_);
     status_(s);
   }
@@ -279,10 +279,10 @@ public:
   struct Status;
 friend struct Status;
   struct Status {
-    template <typename S> inline void print(S &s) const { p.status_(s); }
+    template <typename S> void print(S &s) const { p.status_(s); }
     const Proxy &p;
   };
-  inline Status status() const { return Status{*this}; }
+  Status status() const { return Status{*this}; }
 
 private:
   ZiMultiplex		*m_mx;
@@ -319,9 +319,7 @@ public:
   struct LocalPortAccessor;
 friend struct LocalPortAccessor;
   struct LocalPortAccessor : public ZuAccessor<Listener *, int> {
-    inline static int value(Listener *listener) {
-      return listener->m_localPort;
-    }
+    static int value(Listener *listener) { return listener->m_localPort; }
   };
 
   Listener(App *app, uint32_t cxnFlags,
@@ -333,23 +331,23 @@ friend struct LocalPortAccessor;
   void add(Proxy *proxy) { m_proxies->add(proxy); }
   void del(Proxy *proxy) { delete m_proxies->del(proxy); }
 
-  inline ZiMultiplex *mx() const { return m_mx; }
-  inline App *app() const { return m_app; }
+  ZiMultiplex *mx() const { return m_mx; }
+  App *app() const { return m_app; }
 
-  inline uint32_t cxnFlags() const { return m_cxnFlags; }
-  inline double cxnLatency() const { return m_cxnLatency; }
-  inline uint32_t cxnFrag() const { return m_cxnFrag; }
-  inline uint32_t cxnPack() const { return m_cxnPack; }
-  inline double cxnDelay() const { return m_cxnDelay; }
-  inline ZiIP localIP() const { return m_localIP; }
-  inline unsigned localPort() const { return m_localPort; }
-  inline ZiIP remoteIP() const { return m_remoteIP; }
-  inline unsigned remotePort() const { return m_remotePort; }
-  inline ZiIP srcIP() const { return m_srcIP; }
-  inline unsigned srcPort() const { return m_srcPort; }
-  inline bool listening() const { return m_listening; }
-  inline ZuString tag() const { return m_tag; }
-  inline unsigned reconnectFreq() const { return m_reconnectFreq; }
+  uint32_t cxnFlags() const { return m_cxnFlags; }
+  double cxnLatency() const { return m_cxnLatency; }
+  uint32_t cxnFrag() const { return m_cxnFrag; }
+  uint32_t cxnPack() const { return m_cxnPack; }
+  double cxnDelay() const { return m_cxnDelay; }
+  ZiIP localIP() const { return m_localIP; }
+  unsigned localPort() const { return m_localPort; }
+  ZiIP remoteIP() const { return m_remoteIP; }
+  unsigned remotePort() const { return m_remotePort; }
+  ZiIP srcIP() const { return m_srcIP; }
+  unsigned srcPort() const { return m_srcPort; }
+  bool listening() const { return m_listening; }
+  ZuString tag() const { return m_tag; }
+  unsigned reconnectFreq() const { return m_reconnectFreq; }
 
   int start();
   void stop();
@@ -358,7 +356,7 @@ friend struct LocalPortAccessor;
 
 private:
   void status_(ZmStream &) const;
-  template <typename S> inline void status_(S &s_) const {
+  template <typename S> void status_(S &s_) const {
     ZmStream s(s_);
     status_(s);
   }
@@ -366,12 +364,12 @@ public:
   struct Status;
 friend struct Status;
   struct Status {
-    template <typename S> inline void print(S &s) const { l.status_(s); }
+    template <typename S> void print(S &s) const { l.status_(s); }
     const Listener &l;
   };
-  inline Status status() const { return Status{*this}; }
+  Status status() const { return Status{*this}; }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << (m_listening ? "LISTEN " : "STOPPED") << " (" << m_tag << ") " <<
       m_localIP << ':' << ZuBoxed(m_localPort) << " = " <<
       m_srcIP << ':' << ZuBoxed(m_srcPort) << " -> " <<
@@ -387,11 +385,11 @@ private:
 
 friend struct ListenerPrintIn;
 friend struct ListenerPrintOut;
-  template <typename S> inline void printIn_(S &s) const {
+  template <typename S> void printIn_(S &s) const {
     s << "NC:NC !> " << m_localIP << ':' << ZuBoxed(m_localPort) <<
       " (" << m_tag << ')';
   }
-  template <typename S> inline void printOut_(S &s) const {
+  template <typename S> void printOut_(S &s) const {
     s << m_srcIP << ':' << ZuBoxed(m_srcPort) << " !> " <<
       m_remoteIP << ':' << ZuBoxed(m_remotePort) << " (" << m_tag << ')';
   }
@@ -419,21 +417,21 @@ template <> struct ZuPrint<Listener::Status> : public ZuPrintFn { };
 
 template <> struct ZuPrint<Listener> : public ZuPrintFn { };
 struct ListenerPrintIn {
-  inline ListenerPrintIn(const Listener &l_) : l(l_) { }
-  template <typename S> inline void print(S &s) const { l.printIn_(s); }
+  ListenerPrintIn(const Listener &l_) : l(l_) { }
+  template <typename S> void print(S &s) const { l.printIn_(s); }
   const Listener &l;
 };
 template <> struct ZuPrint<ListenerPrintIn> : public ZuPrintFn { };
 struct ListenerPrintOut {
-  inline ListenerPrintOut(const Listener &l_) : l(l_) { }
-  template <typename S> inline void print(S &s) const { l.printOut_(s); }
+  ListenerPrintOut(const Listener &l_) : l(l_) { }
+  template <typename S> void print(S &s) const { l.printOut_(s); }
   const Listener &l;
 };
 template <> struct ZuPrint<ListenerPrintOut> : public ZuPrintFn { };
-inline ListenerPrintIn Listener::printIn() const {
+ListenerPrintIn Listener::printIn() const {
   return ListenerPrintIn(*this);
 }
-inline ListenerPrintOut Listener::printOut() const {
+ListenerPrintOut Listener::printOut() const {
   return ListenerPrintOut(*this);
 }
 
@@ -480,8 +478,8 @@ class App : public ZmPolymorph, public ZvCmdHost {
 
   class Mx : public ZuObject, public ZiMultiplex {
   public:
-    inline Mx() : ZiMultiplex(ZvMxParams()) { }
-    inline Mx(ZvCf *cf) : ZiMultiplex(ZvMxParams(cf)) { }
+    Mx() : ZiMultiplex(ZvMxParams()) { }
+    Mx(ZvCf *cf) : ZiMultiplex(ZvMxParams(cf)) { }
   };
 
   typedef ZmHash<ZmRef<Listener>,
@@ -580,8 +578,8 @@ public:
     m_proxies->clean();
   }
 
-  inline Mx *mx() const { return m_mx; }
-  inline bool verbose() const { return m_verbose; }
+  Mx *mx() const { return m_mx; }
+  bool verbose() const { return m_verbose; }
 
   int start() {
     int r;

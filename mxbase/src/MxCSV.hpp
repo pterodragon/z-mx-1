@@ -175,11 +175,11 @@ public:
 };
 
 struct MxCSVApp {
-  inline static bool hhmmss() { return false; }
-  inline static unsigned yyyymmdd() { return 0; }
-  inline static int tzOffset() { return 0; }
+  static bool hhmmss() { return false; }
+  static unsigned yyyymmdd() { return 0; }
+  static int tzOffset() { return 0; }
 
-  inline static bool raw() { return false; }
+  static bool raw() { return false; }
 };
 
 template <typename CSV> struct MxCSV {

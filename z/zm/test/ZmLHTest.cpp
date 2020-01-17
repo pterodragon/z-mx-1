@@ -42,46 +42,46 @@
 #include <zlib/ZmSpecific.hpp>
 
 template <int N> struct String {
-  inline String() { }
-  inline String(const String &s) { memcpy(m_data, s.m_data, N); }
-  inline String &operator =(const String &s) {
+  String() { }
+  String(const String &s) { memcpy(m_data, s.m_data, N); }
+  String &operator =(const String &s) {
     if (this == &s) return *this;
     memcpy(m_data, s.m_data, N);
     return *this;
   }
-  inline ~String() { }
-  inline String(const char *s) {
+  ~String() { }
+  String(const char *s) {
     if (!s) { m_data[0] = 0; return; }
     strncpy(m_data, s, N);
     m_data[N - 1] = 0;
   }
-  inline operator const char *() const { return m_data; }
-  inline operator char *() { return m_data; }
-  inline const char *data() const { return m_data; }
-  inline char *data() { return m_data; }
-  inline unsigned length() const { return strlen(m_data); }
-  inline bool operator !() const { return !m_data[0]; }
+  operator const char *() const { return m_data; }
+  operator char *() { return m_data; }
+  const char *data() const { return m_data; }
+  char *data() { return m_data; }
+  unsigned length() const { return strlen(m_data); }
+  bool operator !() const { return !m_data[0]; }
   template <typename S>
-  inline int cmp(const S &s) const {
+  int cmp(const S &s) const {
     return ZuCmp<String>::cmp(*this, s);
   }
   template <typename S>
-  inline bool equals(const S &s) const {
+  bool equals(const S &s) const {
     return ZuCmp<String>::equals(*this, s);
   }
   template <typename S>
-  inline bool operator ==(const S &s) const { return equals(s); }
+  bool operator ==(const S &s) const { return equals(s); }
   template <typename S>
-  inline bool operator !=(const S &s) const { return !equals(s); }
+  bool operator !=(const S &s) const { return !equals(s); }
   template <typename S>
-  inline bool operator >(const S &s) const { return cmp(s) > 0; }
+  bool operator >(const S &s) const { return cmp(s) > 0; }
   template <typename S>
-  inline bool operator >=(const S &s) const { return cmp(s) >= 0; }
+  bool operator >=(const S &s) const { return cmp(s) >= 0; }
   template <typename S>
-  inline bool operator <(const S &s) const { return cmp(s) < 0; }
+  bool operator <(const S &s) const { return cmp(s) < 0; }
   template <typename S>
-  inline bool operator <=(const S &s) const { return cmp(s) <= 0; }
-  inline uint32_t hash() const { return ZuHash<String>::hash(*this); }
+  bool operator <=(const S &s) const { return cmp(s) <= 0; }
+  uint32_t hash() const { return ZuHash<String>::hash(*this); }
   char	m_data[N];
 };
 template <int N>
@@ -92,12 +92,12 @@ struct ZuTraits<String<N> > : public ZuGenericTraits<String<N> > {
   };
   typedef char Elem;
 #if 0
-  inline String<N> make(const char *data, unsigned length) {
+  String<N> make(const char *data, unsigned length) {
     return String<N>(data);
   }
 #endif
-  inline static const char *data(const String<N> &s) { return s.data(); }
-  inline static unsigned length(const String<N> &s) { return s.length(); }
+  static const char *data(const String<N> &s) { return s.data(); }
+  static unsigned length(const String<N> &s) { return s.length(); }
 };
 typedef String<16> S;
 
@@ -111,20 +111,20 @@ typedef ZmLHash<S,
 template <typename H>
 struct HashAdapter {
   typedef ZmRef<typename H::Node> Ret;
-  inline static const typename H::Key &key(const typename H::Node *n) {
+  static const typename H::Key &key(const typename H::Node *n) {
     return n->key();
   }
-  inline static const typename H::Val &value(const typename H::Node *n) {
+  static const typename H::Val &value(const typename H::Node *n) {
     return n->val();
   }
 };
 template <typename H>
 struct LHashAdapter {
   typedef ZuPair<typename H::Key, typename H::Val> Ret;
-  inline static const typename H::Key &key(const Ret &n) {
+  static const typename H::Key &key(const Ret &n) {
     return n.template p<0>();
   }
-  inline static const typename H::Val &value(const Ret &n) {
+  static const typename H::Val &value(const Ret &n) {
     return n.template p<1>();
   }
 };

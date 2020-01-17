@@ -43,18 +43,18 @@ class ZiNetlinkHdr {
 public:
   enum _ { PADDING = NLMSG_HDRLEN - sizeof(struct nlmsghdr) };
 
-  inline uint32_t hdrSize() const { return NLMSG_HDRLEN; }
-  inline uint32_t len() const { return m_n.nlmsg_len; }
-  inline uint32_t dataLen() const { return m_n.nlmsg_len - NLMSG_HDRLEN; }
+  ZuInline uint32_t hdrSize() const { return NLMSG_HDRLEN; }
+  ZuInline uint32_t len() const { return m_n.nlmsg_len; }
+  ZuInline uint32_t dataLen() const { return m_n.nlmsg_len - NLMSG_HDRLEN; }
 
-  inline uint16_t type() const { return m_n.nlmsg_type; }
-  inline uint16_t flags() const { return m_n.nlmsg_flags; }
-  inline uint32_t seq() const { return m_n.nlmsg_seq; }
-  inline uint32_t pid() const { return m_n.nlmsg_pid; }
+  ZuInline uint16_t type() const { return m_n.nlmsg_type; }
+  ZuInline uint16_t flags() const { return m_n.nlmsg_flags; }
+  ZuInline uint32_t seq() const { return m_n.nlmsg_seq; }
+  ZuInline uint32_t pid() const { return m_n.nlmsg_pid; }
 
-  inline struct nlmsghdr *hdr() { return &m_n; }
+  ZuInline struct nlmsghdr *hdr() { return &m_n; }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << "ZiNetlinkHdr [[len = " << m_n.nlmsg_len
       << "] [type = " << m_n.nlmsg_type
       << "] [flags = " << m_n.nlmsg_flags
@@ -67,7 +67,7 @@ public:
   }
 
 protected:
-  inline ZiNetlinkHdr() { memset(&m_n, 0, sizeof(struct nlmsghdr)); }
+  ZiNetlinkHdr() { memset(&m_n, 0, sizeof(struct nlmsghdr)); }
 
   inline ZiNetlinkHdr(uint32_t len, uint16_t type,
       uint16_t flags, uint32_t seqNo, uint32_t portID) :
@@ -86,7 +86,7 @@ class ZiGenericNetlinkHdr : public ZiNetlinkHdr {
 public:
   enum _ { PADDING = GENL_HDRLEN - sizeof(struct genlmsghdr) };
 
-  inline ZiGenericNetlinkHdr() { memset(&m_g, 0, sizeof(struct genlmsghdr)); }
+  ZiGenericNetlinkHdr() { memset(&m_g, 0, sizeof(struct genlmsghdr)); }
 
   ZiGenericNetlinkHdr(uint32_t len, uint16_t type, uint16_t flags,
 		      uint32_t seqNo, uint32_t portID, uint8_t cmd) :
@@ -95,13 +95,13 @@ public:
 
   ZiGenericNetlinkHdr(ZiConnection *connection, uint32_t seqNo, uint32_t len);
 
-  inline uint8_t cmd() const { return m_g.cmd; }
-  inline uint8_t version() const { return m_g.version; }
-  inline uint32_t hdrSize() const { 
+  ZuInline uint8_t cmd() const { return m_g.cmd; }
+  ZuInline uint8_t version() const { return m_g.version; }
+  ZuInline uint32_t hdrSize() const { 
     return GENL_HDRLEN + ZiNetlinkHdr::hdrSize(); 
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << "ZiGenericNetlinkHdr [" << static_cast<const ZiNetlinkHdr &>(*this)
       << " [cmd = " << m_g.cmd
       << "] [version = " << m_g.version
@@ -141,20 +141,20 @@ public:
 
   ZiNetlinkAttr() { memset(this, 0, sizeof(ZiNetlinkAttr)); }
 
-  inline uint16_t hdrLen() const { return NLA_HDRLEN; }
-  inline uint16_t len() const { return m_na.nla_len; }
-  inline uint16_t dataLen() const { return len() - hdrLen(); }
-  inline uint16_t size() const { return hdrLen() + NLA_ALIGN(dataLen()); }
-  inline uint16_t type() const { return m_na.nla_type; }
+  ZuInline uint16_t hdrLen() const { return NLA_HDRLEN; }
+  ZuInline uint16_t len() const { return m_na.nla_len; }
+  ZuInline uint16_t dataLen() const { return len() - hdrLen(); }
+  ZuInline uint16_t size() const { return hdrLen() + NLA_ALIGN(dataLen()); }
+  ZuInline uint16_t type() const { return m_na.nla_type; }
 
-  inline char *data_() { return ((char *)&m_na); }
-  inline char *data() { return ((char *)&m_na) + hdrLen(); }
-  inline const char *data() const { return ((const char *)&m_na) + hdrLen(); }
-  inline ZiNetlinkAttr *next() {
+  ZuInline char *data_() { return ((char *)&m_na); }
+  ZuInline char *data() { return ((char *)&m_na) + hdrLen(); }
+  ZuInline const char *data() const { return ((const char *)&m_na) + hdrLen(); }
+  ZuInline ZiNetlinkAttr *next() {
     return (ZiNetlinkAttr *)((char *)&m_na + size());
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << "ZiNetlinkAttr [[len = " << m_na.nla_len
       << "] [type = " << m_na.nla_type
       << "] [hdrLen = " << hdrLen()
@@ -185,7 +185,7 @@ public:
     m_familyName[len] = 0;
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << "ZiNetlinkFamilyName [" << static_cast<const ZiNetlinkAttr &>(*this)
       << " [familyName = " << m_familyName << "]]";
   }
@@ -211,7 +211,7 @@ public:
     m_data = v;
   }
 
-  inline const T &data() const { return m_data; }
+  const T &data() const { return m_data; }
 
 private:
   T	m_data;

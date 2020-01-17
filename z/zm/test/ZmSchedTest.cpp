@@ -43,7 +43,7 @@ class Job : public ZmPolymorph {
 public:
   inline Job(const char *message, ZmTime timeout) :
 	m_message(message), m_timeout(timeout) { }
-  inline ~Job() {
+  ~Job() {
     printf("~%s [%d]\n", m_message, (int)ZmThreadContext::self()->index());
     ::free((void *)m_message);
   }
@@ -54,7 +54,7 @@ public:
     return 0;
   }
 
-  inline ZmTime timeout() { return m_timeout; }
+  ZmTime timeout() { return m_timeout; }
 
 private:
   const char	*m_message;
@@ -63,7 +63,7 @@ private:
 
 class Timer : public ZmTimeout, public ZmObject {
 public:
-  inline Timer(ZmScheduler *s, const ZmBackoff &t) : ZmTimeout(s, t, -1) { }
+  Timer(ZmScheduler *s, const ZmBackoff &t) : ZmTimeout(s, t, -1) { }
 
   void retry() {
     ZmTime now = ZmTimeNow();

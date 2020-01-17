@@ -24,7 +24,7 @@
 // };
 // class UDT {
 //   ...
-//   inline int cmp(const UDT &t) { ... }
+//   int cmp(const UDT &t) { ... }
 //   // returns -ve if *this < t, 0 if *this == t, +ve if *this > t
 //   ...
 // };
@@ -218,8 +218,8 @@ struct ZuTraits_Array : public ZuGenericTraits<T> {
     IsHashable = ElemTraits::IsHashable,
     IsComparable = ElemTraits::IsComparable
   };
-  inline static const Elem *data(const T &a) { return &a[0]; }
-  inline static unsigned length(const T &a) { return sizeof(a) / sizeof(a[0]); }
+  ZuInline static const Elem *data(const T &a) { return &a[0]; }
+  ZuInline static unsigned length(const T &a) { return sizeof(a) / sizeof(a[0]); }
 };
 
 template <typename T>
@@ -260,8 +260,8 @@ struct ZuTraits<const volatile T (&)[N]> :
 
 template <class Base> struct ZuTraits_CString : public Base {
   enum { IsCString = 1, IsString = 1 };
-  inline static const char *data(const char *s) { return s; }
-  inline static unsigned length(const char *s) { return s ? strlen(s) : 0; }
+  ZuInline static const char *data(const char *s) { return s; }
+  ZuInline static unsigned length(const char *s) { return s ? strlen(s) : 0; }
 };
 
 template <> struct ZuTraits<char *> :
@@ -319,8 +319,8 @@ struct ZuTraits<const volatile char (&)[N]> :
 
 template <class Base> struct ZuTraits_WString : public Base {
   enum { IsCString = 1, IsString = 1, IsWString = 1 };
-  inline static const wchar_t *data(const wchar_t *s) { return s; }
-  inline static unsigned length(const wchar_t *s) { return s ? wcslen(s) : 0; }
+  ZuInline static const wchar_t *data(const wchar_t *s) { return s; }
+  ZuInline static unsigned length(const wchar_t *s) { return s ? wcslen(s) : 0; }
 };
 
 template <> struct ZuTraits<wchar_t *> :
@@ -428,14 +428,8 @@ struct ZuStdStringTraits_ : public ZuGenericTraits<T_> {
   enum { IsString = 1 };
   typedef T_ T;
   typedef Char Elem;
-#if 0
-  inline static T make(const Char *data, unsigned length) {
-    if (ZuUnlikely(!data)) return T();
-    return T(data, (size_t)length);
-  }
-#endif
-  inline static const Char *data(const T &s) { return s.data(); }
-  inline static unsigned length(const T &s) { return s.length(); }
+  ZuInline static const Char *data(const T &s) { return s.data(); }
+  ZuInline static unsigned length(const T &s) { return s.length(); }
 };
 template <typename T_>
 struct ZuStdStringTraits : public ZuStdStringTraits_<T_, char> { };
@@ -448,30 +442,13 @@ struct ZuStdArrayTraits_ : public ZuGenericTraits<T_> {
   enum { IsArray = 1 };
   typedef T_ T;
   typedef Elem_ Elem;
-  inline static const Elem *data(const T &a) { return a.data(); }
-  inline static unsigned length(const T &a) { return a.size(); }
+  ZuInline static const Elem *data(const T &a) { return a.data(); }
+  ZuInline static unsigned length(const T &a) { return a.size(); }
 };
 template <typename T, typename Elem>
-struct ZuStdVectorTraits : public ZuStdArrayTraits_<T, Elem> {
-#if 0
-  inline static T make(const Elem *data, unsigned length) {
-    T vector((size_t)length);
-    for (unsigned i = 0; i < length; i++) vector[i] = data[i];
-    return vector;
-  }
-#endif
-};
+struct ZuStdVectorTraits : public ZuStdArrayTraits_<T, Elem> { };
 template <typename T, typename Elem, size_t N>
-struct ZuStdArrayTraits : public ZuStdArrayTraits_<T, Elem> {
-#if 0
-  inline static T make(const Elem *data, unsigned length) {
-    T array;
-    if ((size_t)length > N) length = N;
-    for (unsigned i = 0; i < length; i++) array[i] = data[i];
-    return array;
-  }
-#endif
-};
+struct ZuStdArrayTraits : public ZuStdArrayTraits_<T, Elem> { };
 
 #include <zlib/ZuStdString.hpp>
 
@@ -516,13 +493,8 @@ struct ZuTraits<std::initializer_list<Elem_> > :
   enum { IsArray = 1 };
   typedef std::initializer_list<Elem_> T;
   typedef Elem_ Elem;
-  inline static const Elem *data(const T &a) { return a.begin(); }
-  inline static unsigned length(const T &a) { return a.size(); }
-#if 0
-  inline static T make(const Elem *data, unsigned length) {
-    return T(data, length);
-  }
-#endif
+  ZuInline static const Elem *data(const T &a) { return a.begin(); }
+  ZuInline static unsigned length(const T &a) { return a.size(); }
 };
 
 template <typename L> struct ZuLambdaTraits :

@@ -39,7 +39,7 @@ class ZiNetlinkSockAddr {
   struct sockaddr_nl  m_snl;
 
 public:
-  inline ZiNetlinkSockAddr() {
+  ZiNetlinkSockAddr() {
     m_snl.nl_family = AF_NETLINK;
     memset(&m_snl.nl_pad, 0, sizeof(m_snl.nl_pad));
     // LATER: we always let the kernel specify these...
@@ -47,17 +47,17 @@ public:
     m_snl.nl_pid = 0;
   }
 
-  inline ZiNetlinkSockAddr(uint32_t portID) {
+  ZiNetlinkSockAddr(uint32_t portID) {
     m_snl.nl_family = AF_NETLINK;
     memset(&m_snl.nl_pad, 0, sizeof(m_snl.nl_pad));
     m_snl.nl_groups = 0;
     m_snl.nl_pid = portID;
   }
 
-  inline struct sockaddr *sa() { return (struct sockaddr *)&m_snl; }
-  inline int len() const { return sizeof(struct sockaddr_nl); }
+  ZuInline struct sockaddr *sa() { return (struct sockaddr *)&m_snl; }
+  ZuInline int len() const { return sizeof(struct sockaddr_nl); }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << "pid=" << ZuBoxed(m_snl.nl_pid) <<
       " groups=" << ZuBoxed(m_snl.nl_groups);
   }

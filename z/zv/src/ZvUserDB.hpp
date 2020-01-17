@@ -86,7 +86,7 @@ public:
   }
 };
 struct RoleNameAccessor : public ZuAccessor<Role_, ZtString> {
-  inline static const ZtString &value(const Role_ &r) { return r.name; }
+  static const ZtString &value(const Role_ &r) { return r.name; }
 };
 using RoleTree =
   ZmRBTree<Role_,
@@ -95,7 +95,7 @@ using RoleTree =
 	ZmRBTreeNodeIsKey<true,
 	  ZmRBTreeLock<ZmNoLock> > > > >;
 using Role = RoleTree::Node;
-inline ZmRef<Role> loadRole(const fbs::Role *role_) {
+ZmRef<Role> loadRole(const fbs::Role *role_) {
   using namespace Zfb::Load;
   ZmRef<Role> role = new Role(str(role_->name()), role_->flags());
   all(role_->perms(), [role](unsigned i, uint64_t v) {
@@ -146,7 +146,7 @@ struct User__ : public ZuPolymorph {
   }
 };
 struct UserIDAccessor : public ZuAccessor<User__, uint64_t> {
-  inline static uint64_t value(const User__ &u) { return u.id; }
+  static uint64_t value(const User__ &u) { return u.id; }
 };
 using UserIDHash =
   ZmHash<User__,
@@ -157,7 +157,7 @@ using UserIDHash =
 	    ZmHashLock<ZmNoLock> > > > > >;
 using User_ = UserIDHash::Node;
 struct UserNameAccessor : public ZuAccessor<User_, ZtString> {
-  inline static ZtString value(const User_ &u) { return u.name; }
+  static ZtString value(const User_ &u) { return u.name; }
 };
 using UserNameHash =
   ZmHash<User_,
@@ -202,7 +202,7 @@ struct Key_ : public ZuObject {
   }
 };
 struct KeyIDAccessor : public ZuAccessor<Key_, ZtString> {
-  inline static ZtString value(const Key_ &k) { return k.id; }
+  static ZtString value(const Key_ &k) { return k.id; }
 };
 using KeyHash =
   ZmHash<Key_,
@@ -211,7 +211,7 @@ using KeyHash =
 	ZmHashNodeIsKey<true,
 	  ZmHashLock<ZmNoLock> > > > >;
 using Key = KeyHash::Node;
-inline ZmRef<Key> loadKey(const fbs::Key *key_, Key_ *next) {
+ZmRef<Key> loadKey(const fbs::Key *key_, Key_ *next) {
   using namespace Zfb::Load;
   ZmRef<Key> key = new Key(str(key_->id()), next, key_->userID());
   key->secret = bytes(key_->secret());

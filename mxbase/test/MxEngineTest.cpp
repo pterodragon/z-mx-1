@@ -43,10 +43,10 @@ public:
 
 class App : public MxEngineApp {
 public:
-  inline App() { }
+  App() { }
   virtual ~App() { }
 
-  inline void final() { }
+  void final() { }
 
   ZmRef<MxAnyLink> createLink(MxID id);
 };
@@ -55,7 +55,7 @@ enum { Connected, Disconnected, Reconnect };
 
 class Engine : public MxEngine {
 public:
-  // inline Engine() { }
+  // Engine() { }
 
   void init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf);
 

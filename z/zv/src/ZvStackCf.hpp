@@ -36,19 +36,19 @@
 #include <zlib/ZvCSV.hpp>
 
 struct ZvStackParams : public ZmStackParams {
-  inline ZvStackParams() : ZmStackParams() { }
+  ZvStackParams() : ZmStackParams() { }
 
-  inline ZvStackParams(const ZmStackParams &p) : ZmStackParams(p) { }
-  inline ZvStackParams &operator =(const ZmStackParams &p) {
+  ZvStackParams(const ZmStackParams &p) : ZmStackParams(p) { }
+  ZvStackParams &operator =(const ZmStackParams &p) {
     ZmStackParams::operator =(p);
     return *this;
   }
 
-  inline ZvStackParams(ZvCf *cf) : ZmStackParams() { init(cf); }
+  ZvStackParams(ZvCf *cf) : ZmStackParams() { init(cf); }
   inline ZvStackParams(ZvCf *cf, const ZmStackParams &deflt) :
       ZmStackParams(deflt) { init(cf); }
 
-  inline void init(ZvCf *cf) {
+  void init(ZvCf *cf) {
     ZmStackParams::operator =(ZmStackParams());
 
     if (!cf) return;

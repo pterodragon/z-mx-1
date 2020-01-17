@@ -35,11 +35,11 @@ namespace Ztls {
 
 class Random {
 public:
-  inline Random() {
+  Random() {
     mbedtls_entropy_init(&m_entropy);
     mbedtls_ctr_drbg_init(&m_ctr_drbg);
   }
-  inline ~Random() {
+  ~Random() {
     mbedtls_ctr_drbg_free(&m_ctr_drbg);
     mbedtls_entropy_free(&m_entropy);
   }

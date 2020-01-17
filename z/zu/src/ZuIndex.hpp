@@ -25,7 +25,7 @@
 //
 // ...
 // struct PointYAccessor : public ZuAccessor<Point, int> {
-//   inline static int value(const Point &p) { return p.y; }
+//   static int value(const Point &p) { return p.y; }
 // }
 // ...
 //
@@ -56,7 +56,7 @@ template <typename T_, typename I_, bool Is> struct ZuAccessor_ {
   typedef ZuHash<I> Hash;
 
   template <typename P>
-  inline static I value(const P &p) { return p; }
+  ZuInline static I value(const P &p) { return p; }
 };
 
 template <typename T_, typename I_> struct ZuAccessor_<T_, I_, true> {
@@ -68,7 +68,7 @@ template <typename T_, typename I_> struct ZuAccessor_<T_, I_, true> {
   typedef ZuHash<I> Hash;
 
   template <typename P>
-  inline static const I &value(const P &p) { return p; }
+  ZuInline static const I &value(const P &p) { return p; }
 };
 
 template <typename T, typename I> struct ZuAccessor :
@@ -82,12 +82,12 @@ template <typename Accessor_, bool Same> struct ZuIndex_ {
 
   struct ICmp {
     template <typename T1, typename T2>
-    inline static int cmp(T1 &&t1, T2 &&t2) {
+    ZuInline static int cmp(T1 &&t1, T2 &&t2) {
       return Accessor::Cmp::cmp(
 	  Accessor::value(ZuFwd<T1>(t1)), ZuFwd<T2>(t2));
     }
     template <typename T1, typename T2>
-    inline static bool equals(T1 &&t1, T2 &&t2) {
+    ZuInline static bool equals(T1 &&t1, T2 &&t2) {
       return Accessor::Cmp::equals(
 	  Accessor::value(ZuFwd<T1>(t1)), ZuFwd<T2>(t2));
     }
@@ -97,29 +97,29 @@ template <typename Accessor_, bool Same> struct ZuIndex_ {
 
   template <typename T> struct CmpT {
     template <typename T1, typename T2>
-    inline static int cmp(T1 &&t1, T2 &&t2) {
+    ZuInline static int cmp(T1 &&t1, T2 &&t2) {
       return Accessor::Cmp::cmp(Accessor::value(
 	    ZuFwd<T1>(t1)), Accessor::value(ZuFwd<T2>(t2)));
     }
     template <typename T1, typename T2>
-    inline static bool equals(T1 &&t1, T2 &&t2) {
+    ZuInline static bool equals(T1 &&t1, T2 &&t2) {
       return Accessor::Cmp::equals(
 	  Accessor::value(ZuFwd<T1>(t1)), Accessor::value(ZuFwd<T2>(t2)));
     }
 
     template <typename T_>
-    inline static bool null(T_ &&t) {
+    ZuInline static bool null(T_ &&t) {
       return Accessor::Cmp::null(Accessor::value(ZuFwd<T_>(t)));
     }
 
-    inline static const T &null() {
+    ZuInline static const T &null() {
       return ZuCmp<T>::null();
     }
   };
 
   struct Hash {
     template <typename T>
-    inline static uint32_t hash(T &&t) {
+    ZuInline static uint32_t hash(T &&t) {
       return Accessor::Hash::hash(Accessor::value(ZuFwd<T>(t)));
     }
   };

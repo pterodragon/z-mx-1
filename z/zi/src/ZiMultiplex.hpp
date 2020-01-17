@@ -212,7 +212,7 @@ public:
     return addr().hash() ^ mif().hash();
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << addr() << "->" << mif();
   }
 
@@ -394,7 +394,7 @@ public:
     return m_mreqs == o.m_mreqs && m_mif == o.m_mif && m_ttl == o.m_ttl;
   }
 
-  inline int cmp(const ZiCxnOptions &o) const {
+  int cmp(const ZiCxnOptions &o) const {
     using namespace ZiCxnFlags;
     int i;
     if (i = ZuCmp<uint32_t>::cmp(m_flags, o.m_flags)) return i;
@@ -407,7 +407,7 @@ public:
     return ZuBoxed(m_ttl).cmp(o.m_ttl);
   }
 
-  inline uint32_t hash() const {
+  uint32_t hash() const {
     using namespace ZiCxnFlags;
     uint32_t code = ZuHash<uint32_t>::hash(m_flags);
 #ifdef ZiMultiplex_Netlink
@@ -419,7 +419,7 @@ public:
 
   ZuInline bool operator ==(const ZiCxnOptions &o) const { return equals(o); }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     using namespace ZiCxnFlags;
     s << "flags=" << Flags::instance()->print(s, m_flags);
     if (m_flags & (1<<Multicast)) {
@@ -448,7 +448,7 @@ template <> struct ZuPrint<ZiCxnOptions> : public ZuPrintFn { };
 
 // listener info (socket, accept queue size, local IP/port, options)
 struct ZiListenInfo {
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << "socket=" << ZuBoxed(socket) <<
       " nAccepts=" << nAccepts <<
       " options={" << options <<
@@ -473,7 +473,7 @@ struct ZiCxnInfo { // pure aggregate, no ctor
   ZuInline bool operator !() const { return !*type; }
   ZuOpBool
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << "type=" << ZiCxnType::name(type) <<
       " socket=" << ZuBoxed(socket) <<
       " options={" << options << "} ";
@@ -673,13 +673,13 @@ public:
   ZiMxParams &operator =(ZiMxParams &&) = default;
 
   template <typename L>
-  inline ZiMxParams &&scheduler(L l) { l(m_scheduler); return ZuMv(*this); }
+  ZiMxParams &&scheduler(L l) { l(m_scheduler); return ZuMv(*this); }
 
-  inline ZiMxParams &&rxThread(unsigned tid) {
+  ZiMxParams &&rxThread(unsigned tid) {
     m_rxThread = tid;
     return ZuMv(*this);
   }
-  inline ZiMxParams &&txThread(unsigned tid) {
+  ZiMxParams &&txThread(unsigned tid) {
     m_txThread = tid;
     return ZuMv(*this);
   }
@@ -700,30 +700,30 @@ public:
   inline ZiMxParams &&cxnHash(ZuString id)
     { m_cxnHash = id; return ZuMv(*this); }
 #ifdef ZiMultiplex_DEBUG
-  inline ZiMxParams &&trace(bool b) { m_trace = b; return ZuMv(*this); }
-  inline ZiMxParams &&debug(bool b) { m_debug = b; return ZuMv(*this); }
-  inline ZiMxParams &&frag(bool b) { m_frag = b; return ZuMv(*this); }
-  inline ZiMxParams &&yield(bool b) { m_yield = b; return ZuMv(*this); }
+  ZiMxParams &&trace(bool b) { m_trace = b; return ZuMv(*this); }
+  ZiMxParams &&debug(bool b) { m_debug = b; return ZuMv(*this); }
+  ZiMxParams &&frag(bool b) { m_frag = b; return ZuMv(*this); }
+  ZiMxParams &&yield(bool b) { m_yield = b; return ZuMv(*this); }
 #endif
 
-  inline ZmSchedParams &scheduler() { return m_scheduler; }
+  ZmSchedParams &scheduler() { return m_scheduler; }
 
-  inline unsigned rxThread() const { return m_rxThread; }
-  inline unsigned txThread() const { return m_txThread; }
+  unsigned rxThread() const { return m_rxThread; }
+  unsigned txThread() const { return m_txThread; }
 #ifdef ZiMultiplex_EPoll
-  inline unsigned epollMaxFDs() const { return m_epollMaxFDs; }
-  inline unsigned epollQuantum() const { return m_epollQuantum; }
+  unsigned epollMaxFDs() const { return m_epollMaxFDs; }
+  unsigned epollQuantum() const { return m_epollQuantum; }
 #endif
-  inline unsigned rxBufSize() const { return m_rxBufSize; }
-  inline unsigned txBufSize() const { return m_txBufSize; }
-  inline ZuString listenerHash() const { return m_listenerHash; }
-  inline ZuString requestHash() const { return m_requestHash; }
-  inline ZuString cxnHash() const { return m_cxnHash; }
+  unsigned rxBufSize() const { return m_rxBufSize; }
+  unsigned txBufSize() const { return m_txBufSize; }
+  ZuString listenerHash() const { return m_listenerHash; }
+  ZuString requestHash() const { return m_requestHash; }
+  ZuString cxnHash() const { return m_cxnHash; }
 #ifdef ZiMultiplex_DEBUG
-  inline bool trace() const { return m_trace; }
-  inline bool debug() const { return m_debug; }
-  inline bool frag() const { return m_frag; }
-  inline bool yield() const { return m_yield; }
+  bool trace() const { return m_trace; }
+  bool debug() const { return m_debug; }
+  bool frag() const { return m_frag; }
+  bool yield() const { return m_yield; }
 #endif
 
 private:
@@ -824,7 +824,7 @@ friend class ZiConnection;
     ZiListenInfo	m_info;
   };
   struct Listener_HeapID : public ZmHeapSharded {
-    inline static const char *id() { return "ZiMultiplex.Listener"; }
+    static const char *id() { return "ZiMultiplex.Listener"; }
   };
   typedef ZmHash<Listener_,
 	    ZmHashNodeIsKey<true,
@@ -865,7 +865,7 @@ template <typename> friend class Accept_;
     char		m_buf[(sizeof(struct sockaddr_in) + 16) * 2];
   };
   struct Accept_HeapID {
-    inline static const char *id() { return "ZiMultiplex.Accept"; }
+    static const char *id() { return "ZiMultiplex.Accept"; }
   };
   typedef ZmHeap<Accept_HeapID, sizeof(Accept_<ZuNull>)> Accept_Heap;
   typedef Accept_<Accept_Heap> Accept; 
@@ -931,7 +931,7 @@ template <typename> friend class Connect_;
 #endif
   };
   struct Connect_HeapID : public ZmHeapSharded {
-    inline static const char *id() { return "ZiMultiplex.Connect"; }
+    static const char *id() { return "ZiMultiplex.Connect"; }
   };
 #if ZiMultiplex__ConnectHash
   typedef ZmHash<Connect_,
@@ -947,7 +947,7 @@ template <typename> friend class Connect_;
 #endif
 
   struct CxnHash_HeapID : public ZmHeapSharded {
-    inline static const char *id() { return "ZiMultiplex.CxnHash"; }
+    static const char *id() { return "ZiMultiplex.CxnHash"; }
   };
   typedef ZmHash<ZmRef<ZiConnection>,
             ZmHashIndex<ZiConnection::SocketAccessor,
@@ -1139,9 +1139,9 @@ private:
   bool			m_frag;
   bool			m_yield;
 
-  inline void traceCapture() { m_tracer.capture(1); }
+  void traceCapture() { m_tracer.capture(1); }
 public:
-  template <typename S> inline void traceDump(S &s) { m_tracer.dump(s); }
+  template <typename S> void traceDump(S &s) { m_tracer.dump(s); }
 private:
   ZmBackTracer<64>	m_tracer;
 #endif

@@ -74,7 +74,7 @@ public:
 
   void init(const char *program, int facility = LOG_USER);
 
-  inline int facility() { return m_facility; }
+  int facility() { return m_facility; }
 
 private:
   ZmLock	m_lock;

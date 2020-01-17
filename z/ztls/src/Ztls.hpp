@@ -103,12 +103,12 @@ friend TCP;
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
   ZuInline Impl *impl() { return static_cast<Impl *>(this); }
 
-  inline Link(App *app) : m_app(app) {
+  Link(App *app) : m_app(app) {
     mbedtls_ssl_init(&m_ssl);
     mbedtls_ssl_setup(&m_ssl, app->conf());
     mbedtls_ssl_set_bio(&m_ssl, this, txOut_, rxIn_, nullptr);
   }
-  inline ~Link() {
+  ~Link() {
     mbedtls_ssl_free(&m_ssl);
   }
 
@@ -623,11 +623,11 @@ template <typename, typename> friend class SrvLink;
   ZuInline const App *app() const { return static_cast<const App *>(this); }
   ZuInline App *app() { return static_cast<App *>(this); }
 
-  inline Engine() {
+  Engine() {
     mbedtls_x509_crt_init(&m_cacert);
     mbedtls_ssl_config_init(&m_conf);
   }
-  inline ~Engine() {
+  ~Engine() {
     mbedtls_ssl_config_free(&m_conf);
     mbedtls_x509_crt_free(&m_cacert);
   }
@@ -690,9 +690,9 @@ protected:
 
   void exception(ZmRef<ZeEvent> e) const { ZeLog::log(ZuMv(e)); } // default
 
-  inline static void log__(ZmStream &s) { }
+  static void log__(ZmStream &s) { }
   template <typename Arg0, typename ...Args>
-  inline static typename ZuIsNot<ZuString, Arg0>::T
+  static typename ZuIsNot<ZuString, Arg0>::T
   log__(ZmStream &s, Arg0 arg0, Args... args) {
     s << ZuMv(arg0);
     log__(s, ZuMv(args)...);
@@ -721,7 +721,7 @@ protected:
   // NetBSD - /etc/openssl/certs
   // AIX - /var/ssl/certs
   // Windows - ROOT certificate store (using Cert* API)
-  inline bool loadCA(ZuString path) {
+  bool loadCA(ZuString path) {
     int n;
     const char *function;
     if (ZiFile::isdir(path)) {
@@ -795,10 +795,10 @@ friend Base;
     });
   }
 
-  inline void final() { Base::final(); }
+  void final() { Base::final(); }
 
 protected:
-  inline unsigned reconnFreq() const { return 0; } // default
+  unsigned reconnFreq() const { return 0; } // default
 };
 
 // CRTP - implementation must conform to the following interface:
@@ -820,7 +820,7 @@ protected:
       int process(const uint8_t *data, unsigned len); // process received data
     };
 
-    inline Link::TCP *accepted(const ZiCxnInfo &ci) {
+    Link::TCP *accepted(const ZiCxnInfo &ci) {
       // ... potentially return nullptr if too many open connections
       return new Link::TCP(new Link(this), ci);
     }
@@ -844,13 +844,13 @@ friend Base;
   ZuInline const App *app() const { return static_cast<const App *>(this); }
   ZuInline App *app() { return static_cast<App *>(this); }
 
-  inline Server() {
+  Server() {
     mbedtls_x509_crt_init(&m_cert);
     mbedtls_pk_init(&m_key);
     mbedtls_ssl_cache_init(&m_cache);
     mbedtls_ssl_ticket_init(&m_ticket_ctx);
   }
-  inline ~Server() {
+  ~Server() {
     mbedtls_ssl_ticket_free(&m_ticket_ctx);
     mbedtls_ssl_cache_free(&m_cache);
     mbedtls_pk_free(&m_key);
@@ -895,7 +895,7 @@ friend Base;
     });
   }
 
-  inline void final() { Base::final(); }
+  void final() { Base::final(); }
 
   void listen() {
     this->mx()->listen(
@@ -920,14 +920,14 @@ friend Base;
   }
 
 protected:
-  inline unsigned nAccepts() const { return 8; } // default
-  inline unsigned rebindFreq() const { return 0; } // default
+  unsigned nAccepts() const { return 8; } // default
+  unsigned rebindFreq() const { return 0; } // default
 
-  inline void listening(const ZiListenInfo &info) { // default
+  void listening(const ZiListenInfo &info) { // default
     m_listening = true;
     app()->logInfo("listening(", info.ip, ':', info.port, ')');
   }
-  inline void listenFailed(bool transient) { // default
+  void listenFailed(bool transient) { // default
     unsigned rebindFreq = app()->rebindFreq();
     if (transient && rebindFreq > 0)
       app()->run(

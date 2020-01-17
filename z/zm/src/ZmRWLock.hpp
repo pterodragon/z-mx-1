@@ -50,30 +50,30 @@ class ZmRWLock {
 friend class ZmRWLockTest;
 
 public:
-  inline ZmRWLock() { memset(&m_lock, 0, sizeof(ck_rwlock_recursive_t)); }
+  ZuInline ZmRWLock() { memset(&m_lock, 0, sizeof(ck_rwlock_recursive_t)); }
 
-  inline void lock() {
+  ZuInline void lock() {
     ck_rwlock_recursive_write_lock(&m_lock, ZmPlatform::getTID());
   }
-  inline int trylock() {
+  ZuInline int trylock() {
     return ck_rwlock_recursive_write_trylock(
 	&m_lock, ZmPlatform::getTID()) ? 0 : -1;
   }
-  inline void unlock() {
+  ZuInline void unlock() {
     ck_rwlock_recursive_write_unlock(&m_lock);
   }
 
-  inline void readlock() {
+  ZuInline void readlock() {
     ck_rwlock_recursive_read_lock(&m_lock);
   }
-  inline int readtrylock() {
+  ZuInline int readtrylock() {
     return ck_rwlock_recursive_read_trylock(&m_lock) ? 0 : -1;
   } 
-  inline void readunlock() {
+  ZuInline void readunlock() {
     ck_rwlock_recursive_read_unlock(&m_lock);
   }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << "writer=" << ZuBoxed(m_lock.rw.writer) <<
       " n_readers=" << ZuBoxed(m_lock.rw.n_readers) <<
       " wc=" << ZuBoxed(m_lock.wc);
@@ -86,9 +86,9 @@ private:
 template <>
 struct ZmLockTraits<ZmRWLock> : public ZmGenericLockTraits<ZmRWLock> {
   enum { RWLock = 1 };
-  inline static void readlock(ZmRWLock &l) { l.readlock(); }
-  inline static int readtrylock(ZmRWLock &l) { return l.readtrylock(); }
-  inline static void readunlock(ZmRWLock &l) { l.readunlock(); }
+  ZuInline static void readlock(ZmRWLock &l) { l.readlock(); }
+  ZuInline static int readtrylock(ZmRWLock &l) { return l.readtrylock(); }
+  ZuInline static void readunlock(ZmRWLock &l) { l.readunlock(); }
 };
 
 class ZmPRWLock {
@@ -98,15 +98,15 @@ class ZmPRWLock {
 friend class ZmRWLockTest;
 
 public:
-  inline ZmPRWLock() { ck_pflock_init(&m_lock); }
+  ZuInline ZmPRWLock() { ck_pflock_init(&m_lock); }
 
-  inline void lock() { ck_pflock_write_lock(&m_lock); }
-  inline void unlock() { ck_pflock_write_unlock(&m_lock); }
+  ZuInline void lock() { ck_pflock_write_lock(&m_lock); }
+  ZuInline void unlock() { ck_pflock_write_unlock(&m_lock); }
 
-  inline void readlock() { ck_pflock_read_lock(&m_lock); }
-  inline void readunlock() { ck_pflock_read_unlock(&m_lock); }
+  ZuInline void readlock() { ck_pflock_read_lock(&m_lock); }
+  ZuInline void readunlock() { ck_pflock_read_unlock(&m_lock); }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << "rin=" << ZuBoxed(m_lock.rin) <<
       " rout=" << ZuBoxed(m_lock.rout) <<
       " win=" << ZuBoxed(m_lock.win) <<
@@ -120,11 +120,11 @@ private:
 template <>
 struct ZmLockTraits<ZmPRWLock> : public ZmGenericLockTraits<ZmPRWLock> {
   enum { CanTry = 0, Recursive = 0, RWLock = 1 };
-  inline static void readlock(ZmPRWLock &l) { l.readlock(); }
-  inline static void readunlock(ZmPRWLock &l) { l.readunlock(); }
+  ZuInline static void readlock(ZmPRWLock &l) { l.readlock(); }
+  ZuInline static void readunlock(ZmPRWLock &l) { l.readunlock(); }
 private:
-  inline static int trylock(ZmPRWLock &);
-  inline static int readtrylock(ZmPRWLock &);
+  static int trylock(ZmPRWLock &);
+  static int readtrylock(ZmPRWLock &);
 };
 
 #else /* !_WIN32 */
@@ -141,16 +141,20 @@ class ZmPRWLock { // non-recursive
   ZmPRWLock &operator =(const ZmPRWLock &);	// prevent mis-use
 
 public:
-  inline ZmPRWLock() { InitializeSRWLock(&m_lock); }
+  ZuInline ZmPRWLock() { InitializeSRWLock(&m_lock); }
 
-  inline void lock() { AcquireSRWLockExclusive(&m_lock); }
-  inline void unlock() { ReleaseSRWLockExclusive(&m_lock); }
-  inline int trylock() { return TryAcquireSRWLockExclusive(&m_lock) ? 0 : -1; }
-  inline void readlock() { AcquireSRWLockShared(&m_lock); }
-  inline void readunlock() { ReleaseSRWLockShared(&m_lock); }
-  inline int readtrylock() { return TryAcquireSRWLockShared(&m_lock) ? 0 : -1; }
+  ZuInline void lock() { AcquireSRWLockExclusive(&m_lock); }
+  ZuInline void unlock() { ReleaseSRWLockExclusive(&m_lock); }
+  ZuInline int trylock() {
+    return TryAcquireSRWLockExclusive(&m_lock) ? 0 : -1;
+  }
+  ZuInline void readlock() { AcquireSRWLockShared(&m_lock); }
+  ZuInline void readunlock() { ReleaseSRWLockShared(&m_lock); }
+  ZuInline int readtrylock() {
+    return TryAcquireSRWLockShared(&m_lock) ? 0 : -1;
+  }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     const uintptr_t *ZuMayAlias(ptr) = (const uintptr_t *)&m_lock;
     s << ZuBoxed(*ptr);
   }
@@ -162,9 +166,9 @@ private:
 template <>
 struct ZmLockTraits<ZmPRWLock> : public ZmGenericLockTraits<ZmPRWLock> {
   enum { Recursive = 0, RWLock = 1 };
-  inline static void readlock(ZmPRWLock &l) { l.readlock(); }
-  inline static int readtrylock(ZmPRWLock &l) { return l.readtrylock(); }
-  inline static void readunlock(ZmPRWLock &l) { l.readunlock(); }
+  ZuInline static void readlock(ZmPRWLock &l) { l.readlock(); }
+  ZuInline static int readtrylock(ZmPRWLock &l) { return l.readtrylock(); }
+  ZuInline static void readunlock(ZmPRWLock &l) { l.readunlock(); }
 };
 
 // Recursive RWLock
@@ -174,9 +178,9 @@ class ZmRWLock : public ZmPRWLock {
   ZmRWLock &operator =(const ZmRWLock &);	// prevent mis-use
 
 public:
-  inline ZmRWLock() : m_tid(0), m_count(0) { }
+  ZuInline ZmRWLock() : m_tid(0), m_count(0) { }
 
-  inline void lock() {
+  void lock() {
     if (m_tid == ZmPlatform::getTID()) {
       ++m_count;
     } else {
@@ -186,7 +190,7 @@ public:
       ++m_count;
     }
   }
-  inline int trylock() {
+  int trylock() {
     if (m_tid == ZmPlatform::getTID()) {
       ++m_count;
       return 0;
@@ -198,18 +202,18 @@ public:
     }
     return -1;
   }
-  inline void unlock() {
+  void unlock() {
     if (!--m_count) {
       m_tid = 0;
       ZmPRWLock::unlock();
     }
   }
 
-  inline void readlock() { ZmPRWLock::readlock(); }
-  inline int readtrylock() { return ZmPRWLock::readtrylock(); }
-  inline void readunlock() { ZmPRWLock::readunlock(); }
+  ZuInline void readlock() { ZmPRWLock::readlock(); }
+  ZuInline int readtrylock() { return ZmPRWLock::readtrylock(); }
+  ZuInline void readunlock() { ZmPRWLock::readunlock(); }
 
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     ZmPRWLock::print(s);
     s << " tid=" << ZuBoxed(m_tid.load_()) << " count=" << m_count;
   }
@@ -222,9 +226,9 @@ private:
 template <>
 struct ZmLockTraits<ZmRWLock> : public ZmGenericLockTraits<ZmRWLock> {
   enum { RWLock = 1 };
-  inline static void readlock(ZmRWLock &l) { l.readlock(); }
-  inline static int readtrylock(ZmRWLock &l) { return l.readtrylock(); }
-  inline static void readunlock(ZmRWLock &l) { l.readunlock(); }
+  ZuInline static void readlock(ZmRWLock &l) { l.readlock(); }
+  ZuInline static int readtrylock(ZmRWLock &l) { return l.readtrylock(); }
+  ZuInline static void readunlock(ZmRWLock &l) { l.readunlock(); }
 };
 
 #ifdef _MSC_VER

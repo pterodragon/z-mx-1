@@ -166,7 +166,7 @@ namespace MxTelemetry {
 namespace MxTelemetry {
 
   struct Msg_HeapID {
-    inline static const char *id() { return "MxTelemetry.Msg"; }
+    static const char *id() { return "MxTelemetry.Msg"; }
   };
 
   template <typename Heap>
@@ -186,7 +186,7 @@ namespace MxTelemetry {
 #endif
 #define DeclFn(Fn, T) \
   template <typename ...Args> \
-  inline ZmRef<Msg> Fn(Args &&... args) { \
+  ZmRef<Msg> Fn(Args &&... args) { \
     ZmRef<Msg> msg = new Msg(); \
     new (msg->ptr()) Hdr{Type::T, sizeof(T)}; \
     new (msg->body()) T{ZuFwd<Args>(args)...}; \
@@ -199,7 +199,7 @@ namespace MxTelemetry {
 #undef DeclFn
 #define DeclFn(Fn, T) \
   template <typename Arg, typename ...Args> \
-  inline ZmRef<Msg> Fn(const Arg *arg, Args &&... args) { \
+  ZmRef<Msg> Fn(const Arg *arg, Args &&... args) { \
     ZmRef<Msg> msg = new Msg(); \
     new (msg->ptr()) Hdr{Type::T, sizeof(T)}; \
     T *ZuMayAlias(body) = new (msg->body()) T{}; \
@@ -236,7 +236,7 @@ namespace MxTelemetry {
 
   namespace UDP {
     template <typename Cxn>
-    inline void send(Cxn *cxn, ZmRef<Msg> msg, const ZiSockAddr &addr) {
+    void send(Cxn *cxn, ZmRef<Msg> msg, const ZiSockAddr &addr) {
       msg->addr = addr;
       cxn->send(ZiIOFn{ZuMv(msg), [](Msg *msg, ZiIOContext &io) {
 	io.init(ZiIOFn{io.fn.mvObject<Msg>(), [](Msg *msg, ZiIOContext &io) {
@@ -266,7 +266,7 @@ namespace MxTelemetry {
     void init(MxMultiplex *mx, ZvCf *cf);
     void final();
 
-    inline ZiMultiplex *mx() const { return m_mx; }
+    ZiMultiplex *mx() const { return m_mx; }
 
     void start();
     void stop();
@@ -326,7 +326,7 @@ namespace MxTelemetry {
     void init(MxMultiplex *mx, ZvCf *cf);
     void final();
 
-    inline ZiMultiplex *mx() const { return m_mx; }
+    ZiMultiplex *mx() const { return m_mx; }
 
     void start();
     void stop();

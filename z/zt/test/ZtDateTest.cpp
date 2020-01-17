@@ -13,24 +13,24 @@
 
 #define CHECK(x) ((x) ? puts("OK  " #x) : puts("NOK " #x))
 
-inline const ZtDateFmt::ISO &isoFmt(const ZtDate &d, int offset = 0) {
+const ZtDateFmt::ISO &isoFmt(const ZtDate &d, int offset = 0) {
   thread_local ZtDateFmt::ISO fmt;
   fmt.offset(offset);
   return d.iso(fmt);
 }
 
-inline ZuStringN<40> isoStr(const ZtDate &d, int offset = 0) {
+ZuStringN<40> isoStr(const ZtDate &d, int offset = 0) {
   return ZuStringN<40>() << isoFmt(d, offset);
 }
 
 struct LocalDT {
-  inline LocalDT(const ZtDate &d) {
+  LocalDT(const ZtDate &d) {
     ZtDate l = d + d.offset();
     l.ymd(m_Y, m_M, m_D);
     l.hmsn(m_h, m_m, m_s, m_n);
     ZmAssert(d == ZtDate(m_Y, m_M, m_D, m_h, m_m, m_s, m_n, ""));
   }
-  inline ZtString dump() {
+  ZtString dump() {
     return ZtSprintf("Lcl %.4d/%.2d/%.2d %.2d:%.2d:%.2d.%.6d",
 	m_Y, m_M, m_D, m_h, m_m, m_s, m_n / 1000);
   }
@@ -38,12 +38,12 @@ struct LocalDT {
 };
 
 struct GMTDT {
-  inline GMTDT(const ZtDate &d) {
+  GMTDT(const ZtDate &d) {
     d.ymd(m_Y, m_M, m_D);
     d.hmsn(m_h, m_m, m_s, m_n);
     ZmAssert(d == ZtDate(m_Y, m_M, m_D, m_h, m_m, m_s, m_n, 0));
   }
-  inline ZtString dump() {
+  ZtString dump() {
     return ZtSprintf("GMT %.4d/%.2d/%.2d %.2d:%.2d:%.2d.%.6d",
 	m_Y, m_M, m_D, m_h, m_m, m_s, m_n / 1000);
   }

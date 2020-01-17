@@ -325,7 +325,7 @@ public:
 
   void stop() { m_fn((ZuAnyPOD *)0); }
 
-  inline void enqueue(Msg *msg) {
+  void enqueue(Msg *msg) {
     ZuAnyPOD *pod = CSV::row(msg);
     if (ZuLikely(pod)) m_fn(pod);
   }
@@ -345,34 +345,34 @@ public:
 
   // dump options
 
-  inline void verbose(bool b) { m_verbose = b; }
+  void verbose(bool b) { m_verbose = b; }
 
   // CSV formatting
 
-  inline bool hhmmss() const { return m_hhmmss; }
-  inline unsigned yyyymmdd() const { return m_yyyymmdd; }
-  inline int tzOffset() const { return m_tzOffset; }
+  bool hhmmss() const { return m_hhmmss; }
+  unsigned yyyymmdd() const { return m_yyyymmdd; }
+  int tzOffset() const { return m_tzOffset; }
 
-  inline void hhmmss(bool b) { m_hhmmss = b; }
-  inline void yyyymmdd(unsigned n) { m_yyyymmdd = n; }
-  inline void tz(const char *tz) {
+  void hhmmss(bool b) { m_hhmmss = b; }
+  void yyyymmdd(unsigned n) { m_yyyymmdd = n; }
+  void tz(const char *tz) {
     ZtDate now(ZtDate::YYYYMMDD, m_yyyymmdd, ZtDate::HHMMSS, 120000, tz);
     m_tzOffset = now.offset(tz);
     m_isoFmt.offset(m_tzOffset);
   }
 
-  inline bool raw() const { return m_raw; }
-  inline void raw(bool b) { m_raw = b; }
+  bool raw() const { return m_raw; }
+  void raw(bool b) { m_raw = b; }
 
   // filters
 
-  inline void refData(bool b) { m_refData = b; }
-  inline void l1(bool b) { m_l1 = b; }
-  inline void l2(bool b) { m_l2 = b; }
-  inline void trades(bool b) { m_trades = b; }
+  void refData(bool b) { m_refData = b; }
+  void l1(bool b) { m_l1 = b; }
+  void l2(bool b) { m_l2 = b; }
+  void trades(bool b) { m_trades = b; }
 
-  inline void instrID(const MxInstrKey &key) { m_instrIDs->add(key); }
-  inline bool filterID(MxInstrKey key) {
+  void instrID(const MxInstrKey &key) { m_instrIDs->add(key); }
+  bool filterID(MxInstrKey key) {
     if (!m_instrIDs->count_()) return false;
     if (m_instrIDs->exists(key)) return false;
     if (*key.segment) {
@@ -388,32 +388,32 @@ public:
 
   // outputs
 
-  inline const ZtString &path() const { return m_path; }
-  inline const ZtString &outPath() const { return m_outPath; }
+  const ZtString &path() const { return m_path; }
+  const ZtString &outPath() const { return m_outPath; }
 
   template <typename Path>
-  inline void path(const Path &path) { m_path = path; }
+  void path(const Path &path) { m_path = path; }
   template <typename Path>
-  inline void outPath(const Path &path) { m_outPath = path; }
+  void outPath(const Path &path) { m_outPath = path; }
 
   template <typename Path>
-  inline void venueCSV(const Path &path) {
+  void venueCSV(const Path &path) {
     m_venueCSV = new CSVWriter<MxMDVenueCSV>(this, path);
   }
   template <typename Path>
-  inline void tickSizeCSV(const Path &path) {
+  void tickSizeCSV(const Path &path) {
     m_tickSizeCSV = new CSVWriter<MxMDTickSizeCSV>(this, path);
   }
   template <typename Path>
-  inline void instrumentCSV(const Path &path) {
+  void instrumentCSV(const Path &path) {
     m_securityCSV = new CSVWriter<MxMDInstrumentCSV>(this, path);
   }
   template <typename Path>
-  inline void orderBookCSV(const Path &path) {
+  void orderBookCSV(const Path &path) {
     m_orderBookCSV = new CSVWriter<MxMDOrderBookCSV>(this, path);
   }
   template <typename Path>
-  inline void realTimeCSV(const Path &path) {
+  void realTimeCSV(const Path &path) {
     m_realTimeCSV = new CSVWriter<RealTimeCSV>(this, path);
   }
 

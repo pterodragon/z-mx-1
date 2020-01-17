@@ -71,14 +71,14 @@ template <> struct ZmCleanup<ZmTLock_Depth> {
 
 struct ZmTLock_Depth : public ZmObject {
   ZmTLock_Depth() : m_depth(0) { }
-  inline void inc() {
+  void inc() {
     if (m_depth > 20) {
       fputs("INFINITE RECURSION\n", stderr);
       _ZmPlatform::exit(1);
     }
     m_depth++;
   }
-  inline void dec() { --m_depth; }
+  void dec() { --m_depth; }
   int m_depth;
 };
 #endif
@@ -87,8 +87,8 @@ struct ZmTLockParams {
   inline ZmTLockParams() :
     m_idHash(ZmHashParams().bits(8)),
     m_tidHash(ZmHashParams().bits(8)) { }
-  inline ZmTLockParams &idHash(ZmHashParams p) { m_idHash = p; return *this; }
-  inline ZmTLockParams &tidHash(ZmHashParams p) { m_tidHash = p; return *this; }
+  ZmTLockParams &idHash(ZmHashParams p) { m_idHash = p; return *this; }
+  ZmTLockParams &tidHash(ZmHashParams p) { m_tidHash = p; return *this; }
 
   ZmHashParams	m_idHash;
   ZmHashParams	m_tidHash;
@@ -113,7 +113,7 @@ struct ZuTraits<ZmTLock_Held> : public ZuGenericTraits<ZmTLock_Held> {
 };
 
 struct ZmTLock_Held_ThreadAccessor : public ZuAccessor<ZmTLock_Held, void *> {
-  inline static void *value(ZmTLock_Held h) { return h.m_thread; }
+  static void *value(ZmTLock_Held h) { return h.m_thread; }
 };
 
 template <typename ID, typename TID> class ZmTLock {
@@ -160,9 +160,9 @@ friend struct Lock;
     // -1	unlocked & deleted
     // <-1	locked & deleted, with count -m_lockCount - 1
 
-    inline static int cmp(const Lock *l1, const Lock *l2) { return 0; }
-    inline static bool equals(const Lock *l1, const Lock *l2) { return true; }
-    inline static const ZmRef<Lock> &null() {
+    static int cmp(const Lock *l1, const Lock *l2) { return 0; }
+    static bool equals(const Lock *l1, const Lock *l2) { return true; }
+    static const ZmRef<Lock> &null() {
       static const ZmRef<Lock> l;
       return l;
     }
@@ -182,7 +182,7 @@ friend struct Lock;
 
   typedef ZmRef<Lock> LockRef;
 
-  struct HeapID { inline static const char *id() { return "ZmTLock"; } };
+  struct HeapID { static const char *id() { return "ZmTLock"; } };
 
   typedef ZmHash<ID,
 	    ZmHashVal<LockRef,
@@ -200,7 +200,7 @@ friend struct Thread;
     typedef ZmStack<Lock *, ZmStackLock<ZmNoLock> > LockStack;
 
     template <typename TID_>
-    inline Thread(const TID_ &tid) : m_tid(tid), m_waiting(0) { }
+    Thread(const TID_ &tid) : m_tid(tid), m_waiting(0) { }
 
     void readLock(Lock *lock) { m_readLocked.push(lock); }
     bool isReadLocked(Lock *lock) { return m_readLocked.find(lock); }
@@ -275,7 +275,7 @@ friend struct Thread;
       while (lock = unlockStack.pop()) parent.unlock_(lock, this);
     }
 
-    inline void running() { m_waiting = 0; }
+    void running() { m_waiting = 0; }
 
     TID			m_tid;
     Lock		*m_waiting;

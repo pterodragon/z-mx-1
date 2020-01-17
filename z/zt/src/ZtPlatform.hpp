@@ -52,16 +52,16 @@ class ZtAPI ZtPlatform {
 public:
 // environment and timezone manipulation
 #ifndef _WIN32
-  inline static int putenv(const char *s) { return ::putenv((char *)s); }
-  inline static void tzset(void) { ::tzset(); }
+  static int putenv(const char *s) { return ::putenv((char *)s); }
+  static void tzset(void) { ::tzset(); }
 #else
-  inline static int putenv(const char *s) { return ::_putenv((char *)s); }
-  inline static void tzset(void) { ::_tzset(); }
+  static int putenv(const char *s) { return ::_putenv((char *)s); }
+  static void tzset(void) { ::_tzset(); }
 #endif
 
 // memory growth algorithm for growing string and array buffers
 
-  inline static unsigned grow(unsigned o, unsigned n) {
+  static unsigned grow(unsigned o, unsigned n) {
     if (ZuUnlikely(o > n)) return o;
 
     const unsigned v = (sizeof(void *)<<1); // malloc overhead

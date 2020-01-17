@@ -44,7 +44,7 @@ void fail2(unsigned line, const char *s, const V1 &v1, const V2 &v2)
 #define CHECK2(x, v1, v2) ((x) ? (void)0 : (void)fail2(__LINE__, #x, v1, v2))
 
 template <class Fmt, class Boxed> struct VFmt_ {
-  inline static void _(ZuVFmt &fmt) {
+  static void _(ZuVFmt &fmt) {
     if (Fmt::Alt_ == 1) fmt.alt();
     if (Fmt::Comma_ != '\0') fmt.comma(Fmt::Comma_);
     if (Fmt::Hex_ == 1) fmt.hex(Fmt::Upper_);
@@ -53,7 +53,7 @@ template <class Fmt, class Boxed> struct VFmt_ {
 template <class Fmt, class Boxed,
   int Justification = Fmt::Justification_> struct VFmt;
 template <class Fmt, class Boxed> struct VFmt<Fmt, Boxed, ZuFmt::Just::None> {
-  inline static ZuVFmt _() {
+  static ZuVFmt _() {
     ZuVFmt fmt;
     fmt.fp(Fmt::NDP_, Fmt::Trim_);
     VFmt_<Fmt, Boxed>::_(fmt);
@@ -61,7 +61,7 @@ template <class Fmt, class Boxed> struct VFmt<Fmt, Boxed, ZuFmt::Just::None> {
   }
 };
 template <class Fmt, class Boxed> struct VFmt<Fmt, Boxed, ZuFmt::Just::Left> {
-  inline static ZuVFmt _() {
+  static ZuVFmt _() {
     ZuVFmt fmt;
     fmt.left(Fmt::Width_, Fmt::Pad_);
     VFmt_<Fmt, Boxed>::_(fmt);
@@ -69,7 +69,7 @@ template <class Fmt, class Boxed> struct VFmt<Fmt, Boxed, ZuFmt::Just::Left> {
   }
 };
 template <class Fmt, class Boxed> struct VFmt<Fmt, Boxed, ZuFmt::Just::Right> {
-  inline static ZuVFmt _() {
+  static ZuVFmt _() {
     ZuVFmt fmt;
     fmt.right(Fmt::Width_, Fmt::Pad_);
     VFmt_<Fmt, Boxed>::_(fmt);
@@ -77,7 +77,7 @@ template <class Fmt, class Boxed> struct VFmt<Fmt, Boxed, ZuFmt::Just::Right> {
   }
 };
 template <class Fmt, class Boxed> struct VFmt<Fmt, Boxed, ZuFmt::Just::Frac> {
-  inline static ZuVFmt _() {
+  static ZuVFmt _() {
     ZuVFmt fmt;
     fmt.frac(Fmt::NDP_, Fmt::Trim_);
     VFmt_<Fmt, Boxed>::_(fmt);

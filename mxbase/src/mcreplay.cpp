@@ -79,15 +79,15 @@ class App;
 
 class Dest : public ZmPolymorph {
 public:
-  inline Dest(App *app, const Group &group) : m_app(app), m_group(group) { }
+  Dest(App *app, const Group &group) : m_app(app), m_group(group) { }
   ~Dest() { }
 
   void connect();
   ZiConnection *connected(const ZiConnectionInfo &ci);
   void connectFailed(bool transient);
 
-  inline App *app() const { return m_app; }
-  inline const Group &group() const { return m_group; }
+  App *app() const { return m_app; }
+  const Group &group() const { return m_group; }
 
 private:
   App	*m_app;
@@ -97,15 +97,15 @@ private:
 class Connection : public ZiConnection {
 public:
   struct GroupIDAccessor : public ZuAccessor<Connection *, uint16_t> {
-    inline static uint16_t value(const Connection *c) { return c->groupID(); }
+    static uint16_t value(const Connection *c) { return c->groupID(); }
   };
 
   Connection(Dest *dest, const ZiConnectionInfo &ci);
   ~Connection() { }
 
-  inline App *app() const { return m_app; }
-  inline uint16_t groupID() const { return m_groupID; }
-  inline const ZiSockAddr &dest() const { return m_dest; }
+  App *app() const { return m_app; }
+  uint16_t groupID() const { return m_groupID; }
+  const ZiSockAddr &dest() const { return m_dest; }
 
   void connected(ZiIOContext &);
   void disconnected();
@@ -140,19 +140,19 @@ public:
   void connect(ZuAnyPOD *pod);
   void read();
 
-  inline const ZtString &replay() const { return m_replay; }
-  inline const ZtString &groups() const { return m_groups; }
-  inline ZuBox<double> speed() const { return m_speed; }
-  inline ZuBox<double> interval() const { return m_interval; }
-  inline ZiIP interface_() const { return m_interface; }
-  inline int ttl() const { return m_ttl; }
-  inline bool loopBack() const { return m_loopBack; }
+  ZuInline const ZtString &replay() const { return m_replay; }
+  ZuInline const ZtString &groups() const { return m_groups; }
+  ZuInline ZuBox<double> speed() const { return m_speed; }
+  ZuInline ZuBox<double> interval() const { return m_interval; }
+  ZuInline ZiIP interface_() const { return m_interface; }
+  ZuInline int ttl() const { return m_ttl; }
+  ZuInline bool loopBack() const { return m_loopBack; }
 
-  inline Mx *mx() { return m_mx; }
+  Mx *mx() { return m_mx; }
 
   void connected_(Connection *cxn) { m_cxns->add(cxn); }
   void disconnected_(Connection *cxn) { delete m_cxns->del(cxn->groupID()); }
-  inline int nCxns() { return m_cxns->count_(); }
+  int nCxns() { return m_cxns->count_(); }
 
 private:
   ZmSemaphore	m_sem;
@@ -179,17 +179,17 @@ public:
   // UDP over Ethernet maximum payload is 1472 (without Jumbo frames)
   enum { Size = 1472 };
 
-  inline Msg_(App *app) : m_app(app) { }
-  inline ~Msg_() { }
+  Msg_(App *app) : m_app(app) { }
+  ~Msg_() { }
 
   int read(ZiFile *);
-  inline uint32_t group() { return m_hdr.group; }
+  uint32_t group() { return m_hdr.group; }
 
   void send(Connection *);
   void send_(ZiIOContext &);
   void sent_(ZiIOContext &);
 
-  inline ZmTime stamp() const {
+  ZmTime stamp() const {
     return ZmTime((time_t)m_hdr.sec, (int32_t)m_hdr.nsec);
   }
 
@@ -200,7 +200,7 @@ private:
   char			m_buf[Size];
 };
 struct Msg_HeapID {
-  inline static const char *id() { return "Msg"; }
+  static const char *id() { return "Msg"; }
 };
 typedef ZmHeap<Msg_HeapID, sizeof(Msg_<ZuNull>)> Msg_Heap;
 typedef Msg_<Msg_Heap> Msg;

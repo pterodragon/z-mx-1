@@ -40,7 +40,7 @@ public:
   ZuInline ZmBackTrace() {
     memset(m_frames, 0, sizeof(void *) * ZmBackTrace_DEPTH);
   }
-  inline ZmBackTrace(unsigned skip) {
+  ZmBackTrace(unsigned skip) {
     memset(m_frames, 0, sizeof(void *) * ZmBackTrace_DEPTH);
     capture(skip + 1);
   }

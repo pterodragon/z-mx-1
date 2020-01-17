@@ -101,7 +101,7 @@ namespace MxMDLibJNI {
 
   // generic unsubscribe
   template <typename T>
-  inline void unsubscribe_(JNIEnv *env, T *owner) {
+  void unsubscribe_(JNIEnv *env, T *owner) {
     if (jobject obj = owner->template libData<jobject>()) {
       owner->unsubscribe();
       env->DeleteGlobalRef(obj);

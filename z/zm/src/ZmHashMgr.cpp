@@ -35,7 +35,7 @@ friend struct ZmSingletonCtor<ZmHashMgr_>;
 friend class ZmHashMgr;
 
   struct HeapID {
-    inline static const char *id() { return "ZmHashMgr_"; }
+    static const char *id() { return "ZmHashMgr_"; }
   };
 
   typedef ZmRBTree<ZmIDString,

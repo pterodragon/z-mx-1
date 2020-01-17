@@ -42,7 +42,7 @@ struct ZuPrintable { };
 struct ZuPrintFn {
   enum { OK = 1, String = 0, Delegate = 1, Buffer = 0 };
   template <typename S, typename T>
-  inline static void print(S &s, const T &v) { v.print(s); }
+  ZuInline static void print(S &s, const T &v) { v.print(s); }
 };
 template <bool> struct ZuPrint_ {
   enum { OK = 0, String = 0, Delegate = 0, Buffer = 0 };
@@ -64,7 +64,7 @@ struct ZuPrintBuffer {
 struct ZuPrintNull {
   enum { OK = 1, String = 0, Delegate = 1, Buffer = 0 };
   template <typename S, typename T>
-  inline static void print(S &, const T &) { }
+  ZuInline static void print(S &, const T &) { }
 };
 
 template <typename T> struct ZuPrint<const T> : public ZuPrint<T> { };
@@ -83,17 +83,17 @@ template <typename S> struct ZuStdStream;
 
 template <typename S> struct ZuStdStream__ {
   enum { Is = 1 };
-  template <typename P> inline static typename ZuIfT<ZuPrint<P>::String>::T
+  template <typename P> ZuInline static typename ZuIfT<ZuPrint<P>::String>::T
       print(S &s, const P &p) {
     const typename ZuTraits<P>::Elem *ptr = ZuTraits<P>::data(p);
     if (ZuLikely(ptr))
       ZuStdStream<S>::append(s, ptr, ZuTraits<P>::length(p));
   }
-  template <typename P> inline static typename ZuIfT<ZuPrint<P>::Delegate>::T
+  template <typename P> ZuInline static typename ZuIfT<ZuPrint<P>::Delegate>::T
       print(S &s, const P &p) {
     ZuPrint<P>::print(s, p);
   }
-  template <typename P> inline static typename ZuIfT<ZuPrint<P>::Buffer>::T
+  template <typename P> static typename ZuIfT<ZuPrint<P>::Buffer>::T
       print(S &s, const P &p) {
     unsigned len = ZuPrint<P>::length(p);
     char *buf;
@@ -119,7 +119,7 @@ template <typename S> struct ZuStdStream__ {
 
 template <typename, bool> struct ZuStdStream_ { enum { Is = 0 }; };
 template <typename S> struct ZuStdStream_<S, true> : public ZuStdStream__<S> {
-  inline static S &append(S &s, const char *data, unsigned length) {
+  static S &append(S &s, const char *data, unsigned length) {
     if (ZuLikely(data)) s.write(data, (size_t)length);
     return s;
   }
@@ -131,7 +131,7 @@ template <typename T, typename A>
 struct ZuStdStream<std::basic_string<char, T, A> > :
     public ZuStdStream__<std::basic_string<char, T, A> > {
   typedef std::basic_string<char, T, A> S;
-  inline static S &append(S &s, const char *data, unsigned length) {
+  static S &append(S &s, const char *data, unsigned length) {
     if (ZuLikely(data)) s.append(data, (size_t)length);
     return s;
   }

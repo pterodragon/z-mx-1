@@ -46,8 +46,8 @@ public:
   inline ZvInvalidEnum(Key &&key, Value &&value) :
     m_key(ZuFwd<Key>(key)), m_value(ZuFwd<Value>(value)) { }
 
-  inline const ZtString &key() const { return m_key; }
-  inline const ZtString &value() const { return m_value; }
+  const ZtString &key() const { return m_key; }
+  const ZtString &value() const { return m_value; }
 
 private:
   ZtString			m_key;
@@ -70,7 +70,7 @@ template <typename T> class ZvEnum : public T {
 template <typename> friend class ZvInvalidEnumT;
 
 public:
-  inline static ZvEnum *instance() {
+  static ZvEnum *instance() {
     return static_cast<ZvEnum *>(T::instance());
   }
 
@@ -83,7 +83,7 @@ public:
     throw ZvInvalidEnumT<T>(key, s, this);
   }
 
-  inline const char *v2s(ZuString key, ZtEnum v) const {
+  const char *v2s(ZuString key, ZtEnum v) const {
     const char *s = T::v2s(v);
     if (ZuLikely(s)) return s;
     throw ZvInvalidEnumT<T>(key, v, this);
@@ -91,7 +91,7 @@ public:
 
 private:
   template <typename Key, typename Value>
-  inline void errorMessage(ZmStream &s, Key &&key, Value &&value) const {
+  void errorMessage(ZmStream &s, Key &&key, Value &&value) const {
     s << ZuFwd<Key>(key) << ": \"" << ZuFwd<Value>(value) <<
       "\" did not match { ";
     bool first = true;
@@ -112,7 +112,7 @@ void ZvInvalidEnumT<T>::print_(ZmStream &s) const
 
 template <typename T> class ZvFlags : public ZvEnum<T> {
 public:
-  inline static ZvFlags *instance() {
+  static ZvFlags *instance() {
     return static_cast<ZvFlags *>(T::instance());
   }
 
@@ -123,7 +123,7 @@ public:
   }
 
   template <typename Flags>
-  inline Flags scan(ZuString key, ZuString s, char delim = '|') const {
+  Flags scan(ZuString key, ZuString s, char delim = '|') const {
     if (!s) return 0;
     if (Flags v = T::template scan<Flags>(s, delim)) return v;
     throw ZvInvalidEnumT<T>(

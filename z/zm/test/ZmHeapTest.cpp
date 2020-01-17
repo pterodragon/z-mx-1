@@ -36,16 +36,16 @@
 static bool verbose = false;
 
 template <typename Heap> struct S_ : public Heap {
-  inline S_(int i) : m_i(i) { }
-  inline ~S_() { m_i = -1; }
-  inline void doit() {
+  S_(int i) : m_i(i) { }
+  ~S_() { m_i = -1; }
+  void doit() {
     if (verbose) { printf("hello world %d\n", m_i); fflush(stdout); }
     if (m_i < 0) __builtin_trap();
   }
   int m_i;
 };
 struct ID {
-  inline static const char *id() { return "S"; }
+  static const char *id() { return "S"; }
 };
 typedef S_<ZmHeap<ID, sizeof(S_<ZuNull>)> > S;
 

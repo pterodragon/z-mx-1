@@ -35,11 +35,11 @@ namespace Ztls {
 class HMAC {
 public:
   // mbedtls_md_type_t, e.g. MBEDTLS_MD_SHA256
-  inline HMAC(mbedtls_md_type_t type) {
+  HMAC(mbedtls_md_type_t type) {
     mbedtls_md_init(&m_ctx);
     mbedtls_md_setup(&m_ctx, mbedtls_md_info_from_type(type), 1);
   }
-  inline ~HMAC() {
+  ~HMAC() {
     mbedtls_md_free(&m_ctx);
   }
 

@@ -69,7 +69,7 @@ struct ZuArrayN___ { };
 template <typename T> struct ZuArrayN__ : public ZuArrayN___ {
 protected:
   typedef enum { Nop } Nop_;
-  inline ZuArrayN__(Nop_ _) { }
+  ZuArrayN__(Nop_ _) { }
 
   inline ZuArrayN__(unsigned size) :
     m_size(size), m_length(0) { }
@@ -130,7 +130,7 @@ protected:
   }
 
   template <typename A>
-  inline typename ZuConvertible<A, T>::T init(const A *a, unsigned length) {
+  typename ZuConvertible<A, T>::T init(const A *a, unsigned length) {
     if (ZuUnlikely(length > Base::m_size)) length = Base::m_size;
     if (ZuUnlikely(!a))
       length = 0;
@@ -144,10 +144,10 @@ protected:
     Base::m_length = 1;
   }
 
-  template <typename P> inline typename MatchPDelegate<P>::T init(const P &p) {
+  template <typename P> typename MatchPDelegate<P>::T init(const P &p) {
     ZuPrint<P>::print(*static_cast<ArrayN *>(this), p);
   }
-  template <typename P> inline typename MatchPBuffer<P>::T init(const P &p) {
+  template <typename P> typename MatchPBuffer<P>::T init(const P &p) {
     unsigned length = ZuPrint<P>::length(p);
     if (length > Base::m_size)
       Base::m_length = 0;
@@ -156,25 +156,25 @@ protected:
   }
 
   template <typename A>
-  inline typename ZuConvertible<A, T>::T append_(const A *a, unsigned length) {
+  typename ZuConvertible<A, T>::T append_(const A *a, unsigned length) {
     if (Base::m_length + length > Base::m_size)
       length = Base::m_size - Base::m_length;
     if (a && length) this->copyItems(data() + Base::m_length, a, length);
     Base::m_length += length;
   }
   template <typename E>
-  inline typename ZuConvertible<E, T>::T append_(E &&e) {
+  typename ZuConvertible<E, T>::T append_(E &&e) {
     if (Base::m_length >= Base::m_size) return;
     this->initItem(data() + Base::m_length, ZuFwd<E>(e));
     ++Base::m_length;
   }
 
   template <typename P>
-  inline typename MatchPDelegate<P>::T append_(const P &p) {
+  typename MatchPDelegate<P>::T append_(const P &p) {
     ZuPrint<P>::print(*static_cast<ArrayN *>(this), p);
   }
   template <typename P>
-  inline typename MatchPBuffer<P>::T append_(const P &p) {
+  typename MatchPBuffer<P>::T append_(const P &p) {
     unsigned length = ZuPrint<P>::length(p);
     if (Base::m_length + length > Base::m_size) return;
     Base::m_length += ZuPrint<P>::print(data() + Base::m_length, length, p);
@@ -212,26 +212,26 @@ public:
 
 // push/pop/shift/unshift
 
-  template <typename I> inline T *push(I &&i) {
+  template <typename I> T *push(I &&i) {
     if (Base::m_length >= Base::m_size) return 0;
     T *ptr = &(data()[Base::m_length++]);
     this->initItem((void *)ptr, ZuFwd<I>(i));
     return ptr;
   }
-  inline T pop() {
+  T pop() {
     if (!Base::m_length) return Cmp::null();
     T t = ZuMv(data()[--Base::m_length]);
     this->destroyItem(data() + Base::m_length);
     return t;
   }
-  inline T shift() {
+  T shift() {
     if (!Base::m_length) return Cmp::null();
     T t = ZuMv(data()[0]);
     this->destroyItem(data());
     this->moveItems(data(), data() + 1, --Base::m_length);
     return t;
   }
-  template <typename I> inline T *unshift(I &&i) {
+  template <typename I> T *unshift(I &&i) {
     if (Base::m_length >= Base::m_size) return 0;
     this->moveItems(data() + 1, data(), Base::m_length++);
     T *ptr = data();
@@ -239,11 +239,11 @@ public:
     return ptr;
   }
 
-  inline void splice(int offset, int length) {
+  void splice(int offset, int length) {
     splice_(offset, length, (void *)0);
   }
   template <typename U>
-  inline void splice(int offset, int length, U &removed) {
+  void splice(int offset, int length, U &removed) {
     splice_(offset, length, &removed);
   }
 
@@ -266,7 +266,7 @@ private:
   struct SpliceDefault<U, R, T, true> { typedef R T; };
 
   template <typename U>
-  inline void splice_(int offset, int length, U *removed) {
+  void splice_(int offset, int length, U *removed) {
     if (ZuUnlikely(!length)) return;
     if (offset < 0) { if ((offset += Base::m_length) < 0) offset = 0; }
     if (offset >= (int)Base::m_size) return;
@@ -632,14 +632,8 @@ struct ZuTraits<ZuArrayN<T_, N, Cmp> > :
     IsWString = ZuConversion<wchar_t, Elem>::Same,
     IsHashable = 1, IsComparable = 1
   };
-#if 0
-  inline static T make(const T *data, unsigned length) {
-    if (!data) return T();
-    return T(data, length);
-  }
-#endif
-  inline static const Elem *data(const T &a) { return a.data(); }
-  inline static unsigned length(const T &a) { return a.length(); }
+  ZuInline static const Elem *data(const T &a) { return a.data(); }
+  ZuInline static unsigned length(const T &a) { return a.length(); }
 };
 
 // generic printing

@@ -20,7 +20,7 @@ const char *Request2 = "\r\n"
 
 struct App : public Ztls::Client<App> {
   struct Link : public Ztls::CliLink<App, Link> {
-    inline Link(App *app) : Ztls::CliLink<App, Link>(app) { }
+    Link(App *app) : Ztls::CliLink<App, Link>(app) { }
 
     void connected(const char *hostname, const char *alpn) {
       if (!hostname) hostname = "(null)";

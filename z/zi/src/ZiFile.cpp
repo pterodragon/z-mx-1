@@ -56,15 +56,15 @@ class ZiFile_WindowsDrives {
 friend struct ZmSingletonCtor<ZiFile_WindowsDrives>;
 
 public:
-  inline static int blkSize(ZtWString path) {
+  static int blkSize(ZtWString path) {
     return instance()->blkSize_path(ZuMv(path));
   }
-  inline static int blkSize(HANDLE handle) {
+  static int blkSize(HANDLE handle) {
     return instance()->blkSize_handle(handle);
   }
 
 #if 0
-  inline static void dump() {
+  static void dump() {
     return instance()->dump_();
   }
 #endif

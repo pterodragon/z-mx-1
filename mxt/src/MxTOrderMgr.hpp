@@ -47,17 +47,17 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
 
     // update
     template <typename Update>
-    inline typename ZuIs<NewOrder, Update>::T update(const Update &u) {
+    typename ZuIs<NewOrder, Update>::T update(const Update &u) {
       Base::update(u);
       clOrdID.update(u.clOrdID);
     }
     template <typename Update>
-    inline typename ZuIsNot<NewOrder, Update>::T update(const Update &u) {
+    typename ZuIsNot<NewOrder, Update>::T update(const Update &u) {
       Base::update(u);
     }
 
     // print
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       s << static_cast<const Base::NewOrder &>(*this) <<
 	" clOrdID=" << clOrdID;
     }
@@ -161,7 +161,7 @@ public:
   }
 
 private:
-  inline static void newOrderIn__(Order *order) {
+  static void newOrderIn__(Order *order) {
     auto &newOrder = order->newOrder();
     unsigned n = newOrder.nLegs();
     for (unsigned i = 0; i < n; i++) {
@@ -171,7 +171,7 @@ private:
       leg.cumValue = 0;
     }
   }
-  inline static void closed__(Order *order) {
+  static void closed__(Order *order) {
     auto &newOrder = order->newOrder();
     unsigned n = newOrder.nLegs();
     for (unsigned i = 0; i < n; i++) {
@@ -180,7 +180,7 @@ private:
     }
   }
   template <int State>
-  inline static void newOrderIn_(Order *order) {
+  static void newOrderIn_(Order *order) {
     auto &newOrder = order->newOrder();
     newOrder.eventState = State;
     newOrder.template rxtx<1, State == MxTEventState::Queued, 0>();
@@ -192,7 +192,7 @@ private:
     newOrderIn__(order);
   }
   template <int State>
-  inline static void newOrderIn(Order *order) {
+  static void newOrderIn(Order *order) {
     auto &newOrder = order->newOrder();
     newOrder.eventState = State;
     newOrder.template rxtx<1, State == MxTEventState::Queued, 0>();
@@ -202,13 +202,13 @@ private:
     order->exec().null();
     newOrderIn__(order);
   }
-  inline static void newOrderOut(Order *order) {
+  static void newOrderOut(Order *order) {
     auto &newOrder = order->newOrder();
     newOrder.eventState = MxTEventState::Queued;
     newOrder.tx_set();
   }
   template <int State>
-  inline static void modifyIn(Order *order) {
+  static void modifyIn(Order *order) {
     order->newOrder().template rxtx<0, 0, 0>();
     auto &modify = order->modify();
     modify.eventState = State;
@@ -217,13 +217,13 @@ private:
     order->ack().null();
     order->exec().null();
   }
-  inline static void modifyOut(Order *order) {
+  static void modifyOut(Order *order) {
     auto &modify = order->modify();
     modify.eventState = MxTEventState::Queued;
     modify.tx_set();
   }
   template <int State>
-  inline static void cancelIn(Order *order) {
+  static void cancelIn(Order *order) {
     order->newOrder().template rxtx<0, 0, 0>();
     order->modify().template rxtx<0, 0, 0>();
     auto &cancel = order->cancel();
@@ -232,7 +232,7 @@ private:
     order->ack().null();
     order->exec().null();
   }
-  inline static void cancelOut(Order *order) {
+  static void cancelOut(Order *order) {
     auto &cancel = order->cancel();
     cancel.eventState = MxTEventState::Queued;
     cancel.tx_set();
@@ -240,7 +240,7 @@ private:
 
   template <int Type, int State, bool NewOrder, bool Modify, bool Cancel,
     bool Unsolicited, bool Synthetic, bool Pending>
-  inline static void ackIn(Order *order, int leg = 0) {
+  static void ackIn(Order *order, int leg = 0) {
     order->newOrder().template rxtx<0, 0, NewOrder>();
     order->modify().template rxtx<0, 0, Modify>();
     order->cancel().template rxtx<0, 0, Cancel>();
@@ -258,7 +258,7 @@ private:
   }
   template <int Type, int State, bool NewOrder, bool Modify, bool Cancel,
     bool Unsolicited, bool Synthetic, bool Pending>
-  inline static void ackOut(Order *order, int leg = 0) {
+  static void ackOut(Order *order, int leg = 0) {
     if constexpr (NewOrder) order->newOrder().ack_set();
     if constexpr (Modify) order->modify().ack_set();
     if constexpr (Cancel) order->cancel().ack_set();
@@ -275,7 +275,7 @@ private:
   }
 
   template <int State>
-  inline static void execIn(Order *order) {
+  static void execIn(Order *order) {
     order->newOrder().template rxtx<0, 0, 0>();
     order->modify().template rxtx<0, 0, 0>();
     order->cancel().template rxtx<0, 0, 0>();
@@ -285,7 +285,7 @@ private:
     exec.template rxtx<1, State == MxTEventState::Sent, 0>();
   }
   template <int State = MxTEventState::Sent>
-  inline static void execOut(Order *order) {
+  static void execOut(Order *order) {
     auto &exec = order->exec();
     exec.eventState = State;
     if constexpr (State == MxTEventState::Sent) exec.tx_set();

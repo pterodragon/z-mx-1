@@ -167,28 +167,28 @@ private:
 struct ZuBox_Approx_ { };
 template <typename T, class Cmp>
 struct ZuBox_Approx : public ZuBox<T, Cmp>, public ZuBox_Approx_ {
-  inline ZuBox_Approx() { }
+  ZuBox_Approx() { }
   inline ZuBox_Approx(const ZuBox_Approx &v) :
     ZuBox<T, Cmp>(static_cast<const ZuBox<T, Cmp> &>(v)) { }
-  inline ZuBox_Approx &operator =(const ZuBox_Approx &v) {
+  ZuBox_Approx &operator =(const ZuBox_Approx &v) {
     if (this != &v)
       ZuBox<T, Cmp>::operator =(static_cast<const ZuBox<T, Cmp> &>(v));
     return *this;
   }
-  template <typename P> inline ZuBox_Approx(const P &p) : ZuBox<T, Cmp>(p) { }
+  template <typename P> ZuBox_Approx(const P &p) : ZuBox<T, Cmp>(p) { }
   template <typename P>
-  inline ZuBox_Approx &operator =(const P &p) {
+  ZuBox_Approx &operator =(const P &p) {
     ZuBox<T, Cmp>::operator =(p);
     return *this;
   }
 };
 template <typename T_, class Cmp, bool IsFloating> struct ZuBox_Tilde {
   typedef ZuBox_Approx<T_, Cmp> T;
-  inline static T fn(const T_ &val) { return T(val); }
+  ZuInline static T fn(const T_ &val) { return T(val); }
 };
 template <typename T_, class Cmp> struct ZuBox_Tilde<T_, Cmp, 0> {
   typedef T_ T;
-  inline static T fn(const T_ &val) { return ~val; }
+  ZuInline static T fn(const T_ &val) { return ~val; }
 };
 
 // SFINAE...

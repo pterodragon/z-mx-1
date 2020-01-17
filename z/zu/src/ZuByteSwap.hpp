@@ -58,7 +58,7 @@
 #if (__GNUC__ > 3 && __GNUC_MINOR > 6)
 #define Zu_bswap16(x) __builtin_bswap16(x)
 #else
-inline uint16_t Zu_bswap16(const uint16_t &i) {
+uint16_t Zu_bswap16(const uint16_t &i) {
   return
     (i << 8) | (i >> 8);
 }
@@ -71,16 +71,16 @@ inline uint16_t Zu_bswap16(const uint16_t &i) {
 #define Zu_bswap32(x) _byteswap_ulong(x)
 #define Zu_bswap64(x) _byteswap_uint64(x)
 #else
-inline uint16_t Zu_bswap16(const uint16_t &i) {
+uint16_t Zu_bswap16(const uint16_t &i) {
   return
     (i << 8) | (i >> 8);
 }
-inline uint32_t Zu_bswap32(const uint32_t &i) {
+uint32_t Zu_bswap32(const uint32_t &i) {
   return
     (i << 24) | ((i & 0xff00UL) << 8) |
     ((i >> 8) & 0xff00UL) | (i >> 24);
 }
-inline uint64_t Zu_bswap64(const uint64_t &i) {
+uint64_t Zu_bswap64(const uint64_t &i) {
   return
     (i << 56) | ((i & 0xff00ULL) << 40) |
     ((i & 0xff0000ULL) << 24) | ((i & 0xff000000ULL) << 8) |
@@ -102,19 +102,19 @@ template <typename T_, class Cmp> struct ZuByteSwap_Unbox<ZuBox<T_, Cmp> > {
 template <int N> struct ZuByteSwap_;
 template <> struct ZuByteSwap_<1> {
   typedef char T;
-  inline static T bswap(const T &i) { return i; }
+  ZuInline static T bswap(const T &i) { return i; }
 };
 template <> struct ZuByteSwap_<2> {
   typedef uint16_t T;
-  inline static T bswap(const T &i) { return Zu_bswap16(i); }
+  ZuInline static T bswap(const T &i) { return Zu_bswap16(i); }
 };
 template <> struct ZuByteSwap_<4> {
   typedef uint32_t T;
-  inline static T bswap(const T &i) { return Zu_bswap32(i); }
+  ZuInline static T bswap(const T &i) { return Zu_bswap32(i); }
 };
 template <> struct ZuByteSwap_<8> {
   typedef uint64_t T;
-  inline static T bswap(const T &i) { return Zu_bswap64(i); }
+  ZuInline static T bswap(const T &i) { return Zu_bswap64(i); }
 };
 template <typename T_> class ZuByteSwap : public ZuByteSwap_<sizeof(T_)> {
   typedef ZuByteSwap_<sizeof(T_)> B;
@@ -124,21 +124,21 @@ public:
   typedef typename ZuByteSwap_Unbox<T>::T U;
   typedef typename B::T I;
 
-  inline ZuByteSwap() { m_i = 0; }
-  inline ZuByteSwap(const ZuByteSwap &i) { m_i = i.m_i; }
-  inline ZuByteSwap &operator =(const ZuByteSwap &i) {
+  ZuByteSwap() { m_i = 0; }
+  ZuByteSwap(const ZuByteSwap &i) { m_i = i.m_i; }
+  ZuByteSwap &operator =(const ZuByteSwap &i) {
     if (this != &i) m_i = i.m_i;
     return *this;
   }
 
   template <typename R>
-  inline ZuByteSwap(const R &r) { set(r); }
+  ZuByteSwap(const R &r) { set(r); }
   template <typename R>
-  inline ZuByteSwap &operator =(const R &r) { set(r); return *this; }
+  ZuByteSwap &operator =(const R &r) { set(r); return *this; }
 
-  inline operator U() const { return get<U>(); }
+  operator U() const { return get<U>(); }
 
-  inline ZuByteSwap operator -() { return ZuByteSwap(-get<I>()); }
+  ZuByteSwap operator -() { return ZuByteSwap(-get<I>()); }
 
   template <typename R> inline ZuByteSwap operator +(const R &r) const
     { return ZuByteSwap(get<I>() + r); }
@@ -185,7 +185,7 @@ public:
 
 private:
   template <typename T>
-  inline typename ZuIs<T, ZuByteSwap>::T set(const T &i) {
+  typename ZuIs<T, ZuByteSwap>::T set(const T &i) {
     m_i = i.m_i;
   }
   template <typename T>
@@ -203,7 +203,7 @@ private:
     m_i = B::bswap(*i_);
   }
   template <typename T>
-  inline typename ZuIs<T, ZuByteSwap, T>::T get() const {
+  typename ZuIs<T, ZuByteSwap, T>::T get() const {
     return *this;
   }
   template <typename T>

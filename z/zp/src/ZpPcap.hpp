@@ -104,27 +104,27 @@ class Zp_Pcap : public ZmObject {
   ZuInline bool operator !() const { return !m_pcap; }
 
   void print(ZmStream &s) const;
-  template <typename S> inline void print(S &s_) const {
+  template <typename S> void print(S &s_) const {
     ZmStream s(s_);
     print(s);
   }
   struct Error;
 friend struct Error;
   struct Error {
-    template <typename S> inline void print(S &s) const {
+    template <typename S> void print(S &s) const {
       if (ZuUnlikely(!p.m_pcap)) return;
       s << pcap_geterr(p.m_pcap);
     }
     const Zp_Pcap &p;
   };
-  inline Error error() const { return Error{*this}; }
+  Error error() const { return Error{*this}; }
   struct Stats;
 friend struct Stats;
   struct Stats {
     template <typename S> void print(S &s) const;
     const Zp_Pcap &p;
   };
-  inline Stats stats() const { return Stats{*this}; }
+  Stats stats() const { return Stats{*this}; }
 
 private:
   pcap_t                *m_pcap; // each instance has an associated file handle
@@ -243,8 +243,8 @@ class ZpAPI ZpHandleInfo {
   friend class ZpPcap;
 
 private:
-  inline void pcap(Zp_Pcap *pcap) { m_pcap = pcap; }
-  inline ZmRef<Zp_Pcap> pcap() { return m_pcap; }
+  void pcap(Zp_Pcap *pcap) { m_pcap = pcap; }
+  ZmRef<Zp_Pcap> pcap() { return m_pcap; }
 
 public:
   ZpHandleInfo(ZuString iface, ZuString filter,
@@ -266,7 +266,7 @@ public:
     m_bufferSize(hi.m_bufferSize), m_nonBlocking(hi.m_nonBlocking),
     m_asFile(hi.m_asFile) { }
 
-  inline ZpHandleInfo &operator =(const ZpHandleInfo &hi) {
+  ZpHandleInfo &operator =(const ZpHandleInfo &hi) {
     if (this == &hi) return *this;
     m_pcap = hi.m_pcap;
     m_iface = hi.m_iface;
@@ -281,20 +281,20 @@ public:
     return *this;
   }
 
-  inline bool operator !() const { return !m_pcap; }
+  bool operator !() const { return !m_pcap; }
 
-  inline const ZtString &iface() const { return m_iface; }
-  inline const ZtString &filter() const { return m_filter; }
-  inline int priority() const { return m_priority; }
-  inline int promisc() const { return m_promisc; }
-  inline int snaplen() const { return m_snaplen; }
-  inline int timeout() const { return m_timeout; }
-  inline int bufferSize() const { return m_bufferSize; }
-  inline bool nonBlocking() const { return m_nonBlocking; }
-  inline bool asFile() const { return m_asFile; }
+  const ZtString &iface() const { return m_iface; }
+  const ZtString &filter() const { return m_filter; }
+  int priority() const { return m_priority; }
+  int promisc() const { return m_promisc; }
+  int snaplen() const { return m_snaplen; }
+  int timeout() const { return m_timeout; }
+  int bufferSize() const { return m_bufferSize; }
+  bool nonBlocking() const { return m_nonBlocking; }
+  bool asFile() const { return m_asFile; }
 
   void print(ZmStream &s) const;
-  template <typename S> inline void print(S &s_) const {
+  template <typename S> void print(S &s_) const {
     ZmStream s(s_);
     print(s);
   }
@@ -305,14 +305,14 @@ public:
   struct Stats;
 friend struct Stats;
   struct Stats {
-    inline void print(ZmStream &s) const { p.stats_(s); }
-    template <typename S> inline void print(S &s_) const {
+    void print(ZmStream &s) const { p.stats_(s); }
+    template <typename S> void print(S &s_) const {
       ZmStream s(s_);
       p.stats_(s);
     }
     const ZpHandleInfo &p;
   };
-  inline Stats stats() const { return Stats{*this}; }
+  Stats stats() const { return Stats{*this}; }
 
 private:
   ZmRef<Zp_Pcap>        m_pcap;
@@ -338,9 +338,7 @@ class ZpAPI ZpHandle : public ZmPolymorph {
   struct FilterAccessor;
   friend struct FilterAccessor;
   struct FilterAccessor : public ZuAccessor<ZpHandle *, const ZtString &> {
-    inline static const ZtString &value(ZpHandle *h) {
-      return h->m_info.filter();
-    }
+    static const ZtString &value(ZpHandle *h) { return h->m_info.filter(); }
   };
 
 public:
@@ -360,7 +358,7 @@ public:
 #endif
     }
     
-    inline void handle(ZpHandle *handle) { m_handle = handle; }
+    void handle(ZpHandle *handle) { m_handle = handle; }
 
   private:
     ZpHandle *m_handle;
@@ -395,14 +393,14 @@ public:
   struct Stats;
 friend struct Stats;
   struct Stats {
-    inline void print(ZmStream &s) const { h.stats_(s); }
-    template <typename S> inline void print(S &s_) const {
+    void print(ZmStream &s) const { h.stats_(s); }
+    template <typename S> void print(S &s_) const {
       ZmStream s(s_);
       h.stats_(s);
     }
     const ZpHandle &h;
   };
-  inline Stats stats() const { return Stats{*this}; }
+  Stats stats() const { return Stats{*this}; }
 
 private:
   void dispatch();
@@ -433,15 +431,15 @@ class ZpAPI ZpPcap : public ZmObject {
 	    ZmHashObject<ZuNull,
 	      ZmHashIndex<ZpHandle::FilterAccessor> > > HandleHash;
 
-  inline void del(const ZtString &c) { delete m_handles->del(c); }
+  void del(const ZtString &c) { delete m_handles->del(c); }
   
  public:
   ZpPcap(ZiMultiplex *mx, ZvCf *cf);
 
   void connect(ZpConnected connected, const ZpHandleInfo &info);
 
-  inline ZiMultiplex *mx() { return m_mx; }
-  inline int maxCapture() const { return m_maxCapture; }
+  ZiMultiplex *mx() { return m_mx; }
+  int maxCapture() const { return m_maxCapture; }
 
 private:
   void stats_(ZmStream &s) const;
@@ -449,17 +447,17 @@ public:
   struct Stats;
 friend struct Stats;
   struct Stats {
-    template <typename S> inline void print(S &s_) const {
+    template <typename S> void print(S &s_) const {
       ZmStream s(s_);
       p.stats_(s);
     }
     const ZpPcap &p;
   };
-  inline Stats stats() const { return Stats{*this}; }
+  Stats stats() const { return Stats{*this}; }
 
 #ifdef ZpPcap_DEBUG
-  inline bool debug() { return m_debug; }
-  inline void debug(bool b) { m_debug = b; }
+  bool debug() { return m_debug; }
+  void debug(bool b) { m_debug = b; }
 #endif
 
 private:

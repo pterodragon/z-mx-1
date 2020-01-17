@@ -26,7 +26,7 @@ struct Order {
   int		m_price;
   int		m_quantity;
   // char	m_pad[1500];
-  template <typename S> inline void print(S &s) const {
+  template <typename S> void print(S &s) const {
     s << "Side: " << (m_side == Buy ? "Buy" : "Sell") <<
       " Symbol: " << m_symbol <<
       " Price: " << ZuBoxed(m_price) <<

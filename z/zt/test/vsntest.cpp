@@ -21,8 +21,8 @@ public:
     m_buf(0), m_length(0), m_increment(increment), m_maxLen(maxLen) { }
   ~S() { free(m_buf); }
 
-  inline char &operator [](int i) { return m_buf[i]; }
-  inline char operator [](int i) const { return m_buf[i]; }
+  char &operator [](int i) { return m_buf[i]; }
+  char operator [](int i) const { return m_buf[i]; }
   operator char *() { return m_buf; }
   operator const char *() const { return m_buf; }
 
@@ -43,7 +43,7 @@ private:
   }
 
 public:
-  inline void vsnprintf(const char *format, va_list args) {
+  void vsnprintf(const char *format, va_list args) {
 retry:
     int n;
 
@@ -78,7 +78,7 @@ retry:
     length(n);
   }
 
-  inline void sprintf(const char *format, ...) {
+  void sprintf(const char *format, ...) {
     va_list args;
 
     va_start(args, format);

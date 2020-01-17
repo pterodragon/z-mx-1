@@ -34,7 +34,7 @@ public:
       ZiConnection(mx, ci), m_headerLen(0), m_connectTime(now) { }
   ~Connection() { }
 
-  inline Mx *mx() { return (Mx *)ZiConnection::mx(); }
+  Mx *mx() { return (Mx *)ZiConnection::mx(); }
 
   void disconnected();
 
@@ -178,7 +178,7 @@ public:
 	ZiIP(), 0, m_ip, m_port, m_options);
   }
 
-  inline unsigned maxRecv() const { return m_maxRecv; }
+  unsigned maxRecv() const { return m_maxRecv; }
 
 private:
   ZiIP			m_ip;

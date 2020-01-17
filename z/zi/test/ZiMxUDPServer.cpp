@@ -35,7 +35,7 @@ public:
   }
   ~Connection() { }
 
-  inline Mx *mx() { return (Mx *)ZiConnection::mx(); }
+  Mx *mx() { return (Mx *)ZiConnection::mx(); }
 
   void disconnected() { Global::post(); }
 
@@ -95,7 +95,7 @@ public:
       Global::post();
   }
 
-  inline unsigned nMessages() const { return m_nMessages; }
+  unsigned nMessages() const { return m_nMessages; }
 
 private:
   ZiIP		m_localIP;

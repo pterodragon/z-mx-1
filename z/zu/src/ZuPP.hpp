@@ -40,7 +40,7 @@
 
 #define ZuPP_Defer(x) x ZuPP_Empty ZuPP_Empty()()
 
-// use "ZuPP_Strip(x)" to strip x of any parentheses
+// use ZuPP_Strip(x) to strip x of any parentheses
 
 #define ZuPP_Strip__(...) ZuPP_Strip__ __VA_ARGS__
 #define ZuPP_Strip_Null_ZuPP_Strip__
@@ -48,7 +48,7 @@
 #define ZuPP_Strip_Concat(x, ...) ZuPP_Strip_Concat_(x, __VA_ARGS__)
 #define ZuPP_Strip(x) ZuPP_Strip_Concat(ZuPP_Strip_Null_, ZuPP_Strip__ x)
 
-// map expansions - the *Comma versions suppress trailing commas
+// map expansions - the ...Comma versions suppress trailing commas
 
 #define ZuPP_Map(map, first, ...) \
   map(first) __VA_OPT__(ZuPP_Defer(ZuPP_Map_)()(map, __VA_ARGS__))

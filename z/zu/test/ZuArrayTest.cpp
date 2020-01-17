@@ -11,19 +11,19 @@
 
 class I {
 public:
-  inline I() : m_i(0) { }
-  inline I(int i) : m_i(i) { }
-  inline ~I() { m_i = 0; }
+  I() : m_i(0) { }
+  I(int i) : m_i(i) { }
+  ~I() { m_i = 0; }
 
-  inline I(const I &i) : m_i(i.m_i) { }
-  inline I &operator =(const I &i) {
+  I(const I &i) : m_i(i.m_i) { }
+  I &operator =(const I &i) {
     if (ZuLikely(this != &i)) m_i = i.m_i;
     return *this;
   }
 
-  inline I &operator =(int i) { m_i = i; return *this; }
+  I &operator =(int i) { m_i = i; return *this; }
 
-  inline operator int() const { return m_i; }
+  operator int() const { return m_i; }
 
 private:
   int	m_i;

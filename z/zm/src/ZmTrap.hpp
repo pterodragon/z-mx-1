@@ -50,13 +50,13 @@ template <> struct ZmCleanup<ZmTrap> {
 
 class ZmAPI ZmTrap {
 public:
-  inline static void trap() { instance()->trap_(); }
+  static void trap() { instance()->trap_(); }
 
-  inline static void sigintFn(ZmFn<> fn) { instance()->m_sigintFn = fn; }
-  inline static ZmFn<> sigintFn() { return instance()->m_sigintFn; }
+  static void sigintFn(ZmFn<> fn) { instance()->m_sigintFn = fn; }
+  static ZmFn<> sigintFn() { return instance()->m_sigintFn; }
 
-  inline static void sighupFn(ZmFn<> fn) { instance()->m_sighupFn = fn; }
-  inline static ZmFn<> sighupFn() { return instance()->m_sighupFn; }
+  static void sighupFn(ZmFn<> fn) { instance()->m_sighupFn = fn; }
+  static ZmFn<> sighupFn() { return instance()->m_sighupFn; }
 
 private:
   static ZmTrap *instance();

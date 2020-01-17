@@ -168,12 +168,12 @@ public:
   }
 #endif
 
-  inline ZmTime &operator =(time_t t) {
+  ZmTime &operator =(time_t t) {
     tv_sec = t;
     tv_nsec = 0;
     return *this;
   }
-  inline ZmTime &operator =(double d) {
+  ZmTime &operator =(double d) {
     tv_sec = (time_t)d;
     tv_nsec = (long)((d - (double)tv_sec) * (double)1000000000);
     return *this;

@@ -33,13 +33,13 @@
 #include <zlib/ZmSingleton.hpp>
 #include <zlib/ZmSpecific.hpp>
 
-struct Orders_HeapID { inline static const char *id() { return "Orders"; } };
+struct Orders_HeapID { static const char *id() { return "Orders"; } };
 
 struct Order : public ZuObject {
   struct IDAccessor : public ZuAccessor<Order *, unsigned> {
-    inline static unsigned value(const Order *o) { return o->id; }
+    static unsigned value(const Order *o) { return o->id; }
   };
-  inline Order(unsigned id_) : id(id_) { }
+  Order(unsigned id_) : id(id_) { }
   unsigned id;
 };
 

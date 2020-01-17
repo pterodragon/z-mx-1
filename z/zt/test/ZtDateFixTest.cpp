@@ -14,7 +14,7 @@
 #define CHECK(x) ((x) ? puts("OK  " #x) : puts("NOK " #x))
 
 struct Null {
-  template <typename S> inline void print(S &s) const { s << "null"; }
+  template <typename S> void print(S &s) const { s << "null"; }
 };
 template <> struct ZuPrint<Null> : public ZuPrintFn { };
 

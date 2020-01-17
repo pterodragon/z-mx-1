@@ -35,7 +35,7 @@ public:
     ZiConnection(mx, ci) { }
   ~Connection() { }
 
-  inline Mx *mx() { return (Mx *)ZiConnection::mx(); }
+  Mx *mx() { return (Mx *)ZiConnection::mx(); }
 
   void disconnected();
 
@@ -77,21 +77,21 @@ public:
     new ((void *)this->attr()) ZiNetlinkAttr();
   }
 
-  inline char *data() { return m_buf; }
+  char *data() { return m_buf; }
 
-  inline ZiGenericNetlinkHdr *hdr() { 
+  ZiGenericNetlinkHdr *hdr() { 
     return (ZiGenericNetlinkHdr *)m_buf; 
   }
 
-  inline ZiNetlinkAttr *attr() { 
+  ZiNetlinkAttr *attr() { 
     return (ZiNetlinkAttr *)(m_buf + sizeof(ZiGenericNetlinkHdr)); 
   }
 
-  inline char *info() {
+  char *info() {
     return m_buf + sizeof(ZiGenericNetlinkHdr) + sizeof(ZiNetlinkAttr);
   }
   
-  inline int hdrSize() {
+  int hdrSize() {
     return sizeof(ZiGenericNetlinkHdr) + sizeof(ZiNetlinkAttr);
   }
 
@@ -156,9 +156,9 @@ public:
 	ZiIP(), 0, ZiIP(), 0, opt);
   }
 
-  inline int maxRecv() const { return m_maxRecv; }
+  int maxRecv() const { return m_maxRecv; }
 
-  inline int nFragments() const { return m_nFragments; }
+  int nFragments() const { return m_nFragments; }
 
   void error(ZeError e) { ::error("error", Zi::IOError, e); }
 

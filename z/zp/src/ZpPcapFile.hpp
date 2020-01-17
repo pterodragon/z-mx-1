@@ -64,14 +64,14 @@ public:
     m_version_minor(ZPCAP_VMINOR(ZPCAP_VERSION)), m_thiszone(zone),
     m_sigfigs(0), m_snaplen(snapLen), m_network((u_int32_t)layer) { }
 
-  inline u_int32_t magicNumber() const { return m_magic_number; }
-  inline u_int32_t version() const {
+  u_int32_t magicNumber() const { return m_magic_number; }
+  u_int32_t version() const {
     return ZPCAP_VULONG(m_version_major, m_version_minor);
   }
 
-  inline int timeZone() const { return m_thiszone; }
-  inline int snapLen() const { return m_snaplen; }
-  inline int linkLayerType() const { return m_network; }
+  int timeZone() const { return m_thiszone; }
+  int snapLen() const { return m_snaplen; }
+  int linkLayerType() const { return m_network; }
 };
 ZuAssert(sizeof(ZpPcapFileHeader) == (6 * 4));
 
@@ -90,10 +90,10 @@ public:
     m_ts_sec((u_int32_t)ts.sec()), m_ts_usec(ts.nsec() / 1000),
     m_incl_len(len), m_orig_len(origLen) { }
 
-  inline int sec() const { return m_ts_sec; }
-  inline int usec() const { return m_ts_usec; }
-  inline int len() const { return m_incl_len; }
-  inline int origLen() const { return m_orig_len; }
+  int sec() const { return m_ts_sec; }
+  int usec() const { return m_ts_usec; }
+  int len() const { return m_incl_len; }
+  int origLen() const { return m_orig_len; }
 };
 
 ZuAssert(sizeof(ZpPcapRecordHeader) == (4 * 4));

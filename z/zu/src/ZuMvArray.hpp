@@ -52,19 +52,19 @@ public:
     if (ZuUnlikely(n && !m_data)) throw std::bad_alloc();
     this->moveItems(m_data, data, n);
   }
-  inline ~ZuMvArray() {
+  ~ZuMvArray() {
     if (!m_data) return;
     this->destroyItems(m_data, m_length);
     ::free(m_data);
   }
 
-  inline ZuMvArray(ZuMvArray &&a) {
+  ZuMvArray(ZuMvArray &&a) {
     m_length = a.m_length;
     m_data = a.m_data;
     a.m_length = 0;
     a.m_data = nullptr;
   }
-  inline ZuMvArray &operator =(ZuMvArray &&a) {
+  ZuMvArray &operator =(ZuMvArray &&a) {
     m_length = a.m_length;
     m_data = a.m_data;
     a.m_length = 0;
@@ -88,7 +88,7 @@ public:
 
 // set length
 
-  inline void length(unsigned newLength) {
+  void length(unsigned newLength) {
     T *oldData = m_data;
     unsigned oldLength = m_length;
     m_length = newLength;
@@ -160,14 +160,8 @@ struct ZuTraits<ZuMvArray<T_> > :
     IsWString = ZuConversion<wchar_t, Elem>::Same,
     IsHashable = 1, IsComparable = 1
   };
-#if 0
-  inline static T make(const T *data, unsigned length) {
-    if (!data) return T();
-    return T(data, length);
-  }
-#endif
-  inline static const Elem *data(const T &a) { return a.data(); }
-  inline static unsigned length(const T &a) { return a.length(); }
+  ZuInline static const Elem *data(const T &a) { return a.data(); }
+  ZuInline static unsigned length(const T &a) { return a.length(); }
 };
 
 // generic printing

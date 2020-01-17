@@ -42,10 +42,10 @@
 #define CHECK(x) ((x) ? puts("OK  " #x) : puts("NOK " #x))
 
 struct X : public ZmObject {
-  inline X() : x(0) { }
+  X() : x(0) { }
   virtual ~X() { }
   virtual void helloWorld();
-  inline void inc() { ++x; }
+  void inc() { ++x; }
   unsigned x;
 };
 
@@ -62,10 +62,10 @@ template <> struct ZuTraits<Z> : public ZuGenericTraits<Z> {
 };
 
 struct ZCmp {
-  inline static int cmp(Z *z1, Z *z2) { return z1->m_z - z2->m_z; }
-  inline static bool equals(Z *z1, Z *z2) { return z1->m_z == z2->m_z; }
-  inline static bool null(Z *z) { return !z; }
-  inline static const ZmRef<Z> &null() { static const ZmRef<Z> z; return z; }
+  static int cmp(Z *z1, Z *z2) { return z1->m_z - z2->m_z; }
+  static bool equals(Z *z1, Z *z2) { return z1->m_z == z2->m_z; }
+  static bool null(Z *z) { return !z; }
+  static const ZmRef<Z> &null() { static const ZmRef<Z> z; return z; }
 };
 
 typedef ZmList<ZmRef<Z>, ZmListCmp<ZCmp> > ZList;
@@ -110,7 +110,7 @@ void semWait(ZmSemaphore *sema) {
 struct S : public ZmObject {
   S() { m_i = 0; m_j++; }
 
-  inline void foo() { m_i++; }
+  void foo() { m_i++; }
 
   static void meyers() {
     for (int i = 0; i < 100000; i++) {
@@ -167,22 +167,22 @@ struct W {
 };
 
 struct O : public ZmObject {
-  inline O() : referenced(0), dereferenced(0) { }
+  O() : referenced(0), dereferenced(0) { }
 #ifdef ZmObject_DEBUG
-  inline void ref(const void *referrer = 0) const {
+  void ref(const void *referrer = 0) const {
     ++referenced;
     ZmObject::ref(referrer);
   }
 #else
-  inline void ref() const { ++referenced; }
+  void ref() const { ++referenced; }
 #endif
 #ifdef ZmObject_DEBUG
-  inline bool deref(const void *referrer = 0) const {
+  bool deref(const void *referrer = 0) const {
     ++dereferenced;
     return ZmObject::deref(referrer);
   }
 #else
-  inline bool deref() const { return ++dereferenced >= referenced; }
+  bool deref() const { return ++dereferenced >= referenced; }
 #endif
   mutable unsigned referenced, dereferenced;
 };

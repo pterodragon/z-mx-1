@@ -76,7 +76,7 @@ struct ZiAPI ZiPlatform {
   typedef int Socket;
   ZuInline static constexpr const Socket nullSocket() { return -1; }
   ZuInline static constexpr bool nullSocket(Socket i) { return i < 0; }
-  inline static void closeSocket(Socket s) { ::close(s); }
+  static void closeSocket(Socket s) { ::close(s); }
   typedef void *MMapPtr;
   typedef ZtString Path;
   typedef off_t Offset;
@@ -98,7 +98,7 @@ struct ZiAPI ZiPlatform {
     { return INVALID_SOCKET; }
   ZuInline static constexpr bool nullSocket(Socket i)
     { return i == INVALID_SOCKET; }
-  inline static void closeSocket(Socket s) { ::closesocket(s); }
+  static void closeSocket(Socket s) { ::closesocket(s); }
   typedef LPVOID MMapPtr;
   typedef ZtWString Path;
   typedef int64_t Offset;		// 2x DWORD

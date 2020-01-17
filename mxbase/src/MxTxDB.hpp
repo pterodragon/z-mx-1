@@ -66,10 +66,10 @@ public:
 	if (rn != ZdbNullRN) s << ZuBoxed(rn);
       }
     };
-    template <typename S> inline static void csvHdr(S &s) {
+    template <typename S> static void csvHdr(S &s) {
       s << "linkID,seqNo,msgRN,msgType\n";
     }
-    template <typename S> inline void csv(S &s) const {
+    template <typename S> void csv(S &s) const {
       s << msgID.linkID
 	<< ',' << msgID.seqNo
 	<< ',' << MsgRN{msgRN}

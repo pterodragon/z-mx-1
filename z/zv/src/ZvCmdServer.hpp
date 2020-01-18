@@ -194,7 +194,7 @@ private:
 	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_Cmd));
 	this->send_(m_fbb.buf());
       } break;
-      case ZvCmd::fbs::MsgType_Telemetry: {
+      case ZvCmd::fbs::MsgType_TelReq: {
 	using namespace ZvTelemetry;
 	{
 	  Verifier verifier(data, len);
@@ -205,7 +205,7 @@ private:
 	    this, m_user, m_interactive, fbs::GetRequest(data), m_fbb);
 	if (ZuUnlikely(i < 0)) return -1;
 	if (!i) return len;
-	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_Telemetry));
+	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_TelAck));
 	this->send_(m_fbb.buf());
       } break;
       case ZvCmd::fbs::MsgType_App: {
@@ -447,7 +447,7 @@ public:
     }
     TelServer::process(link, in);
     using namespace Zfb::Save;
-    fbb.Finish(fbs::CreateAck(fbb, true));
+    fbb.Finish(fbs::CreateReqAck(fbb, true));
     return fbb.GetSize();
   }
 

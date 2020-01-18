@@ -201,9 +201,11 @@ public:
 	m_mxTbl.add(new ZvMultiplex(key, mxCf_));
     }
 
-    m_minInterval = cf->getInt("telemetry:minInterval", 10, 1000000, 100);
+    m_minInterval =
+      cf->getInt("telemetry:minInterval", 10, 1000000, false, 100);
     m_alertPrefix = cf->get("telemetry:alertPrefix", false, "alerts");
-    m_alertMaxReplay = cf->getInt("telemetry:alertMaxReplay", 1, 1000, 10);
+    m_alertMaxReplay =
+      cf->getInt("telemetry:alertMaxReplay", 1, 1000, false, 10);
   }
   void final() {
     stop_();

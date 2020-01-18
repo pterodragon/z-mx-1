@@ -215,12 +215,13 @@ template <typename T> struct ZvField {
 #define ZvMkField(T, args) \
   ZuPP_Defer(ZvMkField_)()(T, ZuPP_Strip(args))
 #define ZvMkField_() ZvMkField__
-#define ZvMkField__(T, type, ...) ZvField##type(T, __VA_ARGS__),
+#define ZvMkField__(T, type, ...) ZvField##type(T, __VA_ARGS__)
 #define ZvMkFields(T, ...)  \
   using namespace ZvFieldFlags; \
-  return ZvFields<T>{std::initializer_list<ZvField<T>>{ \
-    ZuPP_Eval(ZuPP_MapArg(ZvMkField, T, __VA_ARGS__)) \
-  } }
+  static ZvField<T> fields_[] = { \
+    ZuPP_Eval(ZuPP_MapArgComma(ZvMkField, T, __VA_ARGS__)) \
+  }; \
+  return ZvFields<T>{&fields_[0], sizeof(fields_) / sizeof(fields_[0])} \
 
 template <typename T> using ZvFields = ZuArray<ZvField<T>>;
 

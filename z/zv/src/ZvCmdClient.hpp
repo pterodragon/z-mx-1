@@ -67,6 +67,8 @@
 using ZvCmdUserDBAckFn = ZmFn<const ZvUserDB::fbs::ReqAck *>;
 // command response
 using ZvCmdAckFn = ZmFn<const ZvCmd::fbs::ReqAck *>;
+// telemetry response
+using ZvCmdTelAckFn = ZmFn<const ZvTelemetry::fbs::ReqAck *>;
 
 struct ZvCmd_Login {
   ZtString		user;
@@ -108,6 +110,8 @@ private:
     ZmRBTree<ZvSeqNo, ZmRBTreeVal<ZvCmdUserDBAckFn, ZmRBTreeLock<ZmPLock> > >;
   using CmdReqs =
     ZmRBTree<ZvSeqNo, ZmRBTreeVal<ZvCmdAckFn, ZmRBTreeLock<ZmPLock> > >;
+  using TelReqs =
+    ZmRBTree<ZvSeqNo, ZmRBTreeVal<ZvCmdTelAckFn, ZmRBTreeLock<ZmPLock> > >;
 
 public:
   struct State {
@@ -181,6 +185,12 @@ public:
     fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), fbs::MsgType_App));
     this->send(fbb.buf());
   }
+  void sendTelReq(Zfb::IOBuilder &fbb, ZvSeqNo seqNo, ZvCmdTelAckFn fn) {
+    using namespace ZvCmd;
+    fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), fbs::MsgType_TelReq));
+    m_telReqs.add(seqNo, ZuMv(fn));
+    this->send(fbb.buf());
+  }
 
   void loggedIn() { } // default
 
@@ -236,6 +246,7 @@ public:
   void disconnected() {
     m_userDBReqs.clean();
     m_cmdReqs.clean();
+    m_telReqs.clean();
 
     m_state = State::Down;
 
@@ -294,6 +305,16 @@ private:
 	auto cmdAck = fbs::GetReqAck(data);
 	if (ZvCmdAckFn fn = m_cmdReqs.delVal(cmdAck->seqNo()))
 	  fn(cmdAck);
+      } break;
+      case ZvCmd::fbs::MsgType_TelAck: {
+	using namespace ZvTelemetry;
+	{
+	  Verifier verifier(data, len);
+	  if (!fbs::VerifyReqAckBuffer(verifier)) return -1;
+	}
+	auto reqAck = fbs::GetReqAck(data);
+	if (ZvCmdTelAckFn fn = m_telReqs.delVal(reqAck->seqNo()))
+	  fn(reqAck);
       } break;
       case ZvCmd::fbs::MsgType_Telemetry: {
 	using namespace ZvTelemetry;
@@ -362,6 +383,7 @@ private:
   Credentials		m_credentials;
   UserDBReqs		m_userDBReqs;
   CmdReqs		m_cmdReqs;
+  TelReqs		m_telReqs;
   uint64_t		m_userID = 0;
   ZtString		m_userName;
   ZtArray<ZtString>	m_roles;

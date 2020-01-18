@@ -3,6 +3,8 @@ enum MsgType : uint8 {
   Login = 0,
   UserDB,
   Cmd,
+  TelReq,
+  TelAck,
   Telemetry,
   App
 }

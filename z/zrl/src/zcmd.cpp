@@ -227,7 +227,6 @@ private:
   // telcap can be given optional filters and intervals for each
   // type, and can enable/disable each type
   int processTel(const ZvTelemetry::fbs::Telemetry *data) {
-    // FIXME - capture
     return 0;
   }
 
@@ -271,7 +270,7 @@ next:
       cmd.chomp();
     }
     if (!cmd) goto next;
-    send(cmd);
+    send(ZuMv(cmd));
   }
 
   void send(ZtString cmd) {
@@ -466,11 +465,24 @@ private:
 	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->loadModCmd(static_cast<FILE *>(file), args, out);
 	}},  "load application-specific module", "usage: loadmod MODULE");
+
+    addCmd("telcap",
+	"i interval interval { type scalar } "
+	"u unsubscribe unsubscribe { type flag }",
+	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	  return app->telcapCmd(static_cast<FILE *>(file), args, out);
+	}},  "telemetry capture",
+	"usage: telcap [OPTIONS...] [TYPE[:FILTER]]...\n\n"
+	"  TYPE\t[*|Heap|HashTbl|Thread|Mx|Queue|Engine|DbEnv|App|Alert]\n"
+	"  FILTER\tfilter specification in type-specific format\n"
+	"Options:\n"
+	"  -i, --interval=N\tset scan interval in seconds\n"
+	"  -u, --unsubscribe\tunsubscribe (i.e. end capture)\n");
   }
 
   int passwdCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc != 1) throw ZvCmdUsage();
+    if (argc != 1) throw ZvCmdUsage{};
     ZtString oldpw = getpass_("Current password: ", 100);
     ZtString newpw = getpass_("New password: ", 100);
     ZtString checkpw = getpass_("Retype new password: ", 100);
@@ -543,7 +555,7 @@ private:
 
   int usersCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc < 1 || argc > 2) throw ZvCmdUsage();
+    if (argc < 1 || argc > 2) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -572,7 +584,7 @@ private:
   }
   int userAddCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc != 4) throw ZvCmdUsage();
+    if (argc != 4) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -613,7 +625,7 @@ private:
   }
   int resetPassCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage();
+    if (argc != 2) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -644,7 +656,7 @@ private:
   }
   int userModCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc != 4) throw ZvCmdUsage();
+    if (argc != 4) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -683,7 +695,7 @@ private:
   }
   int userDelCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage();
+    if (argc != 2) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -731,7 +743,7 @@ private:
 
   int rolesCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc < 1 || argc > 2) throw ZvCmdUsage();
+    if (argc < 1 || argc > 2) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -762,7 +774,7 @@ private:
   }
   int roleAddCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc != 4) throw ZvCmdUsage();
+    if (argc != 4) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -798,7 +810,7 @@ private:
   }
   int roleModCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc != 4) throw ZvCmdUsage();
+    if (argc != 4) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -834,7 +846,7 @@ private:
   }
   int roleDelCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage();
+    if (argc != 2) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -864,7 +876,7 @@ private:
 
   int permsCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc < 1 || argc > 2) throw ZvCmdUsage();
+    if (argc < 1 || argc > 2) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -894,7 +906,7 @@ private:
   }
   int permAddCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage();
+    if (argc != 2) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -925,7 +937,7 @@ private:
   }
   int permModCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc != 3) throw ZvCmdUsage();
+    if (argc != 3) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -957,7 +969,7 @@ private:
   }
   int permDelCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage();
+    if (argc != 2) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -989,7 +1001,7 @@ private:
 
   int keysCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc < 1 || argc > 2) throw ZvCmdUsage();
+    if (argc < 1 || argc > 2) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -1024,7 +1036,7 @@ private:
 
   int keyAddCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc < 1 || argc > 2) throw ZvCmdUsage();
+    if (argc < 1 || argc > 2) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -1067,7 +1079,7 @@ private:
 
   int keyDelCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage();
+    if (argc != 2) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -1098,7 +1110,7 @@ private:
 
   int keyClrCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc < 1 || argc > 2) throw ZvCmdUsage();
+    if (argc < 1 || argc > 2) throw ZvCmdUsage{};
     auto seqNo = m_seqNo++;
     using namespace ZvUserDB;
     {
@@ -1134,7 +1146,7 @@ private:
 
   int loadModCmd(FILE *, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage();
+    if (argc != 2) throw ZvCmdUsage{};
     ZiModule module;
     ZiModule::Path name = args->get("1", true);
     ZtString e;
@@ -1151,6 +1163,56 @@ private:
     }
     (*initFn)(static_cast<ZCmdHost *>(this));
     out << "module \"" << name << "\" loaded\n";
+    return 0;
+  }
+
+  // FIXME - need to specify path for tel capture, open/close files, write headers, etc.
+  // FIXME - need to append to files from processTel(), using new CSV fields
+  int telcapCmd(FILE *file, ZvCf *args, ZtString &out) {
+    ZuBox<int> argc = args->get("#");
+    if (argc < 2) throw ZvCmdUsage{};
+    using namespace ZvTelemetry;
+    unsigned interval = cf->getInt("interval", 10, 1000000, false, 0);
+    bool subscribe = !cf->getInt("unsubscribe", 0, 1, false, 0);
+    const auto &colon = ZtStaticRegexUTF8(":");
+    auto types = fbs::EnumNamesReqType();
+    ZuBox<unsigned> i = 1;
+    thread_local ZmSemaphore sem;
+    ZtArray<ZmAtomic<unsigned>> ok{(int)argc - 1};
+    for (i = 1; i < argc; i++) {
+      auto arg = cf->get(ZuStringN<24>{} << i);
+      int type = -1;
+      ZuString type_, filter;
+      ZtRegex::Captures c;
+      if (colon.m(arg, c)) {
+	type_ = c[0];
+	filter = c[2];
+      } else {
+	type_ = arg;
+      }
+      for (unsigned j = 0; j <= fbs::ReqType_MAX; j++)
+	if (type_ == types[j]) { type = j; break; }
+      if (type < 0) throw ZvCmdUsage{};
+      using namespace Zfb::Save;
+      auto seqNo = m_seqNo++;
+      m_fbb.Clear();
+      m_fbb.Finish(fbs::CreateRequest(m_fbb,
+	    seqNo, str(m_fbb, filter), interval, type, subscribe));
+      m_link->sendTelReq(m_fbb, seqNo,
+	  [this, file, ok = &ok[i - 1], sem = &sem](const fbs::ReqAck *ack) {
+	    ok.store_(ack->ok());
+	    sem->post();
+	  });
+    }
+    for (i = 1; i < argc; i++) sem.wait();
+    bool allOK = true;
+    for (i = 1; i < argc; i++)
+      if (!ok[i - 1].load_()) {
+	out << "telemetry request "
+	  << cf->get(ZuStringN<24>{} << i) << " rejected\n";
+	allOK = false;
+      }
+    if (allOK) out << "telemetry requests accepted\n";
     return 0;
   }
 

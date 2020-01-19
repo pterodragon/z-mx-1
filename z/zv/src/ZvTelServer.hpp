@@ -38,10 +38,10 @@
 
 namespace ZvTelemetry {
 
-namespace ReqType {
-  ZfbEnumValues(ReqType,
-      Heap, HashTbl, Thread, Mx, Queue, Engine, DBEnv, App, Alert);
-}
+using QueueFn = ZmFn<Queue &>;
+
+using DBEnvFn =
+  ZmFn<ZmFn<const DBEnv &>, ZmFn<const DBHost &>, ZmFn<const DB &>>;
 
 using IOBuf = ZiIOBuf<>;
 

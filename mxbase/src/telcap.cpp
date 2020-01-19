@@ -43,7 +43,7 @@ private:
     ZeError e;
     ZiFile::Path path = ZiFile::append(m_dir, ZtString() << name << ".csv");
     if (file.open(path,
-	  ZiFile::Create | ZiFile::WriteOnly | ZiFile::GC, 0777, &e) != Zi::OK)
+	  ZiFile::Create | ZiFile::WriteOnly | ZiFile::GC, 0666, &e) != Zi::OK)
       throw ZtString() << path << ": " << e;
   }
 

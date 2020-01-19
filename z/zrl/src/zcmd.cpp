@@ -222,12 +222,45 @@ private:
     return m_plugin->processApp(data);
   }
 
+  enum {
+    ReqTypeN = ZvTelemetry::ReqType::N - ZvTelemetry::ReqType::MIN,
+    TelDataN = ZvTelemetry::TelData::N - ZvTelemetry::TelData::MIN
+  };
+
   // FIXME - need built-in telcap command to open capture CSV files,
   // write headers, begin capturing, run queries; telcap -e ends capture
   // telcap can be given optional filters and intervals for each
   // type, and can enable/disable each type
   int processTel(const ZvTelemetry::fbs::Telemetry *data) {
-    return 0;
+    using namespace ZvTelemetry;
+    switch ((int)data->data_type()) {
+      case fbs::TelData_Heap:
+	break;
+      case fbs::TelData_HashTbl:
+	break;
+      case fbs::TelData_Thread:
+	break;
+      case fbs::TelData_Mx:
+	break;
+      case fbs::TelData_Socket:
+	break;
+      case fbs::TelData_Queue:
+	break;
+      case fbs::TelData_Link:
+	break;
+      case fbs::TelData_Engine:
+	break;
+      case fbs::TelData_DB:
+	break;
+      case fbs::TelData_DBHost:
+	break;
+      case fbs::TelData_DBEnv:
+	break;
+      case fbs::TelData_App:
+	break;
+      case fbs::TelData_Alert:
+	break;
+    }
   }
 
   void disconnected() {
@@ -472,8 +505,9 @@ private:
 	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->telcapCmd(static_cast<FILE *>(file), args, out);
 	}},  "telemetry capture",
-	"usage: telcap [OPTIONS...] [TYPE[:FILTER]]...\n\n"
-	"  TYPE\t[*|Heap|HashTbl|Thread|Mx|Queue|Engine|DbEnv|App|Alert]\n"
+	"usage: telcap [OPTIONS...] PATH [TYPE[:FILTER]]...\n\n"
+	"  PATH\tdirectory for capture CSV files\n"
+	"  TYPE\t[Heap|HashTbl|Thread|Mx|Queue|Engine|DbEnv|App|Alert]\n"
 	"  FILTER\tfilter specification in type-specific format\n"
 	"Options:\n"
 	"  -i, --interval=N\tset scan interval in seconds\n"
@@ -1170,49 +1204,104 @@ private:
   // FIXME - need to append to files from processTel(), using new CSV fields
   int telcapCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
-    if (argc < 2) throw ZvCmdUsage{};
     using namespace ZvTelemetry;
-    unsigned interval = cf->getInt("interval", 10, 1000000, false, 0);
-    bool subscribe = !cf->getInt("unsubscribe", 0, 1, false, 0);
-    const auto &colon = ZtStaticRegexUTF8(":");
-    auto types = fbs::EnumNamesReqType();
-    ZuBox<unsigned> i = 1;
-    thread_local ZmSemaphore sem;
-    ZtArray<ZmAtomic<unsigned>> ok{(int)argc - 1};
-    for (i = 1; i < argc; i++) {
-      auto arg = cf->get(ZuStringN<24>{} << i);
-      int type = -1;
-      ZuString type_, filter;
-      ZtRegex::Captures c;
-      if (colon.m(arg, c)) {
-	type_ = c[0];
-	filter = c[2];
-      } else {
-	type_ = arg;
+    unsigned interval = args->getInt("interval", 10, 1000000, false, 0);
+    bool subscribe = !args->getInt("unsubscribe", 0, 1, false, 0);
+    if (!subscribe) {
+      for (unsigned i = 0; i < TelDataN; i++) m_telcap[i].close();
+      if (argc < 1) throw ZvCmdUsage{};
+    } else {
+      if (argc < 2) throw ZvCmdUsage{};
+      auto dir = args->get("1");
+      ZiFile::age(dir, 10);
+      {
+	ZeError e;
+	if (ZiFile::mkdir(dir, &e) != Zi::OK) {
+	  out << dir << ": " << e << '\n';
+	  return 1;
+	}
       }
-      for (unsigned j = 0; j <= fbs::ReqType_MAX; j++)
-	if (type_ == types[j]) { type = j; break; }
-      if (type < 0) throw ZvCmdUsage{};
-      using namespace Zfb::Save;
-      auto seqNo = m_seqNo++;
-      m_fbb.Clear();
-      m_fbb.Finish(fbs::CreateRequest(m_fbb,
-	    seqNo, str(m_fbb, filter), interval, type, subscribe));
-      m_link->sendTelReq(m_fbb, seqNo,
-	  [this, file, ok = &ok[i - 1], sem = &sem](const fbs::ReqAck *ack) {
-	    ok.store_(ack->ok());
-	    sem->post();
-	  });
+      auto dataNames = fbs::EnumNamesTelData();
+      for (unsigned i = 0; i < TelDataN; i++) {
+	m_telcap[i].close();
+	auto path = ZiFile::append(dir,
+	    ZtString() << dir << dataNames[i + fbs::TelData_MIN] << ".csv");
+	if (m_telcap[i].open(path,
+	      ZiFile::Create | ZiFile::WriteOnly | ZiFile::GC,
+	      0666, &e) != Zi::OK) {
+	  out << path << ": " << e << '\n';
+	  return 1;
+	}
+      }
     }
-    for (i = 1; i < argc; i++) sem.wait();
+    auto reqNames = fbs::EnumNamesReqType();
+    thread_local ZmSemaphore sem;
+    ZtArray<ZmAtomic<unsigned>> ok;
+    ZtArray<ZuString> filters;
+    ZtArray<int> types;
+    if (argc == 2) {
+      ok.length(TelDataN);
+      filters.length(ok.length());
+      types.length(ok.length());
+      for (unsigned i = fbs::ReqType_MIN; i <= fbs::ReqType_MAX; i++) {
+	auto j = i - fbs::ReqType_MIN;
+	using namespace Zfb::Save;
+	auto seqNo = m_seqNo++;
+	filters[j] = "*";
+	types[j] = i;
+	m_fbb.Clear();
+	m_fbb.Finish(fbs::CreateRequest(m_fbb,
+	      seqNo, str(m_fbb, filters[j]), interval, types[j], subscribe));
+	m_link->sendTelReq(m_fbb, seqNo,
+	    [this, file, ok = &ok[j], sem = &sem](
+		const fbs::ReqAck *ack) {
+	      ok.store_(ack->ok());
+	      sem->post();
+	    });
+      }
+    } else {
+      ok.length(argc - 2);
+      filters.length(ok.length());
+      types.length(ok.length());
+      const auto &colon = ZtStaticRegexUTF8(":");
+      for (unsigned i = 2; i < argc; i++) {
+	auto j = i - 2;
+	auto arg = args->get(ZuStringN<24>{} << i);
+	ZuString type_;
+	ZtRegex::Captures c;
+	if (colon.m(arg, c)) {
+	  type_ = c[0];
+	  filters[j] = c[2];
+	} else {
+	  type_ = arg;
+	  filters[j] = '*';
+	}
+	types[j] = -1;
+	for (unsigned k = 0; k <= fbs::ReqType_MAX; k++)
+	  if (type_ == names[j]) { types[j] = k; break; }
+	if (types[j] < 0) throw ZvCmdUsage{};
+	using namespace Zfb::Save;
+	auto seqNo = m_seqNo++;
+	m_fbb.Clear();
+	m_fbb.Finish(fbs::CreateRequest(m_fbb,
+	      seqNo, str(m_fbb, filters[j]), interval, types[j], subscribe));
+	m_link->sendTelReq(m_fbb, seqNo,
+	    [this, file, ok = &ok[j], sem = &sem](const fbs::ReqAck *ack) {
+	      ok.store_(ack->ok());
+	      sem->post();
+	    });
+      }
+    }
+    for (unsigned i = 0, n = ok.length(); i < n; i++) sem.wait();
     bool allOK = true;
-    for (i = 1; i < argc; i++)
-      if (!ok[i - 1].load_()) {
+    for (unsigned i = 0, n = ok.length(); i < n; i++)
+      if (!ok[i].load_()) {
 	out << "telemetry request "
-	  << cf->get(ZuStringN<24>{} << i) << " rejected\n";
+	  << names[types[i]] << ':' << filters[i] << " rejected\n";
 	allOK = false;
       }
-    if (allOK) out << "telemetry requests accepted\n";
+    if (!allOK) return 1;
+    out << "telemetry requests accepted\n";
     return 0;
   }
 
@@ -1228,6 +1317,7 @@ private:
   bool			m_solo = false;
   bool			m_exiting = false;
   ZmRef<ZCmdPlugin>	m_plugin;
+  ZiFile		m_telcap[TelData::N - TelData::MIN];
 };
 
 int main(int argc, char **argv)

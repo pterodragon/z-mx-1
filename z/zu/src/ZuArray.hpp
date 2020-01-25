@@ -59,10 +59,10 @@ struct ZuArray_ { };
 template <typename T_, class Cmp_ = ZuCmp<T_> >
 class ZuArray : public ZuArray_ {
 public:
-  typedef T_ T;
-  typedef Cmp_ Cmp;
-  typedef T Elem;
-  typedef ZuArrayFn<T, Cmp> Ops;
+  using T = T_;
+  using Cmp = Cmp_;
+  using Elem = T;
+  using Ops = ZuArrayFn<T, Cmp>;
 
   ZuArray() : m_data(0), m_length(0) { }
   ZuArray(const ZuArray &a) :
@@ -279,7 +279,7 @@ template <typename T> class ZuArray_Null {
 template <typename Cmp>
 class ZuArray<ZuNull, Cmp> : public ZuArray_Null<ZuNull> {
 public:
-  typedef ZuNull Elem;
+  using Elem = ZuNull;
 
   ZuInline ZuArray() { }
   ZuInline ZuArray(const ZuArray &a) { }
@@ -299,7 +299,7 @@ public:
 template <typename Cmp>
 class ZuArray<void, Cmp> : public ZuArray_Null<void> {
 public:
-  typedef void Elem;
+  using Elem = void;
 
   ZuInline ZuArray() { }
   ZuInline ZuArray(const ZuArray &a) { }
@@ -318,8 +318,8 @@ public:
 
 template <typename Elem_>
 struct ZuTraits<ZuArray<Elem_> > : public ZuGenericTraits<ZuArray<Elem_> > {
-  typedef Elem_ Elem;
-  typedef ZuArray<Elem_> T;
+  using Elem =  Elem_;
+  using T = ZuArray<Elem>;
   enum {
     IsArray = 1, IsPrimitive = 0,
     IsString =

@@ -442,12 +442,12 @@ public:
     using namespace ZvTelemetry;
     if (m_telPerm < 0 || !m_userDB->ok(user, interactive, m_telPerm)) {
       using namespace Zfb::Save;
-      fbb.Finish(fbs::CreateAck(fbb, false));
+      fbb.Finish(fbs::CreateReqAck(fbb, in->seqNo(), false));
       return fbb.GetSize();
     }
     TelServer::process(link, in);
     using namespace Zfb::Save;
-    fbb.Finish(fbs::CreateReqAck(fbb, true));
+    fbb.Finish(fbs::CreateReqAck(fbb, in->seqNo(), true));
     return fbb.GetSize();
   }
 

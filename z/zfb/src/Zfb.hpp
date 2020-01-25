@@ -277,7 +277,7 @@ namespace Load {
 #define ZfbEnumValues(Enum, ...) \
   enum _ { Invalid = -1, \
     ZuPP_Eval(ZuPP_MapArg(ZfbEnum_Value, Enum, \
-	  NONE, __VA_OPT__(__VA_ARGS__ ,) MIN, MAX)) \
+	  __VA_OPT__(__VA_ARGS__ ,) MIN, MAX)) \
     N = fbs::Enum##_MAX + 1 }; \
   ZuAssert(N <= 1024); \
   enum { Bits = \

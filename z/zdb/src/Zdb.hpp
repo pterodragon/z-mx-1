@@ -61,8 +61,7 @@
 
 #include <zlib/ZvCf.hpp>
 #include <zlib/ZvTelemetry.hpp>
-
-#include <zlib/telemetry_fbs.h>
+#include <zlib/ZvTelServer.hpp>
 
 #if defined(ZDEBUG) && !defined(ZdbRep_DEBUG)
 #define ZdbRep_DEBUG

@@ -38,7 +38,7 @@
 
 namespace ZvTelemetry {
 
-using QueueFn = ZmFn<Queue &>;
+using QueueFn = ZvEngineMgr::QueueFn;
 
 using DBEnvFn =
   ZmFn<ZmFn<const DBEnv &>, ZmFn<const DBHost &>, ZmFn<const DB &>>;

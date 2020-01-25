@@ -28,6 +28,12 @@
 //   // returns -ve if *this < t, 0 if *this == t, +ve if *this > t
 //   ...
 // };
+//
+// The following are roughly equivalent:
+//
+// ZuDeref<T>::T	std::remove_reference<T>::type
+// ZuStrip<T>::T	std::remove_cv<T>::type
+// ZuTraits<T>::T	std::decay<T>::type
 
 #ifndef ZuTraits_HPP
 #define ZuTraits_HPP
@@ -75,8 +81,8 @@ template <typename T_, bool Enum> struct ZuGenericTraits_ {
     IsEnum = Enum
   };
 
-  typedef T_ T;
-  typedef void Elem;
+  using T = T_;
+  using Elem = void;
 };
 template <typename T>
 struct ZuGenericTraits : public ZuGenericTraits_<T, ZuTraits_Enum<T>::Is> { };
@@ -165,12 +171,9 @@ struct ZuTraits<long double> : public ZuTraits_Floating<long double> { };
 
 // references
 
-// Note: ZuTraits<T>::T both dereferences and strips cv qualifiers,
-// while ZuDeref<T>::T preserves cv qualifiers
-
 template <typename T_> struct ZuTraits<T_ &> : public ZuTraits<T_> {
   enum { IsReference = 1 };
-  typedef T_ T;
+  using T = T_;
 };
 
 template <typename T> struct ZuTraits<const T &> : public ZuTraits<T &> { };
@@ -180,7 +183,7 @@ struct ZuTraits<const volatile T &> : public ZuTraits<T &> { };
 
 template <typename T_> struct ZuTraits<T_ &&> : public ZuTraits<T_> {
   enum { IsRvalueRef = 1 };
-  typedef T_ T;
+  using T = T_;
 };
 
 // pointers
@@ -190,7 +193,7 @@ struct ZuTraits_Pointer : public ZuGenericTraits<T> {
   enum {
     IsPrimitive = 1, IsPOD = 1, IsPointer = 1, IsHashable = 1, IsComparable = 1
   };
-  typedef Elem_ Elem;
+  using Elem = Elem_;
 };
 
 template <typename T>
@@ -426,8 +429,8 @@ template <typename S, typename T = void> struct ZuIsCharString :
 template <typename T_, typename Char>
 struct ZuStdStringTraits_ : public ZuGenericTraits<T_> {
   enum { IsString = 1 };
-  typedef T_ T;
-  typedef Char Elem;
+  using T = T_;
+  using Elem = Char;
   ZuInline static const Char *data(const T &s) { return s.data(); }
   ZuInline static unsigned length(const T &s) { return s.length(); }
 };
@@ -440,8 +443,8 @@ struct ZuStdWStringTraits : public ZuStdStringTraits_<T_, wchar_t>
 template <typename T_, typename Elem_>
 struct ZuStdArrayTraits_ : public ZuGenericTraits<T_> {
   enum { IsArray = 1 };
-  typedef T_ T;
-  typedef Elem_ Elem;
+  using T = T_;
+  using Elem = Elem_;
   ZuInline static const Elem *data(const T &a) { return a.data(); }
   ZuInline static unsigned length(const T &a) { return a.size(); }
 };
@@ -491,8 +494,8 @@ template <typename Elem_>
 struct ZuTraits<std::initializer_list<Elem_> > :
     public ZuGenericTraits<std::initializer_list<Elem_> > {
   enum { IsArray = 1 };
-  typedef std::initializer_list<Elem_> T;
-  typedef Elem_ Elem;
+  using T = std::initializer_list<Elem_>;
+  using Elem = Elem_;
   ZuInline static const Elem *data(const T &a) { return a.begin(); }
   ZuInline static unsigned length(const T &a) { return a.size(); }
 };

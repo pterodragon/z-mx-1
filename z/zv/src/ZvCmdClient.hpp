@@ -51,7 +51,6 @@
 #include <zlib/ZvUserDB.hpp>
 #include <zlib/ZvSeqNo.hpp>
 #include <zlib/ZvTelemetry.hpp>
-#include <zlib/ZvTelClient.hpp>
 
 #include <zlib/loginreq_fbs.h>
 #include <zlib/loginack_fbs.h>
@@ -60,6 +59,9 @@
 #include <zlib/zcmd_fbs.h>
 #include <zlib/zcmdreq_fbs.h>
 #include <zlib/zcmdack_fbs.h>
+#include <zlib/telemetry_fbs.h>
+#include <zlib/telreq_fbs.h>
+#include <zlib/telack_fbs.h>
 
 #include <zlib/ZvCmdNet.hpp>
 

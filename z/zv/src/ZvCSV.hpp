@@ -74,9 +74,9 @@ namespace ZvCSV_ {
     quote_2(row, s);
     row << '"';
   }
-  template <typename T, typename Fmt, typename Row>
+  template <typename Field, typename T, typename Fmt, typename Row>
   void quote(
-      Row &row, const ZvField<T> *field, const T *object, const Fmt &fmt) {
+      Row &row, const Field *field, const T *object, const Fmt &fmt) {
     switch ((int)field->type) {
       case ZvFieldType::String:
       case ZvFieldType::Enum:
@@ -99,8 +99,8 @@ template <typename T> class ZvCSV {
   ZvCSV &operator =(const ZvCSV &) = delete;
 
 public:
-  using Field = ZvField<T>;
-  using Fields = ZvFields<T>;
+  using Fields = typename ZuTraits<decltype(T::fields())>::T;
+  using Field = typename Fields::Elem;
 
   using ColNames = ZtArray<ZuString>;
   using ColIndex = ZtArray<int>;
@@ -294,7 +294,7 @@ public:
     *row << '\n';
     fwrite(row->data(), 1, row->length(), file);
 
-    return [colArray = ZuMv(colArray), row, &fmt, file](T *object) {
+    return [colArray = ZuMv(colArray), row, &fmt, file](const T *object) {
       if (ZuUnlikely(!object)) {
 	delete row;
 	fclose(file);
@@ -325,7 +325,7 @@ public:
     *row << '\n';
     data << *row;
 
-    return [this, colArray = ZuMv(colArray), row, &fmt, &data](T *object) {
+    return [colArray = ZuMv(colArray), row, &fmt, &data](const T *object) {
       if (ZuUnlikely(!object)) {
 	delete row;
 	return;

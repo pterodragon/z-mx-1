@@ -145,17 +145,27 @@
 #if defined (__cplusplus)
 // std::remove_reference without dragging in STL cruft
 template <typename T_>
-struct ZuDeref { typedef T_ T; };
+struct ZuDeref { using T = T_; };
 template <typename T_>
-struct ZuDeref<T_ &> { typedef T_ T; };
+struct ZuDeref<T_ &> { using T = T_; };
 template <typename T_>
-struct ZuDeref<const T_ &> { typedef const T_ T; };
+struct ZuDeref<const T_ &> { using T = const T_; };
 template <typename T_>
-struct ZuDeref<volatile T_ &> { typedef volatile T_ T; };
+struct ZuDeref<volatile T_ &> { using T = volatile T_; };
 template <typename T_>
-struct ZuDeref<const volatile T_ &> { typedef const volatile T_ T; };
+struct ZuDeref<const volatile T_ &> { using T = const volatile T_; };
 template <typename T_>
-struct ZuDeref<T_ &&> { typedef T_ T; };
+struct ZuDeref<T_ &&> { using T = T_; };
+
+// std::remove_cv (strip qualifiers) without dragging in STL cruft
+template <typename T_>
+struct ZuStrip { using T = T_; };
+template <typename T_>
+struct ZuStrip<const T_> { using T = T_; };
+template <typename T_>
+struct ZuStrip<volatile T_> { using T = T_; };
+template <typename T_>
+struct ZuStrip<const volatile T_> { using T = T_; };
 
 // shorthand constexpr std::forward without STL cruft
 template <typename T>

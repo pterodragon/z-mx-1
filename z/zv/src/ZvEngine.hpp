@@ -187,7 +187,7 @@ struct ZvAPI ZvEngineApp {
 //    that reference it can remain in existence
 
 struct ZvEngineMgr {
-  using QueueFn = ZvTelemetry::QueueFn;
+  using QueueFn = ZmFn<ZvTelemetry::Queue &>;
 
   // Engine Management
   virtual void addEngine(ZvEngine *) { }
@@ -228,7 +228,7 @@ public:
   using Mx = ZvMultiplex;
   using Mgr = ZvEngineMgr;
   using App = ZvEngineApp;
-  using QueueFn = ZvTelemetry::QueueFn;
+  using QueueFn = ZvEngineMgr::QueueFn;
 
   ZvEngine() : m_state(ZvEngineState::Stopped) { }
 

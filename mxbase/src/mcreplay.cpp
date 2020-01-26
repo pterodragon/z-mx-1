@@ -257,7 +257,7 @@ void Connection::connected(ZiIOContext &io)
 
 void Connection::disconnected()
 {
-  m_app->disconnected_(this);
+  if (m_app) m_app->disconnected_(this);
 }
 
 void App::read()

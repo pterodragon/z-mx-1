@@ -283,7 +283,9 @@ namespace MxTelemetry {
 
     private:
       void connected(ZiIOContext &io) { m_client->connected(this, io); }
-      void disconnected() { m_client->disconnected(this); }
+      void disconnected() {
+	if (auto client = m_client) client->disconnected(this);
+      }
 
       void recv(ZiIOContext &io) {
 	ZmRef<Msg> msg = new Msg();
@@ -345,7 +347,9 @@ namespace MxTelemetry {
 
     private:
       void connected(ZiIOContext &) { m_server->connected(this); }
-      void disconnected() { m_server->disconnected(this); }
+      void disconnected() {
+	if (auto server = m_server) server->disconnected(this);
+      }
 
       Server		*m_server = 0;
     };

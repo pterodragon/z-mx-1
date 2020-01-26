@@ -2221,7 +2221,7 @@ inline void MxMDFeed::connected() {
   m_md->handler()->connected(this);
 }
 inline void MxMDFeed::disconnected() {
-  m_md->handler()->disconnected(this);
+  if (m_md) m_md->handler()->disconnected(this);
 }
 
 ZuInline MxMDVenueShard *MxMDVenue::shard(const MxMDShard *shard) const {

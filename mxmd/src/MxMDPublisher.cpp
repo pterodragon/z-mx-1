@@ -331,7 +331,7 @@ void MxMDPubLink::TCP::close()
 void MxMDPubLink::TCP::disconnected()
 {
   mx()->del(&m_loginTimer);
-  if (m_state != State::LinkDisconnect) {
+  if (m_state != State::LinkDisconnect && m_link) {
     // tcpERROR(this, 0, "TCP disconnected");
     m_link->engine()->rxRun(ZmFn<>{ZmMkRef(this), [](ZmRef<TCP> tcp) {
       tcp->link()->tcpDisconnected(tcp);
@@ -374,9 +374,10 @@ void MxMDPubLink::TCP::processLogin(ZmRef<MxQMsg> msg, ZiIOContext &io)
 	tcp->process(ZuMv(msg), io);
       });
 
-  m_link->engine()->rxRun(ZmFn<>{ZmMkRef(this), [](TCP *tcp) {
-    tcp->link()->snap(tcp);
-  }});
+  m_link->engine()->rxRun(ZmFn<>{ZmMkRef(this),
+    [](TCP *tcp) {
+      if (auto link = tcp->link()) link->snap(tcp);
+    }});
 }
 void MxMDPubLink::TCP::process(ZmRef<MxQMsg>, ZiIOContext &io)
 {
@@ -449,9 +450,9 @@ MxMDPubLink::UDP::UDP(MxMDPubLink *link, const ZiCxnInfo &ci) :
 void MxMDPubLink::UDP::connected(ZiIOContext &io)
 {
   m_link->engine()->rxRun(ZmFn<>{ZmMkRef(this),
-      [](UDP *udp) {
-	udp->link()->udpConnected(udp);
-      }});
+    [](UDP *udp) {
+      if (auto link = udp->link()) link->udpConnected(udp);
+    }});
   recv(io); // begin receiving UDP packets (resend requests)
 }
 void MxMDPubLink::udpConnected(MxMDPubLink::UDP *udp)

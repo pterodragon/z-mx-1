@@ -232,7 +232,7 @@ void Connection::connected(ZiIOContext &io)
 
 void Connection::disconnected()
 {
-  m_app->post();
+  if (m_app) m_app->post();
 }
 
 void Connection::recv(ZiIOContext &io)

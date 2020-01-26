@@ -34,7 +34,7 @@ int main()
 
     iobuf = b.buf();
 
-    std::cout << ZtHexDump("\n", iobuf->data(), iobuf->length);
+    // std::cout << ZtHexDump("\n", iobuf->data(), iobuf->length);
 
     if ((void *)buf != (void *)(iobuf->data()) ||
 	len != iobuf->length) {

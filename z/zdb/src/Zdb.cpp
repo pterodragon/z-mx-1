@@ -767,7 +767,7 @@ ret:
 
 void ZdbHost::disconnected()
 {
-  m_cxn = 0;
+  m_cxn = nullptr;
 }
 
 ZdbHost *ZdbEnv::setMaster()

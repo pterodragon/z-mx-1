@@ -133,7 +133,10 @@ public:
   template <typename Data_load, typename FBS>
   static TelCap fn(const char *path) {
     return TelCap{[l = ZvCSV<Data_load>{}.writeFile(path)](const void *data_) {
-      if (!data_) { l(nullptr); return; }
+      if (!data_) {
+	l(nullptr);
+	return;
+      }
       Data_load data{static_cast<const FBS *>(data_)};
       l(&data);
     }};
@@ -511,9 +514,9 @@ private:
 	"usage: telcap [OPTIONS...] PATH [TYPE[:FILTER]]...\n\n"
 	"  PATH\tdirectory for capture CSV files\n"
 	"  TYPE\t[Heap|HashTbl|Thread|Mx|Queue|Engine|DbEnv|App|Alert]\n"
-	"  FILTER\tfilter specification in type-specific format\n"
+	"  FILTER\tfilter specification in type-specific format\n\n"
 	"Options:\n"
-	"  -i, --interval=N\tset scan interval in seconds\n"
+	"  -i, --interval=N\tset scan interval in microseconds\n"
 	"  -u, --unsubscribe\tunsubscribe (i.e. end capture)\n");
   }
 
@@ -1206,7 +1209,7 @@ private:
   int telcapCmd(FILE *file, ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
     using namespace ZvTelemetry;
-    unsigned interval = args->getInt("interval", 10, 1000000, false, 0);
+    unsigned interval = args->getInt("interval", 100, 1000000, false, 0);
     bool subscribe = !args->getInt("unsubscribe", 0, 1, false, 0);
     if (!subscribe) {
       for (unsigned i = 0; i < TelDataN; i++) m_telcap[i] = TelCap{};
@@ -1218,17 +1221,16 @@ private:
     ZtArray<ZuString> filters;
     ZtArray<int> types;
     auto reqNames = fbs::EnumNamesReqType();
-    if (argc == 2) {
-      ok.length(TelDataN);
+    if (argc <= 1 + subscribe) {
+      ok.length(1); // (ReqTypeN);
       filters.length(ok.length());
       types.length(ok.length());
-      for (unsigned i = fbs::ReqType_MIN; i <= fbs::ReqType_MAX; i++) {
-	auto j = i - fbs::ReqType_MIN;
-	filters[j] = "*";
-	types[j] = i;
+      for (unsigned i = 0; i < 1; i++) { // ReqTypeN
+	filters[i] = "*";
+	types[i] = ReqType::MIN + i;
       }
     } else {
-      ok.length(argc - 2);
+      ok.length(argc - (1 + subscribe));
       filters.length(ok.length());
       types.length(ok.length());
       const auto &colon = ZtStaticRegexUTF8(":");
@@ -1260,51 +1262,65 @@ private:
 	  return 1;
 	}
       }
-      auto dataNames = fbs::EnumNamesTelData();
       for (unsigned i = 0, n = ok.length(); i < n; i++) {
-	unsigned j = types[i];
-	unsigned k = j - TelData::MIN;
-	auto path = ZiFile::append(dir, ZtString() << dataNames[j] << ".csv");
 	try {
-	  switch (j) {
-	    case TelData::Heap:
-	      m_telcap[k] = TelCap::fn<Heap_load, fbs::Heap>(path);
+	  switch (types[i]) {
+	    case ReqType::Heap:
+	      m_telcap[TelData::Heap - TelData::MIN] =
+		TelCap::fn<Heap_load, fbs::Heap>(
+		    ZiFile::append(dir, "heap.csv"));
 	      break;
-	    case TelData::HashTbl:
-	      m_telcap[k] = TelCap::fn<HashTbl_load, fbs::HashTbl>(path);
+	    case ReqType::HashTbl:
+	      m_telcap[TelData::HashTbl - TelData::MIN] =
+		TelCap::fn<HashTbl_load, fbs::HashTbl>(
+		    ZiFile::append(dir, "hash.csv"));
 	      break;
-	    case TelData::Thread:
-	      m_telcap[k] = TelCap::fn<Thread_load, fbs::Thread>(path);
+	    case ReqType::Thread:
+	      m_telcap[TelData::Thread - TelData::MIN] =
+		TelCap::fn<Thread_load, fbs::Thread>(
+		    ZiFile::append(dir, "thread.csv"));
 	      break;
-	    case TelData::Mx:
-	      m_telcap[k] = TelCap::fn<Mx_load, fbs::Mx>(path);
+	    case ReqType::Mx:
+	      m_telcap[TelData::Mx - TelData::MIN] =
+		TelCap::fn<Mx_load, fbs::Mx>(
+		    ZiFile::append(dir, "mx.csv"));
+	      m_telcap[TelData::Socket - TelData::MIN] =
+		TelCap::fn<Socket_load, fbs::Socket>(
+		    ZiFile::append(dir, "socket.csv"));
 	      break;
-	    case TelData::Socket:
-	      m_telcap[k] = TelCap::fn<Socket_load, fbs::Socket>(path);
+	    case ReqType::Queue:
+	      m_telcap[TelData::Queue - TelData::MIN] =
+		TelCap::fn<Queue_load, fbs::Queue>(
+		    ZiFile::append(dir, "queue.csv"));
 	      break;
-	    case TelData::Queue:
-	      m_telcap[k] = TelCap::fn<Queue_load, fbs::Queue>(path);
+	    case ReqType::Engine:
+	      m_telcap[TelData::Engine - TelData::MIN] =
+		TelCap::fn<Engine_load, fbs::Engine>(
+		    ZiFile::append(dir, "engine.csv"));
+	      m_telcap[TelData::Link - TelData::MIN] =
+		TelCap::fn<Link_load, fbs::Link>(
+		    ZiFile::append(dir, "link.csv"));
 	      break;
-	    case TelData::Link:
-	      m_telcap[k] = TelCap::fn<Link_load, fbs::Link>(path);
+	    case ReqType::DBEnv:
+	      m_telcap[TelData::DBEnv - TelData::MIN] =
+		TelCap::fn<DBEnv_load, fbs::DBEnv>(
+		    ZiFile::append(dir, "dbenv.csv"));
+	      m_telcap[TelData::DBHost - TelData::MIN] =
+		TelCap::fn<DBHost_load, fbs::DBHost>(
+		    ZiFile::append(dir, "dbhost.csv"));
+	      m_telcap[TelData::DB - TelData::MIN] =
+		TelCap::fn<DB_load, fbs::DB>(
+		    ZiFile::append(dir, "db.csv"));
 	      break;
-	    case TelData::Engine:
-	      m_telcap[k] = TelCap::fn<Engine_load, fbs::Engine>(path);
+	    case ReqType::App:
+	      m_telcap[TelData::App - TelData::MIN] =
+		TelCap::fn<App_load, fbs::App>(
+		    ZiFile::append(dir, "app.csv"));
 	      break;
-	    case TelData::DB:
-	      m_telcap[k] = TelCap::fn<DB_load, fbs::DB>(path);
-	      break;
-	    case TelData::DBHost:
-	      m_telcap[k] = TelCap::fn<DBHost_load, fbs::DBHost>(path);
-	      break;
-	    case TelData::DBEnv:
-	      m_telcap[k] = TelCap::fn<DBEnv_load, fbs::DBEnv>(path);
-	      break;
-	    case TelData::App:
-	      m_telcap[k] = TelCap::fn<App_load, fbs::App>(path);
-	      break;
-	    case TelData::Alert:
-	      m_telcap[k] = TelCap::fn<Alert_load, fbs::Alert>(path);
+	    case ReqType::Alert:
+	      m_telcap[TelData::Alert - TelData::MIN] =
+		TelCap::fn<Alert_load, fbs::Alert>(
+		    ZiFile::append(dir, "alert.csv"));
 	      break;
 	  }
 	} catch (const ZvError &e) {
@@ -1336,7 +1352,13 @@ private:
 	allOK = false;
       }
     if (!allOK) return 1;
-    out << "telemetry requests accepted\n";
+    if (subsribe) {
+      if (!interval)
+	out << "telemetry queried\n";
+      else
+	out << "telemetry subscribed\n";
+    } else
+      out << "telemetry unsubscribed\n";
     return 0;
   }
 

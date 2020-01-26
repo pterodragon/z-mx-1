@@ -167,24 +167,23 @@ struct ZvAPI ZvEngineApp {
 // this is only a routine problem for transient objects such as messages.
 // It should not be necessary to frequently adjust the reference count of
 // semi-persistent objects such as links and engines, since most of the time
-// they will remain in scope. Furthermore, atomic operations on reference
+// they remain in scope. Furthermore, atomic operations on reference
 // counts are somewhat expensive and should be minimized.
 //
-// Accordingly, when scheduling link or engine methods to be run later, 'this'
+// Accordingly, when enqueuing work involving links/engines, 'this'
 // can be directly captured as a raw pointer, without reference counting.
 // As a corollary, code that deletes links or engines needs to take extra
-// care not to destroy them while they could remain referenced by pending
-// member functions; a relatively simple way of ensuring this is to perform
-// multi-stage destruction as follows:
+// care not to destroy them while they could remain referenced by outstanding
+// work; a relatively simple way of ensuring this is to perform multi-stage
+// destruction as follows:
 // 1] De-index the link/engine and disable it so it will not be used in future
 // 2] Initialize a temporary semaphore
 // 3] Enqueue a function that posts the semaphore onto each of the threads
-//    that could potentially execute pending member functions for the
-//    link/engine being deleted; each semaphore post will be executed after
-//    all the other pending functions ahead of it
+//    that could potentially do work involving the link/engine being deleted;
+//    each semaphore post will be executed after all the work ahead of it
 // 4] Wait for the semaphore to be posted as many times as there are threads
-// 5] Destroy the link/engine, safe in the knowledge that no pending functions
-//    that reference it can remain in existence
+// 5] Destroy the link/engine, safe in the knowledge that no outstanding work
+//    involving it can remain in existence
 
 struct ZvEngineMgr {
   using QueueFn = ZmFn<ZvTelemetry::Queue &>;

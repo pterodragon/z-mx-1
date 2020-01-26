@@ -78,7 +78,8 @@ public:
 
   ZuInline ZmAnyFn(ZmAnyFn &&fn) noexcept :
       m_invoker(fn.m_invoker), m_object(fn.m_object) {
-    deref(fn.m_object);
+    // deref(fn.m_object);
+    fn.m_invoker = fn.m_object = 0;
 #ifdef ZmObject_DEBUG
     if (ZuUnlikely(owned(m_object))) ZmMVREF(ptr(m_object), &fn, this);
 #endif
@@ -99,7 +100,8 @@ public:
 #endif
     m_invoker = fn.m_invoker;
     m_object = fn.m_object;
-    deref(fn.m_object);
+    // deref(fn.m_object);
+    fn.m_invoker = fn.m_object = 0;
 #ifdef ZmObject_DEBUG
     if (ZuUnlikely(owned(m_object))) ZmMVREF(ptr(m_object), &fn, this);
 #endif

@@ -79,8 +79,7 @@ public:
 
   void connected(ZiIOContext &io) { m_link->connected_(this, io); }
   void disconnected() {
-    Link *link = m_link;
-    link->disconnected_(this, ZuMv(m_link));
+    if (Link *link = m_link) link->disconnected_(this, ZuMv(m_link));
   }
 
 private:
@@ -165,10 +164,11 @@ private:
   void rx(ZiIOContext &io) { // I/O Rx thread
     io.offset += io.length;
     m_rxBuf->length = io.offset;
-    app()->run([buf = ZuMv(m_rxBuf)]() {
-      auto link = static_cast<Link *>(buf->owner);
-      link->recv_(ZuMv(buf));
-    });
+    if (ZuLikely(!m_disconnecting.load_()))
+      app()->run([buf = ZuMv(m_rxBuf)]() {
+	auto link = static_cast<Link *>(buf->owner);
+	link->recv_(ZuMv(buf));
+      });
     m_rxBuf = new IOBuf(this, 0);
     io.ptr = m_rxBuf->data_;
     io.length = IOBuf::Size;
@@ -283,6 +283,7 @@ private:
     if (n <= 0) {
       if (ZuUnlikely(!n)) {
 	app()->logError("mbedtls_ssl_read(): unknown error");
+	disconnect_(false);
 	return false;
       }
       switch (n) {
@@ -339,6 +340,7 @@ public:
   }
   void send(ZmRef<IOBuf> buf) {
     if (ZuUnlikely(!buf->length)) return;
+    if (ZuUnlikely(m_disconnecting.load_())) return;
     buf->owner = this;
     app()->invoke([buf = ZuMv(buf)]() mutable {
       auto link = static_cast<Link *>(buf->owner);
@@ -351,6 +353,7 @@ public:
   }
   void send_(const uint8_t *data, unsigned len) { // TLS thread
     if (ZuUnlikely(!len)) return;
+    if (ZuUnlikely(m_disconnecting.load_())) return;
     unsigned offset = 0;
     do {
       int n = mbedtls_ssl_write(&m_ssl, data + offset, len - offset);
@@ -365,6 +368,7 @@ public:
 	    continue;
 	}
 	app()->logError("mbedtls_ssl_write(): ", strerror_(n));
+	disconnect_(false);
 	return;
       }
       offset += n;
@@ -403,9 +407,11 @@ private:
 
 public:
   void disconnect() { // App thread(s)
+    m_disconnecting = 1;
     app()->invoke(this, [](Link *link) { link->disconnect_(); });
   }
   void disconnect_(bool notify = true) { // TLS thread
+    m_disconnecting = 1; // disconnect() might be bypassed
     app()->mx()->del(&m_reconnTimer);
     if (notify) {
       int n = mbedtls_ssl_close_notify(&m_ssl);
@@ -415,8 +421,11 @@ public:
     m_tcp = nullptr;
     if (tcp) {
       auto mx = tcp->mx();
-      // drain Tx while keeping tcp referenced
-      mx->txRun(ZmFn<>{ZuMv(tcp), [](TCP *tcp) { tcp->disconnect(); }});
+      if (notify) {
+	// drain Tx while keeping tcp referenced
+	mx->txRun(ZmFn<>{ZuMv(tcp), [](TCP *tcp) { tcp->disconnect(); }});
+      } else
+	tcp->close();
     }
   }
 
@@ -441,6 +450,9 @@ private:
   ZmRef<IOBuf>		m_rxRing[RxRingSize];
   unsigned		m_rxOutOffset = 0;
   uint8_t		m_rxOutBuf[MBEDTLS_SSL_MAX_CONTENT_LEN];
+
+  // Contended
+  ZmAtomic<uint>	m_disconnecting = 0;
 };
 
 // client links are persistent, own the (transient) connection

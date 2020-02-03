@@ -1002,6 +1002,10 @@ struct Alert : public ZvFieldTuple<Alert> {
 	static_cast<fbs::Severity>(severity),
 	str(fbb, message));
   }
+  Zfb::Offset<fbs::Alert> saveDelta(Zfb::Builder &fbb) const {
+    return save(fbb);
+  }
+  void loadDelta(const fbs::Alert *);
 };
 inline const ZvFields<Alert> Alert::fields() noexcept {
   ZvMkFields(Alert,
@@ -1020,6 +1024,10 @@ struct Alert_load : public Alert {
     .message = Zfb::Load::str(alert_->message())
   } { }
 };
+void Alert::loadDelta(const fbs::Alert *alert_) {
+  this->~Alert();
+  new (static_cast<void *>(this)) Alert_load{alert_};
+}
 
 namespace ReqType {
   ZfbEnumValues(ReqType,

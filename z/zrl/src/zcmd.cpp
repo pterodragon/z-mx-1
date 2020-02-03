@@ -120,32 +120,47 @@ static ZtString getpass_(const ZtString &prompt, unsigned passLen)
 
 class TelCap {
 public:
+  using Fn = ZmFn<void *&, const void *>;
+
   TelCap() { }
-  TelCap(ZmFn<const void *> fn) : m_fn{ZuMv(fn)} { }
+  TelCap(Fn fn) : m_fn{ZuMv(fn)} { }
   TelCap(TelCap &&o) : m_fn{ZuMv(o.m_fn)} { }
   TelCap &operator =(TelCap &&o) {
-    m_fn(nullptr);
+    m_fn(m_ptr, nullptr);
     m_fn = ZuMv(o.m_fn);
     return *this;
   }
-  ~TelCap() { m_fn(nullptr); }
+  ~TelCap() { m_fn(m_ptr, nullptr); }
 
   template <typename Data_load, typename FBS>
   static TelCap fn(const char *path) {
-    return TelCap{[l = ZvCSV<Data_load>{}.writeFile(path)](const void *data_) {
+    return TelCap{[l = ZvCSV<Data_load>{}.writeFile(path)](
+	void *&ptr_, const void *data_) {
+      auto ptr = static_cast<Data_load *>(ptr_);
       if (!data_) {
 	l(nullptr);
+	if (ptr) {
+	  ptr->~Data_load();
+	  ::free(ptr_);
+	  ptr_ = nullptr;
+	}
 	return;
       }
-      Data_load data{static_cast<const FBS *>(data_)};
-      l(&data);
+      auto data = static_cast<const FBS *>(data_);
+      if (!ptr) {
+	ptr_ = ::malloc(sizeof(Data_load));
+	ptr = new (ptr_) Data_load{data};
+      } else
+	ptr->loadDelta(data);
+      l(ptr);
     }};
   }
 
-  void operator ()(const void *p) { m_fn(p); }
+  void operator ()(const void *p) { m_fn(m_ptr, p); }
 
 private:
-  ZmFn<const void *>	m_fn;
+  Fn		m_fn;
+  void		*m_ptr = nullptr;
 };
 
 class ZCmd : public ZmPolymorph, public ZvCmdClient<ZCmd>, public ZCmdHost {
@@ -516,7 +531,8 @@ private:
 	"  TYPE\t[Heap|HashTbl|Thread|Mx|Queue|Engine|DbEnv|App|Alert]\n"
 	"  FILTER\tfilter specification in type-specific format\n\n"
 	"Options:\n"
-	"  -i, --interval=N\tset scan interval in microseconds\n"
+	"  -i, --interval=N\tset scan interval in milliseconds "
+	  "(100 <= N <= 1M)\n"
 	"  -u, --unsubscribe\tunsubscribe (i.e. end capture)\n");
   }
 
@@ -1222,10 +1238,10 @@ private:
     ZtArray<int> types;
     auto reqNames = fbs::EnumNamesReqType();
     if (argc <= 1 + subscribe) {
-      ok.length(1); // (ReqTypeN);
+      ok.length(ReqTypeN);
       filters.length(ok.length());
       types.length(ok.length());
-      for (unsigned i = 0; i < 1; i++) { // ReqTypeN
+      for (unsigned i = 0; i < ReqTypeN; i++) {
 	filters[i] = "*";
 	types[i] = ReqType::MIN + i;
       }
@@ -1352,7 +1368,7 @@ private:
 	allOK = false;
       }
     if (!allOK) return 1;
-    if (subsribe) {
+    if (subscribe) {
       if (!interval)
 	out << "telemetry queried\n";
       else

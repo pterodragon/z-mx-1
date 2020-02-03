@@ -1820,8 +1820,8 @@ void ZiConnection::overlappedDisconnect(int status, unsigned n, ZeError e)
 
 void ZiConnection::errorDisconnect(int status, ZeError e)
 {
-  ZmRef<ZiConnection> self(this);
-  m_mx->disconnected(self);
+  ZmRef<ZiConnection> self(this); // maintain +ve ref count in scope
+  m_mx->disconnected(this);
   Error(
 #ifndef _WIN32
       "shutdown",
@@ -1836,8 +1836,8 @@ void ZiConnection::errorDisconnect(int status, ZeError e)
 
 void ZiConnection::executedDisconnect()
 {
-  ZmRef<ZiConnection> self(this);
-  m_mx->disconnected(self);
+  ZmRef<ZiConnection> self(this); // maintain +ve ref count in scope
+  m_mx->disconnected(this);
   ZiPlatform::closeSocket(m_info.socket);
   m_info.socket = ZiPlatform::nullSocket();
   disconnected();

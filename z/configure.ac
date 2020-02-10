@@ -100,6 +100,16 @@ AX_PATH_LIB_READLINE(, [AC_MSG_ERROR([libreadline required])])
 CPPFLAGS="$READLINE_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$READLINE_LDFLAGS $LDFLAGS"
 
+PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.24.0], [dnl
+  gtk="yes"
+], [dnl
+  AC_MSG_NOTICE([Gtk unavailable])
+  gtk="no"
+])
+AC_SUBST(GTK_CFLAGS)
+AC_SUBST(GTK_LDFLAGS)
+AC_SUBST(GTK_LIBS)
+
 Z_CPPFLAGS="-D_REENTRANT -D_GNU_SOURCE"
 
 AM_CONDITIONAL([GXX], [test ".$GXX" = ".yes"])
@@ -107,6 +117,7 @@ AM_CONDITIONAL([MINGW], [test ".$mingw" = ".yes"])
 AM_CONDITIONAL([MINGW32], [test ".$mingw32" = ".yes"])
 AM_CONDITIONAL([MINGW64], [test ".$mingw64" = ".yes"])
 AM_CONDITIONAL([JNI], [test ".$jni" = ".yes"])
+AM_CONDITIONAL([GTK], [test ".$gtk" = ".yes"])
 
 if test ".$GXX" = ".yes"; then
   Z_CXXFLAGS="$Z_CXXFLAGS -Wall -Wno-parentheses -Wno-invalid-offsetof -Wno-misleading-indentation -fstrict-aliasing"
@@ -136,7 +147,7 @@ AC_SUBST(MBEDTLS_LIBS)
 AC_SUBST(FLATBUFFERS_LIBS)
 AC_SUBST(READLINE_LIBS)
 
-for i in zu zm zjni zt ze zi ztls zfb zv zp zdb zrl
+for i in zu zm zjni zt ze zi ztls zfb zv zp zdb zrl zgtk
 do ( cd $i/src; test ! -e AC_PACKAGE_NAME && ln -s . AC_PACKAGE_NAME )
 done
 
@@ -152,4 +163,5 @@ AC_OUTPUT(Makefile \
 	zv/Makefile zv/src/Makefile zv/test/Makefile \
 	zp/Makefile zp/src/Makefile \
 	zdb/Makefile zdb/src/Makefile zdb/test/Makefile \
-	zrl/Makefile zrl/src/Makefile zrl/test/Makefile)
+	zrl/Makefile zrl/src/Makefile zrl/test/Makefile \
+	zgtk/Makefile zgtk/src/Makefile)

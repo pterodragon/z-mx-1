@@ -8,3 +8,6 @@ if JNI
 SUBDIRS += zjni
 endif
 SUBDIRS += zrl zdb
+if GTK
+SUBDIRS += zgtk
+endif

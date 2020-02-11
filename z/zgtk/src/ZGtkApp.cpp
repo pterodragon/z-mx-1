@@ -24,28 +24,35 @@ void App::run()
   gtk_main();
 }
 
-void App::attach(ZmScheduler &sched, unsigned tid)
+void App::attach(ZmScheduler *sched, unsigned tid)
 {
-  GSourceFuncs funcs = {
+  static GSourceFuncs funcs = {
     .prepare = nullptr,
     .check = nullptr,
     .dispatch = dispatch,
     .finalize = nullptr
   };
 
+  m_sched = sched;
+  m_tid = tid;
+
   m_source = g_source_new(&funcs, sizeof(GSource));
   g_source_attach(m_source, nullptr);
-  sched.wakeFn(tid, [this, &sched]() mutable {
-    sched.run_(1, []() { run(); }); wake();
-  });
-  sched.run_(tid, []() { run(); });
+
+  m_sched->wakeFn(m_tid, ZmFn{this, [](App *app) {
+    app->m_sched->run_(app->m_tid, []() { run(); });
+    app->wake();
+  }});
+  m_sched->run_(m_tid, ZmFn{this, [](App *app) {
+    run();
+  }});
 }
 
-void App::detach(ZmScheduler &sched, unsigned tid)
+void App::detach()
 {
   // g_source_detach(m_source, nullptr); // FIXME
   // g_source_final(m_source); // FIXME
-  sched.wakeFn(tid, ZmFn{});
+  m_sched->wakeFn(m_tid, ZmFn{});
 }
 
 }

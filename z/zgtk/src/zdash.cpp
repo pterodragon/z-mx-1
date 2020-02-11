@@ -1,19 +1,15 @@
-#include <glib.h>
-
-#include <gtk/gtk.h>
-
 #include <zlib/ZmScheduler.hpp>
 
 #include <zlib/ZGtkApp.hpp>
 
-int main()
+int main(int argc, char **argv)
 {
   ZmScheduler s{ZmSchedParams().id("sched").nThreads(2)};
   s.start();
 
   ZGtk::App app;
 
-  app.attach(s, 1);
+  app.attach(&s, 1);
 
   for (int i = 0; i < 5; i++) {
     s.run(1, []() {
@@ -24,5 +20,5 @@ int main()
 
   s.stop();
 
-  app.detach(s, 1);
+  app.detach();
 }

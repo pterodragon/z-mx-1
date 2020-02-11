@@ -40,8 +40,8 @@ namespace ZGtk {
 
 class App {
 public:
-  void attach(ZmScheduler &sched, unsigned tid);
-  void detach(ZmScheduler &sched, unsigned tid);
+  void attach(ZmScheduler *sched, unsigned tid);
+  void detach();
 
 private:
   void wake();
@@ -49,6 +49,8 @@ private:
 
 private:
   GSource	*m_source = nullptr;
+  ZmScheduler	*m_sched = nullptr;
+  unsigned	m_tid = 0;
 };
 
 } // ZGtk

@@ -48,12 +48,11 @@ namespace ZvFieldType {
 
 namespace ZvFieldFlags {
   enum _ {
-    Primary	= 0x01,		// primary key
-    Secondary	= 0x02,		// secondary key
-    Dynamic	= 0x04,		// scalar that varies over time
-    Synthetic	= 0x08,		// synthetic scalar
-    Cumulative	= 0x10,		// first derivative should be logged/graphed
-    ColorRAG	= 0x20		// red/amber/green
+    Dynamic	= 0x01,		// scalar that varies over time
+    Synthetic	= 0x02,		// synthetic scalar
+    Cumulative	= 0x04,		// first derivative should be logged/graphed
+    ColorRAG	= 0x08,		// red/amber/green
+    Hex		= 0x10
   };
 }
 

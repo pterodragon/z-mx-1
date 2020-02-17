@@ -673,7 +673,6 @@ private:
     }
   };
 
-
   template <typename O, typename R, typename L, typename ...Args_, class HeapID>
   struct LBoundInvoker<R (L::*)(O *, Args_...), HeapID> :
     public LBoundInvoker_<O *, L, R, HeapID,

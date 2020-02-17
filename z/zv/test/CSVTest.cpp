@@ -46,7 +46,7 @@ struct Row {
 };
 inline const ZvFields<Row> Row::fields() noexcept {
   ZvMkFields(Row,
-      (StringAlias, string, m_string, Primary),
+      (StringAlias, string, m_string, 0),
       (ScalarAlias, int, m_int, 0),
       (BoolAlias, bool, m_bool, 0),
       (ScalarAlias, float, m_float, 0),

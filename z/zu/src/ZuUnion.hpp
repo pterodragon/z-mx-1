@@ -369,7 +369,7 @@ public: \
   ZuInline Type(Union &&v) : Union(ZuMv(v)) { }; \
   ZuPP_Eval(ZuPP_MapIndex(ZuUnion_FieldFn, 1, __VA_ARGS__)) \
   struct Traits : public ZuTraits<Type##_> { using T = Type; }; \
-  friend Traits ZuTraitsFn(const Type *); \
+  friend Traits ZuTraitsType(const Type *); \
 }
 
 #endif /* ZuUnion_HPP */

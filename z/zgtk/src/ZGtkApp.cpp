@@ -15,17 +15,38 @@ namespace ZGtk {
 
 void App::wake()
 {
+  m_sched->run_(m_tid, []() { run_(); });
+  wake_();
+}
+
+void App::wake_()
+{
   g_source_set_ready_time(m_source, 0);
   g_main_context_wakeup(nullptr);
 }
 
-void App::run()
+void App::run_()
 {
   gtk_main();
 }
 
 void App::attach(ZmScheduler *sched, unsigned tid)
 {
+  m_sched = sched;
+  m_tid = tid;
+
+  m_sched->run_(m_tid, ZmFn{this, [](App *app) { app->attach_(); }});
+}
+
+void App::attach_()
+{
+  static bool initialized = false;
+
+  if (!initialized) {
+    gtk_init(nullptr, nullptr);
+    initialized = true;
+  }
+
   static GSourceFuncs funcs = {
     .prepare = nullptr,
     .check = nullptr,
@@ -33,26 +54,24 @@ void App::attach(ZmScheduler *sched, unsigned tid)
     .finalize = nullptr
   };
 
-  m_sched = sched;
-  m_tid = tid;
-
   m_source = g_source_new(&funcs, sizeof(GSource));
   g_source_attach(m_source, nullptr);
 
-  m_sched->wakeFn(m_tid, ZmFn{this, [](App *app) {
-    app->m_sched->run_(app->m_tid, []() { run(); });
-    app->wake();
-  }});
-  m_sched->run_(m_tid, ZmFn{this, [](App *app) {
-    run();
-  }});
+  m_sched->wakeFn(m_tid, ZmFn{this, [](App *app) { app->wake(); }});
+  m_sched->run_(m_tid, ZmFn{this, [](App *app) { app->run_(); }});
 }
 
 void App::detach()
 {
-  // g_source_detach(m_source, nullptr); // FIXME
-  // g_source_final(m_source); // FIXME
   m_sched->wakeFn(m_tid, ZmFn{});
+  m_sched->run_(m_tid, ZmFn{this, [](App *app) { app->detach_(); }});
+}
+
+void App::detach_()
+{
+  g_source_destroy(m_source);
+  g_source_unref(m_source);
+  m_source = nullptr;
 }
 
 }

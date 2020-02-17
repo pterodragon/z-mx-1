@@ -43,9 +43,16 @@ public:
   void attach(ZmScheduler *sched, unsigned tid);
   void detach();
 
+  ZuInline ZmScheduler *sched() const { return m_sched; }
+  ZuInline unsigned tid() const { return m_tid; }
+
 private:
+  void attach_();	// runs on Gtk thread
+  void detach_();	// ''
+
   void wake();
-  static void run();
+  void wake_();		// ''
+  static void run_();	// ''
 
 private:
   GSource	*m_source = nullptr;

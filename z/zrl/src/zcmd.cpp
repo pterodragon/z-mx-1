@@ -118,49 +118,92 @@ static ZtString getpass_(const ZtString &prompt, unsigned passLen)
   return passwd;
 }
 
+template <typename Data>
+struct DeduceKey {
+  static const Data &data_();
+  using T = decltype(data_().key());
+};
+
 class TelCap {
 public:
-  using Fn = ZmFn<void *&, const void *>;
+  using Fn = ZmFn<const void *>;
 
   TelCap() { }
   TelCap(Fn fn) : m_fn{ZuMv(fn)} { }
   TelCap(TelCap &&o) : m_fn{ZuMv(o.m_fn)} { }
   TelCap &operator =(TelCap &&o) {
-    m_fn(m_ptr, nullptr);
+    m_fn(nullptr);
     m_fn = ZuMv(o.m_fn);
     return *this;
   }
-  ~TelCap() { m_fn(m_ptr, nullptr); }
+  ~TelCap() { m_fn(nullptr); }
 
-  template <typename Data_load, typename FBS>
-  static TelCap fn(const char *path) {
-    return TelCap{[l = ZvCSV<Data_load>{}.writeFile(path)](
-	void *&ptr_, const void *data_) {
-      auto ptr = static_cast<Data_load *>(ptr_);
-      if (!data_) {
+  template <typename Data, typename FBS>
+  static TelCap keyedFn(const char *path) {
+    using Key = typename DeduceKey<Data>::T;
+    struct Accessor : public ZuAccessor<Data, typename ZuTraits<Key>::T> {
+      inline static Key value(const Data &data) { return data.key(); }
+    };
+    using Tree =
+      ZmRBTree<Data,
+	ZmRBTreeIndex<Accessor,
+	  ZmRBTreeBase<ZuObject,
+	    ZmRBTreeLock<ZmNoLock> > > >;
+    ZmRef<Tree> tree = new Tree{};
+    return TelCap{[
+	tree = ZuMv(tree),
+	l = ZvCSV<Data>{}.writeFile(path)](const void *fbs_) mutable {
+      if (!fbs_) {
 	l(nullptr);
-	if (ptr) {
-	  ptr->~Data_load();
-	  ::free(ptr_);
-	  ptr_ = nullptr;
-	}
+	tree->clean();
 	return;
       }
-      auto data = static_cast<const FBS *>(data_);
-      if (!ptr) {
-	ptr_ = ::malloc(sizeof(Data_load));
-	ptr = new (ptr_) Data_load{data};
-      } else
-	ptr->loadDelta(data);
-      l(ptr);
+      auto fbs = static_cast<const FBS *>(fbs_);
+      auto node = tree->find(Data::key(fbs));
+      if (!node)
+	tree->add(node = new typename Tree::Node{fbs});
+      else
+	node->key().loadDelta(fbs);
+      l(&(node->key()));
     }};
   }
 
-  void operator ()(const void *p) { m_fn(m_ptr, p); }
+  template <typename Data, typename FBS>
+  static TelCap singletonFn(const char *path) {
+    return TelCap{[
+	l = ZvCSV<Data>{}.writeFile(path)](const void *fbs_) mutable {
+      if (!fbs_) {
+	l(nullptr);
+	return;
+      }
+      auto fbs = static_cast<const FBS *>(fbs_);
+      static Data *data = nullptr;
+      if (!data)
+	data = new Data{fbs};
+      else
+	data->loadDelta(fbs);
+      l(data);
+    }};
+  }
+
+  template <typename Data, typename FBS>
+  static TelCap alertFn(const char *path) {
+    return TelCap{[
+	l = ZvCSV<Data>{}.writeFile(path)](const void *fbs_) mutable {
+      if (!fbs_) {
+	l(nullptr);
+	return;
+      }
+      auto fbs = static_cast<const FBS *>(fbs_);
+      Data data{fbs};
+      l(&data);
+    }};
+  }
+
+  void operator ()(const void *p) { m_fn(p); }
 
 private:
   Fn		m_fn;
-  void		*m_ptr = nullptr;
 };
 
 class ZCmd : public ZmPolymorph, public ZvCmdClient<ZCmd>, public ZCmdHost {
@@ -1186,7 +1229,7 @@ private:
     m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
       ZtString out;
       if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_OwnKeyGet, fbs::ReqAckData_KeyGet,
+	    file, ack, fbs::ReqAckData_OwnKeyClr, fbs::ReqAckData_KeyClr,
 	    "key clear", out))
 	return executed(code, file, out);
       auto userAck = static_cast<const fbs::UserAck *>(ack->data());
@@ -1283,59 +1326,59 @@ private:
 	  switch (types[i]) {
 	    case ReqType::Heap:
 	      m_telcap[TelData::Heap - TelData::MIN] =
-		TelCap::fn<Heap_load, fbs::Heap>(
+		TelCap::keyedFn<Heap_load, fbs::Heap>(
 		    ZiFile::append(dir, "heap.csv"));
 	      break;
 	    case ReqType::HashTbl:
 	      m_telcap[TelData::HashTbl - TelData::MIN] =
-		TelCap::fn<HashTbl_load, fbs::HashTbl>(
+		TelCap::keyedFn<HashTbl_load, fbs::HashTbl>(
 		    ZiFile::append(dir, "hash.csv"));
 	      break;
 	    case ReqType::Thread:
 	      m_telcap[TelData::Thread - TelData::MIN] =
-		TelCap::fn<Thread_load, fbs::Thread>(
+		TelCap::keyedFn<Thread_load, fbs::Thread>(
 		    ZiFile::append(dir, "thread.csv"));
 	      break;
 	    case ReqType::Mx:
 	      m_telcap[TelData::Mx - TelData::MIN] =
-		TelCap::fn<Mx_load, fbs::Mx>(
+		TelCap::keyedFn<Mx_load, fbs::Mx>(
 		    ZiFile::append(dir, "mx.csv"));
 	      m_telcap[TelData::Socket - TelData::MIN] =
-		TelCap::fn<Socket_load, fbs::Socket>(
+		TelCap::keyedFn<Socket_load, fbs::Socket>(
 		    ZiFile::append(dir, "socket.csv"));
 	      break;
 	    case ReqType::Queue:
 	      m_telcap[TelData::Queue - TelData::MIN] =
-		TelCap::fn<Queue_load, fbs::Queue>(
+		TelCap::keyedFn<Queue_load, fbs::Queue>(
 		    ZiFile::append(dir, "queue.csv"));
 	      break;
 	    case ReqType::Engine:
 	      m_telcap[TelData::Engine - TelData::MIN] =
-		TelCap::fn<Engine_load, fbs::Engine>(
+		TelCap::keyedFn<Engine_load, fbs::Engine>(
 		    ZiFile::append(dir, "engine.csv"));
 	      m_telcap[TelData::Link - TelData::MIN] =
-		TelCap::fn<Link_load, fbs::Link>(
+		TelCap::keyedFn<Link_load, fbs::Link>(
 		    ZiFile::append(dir, "link.csv"));
 	      break;
 	    case ReqType::DBEnv:
 	      m_telcap[TelData::DBEnv - TelData::MIN] =
-		TelCap::fn<DBEnv_load, fbs::DBEnv>(
+		TelCap::singletonFn<DBEnv_load, fbs::DBEnv>(
 		    ZiFile::append(dir, "dbenv.csv"));
 	      m_telcap[TelData::DBHost - TelData::MIN] =
-		TelCap::fn<DBHost_load, fbs::DBHost>(
+		TelCap::keyedFn<DBHost_load, fbs::DBHost>(
 		    ZiFile::append(dir, "dbhost.csv"));
 	      m_telcap[TelData::DB - TelData::MIN] =
-		TelCap::fn<DB_load, fbs::DB>(
+		TelCap::keyedFn<DB_load, fbs::DB>(
 		    ZiFile::append(dir, "db.csv"));
 	      break;
 	    case ReqType::App:
 	      m_telcap[TelData::App - TelData::MIN] =
-		TelCap::fn<App_load, fbs::App>(
+		TelCap::singletonFn<App_load, fbs::App>(
 		    ZiFile::append(dir, "app.csv"));
 	      break;
 	    case ReqType::Alert:
 	      m_telcap[TelData::Alert - TelData::MIN] =
-		TelCap::fn<Alert_load, fbs::Alert>(
+		TelCap::alertFn<Alert_load, fbs::Alert>(
 		    ZiFile::append(dir, "alert.csv"));
 	      break;
 	  }

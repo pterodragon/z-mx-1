@@ -45,7 +45,6 @@ friend class ZmHeapCache;
   typedef ZmGuard<Lock> Guard;
   typedef ZmReadGuard<Lock> ReadGuard;
 
-  typedef ZmHeapCache::IDPartSize IDSize;
   typedef ZmHeapCache::IDPartSize IDPartSize;
 
   typedef ZmRBTree<ZuPair<ZmIDString, unsigned>,

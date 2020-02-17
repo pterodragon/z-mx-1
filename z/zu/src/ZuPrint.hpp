@@ -44,12 +44,20 @@ struct ZuPrintFn {
   template <typename S, typename T>
   ZuInline static void print(S &s, const T &v) { v.print(s); }
 };
-template <bool> struct ZuPrint_ {
+template <bool> struct ZuGenericPrint_ {
   enum { OK = 0, String = 0, Delegate = 0, Buffer = 0 };
 };
-template <> struct ZuPrint_<true> : public ZuPrintFn { };
+template <> struct ZuGenericPrint_<true> : public ZuPrintFn { };
 template <typename T>
-struct ZuPrint : public ZuPrint_<ZuConversion<ZuPrintable, T>::Base> { };
+struct ZuGenericPrint :
+    public ZuGenericPrint_<ZuConversion<ZuPrintable, T>::Base> { };
+
+template <typename T> ZuGenericPrint<T> ZuPrintType(const T *);
+template <typename T> const T *ZuPrintType_();
+template <typename T>
+using ZuDefaultPrint = decltype(ZuPrintType(ZuPrintType_<T>()));
+
+template <typename T> struct ZuPrint : public ZuDefaultPrint<T> { };
 
 struct ZuPrintString {
   enum { OK = 1, String = 1, Delegate = 0, Buffer = 0 };

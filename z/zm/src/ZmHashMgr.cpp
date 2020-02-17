@@ -93,7 +93,7 @@ private:
     tbl->deref_();
   }
 
-  typedef ZmHashMgr_Tables Tables;
+  using Tables = ZmHashMgr_Tables;
 
   void all(ZmFn<ZmAnyHash *> fn) {
     ZmRef<ZmAnyHash> tbl;

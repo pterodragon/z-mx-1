@@ -12,7 +12,7 @@ int main(int argc, char **argv)
   app.attach(&s, 1);
 
   for (int i = 0; i < 5; i++) {
-    s.run(1, []() {
+    s.run(app.tid(), []() {
       std::cout << ZmThreadContext::self() << '\n' << std::flush;
     }, ZmTimeNow(i));
   }
@@ -22,3 +22,21 @@ int main(int argc, char **argv)
 
   app.detach();
 }
+
+// FIXME - key telemetry for deltas, do not use single static per type
+//
+// FIXME - need small framework to cast lambdas to raw function pointers
+// with return type and args, so that G_CALLBACK() will work
+//
+// GtkBuilder *builder = gtk_builder_new();
+//
+// m_window = GTK_WIDGET(gtk_builder_get_object(builder, "window"));
+//
+// g_signal_connect(G_OBJECT(m_window), "destroy",
+// G_CALLBACK([](GtkObject *o, gpointer p) {  ... }));
+//
+// gtk_widget_show(m_window);
+//
+// gtk_window_present(GTK_WINDOW(m_window)); // focus the main window
+//
+// g_object_unref(G_OBJECT(builder));

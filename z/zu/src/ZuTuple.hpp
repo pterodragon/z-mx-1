@@ -260,7 +260,7 @@ public: \
   ZuInline Type(Tuple &&v) : Tuple(ZuMv(v)) { }; \
   ZuPP_Eval(ZuPP_MapIndex(ZuTuple_FieldFn, 0, __VA_ARGS__)) \
   struct Traits : public ZuTraits<Type##_> { using T = Type; }; \
-  friend Traits ZuTraitsFn(const Type *); \
+  friend Traits ZuTraitsType(const Type *); \
 }
 
 #endif /* ZuTuple_HPP */

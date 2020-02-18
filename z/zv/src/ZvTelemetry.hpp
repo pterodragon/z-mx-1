@@ -275,7 +275,7 @@ struct HashTbl : public HashTbl_, public ZvFieldTuple<HashTbl> {
 inline const ZvFields<HashTbl> HashTbl::fields() noexcept {
   ZvMkFields(HashTbl,
       (String, id, 0),
-      (Scalar, addr, Hex),
+      (Hex, addr, 0),
       (Bool, linear, 0),
       (Scalar, bits, 0),
       (Scalar, cBits, 0),

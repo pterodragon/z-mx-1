@@ -246,7 +246,7 @@ public:
 
   template <typename B>
   ZuInline ZuBox(B b, typename ZuIsBoxed<B>::T *_ = 0) :
-    m_val(!*b ? (T)Cmp::null() : (T)b.m_val) { }
+    m_val(!*b ? static_cast<T>(Cmp::null()) : static_cast<T>(b.m_val)) { }
 
   template <typename S>
   ZuInline ZuBox(S &&s_, typename ZuIsCharString<S>::T *_ = 0) :

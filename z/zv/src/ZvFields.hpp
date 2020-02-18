@@ -40,6 +40,7 @@ namespace ZvFieldType {
     String = 0,
     Bool,
     Scalar,
+    Hex,
     Enum,
     Flags,
     Time
@@ -51,8 +52,7 @@ namespace ZvFieldFlags {
     Dynamic	= 0x01,		// scalar that varies over time
     Synthetic	= 0x02,		// synthetic scalar
     Cumulative	= 0x04,		// first derivative should be logged/graphed
-    ColorRAG	= 0x08,		// red/amber/green
-    Hex		= 0x10
+    ColorRAG	= 0x08		// red/amber/green
   };
 }
 
@@ -104,6 +104,13 @@ template <typename T> struct ZvField {
       using V = typename ZuTraits<decltype(get(o, member))>::T; \
       set(o, member, (typename ZuBoxT<V>::T{s})); }, \
     [](const T_ *o) { return (double)get(o, member); } }
+#define ZvFieldHex_(T_, id, flags, member, get, set) \
+  { #id, ZvFieldType::Hex, flags, \
+    [](ZmStream &s, const T_ *o, const ZvFieldFmt &fmt) { \
+      s << ZuBoxed(get(o, member)).hex(); }, \
+    [](ZuString s, T_ *o, const ZvFieldFmt &) { \
+      using V = typename ZuTraits<decltype(get(o, member))>::T; \
+      set(o, member, (typename ZuBoxT<V>::T{ZuFmt::Hex<>{}, s})); } }
 #define ZvFieldEnum_(T, id, flags, map, member, get, set) \
   { #id, ZvFieldType::Enum, flags, \
     [](ZmStream &s, const T *o, const ZvFieldFmt &) { \
@@ -159,6 +166,8 @@ template <typename T> struct ZvField {
 	ZvFieldBool_(T, id, flags, id, ZvField_Get, ZvField_Set)
 #define ZvFieldScalar(T, id, flags) \
 	ZvFieldScalar_(T, id, flags, id, ZvField_Get, ZvField_Set)
+#define ZvFieldHex(T, id, flags) \
+	ZvFieldHex_(T, id, flags, id, ZvField_Get, ZvField_Set)
 #define ZvFieldEnum(T, id, flags, map) \
 	ZvFieldEnum_(T, id, flags, map, id, ZvField_Get, ZvField_Set)
 #define ZvFieldFlags(T, id, flags, map) \
@@ -172,6 +181,8 @@ template <typename T> struct ZvField {
 	ZvFieldBool_(T, id, flags, alias, ZvField_Get, ZvField_Set)
 #define ZvFieldScalarAlias(T, id, alias, flags) \
 	ZvFieldScalar_(T, id, flags, alias, ZvField_Get, ZvField_Set)
+#define ZvFieldHexAlias(T, id, alias, flags) \
+	ZvFieldHex_(T, id, flags, alias, ZvField_Get, ZvField_Set)
 #define ZvFieldEnumAlias(T, id, alias, flags, map) \
 	ZvFieldEnum_(T, id, flags, map, alias, ZvField_Get, ZvField_Set)
 #define ZvFieldFlagsAlias(T, id, alias, flags, map) \
@@ -190,6 +201,8 @@ template <typename T> struct ZvField {
 	ZvFieldBool_(T, id, flags, id, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldScalarFn(T, id, flags) \
 	ZvFieldScalar_(T, id, flags, id, ZvField_GetFn, ZvField_SetFn)
+#define ZvFieldHexFn(T, id, flags) \
+	ZvFieldHex_(T, id, flags, id, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldEnumFn(T, id, flags, map) \
 	ZvFieldEnum_(T, id, flags, map, id, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldFlagsFn(T, id, flags, map) \
@@ -204,6 +217,8 @@ template <typename T> struct ZvField {
 	ZvFieldBool_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldScalarAliasFn(T, id, fn, flags) \
 	ZvFieldScalar_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
+#define ZvFieldHexAliasFn(T, id, fn, flags) \
+	ZvFieldHex_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldEnumAliasFn(T, id, fn, flags, map) \
 	ZvFieldEnum_(T, id, flags, map, fn, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldFlagsAliasFn(T, id, fn, flags, map) \

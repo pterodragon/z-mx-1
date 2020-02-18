@@ -171,7 +171,7 @@ protected:
 
 // NTP defaults
 struct ZmHash_Defaults {
-  typedef ZuNull Val;
+  using Val = ZuNull;
   template <typename T> struct CmpT { typedef ZuCmp<T> Cmp; };
   template <typename T> struct ICmpT { typedef ZuCmp<T> ICmp; };
   template <typename T> struct HashFnT { typedef ZuHash<T> HashFn; };
@@ -180,10 +180,10 @@ struct ZmHash_Defaults {
   template <typename T> struct ValCmpT { typedef ZuCmp<T> ValCmp; };
   enum { NodeIsKey = 0 };
   enum { NodeIsVal = 0 };
-  typedef ZmLock Lock;
-  typedef ZmObject Object;
+  using Lock = ZmLock;
+  using Object = ZmObject;
   struct HeapID { ZuInline static const char *id() { return "ZmHash"; } };
-  typedef HeapID ID;
+  using ID = HeapID;
 };
 
 // ZmHashCmp - the key comparator

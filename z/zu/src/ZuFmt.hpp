@@ -194,15 +194,17 @@ struct ZuVFmt {
   ZuInline char trim() const { return m_trim; }
 
 private:
+#pragma pack(push, 1)
   int8_t	m_justification;
-  bool		m_hex;
-  bool		m_upper;
-  bool		m_alt;
+  uint8_t	m_hex:1,
+  		m_upper:1,
+  		m_alt:1;
   char		m_comma;
   uint8_t	m_width;
   int8_t	m_pad;
   int8_t	m_ndp;
   char		m_trim;
+#pragma pack(pop)
 };
 
 #endif /* ZuFmt_HPP */

@@ -145,6 +145,9 @@ struct User__ : public ZuPolymorph {
 	}), flags);
   }
 };
+struct UserIDHashID {
+  static const char *id() { return "ZvUserDB.UserIDs"; }
+};
 struct UserIDAccessor : public ZuAccessor<User__, uint64_t> {
   ZuInline static uint64_t value(const User__ &u) { return u.id; }
 };
@@ -154,8 +157,12 @@ using UserIDHash =
       ZmHashIndex<UserIDAccessor,
 	ZmHashNodeIsKey<true,
 	  ZmHashHeapID<ZuNull,
-	    ZmHashLock<ZmNoLock> > > > > >;
+	    ZmHashID<UserIDHashID,
+	      ZmHashLock<ZmNoLock> > > > > > >;
 using User_ = UserIDHash::Node;
+struct UserNameHashID {
+  static const char *id() { return "ZvUserDB.UserNames"; }
+};
 struct UserNameAccessor : public ZuAccessor<User_, ZtString> {
   ZuInline static ZtString value(const User_ &u) { return u.name; }
 };
@@ -164,7 +171,8 @@ using UserNameHash =
     ZmHashObject<ZuPolymorph,
       ZmHashIndex<UserNameAccessor,
 	ZmHashNodeIsKey<true,
-	  ZmHashLock<ZmNoLock> > > > >;
+	  ZmHashHeapID<UserNameHashID,
+	    ZmHashLock<ZmNoLock> > > > > >;
 using User = UserNameHash::Node;
 template <typename Roles>
 ZmRef<User> loadUser(const Roles &roles, const fbs::User *user_) {
@@ -201,6 +209,9 @@ struct Key_ : public ZuObject {
     return fbs::CreateKey(fbb, str(fbb, id), bytes(fbb, secret), userID);
   }
 };
+struct KeyHashID {
+  static const char *id() { return "ZvUserDB.Keys"; }
+};
 struct KeyIDAccessor : public ZuAccessor<Key_, ZtString> {
   ZuInline static ZtString value(const Key_ &k) { return k.id; }
 };
@@ -209,7 +220,8 @@ using KeyHash =
     ZmHashObject<ZuObject,
       ZmHashIndex<KeyIDAccessor,
 	ZmHashNodeIsKey<true,
-	  ZmHashLock<ZmNoLock> > > > >;
+	  ZmHashHeapID<KeyHashID,
+	    ZmHashLock<ZmNoLock> > > > > >;
 using Key = KeyHash::Node;
 ZmRef<Key> loadKey(const fbs::Key *key_, Key_ *next) {
   using namespace Zfb::Load;

@@ -39,6 +39,9 @@
 #pragma once
 #endif
 
+// #include <utility>
+// #include <type_traits>
+
 #include <zlib/ZuIfT.hpp>
 
 #ifdef _MSC_VER
@@ -62,6 +65,18 @@ public:
     Same = 0
   };
 };
+
+#if 0
+template <typename T1, typename T2> struct ZuConversion__ {
+  enum {
+    _ = sizeof(T1) == sizeof(T2), // ensure both types are complete
+    Exists =
+      std::is_constructible<T2, T1>::value ||
+      std::is_convertible<T1, T2>::value,
+    Same = 0
+  };
+};
+#endif
 
 #define ZuConversionFriend ZuConversion__
 

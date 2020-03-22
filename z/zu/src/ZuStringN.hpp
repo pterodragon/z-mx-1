@@ -175,7 +175,7 @@ private:
 public:
   // remove trailing characters
   template <typename Match>
-  void chomp(Match &&match) noexcept {
+  void chomp(Match match) noexcept {
     int o = m_length;
     if (!o) return;
     while (--o >= 0 && match(data()[0]));
@@ -185,7 +185,7 @@ public:
 
   // remove leading characters
   template <typename Match>
-  void trim(Match &&match) noexcept {
+  void trim(Match match) noexcept {
     int o;
     for (o = 0; o < (int)m_length && match(data()[0]); o++);
     if (!o) return;
@@ -197,7 +197,7 @@ public:
 
   // remove leading & trailing characters
   template <typename Match>
-  void strip(Match &&match) noexcept {
+  void strip(Match match) noexcept {
     int o = m_length;
     if (!o) return;
     while (--o >= 0 && match(data()[o]));

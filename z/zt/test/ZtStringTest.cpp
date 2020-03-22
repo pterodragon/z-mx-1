@@ -314,6 +314,6 @@ int main()
 
   {
     ZtString s("inline const char *");
-    s[0] = 'X';
+    // s[0] = 'X';
   }
 }

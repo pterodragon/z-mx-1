@@ -17,10 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Gtk wrapper
+// Gtk application wrapper
 
-#ifndef ZGtk_HPP
-#define ZGtk_HPP
+#ifndef ZGtkApp_HPP
+#define ZGtkApp_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -35,10 +35,11 @@
 #include <gtk/gtk.h>
 
 #include <zlib/ZmScheduler.hpp>
+#include <zlib/ZmLock.hpp>
 
 namespace ZGtk {
 
-class App {
+class ZGtkAPI App {
 public:
   void attach(ZmScheduler *sched, unsigned tid);
   void detach();
@@ -55,11 +56,11 @@ private:
   static void run_();	// ''
 
 private:
-  GSource	*m_source = nullptr;
-  ZmScheduler	*m_sched = nullptr;
-  unsigned	m_tid = 0;
+  GSource		*m_source = nullptr;
+  ZmScheduler		*m_sched = nullptr;
+  unsigned		m_tid = 0;
 };
 
 } // ZGtk
 
-#endif /* ZGtk_HPP */
+#endif /* ZGtkApp_HPP */

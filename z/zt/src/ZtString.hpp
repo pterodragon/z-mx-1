@@ -277,8 +277,8 @@ private:
     alloc_(size, 0)[0] = 0;
   }
 
-  template <typename R> ZuInline typename CtorReal<R>::T ctor(R &&r)
-    { ctor(ZuBoxed(ZuFwd<R>(r))); }
+  template <typename R> ZuInline typename CtorReal<R>::T ctor(R r)
+    { ctor(ZuBoxed(r)); }
 
 public:
   enum Copy_ { Copy };
@@ -925,8 +925,8 @@ private:
     length_(n + ZuPrint<P>::print(data + n, o, p));
   }
 
-  template <typename R> ZuInline typename MatchReal<R>::T append_(R &&r)
-    { append_(ZuBoxed(ZuFwd<R>(r))); }
+  template <typename R> ZuInline typename MatchReal<R>::T append_(R r)
+    { append_(ZuBoxed(r)); }
 
 public:
   ZuInline void append(const Char *data, unsigned length) {

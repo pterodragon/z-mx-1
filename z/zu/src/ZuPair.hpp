@@ -67,6 +67,17 @@ struct ZuTraits<ZuPair<T0, T1> > : public ZuGenericTraits<ZuPair<T0, T1> > {
   };
 };
 
+template <unsigned, typename, typename> struct ZuPair_Type;
+template <typename T0, typename T1>
+struct ZuPair_Type<0, T0, T1> { using T = T0; };
+template <typename T0, typename T1>
+struct ZuPair_Type<1, T0, T1> { using T = T1; };
+template <unsigned, typename, typename> struct ZuPair_Type_;
+template <typename U0, typename U1>
+struct ZuPair_Type_<0, U0, U1> { using T = U0; };
+template <typename U0, typename U1>
+struct ZuPair_Type_<1, U0, U1> { using T = U1; };
+
 template <typename T0_, typename T1_> class ZuPair : public ZuPair_ {
   template <typename, typename> friend class ZuPair;
 
@@ -75,12 +86,8 @@ public:
   using T1 = T1_;
   using U0 = typename ZuDeref<T0_>::T;
   using U1 = typename ZuDeref<T1_>::T;
-  template <unsigned> struct Type;
-  template <> struct Type<0> { using T = T0; };
-  template <> struct Type<1> { using T = T1; };
-  template <unsigned> struct Type_;
-  template <> struct Type_<0> { using T = U0; };
-  template <> struct Type_<1> { using T = U1; };
+  template <unsigned I> using Type = ZuPair_Type<I, T0, T1>;
+  template <unsigned I> using Type_ = ZuPair_Type_<I, U0, U1>;
 
   ZuInline ZuPair() { }
 
@@ -99,13 +106,10 @@ public:
     return *this;
   }
 
-  template <typename T> ZuInline ZuPair(const T &p,
+  template <typename T> ZuInline ZuPair(T p,
       typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK>::T *_ = 0) :
-    m_p0(p.m_p0), m_p1(p.m_p1) { }
-  template <typename T> ZuInline ZuPair(T &&p,
-      typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK>::T *_ = 0) noexcept :
-    m_p0(ZuFwd<decltype(p.m_p0)>(p.m_p0)),
-    m_p1(ZuFwd<decltype(p.m_p1)>(p.m_p1)) { }
+    m_p0(ZuMv(p.m_p0)), m_p1(ZuMv(p.m_p1)) { }
+
   template <typename T> ZuInline ZuPair(T &&v,
       typename ZuIfT<
 	!ZuPair_Cvt<T, ZuPair>::OK &&
@@ -115,15 +119,11 @@ public:
     m_p0(ZuFwd<T>(v)), m_p1(ZuCmp<U1>::null()) { }
 
 private:
-  template <typename T> inline
-      typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK>::T assign(const T &p)
-    { m_p0 = p.m_p0, m_p1 = p.m_p1; }
-  template <typename T> inline
-      typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK>::T assign(T &&p) {
-    m_p0 = ZuFwd<decltype(p.m_p0)>(p.m_p0);
-    m_p1 = ZuFwd<decltype(p.m_p1)>(p.m_p1);
-  }
-  template <typename T> inline
+  template <typename T> ZuInline
+      typename ZuIfT<ZuPair_Cvt<T, ZuPair>::OK>::T assign(T p)
+    { m_p0 = ZuMv(p.m_p0), m_p1 = ZuMv(p.m_p1); }
+
+  template <typename T> ZuInline
       typename ZuIfT<
 	!ZuPair_Cvt<T, ZuPair>::OK &&
 	  (!ZuTraits<T0>::IsReference ||

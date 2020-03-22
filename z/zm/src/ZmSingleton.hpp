@@ -23,8 +23,8 @@
 //
 // ZmCleanup<T>::Level determines order of destruction (per ZmCleanupLevel)
 //
-// ZmSingleton<T, 0>::instance() can return null since T will not be
-// constructed on-demand - use ZmSingleton<T, 0>::instance(new T(...))
+// ZmSingleton<T, false>::instance() can return null since T will not be
+// constructed on-demand - use ZmSingleton<T, false>::instance(new T(...))
 //
 // T can be ZmObject-derived, but does not have to be
 //

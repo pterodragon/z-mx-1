@@ -4,12 +4,16 @@ AM_CPPFLAGS = -I$(top_srcdir)/zu/src -I$(top_srcdir)/zm/src \
 	-I$(top_srcdir)/ztls/src -I$(top_srcdir)/zfb/src \
 	-I$(top_srcdir)/zv/src \
 	-DZGTK_EXPORTS @Z_CPPFLAGS@
+AM_CFLAGS = @GTK_CFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@ @GTK_CFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @GTK_LDFLAGS@
-pkginclude_HEADERS = ZGtkLib.hpp ZGtkApp.hpp
+pkginclude_HEADERS = ZGtkLib.hpp \
+	ZGtkApp.hpp ZGtkCallback.hpp ZGtkTreeModel.hpp \
+	libegg_eggtreemultidnd.h
 lib_LTLIBRARIES = libZGtk.la
 libZGtk_la_LDFLAGS = @Z_SO_LDFLAGS@
-libZGtk_la_SOURCES = ZGtkLib.cpp ZGtkApp.cpp
+libZGtk_la_SOURCES = ZGtkLib.cpp ZGtkApp.cpp \
+	libegg_eggtreemultidnd.c
 libZGtk_la_LIBADD = $(top_builddir)/zv/src/libZv.la \
 	$(top_builddir)/zfb/src/libZfb.la $(top_builddir)/ztls/src/libZtls.la \
 	$(top_builddir)/zi/src/libZi.la $(top_builddir)/ze/src/libZe.la \

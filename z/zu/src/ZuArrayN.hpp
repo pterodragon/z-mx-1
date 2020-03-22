@@ -96,11 +96,13 @@ public:
 
 private:
   template <typename U, typename R = void, typename V = T,
-    bool B = ZuPrint<U>::Delegate> struct MatchPDelegate;
+    bool B = ZuPrint<typename ZuTraits<U>::T>::Delegate>
+  struct MatchPDelegate;
   template <typename U, typename R>
   struct MatchPDelegate<U, R, char, true> { typedef R T; };
   template <typename U, typename R = void, typename V = T,
-    bool B = ZuPrint<U>::Buffer> struct MatchPBuffer;
+    bool B = ZuPrint<typename ZuTraits<U>::T>::Buffer>
+  struct MatchPBuffer;
   template <typename U, typename R>
   struct MatchPBuffer<U, R, char, true> { typedef R T; };
 

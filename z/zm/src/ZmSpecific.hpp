@@ -31,7 +31,8 @@
 // * need to iterate over all thread-local instances from other threads
 //   for statistics gathering, telemetry or other purposes
 // * on Windows, DLLs do not share TLS, resulting in multiple conflicting
-//   instances of the same type within the same thread
+//   instances of the same type within the same thread when multiple modules
+//   reference the declaration at compile-time
 
 // performance - normal run-time ZmSpecific::instance() calls are lock-free
 // and equivalent to thread_local with one additional pointer dereference;
@@ -46,7 +47,7 @@
 // ZmCleanup<T>::Level determines order of destruction (per ZmCleanupLevel)
 //
 // ZmSpecific<T, false>::instance() can return null since T will not be
-// constructed on-demand - use ZmSpecific<T, 0>::instance(new T(...))
+// constructed on-demand - use ZmSpecific<T, false>::instance(new T(...))
 //
 // T must be ZuObject derived
 //
@@ -116,8 +117,8 @@ struct ZmAPI ZmSpecific_Object {
       ZmSpecific_unlock();
   }
 
-  DtorFn		dtorFn = nullptr;
   ZmObject		*ptr = nullptr;
+  DtorFn		dtorFn = nullptr;
   ZmSpecific_Object	*prev = nullptr;
   ZmSpecific_Object	*next = nullptr;
 #ifdef _WIN32
@@ -297,7 +298,7 @@ private:
     ZuIfT<!CanFinal<ZmCleanup<U>, void (*)(U *)>::OK, void>::T
       final(U *u) { }
 
-  typedef ZmSpecific_Object Object;
+  using Object = ZmSpecific_Object;
 
 public:
   ZmSpecific() { }

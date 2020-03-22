@@ -9,6 +9,7 @@
 #include <zlib/ZuPair.hpp>
 #include <zlib/ZuTuple.hpp>
 #include <zlib/ZuCmp.hpp>
+#include <zlib/ZuBox.hpp>
 
 #define CHECK(x) ((x) ? puts("OK  " #x) : puts("NOK " #x))
 
@@ -113,5 +114,11 @@ int main()
     B q = B().foo(42), r{p};
     p = q;
     r = ZuMv(q);
+  }
+
+  {
+    ZuTuple<int, int, int> a{1, 2, 3};
+    ZuTuple<ZuBox<int>, int, int> b{a};
+    CHECK(b.p<0>() == 1 && b.p<1>() == 2 && b.p<2>() == 3);
   }
 }

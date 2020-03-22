@@ -37,14 +37,34 @@
 
 template <typename ...Args> class ZuTuple;
 
+struct ZuTuple0_ { };
+
+template <typename T, typename P, bool IsTuple0> struct ZuTuple0_Cvt_;
+template <typename T, typename P> struct ZuTuple0_Cvt_<T, P, 0> {
+  enum { OK = 0 };
+};
+template <typename T, typename P> struct ZuTuple0_Cvt_<T, P, 1> {
+  enum {
+    OK = ZuConversion<typename T::T0, typename P::T0>::Exists
+  };
+};
+template <typename T, typename P> struct ZuTuple0_Cvt :
+  public ZuTuple0_Cvt_<typename ZuDeref<T>::T, P,
+    ZuConversion<ZuTuple0_, typename ZuDeref<T>::T>::Base> { };
+
+template <unsigned, typename> struct ZuTuple_Type0;
+template <typename Left>
+struct ZuTuple_Type0<0, Left> { using T = Left; };
+template <unsigned, typename> struct ZuTuple_Type0_;
+template <typename Left_>
+struct ZuTuple_Type0_<0, Left_> { using T = Left_; };
+
 template <typename T0>
-class ZuTuple<T0> {
+class ZuTuple<T0> : public ZuTuple0_ {
 public:
   using U0 = typename ZuDeref<T0>::T;
-  template <unsigned> struct Type;
-  template <unsigned> struct Type_;
-  template <> struct Type<0> { using T = T0; };
-  template <> struct Type_<0> { using T = U0; };
+  template <unsigned I> using Type = ZuTuple_Type0<I, T0>;
+  template <unsigned I> using Type_ = ZuTuple_Type0_<I, U0>;
   using Traits = ZuTraits<T0>;
   enum { N = 1 };
 
@@ -64,19 +84,33 @@ public:
     return *this;
   }
 
+  template <typename T>
+  ZuInline explicit ZuTuple(T p,
+      typename ZuIfT<ZuTuple0_Cvt<T, ZuTuple>::OK>::T *_ = 0) :
+    m_p0(ZuMv(p.m_p0)) { }
+
   template <typename T> ZuInline ZuTuple(T &&v,
       typename ZuIfT<
+	!ZuTuple0_Cvt<typename ZuTraits<T>::T, ZuTuple>::OK &&
 	  (!ZuTraits<T0>::IsReference ||
 	    ZuConversion<typename ZuTraits<U0>::T,
 			 typename ZuTraits<T>::T>::Is)>::T *_ = 0) :
     m_p0(ZuFwd<T>(v)) { }
 
-  template <typename T> inline
+  template <typename T> ZuInline
+  typename ZuIfT<ZuTuple0_Cvt<T, ZuTuple>::OK, ZuTuple &>::T
+  operator =(T p) {
+    m_p0 = ZuMv(p.m_p0);
+    return *this;
+  }
+
+  template <typename T> ZuInline
       typename ZuIfT<
+	!ZuTuple0_Cvt<typename ZuTraits<T>::T, ZuTuple>::OK &&
 	  (!ZuTraits<T0>::IsReference ||
 	    ZuConversion<typename ZuTraits<U0>::T,
 			 typename ZuTraits<T>::T>::Is), ZuTuple &>::T
-  operator =(T &&v) noexcept {
+  operator =(T &&v) {
     m_p0 = ZuFwd<T>(v);
     return *this;
   }
@@ -160,6 +194,15 @@ public:
   }
 };
 
+template <unsigned I, typename Left, typename Right>
+struct ZuTuple_Type : public Right::template Type<I - 1> { };
+template <unsigned I, typename Left, typename Right>
+struct ZuTuple_Type_ : public Right::template Type_<I - 1> { };
+template <typename Left, typename Right>
+struct ZuTuple_Type<0, Left, Right> { using T = Left; };
+template <typename Left, typename Right>
+struct ZuTuple_Type_<0, Left, Right> { using T = typename ZuDeref<Left>::T; };
+
 template <typename T0, typename T1, typename ...Args>
 class ZuTuple<T0, T1, Args...> : public ZuPair<T0, ZuTuple<T1, Args...>> {
   using Left = T0;
@@ -167,10 +210,8 @@ class ZuTuple<T0, T1, Args...> : public ZuPair<T0, ZuTuple<T1, Args...>> {
   using Pair = ZuPair<Left, Right>;
 
 public:
-  template <unsigned I> struct Type : public Right::template Type<I - 1> { };
-  template <unsigned I> struct Type_ : public Right::template Type_<I - 1> { };
-  template <> struct Type<0> : public Pair::template Type<0> { };
-  template <> struct Type_<0> : public Pair::template Type_<0> { };
+  template <unsigned I> using Type = ZuTuple_Type<I, Left, Right>;
+  template <unsigned I> using Type_ = ZuTuple_Type_<I, Left, Right>;
   using Traits = ZuTraits<Pair>;
   enum { N = Right::N + 1 };
 
@@ -179,6 +220,12 @@ public:
 
   ZuInline ZuTuple(const Pair &v) : Pair(v) { };
   ZuInline ZuTuple(Pair &&v) : Pair(ZuMv(v)) { };
+
+#if 0
+  template <typename T>
+  ZuInline ZuTuple(T p, typename ZuIfT<ZuPair_Cvt<T, Pair>::OK>::T *_ = 0) :
+      Pair(ZuMv(p)) { }
+#endif
 
   template <typename P0, typename P1, typename ...Args_>
   ZuInline ZuTuple(P0 &&p0, P1 &&p1, Args_ &&... args) :

@@ -343,7 +343,7 @@ public:
   }
 
   template <typename A>
-  ZuInline ZtArray &operator =(const A &a) { assign(a); return *this; }
+  ZuInline ZtArray &operator =(A &&a) { assign(ZuFwd<A>(a)); return *this; }
 
   ZuInline ZtArray &operator =(std::initializer_list<T> a) {
     uint32_t oldLength = 0;
@@ -409,8 +409,8 @@ private:
     length_(ZuPrint<P>::print(m_data, o, p));
   }
 
-  template <typename R> ZuInline typename MatchReal<R>::T assign(R &&r)
-    { assign(ZuBoxed(ZuFwd<R>(r))); }
+  template <typename R> ZuInline typename MatchReal<R>::T assign(R r)
+    { assign(ZuBoxed(r)); }
 
   template <typename R> ZuInline typename MatchElem<R>::T assign(R &&r) {
     free_();

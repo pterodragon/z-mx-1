@@ -121,22 +121,39 @@ struct ZuUnion_Ops :
     { return ZuHash<T>::hash(*(const T *)t); }
 };
 
-template <typename ...Args> struct ZuUnion_;
-template <typename Arg0> struct ZuUnion_<Arg0> {
-  template <unsigned I> struct Type;
-  template <unsigned I> struct Type_;
-  template <> struct Type<0> { using T = Arg0; };
-  template <> struct Type_<0> { using T = typename ZuDeref<Arg0>::T; };
+template <unsigned I, typename Left> struct ZuUnion_Type0;
+template <unsigned I, typename Left> struct ZuUnion_Type0_;
+template <typename Left>
+struct ZuUnion_Type0<0, Left> { using T = Left; };
+template <typename Left>
+struct ZuUnion_Type0_<0, Left> { using T = typename ZuDeref<Left>::T; };
+
+template <typename ...Args> class ZuUnion_;
+template <typename Arg0> class ZuUnion_<Arg0> {
+public:
+  template <unsigned I> using Type = ZuUnion_Type0<I, Arg0>;
+  template <unsigned I> using Type_ = ZuUnion_Type0_<I, Arg0>;
   enum { N = 1 };
 };
-template <typename Arg0, typename ...Args> struct ZuUnion_<Arg0, Args...> {
-  template <unsigned I>
-  struct Type : public ZuUnion_<Args...>::template Type<I - 1> { };
-  template <unsigned I>
-  struct Type_ : public ZuUnion_<Args...>::template Type_<I - 1> { };
-  template <> struct Type<0> { using T = Arg0; };
-  template <> struct Type_<0> { using T = typename ZuDeref<Arg0>::T; };
-  enum { N = ZuUnion_<Args...>::N + 1 };
+
+template <unsigned I, typename Left, typename Right>
+struct ZuUnion_Type : public Right::template Type<I - 1> { };
+template <unsigned I, typename Left, typename Right>
+struct ZuUnion_Type_ : public Right::template Type_<I - 1> { };
+template <typename Left, typename Right>
+struct ZuUnion_Type<0, Left, Right> { using T = Left; };
+template <typename Left, typename Right>
+struct ZuUnion_Type_<0, Left, Right> { using T = typename ZuDeref<Left>::T; };
+
+template <typename Arg0, typename ...Args>
+class ZuUnion_<Arg0, Args...> {
+  using Left = Arg0;
+  using Right = ZuUnion_<Args...>;
+
+public:
+  template <unsigned I> using Type = ZuUnion_Type<I, Left, Right>;
+  template <unsigned I> using Type_ = ZuUnion_Type_<I, Left, Right>;
+  enum { N = Right::N + 1 };
 };
 
 template <typename ...Args> class ZuUnion {

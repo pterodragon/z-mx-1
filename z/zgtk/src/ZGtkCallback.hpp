@@ -17,39 +17,45 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// compile-time assertion
+// Gtk wrapper
 
-#ifndef ZuAssert_HPP
-#define ZuAssert_HPP
-
-#ifndef ZuLib_HPP
-#include <zlib/ZuLib.hpp>
-#endif
+#ifndef ZGtkCallback_HPP
+#define ZGtkCallback_HPP
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-template <bool> struct ZuAssertion_FAILED;
-template <> struct ZuAssertion_FAILED<true> { };
-
-template <int N> struct ZuAssert_TEST { };
-
-#ifdef __GNUC__
-#define ZuAssert_Unused_Typedef __attribute__((unused))
-#else
-#define ZuAssert_Unused_Typedef
+#ifndef ZGtkLib_HPP
+#include <zlib/ZGtkLib.hpp>
 #endif
 
-// need to indirect via two macros to ensure expansion of __LINE__
-#define ZuAssert_Typedef_(p, l) p##l
-#define ZuAssert_Typedef(p, l) ZuAssert_Typedef_(p, l)
+#include <glib.h>
 
-#define ZuAssert(x) \
-	typedef ZuAssert_TEST<sizeof(ZuAssertion_FAILED<(bool)(x)>)> \
-	ZuAssert_Typedef(ZuAssert_, __LINE__) ZuAssert_Unused_Typedef
+#include <gtk/gtk.h>
 
-// compile time C assert
-#define ZuCAssert(x) switch (0) { case 0: case (x): ; }
+namespace ZGtk {
 
-#endif /* ZuAssert_HPP */
+template <auto Fn> struct StatelessLambda_;
+template <typename L, typename R, typename ...Args, R (L::*Fn_)(Args...) const>
+struct StatelessLambda_<Fn_> {
+  typedef R (*Fn)(Args...);
+  enum { OK = ZuConversion<L, Fn>::Exists };
+};
+template <typename L>
+struct StatelessLambda : public StatelessLambda_<&L::operator()> { };
+
+template <typename L, bool OK = StatelessLambda<L>::OK> struct Callback;
+template <typename L> struct Callback<L, true> {
+  using Fn = typename StatelessLambda<L>::Fn;
+  static constexpr auto fn(L l) { return static_cast<Fn>(l); }
+};
+
+template <typename L>
+constexpr auto callback(L l) { 
+  return G_CALLBACK(Callback<L>::fn(ZuMv(l)));
+}
+
+} // ZGtk
+
+#endif /* ZGtkCallback_HPP */

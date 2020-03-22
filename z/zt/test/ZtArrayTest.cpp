@@ -90,6 +90,7 @@ int main()
     puts(a[1].bar);
   }
 
+#if 0
   {
     // typedef const char *P;
     // typedef P N[];
@@ -98,6 +99,7 @@ int main()
     puts(a[0]);
     puts(a[1]);
   }
+#endif
 
   {
     ZtArray<ZtString> a = { "Foo", "Bar" };

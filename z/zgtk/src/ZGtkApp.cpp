@@ -13,23 +13,6 @@ gboolean dispatch(GSource *source, GSourceFunc, gpointer)
 
 namespace ZGtk {
 
-void App::wake()
-{
-  m_sched->run_(m_tid, []() { run_(); });
-  wake_();
-}
-
-void App::wake_()
-{
-  g_source_set_ready_time(m_source, 0);
-  g_main_context_wakeup(nullptr);
-}
-
-void App::run_()
-{
-  gtk_main();
-}
-
 void App::attach(ZmScheduler *sched, unsigned tid)
 {
   m_sched = sched;
@@ -43,6 +26,10 @@ void App::attach_()
   static bool initialized = false;
 
   if (!initialized) {
+#ifdef _WIN32
+    putenv("GTK_CSD=0");
+    putenv("GTK_THEME=win32");
+#endif
     gtk_init(nullptr, nullptr);
     initialized = true;
   }
@@ -72,6 +59,23 @@ void App::detach_()
   g_source_destroy(m_source);
   g_source_unref(m_source);
   m_source = nullptr;
+}
+
+void App::wake()
+{
+  m_sched->run_(m_tid, []() { run_(); });
+  wake_();
+}
+
+void App::wake_()
+{
+  g_source_set_ready_time(m_source, 0);
+  g_main_context_wakeup(nullptr);
+}
+
+void App::run_()
+{
+  gtk_main();
 }
 
 }

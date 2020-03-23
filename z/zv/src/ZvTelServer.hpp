@@ -584,7 +584,7 @@ private:
 	  return ZuString{&filter[i + 1], n - i} == id;
 	}
 	int ftype = QueueType::lookup(ZuString{&filter[0], i});
-	if (ftype != type) return false;
+	if (ftype != (int)type) return false;
 	if (i == n || (i == n - 1 && filter[n] == '*'))
 	  return true; // "type:" or "type:*"
 	if (filter[n] == '*') { // "type:prefix*"

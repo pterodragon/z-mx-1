@@ -213,7 +213,7 @@ namespace Save {
     if (n > 0) {
       n = (n>>6) + 1;
       v.reserve(n);
-      for (unsigned i = 0; i < n; i++)
+      for (unsigned i = 0; i < (unsigned)n; i++)
 	v.push_back(hwloc_bitmap_to_ith_ulong(m, i));
     }
     return b.CreateVector(v);

@@ -226,7 +226,7 @@ recv:
     if (avail <= 0) return MBEDTLS_ERR_SSL_WANT_READ;
     if (len > (size_t)avail) len = avail;
     memcpy(ptr, inBuf->data() + offset, len);
-    if (len == avail) {
+    if (len == (size_t)avail) {
       m_rxInOffset = 0;
       m_rxRing[m_rxRingOffset++] = nullptr;
       if (!--m_rxRingCount || m_rxRingOffset >= RxRingSize)

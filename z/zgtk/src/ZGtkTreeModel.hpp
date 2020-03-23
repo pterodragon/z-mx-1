@@ -73,12 +73,8 @@ struct App : public TreeModel<App> {
 };
 #endif
 
-struct ZGtkObject : public GObject {
-  ZGtkObject() { } // prevent clearing of GObject's C struct
-};
-
 template <typename T>
-class TreeModel : public ZGtkObject {
+class TreeModel : public GObject {
 
   T *impl() { return static_cast<T *>(this); }
   template <typename Ptr>
@@ -102,7 +98,10 @@ class TreeModel : public ZGtkObject {
       sizeof(T),
       0,					// n_preallocs
       [](GTypeInstance *m, void *) {
+	char object[sizeof(GObject)];
+	memcpy(object, reinterpret_cast<const GObject *>(m), sizeof(GObject));
 	new (m) T{};
+	memcpy(reinterpret_cast<GObject *>(m), object, sizeof(GObject));
       }
     };
 

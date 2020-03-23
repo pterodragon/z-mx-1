@@ -37,7 +37,7 @@ int main()
     // std::cout << ZtHexDump("\n", iobuf->data(), iobuf->length);
 
     if ((void *)buf != (void *)(iobuf->data()) ||
-	len != iobuf->length) {
+	len != (int)iobuf->length) {
       std::cerr << "FAILED - inconsistent buffers\n" << std::flush;
       return 1;
     }

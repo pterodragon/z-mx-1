@@ -1293,7 +1293,7 @@ private:
       filters.length(ok.length());
       types.length(ok.length());
       const auto &colon = ZtStaticRegexUTF8(":");
-      for (unsigned i = 2; i < argc; i++) {
+      for (unsigned i = 2; i < (unsigned)argc; i++) {
 	auto j = i - 2;
 	auto arg = args->get(ZuStringN<24>{} << i);
 	ZuString type_;

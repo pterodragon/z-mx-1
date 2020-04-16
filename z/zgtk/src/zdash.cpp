@@ -8,11 +8,11 @@
 #include <zlib/ZGtkApp.hpp>
 #include <zlib/ZGtkCallback.hpp>
 #include <zlib/ZGtkTreeModel.hpp>
+#include <zlib/ZGtkValue.hpp>
 
 ZmSemaphore done;
 
 void start();
-void activate(GtkApplication *, gpointer);
 
 int main(int argc, char **argv)
 {
@@ -39,28 +39,6 @@ int main(int argc, char **argv)
   s.stop();
 
   app.detach();
-}
-
-static const auto rowsAtomName = "zdash/rows";
-static GdkAtom rowsAtom()
-{
-  static GdkAtom atom = nullptr;
-  if (!atom) atom = gdk_atom_intern_static_string(rowsAtomName);
-  return atom;
-}
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wwrite-strings" 
-static GtkTargetEntry rowsTargets_[] = {
-  { (gchar *)rowsAtomName, GTK_TARGET_SAME_APP, 0 }
-};
-#pragma GCC diagnostic pop
-static constexpr const GtkTargetEntry *rowsTargets()
-{
-  return rowsTargets_;
-}
-static constexpr const gint nRowsTargets()
-{
-  return sizeof(rowsTargets_) / sizeof(rowsTargets_[0]);
 }
 
 struct TreeModel : public ZGtk::TreeModel<TreeModel> {
@@ -96,14 +74,10 @@ struct TreeModel : public ZGtk::TreeModel<TreeModel> {
     gtk_tree_path_append_index(path, index);
     return path;
   }
-  void get_value(GtkTreeIter *iter, gint i, GValue *value) {
-    g_value_init(value, G_TYPE_STRING);
+  void get_value(GtkTreeIter *iter, gint i, ZGtk::Value *value) {
     unsigned j = (uintptr_t)iter->user_data;
-    // if (m_order != GTK_SORT_ASCENDING) j = 9 - j;
-    j *= j;
-    static ZuStringN<24> v;
-    v.null(); v << j;
-    g_value_set_static_string(value, v);
+    value->init(G_TYPE_LONG);
+    value->set_long(j * j);
   }
   gboolean iter_next(GtkTreeIter *iter) {
     uintptr_t index = (uintptr_t)iter->user_data;
@@ -185,7 +159,7 @@ struct TreeModel : public ZGtk::TreeModel<TreeModel> {
     auto path = gtk_tree_path_new();
     for (unsigned i = 0; i < 10; i++) new_order[i] = 9 - i;
     gtk_tree_model_rows_reordered(
-	GTK_TREE_MODEL(this), path, nullptr, &new_order[0]);
+	GTK_TREE_MODEL(this), path, nullptr, new_order.data());
     gtk_tree_path_free(path);
   }
 
@@ -239,12 +213,9 @@ void start()
     return;
   }
 
-  auto window = GTK_WIDGET(gtk_builder_get_object(builder, "window"));
-  auto view = GTK_WIDGET(gtk_builder_get_object(builder, "treeview"));
-  auto watchlist = GTK_WIDGET(gtk_builder_get_object(builder, "watchlist"));
-
-  g_object_unref(G_OBJECT(builder));
-
+  auto window = GTK_WINDOW(gtk_builder_get_object(builder, "window"));
+  auto view = GTK_TREE_VIEW(gtk_builder_get_object(builder, "treeview"));
+  auto watchlist = GTK_TREE_VIEW(gtk_builder_get_object(builder, "watchlist"));
   auto model = TreeModel::ctor();
 
 #if 0
@@ -259,77 +230,86 @@ void start()
       0,
       GTK_SORT_ASCENDING);
 
-  gtk_tree_view_set_model(GTK_TREE_VIEW(view), GTK_TREE_MODEL(model));
-
-  g_object_unref(model); // view now owns model
-
-  // the renderer, column and view all need to be referenced together
+  // the cell, column and view all need to be referenced together
   // by a containing application view object, and unref'd in reverse
   // order in the dtor
 
-  auto renderer = gtk_cell_renderer_text_new();
   auto col = gtk_tree_view_column_new();
-
   gtk_tree_view_column_set_title(col, "number");
-  gtk_tree_view_column_pack_start(col, renderer, true);
-  gtk_tree_view_column_add_attribute(col, renderer, "text", 1);
+
+  auto cell = gtk_cell_renderer_text_new();
+  gtk_tree_view_column_pack_start(col, cell, true);
+
+  gtk_tree_view_column_set_cell_data_func(
+      col, cell, [](
+	  GtkTreeViewColumn *col, GtkCellRenderer *cell,
+	  GtkTreeModel *model, GtkTreeIter *iter, gpointer) {
+	static const gchar *props[] = {
+	  "text", "background-rgba", "foreground-rgba"
+	};
+	static ZGtk::Value values[3];
+	static bool init = true;
+	if (init) {
+	  init = false;
+	  values[0].init(G_TYPE_STRING);
+	  values[1].init(GDK_TYPE_RGBA);
+	  values[2].init(GDK_TYPE_RGBA);
+	}
+
+	gint i;
+	{
+	  GtkTreePath *path = gtk_tree_model_get_path(model, iter);
+	  gint *indices = gtk_tree_path_get_indices(path);
+	  i = indices[0];
+	  gtk_tree_path_free(path);
+	}
+
+	gint j;
+	{
+	  ZGtk::Value value;
+	  gtk_tree_model_get_value(model, iter, 0, &value);
+	  j = value.get_long();
+	}
+
+	{
+	  static ZuStringN<24> text;
+	  text.null(); text << j;
+	  values[0].set_static_string(text);
+	}
+	{
+	  static GdkRGBA bg = { 0.0, 0.0, 0.0, 1.0 };
+	  bg.red = (gdouble)i / (gdouble)9;
+	  bg.blue = (gdouble)(9 - i) / (gdouble)9;
+	  values[1].set_static_boxed(&bg);
+	}
+	{
+	  static GdkRGBA fg = { 1.0, 1.0, 1.0, 1.0 };
+	  values[2].set_static_boxed(&fg);
+	}
+
+	g_object_setv(G_OBJECT(cell), 3, props, values);
+      }, nullptr, nullptr);
 
   gtk_tree_view_column_set_sort_column_id(col, 0);
 
   gtk_tree_view_append_column(GTK_TREE_VIEW(view), col);
 
-  gtk_drag_source_set(view,
-      GDK_BUTTON1_MASK, rowsTargets(), nRowsTargets(), GDK_ACTION_COPY);
+  model->drag(view, GTK_WIDGET(watchlist),
+      [](TreeModel *model, GtkTreeIter *iter) {
+	ZGtk::Value value;
+	gtk_tree_model_get_value(GTK_TREE_MODEL(model), iter, 0, &value);
+	std::cout << value.get_long() << '\n';
+      });
 
-  egg_tree_multi_drag_add_drag_support(GTK_TREE_VIEW(view));
-
-  g_signal_connect(G_OBJECT(view), "drag-data-get",
-      ZGtk::callback([](GObject *o, GdkDragContext *,
-	  GtkSelectionData *data, guint, guint) {
-	auto view = GTK_TREE_VIEW(o);
-	g_return_if_fail(!!view);
-	auto sel = gtk_tree_view_get_selection(view);
-	g_return_if_fail(!!sel);
-	GtkTreeModel *model = nullptr;
-	auto rows = gtk_tree_selection_get_selected_rows(sel, &model);
-	g_return_if_fail(!!rows);
-	g_return_if_fail(!!model);
-	egg_tree_multi_drag_source_drag_data_get(
-	    EGG_TREE_MULTI_DRAG_SOURCE(model), rows, data);
-      }), 0);
-
-  gtk_drag_dest_set(watchlist,
-      GTK_DEST_DEFAULT_ALL, rowsTargets(), nRowsTargets(), GDK_ACTION_COPY);
-
-  g_signal_connect(G_OBJECT(watchlist), "drag-data-received",
-      ZGtk::callback([](GtkWidget *widget, GdkDragContext *, int, int,
-	  GtkSelectionData *data, guint, guint32, gpointer x) {
-	if (gtk_selection_data_get_data_type(data) != rowsAtom()) return;
-	gint length;
-	auto ptr = gtk_selection_data_get_data_with_length(data, &length);
-	auto rows = *reinterpret_cast<GList *const *>(ptr);
-	for (GList *i = g_list_first(rows); i; i = g_list_next(i)) {
-	  auto path = reinterpret_cast<GtkTreePath *>(i->data);
-	  gint n;
-	  auto indices = gtk_tree_path_get_indices_with_depth(path, &n);
-	  for (gint j = 0; j < n; j++) {
-	    if (j) std::cout << ':';
-	    std::cout << indices[j];
-	  }
-	  std::cout << '\n';
-	  gtk_tree_path_free(path);
-	}
-	g_list_free(rows);
-	g_signal_stop_emission_by_name(widget, "drag-data-received");
-      }), nullptr);
+  model->view(view);
 
   g_signal_connect(G_OBJECT(window), "destroy",
       ZGtk::callback([](GObject *o, gpointer p) {
-	// std::cerr << "destroy " << ZmPlatform::getTID() << '\n' << std::flush;
+      // std::cerr << "destroy " << ZmPlatform::getTID() << '\n' << std::flush;
 	reinterpret_cast<ZmSemaphore *>(p)->post();
       }), reinterpret_cast<gpointer>(&done));
 
-  gtk_widget_show_all(window);
+  gtk_widget_show_all(GTK_WIDGET(window));
 
   gtk_window_present(GTK_WINDOW(window));
 }

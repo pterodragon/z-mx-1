@@ -579,7 +579,7 @@ namespace MxMDStream {
   template <typename Cxn, typename L> struct IOLambda<Cxn, L, true> {
     typedef void T;
     ZuInline static void invoke(ZiIOContext &io) {
-      (*(L *)(void *)0)(
+      (*(const L *)(void *)0)(
 	  static_cast<Cxn *>(io.cxn), io.fn.mvObject<MxQMsg>(), io);
     }
   };

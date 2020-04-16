@@ -503,7 +503,7 @@ private:
   template <typename L> struct SubscribeLambda<L, true> {
     typedef void T;
     ZuInline static void invoke(Server *server) {
-      (*(L *)(void *)0)(server);
+      (*(const L *)(void *)0)(server);
     }
   };
   template <typename L>

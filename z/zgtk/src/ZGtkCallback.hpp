@@ -34,26 +34,13 @@
 
 #include <gtk/gtk.h>
 
+#include <zlib/ZuLambdaFn.hpp>
+
 namespace ZGtk {
-
-template <auto Fn> struct StatelessLambda_;
-template <typename L, typename R, typename ...Args, R (L::*Fn_)(Args...) const>
-struct StatelessLambda_<Fn_> {
-  typedef R (*Fn)(Args...);
-  enum { OK = ZuConversion<L, Fn>::Exists };
-};
-template <typename L>
-struct StatelessLambda : public StatelessLambda_<&L::operator()> { };
-
-template <typename L, bool OK = StatelessLambda<L>::OK> struct Callback;
-template <typename L> struct Callback<L, true> {
-  using Fn = typename StatelessLambda<L>::Fn;
-  static constexpr auto fn(L l) { return static_cast<Fn>(l); }
-};
 
 template <typename L>
 constexpr auto callback(L l) { 
-  return G_CALLBACK(Callback<L>::fn(ZuMv(l)));
+  return G_CALLBACK(ZuLambdaFn<L>::fn(ZuMv(l)));
 }
 
 } // ZGtk

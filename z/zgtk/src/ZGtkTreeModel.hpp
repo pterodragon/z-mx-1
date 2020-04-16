@@ -37,6 +37,7 @@
 #include <gtk/gtk.h>
 
 #include <zlib/ZGtkApp.hpp>
+#include <zlib/ZGtkValue.hpp>
 
 #include <zlib/libegg_eggtreemultidnd.h>
 
@@ -50,7 +51,7 @@ struct App : public TreeModel<App> {
   GType get_column_type(gint i);
   gboolean get_iter(GtkTreeIter *iter, GtkTreePath *path);
   GtkTreePath *get_path(GtkTreeIter *iter);
-  void get_value(GtkTreeIter *iter, gint i, GValue *value);
+  void get_value(GtkTreeIter *iter, gint i, Value *value);
   gboolean iter_next(GtkTreeIter *iter);
   gboolean iter_children(GtkTreeIter *iter, GtkTreeIter *parent);
   gboolean iter_has_child(GtkTreeIter *iter);
@@ -76,13 +77,35 @@ struct App : public TreeModel<App> {
 template <typename T>
 class TreeModel : public GObject {
 
+public:
+  static const char *rowsAtomName() {
+    static const char *name = nullptr;
+    if (!name) name = typeid(TreeModel).name();
+    return name;
+  }
+  static GdkAtom rowsAtom() {
+    static GdkAtom atom = nullptr;
+    if (!atom) atom = gdk_atom_intern_static_string(rowsAtomName());
+    return atom;
+  }
+  static constexpr gint nRowsTargets() { return 1; }
+  static const GtkTargetEntry *rowsTargets() {
+    static GtkTargetEntry rowsTargets_[] = {
+      { (gchar *)nullptr, GTK_TARGET_SAME_APP, 0 }
+    };
+    if (!rowsTargets_[0].target) rowsTargets_[0].target =
+      const_cast<gchar *>(reinterpret_cast<const gchar *>(rowsAtomName()));
+    return rowsTargets_;
+  }
+
+private:
   T *impl() { return static_cast<T *>(this); }
   template <typename Ptr>
   static T *impl(Ptr *ptr) {
     return static_cast<T *>(reinterpret_cast<TreeModel *>(ptr));
   }
 
-  static GType init() {
+  static GType gtype_init() {
     static const GTypeInfo gtype_info{
       sizeof(GObjectClass),
       nullptr,					// base_init
@@ -141,7 +164,7 @@ class TreeModel : public GObject {
 	    GtkTreeIter *iter, gint i, GValue *value) {
 	  g_return_if_fail(G_TYPE_CHECK_INSTANCE_TYPE((m), gtype()));
 	  g_return_if_fail(!!iter);
-	  impl(m)->get_value(iter, i, value);
+	  impl(m)->get_value(iter, i, reinterpret_cast<Value *>(value));
 	};
 	i->iter_next = [](GtkTreeModel *m, GtkTreeIter *iter) -> gboolean {
 	  g_return_val_if_fail(
@@ -255,14 +278,73 @@ class TreeModel : public GObject {
 public:
   static GType gtype() {
     static GType gtype_ = 0;
-    if (!gtype_) gtype_ = init();
+    if (!gtype_) gtype_ = gtype_init();
     return gtype_;
   }
 
   static TreeModel *ctor() {
     return reinterpret_cast<TreeModel *>(g_object_new(gtype(), nullptr));
   }
+
+  // Drop(TreeModel *model, GtkTreeIter *iter)
+  template <typename Drop>
+  void drag(GtkTreeView *view, GtkWidget *dest, Drop) {
+    gtk_drag_source_set(GTK_WIDGET(view),
+	GDK_BUTTON1_MASK,
+	rowsTargets(), nRowsTargets(),
+	GDK_ACTION_COPY);
+
+    egg_tree_multi_drag_add_drag_support(view);
+
+    g_signal_connect(G_OBJECT(view), "drag-data-get",
+	ZGtk::callback([](GObject *o, GdkDragContext *,
+	    GtkSelectionData *data, guint, guint) {
+	  auto view = GTK_TREE_VIEW(o);
+	  g_return_if_fail(!!view);
+	  auto sel = gtk_tree_view_get_selection(view);
+	  g_return_if_fail(!!sel);
+	  GtkTreeModel *model = nullptr;
+	  auto rows = gtk_tree_selection_get_selected_rows(sel, &model);
+	  g_return_if_fail(!!rows);
+	  g_return_if_fail(!!model);
+	  egg_tree_multi_drag_source_drag_data_get(
+	      EGG_TREE_MULTI_DRAG_SOURCE(model), rows, data);
+	}), 0);
+ 
+    gtk_drag_dest_set(dest,
+	GTK_DEST_DEFAULT_ALL,
+	TreeModel::rowsTargets(), TreeModel::nRowsTargets(),
+	GDK_ACTION_COPY);
+
+    g_signal_connect(G_OBJECT(dest), "drag-data-received",
+	ZGtk::callback([](GtkWidget *widget, GdkDragContext *, int, int,
+	    GtkSelectionData *data, guint, guint32, gpointer model_) {
+	  if (gtk_selection_data_get_data_type(data) != rowsAtom()) return;
+	  gint length;
+	  auto ptr = gtk_selection_data_get_data_with_length(data, &length);
+	  auto rows = *reinterpret_cast<GList *const *>(ptr);
+	  auto model = reinterpret_cast<T *>(model_);
+	  for (GList *i = g_list_first(rows); i; i = g_list_next(i)) {
+	    auto path = reinterpret_cast<GtkTreePath *>(i->data);
+	    GtkTreeIter iter;
+	    if (gtk_tree_model_get_iter(GTK_TREE_MODEL(model), &iter, path))
+	      ZuLambdaFn<Drop>::invoke(model, &iter);
+	    gtk_tree_path_free(path);
+	  }
+	  g_list_free(rows);
+	  g_signal_stop_emission_by_name(widget, "drag-data-received");
+	}), reinterpret_cast<gpointer>(this));
+  }
+
+  void view(GtkTreeView *view) {
+    gtk_tree_view_set_model(view, GTK_TREE_MODEL(this));
+    g_object_unref(this); // view now owns model
+  }
 };
+
+// need to predigest depth, indices, iterator, etc.
+// need to think about how to abstract columns and types, using ZvFields, but also permitting hierarchical paths
+// 
 
 } // ZGtk
 

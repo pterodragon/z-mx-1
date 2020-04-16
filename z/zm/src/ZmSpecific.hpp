@@ -415,7 +415,7 @@ public:
 };
 
 template <typename L> struct ZmTLS_Ctor {
-  static auto fn() { return (*(L *)(void *)0)(); }
+  static auto fn() { return (*(const L *)(void *)0)(); }
   typedef decltype(fn()) (*Fn)();
   enum { OK = ZuConversion<L, Fn>::Exists };
 };

@@ -230,7 +230,8 @@ namespace MxTelemetry {
   template <typename Cxn, typename L> struct IOLambda<Cxn, L, true> {
     using T = void;
     ZuInline static void invoke(ZiIOContext &io) {
-      (*(L *)(void *)0)(static_cast<Cxn *>(io.cxn), io.fn.mvObject<Msg>(), io);
+      (*(const L *)(void *)0)(
+	  static_cast<Cxn *>(io.cxn), io.fn.mvObject<Msg>(), io);
     }
   };
 

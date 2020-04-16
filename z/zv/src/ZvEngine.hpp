@@ -653,7 +653,7 @@ public:
   struct RcvdLambda;
   template <typename L> struct RcvdLambda<L, true> {
     using T = void;
-    ZuInline static void invoke(Rx *rx) { (*(L *)(void *)0)(rx); }
+    ZuInline static void invoke(Rx *rx) { (*(const L *)(void *)0)(rx); }
   };
 
   template <typename L>

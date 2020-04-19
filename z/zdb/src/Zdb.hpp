@@ -462,11 +462,11 @@ public:
   ZdbPOD_(ZdbAny *db) : Base(db) { }
 
   ZuInline static const ZdbPOD_ *pod(const T *data) {
-    const Data *ZuMayAlias(ptr) = (const Data *)data;
+    const Data *ZuMayAlias(ptr) = reinterpret_cast<const Data *>(data);
     return static_cast<const ZdbPOD_ *>(Base::pod(ptr));
   }
   ZuInline static ZdbPOD_ *pod(T *data) {
-    Data *ZuMayAlias(ptr) = (Data *)data;
+    Data *ZuMayAlias(ptr) = reinterpret_cast<Data *>(data);
     return static_cast<ZdbPOD_ *>(Base::pod(ptr));
   }
 

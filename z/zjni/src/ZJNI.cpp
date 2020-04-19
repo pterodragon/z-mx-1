@@ -43,13 +43,13 @@ static uint32_t ZJNI_lock_ = 0;
 void ZJNI_lock()
 {
   ZmAtomic<uint32_t> *ZuMayAlias(lock) =
-    (ZmAtomic<uint32_t> *)&ZJNI_lock_;
+    reinterpret_cast<ZmAtomic<uint32_t> *>(&ZJNI_lock_);
   while (ZuUnlikely(lock->cmpXch(1, 0))) ZmPlatform::yield();
 }
 void ZJNI_unlock()
 {
   ZmAtomic<uint32_t> *ZuMayAlias(lock) =
-    (ZmAtomic<uint32_t> *)&ZJNI_lock_;
+    reinterpret_cast<ZmAtomic<uint32_t> *>(&ZJNI_lock_);
   *lock = 0;
 }
 

@@ -37,20 +37,20 @@
 class ZuAnyPOD_Data {
 public:
   template <typename T = void> ZuInline const T *ptr() const {
-    const T *ZuMayAlias(ptr) = (const T *)this;
+    const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(this);
     return ptr;
   }
   template <typename T = void> ZuInline T *ptr() {
-    T *ZuMayAlias(ptr) = (T *)this;
+    T *ZuMayAlias(ptr) = reinterpret_cast<T *>(this);
     return ptr;
   }
 
   template <typename T> ZuInline const T &as() const {
-    const T *ZuMayAlias(ptr) = (const T *)this;
+    const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(this);
     return *ptr;
   }
   template <typename T> ZuInline T &as() {
-    T *ZuMayAlias(ptr) = (T *)this;
+    T *ZuMayAlias(ptr) = reinterpret_cast<T *>(this);
     return *ptr;
   }
 
@@ -104,11 +104,11 @@ public:
   ZuInline T &data() { return this->template as<T>(); }
 
   ZuInline static const ZuPOD_ *pod(const T *data) {
-    const ZuAnyPOD_Data *ZuMayAlias(ptr) = (const ZuAnyPOD_Data *)data;
+    const ZuAnyPOD_Data *ZuMayAlias(ptr) = reinterpret_cast<const ZuAnyPOD_Data *>(data);
     return static_cast<const ZuPOD_ *>(ptr);
   }
   ZuInline static ZuPOD_ *pod(T *data) {
-    ZuAnyPOD_Data *ZuMayAlias(ptr) = (ZuAnyPOD_Data *)data;
+    ZuAnyPOD_Data *ZuMayAlias(ptr) = reinterpret_cast<ZuAnyPOD_Data *>(data);
     return static_cast<ZuPOD_ *>(ptr);
   }
 

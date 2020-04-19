@@ -542,14 +542,14 @@ public:
     }
 
     delNode_(node);
-    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    NodeRef *ZuMayAlias(ptr) = reinterpret_cast<NodeRef *>(&node);
     return ZuMv(*ptr);
   }
   NodeRef del(Node *node) {
     if (ZuUnlikely(!node)) return nullptr;
     Guard guard(m_lock);
     delNode_(node);
-    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    NodeRef *ZuMayAlias(ptr) = reinterpret_cast<NodeRef *>(&node);
     return ZuMv(*ptr);
   }
   void delNode_(Node *node) {
@@ -629,7 +629,7 @@ public:
     do {
       if (ValCmp::equals(node->Node::val(), val)) {
 	delNode_(node);
-	NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+	NodeRef *ZuMayAlias(ptr) = reinterpret_cast<NodeRef *>(&node);
 	return ZuMv(*ptr);
       }
     } while (node = node->Fn::dup());
@@ -662,7 +662,7 @@ public:
     do {
       if (node->Node::key() == key) { // not Cmp::equals()
 	delNode_(node);
-	NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+	NodeRef *ZuMayAlias(ptr) = reinterpret_cast<NodeRef *>(&node);
 	return ZuMv(*ptr);
       }
     } while (node = node->Fn::dup());

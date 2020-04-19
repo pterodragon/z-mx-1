@@ -60,20 +60,24 @@
 
 template <typename T, bool CanStar> class ZuUnion_OpStar;
 template <typename T> class ZuUnion_OpStar<T, 1> {
-  ZuInline static bool star(const void *t) { return *(*(const T *)t); }
+  ZuInline static bool star(const void *p) {
+    return *(*static_cast<const T *>(p));
+  }
 };
 template <typename T> class ZuUnion_OpStar<T, 0> {
-  ZuInline static bool star(const void *t) {
-    return !ZuCmp<T>::null(*(const T *)t);
+  ZuInline static bool star(const void *p) {
+    return !ZuCmp<T>::null(*static_cast<const T *>(p));
   }
 };
 template <typename T, bool CanBang> class ZuUnion_OpBang;
 template <typename T> class ZuUnion_OpBang<T, 1> {
-  ZuInline static bool bang(const void *t) { return !(*(const T *)t); }
+  ZuInline static bool bang(const void *p) {
+    return !(*static_cast<const T *>(p));
+  }
 };
 template <typename T> class ZuUnion_OpBang<T, 0> {
-  ZuInline static bool bang(const void *t) {
-    return ZuCmp<T>::null(*(const T *)t);
+  ZuInline static bool bang(const void *p) {
+    return ZuCmp<T>::null(*static_cast<const T *>(p));
   }
 };
 template <typename T, bool IsPrimitive, bool IsPointer> class ZuUnion_Ops_;
@@ -83,42 +87,56 @@ template <typename T> class ZuUnion_Ops_<T, 0, 0> :
   public ZuUnion_OpStar<T, ZuUnion_CanStar<T, bool (T::*)() const>::OK>,
   public ZuUnion_OpBang<T, ZuUnion_CanBang<T, bool (T::*)() const>::OK> {
 public:
-  ZuInline static void ctor(void *dst) { new (dst) T(ZuCmp<T>::null()); }
-  template <typename P>
-  ZuInline static void ctor(void *dst, const P &p) { new (dst) T(p); }
-  ZuInline static void dtor(void *dst) { ((T *)dst)->~T(); }
+  ZuInline static void ctor(void *p) { new (p) T(ZuCmp<T>::null()); }
+  template <typename V>
+  ZuInline static void ctor(void *p, V &&v) { new (p) T(ZuFwd<V>(v)); }
+  ZuInline static void dtor(void *p) { static_cast<T *>(p)->~T(); }
 };
 template <typename T> class ZuUnion_Ops_<T, 1, 0> {
 public:
-  ZuInline static void ctor(void *dst) { *(T *)dst = ZuCmp<T>::null(); }
-  template <typename P>
-  ZuInline static void ctor(void *dst, const P &p) { *(T *)dst = p; }
-  ZuInline static void dtor(void *dst) { }
-  ZuInline static bool star(const void *t) {
-    return !ZuCmp<T>::null(*(const T *)t);
+  ZuInline static void ctor(void *p) {
+    *static_cast<T *>(p) = ZuCmp<T>::null();
   }
-  ZuInline static bool bang(const void *t) { return !(*(const T *)t); }
+  template <typename V>
+  ZuInline static void ctor(void *p, V &&v) {
+    *static_cast<T *>(p) = ZuFwd<V>(v);
+  }
+  ZuInline static void dtor(void *p) { }
+  ZuInline static bool star(const void *p) {
+    return !ZuCmp<T>::null(*static_cast<const T *>(p));
+  }
+  ZuInline static bool bang(const void *p) {
+    return !(*static_cast<const T *>(p));
+  }
 };
 template <typename T> class ZuUnion_Ops_<T, 1, 1> {
 public:
-  ZuInline static void ctor(void *dst) { *(T *)dst = ZuCmp<T>::null(); }
-  template <typename P>
-  ZuInline static void ctor(void *dst, const P &p) { *(T *)dst = p; }
-  ZuInline static void dtor(void *dst) { }
-  ZuInline static bool star(const void *t) { return (bool)(*(const T *)t); }
-  ZuInline static bool bang(const void *t) { return !(*(const T *)t); }
+  ZuInline static void ctor(void *p) {
+    *static_cast<T *>(p) = ZuCmp<T>::null();
+  }
+  template <typename V>
+  ZuInline static void ctor(void *p, const V &v) {
+    *static_cast<T *>(p) = v;
+  }
+  ZuInline static void dtor(void *p) { }
+  ZuInline static bool star(const void *p) {
+    return (bool)(*static_cast<const T *>(p));
+  }
+  ZuInline static bool bang(const void *p) {
+    return !(*static_cast<const T *>(p));
+  }
 };
 template <typename T>
 struct ZuUnion_Ops :
     public ZuUnion_Ops_<T, ZuTraits<T>::IsPrimitive, ZuTraits<T>::IsPointer> {
-  template <typename P> ZuInline static void assign(void *dst, const P &p)
-    { *(T *)dst = p; }
-  template <typename P> ZuInline static bool equals(const void *t, const P &p)
-    { return ZuCmp<T>::equals(*(const T *)t, p); }
-  template <typename P> ZuInline static int cmp(const void *t, const P &p)
-    { return ZuCmp<T>::cmp(*(const T *)t, p); }
-  ZuInline static uint32_t hash(const void *t)
-    { return ZuHash<T>::hash(*(const T *)t); }
+  template <typename V> ZuInline static void assign(void *p, const V &v)
+    { *static_cast<T *>(p) = v; }
+  template <typename V> ZuInline static bool equals(const void *p, const V &v)
+    { return ZuCmp<T>::equals(*static_cast<const T *>(p), v); }
+  template <typename V> ZuInline static int cmp(const void *p, const V &v)
+    { return ZuCmp<T>::cmp(*static_cast<const T *>(p), v); }
+  ZuInline static uint32_t hash(const void *p)
+    { return ZuHash<T>::hash(*static_cast<const T *>(p)); }
 };
 
 template <unsigned I, typename Left> struct ZuUnion_Type0;
@@ -178,7 +196,7 @@ public:
   ZuUnion(const ZuUnion &u) {
     ZuSwitch::dispatch<N>(this->type(u.type()), [this, &u](auto i) {
       using T = typename Type<i>::T;
-      const T *ZuMayAlias(ptr) = (const T *)u.m_u;
+      const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(u.m_u);
       ZuUnion_Ops<T>::ctor(m_u, *ptr);
     });
   }
@@ -192,7 +210,7 @@ public:
     }
     ZuSwitch::dispatch<N>(this->type(u.type()), [this, &u](auto i) {
       using T = typename Type<i>::T;
-      const T *ZuMayAlias(ptr) = (const T *)u.m_u;
+      const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(u.m_u);
       ZuUnion_Ops<T>::assign(m_u, *ptr);
     });
     return *this;
@@ -225,7 +243,7 @@ public:
     if (this->type() != p.type()) return false;
     return ZuSwitch::dispatch<N>(this->type(), [this, &p](auto i) -> bool {
       using T = typename Type<i>::T;
-      const T *ZuMayAlias(ptr) = (const T *)p.m_u;
+      const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(p.m_u);
       return ZuUnion_Ops<T>::equals(m_u, *ptr);
     });
   }
@@ -243,7 +261,7 @@ public:
     if (int i = ZuCmp<uint8_t>::cmp(this->type(), p.type())) return i;
     return ZuSwitch::dispatch<N>(this->type(), [this, &p](auto i) -> int {
       using T = typename Type<i>::T;
-      const T *ZuMayAlias(ptr) = (const T *)p.m_u;
+      const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(p.m_u);
       return ZuUnion_Ops<T>::cmp(m_u, *ptr);
     });
   }
@@ -283,14 +301,14 @@ public:
     using T = typename Type<I>::T;
     static const T null = ZuCmp<T>::null();
     if (this->type() != I) return null;
-    const T *ZuMayAlias(ptr) = (const T *)(const void *)m_u;
+    const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(m_u);
     return *ptr;
   }
   template <unsigned I, typename P>
   ZuUnion &p(P &&p) {
     using T = typename Type<I>::T;
     if (this->type() == I) {
-      T *ZuMayAlias(ptr) = (T *)(void *)m_u;
+      T *ZuMayAlias(ptr) = reinterpret_cast<T *>(m_u);
       *ptr = ZuFwd<P>(p);
       return *this;
     }
@@ -302,7 +320,7 @@ public:
   template <unsigned I>
   typename Type_<I>::T &p() {
     using T = typename Type<I>::T;
-    T *ZuMayAlias(ptr) = (T *)(void *)m_u;
+    T *ZuMayAlias(ptr) = reinterpret_cast<T *>(m_u);
     if (this->type() == I) return *ptr;
     this->~ZuUnion();
     this->type(I);
@@ -313,7 +331,7 @@ public:
   typename Type<I>::T *ptr() {
     using T = typename Type<I>::T;
     if (this->type() != I) return 0;
-    T *ZuMayAlias(ptr) = (T *)(void *)m_u;
+    T *ZuMayAlias(ptr) = reinterpret_cast<T *>(m_u);
     return ptr;
   }
   template <unsigned I>
@@ -321,7 +339,7 @@ public:
     using T = typename Type<I>::T;
     this->~ZuUnion();
     this->type(I);
-    T *ZuMayAlias(ptr) = (T *)(void *)m_u;
+    T *ZuMayAlias(ptr) = reinterpret_cast<T *>(m_u);
     return ptr;
   }
 

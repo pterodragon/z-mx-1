@@ -607,12 +607,12 @@ template <typename T>
 ZuInline typename ZuIsBoxed<T, T>::T &ZuBoxed(T &t) { return t; }
 template <typename T>
 ZuInline const typename ZuNotBoxed<T, ZuBox<T> >::T &ZuBoxed(const T &t) {
-  const ZuBox<T> *ZuMayAlias(t_) = (const ZuBox<T> *)&t;
+  const ZuBox<T> *ZuMayAlias(t_) = reinterpret_cast<const ZuBox<T> *>(&t);
   return *t_;
 }
 template <typename T>
 ZuInline typename ZuNotBoxed<T, ZuBox<T> >::T &ZuBoxed(T &t) {
-  ZuBox<T> *ZuMayAlias(t_) = (ZuBox<T> *)&t;
+  ZuBox<T> *ZuMayAlias(t_) = reinterpret_cast<ZuBox<T> *>(&t);
   return *t_;
 }
 

@@ -112,7 +112,7 @@ public:
   }
 #else
   ZuInline ZmTime(FILETIME f) {
-    int64_t *ZuMayAlias(f_) = (int64_t *)&f;
+    int64_t *ZuMayAlias(f_) = reinterpret_cast<int64_t *>(&f);
     int64_t t = *f_;
     t -= ZmTime_FT_Epoch;
     tv_sec = t / 10000000;
@@ -162,7 +162,7 @@ public:
 #else
   ZuInline operator FILETIME() const {
     FILETIME f;
-    int64_t *ZuMayAlias(f_) = (int64_t *)&f;
+    int64_t *ZuMayAlias(f_) = reinterpret_cast<int64_t *>(&f);
     *f_ = (int64_t)tv_sec * 10000000 + tv_nsec / 100 + ZmTime_FT_Epoch;
     return f;
   }

@@ -82,7 +82,8 @@ public:
 
   ZuInline void init(ZuString s) {
     if (ZuLikely(s.length() == 8)) {
-      const uint64_t *ZuMayAlias(ptr) = (const uint64_t *)s.data();
+      const uint64_t *ZuMayAlias(ptr) =
+	reinterpret_cast<const uint64_t *>(s.data());
       m_val = *ptr; // potentially misaligned load
       return;
     }
@@ -94,11 +95,11 @@ public:
   }
 
   ZuInline char *data() {
-    char *ZuMayAlias(ptr) = (char *)&m_val;
+    char *ZuMayAlias(ptr) = reinterpret_cast<char *>(&m_val);
     return ptr;
   }
   ZuInline const char *data() const {
-    const char *ZuMayAlias(ptr) = (const char *)&m_val;
+    const char *ZuMayAlias(ptr) = reinterpret_cast<const char *>(&m_val);
     return ptr;
   }
   ZuInline unsigned length() const {

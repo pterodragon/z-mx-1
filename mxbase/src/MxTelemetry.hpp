@@ -131,11 +131,11 @@ namespace MxTelemetry {
     ZuInline const void *ptr() const { return (const void *)this; }
 
     ZuInline Hdr &hdr() {
-      Hdr *ZuMayAlias(ptr) = (Hdr *)this;
+      Hdr *ZuMayAlias(ptr) = reinterpret_cast<Hdr *>(this);
       return *ptr;
     }
     ZuInline const Hdr &hdr() const {
-      const Hdr *ZuMayAlias(ptr) = (const Hdr *)this;
+      const Hdr *ZuMayAlias(ptr) = reinterpret_cast<const Hdr *>(this);
       return *ptr;
     }
 
@@ -230,7 +230,7 @@ namespace MxTelemetry {
   template <typename Cxn, typename L> struct IOLambda<Cxn, L, true> {
     using T = void;
     ZuInline static void invoke(ZiIOContext &io) {
-      (*(const L *)(void *)0)(
+      (*reinterpret_cast<const L *>(0))(
 	  static_cast<Cxn *>(io.cxn), io.fn.mvObject<Msg>(), io);
     }
   };

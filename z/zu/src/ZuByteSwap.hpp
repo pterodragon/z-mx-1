@@ -199,7 +199,7 @@ private:
       !ZuConversion<T, ZuByteSwap>::Is &&
       !ZuConversion<T, I>::Exists &&
       sizeof(T) == sizeof(I)>::T set(const T &i) {
-    const I *ZuMayAlias(i_) = (const I *)(const void *)&i;
+    const I *ZuMayAlias(i_) = reinterpret_cast<const I *>(&i);
     m_i = B::bswap(*i_);
   }
   template <typename T>
@@ -218,7 +218,7 @@ private:
       !ZuConversion<T, I>::Exists &&
       sizeof(T) == sizeof(I), T>::T get() const {
     I i = B::bswap(m_i);
-    T *ZuMayAlias(i_) = (T *)(void *)&i;
+    T *ZuMayAlias(i_) = reinterpret_cast<T *>(&i);
     return *i_;
   }
 

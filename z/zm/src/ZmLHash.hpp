@@ -306,12 +306,12 @@ private:
 
   const Data &data() const {
     ZmAssert(m_u);
-    const Data *ZuMayAlias(data_) = (const Data *)m_data;
+    const Data *ZuMayAlias(data_) = reinterpret_cast<const Data *>(m_data);
     return *data_;
   }
   Data &data() {
     ZmAssert(m_u);
-    Data *ZuMayAlias(data_) = (Data *)m_data;
+    Data *ZuMayAlias(data_) = reinterpret_cast<Data *>(m_data);
     return *data_;
   }
 

@@ -468,12 +468,13 @@ template <typename T_> struct ZuTraits<ZmAtomic<T_> > : public ZuTraits<T_> {
 
 template <typename T>
 ZuInline ZmAtomic<T> &ZmAtomize(T &v) {
-  ZmAtomic<T> *ZuMayAlias(ptr) = (ZmAtomic<T> *)&v;
+  ZmAtomic<T> *ZuMayAlias(ptr) = reinterpret_cast<ZmAtomic<T> *>(&v);
   return *ptr;
 }
 template <typename T>
 ZuInline const ZmAtomic<T> &ZmAtomize(const T &v) {
-  const ZmAtomic<T> *ZuMayAlias(ptr) = (const ZmAtomic<T> *)&v;
+  const ZmAtomic<T> *ZuMayAlias(ptr) =
+    reinterpret_cast<const ZmAtomic<T> *>(&v);
   return *ptr;
 }
 

@@ -339,7 +339,7 @@ friend class ReadIterator;
 
     if (ZuLikely(node)) del_(node);
 
-    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    NodeRef *ZuMayAlias(ptr) = reinterpret_cast<NodeRef *>(&node);
     return ZuMv(*ptr);
   }
   NodeRef del(Node *node) {
@@ -347,7 +347,7 @@ friend class ReadIterator;
 
     if (ZuLikely(node)) del_(node);
 
-    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    NodeRef *ZuMayAlias(ptr) = reinterpret_cast<NodeRef *>(&node);
     return ZuMv(*ptr);
   }
 

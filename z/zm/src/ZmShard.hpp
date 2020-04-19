@@ -73,7 +73,7 @@ public:
   ZuInline ZmHandle(ZmRef<T> o) { new (&m_ptr) ZmRef<T>(ZuMv(o)); }
   ZuInline ~ZmHandle() {
     if (m_ptr && !(m_ptr & 1)) {
-      ZmRef<T> *ZuMayAlias(ptr) = (ZmRef<T> *)&m_ptr;
+      ZmRef<T> *ZuMayAlias(ptr) = reinterpret_cast<ZmRef<T> *>(&m_ptr);
       ptr->~ZmRef<T>();
     }
   }
@@ -163,7 +163,7 @@ public:
     T *o;
     shardObject(shard, o);
     m_ptr = 0;
-    ZmRef<T> *ZuMayAlias(ptr) = (ZmRef<T> *)&o;
+    ZmRef<T> *ZuMayAlias(ptr) = reinterpret_cast<ZmRef<T> *>(&o);
     shard->invoke([l = ZuMv(l), shard, o = ZuMv(*ptr)]() mutable {
       l(shard, ZuMv(o));
     });

@@ -38,7 +38,7 @@
 static uint32_t ZmGlobal_lock = 0;
 #define lock() \
   ZmAtomic<uint32_t> *ZuMayAlias(lock) = \
-    (ZmAtomic<uint32_t> *)&ZmGlobal_lock; \
+    reinterpret_cast<ZmAtomic<uint32_t> *>(&ZmGlobal_lock); \
   while (ZuUnlikely(lock->cmpXch(1, 0))) ZmPlatform::yield()
 #define unlock() (*lock = 0)
 

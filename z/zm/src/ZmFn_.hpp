@@ -137,7 +137,7 @@ public:
   template <typename O> ZuInline ZmRef<O> mvObject() {
     if (ZuUnlikely(!owned(m_object))) return ZmRef<O>((O *)(void *)m_object);
     deref(m_object);
-    ZmRef<O> *ZuMayAlias(ptr) = (ZmRef<O> *)(void *)&m_object;
+    ZmRef<O> *ZuMayAlias(ptr) = reinterpret_cast<ZmRef<O> *>(&m_object);
     return ZuMv(*ptr);
   }
   template <typename O> ZuInline void object(O *o) {
@@ -506,7 +506,7 @@ private:
   template <typename L, typename R, class HeapID, typename ...Args_>
   struct LambdaInvoker_<L, R, HeapID, 1, Args_...> {
     static uintptr_t invoke(uintptr_t, Args... args) {
-      return (uintptr_t)(*(const L *)(void *)0)(ZuFwd<Args>(args)...);
+      return (uintptr_t)(*reinterpret_cast<const L *>(0))(ZuFwd<Args>(args)...);
     }
     template <typename L_> ZuInline static ZmFn fn(L_ &&) {
       return ZmFn(ZmFn::Pass(), &LambdaInvoker_::invoke, (void *)0);
@@ -515,7 +515,7 @@ private:
   template <typename L, class HeapID, typename ...Args_>
   struct LambdaInvoker_<L, void, HeapID, 1, Args_...> {
     static uintptr_t invoke(uintptr_t, Args... args) {
-      (*(const L *)(void *)0)(ZuFwd<Args>(args)...);
+      (*reinterpret_cast<const L *>(0))(ZuFwd<Args>(args)...);
       return 0;
     }
     template <typename L_> ZuInline static ZmFn fn(L_ &&) {
@@ -576,7 +576,7 @@ private:
   template <typename O, typename L, typename R, class HeapID>
   struct LBoundInvoker_<O *, L, R, HeapID, 1> {
     static uintptr_t invoke(uintptr_t &o, Args... args) {
-      return (uintptr_t)(*(const L *)(void *)0)(
+      return (uintptr_t)(*reinterpret_cast<const L *>(0))(
 	  ptr<O>(o),
 	  ZuFwd<Args>(args)...);
     }
@@ -593,7 +593,7 @@ private:
   template <typename O, typename L, class HeapID>
   struct LBoundInvoker_<O *, L, void, HeapID, 1> {
     static uintptr_t invoke(uintptr_t &o, Args... args) {
-      (*(const L *)(void *)0)(ptr<O>(o), ZuFwd<Args>(args)...);
+      (*reinterpret_cast<const L *>(0))(ptr<O>(o), ZuFwd<Args>(args)...);
       return 0;
     }
     ZuInline static ZmFn fn(O *o, L) {
@@ -631,12 +631,12 @@ private:
   template <typename O, typename L, typename R, class HeapID>
   struct LBoundInvoker_<ZmRef<O>, L, R, HeapID, 1> {
     static uintptr_t invoke(uintptr_t &o, Args... args) {
-      return (uintptr_t)(*(const L *)(void *)0)(
+      return (uintptr_t)(*reinterpret_cast<const L *>(0))(
 	  ptr<O>(o), ZuFwd<Args>(args)...);
     }
     static uintptr_t mvInvoke(uintptr_t &o, Args... args) {
       deref(o);
-      return (uintptr_t)(*(const L *)(void *)0)(
+      return (uintptr_t)(*reinterpret_cast<const L *>(0))(
 	  ZuMv(*reinterpret_cast<ZmRef<O> *>(&o)),
 	  ZuFwd<Args>(args)...);
     }
@@ -653,12 +653,12 @@ private:
   template <typename O, typename L, class HeapID>
   struct LBoundInvoker_<ZmRef<O>, L, void, HeapID, 1> {
     static uintptr_t invoke(uintptr_t &o, Args... args) {
-      (*(const L *)(void *)0)(ptr<O>(o), ZuFwd<Args>(args)...);
+      (*reinterpret_cast<const L *>(0))(ptr<O>(o), ZuFwd<Args>(args)...);
       return 0;
     }
     static uintptr_t mvInvoke(uintptr_t &o, Args... args) {
       deref(o);
-      (*(const L *)(void *)0)(
+      (*reinterpret_cast<const L *>(0))(
 	  ZuMv(*reinterpret_cast<ZmRef<O> *>(&o)),
 	  ZuFwd<Args>(args)...);
       return 0;

@@ -155,7 +155,8 @@ public:
   }
 
   template <typename S> void print(S &s) const {
-    const uintptr_t *ZuMayAlias(ptr) = (const uintptr_t *)&m_lock;
+    const uintptr_t *ZuMayAlias(ptr) =
+      reinterpret_cast<const uintptr_t *>(&m_lock);
     s << ZuBoxed(*ptr);
   }
 

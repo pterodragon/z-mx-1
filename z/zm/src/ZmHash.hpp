@@ -861,7 +861,7 @@ private:
 
     m_count.store_(count - 1);
 
-    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    NodeRef *ZuMayAlias(ptr) = reinterpret_cast<NodeRef *>(&node);
     return ZuMv(*ptr);
   }
 
@@ -896,7 +896,7 @@ private:
 
     m_count.store_(count - 1);
 
-    NodeRef *ZuMayAlias(ptr) = (NodeRef *)&node;
+    NodeRef *ZuMayAlias(ptr) = reinterpret_cast<NodeRef *>(&node);
     return ZuMv(*ptr);
   }
 

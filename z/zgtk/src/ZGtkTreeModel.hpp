@@ -68,7 +68,6 @@ struct App : public TreeModel<App> {
       GtkTreeIterCompareFunc fn, gpointer user_data, GDestroyNotify destroy);
   gboolean has_default_sort_func();
 
-  gboolean row_draggable(GList *path_list);
   gboolean drag_data_get(GList *path_list, GtkSelectionData *data);
   gboolean drag_data_delete(GList *path_list);
 };
@@ -254,11 +253,6 @@ private:
     static const GInterfaceInfo egg_tree_multi_drag_source_info {
       [](void *i_, void *) {
 	auto i = static_cast<EggTreeMultiDragSourceIface *>(i_);
-	i->row_draggable = [](EggTreeMultiDragSource *s,
-	    GList *path_list) -> gboolean {
-	  g_return_val_if_fail(G_TYPE_CHECK_INSTANCE_TYPE((s), gtype()), false);
-	  return impl(s)->row_draggable(path_list);
-	};
         i->drag_data_get = [](EggTreeMultiDragSource *s,
 	    GList *path_list, GtkSelectionData *selection_data) -> gboolean {
 	  g_return_val_if_fail(G_TYPE_CHECK_INSTANCE_TYPE((s), gtype()), false);
@@ -300,7 +294,7 @@ public:
   // Drop(TreeModel *model, GtkSelectionData *data)
   template <typename Drop>
   void drag(GtkTreeView *view, GtkWidget *dest, Drop) {
-    gtk_tree_view_set_rubber_banding(view, false);
+    // gtk_tree_view_set_rubber_banding(view, false);
 
     gtk_drag_source_set(GTK_WIDGET(view),
 	GDK_BUTTON1_MASK,
@@ -309,6 +303,7 @@ public:
 
     egg_tree_multi_drag_add_drag_support(view);
 
+#if 0
     g_signal_connect(G_OBJECT(view), "drag-data-get",
 	ZGtk::callback([](GObject *o, GdkDragContext *,
 	    GtkSelectionData *data, guint, guint) {
@@ -323,6 +318,7 @@ public:
 	  egg_tree_multi_drag_source_drag_data_get(
 	      EGG_TREE_MULTI_DRAG_SOURCE(model), rows, data);
 	}), 0);
+#endif
  
     gtk_drag_dest_set(dest,
 	GTK_DEST_DEFAULT_ALL,

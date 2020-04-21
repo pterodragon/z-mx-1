@@ -65,21 +65,27 @@ struct TreeModel : public ZGtk::SortableTreeModel<TreeModel, 1> {
     new (iter) Iter{this, index};
     return true;
   }
-  GtkTreePath *get_path(GtkTreeIter *iter) {
+  GtkTreePath *get_path(GtkTreeIter *iter_) {
+    auto iter = reinterpret_cast<Iter *>(iter_);
+    g_return_val_if_fail(iter->valid(this), nullptr);
     GtkTreePath *path;
-    auto index = Iter::data(iter).index;
+    auto index = iter->data().index;
     path = gtk_tree_path_new();
     if (m_order != GTK_SORT_ASCENDING) index = 9 - index;
     gtk_tree_path_append_index(path, index);
     return path;
   }
-  void get_value(GtkTreeIter *iter, gint i, ZGtk::Value *value) {
-    auto index = Iter::data(iter).index;
+  void get_value(GtkTreeIter *iter_, gint i, ZGtk::Value *value) {
+    auto iter = reinterpret_cast<Iter *>(iter_);
+    g_return_if_fail(iter->valid(this));
+    auto index = iter->data().index;
     value->init(G_TYPE_LONG);
     value->set_long(index * index);
   }
-  gboolean iter_next(GtkTreeIter *iter) {
-    auto &index = Iter::data(iter).index;
+  gboolean iter_next(GtkTreeIter *iter_) {
+    auto iter = reinterpret_cast<Iter *>(iter_);
+    g_return_val_if_fail(iter->valid(this), false);
+    auto &index = iter->data().index;
     if (m_order != GTK_SORT_ASCENDING) {
       if (!index) return false;
       --index;
@@ -89,25 +95,40 @@ struct TreeModel : public ZGtk::SortableTreeModel<TreeModel, 1> {
     }
     return true;
   }
-  gboolean iter_children(GtkTreeIter *iter, GtkTreeIter *parent) {
-    if (parent) return false;
+  gboolean iter_children(GtkTreeIter *iter, GtkTreeIter *parent_) {
+    if (parent_) {
+      // auto parent = reinterpret_cast<Iter *>(parent_);
+      // g_return_val_if_fail(parent->valid(this), false);
+      return false;
+    }
     new (iter) Iter{this, 0};
     return true;
   }
-  gboolean iter_has_child(GtkTreeIter *iter) {
-    if (!iter) return true;
+  gboolean iter_has_child(GtkTreeIter *iter_) {
+    if (!iter_) return true;
+    // auto iter = reinterpret_cast<Iter *>(iter_);
+    // g_return_val_if_fail(iter->valid(this), false);
     return false;
   }
-  gint iter_n_children(GtkTreeIter *iter) {
-    if (!iter) return 10;
+  gint iter_n_children(GtkTreeIter *iter_) {
+    if (!iter_) return 10;
+    // auto iter = reinterpret_cast<Iter *>(iter_);
+    // g_return_val_if_fail(iter->valid(this), 0);
     return 0;
   }
-  gboolean iter_nth_child(GtkTreeIter *iter, GtkTreeIter *parent, gint n) {
-    if (parent) return false;
+  gboolean iter_nth_child(GtkTreeIter *iter, GtkTreeIter *parent_, gint n) {
+    if (parent_) {
+      // auto parent = reinterpret_cast<Iter *>(parent_);
+      // g_return_val_if_fail(parent->valid(this), false);
+      return false;
+    }
     new (iter) Iter{this, n};
     return true;
   }
-  gboolean iter_parent(GtkTreeIter *iter, GtkTreeIter *child) {
+  gboolean iter_parent(GtkTreeIter *iter, GtkTreeIter *child_) {
+    // if (!child_) return false;
+    // auto child = reinterpret_cast<Iter *>(child_);
+    // g_return_val_if_fail(child->valid(this), false);
     return false;
   }
 
@@ -125,9 +146,6 @@ struct TreeModel : public ZGtk::SortableTreeModel<TreeModel, 1> {
     gtk_tree_path_free(path);
   }
 
-  gboolean row_draggable(GList *rows) {
-    return true;
-  }
   gboolean drag_data_get(GList *rows, GtkSelectionData *data) {
     gtk_selection_data_set(data, rowsAtom(), sizeof(rows)<<3,
 	reinterpret_cast<const guchar *>(&rows), sizeof(rows));

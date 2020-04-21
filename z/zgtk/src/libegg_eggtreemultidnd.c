@@ -33,6 +33,7 @@ typedef struct {
   gint y;
   guint button_release_handler;
   guint drag_data_get_handler;
+  guint drag_end_handler;
   GList *event_list;
 } EggTreeMultiDndData;
 
@@ -124,10 +125,21 @@ static void stop_drag_check(GtkWidget *widget)
   for (l = priv_data->event_list; l != NULL; l = l->next)
     gdk_event_free(l->data);
   
-  g_list_free(priv_data->event_list);
-  priv_data->event_list = NULL;
+  if (priv_data->event_list) {
+    g_list_free(priv_data->event_list);
+    priv_data->event_list = NULL;
+  }
 
-  g_signal_handler_disconnect(widget, priv_data->button_release_handler);
+  if (priv_data->button_release_handler) {
+    g_signal_handler_disconnect(widget, priv_data->button_release_handler);
+    priv_data->button_release_handler = 0;
+  }
+}
+
+static void egg_tree_multi_drag_drag_end(
+    GtkWidget *widget, GdkDragContext *context, gpointer user_data)
+{
+  stop_drag_check(widget); /* the event_list is discarded */
 }
 
 static gboolean egg_tree_multi_drag_button_release_event(
@@ -144,36 +156,6 @@ static gboolean egg_tree_multi_drag_button_release_event(
   stop_drag_check(widget);
 
   return FALSE;
-}
-
-static void selection_foreach(
-    GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data)
-{
-  GList **list_ptr;
-
-  list_ptr =(GList **) data;
-
-  *list_ptr = g_list_prepend(
-      *list_ptr, gtk_tree_row_reference_new(model, path));
-}
-
-static void
-path_list_free(GList *path_list)
-{
-  g_list_foreach(path_list, (GFunc)gtk_tree_row_reference_free, NULL);
-  g_list_free(path_list);
-}
-
-static void set_context_data(GdkDragContext *context, GList *path_list)
-{
-  g_object_set_data_full(G_OBJECT(context), "egg-tree-view-multi-source-row",
-      path_list, (GDestroyNotify)path_list_free);
-}
-
-static GList *get_context_data(GdkDragContext *context)
-{
-  return g_object_get_data(
-      G_OBJECT(context), "egg-tree-view-multi-source-row");
 }
 
 static void egg_tree_multi_drag_drag_data_get(
@@ -203,8 +185,6 @@ static void egg_tree_multi_drag_drag_data_get(
 
   egg_tree_multi_drag_source_drag_data_get(
       EGG_TREE_MULTI_DRAG_SOURCE(model), path_list, selection_data);
-
-  stop_drag_check(widget); /* the event_list is discarded */
 }
 
 static gboolean egg_tree_multi_drag_button_press_event(
@@ -239,10 +219,8 @@ static gboolean egg_tree_multi_drag_button_press_event(
   if (event->type == GDK_2BUTTON_PRESS)
     return FALSE;
 
-  gtk_tree_view_get_path_at_pos(tree_view,
-				 event->x, event->y,
-				 &path, &column,
-				 &cell_x, &cell_y);
+  gtk_tree_view_get_path_at_pos(
+      tree_view, event->x, event->y, &path, &column, &cell_x, &cell_y);
 
   selection = gtk_tree_view_get_selection(tree_view);
 
@@ -270,13 +248,16 @@ static gboolean egg_tree_multi_drag_button_press_event(
 	      gdk_event_copy((GdkEvent*)event));
 
       priv_data->button_release_handler =
-	g_signal_connect(G_OBJECT(tree_view), "button_release_event",
+	g_signal_connect(G_OBJECT(tree_view), "button-release-event",
 	    G_CALLBACK(egg_tree_multi_drag_button_release_event), NULL);
-      if (!priv_data->drag_data_get_handler) {
+      if (!priv_data->drag_data_get_handler)
 	priv_data->drag_data_get_handler =
-	  g_signal_connect(G_OBJECT(tree_view), "drag_data_get",
+	  g_signal_connect(G_OBJECT(tree_view), "drag-data-get",
 	      G_CALLBACK(egg_tree_multi_drag_drag_data_get), NULL);
-      }
+      if (!priv_data->drag_end_handler)
+	priv_data->drag_end_handler =
+	  g_signal_connect(G_OBJECT(tree_view), "drag-end",
+	      G_CALLBACK(egg_tree_multi_drag_drag_end), NULL);
     }
 
     gtk_tree_path_free(path);
@@ -290,6 +271,6 @@ static gboolean egg_tree_multi_drag_button_press_event(
 void egg_tree_multi_drag_add_drag_support(GtkTreeView *tree_view)
 {
   g_return_if_fail(GTK_IS_TREE_VIEW(tree_view));
-  g_signal_connect(G_OBJECT(tree_view), "button_press_event",
+  g_signal_connect(G_OBJECT(tree_view), "button-press-event",
       G_CALLBACK(egg_tree_multi_drag_button_press_event), NULL);
 }

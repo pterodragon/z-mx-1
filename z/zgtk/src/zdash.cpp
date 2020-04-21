@@ -145,15 +145,6 @@ struct TreeModel : public ZGtk::SortableTreeModel<TreeModel, 1> {
 	GTK_TREE_MODEL(this), path, nullptr, new_order.data());
     gtk_tree_path_free(path);
   }
-
-  gboolean drag_data_get(GList *rows, GtkSelectionData *data) {
-    gtk_selection_data_set(data, rowsAtom(), sizeof(rows)<<3,
-	reinterpret_cast<const guchar *>(&rows), sizeof(rows));
-    return true;
-  }
-  gboolean drag_data_delete(GList *rows) {
-    return false;
-  }
 };
 
 void start()
@@ -258,7 +249,12 @@ void start()
   gtk_tree_view_append_column(GTK_TREE_VIEW(view), col);
 
   model->drag(view, GTK_WIDGET(watchlist),
-      [](TreeModel *model, GtkSelectionData *data) {
+      [](TreeModel *model, GList *rows, GtkSelectionData *data) -> gboolean {
+	gtk_selection_data_set(data, TreeModel::rowsAtom(), sizeof(rows)<<3,
+	    reinterpret_cast<const guchar *>(&rows), sizeof(rows));
+	return true;
+      },
+      [](TreeModel *model, GtkWidget *widget, GtkSelectionData *data) {
 	if (gtk_selection_data_get_data_type(data) != TreeModel::rowsAtom())
 	  return;
 	gint length;

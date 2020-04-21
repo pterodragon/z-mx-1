@@ -39,8 +39,6 @@
 #include <zlib/ZGtkApp.hpp>
 #include <zlib/ZGtkValue.hpp>
 
-#include <zlib/libegg_eggtreemultidnd.h>
-
 namespace ZGtk {
 
 // CRTP - implementation must conform to the following interface:
@@ -73,17 +71,22 @@ struct App : public TreeModel<App> {
 };
 #endif
 
+struct TreeModelDragData {
+  GList *events = nullptr;
+  guint	handler = 0;		// button release handler
+};
+
 template <typename T>
 class TreeModel : public GObject {
 public:
-  static const char *rowsAtomName() {
+  static const char *typeName() {
     static const char *name = nullptr;
     if (!name) name = typeid(T).name();
     return name;
   }
   static GdkAtom rowsAtom() {
     static GdkAtom atom = nullptr;
-    if (!atom) atom = gdk_atom_intern_static_string(rowsAtomName());
+    if (!atom) atom = gdk_atom_intern_static_string(typeName());
     return atom;
   }
   static constexpr gint nRowsTargets() { return 1; }
@@ -92,7 +95,7 @@ public:
       { (gchar *)nullptr, GTK_TARGET_SAME_APP, 0 }
     };
     if (!rowsTargets_[0].target) rowsTargets_[0].target =
-      const_cast<gchar *>(reinterpret_cast<const gchar *>(rowsAtomName()));
+      const_cast<gchar *>(reinterpret_cast<const gchar *>(typeName()));
     return rowsTargets_;
   }
 
@@ -250,32 +253,12 @@ private:
       nullptr
     }; 
 
-    static const GInterfaceInfo egg_tree_multi_drag_source_info {
-      [](void *i_, void *) {
-	auto i = static_cast<EggTreeMultiDragSourceIface *>(i_);
-        i->drag_data_get = [](EggTreeMultiDragSource *s,
-	    GList *path_list, GtkSelectionData *selection_data) -> gboolean {
-	  g_return_val_if_fail(G_TYPE_CHECK_INSTANCE_TYPE((s), gtype()), false);
-	  return impl(s)->drag_data_get(path_list, selection_data);
-	};
-	i->drag_data_delete = [](EggTreeMultiDragSource *s,
-	    GList *path_list) -> gboolean {
-	  g_return_val_if_fail(G_TYPE_CHECK_INSTANCE_TYPE((s), gtype()), false);
-	  return impl(s)->drag_data_delete(path_list);
-	};
-      },
-      nullptr,
-      nullptr
-    };
-
     GType gtype_ = g_type_register_static(
 	G_TYPE_OBJECT, "TreeModel", &gtype_info, (GTypeFlags)0);
     g_type_add_interface_static(gtype_,
 	GTK_TYPE_TREE_MODEL, &tree_model_info);
     g_type_add_interface_static(gtype_,
 	GTK_TYPE_TREE_SORTABLE, &tree_sortable_info);
-    g_type_add_interface_static(gtype_,
-	EGG_TYPE_TREE_MULTI_DRAG_SOURCE, &egg_tree_multi_drag_source_info);
 
     return gtype_;
   }
@@ -291,35 +274,97 @@ public:
     return reinterpret_cast<TreeModel *>(g_object_new(gtype(), nullptr));
   }
 
-  // Drop(TreeModel *model, GtkSelectionData *data)
-  template <typename Drop>
-  void drag(GtkTreeView *view, GtkWidget *dest, Drop) {
-    // gtk_tree_view_set_rubber_banding(view, false);
-
+  // Drag(TreeModel *model, GList *rows, GtkSelectionData *data) -> gboolean
+  // Drop(TreeModel *model, GtkWidget *widget, GtkSelectionData *data)
+  template <typename Drag, typename Drop>
+  void drag(GtkTreeView *view, GtkWidget *dest, Drag, Drop) {
     gtk_drag_source_set(GTK_WIDGET(view),
 	GDK_BUTTON1_MASK,
 	rowsTargets(), nRowsTargets(),
 	GDK_ACTION_COPY);
 
-    egg_tree_multi_drag_add_drag_support(view);
-
-#if 0
     g_signal_connect(G_OBJECT(view), "drag-data-get",
 	ZGtk::callback([](GObject *o, GdkDragContext *,
-	    GtkSelectionData *data, guint, guint) {
+	    GtkSelectionData *data, guint, guint) -> gboolean {
 	  auto view = GTK_TREE_VIEW(o);
-	  g_return_if_fail(!!view);
+	  g_return_val_if_fail(!!view, false);
 	  auto sel = gtk_tree_view_get_selection(view);
-	  g_return_if_fail(!!sel);
+	  g_return_val_if_fail(!!sel, false);
 	  GtkTreeModel *model = nullptr;
 	  auto rows = gtk_tree_selection_get_selected_rows(sel, &model);
-	  g_return_if_fail(!!rows);
-	  g_return_if_fail(!!model);
-	  egg_tree_multi_drag_source_drag_data_get(
-	      EGG_TREE_MULTI_DRAG_SOURCE(model), rows, data);
+	  g_return_val_if_fail(!!rows, false);
+	  g_return_val_if_fail(!!model, false);
+	  return ZuLambdaFn<Drag>::invoke(impl(model), rows, data);
 	}), 0);
-#endif
+
+    g_signal_connect(G_OBJECT(view), "drag-end",
+	ZGtk::callback([](GtkWidget *widget,
+	    GdkEventButton *event, gpointer) {
+	  TreeModelDragData *dragData =
+	    reinterpret_cast<TreeModelDragData *>(
+		g_object_get_data(G_OBJECT(widget), typeName()));
+	  g_return_if_fail(!!dragData);
+	  dragEnd(widget, dragData);
+	}), 0);
  
+    g_signal_connect(G_OBJECT(view), "button-press-event",
+	ZGtk::callback([](GtkWidget *widget,
+	    GdkEventButton *event, gpointer) -> gboolean {
+	  auto view = GTK_TREE_VIEW(widget);
+	  g_return_val_if_fail(!!view, false);
+	  TreeModelDragData *dragData =
+	    reinterpret_cast<TreeModelDragData *>(
+		g_object_get_data(G_OBJECT(view), typeName()));
+	  if (!dragData) {
+	    dragData = new TreeModelDragData();
+	    g_object_set_data(G_OBJECT(view), typeName(), dragData);
+	  }
+	  if (g_list_find(dragData->events, event)) return false;
+	  if (dragData->events) {
+	    dragData->events = g_list_append(dragData->events,
+		gdk_event_copy(reinterpret_cast<GdkEvent *>(event)));
+	    return true;
+	  }
+	  if (event->type == GDK_2BUTTON_PRESS) return false;
+	  GtkTreePath *path = nullptr;
+	  GtkTreeViewColumn *column = nullptr;
+	  gint cell_x, cell_y;
+	  gtk_tree_view_get_path_at_pos(
+	      view, event->x, event->y, &path, &column, &cell_x, &cell_y);
+	  if (!path) return false;
+	  auto selection = gtk_tree_view_get_selection(view);
+	  bool drag = gtk_tree_selection_path_is_selected(selection, path);
+	  bool call_parent =
+	    !drag ||
+	    (event->state & (GDK_CONTROL_MASK | GDK_SHIFT_MASK)) ||
+	    event->button != 1;
+	  if (call_parent) {
+	    (GTK_WIDGET_GET_CLASS(view))->button_press_event(widget, event);
+	    drag = gtk_tree_selection_path_is_selected(selection, path);
+	  }
+	  if (drag) {
+	    if (!call_parent)
+	      dragData->events = g_list_append(dragData->events,
+		  gdk_event_copy((GdkEvent*)event));
+	    dragData->handler =
+	      g_signal_connect(G_OBJECT(view), "button-release-event",
+		  ZGtk::callback([](GtkWidget *widget,
+		      GdkEventButton *event, gpointer) -> gboolean {
+		    TreeModelDragData *dragData =
+		      reinterpret_cast<TreeModelDragData *>(
+			  g_object_get_data(G_OBJECT(widget), typeName()));
+		    g_return_val_if_fail(!!dragData, false);
+		    for (GList *l = dragData->events; l; l = l->next)
+		      gtk_propagate_event(widget,
+			  reinterpret_cast<GdkEvent *>(l->data));
+		    dragEnd(widget, dragData);
+		    return false;
+		  }), 0);
+	  }
+	  gtk_tree_path_free(path);
+	  return call_parent || drag;
+	}), 0);
+
     gtk_drag_dest_set(dest,
 	GTK_DEST_DEFAULT_ALL,
 	TreeModel::rowsTargets(), TreeModel::nRowsTargets(),
@@ -328,11 +373,26 @@ public:
     g_signal_connect(G_OBJECT(dest), "drag-data-received",
 	ZGtk::callback([](GtkWidget *widget, GdkDragContext *, int, int,
 	    GtkSelectionData *data, guint, guint32, gpointer model_) {
-	  ZuLambdaFn<Drop>::invoke(reinterpret_cast<T *>(model_), data);
+	  ZuLambdaFn<Drop>::invoke(reinterpret_cast<T *>(model_), widget, data);
 	  g_signal_stop_emission_by_name(widget, "drag-data-received");
-	}), reinterpret_cast<gpointer>(this));
+	}), this);
   }
 
+private:
+  static void dragEnd(GtkWidget *widget, TreeModelDragData *dragData) {
+    for (GList *l = dragData->events; l; l = l->next)
+      gdk_event_free(reinterpret_cast<GdkEvent *>(l->data));
+    if (dragData->events) {
+      g_list_free(dragData->events);
+      dragData->events = nullptr;
+    }
+    if (dragData->handler) {
+      g_signal_handler_disconnect(widget, dragData->handler);
+      dragData->handler = 0;
+    }
+  }
+
+public:
   void view(GtkTreeView *view) {
     gtk_tree_view_set_model(view, GTK_TREE_MODEL(this));
     g_object_unref(this); // view now owns model

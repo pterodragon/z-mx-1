@@ -36,6 +36,8 @@
 
 #include <gtk/gtk.h>
 
+#include <zlib/ZmPLock.hpp>
+
 #include <zlib/ZGtkApp.hpp>
 #include <zlib/ZGtkValue.hpp>
 
@@ -44,7 +46,7 @@ namespace ZGtk {
 // CRTP - implementation must conform to the following interface:
 #if 0
 struct App : public TreeModel<App> {
-  GtkTreeModelFlags get_flags(); 
+  GtkTreeModelFlags get_flags();
   gint get_n_columns();
   GType get_column_type(gint i);
   gboolean get_iter(GtkTreeIter *iter, GtkTreePath *path);
@@ -59,15 +61,6 @@ struct App : public TreeModel<App> {
 
   gboolean get_sort_column_id(gint *column, GtkSortType *order);
   void set_sort_column_id(gint column, GtkSortType order);
-  void set_sort_func(
-      gint column, GtkTreeIterCompareFunc fn,
-      gpointer user_data, GDestroyNotify destroy);
-  void set_default_sort_func(
-      GtkTreeIterCompareFunc fn, gpointer user_data, GDestroyNotify destroy);
-  gboolean has_default_sort_func();
-
-  gboolean drag_data_get(GList *path_list, GtkSelectionData *data);
-  gboolean drag_data_delete(GList *path_list);
 };
 #endif
 
@@ -202,7 +195,6 @@ private:
 	  g_return_val_if_fail(!!child, false);
 	  return impl(m)->iter_parent(iter, child);
 	};
-#if 0
 	i->ref_node = [](GtkTreeModel *m, GtkTreeIter *iter) {
 	  g_return_if_fail(G_TYPE_CHECK_INSTANCE_TYPE((m), gtype()));
 	  g_return_if_fail(!!iter);
@@ -213,7 +205,6 @@ private:
 	  g_return_if_fail(!!iter);
 	  return impl(m)->unref_node(iter);
 	};
-#endif
       },
       nullptr,
       nullptr
@@ -232,21 +223,8 @@ private:
 	  g_return_if_fail(G_TYPE_CHECK_INSTANCE_TYPE((s), gtype()));
 	  impl(s)->set_sort_column_id(column, order);
 	};
-	i->set_sort_func = [](GtkTreeSortable *s,
-	    gint column, GtkTreeIterCompareFunc fn,
-	    gpointer user_data, GDestroyNotify destroy) {
-	  g_return_if_fail(G_TYPE_CHECK_INSTANCE_TYPE((s), gtype()));
-	  impl(s)->set_sort_func(column, fn, user_data, destroy);
-	};
-	i->set_default_sort_func = [](GtkTreeSortable *s,
-	    GtkTreeIterCompareFunc fn,
-	    gpointer user_data, GDestroyNotify destroy) {
-	  g_return_if_fail(G_TYPE_CHECK_INSTANCE_TYPE((s), gtype()));
-	  impl(s)->set_default_sort_func(fn, user_data, destroy);
-	};
 	i->has_default_sort_func = [](GtkTreeSortable *s) -> gboolean {
-	  g_return_val_if_fail(G_TYPE_CHECK_INSTANCE_TYPE((s), gtype()), false);
-	  return impl(s)->has_default_sort_func();
+	  return false;
 	};
       },
       nullptr,
@@ -274,6 +252,8 @@ public:
     return reinterpret_cast<TreeModel *>(g_object_new(gtype(), nullptr));
   }
 
+  // multiple row drag-and-drop support
+  //
   // Drag(TreeModel *model, GList *rows, GtkSelectionData *data) -> gboolean
   // Drop(TreeModel *model, GtkWidget *widget, GtkSelectionData *data)
   template <typename Drag, typename Drop>
@@ -289,10 +269,10 @@ public:
 	  auto view = GTK_TREE_VIEW(o);
 	  g_return_val_if_fail(!!view, false);
 	  auto sel = gtk_tree_view_get_selection(view);
-	  g_return_val_if_fail(!!sel, false);
+	  if (!sel) return false;
 	  GtkTreeModel *model = nullptr;
 	  auto rows = gtk_tree_selection_get_selected_rows(sel, &model);
-	  g_return_val_if_fail(!!rows, false);
+	  if (!rows) return false;
 	  g_return_val_if_fail(!!model, false);
 	  return ZuLambdaFn<Drag>::invoke(impl(model), rows, data);
 	}), 0);
@@ -377,7 +357,6 @@ public:
 	  g_signal_stop_emission_by_name(widget, "drag-data-received");
 	}), this);
   }
-
 private:
   static void dragEnd(GtkWidget *widget, TreeModelDragData *dragData) {
     for (GList *l = dragData->events; l; l = l->next)
@@ -407,65 +386,20 @@ public:
   void set_sort_column_id(gint column, GtkSortType order) {
     return;
   }
-  void set_sort_func(
-      gint column, GtkTreeIterCompareFunc fn,
-      gpointer user_data, GDestroyNotify destroy) {
-    return;
-  }
-  void set_default_sort_func(
-      GtkTreeIterCompareFunc fn, gpointer user_data, GDestroyNotify destroy) {
-    return;
-  }
-  gboolean has_default_sort_func() {
-    return false;
-  }
-};
-
-struct TreeSortFn {
-  TreeSortFn() = default;
-  TreeSortFn(
-      GtkTreeIterCompareFunc fn_, gpointer userData_, GDestroyNotify dtor_) :
-      fn{fn_}, userData{userData_}, dtor{dtor_} { }
-  ~TreeSortFn() { if (userData && dtor) dtor(userData); }
-  TreeSortFn(const TreeSortFn &) = delete;
-  TreeSortFn &operator =(const TreeSortFn &) = delete;
-  TreeSortFn(TreeSortFn &&o) : fn(o.fn), userData(o.userData), dtor(o.dtor) {
-    o.dtor = nullptr;
-  }
-  TreeSortFn &operator =(TreeSortFn &&o) {
-    fn = o.fn;
-    userData = o.userData;
-    dtor = o.dtor;
-    o.dtor = nullptr;
-    return *this;
-  }
-
-  ZuInline gint operator()(
-      GtkTreeModel *model, GtkTreeIter *a, GtkTreeIter *b) const {
-    return fn(model, a, b, userData);
-  }
-
-  ZuInline bool operator !() const { return !fn; }
-  ZuOpBool
-
-  GtkTreeIterCompareFunc	fn = nullptr;
-  gpointer			userData = nullptr;
-  GDestroyNotify		dtor = nullptr;
 };
 
 template <
   typename T,
-  unsigned N,
   int DefaultCol = GTK_TREE_SORTABLE_UNSORTED_SORT_COLUMN_ID,
   int DefaultOrder = GTK_SORT_ASCENDING>
-class SortableTreeModel : public TreeModel<T> {
+class TreeSortable : public TreeModel<T> {
 private:
   T *impl() { return static_cast<T *>(this); }
 
 public:
-  gboolean get_sort_column_id(gint *col_, GtkSortType *order_) {
-    if (col_) *col_ = col;
-    if (order_) *order_ = order;
+  gboolean get_sort_column_id(gint *col, GtkSortType *order) {
+    if (col) *col = m_col;
+    if (order) *order = m_order;
     switch ((int)col) {
       case GTK_TREE_SORTABLE_DEFAULT_SORT_COLUMN_ID:
       case GTK_TREE_SORTABLE_UNSORTED_SORT_COLUMN_ID:
@@ -474,81 +408,159 @@ public:
 	return true;
     }
   }
-  void set_sort_column_id(gint col_, GtkSortType order_) {
-    if (ZuUnlikely(col == col_ && order == order_)) return;
+  void set_sort_column_id(gint col, GtkSortType order) {
+    if (ZuUnlikely(m_col == col && m_order == order)) return;
 
-    col = col_;
-    order = order_;
+    m_col = col;
+    m_order = order;
 
     // emit gtk_tree_sortable_sort_column_changed()
     gtk_tree_sortable_sort_column_changed(GTK_TREE_SORTABLE(this));
 
-    const TreeSortFn *fn = &colFn[col];
-
-    if (!*fn) fn = &defaultFn;
-
-    impl()->sort(col, order, *fn);
-  }
-  void set_sort_func(
-      gint col, GtkTreeIterCompareFunc fn,
-      gpointer userData, GDestroyNotify dtor) {
-    colFn[col] = TreeSortFn{fn, userData, dtor};
-  }
-  void set_default_sort_func(
-      GtkTreeIterCompareFunc fn, gpointer userData, GDestroyNotify dtor) {
-    defaultFn = TreeSortFn{fn, userData, dtor};
-  }
-  gboolean has_default_sort_func() {
-    return !!defaultFn;
+    impl()->sort(m_col, m_order);
   }
 
-  gint		col = DefaultCol;
-  GtkSortType	order = static_cast<GtkSortType>(DefaultOrder);
-  TreeSortFn	defaultFn;
-  TreeSortFn	colFn[N];
+private:
+  gint		m_col = DefaultCol;
+  GtkSortType	m_order = static_cast<GtkSortType>(DefaultOrder);
 };
 
-// wrapper for GtkTreeIter
-template <typename T>
-class TreeIter : public GtkTreeIter {
-  ZuAssert(sizeof(T) < 3 * sizeof(gpointer));
+/*
+// called by view
+load(initial load into array) - returns sort col, sort order, number of rows and lambda iterator []() -> noderef
+// sort col / sort order can be unsorted
+sort(node1, node2, col) // called by qsort
+index(node, gint i) // set row#
+gint index(node) // get row# - used to build reordered[]
+template <typename S> print(node, col, S &s) -> s << value
+
+// also permit add/mod/del by view
+
+// called by model
+del(node, gint i) // delete node/row#
+gint add(node) // insert/append node - returns row# (based on sorting)
+
+
+// note - most of this can be done with auto fields = node->fields();
+// fields[i].id, fields[i].print, fields[i].scan, etc.
+// also need a create() to create a new (blank) node to be filled
+// in by view
+
+*/
+
+
+// CRTP - implementation must conform to the following interface:
+#if 0
+struct App : public TreeArray<App, NodeRef> {
+  // Count(unsigned)
+  // Iterate(NodeRef)
+  template <typename Count, typename Iterate>
+  void load(Count count, Iterate iterate);
+  Data *data(Node *node);
+  gint row(Node *node);
+  void row(Node *node, gint v);
+  const ZvFieldFmt &fmt(unsigned col);
+};
+#endif
+template <
+  typename T,
+  typename Data,
+  typename NodeRef>
+class TreeArray : public TreeSortable<TreeArray> {
+  const NodeRef &nodeRef_();
+  using Node = decltype(*nodeRef_());
+
+private:
+  T *impl() { return static_cast<T *>(this); }
+  const T *impl() { return static_cast<const T *>(this); }
 
 public:
-  TreeIter() : GtkTreeIter{0} { }
-  TreeIter(TreeIter &&o) : GtkTreeIter{o.stamp} {
-    new (&user_data) T{ZuMv(o.data())};
+  void init(GtkTreePath *path) {
+    if (!path) { m_path.null(); return; }
+    m_path.length(gtk_tree_path_get_depth(path));
+    memcpy(&m_path[0], gtk_tree_path_get_indices(path),
+	m_path.length() * sizeof(gint));
   }
-  TreeIter &operator =(TreeIter &&o) {
-    if (stamp) data().~T();
-    stamp = o.stamp;
-    new (&user_data) T{ZuMv(o.data())};
+  void load(gint col, GtkSortType order) {
+    this->set_sort_column_id(col, order);
+    impl()->load(
+	[this](unsigned count) { m_rows.size(count); },
+	[this](NodeRef node) { m_rows.push(ZuMv(node)); });
   }
-  ~TreeIter() {
-    if (stamp) data().~T();
+  GtkTreeModelFlags get_flags() {
+    return static_cast<GtkTreeModelFlags>(
+	GTK_TREE_MODEL_LIST_ONLY | GTK_TREE_MODEL_ITERS_PERSIST);
+  }
+  gint get_n_columns() {
+    auto fields = Data::fields();
+    return fields.length();
+  }
+  GType get_column_type(gint i) {
+    return G_TYPE_STRING;
+  }
+  gboolean get_iter(GtkTreeIter *iter, GtkTreePath *path) {
+    gint depth = gtk_tree_path_get_depth(path);
+    if (depth <= m_path.length()) return false;
+    gint *indices = gtk_tree_path_get_indices(path);
+    auto row = indices[m_path.length()];
+    iter->user_data = reinterpret_cast<gpointer>(static_cast<uintptr_t>(row));
+  }
+  GtkTreePath *get_path(GtkTreeIter *iter) {
+    GtkTreePath *path = gtk_tree_path_new();
+    for (unsigned i = 0, n = m_path.length(); i < n; i++)
+      gtk_tree_path_append_index(path, m_path[i]);
+    gtk_tree_path_append_index(path, (uintptr_t)iter->user_data);
+    return path;
+  }
+  void get_value(GtkTreeIter *iter, gint col, Value *value) {
+    gint row = (uintptr_t)iter->user_data;
+    if (ZuUnlikely(row >= m_rows.length())) return;
+    auto fields = Data::fields();
+    static ZtString s; // ok - this is single-threaded
+    fields[col].print(s, impl()->data(m_rows[row]), impl()->fmt(col));
+    value->init(G_TYPE_STRING);
+    value->set_static_string(s);
+  }
+  gboolean iter_next(GtkTreeIter *iter) {
+    gint row = (uintptr_t)iter->user_data;
+    if (ZuUnlikely(++row >= m_rows.length())) return false;
+    iter->user_data = reinterpret_cast<gpointer>(static_cast<uintptr_t>(row));
+  }
+  gboolean iter_children(GtkTreeIter *iter, GtkTreeIter *parent) {
+    if (parent) return false;
+    iter->user_data = 0;
+    return true;
+  }
+  gboolean iter_has_child(GtkTreeIter *iter) {
+    return !iter;
+  }
+  gint iter_n_children(GtkTreeIter *iter) {
+    return iter ? 0 : static_cast<gint>(m_rows.length());
+  }
+  gboolean iter_nth_child(GtkTreeIter *iter, GtkTreeIter *parent, gint row) {
+    if (parent) return false;
+    iter->user_data = reinterpret_cast<gpointer>(static_cast<uintptr_t>(row));
+    return true;
+  }
+  gboolean iter_parent(GtkTreeIter *iter, GtkTreeIter *child) {
+    return false;
   }
 
-  template <typename ...Args>
-  TreeIter(void *model, Args &&... args) :
-      GtkTreeIter{(gint)(uintptr_t)model} {
-    new (&user_data) T{ZuFwd<Args>(args)...};
-  }
-
-  bool valid(void *model) {
-    return stamp == (gint)(uintptr_t)model;
-  }
-
-  ZuInline static T &data(GtkTreeIter *iter) {
-    T *ZuMayAlias(ptr) = reinterpret_cast<T *>(&iter->user_data);
-    return *ptr;
-  }
-  ZuInline static T *ptr(GtkTreeIter *iter) {
-    T *ZuMayAlias(ptr) = reinterpret_cast<T *>(&iter->user_data);
-    return ptr;
-  }
-
-  ZuInline T &data() { return data(this); }
-  ZuInline T *ptr() { return ptr(this); }
+private:
+  ZtArray<gint>		m_path;
+  ZtArray<NodeRef>	m_rows;
 };
+
+
+// FIXME - need a tree model that is an array of node refs,
+// that can be resorted independent of the underlying container's
+// primary key sorting
+//
+// array[index] -> node
+// node->index() -> array offset (used to build reordered array
+// following re-sort, and to delete nodes)
+//
+// GtkTreeIter contains index and ptr to array
 
 } // ZGtk
 

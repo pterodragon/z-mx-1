@@ -81,23 +81,32 @@ template <typename T> struct ZvField {
   const char	*id;
   uint32_t	type;		// ZvFieldType
   uint32_t	flags;		// ZvFieldFlags
+  int		(*cmp)(const T *, const T *);
   void		(*print)(ZmStream &, const T *, const ZvFieldFmt &);
   void		(*scan)(ZuString, T *, const ZvFieldFmt &);
   double	(*scalar)(const T *) = nullptr;
 };
 
+#define ZvFieldCmp_(get, set) \
+    [](const T *o1, const T *o2) { \
+      return ZuCmp<decltype(get(o1, member))>::cmp( \
+	  get(o1, member), get(o2, member)); }
+
 #define ZvFieldString_(T, id, flags, member, get, set) \
   { #id, ZvFieldType::String, flags, \
+    ZvFieldCmp_(get, set), \
     [](ZmStream &s, const T *o, const ZvFieldFmt &) { s << get(o, member); }, \
     [](ZuString s, T *o, const ZvFieldFmt &) { set(o, member, s); } }
 #define ZvFieldBool_(T, id, flags, member, get, set) \
   { #id, ZvFieldType::Bool, flags, \
+    ZvFieldCmp_(get, set), \
     [](ZmStream &s, const T *o, const ZvFieldFmt &) { \
       s << (get(o, member) ? '1' : '0'); }, \
     [](ZuString s, T *o, const ZvFieldFmt &) { \
       set(o, member, (s && s.length() == 1 && s[0] == '1')); } }
 #define ZvFieldScalar_(T_, id, flags, member, get, set) \
   { #id, ZvFieldType::Scalar, flags, \
+    ZvFieldCmp_(get, set), \
     [](ZmStream &s, const T_ *o, const ZvFieldFmt &fmt) { \
       s << ZuBoxed(get(o, member)).vfmt(fmt.scalar); }, \
     [](ZuString s, T_ *o, const ZvFieldFmt &) { \
@@ -106,6 +115,7 @@ template <typename T> struct ZvField {
     [](const T_ *o) { return (double)get(o, member); } }
 #define ZvFieldHex_(T_, id, flags, member, get, set) \
   { #id, ZvFieldType::Hex, flags, \
+    ZvFieldCmp_(get, set), \
     [](ZmStream &s, const T_ *o, const ZvFieldFmt &fmt) { \
       s << ZuBoxed(get(o, member)).hex(); }, \
     [](ZuString s, T_ *o, const ZvFieldFmt &) { \
@@ -113,12 +123,14 @@ template <typename T> struct ZvField {
       set(o, member, (typename ZuBoxT<V>::T{ZuFmt::Hex<>{}, s})); } }
 #define ZvFieldEnum_(T, id, flags, map, member, get, set) \
   { #id, ZvFieldType::Enum, flags, \
+    ZvFieldCmp_(get, set), \
     [](ZmStream &s, const T *o, const ZvFieldFmt &) { \
       s << map::instance()->v2s(get(o, member)); }, \
     [](ZuString s, T *o, const ZvFieldFmt &) { \
       set(o, member, (map::instance()->s2v(s))); } }
 #define ZvFieldFlags_(T_, id, flags, map, member, get, set) \
   { #id, ZvFieldType::Flags, flags, \
+    ZvFieldCmp_(get, set), \
     [](ZmStream &s, const T_ *o, const ZvFieldFmt &fmt) { \
       map::instance()->print(s, get(o, member), fmt.flagsDelim); }, \
     [](ZuString s, T_ *o, const ZvFieldFmt &fmt) { \
@@ -126,32 +138,21 @@ template <typename T> struct ZvField {
       set(o, member, (map::instance()->scan<V>(s, fmt.flagsDelim))); } }
 #define ZvFieldTime_(T, id, flags, member, get, set) \
   { #id, ZvFieldType::Time, flags, \
+    ZvFieldCmp_(get, set), \
     [](ZmStream &s, const T *o, const ZvFieldFmt &fmt) { \
       switch (fmt.time.type()) { \
 	default: \
-	case 1: \
-	  s << get(o, member).csv(fmt.time.csv()); \
-	  break; \
-	case 2: \
-	  s << get(o, member).fix(fmt.time.fix()); \
-	  break; \
-	case 3: \
-	  s << get(o, member).iso(fmt.time.iso()); \
-	  break; \
+	case 1: s << get(o, member).csv(fmt.time.csv()); break; \
+	case 2: s << get(o, member).fix(fmt.time.fix()); break; \
+	case 3: s << get(o, member).iso(fmt.time.iso()); break; \
       } \
     }, \
     [](ZuString s, T *o, const ZvFieldFmt &fmt) { \
       switch (fmt.time.type()) { \
 	default: \
-	case 1: \
-	  set(o, member, (ZtDate{ZtDate::CSV, s})); \
-	  break; \
-	case 2: \
-	  set(o, member, (ZtDate{ZtDate::FIX, s})); \
-	  break; \
-	case 3: \
-	  set(o, member, (ZtDate{s})); \
-	  break; \
+	case 1: set(o, member, (ZtDate{ZtDate::CSV, s})); break; \
+	case 2: set(o, member, (ZtDate{ZtDate::FIX, s})); break; \
+	case 3: set(o, member, (ZtDate{s})); break; \
       } \
     } }
 

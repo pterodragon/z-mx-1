@@ -407,13 +407,13 @@ public:
   template <typename Heap>
   using Node_ = ZmKVNode<Heap, NodeIsKey, NodeIsVal, NodeFn, Key, Val>;
   struct NullHeap { }; // deconflict with ZuNull
-  typedef ZmHeap<HeapID, sizeof(Node_<NullHeap>)> NodeHeap;
-  typedef Node_<NodeHeap> Node;
-  typedef typename Node::Fn Fn;
+  using NodeHeap = ZmHeap<HeapID, sizeof(Node_<NullHeap>)>;
+  using Node = Node_<NodeHeap>;
+  using Fn = typename Node::Fn;
 
-  typedef typename ZuIf<ZmRef<Node>, Node *, ZuIsObject_<Object>::OK>::T
-    NodeRef;
-  typedef Node *NodePtr;
+  using NodeRef =
+    typename ZuIf<ZmRef<Node>, Node *, ZuIsObject_<Object>::OK>::T;
+  using NodePtr = Node *;
 
 private:
   // in order to support both intrusively reference-counted and plain node

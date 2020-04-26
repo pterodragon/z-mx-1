@@ -38,8 +38,8 @@
 #include <zlib/ZuNull.hpp>
 #include <zlib/ZuConversion.hpp>
 #include <zlib/ZuPrint.hpp>
+#include <zlib/ZuString.hpp>
 
-// SFINAE...
 struct ZuPair_ { };
 
 template <typename T, typename P, bool IsPair> struct ZuPair_Cvt_;
@@ -77,6 +77,59 @@ template <typename U0, typename U1>
 struct ZuPair_Type_<0, U0, U1> { using T = U0; };
 template <typename U0, typename U1>
 struct ZuPair_Type_<1, U0, U1> { using T = U1; };
+
+template <typename U0, typename U1> struct ZuPair_Print_ {
+  ZuPair_Print_() = delete;
+  ZuPair_Print_(const ZuPair_Print_ &) = delete;
+  ZuPair_Print_ &operator =(const ZuPair_Print_ &) = delete;
+  ZuPair_Print_(ZuPair_Print_ &&) = delete;
+  ZuPair_Print_ &operator =(ZuPair_Print_ &&) = delete;
+  ZuPair_Print_(const U0 &p0_, const U1 &p1_, const ZuString &delim_) :
+      p0{p0_}, p1{p1_}, delim{delim_} { }
+  const U0		&p0;
+  const U1		&p1;
+  const ZuString	&delim;
+};
+template <typename U0, typename U1, bool LeftPair, bool RightPair>
+struct ZuPair_Print;
+template <typename U0, typename U1>
+struct ZuPair_Print<U0, U1, false, false> :
+  public ZuPair_Print_<U0, U1>, public ZuPrintable {
+  ZuPair_Print(const U0 &p0, const U1 &p1, const ZuString &delim) :
+      ZuPair_Print_<U0, U1>{p0, p1, delim} { }
+  template <typename S> void print(S &s) const {
+    s << this->p0 << this->delim << this->p1;
+  }
+};
+template <typename U0, typename U1>
+struct ZuPair_Print<U0, U1, false, true> :
+  public ZuPair_Print_<U0, U1>, public ZuPrintable {
+  ZuPair_Print(const U0 &p0, const U1 &p1, const ZuString &delim) :
+      ZuPair_Print_<U0, U1>{p0, p1, delim} { }
+  template <typename S> void print(S &s) const {
+    s << this->p0 << this->delim << this->p1.print(this->delim);
+  }
+};
+template <typename U0, typename U1>
+struct ZuPair_Print<U0, U1, true, false> :
+  public ZuPair_Print_<U0, U1>, public ZuPrintable {
+  ZuPair_Print(const U0 &p0, const U1 &p1, const ZuString &delim) :
+      ZuPair_Print_<U0, U1>{p0, p1, delim} { }
+  template <typename S> void print(S &s) const {
+    s << this->p0.print(this->delim) << this->delim << this->p1;
+  }
+};
+template <typename U0, typename U1>
+struct ZuPair_Print<U0, U1, true, true> :
+  public ZuPair_Print_<U0, U1>, public ZuPrintable {
+  ZuPair_Print(const U0 &p0, const U1 &p1, const ZuString &delim) :
+      ZuPair_Print_<U0, U1>{p0, p1, delim} { }
+  template <typename S> void print(S &s) const {
+    s <<
+      this->p0.print(this->delim) << this->delim <<
+      this->p1.print(this->delim);
+  }
+};
 
 template <typename T0_, typename T1_> class ZuPair : public ZuPair_ {
   template <typename, typename> friend class ZuPair;
@@ -214,6 +267,15 @@ public:
   ZuInline typename ZuIfT<I == 1, ZuPair &>::T p(P &&p) {
     m_p1 = ZuFwd<P>(p);
     return *this;
+  }
+
+  using Print = ZuPair_Print<U0, U1,
+	ZuConversion<ZuPair_, U0>::Base, ZuConversion<ZuPair_, U1>::Base>;
+  ZuInline Print print() const {
+    return Print{m_p0, m_p1, "|"};
+  }
+  ZuInline Print print(const ZuString &delim) const {
+    return Print{m_p0, m_p1, delim};
   }
 
 private:

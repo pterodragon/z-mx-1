@@ -41,13 +41,12 @@ int main(int argc, char **argv)
   app.detach();
 }
 
-struct TreeModel : public ZGtk::SortableTreeModel<TreeModel, 1> {
+struct TreeModel : public ZGtk::TreeModelSortable<TreeModel, 1> {
   ~TreeModel() { }
 
-  struct Iter_ {
-    gint index;
-  };
-  using Iter = ZGtk::TreeIter<Iter_>;
+  struct Iter { gint index; };
+
+  ZuAssert(sizeof(Iter) < sizeof(GtkTreeIter));
 
   GtkTreeModelFlags get_flags() {
     return static_cast<GtkTreeModelFlags>(
@@ -62,14 +61,13 @@ struct TreeModel : public ZGtk::SortableTreeModel<TreeModel, 1> {
     if (indices[0] < 0 || indices[0] > 9) return false;
     auto index = indices[0];
     if (m_order != GTK_SORT_ASCENDING) index = 9 - index;
-    new (iter) Iter{this, index};
+    new (iter) Iter{index};
     return true;
   }
   GtkTreePath *get_path(GtkTreeIter *iter_) {
     auto iter = reinterpret_cast<Iter *>(iter_);
-    g_return_val_if_fail(iter->valid(this), nullptr);
     GtkTreePath *path;
-    auto index = iter->data().index;
+    auto index = iter->index;
     path = gtk_tree_path_new();
     if (m_order != GTK_SORT_ASCENDING) index = 9 - index;
     gtk_tree_path_append_index(path, index);
@@ -77,15 +75,13 @@ struct TreeModel : public ZGtk::SortableTreeModel<TreeModel, 1> {
   }
   void get_value(GtkTreeIter *iter_, gint i, ZGtk::Value *value) {
     auto iter = reinterpret_cast<Iter *>(iter_);
-    g_return_if_fail(iter->valid(this));
-    auto index = iter->data().index;
+    auto index = iter->index;
     value->init(G_TYPE_LONG);
     value->set_long(index * index);
   }
   gboolean iter_next(GtkTreeIter *iter_) {
     auto iter = reinterpret_cast<Iter *>(iter_);
-    g_return_val_if_fail(iter->valid(this), false);
-    auto &index = iter->data().index;
+    auto &index = iter->index;
     if (m_order != GTK_SORT_ASCENDING) {
       if (!index) return false;
       --index;
@@ -98,42 +94,39 @@ struct TreeModel : public ZGtk::SortableTreeModel<TreeModel, 1> {
   gboolean iter_children(GtkTreeIter *iter, GtkTreeIter *parent_) {
     if (parent_) {
       // auto parent = reinterpret_cast<Iter *>(parent_);
-      // g_return_val_if_fail(parent->valid(this), false);
       return false;
     }
-    new (iter) Iter{this, 0};
+    new (iter) Iter{0};
     return true;
   }
   gboolean iter_has_child(GtkTreeIter *iter_) {
     if (!iter_) return true;
     // auto iter = reinterpret_cast<Iter *>(iter_);
-    // g_return_val_if_fail(iter->valid(this), false);
     return false;
   }
   gint iter_n_children(GtkTreeIter *iter_) {
     if (!iter_) return 10;
     // auto iter = reinterpret_cast<Iter *>(iter_);
-    // g_return_val_if_fail(iter->valid(this), 0);
     return 0;
   }
   gboolean iter_nth_child(GtkTreeIter *iter, GtkTreeIter *parent_, gint n) {
     if (parent_) {
       // auto parent = reinterpret_cast<Iter *>(parent_);
-      // g_return_val_if_fail(parent->valid(this), false);
       return false;
     }
-    new (iter) Iter{this, n};
+    new (iter) Iter{n};
     return true;
   }
   gboolean iter_parent(GtkTreeIter *iter, GtkTreeIter *child_) {
     // if (!child_) return false;
     // auto child = reinterpret_cast<Iter *>(child_);
-    // g_return_val_if_fail(child->valid(this), false);
     return false;
   }
+  void ref_node(GtkTreeIter *) { }
+  void unref_node(GtkTreeIter *) { }
 
   bool m_order = GTK_SORT_ASCENDING;
-  void sort(gint col, GtkSortType order, const ZGtk::TreeSortFn &) {
+  void sort(gint col, GtkSortType order) { // , const ZGtk::TreeSortFn &
     if (m_order == order) return;
     m_order = order;
     // emit gtk_tree_model_rows_reordered()
@@ -170,83 +163,82 @@ void start()
   auto watchlist = GTK_TREE_VIEW(gtk_builder_get_object(builder, "watchlist"));
   auto model = TreeModel::ctor();
 
-#if 0
-  gtk_tree_sortable_set_default_sort_func(GTK_TREE_SORTABLE(model),
-      [](GtkTreeModel *, GtkTreeIter *a, GtkTreeIter *b, gpointer) -> gint {
-	return (int)(uintptr_t)a->user_data - (int)(uintptr_t)b->user_data;
-      }, nullptr, nullptr);
-#endif
-
-#if 0
-  gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(model),
-      // GTK_TREE_SORTABLE_DEFAULT_SORT_COLUMN_ID,
-      0,
-      GTK_SORT_ASCENDING);
-#endif
-
   // the cell, column and view all need to be referenced together
   // by a containing application view object, and unref'd in reverse
   // order in the dtor
 
-  auto col = gtk_tree_view_column_new();
-  gtk_tree_view_column_set_title(col, "number");
+  auto addCol = [&](bool reverse) {
+    auto col = gtk_tree_view_column_new();
+    gtk_tree_view_column_set_title(col, "number");
 
-  auto cell = gtk_cell_renderer_text_new();
-  gtk_tree_view_column_pack_start(col, cell, true);
+    auto cell = gtk_cell_renderer_text_new();
+    gtk_tree_view_column_pack_start(col, cell, true);
 
-  gtk_tree_view_column_set_cell_data_func(
-      col, cell, [](
-	  GtkTreeViewColumn *col, GtkCellRenderer *cell,
-	  GtkTreeModel *model, GtkTreeIter *iter, gpointer) {
-	static const gchar *props[] = {
-	  "text", "background-rgba", "foreground-rgba"
-	};
-	static ZGtk::Value values[3];
-	static bool init = true;
-	if (init) {
-	  init = false;
-	  values[0].init(G_TYPE_STRING);
-	  values[1].init(GDK_TYPE_RGBA);
-	  values[2].init(GDK_TYPE_RGBA);
-	}
+    gtk_tree_view_column_set_cell_data_func(
+	col, cell, [](
+	    GtkTreeViewColumn *col, GtkCellRenderer *cell,
+	    GtkTreeModel *model, GtkTreeIter *iter, gpointer reverse) {
+	  static const gchar *props[] = {
+	    "text", "background-rgba", "foreground-rgba"
+	  };
+	  static ZGtk::Value values[3];
+	  static bool init = true;
+	  if (init) {
+	    init = false;
+	    values[0].init(G_TYPE_STRING);
+	    values[1].init(GDK_TYPE_RGBA);
+	    values[2].init(GDK_TYPE_RGBA);
+	  }
 
-	gint i;
-	{
-	  GtkTreePath *path = gtk_tree_model_get_path(model, iter);
-	  gint *indices = gtk_tree_path_get_indices(path);
-	  i = indices[0];
-	  gtk_tree_path_free(path);
-	}
+	  gint i;
+	  {
+	    GtkTreePath *path = gtk_tree_model_get_path(model, iter);
+	    gint *indices = gtk_tree_path_get_indices(path);
+	    i = indices[0];
+	    gtk_tree_path_free(path);
+	  }
 
-	gint j;
-	{
-	  ZGtk::Value value;
-	  gtk_tree_model_get_value(model, iter, 0, &value);
-	  j = value.get_long();
-	}
+	  gint j;
+	  {
+	    ZGtk::Value value;
+	    gtk_tree_model_get_value(model, iter, 0, &value);
+	    j = value.get_long();
+	  }
 
-	{
-	  static ZuStringN<24> text;
-	  text.null(); text << j;
-	  values[0].set_static_string(text);
-	}
-	{
-	  static GdkRGBA bg = { 0.0, 0.0, 0.0, 1.0 };
-	  bg.red = (gdouble)i / (gdouble)9;
-	  bg.blue = (gdouble)(9 - i) / (gdouble)9;
-	  values[1].set_static_boxed(&bg);
-	}
-	{
-	  static GdkRGBA fg = { 1.0, 1.0, 1.0, 1.0 };
-	  values[2].set_static_boxed(&fg);
-	}
+	  {
+	    static ZuStringN<24> text;
+	    text.null(); text << j;
+	    values[0].set_static_string(text);
+	  }
+	  {
+	    static GdkRGBA bg = { 0.0, 0.0, 0.0, 1.0 };
+	    if (reverse) {
+	      bg.red = (gdouble)i / (gdouble)9;
+	      bg.blue = (gdouble)(9 - i) / (gdouble)9;
+	    } else {
+	      bg.red = (gdouble)(9 - i) / (gdouble)9;
+	      bg.blue = (gdouble)i / (gdouble)9;
+	    }
+	    values[1].set_static_boxed(&bg);
+	  }
+	  {
+	    static GdkRGBA fg = { 1.0, 1.0, 1.0, 1.0 };
+	    values[2].set_static_boxed(&fg);
+	  }
 
-	g_object_setv(G_OBJECT(cell), 3, props, values);
-      }, nullptr, nullptr);
+	  g_object_setv(G_OBJECT(cell), 3, props, values);
+	}, (gpointer)(uintptr_t)reverse, nullptr);
 
-  gtk_tree_view_column_set_sort_column_id(col, 0);
+    // makes column sortable, and causes model->sort(0, order) to be called
+    gtk_tree_view_column_set_sort_column_id(col, 0);
 
-  gtk_tree_view_append_column(GTK_TREE_VIEW(view), col);
+    gtk_tree_view_column_set_reorderable(col, true);
+
+    gtk_tree_view_append_column(GTK_TREE_VIEW(view), col);
+  };
+
+  addCol(false);
+  addCol(true);
 
   model->drag(view, GTK_WIDGET(watchlist),
       [](TreeModel *model, GList *rows, GtkSelectionData *data) -> gboolean {

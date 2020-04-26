@@ -217,7 +217,7 @@ public:
 protected:
   Tree	&m_tree;
   Node	*m_node;
-  Node	*m_last;
+  Node	*m_last;	// FIXME - remove this; only needed for i.del(), which can be replaced by i.del(last) in all callers; need to make equivalent changes to other containers
 };
 
 template <typename Tree_, int Direction_ = ZmRBTreeGreaterEqual>

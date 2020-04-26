@@ -37,20 +37,20 @@
 
 template <typename ...Args> class ZuTuple;
 
-struct ZuTuple0_ { };
+struct ZuTuple1_ { }; // tuple containing single value
 
-template <typename T, typename P, bool IsTuple0> struct ZuTuple0_Cvt_;
-template <typename T, typename P> struct ZuTuple0_Cvt_<T, P, 0> {
+template <typename T, typename P, bool IsTuple0> struct ZuTuple1_Cvt_;
+template <typename T, typename P> struct ZuTuple1_Cvt_<T, P, 0> {
   enum { OK = 0 };
 };
-template <typename T, typename P> struct ZuTuple0_Cvt_<T, P, 1> {
+template <typename T, typename P> struct ZuTuple1_Cvt_<T, P, 1> {
   enum {
     OK = ZuConversion<typename T::T0, typename P::T0>::Exists
   };
 };
-template <typename T, typename P> struct ZuTuple0_Cvt :
-  public ZuTuple0_Cvt_<typename ZuDeref<T>::T, P,
-    ZuConversion<ZuTuple0_, typename ZuDeref<T>::T>::Base> { };
+template <typename T, typename P> struct ZuTuple1_Cvt :
+  public ZuTuple1_Cvt_<typename ZuDeref<T>::T, P,
+    ZuConversion<ZuTuple1_, typename ZuDeref<T>::T>::Base> { };
 
 template <unsigned, typename> struct ZuTuple_Type0;
 template <typename Left>
@@ -59,8 +59,40 @@ template <unsigned, typename> struct ZuTuple_Type0_;
 template <typename Left_>
 struct ZuTuple_Type0_<0, Left_> { using T = Left_; };
 
+template <typename U0> struct ZuTuple1_Print_ {
+  ZuTuple1_Print_() = delete;
+  ZuTuple1_Print_(const ZuTuple1_Print_ &) = delete;
+  ZuTuple1_Print_ &operator =(const ZuTuple1_Print_ &) = delete;
+  ZuTuple1_Print_(ZuTuple1_Print_ &&) = delete;
+  ZuTuple1_Print_ &operator =(ZuTuple1_Print_ &&) = delete;
+  ZuTuple1_Print_(const U0 &p0_, const ZuString &delim_) :
+      p0{p0_}, delim{delim_} { }
+  const U0		&p0;
+  const ZuString	&delim;
+};
+template <typename U0, bool Nested>
+struct ZuTuple1_Print;
+template <typename U0>
+struct ZuTuple1_Print<U0, false> :
+  public ZuTuple1_Print_<U0>, public ZuPrintable {
+  ZuTuple1_Print(const U0 &p0, const ZuString &delim) :
+      ZuTuple1_Print_<U0>{p0, delim} { }
+  template <typename S> void print(S &s) const {
+    s << this->p0;
+  }
+};
+template <typename U0>
+struct ZuTuple1_Print<U0, true> :
+  public ZuTuple1_Print_<U0>, public ZuPrintable {
+  ZuTuple1_Print(const U0 &p0, const ZuString &delim) :
+      ZuTuple1_Print_<U0>{p0, delim} { }
+  template <typename S> void print(S &s) const {
+    s << this->p0.print(this->delim);
+  }
+};
+
 template <typename T0>
-class ZuTuple<T0> : public ZuTuple0_ {
+class ZuTuple<T0> : public ZuTuple1_ {
 public:
   using U0 = typename ZuDeref<T0>::T;
   template <unsigned I> using Type = ZuTuple_Type0<I, T0>;
@@ -86,19 +118,19 @@ public:
 
   template <typename T>
   ZuInline explicit ZuTuple(T p,
-      typename ZuIfT<ZuTuple0_Cvt<T, ZuTuple>::OK>::T *_ = 0) :
+      typename ZuIfT<ZuTuple1_Cvt<T, ZuTuple>::OK>::T *_ = 0) :
     m_p0(ZuMv(p.m_p0)) { }
 
   template <typename T> ZuInline ZuTuple(T &&v,
       typename ZuIfT<
-	!ZuTuple0_Cvt<typename ZuTraits<T>::T, ZuTuple>::OK &&
+	!ZuTuple1_Cvt<typename ZuTraits<T>::T, ZuTuple>::OK &&
 	  (!ZuTraits<T0>::IsReference ||
 	    ZuConversion<typename ZuTraits<U0>::T,
 			 typename ZuTraits<T>::T>::Is)>::T *_ = 0) :
     m_p0(ZuFwd<T>(v)) { }
 
   template <typename T> ZuInline
-  typename ZuIfT<ZuTuple0_Cvt<T, ZuTuple>::OK, ZuTuple &>::T
+  typename ZuIfT<ZuTuple1_Cvt<T, ZuTuple>::OK, ZuTuple &>::T
   operator =(T p) {
     m_p0 = ZuMv(p.m_p0);
     return *this;
@@ -106,7 +138,7 @@ public:
 
   template <typename T> ZuInline
       typename ZuIfT<
-	!ZuTuple0_Cvt<typename ZuTraits<T>::T, ZuTuple>::OK &&
+	!ZuTuple1_Cvt<typename ZuTraits<T>::T, ZuTuple>::OK &&
 	  (!ZuTraits<T0>::IsReference ||
 	    ZuConversion<typename ZuTraits<U0>::T,
 			 typename ZuTraits<T>::T>::Is), ZuTuple &>::T
@@ -157,6 +189,14 @@ public:
   ZuInline typename ZuIfT<!I, ZuTuple &>::T p(P &&p) {
     m_p0 = ZuFwd<P>(p);
     return *this;
+  }
+
+  using Print = ZuTuple1_Print<U0, ZuConversion<ZuPair_, U0>::Base>;
+  ZuInline Print print() const {
+    return Print{m_p0, "|"};
+  }
+  ZuInline Print print(const ZuString &delim) const {
+    return Print{m_p0, delim};
   }
 
 private:
@@ -246,15 +286,16 @@ public:
   }
 
   template <unsigned I>
-  ZuInline typename ZuIfT<!!I, const typename Type_<I>::T &>::T p() const {
+  ZuInline
+  typename ZuIfT<(I && I < N), const typename Type_<I>::T &>::T p() const {
     return Pair::template p<1>().template p<I - 1>();
   }
   template <unsigned I>
-  ZuInline typename ZuIfT<!!I, typename Type_<I>::T &>::T p() {
+  ZuInline typename ZuIfT<(I && I < N), typename Type_<I>::T &>::T p() {
     return Pair::template p<1>().template p<I - 1>();
   }
   template <unsigned I, typename P>
-  ZuInline typename ZuIfT<!!I, ZuTuple &>::T p(P &&p) {
+  ZuInline typename ZuIfT<(I && I < N), ZuTuple &>::T p(P &&p) {
     Pair::template p<1>().template p<I - 1>(ZuFwd<P>(p));
     return *this;
   }

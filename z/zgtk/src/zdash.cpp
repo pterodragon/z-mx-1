@@ -41,7 +41,7 @@ int main(int argc, char **argv)
   app.detach();
 }
 
-struct TreeModel : public ZGtk::TreeModelSortable<TreeModel, 1> {
+struct TreeModel : public ZGtk::TreeSortable<TreeModel, 1> {
   ~TreeModel() { }
 
   struct Iter { gint index; };

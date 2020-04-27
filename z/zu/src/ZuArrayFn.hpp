@@ -118,26 +118,15 @@ class ZuArrayFn_Ops<T, Cmp, true> : public ZuArrayFn_ItemOps<T, Cmp> {
 public:
   ZuInline static void destroyItems(T *dst, unsigned length) { }
   template <typename S>
-  ZuInline static typename ZuNotSame<T, S>::T copyItem(T *dst, const S &src) {
-    new ((void *)dst) T(src);
-  }
-  template <typename S>
   static typename ZuNotSame<T, S>::T copyItems(
       T *dst, const S *src, unsigned length) {
     if (ZuUnlikely(!length || (void *)dst == (void *)src)) return;
     do { new ((void *)dst++) T(*src++); } while (--length > 0);
   }
   template <typename S>
-  ZuInline static typename ZuSame<T, S>::T copyItem(T *dst, const S &src) {
-    memcpy((void *)dst, &src, sizeof(T));
-  }
-  template <typename S>
   ZuInline static typename ZuSame<T, S>::T copyItems(
       T *dst, const S *src, unsigned length) {
     memcpy((void *)dst, src, length * sizeof(T));
-  }
-  ZuInline static void moveItem(T *dst, T *src) {
-    memmove((void *)dst, src, sizeof(T));
   }
   ZuInline static void moveItems(T *dst, const T *src, unsigned length) {
     memmove((void *)dst, src, length * sizeof(T));
@@ -205,10 +194,7 @@ public:
   ZuInline static void initItems(T *dst, unsigned length) { }
   ZuInline static void destroyItems(T *dst, unsigned length) { }
   template <typename S>
-  ZuInline static void copyItem(T *dst, const S &src) { }
-  template <typename S>
   ZuInline static void copyItems(T *dst, const S *src, unsigned length) { }
-  ZuInline static void moveItem(T *dst, T *src) { }
   ZuInline static void moveItems(T *dst, const T *src, unsigned length) { }
   ZuInline static int cmp(const T *dst, const T *src, unsigned length)
     { return 0; }

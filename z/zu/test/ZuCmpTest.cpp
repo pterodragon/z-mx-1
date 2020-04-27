@@ -15,6 +15,7 @@
 #include <zlib/ZuUnion.hpp>
 #include <zlib/ZuArrayN.hpp>
 #include <zlib/ZuStringN.hpp>
+#include <zlib/ZuSort.hpp>
 
 #define CHECK(x) ((x) ? puts("OK  " #x) : puts("NOK " #x))
 
@@ -284,5 +285,13 @@ int main()
     checkNull<int64_t, uint16_t>();
     checkNull<double, uint16_t>();
     checkNull<int32_t, double>();
+  }
+
+  {
+    ZuArrayN<int, 13> foo{3, 1, 2, 9, 5, 3, 5, 1, 10, 4, 0, 7, 6};
+    ZuSort(&foo[0], foo.length());
+    for (unsigned i = 0, n = foo.length(); i < n; i++)
+      std::cout << (i ? " " : "") << foo[i];
+    std::cout << '\n';
   }
 }

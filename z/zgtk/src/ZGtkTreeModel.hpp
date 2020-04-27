@@ -400,7 +400,7 @@ public:
   gboolean get_sort_column_id(gint *col, GtkSortType *order) {
     if (col) *col = m_col;
     if (order) *order = m_order;
-    switch ((int)col) {
+    switch ((int)m_col) {
       case GTK_TREE_SORTABLE_DEFAULT_SORT_COLUMN_ID:
       case GTK_TREE_SORTABLE_UNSORTED_SORT_COLUMN_ID:
 	return false;
@@ -429,7 +429,7 @@ private:
 // called by view
 load(initial load into array) - returns sort col, sort order, number of rows and lambda iterator []() -> noderef
 // sort col / sort order can be unsorted
-sort(node1, node2, col) // called by qsort
+sort(node1, node2, col, order) // called by qsort
 index(node, gint i) // set row#
 gint index(node) // get row# - used to build reordered[]
 template <typename S> print(node, col, S &s) -> s << value
@@ -466,13 +466,13 @@ template <
   typename T,
   typename Data,
   typename NodeRef>
-class TreeArray : public TreeSortable<TreeArray> {
+class TreeArray : public TreeSortable<TreeArray<T, Data, NodeRef> > {
   const NodeRef &nodeRef_();
   using Node = decltype(*nodeRef_());
 
 private:
   T *impl() { return static_cast<T *>(this); }
-  const T *impl() { return static_cast<const T *>(this); }
+  const T *impl() const { return static_cast<const T *>(this); }
 
 public:
   void init(GtkTreePath *path) {
@@ -545,22 +545,17 @@ public:
   gboolean iter_parent(GtkTreeIter *iter, GtkTreeIter *child) {
     return false;
   }
+  void ref_node(GtkTreeIter *) { }
+  void unref_node(GtkTreeIter *) { }
+
+  void sort(gint col, GtkSortType order) {
+    qsort(&m_rows[0], m_rows.length(), 
+  }
 
 private:
   ZtArray<gint>		m_path;
   ZtArray<NodeRef>	m_rows;
 };
-
-
-// FIXME - need a tree model that is an array of node refs,
-// that can be resorted independent of the underlying container's
-// primary key sorting
-//
-// array[index] -> node
-// node->index() -> array offset (used to build reordered array
-// following re-sort, and to delete nodes)
-//
-// GtkTreeIter contains index and ptr to array
 
 } // ZGtk
 

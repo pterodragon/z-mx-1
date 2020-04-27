@@ -215,4 +215,12 @@ template <typename L> struct ZuGuard {
     return !*this ? (const void *)0 : (const void *)this; \
   }
 
+// generic swap
+template <typename T>
+void ZuSwap(T &v1, T &v2) {
+  T tmp = ZuMv(v1);
+  v1 = ZuMv(v2);
+  v2 = ZuMv(tmp);
+}
+
 #endif /* ZuLib_HPP */

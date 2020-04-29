@@ -188,7 +188,6 @@ struct ZePlatform_EventLogger {
 
     path_.size(Ze_NTFS_MAX_PATH);
     GetModuleFileName(0, path_.data(), Ze_NTFS_MAX_PATH);
-    path_[Ze_NTFS_MAX_PATH - 1] = 0;
     path_.calcLength();
 
     ZtString path(path_);

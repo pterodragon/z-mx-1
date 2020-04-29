@@ -55,7 +55,6 @@ namespace Ztls {
   inline ZtString strerror_(int n) {
     ZtString s(100);
     mbedtls_strerror(n, s.data(), s.size() - 1);
-    s[s.size() - 1] = 0;
     s.calcLength();
     s.chomp();
     return s;

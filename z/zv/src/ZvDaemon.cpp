@@ -86,7 +86,6 @@ int ZvDaemon::init(const char *username, const char *password, int umask,
     // get path to current program
 	ZtWString path((const wchar_t *)0, ZiPlatform::PathMax);
     GetModuleFileName(0, path.data(), path.size());
-    path[path.size() - 1] = 0;
     path.calcLength();
     path.truncate();
 

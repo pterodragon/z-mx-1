@@ -416,7 +416,7 @@ public:
     m_col = col;
     m_order = order;
 
-    // emit gtk_tree_sortable_sort_column_changed()
+    // emit #GtkTreeSortable::sort-column-changed
     gtk_tree_sortable_sort_column_changed(GTK_TREE_SORTABLE(this));
 
     impl()->sort(m_col, m_order);
@@ -430,13 +430,18 @@ private:
 // CRTP - implementation must conform to the following interface:
 #if 0
 struct App : public TreeArray<App, Data, NodeRef> {
-  // Count(unsigned)
-  // Iterate(NodeRef)
+  // call count(unsigned), then iterate(NodeRef) for each node
   template <typename Count, typename Iterate>
   void load(Count count, Iterate iterate);
+
+  // get data given node
   Data *data(Node *node);
-  gint row(const Node *node);
+
+  // get/set row# given node
   void row(Node *node, gint v);
+  gint row(const Node *node);
+
+  // get print format given column
   const ZvFieldFmt &fmt(unsigned col);
 };
 #endif
@@ -543,6 +548,7 @@ public:
       impl()->row(m_rows[i], i);
     }
     GtkTreePath *path = gtk_tree_path_new();
+    // emit #GtkTreeModel::rows-reordered
     gtk_tree_model_rows_reordered(
 	GTK_TREE_MODEL(this), path, nullptr, new_order.data());
     gtk_tree_path_free(path);

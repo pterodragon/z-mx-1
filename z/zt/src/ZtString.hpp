@@ -712,8 +712,11 @@ public:
   void calcLength() {
     if (null__())
       length__(0);
-    else
-      length__(Zu::strlen_(data_()));
+    else {
+      auto data = data_();
+      data[size_() - 1] = 0;
+      length__(Zu::strlen_(data));
+    }
   }
 
 // set size

@@ -148,7 +148,7 @@ void ZiFile_WindowsDrives::refresh()
     drive[0] = dl;
     drive[2] = 0;
     if (QueryDosDevice(drive, pathBuf, ZiPlatform::PathMax + 1) > 0) {
-      pathBuf[ZiPlatform::PathMax] = 0, pathBuf.calcLength();
+      pathBuf.calcLength();
       if (!pathBuf.cmp(L"\\\\?\\", 4))
 	path.init(&pathBuf[4], pathBuf.length() - 4);
       else
@@ -1122,7 +1122,6 @@ ZiFile::Path ZiFile::cwd()
   if (!getcwd(ret.data(), ZiPlatform::PathMax + 1))
     ret.null();
   else {
-    ret[ZiPlatform::PathMax] = 0;
     ret.calcLength();
     ret.truncate();
   }

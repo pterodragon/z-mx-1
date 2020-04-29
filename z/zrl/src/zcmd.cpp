@@ -108,7 +108,6 @@ static ZtString getpass_(const ZtString &prompt, unsigned passLen)
   ::write(fd, prompt.data(), prompt.length());
   FILE *in = fdopen(fd, "r");
   if (!fgets(passwd, passwd.size() - 1, in)) return passwd;
-  passwd[passwd.size() - 1] = 0;
   passwd.calcLength();
   tcsetattr(fd, TCSANOW, &oflags);
   fclose(in);
@@ -362,7 +361,6 @@ next:
 	post();
 	return;
       }
-      cmd[cmd.size() - 1] = 0;
       cmd.calcLength();
       cmd.chomp();
     }

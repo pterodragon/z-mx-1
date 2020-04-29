@@ -1548,7 +1548,6 @@ int main(int argc, char **argv)
   } else {
     ZtString cmd(1024);
     while (fgets(cmd.data(), cmd.size() - 1, stdin)) {
-      cmd[cmd.size() - 1] = 0;
       cmd.calcLength();
       cmd.chomp();
       app->processCmd(cmd);

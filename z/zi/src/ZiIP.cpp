@@ -258,7 +258,6 @@ ZiIP::Hostname ZiIP::name(ZeError *e)
     ret.null();
     return ret;
   }
-  ret[ZiPlatform::HostnameMax - 1] = 0;
   ret.calcLength();
   ret.truncate();
   return ret;

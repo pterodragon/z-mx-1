@@ -224,13 +224,11 @@ public:
     const auto &fmt = this->fmt();
 
     if (char *data = fgets(row.data(), ZvCSV_MaxLineSize - 1, file)) {
-      row[ZvCSV_MaxLineSize - 1] = 0;
       row.calcLength();
       row.chomp();
       header(colIndex, row);
       row.length(0);
       while (data = fgets(row.data(), ZvCSV_MaxLineSize - 1, file)) {
-	row[ZvCSV_MaxLineSize - 1] = 0;
 	row.calcLength();
 	row.chomp();
 	if (row.length()) {

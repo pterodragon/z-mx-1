@@ -25,6 +25,7 @@
 // - fallback to insertion sort for small partitions of N items or less
 // - recurse smaller partition, iterate larger partition
 // - minimized stack depth on recursion
+// - bundled binary search
 
 // template <typename T, typename Cmp = ZuCmp<T>, unsigned N = ZuSort_::isort_N>
 // ZuSort(T *data, unsigned n)

@@ -148,7 +148,7 @@ struct ZuSort_Fn {
   }
 };
 
-template <typename T, unsigned N = 8>
+template <unsigned N = 8, typename T>
 void ZuSort(T *data, unsigned n) {
   auto cmp = [](const T &v1, const T &v2) {
     return ZuCmp<T>::cmp(v1, v2);
@@ -161,7 +161,7 @@ void ZuSort(T *data, unsigned n) {
     Fn::isort_(data, n, cmp);
 }
 
-template <typename T, typename Cmp, unsigned N = 8>
+template <unsigned N = 8, typename T, typename Cmp>
 void ZuSort(T *data, unsigned n, Cmp cmp) {
   using Fn = ZuSort_Fn<T, Cmp, N>;
   if (n > N)
@@ -174,21 +174,25 @@ void ZuSort(T *data, unsigned n, Cmp cmp) {
 // - returns insertion position if not found
 bool ZuSearchFound(unsigned i) { return i & 1; }
 unsigned ZuSearchPos(unsigned i) { return i>>1; }
-template <typename T, typename Cmp, typename Find>
-unsigned ZuSearch(T *data, unsigned n, const T &item, Cmp cmp,
-    Find find = [](int v) { return !v; }) {
+template <bool Find = true, typename T, typename Cmp>
+unsigned ZuSearch(T *data, unsigned n, const T &item, Cmp cmp) {
   if (!n) return 0;
   unsigned o = 0;
 loop:
   unsigned m = n>>1;
   int v = cmp(item, data[m]);
-  if (find(v)) return ((o + m)<<1) | 1;
+  if constexpr (Find) if (!v) return ((o + m)<<1) | 1;
   if (!m) return (o + (v >= 0))<<1;
   if (v < 0) { n = m; goto loop; }
   data += m;
   o += m;
   n -= m;
   goto loop;
+}
+template <bool Find = true, typename T>
+unsigned ZuSearch(T *data, unsigned n, const T &item) {
+  return ZuSearch<Find>(data, n, item, 
+      [](const T &v1, const T &v2) { return ZuCmp<T>::cmp(v1, v2); });
 }
 
 #endif /* ZuSort_HPP */

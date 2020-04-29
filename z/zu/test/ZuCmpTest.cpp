@@ -98,6 +98,58 @@ namespace T3 {
   using T = ZuTuple<ZuArrayN<V, 3>, ZuArrayN<int, 3> >;
 }
 
+template <unsigned N> struct SortTest {
+  template <typename A, typename S> static void test_(A &a, S &s) {
+    ZuSort<N>(&a[0], a.length());
+    for (unsigned i = 0, n = a.length(); i < n; i++)
+      s << (i ? " " : "") << a[i];
+  }
+  static void test() {
+    {
+      ZuArrayN<int, 13> foo{};
+      ZuStringN<80> s;
+      test_(foo, s);
+      CHECK(s == "");
+      CHECK(ZuSearch(&foo[0], 0, 0) == 0);
+    }
+    {
+      ZuArrayN<int, 13> foo{1};
+      ZuStringN<80> s;
+      test_(foo, s);
+      CHECK(s == "1");
+      CHECK(ZuSearch(&foo[0], 1, 0) == 0);
+      CHECK(ZuSearch(&foo[0], 1, 1) == 1);
+      CHECK(ZuSearch<false>(&foo[0], 1, 1) == 2);
+    }
+    {
+      ZuArrayN<int, 13> foo{0, 1};
+      ZuStringN<80> s;
+      test_(foo, s);
+      CHECK(s == "0 1");
+      CHECK(ZuSearch(&foo[0], 2, 0) == 1);
+      CHECK(ZuSearch(&foo[0], 2, 1) == 3);
+      CHECK(ZuSearch<false>(&foo[0], 2, 0) == 2);
+      CHECK(ZuSearch<false>(&foo[0], 2, 1) == 4);
+    }
+    {
+      ZuArrayN<int, 13> foo{1, 0};
+      ZuStringN<80> s;
+      test_(foo, s);
+      CHECK(s == "0 1");
+    }
+    {
+      ZuArrayN<int, 13> foo{3, 1, 2, 9, 5, 3, 5, 1, 10, 4, 0, 7, 6};
+      ZuStringN<80> s;
+      test_(foo, s);
+      CHECK(s == "0 1 1 2 3 3 4 5 5 6 7 9 10");
+      CHECK(ZuSearch(&foo[0], 13, 0) == 1);
+      CHECK(ZuSearch(&foo[0], 13, 2) == 7);
+      CHECK(ZuSearch<false>(&foo[0], 13, 5) == 18);
+      CHECK(ZuSearch<false>(&foo[0], 13, 10) == 26);
+    }
+  }
+};
+
 int main()
 {
   {
@@ -288,11 +340,10 @@ int main()
   }
 
   {
-    ZuArrayN<int, 13> foo{3, 1, 2, 9, 5, 3, 5, 1, 10, 4, 0, 7, 6};
-    ZuSort(&foo[0], foo.length());
-    ZuStringN<80> s;
-    for (unsigned i = 0, n = foo.length(); i < n; i++)
-      s << (i ? " " : "") << foo[i];
-    CHECK(s == "0 1 1 2 3 3 4 5 5 6 7 9 10");
+    SortTest<0>::test();
+    SortTest<1>::test();
+    SortTest<2>::test();
+    SortTest<8>::test();
+    SortTest<20>::test();
   }
 }

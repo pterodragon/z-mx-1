@@ -290,8 +290,9 @@ int main()
   {
     ZuArrayN<int, 13> foo{3, 1, 2, 9, 5, 3, 5, 1, 10, 4, 0, 7, 6};
     ZuSort(&foo[0], foo.length());
+    ZuStringN<80> s;
     for (unsigned i = 0, n = foo.length(); i < n; i++)
-      std::cout << (i ? " " : "") << foo[i];
-    std::cout << '\n';
+      s << (i ? " " : "") << foo[i];
+    CHECK(s == "0 1 1 2 3 3 4 5 5 6 7 9 10");
   }
 }

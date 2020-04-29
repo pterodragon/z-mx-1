@@ -14,16 +14,39 @@
 #endif
 
 struct E {
-  E() : m_ptr((void *)this), m_copied(0) { }
-  ~E() { m_ptr = 0; }
+  E() : m_ptr(this), m_copied(0), m_moved(0) { }
+  ~E() {
+    m_ptr = 0;
+  }
 
-  E(const E &e) : m_ptr((void *)this), m_copied(e.m_copied + 1) { }
+  E(const E &e) :
+      m_ptr(this), m_copied(e.m_copied + 1), m_moved(e.m_moved) { }
+  E &operator =(const E &e) {
+    if (this == &e) return *this;
+    m_ptr = this;
+    m_copied = e.m_copied + 1;
+    m_moved = e.m_moved;
+    return *this;
+  }
+  E(E &&e) :
+      m_ptr(this), m_copied(e.m_copied), m_moved(e.m_moved + 1) {
+    e.m_ptr = 0;
+  }
+  E &operator =(E &&e) {
+    m_ptr = this;
+    m_copied = e.m_copied;
+    m_moved = e.m_moved + 1;
+    e.m_ptr = 0;
+    return *this;
+  }
 
   void *ptr() const { return m_ptr; }
   int copied() const { return m_copied; }
+  int moved() const { return m_moved; }
 
   void	*m_ptr;
   int	m_copied;
+  int	m_moved;
 };
 
 void validate(const ZtArray<E> &a, unsigned length)
@@ -31,8 +54,10 @@ void validate(const ZtArray<E> &a, unsigned length)
   assert(a.length() == length);
   unsigned n = a.length();
   for (unsigned i = 0; i < n; i++) {
-    assert(a[i].ptr() == (const void *)&a[i]);
-    printf("%d:%d ", i, a[i].copied());
+    if (a[i].ptr() != (const void *)&a[i]) {
+      printf("\n%d %p != %p\n", i, a[i].ptr(), &a[i]);
+    }
+    printf("%d:%d:%d ", i, a[i].copied(), a[i].moved());
   }
   putc('\n', stdout);
 }
@@ -62,7 +87,7 @@ int main()
     a.splice(0, 0, b);
     validate(a, 12);
     validate(b, 4);
-    b.splice(8, 100, b);
+    b.splice(8, 100, ZtArray<E>{b});
     validate(b, 12);
     for (int i = 0; i < 8; i++) a.push(a.shift());
     validate(a, 12);

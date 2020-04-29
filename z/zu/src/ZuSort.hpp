@@ -17,11 +17,23 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// generic quick sort
+// "good ole' quick sort", modern C++ version
 // - no STL iterator cruft
+// - optimized three-way comparison
 // - optimized array memory operations
 // - median-of-three pivot
-// - insertion sort for partitions of 8 items or less
+// - fallback to insertion sort for small partitions of N items or less
+// - recurse smaller partition, iterate larger partition
+// - minimized stack depth on recursion
+
+// template <typename T, typename Cmp = ZuCmp<T>, unsigned N = ZuSort_::isort_N>
+// ZuSort(T *data, unsigned n)
+//
+// data - pointer to T * data to be sorted
+// n - number of contiguous elements of type T
+//
+// Cmp - three-way comparison - defaults to ZuCmp<T>
+// N - insertion sort is used below this partition size threshold
 
 #ifndef ZuSort_HPP
 #define ZuSort_HPP
@@ -35,108 +47,126 @@
 #endif
 
 #include <zlib/ZuCmp.hpp>
+#include <zlib/ZuLambdaFn.hpp>
 #include <zlib/ZuArrayFn.hpp>
 
-namespace ZuSort_ {
-
-enum { isort_N = 8 };	// threshold for insertion sort
-
-template <typename T, typename Cmp>
-void isort_(T *base, unsigned n) {
+template <typename T, typename Cmp, unsigned N>
+struct ZuSort_Fn {
   using Fn = ZuArrayFn<T>;
-  T *end = base + n; // past end
-  T *minimum = base, *ptr = base;
-  // find minimum
-  while (++ptr < end)
-    if (Cmp::cmp(*minimum, *ptr) > 0)
-      minimum = ptr;
-  // swap minimum into base
-  if (minimum != base) {
-    ZuSwap(*minimum, *base);
-    minimum = base;
-  }
-  // standard insertion sort
-  while ((ptr = ++minimum) < end) {
-    while (Cmp::cmp(*--ptr, *minimum) > 0);
-    if (++ptr != minimum) {
-      T tmp = ZuMv(*minimum);
-      Fn::moveItems(ptr + 1, ptr, minimum - ptr);
-      *ptr = ZuMv(tmp);
-    }
-  }
-}
 
-template <typename T, typename Cmp>
-void qsort_(T *base, unsigned n) {
-loop:
-  T *middle = base + (n>>1);
-  unsigned i = 0;
-  {
-    T *end = base + (n - 1); // at end (not past)
-    // find pivot - median of base, middle, end
-    T *ptr;
-    if (Cmp::cmp(*base, *middle) >= 0)
-      ptr = base;
-    else
-      ptr = middle, middle = base;
-    if (Cmp::cmp(*ptr, *end) > 0)
-      ptr = Cmp::cmp(*middle, *end) >= 0 ? middle : end;
-    // swap pivot into base
-    if (ptr != base) {
-      ZuSwap(*ptr, *base);
-      ptr = base;
+  static void isort_(T *base, unsigned n, Cmp &cmp) {
+    T *end = base + n; // past end
+    T *minimum = base, *ptr = base;
+    // find minimum
+    while (++ptr < end)
+      if (cmp(*minimum, *ptr) > 0)
+	minimum = ptr;
+    // swap minimum into base
+    if (minimum != base) {
+      ZuSwap(*minimum, *base);
+      minimum = base;
     }
-    // standard quicksort & check for flat partition
-    middle = base;
-    unsigned j = 1;
-    int k;
-    while (++ptr <= end) {
-      if (!(k = Cmp::cmp(*ptr, *base)))
-	j++;
-      if (k < 0) {
-	if (++middle != ptr)
-	  ZuSwap(*middle, *ptr);
-	++i;
+    // standard insertion sort
+    while ((ptr = ++minimum) < end) {
+      while (cmp(*--ptr, *minimum) > 0);
+      if (++ptr != minimum) {
+	T tmp = ZuMv(*minimum);
+	Fn::moveItems(ptr + 1, ptr, minimum - ptr);
+	*ptr = ZuMv(tmp);
       }
     }
-    if (j == n) return; // exit if flat
   }
-  if (base != middle) ZuSwap(*base, *middle);
-  ++middle;
-  // recurse smaller partition
-  if (i < (n>>1)) {
-    if (i > isort_N)
-      qsort_<T, Cmp>(base, i);
-    else if (i > 1)
-      isort_<T, Cmp>(base, i);
-    i = n - i - 1;
-  } else {
-    i = n - i - 1;
-    if (i > isort_N)
-      qsort_<T, Cmp>(middle, i);
-    else if (i > 1)
-      isort_<T, Cmp>(middle, i);
-    i = n - i - 1;
-    middle = base;
+
+  static void qsort_(T *base, unsigned n, Cmp &cmp) {
+  loop:
+    T *middle = base + (n>>1);
+    {
+      T *end = base + (n - 1); // at end (not past)
+      // find pivot - median of base, middle, end
+      T *ptr;
+      if (cmp(*base, *middle) >= 0)
+	ptr = base;
+      else
+	ptr = middle, middle = base;
+      if (cmp(*ptr, *end) > 0)
+	ptr = cmp(*middle, *end) >= 0 ? middle : end;
+      // swap pivot into base (gets swapped back later)
+      if (ptr != base) {
+	ZuSwap(*ptr, *base);
+	ptr = base;
+      }
+      // standard quicksort & check for flat partition
+      middle = base;
+      unsigned j = 1;
+      int k;
+      while (++ptr <= end) {
+	if (!(k = cmp(*ptr, *base)))
+	  j++;
+	if (k < 0) {
+	  if (++middle != ptr) {
+	    ZuSwap(*middle, *ptr);
+	  }
+	}
+      }
+      if (j == n) return; // exit if flat
+    }
+    if (base != middle) ZuSwap(*base, *middle); // swap back pivot
+    unsigned i = middle - base;
+    if (i < (n>>1)) {
+      // recurse smaller partition
+      if (i > N)
+	qsort_(base, i, cmp);
+      else if (i > 1)
+	isort_(base, i, cmp);
+      ++middle;
+      i = n - i - 1;
+      // iterate larger partition (unless insertion sort)
+      if (i > N) {
+	base = middle;
+	n = i;
+	goto loop;
+      }
+    } else {
+      // recurse smaller partition
+      ++middle;
+      i = n - i - 1;
+      if (i > N)
+	qsort_(middle, i, cmp);
+      else if (i > 1)
+	isort_(middle, i, cmp);
+      middle = base;
+      i = n - i - 1;
+      // iterate larger partition (unless insertion sort)
+      if (i > N) {
+	n = i;
+	goto loop;
+      }
+    }
+    if (i > 1)
+      isort_(middle, i, cmp);
   }
-  // iterate larger partition (unless insertion sort)
-  if (i > isort_N) {
-    base = middle;
-    n = i;
-    goto loop;
-  } else if (i > 1)
-    isort_<T, Cmp>(middle, i);
+};
+
+template <typename T, unsigned N = 8>
+void ZuSort(T *data, unsigned n) {
+  auto cmp = [](const T &v1, const T &v2) {
+    return ZuCmp<T>::cmp(v1, v2);
+  };
+  using Cmp = decltype(cmp);
+  using Fn = ZuSort_Fn<T, Cmp, N>;
+  if (n > N)
+    Fn::qsort_(data, n, cmp);
+  else if (n > 1)
+    Fn::isort_(data, n, cmp);
 }
 
-} // namespace ZuSort_
-
-template <typename T, typename Cmp = ZuCmp<T>>
-void ZuSort(T *base, unsigned n) {
-  using namespace ZuSort_;
-  if (n > isort_N)
-    qsort_<T, Cmp>(base, n);
+template <typename T, typename Cmp, unsigned N = 8>
+void ZuSort(T *data, unsigned n, Cmp cmp) {
+  using Fn = ZuSort_Fn<T, Cmp, N>;
+  if (n > N)
+    Fn::qsort_(data, n, cmp);
   else if (n > 1)
-    isort_<T, Cmp>(base, n);
+    Fn::isort_(data, n, cmp);
 }
 
 #endif /* ZuSort_HPP */

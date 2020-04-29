@@ -94,6 +94,8 @@ public:
   typedef T_ T;
   typedef Cmp_ Cmp;
 
+  enum Nop_ { Nop };
+
 private:
   template <typename U, typename R = void, typename V = T,
     bool B = ZuPrint<typename ZuTraits<U>::T>::Delegate>
@@ -122,7 +124,6 @@ protected:
 
   ZuInline ZuArrayN_(unsigned size) : Base(size) { }
 
-  typedef enum { Nop } Nop_;
   ZuInline ZuArrayN_(Nop_ _) : Base(Base::Nop) { }
 
   ZuInline ZuArrayN_(unsigned size, unsigned length, bool initItems) :
@@ -138,6 +139,15 @@ protected:
       length = 0;
     else if (ZuLikely(length))
       this->copyItems(data(), a, length);
+    Base::m_length = length;
+  }
+  template <typename A>
+  typename ZuConvertible<A, T>::T init_mv(A *a, unsigned length) {
+    if (ZuUnlikely(length > Base::m_size)) length = Base::m_size;
+    if (ZuUnlikely(!a))
+      length = 0;
+    else if (ZuLikely(length))
+      this->moveItems(data(), a, length);
     Base::m_length = length;
   }
   template <typename E>
@@ -162,6 +172,13 @@ protected:
     if (Base::m_length + length > Base::m_size)
       length = Base::m_size - Base::m_length;
     if (a && length) this->copyItems(data() + Base::m_length, a, length);
+    Base::m_length += length;
+  }
+  template <typename A>
+  typename ZuConvertible<A, T>::T append_mv_(A *a, unsigned length) {
+    if (Base::m_length + length > Base::m_size)
+      length = Base::m_size - Base::m_length;
+    if (a && length) this->moveItems(data() + Base::m_length, a, length);
     Base::m_length += length;
   }
   template <typename E>
@@ -369,10 +386,11 @@ class ZuArrayN : public ZuArrayN_<T_, Cmp_, ZuArrayN<T_, N_, Cmp_> > {
   ZuAssert(N_ < (1U<<16) - 1U);
 
 public:
-  typedef T_ T;
-  typedef Cmp_ Cmp;
-  typedef ZuArrayN_<T, Cmp, ZuArrayN> Base;
+  using T = T_;
+  using Cmp = Cmp_;
+  using Base = ZuArrayN_<T, Cmp, ZuArrayN>;
   enum { N = N_ };
+  enum Move_ { Move };
 
 private:
   template <typename U, typename R = void, typename V = T,
@@ -451,58 +469,108 @@ public:
     return *this;
   }
 
+  ZuInline ZuArrayN(ZuArrayN &&a) : Base(Base::Nop) {
+    Base::m_size = N;
+    this->init_mv(a.data(), a.length());
+  }
+  ZuInline ZuArrayN &operator =(ZuArrayN &&a) {
+    if (this != &a) this->init_mv(a.data(), a.length());
+    return *this;
+  }
+
   ZuInline ZuArrayN(std::initializer_list<T> a) : Base(Base::Nop) {
     Base::m_size = N;
     this->init(a.begin(), a.size());
   }
 
   // ZuArrayN types
+private:
+  template <typename A_> struct Fwd_ArrayN {
+    using A = typename ZuTraits<A_>::T;
+
+    static void init_(ZuArrayN *this_, const A &a) {
+      this_->init(a.data(), a.length());
+    }
+    static void init_(ZuArrayN *this_, A &&a) {
+      this_->init_mv(a.data(), a.length());
+    }
+
+    static void append_(ZuArrayN *this_, const A &a) {
+      this_->append_(a.data(), a.length());
+    }
+    static void append_(ZuArrayN *this_, A &&a) {
+      this_->append_mv_(a.data(), a.length());
+    }
+  };
+
+public:
   template <typename A>
-  ZuInline ZuArrayN(const A &a, typename MatchArrayN<A>::T *_ = 0) :
+  ZuInline ZuArrayN(A &&a, typename MatchArrayN<A>::T *_ = 0) :
       Base(Base::Nop) {
     Base::m_size = N;
-    this->init(a.data(), a.length());
+    Fwd_ArrayN<A>::init_(this, ZuFwd<A>(a));
   }
   template <typename A>
-  ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator =(const A &a) {
-    this->init(a.data(), a.length());
+  ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator =(A &&a) {
+    Fwd_ArrayN<A>::init_(this, ZuFwd<A>(a));
     return *this;
   }
   template <typename A>
-  ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator +=(const A &a) {
-    this->append_(a.data(), a.length());
+  ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator +=(A &&a) {
+    Fwd_ArrayN<A>::append_(this, ZuFwd<A>(a));
     return *this;
   }
   template <typename A>
-  ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator <<(const A &a) {
-    this->append_(a.data(), a.length());
+  ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator <<(A &&a) {
+    Fwd_ArrayN<A>::append_(this, ZuFwd<A>(a));
     return *this;
   }
 
   // array types (other than ZuArrayN<>)
+private:
+  template <typename A_> struct Fwd_Array {
+    using A = typename ZuTraits<A_>::T;
+    using Elem = typename ZuArrayT<A>::Elem;
+
+    static void init_(ZuArrayN *this_, const A &a_) {
+      ZuArrayT<A> a(a_);
+      this_->init(a.data(), a.length());
+    }
+    static void init_(ZuArrayN *this_, A &&a_) {
+      ZuArrayT<A> a(a_);
+      this_->init_mv(const_cast<Elem *>(a.data()), a.length());
+    }
+
+    static void append_(ZuArrayN *this_, const A &a_) {
+      ZuArrayT<A> a(a_);
+      this_->append_(a.data(), a.length());
+    }
+    static void append_(ZuArrayN *this_, A &&a_) {
+      ZuArrayT<A> a(a_);
+      this_->append_mv_(const_cast<Elem *>(a.data()), a.length());
+    }
+  };
+
+public:
   template <typename A>
-  ZuInline ZuArrayN(A &&a_, typename MatchArray<A>::T *_ = 0) :
+  ZuInline ZuArrayN(A &&a, typename MatchArray<A>::T *_ = 0) :
       Base(Base::Nop) {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
     Base::m_size = N;
-    this->init(a.data(), a.length());
+    Fwd_Array<A>::init_(this, ZuFwd<A>(a));
   }
   template <typename A>
-  ZuInline typename MatchArray<A, ZuArrayN &>::T operator =(A &&a_) {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
-    this->init(a.data(), a.length());
+  ZuInline typename MatchArray<A, ZuArrayN &>::T operator =(A &&a) {
+    Fwd_Array<A>::init_(this, ZuFwd<A>(a));
     return *this;
   }
   template <typename A>
-  ZuInline typename MatchArray<A, ZuArrayN &>::T operator +=(A &&a_) {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
-    this->append_(a.data(), a.length());
+  ZuInline typename MatchArray<A, ZuArrayN &>::T operator +=(A &&a) {
+    Fwd_Array<A>::append_(this, ZuFwd<A>(a));
     return *this;
   }
   template <typename A>
-  ZuInline typename MatchArray<A, ZuArrayN &>::T operator <<(A &&a_) {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
-    this->append_(a.data(), a.length());
+  ZuInline typename MatchArray<A, ZuArrayN &>::T operator <<(A &&a) {
+    Fwd_Array<A>::append_(this, ZuFwd<A>(a));
     return *this;
   }
 
@@ -609,11 +677,19 @@ public:
     Base::m_size = N;
     this->init(a, length);
   }
+  ZuInline ZuArrayN(Move_ _, T *a, unsigned length) : Base(Base::Nop) {
+    Base::m_size = N;
+    this->init_mv(a, length);
+  }
 
   // append()
   template <typename A>
   ZuInline typename ZuConvertible<A, T>::T append(const A *a, unsigned length) {
     this->append_(a, length);
+  }
+  template <typename A>
+  ZuInline typename ZuConvertible<A, T>::T append_mv(A *a, unsigned length) {
+    this->append_mv_(a, length);
   }
 
 private:

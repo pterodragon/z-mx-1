@@ -17,7 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// generic comparison (including distinguished null values)
+// generic three-way and two-way comparison 
+// (including distinguished null values)
 
 // UDTs must implement the <, >, == and ! operators
 //
@@ -128,7 +129,7 @@ template <typename T> struct ZuCmp_IntNull<T, 16, true> {
 
 template <typename T, bool isSmallInt> struct ZuCmp_Integral {
   ZuInline static int cmp(T i1, T i2) {
-    return (i1 > i2) ? 1 : (i1 < i2) ? -1 : 0;
+    return (i1 > i2) - (i1 < i2);
   }
   ZuInline static bool equals(T i1, T i2) { return i1 == i2; }
   ZuInline static bool null(T i) { return i == null(); }
@@ -157,7 +158,7 @@ template <typename T> struct ZuCmp_Integral<T, true> {
 // comparison of floating point types
 
 template <typename T> struct ZuCmp_Floating {
-  ZuInline static int cmp(T f1, T f2) { return f1 > f2 ? 1 : f1 < f2 ? -1 : 0; }
+  ZuInline static int cmp(T f1, T f2) { return (f1 > f2) - (f1 < f2); }
   ZuInline static bool equals(T f1, T f2) { return f1 == f2; }
   ZuInline static T null() { return ZuTraits<T>::nan(); }
   ZuInline static bool null(T f) { return ZuTraits<T>::nan(f); }
@@ -186,7 +187,7 @@ template <typename T> struct ZuCmp_Primitive<T, true, false> :
 template <typename T, bool IsComparable, bool Fwd> struct ZuCmp_NonPrimitive {
   template <typename P1, typename P2>
   ZuInline static int cmp(const P1 &p1, const P2 &p2) {
-    return (p1 > p2) ? 1 : (p1 < p2) ? -1 : 0;
+    return (p1 > p2) - (p1 < p2);
   }
   template <typename P1, typename P2>
   ZuInline static bool equals(const P1 &p1, const P2 &p2) { return p1 == p2; }
@@ -226,7 +227,7 @@ template <typename T, bool Fwd> struct ZuCmp_NonPrimitive<T, true, Fwd> {
 template <typename T> struct ZuCmp_Pointer {
   typedef typename ZuTraits<T>::Elem P;
   ZuInline static int cmp(const P *p1, const P *p2) {
-    return (char *)p1 > (char *)p2 ? 1 : (char *)p1 < (char *)p2 ? -1 : 0;
+    return ((char *)p1 > (char *)p2) - ((char *)p1 < (char *)p2);
   }
   ZuInline static bool equals(const P *p1, const P *p2) { return p1 == p2; }
   ZuInline static bool null(const P *p) { return !p; }
@@ -292,7 +293,7 @@ struct ZuCmp_StrCmp<T1, T2, 0, 1, 0> {
   static int cmp(const T1 &s1_, const T2 &s2_) {
     const char *s1 = ZuTraits<T1>::data(s1_);
     const char *s2 = ZuTraits<T2>::data(s2_);
-    if (!s1) return s2 ? -1 : 0;
+    if (!s1) return -!!s2;
     if (!s2) return 1;
     int l1 = ZuTraits<T1>::length(s1_), l2 = ZuTraits<T2>::length(s2_);
     if (int i = strncmp(s1, s2, l1 > l2 ? l2 : l1)) return i;
@@ -313,7 +314,7 @@ struct ZuCmp_StrCmp<T1, T2, 1, T1IsString, 1> {
   static int cmp(const T1 &w1_, const T2 &w2_) {
     const wchar_t *w1 = ZuTraits<T1>::data(w1_);
     const wchar_t *w2 = ZuTraits<T2>::data(w2_);
-    if (!w1) return w2 ? -1 : 0;
+    if (!w1) return -!!w2;
     if (!w2) return 1;
     return wcscmp(w1, w2);
   }
@@ -330,7 +331,7 @@ struct ZuCmp_StrCmp<T1, T2, 0, 1, 1> {
   static int cmp(const T1 &w1_, const T2 &w2_) {
     const wchar_t *w1 = ZuTraits<T1>::data(w1_);
     const wchar_t *w2 = ZuTraits<T2>::data(w2_);
-    if (!w1) return w2 ? -1 : 0;
+    if (!w1) return -!!w2;
     if (!w2) return 1;
     int l1 = ZuTraits<T1>::length(w1_), l2 = ZuTraits<T2>::length(w2_);
     if (int i = wcsncmp(w1, w2, l1 > l2 ? l2 : l1)) return i;

@@ -169,12 +169,12 @@ struct ZuStrip<const volatile T_> { using T = T_; };
 
 // shorthand constexpr std::forward without STL cruft
 template <typename T>
-constexpr T &&ZuFwd(typename ZuDeref<T>::T &t) noexcept { // fwd lvalue
-  return static_cast<T &&>(t);
+constexpr T &&ZuFwd(typename ZuDeref<T>::T &v) noexcept { // fwd lvalue
+  return static_cast<T &&>(v);
 }
 template <typename T>
-constexpr T &&ZuFwd(typename ZuDeref<T>::T &&t) noexcept { // fwd rvalue
-  return static_cast<T &&>(t);
+constexpr T &&ZuFwd(typename ZuDeref<T>::T &&v) noexcept { // fwd rvalue
+  return static_cast<T &&>(v);
 }
 // use to forward auto &&x parameters (GNU extension)
 #define ZuAutoFwd(x) ZuFwd<decltype(x)>(x)

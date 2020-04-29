@@ -78,6 +78,9 @@ public:
     IsWString = ZuConversion<T, wchar_t>::Same
   };
 
+  enum Copy_ { Copy };
+  enum Move_ { Move };
+
 private:
   typedef T Char;
   typedef typename ZtArray_Char2<T>::T Char2;
@@ -263,12 +266,104 @@ public:
   template <typename A> ZuInline ZtArray(A &&a) { ctor(ZuFwd<A>(a)); }
 
 private:
-  template <typename A> ZuInline typename MatchZtArray<A>::T ctor(const A &a)
-    { copy_(a.m_data, a.length()); }
-  template <typename A> ZuInline typename MatchArray<A>::T ctor(A &&a_) {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
-    copy_(a.data(), a.length());
-  }
+  template <typename A_> struct Fwd_ZtArray {
+    using A = typename ZuTraits<A_>::T;
+
+    static void ctor_(ZtArray *this_, const A &a) {
+      this_->copy_(a.m_data, a.length());
+    }
+    static void ctor_(ZtArray *this_, A &&a) {
+      this_->move_(a.m_data, a.length());
+    }
+
+    static void assign_(ZtArray *this_, const A &a) {
+      uint32_t oldLength = 0;
+      T *oldData = this_->free_1(oldLength);
+      this_->copy_(a.m_data, a.length());
+      this_->free_2(oldData, oldLength);
+    }
+    static void assign_(ZtArray *this_, A &&a) {
+      uint32_t oldLength = 0;
+      T *oldData = this_->free_1(oldLength);
+      this_->move_(a.m_data, a.length());
+      this_->free_2(oldData, oldLength);
+    }
+
+    static ZtArray add_(const ZtArray *this_, const A &a) {
+      return this_->add(a.m_data, a.length());
+    }
+    static ZtArray add_(const ZtArray *this_, A &&a) {
+      return this_->add_mv(a.m_data, a.length());
+    }
+
+    static void splice_(ZtArray *this_,
+	ZtArray *removed, int offset, int length, const A &a) {
+      if (this_ == &a) {
+	ZtArray a_ = a;
+	this_->splice_cp_(removed, offset, length, a_.m_data, a_.length());
+      } else
+	this_->splice_cp_(removed, offset, length, a.m_data, a.length());
+    }
+    static void splice_(ZtArray *this_,
+	ZtArray *removed, int offset, int length, A &&a) {
+      this_->splice_mv_(removed, offset, length, a.m_data, a.length());
+    }
+  };
+  template <typename A_> struct Fwd_Array {
+    using A = typename ZuTraits<A_>::T;
+    using Elem = typename ZuArrayT<A>::Elem;
+
+    static void ctor_(ZtArray *this_, const A &a_) {
+      ZuArrayT<A> a(a_);
+      this_->copy_(a.data(), a.length());
+    }
+    static void ctor_(ZtArray *this_, A &&a_) {
+      ZuArrayT<A> a(a_);
+      this_->move_(const_cast<Elem *>(a.data()), a.length());
+    }
+
+    static void assign_(ZtArray *this_, const A &a_) {
+      ZuArrayT<A> a(a_);
+      uint32_t oldLength = 0;
+      T *oldData = this_->free_1(oldLength);
+      this_->copy_(a.data(), a.length());
+      this_->free_2(oldData, oldLength);
+    }
+    static void assign_(ZtArray *this_, A &&a_) {
+      ZuArrayT<A> a(a_);
+      uint32_t oldLength = 0;
+      T *oldData = this_->free_1(oldLength);
+      this_->move_(const_cast<Elem *>(a.data()), a.length());
+      this_->free_2(oldData, oldLength);
+    }
+
+    static ZtArray add_(const ZtArray *this_, const A &a_) {
+      ZuArrayT<A> a(a_);
+      return this_->add(a.data(), a.length());
+    }
+    static ZtArray add_(const ZtArray *this_, A &&a_) {
+      ZuArrayT<A> a(a_);
+      return this_->add_mv(const_cast<Elem *>(a.data()), a.length());
+    }
+
+    static void splice_(ZtArray *this_,
+	ZtArray *removed, int offset, int length, const A &a_) {
+      ZuArrayT<A> a(a_);
+      this_->splice_cp_(removed, offset, length, a.data(), a.length());
+    }
+    static void splice_(ZtArray *this_,
+	ZtArray *removed, int offset, int length, A &&a_) {
+      ZuArrayT<A> a(a_);
+      this_->splice_mv_(
+	  removed, offset, length,
+	  const_cast<Elem *>(a.data()), a.length());
+    }
+  };
+
+  template <typename A> ZuInline typename MatchZtArray<A>::T ctor(A &&a)
+    { Fwd_ZtArray<A>::ctor_(this, ZuFwd<A>(a)); }
+  template <typename A> ZuInline typename MatchArray<A>::T ctor(A &&a)
+    { Fwd_Array<A>::ctor_(this, ZuFwd<A>(a)); }
 
   template <typename S> ZuInline typename MatchStrLiteral<S>::T ctor(S &&s_)
     { ZuArrayT<S> s(ZuFwd<S>(s_)); shadow_(s.data(), s.length()); }
@@ -313,12 +408,14 @@ private:
   }
 
 public:
-  enum Copy_ { Copy };
   template <typename A> ZtArray(Copy_ _, A &&a) { copy(ZuFwd<A>(a)); }
 
+  template <typename A> ZtArray(Move_ _, A &&a) { move(ZuFwd<A>(a)); }
+
 private:
-  template <typename A> typename MatchZtArray<A>::T copy(const A &a)
-    { copy_(a.m_data, a.length()); }
+  template <typename A> typename MatchZtArray<A>::T copy(const A &a) {
+    copy_(a.m_data, a.length());
+  }
   template <typename A> typename MatchArray<A>::T copy(A &&a_) {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     copy_(a.data(), a.length());
@@ -354,19 +451,11 @@ public:
   }
 
 private:
-  template <typename A> typename MatchZtArray<A>::T assign(const A &a) {
-    if (this == &a) return;
-    uint32_t oldLength = 0;
-    T *oldData = free_1(oldLength);
-    copy_(a.m_data, a.length());
-    free_2(oldData, oldLength);
+  template <typename A> typename MatchZtArray<A>::T assign(A &&a) {
+    Fwd_ZtArray<A>::assign_(this, ZuFwd<A>(a));
   }
-  template <typename A> typename MatchArray<A>::T assign(A &&a_) {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
-    uint32_t oldLength = 0;
-    T *oldData = free_1(oldLength);
-    copy_(a.data(), a.length());
-    free_2(oldData, oldLength);
+  template <typename A> typename MatchArray<A>::T assign(A &&a) {
+    Fwd_Array<A>::assign_(this, ZuFwd<A>(a));
   }
 
   template <typename S> typename MatchStrLiteral<S>::T assign(S &&s_) {
@@ -463,6 +552,10 @@ public:
     if (!length) { null_(); return; }
     copy_(data, length);
   }
+  explicit ZtArray(Move_ _, T *data, unsigned length) {
+    if (!length) { null_(); return; }
+    move_(data, length);
+  }
   explicit ZtArray(const T *data, unsigned length, unsigned size) {
     if (!size) { null_(); return; }
     own_(data, length, size, true);
@@ -514,9 +607,19 @@ public:
     init_(_, data, length);
     free_2(oldData, oldLength);
   }
+  void init(Move_ _, T *data, unsigned length) {
+    uint32_t oldLength = 0;
+    T *oldData = free_1(oldLength);
+    init_(_, data, length);
+    free_2(oldData, oldLength);
+  }
   void init_(Copy_ _, const T *data, unsigned length) {
     if (!length) { null_(); return; }
     copy_(data, length);
+  }
+  void init_(Move_ _, T *data, unsigned length) {
+    if (!length) { null_(); return; }
+    move_(data, length);
   }
   void init(const T *data, unsigned length, unsigned size) {
     free_();
@@ -577,6 +680,14 @@ private:
     if (!length) { null_(); return; }
     m_data = (T *)::malloc(length * sizeof(T));
     if (length) this->copyItems(m_data, data, length);
+    size_owned(length, 1);
+    length_mallocd(length, 1);
+  }
+
+  template <typename S> void move_(S *data, unsigned length) {
+    if (!length) { null_(); return; }
+    m_data = (T *)::malloc(length * sizeof(T));
+    if (length) this->moveItems(m_data, data, length);
     size_owned(length, 1);
     length_mallocd(length, 1);
   }
@@ -804,13 +915,14 @@ public:
 
 private:
   template <typename A>
-  ZuInline typename MatchZtArray<A, ZtArray<T, Cmp> >::T
-    add(const A &a) const { return add(a.m_data, a.length()); }
-  template <typename A>
-  ZuInline typename MatchArray<A, ZtArray<T, Cmp> >::T add(A &&a_) const {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
-    return add(a.data(), a.length());
+  ZuInline typename MatchZtArray<A, ZtArray<T, Cmp> >::T add(A &&a) const {
+    return Fwd_ZtArray<A>::add_(this, ZuFwd<A>(a));
   }
+  template <typename A>
+  ZuInline typename MatchArray<A, ZtArray<T, Cmp> >::T add(A &&a) const {
+    return Fwd_Array<A>::add_(this, ZuFwd<A>(a));
+  }
+
   template <typename S>
   ZuInline typename MatchAnyString<S, ZtArray<T, Cmp> >::T add(S &&s_) const
     { ZuArrayT<S> s(ZuFwd<S>(s_)); return add(s.data(), s.length()); }
@@ -847,6 +959,15 @@ private:
     if (length) this->copyItems(newData + n, data, length);
     return ZtArray<T, Cmp>(newData, z, z);
   }
+  ZtArray<T, Cmp> add_mv(T *data, unsigned length) const {
+    unsigned n = this->length();
+    unsigned z = n + length;
+    if (ZuUnlikely(!z)) return ZtArray<T, Cmp>();
+    T *newData = (T *)::malloc(z * sizeof(T));
+    if (n) this->copyItems(newData, m_data, n);
+    if (length) this->moveItems(newData + n, data, length);
+    return ZtArray<T, Cmp>(newData, z, z);
+  }
 
 public:
   template <typename A> ZuInline ZtArray &operator +=(A &&a)
@@ -856,21 +977,17 @@ public:
 
 private:
   template <typename A>
-  typename MatchZtArray<A>::T append_(const A &a) {
-    if (this == &a) {
-      ZtArray a_ = a;
-      splice__(0, length(), 0, a_.m_data, a_.length());
-    } else
-      splice__(0, length(), 0, a.m_data, a.length());
+  ZuInline typename MatchZtArray<A>::T append_(A &&a) {
+    Fwd_ZtArray<A>::splice_(this, 0, length(), 0, ZuFwd<A>(a));
   }
-  template <typename A> ZuInline typename MatchArray<A>::T append_(A &&a_) {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
-    splice__(0, length(), 0, a.data(), a.length());
+  template <typename A>
+  ZuInline typename MatchArray<A>::T append_(A &&a) {
+    Fwd_Array<A>::splice_(this, 0, length(), 0, ZuFwd<A>(a));
   }
 
   template <typename S> ZuInline typename MatchAnyString<S>::T append_(S &&s_) {
     ZuArrayT<S> s(ZuFwd<S>(s_));
-    splice__(0, length(), 0, s.data(), s.length());
+    splice_cp_(0, length(), 0, s.data(), s.length());
   }
 
   template <typename S>
@@ -900,7 +1017,10 @@ private:
 
 public:
   ZuInline void append(const T *data, unsigned length) {
-    if (data) splice__(0, this->length(), 0, data, length);
+    if (data) splice_cp_(0, this->length(), 0, data, length);
+  }
+  ZuInline void append_mv(T *data, unsigned length) {
+    if (data) splice_mv_(0, this->length(), 0, data, length);
   }
 
 // splice()
@@ -908,45 +1028,40 @@ public:
 public:
   template <typename A>
   ZuInline void splice(
-      ZtArray &removed, int offset, int length, const A &replace) {
-    splice_(&removed, offset, length, replace);
+      ZtArray &removed, int offset, int length, A &&replace) {
+    splice_(&removed, offset, length, ZuFwd<A>(replace));
   }
 
   template <typename A>
-  ZuInline void splice(int offset, int length, const A &replace) {
-    splice_(0, offset, length, replace);
+  ZuInline void splice(int offset, int length, A &&replace) {
+    splice_(nullptr, offset, length, ZuFwd<A>(replace));
   }
 
   ZuInline void splice(ZtArray &removed, int offset, int length) {
-    splice__(&removed, offset, length, 0, 0);
+    splice_del_(&removed, offset, length);
   }
 
   ZuInline void splice(int offset, int length) {
-    splice__(0, offset, length, 0, 0);
+    splice_del_(nullptr, offset, length);
   }
 
 private:
   template <typename A>
   typename MatchZtArray<A>::T splice_(
-      ZtArray *removed, int offset, int length, const A &a) {
-    if (this == &a) {
-      ZtArray a_ = a;
-      splice__(removed, offset, length, a_.m_data, a_.length());
-    } else
-      splice__(removed, offset, length, a.m_data, a.length());
+      ZtArray *removed, int offset, int length, A &&a) {
+    Fwd_ZtArray<A>::splice_(this, removed, offset, length, ZuFwd<A>(a));
   }
   template <typename A>
   ZuInline typename MatchArray<A>::T splice_(
-      ZtArray *removed, int offset, int length, A &&a_) {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
-    splice__(removed, offset, length, a.data(), a.length());
+      ZtArray *removed, int offset, int length, A &&a) {
+    Fwd_Array<A>::splice_(this, removed, offset, length, ZuFwd<A>(a));
   }
 
   template <typename S>
   ZuInline typename MatchAnyString<S>::T splice_(
-      ZtArray *removed, int offset, int length, S &&s_) {
-    ZuArrayT<S> s(ZuFwd<S>(s_));
-    splice__(removed, offset, length, s.data(), s.length());
+      ZtArray *removed, int offset, int length, const S &s_) {
+    ZuArrayT<S> s(s_);
+    splice_cp_(removed, offset, length, s.data(), s.length());
   }
 
   template <typename S>
@@ -963,26 +1078,40 @@ private:
   template <typename R>
   ZuInline typename MatchElem<R>::T splice_(
       ZtArray *removed, int offset, int length, R &&r_) {
-    T r(ZuFwd<R>(r_));
-    splice__(removed, offset, length, &r, 1);
+    T r{ZuFwd<R>(r_)};
+    splice_mv_(removed, offset, length, &r, 1);
   }
 
 public:
+  template <typename R>
   ZuInline void splice(
       ZtArray &removed, int offset, int length,
-      const T *replace, unsigned rlength) {
-    splice__(&removed, offset, length, replace, rlength);
+      const R *replace, unsigned rlength) {
+    splice_cp_(&removed, offset, length, replace, rlength);
+  }
+  template <typename R>
+  ZuInline void splice_mv(
+      ZtArray &removed, int offset, int length,
+      R *replace, unsigned rlength) {
+    splice_mv_(&removed, offset, length, replace, rlength);
   }
 
+  template <typename R>
   ZuInline void splice(
-      int offset, int length, const T *replace, unsigned rlength) {
-    splice__(0, offset, length, replace, rlength);
+      int offset, int length, const R *replace, unsigned rlength) {
+    splice_cp_(nullptr, offset, length, replace, rlength);
+  }
+  template <typename R>
+  ZuInline void splice_mv(
+      int offset, int length, R *replace, unsigned rlength) {
+    splice_mv_(nullptr, offset, length, replace, rlength);
   }
 
   template <typename A> ZuInline typename MatchZtArray<A>::T push(A &&a)
-    { splice(length(), 0, ZuFwd<A>(a)); }
+    { Fwd_ZtArray<A>::splice_(this, nullptr, length(), 0, ZuFwd<A>(a)); }
   template <typename A> ZuInline typename MatchArray<A>::T push(A &&a)
-    { splice(length(), 0, ZuFwd<A>(a)); }
+    { Fwd_Array<A>::splice_(this, nullptr, length(), 0, ZuFwd<A>(a)); }
+
   void *push() {
     unsigned n = length();
     unsigned z = size();
@@ -1035,10 +1164,12 @@ public:
     length_(n);
     return v;
   }
+
   template <typename A> typename MatchZtArray<A>::T unshift(A &&a)
-    { splice(0, 0, ZuFwd<A>(a)); }
+    { Fwd_ZtArray<A>::splice_(this, nullptr, 0, 0, ZuFwd<A>(a)); }
   template <typename A> typename MatchArray<A>::T unshift(A &&a)
-    { splice(0, 0, ZuFwd<A>(a)); }
+    { Fwd_Array<A>::splice_(this, nullptr, 0, 0, ZuFwd<A>(a)); }
+
   void *unshift() {
     unsigned n = length();
     unsigned z = size();
@@ -1061,11 +1192,65 @@ public:
   }
 
 private:
-  void splice__(
+  void splice_del_(
+      ZtArray *removed,
+      int offset,
+      int length) {
+    unsigned n = this->length();
+    unsigned z = size();
+    if (offset < 0) { if ((offset += n) < 0) offset = 0; }
+    if (length < 0) { if ((length += (n - offset)) < 0) length = 0; }
+
+    if (offset > (int)n) {
+      if (removed) removed->null();
+      if (!owned() || offset > (int)z) {
+	z = grow(z, offset);
+	size(z);
+      }
+      this->initItems(m_data + n, offset - n);
+      length_(offset);
+      return;
+    }
+
+    if (offset + length > (int)n) length = n - offset;
+
+    int l = n - length;
+
+    if (l > 0 && (!owned() || l > (int)z)) {
+      z = grow(z, l);
+      if (removed) removed->init(Move, m_data + offset, length);
+      T *newData = (T *)::malloc(z * sizeof(T));
+      this->copyItems(newData, m_data, offset);
+      if (offset + length < (int)n)
+	this->copyItems(
+	    newData + offset,
+	    m_data + offset + length,
+	    n - (offset + length));
+      free_();
+      m_data = newData;
+      size_owned(z, 1);
+      length_mallocd(l, 1);
+      return;
+    }
+
+    if (removed) removed->init(Move, m_data + offset, length);
+    this->destroyItems(m_data + offset, length);
+    if (l > 0) {
+      if (offset + length < (int)n)
+	this->moveItems(
+	    m_data + offset,
+	    m_data + offset + length,
+	    n - (offset + length));
+    }
+    length_(l);
+  }
+
+  template <typename R>
+  void splice_cp_(
       ZtArray *removed,
       int offset,
       int length,
-      const T *replace,
+      const R *replace,
       unsigned rlength) {
     unsigned n = this->length();
     unsigned z = size();
@@ -1079,7 +1264,7 @@ private:
 	size(z);
       }
       this->initItems(m_data + n, offset - n);
-      if (rlength) this->copyItems(m_data + offset, replace, rlength);
+      this->copyItems(m_data + offset, replace, rlength);
       length_(offset + rlength);
       return;
     }
@@ -1090,10 +1275,10 @@ private:
 
     if (l > 0 && (!owned() || l > (int)z)) {
       z = grow(z, l);
-      if (removed) removed->init(Copy, m_data + offset, length);
+      if (removed) removed->init(Move, m_data + offset, length);
       T *newData = (T *)::malloc(z * sizeof(T));
-      if (offset) this->copyItems(newData, m_data, offset);
-      if (rlength) this->copyItems(newData + offset, replace, rlength);
+      this->copyItems(newData, m_data, offset);
+      this->copyItems(newData + offset, replace, rlength);
       if ((int)rlength != length && offset + length < (int)n)
 	this->copyItems(
 	    newData + offset + rlength,
@@ -1106,7 +1291,7 @@ private:
       return;
     }
 
-    if (removed) removed->init(Copy, m_data + offset, length);
+    if (removed) removed->init(Move, m_data + offset, length);
     this->destroyItems(m_data + offset, length);
     if (l > 0) {
       if ((int)rlength != length && offset + length < (int)n)
@@ -1114,7 +1299,66 @@ private:
 	    m_data + offset + rlength,
 	    m_data + offset + length,
 	    n - (offset + length));
-      if (rlength) this->copyItems(m_data + offset, replace, rlength);
+      this->copyItems(m_data + offset, replace, rlength);
+    }
+    length_(l);
+  }
+
+  template <typename R>
+  void splice_mv_(
+      ZtArray *removed,
+      int offset,
+      int length,
+      R *replace,
+      unsigned rlength) {
+    unsigned n = this->length();
+    unsigned z = size();
+    if (offset < 0) { if ((offset += n) < 0) offset = 0; }
+    if (length < 0) { if ((length += (n - offset)) < 0) length = 0; }
+
+    if (offset > (int)n) {
+      if (removed) removed->null();
+      if (!owned() || offset + (int)rlength > (int)z) {
+	z = grow(z, offset + rlength);
+	size(z);
+      }
+      this->initItems(m_data + n, offset - n);
+      this->moveItems(m_data + offset, replace, rlength);
+      length_(offset + rlength);
+      return;
+    }
+
+    if (offset + length > (int)n) length = n - offset;
+
+    int l = n + rlength - length;
+
+    if (l > 0 && (!owned() || l > (int)z)) {
+      z = grow(z, l);
+      if (removed) removed->init(Move, m_data + offset, length);
+      T *newData = (T *)::malloc(z * sizeof(T));
+      this->copyItems(newData, m_data, offset);
+      this->moveItems(newData + offset, replace, rlength);
+      if ((int)rlength != length && offset + length < (int)n)
+	this->copyItems(
+	    newData + offset + rlength,
+	    m_data + offset + length,
+	    n - (offset + length));
+      free_();
+      m_data = newData;
+      size_owned(z, 1);
+      length_mallocd(l, 1);
+      return;
+    }
+
+    if (removed) removed->init(Move, m_data + offset, length);
+    this->destroyItems(m_data + offset, length);
+    if (l > 0) {
+      if ((int)rlength != length && offset + length < (int)n)
+	this->moveItems(
+	    m_data + offset + rlength,
+	    m_data + offset + length,
+	    n - (offset + length));
+      this->moveItems(m_data + offset, replace, rlength);
     }
     length_(l);
   }
@@ -1133,7 +1377,7 @@ public:
   template <typename L> void grep(L l) {
     for (unsigned i = 0, n = length(); i < n; i++) {
       if (l(m_data[i])) {
-	splice__(0, i, 1, 0, 0);
+	splice_del_(0, i, 1);
 	--i, --n;
       }
     }

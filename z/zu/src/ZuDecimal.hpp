@@ -292,29 +292,12 @@ struct ZuDecimal {
     return (q1<<64) | q0;
   }
 
-  static int128_t mul(const int128_t u_, const int128_t v_) {
-    uint128_t u, v;
-    bool negative;
+  static int128_t mul(int128_t u_, int128_t v_) {
+    bool negative = u_ < 0;
+    if (negative) u_ = -u_;
+    if (v_ < 0) negative = !negative, v_ = -v_;
 
-    if (u_ < 0) {
-      u = -u_;
-      if (v_ < 0) {
-	v = -v_;
-	negative = false;
-      } else {
-	v = v_;
-	negative = true;
-      }
-    } else {
-      u = u_;
-      if (v_ < 0) {
-	v = -v_;
-	negative = true;
-      } else {
-	v = v_;
-	negative = false;
-      }
-    }
+    uint128_t u = u_, v = v_;
 
     uint128_t h, l;
 
@@ -328,29 +311,12 @@ struct ZuDecimal {
     return u;
   }
 
-  static int128_t div(const int128_t u_, const int128_t v_) {
-    uint128_t u, v;
-    bool negative;
+  static int128_t div(int128_t u_, int128_t v_) {
+    bool negative = u_ < 0;
+    if (negative) u_ = -u_;
+    if (v_ < 0) negative = !negative, v_ = -v_;
 
-    if (u_ < 0) {
-      u = -u_;
-      if (v_ < 0) {
-	v = -v_;
-	negative = false;
-      } else {
-	v = v_;
-	negative = true;
-      }
-    } else {
-      u = u_;
-      if (v_ < 0) {
-	v = -v_;
-	negative = true;
-      } else {
-	v = v_;
-	negative = false;
-      }
-    }
+    uint128_t u = u_, v = v_;
 
     uint128_t h, l;
 
@@ -428,7 +394,7 @@ public:
   // comparisons
   ZuInline bool equals(const ZuDecimal &v) const { return value == v.value; }
   ZuInline int cmp(const ZuDecimal &v) const {
-    return value > v.value ? 1 : value < v.value ? -1 : 0;
+    return (value > v.value) - (value < v.value);
   }
   ZuInline bool operator ==(const ZuDecimal &v) const { return value == v.value; }
   ZuInline bool operator !=(const ZuDecimal &v) const { return value != v.value; }

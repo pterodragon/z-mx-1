@@ -58,7 +58,7 @@ public:
   ZuInline static void initItem(void *dst) { new (dst) T(Cmp::null()); }
   template <typename P>
   ZuInline static void initItem(void *dst, P &&p) {
-    new (dst) T(ZuFwd<P>(p));
+    new (dst) T{ZuFwd<P>(p)};
   }
   ZuInline static void destroyItem(T *dst) { (*dst).~T(); }
 };
@@ -68,7 +68,7 @@ public:
   ZuInline static void initItem(void *dst) { *(T *)dst = Cmp::null(); }
   template <typename P>
   ZuInline static void initItem(void *dst, P &&p) {
-    *(T *)dst = ZuFwd<P>(p);
+    *reinterpret_cast<T *>(dst) = ZuFwd<P>(p);
   }
   ZuInline static void destroyItem(T *dst) { }
 };
@@ -93,21 +93,38 @@ public:
 
   template <typename S>
   static void copyItems(T *dst, const S *src, unsigned length) {
-    if (ZuUnlikely(!length || (void *)dst == (void *)src)) return;
-    do { new ((void *)dst++) T(*src++); } while (--length > 0);
-  }
-
-  static void moveItems(T *dst, T *src, unsigned length) {
-    if (ZuUnlikely(!length || dst == src)) return;
-    if (src > dst || length < (unsigned)(dst - src)) {
+    ptrdiff_t diff = 
+      reinterpret_cast<const char *>(dst) -
+      reinterpret_cast<const char *>(src);
+    if (ZuUnlikely(!length || !diff)) return;
+    if (diff < 0 || diff > static_cast<ptrdiff_t>(length * sizeof(T))) {
       do {
-	new ((void *)dst++) T(ZuMv(*src)); (*src++).~T();
+	new (dst++) T{*src++};
       } while (--length > 0);
     } else {
       dst += length;
       src += length;
       do {
-	new ((void *)--dst) T(ZuMv(*--src)); (*src).~T();
+	new (--dst) T{*--src};
+      } while (--length > 0);
+    }
+  }
+
+  template <typename S>
+  static void moveItems(T *dst, S *src, unsigned length) {
+    ptrdiff_t diff = 
+      reinterpret_cast<char *>(dst) -
+      reinterpret_cast<char *>(src);
+    if (ZuUnlikely(!length || !diff)) return;
+    if (diff < 0 || diff > static_cast<ptrdiff_t>(length * sizeof(T))) {
+      do {
+	new (dst++) T{ZuMv(*src++)};
+      } while (--length > 0);
+    } else {
+      dst += length;
+      src += length;
+      do {
+	new (--dst) T{ZuMv(*--src)};
       } while (--length > 0);
     }
   }
@@ -120,15 +137,45 @@ public:
   template <typename S>
   static typename ZuNotSame<T, S>::T copyItems(
       T *dst, const S *src, unsigned length) {
-    if (ZuUnlikely(!length || (void *)dst == (void *)src)) return;
-    do { new ((void *)dst++) T(*src++); } while (--length > 0);
+    if (ZuUnlikely(!length || dst == static_cast<T *>(src))) return;
+    if (static_cast<T *>(src) > dst ||
+	length < static_cast<unsigned>(dst - static_cast<T *>(src))) {
+      do {
+	new (dst++) T{*src++};
+      } while (--length > 0);
+    } else {
+      dst += length;
+      src += length;
+      do {
+	new (--dst) T{*--src};
+      } while (--length > 0);
+    }
   }
   template <typename S>
   ZuInline static typename ZuSame<T, S>::T copyItems(
       T *dst, const S *src, unsigned length) {
-    memcpy((void *)dst, src, length * sizeof(T));
+    memmove((void *)dst, src, length * sizeof(T));
   }
-  ZuInline static void moveItems(T *dst, const T *src, unsigned length) {
+  template <typename S>
+  static typename ZuNotSame<T, S>::T moveItems(
+      T *dst, const S *src, unsigned length) {
+    if (ZuUnlikely(!length || dst == static_cast<T *>(src))) return;
+    if (static_cast<T *>(src) > dst ||
+	length < static_cast<unsigned>(dst - static_cast<T *>(src))) {
+      do {
+	new (dst++) T{ZuMv(*src++)};
+      } while (--length > 0);
+    } else {
+      dst += length;
+      src += length;
+      do {
+	new (--dst) T{ZuMv(*--src)};
+      } while (--length > 0);
+    }
+  }
+  template <typename S>
+  ZuInline static typename ZuSame<T, S>::T moveItems(
+      T *dst, const S *src, unsigned length) {
     memmove((void *)dst, src, length * sizeof(T));
   }
 };

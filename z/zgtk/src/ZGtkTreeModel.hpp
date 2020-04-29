@@ -36,6 +36,8 @@
 
 #include <gtk/gtk.h>
 
+#include <zlib/ZuSort.hpp>
+
 #include <zlib/ZmPLock.hpp>
 
 #include <zlib/ZGtkApp.hpp>
@@ -480,11 +482,12 @@ public:
   }
   GtkTreePath *get_path(GtkTreeIter *iter) {
     GtkTreePath *path = gtk_tree_path_new();
-    gtk_tree_path_append_index(path, (uintptr_t)iter->user_data);
+    gtk_tree_path_append_index(
+	path, reinterpret_cast<uintptr_t>(iter->user_data));
     return path;
   }
   void get_value(GtkTreeIter *iter, gint col, Value *value) {
-    gint row = (uintptr_t)iter->user_data;
+    gint row = reinterpret_cast<uintptr_t>(iter->user_data);
     if (ZuUnlikely(row >= m_rows.length())) return;
     auto fields = Data::fields();
     static ZtString s; // ok - this is single-threaded
@@ -493,7 +496,7 @@ public:
     value->set_static_string(s);
   }
   gboolean iter_next(GtkTreeIter *iter) {
-    gint row = (uintptr_t)iter->user_data;
+    gint row = reinterpret_cast<uintptr_t>(iter->user_data);
     if (ZuUnlikely(++row >= m_rows.length())) return false;
     iter->user_data = reinterpret_cast<gpointer>(static_cast<uintptr_t>(row));
   }
@@ -520,20 +523,26 @@ public:
   void ref_node(GtkTreeIter *) { }
   void unref_node(GtkTreeIter *) { }
 
+private:
+  auto cmp_(gint col, GtkSortType order) {
+    return [impl = impl(), col, descending = order == GTK_SORT_DESCENDING](
+	const NodeRef &o1, const NodeRef &o2) {
+      int v = Data::fields()[col].cmp(impl->data(o1), impl->data(o2));
+      if (descending) v = -v;
+      return v;
+    };
+  }
+
+public:
   void sort(gint col, GtkSortType order) {
     unsigned n = m_rows.length();
-    qsort(&m_rows[0], n,
-	[impl = impl(), col, order](const NodeRef &o1, const NodeRef &o2) {
-	  int v = Data::fields()[col].cmp(impl->data(o1), impl->data(o2));
-	  if (order == GTK_SORT_DESCENDING) v = -v;
-	  return v;
-	});
+    ZuSort(&m_rows[0], n, cmp_(col, order));
     ZtArray new_order(n);
     for (unsigned i = 0; i < n; i++) {
       new_order.push(impl()->row(m_rows[i]));
       impl()->row(m_rows[i], i);
     }
-    auto path = gtk_tree_path_new();
+    GtkTreePath *path = gtk_tree_path_new();
     gtk_tree_model_rows_reordered(
 	GTK_TREE_MODEL(this), path, nullptr, new_order.data());
     gtk_tree_path_free(path);
@@ -542,13 +551,28 @@ public:
   void add(NodeRef node) {
     gint col;
     GtkSortType order;
-    if (get_sort_column_id(&col, &order)) {
+    unsigned i;
+    if (this->get_sort_column_id(&col, &order)) {
+      i = ZuSearch(&m_rows[0], m_rows.length(), node, cmp_(col, order),
+	  [](int) constexpr { return false; }); // do not find
+      impl()->row(node, ZuSearchPos(i));
+      m_rows.splice(i, 0, ZuMv(node));
+    } else {
+      i = m_rows.length();
+      impl()->row(node, i);
+      m_rows.push(ZuMv(node));
     }
+    GtkTreeIter iter;
+    iter.user_data = reinterpret_cast<gpointer>(static_cast<uintptr_t>(i));
+    GtkTreePath *path = gtk_tree_path_new();
+    gtk_tree_path_append_index(path, i);
+    gtk_tree_model_row_inserted(GTK_TREE_MODEL(this), path, &iter);
+    gtk_tree_path_free(path);
   }
 
   void del(const Node *node) {
     unsigned i = impl()->row(node);
-    auto path = gtk_tree_path_new();
+    GtkTreePath *path = gtk_tree_path_new();
     gtk_tree_path_append_index(path, i);
     gtk_tree_model_row_deleted(GTK_TREE_MODEL(this), path);
     gtk_tree_path_free(path);

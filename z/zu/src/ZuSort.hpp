@@ -169,4 +169,25 @@ void ZuSort(T *data, unsigned n, Cmp cmp) {
     Fn::isort_(data, n, cmp);
 }
 
+// binary search in sorted data (i.e. following ZuSort)
+// - returns insertion position if not found
+bool ZuSearchFound(unsigned i) { return i & 1; }
+unsigned ZuSearchPos(unsigned i) { return i>>1; }
+template <typename T, typename Cmp, typename Find>
+unsigned ZuSearch(T *data, unsigned n, const T &item, Cmp cmp,
+    Find find = [](int v) { return !v; }) {
+  if (!n) return 0;
+  unsigned o = 0;
+loop:
+  unsigned m = n>>1;
+  int v = cmp(item, data[m]);
+  if (find(v)) return ((o + m)<<1) | 1;
+  if (!m) return (o + (v >= 0))<<1;
+  if (v < 0) { n = m; goto loop; }
+  data += m;
+  o += m;
+  n -= m;
+  goto loop;
+}
+
 #endif /* ZuSort_HPP */

@@ -38,7 +38,7 @@
 #endif
 
 template <class Lock> class ZmGuard : private ZmLockTraits<Lock> {
-  typedef ZmLockTraits<Lock> Traits;
+  using Traits = ZmLockTraits<Lock>;
 
 public:
   enum Try_ { Try };	// disambiguator
@@ -83,7 +83,7 @@ template <typename Lock> ZmGuard(Lock &) -> ZmGuard<Lock>;
 #endif
 
 template <class Lock> class ZmReadGuard : private ZmLockTraits<Lock> {
-  typedef ZmLockTraits<Lock> Traits;
+  using Traits = ZmLockTraits<Lock>;
 
 public:
   enum Try_ { Try };	// disambiguator

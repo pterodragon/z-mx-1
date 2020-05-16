@@ -68,7 +68,7 @@ struct ZuArrayN___ { };
 
 template <typename T> struct ZuArrayN__ : public ZuArrayN___ {
 protected:
-  typedef enum { Nop } Nop_;
+  using Nop_ = enum { Nop };
   ZuArrayN__(Nop_ _) { }
 
   ZuArrayN__(unsigned size) :
@@ -88,11 +88,11 @@ class ZuArrayN_ : public ZuArrayN__<T_>, public ZuArrayFn<T_, Cmp_> {
   ZuArrayN_ &operator =(const ZuArrayN_ &);
   bool operator *() const;
 
-  typedef ZuArrayN__<T_> Base;
+  using Base = ZuArrayN__<T_>;
 
 public:
-  typedef T_ T;
-  typedef Cmp_ Cmp;
+  using T = T_;
+  using Cmp = Cmp_;
 
   enum Nop_ { Nop };
 
@@ -101,21 +101,21 @@ private:
     bool B = ZuPrint<typename ZuTraits<U>::T>::Delegate>
   struct MatchPDelegate;
   template <typename U, typename R>
-  struct MatchPDelegate<U, R, char, true> { typedef R T; };
+  struct MatchPDelegate<U, R, char, true> { using T = R; };
   template <typename U, typename R = void, typename V = T,
     bool B = ZuPrint<typename ZuTraits<U>::T>::Buffer>
   struct MatchPBuffer;
   template <typename U, typename R>
-  struct MatchPBuffer<U, R, char, true> { typedef R T; };
+  struct MatchPBuffer<U, R, char, true> { using T = R; };
 
   template <typename U, typename R = void,
     typename V = T,
     bool S = ZuTraits<U>::IsString,
     bool W = ZuTraits<U>::IsWString> struct ToString;
   template <typename U, typename R>
-  struct ToString<U, R, char, true, false> { typedef R T; };
+  struct ToString<U, R, char, true, false> { using T = R; };
   template <typename U, typename R>
-  struct ToString<U, R, wchar_t, true, true> { typedef R T; };
+  struct ToString<U, R, wchar_t, true, true> { using T = R; };
 
 protected:
   ZuInline ~ZuArrayN_() {
@@ -270,19 +270,19 @@ private:
   template <typename U, typename R = void,
     bool B = ZuConversion<void, U>::Same> struct SpliceVoid;
   template <typename U, typename R>
-  struct SpliceVoid<U, R, true> { typedef R T; };
+  struct SpliceVoid<U, R, true> { using T = R; };
 
   template <typename U, typename R = void, typename V = T,
     bool B = ZuArrayN_CanAppend<U, V>::OK> struct SpliceAppend;
   template <typename U, typename R>
-  struct SpliceAppend<U, R, T, true> { typedef R T; };
+  struct SpliceAppend<U, R, T, true> { using T = R; };
 
   template <typename U, typename R = void, typename V = T,
     bool B =
       !ZuConversion<void, U>::Same &&
       !ZuArrayN_CanAppend<U, V>::OK> struct SpliceDefault;
   template <typename U, typename R>
-  struct SpliceDefault<U, R, T, true> { typedef R T; };
+  struct SpliceDefault<U, R, T, true> { using T = R; };
 
   template <typename U>
   void splice_(int offset, int length, U *removed) {
@@ -396,29 +396,29 @@ private:
   template <typename U, typename R = void, typename V = T,
     bool A = ZuConversion<ZuArrayN___, U>::Base> struct MatchArrayN;
   template <typename U, typename R>
-  struct MatchArrayN<U, R, T, true> { typedef R T; };
+  struct MatchArrayN<U, R, T, true> { using T = R; };
 
   template <typename U, typename R = void, typename V = T,
     bool A = !ZuConversion<ZuArrayN___, U>::Base &&
       (!ZuTraits<U>::IsString || ZuTraits<U>::IsWString) &&
       ZuTraits<U>::IsArray> struct MatchArray;
   template <typename U, typename R>
-  struct MatchArray<U, R, T, true> { typedef R T; };
+  struct MatchArray<U, R, T, true> { using T = R; };
 
   template <typename U, typename R = void, typename V = T,
     bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct MatchPrint;
   template <typename U, typename R>
-  struct MatchPrint<U, R, char, true> { typedef R T; };
+  struct MatchPrint<U, R, char, true> { using T = R; };
   template <typename U, typename R = void, typename V = T,
     bool B = ZuTraits<U>::IsBoxed> struct MatchBoxed { };
   template <typename U, typename R>
-  struct MatchBoxed<U, R, char, true> { typedef R T; };
+  struct MatchBoxed<U, R, char, true> { using T = R; };
 
   template <typename U, typename R = void, typename V = T,
     bool S = ZuTraits<U>::IsString && !ZuTraits<U>::IsWString
     > struct MatchString;
   template <typename U, typename R>
-  struct MatchString<U, R, char, true> { typedef R T; };
+  struct MatchString<U, R, char, true> { using T = R; };
 
   template <typename U, typename R = void, typename V = T,
     bool E =
@@ -431,7 +431,7 @@ private:
       ZuConversion<U, V>::Exists
     > struct MatchElem;
   template <typename U, typename R>
-  struct MatchElem<U, R, T, true> { typedef R T; };
+  struct MatchElem<U, R, T, true> { using T = R; };
 
   template <typename U, typename R = void, typename V = T,
     bool E = ZuConversion<U, unsigned>::Same ||
@@ -439,7 +439,7 @@ private:
 	     ZuConversion<U, size_t>::Same
     > struct CtorLength;
   template <typename U, typename R>
-  struct CtorLength<U, R, T, true> { typedef R T; };
+  struct CtorLength<U, R, T, true> { using T = R; };
 
   template <typename U, typename R = void, typename V = T,
     bool E =
@@ -455,7 +455,7 @@ private:
       ZuConversion<U, V>::Exists
     > struct CtorElem;
   template <typename U, typename R>
-  struct CtorElem<U, R, T, true> { typedef R T; };
+  struct CtorElem<U, R, T, true> { using T = R; };
 
 public:
   ZuInline ZuArrayN() : Base(N) { }
@@ -699,8 +699,8 @@ private:
 template <typename T_, unsigned N, typename Cmp>
 struct ZuTraits<ZuArrayN<T_, N, Cmp> > :
     public ZuGenericTraits<ZuArrayN<T_, N, Cmp> > {
-  typedef ZuArrayN<T_, N, Cmp> T;
-  typedef T_ Elem;
+  using T = ZuArrayN<T_, N, Cmp>;
+  using Elem = T_;
   enum {
     IsArray = 1, IsPrimitive = 0,
     IsPOD = ZuTraits<T>::IsPOD,

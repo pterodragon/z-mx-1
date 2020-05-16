@@ -78,8 +78,8 @@ struct ZeSink : public ZmPolymorph {
 };
 
 class ZeAPI ZeFileSink : public ZeSink {
-  typedef ZmPLock Lock;
-  typedef ZmGuard<Lock> Guard;
+  using Lock = ZmPLock;
+  using Guard = ZmGuard<Lock>;
 
 public:
   ZeFileSink() :
@@ -106,8 +106,8 @@ private:
 };
 
 class ZeAPI ZeDebugSink : public ZeSink {
-  typedef ZmPLock Lock;
-  typedef ZmGuard<Lock> Guard;
+  using Lock = ZmPLock;
+  using Guard = ZmGuard<Lock>;
 
 public:
   ZeDebugSink() : ZeSink{ZeSinkType::Debug},
@@ -161,10 +161,11 @@ friend struct ZmCleanup<ZeLog>;
     ZuInline static const char *id() { return "ZeLog.EventQueue"; }
   };
 
-  typedef ZmList<ZmRef<ZeEvent>,
-	    ZmListObject<ZuNull,
-	      ZmListLock<ZmNoLock,
-		ZmListHeapID<EventQueueID> > > > EventQueue;
+  using EventQueue =
+    ZmList<ZmRef<ZeEvent>,
+      ZmListObject<ZuNull,
+	ZmListLock<ZmNoLock,
+	  ZmListHeapID<EventQueueID> > > >;
 
   using Lock = ZmPLock;
   using Guard = ZmGuard<Lock>;

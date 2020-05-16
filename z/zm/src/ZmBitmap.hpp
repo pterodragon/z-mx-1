@@ -42,10 +42,6 @@
 
 class ZmBitmap;
 
-template <> struct ZuTraits<ZmBitmap> : public ZuGenericTraits<ZmBitmap> {
-  enum { IsComparable = 1 };
-};
-
 class ZmBitmap {
 public:
   ZuInline ZmBitmap() : m_map(0) { }
@@ -92,7 +88,7 @@ public:
     return hwloc_bitmap_compare(m_map, b.m_map);
   }
 
-  typedef ZuPair<unsigned, unsigned> Range;
+  using Range = ZuPair<unsigned, unsigned>;
 
   ZmBitmap &set(unsigned i) {
     lazy();
@@ -296,6 +292,11 @@ public:
       begin = next;
     }
   }
+
+  struct Traits : public ZuGenericTraits<ZmBitmap> {
+    enum { IsComparable = 1 };
+  };
+  friend Traits ZuTraitsType(const ZmBitmap *);
 
 private:
   hwloc_bitmap_t	m_map;

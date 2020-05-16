@@ -103,7 +103,7 @@ template <> struct ZiRingTraits<ZiRingMsg> {
 // ring buffer parameters
 class ZiAPI ZiRingParams {
 public:
-  typedef ZiPlatform::Path Path;
+  using Path = ZiPlatform::Path;
 
   ZiRingParams() :
     m_size(0),
@@ -223,7 +223,7 @@ struct ZiRing_Defaults {
 // ZiRingBase - injection of a base class (e.g. ZmObject)
 template <class Base_, class NTP = ZiRing_Defaults>
 struct ZiRingBase : public NTP {
-  typedef Base_ Base;
+  using Base = Base_;
 };
 
 template <typename T_, class NTP = ZiRing_Defaults>
@@ -241,8 +241,8 @@ public:
     Shadow	= 0x00000008
   };
 
-  typedef T_ T;
-  typedef ZiRingTraits<T> Traits;
+  using T = T_;
+  using Traits = ZiRingTraits<T>;
 
   template <typename ...Args>
   ZiRing(const ZiRingParams &params, Args &&... args) :

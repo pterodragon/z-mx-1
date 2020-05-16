@@ -19,6 +19,6 @@ libZGtk_la_LIBADD = $(top_builddir)/zv/src/libZv.la \
 	$(top_builddir)/zu/src/libZu.la \
 	@GTK_LIBS@ @FLATBUFFERS_LIBS@ @MBEDTLS_LIBS@ \
 	@Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
-bin_PROGRAMS = zdash
+bin_PROGRAMS = #zdash
 zdash_LDADD = libZGtk.la $(libZGtk_la_LIBADD)
 zdash_SOURCES = zdash.cpp

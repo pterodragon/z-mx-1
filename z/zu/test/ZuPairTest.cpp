@@ -14,10 +14,10 @@
 
 #define CHECK(x) ((x) ? puts("OK  " #x) : puts("NOK " #x))
 
-typedef ZuPair<int, int> VPair;
-typedef ZuPair<const int &, const int &> RVPair;
-typedef ZuPair<int &, int &> LVPair;
-typedef ZuPair<int &&, int &&> MVPair;
+using VPair = ZuPair<int, int>;
+using RVPair = ZuPair<const int &, const int &>;
+using LVPair = ZuPair<int &, int &>;
+using MVPair = ZuPair<int &&, int &&>;
 
 template <typename P> P mkpair() {
   static int i = 42, j = 42;
@@ -128,5 +128,12 @@ int main()
     auto c = ZuMkTuple(a);
     s << c.print(";");
     CHECK(s == "1;2;3");
+  }
+
+  {
+    using T = ZuTuple<int, float, double, int>;
+    T a{1, 2, 3, 4};
+    auto b = a;
+    CHECK(b.v<int>() == 1 && b.v<float>() == 2 && b.v<double>() == 3);
   }
 }

@@ -90,7 +90,7 @@ struct ZuTraits<String<N> > : public ZuGenericTraits<String<N> > {
     IsPOD = 1, IsCString = 1, IsString = 1,
     IsHashable = 1, IsComparable = 1
   };
-  typedef char Elem;
+  using Elem = char;
 #if 0
   String<N> make(const char *data, unsigned length) {
     return String<N>(data);
@@ -99,18 +99,20 @@ struct ZuTraits<String<N> > : public ZuGenericTraits<String<N> > {
   static const char *data(const String<N> &s) { return s.data(); }
   static unsigned length(const String<N> &s) { return s.length(); }
 };
-typedef String<16> S;
+using S = String<16>;
 
-typedef ZmHash<S,
-	  ZmHashVal<int,
-	    ZmHashLock<ZmNoLock> > > Hash;
-typedef ZmLHash<S,
-	  ZmLHashVal<int,
-	    ZmLHashLock<ZmNoLock> > > LHash;
+using Hash =
+  ZmHash<S,
+    ZmHashVal<int,
+      ZmHashLock<ZmNoLock> > >;
+using LHash =
+  ZmLHash<S,
+    ZmLHashVal<int,
+      ZmLHashLock<ZmNoLock> > >;
 
 template <typename H>
 struct HashAdapter {
-  typedef ZmRef<typename H::Node> Ret;
+  using Ret = ZmRef<typename H::Node>;
   static const typename H::Key &key(const typename H::Node *n) {
     return n->key();
   }
@@ -120,7 +122,7 @@ struct HashAdapter {
 };
 template <typename H>
 struct LHashAdapter {
-  typedef ZuPair<typename H::Key, typename H::Val> Ret;
+  using Ret = ZuPair<typename H::Key, typename H::Val>;
   static const typename H::Key &key(const Ret &n) {
     return n.template p<0>();
   }
@@ -278,8 +280,8 @@ template <typename H, template <typename> class A> void funcTest()
   }
 }
 
-typedef ZmHash<int, ZmHashVal<String<16>, ZmHashLock<ZmLock> > > PerfHash;
-typedef ZmLHash<int, ZmLHashVal<String<16>, ZmLHashLock<ZmLock> > > PerfLHash;
+using PerfHash = ZmHash<int, ZmHashVal<String<16>, ZmHashLock<ZmLock> > >;
+using PerfLHash = ZmLHash<int, ZmLHashVal<String<16>, ZmLHashLock<ZmLock> > >;
 
 int perfTestSize = 1000;
 

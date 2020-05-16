@@ -30,7 +30,7 @@
 #include <zlib/ZmPQueue.hpp>
 #include <zlib/ZmNoLock.hpp>
 
-typedef ZuPair<uint32_t, unsigned> Msg_Data;
+using Msg_Data = ZuPair<uint32_t, unsigned>;
 struct Msg : public Msg_Data {
   using Msg_Data::Msg_Data;
   using Msg_Data::operator =;

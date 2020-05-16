@@ -21,7 +21,7 @@ struct Order {
   int		m_quantity;
 };
 
-typedef ZdbTable<uint32_t, offsetof(Order, m_side), Order> OrderTable;
+using OrderTable = ZdbTable<uint32_t, offsetof(Order, m_side), Order>;
 
 static void dump(Order *o)
 {

@@ -38,11 +38,12 @@ friend class ZmHashMgr;
     ZuInline static const char *id() { return "ZmHashMgr_"; }
   };
 
-  typedef ZmRBTree<ZmIDString,
-	    ZmRBTreeVal<ZmHashParams,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeHeapID<HeapID,
-		  ZmRBTreeLock<ZmNoLock> > > > > ID2Params;
+  using ID2Params =
+    ZmRBTree<ZmIDString,
+      ZmRBTreeVal<ZmHashParams,
+	ZmRBTreeObject<ZuNull,
+	  ZmRBTreeHeapID<HeapID,
+	    ZmRBTreeLock<ZmNoLock> > > > >;
 
   ZmHashMgr_() { }
 public:

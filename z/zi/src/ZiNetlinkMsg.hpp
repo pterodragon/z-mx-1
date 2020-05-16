@@ -218,6 +218,6 @@ private:
   char	m_pad[PADDING];
 };
 
-typedef ZiNetlinkAttr_<uint16_t, ZiGNLAttr_PCI> ZiNetlinkOpCodeAttr;
+using ZiNetlinkOpCodeAttr = ZiNetlinkAttr_<uint16_t, ZiGNLAttr_PCI>;
 
 #endif /* ZiNetlinkMsg_HPP */

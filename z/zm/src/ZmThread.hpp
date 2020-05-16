@@ -52,7 +52,7 @@
 #pragma warning(disable:4251)
 #endif
 
-typedef ZmPlatform::ThreadID ZmThreadID;
+using ZmThreadID = ZmPlatform::ThreadID;
 
 namespace ZmThreadPriority {
   enum _ {		// thread priorities
@@ -64,7 +64,7 @@ namespace ZmThreadPriority {
   };
 }
 
-typedef ZuStringN<28> ZmThreadName;
+using ZmThreadName = ZuStringN<28>;
 
 // display sequence:
 //   name, id, tid, cpuUsage, cpuset, priority, sysPriority,
@@ -319,8 +319,8 @@ template <> struct ZuPrint<ZmThreadContext *> : public ZuPrintDelegate {
 
 class ZmAPI ZmThread {
 public:
-  typedef ZmThreadContext Context;
-  typedef ZmThreadID ID;
+  using Context = ZmThreadContext;
+  using ID = ZmThreadID;
 
   ZmThread() { }
   template <typename Fn>

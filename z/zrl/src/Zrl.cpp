@@ -50,8 +50,8 @@ struct Zrl_ {
   Zrl_() { }
   ~Zrl_() { }
 
-  typedef ZmLock Lock;
-  typedef ZmGuard<Lock> Guard;
+  using Lock = ZmLock;
+  using Guard = ZmGuard<Lock>;
 
   static Zrl_ *instance();
 

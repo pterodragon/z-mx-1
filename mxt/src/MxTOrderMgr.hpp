@@ -38,7 +38,7 @@
 // CRTP - implementation must conform to the following interface:
 #if 0
 struct AppTypes : public MxTAppTypes<AppTypes> {
-  typedef MxTAppTypes<AppTypes> Base;
+  using Base = MxTAppTypes<AppTypes>;
 
   // extend data definitions
   struct NewOrder : public Base::NewOrder {

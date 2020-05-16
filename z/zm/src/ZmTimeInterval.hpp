@@ -44,8 +44,8 @@ class ZmTimeInterval {
   ZmTimeInterval(const ZmTimeInterval &);		// prevent mis-use
   ZmTimeInterval &operator =(const ZmTimeInterval &);
 
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
 public:
   ZmTimeInterval() : m_min(INT_MAX), m_max(0), m_total(0), m_count(0) { }

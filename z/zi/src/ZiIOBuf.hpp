@@ -126,11 +126,11 @@ private:
   template <typename U, typename R = void,
     bool B = ZuPrint<U>::Delegate> struct MatchPDelegate;
   template <typename U, typename R>
-  struct MatchPDelegate<U, R, true> { typedef R T; };
+  struct MatchPDelegate<U, R, true> { using T = R; };
   template <typename U, typename R = void,
     bool B = ZuPrint<U>::Buffer> struct MatchPBuffer;
   template <typename U, typename R>
-  struct MatchPBuffer<U, R, true> { typedef R T; };
+  struct MatchPBuffer<U, R, true> { using T = R; };
 
   template <typename P>
   typename MatchPDelegate<P>::T append(const P &p) {
@@ -147,7 +147,7 @@ private:
   template <typename U, typename R = void,
     bool B = ZuConversion<U, char>::Same> struct MatchChar;
   template <typename U, typename R>
-  struct MatchChar<U, R, true> { typedef R T; };
+  struct MatchChar<U, R, true> { using T = R; };
 
   template <typename U, typename R = void,
     bool S = ZuTraits<U>::IsString &&
@@ -155,7 +155,7 @@ private:
 	     !ZuTraits<U>::IsPrimitive
     > struct MatchString;
   template <typename U, typename R>
-  struct MatchString<U, R, true> { typedef R T; };
+  struct MatchString<U, R, true> { using T = R; };
 
   template <typename U, typename R = void,
     bool B = ZuTraits<U>::IsPrimitive &&
@@ -163,12 +163,12 @@ private:
 	     !ZuConversion<U, char>::Same
     > struct MatchReal;
   template <typename U, typename R>
-  struct MatchReal<U, R, true> { typedef R T; };
+  struct MatchReal<U, R, true> { using T = R; };
 
   template <typename U, typename R = void,
     bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct MatchPrint;
   template <typename U, typename R>
-  struct MatchPrint<U, R, true> { typedef R T; };
+  struct MatchPrint<U, R, true> { using T = R; };
 
 public:
   template <typename C>

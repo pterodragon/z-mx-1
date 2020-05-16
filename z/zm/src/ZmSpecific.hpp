@@ -287,7 +287,7 @@ class ZmSpecific : public ZmGlobal, public ZmSpecific_ {
   ZmSpecific &operator =(const ZmSpecific &);	// prevent mis-use
 
 public:
-  typedef T_ T;
+  using T = T_;
 
 private:
   ZuCan(final, CanFinal);
@@ -421,7 +421,7 @@ template <typename L> struct ZmTLS_Ctor {
 };
 template <typename L>
 ZuInline auto ZmTLS(L l, typename ZuIfT<ZmTLS_Ctor<L>::OK>::T *_ = 0) {
-  typedef typename ZuDeref<decltype(*ZmTLS_Ctor<L>::fn())>::T T;
+  using T = typename ZuDeref<decltype(*ZmTLS_Ctor<L>::fn())>::T;
   return ZmSpecific<T, true, ZmTLS_Ctor<L>::fn>::instance();
 }
 

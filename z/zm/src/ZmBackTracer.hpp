@@ -43,7 +43,7 @@ public:
   ~ZmBackTracer() { }
 
 private:
-  typedef ZuTuple<ZmThreadID, ZmThreadName, ZmBackTrace> Data;
+  using Data = ZuTuple<ZmThreadID, ZmThreadName, ZmBackTrace>;
 
   using Lock = ZmPLock;
   using Guard = ZmGuard<Lock>;
@@ -54,7 +54,7 @@ public:
     Guard guard(m_lock);
     unsigned i = m_offset;
     m_offset = (i + 1) & 63;
-    Data *data = new (m_captures[i].template new_<0>()) Data();
+    Data *data = new (m_captures[i].template init<Data>()) Data();
     ZmThreadContext *self = ZmThreadContext::self();
     data->p<0>() = self->tid();
     data->p<1>() = self->name();

@@ -60,8 +60,8 @@ struct ZCmp {
   static Z *null() { return 0; }
 };
 
-typedef ZmList<ZmRef<Z>, ZmListCmp<ZCmp> > ZList;
-typedef ZmHash<int, ZmHashVal<ZmRef<Z> > > ZHash;
+using ZList = ZmList<ZmRef<Z>, ZmListCmp<ZCmp> >;
+using ZHash = ZmHash<int, ZmHashVal<ZmRef<Z> > >;
 
 void Y::helloWorld() { puts("hello world [Y]"); }
 
@@ -225,8 +225,7 @@ int main(int argc, char **argv)
     (int)overallEnd.sec(), (int)(overallEnd.nsec() / 1000000));
 
   {
-    typedef ZmHash<ZmRef<J>,
-	      ZmHashIndex<J::IAccessor> > H;
+    using H = ZmHash<ZmRef<J>, ZmHashIndex<J::IAccessor> >;
     ZmRef<H> h_ = new H();
     H &h = *h_;
     for (int k = 0; k < 100; k++) h.add(ZmRef<J>(new J(k)));

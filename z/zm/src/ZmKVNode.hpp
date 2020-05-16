@@ -46,7 +46,7 @@ template <class Heap, template <typename, typename, bool, bool> class Fn_,
   ZmKVNode &operator =(const ZmKVNode &);	// prevent mis-use
 
 public:
-  typedef Fn_<ZmKVNode<Heap, 0, 0, Fn_, Key, Val>, Heap, 0, 0> Fn;
+  using Fn = Fn_<ZmKVNode<Heap, 0, 0, Fn_, Key, Val>, Heap, 0, 0>;
 
   ZuInline ZmKVNode() { }
   template <typename Key__>
@@ -73,7 +73,7 @@ template <class Heap,
   ZmKVNode &operator =(const ZmKVNode &);	// prevent mis-use
 
 public:
-  typedef Fn_<ZmKVNode<Heap, 0, 0, Fn_, Key, ZuNull>, Heap, 0, 0> Fn;
+  using Fn = Fn_<ZmKVNode<Heap, 0, 0, Fn_, Key, ZuNull>, Heap, 0, 0>;
 
   ZuInline ZmKVNode() { }
   template <typename ...Args>
@@ -96,7 +96,7 @@ template <class Heap,
   ZmKVNode &operator =(const ZmKVNode &);	// prevent mis-use
 
 public:
-  typedef Fn_<ZmKVNode<Heap, 1, 0, Fn_, Key, Val>, Heap, 1, 0> Fn;
+  using Fn = Fn_<ZmKVNode<Heap, 1, 0, Fn_, Key, Val>, Heap, 1, 0>;
 
   ZuInline ZmKVNode() { }
   template <typename Key__>
@@ -123,7 +123,7 @@ template <class Heap,
   ZmKVNode &operator =(const ZmKVNode &);	// prevent mis-use
 
 public:
-  typedef Fn_<ZmKVNode<Heap, 1, 0, Fn_, Key, ZuNull>, Heap, 1, 0> Fn;
+  using Fn = Fn_<ZmKVNode<Heap, 1, 0, Fn_, Key, ZuNull>, Heap, 1, 0>;
 
   ZuInline ZmKVNode() { }
   template <typename ...Args>
@@ -143,7 +143,7 @@ template <class Heap,
   ZmKVNode &operator =(const ZmKVNode &);	// prevent mis-use
 
 public:
-  typedef Fn_<ZmKVNode<Heap, 0, 1, Fn_, Key, Val>, Heap, 0, 1> Fn;
+  using Fn = Fn_<ZmKVNode<Heap, 0, 1, Fn_, Key, Val>, Heap, 0, 1>;
 
   ZuInline ZmKVNode() { }
   template <typename Key__>
@@ -170,7 +170,7 @@ template <class Heap,
   ZmKVNode &operator =(const ZmKVNode &);	// prevent mis-use
 
 public:
-  typedef Fn_<ZmKVNode<Heap, 1, 1, Fn_, Key, Val>, Heap, 1, 1> Fn;
+  using Fn = Fn_<ZmKVNode<Heap, 1, 1, Fn_, Key, Val>, Heap, 1, 1>;
 
   ZuInline ZmKVNode() { }
   template <typename Key__>

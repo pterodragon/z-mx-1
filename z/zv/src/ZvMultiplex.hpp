@@ -132,7 +132,7 @@ struct ZvMxParams : public ZiMxParams {
 
 class ZvMultiplex : public ZuPolymorph, public ZiMultiplex {
 public:
-  typedef ZmScheduler::ID ID;
+  using ID = ZmScheduler::ID;
 
   struct IDAccessor : public ZuAccessor<ZvMultiplex *, ID> {
     ZuInline static ID value(const ZvMultiplex *mx) {

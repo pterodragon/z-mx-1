@@ -125,7 +125,7 @@ public:
   }
 
   struct FieldFmt : public ZvFieldFmt {
-    FieldFmt() { new (time.new_csv()) ZtDateFmt::CSV{}; }
+    FieldFmt() { new (time.init_csv()) ZtDateFmt::CSV{}; }
   };
   FieldFmt &fmt() {
     thread_local FieldFmt fmt;

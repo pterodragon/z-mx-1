@@ -43,7 +43,7 @@ static uint32_t ZmGlobal_lock = 0;
 #define unlock() (*lock = 0)
 
 static uint32_t ZmGlobal_atexit_ = 0;
-typedef ZmGlobal *ZmGlobalPtr;
+using ZmGlobalPtr = ZmGlobal *;
 static ZmGlobalPtr ZmGlobal_list[ZmCleanupLevel::N] = { 0 };
 
 // atexit handler

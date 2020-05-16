@@ -83,7 +83,7 @@ private:
 
 class ZvIOQFn {
 public:
-  typedef ZvSeqNo Key;
+  using Key = ZvSeqNo;
   ZuInline ZvIOQFn(ZvIOQItem &item) : m_item(item) { }
   ZuInline ZvSeqNo key() const { return m_item.id().seqNo; }
   ZuInline unsigned length() const { return m_item.skip(); }
@@ -99,15 +99,16 @@ private:
 struct ZvIOMsg_HeapID {
   ZuInline static const char *id() { return "ZvIOMsg"; }
 };
-typedef ZmPQueue<ZvIOQItem,
-	  ZmPQueueNodeIsItem<true,
-	    ZmPQueueObject<ZmPolymorph,
-	      ZmPQueueFn<ZvIOQFn,
-		ZmPQueueLock<ZmNoLock,
-		  ZmPQueueHeapID<ZvIOMsg_HeapID,
-		    ZmPQueueBase<ZmObject> > > > > > > ZvIOQueue;
-typedef ZvIOQueue::Node ZvIOMsg;
-typedef ZvIOQueue::Gap ZvIOQGap;
+using ZvIOQueue =
+  ZmPQueue<ZvIOQItem,
+    ZmPQueueNodeIsItem<true,
+      ZmPQueueObject<ZmPolymorph,
+	ZmPQueueFn<ZvIOQFn,
+	  ZmPQueueLock<ZmNoLock,
+	    ZmPQueueHeapID<ZvIOMsg_HeapID,
+	      ZmPQueueBase<ZmObject> > > > > > >;
+using ZvIOMsg = ZvIOQueue::Node;
+using ZvIOQGap = ZvIOQueue::Gap;
 
 // ZvIOQueueRx - receive queue
 
@@ -130,11 +131,11 @@ struct Impl : public ZvIOQueueRx<Impl> {
 
 template <class Impl, class Lock_ = ZmNoLock>
 class ZvIOQueueRx : public ZmPQRx<Impl, ZvIOQueue, Lock_> {
-  typedef ZmPQRx<Impl, ZvIOQueue, Lock_> Rx;
+  using Rx = ZmPQRx<Impl, ZvIOQueue, Lock_>;
 
 public:
-  typedef Lock_ Lock;
-  typedef ZmGuard<Lock> Guard;
+  using Lock = Lock_;
+  using Guard = ZmGuard<Lock>;
 
   ZuInline ZvIOQueueRx() : m_queue(new ZvIOQueue(ZvSeqNo{})) { }
   
@@ -218,14 +219,13 @@ struct Impl : public ZvIOQueueTxPool<Impl> {
 
 template <class Impl, class Lock_ = ZmNoLock>
 class ZvIOQueueTx : public ZmPQTx<Impl, ZvIOQueue, Lock_> {
-  typedef ZmPQTx<Impl, ZvIOQueue, Lock_> Tx;
-  typedef ZvIOQueueTxPool<Impl, Lock_> Pool;
-
-  typedef ZuArrayN<Pool *, ZvIOQueueMaxPools> Pools;
+  using Tx = ZmPQTx<Impl, ZvIOQueue, Lock_>;
+  using Pool = ZvIOQueueTxPool<Impl, Lock_>;
+  using Pools = ZuArrayN<Pool *, ZvIOQueueMaxPools>;
 
 public:
-  typedef Lock_ Lock;
-  typedef ZmGuard<Lock> Guard;
+  using Lock = Lock_;
+  using Guard = ZmGuard<Lock>;
 
 protected:
   ZuInline const Lock &lock() const { return m_lock; }
@@ -337,17 +337,18 @@ class ZvIOQueueTxPool : public ZvIOQueueTx<Impl, Lock_> {
     ZuInline static const char *id() { return "ZvIOQueueTxPool.Queues"; }
   };
 
-  typedef ZvIOQueue::Gap Gap;
-  typedef ZvIOQueueTx<Impl, Lock_> Tx;
+  using Gap = ZvIOQueue::Gap;
+  using Tx = ZvIOQueueTx<Impl, Lock_>;
 
-  typedef Lock_ Lock;
-  typedef ZmGuard<Lock> Guard;
+  using Lock = Lock_;
+  using Guard = ZmGuard<Lock>;
 
-  typedef ZmRBTree<ZmTime,
-	    ZmRBTreeVal<ZmRef<Tx>,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmNoLock,
-		  ZmRBTreeHeapID<Queues_HeapID> > > > > Queues;
+  using Queues =
+    ZmRBTree<ZmTime,
+      ZmRBTreeVal<ZmRef<Tx>,
+	ZmRBTreeObject<ZuNull,
+	  ZmRBTreeLock<ZmNoLock,
+	    ZmRBTreeHeapID<Queues_HeapID> > > > >;
 
 public:
   ZuInline void loaded_(ZvIOMsg *) { }   // may be overridden by Impl

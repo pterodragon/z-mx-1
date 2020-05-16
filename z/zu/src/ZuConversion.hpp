@@ -52,7 +52,7 @@
 template <typename T1, typename T2> struct ZuConversion__ {
 private:
   typedef char	Small;
-  class		Big { char _[2]; };
+  struct	Big { char _[2]; };
   static Small	ZuConversion_test(const T2 &_); // named due to VS2010 bug
   static Big	ZuConversion_test(...);
   static T1	&ZuConversion_mkT1();		// reference due to VS2010 bug
@@ -84,27 +84,27 @@ template <typename T> struct ZuConversion__<T, T>
   { enum { Exists = 1, Same = 1, Base = 0, Is = 1 }; };
 
 template <typename T_> struct ZuConversion_Array
-  { typedef T_ T; };
+  { using T = T_; };
 template <typename T_> struct ZuConversion_Array<T_ []>
-  { typedef T_ *const T; };
+  { using T = T_ *const; };
 template <typename T_> struct ZuConversion_Array<const T_ []>
-  { typedef const T_ *const T; };
+  { using T = const T_ *const; };
 template <typename T_> struct ZuConversion_Array<volatile T_ []>
-  { typedef volatile T_ *const T; };
+  { using T = volatile T_ *const; };
 template <typename T_> struct ZuConversion_Array<const volatile T_ []>
-  { typedef const volatile T_ *const T; };
+  { using T = const volatile T_ *const; };
 template <typename T_, int N> struct ZuConversion_Array<T_ [N]>
-  { typedef T_ *const T; };
+  { using T = T_ *const; };
 template <typename T_, int N> struct ZuConversion_Array<const T_ [N]>
-  { typedef const T_ *const T; };
+  { using T = const T_ *const; };
 template <typename T_, int N> struct ZuConversion_Array<volatile T_ [N]>
-  { typedef volatile T_ *const T; };
+  { using T = volatile T_ *const; };
 template <typename T_, int N> struct ZuConversion_Array<const volatile T_ [N]>
-  { typedef const volatile T_ *const T; };
+  { using T = const volatile T_ *const; };
 
 template <typename T1, typename T2> struct ZuConversion_ {
-  typedef typename ZuConversion_Array<T1>::T U1;
-  typedef typename ZuConversion_Array<T2>::T U2;
+  using U1 = typename ZuConversion_Array<T1>::T;
+  using U2 = typename ZuConversion_Array<T2>::T;
   enum {
     Exists = ZuConversion__<U1, U2>::Exists,
     Same = ZuConversion__<const volatile U1, const volatile U2>::Same,
@@ -121,17 +121,17 @@ template <typename T> struct ZuConversion_<T, void>
   { enum { Exists = 0, Same = 0, Base = 0, Is = 0 }; };
 
 template <typename T_> struct ZuConversion_Void
-  { typedef T_ T; };
+  { using T = T_; };
 template <> struct ZuConversion_Void<const void>
-  { typedef void T; };
+  { using T = void; };
 template <> struct ZuConversion_Void<volatile void>
-  { typedef void T; };
+  { using T = void; };
 template <> struct ZuConversion_Void<const volatile void>
-  { typedef void T; };
+  { using T = void; };
 
 template <typename T1, typename T2> class ZuConversion {
-  typedef typename ZuConversion_Void<typename ZuDeref<T1>::T>::T U1;
-  typedef typename ZuConversion_Void<typename ZuDeref<T2>::T>::T U2;
+  using U1 = typename ZuConversion_Void<typename ZuDeref<T1>::T>::T;
+  using U2 = typename ZuConversion_Void<typename ZuDeref<T2>::T>::T;
 public:
   enum {
     Exists = ZuConversion_<U1, U2>::Exists,

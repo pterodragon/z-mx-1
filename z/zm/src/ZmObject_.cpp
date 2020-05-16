@@ -28,9 +28,10 @@
 #include <zlib/ZmRBTree.hpp>
 #include <zlib/ZmPLock.hpp>
 
-typedef ZmRBTree<const void *,
-	  ZmRBTreeVal<const ZmBackTrace *,
-	    ZmRBTreeLock<ZmPLock> > > DebugTree;
+using DebugTree =
+  ZmRBTree<const void *,
+    ZmRBTreeVal<const ZmBackTrace *,
+      ZmRBTreeLock<ZmPLock> > >;
 
 void ZmObject_Debug::debug() const
 {

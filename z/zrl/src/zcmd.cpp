@@ -31,9 +31,10 @@
 
 #include <zlib/ZvCf.hpp>
 #include <zlib/ZvCSV.hpp>
+#include <zlib/ZvMultiplex.hpp>
 #include <zlib/ZvCmdClient.hpp>
 #include <zlib/ZvCmdHost.hpp>
-#include <zlib/ZvMultiplex.hpp>
+#include <zlib/ZvUserDB.hpp>
 
 #include <zlib/ZtlsBase32.hpp>
 #include <zlib/ZtlsBase64.hpp>
@@ -141,7 +142,7 @@ public:
   static TelCap keyedFn(const char *path) {
     using Key = typename DeduceKey<Data>::T;
     struct Accessor : public ZuAccessor<Data, typename ZuTraits<Key>::T> {
-      inline static Key value(const Data &data) { return data.key(); }
+      static Key value(const Data &data) { return data.key(); }
     };
     using Tree =
       ZmRBTree<Data,
@@ -210,7 +211,7 @@ public:
   using Base = ZvCmdClient<ZCmd>;
 
   struct Link : public ZvCmdCliLink<ZCmd, Link> {
-  using Base = ZvCmdCliLink<ZCmd, Link>;
+    using Base = ZvCmdCliLink<ZCmd, Link>;
     Link(ZCmd *app) : Base(app) { }
     void loggedIn() {
       this->app()->loggedIn();

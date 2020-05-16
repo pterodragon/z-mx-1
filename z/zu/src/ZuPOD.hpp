@@ -83,13 +83,13 @@ public:
 
 #include <zlib/ZuPolymorph.hpp>
 
-typedef ZuAnyPOD_<ZuPolymorph> ZuAnyPOD;
+using ZuAnyPOD = ZuAnyPOD_<ZuPolymorph>;
 
 template <typename T_, class Base,
   bool Small = sizeof(T_) <= sizeof(uintptr_t)>
 class ZuPOD_ : public ZuAnyPOD_<Base> {
 public:
-  typedef T_ T;
+  using T = T_;
 
   template <typename ...Args>
   ZuPOD_(Args &&... args) :
@@ -118,7 +118,7 @@ private:
 template <typename T_, class Base>
 class ZuPOD_<T_, Base, 1> : public ZuAnyPOD_<Base> {
 public:
-  typedef T_ T;
+  using T = T_;
 
   template <typename ...Args>
   ZuPOD_(Args &&... args) :

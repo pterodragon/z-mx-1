@@ -270,7 +270,7 @@ template <typename AppTypes> struct MxTAppTypes {
   template <typename Leg> struct Modify_;
   template <typename Leg> struct Cancel_;
 
-  typedef ZuBox0(uint8_t) NLegs;
+  using NLegs = ZuBox0(uint8_t);
 
   struct Legs_ { };
   template <typename Leg> struct Legs : public Legs_ {
@@ -794,9 +794,9 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
   };
   template <typename Largest>
   class Txn : public Buf<Largest>, public Txn_ {
-    typedef typename Txn_::Data__ Data__;
-    typedef typename Txn_::Request__ Request__;
-    typedef typename Txn_::Reject__ Reject__;
+    using Data__ = typename Txn_::Data__;
+    using Request__ = typename Txn_::Request__;
+    using Reject__ = typename Txn_::Reject__;
 
   public:
     Txn() { }
@@ -804,8 +804,8 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     // Txn m1, m2;
     // m1 = m2.data<NewOrder>(); // copy m2 (containing NewOrder) to m1
     template <typename Txn_, typename T_> struct Data : public Data__ {
-      typedef Txn_ Txn;
-      typedef T_ T;
+      using Txn = Txn_;
+      using T = T_;
       Data(const Txn &txn_) : txn(txn_) { }
       const Txn	&txn;
     };
@@ -874,29 +874,29 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
 #pragma GCC diagnostic pop
 #endif
 
-  typedef Txn<NewOrder> OrderTxn;	// order / order ack
-  typedef Txn<Modify> ModifyTxn;	// modify / modify ack
-  typedef Txn<Cancel> CancelTxn;	// cancel / cancel ack
+  using OrderTxn = Txn<NewOrder>;	// order / order ack
+  using ModifyTxn = Txn<Modify>;	// modify / modify ack
+  using CancelTxn = Txn<Cancel>;	// cancel / cancel ack
 
-  typedef Txn<Event> AckTxn;		// ack event header
+  using AckTxn = Txn<Event>;		// ack event header
 
   // ExecTxn can contain a reject/execution(notice) (acks update OMC)
   typedef typename ZuLargest<
     Reject, ModReject, CxlReject,
     Fill, Closed>::T Exec_Largest;
-  typedef Txn<Exec_Largest> ExecTxn;
+  using ExecTxn = Txn<Exec_Largest>;
 
   // ClosedTxn can contain a reject, cancel ack, or closed event
   typedef typename ZuLargest<
     Reject, Event, Closed>::T Closed_Largest;
-  typedef Txn<Closed_Largest> ClosedTxn;
+  using ClosedTxn = Txn<Closed_Largest>;
 
   // AnyTxn can contain any request or event
   typedef typename ZuLargest<
     NewOrder, Modify, Cancel,
     Ordered, Modified, Canceled,
     Exec_Largest>::T Any_Largest;
-  typedef Txn<Any_Largest> AnyTxn;
+  using AnyTxn = Txn<Any_Largest>;
 
   // Order - open order state including pending modify/cancel
   struct Order : public ZuPrintable {

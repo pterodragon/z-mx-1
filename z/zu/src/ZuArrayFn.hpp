@@ -75,7 +75,7 @@ public:
 
 template <typename T, class Cmp> class ZuArrayFn_ItemOps :
     public ZuArrayFn_ItemOps_<T, Cmp, ZuTraits<T>::IsPrimitive> {
-  typedef ZuArrayFn_ItemOps_<T, Cmp, ZuTraits<T>::IsPrimitive> Base;
+  using Base = ZuArrayFn_ItemOps_<T, Cmp, ZuTraits<T>::IsPrimitive>;
 public:
   static void initItems(T *dst, unsigned length) {
     if (ZuLikely(length))

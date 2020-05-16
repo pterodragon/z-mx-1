@@ -176,7 +176,7 @@ template <typename T>
 constexpr T &&ZuFwd(typename ZuDeref<T>::T &&v) noexcept { // fwd rvalue
   return static_cast<T &&>(v);
 }
-// use to forward auto &&x parameters (GNU extension)
+// use to forward auto &&x parameters (usually template lambda parameters)
 #define ZuAutoFwd(x) ZuFwd<decltype(x)>(x)
 // shorthand constexpr std::move without STL cruft
 template <typename T>

@@ -40,7 +40,7 @@
 #include <zlib/ZmLHash.hpp>
 #include <zlib/ZmNoLock.hpp>
 
-typedef ZuBox_1(int8_t) ZtEnum;
+using ZtEnum = ZuBox_1(int8_t);
 
 // ZtEnum class declaration macros
 //   Note: must use in this order: Values; Names; Map; Flags;...
@@ -53,14 +53,16 @@ typedef ZuBox_1(int8_t) ZtEnum;
   }; \
   template <typename T> struct Map_ : public ZuObject { \
   private: \
-    typedef ZmLHash<ZtEnum, \
-	      ZmLHashVal<ZuString, \
-		ZmLHashStatic<Bits, \
-		  ZmLHashLock<ZmNoLock> > > > V2S; \
-    typedef ZmLHash<ZuString, \
-	      ZmLHashVal<ZtEnum, \
-		ZmLHashStatic<Bits, \
-		  ZmLHashLock<ZmNoLock> > > > S2V; \
+    using V2S = \
+      ZmLHash<ZtEnum, \
+	ZmLHashVal<ZuString, \
+	  ZmLHashStatic<Bits, \
+	    ZmLHashLock<ZmNoLock> > > >; \
+    using S2V = \
+      ZmLHash<ZuString, \
+	ZmLHashVal<ZtEnum, \
+	  ZmLHashStatic<Bits, \
+	    ZmLHashLock<ZmNoLock> > > >; \
   protected: \
     void init(const char *s, int v, ...) { \
       if (ZuUnlikely(!s)) return; \

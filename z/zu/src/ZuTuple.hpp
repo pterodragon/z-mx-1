@@ -35,6 +35,17 @@
 #include <zlib/ZuNull.hpp>
 #include <zlib/ZuPP.hpp>
 
+template <typename ...Args> struct ZuTuple_Index_ { };
+template <typename, typename> struct ZuTuple_Index;
+template <typename T, typename ...Args>
+struct ZuTuple_Index<T, ZuTuple_Index_<T, Args...>> {
+  enum { I = 0 };
+};
+template <typename T, typename O, typename ...Args>
+struct ZuTuple_Index<T, ZuTuple_Index_<O, Args...>> {
+  enum { I = 1 + ZuTuple_Index<T, ZuTuple_Index_<Args...>>::I };
+};
+
 template <typename ...Args> class ZuTuple;
 
 struct ZuTuple1_ { }; // tuple containing single value
@@ -99,6 +110,9 @@ public:
   template <unsigned I> using Type_ = ZuTuple_Type0_<I, U0>;
   using Traits = ZuTraits<T0>;
   enum { N = 1 };
+
+  template <typename T>
+  using Index = ZuTuple_Index<T, ZuTuple_Index_<T0>>;
 
   ZuInline ZuTuple() { }
 
@@ -191,6 +205,19 @@ public:
     return *this;
   }
 
+  template <typename T>
+  ZuInline auto v() const {
+    return p<Index<T>::I>();
+  }
+  template <typename T>
+  ZuInline auto v() {
+    return p<Index<T>::I>();
+  }
+  template <typename T, typename P>
+  ZuInline auto v(P &&p) {
+    return p<Index<T>::I>(ZuFwd<P>(p));
+  }
+
   using Print = ZuTuple1_Print<U0, ZuConversion<ZuPair_, U0>::Base>;
   ZuInline Print print() const {
     return Print{m_p0, "|"};
@@ -213,6 +240,9 @@ public:
   using Traits = ZuTraits<Pair>;
   enum { N = 2 };
 
+  template <typename T>
+  using Index = ZuTuple_Index<T, ZuTuple_Index_<T0, T1>>;
+
   using Pair::Pair;
   using Pair::operator =;
 
@@ -231,6 +261,19 @@ public:
   ZuInline ZuTuple &p(P &&p) {
     Pair::template p<I>(ZuFwd<P>(p));
     return *this;
+  }
+
+  template <typename T>
+  ZuInline auto v() const {
+    return p<Index<T>::I>();
+  }
+  template <typename T>
+  ZuInline auto v() {
+    return p<Index<T>::I>();
+  }
+  template <typename T, typename P>
+  ZuInline auto v(P &&p) {
+    return p<Index<T>::I>(ZuFwd<P>(p));
   }
 };
 
@@ -255,17 +298,14 @@ public:
   using Traits = ZuTraits<Pair>;
   enum { N = Right::N + 1 };
 
+  template <typename T>
+  using Index = ZuTuple_Index<T, ZuTuple_Index_<T0, T1, Args...>>;
+
   using Pair::Pair;
   using Pair::operator =;
 
   ZuInline ZuTuple(const Pair &v) : Pair(v) { };
   ZuInline ZuTuple(Pair &&v) : Pair(ZuMv(v)) { };
-
-#if 0
-  template <typename T>
-  ZuInline ZuTuple(T p, typename ZuIfT<ZuPair_Cvt<T, Pair>::OK>::T *_ = 0) :
-      Pair(ZuMv(p)) { }
-#endif
 
   template <typename P0, typename P1, typename ...Args_>
   ZuInline ZuTuple(P0 &&p0, P1 &&p1, Args_ &&... args) :
@@ -298,6 +338,19 @@ public:
   ZuInline typename ZuIfT<(I && I < N), ZuTuple &>::T p(P &&p) {
     Pair::template p<1>().template p<I - 1>(ZuFwd<P>(p));
     return *this;
+  }
+
+  template <typename T>
+  ZuInline auto v() const {
+    return p<Index<T>::I>();
+  }
+  template <typename T>
+  ZuInline auto v() {
+    return p<Index<T>::I>();
+  }
+  template <typename T, typename P>
+  ZuInline auto v(P &&p) {
+    return p<Index<T>::I>(ZuFwd<P>(p));
   }
 };
 

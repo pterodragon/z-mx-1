@@ -87,8 +87,8 @@ template <typename Int, int Size> struct ZmAtomicOps;
 
 // 32bit atomic operations
 template <typename Int32> struct ZmAtomicOps<Int32, 4> {
-  typedef int32_t S;
-  typedef uint32_t U;
+  using S = int32_t;
+  using U = uint32_t;
 
   ZuInline static Int32 load_(const Int32 *ptr) {
     return ZmAtomic_load(ptr);
@@ -166,8 +166,8 @@ template <typename Int32> struct ZmAtomicOps<Int32, 4> {
 
 // 64bit atomic operations
 template <typename Int64> struct ZmAtomicOps<Int64, 8> {
-  typedef int64_t S;
-  typedef uint64_t U;
+  using S = int64_t;
+  using U = uint64_t;
 
   ZuInline static Int64 load_(const Int64 *ptr) {
     return ZmAtomic_load(ptr);
@@ -296,11 +296,11 @@ template <typename T> class ZmAtomic {
   ZuAssert(ZuTraits<T>::IsPrimitive && ZuTraits<T>::IsIntegral);
 
 public:
-  typedef ZmAtomicOps<T, sizeof(T)> Ops;
+  using Ops = ZmAtomicOps<T, sizeof(T)>;
 
 private:
-  typedef typename Ops::S S;
-  typedef typename Ops::U U;
+  using S = typename Ops::S;
+  using U = typename Ops::U;
 
 public:
   ZuInline ZmAtomic() : m_val(0) { };
@@ -391,11 +391,11 @@ private:
 
 template <typename T> class ZmAtomic<T *> {
 public:
-  typedef ZmAtomicOps<uintptr_t, sizeof(T *)> Ops;
+  using Ops = ZmAtomicOps<uintptr_t, sizeof(T *)>;
 
 private:
-  typedef typename Ops::S S;
-  typedef typename Ops::U U;
+  using S = typename Ops::S;
+  using U = typename Ops::U;
 
 public:
   ZuInline ZmAtomic() : m_val(0) { }
@@ -462,7 +462,7 @@ private:
 };
 
 template <typename T_> struct ZuTraits<ZmAtomic<T_> > : public ZuTraits<T_> {
-  typedef ZmAtomic<T_> T;
+  using T = ZmAtomic<T_>;
   enum { IsPrimitive = 0 };
 };
 

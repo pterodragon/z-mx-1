@@ -34,7 +34,7 @@
 #include <zlib/ZmLockTraits.hpp>
 
 #ifdef _WIN32
-typedef ZmPLock ZmSpinLock;
+using ZmSpinLock = ZmPLock;
 #endif
 
 #ifndef _WIN32

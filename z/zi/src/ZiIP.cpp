@@ -169,7 +169,7 @@ ZiIP_WSAStartup::~ZiIP_WSAStartup()
   if (m_wsaCleanup) WSACleanup();
 }
 
-typedef ADDRINFOT ZiIP_AddrInfo;
+using ZiIP_AddrInfo = ADDRINFOT;
 #define ZiIP_GetAddrInfo GetAddrInfo
 #define ZiIP_FreeAddrInfo FreeAddrInfo
 #define ZiIP_GetNameInfo GetNameInfo
@@ -178,7 +178,7 @@ typedef ADDRINFOT ZiIP_AddrInfo;
 
 #else
 
-typedef struct addrinfo ZiIP_AddrInfo;
+using ZiIP_AddrInfo = struct addrinfo;
 #define ZiIP_GetAddrInfo getaddrinfo
 #define ZiIP_FreeAddrInfo freeaddrinfo
 #define ZiIP_GetNameInfo getnameinfo

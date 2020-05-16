@@ -188,7 +188,7 @@ int foo() { return 42; }
 ZuBox<int> bar() { return ZuBox<int>(); }
 ZuBox<int> bah() { return ZuBox<int>(42); }
 
-typedef ZuBox<int> BoxedInt;
+using BoxedInt = ZuBox<int>;
 
 int foo2() { return 42; }
 BoxedInt bar2() { return BoxedInt(); }

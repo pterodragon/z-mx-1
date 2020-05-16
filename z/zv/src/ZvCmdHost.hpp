@@ -131,9 +131,10 @@ private:
     ZtString	brief;
     ZtString	usage;
   };
-  typedef ZmRBTree<ZtString,
-	    ZmRBTreeVal<CmdData,
-	      ZmRBTreeLock<ZmNoLock> > > Cmds;
+  using Cmds =
+    ZmRBTree<ZtString,
+      ZmRBTreeVal<CmdData,
+	ZmRBTreeLock<ZmNoLock> > >;
 
   ZmRef<ZvCf>		m_syntax;
   Cmds			m_cmds;

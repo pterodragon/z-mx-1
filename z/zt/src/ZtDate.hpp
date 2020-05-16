@@ -182,7 +182,7 @@ namespace ZtDateFmt {
   friend class ::ZtDate;
   public:
     enum { Prec = Prec_ };
-    typedef Null_ Null;
+    using Null = Null_;
 
     ZuAssert(Prec >= -9 && Prec <= 9);
 
@@ -269,14 +269,14 @@ template <> struct ZuTraits<ZtDate> : public ZuGenericTraits<ZtDate> {
 };
 
 class ZtAPI ZtDate {
-  typedef ZtDate_time_t<sizeof(time_t)> Native;
+  using Native = ZtDate_time_t<sizeof(time_t)>;
 
 public:
   template <int Prec, class Null>
   using FIXFmt = ZtDateFmt::FIX<Prec, Null>;
-  typedef ZtDateFmt::CSV CSVFmt;
-  typedef ZtDateFmt::ISO ISOFmt;
-  typedef ZtDateFmt::Strftime Strftime;
+  using CSVFmt = ZtDateFmt::CSV;
+  using ISOFmt = ZtDateFmt::ISO;
+  using Strftime = ZtDateFmt::Strftime;
 
   enum Now_ { Now };		// disambiguator
   enum Julian_ { Julian };	// ''

@@ -63,16 +63,16 @@ template <typename T, class Cmp> class ZtArray;
 
 template <typename T> struct ZtArray_ { };
 
-template <typename T_> struct ZtArray_Char2 { typedef ZuNull T; };
-template <> struct ZtArray_Char2<char> { typedef wchar_t T; };
-template <> struct ZtArray_Char2<wchar_t> { typedef char T; };
+template <typename T_> struct ZtArray_Char2 { using T = ZuNull; };
+template <> struct ZtArray_Char2<char> { using T = wchar_t; };
+template <> struct ZtArray_Char2<wchar_t> { using T = char; };
 
 template <typename T_, class Cmp_ = ZuCmp<T_> >
 class ZtArray : public ZtArray_<T_>, public ZuArrayFn<T_, Cmp_> {
 public:
-  typedef T_ T;
-  typedef Cmp_ Cmp;
-  typedef ZuArrayFn<T, Cmp> Ops;
+  using T = T_;
+  using Cmp = Cmp_;
+  using Ops = ZuArrayFn<T, Cmp>;
   enum {
     IsString = ZuConversion<T, char>::Same || ZuConversion<T, wchar_t>::Same,
     IsWString = ZuConversion<T, wchar_t>::Same
@@ -82,14 +82,14 @@ public:
   enum Move_ { Move };
 
 private:
-  typedef T Char;
-  typedef typename ZtArray_Char2<T>::T Char2;
+  using Char = T;
+  using Char2 = typename ZtArray_Char2<T>::T;
 
   // from same type ZtArray
   template <typename U, typename R = void, typename V = T,
     bool A = ZuConversion<ZtArray_<V>, U>::Base> struct MatchZtArray;
   template <typename U, typename R>
-    struct MatchZtArray<U, R, T, true> { typedef R T; };
+    struct MatchZtArray<U, R, T, true> { using T = R; };
 
   // from another array type with convertible element type (not a string)
   template <typename U, typename R = void, typename V = T,
@@ -98,7 +98,7 @@ private:
       ZuConversion<typename ZuTraits<U>::Elem, V>::Exists
     > struct MatchArray;
   template <typename U, typename R>
-    struct MatchArray<U, R, T, true> { typedef R T; };
+    struct MatchArray<U, R, T, true> { using T = R; };
 
   // from another array type with same element type (not a string)
   template <typename U, typename R = void, typename V = T,
@@ -107,7 +107,7 @@ private:
       ZuConversion<typename ZuTraits<U>::Elem, V>::Same
     > struct MatchSameArray;
   template <typename U, typename R>
-    struct MatchSameArray<U, R, T, true> { typedef R T; };
+    struct MatchSameArray<U, R, T, true> { using T = R; };
 
   // from another array type with convertible element type (not a string)
   template <typename U, typename R = void, typename V = T,
@@ -117,7 +117,7 @@ private:
       ZuConversion<typename ZuTraits<U>::Elem, V>::Exists
     > struct MatchDiffArray;
   template <typename U, typename R>
-    struct MatchDiffArray<U, R, T, true> { typedef R T; };
+    struct MatchDiffArray<U, R, T, true> { using T = R; };
 
   // from string literal with same char
   template <typename U, typename V = Char> struct IsStrLiteral {
@@ -152,7 +152,7 @@ private:
       ZuConversion<typename ZuTraits<U>::Elem, const V>::Same
     > struct MatchChar2String;
   template <typename U, typename R>
-    struct MatchChar2String<U, R, Char2, true> { typedef R T; };
+    struct MatchChar2String<U, R, Char2, true> { using T = R; };
 
   // from individual char2 (requires conversion)
   template <typename U, typename R = void, typename V = Char2,
@@ -160,24 +160,24 @@ private:
       ZuConversion<U, V>::Same &&
       !ZuConversion<U, wchar_t>::Same> struct MatchChar2;
   template <typename U, typename R>
-  struct MatchChar2<U, R, Char2, true> { typedef R T; };
+  struct MatchChar2<U, R, Char2, true> { using T = R; };
 
   // from printable type (if this is a char array)
   template <typename U, typename R = void, typename V = Char,
     bool B = ZuConversion<char, V>::Same &&
       ZuPrint<U>::OK && !ZuPrint<U>::String> struct MatchPrint;
   template <typename U, typename R>
-  struct MatchPrint<U, R, char, true> { typedef R T; };
+  struct MatchPrint<U, R, char, true> { using T = R; };
   template <typename U, typename R = void, typename V = Char,
     bool B = ZuConversion<char, V>::Same &&
       ZuPrint<U>::Delegate> struct MatchPDelegate { };
   template <typename U, typename R>
-  struct MatchPDelegate<U, R, char, true> { typedef R T; };
+  struct MatchPDelegate<U, R, char, true> { using T = R; };
   template <typename U, typename R = void, typename V = Char,
     bool B = ZuConversion<char, V>::Same &&
       ZuPrint<U>::Buffer> struct MatchPBuffer { };
   template <typename U, typename R>
-  struct MatchPBuffer<U, R, char, true> { typedef R T; };
+  struct MatchPBuffer<U, R, char, true> { using T = R; };
 
   // from real primitive types other than chars (if this is a char array)
   template <typename U, typename R = void, typename V = Char,
@@ -187,7 +187,7 @@ private:
       !ZuTraits<U>::IsArray
     > struct MatchReal { };
   template <typename U, typename R>
-  struct MatchReal<U, R, char, true> { typedef R T; };
+  struct MatchReal<U, R, char, true> { using T = R; };
 
   // from individual element
   template <typename U, typename R = void, typename V = T, typename W = Char2,
@@ -203,7 +203,7 @@ private:
        ZuConversion<U, V>::Exists)
     > struct MatchElem;
   template <typename U, typename R>
-  struct MatchElem<U, R, T, Char2, true> { typedef R T; };
+  struct MatchElem<U, R, T, Char2, true> { using T = R; };
 
   // an unsigned|int|size_t parameter to the constructor is a buffer size
   template <typename U, typename R = void, typename V = Char,
@@ -213,7 +213,7 @@ private:
       ZuConversion<U, size_t>::Same
     > struct CtorSize;
   template <typename U, typename R>
-  struct CtorSize<U, R, Char, true> { typedef R T; };
+  struct CtorSize<U, R, Char, true> { using T = R; };
 
   // construction from individual element
   template <typename U, typename R = void, typename V = T, typename W = Char2,
@@ -233,16 +233,16 @@ private:
        ZuConversion<U, V>::Exists))
     > struct CtorElem;
   template <typename U, typename R>
-  struct CtorElem<U, R, T, Char2, true> { typedef R T; };
+  struct CtorElem<U, R, T, Char2, true> { using T = R; };
 
   template <typename U, typename R = void,
     typename V = Char,
     bool S = ZuTraits<U>::IsString,
     bool W = ZuTraits<U>::IsWString> struct ToString { };
   template <typename U, typename R>
-  struct ToString<U, R, char, true, false> { typedef R T; };
+  struct ToString<U, R, char, true, false> { using T = R; };
   template <typename U, typename R>
-  struct ToString<U, R, wchar_t, true, true> { typedef R T; };
+  struct ToString<U, R, wchar_t, true, true> { using T = R; };
 
 public:
   ZuInline ZtArray() { null_(); }
@@ -1420,8 +1420,8 @@ ZuInline void ZtArray<T, Cmp>::convert_(const S &s, ZtIconv *iconv) {
 template <typename Elem_, class Cmp>
 struct ZuTraits<ZtArray<Elem_, Cmp> > :
     public ZuGenericTraits<ZtArray<Elem_, Cmp> > {
-  typedef ZtArray<Elem_, Cmp> T;
-  typedef Elem_ Elem;
+  using T = ZtArray<Elem_, Cmp>;
+  using Elem = Elem_;
   enum {
     IsArray = 1, IsPrimitive = 0,
     IsString =

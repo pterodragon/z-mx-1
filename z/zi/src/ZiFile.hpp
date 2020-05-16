@@ -56,14 +56,14 @@ class ZiAPI ZiFile {
   ZiFile &operator =(const ZiFile &) = delete;	// prevent mis-use
 
 public:
-  typedef ZiPlatform::Handle Handle;
-  typedef ZiPlatform::Path Path;
-  typedef ZiPlatform::Offset Offset;
-  typedef ZiPlatform::MMapPtr MMapPtr;
+  using Handle = ZiPlatform::Handle;
+  using Path = ZiPlatform::Path;
+  using Offset = ZiPlatform::Offset;
+  using MMapPtr = ZiPlatform::MMapPtr;
 
-  typedef ZmLock Lock;
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using Lock = ZmLock;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
   enum Flags {
     ReadOnly	= 0x0001,
@@ -189,12 +189,12 @@ private:
 	   bool B = ZuPrint<U>::Delegate && !ZuTraits<U>::IsString>
   struct MatchPDelegate;
   template <typename U, typename R>
-  struct MatchPDelegate<U, R, 1> { typedef R T; };
+  struct MatchPDelegate<U, R, 1> { using T = R; };
   template <typename U, typename R = void,
 	   bool B = ZuPrint<U>::Buffer && !ZuTraits<U>::IsString>
   struct MatchPBuffer;
   template <typename U, typename R>
-  struct MatchPBuffer<U, R, 1> { typedef R T; };
+  struct MatchPBuffer<U, R, 1> { using T = R; };
 
   template <typename S> typename ZuIsString<S>::T append(S &&s_) {
     ZuString s(ZuFwd<S>(s_));

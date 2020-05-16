@@ -55,7 +55,7 @@
 #ifndef _WIN32
 #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 #define ZmPLock_Recursive 0
-typedef uint32_t ZmPLock_;
+using ZmPLock_ = uint32_t;
 #define ZmPLock_init(m) m = 0
 #define ZmPLock_final(m) (void)0
 ZuInline void ZmPLock_lock_(ZmPLock_ &m) {
@@ -101,7 +101,7 @@ ZuInline void ZmPLock_unlock_(ZmPLock_ &m) {
 #define ZmPLock_unlock(m) ZmPLock_unlock_(m) 
 #else
 #define ZmPLock_Recursive 1
-typedef pthread_mutex_t ZmPLock_;
+using ZmPLock_ = pthread_mutex_t;
 struct ZmPLock_Attr {
   ZmPLock_Attr() {
     pthread_mutexattr_init(&m_value);
@@ -124,7 +124,7 @@ struct ZmPLock_Attr {
 #endif
 #else
 #define ZmPLock_Recursive 1
-typedef CRITICAL_SECTION ZmPLock_;
+using ZmPLock_ = CRITICAL_SECTION;
 #define ZmPLock_init(m) \
   InitializeCriticalSectionAndSpinCount(&m, 0x10000)
 #define ZmPLock_final(m) DeleteCriticalSection(&m)

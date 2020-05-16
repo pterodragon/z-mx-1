@@ -32,7 +32,7 @@ void usage()
   ZmPlatform::exit(1);
 }
 
-typedef ZiRing<ZiRingMsg> Ring;
+using Ring = ZiRing<ZiRingMsg>;
 
 struct App {
   App() :

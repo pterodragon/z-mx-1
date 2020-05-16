@@ -70,40 +70,40 @@
 
 struct ZiAPI ZiPlatform {
 #ifndef _WIN32
-  typedef int Handle;
+  using Handle = int;
   ZuInline static constexpr const Handle nullHandle() { return -1; }
   ZuInline static constexpr bool nullHandle(Handle i) { return i < 0; }
-  typedef int Socket;
+  using Socket = int;
   ZuInline static constexpr const Socket nullSocket() { return -1; }
   ZuInline static constexpr bool nullSocket(Socket i) { return i < 0; }
   static void closeSocket(Socket s) { ::close(s); }
-  typedef void *MMapPtr;
-  typedef ZtString Path;
-  typedef off_t Offset;
-  typedef ZtString Hostname;
-  typedef ZtString Username;
+  using MMapPtr = void *;
+  using Path = ZtString;
+  using Offset = off_t;
+  using Hostname = ZtString;
+  using Username = ZtString;
   enum {
     PathMax = PATH_MAX,
     NameMax = NAME_MAX,
     NVecMax = IOV_MAX
   };
 #else
-  typedef HANDLE Handle;
+  using Handle = HANDLE;
   ZuInline static const Handle nullHandle()
     { return INVALID_HANDLE_VALUE; }
   ZuInline static bool nullHandle(Handle i)
     { return !i || i == INVALID_HANDLE_VALUE; }
-  typedef SOCKET Socket;
+  using Socket = SOCKET;
   ZuInline static constexpr const Socket nullSocket()
     { return INVALID_SOCKET; }
   ZuInline static constexpr bool nullSocket(Socket i)
     { return i == INVALID_SOCKET; }
   static void closeSocket(Socket s) { ::closesocket(s); }
-  typedef LPVOID MMapPtr;
-  typedef ZtWString Path;
-  typedef int64_t Offset;		// 2x DWORD
-  typedef ZtWString Hostname;
-  typedef ZtWString Username;
+  using MMapPtr = LPVOID;
+  using Path = ZtWString;
+  using Offset = int64_t;		// 2x DWORD
+  using Hostname = ZtWString;
+  using Username = ZtWString;
   enum {
     PathMax = 32767,	// NTFS limit (MAX_PATH is 260 for FAT)
     NameMax = 255,	// NTFS & FAT limit
@@ -121,15 +121,15 @@ struct ZiAPI ZiPlatform {
 };
 
 #ifndef _WIN32
-typedef struct iovec ZiVec;
-typedef void *ZiVecPtr;
-typedef size_t ZiVecLen;
+using ZiVec = struct iovec;
+using ZiVecPtr = void *;
+using ZiVecLen = size_t;
 #define ZiVec_ptr(x) (x).iov_base
 #define ZiVec_len(x) (x).iov_len
 #else
-typedef WSABUF ZiVec;
-typedef char *ZiVecPtr;
-typedef u_long ZiVecLen;
+using ZiVec = WSABUF;
+using ZiVecPtr = char *;
+using ZiVecLen = u_long;
 #define ZiVec_ptr(x) (x).buf
 #define ZiVec_len(x) (x).len
 #endif

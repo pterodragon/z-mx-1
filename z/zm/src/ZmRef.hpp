@@ -95,7 +95,7 @@ struct ZmRef__ {
 template <typename T_> class ZmRef : public ZuRef_, public ZmRef_ {
 template <typename> friend class ZmRef;
 public:
-  typedef T_ T;
+  using T = T_;
 
 private:
   // matches ZmRef<U> where U is not T, but is in the same type hierarchy as T
@@ -107,7 +107,7 @@ private:
   template <typename U, typename R = void, bool OK = IsOtherRef2<U>::OK>
   struct MatchOtherRef2 { };
   template <typename U, typename R>
-  struct MatchOtherRef2<U, R, true> { typedef R T; };
+  struct MatchOtherRef2<U, R, true> { using T = R; };
   template <typename U> struct IsOtherRef1 {
     enum { OK = ZuConversion<ZmRef_, U>::Base };
   };
@@ -125,7 +125,7 @@ private:
   template <typename U, typename R = void, bool OK = IsRef2<U>::OK>
   struct MatchRef2 { };
   template <typename U, typename R>
-  struct MatchRef2<U, R, true> { typedef R T; };
+  struct MatchRef2<U, R, true> { using T = R; };
   template <typename U> struct IsRef1 {
     enum { OK = ZuConversion<ZmRef_, U>::Base };
   };
@@ -141,7 +141,7 @@ private:
   template <typename U, typename R = void, bool OK = IsPtr<U>::OK>
   struct MatchPtr;
   template <typename U, typename R>
-  struct MatchPtr<U, R, true> { typedef R T; };
+  struct MatchPtr<U, R, true> { using T = R; };
 
 public:
   ZmRef() : m_object(0) { }
@@ -235,7 +235,7 @@ protected:
 template <typename T_>
 struct ZuTraits<ZmRef<T_> > : public ZuTraits<T_ *> {
   enum { IsPrimitive = 0, IsPOD = 0 };
-  typedef ZmRef<T_> T;
+  using T = ZmRef<T_>;
 };
 
 template <typename T> struct ZuCmp;

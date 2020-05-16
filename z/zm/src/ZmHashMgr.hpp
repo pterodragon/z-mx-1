@@ -90,14 +90,15 @@ struct ZmAnyHash_PtrAccessor : public ZuAccessor<ZmAnyHash_, uintptr_t> {
 struct ZmHashMgr_HeapID {
   ZuInline static const char *id() { return "ZmHashMgr_"; }
 };
-typedef ZmRBTree<ZmAnyHash_,
-	  ZmRBTreeNodeIsKey<true,
-	    ZmRBTreeObject<ZmPolymorph,
-	      ZmRBTreeHeapID<ZuNull,
-		ZmRBTreeIndex<ZmAnyHash_PtrAccessor,
-		  ZmRBTreeHeapID<ZmHashMgr_HeapID,
-		    ZmRBTreeLock<ZmNoLock> > > > > > > ZmHashMgr_Tables;
-typedef ZmHashMgr_Tables::Node ZmAnyHash;
+using ZmHashMgr_Tables =
+  ZmRBTree<ZmAnyHash_,
+    ZmRBTreeNodeIsKey<true,
+      ZmRBTreeObject<ZmPolymorph,
+	ZmRBTreeHeapID<ZuNull,
+	  ZmRBTreeIndex<ZmAnyHash_PtrAccessor,
+	    ZmRBTreeHeapID<ZmHashMgr_HeapID,
+	      ZmRBTreeLock<ZmNoLock> > > > > > >;
+using ZmAnyHash = ZmHashMgr_Tables::Node;
 
 class ZmHashMgr_;
 class ZmAPI ZmHashMgr {

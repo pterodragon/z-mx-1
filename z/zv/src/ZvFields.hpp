@@ -65,7 +65,7 @@ ZuDeclUnion(ZvTimeFmt,
     (ZtDateFmt::ISO, iso));
 
 struct ZvFieldFmt {
-  ZvFieldFmt() { new (time.new_csv()) ZtDateFmt::CSV{}; }
+  ZvFieldFmt() { new (time.init_csv()) ZtDateFmt::CSV{}; }
   ZvFieldFmt(const ZvFieldFmt &) = default;
   ZvFieldFmt &operator =(const ZvFieldFmt &) = default;
   ZvFieldFmt(ZvFieldFmt &&) = default;

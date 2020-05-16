@@ -73,8 +73,8 @@
 #define ZdbDEBUG(env, e) ((void)0)
 #endif
 
-typedef uint32_t ZdbID;		// database ID
-typedef uint64_t ZdbRN;		// record ID
+using ZdbID = uint32_t;		// database ID
+using ZdbRN = uint64_t;		// record ID
 #define ZdbNullRN (~((uint64_t)0))
 #define ZdbMaxRN ZdbNullRN
 
@@ -212,12 +212,13 @@ private:
   uint64_t	m_undeleted[ZdbFileRecs>>6];
 };
 
-typedef ZmList<Zdb_File_,
-	  ZmListObject<ZmPolymorph,
-	    ZmListNodeIsItem<true,
-	      ZmListHeapID<ZuNull,
-		ZmListLock<ZmNoLock> > > > > Zdb_FileLRU;
-typedef Zdb_FileLRU::Node Zdb_FileLRUNode;
+using Zdb_FileLRU =
+  ZmList<Zdb_File_,
+    ZmListObject<ZmPolymorph,
+      ZmListNodeIsItem<true,
+	ZmListHeapID<ZuNull,
+	  ZmListLock<ZmNoLock> > > > >;
+using Zdb_FileLRUNode = Zdb_FileLRU::Node;
 
 struct Zdb_FileIndexAccessor : public ZuAccessor<Zdb_FileLRUNode, unsigned> {
   ZuInline static unsigned value(const Zdb_FileLRUNode &node) {
@@ -228,13 +229,14 @@ struct Zdb_FileIndexAccessor : public ZuAccessor<Zdb_FileLRUNode, unsigned> {
 struct Zdb_FileHeapID {
   ZuInline static const char *id() { return "Zdb_File"; }
 };
-typedef ZmHash<Zdb_FileLRUNode,
-	  ZmHashObject<ZmPolymorph,
-	    ZmHashNodeIsKey<true,
-	      ZmHashIndex<Zdb_FileIndexAccessor,
-		ZmHashHeapID<Zdb_FileHeapID,
-		  ZmHashLock<ZmNoLock> > > > > > Zdb_FileHash;
-typedef Zdb_FileHash::Node Zdb_File;
+using Zdb_FileHash =
+  ZmHash<Zdb_FileLRUNode,
+    ZmHashObject<ZmPolymorph,
+      ZmHashNodeIsKey<true,
+	ZmHashIndex<Zdb_FileIndexAccessor,
+	  ZmHashHeapID<Zdb_FileHeapID,
+	    ZmHashLock<ZmNoLock> > > > > >;
+using Zdb_File = Zdb_FileHash::Node;
 
 class Zdb_FileRec {
 public:
@@ -266,12 +268,13 @@ struct ZdbTrailer {
 };
 #pragma pack(pop)
 
-typedef ZmList<ZmPolymorph,
-	  ZmListObject<ZmPolymorph,
-	    ZmListNodeIsItem<true,
-	      ZmListHeapID<ZuNull,
-		ZmListLock<ZmNoLock> > > > > ZdbLRU;
-typedef ZdbLRU::Node ZdbLRUNode;
+using ZdbLRU =
+  ZmList<ZmPolymorph,
+    ZmListObject<ZmPolymorph,
+      ZmListNodeIsItem<true,
+	ZmListHeapID<ZuNull,
+	  ZmListLock<ZmNoLock> > > > >;
+using ZdbLRUNode = ZdbLRU::Node;
 
 struct ZdbLRUNode_RNAccessor : public ZuAccessor<ZdbLRUNode, ZdbRN> {
   static ZdbRN value(const ZdbLRUNode &pod);
@@ -281,14 +284,15 @@ struct Zdb_Cache_ID {
   ZuInline static const char *id() { return "Zdb.Cache"; }
 };
 
-typedef ZmHash<ZdbLRUNode,
-	  ZmHashObject<ZmPolymorph,
-	    ZmHashNodeIsKey<true,
-	      ZmHashIndex<ZdbLRUNode_RNAccessor,
-		ZmHashHeapID<ZuNull,
-		  ZmHashID<Zdb_Cache_ID,
-		    ZmHashLock<ZmNoLock> > > > > > > Zdb_Cache;
-typedef Zdb_Cache::Node Zdb_CacheNode;
+using Zdb_Cache =
+  ZmHash<ZdbLRUNode,
+    ZmHashObject<ZmPolymorph,
+      ZmHashNodeIsKey<true,
+	ZmHashIndex<ZdbLRUNode_RNAccessor,
+	  ZmHashHeapID<ZuNull,
+	    ZmHashID<Zdb_Cache_ID,
+	      ZmHashLock<ZmNoLock> > > > > > >;
+using Zdb_CacheNode = Zdb_Cache::Node;
 
 class ZdbAnyPOD_Cmpr;
 class ZdbAnyPOD_Send__;
@@ -429,11 +433,11 @@ private:
 // Note: ptr and range can be null if op is ZdbOp::Delete
 
 // AllocFn - called to allocate/initialize new record from memory
-typedef ZmFn<ZdbAny *, ZmRef<ZdbAnyPOD> &> ZdbAllocFn;
+using ZdbAllocFn = ZmFn<ZdbAny *, ZmRef<ZdbAnyPOD> &>;
 // AddFn(pod, op, recovered) - record is recovered, or new/update replicated
-typedef ZmFn<ZdbAnyPOD *, int, bool> ZdbAddFn;
+using ZdbAddFn = ZmFn<ZdbAnyPOD *, int, bool>;
 // WriteFn(pod, op) - write drop copy
-typedef ZmFn<ZdbAnyPOD *, int> ZdbWriteFn;
+using ZdbWriteFn = ZmFn<ZdbAnyPOD *, int>;
 
 struct ZdbPOD_HeapID {
   ZuInline static const char *id() { return "ZdbPOD"; }
@@ -453,11 +457,11 @@ class ZdbPOD_ : public Heap, public ZuPOD_<ZdbData<T_>, ZdbAnyPOD> {
 friend class Zdb<T_>;
 friend class ZdbAnyPOD_Send__;
 
-  typedef ZuPOD_<ZdbData<T_>, ZdbAnyPOD> Base;
+  using Base = ZuPOD_<ZdbData<T_>, ZdbAnyPOD>;
 
 public:
-  typedef T_ T;
-  typedef ZdbData<T> Data;
+  using T = T_;
+  using Data = ZdbData<T>;
 
   ZdbPOD_(ZdbAny *db) : Base(db) { }
 
@@ -484,7 +488,7 @@ private:
     char	m_data[LZ4_COMPRESSBOUND(sizeof(Data))];
   };
   using Cmpr_Heap = ZmHeap<ZdbPOD_Cmpr_HeapID<T_>, sizeof(Cmpr_<ZuNull>)>;
-  typedef Cmpr_<Cmpr_Heap> Cmpr;
+  using Cmpr = Cmpr_<Cmpr_Heap>;
 
   ZmRef<ZdbAnyPOD_Cmpr> compress() { return new Cmpr(); }
 };
@@ -537,17 +541,17 @@ friend struct IDAccessor;
     ZuInline static ZdbID value(const ZdbAny *db) { return db->m_id; }
   };
 
-  typedef Zdb_Cache Cache;
-  typedef Zdb_FileHash FileHash;
+  using Cache = Zdb_Cache;
+  using FileHash = Zdb_FileHash;
 
 protected:
-  typedef ZmPLock Lock;
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using Lock = ZmPLock;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
-  typedef ZmLock FSLock;
-  typedef ZmGuard<FSLock> FSGuard;
-  typedef ZmReadGuard<FSLock> FSReadGuard;
+  using FSLock = ZmLock;
+  using FSGuard = ZmGuard<FSLock>;
+  using FSReadGuard = ZmReadGuard<FSLock>;
 
   ZdbAny(ZdbEnv *env, ZuString name, uint32_t version, int cacheMode,
       ZdbHandler handler, unsigned recSize, unsigned dataSize);
@@ -703,7 +707,7 @@ private:
 template <typename T_>
 class Zdb : public ZdbAny {
 public:
-  typedef T_ T;
+  using T = T_;
 
   template <typename Handler>
   Zdb(ZdbEnv *env, ZuString name, uint32_t version, int cacheMode,
@@ -712,7 +716,7 @@ public:
 	sizeof(typename ZdbPOD<T, ZuNull>::Data), sizeof(T)) { }
 };
 
-typedef ZtArray<ZdbRN> Zdb_DBState;
+using Zdb_DBState = ZtArray<ZdbRN>;
 
 template <> struct ZuPrint<Zdb_DBState> : public ZuPrintDelegate {
   template <typename P, typename S>
@@ -751,9 +755,9 @@ friend class ZdbEnv;
 friend class Zdb_Cxn;
 template <typename> friend struct ZuPrint;
 
-  typedef ZmPLock Lock;
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using Lock = ZmPLock;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
   struct IDAccessor;
 friend struct IDAccessor;
@@ -853,7 +857,7 @@ template <> struct ZuPrint<ZdbHost> : public ZuPrintDelegate {
   }
 };
 template <> struct ZuPrint<ZdbHost *> : public ZuPrintDelegate {
-  typedef ZdbHost *Zdb_HostPtr;
+  using Zdb_HostPtr = ZdbHost *;
   template <typename S>
   static void print(S &s, const Zdb_HostPtr &v) {
     if (!v)
@@ -986,24 +990,26 @@ friend class ZdbAnyPOD_Send__;
   struct HostTree_HeapID {
     ZuInline static const char *id() { return "ZdbEnv.HostTree"; }
   };
-  typedef ZmRBTree<ZmRef<ZdbHost>,
-	    ZmRBTreeIndex<ZdbHost::IDAccessor,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmNoLock,
-		  ZmRBTreeHeapID<HostTree_HeapID> > > > > HostTree;
+  using HostTree =
+    ZmRBTree<ZmRef<ZdbHost>,
+      ZmRBTreeIndex<ZdbHost::IDAccessor,
+	ZmRBTreeObject<ZuNull,
+	  ZmRBTreeLock<ZmNoLock,
+	    ZmRBTreeHeapID<HostTree_HeapID> > > > >;
 
   struct CxnHash_HeapID {
     ZuInline static const char *id() { return "ZdbEnv.CxnHash"; }
   };
-  typedef ZmHash<ZmRef<Zdb_Cxn>,
-	    ZmHashLock<ZmPLock,
-	      ZmHashObject<ZuNull,
-		ZmHashHeapID<CxnHash_HeapID> > > > CxnHash;
+  using CxnHash =
+    ZmHash<ZmRef<Zdb_Cxn>,
+      ZmHashLock<ZmPLock,
+	ZmHashObject<ZuNull,
+	  ZmHashHeapID<CxnHash_HeapID> > > >;
 
-  typedef ZmLock Lock;
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
-  typedef ZmCondition<Lock> StateCond;
+  using Lock = ZmLock;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
+  using StateCond = ZmCondition<Lock>;
 
 #ifdef ZdbRep_DEBUG
   bool debug() const { return m_config.debug; }

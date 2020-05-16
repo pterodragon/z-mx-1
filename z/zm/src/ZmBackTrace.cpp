@@ -340,8 +340,8 @@ notfound:
 
   void init();
 
-  typedef ZmPLock Lock;
-  typedef ZmGuard<Lock> Guard;
+  using Lock = ZmPLock;
+  using Guard = ZmGuard<Lock>;
 
   void capture(unsigned skip, void **frames);
 #ifdef _WIN32

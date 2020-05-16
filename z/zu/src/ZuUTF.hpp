@@ -34,7 +34,7 @@
 #include <zlib/ZuString.hpp>
 
 struct ZuUTF8 {
-  typedef uint8_t Elem;
+  using Elem = uint8_t;
 
   static unsigned in(const uint8_t *s, unsigned n, uint32_t &u_) {
     if (ZuUnlikely(n < 1)) return 0;
@@ -107,7 +107,7 @@ struct ZuUTF8 {
 };
 
 struct ZuUTF16 {
-  typedef uint16_t Elem;
+  using Elem = uint16_t;
 
   static unsigned in(const uint16_t *s, unsigned n, uint32_t &u_) {
     uint16_t c = *s;
@@ -143,7 +143,7 @@ struct ZuUTF16 {
 };
 
 struct ZuUTF32 {
-  typedef uint32_t Elem;
+  using Elem = uint32_t;
 
   static unsigned in(const uint32_t *s, unsigned n, uint32_t &u) {
     if (ZuUnlikely(n < 1)) return 0;
@@ -161,15 +161,15 @@ struct ZuUTF32 {
 };
 
 template <unsigned> struct ZuUTF_;
-template <> struct ZuUTF_<1> { typedef ZuUTF8 T; };
-template <> struct ZuUTF_<2> { typedef ZuUTF16 T; };
-template <> struct ZuUTF_<4> { typedef ZuUTF32 T; };
+template <> struct ZuUTF_<1> { using T = ZuUTF8; };
+template <> struct ZuUTF_<2> { using T = ZuUTF16; };
+template <> struct ZuUTF_<4> { using T = ZuUTF32; };
 
 template <typename OutChar, typename InChar> struct ZuUTF {
-  typedef typename ZuUTF_<sizeof(OutChar)>::T OutUTF;
-  typedef typename OutUTF::Elem OutElem;
-  typedef typename ZuUTF_<sizeof(InChar)>::T InUTF;
-  typedef typename InUTF::Elem InElem;
+  using OutUTF = typename ZuUTF_<sizeof(OutChar)>::T;
+  using OutElem = typename OutUTF::Elem;
+  using InUTF = typename ZuUTF_<sizeof(InChar)>::T;
+  using InElem = typename InUTF::Elem;
 
   static unsigned len(ZuArray<const InChar> s_) {
     const InElem *s = (const InElem *)s_.data();

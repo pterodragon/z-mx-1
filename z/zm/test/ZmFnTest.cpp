@@ -289,7 +289,7 @@ int main()
   }
   {
     ZmRef<E3> e3 = new E3();
-    typedef ZmFn<int, int> TestFn;
+    using TestFn = ZmFn<int, int>;
     TestFn test = TestFn::Member<&E3::foo<1> >::fn(e3);
   }
   {

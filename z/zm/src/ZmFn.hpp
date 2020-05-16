@@ -55,7 +55,7 @@
 // I *i;
 // ZmThread t(ZmFn<>::Bound<&baz>::fn(i));	// Note: pointer to I
 //
-// typedef ZmFn<Params> Fn;
+// using Fn = ZmFn<Params>;
 // void foo(Fn fn);
 // foo(Fn([this, ...](params) { ... }));
 //

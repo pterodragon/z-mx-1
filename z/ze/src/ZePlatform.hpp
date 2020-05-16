@@ -77,7 +77,7 @@ namespace Ze {
 
 struct ZeAPI ZePlatform_ {
 #ifndef _WIN32
-  typedef int ErrNo;
+  using ErrNo = int;
   static constexpr ErrNo OK = 0;
 
   ZuInline static ErrNo errNo() { return errno; }
@@ -86,7 +86,7 @@ struct ZeAPI ZePlatform_ {
     return e >= 0 ? ::strerror(e) : gai_strerror(e);
   }
 #else
-  typedef DWORD ErrNo;				// <= sizeof(int)
+  using ErrNo = DWORD;				// <= sizeof(int)
   static constexpr ErrNo OK = ERROR_SUCCESS;	// == 0
 
   ZuInline static ErrNo errNo() { return GetLastError(); }
@@ -97,7 +97,7 @@ struct ZeAPI ZePlatform_ {
 
 class ZeError {
 public:
-  typedef ZePlatform_::ErrNo ErrNo;
+  using ErrNo = ZePlatform_::ErrNo;
   static const ErrNo OK = ZePlatform_::OK;
 
   ZuInline ZeError() : m_errNo(OK) { }
@@ -146,7 +146,7 @@ template <> struct ZuPrint<ZeError> : public ZuPrintFn { };
 template <typename Event>
 class ZeMessageFn_ : public ZmFn<const Event &, ZmStream &> {
 public:
-  typedef ZmFn<const Event &, ZmStream &> Fn;
+  using Fn = ZmFn<const Event &, ZmStream &>;
 
   ZuInline ZeMessageFn_() { }
   ZuInline ZeMessageFn_(const ZeMessageFn_ &fn) : Fn(fn) { }
@@ -204,10 +204,10 @@ template <typename Heap> class ZeEvent_ : public ZmObject, public Heap {
   ZeEvent_(const ZeEvent_ &) = delete;
   ZeEvent_ &operator =(const ZeEvent_ &) = delete;
 
-  typedef ZmPlatform::ThreadID ThreadID;
+  using ThreadID = ZmPlatform::ThreadID;
 
 public:
-  typedef ZeMessageFn_<ZeEvent_> MessageFn;
+  using MessageFn = ZeMessageFn_<ZeEvent_>;
 
   // from anything else
   template <typename Msg>
@@ -248,9 +248,9 @@ private:
 struct ZeEvent_HeapID {
   ZuInline static const char *id() { return "ZeEvent"; }
 };
-typedef ZmHeap<ZeEvent_HeapID, sizeof(ZeEvent_<ZuNull>)> ZeEvent_Heap;
-typedef ZeEvent_<ZeEvent_Heap> ZeEvent;
-typedef ZeEvent::MessageFn ZeMessageFn;
+using ZeEvent_Heap = ZmHeap<ZeEvent_HeapID, sizeof(ZeEvent_<ZuNull>)>;
+using ZeEvent = ZeEvent_<ZeEvent_Heap>;
+using ZeMessageFn = ZeEvent::MessageFn;
 template <> struct ZuPrint<ZeEvent::Message> : public ZuPrintFn { };
 template <> struct ZuPrint<ZeEvent> : public ZuPrintDelegate {
   template <typename S>

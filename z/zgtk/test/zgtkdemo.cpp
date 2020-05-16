@@ -42,8 +42,6 @@ int main(int argc, char **argv)
 }
 
 struct TreeModel : public ZGtk::TreeSortable<TreeModel, 1> {
-  ~TreeModel() { }
-
   struct Iter { gint index; };
 
   ZuAssert(sizeof(Iter) < sizeof(GtkTreeIter));

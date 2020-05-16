@@ -65,7 +65,7 @@
 
 #define ZmIDStrSize	60	// max size of a heap/hash ID incl. terminator
 
-typedef ZuStringN<ZmIDStrSize> ZmIDString;
+using ZmIDString = ZuStringN<ZmIDStrSize>;
 
 class ZmTime;
 
@@ -85,15 +85,15 @@ public:
   enum { CacheLineSize = ZmCacheLineSize };
 
 #ifndef _WIN32
-  typedef pid_t ProcessID;
+  using ProcessID = pid_t;
 #ifdef linux
-  typedef pid_t ThreadID;
+  using ThreadID = pid_t;
 #else
-  typedef pthread_t ThreadID;
+  using ThreadID = pthread_t;
 #endif
 #else /* !_WIN32 */
-  typedef DWORD ProcessID;
-  typedef DWORD ThreadID;
+  using ProcessID = DWORD;
+  using ThreadID = DWORD;
 #endif /* !_WIN32 */
 
 // process ID

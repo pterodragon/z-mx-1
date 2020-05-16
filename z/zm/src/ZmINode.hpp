@@ -46,7 +46,7 @@ class ZmINode<Heap, 0, Fn_, Item> :
   ZmINode &operator =(const ZmINode &);	// prevent mis-use
 
 public:
-  typedef Fn_<ZmINode<Heap, 0, Fn_, Item>, Heap, 0> Fn;
+  using Fn = Fn_<ZmINode<Heap, 0, Fn_, Item>, Heap, 0>;
 
   ZuInline ZmINode() { }
   template <typename ...Args>
@@ -67,7 +67,7 @@ class ZmINode<Heap, 1, Fn_, Item> :
   ZmINode &operator =(const ZmINode &);	// prevent mis-use
 
 public:
-  typedef Fn_<ZmINode<Heap, 1, Fn_, Item>, Heap, 1> Fn;
+  using Fn = Fn_<ZmINode<Heap, 1, Fn_, Item>, Heap, 1>;
 
   ZuInline ZmINode() { }
   template <typename ...Args>

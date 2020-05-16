@@ -48,11 +48,12 @@ void dump(Order *o)
   printf("order ID: %u\n", o->id);
 }
 
-typedef ZmHash<ZmRef<Order>,
-	  ZmHashIndex<Order::IDAccessor,
-	    ZmHashObject<ZuNull,
-	      ZmHashLock<ZmNoLock,
-		ZmHashHeapID<Orders_HeapID> > > > > Orders;
+using Orders =
+  ZmHash<ZmRef<Order>,
+    ZmHashIndex<Order::IDAccessor,
+      ZmHashObject<ZuNull,
+	ZmHashLock<ZmNoLock,
+	  ZmHashHeapID<Orders_HeapID> > > > >;
 
 int main(int argc, char **argv)
 {

@@ -86,12 +86,14 @@ private:
 
   static ZiFile_WindowsDrives *instance();
 
-  typedef ZmRBTree<ZtWString,
-	    ZmRBTreeVal<char,
-	      ZmRBTreeLock<ZmNoLock> > > DriveLetters;
-  typedef ZmRBTree<char,
-	    ZmRBTreeVal<int,
-	      ZmRBTreeLock<ZmNoLock> > > DriveBlkSizes;
+  using DriveLetters =
+    ZmRBTree<ZtWString,
+      ZmRBTreeVal<char,
+	ZmRBTreeLock<ZmNoLock> > >;
+  using DriveBlkSize =
+    ZmRBTree<char,
+      ZmRBTreeVal<int,
+	ZmRBTreeLock<ZmNoLock> > >;
 
   HMODULE		m_ntdll;
   PNtQueryObject	m_ntQueryObject;

@@ -32,7 +32,7 @@
 #include <zlib/ZmTime.hpp>
 #include <zlib/ZmHash.hpp>
 
-typedef ZuPair<uint32_t, unsigned> Msg_Data;
+using Msg_Data = ZuPair<uint32_t, unsigned>;
 struct Msg_ : public Msg_Data {
   using Msg_Data::Msg_Data;
   using Msg_Data::operator =;
@@ -52,16 +52,17 @@ struct Msg_ : public Msg_Data {
   unsigned bytes() const { return 1; }
 };
 
-typedef ZmPQueue<Msg_,
-	  ZmPQueueLock<ZmNoLock,
-	    ZmPQueueNodeIsItem<true> > > Queue;
+using Queue =
+  ZmPQueue<Msg_,
+    ZmPQueueLock<ZmNoLock,
+      ZmPQueueNodeIsItem<true> > >;
 
 class App : public ZmPQTx<App, Queue, ZmNoLock> {
 public:
-  typedef ZmPQTx<App, Queue, ZmNoLock> Tx;
-  typedef Queue::Node Msg;
-  typedef Queue::Gap Gap;
-  typedef Queue::Fn Fn;
+  using Tx = ZmPQTx<App, Queue, ZmNoLock>;
+  using Msg = Queue::Node;
+  using Gap = Queue::Gap;
+  using Fn = Queue::Fn;
 
   App(uint32_t head) : m_queue(head) { }
 

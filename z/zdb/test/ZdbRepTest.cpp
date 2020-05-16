@@ -69,7 +69,7 @@ struct Order {
 
 // the order table - note how the key and value are defined using offsetof
 
-typedef ZdbTable<uint32_t, offsetof(Order, m_side), Order> OrderTable;
+using OrderTable = ZdbTable<uint32_t, offsetof(Order, m_side), Order>;
 
 // dump an individual order
 

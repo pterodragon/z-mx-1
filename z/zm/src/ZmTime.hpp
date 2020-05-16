@@ -76,7 +76,7 @@ public:
   template <typename T, typename R = void, bool OK = IsInt<T>::OK>
   struct MatchInt;
   template <typename T_, typename R> struct MatchInt<T_, R, 1> {
-    typedef T_ T;
+    using T = T_;
   };
 
 public:

@@ -43,7 +43,7 @@ template <typename L, typename HeapID> struct ZmLambda {
     T_ &operator =(T_ &&) = delete;
     template <typename L_> ZuInline T_(L_ &&l) : L(ZuFwd<L_>(l)) { }
   };
-  typedef T_<ZmHeap<HeapID, sizeof(T_<ZuNull>)> > T;
+  using T = T_<ZmHeap<HeapID, sizeof(T_<ZuNull>)> >;
 };
 
 #endif /* ZmFn_Lambda_HPP */

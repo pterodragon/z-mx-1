@@ -122,7 +122,7 @@ ZiMultiplex_WSExt *ZiMultiplex_WSExt::instance()
 
 ZiMultiplex_WSExt::ZiMultiplex_WSExt()
 {
-  typedef ZiPlatform::Socket Socket;
+  using Socket = ZiPlatform::Socket;
   Socket s = (Socket)::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (ZiPlatform::nullSocket(s)) goto error;
   {
@@ -222,7 +222,7 @@ ZiMultiplex_WSExt::~ZiMultiplex_WSExt()
 
 #endif /* ZiMultiplex_EPoll */
 
-typedef ZuStringN<120> ErrorStr;
+using ErrorStr = ZuStringN<120>;
 
 #define Log(severity, op, result, error) \
   ZeLOG(severity, \
@@ -612,7 +612,7 @@ void ZiMultiplex::connect_(ZiConnectFn fn, ZiFailFn failFn,
   Connect *request = new Connect(
       this, fn, failFn,
       ZiCxnType::TCPOut, s, options, localIP, localPort, remoteIP, remotePort);
-  typedef Zi_Overlapped::Executed Executed;
+  using Executed = Zi_Overlapped::Executed;
   Zi_Overlapped &overlapped = request->overlapped();
   overlapped.init(Executed::Member<&Connect::executed>::fn(request));
   ZeError e;
@@ -1203,7 +1203,7 @@ void ZiConnection::recv()
   wsaBuf.buf = (char *)m_rxContext.ptr + m_rxContext.offset;
   wsaBuf.len = len;
 
-  typedef Zi_Overlapped::Executed Executed;
+  using Executed = Zi_Overlapped::Executed;
   Zi_Overlapped &overlapped = m_rxOverlapped;
 
 #ifdef ZiMultiplex_DEBUG
@@ -1780,7 +1780,7 @@ void ZiConnection::disconnect_2()
   ZiDEBUG(m_mx, ZtSprintf("FD: % 3d disconnect()", (int)m_info.socket));
   
 #ifdef ZiMultiplex_IOCP
-  typedef Zi_Overlapped::Executed Executed;
+  using Executed = Zi_Overlapped::Executed;
   Zi_Overlapped &overlapped = m_discOverlapped;
   ZeError e;
   overlapped.init(

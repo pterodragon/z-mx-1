@@ -127,15 +127,16 @@ friend struct ZmTLock_Test;
     Timed	= 2
   };
 
-  typedef ZmLock Lock_;
-  typedef ZmGuard<Lock_> Guard_;
-  typedef ZmReadGuard<Lock_> ReadGuard_;
+  using Lock_ = ZmLock;
+  using Guard_ = ZmGuard<Lock_>;
+  using ReadGuard_ = ZmReadGuard<Lock_>;
 
-  typedef ZmTLock_Held Held;
-  typedef ZmStack<Held,
-	    ZmStackIndex<ZmTLock_Held_ThreadAccessor,
-	      ZmStackLock<ZmNoLock> > > HeldStack;
-  typedef typename HeldStack::Iterator HeldStackIterator;
+  using Held = ZmTLock_Held;
+  using HeldStack =
+    ZmStack<Held,
+      ZmStackIndex<ZmTLock_Held_ThreadAccessor,
+	ZmStackLock<ZmNoLock> > >;
+  using HeldStackIterator = typename HeldStack::Iterator;
 
   struct Lock;
 friend struct Lock;
@@ -180,24 +181,26 @@ friend struct Lock;
     HeldStack			m_held;		// lockers (inc. write locker)
   };
 
-  typedef ZmRef<Lock> LockRef;
+  using LockRef = ZmRef<Lock>;
 
   struct HeapID { ZuInline static const char *id() { return "ZmTLock"; } };
 
-  typedef ZmHash<ID,
-	    ZmHashVal<LockRef,
-	      ZmHashValCmp<Lock,
-		ZmHashHeapID<HeapID,
-		  ZmHashLock<ZmNoLock> > > > > LockHash;
+  using LockHash =
+    ZmHash<ID,
+      ZmHashVal<LockRef,
+	ZmHashValCmp<Lock,
+	  ZmHashHeapID<HeapID,
+	    ZmHashLock<ZmNoLock> > > > >;
 
-  typedef ZmList<LockRef,
-	    ZmListLock<ZmNoLock,
-	      ZmListHeapID<HeapID> > > LockList;
+  using LockList =
+    ZmList<LockRef,
+      ZmListLock<ZmNoLock,
+	ZmListHeapID<HeapID> > >;
 
   struct Thread;
 friend struct Thread;
   struct Thread : public ZmObject {
-    typedef ZmStack<Lock *, ZmStackLock<ZmNoLock> > LockStack;
+    using LockStack = ZmStack<Lock *, ZmStackLock<ZmNoLock> >;
 
     template <typename TID_>
     Thread(const TID_ &tid) : m_tid(tid), m_waiting(0) { }
@@ -284,11 +287,12 @@ friend struct Thread;
     LockStack		m_upgraded;
   };
 
-  typedef ZmRef<Thread> ThreadRef;
+  using ThreadRef = ZmRef<Thread>;
 
-  typedef ZmHash<TID,
-	    ZmHashVal<ThreadRef,
-	      ZmHashLock<ZmNoLock> > > ThreadHash;
+  using ThreadHash =
+    ZmHash<TID,
+      ZmHashVal<ThreadRef,
+	ZmHashLock<ZmNoLock> > >;
 
 public:
   ZmTLock(ZmTLockParams params = ZmTLockParams()) {

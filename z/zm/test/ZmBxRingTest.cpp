@@ -33,7 +33,7 @@ struct Msg {
   uintptr_t m_p;
 };
 
-typedef ZmBxRing<Msg> Ring;
+using Ring = ZmBxRing<Msg>;
 
 struct App {
   App() :

@@ -41,34 +41,38 @@ friend struct ZmSingletonCtor<ZmHeapMgr_>;
 friend class ZmHeapMgr;
 friend class ZmHeapCache;
 
-  typedef ZmPLock Lock;
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using Lock = ZmPLock;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
-  typedef ZmHeapCache::IDPartSize IDPartSize;
+  using IDPartSize = ZmHeapCache::IDPartSize;
 
-  typedef ZmRBTree<ZuPair<ZmIDString, unsigned>,
-	    ZmRBTreeVal<ZmHeapConfig,
-	      ZmRBTreeHeapID<ZuNull,
-		ZmRBTreeLock<ZmNoLock> > > > IDPart2Config;
-  typedef ZmRBTree<ZmHeapCache *,
-	    ZmRBTreeIndex<ZmHeapCache::IDAccessor,
-	      ZmRBTreeHeapID<ZuNull,
-		ZmRBTreeLock<ZmNoLock> > > > ID2Cache;
-  typedef ZmRBTree<ZmHeapCache *,
-	    ZmRBTreeIndex<ZmHeapCache::IDSizeAccessor,
-	      ZmRBTreeHeapID<ZuNull,
-		ZmRBTreeLock<ZmNoLock> > > > IDSize2Cache;
-  typedef ZmRBTree<ZmHeapCache *,
-	    ZmRBTreeIndex<ZmHeapCache::IDPartSizeAccessor,
-	      ZmRBTreeHeapID<ZuNull,
-		ZmRBTreeLock<ZmNoLock> > > > IDPartSize2Cache;
+  using IDPart2Config =
+    ZmRBTree<ZuPair<ZmIDString, unsigned>,
+      ZmRBTreeVal<ZmHeapConfig,
+	ZmRBTreeHeapID<ZuNull,
+	  ZmRBTreeLock<ZmNoLock> > > >;
+  using ID2Cache =
+    ZmRBTree<ZmHeapCache *,
+      ZmRBTreeIndex<ZmHeapCache::IDAccessor,
+	ZmRBTreeHeapID<ZuNull,
+	  ZmRBTreeLock<ZmNoLock> > > >;
+  using IDSize2Cache =
+    ZmRBTree<ZmHeapCache *,
+      ZmRBTreeIndex<ZmHeapCache::IDSizeAccessor,
+	ZmRBTreeHeapID<ZuNull,
+	  ZmRBTreeLock<ZmNoLock> > > >;
+  using IDPartSize2Cache =
+    ZmRBTree<ZmHeapCache *,
+      ZmRBTreeIndex<ZmHeapCache::IDPartSizeAccessor,
+	ZmRBTreeHeapID<ZuNull,
+	  ZmRBTreeLock<ZmNoLock> > > >;
 
-  typedef ZmHeapCache::StatsFn StatsFn;
-  typedef ZmHeapCache::AllStatsFn AllStatsFn;
+  using StatsFn = ZmHeapCache::StatsFn;
+  using AllStatsFn = ZmHeapCache::AllStatsFn;
 
 #ifdef ZmHeap_DEBUG
-  typedef ZmHeapMgr::TraceFn TraceFn;
+  using TraceFn = ZmHeapMgr::TraceFn;
 #endif
 
   ZmHeapMgr_() {

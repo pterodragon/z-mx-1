@@ -49,12 +49,12 @@
 //     ZmListCmp<ZtICmp> > >			// case-insensitive comparison
 
 struct ZmList_Defaults {
-  template <typename T> struct CmpT { typedef ZuCmp<T> Cmp; };
-  template <typename T> struct ICmpT { typedef ZuCmp<T> ICmp; };
-  template <typename T> struct IndexT { typedef T Index; };
+  template <typename T> struct CmpT { using Cmp = ZuCmp<T>; };
+  template <typename T> struct ICmpT { using ICmp = ZuCmp<T>; };
+  template <typename T> struct IndexT { using Index = T; };
   enum { NodeIsItem = 0 };
-  typedef ZmLock Lock;
-  typedef ZmObject Object;
+  using Lock = ZmLock;
+  using Object = ZmObject;
   struct HeapID { ZuInline static const char *id() { return "ZmList"; } };
   struct Base { };
 };
@@ -62,21 +62,21 @@ struct ZmList_Defaults {
 // ZmListCmp - the item comparator
 template <class Cmp_, class NTP = ZmList_Defaults>
 struct ZmListCmp : public NTP {
-  template <typename> struct CmpT { typedef Cmp_ Cmp; };
-  template <typename> struct ICmpT { typedef Cmp_ ICmp; };
+  template <typename> struct CmpT { using Cmp = Cmp_; };
+  template <typename> struct ICmpT { using ICmp = Cmp_; };
 };
 
 // ZmListCmp_ - directly override the comparator
 // (used by other templates to forward NTP parameters to ZmList)
 template <class Cmp_, class NTP = ZmList_Defaults>
 struct ZmListCmp_ : public NTP {
-  template <typename> struct CmpT { typedef Cmp_ Cmp; };
+  template <typename> struct CmpT { using Cmp = Cmp_; };
 };
 
 // ZmListICmp - the index comparator
 template <class ICmp_, class NTP = ZmList_Defaults>
 struct ZmListICmp : public NTP {
-  template <typename> struct ICmpT { typedef ICmp_ ICmp; };
+  template <typename> struct ICmpT { using ICmp = ICmp_; };
 };
 
 // ZmListIndex - use a different type as the index, rather than the key as is
@@ -86,13 +86,13 @@ struct ZmListICmp : public NTP {
 template <class Accessor, class NTP = ZmList_Defaults>
 struct ZmListIndex : public NTP {
   template <typename T> struct CmpT {
-    typedef typename ZuIndex<Accessor>::template CmpT<T> Cmp;
+    using Cmp = typename ZuIndex<Accessor>::template CmpT<T>;
   };
   template <typename> struct ICmpT {
-    typedef typename ZuIndex<Accessor>::ICmp ICmp;
+    using ICmp = typename ZuIndex<Accessor>::ICmp;
   };
   template <typename> struct IndexT {
-    typedef typename ZuIndex<Accessor>::I Index;
+    using Index = typename ZuIndex<Accessor>::I;
   };
 };
 
@@ -100,7 +100,7 @@ struct ZmListIndex : public NTP {
 // (used by other templates to forward NTP parameters to ZmList)
 template <class Index_, class NTP = ZmList_Defaults>
 struct ZmListIndex_ : public NTP {
-  template <typename> struct IndexT { typedef Index_ Index; };
+  template <typename> struct IndexT { using Index = Index_; };
 };
 
 // ZmListNodeIsItem - derive ZmList::Node from Item instead of containing it
@@ -112,25 +112,25 @@ struct ZmListNodeIsItem : public NTP {
 // ZmListLock - the lock type used (ZmRWLock will permit concurrent reads)
 template <class Lock_, class NTP = ZmList_Defaults>
 struct ZmListLock : public NTP {
-  typedef Lock_ Lock;
+  using Lock = Lock_;
 };
 
 // ZmListObject - the reference-counted object type used
 template <class Object_, class NTP = ZmList_Defaults>
 struct ZmListObject : public NTP {
-  typedef Object_ Object;
+  using Object = Object_;
 };
 
 // ZmListHeapID - the heap ID
 template <class HeapID_, class NTP = ZmList_Defaults>
 struct ZmListHeapID : public NTP {
-  typedef HeapID_ HeapID;
+  using HeapID = HeapID_;
 };
 
 // ZmListBase - injection of a base class (e.g. ZmObject)
 template <class Base_, class NTP = ZmList_Defaults>
 struct ZmListBase : public NTP {
-  typedef Base_ Base;
+  using Base = Base_;
 };
 
 template <typename Item, class NTP = ZmList_Defaults>
@@ -139,16 +139,16 @@ class ZmList : public NTP::Base {
   ZmList &operator =(const ZmList &);	// prevent mis-use
 
 public:
-  typedef typename NTP::template CmpT<Item>::Cmp Cmp;
-  typedef typename NTP::template ICmpT<Item>::ICmp ICmp;
-  typedef typename NTP::template IndexT<Item>::Index Index;
+  using Cmp = typename NTP::template CmpT<Item>::Cmp;
+  using ICmp = typename NTP::template ICmpT<Item>::ICmp;
+  using Index = typename NTP::template IndexT<Item>::Index;
   enum { NodeIsItem = NTP::NodeIsItem };
-  typedef typename NTP::Lock Lock;
-  typedef typename NTP::Object Object;
-  typedef typename NTP::HeapID HeapID;
+  using Lock = typename NTP::Lock;
+  using Object = typename NTP::Object;
+  using HeapID = typename NTP::HeapID;
 
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
 protected:
   class Iterator_;
@@ -189,12 +189,12 @@ public:
   template <typename Heap>
   using Node_ = ZmINode<Heap, NodeIsItem, NodeFn, Item>;
   struct NullHeap { }; // deconflict with ZuNull
-  typedef ZmHeap<HeapID, sizeof(Node_<NullHeap>)> NodeHeap;
-  typedef Node_<NodeHeap> Node;
-  typedef typename Node::Fn Fn;
+  using NodeHeap = ZmHeap<HeapID, sizeof(Node_<NullHeap>)>;
+  using Node = Node_<NodeHeap>;
+  using Fn = typename Node::Fn;
 
-  typedef typename ZuIf<ZmRef<Node>, Node *, ZuIsObject_<Object>::OK>::T
-    NodeRef;
+  using NodeRef =
+    typename ZuIf<ZmRef<Node>, Node *, ZuIsObject_<Object>::OK>::T;
 
 private:
   // in order to support both intrusively reference-counted and plain node
@@ -221,7 +221,7 @@ private:
 
 protected:
   class Iterator_ {			// iterator
-    typedef ZmList<Item, NTP> List;
+    using List = ZmList<Item, NTP>;
   friend class ZmList<Item, NTP>;
 
   protected:
@@ -254,7 +254,7 @@ friend class Iterator;
     Iterator(const Iterator &);
     Iterator &operator =(const Iterator &);	// prevent mis-use
 
-    typedef ZmList<Item, NTP> List;
+    using List = ZmList<Item, NTP>;
 
   public:
     Iterator(List &list) : Guard(list.m_lock), Iterator_(list) { }
@@ -272,7 +272,7 @@ friend class ReadIterator;
     ReadIterator(const ReadIterator &);
     ReadIterator &operator =(const ReadIterator &);	// prevent mis-use
 
-    typedef ZmList<Item, NTP> List;
+    using List = ZmList<Item, NTP>;
 
   public:
     ReadIterator(const List &list) :

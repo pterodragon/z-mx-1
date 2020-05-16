@@ -34,10 +34,10 @@
 
 template <typename T1, typename T2, bool B> struct ZuIf;
 template <typename T1, typename T2> struct ZuIf<T1, T2, true> {
-  typedef T1 T;
+  using T = T1;
 };
 template <typename T1, typename T2> struct ZuIf<T1, T2, false> {
-  typedef T2 T;
+  using T = T2;
 };
 
 #endif /* ZuIf_HPP */

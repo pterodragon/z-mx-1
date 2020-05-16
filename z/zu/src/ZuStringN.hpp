@@ -64,30 +64,30 @@ class ZuStringN_ : public ZuStringN__ {
   ZuStringN_ &operator =(const ZuStringN_ &);
 
 public:
-  typedef Char_ Char;
+  using Char = Char_;
 
 private:
   template <typename U, typename R = void, typename V = Char,
     bool B = ZuPrint<U>::Delegate> struct MatchPDelegate;
   template <typename U, typename R>
-  struct MatchPDelegate<U, R, char, true> { typedef R T; };
+  struct MatchPDelegate<U, R, char, true> { using T = R; };
   template <typename U, typename R = void, typename V = Char,
     bool B = ZuPrint<U>::Buffer> struct MatchPBuffer;
   template <typename U, typename R>
-  struct MatchPBuffer<U, R, char, true> { typedef R T; };
+  struct MatchPBuffer<U, R, char, true> { using T = R; };
 
   template <typename U, typename R = void, typename V = Char,
     bool S = ZuTraits<U>::IsString,
     bool W = ZuTraits<U>::IsWString> struct ToString;
   template <typename U, typename R>
-  struct ToString<U, R, char, true, false> { typedef R T; };
+  struct ToString<U, R, char, true, false> { using T = R; };
   template <typename U, typename R>
-  struct ToString<U, R, wchar_t, true, true> { typedef R T; };
+  struct ToString<U, R, wchar_t, true, true> { using T = R; };
 
 protected:
   ZuStringN_() : m_length(0) { data()[0] = 0; }
 
-  typedef enum { Nop } Nop_;
+  using Nop_ = enum { Nop };
   ZuInline ZuStringN_(Nop_ _) { }
 
   ZuStringN_(unsigned length) : m_length(length) {
@@ -314,8 +314,8 @@ protected:
 
 template <typename T_>
 struct ZuStringN_Traits : public ZuGenericTraits<T_> {
-  typedef T_ T;
-  typedef typename T::Char Elem;
+  using T = T_;
+  using Elem = typename T::Char;
   enum {
     IsPOD = 1, IsCString = 1, IsString = 1, IsStream = 1,
     IsWString = ZuConversion<Elem, wchar_t>::Same,
@@ -330,8 +330,8 @@ class ZuStringN : public ZuStringN_<char, ZuStringN<N_>, N_> {
   ZuAssert(N_ < (1U<<16) - 1U);
 
 public:
-  typedef char Char;
-  typedef ZuStringN_<char, ZuStringN<N_>, N_> Base;
+  using Char = char;
+  using Base = ZuStringN_<char, ZuStringN<N_>, N_>;
   enum { N = N_ };
 
 private:
@@ -341,12 +341,12 @@ private:
 	     !ZuTraits<U>::IsPrimitive
     > struct MatchString;
   template <typename U, typename R>
-  struct MatchString<U, R, true> { typedef R T; };
+  struct MatchString<U, R, true> { using T = R; };
 
   template <typename U, typename R = void,
     bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct MatchPrint;
   template <typename U, typename R>
-  struct MatchPrint<U, R, true> { typedef R T; };
+  struct MatchPrint<U, R, true> { using T = R; };
 
   template <typename U, typename R = void,
     bool B = ZuTraits<U>::IsPrimitive &&
@@ -354,7 +354,7 @@ private:
 	     !ZuConversion<U, char>::Same
     > struct MatchReal;
   template <typename U, typename R>
-  struct MatchReal<U, R, true> { typedef R T; };
+  struct MatchReal<U, R, true> { using T = R; };
 
   template <typename U, typename R = void,
     bool E = ZuConversion<U, unsigned>::Same ||
@@ -362,12 +362,12 @@ private:
 	     ZuConversion<U, size_t>::Same
     > struct CtorLength;
   template <typename U, typename R>
-  struct CtorLength<U, R, true> { typedef R T; };
+  struct CtorLength<U, R, true> { using T = R; };
 
   template <typename U, typename R = void,
     bool B = ZuConversion<U, char>::Same> struct MatchChar;
   template <typename U, typename R>
-  struct MatchChar<U, R, true> { typedef R T; };
+  struct MatchChar<U, R, true> { using T = R; };
 
 public:
   ZuInline ZuStringN() { }
@@ -516,8 +516,8 @@ class ZuWStringN : public ZuStringN_<wchar_t, ZuWStringN<N_>, N_> {
   ZuAssert(N_ < (1U<<15) - 1U);
 
 public:
-  typedef wchar_t Char;
-  typedef ZuStringN_<wchar_t, ZuWStringN<N_>, N_> Base;
+  using Char = wchar_t;
+  using Base = ZuStringN_<wchar_t, ZuWStringN<N_>, N_>;
   enum { N = N_ };
 
 private:
@@ -527,7 +527,7 @@ private:
 	     !ZuTraits<U>::IsPrimitive
     > struct MatchString;
   template <typename U, typename R>
-  struct MatchString<U, R, true> { typedef R T; };
+  struct MatchString<U, R, true> { using T = R; };
 
   template <typename U, typename R = void,
     bool E = ZuConversion<U, unsigned>::Same ||
@@ -535,7 +535,7 @@ private:
 	     ZuConversion<U, size_t>::Same
     > struct CtorLength { };
   template <typename U, typename R>
-  struct CtorLength<U, R, true> { typedef R T; };
+  struct CtorLength<U, R, true> { using T = R; };
 
 public:
   ZuInline ZuWStringN() : Base() { }

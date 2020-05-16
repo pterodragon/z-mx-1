@@ -34,6 +34,6 @@
 #endif
 
 template <bool, typename U = void> struct ZuIfT { };
-template <typename U> struct ZuIfT<true, U> { typedef U T; };
+template <typename U> struct ZuIfT<true, U> { using T = U; };
 
 #endif /* ZuIfT_HPP */

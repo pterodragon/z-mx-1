@@ -327,10 +327,11 @@ static constexpr struct {
 };
 class ZePlatform_WSAErrors {
 public:
-  typedef ZmLHash<DWORD,
-	    ZmLHashVal<const char *,
-	      ZmLHashStatic<6,
-		ZmLHashLock<ZmNoLock> > > > Hash;
+  using Hash =
+    ZmLHash<DWORD,
+      ZmLHashVal<const char *,
+	ZmLHashStatic<6,
+	  ZmLHashLock<ZmNoLock> > > >;
 
   ZePlatform_WSAErrors() {
     m_hash = new Hash();

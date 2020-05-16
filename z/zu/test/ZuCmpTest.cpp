@@ -82,18 +82,18 @@ ZuAssert(ZuTraits<T1::V>::IsHashable);
 ZuAssert(ZuTraits<T1::T>::IsHashable);
 
 namespace T2 {
-  typedef int I;
-  typedef double D;
-  typedef const char *S;
-  typedef ZuPair<int, int> P;
-  typedef int *CP;
+  using I = int;
+  using D = double;
+  using S = const char *;
+  using P = ZuPair<int, int>;
+  using CP = int *;
   ZuDeclUnion(V, (I, id), (D, income), (S, name), (P, dependents), (CP, foo));
 }
 
 ZuAssert(ZuTraits<T2::V>::IsHashable);
 
 namespace T3 {
-  typedef ZuBox<int> I;
+  using I = ZuBox<int>;
   ZuDeclTuple(V, (I, id), (I, age), (I, height));
   using T = ZuTuple<ZuArrayN<V, 3>, ZuArrayN<int, 3> >;
 }
@@ -186,10 +186,10 @@ int main()
   TEST(double);
 
   {
-    typedef ZuBox<int> I;
-    typedef const ZuBox<int> &R;
-    typedef ZuPair<I, I> V;
-    typedef ZuPair<R, R> T;
+    using I = ZuBox<int>;
+    using R = const ZuBox<int> &;
+    using V = ZuPair<I, I>;
+    using T = ZuPair<R, R>;
 
     V j(1, 2);
     V i = j;
@@ -345,5 +345,15 @@ int main()
     SortTest<2>::test();
     SortTest<8>::test();
     SortTest<20>::test();
+  }
+
+  {
+    using U = ZuUnion<int, float, double>;
+    char c_[sizeof(U)];
+    *reinterpret_cast<double *>(c_) = 42.0;
+    auto c = reinterpret_cast<U *>(c_);
+    c->type_(U::Index<double>::I);
+    CHECK(c->v<double>() == 42.0);
+    c->~U();
   }
 }

@@ -51,15 +51,15 @@
 //	 ZmRBTreeValCmp<ZtICmp> > > >		// case-insensitive comparison
 
 struct ZmRBTree_Defaults {
-  typedef ZuNull Val;
-  template <typename T> struct CmpT { typedef ZuCmp<T> Cmp; };
-  template <typename T> struct ICmpT { typedef ZuCmp<T> ICmp; };
-  template <typename T> struct IndexT { typedef T Index; };
-  template <typename T> struct ValCmpT { typedef ZuCmp<T> ValCmp; };
+  using Val = ZuNull;
+  template <typename T> struct CmpT { using Cmp = ZuCmp<T>; };
+  template <typename T> struct ICmpT { using ICmp = ZuCmp<T>; };
+  template <typename T> struct IndexT { using Index = T; };
+  template <typename T> struct ValCmpT { using ValCmp = ZuCmp<T>; };
   enum { NodeIsKey = 0 };
   enum { NodeIsVal = 0 };
-  typedef ZmLock Lock;
-  typedef ZmObject Object;
+  using Lock = ZmLock;
+  using Object = ZmObject;
   struct HeapID { ZuInline static const char *id() { return "ZmRBTree"; } };
   struct Base { };
 };
@@ -67,21 +67,21 @@ struct ZmRBTree_Defaults {
 // ZmRBTreeCmp - the key comparator
 template <class Cmp_, class NTP = ZmRBTree_Defaults>
 struct ZmRBTreeCmp : public NTP {
-  template <typename> struct CmpT { typedef Cmp_ Cmp; };
-  template <typename> struct ICmpT { typedef Cmp_ ICmp; };
+  template <typename> struct CmpT { using Cmp = Cmp_; };
+  template <typename> struct ICmpT { using ICmp = Cmp_; };
 };
 
 // ZmRBTreeCmp_ - directly override the key comparator
 // (used by other templates to forward NTP parameters to ZmRBTree)
 template <class Cmp_, class NTP = ZmRBTree_Defaults>
 struct ZmRBTreeCmp_ : public NTP {
-  template <typename> struct CmpT { typedef Cmp_ Cmp; };
+  template <typename> struct CmpT { using Cmp = Cmp_; };
 };
 
 // ZmRBTreeICmp - the index comparator
 template <class ICmp_, class NTP = ZmRBTree_Defaults>
 struct ZmRBTreeICmp : public NTP {
-  template <typename> struct ICmpT { typedef ICmp_ ICmp; };
+  template <typename> struct ICmpT { using ICmp = ICmp_; };
 };
 
 // ZmRBTreeIndex - use a different type as the index, rather than the key as is
@@ -91,13 +91,13 @@ struct ZmRBTreeICmp : public NTP {
 template <class Accessor, class NTP = ZmRBTree_Defaults>
 struct ZmRBTreeIndex : public NTP {
   template <typename T> struct CmpT {
-    typedef typename ZuIndex<Accessor>::template CmpT<T> Cmp;
+    using Cmp = typename ZuIndex<Accessor>::template CmpT<T>;
   };
   template <typename> struct ICmpT {
-    typedef typename ZuIndex<Accessor>::ICmp ICmp;
+    using ICmp = typename ZuIndex<Accessor>::ICmp;
   };
   template <typename> struct IndexT {
-    typedef typename ZuIndex<Accessor>::I Index;
+    using Index = typename ZuIndex<Accessor>::I;
   };
 };
 
@@ -105,19 +105,19 @@ struct ZmRBTreeIndex : public NTP {
 // (used by other templates to forward NTP parameters to ZmRBTree)
 template <class Index_, class NTP = ZmRBTree_Defaults>
 struct ZmRBTreeIndex_ : public NTP {
-  template <typename> struct IndexT { typedef Index_ Index; };
+  template <typename> struct IndexT { using Index = Index_; };
 };
 
 // ZmRBTreeVal - the value type
 template <class Val_, class NTP = ZmRBTree_Defaults>
 struct ZmRBTreeVal : public NTP {
-  typedef Val_ Val;
+  using Val = Val_;
 };
 
 // ZmRBTreeValCmp - the value comparator
 template <class ValCmp_, class NTP = ZmRBTree_Defaults>
 struct ZmRBTreeValCmp : public NTP {
-  template <typename> struct ValCmpT { typedef ValCmp_ ValCmp; };
+  template <typename> struct ValCmpT { using ValCmp = ValCmp_; };
 };
 
 // ZmRBTreeNodeIsKey - derive ZmRBTree::Node from Key instead of containing it
@@ -135,25 +135,25 @@ struct ZmRBTreeNodeIsVal : public NTP {
 // ZmRBTreeLock - the lock type used (ZmRWLock will permit concurrent reads)
 template <class Lock_, class NTP = ZmRBTree_Defaults>
 struct ZmRBTreeLock : public NTP {
-  typedef Lock_ Lock;
+  using Lock = Lock_;
 };
 
 // ZmRBTreeObject - the reference-counted object type used
 template <class Object_, class NTP = ZmRBTree_Defaults>
 struct ZmRBTreeObject : public NTP {
-  typedef Object_ Object;
+  using Object = Object_;
 };
 
 // ZmRBTreeHeapID - the heap ID
 template <class HeapID_, class NTP = ZmRBTree_Defaults>
 struct ZmRBTreeHeapID : public NTP {
-  typedef HeapID_ HeapID;
+  using HeapID = HeapID_;
 };
 
 // ZmRBTreeBase - injection of a base class (e.g. ZmObject)
 template <class Base_, class NTP = ZmRBTree_Defaults>
 struct ZmRBTreeBase : public NTP {
-  typedef Base_ Base;
+  using Base = Base_;
 };
 
 enum {
@@ -169,14 +169,14 @@ class ZmRBTreeIterator_ { // red/black tree iterator
 friend Tree_;
 
 public:
-  typedef Tree_ Tree;
+  using Tree = Tree_;
   enum { Direction = Direction_ };
-  typedef typename Tree::Key Key;
-  typedef typename Tree::Val Val;
-  typedef typename Tree::Cmp Cmp;
-  typedef typename Tree::ValCmp ValCmp;
-  typedef typename Tree::Node Node;
-  typedef typename Tree::NodeRef NodeRef;
+  using Key = typename Tree::Key;
+  using Val = typename Tree::Val;
+  using Cmp = typename Tree::Cmp;
+  using ValCmp = typename Tree::ValCmp;
+  using Node = typename Tree::Node;
+  using NodeRef = typename Tree::NodeRef;
 
 protected:
   ZmRBTreeIterator_(Tree &tree) : m_tree(tree) {
@@ -224,9 +224,9 @@ template <typename Tree_, int Direction_ = ZmRBTreeGreaterEqual>
 class ZmRBTreeIterator :
   public Tree_::Guard,
   public ZmRBTreeIterator_<Tree_, Direction_> {
-  typedef Tree_ Tree;
+  using Tree = Tree_;
   enum { Direction = Direction_ };
-  typedef typename Tree::Guard Guard;
+  using Guard = typename Tree::Guard;
 
 public:
   ZmRBTreeIterator(Tree &tree) :
@@ -245,9 +245,9 @@ template <typename Tree_, int Direction_ = ZmRBTreeGreaterEqual>
 class ZmRBTreeReadIterator :
   public Tree_::ReadGuard,
   public ZmRBTreeIterator_<Tree_, Direction_> {
-  typedef Tree_ Tree;
+  using Tree = Tree_;
   enum { Direction = Direction_ };
-  typedef typename Tree::ReadGuard ReadGuard;
+  using ReadGuard = typename Tree::ReadGuard;
 
 public:
   ZmRBTreeReadIterator(const Tree &tree) :
@@ -271,20 +271,20 @@ class ZmRBTree : public NTP::Base {
   template <typename, int> friend class ZmRBTreeIterator;
 
 public:
-  typedef Key_ Key;
-  typedef typename NTP::Val Val;
-  typedef typename NTP::template CmpT<Key>::Cmp Cmp;
-  typedef typename NTP::template ICmpT<Key>::ICmp ICmp;
-  typedef typename NTP::template IndexT<Key>::Index Index;
-  typedef typename NTP::template ValCmpT<Val>::ValCmp ValCmp;
+  using Key = Key_;
+  using Val = typename NTP::Val;
+  using Cmp = typename NTP::template CmpT<Key>::Cmp;
+  using ICmp = typename NTP::template ICmpT<Key>::ICmp;
+  using Index = typename NTP::template IndexT<Key>::Index;
+  using ValCmp = typename NTP::template ValCmpT<Val>::ValCmp;
   enum { NodeIsKey = NTP::NodeIsKey };
   enum { NodeIsVal = NTP::NodeIsVal };
-  typedef typename NTP::Lock Lock;
-  typedef typename NTP::Object Object;
-  typedef typename NTP::HeapID HeapID;
+  using Lock = typename NTP::Lock;
+  using Object = typename NTP::Object;
+  using HeapID = typename NTP::HeapID;
 
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
   template <int Direction = ZmRBTreeGreaterEqual>
   using Iterator = ZmRBTreeIterator<ZmRBTree, Direction>;

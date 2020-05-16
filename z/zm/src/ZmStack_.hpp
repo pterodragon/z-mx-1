@@ -81,46 +81,46 @@ private:
 //      ZmStackCmp<ZtICmp> > >		// case-insensitive comparison
 
 struct ZmStack_Defaults {
-  template <typename T> struct OpsT { typedef ZuArrayFn<T> Ops; };
-  template <typename T> struct CmpT { typedef ZuCmp<T> Cmp; };
-  template <typename T> struct ICmpT { typedef ZuCmp<T> ICmp; };
-  template <typename T> struct IndexT { typedef T Index; };
-  typedef ZmLock Lock;
+  template <typename T> struct OpsT { using Ops = ZuArrayFn<T>; };
+  template <typename T> struct CmpT { using Cmp = ZuCmp<T>; };
+  template <typename T> struct ICmpT { using ICmp = ZuCmp<T>; };
+  template <typename T> struct IndexT { using Index = T; };
+  using Lock = ZmLock;
   struct Base { };
 };
 
 template <class Cmp_, class NTP = ZmStack_Defaults>
 struct ZmStackCmp : public NTP {
-  template <typename T> struct OpsT { typedef ZuArrayFn<T, Cmp_> Ops; };
-  template <typename> struct CmpT { typedef Cmp_ Cmp; };
+  template <typename T> struct OpsT { using Ops = ZuArrayFn<T, Cmp_>; };
+  template <typename> struct CmpT { using Cmp = Cmp_; };
 };
 
 template <class ICmp_, class NTP = ZmStack_Defaults>
 struct ZmStackICmp : public NTP {
-  template <typename> struct ICmpT { typedef ICmp_ ICmp; };
+  template <typename> struct ICmpT { using ICmp = ICmp_; };
 };
 
 template <typename Accessor, class NTP = ZmStack_Defaults>
 struct ZmStackIndex : public NTP {
   template <typename T> struct CmpT {
-    typedef typename ZuIndex<Accessor>::template CmpT<T> Cmp;
+    using Cmp = typename ZuIndex<Accessor>::template CmpT<T>;
   };
   template <typename> struct ICmpT {
-    typedef typename ZuIndex<Accessor>::ICmp ICmp;
+    using ICmp = typename ZuIndex<Accessor>::ICmp;
   };
   template <typename> struct IndexT {
-    typedef typename ZuIndex<Accessor>::I Index;
+    using Index = typename ZuIndex<Accessor>::I;
   };
 };
 
 template <class Lock_, class NTP = ZmStack_Defaults>
 struct ZmStackLock : public NTP {
-  typedef Lock_ Lock;
+  using Lock = Lock_;
 };
 
 template <class Base_, class NTP = ZmStack_Defaults>
 struct ZmStackBase : public NTP {
-  typedef Base_ Base;
+  using Base = Base_;
 };
 
 // only provide delPtr and findPtr methods to callers of unlocked ZmStacks
@@ -131,7 +131,7 @@ template <typename Val, class NTP> class ZmStack;
 template <class Stack> struct ZmStack_Unlocked;
 template <typename Val, class NTP>
 struct ZmStack_Unlocked<ZmStack<Val, NTP> > {
-  typedef ZmStack<Val, NTP> Stack;
+  using Stack = ZmStack<Val, NTP>;
 
   template <typename Index_>
   Val *findPtr(const Index_ &index) {
@@ -158,14 +158,14 @@ template <typename Val, class NTP = ZmStack_Defaults> class ZmStack :
 friend struct ZmStack_Unlocked<ZmStack>;
 
 public:
-  typedef typename NTP::template OpsT<Val>::Ops Ops;
-  typedef typename NTP::template CmpT<Val>::Cmp Cmp;
-  typedef typename NTP::template ICmpT<Val>::ICmp ICmp;
-  typedef typename NTP::template IndexT<Val>::Index Index;
-  typedef typename NTP::Lock Lock;
+  using Ops = typename NTP::template OpsT<Val>::Ops;
+  using Cmp = typename NTP::template CmpT<Val>::Cmp;
+  using ICmp = typename NTP::template ICmpT<Val>::ICmp;
+  using Index = typename NTP::template IndexT<Val>::Index;
+  using Lock = typename NTP::Lock;
 
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
   template <typename ...Args>
   ZmStack(ZmStackParams params = ZmStackParams(), Args &&... args) :
@@ -346,7 +346,7 @@ friend class Iterator;
     Iterator(const Iterator &);
     Iterator &operator =(const Iterator &);	// prevent mis-use
 
-    typedef ZmStack<Val, NTP> Stack;
+    using Stack = ZmStack<Val, NTP>;
 
   public:
     Iterator(Stack &stack) :

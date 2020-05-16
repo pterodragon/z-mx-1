@@ -98,7 +98,7 @@ struct ZuHash_GoldenPrime128 {
 
 #if defined(__x86_64__) || defined(_WIN64)
 struct ZuHash_FNV_ {
-  typedef uint64_t Value;
+  using Value = uint64_t;
 
   ZuInline static Value initial_() { return 0xcbf29ce484222325ULL; }
 
@@ -110,7 +110,7 @@ struct ZuHash_FNV_ {
 };
 #else
 struct ZuHash_FNV_ {
-  typedef uint32_t Value;
+  using Value = uint32_t;
 
   ZuInline static Value initial_() { return 0x811c9dc5UL; }
 
@@ -123,7 +123,7 @@ struct ZuHash_FNV_ {
 #endif
 
 struct ZuHash_FNV : public ZuHash_FNV_ {
-  typedef ZuHash_FNV_::Value Value;
+  using Value = ZuHash_FNV_::Value;
 
   ZuInline static uint32_t hash(const unsigned char *p, int n) {
     Value v = initial_();
@@ -393,8 +393,8 @@ template <typename T> struct ZuHash_<T, false> :
 template <typename T> struct ZuHash_<T, true> {
   template <typename S>
   ZuInline static uint32_t hash(const S &s) {
-    typedef ZuTraits<S> Traits;
-    typedef typename ZuTraits<typename Traits::Elem>::T Char;
+    using Traits = ZuTraits<S>;
+    using Char = typename ZuTraits<typename Traits::Elem>::T;
     return ZuStringHash<Char>::hash(Traits::data(s), Traits::length(s));
   }
 };

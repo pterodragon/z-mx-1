@@ -16,7 +16,7 @@ friend struct ZmSingletonCtor<Global>;
     m_sendRequests(0), m_sendBytes(0) { }
 
 public:
-  typedef ZmTimeInterval<ZmPLock> TimeInterval;
+  using TimeInterval = ZmTimeInterval<ZmPLock>;
 
   ZuInline static void wait() { instance()->m_sem.wait(); }
   ZuInline static void post() { instance()->m_sem.post(); }

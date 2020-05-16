@@ -68,10 +68,10 @@ struct ZCmp {
   static const ZmRef<Z> &null() { static const ZmRef<Z> z; return z; }
 };
 
-typedef ZmList<ZmRef<Z>, ZmListCmp<ZCmp> > ZList;
-typedef ZmHash<int, ZmHashVal<ZmRef<Z> > > ZHash;
+using ZList = ZmList<ZmRef<Z>, ZmListCmp<ZCmp> >;
+using ZHash = ZmHash<int, ZmHashVal<ZmRef<Z> > >;
 
-typedef ZmList<ZuStringN<20>, ZmListNodeIsItem<true> > ZList2;
+using ZList2 = ZmList<ZuStringN<20>, ZmListNodeIsItem<true> >;
 
 void Y::helloWorld() { puts("hello world [Y]"); }
 

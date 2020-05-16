@@ -36,7 +36,7 @@ ZmAtomic<int> threads;
 
 #define self() (ZmPlatform::getTID())
 
-typedef ZmTLock<int, int> TLock;
+using TLock = ZmTLock<int, int>;
 
 struct TLockPtr {
   TLockPtr() {

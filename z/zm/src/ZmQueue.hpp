@@ -43,13 +43,13 @@
 
 // NTP defaults
 struct ZmQueue_Defaults {
-  typedef uint64_t ID;
-  template <typename T> struct CmpT { typedef ZuCmp<T> Cmp; };
-  template <typename T> struct ICmpT { typedef ZuCmp<T> ICmp; };
-  template <typename T> struct HashFnT { typedef ZuHash<T> HashFn; };
-  template <typename T> struct IHashFnT { typedef ZuHash<T> IHashFn; };
-  template <typename T> struct IndexT { typedef T Index; };
-  typedef ZmLock Lock;
+  using ID = uint64_t;
+  template <typename T> struct CmpT { using Cmp = ZuCmp<T>; };
+  template <typename T> struct ICmpT { using ICmp = ZuCmp<T>; };
+  template <typename T> struct HashFnT { using HashFn = ZuHash<T>; };
+  template <typename T> struct IHashFnT { using IHashFn = ZuHash<T>; };
+  template <typename T> struct IndexT { using Index = T; };
+  using Lock = ZmLock;
   struct HeapID { ZuInline static const char *id() { return "ZmQueue"; } };
   struct Base { };
 };
@@ -60,7 +60,7 @@ struct ZmQueueID : public NTP {
   ZuAssert(ZuTraits<ID_>::IsPrimitive &&
 	   ZuTraits<ID_>::IsIntegral &&
 	   !ZuTraits<ID_>::IsSigned);
-  typedef ID_ ID;
+  using ID = ID_;
 };
 
 // ZmQueueIndex - use a different type as the index, rather than the key as is
@@ -69,63 +69,63 @@ struct ZmQueueID : public NTP {
 template <class Accessor, class NTP = ZmQueue_Defaults>
 struct ZmQueueIndex : public NTP {
   template <typename T> struct CmpT {
-    typedef typename ZuIndex<Accessor>::template CmpT<T> Cmp;
+    using Cmp = typename ZuIndex<Accessor>::template CmpT<T>;
   };
   template <typename> struct ICmpT {
-    typedef typename ZuIndex<Accessor>::ICmp ICmp;
+    using ICmp = typename ZuIndex<Accessor>::ICmp;
   };
   template <typename> struct HashFnT {
-    typedef typename ZuIndex<Accessor>::Hash HashFn;
+    using HashFn = typename ZuIndex<Accessor>::Hash;
   };
   template <typename> struct IHashFnT {
-    typedef typename ZuIndex<Accessor>::IHash IHashFn;
+    using IHashFn = typename ZuIndex<Accessor>::IHash;
   };
   template <typename> struct IndexT {
-    typedef typename ZuIndex<Accessor>::I Index;
+    using Index = typename ZuIndex<Accessor>::I;
   };
 };
 
 // ZmQueueCmp - the key comparator
 template <class Cmp_, class NTP = ZmQueue_Defaults>
 struct ZmQueueCmp : public NTP {
-  template <typename> struct CmpT { typedef Cmp_ Cmp; };
-  template <typename> struct ICmpT { typedef Cmp_ ICmp; };
+  template <typename> struct CmpT { using Cmp = Cmp_; };
+  template <typename> struct ICmpT { using ICmp = Cmp_; };
 };
 
 // ZmQueueICmp - the index comparator
 template <class ICmp_, class NTP = ZmQueue_Defaults>
 struct ZmQueueICmp : public NTP {
-  template <typename> struct ICmpT { typedef ICmp_ ICmp; };
+  template <typename> struct ICmpT { using ICmp = ICmp_; };
 };
 
 // ZmQueueHashFn - the hash function
 template <class HashFn_, class NTP = ZmQueue_Defaults>
 struct ZmQueueHashFn : public NTP {
-  template <typename> struct HashFnT { typedef HashFn_ HashFn; };
+  template <typename> struct HashFnT { using HashFn = HashFn_; };
 };
 
 // ZmQueueIHashFn - the index hash function
 template <class IHashFn_, class NTP = ZmQueue_Defaults>
 struct ZmQueueIHashFn : public NTP {
-  template <typename> struct IHashFnT { typedef IHashFn_ IHashFn; };
+  template <typename> struct IHashFnT { using IHashFn = IHashFn_; };
 };
 
 // ZmQueueLock - the lock type used (ZmRWLock will permit concurrent reads)
 template <class Lock_, class NTP = ZmQueue_Defaults>
 struct ZmQueueLock : public NTP {
-  typedef Lock_ Lock;
+  using Lock = Lock_;
 };
 
 // ZmQueueHeapID - the heap ID
 template <class HeapID_, class NTP = ZmQueue_Defaults>
 struct ZmQueueHeapID : public NTP {
-  typedef HeapID_ HeapID;
+  using HeapID = HeapID_;
 };
 
 // ZmQueueBase - injection of a base class (e.g. ZmObject)
 template <class Base_, class NTP = ZmQueue_Defaults>
 struct ZmQueueBase : public NTP {
-  typedef Base_ Base;
+  using Base = Base_;
 };
 
 template <typename Key, class NTP = ZmQueue_Defaults>
@@ -134,33 +134,35 @@ class ZmQueue : public NTP::Base {
   ZmQueue &operator =(const ZmQueue &);	// prevent mis-use
 
 public:
-  typedef typename NTP::ID ID;
-  typedef typename NTP::template CmpT<Key>::Cmp Cmp;
-  typedef typename NTP::template ICmpT<Key>::ICmp ICmp;
-  typedef typename NTP::template HashFnT<Key>::HashFn HashFn;
-  typedef typename NTP::template IHashFnT<Key>::IHashFn IHashFn;
-  typedef typename NTP::template IndexT<Key>::Index Index;
-  typedef typename NTP::Lock Lock;
-  typedef typename NTP::HeapID HeapID;
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using ID = typename NTP::ID;
+  using Cmp = typename NTP::template CmpT<Key>::Cmp;
+  using ICmp = typename NTP::template ICmpT<Key>::ICmp;
+  using HashFn = typename NTP::template HashFnT<Key>::HashFn;
+  using IHashFn = typename NTP::template IHashFnT<Key>::IHashFn;
+  using Index = typename NTP::template IndexT<Key>::Index;
+  using Lock = typename NTP::Lock;
+  using HeapID = typename NTP::HeapID;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
   ZuAssert(ZuTraits<ID>::IsPrimitive && ZuTraits<ID>::IsIntegral);
 
-  typedef ZmHash<Key,
-	    ZmHashCmp_<Cmp,
-	      ZmHashICmp<ICmp,
-		ZmHashFn<HashFn,
-		  ZmHashIFn<IHashFn,
-		    ZmHashIndex_<Index,
-		      ZmHashVal<ID,
-			ZmHashLock<ZmNoLock,
-			  ZmHashHeapID<HeapID> > > > > > > > > Key2ID;
-  typedef ZmHash<ID,
-	    ZmHashVal<Key,
-	      ZmHashValCmp<Cmp,
-		ZmHashLock<ZmNoLock,
-		  ZmHashHeapID<HeapID> > > > > ID2Key;
+  using Key2ID =
+    ZmHash<Key,
+      ZmHashCmp_<Cmp,
+	ZmHashICmp<ICmp,
+	  ZmHashFn<HashFn,
+	    ZmHashIFn<IHashFn,
+	      ZmHashIndex_<Index,
+		ZmHashVal<ID,
+		  ZmHashLock<ZmNoLock,
+		    ZmHashHeapID<HeapID> > > > > > > > >;
+  using ID2Key =
+    ZmHash<ID,
+      ZmHashVal<Key,
+	ZmHashValCmp<Cmp,
+	  ZmHashLock<ZmNoLock,
+	    ZmHashHeapID<HeapID> > > > >;
 
   ZmQueue() : m_head(0), m_tail(0) { }
 
@@ -180,7 +182,7 @@ friend class Iterator;
     Iterator(const Iterator &);
     Iterator &operator =(const Iterator &);	// prevent mis-use
 
-    typedef ZmQueue<Key, NTP> Queue;
+    using Queue = ZmQueue<Key, NTP>;
 
   public:
     Iterator(Queue &queue) :

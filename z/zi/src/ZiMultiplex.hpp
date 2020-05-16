@@ -158,11 +158,11 @@ public:
   ZiSockAddr	addr;	// address - set by app (send) / ZiMultiplex (recv)
   ZiConnection	*cxn;	// connection - set by ZiMultiplex
 };
-typedef ZmFn<ZiIOContext &> ZiIOFn;
+using ZiIOFn = ZmFn<ZiIOContext &>;
 ZuInline uintptr_t ZiIOContext::operator ()() { return fn.as<ZiIOFn>()(*this); }
 
 // transient
-typedef ZmFn<bool> ZiFailFn;
+using ZiFailFn = ZmFn<bool>;
 
 // multicast subscription request (IGMP Report)
 class ZiMReq : public ip_mreq {
@@ -247,9 +247,9 @@ namespace ZiCxnFlags {
       "D", Nagle);
 }
 class ZiCxnOptions {
-  typedef ZuArrayN<ZiMReq, ZiCxnOptions_NMReq> MReqs;
+  using MReqs = ZuArrayN<ZiMReq, ZiCxnOptions_NMReq>;
 #ifdef ZiMultiplex_Netlink
-  typedef ZuStringN<GENL_NAMSIZ> FamilyName;
+  using FamilyName = ZuStringN<GENL_NAMSIZ>;
 #endif
 
 public:
@@ -521,14 +521,14 @@ struct ZiCxnTelemetry {
   uint8_t	type;		// ZiCxnType
 };
 
-typedef ZmFn<const ZiListenInfo &> ZiListenFn;
-typedef ZmFn<const ZiCxnInfo &> ZiConnectFn;
+using ZiListenFn = ZmFn<const ZiListenInfo &>;
+using ZiConnectFn = ZmFn<const ZiCxnInfo &>;
 
 #ifdef ZiMultiplex_IOCP
 // overlapped I/O structure for a single request (Windows IOCP) - internal
 class Zi_Overlapped {
 public:
-  typedef ZmFn<int, unsigned, ZeError> Executed;
+  using Executed = ZmFn<int, unsigned, ZeError>;
 
   ZuInline Zi_Overlapped() { }
   ZuInline ~Zi_Overlapped() { }
@@ -560,7 +560,7 @@ class ZiAPI ZiConnection : public ZmPolymorph {
 friend class ZiMultiplex;
 
 public:
-  typedef ZiPlatform::Socket Socket;
+  using Socket = ZiPlatform::Socket;
 
   // index on socket
   struct SocketAccessor;
@@ -793,7 +793,7 @@ friend class ZiConnection;
   template <typename> friend class Accept_;
 #endif
 
-    typedef ZiPlatform::Socket Socket;
+    using Socket = ZiPlatform::Socket;
 
   public:
     struct SocketAccessor;
@@ -824,13 +824,14 @@ friend class ZiConnection;
   struct Listener_HeapID : public ZmHeapSharded {
     ZuInline static const char *id() { return "ZiMultiplex.Listener"; }
   };
-  typedef ZmHash<Listener_,
-	    ZmHashNodeIsKey<true,
-	      ZmHashIndex<Listener_::SocketAccessor,
-		ZmHashLock<ZmNoLock,
-		  ZmHashObject<ZuObject,
-		    ZmHashHeapID<Listener_HeapID> > > > > > ListenerHash;
-  typedef ListenerHash::Node Listener;
+  using ListenerHash =
+    ZmHash<Listener_,
+      ZmHashNodeIsKey<true,
+	ZmHashIndex<Listener_::SocketAccessor,
+	  ZmHashLock<ZmNoLock,
+	    ZmHashObject<ZuObject,
+	      ZmHashHeapID<Listener_HeapID> > > > > >;
+  using Listener = ListenerHash::Node;
 
 #if ZiMultiplex__AcceptHeap
   // heap-allocated asynchronous accept, exclusively used by IOCP
@@ -865,8 +866,8 @@ template <typename> friend class Accept_;
   struct Accept_HeapID {
     ZuInline static const char *id() { return "ZiMultiplex.Accept"; }
   };
-  typedef ZmHeap<Accept_HeapID, sizeof(Accept_<ZuNull>)> Accept_Heap;
-  typedef Accept_<Accept_Heap> Accept; 
+  using Accept_Heap = ZmHeap<Accept_HeapID, sizeof(Accept_<ZuNull>)>;
+  using Accept = Accept_<Accept_Heap>; 
 #endif
 
   // heap-allocated non-blocking / asynchronous connect
@@ -880,7 +881,7 @@ template <typename> friend class Connect_;
   {
   friend class ZiMultiplex;
 
-    typedef ZiPlatform::Socket Socket;
+    using Socket = ZiPlatform::Socket;
 
 #ifdef ZiMultiplex__ConnectHash
   public:
@@ -931,30 +932,32 @@ template <typename> friend class Connect_;
     ZuInline static const char *id() { return "ZiMultiplex.Connect"; }
   };
 #if ZiMultiplex__ConnectHash
-  typedef ZmHash<Connect_,
-	    ZmHashNodeIsKey<true,
-	      ZmHashIndex<Connect_::SocketAccessor,
-		ZmHashLock<ZmNoLock,
-		  ZmHashObject<ZuObject,
-		    ZmHashHeapID<Connect_HeapID> > > > > > ConnectHash;
-  typedef ConnectHash::Node Connect;
+  using ConnectHash =
+    ZmHash<Connect_,
+      ZmHashNodeIsKey<true,
+	ZmHashIndex<Connect_::SocketAccessor,
+	  ZmHashLock<ZmNoLock,
+	    ZmHashObject<ZuObject,
+	      ZmHashHeapID<Connect_HeapID> > > > > >;
+  using Connect = ConnectHash::Node;
 #else
-  typedef ZmHeap<Connect_HeapID, sizeof(Connect_<ZuNull>)> ConnectHeap;
-  typedef Connect_<ConnectHeap> Connect;
+  using ConnectHeap = ZmHeap<Connect_HeapID, sizeof(Connect_<ZuNull>)>;
+  using Connect = Connect_<ConnectHeap>;
 #endif
 
   struct CxnHash_HeapID : public ZmHeapSharded {
     ZuInline static const char *id() { return "ZiMultiplex.CxnHash"; }
   };
-  typedef ZmHash<ZmRef<ZiConnection>,
-            ZmHashIndex<ZiConnection::SocketAccessor,
-	      ZmHashLock<ZmNoLock,
-		ZmHashObject<ZuNull,
-		  ZmHashHeapID<CxnHash_HeapID> > > > > CxnHash;
+  using CxnHash =
+    ZmHash<ZmRef<ZiConnection>,
+      ZmHashIndex<ZiConnection::SocketAccessor,
+	ZmHashLock<ZmNoLock,
+	  ZmHashObject<ZuNull,
+	    ZmHashHeapID<CxnHash_HeapID> > > > >;
 
-  typedef ZmLock StateLock;
-  typedef ZmGuard<StateLock> StateGuard;
-  typedef ZmCondition<StateLock> ShutdownCond;
+  using StateLock = ZmLock;
+  using StateGuard = ZmGuard<StateLock>;
+  using ShutdownCond = ZmCondition<StateLock>;
 
 public:
   using Socket = ZiPlatform::Socket;

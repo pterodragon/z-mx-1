@@ -206,8 +206,8 @@ int main()
   }
 
   {
-    // typedef ZmQueue<ZtString, ZmQueueID<uint64_t> > Queue;
-    typedef ZmList<ZtString> Queue;
+    // using Queue = ZmQueue<ZtString, ZmQueueID<uint64_t> >;
+    using Queue = ZmList<ZtString>;
 
     Queue q;
 

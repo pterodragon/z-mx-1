@@ -201,7 +201,7 @@ template <typename ...Args> class ZmFn : public ZmAnyFn {
   template <typename T, typename R = void, bool OK = IsFunctor<T>::OK>
   struct MatchFunctor;
   template <typename T_, typename R>
-  struct MatchFunctor<T_, R, 1> { typedef R T; };
+  struct MatchFunctor<T_, R, 1> { using T = R; };
 
 public:
   ZuInline ZmFn() : ZmAnyFn() { }
@@ -488,7 +488,7 @@ private:
   template <typename L, typename R, class HeapID, typename ...Args_>
   struct LambdaInvoker_<L, R, HeapID, 0, Args_...> {
     template <typename L_> ZuInline static ZmFn fn(L_ &&l) {
-      typedef typename ZmLambda<L, HeapID>::T O;
+      using O = typename ZmLambda<L, HeapID>::T;
       return Member<&L::operator ()>::fn(
 	    ZmRef<O>(new typename ZmLambda<L, HeapID>::T(ZuFwd<L_>(l))));
     }
@@ -496,7 +496,7 @@ private:
   template <typename L, typename R, class HeapID, typename ...Args_>
   struct LambdaInvoker_<const L, R, HeapID, 0, Args_...> {
     template <typename L_> ZuInline static ZmFn fn(L_ &&l) {
-      typedef typename ZmLambda<L, HeapID>::T O;
+      using O = typename ZmLambda<L, HeapID>::T;
       return Member<&L::operator ()>::fn(
 	    ZmRef<const O>(new typename ZmLambda<L, HeapID>::T(ZuFwd<L_>(l))));
     }

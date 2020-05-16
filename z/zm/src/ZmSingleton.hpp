@@ -82,7 +82,7 @@ class ZmSingleton : public ZmGlobal, public ZmSingleton_<T_> {
   ZmSingleton &operator =(const ZmSingleton &);	// prevent mis-use
 
 public:
-  typedef T_ T;
+  using T = T_;
 
 private:
   ZuCan(final, CanFinal);
@@ -153,7 +153,7 @@ template <typename L> struct ZmStatic_Ctor {
 template <typename L>
 ZuInline auto &ZmStatic(L l,
     typename ZuIfT<ZmStatic_Ctor<L>::OK>::T *_ = 0) {
-  typedef typename ZuDeref<decltype(*ZmStatic_Ctor<L>::fn())>::T T;
+  using T = typename ZuDeref<decltype(*ZmStatic_Ctor<L>::fn())>::T;
   return *(ZmSingleton<T, true, ZmStatic_Ctor<L>::fn>::instance());
 }
 

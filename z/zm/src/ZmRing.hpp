@@ -162,7 +162,7 @@ struct ZmRing_Defaults {
 // ZmRingBase - injection of a base class (e.g. ZmObject)
 template <class Base_, class NTP = ZmRing_Defaults>
 struct ZmRingBase : public NTP {
-  typedef Base_ Base;
+  using Base = Base_;
 };
 
 #define ZmRingAlign(x) (((x) + 8 + 15) & ~15)
@@ -180,7 +180,7 @@ public:
     Shadow	= 0x00000004
   };
 
-  typedef T_ T;
+  using T = T_;
 
   enum { Size = ZmRingAlign(sizeof(T)) };
 

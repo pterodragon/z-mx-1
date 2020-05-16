@@ -225,7 +225,7 @@ template <typename T, bool Fwd> struct ZuCmp_NonPrimitive<T, true, Fwd> {
 // comparison of pointers (including smart pointers)
 
 template <typename T> struct ZuCmp_Pointer {
-  typedef typename ZuTraits<T>::Elem P;
+  using P = typename ZuTraits<T>::Elem;
   ZuInline static int cmp(const P *p1, const P *p2) {
     return ((char *)p1 > (char *)p2) - ((char *)p1 < (char *)p2);
   }

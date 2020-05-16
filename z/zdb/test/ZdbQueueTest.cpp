@@ -21,7 +21,7 @@ struct Order {
   char		m_pad[1500];
 };
 
-typedef ZdbQueue<Order> OrderQueue;
+using OrderQueue = ZdbQueue<Order>;
 
 static void dump(db_recno_t id, Order *o)
 {

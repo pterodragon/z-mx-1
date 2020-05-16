@@ -49,11 +49,11 @@
 
 template <typename T_, typename I_, bool Is> struct ZuAccessor_ {
   enum { Same = 0 };
-  typedef T_ T;
-  typedef I_ I;
-  typedef ZuCmp<T> TCmp;
-  typedef ZuCmp<I> Cmp;
-  typedef ZuHash<I> Hash;
+  using T = T_;
+  using I = I_;
+  using TCmp = ZuCmp<T>;
+  using Cmp = ZuCmp<I>;
+  using Hash = ZuHash<I>;
 
   template <typename P>
   ZuInline static I value(const P &p) { return p; }
@@ -61,11 +61,11 @@ template <typename T_, typename I_, bool Is> struct ZuAccessor_ {
 
 template <typename T_, typename I_> struct ZuAccessor_<T_, I_, true> {
   enum { Same = 1 };
-  typedef T_ T;
-  typedef I_ I;
-  typedef ZuCmp<T> TCmp;
-  typedef ZuCmp<I> Cmp;
-  typedef ZuHash<I> Hash;
+  using T = T_;
+  using I = I_;
+  using TCmp = ZuCmp<T>;
+  using Cmp = ZuCmp<I>;
+  using Hash = ZuHash<I>;
 
   template <typename P>
   ZuInline static const I &value(const P &p) { return p; }
@@ -76,9 +76,9 @@ template <typename T, typename I> struct ZuAccessor :
       ZuConversion<typename ZuTraits<I>::T, typename ZuTraits<T>::T>::Is> { };
 
 template <typename Accessor_, bool Same> struct ZuIndex_ {
-  typedef Accessor_ Accessor;
-  typedef typename Accessor::T T;
-  typedef typename Accessor::I I;
+  using Accessor = Accessor_;
+  using T = typename Accessor::T;
+  using I = typename Accessor::I;
 
   struct ICmp {
     template <typename T1, typename T2>
@@ -93,7 +93,7 @@ template <typename Accessor_, bool Same> struct ZuIndex_ {
     }
   };
 
-  typedef typename Accessor::Hash IHash;
+  using IHash = typename Accessor::Hash;
 
   template <typename T> struct CmpT {
     template <typename T1, typename T2>
@@ -127,13 +127,13 @@ template <typename Accessor_, bool Same> struct ZuIndex_ {
 
 template <typename Accessor_>
 struct ZuIndex_<Accessor_, true> : public Accessor_ {
-  typedef Accessor_ Accessor;
-  typedef typename Accessor::T T;
-  typedef typename Accessor::I I;
-  typedef typename Accessor::Cmp ICmp;
-  typedef typename Accessor::Hash IHash;
-  typedef typename Accessor::Cmp Cmp;
-  typedef typename Accessor::Hash Hash;
+  using Accessor = Accessor_;
+  using T = typename Accessor::T;
+  using I = typename Accessor::I;
+  using ICmp = typename Accessor::Cmp;
+  using IHash = typename Accessor::Hash;
+  using Cmp = typename Accessor::Cmp;
+  using Hash = typename Accessor::Hash;
 };
 
 template <typename Accessor>

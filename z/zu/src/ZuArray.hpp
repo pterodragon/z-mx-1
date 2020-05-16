@@ -84,30 +84,30 @@ public:
 
 private:
   template <typename U> struct IsPrimitiveArray_ {
-    typedef typename ZuTraits<U>::Elem Elem;
+    using Elem = typename ZuTraits<U>::Elem;
     enum { OK = ZuConversion<Elem, T>::Same &&
       ZuTraits<U>::IsArray && ZuTraits<U>::IsPrimitive };
   };
   template <typename U> struct IsCharElem_ {
-    typedef typename ZuTraits<U>::Elem Elem;
+    using Elem = typename ZuTraits<U>::Elem;
     enum { OK = 
       (ZuConversion<char, Elem>::Same || ZuConversion<wchar_t, Elem>::Same) };
   };
   template <typename U> struct IsStrLiteral {
-    typedef typename ZuTraits<U>::Elem Elem;
+    using Elem = typename ZuTraits<U>::Elem;
     enum { OK = IsPrimitiveArray_<U>::OK && IsCharElem_<U>::OK };
   };
   template <typename U> struct IsPrimitiveArray {
-    typedef typename ZuTraits<U>::Elem Elem;
+    using Elem = typename ZuTraits<U>::Elem;
     enum { OK = IsPrimitiveArray_<U>::OK && !IsCharElem_<U>::OK };
   };
   template <typename U> struct IsCString {
-    typedef typename ZuTraits<U>::Elem Elem;
+    using Elem = typename ZuTraits<U>::Elem;
     enum { OK = !IsPrimitiveArray_<U>::OK && ZuTraits<U>::IsPointer &&
       IsCharElem_<U>::OK };
   };
   template <typename U> struct IsOtherArray {
-    typedef typename ZuTraits<U>::Elem Elem;
+    using Elem = typename ZuTraits<U>::Elem;
     enum { OK =
       !IsPrimitiveArray_<U>::OK && !IsCString<U>::OK &&
       (ZuTraits<U>::IsArray || ZuTraits<U>::IsString) &&
@@ -117,19 +117,19 @@ private:
   template <typename U, typename R = void, bool OK = IsStrLiteral<U>::OK>
   struct MatchStrLiteral;
   template <typename U, typename R>
-  struct MatchStrLiteral<U, R, 1> { typedef R T; };
+  struct MatchStrLiteral<U, R, 1> { using T = R; };
   template <typename U, typename R = void, bool OK = IsPrimitiveArray<U>::OK>
   struct MatchPrimitiveArray;
   template <typename U, typename R>
-  struct MatchPrimitiveArray<U, R, 1> { typedef R T; };
+  struct MatchPrimitiveArray<U, R, 1> { using T = R; };
   template <typename U, typename R = void, bool OK = IsCString<U>::OK>
   struct MatchCString;
   template <typename U, typename R>
-  struct MatchCString<U, R, 1> { typedef R T; };
+  struct MatchCString<U, R, 1> { using T = R; };
   template <typename U, typename R = void, bool OK = IsOtherArray<U>::OK>
   struct MatchOtherArray;
   template <typename U, typename R>
-  struct MatchOtherArray<U, R, 1> { typedef R T; };
+  struct MatchOtherArray<U, R, 1> { using T = R; };
 
 public:
   // compile-time length from string literal (null-terminated)

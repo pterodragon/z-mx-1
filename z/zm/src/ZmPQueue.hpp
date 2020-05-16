@@ -72,7 +72,7 @@
 template <typename Item> class ZmPQueueDefaultFn {
 public:
   // Key is the type of the key (sequence number)
-  typedef uint32_t Key;
+  using Key = uint32_t;
 
   ZuInline ZmPQueueDefaultFn(Item &item) : m_item(item) { }
 
@@ -105,15 +105,15 @@ private:
 
 struct ZmPQueue_Defaults {
   enum { NodeIsItem = 0 };
-  typedef ZmLock Lock;
-  typedef ZmObject Object;
+  using Lock = ZmLock;
+  using Object = ZmObject;
   struct HeapID {
     static const char *id() { return "ZmPQueue"; }
   };
   struct Base { };
   enum { Bits = 3, Levels = 3 };
   template <typename Item> struct ZmPQueueFnT {
-    typedef ZmPQueueDefaultFn<Item> T;
+    using T = ZmPQueueDefaultFn<Item>;
   };
 };
 
@@ -126,25 +126,25 @@ struct ZmPQueueNodeIsItem : public NTP {
 // ZmPQueueLock - the lock type used (ZmRWLock will permit concurrent reads)
 template <class Lock_, class NTP = ZmPQueue_Defaults>
 struct ZmPQueueLock : public NTP {
-  typedef Lock_ Lock;
+  using Lock = Lock_;
 };
 
 // ZmPQueueObject - the reference-counted object type used
 template <class Object_, class NTP = ZmPQueue_Defaults>
 struct ZmPQueueObject : public NTP {
-  typedef Object_ Object;
+  using Object = Object_;
 };
 
 // ZmPQueueHeapID - the heap ID
 template <class HeapID_, class NTP = ZmPQueue_Defaults>
 struct ZmPQueueHeapID : public NTP {
-  typedef HeapID_ HeapID;
+  using HeapID = HeapID_;
 };
 
 // ZmPQueueBase - injection of a base class (e.g. ZmObject)
 template <class Base_, class NTP = ZmPQueue_Defaults>
 struct ZmPQueueBase : public NTP {
-  typedef Base_ Base;
+  using Base = Base_;
 };
 
 // ZmPQueueBits - change skip list factor (power of 2)
@@ -162,21 +162,21 @@ struct ZmPQueueLevels : public NTP {
 // ZmPQueueFn - override queuing functions for the type
 template <typename Fn_, class NTP = ZmPQueue_Defaults>
 struct ZmPQueueFn : public NTP {
-  template <typename> struct ZmPQueueFnT { typedef Fn_ T; };
+  template <typename> struct ZmPQueueFnT { using T = Fn_; };
 };
 
 namespace ZmPQueue_ {
   template <int, int, typename = void> struct First;
   template <int Levels, typename T_>
-  struct First<0, Levels, T_> { typedef T_ T; };
-  template <int, int, typename T_ = void> struct Next { typedef T_ T; };
+  struct First<0, Levels, T_> { using T = T_; };
+  template <int, int, typename T_ = void> struct Next { using T = T_; };
   template <int Levels, typename T_> struct Next<0, Levels, T_> { };
   template <int Levels, typename T_> struct Next<Levels, Levels, T_> { };
-  template <int, int, typename T_ = void> struct NotLast { typedef T_ T; };
+  template <int, int, typename T_ = void> struct NotLast { using T = T_; };
   template <int Levels, typename T_> struct NotLast<Levels, Levels, T_> { };
   template <int, int, typename = void> struct Last;
   template <int Levels, typename T_>
-  struct Last<Levels, Levels, T_> { typedef void T; };
+  struct Last<Levels, Levels, T_> { using T = void; };
 };
 
 template <typename Item_, class NTP = ZmPQueue_Defaults>
@@ -185,13 +185,13 @@ class ZmPQueue : public ZuPrintable, public NTP::Base {
   ZmPQueue &operator =(const ZmPQueue &);	// prevent mis-use
 
 public:
-  typedef Item_ Item;
-  typedef typename NTP::template ZmPQueueFnT<Item>::T Fn;
-  typedef typename Fn::Key Key;
+  using Item = Item_;
+  using Fn = typename NTP::template ZmPQueueFnT<Item>::T;
+  using Key = typename Fn::Key;
   enum { NodeIsItem = NTP::NodeIsItem };
-  typedef typename NTP::Lock Lock;
-  typedef typename NTP::Object Object;
-  typedef typename NTP::HeapID HeapID;
+  using Lock = typename NTP::Lock;
+  using Object = typename NTP::Object;
+  using HeapID = typename NTP::HeapID;
   enum { Bits = NTP::Bits };
   enum { Levels = NTP::Levels };
 
@@ -235,12 +235,12 @@ public:
   template <typename Heap>
   using Node_ = ZmINode<Heap, NodeIsItem, NodeFn_, Item>;
   struct NullHeap { }; // deconflict with ZuNull
-  typedef ZmHeap<HeapID, sizeof(Node_<NullHeap>)> NodeHeap;
-  typedef Node_<NodeHeap> Node;
-  typedef typename Node::Fn NodeFn;
+  using NodeHeap = ZmHeap<HeapID, sizeof(Node_<NullHeap>)>;
+  using Node = Node_<NodeHeap>;
+  using NodeFn = typename Node::Fn;
 
-  typedef typename ZuIf<ZmRef<Node>, Node *, ZuIsObject_<Object>::OK>::T
-    NodeRef;
+  using NodeRef =
+    typename ZuIf<ZmRef<Node>, Node *, ZuIsObject_<Object>::OK>::T;
 
 private:
   // in order to support both intrusively reference-counted and plain node
@@ -1042,11 +1042,11 @@ private:
 
 // CRTP - application must conform to the following interface:
 #if 0
-typedef ZmPQueue<...> Queue;
+using Queue = ZmPQueue<...>;
 
 struct App : public ZmPQRx<App, Queue> {
-  typedef typename Queue::Node Msg;
-  typedef typename Queue::Gap Gap;
+  using Msg = typename Queue::Node;
+  using Gap = typename Queue::Gap;
 
   // access queue
   Queue &rxQueue();
@@ -1110,13 +1110,13 @@ public:
     unsigned v;
   };
 
-  typedef typename Queue::Node Msg;
-  typedef typename Queue::Key Key;
-  typedef typename Queue::Gap Gap;
+  using Msg = typename Queue::Node;
+  using Key = typename Queue::Key;
+  using Gap = typename Queue::Gap;
 
-  typedef Lock_ Lock;
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using Lock = Lock_;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
   // reset sequence number
   void rxReset(Key key) {
@@ -1234,11 +1234,11 @@ private:
 
 // CRTP - application must conform to the following interface:
 #if 0
-typedef ZmPQueue<...> Queue;
+using Queue = ZmPQueue<...>;
 
 struct App : public ZmPQTx<App, Queue> {
-  typedef typename Queue::Node Msg;
-  typedef typename Queue::Gap Gap;
+  using Msg = typename Queue::Node;
+  using Gap = typename Queue::Gap;
 
   // access queue
   Queue *txQueue();
@@ -1326,14 +1326,14 @@ public:
   };
 
 public:
-  typedef typename Queue::Node Msg;
-  typedef typename Queue::Fn Fn;
-  typedef typename Queue::Key Key;
-  typedef typename Queue::Gap Gap;
+  using Msg = typename Queue::Node;
+  using Fn = typename Queue::Fn;
+  using Key = typename Queue::Key;
+  using Gap = typename Queue::Gap;
 
-  typedef Lock_ Lock;
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using Lock = Lock_;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
   // start concurrent sending and re-sending (datagrams)
   void start() {

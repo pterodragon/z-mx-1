@@ -32,7 +32,7 @@
 //   void foo() { T::ptr()->bar(42); } // adds a foo() method
 // };
 //
-// typedef ZuMixin<Class, Foo> Mixed;	// Class, with Foo mixed in
+// using Mixed = ZuMixin<Class, Foo>;	// Class, with Foo mixed in
 //
 // Mixed m;			// calls Class::Class()
 // Mixed n(42, 43, "bah")	// calls Class::Class(...)
@@ -84,8 +84,8 @@ public:
 template <class T_, template <class> class M_>
 class ZuMixin : public T_, public M_<ZuMixin_<T_, M_<ZuNull> > > {
 public:
-  typedef T_ T;
-  typedef M_<ZuMixin_<T_, M_<ZuNull> > > M;
+  using T = T_ T;
+  using M = M_<ZuMixin_<T_, M_<ZuNull> > >;
 
   ZuInline ZuMixin() { }
   ZuInline ZuMixin(const ZuMixin &v) : T(v) { }
@@ -112,7 +112,7 @@ public:
 template <typename T> struct ZuTraits;
 template <class T_, template <class> class M_>
 struct ZuTraits<ZuMixin<T_, M_> > : public ZuTraits<T_> {
-  typedef ZuMixin<T_, M_> T;
+  using T = ZuMixin<T_, M_>;
 };
 
 template <typename T> struct ZuCmp;

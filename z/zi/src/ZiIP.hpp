@@ -43,7 +43,7 @@
 
 class ZiAPI ZiIP : public in_addr {
 public:
-  typedef ZiPlatform::Hostname Hostname;
+  using Hostname = ZiPlatform::Hostname;
 
   enum Result {
     OK		= Zi::OK,

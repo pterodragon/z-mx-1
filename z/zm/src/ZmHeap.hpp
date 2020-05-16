@@ -105,24 +105,24 @@ template <class, unsigned> friend class ZmHeapCacheT;
 
   enum { CacheLineSize = ZmPlatform::CacheLineSize };
 
-  typedef ZmPLock Lock;
-  typedef ZmGuard<Lock> Guard;
+  using Lock = ZmPLock;
+  using Guard = ZmGuard<Lock>;
 
-  typedef ZmFn<const ZmHeapStats &> StatsFn;
-  typedef ZmFn<StatsFn> AllStatsFn;
+  using StatsFn = ZmFn<const ZmHeapStats &>;
+  using AllStatsFn = ZmFn<StatsFn>;
 
   struct IDAccessor : public ZuAccessor<ZmHeapCache *, const char *> {
     ZuInline static const char *value(const ZmHeapCache *c) {
       return c->info().id;
     }
   };
-  typedef ZuTuple<const char *, unsigned> IDSize;
+  using IDSize = ZuTuple<const char *, unsigned>;
   struct IDSizeAccessor : public ZuAccessor<ZmHeapCache *, IDSize> {
     ZuInline static IDSize value(const ZmHeapCache *c) {
       return IDSize(c->info().id, c->info().size);
     }
   };
-  typedef ZuTuple<const char *, unsigned, unsigned> IDPartSize;
+  using IDPartSize = ZuTuple<const char *, unsigned, unsigned>;
   struct IDPartSizeAccessor : public ZuAccessor<ZmHeapCache *, IDPartSize> {
     ZuInline static IDPartSize value(const ZmHeapCache *c) {
       return IDPartSize(c->info().id, c->info().partition, c->info().size);
@@ -259,13 +259,13 @@ public:
   static CSV csv() { return CSV(); }
 
 #ifdef ZmHeap_DEBUG
-  typedef ZmHeapCache::TraceFn TraceFn;
+  using TraceFn = ZmHeapCache::TraceFn;
 
   static void trace(const char *id, TraceFn allocFn, TraceFn freeFn);
 #endif
 
 private:
-  typedef ZmHeapCache::AllStatsFn AllStatsFn;
+  using AllStatsFn = ZmHeapCache::AllStatsFn;
 
   static ZmHeapCache *cache(
       const char *id, unsigned size, bool sharded, AllStatsFn);
@@ -287,10 +287,10 @@ class ZmHeapCacheT : public ZmObject {
 friend struct ZmSpecificCtor<ZmHeapCacheT<ID, Size> >;
 template <class, unsigned> friend class ZmHeap; 
 
-  typedef ZmSpecific<ZmHeapCacheT> TLS;
+  using TLS = ZmSpecific<ZmHeapCacheT>;
 
-  typedef ZmHeapCache::StatsFn StatsFn;
-  typedef ZmHeapCache::AllStatsFn AllStatsFn;
+  using StatsFn = ZmHeapCache::StatsFn;
+  using AllStatsFn = ZmHeapCache::AllStatsFn;
 
 public:
   // allStats uses ZmSpecific::all to iterate over all threads and
@@ -353,7 +353,7 @@ template <typename, unsigned> friend class ZmHeap;
 template <typename ID, unsigned Size_> class ZmHeap {
   enum { Size = ZmHeap_Size<Size_>::Size };
 
-  typedef ZmHeapCacheT<ID, Size> Cache;
+  using Cache = ZmHeapCacheT<ID, Size>;
 
 public:
   ZuInline void *operator new(size_t) { return Cache::alloc(); }

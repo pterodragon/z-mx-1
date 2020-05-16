@@ -396,12 +396,24 @@ public:
   ZuInline int cmp(const ZuDecimal &v) const {
     return (value > v.value) - (value < v.value);
   }
-  ZuInline bool operator ==(const ZuDecimal &v) const { return value == v.value; }
-  ZuInline bool operator !=(const ZuDecimal &v) const { return value != v.value; }
-  ZuInline bool operator >(const ZuDecimal &v) const { return value > v.value; }
-  ZuInline bool operator >=(const ZuDecimal &v) const { return value >= v.value; }
-  ZuInline bool operator <(const ZuDecimal &v) const { return value < v.value; }
-  ZuInline bool operator <=(const ZuDecimal &v) const { return value <= v.value; }
+  ZuInline bool operator ==(const ZuDecimal &v) const {
+    return value == v.value;
+  }
+  ZuInline bool operator !=(const ZuDecimal &v) const {
+    return value != v.value;
+  }
+  ZuInline bool operator >(const ZuDecimal &v) const {
+    return value > v.value;
+  }
+  ZuInline bool operator >=(const ZuDecimal &v) const {
+    return value >= v.value;
+  }
+  ZuInline bool operator <(const ZuDecimal &v) const {
+    return value < v.value;
+  }
+  ZuInline bool operator <=(const ZuDecimal &v) const {
+    return value <= v.value;
+  }
 
   // ! is zero, unary * is !null
   ZuInline bool operator !() const { return !value; }
@@ -482,13 +494,13 @@ inline ZuDecimalVFmt ZuDecimal::vfmt(const ZuVFmt &fmt) const
 template <> struct ZuPrint<ZuDecimalVFmt> : public ZuPrintFn { };
 
 template <> struct ZuTraits<ZuDecimal> : public ZuTraits<int128_t> {
-  typedef ZuDecimal T;
+  using T = ZuDecimal;
   enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
 };
 
 // ZuCmp has to be specialized since null() is otherwise !t (instead of !*t)
 template <> struct ZuCmp<ZuDecimal> {
-  typedef ZuDecimal T;
+  using T = ZuDecimal;
   ZuInline static int cmp(const T &t1, const T &t2) { return t1.cmp(t2); }
   ZuInline static bool equals(const T &t1, const T &t2) { return t1 == t2; }
   ZuInline static bool null(const T &t) { return !*t; }

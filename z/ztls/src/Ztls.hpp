@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// mbedtls C++ wrapper - main SSL component
+// mbedtls C++ wrapper - main TLS/SSL component
 
 #ifndef Ztls_HPP
 #define Ztls_HPP
@@ -46,8 +46,8 @@ namespace Ztls {
 
 // mbedtls runs sharded within a dedicated thread, without lock contention
 
-// API functions: listen, connect, disconnect/disconnect_, send/send_
-// API callbacks: accepted, connected, disconnected, process
+// API functions: listen, connect, disconnect/disconnect_, send/send_ (Tx)
+// API callbacks: accepted, connected, disconnected, process (Rx)
 
 // Function Category | I/O Threads |        TLS thread          | App threads
 // ------------------|-------------|----------------------------|------------

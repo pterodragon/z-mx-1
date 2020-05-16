@@ -20,7 +20,7 @@
 // byte swap utility class
 
 // Example:
-// typedef typename ZuBigEndian<ZuBox0(uint32_t)>::T UInt32N;
+// using UInt32N = typename ZuBigEndian<ZuBox0(uint32_t)>::T;
 // #pragma pack(push, 1)
 // struct Hdr {
 //   ...
@@ -91,38 +91,38 @@ uint64_t Zu_bswap64(const uint64_t &i) {
 
 template <typename T, class Cmp> class ZuBox;
 template <typename T_> struct ZuByteSwap_Unbox {
-  typedef T_ T;
+  using T = T_;
 };
 template <typename T_, class Cmp> struct ZuByteSwap_Unbox<ZuBox<T_, Cmp> > {
-  typedef T_ T;
+  using T = T_;
 };
 
 #pragma pack(push, 1)
 
 template <int N> struct ZuByteSwap_;
 template <> struct ZuByteSwap_<1> {
-  typedef char T;
+  using T = char;
   ZuInline static T bswap(const T &i) { return i; }
 };
 template <> struct ZuByteSwap_<2> {
-  typedef uint16_t T;
+  using T = uint16_t;
   ZuInline static T bswap(const T &i) { return Zu_bswap16(i); }
 };
 template <> struct ZuByteSwap_<4> {
-  typedef uint32_t T;
+  using T = uint32_t;
   ZuInline static T bswap(const T &i) { return Zu_bswap32(i); }
 };
 template <> struct ZuByteSwap_<8> {
-  typedef uint64_t T;
+  using T = uint64_t;
   ZuInline static T bswap(const T &i) { return Zu_bswap64(i); }
 };
 template <typename T_> class ZuByteSwap : public ZuByteSwap_<sizeof(T_)> {
-  typedef ZuByteSwap_<sizeof(T_)> B;
+  using B = ZuByteSwap_<sizeof(T_)>;
 
 public:
-  typedef T_ T;
-  typedef typename ZuByteSwap_Unbox<T>::T U;
-  typedef typename B::T I;
+  using T = T_;
+  using U = typename ZuByteSwap_Unbox<T>::T;
+  using I = typename B::T;
 
   ZuByteSwap() { m_i = 0; }
   ZuByteSwap(const ZuByteSwap &i) { m_i = i.m_i; }
@@ -227,7 +227,7 @@ private:
 
 template <typename I>
 struct ZuTraits<ZuByteSwap<I> > : public ZuTraits<I> {
-  typedef ZuByteSwap<I> T;
+  using T = ZuByteSwap<I>;
   enum { IsBoxed = 0, IsPrimitive = 0 };
 };
 

@@ -52,7 +52,7 @@ private:
 
 template <class Shard_> class ZmSharded {
 public:
-  typedef Shard_ Shard;
+  using Shard = Shard_;
 
   ZuInline ZmSharded(Shard *shard) : m_shard(shard) { }
 
@@ -64,7 +64,7 @@ private:
 
 template <typename T> class ZmHandle {
 public:
-  typedef typename T::Shard Shard;
+  using Shard = typename T::Shard;
 
   ZuInline ZmHandle() : m_ptr(0) { }
   ZuInline ZmHandle(Shard *shard) :

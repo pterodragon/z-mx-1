@@ -47,7 +47,7 @@ template <typename Lock> class ZmCondition;
 #define ZmCondition_Native 0
 #else
 #define ZmCondition_Native 1
-typedef pthread_cond_t ZmCondition_;
+using ZmCondition_ = pthread_cond_t;
 #define ZmCondition_init(c) pthread_cond_init(&c, 0)
 #define ZmCondition_final(c) pthread_cond_destroy(&c)
 #define ZmCondition_wait(c, l) pthread_cond_wait(&c, &l)
@@ -196,7 +196,7 @@ template <class Lock> class ZmCondition {
   ZmCondition(const ZmCondition &);
   ZmCondition &operator =(const ZmCondition &);		// prevent mis-use
 
-  typedef typename Lock::Wait Wait;
+  using Wait = typename Lock::Wait;
 
 public:
   ZuInline ZmCondition(Lock &lock) : m_lock(lock) { ZmCondition_init(m_cond); }

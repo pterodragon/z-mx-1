@@ -7,7 +7,7 @@
 #include <mxt/MxTOrderMgr.hpp>
 
 struct AppTypes : public MxTAppTypes<AppTypes> {
-  typedef MxTAppTypes<AppTypes> Base;
+  using Base = MxTAppTypes<AppTypes>;
 
   struct AppCxlLeg {
     template <typename S> void print(S &) const { }
@@ -196,7 +196,7 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
 #undef DeclType
 };
 
-typedef MxTTxnTypes<AppTypes> TxnTypes;
+using TxnTypes = MxTTxnTypes<AppTypes>;
 
 struct App : public MxTOrderMgr<App, TxnTypes> {
   // log abnormal OSM transition

@@ -88,12 +88,12 @@ private:
 public:
   ~ZvCf();
 
-  typedef ZuBox<int32_t> Int;
-  typedef ZuBox<int64_t> Int64;
-  typedef ZuBox<double> Double;
-  typedef ZtEnum Enum;
-  typedef ZuBox<uint32_t> Flags;
-  typedef ZuBox<uint64_t> Flags64;
+  using Int = ZuBox<int32_t>;
+  using Int64 = ZuBox<int64_t>;
+  using Double = ZuBox<double>;
+  using Enum = ZtEnum;
+  using Flags = ZuBox<uint32_t>;
+  using Flags64 = ZuBox<uint64_t>;
 
 private:
   static ZtString fullKey(ZvCf *cf, ZtString key) {
@@ -188,10 +188,11 @@ public:
     ZtString	m_fileName;
   };
 
-  typedef ZmRBTree<ZtString,
-	    ZmRBTreeVal<ZtString,
-	      ZmRBTreeBase<ZuObject,
-		ZmRBTreeLock<ZmNoLock> > > > Defines;
+  using Defines =
+    ZmRBTree<ZtString,
+      ZmRBTreeVal<ZtString,
+	ZmRBTreeBase<ZuObject,
+	  ZmRBTreeLock<ZmNoLock> > > >;
 
   void fromString(
       ZuString in, bool validate,
@@ -508,13 +509,14 @@ private:
     ZmRef<ZvCf>		m_cf;
   };
 
-  typedef ZmRef<Node> NodeRef;
+  using NodeRef = ZmRef<Node>;
 
   struct HeapID { ZuInline static const char *id() { return "ZvCf"; } };
 
-  typedef ZmRBTree<ZtString,
-	    ZmRBTreeVal<NodeRef,
-	      ZmRBTreeHeapID<HeapID> > > Tree;
+  using Tree =
+    ZmRBTree<ZtString,
+      ZmRBTreeVal<NodeRef,
+	ZmRBTreeHeapID<HeapID> > >;
 
 public:
   unsigned count() const { return m_tree.count(); }

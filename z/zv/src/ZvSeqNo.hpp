@@ -43,6 +43,6 @@ struct ZvSeqNoCmp {
   ZuInline static bool null(uint64_t v) { return !v; }
   ZuInline static uint64_t null() { return 0; }
 };
-typedef ZuBox<uint64_t, ZvSeqNoCmp> ZvSeqNo;
+using ZvSeqNo = ZuBox<uint64_t, ZvSeqNoCmp>;
 
 #endif /* ZvSeqNo_HPP */

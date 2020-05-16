@@ -298,8 +298,9 @@ public:
 	    reinterpret_cast<TreeModelDragData *>(
 		g_object_get_data(G_OBJECT(view), typeName()));
 	  if (!dragData) {
-	    dragData = new TreeModelDragData();
-	    g_object_set_data(G_OBJECT(view), typeName(), dragData);
+	    thread_local TreeModelDragData dragData_;
+	    g_object_set_data(G_OBJECT(view), typeName(), &dragData_);
+	    dragData = &dragData_;
 	  }
 	  if (g_list_find(dragData->events, event)) return false;
 	  if (dragData->events) {
@@ -429,29 +430,31 @@ private:
 
 // CRTP - implementation must conform to the following interface:
 #if 0
-struct App : public TreeArray<App, Data, NodeRef> {
-  // call count(unsigned), then iterate(NodeRef) for each node
+struct App : public TreeArray<App, Iter, Data> {
+  // call count(unsigned), then iterate(const Iter &) for each item
   template <typename Count, typename Iterate>
   void load(Count count, Iterate iterate);
 
-  // get data given node
-  Data *data(Node *node);
+  // get data given ptr
+  Data *data(const Iter &iter);
 
   // get/set row# given node
-  void row(Node *node, gint v);
-  gint row(const Node *node);
+  void row(const Iter &iter, gint v);
+  gint row(const Iter &iter);
 
   // get print format given column
   const ZvFieldFmt &fmt(unsigned col);
 };
 #endif
+// Note: following load() and association with a view, App must call
+// add() and del() to inform Gtk about subsequent modifications to the model
 template <
   typename T,
-  typename Data,
-  typename NodeRef>
-class TreeArray : public TreeSortable<TreeArray<T, Data, NodeRef> > {
-  const NodeRef &nodeRef_();
-  using Node = decltype(*nodeRef_());
+  typename Iter,
+  typename Data>
+class TreeArray : public TreeSortable<TreeArray<T, Iter, Data>> {
+  ZuAssert(sizeof(Iter) <= sizeof(GtkTreeIter));
+  ZuAssert(ZuTraits<Iter>::IsPOD);
 
 private:
   T *impl() { return static_cast<T *>(this); }
@@ -462,9 +465,9 @@ public:
     this->set_sort_column_id(col, order);
     impl()->load(
 	[this](unsigned count) { m_rows.size(count); },
-	[this](NodeRef node) {
-	  impl()->row(node, m_rows.length());
-	  m_rows.push(ZuMv(node));
+	[this](const Iter &iter) {
+	  impl()->row(iter, m_rows.length());
+	  m_rows.push(iter);
 	});
   }
   GtkTreeModelFlags get_flags() {
@@ -483,31 +486,29 @@ public:
     if (depth != 1) return false;
     gint *indices = gtk_tree_path_get_indices(path);
     auto row = indices[0];
-    iter->user_data = reinterpret_cast<gpointer>(static_cast<uintptr_t>(row));
+    if (ZuUnlikely(row < 0 || row >= m_rows.length())) return false;
+    new (iter) Iter{m_rows[row]};
   }
   GtkTreePath *get_path(GtkTreeIter *iter) {
-    GtkTreePath *path = gtk_tree_path_new();
-    gtk_tree_path_append_index(
-	path, reinterpret_cast<uintptr_t>(iter->user_data));
-    return path;
+    gint row = impl()->row(*reinterpret_cast<Iter *>(iter));
+    return gtk_tree_path_new_from_indicesv(&row, 1);
   }
   void get_value(GtkTreeIter *iter, gint col, Value *value) {
-    gint row = reinterpret_cast<uintptr_t>(iter->user_data);
-    if (ZuUnlikely(row >= m_rows.length())) return;
     auto fields = Data::fields();
     static ZtString s; // ok - this is single-threaded
-    fields[col].print(s, impl()->data(m_rows[row]), impl()->fmt(col));
+    fields[col].print(
+	s, impl()->data(*reinterpret_cast<Iter *>(iter)), impl()->fmt(col));
     value->init(G_TYPE_STRING);
     value->set_static_string(s);
   }
   gboolean iter_next(GtkTreeIter *iter) {
-    gint row = reinterpret_cast<uintptr_t>(iter->user_data);
+    auto row = impl()->row(*reinterpret_cast<Iter *>(iter));
     if (ZuUnlikely(++row >= m_rows.length())) return false;
-    iter->user_data = reinterpret_cast<gpointer>(static_cast<uintptr_t>(row));
+    new (iter) Iter{m_rows[row]};
   }
   gboolean iter_children(GtkTreeIter *iter, GtkTreeIter *parent) {
     if (parent) return false;
-    iter->user_data = 0;
+    new (iter) Iter{m_rows[0]};
     return true;
   }
   gboolean iter_has_child(GtkTreeIter *parent) {
@@ -519,7 +520,8 @@ public:
   }
   gboolean iter_nth_child(GtkTreeIter *iter, GtkTreeIter *parent, gint row) {
     if (parent) return false;
-    iter->user_data = reinterpret_cast<gpointer>(static_cast<uintptr_t>(row));
+    if (ZuUnlikely(row < 0 || row >= m_rows.length())) return false;
+    new (iter) Iter{m_rows[row]};
     return true;
   }
   gboolean iter_parent(GtkTreeIter *iter, GtkTreeIter *child) {
@@ -531,8 +533,8 @@ public:
 private:
   auto cmp_(gint col, GtkSortType order) {
     return [impl = impl(), col, descending = order == GTK_SORT_DESCENDING](
-	const NodeRef &o1, const NodeRef &o2) {
-      int v = Data::fields()[col].cmp(impl->data(o1), impl->data(o2));
+	const Iter &i1, const Iter &i2) {
+      int v = Data::fields()[col].cmp(impl->data(i1), impl->data(i2));
       if (descending) v = -v;
       return v;
     };
@@ -554,39 +556,40 @@ public:
     gtk_tree_path_free(path);
   }
 
-  void add(NodeRef node) {
+  void add(const Iter &iter) {
     gint col;
     GtkSortType order;
-    unsigned i;
+    gint row;
     if (this->get_sort_column_id(&col, &order)) {
-      i = ZuSearch(&m_rows[0], m_rows.length(), node, cmp_(col, order),
-	  [](int) constexpr { return false; }); // do not find
-      impl()->row(node, ZuSearchPos(i));
-      m_rows.splice(i, 0, ZuMv(node));
+      row = ZuSearchPos(
+	  ZuSearch(&m_rows[0], m_rows.length(), iter, cmp_(col, order),
+	    [](int) constexpr { return false; })); // do not find
+      impl()->row(iter, row);
+      m_rows.splice(row, 0, iter);
     } else {
-      i = m_rows.length();
-      impl()->row(node, i);
-      m_rows.push(ZuMv(node));
+      row = m_rows.length();
+      impl()->row(iter, row);
+      m_rows.push(iter);
     }
-    GtkTreeIter iter;
-    iter.user_data = reinterpret_cast<gpointer>(static_cast<uintptr_t>(i));
-    GtkTreePath *path = gtk_tree_path_new();
-    gtk_tree_path_append_index(path, i);
-    gtk_tree_model_row_inserted(GTK_TREE_MODEL(this), path, &iter);
+    GtkTreeIter iter_;
+    new (&iter_) Iter{iter};
+    auto path = gtk_tree_path_new_from_indicesv(&row, 1);
+    // emit #GtkTreeModel::row-inserted
+    gtk_tree_model_row_inserted(GTK_TREE_MODEL(this), path, &iter_);
     gtk_tree_path_free(path);
   }
 
-  void del(const Node *node) {
-    unsigned i = impl()->row(node);
-    GtkTreePath *path = gtk_tree_path_new();
-    gtk_tree_path_append_index(path, i);
+  void del(const Iter &iter) {
+    gint row = impl()->row(iter);
+    auto path = gtk_tree_path_new_from_indicesv(&row, 1);
+    // emit #GtkTreeModel::row-deleted - invalidates iterators
     gtk_tree_model_row_deleted(GTK_TREE_MODEL(this), path);
     gtk_tree_path_free(path);
-    m_rows.splice(i, 1);
+    m_rows.splice(row, 1);
   }
 
 private:
-  ZtArray<NodeRef>	m_rows;
+  ZtArray<Iter>	m_rows;
 };
 
 } // ZGtk

@@ -44,9 +44,9 @@ namespace Zu_aton {
   using namespace ZuFmt;
 
   template <typename T_, unsigned Size = sizeof(T_)> struct Unsigned {
-    typedef uint64_t T;
+    using T = uint64_t;
   };
-  template <typename T_> struct Unsigned<T_, 16> { typedef uint128_t T; };
+  template <typename T_> struct Unsigned<T_, 16> { using T = uint128_t; };
 
   template <class Fmt,
     char Skip = Fmt::Comma_,
@@ -193,9 +193,9 @@ template <class Fmt> struct Zu_nscan_ {
   template <unsigned Width> struct Len_<0, Width> {
     ZuInline static constexpr unsigned len(unsigned n) { return n; }
   };
-  typedef Len_<
+  using Len = Len_<
     Fmt::Justification_ != ZuFmt::Just::None,
-    Fmt::Justification_ != ZuFmt::Just::Frac ? Fmt::Width_ : Fmt::NDP_> Len;
+    Fmt::Justification_ != ZuFmt::Just::Frac ? Fmt::Width_ : Fmt::NDP_>;
 
   template <typename T>
   static unsigned atou_(T &v, const char *buf, unsigned n) {
@@ -248,7 +248,7 @@ template <class Fmt> struct Zu_nscan_ {
   template <typename T>
   static unsigned atof_(T &v_, const char *buf, unsigned n) {
     using namespace Zu_aton;
-    typedef ZuFP<T> FP;
+    using FP = ZuFP<T>;
     uint64_t iv;
     unsigned o = 0;
     int c = *buf;
@@ -312,7 +312,7 @@ template <class Fmt = ZuFmt::Default, int Skip =
   (Fmt::Justification_ == ZuFmt::Just::Right && Fmt::Pad_ != '0') ?
     Fmt::Pad_ : -1>
 struct Zu_nscan : public Zu_nscan_<Fmt> {
-  typedef typename Zu_nscan_<Fmt>::Len Len;
+  using Len = typename Zu_nscan_<Fmt>::Len;
   static unsigned skip(const char *buf, unsigned n) {
     unsigned o = 0;
     while (ZuLikely(o < n && buf[o] == Skip)) ++o;

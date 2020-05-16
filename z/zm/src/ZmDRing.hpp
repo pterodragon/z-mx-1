@@ -75,50 +75,50 @@ private:
 //      ZmDRingCmp<ZtICmp> > >		// case-insensitive comparison
 
 struct ZmDRing_Defaults {
-  template <typename T> struct OpsT { typedef ZuArrayFn<T> Ops; };
-  template <typename T> struct CmpT { typedef ZuCmp<T> Cmp; };
-  template <typename T> struct ICmpT { typedef ZuCmp<T> ICmp; };
-  template <typename T> struct IndexT { typedef T Index; };
-  typedef ZmLock Lock;
+  template <typename T> struct OpsT { using Ops = ZuArrayFn<T>; };
+  template <typename T> struct CmpT { using Cmp = ZuCmp<T>; };
+  template <typename T> struct ICmpT { using ICmp = ZuCmp<T>; };
+  template <typename T> struct IndexT { using Index = T; };
+  using Lock = ZmLock;
   struct Base { };
 };
 
 template <class Cmp_, class NTP = ZmDRing_Defaults>
 struct ZmDRingCmp : public NTP {
   template <typename T> struct OpsT {
-    typedef ZuArrayFn<T, Cmp_> Ops;
+    using Ops = ZuArrayFn<T, Cmp_>;
   };
   template <typename T> struct CmpT {
-    typedef Cmp_ Cmp;
+    using Cmp = Cmp_;
   };
 };
 
 template <class ICmp_, class NTP = ZmDRing_Defaults>
 struct ZmDRingICmp : public NTP {
-  template <typename> struct ICmpT { typedef ICmp_ ICmp; };
+  template <typename> struct ICmpT { using ICmp = ICmp_; };
 };
 
 template <typename Accessor, class NTP = ZmDRing_Defaults>
 struct ZmDRingIndex : public NTP {
   template <typename T> struct CmpT {
-    typedef typename ZuIndex<Accessor>::template CmpT<T> Cmp;
+    using Cmp = typename ZuIndex<Accessor>::template CmpT<T>;
   };
   template <typename> struct ICmpT {
-    typedef typename ZuIndex<Accessor>::ICmp ICmp;
+    using ICmp = typename ZuIndex<Accessor>::ICmp;
   };
   template <typename> struct IndexT {
-    typedef typename ZuIndex<Accessor>::I Index;
+    using Index = typename ZuIndex<Accessor>::I;
   };
 };
 
 template <class Lock_, class NTP = ZmDRing_Defaults>
 struct ZmDRingLock : public NTP {
-  typedef Lock_ Lock;
+  using Lock = Lock_;
 };
 
 template <class Base_, class NTP = ZmDRing_Defaults>
 struct ZmDRingBase : public NTP {
-  typedef Base_ Base;
+  using Base = Base_;
 };
 
 // only provide delPtr and findPtr methods to callers of unlocked ZmDRings
@@ -129,7 +129,7 @@ template <typename Val, class NTP> class ZmDRing;
 template <class Ring> struct ZmDRing_Unlocked;
 template <typename Val, class NTP>
 struct ZmDRing_Unlocked<ZmDRing<Val, NTP> > {
-  typedef ZmDRing<Val, NTP> Ring;
+  using Ring = ZmDRing<Val, NTP>;
 
   template <typename Index_>
   Val *findPtr(const Index_ &index) {
@@ -156,13 +156,13 @@ template <typename Val, class NTP = ZmDRing_Defaults> class ZmDRing :
 friend struct ZmDRing_Unlocked<ZmDRing>;
 
 public:
-  typedef typename NTP::template OpsT<Val>::Ops Ops;
-  typedef typename NTP::template CmpT<Val>::Cmp Cmp;
-  typedef typename NTP::template ICmpT<Val>::ICmp ICmp;
-  typedef typename NTP::template IndexT<Val>::Index Index;
-  typedef typename NTP::Lock Lock;
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using Ops = typename NTP::template OpsT<Val>::Ops;
+  using Cmp = typename NTP::template CmpT<Val>::Cmp;
+  using ICmp = typename NTP::template ICmpT<Val>::ICmp;
+  using Index = typename NTP::template IndexT<Val>::Index;
+  using Lock = typename NTP::Lock;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
   template <typename ...Args>
   ZmDRing(ZmDRingParams params = ZmDRingParams(), Args &&... args) :
@@ -441,7 +441,7 @@ friend class Iterator_;
     Iterator_ &operator =(const Iterator_ &);	// prevent mis-use
 
   protected:
-    typedef ZmDRing<Val, NTP> Ring;
+    using Ring = ZmDRing<Val, NTP>;
 
     Iterator_(Ring &ring, unsigned i) :
 	Guard(ring.m_lock), m_ring(ring), m_i(i) { }

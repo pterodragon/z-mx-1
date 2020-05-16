@@ -31,7 +31,7 @@
 #endif
 
 template <class Lock_> struct ZmGenericLockTraits {
-  typedef Lock_ Lock;
+  using Lock = Lock_;
   enum { CanTry = 1, Recursive = 1, RWLock = 0 };
   ZuInline static void lock(Lock &l) { l.lock(); }
   ZuInline static int trylock(Lock &l) { return l.trylock(); }

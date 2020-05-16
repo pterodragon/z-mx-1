@@ -132,7 +132,8 @@ public:
   void login(
       ZtString server, unsigned port,
       ZtString user, ZtString passwd, unsigned totp) {
-    new (m_credentials.new_<1>()) ZvCmd_Login{ZuMv(user), ZuMv(passwd), totp};
+    new (m_credentials.init<ZvCmd_Login>())
+      ZvCmd_Login{ZuMv(user), ZuMv(passwd), totp};
     this->connect(ZuMv(server), port);
   }
   void access(
@@ -153,7 +154,8 @@ public:
       hmac_.update(token.data(), token.length());
       hmac_.finish(hmac.data());
     }
-    new (m_credentials.new_<2>()) ZvCmd_Access{ZuMv(keyID), token, hmac};
+    new (m_credentials.init<ZvCmd_Access>())
+      ZvCmd_Access{ZuMv(keyID), token, hmac};
     this->connect(ZuMv(server), port);
   }
 

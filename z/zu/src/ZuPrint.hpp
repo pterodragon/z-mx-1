@@ -138,7 +138,7 @@ template <typename S> struct ZuStdStream :
 template <typename T, typename A>
 struct ZuStdStream<std::basic_string<char, T, A> > :
     public ZuStdStream__<std::basic_string<char, T, A> > {
-  typedef std::basic_string<char, T, A> S;
+  using S = std::basic_string<char, T, A>;
   static S &append(S &s, const char *data, unsigned length) {
     if (ZuLikely(data)) s.append(data, (size_t)length);
     return s;

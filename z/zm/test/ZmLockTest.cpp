@@ -53,7 +53,7 @@ private:
   pthread_mutex_t	m_lock;
 };
 
-typedef ZmSpinLock FAS;
+using FAS = ZmSpinLock;
 
 struct Ticket {
   ZuInline Ticket() : m_lock(CK_SPINLOCK_TICKET_INITIALIZER) { }

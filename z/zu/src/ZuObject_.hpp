@@ -43,12 +43,12 @@ template <typename T> struct ZuIsObject_ {
 template <typename T, typename R = void, bool OK = ZuIsObject_<T>::OK>
 struct ZuIsObject;
 template <typename T_, typename R> struct ZuIsObject<T_, R, 1> {
-  typedef R T;
+  using T = R;
 };
 template <typename T, typename R = void, bool OK = !ZuIsObject_<T>::OK>
 struct ZuNotObject;
 template <typename T_, typename R> struct ZuNotObject<T_, R, 1> {
-  typedef R T;
+  using T = R;
 };
 
 #endif /* ZuObject__HPP */

@@ -125,7 +125,7 @@ private:
   ZtArray<char>	m_buf;
 };
 
-typedef ZmList<ZmRef<IOBuf>, ZmListLock<ZmNoLock> > IOList;
+using IOList = ZmList<ZmRef<IOBuf>, ZmListLock<ZmNoLock> >;
 
 class IOQueue : protected IOList {
 public:
@@ -162,8 +162,8 @@ private:
 };
 
 class Connection : public ZiConnection {
-  typedef ZmPLock Lock;
-  typedef ZmGuard<Lock> Guard;
+  using Lock = ZmPLock;
+  using Guard = ZmGuard<Lock>;
 
 public:
   enum {
@@ -312,8 +312,9 @@ template <typename S> inline void Connection::print(S &s) const
 struct ListenerPrintIn;
 struct ListenerPrintOut;
 class Listener : public ZmObject {
-  typedef ZmHash<ZmRef<Proxy>,
-	    ZmHashObject<ZuNull> > ProxyHash;
+  using ProxyHash =
+    ZmHash<ZmRef<Proxy>,
+      ZmHashObject<ZuNull> >;
 
 public:
   struct LocalPortAccessor;
@@ -484,13 +485,15 @@ class App : public ZmPolymorph, public ZvCmdHost {
     Mx(ZvCf *cf) : ZiMultiplex(ZvMxParams(cf)) { }
   };
 
-  typedef ZmHash<ZmRef<Listener>,
-	    ZmHashIndex<Listener::LocalPortAccessor,
-	      ZmHashObject<ZuNull> > > ListenerHash;
+  using ListenerHash =
+    ZmHash<ZmRef<Listener>,
+      ZmHashIndex<Listener::LocalPortAccessor,
+	ZmHashObject<ZuNull> > >;
 
-  typedef ZmHash<ZmRef<Proxy>,
-	    ZmHashIndex<Proxy::SrcPortAccessor,
-	      ZmHashObject<ZuNull> > > ProxyHash;
+  using ProxyHash =
+    ZmHash<ZmRef<Proxy>,
+      ZmHashIndex<Proxy::SrcPortAccessor,
+	ZmHashObject<ZuNull> > >;
 
 public:
   App() : m_verbose(false) {

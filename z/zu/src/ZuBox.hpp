@@ -108,17 +108,17 @@ template <typename T, class Fmt,
   bool FloatingPoint = Signed && ZuTraits<T>::IsFloatingPoint>
 struct ZuBox_Scan;
 template <typename T_, class Fmt> struct ZuBox_Scan<T_, Fmt, 0, 0> {
-  typedef uint64_t T;
+  using T = uint64_t;
   ZuInline static unsigned scan(T &v, const char *buf, unsigned n)
     { return Zu_nscan<Fmt>::atou(v, buf, n); }
 };
 template <typename T_, class Fmt> struct ZuBox_Scan<T_, Fmt, 1, 0> {
-  typedef int64_t T;
+  using T = int64_t;
   ZuInline static unsigned scan(T &v, const char *buf, unsigned n)
     { return Zu_nscan<Fmt>::atoi(v, buf, n); }
 };
 template <typename T_, class Fmt> struct ZuBox_Scan<T_, Fmt, 1, 1> {
-  typedef T_ T;
+  using T = T_;
   ZuInline static unsigned scan(T &v, const char *buf, unsigned n)
     { return Zu_nscan<Fmt>::atof(v, buf, n); }
 };
@@ -129,7 +129,7 @@ template <typename T, class Cmp> class ZuBox;
 template <class Boxed, class Fmt> class ZuBoxFmt {
 template <typename, class> friend class ZuBox;
 
-  typedef ZuBox_Print<typename Boxed::T, Fmt> Print;
+  using Print = ZuBox_Print<typename Boxed::T, Fmt>;
 
   ZuInline ZuBoxFmt(const Boxed &ref) : m_ref(ref) { }
 
@@ -145,7 +145,7 @@ private:
 template <class Boxed> class ZuBoxVFmt {
 template <typename, class> friend class ZuBox;
 
-  typedef ZuBox_VPrint<typename Boxed::T> Print;
+  using Print = ZuBox_VPrint<typename Boxed::T>;
 
 public:
   ZuInline ZuBoxVFmt(const Boxed &v, const ZuVFmt &fmt) :
@@ -183,11 +183,11 @@ struct ZuBox_Approx : public ZuBox<T, Cmp>, public ZuBox_Approx_ {
   }
 };
 template <typename T_, class Cmp, bool IsFloating> struct ZuBox_Tilde {
-  typedef ZuBox_Approx<T_, Cmp> T;
+  using T = ZuBox_Approx<T_, Cmp>;
   ZuInline static T fn(const T_ &val) { return T(val); }
 };
 template <typename T_, class Cmp> struct ZuBox_Tilde<T_, Cmp, 0> {
-  typedef T_ T;
+  using T = T_;
   ZuInline static T fn(const T_ &val) { return ~val; }
 };
 
@@ -215,9 +215,9 @@ template <typename S, typename T = void> struct ZuBox_IsCharPtr :
 			    ZuTraits<S>::IsArray> { };
 
 template <typename T_>
-struct ZuBox_Unbox { typedef T_ T; };
+struct ZuBox_Unbox { using T = T_; };
 template <typename T_, class Cmp>
-struct ZuBox_Unbox<ZuBox<T_, Cmp> > { typedef T_ T; };
+struct ZuBox_Unbox<ZuBox<T_, Cmp> > { using T = T_; };
 
 template <typename T_, class Cmp_ = ZuCmp<typename ZuBox_Unbox<T_>::T> >
 class ZuBox {
@@ -225,8 +225,8 @@ template <typename, class> friend class ZuBox;
 template <class, class> friend class ZuBoxFmt;
 template <class> friend class ZuBoxVFmt;
 public:
-  typedef typename ZuBox_Unbox<T_>::T T;
-  typedef Cmp_ Cmp;
+  using T = typename ZuBox_Unbox<T_>::T;
+  using Cmp = Cmp_;
 
 private:
   template <class Fmt = ZuFmt::Default> using Scan = ZuBox_Scan<T, Fmt>;
@@ -538,7 +538,7 @@ public:
     ZuInline static const ZuBox &null() { static const ZuBox t; return t; }
   };
 
-  typedef ZuBox_Tilde<T, Cmp, ZuTraits<T>::IsFloatingPoint> Tilde;
+  using Tilde = ZuBox_Tilde<T, Cmp, ZuTraits<T>::IsFloatingPoint>;
   ZuInline typename Tilde::T operator ~() const { return Tilde::fn(*this); }
 
   template <typename R> ZuInline typename ZuIs<ZuBox_Approx_, R, bool>::T
@@ -564,14 +564,14 @@ private:
 
 template <typename T_, class Cmp>
 struct ZuTraits<ZuBox<T_, Cmp> > : public ZuTraits<T_> {
-  typedef ZuBox<T_, Cmp> T;
+  using T = ZuBox<T_, Cmp>;
   enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1, IsBoxed = 1 };
 };
 
 // ZuCmp has to be specialized since null() is otherwise !t (instead of !*t)
 template <typename T_, class Cmp>
 struct ZuCmp<ZuBox<T_, Cmp> > {
-  typedef ZuBox<T_, Cmp> T;
+  using T = ZuBox<T_, Cmp>;
   ZuInline static int cmp(const T &t1, const T &t2) { return t1.cmp(t2); }
   ZuInline static bool equals(const T &t1, const T &t2) { return t1 == t2; }
   ZuInline static bool null(const T &t) { return !*t; }
@@ -596,9 +596,9 @@ struct ZuPrint<ZuBoxVFmt<T>> : public ZuBoxPrint<ZuBoxVFmt<T>> { };
 
 // ZuBoxT<T>::T is T if T is already boxed, ZuBox<T> otherwise
 template <typename T_>
-struct ZuBoxT { typedef ZuBox<T_> T; };
+struct ZuBoxT { using T = ZuBox<T_>; };
 template <typename T_, class Cmp_>
-struct ZuBoxT<ZuBox<T_, Cmp_> > { typedef ZuBox<T_, Cmp_> T; };
+struct ZuBoxT<ZuBox<T_, Cmp_> > { using T = ZuBox<T_, Cmp_>; };
 
 // ZuBoxed(t) - convenience function to cast primitives to boxed
 template <typename T>

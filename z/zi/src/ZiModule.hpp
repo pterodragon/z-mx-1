@@ -47,15 +47,15 @@ class ZiAPI ZiModule {
 
 public:
 #ifdef _WIN32
-  typedef HMODULE Handle;
+  using Handle = HMODULE;
 #else
-  typedef void *Handle;
+  using Handle = void *;
 #endif
 
-  typedef ZiPlatform::Path Path;
+  using Path = ZiPlatform::Path;
 
-  typedef ZmLock Lock;
-  typedef ZmGuard<Lock> Guard;
+  using Lock = ZmLock;
+  using Guard = ZmGuard<Lock>;
 
   enum Flags {
     GC	= 0x001,	// unload() handle in destructor

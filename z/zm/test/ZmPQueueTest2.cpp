@@ -36,7 +36,7 @@
 #include <zlib/ZmNoLock.hpp>
 #include <zlib/ZmList.hpp>
 
-typedef ZuPair<uint32_t, unsigned> Msg_Data;
+using Msg_Data = ZuPair<uint32_t, unsigned>;
 struct Msg_ : public Msg_Data {
   using Msg_Data::Msg_Data;
   using Msg_Data::operator =;
@@ -56,13 +56,13 @@ struct Msg_ : public Msg_Data {
   unsigned bytes() const { return 1; }
 };
 
-typedef ZmPQueue<Msg_, ZmPQueueNodeIsItem<true> > Queue;
+using Queue = ZmPQueue<Msg_, ZmPQueueNodeIsItem<true> >;
 
 class App : public ZmPQRx<App, Queue, ZmNoLock> {
 public:
-  typedef ZmPQRx<App, Queue, ZmNoLock> Rx;
-  typedef Queue::Node Msg;
-  typedef Queue::Gap Gap;
+  using Rx = ZmPQRx<App, Queue, ZmNoLock>;
+  using Msg = Queue::Node;
+  using Gap = Queue::Gap;
 
   App(uint32_t head) : m_queue(head) { }
 

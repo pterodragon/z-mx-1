@@ -88,8 +88,8 @@ template <typename Char, typename Char2> class ZtString_;
 template <typename Char_, typename Char2_>
 class ZtString_ : public ZtString__<Char_> {
 public:
-  typedef Char_ Char;
-  typedef Char2_ Char2;
+  using Char = Char_;
+  using Char2 = Char2_;
   enum { IsWString = ZuConversion<Char, wchar_t>::Same };
   enum { BuiltinSize = (int)ZtString_BuiltinSize / sizeof(Char) };
 
@@ -99,7 +99,7 @@ private:
     typename V = Char, typename W = Char2,
     bool A = ZuConversion<ZtString_<V, W>, U>::Same> struct MatchZtString;
   template <typename U, typename R>
-    struct MatchZtString<U, R, Char, Char2, true> { typedef R T; };
+    struct MatchZtString<U, R, Char, Char2, true> { using T = R; };
 
   // from string literal with same char
   template <typename U, typename V = Char> struct IsLiteral {
@@ -142,7 +142,7 @@ private:
     bool B = ZuConversion<U, V>::Same &&
       !ZuConversion<U, wchar_t>::Same> struct MatchChar;
   template <typename U, typename R>
-  struct MatchChar<U, R, Char, true> { typedef R T; };
+  struct MatchChar<U, R, Char, true> { using T = R; };
 
   // from char2 string (requires conversion)
   template <typename U, typename R = void, typename V = Char2,
@@ -151,28 +151,28 @@ private:
        (ZuTraits<U>::IsWString && ZuConversion<wchar_t, V>::Same))
     > struct MatchChar2String;
   template <typename U, typename R>
-    struct MatchChar2String<U, R, Char2, true> { typedef R T; };
+    struct MatchChar2String<U, R, Char2, true> { using T = R; };
 
   // from individual char2 (requires conversion, char->wchar_t only)
   template <typename U, typename R = void, typename V = Char2,
     bool B = ZuConversion<U, V>::Same &&
       !ZuConversion<U, wchar_t>::Same> struct MatchChar2;
   template <typename U, typename R>
-  struct MatchChar2<U, R, Char2, true> { typedef R T; };
+  struct MatchChar2<U, R, Char2, true> { using T = R; };
 
   // from printable type
   template <typename U, typename R = void, typename V = Char,
     bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct MatchPrint;
   template <typename U, typename R>
-  struct MatchPrint<U, R, char, true> { typedef R T; };
+  struct MatchPrint<U, R, char, true> { using T = R; };
   template <typename U, typename R = void, typename V = Char,
     bool B = ZuPrint<U>::Delegate> struct MatchPDelegate;
   template <typename U, typename R>
-  struct MatchPDelegate<U, R, char, true> { typedef R T; };
+  struct MatchPDelegate<U, R, char, true> { using T = R; };
   template <typename U, typename R = void, typename V = Char,
     bool B = ZuPrint<U>::Buffer> struct MatchPBuffer;
   template <typename U, typename R>
-  struct MatchPBuffer<U, R, char, true> { typedef R T; };
+  struct MatchPBuffer<U, R, char, true> { using T = R; };
 
   // from any other real and primitive type (integers, floating point, etc.)
   template <typename U, typename R = void, typename V = Char,
@@ -182,7 +182,7 @@ private:
       !ZuTraits<U>::IsArray
     > struct MatchReal { };
   template <typename U, typename R>
-  struct MatchReal<U, R, char, true> { typedef R T; };
+  struct MatchReal<U, R, char, true> { using T = R; };
 
   // an unsigned|int|size_t parameter to the constructor is a buffer size
   template <typename U, typename R = void, typename V = Char,
@@ -192,7 +192,7 @@ private:
       ZuConversion<U, size_t>::Same
     > struct CtorSize;
   template <typename U, typename R>
-  struct CtorSize<U, R, Char, true> { typedef R T; };
+  struct CtorSize<U, R, Char, true> { using T = R; };
 
   // construction from any other real and primitive type
   template <typename U, typename R = void, typename V = Char,
@@ -205,16 +205,16 @@ private:
       !ZuTraits<U>::IsArray && !ZuPrint<U>::OK
     > struct CtorReal { };
   template <typename U, typename R>
-  struct CtorReal<U, R, char, true> { typedef R T; };
+  struct CtorReal<U, R, char, true> { using T = R; };
 
   template <typename U, typename R = void,
     typename V = Char,
     bool S = ZuTraits<U>::IsString,
     bool W = ZuTraits<U>::IsWString> struct ToString { };
   template <typename U, typename R>
-  struct ToString<U, R, char, true, false> { typedef R T; };
+  struct ToString<U, R, char, true, false> { using T = R; };
   template <typename U, typename R>
-  struct ToString<U, R, wchar_t, true, true> { typedef R T; };
+  struct ToString<U, R, wchar_t, true, true> { using T = R; };
 
 public:
 // constructors, assignment operators and destructor
@@ -1257,13 +1257,13 @@ ZtExplicit template class ZtAPI ZtString_<char, wchar_t>;
 ZtExplicit template class ZtAPI ZtString_<wchar_t, char>;
 #endif
 
-typedef ZtString_<char, wchar_t> ZtString;
-typedef ZtString_<wchar_t, char> ZtWString;
+using ZtString = ZtString_<char, wchar_t>;
+using ZtWString = ZtString_<wchar_t, char>;
 
 // traits
 
 template <typename T> struct ZtStringTraits : public ZuGenericTraits<T> {
-  typedef typename T::Char Elem;
+  using Elem = typename T::Char;
   enum {
     IsCString = 1, IsString = 1,
     IsWString = ZuConversion<Elem, wchar_t>::Same,

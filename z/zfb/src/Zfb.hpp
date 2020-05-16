@@ -286,10 +286,11 @@ namespace Load {
   }; \
   template <typename T> struct Map_ : public ZuObject { \
   private: \
-    typedef ZmLHash<ZuString, \
-	      ZmLHashVal<ZtEnum, \
-		ZmLHashStatic<Bits, \
-		  ZmLHashLock<ZmNoLock> > > > S2V; \
+    using S2V = \
+      ZmLHash<ZuString, \
+	ZmLHashVal<ZtEnum, \
+	  ZmLHashStatic<Bits, \
+	    ZmLHashLock<ZmNoLock> > > >; \
   protected: \
     void init(const char *s, int v, ...) { \
       if (ZuUnlikely(!s)) return; \

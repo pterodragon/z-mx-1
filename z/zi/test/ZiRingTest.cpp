@@ -49,7 +49,7 @@ void check_(bool ok, unsigned line, const char *exp)
   if (!ok) fail();
 }
 
-typedef ZiRing<ZiRingMsg> Ring;
+using Ring = ZiRing<ZiRingMsg>;
 
 class Thread;
 

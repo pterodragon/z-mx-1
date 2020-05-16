@@ -68,7 +68,7 @@ class ZtIconv {
   public:
     enum { Const = sizeof(test(&iconv)) == sizeof(Small) };
   };
-  typedef typename ZuIf<const char **, char **, IconvTraits::Const>::T InBuf;
+  using InBuf = typename ZuIf<const char **, char **, IconvTraits::Const>::T;
 
 public:
   ZtIconv(const char *tocode, const char *fromcode) :

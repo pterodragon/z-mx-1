@@ -30,7 +30,7 @@
 // Example of ZuFmt compile-time formatting (right-justified, space-padded):
 //
 // unsigned v = 42
-// typedef Zu_nprint<ZuFmt::Right<5, ' '> > Print; // specify formatting
+// using Print = Zu_nprint<ZuFmt::Right<5, ' '> >; // specify formatting
 // char buf[Print::ulen<unsigned>() + 1]; // could safely be char buf[6]
 // buf[Print::utoa(v)] = 0;
 // puts(buf); // prints "    42"
@@ -93,11 +93,11 @@ namespace Zu_ntoa {
   using namespace ZuFmt;
 
   template <typename T_, unsigned Size = sizeof(T_)> struct Unsigned;
-  template <typename T_> struct Unsigned<T_, 1> { typedef uint8_t T; };
-  template <typename T_> struct Unsigned<T_, 2> { typedef uint16_t T; };
-  template <typename T_> struct Unsigned<T_, 4> { typedef uint32_t T; };
-  template <typename T_> struct Unsigned<T_, 8> { typedef uint64_t T; };
-  template <typename T_> struct Unsigned<T_, 16> { typedef uint128_t T; };
+  template <typename T_> struct Unsigned<T_, 1> { using T = uint8_t; };
+  template <typename T_> struct Unsigned<T_, 2> { using T = uint16_t; };
+  template <typename T_> struct Unsigned<T_, 4> { using T = uint32_t; };
+  template <typename T_> struct Unsigned<T_, 8> { using T = uint64_t; };
+  template <typename T_> struct Unsigned<T_, 16> { using T = uint128_t; };
 
   template <typename T, typename R = void> struct Is128Bit :
     public ZuIfT<(sizeof(T) > 8) && ZuTraits<T>::IsIntegral, R> { };
@@ -669,7 +669,7 @@ namespace Zu_ntoa {
   template <typename T> ZuInline constexpr T ftoa_max() { return (T)(~0ULL); }
   template <typename T>
   unsigned ftoa_variable(T v, unsigned f, char *buf) {
-    typedef ZuFP<T> FP;
+    using FP = ZuFP<T>;
     if (ZuUnlikely(FP::nan(v))) {
       *buf++ = 'n', *buf++ = 'a', *buf = 'n';
       return 3U;
@@ -701,7 +701,7 @@ namespace Zu_ntoa {
   }
   template <typename T>
   static unsigned ftoa_fixed(T v, unsigned f, char *buf) {
-    typedef ZuFP<T> FP;
+    using FP = ZuFP<T>;
     if (ZuUnlikely(FP::nan(v))) {
       *buf++ = 'n', *buf++ = 'a', *buf = 'n';
       return 3U;
@@ -727,7 +727,7 @@ namespace Zu_ntoa {
   struct FPrint {
     template <typename T>
     static unsigned ftoa(T v, char *buf) {
-      typedef ZuFP<T> FP;
+      using FP = ZuFP<T>;
       if (ZuUnlikely(FP::nan(v))) {
 	*buf++ = 'n', *buf++ = 'a', *buf = 'n';
 	return 3U;
@@ -798,8 +798,8 @@ struct Zu_nprint {
   using Print_ = Zu_ntoa::Print<
     Fmt::Hex_, Fmt::Comma_, Fmt::Upper_, Fmt::Alt_,
     Fmt::Justification_, Fmt::Width_, Fmt::Pad_, Negative>;
-  typedef Print_<0> Print;
-  typedef Print_<1> NPrint;
+  using Print = Print_<0>;
+  using NPrint = Print_<1>;
 
   template <typename T>
   using Log = Zu_ntoa::LogN<Fmt::Hex_, sizeof(T)>;
@@ -831,7 +831,7 @@ struct Zu_nprint {
     return n;
   }
 
-  typedef Zu_ntoa::FPrint<Fmt::Comma_, Fmt::NDP_, Fmt::Trim_> FPrint;
+  using FPrint = Zu_ntoa::FPrint<Fmt::Comma_, Fmt::NDP_, Fmt::Trim_>;
 
   // 20 integer digits with commas, with negative and .0, gives 26+3 = 29
   template <typename T>
@@ -1154,7 +1154,7 @@ struct Zu_vprint {
   }
   template <typename T>
   static unsigned ftoa(const ZuVFmt &fmt, T v, char *buf) {
-    typedef ZuFP<T> FP;
+    using FP = ZuFP<T>;
     if (ZuUnlikely(FP::nan(v))) {
       *buf++ = 'n', *buf++ = 'a', *buf = 'n';
       return 3U;

@@ -71,8 +71,8 @@ class ZtAPI ZtRegex {
   ZtRegex();
 
 public:
-  typedef ZuString Capture;
-  typedef ZtArray<Capture> Captures;
+  using Capture = ZuString;
+  using Captures = ZtArray<Capture>;
 
   ZtRegex(const char *pattern, int options = 0); // pcre_compile() options
 

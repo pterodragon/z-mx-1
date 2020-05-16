@@ -10,8 +10,8 @@
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmQueue.hpp>
 
-typedef ZmQueue<int, ZmQueueID<unsigned char> > Queue;
-typedef ZmQueue<int> Queue2;
+using Queue = ZmQueue<int, ZmQueueID<unsigned char> >;
+using Queue2 = ZmQueue<int>;
 
 void check(Queue &queue, int l)
 {

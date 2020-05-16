@@ -147,7 +147,7 @@ AC_SUBST(MBEDTLS_LIBS)
 AC_SUBST(FLATBUFFERS_LIBS)
 AC_SUBST(READLINE_LIBS)
 
-for i in zu zm zjni zt ze zi ztls zfb zv zp zdb zrl zgtk
+for i in zu zm zjni zt ze zi ztls zfb zv zdb zrl zgtk
 do ( cd $i/src; test ! -e AC_PACKAGE_NAME && ln -s . AC_PACKAGE_NAME )
 done
 
@@ -161,7 +161,6 @@ AC_OUTPUT(Makefile \
 	ztls/Makefile ztls/src/Makefile ztls/test/Makefile \
 	zfb/Makefile zfb/src/Makefile zfb/test/Makefile \
 	zv/Makefile zv/src/Makefile zv/test/Makefile \
-	zp/Makefile zp/src/Makefile \
 	zdb/Makefile zdb/src/Makefile zdb/test/Makefile \
 	zrl/Makefile zrl/src/Makefile zrl/test/Makefile \
 	zgtk/Makefile zgtk/src/Makefile zgtk/test/Makefile)

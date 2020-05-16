@@ -50,7 +50,7 @@ template <> struct ZuTraits<Z> {
   enum { IsComparable = 1, IsReal = 0, IsBase = 0 };
 };
 
-typedef ZmRBTree<ZmRef<Z>, ZmRBTreeCmp<ZCmp> > Tree;
+using Tree = ZmRBTree<ZmRef<Z>, ZmRBTreeCmp<ZCmp> >;
 
 static void delptr(Tree *tree, Z *z) {
   tree->del(z, z);

@@ -35,7 +35,7 @@ struct Order {
 };
 template <> struct ZuPrint<Order> : public ZuPrintFn { };
 
-typedef Zdb<Order> OrderDB;
+using OrderDB = Zdb<Order>;
 
 static void dump(const char *prefix, int op, ZdbAnyPOD *pod)
 {

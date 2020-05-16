@@ -28,6 +28,8 @@
 #include <zlib/ZvLib.hpp>
 #endif
 
+#include <zlib/ZuLambdaFn.hpp>
+
 #include <zlib/ZvTelemetry.hpp>
 #include <zlib/ZvEngine.hpp>
 #include <zlib/ZvCmdNet.hpp>
@@ -493,22 +495,8 @@ private:
     ZuInline auto readIterator() { return list.readIterator(); }
   };
 
-  // ensure passed lambdas are stateless and match required signature
-  template <typename L> struct SubscribeLambda_ {
-    typedef void (*Fn)(Server *);
-    enum { OK = ZuConversion<L, Fn>::Exists };
-  };
-  template <typename L, bool = SubscribeLambda_<L>::OK>
-  struct SubscribeLambda;
-  template <typename L> struct SubscribeLambda<L, true> {
-    typedef void T;
-    ZuInline static void invoke(Server *server) {
-      (*reinterpret_cast<const L *>(0))(server);
-    }
-  };
   template <typename L>
-  typename SubscribeLambda<L>::T
-  subscribe(WatchList &list, Watch *watch, unsigned interval, L) {
+  void subscribe(WatchList &list, Watch *watch, unsigned interval, L) {
     bool reschedule = false;
     if (!list.interval || interval < list.interval)
       if (list.interval != interval) {
@@ -519,17 +507,15 @@ private:
     if (reschedule) this->reschedule<L>(list);
   }
   template <typename L>
-  typename SubscribeLambda<L>::T
-  reschedule(WatchList &list, L) {
+  void reschedule(WatchList &list, L) {
     if (!list.interval) return;
     this->reschedule<L>(list);
   }
   template <typename L>
-  typename SubscribeLambda<L>::T
-  reschedule(WatchList &list) {
+  void reschedule(WatchList &list) {
     m_mx->run(m_thread,
 	ZmFn<>{&list, [](WatchList *list) {
-	  SubscribeLambda<L>::invoke(list->server);
+	  ZuLambdaFn<L>::invoke(list->server);
 	  list->server->template reschedule<L>(*list);
 	}},
 	ZmTimeNow() + ZmTime{ZmTime::Nano, ((int64_t)list.interval) * 1000000},

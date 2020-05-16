@@ -61,7 +61,7 @@ struct ZmHash_Bits {
 // hash table lock manager
 
 template <class Lock> class ZmHash_LockMgr {
-  typedef ZmLockTraits<Lock> LockTraits;
+  using LockTraits = ZmLockTraits<Lock>;
 
   enum { CacheLineSize = ZmPlatform::CacheLineSize };
 
@@ -172,12 +172,12 @@ protected:
 // NTP defaults
 struct ZmHash_Defaults {
   using Val = ZuNull;
-  template <typename T> struct CmpT { typedef ZuCmp<T> Cmp; };
-  template <typename T> struct ICmpT { typedef ZuCmp<T> ICmp; };
-  template <typename T> struct HashFnT { typedef ZuHash<T> HashFn; };
-  template <typename T> struct IHashFnT { typedef ZuHash<T> IHashFn; };
-  template <typename T> struct IndexT { typedef T Index; };
-  template <typename T> struct ValCmpT { typedef ZuCmp<T> ValCmp; };
+  template <typename T> struct CmpT { using Cmp = ZuCmp<T>; };
+  template <typename T> struct ICmpT { using ICmp = ZuCmp<T>; };
+  template <typename T> struct HashFnT { using HashFn = ZuHash<T>; };
+  template <typename T> struct IHashFnT { using IHashFn = ZuHash<T>; };
+  template <typename T> struct IndexT { using Index = T; };
+  template <typename T> struct ValCmpT { using ValCmp = ZuCmp<T>; };
   enum { NodeIsKey = 0 };
   enum { NodeIsVal = 0 };
   using Lock = ZmLock;
@@ -189,38 +189,38 @@ struct ZmHash_Defaults {
 // ZmHashCmp - the key comparator
 template <class Cmp_, class NTP = ZmHash_Defaults>
 struct ZmHashCmp : public NTP {
-  template <typename> struct CmpT { typedef Cmp_ Cmp; };
-  template <typename> struct ICmpT { typedef Cmp_ ICmp; };
+  template <typename> struct CmpT { using Cmp = Cmp_; };
+  template <typename> struct ICmpT { using ICmp = Cmp_; };
 };
 
 // ZmHashCmp_ - directly override the key comparator
 // (used by other templates to forward NTP parameters to ZmHash)
 template <class Cmp_, class NTP = ZmHash_Defaults>
 struct ZmHashCmp_ : public NTP {
-  template <typename> struct CmpT { typedef Cmp_ Cmp; };
+  template <typename> struct CmpT { using Cmp = Cmp_; };
 };
 
 // ZmHashICmp - the index comparator
 template <class ICmp_, class NTP = ZmHash_Defaults>
 struct ZmHashICmp : public NTP {
-  template <typename> struct ICmpT { typedef ICmp_ ICmp; };
+  template <typename> struct ICmpT { using ICmp = ICmp_; };
 };
 
 // ZmHashFn - the hash function
 template <class HashFn_, class NTP = ZmHash_Defaults>
 struct ZmHashFn : public NTP {
   template <typename> struct HashFnT {
-    typedef HashFn_ HashFn;
+    using HashFn = HashFn_;
   };
   template <typename> struct IHashFnT {
-    typedef HashFn_ IHashFn;
+    using IHashFn = HashFn_;
   };
 };
 
 // ZmHashIFn - the index hash function
 template <class IHashFn_, class NTP = ZmHash_Defaults>
 struct ZmHashIFn : public NTP {
-  template <typename> struct IHashFnT { typedef IHashFn_ IHashFn; };
+  template <typename> struct IHashFnT { using IHashFn = IHashFn_; };
 };
 
 // ZmHashIndex - use a different type as the index, rather than the key as is
@@ -230,19 +230,19 @@ struct ZmHashIFn : public NTP {
 template <class Accessor, class NTP = ZmHash_Defaults>
 struct ZmHashIndex : public NTP {
   template <typename T> struct CmpT {
-    typedef typename ZuIndex<Accessor>::template CmpT<T> Cmp;
+    using Cmp = typename ZuIndex<Accessor>::template CmpT<T>;
   };
   template <typename> struct ICmpT {
-    typedef typename ZuIndex<Accessor>::ICmp ICmp;
+    using ICmp = typename ZuIndex<Accessor>::ICmp;
   };
   template <typename> struct HashFnT {
-    typedef typename ZuIndex<Accessor>::Hash HashFn;
+    using HashFn = typename ZuIndex<Accessor>::Hash;
   };
   template <typename> struct IHashFnT {
-    typedef typename ZuIndex<Accessor>::IHash IHashFn;
+    using IHashFn = typename ZuIndex<Accessor>::IHash;
   };
   template <typename> struct IndexT {
-    typedef typename ZuIndex<Accessor>::I Index;
+    using Index = typename ZuIndex<Accessor>::I;
   };
 };
 
@@ -251,20 +251,20 @@ struct ZmHashIndex : public NTP {
 template <class Index_, class NTP = ZmHash_Defaults>
 struct ZmHashIndex_ : public NTP {
   template <typename> struct IndexT {
-    typedef Index_ Index;
+    using Index = Index_;
   };
 };
 
 // ZmHashVal - the value type
 template <class Val_, class NTP = ZmHash_Defaults>
 struct ZmHashVal : public NTP {
-  typedef Val_ Val;
+  using Val = Val_;
 };
 
 // ZmHashValCmp - the value comparator
 template <class ValCmp_, class NTP = ZmHash_Defaults>
 struct ZmHashValCmp : public NTP {
-  template <typename> struct ValCmpT { typedef ValCmp_ ValCmp; };
+  template <typename> struct ValCmpT { using ValCmp = ValCmp_; };
 };
 
 // ZmHashNodeIsKey - derive ZmHash::Node from Key instead of containing it
@@ -282,30 +282,30 @@ struct ZmHashNodeIsVal : public NTP {
 // ZmHashLock - the lock type used (ZmRWLock will permit concurrent reads)
 template <class Lock_, class NTP = ZmHash_Defaults>
 struct ZmHashLock : public NTP {
-  typedef Lock_ Lock;
+  using Lock = Lock_;
 };
 
 // ZmHashObject - the reference-counted object type used for nodes
 template <class Object_, class NTP = ZmHash_Defaults>
 struct ZmHashObject : public NTP {
-  typedef Object_ Object;
+  using Object = Object_;
 };
 
 // ZmHashHeapID - the heap ID
 template <class HeapID_, class NTP = ZmHash_Defaults>
 struct ZmHashHeapID : public NTP {
-  typedef HeapID_ HeapID;
-  typedef HeapID_ ID;
+  using HeapID = HeapID_;
+  using ID = HeapID_;
 };
 template <class NTP>
 struct ZmHashHeapID<ZuNull, NTP> : public NTP {
-  typedef ZuNull HeapID;
+  using HeapID = ZuNull;
 };
 
 // ZmHashID - the hash ID (if the heap ID is shared)
 template <class ID_, class NTP = ZmHash_Defaults>
 struct ZmHashID : public NTP {
-  typedef ID_ ID;
+  using ID = ID_;
 };
 
 template <typename Key_, class NTP = ZmHash_Defaults>
@@ -313,27 +313,27 @@ class ZmHash : public ZmAnyHash, public ZmHash_LockMgr<typename NTP::Lock> {
   ZmHash(const ZmHash &) = delete;
   ZmHash &operator =(const ZmHash &) = delete; // prevent mis-use
 
-  typedef ZmHash_LockMgr<typename NTP::Lock> Base;
+  using Base = ZmHash_LockMgr<typename NTP::Lock>;
 
 public:
-  typedef Key_ Key;
-  typedef typename NTP::Val Val;
-  typedef typename NTP::template CmpT<Key>::Cmp Cmp;
-  typedef typename NTP::template ICmpT<Key>::ICmp ICmp;
-  typedef typename NTP::template HashFnT<Key>::HashFn HashFn;
-  typedef typename NTP::template IHashFnT<Key>::IHashFn IHashFn;
-  typedef typename NTP::template IndexT<Key>::Index Index;
-  typedef typename NTP::template ValCmpT<Val>::ValCmp ValCmp;
+  using Key = Key_;
+  using Val = typename NTP::Val;
+  using Cmp = typename NTP::template CmpT<Key>::Cmp;
+  using ICmp = typename NTP::template ICmpT<Key>::ICmp;
+  using HashFn = typename NTP::template HashFnT<Key>::HashFn;
+  using IHashFn = typename NTP::template IHashFnT<Key>::IHashFn;
+  using Index = typename NTP::template IndexT<Key>::Index;
+  using ValCmp = typename NTP::template ValCmpT<Val>::ValCmp;
   enum { NodeIsKey = NTP::NodeIsKey };
   enum { NodeIsVal = NTP::NodeIsVal };
-  typedef typename NTP::Lock Lock;
-  typedef typename NTP::Object Object;
-  typedef typename NTP::ID ID;
-  typedef typename NTP::HeapID HeapID;
+  using Lock = typename NTP::Lock;
+  using Object = typename NTP::Object;
+  using ID = typename NTP::ID;
+  using HeapID = typename NTP::HeapID;
 
-  typedef ZmLockTraits<Lock> LockTraits;
-  typedef ZmGuard<Lock> Guard;
-  typedef ZmReadGuard<Lock> ReadGuard;
+  using LockTraits = ZmLockTraits<Lock>;
+  using Guard = ZmGuard<Lock>;
+  using ReadGuard = ZmReadGuard<Lock>;
 
 private:
   using Base::lockCode;
@@ -352,7 +352,7 @@ private:
   // CheckHashFn ensures that legacy hash functions returning int
   // trigger a compile-time assertion failure; hash() must return uint32_t
   class CheckHashFn {
-    typedef char Small;
+    using Small = char;
     struct Big { char _[2]; };
     static Small test(const uint32_t &_); // named parameter due to VS2010 bug
     static Big	 test(const int &_);
@@ -453,7 +453,7 @@ protected:
   };
 
   template <typename I> class Iterator_ : public Iterator__<I> {
-    typedef ZmHash<Key, NTP> Hash;
+    using Hash = ZmHash<Key, NTP>;
   friend class ZmHash<Key, NTP>;
 
   protected:
@@ -477,7 +477,7 @@ protected:
   };
 
   template <typename I> class IndexIterator_ : public Iterator_<I> {
-    typedef ZmHash<Key, NTP> Hash;
+    using Hash = ZmHash<Key, NTP>;
   friend class ZmHash<Key, NTP>;
 
     using Iterator_<I>::m_hash;
@@ -504,9 +504,9 @@ public:
     Iterator(const Iterator &) = delete;
     Iterator &operator =(const Iterator &) = delete;
 
-    typedef ZmHash<Key, NTP> Hash;
+    using Hash = ZmHash<Key, NTP>;
   friend class ZmHash<Key, NTP>;
-    typedef Iterator_<Iterator> Base;
+    using Base = Iterator_<Iterator>;
 
     using Base::m_hash;
 
@@ -523,9 +523,9 @@ public:
     ReadIterator(const ReadIterator &) = delete;
     ReadIterator &operator =(const ReadIterator &) = delete;
 
-    typedef ZmHash<Key, NTP> Hash;
+    using Hash = ZmHash<Key, NTP>;
   friend class ZmHash<Key, NTP>;
-    typedef Iterator_<ReadIterator> Base;
+    using Base = Iterator_<ReadIterator>;
 
     using Base::m_hash;
 
@@ -543,9 +543,9 @@ public:
     IndexIterator(const IndexIterator &) = delete;
     IndexIterator &operator =(const IndexIterator &) = delete;
 
-    typedef ZmHash<Key, NTP> Hash;
+    using Hash = ZmHash<Key, NTP>;
   friend class ZmHash<Key, NTP>;
-    typedef IndexIterator_<IndexIterator> Base;
+    using Base = IndexIterator_<IndexIterator>;
 
     using Base::m_hash;
 
@@ -566,9 +566,9 @@ public:
     ReadIndexIterator(const ReadIndexIterator &) = delete;
     ReadIndexIterator &operator =(const ReadIndexIterator &) = delete;
 
-    typedef ZmHash<Key, NTP> Hash;
+    using Hash = ZmHash<Key, NTP>;
   friend class ZmHash<Key, NTP>;
-    typedef IndexIterator_<ReadIndexIterator> Base;
+    using Base = IndexIterator_<ReadIndexIterator>;
 
     using Base::m_hash;
 

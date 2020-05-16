@@ -26,7 +26,7 @@
 
 struct Connection : public ZmObject { };
 
-typedef ZmHash<int, ZmHashVal<ZmRef<Connection> > > ConnHash;
+using ConnHash = ZmHash<int, ZmHashVal<ZmRef<Connection> > >;
 
 bool running = true;
 

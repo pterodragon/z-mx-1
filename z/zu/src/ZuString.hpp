@@ -32,7 +32,7 @@
 
 #include <zlib/ZuArray.hpp>
 
-typedef ZuArray<const char> ZuString;
-typedef ZuArray<const wchar_t> ZuWString;
+using ZuString = ZuArray<const char>;
+using ZuWString = ZuArray<const wchar_t>;
 
 #endif /* ZuString_HPP */

@@ -150,8 +150,8 @@ private:
 template <typename T_>
 struct ZuTraits<ZuMvArray<T_> > :
     public ZuGenericTraits<ZuMvArray<T_> > {
-  typedef ZuMvArray<T_> T;
-  typedef T_ Elem;
+  using T = ZuMvArray<T_>;
+  using Elem = T_;
   enum {
     IsArray = 1, IsPrimitive = 0, IsPOD = 0,
     IsString =

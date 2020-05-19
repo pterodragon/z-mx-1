@@ -141,7 +141,7 @@ public:
   template <typename Data, typename FBS>
   static TelCap keyedFn(const char *path) {
     using Key = typename DeduceKey<Data>::T;
-    struct Accessor : public ZuAccessor<Data, typename ZuTraits<Key>::T> {
+    struct Accessor : public ZuAccessor<Data, typename ZuDecay<Key>::T> {
       static Key value(const Data &data) { return data.key(); }
     };
     using Tree =

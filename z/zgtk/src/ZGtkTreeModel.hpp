@@ -496,6 +496,7 @@ public:
   void get_value(GtkTreeIter *iter, gint col, Value *value) {
     auto fields = Data::fields();
     static ZtString s; // ok - this is single-threaded
+    s.length(0);
     fields[col].print(
 	s, impl()->data(*reinterpret_cast<Iter *>(iter)), impl()->fmt(col));
     value->init(G_TYPE_STRING);
@@ -562,8 +563,7 @@ public:
     gint row;
     if (this->get_sort_column_id(&col, &order)) {
       row = ZuSearchPos(
-	  ZuSearch(&m_rows[0], m_rows.length(), iter, cmp_(col, order),
-	    [](int) constexpr { return false; })); // do not find
+	  ZuSearch<false>(&m_rows[0], m_rows.length(), iter, cmp_(col, order));
       impl()->row(iter, row);
       m_rows.splice(row, 0, iter);
     } else {

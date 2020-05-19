@@ -33,7 +33,7 @@
 //
 // ZuDeref<T>::T	std::remove_reference<T>::type
 // ZuStrip<T>::T	std::remove_cv<T>::type
-// ZuTraits<T>::T	std::decay<T>::type
+// ZuDecay<T>::T	std::decay<T>::type
 
 #ifndef ZuTraits_HPP
 #define ZuTraits_HPP
@@ -68,7 +68,7 @@ template <typename T> struct ZuTraits_Enum {
   enum { Is = __is_enum(T) }; // supported by VC++, gcc and clang
 };
 
-template <typename T_, bool Enum> struct ZuGenericTraits_ {
+template <typename T, bool Enum> struct ZuGenericTraits_ {
   enum {
     IsReference		= 0,	IsRvalueRef	= 0,	IsPointer	= 0,
     IsPrimitive		= Enum,	IsReal		= Enum,	IsSigned	= Enum,
@@ -77,11 +77,11 @@ template <typename T_, bool Enum> struct ZuGenericTraits_ {
     IsVoid		= 0,	IsBool		= 0,	IsArray		= 0,
     IsHashable		= 0,	IsComparable	= 0,
     IsBoxed		= 0,	IsFixedPoint	= 0,
-    IsComposite	= ZuTraits_Composite<T_>::Is,	// class/struct/union
+    IsComposite	= ZuTraits_Composite<T>::Is,	// class/struct/union
     IsEnum = Enum
   };
 
-  using T = T_;
+  // using T = T_;
   using Elem = void;
 };
 template <typename T>
@@ -172,9 +172,9 @@ struct ZuTraits<long double> : public ZuTraits_Floating<long double> { };
 
 // references
 
-template <typename T_> struct ZuTraits<T_ &> : public ZuTraits<T_> {
+template <typename T> struct ZuTraits<T &> : public ZuTraits<T> {
   enum { IsReference = 1 };
-  using T = T_;
+  // using T = T_;
 };
 
 template <typename T> struct ZuTraits<const T &> : public ZuTraits<T &> { };
@@ -182,9 +182,9 @@ template <typename T> struct ZuTraits<volatile T &> : public ZuTraits<T &> { };
 template <typename T>
 struct ZuTraits<const volatile T &> : public ZuTraits<T &> { };
 
-template <typename T_> struct ZuTraits<T_ &&> : public ZuTraits<T_> {
+template <typename T> struct ZuTraits<T &&> : public ZuTraits<T> {
   enum { IsRvalueRef = 1 };
-  using T = T_;
+  // using T = T_;
 };
 
 // pointers
@@ -427,10 +427,10 @@ template <typename S, typename T = void> struct ZuIsCharString :
   public ZuIfT<ZuTraits<S>::IsString && !ZuTraits<S>::IsWString, T> { };
 
 // STL / Boost interoperability
-template <typename T_, typename Char>
-struct ZuStdStringTraits_ : public ZuGenericTraits<T_> {
+template <typename T, typename Char>
+struct ZuStdStringTraits_ : public ZuGenericTraits<T> {
   enum { IsString = 1 };
-  using T = T_;
+  // using T = T_;
   using Elem = Char;
   ZuInline static const Char *data(const T &s) { return s.data(); }
   ZuInline static unsigned length(const T &s) { return s.length(); }
@@ -441,10 +441,10 @@ template <typename T_>
 struct ZuStdWStringTraits : public ZuStdStringTraits_<T_, wchar_t>
   { enum { IsWString = 1 }; };
 
-template <typename T_, typename Elem_>
-struct ZuStdArrayTraits_ : public ZuGenericTraits<T_> {
+template <typename T, typename Elem_>
+struct ZuStdArrayTraits_ : public ZuGenericTraits<T> {
   enum { IsArray = 1 };
-  using T = T_;
+  // using T = T_;
   using Elem = Elem_;
   ZuInline static const Elem *data(const T &a) { return a.data(); }
   ZuInline static unsigned length(const T &a) { return a.size(); }

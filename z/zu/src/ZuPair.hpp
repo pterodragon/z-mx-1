@@ -167,8 +167,8 @@ public:
       typename ZuIfT<
 	!ZuPair_Cvt<T, ZuPair>::OK &&
 	  (!ZuTraits<T0>::IsReference ||
-	    ZuConversion<typename ZuTraits<U0>::T,
-			 typename ZuTraits<T>::T>::Is)>::T *_ = 0) :
+	    ZuConversion<typename ZuDecay<U0>::T,
+			 typename ZuDecay<T>::T>::Is)>::T *_ = 0) :
     m_p0(ZuFwd<T>(v)), m_p1(ZuCmp<U1>::null()) { }
 
 private:
@@ -180,8 +180,8 @@ private:
       typename ZuIfT<
 	!ZuPair_Cvt<T, ZuPair>::OK &&
 	  (!ZuTraits<T0>::IsReference ||
-	    ZuConversion<typename ZuTraits<U0>::T,
-			 typename ZuTraits<T>::T>::Is)
+	    ZuConversion<typename ZuDecay<U0>::T,
+			 typename ZuDecay<T>::T>::Is)
       >::T assign(T &&v) { m_p0 = ZuFwd<T>(v), m_p1 = ZuCmp<U1>::null(); }
 
 public:
@@ -194,11 +194,11 @@ public:
   ZuInline ZuPair(P0 &&p0, P1 &&p1,
       typename ZuIfT<
 	(!ZuTraits<T0>::IsReference ||
-	  ZuConversion<typename ZuTraits<U0>::T,
-		       typename ZuTraits<P0>::T>::Is) && 
+	  ZuConversion<typename ZuDecay<U0>::T,
+		       typename ZuDecay<P0>::T>::Is) && 
 	(!ZuTraits<T1>::IsReference ||
-	  ZuConversion<typename ZuTraits<U1>::T,
-		       typename ZuTraits<P1>::T>::Is)>::T *_ = 0) :
+	  ZuConversion<typename ZuDecay<U1>::T,
+		       typename ZuDecay<P1>::T>::Is)>::T *_ = 0) :
     m_p0(ZuFwd<P0>(p0)), m_p1(ZuFwd<P1>(p1)) { }
 
   template <typename P0, typename P1>

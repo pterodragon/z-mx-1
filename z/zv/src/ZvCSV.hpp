@@ -99,7 +99,7 @@ template <typename T> class ZvCSV {
   ZvCSV &operator =(const ZvCSV &) = delete;
 
 public:
-  using Fields = typename ZuTraits<decltype(T::fields())>::T;
+  using Fields = typename ZuDecay<decltype(T::fields())>::T;
   using Field = typename Fields::Elem;
 
   using ColNames = ZtArray<ZuString>;

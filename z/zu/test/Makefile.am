@@ -11,6 +11,7 @@ noinst_PROGRAMS = \
 ZuConversionTest_SOURCES = ZuConversionTest.cpp
 ZuHashTest_SOURCES = ZuHashTest.cpp Analyze.hpp
 ZuCmpTest_SOURCES = ZuCmpTest.cpp
+#ZuCmpTest_CXXFLAGS = $(AM_CXXFLAGS) -fprofile-instr-generate -fcoverage-mapping
 ZuBoxTest_SOURCES = ZuBoxTest.cpp
 ZuCanTest_SOURCES = ZuCanTest.cpp
 ZuArrayTest_SOURCES = ZuArrayTest.cpp

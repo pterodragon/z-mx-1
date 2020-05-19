@@ -214,7 +214,7 @@ template <typename T, typename P1> struct ZuCmp_NonPrimitive_<T, P1, false> {
 template <typename T, bool Fwd> struct ZuCmp_NonPrimitive<T, true, Fwd> {
   template <typename P1, typename P2>
   ZuInline static int cmp(const P1 &p1, const P2 &p2) {
-    return ZuCmp_NonPrimitive_<T, typename ZuTraits<P1>::T, Fwd>::cmp(p1, p2);
+    return ZuCmp_NonPrimitive_<T, typename ZuDecay<P1>::T, Fwd>::cmp(p1, p2);
   }
   template <typename P1, typename P2>
   ZuInline static bool equals(const P1 &p1, const P2 &p2) { return p1 == p2; }
@@ -456,7 +456,7 @@ template <typename T> struct ZuCmp_<T, true> :
 // generic template
 
 template <typename T> struct ZuCmp :
-  public ZuCmp_<typename ZuTraits<T>::T,
+  public ZuCmp_<typename ZuDecay<T>::T,
     ZuTraits<T>::IsCString || ZuTraits<T>::IsString> { };
 
 // comparison of bool

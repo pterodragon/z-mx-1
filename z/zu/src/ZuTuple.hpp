@@ -33,6 +33,7 @@
 #include <zlib/ZuTraits.hpp>
 #include <zlib/ZuPair.hpp>
 #include <zlib/ZuNull.hpp>
+#include <zlib/ZuSwitch.hpp>
 #include <zlib/ZuPP.hpp>
 
 template <typename ...Args> struct ZuTuple_Index_ { };
@@ -137,10 +138,10 @@ public:
 
   template <typename T> ZuInline ZuTuple(T &&v,
       typename ZuIfT<
-	!ZuTuple1_Cvt<typename ZuTraits<T>::T, ZuTuple>::OK &&
+	!ZuTuple1_Cvt<typename ZuDecay<T>::T, ZuTuple>::OK &&
 	  (!ZuTraits<T0>::IsReference ||
-	    ZuConversion<typename ZuTraits<U0>::T,
-			 typename ZuTraits<T>::T>::Is)>::T *_ = 0) :
+	    ZuConversion<typename ZuDecay<U0>::T,
+			 typename ZuDecay<T>::T>::Is)>::T *_ = 0) :
     m_p0(ZuFwd<T>(v)) { }
 
   template <typename T> ZuInline
@@ -152,10 +153,10 @@ public:
 
   template <typename T> ZuInline
       typename ZuIfT<
-	!ZuTuple1_Cvt<typename ZuTraits<T>::T, ZuTuple>::OK &&
+	!ZuTuple1_Cvt<typename ZuDecay<T>::T, ZuTuple>::OK &&
 	  (!ZuTraits<T0>::IsReference ||
-	    ZuConversion<typename ZuTraits<U0>::T,
-			 typename ZuTraits<T>::T>::Is), ZuTuple &>::T
+	    ZuConversion<typename ZuDecay<U0>::T,
+			 typename ZuDecay<T>::T>::Is), ZuTuple &>::T
   operator =(T &&v) {
     m_p0 = ZuFwd<T>(v);
     return *this;
@@ -226,6 +227,17 @@ public:
     return Print{m_p0, delim};
   }
 
+  template <typename L>
+  auto dispatch(unsigned i, L l) {
+    if (i) return decltype(l(m_p0)){};
+    return l(m_p0);
+  }
+  template <typename L>
+  auto cdispatch(unsigned i, L l) const {
+    if (i) return decltype(l(m_p0)){};
+    return l(m_p0);
+  }
+
 private:
   T0		m_p0;
 };
@@ -274,6 +286,21 @@ public:
   template <typename T, typename P>
   ZuInline auto v(P &&p) {
     return p<Index<T>::I>(ZuFwd<P>(p));
+  }
+
+  template <typename L>
+  auto dispatch(unsigned i, L l) {
+    return ZuSwitch::dispatch<N>(
+	i, [this, &l](auto i) mutable {
+	  return l(p<i>());
+	});
+  }
+  template <typename L>
+  auto cdispatch(unsigned i, L l) const {
+    return ZuSwitch::dispatch<N>(
+	i, [this, &l](auto i) mutable {
+	  return l(p<i>());
+	});
   }
 };
 
@@ -351,6 +378,21 @@ public:
   template <typename T, typename P>
   ZuInline auto v(P &&p) {
     return p<Index<T>::I>(ZuFwd<P>(p));
+  }
+
+  template <typename L>
+  auto dispatch(unsigned i, L l) {
+    return ZuSwitch::dispatch<N>(
+	i, [this, &l](auto i) mutable {
+	  return l(p<i>());
+	});
+  }
+  template <typename L>
+  auto cdispatch(unsigned i, L l) const {
+    return ZuSwitch::dispatch<N>(
+	i, [this, &l](auto i) mutable {
+	  return l(p<i>());
+	});
   }
 };
 

@@ -72,8 +72,8 @@ template <typename T_, typename I_> struct ZuAccessor_<T_, I_, true> {
 };
 
 template <typename T, typename I> struct ZuAccessor :
-    public ZuAccessor_<typename ZuTraits<T>::T, typename ZuTraits<I>::T,
-      ZuConversion<typename ZuTraits<I>::T, typename ZuTraits<T>::T>::Is> { };
+    public ZuAccessor_<typename ZuDecay<T>::T, typename ZuDecay<I>::T,
+      ZuConversion<typename ZuDecay<I>::T, typename ZuDecay<T>::T>::Is> { };
 
 template <typename Accessor_, bool Same> struct ZuIndex_ {
   using Accessor = Accessor_;

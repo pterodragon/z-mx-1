@@ -1318,9 +1318,9 @@ template <
 template <typename DChar, typename E, typename VChar>
 struct ZtJoinable_2<DChar, E, VChar, true> :
   public ZtJoinable_3<
-    typename ZuTraits<DChar>::T,
-    typename ZuTraits<typename ZuTraits<E>::Elem>::T,
-    typename ZuTraits<VChar>::T> { };
+    typename ZuDecay<DChar>::T,
+    typename ZuDecay<typename ZuTraits<E>::Elem>::T,
+    typename ZuDecay<VChar>::T> { };
 
 template <
   typename D, typename A, typename V, bool =

@@ -110,7 +110,7 @@ template <typename T> struct ZvField {
     [](ZmStream &s, const T_ *o, const ZvFieldFmt &fmt) { \
       s << ZuBoxed(get(o, member)).vfmt(fmt.scalar); }, \
     [](ZuString s, T_ *o, const ZvFieldFmt &) { \
-      using V = typename ZuTraits<decltype(get(o, member))>::T; \
+      using V = typename ZuDecay<decltype(get(o, member))>::T; \
       set(o, member, (typename ZuBoxT<V>::T{s})); }, \
     [](const T_ *o) { return (double)get(o, member); } }
 #define ZvFieldHex_(T_, id, flags, member, get, set) \
@@ -119,7 +119,7 @@ template <typename T> struct ZvField {
     [](ZmStream &s, const T_ *o, const ZvFieldFmt &fmt) { \
       s << ZuBoxed(get(o, member)).hex(); }, \
     [](ZuString s, T_ *o, const ZvFieldFmt &) { \
-      using V = typename ZuTraits<decltype(get(o, member))>::T; \
+      using V = typename ZuDecay<decltype(get(o, member))>::T; \
       set(o, member, (typename ZuBoxT<V>::T{ZuFmt::Hex<>{}, s})); } }
 #define ZvFieldEnum_(T, id, flags, map, member, get, set) \
   { #id, ZvFieldType::Enum, flags, \
@@ -134,7 +134,7 @@ template <typename T> struct ZvField {
     [](ZmStream &s, const T_ *o, const ZvFieldFmt &fmt) { \
       map::instance()->print(s, get(o, member), fmt.flagsDelim); }, \
     [](ZuString s, T_ *o, const ZvFieldFmt &fmt) { \
-      using V = typename ZuTraits<decltype(get(o, member))>::T; \
+      using V = typename ZuDecay<decltype(get(o, member))>::T; \
       set(o, member, (map::instance()->scan<V>(s, fmt.flagsDelim))); } }
 #define ZvFieldTime_(T, id, flags, member, get, set) \
   { #id, ZvFieldType::Time, flags, \

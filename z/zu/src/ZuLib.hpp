@@ -167,6 +167,10 @@ struct ZuStrip<volatile T_> { using T = T_; };
 template <typename T_>
 struct ZuStrip<const volatile T_> { using T = T_; };
 
+// std::decay without dragging in STL cruft
+template <typename T_>
+struct ZuDecay { using T = typename ZuStrip<typename ZuDeref<T_>::T>::T; };
+
 // shorthand constexpr std::forward without STL cruft
 template <typename T>
 constexpr T &&ZuFwd(typename ZuDeref<T>::T &v) noexcept { // fwd lvalue

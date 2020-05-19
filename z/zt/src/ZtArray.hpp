@@ -267,7 +267,7 @@ public:
 
 private:
   template <typename A_> struct Fwd_ZtArray {
-    using A = typename ZuTraits<A_>::T;
+    using A = typename ZuDecay<A_>::T;
 
     static void ctor_(ZtArray *this_, const A &a) {
       this_->copy_(a.m_data, a.length());
@@ -310,7 +310,7 @@ private:
     }
   };
   template <typename A_> struct Fwd_Array {
-    using A = typename ZuTraits<A_>::T;
+    using A = typename ZuDecay<A_>::T;
     using Elem = typename ZuArrayT<A>::Elem;
 
     static void ctor_(ZtArray *this_, const A &a_) {

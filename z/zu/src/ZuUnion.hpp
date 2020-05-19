@@ -237,9 +237,9 @@ public:
   }
 
   template <typename T>
-  ZuInline static void *new_(void *ptr) {
+  ZuInline static T *new_(void *ptr) {
     reinterpret_cast<ZuUnion *>(ptr)->type_(Index<T>::I);
-    return ptr;
+    return reinterpret_cast<T *>(ptr);
   }
 
   template <typename T> void *init() {
@@ -384,14 +384,14 @@ public:
   template <typename L>
   auto dispatch(L l) {
     return ZuSwitch::dispatch<N>(
-	type(), [this, l = ZuMv(l)](auto i) mutable {
+	type(), [this, &l](auto i) mutable {
 	  return l(p<i>());
 	});
   }
   template <typename L>
   auto cdispatch(L l) const {
     return ZuSwitch::dispatch<N>(
-	type(), [this, l = ZuMv(l)](auto i) mutable {
+	type(), [this, &l](auto i) mutable {
 	  return l(p<i>());
 	});
   }

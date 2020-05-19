@@ -98,12 +98,12 @@ public:
 
 private:
   template <typename U, typename R = void, typename V = T,
-    bool B = ZuPrint<typename ZuTraits<U>::T>::Delegate>
+    bool B = ZuPrint<typename ZuDecay<U>::T>::Delegate>
   struct MatchPDelegate;
   template <typename U, typename R>
   struct MatchPDelegate<U, R, char, true> { using T = R; };
   template <typename U, typename R = void, typename V = T,
-    bool B = ZuPrint<typename ZuTraits<U>::T>::Buffer>
+    bool B = ZuPrint<typename ZuDecay<U>::T>::Buffer>
   struct MatchPBuffer;
   template <typename U, typename R>
   struct MatchPBuffer<U, R, char, true> { using T = R; };
@@ -486,7 +486,7 @@ public:
   // ZuArrayN types
 private:
   template <typename A_> struct Fwd_ArrayN {
-    using A = typename ZuTraits<A_>::T;
+    using A = typename ZuDecay<A_>::T;
 
     static void init_(ZuArrayN *this_, const A &a) {
       this_->init(a.data(), a.length());
@@ -529,7 +529,7 @@ public:
   // array types (other than ZuArrayN<>)
 private:
   template <typename A_> struct Fwd_Array {
-    using A = typename ZuTraits<A_>::T;
+    using A = typename ZuDecay<A_>::T;
     using Elem = typename ZuArrayT<A>::Elem;
 
     static void init_(ZuArrayN *this_, const A &a_) {

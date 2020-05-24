@@ -19,7 +19,7 @@
 
 // fast generic array operations
 
-// ZuArrayFn<T> provides a library of fast array operations used
+// ZuArrayFn<T> provides fast array operations used
 // by many other templates and classes
 
 #ifndef ZuArrayFn_HPP

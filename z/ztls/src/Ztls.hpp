@@ -479,18 +479,15 @@ friend Base;
   }
 
   void connect(ZtString server, uint16_t port) { // App thread(s)
-    this->app()->invoke([this, server = ZuMv(server), port]() mutable {
-      connect_(ZuMv(server), port);
-    });
-  }
-
-  void connect_(ZtString server, uint16_t port) { // TLS thread
     m_server = ZuMv(server);
     m_port = port;
-    connect_();
+    this->app()->invoke([this]() mutable { connect_(); });
   }
 
-  void connect_() {
+  const ZtString &server() const { return m_server; }
+  uint16_t port() const { return m_port; }
+
+  void connect_() { // TLS thread
     ZiIP ip = m_server;
     if (!ip) {
       this->app()->logError('"', m_server, "\": hostname lookup failure");

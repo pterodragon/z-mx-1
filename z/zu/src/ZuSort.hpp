@@ -230,7 +230,7 @@ loop:
     n -= 2;
     goto small1;
   }
-  unsigned m = ((n - 2) * v1) / (v1 - v2) + 1;
+  unsigned m = ((n - 3) * v1 + (v1>>1)) / (v1 - v2) + 1;
   int v3 = cmp(item, data[m]);
   if constexpr (Match) if (!v3) return ((o + m)<<1) | 1;
   if (v3 < 0) {

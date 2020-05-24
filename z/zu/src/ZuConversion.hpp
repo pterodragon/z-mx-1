@@ -49,10 +49,13 @@
 #pragma warning(disable:4244 4800)
 #endif
 
-template <typename T1, typename T2> struct ZuConversion__ {
-private:
+struct ZuConversion___ {
   typedef char	Small;
   struct	Big { char _[2]; };
+};
+template <typename T1, typename T2>
+struct ZuConversion__ : public ZuConversion___ {
+private:
   static Small	ZuConversion_test(const T2 &_); // named due to VS2010 bug
   static Big	ZuConversion_test(...);
   static T1	&ZuConversion_mkT1();		// reference due to VS2010 bug

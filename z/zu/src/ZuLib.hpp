@@ -227,4 +227,25 @@ void ZuSwap(T &v1, T &v2) {
   v2 = ZuMv(tmp);
 }
 
+// move/copy universal reference
+// ZuMvCp<U>::mvcp(ZuFwd<U>(u), [](auto &&v) { }, [](const auto &v) { });
+template <typename T_> struct ZuMvCp {
+  using T = typename ZuDecay<T_>::T;
+
+  template <typename Mv, typename Cp>
+  static auto mvcp(const T &v, Mv, Cp cp) { return cp(v); }
+  template <typename Mv, typename Cp>
+  static auto mvcp(T &&v, Mv mv, Cp) { return mv(ZuMv(v)); }
+
+  template <typename Mv>
+  static void mv(const T &v, Mv); // undefined
+  template <typename Mv>
+  static auto mv(T &&v, Mv mv) { return mv(ZuMv(v)); }
+
+  template <typename Cp>
+  static auto cp(const T &v, Cp cp) { return cp(v); }
+  template <typename Cp>
+  static void cp(T &&v, Cp); // undefined
+};
+
 #endif /* ZuLib_HPP */

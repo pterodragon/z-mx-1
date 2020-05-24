@@ -118,9 +118,7 @@ private:
   struct ToString<U, R, wchar_t, true, true> { using T = R; };
 
 protected:
-  ZuInline ~ZuArrayN_() {
-    this->destroyItems(data(), Base::m_length);
-  }
+  ZuInline ~ZuArrayN_() { dtor(); }
 
   ZuInline ZuArrayN_(unsigned size) : Base(size) { }
 
@@ -130,6 +128,10 @@ protected:
       Base(size, length) {
     if (Base::m_length > Base::m_size) Base::m_length = Base::m_size;
     if (initItems) this->initItems(data(), Base::m_length);
+  }
+
+  ZuInline void dtor() {
+    this->destroyItems(data(), Base::m_length);
   }
 
   template <typename A>
@@ -375,8 +377,12 @@ private:
   struct Align : public Base { T m_data[1]; };
 
 public:
-  ZuInline T *data() { return ((Align *)this)->m_data; }
-  ZuInline const T *data() const { return ((const Align *)this)->m_data; }
+  ZuInline T *data() {
+    return reinterpret_cast<Align *>(this)->m_data;
+  }
+  ZuInline const T *data() const {
+    return reinterpret_cast<const Align *>(this)->m_data;
+  }
 };
 
 // ZuArrayN<T, N> can be cast and used as ZuArrayN<T>
@@ -465,7 +471,10 @@ public:
     this->init(a.data(), a.length());
   }
   ZuInline ZuArrayN &operator =(const ZuArrayN &a) {
-    if (this != &a) this->init(a.data(), a.length());
+    if (this != &a) {
+      this->dtor();
+      this->init(a.data(), a.length());
+    }
     return *this;
   }
 
@@ -474,7 +483,10 @@ public:
     this->init_mv(a.data(), a.length());
   }
   ZuInline ZuArrayN &operator =(ZuArrayN &&a) {
-    if (this != &a) this->init_mv(a.data(), a.length());
+    if (this != &a) {
+      this->dtor();
+      this->init_mv(a.data(), a.length());
+    }
     return *this;
   }
 
@@ -484,93 +496,87 @@ public:
   }
 
   // ZuArrayN types
-private:
-  template <typename A_> struct Fwd_ArrayN {
-    using A = typename ZuDecay<A_>::T;
-
-    static void init_(ZuArrayN *this_, const A &a) {
-      this_->init(a.data(), a.length());
-    }
-    static void init_(ZuArrayN *this_, A &&a) {
-      this_->init_mv(a.data(), a.length());
-    }
-
-    static void append_(ZuArrayN *this_, const A &a) {
-      this_->append_(a.data(), a.length());
-    }
-    static void append_(ZuArrayN *this_, A &&a) {
-      this_->append_mv_(a.data(), a.length());
-    }
-  };
-
-public:
   template <typename A>
   ZuInline ZuArrayN(A &&a, typename MatchArrayN<A>::T *_ = 0) :
       Base(Base::Nop) {
     Base::m_size = N;
-    Fwd_ArrayN<A>::init_(this, ZuFwd<A>(a));
+    ZuMvCp<A>::mvcp(ZuFwd<A>(a),
+      [this](auto &&a) { init_mv(a.data(), a.length()); },
+      [this](const auto &a) { init(a.data(), a.length()); });
   }
   template <typename A>
   ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator =(A &&a) {
-    Fwd_ArrayN<A>::init_(this, ZuFwd<A>(a));
+    this->dtor();
+    ZuMvCp<A>::mvcp(ZuFwd<A>(a),
+      [this](auto &&a) { init_mv(a.data(), a.length()); },
+      [this](const auto &a) { init(a.data(), a.length()); });
     return *this;
   }
   template <typename A>
   ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator +=(A &&a) {
-    Fwd_ArrayN<A>::append_(this, ZuFwd<A>(a));
+    ZuMvCp<A>::mvcp(ZuFwd<A>(a),
+      [this](auto &&a) { append_mv_(a.data(), a.length()); },
+      [this](const auto &a) { append_(a.data(), a.length()); });
     return *this;
   }
   template <typename A>
   ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator <<(A &&a) {
-    Fwd_ArrayN<A>::append_(this, ZuFwd<A>(a));
+    ZuMvCp<A>::mvcp(ZuFwd<A>(a),
+      [this](auto &&a) { append_mv_(a.data(), a.length()); },
+      [this](const auto &a) { append_(a.data(), a.length()); });
     return *this;
   }
 
   // array types (other than ZuArrayN<>)
-private:
-  template <typename A_> struct Fwd_Array {
-    using A = typename ZuDecay<A_>::T;
-    using Elem = typename ZuArrayT<A>::Elem;
-
-    static void init_(ZuArrayN *this_, const A &a_) {
-      ZuArrayT<A> a(a_);
-      this_->init(a.data(), a.length());
-    }
-    static void init_(ZuArrayN *this_, A &&a_) {
-      ZuArrayT<A> a(a_);
-      this_->init_mv(const_cast<Elem *>(a.data()), a.length());
-    }
-
-    static void append_(ZuArrayN *this_, const A &a_) {
-      ZuArrayT<A> a(a_);
-      this_->append_(a.data(), a.length());
-    }
-    static void append_(ZuArrayN *this_, A &&a_) {
-      ZuArrayT<A> a(a_);
-      this_->append_mv_(const_cast<Elem *>(a.data()), a.length());
-    }
-  };
-
-public:
   template <typename A>
   ZuInline ZuArrayN(A &&a, typename MatchArray<A>::T *_ = 0) :
       Base(Base::Nop) {
     Base::m_size = N;
-    Fwd_Array<A>::init_(this, ZuFwd<A>(a));
+    ZuMvCp<A>::mvcp(ZuFwd<A>(a),
+      [this](auto &&a_) {
+	using Elem = typename ZuTraits<decltype(a_)>::Elem;
+	ZuArray<Elem> a(a_);
+	init_mv(const_cast<Elem *>(a.data()), a.length());
+      },
+      [this](const auto &a_) {
+	using Elem = typename ZuTraits<decltype(a_)>::Elem;
+	ZuArray<Elem> a(a_);
+	init(a.data(), a.length());
+      });
   }
   template <typename A>
   ZuInline typename MatchArray<A, ZuArrayN &>::T operator =(A &&a) {
-    Fwd_Array<A>::init_(this, ZuFwd<A>(a));
+    this->dtor();
+    ZuMvCp<A>::mvcp(ZuFwd<A>(a),
+      [this](auto &&a_) {
+	using Elem = typename ZuTraits<decltype(a_)>::Elem;
+	ZuArray<Elem> a(a_);
+	init_mv(const_cast<Elem *>(a.data()), a.length());
+      },
+      [this](const auto &a_) {
+	using Elem = typename ZuTraits<decltype(a_)>::Elem;
+	ZuArray<Elem> a(a_);
+	init(a.data(), a.length());
+      });
     return *this;
   }
   template <typename A>
-  ZuInline typename MatchArray<A, ZuArrayN &>::T operator +=(A &&a) {
-    Fwd_Array<A>::append_(this, ZuFwd<A>(a));
-    return *this;
+  typename MatchArray<A, ZuArrayN &>::T operator +=(A &&a) {
+    return operator <<(ZuFwd<A>(a));
   }
   template <typename A>
-  ZuInline typename MatchArray<A, ZuArrayN &>::T operator <<(A &&a) {
-    Fwd_Array<A>::append_(this, ZuFwd<A>(a));
+  typename MatchArray<A, ZuArrayN &>::T operator <<(A &&a) {
+    ZuMvCp<A>::mvcp(ZuFwd<A>(a),
+      [this](auto &&a_) {
+	using Elem = typename ZuTraits<decltype(a_)>::Elem;
+	ZuArray<Elem> a(a_);
+	append_mv_(const_cast<Elem *>(a.data()), a.length());
+      },
+      [this](const auto &a_) {
+	using Elem = typename ZuTraits<decltype(a_)>::Elem;
+	ZuArray<Elem> a(a_);
+	append_(a.data(), a.length());
+      });
     return *this;
   }
 
@@ -583,6 +589,7 @@ public:
   }
   template <typename P>
   ZuInline typename MatchPrint<P, ZuArrayN &>::T operator =(const P &p) {
+    // this->dtor();
     this->init(p);
     return *this;
   }
@@ -617,6 +624,7 @@ public:
   template <typename S>
   ZuInline typename MatchString<S, ZuArrayN &>::T operator =(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
+    // this->dtor();
     this->init(s.data(), s.length());
     return *this;
   }
@@ -655,6 +663,7 @@ public:
   }
   template <typename E>
   ZuInline typename MatchElem<E, ZuArrayN &>::T operator =(E &&e) {
+    this->dtor();
     this->init(ZuFwd<E>(e));
     return *this;
   }
@@ -693,7 +702,7 @@ public:
   }
 
 private:
-  T	m_data[N];
+  char	*m_data[N * sizeof(T)];
 };
 
 template <typename T_, unsigned N, typename Cmp>

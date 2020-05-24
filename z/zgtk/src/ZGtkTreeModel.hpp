@@ -47,7 +47,7 @@ namespace ZGtk {
 
 // CRTP - implementation must conform to the following interface:
 #if 0
-struct App : public TreeModel<App> {
+struct Impl : public TreeModel<Impl> {
   GtkTreeModelFlags get_flags();
   gint get_n_columns();
   GType get_column_type(gint i);
@@ -71,7 +71,7 @@ struct TreeModelDragData {
   guint	handler = 0;		// button release handler
 };
 
-template <typename T>
+template <typename Impl>
 class TreeModel : public GObject {
 public:
   static const char *typeName() {
@@ -95,10 +95,11 @@ public:
   }
 
 private:
-  T *impl() { return static_cast<T *>(this); }
+  Impl *impl() { return static_cast<Impl *>(this); }
+  const Impl *impl() const { return static_cast<const Impl *>(this); }
   template <typename Ptr>
-  static T *impl(Ptr *ptr) {
-    return static_cast<T *>(reinterpret_cast<TreeModel *>(ptr));
+  static Impl *impl(Ptr *ptr) {
+    return static_cast<Impl *>(reinterpret_cast<TreeModel *>(ptr));
   }
 
   static GType gtype_init() {
@@ -392,12 +393,13 @@ public:
 };
 
 template <
-  typename T,
+  typename Impl,
   int DefaultCol = GTK_TREE_SORTABLE_UNSORTED_SORT_COLUMN_ID,
   int DefaultOrder = GTK_SORT_ASCENDING>
-class TreeSortable : public TreeModel<T> {
+class TreeSortable : public TreeModel<Impl> {
 private:
-  T *impl() { return static_cast<T *>(this); }
+  Impl *impl() { return static_cast<Impl *>(this); }
+  const Impl *impl() const { return static_cast<const Impl *>(this); }
 
 public:
   gboolean get_sort_column_id(gint *col, GtkSortType *order) {
@@ -430,7 +432,7 @@ private:
 
 // CRTP - implementation must conform to the following interface:
 #if 0
-struct App : public TreeArray<App, Iter, Data> {
+struct Impl : public TreeArray<Impl, Iter, Data> {
   // call count(unsigned), then iterate(const Iter &) for each item
   template <typename Count, typename Iterate>
   void load(Count count, Iterate iterate);
@@ -446,19 +448,19 @@ struct App : public TreeArray<App, Iter, Data> {
   const ZvFieldFmt &fmt(unsigned col);
 };
 #endif
-// Note: following load() and association with a view, App must call
+// Note: following load() and association with a view, Impl must call
 // add() and del() to inform Gtk about subsequent modifications to the model
 template <
-  typename T,
+  typename Impl,
   typename Iter,
   typename Data>
-class TreeArray : public TreeSortable<TreeArray<T, Iter, Data>> {
+class TreeArray : public TreeSortable<TreeArray<Impl, Iter, Data>> {
   ZuAssert(sizeof(Iter) <= sizeof(GtkTreeIter));
   ZuAssert(ZuTraits<Iter>::IsPOD);
 
 private:
-  T *impl() { return static_cast<T *>(this); }
-  const T *impl() const { return static_cast<const T *>(this); }
+  Impl *impl() { return static_cast<Impl *>(this); }
+  const Impl *impl() const { return static_cast<const Impl *>(this); }
 
 public:
   void load(gint col, GtkSortType order) {
@@ -591,6 +593,246 @@ public:
 private:
   ZtArray<Iter>	m_rows;
 };
+
+namespace TreeNode {
+  class Row {
+  public:
+    gint row() const { return m_row; }
+    void row(gint v) { m_row = v; }
+
+  private:
+    gint			m_row = -1;
+  };
+
+  template <unsigned> class Root { };
+
+  template <unsigned Depth> class Child;
+
+  template <> class Child<0> : public Row {
+  public:
+    constexpr static unsigned depth() const { return 0; }
+    void ascend(const gint *indices) const { indices[0] = this->row(); }
+  };
+
+  template <unsigned Depth> class Child : public Row {
+  public:
+    constexpr static unsigned depth() const { return Depth; }
+    void ascend(const gint *indices) const {
+      indices[Depth] = this->row();
+      m_parent->ascend(indices);
+    }
+
+    template <typename Parent> Parent *parent() const {
+      return reinterpret_cast<Parent *>(m_parent);
+    }
+    void parent(Child<Depth - 1> *p) { m_parent = p; }
+
+  private:
+    Child<Depth - 1>	*m_parent = nullptr;
+  };
+
+  // individual leaf item
+  template <unsigned Depth>
+  class Item : public Child<Depth> {
+  public:
+    constexpr static bool hasChild() { return false; }
+    constexpr static unsigned nChildren() { return 0; }
+    template <typename L>
+    bool child(gint, L l) const { return false; }
+    template <typename L>
+    auto descend(const gint *, unsigned, L &l) const { return l(this); }
+  };
+
+  // parent of array of homogenous Children
+  template <unsigned Depth, typename Child, template <unsigned> Type = Item>
+  class Parent : public Type<Depth> {
+  public:
+    constexpr bool hasChild() const { return true; }
+    constexpr unsigned nChildren() const { return m_index.length(); }
+    template <typename L>
+    bool child(gint i, L l) const {
+      if (ZuUnlikely(i < 0 || i >= m_index.length())) return false;
+      l(m_index[i]);
+      return true;
+    }
+    template <typename L>
+    auto descend(const gint *indices, unsigned n, L &l) const {
+      if (!n) return l(this);
+      auto i = indices[0];
+      if (i < 0 || i >= m_index.length())
+	return decltype(l(decltype(m_index[0]){})){};
+      ++indices, --n;
+      return m_index[i]->descend(indices, n, l);
+    }
+
+    void add(Child *child) {
+      gint row = ZuSearchPos(ZuInterSearch<false>(
+	    &m_index[0], m_index.length(), child,
+	    [](const Child *i1, const Child *i2) {
+	      return ZuCmp<Child>::cmp(*i1, *i2);
+	    });
+      child->row(row);
+      m_index.splice(row, 0, child);
+    }
+    
+    void del(Child *child) {
+      gint row = child->row();
+      m_index.splice(row, 1);
+    }
+
+  private:
+    ZtArray<Child *>		m_index;
+  };
+
+  // parent of tuple of heterogeneous Children
+  template <unsigned Depth, typename Tuple, template <unsigned> Type = Item>
+  class Branch : public Type<Depth>, public Tuple {
+  public:
+    constexpr bool hasChild() const { return true; }
+    constexpr unsigned nChildren() const { return Tuple::N; }
+    template <typename L>
+    bool child(gint i, L l) const {
+      if (ZuUnlikely(i < 0 || i >= Tuple::N)) return false;
+      Tuple::dispatch(i, [&l](auto ptr) { l(ptr); });
+      return true;
+    }
+    template <typename L>
+    auto descend(const gint *indices, unsigned n, L &l) const {
+      if (!n) return l(this);
+      auto i = indices[0];
+      ++indices, --n;
+      return Tuple::dispatch(i, [indices, n, &l](auto ptr) {
+	return ptr->descend(indices, n, l);
+      });
+    }
+  };
+}
+
+// CRTP - implementation must conform to the following interface:
+#if 0
+// Node should be a ZuUnion of pointers to TelChild|TelParent|TelBranch
+struct Impl : public TreeHierarchy<Impl, Iter> {
+  auto root();	// must return a TelParent|TelBranch pointer
+  template <typename Ptr> auto print(Ptr *ptr);	// used for column 0 values
+};
+#endif
+template <typename Impl, typename Node>
+class TreeHierarchy : public ZGtk::TreeModel<Impl> {
+public:
+  Impl *impl() { return static_cast<Impl *>(this); }
+  const Impl *impl() const { return static_cast<Impl *>(this); }
+
+  GtkTreeModelFlags get_flags() {
+    return static_cast<GtkTreeModelFlags>(GTK_TREE_MODEL_ITERS_PERSIST);
+  }
+  gint get_n_columns() { return 1; }
+  GType get_column_type(gint i) { return G_TYPE_STRING; }
+  gboolean get_iter(GtkTreeIter *iter, GtkTreePath *path) {
+    gint depth = gtk_tree_path_get_depth(path);
+    gint *indices = gtk_tree_path_get_indices(path);
+    impl()->root()->descend(indices, depth, [iter](auto ptr) {
+      *Node::new_<typename ZuDecay<decltype(ptr)>::T>(iter) = ptr;
+    });
+  }
+  GtkTreePath *get_path(GtkTreeIter *iter) {
+    auto node = reinterpret_cast<Node *>(iter);
+    GtkTreePath *path = gtk_tree_path_new();
+    gint depth;
+    gint indices[MaxDepth + 1];
+    node->cdispatch([&depth, indices](auto ptr) {
+      depth = ptr->depth();
+      ptr->ascend(indices);
+    });
+    return gtk_tree_path_new_from_indicesv(indices, depth + 1);
+  }
+  void get_value(GtkTreeIter *iter, gint i, ZGtk::Value *value) {
+    auto node = reinterpret_cast<Node *>(iter);
+    node->cdispatch([ptr, i, value](const auto ptr) {
+      Impl::value(ptr, i, value);
+    });
+  }
+  gboolean iter_next(GtkTreeIter *iter) {
+    auto node = reinterpret_cast<Node *>(iter);
+    return node->cdispatch([iter](auto ptr) {
+      unsigned i = ptr->row() + 1;
+      return Impl::parent(ptr)->child(i, [iter](auto ptr) {
+	*Node::new_<typename ZuDecay<decltype(ptr)>::T>(iter) = ptr;
+      });
+    });
+  }
+  gboolean iter_children(GtkTreeIter *iter, GtkTreeIter *parent_) {
+    if (!parent_)
+      return impl()->root()->child(0, [iter](auto ptr)
+	*Node::new_<typename ZuDecay<decltype(ptr)>::T>(iter) = ptr;
+    auto parent = reinterpret_cast<Node *>(parent_);
+    return parent->cdispatch([iter](auto ptr) {
+      return ptr->child(0, [iter](auto ptr) {
+	*Node::new_<typename ZuDecay<decltype(ptr)>::T>(iter) = ptr;
+      });
+    });
+  }
+  gboolean iter_has_child(GtkTreeIter *iter) {
+    if (!iter) return true;
+    auto node = reinterpret_cast<Node *>(iter);
+    return node->cdispatch([node](auto ptr) { return ptr->hasChild(); });
+  }
+  gint iter_n_children(GtkTreeIter *iter) {
+    if (!iter) return impl()->root()->nChildren();
+    auto node = reinterpret_cast<Node *>(iter);
+    return node->cdispatch([node](auto ptr) { return ptr->nChildren(); });
+  }
+  gboolean iter_nth_child(GtkTreeIter *iter, GtkTreeIter *parent_, gint i) {
+    if (!parent_)
+      return impl()->root()->child(i, [iter](auto ptr)
+	*Node::new_<typename ZuDecay<decltype(ptr)>::T>(iter) = ptr;
+    auto parent = reinterpret_cast<Node *>(parent_);
+    return parent->cdispatch([iter, i](auto ptr) {
+      return ptr->child(i, [iter](auto ptr) {
+	*Node::new_<typename ZuDecay<decltype(ptr)>::T>(iter) = ptr;
+      });
+    });
+  }
+  gboolean iter_parent(GtkTreeIter *iter, GtkTreeIter *child_) {
+    if (!child_) return false;
+    auto child = reinterpret_cast<Node *>(child_);
+    return child->cdispatch([iter](auto ptr) {
+      auto parent = Impl::parent(ptr);
+      if (!parent) return false;
+      *Node::new_<typename ZuDecay<decltype(parent)>::T>(iter) = parent;
+      return true;
+    });
+  }
+  void ref_node(GtkTreeIter *) { }
+  void unref_node(GtkTreeIter *) { }
+
+  template <typename Ptr, typename Parent>
+  void add(Ptr *ptr, Parent *parent) {
+    ptr->parent(parent);
+    parent->add(ptr);
+    gint indices[MaxDepth + 1];
+    gint depth = ptr->depth();
+    ptr->ascend(indices);
+    gtk_tree_path_new_from_indicesv(indices, depth + 1);
+    GtkTreeIter iter;
+    new (&iter) Node{ptr};
+    // emit #GtkTreeModel::row-inserted
+    gtk_tree_model_row_inserted(GTK_TREE_MODEL(this), path, &iter);
+    gtk_tree_path_free(path);
+  }
+
+  template <typename Ptr>
+  void del(Ptr *ptr) {
+    gint indices[MaxDepth + 1];
+    gint depth = ptr->depth();
+    ptr->ascend(indices);
+    gtk_tree_path_new_from_indicesv(indices, depth + 1);
+    // emit #GtkTreeModel::row-deleted - invalidates iterators
+    gtk_tree_model_row_deleted(GTK_TREE_MODEL(this), path);
+    gtk_tree_path_free(path);
+    Impl::parent(ptr)->del(ptr);
+  }
+};
+#endif
 
 } // ZGtk
 

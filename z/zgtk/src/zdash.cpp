@@ -75,138 +75,38 @@ class ZDash : public ZmPolymorph, public ZvCmdClient<ZDash>, public ZCmdHost {
   // FIXME - use ZGtk::TreeArray<> to define all watchlists
   // FIXME - figure out how to save/load tree view columns, sort, etc.
 
-  class Link;
+  class Link : public ZvCmdCliLink<ZDash, Link> {
+  public:
+    using Base = ZvCmdCliLink<ZDash, Link>;
 
-  struct Tree : public ZGtk::TreeModel<Tree> {
-    template <unsigned, typename Data>
-    class TelRoot {
-    public:
-      TelRoot() = default;
-      template <typename ...Args>
-      TelRoot(Args &&... args) : data{ZuFwd<Args>(args)...} { }
+    auto key() { return ZuMkTuple(this->server(), this->port()); }
 
-      Data			data;
-    };
+    void loggedIn() {
+      this->app()->loggedIn(this);
+    }
+    void disconnected() {
+      this->app()->disconnected(this);
+      Base::disconnected();
+    }
+    void connectFailed(bool transient) {
+      this->app()->connectFailed(this);
+      // Base::connectFailed(transient);
+    }
+    int processApp(ZuArray<const uint8_t> data) {
+      return this->app()->processApp(this, data);
+    }
+    int processTel(const ZvTelemetry::fbs::Telemetry *data) {
+      return this->app()->processTel(this, data);
+    }
+  };
 
-    class TelRow {
-    public:
-      gint row() const { return m_row; }
-      void row(gint v) { m_row = v; }
-
-    private:
-      gint			m_row = -1;
-    };
-
-    template <int Depth> class TelChild;
-
-    template <> class TelChild<-1> { };
-
-    template <> class TelChild<0> : public TelRow {
-    public:
-      constexpr static unsigned depth() const { return 0; }
-      void ascend(const gint *indices) const { indices[0] = this->row(); }
-    };
-
-    template <unsigned Depth> class TelChild : public TelRow {
-    public:
-      constexpr static unsigned depth() const { return Depth; }
-      void ascend(const gint *indices) const {
-	indices[Depth] = this->row();
-	m_parent->ascend(indices);
-      }
-
-      template <typename Parent> Parent *parent() const {
-	return reinterpret_cast<Parent *>(m_parent);
-      }
-      void parent(TelChild<Depth - 1> *p) { m_parent = p; }
-
-    private:
-      TelChild<Depth - 1>	*m_parent = nullptr;
-    };
-
-    template <unsigned Depth, typename Data>
-    class TelItem : public TelChild<Depth> {
-    public:
-      TelItem() = default;
-      template <typename ...Args>
-      TelItem(Args &&... args) : data{ZuFwd<Args>(args)...} { }
-
-      constexpr static bool hasChild() { return false; }
-      constexpr static unsigned nChildren() { return 0; }
-      template <typename L>
-      bool child(gint, L l) const { return false; }
-      template <typename L>
-      auto descend(const gint *, unsigned, L &l) const { return l(this); }
-
-      Data			data;
-    };
-
-    template <
-      unsigned Depth, typename Data, typename Base, typename ChildPtr,
-      template <unsigned, typename> Type = TelItem>
-    class TelParent : public Type<Depth, Data>, public Base {
-    public:
-      TelParent() = default;
-      template <typename ...Args>
-      TelParent(Args &&... args) : Type<Depth, Data>{ZuFwd<Args>(args)...} { }
-
-      constexpr bool hasChild() const { return true; }
-      constexpr unsigned nChildren() const { return m_children.length(); }
-      template <typename L>
-      bool child(gint i, L l) const {
-	if (ZuUnlikely(i < 0 || i >= m_children.length())) return false;
-	l(m_children[i]);
-        return true;
-      }
-      template <typename L>
-      auto descend(const gint *indices, unsigned n, L &l) const {
-	if (!n) return l(this);
-	auto i = indices[0];
-	if (i < 0 || i >= m_children.length())
-	  return decltype(l(decltype(m_children[0]){})){};
-	++indices, --n;
-	return m_children[i]->descend(indices, n, l);
-      }
-
-    private:
-      ZtArray<ChildPtr>		m_children;
-    };
-
-    template <
-      unsigned Depth, typename Data, typename Base, typename Children,
-      template <unsigned, typename> Type = TelItem>
-    class TelBranch : public Type<Depth, Data>, public Base {
-    public:
-      TelBranch() = default;
-      template <typename ...Args>
-      TelBranch(Args &&... args) : Type<Depth, Data>{ZuFwd<Args>(args)...} { }
-
-      constexpr bool hasChild() const { return true; }
-      constexpr unsigned nChildren() const { return Children::N; }
-      template <typename L>
-      bool child(gint i, L l) const {
-	if (ZuUnlikely(i < 0 || i >= Children::N)) return false;
-	Children::dispatch(i, [&l](auto ptr) { l(ptr); });
-	return true;
-      }
-      template <typename L>
-      auto descend(const gint *indices, unsigned n, L &l) const {
-	if (!n) return l(this);
-	auto i = indices[0];
-	++indices, --n;
-	return Children::dispatch(i, [indices, n, &l](auto ptr) {
-	  return ptr->descend(indices, n, l);
-	});
-      }
-
-    private:
-      Children			m_children;
-    };
-
+  class Tree : public ZGtk::TreeHierarchy<Tree> {
+  public:
     template <typename T>
-    struct TelKey {
+    class TelKey {
       static const T &data_();
-      using Key = typename ZuDecay<decltype(data_().data.key())>::T;
+    public:
+      using Key = typename ZuDecay<decltype(data_().key())>::T;
       struct Accessor : public ZuAccessor<T, Key> {
 	static auto value(const T &data) { return data.key(); }
       };
@@ -216,128 +116,157 @@ class ZDash : public ZmPolymorph, public ZvCmdClient<ZDash>, public ZCmdHost {
     using TelTree =
       ZmRBTree<T,
 	ZmRBTreeIndex<typename TelKey<T>::Accessor,
-	  ZmRBTreeBase<ZmObject,
-	    ZmRBTreeLock<ZmNoLock> > > >;
+	  ZmRBTreeLock<ZmNoLock> > >;
 
-    using HeapTree = TelTree<TelChild<2, ZvTelemetry::Heap_load>>;
-    using HeapPtr = typename HeapTree_::Node *;
+    template <unsigned Depth, typename Data>
+    struct Child : public Data, public ZGtk::TreeNode::Child<Depth> {
+      Child() = default;
+      template <typename ...Args>
+      Child(Args &&... args) : Data{ZuFwd<Args>(args)...} { }
+    };
 
-    using HashTblTree = TelTree<TelChild<2, ZvTelemetry::HashTbl_load>>;
-    using HashTblPtr = typename HashTblTree_::Node *;
+    template <
+      unsigned Depth, typename Data, typename Child,
+      typename Container, typename XData = ZuNull>
+    struct Parent :
+	public Data,
+	public ZGtk::TreeNode::Parent<Depth, Child> {
+      Child() = default;
+      template <typename ...Args>
+      Child(Args &&... args) : Data{ZuFwd<Args>(args)...} { }
 
-    using ThreadTree = TelTree<TelChild<2, ZvTelemetry::Thread_load>>;
-    using ThreadPtr = typename ThreadTree_::Node *;
+      Container	container;
+      XData	xdata;
+    };
 
-    using SocketTree = TelTree<TelChild<3, ZvTelemetry::Socket_load>>;
-    using SocketPtr = typename SocketTree_::Node *;
+    template <
+      unsigned Depth, typename Data, typename Tuple, typename XData = ZuNull>
+    struct Branch :
+	public Data,
+	public ZGtk::TreeNode::Branch<Depth, Tuple> {
+      Child() = default;
+      template <typename ...Args>
+      Child(Args &&... args) : Data{ZuFwd<Args>(args)...} { }
 
-    using Mx = TelParent<2, ZvTelemetry::Mx_load, SocketTree, SocketPtr>;
-    using MxTree = TelTree<Mx>;
-    using MxPtr = typename MxTree::Node *;
+      XData	xdata;
+    };
 
-    using LinkTree = TelTree<TelChild<3, ZvTelemetry::Link_load>>;
-    using LinkPtr = typename LinkTree::Node *;
+    using Heap_ = Child<2, ZvTelemetry::Heap_load>
+    using HeapTree = TelTree<Heap>;
+    using Heap = typename HeapTree::Node;
 
-    using Engine = TelParent<2, ZvTelemetry::Engine_load, LinkTree, LinkPtr>;
-    using EngineTree = TelTree<Engine>;
-    using EnginePtr = typename EngineTree::Node *;
+    using HashTbl_ = Child<2, ZvTelemetry::HashTbl_load>;
+    using HashTblTree = TelTree<HashTbl_>;
+    using HashTbl = typename HashTblTree_::Node;
 
-    using DBHostTree = TelTree<TelChild<3, ZvTelemetry::DBHost_load>>;
-    using DBHostPtr = typename DBHostTree::Node *;
+    using Thread_ = Child<2, ZvTelemetry::Thread_load>;
+    using ThreadTree = TelTree<Thread_>;
+    using Thread = typename ThreadTree_::Node;
 
-    using DBTree = TelTree<TelChild<3, ZvTelemetry::DB_load>>;
-    using DBPtr = typename DBTree::Node *;
+    using Socket_ = Child<3, ZvTelemetry::Socket_load>;
+    using SocketTree = TelTree<Socket_>;
+    using Socket = typename SocketTree_::Node;
+
+    using Mx_ = Parent<2, ZvTelemetry::Mx_load, Socket, SocketTree>;
+    using MxTree = TelTree<Mx_>;
+    using Mx = typename MxTree::Node;
+
+    using Link_ = Child<3, ZvTelemetry::Link_load>;
+    using LinkTree = TelTree<Link_>;
+    using Link = typename LinkTree::Node;
+
+    using Engine_ = Parent<2, ZvTelemetry::Engine_load, Link, LinkTree>;
+    using EngineTree = TelTree<Engine_>;
+    using Engine = typename EngineTree::Node;
+
+    using DBHost_ = Child<3, ZvTelemetry::DBHost_load>;
+    using DBHostTree = TelTree<DBHost_>;
+    using DBHost = typename DBHostTree::Node;
+
+    using DB_ = Child<3, ZvTelemetry::DB_load>;
+    using DBTree = TelTree<DB_>;
+    using DB = typename DBTree::Node;
 
     // DB hosts
     struct DBHosts { auto key() const { return ZuMkTuple("hosts"); } };
-    using DBHostParent = TelParent<2, DBHosts, DBHostTree, DBHostPtr>;
-    using DBHostParentPtr = DBHostParent *;
+    using DBHostParent = Parent<2, DBHosts, DBHost, DBHostTree>;
     // DBs
     struct DBs { auto key() const { return ZuMkTuple("dbs"); } };
-    using DBParent = TelParent<2, DBs, DBTree, DBPtr>;
-    using DBParentPtr = DBParent *;
+    using DBParent = Parent<2, DBs, DB, DBTree>;
 
     // heaps
     struct Heaps { auto key() const { return ZuMkTuple("heaps"); } };
-    using HeapParent = TelParent<1, Heaps, HeapTree, HeapPtr>;
-    using HeapParentPtr = HeapParent *;
+    using HeapParent = Parent<1, Heaps, Heap, HeapTree>;
     // hashTbls
     struct HashTbls { auto key() const { return ZuMkTuple("hashTbls"); } };
-    using HashTblParent = TelParent<1, HashTbls, HashTblTree, HashTblPtr>;
-    using HashTblParentPtr = HashTblParent *;
+    using HashTblParent = Parent<1, HashTbls, HashTbl, HashTblTree>;
     // threads
     struct Threads { auto key() const { return ZuMkTuple("threads"); } };
-    using ThreadParent = TelParent<1, Threads, ThreadTree, ThreadPtr>;
-    using ThreadParentPtr = ThreadParent *;
+    using ThreadParent = Parent<1, Threads, Thread, ThreadTree>;
     // multiplexers
     struct Mxs { auto key() const { return ZuMkTuple("multiplexers"); } };
-    using MxParent = TelParent<1, Mxs, MxTree, MxPtr>;
-    using MxParentPtr = MxParent *;
+    using MxParent = Parent<1, Mxs, Mx, MxTree>;
     // engines
     struct Engines { auto key() const { return ZuMkTuple("engines"); } };
-    using EngineParent = TelParent<1, Engines, EngineTree, EnginePtr>;
-    using EngineParentPtr = EngineParent *;
+    using EngineParent = Parent<1, Engines, Engine, EngineTree>;
 
     // dbEnv
-    ZuDeclTuple(DBEnvChildren,
+    ZuDeclTuple(DBEnvTuple,
 	(DBHostParent, hosts),
 	(DBParent, dbs));
-    using DBEnv = TelBranch<1, ZvTelemetry::DBEnv_load, ZuNull, DBEnvChildren>;
-    using DBEnvPtr = DBEnv *;
+    using DBEnv = Branch<1, ZvTelemetry::DBEnv_load, DBEnvTuple>;
     // applications
-    ZuDeclTuple(AppChildren,
+    ZuDeclTuple(AppTuple,
 	(HeapParent, heaps),
 	(HashTblParent, hashTbls),
 	(ThreadParent, threads),
 	(MxParent, multiplexers),
 	(EngineParent, engines),
-	(DBEnv, dbEnv),
-	(AppLink, link));
-    struct AppBase { Link *link = nullptr; };
-    using App = TelBranch<0, ZvTelemetry::App_load, AppBase, AppChildren>;
-    using AppTree = TelTree<App>;
-    using AppPtr = typename AppTree:Node *;
+	(DBEnv, dbEnv));
+    struct AppXData { Link *link = nullptr; };
+    using App = Branch<0, ZvTelemetry::App_load, AppTuple, AppXData>;
 
-    using Root = TelParent<0, ZuNull, AppTree, AppPtr, TelRoot>;
+    using Root = Parent<0, ZuNull, App, ZuNull, ZGtk::TreeNode::Root>;
 
     enum { MaxDepth = 3 };
 
-    Root	m_root;	// root of tree
-
     // (*) - virtual parent node - not draggable
     using Iter = ZuUnion<
-      AppPtr,		// [app]
+      App *,		// [app]
 
       // app children
-      HeapParentPtr,	// app->heaps (*)
-      HashTblParentPtr,	// app->hashTbls (*)
-      ThreadParentPtr,	// app->threads (*)
-      MxParentPtr,	// app->mxTbl (*)
-      EngineParentPtr,	// app->engines (*)
-      DBEnvPtr,		// app->dbEnv (*) !!! must be EngineParentPtr + 1 !!!
+      HeapParent *,	// app->heaps (*)
+      HashTblParent *,	// app->hashTbls (*)
+      ThreadParent *,	// app->threads (*)
+      MxParent *,	// app->mxTbl (*)
+      EngineParent *,	// app->engines (*)
+      DBEnv *,		// app->dbEnv (*) !!! must be EngineParent * + 1 !!!
 
       // app grandchildren
-      HeapPtr,		// app->heaps->[heap]
-      HashTblPtr,	// app->hashTbls->[hashTbl]
-      ThreadPtr,	// app->threads->[thread]
-      MxPtr,		// app->mxTbl->[mx]
-      EnginePtr,	// app->engines->[engine]
+      Heap *,		// app->heaps->[heap]
+      HashTbl *,	// app->hashTbls->[hashTbl]
+      Thread *,		// app->threads->[thread]
+      Mx *,		// app->mxTbl->[mx]
+      Engine *,		// app->engines->[engine]
 
       // app great-grandchildren
-      SocketPtr,	// app->mxTbl->mx->[socket]
-      LinkPtr,		// app->engines->engine->[link]
+      Socket *,		// app->mxTbl->mx->[socket]
+      Link *,		// app->engines->engine->[link]
 
       // DBEnv children
-      DBHostParentPtr,	// app->dbEnv->hosts (*)
-      DBParentPtr,	// app->dbEnv->dbs (*)
+      DBHostParent *,	// app->dbEnv->hosts (*)
+      DBParent *,	// app->dbEnv->dbs (*)
 
       // DBEnv grandchildren
-      DBHostPtr,	// app->dbEnv->hosts->[host]
-      DBPtr>;		// app->dbEnv->dbs->[db]
+      DBHost *,		// app->dbEnv->hosts->[host]
+      DB *>;		// app->dbEnv->dbs->[db]
 
     ZuAssert(sizeof(Iter) < sizeof(GtkTreeIter));
 
-    // child->parent relationships
+    // root()
+    Root *root() { return &m_root; }
+
+    // parent() - child->parent type map
     template <typename T>
     static typename ZuSame<T, AppPtr, Root *>::T parent(T *ptr) {
       return ptr->parent<Root>();
@@ -399,155 +328,29 @@ class ZDash : public ZmPolymorph, public ZvCmdClient<ZDash>, public ZCmdHost {
       return ptr->parent<DBParentPtr>();
     }
 
-    GtkTreeModelFlags get_flags() {
-      return static_cast<GtkTreeModelFlags>(GTK_TREE_MODEL_ITERS_PERSIST);
-    }
-    gint get_n_columns() { return 1; }
-    GType get_column_type(gint i) { return G_TYPE_STRING; }
-    gboolean get_iter(GtkTreeIter *iter_, GtkTreePath *path) {
-      gint depth = gtk_tree_path_get_depth(path);
-      gint *indices = gtk_tree_path_get_indices(path);
-      m_root.descend(indices, depth, [iter_](auto ptr) {
-	*Iter::new_<typename ZuDecay<decltype(ptr)>::T>(iter_) = ptr;
-      });
-    }
-    GtkTreePath *get_path(GtkTreeIter *iter_) {
-      auto iter = reinterpret_cast<Iter *>(iter_);
-      GtkTreePath *path = gtk_tree_path_new();
-      gint depth;
-      gint indices[MaxDepth + 1];
-      iter->cdispatch([&depth, indices](auto ptr) {
-	depth = ptr->depth();
-	ptr->ascend(indices);
-      });
-      return gtk_tree_path_new_from_indicesv(indices, depth + 1);
-    }
-    void get_value(GtkTreeIter *iter_, gint i, ZGtk::Value *value) {
-      auto iter = reinterpret_cast<Iter *>(iter_);
-      static ZtString s; // ok - this is single-threaded
-      s.length(0);
+    // value() - get value for column i from ptr
+
+    template <typename T>
+    static void value(T *ptr, gint i, ZGtk::Value *value) {
+      m_value.length(0);
       value->init(G_TYPE_STRING);
-      iter->cdispatch([&s](const auto ptr) { s << ptr->data.key(); });
-      value->set_static_string(s);
-    }
-    gboolean iter_next(GtkTreeIter *iter_) {
-      auto iter = reinterpret_cast<Iter *>(iter_);
-      return iter->cdispatch([iter_](auto ptr) {
-	unsigned i = ptr->row() + 1;
-	return parent(ptr)->child(i, [iter_](auto ptr) {
-	  *Iter::new_<typename ZuDecay<decltype(ptr)>::T>(iter_) = ptr;
-	});
-      });
-    }
-    gboolean iter_children(GtkTreeIter *iter_, GtkTreeIter *parent_) {
-      if (!parent_)
-	return m_root.child(0, [iter_](auto ptr)
-	  *Iter::new_<typename ZuDecay<decltype(ptr)>::T>(iter_) = ptr;
-      auto parent = reinterpret_cast<Iter *>(parent_);
-      return parent->cdispatch([iter_](auto ptr) {
-	return ptr->child(0, [iter_](auto ptr) {
-	  *Iter::new_<typename ZuDecay<decltype(ptr)>::T>(iter_) = ptr;
-	});
-      });
-    }
-    gboolean iter_has_child(GtkTreeIter *iter_) {
-      if (!iter_) return true;
-      auto iter = reinterpret_cast<Iter *>(iter_);
-      return iter->cdispatch([iter](auto ptr) { return ptr->hasChild(); });
-    }
-    gint iter_n_children(GtkTreeIter *iter_) {
-      if (!iter_) return m_root.nChildren();
-      auto iter = reinterpret_cast<Iter *>(iter_);
-      return iter->cdispatch([iter](auto ptr) { return ptr->nChildren(); });
-    }
-    gboolean iter_nth_child(GtkTreeIter *iter_, GtkTreeIter *parent_, gint i) {
-      if (!parent_)
-	return m_root.child(i, [iter_](auto ptr)
-	  *Iter::new_<typename ZuDecay<decltype(ptr)>::T>(iter) = ptr;
-      auto parent = reinterpret_cast<Iter *>(parent_);
-      return parent->cdispatch([iter_, i](auto ptr) {
-	return ptr->child(i, [iter_](auto ptr) {
-	  *Iter::new_<typename ZuDecay<decltype(ptr)>::T>(iter_) = ptr;
-	});
-      });
-    }
-    gboolean iter_parent(GtkTreeIter *iter_, GtkTreeIter *child_) {
-      if (!child_) return false;
-      auto child = reinterpret_cast<Iter *>(child_);
-      return child->cdispatch([iter_](auto ptr) {
-	auto parent = Tree::parent(ptr);
-	if (!parent) return false;
-	*Iter::new_<typename ZuDecay<decltype(parent)>::T>(iter_) = parent;
-	return true;
-      });
-    }
-    void ref_node(GtkTreeIter *) { }
-    void unref_node(GtkTreeIter *) { }
-
-    // FIXME from here - need (somewhat) generic add/del
-    void add(const Iter &iter) {
-      gint col;
-      GtkSortType order;
-      gint row;
-      if (this->get_sort_column_id(&col, &order)) {
-	row = ZuSearchPos(ZuInterSearch<false>(
-	      &m_rows[0], m_rows.length(), iter,
-    [](Iter i1, Iter i2) {
-      return i1->data.key().cmp(i2->data.key());
-    });
-	impl()->row(iter, row);
-	m_rows.splice(row, 0, iter);
-      } else {
-	row = m_rows.length();
-	impl()->row(iter, row);
-	m_rows.push(iter);
-      }
-      GtkTreeIter iter_;
-      new (&iter_) Iter{iter};
-      auto path = gtk_tree_path_new_from_indicesv(&row, 1);
-      // emit #GtkTreeModel::row-inserted
-      gtk_tree_model_row_inserted(GTK_TREE_MODEL(this), path, &iter_);
-      gtk_tree_path_free(path);
+      m_value << ptr->key().print("|");
+      value->set_static_string(m_value);
     }
 
-    void del(const Iter &iter) {
-      gint row = impl()->row(iter);
-      auto path = gtk_tree_path_new_from_indicesv(&row, 1);
-      // emit #GtkTreeModel::row-deleted - invalidates iterators
-      gtk_tree_model_row_deleted(GTK_TREE_MODEL(this), path);
-      gtk_tree_path_free(path);
-      m_rows.splice(row, 1);
-    }
-
-  };
-
-  class Link : public ZvCmdCliLink<ZDash, Link> {
-  public:
-    using Base = ZvCmdCliLink<ZDash, Link>;
-
-    void loggedIn() {
-      this->app()->loggedIn();
-    }
-    void disconnected() {
-      this->app()->disconnected();
-      Base::disconnected();
-    }
-    void connectFailed(bool transient) {
-      this->app()->connectFailed();
-      // Base::connectFailed(transient);
-    }
-    int processApp(ZuArray<const uint8_t> data) {
-      return this->app()->processApp(data);
-    }
-    int processTel(const ZvTelemetry::fbs::Telemetry *data) {
-      return this->app()->processTel(data);
+    void addApp(App *app) {
+      add(app, root());
     }
 
   private:
-    // FIXME - each link should have a name that defaults to host:port
-    // FIXME - when creating/adding the link, user specified host:port and
-    // optionally name
+    Root	m_root;	// root of tree
+    ZtString	m_value;
   };
+
+  if (!app.tuple.dbEnv()) {
+    app.tuple.dbEnv() = new DBEnv
+  }
+}
 
 
 

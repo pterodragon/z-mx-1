@@ -155,19 +155,19 @@ public:
 #endif
   }
   template <typename R>
-  ZmRef(const R &r, typename MatchOtherRef<R>::T *_ = 0) :
-      m_object(static_cast<T *>(const_cast<typename R::T *>(r.m_object))) {
-    if (T *o = m_object) ZmREF(o);
-  }
-  template <typename R>
-  ZmRef(R &&r,
-      typename MatchOtherRef<typename ZuDeref<R>::T>::T *_ = 0) noexcept :
-      m_object(static_cast<T *>(const_cast<typename ZuDeref<R>::T::T *>(
-	      r.m_object))) {
-    r.m_object = 0;
-#ifdef ZmObject_DEBUG
-    if (T *o = m_object) ZmMVREF(o, &r, this);
+  ZmRef(R &&r, typename MatchOtherRef<typename ZuDeref<R>::T>::T *_ = 0)
+  noexcept : m_object(
+      static_cast<T *>(const_cast<typename ZuDeref<R>::T::T *>(r.m_object))) {
+    ZuMvCp<R>::mvcp(ZuFwd<R>(r),
+#ifndef ZmObject_DEBUG
+	[](auto &&r) { r.m_object = 0; }
+#else
+	[this](auto &&r) {
+	  r.m_object = 0;
+	  if (T *o = m_object) ZmMVREF(o, &r, this);
+	}
 #endif
+	, [this](const auto &) { if (T *o = m_object) ZmREF(o); });
   }
   ZmRef(T *o) : m_object(o) {
     if (o) ZmREF(o);

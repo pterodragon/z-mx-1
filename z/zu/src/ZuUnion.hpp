@@ -258,18 +258,12 @@ public:
     type_(0);
   }
 
-  template <typename P>
-  bool operator ==(const P &p) const { return equals(p); }
-  template <typename P>
-  bool operator !=(const P &p) const { return !equals(p); }
-  template <typename P>
-  bool operator >(const P &p) const { return cmp(p) > 0; }
-  template <typename P>
-  bool operator >=(const P &p) const { return cmp(p) >= 0; }
-  template <typename P>
-  bool operator <(const P &p) const { return cmp(p) < 0; }
-  template <typename P>
-  bool operator <=(const P &p) const { return cmp(p) <= 0; }
+  ZuInline bool operator ==(const ZuUnion &p) const { return equals(p); }
+  ZuInline bool operator !=(const ZuUnion &p) const { return !equals(p); }
+  ZuInline bool operator >(const ZuUnion &p) const { return cmp(p) > 0; }
+  ZuInline bool operator >=(const ZuUnion &p) const { return cmp(p) >= 0; }
+  ZuInline bool operator <(const ZuUnion &p) const { return cmp(p) < 0; }
+  ZuInline bool operator <=(const ZuUnion &p) const { return cmp(p) <= 0; }
 
   template <typename P>
   typename ZuIs<ZuUnion, P, bool>::T equals(const P &p) const {

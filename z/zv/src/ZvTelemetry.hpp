@@ -172,6 +172,14 @@ struct Heap : public Heap_, public ZvFieldTuple<Heap> {
     return Key{Zfb::Load::str(heap_->id()), heap_->partition(), heap_->size()};
   }
 
+  int rag() const {
+    if (!cacheSize) return RAG::Off;
+    if (allocated() > cacheSize) return RAG::Red;
+    if (heapAllocs) return RAG::Amber;
+    return RAG::Green;
+  }
+  void rag(int) { } // unused
+
   uint64_t allocated() const { return (cacheAllocs + heapAllocs) - frees; }
   void allocated(uint64_t) { } // unused
 
@@ -244,6 +252,13 @@ struct HashTbl : public HashTbl_, public ZvFieldTuple<HashTbl> {
     return Key{Zfb::Load::str(hash_->id()), hash_->addr()};
   }
 
+  int rag() const {
+    if (resized) return RAG::Red;
+    if (effLoadFactor >= loadFactor * 0.8) return RAG::Amber;
+    return RAG::Green;
+  }
+  void rag(int) { } // unused
+
   Zfb::Offset<fbs::HashTbl> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
     return fbs::CreateHashTbl(fbb,
@@ -303,8 +318,16 @@ struct HashTbl_load : public HashTbl {
 using Thread_ = ZmThreadTelemetry;
 struct Thread : public Thread_, public ZvFieldTuple<Thread> {
   static const ZvFields<Thread> fields() noexcept;
-  const auto &key() const { return tid; }
-  static auto key(const fbs::Thread *thread_) { return thread_->tid(); }
+  using Key = decltype(Thread_::tid);
+  const Key &key() const { return tid; }
+  static Key key(const fbs::Thread *thread_) { return thread_->tid(); }
+
+  int rag() const {
+    if (cpuUsage >= 0.8) return RAG::Red;
+    if (cpuUsage >= 0.5) return RAG::Amber;
+    return RAG::Green;
+  }
+  void rag(int) { } // unused
 
   Zfb::Offset<fbs::Thread> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
@@ -356,9 +379,10 @@ struct Thread_load : public Thread {
 using Mx_ = ZiMxTelemetry;
 struct Mx : public Mx_, public ZvFieldTuple<Mx> {
   static const ZvFields<Mx> fields() noexcept;
-  const auto &key() const { return id; }
-  static auto key(const fbs::Mx *mx_) {
-    return ZuID{Zfb::Load::str(mx_->id())};
+  using Key = decltype(Mx_::id);
+  const Key &key() const { return id; }
+  static Key key(const fbs::Mx *mx_) {
+    return Key{Zfb::Load::str(mx_->id())};
   }
 
   int rag() const { return MxState::rag(state); }
@@ -398,8 +422,7 @@ inline const ZvFields<Mx> Mx::fields() noexcept {
       (Scalar, queueSize, 0),
       (Bool, ll, 0),
       (Scalar, spin, 0),
-      (Scalar, timeout, 0),
-      (EnumFn, rag, Dynamic | Synthetic | ColorRAG, RAG::Map));
+      (Scalar, timeout, 0));
 }
 struct Mx_load : public Mx {
   Mx_load(const fbs::Mx *mx_) : Mx{ {
@@ -423,8 +446,18 @@ struct Mx_load : public Mx {
 using Socket_ = ZiCxnTelemetry;
 struct Socket : public Socket_, public ZvFieldTuple<Socket> {
   static const ZvFields<Socket> fields() noexcept;
-  const auto &key() const { return socket; }
-  static auto key(const fbs::Socket *socket_) { return socket_->socket(); }
+  using Key = decltype(Socket_::socket);
+  const Key &key() const { return socket; }
+  static Key key(const fbs::Socket *socket_) { return socket_->socket(); }
+
+  int rag() const {
+    if (rxBufLen * 10 >= (rxBufSize<<3) ||
+	txBufLen * 10 >= (txBufSize<<3)) return RAG::Red;
+    if ((rxBufLen<<1) >= rxBufSize ||
+	(txBufLen<<1) >= txBufSize) return RAG::Amber;
+    return RAG::Green;
+  }
+  void rag(int) { } // unused
 
   Zfb::Offset<fbs::Socket> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
@@ -504,20 +537,20 @@ struct Queue : public ZvFieldTuple<Queue> {
   uint32_t	full;		// dynamic - how many times queue overflowed
   uint8_t	type;		// primary key - QueueType
 
-  int rag() const {
-    if (ZuLikely(!size)) return RAG::Off;
-    if (ZuLikely(count < (size>>1))) return RAG::Green;
-    if (ZuLikely(count < (size>>1) + (size>>2))) return RAG::Amber;
-    return RAG::Red;
-  }
-  void rag(int) { } // unused
-
   static const ZvFields<Queue> fields() noexcept;
   using Key = ZuPair<ZuID, unsigned>;
   Key key() const { return Key{id, type}; }
   static Key key(const fbs::Queue *queue_) {
     return Key{Zfb::Load::str(queue_->id()), queue_->type()}; 
   }
+
+  int rag() const {
+    if (!size) return RAG::Off;
+    if (count * 10 >= (size<<3)) return RAG::Red;
+    if ((count<<1) >= size) return RAG::Amber;
+    return RAG::Green;
+  }
+  void rag(int) { } // unused
 
   Zfb::Offset<fbs::Queue> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
@@ -567,8 +600,7 @@ inline const ZvFields<Queue> Queue::fields() noexcept {
       (Scalar, inCount, Dynamic | Cumulative),
       (Scalar, inBytes, Dynamic | Cumulative),
       (Scalar, outCount, Dynamic | Cumulative),
-      (Scalar, outBytes, Dynamic | Cumulative),
-      (EnumFn, rag, Dynamic | Synthetic | ColorRAG, RAG::Map));
+      (Scalar, outBytes, Dynamic | Cumulative));
 }
 struct Queue_load : public Queue {
   Queue_load(const fbs::Queue *queue_) : Queue{
@@ -595,9 +627,10 @@ struct Link : public ZvFieldTuple<Link> {
   int8_t	state;
 
   static const ZvFields<Link> fields() noexcept;
-  const auto &key() const { return id; }
-  static auto key(const fbs::Link *link_) {
-    return ZuID{Zfb::Load::str(link_->id())};
+  using Key = decltype(id);
+  const Key &key() const { return id; }
+  static Key key(const fbs::Link *link_) {
+    return Key{Zfb::Load::str(link_->id())};
   }
 
   int rag() const { return LinkState::rag(state); }
@@ -633,8 +666,7 @@ inline const ZvFields<Link> Link::fields() noexcept {
       (Enum, state, Dynamic, LinkState::Map),
       (Scalar, reconnects, Dynamic | Cumulative),
       (Scalar, rxSeqNo, Dynamic | Cumulative),
-      (Scalar, txSeqNo, Dynamic | Cumulative),
-      (EnumFn, rag, Dynamic | Synthetic | ColorRAG, RAG::Map));
+      (Scalar, txSeqNo, Dynamic | Cumulative));
 }
 struct Link_load : public Link {
   Link_load(const fbs::Link *link_) : Link{
@@ -662,9 +694,10 @@ struct Engine : public ZvFieldTuple<Engine> {
   int8_t	state;
 
   static const ZvFields<Engine> fields() noexcept;
-  const auto &key() const { return id; }
-  static auto key(const fbs::Engine *engine_) {
-    return ZuID{Zfb::Load::str(engine_->id())};
+  using Key = decltype(id);
+  const Key &key() const { return id; }
+  static Key key(const fbs::Engine *engine_) {
+    return Key{Zfb::Load::str(engine_->id())};
   }
 
   int rag() const { return EngineState::rag(state); }
@@ -715,8 +748,7 @@ inline const ZvFields<Engine> Engine::fields() noexcept {
       (Scalar, failed, Dynamic),
       (String, mxID, 0),
       (Scalar, rxThread, 0),
-      (Scalar, txThread, 0),
-      (EnumFn, rag, Dynamic | Synthetic | ColorRAG, RAG::Map));
+      (Scalar, txThread, 0));
 }
 struct Engine_load : public Engine {
   Engine_load(const fbs::Engine *engine_) : Engine{
@@ -764,8 +796,18 @@ struct DB : public ZvFieldTuple<DB> {
   uint8_t	cacheMode;	// ZdbCacheMode
 
   static const ZvFields<DB> fields() noexcept;
-  const auto &key() const { return id; }
-  static auto key(const fbs::DB *db_) { return db_->id(); }
+  using Key = decltype(id);
+  const Key &key() const { return id; }
+  static Key key(const fbs::DB *db_) { return db_->id(); }
+
+  int rag() const {
+    unsigned total = cacheLoads + cacheMisses;
+    if (!total) return RAG::Off;
+    if (cacheMisses * 10 > (total<<3)) return RAG::Red;
+    if ((cacheMisses<<1) > total) return RAG::Amber;
+    return RAG::Green;
+  }
+  void rag(int) { } // unused
 
   Zfb::Offset<fbs::DB> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
@@ -853,12 +895,13 @@ struct DBHost : public ZvFieldTuple<DBHost> {
   int8_t	state; // RAG: Instantiated - Red; Active - Green; * - Amber
   uint8_t	voted;
 
+  static const ZvFields<DBHost> fields() noexcept;
+  using Key = decltype(id);
+  const Key &key() const { return id; }
+  static Key key(const fbs::DBHost *host_) { return host_->id(); }
+
   int rag() const { return DBHostState::rag(state); }
   void rag(int) { } // unused
-
-  static const ZvFields<DBHost> fields() noexcept;
-  const auto &key() const { return id; }
-  static auto key(const fbs::DBHost *host_) { return host_->id(); }
 
   Zfb::Offset<fbs::DBHost> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
@@ -886,8 +929,7 @@ inline const ZvFields<DBHost> DBHost::fields() noexcept {
       (Enum, state, Dynamic, DBHostState::Map),
       (Bool, voted, Dynamic),
       (String, ip, 0),
-      (Scalar, port, 0),
-      (EnumFn, rag, Dynamic | Synthetic | ColorRAG, RAG::Map));
+      (Scalar, port, 0));
 }
 struct DBHost_load : public DBHost {
   DBHost_load(const fbs::DBHost *host_) : DBHost{
@@ -924,10 +966,10 @@ struct DBEnv : public ZvFieldTuple<DBEnv> {
   uint8_t	recovering;
   uint8_t	replicating;
 
+  static const ZvFields<DBEnv> fields() noexcept;
+
   int rag() const { return DBHostState::rag(state); }
   void rag(int) { } // unused
-
-  static const ZvFields<DBEnv> fields() noexcept;
 
   Zfb::Offset<fbs::DBEnv> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
@@ -970,8 +1012,7 @@ inline const ZvFields<DBEnv> DBEnv::fields() noexcept {
       (Scalar, heartbeatTimeout, 0),
       (Scalar, reconnectFreq, 0),
       (Scalar, electionTimeout, 0),
-      (Scalar, writeThread, 0),
-      (EnumFn, rag, Dynamic | Synthetic | ColorRAG, RAG::Map));
+      (Scalar, writeThread, 0));
 }
 struct DBEnv_load : public DBEnv {
   DBEnv_load(const fbs::DBEnv *env_) : DBEnv{
@@ -1002,27 +1043,33 @@ struct App : public ZvFieldTuple<App> {
   ZmIDString	version;
   ZtDate	uptime;
   uint8_t	role;
-  uint8_t	rag;
+  uint8_t	rag_;
 
   static const ZvFields<App> fields() noexcept;
+  using Key = decltype(id);
+  const Key &key() const { return id; }
+  static Key key(const fbs::App *app_) { return Zfb::Load::str(app_->id()); }
+
+  int rag() const { return rag_; }
+  void rag(int v) { rag_ = v; }
 
   Zfb::Offset<fbs::App> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
     return fbs::CreateApp(fbb,
 	str(fbb, id), str(fbb, version), dateTime(fbb, uptime),
 	static_cast<fbs::AppRole>(role),
-	static_cast<fbs::RAG>(rag));
+	static_cast<fbs::RAG>(rag_));
   }
   Zfb::Offset<fbs::App> saveDelta(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
     auto id_ = str(fbb, id);
     fbs::AppBuilder b(fbb);
     b.add_id(id_);
-    b.add_rag(static_cast<fbs::RAG>(rag));
+    b.add_rag(static_cast<fbs::RAG>(rag_));
     return b.Finish();
   }
   void loadDelta(const fbs::App *app_) {
-    rag = app_->rag();
+    rag(app_->rag());
   }
 };
 inline const ZvFields<App> App::fields() noexcept {
@@ -1031,7 +1078,7 @@ inline const ZvFields<App> App::fields() noexcept {
       (String, version, 0),
       (Time, uptime, 0),
       (Enum, role, 0, AppRole::Map),
-      (Enum, rag, 0, RAG::Map));
+      (Enum, rag_, 0, RAG::Map));
 }
 struct App_load : public App {
   App_load(const fbs::App *app_) : App{
@@ -1039,7 +1086,7 @@ struct App_load : public App {
     .version = Zfb::Load::str(app_->version()),
     .uptime = Zfb::Load::dateTime(app_->uptime()),
     .role = (uint8_t)app_->role(),
-    .rag = (uint8_t)app_->rag()
+    .rag_ = (uint8_t)app_->rag()
   } { }
 };
 

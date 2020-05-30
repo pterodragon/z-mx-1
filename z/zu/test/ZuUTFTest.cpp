@@ -49,11 +49,11 @@ int main()
       j.length(ZuUTF<char, uint32_t>::cvt(
 	    ZuArray<char>(j.data(), j.size() - 1), u));
       CHECK(j.length() == 6);
-      CHECK(j == "\xf0\x9f\x90\x84xy");
+      CHECK(j.equals("\xf0\x9f\x90\x84xy"));
       ZuArrayN<uint32_t, 4> k;
       k.length(ZuUTF<uint32_t, char>::cvt(
 	    ZuArray<uint32_t>(k.data(), k.size() - 1), j));
-      CHECK(k == u);
+      CHECK(k.equals(u));
     }
   }
 }

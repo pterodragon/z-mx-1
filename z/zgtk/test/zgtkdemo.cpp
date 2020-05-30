@@ -159,6 +159,9 @@ void start()
   auto window = GTK_WINDOW(gtk_builder_get_object(builder, "window"));
   auto view = GTK_TREE_VIEW(gtk_builder_get_object(builder, "treeview"));
   auto watchlist = GTK_TREE_VIEW(gtk_builder_get_object(builder, "watchlist"));
+
+  g_object_unref(G_OBJECT(builder));
+
   auto model = TreeModel::ctor();
 
   // the cell, column and view all need to be referenced together
@@ -264,7 +267,9 @@ void start()
 	g_list_free(rows);
       });
 
-  model->view(view);
+  gtk_tree_view_set_model(view, GTK_TREE_MODEL(model));
+
+  g_object_unref(G_OBJECT(model));
 
   g_signal_connect(G_OBJECT(window), "destroy",
       ZGtk::callback([](GObject *o, gpointer p) {

@@ -347,19 +347,6 @@ public:
     return self.equals(a);
   }
 
-  template <typename A>
-  ZuInline bool operator ==(const A &a) const { return equals(a); }
-  template <typename A>
-  ZuInline bool operator !=(const A &a) const { return !equals(a); }
-  template <typename A>
-  ZuInline bool operator >(const A &a) const { return cmp(a) > 0; }
-  template <typename A>
-  ZuInline bool operator >=(const A &a) const { return cmp(a) >= 0; }
-  template <typename A>
-  ZuInline bool operator <(const A &a) const { return cmp(a) < 0; }
-  template <typename A>
-  ZuInline bool operator <=(const A &a) const { return cmp(a) <= 0; }
-
 // hash
 
   ZuInline uint32_t hash() const {
@@ -501,29 +488,29 @@ public:
       Base(Base::Nop) {
     Base::m_size = N;
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
-      [this](auto &&a) { init_mv(a.data(), a.length()); },
-      [this](const auto &a) { init(a.data(), a.length()); });
+      [this](auto &&a) { this->init_mv(a.data(), a.length()); },
+      [this](const auto &a) { this->init(a.data(), a.length()); });
   }
   template <typename A>
   ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator =(A &&a) {
     this->dtor();
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
-      [this](auto &&a) { init_mv(a.data(), a.length()); },
-      [this](const auto &a) { init(a.data(), a.length()); });
+      [this](auto &&a) { this->init_mv(a.data(), a.length()); },
+      [this](const auto &a) { this->init(a.data(), a.length()); });
     return *this;
   }
   template <typename A>
   ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator +=(A &&a) {
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
-      [this](auto &&a) { append_mv_(a.data(), a.length()); },
-      [this](const auto &a) { append_(a.data(), a.length()); });
+      [this](auto &&a) { this->append_mv_(a.data(), a.length()); },
+      [this](const auto &a) { this->append_(a.data(), a.length()); });
     return *this;
   }
   template <typename A>
   ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator <<(A &&a) {
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
-      [this](auto &&a) { append_mv_(a.data(), a.length()); },
-      [this](const auto &a) { append_(a.data(), a.length()); });
+      [this](auto &&a) { this->append_mv_(a.data(), a.length()); },
+      [this](const auto &a) { this->append_(a.data(), a.length()); });
     return *this;
   }
 
@@ -536,12 +523,12 @@ public:
       [this](auto &&a_) {
 	using Elem = typename ZuTraits<decltype(a_)>::Elem;
 	ZuArray<Elem> a(a_);
-	init_mv(const_cast<Elem *>(a.data()), a.length());
+	this->init_mv(const_cast<Elem *>(a.data()), a.length());
       },
       [this](const auto &a_) {
 	using Elem = typename ZuTraits<decltype(a_)>::Elem;
 	ZuArray<Elem> a(a_);
-	init(a.data(), a.length());
+	this->init(a.data(), a.length());
       });
   }
   template <typename A>
@@ -551,12 +538,12 @@ public:
       [this](auto &&a_) {
 	using Elem = typename ZuTraits<decltype(a_)>::Elem;
 	ZuArray<Elem> a(a_);
-	init_mv(const_cast<Elem *>(a.data()), a.length());
+	this->init_mv(const_cast<Elem *>(a.data()), a.length());
       },
       [this](const auto &a_) {
 	using Elem = typename ZuTraits<decltype(a_)>::Elem;
 	ZuArray<Elem> a(a_);
-	init(a.data(), a.length());
+	this->init(a.data(), a.length());
       });
     return *this;
   }
@@ -570,12 +557,12 @@ public:
       [this](auto &&a_) {
 	using Elem = typename ZuTraits<decltype(a_)>::Elem;
 	ZuArray<Elem> a(a_);
-	append_mv_(const_cast<Elem *>(a.data()), a.length());
+	this->append_mv_(const_cast<Elem *>(a.data()), a.length());
       },
       [this](const auto &a_) {
 	using Elem = typename ZuTraits<decltype(a_)>::Elem;
 	ZuArray<Elem> a(a_);
-	append_(a.data(), a.length());
+	this->append_(a.data(), a.length());
       });
     return *this;
   }
@@ -699,6 +686,25 @@ public:
   template <typename A>
   ZuInline typename ZuConvertible<A, T>::T append_mv(A *a, unsigned length) {
     this->append_mv_(a, length);
+  }
+
+  ZuInline bool operator ==(const ZuArrayN &a) const {
+    return this->equals(a);
+  }
+  ZuInline bool operator !=(const ZuArrayN &a) const {
+    return !this->equals(a);
+  }
+  ZuInline bool operator >(const ZuArrayN &a) const {
+    return this->cmp(a) > 0;
+  }
+  ZuInline bool operator >=(const ZuArrayN &a) const {
+    return this->cmp(a) >= 0;
+  }
+  ZuInline bool operator <(const ZuArrayN &a) const {
+    return this->cmp(a) < 0;
+  }
+  ZuInline bool operator <=(const ZuArrayN &a) const {
+    return this->cmp(a) <= 0;
   }
 
 private:

@@ -51,8 +51,7 @@ namespace ZvFieldFlags {
   enum _ {
     Dynamic	= 0x01,		// scalar that varies over time
     Synthetic	= 0x02,		// synthetic scalar
-    Cumulative	= 0x04,		// first derivative should be logged/graphed
-    ColorRAG	= 0x08		// red/amber/green
+    Cumulative	= 0x04		// first derivative should be logged/graphed
   };
 }
 

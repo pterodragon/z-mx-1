@@ -265,7 +265,7 @@ int main(int argc, const char *argv[])
 	  try {
 	    const auto &r = ZtStaticRegexUTF8("/");
 	    int n = r.split(argv[++i], c);
-	    if (n < 1 && n > 2) usage();
+	    if (n < 1 || n > 2) usage();
 	    ZiIP addr(c[0]);
 	    if (!addr.multicast()) usage();
 	    ZiIP mif;

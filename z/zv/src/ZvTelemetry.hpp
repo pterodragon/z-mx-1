@@ -524,7 +524,6 @@ struct Socket_load : public Socket {
 // display sequence:
 //   id, type, size, full, count, seqNo,
 //   inCount, inBytes, outCount, outBytes
-// RAG for queues - count > 50% size - amber; 75% - red
 struct Queue : public ZvFieldTuple<Queue> {
   ZuID		id;		// primary key - same as Link id for Rx/Tx
   uint64_t	seqNo;		// 0 for Thread, IPC
@@ -544,6 +543,7 @@ struct Queue : public ZvFieldTuple<Queue> {
     return Key{Zfb::Load::str(queue_->id()), queue_->type()}; 
   }
 
+  // RAG for queues - count > 50% size - amber; 80% - red
   int rag() const {
     if (!size) return RAG::Off;
     if (count * 10 >= (size<<3)) return RAG::Red;

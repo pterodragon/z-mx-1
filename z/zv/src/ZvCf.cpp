@@ -70,14 +70,14 @@ void ZvCf::parseCLI(ZuString line, ZtArray<ZtString> &args)
   args.length(0);
   ZtString val;
   const auto &cliValue = ZtStaticRegexUTF8("\\G[^\"'`#;\\s]+");// \G[^"'`#;\s]+
-  const auto &cliSglQuote = ZtStaticRegexUTF8("\\G'");	// \G'
+  const auto &cliSglQuote = ZtStaticRegexUTF8("\\G'");		// \G'
   const auto &cliSglQuotedValue = ZtStaticRegexUTF8("\\G[^'`]+"); // \G[^'`]+
-  const auto &cliDblQuote = ZtStaticRegexUTF8("\\G\"");	// \G"
+  const auto &cliDblQuote = ZtStaticRegexUTF8("\\G\"");		// \G"
   const auto &cliDblQuotedValue = ZtStaticRegexUTF8("\\G[^\"`]+"); // \G[^"`]+
   const auto &cliQuoted = ZtStaticRegexUTF8("\\G`.");		// \G`.
   const auto &cliWhiteSpace = ZtStaticRegexUTF8("\\G\\s+");	// \G\s+
   const auto &cliComment = ZtStaticRegexUTF8("\\G#");		// \G#
-  const auto &cliSemicolon = ZtStaticRegexUTF8("\\G;");	// \G;
+  const auto &cliSemicolon = ZtStaticRegexUTF8("\\G;");		// \G;
   ZtRegex::Captures c;
   unsigned pos = 0;
 

@@ -38,6 +38,7 @@
 #include <zlib/ZuStringN.hpp>
 #include <zlib/ZuPrint.hpp>
 #include <zlib/ZuID.hpp>
+#include <zlib/ZuDec64.hpp>
 
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmLHash.hpp>
@@ -57,223 +58,42 @@
 #define MxBase_LongDouble 1	// MxFloat is long double instead of double
 #endif
 
-typedef ZuBox0(char) MxChar;
-typedef ZuBox<int8_t> MxBool;
-typedef ZuBox<uint8_t> MxUInt8;
-typedef ZuBox<int32_t> MxInt;
-typedef ZuBox<uint32_t> MxUInt;
-typedef ZuBox<int64_t> MxInt64;
-typedef ZuBox<uint64_t> MxUInt64;
-typedef ZuBox<int128_t> MxInt128;
-typedef ZuBox<uint128_t> MxUInt128;
+using MxChar = ZuBox0(char);
+using MxBool = ZuBox<int8_t>;
+using MxUInt8 = ZuBox<uint8_t>;
+using MxInt = ZuBox<int32_t>;
+using MxUInt = ZuBox<uint32_t>;
+using MxInt64 = ZuBox<int64_t>;
+using MxUInt64 = ZuBox<uint64_t>;
+using MxInt128 = ZuBox<int128_t>;
+using MxUInt128 = ZuBox<uint128_t>;
 #if MxBase_LongDouble
-typedef ZuBox<long double> MxFloat;
+using MxFloat = ZuBox<long double>;
 #else
-typedef ZuBox<double> MxFloat;
+using MxFloat = ZuBox<double>;
 #endif
-typedef ZtDate MxDateTime;
+using MxDateTime = ZtDate;
 #define MxNow ZtDateNow
-typedef ZmTime MxDeltaTime;
-typedef ZtEnum MxEnum;
-typedef ZuBox0(uint32_t) MxFlags;
-typedef ZuBox0(uint64_t) MxFlags64;
+using MxDeltaTime = ZmTime;
+using MxEnum = ZtEnum;
+using MxFlags = ZuBox0(uint32_t);
+using MxFlags64 = ZuBox0(uint64_t);
 
 #define MxString ZuStringN
 
-typedef ZuID MxID; // Note: different than MxIDString
+using MxID = ZuID; // Note: different than MxIDString
 
-typedef ZuDecimal MxDecimal;
+using MxDecimal = ZuDecimal;
 
-// MxValue value range is +/- 10^18
-typedef MxInt64 MxValue;	// fixed point value (numerator)
-typedef MxUInt8 MxNDP;		// number of decimal places (log10(denominator))
-typedef MxUInt8 MxRatio;	// ratio numerator (orders w/ multiple legs)
+using MxValue = ZuDec64Val;	// fixed point value (numerator)
+#define MxValueMin ZuDec64Min
+#define MxValueMax ZuDec64Max
+#define MxValueReset ZuDec64Reset
+using MxNDP = ZuDec64Exp;	// number of decimal places (log10(denominator))
+using MxValNDP = ZuDec64;
+
+using MxRatio = MxUInt8;	// ratio numerator (orders w/ multiple legs)
 				// (denominator is sum of individual ratios)
-#define MxValueMin (MxValue{(int64_t)-999999999999999999LL})
-#define MxValueMax (MxValue{(int64_t)999999999999999999LL})
-// MxValueReset is the distinct sentinel value used to reset values to null
-#define MxValueReset (MxValue{(int64_t)-1000000000000000000LL})
-
-// combination of value and ndp, used as a temporary for conversions & IO
-// constructors / scanning:
-//   MxValNDP(<integer>, ndp)			// {1042, 2} -> 10.42
-//   MxValNDP(<floating point>, ndp)		// {10.42, 2} -> 10.42
-//   MxValNDP(<string>, ndp)			// {"10.42", 2} -> 10.42
-//   MxValue x = MxValNDP{"42.42", 2}.value	// x == 4242
-//   MxValNDP xn{x, 2}; xn *= MxValNDP{2000, 3}; x = xn.value // x == 8484
-// printing:
-//   s << MxValNDP{...}			// print (default)
-//   s << MxValNDP{...}.fmt(ZuFmt...)	// print (compile-time formatted)
-//   s << MxValNDP{...}.vfmt(ZuVFmt...)	// print (variable run-time formatted)
-//   s << MxValNDP(x, 2)			// s << "42.42"
-//   x = 4200042;				// 42000.42
-//   s << MxValNDP(x, 2).fmt(ZuFmt::Comma<>())	// s << "42,000.42"
-
-template <typename Fmt> struct MxValNDPFmt;	// internal
-template <bool Ref = 0> struct MxValNDPVFmt;	// internal
-
-struct MxValNDP {
-  MxValue	value;
-  unsigned	ndp = 0;
-
-  ZuInline MxValNDP() { }
-
-  template <typename V>
-  ZuInline MxValNDP(V value_, unsigned ndp_,
-      typename ZuIsIntegral<V>::T *_ = 0) :
-    value(value_), ndp(ndp_) { }
-
-  template <typename V>
-  ZuInline MxValNDP(V value_, unsigned ndp_,
-      typename ZuIsFloatingPoint<V>::T *_ = 0) :
-    value((MxFloat)value_ * ZuDecimalFn::pow10_64(ndp_)), ndp(ndp_) { }
-
-  // multiply: NDP of result is taken from the LHS
-  // a 128bit integer intermediary is used to avoid overflow
-  MxValNDP operator *(const MxValNDP &v) const {
-    int128_t i = (typename MxValue::T)value;
-    i *= (typename MxValue::T)v.value;
-    i /= ZuDecimalFn::pow10_64(v.ndp);
-    if (ZuUnlikely(i >= 1000000000000000000ULL))
-      return MxValNDP{MxValue(), ndp};
-    return MxValNDP{(int64_t)i, ndp};
-  }
-
-  // divide: NDP of result is taken from the LHS
-  // a 128bit integer intermediary is used to avoid overflow
-  MxValNDP operator /(const MxValNDP &v) const {
-    int128_t i = (typename MxValue::T)value;
-    i *= ZuDecimalFn::pow10_64(v.ndp);
-    i /= (typename MxValue::T)v.value;
-    if (ZuUnlikely(i >= 1000000000000000000ULL))
-      return MxValNDP{MxValue(), ndp};
-    return MxValNDP{(int64_t)i, ndp};
-  }
-
-  // scan from string
-  template <typename S>
-  MxValNDP(const S &s_, int ndp_ = -1,
-      typename ZuIsString<S>::T *_ = 0) {
-    ZuString s(s_);
-    if (ZuUnlikely(!s || ndp_ > 18)) goto null;
-    {
-      bool negative = s[0] == '-';
-      if (ZuUnlikely(negative)) {
-	s.offset(1);
-	if (ZuUnlikely(!s)) goto null;
-      }
-      while (s[0] == '0') s.offset(1);
-      if (!s) { value = 0; return; }
-      uint64_t iv = 0, fv = 0;
-      unsigned n = s.length();
-      if (ZuUnlikely(s[0] == '.')) {
-	if (ZuUnlikely(n == 1)) { value = 0; return; }
-	if (ndp_ < 0) ndp_ = n - 1;
-	goto frac;
-      }
-      n = Zu_atou(iv, s.data(), n);
-      if (ZuUnlikely(!n)) goto null;
-      if (ZuUnlikely(n > (18 - (ndp_ < 0 ? 0 : ndp_)))) goto null; // overflow
-      s.offset(n);
-      if (ndp_ < 0) ndp_ = 18 - n;
-      if ((n = s.length()) > 1 && s[0] == '.') {
-  frac:
-	if (--n > ndp_) n = ndp_;
-	n = Zu_atou(fv, &s[1], n);
-	if (fv && ndp_ > n)
-	  fv *= ZuDecimalFn::pow10_64(ndp_ - n);
-      }
-      value = iv * ZuDecimalFn::pow10_64(ndp_) + fv;
-      if (ZuUnlikely(negative)) value = -value;
-    }
-    ndp = ndp_;
-    return;
-  null:
-    value = MxValue();
-    return;
-  }
-
-  // convert to floating point (MxFloat)
-  ZuInline MxFloat fp() const {
-    if (ZuUnlikely(!*value)) return MxFloat();
-    return (MxFloat)value / (MxFloat)ZuDecimalFn::pow10_64(ndp);
-  }
-
-  // adjust to another NDP
-  ZuInline MxValue adjust(unsigned ndp) const {
-    if (ZuLikely(ndp == this->ndp)) return value;
-    if (!*value) return MxValue();
-    return (MxValNDP{1.0, ndp} * (*this)).value;
-  }
-
-  // ! is zero, unary * is !null
-  ZuInline bool operator !() const { return !value; }
-  ZuOpBool
-
-  ZuInline bool operator *() const { return *value; }
-
-  template <typename S> void print(S &s) const;
-
-  template <typename Fmt> MxValNDPFmt<Fmt> fmt(Fmt) const;
-  MxValNDPVFmt<> vfmt() const;
-  MxValNDPVFmt<1> vfmt(ZuVFmt &) const;
-};
-template <typename Fmt> struct MxValNDPFmt {
-  const MxValNDP	&fixedNDP;
-
-  template <typename S> void print(S &s) const {
-    MxValue iv = fixedNDP.value;
-    if (ZuUnlikely(!*iv)) return;
-    if (ZuUnlikely(iv < 0)) { s << '-'; iv = -iv; }
-    uint64_t factor = ZuDecimalFn::pow10_64(fixedNDP.ndp);
-    MxValue fv = iv % factor;
-    iv /= factor;
-    s << ZuBoxed(iv).fmt(Fmt());
-    if (fv) s << '.' << ZuBoxed(fv).vfmt().frac(fixedNDP.ndp);
-  }
-};
-template <typename Fmt>
-struct ZuPrint<MxValNDPFmt<Fmt> > : public ZuPrintFn { };
-template <class Fmt>
-ZuInline MxValNDPFmt<Fmt> MxValNDP::fmt(Fmt) const
-{
-  return MxValNDPFmt<Fmt>{*this};
-}
-template <typename S> inline void MxValNDP::print(S &s) const
-{
-  s << MxValNDPFmt<ZuFmt::Default>{*this};
-}
-template <> struct ZuPrint<MxValNDP> : public ZuPrintFn { };
-template <bool Ref>
-struct MxValNDPVFmt : public ZuVFmtWrapper<MxValNDPVFmt<Ref>, Ref> {
-  const MxValNDP	&fixedNDP;
-
-  ZuInline MxValNDPVFmt(const MxValNDP &fixedNDP_) :
-    fixedNDP{fixedNDP_} { }
-  ZuInline MxValNDPVFmt(const MxValNDP &fixedNDP_, ZuVFmt &fmt_) :
-    ZuVFmtWrapper<MxValNDPVFmt, Ref>{fmt_}, fixedNDP{fixedNDP_} { }
-
-  template <typename S> void print(S &s) const {
-    MxValue iv = fixedNDP.value;
-    if (ZuUnlikely(!*iv)) return;
-    if (ZuUnlikely(iv < 0)) { s << '-'; iv = -iv; }
-    uint64_t factor = ZuDecimalFn::pow10_64(fixedNDP.ndp);
-    MxValue fv = iv % factor;
-    iv /= factor;
-    s << ZuBoxed(iv).vfmt(this->fmt);
-    if (fv) s << '.' << ZuBoxed(fv).vfmt().frac(fixedNDP.ndp);
-  }
-};
-ZuInline MxValNDPVFmt<> MxValNDP::vfmt() const
-{
-  return MxValNDPVFmt<>{*this};
-}
-ZuInline MxValNDPVFmt<1> MxValNDP::vfmt(ZuVFmt &fmt) const
-{
-  return MxValNDPVFmt<1>{*this, fmt};
-}
-template <bool Ref>
-struct ZuPrint<MxValNDPVFmt<Ref> > : public ZuPrintFn { };
 
 // MxMatch*<> - SFINAE templates used in declaring overloaded templated
 // functions that need to unambiguously specialize for the various Mx
@@ -283,7 +103,7 @@ template <typename T> struct MxIsChar { enum { OK =
 template <typename T, typename R = void, bool A = MxIsChar<T>::OK>
   struct MxMatchChar;
 template <typename U, typename R>
-  struct MxMatchChar<U, R, true> { typedef R T; };
+  struct MxMatchChar<U, R, true> { using T = R; };
 
 template <typename T> struct MxIsBool { enum { OK =
   ZuConversion<bool, T>::Same ||
@@ -291,14 +111,14 @@ template <typename T> struct MxIsBool { enum { OK =
 template <typename T, typename R = void, bool A = MxIsBool<T>::OK>
   struct MxMatchBool;
 template <typename U, typename R>
-  struct MxMatchBool<U, R, true> { typedef R T; };
+  struct MxMatchBool<U, R, true> { using T = R; };
 
 template <typename T> struct MxIsEnum { enum { OK =
   ZuConversion<MxEnum, T>::Is }; };
 template <typename T, typename R = void, bool A = MxIsEnum<T>::OK>
   struct MxMatchEnum;
 template <typename U, typename R>
-  struct MxMatchEnum<U, R, true> { typedef R T; };
+  struct MxMatchEnum<U, R, true> { using T = R; };
 
 template <typename T> struct MxIsFlags { enum { OK =
   ZuConversion<MxFlags, T>::Is ||
@@ -306,7 +126,7 @@ template <typename T> struct MxIsFlags { enum { OK =
 template <typename T, typename R = void, bool A = MxIsFlags<T>::OK>
   struct MxMatchFlags;
 template <typename U, typename R>
-  struct MxMatchFlags<U, R, true> { typedef R T; };
+  struct MxMatchFlags<U, R, true> { using T = R; };
 
 template <typename T> struct MxIsInt { enum { OK =
   ZuTraits<T>::IsReal &&
@@ -318,14 +138,14 @@ template <typename T> struct MxIsInt { enum { OK =
 template <typename T, typename R = void, bool A = MxIsInt<T>::OK>
   struct MxMatchInt;
 template <typename U, typename R>
-  struct MxMatchInt<U, R, true> { typedef R T; };
+  struct MxMatchInt<U, R, true> { using T = R; };
 
 template <typename T> struct MxIsFloat { enum { OK =
   ZuTraits<T>::IsFloatingPoint }; };
 template <typename T, typename R = void, bool A = MxIsFloat<T>::OK>
   struct MxMatchFloat;
 template <typename U, typename R>
-  struct MxMatchFloat<U, R, true> { typedef R T; };
+  struct MxMatchFloat<U, R, true> { using T = R; };
 
 template <typename T> struct MxIsString { enum { OK =
   ZuConversion<ZuStringN__, T>::Base &&
@@ -333,56 +153,56 @@ template <typename T> struct MxIsString { enum { OK =
 template <typename T, typename R = void, bool A = MxIsString<T>::OK>
   struct MxMatchString;
 template <typename U, typename R>
-  struct MxMatchString<U, R, true> { typedef R T; };
+  struct MxMatchString<U, R, true> { using T = R; };
 
 template <typename T> struct MxIsTime { enum { OK =
   ZuConversion<MxDateTime, T>::Is }; };
 template <typename T, typename R = void, bool A = MxIsTime<T>::OK>
   struct MxMatchTime;
 template <typename U, typename R>
-  struct MxMatchTime<U, R, true> { typedef R T; };
+  struct MxMatchTime<U, R, true> { using T = R; };
 
 // MxType<T>::T returns the MxType corresponding to the generic type T,
 // except that string types are passed through as is
 template <typename U> struct MxType;
 
 template <typename U, bool OK> struct MxType_Time { };
-template <typename U> struct MxType_Time<U, true> { typedef MxDateTime T; };
+template <typename U> struct MxType_Time<U, true> { using T = MxDateTime; };
 
 template <typename U, bool OK> struct MxType_String :
   public MxType_Time<U, MxIsTime<U>::OK> { };
-template <typename U> struct MxType_String<U, true> { typedef U T; };
+template <typename U> struct MxType_String<U, true> { using T = U; };
 
 template <typename U, bool OK> struct MxType_Float :
   public MxType_String<U, MxIsString<U>::OK> { };
-template <typename U> struct MxType_Float<U, true> { typedef MxFloat T; };
+template <typename U> struct MxType_Float<U, true> { using T = MxFloat; };
 
 template <bool, bool> struct MxType_Int_;
-template <> struct MxType_Int_<0, 0> { typedef MxUInt T; };
-template <> struct MxType_Int_<0, 1> { typedef MxInt T; };
-template <> struct MxType_Int_<1, 0> { typedef MxUInt64 T; };
-template <> struct MxType_Int_<1, 1> { typedef MxInt64 T; };
+template <> struct MxType_Int_<0, 0> { using T = MxUInt; };
+template <> struct MxType_Int_<0, 1> { using T = MxInt; };
+template <> struct MxType_Int_<1, 0> { using T = MxUInt64; };
+template <> struct MxType_Int_<1, 1> { using T = MxInt64; };
 template <typename U, bool OK> struct MxType_Int :
   public MxType_Float<U, MxIsFloat<U>::OK> { };
 template <typename U> struct MxType_Int<U, true> {
-  typedef typename MxType_Int_<sizeof(U) <= 4, ZuTraits<U>::IsSigned>::T T;
+  using T = typename MxType_Int_<sizeof(U) <= 4, ZuTraits<U>::IsSigned>::T;
 };
 
 template <typename U, bool OK> struct MxType_Flags :
   public MxType_Int<U, MxIsInt<U>::OK> { };
-template <typename U> struct MxType_Flags<U, true> { typedef U T; };
+template <typename U> struct MxType_Flags<U, true> { using T = U; };
 
 template <typename U, bool OK> struct MxType_Enum :
   public MxType_Flags<U, MxIsFlags<U>::OK> { };
-template <typename U> struct MxType_Enum<U, true> { typedef U T; };
+template <typename U> struct MxType_Enum<U, true> { using T = U; };
 
 template <typename U, bool OK> struct MxType_Bool :
   public MxType_Enum<U, MxIsEnum<U>::OK> { };
-template <typename U> struct MxType_Bool<U, true> { typedef MxBool T; };
+template <typename U> struct MxType_Bool<U, true> { using T = MxBool; };
 
 template <typename U, bool OK> struct MxType_Char :
   public MxType_Bool<U, MxIsBool<U>::OK> { };
-template <typename U> struct MxType_Char<U, true> { typedef MxChar T; };
+template <typename U> struct MxType_Char<U, true> { using T = MxChar; };
 
 template <typename U> struct MxType :
     public MxType_Char<U, MxIsChar<U>::OK> { };
@@ -398,8 +218,8 @@ template <typename U> struct MxType :
 #define MxTxtSize 124	// text field size (alerts, error messages, etc.)
 #endif
 
-typedef MxString<MxIDStrSize> MxIDString;
-typedef MxString<MxTxtSize> MxTxtString;
+using MxIDString = MxString<MxIDStrSize>;
+using MxTxtString = MxString<MxTxtSize>;
 
 #define MxEnumValues ZtEnumValues
 #define MxEnumNames ZtEnumNames
@@ -594,7 +414,7 @@ template <> struct ZuTraits<MxSymKey> : public ZuGenericTraits<MxSymKey> {
 };
 template <> struct ZuPrint<MxSymKey> : public ZuPrintFn { };
 
-typedef MxUInt MxFutKey;	// mat
+using MxFutKey = MxUInt;	// mat
 
 struct MxOptKey {
   MxValue	strike;

@@ -289,6 +289,7 @@ namespace ZuSeries {
 	  value >>= 8; *m_start++ = value & 0xff;
 	  value >>= 8; *m_start++ = value & 0xff;
 	  value >>= 8; *m_start++ = value;
+	  break;
 	case 6: // 64 bits
 	  *m_start++ = negative | 0x3f;
 	  *reinterpret_cast<uint64_t *>(m_start) = value; // misaligned
@@ -381,6 +382,7 @@ namespace ZuSeries {
     bool writeSecond(int64_t value) {
       int64_t delta = value - m_base;
       if (ZuUnlikely(!writeValue<false>(delta))) return false;
+      m_base = value;
       m_delta = delta;
       m_writeFn = &Delta2Writer::writeNext;
       return true;

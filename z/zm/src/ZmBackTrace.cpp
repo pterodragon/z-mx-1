@@ -238,7 +238,8 @@ friend class BFD;
     asymbol		**m_symbols;
   };
 
-  struct BFD_Find {
+  class BFD_Find {
+  public:
     struct Info {
       uintptr_t		addr;
       const char	*name;

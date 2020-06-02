@@ -19,6 +19,8 @@
 
 // thread class
 
+#include <zlib/ZuLib.hpp>
+
 #include <stdio.h>
 
 #ifndef _WIN32
@@ -127,9 +129,9 @@ void ZmThreadContext::init()
     pthread_attr_getstacksize(&attr, &n);
     m_stackSize = n;
 #else /* !_WIN32 */
-    PULONG low, high;
-    void GetCurrentThreadStackLimits(&low, &high);
-    m_stackSize = (high - low) * sizeof(ULONG);
+    ULONG_PTR low, high;
+    GetCurrentThreadStackLimits(&low, &high);
+    m_stackSize = high - low;
 #endif /* !_WIN32 */
   }
   if (!m_name) {

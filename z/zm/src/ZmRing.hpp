@@ -114,11 +114,11 @@ protected:
 
 #ifdef _WIN32
 #define ZmRing_wait(index, addr, val) wait(index, addr, val)
-#define ZmRing_wake(index, addr, n) wake(index, n)
+#define ZmRing_wake(index, addr, n) wake(index, addr, n)
   // block until woken or timeout while addr == val
   int wait(unsigned index, ZmAtomic<uint32_t> &addr, uint32_t val);
   // wake up waiters on addr (up to n waiters are woken)
-  int wake(unsigned index, int n);
+  int wake(unsigned index, ZmAtomic<uint32_t> &addr, int n);
 #endif
 
 public:

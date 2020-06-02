@@ -24,7 +24,7 @@ AC_DEFUN([AX_PATH_LIB_PCAP], [
     OLDLDFLAGS="$LDFLAGS"
     if test ".$with_pcap" != "." -a ".$with_pcap" != ".yes"; then
       CPPFLAGS="-I$with_pcap/include $CPPFLAGS"
-      LDFLAGS="-L$with_pcap/lib -L$with_pcap/lib64 -Wl,-R,$with_pcap/lib -Wl,-R,$with_pcap/lib64 $LDFLAGS"
+      LDFLAGS="-L$with_pcap/lib -L$with_pcap/lib/x64 -Wl,-R,$with_pcap/lib -Wl,-R,$with_pcap/lib/x64 $LDFLAGS"
     fi
     AC_CHECK_LIB(pcap, pcap_strerror)
     if test ".$ac_cv_lib_pcap_pcap_strerror" != ".yes"; then
@@ -44,8 +44,8 @@ AC_DEFUN([AX_PATH_LIB_PCAP], [
       PCAP_LDFLAGS=""
       PCAP_CPPFLAGS=""
       if test ".$with_pcap" != "." -a ".$with_pcap" != ".yes"; then
-	AC_MSG_NOTICE([PCAP_LDFLAGS=-L$with_pcap/lib -L$with_pcap/lib64])
-	PCAP_LDFLAGS="-L$with_pcap/lib -L$with_pcap/lib64 -Wl,-R,$with_pcap/lib -Wl,-R,$with_pcap/lib64"
+	AC_MSG_NOTICE([PCAP_LDFLAGS=-L$with_pcap/lib -L$with_pcap/lib/x64])
+	PCAP_LDFLAGS="-L$with_pcap/lib -L$with_pcap/lib/x64 -Wl,-R,$with_pcap/lib -Wl,-R,$with_pcap/lib/x64"
 	if test -d "$with_pcap/include"; then
 	  AC_MSG_NOTICE([PCAP_CPPFLAGS=-I$with_pcap/include])
 	  PCAP_CPPFLAGS="-I$with_pcap/include"

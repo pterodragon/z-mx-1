@@ -41,7 +41,7 @@ case $build_os in
       x86_64) mingw64=yes;;
       *) ;;
     esac
-    Z_CXXFLAGS="-mthreads"
+    Z_CXXFLAGS=""
     Z_LDFLAGS="-Wl,--enable-auto-import"
     Z_SO_LDFLAGS="-no-undefined"
     Z_MT_LIBS="$CK_LIBS $HWLOC_LIBS"
@@ -66,10 +66,6 @@ AX_PATH_JNI([jni="yes"], [dnl
   jni="no"
 ])
 
-AX_PATH_LIB_PCAP(, [AC_MSG_ERROR([libpcap required])])
-CPPFLAGS="$PCAP_CPPFLAGS $CPPFLAGS"
-LDFLAGS="$PCAP_LDFLAGS $LDFLAGS"
-
 AX_PATH_LIB_LZ4(, [AC_MSG_ERROR([liblz4 required])])
 CPPFLAGS="$LZ4_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$LZ4_LDFLAGS $LDFLAGS"
@@ -81,9 +77,6 @@ LDFLAGS="$MBEDTLS_LDFLAGS $LDFLAGS"
 AX_PATH_LIB_FLATBUFFERS(, [AC_MSG_ERROR([libflatbuffers required])])
 CPPFLAGS="$FLATBUFFERS_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$FLATBUFFERS_LDFLAGS $LDFLAGS"
-
-AX_PATH_LIB_CPPCODEC(, [AC_MSG_ERROR([libcppcodec required])])
-CPPFLAGS="$CPPCODEC_CPPFLAGS $CPPFLAGS"
 
 if test ".$mingw" != ".yes"; then
   AC_ARG_ENABLE([netlink],
@@ -141,15 +134,21 @@ AC_SUBST(Z_ZT_LIBS)
 AC_SUBST(Z_IO_LIBS)
 
 AC_SUBST(JNI_CPPFLAGS)
-AC_SUBST(PCAP_LIBS)
 AC_SUBST(LZ4_LIBS)
 AC_SUBST(MBEDTLS_LIBS)
 AC_SUBST(FLATBUFFERS_LIBS)
 AC_SUBST(READLINE_LIBS)
 
-for i in zu zm zjni zt ze zi ztls zfb zv zdb zrl zgtk
-do ( cd $i/src; test ! -e AC_PACKAGE_NAME && ln -s . AC_PACKAGE_NAME )
-done
+for i in zu zm zjni zt ze zi ztls zfb zv zdb zrl; do (
+  cd $i/src
+  if test ! -e AC_PACKAGE_NAME; then
+    if test ".$mingw" != ".yes"; then
+      ln -s . AC_PACKAGE_NAME
+    else
+      env MSYS2_ARG_CONV_EXCL="*" cmd /c mklink /d AC_PACKAGE_NAME .
+    fi
+  fi
+); done
 
 AC_OUTPUT(Makefile \
 	zu/Makefile zu/src/Makefile zu/test/Makefile \

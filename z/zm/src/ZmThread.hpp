@@ -189,7 +189,7 @@ public:
     if (ZuUnlikely(!cpuLast || !rtLast)) return 0.0;
     return (double)(m_cpuLast - cpuLast) / (double)(m_rtLast - rtLast);
   }
-  int32_t sysPriority() {
+  int32_t sysPriority() const {
     return GetThreadPriority(m_handle);
   }
 #endif /* !_WIN32 */
@@ -416,10 +416,10 @@ template <> struct ZuPrint<ZmThread::CSV> : public ZuPrintFn { };
 
 #include <zlib/ZmSpecific.hpp>
 
-inline ZmThreadContext *ZmThreadContext::self() {
+ZmThreadContext *ZmThreadContext::self() {
   return ZmSpecific<ZmThreadContext>::instance();
 }
-inline ZmThreadContext *ZmThreadContext::self(ZmThreadContext *c) {
+ZmThreadContext *ZmThreadContext::self(ZmThreadContext *c) {
   return ZmSpecific<ZmThreadContext>::instance(c);
 }
 

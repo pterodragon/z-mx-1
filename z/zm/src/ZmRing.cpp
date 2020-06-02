@@ -120,7 +120,7 @@ int ZmRing_::wait(unsigned index, ZmAtomic<uint32_t> &addr, uint32_t val)
   return OK;
 }
 
-int ZmRing_::wake(unsigned index, int n)
+int ZmRing_::wake(unsigned index, ZmAtomic<uint32_t> &addr, int n)
 {
   addr &= ~Waiting;
   ReleaseSemaphore(m_sem[index], n, 0);

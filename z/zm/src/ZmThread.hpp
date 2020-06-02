@@ -248,7 +248,7 @@ public:
   void prioritize(int priority);
   void bind(unsigned partition, const ZmBitmap &cpuset);
 
-  static ZmThreadContext *self();
+  inline static ZmThreadContext *self();
 
   ZuInline ZmThreadID tid() const {
 #ifndef _WIN32
@@ -285,7 +285,7 @@ public:
   }
 
 private:
-  static ZmThreadContext *self(ZmThreadContext *c);
+  inline static ZmThreadContext *self(ZmThreadContext *c);
 
   void prioritize();
   void bind();
@@ -416,10 +416,10 @@ template <> struct ZuPrint<ZmThread::CSV> : public ZuPrintFn { };
 
 #include <zlib/ZmSpecific.hpp>
 
-ZmThreadContext *ZmThreadContext::self() {
+inline ZmThreadContext *ZmThreadContext::self() {
   return ZmSpecific<ZmThreadContext>::instance();
 }
-ZmThreadContext *ZmThreadContext::self(ZmThreadContext *c) {
+inline ZmThreadContext *ZmThreadContext::self(ZmThreadContext *c) {
   return ZmSpecific<ZmThreadContext>::instance(c);
 }
 

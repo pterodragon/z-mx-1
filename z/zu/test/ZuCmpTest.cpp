@@ -337,8 +337,10 @@ int main()
     CHECK((ZuCmp<ZuTuple<int, const S &, const S &> >::cmp(t2, t1) > 0));
     ZuTuple<int, const S &, const S &> t3 = ZuMkTuple(42, s3, s3);
     CHECK((ZuCmp<ZuTuple<int, const S &, const S &> >::cmp(t1, t3) < 0));
+    S s4{"hello"};
+    S s5{"world"};
     CHECK((ZuCmp<ZuTuple<int, const S &, const S &> >::cmp(t1,
-	    ZuMkTuple(42, "hello", "world")) > 0));
+	    ZuMkTuple(42, s4, s5)) > 0));
     // ZuTuple<int, const S &, const S &> t4(42, "string1", "string2");
     // CHECK((ZuCmp<ZuTuple<int, const S &, const S &> >::cmp(t4, t2) < 0));
   }

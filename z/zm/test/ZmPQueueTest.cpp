@@ -100,7 +100,7 @@ int main()
   enqueue(q, 4, 3); // should be head- and tail-clipped, trigger dequeue
 
   enqueue(q, 15, 1);
-  assert(q.gap() == ZuMkPair(14, 1));
+  assert(q.gap().equals(ZuMkPair(14, 1)));
   enqueue(q, 17, 1);
   enqueue(q, 19, 1);
   enqueue(q, 21, 3);
@@ -122,8 +122,8 @@ int main()
 
   head(q, 12); // should leave 12+2 in place
   enqueue(q, 15, 1);
-  assert(q.gap() == ZuMkPair(14, 1));
+  assert(q.gap().equals(ZuMkPair(14, 1)));
   dequeue(q);
-  assert(q.gap() == ZuMkPair(14, 1));
+  assert(q.gap().equals(ZuMkPair(14, 1)));
   enqueue(q, 14, 1);
 }

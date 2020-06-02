@@ -1,5 +1,7 @@
 #include <stdlib.h>
+#ifndef _WIN32
 #include <alloca.h>
+#endif
 
 #include <iostream>
 #include <string>

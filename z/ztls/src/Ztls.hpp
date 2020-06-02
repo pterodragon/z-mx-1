@@ -452,7 +452,7 @@ private:
   uint8_t		m_rxOutBuf[MBEDTLS_SSL_MAX_CONTENT_LEN];
 
   // Contended
-  ZmAtomic<uint>	m_disconnecting = 0;
+  ZmAtomic<unsigned>	m_disconnecting = 0;
 };
 
 // client links are persistent, own the (transient) connection

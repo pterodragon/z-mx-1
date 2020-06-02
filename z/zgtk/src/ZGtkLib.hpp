@@ -30,7 +30,7 @@
 
 #ifdef _WIN32
 
-#ifdef ZI_EXPORTS
+#ifdef ZGTK_EXPORTS
 #define ZGtkAPI ZuExport_API
 #define ZGtkExplicit ZuExport_Explicit
 #else

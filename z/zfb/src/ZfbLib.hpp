@@ -30,7 +30,7 @@
 
 #ifdef _WIN32
 
-#ifdef ZI_EXPORTS
+#ifdef ZFB_EXPORTS
 #define ZfbAPI ZuExport_API
 #define ZfbExplicit ZuExport_Explicit
 #else

@@ -30,7 +30,7 @@
 
 #ifdef _WIN32
 
-#ifdef ZI_EXPORTS
+#ifdef ZTLS_EXPORTS
 #define ZtlsAPI ZuExport_API
 #define ZtlsExplicit ZuExport_Explicit
 #else

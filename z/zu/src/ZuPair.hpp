@@ -201,24 +201,12 @@ public:
 		       typename ZuDecay<P1>::T>::Is)>::T *_ = 0) :
     m_p0(ZuFwd<P0>(p0)), m_p1(ZuFwd<P1>(p1)) { }
 
-  template <typename P0, typename P1>
-  ZuInline bool operator ==(const ZuPair<P0, P1> &p) const
-    { return equals(p); }
-  template <typename P0, typename P1>
-  ZuInline bool operator !=(const ZuPair<P0, P1> &p) const
-    { return !equals(p); }
-  template <typename P0, typename P1>
-  ZuInline bool operator >(const ZuPair<P0, P1> &p) const
-    { return cmp(p) > 0; }
-  template <typename P0, typename P1>
-  ZuInline bool operator >=(const ZuPair<P0, P1> &p) const
-    { return cmp(p) >= 0; }
-  template <typename P0, typename P1>
-  ZuInline bool operator <(const ZuPair<P0, P1> &p) const
-    { return cmp(p) < 0; }
-  template <typename P0, typename P1>
-  ZuInline bool operator <=(const ZuPair<P0, P1> &p) const
-    { return cmp(p) <= 0; }
+  ZuInline bool operator ==(const ZuPair &p) const { return equals(p); }
+  ZuInline bool operator !=(const ZuPair &p) const { return !equals(p); }
+  ZuInline bool operator >(const ZuPair &p) const { return cmp(p) > 0; }
+  ZuInline bool operator >=(const ZuPair &p) const { return cmp(p) >= 0; }
+  ZuInline bool operator <(const ZuPair &p) const { return cmp(p) < 0; }
+  ZuInline bool operator <=(const ZuPair &p) const { return cmp(p) <= 0; }
 
   template <typename P0, typename P1>
   ZuInline bool equals(const ZuPair<P0, P1> &p) const {

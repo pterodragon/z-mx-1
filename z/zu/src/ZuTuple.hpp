@@ -162,18 +162,12 @@ public:
     return *this;
   }
 
-  template <typename P0>
-  ZuInline bool operator ==(const ZuTuple<P0> &p) const { return equals(p); }
-  template <typename P0>
-  ZuInline bool operator !=(const ZuTuple<P0> &p) const { return !equals(p); }
-  template <typename P0>
-  ZuInline bool operator >(const ZuTuple<P0> &p) const { return cmp(p) > 0; }
-  template <typename P0>
-  ZuInline bool operator >=(const ZuTuple<P0> &p) const { return cmp(p) >= 0; }
-  template <typename P0>
-  ZuInline bool operator <(const ZuTuple<P0> &p) const { return cmp(p) < 0; }
-  template <typename P0>
-  ZuInline bool operator <=(const ZuTuple<P0> &p) const { return cmp(p) <= 0; }
+  ZuInline bool operator ==(const ZuTuple &p) const { return equals(p); }
+  ZuInline bool operator !=(const ZuTuple &p) const { return !equals(p); }
+  ZuInline bool operator >(const ZuTuple &p) const { return cmp(p) > 0; }
+  ZuInline bool operator >=(const ZuTuple &p) const { return cmp(p) >= 0; }
+  ZuInline bool operator <(const ZuTuple &p) const { return cmp(p) < 0; }
+  ZuInline bool operator <=(const ZuTuple &p) const { return cmp(p) <= 0; }
 
   template <typename P0>
   ZuInline bool equals(const ZuTuple<P0> &p) const {

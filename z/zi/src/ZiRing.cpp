@@ -179,7 +179,7 @@ int ZiRing_::wait(unsigned index, ZmAtomic<uint32_t> &addr, uint32_t val)
   return Zi::OK;
 }
 
-int ZiRing_::wake(unsigned index, int n)
+int ZiRing_::wake(unsigned index, ZmAtomic<uint32_t> &addr, int n)
 {
   addr &= ~Waiting;
   ReleaseSemaphore(m_sem[index], n, 0);

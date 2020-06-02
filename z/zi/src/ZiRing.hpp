@@ -188,11 +188,11 @@ protected:
 
 #ifdef _WIN32
 #define ZiRing_wait(index, addr, val) wait(index, addr, val)
-#define ZiRing_wake(index, addr, n) wake(index, n)
+#define ZiRing_wake(index, addr, n) wake(index, addr, n)
   // block until woken or timeout while addr == val
   int wait(unsigned index, ZmAtomic<uint32_t> &addr, uint32_t val);
   // wake up waiters on addr (up to n waiters are woken)
-  int wake(unsigned index, int n);
+  int wake(unsigned index, ZmAtomic<uint32_t> &addr, int n);
 #endif
 
   static void getpinfo(uint32_t &pid, ZmTime &start);

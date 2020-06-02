@@ -1951,7 +1951,7 @@ int ZiMultiplex::start()
   }
 
   m_completionPort =
-    CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, nThreads());
+    CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, params().nThreads());
   if (!m_completionPort) {
     ZeError e(GetLastError());
     WSACleanup();
@@ -2131,7 +2131,7 @@ void ZiMultiplex::rx()
   for (;;) {
     ZiDEBUG(this, ZtSprintf(
 	  "wait() nThreads: % 2d nConnections: % 4d nListeners: % 3d",
-	  nThreads(), m_cxns->count(), m_listeners->count()));
+	  params().nThreads(), m_cxns->count_(), m_listeners->count_()));
     if (!GetQueuedCompletionStatus(
 	  m_completionPort, &len, &key, (OVERLAPPED **)&overlapped, INFINITE)) {
       e = GetLastError();

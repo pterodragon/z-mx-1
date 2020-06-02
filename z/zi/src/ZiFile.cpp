@@ -90,7 +90,7 @@ private:
     ZmRBTree<ZtWString,
       ZmRBTreeVal<char,
 	ZmRBTreeLock<ZmNoLock> > >;
-  using DriveBlkSize =
+  using DriveBlkSizes =
     ZmRBTree<char,
       ZmRBTreeVal<int,
 	ZmRBTreeLock<ZmNoLock> > >;
@@ -201,7 +201,7 @@ void ZiFile_WindowsDrives::dump_()
 
 int ZiFile_WindowsDrives::blkSize_path(ZtWString path)
 {
-  if (!path.cmp(L"\\\\?\\", 4)) path = path.splice(4);
+  if (!path.cmp(L"\\\\?\\", 4)) path.splice(4);
 
   int dl = 0;
   if (path[1] == ':')

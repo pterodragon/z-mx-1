@@ -94,6 +94,21 @@ namespace ZvCSV_ {
   }
 }
 
+class ZvAPI ZvCSV_FileIOError : public ZvError {
+public:
+  template <typename FileName>
+  ZvCSV_FileIOError(const FileName &fileName, ZeError e) :
+    m_fileName(fileName), m_error(e) { }
+
+  void print_(ZmStream &s) const {
+    s << "\"" << m_fileName << "\" " << m_error;
+  }
+
+private:
+  ZtString	m_fileName;
+  ZeError	m_error;
+};
+
 template <typename T> class ZvCSV {
   ZvCSV(const ZvCSV &) = delete;
   ZvCSV &operator =(const ZvCSV &) = delete;
@@ -197,20 +212,7 @@ private:
   }
 
 public:
-  class ZvAPI FileIOError : public ZvError {
-  public:
-    template <typename FileName>
-    FileIOError(const FileName &fileName, ZeError e) :
-      m_fileName(fileName), m_error(e) { }
-
-    void print_(ZmStream &s) const {
-      s << "\"" << m_fileName << "\" " << m_error;
-    }
-
-  private:
-    ZtString	m_fileName;
-    ZeError	m_error;
-  };
+  using FileIOError = ZvCSV_FileIOError;
 
   template <typename Alloc, typename Read>
   void readFile(const char *fileName, Alloc alloc, Read read) const {

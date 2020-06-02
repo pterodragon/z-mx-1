@@ -123,7 +123,10 @@ if test ".$MX_CLANG" = ".yes"; then
   Z_CXXFLAGS="$Z_CXXFLAGS -Wno-unused-local-typedef -Wno-empty-body -Wno-c++11-extensions"
 fi
 
-AC_CHECK_PROG(PERL, "perl")
+AC_CHECK_PROG(PERL, "perl", "yes", "no")
+if test ".$PERL" = ".no"; then
+  AC_MSG_ERROR([perl required])
+fi
 
 CPPFLAGS=`echo $CPPFLAGS | perl -pe 's/-I(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$I{$1}++ ? "" : "-I${1}${2}"/ge;'`
 LDFLAGS=`echo $LDFLAGS | perl -pe 's/-L(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$L{$1}++ ? "" : "-L${1}${2}"/ge; s/(-Wl,)?-R,(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$R{$2}++ ? "" : "${1}-R,${2}${3}"/ge'`
@@ -142,7 +145,7 @@ AC_SUBST(MBEDTLS_LIBS)
 AC_SUBST(FLATBUFFERS_LIBS)
 AC_SUBST(READLINE_LIBS)
 
-for i in zu zm zjni zt ze zi ztls zfb zv zdb zrl; do (
+for i in zu zm zjni zt ze zi ztls zfb zv zdb zrl zgtk; do (
   cd $i/src
   if test ! -e AC_PACKAGE_NAME; then
     if test ".$mingw" != ".yes"; then

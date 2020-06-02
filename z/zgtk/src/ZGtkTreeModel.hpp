@@ -635,7 +635,7 @@ namespace TreeNode {
     template <typename L>
     bool child(gint, L l) const { return false; }
     template <typename L>
-    auto descend(const gint *, unsigned, L &l) const { return l(this); }
+    bool descend(const gint *, unsigned, L &l) const { l(this); return true; }
   };
 
   // parent of array of homogenous Children
@@ -652,11 +652,10 @@ namespace TreeNode {
       return true;
     }
     template <typename L>
-    auto descend(const gint *indices, unsigned n, L &l) const {
-      if (!n) return l(this);
+    bool descend(const gint *indices, unsigned n, L &l) const {
+      if (!n) { l(this); return true; }
       auto i = indices[0];
-      if (i < 0 || i >= m_index.length())
-	return decltype(l(decltype(m_index[0]){})){};
+      if (i < 0 || i >= m_index.length()) return false;
       ++indices, --n;
       return m_index[i]->descend(indices, n, l);
     }
@@ -694,9 +693,10 @@ namespace TreeNode {
       return true;
     }
     template <typename L>
-    auto descend(const gint *indices, unsigned n, L &l) const {
-      if (!n) return l(this);
+    bool descend(const gint *indices, unsigned n, L &l) const {
+      if (!n) { l(this); return true; }
       auto i = indices[0];
+      if (ZuUnlikely(i < 0 || i >= Tuple::N)) return false;
       ++indices, --n;
       return Tuple::dispatch(i, [indices, n, &l](auto &child) {
 	return child.descend(indices, n, l);
@@ -727,12 +727,14 @@ public:
   }
   gint get_n_columns() { return 1; }
   GType get_column_type(gint i) { return G_TYPE_STRING; }
-  gboolean get_iter_(GtkTreeIter *iter_, GtkTreePath *path) {
+  gboolean get_iter(GtkTreeIter *iter_, GtkTreePath *path) {
     gint depth = gtk_tree_path_get_depth(path);
+    if (!depth) return false;
     gint *indices = gtk_tree_path_get_indices(path);
     impl()->root()->descend(indices, depth, [iter_](auto ptr) {
       *Iter::template new_<typename ZuDecay<decltype(ptr)>::T>(iter_) = ptr;
     });
+    return true;
   }
   GtkTreePath *get_path(GtkTreeIter *iter_) {
     auto iter = reinterpret_cast<Iter *>(iter_);

@@ -95,7 +95,6 @@ static ZtString getpass_(const ZtString &prompt, unsigned passLen)
   ReadConsole(h, passwd.data(), passwd.size() - 1, &n, nullptr);
   if (n < passwd.size()) passwd.length(n);
   WriteConsole(h, "\r\n", 2, &n, nullptr);
-  mode |= ENABLE_ECHO_INPUT;
   SetConsoleMode(h, omode);
 #else
   int fd = ::open("/dev/tty", O_RDWR, 0);
@@ -139,7 +138,7 @@ public:
   ~TelCap() { m_fn(nullptr); }
 
   template <typename Data, typename FBS>
-  static TelCap keyedFn(const char *path) {
+  static TelCap keyedFn(ZtString path) {
     using Key = typename DeduceKey<Data>::T;
     struct Accessor : public ZuAccessor<Data, typename ZuDecay<Key>::T> {
       static Key value(const Data &data) { return data.key(); }
@@ -169,7 +168,7 @@ public:
   }
 
   template <typename Data, typename FBS>
-  static TelCap singletonFn(const char *path) {
+  static TelCap singletonFn(ZtString path) {
     return TelCap{[
 	l = ZvCSV<Data>{}.writeFile(path)](const void *fbs_) mutable {
       if (!fbs_) {
@@ -187,7 +186,7 @@ public:
   }
 
   template <typename Data, typename FBS>
-  static TelCap alertFn(const char *path) {
+  static TelCap alertFn(ZtString path) {
     return TelCap{[
 	l = ZvCSV<Data>{}.writeFile(path)](const void *fbs_) mutable {
       if (!fbs_) {

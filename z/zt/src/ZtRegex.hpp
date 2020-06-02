@@ -41,7 +41,7 @@
 
 #include <zlib/ZtString.hpp>
 
-struct ZtRegexError {
+struct ZtAPI ZtRegexError {
   const char	*message = 0;
   int		code;
   int		offset;

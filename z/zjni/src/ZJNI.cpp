@@ -73,6 +73,7 @@ void ZJNI_sig(int s)
 BOOL WINAPI ZJNI_handler(DWORD)
 {
   ZJNI_sem.post();
+  return TRUE;
 }
 #endif
 

@@ -35,8 +35,6 @@
 #include <zlib/ZmPolymorph.hpp>
 #include <zlib/ZmHeap.hpp>
 
-#include <zlib/ZtString.hpp>
-
 #pragma pack(push, 2)
 struct ZiAnyIOBuf : public ZmPolymorph {
   ZuInline ZiAnyIOBuf(uint32_t size_, uint32_t length_ = 0) :
@@ -73,6 +71,10 @@ public:
     }
   }
 
+  ZuInline const uint8_t *data() const {
+    const uint8_t *ptr = ZuUnlikely(jumbo) ? jumbo : data_;
+    return ptr + skip;
+  }
   ZuInline uint8_t *data() {
     uint8_t *ptr = ZuUnlikely(jumbo) ? jumbo : data_;
     return ptr + skip;
@@ -221,14 +223,14 @@ public:
 #pragma pack(pop)
 
 struct ZiIOBuf_HeapID {
-  ZuInline static const char *id() { return "ZiIOBuf"; }
+  static const char *id() { return "ZiIOBuf"; }
 };
 template <unsigned Size>
 using ZiIOBuf_Heap = ZmHeap<ZiIOBuf_HeapID, sizeof(ZiIOBuf_<Size, ZuNull>)>;
  
 // TCP over Ethernet maximum payload is 1460 (without Jumbo frames)
 template <unsigned Size = 1460>
-using ZiIOBuf = ZiIOBuf_<Size, ZiIOBuf_Heap<Size> >;
+using ZiIOBuf = ZiIOBuf_<Size, ZiIOBuf_Heap<Size>>;
 
 // generic ZiIOBuf receiver
 template <typename Buf_> class ZiIORx {

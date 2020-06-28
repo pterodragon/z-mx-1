@@ -97,7 +97,7 @@ private:
 };
 
 struct ZvIOMsg_HeapID {
-  ZuInline static const char *id() { return "ZvIOMsg"; }
+  static const char *id() { return "ZvIOMsg"; }
 };
 using ZvIOQueue =
   ZmPQueue<ZvIOQItem,
@@ -334,7 +334,7 @@ private:
 template <class Impl, class Lock_ = ZmNoLock>
 class ZvIOQueueTxPool : public ZvIOQueueTx<Impl, Lock_> {
   struct Queues_HeapID {
-    ZuInline static const char *id() { return "ZvIOQueueTxPool.Queues"; }
+    static const char *id() { return "ZvIOQueueTxPool.Queues"; }
   };
 
   using Gap = ZvIOQueue::Gap;

@@ -182,7 +182,7 @@ struct ZmHash_Defaults {
   enum { NodeIsVal = 0 };
   using Lock = ZmLock;
   using Object = ZmObject;
-  struct HeapID { ZuInline static const char *id() { return "ZmHash"; } };
+  struct HeapID { static const char *id() { return "ZmHash"; } };
   using ID = HeapID;
 };
 

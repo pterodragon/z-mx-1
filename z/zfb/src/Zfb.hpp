@@ -41,6 +41,8 @@
 
 #include <zlib/ZtDate.hpp>
 
+#include <zlib/ZePlatform.hpp>
+
 #include <zlib/ZiIOBuf.hpp>
 
 #include <zlib/types_fbs.h>
@@ -224,6 +226,9 @@ namespace Save {
   ZuInline auto dateTime(B &b, const ZtDate &v) {
     return CreateDateTime(b, v.julian(), v.sec(), v.nsec());
   }
+
+  // save file
+  ZfbExtern int save(ZuString path, Builder &fbb, ZeError *e);
 }
 
 namespace Load {
@@ -269,6 +274,10 @@ namespace Load {
   ZuInline ZtDate dateTime(const DateTime *v) {
     return ZtDate{ZtDate::Julian, v->julian(), v->sec(), v->nsec()};
   }
+
+  // load file
+  using LoadFn = ZmFn<const uint8_t *, unsigned>;
+  ZfbExtern int load(ZuString path, LoadFn, unsigned maxSize, ZeError *e);
 }
 
 } // Zfb

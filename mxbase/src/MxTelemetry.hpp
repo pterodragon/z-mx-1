@@ -166,7 +166,7 @@ namespace MxTelemetry {
 namespace MxTelemetry {
 
   struct Msg_HeapID {
-    ZuInline static const char *id() { return "MxTelemetry.Msg"; }
+    static const char *id() { return "MxTelemetry.Msg"; }
   };
 
   template <typename Heap>

@@ -1,0 +1,5 @@
+include "types.fbs";
+namespace ZvDataFrame.fbs;
+table DataFrame {
+  epoch:Zfb.DateTime;
+}

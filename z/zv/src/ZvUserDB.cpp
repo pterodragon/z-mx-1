@@ -28,10 +28,12 @@
 
 namespace ZvUserDB {
 
-Mgr::Mgr(Ztls::Random *rng, unsigned passLen, unsigned totpRange) :
+Mgr::Mgr(Ztls::Random *rng, unsigned passLen, unsigned totpRange,
+    unsigned maxSize) :
   m_rng(rng),
   m_passLen(passLen),
-  m_totpRange(totpRange)
+  m_totpRange(totpRange),
+  m_maxSize(maxSize)
 {
   m_users = new UserIDHash();
   m_userNames = new UserNameHash();
@@ -186,35 +188,11 @@ Zfb::Offset<fbs::UserDB> Mgr::save(Zfb::Builder &fbb) const
 
 int Mgr::load(ZuString path, ZeError *e)
 {
-  ZiFile f;
-  int i;
-
-  if ((i = f.open(path, ZiFile::ReadOnly, 0, e)) != Zi::OK) return i;
-  ZiFile::Offset len = f.size();
-  if (!len || len >= (ZiFile::Offset)INT_MAX) {
-    f.close();
-    if (e) *e = ZiENOMEM;
-    return Zi::IOError;
-  }
-  uint8_t *buf = (uint8_t *)::malloc(len);
-  if (!buf) {
-    f.close();
-    if (e) *e = ZiENOMEM;
-    return Zi::IOError;
-  }
-  if ((i = f.read(buf, len, e)) < len) {
-    ::free(buf);
-    f.close();
-    return Zi::IOError;
-  }
-  f.close();
-  if (!load(buf, len)) {
-    ::free(buf);
-    if (e) *e = ZiEINVAL;
-    return Zi::IOError;
-  }
-  ::free(buf);
-  return Zi::OK;
+  using namespace Zfb::Load;
+  return load(path,
+      LoadFn{this, [](Mgr *this_, const uint8_t *buf, unsigned len) {
+	return this_->load(buf, len);
+      }}, m_maxSize, e);
 }
 
 int Mgr::save(ZuString path, unsigned maxAge, ZeError *e)
@@ -224,27 +202,7 @@ int Mgr::save(ZuString path, unsigned maxAge, ZeError *e)
 
   if (maxAge) ZiFile::age(path, maxAge);
 
-  ZiFile f;
-  int i;
-  
-  if ((i = f.open(path,
-	  ZiFile::Create | ZiFile::WriteOnly, 0600, e)) != Zi::OK)
-    return i;
-
-  uint8_t *buf = fbb.GetBufferPointer();
-  int len = fbb.GetSize();
-
-  if (!buf || len <= 0) {
-    f.close();
-    if (e) *e = ZiENOMEM;
-    return Zi::IOError;
-  }
-  if ((i = f.write(buf, len, e)) != Zi::OK) {
-    f.close();
-    return i;
-  }
-  f.close();
-  return Zi::OK;
+  return Zfb::Save::save(path, fbb, e);
 }
 
 bool Mgr::modified() const

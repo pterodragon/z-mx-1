@@ -21,6 +21,7 @@ struct B {
 struct C {
   template <typename T>
   void baz(T t) { int i = t; printf("baz %d\n", i); }
+  void operator ()() const { puts("C"); }
 };
 
 ZuCan(foo, CanFoo);
@@ -42,6 +43,11 @@ typename ZuIfT<CanBaz<T, void (T::*)(int)>::OK>::T baz(T *t, int i) { t->baz(i);
 template <typename T>
 typename ZuIfT<!CanBaz<T, void (T::*)(int)>::OK>::T baz(T *, int) { }
 
+template <typename T>
+typename ZuIfT<ZuCanOpFn<T, void (T::*)() const>::OK>::T fn(T *t) { t->operator ()(); }
+template <typename T>
+typename ZuIfT<!ZuCanOpFn<T, void (T::*)() const>::OK>::T fn(T *) { }
+
 int main()
 {
   A a;
@@ -53,4 +59,6 @@ int main()
   bar<B>(44);
   baz(&a, 45); // cannot
   baz(&c, 46);
+  fn(&a); // cannot
+  fn(&c);
 }

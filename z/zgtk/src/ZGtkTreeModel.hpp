@@ -559,8 +559,10 @@ public:
     GtkSortType order;
     gint row;
     if (this->get_sort_column_id(&col, &order)) {
-      row = ZuSearchPos(
-	  ZuSearch<false>(&m_rows[0], m_rows.length(), iter, cmp_(col, order)));
+      row = ZuSearchPos(ZuSearch<false>(&m_rows[0], m_rows.length(),
+	auto cmp = [i1 = &iter, fn = cmp_(col, order)](const Iter &i2) {
+	  return fn(i1, i2);
+	}));
       impl()->row(iter, row);
       m_rows.splice(row, 0, iter);
     } else {
@@ -662,9 +664,9 @@ namespace TreeNode {
 
     void add(Child_ *child) {
       gint row = ZuSearchPos(ZuInterSearch<false>(
-	    &m_index[0], m_index.length(), child,
-	    [](const Child_ *i1, const Child_ *i2) {
-	      return ZuCmp<Child_>::cmp(*i1, *i2);
+	    &m_index[0], m_index.length(),
+	    [c1 = const_cast<const Child_ *>(child)](const Child_ *c2) {
+	      return ZuCmp<Child_>::cmp(*c1, *c2);
 	    }));
       child->row(row);
       m_index.splice(row, 0, child);

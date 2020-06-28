@@ -42,8 +42,7 @@
 #ifdef _WIN32
 #define ZmBackTrace_BFD
 #endif
-#include <cxxabi.h>
-using __cxxabiv1::__cxa_demangle;
+#include <zlib/ZuDemangle.hpp>
 #endif
 
 #ifdef ZmBackTrace_BFD
@@ -139,6 +138,10 @@ friend class ZmBackTrace;
 friend struct ZmBackTrace_MgrInit;
 friend void ZmBackTrace_print(ZmStream &s, const ZmBackTrace &bt);
 
+#if defined(__GNUC__) || defined(linux)
+  using Demangle = ZuDemangle<ZmBackTrace_BUFSIZ>;
+#endif
+
   ZmBackTrace_Mgr();
 public:
   ~ZmBackTrace_Mgr();
@@ -151,17 +154,12 @@ private:
       s << "..." << ZuString(module.data() + module.length() - 21, 21);
     else
       s << module;
-#ifndef _MSC_VER
-    int status;
-    size_t bufLen = m_demangleBufLen;
-    const char *demangled =
-      __cxa_demangle(symbol.data(), m_demangleBuf, &bufLen, &status);
-    m_demangleBuf[m_demangleBufLen - 1] = 0;
-    if (!status && demangled)
-      symbol = ZuString(demangled,
-	  bufLen != m_demangleBufLen ? bufLen : strlen(demangled));
-#endif
+#if defined(__GNUC__) || defined(linux)
+    m_demangle = symbol;
+    s << '(' << m_demangle << ")";
+#else
     s << '(' << symbol << ")";
+#endif
     if (file && line) s << ' ' << file << ':' << ZuBoxed(line);
     s << " [+" << ZuBoxed(addr).hex() << "]\n";
   }
@@ -369,9 +367,8 @@ notfound:
   char				m_nameBuf[ZmBackTrace_BUFSIZ]; // not MAX_PATH
 #endif
 
-#ifdef __GNUC__
-  char				*m_demangleBuf;
-  size_t			m_demangleBufLen;
+#if defined(__GNUC__) || defined(linux)
+  Demangle			m_demangle;
 #endif
 
 #ifdef ZmBackTrace_BFD
@@ -411,10 +408,6 @@ ZmBackTrace_Mgr::ZmBackTrace_Mgr() :
   , m_bfd(0)
 #endif
 {
-#ifdef __GNUC__
-  m_demangleBuf = 0;
-  m_demangleBufLen = 0;
-#endif
 }
 
 ZmBackTrace_Mgr::~ZmBackTrace_Mgr()
@@ -428,10 +421,6 @@ ZmBackTrace_Mgr::~ZmBackTrace_Mgr()
 #ifdef ZmBackTrace_BFD
     if (m_bfd) m_bfd->final(this);
 #endif
-
-#ifdef __GNUC__
-    if (m_demangleBuf) free(m_demangleBuf);
-#endif
   }
 }
 
@@ -440,10 +429,6 @@ void ZmBackTrace_Mgr::init()
   Guard guard(m_lock);
 
   if (m_initialized) return;
-
-#ifdef __GNUC__
-  m_demangleBuf = (char *)malloc(m_demangleBufLen = ZmBackTrace_BUFSIZ);
-#endif
 
 #ifdef _WIN32
   if (!(m_dll = LoadLibrary(L"dbghelp.dll"))) goto error;

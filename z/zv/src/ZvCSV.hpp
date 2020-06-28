@@ -54,7 +54,7 @@
 
 #include <zlib/ZvError.hpp>
 #include <zlib/ZvEnum.hpp>
-#include <zlib/ZvFields.hpp>
+#include <zlib/ZvField.hpp>
 #include <zlib/ZvCSV.hpp>
 
 #define ZvCSV_MaxLineSize	(8<<10)	// 8K
@@ -123,7 +123,7 @@ public:
 
 private:
   struct ColTree_HeapID {
-    ZuInline static const char *id() { return "ZvCSV.ColTree"; }
+    static const char *id() { return "ZvCSV.ColTree"; }
   };
   using ColTree =
     ZmRBTree<ZuString,

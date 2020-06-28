@@ -17,14 +17,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// 64bit decimal variable point with variable decimal exponent,
+// 64bit decimal variable point with variable exponent,
 // 18 significant digits and 10^-exponent scaling:
 //   (18 - exponent) integer digits
-//   exponent fractional digits (i.e. decimal places)
+//   exponent fractional digits (i.e. number of decimal places)
 // Note: exponent is negated
 
-#ifndef ZuDec64_HPP
-#define ZuDec64_HPP
+#ifndef ZuFixed_HPP
+#define ZuFixed_HPP
 
 #ifndef ZuLib_HPP
 #include <zlib/ZuLib.hpp>
@@ -42,75 +42,75 @@
 #include <zlib/ZuFmt.hpp>
 #include <zlib/ZuBox.hpp>
 
-// ZuDec64Val value range is +/- 10^18
-typedef ZuBox<int64_t> ZuDec64Val; // fixed point value (numerator)
-typedef ZuBox<uint8_t> ZuDec64Exp; // exponent, i.e. number of decimal places
+// ZuFixedVal value range is +/- 10^18
+typedef ZuBox<int64_t> ZuFixedVal; // fixed point value (mantissa numerator)
+typedef ZuBox<uint8_t> ZuFixedExp; // exponent, i.e. number of decimal places
 
-#define ZuDec64Min (ZuDecVal{static_cast<int64_t>(-999999999999999999LL)})
-#define ZuDec64Max (ZuDecVal{static_cast<int64_t>(999999999999999999LL)})
-// ZuDec64ValReset is the distinct sentinel value used to reset values to null
-#define ZuDec64Reset (ZuDecVal{static_cast<int64_t>(-1000000000000000000LL)})
+#define ZuFixedMin (ZuDecVal{static_cast<int64_t>(-999999999999999999LL)})
+#define ZuFixedMax (ZuDecVal{static_cast<int64_t>(999999999999999999LL)})
+// ZuFixedValReset is the distinct sentinel value used to reset values to null
+#define ZuFixedReset (ZuDecVal{static_cast<int64_t>(-1000000000000000000LL)})
 
 // combination of value and exponent, used as a temporary for conversions & I/O
 // constructors / scanning:
-//   ZuDec64(<integer>, exponent)		// {1042, 2} -> 10.42
-//   ZuDec64(<floating point>, exponent)	// {10.42, 2} -> 10.42
-//   ZuDec64(<string>, exponent)		// {"10.42", 2} -> 10.42
-//   ZuDec64Val x = ZuDec64{"42.42", 2}.value	// x == 4242
-//   ZuDec64 xn{x, 2}; xn *= ZuDec64{2000, 3}; x = xn.value // x == 8484
+//   ZuFixed(<integer>, exponent)		// {1042, 2} -> 10.42
+//   ZuFixed(<floating point>, exponent)	// {10.42, 2} -> 10.42
+//   ZuFixed(<string>, exponent)		// {"10.42", 2} -> 10.42
+//   ZuFixedVal x = ZuFixed{"42.42", 2}.value	// x == 4242
+//   ZuFixed xn{x, 2}; xn *= ZuFixed{2000, 3}; x = xn.value // x == 8484
 // printing:
-//   s << ZuDec64{...}			// print (default)
-//   s << ZuDec64{...}.fmt(ZuFmt...)	// print (compile-time formatted)
-//   s << ZuDec64{...}.vfmt(ZuVFmt...)	// print (variable run-time formatted)
-//   s << ZuDec64(x, 2)			// s << "42.42"
+//   s << ZuFixed{...}			// print (default)
+//   s << ZuFixed{...}.fmt(ZuFmt...)	// print (compile-time formatted)
+//   s << ZuFixed{...}.vfmt(ZuVFmt...)	// print (variable run-time formatted)
+//   s << ZuFixed(x, 2)			// s << "42.42"
 //   x = 4200042;				// 42000.42
-//   s << ZuDec64(x, 2).fmt(ZuFmt::Comma<>())	// s << "42,000.42"
+//   s << ZuFixed(x, 2).fmt(ZuFmt::Comma<>())	// s << "42,000.42"
 
-template <typename Fmt> struct ZuDec64_Fmt;	// internal
-template <bool Ref = 0> struct ZuDec64_VFmt;	// internal
+template <typename Fmt> struct ZuFixed_Fmt;	// internal
+template <bool Ref = 0> struct ZuFixed_VFmt;	// internal
 
-struct ZuDec64 {
-  ZuDec64Val	value;
+struct ZuFixed {
+  ZuFixedVal	value;	// mantissa
   unsigned	exponent = 0;
 
-  ZuInline ZuDec64() { }
+  ZuInline ZuFixed() { }
 
   template <typename V>
-  ZuInline ZuDec64(V value_, unsigned exponent_,
+  ZuInline ZuFixed(V value_, unsigned exponent_,
       typename ZuIsIntegral<V>::T *_ = 0) :
     value(value_), exponent(exponent_) { }
 
   template <typename V>
-  ZuInline ZuDec64(V value_, unsigned exponent_,
+  ZuInline ZuFixed(V value_, unsigned exponent_,
       typename ZuIsFloatingPoint<V>::T *_ = 0) :
     value((MxFloat)value_ * ZuDecimalFn::pow10_64(exponent_)),
     exponent(exponent_) { }
 
   // multiply: exponent of result is taken from the LHS
   // a 128bit integer intermediary is used to avoid overflow
-  ZuDec64 operator *(const ZuDec64 &v) const {
-    int128_t i = (typename ZuDec64Val::T)value;
-    i *= (typename ZuDec64Val::T)v.value;
+  ZuFixed operator *(const ZuFixed &v) const {
+    int128_t i = (typename ZuFixedVal::T)value;
+    i *= (typename ZuFixedVal::T)v.value;
     i /= ZuDecimalFn::pow10_64(v.exponent);
     if (ZuUnlikely(i >= 1000000000000000000ULL))
-      return ZuDec64{ZuDec64Val{}, exponent};
-    return ZuDec64{static_cast<int64_t>(i), exponent};
+      return ZuFixed{ZuFixedVal{}, exponent};
+    return ZuFixed{static_cast<int64_t>(i), exponent};
   }
 
   // divide: exponent of result is taken from the LHS
   // a 128bit integer intermediary is used to avoid overflow
-  ZuDec64 operator /(const ZuDec64 &v) const {
-    int128_t i = (typename ZuDec64Val::T)value;
+  ZuFixed operator /(const ZuFixed &v) const {
+    int128_t i = (typename ZuFixedVal::T)value;
     i *= ZuDecimalFn::pow10_64(v.exponent);
-    i /= (typename ZuDec64Val::T)v.value;
+    i /= (typename ZuFixedVal::T)v.value;
     if (ZuUnlikely(i >= 1000000000000000000ULL))
-      return ZuDec64{ZuDec64Val(), exponent};
-    return ZuDec64{static_cast<int64_t>(i), exponent};
+      return ZuFixed{ZuFixedVal(), exponent};
+    return ZuFixed{static_cast<int64_t>(i), exponent};
   }
 
   // scan from string
   template <typename S>
-  ZuDec64(const S &s_, int exponent_ = -1,
+  ZuFixed(const S &s_, int exponent_ = -1,
       typename ZuIsString<S>::T *_ = 0) {
     ZuString s(s_);
     if (ZuUnlikely(!s || exponent_ > 18)) goto null;
@@ -148,7 +148,7 @@ struct ZuDec64 {
     exponent = exponent_;
     return;
   null:
-    value = ZuDec64Val();
+    value = ZuFixedVal();
     return;
   }
 
@@ -160,10 +160,10 @@ struct ZuDec64 {
   }
 
   // adjust to another exponent
-  ZuInline ZuDec64Val adjust(unsigned exponent) const {
+  ZuInline ZuFixedVal adjust(unsigned exponent) const {
     if (ZuLikely(exponent == this->exponent)) return value;
-    if (!*value) return ZuDec64Val();
-    return (ZuDec64{1.0, exponent} * (*this)).value;
+    if (!*value) return ZuFixedVal();
+    return (ZuFixed{1.0, exponent} * (*this)).value;
   }
 
   // ! is zero, unary * is !null
@@ -174,65 +174,65 @@ struct ZuDec64 {
 
   template <typename S> void print(S &s) const;
 
-  template <typename Fmt> ZuDec64_Fmt<Fmt> fmt(Fmt) const;
-  ZuDec64_VFmt<> vfmt() const;
-  ZuDec64_VFmt<1> vfmt(ZuVFmt &) const;
+  template <typename Fmt> ZuFixed_Fmt<Fmt> fmt(Fmt) const;
+  ZuFixed_VFmt<> vfmt() const;
+  ZuFixed_VFmt<1> vfmt(ZuVFmt &) const;
 };
-template <typename Fmt> struct ZuDec64_Fmt {
-  const ZuDec64	&fixed;
+template <typename Fmt> struct ZuFixed_Fmt {
+  const ZuFixed	&fixed;
 
   template <typename S> void print(S &s) const {
-    ZuDec64Val iv = fixed.value;
+    ZuFixedVal iv = fixed.value;
     if (ZuUnlikely(!*iv)) return;
     if (ZuUnlikely(iv < 0)) { s << '-'; iv = -iv; }
     uint64_t factor = ZuDecimalFn::pow10_64(fixed.exponent);
-    ZuDec64Val fv = iv % factor;
+    ZuFixedVal fv = iv % factor;
     iv /= factor;
     s << ZuBoxed(iv).fmt(Fmt());
     if (fv) s << '.' << ZuBoxed(fv).vfmt().frac(fixed.exponent);
   }
 };
 template <typename Fmt>
-struct ZuPrint<ZuDec64_Fmt<Fmt> > : public ZuPrintFn { };
+struct ZuPrint<ZuFixed_Fmt<Fmt> > : public ZuPrintFn { };
 template <class Fmt>
-ZuInline ZuDec64_Fmt<Fmt> ZuDec64::fmt(Fmt) const
+ZuInline ZuFixed_Fmt<Fmt> ZuFixed::fmt(Fmt) const
 {
-  return ZuDec64_Fmt<Fmt>{*this};
+  return ZuFixed_Fmt<Fmt>{*this};
 }
-template <typename S> inline void ZuDec64::print(S &s) const
+template <typename S> inline void ZuFixed::print(S &s) const
 {
-  s << ZuDec64_Fmt<ZuFmt::Default>{*this};
+  s << ZuFixed_Fmt<ZuFmt::Default>{*this};
 }
-template <> struct ZuPrint<ZuDec64> : public ZuPrintFn { };
+template <> struct ZuPrint<ZuFixed> : public ZuPrintFn { };
 template <bool Ref>
-struct ZuDec64_VFmt : public ZuVFmtWrapper<ZuDec64_VFmt<Ref>, Ref> {
-  const ZuDec64	&fixed;
+struct ZuFixed_VFmt : public ZuVFmtWrapper<ZuFixed_VFmt<Ref>, Ref> {
+  const ZuFixed	&fixed;
 
-  ZuInline ZuDec64_VFmt(const ZuDec64 &fixed_) :
+  ZuInline ZuFixed_VFmt(const ZuFixed &fixed_) :
     fixed{fixed_} { }
-  ZuInline ZuDec64_VFmt(const ZuDec64 &fixed_, ZuVFmt &fmt_) :
-    ZuVFmtWrapper<ZuDec64_VFmt, Ref>{fmt_}, fixed{fixed_} { }
+  ZuInline ZuFixed_VFmt(const ZuFixed &fixed_, ZuVFmt &fmt_) :
+    ZuVFmtWrapper<ZuFixed_VFmt, Ref>{fmt_}, fixed{fixed_} { }
 
   template <typename S> void print(S &s) const {
-    ZuDec64Val iv = fixed.value;
+    ZuFixedVal iv = fixed.value;
     if (ZuUnlikely(!*iv)) return;
     if (ZuUnlikely(iv < 0)) { s << '-'; iv = -iv; }
     uint64_t factor = ZuDecimalFn::pow10_64(fixed.exponent);
-    ZuDec64Val fv = iv % factor;
+    ZuFixedVal fv = iv % factor;
     iv /= factor;
     s << ZuBoxed(iv).vfmt(this->fmt);
     if (fv) s << '.' << ZuBoxed(fv).vfmt().frac(fixed.exponent);
   }
 };
-ZuInline ZuDec64_VFmt<> ZuDec64::vfmt() const
+ZuInline ZuFixed_VFmt<> ZuFixed::vfmt() const
 {
-  return ZuDec64_VFmt<>{*this};
+  return ZuFixed_VFmt<>{*this};
 }
-ZuInline ZuDec64_VFmt<1> ZuDec64::vfmt(ZuVFmt &fmt) const
+ZuInline ZuFixed_VFmt<1> ZuFixed::vfmt(ZuVFmt &fmt) const
 {
-  return ZuDec64_VFmt<1>{*this, fmt};
+  return ZuFixed_VFmt<1>{*this, fmt};
 }
 template <bool Ref>
-struct ZuPrint<ZuDec64_VFmt<Ref> > : public ZuPrintFn { };
+struct ZuPrint<ZuFixed_VFmt<Ref> > : public ZuPrintFn { };
 
-#endif /* ZuDec64_HPP */
+#endif /* ZuFixed_HPP */

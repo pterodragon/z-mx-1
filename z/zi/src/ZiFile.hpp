@@ -124,13 +124,13 @@ public:
   ZuOpBool
 
   int open(const Path &name,
-      unsigned flags, unsigned mode = 0666, ZeError *e = 0);
+      unsigned flags, unsigned mode = 0666, ZeError *e = nullptr);
   int open(const Path &name,
-      unsigned flags, unsigned mode, Offset length, ZeError *e = 0);
+      unsigned flags, unsigned mode, Offset length, ZeError *e = nullptr);
   int mmap(const Path &name,
       unsigned flags, Offset length, bool shared = true,
-      int mmapFlags = 0, unsigned mode = 0666, ZeError *e = 0);
-  int shadow(const ZiFile &file, ZeError *e = 0);
+      int mmapFlags = 0, unsigned mode = 0666, ZeError *e = nullptr);
+  int shadow(const ZiFile &file, ZeError *e = nullptr);
   void close();
 
   Offset size();

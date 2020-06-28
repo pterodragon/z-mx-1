@@ -94,13 +94,13 @@ private:
 public:
   ZuPtr() : m_object(0) { }
   ZuPtr(ZuPtr &&r) noexcept : m_object(r.m_object) {
-    r.m_object = 0;
+    r.m_object = nullptr;
   }
   template <typename R>
   ZuPtr(R &&r, typename MatchOtherRef<typename ZuDeref<R>::T>::T *_ = 0)
   noexcept : m_object(
       static_cast<T *>(const_cast<typename ZuDeref<R>::T::T *>(r.m_object))) {
-    ZuMvCp<R>::mv(ZuFwd<R>(r), [](auto &&r) { r.m_object = 0; });
+    ZuMvCp<R>::mv(ZuFwd<R>(r), [](auto &&r) { r.m_object = nullptr; });
   }
   ZuPtr(T *o) : m_object(o) { }
   template <typename O>

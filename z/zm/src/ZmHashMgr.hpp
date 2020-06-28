@@ -88,7 +88,7 @@ struct ZmAnyHash_PtrAccessor : public ZuAccessor<ZmAnyHash_, uintptr_t> {
   }
 };
 struct ZmHashMgr_HeapID {
-  ZuInline static const char *id() { return "ZmHashMgr_"; }
+  static const char *id() { return "ZmHashMgr_"; }
 };
 using ZmHashMgr_Tables =
   ZmRBTree<ZmAnyHash_,

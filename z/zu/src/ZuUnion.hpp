@@ -324,6 +324,9 @@ public:
 
   ZuInline unsigned type() const { return m_u[Size]; }
 
+  template <typename T>
+  ZuInline bool contains() const { return type() == Index<T>::I; }
+
   template <unsigned I>
   const typename Type_<I>::T &p() const {
     using T = typename Type<I>::T;

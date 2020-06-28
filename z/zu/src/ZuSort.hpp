@@ -50,6 +50,7 @@
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuLambdaFn.hpp>
 #include <zlib/ZuArrayFn.hpp>
+#include <zlib/ZuCan.hpp>
 
 template <typename T, typename Cmp, unsigned N>
 struct ZuSort_Fn {
@@ -176,12 +177,16 @@ unsigned ZuSearchPos(unsigned i) { return i>>1; }
 // binary search in sorted data (i.e. following ZuSort)
 // - returns insertion position if not found
 template <bool Match = true, typename T, typename Cmp>
-unsigned ZuSearch(T *data, unsigned n, const T &item, Cmp cmp) {
+typename ZuIfT<
+  ZuCanOpFn<Cmp, int (Cmp::*)(const T &) const>::OK ||
+  ZuCanOpFn<Cmp, int (Cmp::*)(const T &)>::OK,
+  unsigned>::T
+ZuSearch(T *data, unsigned n, Cmp cmp) {
   if (!n) return 0;
   unsigned o = 0;
 loop:
   unsigned m = n>>1;
-  int v = cmp(item, data[m]);
+  int v = cmp(data[m]);
   if constexpr (Match) if (!v) return ((o + m)<<1) | 1;
   if (!m) return (o + (v >= 0))<<1;
   if (v < 0) { n = m; goto loop; }
@@ -192,21 +197,26 @@ loop:
 }
 template <bool Match = true, typename T>
 unsigned ZuSearch(T *data, unsigned n, const T &item) {
-  return ZuSearch<Match>(data, n, item, 
-      [](const T &v1, const T &v2) { return ZuCmp<T>::cmp(v1, v2); });
+  return ZuSearch<Match>(data, n,
+      [&item](const T &v) { return ZuCmp<T>::cmp(item, v); });
 }
 
 // interpolation search in sorted data (i.e. following ZuSort)
 // - returns insertion position if not found
+
 template <bool Match = true, typename T, typename Cmp>
-unsigned ZuInterSearch(T *data, unsigned n, const T &item, Cmp cmp) {
+typename ZuIfT<
+  ZuCanOpFn<Cmp, int (Cmp::*)(const T &) const>::OK ||
+  ZuCanOpFn<Cmp, int (Cmp::*)(const T &)>::OK,
+  unsigned>::T
+ZuInterSearch(T *data, unsigned n, Cmp cmp) {
   if (!n) return 0;
   unsigned o = 0;
   int v1, v2;
   if (n <= 2) {
 small1:
-    v1 = cmp(item, data[0]);
-    if (n == 2) v2 = cmp(item, data[1]);
+    v1 = cmp(data[0]);
+    if (n == 2) v2 = cmp(data[1]);
 small2:
     if (v1 < 0) return o<<1;
     if constexpr (Match) if (!v1) return (o<<1) | 1;
@@ -215,8 +225,8 @@ small2:
     if constexpr (Match) if (!v2) return (o<<1) | 1;
     return (o + (v2 >= 0))<<1;
   }
-  v1 = cmp(item, data[0]);
-  v2 = cmp(item, data[n - 1]);
+  v1 = cmp(data[0]);
+  v2 = cmp(data[n - 1]);
 loop:
   if (v1 < 0) return 0;
   if constexpr (Match) {
@@ -231,7 +241,7 @@ loop:
     goto small1;
   }
   unsigned m = ((n - 3) * v1 + (v1>>1)) / (v1 - v2) + 1;
-  int v3 = cmp(item, data[m]);
+  int v3 = cmp(data[m]);
   if constexpr (Match) if (!v3) return ((o + m)<<1) | 1;
   if (v3 < 0) {
     ++data;
@@ -252,8 +262,8 @@ loop:
 }
 template <bool Match = true, typename T>
 unsigned ZuInterSearch(T *data, unsigned n, const T &item) {
-  return ZuInterSearch<Match>(data, n, item, 
-      [](const T &v1, const T &v2) { return ZuCmp<T>::cmp(v1, v2); });
+  return ZuInterSearch<Match>(data, n,
+      [&item](const T &v) { return ZuCmp<T>::cmp(item, v); });
 }
 
 #endif /* ZuSort_HPP */

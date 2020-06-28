@@ -60,9 +60,9 @@
 //     the POSIX time crosses the midnight that a leap second was applied
 //     (typically applied by NTP software)
 //
-//   * when calculating the elapsed atomic time difference between two
-//     absolute POSIX times, leap seconds that were applied to UTC for the
-//     intervening period should be added/removed
+//   * when calculating the time interval between two absolute POSIX times,
+//     leap seconds that were applied to UTC for the intervening period
+//     should be added/removed, to get an accurate interval
 
 // * conversion functions accept an arbitrary intraday offset in seconds
 //   for adjustment between GMT and another time zone; for local time
@@ -78,8 +78,8 @@
 //
 //     ZtDateFmt::ISO gmt;			// GMT/UTC
 //     ZtDateFmt::ISO local(date.offset());	// default local time (tzset())
-//     ZtDateFmt::ISO gb(date.offset("GB"));	// local time in GB
-//     ZtDateFmt::ISO est(date.offset("EST"));	// local time in EST
+//     ZtDateFmt::ISO gb(date.offset("GB"));	// local time in UK
+//     ZtDateFmt::ISO est(date.offset("EST"));	// local time in New York
 //
 //     std::cout << date.iso(gmt);	// print time in ISO8601 format
 //

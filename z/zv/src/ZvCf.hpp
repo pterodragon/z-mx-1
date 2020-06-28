@@ -511,7 +511,7 @@ private:
 
   using NodeRef = ZmRef<Node>;
 
-  struct HeapID { ZuInline static const char *id() { return "ZvCf"; } };
+  struct HeapID { static const char *id() { return "ZvCf"; } };
 
   using Tree =
     ZmRBTree<ZtString,

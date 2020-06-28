@@ -312,14 +312,15 @@ friend TLS;
     m_nAccepts = cf->getInt("nAccepts", 1, 1024, false, 8);
     m_rebindFreq = cf->getInt("rebindFreq", 0, 3600, false, 0);
     m_timeout = cf->getInt("timeout", 0, 3600, false, 0);
-    unsigned passLen = 12, totpRange = 6;
+    unsigned passLen = 12, totpRange = 6, maxSize = (10<<20);
     if (ZmRef<ZvCf> mgrCf = cf->subset("userDB", false, true)) {
       passLen = mgrCf->getInt("passLen", 6, 60, false, 12);
       totpRange = mgrCf->getInt("totpRange", 0, 100, false, 6);
+      maxSize = mgrCf->getInt("maxSize", 0, (10<<24), false, (10<<20));
       m_userDBPath = mgrCf->get("path", true);
       m_userDBMaxAge = mgrCf->getInt("maxAge", 0, INT_MAX, false, 8);
     }
-    m_userDB = new UserDB(this, passLen, totpRange);
+    m_userDB = new UserDB(this, passLen, totpRange, maxSize);
     if (!loadUserDB())
       throw ZtString() << "failed to load \"" << m_userDBPath << '"';
     TelServer::init(mx, cf->subset("telemetry", false));

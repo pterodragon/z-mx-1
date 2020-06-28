@@ -20,7 +20,8 @@ FBS = \
 	zcmdack.fbs \
 	telreq.fbs \
 	telack.fbs \
-	telemetry.fbs
+	telemetry.fbs \
+	dataframe.fbs
 FBS_H = ${FBS:%.fbs=%_fbs.h}
 ${FBS_H}: %_fbs.h: fbs/%.fbs
 	flatc -c -I fbs -I $(top_srcdir)/zfb/src/fbs $<
@@ -29,20 +30,22 @@ ${FBS_H}: %_fbs.h: fbs/%.fbs
 BUILT_SOURCES = ${FBS_H}
 CLEANFILES = ${FBS_H}
 pkginclude_HEADERS = ZvLib.hpp \
-	ZvCf.hpp ZvFields.hpp ZvCSV.hpp ZvError.hpp ZvEnum.hpp ZvHashCSV.hpp \
+	ZvCf.hpp ZvField.hpp ZvCSV.hpp ZvError.hpp ZvEnum.hpp ZvHashCSV.hpp \
 	ZvHeapCSV.hpp ZvDaemon.hpp \
 	ZvRingCf.hpp ZvThreadCf.hpp ZvUserDB.hpp \
 	ZvCmdNet.hpp ZvCmdHost.hpp ZvCmdClient.hpp ZvCmdServer.hpp \
 	ZvScheduler.hpp ZvMultiplex.hpp \
 	ZvSeqNo.hpp ZvMsgID.hpp ZvIOQueue.hpp ZvEngine.hpp \
-	ZvTelemetry.hpp ZvTelServer.hpp ${FBS_H}
+	ZvTelemetry.hpp ZvTelServer.hpp \
+	ZvSeriesRW.hpp ZvSeries.hpp ZvDataFrame.hpp \
+	${FBS_H}
 #fbsdir = $(datarootdir)/${PACKAGE}/fbs
 #dist_fbs_DATA = fbs/telemetry.fbs
 lib_LTLIBRARIES = libZv.la
 bin_PROGRAMS = zuserdb
 libZv_la_LDFLAGS = @Z_SO_LDFLAGS@
 libZv_la_SOURCES = ZvLib.cpp \
-	ZvCf.cpp ZvCSV.cpp ZvDaemon.cpp ZvUserDB.cpp ZvEngine.cpp
+	ZvCf.cpp ZvCSV.cpp ZvDaemon.cpp ZvUserDB.cpp ZvEngine.cpp ZvSeries.cpp
 libZv_la_LIBADD = $(top_builddir)/zfb/src/libZfb.la \
 	$(top_builddir)/ztls/src/libZtls.la \
 	$(top_builddir)/zi/src/libZi.la $(top_builddir)/ze/src/libZe.la \

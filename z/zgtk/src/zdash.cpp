@@ -54,9 +54,7 @@
 
 // FIXME - css
 //
-// @define-color bg_color #f9a039;
-//
-// gtk_style_context_lookup_color() // look up color
+// @define-color rag_red_bg #ff1515;
 
 // FIXME
 // each node needs to include:
@@ -520,7 +518,9 @@ public:
   void final() {
     // m_link = nullptr;
 
-    detach();
+    detach(); // FIXME - we may want to pass a finalizer lambda to this
+    // to run on the Gtk thread and clean up,
+    // and also have the caller synchronously block until it completes..
 
     ZvCmdHost::final();
     Base::final();
@@ -561,7 +561,7 @@ public:
     }
 
     m_view.init(view_, m_styleContext);
-    m_view.bind(MainTree::Model::ctor());
+    m_view.bind(m_model = MainTree::Model::ctor());
 
     g_signal_connect(G_OBJECT(m_mainWindow), "destroy",
 	ZGtk::callback([](GObject *o, gpointer this_) {
@@ -1592,6 +1592,10 @@ private:
     } else {
       if (argc < 2) throw ZvCmdUsage{};
     }
+
+    // FIXME from here - add telemetry on-demand into m_model
+    // using TreeHierarchy::add(...)
+
     ZtArray<ZmAtomic<unsigned>> ok;
     ZtArray<ZuString> filters;
     ZtArray<int> types;
@@ -1755,6 +1759,7 @@ private:
   ZtString		m_stylePath;
   GtkStyleContext	*m_styleContext = nullptr;
   GtkWindow		*m_mainWindow = nullptr;
+  MainTree::Model	*m_model;
   MainTree::View	m_view;
 };
 
@@ -1768,7 +1773,6 @@ int main(int argc, char **argv)
 	[](ZeEvent *e) { std::cerr << e->message() << '\n' << std::flush; }));
   ZeLog::start();
 
-  bool interactive = isatty(fileno(stdin));
   auto keyID = ::getenv("ZCMD_KEY_ID");
   auto secret = ::getenv("ZCMD_KEY_SECRET");
   ZtString user, passwd, server;
@@ -1828,11 +1832,6 @@ int main(int argc, char **argv)
       ::exit(1);
     }
   } else {
-    if (!interactive || argc > 2) {
-      std::cerr << "set ZCMD_KEY_ID and ZCMD_KEY_SECRET "
-	"to use non-interactively\n" << std::flush;
-      ::exit(1);
-    }
     passwd = getpass_("password: ", 100);
     totp = getpass_("totp: ", 6);
   }
@@ -1840,17 +1839,17 @@ int main(int argc, char **argv)
   ZiMultiplex *mx = new ZiMultiplex(
       ZiMxParams()
 	.scheduler([](auto &s) {
-	  s.nThreads(4)
+	  s.nThreads(5)
 	  .thread(1, [](auto &t) { t.isolated(1); })
 	  .thread(2, [](auto &t) { t.isolated(1); })
-	  .thread(3, [](auto &t) { t.isolated(1); }); })
+	  .thread(3, [](auto &t) { t.isolated(1); })
+	  .thread(4, [](auto &t) { t.isolated(1); }); })
 	.rxThread(1).txThread(2));
 
   mx->start();
 
   ZmRef<ZDash> client = new ZDash();
 
-  // FIXME
   ZmTrap::sigintFn(ZmFn<>{client, [](ZDash *client) { client->post(); }});
   ZmTrap::trap();
 
@@ -1858,12 +1857,14 @@ int main(int argc, char **argv)
     ZmRef<ZvCf> cf = new ZvCf();
     cf->set("timeout", "1");
     cf->set("thread", "3");
+    cf->set("gtkThread", "4");
+    cf->set("gtkGlade", "zdash.glade");
     if (auto caPath = ::getenv("ZCMD_CAPATH"))
       cf->set("caPath", caPath);
     else
       cf->set("caPath", "/etc/ssl/certs");
     try {
-      client->init(mx, cf, interactive);
+      client->init(mx, cf);
     } catch (const ZvError &e) {
       std::cerr << e << '\n' << std::flush;
       ::exit(1);

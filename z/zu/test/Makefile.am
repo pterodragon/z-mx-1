@@ -7,7 +7,7 @@ LDADD = $(top_builddir)/zu/src/libZu.la
 noinst_PROGRAMS = \
 	ZuConversionTest ZuHashTest ZuCmpTest ZuBoxTest \
 	ZuCanTest ZuArrayTest ZuPairTest ZuIDTest ZuUTFTest ZuBitmapTest \
-	ZuDecimalTest ZuSeriesTest
+	ZuDecimalTest
 ZuConversionTest_SOURCES = ZuConversionTest.cpp
 ZuHashTest_SOURCES = ZuHashTest.cpp Analyze.hpp
 ZuCmpTest_SOURCES = ZuCmpTest.cpp
@@ -20,4 +20,3 @@ ZuIDTest_SOURCES = ZuIDTest.cpp
 ZuUTFTest_SOURCES = ZuUTFTest.cpp
 ZuBitmapTest_SOURCES = ZuBitmapTest.cpp
 ZuDecimalTest_SOURCES = ZuDecimalTest.cpp
-ZuSeriesTest_SOURCES = ZuSeriesTest.cpp

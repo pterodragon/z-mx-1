@@ -280,7 +280,7 @@ private:
   uint64_t	m_head = 0;
   uint64_t	m_tail = 0;
   uint64_t	m_offset = 0;
-  // bool		m_debug = false;
+  // bool	m_debug = false;
 };
 
 template <unsigned Bits_> class ZtBitWindow<Bits_, true, false> {
@@ -506,7 +506,7 @@ private:
   uint64_t	m_head = 0;
   uint64_t	m_tail = 0;
   uint64_t	m_offset = 0;
-  // bool		m_debug = false;
+  // bool	m_debug = false;
 };
 
 template <> class ZtBitWindow<64U, true, true> {
@@ -720,7 +720,7 @@ private:
   uint64_t	m_head = 0;
   uint64_t	m_tail = 0;
   uint64_t	m_offset = 0;
-  // bool		m_debug = false;
+  // bool	m_debug = false;
 };
 
 #endif /* ZtBitWindow_HPP */

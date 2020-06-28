@@ -177,7 +177,7 @@ protected:
 };
 
 struct ZmLambda_HeapID {
-  ZuInline static const char *id() { return "ZmLambda"; }
+  static const char *id() { return "ZmLambda"; }
 };
 template <typename L, class HeapID> struct ZmLambda;
 

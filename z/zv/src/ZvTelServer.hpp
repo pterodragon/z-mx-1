@@ -480,7 +480,7 @@ private:
       ZmListObject<ZuNull,
 	ZmListNodeIsItem<true,
 	  ZmListLock<ZmNoLock> > > >;
-  using Watch = typename WatchList_::Node;
+  using Watch = WatchList_::Node;
   struct WatchList {
     WatchList_		list;
     unsigned		interval = 0;	// in millisecs

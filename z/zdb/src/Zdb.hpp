@@ -184,7 +184,15 @@ template <> struct ZuPrint<ZdbRange> : public ZuPrintFn { };
 
 struct Zdb_File_IndexAccessor;
 
-class Zdb_File_ : public ZmPolymorph, public ZiFile {
+using Zdb_FileLRU =
+  ZmList<ZuNull,
+    ZmListObject<ZuNull,
+      ZmListNodeIsItem<true,
+	ZmListHeapID<ZuNull,
+	  ZmListLock<ZmNoLock> > > > >;
+using Zdb_FileLRUNode = Zdb_FileLRU::Node;
+
+class Zdb_File_ : public ZmPolymorph, public ZiFile, public Zdb_FileLRUNode {
 friend struct Zdb_File_IndexAccessor;
 
 public:
@@ -212,28 +220,20 @@ private:
   uint64_t	m_undeleted[ZdbFileRecs>>6];
 };
 
-using Zdb_FileLRU =
-  ZmList<Zdb_File_,
-    ZmListObject<ZmPolymorph,
-      ZmListNodeIsItem<true,
-	ZmListHeapID<ZuNull,
-	  ZmListLock<ZmNoLock> > > > >;
-using Zdb_FileLRUNode = Zdb_FileLRU::Node;
-
-struct Zdb_FileIndexAccessor : public ZuAccessor<Zdb_FileLRUNode, unsigned> {
-  ZuInline static unsigned value(const Zdb_FileLRUNode &node) {
-    return node.index();
+struct Zdb_File_IndexAccessor : public ZuAccessor<Zdb_File_, unsigned> {
+  ZuInline static unsigned value(const Zdb_File_ &file) {
+    return file.index();
   }
 };
 
 struct Zdb_FileHeapID {
-  ZuInline static const char *id() { return "Zdb_File"; }
+  static const char *id() { return "Zdb_File"; }
 };
 using Zdb_FileHash =
-  ZmHash<Zdb_FileLRUNode,
-    ZmHashObject<ZmPolymorph,
+  ZmHash<Zdb_File_,
+    ZmHashObject<ZuObject, // ZmPolymorph
       ZmHashNodeIsKey<true,
-	ZmHashIndex<Zdb_FileIndexAccessor,
+	ZmHashIndex<Zdb_FileNode_IndexAccessor,
 	  ZmHashHeapID<Zdb_FileHeapID,
 	    ZmHashLock<ZmNoLock> > > > > >;
 using Zdb_File = Zdb_FileHash::Node;
@@ -241,7 +241,7 @@ using Zdb_File = Zdb_FileHash::Node;
 class Zdb_FileRec {
 public:
   ZuInline Zdb_FileRec() : m_file(0), m_offRN(0) { }
-  ZuInline Zdb_FileRec(ZmRef<Zdb_File> file, unsigned offRN) :
+  ZuInline Zdb_FileRec(ZuRef<Zdb_File> file, unsigned offRN) :
     m_file(ZuMv(file)), m_offRN(offRN) { }
 
   ZuInline bool operator !() const { return !m_file; }
@@ -251,7 +251,7 @@ public:
   ZuInline unsigned offRN() const { return m_offRN; }
 
 private:
-  ZmRef<Zdb_File>	m_file;
+  ZuRef<Zdb_File>	m_file;
   unsigned		m_offRN;
 };
 
@@ -269,19 +269,20 @@ struct ZdbTrailer {
 #pragma pack(pop)
 
 using ZdbLRU =
-  ZmList<ZmPolymorph,
-    ZmListObject<ZmPolymorph,
+  ZmList<ZuNull,
+    ZmListObject<ZuNull,
       ZmListNodeIsItem<true,
 	ZmListHeapID<ZuNull,
 	  ZmListLock<ZmNoLock> > > > >;
-using ZdbLRUNode = ZdbLRU::Node;
+using ZdbLRUNode_ = ZdbLRU::Node;
 
+struct ZdbLRUNode : public ZmPolymorph, public ZdbLRUNode_ { };
 struct ZdbLRUNode_RNAccessor : public ZuAccessor<ZdbLRUNode, ZdbRN> {
   static ZdbRN value(const ZdbLRUNode &pod);
 };
 
 struct Zdb_Cache_ID {
-  ZuInline static const char *id() { return "Zdb.Cache"; }
+  static const char *id() { return "Zdb.Cache"; }
 };
 
 using Zdb_Cache =
@@ -440,11 +441,11 @@ using ZdbAddFn = ZmFn<ZdbAnyPOD *, int, bool>;
 using ZdbWriteFn = ZmFn<ZdbAnyPOD *, int>;
 
 struct ZdbPOD_HeapID {
-  ZuInline static const char *id() { return "ZdbPOD"; }
+  static const char *id() { return "ZdbPOD"; }
 };
 // heap ID can be specialized by app
 template <typename T> struct ZdbPOD_Cmpr_HeapID {
-  ZuInline static const char *id() { return "ZdbPOD_Cmpr"; }
+  static const char *id() { return "ZdbPOD_Cmpr"; }
 };
 
 template <typename T_>
@@ -542,6 +543,7 @@ friend struct IDAccessor;
   };
 
   using Cache = Zdb_Cache;
+  using FileLRU = Zdb_FileLRU;
   using FileHash = Zdb_FileHash;
 
 protected:
@@ -659,8 +661,8 @@ private:
 
   Zdb_FileRec rn2file(ZdbRN rn, bool write);
 
-  ZmRef<Zdb_File> getFile(unsigned index, bool create);
-  ZmRef<Zdb_File> openFile(unsigned i, bool create);
+  ZuRef<Zdb_File> getFile(unsigned i, bool create);
+  ZuRef<Zdb_File> openFile(unsigned i, bool create);
   void delFile(Zdb_File *file);
   void recover(Zdb_File *file);
   void scan(Zdb_File *file);
@@ -670,8 +672,8 @@ private:
   void write(ZmRef<ZdbAnyPOD> pod);
   void write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op);
 
-  void fileReadError_(Zdb_File *, ZiFile::Offset, int, ZeError e);
-  void fileWriteError_(Zdb_File *, ZiFile::Offset, ZeError e);
+  void fileRdError_(Zdb_File *, ZiFile::Offset, int, ZeError e);
+  void fileWrError_(Zdb_File *, ZiFile::Offset, ZeError e);
 
   void cache(ZdbAnyPOD *pod);
   void cache_(ZdbAnyPOD *pod);
@@ -691,13 +693,13 @@ private:
     ZdbRN			  m_nextRN = 0;
     ZdbRN			  m_fileRN = 0;
     ZdbLRU			  m_lru;
-    ZmRef<Zdb_Cache>		  m_cache;
+    ZmRef<Cache>		  m_cache;
     unsigned			  m_cacheSize = 0;
     uint64_t			  m_cacheLoads = 0;
     uint64_t			  m_cacheMisses = 0;
   FSLock			m_fsLock;	// guards files
-    Zdb_FileLRU			  m_filesLRU;
-    ZmRef<Zdb_FileHash>		  m_files;
+    FileLRU			  m_filesLRU;
+    ZmRef<FileHash>		  m_files;
     unsigned			  m_filesMax = 0;
     unsigned			  m_lastFile = 0;
     uint64_t			  m_fileLoads = 0;
@@ -988,7 +990,7 @@ friend class ZdbAnyPOD;
 friend class ZdbAnyPOD_Send__;
 
   struct HostTree_HeapID {
-    ZuInline static const char *id() { return "ZdbEnv.HostTree"; }
+    static const char *id() { return "ZdbEnv.HostTree"; }
   };
   using HostTree =
     ZmRBTree<ZmRef<ZdbHost>,
@@ -998,7 +1000,7 @@ friend class ZdbAnyPOD_Send__;
 	    ZmRBTreeHeapID<HostTree_HeapID> > > > >;
 
   struct CxnHash_HeapID {
-    ZuInline static const char *id() { return "ZdbEnv.CxnHash"; }
+    static const char *id() { return "ZdbEnv.CxnHash"; }
   };
   using CxnHash =
     ZmHash<ZmRef<Zdb_Cxn>,

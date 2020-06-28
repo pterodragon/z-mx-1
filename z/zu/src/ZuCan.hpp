@@ -67,6 +67,8 @@ public: \
   }; \
 }
 
+ZuCan(operator (), ZuCanOpFn);
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

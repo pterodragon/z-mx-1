@@ -38,7 +38,7 @@
 #include <zlib/ZuStringN.hpp>
 #include <zlib/ZuPrint.hpp>
 #include <zlib/ZuID.hpp>
-#include <zlib/ZuDec64.hpp>
+#include <zlib/ZuFixed.hpp>
 
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmLHash.hpp>
@@ -85,12 +85,12 @@ using MxID = ZuID; // Note: different than MxIDString
 
 using MxDecimal = ZuDecimal;
 
-using MxValue = ZuDec64Val;	// fixed point value (numerator)
-#define MxValueMin ZuDec64Min
-#define MxValueMax ZuDec64Max
-#define MxValueReset ZuDec64Reset
-using MxNDP = ZuDec64Exp;	// number of decimal places (log10(denominator))
-using MxValNDP = ZuDec64;
+using MxValue = ZuFixedVal;	// fixed point value (numerator)
+#define MxValueMin ZuFixedMin
+#define MxValueMax ZuFixedMax
+#define MxValueReset ZuFixedReset
+using MxNDP = ZuFixedExp;	// number of decimal places (log10(denominator))
+using MxValNDP = ZuFixed;
 
 using MxRatio = MxUInt8;	// ratio numerator (orders w/ multiple legs)
 				// (denominator is sum of individual ratios)

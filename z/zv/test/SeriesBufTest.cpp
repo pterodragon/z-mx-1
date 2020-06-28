@@ -4,8 +4,9 @@
 #include <iostream>
 
 #include <zlib/ZuStringN.hpp>
+#include <zlib/ZuDemangle.hpp>
 
-#include <zlib/ZuSeries.hpp>
+#include <zlib/ZvSeriesBuf.hpp>
 
 void print(const char *s) {
   std::cout << s << '\n' << std::flush;
@@ -42,6 +43,10 @@ void test() {
 	CHECK(nw.write(-(j + k + 8)));
 	CHECK(nw.write(-(j + k * k)));
       }
+      std::cout <<
+	ZuDemangle<200>{typeid(Writer).name()} << " +ve: " << pw.count() << ' ' << (pw.pos() - p) << '\n';
+      std::cout <<
+	ZuDemangle<200>{typeid(Writer).name()} << " -ve: " << nw.count() << ' ' << (nw.pos() - n) << '\n';
     }
     {
       Reader pr{p, p + 4096};
@@ -69,8 +74,8 @@ void test() {
 
 int main()
 {
-  using namespace ZuSeries;
+  using namespace ZvSeriesBuf;
   test<Reader, Writer>();
-  test<DeltaReader, DeltaWriter>();
-  test<Delta2Reader, Delta2Writer>();
+  test<DeltaReader<>, DeltaWriter<>>();
+  test<DeltaReader<DeltaReader<>>, DeltaWriter<DeltaWriter<>>>();
 }

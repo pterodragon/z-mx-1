@@ -183,7 +183,7 @@ friend struct Lock;
 
   using LockRef = ZmRef<Lock>;
 
-  struct HeapID { ZuInline static const char *id() { return "ZmTLock"; } };
+  struct HeapID { static const char *id() { return "ZmTLock"; } };
 
   using LockHash =
     ZmHash<ID,

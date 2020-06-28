@@ -13,6 +13,6 @@ pkginclude_HEADERS = \
 	ZuStringFn.hpp ZuStringN.hpp ZuTraits.hpp ZuTuple.hpp ZuUnion.hpp \
 	ZuVersion.hpp Zu_aton.hpp Zu_ntoa.hpp ZuDecimalFn.hpp ZuUTF.hpp \
 	ZuDecimal.hpp ZuSwitch.hpp ZuSort.hpp ZuPtr.hpp ZuDec64.hpp \
-	ZuSeries.hpp
+	ZuDemangle.hpp
 lib_LTLIBRARIES = libZu.la
 libZu_la_SOURCES = ZuLib.cpp ZuVersion.cpp

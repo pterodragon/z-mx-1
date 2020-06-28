@@ -75,8 +75,6 @@ public:
   int read(Path &file, ZeError *e = 0);
   void close();
 
-  static bool isdir(const Path &name, ZeError *e = 0);
-
 private:
   ZmLock	m_lock;
 #ifdef _WIN32

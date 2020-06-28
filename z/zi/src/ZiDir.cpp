@@ -21,6 +21,8 @@
 
 #include <zlib/ZiDir.hpp>
 
+#include <zlib/ZiFile.hpp>
+
 int ZiDir::open(const Path &name, ZeError *e)
 {
   Guard guard(m_lock);
@@ -29,8 +31,8 @@ int ZiDir::open(const Path &name, ZeError *e)
 
 #ifdef _WIN32
 
-  if (!isdir(name, e)) {
-    if (e && !*e) *e = ZeError(ENOTDIR);
+  if (!ZiFile::isdir(name, e)) {
+    if (e && !*e) *e = ENOTDIR;
     return Zi::IOError;
   }
   m_match = name + L"\\*";
@@ -38,7 +40,7 @@ int ZiDir::open(const Path &name, ZeError *e)
 #else /* _WIN32 */
 
   if (!(m_dir = opendir(name))) {
-    if (e) *e = ZeError(errno);
+    if (e) *e = errno;
     return Zi::IOError;
   }
 
@@ -57,7 +59,7 @@ int ZiDir::read(Path &file, ZeError *e)
 
   if (m_handle == INVALID_HANDLE_VALUE) {
     if (!m_match) {
-      if (e) *e = ZeError(EBADF);
+      if (e) *e = EBADF;
       return Zi::IOError;
     }
     m_handle = FindFirstFileEx(
@@ -77,7 +79,7 @@ error:
     case ERROR_PATH_NOT_FOUND:
       return Zi::EndOfFile;
     default:
-      if (e) *e = ZeError(errNo);
+      if (e) *e = errNo;
       break;
   }
   close();
@@ -86,7 +88,7 @@ error:
 #else /* _WIN32 */
 
   if (!m_dir) {
-    if (e) *e = ZeError(EBADF);
+    if (e) *e = EBADF;
     return Zi::IOError;
   }
 
@@ -99,7 +101,7 @@ error:
   return Zi::OK;
 
 error:
-  if (e) *e = ZeError(errno);
+  if (e) *e = errno;
   close();
   return Zi::IOError;
 
@@ -121,29 +123,5 @@ void ZiDir::close()
     closedir(m_dir);
     m_dir = 0;
   }
-#endif
-}
-
-bool ZiDir::isdir(const Path &name, ZeError *e)
-{
-#ifdef _WIN32
-  DWORD a = GetFileAttributes(name);
-  if (a == INVALID_FILE_ATTRIBUTES) {
-    int errNo = GetLastError();
-    if (e) *e = ZeError(errNo);
-    return false;
-  }
-  if (!(a & FILE_ATTRIBUTE_DIRECTORY)) {
-    if (e) *e = ZeError(ENOTDIR);
-    return false;
-  }
-  return true;
-#else
-  struct stat s;
-  if (stat(name, &s)) {
-    if (e) *e = ZeError(errno);
-    return false;
-  }
-  return S_ISDIR(s.st_mode);
 #endif
 }

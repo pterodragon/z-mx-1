@@ -70,7 +70,7 @@ struct ZmLHash_Defaults {
   template <typename T> struct IndexT	{ using Index	= T; };
   template <typename T> struct ValCmpT	{ using ValCmp	= ZuCmp<T>; };
   using Lock = ZmLock;
-  struct ID { ZuInline static const char *id() { return "ZmLHash"; } };
+  struct ID { static const char *id() { return "ZmLHash"; } };
   enum { Static = 0 };
 };
 

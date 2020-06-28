@@ -149,7 +149,7 @@ public:
     if (T *o = m_object) ZmREF(o);
   }
   ZmRef(ZmRef &&r) noexcept : m_object(r.m_object) {
-    r.m_object = 0;
+    r.m_object = nullptr;
 #ifdef ZmObject_DEBUG
     if (T *o = m_object) ZmMVREF(o, &r, this);
 #endif
@@ -160,10 +160,10 @@ public:
       static_cast<T *>(const_cast<typename ZuDeref<R>::T::T *>(r.m_object))) {
     ZuMvCp<R>::mvcp(ZuFwd<R>(r),
 #ifndef ZmObject_DEBUG
-	[](auto &&r) { r.m_object = 0; }
+	[](auto &&r) { r.m_object = nullptr; }
 #else
 	[this](auto &&r) {
-	  r.m_object = 0;
+	  r.m_object = nullptr;
 	  if (T *o = m_object) ZmMVREF(o, &r, this);
 	}
 #endif

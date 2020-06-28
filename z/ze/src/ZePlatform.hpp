@@ -246,7 +246,7 @@ private:
   MessageFn	m_messageFn;
 };
 struct ZeEvent_HeapID {
-  ZuInline static const char *id() { return "ZeEvent"; }
+  static const char *id() { return "ZeEvent"; }
 };
 using ZeEvent_Heap = ZmHeap<ZeEvent_HeapID, sizeof(ZeEvent_<ZuNull>)>;
 using ZeEvent = ZeEvent_<ZeEvent_Heap>;

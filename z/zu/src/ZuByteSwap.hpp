@@ -210,7 +210,7 @@ private:
   typename ZuIfT<
       !ZuConversion<T, ZuByteSwap>::Is &&
       ZuConversion<T, I>::Exists, T>::T get() const {
-    return (T)B::bswap(m_i);
+    return static_cast<T>(B::bswap(m_i));
   }
   template <typename T>
   typename ZuIfT<

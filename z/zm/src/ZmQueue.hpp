@@ -50,7 +50,7 @@ struct ZmQueue_Defaults {
   template <typename T> struct IHashFnT { using IHashFn = ZuHash<T>; };
   template <typename T> struct IndexT { using Index = T; };
   using Lock = ZmLock;
-  struct HeapID { ZuInline static const char *id() { return "ZmQueue"; } };
+  struct HeapID { static const char *id() { return "ZmQueue"; } };
   struct Base { };
 };
 

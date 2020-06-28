@@ -1467,7 +1467,6 @@ bool ZdbAny::recover()
   {
     ZiDir dir;
     if (dir.open(m_config->path) != Zi::OK) {
-      ZeError e;
       if (ZiFile::mkdir(m_config->path, &e) != Zi::OK) {
 	ZeLOG(Fatal, ZtString() << m_config->path << ": " << e);
 	return false;
@@ -1594,7 +1593,7 @@ bool ZdbAny::recover()
       fileName_ << ".zdb";
       unsigned index = (((unsigned)i)<<20U) | ((unsigned)j);
       fileName = ZiFile::append(subName, fileName_);
-      ZmRef<Zdb_File> file = new Zdb_File(index);
+      ZuRef<Zdb_File> file = new Zdb_File(index);
       if (file->open(
 	    fileName, ZiFile::GC, 0666, m_fileSize, &e) != Zi::OK) {
 	ZeLOG(Error, ZtString() << fileName << ": " << e);
@@ -1661,7 +1660,7 @@ void ZdbAny::scan(Zdb_File *file)
     int r;
     ZeError e;
     if (ZuUnlikely((r = file->pread(off, &magic, 4, &e)) < 4)) {
-      fileReadError_(file, off, r, e);
+      fileRdError_(file, off, r, e);
       return;
     }
     switch (magic) {
@@ -1782,10 +1781,8 @@ ZmRef<ZdbAnyPOD> ZdbAny::get(ZdbRN rn)
   ++m_cacheLoads;
   if (ZuLikely(pod = m_cache->find(rn))) {
     if (!pod->committed()) return nullptr;
-    if (m_cacheMode != ZdbCacheMode::FullCache) {
-      m_lru.del(pod);
-      m_lru.push(pod);
-    }
+    if (m_cacheMode != ZdbCacheMode::FullCache)
+      m_lru.push(m_lru.del(pod.ptr()));
     return pod;
   }
   ++m_cacheMisses;
@@ -1824,11 +1821,11 @@ void ZdbAny::cache(ZdbAnyPOD *pod)
 {
   if (m_cacheMode != ZdbCacheMode::FullCache &&
       m_cache->count_() >= m_cacheSize) {
-    ZmRef<ZdbLRUNode> lru_ = m_lru.shiftNode();
+    ZdbLRUNode *lru_ = m_lru.shiftNode();
     if (ZuLikely(lru_)) {
-      ZdbAnyPOD *lru = static_cast<ZdbAnyPOD *>(lru_.ptr());
+      ZdbAnyPOD *lru = static_cast<ZdbAnyPOD *>(lru_);
       if (lru->pinned()) {
-	m_lru.push(ZuMv(lru_));
+	m_lru.push(lru_);
 	cache_(pod);
 	m_cacheSize = m_cache->size();
 	return;
@@ -1842,13 +1839,13 @@ void ZdbAny::cache(ZdbAnyPOD *pod)
 void ZdbAny::cache_(ZdbAnyPOD *pod)
 {
   m_cache->add(pod);
-  if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.push(pod);
+  if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.push(pod.ptr());
 }
 
 void ZdbAny::cacheDel_(ZdbRN rn)
 {
   if (ZmRef<Zdb_CacheNode> pod = m_cache->del(rn))
-    if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.del(pod);
+    if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.del(pod.ptr());
 }
 
 void ZdbAny::abort(ZdbAnyPOD *pod) // aborts a push()
@@ -2054,39 +2051,38 @@ Zdb_FileRec ZdbAny::rn2file(ZdbRN rn, bool write)
 {
   unsigned index = rn>>ZdbFileShift;
   unsigned offRN = rn & ZdbFileMask;
-  ZmRef<Zdb_File> file = getFile(index, write);
+  ZuRef<Zdb_File> file = getFile(index, write);
   if (!file) return Zdb_FileRec();
   return Zdb_FileRec(ZuMv(file), offRN);
 }
 
-ZmRef<Zdb_File> ZdbAny::getFile(unsigned index, bool create)
+ZuRef<Zdb_File> ZdbAny::getFile(unsigned index, bool create)
 {
   FSGuard guard(m_fsLock);
   ++m_fileLoads;
-  ZmRef<Zdb_File> file;
+  ZuRef<Zdb_File> file;
   if (file = m_files->find(index)) {
-    m_filesLRU.del(file);
-    m_filesLRU.push(file);
+    m_filesLRU.push(m_filesLRU.del(file.ptr()));
     return file;
   }
   ++m_fileMisses;
   file = openFile(index, create);
   if (ZuUnlikely(!file)) return nullptr;
   if (m_files->count_() >= m_filesMax)
-    if (ZmRef<Zdb_File> lru = m_filesLRU.shiftNode())
+    if (Zdb_File *lru = m_filesLRU.shiftNode())
       m_files->del(lru->index());
   m_files->add(file);
-  m_filesLRU.push(file);
+  m_filesLRU.push(file.ptr());
   if (index > m_lastFile) m_lastFile = index;
   return file;
 }
 
-ZmRef<Zdb_File> ZdbAny::openFile(unsigned index, bool create)
+ZuRef<Zdb_File> ZdbAny::openFile(unsigned index, bool create)
 {
   ZiFile::Path name = dirName(index);
   if (create) ZiFile::mkdir(name); // pre-emptive idempotent
   name = fileName(name, index);
-  ZmRef<Zdb_File> file = new Zdb_File(index);
+  ZuRef<Zdb_File> file = new Zdb_File(index);
   if (file->open(name, ZiFile::GC, 0666, m_fileSize, 0) == Zi::OK) {
     scan(file);
     return file;
@@ -2125,8 +2121,8 @@ ZmRef<ZdbAnyPOD> ZdbAny::read_(const Zdb_FileRec &rec)
   int r;
   ZeError e;
   if (ZuUnlikely((r = rec.file()->pread(
-	    off, pod->ptr(), m_recSize)) < (int)m_recSize)) {
-    fileReadError_(rec.file(), off, r, e);
+	    off, pod->ptr(), m_recSize, &e)) < (int)m_recSize)) {
+    fileRdError_(rec.file(), off, r, e);
     return nullptr;
   }
   return pod;
@@ -2158,7 +2154,7 @@ void ZdbAny::write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op)
 	  (ZiFile::Offset)rec.offRN() * m_recSize + trailerOffset;
 	if (ZuUnlikely((r = rec.file()->pwrite(
 		  off, &trailer, sizeof(ZdbTrailer), &e)) != Zi::OK))
-	  fileWriteError_(rec.file(), off, e);
+	  fileWrError_(rec.file(), off, e);
 	++gapRN;
       }
     }
@@ -2172,7 +2168,7 @@ void ZdbAny::write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op)
   else {
     ZiFile::Offset off = (ZiFile::Offset)rec.offRN() * m_recSize;
     if (ZuUnlikely((r = rec.file()->pwrite(off, ptr, m_recSize, &e)) != Zi::OK))
-      fileWriteError_(rec.file(), off, e);
+      fileWrError_(rec.file(), off, e);
   }
 
   if (op == ZdbOp::Add) return;
@@ -2203,14 +2199,14 @@ void ZdbAny::write_(ZdbRN rn, ZdbRN prevRN, const void *ptr, int op)
 	(ZiFile::Offset)rec.offRN() * m_recSize + magicOffset;
       r = rec.file()->pwrite(off, &magicDeleted, 4, &e);
       if (ZuUnlikely(r != Zi::OK)) {
-	fileWriteError_(rec.file(), off, e);
+	fileWrError_(rec.file(), off, e);
 	break;
       }
     }
   }
 }
 
-void ZdbAny::fileReadError_(
+void ZdbAny::fileRdError_(
     Zdb_File *file, ZiFile::Offset off, int r, ZeError e)
 {
   if (r < 0) {
@@ -2224,7 +2220,7 @@ void ZdbAny::fileReadError_(
   }
 }
 
-void ZdbAny::fileWriteError_(Zdb_File *file, ZiFile::Offset off, ZeError e)
+void ZdbAny::fileWrError_(Zdb_File *file, ZiFile::Offset off, ZeError e)
 {
   ZeLOG(Error, ZtString() <<
       "Zdb pwrite() failed on \"" << fileName(file->index()) <<

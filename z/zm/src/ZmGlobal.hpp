@@ -79,7 +79,7 @@ private:
 
   template <typename T> struct Ctor {
     static ZmGlobal *_() {
-      ZmGlobal *global = (ZmGlobal *)(new T());
+      ZmGlobal *global = static_cast<ZmGlobal *>(new T());
       const std::type_info &info = typeid(T);
       global->m_type = std::type_index(info);
 #ifdef ZDEBUG

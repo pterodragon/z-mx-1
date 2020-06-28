@@ -52,7 +52,7 @@
 
 #include <zlib/Zfb.hpp>
 
-#include <zlib/ZvFields.hpp>
+#include <zlib/ZvField.hpp>
 #include <zlib/ZvMultiplex.hpp>
 
 #include <zlib/telemetry_fbs.h>
@@ -165,7 +165,7 @@ namespace Severity {
 
 using Heap_ = ZmHeapTelemetry;
 struct Heap : public Heap_, public ZvFieldTuple<Heap> {
-  static const ZvFields<Heap> fields() noexcept;
+  static const ZvFields fields() noexcept;
   using Key = ZuTuple<ZmIDString, unsigned, unsigned>;
   Key key() const { return Key{id, partition, size}; }
   static Key key(const fbs::Heap *heap_) {
@@ -209,24 +209,24 @@ struct Heap : public Heap_, public ZvFieldTuple<Heap> {
   struct KeyPrint : public ZuPrintDelegate {
     template <typename S>
     static void print(S &s, const Key &k) {
-      s << k.p<0>() << ':' << k.p<1>() << ':' << k.p<2>();
+      s << k.p<0>() << '_' << k.p<1>() << '_' << k.p<2>();
     }
   };
   friend KeyPrint ZuPrintType(const Key *);
 };
-inline const ZvFields<Heap> Heap::fields() noexcept {
+inline const ZvFields Heap::fields() noexcept {
   ZvMkFields(Heap,
       (String, id, 0),
-      (Scalar, size, 0),
-      (Scalar, alignment, 0),
-      (Scalar, partition, 0),
+      (Int, size, 0),
+      (Int, alignment, 0),
+      (Int, partition, 0),
       (Bool, sharded, 0),
-      (Scalar, cacheSize, 0),
+      (Int, cacheSize, 0),
       (String, cpuset, 0),
-      (Scalar, cacheAllocs, Dynamic | Cumulative),
-      (Scalar, heapAllocs, Dynamic | Cumulative),
-      (Scalar, frees, Dynamic | Cumulative),
-      (ScalarFn, allocated, Synthetic | Dynamic));
+      (Int, cacheAllocs, Series | Delta),
+      (Int, heapAllocs, Series | Delta),
+      (Int, frees, Series | Delta),
+      (IntFn, allocated, Synthetic | Series));
 }
 struct Heap_load : public Heap {
   Heap_load(const fbs::Heap *heap_) : Heap{ {
@@ -245,7 +245,7 @@ struct Heap_load : public Heap {
 
 using HashTbl_ = ZmHashTelemetry;
 struct HashTbl : public HashTbl_, public ZvFieldTuple<HashTbl> {
-  static const ZvFields<HashTbl> fields() noexcept;
+  static const ZvFields fields() noexcept;
   using Key = ZuPair<ZmIDString, uintptr_t>;
   Key key() const { return Key{id, addr}; }
   static Key key(const fbs::HashTbl *hash_) {
@@ -282,23 +282,23 @@ struct HashTbl : public HashTbl_, public ZvFieldTuple<HashTbl> {
   struct KeyPrint : public ZuPrintDelegate {
     template <typename S>
     static void print(S &s, const Key &k) {
-      s << k.p<0>() << ':' << ZuBoxed(k.p<1>()).hex();
+      s << k.p<0>() << '_' << ZuBoxed(k.p<1>()).hex();
     }
   };
   friend KeyPrint ZuPrintType(const Key *);
 };
-inline const ZvFields<HashTbl> HashTbl::fields() noexcept {
+inline const ZvFields HashTbl::fields() noexcept {
   ZvMkFields(HashTbl,
       (String, id, 0),
       (Hex, addr, 0),
       (Bool, linear, 0),
-      (Scalar, bits, 0),
-      (Scalar, cBits, 0),
-      (Scalar, loadFactor, 0),
-      (Scalar, nodeSize, 0),
-      (Scalar, count, Dynamic),
-      (Scalar, effLoadFactor, Dynamic),
-      (Scalar, loadFactor, 0));
+      (Int, bits, 0),
+      (Int, cBits, 0),
+      (Int, loadFactor, 0),
+      (Int, nodeSize, 0),
+      (Int, count, Series),
+      (Float, effLoadFactor, Series, 2),
+      (Int, loadFactor, 0));
 }
 struct HashTbl_load : public HashTbl {
   HashTbl_load(const fbs::HashTbl *hash_) : HashTbl{ {
@@ -317,7 +317,7 @@ struct HashTbl_load : public HashTbl {
 
 using Thread_ = ZmThreadTelemetry;
 struct Thread : public Thread_, public ZvFieldTuple<Thread> {
-  static const ZvFields<Thread> fields() noexcept;
+  static const ZvFields fields() noexcept;
   using Key = decltype(Thread_::tid);
   const Key &key() const { return tid; }
   static Key key(const fbs::Thread *thread_) { return thread_->tid(); }
@@ -347,16 +347,16 @@ struct Thread : public Thread_, public ZvFieldTuple<Thread> {
     cpuUsage = thread_->cpuUsage();
   }
 };
-inline const ZvFields<Thread> Thread::fields() noexcept {
+inline const ZvFields Thread::fields() noexcept {
   ZvMkFields(Thread,
       (String, name, 0),
-      (Scalar, tid, 0),
-      (Scalar, cpuUsage, Dynamic),
+      (Int, tid, 0),
+      (Float, cpuUsage, Series, 2),
       (String, cpuset, 0),
       (Enum, priority, 0, ThreadPriority::Map),
-      (Scalar, sysPriority, 0),
-      (Scalar, stackSize, 0),
-      (Scalar, partition, 0),
+      (Int, sysPriority, 0),
+      (Int, stackSize, 0),
+      (Int, partition, 0),
       (Bool, main, 0),
       (Bool, detached, 0));
 }
@@ -378,7 +378,7 @@ struct Thread_load : public Thread {
 
 using Mx_ = ZiMxTelemetry;
 struct Mx : public Mx_, public ZvFieldTuple<Mx> {
-  static const ZvFields<Mx> fields() noexcept;
+  static const ZvFields fields() noexcept;
   using Key = decltype(Mx_::id);
   const Key &key() const { return id; }
   static Key key(const fbs::Mx *mx_) {
@@ -407,22 +407,22 @@ struct Mx : public Mx_, public ZvFieldTuple<Mx> {
     state = mx_->state();
   }
 };
-inline const ZvFields<Mx> Mx::fields() noexcept {
+inline const ZvFields Mx::fields() noexcept {
   ZvMkFields(Mx,
       (String, id, 0),
-      (Enum, state, Dynamic, MxState::Map),
-      (Scalar, nThreads, 0),
-      (Scalar, rxThread, 0),
-      (Scalar, txThread, 0),
-      (Scalar, priority, 0),
-      (Scalar, stackSize, 0),
-      (Scalar, partition, 0),
-      (Scalar, rxBufSize, 0),
-      (Scalar, txBufSize, 0),
-      (Scalar, queueSize, 0),
+      (Enum, state, Series, MxState::Map),
+      (Int, nThreads, 0),
+      (Int, rxThread, 0),
+      (Int, txThread, 0),
+      (Int, priority, 0),
+      (Int, stackSize, 0),
+      (Int, partition, 0),
+      (Int, rxBufSize, 0),
+      (Int, txBufSize, 0),
+      (Int, queueSize, 0),
       (Bool, ll, 0),
-      (Scalar, spin, 0),
-      (Scalar, timeout, 0));
+      (Int, spin, 0),
+      (Int, timeout, 0));
 }
 struct Mx_load : public Mx {
   Mx_load(const fbs::Mx *mx_) : Mx{ {
@@ -445,7 +445,7 @@ struct Mx_load : public Mx {
 
 using Socket_ = ZiCxnTelemetry;
 struct Socket : public Socket_, public ZvFieldTuple<Socket> {
-  static const ZvFields<Socket> fields() noexcept;
+  static const ZvFields fields() noexcept;
   using Key = decltype(Socket_::socket);
   const Key &key() const { return socket; }
   static Key key(const fbs::Socket *socket_) { return socket_->socket(); }
@@ -481,24 +481,24 @@ struct Socket : public Socket_, public ZvFieldTuple<Socket> {
     txBufLen = socket_->txBufLen();
   }
 };
-inline const ZvFields<Socket> Socket::fields() noexcept {
+inline const ZvFields Socket::fields() noexcept {
   ZvMkFields(Socket,
       (String, mxID, 0),
       (Enum, type, 0, SocketType::Map),
       (String, remoteIP, 0),
-      (Scalar, remotePort, 0),
+      (Int, remotePort, 0),
       (String, localIP, 0),
-      (Scalar, localPort, 0),
-      (Scalar, socket, 0),
-      (Scalar, flags, 0),
+      (Int, localPort, 0),
+      (Int, socket, 0),
+      (Int, flags, 0),
       (String, mreqAddr, 0),
       (String, mreqIf, 0),
       (String, mif, 0),
-      (Scalar, ttl, 0),
-      (Scalar, rxBufSize, 0),
-      (Scalar, rxBufLen, Dynamic),
-      (Scalar, txBufSize, 0),
-      (Scalar, txBufLen, Dynamic));
+      (Int, ttl, 0),
+      (Int, rxBufSize, 0),
+      (Int, rxBufLen, Series),
+      (Int, txBufSize, 0),
+      (Int, txBufLen, Series));
 }
 struct Socket_load : public Socket {
   Socket_load(const fbs::Socket *socket_) : Socket{ {
@@ -536,7 +536,7 @@ struct Queue : public ZvFieldTuple<Queue> {
   uint32_t	full;		// dynamic - how many times queue overflowed
   uint8_t	type;		// primary key - QueueType
 
-  static const ZvFields<Queue> fields() noexcept;
+  static const ZvFields fields() noexcept;
   using Key = ZuPair<ZuID, unsigned>;
   Key key() const { return Key{id, type}; }
   static Key key(const fbs::Queue *queue_) {
@@ -584,23 +584,23 @@ struct Queue : public ZvFieldTuple<Queue> {
   struct KeyPrint : public ZuPrintDelegate {
     template <typename S>
     static void print(S &s, const Key &k) {
-      s << k.p<0>() << ':' << QueueType::name(k.p<1>());
+      s << k.p<0>() << '_' << QueueType::name(k.p<1>());
     }
   };
   friend KeyPrint ZuPrintType(const Key *);
 };
-inline const ZvFields<Queue> Queue::fields() noexcept {
+inline const ZvFields Queue::fields() noexcept {
   ZvMkFields(Queue,
       (String, id, 0),
       (Enum, type, 0, QueueType::Map),
-      (Scalar, size, 0),
-      (Scalar, full, Dynamic | Cumulative),
-      (Scalar, count, Dynamic),
-      (Scalar, seqNo, 0),
-      (Scalar, inCount, Dynamic | Cumulative),
-      (Scalar, inBytes, Dynamic | Cumulative),
-      (Scalar, outCount, Dynamic | Cumulative),
-      (Scalar, outBytes, Dynamic | Cumulative));
+      (Int, size, 0),
+      (Int, full, Series | Delta, 0),
+      (Int, count, Series),
+      (Int, seqNo, 0),
+      (Int, inCount, Series | Delta, 0),
+      (Int, inBytes, Series | Delta, 0),
+      (Int, outCount, Series | Delta, 0),
+      (Int, outBytes, Series | Delta, 0));
 }
 struct Queue_load : public Queue {
   Queue_load(const fbs::Queue *queue_) : Queue{
@@ -626,7 +626,7 @@ struct Link : public ZvFieldTuple<Link> {
   uint32_t	reconnects;
   int8_t	state;
 
-  static const ZvFields<Link> fields() noexcept;
+  static const ZvFields fields() noexcept;
   using Key = decltype(id);
   const Key &key() const { return id; }
   static Key key(const fbs::Link *link_) {
@@ -660,13 +660,13 @@ struct Link : public ZvFieldTuple<Link> {
     state = link_->state();
   }
 };
-inline const ZvFields<Link> Link::fields() noexcept {
+inline const ZvFields Link::fields() noexcept {
   ZvMkFields(Link,
       (String, id, 0),
-      (Enum, state, Dynamic, LinkState::Map),
-      (Scalar, reconnects, Dynamic | Cumulative),
-      (Scalar, rxSeqNo, Dynamic | Cumulative),
-      (Scalar, txSeqNo, Dynamic | Cumulative));
+      (Enum, state, Series, LinkState::Map),
+      (Int, reconnects, Series | Delta, 0),
+      (Int, rxSeqNo, Series | Delta, 0),
+      (Int, txSeqNo, Series | Delta, 0));
 }
 struct Link_load : public Link {
   Link_load(const fbs::Link *link_) : Link{
@@ -693,7 +693,7 @@ struct Engine : public ZvFieldTuple<Engine> {
   uint16_t	txThread;
   int8_t	state;
 
-  static const ZvFields<Engine> fields() noexcept;
+  static const ZvFields fields() noexcept;
   using Key = decltype(id);
   const Key &key() const { return id; }
   static Key key(const fbs::Engine *engine_) {
@@ -734,21 +734,21 @@ struct Engine : public ZvFieldTuple<Engine> {
     state = engine_->state();
   }
 };
-inline const ZvFields<Engine> Engine::fields() noexcept {
+inline const ZvFields Engine::fields() noexcept {
   ZvMkFields(Engine,
       (String, id, 0),
       (String, type, 0),
-      (Enum, state, Dynamic, EngineState::Map),
-      (Scalar, nLinks, 0),
-      (Scalar, up, Dynamic),
-      (Scalar, down, Dynamic),
-      (Scalar, disabled, Dynamic),
-      (Scalar, transient, Dynamic),
-      (Scalar, reconn, Dynamic),
-      (Scalar, failed, Dynamic),
+      (Enum, state, Series, EngineState::Map),
+      (Int, nLinks, 0),
+      (Int, up, Series),
+      (Int, down, Series),
+      (Int, disabled, Series),
+      (Int, transient, Series),
+      (Int, reconn, Series),
+      (Int, failed, Series),
       (String, mxID, 0),
-      (Scalar, rxThread, 0),
-      (Scalar, txThread, 0));
+      (Int, rxThread, 0),
+      (Int, txThread, 0));
 }
 struct Engine_load : public Engine {
   Engine_load(const fbs::Engine *engine_) : Engine{
@@ -795,7 +795,7 @@ struct DB : public ZvFieldTuple<DB> {
   uint8_t	compress;
   uint8_t	cacheMode;	// ZdbCacheMode
 
-  static const ZvFields<DB> fields() noexcept;
+  static const ZvFields fields() noexcept;
   using Key = decltype(id);
   const Key &key() const { return id; }
   static Key key(const fbs::DB *db_) { return db_->id(); }
@@ -841,26 +841,26 @@ struct DB : public ZvFieldTuple<DB> {
     fileMisses = db_->fileMisses();
   }
 };
-inline const ZvFields<DB> DB::fields() noexcept {
+inline const ZvFields DB::fields() noexcept {
   ZvMkFields(DB,
       (String, name, 0),
-      (Scalar, id, 0),
-      (Scalar, recSize, 0),
-      (Scalar, compress, 0),
+      (Int, id, 0),
+      (Int, recSize, 0),
+      (Int, compress, 0),
       (Enum, cacheMode, 0, DBCacheMode::Map),
-      (Scalar, cacheSize, 0),
+      (Int, cacheSize, 0),
       (String, path, 0),
-      (Scalar, fileSize, 0),
-      (Scalar, fileRecs, 0),
-      (Scalar, filesMax, 0),
-      (Scalar, preAlloc, 0),
-      (Scalar, minRN, 0),
-      (Scalar, nextRN, Dynamic | Cumulative),
-      (Scalar, fileRN, Dynamic | Cumulative),
-      (Scalar, cacheLoads, Dynamic | Cumulative),
-      (Scalar, cacheMisses, Dynamic | Cumulative),
-      (Scalar, fileLoads, Dynamic | Cumulative),
-      (Scalar, fileMisses, Dynamic | Cumulative));
+      (Int, fileSize, 0),
+      (Int, fileRecs, 0),
+      (Int, filesMax, 0),
+      (Int, preAlloc, 0),
+      (Int, minRN, 0),
+      (Int, nextRN, Series | Delta, 0),
+      (Int, fileRN, Series | Delta, 0),
+      (Int, cacheLoads, Series | Delta, 0),
+      (Int, cacheMisses, Series | Delta, 0),
+      (Int, fileLoads, Series | Delta, 0),
+      (Int, fileMisses, Series | Delta, 0));
 }
 struct DB_load : public DB {
   DB_load(const fbs::DB *db_) : DB{
@@ -895,7 +895,7 @@ struct DBHost : public ZvFieldTuple<DBHost> {
   int8_t	state; // RAG: Instantiated - Red; Active - Green; * - Amber
   uint8_t	voted;
 
-  static const ZvFields<DBHost> fields() noexcept;
+  static const ZvFields fields() noexcept;
   using Key = decltype(id);
   const Key &key() const { return id; }
   static Key key(const fbs::DBHost *host_) { return host_->id(); }
@@ -922,14 +922,14 @@ struct DBHost : public ZvFieldTuple<DBHost> {
     voted = host_->voted();
   }
 };
-inline const ZvFields<DBHost> DBHost::fields() noexcept {
+inline const ZvFields DBHost::fields() noexcept {
   ZvMkFields(DBHost,
-      (Scalar, id, 0),
-      (Scalar, priority, 0),
-      (Enum, state, Dynamic, DBHostState::Map),
-      (Bool, voted, Dynamic),
+      (Int, id, 0),
+      (Int, priority, 0),
+      (Enum, state, Series, DBHostState::Map),
+      (Bool, voted, Series),
       (String, ip, 0),
-      (Scalar, port, 0));
+      (Int, port, 0));
 }
 struct DBHost_load : public DBHost {
   DBHost_load(const fbs::DBHost *host_) : DBHost{
@@ -966,7 +966,7 @@ struct DBEnv : public ZvFieldTuple<DBEnv> {
   uint8_t	recovering;
   uint8_t	replicating;
 
-  static const ZvFields<DBEnv> fields() noexcept;
+  static const ZvFields fields() noexcept;
 
   int rag() const { return DBHostState::rag(state); }
   void rag(int) { } // unused
@@ -994,25 +994,25 @@ struct DBEnv : public ZvFieldTuple<DBEnv> {
     state = env_->state();
   }
 };
-inline const ZvFields<DBEnv> DBEnv::fields() noexcept {
+inline const ZvFields DBEnv::fields() noexcept {
   ZvMkFields(DBEnv,
-      (Scalar, self, 0),
-      (Scalar, master, 0),
-      (Scalar, prev, 0),
-      (Scalar, next, 0),
-      (Enum, state, Dynamic, DBHostState::Map),
-      (Scalar, active, 0),
-      (Scalar, recovering, 0),
-      (Scalar, replicating, 0),
-      (Scalar, nDBs, 0),
-      (Scalar, nHosts, 0),
-      (Scalar, nPeers, 0),
-      (Scalar, nCxns, Dynamic),
-      (Scalar, heartbeatFreq, 0),
-      (Scalar, heartbeatTimeout, 0),
-      (Scalar, reconnectFreq, 0),
-      (Scalar, electionTimeout, 0),
-      (Scalar, writeThread, 0));
+      (Int, self, 0),
+      (Int, master, 0),
+      (Int, prev, 0),
+      (Int, next, 0),
+      (Enum, state, Series, DBHostState::Map),
+      (Int, active, 0),
+      (Int, recovering, 0),
+      (Int, replicating, 0),
+      (Int, nDBs, 0),
+      (Int, nHosts, 0),
+      (Int, nPeers, 0),
+      (Int, nCxns, Series),
+      (Int, heartbeatFreq, 0),
+      (Int, heartbeatTimeout, 0),
+      (Int, reconnectFreq, 0),
+      (Int, electionTimeout, 0),
+      (Int, writeThread, 0));
 }
 struct DBEnv_load : public DBEnv {
   DBEnv_load(const fbs::DBEnv *env_) : DBEnv{
@@ -1045,7 +1045,7 @@ struct App : public ZvFieldTuple<App> {
   uint8_t	role;
   uint8_t	rag_;
 
-  static const ZvFields<App> fields() noexcept;
+  static const ZvFields fields() noexcept;
   using Key = decltype(id);
   const Key &key() const { return id; }
   static Key key(const fbs::App *app_) { return Zfb::Load::str(app_->id()); }
@@ -1072,7 +1072,7 @@ struct App : public ZvFieldTuple<App> {
     rag(app_->rag());
   }
 };
-inline const ZvFields<App> App::fields() noexcept {
+inline const ZvFields App::fields() noexcept {
   ZvMkFields(App,
       (String, id, 0),
       (String, version, 0),
@@ -1099,7 +1099,7 @@ struct Alert : public ZvFieldTuple<Alert> {
   uint8_t	severity;
   ZtString	message;
 
-  static const ZvFields<Alert> fields() noexcept;
+  static const ZvFields fields() noexcept;
 
   Zfb::Offset<fbs::Alert> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
@@ -1113,13 +1113,13 @@ struct Alert : public ZvFieldTuple<Alert> {
   }
   void loadDelta(const fbs::Alert *);
 };
-inline const ZvFields<Alert> Alert::fields() noexcept {
+inline const ZvFields Alert::fields() noexcept {
   ZvMkFields(Alert,
       (Time, time, 0),
-      (Scalar, seqNo, 0),
-      (Scalar, tid, 0),
+      (Int, seqNo, 0),
+      (Int, tid, 0),
       (Enum, severity, 0, Severity::Map),
-      (String, message, 0));
+      (String, message, 0, 0));
 }
 struct Alert_load : public Alert {
   Alert_load(const fbs::Alert *alert_) : Alert{

@@ -247,7 +247,8 @@ public:
     };
   };
 
-  Mgr(Ztls::Random *rng, unsigned passLen, unsigned totpRange);
+  Mgr(Ztls::Random *rng, unsigned passLen, unsigned totpRange,
+      unsigned maxSize);
 
   void init();
   void final();

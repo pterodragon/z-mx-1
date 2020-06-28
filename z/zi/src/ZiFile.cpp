@@ -957,7 +957,7 @@ ZmTime ZiFile::mtime(const Path &name, ZeError *e)
 #ifndef _WIN32
   struct stat s;
   if (::stat(name, &s) < 0) goto error;
-  return ZmTime(s.st_mtime);
+  return ZmTime{s.st_mtime};
 #else
   Handle h;
   FILETIME mtime;
@@ -965,12 +965,12 @@ ZmTime ZiFile::mtime(const Path &name, ZeError *e)
   if (h == INVALID_HANDLE_VALUE) goto error;
   if (!GetFileTime(h, 0, 0, &mtime)) { CloseHandle(h); goto error; }
   CloseHandle(h);
-  return ZmTime(mtime);
+  return ZmTime{mtime};
 #endif
 
 error:
   if (e) *e = ZeLastError;
-  return ZmTime();
+  return ZmTime{};
 }
 
 bool ZiFile::isdir(const Path &name, ZeError *e)

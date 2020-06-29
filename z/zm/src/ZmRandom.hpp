@@ -278,7 +278,7 @@ class ZmAPI ZmRand : public ZmObject, public ZmRandom {
   ZmRand(const ZmRand &) = delete;
   ZmRand &operator =(const ZmRand &) = delete;
 
-friend struct ZmSpecificCtor<ZmRand, true>;
+friend ZmSpecificCtor<ZmRand, true>;
 
   ZmRand() : ZmRandom() { }
 

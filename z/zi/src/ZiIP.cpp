@@ -52,7 +52,7 @@ template <> struct ZmCleanup<ZiIP_WSDLL> {
 };
 
 class ZiIP_WSDLL {
-friend struct ZmSingletonCtor<ZiIP_WSDLL>;
+friend ZmSingletonCtor<ZiIP_WSDLL>;
 
 public:
   int getAddrInfo(const wchar_t *, const wchar_t *, const ADDRINFOT *,
@@ -139,7 +139,7 @@ template <> struct ZmCleanup<ZiIP_WSAStartup> {
 };
 
 class ZiIP_WSAStartup {
-friend struct ZmSingletonCtor<ZiIP_WSAStartup>;
+friend ZmSingletonCtor<ZiIP_WSAStartup>;
 
 public:
   static ZiIP_WSAStartup *instance();

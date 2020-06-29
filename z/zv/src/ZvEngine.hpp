@@ -92,7 +92,7 @@ class ZvAPI ZvAnyLink : public ZvAnyTx {
   ZvAnyLink(const ZvAnyLink &) = delete;
   ZvAnyLink &operator =(const ZvAnyLink &) = delete;
 
-friend class ZvEngine;
+friend ZvEngine;
 
   using StateLock = ZmLock;
   using StateGuard = ZmGuard<StateLock>;
@@ -208,7 +208,7 @@ class ZvAPI ZvEngine : public ZmPolymorph {
   ZvEngine(const ZvEngine &);	//prevent mis-use
   ZvEngine &operator =(const ZvEngine &);
 
-friend class ZvAnyLink;
+friend ZvAnyLink;
 
   using Lock = ZmRWLock;
   using Guard = ZmGuard<Lock>;

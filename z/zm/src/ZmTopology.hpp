@@ -50,7 +50,7 @@ class ZmAPI ZmTopology {
   ZmTopology(const ZmTopology &) = delete;
   ZmTopology &operator =(const ZmTopology &) = delete;
 
-friend struct ZmSingletonCtor<ZmTopology, true>;
+friend ZmSingletonCtor<ZmTopology, true>;
 
   ZmTopology();
 

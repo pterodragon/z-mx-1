@@ -6,7 +6,7 @@
 #include <zlib/ZuStringN.hpp>
 #include <zlib/ZuDemangle.hpp>
 
-#include <zlib/ZvSeriesBuf.hpp>
+#include <zlib/ZdfCompress.hpp>
 
 void print(const char *s) {
   std::cout << s << '\n' << std::flush;
@@ -74,7 +74,7 @@ void test() {
 
 int main()
 {
-  using namespace ZvSeriesBuf;
+  using namespace ZdfCompress;
   test<Reader, Writer>();
   test<DeltaReader<>, DeltaWriter<>>();
   test<DeltaReader<DeltaReader<>>, DeltaWriter<DeltaWriter<>>>();

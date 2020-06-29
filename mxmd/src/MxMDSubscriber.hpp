@@ -116,7 +116,7 @@ class MxMDAPI MxMDSubLink : public MxLink<MxMDSubLink> {
   typedef MxMDStream::Msg Msg;
 
   class TCP;
-friend class TCP;
+friend TCP;
   class TCP : public ZiConnection {
   public:
     struct State {
@@ -154,7 +154,7 @@ friend class TCP;
   };
 
   class UDP;
-friend class UDP;
+friend UDP;
   class UDP : public ZiConnection {
   public:
     struct State {

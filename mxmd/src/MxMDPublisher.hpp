@@ -133,7 +133,7 @@ class MxMDAPI MxMDPubLink : public MxLink<MxMDPubLink> {
   typedef MxMDStream::Msg Msg;
 
   class TCP;
-friend class TCP;
+friend TCP;
   class TCP : public ZiConnection {
   public:
     struct State {
@@ -192,7 +192,7 @@ friend class TCP;
 		ZmHashHeapID<TCP_HeapID> > > > TCPTbl;
 
   class UDP;
-friend class UDP;
+friend UDP;
   class UDP : public ZiConnection {
   public:
     struct State {

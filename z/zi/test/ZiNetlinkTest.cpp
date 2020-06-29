@@ -106,7 +106,7 @@ private:
 };
 
 class Mx : public ZiMultiplex {
-friend class Connection;
+friend Connection;
 
 public:
   Mx(int nThreads, int nConnections, int nConcurrent, int maxRecv,

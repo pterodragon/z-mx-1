@@ -98,10 +98,10 @@ struct ZmHeapTelemetry {
 
 // cache (LIFO free list) of fixed-size blocks; one per CPU set / NUMA node
 class ZmAPI ZmHeapCache : public ZmObject {
-friend class ZmHeapMgr;
-friend class ZmHeapMgr_;
-template <class, unsigned> friend class ZmHeap;
-template <class, unsigned> friend class ZmHeapCacheT;
+friend ZmHeapMgr;
+friend ZmHeapMgr_;
+template <class, unsigned> friend ZmHeap;
+template <class, unsigned> friend ZmHeapCacheT;
 
   enum { CacheLineSize = ZmPlatform::CacheLineSize };
 
@@ -214,8 +214,8 @@ private:
 };
 
 class ZmAPI ZmHeapMgr {
-friend class ZmHeapCache;
-template <class, unsigned> friend class ZmHeapCacheT; 
+friend ZmHeapCache;
+template <class, unsigned> friend ZmHeapCacheT; 
 
   template <class S> struct CSV_ {
     CSV_(S &stream) : m_stream(stream) { }
@@ -284,8 +284,8 @@ struct ZmCleanup<ZmHeapCacheT<ID, Size> > {
 // TLS heap cache, specific to ID+size; maintains TLS heap statistics
 template <class ID, unsigned Size>
 class ZmHeapCacheT : public ZmObject {
-friend struct ZmSpecificCtor<ZmHeapCacheT<ID, Size> >;
-template <class, unsigned> friend class ZmHeap; 
+friend ZmSpecificCtor<ZmHeapCacheT<ID, Size> >;
+template <class, unsigned> friend ZmHeap; 
 
   using TLS = ZmSpecific<ZmHeapCacheT>;
 
@@ -346,7 +346,7 @@ struct ZmHeap_Size<Size_, false, 0, true> { // larger than cache line size
 };
 
 template <typename Heap> class ZmHeap_Init {
-template <typename, unsigned> friend class ZmHeap;
+template <typename, unsigned> friend ZmHeap;
   ZmHeap_Init();
 };
 

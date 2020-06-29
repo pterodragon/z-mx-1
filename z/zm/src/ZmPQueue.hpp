@@ -211,7 +211,7 @@ public:
     NodeFn_(const NodeFn_ &);
     NodeFn_ &operator =(const NodeFn_ &); // prevent mis-use
 
-  friend class ZmPQueue<Item, NTP>;
+  friend ZmPQueue<Item, NTP>;
 
   protected:
     NodeFn_() {

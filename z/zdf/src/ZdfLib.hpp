@@ -17,10 +17,34 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Zero Copy V-Layer Library
+// Zdf library main header
 
-#include <zlib/ZvLib.hpp>
+#ifndef ZdfLib_HPP
+#define ZdfLib_HPP
 
-#include "../../version.h"
+#ifdef _MSC_VER
+#pragma once
+#endif
 
-ZvExtern const char ZvLib[] = "@(#) Zero Copy V-Layer Library v" Z_VERNAME;
+#include <zlib/ZuLib.hpp>
+
+#ifdef _WIN32
+
+#ifdef ZDF_EXPORTS
+#define ZdfAPI ZuExport_API
+#define ZdfExplicit ZuExport_Explicit
+#else
+#define ZdfAPI ZuImport_API
+#define ZdfExplicit ZuImport_Explicit
+#endif
+#define ZdfExtern extern ZdfAPI
+
+#else
+
+#define ZdfAPI
+#define ZdfExplicit
+#define ZdfExtern extern
+
+#endif
+
+#endif /* ZdfLib_HPP */

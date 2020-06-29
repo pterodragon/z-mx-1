@@ -89,8 +89,8 @@ private:
 };
 
 class MxMDAPI MxMDCore : public MxMDLib, public MxEngineMgr {
-friend class MxMDLib;
-friend class MxMDCmdServer;
+friend MxMDLib;
+friend MxMDCmdServer;
 
 public:
   static unsigned vmajor();

@@ -53,7 +53,7 @@ template <> struct ZmCleanup<ZiFile_WindowsDrives> {
 };
 
 class ZiFile_WindowsDrives {
-friend struct ZmSingletonCtor<ZiFile_WindowsDrives>;
+friend ZmSingletonCtor<ZiFile_WindowsDrives>;
 
 public:
   static int blkSize(ZtWString path) {

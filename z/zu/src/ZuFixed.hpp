@@ -162,9 +162,41 @@ struct ZuFixed {
   // adjust to another exponent
   ZuInline ZuFixedVal adjust(unsigned exponent) const {
     if (ZuLikely(exponent == this->exponent)) return value;
-    if (!*value) return ZuFixedVal();
-    return (ZuFixed{1.0, exponent} * (*this)).value;
+    if (!*value) return ZuFixedVal{};
+    if (exponent > this->exponent)
+      return value * ZuDecimalFn::pow10_64(exponent - this->exponent);
+    return value / ZuDecimalFn::pow10_64(this->exponent - exponent);
   }
+
+  // comparisons
+  ZuInline int cmp(const ZuFixed &v) {
+    if (ZuLikely(exponent == v.exponent || !*value || !*v.value))
+      return value.cmp(v.value);
+    int128_t i = (typename ZuFixedVal::T)value;
+    int128_t j = (typename ZuFixedVal::T)v.value;
+    if (exponent < v.exponent)
+      i *= ZuDecimalFn::pow10_64(v.exponent - exponent);
+    else
+      j *= ZuDecimalFn::pow10_64(exponent - v.exponent);
+    return (i > j) - (i < j);
+  }
+  ZuInline bool equals(const ZuFixed &v) {
+    if (ZuLikely(exponent == v.exponent || !*value || !*v.value))
+      return value == v.value;
+    int128_t i = (typename ZuFixedVal::T)value;
+    int128_t j = (typename ZuFixedVal::T)v.value;
+    if (exponent < v.exponent)
+      i *= ZuDecimalFn::pow10_64(v.exponent - exponent);
+    else
+      j *= ZuDecimalFn::pow10_64(exponent - v.exponent);
+    return i == j;
+  }
+  ZuInline bool operator ==(const ZuFixed &v) { return equals(v); }
+  ZuInline bool operator !=(const ZuFixed &v) { return !equals(v); }
+  ZuInline bool operator >(const ZuFixed &v) { return cmp(v) > 0; }
+  ZuInline bool operator >=(const ZuFixed &v) { return cmp(v) >= 0; }
+  ZuInline bool operator <(const ZuFixed &v) { return cmp(v) < 0; }
+  ZuInline bool operator <=(const ZuFixed &v) { return cmp(v) <= 0; }
 
   // ! is zero, unary * is !null
   ZuInline bool operator !() const { return !value; }

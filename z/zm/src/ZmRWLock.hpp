@@ -47,7 +47,7 @@ class ZmRWLock {
   ZmRWLock(const ZmRWLock &);
   ZmRWLock &operator =(const ZmRWLock &);	// prevent mis-use
 
-friend class ZmRWLockTest;
+friend ZmRWLockTest;
 
 public:
   ZuInline ZmRWLock() { memset(&m_lock, 0, sizeof(ck_rwlock_recursive_t)); }
@@ -95,7 +95,7 @@ class ZmPRWLock {
   ZmPRWLock(const ZmPRWLock &);
   ZmPRWLock &operator =(const ZmPRWLock &);	// prevent mis-use
 
-friend class ZmRWLockTest;
+friend ZmRWLockTest;
 
 public:
   ZuInline ZmPRWLock() { ck_pflock_init(&m_lock); }

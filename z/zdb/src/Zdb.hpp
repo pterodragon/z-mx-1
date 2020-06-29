@@ -193,7 +193,7 @@ using Zdb_FileLRU =
 using Zdb_FileLRUNode = Zdb_FileLRU::Node;
 
 class Zdb_File_ : public ZmPolymorph, public ZiFile, public Zdb_FileLRUNode {
-friend struct Zdb_File_IndexAccessor;
+friend Zdb_File_IndexAccessor;
 
 public:
   Zdb_File_(unsigned index) : m_index(index) {
@@ -299,10 +299,10 @@ class ZdbAnyPOD_Cmpr;
 class ZdbAnyPOD_Send__;
 
 class ZdbAPI ZdbAnyPOD : public Zdb_CacheNode, public ZuPrintable {
-friend class ZdbAny;
-friend class Zdb_Cxn;
-friend class ZdbAnyPOD_Send__;
-friend class ZdbEnv;
+friend ZdbAny;
+friend Zdb_Cxn;
+friend ZdbAnyPOD_Send__;
+friend ZdbEnv;
 
 protected:
   ZuInline ZdbAnyPOD(ZdbAny *db) : m_db(db) { }
@@ -455,8 +455,8 @@ struct ZdbData : public T_, public ZdbTrailer {
 
 template <typename T_, class Heap>
 class ZdbPOD_ : public Heap, public ZuPOD_<ZdbData<T_>, ZdbAnyPOD> {
-friend class Zdb<T_>;
-friend class ZdbAnyPOD_Send__;
+friend Zdb<T_>;
+friend ZdbAnyPOD_Send__;
 
   using Base = ZuPOD_<ZdbData<T_>, ZdbAnyPOD>;
 
@@ -533,11 +533,11 @@ struct ZdbHandler {
 };
 
 class ZdbAPI ZdbAny : public ZmPolymorph {
-friend class ZdbEnv;
-friend class ZdbAnyPOD;
+friend ZdbEnv;
+friend ZdbAnyPOD;
 
   struct IDAccessor;
-friend struct IDAccessor;
+friend IDAccessor;
   struct IDAccessor : public ZuAccessor<ZdbAny *, ZdbID> {
     ZuInline static ZdbID value(const ZdbAny *db) { return db->m_id; }
   };
@@ -753,16 +753,16 @@ namespace ZdbHostState {
 }
 
 class ZdbAPI ZdbHost : public ZmPolymorph {
-friend class ZdbEnv;
-friend class Zdb_Cxn;
-template <typename> friend struct ZuPrint;
+friend ZdbEnv;
+friend Zdb_Cxn;
+template <typename> friend ZuPrint;
 
   using Lock = ZmPLock;
   using Guard = ZmGuard<Lock>;
   using ReadGuard = ZmReadGuard<Lock>;
 
   struct IDAccessor;
-friend struct IDAccessor;
+friend IDAccessor;
   struct IDAccessor : public ZuAccessor<ZdbHost *, int> {
     ZuInline static int value(ZdbHost *h) { return h->id(); }
   };
@@ -873,11 +873,11 @@ class Zdb_Cxn : public ZiConnection {
   Zdb_Cxn(const Zdb_Cxn &);
   Zdb_Cxn &operator =(const Zdb_Cxn &);	// prevent mis-use
 
-friend class ZiConnection;
-friend class ZiMultiplex;
-friend class ZdbEnv;
-friend class ZdbHost;
-friend class ZdbAnyPOD_Send__;
+// friend ZiConnection;
+// friend ZiMultiplex;
+friend ZdbEnv;
+friend ZdbHost;
+friend ZdbAnyPOD_Send__;
 
   Zdb_Cxn(ZdbEnv *env, ZdbHost *host, const ZiCxnInfo &ci);
 
@@ -983,11 +983,11 @@ class ZdbAPI ZdbEnv : public ZmPolymorph {
   ZdbEnv(const ZdbEnv &);
   ZdbEnv &operator =(const ZdbEnv &);		// prevent mis-use
 
-friend class ZdbAny;
-friend class ZdbHost;
-friend class Zdb_Cxn;
-friend class ZdbAnyPOD;
-friend class ZdbAnyPOD_Send__;
+friend ZdbAny;
+friend ZdbHost;
+friend Zdb_Cxn;
+friend ZdbAnyPOD;
+friend ZdbAnyPOD_Send__;
 
   struct HostTree_HeapID {
     static const char *id() { return "ZdbEnv.HostTree"; }

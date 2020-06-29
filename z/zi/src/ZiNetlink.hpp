@@ -65,8 +65,8 @@ public:
 template <> struct ZuPrint<ZiNetlinkSockAddr> : public ZuPrintFn { };
 
 class ZiNetlink {
-  friend class ZiMultiplex;
-  friend class ZiConnection;
+  friend ZiMultiplex;
+  friend ZiConnection;
 
   using Socket = ZiPlatform::Socket;
 

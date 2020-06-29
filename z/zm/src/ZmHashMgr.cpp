@@ -31,8 +31,8 @@ struct ZmCleanup<ZmHashMgr_> {
 };
 
 class ZmHashMgr_ : public ZmObject {
-friend struct ZmSingletonCtor<ZmHashMgr_>;
-friend class ZmHashMgr;
+friend ZmSingletonCtor<ZmHashMgr_>;
+friend ZmHashMgr;
 
   struct HeapID { static const char *id() { return "ZmHashMgr_"; } };
 

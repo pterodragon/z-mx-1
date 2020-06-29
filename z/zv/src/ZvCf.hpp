@@ -523,7 +523,7 @@ public:
   ZmRef<ZvCf> parent() const { return m_parent; }
 
   class Iterator;
-friend class Iterator;
+friend Iterator;
   class ZvAPI Iterator {
   public:
     Iterator(ZvCf *cf) : m_cf(cf), m_iterator(cf->m_tree) { }

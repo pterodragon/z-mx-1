@@ -45,7 +45,7 @@ template <class Lock> class ZmCondition;
 #ifdef ZmLock_DEBUG
 template <unsigned> class ZmBackTracer;
 class ZmAPI ZmLock_Debug {
-friend class ZmLock;
+friend ZmLock;
   static void enable();
   static void disable();
   static void capture(unsigned skip = 1);
@@ -64,7 +64,7 @@ class ZmLock {
   ZmLock(const ZmLock &);
   ZmLock &operator =(const ZmLock &);	// prevent mis-use
 
-friend class ZmCondition<ZmLock>;
+friend ZmCondition<ZmLock>;
 
 public:
   ZmLock()
@@ -132,9 +132,9 @@ private:
   Wait wait() { return Wait(); }
 #else
   class Wait;
-friend class Wait;
+friend Wait;
   class Wait {
-  friend class ZmLock;
+  friend ZmLock;
   private:
     Wait(ZmLock &lock) :
 	m_lock(lock), m_count(lock.m_count), m_tid(lock.m_tid) {

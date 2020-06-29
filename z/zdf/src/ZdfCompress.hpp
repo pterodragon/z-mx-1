@@ -24,8 +24,8 @@
 // - single-byte RLE
 // - absolute, delta (first derivative), and delta-of-delta (second derivative)
 
-#ifndef ZvSeriesRW_HPP
-#define ZvSeriesRW_HPP
+#ifndef ZdfRW_HPP
+#define ZdfRW_HPP
 
 #ifndef ZvLib_HPP
 #include <zlib/ZvLib.hpp>
@@ -37,7 +37,7 @@
 
 #include <ZuInt.hpp>
 
-namespace ZvSeriesRW {
+namespace ZdfCompress {
 
 class Reader {
 public:
@@ -313,6 +313,6 @@ private:
   int64_t	m_base = 0;
 };
 
-} // namespace ZvSeriesRW
+} // namespace ZdfCompress
 
-#endif /* ZvSeriesRW_HPP */
+#endif /* ZdfRW_HPP */

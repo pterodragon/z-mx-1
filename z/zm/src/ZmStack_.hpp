@@ -155,7 +155,7 @@ template <typename Val, class NTP = ZmStack_Defaults> class ZmStack :
   ZmStack(const ZmStack &);
   ZmStack &operator =(const ZmStack &);	// prevent mis-use
 
-friend struct ZmStack_Unlocked<ZmStack>;
+friend ZmStack_Unlocked<ZmStack>;
 
 public:
   using Ops = typename NTP::template OpsT<Val>::Ops;
@@ -341,7 +341,7 @@ public:
   }
 
   class Iterator;
-friend class Iterator;
+friend Iterator;
   class Iterator : private Guard {
     Iterator(const Iterator &);
     Iterator &operator =(const Iterator &);	// prevent mis-use

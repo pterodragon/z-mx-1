@@ -19,11 +19,11 @@
 
 // Data Series
 
-#include <zlib/ZvSeries.hpp>
+#include <zlib/ZdfSeries.hpp>
 
 #include <zlib/ZeLog.hpp>
 
-using namespace ZvSeries;
+using namespace Zdf;
 
 void Mgr::init(unsigned maxBufs)
 {
@@ -61,7 +61,7 @@ void FileMgr::init(ZmScheduler *sched, FileMgr::Config config)
   if (!m_writeTID ||
       m_writeTID > sched->params().nThreads())
     throw ZtString() <<
-      "ZvSeries::FileMgr writeThread misconfigured: " <<
+      "Zdf::FileMgr writeThread misconfigured: " <<
       config.writeThread;
   m_files = new FileHash{};
   m_maxFileSize = config.maxFileSize;
@@ -162,7 +162,7 @@ retry:
 	0666, fileSize, &e) != Zi::OK) {
     if (retried) {
       ZeLOG(Error, ZtString() <<
-	  "ZvSeries::FileMgr could not open or create \"" <<
+	  "Zdf::FileMgr could not open or create \"" <<
 	  path << "\": " << e);
       return nullptr; 
     }
@@ -183,7 +183,7 @@ void FileMgr::archiveFile(FileID fileID)
   ZeError e;
   if (ZiFile::rename(name, coldName, &e) != Zi::OK) {
     ZeLOG(Error, ZtString() <<
-	"ZvSeries::FileMgr could not rename \"" << name << "\" to \"" <<
+	"Zdf::FileMgr could not rename \"" << name << "\" to \"" <<
 	coldName << "\": " << e);
   }
 }
@@ -256,12 +256,12 @@ void FileMgr::fileRdError_(
 {
   if (r < 0) {
     ZeLOG(Error, ZtString() <<
-	"ZvSeries::FileMgr pread() failed on \"" <<
+	"Zdf::FileMgr pread() failed on \"" <<
 	m_series[seriesID].name <<
 	"\" at offset " << ZuBoxed(off) <<  ": " << e);
   } else {
     ZeLOG(Error, ZtString() <<
-	"ZvSeries::FileMgr pread() truncated on \"" <<
+	"Zdf::FileMgr pread() truncated on \"" <<
 	m_series[seriesID].name <<
 	"\" at offset " << ZuBoxed(off));
   }
@@ -270,6 +270,6 @@ void FileMgr::fileRdError_(
 void FileMgr::fileWrError_(unsigned seriesID, ZiFile::Offset off, ZeError e)
 {
   ZeLOG(Error, ZtString() <<
-      "ZvSeries::FileMgr pwrite() failed on \"" << m_series[seriesID].name <<
+      "Zdf::FileMgr pwrite() failed on \"" << m_series[seriesID].name <<
       "\" at offset " << ZuBoxed(off) <<  ": " << e);
 }

@@ -67,7 +67,7 @@ private:
 };
 
 template <typename T> class ZvEnum : public T {
-template <typename> friend class ZvInvalidEnumT;
+template <typename> friend ZvInvalidEnumT;
 
 public:
   static ZvEnum *instance() {

@@ -91,7 +91,10 @@ struct ZvField {
   int		(*cmp)(const void *, const void *);
   void		(*print)(ZmStream &, const void *, const ZvFieldFmt &);
   void		(*scan)(ZuString, void *, const ZvFieldFmt &);
-  ZuFixed	(*scalar)(const void *) = nullptr;
+  union {
+    ZuFixed	(*scalar)(const void *) = nullptr;
+    ZmTime	(*time)(const void *);
+  } u;
 };
 
 #define ZvFieldCmp_(T_, member, get) \
@@ -124,8 +127,8 @@ struct ZvField {
       using V = typename ZuDecay<decltype( \
 	  get(static_cast<const T_ *>(o), member))>::T; \
       set(static_cast<T_ *>(o), member, (typename ZuBoxT<V>::T{s})); }, \
-    [](const T_ *o) { \
-      return ZuFixed{get(static_cast<const T_ *>(o), member), 0}; } }
+    { .scalar = [](const T_ *o) { \
+      return ZuFixed{get(static_cast<const T_ *>(o), member), 0}; } } }
 #define ZvFieldFloat_(T_, id, flags, exponent, member, get, set) \
   { #id, ZvFieldType::Float, flags, \
     ZvFieldCmp_(T_, member, get), \
@@ -136,8 +139,8 @@ struct ZvField {
       using V = typename ZuDecay<decltype( \
 	  get(static_cast<const T_ *>(o), member))>::T; \
       set(static_cast<T_ *>(o), member, (typename ZuBoxT<V>::T{s})); }, \
-    [](const T_ *o) { \
-      return ZuFixed{get(static_cast<const T_ *>(o), member), exponent}; } }
+    { .scalar = [](const T_ *o) { \
+      return ZuFixed{get(static_cast<const T_ *>(o), member), exponent}; } } }
 #define ZvFieldFixed_(T_, id, flags, exponent, member, get, set) \
   { #id, ZvFieldType::Fixed, flags, \
     ZvFieldCmp_(T_, member, get), \
@@ -146,8 +149,8 @@ struct ZvField {
 	vfmt(fmt.scalar); }, \
     [](ZuString s, T_ *o, const ZvFieldFmt &) { \
       set(static_cast<T_ *>(o), member, ZuFixed{s, exponent}.value); }, \
-    [](const T_ *o) { \
-      return ZuFixed{get(static_cast<const T_ *>(o), member), exponent}; } }
+    { .scalar = [](const T_ *o) { \
+      return ZuFixed{get(static_cast<const T_ *>(o), member), exponent}; } } }
 #define ZvFieldHex_(T_, id, flags, member, get, set) \
   { #id, ZvFieldType::Hex, flags, \
     ZvFieldCmp_(T_, member, get), \
@@ -206,7 +209,9 @@ struct ZvField {
 	  set(static_cast<T_ *>(o), member, (ZtDate{s})); \
 	  break; \
       } \
-    } }
+    }, \
+    { .time = [](const T_ *o) { \
+      return get(static_cast<const T_ *>(o), member); } } }
 
 // data member get/set
 #define ZvField_Get(o, member) (o->member)

@@ -78,8 +78,8 @@ static void ZmCondition_signal_(ZmCondition_ &);
 static void ZmCondition_broadcast_(ZmCondition_ &);
 
 class ZmCondition_Thread : public ZmObject {
-friend struct ZmSpecificCtor<ZmCondition_Thread>;
-template <typename> friend class ZmCondition;
+friend ZmSpecificCtor<ZmCondition_Thread>;
+template <typename> friend ZmCondition;
 friend void ZmCondition_wait_(ZmCondition_ &, ZmPLock_ &);
 friend int ZmCondition_timedwait_(ZmCondition_ &, ZmPLock_ &, const ZmTime &);
 friend void ZmCondition_signal_(ZmCondition_ &);
@@ -92,7 +92,7 @@ friend void ZmCondition_broadcast_(ZmCondition_ &);
 };
 
 class ZmCondition_ {
-template <typename> friend class ZmCondition;
+template <typename> friend ZmCondition;
 friend void ZmCondition_wait_(ZmCondition_ &, ZmPLock_ &);
 friend int ZmCondition_timedwait_(ZmCondition_ &, ZmPLock_ &, const ZmTime &);
 friend void ZmCondition_signal_(ZmCondition_ &);

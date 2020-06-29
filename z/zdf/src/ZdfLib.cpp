@@ -17,10 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Zero Copy V-Layer Library
+// Zero Copy DataFrame Library
 
-#include <zlib/ZvLib.hpp>
+#include <zlib/ZdfLib.hpp>
 
 #include "../../version.h"
 
-ZvExtern const char ZvLib[] = "@(#) Zero Copy V-Layer Library v" Z_VERNAME;
+ZdfExtern const char ZdfLib[] = "@(#) Zero Copy DataFrame Library v" Z_VERNAME;

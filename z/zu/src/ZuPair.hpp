@@ -132,7 +132,7 @@ struct ZuPair_Print<U0, U1, true, true> :
 };
 
 template <typename T0_, typename T1_> class ZuPair : public ZuPair_ {
-  template <typename, typename> friend class ZuPair;
+  template <typename, typename> friend ZuPair;
 
 public:
   using T0 = T0_;

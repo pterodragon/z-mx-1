@@ -217,8 +217,8 @@ class MxMDAPI MxMDTickSizeTbl : public ZmObject {
   MxMDTickSizeTbl(const MxMDTickSizeTbl &) = delete;
   MxMDTickSizeTbl &operator =(const MxMDTickSizeTbl &) = delete;
 
-friend class MxMDLib;
-friend class MxMDVenue;
+friend MxMDLib;
+friend MxMDVenue;
 
   struct TickSizes_HeapID {
     static const char *id() { return "MxMDTickSizeTbl.TickSizes"; }
@@ -288,8 +288,8 @@ template <class Heap> class MxMDTrade_ : public Heap, public ZmObject {
   MxMDTrade_(const MxMDTrade_ &) = delete;
   MxMDTrade_ &operator =(const MxMDTrade_ &) = delete;
 
-friend class MxMDOrderBook;
-friend class MxMDLib;
+friend MxMDOrderBook;
+friend MxMDLib;
 
   template <typename TradeID>
   MxMDTrade_(MxMDInstrument *instrument, MxMDOrderBook *ob,
@@ -365,11 +365,11 @@ class MxMDAPI MxMDOrder_ {
   MxMDOrder_(const MxMDOrder_ &) = delete;
   MxMDOrder_ &operator =(const MxMDOrder_ &) = delete;
 
-friend class MxMDVenue;
-friend class MxMDVenueShard;
-friend class MxMDOrderBook;
-friend class MxMDOBSide;
-friend class MxMDPxLevel_;
+friend MxMDVenue;
+friend MxMDVenueShard;
+friend MxMDOrderBook;
+friend MxMDOBSide;
+friend MxMDPxLevel_;
 
 private:
   static MxMDOBSide *bids_(const MxMDOrderBook *);
@@ -388,17 +388,17 @@ public:
   ~MxMDOrder_() { }
 
   struct OrderID3Accessor;
-friend struct OrderID3Accessor;
+friend OrderID3Accessor;
   struct OrderID3Accessor : public ZuAccessor<MxMDOrder_ *, MxMDOrderID3> {
     static MxMDOrderID3Ref value(const MxMDOrder_ *o);
   };
   struct OrderID2Accessor;
-friend struct OrderID2Accessor;
+friend OrderID2Accessor;
   struct OrderID2Accessor : public ZuAccessor<MxMDOrder_ *, MxMDOrderID2> {
     static MxMDOrderID2Ref value(const MxMDOrder_ *o);
   };
   struct OrderID1Accessor;
-friend struct OrderID1Accessor;
+friend OrderID1Accessor;
   struct OrderID1Accessor : public ZuAccessor<MxMDOrder_ *, MxIDString> {
     ZuInline static const MxIDString &value(const MxMDOrder_ *o) {
       return o->m_id;
@@ -592,8 +592,8 @@ class MxMDPxLevel_ : public ZmObject {
   MxMDPxLevel_(const MxMDPxLevel_ &) = delete;
   MxMDPxLevel_ &operator =(const MxMDPxLevel_ &) = delete;
 
-friend class MxMDOrderBook;
-friend class MxMDOBSide;
+friend MxMDOrderBook;
+friend MxMDOBSide;
 
 protected:
   MxMDPxLevel_(MxMDOBSide *obSide,
@@ -766,8 +766,8 @@ class MxMDAPI MxMDOBSide : public ZmObject {
   MxMDOBSide(const MxMDOBSide &) = delete;
   MxMDOBSide &operator =(const MxMDOBSide &) = delete;
 
-friend class MxMDOrderBook;
-friend class MxMDPxLevel_;
+friend MxMDOrderBook;
+friend MxMDPxLevel_;
 
 private:
   MxMDOBSide(MxMDOrderBook *ob, MxEnum side) :
@@ -939,12 +939,12 @@ class MxMDAPI MxMDOrderBook : public ZmObject, public MxMDSharded {
   MxMDOrderBook(const MxMDOrderBook &) = delete;
   MxMDOrderBook &operator =(const MxMDOrderBook &) = delete;
 
-friend class MxMDLib;
-friend class MxMDShard;
-friend class MxMDVenue;
-friend class MxMDInstrument;
-friend class MxMDOBSide;
-friend class MxMDPxLevel_;
+friend MxMDLib;
+friend MxMDShard;
+friend MxMDVenue;
+friend MxMDInstrument;
+friend MxMDOBSide;
+friend MxMDPxLevel_;
 
   struct KeyAccessor : public ZuAccessor<MxMDOrderBook *, MxInstrKey> {
     ZuInline static const MxInstrKey &value(const MxMDOrderBook *ob) {
@@ -1244,7 +1244,7 @@ class MxMDAPI MxMDDerivatives : public ZmObject {
   MxMDDerivatives(const MxMDDerivatives &) = delete;
   MxMDDerivatives &operator =(const MxMDDerivatives &) = delete;
 
-friend class MxMDInstrument;
+friend MxMDInstrument;
 
   struct Futures_HeapID {
     static const char *id() { return "MxMDLib.Futures"; }
@@ -1286,8 +1286,8 @@ class MxMDAPI MxMDInstrument : public ZmObject, public MxMDSharded {
   MxMDInstrument(const MxMDInstrument &) = delete;
   MxMDInstrument &operator =(const MxMDInstrument &) = delete;
 
-friend class MxMDLib;
-friend class MxMDShard;
+friend MxMDLib;
+friend MxMDShard;
 
   struct KeyAccessor : public ZuAccessor<MxMDInstrument *, MxInstrKey> {
     ZuInline static const MxInstrKey &value(const MxMDInstrument *instrument) {
@@ -1435,8 +1435,8 @@ class MxMDAPI MxMDFeed : public ZmPolymorph {
   MxMDFeed(const MxMDFeed &) = delete;
   MxMDFeed &operator =(const MxMDFeed &) = delete;
 
-friend class MxMDCore;
-friend class MxMDLib;
+friend MxMDCore;
+friend MxMDLib;
 
 public:
   MxMDFeed(MxMDLib *md, MxID id, unsigned level);
@@ -1469,10 +1469,10 @@ private:
 // venues
 
 class MxMDAPI MxMDVenueShard : public ZuObject {
-friend class MxMDVenue;
-friend class MxMDOrderBook;
-friend class MxMDOBSide;
-friend class MxMDPxLevel_;
+friend MxMDVenue;
+friend MxMDOrderBook;
+friend MxMDOBSide;
+friend MxMDPxLevel_;
 
   typedef ZmHash<ZmRef<MxMDOrder>,
 	    ZmHashIndex<MxMDOrder::OrderID2Accessor,
@@ -1544,9 +1544,9 @@ class MxMDAPI MxMDVenue : public ZmObject {
   MxMDVenue(const MxMDVenue &) = delete;
   MxMDVenue &operator =(const MxMDVenue &) = delete;
 
-friend class MxMDLib;
-friend class MxMDVenueShard;
-friend class MxMDOrderBook;
+friend MxMDLib;
+friend MxMDVenueShard;
+friend MxMDOrderBook;
 
   typedef ZtArray<ZuRef<MxMDVenueShard> > Shards;
 
@@ -1706,7 +1706,7 @@ inline ZmRef<MxMDOrder> MxMDVenueShard::delOrder(
 // shard
 
 class MxMDAPI MxMDShard : public ZuObject, public ZmShard {
-friend class MxMDLib;
+friend MxMDLib;
 
   struct Instruments_HeapID : public ZmHeapSharded {
     static const char *id() { return "MxMDShard.Instruments"; }
@@ -1785,16 +1785,16 @@ class MxMDAPI MxMDLib : public ZmPolymorph {
   MxMDLib(const MxMDLib &) = delete;
   MxMDLib &operator =(const MxMDLib &) = delete;
 
-friend class MxMDTickSizeTbl;
-friend class MxMDPxLevel_;
-friend class MxMDOrderBook;
-friend class MxMDInstrument;
-friend class MxMDFeed;
-friend class MxMDVenue;
-friend class MxMDVenueShard;
-friend class MxMDShard;
+friend MxMDTickSizeTbl;
+friend MxMDPxLevel_;
+friend MxMDOrderBook;
+friend MxMDInstrument;
+friend MxMDFeed;
+friend MxMDVenue;
+friend MxMDVenueShard;
+friend MxMDShard;
 
-friend class MxMDLib_JNI;
+friend MxMDLib_JNI;
 
 protected:
   MxMDLib(ZmScheduler *);
@@ -1906,7 +1906,7 @@ private:
   typedef ZmGuard<SubLock> SubGuard;
   typedef ZmReadGuard<SubLock> SubReadGuard;
 
-friend class ZmShard;
+friend ZmShard;
   template <typename ...Args>
   ZuInline void run(unsigned tid, Args &&... args)
     { m_scheduler->run(tid, ZuFwd<Args>(args)...); }

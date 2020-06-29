@@ -152,7 +152,7 @@ public:
 
 protected:
   class Iterator_;
-friend class Iterator_;
+friend Iterator_;
 
 public:
   // node in a list
@@ -166,8 +166,8 @@ public:
     NodeFn(const NodeFn &);
     NodeFn &operator =(const NodeFn &);	// prevent mis-use
 
-  friend class ZmList<Item, NTP>;
-  friend class ZmList<Item, NTP>::Iterator_;
+  friend ZmList<Item, NTP>;
+  friend ZmList<Item, NTP>::Iterator_;
 
   protected:
     ZuInline NodeFn() { init(); }
@@ -222,7 +222,7 @@ private:
 protected:
   class Iterator_ {			// iterator
     using List = ZmList<Item, NTP>;
-  friend class ZmList<Item, NTP>;
+  friend ZmList<Item, NTP>;
 
   protected:
     Iterator_(List &list) : m_list(list) {
@@ -249,7 +249,7 @@ protected:
 
 public:
   class Iterator;
-friend class Iterator;
+friend Iterator;
   class Iterator : private Guard, public Iterator_ {
     Iterator(const Iterator &);
     Iterator &operator =(const Iterator &);	// prevent mis-use
@@ -267,7 +267,7 @@ friend class Iterator;
   };
 
   class ReadIterator;
-friend class ReadIterator;
+friend ReadIterator;
   class ReadIterator : private ReadGuard, public Iterator_ {
     ReadIterator(const ReadIterator &);
     ReadIterator &operator =(const ReadIterator &);	// prevent mis-use

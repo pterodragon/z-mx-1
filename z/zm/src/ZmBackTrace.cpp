@@ -133,9 +133,9 @@ template <> struct ZmCleanup<ZmBackTrace_Mgr> {
 struct ZmBackTrace_MgrInit;
 
 class ZmBackTrace_Mgr {
-friend struct ZmSingletonCtor<ZmBackTrace_Mgr>;
-friend class ZmBackTrace;
-friend struct ZmBackTrace_MgrInit;
+friend ZmSingletonCtor<ZmBackTrace_Mgr>;
+friend ZmBackTrace;
+friend ZmBackTrace_MgrInit;
 friend void ZmBackTrace_print(ZmStream &s, const ZmBackTrace &bt);
 
 #if defined(__GNUC__) || defined(linux)
@@ -178,11 +178,11 @@ private:
 #ifdef ZmBackTrace_BFD
   class BFD_Find;
   class BFD;
-friend class BFD_Find;
-friend class BFD;
+friend BFD_Find;
+friend BFD;
 
   class BFD {
-  friend class BFD_Find;
+  friend BFD_Find;
   private:
     BFD() : m_next(0), m_name(0), m_handle(0), m_symbols(0) { }
     ~BFD() {

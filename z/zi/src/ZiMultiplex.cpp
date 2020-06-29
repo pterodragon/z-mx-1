@@ -72,7 +72,7 @@ template <> struct ZmCleanup<ZiMultiplex_WSExt> {
 };
 
 class ZiMultiplex_WSExt {
-friend struct ZmSingletonCtor<ZiMultiplex_WSExt>;
+friend ZmSingletonCtor<ZiMultiplex_WSExt>;
 
   ZiMultiplex_WSExt();
 

@@ -9,7 +9,7 @@ class Global {
   Global(const Global &);
   Global &operator =(const Global &);	// prevent mis-use
 
-friend struct ZmSingletonCtor<Global>;
+friend ZmSingletonCtor<Global>;
 
   Global() :
     m_recvRequests(0), m_recvBytes(0),

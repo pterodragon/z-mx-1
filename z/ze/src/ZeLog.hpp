@@ -154,8 +154,8 @@ class ZeAPI ZeLog {
   ZeLog(const ZeLog &);
   ZeLog &operator =(const ZeLog &);		// prevent mis-use
 
-friend struct ZmSingletonCtor<ZeLog>;
-friend struct ZmCleanup<ZeLog>;
+friend ZmSingletonCtor<ZeLog>;
+friend ZmCleanup<ZeLog>;
 
   struct EventQueueID {
     static const char *id() { return "ZeLog.EventQueue"; }

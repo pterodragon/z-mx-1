@@ -116,11 +116,13 @@ struct ZmTLock_Held_ThreadAccessor : public ZuAccessor<ZmTLock_Held, void *> {
   ZuInline static void *value(ZmTLock_Held h) { return h.m_thread; }
 };
 
+struct ZmTLock_Test;
+
 template <typename ID, typename TID> class ZmTLock {
   ZmTLock(const ZmTLock &);
   ZmTLock &operator =(const ZmTLock &);	// prevent mis-use
 
-friend struct ZmTLock_Test;
+friend ZmTLock_Test;
 
   enum {				// flags
     Try		= 1,
@@ -139,7 +141,7 @@ friend struct ZmTLock_Test;
   using HeldStackIterator = typename HeldStack::Iterator;
 
   struct Lock;
-friend struct Lock;
+friend Lock;
   struct Lock : public ZmObject {
     template <typename ID_> Lock(ID_ &&id, Lock_ &l) :
       m_id(ZuFwd<ID_>(id)),
@@ -198,7 +200,7 @@ friend struct Lock;
 	ZmListHeapID<HeapID> > >;
 
   struct Thread;
-friend struct Thread;
+friend Thread;
   struct Thread : public ZmObject {
     using LockStack = ZmStack<Lock *, ZmStackLock<ZmNoLock> >;
 

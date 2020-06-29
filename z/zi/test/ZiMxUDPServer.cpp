@@ -62,7 +62,7 @@ private:
 };
 
 class Mx : public ZiMultiplex {
-  friend class Connection;
+friend Connection;
 
 public:
   Mx(ZiIP localIP, unsigned localPort, ZiIP remoteIP, unsigned remotePort,

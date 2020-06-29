@@ -133,7 +133,7 @@ private:
 };
 
 class Mx : public ZiMultiplex {
-friend class Connection;
+friend Connection;
 
 public:
   Mx(ZiIP ip, unsigned port, const ZiCxnOptions &options,

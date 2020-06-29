@@ -245,7 +245,7 @@ template <> struct ZuPrint<Connection> : public ZuPrintFn { };
 class Proxy : public ZmPolymorph {
 public:
   struct SrcPortAccessor;
-friend struct SrcPortAccessor;
+friend SrcPortAccessor;
   struct SrcPortAccessor : public ZuAccessor<Proxy *, int> {
     static unsigned value(Proxy *p);
   };
@@ -277,7 +277,7 @@ private:
   }
 public:
   struct Status;
-friend struct Status;
+friend Status;
   struct Status {
     template <typename S> void print(S &s) const { p.status_(s); }
     const Proxy &p;
@@ -318,7 +318,7 @@ class Listener : public ZmObject {
 
 public:
   struct LocalPortAccessor;
-friend struct LocalPortAccessor;
+friend LocalPortAccessor;
   struct LocalPortAccessor : public ZuAccessor<Listener *, int> {
     ZuInline static int value(Listener *listener) {
       return listener->m_localPort;
@@ -365,7 +365,7 @@ private:
   }
 public:
   struct Status;
-friend struct Status;
+friend Status;
   struct Status {
     template <typename S> void print(S &s) const { l.status_(s); }
     const Listener &l;
@@ -386,8 +386,8 @@ private:
   void ok(const ZiListenInfo &);
   void failed(bool transient);
 
-friend struct ListenerPrintIn;
-friend struct ListenerPrintOut;
+friend ListenerPrintIn;
+friend ListenerPrintOut;
   template <typename S> void printIn_(S &s) const {
     s << "NC:NC !> " << m_localIP << ':' << ZuBoxed(m_localPort) <<
       " (" << m_tag << ')';

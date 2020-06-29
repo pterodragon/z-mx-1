@@ -17,11 +17,72 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Data Frames
+// Data Frame
 
-#include <zlib/ZvDataFrame.hpp>
+#include <zlib/Zdf.hpp>
 
-using namespace ZvDataFrame;
+using namespace Zdf;
+
+DataFrame::DataFrame(ZvFields fields, ZuString name) : m_name(name)
+{
+  bool indexed = false;
+  unsigned n = fields.length();
+  {
+    unsigned m = 0;
+    for (unsigned i = 0; i < n; i++)
+      if (fields[i].flags & ZvFieldFlags::Series) {
+	if (!indexed && (fields[i].flags & ZvFieldFlags::Index))
+	  indexed = true;
+	m++;
+      }
+    if (!indexed) m++;
+    indexed = false;
+    m_series.size(m);
+    m_fields.size(m);
+  }
+  for (unsigned i = 0; i < n; i++)
+    if (fields[i].flags & ZvFieldFlags::Series) {
+      ZuPtr<Series> series = new Series{&fields[i]};
+      if (!indexed && (fields[i].flags & ZvFieldFlags::Index)) {
+	indexed = true;
+	m_series.unshift(ZuMv(series));
+	m_fields.unshift(&fields[i]);
+      } else {
+	m_series.push(ZuMv(series));
+	m_fields.push(&fields[i]);
+      }
+    }
+  if (!indexed) {
+    m_series.unshift(ZuPtr<Series>{new Series{nullptr}});
+    m_fields.unshift(static_cast<ZvField *>(nullptr));
+  }
+}
+
+void DataFrame::init(FileMgr *mgr)
+{
+  m_mgr = mgr;
+  unsigned n = m_series.length();
+  for (unsigned i = 0; i < n; i++) series[i]->init(mgr);
+}
+
+bool DataFrame::open()
+{
+  ZiFile::Path path = this->path();
+  if (!ZiFile::mtime(path)) {
+    m_epoch.now();
+    return save(path);
+  }
+  if (!load(path)) return false;
+  unsigned n = m_series.length();
+  for (unsigned i = 0; i < n; i++)
+    m_series[i]->open(m_name, m_fields[i].id);
+  return true;
+}
+
+bool DataFrame::close()
+{
+  return save(path());
+}
 
 bool DataFrame::load(const ZiFile::Path &path)
 {
@@ -32,7 +93,7 @@ bool DataFrame::load(const ZiFile::Path &path)
 	return this_->load_(buf, len);
       }}, (1<<10) /* 1Kb */, e) != Zi::OK) {
     ZeLOG(Error, ZtString() <<
-      "ZvDataFrame::DataFrame could not open \"" <<
+      "Zdf::DataFrame could not open \"" <<
       path << "\": " << e);
     return false;
   }
@@ -58,7 +119,7 @@ bool DataFrame::save(const ZiFile::Path &path)
   ZeError e;
   if (Zfb::Save::save(path, fbb, e) != Zi::OK) {
     ZeLOG(Error, ZtString() <<
-      "ZvDataFrame::DataFrame could not create \"" <<
+      "Zdf::DataFrame could not create \"" <<
       path << "\": " << e);
     return false;
   }

@@ -177,7 +177,7 @@ public:
   virtual ~ZmQueue() { }
 
   class Iterator;
-friend class Iterator;
+friend Iterator;
   class Iterator : private Guard {
     Iterator(const Iterator &);
     Iterator &operator =(const Iterator &);	// prevent mis-use

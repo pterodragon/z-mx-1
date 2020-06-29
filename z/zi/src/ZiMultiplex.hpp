@@ -108,7 +108,7 @@ struct ZiCxnInfo;
 struct ZiIOContext {
   ZuInline ZiIOContext() : ptr(0), size(0), offset(0), length(0) { }
 
-friend class ZiConnection;
+friend ZiConnection;
 private:
   // initialize (called from within send/recv)
   template <typename Fn>
@@ -557,14 +557,14 @@ class ZiAPI ZiConnection : public ZmPolymorph {
   ZiConnection(const ZiConnection &);
   ZiConnection &operator =(const ZiConnection &);	// prevent mis-use
 
-friend class ZiMultiplex;
+friend ZiMultiplex;
 
 public:
   using Socket = ZiPlatform::Socket;
 
   // index on socket
   struct SocketAccessor;
-friend struct SocketAccessor;
+friend SocketAccessor;
   struct SocketAccessor : public ZuAccessor<ZiConnection *, Socket> {
     ZuInline static Socket value(const ZiConnection *c) {
       return c->info().socket;
@@ -771,7 +771,7 @@ class ZiAPI ZiMultiplex : public ZmScheduler {
   ZiMultiplex(const ZiMultiplex &);
   ZiMultiplex &operator =(const ZiMultiplex &);	// prevent mis-use
 
-friend class ZiConnection;
+friend ZiConnection;
 
   class Listener_;
 #if !ZiMultiplex__AcceptHeap
@@ -786,18 +786,18 @@ friend class ZiConnection;
 #endif
 
   class Listener_ {
-  friend class ZiMultiplex;
+  friend ZiMultiplex;
 #if !ZiMultiplex__AcceptHeap
-  friend class Accept_;
+  friend Accept_;
 #else
-  template <typename> friend class Accept_;
+  template <typename> friend Accept_;
 #endif
 
     using Socket = ZiPlatform::Socket;
 
   public:
     struct SocketAccessor;
-  friend struct SocketAccessor;
+  friend SocketAccessor;
     struct SocketAccessor : public ZuAccessor<Listener_ *, Socket> {
       ZuInline static Socket value(const Listener_ &l) {
 	return l.info().socket;
@@ -836,9 +836,9 @@ friend class ZiConnection;
 #if ZiMultiplex__AcceptHeap
   // heap-allocated asynchronous accept, exclusively used by IOCP
   template <typename> class Accept_;
-template <typename> friend class Accept_;
+template <typename> friend Accept_;
   template <typename Heap> class Accept_ : public Heap {
-  friend class ZiMultiplex;
+  friend ZiMultiplex;
 
     Accept_(Listener *listener) : m_listener(listener), m_info{
 	  ZiCxnType::TCPIn,
@@ -875,18 +875,18 @@ template <typename> friend class Accept_;
   class Connect_
 #else
   template <typename> class Connect_;
-template <typename> friend class Connect_;
+template <typename> friend Connect_;
   template <typename Heap> class Connect_ : public Heap
 #endif
   {
-  friend class ZiMultiplex;
+  friend ZiMultiplex;
 
     using Socket = ZiPlatform::Socket;
 
 #ifdef ZiMultiplex__ConnectHash
   public:
     struct SocketAccessor;
-  friend struct SocketAccessor;
+  friend SocketAccessor;
     struct SocketAccessor : public ZuAccessor<Connect_ *, Socket> {
       ZuInline static Socket value(const Connect_ &c) {
 	return c.info().socket;

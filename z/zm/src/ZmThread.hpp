@@ -221,13 +221,13 @@ template <> struct ZmCleanup<ZmThreadContext> {
 template <typename, bool> struct ZmSpecificCtor;
 
 class ZmAPI ZmThreadContext : public ZmObject, public ZmThreadContext_ {
-  friend struct ZmSpecificCtor<ZmThreadContext, true>;
+  friend ZmSpecificCtor<ZmThreadContext, true>;
 #ifndef _WIN32
   friend ZmAPI void *ZmThread_start(void *);
 #else
   friend ZmAPI unsigned __stdcall ZmThread_start(void *);
 #endif
-  friend class ZmThread;
+  friend ZmThread;
 
   ZmThreadContext() // only called via self() for unmanaged threads
     { init(); }

@@ -272,9 +272,9 @@ namespace MxTelemetry {
     void stop();
 
     class Cxn;
-  friend class Cxn;
+  friend Cxn;
     class MxBaseAPI Cxn : public ZiConnection {
-      friend class Client;
+      friend Client;
 
     public:
       Cxn(Client *client, const ZiConnectionInfo &info) :
@@ -334,7 +334,7 @@ namespace MxTelemetry {
     void stop();
 
     class Cxn;
-  friend class Cxn;
+  friend Cxn;
     class MxBaseAPI Cxn : public ZiConnection {
     public:
       Cxn(Server *server, const ZiConnectionInfo &info) :

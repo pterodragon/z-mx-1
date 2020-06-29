@@ -634,7 +634,6 @@ public:
       typename CtorLength<L>::T *_ = 0) : Base(N, l, initItems) { }
 
 private:
-  template <typename> friend struct ZuAlloca;
   enum Size_ { Size };
   template <typename Z>
   ZuInline ZuArrayN(Size_, Z z,

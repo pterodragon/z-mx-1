@@ -128,7 +128,7 @@ class ZtDate;
 
 template <int size> class ZtDate_time_t;
 template <> class ZtDate_time_t<4> {
-friend class ZtDate;
+friend ZtDate;
 private:
   ZuInline static constexpr int32_t minimum() { return -0x80000000; } 
   ZuInline static constexpr int32_t maximum() { return 0x7fffffff; } 
@@ -179,7 +179,7 @@ namespace ZtDateFmt {
   template <int Prec_, class Null_>
   class FIX :
       public FIX_<(Prec_ < 0 ? -Prec_ : Prec_), (Prec_ < 0 ? '\0' : '0')> {
-  friend class ::ZtDate;
+  friend ::ZtDate;
   public:
     enum { Prec = Prec_ };
     using Null = Null_;
@@ -204,7 +204,7 @@ namespace ZtDateFmt {
   };
 
   class CSV {
-  friend class ::ZtDate;
+  friend ::ZtDate;
   public:
     ZuInline CSV() :
 	m_offset(0), m_pad(0), m_ptr(nullptr), m_julian(0), m_sec(0) {
@@ -233,7 +233,7 @@ namespace ZtDateFmt {
   };
 
   class ISO {
-  friend class ::ZtDate;
+  friend ::ZtDate;
   public:
     ZuInline ISO(int offset = 0) :
 	m_offset(offset), m_ptr(nullptr), m_julian(0), m_sec(0) {

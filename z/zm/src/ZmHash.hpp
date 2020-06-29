@@ -370,7 +370,7 @@ private:
 
 protected:
   template <typename I> class Iterator_;
-template <typename> friend class Iterator_;
+template <typename> friend Iterator_;
 
 public:
   // node in a hash table
@@ -386,8 +386,8 @@ public:
     NodeFn(const NodeFn &);
     NodeFn &operator =(const NodeFn &);	// prevent mis-use
 
-  friend class ZmHash<Key, NTP>;
-  template <typename> friend class ZmHash<Key, NTP>::Iterator_;
+  friend ZmHash<Key, NTP>;
+  template <typename> friend ZmHash<Key, NTP>::Iterator_;
 
   protected:
     ZuInline NodeFn() { }
@@ -454,7 +454,7 @@ protected:
 
   template <typename I> class Iterator_ : public Iterator__<I> {
     using Hash = ZmHash<Key, NTP>;
-  friend class ZmHash<Key, NTP>;
+  friend Hash;
 
   protected:
     ZuInline Iterator_(Hash &hash) : m_hash(hash) { }
@@ -505,7 +505,7 @@ public:
     Iterator &operator =(const Iterator &) = delete;
 
     using Hash = ZmHash<Key, NTP>;
-  friend class ZmHash<Key, NTP>;
+  friend Hash;
     using Base = Iterator_<Iterator>;
 
     using Base::m_hash;
@@ -524,7 +524,7 @@ public:
     ReadIterator &operator =(const ReadIterator &) = delete;
 
     using Hash = ZmHash<Key, NTP>;
-  friend class ZmHash<Key, NTP>;
+  friend Hash;
     using Base = Iterator_<ReadIterator>;
 
     using Base::m_hash;
@@ -544,7 +544,7 @@ public:
     IndexIterator &operator =(const IndexIterator &) = delete;
 
     using Hash = ZmHash<Key, NTP>;
-  friend class ZmHash<Key, NTP>;
+  friend Hash;
     using Base = IndexIterator_<IndexIterator>;
 
     using Base::m_hash;
@@ -567,7 +567,7 @@ public:
     ReadIndexIterator &operator =(const ReadIndexIterator &) = delete;
 
     using Hash = ZmHash<Key, NTP>;
-  friend class ZmHash<Key, NTP>;
+  friend Hash;
     using Base = IndexIterator_<ReadIndexIterator>;
 
     using Base::m_hash;

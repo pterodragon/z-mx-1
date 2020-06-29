@@ -26,6 +26,7 @@
 #include <zlib/ZuPair.hpp>
 #include <zlib/ZuStringN.hpp>
 
+#include <zlib/ZmSingleton.hpp>
 #include <zlib/ZmThread.hpp>
 #include <zlib/ZmTopology.hpp>
 #include <zlib/ZmRBTree.hpp>
@@ -36,10 +37,13 @@ struct ZmCleanup<ZmHeapMgr_> {
   enum { Level = ZmCleanupLevel::Heap };
 };
 
+class ZmHeapMgr;
+class ZmHeapCache;
+
 class ZmHeapMgr_ : public ZmObject {
-friend struct ZmSingletonCtor<ZmHeapMgr_>;
-friend class ZmHeapMgr;
-friend class ZmHeapCache;
+friend ZmSingletonCtor<ZmHeapMgr_>;
+friend ZmHeapMgr;
+friend ZmHeapCache;
 
   using Lock = ZmPLock;
   using Guard = ZmGuard<Lock>;

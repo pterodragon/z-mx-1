@@ -102,10 +102,10 @@ using ZmAnyHash = ZmHashMgr_Tables::Node;
 
 class ZmHashMgr_;
 class ZmAPI ZmHashMgr {
-friend class ZmHashMgr_;
-friend class ZmHashParams;
-template <typename, class> friend class ZmHash; 
-template <class, typename, class, unsigned> friend class ZmLHash_;
+friend ZmHashMgr_;
+friend ZmHashParams;
+template <typename, class> friend ZmHash; 
+template <class, typename, class, unsigned> friend ZmLHash_;
 
   template <class S> struct CSV_ {
     CSV_(S &stream) : m_stream(stream) {
@@ -140,7 +140,7 @@ public:
   static void all(ZmFn<ZmAnyHash *> fn);
 
   struct CSV;
-friend struct CSV;
+friend CSV;
   struct CSV {
     template <typename S> ZuInline void print(S &s) const {
       ZmHashMgr::CSV_<S> csv(s);

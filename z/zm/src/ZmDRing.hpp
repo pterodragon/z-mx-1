@@ -153,7 +153,7 @@ template <typename Val, class NTP = ZmDRing_Defaults> class ZmDRing :
   ZmDRing(const ZmDRing &);
   ZmDRing &operator =(const ZmDRing &);	// prevent mis-use
 
-friend struct ZmDRing_Unlocked<ZmDRing>;
+friend ZmDRing_Unlocked<ZmDRing>;
 
 public:
   using Ops = typename NTP::template OpsT<Val>::Ops;
@@ -435,7 +435,7 @@ public:
   }
 
   class Iterator_;
-friend class Iterator_;
+friend Iterator_;
   class Iterator_ : private Guard {
     Iterator_(const Iterator_ &);
     Iterator_ &operator =(const Iterator_ &);	// prevent mis-use
@@ -450,7 +450,7 @@ friend class Iterator_;
     int		m_i;
   };
   class Iterator;
-friend class Iterator;
+friend Iterator;
   class Iterator : private Iterator_ {
   public:
     Iterator(typename Iterator_::Ring &ring) : Iterator_(ring, 0) { }
@@ -473,7 +473,7 @@ friend class Iterator;
   };
   auto iterator() { return Iterator(*this); }
   class RevIterator;
-friend class RevIterator;
+friend RevIterator;
   class RevIterator : private Iterator_ {
   public:
     RevIterator(typename Iterator_::Ring &ring) :

@@ -181,8 +181,8 @@ struct ZmLHash_Ops : public ZuArrayFn<T, ZuCmp<T> > {
 
 template <typename Key, typename Cmp, typename Val, typename ValCmp>
 class ZmLHash_Node {
-template <typename, class> friend class ZmLHash;
-template <class, typename, class, unsigned> friend class ZmLHash_;
+template <typename, class> friend ZmLHash;
+template <class, typename, class, unsigned> friend ZmLHash_;
 
   class Data {
   public:
@@ -442,7 +442,7 @@ class ZmLHash : public ZmLHash_<ZmLHash<Key_, NTP>, Key_, NTP, NTP::Static> {
   ZmLHash(const ZmLHash &) = delete;
   ZmLHash &operator =(const ZmLHash &) = delete; // prevent mis-use
 
-template <class, typename, class, unsigned> friend class ZmLHash_;
+template <class, typename, class, unsigned> friend ZmLHash_;
 
   using Base = ZmLHash_<ZmLHash<Key_, NTP>, Key_, NTP, NTP::Static>;
 
@@ -498,10 +498,10 @@ public:
 
 protected:
   class Iterator_;
-friend class Iterator_;
+friend Iterator_;
   class Iterator_ {			// hash iterator
     using Hash = ZmLHash<Key, NTP>;
-  friend class ZmLHash<Key, NTP>;
+  friend ZmLHash<Key, NTP>;
 
   protected:
     Iterator_(Hash &hash) : m_hash(hash), m_slot(-1), m_next(-1) { }
@@ -527,10 +527,10 @@ friend class Iterator_;
   };
 
   class IndexIterator_;
-friend class IndexIterator_;
+friend IndexIterator_;
   class IndexIterator_ : protected Iterator_ {
     using Hash = ZmLHash<Key, NTP>;
-  friend class ZmLHash<Key, NTP>;
+  friend ZmLHash<Key, NTP>;
 
     using Iterator_::m_hash;
 

@@ -57,7 +57,7 @@
 template <class, template <class> class> class ZuMixin;
 
 template <class T, class M> class ZuMixin_ {
-template <class, template <class> class> friend ZuMixin;
+template <class, template <class> class> friend class ZuMixin;
   struct Mixed : public T, public M {
     ZuInline static const T *offset(const void *ptr) {
       return

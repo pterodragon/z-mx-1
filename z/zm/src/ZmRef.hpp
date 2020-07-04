@@ -93,7 +93,7 @@ struct ZmRef__ {
 #endif
 
 template <typename T_> class ZmRef : public ZuRef_, public ZmRef_ {
-template <typename> friend ZmRef;
+template <typename> friend class ZmRef;
 public:
   using T = T_;
 

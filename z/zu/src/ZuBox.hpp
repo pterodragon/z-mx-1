@@ -127,7 +127,7 @@ template <typename T, class Cmp> class ZuBox;
 
 // compile-time formatting
 template <class Boxed, class Fmt> class ZuBoxFmt {
-template <typename, class> friend ZuBox;
+template <typename, class> friend class ZuBox;
 
   using Print = ZuBox_Print<typename Boxed::T, Fmt>;
 
@@ -143,7 +143,7 @@ private:
 
 // run-time formatting
 template <class Boxed> class ZuBoxVFmt {
-template <typename, class> friend ZuBox;
+template <typename, class> friend class ZuBox;
 
   using Print = ZuBox_VPrint<typename Boxed::T>;
 
@@ -221,9 +221,9 @@ struct ZuBox_Unbox<ZuBox<T_, Cmp> > { using T = T_; };
 
 template <typename T_, class Cmp_ = ZuCmp<typename ZuBox_Unbox<T_>::T> >
 class ZuBox {
-template <typename, class> friend ZuBox;
-template <class, class> friend ZuBoxFmt;
-template <class> friend ZuBoxVFmt;
+template <typename, class> friend class ZuBox;
+template <class, class> friend class ZuBoxFmt;
+template <class> friend class ZuBoxVFmt;
 public:
   using T = typename ZuBox_Unbox<T_>::T;
   using Cmp = Cmp_;

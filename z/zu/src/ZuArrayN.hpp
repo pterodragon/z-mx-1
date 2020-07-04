@@ -209,6 +209,9 @@ public:
 
 // accessors
 
+  ZuInline const T *begin() const { return data(); }
+  ZuInline const T *end() const { return data() + Base::m_length; }
+
   ZuInline unsigned size() const { return Base::m_size; }
   ZuInline unsigned length() const { return Base::m_length; }
 

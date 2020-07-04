@@ -625,9 +625,9 @@ private:
 template <typename App_> class Engine : public Random {
 public:
   using App = App_;
-template <typename, typename, typename, typename> friend Link;
-template <typename, typename> friend CliLink;
-template <typename, typename> friend SrvLink;
+template <typename, typename, typename, typename> friend class Link;
+template <typename, typename> friend class CliLink;
+template <typename, typename> friend class SrvLink;
 
   ZuInline const App *app() const { return static_cast<const App *>(this); }
   ZuInline App *app() { return static_cast<App *>(this); }

@@ -755,7 +755,7 @@ namespace ZdbHostState {
 class ZdbAPI ZdbHost : public ZmPolymorph {
 friend ZdbEnv;
 friend Zdb_Cxn;
-template <typename> friend ZuPrint;
+template <typename> friend class ZuPrint;
 
   using Lock = ZmPLock;
   using Guard = ZmGuard<Lock>;

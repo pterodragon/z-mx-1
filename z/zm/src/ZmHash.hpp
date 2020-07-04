@@ -370,7 +370,7 @@ private:
 
 protected:
   template <typename I> class Iterator_;
-template <typename> friend Iterator_;
+template <typename> friend class Iterator_;
 
 public:
   // node in a hash table
@@ -387,7 +387,7 @@ public:
     NodeFn &operator =(const NodeFn &);	// prevent mis-use
 
   friend ZmHash<Key, NTP>;
-  template <typename> friend ZmHash<Key, NTP>::Iterator_;
+  template <typename> friend class ZmHash<Key, NTP>::Iterator_;
 
   protected:
     ZuInline NodeFn() { }

@@ -70,46 +70,89 @@ public:
   ZuInline const uint8_t *end() const { return m_end; }
   ZuInline unsigned count() const { return m_count; }
 
-  bool read(int64_t &value_) {
+  bool seek(unsigned count) {
+    while (count) {
+      if (m_rle) {
+	if (m_rle >= count) {
+	  m_rle -= count;
+	  m_count += count;
+	  return true;
+	}
+	m_count += m_rle;
+	count -= m_rle;
+	m_rle = 0;
+      } else {
+	if (!read_(nullptr)) return false;
+	--count;
+      }
+    }
+    return true;
+  }
+
+  template <typename L>
+  bool search(L l) {
+    int64_t value;
+    const uint8_t *origPos;
+    do {
+      if (m_rle) {
+	if (l(m_prev)) return true;
+	m_count += m_rle;
+	m_rle = 0;
+      }
+      origPos = m_pos;
+      if (!read_(&value)) return false;
+    } while (!l(value));
+    m_pos = origPos;	// back-up by one value
+    m_rle = 0;		// just in case we began RLE
+    --m_count;
+    return true;
+  }
+
+  bool read(int64_t &value) {
     if (m_rle) {
       --m_rle;
-      value_ = m_prev;
+      value = m_prev;
       ++m_count;
       return true;
     }
+    return read_(&value);
+  }
+
+private:
+  bool read_(int64_t *value_) {
     if (ZuUnlikely(m_pos >= m_end)) return false;
     unsigned byte = *m_pos;
     if (byte & 0x80) {
       ++m_pos;
       m_rle = byte & 0x7f;
-      value_ = m_prev;
+      if (value_) *value_ = m_prev;
       ++m_count;
       return true;
     }
     int64_t value;
-    if (!(byte & 0x20)) {					// 5 bits
+    if (!(byte & 0x20)) {				// 5 bits
       ++m_pos;
       value = byte & 0x1f;
     } else if ((byte & 0x30) == 0x20) {			// 12 bits
-      if (m_pos + 1 >= m_end) return false;
+      if (m_pos + 2 > m_end) return false;
       ++m_pos;
       value = byte & 0xf;
       value |= static_cast<int64_t>(*m_pos++)<<4;
     } else if ((byte & 0x38) == 0x30) {			// 19 bits
-      if (m_pos + 2 >= m_end) return false;
+      if (m_pos + 3 > m_end) return false;
       ++m_pos;
       value = byte & 0x7;
       value |= static_cast<int64_t>(*m_pos++)<<3;
       value |= static_cast<int64_t>(*m_pos++)<<11;
     } else if ((byte & 0x3c) == 0x38) {			// 26 bits
-      if (m_pos + 3 >= m_end) return false;
+      if (m_pos + 4 > m_end) return false;
       ++m_pos;
       value = byte & 0x3;
       value |= static_cast<int64_t>(*m_pos++)<<2;
       value |= static_cast<int64_t>(*m_pos++)<<10;
       value |= static_cast<int64_t>(*m_pos++)<<18;
     } else if ((byte & 0x3e) == 0x3c) {			// 33 bits
-      if (m_pos + 4 >= m_end) return false;
+      if (m_pos + 5 > m_end) return false;
       ++m_pos;
       value = byte & 0x1;
       value |= static_cast<int64_t>(*m_pos++)<<1;
@@ -117,31 +160,31 @@ public:
       value |= static_cast<int64_t>(*m_pos++)<<17;
       value |= static_cast<int64_t>(*m_pos++)<<25;
     } else if ((byte & 0x3f) == 0x3e) {			// 40 bits
-      if (m_pos + 5 >= m_end) return false;
+      if (m_pos + 6 > m_end) return false;
       ++m_pos;
       value = *m_pos++;
       value |= static_cast<int64_t>(*m_pos++)<<8;
       value |= static_cast<int64_t>(*m_pos++)<<16;
       value |= static_cast<int64_t>(*m_pos++)<<24;
       value |= static_cast<int64_t>(*m_pos++)<<32;
-    } else {							 // 64 bits
-      if (m_pos + 8 >= m_end) return false;
+    } else {						// 64 bits
+      if (m_pos + 9 > m_end) return false;
       ++m_pos;
       // potentially misaligned
       value = *reinterpret_cast<const ZuLittleEndian<uint64_t> *>(m_pos);
       m_pos += 8;
     }
     if (byte & 0x40) value = ~value;
-    value_ = m_prev = value;
+    if (value_) *value_ = m_prev = value;
     ++m_count;
     return true;
   }
 
 private:
   const uint8_t	*m_pos, *m_end;
-  int64_t		m_prev = 0;
-  unsigned		m_rle = 0;
-  unsigned		m_count = 0;
+  int64_t	m_prev = 0;
+  unsigned	m_rle = 0;
+  unsigned	m_count = 0;
 };
 
 template <typename Base = Reader>

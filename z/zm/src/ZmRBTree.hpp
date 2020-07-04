@@ -267,8 +267,8 @@ class ZmRBTree : public NTP::Base {
   ZmRBTree(const ZmRBTree &);
   ZmRBTree &operator =(const ZmRBTree &);	// prevent mis-use
 
-  template <typename, int> friend ZmRBTreeIterator_;
-  template <typename, int> friend ZmRBTreeIterator;
+  template <typename, int> friend class ZmRBTreeIterator_;
+  template <typename, int> friend class ZmRBTreeIterator;
 
 public:
   using Key = Key_;
@@ -304,7 +304,7 @@ public:
     NodeFn(const NodeFn &);
     NodeFn &operator =(const NodeFn &);	// prevent mis-use
 
-  template <typename, typename> friend ZmRBTree;
+  template <typename, typename> friend class ZmRBTree;
 
   protected:
     ZuInline NodeFn() { }

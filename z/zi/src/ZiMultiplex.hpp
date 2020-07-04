@@ -790,7 +790,7 @@ friend ZiConnection;
 #if !ZiMultiplex__AcceptHeap
   friend Accept_;
 #else
-  template <typename> friend Accept_;
+  template <typename> friend class Accept_;
 #endif
 
     using Socket = ZiPlatform::Socket;
@@ -836,7 +836,7 @@ friend ZiConnection;
 #if ZiMultiplex__AcceptHeap
   // heap-allocated asynchronous accept, exclusively used by IOCP
   template <typename> class Accept_;
-template <typename> friend Accept_;
+template <typename> friend class Accept_;
   template <typename Heap> class Accept_ : public Heap {
   friend ZiMultiplex;
 
@@ -875,7 +875,7 @@ template <typename> friend Accept_;
   class Connect_
 #else
   template <typename> class Connect_;
-template <typename> friend Connect_;
+template <typename> friend class Connect_;
   template <typename Heap> class Connect_ : public Heap
 #endif
   {

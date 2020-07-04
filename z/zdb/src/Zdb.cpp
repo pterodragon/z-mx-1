@@ -1821,11 +1821,11 @@ void ZdbAny::cache(ZdbAnyPOD *pod)
 {
   if (m_cacheMode != ZdbCacheMode::FullCache &&
       m_cache->count_() >= m_cacheSize) {
-    ZdbLRUNode *lru_ = m_lru.shiftNode();
+    auto lru_ = m_lru.shiftNode();
     if (ZuLikely(lru_)) {
       ZdbAnyPOD *lru = static_cast<ZdbAnyPOD *>(lru_);
       if (lru->pinned()) {
-	m_lru.push(lru_);
+	m_lru.push(ZuMv(lru_));
 	cache_(pod);
 	m_cacheSize = m_cache->size();
 	return;

@@ -181,8 +181,8 @@ struct ZmLHash_Ops : public ZuArrayFn<T, ZuCmp<T> > {
 
 template <typename Key, typename Cmp, typename Val, typename ValCmp>
 class ZmLHash_Node {
-template <typename, class> friend ZmLHash;
-template <class, typename, class, unsigned> friend ZmLHash_;
+template <typename, class> friend class ZmLHash;
+template <class, typename, class, unsigned> friend class ZmLHash_;
 
   class Data {
   public:
@@ -442,7 +442,7 @@ class ZmLHash : public ZmLHash_<ZmLHash<Key_, NTP>, Key_, NTP, NTP::Static> {
   ZmLHash(const ZmLHash &) = delete;
   ZmLHash &operator =(const ZmLHash &) = delete; // prevent mis-use
 
-template <class, typename, class, unsigned> friend ZmLHash_;
+template <class, typename, class, unsigned> friend class ZmLHash_;
 
   using Base = ZmLHash_<ZmLHash<Key_, NTP>, Key_, NTP, NTP::Static>;
 

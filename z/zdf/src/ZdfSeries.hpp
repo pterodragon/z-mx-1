@@ -53,19 +53,22 @@ struct Hdr {
 
 private:
   constexpr static uint64_t countMask() { return 0xfffffffULL; }
-  constexpr static uint64_t lengthMask() { return countMask()<<28U; }
   constexpr static unsigned lengthShift() { return 28U; }
+  constexpr static uint64_t lengthMask() { return countMask()<<lengthShift(); }
 public:
   constexpr static uint64_t lengthMax() { return countMask(); }
 private:
-  constexpr static uint64_t exponentMask_() { return 0xffULL; }
-  constexpr static uint64_t exponentMask() { return exponentMask_()<<56U; }
-  constexpr static unsigned exponentShift() { return 56U; }
+  constexpr static uint64_t expMask_() { return 0x1fULL; }
+  constexpr static unsigned expShift() { return 56U; }
+  constexpr static uint64_t expMask() { return expMask_()<<expShift(); }
 
   uint64_t cle() const { return cle_; }
   void cle(uint64_t v) { cle_ = v; }
 
 public:
+  // offset (as a value count) of this buffer
+  uint64_t offset() const { return offset_; }
+  void offset(uint64_t v) { offset_ = v; }
   // count of values in this buffer
   unsigned count() const {
     return cle() & countMask();
@@ -82,14 +85,11 @@ public:
   }
   // negative decimal exponent
   unsigned exponent() const {
-    return (cle() & exponentMask())>>exponentShift();
+    return (cle() & expMask())>>expShift();
   }
   void exponent(uint64_t v) {
-    cle(cle() & ~exponentMask()) | (v<<exponentShift());
+    cle(cle() & ~expMask()) | (v<<expShift());
   }
-  // offset (as a value count) of this buffer
-  uint64_t offset() const { return offset_; }
-  void offset(uint64_t v) { offset_ = v; }
 
   UInt64	offset_ = 0;
   UInt64	cle_ = 0;	// count/length/exponent
@@ -106,7 +106,7 @@ struct BufLRUNode_ {
   BufLRUNode_ &operator =(BufLRUNode_ &&) = default;
   ~BufLRUNode_() = default;
 
-  void	*mgr;
+  void		*mgr;
   unsigned	seriesID;
   unsigned	blkIndex;
 };
@@ -132,8 +132,16 @@ public:
 protected:
   void shift() {
     if (m_lru.count() >= m_maxBufs) {
-      auto node = m_lru.shiftNode();
-      (m_unloadFn[node->seriesID])(node.ptr());
+      auto lru_ = m_lru.shiftNode();
+      if (ZuLikely(lru_)) {
+	Buf *lru = static_cast<Buf *>(lru);
+	if (lru->pinned()) {
+	  m_lru.push(ZuMv(lru_));
+	  m_maxBufs = m_lru.count() + 1;
+	  return;
+	}
+	(m_unloadFn[node->seriesID])(lru);
+      }
     }
   }
   void push(BufLRUNode *node) { m_lru.push(node); }
@@ -162,6 +170,27 @@ public:
   const uint8_t *data() const { return &m_data[0]; }
 
 private:
+  using PinLock = ZmPLock;
+  using PinGuard = ZmGuard<PinLock>;
+  using PinReadGuard = ZmReadGuard<PinLock>;
+public:
+  bool pin() {
+    PinGuard guard(m_pinLock);
+    if (m_pinned) return false;
+    return m_pinned = true;
+  }
+  bool pinned() const {
+    PinReadGuard guard(m_pinLock);
+    return m_pinned;
+  }
+  template <typename L>
+  void unpin(L l) {
+    PinGuard guard(m_pinLock);
+    m_pinned = false;
+    l(this);
+  }
+
+private:
   const Hdr *hdr() const {
     return reinterpret_cast<const Hdr *>(data());
   }
@@ -175,12 +204,12 @@ private:
 
   template <typename Writer>
   Writer writer() {
-    auto start = data() + sizeof(Hdr) + hdr()->length();
+    auto start = data() + sizeof(Hdr);
     auto end = data() + Size;
     return Writer{start, end};
   }
   template <typename Writer>
-  void endWriting(const Writer &writer) {
+  void sync(const Writer &writer) {
     auto hdr = this->hdr();
     hdr->count(writer.count());
     auto start = data() + sizeof(Hdr);
@@ -195,7 +224,10 @@ private:
   }
 
 private:
-  uint8_t	m_data[Size];
+  ZmLock		m_pinLock;
+    bool		  m_pinned = false;
+
+  uint8_t		m_data[Size];
 };
 struct Buf_HeapID {
   static const char *id() { return "ZdfSeries.Buf"; }
@@ -312,9 +344,12 @@ public:
     return *this;
   }
   ~Writer() {
-    m_buf->endWriting(m_bufWriter);
+    m_buf->sync(m_bufWriter);
     m_series->save_(m_buf);
   }
+
+  // FIXME - support both in-memory and on-disk, at this level
+  // and in Zdf::DataFrame
 
   bool write(const ZuFixed &value) {
     if (ZuUnlikely(!m_bufWriter)) return false;
@@ -326,7 +361,7 @@ public:
       eob = true;
     }
     if (eob || !m_bufWriter.write(value.value)) {
-      m_buf->endWriting(m_bufWriter);
+      m_buf->sync(m_bufWriter);
       m_series->save_(m_buf);
       m_bufWriter = m_series->template nextWriter<BufWriter>(m_buf);
       if (ZuUnlikely(!m_bufWriter)) return false;
@@ -334,6 +369,10 @@ public:
       hdr->exponent(value.exponent);
       if (ZuUnlikely(!m_bufWriter.write(value.value))) return false;
     }
+  }
+
+  void sync() { // in-memory sync to readers
+    m_buf->sync(m_bufWriter);
   }
 
 private:
@@ -440,7 +479,7 @@ private:
     return buf_;
   }
 
-  void unloadBuf(BufLRUNode *node) {
+  bool unloadBuf(BufLRUNode *node) {
     auto &lruBlk = m_blks[node->blkIndex];
     if (ZuLikely(lruBlk.contains<ZmRef<Buf>>())) {
       Hdr hdr = *(lruBlk.v<ZmRef<Buf>>()->hdr());
@@ -457,10 +496,7 @@ private:
     {
       auto reader = buf->reader<BufReader>();
       offset -= buf->hdr()->offset();
-      {
-	ZuFixed skip;
-	while (reader.count() < offset) reader.read(skip);
-      }
+      if (!reader.seek(offset)) goto null;
       return reader;
     }
   null:
@@ -475,11 +511,11 @@ private:
     if (!(buf = loadBuf(blkIndex))) goto null;
     {
       Reader reader = buf->reader<BufReader>();
-      {
-	ZuFixed skip;
-	Reader next = reader;
-	while (next.read(skip) && value < skip) reader = next;
-      }
+      bool found = reader.search(
+	  [&value, exponent = buf->hdr()->exponent()](int64_t skip) {
+	    return value >= ZuFixed{skip, exponent};
+	  });
+      if (!found) goto null;
       return reader;
     }
   null:
@@ -489,24 +525,32 @@ private:
   }
 
   auto offsetSearch(uint64_t offset) const {
-    return [offset](const Blk &blk) {
+    return [offset](const Blk &blk) -> int {
       auto hdr = Series::hdr(blk);
       auto hdrOffset = hdr->offset();
-      if (offset < hdrOffset) return -1;
-      if (offset >= (hdrOffset + hdr->count())) return 1;
+      if (offset < hdrOffset) return -static_cast<int>(hdrOffset - offset);
+      hdrOffset += hdr->count();
+      if (offset >= hdrOffset) return static_cast<int>(offset - hdrOffset) + 1;
       return 0;
     };
   }
   auto indexSearch(const ZuFixed &value) const {
-    return [this, value](const Blk &blk) {
+    return [this, value](const Blk &blk) -> int {
       unsigned blkIndex = &const_cast<Blk &>(blk) - &m_blks[0];
       auto buf = loadBuf(blkIndex);
       if (!buf) return -1;
       auto reader = buf->reader<BufReader>();
-      ZuFixed value_;
-      if (!reader.read(value_)) return -1;
-      if (value < value_) return -1;
-      return 1;
+      ZuFixed value_{static_cast<int64_t>(0), buf->hdr()->exponent};
+      if (!reader.read(value_.value)) return -1;
+      if (value < value_) {
+	int64_t delta = value_.adjust(value.exponent) - value.value;
+	if (ZuUnlikely(delta >= static_cast<int64_t>(INT_MAX))) return INT_MIN;
+	return -static_cast<int>(delta);
+      } else {
+	int64_t delta = value.value - value_.adjust(value.exponent);
+	if (ZuUnlikely(delta >= static_cast<int64_t>(INT_MAX))) return INT_MAX;
+	return static_cast<int>(delta) + 1;
+      }
     };
   }
 
@@ -565,10 +609,6 @@ private:
 
   template <typename BufWriter>
   Writer firstWriter(ZmRef<Buf> &buf) {
-    if (unsigned n = m_blks.length()) {
-      if (!(buf = loadBuf(n - 1))) return BufWriter();
-      if (buf->space()) return buf->writer<BufWriter>();
-    }
     return nextWriter<BufWriter>(buf);
   }
   template <typename BufWriter>
@@ -688,9 +728,12 @@ public:
       unsigned seriesID, unsigned blkIndex, void *buf);
   template <typename Buf>
   void save(ZmRef<Buf> buf) {
+    if (!buf->pin()) return;
     m_sched->run(m_writeTID, ZmFn<>{ZuMv(buf), [](Buf *buf) {
-      static_cast<FileMgr *>(buf->mgr)->save_(
-	  buf->seriesID, buf->blkIndex, Buf::Size, buf->data());
+      buf->unpin([](Buf *buf) {
+	static_cast<FileMgr *>(buf->mgr)->save_(
+	    buf->seriesID, buf->blkIndex, Buf::Size, buf->data());
+      });
     }});
   }
 

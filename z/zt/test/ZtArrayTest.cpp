@@ -130,6 +130,7 @@ int main()
     ZtArray<ZtString> a = { "Foo", "Bar" };
     puts(a[0]);
     puts(a[1]);
+    for (auto &&s: a) puts(s);
   }
 
   return 0;

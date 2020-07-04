@@ -41,7 +41,7 @@
 struct ZuPtr_ { }; // compile-time tag
 
 template <typename T_> class ZuPtr : public ZuPtr_ {
-template <typename> friend ZuPtr;
+template <typename> friend class ZuPtr;
 public:
   using T = T_;
 

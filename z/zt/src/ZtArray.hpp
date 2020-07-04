@@ -740,6 +740,9 @@ public:
 
 // accessors
 
+  ZuInline const T *begin() const { return m_data; }
+  ZuInline const T *end() const { return &m_data[length()]; }
+
   ZuInline T *data() { return m_data; }
   ZuInline const T *data() const { return m_data; }
 

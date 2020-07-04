@@ -30,7 +30,6 @@
 #include <zlib/ZiLib.hpp>
 #endif
 
-#include <zlib/ZuByteSwap.hpp>
 #include <zlib/ZuUnion.hpp>
 
 #include <zlib/ZmHeap.hpp>
@@ -211,6 +210,12 @@ public:
 	}
 	m_writers[i].write(v);
       }
+    }
+
+    void sync() {
+      unsigned n = m_writers.length();
+      for (unsigned i = 0; i < n; i++)
+	m_writers[i].sync();
     }
 
   private:

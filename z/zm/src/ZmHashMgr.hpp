@@ -104,8 +104,8 @@ class ZmHashMgr_;
 class ZmAPI ZmHashMgr {
 friend ZmHashMgr_;
 friend ZmHashParams;
-template <typename, class> friend ZmHash; 
-template <class, typename, class, unsigned> friend ZmLHash_;
+template <typename, class> friend class ZmHash; 
+template <class, typename, class, unsigned> friend class ZmLHash_;
 
   template <class S> struct CSV_ {
     CSV_(S &stream) : m_stream(stream) {

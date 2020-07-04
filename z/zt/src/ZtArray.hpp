@@ -720,7 +720,7 @@ public:
     unsigned n = length();
     if (!m_data || size() <= n) return;
     T *newData = (T *)::malloc(n * sizeof(T));
-    this->copyItems(newData, m_data, n);
+    this->moveItems(newData, m_data, n);
     free_();
     m_data = newData;
     mallocd(1);
@@ -825,7 +825,7 @@ public:
     unsigned n = z;
     if (n > length()) n = length();
     if (m_data) {
-      if (n) this->copyItems(newData, m_data, n);
+      if (n) this->moveItems(newData, m_data, n);
       free_();
     } else
       n = 0;
@@ -1121,7 +1121,7 @@ public:
     if (!owned() || n + 1 > z) {
       z = grow(z, n + 1);
       T *newData = (T *)::malloc(z * sizeof(T));
-      this->copyItems(newData, m_data, n);
+      this->moveItems(newData, m_data, n);
       free_();
       m_data = newData;
       size_owned(z, 1);
@@ -1179,7 +1179,7 @@ public:
     if (!owned() || n + 1 > z) {
       z = grow(z, n + 1);
       T *newData = (T *)::malloc(z * sizeof(T));
-      this->copyItems(newData + 1, m_data, n);
+      this->moveItems(newData + 1, m_data, n);
       free_();
       m_data = newData;
       size_owned(z, 1);
@@ -1223,9 +1223,9 @@ private:
       z = grow(z, l);
       if (removed) removed->init(Move, m_data + offset, length);
       T *newData = (T *)::malloc(z * sizeof(T));
-      this->copyItems(newData, m_data, offset);
+      this->moveItems(newData, m_data, offset);
       if (offset + length < (int)n)
-	this->copyItems(
+	this->moveItems(
 	    newData + offset,
 	    m_data + offset + length,
 	    n - (offset + length));
@@ -1280,10 +1280,10 @@ private:
       z = grow(z, l);
       if (removed) removed->init(Move, m_data + offset, length);
       T *newData = (T *)::malloc(z * sizeof(T));
-      this->copyItems(newData, m_data, offset);
+      this->moveItems(newData, m_data, offset);
       this->copyItems(newData + offset, replace, rlength);
       if ((int)rlength != length && offset + length < (int)n)
-	this->copyItems(
+	this->moveItems(
 	    newData + offset + rlength,
 	    m_data + offset + length,
 	    n - (offset + length));
@@ -1339,10 +1339,10 @@ private:
       z = grow(z, l);
       if (removed) removed->init(Move, m_data + offset, length);
       T *newData = (T *)::malloc(z * sizeof(T));
-      this->copyItems(newData, m_data, offset);
+      this->moveItems(newData, m_data, offset);
       this->moveItems(newData + offset, replace, rlength);
       if ((int)rlength != length && offset + length < (int)n)
-	this->copyItems(
+	this->moveItems(
 	    newData + offset + rlength,
 	    m_data + offset + length,
 	    n - (offset + length));

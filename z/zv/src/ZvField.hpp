@@ -35,6 +35,7 @@
 #include <zlib/ZuPrint.hpp>
 #include <zlib/ZuBox.hpp>
 #include <zlib/ZuString.hpp>
+#include <zlib/ZuFixed.hpp>
 
 #include <zlib/ZtEnum.hpp>
 #include <zlib/ZtDate.hpp>
@@ -99,86 +100,76 @@ struct ZvField {
 
 #define ZvFieldCmp_(T_, member, get) \
     [](const void *o1, const void *o2) { \
-      return ZuCmp<decltype(get(static_cast<const T_ *>(o1), member))>::cmp( \
-	  get(o1, member), get(static_cast<const T_ *>(o2), member)); }
+      return ZuCmp<decltype(get(T_, o1, member))>::cmp( \
+	  get(T_, o1, member), get(T_, o2, member)); }
 
 #define ZvFieldString_(T_, id, flags, member, get, set) \
   { #id, ZvFieldType::String, flags, \
     ZvFieldCmp_(T_, member, get), \
     [](ZmStream &s, const void *o, const ZvFieldFmt &) { \
-      s << get(static_cast<const T_ *>(o), member); }, \
+      s << get(T_, o, member); }, \
     [](ZuString s, void *o, const ZvFieldFmt &) { \
-      set(static_cast<T_ *>(o), member, s); } }
+      set(T_, o, member, s); } }
 #define ZvFieldBool_(T_, id, flags, member, get, set) \
   { #id, ZvFieldType::Bool, flags, \
     ZvFieldCmp_(T_, member, get), \
     [](ZmStream &s, const void *o, const ZvFieldFmt &) { \
-      s << (get(static_cast<const T_ *>(o), member) ? '1' : '0'); }, \
+      s << (get(T_, o, member) ? '1' : '0'); }, \
     [](ZuString s, void *o, const ZvFieldFmt &) { \
-      set(static_cast<T_ *>(o), member, \
+      set(T_, o, member, \
 	  (s && s.length() == 1 && s[0] == '1')); } }
 #define ZvFieldInt_(T_, id, flags, member, get, set) \
   { #id, ZvFieldType::Int, flags, \
     ZvFieldCmp_(T_, member, get), \
-    [](ZmStream &s, const T_ *o, const ZvFieldFmt &fmt) { \
-      s << ZuBoxed(get( \
-	    static_cast<const T_ *>(o), member)).vfmt(fmt.scalar); }, \
-    [](ZuString s, T_ *o, const ZvFieldFmt &) { \
-      using V = typename ZuDecay<decltype( \
-	  get(static_cast<const T_ *>(o), member))>::T; \
-      set(static_cast<T_ *>(o), member, (typename ZuBoxT<V>::T{s})); }, \
-    { .scalar = [](const T_ *o) { \
-      return ZuFixed{get(static_cast<const T_ *>(o), member), 0}; } } }
+    [](ZmStream &s, const void *o, const ZvFieldFmt &fmt) { \
+      s << ZuBoxed(get(T_, o, member)).vfmt(fmt.scalar); }, \
+    [](ZuString s, void *o, const ZvFieldFmt &) { \
+      using V = typename ZuDecay<decltype(get(T_, o, member))>::T; \
+      set(T_, o, member, (typename ZuBoxT<V>::T{s})); }, \
+    { .scalar = [](const void *o) { \
+      return ZuFixed{get(T_, o, member), 0}; } } }
 #define ZvFieldFloat_(T_, id, flags, exponent, member, get, set) \
   { #id, ZvFieldType::Float, flags, \
     ZvFieldCmp_(T_, member, get), \
-    [](ZmStream &s, const T_ *o, const ZvFieldFmt &fmt) { \
-      s << ZuBoxed(get( \
-	    static_cast<const T_ *>(o), member)).vfmt(fmt.scalar); }, \
-    [](ZuString s, T_ *o, const ZvFieldFmt &) { \
-      using V = typename ZuDecay<decltype( \
-	  get(static_cast<const T_ *>(o), member))>::T; \
-      set(static_cast<T_ *>(o), member, (typename ZuBoxT<V>::T{s})); }, \
-    { .scalar = [](const T_ *o) { \
-      return ZuFixed{get(static_cast<const T_ *>(o), member), exponent}; } } }
+    [](ZmStream &s, const void *o, const ZvFieldFmt &fmt) { \
+      s << ZuBoxed(get(T_, o, member)).vfmt(fmt.scalar); }, \
+    [](ZuString s, void *o, const ZvFieldFmt &) { \
+      using V = typename ZuDecay<decltype(get(T_, o, member))>::T; \
+      set(T_, o, member, (typename ZuBoxT<V>::T{s})); }, \
+    { .scalar = [](const void *o) { \
+      return ZuFixed{get(T_, o, member), exponent}; } } }
 #define ZvFieldFixed_(T_, id, flags, exponent, member, get, set) \
   { #id, ZvFieldType::Fixed, flags, \
     ZvFieldCmp_(T_, member, get), \
-    [](ZmStream &s, const T_ *o, const ZvFieldFmt &fmt) { \
-      s << ZuFixed{get(static_cast<const T_ *>(o), member), exponent}. \
-	vfmt(fmt.scalar); }, \
-    [](ZuString s, T_ *o, const ZvFieldFmt &) { \
-      set(static_cast<T_ *>(o), member, ZuFixed{s, exponent}.value); }, \
-    { .scalar = [](const T_ *o) { \
-      return ZuFixed{get(static_cast<const T_ *>(o), member), exponent}; } } }
+    [](ZmStream &s, const void *o, const ZvFieldFmt &fmt) { \
+      s << ZuFixed{get(T_, o, member), exponent}.vfmt(fmt.scalar); }, \
+    [](ZuString s, void *o, const ZvFieldFmt &) { \
+      set(T_, o, member, (ZuFixed{s, exponent}.value)); }, \
+    { .scalar = [](const void *o) { \
+      return ZuFixed{get(T_, o, member), exponent}; } } }
 #define ZvFieldHex_(T_, id, flags, member, get, set) \
   { #id, ZvFieldType::Hex, flags, \
     ZvFieldCmp_(T_, member, get), \
-    [](ZmStream &s, const T_ *o, const ZvFieldFmt &fmt) { \
-      s << ZuBoxed(get(static_cast<const T_ *>(o), member)).hex(); }, \
-    [](ZuString s, T_ *o, const ZvFieldFmt &) { \
-      using V = typename ZuDecay<decltype( \
-	  get(static_cast<const T_ *>(o), member))>::T; \
-      set(static_cast<T_ *>(o), member, \
-	  (typename ZuBoxT<V>::T{ZuFmt::Hex<>{}, s})); } }
+    [](ZmStream &s, const void *o, const ZvFieldFmt &fmt) { \
+      s << ZuBoxed(get(T_, o, member)).hex(); }, \
+    [](ZuString s, void *o, const ZvFieldFmt &) { \
+      using V = typename ZuDecay<decltype(get(T_, o, member))>::T; \
+      set(T_, o, member, (typename ZuBoxT<V>::T{ZuFmt::Hex<>{}, s})); } }
 #define ZvFieldEnum_(T_, id, flags, map, member, get, set) \
   { #id, ZvFieldType::Enum, flags, \
     ZvFieldCmp_(T_, member, get), \
     [](ZmStream &s, const void *o, const ZvFieldFmt &) { \
-      s << map::instance()->v2s(get(static_cast<const T_ *>(o), member)); }, \
+      s << map::instance()->v2s(get(T_, o, member)); }, \
     [](ZuString s, void *o, const ZvFieldFmt &) { \
-      set(static_cast<T_ *>(o), member, (map::instance()->s2v(s))); } }
+      set(T_, o, member, (map::instance()->s2v(s))); } }
 #define ZvFieldFlags_(T_, id, flags, map, member, get, set) \
   { #id, ZvFieldType::Flags, flags, \
     ZvFieldCmp_(T_, member, get), \
     [](ZmStream &s, const void *o, const ZvFieldFmt &fmt) { \
-      map::instance()->print(s, get( \
-	    static_cast<const T_ *>(o), member), fmt.flagsDelim); }, \
+      map::instance()->print(s, get(T_, o, member), fmt.flagsDelim); }, \
     [](ZuString s, void *o, const ZvFieldFmt &fmt) { \
-      using V = typename ZuDecay<decltype( \
-	  get(static_cast<const T_ *>(o), member))>::T; \
-      set(static_cast<T_ *>(o), member, \
-	  (map::instance()->scan<V>(s, fmt.flagsDelim))); } }
+      using V = typename ZuDecay<decltype(get(T_, o, member))>::T; \
+      set(T_, o, member, (map::instance()->scan<V>(s, fmt.flagsDelim))); } }
 #define ZvFieldTime_(T_, id, flags, member, get, set) \
   { #id, ZvFieldType::Time, flags, \
     ZvFieldCmp_(T_, member, get), \
@@ -186,13 +177,13 @@ struct ZvField {
       switch (fmt.time.type()) { \
 	default: \
 	case 1: \
-	  s << get(static_cast<const T_ *>(o), member).csv(fmt.time.csv()); \
+	  s << get(T_, o, member).csv(fmt.time.csv()); \
 	  break; \
 	case 2: \
-	  s << get(static_cast<const T_ *>(o), member).fix(fmt.time.fix()); \
+	  s << get(T_, o, member).fix(fmt.time.fix()); \
 	  break; \
 	case 3: \
-	  s << get(static_cast<const T_ *>(o), member).iso(fmt.time.iso()); \
+	  s << get(T_, o, member).iso(fmt.time.iso()); \
 	  break; \
       } \
     }, \
@@ -200,34 +191,35 @@ struct ZvField {
       switch (fmt.time.type()) { \
 	default: \
 	case 1: \
-	  set(static_cast<T_ *>(o), member, (ZtDate{ZtDate::CSV, s})); \
+	  set(T_, o, member, (ZtDate{ZtDate::CSV, s})); \
 	  break; \
 	case 2: \
-	  set(static_cast<T_ *>(o), member, (ZtDate{ZtDate::FIX, s})); \
+	  set(T_, o, member, (ZtDate{ZtDate::FIX, s})); \
 	  break; \
 	case 3: \
-	  set(static_cast<T_ *>(o), member, (ZtDate{s})); \
+	  set(T_, o, member, (ZtDate{s})); \
 	  break; \
       } \
     }, \
-    { .time = [](const T_ *o) { \
-      return get(static_cast<const T_ *>(o), member); } } }
+    { .time = [](const void *o) -> ZmTime { return get(T_, o, member); } } }
 
 // data member get/set
-#define ZvField_Get(o, member) (o->member)
-#define ZvField_Set(o, member, v) (o->member = (v))
+#define ZvField_Get(T_, o, member) (static_cast<const T_ *>(o)->member)
+#define ZvField_Set(T_, o, member, v) (static_cast<T_ *>(o)->member = (v))
 
 // data member fields
 #define ZvFieldString(T, id, flags) \
 	ZvFieldString_(T, id, flags, id, ZvField_Get, ZvField_Set)
 #define ZvFieldBool(T, id, flags) \
 	ZvFieldBool_(T, id, flags, id, ZvField_Get, ZvField_Set)
-#define ZvFieldInt(T, id, flags, exponent) \
-	ZvFieldInt_(T, id, flags, exponent, id, ZvField_Get, ZvField_Set)
+#define ZvFieldInt(T, id, flags) \
+	ZvFieldInt_(T, id, flags, id, ZvField_Get, ZvField_Set)
 #define ZvFieldFloat(T, id, flags, exponent) \
 	ZvFieldFloat_(T, id, flags, exponent, id, ZvField_Get, ZvField_Set)
 #define ZvFieldFixed(T, id, flags, exponent) \
 	ZvFieldFixed_(T, id, flags, exponent, id, ZvField_Get, ZvField_Set)
+#define ZvFieldHex(T, id, flags) \
+	ZvFieldHex_(T, id, flags, id, ZvField_Get, ZvField_Set)
 #define ZvFieldEnum(T, id, flags, map) \
 	ZvFieldEnum_(T, id, flags, map, id, ZvField_Get, ZvField_Set)
 #define ZvFieldFlags(T, id, flags, map) \
@@ -239,12 +231,14 @@ struct ZvField {
 	ZvFieldString_(T, id, flags, alias, ZvField_Get, ZvField_Set)
 #define ZvFieldBoolAlias(T, id, alias, flags) \
 	ZvFieldBool_(T, id, flags, alias, ZvField_Get, ZvField_Set)
-#define ZvFieldIntAlias(T, id, alias, flags, exponent) \
-	ZvFieldInt_(T, id, flags, exponent, alias, ZvField_Get, ZvField_Set)
+#define ZvFieldIntAlias(T, id, alias, flags) \
+	ZvFieldInt_(T, id, flags, alias, ZvField_Get, ZvField_Set)
 #define ZvFieldFloatAlias(T, id, alias, flags, exponent) \
 	ZvFieldFloat_(T, id, flags, exponent, alias, ZvField_Get, ZvField_Set)
 #define ZvFieldFixedAlias(T, id, alias, flags, exponent) \
 	ZvFieldFixed_(T, id, flags, exponent, alias, ZvField_Get, ZvField_Set)
+#define ZvFieldHexAlias(T, id, alias, flags) \
+	ZvFieldHex_(T, id, flags, alias, ZvField_Get, ZvField_Set)
 #define ZvFieldEnumAlias(T, id, alias, flags, map) \
 	ZvFieldEnum_(T, id, flags, map, alias, ZvField_Get, ZvField_Set)
 #define ZvFieldFlagsAlias(T, id, alias, flags, map) \
@@ -253,20 +247,22 @@ struct ZvField {
 	ZvFieldTime_(T, id, flags, alias, ZvField_Get, ZvField_Set)
 
 // function member get/set
-#define ZvField_GetFn(o, member) (o->member())
-#define ZvField_SetFn(o, member, v) (o->member(v))
+#define ZvField_GetFn(T_, o, member) (static_cast<const T_ *>(o)->member())
+#define ZvField_SetFn(T_, o, member, v) (static_cast<T_ *>(o)->member(v))
 
 // function member fields
 #define ZvFieldStringFn(T, id, flags) \
 	ZvFieldString_(T, id, flags, id, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldBoolFn(T, id, flags) \
 	ZvFieldBool_(T, id, flags, id, ZvField_GetFn, ZvField_SetFn)
-#define ZvFieldIntFn(T, id, flags, exponent) \
-	ZvFieldInt_(T, id, flags, exponent, id, ZvField_GetFn, ZvField_SetFn)
+#define ZvFieldIntFn(T, id, flags) \
+	ZvFieldInt_(T, id, flags, id, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldFloatFn(T, id, flags, exponent) \
 	ZvFieldFloat_(T, id, flags, exponent, id, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldFixedFn(T, id, flags, exponent) \
 	ZvFieldFixed_(T, id, flags, exponent, id, ZvField_GetFn, ZvField_SetFn)
+#define ZvFieldHexFn(T, id, flags) \
+	ZvFieldHex_(T, id, flags, id, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldEnumFn(T, id, flags, map) \
 	ZvFieldEnum_(T, id, flags, map, id, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldFlagsFn(T, id, flags, map) \
@@ -279,12 +275,14 @@ struct ZvField {
 	ZvFieldString_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldBoolAliasFn(T, id, fn, flags) \
 	ZvFieldBool_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
-#define ZvFieldIntAliasFn(T, id, fn, flags, exponent) \
-	ZvFieldInt_(T, id, flags, exponent, fn, ZvField_GetFn, ZvField_SetFn)
+#define ZvFieldIntAliasFn(T, id, fn, flags) \
+	ZvFieldInt_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldFloatAliasFn(T, id, fn, flags, exponent) \
 	ZvFieldFloat_(T, id, flags, exponent, fn, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldFixedAliasFn(T, id, fn, flags, exponent) \
 	ZvFieldFixed_(T, id, flags, exponent, fn, ZvField_GetFn, ZvField_SetFn)
+#define ZvFieldHexAliasFn(T, id, fn, flags) \
+	ZvFieldHex_(T, id, flags, fn, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldEnumAliasFn(T, id, fn, flags, map) \
 	ZvFieldEnum_(T, id, flags, map, fn, ZvField_GetFn, ZvField_SetFn)
 #define ZvFieldFlagsAliasFn(T, id, fn, flags, map) \
@@ -301,7 +299,7 @@ struct ZvField {
   static ZvField fields_[] = { \
     ZuPP_Eval(ZuPP_MapArgComma(ZvMkField, T, __VA_ARGS__)) \
   }; \
-  return ZvFields{&fields_[0], sizeof(fields_) / sizeof(fields_[0])} \
+  return ZvFields{&fields_[0], sizeof(fields_) / sizeof(fields_[0])}
 
 using ZvFields = ZuArray<ZvField>;
 

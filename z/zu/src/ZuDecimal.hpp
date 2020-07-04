@@ -429,7 +429,8 @@ public:
 
   template <typename Fmt> ZuDecimalFmt<Fmt> fmt(Fmt) const;
   ZuDecimalVFmt vfmt() const;
-  ZuDecimalVFmt vfmt(const ZuVFmt &) const;
+  template <typename VFmt>
+  ZuDecimalVFmt vfmt(VFmt &&) const;
 };
 template <typename Fmt> struct ZuDecimalFmt {
   const ZuDecimal	&fixed;
@@ -459,10 +460,12 @@ template <typename S> inline void ZuDecimal::print(S &s) const
   s << ZuDecimalFmt<ZuFmt::Default>{*this};
 }
 template <> struct ZuPrint<ZuDecimal> : public ZuPrintFn { };
-class ZuDecimalVFmt {
+class ZuDecimalVFmt : public ZuVFmtWrapper<ZuDecimalVFmt> {
 public:
-  ZuInline ZuDecimalVFmt(const ZuDecimal &decimal, const ZuVFmt &fmt) :
-      m_decimal{decimal}, m_fmt{fmt} { }
+  ZuInline ZuDecimalVFmt(const ZuDecimal &decimal) : m_decimal{decimal} { }
+  template <typename VFmt>
+  ZuInline ZuDecimalVFmt(const ZuDecimal &decimal, VFmt &&fmt) :
+    ZuVFmtWrapper<ZuDecimalVFmt>{ZuFwd<VFmt>(fmt)}, m_decimal{decimal} { }
 
   template <typename S> void print(S &s) const {
     if (ZuUnlikely(!*m_decimal)) return;
@@ -474,22 +477,19 @@ public:
       iv = m_decimal.value;
     fv = iv % ZuDecimal::scale();
     iv /= ZuDecimal::scale();
-    s << ZuBoxed(iv).vfmt(m_fmt);
+    s << ZuBoxed(iv).vfmt(fmt);
     if (fv) s << '.' << ZuBoxed(fv).fmt(ZuFmt::Frac<18>());
   }
 
 private:
   const ZuDecimal	&m_decimal;
-  const ZuVFmt		&m_fmt;
 };
-inline ZuDecimalVFmt ZuDecimal::vfmt() const
-{
-  static const ZuVFmt fmt;
-  return ZuDecimalVFmt{*this, fmt};
+inline ZuDecimalVFmt ZuDecimal::vfmt() const {
+  return ZuDecimalVFmt{*this};
 }
-inline ZuDecimalVFmt ZuDecimal::vfmt(const ZuVFmt &fmt) const
-{
-  return ZuDecimalVFmt{*this, fmt};
+template <typename VFmt>
+inline ZuDecimalVFmt ZuDecimal::vfmt(VFmt &&fmt) const {
+  return ZuDecimalVFmt{*this, ZuFwd<VFmt>(fmt)};
 }
 template <> struct ZuPrint<ZuDecimalVFmt> : public ZuPrintFn { };
 

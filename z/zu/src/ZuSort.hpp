@@ -150,7 +150,7 @@ struct ZuSort_Fn {
 };
 
 template <unsigned N = 8, typename T>
-void ZuSort(T *data, unsigned n) {
+inline void ZuSort(T *data, unsigned n) {
   auto cmp = [](const T &v1, const T &v2) {
     return ZuCmp<T>::cmp(v1, v2);
   };
@@ -163,7 +163,7 @@ void ZuSort(T *data, unsigned n) {
 }
 
 template <unsigned N = 8, typename T, typename Cmp>
-void ZuSort(T *data, unsigned n, Cmp cmp) {
+inline void ZuSort(T *data, unsigned n, Cmp cmp) {
   using Fn = ZuSort_Fn<T, Cmp, N>;
   if (n > N)
     Fn::qsort_(data, n, cmp);
@@ -171,8 +171,8 @@ void ZuSort(T *data, unsigned n, Cmp cmp) {
     Fn::isort_(data, n, cmp);
 }
 
-bool ZuSearchFound(unsigned i) { return i & 1; }
-unsigned ZuSearchPos(unsigned i) { return i>>1; }
+inline bool ZuSearchFound(unsigned i) { return i & 1; }
+inline unsigned ZuSearchPos(unsigned i) { return i>>1; }
 
 // binary search in sorted data (i.e. following ZuSort)
 // - returns insertion position if not found
@@ -181,7 +181,7 @@ typename ZuIfT<
   ZuCanOpFn<Cmp, int (Cmp::*)(const T &) const>::OK ||
   ZuCanOpFn<Cmp, int (Cmp::*)(const T &)>::OK,
   unsigned>::T
-ZuSearch(T *data, unsigned n, Cmp cmp) {
+inline ZuSearch(T *data, unsigned n, Cmp cmp) {
   if (!n) return 0;
   unsigned o = 0;
 loop:
@@ -196,7 +196,7 @@ loop:
   goto loop;
 }
 template <bool Match = true, typename T>
-unsigned ZuSearch(T *data, unsigned n, const T &item) {
+inline unsigned ZuSearch(T *data, unsigned n, const T &item) {
   return ZuSearch<Match>(data, n,
       [&item](const T &v) { return ZuCmp<T>::cmp(item, v); });
 }
@@ -209,7 +209,7 @@ typename ZuIfT<
   ZuCanOpFn<Cmp, int (Cmp::*)(const T &) const>::OK ||
   ZuCanOpFn<Cmp, int (Cmp::*)(const T &)>::OK,
   unsigned>::T
-ZuInterSearch(T *data, unsigned n, Cmp cmp) {
+inline ZuInterSearch(T *data, unsigned n, Cmp cmp) {
   if (!n) return 0;
   unsigned o = 0;
   int v1, v2;
@@ -261,7 +261,7 @@ loop:
   goto loop;
 }
 template <bool Match = true, typename T>
-unsigned ZuInterSearch(T *data, unsigned n, const T &item) {
+inline unsigned ZuInterSearch(T *data, unsigned n, const T &item) {
   return ZuInterSearch<Match>(data, n,
       [&item](const T &v) { return ZuCmp<T>::cmp(item, v); });
 }

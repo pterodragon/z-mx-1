@@ -435,6 +435,7 @@ private:
   Ztls::Random		*m_rng;
   unsigned		m_passLen;
   unsigned		m_totpRange;
+  unsigned		m_maxSize;
 
   mutable Lock		m_lock;
     mutable bool	  m_modified = false;	// cleared by save()

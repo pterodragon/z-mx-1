@@ -27,8 +27,8 @@
 #ifndef ZdfRW_HPP
 #define ZdfRW_HPP
 
-#ifndef ZvLib_HPP
-#include <zlib/ZvLib.hpp>
+#ifndef ZdfLib_HPP
+#include <zlib/ZdfLib.hpp>
 #endif
 
 #ifdef _MSC_VER
@@ -36,6 +36,7 @@
 #endif
 
 #include <ZuInt.hpp>
+#include <ZuByteSwap.hpp>
 
 namespace ZdfCompress {
 

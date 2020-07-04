@@ -482,7 +482,7 @@ private:
   template <typename L, typename R, class HeapID, bool, typename ...Args_>
   struct LambdaInvoker_;
   template <typename, typename, class, bool, typename ...Args_>
-  friend LambdaInvoker_;
+  friend struct LambdaInvoker_;
 
   // lambdas with captures (heap-allocated)
   template <typename L, typename R, class HeapID, typename ...Args_>
@@ -535,7 +535,7 @@ private:
   template <typename, typename L, typename R, class HeapID, bool Stateless>
   struct LBoundInvoker_;
   template <typename, typename, typename, class, bool>
-  friend LBoundInvoker_;
+  friend struct LBoundInvoker_;
 
   template <typename O, typename L, typename R, class HeapID>
   struct LBoundInvoker_<O *, L, R, HeapID, 0> {

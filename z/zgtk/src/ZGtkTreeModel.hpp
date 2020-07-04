@@ -709,7 +709,6 @@ namespace TreeNode {
 
 // CRTP - implementation must conform to the following interface:
 #if 0
-// Node should be a ZuUnion of pointers to TelChild|TelParent|TelBranch
 struct Impl : public TreeHierarchy<Impl, Iter> {
   auto root();	// must return a TelParent|TelBranch pointer
   template <typename Ptr> auto print(Ptr *ptr);	// used for column 0 values

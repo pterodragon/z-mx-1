@@ -49,7 +49,7 @@ inline const ZvFields Row::fields() noexcept {
       (StringAlias, string, m_string, 0),
       (IntAlias, int, m_int, 0),
       (BoolAlias, bool, m_bool, 0),
-      (FloatAlias, float, m_float, 0),
+      (FloatAlias, float, m_float, 0, 2),
       (EnumAlias, enum, m_enum, 0, Enums::Map),
       (TimeAlias, time, m_time, 0),
       (FlagsAlias, flags, m_flags, 0, DaFlags::Map));

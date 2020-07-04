@@ -145,7 +145,7 @@ AC_SUBST(MBEDTLS_LIBS)
 AC_SUBST(FLATBUFFERS_LIBS)
 AC_SUBST(READLINE_LIBS)
 
-for i in zu zm zjni zt ze zi ztls zfb zv zdb zrl zgtk; do (
+for i in zu zm zjni zt ze zi ztls zfb zv zdb zdf zrl zgtk; do (
   cd $i/src
   if test ! -e AC_PACKAGE_NAME; then
     if test ".$mingw" != ".yes"; then

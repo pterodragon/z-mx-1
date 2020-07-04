@@ -26,8 +26,8 @@
 #pragma once
 #endif
 
-#ifndef ZiLib_HPP
-#include <zlib/ZiLib.hpp>
+#ifndef ZdfLib_HPP
+#include <zlib/ZdfLib.hpp>
 #endif
 
 #include <zlib/ZuUnion.hpp>
@@ -70,27 +70,27 @@ namespace Zdf {
 // reader.read(value);
 
 // typedefs for (de)compressors
-using Reader_ = ZdfCompress::Reader;
+using AbsReader_ = ZdfCompress::Reader;
 template <typename Base> using DeltaReader__ = ZdfCompress::DeltaReader<Base>;
-using DeltaReader_ = DeltaReader__<Reader_>;
+using DeltaReader_ = DeltaReader__<AbsReader_>;
 using Delta2Reader_ = DeltaReader__<DeltaReader_>;
 
-using Writer_ = ZdfCompress::Writer;
+using AbsWriter_ = ZdfCompress::Writer;
 template <typename Base> using DeltaWriter__ = ZdfCompress::DeltaWriter<Base>;
-using DeltaWriter_ = DeltaWriter__<Writer_>;
+using DeltaWriter_ = DeltaWriter__<AbsWriter_>;
 using Delta2Writer_ = DeltaWriter__<DeltaWriter_>;
 
 // typedefs for reader/writer types
-using Reader = Reader<Series, Reader_>;
+using AbsReader = Reader<Series, AbsReader_>;
 using DeltaReader = Reader<Series, DeltaReader_>;
 using Delta2Reader = Reader<Series, Delta2Reader_>;
 
-using Writer = Writer<Series, Writer_>;
+using AbsWriter = Writer<Series, AbsWriter_>;
 using DeltaWriter = Writer<Series, DeltaWriter_>;
 using Delta2Writer = Writer<Series, Delta2Writer_>;
 
 // run-time polymorphic reader
-using AnyReader_ = ZuUnion<Reader, DeltaReader, Delta2Reader>;
+using AnyReader_ = ZuUnion<AbsReader, DeltaReader, Delta2Reader>;
 struct AnyReader : public AnyReader_ {
   AnyReader() = default;
   AnyReader(const AnyReader &r) : AnyReader_{r} { }
@@ -113,10 +113,10 @@ struct AnyReader : public AnyReader_ {
       new (AnyReader_::init<Delta2Reader>())
 	Delta2Reader{s->reader<Delta2Reader_>(offset)};
     else
-      new (AnyReader_::init<Reader>())
-	Reader{s->reader<Reader_>(offset)};
+      new (AnyReader_::init<AbsReader>())
+	AbsReader{s->reader<AbsReader_>(offset)};
   }
-  void initIndex(const Series *s, unsigned flags, ZuFixed value) {
+  void initIndex(const Series *s, unsigned flags, const ZuFixed &value) {
     if (flags & ZvFieldFlags::Delta)
       new (AnyReader_::init<DeltaReader>())
 	DeltaReader{s->index<DeltaReader_>(value)};
@@ -124,8 +124,8 @@ struct AnyReader : public AnyReader_ {
       new (AnyReader_::init<Delta2Reader>())
 	Delta2Reader{s->index<Delta2Reader_>(value)};
     else
-      new (AnyReader_::init<Reader>())
-	Reader{s->index<Reader_>(value)};
+      new (AnyReader_::init<AbsReader>())
+	AbsReader{s->index<AbsReader_>(value)};
   }
   bool read(ZuFixed &v) {
     return dispatch([&v](auto &&r) { return r.read(v); });
@@ -144,15 +144,13 @@ struct AnyReader : public AnyReader_ {
   }
 };
 // run-time polymorphic writer
-using AnyWriter_ = ZuUnion<Writer, DeltaWriter, Delta2Writer>;
+using AnyWriter_ = ZuUnion<AbsWriter, DeltaWriter, Delta2Writer>;
 struct AnyWriter : public AnyWriter_ {
+  AnyWriter(const AnyWriter &r) = delete;
+  AnyWriter &operator =(const AnyWriter &r) = delete;
+
   AnyWriter() = default;
-  AnyWriter(const AnyWriter &r) : AnyWriter_{r} { }
   AnyWriter(AnyWriter &&r) : AnyWriter_{static_cast<AnyWriter_ &&>(r)} { }
-  AnyWriter &operator =(const AnyWriter &r) {
-    AnyWriter_::operator =(r);
-    return *this;
-  }
   AnyWriter &operator =(AnyWriter &&r) {
     AnyWriter_::operator =(static_cast<AnyWriter_ &&>(r));
     return *this;
@@ -167,11 +165,16 @@ struct AnyWriter : public AnyWriter_ {
       new (AnyWriter_::init<Delta2Writer>())
 	Delta2Writer{s->writer<Delta2Writer_>()};
     else
-      new (AnyWriter_::init<Writer>())
-	Writer{s->writer<Writer_>()};
+      new (AnyWriter_::init<AbsWriter>())
+	AbsWriter{s->writer<AbsWriter_>()};
   }
+
   bool write(ZuFixed v) {
     return dispatch([v](auto &&w) { return w.write(v); });
+  }
+
+  void sync() {
+    return dispatch([](auto &&w) { w.sync(); });
   }
 };
 
@@ -240,12 +243,12 @@ public:
   void index(AnyReader &r, unsigned i, const ZuFixed &value) {
     auto field = m_fields[i];
     unsigned flags = field ? field->flags : ZvFieldFlags::Delta;
-    r.init(m_series[i], flags, value);
+    r.initIndex(m_series[i], flags, value);
   }
 
   unsigned nSeries() const { return m_series.length(); }
-  const Series &series(unsigned i) const { return m_series[i]; }
-  Series &series(unsigned i) { return m_series[i]; }
+  const Series *series(unsigned i) const { return m_series[i]; }
+  Series *series(unsigned i) { return m_series[i]; }
   const ZvField *field(unsigned i) const { return m_fields[i]; }
 
 private:

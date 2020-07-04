@@ -207,4 +207,37 @@ private:
 #pragma pack(pop)
 };
 
+template <typename Impl> struct ZuVFmtWrapper {
+  ZuVFmt	fmt;
+
+  Impl *impl() { return static_cast<Impl *>(this); }
+
+  ZuInline Impl &reset() { fmt.reset(); return *impl(); }
+  ZuInline Impl &left(unsigned width, char pad = '\0') {
+    fmt.left(width, pad);
+    return *impl();
+  }
+  ZuInline Impl &right(unsigned width, char pad = '0') {
+    fmt.right(width, pad);
+    return *impl();
+  }
+  ZuInline Impl &frac(unsigned ndp, char trim = '\0') {
+    fmt.frac(ndp, trim);
+    return *impl();
+  }
+  ZuInline Impl &hex() { fmt.hex(); return *impl(); }
+  ZuInline Impl &hex(bool upper) { fmt.hex(upper); return *impl(); }
+  ZuInline Impl &hex(bool hex_, bool upper) {
+    fmt.hex(hex_, upper);
+    return *impl();
+  }
+  ZuInline Impl &comma(char comma_ = ',') { fmt.comma(comma_); return *impl(); }
+  ZuInline Impl &alt() { fmt.alt(); return *impl(); }
+  ZuInline Impl &alt(bool alt_) { fmt.alt(alt_); return *impl(); }
+  ZuInline Impl &fp(int ndp = -ZuFmt::MaxNDP, char trim = '\0') {
+    fmt.fp(ndp, trim);
+    return *impl();
+  }
+};
+
 #endif /* ZuFmt_HPP */

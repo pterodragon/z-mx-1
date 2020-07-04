@@ -15,16 +15,16 @@ ${FBS_H}: %_fbs.h: fbs/%.fbs
 BUILT_SOURCES = ${FBS_H}
 CLEANFILES = ${FBS_H}
 pkginclude_HEADERS = ZdfLib.hpp \
-	ZdfCompress.hpp ZdfSeries.hpp ZdfDataFrame.hpp \
+	ZdfCompress.hpp ZdfSeries.hpp Zdf.hpp \
 	${FBS_H}
 #fbsdir = $(datarootdir)/${PACKAGE}/fbs
 #dist_fbs_DATA = fbs/telemetry.fbs
-lib_LTLIBRARIES = libZv.la
-libZv_la_LDFLAGS = @Z_SO_LDFLAGS@
-libZv_la_SOURCES = ZdfLib.cpp \
-	ZdfSeries.cpp ZdfDataFrame.cpp
-libZv_la_LIBADD = \
-	$(top_builddir)/zfb/src/libZv.la \
+lib_LTLIBRARIES = libZdf.la
+libZdf_la_LDFLAGS = @Z_SO_LDFLAGS@
+libZdf_la_SOURCES = ZdfLib.cpp \
+	ZdfSeries.cpp Zdf.cpp
+libZdf_la_LIBADD = \
+	$(top_builddir)/zv/src/libZv.la \
 	$(top_builddir)/zfb/src/libZfb.la \
 	$(top_builddir)/ztls/src/libZtls.la \
 	$(top_builddir)/zi/src/libZi.la $(top_builddir)/ze/src/libZe.la \

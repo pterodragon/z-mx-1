@@ -220,6 +220,8 @@ template <> struct ZmCleanup<ZmThreadContext> {
 
 template <typename, bool> struct ZmSpecificCtor;
 
+class ZmThread;
+
 class ZmAPI ZmThreadContext : public ZmObject, public ZmThreadContext_ {
   friend ZmSpecificCtor<ZmThreadContext, true>;
 #ifndef _WIN32

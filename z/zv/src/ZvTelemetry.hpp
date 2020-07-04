@@ -594,13 +594,13 @@ inline const ZvFields Queue::fields() noexcept {
       (String, id, 0),
       (Enum, type, 0, QueueType::Map),
       (Int, size, 0),
-      (Int, full, Series | Delta, 0),
+      (Int, full, Series | Delta),
       (Int, count, Series),
       (Int, seqNo, 0),
-      (Int, inCount, Series | Delta, 0),
-      (Int, inBytes, Series | Delta, 0),
-      (Int, outCount, Series | Delta, 0),
-      (Int, outBytes, Series | Delta, 0));
+      (Int, inCount, Series | Delta),
+      (Int, inBytes, Series | Delta),
+      (Int, outCount, Series | Delta),
+      (Int, outBytes, Series | Delta));
 }
 struct Queue_load : public Queue {
   Queue_load(const fbs::Queue *queue_) : Queue{
@@ -664,9 +664,9 @@ inline const ZvFields Link::fields() noexcept {
   ZvMkFields(Link,
       (String, id, 0),
       (Enum, state, Series, LinkState::Map),
-      (Int, reconnects, Series | Delta, 0),
-      (Int, rxSeqNo, Series | Delta, 0),
-      (Int, txSeqNo, Series | Delta, 0));
+      (Int, reconnects, Series | Delta),
+      (Int, rxSeqNo, Series | Delta),
+      (Int, txSeqNo, Series | Delta));
 }
 struct Link_load : public Link {
   Link_load(const fbs::Link *link_) : Link{
@@ -855,12 +855,12 @@ inline const ZvFields DB::fields() noexcept {
       (Int, filesMax, 0),
       (Int, preAlloc, 0),
       (Int, minRN, 0),
-      (Int, nextRN, Series | Delta, 0),
-      (Int, fileRN, Series | Delta, 0),
-      (Int, cacheLoads, Series | Delta, 0),
-      (Int, cacheMisses, Series | Delta, 0),
-      (Int, fileLoads, Series | Delta, 0),
-      (Int, fileMisses, Series | Delta, 0));
+      (Int, nextRN, Series | Delta),
+      (Int, fileRN, Series | Delta),
+      (Int, cacheLoads, Series | Delta),
+      (Int, cacheMisses, Series | Delta),
+      (Int, fileLoads, Series | Delta),
+      (Int, fileMisses, Series | Delta));
 }
 struct DB_load : public DB {
   DB_load(const fbs::DB *db_) : DB{
@@ -1119,7 +1119,7 @@ inline const ZvFields Alert::fields() noexcept {
       (Int, seqNo, 0),
       (Int, tid, 0),
       (Enum, severity, 0, Severity::Map),
-      (String, message, 0, 0));
+      (String, message, 0));
 }
 struct Alert_load : public Alert {
   Alert_load(const fbs::Alert *alert_) : Alert{

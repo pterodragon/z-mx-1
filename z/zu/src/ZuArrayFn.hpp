@@ -55,7 +55,7 @@ template <typename T, class Cmp, bool IsPrimitive> class ZuArrayFn_ItemOps_;
 
 template <typename T, class Cmp> class ZuArrayFn_ItemOps_<T, Cmp, false> {
 public:
-  ZuInline static void initItem(void *dst) { new (dst) T(Cmp::null()); }
+  ZuInline static void initItem(void *dst) { new (dst) T{}; }
   template <typename P>
   ZuInline static void initItem(void *dst, P &&p) {
     new (dst) T{ZuFwd<P>(p)};
@@ -65,10 +65,12 @@ public:
 
 template <typename T, class Cmp> class ZuArrayFn_ItemOps_<T, Cmp, true> {
 public:
-  ZuInline static void initItem(void *dst) { *(T *)dst = Cmp::null(); }
+  ZuInline static void initItem(void *dst) {
+    *static_cast<T *>(dst) = Cmp::null();
+  }
   template <typename P>
   ZuInline static void initItem(void *dst, P &&p) {
-    *reinterpret_cast<T *>(dst) = ZuFwd<P>(p);
+    *static_cast<T *>(dst) = ZuFwd<P>(p);
   }
   ZuInline static void destroyItem(T *dst) { }
 };

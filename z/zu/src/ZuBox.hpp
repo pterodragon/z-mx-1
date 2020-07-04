@@ -142,26 +142,28 @@ private:
 };
 
 // run-time formatting
-template <class Boxed> class ZuBoxVFmt {
+template <class Boxed>
+class ZuBoxVFmt : public ZuVFmtWrapper<ZuBoxVFmt<Boxed>> {
 template <typename, class> friend class ZuBox;
 
   using Print = ZuBox_VPrint<typename Boxed::T>;
 
 public:
-  ZuInline ZuBoxVFmt(const Boxed &v, const ZuVFmt &fmt) :
-    m_value{v}, m_fmt(fmt) { }
+  ZuInline ZuBoxVFmt(const Boxed &v) : m_value(v) { }
+  template <typename VFmt>
+  ZuInline ZuBoxVFmt(const Boxed &v, VFmt &&fmt) :
+    ZuVFmtWrapper<ZuBoxVFmt>{ZuFwd<VFmt>(fmt)}, m_value{v} { }
 
   // print
   ZuInline unsigned length() const {
-    return Print::length(m_fmt, m_value);
+    return Print::length(this->fmt, m_value);
   }
   ZuInline unsigned print(char *buf) const {
-    return Print::print(m_fmt, m_value, buf);
+    return Print::print(this->fmt, m_value, buf);
   }
 
 private:
   const Boxed	&m_value;
-  const ZuVFmt	&m_fmt;
 };
 
 struct ZuBox_Approx_ { };
@@ -367,11 +369,11 @@ public:
   }
   // run-time formatting
   ZuInline ZuBoxVFmt<ZuBox> vfmt() const {
-    static const ZuVFmt fmt;
-    return ZuBoxVFmt<ZuBox>{*this, fmt};
+    return ZuBoxVFmt<ZuBox>{*this};
   }
-  ZuInline ZuBoxVFmt<ZuBox> vfmt(const ZuVFmt &fmt) const {
-    return ZuBoxVFmt<ZuBox>{*this, fmt};
+  template <typename VFmt>
+  ZuInline ZuBoxVFmt<ZuBox> vfmt(VFmt &&fmt) const {
+    return ZuBoxVFmt<ZuBox>{*this, ZuFwd<VFmt>(fmt)};
   }
 
   template <typename S>

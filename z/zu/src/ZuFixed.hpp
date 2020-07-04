@@ -67,7 +67,7 @@ typedef ZuBox<uint8_t> ZuFixedExp; // exponent, i.e. number of decimal places
 //   s << ZuFixed(x, 2).fmt(ZuFmt::Comma<>())	// s << "42,000.42"
 
 template <typename Fmt> struct ZuFixed_Fmt;	// internal
-template <bool Ref = 0> struct ZuFixed_VFmt;	// internal
+class ZuFixed_VFmt;				// internal
 
 struct ZuFixed {
   ZuFixedVal	value;	// mantissa
@@ -83,7 +83,7 @@ struct ZuFixed {
   template <typename V>
   ZuInline ZuFixed(V value_, unsigned exponent_,
       typename ZuIsFloatingPoint<V>::T *_ = 0) :
-    value((MxFloat)value_ * ZuDecimalFn::pow10_64(exponent_)),
+    value((double)value_ * ZuDecimalFn::pow10_64(exponent_)),
     exponent(exponent_) { }
 
   // multiply: exponent of result is taken from the LHS
@@ -207,8 +207,9 @@ struct ZuFixed {
   template <typename S> void print(S &s) const;
 
   template <typename Fmt> ZuFixed_Fmt<Fmt> fmt(Fmt) const;
-  ZuFixed_VFmt<> vfmt() const;
-  ZuFixed_VFmt<1> vfmt(ZuVFmt &) const;
+  ZuFixed_VFmt vfmt() const;
+  template <typename VFmt>
+  ZuFixed_VFmt vfmt(VFmt &&) const;
 };
 template <typename Fmt> struct ZuFixed_Fmt {
   const ZuFixed	&fixed;
@@ -236,35 +237,35 @@ template <typename S> inline void ZuFixed::print(S &s) const
   s << ZuFixed_Fmt<ZuFmt::Default>{*this};
 }
 template <> struct ZuPrint<ZuFixed> : public ZuPrintFn { };
-template <bool Ref>
-struct ZuFixed_VFmt : public ZuVFmtWrapper<ZuFixed_VFmt<Ref>, Ref> {
-  const ZuFixed	&fixed;
-
-  ZuInline ZuFixed_VFmt(const ZuFixed &fixed_) :
-    fixed{fixed_} { }
-  ZuInline ZuFixed_VFmt(const ZuFixed &fixed_, ZuVFmt &fmt_) :
-    ZuVFmtWrapper<ZuFixed_VFmt, Ref>{fmt_}, fixed{fixed_} { }
+class ZuFixed_VFmt : public ZuVFmtWrapper<ZuFixed_VFmt> {
+public:
+  ZuInline ZuFixed_VFmt(const ZuFixed &fixed) : m_fixed{fixed} { }
+  template <typename VFmt>
+  ZuInline ZuFixed_VFmt(const ZuFixed &fixed, VFmt &&fmt) :
+    ZuVFmtWrapper<ZuFixed_VFmt>{ZuFwd<VFmt>(fmt)}, m_fixed{fixed} { }
 
   template <typename S> void print(S &s) const {
-    ZuFixedVal iv = fixed.value;
+    ZuFixedVal iv = m_fixed.value;
     if (ZuUnlikely(!*iv)) return;
     if (ZuUnlikely(iv < 0)) { s << '-'; iv = -iv; }
-    uint64_t factor = ZuDecimalFn::pow10_64(fixed.exponent);
+    uint64_t factor = ZuDecimalFn::pow10_64(m_fixed.exponent);
     ZuFixedVal fv = iv % factor;
     iv /= factor;
     s << ZuBoxed(iv).vfmt(this->fmt);
-    if (fv) s << '.' << ZuBoxed(fv).vfmt().frac(fixed.exponent);
+    if (fv) s << '.' << ZuBoxed(fv).vfmt().frac(m_fixed.exponent);
   }
+
+private:
+  const ZuFixed	&m_fixed;
 };
-ZuInline ZuFixed_VFmt<> ZuFixed::vfmt() const
-{
-  return ZuFixed_VFmt<>{*this};
+inline ZuFixed_VFmt ZuFixed::vfmt() const {
+  return ZuFixed_VFmt{*this};
 }
-ZuInline ZuFixed_VFmt<1> ZuFixed::vfmt(ZuVFmt &fmt) const
-{
-  return ZuFixed_VFmt<1>{*this, fmt};
+template <typename VFmt>
+inline ZuFixed_VFmt ZuFixed::vfmt(VFmt &&fmt) const {
+  return ZuFixed_VFmt{*this, ZuFwd<VFmt>(fmt)};
 }
-template <bool Ref>
-struct ZuPrint<ZuFixed_VFmt<Ref> > : public ZuPrintFn { };
+template <>
+struct ZuPrint<ZuFixed_VFmt> : public ZuPrintFn { };
 
 #endif /* ZuFixed_HPP */

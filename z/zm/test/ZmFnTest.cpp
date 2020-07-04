@@ -179,7 +179,7 @@ int main()
     B *b = new B(48);
     ZmRef<E> e1 = new E_(49);
     ZmRef<E> e2 = new E_(50);
-    const E *e2c = e2;
+    // const E *e2c = e2;
 
     ZmFn<> fap = ZmFn<>::Member<&A::operator()>::fn(a);
     ZmFn<> fbp = ZmFn<>::Member<&B::operator()>::fn(b);

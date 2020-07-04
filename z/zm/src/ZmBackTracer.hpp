@@ -80,7 +80,7 @@ public:
 private:
   ZmPLock		m_lock;
   ZuBox0(unsigned)	  m_offset;
-  ZuUnion<Data>		  m_captures[64];
+  ZuUnion<ZuNull, Data>	  m_captures[64];
 };
 
 #endif /* ZmBackTracer_HPP */

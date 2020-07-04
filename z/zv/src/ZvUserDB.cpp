@@ -189,7 +189,7 @@ Zfb::Offset<fbs::UserDB> Mgr::save(Zfb::Builder &fbb) const
 int Mgr::load(ZuString path, ZeError *e)
 {
   using namespace Zfb::Load;
-  return load(path,
+  return Zfb::Load::load(path,
       LoadFn{this, [](Mgr *this_, const uint8_t *buf, unsigned len) {
 	return this_->load(buf, len);
       }}, m_maxSize, e);

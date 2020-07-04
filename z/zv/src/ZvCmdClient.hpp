@@ -225,7 +225,7 @@ public:
     if (m_credentials.type() == 1) {
       using namespace ZvUserDB;
       using namespace Zfb::Save;
-      const auto &data = m_credentials.p<1>();
+      const auto &data = m_credentials.v<ZvCmd_Login>();
       fbb.Finish(fbs::CreateLoginReq(fbb,
 	    fbs::LoginReqData_Login,
 	    fbs::CreateLogin(fbb,
@@ -235,7 +235,7 @@ public:
     } else {
       using namespace ZvUserDB;
       using namespace Zfb::Save;
-      const auto &data = m_credentials.p<2>();
+      const auto &data = m_credentials.v<ZvCmd_Access>();
       fbb.Finish(fbs::CreateLoginReq(fbb,
 	    fbs::LoginReqData_Access,
 	    fbs::CreateAccess(fbb,

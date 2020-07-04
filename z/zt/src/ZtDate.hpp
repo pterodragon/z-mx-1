@@ -624,7 +624,7 @@ public:
   // time(), dtime() and zmTime() can result in an out of range conversion
   // to time_t
 
-  ZuInline operator time_t() { return this->time(); }
+  ZuInline operator time_t() const { return this->time(); }
   ZuInline time_t time() const {
     return (time_t)Native::time(m_julian, m_sec);
   }
@@ -635,11 +635,11 @@ public:
     if (ZuUnlikely(Native::isMaximum(t))) return ZuCmp<double>::inf();
     return((double)t + (double)m_nsec / (double)1000000000);
   }
+  ZuInline operator ZmTime() const { return this->zmTime(); }
   ZmTime zmTime() const {
     if (ZuUnlikely(m_julian == ZtDate_NullJulian)) return ZmTime();
     return ZmTime(this->time(), m_nsec);
   }
-  ZuInline operator ZmTime() { return zmTime(); }
 
   struct tm *tm(struct tm *tm) const;
 

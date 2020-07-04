@@ -33,6 +33,7 @@ struct Row {
   bool		bar;
   int		bah;
   double	baz;
+  ZuFixedVal	bam;
   int		snafu;
   ZtDate	mabbit;
   int		flags;
@@ -41,8 +42,9 @@ inline const ZvFields Row::fields() noexcept {
   ZvMkFields(Row,
       (String, foo, 0),
       (Bool, bar, 0),
-      (Dec, baz, 0),
-      (Dec, snafu, 0),
+      (Float, baz, 0, 2),
+      (Fixed, bam, 0, 2),
+      (Int, snafu, 0),
       (Time, mabbit, 0),
       (Flags, flags, 0, DaFlags::Map));
 }
@@ -64,6 +66,7 @@ int main()
       r->bar = i % 2;
       r->bah = i * 2;
       r->baz = i * 2.2;
+      r->bam = ZuFixed{r->baz * 2.2, 2}.value;
       switch(i) {
 	case 1: r->snafu = 1; break;
 	case 2: r->snafu = 42; break;

@@ -52,17 +52,8 @@
 #include <zlib/ZuInt.hpp>
 
 // use optimized compiler built-ins wherever possible
-#if !defined(__mips64) && defined(__GNUC__)
-// bswap16 only available in gcc 4.7 and later
-// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=52624
-#if (__GNUC__ > 3 && __GNUC_MINOR > 6)
+#ifdef __GNUC__
 #define Zu_bswap16(x) __builtin_bswap16(x)
-#else
-uint16_t Zu_bswap16(const uint16_t &i) {
-  return
-    (i << 8) | (i >> 8);
-}
-#endif
 #define Zu_bswap32(x) __builtin_bswap32(x)
 #define Zu_bswap64(x) __builtin_bswap64(x)
 #elif defined(_MSC_VER) && !defined(_DEBUG)
@@ -71,16 +62,16 @@ uint16_t Zu_bswap16(const uint16_t &i) {
 #define Zu_bswap32(x) _byteswap_ulong(x)
 #define Zu_bswap64(x) _byteswap_uint64(x)
 #else
-uint16_t Zu_bswap16(const uint16_t &i) {
+inline uint16_t Zu_bswap16(const uint16_t &i) {
   return
     (i << 8) | (i >> 8);
 }
-uint32_t Zu_bswap32(const uint32_t &i) {
+inline uint32_t Zu_bswap32(const uint32_t &i) {
   return
     (i << 24) | ((i & 0xff00UL) << 8) |
     ((i >> 8) & 0xff00UL) | (i >> 24);
 }
-uint64_t Zu_bswap64(const uint64_t &i) {
+inline uint64_t Zu_bswap64(const uint64_t &i) {
   return
     (i << 56) | ((i & 0xff00ULL) << 40) |
     ((i & 0xff0000ULL) << 24) | ((i & 0xff000000ULL) << 8) |

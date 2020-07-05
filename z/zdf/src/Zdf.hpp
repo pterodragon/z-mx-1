@@ -201,16 +201,17 @@ public:
   public:
     void write(const void *ptr) {
       unsigned n = m_writers.length();
+      if (ZuUnlikely(!n)) return;
+      ZuFixed v;
       for (unsigned i = 0; i < n; i++) {
-	ZuFixed v;
-	if (auto field = m_df->field(i)) {
+	auto field = m_df->field(i);
+	if (i || field) {
 	  if (field->type == ZvFieldType::Time)
 	    v = m_df->nsecs(field->u.time(ptr));
 	  else
 	    v = field->u.scalar(ptr);
-	} else {
+	} else
 	  v = m_df->nsecs(ZmTimeNow());
-	}
 	m_writers[i].write(v);
       }
     }

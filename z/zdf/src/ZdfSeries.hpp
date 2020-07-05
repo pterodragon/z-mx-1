@@ -355,9 +355,6 @@ public:
     m_series->save_(m_buf);
   }
 
-  // FIXME - support both in-memory and on-disk, at this level
-  // and in Zdf::DataFrame
-
   bool write(const ZuFixed &value) {
     if (ZuUnlikely(!m_bufWriter)) return false;
     auto hdr = m_buf->hdr();

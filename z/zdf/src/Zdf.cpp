@@ -74,11 +74,13 @@ bool DataFrame::open()
   }
   if (!load(path)) return false;
   unsigned n = m_series.length();
+  if (ZuUnlikely(!n)) return false;
   for (unsigned i = 0; i < n; i++) {
     auto field = m_fields[i];
-    ZmAssert(field || !i);
-    const char *id = field ? static_cast<const char *>(field->id) : "_index";
-    m_series[i]->open(m_name, id);
+    if (i || field)
+      m_series[i]->open(m_name, field->id);
+    else
+      m_series[i]->open(m_name, "_0");
   }
   return true;
 }

@@ -25,7 +25,7 @@ int main()
 
     IOBuilder b;
 
-    b.Finish(mgr.save(b));
+    b.Finish(mgr.save_(b));
 
     uint8_t *buf = b.GetBufferPointer();
     int len = b.GetSize();
@@ -62,7 +62,7 @@ int main()
 
     Mgr mgr(&rng, 12, 6, 1<<20 /* 1Mb */);
 
-    if (!mgr.load(iobuf->data(), iobuf->length)) {
+    if (!mgr.load_(iobuf->data(), iobuf->length)) {
       std::cerr << "LOAD FAILED - failed to verify\n" << std::flush;
       return 1;
     }

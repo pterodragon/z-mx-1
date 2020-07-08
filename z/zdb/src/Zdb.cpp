@@ -1447,7 +1447,7 @@ void ZdbAny::final()
   m_handler = ZdbHandler{};
 }
 
-#pragma pack(push, 0)
+#pragma pack(push, 4)
 namespace {
   struct Schema {
     uint32_t	magic;
@@ -1593,7 +1593,7 @@ bool ZdbAny::recover()
       fileName_ << ".zdb";
       unsigned index = (((unsigned)i)<<20U) | ((unsigned)j);
       fileName = ZiFile::append(subName, fileName_);
-      ZuRef<Zdb_File> file = new Zdb_File(index);
+      ZmRef<Zdb_File> file = new Zdb_File(index);
       if (file->open(
 	    fileName, ZiFile::GC, 0666, m_fileSize, &e) != Zi::OK) {
 	ZeLOG(Error, ZtString() << fileName << ": " << e);
@@ -1839,7 +1839,7 @@ void ZdbAny::cache(ZdbAnyPOD *pod)
 void ZdbAny::cache_(ZdbAnyPOD *pod)
 {
   m_cache->add(pod);
-  if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.push(pod.ptr());
+  if (m_cacheMode != ZdbCacheMode::FullCache) m_lru.push(pod);
 }
 
 void ZdbAny::cacheDel_(ZdbRN rn)
@@ -2051,16 +2051,16 @@ Zdb_FileRec ZdbAny::rn2file(ZdbRN rn, bool write)
 {
   unsigned index = rn>>ZdbFileShift;
   unsigned offRN = rn & ZdbFileMask;
-  ZuRef<Zdb_File> file = getFile(index, write);
+  ZmRef<Zdb_File> file = getFile(index, write);
   if (!file) return Zdb_FileRec();
   return Zdb_FileRec(ZuMv(file), offRN);
 }
 
-ZuRef<Zdb_File> ZdbAny::getFile(unsigned index, bool create)
+ZmRef<Zdb_File> ZdbAny::getFile(unsigned index, bool create)
 {
   FSGuard guard(m_fsLock);
   ++m_fileLoads;
-  ZuRef<Zdb_File> file;
+  ZmRef<Zdb_File> file;
   if (file = m_files->find(index)) {
     m_filesLRU.push(m_filesLRU.del(file.ptr()));
     return file;
@@ -2069,7 +2069,7 @@ ZuRef<Zdb_File> ZdbAny::getFile(unsigned index, bool create)
   file = openFile(index, create);
   if (ZuUnlikely(!file)) return nullptr;
   if (m_files->count_() >= m_filesMax)
-    if (Zdb_File *lru = m_filesLRU.shiftNode())
+    if (Zdb_File *lru = static_cast<Zdb_File *>(m_filesLRU.shiftNode()))
       m_files->del(lru->index());
   m_files->add(file);
   m_filesLRU.push(file.ptr());
@@ -2077,12 +2077,12 @@ ZuRef<Zdb_File> ZdbAny::getFile(unsigned index, bool create)
   return file;
 }
 
-ZuRef<Zdb_File> ZdbAny::openFile(unsigned index, bool create)
+ZmRef<Zdb_File> ZdbAny::openFile(unsigned index, bool create)
 {
   ZiFile::Path name = dirName(index);
   if (create) ZiFile::mkdir(name); // pre-emptive idempotent
   name = fileName(name, index);
-  ZuRef<Zdb_File> file = new Zdb_File(index);
+  ZmRef<Zdb_File> file = new Zdb_File(index);
   if (file->open(name, ZiFile::GC, 0666, m_fileSize, 0) == Zi::OK) {
     scan(file);
     return file;

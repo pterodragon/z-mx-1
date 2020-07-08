@@ -106,7 +106,7 @@ ZmRef<User> Mgr::userAdd_(
   return user;
 }
 
-bool Mgr::load(const uint8_t *buf, unsigned len)
+bool Mgr::load_(const uint8_t *buf, unsigned len)
 {
   {
     Zfb::Verifier verifier(buf, len);
@@ -155,7 +155,7 @@ bool Mgr::load(const uint8_t *buf, unsigned len)
   return true;
 }
 
-Zfb::Offset<fbs::UserDB> Mgr::save(Zfb::Builder &fbb) const
+Zfb::Offset<fbs::UserDB> Mgr::save_(Zfb::Builder &fbb) const
 {
   Guard guard(m_lock); // not ReadGuard
   m_modified = false;
@@ -186,19 +186,19 @@ Zfb::Offset<fbs::UserDB> Mgr::save(Zfb::Builder &fbb) const
   return fbs::CreateUserDB(fbb, perms_, roles_, users_, keys_);
 }
 
-int Mgr::load(ZuString path, ZeError *e)
+int Mgr::load(const ZiFile::Path &path, ZeError *e)
 {
   using namespace Zfb::Load;
   return Zfb::Load::load(path,
       LoadFn{this, [](Mgr *this_, const uint8_t *buf, unsigned len) {
-	return this_->load(buf, len);
+	return this_->load_(buf, len);
       }}, m_maxSize, e);
 }
 
-int Mgr::save(ZuString path, unsigned maxAge, ZeError *e)
+int Mgr::save(const ZiFile::Path &path, unsigned maxAge, ZeError *e)
 {
   Zfb::Builder fbb;
-  fbb.Finish(save(fbb));
+  fbb.Finish(save_(fbb));
 
   if (maxAge) ZiFile::age(path, maxAge);
 

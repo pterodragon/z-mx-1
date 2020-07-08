@@ -231,9 +231,9 @@ struct Zdb_FileHeapID {
 };
 using Zdb_FileHash =
   ZmHash<Zdb_File_,
-    ZmHashObject<ZuObject, // ZmPolymorph
+    ZmHashObject<ZmPolymorph,
       ZmHashNodeIsKey<true,
-	ZmHashIndex<Zdb_FileNode_IndexAccessor,
+	ZmHashIndex<Zdb_File_IndexAccessor,
 	  ZmHashHeapID<Zdb_FileHeapID,
 	    ZmHashLock<ZmNoLock> > > > > >;
 using Zdb_File = Zdb_FileHash::Node;
@@ -241,7 +241,7 @@ using Zdb_File = Zdb_FileHash::Node;
 class Zdb_FileRec {
 public:
   ZuInline Zdb_FileRec() : m_file(0), m_offRN(0) { }
-  ZuInline Zdb_FileRec(ZuRef<Zdb_File> file, unsigned offRN) :
+  ZuInline Zdb_FileRec(ZmRef<Zdb_File> file, unsigned offRN) :
     m_file(ZuMv(file)), m_offRN(offRN) { }
 
   ZuInline bool operator !() const { return !m_file; }
@@ -251,7 +251,7 @@ public:
   ZuInline unsigned offRN() const { return m_offRN; }
 
 private:
-  ZuRef<Zdb_File>	m_file;
+  ZmRef<Zdb_File>	m_file;
   unsigned		m_offRN;
 };
 
@@ -268,8 +268,9 @@ struct ZdbTrailer {
 };
 #pragma pack(pop)
 
+struct ZdbLRU_ { };
 using ZdbLRU =
-  ZmList<ZuNull,
+  ZmList<ZdbLRU_,
     ZmListObject<ZuNull,
       ZmListNodeIsItem<true,
 	ZmListHeapID<ZuNull,
@@ -661,8 +662,8 @@ private:
 
   Zdb_FileRec rn2file(ZdbRN rn, bool write);
 
-  ZuRef<Zdb_File> getFile(unsigned i, bool create);
-  ZuRef<Zdb_File> openFile(unsigned i, bool create);
+  ZmRef<Zdb_File> getFile(unsigned i, bool create);
+  ZmRef<Zdb_File> openFile(unsigned i, bool create);
   void delFile(Zdb_File *file);
   void recover(Zdb_File *file);
   void scan(Zdb_File *file);
@@ -755,7 +756,7 @@ namespace ZdbHostState {
 class ZdbAPI ZdbHost : public ZmPolymorph {
 friend ZdbEnv;
 friend Zdb_Cxn;
-template <typename> friend class ZuPrint;
+template <typename> friend struct ZuPrint;
 
   using Lock = ZmPLock;
   using Guard = ZmGuard<Lock>;

@@ -78,7 +78,7 @@ public:
   Bitmap		apiperms;
   Flags			flags;
 
-  Zfb::Offset<fbs::Role> save(Zfb::Builder &fbb) {
+  Zfb::Offset<fbs::Role> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
     return fbs::CreateRole(fbb, str(fbb, name),
 	fbb.CreateVector(perms.data, Bitmap::Words),
@@ -136,7 +136,7 @@ struct User__ : public ZuPolymorph {
   Bitmap		apiperms;	// API permissions
   Flags			flags;
 
-  Zfb::Offset<fbs::User> save(Zfb::Builder &fbb) {
+  Zfb::Offset<fbs::User> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
     return fbs::CreateUser(fbb, id,
 	str(fbb, name), bytes(fbb, hmac), bytes(fbb, secret),
@@ -204,7 +204,7 @@ struct Key_ : public ZuObject {
   Key_		*nextKey;// next in per-user list
   uint64_t	userID;
 
-  Zfb::Offset<fbs::Key> save(Zfb::Builder &fbb) {
+  Zfb::Offset<fbs::Key> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
     return fbs::CreateKey(fbb, str(fbb, id), bytes(fbb, secret), userID);
   }
@@ -257,11 +257,11 @@ public:
   bool bootstrap(
       ZtString user, ZtString role, ZtString &passwd, ZtString &secret);
 
-  bool load(const uint8_t *buf, unsigned len);
-  Zfb::Offset<fbs::UserDB> save(Zfb::Builder &) const;
+  bool load_(const uint8_t *buf, unsigned len);
+  Zfb::Offset<fbs::UserDB> save_(Zfb::Builder &) const;
 
-  int load(ZuString path, ZeError *e = 0);
-  int save(ZuString path, unsigned maxAge = 8, ZeError *e = 0);
+  int load(const ZiFile::Path &path, ZeError *e = 0);
+  int save(const ZiFile::Path &path, unsigned maxAge = 8, ZeError *e = 0);
 
   bool modified() const;
 

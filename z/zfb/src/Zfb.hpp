@@ -43,6 +43,7 @@
 
 #include <zlib/ZePlatform.hpp>
 
+#include <zlib/ZiPlatform.hpp>
 #include <zlib/ZiIOBuf.hpp>
 
 #include <zlib/types_fbs.h>
@@ -228,7 +229,8 @@ namespace Save {
   }
 
   // save file
-  ZfbExtern int save(ZuString path, Builder &fbb, ZeError *e);
+  ZfbExtern int save(
+      const ZiPlatform::Path &path, Builder &fbb, ZeError *e);
 }
 
 namespace Load {
@@ -277,7 +279,8 @@ namespace Load {
 
   // load file
   using LoadFn = ZmFn<const uint8_t *, unsigned>;
-  ZfbExtern int load(ZuString path, LoadFn, unsigned maxSize, ZeError *e);
+  ZfbExtern int load(
+      const ZiPlatform::Path &path, LoadFn, unsigned maxSize, ZeError *e);
 }
 
 } // Zfb

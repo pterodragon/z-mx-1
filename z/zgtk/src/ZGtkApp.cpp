@@ -1,4 +1,4 @@
-#include <ZGtkApp.hpp>
+#include <zlib/ZGtkApp.hpp>
 
 extern "C" {
   gboolean dispatch(GSource *, GSourceFunc, gpointer);

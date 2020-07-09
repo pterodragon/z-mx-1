@@ -34,16 +34,12 @@
 #include <zlib/ZuFixed.hpp>
 #include <zlib/ZuSort.hpp>
 
-#include <zlib/ZmScheduler.hpp>
 #include <zlib/ZmRef.hpp>
 
 #include <zlib/ZtArray.hpp>
 
-#include <zlib/ZvCf.hpp>
-
-#include <zlib/Zfb.hpp>
-
 #include <zlib/ZdfBuf.hpp>
+#include <zlib/ZdfMgr.hpp>
 
 namespace Zdf {
 
@@ -186,29 +182,6 @@ private:
   Series	*m_series = nullptr;
   ZmRef<Buf>	m_buf;
   BufWriter	m_bufWriter;
-};
-
-using OpenFn = ZmFn<unsigned>;
-class ZdfAPI Mgr : public BufMgr {
-public:
-  virtual void init(ZmScheduler *, ZvCf *);
-  virtual void final();
-
-  virtual bool open(
-      unsigned seriesID, ZuString parent, ZuString name, OpenFn);
-  virtual void close(unsigned seriesID);
-
-  virtual bool loadHdr(unsigned seriesID, unsigned blkIndex, Hdr &hdr);
-  virtual bool load(unsigned seriesID, unsigned blkIndex, void *buf);
-  virtual void save(ZmRef<Buf>);
-
-  virtual void purge(unsigned seriesID, unsigned blkIndex);
-
-  virtual bool loadFile(
-      ZuString name, Zfb::Load::LoadFn,
-      unsigned maxFileSize, ZeError *e = nullptr);
-  virtual bool saveFile(
-      ZuString name, Zfb::Builder &fbb, ZeError *e = nullptr);
 };
 
 class Series {

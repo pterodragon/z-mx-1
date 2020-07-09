@@ -17,11 +17,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Data Series In-Memory
+// Data Series File Manager
 
-#include <zlib/ZdfSeries.hpp>
+#include <zlib/ZdfMgr.hpp>
 
 using namespace Zdf;
+
+// In-Memory default implementation, overridden by FileMgr
 
 void Mgr::init(ZmScheduler *, ZvCf *) { BufMgr::init(UINT_MAX); }
 

@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Data Series File
+// Data Series File I/O
 
 #ifndef ZdfFile_HPP
 #define ZdfFile_HPP

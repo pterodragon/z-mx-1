@@ -15,7 +15,7 @@ ${FBS_H}: %_fbs.h: fbs/%.fbs
 BUILT_SOURCES = ${FBS_H}
 CLEANFILES = ${FBS_H}
 pkginclude_HEADERS = ZdfLib.hpp \
-	ZdfCompress.hpp ZdfBuf.hpp \
+	ZdfCompress.hpp ZdfBuf.hpp ZdfMgr.hpp \
 	ZdfSeries.hpp ZdfFile.hpp Zdf.hpp \
 	${FBS_H}
 #fbsdir = $(datarootdir)/${PACKAGE}/fbs
@@ -23,7 +23,7 @@ pkginclude_HEADERS = ZdfLib.hpp \
 lib_LTLIBRARIES = libZdf.la
 libZdf_la_LDFLAGS = @Z_SO_LDFLAGS@
 libZdf_la_SOURCES = ZdfLib.cpp \
-	ZdfBuf.cpp ZdfSeries.cpp ZdfFile.cpp Zdf.cpp
+	ZdfBuf.cpp ZdfMgr.cpp ZdfFile.cpp Zdf.cpp
 libZdf_la_LIBADD = \
 	$(top_builddir)/zv/src/libZv.la \
 	$(top_builddir)/zfb/src/libZfb.la \

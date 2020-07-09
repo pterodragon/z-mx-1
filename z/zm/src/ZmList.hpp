@@ -263,7 +263,7 @@ friend Iterator;
       { this->m_list.pushIterate(*this, ZuFwd<Item_>(item)); }
     template <typename Item_> void unshift(Item_ &&item)
       { this->m_list.unshiftIterate(*this, ZuFwd<Item_>(item)); }
-    void del() { this->m_list.delIterate(*this); }
+    NodeRef del() { return this->m_list.delIterate(*this); }
   };
 
   class ReadIterator;
@@ -581,17 +581,18 @@ protected:
       unshiftIterate(Iterator_ &iterator, Item_ &&item) {
     unshiftIterate(iterator, NodeRef(new Node(ZuFwd<Item_>(item))));
   }
-  void delIterate(Iterator_ &iterator) {
-    if (!m_count) return;
+  NodeRef delIterate(Iterator_ &iterator) {
+    if (!m_count) return nullptr;
 
     Node *node = iterator.m_node;
 
     if (ZuLikely(node)) {
       iterator.m_node = node->Fn::prev();
       del_(node);
-      nodeDeref(node);
-      nodeDelete(node);
     }
+
+    NodeRef *ZuMayAlias(ptr) = reinterpret_cast<NodeRef *>(&node);
+    return ZuMv(*ptr);
   }
 
   void del_(Node *node) {

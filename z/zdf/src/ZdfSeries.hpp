@@ -197,6 +197,7 @@ public:
 	}});
   }
   void final() {
+    m_mgr->free(m_seriesID);
     m_blks.null();
   }
 

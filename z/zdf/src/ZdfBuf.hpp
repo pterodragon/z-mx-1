@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Data Series Buffer
+// Data Series Buffer Management
 
 #ifndef ZdfBuf_HPP
 #define ZdfBuf_HPP
@@ -133,7 +133,7 @@ public:
   bool pin() {
     PinGuard guard(m_pinLock);
     if (m_pinned) return false;
-    return m_pinned = true;
+    return m_pinned = 1;
   }
   bool pinned() const {
     PinReadGuard guard(m_pinLock);
@@ -142,7 +142,7 @@ public:
   template <typename L>
   void unpin(L l) {
     PinGuard guard(m_pinLock);
-    m_pinned = false;
+    m_pinned = 0;
     l(this);
   }
 
@@ -183,7 +183,7 @@ public:
 
 private:
   PinLock		m_pinLock;
-    bool		  m_pinned = false;
+    unsigned		  m_pinned = 0;
 
   uint8_t		m_data[Size];
 };

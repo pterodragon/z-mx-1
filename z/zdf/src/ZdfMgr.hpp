@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Data Series Manager
+// Data Series Manager Interface
 
 #ifndef ZdfMgr_HPP
 #define ZdfMgr_HPP

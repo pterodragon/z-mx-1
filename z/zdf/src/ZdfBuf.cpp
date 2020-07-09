@@ -17,51 +17,38 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Data Series In-Memory
+// Data Series Buffer
 
-#include <zlib/ZdfSeries.hpp>
+#include <zlib/ZdfBuf.hpp>
 
 using namespace Zdf;
 
-void Mgr::init(ZmScheduler *, ZvCf *) { BufMgr::init(UINT_MAX); }
-
-void Mgr::final() { BufMgr::final(); }
-
-bool Mgr::open(unsigned, ZuString, ZuString, OpenFn openFn)
+void BufMgr::init(unsigned maxBufs)
 {
-  return true;
+  m_maxBufs = maxBufs;
 }
 
-void Mgr::close(unsigned) { }
-
-bool Mgr::loadHdr(unsigned, unsigned, Hdr &)
-{
-  return false;
-}
-
-bool Mgr::load(unsigned, unsigned, void *)
-{
-  return false;
-}
-
-void Mgr::save(ZmRef<Buf>)
+void BufMgr::final()
 {
 }
 
-void Mgr::purge(unsigned, unsigned)
+unsigned BufMgr::alloc(BufUnloadFn unloadFn)
 {
+  unsigned id = m_unloadFn.length();
+  m_unloadFn.push(ZuMv(unloadFn));
+  return id;
 }
 
-bool Mgr::loadFile(
-    ZuString, Zfb::Load::LoadFn,
-    unsigned, ZeError *e)
+void BufMgr::free(unsigned seriesID) // caller unloads
 {
-  if (e) *e = ZiENOENT;
-  return false;
+  auto i = m_lru.iterator();
+  while (auto node = i.iterateNode())
+    if (node->seriesID == seriesID) i.del();
 }
 
-bool Mgr::saveFile(ZuString, Zfb::Builder &, ZeError *e)
+void BufMgr::purge(unsigned seriesID, unsigned blkIndex) // caller unloads
 {
-  if (e) *e = ZiENOENT;
-  return false;
+  auto i = m_lru.iterator();
+  while (auto node = i.iterateNode())
+    if (node->seriesID == seriesID && node->blkIndex < blkIndex) i.del();
 }

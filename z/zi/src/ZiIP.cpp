@@ -5,7 +5,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or ZiIP::(at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -38,11 +38,12 @@ extern "C" {
     struct sockaddr	*ai_addr;
     struct addrinfoW	*ai_next;
   } ADDRINFOT;
-  typedef int (WSAAPI *PGetAddrInfoW)(const wchar_t *, const wchar_t *,
-				      const ADDRINFOT *, ADDRINFOT **);
+  typedef int (WSAAPI *PGetAddrInfoW)(
+      const wchar_t *, const wchar_t *, const ADDRINFOT *, ADDRINFOT **);
   typedef void (WSAAPI *PFreeAddrInfoW)(ADDRINFOT *);
-  typedef int (WSAAPI *PGetNameInfoW)(const struct sockaddr *, socklen_t,
-				      wchar_t *, DWORD, wchar_t *, DWORD, int);
+  typedef int (WSAAPI *PGetNameInfoW)(
+      const struct sockaddr *, socklen_t,
+      wchar_t *, DWORD, wchar_t *, DWORD, int);
 }
 
 class ZiIP_WSDLL;
@@ -55,11 +56,12 @@ class ZiIP_WSDLL {
 friend ZmSingletonCtor<ZiIP_WSDLL>;
 
 public:
-  int getAddrInfo(const wchar_t *, const wchar_t *, const ADDRINFOT *,
-		  ADDRINFOT **);
+  int getAddrInfo(
+      const wchar_t *, const wchar_t *, const ADDRINFOT *, ADDRINFOT **);
   void freeAddrInfo(ADDRINFOT *);
-  int getNameInfo(const struct sockaddr *, socklen_t,
-		   wchar_t *, DWORD, wchar_t *, DWORD, int);
+  int getNameInfo(
+      const struct sockaddr *, socklen_t,
+      wchar_t *, DWORD, wchar_t *, DWORD, int);
 
   static ZiIP_WSDLL *instance();
 
@@ -245,10 +247,9 @@ ZiIP::Hostname ZiIP::name(ZeError *e)
   sai.sin_addr.s_addr = s_addr;
   ret.size(ZiPlatform::HostnameMax);
   int errno_;
-  while (errno_ = ZiIP_GetNameInfo((struct sockaddr *)&sai,
-				   sizeof(struct sockaddr_in),
-				   ret, ZiPlatform::HostnameMax,
-				   0, 0, 0)) {
+  while (errno_ = ZiIP_GetNameInfo(
+	reinterpret_cast<sockaddr *>(&sai), sizeof(struct sockaddr_in),
+	ret, ZiPlatform::HostnameMax, 0, 0, 0)) {
     if (errno_ == EAI_AGAIN) continue;
     if (e) *e =
 #ifdef EAI_SYSTEM

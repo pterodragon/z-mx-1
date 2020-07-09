@@ -5,7 +5,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or ZiIP::(at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,220 +30,22 @@
 #include <zlib/ZdfLib.hpp>
 #endif
 
-#include <zlib/ZuPtr.hpp>
-#include <zlib/ZuByteSwap.hpp>
 #include <zlib/ZuUnion.hpp>
+#include <zlib/ZuFixed.hpp>
 #include <zlib/ZuSort.hpp>
 
-#include <zlib/ZmHeap.hpp>
-#include <zlib/ZmList.hpp>
-#include <zlib/ZmNoLock.hpp>
-#include <zlib/ZmHash.hpp>
 #include <zlib/ZmScheduler.hpp>
+#include <zlib/ZmRef.hpp>
 
 #include <zlib/ZtArray.hpp>
-#include <zlib/ZtString.hpp>
 
-#include <zlib/ZeLog.hpp>
-
-#include <zlib/ZiFile.hpp>
-
-#include <zlib/ZvField.hpp>
 #include <zlib/ZvCf.hpp>
 
+#include <zlib/Zfb.hpp>
+
+#include <zlib/ZdfBuf.hpp>
+
 namespace Zdf {
-
-#pragma pack(push, 1)
-struct Hdr {
-  using UInt64 = ZuLittleEndian<uint64_t>;
-
-  UInt64	offset_ = 0;
-  UInt64	cle_ = 0;	// count/length/exponent
-
-private:
-  constexpr static uint64_t countMask() { return 0xfffffffULL; }
-  constexpr static unsigned lengthShift() { return 28U; }
-  constexpr static uint64_t lengthMask() { return countMask()<<lengthShift(); }
-public:
-  constexpr static uint64_t lengthMax() { return countMask(); }
-private:
-  constexpr static uint64_t expMask_() { return 0x1fULL; }
-  constexpr static unsigned expShift() { return 56U; }
-  constexpr static uint64_t expMask() { return expMask_()<<expShift(); }
-
-  uint64_t cle() const { return cle_; }
-  void cle(uint64_t v) { cle_ = v; }
-
-public:
-  // offset (as a value count) of this buffer
-  uint64_t offset() const { return offset_; }
-  void offset(uint64_t v) { offset_ = v; }
-  // count of values in this buffer
-  unsigned count() const {
-    return cle() & countMask();
-  }
-  void count(uint64_t v) {
-    cle((cle() & ~countMask()) | v);
-  }
-  // length of this buffer in bytes
-  unsigned length() const {
-    return (cle() & lengthMask())>>lengthShift();
-  }
-  void length(uint64_t v) {
-    cle((cle() & ~lengthMask()) | (v<<lengthShift()));
-  }
-  // negative decimal exponent
-  unsigned exponent() const {
-    return (cle() & expMask())>>expShift();
-  }
-  void exponent(uint64_t v) {
-    cle((cle() & ~expMask()) | (v<<expShift()));
-  }
-};
-#pragma pack(pop)
-
-struct BufLRUNode_ {
-  BufLRUNode_() = delete;
-  BufLRUNode_(void *mgr_, unsigned seriesID_, unsigned blkIndex_) :
-      mgr(mgr_), seriesID(seriesID_), blkIndex(blkIndex_) { }
-  BufLRUNode_(const BufLRUNode_ &) = default;
-  BufLRUNode_ &operator =(const BufLRUNode_ &) = default;
-  BufLRUNode_(BufLRUNode_ &&) = default;
-  BufLRUNode_ &operator =(BufLRUNode_ &&) = default;
-  ~BufLRUNode_() = default;
-
-  void		*mgr;
-  unsigned	seriesID;
-  unsigned	blkIndex;
-};
-struct BufLRU_HeapID {
-  static const char *id() { return "ZdfSeries.BufLRU"; }
-};
-using BufLRU =
-  ZmList<BufLRUNode_,
-    ZmListObject<ZuNull,
-      ZmListNodeIsItem<true,
-	ZmListHeapID<ZuNull,
-	  ZmListLock<ZmNoLock> > > > >;
-using BufLRUNode = BufLRU::Node;
-
-// TCP over Ethernet maximum payload is 1460 (without Jumbo frames)
-enum { BufSize = 1460 };
-
-template <typename Heap>
-class Buf_ : public ZmPolymorph, public BufLRUNode, public Heap {
-  using PinLock = ZmPLock;
-  using PinGuard = ZmGuard<PinLock>;
-  using PinReadGuard = ZmReadGuard<PinLock>;
-
-public:
-  enum { Size = BufSize };
-
-  template <typename ...Args>
-  Buf_(Args &&... args) : BufLRUNode{ZuFwd<Args>(args)...} { }
-
-  bool pin() {
-    PinGuard guard(m_pinLock);
-    if (m_pinned) return false;
-    return m_pinned = true;
-  }
-  bool pinned() const {
-    PinReadGuard guard(m_pinLock);
-    return m_pinned;
-  }
-  template <typename L>
-  void unpin(L l) {
-    PinGuard guard(m_pinLock);
-    m_pinned = false;
-    l(this);
-  }
-
-  uint8_t *data() { return &m_data[0]; }
-  const uint8_t *data() const { return &m_data[0]; }
-
-  const Hdr *hdr() const {
-    return reinterpret_cast<const Hdr *>(data());
-  }
-  Hdr *hdr() { return reinterpret_cast<Hdr *>(data()); }
-
-  template <typename Reader>
-  Reader reader() {
-    auto start = data() + sizeof(Hdr);
-    return Reader{start, start + hdr()->length()};
-  }
-
-  template <typename Writer>
-  Writer writer() {
-    auto start = data() + sizeof(Hdr);
-    auto end = data() + Size;
-    return Writer{start, end};
-  }
-  template <typename Writer>
-  void sync(const Writer &writer) {
-    auto hdr = this->hdr();
-    hdr->count(writer.count());
-    auto start = data() + sizeof(Hdr);
-    hdr->length(writer.pos() - start);
-  }
-
-  unsigned space() const {
-    auto start = data() + sizeof(Hdr) + hdr()->length();
-    auto end = data() + Size;
-    if (start >= end) return 0;
-    return end - start;
-  }
-
-private:
-  PinLock		m_pinLock;
-    bool		  m_pinned = false;
-
-  uint8_t		m_data[Size];
-};
-struct Buf_HeapID {
-  static const char *id() { return "ZdfSeries.Buf"; }
-};
-using Buf = Buf_<ZmHeap<Buf_HeapID, sizeof(Buf_<ZuNull>)>>;
-
-using BufUnloadFn = ZmFn<Buf *>;
-
-template <typename Impl> class Series_;
-
-class ZdfAPI Mgr {
-template <typename Impl> friend class Series_;
-
-public:
-  void init(unsigned maxBufs);
-  void final() { }
-
-  unsigned alloc(BufUnloadFn unloadFn);
-  void free(unsigned seriesID);
-
-protected:
-  void shift() {
-    if (m_lru.count() >= m_maxBufs) {
-      auto lru_ = m_lru.shiftNode();
-      if (ZuLikely(lru_)) {
-	Buf *lru = static_cast<Buf *>(lru_);
-	if (lru->pinned()) {
-	  m_lru.push(ZuMv(lru_));
-	  m_maxBufs = m_lru.count() + 1;
-	  return;
-	}
-	(m_unloadFn[lru->seriesID])(lru);
-      }
-    }
-  }
-  void push(BufLRUNode *node) { m_lru.push(node); }
-  void use(BufLRUNode *node) { m_lru.push(m_lru.del(node)); }
-  void del(BufLRUNode *node) { m_lru.del(node); }
-
-  void purge(unsigned seriesID, unsigned blkIndex); // caller unloads
-
-private:
-  BufLRU		m_lru;
-  ZtArray<BufUnloadFn>	m_unloadFn;	// allocates seriesID
-  unsigned		m_maxBufs = 0;
-};
 
 template <typename Series, typename BufReader_>
 class Reader {
@@ -352,7 +154,7 @@ public:
   }
   ~Writer() {
     m_buf->sync(m_bufWriter);
-    m_series->save_(m_buf);
+    m_series->save(m_buf);
   }
 
   bool write(const ZuFixed &value) {
@@ -366,7 +168,7 @@ public:
     }
     if (eob || !m_bufWriter.write(value.value)) {
       m_buf->sync(m_bufWriter);
-      m_series->save_(m_buf);
+      m_series->save(m_buf);
       m_bufWriter = m_series->template nextWriter<BufWriter>(m_buf);
       if (ZuUnlikely(!m_bufWriter)) return false;
       hdr = m_buf->hdr();
@@ -386,31 +188,30 @@ private:
   BufWriter	m_bufWriter;
 };
 
-// CRTP - implementation must conform to the following interface:
-#if 0
-struct Impl : public Series<Impl, Buf> {
-using Blk = typename Series<Impl, Buf>::Blk;
-bool loadHdr(unsigned i, Hdr &hdr) {
-  // ... load hdr for block i
-}
-ZmRef<Buf> load(unsigned i) {
-  ZmRef<Buf> buf = new Buf{this->mgr(), this->seriesID(), i};
-  // ... load block i into buf
-  return buf;
-}
-void save(ZmRef<Buf> buf) {
-  // ... save buf
-}
-void purge(unsigned i) {
-  // ... GC any storage for blocks < i
-}
-};
-#endif
 using OpenFn = ZmFn<unsigned>;
-template <typename Impl> class Series_ {
-  Impl *impl() { return static_cast<Impl *>(this); }
-  const Impl *impl() const { return static_cast<const Impl *>(this); }
+class ZdfAPI Mgr : public BufMgr {
+public:
+  virtual void init(ZmScheduler *, ZvCf *);
+  virtual void final();
 
+  virtual bool open(
+      unsigned seriesID, ZuString parent, ZuString name, OpenFn);
+  virtual void close(unsigned seriesID);
+
+  virtual bool loadHdr(unsigned seriesID, unsigned blkIndex, Hdr &hdr);
+  virtual bool load(unsigned seriesID, unsigned blkIndex, void *buf);
+  virtual void save(ZmRef<Buf>);
+
+  virtual void purge(unsigned seriesID, unsigned blkIndex);
+
+  virtual bool loadFile(
+      ZuString name, Zfb::Load::LoadFn,
+      unsigned maxFileSize, ZeError *e = nullptr);
+  virtual bool saveFile(
+      ZuString name, Zfb::Builder &fbb, ZeError *e = nullptr);
+};
+
+class Series {
 template <typename, typename> friend class Reader;
 template <typename, typename> friend class Writer;
 
@@ -418,12 +219,11 @@ public:
   void init(Mgr *mgr) {
     m_mgr = mgr;
     m_seriesID = mgr->alloc(
-	BufUnloadFn{this, [](Series_ *this_, BufLRUNode *node) {
+	BufUnloadFn{this, [](Series *this_, BufLRUNode *node) {
 	  this_->unloadBuf(node);
 	}});
   }
   void final() {
-    m_mgr->free(m_seriesID);
     m_blks.null();
   }
 
@@ -434,11 +234,21 @@ protected:
   void open_(unsigned blkOffset = 0) {
     m_blkOffset = blkOffset;
     Hdr hdr;
-    for (unsigned i = 0; impl()->loadHdr(i + blkOffset, hdr); i++)
+    for (unsigned i = 0; loadHdr(i + blkOffset, hdr); i++)
       new (Blk::new_<Hdr>(m_blks.push())) Hdr{hdr};
   }
 
 public:
+  bool open(ZuString parent, ZuString name) {
+    return mgr()->open(this->seriesID(), parent, name, OpenFn{
+      this, [](Series *this_, unsigned blkOffset) {
+	this_->open_(blkOffset);
+      }});
+  }
+  void close() {
+    mgr()->close(this->seriesID());
+  }
+
   uint64_t count() const {
     unsigned n = m_blks.length();
     if (ZuUnlikely(!n)) return 0;
@@ -448,15 +258,15 @@ public:
 
   template <typename BufReader>
   auto reader(uint64_t offset = 0) const {
-    return Reader<Impl, BufReader>::reader(impl(), offset);
+    return Reader<Series, BufReader>::reader(this, offset);
   }
   template <typename BufReader>
   auto index(const ZuFixed &value) const {
-    return Reader<Impl, BufReader>::index(impl(), value);
+    return Reader<Series, BufReader>::index(this, value);
   }
 
   template <typename BufWriter>
-  auto writer() { return Writer<Impl, BufWriter>{impl()}; }
+  auto writer() { return Writer<Series, BufWriter>{this}; }
 
 private:
   using Blk = ZuUnion<Hdr, ZmRef<Buf>>;
@@ -465,7 +275,7 @@ private:
   static const Hdr *hdr_(const Hdr &hdr) { return &hdr; }
   static const Hdr *hdr_(const ZmRef<Buf> &buf) { return buf->hdr(); }
   static const Hdr *hdr(const Blk &blk) {
-    return blk.cdispatch([](auto &&v) { return Series_::hdr_(v); }); 
+    return blk.cdispatch([](auto &&v) { return hdr_(v); }); 
   }
 
   Buf *loadBuf(unsigned blkIndex) const {
@@ -478,7 +288,7 @@ private:
     } else {
       if (ZuUnlikely(!blk.contains<Hdr>())) return nullptr;
       m_mgr->shift(); // might call unloadBuf()
-      buf = impl()->load(blkIndex + m_blkOffset);
+      buf = load(blkIndex + m_blkOffset);
       if (!buf) return nullptr;
       buf_ = buf.ptr();
       const_cast<Blk &>(blk).v<ZmRef<Buf>>(ZuMv(buf));
@@ -536,7 +346,7 @@ private:
 
   auto offsetSearch(uint64_t offset) const {
     return [offset](const Blk &blk) -> int {
-      auto hdr = Series_::hdr(blk);
+      auto hdr = Series::hdr(blk);
       auto hdrOffset = hdr->offset();
       if (offset < hdrOffset) return -static_cast<int>(hdrOffset - offset);
       hdrOffset += hdr->count();
@@ -646,12 +456,8 @@ private:
     return buf->writer<BufWriter>();
   }
 
-  void save_(ZmRef<Buf> buf) const {
-    impl()->save(ZuMv(buf));
-  }
-
   void purge_(unsigned blkIndex) {
-    impl()->purge(m_blkOffset += blkIndex);
+    mgr()->purge(this->seriesID(), m_blkOffset += blkIndex);
     {
       unsigned n = m_blks.length();
       if (n > blkIndex) n = blkIndex;
@@ -662,171 +468,6 @@ private:
       }
     }
     m_blks.splice(0, blkIndex);
-  }
-
-private:
-  Mgr		*m_mgr = nullptr;
-  ZtArray<Blk>	m_blks;
-  unsigned	m_seriesID = 0;
-  unsigned	m_blkOffset = 0;
-};
-
-using FileLRU =
-  ZmList<ZuNull,
-    ZmListObject<ZuNull,
-      ZmListNodeIsItem<true,
-	ZmListHeapID<ZuNull,
-	  ZmListLock<ZmNoLock> > > > >;
-using FileLRUNode = FileLRU::Node;
-
-ZuDeclTuple(FileID, (unsigned, seriesID), (unsigned, index));
-ZuDeclTuple(FilePos, (unsigned, index), (unsigned, offset));
-
-struct File_ : public ZmObject, public ZiFile, public FileLRUNode {
-  template <typename ...Args>
-  File_(Args &&... args) : id{ZuFwd<Args>(args)...} { }
-
-  FileID	id;
-};
-struct File_IDAccessor : public ZuAccessor<File_, FileID> {
-  ZuInline static const FileID &value(const File_ &file) {
-    return file.id;
-  }
-};
-
-struct File_HeapID {
-  static const char *id() { return "ZdfSeries.File"; }
-};
-using FileHash =
-  ZmHash<File_,
-    ZmHashObject<ZmObject,
-      ZmHashNodeIsKey<true,
-	ZmHashIndex<File_IDAccessor,
-	  ZmHashHeapID<File_HeapID,
-	    ZmHashLock<ZmNoLock> > > > > >;
-
-class ZdfAPI FileMgr : public Mgr {
-public:
-  struct Config {
-    Config(const Config &) = delete;
-    Config &operator =(const Config &) = delete;
-    Config() = default;
-    Config(Config &&) = default;
-    Config &operator =(Config &&) = default;
-
-    Config(ZvCf *cf) {
-      dir = cf->get("dir", true);
-      coldDir = cf->get("coldDir", true);
-      writeThread = cf->get("writeThread", true);
-      maxFileSize = cf->getInt("maxFileSize", 1, 1U<<30, false, 10<<20);
-    }
-
-    ZiFile::Path	dir;
-    ZiFile::Path	coldDir;
-    ZmThreadName	writeThread;
-    unsigned		maxFileSize = 0;
-  };
-
-  void init(ZmScheduler *sched, Config config);
-  void final();
-
-  const ZiFile::Path &dir() const { return m_dir; }
-  const ZiFile::Path &coldDir() const { return m_coldDir; }
-
-  bool open(
-      unsigned seriesID, ZuString parent, ZuString name, OpenFn openFn);
-  void close(unsigned seriesID);
-
-  ZmRef<File_> getFile(FileID fileID, bool create);
-  ZmRef<File_> openFile(FileID fileID, bool create);
-  void archiveFile(FileID fileID);
-
-  bool loadHdr(
-      unsigned seriesID, unsigned blkIndex, Hdr &hdr);
-  bool load(
-      unsigned seriesID, unsigned blkIndex, void *buf);
-  template <typename Buf>
-  void save(ZmRef<Buf> buf) {
-    if (!buf->pin()) return;
-    m_sched->run(m_writeTID, ZmFn<>{ZuMv(buf), [](Buf *buf) {
-      buf->unpin([](Buf *buf) {
-	static_cast<FileMgr *>(buf->mgr)->save_(
-	    buf->seriesID, buf->blkIndex, buf->data());
-      });
-    }});
-  }
-
-  void purge(unsigned seriesID, unsigned blkIndex);
-
-private:
-  void save_(unsigned seriesID, unsigned blkIndex, const void *buf);
-
-  struct SeriesData {
-    ZiFile::Path	path;
-    unsigned		minFileIndex = 0;	// earliest file index
-    unsigned		fileBlks = 0;
-
-    unsigned fileSize() const { return fileBlks * BufSize; }
-  };
-
-  const ZiFile::Path &pathName(unsigned seriesID) {
-    return m_series[seriesID].path;
-  }
-  ZiFile::Path fileName(const FileID &fileID) {
-    return fileName(pathName(fileID.seriesID()), fileID.index());
-  }
-  static ZiFile::Path fileName(const ZiFile::Path &path, unsigned index) {
-    return ZiFile::append(path, ZuStringN<20>() <<
-	ZuBox<unsigned>(index).hex(ZuFmt::Right<8>()) << ".sdb");
-  }
-  FilePos pos(unsigned seriesID, unsigned blkIndex) {
-    auto fileBlks = m_series[seriesID].fileBlks;
-    return FilePos{blkIndex / fileBlks, (blkIndex % fileBlks) * BufSize};
-  }
-
-  FileLRUNode *shift() {
-    if (m_lru.count() >= m_maxOpenFiles) return m_lru.shiftNode();
-    return nullptr;
-  }
-  void push(FileLRUNode *node) { m_lru.push(node); }
-  void use(FileLRUNode *node) { m_lru.push(m_lru.del(node)); }
-  void del(FileLRUNode *node) { m_lru.del(node); }
-
-  void fileRdError_(unsigned seriesID, ZiFile::Offset, int, ZeError);
-  void fileWrError_(unsigned seriesID, ZiFile::Offset, ZeError);
-
-private:
-  ZtArray<SeriesData>	m_series;	// indexed by seriesID
-  ZuPtr<FileHash>	m_files;
-  FileLRU		m_lru;
-  ZmScheduler		*m_sched = nullptr;
-  ZiFile::Path		m_dir;
-  ZiFile::Path		m_coldDir;
-  unsigned		m_writeTID = 0;	// write thread ID
-  unsigned		m_maxFileSize;	// maximum file size
-  unsigned		m_maxOpenFiles;	// maximum #files open
-  unsigned		m_fileLoads = 0;
-  unsigned		m_fileMisses = 0;
-};
-
-class Series : public Series_<Series> {
-public:
-  using Base = Series_<Series>;
-friend Base;
-
-  FileMgr *mgr() const { return static_cast<FileMgr *>(Base::mgr()); }
-
-  void init(FileMgr *mgr) { Base::init(mgr); }
-
-  bool open(ZuString parent, ZuString name) {
-    return mgr()->open(this->seriesID(), parent, name, OpenFn{
-      this, [](Series *this_, unsigned blkOffset) {
-	this_->open_(blkOffset);
-      }});
-  }
-  void close() {
-    mgr()->close(this->seriesID());
-    Base::final();
   }
 
   bool loadHdr(unsigned i, Hdr &hdr) const {
@@ -841,9 +482,12 @@ friend Base;
   void save(ZmRef<Buf> buf) const {
     return mgr()->save(ZuMv(buf));
   }
-  void purge(unsigned i) {
-    mgr()->purge(this->seriesID(), i);
-  }
+
+private:
+  Mgr		*m_mgr = nullptr;
+  ZtArray<Blk>	m_blks;
+  unsigned	m_seriesID = 0;
+  unsigned	m_blkOffset = 0;
 };
 
 } // namespace Zdf

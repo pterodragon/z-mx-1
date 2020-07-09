@@ -336,7 +336,7 @@ public:
 
   DeltaWriter() { }
   DeltaWriter(DeltaWriter &&w) noexcept :
-      Base(static_cast<Base &&>(w)), m_base(w.m_base) {
+      Base{static_cast<Base &&>(w)}, m_base{w.m_base} {
     w.m_base = 0;
   }
   DeltaWriter &operator =(DeltaWriter &&w) noexcept {

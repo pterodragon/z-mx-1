@@ -5,7 +5,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or ZiIP::(at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,19 +30,15 @@
 #include <zlib/ZdfLib.hpp>
 #endif
 
+#include <zlib/ZuPtr.hpp>
 #include <zlib/ZuUnion.hpp>
-
-#include <zlib/ZmHeap.hpp>
-#include <zlib/ZmList.hpp>
 
 #include <zlib/ZtArray.hpp>
 #include <zlib/ZtString.hpp>
 
-#include <zlib/ZeLog.hpp>
-
-#include <zlib/ZiFile.hpp>
-
 #include <zlib/Zfb.hpp>
+
+#include <zlib/ZvField.hpp>
 
 #include <zlib/ZdfCompress.hpp>
 #include <zlib/ZdfSeries.hpp>
@@ -137,10 +133,10 @@ struct AnyReader : public AnyReader_ {
     dispatch([offset](auto &&r) { r.seekRev(offset); });
   }
   void indexFwd(ZuFixed value) {
-    dispatch([value](auto &&r) { r.indexFwd(value); });
+    dispatch([&value](auto &&r) { r.indexFwd(value); });
   }
   void indexRev(ZuFixed value) {
-    dispatch([value](auto &&r) { r.indexRev(value); });
+    dispatch([&value](auto &&r) { r.indexRev(value); });
   }
 };
 // run-time polymorphic writer
@@ -185,10 +181,10 @@ public:
   const ZtString &name() const { return m_name; }
   const ZmTime &epoch() const { return m_epoch; }
 
-  void init(FileMgr *mgr);
+  void init(Mgr *mgr);
 
-  bool open();
-  bool close();
+  bool open(ZeError *e = nullptr);
+  bool close(ZeError *e = nullptr);
 
   class ZdfAPI Writer {
   friend DataFrame;
@@ -268,21 +264,17 @@ public:
   }
 
 private:
-  ZiFile::Path path() const {
-    return ZiFile::append(m_mgr->dir(), m_name + ".df");
-  }
-
-  bool load(const ZiFile::Path &path);
+  bool load(ZeError *e = nullptr);
   bool load_(const uint8_t *buf, unsigned len);
 
-  bool save(const ZiFile::Path &path);
+  bool save(ZeError *e = nullptr);
   Zfb::Offset<fbs::DataFrame> save_(Zfb::Builder &);
 
 private:
   ZtString			m_name;
   ZtArray<ZuPtr<Series>>	m_series;
   ZtArray<const ZvField *>	m_fields;
-  FileMgr			*m_mgr = nullptr;
+  Mgr				*m_mgr = nullptr;
   ZmTime			m_epoch;
 };
 

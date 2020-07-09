@@ -53,8 +53,10 @@ public:
     m_buf[BufSize - 1] = 0;
     if (ZuUnlikely(status || !demangled))
       m_output = symbol;
-    else
-      m_output = ZuString{demangled, len != BufSize ? len : strlen(demangled)};
+    else {
+      if (len == BufSize) len = strlen(demangled);
+      m_output = ZuString{demangled, (unsigned)len};
+    }
   }
 
   ZuDemangle &operator =(ZuString symbol) {

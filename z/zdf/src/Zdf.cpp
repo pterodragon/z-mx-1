@@ -58,21 +58,25 @@ DataFrame::DataFrame(ZvFields fields, ZuString name) : m_name(name)
   }
 }
 
-void DataFrame::init(FileMgr *mgr)
+void DataFrame::init(Mgr *mgr)
 {
   m_mgr = mgr;
   unsigned n = m_series.length();
   for (unsigned i = 0; i < n; i++) m_series[i]->init(mgr);
 }
 
-bool DataFrame::open()
+bool DataFrame::open(ZeError *e_)
 {
-  ZiFile::Path path = this->path();
-  if (!ZiFile::mtime(path)) {
-    m_epoch.now();
-    return save(path);
+  ZeError e;
+  if (!load(&e)) {
+    if (e.errNo() == ZiENOENT) {
+      m_epoch.now();
+      return save(e_);
+    } else {
+      if (e_) *e_ = e;
+      return false;
+    }
   }
-  if (!load(path)) return false;
   unsigned n = m_series.length();
   if (ZuUnlikely(!n)) return false;
   for (unsigned i = 0; i < n; i++) {
@@ -85,25 +89,18 @@ bool DataFrame::open()
   return true;
 }
 
-bool DataFrame::close()
+bool DataFrame::close(ZeError *e)
 {
-  return save(path());
+  return save(e);
 }
 
-bool DataFrame::load(const ZiFile::Path &path)
+bool DataFrame::load(ZeError *e)
 {
-  ZeError e;
   using namespace Zfb::Load;
-  if (Zfb::Load::load(path,
+  return m_mgr->loadFile(m_name,
       LoadFn{this, [](DataFrame *this_, const uint8_t *buf, unsigned len) {
 	return this_->load_(buf, len);
-      }}, (1<<10) /* 1Kb */, &e) != Zi::OK) {
-    ZeLOG(Error, ZtString() <<
-      "Zdf::DataFrame could not open \"" <<
-      path << "\": " << e);
-    return false;
-  }
-  return true;
+      }}, (1<<10) /* 1Kb */, e);
 }
 
 bool DataFrame::load_(const uint8_t *buf, unsigned len)
@@ -118,18 +115,11 @@ bool DataFrame::load_(const uint8_t *buf, unsigned len)
   return true;
 }
 
-bool DataFrame::save(const ZiFile::Path &path)
+bool DataFrame::save(ZeError *e)
 {
   Zfb::Builder fbb;
   fbb.Finish(save_(fbb));
-  ZeError e;
-  if (Zfb::Save::save(path, fbb, &e) != Zi::OK) {
-    ZeLOG(Error, ZtString() <<
-      "Zdf::DataFrame could not create \"" <<
-      path << "\": " << e);
-    return false;
-  }
-  return true;
+  return m_mgr->saveFile(m_name, fbb, e);
 }
 
 Zfb::Offset<fbs::DataFrame> DataFrame::save_(Zfb::Builder &fbb)

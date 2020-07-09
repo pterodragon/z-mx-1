@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Data Series File Manager
+// Data Series Manager
 
 #include <zlib/ZdfMgr.hpp>
 
@@ -25,45 +25,4 @@ using namespace Zdf;
 
 // In-Memory default implementation, overridden by FileMgr
 
-void Mgr::init(ZmScheduler *, ZvCf *) { BufMgr::init(UINT_MAX); }
-
-void Mgr::final() { BufMgr::final(); }
-
-bool Mgr::open(unsigned, ZuString, ZuString, OpenFn openFn)
-{
-  return true;
-}
-
-void Mgr::close(unsigned) { }
-
-bool Mgr::loadHdr(unsigned, unsigned, Hdr &)
-{
-  return false;
-}
-
-bool Mgr::load(unsigned, unsigned, void *)
-{
-  return false;
-}
-
-void Mgr::save(ZmRef<Buf>)
-{
-}
-
-void Mgr::purge(unsigned, unsigned)
-{
-}
-
-bool Mgr::loadFile(
-    ZuString, Zfb::Load::LoadFn,
-    unsigned, ZeError *e)
-{
-  if (e) *e = ZiENOENT;
-  return false;
-}
-
-bool Mgr::saveFile(ZuString, Zfb::Builder &, ZeError *e)
-{
-  if (e) *e = ZiENOENT;
-  return false;
-}
+Mgr::~Mgr() { }

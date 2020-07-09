@@ -44,24 +44,24 @@ namespace Zdf {
 using OpenFn = ZmFn<unsigned>;
 class ZdfAPI Mgr : public BufMgr {
 public:
-  virtual void init(ZmScheduler *, ZvCf *);
-  virtual void final();
+  ~Mgr();
+
+  virtual void init(ZmScheduler *, ZvCf *) = 0;
+  virtual void final() = 0;
 
   virtual bool open(
-      unsigned seriesID, ZuString parent, ZuString name, OpenFn);
-  virtual void close(unsigned seriesID);
+      unsigned seriesID, ZuString parent, ZuString name, OpenFn) = 0;
+  virtual void close(unsigned seriesID) = 0;
 
-  virtual bool loadHdr(unsigned seriesID, unsigned blkIndex, Hdr &hdr);
-  virtual bool load(unsigned seriesID, unsigned blkIndex, void *buf);
-  virtual void save(ZmRef<Buf>);
-
-  virtual void purge(unsigned seriesID, unsigned blkIndex);
+  virtual bool loadHdr(unsigned seriesID, unsigned blkIndex, Hdr &hdr) = 0;
+  virtual bool load(unsigned seriesID, unsigned blkIndex, void *buf) = 0;
+  virtual void save(ZmRef<Buf>) = 0;
 
   virtual bool loadFile(
       ZuString name, Zfb::Load::LoadFn,
-      unsigned maxFileSize, ZeError *e = nullptr);
+      unsigned maxFileSize, ZeError *e = nullptr) = 0;
   virtual bool saveFile(
-      ZuString name, Zfb::Builder &fbb, ZeError *e = nullptr);
+      ZuString name, Zfb::Builder &fbb, ZeError *e = nullptr) = 0;
 };
 
 } // namespace Zdf

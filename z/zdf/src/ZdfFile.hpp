@@ -124,11 +124,11 @@ private:
   void archiveFile(FileID fileID);
 
 public:
+  void purge(unsigned seriesID, unsigned blkIndex);
+
   bool loadHdr(unsigned seriesID, unsigned blkIndex, Hdr &hdr);
   bool load(unsigned seriesID, unsigned blkIndex, void *buf);
   void save(ZmRef<Buf> buf);
-
-  void purge(unsigned seriesID, unsigned blkIndex);
 
   bool loadFile(
       ZuString name, Zfb::Load::LoadFn,
@@ -161,14 +161,6 @@ private:
     auto fileBlks = m_series[seriesID].fileBlks;
     return FilePos{blkIndex / fileBlks, (blkIndex % fileBlks) * BufSize};
   }
-
-  FileLRUNode *shift() {
-    if (m_lru.count() >= m_maxOpenFiles) return m_lru.shiftNode();
-    return nullptr;
-  }
-  void push(FileLRUNode *node) { m_lru.push(node); }
-  void use(FileLRUNode *node) { m_lru.push(m_lru.del(node)); }
-  void del(FileLRUNode *node) { m_lru.del(node); }
 
   void fileRdError_(unsigned seriesID, ZiFile::Offset, int, ZeError);
   void fileWrError_(unsigned seriesID, ZiFile::Offset, ZeError);

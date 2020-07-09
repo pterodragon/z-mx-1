@@ -202,7 +202,7 @@ public:
   unsigned alloc(BufUnloadFn unloadFn);
   void free(unsigned seriesID);
 
-  void shift() {
+  virtual void shift() {
     if (m_lru.count() >= m_maxBufs) {
       auto lru_ = m_lru.shiftNode();
       if (ZuLikely(lru_)) {
@@ -216,11 +216,11 @@ public:
       }
     }
   }
-  void push(BufLRUNode *node) { m_lru.push(node); }
-  void use(BufLRUNode *node) { m_lru.push(m_lru.del(node)); }
-  void del(BufLRUNode *node) { m_lru.del(node); }
+  virtual void push(BufLRUNode *node) { m_lru.push(node); }
+  virtual void use(BufLRUNode *node) { m_lru.push(m_lru.del(node)); }
+  virtual void del(BufLRUNode *node) { m_lru.del(node); }
 
-  void purge(unsigned seriesID, unsigned blkIndex); // caller unloads
+  virtual void purge(unsigned seriesID, unsigned blkIndex); // caller unloads
 
 private:
   BufLRU		m_lru;

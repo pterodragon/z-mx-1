@@ -8,6 +8,7 @@
 
 #include <zlib/ZdfCompress.hpp>
 #include <zlib/ZdfSeries.hpp>
+#include <zlib/ZdfMem.hpp>
 
 void print(const char *s) {
   std::cout << s << '\n' << std::flush;
@@ -77,7 +78,7 @@ int main()
 {
   using namespace Zdf;
   using namespace ZdfCompress;
-  Zdf::Mgr mgr;
+  Zdf::MemMgr mgr;
   mgr.init(nullptr, nullptr);
   Zdf::Series s;
   s.init(&mgr);
@@ -92,6 +93,7 @@ int main()
     ZuFixed v;
     CHECK(r.read(v)); CHECK(v.value == 42 && !v.exponent);
     CHECK(r.read(v)); CHECK(v.value == 42 && !v.exponent);
+    CHECK(!r.read(v));
   }
   s.close();
   s.final();

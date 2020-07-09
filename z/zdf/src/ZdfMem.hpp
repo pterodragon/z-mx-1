@@ -17,41 +17,45 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Data Series Buffer
+// Data Series In-Memory
 
-#include <zlib/ZdfBuf.hpp>
+#ifndef ZdfMem_HPP
+#define ZdfMem_HPP
 
-using namespace Zdf;
+#ifdef _MSC_VER
+#pragma once
+#endif
 
-void BufMgr::init(unsigned maxBufs)
-{
-  m_maxBufs = maxBufs;
-}
+#ifndef ZdfLib_HPP
+#include <zlib/ZdfLib.hpp>
+#endif
 
-void BufMgr::final()
-{
-  // manually clean to prevent ZmList from trying to delete (free) nodes
-  auto i = m_lru.iterator();
-  while (i.iterateNode()) i.del();
-}
+#include <zlib/ZdfMgr.hpp>
 
-unsigned BufMgr::alloc(BufUnloadFn unloadFn)
-{
-  unsigned id = m_unloadFn.length();
-  m_unloadFn.push(ZuMv(unloadFn));
-  return id;
-}
+namespace Zdf {
 
-void BufMgr::free(unsigned seriesID) // caller unloads
-{
-  auto i = m_lru.iterator();
-  while (auto node = i.iterateNode())
-    if (node->seriesID == seriesID) i.del();
-}
+class ZdfAPI MemMgr : public Mgr {
+public:
+  void shift();
+  void push(BufLRUNode *);
+  void use(BufLRUNode *);
+  void del(BufLRUNode *);
+  void purge(unsigned, unsigned);
 
-void BufMgr::purge(unsigned seriesID, unsigned blkIndex) // caller unloads
-{
-  auto i = m_lru.iterator();
-  while (auto node = i.iterateNode())
-    if (node->seriesID == seriesID && node->blkIndex < blkIndex) i.del();
-}
+  void init(ZmScheduler *, ZvCf *);
+  void final();
+
+  bool open(unsigned, ZuString, ZuString, OpenFn openFn);
+  void close(unsigned);
+
+  bool loadHdr(unsigned, unsigned, Hdr &);
+  bool load(unsigned, unsigned, void *);
+  void save(ZmRef<Buf>);
+
+  bool loadFile(ZuString, Zfb::Load::LoadFn, unsigned, ZeError *e);
+  bool saveFile(ZuString, Zfb::Builder &, ZeError *e);
+};
+
+} // namespace Zdf
+
+#endif /* ZdfMem_HPP */

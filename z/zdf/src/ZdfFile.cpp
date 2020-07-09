@@ -109,16 +109,18 @@ ZmRef<File_> FileMgr::getFile(FileID fileID, bool create)
   ++m_fileLoads;
   ZmRef<File_> file;
   if (file = m_files->find(fileID)) {
-    use(file.ptr());
+    m_lru.push(m_lru.del(file.ptr()));
     return file;
   }
   ++m_fileMisses;
   file = openFile(fileID, create);
   if (ZuUnlikely(!file)) return nullptr;
-  if (auto node = shift())
+  while (m_lru.count() >= m_maxOpenFiles) {
+    auto node = m_lru.shiftNode();
     m_files->del(static_cast<File_ *>(node)->id);
+  }
   m_files->add(file);
-  push(file.ptr());
+  m_lru.push(file.ptr());
   return file;
 }
 
@@ -218,7 +220,7 @@ void FileMgr::save_(unsigned seriesID, unsigned blkIndex, const void *buf)
 
 void FileMgr::purge(unsigned seriesID, unsigned blkIndex)
 {
-  Mgr::purge(seriesID, blkIndex);
+  BufMgr::purge(seriesID, blkIndex);
   FilePos pos = this->pos(seriesID, blkIndex);
   {
     auto i = m_lru.iterator();

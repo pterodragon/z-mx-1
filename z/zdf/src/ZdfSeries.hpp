@@ -223,11 +223,20 @@ public:
     mgr()->close(this->seriesID());
   }
 
+  // value count (length of series in #values)
   uint64_t count() const {
     unsigned n = m_blks.length();
     if (ZuUnlikely(!n)) return 0;
     auto hdr = this->hdr(m_blks[n - 1]);
     return hdr->offset() + hdr->count();
+  }
+
+  // length in bytes (compressed)
+  uint64_t length() const {
+    unsigned n = m_blks.length();
+    if (ZuUnlikely(!n)) return 0;
+    auto hdr = this->hdr(m_blks[n - 1]);
+    return (n - 1) * BufSize + hdr->length();
   }
 
   template <typename BufReader>

@@ -18,14 +18,14 @@
  */
 
 // "good ole' quick sort", modern C++ version
-// - no STL iterator cruft
+// - no STL range/iterator cruft
 // - optimized three-way comparison
 // - optimized array memory operations
 // - median-of-three pivot
 // - fallback to insertion sort for small partitions of N items or less
 // - recurse smaller partition, iterate larger partition
 // - minimized stack usage during recursion
-// - bundled binary search
+// - bundled with binary and interpolation search of sorted data
 
 // template <typename T, typename Cmp = ZuCmp<T>, unsigned N = ZuSort_::isort_N>
 // ZuSort(T *data, unsigned n)
@@ -177,11 +177,11 @@ inline unsigned ZuSearchPos(unsigned i) { return i>>1; }
 // binary search in sorted data (i.e. following ZuSort)
 // - returns insertion position if not found
 template <bool Match = true, typename T, typename Cmp>
-typename ZuIfT<
+inline typename ZuIfT<
   ZuCanOpFn<Cmp, int (Cmp::*)(const T &) const>::OK ||
   ZuCanOpFn<Cmp, int (Cmp::*)(const T &)>::OK,
   unsigned>::T
-inline ZuSearch(T *data, unsigned n, Cmp cmp) {
+ZuSearch(T *data, unsigned n, Cmp cmp) {
   if (!n) return 0;
   unsigned o = 0;
 loop:
@@ -203,13 +203,12 @@ inline unsigned ZuSearch(T *data, unsigned n, const T &item) {
 
 // interpolation search in sorted data (i.e. following ZuSort)
 // - returns insertion position if not found
-
 template <bool Match = true, typename T, typename Cmp>
-typename ZuIfT<
+inline typename ZuIfT<
   ZuCanOpFn<Cmp, int (Cmp::*)(const T &) const>::OK ||
   ZuCanOpFn<Cmp, int (Cmp::*)(const T &)>::OK,
   unsigned>::T
-inline ZuInterSearch(T *data, unsigned n, Cmp cmp) {
+ZuInterSearch(T *data, unsigned n, Cmp cmp) {
   if (!n) return 0;
   unsigned o = 0;
   int v1, v2;
@@ -240,7 +239,7 @@ loop:
     n -= 2;
     goto small1;
   }
-  unsigned m = ((n - 3) * v1 + (v1>>1)) / (v1 - v2) + 1;
+  unsigned m = ((n - 3) * v1) / (v1 - v2) + 1;
   int v3 = cmp(data[m]);
   if constexpr (Match) if (!v3) return ((o + m)<<1) | 1;
   if (v3 < 0) {

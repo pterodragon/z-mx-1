@@ -560,7 +560,7 @@ public:
     gint row;
     if (this->get_sort_column_id(&col, &order)) {
       row = ZuSearchPos(ZuSearch<false>(&m_rows[0], m_rows.length(),
-	auto cmp = [i1 = &iter, fn = cmp_(col, order)](const Iter &i2) {
+	[i1 = &iter, fn = cmp_(col, order)](const Iter &i2) {
 	  return fn(i1, i2);
 	}));
       impl()->row(iter, row);

@@ -44,10 +44,11 @@ namespace Zdf {
 using OpenFn = ZmFn<unsigned>;
 class ZdfAPI Mgr : public BufMgr {
 public:
+  Mgr() = default;
   ~Mgr();
 
   virtual void init(ZmScheduler *, ZvCf *) = 0;
-  virtual void final() = 0;
+  virtual void final();
 
   virtual bool open(
       unsigned seriesID, ZuString parent, ZuString name, OpenFn) = 0;

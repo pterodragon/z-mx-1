@@ -25,4 +25,6 @@ using namespace Zdf;
 
 // In-Memory default implementation, overridden by FileMgr
 
-Mgr::~Mgr() { }
+Mgr::~Mgr() { final(); }
+
+void Mgr::final() { BufMgr::final(); }

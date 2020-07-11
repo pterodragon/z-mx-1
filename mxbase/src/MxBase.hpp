@@ -85,6 +85,7 @@ using MxID = ZuID; // Note: different than MxIDString
 
 using MxDecimal = ZuDecimal;
 
+// FIXME - rename to be consistent with ZuFixed (NDP -> Exp, etc.)
 using MxValue = ZuFixedVal;	// fixed point value (numerator)
 #define MxValueMin ZuFixedMin
 #define MxValueMax ZuFixedMax

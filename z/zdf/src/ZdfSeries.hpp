@@ -50,14 +50,16 @@ public:
 
   Reader() { }
   Reader(const Reader &r) :
-      m_series(r.m_series), m_buf(r.m_buf), m_bufReader(r.m_bufReader) { }
+      m_series(r.m_series), m_buf(r.m_buf), m_exponent(r.m_exponent),
+      m_bufReader(r.m_bufReader) { }
   Reader &operator =(const Reader &r) {
     this->~Reader(); // nop
     new (this) Reader{r};
     return *this;
   }
   Reader(Reader &&r) noexcept :
-      m_series(r.m_series), m_buf(r.m_buf), m_bufReader(ZuMv(r.m_bufReader)) { }
+      m_series(r.m_series), m_buf(ZuMv(r.m_buf)), m_exponent(r.m_exponent),
+      m_bufReader(ZuMv(r.m_bufReader)) { }
   Reader &operator =(Reader &&r) noexcept {
     this->~Reader(); // nop
     new (this) Reader{ZuMv(r)};
@@ -67,7 +69,9 @@ public:
 
 private:
   Reader(const Series *s, ZmRef<Buf> buf, BufReader r) :
-      m_series(s), m_buf(ZuMv(buf)), m_bufReader(ZuMv(r)) { }
+      m_series(s), m_buf(ZuMv(buf)), m_bufReader(ZuMv(r)) {
+    m_exponent = m_buf->hdr()->exponent();
+  }
 
 public:
   // start reading at offset
@@ -79,10 +83,12 @@ public:
   // seek forward to offset
   void seekFwd(uint64_t offset) {
     m_bufReader = m_series->template firstRdrFwd<BufReader>(m_buf, offset);
+    m_exponent = m_buf->hdr()->exponent();
   }
   // seek reverse to offset
   void seekRev(uint64_t offset) {
     m_bufReader = m_series->template firstRdrFwd<BufReader>(m_buf, offset);
+    m_exponent = m_buf->hdr()->exponent();
   }
 
   // start reading at index value
@@ -94,10 +100,12 @@ public:
   // seek forward to index value
   void indexFwd(const ZuFixed &value) {
     m_bufReader = m_series->template firstIdxFwd<BufReader>(m_buf, value);
+    m_exponent = m_buf->hdr()->exponent();
   }
   // seek reverse to index value
   void indexRev(const ZuFixed &value) {
     m_bufReader = m_series->template firstIdxRev<BufReader>(m_buf, value);
+    m_exponent = m_buf->hdr()->exponent();
   }
 
   bool read(ZuFixed &value) {
@@ -106,8 +114,9 @@ public:
       m_bufReader = m_series->template nextReader<BufReader>(m_buf);
       if (ZuUnlikely(!m_bufReader || !m_bufReader.read(value.value)))
 	return false;
+      m_exponent = m_buf->hdr()->exponent();
     }
-    value.exponent = m_buf->hdr()->exponent();
+    value.exponent = m_exponent;
     return true;
   }
 
@@ -120,6 +129,7 @@ public:
 private:
   const Series	*m_series = nullptr;
   ZmRef<Buf>	m_buf;
+  unsigned	m_exponent = 0;
   BufReader	m_bufReader;
 };
 
@@ -131,17 +141,17 @@ class Writer {
 public:
   using BufWriter = BufWriter_;
 
-  Writer(Series *s) : m_series(s) {
-    m_bufWriter = s->template firstWriter<BufWriter>(m_buf);
-  }
+  Writer(Series *s) : m_series(s) { }
 
   Writer() { }
   Writer(Writer &&w) noexcept :
       m_series(w.m_series),
-      m_buf(w.m_buf),
+      m_buf(ZuMv(w.m_buf)),
+      m_exponent(w.m_exponent),
       m_bufWriter(ZuMv(w.m_bufWriter)) {
     w.m_series = nullptr;
     w.m_buf = nullptr;
+    // w.m_exponent = 0;
   }
   Writer &operator =(Writer &&w) noexcept {
     this->~Writer(); // nop
@@ -149,38 +159,43 @@ public:
     return *this;
   }
   ~Writer() {
-    m_buf->sync(m_bufWriter);
-    m_series->save(m_buf);
+    sync();
+    save();
+  }
+
+  void sync() {
+    if (ZuLikely(m_buf)) m_buf->sync(m_bufWriter, m_exponent);
+  }
+
+  void save() {
+    if (ZuLikely(m_buf)) m_series->save(m_buf);
   }
 
   bool write(const ZuFixed &value) {
-    if (ZuUnlikely(!m_bufWriter)) return false;
-    auto hdr = m_buf->hdr();
-    bool eob = false;
-    if (ZuUnlikely(!hdr->count())) {
-      hdr->exponent(value.exponent);
-    } else if (hdr->exponent() != value.exponent) {
-      eob = true;
+    bool eob;
+    if (ZuUnlikely(!m_buf)) {
+      m_bufWriter = m_series->template firstWriter<BufWriter>(m_buf);
+      if (ZuUnlikely(!m_buf)) return false;
+      m_exponent = value.exponent;
+      eob = false;
+    } else {
+      eob = value.exponent != m_exponent;
     }
     if (eob || !m_bufWriter.write(value.value)) {
-      m_buf->sync(m_bufWriter);
-      m_series->save(m_buf);
+      sync();
+      save();
       m_bufWriter = m_series->template nextWriter<BufWriter>(m_buf);
-      if (ZuUnlikely(!m_bufWriter)) return false;
-      hdr = m_buf->hdr();
-      hdr->exponent(value.exponent);
+      if (ZuUnlikely(!m_buf)) return false;
+      m_exponent = value.exponent;
       if (ZuUnlikely(!m_bufWriter.write(value.value))) return false;
     }
     return true;
   }
 
-  void sync() { // in-memory sync to readers
-    m_buf->sync(m_bufWriter);
-  }
-
 private:
   Series	*m_series = nullptr;
   ZmRef<Buf>	m_buf;
+  unsigned	m_exponent = 0;
   BufWriter	m_bufWriter;
 };
 
@@ -189,6 +204,9 @@ template <typename, typename> friend class Reader;
 template <typename, typename> friend class Writer;
 
 public:
+  Series() = default;
+  ~Series() { final(); }
+
   void init(Mgr *mgr) {
     m_mgr = mgr;
     m_seriesID = mgr->alloc(
@@ -197,7 +215,7 @@ public:
 	}});
   }
   void final() {
-    m_mgr->free(m_seriesID);
+    if (m_mgr) m_mgr->free(m_seriesID);
     m_blks.null();
   }
 
@@ -214,13 +232,13 @@ protected:
 
 public:
   bool open(ZuString parent, ZuString name) {
-    return mgr()->open(this->seriesID(), parent, name, OpenFn{
+    return m_mgr->open(m_seriesID, parent, name, OpenFn{
       this, [](Series *this_, unsigned blkOffset) {
 	this_->open_(blkOffset);
       }});
   }
   void close() {
-    mgr()->close(this->seriesID());
+    m_mgr->close(m_seriesID);
   }
 
   // value count (length of series in #values)
@@ -258,7 +276,7 @@ private:
   static const Hdr *hdr_(const Hdr &hdr) { return &hdr; }
   static const Hdr *hdr_(const ZmRef<Buf> &buf) { return buf->hdr(); }
   static const Hdr *hdr(const Blk &blk) {
-    return blk.cdispatch([](auto &&v) { return hdr_(v); }); 
+    return blk.cdispatch([](auto &&v) { return hdr_(v); });
   }
 
   Buf *loadBuf(unsigned blkIndex) const {
@@ -440,7 +458,7 @@ private:
   }
 
   void purge_(unsigned blkIndex) {
-    mgr()->purge(this->seriesID(), m_blkOffset += blkIndex);
+    m_mgr->purge(m_seriesID, m_blkOffset += blkIndex);
     {
       unsigned n = m_blks.length();
       if (n > blkIndex) n = blkIndex;
@@ -454,16 +472,16 @@ private:
   }
 
   bool loadHdr(unsigned i, Hdr &hdr) const {
-    return mgr()->loadHdr(this->seriesID(), i, hdr);
+    return m_mgr->loadHdr(m_seriesID, i, hdr);
   }
   ZmRef<Buf> load(unsigned i) const {
-    ZmRef<Buf> buf = new Buf{mgr(), this->seriesID(), i};
-    if (mgr()->load(this->seriesID(), i, buf->data()))
+    ZmRef<Buf> buf = new Buf{m_mgr, m_seriesID, i};
+    if (m_mgr->load(m_seriesID, i, buf->data()))
       return buf;
     return nullptr;
   }
   void save(ZmRef<Buf> buf) const {
-    return mgr()->save(ZuMv(buf));
+    return m_mgr->save(ZuMv(buf));
   }
 
 private:

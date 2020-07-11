@@ -47,7 +47,7 @@ void FileMgr::init(ZmScheduler *sched, ZvCf *cf)
 void FileMgr::final()
 {
   m_files->clean();
-  BufMgr::final();
+  Mgr::final();
 }
 
 bool FileMgr::open(

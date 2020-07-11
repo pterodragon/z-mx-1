@@ -31,7 +31,7 @@ void MemMgr::purge(unsigned, unsigned) { }
 
 void MemMgr::init(ZmScheduler *, ZvCf *) { BufMgr::init(UINT_MAX); }
 
-void MemMgr::final() { BufMgr::final(); }
+void MemMgr::final() { Mgr::final(); }
 
 bool MemMgr::open(unsigned, ZuString, ZuString, OpenFn openFn)
 {

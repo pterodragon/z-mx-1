@@ -50,55 +50,43 @@ struct Hdr {
 
 private:
   constexpr static uint64_t countMask() { return 0xfffffffULL; }
+  constexpr static uint64_t lengthMask() { return countMask(); }
   constexpr static unsigned lengthShift() { return 28U; }
-  constexpr static uint64_t lengthMask() { return countMask()<<lengthShift(); }
 public:
   constexpr static uint64_t lengthMax() { return countMask(); }
 private:
-  constexpr static uint64_t expMask_() { return 0x1fULL; }
+  constexpr static uint64_t expMask() { return 0x1fULL; }
   constexpr static unsigned expShift() { return 56U; }
-  constexpr static uint64_t expMask() { return expMask_()<<expShift(); }
 
   uint64_t cle() const { return cle_; }
-  void cle(uint64_t v) { cle_ = v; }
 
 public:
   // offset (as a value count) of this buffer
   uint64_t offset() const { return offset_; }
-  void offset(uint64_t v) { offset_ = v; }
   // count of values in this buffer
-  unsigned count() const {
-    return cle() & countMask();
-  }
-  void count(uint64_t v) {
-    cle((cle() & ~countMask()) | v);
-  }
+  unsigned count() const { return cle() & countMask(); }
   // length of this buffer in bytes
-  unsigned length() const {
-    return (cle() & lengthMask())>>lengthShift();
-  }
-  void length(uint64_t v) {
-    cle((cle() & ~lengthMask()) | (v<<lengthShift()));
-  }
+  unsigned length() const { return (cle()>>lengthShift()) & lengthMask(); }
   // negative decimal exponent
-  unsigned exponent() const {
-    return (cle() & expMask())>>expShift();
-  }
-  void exponent(uint64_t v) {
-    cle((cle() & ~expMask()) | (v<<expShift()));
+  unsigned exponent() const { return cle()>>expShift(); }
+
+  void offset(uint64_t v) { offset_ = v; }
+  void cle(uint64_t count, uint64_t length, uint64_t exponent) {
+    cle_ = count | (length<<lengthShift()) | (exponent<<expShift());
   }
 };
 #pragma pack(pop)
 
 struct BufLRUNode_ {
   BufLRUNode_() = delete;
+  BufLRUNode_(const BufLRUNode_ &) = delete;
+  BufLRUNode_ &operator =(const BufLRUNode_ &) = delete;
+  BufLRUNode_(BufLRUNode_ &&) = delete;
+  BufLRUNode_ &operator =(BufLRUNode_ &&) = delete;
+  ~BufLRUNode_() = default;
+
   BufLRUNode_(void *mgr_, unsigned seriesID_, unsigned blkIndex_) :
       mgr(mgr_), seriesID(seriesID_), blkIndex(blkIndex_) { }
-  BufLRUNode_(const BufLRUNode_ &) = default;
-  BufLRUNode_ &operator =(const BufLRUNode_ &) = default;
-  BufLRUNode_(BufLRUNode_ &&) = default;
-  BufLRUNode_ &operator =(BufLRUNode_ &&) = default;
-  ~BufLRUNode_() = default;
 
   void		*mgr;
   unsigned	seriesID;
@@ -167,11 +155,10 @@ public:
     return Writer{start, end};
   }
   template <typename Writer>
-  void sync(const Writer &writer) {
+  void sync(const Writer &writer, unsigned exponent) {
     auto hdr = this->hdr();
-    hdr->count(writer.count());
     auto start = data() + sizeof(Hdr);
-    hdr->length(writer.pos() - start);
+    hdr->cle(writer.count(), writer.pos() - start, exponent);
   }
 
   unsigned space() const {

@@ -169,7 +169,7 @@ struct ZuFixed {
   }
 
   // comparisons
-  ZuInline int cmp(const ZuFixed &v) {
+  ZuInline int cmp(const ZuFixed &v) const {
     if (ZuLikely(exponent == v.exponent || !*value || !*v.value))
       return value.cmp(v.value);
     int128_t i = (typename ZuFixedVal::T)value;
@@ -180,7 +180,7 @@ struct ZuFixed {
       j *= ZuDecimalFn::pow10_64(exponent - v.exponent);
     return (i > j) - (i < j);
   }
-  ZuInline bool equals(const ZuFixed &v) {
+  ZuInline bool equals(const ZuFixed &v) const {
     if (ZuLikely(exponent == v.exponent || !*value || !*v.value))
       return value == v.value;
     int128_t i = (typename ZuFixedVal::T)value;
@@ -191,12 +191,12 @@ struct ZuFixed {
       j *= ZuDecimalFn::pow10_64(exponent - v.exponent);
     return i == j;
   }
-  ZuInline bool operator ==(const ZuFixed &v) { return equals(v); }
-  ZuInline bool operator !=(const ZuFixed &v) { return !equals(v); }
-  ZuInline bool operator >(const ZuFixed &v) { return cmp(v) > 0; }
-  ZuInline bool operator >=(const ZuFixed &v) { return cmp(v) >= 0; }
-  ZuInline bool operator <(const ZuFixed &v) { return cmp(v) < 0; }
-  ZuInline bool operator <=(const ZuFixed &v) { return cmp(v) <= 0; }
+  ZuInline bool operator ==(const ZuFixed &v) const { return equals(v); }
+  ZuInline bool operator !=(const ZuFixed &v) const { return !equals(v); }
+  ZuInline bool operator >(const ZuFixed &v) const { return cmp(v) > 0; }
+  ZuInline bool operator >=(const ZuFixed &v) const { return cmp(v) >= 0; }
+  ZuInline bool operator <(const ZuFixed &v) const { return cmp(v) < 0; }
+  ZuInline bool operator <=(const ZuFixed &v) const { return cmp(v) <= 0; }
 
   // ! is zero, unary * is !null
   ZuInline bool operator !() const { return !value; }

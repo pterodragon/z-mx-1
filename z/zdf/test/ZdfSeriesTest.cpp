@@ -23,57 +23,6 @@ void fail(const char *s, int64_t i) { print(s, i); }
 #define CHECK(x) ((x) ? ok("OK  " #x) : fail("NOK " #x))
 #define CHECK2(x, y) ((x == y) ? ok("OK  " #x, x) : fail("NOK " #x, x))
 
-template <typename Reader, typename Writer>
-void test() {
-  uint8_t p[4096], n[4096];
-  for (int64_t i = 0; i < 63; i++) {
-    int64_t j = 1; j <<= i;
-    {
-      Writer pw{p, p + 4096};
-      Writer nw{n, n + 4096};
-      for (int64_t k = 0; k < 10; k++) {
-	for (unsigned l = 0; l < 10; l++) CHECK(pw.write(j + k));
-	CHECK(pw.write(j + k + 1));
-	CHECK(pw.write(j + k + 2));
-	CHECK(pw.write(j + k + 4));
-	CHECK(pw.write(j + k + 8));
-	CHECK(pw.write(j + k * k));
-	CHECK(nw.write(-(j + k)));
-	CHECK(nw.write(-(j + k + 1)));
-	CHECK(nw.write(-(j + k + 2)));
-	CHECK(nw.write(-(j + k + 4)));
-	CHECK(nw.write(-(j + k + 8)));
-	CHECK(nw.write(-(j + k * k)));
-      }
-      std::cout <<
-	ZuDemangle<200>{typeid(Writer).name()} << " +ve: " << pw.count() << ' ' << (pw.pos() - p) << '\n';
-      std::cout <<
-	ZuDemangle<200>{typeid(Writer).name()} << " -ve: " << nw.count() << ' ' << (nw.pos() - n) << '\n';
-    }
-    {
-      Reader pr{p, p + 4096};
-      Reader nr{n, n + 4096};
-      int64_t v;
-      for (int64_t k = 0; k < 10; k++) {
-	for (unsigned l = 0; l < 10; l++) {
-	  CHECK(pr.read(v)); CHECK2(v, (j + k));
-	}
-	CHECK(pr.read(v)); CHECK2(v, (j + k + 1));
-	CHECK(pr.read(v)); CHECK2(v, (j + k + 2));
-	CHECK(pr.read(v)); CHECK2(v, (j + k + 4));
-	CHECK(pr.read(v)); CHECK2(v, (j + k + 8));
-	CHECK(pr.read(v)); CHECK2(v, (j + k * k));
-	CHECK(nr.read(v)); CHECK2(v, (-(j + k)));
-	CHECK(nr.read(v)); CHECK2(v, (-(j + k + 1)));
-	CHECK(nr.read(v)); CHECK2(v, (-(j + k + 2)));
-	CHECK(nr.read(v)); CHECK2(v, (-(j + k + 4)));
-	CHECK(nr.read(v)); CHECK2(v, (-(j + k + 8)));
-	CHECK(nr.read(v)); CHECK2(v, (-(j + k * k)));
-      }
-    }
-  }
-}
-
 int main()
 {
   using namespace Zdf;
@@ -84,18 +33,41 @@ int main()
   s.init(&mgr);
   s.open("test", "test");
   {
-    auto w = s.writer<DeltaWriter<>>();
+    auto w = s.writer<DeltaEncoder<>>();
     CHECK(w.write(ZuFixed{42, 0}));
     CHECK(w.write(ZuFixed{42, 0}));
+    CHECK(w.write(ZuFixed{4301, 2}));
+    CHECK(w.write(ZuFixed{4302, 2}));
+    CHECK(w.write(ZuFixed{43030, 3}));
+    CHECK(w.write(ZuFixed{43040, 3}));
+    CHECK(w.write(ZuFixed{430500, 4}));
+    CHECK(w.write(ZuFixed{430600, 4}));
   }
+  CHECK(s.blkCount() == 4);
   {
-    auto r = s.reader<DeltaReader<>>();
+    auto r = s.reader<DeltaDecoder<>>();
     ZuFixed v;
     CHECK(r.read(v)); CHECK(v.value == 42 && !v.exponent);
     CHECK(r.read(v)); CHECK(v.value == 42 && !v.exponent);
+    CHECK(r.read(v)); CHECK(v.value == 4301 && v.exponent == 2);
+    CHECK(r.read(v)); CHECK(v.value == 4302 && v.exponent == 2);
+    CHECK(r.read(v)); CHECK(v.value == 43030 && v.exponent == 3);
+    CHECK(r.read(v)); CHECK(v.value == 43040 && v.exponent == 3);
+    CHECK(r.read(v)); CHECK(v.value == 430500 && v.exponent == 4);
+    CHECK(r.read(v)); CHECK(v.value == 430600 && v.exponent == 4);
     CHECK(!r.read(v));
   }
+  {
+    auto r = s.index<DeltaDecoder<>>(ZuFixed{425, 1});
+    ZuFixed v;
+    CHECK(r.read(v)); CHECK(v.value == 4301 && v.exponent == 2);
+  }
+  {
+    auto r = s.index<DeltaDecoder<>>(ZuFixed{43019, 3});
+    ZuFixed v;
+    CHECK(r.read(v)); CHECK(v.value == 4302 && v.exponent == 2);
+  }
   s.close();
-  s.final();
-  mgr.final();
+  // s.final();
+  // mgr.final();
 }

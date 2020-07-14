@@ -21,14 +21,14 @@ void fail(const char *s, int64_t i) { print(s, i); }
 #define CHECK(x) ((x) ? ok("OK  " #x) : fail("NOK " #x))
 #define CHECK2(x, y) ((x == y) ? ok("OK  " #x, x) : fail("NOK " #x, x))
 
-template <typename Reader, typename Writer>
+template <typename Decoder, typename Encoder>
 void test() {
   uint8_t p[4096], n[4096];
   for (int64_t i = 0; i < 63; i++) {
     int64_t j = 1; j <<= i;
     {
-      Writer pw{p, p + 4096};
-      Writer nw{n, n + 4096};
+      Encoder pw{p, p + 4096};
+      Encoder nw{n, n + 4096};
       for (int64_t k = 0; k < 10; k++) {
 	for (unsigned l = 0; l < 10; l++) CHECK(pw.write(j + k));
 	CHECK(pw.write(j + k + 1));
@@ -44,13 +44,13 @@ void test() {
 	CHECK(nw.write(-(j + k * k)));
       }
       std::cout <<
-	ZuDemangle<200>{typeid(Writer).name()} << " +ve: " << pw.count() << ' ' << (pw.pos() - p) << '\n';
+	ZuDemangle<200>{typeid(Encoder).name()} << " +ve: " << pw.count() << ' ' << (pw.pos() - p) << '\n';
       std::cout <<
-	ZuDemangle<200>{typeid(Writer).name()} << " -ve: " << nw.count() << ' ' << (nw.pos() - n) << '\n';
+	ZuDemangle<200>{typeid(Encoder).name()} << " -ve: " << nw.count() << ' ' << (nw.pos() - n) << '\n';
     }
     {
-      Reader pr{p, p + 4096};
-      Reader nr{n, n + 4096};
+      Decoder pr{p, p + 4096};
+      Decoder nr{n, n + 4096};
       int64_t v;
       for (int64_t k = 0; k < 10; k++) {
 	for (unsigned l = 0; l < 10; l++) {
@@ -75,7 +75,9 @@ void test() {
 int main()
 {
   using namespace ZdfCompress;
-  test<Reader, Writer>();
-  test<DeltaReader<>, DeltaWriter<>>();
-  test<DeltaReader<DeltaReader<>>, DeltaWriter<DeltaWriter<>>>();
+  test<Decoder, Encoder>();
+  test<DeltaDecoder<>, DeltaEncoder<>>();
+  test<
+    DeltaDecoder<DeltaDecoder<>>,
+    DeltaEncoder<DeltaEncoder<>>>();
 }

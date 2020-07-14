@@ -65,25 +65,27 @@ namespace Zdf {
 // ZmTime then = df.time(nsecs);
 // reader.read(value);
 
-// typedefs for (de)compressors
-using AbsReader_ = ZdfCompress::Reader;
-template <typename Base> using DeltaReader__ = ZdfCompress::DeltaReader<Base>;
-using DeltaReader_ = DeltaReader__<AbsReader_>;
-using Delta2Reader_ = DeltaReader__<DeltaReader_>;
+// typedefs for (de)encoders
+using AbsDecoder = ZdfCompress::Decoder;
+template <typename Base>
+using DeltaDecoder_ = ZdfCompress::DeltaDecoder<Base>;
+using DeltaDecoder = DeltaDecoder_<AbsDecoder>;
+using Delta2Decoder = DeltaDecoder_<DeltaDecoder>;
 
-using AbsWriter_ = ZdfCompress::Writer;
-template <typename Base> using DeltaWriter__ = ZdfCompress::DeltaWriter<Base>;
-using DeltaWriter_ = DeltaWriter__<AbsWriter_>;
-using Delta2Writer_ = DeltaWriter__<DeltaWriter_>;
+using AbsEncoder = ZdfCompress::Encoder;
+template <typename Base>
+using DeltaEncoder_ = ZdfCompress::DeltaEncoder<Base>;
+using DeltaEncoder = DeltaEncoder_<AbsEncoder>;
+using Delta2Encoder = DeltaEncoder_<DeltaEncoder>;
 
 // typedefs for reader/writer types
-using AbsReader = Reader<Series, AbsReader_>;
-using DeltaReader = Reader<Series, DeltaReader_>;
-using Delta2Reader = Reader<Series, Delta2Reader_>;
+using AbsReader = Reader<Series, AbsDecoder>;
+using DeltaReader = Reader<Series, DeltaDecoder>;
+using Delta2Reader = Reader<Series, Delta2Decoder>;
 
-using AbsWriter = Writer<Series, AbsWriter_>;
-using DeltaWriter = Writer<Series, DeltaWriter_>;
-using Delta2Writer = Writer<Series, Delta2Writer_>;
+using AbsWriter = Writer<Series, AbsEncoder>;
+using DeltaWriter = Writer<Series, DeltaEncoder>;
+using Delta2Writer = Writer<Series, Delta2Encoder>;
 
 // run-time polymorphic reader
 using AnyReader_ = ZuUnion<AbsReader, DeltaReader, Delta2Reader>;
@@ -104,24 +106,24 @@ struct AnyReader : public AnyReader_ {
   void init(const Series *s, unsigned flags, uint64_t offset) {
     if (flags & ZvFieldFlags::Delta)
       new (AnyReader_::init<DeltaReader>())
-	DeltaReader{s->reader<DeltaReader_>(offset)};
+	DeltaReader{s->reader<DeltaDecoder>(offset)};
     else if (flags & ZvFieldFlags::Delta2)
       new (AnyReader_::init<Delta2Reader>())
-	Delta2Reader{s->reader<Delta2Reader_>(offset)};
+	Delta2Reader{s->reader<Delta2Decoder>(offset)};
     else
       new (AnyReader_::init<AbsReader>())
-	AbsReader{s->reader<AbsReader_>(offset)};
+	AbsReader{s->reader<AbsDecoder>(offset)};
   }
   void initIndex(const Series *s, unsigned flags, const ZuFixed &value) {
     if (flags & ZvFieldFlags::Delta)
       new (AnyReader_::init<DeltaReader>())
-	DeltaReader{s->index<DeltaReader_>(value)};
+	DeltaReader{s->index<DeltaDecoder>(value)};
     else if (flags & ZvFieldFlags::Delta2)
       new (AnyReader_::init<Delta2Reader>())
-	Delta2Reader{s->index<Delta2Reader_>(value)};
+	Delta2Reader{s->index<Delta2Decoder>(value)};
     else
       new (AnyReader_::init<AbsReader>())
-	AbsReader{s->index<AbsReader_>(value)};
+	AbsReader{s->index<AbsDecoder>(value)};
   }
   bool read(ZuFixed &v) {
     return dispatch([&v](auto &&r) { return r.read(v); });
@@ -156,13 +158,13 @@ struct AnyWriter : public AnyWriter_ {
   void init(Series *s, unsigned flags) {
     if (flags & ZvFieldFlags::Delta)
       new (AnyWriter_::init<DeltaWriter>())
-	DeltaWriter{s->writer<DeltaWriter_>()};
+	DeltaWriter{s->writer<DeltaEncoder>()};
     else if (flags & ZvFieldFlags::Delta2)
       new (AnyWriter_::init<Delta2Writer>())
-	Delta2Writer{s->writer<Delta2Writer_>()};
+	Delta2Writer{s->writer<Delta2Encoder>()};
     else
       new (AnyWriter_::init<AbsWriter>())
-	AbsWriter{s->writer<AbsWriter_>()};
+	AbsWriter{s->writer<AbsEncoder>()};
   }
 
   bool write(ZuFixed v) {

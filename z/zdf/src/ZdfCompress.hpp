@@ -40,28 +40,28 @@
 
 namespace ZdfCompress {
 
-class Reader {
+class Decoder {
 public:
-  Reader() : m_pos(nullptr), m_end(nullptr) { }
-  Reader(const Reader &r) :
+  Decoder() : m_pos(nullptr), m_end(nullptr) { }
+  Decoder(const Decoder &r) :
       m_pos(r.m_pos), m_end(r.m_end),
       m_prev(r.m_prev), m_rle(r.m_rle), m_count(r.m_count) { }
-  Reader &operator =(const Reader &r) {
-    this->~Reader(); // nop
-    new (this) Reader{r};
+  Decoder &operator =(const Decoder &r) {
+    this->~Decoder(); // nop
+    new (this) Decoder{r};
     return *this;
   }
-  Reader(Reader &&r) noexcept :
+  Decoder(Decoder &&r) noexcept :
       m_pos(r.m_pos), m_end(r.m_end),
       m_prev(r.m_prev), m_rle(r.m_rle), m_count(r.m_count) { }
-  Reader &operator =(Reader &&r) noexcept {
-    this->~Reader(); // nop
-    new (this) Reader{ZuMv(r)};
+  Decoder &operator =(Decoder &&r) noexcept {
+    this->~Decoder(); // nop
+    new (this) Decoder{ZuMv(r)};
     return *this;
   }
-  ~Reader() = default;
+  ~Decoder() = default;
 
-  Reader(const uint8_t *start, const uint8_t *end) :
+  Decoder(const uint8_t *start, const uint8_t *end) :
       m_pos(start), m_end(end) { }
 
   bool operator !() const { return !m_pos; }
@@ -188,26 +188,36 @@ private:
   unsigned	m_count = 0;
 };
 
-template <typename Base = Reader>
-class DeltaReader : public Base {
+template <typename Base = Decoder>
+class DeltaDecoder : public Base {
 public:
-  DeltaReader() : Base() { }
-  DeltaReader(const DeltaReader &r) : Base(r), m_base(r.m_base) { }
-  DeltaReader &operator =(const DeltaReader &r) {
-    this->~DeltaReader(); // nop
-    new (this) DeltaReader{r};
+  DeltaDecoder() : Base() { }
+  DeltaDecoder(const DeltaDecoder &r) : Base(r), m_base(r.m_base) { }
+  DeltaDecoder &operator =(const DeltaDecoder &r) {
+    this->~DeltaDecoder(); // nop
+    new (this) DeltaDecoder{r};
     return *this;
   }
-  DeltaReader(DeltaReader &&r) :
+  DeltaDecoder(DeltaDecoder &&r) :
       Base(static_cast<Base &&>(r)), m_base(r.m_base) { }
-  DeltaReader &operator =(DeltaReader &&r) {
-    this->~DeltaReader(); // nop
-    new (this) DeltaReader{ZuMv(r)};
+  DeltaDecoder &operator =(DeltaDecoder &&r) {
+    this->~DeltaDecoder(); // nop
+    new (this) DeltaDecoder{ZuMv(r)};
     return *this;
   }
 
-  DeltaReader(const uint8_t *start, const uint8_t *end) :
+  DeltaDecoder(const uint8_t *start, const uint8_t *end) :
       Base(start, end) { }
+
+  template <typename L>
+  bool search(L l) {
+    return Base::search([this, l = ZuMv(l)](int64_t skip) {
+      int64_t value = m_base + skip;
+      if (l(value)) return true;
+      m_base = value;
+      return false;
+    });
+  }
 
   bool read(int64_t &value_) {
     int64_t value;
@@ -220,15 +230,15 @@ private:
   int64_t		m_base = 0;
 };
 
-class Writer {
-  Writer(const Writer &) = delete;
-  Writer &operator =(const Writer &) = delete;
+class Encoder {
+  Encoder(const Encoder &) = delete;
+  Encoder &operator =(const Encoder &) = delete;
 
 public:
-  Writer(uint8_t *start, uint8_t *end) : m_pos(start), m_end(end) { }
+  Encoder(uint8_t *start, uint8_t *end) : m_pos(start), m_end(end) { }
 
-  Writer() : m_pos(nullptr), m_end(nullptr) { }
-  Writer(Writer &&w) noexcept :
+  Encoder() : m_pos(nullptr), m_end(nullptr) { }
+  Encoder(Encoder &&w) noexcept :
       m_pos(w.m_pos), m_end(w.m_end),
       m_rle(w.m_rle), m_prev(w.m_prev), m_count(w.m_count) {
     w.m_pos = nullptr;
@@ -237,12 +247,12 @@ public:
     w.m_prev = 0;
     w.m_count = 0;
   }
-  Writer &operator =(Writer &&w) noexcept {
-    this->~Writer(); // nop
-    new (this) Writer{ZuMv(w)};
+  Encoder &operator =(Encoder &&w) noexcept {
+    this->~Encoder(); // nop
+    new (this) Encoder{ZuMv(w)};
     return *this;
   }
-  ~Writer() = default;
+  ~Encoder() = default;
 
   ZuInline uint8_t *pos() const { return m_pos; }
   ZuInline uint8_t *end() const { return m_end; }
@@ -319,6 +329,8 @@ public:
     return true;
   }
 
+  ZuInline int64_t last() const { return m_prev; }
+
 private:
   uint8_t	*m_pos, *m_end;
   uint8_t	*m_rle = nullptr;
@@ -326,25 +338,25 @@ private:
   unsigned	m_count = 0;
 };
 
-template <typename Base = Writer>
-class DeltaWriter : public Base {
-  DeltaWriter(const DeltaWriter &) = delete;
-  DeltaWriter &operator =(const DeltaWriter &) = delete;
+template <typename Base = Encoder>
+class DeltaEncoder : public Base {
+  DeltaEncoder(const DeltaEncoder &) = delete;
+  DeltaEncoder &operator =(const DeltaEncoder &) = delete;
 
 public:
-  DeltaWriter(uint8_t *start, uint8_t *end) : Base(start, end) { }
+  DeltaEncoder(uint8_t *start, uint8_t *end) : Base(start, end) { }
 
-  DeltaWriter() { }
-  DeltaWriter(DeltaWriter &&w) noexcept :
+  DeltaEncoder() { }
+  DeltaEncoder(DeltaEncoder &&w) noexcept :
       Base{static_cast<Base &&>(w)}, m_base{w.m_base} {
     w.m_base = 0;
   }
-  DeltaWriter &operator =(DeltaWriter &&w) noexcept {
-    this->~DeltaWriter(); // nop
-    new (this) DeltaWriter{ZuMv(w)};
+  DeltaEncoder &operator =(DeltaEncoder &&w) noexcept {
+    this->~DeltaEncoder(); // nop
+    new (this) DeltaEncoder{ZuMv(w)};
     return *this;
   }
-  ~DeltaWriter() = default;
+  ~DeltaEncoder() = default;
 
   bool write(int64_t value) {
     int64_t delta = value - m_base;
@@ -352,6 +364,8 @@ public:
     m_base = value;
     return true;
   }
+
+  ZuInline int64_t last() const { return m_base + Base::last(); }
 
 private:
   int64_t	m_base = 0;

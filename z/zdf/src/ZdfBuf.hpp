@@ -44,9 +44,11 @@ namespace Zdf {
 #pragma pack(push, 1)
 struct Hdr {
   using UInt64 = ZuLittleEndian<uint64_t>;
+  using Int64 = ZuLittleEndian<int64_t>;
 
   UInt64	offset_ = 0;
   UInt64	cle_ = 0;	// count/length/exponent
+  Int64		last = 0;	// value at end of buffer
 
 private:
   constexpr static uint64_t countMask() { return 0xfffffffULL; }
@@ -155,10 +157,11 @@ public:
     return Writer{start, end};
   }
   template <typename Writer>
-  void sync(const Writer &writer, unsigned exponent) {
+  void sync(const Writer &writer, unsigned exponent, int64_t last) {
     auto hdr = this->hdr();
     auto start = data() + sizeof(Hdr);
     hdr->cle(writer.count(), writer.pos() - start, exponent);
+    hdr->last = last;
   }
 
   unsigned space() const {

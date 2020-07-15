@@ -131,7 +131,7 @@ public:
 
   void purge() {
     if (ZuUnlikely(!*this)) return;
-    m_series->purge_(m_buf->blkIndex);
+    const_cast<Series *>(m_series)->purge_(m_buf->blkIndex);
   }
 
   uint64_t offset() const {
@@ -328,17 +328,15 @@ private:
   template <typename Decoder>
   Decoder firstReader_(
       ZmRef<Buf> &buf, unsigned search, uint64_t offset) const {
-    if (!ZuSearchFound(search)) goto null;
+    unsigned blkIndex = ZuSearchPos(search);
+    if (blkIndex >= m_blks.length()) goto null;
+    if (!(buf = loadBuf(blkIndex))) goto null;
     {
-      unsigned blkIndex = ZuSearchPos(search);
-      if (blkIndex >= m_blks.length()) goto null;
-      if (!(buf = loadBuf(blkIndex))) goto null;
-      {
-	auto reader = buf->reader<Decoder>();
-	offset -= buf->hdr()->offset();
-	if (!reader.seek(offset)) goto null;
-	return reader;
-      }
+      auto reader = buf->reader<Decoder>();
+      auto offset_ = buf->hdr()->offset();
+      if (offset_ >= offset) return reader;
+      if (!reader.seek(offset - offset_)) goto null;
+      return reader;
     }
   null:
     buf = nullptr;

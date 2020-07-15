@@ -42,6 +42,9 @@ int main()
     CHECK(w.write(ZuFixed{43040, 3}));
     CHECK(w.write(ZuFixed{430500, 4}));
     CHECK(w.write(ZuFixed{430600, 4}));
+    for (unsigned i = 0; i < 300; i++) {
+      CHECK(w.write(ZuFixed{430700, 4}));
+    }
   }
   CHECK(s.blkCount() == 4);
   {
@@ -55,6 +58,10 @@ int main()
     CHECK(r.read(v)); CHECK(v.value == 43040 && v.exponent == 3);
     CHECK(r.read(v)); CHECK(v.value == 430500 && v.exponent == 4);
     CHECK(r.read(v)); CHECK(v.value == 430600 && v.exponent == 4);
+    for (unsigned i = 0; i < 300; i++) {
+      CHECK(r.read(v));
+      CHECK(v.value == 430700 && v.exponent == 4);
+    }
     CHECK(!r.read(v));
   }
   {
@@ -66,6 +73,28 @@ int main()
     auto r = s.index<DeltaDecoder<>>(ZuFixed{43019, 3});
     ZuFixed v;
     CHECK(r.read(v)); CHECK(v.value == 4302 && v.exponent == 2);
+    r.purge();
+  }
+  CHECK(s.blkCount() == 3);
+  {
+    auto r = s.index<DeltaDecoder<>>(ZuFixed{44, 0});
+    ZuFixed v;
+    CHECK(!r);
+    CHECK(!r.read(v));
+  }
+  {
+    auto r = s.reader<DeltaDecoder<>>();
+    ZuFixed v;
+    CHECK(r.read(v)); CHECK(v.value == 4301 && v.exponent == 2);
+  }
+  {
+    auto r = s.reader<DeltaDecoder<>>(208);
+    ZuFixed v;
+    for (unsigned i = 0; i < 100; i++) {
+      CHECK(r.read(v));
+      CHECK(v.value == 430700 && v.exponent == 4);
+    }
+    CHECK(!r.read(v));
   }
   s.close();
   // s.final();

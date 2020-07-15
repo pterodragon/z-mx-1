@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// Data Series Buffer Management
+// Data Series Buffer
 
 #ifndef ZdfBuf_HPP
 #define ZdfBuf_HPP
@@ -48,7 +48,7 @@ struct Hdr {
 
   UInt64	offset_ = 0;
   UInt64	cle_ = 0;	// count/length/exponent
-  Int64		last = 0;	// value at end of buffer
+  Int64		last = 0;	// last value in buffer
 
 private:
   constexpr static uint64_t countMask() { return 0xfffffffULL; }
@@ -63,7 +63,7 @@ private:
   uint64_t cle() const { return cle_; }
 
 public:
-  // offset (as a value count) of this buffer
+  // offset (as a value count) of the first value in this buffer
   uint64_t offset() const { return offset_; }
   // count of values in this buffer
   unsigned count() const { return cle() & countMask(); }

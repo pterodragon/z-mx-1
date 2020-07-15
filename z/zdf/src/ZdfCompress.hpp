@@ -91,6 +91,29 @@ public:
   }
 
   template <typename L>
+  bool seek(unsigned count, L l) {
+    while (count) {
+      if (m_rle) {
+	if (m_rle >= count) {
+	  m_rle -= count;
+	  m_count += count;
+	  return true;
+	}
+	l(m_prev);
+	m_count += m_rle;
+	count -= m_rle;
+	m_rle = 0;
+      } else {
+	int64_t value;
+	if (!read_(&value)) return false;
+	l(value);
+	--count;
+      }
+    }
+    return true;
+  }
+
+  template <typename L>
   bool search(L l) {
     int64_t value;
     const uint8_t *origPos;
@@ -209,9 +232,20 @@ public:
   DeltaDecoder(const uint8_t *start, const uint8_t *end) :
       Base(start, end) { }
 
+  bool seek(unsigned count) {
+    return Base::seek(count, [this](int64_t skip) { m_base += skip; });
+  }
+
+  template <typename L>
+  bool seek(unsigned count, L l) {
+    return Base::seek(count, [this, l = ZuMv(l)](int64_t skip) mutable {
+      l(m_base += skip);
+    });
+  }
+
   template <typename L>
   bool search(L l) {
-    return Base::search([this, l = ZuMv(l)](int64_t skip) {
+    return Base::search([this, l = ZuMv(l)](int64_t skip) mutable {
       int64_t value = m_base + skip;
       if (l(value)) return true;
       m_base = value;

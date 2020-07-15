@@ -16,8 +16,8 @@ void print(const char *s) {
 void print(const char *s, int64_t i) {
   std::cout << s << ' ' << i << '\n' << std::flush;
 }
-void ok(const char *s) { print(s); }
-void ok(const char *s, int64_t i) { print(s, i); }
+void ok(const char *s) { } // { print(s); }
+void ok(const char *s, int64_t i) { } // { print(s, i); }
 void fail(const char *s) { print(s); }
 void fail(const char *s, int64_t i) { print(s, i); }
 #define CHECK(x) ((x) ? ok("OK  " #x) : fail("NOK " #x))
@@ -90,7 +90,12 @@ int main()
   {
     auto r = s.reader<DeltaDecoder<>>(208);
     ZuFixed v;
-    for (unsigned i = 0; i < 100; i++) {
+    for (unsigned i = 0; i < 50; i++) {
+      CHECK(r.read(v));
+      CHECK(v.value == 430700 && v.exponent == 4);
+    }
+    CHECK(r.offset() == 258);
+    for (unsigned i = 0; i < 50; i++) {
       CHECK(r.read(v));
       CHECK(v.value == 430700 && v.exponent == 4);
     }

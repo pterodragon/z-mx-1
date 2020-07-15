@@ -187,9 +187,15 @@ ZuSearch(T *data, unsigned n, Cmp cmp) {
 loop:
   unsigned m = n>>1;
   int v = cmp(data[m]);
-  if constexpr (Match) if (!v) return ((o + m)<<1) | 1;
-  if (!m) return (o + (v >= 0))<<1;
-  if (v < 0) { n = m; goto loop; }
+  if (!m) {
+    if constexpr (Match) if (!v) return (o<<1) | 1;
+    if (v <= 0) return o<<1;
+    return (o + 1)<<1;
+  }
+  if (v <= 0) {
+    n = m;
+    goto loop;
+  }
   data += m;
   o += m;
   n -= m;
@@ -206,57 +212,56 @@ inline unsigned ZuSearch(T *data, unsigned n, const T &item) {
 template <bool Match = true, typename T, typename Cmp>
 inline typename ZuIfT<
   ZuCanOpFn<Cmp, int (Cmp::*)(const T &) const>::OK ||
-  ZuCanOpFn<Cmp, int (Cmp::*)(const T &)>::OK,
+  ZuCanOpFn<Cmp, int (Cmp::*)(const T &)>::OK ||
+  ZuCanOpFn<Cmp, int (Cmp::*)(T) const>::OK ||
+  ZuCanOpFn<Cmp, int (Cmp::*)(T)>::OK,
   unsigned>::T
 ZuInterSearch(T *data, unsigned n, Cmp cmp) {
   if (!n) return 0;
   unsigned o = 0;
   int v1, v2;
-  if (n <= 2) {
-small1:
+  if (n == 1) {
     v1 = cmp(data[0]);
-    if (n == 2) v2 = cmp(data[1]);
-small2:
-    if (v1 < 0) return o<<1;
+small1:
     if constexpr (Match) if (!v1) return (o<<1) | 1;
-    ++o;
-    if (n == 1) return o<<1;
-    if constexpr (Match) if (!v2) return (o<<1) | 1;
-    return (o + (v2 >= 0))<<1;
+    if (v1 <= 0) return o<<1;
+    return (o + 1)<<1;
+  }
+  if (n == 2) {
+    v1 = cmp(data[0]);
+    v2 = cmp(data[1]);
+small2:
+    if constexpr (Match) if (!v1) return (o<<1) | 1;
+    if (v1 <= 0) return o<<1;
+    if constexpr (Match) if (!v2) return ((o + 1)<<1) | 1;
+    if (v2 <= 0) return (o + 1)<<1;
+    return (o + 2)<<1;
   }
   v1 = cmp(data[0]);
   v2 = cmp(data[n - 1]);
+  if constexpr (Match) if (!v1) return 1;
+  if (v1 <= 0) return 0;
+  if (v2 > 0) return n<<1;
+  if (n == 3) {
+    v2 = cmp(data[1]);
+    goto small2;
+  }
 loop:
-  if (v1 < 0) return 0;
-  if constexpr (Match) {
-    if (!v1) return (o<<1) | 1;
-    if (!v2) return ((o + n - 1)<<1) | 1;
-  }
-  if (v2 >= 0) return (o + n)<<1;
-  if (n <= 4) {
-    ++data;
-    ++o;
-    n -= 2;
-    goto small1;
-  }
   unsigned m = ((n - 3) * v1) / (v1 - v2) + 1;
   int v3 = cmp(data[m]);
-  if constexpr (Match) if (!v3) return ((o + m)<<1) | 1;
-  if (v3 < 0) {
-    ++data;
-    ++o;
-    if (m <= 1) return (o + m)<<1;
-    n = m - 1;
+  if (v3 <= 0) {
+    n = m;
+    if (n == 1) goto small1;
     v2 = v3;
-    if (n <= 2) goto small2;
+    if (n == 2) goto small2;
     goto loop;
   }
-  data += m + 1;
-  o += m + 1;
-  n -= m + 2;
-  if (!n) return o<<1;
+  data += m;
+  o += m;
+  n -= m;
   v1 = v3;
-  if (n <= 2) goto small2;
+  if (n == 1) goto small1;
+  if (n == 2) goto small2;
   goto loop;
 }
 template <bool Match = true, typename T>

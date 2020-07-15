@@ -393,8 +393,12 @@ public:
   }
   template <unsigned I>
   typename Type<I>::T *ptr() {
+    if (type() != I) return nullptr;
+    return ptr_<I>();
+  }
+  template <unsigned I>
+  typename Type<I>::T *ptr_() {
     using T = typename Type<I>::T;
-    if (type() != I) return 0;
     T *ZuMayAlias(ptr) = reinterpret_cast<T *>(m_u);
     return ptr;
   }

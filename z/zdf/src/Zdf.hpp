@@ -89,91 +89,159 @@ using Delta2Writer = Writer<Series, Delta2Encoder>;
 
 // run-time polymorphic reader
 using AnyReader_ = ZuUnion<AbsReader, DeltaReader, Delta2Reader>;
-struct AnyReader : public AnyReader_ {
-  AnyReader() = default;
-  AnyReader(const AnyReader &r) : AnyReader_{r} { }
-  AnyReader(AnyReader &&r) : AnyReader_{static_cast<AnyReader_ &&>(r)} { }
+class AnyReader : public AnyReader_ {
+public:
+  AnyReader() {
+    initFn();
+  }
+  AnyReader(const AnyReader &r) : AnyReader_{r} {
+    initFn();
+  }
+  AnyReader(AnyReader &&r) : AnyReader_{static_cast<AnyReader_ &&>(r)} {
+    initFn();
+  }
   AnyReader &operator =(const AnyReader &r) {
     AnyReader_::operator =(r);
+    initFn();
     return *this;
   }
   AnyReader &operator =(AnyReader &&r) {
     AnyReader_::operator =(static_cast<AnyReader_ &&>(r));
+    initFn();
     return *this;
   }
   ~AnyReader() = default;
 
   void init(const Series *s, unsigned flags, uint64_t offset) {
     if (flags & ZvFieldFlags::Delta)
-      new (AnyReader_::init<DeltaReader>())
-	DeltaReader{s->reader<DeltaDecoder>(offset)};
+      init_<DeltaReader>(s, offset);
     else if (flags & ZvFieldFlags::Delta2)
-      new (AnyReader_::init<Delta2Reader>())
-	Delta2Reader{s->reader<Delta2Decoder>(offset)};
+      init_<Delta2Reader>(s, offset);
     else
-      new (AnyReader_::init<AbsReader>())
-	AbsReader{s->reader<AbsDecoder>(offset)};
+      init_<AbsReader>(s, offset);
   }
   void initIndex(const Series *s, unsigned flags, const ZuFixed &value) {
     if (flags & ZvFieldFlags::Delta)
-      new (AnyReader_::init<DeltaReader>())
-	DeltaReader{s->index<DeltaDecoder>(value)};
+      initIndex_<DeltaReader>(s, value);
     else if (flags & ZvFieldFlags::Delta2)
-      new (AnyReader_::init<Delta2Reader>())
-	Delta2Reader{s->index<Delta2Decoder>(value)};
+      initIndex_<Delta2Reader>(s, value);
     else
-      new (AnyReader_::init<AbsReader>())
-	AbsReader{s->index<AbsDecoder>(value)};
+      initIndex_<AbsReader>(s, value);
   }
-  bool read(ZuFixed &v) {
-    return dispatch([&v](auto &&r) { return r.read(v); });
+
+  ZuInline bool read(ZuFixed &v) { return m_readFn(this, v); }
+  ZuInline void seekFwd(uint64_t offset) { m_seekFwdFn(this, offset); }
+  ZuInline void seekRev(uint64_t offset) { m_seekRevFn(this, offset); }
+  ZuInline void indexFwd(const ZuFixed &value) { m_indexFwdFn(this, value); }
+  ZuInline void indexRev(const ZuFixed &value) { m_indexRevFn(this, value); }
+
+private:
+  template <typename Reader>
+  void init_(const Series *s, unsigned offset) {
+    new (AnyReader_::init<Reader>())
+      Reader{s->reader<typename Reader::Decoder>(offset)};
+    initFn_<Reader>();
   }
-  void seekFwd(uint64_t offset) {
-    dispatch([offset](auto &&r) { r.seekFwd(offset); });
+  template <typename Reader>
+  void initIndex_(const Series *s, const ZuFixed &value) {
+    new (AnyReader_::init<Reader>())
+      Reader{s->index<typename Reader::Decoder>(value)};
+    initFn_<Reader>();
   }
-  void seekRev(uint64_t offset) {
-    dispatch([offset](auto &&r) { r.seekRev(offset); });
+
+  void initFn() {
+    dispatch([this](auto &&v) { initFn_<typename ZuDecay<decltype(v)>::T>(); });
   }
-  void indexFwd(ZuFixed value) {
-    dispatch([&value](auto &&r) { r.indexFwd(value); });
+  template <typename Reader>
+  void initFn_() {
+    m_readFn = [](AnyReader *this_, ZuFixed &v) {
+      return this_->ptr_<Index<Reader>::I>()->read(v);
+    };
+    m_seekFwdFn = [](AnyReader *this_, uint64_t offset) {
+      this_->ptr_<Index<Reader>::I>()->seekFwd(offset);
+    };
+    m_seekRevFn = [](AnyReader *this_, uint64_t offset) {
+      this_->ptr_<Index<Reader>::I>()->seekRev(offset);
+    };
+    m_indexFwdFn = [](AnyReader *this_, const ZuFixed &value) {
+      this_->ptr_<Index<Reader>::I>()->indexFwd(value);
+    };
+    m_indexRevFn = [](AnyReader *this_, const ZuFixed &value) {
+      this_->ptr_<Index<Reader>::I>()->indexRev(value);
+    };
   }
-  void indexRev(ZuFixed value) {
-    dispatch([&value](auto &&r) { r.indexRev(value); });
-  }
+
+  typedef bool (*ReadFn)(AnyReader *, ZuFixed &);
+  typedef void (*SeekFn)(AnyReader *, uint64_t); 
+  typedef void (*IndexFn)(AnyReader *, const ZuFixed &); 
+
+private:
+  ReadFn	m_readFn = nullptr;
+  SeekFn	m_seekFwdFn = nullptr;
+  SeekFn	m_seekRevFn = nullptr;
+  IndexFn	m_indexFwdFn = nullptr;
+  IndexFn	m_indexRevFn = nullptr;
 };
+
 // run-time polymorphic writer
 using AnyWriter_ = ZuUnion<AbsWriter, DeltaWriter, Delta2Writer>;
-struct AnyWriter : public AnyWriter_ {
+class AnyWriter : public AnyWriter_ {
+public:
   AnyWriter(const AnyWriter &r) = delete;
   AnyWriter &operator =(const AnyWriter &r) = delete;
 
-  AnyWriter() = default;
-  AnyWriter(AnyWriter &&r) : AnyWriter_{static_cast<AnyWriter_ &&>(r)} { }
+  AnyWriter() {
+    initFn();
+  }
+  AnyWriter(AnyWriter &&r) : AnyWriter_{static_cast<AnyWriter_ &&>(r)} {
+    initFn();
+  }
   AnyWriter &operator =(AnyWriter &&r) {
     AnyWriter_::operator =(static_cast<AnyWriter_ &&>(r));
+    initFn();
     return *this;
   }
   ~AnyWriter() = default;
 
   void init(Series *s, unsigned flags) {
     if (flags & ZvFieldFlags::Delta)
-      new (AnyWriter_::init<DeltaWriter>())
-	DeltaWriter{s->writer<DeltaEncoder>()};
+      init_<DeltaWriter>(s);
     else if (flags & ZvFieldFlags::Delta2)
-      new (AnyWriter_::init<Delta2Writer>())
-	Delta2Writer{s->writer<Delta2Encoder>()};
+      init_<Delta2Writer>(s);
     else
-      new (AnyWriter_::init<AbsWriter>())
-	AbsWriter{s->writer<AbsEncoder>()};
+      init_<AbsWriter>(s);
   }
 
-  bool write(ZuFixed v) {
-    return dispatch([v](auto &&w) { return w.write(v); });
+  bool write(const ZuFixed &v) { return m_writeFn(this, v); }
+  void sync() { m_syncFn(this); }
+
+private:
+  template <typename Writer>
+  void init_(Series *s) {
+    new (AnyWriter_::init<Writer>())
+      Writer{s->writer<typename Writer::Encoder>()};
+    initFn_<Writer>();
   }
 
-  void sync() {
-    return dispatch([](auto &&w) { w.sync(); });
+  void initFn() {
+    dispatch([this](auto &&v) { initFn_<typename ZuDecay<decltype(v)>::T>(); });
   }
+  template <typename Writer>
+  void initFn_() {
+    m_writeFn = [](AnyWriter *this_, const ZuFixed &v) {
+      return this_->ptr_<Index<Writer>::I>()->write(v);
+    };
+    m_syncFn = [](AnyWriter *this_) {
+      this_->ptr_<Index<Writer>::I>()->sync();
+    };
+  }
+
+  typedef bool (*WriteFn)(AnyWriter *, const ZuFixed &);
+  typedef void (*SyncFn)(AnyWriter *);
+
+private:
+  WriteFn	m_writeFn = nullptr;
+  SyncFn	m_syncFn = nullptr;
 };
 
 class ZdfAPI DataFrame {

@@ -22,6 +22,7 @@
 // - signed data
 // - Huffman-coded length prefix
 // - single-byte RLE
+// - efficient random-access (seeking) and interpolation searching
 // - absolute, delta (first derivative), and delta-of-delta (second derivative)
 
 #ifndef ZdfRW_HPP

@@ -128,6 +128,7 @@ template <typename T> struct ZuCmp_IntNull<T, 16, true> {
 // comparison of larger-sized (>= sizeof(int)) integral types
 
 template <typename T, bool isSmallInt> struct ZuCmp_Integral {
+  // delta() returns a value suitable for use in interpolation search
   enum { DeltaShift = ((sizeof(T) - sizeof(int))<<3) + 1 };
   ZuInline static int delta(T i1, T i2) {
     if (i1 == i2) return 0;

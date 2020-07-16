@@ -263,9 +263,10 @@ ZuInterSearch(T *data, unsigned n, Cmp cmp) {
   return (o + 2)<<1;
 }
 template <bool Match = true, typename T>
-inline unsigned ZuInterSearch(T *data, unsigned n, const T &item) {
+inline typename ZuIsIntegral<T, unsigned>::T
+ZuInterSearch(T *data, unsigned n, T v) {
   return ZuInterSearch<Match>(data, n,
-      [&item](const T &v) { return ZuCmp<T>::cmp(item, v); });
+      [v](const T &w) { return ZuCmp<T>::delta(v, w); });
 }
 
 #endif /* ZuSort_HPP */

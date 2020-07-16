@@ -184,22 +184,27 @@ inline typename ZuIfT<
 ZuSearch(T *data, unsigned n, Cmp cmp) {
   if (!n) return 0;
   unsigned o = 0;
-loop:
-  unsigned m = n>>1;
-  int v = cmp(data[m]);
-  if (!m) {
-    if constexpr (Match) if (!v) return (o<<1) | 1;
-    if (v <= 0) return o<<1;
-    return (o + 1)<<1;
+  int m = n>>1;
+  int v1 = cmp(data[m]);
+  while (n > 2) {
+    n -= m;
+    if (v1 > 0) {
+      data += m;
+      o += m;
+    }
+    v1 = cmp(data[m = n>>1]);
   }
-  if (v <= 0) {
-    n = m;
-    goto loop;
+  int v2;
+  if (n == 2) {
+    if (v1 > 0) return (o + 2)<<1;
+    v2 = v1;
+    v1 = cmp(data[0]);
   }
-  data += m;
-  o += m;
-  n -= m;
-  goto loop;
+  if constexpr (Match) if (!v1) return (o<<1) | 1;
+  if (v1 <= 0) return o<<1;
+  if (n == 1) return (o + 1)<<1;
+  if constexpr (Match) if (!v2) return ((o + 1)<<1) | 1;
+  return (o + 1)<<1;
 }
 template <bool Match = true, typename T>
 inline unsigned ZuSearch(T *data, unsigned n, const T &item) {
@@ -218,51 +223,44 @@ inline typename ZuIfT<
   unsigned>::T
 ZuInterSearch(T *data, unsigned n, Cmp cmp) {
   if (!n) return 0;
+  if (n <= 2) { // special case for small arrays
+    int v1 = cmp(data[0]);
+    if constexpr (Match) if (!v1) return 1;
+    if (v1 <= 0) return 0;
+    if (n == 1) return 2;
+    int v2 = cmp(data[1]);
+    if constexpr (Match) if (!v2) return 3;
+    if (v2 <= 0) return 2;
+    return 4;
+  }
   unsigned o = 0;
-  int v1, v2;
-  if (n == 1) {
-    v1 = cmp(data[0]);
-small1:
-    if constexpr (Match) if (!v1) return (o<<1) | 1;
-    if (v1 <= 0) return o<<1;
-    return (o + 1)<<1;
-  }
-  if (n == 2) {
-    v1 = cmp(data[0]);
-    v2 = cmp(data[1]);
-small2:
-    if constexpr (Match) if (!v1) return (o<<1) | 1;
-    if (v1 <= 0) return o<<1;
-    if constexpr (Match) if (!v2) return ((o + 1)<<1) | 1;
-    if (v2 <= 0) return (o + 1)<<1;
-    return (o + 2)<<1;
-  }
-  v1 = cmp(data[0]);
-  v2 = cmp(data[n - 1]);
+  int v1 = cmp(data[0]);
+  int v2 = cmp(data[n - 1]);
   if constexpr (Match) if (!v1) return 1;
   if (v1 <= 0) return 0;
   if (v2 > 0) return n<<1;
   if (n == 3) {
     v2 = cmp(data[1]);
-    goto small2;
+  } else {
+    do {
+      unsigned m = ((n - 3) * v1) / (v1 - v2) + 1;
+      int v3 = cmp(data[m]);
+      n -= m;
+      if (v3 <= 0) {
+	v2 = v3;
+      } else {
+	data += m;
+	o += m;
+	v1 = v3;
+      }
+    } while (n > 2);
+    if constexpr (Match) if (!v1) return (o<<1) | 1;
+    if (v1 <= 0) return o<<1;
+    if (n == 1) return (o + 1)<<1;
   }
-loop:
-  unsigned m = ((n - 3) * v1) / (v1 - v2) + 1;
-  int v3 = cmp(data[m]);
-  if (v3 <= 0) {
-    n = m;
-    if (n == 1) goto small1;
-    v2 = v3;
-    if (n == 2) goto small2;
-    goto loop;
-  }
-  data += m;
-  o += m;
-  n -= m;
-  v1 = v3;
-  if (n == 1) goto small1;
-  if (n == 2) goto small2;
-  goto loop;
+  if constexpr (Match) if (!v2) return ((o + 1)<<1) | 1;
+  if (v2 <= 0) return (o + 1)<<1;
+  return (o + 2)<<1;
 }
 template <bool Match = true, typename T>
 inline unsigned ZuInterSearch(T *data, unsigned n, const T &item) {

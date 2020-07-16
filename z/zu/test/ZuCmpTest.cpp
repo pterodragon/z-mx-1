@@ -122,8 +122,8 @@ template <unsigned N> struct SortTest {
       CHECK(ZuInterSearch(&foo[0], 1, 0) == 0);
       CHECK(ZuSearch(&foo[0], 1, 1) == 1);
       CHECK(ZuInterSearch(&foo[0], 1, 1) == 1);
-      CHECK(ZuSearch<false>(&foo[0], 1, 1) == 2);
-      CHECK(ZuInterSearch<false>(&foo[0], 1, 1) == 2);
+      CHECK(ZuSearch<false>(&foo[0], 1, 1) == 0);
+      CHECK(ZuInterSearch<false>(&foo[0], 1, 1) == 0);
     }
     {
       ZuArrayN<int, 2> foo{0, 1};
@@ -134,10 +134,10 @@ template <unsigned N> struct SortTest {
       CHECK(ZuInterSearch(&foo[0], 2, 0) == 1);
       CHECK(ZuSearch(&foo[0], 2, 1) == 3);
       CHECK(ZuInterSearch(&foo[0], 2, 1) == 3);
-      CHECK(ZuSearch<false>(&foo[0], 2, 0) == 2);
-      CHECK(ZuInterSearch<false>(&foo[0], 2, 0) == 2);
-      CHECK(ZuSearch<false>(&foo[0], 2, 1) == 4);
-      CHECK(ZuInterSearch<false>(&foo[0], 2, 1) == 4);
+      CHECK(ZuSearch<false>(&foo[0], 2, 0) == 0);
+      CHECK(ZuInterSearch<false>(&foo[0], 2, 0) == 0);
+      CHECK(ZuSearch<false>(&foo[0], 2, 1) == 2);
+      CHECK(ZuInterSearch<false>(&foo[0], 2, 1) == 2);
     }
     {
       ZuArrayN<int, 2> foo{1, 0};
@@ -156,10 +156,10 @@ template <unsigned N> struct SortTest {
       CHECK(ZuInterSearch(&foo[0], 3, 1) == 1);
       CHECK(ZuSearch(&foo[0], 3, 2) == 3);
       CHECK(ZuInterSearch(&foo[0], 3, 2) == 3);
-      CHECK(ZuSearch<false>(&foo[0], 3, 2) == 4);
-      CHECK(ZuInterSearch<false>(&foo[0], 3, 2) == 4);
-      CHECK(ZuSearch<false>(&foo[0], 3, 3) == 6);
-      CHECK(ZuInterSearch<false>(&foo[0], 3, 3) == 6);
+      CHECK(ZuSearch<false>(&foo[0], 3, 2) == 2);
+      CHECK(ZuInterSearch<false>(&foo[0], 3, 2) == 2);
+      CHECK(ZuSearch<false>(&foo[0], 3, 3) == 4);
+      CHECK(ZuInterSearch<false>(&foo[0], 3, 3) == 4);
     }
     {
       ZuArrayN<int, 4> foo{4, 1, 3, 0};
@@ -172,10 +172,10 @@ template <unsigned N> struct SortTest {
       CHECK(ZuInterSearch(&foo[0], 4, 1) == 3);
       CHECK(ZuSearch(&foo[0], 4, 2) == 4);
       CHECK(ZuInterSearch(&foo[0], 4, 2) == 4);
-      CHECK(ZuSearch<false>(&foo[0], 4, 3) == 6);
-      CHECK(ZuInterSearch<false>(&foo[0], 4, 3) == 6);
-      CHECK(ZuSearch<false>(&foo[0], 4, 4) == 8);
-      CHECK(ZuInterSearch<false>(&foo[0], 4, 4) == 8);
+      CHECK(ZuSearch<false>(&foo[0], 4, 3) == 4);
+      CHECK(ZuInterSearch<false>(&foo[0], 4, 3) == 4);
+      CHECK(ZuSearch<false>(&foo[0], 4, 4) == 6);
+      CHECK(ZuInterSearch<false>(&foo[0], 4, 4) == 6);
     }
     {
       ZuArrayN<int, 13> foo{3, 1, 2, 9, 5, 3, 5, 1, 10, 4, 0, 7, 6};
@@ -186,10 +186,10 @@ template <unsigned N> struct SortTest {
       CHECK(ZuInterSearch(&foo[0], 13, 0) == 1);
       CHECK(ZuSearch(&foo[0], 13, 2) == 7);
       CHECK(ZuInterSearch(&foo[0], 13, 2) == 7);
-      CHECK(ZuSearch<false>(&foo[0], 13, 5) == 18);
-      CHECK(ZuInterSearch<false>(&foo[0], 13, 5) == 18);
-      CHECK(ZuSearch<false>(&foo[0], 13, 10) == 26);
-      CHECK(ZuInterSearch<false>(&foo[0], 13, 10) == 26);
+      CHECK(ZuSearch<false>(&foo[0], 13, 5) == 14);
+      CHECK(ZuInterSearch<false>(&foo[0], 13, 5) == 14);
+      CHECK(ZuSearch<false>(&foo[0], 13, 10) == 24);
+      CHECK(ZuInterSearch<false>(&foo[0], 13, 10) == 24);
     }
   }
 };

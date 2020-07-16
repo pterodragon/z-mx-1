@@ -128,6 +128,20 @@ template <typename T> struct ZuCmp_IntNull<T, 16, true> {
 // comparison of larger-sized (>= sizeof(int)) integral types
 
 template <typename T, bool isSmallInt> struct ZuCmp_Integral {
+  enum { DeltaShift = ((sizeof(T) - sizeof(int))<<3) + 1 };
+  ZuInline static int delta(T i1, T i2) {
+    if (i1 == i2) return 0;
+    if (i1 > i2) {
+      i1 -= i2;
+      i1 >>= DeltaShift;
+      int delta = i1;
+      return delta | 1;
+    }
+    i2 -= i1;
+    i2 >>= DeltaShift;
+    int delta = i2;
+    return -(delta | 1);
+  }
   ZuInline static int cmp(T i1, T i2) {
     return (i1 > i2) - (i1 < i2);
   }
@@ -144,7 +158,12 @@ template <typename T, bool isSmallInt> struct ZuCmp_Integral {
 // comparison of small-sized (< sizeof(int)) integral types
 
 template <typename T> struct ZuCmp_Integral<T, true> {
-  ZuInline static int cmp(T i1, T i2) { return (int)i1 - (int)i2; }
+  ZuInline static int delta(T i1, T i2) {
+    return static_cast<int>(i1) - static_cast<int>(i2);
+  }
+  ZuInline static int cmp(T i1, T i2) {
+    return static_cast<int>(i1) - static_cast<int>(i2);
+  }
   ZuInline static bool equals(T i1, T i2) { return i1 == i2; }
   ZuInline static bool null(T i) { return i == null(); }
   ZuInline static const T &null() {

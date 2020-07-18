@@ -72,12 +72,13 @@ public:
   ZuInline const uint8_t *end() const { return m_end; }
   ZuInline unsigned count() const { return m_count; }
 
+  // seek to a position
   bool seek(unsigned count) {
     while (count) {
       if (m_rle) {
 	if (m_rle >= count) {
-	  m_rle -= count;
 	  m_count += count;
+	  m_rle -= count;
 	  return true;
 	}
 	m_count += m_rle;
@@ -85,62 +86,82 @@ public:
 	m_rle = 0;
       } else {
 	if (!read_(nullptr)) return false;
+	++m_count;
 	--count;
       }
     }
     return true;
   }
 
+  // seek to a position, informing upper layer of skipped values
+  // l(int64_t value, unsigned count)
   template <typename L>
   bool seek(unsigned count, L l) {
     while (count) {
       if (m_rle) {
 	if (m_rle >= count) {
-	  m_rle -= count;
+	  l(m_prev, count);
 	  m_count += count;
+	  m_rle -= count;
 	  return true;
 	}
-	l(m_prev);
+	l(m_prev, m_rle);
 	m_count += m_rle;
 	count -= m_rle;
 	m_rle = 0;
       } else {
 	int64_t value;
 	if (!read_(&value)) return false;
-	l(value);
+	l(value, 1);
+	++m_count;
 	--count;
       }
     }
     return true;
   }
 
+  // search for a value
+  // l(int64_t value, unsigned count) -> unsigned skipped
+  // search ends when skipped < count
   template <typename L>
   bool search(L l) {
-    int64_t value;
     const uint8_t *origPos;
-    do {
-      if (m_rle) {
-	if (l(m_prev)) return true;
-	m_count += m_rle;
-	m_rle = 0;
-      }
+    unsigned count;
+    if (m_rle) {
+      count = l(m_prev, m_rle);
+      m_count += count;
+      if (m_rle -= count) return true;
+    }
+    int64_t value;
+    for (;;) {
       origPos = m_pos;
       if (!read_(&value)) return false;
-    } while (!l(value));
-    m_pos = origPos;	// back-up by one value
-    m_rle = 0;		// just in case we began RLE
-    --m_count;
-    return true;
+      count = l(value, 1 + m_rle);
+      if (!count) {
+	m_pos = origPos;
+	return true;
+      }
+      ++m_count;
+      --count;
+      if (m_rle) {
+	m_count += count;
+	if (m_rle -= count) return true;
+      }
+    }
   }
 
   bool read(int64_t &value) {
     if (m_rle) {
+      ++m_count;
       --m_rle;
       value = m_prev;
+      return true;
+    }
+    if (read_(&value)) {
       ++m_count;
       return true;
     }
-    return read_(&value);
+    return false;
   }
 
 private:
@@ -151,7 +172,6 @@ private:
       ++m_pos;
       m_rle = byte & 0x7f;
       if (value_) *value_ = m_prev;
-      ++m_count;
       return true;
     }
     int64_t value;
@@ -201,11 +221,10 @@ private:
     }
     if (byte & 0x40) value = ~value;
     if (value_) *value_ = m_prev = value;
-    ++m_count;
     return true;
   }
 
-private:
+protected:
   const uint8_t	*m_pos, *m_end;
   int64_t	m_prev = 0;
   unsigned	m_rle = 0;
@@ -234,24 +253,33 @@ public:
       Base(start, end) { }
 
   bool seek(unsigned count) {
-    return Base::seek(count, [this](int64_t skip) { m_base += skip; });
+    return Base::seek(count,
+	[this](int64_t skip, unsigned count) {
+	  m_base += skip * count;
+	});
   }
 
   template <typename L>
   bool seek(unsigned count, L l) {
-    return Base::seek(count, [this, l = ZuMv(l)](int64_t skip) mutable {
-      l(m_base += skip);
-    });
+    return Base::seek(count,
+	[this, l = ZuMv(l)](int64_t skip, unsigned count) {
+	  for (unsigned i = 0; i < count; i++)
+	    l(m_base += skip, 1);
+	});
   }
 
   template <typename L>
   bool search(L l) {
-    return Base::search([this, l = ZuMv(l)](int64_t skip) mutable {
-      int64_t value = m_base + skip;
-      if (l(value)) return true;
-      m_base = value;
-      return false;
-    });
+    return Base::search(
+	[this, l = ZuMv(l)](int64_t skip, unsigned count) {
+	  int64_t value;
+	  for (unsigned i = 0; i < count; i++) {
+	    value = m_base + skip;
+	    if (!l(value, 1)) return i;
+	    m_base = value;
+	  }
+	  return count;
+	});
   }
 
   bool read(int64_t &value_) {

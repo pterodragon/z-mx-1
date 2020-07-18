@@ -344,16 +344,17 @@ private:
   }
   template <typename Decoder>
   Decoder firstIndex_(
-      ZmRef<Buf> &buf, unsigned search, const ZuFixed &value) const {
+      ZmRef<Buf> &buf, unsigned search, const ZuFixed &value_) const {
     unsigned blkIndex = ZuSearchPos(search);
     if (blkIndex >= m_blks.length()) goto null;
     if (!(buf = loadBuf(blkIndex))) goto null;
     {
       auto reader = buf->reader<Decoder>();
       bool found = reader.search(
-	  [&value, exponent = buf->hdr()->exponent()](int64_t skip) {
-	    return value < ZuFixed{skip, exponent};
-	  });
+	  [value = value_.adjust(buf->hdr()->exponent())](
+	    int64_t skip, unsigned count) -> unsigned {
+	      return skip < value ? count : 0;
+	    });
       if (!found) goto null;
       return reader;
     }

@@ -70,7 +70,7 @@ int main()
     CHECK(r.read(v)); CHECK(v.value == 4301 && v.exponent == 2);
   }
   {
-    auto r = s.index<DeltaDecoder<>>(ZuFixed{43019, 3});
+    auto r = s.index<DeltaDecoder<>>(ZuFixed{43020, 3});
     ZuFixed v;
     CHECK(r.read(v)); CHECK(v.value == 4302 && v.exponent == 2);
     r.purge();

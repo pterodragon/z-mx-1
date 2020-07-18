@@ -134,6 +134,9 @@ public:
   ZuInline void seekRev(uint64_t offset) { m_seekRevFn(this, offset); }
   ZuInline void indexFwd(const ZuFixed &value) { m_indexFwdFn(this, value); }
   ZuInline void indexRev(const ZuFixed &value) { m_indexRevFn(this, value); }
+  ZuInline uint64_t offset() { return m_offsetFn(this); }
+
+  void purge() { dispatch([](auto &&v) { v.purge(); }); }
 
 private:
   template <typename Reader>
@@ -150,7 +153,8 @@ private:
   }
 
   void initFn() {
-    dispatch([this](auto &&v) { initFn_<typename ZuDecay<decltype(v)>::T>(); });
+    dispatch(
+	[this](auto &&v) { initFn_<typename ZuDecay<decltype(v)>::T>(); });
   }
   template <typename Reader>
   void initFn_() {
@@ -169,11 +173,15 @@ private:
     m_indexRevFn = [](AnyReader *this_, const ZuFixed &value) {
       this_->ptr_<Index<Reader>::I>()->indexRev(value);
     };
+    m_offsetFn = [](const AnyReader *this_) {
+      return this_->ptr_<Index<Reader>::I>()->offset();
+    };
   }
 
   typedef bool (*ReadFn)(AnyReader *, ZuFixed &);
   typedef void (*SeekFn)(AnyReader *, uint64_t); 
   typedef void (*IndexFn)(AnyReader *, const ZuFixed &); 
+  typedef uint64_t (*OffsetFn)(const AnyReader *);
 
 private:
   ReadFn	m_readFn = nullptr;
@@ -181,6 +189,7 @@ private:
   SeekFn	m_seekRevFn = nullptr;
   IndexFn	m_indexFwdFn = nullptr;
   IndexFn	m_indexRevFn = nullptr;
+  OffsetFn	m_offsetFn = nullptr;
 };
 
 // run-time polymorphic writer

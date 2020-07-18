@@ -205,7 +205,11 @@ public:
   template <typename T>
   using Index = ZuUnion_Index<T, ZuUnion_Index_<Args...>>;
 
-  ZuUnion() { type_(0); }
+  ZuUnion() {
+    using T0 = typename Type<0>::T;
+    type_(0);
+    new (&m_u[0]) T0{};
+  }
 
   ~ZuUnion() {
     ZuSwitch::dispatch<N>(type(), [this](auto i) {
@@ -392,9 +396,20 @@ public:
     return this->template p<Index<T>::I>();
   }
   template <unsigned I>
+  const typename Type<I>::T *ptr() const {
+    if (type() != I) return nullptr;
+    return ptr_<I>();
+  }
+  template <unsigned I>
   typename Type<I>::T *ptr() {
     if (type() != I) return nullptr;
     return ptr_<I>();
+  }
+  template <unsigned I>
+  const typename Type<I>::T *ptr_() const {
+    using T = typename Type<I>::T;
+    const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(m_u);
+    return ptr;
   }
   template <unsigned I>
   typename Type<I>::T *ptr_() {

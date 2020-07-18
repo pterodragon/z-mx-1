@@ -57,8 +57,8 @@ namespace Zdf {
 // ...
 // AnyReader index, reader;
 // ...
-// df.index(index, 0, df.nsecs(time));		// index time to offset
-// df.reader(reader, N, index.offset());	// seek to offset
+// df.find(index, 0, df.nsecs(time));	// index time to offset
+// df.seek(reader, N, index.offset());	// seek reader to offset
 // ...
 // ZuFixed nsecs, value;
 // index.read(nsecs);
@@ -112,7 +112,7 @@ public:
   }
   ~AnyReader() = default;
 
-  void init(const Series *s, unsigned flags, uint64_t offset) {
+  void seek(const Series *s, unsigned flags, uint64_t offset) {
     if (flags & ZvFieldFlags::Delta)
       init_<DeltaReader>(s, offset);
     else if (flags & ZvFieldFlags::Delta2)
@@ -120,20 +120,23 @@ public:
     else
       init_<AbsReader>(s, offset);
   }
-  void initIndex(const Series *s, unsigned flags, const ZuFixed &value) {
+
+  // series must be monotonically increasing
+
+  void find(const Series *s, unsigned flags, const ZuFixed &value) {
     if (flags & ZvFieldFlags::Delta)
-      initIndex_<DeltaReader>(s, value);
+      find_<DeltaReader>(s, value);
     else if (flags & ZvFieldFlags::Delta2)
-      initIndex_<Delta2Reader>(s, value);
+      find_<Delta2Reader>(s, value);
     else
-      initIndex_<AbsReader>(s, value);
+      find_<AbsReader>(s, value);
   }
 
   ZuInline bool read(ZuFixed &v) { return m_readFn(this, v); }
   ZuInline void seekFwd(uint64_t offset) { m_seekFwdFn(this, offset); }
   ZuInline void seekRev(uint64_t offset) { m_seekRevFn(this, offset); }
-  ZuInline void indexFwd(const ZuFixed &value) { m_indexFwdFn(this, value); }
-  ZuInline void indexRev(const ZuFixed &value) { m_indexRevFn(this, value); }
+  ZuInline void findFwd(const ZuFixed &value) { m_findFwdFn(this, value); }
+  ZuInline void findRev(const ZuFixed &value) { m_findRevFn(this, value); }
   ZuInline uint64_t offset() { return m_offsetFn(this); }
 
   void purge() { dispatch([](auto &&v) { v.purge(); }); }
@@ -142,13 +145,13 @@ private:
   template <typename Reader>
   void init_(const Series *s, unsigned offset) {
     new (AnyReader_::init<Reader>())
-      Reader{s->reader<typename Reader::Decoder>(offset)};
+      Reader{s->seek<typename Reader::Decoder>(offset)};
     initFn_<Reader>();
   }
   template <typename Reader>
-  void initIndex_(const Series *s, const ZuFixed &value) {
+  void find_(const Series *s, const ZuFixed &value) {
     new (AnyReader_::init<Reader>())
-      Reader{s->index<typename Reader::Decoder>(value)};
+      Reader{s->find<typename Reader::Decoder>(value)};
     initFn_<Reader>();
   }
 
@@ -167,11 +170,11 @@ private:
     m_seekRevFn = [](AnyReader *this_, uint64_t offset) {
       this_->ptr_<Index<Reader>::I>()->seekRev(offset);
     };
-    m_indexFwdFn = [](AnyReader *this_, const ZuFixed &value) {
-      this_->ptr_<Index<Reader>::I>()->indexFwd(value);
+    m_findFwdFn = [](AnyReader *this_, const ZuFixed &value) {
+      this_->ptr_<Index<Reader>::I>()->findFwd(value);
     };
-    m_indexRevFn = [](AnyReader *this_, const ZuFixed &value) {
-      this_->ptr_<Index<Reader>::I>()->indexRev(value);
+    m_findRevFn = [](AnyReader *this_, const ZuFixed &value) {
+      this_->ptr_<Index<Reader>::I>()->findRev(value);
     };
     m_offsetFn = [](const AnyReader *this_) {
       return this_->ptr_<Index<Reader>::I>()->offset();
@@ -180,15 +183,15 @@ private:
 
   typedef bool (*ReadFn)(AnyReader *, ZuFixed &);
   typedef void (*SeekFn)(AnyReader *, uint64_t); 
-  typedef void (*IndexFn)(AnyReader *, const ZuFixed &); 
+  typedef void (*FindFn)(AnyReader *, const ZuFixed &); 
   typedef uint64_t (*OffsetFn)(const AnyReader *);
 
 private:
   ReadFn	m_readFn = nullptr;
   SeekFn	m_seekFwdFn = nullptr;
   SeekFn	m_seekRevFn = nullptr;
-  IndexFn	m_indexFwdFn = nullptr;
-  IndexFn	m_indexRevFn = nullptr;
+  FindFn	m_findFwdFn = nullptr;
+  FindFn	m_findRevFn = nullptr;
   OffsetFn	m_offsetFn = nullptr;
 };
 
@@ -311,15 +314,15 @@ private:
     w.init(m_series[i], flags);
   }
 public:
-  void reader(AnyReader &r, unsigned i, uint64_t offset = 0) {
+  void seek(AnyReader &r, unsigned i, uint64_t offset = 0) {
     auto field = m_fields[i];
     unsigned flags = field ? field->flags : ZvFieldFlags::Delta;
-    r.init(m_series[i], flags, offset);
+    r.seek(m_series[i], flags, offset);
   }
-  void index(AnyReader &r, unsigned i, const ZuFixed &value) {
+  void find(AnyReader &r, unsigned i, const ZuFixed &value) {
     auto field = m_fields[i];
     unsigned flags = field ? field->flags : ZvFieldFlags::Delta;
-    r.initIndex(m_series[i], flags, value);
+    r.find(m_series[i], flags, value);
   }
 
   unsigned nSeries() const { return m_series.length(); }

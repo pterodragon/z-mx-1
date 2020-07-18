@@ -54,14 +54,14 @@ int main()
   }
   {
     AnyReader index, reader;
-    df.index(index, 0, ZuFixed{20, 0});
+    df.find(index, 0, ZuFixed{20, 0});
     std::cout << "offset=" << index.offset() << '\n';
-    df.reader(reader, 1, index.offset());
+    df.seek(reader, 1, index.offset());
     ZuFixed v;
     CHECK(reader.read(v));
     CHECK(v.value == 20 * 42);
     CHECK(v.exponent == 9);
-    index.indexFwd(ZuFixed{200, 0});
+    index.findFwd(ZuFixed{200, 0});
     std::cout << "offset=" << index.offset() << '\n';
     reader.seekFwd(index.offset());
     CHECK(reader.read(v));

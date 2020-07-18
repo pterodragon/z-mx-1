@@ -48,7 +48,7 @@ int main()
   }
   CHECK(s.blkCount() == 4);
   {
-    auto r = s.reader<DeltaDecoder<>>();
+    auto r = s.seek<DeltaDecoder<>>();
     ZuFixed v;
     CHECK(r.read(v)); CHECK(v.value == 42 && !v.exponent);
     CHECK(r.read(v)); CHECK(v.value == 42 && !v.exponent);
@@ -65,30 +65,30 @@ int main()
     CHECK(!r.read(v));
   }
   {
-    auto r = s.index<DeltaDecoder<>>(ZuFixed{425, 1});
+    auto r = s.find<DeltaDecoder<>>(ZuFixed{425, 1});
     ZuFixed v;
     CHECK(r.read(v)); CHECK(v.value == 4301 && v.exponent == 2);
   }
   {
-    auto r = s.index<DeltaDecoder<>>(ZuFixed{43020, 3});
+    auto r = s.find<DeltaDecoder<>>(ZuFixed{43020, 3});
     ZuFixed v;
     CHECK(r.read(v)); CHECK(v.value == 4302 && v.exponent == 2);
     r.purge();
   }
   CHECK(s.blkCount() == 3);
   {
-    auto r = s.index<DeltaDecoder<>>(ZuFixed{44, 0});
+    auto r = s.find<DeltaDecoder<>>(ZuFixed{44, 0});
     ZuFixed v;
     CHECK(!r);
     CHECK(!r.read(v));
   }
   {
-    auto r = s.reader<DeltaDecoder<>>();
+    auto r = s.seek<DeltaDecoder<>>();
     ZuFixed v;
     CHECK(r.read(v)); CHECK(v.value == 4301 && v.exponent == 2);
   }
   {
-    auto r = s.reader<DeltaDecoder<>>(208);
+    auto r = s.seek<DeltaDecoder<>>(208);
     ZuFixed v;
     for (unsigned i = 0; i < 50; i++) {
       CHECK(r.read(v));

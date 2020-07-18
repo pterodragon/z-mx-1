@@ -18,6 +18,11 @@
  */
 
 // Data Series
+// - chunked
+// - compressed (see ZdfCompress)
+// - indexable (if monotonically increasing, e.g. time series)
+// - support archiving of old data with purge()
+// - in-memory or file-backed (see ZdfMem / ZdfFile)
 
 #ifndef ZdfSeries_HPP
 #define ZdfSeries_HPP
@@ -76,51 +81,53 @@ private:
 
 public:
   // start reading at offset
-  static Reader reader(const Series *s, uint64_t offset = 0) {
+  static Reader seek(const Series *s, uint64_t offset = 0) {
     ZmRef<Buf> buf;
-    auto decoder = s->template firstReader<Decoder>(buf, offset);
+    auto decoder = s->template seek<Decoder>(buf, offset);
     return Reader{s, ZuMv(buf), ZuMv(decoder)};
   }
   // seek forward to offset
   void seekFwd(uint64_t offset) {
     if (ZuUnlikely(!*this)) return;
     m_decoder =
-      m_series->template firstRdrFwd<Decoder>(m_buf, offset);
+      m_series->template seekFwd<Decoder>(m_buf, offset);
     m_exponent = m_buf->hdr()->exponent();
   }
   // seek reverse to offset
   void seekRev(uint64_t offset) {
     if (ZuUnlikely(!*this)) return;
     m_decoder =
-      m_series->template firstRdrFwd<Decoder>(m_buf, offset);
+      m_series->template seekFwd<Decoder>(m_buf, offset);
     m_exponent = m_buf->hdr()->exponent();
   }
 
-  // start reading at index value
-  static Reader index(const Series *s, const ZuFixed &value) {
+  // series must be monotonically increasing to use find*() (e.g. time series)
+
+  // start reading from >= value
+  static Reader find(const Series *s, const ZuFixed &value) {
     ZmRef<Buf> buf;
-    auto decoder = s->template firstIndex<Decoder>(buf, value);
+    auto decoder = s->template find<Decoder>(buf, value);
     return Reader{s, ZuMv(buf), ZuMv(decoder)};
   }
-  // seek forward to index value
-  void indexFwd(const ZuFixed &value) {
+  // seek forward to >= value
+  void findFwd(const ZuFixed &value) {
     if (ZuUnlikely(!*this)) return;
     m_decoder =
-      m_series->template firstIdxFwd<Decoder>(m_buf, value);
+      m_series->template findFwd<Decoder>(m_buf, value);
     m_exponent = m_buf->hdr()->exponent();
   }
-  // seek reverse to index value
-  void indexRev(const ZuFixed &value) {
+  // seek backwards to >= value
+  void findRev(const ZuFixed &value) {
     if (ZuUnlikely(!*this)) return;
     m_decoder =
-      m_series->template firstIdxRev<Decoder>(m_buf, value);
+      m_series->template findRev<Decoder>(m_buf, value);
     m_exponent = m_buf->hdr()->exponent();
   }
 
   bool read(ZuFixed &value) {
     if (ZuUnlikely(!*this)) return false;
     if (ZuUnlikely(!m_decoder.read(value.value))) {
-      m_decoder = m_series->template nextReader<Decoder>(m_buf);
+      m_decoder = m_series->template nextDecoder<Decoder>(m_buf);
       if (ZuUnlikely(!m_decoder || !m_decoder.read(value.value)))
 	return false;
       m_exponent = m_buf->hdr()->exponent();
@@ -190,7 +197,7 @@ public:
   bool write(const ZuFixed &value) {
     bool eob;
     if (ZuUnlikely(!m_buf)) {
-      m_encoder = m_series->template firstWriter<Encoder>(m_buf);
+      m_encoder = m_series->template encoder<Encoder>(m_buf);
       if (ZuUnlikely(!m_buf)) return false;
       m_exponent = value.exponent;
       eob = false;
@@ -200,7 +207,7 @@ public:
     if (eob || !m_encoder.write(value.value)) {
       sync();
       save();
-      m_encoder = m_series->template nextWriter<Encoder>(m_buf);
+      m_encoder = m_series->template nextEncoder<Encoder>(m_buf);
       if (ZuUnlikely(!m_buf)) return false;
       m_exponent = value.exponent;
       if (ZuUnlikely(!m_encoder.write(value.value))) return false;
@@ -277,12 +284,12 @@ public:
   }
 
   template <typename Decoder>
-  auto reader(uint64_t offset = 0) const {
-    return Reader<Series, Decoder>::reader(this, offset);
+  auto seek(uint64_t offset = 0) const {
+    return Reader<Series, Decoder>::seek(this, offset);
   }
   template <typename Decoder>
-  auto index(const ZuFixed &value) const {
-    return Reader<Series, Decoder>::index(this, value);
+  auto find(const ZuFixed &value) const {
+    return Reader<Series, Decoder>::find(this, value);
   }
 
   template <typename Encoder>
@@ -326,7 +333,7 @@ private:
   }
 
   template <typename Decoder>
-  Decoder firstReader_(
+  Decoder seek_(
       ZmRef<Buf> &buf, unsigned search, uint64_t offset) const {
     unsigned blkIndex = ZuSearchPos(search);
     if (blkIndex >= m_blks.length()) goto null;
@@ -343,7 +350,7 @@ private:
     return Decoder{};
   }
   template <typename Decoder>
-  Decoder firstIndex_(
+  Decoder find_(
       ZmRef<Buf> &buf, unsigned search, const ZuFixed &value_) const {
     unsigned blkIndex = ZuSearchPos(search);
     if (blkIndex >= m_blks.length()) goto null;
@@ -363,7 +370,7 @@ private:
     return Decoder{};
   }
 
-  auto offsetSearch(uint64_t offset) const {
+  auto seekFn(uint64_t offset) const {
     return [offset](const Blk &blk) -> int {
       auto hdr = Series::hdr(blk);
       auto hdrOffset = hdr->offset();
@@ -374,7 +381,7 @@ private:
     };
   }
   template <typename Decoder>
-  auto indexSearch(const ZuFixed &value) const {
+  auto findFn(const ZuFixed &value) const {
     return [this, value](const Blk &blk) -> int {
       unsigned blkIndex = &const_cast<Blk &>(blk) - &m_blks[0];
       auto buf = loadBuf(blkIndex);
@@ -403,53 +410,53 @@ private:
   }
 
   template <typename Decoder>
-  Decoder firstReader(ZmRef<Buf> &buf, uint64_t offset) const {
-    return firstReader_<Decoder>(buf,
-	ZuInterSearch(&m_blks[0], m_blks.length(), offsetSearch(offset)),
+  Decoder seek(ZmRef<Buf> &buf, uint64_t offset) const {
+    return seek_<Decoder>(buf,
+	ZuInterSearch(&m_blks[0], m_blks.length(), seekFn(offset)),
 	offset);
   }
   template <typename Decoder>
-  Decoder firstRdrFwd(ZmRef<Buf> &buf, uint64_t offset) const {
-    return firstReader_<Decoder>(buf,
+  Decoder seekFwd(ZmRef<Buf> &buf, uint64_t offset) const {
+    return seek_<Decoder>(buf,
 	ZuInterSearch(
 	  &m_blks[buf->blkIndex], m_blks.length() - buf->blkIndex,
-	  offsetSearch(offset)),
+	  seekFn(offset)),
 	offset);
   }
   template <typename Decoder>
-  Decoder firstRdrRev(ZmRef<Buf> &buf, uint64_t offset) const {
-    return firstReader_<Decoder>(buf,
-	ZuInterSearch(&m_blks[0], buf->blkIndex + 1, offsetSearch(offset)),
+  Decoder seekRev(ZmRef<Buf> &buf, uint64_t offset) const {
+    return seek_<Decoder>(buf,
+	ZuInterSearch(&m_blks[0], buf->blkIndex + 1, seekFn(offset)),
 	offset);
   }
 
   template <typename Decoder>
-  Decoder firstIndex(ZmRef<Buf> &buf, const ZuFixed &value) const {
-    return firstIndex_<Decoder>(buf,
+  Decoder find(ZmRef<Buf> &buf, const ZuFixed &value) const {
+    return find_<Decoder>(buf,
 	ZuInterSearch(
 	  &m_blks[0], m_blks.length(),
-	  indexSearch<Decoder>(value)),
+	  findFn<Decoder>(value)),
 	value);
   }
   template <typename Decoder>
-  Decoder firstIdxFwd(ZmRef<Buf> &buf, const ZuFixed &value) const {
-    return firstIndex_<Decoder>(buf,
+  Decoder findFwd(ZmRef<Buf> &buf, const ZuFixed &value) const {
+    return find_<Decoder>(buf,
 	ZuInterSearch(
 	  &m_blks[buf->blkIndex], m_blks.length() - buf->blkIndex,
-	  indexSearch<Decoder>(value)),
+	  findFn<Decoder>(value)),
 	value);
   }
   template <typename Decoder>
-  Decoder firstIdxRev(ZmRef<Buf> &buf, const ZuFixed &value) const {
-    return firstIndex_<Decoder>(buf,
+  Decoder findRev(ZmRef<Buf> &buf, const ZuFixed &value) const {
+    return find_<Decoder>(buf,
 	ZuInterSearch(
 	  &m_blks[0], buf->blkIndex + 1,
-	  indexSearch<Decoder>(value)),
+	  findFn<Decoder>(value)),
 	value);
   }
 
   template <typename Decoder>
-  Decoder nextReader(ZmRef<Buf> &buf) const {
+  Decoder nextDecoder(ZmRef<Buf> &buf) const {
     unsigned blkIndex = buf->blkIndex + 1;
     if (blkIndex >= m_blks.length()) goto null;
     if (!(buf = loadBuf(blkIndex))) goto null;
@@ -460,11 +467,11 @@ private:
   }
 
   template <typename Encoder>
-  Encoder firstWriter(ZmRef<Buf> &buf) {
-    return nextWriter<Encoder>(buf);
+  Encoder encoder(ZmRef<Buf> &buf) {
+    return nextEncoder<Encoder>(buf);
   }
   template <typename Encoder>
-  Encoder nextWriter(ZmRef<Buf> &buf) {
+  Encoder nextEncoder(ZmRef<Buf> &buf) {
     unsigned blkIndex;
     uint64_t offset;
     if (ZuLikely(buf)) {

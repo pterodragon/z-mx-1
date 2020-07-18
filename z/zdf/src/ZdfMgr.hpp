@@ -39,6 +39,9 @@
 
 #include <zlib/ZdfBuf.hpp>
 
+// no need for CRTP or explicit jump tables
+// - good ole' vtbl is fine due to (relatively) infrequent calls
+
 namespace Zdf {
 
 using OpenFn = ZmFn<unsigned>;

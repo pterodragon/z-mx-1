@@ -48,7 +48,7 @@ struct App : public Ztls::Client<App> {
     int process(const uint8_t *data, unsigned len) {
       auto s = ZuString{(const char *)data, len};
       std::cout << s << std::flush;
-      const auto &htmlend = ZtStaticRegexUTF8("</html>");
+      const auto &htmlend = ZtStaticRegex("</html>");
       if (htmlend.m(s)) {
 	disconnect_();
 	return -1;

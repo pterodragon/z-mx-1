@@ -30,9 +30,7 @@ void BufMgr::init(unsigned maxBufs)
 
 void BufMgr::final()
 {
-  // manually clean to prevent ZmList from trying to delete (free) nodes
-  auto i = m_lru.iterator();
-  while (i.iterateNode()) i.del();
+  m_lru.clean();
 }
 
 unsigned BufMgr::alloc(BufUnloadFn unloadFn)

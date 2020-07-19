@@ -17,33 +17,31 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// null type
+// Data Series Statistical Methods
 
-#ifndef ZuNull_HPP
-#define ZuNull_HPP
-
-#ifndef ZuLib_HPP
-#include <zlib/ZuLib.hpp>
-#endif
+#ifndef ZdfStats_HPP
+#define ZdfStats_HPP
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <zlib/ZuTraits.hpp>
+#ifndef ZdfLib_HPP
+#include <zlib/ZdfLib.hpp>
+#endif
 
-class ZuNull { };
+namespace Zdf {
+/* Welford's Variance
+M := 0
+  S := 0
+  for k from 1 to N:
+    x := samples[k]
+    oldM := M
+    M := M + (x-M)/k
+    S := S + (x-M)*(x-oldM)
+  return S/(N-1)
+*/
 
-template <> struct ZuTraits<ZuNull> : public ZuGenericTraits<ZuNull> {
-  enum { IsPOD = 1, IsComparable = 1 };
-};
+} // namespace Zdf
 
-template <typename T> struct ZuCmp;
-template <> struct ZuCmp<ZuNull> {
-  ZuInline static int cmp(ZuNull n1, ZuNull n2) { return 0; }
-  ZuInline static bool equals(ZuNull n1, ZuNull n2) { return true; }
-  ZuInline static bool null(ZuNull n) { return true; }
-  ZuInline static const ZuNull &null() { static const ZuNull _; return _; }
-};
-
-#endif /* ZuNull_HPP */
+#endif /* ZdfStats_HPP */

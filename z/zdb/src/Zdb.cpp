@@ -1532,7 +1532,7 @@ bool ZdbAny::recover()
       auto &subName_ = subName;
 #endif
       try {
-	const auto &r = ZtStaticRegexUTF8("^[0-9a-f]{5}$");
+	const auto &r = ZtStaticRegex("^[0-9a-f]{5}$");
 	if (!r.m(subName_)) continue;
       } catch (const ZtRegexError &e) {
 	ZeLOG(Error, ZtString() << e);
@@ -1569,7 +1569,7 @@ bool ZdbAny::recover()
 	auto &fileName_ = fileName;
 #endif
 	try {
-	  const auto &r = ZtStaticRegexUTF8("^[0-9a-f]{5}\\.zdb$");
+	  const auto &r = ZtStaticRegex("^[0-9a-f]{5}\\.zdb$");
 	  if (!r.m(fileName_)) continue;
 	} catch (const ZtRegexError &e) {
 	  ZeLOG(Error, ZtString() << e);

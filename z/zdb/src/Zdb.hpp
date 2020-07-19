@@ -33,6 +33,7 @@
 #include <lz4.h>
 
 #include <zlib/ZuTraits.hpp>
+#include <zlib/ZuShadow.hpp>
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuHash.hpp>
 #include <zlib/ZuPrint.hpp>
@@ -184,15 +185,7 @@ template <> struct ZuPrint<ZdbRange> : public ZuPrintFn { };
 
 struct Zdb_File_IndexAccessor;
 
-using Zdb_FileLRU =
-  ZmList<ZuNull,
-    ZmListObject<ZuNull,
-      ZmListNodeIsItem<true,
-	ZmListHeapID<ZuNull,
-	  ZmListLock<ZmNoLock> > > > >;
-using Zdb_FileLRUNode = Zdb_FileLRU::Node;
-
-class Zdb_File_ : public ZmPolymorph, public ZiFile, public Zdb_FileLRUNode {
+class Zdb_File_ : public ZiFile {
 friend Zdb_File_IndexAccessor;
 
 public:
@@ -226,12 +219,20 @@ struct Zdb_File_IndexAccessor : public ZuAccessor<Zdb_File_, unsigned> {
   }
 };
 
+using Zdb_FileLRU =
+  ZmList<Zdb_File_,
+    ZmListObject<ZuShadow,
+      ZmListNodeIsItem<true,
+	ZmListHeapID<ZuNull,
+	  ZmListLock<ZmNoLock> > > > >;
+using Zdb_FileLRUNode = Zdb_FileLRU::Node;
+
 struct Zdb_FileHeapID {
   static const char *id() { return "Zdb_File"; }
 };
 using Zdb_FileHash =
-  ZmHash<Zdb_File_,
-    ZmHashObject<ZmPolymorph,
+  ZmHash<Zdb_FileLRUNode,
+    ZmHashObject<ZmObject,
       ZmHashNodeIsKey<true,
 	ZmHashIndex<Zdb_File_IndexAccessor,
 	  ZmHashHeapID<Zdb_FileHeapID,
@@ -268,16 +269,14 @@ struct ZdbTrailer {
 };
 #pragma pack(pop)
 
-struct ZdbLRU_ { };
 using ZdbLRU =
-  ZmList<ZdbLRU_,
-    ZmListObject<ZuNull,
+  ZmList<ZuNull,
+    ZmListObject<ZuShadow,
       ZmListNodeIsItem<true,
 	ZmListHeapID<ZuNull,
 	  ZmListLock<ZmNoLock> > > > >;
-using ZdbLRUNode_ = ZdbLRU::Node;
+using ZdbLRUNode = ZdbLRU::Node;
 
-struct ZdbLRUNode : public ZmPolymorph, public ZdbLRUNode_ { };
 struct ZdbLRUNode_RNAccessor : public ZuAccessor<ZdbLRUNode, ZdbRN> {
   static ZdbRN value(const ZdbLRUNode &pod);
 };

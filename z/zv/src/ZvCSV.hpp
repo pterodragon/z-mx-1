@@ -251,7 +251,7 @@ public:
     ColIndex colIndex;
     const auto &fmt = this->fmt();
 
-    const auto &newLine = ZtStaticRegexUTF8("\\n");
+    const auto &newLine = ZtStaticRegex("\\n");
     ZtArray<ZtArray<char>> rows;
     if (!newLine.split(data, rows)) return;
     ZtString row{ZvCSV_MaxLineSize};

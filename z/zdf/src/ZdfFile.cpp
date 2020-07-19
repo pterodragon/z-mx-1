@@ -30,6 +30,7 @@ using namespace Zdf;
 void FileMgr::init(ZmScheduler *sched, ZvCf *cf)
 {
   FileMgr::Config config{cf};
+  BufMgr::init(config.maxBufs);
   m_sched = sched;
   m_dir = config.dir;
   m_coldDir = config.coldDir;
@@ -46,6 +47,7 @@ void FileMgr::init(ZmScheduler *sched, ZvCf *cf)
 
 void FileMgr::final()
 {
+  m_lru.clean();
   m_files->clean();
   Mgr::final();
 }
@@ -54,18 +56,24 @@ bool FileMgr::open(
     unsigned seriesID, ZuString parent, ZuString name, OpenFn openFn)
 {
   ZiFile::Path path = ZiFile::append(m_dir, parent);
-  if (!ZiFile::isdir(path)) return true;
-  path = ZiFile::append(path, name);
-  if (!ZiFile::isdir(path)) return true;
   if (m_series.length() <= seriesID) m_series.length(seriesID + 1);
   m_series[seriesID] = SeriesFile{
     .path = path,
+    .name = name,
     .fileBlks = (m_maxFileSize > BufSize) ? (m_maxFileSize / BufSize) : 1
   };
   ZiDir dir;
-  if (dir.open(path) != Zi::OK) return false;
+  {
+    ZeError e;
+    if (dir.open(path, &e) != Zi::OK)
+      return e.errNo() == ZiENOENT;
+  }
   ZiDir::Path fileName;
   unsigned minIndex = UINT_MAX;
+  ZtString regex_{name};
+  { const auto &quote = ZtStaticRegex("\\\\E"); quote.sg(regex_, "\\\\E"); }
+  regex_ = ZtString{} << "^\\Q" << regex_ << '_' << "\\E[0-9a-f]{8}\\.sdb$";
+  ZtRegex regex{regex_};
   while (dir.read(fileName) == Zi::OK) {
 #ifdef _WIN32
     ZtString fileName_{fileName};
@@ -73,8 +81,7 @@ bool FileMgr::open(
     auto &fileName_ = fileName;
 #endif
     try {
-      const auto &r = ZtStaticRegexUTF8("^[0-9a-f]{8}\\.sdb$");
-      if (!r.m(fileName_)) continue;
+      if (!regex.m(fileName_)) continue;
     } catch (const ZtRegexError &e) {
       ZeLOG(Error, ZtString() << e);
       continue;
@@ -94,9 +101,9 @@ bool FileMgr::open(
 void FileMgr::close(unsigned seriesID)
 {
   auto i = m_lru.iterator();
-  ZmRef<File_> fileRef; // need to keep ref count +ve during loop iteration
+  ZmRef<File> fileRef; // need to keep ref count +ve during loop iteration
   while (auto file_ = i.iterateNode()) {
-    auto file = static_cast<File_ *>(file_);
+    auto file = static_cast<File *>(file_);
     if (file->id.seriesID() == seriesID) {
       i.del();
       fileRef = m_files->del(file->id); // see above comment
@@ -104,10 +111,10 @@ void FileMgr::close(unsigned seriesID)
   }
 }
 
-ZmRef<File_> FileMgr::getFile(FileID fileID, bool create)
+ZmRef<File> FileMgr::getFile(const FileID &fileID, bool create)
 {
   ++m_fileLoads;
-  ZmRef<File_> file;
+  ZmRef<File> file;
   if (file = m_files->find(fileID)) {
     m_lru.push(m_lru.del(file.ptr()));
     return file;
@@ -117,16 +124,16 @@ ZmRef<File_> FileMgr::getFile(FileID fileID, bool create)
   if (ZuUnlikely(!file)) return nullptr;
   while (m_lru.count() >= m_maxOpenFiles) {
     auto node = m_lru.shiftNode();
-    m_files->del(static_cast<File_ *>(node)->id);
+    m_files->del(static_cast<File *>(node)->id);
   }
   m_files->add(file);
   m_lru.push(file.ptr());
   return file;
 }
 
-ZmRef<File_> FileMgr::openFile(FileID fileID, bool create)
+ZmRef<File> FileMgr::openFile(const FileID &fileID, bool create)
 {
-  ZmRef<File_> file = new File_{fileID};
+  ZmRef<File> file = new File{fileID};
   unsigned fileSize = m_series[fileID.seriesID()].fileSize();
   ZiFile::Path path = fileName(fileID);
   if (file->open(path, ZiFile::GC, 0666, fileSize, nullptr) == Zi::OK)
@@ -152,7 +159,7 @@ retry:
   return file;
 }
 
-void FileMgr::archiveFile(FileID fileID)
+void FileMgr::archiveFile(const FileID &fileID)
 {
   ZiFile::Path name = fileName(fileID);
   ZiFile::Path coldName = ZiFile::append(m_coldDir, name);
@@ -170,11 +177,12 @@ bool FileMgr::loadHdr(unsigned seriesID, unsigned blkIndex, Hdr &hdr)
   int r;
   ZeError e;
   FilePos pos = this->pos(seriesID, blkIndex);
-  ZmRef<File_> file = getFile(FileID{seriesID, pos.index()}, false);
+  FileID fileID{seriesID, pos.index()};
+  ZmRef<File> file = getFile(fileID, false);
   if (!file) return false;
   if (ZuUnlikely((r = file->pread(
 	    pos.offset(), &hdr, sizeof(Hdr), &e)) < (int)sizeof(Hdr))) {
-    fileRdError_(seriesID, pos.offset(), r, e);
+    fileRdError_(fileID, pos.offset(), r, e);
     return false;
   }
   return true;
@@ -185,11 +193,12 @@ bool FileMgr::load(unsigned seriesID, unsigned blkIndex, void *buf)
   int r;
   ZeError e;
   FilePos pos = this->pos(seriesID, blkIndex);
-  ZmRef<File_> file = getFile(FileID{seriesID, pos.index()}, false);
+  FileID fileID{seriesID, pos.index()};
+  ZmRef<File> file = getFile(fileID, false);
   if (!file) return false;
   if (ZuUnlikely((r = file->pread(
 	    pos.offset(), buf, BufSize, &e)) < (int)BufSize)) {
-    fileRdError_(seriesID, pos.offset(), r, e);
+    fileRdError_(fileID, pos.offset(), r, e);
     return false;
   }
   return true;
@@ -197,7 +206,6 @@ bool FileMgr::load(unsigned seriesID, unsigned blkIndex, void *buf)
 
 void FileMgr::save(ZmRef<Buf> buf)
 {
-  if (!buf->pin()) return;
   m_sched->run(m_writeTID, ZmFn<>{ZuMv(buf), [](Buf *buf) {
     buf->unpin([](Buf *buf) {
       static_cast<FileMgr *>(buf->mgr)->save_(
@@ -211,11 +219,12 @@ void FileMgr::save_(unsigned seriesID, unsigned blkIndex, const void *buf)
   int r;
   ZeError e;
   FilePos pos = this->pos(seriesID, blkIndex);
-  ZmRef<File_> file = getFile(FileID{seriesID, pos.index()}, true);
+  FileID fileID{seriesID, pos.index()};
+  ZmRef<File> file = getFile(fileID, true);
   if (!file) return;
   if (ZuUnlikely((r = file->pwrite(
 	    pos.offset(), buf, BufSize, &e)) != (int)BufSize))
-    fileWrError_(seriesID, pos.offset(), e);
+    fileWrError_(fileID, pos.offset(), e);
 }
 
 void FileMgr::purge(unsigned seriesID, unsigned blkIndex)
@@ -224,9 +233,9 @@ void FileMgr::purge(unsigned seriesID, unsigned blkIndex)
   FilePos pos = this->pos(seriesID, blkIndex);
   {
     auto i = m_lru.iterator();
-    ZmRef<File_> fileRef; // need to keep ref count +ve during loop iteration
+    ZmRef<File> fileRef; // need to keep ref count +ve during loop iteration
     while (auto file_ = i.iterateNode()) {
-      auto file = static_cast<File_ *>(file_);
+      auto file = static_cast<File *>(file_);
       if (file->id.seriesID() == seriesID &&
 	  file->id.index() < pos.index()) {
 	i.del();
@@ -259,24 +268,26 @@ bool FileMgr::saveFile(ZuString name_, Zfb::Builder &fbb, ZeError *e)
 }
 
 void FileMgr::fileRdError_(
-    unsigned seriesID, ZiFile::Offset off, int r, ZeError e)
+    const FileID &fileID, ZiFile::Offset off, int r, ZeError e)
 {
   if (r < 0) {
     ZeLOG(Error, ZtString() <<
 	"Zdf::FileMgr pread() failed on \"" <<
-	m_series[seriesID].path <<
+	fileName(fileID) <<
 	"\" at offset " << ZuBoxed(off) <<  ": " << e);
   } else {
     ZeLOG(Error, ZtString() <<
 	"Zdf::FileMgr pread() truncated on \"" <<
-	m_series[seriesID].path <<
+	fileName(fileID) <<
 	"\" at offset " << ZuBoxed(off));
   }
 }
 
-void FileMgr::fileWrError_(unsigned seriesID, ZiFile::Offset off, ZeError e)
+void FileMgr::fileWrError_(
+    const FileID &fileID, ZiFile::Offset off, ZeError e)
 {
   ZeLOG(Error, ZtString() <<
-      "Zdf::FileMgr pwrite() failed on \"" << m_series[seriesID].path <<
+      "Zdf::FileMgr pwrite() failed on \"" <<
+      fileName(fileID) <<
       "\" at offset " << ZuBoxed(off) <<  ": " << e);
 }

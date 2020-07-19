@@ -1940,7 +1940,7 @@ MxUniKey MxMDLib::parseInstrument(ZvCf *args, unsigned index) const
     key.segment = args->get("segment");
   }
   if (ZtString mat = args->get("mat")) {
-    const auto &r = ZtStaticRegexUTF8("^\\d{8}$");
+    const auto &r = ZtStaticRegex("^\\d{8}$");
     if (!r.m(mat))
       throw ZtString() << "maturity \"" << mat << "\" invalid - "
 	"must be YYYYMMDD (DD is usually 00)";

@@ -68,15 +68,15 @@ void ZvCf::parseCLI(ZuString line, ZtArray<ZtString> &args)
 {
   args.length(0);
   ZtString val;
-  const auto &cliValue = ZtStaticRegexUTF8("\\G[^\"'`#;\\s]+");// \G[^"'`#;\s]+
-  const auto &cliSglQuote = ZtStaticRegexUTF8("\\G'");		// \G'
-  const auto &cliSglQuotedValue = ZtStaticRegexUTF8("\\G[^'`]+"); // \G[^'`]+
-  const auto &cliDblQuote = ZtStaticRegexUTF8("\\G\"");		// \G"
-  const auto &cliDblQuotedValue = ZtStaticRegexUTF8("\\G[^\"`]+"); // \G[^"`]+
-  const auto &cliQuoted = ZtStaticRegexUTF8("\\G`.");		// \G`.
-  const auto &cliWhiteSpace = ZtStaticRegexUTF8("\\G\\s+");	// \G\s+
-  const auto &cliComment = ZtStaticRegexUTF8("\\G#");		// \G#
-  const auto &cliSemicolon = ZtStaticRegexUTF8("\\G;");		// \G;
+  const auto &cliValue = ZtStaticRegex("\\G[^\"'`#;\\s]+");// \G[^"'`#;\s]+
+  const auto &cliSglQuote = ZtStaticRegex("\\G'");		// \G'
+  const auto &cliSglQuotedValue = ZtStaticRegex("\\G[^'`]+"); // \G[^'`]+
+  const auto &cliDblQuote = ZtStaticRegex("\\G\"");		// \G"
+  const auto &cliDblQuotedValue = ZtStaticRegex("\\G[^\"`]+"); // \G[^"`]+
+  const auto &cliQuoted = ZtStaticRegex("\\G`.");		// \G`.
+  const auto &cliWhiteSpace = ZtStaticRegex("\\G\\s+");	// \G\s+
+  const auto &cliComment = ZtStaticRegex("\\G#");		// \G#
+  const auto &cliSemicolon = ZtStaticRegex("\\G;");		// \G;
   ZtRegex::Captures c;
   unsigned pos = 0;
 
@@ -165,9 +165,9 @@ int ZvCf::fromArgs(const ZvOpt *opts, int argc, char **argv)
 int ZvCf::fromArgs(ZvCf *options, const ZtArray<ZtString> &args)
 {
   int i, j, n, l, p;
-  const auto &argShort = ZtStaticRegexUTF8("^-(\\w+)$");	// -a
-  const auto &argLongFlag = ZtStaticRegexUTF8("^--([\\w:]+)$"); // --arg
-  const auto &argLongValue = ZtStaticRegexUTF8("^--([\\w:]+)="); // --arg=val
+  const auto &argShort = ZtStaticRegex("^-(\\w+)$");	// -a
+  const auto &argLongFlag = ZtStaticRegex("^--([\\w:]+)$"); // --arg
+  const auto &argLongValue = ZtStaticRegex("^--([\\w:]+)="); // --arg=val
   ZtRegex::Captures c;
   ZmRef<ZvCf> option;
 
@@ -313,10 +313,10 @@ void ZvCf::fromArg(ZuString fullKey, int type, ZuString argVal)
 
   // type == ZvOptScalar || ZvOptMulti
 
-  const auto &argValue = ZtStaticRegexUTF8("\\G[^`]+");		// \G[^`]+
-  const auto &argValueMulti = ZtStaticRegexUTF8("\\G[^`,]+");	// \G[^`,]+
-  const auto &argValueQuoted = ZtStaticRegexUTF8("\\G`(.)");	// \G`(.)
-  const auto &argValueComma = ZtStaticRegexUTF8("\\G,");	// \G,
+  const auto &argValue = ZtStaticRegex("\\G[^`]+");		// \G[^`]+
+  const auto &argValueMulti = ZtStaticRegex("\\G[^`,]+");	// \G[^`,]+
+  const auto &argValueQuoted = ZtStaticRegex("\\G`(.)");	// \G`(.)
+  const auto &argValueComma = ZtStaticRegex("\\G,");	// \G,
   ZtRegex::Captures c;
   unsigned pos = 0;
 
@@ -354,23 +354,23 @@ void ZvCf::fromString(ZuString in,
 
   ZmRef<ZvCf> self = this;
 
-  const auto &fileSkip = ZtStaticRegexUTF8(
+  const auto &fileSkip = ZtStaticRegex(
       "\\G(?:#[^\\n]*\\n|\\s+)"); // \G(?:#[^\n]*\n|\s+)
-  const auto &fileEndScope = ZtStaticRegexUTF8("\\G\\}");	// \G\}
-  const auto &fileKey = ZtStaticRegexUTF8(
+  const auto &fileEndScope = ZtStaticRegex("\\G\\}");	// \G\}
+  const auto &fileKey = ZtStaticRegex(
       "\\G(?:[^$#%`\"{},:=\\s]+|[%=]\\w+)"); // \G(?:[^$#%`"{},:=\s]+|[%=]\w+)
-  const auto &fileLine = ZtStaticRegexUTF8("\\G[^\\n]*\\n");	// \G[^\n]*\n1
-  const auto &fileValue = ZtStaticRegexUTF8(
+  const auto &fileLine = ZtStaticRegex("\\G[^\\n]*\\n");	// \G[^\n]*\n1
+  const auto &fileValue = ZtStaticRegex(
       "\\G[^$#`\"{},\\s]+"); // \G[^#`"{},\s]+
-  const auto &fileValueQuoted = ZtStaticRegexUTF8("\\G`(.)");	// \G`(.)
-  const auto &fileDblQuote = ZtStaticRegexUTF8("\\G\"");	// \G"
-  const auto &fileValueDblQuoted = ZtStaticRegexUTF8(
+  const auto &fileValueQuoted = ZtStaticRegex("\\G`(.)");	// \G`(.)
+  const auto &fileDblQuote = ZtStaticRegex("\\G\"");	// \G"
+  const auto &fileValueDblQuoted = ZtStaticRegex(
       "\\G[^`\"]+"); // \G[^`"]+
-  const auto &fileBeginScope = ZtStaticRegexUTF8("\\G\\{");	// \G\{
-  const auto &fileComma = ZtStaticRegexUTF8("\\G,");		// \G,
-  const auto &fileDefine = ZtStaticRegexUTF8(
+  const auto &fileBeginScope = ZtStaticRegex("\\G\\{");	// \G\{
+  const auto &fileComma = ZtStaticRegex("\\G,");		// \G,
+  const auto &fileDefine = ZtStaticRegex(
       "([^$#%`\"{},:=\\s]+)=(.+)"); // ([^$#%`"{},:=\s]+)=(.+)
-  const auto &fileValueVar = ZtStaticRegexUTF8(
+  const auto &fileValueVar = ZtStaticRegex(
       "\\G\\${([^$#%`\"{},:=\\s]+)}"); // \G\${([^$#%`"{},:=\s]+)}
   ZtRegex::Captures c;
   unsigned pos = 0;
@@ -514,20 +514,20 @@ void ZvCf::fromEnv(const char *name, bool validate)
   bool first = true;
 
   unsigned pos = 0;
-  const auto &envEndScope = ZtStaticRegexUTF8("\\G\\}");	// \G\}
-  const auto &envColon = ZtStaticRegexUTF8("\\G:");		// \G:
-  const auto &envKey = ZtStaticRegexUTF8(
+  const auto &envEndScope = ZtStaticRegex("\\G\\}");	// \G\}
+  const auto &envColon = ZtStaticRegex("\\G:");		// \G:
+  const auto &envKey = ZtStaticRegex(
       "\\G[^#`\"{},:=\\s]+"); // \G[^#`"{},:=\s]+
-  const auto &envEquals = ZtStaticRegexUTF8("\\G=");		// \G=
-  const auto &envValue = ZtStaticRegexUTF8(
+  const auto &envEquals = ZtStaticRegex("\\G=");		// \G=
+  const auto &envValue = ZtStaticRegex(
       "\\G[^`\"{},:]+");	// \G[^`"{},:]+
-  const auto &envValueQuoted = ZtStaticRegexUTF8(
+  const auto &envValueQuoted = ZtStaticRegex(
       "\\G`([`\"{},:\\s])"); // \G\\([`"{},:\s])
-  const auto &envDblQuote = ZtStaticRegexUTF8("\\G\"");	// \G"
-  const auto &envValueDblQuoted = ZtStaticRegexUTF8(
+  const auto &envDblQuote = ZtStaticRegex("\\G\"");	// \G"
+  const auto &envValueDblQuoted = ZtStaticRegex(
       "\\G[^`\"]+");	// \G[^`"]+
-  const auto &envBeginScope = ZtStaticRegexUTF8("\\G\\{");	// \G\{
-  const auto &envComma = ZtStaticRegexUTF8("\\G,");		// \G,
+  const auto &envBeginScope = ZtStaticRegex("\\G\\{");	// \G\{
+  const auto &envComma = ZtStaticRegex("\\G,");		// \G,
   ZtRegex::Captures c;
 
 key:
@@ -681,7 +681,7 @@ ZtString ZvCf::quoteArgValue(ZuString in)
 
   ZtString out = in;
 
-  const auto &argQuote = ZtStaticRegexUTF8("[`,]");	// [`,]
+  const auto &argQuote = ZtStaticRegex("[`,]");	// [`,]
   ZtRegex::Captures c;
   unsigned pos = 0;
 
@@ -730,10 +730,10 @@ ZtString ZvCf::quoteValue(ZuString in)
 
   ZtString out = in;
 
-  const auto &quote1 = ZtStaticRegexUTF8("[#`\"{},\\s]");	// [#`"{},\s]
-  const auto &quote2 = ZtStaticRegexUTF8("[#`\",\\s]");	// [#`",\s]
-  const auto &quoteValueDbl = ZtStaticRegexUTF8("[`\"]");	// [`"]
-  const auto &quoteValue = ZtStaticRegexUTF8("[#`\"{},\\s]"); // [#`"{},\s]
+  const auto &quote1 = ZtStaticRegex("[#`\"{},\\s]");	// [#`"{},\s]
+  const auto &quote2 = ZtStaticRegex("[#`\",\\s]");	// [#`",\s]
+  const auto &quoteValueDbl = ZtStaticRegex("[`\"]");	// [`"]
+  const auto &quoteValue = ZtStaticRegex("[#`\"{},\\s]"); // [#`"{},\s]
   ZtRegex::Captures c;
   bool doubleQuote = false;
   unsigned pos = 0;

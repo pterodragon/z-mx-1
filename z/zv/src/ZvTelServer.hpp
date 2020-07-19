@@ -1176,7 +1176,7 @@ private:
   }
   void alertQuery_(Watch *watch) {
     // parse filter - yyyymmdd:seqNo
-    const auto &alertFilter = ZtStaticRegexUTF8("^(\\d{8}):(\\d+)$");
+    const auto &alertFilter = ZtStaticRegex("^(\\d{8}):(\\d+)$");
     ZtRegex::Captures c;
     ZuBox<unsigned> date = 0, seqNo = 0;
     if (alertFilter.m(watch->filter, c) == 3) {

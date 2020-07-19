@@ -231,68 +231,6 @@ protected:
   unsigned	m_count = 0;
 };
 
-template <typename Base = Decoder>
-class DeltaDecoder : public Base {
-public:
-  DeltaDecoder() : Base() { }
-  DeltaDecoder(const DeltaDecoder &r) : Base(r), m_base(r.m_base) { }
-  DeltaDecoder &operator =(const DeltaDecoder &r) {
-    this->~DeltaDecoder(); // nop
-    new (this) DeltaDecoder{r};
-    return *this;
-  }
-  DeltaDecoder(DeltaDecoder &&r) :
-      Base(static_cast<Base &&>(r)), m_base(r.m_base) { }
-  DeltaDecoder &operator =(DeltaDecoder &&r) {
-    this->~DeltaDecoder(); // nop
-    new (this) DeltaDecoder{ZuMv(r)};
-    return *this;
-  }
-
-  DeltaDecoder(const uint8_t *start, const uint8_t *end) :
-      Base(start, end) { }
-
-  bool seek(unsigned count) {
-    return Base::seek(count,
-	[this](int64_t skip, unsigned count) {
-	  m_base += skip * count;
-	});
-  }
-
-  template <typename L>
-  bool seek(unsigned count, L l) {
-    return Base::seek(count,
-	[this, l = ZuMv(l)](int64_t skip, unsigned count) {
-	  for (unsigned i = 0; i < count; i++)
-	    l(m_base += skip, 1);
-	});
-  }
-
-  template <typename L>
-  bool search(L l) {
-    return Base::search(
-	[this, l = ZuMv(l)](int64_t skip, unsigned count) {
-	  int64_t value;
-	  for (unsigned i = 0; i < count; i++) {
-	    value = m_base + skip;
-	    if (!l(value, 1)) return i;
-	    m_base = value;
-	  }
-	  return count;
-	});
-  }
-
-  bool read(int64_t &value_) {
-    int64_t value;
-    if (ZuUnlikely(!Base::read(value))) return false;
-    value_ = (m_base += value);
-    return true;
-  }
-
-private:
-  int64_t		m_base = 0;
-};
-
 class Encoder {
   Encoder(const Encoder &) = delete;
   Encoder &operator =(const Encoder &) = delete;
@@ -399,6 +337,68 @@ private:
   uint8_t	*m_rle = nullptr;
   int64_t	m_prev = 0;
   unsigned	m_count = 0;
+};
+
+template <typename Base = Decoder>
+class DeltaDecoder : public Base {
+public:
+  DeltaDecoder() : Base() { }
+  DeltaDecoder(const DeltaDecoder &r) : Base(r), m_base(r.m_base) { }
+  DeltaDecoder &operator =(const DeltaDecoder &r) {
+    this->~DeltaDecoder(); // nop
+    new (this) DeltaDecoder{r};
+    return *this;
+  }
+  DeltaDecoder(DeltaDecoder &&r) :
+      Base(static_cast<Base &&>(r)), m_base(r.m_base) { }
+  DeltaDecoder &operator =(DeltaDecoder &&r) {
+    this->~DeltaDecoder(); // nop
+    new (this) DeltaDecoder{ZuMv(r)};
+    return *this;
+  }
+
+  DeltaDecoder(const uint8_t *start, const uint8_t *end) :
+      Base(start, end) { }
+
+  bool seek(unsigned count) {
+    return Base::seek(count,
+	[this](int64_t skip, unsigned count) {
+	  m_base += skip * count;
+	});
+  }
+
+  template <typename L>
+  bool seek(unsigned count, L l) {
+    return Base::seek(count,
+	[this, l = ZuMv(l)](int64_t skip, unsigned count) {
+	  for (unsigned i = 0; i < count; i++)
+	    l(m_base += skip, 1);
+	});
+  }
+
+  template <typename L>
+  bool search(L l) {
+    return Base::search(
+	[this, l = ZuMv(l)](int64_t skip, unsigned count) {
+	  int64_t value;
+	  for (unsigned i = 0; i < count; i++) {
+	    value = m_base + skip;
+	    if (!l(value, 1)) return i;
+	    m_base = value;
+	  }
+	  return count;
+	});
+  }
+
+  bool read(int64_t &value_) {
+    int64_t value;
+    if (ZuUnlikely(!Base::read(value))) return false;
+    value_ = (m_base += value);
+    return true;
+  }
+
+private:
+  int64_t		m_base = 0;
 };
 
 template <typename Base = Encoder>

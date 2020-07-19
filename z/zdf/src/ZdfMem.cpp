@@ -50,8 +50,9 @@ bool MemMgr::load(unsigned, unsigned, void *)
   return false;
 }
 
-void MemMgr::save(ZmRef<Buf>)
+void MemMgr::save(ZmRef<Buf> buf)
 {
+  buf->unpin([](Buf *) { });
 }
 
 bool MemMgr::loadFile(

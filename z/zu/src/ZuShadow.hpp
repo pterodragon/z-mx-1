@@ -17,33 +17,34 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// null type
+// compile-time tag for intrusively shadowed (not owned) objects
 
-#ifndef ZuNull_HPP
-#define ZuNull_HPP
-
-#ifndef ZuLib_HPP
-#include <zlib/ZuLib.hpp>
-#endif
+#ifndef ZuShadow_HPP
+#define ZuShadow_HPP
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#include <zlib/ZuTraits.hpp>
+#ifndef ZuLib_HPP
+#include <zlib/ZuLib.hpp>
+#endif
 
-class ZuNull { };
+class ZuShadow { };
 
-template <> struct ZuTraits<ZuNull> : public ZuGenericTraits<ZuNull> {
-  enum { IsPOD = 1, IsComparable = 1 };
+template <typename T> struct ZuIsShadow_ {
+  enum { OK = ZuConversion<ZuShadow, T>::Is };
+};
+// SFINAE
+template <typename T, typename R = void, bool OK = ZuIsShadow_<T>::OK>
+struct ZuIsShadow;
+template <typename T_, typename R> struct ZuIsShadow<T_, R, 1> {
+  using T = R;
+};
+template <typename T, typename R = void, bool OK = !ZuIsShadow_<T>::OK>
+struct ZuNotShadow;
+template <typename T_, typename R> struct ZuNotShadow<T_, R, 1> {
+  using T = R;
 };
 
-template <typename T> struct ZuCmp;
-template <> struct ZuCmp<ZuNull> {
-  ZuInline static int cmp(ZuNull n1, ZuNull n2) { return 0; }
-  ZuInline static bool equals(ZuNull n1, ZuNull n2) { return true; }
-  ZuInline static bool null(ZuNull n) { return true; }
-  ZuInline static const ZuNull &null() { static const ZuNull _; return _; }
-};
-
-#endif /* ZuNull_HPP */
+#endif /* ZuShadow_HPP */

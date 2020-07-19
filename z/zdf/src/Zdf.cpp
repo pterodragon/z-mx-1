@@ -23,9 +23,10 @@
 
 using namespace Zdf;
 
-DataFrame::DataFrame(ZvFields fields, ZuString name) : m_name(name)
+DataFrame::DataFrame(ZvFields fields, ZuString name, bool timeIndex) :
+    m_name(name)
 {
-  bool indexed = false;
+  bool indexed = timeIndex;
   unsigned n = fields.length();
   {
     unsigned m = 0;
@@ -35,11 +36,11 @@ DataFrame::DataFrame(ZvFields fields, ZuString name) : m_name(name)
 	  indexed = true;
 	m++;
       }
-    if (!indexed) m++;
-    indexed = false;
+    if (timeIndex) m++;
     m_series.size(m);
     m_fields.size(m);
   }
+  indexed = timeIndex;
   for (unsigned i = 0; i < n; i++)
     if (fields[i].flags & ZvFieldFlags::Series) {
       ZuPtr<Series> series = new Series();
@@ -52,7 +53,7 @@ DataFrame::DataFrame(ZvFields fields, ZuString name) : m_name(name)
 	m_fields.push(&fields[i]);
       }
     }
-  if (!indexed) {
+  if (timeIndex) {
     m_series.unshift(ZuPtr<Series>{new Series()});
     m_fields.unshift(static_cast<ZvField *>(nullptr));
   }
@@ -68,15 +69,14 @@ void DataFrame::init(Mgr *mgr)
 bool DataFrame::open(ZeError *e_)
 {
   ZeError e;
-  if (!load(&e)) {
-    if (e.errNo() == ZiENOENT) {
-      m_epoch.now();
-      return save(e_);
-    } else {
-      if (e_) *e_ = e;
-      return false;
-    }
+  if (load(&e)) goto open;
+  if (e.errNo() == ZiENOENT) {
+    m_epoch.now();
+    if (save(e_)) goto open;
   }
+  if (e_) *e_ = e;
+  return false;
+open:
   unsigned n = m_series.length();
   if (ZuUnlikely(!n)) return false;
   for (unsigned i = 0; i < n; i++) {

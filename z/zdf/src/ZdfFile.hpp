@@ -30,6 +30,8 @@
 #include <zlib/ZdfLib.hpp>
 #endif
 
+#include <zlib/ZuObject.hpp>
+#include <zlib/ZuShadow.hpp>
 #include <zlib/ZuPtr.hpp>
 
 #include <zlib/ZmHeap.hpp>
@@ -51,18 +53,10 @@
 
 namespace Zdf {
 
-using FileLRU =
-  ZmList<ZuNull,
-    ZmListObject<ZuNull,
-      ZmListNodeIsItem<true,
-	ZmListHeapID<ZuNull,
-	  ZmListLock<ZmNoLock> > > > >;
-using FileLRUNode = FileLRU::Node;
-
 ZuDeclTuple(FileID, (unsigned, seriesID), (unsigned, index));
 ZuDeclTuple(FilePos, (unsigned, index), (unsigned, offset));
 
-struct File_ : public ZmObject, public ZiFile, public FileLRUNode {
+struct File_ : public ZiFile {
   template <typename ...Args>
   File_(Args &&... args) : id{ZuFwd<Args>(args)...} { }
 
@@ -74,16 +68,25 @@ struct File_IDAccessor : public ZuAccessor<File_, FileID> {
   }
 };
 
+using FileLRU =
+  ZmList<File_,
+    ZmListObject<ZuShadow,
+      ZmListNodeIsItem<true,
+	ZmListHeapID<ZuNull,
+	  ZmListLock<ZmNoLock> > > > >;
+using FileLRUNode = FileLRU::Node;
+
 struct File_HeapID {
   static const char *id() { return "Zdf.File"; }
 };
 using FileHash =
-  ZmHash<File_,
+  ZmHash<FileLRUNode,
     ZmHashObject<ZmObject,
       ZmHashNodeIsKey<true,
 	ZmHashIndex<File_IDAccessor,
 	  ZmHashHeapID<File_HeapID,
 	    ZmHashLock<ZmNoLock> > > > > >;
+using File = typename FileHash::Node;
 
 class ZdfAPI FileMgr : public Mgr {
 private:
@@ -98,13 +101,15 @@ private:
       dir = cf->get("dir", true);
       coldDir = cf->get("coldDir", true);
       writeThread = cf->get("writeThread", true);
-      maxFileSize = cf->getInt("maxFileSize", 1, 1U<<30, false, 10<<20);
+      maxFileSize = cf->getInt("maxFileSize", 1, 1<<30, false, 10<<20);
+      maxBufs = cf->getInt("maxBufs", 0, 1<<20, false, 1<<10);
     }
 
     ZiFile::Path	dir;
     ZiFile::Path	coldDir;
     ZmThreadName	writeThread;
     unsigned		maxFileSize = 0;
+    unsigned		maxBufs = 0;
   };
 
 public:
@@ -119,9 +124,9 @@ public:
   void close(unsigned seriesID);
 
 private:
-  ZmRef<File_> getFile(FileID fileID, bool create);
-  ZmRef<File_> openFile(FileID fileID, bool create);
-  void archiveFile(FileID fileID);
+  ZmRef<File> getFile(const FileID &fileID, bool create);
+  ZmRef<File> openFile(const FileID &fileID, bool create);
+  void archiveFile(const FileID &fileID);
 
 public:
   void purge(unsigned seriesID, unsigned blkIndex);
@@ -141,29 +146,26 @@ private:
 
   struct SeriesFile {
     ZiFile::Path	path;
+    ZiFile::Path	name;
     unsigned		minFileIndex = 0;	// earliest file index
     unsigned		fileBlks = 0;
 
     unsigned fileSize() const { return fileBlks * BufSize; }
   };
 
-  const ZiFile::Path &pathName(unsigned seriesID) {
-    return m_series[seriesID].path;
-  }
   ZiFile::Path fileName(const FileID &fileID) {
-    return fileName(pathName(fileID.seriesID()), fileID.index());
-  }
-  static ZiFile::Path fileName(const ZiFile::Path &path, unsigned index) {
-    return ZiFile::append(path, ZuStringN<20>() <<
-	ZuBox<unsigned>(index).hex(ZuFmt::Right<8>()) << ".sdb");
+    const auto &series = m_series[fileID.seriesID()];
+    return ZiFile::append(series.path,
+	ZiFile::Path{} << series.name << '_' <<
+	ZuBox<unsigned>(fileID.index()).hex(ZuFmt::Right<8>()) << ".sdb");
   }
   FilePos pos(unsigned seriesID, unsigned blkIndex) {
     auto fileBlks = m_series[seriesID].fileBlks;
     return FilePos{blkIndex / fileBlks, (blkIndex % fileBlks) * BufSize};
   }
 
-  void fileRdError_(unsigned seriesID, ZiFile::Offset, int, ZeError);
-  void fileWrError_(unsigned seriesID, ZiFile::Offset, ZeError);
+  void fileRdError_(const FileID &fileID, ZiFile::Offset, int, ZeError);
+  void fileWrError_(const FileID &fileID, ZiFile::Offset, ZeError);
 
 private:
   ZtArray<SeriesFile>	m_series;	// indexed by seriesID

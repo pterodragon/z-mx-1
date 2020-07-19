@@ -16,7 +16,7 @@ BUILT_SOURCES = ${FBS_H}
 CLEANFILES = ${FBS_H}
 pkginclude_HEADERS = ZdfLib.hpp \
 	ZdfCompress.hpp ZdfBuf.hpp ZdfMgr.hpp \
-	ZdfSeries.hpp ZdfMem.hpp ZdfFile.hpp Zdf.hpp \
+	ZdfSeries.hpp ZdfMem.hpp ZdfFile.hpp Zdf.hpp ZdfStats.hpp \
 	${FBS_H}
 #fbsdir = $(datarootdir)/${PACKAGE}/fbs
 #dist_fbs_DATA = fbs/telemetry.fbs

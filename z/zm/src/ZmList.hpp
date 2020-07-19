@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// doubly linked list for types with a distinguished null value
+// intrusive double-linked list
 
 #ifndef ZmList_HPP
 #define ZmList_HPP
@@ -34,6 +34,8 @@
 #include <zlib/ZuNull.hpp>
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuConversion.hpp>
+#include <zlib/ZuObject.hpp>
+#include <zlib/ZuShadow.hpp>
 
 #include <zlib/ZmLock.hpp>
 #include <zlib/ZmGuard.hpp>
@@ -160,7 +162,8 @@ public:
   struct NullObject { }; // deconflict with ZuNull
   template <typename Node, typename Heap, bool NodeIsItem> class NodeFn :
       public ZuIf<NullObject, Object,
-	ZuConversion<Object, ZuNull>::Is ||
+	ZuConversion<ZuNull, Object>::Is ||
+	ZuConversion<ZuShadow, Object>::Is ||
 	(NodeIsItem && ZuConversion<Object, Item>::Is)>::T,
       public Heap {
     NodeFn(const NodeFn &);
@@ -197,27 +200,25 @@ public:
     typename ZuIf<ZmRef<Node>, Node *, ZuIsObject_<Object>::OK>::T;
 
 private:
-  // in order to support both intrusively reference-counted and plain node
+  // in order to support reference-counted, owned and shadowed
   // objects, some overloading is required for ref/deref/delete
-  template <typename O>
-  ZuInline void nodeRef(const ZmRef<O> &o) { ZmREF(o); }
-  template <typename O>
-  ZuInline typename ZuIsObject<O>::T nodeRef(const O *o) { ZmREF(o); }
-  template <typename O>
-  ZuInline void nodeDeref(const ZmRef<O> &o) { ZmDEREF(o); }
-  template <typename O>
-  ZuInline typename ZuIsObject<O>::T nodeDeref(const O *o) { ZmDEREF(o); }
-  template <typename O>
-  ZuInline void nodeDelete(const ZmRef<O> &o) { }
-  template <typename O>
-  ZuInline typename ZuIsObject<O>::T nodeDelete(const O *) { }
+  template <typename T, typename O = Object>
+  ZuInline typename ZuIsObject<O>::T nodeRef(T &&o) { ZmREF(ZuFwd<T>(o)); }
+  template <typename T, typename O = Object>
+  ZuInline typename ZuIsObject<O>::T nodeDeref(T &&o) { ZmDEREF(ZuFwd<T>(o)); }
+  template <typename T, typename O = Object>
+  ZuInline typename ZuIsObject<O>::T nodeDelete(T &&) { }
 
-  template <typename O>
-  ZuInline typename ZuNotObject<O>::T nodeRef(const O *) { }
-  template <typename O>
-  ZuInline typename ZuNotObject<O>::T nodeDeref(const O *) { }
-  template <typename O>
-  ZuInline typename ZuNotObject<O>::T nodeDelete(const O *o) { delete o; }
+  template <typename T, typename O = Object>
+  ZuInline typename ZuNotObject<O>::T nodeRef(T &&) { }
+  template <typename T, typename O = Object>
+  ZuInline typename ZuNotObject<O>::T nodeDeref(T &&) { }
+  template <typename T, typename O = Object>
+  ZuInline typename ZuIfT<!ZuIsObject_<O>::OK && !ZuIsShadow_<O>::OK>::T
+  nodeDelete(T &&o) { delete ZuFwd<T>(o); }
+  template <typename T, typename O = Object>
+  ZuInline typename ZuIfT<!ZuIsObject_<O>::OK && ZuIsShadow_<O>::OK>::T
+  nodeDelete(T &&) { }
 
 protected:
   class Iterator_ {			// iterator

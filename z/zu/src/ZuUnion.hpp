@@ -27,11 +27,11 @@
 // v = u;
 // if (v.type() == 0) { printf("%d\n", v.p<1>()); }
 // v.p<1>(42.0);
-// if (v.type() == 1) { printf("%g\n", v.p<2>()); }
+// if (v.contains<double>()) { printf("%g\n", v.v<double>()); }
 // u.~U();
-// *reinterpret_cast<int *>(&u) = 43;
-// u.type_(0);
-// printf("%d\n", v.p<0>());
+// *reinterpret_cast<int *>(&u) = 43; // *(u.ptr_<Index<int>::I>()) = ...
+// u.type_(U::Index<int>::I);
+// printf("%d\n", u.v<int>());
 //
 // namespace {
 //   void print(int i) const { printf("%d\n", i); }

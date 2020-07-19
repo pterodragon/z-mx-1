@@ -74,7 +74,8 @@ public:
   using Capture = ZuString;
   using Captures = ZtArray<Capture>;
 
-  ZtRegex(const char *pattern, int options = 0); // pcre_compile() options
+  // pcre_compile() options
+  ZtRegex(const char *pattern, int options = PCRE_UTF8);
 
   // ZtRegex is move-only (by design)
   ZtRegex(ZtRegex &&r) noexcept :
@@ -231,7 +232,5 @@ private:
 };
 
 #define ZtStaticRegex(...) ZmStatic([]() { return new ZtRegex(__VA_ARGS__); })
-#define ZtStaticRegexUTF8(x) \
-  ZmStatic([]() { return new ZtRegex(x, PCRE_UTF8); })
 
 #endif /* ZtRegex_HPP */

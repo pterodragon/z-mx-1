@@ -45,9 +45,9 @@ ZuString ZePlatform::filename(ZuString s)
 {
   ZtRegex::Captures c;
 #ifndef _WIN32
-  const auto &r = ZtStaticRegexUTF8("([^/]*)$");
+  const auto &r = ZtStaticRegex("([^/]*)$");
 #else
-  const auto &r = ZtStaticRegexUTF8("([^:/\\\\]*)$");
+  const auto &r = ZtStaticRegex("([^:/\\\\]*)$");
 #endif
   if (r.m(s, c) < 2) return s;
   return c[2];
@@ -56,7 +56,7 @@ ZuString ZePlatform::filename(ZuString s)
 ZuString ZePlatform::function(ZuString s)
 {
   ZtRegex::Captures c;
-  const auto &r = ZtStaticRegexUTF8("([a-zA-Z_][a-zA-Z_0-9:]*)\\(");
+  const auto &r = ZtStaticRegex("([a-zA-Z_][a-zA-Z_0-9:]*)\\(");
   if (r.m(s, c) < 2) return s;
   return c[2];
 }
@@ -195,7 +195,7 @@ struct ZePlatform_EventLogger {
     program = "Application";
     try {
       ZtRegex::Captures c;
-      const auto &r = ZtStaticRegexUTF8("[^\\\\]*$");
+      const auto &r = ZtStaticRegex("[^\\\\]*$");
       if (r.m(path, c, 0)) program = c[1];
     } catch (...) { }
   }

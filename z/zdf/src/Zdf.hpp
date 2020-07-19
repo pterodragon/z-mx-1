@@ -91,9 +91,7 @@ using Delta2Writer = Writer<Series, Delta2Encoder>;
 using AnyReader_ = ZuUnion<AbsReader, DeltaReader, Delta2Reader>;
 class AnyReader : public AnyReader_ {
 public:
-  AnyReader() {
-    initFn();
-  }
+  AnyReader() { initFn(); }
   AnyReader(const AnyReader &r) : AnyReader_{r} {
     initFn();
   }
@@ -202,9 +200,7 @@ public:
   AnyWriter(const AnyWriter &r) = delete;
   AnyWriter &operator =(const AnyWriter &r) = delete;
 
-  AnyWriter() {
-    initFn();
-  }
+  AnyWriter() { initFn(); }
   AnyWriter(AnyWriter &&r) : AnyWriter_{static_cast<AnyWriter_ &&>(r)} {
     initFn();
   }
@@ -258,7 +254,7 @@ private:
 
 class ZdfAPI DataFrame {
 public:
-  DataFrame(ZvFields fields, ZuString name);
+  DataFrame(ZvFields fields, ZuString name, bool timeIndex = false);
 
   const ZtString &name() const { return m_name; }
   const ZmTime &epoch() const { return m_epoch; }

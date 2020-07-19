@@ -7,6 +7,7 @@
 #include <zlib/ZuDemangle.hpp>
 
 #include <zlib/ZdfMem.hpp>
+#include <zlib/ZdfFile.hpp>
 #include <zlib/Zdf.hpp>
 
 void print(const char *s) {
@@ -34,17 +35,46 @@ inline const ZvFields Frame::fields() noexcept {
       // (Int, v1, Series | Index),
       (Fixed, v2, Series | Delta, 9));
 }
-int main()
+void usage() {
+  std::cerr << "usage: ZdfTest mem|load|save\n" << std::flush;
+  ::exit(1);
+};
+int main(int argc, char **argv)
 {
+  if (argc < 2) usage();
+  enum { Mem = 0, Load, Save };
+  int mode;
+  if (!strcmp(argv[1], "mem"))
+    mode = Mem;
+  else if (!strcmp(argv[1], "load"))
+    mode = Load;
+  else if (!strcmp(argv[1], "save"))
+    mode = Save;
+  else
+    usage();
   using namespace Zdf;
   using namespace ZdfCompress;
-  Zdf::MemMgr mgr;
-  mgr.init(nullptr, nullptr);
-  Zdf::DataFrame df(Frame::fields(), "frame");
-  df.init(&mgr);
+  MemMgr memMgr;
+  if (mode == Mem) memMgr.init(nullptr, nullptr);
+  ZmScheduler sched(ZmSchedParams().nThreads(2));
+  FileMgr fileMgr;
+  if (mode != Mem) {
+    ZmRef<ZvCf> cf = new ZvCf{};
+    cf->fromString(
+	"dir .\n"
+	"coldDir .\n"
+	"writeThread 1\n", false);
+    fileMgr.init(&sched, cf);
+  }
+  DataFrame df(Frame::fields(), "frame");
+  if (mode == Mem)
+    df.init(&memMgr);
+  else
+    df.init(&fileMgr);
+  sched.start();
   df.open();
   Frame frame;
-  {
+  if (mode == Mem || mode == Save) {
     auto writer = df.writer();
     for (uint64_t i = 0; i < 1000; i++) {
       frame.v1 = i;
@@ -52,7 +82,7 @@ int main()
       writer.write(&frame);
     }
   }
-  {
+  if (mode == Mem || mode == Load) {
     AnyReader index, reader;
     df.find(index, 0, ZuFixed{20, 0});
     std::cout << "offset=" << index.offset() << '\n';
@@ -69,6 +99,7 @@ int main()
     CHECK(v.exponent == 9);
   }
   df.close();
+  sched.stop();
   // df.final();
   // mgr.final();
 }

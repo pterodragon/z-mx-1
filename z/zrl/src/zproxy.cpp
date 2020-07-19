@@ -445,8 +445,8 @@ bool validateTag(ZuString s) {
 
 template <typename S>
 void parseAddr(const S &s, ZiIP &ip, uint16_t &port) {
-  const auto &colon = ZtStaticRegexUTF8(":");
-  const auto &nonDigit = ZtStaticRegexUTF8("\\D");
+  const auto &colon = ZtStaticRegex(":");
+  const auto &nonDigit = ZtStaticRegex("\\D");
   ZtRegex::Captures c;
   if (!s) {
     ip = ZiIP();

@@ -694,8 +694,8 @@ next:
     ZtString cmd_ = ZuMv(cmd);
     {
       ZtRegex::Captures c;
-      const auto &append = ZtStaticRegexUTF8("\\s*>>\\s*");
-      const auto &output = ZtStaticRegexUTF8("\\s*>\\s*");
+      const auto &append = ZtStaticRegex("\\s*>>\\s*");
+      const auto &output = ZtStaticRegex("\\s*>\\s*");
       unsigned pos = 0, n = 0;
       if (n = append.m(cmd, c, pos)) {
 	if (!(file = fopen(c[2], "a"))) {
@@ -1007,7 +1007,7 @@ private:
       uint8_t flags = 0;
       if (args->get("enabled")) flags |= User::Enabled;
       if (args->get("immutable")) flags |= User::Immutable;
-      const auto &comma = ZtStaticRegexUTF8(",");
+      const auto &comma = ZtStaticRegex(",");
       ZtRegex::Captures roles;
       comma.split(args->get("3"), roles);
       m_fbb.Clear();
@@ -1079,7 +1079,7 @@ private:
       uint8_t flags = 0;
       if (args->get("enabled")) flags |= User::Enabled;
       if (args->get("immutable")) flags |= User::Immutable;
-      const auto &comma = ZtStaticRegexUTF8(",");
+      const auto &comma = ZtStaticRegex(",");
       ZtRegex::Captures roles;
       comma.split(args->get("3"), roles);
       m_fbb.Clear();
@@ -1612,7 +1612,7 @@ private:
       ok.length(argc - (1 + subscribe));
       filters.length(ok.length());
       types.length(ok.length());
-      const auto &colon = ZtStaticRegexUTF8(":");
+      const auto &colon = ZtStaticRegex(":");
       for (unsigned i = 2; i < (unsigned)argc; i++) {
 	auto j = i - 2;
 	auto arg = args->get(ZuStringN<24>{} << i);
@@ -1781,7 +1781,7 @@ int main(int argc, char **argv)
 
   try {
     {
-      const auto &remote = ZtStaticRegexUTF8("^([^@]+)@([^:]+):(\\d+)$");
+      const auto &remote = ZtStaticRegex("^([^@]+)@([^:]+):(\\d+)$");
       ZtRegex::Captures c;
       if (remote.m(argv[1], c) == 4) {
 	user = c[2];
@@ -1790,7 +1790,7 @@ int main(int argc, char **argv)
       }
     }
     if (!user) {
-      const auto &local = ZtStaticRegexUTF8("^([^@]+)@(\\d+)$");
+      const auto &local = ZtStaticRegex("^([^@]+)@(\\d+)$");
       ZtRegex::Captures c;
       if (local.m(argv[1], c) == 3) {
 	user = c[2];
@@ -1799,7 +1799,7 @@ int main(int argc, char **argv)
       }
     }
     if (!user) {
-      const auto &remote = ZtStaticRegexUTF8("^([^:]+):(\\d+)$");
+      const auto &remote = ZtStaticRegex("^([^:]+):(\\d+)$");
       ZtRegex::Captures c;
       if (remote.m(argv[1], c) == 3) {
 	server = c[2];
@@ -1807,7 +1807,7 @@ int main(int argc, char **argv)
       }
     }
     if (!server) {
-      const auto &local = ZtStaticRegexUTF8("^(\\d+)$");
+      const auto &local = ZtStaticRegex("^(\\d+)$");
       ZtRegex::Captures c;
       if (local.m(argv[1], c) == 2) {
 	server = "localhost";

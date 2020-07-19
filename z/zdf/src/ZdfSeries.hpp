@@ -124,6 +124,7 @@ public:
     m_exponent = m_buf->hdr()->exponent();
   }
 
+  // read single value
   bool read(ZuFixed &value) {
     if (ZuUnlikely(!*this)) return false;
     if (ZuUnlikely(!m_decoder.read(value.value))) {
@@ -199,6 +200,7 @@ public:
     if (ZuUnlikely(!m_buf)) {
       m_encoder = m_series->template encoder<Encoder>(m_buf);
       if (ZuUnlikely(!m_buf)) return false;
+      m_buf->pin();
       m_exponent = value.exponent;
       eob = false;
     } else {
@@ -209,6 +211,7 @@ public:
       save();
       m_encoder = m_series->template nextEncoder<Encoder>(m_buf);
       if (ZuUnlikely(!m_buf)) return false;
+      m_buf->pin();
       m_exponent = value.exponent;
       if (ZuUnlikely(!m_encoder.write(value.value))) return false;
     }
@@ -371,7 +374,7 @@ private:
   }
 
   auto seekFn(uint64_t offset) const {
-    return [offset](const Blk &blk) -> int {
+    return [this, offset](const Blk &blk) -> int {
       auto hdr = Series::hdr(blk);
       auto hdrOffset = hdr->offset();
       if (offset < hdrOffset) return -static_cast<int>(hdrOffset - offset);
@@ -487,6 +490,11 @@ private:
     new (Blk::new_<ZmRef<Buf>>(m_blks.push())) ZmRef<Buf>{buf};
     new (buf->hdr()) Hdr{offset, 0};
     m_mgr->push(buf);
+    {
+      blkIndex = buf->blkIndex;
+      const auto *hdr = buf->hdr();
+      offset = hdr->offset() + hdr->count();
+    }
     return buf->writer<Encoder>();
   }
 

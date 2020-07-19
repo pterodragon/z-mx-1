@@ -99,7 +99,7 @@ struct BufLRU_HeapID {
 };
 using BufLRU =
   ZmList<BufLRUNode_,
-    ZmListObject<ZuNull,
+    ZmListObject<ZuShadow,
       ZmListNodeIsItem<true,
 	ZmListHeapID<ZuNull,
 	  ZmListLock<ZmNoLock> > > > >;

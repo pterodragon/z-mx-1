@@ -52,7 +52,7 @@ bool MemMgr::load(unsigned, unsigned, void *)
 
 void MemMgr::save(ZmRef<Buf> buf)
 {
-  buf->unpin([]() { });
+  buf->unpin([](unsigned) { });
 }
 
 bool MemMgr::loadFile(

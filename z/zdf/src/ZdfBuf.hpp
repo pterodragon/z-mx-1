@@ -132,7 +132,7 @@ public:
   template <typename L>
   void unpin(L l) {
     PinGuard guard(m_pinLock);
-    if (ZuLikely(m_pinned)) if (!--m_pinned) l();
+    if (ZuLikely(m_pinned)) l(--m_pinned);
   }
 
   uint8_t *data() { return &m_data[0]; }

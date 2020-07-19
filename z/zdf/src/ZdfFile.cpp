@@ -206,13 +206,14 @@ bool FileMgr::load(unsigned seriesID, unsigned blkIndex, void *buf)
 
 void FileMgr::save(ZmRef<Buf> buf)
 {
-  m_sched->run(m_writeTID, ZmFn<>{ZuMv(buf), [](Buf *buf) {
-    buf->unpin([buf](unsigned pinned) {
-      if (!pinned)
+  buf->save([this, buf = ZuMv(buf)]() {
+    m_sched->run(m_writeTID, ZmFn<>{ZuMv(buf), [](Buf *buf) {
+      buf->save_([buf]() {
 	static_cast<FileMgr *>(buf->mgr)->save_(
 	    buf->seriesID, buf->blkIndex, buf->data());
-    });
-  }});
+      });
+    }});
+  });
 }
 
 void FileMgr::save_(unsigned seriesID, unsigned blkIndex, const void *buf)

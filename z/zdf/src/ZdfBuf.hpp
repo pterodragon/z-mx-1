@@ -124,15 +124,33 @@ public:
     PinGuard guard(m_pinLock);
     ++m_pinned;
   }
+  void unpin() {
+    PinGuard guard(m_pinLock);
+    if (ZuLikely(m_pinned)) --m_pinned;
+  }
   template <typename L>
   void pinned(L l) const {
     PinReadGuard guard(m_pinLock);
     l(m_pinned);
   }
+
+  // used for asynchronous saves
   template <typename L>
-  void unpin(L l) {
+  void save(L l) {
     PinGuard guard(m_pinLock);
-    if (ZuLikely(m_pinned)) l(--m_pinned);
+    if (!m_saves++) l();
+  }
+  template <typename L>
+  void save_(L l) {
+    PinGuard guard(m_pinLock);
+    if (ZuLikely(m_saves)) {
+      if (m_pinned > m_saves)
+	m_pinned -= m_saves;
+      else
+	m_pinned = 0;
+      m_saves = 0;
+      l();
+    }
   }
 
   uint8_t *data() { return &m_data[0]; }
@@ -173,6 +191,7 @@ public:
 private:
   PinLock		m_pinLock;
     unsigned		  m_pinned = 0;
+    unsigned		  m_saves = 0;
 
   uint8_t		m_data[Size];
 };

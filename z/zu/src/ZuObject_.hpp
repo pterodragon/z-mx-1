@@ -30,8 +30,6 @@
 #include <zlib/ZuLib.hpp>
 #endif
 
-#include <stddef.h>
-
 #include <zlib/ZuConversion.hpp>
 
 struct ZuObject_ { }; // tag

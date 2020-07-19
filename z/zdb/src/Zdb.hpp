@@ -269,8 +269,9 @@ struct ZdbTrailer {
 };
 #pragma pack(pop)
 
+struct ZdbLRU_ { }; // disambiguate from ZuNull
 using ZdbLRU =
-  ZmList<ZuNull,
+  ZmList<ZdbLRU_,
     ZmListObject<ZuShadow,
       ZmListNodeIsItem<true,
 	ZmListHeapID<ZuNull,

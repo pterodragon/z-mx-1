@@ -44,7 +44,7 @@ static void dump(const char *prefix, int op, ZdbAnyPOD *pod)
     << " RN=" << ZuBoxed(pod->rn())
     << ", prevRN=" << ZuBoxed(pod->prevRN())
     << ", data={" << *(Order *)pod->ptr() << "}}";
-  std::cout << s << std::flush;
+  std::cout << s << '\n' << std::flush;
 }
 
 ZmRef<OrderDB> orders;
@@ -138,11 +138,11 @@ void usage()
   static const char *help =
     "usage: ZdbTest nThreads nOps [OPTION]...\n\n"
     "Options:\n"
-    "  -D, --del=N\t\t- delete first N sequences\n"
-    "  -k, --skip=N\t\t- skip N RNs before first\n"
+    "  -D, --del=N\t\t\t- delete first N sequences\n"
+    "  -k, --skip=N\t\t\t- skip N RNs before first\n"
     "  -s, --stride=N\t\t- increment RNs by N with each operation\n"
-    "  -a, --append\t\t- append\n"
-    "  -c, --chain=N\t\t- append chains of N records\n"
+    "  -a, --append\t\t\t- append\n"
+    "  -c, --chain=N\t\t\t- append chains of N records\n"
     "  -f, --dbs:0:path=PATH\t\t- file path\n"
     "  -p, --dbs:0:preAlloc=N\t- number of records to pre-allocate\n"
     "  -h, --hostID=N\t\t- host ID\n"
@@ -162,7 +162,7 @@ void usage()
     "  --orders:indexHash:loadFactor=N - load factor for index hash table\n"
     "  --orders:indexHash:cBits=N\t- concurrency bits for index hash table\n"
     "  --orders:lockHash:bits=N\t- bits for lock hash table\n"
-    "  --orders:lockHash:loadFactor=N\t- load factor for lock hash table\n"
+    "  --orders:lockHash:loadFactor=N - load factor for lock hash table\n"
     "  --hosts:1:priority=N\t\t- host 0 priority\n"
     "  --hosts:1:IP=N\t\t- host 0 IP\n"
     "  --hosts:1:port=N\t\t- host 0 port\n"

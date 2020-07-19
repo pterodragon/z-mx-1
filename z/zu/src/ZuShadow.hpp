@@ -30,6 +30,8 @@
 #include <zlib/ZuLib.hpp>
 #endif
 
+#include <zlib/ZuConversion.hpp>
+
 class ZuShadow { };
 
 template <typename T> struct ZuIsShadow_ {

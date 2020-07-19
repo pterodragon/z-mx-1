@@ -120,20 +120,19 @@ public:
   template <typename ...Args>
   Buf_(Args &&... args) : BufLRUNode{ZuFwd<Args>(args)...} { }
 
-  bool pin() {
+  void pin() {
     PinGuard guard(m_pinLock);
-    if (m_pinned) return false;
-    return m_pinned = 1;
+    ++m_pinned;
   }
-  bool pinned() const {
+  template <typename L>
+  void pinned(L l) const {
     PinReadGuard guard(m_pinLock);
-    return m_pinned;
+    l(m_pinned);
   }
   template <typename L>
   void unpin(L l) {
     PinGuard guard(m_pinLock);
-    m_pinned = 0;
-    l(this);
+    if (ZuLikely(m_pinned)) if (!--m_pinned) l();
   }
 
   uint8_t *data() { return &m_data[0]; }
@@ -197,12 +196,13 @@ public:
       auto lru_ = m_lru.shiftNode();
       if (ZuLikely(lru_)) {
 	Buf *lru = static_cast<Buf *>(lru_);
-	if (lru->pinned()) {
-	  m_lru.push(ZuMv(lru_));
-	  m_maxBufs = m_lru.count() + 1;
-	  return;
-	}
-	(m_unloadFn[lru->seriesID])(lru);
+	lru->pinned([this, lru_ = ZuMv(lru_), lru](unsigned pinned) {
+	  if (pinned) {
+	    m_lru.push(ZuMv(lru_));
+	    m_maxBufs = m_lru.count() + 1;
+	  } else
+	    (m_unloadFn[lru->seriesID])(lru);
+	});
       }
     }
   }

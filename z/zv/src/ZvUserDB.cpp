@@ -202,7 +202,7 @@ int Mgr::save(const ZiFile::Path &path, unsigned maxAge, ZeError *e)
 
   if (maxAge) ZiFile::age(path, maxAge);
 
-  return Zfb::Save::save(path, fbb, e);
+  return Zfb::Save::save(path, fbb, 0600, e);
 }
 
 bool Mgr::modified() const

@@ -266,7 +266,7 @@ bool FileMgr::saveFile(ZuString name_, Zfb::Builder &fbb, ZeError *e)
   ZiFile::Path name{name_};
   name += ZiFile::Path{".df"};
   ZiFile::Path path = ZiFile::append(m_dir, name);
-  return Zfb::Save::save(path, fbb, e) == Zi::OK;
+  return Zfb::Save::save(path, fbb, 0666, e) == Zi::OK;
 }
 
 void FileMgr::fileRdError_(

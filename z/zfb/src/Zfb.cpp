@@ -24,13 +24,13 @@
 #include <zlib/ZiFile.hpp>
 
 ZfbExtern int Zfb::Save::save(
-    const ZiPlatform::Path &path, Builder &fbb, ZeError *e)
+    const ZiPlatform::Path &path, Builder &fbb, unsigned mode, ZeError *e)
 {
   ZiFile f;
   int i;
 
   if ((i = f.open(path,
-	  ZiFile::Create | ZiFile::WriteOnly, 0600, e)) != Zi::OK)
+	  ZiFile::Create | ZiFile::WriteOnly, mode, e)) != Zi::OK)
     return i;
 
   uint8_t *buf = fbb.GetBufferPointer();

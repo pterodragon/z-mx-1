@@ -230,7 +230,7 @@ namespace Save {
 
   // save file
   ZfbExtern int save(
-      const ZiPlatform::Path &path, Builder &fbb, ZeError *e);
+      const ZiPlatform::Path &path, Builder &fbb, unsigned mode, ZeError *e);
 }
 
 namespace Load {

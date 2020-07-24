@@ -48,17 +48,18 @@ void App::attach_()
   m_sched->run_(m_tid, ZmFn{this, [](App *app) { app->run_(); }});
 }
 
-void App::detach() // FIXME - completion / continuation?
+void App::detach(ZmFn<> fn)
 {
   m_sched->wakeFn(m_tid, ZmFn{});
-  m_sched->run_(m_tid, ZmFn{this, [](App *app) { app->detach_(); }});
+  m_sched->run_(m_tid, [this, fn = ZuMv(fn)]() mutable { detach_(ZuMv(fn)); });
 }
 
-void App::detach_() // FIXME - app-specific Gtk thread cleanup / finalization?
+void App::detach_(ZmFn<> fn)
 {
   g_source_destroy(m_source);
   g_source_unref(m_source);
   m_source = nullptr;
+  fn();
 }
 
 void App::wake()

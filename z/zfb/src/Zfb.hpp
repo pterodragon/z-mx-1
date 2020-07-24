@@ -57,7 +57,7 @@ using Builder = FlatBufferBuilder;
 using IOBuf = ZiIOBuf<>;
 
 // IOBuilder customizes FlatBufferBuilder with an allocator that
-// builds directly into a detachable IOBuf for transmission
+// builds directly into a detachable IOBuf for transmission/persistence
 class IOBuilder : public Allocator, public Builder {
 public:
   enum { Align = 8 };

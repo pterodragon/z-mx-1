@@ -42,14 +42,14 @@ namespace ZGtk {
 class ZGtkAPI App {
 public:
   void attach(ZmScheduler *sched, unsigned tid);
-  void detach();
+  void detach(ZmFn<>);
 
   ZuInline ZmScheduler *sched() const { return m_sched; }
   ZuInline unsigned tid() const { return m_tid; }
 
 private:
   void attach_();	// runs on Gtk thread
-  void detach_();	// ''
+  void detach_(ZmFn<>);	// ''
 
   void wake();
   void wake_();		// ''

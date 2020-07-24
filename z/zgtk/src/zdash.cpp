@@ -45,7 +45,10 @@
 #include <zlib/ZtlsBase64.hpp>
 
 #include <zlib/Zrl.hpp>
+
 #include <zlib/ZCmd.hpp>
+
+#include <zlib/Zdf.hpp>
 
 #include <zlib/ZGtkApp.hpp>
 #include <zlib/ZGtkCallback.hpp>
@@ -61,12 +64,6 @@
 // index row (in left-hand tree)
 // watch window and row (in watchlist)
 // array of time series
-
-// time series structure
-// key frames per-packet (1.5K Ethernet MTU)
-// delta compression
-// values: floating point +1.0
-// 
 
 static void usage()
 {
@@ -518,12 +515,10 @@ public:
   void final() {
     // m_link = nullptr;
 
-    detach(); // FIXME - we may want to pass a finalizer lambda to this
-    // to run on the Gtk thread and clean up,
-    // and also have the caller synchronously block until it completes..
-
-    ZvCmdHost::final();
-    Base::final();
+    detach([this]() {
+      ZvCmdHost::final();
+      Base::final();
+    });
   }
 
   void gtkInit() {

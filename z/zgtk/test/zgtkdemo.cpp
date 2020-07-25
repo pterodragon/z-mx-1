@@ -241,30 +241,12 @@ void start()
   addCol(false);
   addCol(true);
 
-  model->drag(view, GTK_WIDGET(watchlist),
-      [](TreeModel *model, GList *rows, GtkSelectionData *data) -> gboolean {
-	gtk_selection_data_set(data, TreeModel::rowsAtom(), sizeof(rows)<<3,
-	    reinterpret_cast<const guchar *>(&rows), sizeof(rows));
-	return true;
-      },
-      [](TreeModel *model, GtkWidget *widget, GtkSelectionData *data) {
-	if (gtk_selection_data_get_data_type(data) != TreeModel::rowsAtom())
-	  return;
-	gint length;
-	auto ptr = gtk_selection_data_get_data_with_length(data, &length);
-	if (length != sizeof(GList *)) return;
-	auto rows = *reinterpret_cast<GList *const *>(ptr);
-	for (GList *i = g_list_first(rows); i; i = g_list_next(i)) {
-	  auto path = reinterpret_cast<GtkTreePath *>(i->data);
-	  GtkTreeIter iter;
-	  if (gtk_tree_model_get_iter(GTK_TREE_MODEL(model), &iter, path)) {
-	    ZGtk::Value value;
-	    gtk_tree_model_get_value(GTK_TREE_MODEL(model), &iter, 0, &value);
-	    std::cout << value.get_long() << '\n';
-	  }
-	  gtk_tree_path_free(path);
-	}
-	g_list_free(rows);
+  model->drag(view);
+  model->drop(GTK_WIDGET(watchlist),
+      [](TreeModel *model, GtkWidget *, GtkTreeIter *iter) {
+	ZGtk::Value value;
+	gtk_tree_model_get_value(GTK_TREE_MODEL(model), iter, 0, &value);
+	std::cout << value.get_long() << '\n';
       });
 
   gtk_tree_view_set_model(view, GTK_TREE_MODEL(model));

@@ -256,11 +256,7 @@ public:
   }
 
   // multiple row drag-and-drop support
-  //
-  // Drag(TreeModel *model, GList *rows, GtkSelectionData *data) -> gboolean
-  // Drop(TreeModel *model, GtkWidget *widget, GtkSelectionData *data)
-  template <typename Drag, typename Drop>
-  void drag(GtkTreeView *view, GtkWidget *dest, Drag, Drop) {
+  void drag(GtkTreeView *view) {
     gtk_drag_source_set(GTK_WIDGET(view),
 	GDK_BUTTON1_MASK,
 	rowsTargets(), nRowsTargets(),
@@ -277,7 +273,9 @@ public:
 	  auto rows = gtk_tree_selection_get_selected_rows(sel, &model);
 	  if (!rows) return false;
 	  g_return_val_if_fail(!!model, false);
-	  return ZuLambdaFn<Drag>::invoke(impl(model), rows, data);
+	  gtk_selection_data_set(data, rowsAtom(), sizeof(rows)<<3,
+	      reinterpret_cast<const guchar *>(&rows), sizeof(rows));
+	  return true;
 	}), 0);
 
     g_signal_connect(G_OBJECT(view), "drag-end",
@@ -348,7 +346,29 @@ public:
 	  gtk_tree_path_free(path);
 	  return call_parent || drag;
 	}), 0);
-
+  }
+  // Drop(TreeModel *model, GtkWidget *widget, GtkTreeIter *iter)
+private:
+  template <typename Drop>
+  bool drop_(GtkWidget *widget, GtkSelectionData *data) {
+    if (gtk_selection_data_get_data_type(data) != rowsAtom()) return false;
+    gint length;
+    auto ptr = gtk_selection_data_get_data_with_length(data, &length);
+    if (length != sizeof(GList *)) return true;
+    auto rows = *reinterpret_cast<GList *const *>(ptr);
+    for (GList *i = g_list_first(rows); i; i = g_list_next(i)) {
+      auto path = reinterpret_cast<GtkTreePath *>(i->data);
+      GtkTreeIter iter;
+      if (gtk_tree_model_get_iter(GTK_TREE_MODEL(this), &iter, path))
+	ZuLambdaFn<Drop>::invoke(impl(), widget, &iter);
+      gtk_tree_path_free(path);
+    }
+    g_list_free(rows);
+    return true;
+  }
+public:
+  template <typename Drop>
+  void drop(GtkWidget *dest, Drop) {
     gtk_drag_dest_set(dest,
 	GTK_DEST_DEFAULT_ALL,
 	TreeModel::rowsTargets(), TreeModel::nRowsTargets(),
@@ -357,10 +377,11 @@ public:
     g_signal_connect(G_OBJECT(dest), "drag-data-received",
 	ZGtk::callback([](GtkWidget *widget, GdkDragContext *, int, int,
 	    GtkSelectionData *data, guint, guint32, gpointer model_) {
-	  ZuLambdaFn<Drop>::invoke(impl(model_), widget, data);
-	  g_signal_stop_emission_by_name(widget, "drag-data-received");
+	  if (impl(model_)->template drop_<Drop>(widget, data))
+	    g_signal_stop_emission_by_name(widget, "drag-data-received");
 	}), this);
   }
+
 private:
   static void dragEnd(GtkWidget *widget, TreeModelDragData *dragData) {
     for (GList *l = dragData->events; l; l = l->next)
@@ -445,10 +466,7 @@ struct Impl : public TreeArray<Impl, Iter, Data> {
 #endif
 // Note: following load() and association with a view, Impl must call
 // add() and del() to inform Gtk about subsequent modifications to the model
-template <
-  typename Impl,
-  typename Iter,
-  typename Data>
+template <typename Impl, typename Iter, typename Data>
 class TreeArray : public TreeSortable<TreeArray<Impl, Iter, Data>> {
   ZuAssert(sizeof(Iter) <= sizeof(GtkTreeIter));
   ZuAssert(ZuTraits<Iter>::IsPOD);

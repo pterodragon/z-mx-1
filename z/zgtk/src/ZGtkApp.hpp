@@ -42,6 +42,7 @@ namespace ZGtk {
 class ZGtkAPI App {
 public:
   void attach(ZmScheduler *sched, unsigned tid);
+  ZuInline void detach() { detach(ZmFn<>{}); }
   void detach(ZmFn<>);
 
   ZuInline ZmScheduler *sched() const { return m_sched; }

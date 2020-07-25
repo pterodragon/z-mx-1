@@ -146,12 +146,10 @@ namespace MainTree {
   };
 
   template <
-    unsigned Depth, typename Data, typename Child,
-    typename Tree, typename XData = ZuNull>
+    unsigned Depth, typename Data, typename Child, typename Tree>
   struct Parent :
       public Data,
-      public ZGtk::TreeNode::Parent<Depth, Child>,
-      public XData {
+      public ZGtk::TreeNode::Parent<Depth, Child> {
     Parent() = default;
     template <typename ...Args>
     Parent(Args &&... args) : Data{ZuFwd<Args>(args)...} { }
@@ -159,12 +157,10 @@ namespace MainTree {
     Tree	tree;
   };
 
-  template <
-    unsigned Depth, typename Data, typename Tuple, typename XData = ZuNull>
+  template <unsigned Depth, typename Data, typename Tuple>
   struct Branch :
       public Data,
-      public ZGtk::TreeNode::Branch<Depth, Tuple>,
-      public XData {
+      public ZGtk::TreeNode::Branch<Depth, Tuple> {
     Branch() = default;
     template <typename ...Args>
     Branch(Args &&... args) : Data{ZuFwd<Args>(args)...} { }
@@ -242,8 +238,8 @@ namespace MainTree {
       (MxParent, multiplexers),
       (EngineParent, engines),
       (DBEnv, dbEnv));
-  struct AppXData { Link *link = nullptr; };
-  using App = Branch<0, ZvTelemetry::App_load, AppTuple, AppXData>;
+  struct AppData : public ZvTelemetry::App_load { Link *link = nullptr; };
+  using App = Branch<0, AppData, AppTuple>;
 
   using Root = ZGtk::TreeNode::Parent<0, App, ZGtk::TreeNode::Root>;
 
@@ -474,6 +470,13 @@ public:
 
   // FIXME - use ZGtk::TreeArray<> to define all watchlists
   // FIXME - figure out how to save/load tree view columns, sort, etc.
+  // - need View class that with a create column(col) with data func that
+  //   calls gtk_tree_model_get_value(model, iter, col, value)
+  // - load() loads sequcence of visible columns and calls
+  //   append_column for each (also persists column ordering/visibility)
+  //   - load() uses all columns in order as default
+  //   - may want to prevent loading an outdated column schema
+  // - save() persists column order (sequence of column IDs)
 
   class Link : public ZvCmdCliLink<ZDash, Link> {
   public:

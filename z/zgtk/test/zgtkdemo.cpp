@@ -241,12 +241,27 @@ void start()
   addCol(false);
   addCol(true);
 
+  model->click<GDK_BUTTON_PRESS, 3, GDK_CONTROL_MASK | GDK_SHIFT_MASK, 0>(view,
+      [](TreeModel *model, GtkWidget *, unsigned n) {
+	std::cout << "right click " << n << '\n';
+	return [model = GTK_TREE_MODEL(model)](GtkTreeIter *iter) {
+	  if (!iter) return;
+	  ZGtk::Value value;
+	  gtk_tree_model_get_value(model, iter, 0, &value);
+	  std::cout << value.get_long() << '\n';
+	};
+      });
+
   model->drag(view);
   model->drop(GTK_WIDGET(watchlist),
-      [](TreeModel *model, GtkWidget *, GtkTreeIter *iter) {
-	ZGtk::Value value;
-	gtk_tree_model_get_value(GTK_TREE_MODEL(model), iter, 0, &value);
-	std::cout << value.get_long() << '\n';
+      [](TreeModel *model, GtkWidget *, unsigned n) {
+	std::cout << "drag/drop " << n << '\n';
+	return [model = GTK_TREE_MODEL(model)](GtkTreeIter *iter) {
+	  if (!iter) return;
+	  ZGtk::Value value;
+	  gtk_tree_model_get_value(model, iter, 0, &value);
+	  std::cout << value.get_long() << '\n';
+	};
       });
 
   gtk_tree_view_set_model(view, GTK_TREE_MODEL(model));

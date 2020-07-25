@@ -255,6 +255,50 @@ public:
     return reinterpret_cast<TreeModel *>(g_object_new(gtype(), nullptr));
   }
 
+  // click (popup menu, etc.)
+  // Click(TreeModel *model, GtkWidget *widget, unsigned n) -> Fn
+  // Fn(GtkTreeIter *iter)
+  // - called once per row, n times
+  template <
+    int Type, unsigned Button, unsigned Mask, unsigned State, typename Click>
+  void click(GtkTreeView *view, Click) {
+    g_signal_connect(G_OBJECT(view), "button-press-event",
+	ZGtk::callback([](GtkWidget *widget,
+	    GdkEventButton *event, gpointer) -> gboolean {
+	  auto view = GTK_TREE_VIEW(widget);
+	  g_return_val_if_fail(!!view, false);
+	  if (event->type != Type ||
+	      event->button != Button ||
+	      (event->state & Mask) != State) return false;
+	  GtkTreePath *path = nullptr;
+	  GtkTreeViewColumn *column = nullptr;
+	  gint cell_x, cell_y;
+	  gtk_tree_view_get_path_at_pos(
+	      view, event->x, event->y, &path, &column, &cell_x, &cell_y);
+	  if (!path) return false;
+	  auto selection = gtk_tree_view_get_selection(view);
+	  if (!gtk_tree_selection_path_is_selected(selection, path)) {
+	    gtk_tree_selection_unselect_all(selection);
+	    gtk_tree_selection_select_path(selection, path);
+	  }
+	  gtk_tree_path_free(path);
+	  GtkTreeModel *model = nullptr;
+	  auto rows = gtk_tree_selection_get_selected_rows(selection, &model);
+	  if (!rows) return false;
+	  g_return_val_if_fail(!!model, false);
+	  auto fn = ZuLambdaFn<Click>::invoke(
+	      impl(model), widget, g_list_length(rows));
+	  for (GList *i = g_list_first(rows); i; i = g_list_next(i)) {
+	    auto path = reinterpret_cast<GtkTreePath *>(i->data);
+	    GtkTreeIter iter;
+	    if (gtk_tree_model_get_iter(model, &iter, path)) fn(&iter);
+	    gtk_tree_path_free(path);
+	  }
+	  g_list_free(rows);
+	  return true;
+	}), 0);
+  }
+
   // multiple row drag-and-drop support
   void drag(GtkTreeView *view) {
     gtk_drag_source_set(GTK_WIDGET(view),
@@ -267,10 +311,10 @@ public:
 	    GtkSelectionData *data, guint, guint) -> gboolean {
 	  auto view = GTK_TREE_VIEW(o);
 	  g_return_val_if_fail(!!view, false);
-	  auto sel = gtk_tree_view_get_selection(view);
-	  if (!sel) return false;
+	  auto selection = gtk_tree_view_get_selection(view);
+	  if (!selection) return false;
 	  GtkTreeModel *model = nullptr;
-	  auto rows = gtk_tree_selection_get_selected_rows(sel, &model);
+	  auto rows = gtk_tree_selection_get_selected_rows(selection, &model);
 	  if (!rows) return false;
 	  g_return_val_if_fail(!!model, false);
 	  gtk_selection_data_set(data, rowsAtom(), sizeof(rows)<<3,
@@ -307,7 +351,7 @@ public:
 		gdk_event_copy(reinterpret_cast<GdkEvent *>(event)));
 	    return true;
 	  }
-	  if (event->type == GDK_2BUTTON_PRESS) return false;
+	  if (event->type != GDK_BUTTON_PRESS) return false;
 	  GtkTreePath *path = nullptr;
 	  GtkTreeViewColumn *column = nullptr;
 	  gint cell_x, cell_y;
@@ -324,30 +368,31 @@ public:
 	    (GTK_WIDGET_GET_CLASS(view))->button_press_event(widget, event);
 	    drag = gtk_tree_selection_path_is_selected(selection, path);
 	  }
-	  if (drag) {
-	    if (!call_parent)
-	      dragData->events = g_list_append(dragData->events,
-		  gdk_event_copy((GdkEvent*)event));
-	    dragData->handler =
-	      g_signal_connect(G_OBJECT(view), "button-release-event",
-		  ZGtk::callback([](GtkWidget *widget,
-		      GdkEventButton *event, gpointer) -> gboolean {
-		    TreeModelDragData *dragData =
-		      reinterpret_cast<TreeModelDragData *>(
-			  g_object_get_data(G_OBJECT(widget), typeName()));
-		    g_return_val_if_fail(!!dragData, false);
-		    for (GList *l = dragData->events; l; l = l->next)
-		      gtk_propagate_event(widget,
-			  reinterpret_cast<GdkEvent *>(l->data));
-		    dragEnd(widget, dragData);
-		    return false;
-		  }), 0);
-	  }
 	  gtk_tree_path_free(path);
-	  return call_parent || drag;
+	  if (!drag) return call_parent;
+	  if (!call_parent)
+	    dragData->events = g_list_append(dragData->events,
+		gdk_event_copy((GdkEvent*)event));
+	  dragData->handler =
+	    g_signal_connect(G_OBJECT(view), "button-release-event",
+		ZGtk::callback([](GtkWidget *widget,
+		    GdkEventButton *event, gpointer) -> gboolean {
+		  TreeModelDragData *dragData =
+		    reinterpret_cast<TreeModelDragData *>(
+			g_object_get_data(G_OBJECT(widget), typeName()));
+		  g_return_val_if_fail(!!dragData, false);
+		  for (GList *l = dragData->events; l; l = l->next)
+		    gtk_propagate_event(widget,
+			reinterpret_cast<GdkEvent *>(l->data));
+		  dragEnd(widget, dragData);
+		  return false;
+		}), 0);
+	  return true;
 	}), 0);
   }
-  // Drop(TreeModel *model, GtkWidget *widget, GtkTreeIter *iter)
+  // Drop(TreeModel *model, GtkWidget *widget, unsigned n) -> Fn
+  // Fn(GtkTreeIter *iter)
+  // - called once per row, n times
 private:
   template <typename Drop>
   bool drop_(GtkWidget *widget, GtkSelectionData *data) {
@@ -355,12 +400,14 @@ private:
     gint length;
     auto ptr = gtk_selection_data_get_data_with_length(data, &length);
     if (length != sizeof(GList *)) return true;
+    auto model = GTK_TREE_MODEL(this);
     auto rows = *reinterpret_cast<GList *const *>(ptr);
+    auto fn = ZuLambdaFn<Drop>::invoke(
+	impl(model), widget, g_list_length(rows));
     for (GList *i = g_list_first(rows); i; i = g_list_next(i)) {
       auto path = reinterpret_cast<GtkTreePath *>(i->data);
       GtkTreeIter iter;
-      if (gtk_tree_model_get_iter(GTK_TREE_MODEL(this), &iter, path))
-	ZuLambdaFn<Drop>::invoke(impl(), widget, &iter);
+      if (gtk_tree_model_get_iter(model, &iter, path)) fn(&iter);
       gtk_tree_path_free(path);
     }
     g_list_free(rows);
@@ -376,8 +423,8 @@ public:
 
     g_signal_connect(G_OBJECT(dest), "drag-data-received",
 	ZGtk::callback([](GtkWidget *widget, GdkDragContext *, int, int,
-	    GtkSelectionData *data, guint, guint32, gpointer model_) {
-	  if (impl(model_)->template drop_<Drop>(widget, data))
+	    GtkSelectionData *data, guint, guint32, gpointer model) {
+	  if (impl(model)->template drop_<Drop>(widget, data))
 	    g_signal_stop_emission_by_name(widget, "drag-data-received");
 	}), this);
   }

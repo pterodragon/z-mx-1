@@ -39,9 +39,10 @@ friend ZmHashMgr;
   using ID2Params =
     ZmRBTree<ZmIDString,
       ZmRBTreeVal<ZmHashParams,
-	ZmRBTreeObject<ZuNull,
-	  ZmRBTreeHeapID<HeapID,
-	    ZmRBTreeLock<ZmNoLock> > > > >;
+	ZmRBTreeUnique<true,
+	  ZmRBTreeObject<ZuNull,
+	    ZmRBTreeHeapID<HeapID,
+	      ZmRBTreeLock<ZmNoLock> > > > > >;
 
   ZmHashMgr_() { }
 public:
@@ -51,8 +52,7 @@ public:
     if (ZuLikely(!i.count())) return;
     while (auto tbl = i.iterate()) {
       tbl->ref2_();
-      i.del();
-      tbl->deref_();
+      (i.del(tbl))->deref_();
     }
   }
 

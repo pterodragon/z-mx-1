@@ -135,7 +135,8 @@ namespace MainTree {
   using TelTree =
     ZmRBTree<T,
       ZmRBTreeIndex<typename TelKey<T>::Accessor,
-	ZmRBTreeLock<ZmNoLock> > >;
+	ZmRBTreeUnique<true,
+	  ZmRBTreeLock<ZmNoLock> > > >;
 
   template <unsigned Depth, typename Data>
   struct Child : public Data, public ZGtk::TreeNode::Child<Depth> {

@@ -54,8 +54,9 @@ friend ZmHeapCache;
   using IDPart2Config =
     ZmRBTree<ZuPair<ZmIDString, unsigned>,
       ZmRBTreeVal<ZmHeapConfig,
-	ZmRBTreeHeapID<ZuNull,
-	  ZmRBTreeLock<ZmNoLock> > > >;
+	ZmRBTreeUnique<true,
+	  ZmRBTreeHeapID<ZuNull,
+	    ZmRBTreeLock<ZmNoLock> > > > >;
   using ID2Cache =
     ZmRBTree<ZmHeapCache *,
       ZmRBTreeIndex<ZmHeapCache::IDAccessor,
@@ -89,8 +90,8 @@ public:
     m_caches2.clean();
     m_caches3.clean();
     auto i = m_caches.iterator();
-    while (ZmHeapCache *c = i.iterateKey()) {
-      i.del();
+    while (auto node = i.iterate()) {
+      auto c = i.del(node)->key();
       ZmDEREF(c);
     }
   }

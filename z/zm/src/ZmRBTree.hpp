@@ -64,6 +64,7 @@ struct ZmRBTree_Defaults {
   using Object = ZmObject;
   struct HeapID { static const char *id() { return "ZmRBTree"; } };
   struct Base { };
+  enum { Unique = 0 };
 };
 
 // ZmRBTreeCmp - the key comparator
@@ -158,6 +159,12 @@ struct ZmRBTreeBase : public NTP {
   using Base = Base_;
 };
 
+// ZmRBTreeUnique - key is unique
+template <bool Unique_, class NTP = ZmRBTree_Defaults>
+struct ZmRBTreeUnique : public NTP {
+  enum { Unique = Unique_ };
+};
+
 enum {
   ZmRBTreeEqual = 0,
   ZmRBTreeGreaterEqual = 1,
@@ -219,7 +226,6 @@ public:
 protected:
   Tree	&m_tree;
   Node	*m_node;
-  Node	*m_last;	// FIXME - remove this; only needed for i.del(), which can be replaced by i.del(last) in all callers; need to make equivalent changes to other containers
 };
 
 template <typename Tree_, int Direction_ = ZmRBTreeGreaterEqual>
@@ -229,6 +235,8 @@ class ZmRBTreeIterator :
   using Tree = Tree_;
   enum { Direction = Direction_ };
   using Guard = typename Tree::Guard;
+  using Node = typename Tree::Node;
+  using NodeRef = typename Tree::NodeRef;
 
 public:
   ZmRBTreeIterator(Tree &tree) :
@@ -240,7 +248,7 @@ public:
     Guard(tree.lock()),
     ZmRBTreeIterator_<Tree, Direction>(tree, index, compare) { }
 
-  void del() { this->m_tree.delIterate(*this); }
+  NodeRef del(Node *node) { return this->m_tree.delIterate(node); }
 };
 
 template <typename Tree_, int Direction_ = ZmRBTreeGreaterEqual>
@@ -284,6 +292,7 @@ public:
   using Lock = typename NTP::Lock;
   using Object = typename NTP::Object;
   using HeapID = typename NTP::HeapID;
+  enum { Unique = NTP::Unique };
 
   using Guard = ZmGuard<Lock>;
   using ReadGuard = ZmReadGuard<Lock>;
@@ -295,25 +304,45 @@ public:
 
   // node in a red/black tree
 
+private:
   struct NullObject { }; // deconflict with ZuNull
-  template <typename Node, typename Heap,
-    bool NodeIsKey, bool NodeIsVal> class NodeFn :
+  template <typename Node>
+  class NodeFn_Dup {
+  public:
+    ZuInline void init() { m_dup = nullptr; }
+    ZuInline Node *dup() const { return m_dup; }
+    ZuInline void dup(Node *n) { m_dup = n; }
+  private:
+    Node		*m_dup;
+  };
+  template <typename Node>
+  class NodeFn_Unique {
+  public:
+    ZuInline void init() { }
+    ZuInline constexpr Node * const dup() const { return nullptr; }
+    ZuInline void dup(Node *) { }
+  };
+  template <
+    typename Node, typename Heap, bool NodeIsKey, bool NodeIsVal, bool Unique>
+  class NodeFn_ :
       public ZuIf<NullObject, Object,
 	ZuConversion<ZuNull, Object>::Is ||
 	ZuConversion<ZuShadow, Object>::Is ||
 	(NodeIsKey && ZuConversion<Object, Key>::Is) ||
 	(NodeIsVal && ZuConversion<Object, Val>::Is)>::T,
+      public ZuIf<NodeFn_Unique<Node>, NodeFn_Dup<Node>, Unique>::T,
       public Heap {
-    NodeFn(const NodeFn &);
-    NodeFn &operator =(const NodeFn &);	// prevent mis-use
+    using Base =
+      typename ZuIf<NodeFn_Unique<Node>, NodeFn_Dup<Node>, Unique>::T;
 
-  template <typename, typename> friend class ZmRBTree;
+  public:
+    ZuInline NodeFn_() { }
 
-  protected:
-    ZuInline NodeFn() { }
-
-  private:
-    ZuInline void init() { m_right = m_left = m_dup = 0; m_parent = 0; }
+    ZuInline void init() {
+      Base::init();
+      m_right = m_left = nullptr;
+      m_parent = 0;
+    }
 
     ZuInline bool black() {
       return m_parent & (uintptr_t)1;
@@ -326,33 +355,33 @@ public:
     // the returned object against concurrent deletion; these are private
     ZuInline Node *right() const { return m_right; }
     ZuInline Node *left() const { return m_left; }
-    ZuInline Node *dup() const { return m_dup; }
     ZuInline Node *parent() const { return (Node *)(m_parent & ~(uintptr_t)1); }
 
     ZuInline void right(Node *n) { m_right = n; }
     ZuInline void left(Node *n) { m_left = n; }
-    ZuInline void dup(Node *n) { m_dup = n; }
     ZuInline void parent(Node *n) {
       m_parent = (uintptr_t)n | (m_parent & (uintptr_t)1);
     }
 
+  private:
     Node		*m_right;
     Node		*m_left;
-    Node		*m_dup;
     uintptr_t		m_parent;
   };
 
+  template <typename Node, typename Heap, bool NodeIsKey, bool NodeIsVal>
+  using NodeFn = NodeFn_<Node, Heap, NodeIsKey, NodeIsVal, Unique>;
   template <typename Heap>
   using Node_ = ZmKVNode<Heap, NodeIsKey, NodeIsVal, NodeFn, Key, Val>;
   struct NullHeap { }; // deconflict with ZuNull
   using NodeHeap = ZmHeap<HeapID, sizeof(Node_<NullHeap>)>;
+public:
   using Node = Node_<NodeHeap>;
-  using Fn = typename Node::Fn;
-
   using NodeRef =
     typename ZuIf<ZmRef<Node>, Node *, ZuIsObject_<Object>::OK>::T;
-
 private:
+  using Fn = typename Node::Fn;
+
   // in order to support reference-counted, owned and shadowed
   // objects, some overloading is required for ref/deref/delete
   template <typename T, typename O = Object>
@@ -405,18 +434,20 @@ public:
     for (;;) {
       int c = Cmp::cmp(node->Node::key(), key);
 
-      if (!c) {
-	Node *child;
+      if constexpr (!Unique) {
+	if (!c) {
+	  Node *child;
 
-	newNode->Fn::dup(child = node->Fn::dup());
-	if (child) child->Fn::parent(newNode);
-	node->Fn::dup(newNode);
-	newNode->Fn::parent(node);
-	++m_count;
-	return;
+	  newNode->Fn::dup(child = node->Fn::dup());
+	  if (child) child->Fn::parent(newNode);
+	  node->Fn::dup(newNode);
+	  newNode->Fn::parent(node);
+	  ++m_count;
+	  return;
+	}
       }
 
-      if (c > 0) {
+      if (c >= 0) {
 	if (!node->Fn::left()) {
 	  node->Fn::left(newNode);
 	  newNode->Fn::parent(node);
@@ -554,37 +585,43 @@ public:
     return ZuMv(*ptr);
   }
   void delNode_(Node *node) {
-    Node *parent = node->Fn::parent();
-    Node *dup = node->Fn::dup();
+    if constexpr (!Unique) {
+      Node *parent = node->Fn::parent();
+      Node *dup = node->Fn::dup();
 
-    if (parent && parent->Fn::dup() == node) {
-      parent->Fn::dup(dup);
-      if (dup) dup->Fn::parent(parent);
-    } else if (dup) {
-      {
-	Node *child;
-
-	dup->Fn::left(child = node->Fn::left());
-	if (child) child->Fn::parent(dup);
-	dup->Fn::right(child = node->Fn::right());
-	if (child) child->Fn::parent(dup);
+      if (parent && parent->Fn::dup() == node) {
+	parent->Fn::dup(dup);
+	if (dup) dup->Fn::parent(parent);
+	--m_count;
+	return;
       }
-      if (!parent) {
-	m_root = dup;
-	dup->Fn::parent(0);
-      } else if (node == parent->Fn::right()) {
-	parent->Fn::right(dup);
-	dup->Fn::parent(parent);
-      } else {
-	parent->Fn::left(dup);
-	dup->Fn::parent(parent);
-      }
-      dup->black(node->black());
-      if (node == m_minimum) m_minimum = dup;
-      if (node == m_maximum) m_maximum = dup;
-    } else
-      delRebalance(node);
+      if (dup) {
+	{
+	  Node *child;
 
+	  dup->Fn::left(child = node->Fn::left());
+	  if (child) child->Fn::parent(dup);
+	  dup->Fn::right(child = node->Fn::right());
+	  if (child) child->Fn::parent(dup);
+	}
+	if (!parent) {
+	  m_root = dup;
+	  dup->Fn::parent(0);
+	} else if (node == parent->Fn::right()) {
+	  parent->Fn::right(dup);
+	  dup->Fn::parent(parent);
+	} else {
+	  parent->Fn::left(dup);
+	  dup->Fn::parent(parent);
+	}
+	dup->black(node->black());
+	if (node == m_minimum) m_minimum = dup;
+	if (node == m_maximum) m_maximum = dup;
+	--m_count;
+	return;
+      }
+    }
+    delRebalance(node);
     --m_count;
   }
   template <typename Index_>
@@ -691,7 +728,7 @@ public:
 
   void clean() {
     auto i = iterator();
-    while (i.iterate()) i.del();
+    while (auto node = i.iterate()) i.del(node);
     m_minimum = m_maximum = m_root = nullptr;
     m_count = 0;
   }
@@ -1019,13 +1056,15 @@ protected:
   Node *next(Node *node) {
     Node *next;
 
-    if (next = node->Fn::dup()) return next;
+    if constexpr (!Unique) {
+      if (next = node->Fn::dup()) return next;
 
-    if (next = node->Fn::parent())
-      while (node == next->Fn::dup()) {
-	node = next;
-	if (!(next = node->Fn::parent())) break;
-      }
+      if (next = node->Fn::parent())
+	while (node == next->Fn::dup()) {
+	  node = next;
+	  if (!(next = node->Fn::parent())) break;
+	}
+    }
 
     if (next = node->Fn::right()) {
       node = next;
@@ -1046,13 +1085,15 @@ protected:
   Node *prev(Node *node) {
     Node *prev;
 
-    if (prev = node->Fn::dup()) return prev;
+    if constexpr (!Unique) {
+      if (prev = node->Fn::dup()) return prev;
 
-    if (prev = node->Fn::parent())
-      while (node == prev->Fn::dup()) {
-	node = prev;
-	if (!(prev = node->Fn::parent())) break;
-      }
+      if (prev = node->Fn::parent())
+	while (node == prev->Fn::dup()) {
+	  node = prev;
+	  if (!(prev = node->Fn::parent())) break;
+	}
+    }
 
     if (prev = node->Fn::left()) {
       node = prev;
@@ -1079,19 +1120,16 @@ protected:
   typename ZuIfT<(Direction >= 0)>::T startIterate(
       Iterator_<Direction> &iterator) {
     iterator.m_node = m_minimum;
-    iterator.m_last = nullptr;
   }
   template <int Direction>
   typename ZuIfT<(Direction < 0)>::T startIterate(
       Iterator_<Direction> &iterator) {
     iterator.m_node = m_maximum;
-    iterator.m_last = nullptr;
   }
   template <int Direction, typename Index_>
   void startIterate(
       Iterator_<Direction> &iterator, const Index_ &index, int compare) {
     iterator.m_node = find_(index, compare);
-    iterator.m_last = nullptr;
   }
 
   template <int Direction>
@@ -1100,7 +1138,7 @@ protected:
     Node *node = iterator.m_node;
     if (!node) return nullptr;
     iterator.m_node = next(node);
-    return iterator.m_last = node;
+    return node;
   }
   template <int Direction>
   typename ZuIfT<(!Direction), Node *>::T iterate(
@@ -1108,7 +1146,7 @@ protected:
     Node *node = iterator.m_node;
     if (!node) return nullptr;
     iterator.m_node = node->Fn::dup();
-    return iterator.m_last = node;
+    return node;
   }
   template <int Direction>
   typename ZuIfT<(Direction < 0), Node *>::T iterate(
@@ -1116,64 +1154,14 @@ protected:
     Node *node = iterator.m_node;
     if (!node) return nullptr;
     iterator.m_node = prev(node);
-    return iterator.m_last = node;
+    return node;
   }
 
-  template <int Direction>
-  void delIterate(Iterator_<Direction> &iterator) {
-    if (!m_count) return;
-
-    Node *node = iterator.m_last;
-
-    if (!node) return;
-
-    iterator.m_last = nullptr;
-
-    {
-      Node *parent = node->Fn::parent();
-      Node *dup = node->Fn::dup();
-
-      if (parent && parent->Fn::dup() == node) {
-	parent->Fn::dup(dup);
-	if (dup) dup->Fn::parent(parent);
-	nodeDeref(node);
-	nodeDelete(node);
-	--m_count;
-	return;
-      } else if (dup) {
-	{
-	  Node *child;
-
-	  dup->Fn::left(child = node->Fn::left());
-	  if (child) child->Fn::parent(dup);
-	  dup->Fn::right(child = node->Fn::right());
-	  if (child) child->Fn::parent(dup);
-	}
-	if (!parent) {
-	  m_root = dup;
-	  dup->Fn::parent(0);
-	} else if (node == parent->Fn::right()) {
-	  parent->Fn::right(dup);
-	  dup->Fn::parent(parent);
-	} else {
-	  parent->Fn::left(dup);
-	  dup->Fn::parent(parent);
-	}
-	dup->black(node->black());
-	if (node == m_minimum) m_minimum = dup;
-	if (node == m_maximum) m_maximum = dup;
-	nodeDeref(node);
-	nodeDelete(node);
-	--m_count;
-	return;
-      }
-    }
-
-    delRebalance(node);
-
-    nodeDeref(node);
-    nodeDelete(node);
-    --m_count;
+  NodeRef delIterate(Node *node) {
+    if (ZuUnlikely(!node)) return nullptr;
+    delNode_(node);
+    NodeRef *ZuMayAlias(ptr) = reinterpret_cast<NodeRef *>(&node);
+    return ZuMv(*ptr);
   }
 
   mutable Lock	m_lock;

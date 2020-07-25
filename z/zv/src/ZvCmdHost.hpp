@@ -134,7 +134,8 @@ private:
   using Cmds =
     ZmRBTree<ZtString,
       ZmRBTreeVal<CmdData,
-	ZmRBTreeLock<ZmNoLock> > >;
+	ZmRBTreeUnique<true,
+	  ZmRBTreeLock<ZmNoLock> > > >;
 
   ZmRef<ZvCf>		m_syntax;
   Cmds			m_cmds;

@@ -350,26 +350,6 @@ public:
   ZuInline unsigned bits() const { return m_bits; }
   using Base::cBits;
 
-private:
-  // CheckHashFn ensures that legacy hash functions returning int
-  // trigger a compile-time assertion failure; hash() must return uint32_t
-  class CheckHashFn {
-    using Small = char;
-    struct Big { char _[2]; };
-    static Small test(const uint32_t &_); // named parameter due to VS2010 bug
-    static Big	 test(const int &_);
-    static Big	 test(...);
-    static Key	 key();
-    static Index index();
-  public:
-    CheckHashFn(); // keep gcc quiet
-    enum _ {
-      IsUInt32 = sizeof(test(HashFn::hash(key()))) == sizeof(Small) &&
-		 sizeof(test(IHashFn::hash(index()))) == sizeof(Small)
-    };
-  };
-  ZuAssert(CheckHashFn::IsUInt32);
-
 protected:
   template <typename I> class Iterator_;
 template <typename> friend class Iterator_;

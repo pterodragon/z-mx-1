@@ -92,8 +92,9 @@ using RoleTree =
   ZmRBTree<Role_,
     ZmRBTreeObject<ZuNull,
       ZmRBTreeIndex<RoleNameAccessor,
-	ZmRBTreeNodeIsKey<true,
-	  ZmRBTreeLock<ZmNoLock> > > > >;
+	ZmRBTreeUnique<true,
+	  ZmRBTreeNodeIsKey<true,
+	    ZmRBTreeLock<ZmNoLock> > > > > >;
 using Role = RoleTree::Node;
 ZmRef<Role> loadRole(const fbs::Role *role_) {
   using namespace Zfb::Load;

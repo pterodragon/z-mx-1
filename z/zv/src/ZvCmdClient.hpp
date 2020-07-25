@@ -109,11 +109,20 @@ private:
 private:
   // containers of pending requests
   using UserDBReqs =
-    ZmRBTree<ZvSeqNo, ZmRBTreeVal<ZvCmdUserDBAckFn, ZmRBTreeLock<ZmPLock> > >;
+    ZmRBTree<ZvSeqNo,
+      ZmRBTreeVal<ZvCmdUserDBAckFn,
+	ZmRBTreeUnique<true,
+	  ZmRBTreeLock<ZmPLock> > > >;
   using CmdReqs =
-    ZmRBTree<ZvSeqNo, ZmRBTreeVal<ZvCmdAckFn, ZmRBTreeLock<ZmPLock> > >;
+    ZmRBTree<ZvSeqNo,
+      ZmRBTreeVal<ZvCmdAckFn,
+	ZmRBTreeUnique<true,
+	  ZmRBTreeLock<ZmPLock> > > >;
   using TelReqs =
-    ZmRBTree<ZvSeqNo, ZmRBTreeVal<ZvCmdTelAckFn, ZmRBTreeLock<ZmPLock> > >;
+    ZmRBTree<ZvSeqNo,
+      ZmRBTreeVal<ZvCmdTelAckFn,
+	ZmRBTreeUnique<true,
+	  ZmRBTreeLock<ZmPLock> > > >;
 
 public:
   struct State {

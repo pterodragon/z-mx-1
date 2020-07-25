@@ -128,9 +128,10 @@ private:
   using ColTree =
     ZmRBTree<ZuString,
       ZmRBTreeVal<const Field *,
-	ZmRBTreeObject<ZuNull,
-	  ZmRBTreeLock<ZmNoLock,
-	    ZmRBTreeHeapID<ColTree_HeapID> > > > >;
+	ZmRBTreeUnique<true,
+	  ZmRBTreeObject<ZuNull,
+	    ZmRBTreeLock<ZmNoLock,
+	      ZmRBTreeHeapID<ColTree_HeapID> > > > > >;
 
 public:
   ZvCSV() {

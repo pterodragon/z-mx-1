@@ -1300,9 +1300,10 @@ friend MxMDShard;
   };
   typedef ZmRBTree<ZmRef<MxMDOrderBook>,
 	    ZmRBTreeIndex<MxMDOrderBook::VenueSegmentAccessor,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmNoLock,
-		  ZmRBTreeHeapID<OrderBooks_HeapID> > > > > OrderBooks;
+	      ZmRBTreeUnique<true,
+		ZmRBTreeObject<ZuNull,
+		  ZmRBTreeLock<ZmNoLock,
+		    ZmRBTreeHeapID<OrderBooks_HeapID> > > > > > OrderBooks;
 
   MxMDInstrument(MxMDShard *shard, const MxInstrKey &key,
       const MxMDInstrRefData &refData);
@@ -1555,9 +1556,10 @@ friend MxMDOrderBook;
   };
   typedef ZmRBTree<ZmRef<MxMDTickSizeTbl>,
 	    ZmRBTreeIndex<MxMDTickSizeTbl::IDAccessor,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmPRWLock,
-		  ZmRBTreeHeapID<TickSizeTbls_HeapID> > > > > TickSizeTbls;
+	      ZmRBTreeUnique<true,
+		ZmRBTreeObject<ZuNull,
+		  ZmRBTreeLock<ZmPRWLock,
+		    ZmRBTreeHeapID<TickSizeTbls_HeapID> > > > > > TickSizeTbls;
   struct Segment_IDAccessor : public ZuAccessor<MxMDSegment, MxID> {
     ZuInline static MxID value(const MxMDSegment &s) { return s.id; }
   };
@@ -2024,27 +2026,30 @@ friend ZmShard;
   };
   typedef ZmRBTree<ZmRef<MxMDFeed>,
 	    ZmRBTreeIndex<MxMDFeed::IDAccessor,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmPLock,
-		  ZmRBTreeHeapID<Feeds_HeapID> > > > > Feeds;
+	      ZmRBTreeUnique<true,
+		ZmRBTreeObject<ZuNull,
+		  ZmRBTreeLock<ZmPLock,
+		    ZmRBTreeHeapID<Feeds_HeapID> > > > > > Feeds;
 
   struct Venues_HeapID {
     static const char *id() { return "MxMDLib.Venues"; }
   };
   typedef ZmRBTree<ZmRef<MxMDVenue>,
 	    ZmRBTreeIndex<MxMDVenue::IDAccessor,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmPLock,
-		  ZmRBTreeHeapID<Venues_HeapID> > > > > Venues;
+	      ZmRBTreeUnique<true,
+		ZmRBTreeObject<ZuNull,
+		  ZmRBTreeLock<ZmPLock,
+		    ZmRBTreeHeapID<Venues_HeapID> > > > > > Venues;
 
   struct VenueMap_HeapID {
     static const char *id() { return "MxMDLib.VenueMap"; }
   };
   typedef ZmRBTree<MxMDVenueMapKey,
 	    ZmRBTreeVal<MxMDVenueMapping,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmPLock,
-		  ZmRBTreeHeapID<VenueMap_HeapID> > > > > VenueMap;
+	      ZmRBTreeUnique<true,
+		ZmRBTreeObject<ZuNull,
+		  ZmRBTreeLock<ZmPLock,
+		    ZmRBTreeHeapID<VenueMap_HeapID> > > > > > VenueMap;
 
 public:
   ZuInline MxMDInstrHandle instrument(const MxInstrKey &key) const {

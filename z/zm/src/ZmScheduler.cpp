@@ -306,7 +306,7 @@ void ZmScheduler::timer()
 	Timer timer;
 
 	while (timer = i.iterate()) {
-	  i.del();
+	  i.del(timer);
 	  {
 	    Timer *ptr = (Timer *)timer->val().ptr;
 	    if (ZuLikely(ptr)) *ptr = nullptr;

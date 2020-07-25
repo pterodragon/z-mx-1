@@ -146,8 +146,9 @@ public:
     using Tree =
       ZmRBTree<Data,
 	ZmRBTreeIndex<Accessor,
-	  ZmRBTreeBase<ZuObject,
-	    ZmRBTreeLock<ZmNoLock> > > >;
+	  ZmRBTreeUnique<true,
+	    ZmRBTreeBase<ZuObject,
+	      ZmRBTreeLock<ZmNoLock> > > > >;
     ZmRef<Tree> tree = new Tree{};
     return TelCap{[
 	tree = ZuMv(tree),

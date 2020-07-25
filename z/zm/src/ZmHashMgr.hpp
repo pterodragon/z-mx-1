@@ -96,8 +96,9 @@ using ZmHashMgr_Tables =
       ZmRBTreeObject<ZmPolymorph,
 	ZmRBTreeHeapID<ZuNull,
 	  ZmRBTreeIndex<ZmAnyHash_PtrAccessor,
-	    ZmRBTreeHeapID<ZmHashMgr_HeapID,
-	      ZmRBTreeLock<ZmNoLock> > > > > > >;
+	    ZmRBTreeUnique<true,
+	      ZmRBTreeHeapID<ZmHashMgr_HeapID,
+		ZmRBTreeLock<ZmNoLock> > > > > > > >;
 using ZmAnyHash = ZmHashMgr_Tables::Node;
 
 class ZmHashMgr_;

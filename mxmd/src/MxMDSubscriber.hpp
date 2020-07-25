@@ -75,7 +75,8 @@ private:
   };
   typedef ZmRBTree<MxMDChannel,
 	    ZmRBTreeIndex<ChannelIDAccessor,
-	      ZmRBTreeLock<ZmRWLock> > > Channels;
+	      ZmRBTreeUnique<true,
+		ZmRBTreeLock<ZmRWLock> > > > Channels;
   typedef Channels::Node Channel;
 
 public:

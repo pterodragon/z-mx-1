@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 
   s.stop();
 
-  app.detach();
+  app.detach([]() { });
 }
 
 struct TreeModel : public ZGtk::TreeSortable<TreeModel, 1> {

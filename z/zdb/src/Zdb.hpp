@@ -996,9 +996,10 @@ friend ZdbAnyPOD_Send__;
   using HostTree =
     ZmRBTree<ZmRef<ZdbHost>,
       ZmRBTreeIndex<ZdbHost::IDAccessor,
-	ZmRBTreeObject<ZuNull,
-	  ZmRBTreeLock<ZmNoLock,
-	    ZmRBTreeHeapID<HostTree_HeapID> > > > >;
+	ZmRBTreeUnique<true,
+	  ZmRBTreeObject<ZuNull,
+	    ZmRBTreeLock<ZmNoLock,
+	      ZmRBTreeHeapID<HostTree_HeapID> > > > > >;
 
   struct CxnHash_HeapID {
     static const char *id() { return "ZdbEnv.CxnHash"; }

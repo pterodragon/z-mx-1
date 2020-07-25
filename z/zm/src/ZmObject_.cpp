@@ -31,7 +31,8 @@
 using DebugTree =
   ZmRBTree<const void *,
     ZmRBTreeVal<const ZmBackTrace *,
-      ZmRBTreeLock<ZmPLock> > >;
+      ZmRBTreeUnique<true,
+	ZmRBTreeLock<ZmPLock> > > >;
 
 void ZmObject_Debug::debug() const
 {

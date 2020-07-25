@@ -93,7 +93,8 @@ private:
   using DriveBlkSizes =
     ZmRBTree<char,
       ZmRBTreeVal<int,
-	ZmRBTreeLock<ZmNoLock> > >;
+	ZmRBTreeUnique<true,
+	  ZmRBTreeLock<ZmNoLock> > > >;
 
   HMODULE		m_ntdll;
   PNtQueryObject	m_ntQueryObject;

@@ -191,8 +191,9 @@ public:
   using Defines =
     ZmRBTree<ZtString,
       ZmRBTreeVal<ZtString,
-	ZmRBTreeBase<ZuObject,
-	  ZmRBTreeLock<ZmNoLock> > > >;
+	ZmRBTreeUnique<true,
+	  ZmRBTreeBase<ZuObject,
+	    ZmRBTreeLock<ZmNoLock> > > > >;
 
   void fromString(
       ZuString in, bool validate,
@@ -516,7 +517,8 @@ private:
   using Tree =
     ZmRBTree<ZtString,
       ZmRBTreeVal<NodeRef,
-	ZmRBTreeHeapID<HeapID> > >;
+	ZmRBTreeUnique<true,
+	  ZmRBTreeHeapID<HeapID> > > >;
 
 public:
   unsigned count() const { return m_tree.count(); }

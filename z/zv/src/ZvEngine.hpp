@@ -304,14 +304,18 @@ public:
   void telemetry(Telemetry &data) const;
 
 private:
-  using TxPools = ZmRBTree<ZmRef<ZvAnyTxPool>,
-	    ZmRBTreeIndex<ZvAnyTxPool::IDAccessor,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmNoLock> > > >;
-  using Links = ZmRBTree<ZmRef<ZvAnyLink>,
-	    ZmRBTreeIndex<ZvAnyLink::IDAccessor,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmNoLock> > > >;
+  using TxPools =
+    ZmRBTree<ZmRef<ZvAnyTxPool>,
+      ZmRBTreeIndex<ZvAnyTxPool::IDAccessor,
+	ZmRBTreeUnique<true,
+	  ZmRBTreeObject<ZuNull,
+	    ZmRBTreeLock<ZmNoLock> > > > >;
+  using Links =
+    ZmRBTree<ZmRef<ZvAnyLink>,
+      ZmRBTreeIndex<ZvAnyLink::IDAccessor,
+	ZmRBTreeUnique<true,
+	  ZmRBTreeObject<ZuNull,
+	    ZmRBTreeLock<ZmNoLock> > > > >;
 
 public:
   ZmRef<ZvAnyTxPool> txPool(ZuID id) {

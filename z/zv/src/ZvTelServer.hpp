@@ -181,8 +181,9 @@ private:
   using MxTbl =
     ZmRBTree<ZmRef<ZvMultiplex>,
       ZmRBTreeIndex<ZvMultiplex::IDAccessor,
-	ZmRBTreeObject<ZuNull,
-	  ZmRBTreeLock<ZmRWLock> > > >;
+	ZmRBTreeUnique<true,
+	  ZmRBTreeObject<ZuNull,
+	    ZmRBTreeLock<ZmRWLock> > > > >;
 
 public:
   ZuInline const App *app() const { return static_cast<const App *>(this); }
@@ -459,8 +460,9 @@ private:
   using Queues =
     ZmRBTree<ZuPair<ZuID, bool>,
       ZmRBTreeVal<QueueFn,
-	ZmRBTreeObject<ZuNull,
-	  ZmRBTreeLock<ZmNoLock> > > >;
+	ZmRBTreeUnique<true,
+	  ZmRBTreeObject<ZuNull,
+	    ZmRBTreeLock<ZmNoLock> > > > >;
 
   struct EngineIDAccessor : public ZuAccessor<ZvEngine *, ZuID> {
     ZuInline static ZuID value(const ZvEngine *engine) { return engine->id(); }
@@ -468,8 +470,9 @@ private:
   using Engines =
     ZmRBTree<ZmRef<ZvEngine>,
       ZmRBTreeIndex<EngineIDAccessor,
-	ZmRBTreeObject<ZuNull,
-	  ZmRBTreeLock<ZmNoLock> > > >;
+	ZmRBTreeUnique<true,
+	  ZmRBTreeObject<ZuNull,
+	    ZmRBTreeLock<ZmNoLock> > > > >;
 
   struct Watch_ {
     Link	*link = nullptr;

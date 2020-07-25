@@ -515,7 +515,7 @@ int main()
 
     while (node = iter.iterate()) {
       printf("%d ", node->key()->m_z);
-      iter.del();
+      iter.del(node);
     }
   }
   putchar('\n');
@@ -531,7 +531,7 @@ int main()
 
     while (node = iter.iterate()) {
       printf("%d ", (z = node->key())->m_z);
-      if (z->m_z & 1) iter.del();
+      if (z->m_z & 1) iter.del(node);
     }
   }
   putchar('\n');
@@ -560,7 +560,7 @@ int main()
 
     while (node = iter.iterate()) {
       printf("%d ", node->key()->m_z);
-      if (!(j & 3)) iter.del();
+      if (!(j & 3)) iter.del(node);
       j++;
     }
   }
@@ -596,7 +596,7 @@ int main()
 
     while (node = iter.iterate()) {
       printf("%d ", node->key()->m_z);
-      if (!(j & 3)) iter.del();
+      if (!(j & 3)) iter.del(node);
       j++;
     }
   }

@@ -35,8 +35,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <zlib/ZuNew.hpp>
-
 #include <zlib/ZuIfT.hpp>
 #include <zlib/ZuInt.hpp>
 #include <zlib/ZuNull.hpp>

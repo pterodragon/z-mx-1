@@ -19,7 +19,6 @@
 
 // application configuration
 
-#include <zlib/ZuNew.hpp>
 #include <zlib/ZuBox.hpp>
 
 #include <zlib/ZmAssert.hpp>

@@ -22,8 +22,6 @@
 #include <zlib/ZmObject.hpp>
 
 #ifdef ZmObject_DEBUG
-#include <zlib/ZuNew.hpp>
-
 #include <zlib/ZmBackTrace.hpp>
 #include <zlib/ZmRBTree.hpp>
 #include <zlib/ZmPLock.hpp>

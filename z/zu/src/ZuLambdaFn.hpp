@@ -59,16 +59,23 @@ struct ZuLambdaFn__<true, L, void, Args...> {
 };
 
 template <typename L, typename R, typename ...Args>
-struct ZuLambdaFn_Stateless {
+struct ZuMatchLambdaFn__ {
   typedef R (*Fn)(Args...);
   enum { OK = ZuConversion<L, Fn>::Exists };
 };
+template <auto> struct ZuMatchLambdaFn_;
+template <typename L, typename R, typename ...Args, R (L::*Fn)(Args...) const>
+struct ZuMatchLambdaFn_<Fn> : public ZuMatchLambdaFn__<L, R, Args...> { };
+template <typename L>
+struct ZuMatchLambdaFn : public ZuMatchLambdaFn_<&L::operator()> { };
+// SFINAE
+template <typename L, typename R = void>
+struct ZuIsLambdaFn : public ZuIfT<ZuMatchLambdaFn<L>::OK, R> { };
 
 template <auto> struct ZuLambdaFn_;
 template <typename L, typename R, typename ...Args, R (L::*Fn)(Args...) const>
 struct ZuLambdaFn_<Fn> : public ZuLambdaFn__<
-    ZuLambdaFn_Stateless<L, R, Args...>::OK, L, R, Args...> { };
-
+    ZuMatchLambdaFn__<L, R, Args...>::OK, L, R, Args...> { };
 template <typename L>
 struct ZuLambdaFn : public ZuLambdaFn_<&L::operator()> {
   using Fn = typename ZuLambdaFn_<&L::operator()>::Fn;

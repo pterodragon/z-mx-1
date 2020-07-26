@@ -51,7 +51,6 @@
 #pragma once
 #endif
 
-#include <zlib/ZuNew.hpp>
 #include <zlib/ZuIfT.hpp>
 #include <zlib/ZuCan.hpp>
 #include <zlib/ZuTraits.hpp>

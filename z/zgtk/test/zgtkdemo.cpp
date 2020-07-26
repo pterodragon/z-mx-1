@@ -241,6 +241,7 @@ void start()
   addCol(false);
   addCol(true);
 
+  // right-click
   model->click<GDK_BUTTON_PRESS, 3, GDK_CONTROL_MASK | GDK_SHIFT_MASK, 0>(view,
       [](TreeModel *model, GtkWidget *, unsigned n) {
 	std::cout << "right click " << n << '\n';
@@ -252,6 +253,7 @@ void start()
 	};
       });
 
+  // drag/drop
   model->drag(view);
   model->drop(GTK_WIDGET(watchlist),
       [](TreeModel *model, GtkWidget *, unsigned n) {

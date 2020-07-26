@@ -243,7 +243,7 @@ ZmHeapCache::ZmHeapCache(
 #ifdef ZmHeap_DEBUG
   , m_traceAllocFn(0), m_traceFreeFn(0)
 #endif
-  , m_stats{}
+  , m_histStats{}, m_stats{}
 {
   init_();
 }
@@ -367,13 +367,24 @@ void ZmHeapCache::free_(ZmHeapCache *self, void *p)
 
 void ZmHeapCache::allStats() const
 {
-  m_stats = {};
+  {
+    HistReadGuard guard{m_histLock};
+    m_stats = m_histStats;
+  }
   StatsFn fn = StatsFn::Lambda<ZuNull>::fn(
       [this](const ZmHeapStats &s) {
 	m_stats.heapAllocs += s.heapAllocs;
 	m_stats.cacheAllocs += s.cacheAllocs;
 	m_stats.frees += s.frees; });
   m_allStatsFn(ZuMv(fn));
+}
+
+void ZmHeapCache::histStats(const ZmHeapStats &s) const
+{
+  HistGuard guard{m_histLock};
+  m_histStats.heapAllocs += s.heapAllocs;
+  m_histStats.cacheAllocs += s.cacheAllocs;
+  m_histStats.frees += s.frees;
 }
 
 void ZmHeapCache::telemetry(ZmHeapTelemetry &data) const

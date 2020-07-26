@@ -50,6 +50,7 @@
 #include <zlib/ZuCan.hpp>
 #include <zlib/ZuConversion.hpp>
 #include <zlib/ZuIfT.hpp>
+#include <zlib/ZuLambdaFn.hpp>
 
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmCleanup.hpp>
@@ -145,16 +146,10 @@ public:
   }
 };
 
-template <typename L> struct ZmStatic_Ctor {
-  static auto fn() { return (*(const L *)(void *)0)(); }
-  typedef decltype(fn()) (*Fn)();
-  enum { OK = ZuConversion<L, Fn>::Exists };
-};
 template <typename L>
-ZuInline auto &ZmStatic(L l,
-    typename ZuIfT<ZmStatic_Ctor<L>::OK>::T *_ = 0) {
-  using T = typename ZuDeref<decltype(*ZmStatic_Ctor<L>::fn())>::T;
-  return *(ZmSingleton<T, true, ZmStatic_Ctor<L>::fn>::instance());
+ZuInline auto &ZmStatic(L l, typename ZuIsLambdaFn<L>::T *_ = 0) {
+  using T = typename ZuDecay<decltype(*ZuLambdaFn<L>::invoke())>::T;
+  return *(ZmSingleton<T, true, ZuLambdaFn<L>::fn()>::instance());
 }
 
 #endif /* ZmSingleton_HPP */

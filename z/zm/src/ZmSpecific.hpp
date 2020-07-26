@@ -80,6 +80,7 @@
 #include <zlib/ZuCan.hpp>
 #include <zlib/ZuPair.hpp>
 #include <zlib/ZuIfT.hpp>
+#include <zlib/ZuLambdaFn.hpp>
 
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmObject.hpp>
@@ -414,15 +415,10 @@ public:
   static void all(ZmFn<T *> fn) { return global()->all_(fn); }
 };
 
-template <typename L> struct ZmTLS_Ctor {
-  static auto fn() { return (*(const L *)(void *)0)(); }
-  typedef decltype(fn()) (*Fn)();
-  enum { OK = ZuConversion<L, Fn>::Exists };
-};
 template <typename L>
-ZuInline auto ZmTLS(L l, typename ZuIfT<ZmTLS_Ctor<L>::OK>::T *_ = 0) {
-  using T = typename ZuDeref<decltype(*ZmTLS_Ctor<L>::fn())>::T;
-  return ZmSpecific<T, true, ZmTLS_Ctor<L>::fn>::instance();
+ZuInline auto ZmTLS(L l, typename ZuIsLambdaFn<L>::T *_ = 0) {
+  using T = typename ZuDecay<decltype(*ZuLambdaFn<L>::invoke())>::T;
+  return ZmSpecific<T, true, ZuLambdaFn<L>::fn(l)>::instance();
 }
 
 #endif /* ZmSpecific_HPP */

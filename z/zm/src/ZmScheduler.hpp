@@ -32,7 +32,6 @@
 
 #include <stdarg.h>
 
-#include <zlib/ZuNew.hpp>
 #include <zlib/ZuNull.hpp>
 #include <zlib/ZuString.hpp>
 #include <zlib/ZuStringN.hpp>

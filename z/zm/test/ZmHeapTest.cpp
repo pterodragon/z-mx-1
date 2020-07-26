@@ -28,9 +28,13 @@
 #include <alloca.h>
 #endif
 
+#include <vector>
+#include <list>
+
 #include <zlib/ZmTime.hpp>
 #include <zlib/ZmHeap.hpp>
 #include <zlib/ZmThread.hpp>
+#include <zlib/ZmSemaphore.hpp>
 #include <zlib/ZmFn.hpp>
 
 static bool verbose = false;
@@ -57,6 +61,14 @@ void doit()
     S *s = new S(i);
     s->doit();
     delete s;
+  }
+  {
+    std::vector<S, ZmAllocator<S, ID>> v;
+    std::list<S, ZmAllocator<S, ID>> l;
+    for (unsigned i = 0; i < count; i++) {
+      v.emplace_back(i);
+      l.emplace_back(i);
+    }
   }
 }
 
@@ -100,8 +112,7 @@ int main(int argc, char **argv)
   ZmTime start(ZmTime::Now);
   for (int i = 0; i < nthr; i++)
     new (&threads[i]) ZmThread(0, ZmFn<>::Ptr<&doit>::fn());
-  for (int i = 0; i < nthr; i++)
-    threads[i].join();
+  for (int i = 0; i < nthr; i++) threads[i].join();
   ZmTime end(ZmTime::Now);
   end -= start;
   printf("%u.%09u\n", (unsigned)end.sec(), (unsigned)end.nsec());

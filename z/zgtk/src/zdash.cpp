@@ -63,7 +63,12 @@
 // each node needs to include:
 // index row (in left-hand tree)
 // watch window and row (in watchlist)
-// array of time series
+// dataframe (so that history is available)
+
+// FIXME - need to design app
+// - right-click row selection in tree -> watch
+// - drag/drop rowset in watchlist -> graph
+//   - this operation needs column (field) selection popup on drop
 
 static void usage()
 {

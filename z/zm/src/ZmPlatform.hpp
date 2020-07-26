@@ -49,7 +49,6 @@
 
 #include <stdarg.h>
 
-#include <zlib/ZuNew.hpp>
 #include <zlib/ZuInt.hpp>
 #include <zlib/ZuStringN.hpp>
 

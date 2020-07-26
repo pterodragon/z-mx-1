@@ -30,7 +30,8 @@
 #include <zlib/ZmLib.hpp>
 #endif
 
-#include <zlib/ZuNew.hpp>
+#include <new>
+
 #include <zlib/ZuTuple.hpp>
 #include <zlib/ZuPrint.hpp>
 #include <zlib/ZuStringN.hpp>
@@ -45,11 +46,6 @@
 
 #if defined(ZDEBUG) && !defined(ZmHeap_DEBUG)
 #define ZmHeap_DEBUG
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251 4275 4996)
 #endif
 
 class ZmHeapMgr;
@@ -192,6 +188,7 @@ private:
   }
 
   void allStats() const;
+  void histStats(const ZmHeapStats &stats) const;
 
   // cache, end, next are guarded by ZmHeapMgr
 
@@ -210,6 +207,12 @@ private:
   TraceFn		m_traceFreeFn;
 #endif
 
+  using HistLock = ZmPLock;
+  using HistGuard = ZmGuard<HistLock>;
+  using HistReadGuard = ZmReadGuard<HistLock>;
+
+  mutable HistLock	m_histLock;
+    mutable ZmHeapStats	  m_histStats;	// historical stats from exited threads
   mutable ZmHeapStats	m_stats;	// aggregated on demand
 };
 
@@ -286,6 +289,7 @@ template <class ID, unsigned Size>
 class ZmHeapCacheT : public ZmObject {
 friend ZmSpecificCtor<ZmHeapCacheT<ID, Size> >;
 template <class, unsigned> friend class ZmHeap; 
+template <typename, class> friend class ZmAllocator;
 
   using TLS = ZmSpecific<ZmHeapCacheT>;
 
@@ -302,7 +306,12 @@ private:
     m_cache(ZmHeapMgr::cache(ID::id(), Size,
 	  ZuConversion<ZmHeapSharded, ID>::Base,
 	  AllStatsFn::Ptr<&allStats>::fn())), m_stats{} { }
+public:
+  ~ZmHeapCacheT() {
+    m_cache->histStats(m_stats);
+  }
 
+private:
   ZuInline static ZmHeapCacheT *instance() { return TLS::instance(); }
   ZuInline static void *alloc() {
     ZmHeapCacheT *self = instance();
@@ -357,8 +366,8 @@ template <typename ID, unsigned Size_> class ZmHeap {
 
 public:
   ZuInline void *operator new(size_t) { return Cache::alloc(); }
-  ZuInline void *operator new(size_t, void *p) { return p; }
-  ZuInline void operator delete(void *p) { Cache::free(p); }
+  ZuInline void *operator new(size_t, void *p) noexcept { return p; }
+  ZuInline void operator delete(void *p) noexcept { Cache::free(p); }
 
 private:
   static ZmHeap_Init<ZmHeap>	m_init;
@@ -378,11 +387,52 @@ template <class ID, unsigned Size>
 inline void ZmHeapCacheT<ID, Size>::allStats(StatsFn fn)
 {
   TLS::all(ZmFn<ZmHeapCacheT *>::template Lambda<ZuNull>::fn(
-	[fn](ZmHeapCacheT *c) { fn(c->m_stats); }));
+	[&fn](ZmHeapCacheT *c) { fn(c->m_stats); }));
 }
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+#include <memory>
+
+// STL allocator cruft
+template <typename T, class ID>
+class ZmAllocator {
+  enum { Size_ = sizeof(T) };
+  enum { Size = ZmHeap_Size<Size_>::Size };
+
+  using Cache = ZmHeapCacheT<ID, Size>;
+
+public:
+  using value_type = T;
+
+  ZmAllocator() = default;
+  template <class U>
+  constexpr ZmAllocator(const ZmAllocator<U, ID> &) noexcept { }
+  template <class U>
+  ZmAllocator &operator =(const ZmAllocator<U, ID> &) noexcept { return *this; }
+
+  template <typename U>
+  struct rebind { using other = ZmAllocator<U, ID>; };
+
+  T *allocate(std::size_t n) {
+    if (ZuLikely(n == 1)) return static_cast<T *>(Cache::alloc());
+    if (auto ptr = static_cast<T *>(::malloc(n * sizeof(T)))) return ptr;
+    throw std::bad_alloc();
+  }
+  void deallocate(T *p, std::size_t n) noexcept {
+    if (ZuLikely(n == 1))
+      Cache::free(p);
+    else
+      ::free(p);
+  }
+};
+template <typename T, typename U, class ID>
+inline constexpr bool operator ==(
+    const ZmAllocator<T, ID> &, const ZmAllocator<U, ID> &) {
+  return true;
+}
+template <typename T, typename U, class ID>
+inline constexpr bool operator !=(
+    const ZmAllocator<T, ID> &, const ZmAllocator<U, ID> &) {
+  return false;
+}
 
 #endif /* ZmHeap_HPP */

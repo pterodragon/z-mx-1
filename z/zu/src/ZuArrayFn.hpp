@@ -36,7 +36,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <zlib/ZuNew.hpp>
 #include <zlib/ZuAssert.hpp>
 #include <zlib/ZuTraits.hpp>
 #include <zlib/ZuNull.hpp>

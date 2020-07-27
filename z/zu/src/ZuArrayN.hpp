@@ -381,14 +381,15 @@ public:
 
 // ZuArrayN<T, N> can be cast and used as ZuArrayN<T>
 
+namespace Zu_ {
 template <typename T_, unsigned N_ = 1, class Cmp_ = ZuCmp<T_> >
-class ZuArrayN : public ZuArrayN_<T_, Cmp_, ZuArrayN<T_, N_, Cmp_> > {
+class ArrayN : public ZuArrayN_<T_, Cmp_, ArrayN<T_, N_, Cmp_> > {
   ZuAssert(N_ < (1U<<16) - 1U);
 
 public:
   using T = T_;
   using Cmp = Cmp_;
-  using Base = ZuArrayN_<T, Cmp, ZuArrayN>;
+  using Base = ZuArrayN_<T, Cmp, ArrayN>;
   enum { N = N_ };
   enum Move_ { Move };
 
@@ -458,13 +459,13 @@ private:
   struct CtorElem<U, R, T, true> { using T = R; };
 
 public:
-  ZuInline ZuArrayN() : Base(N) { }
+  ZuInline ArrayN() : Base(N) { }
 
-  ZuInline ZuArrayN(const ZuArrayN &a) : Base(Base::Nop) {
+  ZuInline ArrayN(const ArrayN &a) : Base(Base::Nop) {
     Base::m_size = N;
     this->init(a.data(), a.length());
   }
-  ZuInline ZuArrayN &operator =(const ZuArrayN &a) {
+  ZuInline ArrayN &operator =(const ArrayN &a) {
     if (this != &a) {
       this->dtor();
       this->init(a.data(), a.length());
@@ -472,11 +473,11 @@ public:
     return *this;
   }
 
-  ZuInline ZuArrayN(ZuArrayN &&a) : Base(Base::Nop) {
+  ZuInline ArrayN(ArrayN &&a) : Base(Base::Nop) {
     Base::m_size = N;
     this->init_mv(a.data(), a.length());
   }
-  ZuInline ZuArrayN &operator =(ZuArrayN &&a) {
+  ZuInline ArrayN &operator =(ArrayN &&a) {
     if (this != &a) {
       this->dtor();
       this->init_mv(a.data(), a.length());
@@ -484,14 +485,14 @@ public:
     return *this;
   }
 
-  ZuInline ZuArrayN(std::initializer_list<T> a) : Base(Base::Nop) {
+  ZuInline ArrayN(std::initializer_list<T> a) : Base(Base::Nop) {
     Base::m_size = N;
     this->init(a.begin(), a.size());
   }
 
-  // ZuArrayN types
+  // ArrayN types
   template <typename A>
-  ZuInline ZuArrayN(A &&a, typename MatchArrayN<A>::T *_ = 0) :
+  ZuInline ArrayN(A &&a, typename MatchArrayN<A>::T *_ = 0) :
       Base(Base::Nop) {
     Base::m_size = N;
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
@@ -499,7 +500,7 @@ public:
       [this](const auto &a) { this->init(a.data(), a.length()); });
   }
   template <typename A>
-  ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator =(A &&a) {
+  ZuInline typename MatchArrayN<A, ArrayN &>::T operator =(A &&a) {
     this->dtor();
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
       [this](auto &&a) { this->init_mv(a.data(), a.length()); },
@@ -507,23 +508,23 @@ public:
     return *this;
   }
   template <typename A>
-  ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator +=(A &&a) {
+  ZuInline typename MatchArrayN<A, ArrayN &>::T operator +=(A &&a) {
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
       [this](auto &&a) { this->append_mv_(a.data(), a.length()); },
       [this](const auto &a) { this->append_(a.data(), a.length()); });
     return *this;
   }
   template <typename A>
-  ZuInline typename MatchArrayN<A, ZuArrayN &>::T operator <<(A &&a) {
+  ZuInline typename MatchArrayN<A, ArrayN &>::T operator <<(A &&a) {
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
       [this](auto &&a) { this->append_mv_(a.data(), a.length()); },
       [this](const auto &a) { this->append_(a.data(), a.length()); });
     return *this;
   }
 
-  // array types (other than ZuArrayN<>)
+  // array types (other than ArrayN<>)
   template <typename A>
-  ZuInline ZuArrayN(A &&a, typename MatchArray<A>::T *_ = 0) :
+  ZuInline ArrayN(A &&a, typename MatchArray<A>::T *_ = 0) :
       Base(Base::Nop) {
     Base::m_size = N;
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
@@ -539,7 +540,7 @@ public:
       });
   }
   template <typename A>
-  ZuInline typename MatchArray<A, ZuArrayN &>::T operator =(A &&a) {
+  ZuInline typename MatchArray<A, ArrayN &>::T operator =(A &&a) {
     this->dtor();
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
       [this](auto &&a_) {
@@ -555,11 +556,11 @@ public:
     return *this;
   }
   template <typename A>
-  typename MatchArray<A, ZuArrayN &>::T operator +=(A &&a) {
+  typename MatchArray<A, ArrayN &>::T operator +=(A &&a) {
     return operator <<(ZuFwd<A>(a));
   }
   template <typename A>
-  typename MatchArray<A, ZuArrayN &>::T operator <<(A &&a) {
+  typename MatchArray<A, ArrayN &>::T operator <<(A &&a) {
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
       [this](auto &&a_) {
 	using Elem = typename ZuTraits<decltype(a_)>::Elem;
@@ -576,29 +577,29 @@ public:
 
   // printable types (if this is a char array)
   template <typename P>
-  ZuInline ZuArrayN(const P &p, typename MatchPrint<P>::T *_ = 0) :
+  ZuInline ArrayN(const P &p, typename MatchPrint<P>::T *_ = 0) :
       Base(Base::Nop) {
     Base::m_size = N;
     this->init(p);
   }
   template <typename P>
-  ZuInline typename MatchPrint<P, ZuArrayN &>::T operator =(const P &p) {
+  ZuInline typename MatchPrint<P, ArrayN &>::T operator =(const P &p) {
     // this->dtor();
     this->init(p);
     return *this;
   }
   template <typename P>
-  ZuInline typename MatchPrint<P, ZuArrayN &>::T operator +=(const P &p) {
+  ZuInline typename MatchPrint<P, ArrayN &>::T operator +=(const P &p) {
     this->append_(p);
     return *this;
   }
   template <typename P>
-  ZuInline typename MatchPrint<P, ZuArrayN &>::T operator <<(const P &p) {
+  ZuInline typename MatchPrint<P, ArrayN &>::T operator <<(const P &p) {
     this->append_(p);
     return *this;
   }
   template <typename B>
-  ZuInline typename MatchBoxed<B, ZuArrayN &>::T
+  ZuInline typename MatchBoxed<B, ArrayN &>::T
       print(const B &b, int precision = -1, int comma = 0, int pad = -1) {
     unsigned length = b.length(precision, comma);
     if (Base::m_length + length > Base::m_size) return;
@@ -609,27 +610,27 @@ public:
 
   // string types (if this is a char array)
   template <typename S>
-  ZuInline ZuArrayN(S &&s_, typename MatchString<S>::T *_ = 0) :
+  ZuInline ArrayN(S &&s_, typename MatchString<S>::T *_ = 0) :
       Base(Base::Nop) {
     ZuString s(ZuFwd<S>(s_));
     Base::m_size = N;
     this->init(s.data(), s.length());
   }
   template <typename S>
-  ZuInline typename MatchString<S, ZuArrayN &>::T operator =(S &&s_) {
+  ZuInline typename MatchString<S, ArrayN &>::T operator =(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     // this->dtor();
     this->init(s.data(), s.length());
     return *this;
   }
   template <typename S>
-  ZuInline typename MatchString<S, ZuArrayN &>::T operator +=(S &&s_) {
+  ZuInline typename MatchString<S, ArrayN &>::T operator +=(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     this->append_(s.data(), s.length());
     return *this;
   }
   template <typename S>
-  ZuInline typename MatchString<S, ZuArrayN &>::T operator <<(S &&s_) {
+  ZuInline typename MatchString<S, ArrayN &>::T operator <<(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     this->append_(s.data(), s.length());
     return *this;
@@ -637,49 +638,49 @@ public:
 
   // length
   template <typename L>
-  ZuInline ZuArrayN(L l, bool initItems = !ZuTraits<T>::IsPrimitive,
+  ZuInline ArrayN(L l, bool initItems = !ZuTraits<T>::IsPrimitive,
       typename CtorLength<L>::T *_ = 0) : Base(N, l, initItems) { }
 
 private:
   enum Size_ { Size };
   template <typename Z>
-  ZuInline ZuArrayN(Size_, Z z,
+  ZuInline ArrayN(Size_, Z z,
       typename CtorLength<Z>::T *_ = 0) : Base(z, 0, 0) { }
 
 public:
   // element types 
   template <typename E>
-  ZuInline ZuArrayN(E &&e, typename CtorElem<E>::T *_ = 0) :
+  ZuInline ArrayN(E &&e, typename CtorElem<E>::T *_ = 0) :
       Base(Base::Nop) {
     Base::m_size = N;
     this->init(ZuFwd<E>(e));
   }
   template <typename E>
-  ZuInline typename MatchElem<E, ZuArrayN &>::T operator =(E &&e) {
+  ZuInline typename MatchElem<E, ArrayN &>::T operator =(E &&e) {
     this->dtor();
     this->init(ZuFwd<E>(e));
     return *this;
   }
   template <typename E>
-  ZuInline typename MatchElem<E, ZuArrayN &>::T operator +=(E &&e) {
+  ZuInline typename MatchElem<E, ArrayN &>::T operator +=(E &&e) {
     this->append_(ZuFwd<E>(e));
     return *this;
   }
   template <typename E>
-  ZuInline typename MatchElem<E, ZuArrayN &>::T operator <<(E &&e) {
+  ZuInline typename MatchElem<E, ArrayN &>::T operator <<(E &&e) {
     this->append_(ZuFwd<E>(e));
     return *this;
   }
 
   // arrays as ptr, length
   template <typename A>
-  ZuInline ZuArrayN(const A *a, unsigned length,
+  ZuInline ArrayN(const A *a, unsigned length,
     typename ZuConvertible<A, T>::T *_ = 0) :
       Base(Base::Nop) {
     Base::m_size = N;
     this->init(a, length);
   }
-  ZuInline ZuArrayN(Move_ _, T *a, unsigned length) : Base(Base::Nop) {
+  ZuInline ArrayN(Move_ _, T *a, unsigned length) : Base(Base::Nop) {
     Base::m_size = N;
     this->init_mv(a, length);
   }
@@ -710,6 +711,9 @@ public:
 private:
   char	*m_data[N * sizeof(T)];
 };
+} // namespace Zu_
+template <typename T, unsigned N, typename Cmp = ZuCmp<T>>
+using ZuArrayN = Zu_::ArrayN<T, N, Cmp>;
 
 template <typename T_, unsigned N, typename Cmp>
 struct ZuTraits<ZuArrayN<T_, N, Cmp> > :
@@ -732,6 +736,45 @@ struct ZuTraits<ZuArrayN<T_, N, Cmp> > :
 // generic printing
 template <unsigned N>
 struct ZuPrint<ZuArrayN<char, N> > : public ZuPrintString { };
+
+// STL structured binding cruft
+#include <type_traits>
+namespace std {
+  template <class> struct tuple_size;
+  template <typename T, unsigned N, typename Cmp>
+  struct tuple_size<ZuArrayN<T, N, Cmp>> :
+  public integral_constant<std::size_t, N> { };
+
+  template <size_t, typename> struct tuple_element;
+  template <size_t I, typename T, unsigned N, typename Cmp>
+  struct tuple_element<I, ZuArrayN<T, N, Cmp>> {
+    using type = T;
+  };
+}
+namespace Zu_ {
+  using size_t = std::size_t;
+  namespace {
+    template <size_t I, typename T>
+    using tuple_element_t = typename std::tuple_element<I, T>::type;
+  }
+  template <size_t I, typename T, unsigned N, typename Cmp>
+  constexpr tuple_element_t<I, ArrayN<T, N, Cmp>> &
+  get(ArrayN<T, N, Cmp> &a) noexcept { return a[I]; }
+  template <size_t I, typename T, unsigned N, typename Cmp>
+  constexpr const tuple_element_t<I, ArrayN<T, N, Cmp>> &
+  get(const ArrayN<T, N, Cmp> &a) noexcept { return a[I]; }
+  template <size_t I, typename T, unsigned N, typename Cmp>
+  constexpr tuple_element_t<I, ArrayN<T, N, Cmp>> &&
+  get(ArrayN<T, N, Cmp> &&a) noexcept {
+    return static_cast<tuple_element_t<I, ArrayN<T, N, Cmp>> &&>(a[I]);
+  }
+  template <size_t I, typename T, unsigned N, typename Cmp>
+  constexpr const tuple_element_t<I, ArrayN<T, N, Cmp>> &&
+  get(const ArrayN<T, N, Cmp> &&a) noexcept {
+    return static_cast<const tuple_element_t<I, ArrayN<T, N, Cmp>> &&>(
+	a[I]);
+  }
+}
 
 #ifdef _MSC_VER
 #pragma warning(pop)

@@ -400,8 +400,27 @@ int main()
     auto c = reinterpret_cast<U *>(c_);
     c->type_(U::Index<double>::I);
     CHECK(c->v<double>() == 42.0);
-    auto d = std::get<double>(*c);
+    auto d = get<double>(*c);
     CHECK(d == 42.0);
     c->~U();
+  }
+
+  // structured binding smoke tests
+  {
+    ZuArrayN<int, 3> foo = { 1, 2, 3 };
+    auto [a, b, c] = foo;
+    CHECK(a == 1 && b == 2 && c == 3);
+  }
+
+  {
+    ZuPair<uint64_t, uint32_t> foo = { 1, 2 };
+    auto [a, b] = foo;
+    CHECK(a == 1 && b == 2);
+  }
+
+  {
+    ZuTuple<uint64_t, uint32_t, uint16_t> foo = { 1, 2, 3 };
+    auto [a, b, c] = foo;
+    CHECK(a == 1 && b == 2 && c == 3);
   }
 }

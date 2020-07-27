@@ -193,7 +193,8 @@ struct ZuUnion_Index<T, ZuUnion_Index_<O, Args...>> {
   enum { I = 1 + ZuUnion_Index<T, ZuUnion_Index_<Args...>>::I };
 };
 
-template <typename ...Args> class ZuUnion {
+namespace Zu_ {
+template <typename ...Args> class Union {
 public:
   using Largest = typename ZuLargest<Args...>::T;
   enum { Size = sizeof(Largest) };
@@ -206,27 +207,27 @@ public:
   template <typename T>
   using Index = ZuUnion_Index<T, ZuUnion_Index_<Args...>>;
 
-  ZuUnion() {
+  Union() {
     using T0 = typename Type<0>::T;
     type_(0);
     new (&m_u[0]) T0{};
   }
 
-  ~ZuUnion() {
+  ~Union() {
     ZuSwitch::dispatch<N>(type(), [this](auto i) {
       using T = typename Type<i>::T;
       ZuUnion_Ops<T>::dtor(m_u);
     });
   }
 
-  ZuUnion(const ZuUnion &u) {
+  Union(const Union &u) {
     ZuSwitch::dispatch<N>(type_(u.type()), [this, &u](auto i) {
       using T = typename Type<i>::T;
       const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(u.m_u);
       ZuUnion_Ops<T>::ctor(m_u, *ptr);
     });
   }
-  ZuUnion(ZuUnion &&u) {
+  Union(Union &&u) {
     ZuSwitch::dispatch<N>(type_(u.type()), [this, &u](auto i) {
       using T = typename Type<i>::T;
       T *ZuMayAlias(ptr) = reinterpret_cast<T *>(u.m_u);
@@ -234,11 +235,11 @@ public:
     });
   }
 
-  ZuUnion &operator =(const ZuUnion &u) {
+  Union &operator =(const Union &u) {
     if (this == &u) return *this;
     if (type() != u.type()) {
-      this->~ZuUnion();
-      new (this) ZuUnion(u);
+      this->~Union();
+      new (this) Union(u);
       return *this;
     }
     ZuSwitch::dispatch<N>(type_(u.type()), [this, &u](auto i) {
@@ -248,10 +249,10 @@ public:
     });
     return *this;
   }
-  ZuUnion &operator =(ZuUnion &&u) {
+  Union &operator =(Union &&u) {
     if (type() != u.type()) {
-      this->~ZuUnion();
-      new (this) ZuUnion(ZuMv(u));
+      this->~Union();
+      new (this) Union(ZuMv(u));
       return *this;
     }
     ZuSwitch::dispatch<N>(type_(u.type()), [this, &u](auto i) {
@@ -264,12 +265,12 @@ public:
 
   template <typename T>
   ZuInline static T *new_(void *ptr) {
-    reinterpret_cast<ZuUnion *>(ptr)->type_(Index<T>::I);
+    reinterpret_cast<Union *>(ptr)->type_(Index<T>::I);
     return reinterpret_cast<T *>(ptr);
   }
 
   template <typename T> void *init() {
-    this->~ZuUnion();
+    this->~Union();
     this->type_(Index<T>::I);
     return m_u;
   }
@@ -285,7 +286,7 @@ public:
   }
 
   template <typename P>
-  typename ZuIs<ZuUnion, P, int>::T cmp(const P &p) const {
+  typename ZuIs<Union, P, int>::T cmp(const P &p) const {
     if (this == &p) return true;
     if (int i = ZuCmp<uint8_t>::cmp(type(), p.type())) return i;
     return ZuSwitch::dispatch<N>(type(), [this, &p](auto i) -> int {
@@ -295,7 +296,7 @@ public:
     });
   }
   template <typename P>
-  typename ZuIsNot<ZuUnion, P, int>::T cmp(const P &p) const {
+  typename ZuIsNot<Union, P, int>::T cmp(const P &p) const {
     return ZuSwitch::dispatch<N>(type(), [this, &p](auto i) -> int {
       using T = typename Type<i>::T;
       return ZuUnion_Ops<T>::cmp(m_u, p);
@@ -303,7 +304,7 @@ public:
   }
 
   template <typename P>
-  typename ZuIs<ZuUnion, P, bool>::T less(const P &p) const {
+  typename ZuIs<Union, P, bool>::T less(const P &p) const {
     if (this == &p) return true;
     if (type() != p.type()) return false;
     return ZuSwitch::dispatch<N>(type(), [this, &p](auto i) -> bool {
@@ -313,7 +314,7 @@ public:
     });
   }
   template <typename P>
-  typename ZuIsNot<ZuUnion, P, bool>::T less(const P &p) const {
+  typename ZuIsNot<Union, P, bool>::T less(const P &p) const {
     return ZuSwitch::dispatch<N>(type(), [this, &p](auto i) -> bool {
       using T = typename Type<i>::T;
       return ZuUnion_Ops<T>::less(m_u, p);
@@ -321,7 +322,7 @@ public:
   }
 
   template <typename P>
-  typename ZuIs<ZuUnion, P, bool>::T equals(const P &p) const {
+  typename ZuIs<Union, P, bool>::T equals(const P &p) const {
     if (this == &p) return true;
     if (type() != p.type()) return false;
     return ZuSwitch::dispatch<N>(type(), [this, &p](auto i) -> bool {
@@ -331,19 +332,19 @@ public:
     });
   }
   template <typename P>
-  typename ZuIsNot<ZuUnion, P, bool>::T equals(const P &p) const {
+  typename ZuIsNot<Union, P, bool>::T equals(const P &p) const {
     return ZuSwitch::dispatch<N>(type(), [this, &p](auto i) -> bool {
       using T = typename Type<i>::T;
       return ZuUnion_Ops<T>::equals(m_u, p);
     });
   }
 
-  ZuInline bool operator ==(const ZuUnion &p) const { return equals(p); }
-  ZuInline bool operator !=(const ZuUnion &p) const { return !equals(p); }
-  ZuInline bool operator >(const ZuUnion &p) const { return p.less(*this); }
-  ZuInline bool operator >=(const ZuUnion &p) const { return !less(p); }
-  ZuInline bool operator <(const ZuUnion &p) const { return less(p); }
-  ZuInline bool operator <=(const ZuUnion &p) const { return !p.less(*this); }
+  ZuInline bool operator ==(const Union &p) const { return equals(p); }
+  ZuInline bool operator !=(const Union &p) const { return !equals(p); }
+  ZuInline bool operator >(const Union &p) const { return p.less(*this); }
+  ZuInline bool operator >=(const Union &p) const { return !less(p); }
+  ZuInline bool operator <(const Union &p) const { return less(p); }
+  ZuInline bool operator <=(const Union &p) const { return !p.less(*this); }
 
   bool operator *() const {
     return ZuSwitch::dispatch<N>(type(), [this](auto i) -> bool {
@@ -380,14 +381,14 @@ public:
     return *ptr;
   }
   template <unsigned I, typename P>
-  ZuUnion &p(P &&p) {
+  Union &p(P &&p) {
     using T = typename Type<I>::T;
     if (type() == I) {
       T *ZuMayAlias(ptr) = reinterpret_cast<T *>(m_u);
       *ptr = ZuFwd<P>(p);
       return *this;
     }
-    this->~ZuUnion();
+    this->~Union();
     type_(I);
     ZuUnion_Ops<T>::ctor(m_u, ZuFwd<P>(p));
     return *this;
@@ -397,7 +398,7 @@ public:
     using T = typename Type<I>::T;
     T *ZuMayAlias(ptr) = reinterpret_cast<T *>(m_u);
     if (type() == I) return *ptr;
-    this->~ZuUnion();
+    this->~Union();
     type_(I);
     ZuUnion_Ops<T>::ctor(m_u);
     return *ptr;
@@ -408,7 +409,7 @@ public:
     return this->template p<Index<T>::I>();
   }
   template <typename T, typename P>
-  ZuInline ZuUnion &v(P &&p) {
+  ZuInline Union &v(P &&p) {
     return this->template p<Index<T>::I>(ZuFwd<P>(p));
   }
   template <typename T>
@@ -457,6 +458,8 @@ public:
 private:
   uint8_t	m_u[Size + 1];
 };
+} // namespace Zu_
+template <typename ...Args> using ZuUnion = Zu_::Union<Args...>;
 
 template <typename Union, typename ...Args> struct ZuUnion_Traits;
 template <typename Union>
@@ -487,71 +490,78 @@ struct ZuTraits<ZuUnion<Args...>> :
 
 // STL variant cruft
 #include <type_traits>
-#include <variant>
 namespace std {
+  template <class> struct tuple_size;
+  template <typename ...Args>
+  struct tuple_size<ZuUnion<Args...>> :
+  public integral_constant<std::size_t, sizeof...(Args)> { };
+
   template <size_t, typename> struct tuple_element;
   template <size_t I, typename ...Args>
   struct tuple_element<I, ZuUnion<Args...>> {
     using type = typename ZuUnion<Args...>::template Type<I>::T;
   };
-
+}
+#include <variant>
+namespace Zu_ {
+  using size_t = std::size_t;
+  using bad_variant_access = std::bad_variant_access;
+  namespace {
+    template <size_t I, typename T>
+    using tuple_element_t = typename std::tuple_element<I, T>::type;
+  }
   template <size_t I, typename ...Args>
-  constexpr tuple_element_t<I, ZuUnion<Args...>> &
-  get(ZuUnion<Args...> &p) {
+  constexpr tuple_element_t<I, Union<Args...>> &
+  get(Union<Args...> &p) {
     if (ZuUnlikely(p.type() != I)) throw bad_variant_access{};
     return p.template p<I>();
   }
   template <size_t I, typename ...Args>
-  constexpr const tuple_element_t<I, ZuUnion<Args...>> &
-  get(const ZuUnion<Args...> &p) {
+  constexpr const tuple_element_t<I, Union<Args...>> &
+  get(const Union<Args...> &p) {
     if (ZuUnlikely(p.type() != I)) throw bad_variant_access{};
     return p.template p<I>();
   }
   template <size_t I, typename ...Args>
-  constexpr tuple_element_t<I, ZuUnion<Args...>> &&
-  get(ZuUnion<Args...> &&p) {
+  constexpr tuple_element_t<I, Union<Args...>> &&
+  get(Union<Args...> &&p) {
     if (ZuUnlikely(p.type() != I)) throw bad_variant_access{};
-    return static_cast<tuple_element_t<I, ZuUnion<Args...>> &&>(
+    return static_cast<tuple_element_t<I, Union<Args...>> &&>(
 	p.template p<I>());
   }
   template <size_t I, typename ...Args>
-  constexpr const tuple_element_t<I, ZuUnion<Args...>> &&
-  get(const ZuUnion<Args...> &&p) {
+  constexpr const tuple_element_t<I, Union<Args...>> &&
+  get(const Union<Args...> &&p) {
     if (ZuUnlikely(p.type() != I)) throw bad_variant_access{};
-    return static_cast<const tuple_element_t<I, ZuUnion<Args...>> &&>(
+    return static_cast<const tuple_element_t<I, Union<Args...>> &&>(
 	p.template p<I>());
   }
 
   template <typename T, typename ...Args>
-  constexpr T &get(ZuUnion<Args...> &p) {
-    if (ZuUnlikely(p.type() != ZuUnion<Args...>::template Index<T>::I))
+  constexpr T &get(Union<Args...> &p) {
+    if (ZuUnlikely(p.type() != Union<Args...>::template Index<T>::I))
       throw bad_variant_access{};
     return p.template v<T>();
   }
   template <typename T, typename ...Args>
-  constexpr const T &get(const ZuUnion<Args...> &p) {
-    if (ZuUnlikely(p.type() != ZuUnion<Args...>::template Index<T>::I))
+  constexpr const T &get(const Union<Args...> &p) {
+    if (ZuUnlikely(p.type() != Union<Args...>::template Index<T>::I))
       throw bad_variant_access{};
     return p.template v<T>();
   }
   template <typename T, typename ...Args>
-  constexpr T &&get(ZuUnion<Args...> &&p) {
-    if (ZuUnlikely(p.type() != ZuUnion<Args...>::template Index<T>::I))
+  constexpr T &&get(Union<Args...> &&p) {
+    if (ZuUnlikely(p.type() != Union<Args...>::template Index<T>::I))
       throw bad_variant_access{};
     return static_cast<T &&>(p.template v<T>());
   }
   template <typename T, typename ...Args>
-  constexpr const T &&get(const ZuUnion<Args...> &&p) {
-    if (ZuUnlikely(p.type() != ZuUnion<Args...>::template Index<T>::I))
+  constexpr const T &&get(const Union<Args...> &&p) {
+    if (ZuUnlikely(p.type() != Union<Args...>::template Index<T>::I))
       throw bad_variant_access{};
     return static_cast<const T &&>(p.template v<T>());
   }
-
-  template <class> struct tuple_size;
-  template <typename ...Args>
-  struct tuple_size<ZuUnion<Args...>> :
-  public integral_constant<std::size_t, sizeof...(Args)> { };
-}
+} // namespace Zu_
 
 #define ZuUnion_FieldType(args) \
   ZuPP_Defer(ZuUnion_FieldType_)()(ZuPP_Strip(args))

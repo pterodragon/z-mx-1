@@ -392,10 +392,11 @@ public:
   }
 
   // comparisons
-  ZuInline bool equals(const ZuDecimal &v) const { return value == v.value; }
   ZuInline int cmp(const ZuDecimal &v) const {
     return (value > v.value) - (value < v.value);
   }
+  ZuInline bool less(const ZuDecimal &v) const { return value < v.value; }
+  ZuInline bool equals(const ZuDecimal &v) const { return value == v.value; }
   ZuInline bool operator ==(const ZuDecimal &v) const {
     return value == v.value;
   }
@@ -502,6 +503,7 @@ template <> struct ZuTraits<ZuDecimal> : public ZuTraits<int128_t> {
 template <> struct ZuCmp<ZuDecimal> {
   using T = ZuDecimal;
   ZuInline static int cmp(const T &t1, const T &t2) { return t1.cmp(t2); }
+  ZuInline static bool less(const T &t1, const T &t2) { return t1 < t2; }
   ZuInline static bool equals(const T &t1, const T &t2) { return t1 == t2; }
   ZuInline static bool null(const T &t) { return !*t; }
   ZuInline static const T &null() { static const T t; return t; }

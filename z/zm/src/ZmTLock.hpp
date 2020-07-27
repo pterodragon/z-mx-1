@@ -163,13 +163,6 @@ friend Lock;
     // -1	unlocked & deleted
     // <-1	locked & deleted, with count -m_lockCount - 1
 
-    static int cmp(const Lock *l1, const Lock *l2) { return 0; }
-    static bool equals(const Lock *l1, const Lock *l2) { return true; }
-    static const ZmRef<Lock> &null() {
-      static const ZmRef<Lock> l;
-      return l;
-    }
-
     ID				m_id;
     int				m_useCount;	// use count (waiting + held)
     ZmCondition<Lock_>		m_readOK;	// wake-up for read lockers

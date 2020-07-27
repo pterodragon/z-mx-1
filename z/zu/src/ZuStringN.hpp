@@ -277,9 +277,19 @@ public:
     return ZuCmp<StringN>::cmp(*static_cast<const StringN *>(this), s);
   }
   template <typename S>
+  ZuInline bool less(const S &s) const {
+    return !same(s) &&
+      ZuCmp<StringN>::less(*static_cast<const StringN *>(this), s);
+  }
+  template <typename S>
+  ZuInline bool greater(const S &s) const {
+    return !same(s) &&
+      ZuCmp<StringN>::less(s, *static_cast<const StringN *>(this));
+  }
+  template <typename S>
   ZuInline bool equals(const S &s) const {
-    if (same(s)) return true;
-    return ZuCmp<StringN>::equals(*static_cast<const StringN *>(this), s);
+    return same(s) ||
+      ZuCmp<StringN>::equals(*static_cast<const StringN *>(this), s);
   }
 
   template <typename S>
@@ -287,13 +297,13 @@ public:
   template <typename S>
   ZuInline bool operator !=(const S &s) const { return !equals(s); }
   template <typename S>
-  ZuInline bool operator >(const S &s) const { return cmp(s) > 0; }
+  ZuInline bool operator >(const S &s) const { return greater(s); }
   template <typename S>
-  ZuInline bool operator >=(const S &s) const { return cmp(s) >= 0; }
+  ZuInline bool operator >=(const S &s) const { return !less(s); }
   template <typename S>
-  ZuInline bool operator <(const S &s) const { return cmp(s) < 0; }
+  ZuInline bool operator <(const S &s) const { return less(s); }
   template <typename S>
-  ZuInline bool operator <=(const S &s) const { return cmp(s) <= 0; }
+  ZuInline bool operator <=(const S &s) const { return !greater(s); }
 
   ZuInline uint32_t hash() const {
     return ZuHash<StringN>::hash(*static_cast<const StringN *>(this));

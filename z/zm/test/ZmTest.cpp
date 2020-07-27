@@ -62,9 +62,10 @@ template <> struct ZuTraits<Z> : public ZuGenericTraits<Z> {
 };
 
 struct ZCmp {
-  static int cmp(Z *z1, Z *z2) { return z1->m_z - z2->m_z; }
-  static bool equals(Z *z1, Z *z2) { return z1->m_z == z2->m_z; }
-  static bool null(Z *z) { return !z; }
+  static int cmp(const Z *z1, const Z *z2) { return z1->m_z - z2->m_z; }
+  static bool less(const Z *z1, const Z *z2) { return z1->m_z < z2->m_z; }
+  static bool equals(const Z *z1, const Z *z2) { return z1->m_z == z2->m_z; }
+  static bool null(const Z *z) { return !z; }
   static const ZmRef<Z> &null() { static const ZmRef<Z> z; return z; }
 };
 

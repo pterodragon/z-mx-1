@@ -62,7 +62,7 @@ template <typename T0, typename T1>
 struct ZuTraits<ZuPair<T0, T1> > : public ZuGenericTraits<ZuPair<T0, T1> > {
   enum {
     IsPOD = ZuTraits<T0>::IsPOD && ZuTraits<T1>::IsPOD,
-    IsComparable = ZuTraits<T0>::IsComparable && ZuTraits<T1>::IsComparable,
+    IsComparable = true,
     IsHashable = ZuTraits<T0>::IsHashable && ZuTraits<T1>::IsHashable
   };
 };
@@ -86,9 +86,9 @@ template <typename U0, typename U1> struct ZuPair_Print_ {
   ZuPair_Print_ &operator =(ZuPair_Print_ &&) = delete;
   ZuPair_Print_(const U0 &p0_, const U1 &p1_, const ZuString &delim_) :
       p0{p0_}, p1{p1_}, delim{delim_} { }
-  const U0		&p0;
-  const U1		&p1;
-  const ZuString	&delim;
+  const U0	&p0;
+  const U1	&p1;
+  ZuString	delim;
 };
 template <typename U0, typename U1, bool LeftPair, bool RightPair>
 struct ZuPair_Print;
@@ -201,13 +201,18 @@ public:
 		       typename ZuDecay<P1>::T>::Is)>::T *_ = 0) :
     m_p0(ZuFwd<P0>(p0)), m_p1(ZuFwd<P1>(p1)) { }
 
-  ZuInline bool operator ==(const ZuPair &p) const { return equals(p); }
-  ZuInline bool operator !=(const ZuPair &p) const { return !equals(p); }
-  ZuInline bool operator >(const ZuPair &p) const { return cmp(p) > 0; }
-  ZuInline bool operator >=(const ZuPair &p) const { return cmp(p) >= 0; }
-  ZuInline bool operator <(const ZuPair &p) const { return cmp(p) < 0; }
-  ZuInline bool operator <=(const ZuPair &p) const { return cmp(p) <= 0; }
-
+  template <typename P0, typename P1>
+  ZuInline int cmp(const ZuPair<P0, P1> &p) const {
+    int i;
+    if (i = ZuCmp<T0>::cmp(m_p0, p.template p<0>())) return i;
+    return ZuCmp<T1>::cmp(m_p1, p.template p<1>());
+  }
+  template <typename P0, typename P1>
+  ZuInline bool less(const ZuPair<P0, P1> &p) const {
+    return
+      !ZuCmp<T0>::less(p.template p<0>(), m_p0) &&
+      ZuCmp<T1>::less(m_p1, p.template p<1>());
+  }
   template <typename P0, typename P1>
   ZuInline bool equals(const ZuPair<P0, P1> &p) const {
     return
@@ -215,12 +220,12 @@ public:
       ZuCmp<T1>::equals(m_p1, p.template p<1>());
   }
 
-  template <typename P0, typename P1>
-  ZuInline int cmp(const ZuPair<P0, P1> &p) const {
-    int i;
-    if (i = ZuCmp<T0>::cmp(m_p0, p.template p<0>())) return i;
-    return ZuCmp<T1>::cmp(m_p1, p.template p<1>());
-  }
+  ZuInline bool operator ==(const ZuPair &p) const { return equals(p); }
+  ZuInline bool operator !=(const ZuPair &p) const { return !equals(p); }
+  ZuInline bool operator >(const ZuPair &p) const { return p.less(*this); }
+  ZuInline bool operator >=(const ZuPair &p) const { return !less(p); }
+  ZuInline bool operator <(const ZuPair &p) const { return less(p); }
+  ZuInline bool operator <=(const ZuPair &p) const { return !p.less(*this); }
 
   ZuInline bool operator !() const { return !m_p0 || !m_p1; }
   ZuOpBool

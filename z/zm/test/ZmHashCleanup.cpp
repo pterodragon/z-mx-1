@@ -32,7 +32,7 @@ struct Object : public ZmObject {
 };
 
 template <> struct ZuTraits<Object> : public ZuGenericTraits<Object> {
-  enum _ { IsHashable = 1, IsComparable = 1 };
+  enum _ { IsComparable = 1, IsHashable = 1 };
 };
 
 using ObjectHash = ZmHash<ZmRef<Object> >;

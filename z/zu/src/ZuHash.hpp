@@ -188,12 +188,12 @@ struct ZuHash_NonPrimitive___<P, true> : public ZuHash<P> { };
 template <typename T, typename P> struct ZuHash_NonPrimitive__ :
     public ZuHash_NonPrimitive___<P, ZuTraits<P>::IsPrimitive> { };
 template <typename T> struct ZuHash_NonPrimitive__<T, T> {
-  ZuInline static uint32_t hash(const T &t) { return t.hash(); }
+  ZuInline static uint32_t hash(const T &v) { return v.hash(); }
 };
 template <typename T, typename P, bool Fwd>
 struct ZuHash_NonPrimitive_ : public ZuHash_NonPrimitive__<T, P> { };
 template <typename T, typename P> struct ZuHash_NonPrimitive_<T, P, false> {
-  ZuInline static uint32_t hash(const T &t) { return t.hash(); }
+  ZuInline static uint32_t hash(const T &v) { return v.hash(); }
 };
 template <typename T, bool Fwd> struct ZuHash_NonPrimitive<T, true, Fwd> {
   template <typename P>

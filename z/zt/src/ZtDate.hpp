@@ -265,7 +265,7 @@ namespace ZtDateFmt {
 };
 
 template <> struct ZuTraits<ZtDate> : public ZuGenericTraits<ZtDate> {
-  enum { IsPOD = 1, IsHashable = 1, IsComparable = 1 };
+  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
 };
 
 class ZtAPI ZtDate {
@@ -1026,11 +1026,11 @@ public:
     return ZtDate::operator +=(-sec_);
   }
 
-  int operator ==(const ZtDate &date) const {
+  bool operator ==(const ZtDate &date) const {
     return m_julian == date.m_julian &&
       m_sec == date.m_sec && m_nsec == date.m_nsec;
   }
-  int operator !=(const ZtDate &date) const {
+  bool operator !=(const ZtDate &date) const {
     return m_julian != date.m_julian ||
       m_sec != date.m_sec || m_nsec != date.m_nsec;
   }

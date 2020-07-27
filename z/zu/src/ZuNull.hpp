@@ -35,14 +35,15 @@
 class ZuNull { };
 
 template <> struct ZuTraits<ZuNull> : public ZuGenericTraits<ZuNull> {
-  enum { IsPOD = 1, IsComparable = 1 };
+  enum { IsPOD = 1 };
 };
 
 template <typename T> struct ZuCmp;
 template <> struct ZuCmp<ZuNull> {
-  ZuInline static int cmp(ZuNull n1, ZuNull n2) { return 0; }
-  ZuInline static bool equals(ZuNull n1, ZuNull n2) { return true; }
-  ZuInline static bool null(ZuNull n) { return true; }
+  ZuInline static constexpr int cmp(ZuNull n1, ZuNull n2) { return 0; }
+  ZuInline static constexpr bool less(ZuNull n1, ZuNull n2) { return false; }
+  ZuInline static constexpr bool equals(ZuNull n1, ZuNull n2) { return true; }
+  ZuInline static constexpr bool null(ZuNull n) { return true; }
   ZuInline static const ZuNull &null() { static const ZuNull _; return _; }
 };
 

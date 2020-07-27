@@ -32,7 +32,6 @@
 
 #include <zlib/ZuTraits.hpp>
 #include <zlib/ZuCmp.hpp>
-#include <zlib/ZuHash.hpp>
 #include <zlib/ZuTraits.hpp>
 #include <zlib/ZuString.hpp>
 #include <zlib/ZuPrint.hpp>
@@ -81,12 +80,18 @@ public:
     return *this;
   }
 
-  ZuInline bool equals(const ZiIP &a) const { return s_addr == a.s_addr; }
   ZuInline int cmp(const ZiIP &a) const {
     return ZuCmp<uint32_t>::cmp(s_addr, a.s_addr);
   }
+  ZuInline bool less(const ZiIP &a) const { return s_addr < a.s_addr; }
+  ZuInline bool equals(const ZiIP &a) const { return s_addr == a.s_addr; }
+
   ZuInline bool operator ==(const ZiIP &a) const { return s_addr == a.s_addr; }
   ZuInline bool operator !=(const ZiIP &a) const { return s_addr != a.s_addr; }
+  ZuInline bool operator >(const ZiIP &a) const { return a.less(*this); }
+  ZuInline bool operator >=(const ZiIP &a) const { return !less(a); }
+  ZuInline bool operator <(const ZiIP &a) const { return less(a); }
+  ZuInline bool operator <=(const ZiIP &a) const { return !a.less(*this); }
 
   ZuInline bool operator !() const { return !s_addr; }
   ZuOpBool

@@ -118,10 +118,11 @@ public:
 
   ZuInline operator uint64_t() const { return m_val; }
 
-  ZuInline bool equals(uint64_t v) const { return m_val == v; }
   ZuInline int cmp(uint64_t v) const {
-    return m_val < v ? -1 : m_val > v ? 1 : 0;
+    return (m_val > v) - (m_val < v);
   }
+  ZuInline bool less(uint64_t v) const { return m_val < v; }
+  ZuInline bool equals(uint64_t v) const { return m_val == v; }
 
   ZuInline bool operator ==(uint64_t v) const { return m_val == v; }
   ZuInline bool operator !=(uint64_t v) const { return m_val != v; }

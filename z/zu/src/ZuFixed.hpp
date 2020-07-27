@@ -180,6 +180,17 @@ struct ZuFixed {
       j *= ZuDecimalFn::pow10_64(exponent - v.exponent);
     return (i > j) - (i < j);
   }
+  ZuInline bool less(const ZuFixed &v) const {
+    if (ZuLikely(exponent == v.exponent || !*value || !*v.value))
+      return value < v.value;
+    int128_t i = (typename ZuFixedVal::T)value;
+    int128_t j = (typename ZuFixedVal::T)v.value;
+    if (exponent < v.exponent)
+      i *= ZuDecimalFn::pow10_64(v.exponent - exponent);
+    else
+      j *= ZuDecimalFn::pow10_64(exponent - v.exponent);
+    return i < j;
+  }
   ZuInline bool equals(const ZuFixed &v) const {
     if (ZuLikely(exponent == v.exponent || !*value || !*v.value))
       return value == v.value;

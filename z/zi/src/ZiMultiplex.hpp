@@ -194,16 +194,23 @@ public:
     return *this;
   }
 
-  ZuInline bool equals(const ZiMReq &m) const {
-    return addr() == m.addr() && mif() == m.mif();
-  }
   ZuInline int cmp(const ZiMReq &m) const {
     int r;
     if (r = addr().cmp(m.addr())) return r;
     return mif().cmp(m.mif());
   }
+  ZuInline bool less(const ZiMReq &m) const {
+    return addr() <= m.addr() && mif() < m.mif();
+  }
+  ZuInline bool equals(const ZiMReq &m) const {
+    return addr() == m.addr() && mif() == m.mif();
+  }
   ZuInline bool operator ==(const ZiMReq &m) const { return equals(m); }
   ZuInline bool operator !=(const ZiMReq &m) const { return !equals(m); }
+  ZuInline bool operator >(const ZiMReq &m) const { return m.less(*this); }
+  ZuInline bool operator >=(const ZiMReq &m) const { return !less(m); }
+  ZuInline bool operator <(const ZiMReq &m) const { return less(m); }
+  ZuInline bool operator <=(const ZiMReq &m) const { return !m.less(*this); }
 
   ZuInline bool operator !() const { return !addr() && !mif(); }
   ZuOpBool
@@ -223,7 +230,7 @@ public:
 };
 template <> struct ZuPrint<ZiMReq> : public ZuPrintFn { };
 template <> struct ZuTraits<ZiMReq> : public ZuGenericTraits<ZiMReq> {
-  enum { IsPOD = 1, IsHashable = 1, IsComparable = 1 };
+  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
 };
 
 #ifndef ZiCxnOptions_NMReq
@@ -384,16 +391,6 @@ public:
     return *this;
   }
 
-  ZuInline bool equals(const ZiCxnOptions &o) const {
-    using namespace ZiCxnFlags;
-    if (m_flags != o.m_flags) return false;
-#ifdef ZiMultiplex_Netlink
-    if ((m_flags & (1<<NetLink))) return m_familyName == o.m_familyName;
-#endif
-    if (!(m_flags & (1<<Multicast))) return true;
-    return m_mreqs == o.m_mreqs && m_mif == o.m_mif && m_ttl == o.m_ttl;
-  }
-
   int cmp(const ZiCxnOptions &o) const {
     using namespace ZiCxnFlags;
     int i;
@@ -405,6 +402,18 @@ public:
     if (i = m_mreqs.cmp(o.m_mreqs)) return i;
     if (i = m_mif.cmp(o.m_mif)) return i;
     return ZuBoxed(m_ttl).cmp(o.m_ttl);
+  }
+  ZuInline bool less(const ZiCxnOptions &o) const {
+    return cmp(o) < 0;
+  }
+  ZuInline bool equals(const ZiCxnOptions &o) const {
+    using namespace ZiCxnFlags;
+    if (m_flags != o.m_flags) return false;
+#ifdef ZiMultiplex_Netlink
+    if ((m_flags & (1<<NetLink))) return m_familyName == o.m_familyName;
+#endif
+    if (!(m_flags & (1<<Multicast))) return true;
+    return m_mreqs == o.m_mreqs && m_mif == o.m_mif && m_ttl == o.m_ttl;
   }
 
   uint32_t hash() const {
@@ -418,6 +427,7 @@ public:
   }
 
   ZuInline bool operator ==(const ZiCxnOptions &o) const { return equals(o); }
+  ZuInline bool operator !=(const ZiCxnOptions &o) const { return !equals(o); }
 
   template <typename S> void print(S &s) const {
     using namespace ZiCxnFlags;

@@ -233,11 +233,26 @@ public:
   template <typename V> ZuInline int cmp(const V &v_) const {
     if (same(v_)) return 0;
     ZuArray v{v_};
-    int64_t l = length();
-    int64_t n = v.length();
-    unsigned m = (l > n) ? n : l;
-    if (int i = Ops::cmp(data(), v.data(), m)) return i;
+    int l = length();
+    int n = v.length();
+    if (int i = Ops::cmp(data(), v.data(), l > n ? n : l)) return i;
     return l - n;
+  }
+  template <typename V> ZuInline bool less(const V &v_) const {
+    if (same(v_)) return false;
+    ZuArray v{v_};
+    unsigned l = length();
+    unsigned n = v.length();
+    if (int i = Ops::cmp(data(), v.data(), l > n ? n : l)) return i < 0;
+    return l < n;
+  }
+  template <typename V> ZuInline bool greater(const V &v_) const {
+    if (same(v_)) return false;
+    ZuArray v{v_};
+    unsigned l = length();
+    unsigned n = v.length();
+    if (int i = Ops::cmp(data(), v.data(), l > n ? n : l)) return i > 0;
+    return l > n;
   }
   template <typename V> ZuInline bool equals(const V &v_) const {
     if (same(v_)) return true;
@@ -253,13 +268,13 @@ public:
   template <typename V>
   ZuInline bool operator !=(const V &v) const { return !equals(v); }
   template <typename V>
-  ZuInline bool operator >(const V &v) const { return cmp(v) > 0; }
+  ZuInline bool operator >(const V &v) const { return greater(v); }
   template <typename V>
-  ZuInline bool operator >=(const V &v) const { return cmp(v) >= 0; }
+  ZuInline bool operator >=(const V &v) const { return !less(v); }
   template <typename V>
-  ZuInline bool operator <(const V &v) const { return cmp(v) < 0; }
+  ZuInline bool operator <(const V &v) const { return less(v); }
   template <typename V>
-  ZuInline bool operator <=(const V &v) const { return cmp(v) <= 0; }
+  ZuInline bool operator <=(const V &v) const { return !greater(v); }
 
   ZuInline uint32_t hash() const { return ZuHash<ZuArray>::hash(*this); }
 
@@ -329,7 +344,7 @@ struct ZuTraits<ZuArray<Elem_> > : public ZuGenericTraits<ZuArray<Elem_> > {
       ZuConversion<char, Elem>::Same ||
       ZuConversion<wchar_t, Elem>::Same,
     IsWString = ZuConversion<wchar_t, Elem>::Same,
-    IsHashable = 1, IsComparable = 1
+    IsComparable = 1, IsHashable = 1
   };
 #if 0
   static T make(const Elem *data, unsigned length) {

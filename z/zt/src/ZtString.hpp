@@ -788,6 +788,14 @@ public:
     return ZuCmp<ZtString_>::cmp(*this, s);
   }
   template <typename S>
+  ZuInline bool less(const S &s) const {
+    return ZuCmp<ZtString_>::less(*this, s);
+  }
+  template <typename S>
+  ZuInline bool greater(const S &s) const {
+    return ZuCmp<ZtString_>::less(s, *this);
+  }
+  template <typename S>
   ZuInline bool equals(const S &s) const {
     return ZuCmp<ZtString_>::equals(*this, s);
   }
@@ -797,13 +805,13 @@ public:
   template <typename S>
   ZuInline bool operator !=(const S &s) const { return !equals(s); }
   template <typename S>
-  ZuInline bool operator >(const S &s) const { return cmp(s) > 0; }
+  ZuInline bool operator >(const S &s) const { return greater(s); }
   template <typename S>
-  ZuInline bool operator >=(const S &s) const { return cmp(s) >= 0; }
+  ZuInline bool operator >=(const S &s) const { return !less(s); }
   template <typename S>
-  ZuInline bool operator <(const S &s) const { return cmp(s) < 0; }
+  ZuInline bool operator <(const S &s) const { return less(s); }
   template <typename S>
-  ZuInline bool operator <=(const S &s) const { return cmp(s) <= 0; }
+  ZuInline bool operator <=(const S &s) const { return !greater(s); }
 
   int cmp(const Char *s, unsigned n) const {
     if (null__()) return s ? -1 : 0;
@@ -1267,7 +1275,7 @@ template <typename T> struct ZtStringTraits : public ZuGenericTraits<T> {
   enum {
     IsCString = 1, IsString = 1,
     IsWString = ZuConversion<Elem, wchar_t>::Same,
-    IsHashable = 1, IsComparable = 1
+    IsComparable = 1, IsHashable = 1
   };
   static const Elem *data(const T &s) { return s.data(); }
   static unsigned length(const T &s) { return s.length(); }

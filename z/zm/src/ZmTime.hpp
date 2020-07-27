@@ -305,7 +305,7 @@ ZuInline ZmTime ZmTimeNow(double d) { return ZmTime(ZmTime::Now, d); }
 ZuInline ZmTime ZmTimeNow(const ZmTime &d) { return ZmTime(ZmTime::Now, d); }
 
 template <> struct ZuTraits<ZmTime> : public ZuGenericTraits<ZmTime> {
-  enum { IsPOD = 1, IsHashable = 1, IsComparable = 1 };
+  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
 };
 
 #endif /* ZmTime_HPP */

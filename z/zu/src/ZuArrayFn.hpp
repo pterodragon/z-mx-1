@@ -190,7 +190,6 @@ struct ZuArrayFn_Cmp {
       if (int i = Cmp::cmp(*dst++, *src++)) return i;
     return 0;
   }
-
   static bool equals(const T *dst, const T *src, unsigned length) {
     while (ZuLikely(length--))
       if (!Cmp::equals(*dst++, *src++)) return false;

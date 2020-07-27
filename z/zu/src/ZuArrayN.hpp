@@ -339,15 +339,19 @@ public:
   template <typename A>
   ZuInline int cmp(const A &a) const {
     if (same(a)) return 0;
-    ZuArray self{data(), length()};
-    return self.cmp(a);
+    return ZuArray{data(), length()}.cmp(a);
   }
-
+  template <typename A>
+  ZuInline bool less(const A &a) const {
+    return !same(a) && ZuArray{data(), length()}.less(a);
+  }
+  template <typename A>
+  ZuInline bool greater(const A &a) const {
+    return !same(a) && ZuArray{data(), length()}.greater(a);
+  }
   template <typename A>
   ZuInline bool equals(const A &a) const {
-    if (same(a)) return true;
-    ZuArray self{data(), length()};
-    return self.equals(a);
+    return same(a) || ZuArray{data(), length()}.equals(a);
   }
 
 // hash
@@ -690,24 +694,18 @@ public:
     this->append_mv_(a, length);
   }
 
-  ZuInline bool operator ==(const ZuArrayN &a) const {
-    return this->equals(a);
-  }
-  ZuInline bool operator !=(const ZuArrayN &a) const {
-    return !this->equals(a);
-  }
-  ZuInline bool operator >(const ZuArrayN &a) const {
-    return this->cmp(a) > 0;
-  }
-  ZuInline bool operator >=(const ZuArrayN &a) const {
-    return this->cmp(a) >= 0;
-  }
-  ZuInline bool operator <(const ZuArrayN &a) const {
-    return this->cmp(a) < 0;
-  }
-  ZuInline bool operator <=(const ZuArrayN &a) const {
-    return this->cmp(a) <= 0;
-  }
+  template <typename A>
+  ZuInline bool operator ==(const A &a) const { return this->equals(a); }
+  template <typename A>
+  ZuInline bool operator !=(const A &a) const { return !this->equals(a); }
+  template <typename A>
+  ZuInline bool operator >(const A &a) const { return this->greater(a); }
+  template <typename A>
+  ZuInline bool operator >=(const A &a) const { return !this->less(a); }
+  template <typename A>
+  ZuInline bool operator <(const A &a) const { return this->less(a); }
+  template <typename A>
+  ZuInline bool operator <=(const A &a) const { return !this->greater(a); }
 
 private:
   char	*m_data[N * sizeof(T)];
@@ -725,7 +723,7 @@ struct ZuTraits<ZuArrayN<T_, N, Cmp> > :
       ZuConversion<char, Elem>::Same ||
       ZuConversion<wchar_t, Elem>::Same,
     IsWString = ZuConversion<wchar_t, Elem>::Same,
-    IsHashable = 1, IsComparable = 1
+    IsComparable = 1, IsHashable = 1
   };
   ZuInline static const Elem *data(const T &a) { return a.data(); }
   ZuInline static unsigned length(const T &a) { return a.length(); }

@@ -50,7 +50,18 @@ public:
     if (!l2) return 1;
     int i = Zu::stricmp_(s1.data(), s2.data(), l1 > l2 ? l2 : l1);
     if (i) return i;
-    return l1 > l2 ? 1 : l1 < l2 ? -1 : 0;
+    return l1 - l2;
+  }
+  template <typename S1, typename S2>
+  static bool less(S1 &&s1_, S2 &&s2_) {
+    ZuString s1(ZuFwd<S1>(s1_));
+    ZuString s2(ZuFwd<S2>(s2_));
+    int l1 = s1.length(), l2 = s2.length();
+    if (!l1) return l2;
+    if (!l2) return false;
+    int i = Zu::stricmp_(s1.data(), s2.data(), l1 > l2 ? l2 : l1);
+    if (i) return i < 0;
+    return l1 < l2;
   }
   template <typename S1, typename S2>
   static int equals(S1 &&s1_, S2 &&s2_) {

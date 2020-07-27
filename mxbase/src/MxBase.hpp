@@ -333,7 +333,7 @@ namespace MxSide {
 // futures/options can be specified by underlying + parameters, e.g.
 // "MSFT Mar 2019 Call Option @100", which is expressed as
 // the MxInstrKey or MxSymKey for the underlying (MSFT) together
-// with an MxOptKey{20190300, MxPutCall::CALL, 10000} (assuming pxNDP=2)
+// with an MxOptKey{20190300, MxPutCall::CALL, 10000} (assuming pxExp=2)
 //
 // an individual instrument might therefore be identified by:
 //
@@ -349,180 +349,21 @@ namespace MxSide {
 
 #pragma pack(push, 1)
 
-struct MxInstrKey {
-  MxIDString	id;
-  MxID		venue;
-  MxID		segment;
-
-  bool operator ==(const MxInstrKey &v) const {
-    return id == v.id && venue == v.venue && segment == v.segment;
-  }
-  bool operator !=(const MxInstrKey &v) const { return !operator ==(v); }
-
-  int cmp(const MxInstrKey &v) const {
-    int i;
-    if (i = id.cmp(v.id)) return i;
-    if (i = venue.cmp(v.venue)) return i;
-    return segment.cmp(v.segment);
-  }
-  bool operator >(const MxInstrKey &v) { return cmp(v) > 0; }
-  bool operator >=(const MxInstrKey &v) { return cmp(v) >= 0; }
-  bool operator <(const MxInstrKey &v) { return cmp(v) < 0; }
-  bool operator <=(const MxInstrKey &v) { return cmp(v) <= 0; }
-
-  uint32_t hash() const {
-    return id.hash() ^ venue.hash() ^ segment.hash();
-  }
-
-  template <typename S> void print(S &s) const {
-    s << venue << '|' << segment << '|' << id;
-  }
-};
-template <> struct ZuTraits<MxInstrKey> : public ZuGenericTraits<MxInstrKey> {
-  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
-};
-template <> struct ZuPrint<MxInstrKey> : public ZuPrintFn { };
-
-struct MxSymKey {
-  MxIDString	id;
-  MxEnum	src;
-
-  bool operator ==(const MxSymKey &v) const {
-    return id == v.id && src == v.src;
-  }
-  bool operator !=(const MxSymKey &v) const { return !operator ==(v); }
-
-  int cmp(const MxSymKey &v) const {
-    int i;
-    if (i = id.cmp(v.id)) return i;
-    return src.cmp(v.src);
-  }
-  bool operator >(const MxSymKey &v) { return cmp(v) > 0; }
-  bool operator >=(const MxSymKey &v) { return cmp(v) >= 0; }
-  bool operator <(const MxSymKey &v) { return cmp(v) < 0; }
-  bool operator <=(const MxSymKey &v) { return cmp(v) <= 0; }
-
-  uint32_t hash() const {
-    return id.hash() ^ src.hash();
-  }
-
-  template <typename S> void print(S &s) const {
-    s << src << '|' << id;
-  }
-};
-template <> struct ZuTraits<MxSymKey> : public ZuGenericTraits<MxSymKey> {
-  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
-};
-template <> struct ZuPrint<MxSymKey> : public ZuPrintFn { };
+ZuDeclTuple(MxInstrKey, (MxIDString, id), (MxID, venue), (MxID, segment));
+ZuDeclTuple(MxSymKey, (MxIDString, id), (MxEnum, src));
 
 using MxFutKey = MxUInt;	// mat
 
-struct MxOptKey {
-  MxValue	strike;
-  MxUInt	mat;
-  MxEnum	putCall;
+ZuDeclTuple(MxOptKey, (MxValue, strike), (MxUInt, mat), (MxEnum, putCall));
 
-  bool operator ==(const MxOptKey &v) const {
-    return strike == v.strike && mat == v.mat && putCall == v.putCall;
-  }
-  bool operator !=(const MxOptKey &v) const { return !operator ==(v); }
-
-  int cmp(const MxOptKey &v) const {
-    int i;
-    if (i = strike.cmp(v.strike)) return i;
-    if (i = mat.cmp(v.mat)) return i;
-    return putCall.cmp(v.putCall);
-  }
-  bool operator >(const MxOptKey &v) { return cmp(v) > 0; }
-  bool operator >=(const MxOptKey &v) { return cmp(v) >= 0; }
-  bool operator <(const MxOptKey &v) { return cmp(v) < 0; }
-  bool operator <=(const MxOptKey &v) { return cmp(v) <= 0; }
-
-  uint32_t hash() const {
-    return strike.hash() ^ mat.hash() ^ putCall.hash();
-  }
-
-  template <typename S> void print(S &s) const {
-    s << mat << '|' << MxPutCall::name(putCall) << '|' << strike;
-  }
-};
-template <> struct ZuTraits<MxOptKey> : public ZuGenericTraits<MxOptKey> {
-  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
-};
-template <> struct ZuPrint<MxOptKey> : public ZuPrintFn { };
-
-struct MxUniKey {
-  MxIDString	id;
-  MxID		venue;
-  MxID		segment;
-  MxValue	strike;
-  MxUInt	mat;
-  MxEnum	src;
-  MxEnum	putCall;
-
-  ZuInline bool operator !() const { return !id; }
-  ZuOpBool
-
-  bool operator ==(const MxUniKey &v) const {
-    if (id != v.id || src != v.src) return false;
-    if (!*src && (venue != v.venue || segment != v.venue)) return false;
-    if (mat != v.mat) return false;
-    if (*mat) {
-      if (strike != v.strike) return false;
-      if (*strike && (putCall != v.putCall)) return false;
-    }
-    return true;
-  }
-  bool operator !=(const MxUniKey &v) const { return !operator ==(v); }
-
-  int cmp(const MxUniKey &v) const {
-    int i;
-    if (i = id.cmp(v.id)) return i;
-    if (i = src.cmp(v.src)) return i;
-    if (!*src) {
-      if (i = venue.cmp(v.venue)) return i;
-      if (i = segment.cmp(v.segment)) return i;
-    }
-    if (i = mat.cmp(v.mat)) return i;
-    if (!*mat) return 0;
-    if (i = strike.cmp(v.strike)) return i;
-    if (!*strike) return 0;
-    return putCall.cmp(v.putCall);
-  }
-  bool operator >(const MxUniKey &v) { return cmp(v) > 0; }
-  bool operator >=(const MxUniKey &v) { return cmp(v) >= 0; }
-  bool operator <(const MxUniKey &v) { return cmp(v) < 0; }
-  bool operator <=(const MxUniKey &v) { return cmp(v) <= 0; }
-
-  uint32_t hash() const {
-    uint32_t code = id.hash();
-    if (*src)
-      code ^= src.hash();
-    else
-      code ^= venue.hash() ^ segment.hash();
-    if (!*mat) return code;
-    code ^= mat.hash();
-    if (!*strike) return code;
-    return code ^ strike.hash() ^ (uint32_t)putCall;
-  }
-
-  template <typename S> void print(S &s) const {
-    if (*src)
-      s << MxSymKey{id, src};
-    else
-      s << MxInstrKey{id, venue, segment};
-    if (*mat) {
-      if (*strike)
-	s << '|' << MxOptKey{mat, putCall, strike};
-      else
-	s << '|' << MxFutKey{mat};
-    }
-  }
-};
-template <> struct ZuTraits<MxUniKey> : public ZuGenericTraits<MxUniKey> {
-  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
-};
-template <> struct ZuPrint<MxUniKey> : public ZuPrintFn { };
+ZuDeclTuple(MxUniKey,
+    (MxIDString, id),
+    (MxID, venue),
+    (MxID, segment),
+    (MxValue, strike),
+    (MxUInt, mat),
+    (MxEnum, src),
+    (MxEnum, putCall));
 
 #pragma pack(pop)
 

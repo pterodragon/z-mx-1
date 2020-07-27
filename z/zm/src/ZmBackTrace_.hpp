@@ -54,12 +54,12 @@ public:
     return *this;
   }
 
-  ZuInline bool equals(const ZmBackTrace &t) {
+  ZuInline bool equals(const ZmBackTrace &t) const {
     return !memcmp(m_frames, t.m_frames, sizeof(void *) * ZmBackTrace_DEPTH);
   }
 
-  ZuInline bool operator !=(const ZmBackTrace &t) { return !equals(t); }
-  ZuInline bool operator ==(const ZmBackTrace &t) { return equals(t); }
+  ZuInline bool operator ==(const ZmBackTrace &t) const { return equals(t); }
+  ZuInline bool operator !=(const ZmBackTrace &t) const { return !equals(t); }
 
   ZuInline bool operator !() const { return !m_frames[0]; }
 

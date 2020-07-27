@@ -586,7 +586,7 @@ int main()
 	buf << ZuBoxed(d);
 	ZuBox<double> e(buf);
 	// printf("d: %f buf: %.*s e: %f diff: %g, epsilon: %g\n", d, buf.length(), buf.data(), (double)e, (double)e - d, (double)ZuFP<double>::epsilon_(d));
-	CHECK2(ZuBoxed(d) ==~ e, e, buf.data());
+	CHECK2(ZuBoxed(d).feq(e), e, buf.data());
 	buf.null();
       }
       clock_gettime(CLOCK_REALTIME, &start);
@@ -611,7 +611,7 @@ int main()
       ZuStringN<30> buf;
       for (double d = INT_MIN; d < INT_MAX - 4201; d += 4200.000420) {
 	buf << ZuBoxed(d).vfmt(fmt);
-	CHECK2(ZuBoxed(d) ==~ ZuBox<double>(buf), d, buf.data());
+	CHECK2(ZuBoxed(d).feq(ZuBox<double>{buf}), d, buf.data());
 	buf.null();
       }
       clock_gettime(CLOCK_REALTIME, &start);

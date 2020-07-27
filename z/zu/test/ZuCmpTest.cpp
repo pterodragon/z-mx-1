@@ -339,6 +339,8 @@ int main()
     CHECK((ZuCmp<ZuTuple<int, const S &, const S &> >::cmp(t1, t3) < 0));
     S s4{"hello"};
     S s5{"world"};
+    std::cout << "t1=" << t1.print() << '\n' << std::flush;
+    std::cout << "t2=" << ZuMkTuple(42, s4, s5).print() << '\n' << std::flush;
     CHECK((ZuCmp<ZuTuple<int, const S &, const S &> >::cmp(t1,
 	    ZuMkTuple(42, s4, s5)) > 0));
     // ZuTuple<int, const S &, const S &> t4(42, "string1", "string2");

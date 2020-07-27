@@ -54,10 +54,11 @@ template <> struct ZuTraits<Z> : public ZuGenericTraits<Z> {
 };
 
 struct ZCmp {
-  static int cmp(Z *z1, Z *z2) { return z1->m_z - z2->m_z; }
-  static bool equals(Z *z1, Z *z2) { return z1->m_z == z2->m_z; }
-  static bool null(Z *z) { return !z; }
-  static Z *null() { return 0; }
+  static int cmp(const Z *z1, const Z *z2) { return z1->m_z - z2->m_z; }
+  static bool less(const Z *z1, const Z *z2) { return z1->m_z < z2->m_z; }
+  static bool equals(const Z *z1, const Z *z2) { return z1->m_z == z2->m_z; }
+  static bool null(const Z *z) { return !z; }
+  static constexpr const Z *null() { return nullptr; }
 };
 
 using ZList = ZmList<ZmRef<Z>, ZmListCmp<ZCmp> >;
@@ -141,7 +142,7 @@ struct I {
 };
 
 template <> struct ZuTraits<I> : public ZuGenericTraits<I> {
-  enum _ { IsHashable = 1, IsComparable = 1 };
+  enum _ { IsComparable = 1, IsHashable = 1 };
 };
 
 struct J : public ZmObject {

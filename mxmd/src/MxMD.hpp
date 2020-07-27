@@ -202,6 +202,7 @@ struct MxMDL1Flags : public MxMDFlags<MxMDL1Flags> {
 // venue mapping
 
 ZuDeclTuple(MxMDVenueMapKey, (MxID, venue), (MxID, segment));
+
 struct MxMDVenueMapping {
   MxID		venue;
   MxID		segment;

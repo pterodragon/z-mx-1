@@ -355,12 +355,23 @@ public:
     return m_context->tid();
   }
 
-  ZuInline bool operator ==(const ZmThread &t) {
-    return tid() == t.tid();
-  }
   ZuInline int cmp(const ZmThread &t) const {
     return ZuCmp<ID>::cmp(tid(), t.tid());
   }
+  ZuInline bool less(const ZmThread &t) const {
+    return tid() < t.tid();
+  }
+  ZuInline bool equals(const ZmThread &t) const {
+    return tid() == t.tid();
+  }
+
+  ZuInline bool operator ==(const ZmThread &t) const { return equals(t); }
+  ZuInline bool operator !=(const ZmThread &t) const { return !equals(t); }
+  ZuInline bool operator >(const ZmThread &t) const { return t.less(*this); }
+  ZuInline bool operator >=(const ZmThread &t) const { return !less(t); }
+  ZuInline bool operator <(const ZmThread &t) const { return less(t); }
+  ZuInline bool operator <=(const ZmThread &t) const { return !t.less(*this); }
+
   ZuInline uint32_t hash() { return ZuHash<ID>::hash(tid()); }
 
   ZuInline bool operator !() const { return !m_context; }

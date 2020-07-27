@@ -66,6 +66,10 @@ template <int N> struct String {
     return ZuCmp<String>::cmp(*this, s);
   }
   template <typename S>
+  bool less(const S &s) const {
+    return ZuCmp<String>::less(*this, s);
+  }
+  template <typename S>
   bool equals(const S &s) const {
     return ZuCmp<String>::equals(*this, s);
   }
@@ -73,14 +77,11 @@ template <int N> struct String {
   bool operator ==(const S &s) const { return equals(s); }
   template <typename S>
   bool operator !=(const S &s) const { return !equals(s); }
-  template <typename S>
-  bool operator >(const S &s) const { return cmp(s) > 0; }
-  template <typename S>
-  bool operator >=(const S &s) const { return cmp(s) >= 0; }
-  template <typename S>
-  bool operator <(const S &s) const { return cmp(s) < 0; }
-  template <typename S>
-  bool operator <=(const S &s) const { return cmp(s) <= 0; }
+  bool operator >(const String &s) const { return s.less(*this); }
+  bool operator >=(const String &s) const { return !less(s); }
+  bool operator <(const String &s) const { return less(s); }
+  bool operator <=(const String &s) const { return !s.less(*this); }
+
   uint32_t hash() const { return ZuHash<String>::hash(*this); }
   char	m_data[N];
 };
@@ -88,7 +89,7 @@ template <int N>
 struct ZuTraits<String<N> > : public ZuGenericTraits<String<N> > {
   enum {
     IsPOD = 1, IsCString = 1, IsString = 1,
-    IsHashable = 1, IsComparable = 1
+    IsComparable = 1, IsHashable = 1
   };
   using Elem = char;
 #if 0

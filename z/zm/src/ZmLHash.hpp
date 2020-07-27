@@ -213,16 +213,22 @@ template <class, typename, class, unsigned> friend class ZmLHash_;
       if (i = Cmp::cmp(m_key, d.m_key)) return i;
       return ValCmp::cmp(m_value, d.m_value);
     }
+    ZuInline bool less(const Data &d) const {
+      return
+	!Cmp::less(d.m_key, m_key) &&
+	ValCmp::less(m_value, d.m_value);
+    }
     ZuInline bool equals(const Data &d) const {
       return
-	Cmp::equals(m_key, d.m_key) && ValCmp::equals(m_value, d.m_value);
+	Cmp::equals(m_key, d.m_key) &&
+	ValCmp::equals(m_value, d.m_value);
     }
     ZuInline bool operator ==(const Data &d) const { return equals(d); }
     ZuInline bool operator !=(const Data &d) const { return !equals(d); }
-    ZuInline bool operator >(const Data &d) const { return cmp(d) > 0; }
-    ZuInline bool operator >=(const Data &d) const { return cmp(d) >= 0; }
-    ZuInline bool operator <(const Data &d) const { return cmp(d) < 0; }
-    ZuInline bool operator <=(const Data &d) const { return cmp(d) <= 0; }
+    ZuInline bool operator >(const Data &d) const { return d.less(*this); }
+    ZuInline bool operator >=(const Data &d) const { return !less(d); }
+    ZuInline bool operator <(const Data &d) const { return less(d); }
+    ZuInline bool operator <=(const Data &d) const { return !d.less(*this); }
 
     ZuInline const Key &key() const { return m_key; }
     ZuInline Key &key() { return m_key; }
@@ -281,6 +287,11 @@ public:
     if (!n.m_u) return !m_u ? 0 : 1;
     if (!m_u) return -1;
     return data().cmp(n.data());
+  }
+  bool less(const ZmLHash_Node &n) const {
+    if (!n.m_u) return false;
+    if (!m_u) return true;
+    return data().less(n.data());
   }
   bool equals(const ZmLHash_Node &n) const {
     if (!n.m_u) return !m_u;

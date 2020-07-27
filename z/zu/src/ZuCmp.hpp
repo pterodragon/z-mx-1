@@ -22,8 +22,8 @@
 
 // UDTs must implement the <, >, == and ! operators
 //
-// For more efficiency, specialize ZuTraits and implement the cmp() method
-// (replaces calls to operators < and >; operators == and ! are still called)
+// For more efficiency, specialize ZuTraits and implement cmp()
+// (operators <, == and ! must always be implemented)
 //
 // template <> ZuTraits<UDT> : public ZuGenericTraits<UDT> {
 //   enum { IsComparable = 1 };
@@ -41,14 +41,16 @@
 // to specialize ZuCmp<UDT>, implement the following:
 //
 // template <> struct ZuCmp<UDT> {
-//   static int cmp(const UDT &t1, const UDT &t2) { ... }
-//   // returns -ve if t1 < t2, 0 if t1 == t2, +ve if t1 > t2
-//   static bool equals(const UDT &t1, const UDT &t2) { ... }
-//   // returns t1 == t2
-//   static bool null(const UDT &t) { ... }
+//   // returns -ve if v1 < v2, 0 if v1 == v2, +ve if v1 > v2
+//   static int cmp(const UDT &v1, const UDT &v2) { ... }
+//   // returns v1 == v2
+//   static bool equals(const UDT &v1, const UDT &v2) { ... }
+//   // returns v1 < v2
+//   static bool less(const UDT &v1, const UDT &v2) { ... }
 //   // returns !t
-//   static const UDT &null() { static UDT udt = ...; return udt; }
+//   static bool null(const UDT &v) { ... }
 //   // returns distinguished "null" value for UDT
+//   static const UDT &null() { static UDT udt = ...; return udt; }
 // };
 //
 // ZuCmp<T>::null() returns a distinguished "null" value for T that may
@@ -146,6 +148,7 @@ template <typename T, bool isSmallInt> struct ZuCmp_Integral {
   ZuInline static int cmp(T i1, T i2) {
     return (i1 > i2) - (i1 < i2);
   }
+  ZuInline static bool less(T i1, T i2) { return i1 < i2; }
   ZuInline static bool equals(T i1, T i2) { return i1 == i2; }
   ZuInline static bool null(T i) { return i == null(); }
   ZuInline static const T &null() {
@@ -165,6 +168,7 @@ template <typename T> struct ZuCmp_Integral<T, true> {
   ZuInline static int cmp(T i1, T i2) {
     return static_cast<int>(i1) - static_cast<int>(i2);
   }
+  ZuInline static bool less(T i1, T i2) { return i1 < i2; }
   ZuInline static bool equals(T i1, T i2) { return i1 == i2; }
   ZuInline static bool null(T i) { return i == null(); }
   ZuInline static const T &null() {
@@ -179,6 +183,7 @@ template <typename T> struct ZuCmp_Integral<T, true> {
 
 template <typename T> struct ZuCmp_Floating {
   ZuInline static int cmp(T f1, T f2) { return (f1 > f2) - (f1 < f2); }
+  ZuInline static bool less(T f1, T f2) { return f1 < f2; }
   ZuInline static bool equals(T f1, T f2) { return f1 == f2; }
   ZuInline static T null() { return ZuTraits<T>::nan(); }
   ZuInline static bool null(T f) { return ZuTraits<T>::nan(f); }
@@ -207,8 +212,11 @@ template <typename T> struct ZuCmp_Primitive<T, true, false> :
 template <typename T, bool IsComparable, bool Fwd> struct ZuCmp_NonPrimitive {
   template <typename P1, typename P2>
   ZuInline static int cmp(const P1 &p1, const P2 &p2) {
+    // FIXME - replace with p1 <=> p2 when available
     return (p1 > p2) - (p1 < p2);
   }
+  template <typename P1, typename P2>
+  ZuInline static bool less(const P1 &p1, const P2 &p2) { return p1 < p2; }
   template <typename P1, typename P2>
   ZuInline static bool equals(const P1 &p1, const P2 &p2) { return p1 == p2; }
   template <typename P> ZuInline static bool null(const P &p) { return !p; }
@@ -237,6 +245,8 @@ template <typename T, bool Fwd> struct ZuCmp_NonPrimitive<T, true, Fwd> {
     return ZuCmp_NonPrimitive_<T, typename ZuDecay<P1>::T, Fwd>::cmp(p1, p2);
   }
   template <typename P1, typename P2>
+  ZuInline static bool less(const P1 &p1, const P2 &p2) { return p1 < p2; }
+  template <typename P1, typename P2>
   ZuInline static bool equals(const P1 &p1, const P2 &p2) { return p1 == p2; }
   template <typename P> ZuInline static bool null(const P &p) { return !p; }
   ZuInline static const T &null() { static const T t; return t; }
@@ -249,6 +259,7 @@ template <typename T> struct ZuCmp_Pointer {
   ZuInline static int cmp(const P *p1, const P *p2) {
     return ((char *)p1 > (char *)p2) - ((char *)p1 < (char *)p2);
   }
+  ZuInline static bool less(const P *p1, const P *p2) { return p1 < p2; }
   ZuInline static bool equals(const P *p1, const P *p2) { return p1 == p2; }
   ZuInline static bool null(const P *p) { return !p; }
   ZuInline static const T &null() { static const T t = 0; return t; }
@@ -296,6 +307,17 @@ struct ZuCmp_StrCmp<T1, T2, 1, T1IsString, 0> {
     }
     return strcmp(s1, s2);
   }
+  static bool less(const T1 &s1_, const T2 &s2_) {
+    const char *s1 = ZuTraits<T1>::data(s1_);
+    const char *s2 = ZuTraits<T2>::data(s2_);
+    if (!s1) {
+      if (!s2) return false;
+      s1 = "";
+    } else {
+      if (!s2) return false;
+    }
+    return strcmp(s1, s2) < 0;
+  }
   static bool equals(const T1 &s1_, const T2 &s2_) {
     const char *s1 = ZuTraits<T1>::data(s1_);
     const char *s2 = ZuTraits<T2>::data(s2_);
@@ -319,6 +341,15 @@ struct ZuCmp_StrCmp<T1, T2, 0, 1, 0> {
     if (int i = strncmp(s1, s2, l1 > l2 ? l2 : l1)) return i;
     return l1 - l2;
   }
+  static bool less(const T1 &s1_, const T2 &s2_) {
+    const char *s1 = ZuTraits<T1>::data(s1_);
+    const char *s2 = ZuTraits<T2>::data(s2_);
+    if (!s1) return !!s2;
+    if (!s2) return false;
+    int l1 = ZuTraits<T1>::length(s1_), l2 = ZuTraits<T2>::length(s2_);
+    if (int i = strncmp(s1, s2, l1 > l2 ? l2 : l1)) return i < 0;
+    return l1 < l2;
+  }
   static bool equals(const T1 &s1_, const T2 &s2_) {
     const char *s1 = ZuTraits<T1>::data(s1_);
     const char *s2 = ZuTraits<T2>::data(s2_);
@@ -338,6 +369,13 @@ struct ZuCmp_StrCmp<T1, T2, 1, T1IsString, 1> {
     if (!w2) return 1;
     return wcscmp(w1, w2);
   }
+  static bool less(const T1 &w1_, const T2 &w2_) {
+    const wchar_t *w1 = ZuTraits<T1>::data(w1_);
+    const wchar_t *w2 = ZuTraits<T2>::data(w2_);
+    if (!w1) return !!w2;
+    if (!w2) return false;
+    return wcscmp(w1, w2) < 0;
+  }
   static bool equals(const T1 &w1_, const T2 &w2_) {
     const wchar_t *w1 = ZuTraits<T1>::data(w1_);
     const wchar_t *w2 = ZuTraits<T2>::data(w2_);
@@ -356,6 +394,15 @@ struct ZuCmp_StrCmp<T1, T2, 0, 1, 1> {
     int l1 = ZuTraits<T1>::length(w1_), l2 = ZuTraits<T2>::length(w2_);
     if (int i = wcsncmp(w1, w2, l1 > l2 ? l2 : l1)) return i;
     return l1 - l2;
+  }
+  static bool less(const T1 &w1_, const T2 &w2_) {
+    const wchar_t *w1 = ZuTraits<T1>::data(w1_);
+    const wchar_t *w2 = ZuTraits<T2>::data(w2_);
+    if (!w1) return !!w2;
+    if (!w2) return false;
+    int l1 = ZuTraits<T1>::length(w1_), l2 = ZuTraits<T2>::length(w2_);
+    if (int i = wcsncmp(w1, w2, l1 > l2 ? l2 : l1)) return i < 0;
+    return l1 < l2;
   }
   static bool equals(const T1 &w1_, const T2 &w2_) {
     const wchar_t *w1 = ZuTraits<T1>::data(w1_);
@@ -386,6 +433,15 @@ struct ZuCmp_String<T, 1, IsString, 0> {
   ZuInline static typename ZuIfT<
       ZuTraits<S1>::IsCString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
+      !ZuTraits<S2>::IsWString, bool>::T less(const S1 &s1, const S2 &s2) {
+    return ZuCmp_StrCmp<S1, S2,
+			ZuTraits<S2>::IsCString,
+			ZuTraits<S1>::IsString, 0>::less(s1, s2);
+  }
+  template <typename S1, typename S2>
+  ZuInline static typename ZuIfT<
+      ZuTraits<S1>::IsCString &&
+      (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
       !ZuTraits<S2>::IsWString, bool>::T equals(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2,
 			ZuTraits<S2>::IsCString,
@@ -404,6 +460,13 @@ struct ZuCmp_String<T, 0, 1, 0> {
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
       !ZuTraits<S2>::IsWString, int>::T cmp(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2, 0, 1, 0>::cmp(s1, s2);
+  }
+  template <typename S1, typename S2>
+  ZuInline static typename ZuIfT<
+      ZuTraits<S1>::IsString &&
+      (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
+      !ZuTraits<S2>::IsWString, bool>::T less(const S1 &s1, const S2 &s2) {
+    return ZuCmp_StrCmp<S1, S2, 0, 1, 0>::less(s1, s2);
   }
   template <typename S1, typename S2>
   ZuInline static typename ZuIfT<
@@ -430,6 +493,15 @@ struct ZuCmp_String<T, 1, IsString, 1> {
   ZuInline static typename ZuIfT<
       ZuTraits<S1>::IsCString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
+      ZuTraits<S2>::IsWString, bool>::T less(const S1 &s1, const S2 &s2) {
+    return ZuCmp_StrCmp<S1, S2,
+			ZuTraits<S2>::IsCString,
+			ZuTraits<S1>::IsString, 1>::less(s1, s2);
+  }
+  template <typename S1, typename S2>
+  ZuInline static typename ZuIfT<
+      ZuTraits<S1>::IsCString &&
+      (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
       ZuTraits<S2>::IsWString, bool>::T equals(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2,
 			ZuTraits<S2>::IsCString,
@@ -449,6 +521,13 @@ struct ZuCmp_String<T, 0, 1, 1> {
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
       ZuTraits<S2>::IsWString, int>::T cmp(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2, 0, 1, 1>::cmp(s1, s2);
+  }
+  template <typename S1, typename S2>
+  ZuInline static typename ZuIfT<
+      ZuTraits<S1>::IsString &&
+      (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
+      ZuTraits<S2>::IsWString, bool>::T less(const S1 &s1, const S2 &s2) {
+    return ZuCmp_StrCmp<S1, S2, 0, 1, 1>::less(s1, s2);
   }
   template <typename S1, typename S2>
   ZuInline static typename ZuIfT<
@@ -483,6 +562,7 @@ template <typename T> struct ZuCmp :
 
 template <> struct ZuCmp<bool> {
   ZuInline static int cmp(bool b1, bool b2) { return (int)b1 - (int)b2; }
+  ZuInline static bool less(bool b1, bool b2) { return b1 < b2; }
   ZuInline static bool equals(bool b1, bool b2) { return b1 == b2; }
   ZuInline static bool null(bool b) { return !b; }
   ZuInline static const bool &null() { static const bool b = 0; return b; }
@@ -492,6 +572,7 @@ template <> struct ZuCmp<bool> {
 
 template <> struct ZuCmp<char> {
   ZuInline static int cmp(char c1, char c2) { return (int)c1 - (int)c2; }
+  ZuInline static bool less(char c1, char c2) { return c1 < c2; }
   ZuInline static bool equals(char c1, char c2) { return c1 == c2; }
   ZuInline static bool null(char c) { return !c; }
   ZuInline static const char &null() { static const char c = 0; return c; }

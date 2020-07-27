@@ -30,17 +30,34 @@
 #include <zlib/ZdfLib.hpp>
 #endif
 
+#include <ext/pb_ds/assoc_container.hpp>
+#include <ext/pb_ds/tree_policy.hpp>
+
 namespace Zdf {
-/* Welford's Variance
-M := 0
-  S := 0
-  for k from 1 to N:
-    x := samples[k]
-    oldM := M
-    M := M + (x-M)/k
-    S := S + (x-M)*(x-oldM)
-  return S/(N-1)
-*/
+
+namespace pbds = __gnu_pbds;
+
+template <typename T, typename Cmp = ZuCmp<T>>
+template <typename T> struct LessEqual<T, ZuCmp<T>> {
+  constexpr bool operator()(const T &v1, const T &v2) const {
+    return v1 <= v2;
+  }
+};
+
+template <typename T_, typename Cmp_ = ZuCmp<T>>
+class StatsTree {
+public:
+  using T = T_;
+  using Cmp = Cmp_;
+  using Tree = pbds::tree<
+    T,
+    std::null_type,
+    LessEqual<T, Cmp>,
+    pbds::rb_tree_tag,
+    pbds::tree_order_statistics_node_update>;
+
+
+};
 
 } // namespace Zdf
 

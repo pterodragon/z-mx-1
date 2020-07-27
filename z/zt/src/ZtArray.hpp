@@ -858,15 +858,71 @@ public:
   }
   template <typename S>
   ZuInline typename MatchChar2String<S, int>::T cmp(const S &s) const {
-    return cmp(ZtArray(s));
+    return cmp(ZtArray{s});
   }
 
-  int cmp(const T *a, int64_t n) const {
+  int cmp(const T *a, unsigned n) const {
     if (!a) return !!m_data;
     if (!m_data) return -1;
-    int64_t l = length();
+    unsigned l = length();
     if (int i = Ops::cmp(m_data, a, l < n ? l : n)) return i;
     return l - n;
+  }
+
+  template <typename A>
+  ZuInline typename MatchZtArray<A, bool>::T less(const A &a) const {
+    if (this == &a) return true;
+    return less(a.m_data, a.length());
+  }
+  template <typename A>
+  ZuInline typename MatchArray<A, bool>::T less(A &&a_) const {
+    ZuArrayT<A> a(ZuFwd<A>(a_));
+    return less(a.data(), a.length());
+  }
+  template <typename S>
+  ZuInline typename MatchAnyString<S, bool>::T less(S &&s_) const {
+    ZuArrayT<S> s(ZuFwd<S>(s_));
+    return less(s.data(), s.length());
+  }
+  template <typename S>
+  ZuInline typename MatchChar2String<S, bool>::T less(const S &s) const {
+    return less(ZtArray{s});
+  }
+
+  ZuInline bool less(const T *a, unsigned n) const {
+    if (!a) return false;
+    if (!m_data) return true;
+    unsigned l = length();
+    if (int i = Ops::cmp(m_data, a, l < n ? l : n)) return i < 0;
+    return l < n;
+  }
+
+  template <typename A>
+  ZuInline typename MatchZtArray<A, bool>::T greater(const A &a) const {
+    if (this == &a) return true;
+    return greater(a.m_data, a.length());
+  }
+  template <typename A>
+  ZuInline typename MatchArray<A, bool>::T greater(A &&a_) const {
+    ZuArrayT<A> a(ZuFwd<A>(a_));
+    return greater(a.data(), a.length());
+  }
+  template <typename S>
+  ZuInline typename MatchAnyString<S, bool>::T greater(S &&s_) const {
+    ZuArrayT<S> s(ZuFwd<S>(s_));
+    return greater(s.data(), s.length());
+  }
+  template <typename S>
+  ZuInline typename MatchChar2String<S, bool>::T greater(const S &s) const {
+    return greater(ZtArray{s});
+  }
+
+  ZuInline bool greater(const T *a, unsigned n) const {
+    if (!m_data) return false;
+    if (!a) return true;
+    unsigned l = length();
+    if (int i = Ops::cmp(m_data, a, l < n ? l : n)) return i > 0;
+    return l > n;
   }
 
   template <typename A>
@@ -886,7 +942,7 @@ public:
   }
   template <typename S>
   ZuInline typename MatchChar2String<S, bool>::T equals(const S &s) const {
-    return equals(ZtArray(s));
+    return equals(ZtArray{s});
   }
 
   ZuInline bool equals(const T *a, unsigned n) const {
@@ -901,13 +957,13 @@ public:
   template <typename A>
   ZuInline bool operator !=(const A &a) const { return !equals(a); }
   template <typename A>
-  ZuInline bool operator >(const A &a) const { return cmp(a) > 0; }
+  ZuInline bool operator >(const A &a) const { return greater(a); }
   template <typename A>
-  ZuInline bool operator >=(const A &a) const { return cmp(a) >= 0; }
+  ZuInline bool operator >=(const A &a) const { return !less(a); }
   template <typename A>
-  ZuInline bool operator <(const A &a) const { return cmp(a) < 0; }
+  ZuInline bool operator <(const A &a) const { return less(a); }
   template <typename A>
-  ZuInline bool operator <=(const A &a) const { return cmp(a) <= 0; }
+  ZuInline bool operator <=(const A &a) const { return !greater(a); }
 
 // +, += operators
 
@@ -929,7 +985,7 @@ private:
     { ZuArrayT<S> s(ZuFwd<S>(s_)); return add(s.data(), s.length()); }
   template <typename S>
   ZuInline typename MatchChar2String<S, ZtArray<T, Cmp> >::T add(S &&s) const
-    { return add(ZtArray(ZuFwd<S>(s))); }
+    { return add(ZtArray{ZuFwd<S>(s)}); }
   template <typename C>
   ZuInline typename MatchChar2<C, ZtArray<T, Cmp> >::T add(C c) const
     { return add(ZtArray(c)); }
@@ -993,7 +1049,7 @@ private:
 
   template <typename S>
   ZuInline typename MatchChar2String<S>::T append_(S &&s)
-    { append_(ZtArray(ZuFwd<S>(s))); }
+    { append_(ZtArray{ZuFwd<S>(s)}); }
   template <typename C>
   ZuInline typename MatchChar2<C>::T append_(C c)
     { append_(ZtArray(c)); }
@@ -1429,7 +1485,8 @@ struct ZuTraits<ZtArray<Elem_, Cmp> > :
       ZuConversion<char, Elem>::Same ||
       ZuConversion<wchar_t, Elem>::Same,
     IsWString = ZuConversion<wchar_t, Elem>::Same,
-    IsHashable = 1, IsComparable = 1
+    IsComparable = 1,
+    IsHashable = 1
   };
   static const Elem *data(const T &a) { return a.data(); }
   static unsigned length(const T &a) { return a.length(); }

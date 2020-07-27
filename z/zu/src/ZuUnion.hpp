@@ -137,6 +137,8 @@ struct ZuUnion_Ops :
       ZuTraits<T>::IsPrimitive && ZuTraits<T>::IsPointer> {
   template <typename V> ZuInline static void assign(void *p, V &&v)
     { *static_cast<T *>(p) = ZuFwd<V>(v); }
+  template <typename V> ZuInline static bool less(const void *p, const V &v)
+    { return ZuCmp<T>::less(*static_cast<const T *>(p), v); }
   template <typename V> ZuInline static bool equals(const void *p, const V &v)
     { return ZuCmp<T>::equals(*static_cast<const T *>(p), v); }
   template <typename V> ZuInline static int cmp(const void *p, const V &v)
@@ -282,12 +284,41 @@ public:
     type_(0);
   }
 
-  ZuInline bool operator ==(const ZuUnion &p) const { return equals(p); }
-  ZuInline bool operator !=(const ZuUnion &p) const { return !equals(p); }
-  ZuInline bool operator >(const ZuUnion &p) const { return cmp(p) > 0; }
-  ZuInline bool operator >=(const ZuUnion &p) const { return cmp(p) >= 0; }
-  ZuInline bool operator <(const ZuUnion &p) const { return cmp(p) < 0; }
-  ZuInline bool operator <=(const ZuUnion &p) const { return cmp(p) <= 0; }
+  template <typename P>
+  typename ZuIs<ZuUnion, P, int>::T cmp(const P &p) const {
+    if (this == &p) return true;
+    if (int i = ZuCmp<uint8_t>::cmp(type(), p.type())) return i;
+    return ZuSwitch::dispatch<N>(type(), [this, &p](auto i) -> int {
+      using T = typename Type<i>::T;
+      const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(p.m_u);
+      return ZuUnion_Ops<T>::cmp(m_u, *ptr);
+    });
+  }
+  template <typename P>
+  typename ZuIsNot<ZuUnion, P, int>::T cmp(const P &p) const {
+    return ZuSwitch::dispatch<N>(type(), [this, &p](auto i) -> int {
+      using T = typename Type<i>::T;
+      return ZuUnion_Ops<T>::cmp(m_u, p);
+    });
+  }
+
+  template <typename P>
+  typename ZuIs<ZuUnion, P, bool>::T less(const P &p) const {
+    if (this == &p) return true;
+    if (type() != p.type()) return false;
+    return ZuSwitch::dispatch<N>(type(), [this, &p](auto i) -> bool {
+      using T = typename Type<i>::T;
+      const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(p.m_u);
+      return ZuUnion_Ops<T>::less(m_u, *ptr);
+    });
+  }
+  template <typename P>
+  typename ZuIsNot<ZuUnion, P, bool>::T less(const P &p) const {
+    return ZuSwitch::dispatch<N>(type(), [this, &p](auto i) -> bool {
+      using T = typename Type<i>::T;
+      return ZuUnion_Ops<T>::less(m_u, p);
+    });
+  }
 
   template <typename P>
   typename ZuIs<ZuUnion, P, bool>::T equals(const P &p) const {
@@ -307,23 +338,12 @@ public:
     });
   }
 
-  template <typename P>
-  typename ZuIs<ZuUnion, P, int>::T cmp(const P &p) const {
-    if (this == &p) return true;
-    if (int i = ZuCmp<uint8_t>::cmp(type(), p.type())) return i;
-    return ZuSwitch::dispatch<N>(type(), [this, &p](auto i) -> int {
-      using T = typename Type<i>::T;
-      const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(p.m_u);
-      return ZuUnion_Ops<T>::cmp(m_u, *ptr);
-    });
-  }
-  template <typename P>
-  typename ZuIsNot<ZuUnion, P, int>::T cmp(const P &p) const {
-    return ZuSwitch::dispatch<N>(type(), [this, &p](auto i) -> int {
-      using T = typename Type<i>::T;
-      return ZuUnion_Ops<T>::cmp(m_u, p);
-    });
-  }
+  ZuInline bool operator ==(const ZuUnion &p) const { return equals(p); }
+  ZuInline bool operator !=(const ZuUnion &p) const { return !equals(p); }
+  ZuInline bool operator >(const ZuUnion &p) const { return p.less(*this); }
+  ZuInline bool operator >=(const ZuUnion &p) const { return !less(p); }
+  ZuInline bool operator <(const ZuUnion &p) const { return less(p); }
+  ZuInline bool operator <=(const ZuUnion &p) const { return !p.less(*this); }
 
   bool operator *() const {
     return ZuSwitch::dispatch<N>(type(), [this](auto i) -> bool {

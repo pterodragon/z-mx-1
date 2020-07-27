@@ -78,7 +78,6 @@ public:
     if (!m_map || !b.m_map) return false;
     return hwloc_bitmap_isequal(m_map, b.m_map);
   }
-
   bool operator !=(const ZmBitmap &b) { return !operator ==(b); }
   
   int cmp(const ZmBitmap &b) const {

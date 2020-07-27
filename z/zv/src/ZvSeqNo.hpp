@@ -31,18 +31,8 @@
 #endif
 
 #include <zlib/ZuInt.hpp>
-#include <zlib/ZuCmp.hpp>
 #include <zlib/ZuBox.hpp>
 
-struct ZvSeqNoCmp {
-  ZuInline static int cmp(uint64_t v1, uint64_t v2) {
-    int64_t d = v1 - v2; // handles wraparound ok
-    return d < 0 ? -1 : d > 0 ? 1 : 0;
-  }
-  ZuInline static bool equals(uint64_t v1, uint64_t v2) { return v1 == v2; }
-  ZuInline static bool null(uint64_t v) { return !v; }
-  ZuInline static uint64_t null() { return 0; }
-};
-using ZvSeqNo = ZuBox<uint64_t, ZvSeqNoCmp>;
+using ZvSeqNo = ZuBox<uint64_t>;
 
 #endif /* ZvSeqNo_HPP */

@@ -87,6 +87,11 @@ template <typename Accessor_, bool Same> struct ZuIndex_ {
 	  Accessor::value(ZuFwd<T1>(t1)), ZuFwd<T2>(t2));
     }
     template <typename T1, typename T2>
+    ZuInline static bool less(T1 &&t1, T2 &&t2) {
+      return Accessor::Cmp::less(
+	  Accessor::value(ZuFwd<T1>(t1)), ZuFwd<T2>(t2));
+    }
+    template <typename T1, typename T2>
     ZuInline static bool equals(T1 &&t1, T2 &&t2) {
       return Accessor::Cmp::equals(
 	  Accessor::value(ZuFwd<T1>(t1)), ZuFwd<T2>(t2));
@@ -100,6 +105,11 @@ template <typename Accessor_, bool Same> struct ZuIndex_ {
     ZuInline static int cmp(T1 &&t1, T2 &&t2) {
       return Accessor::Cmp::cmp(Accessor::value(
 	    ZuFwd<T1>(t1)), Accessor::value(ZuFwd<T2>(t2)));
+    }
+    template <typename T1, typename T2>
+    ZuInline static bool less(T1 &&t1, T2 &&t2) {
+      return Accessor::Cmp::less(
+	  Accessor::value(ZuFwd<T1>(t1)), Accessor::value(ZuFwd<T2>(t2)));
     }
     template <typename T1, typename T2>
     ZuInline static bool equals(T1 &&t1, T2 &&t2) {

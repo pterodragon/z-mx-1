@@ -166,33 +166,6 @@ private:
   const Boxed	&m_value;
 };
 
-struct ZuBox_Approx_ { };
-template <typename T, class Cmp>
-struct ZuBox_Approx : public ZuBox<T, Cmp>, public ZuBox_Approx_ {
-  ZuBox_Approx() { }
-  ZuBox_Approx(const ZuBox_Approx &v) :
-    ZuBox<T, Cmp>(static_cast<const ZuBox<T, Cmp> &>(v)) { }
-  ZuBox_Approx &operator =(const ZuBox_Approx &v) {
-    if (this != &v)
-      ZuBox<T, Cmp>::operator =(static_cast<const ZuBox<T, Cmp> &>(v));
-    return *this;
-  }
-  template <typename P> ZuBox_Approx(const P &p) : ZuBox<T, Cmp>(p) { }
-  template <typename P>
-  ZuBox_Approx &operator =(const P &p) {
-    ZuBox<T, Cmp>::operator =(p);
-    return *this;
-  }
-};
-template <typename T_, class Cmp, bool IsFloating> struct ZuBox_Tilde {
-  using T = ZuBox_Approx<T_, Cmp>;
-  ZuInline static T fn(const T_ &val) { return T(val); }
-};
-template <typename T_, class Cmp> struct ZuBox_Tilde<T_, Cmp, 0> {
-  using T = T_;
-  ZuInline static T fn(const T_ &val) { return ~val; }
-};
-
 // SFINAE...
 template <typename U, typename T, typename R = void> struct ZuBox_IsReal :
     public ZuIfT<!ZuTraits<U>::IsBoxed && !ZuTraits<U>::IsString &&
@@ -305,20 +278,6 @@ public:
   template <typename T>
   ZuInline ZuBox &operator =(T &&t) { assign(ZuFwd<T>(t)); return *this; }
 
-  template <typename T>
-  ZuInline static typename ZuIsFloatingPoint<T, bool>::T equals_(
-      const T &t1, const T &t2) {
-    if (Cmp::null(t2)) return Cmp::null(t1);
-    if (Cmp::null(t1)) return false;
-    return t1 == t2;
-  }
-  template <typename T>
-  ZuInline static typename ZuNotFloatingPoint<T, bool>::T equals_(
-      const T &t1, const T &t2) {
-    return t1 == t2;
-  }
-  ZuInline bool equals(const ZuBox &b) const { return equals_(m_val, b.m_val); }
-
   template <class Cmp__ = Cmp>
   ZuInline typename ZuIfT<!ZuConversion<Cmp__, ZuCmp0<T> >::Same, int>::T
   cmp_(const ZuBox &b) const {
@@ -333,18 +292,62 @@ public:
   }
   ZuInline int cmp(const ZuBox &b) const { return cmp_<>(b.m_val); }
 
-  template <typename R> ZuInline typename ZuIsNot<ZuBox_Approx_, R, bool>::T
-    operator ==(const R &r) const { return equals(r); }
-  template <typename R> ZuInline typename ZuIsNot<ZuBox_Approx_, R, bool>::T
-    operator !=(const R &r) const { return !equals(r); }
-  template <typename R> ZuInline typename ZuIsNot<ZuBox_Approx_, R, bool>::T
-    operator >(const R &r) const { return cmp(r) > 0; }
-  template <typename R> ZuInline typename ZuIsNot<ZuBox_Approx_, R, bool>::T
-    operator >=(const R &r) const { return cmp(r) >= 0; }
-  template <typename R> ZuInline typename ZuIsNot<ZuBox_Approx_, R, bool>::T
-    operator <(const R &r) const { return cmp(r) < 0; }
-  template <typename R> ZuInline typename ZuIsNot<ZuBox_Approx_, R, bool>::T
-    operator <=(const R &r) const { return cmp(r) <= 0; }
+  template <class Cmp__ = Cmp>
+  ZuInline typename ZuIfT<!ZuConversion<Cmp__, ZuCmp0<T> >::Same, bool>::T
+  less_(const ZuBox &b) const {
+    if (Cmp::null(b.m_val)) return false;
+    if (Cmp::null(m_val)) return true;
+    return Cmp::less(m_val, b.m_val);
+  }
+  template <class Cmp__ = Cmp>
+  ZuInline typename ZuIfT<ZuConversion<Cmp__, ZuCmp0<T> >::Same, bool>::T
+  less_(const ZuBox &b) const {
+    return Cmp::less(m_val, b.m_val);
+  }
+  ZuInline bool less(const ZuBox &b) const { return less_<>(b.m_val); }
+
+  template <class Cmp__ = Cmp>
+  ZuInline typename ZuIfT<!ZuConversion<Cmp__, ZuCmp0<T> >::Same, bool>::T
+  greater_(const ZuBox &b) const {
+    if (Cmp::null(m_val)) return false;
+    if (Cmp::null(b.m_val)) return true;
+    return Cmp::less(b.m_val, m_val);
+  }
+  template <class Cmp__ = Cmp>
+  ZuInline typename ZuIfT<ZuConversion<Cmp__, ZuCmp0<T> >::Same, bool>::T
+  greater_(const ZuBox &b) const {
+    return !Cmp::less(b.m_val, m_val);
+  }
+  ZuInline bool greater(const ZuBox &b) const { return greater_<>(b.m_val); }
+
+  template <typename T>
+  ZuInline static typename ZuIsFloatingPoint<T, bool>::T equals_(
+      const T &t1, const T &t2) {
+    if (Cmp::null(t2)) return Cmp::null(t1);
+    if (Cmp::null(t1)) return false;
+    return t1 == t2;
+  }
+  template <typename T>
+  ZuInline static typename ZuNotFloatingPoint<T, bool>::T equals_(
+      const T &t1, const T &t2) {
+    return t1 == t2;
+  }
+  ZuInline bool equals(const ZuBox &b) const {
+    return equals_(m_val, b.m_val);
+  }
+
+  template <typename V>
+  ZuInline bool operator ==(const V &v) const { return equals(v); }
+  template <typename V>
+  ZuInline bool operator !=(const V &v) const { return !equals(v); }
+  template <typename V>
+  ZuInline bool operator >(const V &v) const { return greater(v); }
+  template <typename V>
+  ZuInline bool operator >=(const V &v) const { return !less(v); }
+  template <typename V>
+  ZuInline bool operator <(const V &v) const { return less(v); }
+  template <typename V>
+  ZuInline bool operator <=(const V &v) const { return !greater(v); }
 
   ZuInline bool operator !() const { return !m_val; }
 
@@ -530,31 +533,6 @@ public:
     if (feq_(r)) return 0;
     return m_val > r ? 1 : -1;
   }
-
-  struct FCmp {
-    ZuInline static int cmp(const ZuBox &f1, const ZuBox &f2)
-      { return f1.fcmp(f2); }
-    ZuInline static bool equals(const ZuBox &f1, const ZuBox &f2)
-      { return f1.feq(f2); }
-    ZuInline static bool null(const ZuBox &t) { return !*t; }
-    ZuInline static const ZuBox &null() { static const ZuBox t; return t; }
-  };
-
-  using Tilde = ZuBox_Tilde<T, Cmp, ZuTraits<T>::IsFloatingPoint>;
-  ZuInline typename Tilde::T operator ~() const { return Tilde::fn(*this); }
-
-  template <typename R> ZuInline typename ZuIs<ZuBox_Approx_, R, bool>::T
-    operator ==(const R &r) const { return feq(r); }
-  template <typename R> ZuInline typename ZuIs<ZuBox_Approx_, R, bool>::T
-    operator !=(const R &r) const { return !feq(r); }
-  template <typename R> ZuInline typename ZuIs<ZuBox_Approx_, R, bool>::T
-    operator >(const R &r) const { return !fle(r); }
-  template <typename R> ZuInline typename ZuIs<ZuBox_Approx_, R, bool>::T
-    operator >=(const R &r) const { return fge(r); }
-  template <typename R> ZuInline typename ZuIs<ZuBox_Approx_, R, bool>::T
-    operator <(const R &r) const { return !fge(r); }
-  template <typename R> ZuInline typename ZuIs<ZuBox_Approx_, R, bool>::T
-    operator <=(const R &r) const { return fle(r); }
 
 private:
   T	m_val;

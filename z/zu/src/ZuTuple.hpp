@@ -162,22 +162,25 @@ public:
     return *this;
   }
 
-  ZuInline bool operator ==(const ZuTuple &p) const { return equals(p); }
-  ZuInline bool operator !=(const ZuTuple &p) const { return !equals(p); }
-  ZuInline bool operator >(const ZuTuple &p) const { return cmp(p) > 0; }
-  ZuInline bool operator >=(const ZuTuple &p) const { return cmp(p) >= 0; }
-  ZuInline bool operator <(const ZuTuple &p) const { return cmp(p) < 0; }
-  ZuInline bool operator <=(const ZuTuple &p) const { return cmp(p) <= 0; }
-
+  template <typename P0>
+  ZuInline int cmp(const ZuTuple<P0> &p) const {
+    return ZuCmp<T0>::cmp(m_p0, p.template p<0>());
+  }
+  template <typename P0>
+  ZuInline bool less(const ZuTuple<P0> &p) const {
+    return ZuCmp<T0>::less(m_p0, p.template p<0>());
+  }
   template <typename P0>
   ZuInline bool equals(const ZuTuple<P0> &p) const {
     return ZuCmp<T0>::equals(m_p0, p.template p<0>());
   }
 
-  template <typename P0>
-  ZuInline int cmp(const ZuTuple<P0> &p) const {
-    return ZuCmp<T0>::cmp(m_p0, p.template p<0>());
-  }
+  ZuInline bool operator ==(const ZuTuple &p) const { return equals(p); }
+  ZuInline bool operator !=(const ZuTuple &p) const { return !equals(p); }
+  ZuInline bool operator >(const ZuTuple &p) const { return p.less(*this); }
+  ZuInline bool operator >=(const ZuTuple &p) const { return !less(p); }
+  ZuInline bool operator <(const ZuTuple &p) const { return less(p); }
+  ZuInline bool operator <=(const ZuTuple &p) const { return !p.less(*this); }
 
   ZuInline bool operator !() const { return !m_p0; }
   ZuOpBool

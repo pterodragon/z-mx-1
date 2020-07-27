@@ -44,7 +44,7 @@ template <typename ...Args> class ZmFn;
 // ZmFn traits
 template <typename ...Args>
 struct ZuTraits<ZmFn<Args...> > : public ZuGenericTraits<ZmFn<Args...> > {
-  enum { IsHashable = 1, IsComparable = 1 };
+  enum { IsComparable = 1, IsHashable = 1 };
 };
 
 // ZmFn base class
@@ -155,6 +155,9 @@ public:
 
   ZuInline bool operator ==(const ZmAnyFn &fn) const {
     return m_invoker == fn.m_invoker && m_object == fn.m_object;
+  }
+  ZuInline bool operator !=(const ZmAnyFn &fn) const {
+    return !operator ==(fn);
   }
 
   ZuInline int cmp(const ZmAnyFn &fn) const {

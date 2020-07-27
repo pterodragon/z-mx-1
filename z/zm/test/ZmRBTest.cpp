@@ -47,7 +47,7 @@ struct ZCmp {
 };
 
 template <> struct ZuTraits<Z> {
-  enum { IsComparable = 1, IsReal = 0, IsBase = 0 };
+  enum { IsReal = 0, IsBase = 0 };
 };
 
 using Tree = ZmRBTree<ZmRef<Z>, ZmRBTreeCmp<ZCmp> >;

@@ -463,7 +463,7 @@ template <typename Union, typename Arg0>
 struct ZuUnion_Traits<Union, Arg0> : public ZuGenericTraits<Union> {
   enum {
     IsPOD = ZuTraits<Arg0>::IsPOD,
-    IsComparable = ZuTraits<Arg0>::IsComparable,
+    IsComparable = 1,
     IsHashable = ZuTraits<Arg0>::IsHashable
   };
 };
@@ -475,13 +475,23 @@ private:
 public:
   enum {
     IsPOD = Left::IsPOD && Right::IsPOD,
-    IsComparable = Left::IsComparable && Right::IsComparable,
+    IsComparable = 1,
     IsHashable = Left::IsHashable && Right::IsHashable
   };
 };
 template <typename ...Args>
 struct ZuTraits<ZuUnion<Args...>> :
     public ZuUnion_Traits<ZuUnion<Args...>, Args...> { };
+
+#include <type_traits>
+namespace std {
+// FIXME get methods per set::get(std::variant)
+
+  template <class> struct tuple_size;
+  template <typename ...Args>
+  struct tuple_size<ZuUnion<Args...>> :
+  public integral_constant<std::size_t, sizeof...(Args)> { };
+}
 
 #define ZuUnion_FieldType(args) \
   ZuPP_Defer(ZuUnion_FieldType_)()(ZuPP_Strip(args))

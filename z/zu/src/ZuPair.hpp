@@ -62,7 +62,7 @@ template <typename T0, typename T1>
 struct ZuTraits<ZuPair<T0, T1> > : public ZuGenericTraits<ZuPair<T0, T1> > {
   enum {
     IsPOD = ZuTraits<T0>::IsPOD && ZuTraits<T1>::IsPOD,
-    IsComparable = true,
+    IsComparable = 1,
     IsHashable = ZuTraits<T0>::IsHashable && ZuTraits<T1>::IsHashable
   };
 };
@@ -288,5 +288,79 @@ struct ZuPrint<ZuPair<T0, T1> > : public ZuPrintDelegate {
     s << p.template p<0>() << ':' << p.template p<1>();
   }
 };
+
+#include <type_traits>
+namespace std {
+
+// FIXME
+template< std::size_t I, class T1, class T2 >
+typename std::tuple_element<I, std::pair<T1,T2> >::type&
+    get( std::pair<T1, T2>& p ) noexcept;
+(since C++11)
+(until C++14)
+template< std::size_t I, class T1, class T2 >
+constexpr std::tuple_element_t<I, std::pair<T1,T2> >&
+    get( std::pair<T1, T2>& p ) noexcept;
+(since C++14)
+(2)	
+template< std::size_t I, class T1, class T2 >
+const typename std::tuple_element<I, std::pair<T1,T2> >::type&
+    get( const std::pair<T1,T2>& p ) noexcept;
+(since C++11)
+(until C++14)
+template< std::size_t I, class T1, class T2 >
+constexpr const std::tuple_element_t<I, std::pair<T1,T2> >&
+    get( const std::pair<T1,T2>& p ) noexcept;
+(since C++14)
+(3)	
+template< std::size_t I, class T1, class T2 >
+typename std::tuple_element<I, std::pair<T1,T2> >::type&&
+    get( std::pair<T1,T2>&& p ) noexcept;
+(since C++11)
+(until C++14)
+template< std::size_t I, class T1, class T2 >
+constexpr std::tuple_element_t<I, std::pair<T1,T2> >&&
+    get( std::pair<T1,T2>&& p ) noexcept;
+(since C++14)
+(4)	
+template< std::size_t I, class T1, class T2 >
+const typename std::tuple_element<I, std::pair<T1,T2> >::type&&
+    get( const std::pair<T1,T2>&& p ) noexcept;
+(since C++11)
+(until C++14)
+template< std::size_t I, class T1, class T2 >
+constexpr const std::tuple_element_t<I, std::pair<T1,T2> >&&
+    get( const std::pair<T1,T2>&& p ) noexcept;
+(since C++14)
+template <class T, class U>
+constexpr T& get(std::pair<T, U>& p) noexcept;
+(5)	(since C++14)
+template <class T, class U>
+constexpr const T& get(const std::pair<T, U>& p) noexcept;
+(6)	(since C++14)
+template <class T, class U>
+constexpr T&& get(std::pair<T, U>&& p) noexcept;
+(7)	(since C++14)
+template <class T, class U>
+constexpr const T&& get(const std::pair<T, U>&& p) noexcept;
+(8)	(since C++14)
+template <class T, class U>
+constexpr T& get(std::pair<U, T>& p) noexcept;
+(9)	(since C++14)
+template <class T, class U>
+constexpr const T& get(const std::pair<U, T>& p) noexcept;
+(10)	(since C++14)
+template <class T, class U>
+constexpr T&& get(std::pair<U, T>&& p) noexcept;
+(11)	(since C++14)
+template <class T, class U>
+constexpr const T&& get(const std::pair<U, T>&& p) noexcept;
+(12)	(since C++14)
+
+  template <class> struct tuple_size;
+  template <typename T0, typename T1>
+  struct tuple_size<ZuPair<T0, T1>> :
+  public integral_constant<std::size_t, 2> { };
+}
 
 #endif /* ZuPair_HPP */

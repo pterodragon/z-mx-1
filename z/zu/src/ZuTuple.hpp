@@ -405,6 +405,16 @@ auto ZuInline ZuMkTuple(Args &&... args) {
 
 template <typename... Args> ZuTuple(Args...) -> ZuTuple<Args...>;
 
+#include <type_traits>
+namespace std {
+// FIXME get methods per set::get(std::tuple)
+
+  template <class> struct tuple_size;
+  template <typename ...Args>
+  struct tuple_size<ZuTuple<Args...>> :
+  public integral_constant<std::size_t, sizeof...(Args)> { };
+}
+
 // ZuDeclTuple(Type, (Type0, Fn0), (Type1, Fn1), ...) creates
 // a ZuTuple<Type0, ...> with named member functions Fn0, Fn1, etc.
 // that alias p<0>, p<1>, etc.

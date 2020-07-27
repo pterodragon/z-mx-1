@@ -37,26 +37,45 @@ namespace Zdf {
 
 namespace pbds = __gnu_pbds;
 
-template <typename T, typename Cmp = ZuCmp<T>>
-template <typename T> struct LessEqual<T, ZuCmp<T>> {
+template <typename T, typename Cmp> struct LessEqual {
+  constexpr bool operator()(const T &v1, const T &v2) const {
+    return !Cmp::less(v2, v1);
+  }
+};
+template <typename T> struct LessEqual<T, ZuNull> {
   constexpr bool operator()(const T &v1, const T &v2) const {
     return v1 <= v2;
   }
 };
 
-template <typename T_, typename Cmp_ = ZuCmp<T>>
+template <
+  typename Key_, typename Value_ = ZuNull, typename Cmp_ = ZuNull>
 class StatsTree {
 public:
-  using T = T_;
+  using Key = Key_;
+  using Value =
+    typename ZuIf<pbds::null_type, Value_,
+	     ZuConversion<Value_, ZuNull>::Same>::T;
   using Cmp = Cmp_;
   using Tree = pbds::tree<
-    T,
-    std::null_type,
+    Key,
+    pbds::null_type,
     LessEqual<T, Cmp>,
     pbds::rb_tree_tag,
     pbds::tree_order_statistics_node_update>;
 
+  // FIXME
 
+  ZuInline void add(Key k) { m_tree.insert(ZuMv(k)); }
+  ZuInline void add(Key k, Value v) { m_tree[ZuMv(k)] = ZuMv(v); }
+  ZuInline void del(const Key &k) { m_tree.erase(k); }
+
+  ZuInline unsigned count() { return m_tree.size(); }
+
+  ZuInline unsigned clean() { return m_tree.clear(); }
+
+private:
+  Tree	m_tree;
 };
 
 } // namespace Zdf

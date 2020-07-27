@@ -329,7 +329,7 @@ struct ZuStringN_Traits : public ZuGenericTraits<T_> {
   enum {
     IsPOD = 1, IsCString = 1, IsString = 1, IsStream = 1,
     IsWString = ZuConversion<Elem, wchar_t>::Same,
-    IsHashable = 1, IsComparable = 1
+    IsComparable = 1, IsHashable = 1
   };
   ZuInline static const Elem *data(const T &s) { return s.data(); }
   ZuInline static unsigned length(const T &s) { return s.length(); }

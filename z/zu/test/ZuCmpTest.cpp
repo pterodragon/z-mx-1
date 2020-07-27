@@ -90,8 +90,6 @@ namespace T2 {
   ZuDeclUnion(V, (I, id), (D, income), (S, name), (P, dependents), (CP, foo));
 }
 
-ZuAssert(ZuTraits<T2::V>::IsHashable);
-
 namespace T3 {
   using I = ZuBox<int>;
   ZuDeclTuple(V, (I, id), (I, age), (I, height));

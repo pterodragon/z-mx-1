@@ -20,7 +20,7 @@
 // type traits
 
 // template <> struct ZuTraits<UDT> : public ZuGenericTraits<UDT> {
-//   enum { IsPOD = 1, IsHashable = 1, IsComparable = 1 }; // traits overrides
+//   enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 }; // traits overrides
 // };
 // class UDT {
 //   ...
@@ -103,7 +103,7 @@ struct ZuTraits<const volatile T> : public ZuTraits<T> { };
 
 template <typename T> struct ZuTraits_Real : public ZuGenericTraits<T> {
   enum {
-    IsPrimitive = 1, IsReal = 1, IsPOD = 1, IsHashable = 1, IsComparable = 1
+    IsPrimitive = 1, IsReal = 1, IsPOD = 1
   };
 };
 
@@ -192,7 +192,7 @@ template <typename T> struct ZuTraits<T &&> : public ZuTraits<T> {
 template <typename T, typename Elem_>
 struct ZuTraits_Pointer : public ZuGenericTraits<T> {
   enum {
-    IsPrimitive = 1, IsPOD = 1, IsPointer = 1, IsHashable = 1, IsComparable = 1
+    IsPrimitive = 1, IsPOD = 1, IsPointer = 1
   };
   using Elem = Elem_;
 };
@@ -218,9 +218,7 @@ struct ZuTraits_Array : public ZuGenericTraits<T> {
   enum {
     IsPrimitive = 1, // the array is primitive, the element might not be
     IsPOD = ElemTraits::IsPOD,
-    IsArray = 1,
-    IsHashable = ElemTraits::IsHashable,
-    IsComparable = ElemTraits::IsComparable
+    IsArray = 1
   };
   ZuInline static const Elem *data(const T &a) { return &a[0]; }
   ZuInline static unsigned length(const T &a) { return sizeof(a) / sizeof(a[0]); }

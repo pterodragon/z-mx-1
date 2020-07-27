@@ -195,7 +195,7 @@ public:
       typename ZuIfT<
 	(!ZuTraits<T0>::IsReference ||
 	  ZuConversion<typename ZuDecay<U0>::T,
-		       typename ZuDecay<P0>::T>::Is) && 
+		       typename ZuDecay<P0>::T>::Is) &&
 	(!ZuTraits<T1>::IsReference ||
 	  ZuConversion<typename ZuDecay<U1>::T,
 		       typename ZuDecay<P1>::T>::Is)>::T *_ = 0) :
@@ -262,6 +262,40 @@ public:
     return *this;
   }
 
+  template <typename T>
+  ZuInline typename ZuIfT<ZuConversion<T, T0>::Same, const U0 &>::T v() const {
+    return m_p0;
+  }
+  template <typename T>
+  ZuInline typename ZuIfT<ZuConversion<T, T0>::Same, U0 &>::T v() {
+    return m_p0;
+  }
+  template <typename T, typename P>
+  ZuInline typename ZuIfT<ZuConversion<T, T0>::Same, ZuPair &>::T v(P &&p) {
+    m_p0 = ZuFwd<P>(p);
+    return *this;
+  }
+
+  template <typename T>
+  ZuInline typename ZuIfT<
+      !ZuConversion<T, T0>::Same && ZuConversion<T, T1>::Same,
+      const U1 &>::T v() const {
+    return m_p1;
+  }
+  template <typename T>
+  ZuInline typename ZuIfT<
+      !ZuConversion<T, T0>::Same && ZuConversion<T, T1>::Same,
+      U1 &>::T v() {
+    return m_p1;
+  }
+  template <typename T, typename P>
+  ZuInline typename ZuIfT<
+      !ZuConversion<T, T0>::Same && ZuConversion<T, T1>::Same,
+      ZuPair &>::T v(P &&p) {
+    m_p1 = ZuFwd<P>(p);
+    return *this;
+  }
+
   using Print = ZuPair_Print<U0, U1,
 	ZuConversion<ZuPair_, U0>::Base, ZuConversion<ZuPair_, U1>::Base>;
   ZuInline Print print() const {
@@ -289,73 +323,68 @@ struct ZuPrint<ZuPair<T0, T1> > : public ZuPrintDelegate {
   }
 };
 
+// STL pair cruft
 #include <type_traits>
+#include <tuple>
 namespace std {
+  template <size_t, class> struct tuple_element;
+  template <typename T0, typename T1>
+  struct tuple_element<0, ZuPair<T0, T1>> { using type = T0; };
+  template <typename T0, typename T1>
+  struct tuple_element<1, ZuPair<T0, T1>> { using type = T1; };
 
-// FIXME
-template< std::size_t I, class T1, class T2 >
-typename std::tuple_element<I, std::pair<T1,T2> >::type&
-    get( std::pair<T1, T2>& p ) noexcept;
-(since C++11)
-(until C++14)
-template< std::size_t I, class T1, class T2 >
-constexpr std::tuple_element_t<I, std::pair<T1,T2> >&
-    get( std::pair<T1, T2>& p ) noexcept;
-(since C++14)
-(2)	
-template< std::size_t I, class T1, class T2 >
-const typename std::tuple_element<I, std::pair<T1,T2> >::type&
-    get( const std::pair<T1,T2>& p ) noexcept;
-(since C++11)
-(until C++14)
-template< std::size_t I, class T1, class T2 >
-constexpr const std::tuple_element_t<I, std::pair<T1,T2> >&
-    get( const std::pair<T1,T2>& p ) noexcept;
-(since C++14)
-(3)	
-template< std::size_t I, class T1, class T2 >
-typename std::tuple_element<I, std::pair<T1,T2> >::type&&
-    get( std::pair<T1,T2>&& p ) noexcept;
-(since C++11)
-(until C++14)
-template< std::size_t I, class T1, class T2 >
-constexpr std::tuple_element_t<I, std::pair<T1,T2> >&&
-    get( std::pair<T1,T2>&& p ) noexcept;
-(since C++14)
-(4)	
-template< std::size_t I, class T1, class T2 >
-const typename std::tuple_element<I, std::pair<T1,T2> >::type&&
-    get( const std::pair<T1,T2>&& p ) noexcept;
-(since C++11)
-(until C++14)
-template< std::size_t I, class T1, class T2 >
-constexpr const std::tuple_element_t<I, std::pair<T1,T2> >&&
-    get( const std::pair<T1,T2>&& p ) noexcept;
-(since C++14)
-template <class T, class U>
-constexpr T& get(std::pair<T, U>& p) noexcept;
-(5)	(since C++14)
-template <class T, class U>
-constexpr const T& get(const std::pair<T, U>& p) noexcept;
-(6)	(since C++14)
-template <class T, class U>
-constexpr T&& get(std::pair<T, U>&& p) noexcept;
-(7)	(since C++14)
-template <class T, class U>
-constexpr const T&& get(const std::pair<T, U>&& p) noexcept;
-(8)	(since C++14)
-template <class T, class U>
-constexpr T& get(std::pair<U, T>& p) noexcept;
-(9)	(since C++14)
-template <class T, class U>
-constexpr const T& get(const std::pair<U, T>& p) noexcept;
-(10)	(since C++14)
-template <class T, class U>
-constexpr T&& get(std::pair<U, T>&& p) noexcept;
-(11)	(since C++14)
-template <class T, class U>
-constexpr const T&& get(const std::pair<U, T>&& p) noexcept;
-(12)	(since C++14)
+  template <size_t I, typename T0, typename T1>
+  constexpr tuple_element_t<I, ZuPair<T0, T1>> &
+  get(ZuPair<T0, T1> &p) noexcept { return p.template p<I>(); }
+  template <size_t I, typename T0, typename T1>
+  constexpr const tuple_element_t<I, ZuPair<T0, T1>> &
+  get(const ZuPair<T0, T1> &p) noexcept { return p.template p<I>(); }
+  template <size_t I, typename T0, typename T1>
+  constexpr tuple_element_t<I, ZuPair<T0, T1>> &&
+  get(ZuPair<T0, T1> &&p) noexcept {
+    return static_cast<tuple_element_t<I, ZuPair<T0, T1>> &&>(
+	p.template p<I>());
+  }
+  template <size_t I, typename T0, typename T1>
+  constexpr const tuple_element_t<I, ZuPair<T0, T1>> &&
+  get(const ZuPair<T0, T1> &&p) noexcept {
+    return static_cast<const tuple_element_t<I, ZuPair<T0, T1>> &&>(
+	p.template p<I>());
+  }
+
+  template <typename T, typename U>
+  constexpr T &get(ZuPair<T, U> &p) noexcept {
+    return p.template p<0>();
+  }
+  template <typename T, typename U>
+  constexpr const T &get(const ZuPair<T, U> &p) noexcept {
+    return p.template p<0>();
+  }
+  template <typename T, typename U>
+  constexpr T &&get(ZuPair<T, U> &&p) noexcept {
+    return static_cast<T &&>(p.template p<0>());
+  }
+  template <typename T, typename U>
+  constexpr const T &&get(const ZuPair<T, U> &&p) noexcept {
+    return static_cast<const T &&>(p.template p<0>());
+  }
+
+  template <typename T, typename U>
+  constexpr T &get(ZuPair<U, T> &p) noexcept {
+    return p.template p<1>();
+  }
+  template <typename T, typename U>
+  constexpr const T &get(const ZuPair<U, T> &p) noexcept {
+    return p.template p<1>();
+  }
+  template <typename T, typename U>
+  constexpr T &&get(ZuPair<U, T> &&p) noexcept {
+    return static_cast<T &&>(p.template p<1>());
+  }
+  template <typename T, typename U>
+  constexpr const T &&get(const ZuPair<U, T> &&p) noexcept {
+    return static_cast<const T &&>(p.template p<1>());
+  }
 
   template <class> struct tuple_size;
   template <typename T0, typename T1>

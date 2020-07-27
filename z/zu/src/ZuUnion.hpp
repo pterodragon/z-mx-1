@@ -402,18 +402,20 @@ public:
     ZuUnion_Ops<T>::ctor(m_u);
     return *ptr;
   }
+
   template <typename T>
-  ZuInline auto v() const {
+  ZuInline const typename Type_<Index<T>::I>::T &v() const {
     return this->template p<Index<T>::I>();
   }
   template <typename T, typename P>
-  ZuInline auto v(P &&p) {
+  ZuInline ZuUnion &v(P &&p) {
     return this->template p<Index<T>::I>(ZuFwd<P>(p));
   }
   template <typename T>
-  ZuInline auto v() {
+  ZuInline typename Type_<Index<T>::I>::T &v() {
     return this->template p<Index<T>::I>();
   }
+
   template <unsigned I>
   const typename Type<I>::T *ptr() const {
     if (type() != I) return nullptr;
@@ -483,9 +485,67 @@ template <typename ...Args>
 struct ZuTraits<ZuUnion<Args...>> :
     public ZuUnion_Traits<ZuUnion<Args...>, Args...> { };
 
+// STL variant cruft
 #include <type_traits>
+#include <variant>
 namespace std {
-// FIXME get methods per set::get(std::variant)
+  template <size_t, typename> struct tuple_element;
+  template <size_t I, typename ...Args>
+  struct tuple_element<I, ZuUnion<Args...>> {
+    using type = typename ZuUnion<Args...>::template Type<I>::T;
+  };
+
+  template <size_t I, typename ...Args>
+  constexpr tuple_element_t<I, ZuUnion<Args...>> &
+  get(ZuUnion<Args...> &p) {
+    if (ZuUnlikely(p.type() != I)) throw bad_variant_access{};
+    return p.template p<I>();
+  }
+  template <size_t I, typename ...Args>
+  constexpr const tuple_element_t<I, ZuUnion<Args...>> &
+  get(const ZuUnion<Args...> &p) {
+    if (ZuUnlikely(p.type() != I)) throw bad_variant_access{};
+    return p.template p<I>();
+  }
+  template <size_t I, typename ...Args>
+  constexpr tuple_element_t<I, ZuUnion<Args...>> &&
+  get(ZuUnion<Args...> &&p) {
+    if (ZuUnlikely(p.type() != I)) throw bad_variant_access{};
+    return static_cast<tuple_element_t<I, ZuUnion<Args...>> &&>(
+	p.template p<I>());
+  }
+  template <size_t I, typename ...Args>
+  constexpr const tuple_element_t<I, ZuUnion<Args...>> &&
+  get(const ZuUnion<Args...> &&p) {
+    if (ZuUnlikely(p.type() != I)) throw bad_variant_access{};
+    return static_cast<const tuple_element_t<I, ZuUnion<Args...>> &&>(
+	p.template p<I>());
+  }
+
+  template <typename T, typename ...Args>
+  constexpr T &get(ZuUnion<Args...> &p) {
+    if (ZuUnlikely(p.type() != ZuUnion<Args...>::template Index<T>::I))
+      throw bad_variant_access{};
+    return p.template v<T>();
+  }
+  template <typename T, typename ...Args>
+  constexpr const T &get(const ZuUnion<Args...> &p) {
+    if (ZuUnlikely(p.type() != ZuUnion<Args...>::template Index<T>::I))
+      throw bad_variant_access{};
+    return p.template v<T>();
+  }
+  template <typename T, typename ...Args>
+  constexpr T &&get(ZuUnion<Args...> &&p) {
+    if (ZuUnlikely(p.type() != ZuUnion<Args...>::template Index<T>::I))
+      throw bad_variant_access{};
+    return static_cast<T &&>(p.template v<T>());
+  }
+  template <typename T, typename ...Args>
+  constexpr const T &&get(const ZuUnion<Args...> &&p) {
+    if (ZuUnlikely(p.type() != ZuUnion<Args...>::template Index<T>::I))
+      throw bad_variant_access{};
+    return static_cast<const T &&>(p.template v<T>());
+  }
 
   template <class> struct tuple_size;
   template <typename ...Args>

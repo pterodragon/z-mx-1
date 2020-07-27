@@ -400,6 +400,8 @@ int main()
     auto c = reinterpret_cast<U *>(c_);
     c->type_(U::Index<double>::I);
     CHECK(c->v<double>() == 42.0);
+    auto d = std::get<double>(*c);
+    CHECK(d == 42.0);
     c->~U();
   }
 }

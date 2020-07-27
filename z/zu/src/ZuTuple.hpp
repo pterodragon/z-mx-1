@@ -204,16 +204,17 @@ public:
   }
 
   template <typename T>
-  ZuInline auto v() const {
-    return p<Index<T>::I>();
+  ZuInline ZuIfT<ZuConversion<T, T0>::Same, const U0 &>::T v() const {
+    return m_p0;
   }
   template <typename T>
-  ZuInline auto v() {
-    return p<Index<T>::I>();
+  ZuInline ZuIfT<ZuConversion<T, T0>::Same, U0 &>::T v() {
+    return m_p0;
   }
   template <typename T, typename P>
-  ZuInline auto v(P &&p) {
-    return p<Index<T>::I>(ZuFwd<P>(p));
+  ZuInline ZuIfT<ZuConversion<T, T0>::Same, ZuTuple &>::T v(P &&p) {
+    m_p0 = ZuFwd<P>(p);
+    return *this;
   }
 
   using Print = ZuTuple1_Print<U0, ZuConversion<ZuPair_, U0>::Base>;
@@ -273,15 +274,15 @@ public:
   }
 
   template <typename T>
-  ZuInline auto v() const {
+  ZuInline const typename Type<Index<T>::I>::T &v() const {
     return p<Index<T>::I>();
   }
   template <typename T>
-  ZuInline auto v() {
+  ZuInline typename Type<Index<T>::I>::T &v() {
     return p<Index<T>::I>();
   }
   template <typename T, typename P>
-  ZuInline auto v(P &&p) {
+  ZuInline ZuTuple &v(P &&p) {
     return p<Index<T>::I>(ZuFwd<P>(p));
   }
 
@@ -405,9 +406,51 @@ auto ZuInline ZuMkTuple(Args &&... args) {
 
 template <typename... Args> ZuTuple(Args...) -> ZuTuple<Args...>;
 
+// STL tuple cruft
 #include <type_traits>
+#include <tuple>
 namespace std {
-// FIXME get methods per set::get(std::tuple)
+  template <size_t, typename> struct tuple_element;
+  template <size_t I, typename ...Args>
+  struct tuple_element<I, ZuTuple<Args...>> {
+    using type = typename ZuTuple<Args...>::template Type<I>::T;
+  };
+
+  template <size_t I, typename ...Args>
+  constexpr tuple_element_t<I, ZuTuple<Args...>> &
+  get(ZuTuple<Args...> &p) noexcept { return p.template p<I>(); }
+  template <size_t I, typename ...Args>
+  constexpr const tuple_element_t<I, ZuTuple<Args...>> &
+  get(const ZuTuple<Args...> &p) noexcept { return p.template p<I>(); }
+  template <size_t I, typename ...Args>
+  constexpr tuple_element_t<I, ZuTuple<Args...>> &&
+  get(ZuTuple<Args...> &&p) noexcept {
+    return static_cast<tuple_element_t<I, ZuTuple<Args...>> &&>(
+	p.template p<I>());
+  }
+  template <size_t I, typename ...Args>
+  constexpr const tuple_element_t<I, ZuTuple<Args...>> &&
+  get(const ZuTuple<Args...> &&p) noexcept {
+    return static_cast<const tuple_element_t<I, ZuTuple<Args...>> &&>(
+	p.template p<I>());
+  }
+
+  template <typename T, typename ...Args>
+  constexpr T &get(ZuTuple<Args...> &p) noexcept {
+    return p.template v<T>();
+  }
+  template <typename T, typename ...Args>
+  constexpr const T &get(const ZuTuple<Args...> &p) noexcept {
+    return p.template v<T>();
+  }
+  template <typename T, typename ...Args>
+  constexpr T &&get(ZuTuple<Args...> &&p) noexcept {
+    return static_cast<T &&>(p.template v<T>());
+  }
+  template <typename T, typename ...Args>
+  constexpr const T &&get(const ZuTuple<Args...> &&p) noexcept {
+    return static_cast<const T &&>(p.template v<T>());
+  }
 
   template <class> struct tuple_size;
   template <typename ...Args>

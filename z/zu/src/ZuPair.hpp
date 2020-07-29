@@ -66,7 +66,7 @@ struct ZuTraits<ZuPair<T0, T1> > : public ZuGenericTraits<ZuPair<T0, T1> > {
   enum {
     IsPOD = ZuTraits<T0>::IsPOD && ZuTraits<T1>::IsPOD,
     IsComparable = 1,
-    IsHashable = ZuTraits<T0>::IsHashable && ZuTraits<T1>::IsHashable
+    IsHashable = 1
   };
 };
 

@@ -9,6 +9,7 @@
 #include <zlib/ZdfMem.hpp>
 #include <zlib/ZdfFile.hpp>
 #include <zlib/Zdf.hpp>
+#include <zlib/ZdfStats.hpp>
 
 void print(const char *s) {
   std::cout << s << '\n' << std::flush;
@@ -97,6 +98,24 @@ int main(int argc, char **argv)
     CHECK(reader.read(v));
     CHECK(v.value == 200 * 42);
     CHECK(v.exponent == 9);
+    index.findRev(ZuFixed{100, 0});
+    std::cout << "offset=" << index.offset() << '\n';
+    reader.seekRev(index.offset());
+    AnyReader cleaner;
+    {
+      auto offset = reader.offset();
+      offset = offset < 100 ? 0 : offset - 100;
+      df.seek(cleaner, 1, offset);
+    }
+    Zdf::StatsTree<ZuFixedVal> w;
+    while (reader.read(v)) {
+      w.add(v.value);
+      if (cleaner.read(v)) w.del(v.value);
+      std::cout << "stddev=" << w.std() << " median=" << w.median() << '\n';
+    }
+    // for (auto k = w.begin(); k != w.end(); ++k) std::cout << *k << '\n';
+    // for (auto k: w) std::cout << k.first << '\n';
+    // std::cout << "stddev=" << w.std() << '\n';
   }
   df.close();
   sched.stop();

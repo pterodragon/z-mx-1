@@ -183,9 +183,9 @@ friend Lock;
   using LockHash =
     ZmHash<ID,
       ZmHashVal<LockRef,
-	ZmHashValCmp<Lock,
+	// ZmHashValCmp<Lock,
 	  ZmHashHeapID<HeapID,
-	    ZmHashLock<ZmNoLock> > > > >;
+	    ZmHashLock<ZmNoLock> > > >;
 
   using LockList =
     ZmList<LockRef,

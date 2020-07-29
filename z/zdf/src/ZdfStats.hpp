@@ -106,7 +106,7 @@ private:
   double	m_var = 0.0;	// accumulated variance
 };
 
-// rolling median, percentiles (uses custom "multimap" statistics tree)
+// rolling median, percentiles
 namespace {
   // adapted from GNU pb_ds tree_order_statistics_node_update
   using namespace __gnu_pbds;
@@ -154,10 +154,10 @@ namespace {
 	const size_type o = l_it == end_it ? 0 : l_it.get_metadata();
 	const size_type n = (*it)->second;
 
-	if (order >= o && order < o + n)
-	  return *it;
-	else if (order < o)
+	if (order < o)
 	  it = l_it;
+	else if (order < o + n)
+	  return *it;
 	else {
 	  order -= o + n;
 	  it = it.get_r_child();
@@ -176,9 +176,10 @@ namespace {
       while (it != end_it) {
 	node_const_iterator l_it = it.get_l_child();
 
-	if (r_cmp_fn(r_key, (*it)->first))
+	const auto &key = (*it)->first;
+	if (r_cmp_fn(r_key, key))
 	  it = l_it;
-	else if (r_cmp_fn((*it)->first, r_key)) {
+	else if (r_cmp_fn(key, r_key)) {
 	  const size_t n = (*it)->second;
 	  ord += (l_it == end_it) ? n : n + l_it.get_metadata();
 	  it = it.get_r_child();

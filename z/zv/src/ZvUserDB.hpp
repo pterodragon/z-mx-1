@@ -147,7 +147,7 @@ struct User__ : public ZuPolymorph {
   }
 };
 struct UserIDHashID {
-  static const char *id() { return "ZvUserDB.UserIDs"; }
+  static constexpr const char *id() { return "ZvUserDB.UserIDs"; }
 };
 struct UserIDAccessor : public ZuAccessor<User__, uint64_t> {
   ZuInline static uint64_t value(const User__ &u) { return u.id; }
@@ -162,7 +162,7 @@ using UserIDHash =
 	      ZmHashLock<ZmNoLock> > > > > > >;
 using User_ = UserIDHash::Node;
 struct UserNameHashID {
-  static const char *id() { return "ZvUserDB.UserNames"; }
+  static constexpr const char *id() { return "ZvUserDB.UserNames"; }
 };
 struct UserNameAccessor : public ZuAccessor<User_, ZtString> {
   ZuInline static ZtString value(const User_ &u) { return u.name; }
@@ -211,7 +211,7 @@ struct Key_ : public ZuObject {
   }
 };
 struct KeyHashID {
-  static const char *id() { return "ZvUserDB.Keys"; }
+  static constexpr const char *id() { return "ZvUserDB.Keys"; }
 };
 struct KeyIDAccessor : public ZuAccessor<Key_, ZtString> {
   ZuInline static ZtString value(const Key_ &k) { return k.id; }

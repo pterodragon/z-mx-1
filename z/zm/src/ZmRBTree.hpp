@@ -62,7 +62,7 @@ struct ZmRBTree_Defaults {
   enum { NodeIsVal = 0 };
   using Lock = ZmLock;
   using Object = ZmObject;
-  struct HeapID { static const char *id() { return "ZmRBTree"; } };
+  struct HeapID { static constexpr const char *id() { return "ZmRBTree"; } };
   struct Base { };
   enum { Unique = 0 };
 };

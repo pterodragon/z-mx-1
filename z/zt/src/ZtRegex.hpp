@@ -38,6 +38,7 @@
 #include <zlib/ZuPrint.hpp>
 
 #include <zlib/ZmCleanup.hpp>
+#include <zlib/ZmSingleton.hpp>
 
 #include <zlib/ZtString.hpp>
 

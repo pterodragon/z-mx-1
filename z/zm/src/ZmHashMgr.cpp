@@ -34,7 +34,7 @@ class ZmHashMgr_ : public ZmObject {
 friend ZmSingletonCtor<ZmHashMgr_>;
 friend ZmHashMgr;
 
-  struct HeapID { static const char *id() { return "ZmHashMgr_"; } };
+  struct HeapID { static constexpr const char *id() { return "ZmHashMgr_"; } };
 
   using ID2Params =
     ZmRBTree<ZmIDString,

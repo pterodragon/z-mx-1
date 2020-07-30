@@ -222,7 +222,7 @@ public:
 #pragma pack(pop)
 
 struct ZiIOBuf_HeapID {
-  static const char *id() { return "ZiIOBuf"; }
+  static constexpr const char *id() { return "ZiIOBuf"; }
 };
 template <unsigned Size>
 using ZiIOBuf_Heap = ZmHeap<ZiIOBuf_HeapID, sizeof(ZiIOBuf_<Size, ZuNull>)>;

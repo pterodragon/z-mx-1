@@ -158,7 +158,7 @@ friend ZmSingletonCtor<ZeLog>;
 friend ZmCleanup<ZeLog>;
 
   struct EventQueueID {
-    static const char *id() { return "ZeLog.EventQueue"; }
+    static constexpr const char *id() { return "ZeLog.EventQueue"; }
   };
 
   using EventQueue =

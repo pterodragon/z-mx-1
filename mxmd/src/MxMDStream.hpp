@@ -458,7 +458,7 @@ namespace MxMDStream {
 namespace MxMDStream {
 
   struct Msg_HeapID {
-    static const char *id() { return "MxMDStream.Msg"; }
+    static constexpr const char *id() { return "MxMDStream.Msg"; }
   };
 
   struct MsgData : public ZuPolymorph {

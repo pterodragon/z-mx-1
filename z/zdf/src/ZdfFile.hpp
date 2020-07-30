@@ -77,7 +77,7 @@ using FileLRU =
 using FileLRUNode = FileLRU::Node;
 
 struct File_HeapID {
-  static const char *id() { return "Zdf.File"; }
+  static constexpr const char *id() { return "Zdf.File"; }
 };
 using FileHash =
   ZmHash<FileLRUNode,

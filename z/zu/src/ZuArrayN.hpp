@@ -335,23 +335,25 @@ protected:
   ZuInline bool same(const ZuArrayN_ &a) const { return this == &a; }
   template <typename A> ZuInline bool same(const A &a) const { return false; }
 
+private:
+  ZuInline auto array_() const { return ZuArray{data(), length()}; }
 public:
   template <typename A>
   ZuInline int cmp(const A &a) const {
     if (same(a)) return 0;
-    return ZuArray{data(), length()}.cmp(a);
+    return array_().cmp(a);
   }
   template <typename A>
   ZuInline bool less(const A &a) const {
-    return !same(a) && ZuArray{data(), length()}.less(a);
+    return !same(a) && array_().less(a);
   }
   template <typename A>
   ZuInline bool greater(const A &a) const {
-    return !same(a) && ZuArray{data(), length()}.greater(a);
+    return !same(a) && array_().greater(a);
   }
   template <typename A>
   ZuInline bool equals(const A &a) const {
-    return same(a) || ZuArray{data(), length()}.equals(a);
+    return same(a) || array_().equals(a);
   }
 
 // hash

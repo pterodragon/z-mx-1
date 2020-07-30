@@ -374,7 +374,7 @@ private:
   }
 
   auto seekFn(uint64_t offset) const {
-    return [this, offset](const Blk &blk) -> int {
+    return [offset](const Blk &blk) -> int {
       auto hdr = Series::hdr(blk);
       auto hdrOffset = hdr->offset();
       if (offset < hdrOffset) return -static_cast<int>(hdrOffset - offset);

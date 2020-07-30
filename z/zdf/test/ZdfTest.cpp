@@ -77,7 +77,7 @@ int main(int argc, char **argv)
   Frame frame;
   if (mode == Mem || mode == Save) {
     auto writer = df.writer();
-    for (uint64_t i = 0; i < 1000; i++) {
+    for (uint64_t i = 0; i < 300; i++) { // 1000
       frame.v1 = i;
       frame.v2 = i * 42;
       writer.write(&frame);
@@ -107,11 +107,16 @@ int main(int argc, char **argv)
       offset = offset < 100 ? 0 : offset - 100;
       df.seek(cleaner, 1, offset);
     }
-    Zdf::StatsTree<ZuFixedVal> w;
+    auto w = Zdf::StatsTreeLambda<double>{}(
+      [](ZuFixedVal v) { return ZuFixed{v, 9}.fp(); }
+      // [](ZuFixedVal v) -> double { return v; }
+    );
     while (reader.read(v)) {
       w.add(v.value);
       if (cleaner.read(v)) w.del(v.value);
-      std::cout << "stddev=" << w.std() << " median=" << w.median() << '\n';
+      std::cout << "min=" << w.minimum() << " max=" << w.maximum() <<
+	" mean=" << w.mean() << " stddev=" << w.std() <<
+	" median=" << w.median() << " 95%=" << w.rank(0.95) << '\n';
     }
     // for (auto k = w.begin(); k != w.end(); ++k) std::cout << *k << '\n';
     // for (auto k: w) std::cout << k.first << '\n';
@@ -119,6 +124,7 @@ int main(int argc, char **argv)
   }
   df.close();
   sched.stop();
+  std::cout << ZmHeapMgr::csv();
   // df.final();
   // mgr.final();
 }

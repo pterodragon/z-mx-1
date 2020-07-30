@@ -228,7 +228,7 @@ using Zdb_FileLRU =
 using Zdb_FileLRUNode = Zdb_FileLRU::Node;
 
 struct Zdb_FileHeapID {
-  static const char *id() { return "Zdb_File"; }
+  static constexpr const char *id() { return "Zdb.File"; }
 };
 using Zdb_FileHash =
   ZmHash<Zdb_FileLRUNode,
@@ -283,7 +283,7 @@ struct ZdbLRUNode_RNAccessor : public ZuAccessor<ZdbLRUNode, ZdbRN> {
 };
 
 struct Zdb_Cache_ID {
-  static const char *id() { return "Zdb.Cache"; }
+  static constexpr const char *id() { return "Zdb.Cache"; }
 };
 
 using Zdb_Cache =
@@ -442,11 +442,11 @@ using ZdbAddFn = ZmFn<ZdbAnyPOD *, int, bool>;
 using ZdbWriteFn = ZmFn<ZdbAnyPOD *, int>;
 
 struct ZdbPOD_HeapID {
-  static const char *id() { return "ZdbPOD"; }
+  static constexpr const char *id() { return "ZdbPOD"; }
 };
 // heap ID can be specialized by app
 template <typename T> struct ZdbPOD_Cmpr_HeapID {
-  static const char *id() { return "ZdbPOD_Cmpr"; }
+  static constexpr const char *id() { return "ZdbPOD_Cmpr"; }
 };
 
 template <typename T_>
@@ -991,7 +991,7 @@ friend ZdbAnyPOD;
 friend ZdbAnyPOD_Send__;
 
   struct HostTree_HeapID {
-    static const char *id() { return "ZdbEnv.HostTree"; }
+    static constexpr const char *id() { return "ZdbEnv.HostTree"; }
   };
   using HostTree =
     ZmRBTree<ZmRef<ZdbHost>,
@@ -1002,7 +1002,7 @@ friend ZdbAnyPOD_Send__;
 	      ZmRBTreeHeapID<HostTree_HeapID> > > > > >;
 
   struct CxnHash_HeapID {
-    static const char *id() { return "ZdbEnv.CxnHash"; }
+    static constexpr const char *id() { return "ZdbEnv.CxnHash"; }
   };
   using CxnHash =
     ZmHash<ZmRef<Zdb_Cxn>,

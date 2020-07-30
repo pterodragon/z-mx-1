@@ -33,7 +33,9 @@
 #include <zlib/ZmSingleton.hpp>
 #include <zlib/ZmSpecific.hpp>
 
-struct Orders_HeapID { static const char *id() { return "Orders"; } };
+struct Orders_HeapID {
+  static constexpr const char *id() { return "Orders"; }
+};
 
 struct Order : public ZuObject {
   struct IDAccessor : public ZuAccessor<Order *, unsigned> {

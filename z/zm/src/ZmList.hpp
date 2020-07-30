@@ -57,7 +57,7 @@ struct ZmList_Defaults {
   enum { NodeIsItem = 0 };
   using Lock = ZmLock;
   using Object = ZmObject;
-  struct HeapID { static const char *id() { return "ZmList"; } };
+  struct HeapID { static constexpr const char *id() { return "ZmList"; } };
   struct Base { };
 };
 

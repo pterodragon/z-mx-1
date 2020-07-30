@@ -208,15 +208,15 @@ public:
   }
 
   template <typename T>
-  ZuInline ZuIfT<ZuConversion<T, T0>::Same, const U0 &>::T v() const {
+  ZuInline typename ZuIfT<ZuConversion<T, T0>::Same, const U0 &>::T v() const {
     return m_p0;
   }
   template <typename T>
-  ZuInline ZuIfT<ZuConversion<T, T0>::Same, U0 &>::T v() {
+  ZuInline typename ZuIfT<ZuConversion<T, T0>::Same, U0 &>::T v() {
     return m_p0;
   }
   template <typename T, typename P>
-  ZuInline ZuIfT<ZuConversion<T, T0>::Same, Tuple &>::T v(P &&p) {
+  ZuInline typename ZuIfT<ZuConversion<T, T0>::Same, Tuple &>::T v(P &&p) {
     m_p0 = ZuFwd<P>(p);
     return *this;
   }

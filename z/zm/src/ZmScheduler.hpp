@@ -166,7 +166,7 @@ class ZmAPI ZmScheduler {
   ZmScheduler &operator =(const ZmScheduler &) = delete;
 
   struct ScheduleTree_HeapID {
-    static const char *id() { return "ZmScheduler.ScheduleTree"; }
+    static constexpr const char *id() { return "ZmScheduler.ScheduleTree"; }
   };
 
   struct Timer_ {

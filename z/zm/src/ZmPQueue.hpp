@@ -110,9 +110,7 @@ struct ZmPQueue_Defaults {
   enum { NodeIsItem = 0 };
   using Lock = ZmLock;
   using Object = ZmObject;
-  struct HeapID {
-    static const char *id() { return "ZmPQueue"; }
-  };
+  struct HeapID { static constexpr const char *id() { return "ZmPQueue"; } };
   struct Base { };
   enum { Bits = 3, Levels = 3 };
   template <typename Item> struct ZmPQueueFnT {

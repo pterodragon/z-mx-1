@@ -178,7 +178,7 @@ friend Lock;
 
   using LockRef = ZmRef<Lock>;
 
-  struct HeapID { static const char *id() { return "ZmTLock"; } };
+  struct HeapID { static constexpr const char *id() { return "ZmTLock"; } };
 
   using LockHash =
     ZmHash<ID,

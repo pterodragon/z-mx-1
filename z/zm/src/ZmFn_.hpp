@@ -180,7 +180,7 @@ protected:
 };
 
 struct ZmLambda_HeapID {
-  static const char *id() { return "ZmLambda"; }
+  static constexpr const char *id() { return "ZmLambda"; }
 };
 template <typename L, class HeapID> struct ZmLambda;
 

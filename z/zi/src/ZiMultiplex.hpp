@@ -832,7 +832,7 @@ friend ZiConnection;
     ZiListenInfo	m_info;
   };
   struct Listener_HeapID : public ZmHeapSharded {
-    static const char *id() { return "ZiMultiplex.Listener"; }
+    static constexpr const char *id() { return "ZiMultiplex.Listener"; }
   };
   using ListenerHash =
     ZmHash<Listener_,
@@ -874,7 +874,7 @@ template <typename> friend class Accept_;
     char		m_buf[(sizeof(struct sockaddr_in) + 16) * 2];
   };
   struct Accept_HeapID {
-    static const char *id() { return "ZiMultiplex.Accept"; }
+    static constexpr const char *id() { return "ZiMultiplex.Accept"; }
   };
   using Accept_Heap = ZmHeap<Accept_HeapID, sizeof(Accept_<ZuNull>)>;
   using Accept = Accept_<Accept_Heap>; 
@@ -939,7 +939,7 @@ template <typename> friend class Connect_;
 #endif
   };
   struct Connect_HeapID : public ZmHeapSharded {
-    static const char *id() { return "ZiMultiplex.Connect"; }
+    static constexpr const char *id() { return "ZiMultiplex.Connect"; }
   };
 #if ZiMultiplex__ConnectHash
   using ConnectHash =
@@ -956,7 +956,7 @@ template <typename> friend class Connect_;
 #endif
 
   struct CxnHash_HeapID : public ZmHeapSharded {
-    static const char *id() { return "ZiMultiplex.CxnHash"; }
+    static constexpr const char *id() { return "ZiMultiplex.CxnHash"; }
   };
   using CxnHash =
     ZmHash<ZmRef<ZiConnection>,

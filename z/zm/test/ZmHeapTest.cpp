@@ -33,6 +33,7 @@
 
 #include <zlib/ZmTime.hpp>
 #include <zlib/ZmHeap.hpp>
+#include <zlib/ZmAllocator.hpp>
 #include <zlib/ZmThread.hpp>
 #include <zlib/ZmSemaphore.hpp>
 #include <zlib/ZmFn.hpp>
@@ -49,7 +50,7 @@ template <typename Heap> struct S_ : public Heap {
   int m_i;
 };
 struct ID {
-  static const char *id() { return "S"; }
+  static constexpr const char *id() { return "S"; }
 };
 using S = S_<ZmHeap<ID, sizeof(S_<ZuNull>)> >;
 
@@ -64,7 +65,7 @@ void doit()
   }
   {
     std::vector<S, ZmAllocator<S, ID>> v;
-    std::list<S, ZmAllocator<S, ID>> l;
+    std::list<S, ZmAllocator<S>> l;
     for (unsigned i = 0; i < count; i++) {
       v.emplace_back(i);
       l.emplace_back(i);

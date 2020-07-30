@@ -43,6 +43,8 @@
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuFP.hpp>
 
+#include <zlib/ZuFixed.hpp>
+
 #include <zlib/ZmHeap.hpp>
 #include <zlib/ZmAllocator.hpp>
 
@@ -50,16 +52,9 @@ namespace Zdf {
 
 namespace pbds = __gnu_pbds;
 
-template <typename Key> struct StatsFP {
-  ZuInline double operator()(Key k) const { return static_cast<double>(k); }
-};
-
 // rolling count, total, mean, variance, standard deviation
-template <typename Key_, typename FP = StatsFP<Key_>>
 class Stats {
 public:
-  using Key = Key_;
-
   Stats() = default;
   Stats(const Stats &) = delete;
   Stats &operator =(const Stats &) = delete;
@@ -67,12 +62,12 @@ public:
   Stats &operator =(Stats &&) = default;
   ~Stats() = default;
 
-  Stats(FP fp) : m_fp(ZuMv(fp)) { }
-
-  ZuInline double fp(Key k) const { return m_fp(k); }
+  ZuInline double fp(ZuFixedVal v) const {
+    return ZuFixed{v, m_exponent}.fp();
+  }
 
   ZuInline unsigned count() const { return m_count; }
-  ZuInline Key total() const { return m_total; }
+  ZuInline double total() const { return fp(m_total); }
   ZuInline double mean() const {
     if (ZuUnlikely(!m_count)) return 0.0;
     return fp(m_total) / static_cast<double>(m_count);
@@ -82,6 +77,61 @@ public:
     return m_var / static_cast<double>(m_count);
   }
   ZuInline double std() const { return sqrt(var()); }
+  ZuInline unsigned exponent() const { return m_exponent; }
+
+  void exponent(unsigned exp) {
+    if (ZuUnlikely(exp != m_exponent)) {
+      if (m_count) {
+	if (exp > m_exponent) {
+	  auto f = ZuDecimalFn::pow10_64(exp - m_exponent);
+	  m_total *= f;
+	  m_var *= static_cast<double>(f);
+	} else {
+	  auto f = ZuDecimalFn::pow10_64(m_exponent - exp);
+	  m_total /= f;
+	  m_var /= static_cast<double>(f);
+	}
+      }
+      m_exponent = exp;
+    }
+  }
+
+  void add(const ZuFixed &v) {
+    exponent(v.exponent);
+    add_(v.value);
+  }
+  void add_(ZuFixedVal v) {
+    if (!m_count) {
+      m_total = v;
+    } else {
+      double n = m_count;
+      auto prev = fp(m_total) / n;
+      auto mean = fp(m_total += v) / (n + 1.0);
+      double k_ = fp(v);
+      m_var += (k_ - prev) * (k_ - mean);
+    }
+    ++m_count;
+  }
+
+  void del(const ZuFixed &v) {
+    del_(v.adjust(m_exponent));
+  }
+  void del_(ZuFixedVal v) {
+    if (ZuUnlikely(!m_count)) return;
+    if (m_count == 1) {
+      m_total = 0;
+    } else if (m_count == 2) {
+      m_total -= v;
+      m_var = 0.0;
+    } else {
+      double n = m_count;
+      auto prev = fp(m_total) / n;
+      auto mean = fp(m_total -= v) / (n - 1.0);
+      double k_ = fp(v);
+      m_var -= (k_ - prev) * (k_ - mean);
+    }
+    --m_count;
+  }
 
   ZuInline void clean() {
     m_count = 0;
@@ -89,47 +139,11 @@ public:
     m_var = 0.0;
   }
 
-  void add(Key k) {
-    if (!m_count) {
-      m_total = k;
-    } else {
-      double n = m_count;
-      auto prev = fp(m_total) / n;
-      auto mean = fp(m_total += k) / (n + 1.0);
-      double k_ = fp(k);
-      m_var += (k_ - prev) * (k_ - mean);
-    }
-    ++m_count;
-  }
-
-  void del(Key k) {
-    if (ZuUnlikely(!m_count)) return;
-    if (m_count == 1) {
-      m_total = 0;
-    } else if (m_count == 2) {
-      m_total -= k;
-      m_var = 0.0;
-    } else {
-      double n = m_count;
-      auto prev = fp(m_total) / n;
-      auto mean = fp(m_total -= k) / (n - 1.0);
-      double k_ = fp(k);
-      m_var -= (k_ - prev) * (k_ - mean);
-    }
-    --m_count;
-  }
-
 private:
   unsigned	m_count = 0;
-  Key		m_total = 0;
+  ZuFixedVal	m_total = 0;
   double	m_var = 0.0;	// accumulated variance
-  FP		m_fp;
-};
-
-template <typename Key>
-struct StatsFn {
-  template <typename FP>
-  auto operator ()(FP fp) const { return Stats<Key, FP>{ZuMv(fp)}; }
+  unsigned	m_exponent = 0;
 };
 
 // rolling median, percentiles
@@ -239,16 +253,9 @@ namespace {
 
 // NTP defaults
 struct StatsTree_Defaults {
-  template <typename T> struct CmpT { using Cmp = ZuCmp<T>; };
   struct HeapID {
     static constexpr const char *id() { return "Zdf.StatsTree"; }
   };
-};
-
-// StatsTreeCmp - the key comparator
-template <class Cmp_, class NTP = StatsTree_Defaults>
-struct StatsTreeCmp : public NTP {
-  template <typename> struct CmpT { using Cmp = Cmp_; };
 };
 
 // StatsTreeHeapID - the heap ID
@@ -257,30 +264,17 @@ struct StatsTreeHeapID : public NTP {
   using HeapID = HeapID_;
 };
 
-template <
-  typename Key_,
-  class NTP = StatsTree_Defaults,
-  typename FP = StatsFP<Key_>>
-class StatsTree : public Stats<Key_, FP> {
+template <class NTP = StatsTree_Defaults>
+class StatsTree : public Stats {
 public:
-  using Key = Key_;
-private:
-  using Base = Stats<Key, FP>;
-public:
-  using Cmp = typename NTP::template CmpT<Key>::Cmp;
   using HeapID = typename NTP::HeapID;
-  using Alloc = ZmAllocator<std::pair<Key, unsigned>, HeapID>;
+  using Alloc = ZmAllocator<std::pair<ZuFixedVal, unsigned>, HeapID>;
 
 private:
-  template <typename T, typename Cmp> struct Less {
-    constexpr bool operator()(const T &v1, const T &v2) const {
-      return Cmp::less(v1, v2);
-    }
-  };
   using Tree = pbds::tree<
-    Key,
+    ZuFixedVal,
     unsigned,
-    Less<Key, Cmp>,
+    std::less<ZuFixedVal>,
     pbds::rb_tree_tag,
     stats_tree_node_update,
     Alloc>;
@@ -298,15 +292,32 @@ public:
   StatsTree &operator =(StatsTree &&) = default;
   ~StatsTree() = default;
 
-  StatsTree(FP fp) : Base{ZuMv(fp)} { }
+  ZuInline unsigned exponent() const { return Stats::exponent(); }
 
-  ZuInline void add(Key k) {
-    add_(k);
-    ++m_tree.insert(std::make_pair(k, 0)).first->second;
+  void exponent(unsigned exp) {
+    if (ZuUnlikely(exp != exponent())) {
+      if (count()) {
+	if (exp > exponent()) {
+	  auto f = ZuDecimalFn::pow10_64(exp - exponent());
+	  for (auto p: m_tree) const_cast<ZuFixedVal &>(p.first) *= f;
+	} else {
+	  auto f = ZuDecimalFn::pow10_64(exponent() - exp);
+	  for (auto p: m_tree) const_cast<ZuFixedVal &>(p.first) /= f;
+	}
+      }
+      Stats::exponent(exp);
+    }
   }
-  template <typename T>
-  ZuInline typename ZuIsNot<typename ZuDecay<T>::T, Iter>::T del(T &&v) {
-    auto iter = m_tree.find(ZuFwd<T>(v));
+
+  ZuInline void add(const ZuFixed &v_) {
+    exponent(v_.exponent);
+    auto v = v_.value;
+    add_(v);
+    ++m_tree.insert(std::make_pair(v, 0)).first->second;
+  }
+  ZuInline void del(const ZuFixed &v_) {
+    auto v = v_.adjust(exponent());
+    auto iter = m_tree.find(v);
     if (iter != end()) del_(iter);
   }
   template <typename T>
@@ -319,7 +330,7 @@ public:
 
   ZuInline double fp(CIter iter) const {
     if (iter == end()) return ZuFP<double>::nan();
-    return Base::fp(iter->first);
+    return Stats::fp(iter->first);
   }
 
   ZuInline double minimum() const { return fp(begin()); }
@@ -351,27 +362,21 @@ public:
   }
 
   ZuInline void clean() {
-    Base::clean();
+    Stats::clean();
     m_tree.clear();
   }
 
 private:
-  void add_(Key k) {
-    Base::add(k);
+  void add_(ZuFixedVal v) {
+    Stats::add_(v);
   }
   void del_(Iter iter) {
-    Base::del(iter->first);
+    Stats::del_(iter->first);
     if (!--iter->second) m_tree.erase(iter);
   }
 
 private:
   Tree		m_tree;
-};
-
-template <typename Key, class NTP = StatsTree_Defaults>
-struct StatsTreeFn {
-  template <typename FP>
-  auto operator ()(FP fp) const { return StatsTree<Key, NTP, FP>{ZuMv(fp)}; }
 };
 
 } // namespace Zdf

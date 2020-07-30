@@ -204,10 +204,10 @@ struct ZuFixed {
   }
   ZuInline bool operator ==(const ZuFixed &v) const { return equals(v); }
   ZuInline bool operator !=(const ZuFixed &v) const { return !equals(v); }
-  ZuInline bool operator >(const ZuFixed &v) const { return cmp(v) > 0; }
-  ZuInline bool operator >=(const ZuFixed &v) const { return cmp(v) >= 0; }
-  ZuInline bool operator <(const ZuFixed &v) const { return cmp(v) < 0; }
-  ZuInline bool operator <=(const ZuFixed &v) const { return cmp(v) <= 0; }
+  ZuInline bool operator >(const ZuFixed &v) const { return v.less(*this); }
+  ZuInline bool operator >=(const ZuFixed &v) const { return !less(v); }
+  ZuInline bool operator <(const ZuFixed &v) const { return less(v); }
+  ZuInline bool operator <=(const ZuFixed &v) const { return !v.less(*this); }
 
   // ! is zero, unary * is !null
   ZuInline bool operator !() const { return !value; }

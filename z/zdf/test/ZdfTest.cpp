@@ -107,13 +107,10 @@ int main(int argc, char **argv)
       offset = offset < 100 ? 0 : offset - 100;
       df.seek(cleaner, 1, offset);
     }
-    auto w = Zdf::StatsTreeFn<double>{}(
-      [](ZuFixedVal v) { return ZuFixed{v, 9}.fp(); }
-      // [](ZuFixedVal v) -> double { return v; }
-    );
+    Zdf::StatsTree<> w;
     while (reader.read(v)) {
-      w.add(v.value);
-      if (cleaner.read(v)) w.del(v.value);
+      w.add(v);
+      if (cleaner.read(v)) w.del(v);
       std::cout << "min=" << ZuBoxed(w.minimum()) <<
 	" max=" << ZuBoxed(w.maximum()) <<
 	" mean=" << ZuBoxed(w.mean()) <<

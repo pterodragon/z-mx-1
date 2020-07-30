@@ -114,9 +114,12 @@ int main(int argc, char **argv)
     while (reader.read(v)) {
       w.add(v.value);
       if (cleaner.read(v)) w.del(v.value);
-      std::cout << "min=" << w.minimum() << " max=" << w.maximum() <<
-	" mean=" << w.mean() << " stddev=" << w.std() <<
-	" median=" << w.median() << " 95%=" << w.rank(0.95) << '\n';
+      std::cout << "min=" << ZuBoxed(w.minimum()) <<
+	" max=" << ZuBoxed(w.maximum()) <<
+	" mean=" << ZuBoxed(w.mean()) <<
+	" stddev=" << ZuBoxed(w.std()) <<
+	" median=" << ZuBoxed(w.median()) <<
+	" 95%=" << ZuBoxed(w.rank(0.95)) << '\n';
     }
     // for (auto k = w.begin(); k != w.end(); ++k) std::cout << *k << '\n';
     // for (auto k: w) std::cout << k.first << '\n';

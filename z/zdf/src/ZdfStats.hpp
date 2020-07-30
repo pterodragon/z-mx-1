@@ -81,7 +81,7 @@ public:
   }
   ZuInline double var() const {
     if (ZuUnlikely(!m_count)) return 0.0;
-    return fp(m_var) / static_cast<double>(m_count);
+    return m_var / static_cast<double>(m_count);
   }
   ZuInline double std() const { return sqrt(var()); }
 

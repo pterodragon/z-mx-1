@@ -67,10 +67,10 @@ public:
   }
 
   ZuInline unsigned count() const { return m_count; }
-  ZuInline double total() const { return fp(m_total); }
+  ZuInline double total() const { return m_total; }
   ZuInline double mean() const {
     if (ZuUnlikely(!m_count)) return 0.0;
-    return fp(m_total) / static_cast<double>(m_count);
+    return m_total / static_cast<double>(m_count);
   }
   ZuInline double var() const {
     if (ZuUnlikely(!m_count)) return 0.0;
@@ -79,18 +79,26 @@ public:
   ZuInline double std() const { return sqrt(var()); }
   ZuInline unsigned exponent() const { return m_exponent; }
 
+  void shiftLeft(uint64_t f_) {
+    auto f = static_cast<double>(f_);
+    m_total *= f;
+    m_var *= f;
+  }
+  void shiftRight(uint64_t f_) {
+    auto f = static_cast<double>(f_);
+    m_total /= f;
+    m_var /= f;
+  }
+  template <typename Derived = Stats>
   void exponent(unsigned exp) {
     if (ZuUnlikely(exp != m_exponent)) {
       if (m_count) {
-	if (exp > m_exponent) {
-	  auto f = ZuDecimalFn::pow10_64(exp - m_exponent);
-	  m_total *= f;
-	  m_var *= static_cast<double>(f);
-	} else {
-	  auto f = ZuDecimalFn::pow10_64(m_exponent - exp);
-	  m_total /= f;
-	  m_var /= static_cast<double>(f);
-	}
+	if (exp > m_exponent)
+	  static_cast<Derived *>(this)->shiftLeft(
+	      ZuDecimalFn::pow10_64(exp - m_exponent));
+	else
+	  static_cast<Derived *>(this)->shiftRight(
+	      ZuDecimalFn::pow10_64(m_exponent - exp));
       }
       m_exponent = exp;
     }
@@ -100,15 +108,15 @@ public:
     exponent(v.exponent);
     add_(v.value);
   }
-  void add_(ZuFixedVal v) {
+  void add_(ZuFixedVal v_) {
+    auto v = fp(v_);
     if (!m_count) {
       m_total = v;
     } else {
       double n = m_count;
-      auto prev = fp(m_total) / n;
-      auto mean = fp(m_total += v) / (n + 1.0);
-      double k_ = fp(v);
-      m_var += (k_ - prev) * (k_ - mean);
+      auto prev = m_total / n;
+      auto mean = (m_total += v) / (n + 1.0);
+      m_var += (v - prev) * (v - mean);
     }
     ++m_count;
   }
@@ -116,32 +124,32 @@ public:
   void del(const ZuFixed &v) {
     del_(v.adjust(m_exponent));
   }
-  void del_(ZuFixedVal v) {
+  void del_(ZuFixedVal v_) {
+    auto v = fp(v_);
     if (ZuUnlikely(!m_count)) return;
     if (m_count == 1) {
-      m_total = 0;
+      m_total = 0.0;
     } else if (m_count == 2) {
       m_total -= v;
       m_var = 0.0;
     } else {
       double n = m_count;
-      auto prev = fp(m_total) / n;
-      auto mean = fp(m_total -= v) / (n - 1.0);
-      double k_ = fp(v);
-      m_var -= (k_ - prev) * (k_ - mean);
+      auto prev = m_total / n;
+      auto mean = (m_total -= v) / (n - 1.0);
+      m_var -= (v - prev) * (v - mean);
     }
     --m_count;
   }
 
   ZuInline void clean() {
     m_count = 0;
-    m_total = 0;
+    m_total = 0.0;
     m_var = 0.0;
   }
 
 private:
   unsigned	m_count = 0;
-  ZuFixedVal	m_total = 0;
+  double	m_total = 0.0;
   double	m_var = 0.0;	// accumulated variance
   unsigned	m_exponent = 0;
 };
@@ -292,25 +300,17 @@ public:
   StatsTree &operator =(StatsTree &&) = default;
   ~StatsTree() = default;
 
-  ZuInline unsigned exponent() const { return Stats::exponent(); }
-
-  void exponent(unsigned exp) {
-    if (ZuUnlikely(exp != exponent())) {
-      if (count()) {
-	if (exp > exponent()) {
-	  auto f = ZuDecimalFn::pow10_64(exp - exponent());
-	  for (auto p: m_tree) const_cast<ZuFixedVal &>(p.first) *= f;
-	} else {
-	  auto f = ZuDecimalFn::pow10_64(exponent() - exp);
-	  for (auto p: m_tree) const_cast<ZuFixedVal &>(p.first) /= f;
-	}
-      }
-      Stats::exponent(exp);
-    }
+  void shiftLeft(uint64_t f) {
+    for (auto p: m_tree) const_cast<ZuFixedVal &>(p.first) *= f;
+    Stats::shiftLeft(f);
+  }
+  void shiftRight(uint64_t f) {
+    for (auto p: m_tree) const_cast<ZuFixedVal &>(p.first) /= f;
+    Stats::shiftRight(f);
   }
 
   ZuInline void add(const ZuFixed &v_) {
-    exponent(v_.exponent);
+    exponent<StatsTree>(v_.exponent);
     auto v = v_.value;
     add_(v);
     ++m_tree.insert(std::make_pair(v, 0)).first->second;

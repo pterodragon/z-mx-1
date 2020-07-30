@@ -51,9 +51,7 @@ namespace Zdf {
 namespace pbds = __gnu_pbds;
 
 template <typename Key> struct StatsFP {
-  ZuInline double operator()(Key k) const {
-    return static_cast<double>(k);
-  }
+  ZuInline double operator()(Key k) const { return static_cast<double>(k); }
 };
 
 // rolling count, total, mean, variance, standard deviation
@@ -129,7 +127,7 @@ private:
 };
 
 template <typename Key>
-struct StatsLambda {
+struct StatsFn {
   template <typename FP>
   auto operator ()(FP fp) const { return Stats<Key, FP>{ZuMv(fp)}; }
 };
@@ -371,7 +369,7 @@ private:
 };
 
 template <typename Key, class NTP = StatsTree_Defaults>
-struct StatsTreeLambda {
+struct StatsTreeFn {
   template <typename FP>
   auto operator ()(FP fp) const { return StatsTree<Key, NTP, FP>{ZuMv(fp)}; }
 };

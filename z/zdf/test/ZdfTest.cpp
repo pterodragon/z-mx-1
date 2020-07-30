@@ -107,7 +107,7 @@ int main(int argc, char **argv)
       offset = offset < 100 ? 0 : offset - 100;
       df.seek(cleaner, 1, offset);
     }
-    auto w = Zdf::StatsTreeLambda<double>{}(
+    auto w = Zdf::StatsTreeFn<double>{}(
       [](ZuFixedVal v) { return ZuFixed{v, 9}.fp(); }
       // [](ZuFixedVal v) -> double { return v; }
     );

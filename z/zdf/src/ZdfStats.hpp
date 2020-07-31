@@ -20,7 +20,7 @@
 // Data Series Statistics
 
 // rolling mean, variance and standard deviation
-// rolling median, percentiles (using statistics tree)
+// rolling median, percentiles (using order statistics tree)
 
 #ifndef ZdfStats_HPP
 #define ZdfStats_HPP
@@ -79,35 +79,15 @@ public:
   ZuInline double std() const { return sqrt(var()); }
   ZuInline unsigned exponent() const { return m_exponent; }
 
-  void shiftLeft(uint64_t f_) {
-    auto f = static_cast<double>(f_);
-    m_total *= f;
-    m_var *= f;
-  }
-  void shiftRight(uint64_t f_) {
-    auto f = static_cast<double>(f_);
-    m_total /= f;
-    m_var /= f;
-  }
-  template <typename Derived = Stats>
   void exponent(unsigned exp) {
-    if (ZuUnlikely(exp != m_exponent)) {
-      if (m_count) {
-	if (exp > m_exponent)
-	  static_cast<Derived *>(this)->shiftLeft(
-	      ZuDecimalFn::pow10_64(exp - m_exponent));
-	else
-	  static_cast<Derived *>(this)->shiftRight(
-	      ZuDecimalFn::pow10_64(m_exponent - exp));
-      }
-      m_exponent = exp;
-    }
+    m_exponent = exp;
   }
 
   void add(const ZuFixed &v) {
     exponent(v.exponent);
     add_(v.value);
   }
+protected:
   void add_(ZuFixedVal v_) {
     auto v = fp(v_);
     if (!m_count) {
@@ -121,9 +101,11 @@ public:
     ++m_count;
   }
 
+public:
   void del(const ZuFixed &v) {
     del_(v.adjust(m_exponent));
   }
+protected:
   void del_(ZuFixedVal v_) {
     auto v = fp(v_);
     if (ZuUnlikely(!m_count)) return;
@@ -239,6 +221,24 @@ namespace {
       return ord;
     }
 
+    // increment repeat count
+    void inc(iterator it_) {
+      auto node = it_.m_p_nd;
+      auto begin = node_begin().m_p_nd;
+      do {
+	++const_cast<metadata_reference>(node->get_metadata());
+      } while (node != begin && (node = node->m_p_parent));
+    }
+
+    // decrement repeat count
+    void dec(iterator it_) {
+      auto node = it_.m_p_nd;
+      auto begin = node_begin().m_p_nd;
+      do {
+	--const_cast<metadata_reference>(node->get_metadata());
+      } while (node != begin && (node = node->m_p_parent));
+    }
+
   private:
     typedef typename detail::rebind_traits<_Alloc, metadata_type>::reference
       metadata_reference;
@@ -300,20 +300,33 @@ public:
   StatsTree &operator =(StatsTree &&) = default;
   ~StatsTree() = default;
 
+  ZuInline unsigned exponent() { return Stats::exponent(); }
+  void exponent(unsigned newExp) {
+    auto exp = exponent();
+    if (ZuUnlikely(newExp != exp)) {
+      if (count()) {
+	if (newExp > exp)
+	  shiftLeft(ZuDecimalFn::pow10_64(newExp - exp));
+	else
+	  shiftRight(ZuDecimalFn::pow10_64(exp - newExp));
+      }
+      Stats::exponent(newExp);
+    }
+  }
+
   void shiftLeft(uint64_t f) {
-    for (auto p: m_tree) const_cast<ZuFixedVal &>(p.first) *= f;
-    Stats::shiftLeft(f);
+    for (auto i = begin(); i != end(); ++i)
+      const_cast<ZuFixedVal &>(i->first) *= f;
   }
   void shiftRight(uint64_t f) {
-    for (auto p: m_tree) const_cast<ZuFixedVal &>(p.first) /= f;
-    Stats::shiftRight(f);
+    for (auto i = begin(); i != end(); ++i)
+      const_cast<ZuFixedVal &>(i->first) /= f;
   }
 
   ZuInline void add(const ZuFixed &v_) {
-    exponent<StatsTree>(v_.exponent);
+    exponent(v_.exponent);
     auto v = v_.value;
     add_(v);
-    ++m_tree.insert(std::make_pair(v, 0)).first->second;
   }
   ZuInline void del(const ZuFixed &v_) {
     auto v = v_.adjust(exponent());
@@ -334,7 +347,10 @@ public:
   }
 
   ZuInline double minimum() const { return fp(begin()); }
-  ZuInline double maximum() const { return fp(--end()); }
+  ZuInline double maximum() const {
+    if (!count()) return ZuFP<double>::nan();
+    return fp(--end());
+  }
 
   template <typename T>
   ZuInline auto find(T &&v) const { return m_tree.find(ZuFwd<T>(v)); }
@@ -369,10 +385,20 @@ public:
 private:
   void add_(ZuFixedVal v) {
     Stats::add_(v);
+    auto p = m_tree.insert(std::make_pair(v, 1));
+    if (!p.second) {
+      ++p.first->second;
+      m_tree.inc(p.first);
+    }
   }
   void del_(Iter iter) {
     Stats::del_(iter->first);
-    if (!--iter->second) m_tree.erase(iter);
+    if (iter->second == 1)
+      m_tree.erase(iter);
+    else {
+      m_tree.dec(iter);
+      --iter->second;
+    }
   }
 
 private:

@@ -94,7 +94,7 @@ namespace {
       while (it != end_it) {
 	node_iterator l_it = it.get_l_child();
 	const size_type o = l_it == end_it ? 0 : l_it.get_metadata();
-	const size_type n = (*it)->second;
+	const size_type n = (*it)->second; // n = repeat count
 
 	if (order < o)
 	  it = l_it;
@@ -122,7 +122,7 @@ namespace {
 	if (r_cmp_fn(r_key, key))
 	  it = l_it;
 	else if (r_cmp_fn(key, r_key)) {
-	  const size_t n = (*it)->second;
+	  const size_t n = (*it)->second; // n = repeat count
 	  ord += (l_it == end_it) ? n : n + l_it.get_metadata();
 	  it = it.get_r_child();
 	} else {

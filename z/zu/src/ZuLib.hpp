@@ -248,4 +248,26 @@ template <typename T_> struct ZuMvCp {
   static void cp(T &&v, Cp); // undefined
 };
 
+// indexed type in list
+template <unsigned I, typename ...> struct ZuType;
+template <typename T_, typename ...Args>
+struct ZuType<0, T_, Args...> {
+  using T = T_;
+};
+template <unsigned I, typename O, typename ...Args>
+struct ZuType<I, O, Args...> {
+  using T = typename ZuType<I - 1, Args...>::T;
+};
+
+// index of type in type list
+template <typename, typename ...> struct ZuTypeIndex;
+template <typename T, typename ...Args>
+struct ZuTypeIndex<T, T, Args...> {
+  enum { I = 0 };
+};
+template <typename T, typename O, typename ...Args>
+struct ZuTypeIndex<T, O, Args...> {
+  enum { I = 1 + ZuTypeIndex<T, Args...>::I };
+};
+
 #endif /* ZuLib_HPP */

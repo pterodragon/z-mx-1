@@ -36,9 +36,6 @@
 #include <math.h>
 
 #include <stats_tree.hpp>
-// #include <utility>
-// #include <ext/pb_ds/assoc_container.hpp>
-// #include <ext/pb_ds/tree_policy.hpp>
 
 #include <zlib/ZuNull.hpp>
 #include <zlib/ZuCmp.hpp>

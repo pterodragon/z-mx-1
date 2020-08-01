@@ -41,7 +41,6 @@
 #ifndef PB_DS_STATS_TREE_HPP
 #define PB_DS_STATS_TREE_HPP
 
-#include <bits/c++config.h>
 #include <utility>
 #include <iterator>
 #include <ext/pb_ds/assoc_container.hpp>

@@ -68,7 +68,9 @@
 // FIXME - need to design app
 // - right-click row selection in tree -> watch
 // - drag/drop rowset in watchlist -> graph
-//   - this operation needs column (field) selection popup on drop
+// - field select in graph
+//   - defaults to no field selected
+//   - until field selected, no trace
 
 static void usage()
 {
@@ -639,23 +641,19 @@ private:
     return m_plugin->processApp(data);
   }
 
-  enum {
-    ReqTypeN = ZvTelemetry::ReqType::N - ZvTelemetry::ReqType::MIN,
-    TelDataN = ZvTelemetry::TelData::N - ZvTelemetry::TelData::MIN
-  };
-
   int processTel(Link *link, const ZvTelemetry::fbs::Telemetry *data) {
-    // FIXME
     using namespace ZvTelemetry;
     int i = data->data_type();
-    if (ZuUnlikely(i < TelData::MIN)) return 0;
-    i -= TelData::MIN;
-    if (ZuUnlikely(i >= TelDataN)) return 0;
+    if (ZuUnlikely(i < TelData::First)) return 0;
+    if (ZuUnlikely(i > TelData::MAX)) return 0;
     // FIXME - find link in tree, create skeleton app if not already present
-    ZuSwitch::dispatch<TelDataN>([this](auto i) {
+    ZuSwitch::dispatch<TelDataN>(i, [this, data](auto i) {
+      using FBS = TelData::Type<i>;
+      auto fbs = static_cast<const FBS *>(data->data());
+
       // FIXME - duspatch i to FBS type
       // data->data() is const void *fbs_;
-      // auto fbs = static_cast<const FBS *>(fbs_);
+      // auto fbs = 
       // FBS is e.g. fbs::Socket
       // then e.g. new Socket_load{fbs}, or node->loadDelta(fbs)
       // need to update time series

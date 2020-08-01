@@ -147,65 +147,15 @@ struct ZuUnion_Ops :
     { return ZuHash<T>::hash(*static_cast<const T *>(p)); }
 };
 
-template <unsigned I, typename Left> struct ZuUnion_Type0;
-template <unsigned I, typename Left> struct ZuUnion_Type0_;
-template <typename Left>
-struct ZuUnion_Type0<0, Left> { using T = Left; };
-template <typename Left>
-struct ZuUnion_Type0_<0, Left> { using T = typename ZuDeref<Left>::T; };
-
-template <typename ...Args> class ZuUnion_;
-template <typename Arg0> class ZuUnion_<Arg0> {
-public:
-  template <unsigned I> using Type = ZuUnion_Type0<I, Arg0>;
-  template <unsigned I> using Type_ = ZuUnion_Type0_<I, Arg0>;
-  enum { N = 1 };
-};
-
-template <unsigned I, typename Left, typename Right>
-struct ZuUnion_Type : public Right::template Type<I - 1> { };
-template <unsigned I, typename Left, typename Right>
-struct ZuUnion_Type_ : public Right::template Type_<I - 1> { };
-template <typename Left, typename Right>
-struct ZuUnion_Type<0, Left, Right> { using T = Left; };
-template <typename Left, typename Right>
-struct ZuUnion_Type_<0, Left, Right> { using T = typename ZuDeref<Left>::T; };
-
-template <typename Arg0, typename ...Args>
-class ZuUnion_<Arg0, Args...> {
-  using Left = Arg0;
-  using Right = ZuUnion_<Args...>;
-
-public:
-  template <unsigned I> using Type = ZuUnion_Type<I, Left, Right>;
-  template <unsigned I> using Type_ = ZuUnion_Type_<I, Left, Right>;
-  enum { N = Right::N + 1 };
-};
-
-template <typename ...Args> struct ZuUnion_Index_ { };
-template <typename, typename> struct ZuUnion_Index;
-template <typename T, typename ...Args>
-struct ZuUnion_Index<T, ZuUnion_Index_<T, Args...>> {
-  enum { I = 0 };
-};
-template <typename T, typename O, typename ...Args>
-struct ZuUnion_Index<T, ZuUnion_Index_<O, Args...>> {
-  enum { I = 1 + ZuUnion_Index<T, ZuUnion_Index_<Args...>>::I };
-};
-
 namespace Zu_ {
 template <typename ...Args> class Union {
 public:
   using Largest = typename ZuLargest<Args...>::T;
   enum { Size = sizeof(Largest) };
-  template <unsigned I>
-  using Type = typename ZuUnion_<Args...>::template Type<I>;
-  template <unsigned I>
-  using Type_ = typename ZuUnion_<Args...>::template Type_<I>;
-  enum { N = ZuUnion_<Args...>::N };
-
-  template <typename T>
-  using Index = ZuUnion_Index<T, ZuUnion_Index_<Args...>>;
+  enum { N = sizeof...(Args) };
+  template <unsigned I> using Type = ZuType<I, Args...>;
+  template <unsigned I> using Type_ = typename ZuDecay<Type<I>>::T;
+  template <typename T> using Index = ZuTypeIndex<T, Args...>;
 
   Union() {
     using T0 = typename Type<0>::T;

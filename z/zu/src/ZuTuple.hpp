@@ -36,17 +36,6 @@
 #include <zlib/ZuSwitch.hpp>
 #include <zlib/ZuPP.hpp>
 
-template <typename ...Args> struct ZuTuple_Index_ { };
-template <typename, typename> struct ZuTuple_Index;
-template <typename T, typename ...Args>
-struct ZuTuple_Index<T, ZuTuple_Index_<T, Args...>> {
-  enum { I = 0 };
-};
-template <typename T, typename O, typename ...Args>
-struct ZuTuple_Index<T, ZuTuple_Index_<O, Args...>> {
-  enum { I = 1 + ZuTuple_Index<T, ZuTuple_Index_<Args...>>::I };
-};
-
 namespace Zu_ {
   template <typename ...Args> class Tuple;
 }
@@ -117,7 +106,7 @@ public:
   enum { N = 1 };
 
   template <typename T>
-  using Index = ZuTuple_Index<T, ZuTuple_Index_<T0>>;
+  using Index = ZuTypeIndex<T, T0>;
 
   ZuInline Tuple() { }
 
@@ -255,7 +244,7 @@ public:
   enum { N = 2 };
 
   template <typename T>
-  using Index = ZuTuple_Index<T, ZuTuple_Index_<T0, T1>>;
+  using Index = ZuTypeIndex<T, T0, T1>;
 
   using Base::Base;
   using Base::operator =;
@@ -330,7 +319,7 @@ public:
   enum { N = Right::N + 1 };
 
   template <typename T>
-  using Index = ZuTuple_Index<T, ZuTuple_Index_<T0, T1, Args...>>;
+  using Index = ZuTypeIndex<T, T0, T1, Args...>;
 
   using Base::Base;
   using Base::operator =;

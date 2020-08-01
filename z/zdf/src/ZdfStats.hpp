@@ -35,9 +35,10 @@
 
 #include <math.h>
 
-#include <utility>
-#include <ext/pb_ds/assoc_container.hpp>
-#include <ext/pb_ds/tree_policy.hpp>
+#include <stats_tree.hpp>
+// #include <utility>
+// #include <ext/pb_ds/assoc_container.hpp>
+// #include <ext/pb_ds/tree_policy.hpp>
 
 #include <zlib/ZuNull.hpp>
 #include <zlib/ZuCmp.hpp>
@@ -136,129 +137,6 @@ private:
   unsigned	m_exponent = 0;
 };
 
-// rolling median, percentiles
-namespace {
-  // adapted from GNU pb_ds tree_order_statistics_node_update
-  using namespace __gnu_pbds;
-
-  template <
-    typename Node_CItr, typename Node_Itr, typename Cmp_Fn, typename _Alloc>
-  class stats_tree_node_update :
-      private detail::branch_policy<Node_CItr, Node_Itr, _Alloc> {
-  private:
-    typedef detail::branch_policy<Node_CItr, Node_Itr, _Alloc> base_type;
-
-  public:
-    using cmp_fn = Cmp_Fn;
-    using allocator_type = _Alloc;
-    using size_type = typename allocator_type::size_type;
-    using key_type = typename base_type::key_type;
-    using key_const_reference = typename base_type::key_const_reference;
-
-    using metadata_type = size_type;
-    using node_const_iterator = Node_CItr;
-    using node_iterator = Node_Itr;
-    using const_iterator = typename node_const_iterator::value_type;
-    using iterator = typename node_iterator::value_type;
-
-    virtual ~stats_tree_node_update() { }
-
-  private:
-    virtual node_const_iterator node_begin() const = 0;
-    virtual node_iterator node_begin() = 0;
-    virtual node_const_iterator node_end() const = 0;
-    virtual node_iterator node_end() = 0;
-    virtual cmp_fn &get_cmp_fn() = 0;
-
-  public:
-    const_iterator find_by_order(size_type order) const {
-      return const_cast<stats_tree_node_update *>(this)->
-	find_by_order(order);
-    }
-    iterator find_by_order(size_type order) {
-      node_iterator it = node_begin();
-      node_iterator end_it = node_end();
-
-      while (it != end_it) {
-	node_iterator l_it = it.get_l_child();
-	const size_type o = l_it == end_it ? 0 : l_it.get_metadata();
-	const size_type n = (*it)->second;
-
-	if (order < o)
-	  it = l_it;
-	else if (order < o + n)
-	  return *it;
-	else {
-	  order -= o + n;
-	  it = it.get_r_child();
-	}
-      }
-      return base_type::end_iterator();
-    }
-
-    size_type order_of_key(key_const_reference r_key) const {
-      node_const_iterator it = node_begin();
-      node_const_iterator end_it = node_end();
-
-      const auto &r_cmp_fn =
-	const_cast<stats_tree_node_update *>(this)->get_cmp_fn();
-      size_type ord = 0;
-      while (it != end_it) {
-	node_const_iterator l_it = it.get_l_child();
-
-	const auto &key = (*it)->first;
-	if (r_cmp_fn(r_key, key))
-	  it = l_it;
-	else if (r_cmp_fn(key, r_key)) {
-	  const size_t n = (*it)->second;
-	  ord += (l_it == end_it) ? n : n + l_it.get_metadata();
-	  it = it.get_r_child();
-	} else {
-	  ord += (l_it == end_it) ? 0 : l_it.get_metadata();
-	  it = end_it;
-	}
-      }
-      return ord;
-    }
-
-    // increment repeat count
-    void inc(iterator it_) {
-      auto node = it_.m_p_nd;
-      auto begin = node_begin().m_p_nd;
-      do {
-	++const_cast<metadata_reference>(node->get_metadata());
-      } while (node != begin && (node = node->m_p_parent));
-    }
-
-    // decrement repeat count
-    void dec(iterator it_) {
-      auto node = it_.m_p_nd;
-      auto begin = node_begin().m_p_nd;
-      do {
-	--const_cast<metadata_reference>(node->get_metadata());
-      } while (node != begin && (node = node->m_p_parent));
-    }
-
-  private:
-    typedef typename detail::rebind_traits<_Alloc, metadata_type>::reference
-      metadata_reference;
-
-  protected:
-    void operator()(
-	node_iterator node_it, node_const_iterator end_nd_it) const {
-      node_iterator l_it = node_it.get_l_child();
-      const size_type l_rank = (l_it == end_nd_it) ? 0 : l_it.get_metadata();
-
-      node_iterator r_it = node_it.get_r_child();
-      const size_type r_rank = (r_it == end_nd_it) ? 0 : r_it.get_metadata();
-
-      const size_t n = (*node_it)->second;
-      const_cast<metadata_reference>(node_it.get_metadata()) =
-	n + l_rank + r_rank;
-    }
-  };
-}
-
 // NTP defaults
 struct StatsTree_Defaults {
   struct HeapID {
@@ -279,13 +157,7 @@ public:
   using Alloc = ZmAllocator<std::pair<ZuFixedVal, unsigned>, HeapID>;
 
 private:
-  using Tree = pbds::tree<
-    ZuFixedVal,
-    unsigned,
-    std::less<ZuFixedVal>,
-    pbds::rb_tree_tag,
-    stats_tree_node_update,
-    Alloc>;
+  using Tree = pbds::stats_tree<ZuFixedVal, unsigned, Alloc>;
   static Tree &tree_();
   static const Tree &ctree_();
 public:
@@ -385,20 +257,11 @@ public:
 private:
   void add_(ZuFixedVal v) {
     Stats::add_(v);
-    auto p = m_tree.insert(std::make_pair(v, 1));
-    if (!p.second) {
-      ++p.first->second;
-      m_tree.inc(p.first);
-    }
+    m_tree.insert(v);
   }
   void del_(Iter iter) {
     Stats::del_(iter->first);
-    if (iter->second == 1)
-      m_tree.erase(iter);
-    else {
-      m_tree.dec(iter);
-      --iter->second;
-    }
+    m_tree.erase(iter);
   }
 
 private:

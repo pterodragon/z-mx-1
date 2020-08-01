@@ -17,7 +17,8 @@ CLEANFILES = ${FBS_H}
 pkginclude_HEADERS = ZdfLib.hpp \
 	ZdfCompress.hpp ZdfBuf.hpp ZdfMgr.hpp \
 	ZdfSeries.hpp ZdfMem.hpp ZdfFile.hpp Zdf.hpp ZdfStats.hpp \
-	${FBS_H}
+	${FBS_H} \
+	stats_tree.hpp
 #fbsdir = $(datarootdir)/${PACKAGE}/fbs
 #dist_fbs_DATA = fbs/telemetry.fbs
 lib_LTLIBRARIES = libZdf.la

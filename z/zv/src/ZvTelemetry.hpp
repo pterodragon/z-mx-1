@@ -1139,29 +1139,12 @@ void Alert::loadDelta(const fbs::Alert *alert_) {
 namespace ReqType {
   ZfbEnumValues(ReqType,
       Heap, HashTbl, Thread, Mx, Queue, Engine, DBEnv, App, Alert);
-  enum { First = Heap };
 }
 
 namespace TelData {
-#define Zv_TelData_Types \
-	Heap, HashTbl, Thread, Mx, Socket, Queue, Engine, Link, \
-	DB, DBHost, DBEnv, App, Alert
-  ZfbEnumValues(TelData, Zv_TelData_Types);
-  enum { First = Heap };
-#define Zv_TelData_fbs_Type(T) fbs::T
-#define Zv_TelData_fbs_Types_(...) \
-  ZuPP_Eval(ZuPP_MapComma(Zv_TelData_fbs_Type, __VA_ARGS__))
-#define Zv_TelData_fbs_Types Zv_TelData_fbs_Types_(Zv_TelData_Types)
-  template <unsigned I>
-  using Type = ZuType<I - First, Zv_TelData_fbs_Types>;
-  template <typename T>
-  struct TypeIndex {
-    enum { I = ZuTypeIndex<T, Zv_TelData_fbs_Types>::I + First };
-  };
-#define Zv_TelData_Assert_(T) ZuAssert(T == TypeIndex<fbs::T>::I);
-#define Zv_TelData_Assert(...) \
-  ZuPP_Eval(ZuPP_Map(Zv_TelData_Assert_, __VA_ARGS__))
-  Zv_TelData_Assert(Zv_TelData_Types);
+  ZfbEnumUnion(TelData,
+      Heap, HashTbl, Thread, Mx, Socket, Queue, Engine, Link,
+      DB, DBHost, DBEnv, App, Alert);
 }
 
 } // ZvTelemetry

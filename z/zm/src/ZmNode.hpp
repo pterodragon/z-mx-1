@@ -19,10 +19,12 @@
 
 // container node (used by ZmHash, ZmRBTree, ...)
 
+// ZmNode - node containing single item (no key/value)
 // ZmKVNode - node containing key with (optional) value
+// ZmNodePolicy - node ownership (referencing/dereferencing) policy
 
-#ifndef ZmKVNode_HPP
-#define ZmKVNode_HPP
+#ifndef ZmNode_HPP
+#define ZmNode_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -33,6 +35,50 @@
 #endif
 
 #include <zlib/ZuNull.hpp>
+#include <zlib/ZuObject.hpp>
+
+template <
+  class Heap, bool NodeIsItem,
+  template <typename, typename, bool> class Fn, typename Item> class ZmNode;
+// node contains item (default)
+template <
+  class Heap, template <typename, typename, bool> class Fn_, typename Item>
+class ZmNode<Heap, 0, Fn_, Item> :
+    public Fn_<ZmNode<Heap, 0, Fn_, Item>, Heap, 0> {
+  ZmNode(const ZmNode &);
+  ZmNode &operator =(const ZmNode &);	// prevent mis-use
+
+public:
+  using Fn = Fn_<ZmNode<Heap, 0, Fn_, Item>, Heap, 0>;
+
+  ZuInline ZmNode() { }
+  template <typename ...Args>
+  ZuInline ZmNode(Args &&... args) : m_item{ZuFwd<Args>(args)...} { }
+
+  ZuInline const Item &item() const { return m_item; }
+  ZuInline Item &item() { return m_item; }
+
+private:
+  Item			m_item;
+};
+// node derives from item
+template <
+  class Heap, template <typename, typename, bool> class Fn_, typename Item>
+class ZmNode<Heap, 1, Fn_, Item> :
+    public Item, public Fn_<ZmNode<Heap, 1, Fn_, Item>, Heap, 1> {
+  ZmNode(const ZmNode &);
+  ZmNode &operator =(const ZmNode &);	// prevent mis-use
+
+public:
+  using Fn = Fn_<ZmNode<Heap, 1, Fn_, Item>, Heap, 1>;
+
+  ZuInline ZmNode() { }
+  template <typename ...Args>
+  ZuInline ZmNode(Args &&... args) : Item{ZuFwd<Args>(args)...} { }
+
+  ZuInline const Item &item() const { return *this; }
+  ZuInline Item &item() { return *this; }
+};
 
 template <class Heap, bool NodeIsKey, bool NodeIsVal,
 	 template <typename, typename, bool, bool> class Fn,
@@ -185,4 +231,40 @@ public:
   ZuInline Val &val() { return *this; }
 };
 
-#endif /* ZmKVNode_HPP */
+template <typename, bool> struct ZmNodePolicy_;
+template <typename O>
+struct ZmNodePolicy : public ZmNodePolicy_<O, ZuIsObject_<O>::OK> { };
+// ref-counted nodes
+template <typename O> struct ZmNodePolicy_<O, true> {
+  using Object = O;
+  template <typename T_> struct Ref { using T = ZmRef<T_>; };
+  template <typename T> ZuInline void nodeRef(T &&o) { ZmREF(ZuFwd<T>(o)); }
+  template <typename T> ZuInline void nodeDeref(T &&o) { ZmDEREF(ZuFwd<T>(o)); }
+  template <typename T> ZuInline void nodeDelete(T &&) { }
+};
+// own nodes (with caller-specified base), delete if not returned to caller
+template <typename O> struct ZmNodePolicy_<O, false> {
+  using Object = O;
+  template <typename T_> struct Ref { using T = T_ *; };
+  template <typename T> ZuInline void nodeRef(T &&) { }
+  template <typename T> ZuInline void nodeDeref(T &&) { }
+  template <typename T> ZuInline void nodeDelete(T &&o) { delete ZuFwd<T>(o); }
+};
+// own nodes, delete if not returned to caller
+template <> struct ZmNodePolicy<ZuNull> {
+  using Object = ZuNull;
+  template <typename T_> struct Ref { using T = T_ *; };
+  template <typename T> ZuInline void nodeRef(T &&) { }
+  template <typename T> ZuInline void nodeDeref(T &&) { }
+  template <typename T> ZuInline void nodeDelete(T &&o) { delete ZuFwd<T>(o); }
+};
+// shadow nodes, never delete
+template <> struct ZmNodePolicy<ZuShadow> {
+  using Object = ZuNull;
+  template <typename T_> struct Ref { using T = T_ *; };
+  template <typename T> ZuInline void nodeRef(T &&) { }
+  template <typename T> ZuInline void nodeDeref(T &&) { }
+  template <typename T> ZuInline void nodeDelete(T &&) { }
+};
+
+#endif /* ZmNode_HPP */

@@ -35,22 +35,19 @@
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuIndex.hpp>
 #include <zlib/ZuConversion.hpp>
-#include <zlib/ZuObject.hpp>
-#include <zlib/ZuShadow.hpp>
 
 #include <zlib/ZmGuard.hpp>
 #include <zlib/ZmLock.hpp>
 #include <zlib/ZmObject.hpp>
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmHeap.hpp>
-#include <zlib/ZmKVNode.hpp>
+#include <zlib/ZmNode.hpp>
 
 // uses NTP (named template parameters):
 //
 // ZmRBTree<ZtString,				// keys are ZtStrings
-//   ZmRBTreeBase<ZmObject,			// base of ZmObject
-//     ZmRBTreeVal<ZtString,			// values are ZtStrings
-//	 ZmRBTreeValCmp<ZtICmp> > > >		// case-insensitive comparison
+//   ZmRBTreeVal<ZtString,			// values are ZtStrings
+//     ZmRBTreeValCmp<ZtICmp> > >		// case-insensitive comparison
 
 struct ZmRBTree_Defaults {
   using Val = ZuNull;
@@ -63,7 +60,6 @@ struct ZmRBTree_Defaults {
   using Lock = ZmLock;
   using Object = ZmObject;
   struct HeapID { static constexpr const char *id() { return "ZmRBTree"; } };
-  struct Base { };
   enum { Unique = 0 };
 };
 
@@ -153,12 +149,6 @@ struct ZmRBTreeHeapID : public NTP {
   using HeapID = HeapID_;
 };
 
-// ZmRBTreeBase - injection of a base class (e.g. ZmObject)
-template <class Base_, class NTP = ZmRBTree_Defaults>
-struct ZmRBTreeBase : public NTP {
-  using Base = Base_;
-};
-
 // ZmRBTreeUnique - key is unique
 template <bool Unique_, class NTP = ZmRBTree_Defaults>
 struct ZmRBTreeUnique : public NTP {
@@ -230,8 +220,8 @@ protected:
 
 template <typename Tree_, int Direction_ = ZmRBTreeGreaterEqual>
 class ZmRBTreeIterator :
-  public Tree_::Guard,
-  public ZmRBTreeIterator_<Tree_, Direction_> {
+    public Tree_::Guard,
+    public ZmRBTreeIterator_<Tree_, Direction_> {
   using Tree = Tree_;
   enum { Direction = Direction_ };
   using Guard = typename Tree::Guard;
@@ -253,8 +243,8 @@ public:
 
 template <typename Tree_, int Direction_ = ZmRBTreeGreaterEqual>
 class ZmRBTreeReadIterator :
-  public Tree_::ReadGuard,
-  public ZmRBTreeIterator_<Tree_, Direction_> {
+    public Tree_::ReadGuard,
+    public ZmRBTreeIterator_<Tree_, Direction_> {
   using Tree = Tree_;
   enum { Direction = Direction_ };
   using ReadGuard = typename Tree::ReadGuard;
@@ -273,12 +263,12 @@ public:
 };
 
 template <typename Key_, class NTP = ZmRBTree_Defaults>
-class ZmRBTree : public NTP::Base {
-  ZmRBTree(const ZmRBTree &);
-  ZmRBTree &operator =(const ZmRBTree &);	// prevent mis-use
-
+class ZmRBTree :
+    public ZmNodePolicy<typename NTP::Object> {
   template <typename, int> friend class ZmRBTreeIterator_;
   template <typename, int> friend class ZmRBTreeIterator;
+
+  using NodePolicy = ZmNodePolicy<typename NTP::Object>;
 
 public:
   using Key = Key_;
@@ -290,7 +280,7 @@ public:
   enum { NodeIsKey = NTP::NodeIsKey };
   enum { NodeIsVal = NTP::NodeIsVal };
   using Lock = typename NTP::Lock;
-  using Object = typename NTP::Object;
+  using Object = typename NodePolicy::Object;
   using HeapID = typename NTP::HeapID;
   enum { Unique = NTP::Unique };
 
@@ -327,7 +317,6 @@ private:
   class NodeFn_ :
       public ZuIf<NullObject, Object,
 	ZuConversion<ZuNull, Object>::Is ||
-	ZuConversion<ZuShadow, Object>::Is ||
 	(NodeIsKey && ZuConversion<Object, Key>::Is) ||
 	(NodeIsVal && ZuConversion<Object, Val>::Is)>::T,
       public ZuIf<NodeFn_Unique<Node>, NodeFn_Dup<Node>, Unique>::T,
@@ -375,36 +364,24 @@ private:
   using Node_ = ZmKVNode<Heap, NodeIsKey, NodeIsVal, NodeFn, Key, Val>;
   struct NullHeap { }; // deconflict with ZuNull
   using NodeHeap = ZmHeap<HeapID, sizeof(Node_<NullHeap>)>;
+
 public:
   using Node = Node_<NodeHeap>;
-  using NodeRef =
-    typename ZuIf<ZmRef<Node>, Node *, ZuIsObject_<Object>::OK>::T;
+  using NodeRef = typename NodePolicy::template Ref<Node>::T;
+
 private:
+  using NodePolicy::nodeRef;
+  using NodePolicy::nodeDeref;
+  using NodePolicy::nodeDelete;
+
   using Fn = typename Node::Fn;
 
-  // in order to support reference-counted, owned and shadowed
-  // objects, some overloading is required for ref/deref/delete
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIsObject<O>::T nodeRef(T &&o) { ZmREF(ZuFwd<T>(o)); }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIsObject<O>::T nodeDeref(T &&o) { ZmDEREF(ZuFwd<T>(o)); }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIsObject<O>::T nodeDelete(T &&) { }
-
-  template <typename T, typename O = Object>
-  ZuInline typename ZuNotObject<O>::T nodeRef(T &&) { }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuNotObject<O>::T nodeDeref(T &&) { }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIfT<!ZuIsObject_<O>::OK && !ZuIsShadow_<O>::OK>::T
-  nodeDelete(T &&o) { delete ZuFwd<T>(o); }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIfT<!ZuIsObject_<O>::OK && ZuIsShadow_<O>::OK>::T
-  nodeDelete(T &&) { }
-
 public:
-  template <typename ...Args>
-  ZmRBTree(Args &&... args) : NTP::Base{ZuFwd<Args>(args)...} { }
+  ZmRBTree() = default;
+  ZmRBTree(const ZmRBTree &) = delete;
+  ZmRBTree &operator =(const ZmRBTree &) = delete;
+  ZmRBTree(ZmRBTree &&) = delete;
+  ZmRBTree &operator =(ZmRBTree &&) = delete;
 
   ~ZmRBTree() { clean(); }
 
@@ -728,7 +705,8 @@ public:
 
   void clean() {
     auto i = iterator();
-    while (auto node = i.iterate()) i.del(node);
+    while (auto node = i.iterate())
+      nodeDelete(i.del(node));
     m_minimum = m_maximum = m_root = nullptr;
     m_count = 0;
   }

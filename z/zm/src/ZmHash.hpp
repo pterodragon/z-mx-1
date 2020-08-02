@@ -36,8 +36,6 @@
 #include <zlib/ZuIndex.hpp>
 #include <zlib/ZuIf.hpp>
 #include <zlib/ZuConversion.hpp>
-#include <zlib/ZuObject.hpp>
-#include <zlib/ZuShadow.hpp>
 
 #include <zlib/ZmAtomic.hpp>
 #include <zlib/ZmGuard.hpp>
@@ -47,7 +45,7 @@
 #include <zlib/ZmLock.hpp>
 #include <zlib/ZmNoLock.hpp>
 #include <zlib/ZmLockTraits.hpp>
-#include <zlib/ZmKVNode.hpp>
+#include <zlib/ZmNode.hpp>
 
 #include <zlib/ZmHashMgr.hpp>
 
@@ -132,6 +130,7 @@ protected:
 
 protected:
   unsigned	m_bits;
+private:
   unsigned	m_cBits;
   mutable void	*m_locks;
 };
@@ -162,6 +161,7 @@ protected:
 
 protected:
   unsigned	m_bits;
+private:
   ZmNoLock	m_noLock;
 };
 
@@ -311,11 +311,12 @@ struct ZmHashID : public NTP {
 };
 
 template <typename Key_, class NTP = ZmHash_Defaults>
-class ZmHash : public ZmAnyHash, public ZmHash_LockMgr<typename NTP::Lock> {
-  ZmHash(const ZmHash &) = delete;
-  ZmHash &operator =(const ZmHash &) = delete; // prevent mis-use
-
-  using Base = ZmHash_LockMgr<typename NTP::Lock>;
+class ZmHash :
+    public ZmAnyHash,
+    public ZmHash_LockMgr<typename NTP::Lock>,
+    public ZmNodePolicy<typename NTP::Object> {
+  using LockMgr = ZmHash_LockMgr<typename NTP::Lock>;
+  using NodePolicy = ZmNodePolicy<typename NTP::Object>;
 
 public:
   using Key = Key_;
@@ -329,7 +330,7 @@ public:
   enum { NodeIsKey = NTP::NodeIsKey };
   enum { NodeIsVal = NTP::NodeIsVal };
   using Lock = typename NTP::Lock;
-  using Object = typename NTP::Object;
+  using Object = typename NodePolicy::Object;
   using ID = typename NTP::ID;
   using HeapID = typename NTP::HeapID;
 
@@ -338,17 +339,17 @@ public:
   using ReadGuard = ZmReadGuard<Lock>;
 
 private:
-  using Base::lockCode;
-  using Base::lockSlot;
-  using Base::lockAllResize;
-  using Base::lockAll;
-  using Base::unlockAll;
+  using LockMgr::lockCode;
+  using LockMgr::lockSlot;
+  using LockMgr::lockAllResize;
+  using LockMgr::lockAll;
+  using LockMgr::unlockAll;
 
-  using Base::m_bits;
+  using LockMgr::m_bits;
 
 public:
   ZuInline unsigned bits() const { return m_bits; }
-  using Base::cBits;
+  using LockMgr::cBits;
 
 protected:
   template <typename I> class Iterator_;
@@ -394,30 +395,13 @@ public:
   using Node = Node_<NodeHeap>;
   using Fn = typename Node::Fn;
 
-  using NodeRef =
-    typename ZuIf<ZmRef<Node>, Node *, ZuIsObject_<Object>::OK>::T;
+  using NodeRef = typename NodePolicy::template Ref<Node>::T;
   using NodePtr = Node *;
 
 private:
-  // in order to support reference-counted, owned and shadowed
-  // objects, some overloading is required for ref/deref/delete
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIsObject<O>::T nodeRef(T &&o) { ZmREF(ZuFwd<T>(o)); }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIsObject<O>::T nodeDeref(T &&o) { ZmDEREF(ZuFwd<T>(o)); }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIsObject<O>::T nodeDelete(T &&) { }
-
-  template <typename T, typename O = Object>
-  ZuInline typename ZuNotObject<O>::T nodeRef(T &&) { }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuNotObject<O>::T nodeDeref(T &&) { }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIfT<!ZuIsObject_<O>::OK && !ZuIsShadow_<O>::OK>::T
-  nodeDelete(T &&o) { delete ZuFwd<T>(o); }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIfT<!ZuIsObject_<O>::OK && ZuIsShadow_<O>::OK>::T
-  nodeDelete(T &&) { }
+  using NodePolicy::nodeRef;
+  using NodePolicy::nodeDeref;
+  using NodePolicy::nodeDelete;
 
 protected:
   template <typename I> struct Iterator__ {
@@ -570,7 +554,7 @@ private:
     double loadFactor = params.loadFactor();
     if (loadFactor < 1.0) loadFactor = 1.0;
     m_loadFactor = (unsigned)(loadFactor * (1<<4));
-    m_table = new NodePtr[1<<m_bits];
+    m_table = new NodePtr[1U<<m_bits];
     memset(m_table, 0, sizeof(NodePtr)<<m_bits);
     ZmHashMgr::add(this);
   }
@@ -580,6 +564,10 @@ public:
       ZmHash_LockMgr<Lock>(params) {
     init(params);
   }
+  ZmHash(const ZmHash &) = delete;
+  ZmHash &operator =(const ZmHash &) = delete;
+  ZmHash(ZmHash &&) = delete;
+  ZmHash &operator =(ZmHash &&) = delete;
 
   ~ZmHash() {
     ZmHashMgr::del(this);
@@ -931,7 +919,7 @@ private:
       prevNode = 0;
       do {
 	iterator.unlock(lockSlot(slot));
-	if (++slot >= (1<<m_bits)) {
+	if (++slot >= (1U<<m_bits)) {
 	  iterator.m_slot = -1;
 	  return 0;
 	}

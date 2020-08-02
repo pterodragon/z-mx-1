@@ -35,14 +35,13 @@
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuConversion.hpp>
 #include <zlib/ZuObject.hpp>
-#include <zlib/ZuShadow.hpp>
 
 #include <zlib/ZmLock.hpp>
 #include <zlib/ZmGuard.hpp>
 #include <zlib/ZmObject.hpp>
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmHeap.hpp>
-#include <zlib/ZmINode.hpp>
+#include <zlib/ZmNode.hpp>
 
 // NTP (named template parameters) convention:
 //
@@ -58,7 +57,6 @@ struct ZmList_Defaults {
   using Lock = ZmLock;
   using Object = ZmObject;
   struct HeapID { static constexpr const char *id() { return "ZmList"; } };
-  struct Base { };
 };
 
 // ZmListCmp - the item comparator
@@ -129,16 +127,10 @@ struct ZmListHeapID : public NTP {
   using HeapID = HeapID_;
 };
 
-// ZmListBase - injection of a base class (e.g. ZmObject)
-template <class Base_, class NTP = ZmList_Defaults>
-struct ZmListBase : public NTP {
-  using Base = Base_;
-};
-
 template <typename Item, class NTP = ZmList_Defaults>
-class ZmList : public NTP::Base {
-  ZmList(const ZmList &);
-  ZmList &operator =(const ZmList &);	// prevent mis-use
+class ZmList :
+    public ZmNodePolicy<typename NTP::Object> {
+  using NodePolicy = ZmNodePolicy<typename NTP::Object>;
 
 public:
   using Cmp = typename NTP::template CmpT<Item>::Cmp;
@@ -146,7 +138,7 @@ public:
   using Index = typename NTP::template IndexT<Item>::Index;
   enum { NodeIsItem = NTP::NodeIsItem };
   using Lock = typename NTP::Lock;
-  using Object = typename NTP::Object;
+  using Object = typename NodePolicy::Object;
   using HeapID = typename NTP::HeapID;
 
   using Guard = ZmGuard<Lock>;
@@ -190,35 +182,18 @@ public:
   };
 
   template <typename Heap>
-  using Node_ = ZmINode<Heap, NodeIsItem, NodeFn, Item>;
+  using Node_ = ZmNode<Heap, NodeIsItem, NodeFn, Item>;
   struct NullHeap { }; // deconflict with ZuNull
   using NodeHeap = ZmHeap<HeapID, sizeof(Node_<NullHeap>)>;
   using Node = Node_<NodeHeap>;
   using Fn = typename Node::Fn;
 
-  using NodeRef =
-    typename ZuIf<ZmRef<Node>, Node *, ZuIsObject_<Object>::OK>::T;
+  using NodeRef = typename NodePolicy::template Ref<Node>::T;
 
 private:
-  // in order to support reference-counted, owned and shadowed
-  // objects, some overloading is required for ref/deref/delete
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIsObject<O>::T nodeRef(T &&o) { ZmREF(ZuFwd<T>(o)); }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIsObject<O>::T nodeDeref(T &&o) { ZmDEREF(ZuFwd<T>(o)); }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIsObject<O>::T nodeDelete(T &&) { }
-
-  template <typename T, typename O = Object>
-  ZuInline typename ZuNotObject<O>::T nodeRef(T &&) { }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuNotObject<O>::T nodeDeref(T &&) { }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIfT<!ZuIsObject_<O>::OK && !ZuIsShadow_<O>::OK>::T
-  nodeDelete(T &&o) { delete ZuFwd<T>(o); }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIfT<!ZuIsObject_<O>::OK && ZuIsShadow_<O>::OK>::T
-  nodeDelete(T &&) { }
+  using NodePolicy::nodeRef;
+  using NodePolicy::nodeDeref;
+  using NodePolicy::nodeDelete;
 
 protected:
   class Iterator_ {			// iterator
@@ -280,10 +255,11 @@ friend ReadIterator;
       ReadGuard(list.m_lock), Iterator_(const_cast<List &>(list)) { }
   };
 
-  template <typename ...Args>
-  ZmList(Args &&... args) :
-      NTP::Base{ZuFwd<Args>(args)...},
-      m_count(0), m_head(0), m_tail(0) { }
+  ZmList() = default;
+  ZmList(const ZmList &) = delete;
+  ZmList &operator =(const ZmList &) = delete;
+  ZmList(ZmList &&) = delete;
+  ZmList &operator =(ZmList &&) = delete;
 
   ~ZmList() { clean_(); }
 
@@ -631,8 +607,9 @@ protected:
   }
 
   Lock		m_lock;
-    unsigned	  m_count;
-    Node	  *m_head, *m_tail;
+    unsigned	  m_count = 0;
+    Node	  *m_head = nullptr;
+    Node	  *m_tail = nullptr;
 };
 
 #endif /* ZmList_HPP */

@@ -354,6 +354,6 @@ namespace Load {
   struct TypeIndex { enum { I = ZuTypeIndex<T, TypeList>::I + First }; }; \
   ZuPP_Eval(ZuPP_Map(ZfbEnum_Assert, First_, __VA_ARGS__)) \
   ZuAssert(First == TypeIndex<typename Type<First>::T>::I); \
-  ZuAssert(MAX == TypeIndex<typename Type<MAX>::T>::I); \
+  ZuAssert(MAX == TypeIndex<typename Type<MAX>::T>::I);
 
 #endif /* Zfb_HPP */

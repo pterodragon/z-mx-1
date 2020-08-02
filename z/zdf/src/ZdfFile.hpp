@@ -31,7 +31,6 @@
 #endif
 
 #include <zlib/ZuObject.hpp>
-#include <zlib/ZuShadow.hpp>
 #include <zlib/ZuPtr.hpp>
 
 #include <zlib/ZmHeap.hpp>

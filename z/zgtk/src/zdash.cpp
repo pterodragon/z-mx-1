@@ -141,9 +141,11 @@ namespace MainTree {
   template <typename T>
   using TelTree =
     ZmRBTree<T,
-      ZmRBTreeIndex<typename TelKey<T>::Accessor,
-	ZmRBTreeUnique<true,
-	  ZmRBTreeLock<ZmNoLock> > > >;
+      ZmRBTreeObject<ZmObject,
+	ZmRBTreeNodeIsKey<true,
+	  ZmRBTreeIndex<typename TelKey<T>::Accessor,
+	    ZmRBTreeUnique<true,
+	      ZmRBTreeLock<ZmNoLock> > > > > >;
 
   template <unsigned Depth, typename Data>
   struct Child : public Data, public ZGtk::TreeNode::Child<Depth> {
@@ -245,10 +247,18 @@ namespace MainTree {
       (MxParent, multiplexers),
       (EngineParent, engines),
       (DBEnv, dbEnv));
-  struct AppData : public ZvTelemetry::App_load { Link *link = nullptr; };
-  using App = Branch<0, AppData, AppTuple>;
+  struct AppData : public ZvTelemetry::App_load {
+    AppData() = default;
+    template <typename ...Args>
+    AppData(Args &&... args) : ZvTelemetry::App_load{ZuFwd<Args>(args)...} { }
 
-  using Root = ZGtk::TreeNode::Parent<0, App, ZGtk::TreeNode::Root>;
+    Link *link = nullptr;
+  };
+  using App_ = Branch<0, AppData, AppTuple>;
+  using AppTree = TelTree<App_>;
+  using App = typename AppTree::Node;
+
+  using Root = Parent<0, ZuNull, App, AppTree>;
 
   enum { MaxDepth = 3 };
 
@@ -646,6 +656,13 @@ private:
     int i = data->data_type();
     if (ZuUnlikely(i < TelData::First)) return 0;
     if (ZuUnlikely(i > TelData::MAX)) return 0;
+    ZmRef<App> app = m_model->root()->tree.find(link->key());
+    if (!app) {
+      app = new App{};
+      app->id = link->key();
+      m_model->root()->tree.add(app);
+    }
+
     // FIXME - find link in tree, create skeleton app if not already present
     ZuSwitch::dispatch<TelDataN>(i, [this, data](auto i) {
       using FBS = TelData::Type<i>;

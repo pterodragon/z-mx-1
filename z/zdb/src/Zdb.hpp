@@ -33,7 +33,6 @@
 #include <lz4.h>
 
 #include <zlib/ZuTraits.hpp>
-#include <zlib/ZuShadow.hpp>
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuHash.hpp>
 #include <zlib/ZuPrint.hpp>

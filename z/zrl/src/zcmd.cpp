@@ -143,12 +143,12 @@ public:
     struct Accessor : public ZuAccessor<Data, typename ZuDecay<Key>::T> {
       static Key value(const Data &data) { return data.key(); }
     };
-    using Tree =
+    using Tree_ =
       ZmRBTree<Data,
 	ZmRBTreeIndex<Accessor,
 	  ZmRBTreeUnique<true,
-	    ZmRBTreeBase<ZuObject,
-	      ZmRBTreeLock<ZmNoLock> > > > >;
+	    ZmRBTreeLock<ZmNoLock> > > >;
+    struct Tree : public ZuObject, public Tree_ { };
     ZmRef<Tree> tree = new Tree{};
     return TelCap{[
 	tree = ZuMv(tree),

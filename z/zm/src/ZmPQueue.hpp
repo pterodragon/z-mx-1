@@ -45,8 +45,6 @@
 
 #include <zlib/ZuNull.hpp>
 #include <zlib/ZuConversion.hpp>
-#include <zlib/ZuObject.hpp>
-#include <zlib/ZuShadow.hpp>
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuIndex.hpp>
 #include <zlib/ZuPair.hpp>
@@ -57,7 +55,7 @@
 #include <zlib/ZmObject.hpp>
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmHeap.hpp>
-#include <zlib/ZmINode.hpp>
+#include <zlib/ZmNode.hpp>
 
 // the application will normally substitute ZmPQueueDefaultFn with
 // a type that is specific to the queued Item; it must conform to the
@@ -181,9 +179,10 @@ namespace ZmPQueue_ {
 };
 
 template <typename Item_, class NTP = ZmPQueue_Defaults>
-class ZmPQueue : public ZuPrintable, public NTP::Base {
-  ZmPQueue(const ZmPQueue &);
-  ZmPQueue &operator =(const ZmPQueue &);	// prevent mis-use
+class ZmPQueue :
+    public ZuPrintable,
+    public ZmNodePolicy<typename NTP::Object> {
+  using NodePolicy = ZmNodePolicy<typename NTP::Object>;
 
 public:
   using Item = Item_;
@@ -191,7 +190,7 @@ public:
   using Key = typename Fn::Key;
   enum { NodeIsItem = NTP::NodeIsItem };
   using Lock = typename NTP::Lock;
-  using Object = typename NTP::Object;
+  using Object = typename NodePolicy::Object;
   using HeapID = typename NTP::HeapID;
   enum { Bits = NTP::Bits };
   enum { Levels = NTP::Levels };
@@ -235,44 +234,30 @@ public:
   };
 
   template <typename Heap>
-  using Node_ = ZmINode<Heap, NodeIsItem, NodeFn_, Item>;
+  using Node_ = ZmNode<Heap, NodeIsItem, NodeFn_, Item>;
   struct NullHeap { }; // deconflict with ZuNull
   using NodeHeap = ZmHeap<HeapID, sizeof(Node_<NullHeap>)>;
   using Node = Node_<NodeHeap>;
   using NodeFn = typename Node::Fn;
 
-  using NodeRef =
-    typename ZuIf<ZmRef<Node>, Node *, ZuIsObject_<Object>::OK>::T;
+  using NodeRef = typename NodePolicy::template Ref<Node>::T;
 
 private:
-  // in order to support reference-counted, owned and shadowed
-  // objects, some overloading is required for ref/deref/delete
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIsObject<O>::T nodeRef(T &&o) { ZmREF(ZuFwd<T>(o)); }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIsObject<O>::T nodeDeref(T &&o) { ZmDEREF(ZuFwd<T>(o)); }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIsObject<O>::T nodeDelete(T &&) { }
-
-  template <typename T, typename O = Object>
-  ZuInline typename ZuNotObject<O>::T nodeRef(T &&) { }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuNotObject<O>::T nodeDeref(T &&) { }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIfT<!ZuIsObject_<O>::OK && !ZuIsShadow_<O>::OK>::T
-  nodeDelete(T &&o) { delete ZuFwd<T>(o); }
-  template <typename T, typename O = Object>
-  ZuInline typename ZuIfT<!ZuIsObject_<O>::OK && ZuIsShadow_<O>::OK>::T
-  nodeDelete(T &&) { }
+  using NodePolicy::nodeRef;
+  using NodePolicy::nodeDeref;
+  using NodePolicy::nodeDelete;
 
 public:
-  template <typename ...Args>
-  ZmPQueue(Key head, Args &&... args) :
-      NTP::Base{ZuFwd<Args>(args)...},
-      m_headKey(head), m_tailKey(head) {
+  ZmPQueue() = delete;
+  ZmPQueue(Key head) : m_headKey(head), m_tailKey(head) {
     memset(m_head, 0, sizeof(Node *) * Levels);
     memset(m_tail, 0, sizeof(Node *) * Levels);
   }
+  ZmPQueue(const ZmPQueue &) = delete;
+  ZmPQueue &operator =(const ZmPQueue &) = delete;
+  ZmPQueue(ZmPQueue &&) = delete;
+  ZmPQueue &operator =(ZmPQueue &&) = delete;
+
   ~ZmPQueue() { clean_(); }
 
 private:

@@ -289,4 +289,7 @@ struct ZuTypeIndex<T, ZuTypeList<O, Args...>> {
   enum { I = 1 + ZuTypeIndex<T, Args...>::I };
 };
 
+// compile-time policy tag for intrusively shadowed (not owned) objects
+class ZuShadow { }; // tag
+
 #endif /* ZuLib_HPP */

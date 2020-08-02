@@ -9,7 +9,7 @@ pkginclude_HEADERS = \
 	ZmBackTracer.hpp ZmBackoff.hpp ZmBitmap.hpp ZmBxRing.hpp ZmCleanup.hpp \
 	ZmCondition.hpp ZmDRing.hpp ZmFn.hpp ZmFn_.hpp ZmFn_Lambda.hpp \
 	ZmGlobal.hpp ZmGuard.hpp ZmHash.hpp ZmHashMgr.hpp ZmHeap.hpp \
-	ZmINode.hpp ZmKVNode.hpp ZmLHash.hpp ZmLib.hpp ZmList.hpp ZmLock.hpp \
+	ZmNode.hpp ZmLHash.hpp ZmLib.hpp ZmList.hpp ZmLock.hpp \
 	ZmLockTraits.hpp ZmNoLock.hpp ZmObject_.hpp ZmObject.hpp \
 	ZmPolymorph.hpp ZmPLock.hpp ZmPQueue.hpp ZmPlatform.hpp ZmQueue.hpp \
 	ZmRBTree.hpp ZmRWLock.hpp ZmRandom.hpp ZmRef.hpp ZmRing.hpp \

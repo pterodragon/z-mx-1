@@ -188,12 +188,12 @@ public:
     ZtString	m_fileName;
   };
 
-  using Defines =
+  using Defines_ =
     ZmRBTree<ZtString,
       ZmRBTreeVal<ZtString,
 	ZmRBTreeUnique<true,
-	  ZmRBTreeBase<ZuObject,
-	    ZmRBTreeLock<ZmNoLock> > > > >;
+	  ZmRBTreeLock<ZmNoLock> > > >;
+  struct Defines : public ZuObject, public Defines_ { };
 
   void fromString(
       ZuString in, bool validate,

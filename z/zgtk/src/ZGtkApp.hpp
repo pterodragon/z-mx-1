@@ -48,6 +48,13 @@ public:
   ZuInline ZmScheduler *sched() const { return m_sched; }
   ZuInline unsigned tid() const { return m_tid; }
 
+  template <typename ...Args>
+  ZuInline void run(Args &&... args)
+    { m_sched->run(m_tid, ZuFwd<Args>(args)...); }
+  template <typename ...Args>
+  ZuInline void invoke(Args &&... args)
+    { m_sched->invoke(m_tid, ZuFwd<Args>(args)...); }
+
 private:
   void attach_();	// runs on Gtk thread
   void detach_(ZmFn<>);	// ''

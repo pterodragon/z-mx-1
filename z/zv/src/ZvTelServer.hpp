@@ -282,35 +282,16 @@ public:
     if (req->interval && req->interval < m_minInterval)
       req->interval = m_minInterval;
     switch (req->type) {
-      case ReqType::Heap:
-	heapQuery(req);
-	break;
-      case ReqType::HashTbl:
-	hashQuery(req);
-	break;
-      case ReqType::Thread:
-	threadQuery(req);
-	break;
-      case ReqType::Mx:
-	mxQuery(req);
-	break;
-      case ReqType::Queue:
-	queueQuery(req);
-	break;
-      case ReqType::Engine:
-	engineQuery(req);
-	break;
-      case ReqType::DBEnv:
-	dbEnvQuery(req);
-	break;
-      case ReqType::App:
-	appQuery(req);
-	break;
-      case ReqType::Alert:
-	alertQuery(req);
-	break;
-      default:
-	break;
+      case ReqType::Heap:	heapQuery(req); break;
+      case ReqType::HashTbl:	hashQuery(req); break;
+      case ReqType::Thread:	threadQuery(req); break;
+      case ReqType::Mx:		mxQuery(req); break;
+      case ReqType::Queue:	queueQuery(req); break;
+      case ReqType::Engine:	engineQuery(req); break;
+      case ReqType::DBEnv:	dbEnvQuery(req); break;
+      case ReqType::App:	appQuery(req); break;
+      case ReqType::Alert:	alertQuery(req); break;
+      default: break;
     }
     delete req;
   }

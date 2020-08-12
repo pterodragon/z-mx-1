@@ -231,8 +231,8 @@ friend MxMDVenue;
 		  ZmRBTreeHeapID<TickSizes_HeapID> > > > > TickSizes;
 
   struct IDAccessor : public ZuAccessor<MxMDTickSizeTbl *, MxIDString> {
-    ZuInline static const MxIDString &value(const MxMDTickSizeTbl *t) {
-      return t->id();
+    ZuInline static const MxIDString &value(const MxMDTickSizeTbl *tbl) {
+      return tbl->id();
     }
   };
 

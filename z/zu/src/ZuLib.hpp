@@ -249,7 +249,14 @@ template <typename T_> struct ZuMvCp {
 };
 
 // type list
-template <typename ...Args> struct ZuTypeList { };
+template <typename ...Args> struct ZuTypeList {
+  template <typename ...Args_> struct Append {
+    using T = ZuTypeList<Args..., Args_...>;
+  };
+  template <typename ...Args_> struct Append<ZuTypeList<Args_...>> {
+    using T = ZuTypeList<Args..., Args_...>;
+  };
+};
 
 // index -> type
 template <unsigned I, typename ...> struct ZuType;
@@ -288,6 +295,35 @@ template <typename T, typename O, typename ...Args>
 struct ZuTypeIndex<T, ZuTypeList<O, Args...>> {
   enum { I = 1 + ZuTypeIndex<T, Args...>::I };
 };
+
+// map
+template <template <typename> class, typename ...> struct ZuTypeMap;
+template <template <typename> class Map, typename T_>
+struct ZuTypeMap<Map, T_> {
+  using T = ZuTypeList<typename Map<T_>::T>;
+};
+template <template <typename> class Map, typename T_>
+struct ZuTypeMap<Map, ZuTypeList<T_>> {
+  using T = ZuTypeList<typename Map<T_>::T>;
+};
+template <template <typename> class Map, typename T_, typename ...Args>
+struct ZuTypeMap<Map, T_, Args...> {
+  using T =
+    typename ZuTypeList<typename Map<T_>::T>::template Append<
+      typename ZuTypeMap<Map, Args...>::T>::T;
+};
+template <template <typename> class Map, typename T_, typename ...Args>
+struct ZuTypeMap<Map, ZuTypeList<T_, Args...>> {
+  using T =
+    typename ZuTypeList<typename Map<T_>::T>::template Append<
+      typename ZuTypeMap<Map, Args...>::T>::T;
+};
+
+// apply typelist to template
+template <template <typename...> class Type, typename ...Args>
+struct ZuTypeApply { using T = Type<Args...>; };
+template <template <typename...> class Type, typename ...Args>
+struct ZuTypeApply<Type, ZuTypeList<Args...>> { using T = Type<Args...>; };
 
 // compile-time policy tag for intrusively shadowed (not owned) objects
 class ZuShadow { }; // tag

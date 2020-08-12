@@ -1101,6 +1101,9 @@ struct Alert : public ZvFieldTuple<Alert> {
   ZtString	message;
 
   static const ZvFields fields() noexcept;
+  using Key = decltype(seqNo);
+  const Key &key() const { return seqNo; }
+  static Key key(const fbs::Alert *alert_) { return alert_->seqNo(); }
 
   Zfb::Offset<fbs::Alert> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
@@ -1146,6 +1149,12 @@ namespace TelData {
       Heap, HashTbl, Thread, Mx, Socket, Queue, Engine, Link,
       DB, DBHost, DBEnv, App, Alert);
 }
+
+using TypeList = ZuTypeList<
+  Heap, HashTbl, Thread, Mx, Socket, Queue, Engine, Link,
+  DB, DBHost, DBEnv, App, Alert>;
+template <typename Data> struct KeyType { using T = typename Data::Key };
+using KeyTypeList = typename ZuTypeMap<KeyType, TypeList>::T;
 
 } // ZvTelemetry
 

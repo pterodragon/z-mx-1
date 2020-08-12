@@ -92,7 +92,7 @@ private:
   struct MatchPtr<U, R, true> { using T = R; };
 
 public:
-  ZuPtr() : m_object(0) { }
+  ZuPtr() : m_object(nullptr) { }
   ZuPtr(ZuPtr &&r) noexcept : m_object(r.m_object) {
     r.m_object = nullptr;
   }

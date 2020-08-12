@@ -643,6 +643,16 @@ public:
     gtk_tree_path_free(path);
   }
 
+  void updated(const Iter &iter) {
+    gint row = impl()->row(iter);
+    auto path = gtk_tree_path_new_from_indicesv(&row, 1);
+    GtkTreeIter iter_;
+    new (&iter_) Iter{iter};
+    // emit #GtkTreeModel::row-changed
+    gtk_tree_model_row_changed(GTK_TREE_MODEL(this), path, &iter_);
+    gtk_tree_path_free(path);
+  }
+
   void del(const Iter &iter) {
     gint row = impl()->row(iter);
     auto path = gtk_tree_path_new_from_indicesv(&row, 1);
@@ -677,6 +687,8 @@ namespace TreeNode {
   };
 
   template <unsigned Depth> class Child : public Row {
+    using Parent = Child<Depth - 1>;
+
   public:
     constexpr static unsigned depth() { return Depth; }
     void ascend(gint *indices) const {
@@ -684,10 +696,10 @@ namespace TreeNode {
       m_parent->ascend(indices);
     }
 
-    template <typename Parent> Parent *parent() const {
-      return reinterpret_cast<Parent *>(m_parent);
+    template <typename Parent_ = Parent> Parent_ *parent() const {
+      return static_cast<Parent_ *>(m_parent);
     }
-    void parent(Child<Depth - 1> *p) { m_parent = p; }
+    void parent(Parent *p) { m_parent = p; }
 
   private:
     Child<Depth - 1>	*m_parent = nullptr;
@@ -779,7 +791,7 @@ struct Impl : public TreeHierarchy<Impl, Iter> {
   template <typename Ptr> auto print(Ptr *ptr);	// used for column 0 values
 };
 #endif
-template <typename Impl, typename Iter, unsigned MaxDepth>
+template <typename Impl, typename Iter, unsigned Depth>
 class TreeHierarchy : public ZGtk::TreeModel<Impl> {
   ZuAssert(sizeof(Iter) <= sizeof(GtkTreeIter));
   ZuAssert(ZuTraits<Iter>::IsPOD);
@@ -791,8 +803,8 @@ public:
   GtkTreeModelFlags get_flags() {
     return static_cast<GtkTreeModelFlags>(GTK_TREE_MODEL_ITERS_PERSIST);
   }
-  gint get_n_columns() { return 1; }
-  GType get_column_type(gint i) { return G_TYPE_STRING; }
+  // gint get_n_columns() { return 1; }
+  // GType get_column_type(gint i) { return G_TYPE_STRING; }
   gboolean get_iter(GtkTreeIter *iter_, GtkTreePath *path) {
     gint depth = gtk_tree_path_get_depth(path);
     if (!depth) return false;
@@ -805,7 +817,7 @@ public:
   GtkTreePath *get_path(GtkTreeIter *iter_) {
     auto iter = reinterpret_cast<Iter *>(iter_);
     gint depth;
-    gint indices[MaxDepth + 1];
+    gint indices[Depth];
     iter->cdispatch([&depth, indices](auto ptr) {
       depth = ptr->depth();
       ptr->ascend(indices);
@@ -879,7 +891,7 @@ public:
   void add(Ptr *ptr, Parent *parent) {
     ptr->parent(parent);
     parent->add(ptr);
-    gint indices[MaxDepth + 1];
+    gint indices[Depth];
     gint depth = ptr->depth();
     ptr->ascend(indices);
     auto path = gtk_tree_path_new_from_indicesv(indices, depth + 1);
@@ -891,12 +903,25 @@ public:
   }
 
   template <typename Ptr>
-  void del(Ptr *ptr) {
-    gint indices[MaxDepth + 1];
+  void updated(Ptr *ptr) {
+    gint indices[Depth];
     gint depth = ptr->depth();
     ptr->ascend(indices);
     auto path = gtk_tree_path_new_from_indicesv(indices, depth + 1);
-    // emit #GtkTreeModel::row-deleted - invalidates iter_ators
+    GtkTreeIter iter_;
+    new (&iter_) Iter{ptr};
+    // emit #GtkTreeModel::row-changed
+    gtk_tree_model_row_changed(GTK_TREE_MODEL(this), path, &iter_);
+    gtk_tree_path_free(path);
+  }
+
+  template <typename Ptr>
+  void del(Ptr *ptr) {
+    gint indices[Depth];
+    gint depth = ptr->depth();
+    ptr->ascend(indices);
+    auto path = gtk_tree_path_new_from_indicesv(indices, depth + 1);
+    // emit #GtkTreeModel::row-deleted - invalidates iterators
     gtk_tree_model_row_deleted(GTK_TREE_MODEL(this), path);
     gtk_tree_path_free(path);
     Impl::parent(ptr)->del(ptr);

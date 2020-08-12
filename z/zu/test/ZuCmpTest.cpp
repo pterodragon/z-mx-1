@@ -402,7 +402,13 @@ int main()
     CHECK(c->v<double>() == 42.0);
     auto d = get<double>(*c);
     CHECK(d == 42.0);
+    *c = 42.0;
+    d = get<double>(*c);
+    CHECK(d == 42.0);
     c->~U();
+    new (c) U{42.0};
+    d = get<double>(*c);
+    CHECK(d == 42.0);
   }
 
   // structured binding smoke tests

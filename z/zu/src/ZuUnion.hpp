@@ -156,6 +156,8 @@ public:
   template <unsigned I> using Type = ZuType<I, Args...>;
   template <unsigned I> using Type_ = typename ZuDecay<Type<I>>::T;
   template <typename T> using Index = ZuTypeIndex<T, Args...>;
+  template <typename T> using Index_ =
+    ZuTypeIndex<T, typename ZuTypeMap<ZuDecay, Args...>::T>;
 
   Union() {
     using T0 = typename Type<0>::T;
@@ -223,6 +225,59 @@ public:
     this->~Union();
     this->type_(Index<T>::I);
     return m_u;
+  }
+
+private:
+  template <typename V, bool = ZuConversion<Union, V>::Is> struct Fwd_Ctor_ {
+    using T = typename Type<Index_<V>::I>::T;
+    static void ctor(Union *this_, V &&v) {
+      new (new_<T>(this_)) T{ZuMv(v)};
+    }
+    static void ctor(Union *this_, const V &v) {
+      new (new_<T>(this_)) T{v};
+    }
+  };
+  template <typename V> struct Fwd_Ctor_<V, true> {
+    static void ctor(Union *this_, V &&v) {
+      new (this_) Union{static_cast<Union &&>(v)};
+    }
+    static void ctor(Union *this_, const V &v) {
+      new (this_) Union{static_cast<const Union &>(v)};
+    }
+  };
+  template <typename V>
+  struct Fwd_Ctor : public Fwd_Ctor_<typename ZuDecay<V>::T> { };
+
+public:
+  template <typename V> Union(V &&v) {
+    Fwd_Ctor<V>::ctor(this, ZuFwd<V>(v));
+  }
+
+private:
+  template <typename V, bool = ZuConversion<Union, V>::Is> struct Fwd_Assign_ {
+    using T = typename Type<Index_<V>::I>::T;
+    static void assign(Union *this_, V &&v) {
+      new (this_->init<T>()) T{ZuMv(v)};
+    }
+    static void assign(Union *this_, const V &v) {
+      new (this_->init<T>()) T{v};
+    }
+  };
+  template <typename V> struct Fwd_Assign_<V, true> {
+    static void assign(Union *this_, V &&v) {
+      this_->operator =(static_cast<Union &&>(v));
+    }
+    static void assign(Union *this_, const V &v) {
+      this_->operator =(static_cast<const Union &>(v));
+    }
+  };
+  template <typename V>
+  struct Fwd_Assign : public Fwd_Assign_<typename ZuDecay<V>::T> { };
+
+public:
+  template <typename V> ZuInline Union &operator =(V &&v) {
+    Fwd_Assign<V>::assign(this, ZuFwd<V>(v));
+    return *this;
   }
 
   ZuInline unsigned type_(unsigned i) { return m_u[Size] = i; }

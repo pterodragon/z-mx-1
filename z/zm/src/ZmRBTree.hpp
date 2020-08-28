@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// red/black tree
+// red/black tree (policy-based)
 
 #ifndef ZmRBTree_HPP
 #define ZmRBTree_HPP

@@ -99,16 +99,18 @@ private:
 struct ZvIOMsg_HeapID {
   static constexpr const char *id() { return "ZvIOMsg"; }
 };
-using ZvIOQueue =
+using ZvIOQueue_ =
   ZmPQueue<ZvIOQItem,
     ZmPQueueNodeIsItem<true,
       ZmPQueueObject<ZmPolymorph,
 	ZmPQueueFn<ZvIOQFn,
 	  ZmPQueueLock<ZmNoLock,
-	    ZmPQueueHeapID<ZvIOMsg_HeapID,
-	      ZmPQueueBase<ZmObject> > > > > > >;
-using ZvIOMsg = ZvIOQueue::Node;
-using ZvIOQGap = ZvIOQueue::Gap;
+	    ZmPQueueHeapID<ZvIOMsg_HeapID> > > > > >;
+using ZvIOMsg = ZvIOQueue_::Node;
+using ZvIOQGap = ZvIOQueue_::Gap;
+struct ZvIOQueue : public ZmObject, public ZvIOQueue_ {
+  using ZvIOQueue_::ZvIOQueue_;
+};
 
 // ZvIOQueueRx - receive queue
 

@@ -192,6 +192,8 @@ template <unsigned N> struct SortTest {
   }
 };
 
+template <unsigned k_> struct K { enum { k = k_ }; };
+
 int main()
 {
   {
@@ -428,5 +430,11 @@ int main()
     ZuTuple<uint64_t, uint32_t, uint16_t> foo = { 1, 2, 3 };
     auto [a, b, c] = foo;
     CHECK(a == 1 && b == 2 && c == 3);
+  }
+
+  {
+    ZuConstant<1> i;
+    ZuConstant<i> j;
+    CHECK(K<j>::k == 1);
   }
 }

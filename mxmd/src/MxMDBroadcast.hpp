@@ -52,7 +52,7 @@ class MxMDAPI MxMDBroadcast {
 public:
   typedef MxMDStream::Hdr Hdr;
 
-  typedef ZiRing<Hdr, ZiRingBase<ZmObject> > Ring;
+  struct Ring : public ZmObject, public ZiRing<Hdr> { };
 
   MxMDBroadcast();
   ~MxMDBroadcast();

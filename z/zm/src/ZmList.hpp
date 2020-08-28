@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// intrusive double-linked list
+// intrusive policy-based double-linked list
 
 #ifndef ZmList_HPP
 #define ZmList_HPP

@@ -154,8 +154,8 @@ int App::main(int argc, char **argv)
 	r = ZmThread(0, ZmFn<>::Member<&App::reader>::fn(this));
       if (flags & Ring::Write)
 	w = ZmThread(0, ZmFn<>::Member<&App::writer>::fn(this));
-      if (!!r) r.join();
-      if (!!w) w.join();
+      if (r) r.join();
+      if (w) w.join();
     }
 
     start = end - start;

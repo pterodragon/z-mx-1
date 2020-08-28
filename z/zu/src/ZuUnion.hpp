@@ -216,9 +216,13 @@ public:
   }
 
   template <typename T>
+  ZuInline T *new_() {
+    this->type_(Index<T>::I);
+    return reinterpret_cast<T *>(&m_u[0]);
+  }
+  template <typename T>
   ZuInline static T *new_(void *ptr) {
-    reinterpret_cast<Union *>(ptr)->type_(Index<T>::I);
-    return reinterpret_cast<T *>(ptr);
+    return reinterpret_cast<Union *>(ptr)->new_<T>();
   }
 
   template <typename T> void *init() {

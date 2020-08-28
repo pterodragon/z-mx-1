@@ -68,12 +68,6 @@ template <unsigned N> struct MkSeq {
   using T = typename Unshift<typename MkSeq<N - 1>::T>::T;
 };
 
-template <unsigned I_> struct Constant {
-  enum { I = I_ };
-  constexpr operator unsigned() const noexcept { return I; }
-  constexpr unsigned operator()() const noexcept { return I; }
-};
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-value"
 template <typename R, typename Seq> struct Dispatch;
@@ -81,7 +75,7 @@ template <unsigned ...Case> struct Dispatch<void, Seq<Case...>> {
   template <typename L>
   static void fn(unsigned i, L l) {
     std::initializer_list<int>{
-      (i == Case ? l(Constant<Case>{}), 0 : 0)...
+      (i == Case ? l(ZuConstant<Case>{}), 0 : 0)...
     };
   }
 };
@@ -90,7 +84,7 @@ template <typename R, unsigned ...Case> struct Dispatch<R, Seq<Case...>> {
   static R fn(unsigned i, L l) {
     R r;
     std::initializer_list<int>{
-      (i == Case ? (r = l(Constant<Case>{})), 0 : 0)...
+      (i == Case ? (r = l(ZuConstant<Case>{})), 0 : 0)...
     };
     return r;
   }
@@ -99,14 +93,14 @@ template <typename R, unsigned ...Case> struct Dispatch<R, Seq<Case...>> {
 
 template <unsigned N, typename L>
 auto dispatch(unsigned i, L l) {
-  return Dispatch<decltype(l(Constant<0>{})), typename MkSeq<N>::T>::fn(
+  return Dispatch<decltype(l(ZuConstant<0>{})), typename MkSeq<N>::T>::fn(
       i, static_cast<L &&>(l));
 }
 
 template <unsigned N, typename L, typename D>
 auto dispatch(unsigned i, L l, D d) {
   if (ZuUnlikely(i >= N)) return d();
-  return Dispatch<decltype(l(Constant<0>{})), typename MkSeq<N>::T>::fn(
+  return Dispatch<decltype(l(ZuConstant<0>{})), typename MkSeq<N>::T>::fn(
       i, static_cast<L &&>(l));
 }
 

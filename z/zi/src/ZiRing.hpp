@@ -20,10 +20,11 @@
 // shared memory ring buffer IPC with broadcast fan-out to multiple readers
 // (up to 64)
 
-// Note: this is not conventional SPMC since every consumer processes
-// every message, i.e. every message is broadcast to all consumers;
-// SPMC conventionally means that each message is only processed once by a
-// single consumer, selected non-deterministically according to availability
+// Note: this is broadcast, not SPMC - every consumer processes every message,
+// i.e. every message is processed as many times as there are consumers;
+// with conventional SPMC, each message is processed once by a single
+// consumer selected from amongst the pool of all consumers, typically
+// selected non-deterministically by availability/readiness/priority
 
 // supports fixed- and variable length messages
 // messages are C/C++ POD types
@@ -212,22 +213,13 @@ private:
 
 // NTP (named template parameters):
 //
-// ZiRing<ZiRingMsg,			// ring of ZiRingMsg
-//   ZiRingBase<ZmObject> >		// base of ZmObject
+// ZiRing<ZiRingMsg>			// ring of ZiRingMsg
 
 // NTP defaults
-struct ZiRing_Defaults {
-  struct Base { };
-};
-
-// ZiRingBase - injection of a base class (e.g. ZmObject)
-template <class Base_, class NTP = ZiRing_Defaults>
-struct ZiRingBase : public NTP {
-  using Base = Base_;
-};
+struct ZiRing_Defaults { };
 
 template <typename T_, class NTP = ZiRing_Defaults>
-class ZiRing : public NTP::Base, public ZiRing_ {
+class ZiRing : public ZiRing_ {
   ZiRing(const ZiRing &) = delete;
   ZiRing &operator =(const ZiRing &) = delete;	// prevent mis-use
 
@@ -246,7 +238,6 @@ public:
 
   template <typename ...Args>
   ZiRing(const ZiRingParams &params, Args &&... args) :
-      NTP::Base{ZuFwd<Args>(args)...},
       ZiRing_(params), m_flags(0), m_id(-1), m_tail(0), m_full(0) { }
 
   ~ZiRing() { close(); }
@@ -279,8 +270,12 @@ private:
     ZmTime			rdrTime[64];
   };
 
-  ZuInline const Ctrl *ctrl() const { return (const Ctrl *)m_ctrl.addr(); }
-  ZuInline Ctrl *ctrl() { return (Ctrl *)m_ctrl.addr(); }
+  ZuInline const Ctrl *ctrl() const {
+    return reinterpret_cast<const Ctrl *>(m_ctrl.addr());
+  }
+  ZuInline Ctrl *ctrl() {
+    return reinterpret_cast<Ctrl *>(m_ctrl.addr());
+  }
 
   ZuInline const ZmAtomic<uint32_t> &head() const { return ctrl()->head; }
   ZuInline ZmAtomic<uint32_t> &head() { return ctrl()->head; }
@@ -318,7 +313,9 @@ public:
   ZuInline bool operator !() const { return !m_ctrl.addr(); }
   ZuOpBool;
 
-  ZuInline void *data() const { return m_data.addr(); }
+  ZuInline uint8_t *data() const {
+    return static_cast<uint8_t *>(m_data.addr());
+  }
 
   ZuInline unsigned full() const { return m_full; }
 
@@ -510,8 +507,8 @@ public:
       goto retry;
     }
 
-    uint8_t *ptr = &((uint8_t *)data())[head_];
-    *(uint64_t *)ptr = rdrMask;
+    uint8_t *ptr = &(data())[head_];
+    *reinterpret_cast<uint64_t *>(ptr) = rdrMask;
     return (void *)&ptr[8];
   }
   void push2() {
@@ -519,8 +516,8 @@ public:
     ZmAssert(m_flags & Write);
 
     uint32_t head = this->head().load_();
-    uint8_t *ptr = &((uint8_t *)data())[head & ~(Wrapped | Mask)];
-    uint32_t size_ = align(Traits::size(*(const T *)&ptr[8]));
+    uint8_t *ptr = &(data())[head & ~(Wrapped | Mask)];
+    uint32_t size_ = align(Traits::size(*reinterpret_cast<const T *>(&ptr[8])));
     head += size_;
     if ((head & ~(Wrapped | Mask)) >= size())
       head = (head ^ Wrapped) - size();
@@ -591,12 +588,13 @@ public:
     uint32_t tail = tail_ & ~Mask;
     uint32_t head = this->head().load_() & ~Mask;
     while (tail != head) {
-      uint8_t *ptr = &((uint8_t *)data())[tail & ~Wrapped];
-      uint32_t n = align(Traits::size(*(const T *)&ptr[8]));
+      uint8_t *ptr = &(data())[tail & ~Wrapped];
+      uint32_t n = align(Traits::size(*reinterpret_cast<const T *>(&ptr[8])));
       tail += n;
       if (ZuUnlikely((tail & ~Wrapped) >= size()))
 	tail = (tail ^ Wrapped) - size();
-      uint64_t mask = (*(ZmAtomic<uint64_t> *)ptr).xchAnd(~dead);
+      uint64_t mask =
+	(*reinterpret_cast<ZmAtomic<uint64_t> *>(ptr)).xchAnd(~dead);
       if (mask && !(mask & ~dead)) {
 	freed += n;
 	if (ZuUnlikely(!m_params.ll())) {
@@ -625,8 +623,8 @@ public:
     {
       uint32_t tail = this->tail() & ~Mask;
       if (tail == (this->head() & ~Mask)) return 0;
-      uint8_t *ptr = &((uint8_t *)data())[tail & ~Wrapped];
-      targets = *(ZmAtomic<uint64_t> *)ptr;
+      uint8_t *ptr = &(data())[tail & ~Wrapped];
+      targets = *reinterpret_cast<ZmAtomic<uint64_t> *>(ptr);
     }
     for (unsigned id = 0; id < 64; id++)
       if (targets & (1ULL<<id))
@@ -694,9 +692,10 @@ public:
     uint32_t head = this->head() & ~Mask, head_; // acquire
     do {
       while (tail != head) {
-	uint8_t *ptr = &((uint8_t *)data())[tail & ~Wrapped];
-	if ((*(uint64_t *)ptr) & (1ULL<<m_id)) goto done; // writer aware
-	tail += align(Traits::size(*(const T *)&ptr[8]));
+	uint8_t *ptr = &(data())[tail & ~Wrapped];
+	if (*reinterpret_cast<uint64_t *>(ptr) & (1ULL<<m_id))
+	  goto done; // writer aware
+	tail += align(Traits::size(*reinterpret_cast<const T *>(&ptr[8])));
 	if ((tail & ~Wrapped) >= size()) tail = (tail ^ Wrapped) - size();
       }
       head_ = head;
@@ -738,11 +737,13 @@ public:
     uint32_t head = this->head() & ~Mask, head_; // acquire
     do {
       while (tail != head) {
-	uint8_t *ptr = &((uint8_t *)data())[tail & ~Wrapped];
-	if (!((*(uint64_t *)ptr) & (1ULL<<m_id))) goto done; // writer aware
-	tail += align(Traits::size(*(const T *)&ptr[8]));
+	uint8_t *ptr = &(data())[tail & ~Wrapped];
+	if (!(*reinterpret_cast<uint64_t *>(ptr) & (1ULL<<m_id)))
+	  goto done; // writer aware
+	tail += align(Traits::size(*reinterpret_cast<const T *>(&ptr[8])));
 	if ((tail & ~Wrapped) >= size()) tail = (tail ^ Wrapped) - size();
-	if (*(ZmAtomic<uint64_t> *)ptr &= ~(1ULL<<m_id)) continue;
+	if (*reinterpret_cast<ZmAtomic<uint64_t> *>(ptr) &= ~(1ULL<<m_id))
+	  continue;
 	/**/ZiRing_bp(detach3);
 	if (ZuUnlikely(!m_params.ll())) {
 	  if (ZuUnlikely(this->tail().xch(tail) & Waiting))
@@ -789,8 +790,8 @@ public:
       goto retry;
     }
 
-    uint8_t *ptr = &((uint8_t *)data())[tail & ~Wrapped];
-    return (T *)&ptr[8];
+    uint8_t *ptr = &(data())[tail & ~Wrapped];
+    return reinterpret_cast<T *>(&ptr[8]);
   }
   void shift2() {
     ZmAssert(m_ctrl.addr());
@@ -798,12 +799,12 @@ public:
     ZmAssert(m_id >= 0);
 
     uint32_t tail = m_tail;
-    uint8_t *ptr = &((uint8_t *)data())[tail & ~Wrapped];
-    uint32_t size_ = align(Traits::size(*(const T *)&ptr[8]));
+    uint8_t *ptr = &(data())[tail & ~Wrapped];
+    uint32_t size_ = align(Traits::size(*reinterpret_cast<const T *>(&ptr[8])));
     tail += size_;
     if ((tail & ~Wrapped) >= size()) tail = (tail ^ Wrapped) - size();
     m_tail = tail;
-    if (*(ZmAtomic<uint64_t> *)ptr &= ~(1ULL<<m_id)) return;
+    if (*reinterpret_cast<ZmAtomic<uint64_t> *>(ptr) &= ~(1ULL<<m_id)) return;
     if (ZuUnlikely(!m_params.ll())) {
       if (ZuUnlikely(this->tail().xch(tail) & Waiting))
 	ZiRing_wake(Tail, this->tail(), 1);

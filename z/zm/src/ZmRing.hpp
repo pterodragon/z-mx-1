@@ -151,24 +151,15 @@ template <> struct ZuPrint<ZmRingError> : public ZuPrintFn { };
 
 // uses NTP (named template parameters):
 //
-// ZmRing<ZmFn<>			// ring of functions
-//   ZmRingBase<ZmObject> >		// reference-counted
+// ZmRing<ZmFn<> >			// ring of functions
 
 // NTP defaults
-struct ZmRing_Defaults {
-  struct Base { };
-};
-
-// ZmRingBase - injection of a base class (e.g. ZmObject)
-template <class Base_, class NTP = ZmRing_Defaults>
-struct ZmRingBase : public NTP {
-  using Base = Base_;
-};
+struct ZmRing_Defaults { };
 
 #define ZmRingAlign(x) (((x) + 8 + 15) & ~15)
 
 template <typename T_, class NTP = ZmRing_Defaults>
-class ZmRing : public NTP::Base, public ZmRing_ {
+class ZmRing : public ZmRing_ {
   ZmRing &operator =(const ZmRing &);	// prevent mis-use
 
 public:
@@ -186,7 +177,6 @@ public:
 
   template <typename ...Args>
   ZmRing(ZmRingParams params = ZmRingParams(0), Args &&... args) :
-      NTP::Base{ZuFwd<Args>(args)...},
       ZmRing_(params),
       m_flags(0), m_ctrl(0), m_data(0), m_full(0) { }
 
@@ -211,8 +201,12 @@ private:
     char			pad_4[CacheLineSize - 24];
   };
 
-  ZuInline const Ctrl *ctrl() const { return (const Ctrl *)m_ctrl; }
-  ZuInline Ctrl *ctrl() { return (Ctrl *)m_ctrl; }
+  ZuInline const Ctrl *ctrl() const {
+    return reinterpret_cast<const Ctrl *>(m_ctrl);
+  }
+  ZuInline Ctrl *ctrl() {
+    return reinterpret_cast<Ctrl *>(m_ctrl);
+  }
 
   ZuInline const ZmAtomic<uint32_t> &head() const { return ctrl()->head; }
   ZuInline ZmAtomic<uint32_t> &head() { return ctrl()->head; }
@@ -237,7 +231,7 @@ public:
   ZuInline bool operator !() const { return !m_ctrl; }
   ZuOpBool;
 
-  ZuInline void *data() const { return m_data; }
+  ZuInline uint8_t *data() const { return reinterpret_cast<uint8_t *>(m_data); }
 
   ZuInline unsigned full() const { return m_full; }
 
@@ -334,15 +328,15 @@ public:
     if (ZuUnlikely(this->head().cmpXch(head, head_) != head_))
       goto retry;
 
-    ZmAtomic<uint32_t> *ptr =
-      (ZmAtomic<uint32_t> *)&((uint8_t *)data())[head_ & ~(Wrapped | Mask)];
+    auto ptr = reinterpret_cast<ZmAtomic<uint32_t> *>(
+	&(data())[head_ & ~(Wrapped | Mask)]);
     return (void *)&ptr[2];
   }
   void push2(void *ptr_) {
     ZmAssert(m_ctrl);
     ZmAssert(m_flags & Write);
 
-    ZmAtomic<uint32_t> *ptr = &((ZmAtomic<uint32_t> *)ptr_)[-2];
+    auto ptr = &(reinterpret_cast<ZmAtomic<uint32_t> *>(ptr_))[-2];
 
     if (ZuUnlikely(!m_params.ll())) {
       if (ZuUnlikely(ptr->xch(Ready) & Waiting))
@@ -359,8 +353,8 @@ public:
     ZmAssert(m_flags & Write);
 
     uint32_t head = this->head().load_();
-    ZmAtomic<uint32_t> *ptr =
-      (ZmAtomic<uint32_t> *)&((uint8_t *)data())[head & ~(Wrapped | Mask)];
+    auto ptr = reinterpret_cast<ZmAtomic<uint32_t> *>(
+	&(data())[head & ~(Wrapped | Mask)]);
     if (!b) {
       *ptr = 0; // release
       this->head() = head & ~EndOfFile_; // release
@@ -400,8 +394,8 @@ public:
 
     uint32_t tail = this->tail().load_() & ~Mask;
   retry:
-    ZmAtomic<uint32_t> *ptr =
-      (ZmAtomic<uint32_t> *)&((uint8_t *)data())[tail & ~Wrapped];
+    auto ptr = reinterpret_cast<ZmAtomic<uint32_t> *>(
+	&(data())[tail & ~Wrapped]);
     uint32_t header = *ptr; // acquire
     if (!(header & ~Waiting)) {
       if (ZuUnlikely(!m_params.ll()))
@@ -439,8 +433,8 @@ public:
 
     uint32_t tail = this->tail().load_() & ~Mask;
     {
-      ZmAtomic<uint32_t> *ptr = (ZmAtomic<uint32_t> *)
-	&((uint8_t *)(const_cast<ZmRing *>(this)->data()))[tail & ~Wrapped];
+      auto ptr = reinterpret_cast<ZmAtomic<uint32_t> *>(
+	&(const_cast<ZmRing *>(this)->data())[tail & ~Wrapped]);
       if (ZuUnlikely(ptr->load_() & EndOfFile_)) return EndOfFile;
     }
     uint32_t head = const_cast<ZmRing *>(this)->head() & ~Mask; // acquire

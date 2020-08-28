@@ -37,9 +37,8 @@
 
 // NTP (named template parameters):
 //
-// ZmQueue<ZtString,				// keys are ZtStrings
-//   ZmQueueBase<ZmObject,			// base of ZmObject
-//     ZmQueueValCmp<ZtICmp> > >		// case-insensitive comparison
+// ZmQueue<ZtString,			// keys are ZtStrings
+//   ZmQueueValCmp<ZtICmp> >		// case-insensitive comparison
 
 // NTP defaults
 struct ZmQueue_Defaults {
@@ -51,7 +50,6 @@ struct ZmQueue_Defaults {
   template <typename T> struct IndexT { using Index = T; };
   using Lock = ZmLock;
   struct HeapID { static constexpr const char *id() { return "ZmQueue"; } };
-  struct Base { };
 };
 
 // ZmQueueID - define internal queue ID type (default: uint64_t)
@@ -122,14 +120,8 @@ struct ZmQueueHeapID : public NTP {
   using HeapID = HeapID_;
 };
 
-// ZmQueueBase - injection of a base class (e.g. ZmObject)
-template <class Base_, class NTP = ZmQueue_Defaults>
-struct ZmQueueBase : public NTP {
-  using Base = Base_;
-};
-
 template <typename Key, class NTP = ZmQueue_Defaults>
-class ZmQueue : public NTP::Base {
+class ZmQueue {
   ZmQueue(const ZmQueue &);
   ZmQueue &operator =(const ZmQueue &);	// prevent mis-use
 
@@ -168,7 +160,6 @@ public:
 
   template <typename ...Args>
   ZmQueue(ID initialID, const ZmHashParams &params, Args &&... args) :
-      NTP::Base{ZuFwd<Args>(args)...},
       m_head(initialID), m_tail(initialID) {
     m_key2id = new Key2ID(params);
     m_id2key = new ID2Key(params);

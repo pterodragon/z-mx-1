@@ -260,13 +260,13 @@ template <typename ...Args> struct ZuTypeList {
 
 // index -> type
 template <unsigned I, typename ...> struct ZuType;
-template <typename T_, typename ...Args>
-struct ZuType<0, T_, Args...> {
-  using T = T_;
+template <typename T0, typename ...Args>
+struct ZuType<0, T0, Args...> {
+  using T = T0;
 };
-template <typename T_, typename ...Args>
-struct ZuType<0, ZuTypeList<T_, Args...>> {
-  using T = T_;
+template <typename T0, typename ...Args>
+struct ZuType<0, ZuTypeList<T0, Args...>> {
+  using T = T0;
 };
 template <unsigned I, typename O, typename ...Args>
 struct ZuType<I, O, Args...> {
@@ -298,25 +298,59 @@ struct ZuTypeIndex<T, ZuTypeList<O, Args...>> {
 
 // map
 template <template <typename> class, typename ...> struct ZuTypeMap;
-template <template <typename> class Map, typename T_>
-struct ZuTypeMap<Map, T_> {
-  using T = ZuTypeList<typename Map<T_>::T>;
+template <template <typename> class Map, typename T0>
+struct ZuTypeMap<Map, T0> {
+  using T = ZuTypeList<typename Map<T0>::T>;
 };
-template <template <typename> class Map, typename T_>
-struct ZuTypeMap<Map, ZuTypeList<T_>> {
-  using T = ZuTypeList<typename Map<T_>::T>;
+template <template <typename> class Map, typename T0>
+struct ZuTypeMap<Map, ZuTypeList<T0>> {
+  using T = ZuTypeList<typename Map<T0>::T>;
 };
-template <template <typename> class Map, typename T_, typename ...Args>
-struct ZuTypeMap<Map, T_, Args...> {
+template <template <typename> class Map, typename T0, typename ...Args>
+struct ZuTypeMap<Map, T0, Args...> {
   using T =
-    typename ZuTypeList<typename Map<T_>::T>::template Append<
+    typename ZuTypeList<typename Map<T0>::T>::template Append<
       typename ZuTypeMap<Map, Args...>::T>::T;
 };
-template <template <typename> class Map, typename T_, typename ...Args>
-struct ZuTypeMap<Map, ZuTypeList<T_, Args...>> {
+template <template <typename> class Map, typename T0, typename ...Args>
+struct ZuTypeMap<Map, ZuTypeList<T0, Args...>> {
   using T =
-    typename ZuTypeList<typename Map<T_>::T>::template Append<
+    typename ZuTypeList<typename Map<T0>::T>::template Append<
       typename ZuTypeMap<Map, Args...>::T>::T;
+};
+
+// reduce (recursive pair-wise reduction)
+template <template <typename...> class, typename ...>
+struct ZuTypeReduce;
+template <template <typename...> class Reduce, typename T0>
+struct ZuTypeReduce<Reduce, T0> {
+  using T = typename Reduce<T0>::T;
+};
+template <template <typename...> class Reduce, typename T0>
+struct ZuTypeReduce<Reduce, ZuTypeList<T0>> {
+  using T = typename Reduce<T0>::T;
+};
+template <template <typename...> class Reduce, typename T0, typename T1>
+struct ZuTypeReduce<Reduce, T0, T1> {
+  using T = typename Reduce<T0, T1>::T;
+};
+template <template <typename...> class Reduce, typename T0, typename T1>
+struct ZuTypeReduce<Reduce, ZuTypeList<T0, T1>> {
+  using T = typename Reduce<T0, T1>::T;
+};
+template <
+  template <typename...> class Reduce,
+  typename T0, typename T1, typename ...Args>
+struct ZuTypeReduce<Reduce, T0, T1, Args...> {
+  using T =
+    typename Reduce<T0, typename ZuTypeReduce<Reduce, T1, Args...>::T>::T;
+};
+template <
+  template <typename...> class Reduce,
+  typename T0, typename T1, typename ...Args>
+struct ZuTypeReduce<Reduce, ZuTypeList<T0, T1, Args...>> {
+  using T =
+    typename Reduce<T0, typename ZuTypeReduce<Reduce, T1, Args...>::T>::T;
 };
 
 // apply typelist to template
@@ -327,5 +361,12 @@ struct ZuTypeApply<Type, ZuTypeList<Args...>> { using T = Type<Args...>; };
 
 // compile-time policy tag for intrusively shadowed (not owned) objects
 class ZuShadow { }; // tag
+
+// constexpr instantiable numeric constant
+template <unsigned I_> struct ZuConstant {
+  enum { I = I_ };
+  constexpr operator unsigned() const noexcept { return I; }
+  constexpr unsigned operator()() const noexcept { return I; }
+};
 
 #endif /* ZuLib_HPP */

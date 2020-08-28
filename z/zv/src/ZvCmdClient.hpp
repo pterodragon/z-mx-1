@@ -330,12 +330,7 @@ private:
 	  fn(reqAck);
       } break;
       case ZvCmd::fbs::MsgType_Telemetry: {
-	using namespace ZvTelemetry;
-	{
-	  Verifier verifier(data, len);
-	  if (!fbs::VerifyTelemetryBuffer(verifier)) return -1;
-	}
-	int i = impl()->processTel(fbs::GetTelemetry(data));
+	int i = impl()->processTel(ZuArray<const uint8_t>(data, len));
 	if (ZuUnlikely(i < 0)) return -1;
       } break;
       case ZvCmd::fbs::MsgType_App: {

@@ -36,13 +36,13 @@ int ZmRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
   if (addr.cmpXch(val | Waiting, val) != val) return OK;
   val |= Waiting;
   if (ZuUnlikely(params().timeout())) {
-    ZmTime out(ZmTime::Now, (int)params().timeout());
+    ZmTime out(ZmTime::Now, static_cast<int>(params().timeout()));
     unsigned i = 0, n = params().spin();
     do {
       if (ZuUnlikely(i >= n)) {
-	if (syscall(SYS_futex, (volatile int *)&addr,
+	if (syscall(SYS_futex, reinterpret_cast<volatile int *>(&addr),
 	      FUTEX_WAIT_BITSET | FUTEX_PRIVATE_FLAG | FUTEX_CLOCK_REALTIME,
-	      (int)val, &out, 0, FUTEX_BITSET_MATCH_ANY) < 0) {
+	      static_cast<int>(val), &out, 0, FUTEX_BITSET_MATCH_ANY) < 0) {
 	  if (errno == ETIMEDOUT) return NotReady;
 	  if (errno == EAGAIN) return OK;
 	}
@@ -54,8 +54,8 @@ int ZmRing_::wait(ZmAtomic<uint32_t> &addr, uint32_t val)
     unsigned i = 0, n = params().spin();
     do {
       if (ZuUnlikely(i >= n)) {
-	syscall(SYS_futex, (volatile int *)&addr,
-	    FUTEX_WAIT | FUTEX_PRIVATE_FLAG, (int)val, 0, 0, 0);
+	syscall(SYS_futex, reinterpret_cast<volatile int *>(&addr),
+	    FUTEX_WAIT | FUTEX_PRIVATE_FLAG, static_cast<int>(val), 0, 0, 0);
 	i = 0;
       } else
 	++i;
@@ -68,7 +68,7 @@ int ZmRing_::wake(ZmAtomic<uint32_t> &addr, int n)
 {
   // fprintf(stderr, "WAKE addr: %#.8x (%#.8x) n:%u\n", (unsigned)(uintptr_t)(void *)&addr, (unsigned)addr.load_(), (unsigned)n);
   addr &= ~Waiting;
-  syscall(SYS_futex, (volatile int *)&addr,
+  syscall(SYS_futex, reinterpret_cast<volatile int *>(&addr),
       FUTEX_WAKE | FUTEX_PRIVATE_FLAG, n, 0, 0, 0);
   return OK;
 }
@@ -108,7 +108,7 @@ int ZmRing_::wait(unsigned index, ZmAtomic<uint32_t> &addr, uint32_t val)
   do {
     if (ZuUnlikely(i >= n)) {
       DWORD r = WaitForSingleObject(m_sem[index], timeout);
-      switch ((int)r) {
+      switch (static_cast<int>(r)) {
 	case WAIT_OBJECT_0:	return OK;
 	case WAIT_TIMEOUT:	return NotReady;
 	default:		return Error;

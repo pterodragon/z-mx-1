@@ -227,7 +227,7 @@ public:
     int processApp(ZuArray<const uint8_t> data) {
       return this->app()->processApp(data);
     }
-    int processTel(const ZvTelemetry::fbs::Telemetry *data) {
+    int processTel(ZuArray<const uint8_t> data) {
       return this->app()->processTel(data);
     }
   };
@@ -313,17 +313,22 @@ private:
   }
 
   enum {
-    ReqTypeN = ZvTelemetry::ReqType::N - ZvTelemetry::ReqType::MIN,
-    TelDataN = ZvTelemetry::TelData::N - ZvTelemetry::TelData::MIN
+    ReqTypeN = ZvTelemetry::ReqType::N,
+    TelDataN = ZvTelemetry::TelData::N
   };
 
-  int processTel(const ZvTelemetry::fbs::Telemetry *data) {
+  int processTel(ZuArray<const uint8_t> data) {
     using namespace ZvTelemetry;
-    int i = data->data_type();
+    {
+      flatbuffers::Verifier verifier(data.data(), data.length());
+      if (!fbs::VerifyTelemetryBuffer(verifier)) return -1;
+    }
+    auto msg = fbs::GetTelemetry(data);
+    int i = msg->data_type();
     if (ZuUnlikely(i < TelData::MIN)) return 0;
     i -= TelData::MIN;
     if (ZuUnlikely(i >= TelDataN)) return 0;
-    m_telcap[i](data->data());
+    m_telcap[i](msg->data());
     return 0;
   }
 
@@ -1325,59 +1330,59 @@ private:
 	  switch (types[i]) {
 	    case ReqType::Heap:
 	      m_telcap[TelData::Heap - TelData::MIN] =
-		TelCap::keyedFn<Heap_load, fbs::Heap>(
+		TelCap::keyedFn<load<Heap>, fbs::Heap>(
 		    ZiFile::append(dir, "heap.csv"));
 	      break;
 	    case ReqType::HashTbl:
 	      m_telcap[TelData::HashTbl - TelData::MIN] =
-		TelCap::keyedFn<HashTbl_load, fbs::HashTbl>(
+		TelCap::keyedFn<load<HashTbl>, fbs::HashTbl>(
 		    ZiFile::append(dir, "hash.csv"));
 	      break;
 	    case ReqType::Thread:
 	      m_telcap[TelData::Thread - TelData::MIN] =
-		TelCap::keyedFn<Thread_load, fbs::Thread>(
+		TelCap::keyedFn<load<Thread>, fbs::Thread>(
 		    ZiFile::append(dir, "thread.csv"));
 	      break;
 	    case ReqType::Mx:
 	      m_telcap[TelData::Mx - TelData::MIN] =
-		TelCap::keyedFn<Mx_load, fbs::Mx>(
+		TelCap::keyedFn<load<Mx>, fbs::Mx>(
 		    ZiFile::append(dir, "mx.csv"));
 	      m_telcap[TelData::Socket - TelData::MIN] =
-		TelCap::keyedFn<Socket_load, fbs::Socket>(
+		TelCap::keyedFn<load<Socket>, fbs::Socket>(
 		    ZiFile::append(dir, "socket.csv"));
 	      break;
 	    case ReqType::Queue:
 	      m_telcap[TelData::Queue - TelData::MIN] =
-		TelCap::keyedFn<Queue_load, fbs::Queue>(
+		TelCap::keyedFn<load<Queue>, fbs::Queue>(
 		    ZiFile::append(dir, "queue.csv"));
 	      break;
 	    case ReqType::Engine:
 	      m_telcap[TelData::Engine - TelData::MIN] =
-		TelCap::keyedFn<Engine_load, fbs::Engine>(
+		TelCap::keyedFn<load<ZvTelemetry::Engine>, fbs::Engine>(
 		    ZiFile::append(dir, "engine.csv"));
 	      m_telcap[TelData::Link - TelData::MIN] =
-		TelCap::keyedFn<Link_load, fbs::Link>(
+		TelCap::keyedFn<load<ZvTelemetry::Link>, fbs::Link>(
 		    ZiFile::append(dir, "link.csv"));
 	      break;
 	    case ReqType::DBEnv:
 	      m_telcap[TelData::DBEnv - TelData::MIN] =
-		TelCap::singletonFn<DBEnv_load, fbs::DBEnv>(
+		TelCap::singletonFn<load<DBEnv>, fbs::DBEnv>(
 		    ZiFile::append(dir, "dbenv.csv"));
 	      m_telcap[TelData::DBHost - TelData::MIN] =
-		TelCap::keyedFn<DBHost_load, fbs::DBHost>(
+		TelCap::keyedFn<load<DBHost>, fbs::DBHost>(
 		    ZiFile::append(dir, "dbhost.csv"));
 	      m_telcap[TelData::DB - TelData::MIN] =
-		TelCap::keyedFn<DB_load, fbs::DB>(
+		TelCap::keyedFn<load<DB>, fbs::DB>(
 		    ZiFile::append(dir, "db.csv"));
 	      break;
 	    case ReqType::App:
 	      m_telcap[TelData::App - TelData::MIN] =
-		TelCap::singletonFn<App_load, fbs::App>(
+		TelCap::singletonFn<load<ZvTelemetry::App>, fbs::App>(
 		    ZiFile::append(dir, "app.csv"));
 	      break;
 	    case ReqType::Alert:
 	      m_telcap[TelData::Alert - TelData::MIN] =
-		TelCap::alertFn<Alert_load, fbs::Alert>(
+		TelCap::alertFn<load<Alert>, fbs::Alert>(
 		    ZiFile::append(dir, "alert.csv"));
 	      break;
 	  }

@@ -342,18 +342,20 @@ namespace Load {
     return Map::instance()->s2v(s); \
   }
 #define ZfbEnum_Type(T) fbs::T
-#define ZfbEnum_Assert(T) ZuAssert(T == TypeIndex<fbs::T>::I);
+#define ZfbEnum_Assert(T) \
+  ZuAssert(static_cast<int>(T) == static_cast<int>(TypeIndex<fbs::T>::I));
 #define ZfbEnumUnion(Enum, First_, ...) \
   ZfbEnumValues(Enum, First_, __VA_ARGS__) \
   enum { First = First_ }; \
   using TypeList = ZuTypeList< \
     ZuPP_Eval(ZuPP_MapComma(ZfbEnum_Type, First_, __VA_ARGS__))>; \
   template <unsigned I> \
-  using Type = ZuType<I - First, TypeList>; \
+  using Type = typename ZuType<I - First, TypeList>::T; \
   template <typename T> \
   struct TypeIndex { enum { I = ZuTypeIndex<T, TypeList>::I + First }; }; \
   ZuPP_Eval(ZuPP_Map(ZfbEnum_Assert, First_, __VA_ARGS__)) \
-  ZuAssert(First == TypeIndex<typename Type<First>::T>::I); \
-  ZuAssert(MAX == TypeIndex<typename Type<MAX>::T>::I);
+  ZuAssert( \
+    static_cast<int>(First) == static_cast<int>(TypeIndex<Type<First>>::I)); \
+  ZuAssert(static_cast<int>(MAX) == static_cast<int>(TypeIndex<Type<MAX>>::I));
 
 #endif /* Zfb_HPP */

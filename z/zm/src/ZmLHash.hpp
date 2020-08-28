@@ -17,13 +17,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// open addressing, linear probing, fast chained lookup, globally locked
+// hash table (policy-based)
+//
+// open addressing, linear probing, fast chained lookup, optionally locked
 //
 // nodes are stored by value - avoids run-time heap usage and improves
 // cache coherence (except during initialization/resizing)
 //
-// ZmHash is better for high-contention high-throughput read/write data
-// ZmLHash is better for unlocked or mostly uncontended reference data
+// use ZmHash for high-contention high-throughput read/write data
+// use ZmLHash for unlocked or mostly uncontended reference data
 
 #ifndef ZmLHash_HPP
 #define ZmLHash_HPP

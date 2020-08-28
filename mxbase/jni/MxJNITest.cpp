@@ -71,7 +71,7 @@ private:
   ZtString	m_text;
 };
 
-typedef ZmRing<Msg, ZmRingBase<ZmObject> > Ring;
+struct Ring : public ZmObject, public ZmRing<Msg> { };
 
 static ZmRef<Ring> ring;
 

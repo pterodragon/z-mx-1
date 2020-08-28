@@ -71,8 +71,7 @@ private:
 // uses NTP (named template parameters):
 //
 // ZmDRing<ZtString,			// ring of ZtStrings
-//   ZmDRingBase<ZmObject,		// base of ZmObject
-//      ZmDRingCmp<ZtICmp> > >		// case-insensitive comparison
+//   ZmDRingCmp<ZtICmp> >		// case-insensitive comparison
 
 struct ZmDRing_Defaults {
   template <typename T> struct OpsT { using Ops = ZuArrayFn<T>; };
@@ -80,7 +79,6 @@ struct ZmDRing_Defaults {
   template <typename T> struct ICmpT { using ICmp = ZuCmp<T>; };
   template <typename T> struct IndexT { using Index = T; };
   using Lock = ZmLock;
-  struct Base { };
 };
 
 template <class Cmp_, class NTP = ZmDRing_Defaults>
@@ -116,11 +114,6 @@ struct ZmDRingLock : public NTP {
   using Lock = Lock_;
 };
 
-template <class Base_, class NTP = ZmDRing_Defaults>
-struct ZmDRingBase : public NTP {
-  using Base = Base_;
-};
-
 // only provide delPtr and findPtr methods to callers of unlocked ZmDRings
 // since they are intrinsically not thread-safe
 
@@ -147,7 +140,6 @@ struct ZmDRing_Base<Ring, ZmNoLock> : public ZmDRing_Unlocked<Ring> { };
 // derives from Ops so that a ZmDRing includes an *instance* of Ops
 
 template <typename Val, class NTP = ZmDRing_Defaults> class ZmDRing :
-    public NTP::Base,
     public ZmDRing_Base<ZmDRing<Val, NTP>, typename NTP::Lock>,
     public NTP::template OpsT<Val>::Ops {
   ZmDRing(const ZmDRing &);
@@ -166,7 +158,6 @@ public:
 
   template <typename ...Args>
   ZmDRing(ZmDRingParams params = ZmDRingParams(), Args &&... args) :
-      NTP::Base{ZuFwd<Args>(args)...},
       m_data(0), m_offset(0), m_size(0), m_length(0), m_count(0),
       m_initial(params.initial()), m_increment(params.increment()),
       m_defrag(1.0 - (double)params.maxFrag() / 100.0) { }

@@ -77,8 +77,7 @@ private:
 // uses NTP (named template parameters):
 //
 // ZmStack<ZtString>			// stack of ZtStrings
-//   ZmStackBase<ZmObject,		// base of ZmObject
-//      ZmStackCmp<ZtICmp> > >		// case-insensitive comparison
+//    ZmStackCmp<ZtICmp> >		// case-insensitive comparison
 
 struct ZmStack_Defaults {
   template <typename T> struct OpsT { using Ops = ZuArrayFn<T>; };
@@ -86,7 +85,6 @@ struct ZmStack_Defaults {
   template <typename T> struct ICmpT { using ICmp = ZuCmp<T>; };
   template <typename T> struct IndexT { using Index = T; };
   using Lock = ZmLock;
-  struct Base { };
 };
 
 template <class Cmp_, class NTP = ZmStack_Defaults>
@@ -118,11 +116,6 @@ struct ZmStackLock : public NTP {
   using Lock = Lock_;
 };
 
-template <class Base_, class NTP = ZmStack_Defaults>
-struct ZmStackBase : public NTP {
-  using Base = Base_;
-};
-
 // only provide delPtr and findPtr methods to callers of unlocked ZmStacks
 // since they are intrinsically not thread-safe
 
@@ -149,7 +142,6 @@ struct ZmStack_Base<Stack, ZmNoLock> : public ZmStack_Unlocked<Stack> { };
 // derives from Ops so that a ZmStack includes an *instance* of Ops
 
 template <typename Val, class NTP = ZmStack_Defaults> class ZmStack :
-    public NTP::Base,
     public ZmStack_Base<ZmStack<Val, NTP>, typename NTP::Lock>,
     public NTP::template OpsT<Val>::Ops {
   ZmStack(const ZmStack &);
@@ -169,7 +161,6 @@ public:
 
   template <typename ...Args>
   ZmStack(ZmStackParams params = ZmStackParams(), Args &&... args) :
-      NTP::Base{ZuFwd<Args>(args)...},
       m_data(0), m_size(0), m_length(0), m_count(0),
       m_initial(params.initial()),
       m_increment(params.increment()),

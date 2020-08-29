@@ -495,8 +495,8 @@ public:
     uint32_t head_ = head & ~(Wrapped | Mask);
     uint32_t tail_ = tail & ~(Wrapped | Mask);
     if (ZuUnlikely((head_ < tail_ ?
-	(head_ + size > tail_) :
-	(head_ + size > tail_ + this->size())))) {
+	(head_ + size >= tail_) :
+	(head_ + size >= tail_ + this->size())))) {
       int j = gc();
       if (ZuUnlikely(j < 0)) return 0;
       if (ZuUnlikely(j > 0)) goto retry;
@@ -677,19 +677,18 @@ public:
     ++(this->attSeqNo());
 
     getpinfo(rdrPID()[m_id], rdrTime()[m_id]);
+
     /**/ZiRing_bp(attach1);
-#ifndef ZiRing_FUNCTEST
-    rdrMask() |= (1ULL<<m_id); // notifies the writer about an attach
-#endif
 
     // skip any trailing messages not intended for us, since other readers
     // may be concurrently advancing the ring's tail; this must be
     // re-attempted as long as the head keeps moving and the writer remains
     // unaware of our attach
-    /**/ZiRing_bp(attach2);
     uint32_t tail = this->tail().load_() & ~Mask;
-    /**/ZiRing_bp(attach3);
     uint32_t head = this->head() & ~Mask, head_; // acquire
+    /**/ZiRing_bp(attach2);
+    rdrMask() |= (1ULL<<m_id); // notifies the writer about an attach
+    /**/ZiRing_bp(attach3);
     do {
       while (tail != head) {
 	uint8_t *ptr = &(data())[tail & ~Wrapped];
@@ -700,9 +699,6 @@ public:
       }
       head_ = head;
       /**/ZiRing_bp(attach4);
-#ifdef ZiRing_FUNCTEST
-      rdrMask() |= (1ULL<<m_id); // deferred notification for functional testing
-#endif
       head = this->head() & ~Mask; // acquire
     } while (head != head_);
 
@@ -722,10 +718,7 @@ public:
 
     ++(this->attSeqNo());
 
-#ifndef ZiRing_FUNCTEST
     rdrMask() &= ~(1ULL<<m_id); // notifies the writer about a detach
-#endif
-
     /**/ZiRing_bp(detach1);
  
     // drain any trailing messages that are waiting to be read by us,
@@ -753,9 +746,6 @@ public:
       }
       head_ = head;
       /**/ZiRing_bp(detach4);
-#ifdef ZiRing_FUNCTEST
-      rdrMask() &= ~(1ULL<<m_id); // deferred notification for func. testing
-#endif
       head = this->head() & ~Mask; // acquire
     } while (head != head_);
   done:
@@ -822,9 +812,10 @@ public:
 
     if (ZuUnlikely(!m_ctrl.addr())) return Zi::IOError;
     uint32_t head = this->head();
-    if (ZuUnlikely(head & EndOfFile)) return Zi::EndOfFile;
-    head &= ~Mask;
     uint32_t tail = m_tail;
+    bool eof = head & EndOfFile;
+    head &= ~Mask;
+    if (ZuUnlikely(eof && tail == head)) return Zi::EndOfFile;
     if ((head ^ tail) == Wrapped) return size();
     head &= ~Wrapped;
     tail &= ~Wrapped;

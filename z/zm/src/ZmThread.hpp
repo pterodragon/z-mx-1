@@ -348,8 +348,6 @@ public:
 
   ZmRef<Context> context() { return m_context; }
 
-  ZuInline operator ID() const { return tid(); }
-
   ZuInline ID tid() const {
     if (!m_context) return 0;
     return m_context->tid();

@@ -202,10 +202,10 @@ private:
   };
 
   ZuInline const Ctrl *ctrl() const {
-    return reinterpret_cast<const Ctrl *>(m_ctrl);
+    return static_cast<const Ctrl *>(m_ctrl);
   }
   ZuInline Ctrl *ctrl() {
-    return reinterpret_cast<Ctrl *>(m_ctrl);
+    return static_cast<Ctrl *>(m_ctrl);
   }
 
   ZuInline const ZmAtomic<uint32_t> &head() const { return ctrl()->head; }

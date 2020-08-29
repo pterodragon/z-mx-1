@@ -339,15 +339,27 @@ int main(int argc, char **argv)
 
   // test push with concurrent attach
   check(synchronous(0, Attach()) == Zi::OK);
-  asynchronous(1, Attach(), attach4);
+  asynchronous(1, Attach(), attach2);
   check(synchronous(2, Push(size1)) > 0);
   asynchronous(0, Shift(), shift1);
   synchronous(2, Push2());
   proceed(0, shift1);
-  proceed(1, attach4);
+  proceed(1, attach2);
   check(result(0) == size1);
   check(result(1) == Zi::OK);
   synchronous(0, Shift2());
+
+  // test push with concurrent attach (2)
+  check(synchronous(0, Detach()) == Zi::OK);
+  asynchronous(0, Attach(), attach4);
+  check(synchronous(2, Push(size1)) > 0);
+  synchronous(2, Push2());
+  proceed(0, attach4);
+  check(result(0) == Zi::OK);
+  check(synchronous(0, Shift()) == size1);
+  synchronous(0, Shift2());
+  check(synchronous(1, Shift()) == size1);
+  synchronous(1, Shift2());
 
   // test push with concurrent dual shift
   check(synchronous(2, Push(size2)) > 0);

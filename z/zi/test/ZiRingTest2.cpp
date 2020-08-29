@@ -176,37 +176,41 @@ int App::main(int argc, char **argv)
 
 void App::reader()
 {
-  std::cerr << "reader started\n";
+  std::cerr << (ZuStringN<80>{} << "reader " << ZmPlatform::getTID() << " started\n") << std::flush;
   if (!gc) {
     ring->attach();
     std::cerr << "reader attached\n";
   }
   if (!(flags & Ring::Write)) start.now();
-  for (unsigned j = 0; j < count; j++) {
+  for (int j = 0; j < count; j++) {
     if (gc) {
       ring->attach();
       ring->detach();
       continue;
     }
     if (const ZiRingMsg *msg = ring->shift()) {
-      // std::cerr << "shift: " << ZuBoxPtr(msg).hex() << " len: " << ZuBoxed(sizeof(ZiRingMsg) + msg->length()) << '\n';
+      // std::cerr << (ZuStringN<80>{} << "shift: " << ZuBoxPtr(msg).hex() << " len: " << ZuBoxed(sizeof(ZiRingMsg) + msg->length()) << '\n') << std::flush;
       // for (unsigned i = 0, n = msg->length(); i < n; i++) assert(((const char *)(msg->ptr()))[i] == (char)(i & 0xff));
       // std::cerr << "msg read\n";
       ring->shift2();
     } else {
+      ZuStringN<80> s;
+      s << "reader count " << j << ' ';
       int i = ring->readStatus();
       if (i == Zi::EndOfFile)
-	std::cerr << "EOF\n";
+	s << "EOF\n";
       else if (!i)
-	std::cerr << "ring empty\n";
+	s << "ring empty\n";
       else
-	std::cerr << "readStatus() returned " << ZuBoxed(i) << '\n';
+	s << "readStatus() returned " << ZuBoxed(i) << '\n';
+      std::cerr << s << std::flush;
       ZmPlatform::sleep(.1);
       --j;
       continue;
     }
     if (slow && !!interval) ZmPlatform::sleep(interval);
   }
+  std::cerr << (ZuStringN<80>{} << "reader count " << count << " completed\n") << std::flush;
   end.now();
   if (!gc) ring->detach();
 }
@@ -214,9 +218,9 @@ void App::reader()
 void App::writer()
 {
   unsigned full = 0;
-  std::cerr << "writer started\n";
+  std::cerr << (ZuStringN<80>{} << "writer " << ZmPlatform::getTID() << " started\n") << std::flush;
   start.now();
-  for (unsigned j = 0; j < count; j++) {
+  for (int j = 0; j < count; j++) {
     if (gc) {
       ring->gc();
       // int i = ring->gc();
@@ -224,32 +228,36 @@ void App::writer()
       continue;
     }
     if (void *ptr = ring->push(msgsize)) {
-      // std::cerr << "push: " << ZuBoxPtr(ptr).hex() << " len: " << ZuBoxed(msgsize) << '\n';
+      // std::cerr << (ZuStringN<80>{} << "push: " << ZuBoxPtr(ptr).hex() << " len: " << ZuBoxed(msgsize) << '\n') << std::flush;
       ZiRingMsg *msg = new (ptr) ZiRingMsg(0, msgsize - sizeof(ZiRingMsg));
       // for (unsigned i = 0, n = msg->length(); i < n; i++) ((char *)(msg->ptr()))[i] = (char)(i & 0xff);
       // std::cerr << "msg written\n";
       ring->push2();
     } else {
+      ZuStringN<80> s;
+      s << "writer count " << j << ' ';
       int i = ring->writeStatus();
       if (i == Zi::EndOfFile)
-	std::cerr << "writer EOF\n";
+	s << "EOF\n";
       else if (i == Zi::IOError)
-	std::cerr << "writer I/O Error\n";
+	s << "I/O Error\n";
       else if (i == Zi::NotReady)
-	std::cerr << "writer Not Ready - no readers\n";
+	s << "Not Ready - no readers\n";
       else if (i > (int)msgsize)
-	std::cerr << "writer OK!\n";
+	s << "OK!\n";
       else {
-	std::cerr << "Ring Full\n";
+	s << "Ring Full\n";
 	++full;
       }
+      std::cerr << s << std::flush;
       ZmPlatform::sleep(.1);
       --j;
       continue;
     }
     if (!!interval) ZmPlatform::sleep(interval);
   }
+  std::cerr << (ZuStringN<80>{} << "writer count " << count << " completed\n") << std::flush;
   if (!(flags & Ring::Read)) end.now();
   ring->eof();
-  std::cerr << "ring full " << ZuBoxed(full) << " times\n";
+  std::cerr << (ZuStringN<80>{} << "ring full " << ZuBoxed(full) << " times\n") << std::flush;
 }

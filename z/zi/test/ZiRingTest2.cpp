@@ -32,7 +32,28 @@ void usage()
   ZmPlatform::exit(1);
 }
 
-using Ring = ZiRing<ZiRingMsg>;
+using Ring = ZiRing;
+
+class Msg {
+public:
+  Msg() : m_type(0), m_length(0) { }
+  Msg(unsigned type, unsigned length) :
+    m_type(type), m_length(length) { }
+
+  ZuInline unsigned type() const { return m_type; }
+  ZuInline unsigned length() const { return m_length; }
+  ZuInline void *ptr() { return (void *)&this[1]; }
+  ZuInline const void *ptr() const { return (const void *)&this[1]; }
+
+private:
+  uint16_t	m_type;
+  uint16_t	m_length;
+};
+
+unsigned sizeFn(const void *ptr)
+{
+  return sizeof(Msg) + static_cast<const Msg *>(ptr)->length();
+}
 
 struct App {
   App() :
@@ -129,7 +150,7 @@ int App::main(int argc, char **argv)
 
   if (!name) usage();
 
-  ring = new Ring(ZiRingParams(name).
+  ring = new Ring(sizeFn, ZiRingParams(name).
       size(bufsize).ll(ll).spin(spin).coredump(true).cpuset(cpuset));
 
   for (unsigned i = 0; i < loop; i++) {
@@ -188,8 +209,9 @@ void App::reader()
       ring->detach();
       continue;
     }
-    if (const ZiRingMsg *msg = ring->shift()) {
-      // std::cerr << (ZuStringN<80>{} << "shift: " << ZuBoxPtr(msg).hex() << " len: " << ZuBoxed(sizeof(ZiRingMsg) + msg->length()) << '\n') << std::flush;
+    if (const void *msg_ = ring->shift()) {
+      auto msg = static_cast<const Msg *>(msg_);
+      // std::cerr << (ZuStringN<80>{} << "shift: " << ZuBoxPtr(msg).hex() << " len: " << ZuBoxed(sizeof(Msg) + msg->length()) << '\n') << std::flush;
       // for (unsigned i = 0, n = msg->length(); i < n; i++) assert(((const char *)(msg->ptr()))[i] == (char)(i & 0xff));
       // std::cerr << "msg read\n";
       ring->shift2();
@@ -227,9 +249,9 @@ void App::writer()
       // { ZuStringN<32> s; s << "GC: " << ZuBoxed(i) << "\n"; std::cerr << s; }
       continue;
     }
-    if (void *ptr = ring->push(msgsize)) {
+    if (void *ptr = ring->tryPush(msgsize)) {
       // std::cerr << (ZuStringN<80>{} << "push: " << ZuBoxPtr(ptr).hex() << " len: " << ZuBoxed(msgsize) << '\n') << std::flush;
-      ZiRingMsg *msg = new (ptr) ZiRingMsg(0, msgsize - sizeof(ZiRingMsg));
+      Msg *msg = new (ptr) Msg(0, msgsize - sizeof(Msg));
       // for (unsigned i = 0, n = msg->length(); i < n; i++) ((char *)(msg->ptr()))[i] = (char)(i & 0xff);
       // std::cerr << "msg written\n";
       ring->push2();
@@ -243,8 +265,6 @@ void App::writer()
 	s << "I/O Error\n";
       else if (i == Zi::NotReady)
 	s << "Not Ready - no readers\n";
-      else if (i > (int)msgsize)
-	s << "OK!\n";
       else {
 	s << "Ring Full\n";
 	++full;
@@ -254,7 +274,7 @@ void App::writer()
       --j;
       continue;
     }
-    if (!!interval) ZmPlatform::sleep(interval);
+    if (!slow && !!interval) ZmPlatform::sleep(interval);
   }
   std::cerr << (ZuStringN<80>{} << "writer count " << count << " completed\n") << std::flush;
   if (!(flags & Ring::Read)) end.now();

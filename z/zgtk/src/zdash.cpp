@@ -1964,6 +1964,8 @@ private:
   ZtString		m_stylePath;
   GtkStyleContext	*m_styleContext = nullptr;
   GtkWindow		*m_mainWindow = nullptr;
+
+  ZiRing<ZiRingMsg>	
 };
 
 class ZDash :

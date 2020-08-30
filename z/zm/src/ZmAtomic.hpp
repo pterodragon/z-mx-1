@@ -287,7 +287,8 @@ template <typename Int64> struct ZmAtomicOps<Int64, 8> {
 
   ZuInline static Int64 atomicCmpXch(
       volatile Int64 *ptr, Int64 value, Int64 cmp) {
-    return _InterlockedCompareExchange64((volatile long long *)ptr, value, cmp);
+    return _InterlockedCompareExchange64(
+	(volatile long long *)ptr, value, cmp);
   }
 #endif /* _WIN32 && _MSC_VER */
 };

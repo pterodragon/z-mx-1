@@ -35,6 +35,7 @@ private:
 
 #define ZiRing_FUNCTEST
 #include <zlib/ZiRing.hpp>
+#include "../src/ZiRing.cpp"
 
 void fail()
 {
@@ -49,7 +50,28 @@ void check_(bool ok, unsigned line, const char *exp)
   if (!ok) fail();
 }
 
-using Ring = ZiRing<ZiRingMsg>;
+using Ring = ZiRing;
+
+class Msg {
+public:
+  Msg() : m_type(0), m_length(0) { }
+  Msg(unsigned type, unsigned length) :
+    m_type(type), m_length(length) { }
+
+  ZuInline unsigned type() const { return m_type; }
+  ZuInline unsigned length() const { return m_length; }
+  ZuInline void *ptr() { return (void *)&this[1]; }
+  ZuInline const void *ptr() const { return (const void *)&this[1]; }
+
+private:
+  uint16_t	m_type;
+  uint16_t	m_length;
+};
+
+unsigned sizeFn(const void *ptr)
+{
+  return sizeof(Msg) + static_cast<const Msg *>(ptr)->length();
+}
 
 class Thread;
 
@@ -77,7 +99,7 @@ class Work;
 class Thread : public ZmObject {
 public:
   Thread(App *app, unsigned id) :
-    m_app(app), m_id(id), m_ring(app->params()), m_result(0) { }
+    m_app(app), m_id(id), m_ring(sizeFn, app->params()), m_result(0) { }
   ~Thread() { }
 
   void operator ()();
@@ -200,7 +222,7 @@ int Work::operator ()(Thread *thread, ZeError *e)
     case Push:
       if (void *ptr = ring.push(m_param)) {
 	result = m_param;
-	ZiRingMsg *msg = new (ptr) ZiRingMsg(0, m_param - sizeof(ZiRingMsg));
+	Msg *msg = new (ptr) Msg(0, m_param - sizeof(Msg));
 	for (unsigned i = 0, n = msg->length(); i < n; i++)
 	  ((char *)(msg->ptr()))[i] = (char)(i & 0xff);
       } else
@@ -229,8 +251,9 @@ int Work::operator ()(Thread *thread, ZeError *e)
 	  thread->id(), result); fflush(stdout);
       break;
     case Shift:
-      if (const ZiRingMsg *msg = ring.shift()) {
-	result = sizeof(ZiRingMsg) + msg->length();
+      if (const void *msg_ = ring.shift()) {
+	result = sizeFn(msg_);
+	auto msg = static_cast<const Msg *>(msg_);
 	for (unsigned i = 0, n = msg->length(); i < n; i++)
 	  ensure(((const char *)(msg->ptr()))[i] == (char)(i & 0xff));
       } else
@@ -330,7 +353,7 @@ int main(int argc, char **argv)
   check(synchronous(2, Open(Ring::Write)) == Zi::OK);
 
   int size1 =
-    app()->thread(2)->ring().size() - Ring::CacheLineSize - 9;
+    app()->thread(2)->ring().size() - ZmPlatform::CacheLineSize - 9;
   int size2 = (app()->thread(2)->ring().size() / 2) - 7;
 
   printf("requested size: %u actual size: %u size1: %u size2: %u\n",
@@ -351,10 +374,10 @@ int main(int argc, char **argv)
 
   // test push with concurrent attach (2)
   check(synchronous(0, Detach()) == Zi::OK);
-  asynchronous(0, Attach(), attach4);
+  asynchronous(0, Attach(), attach3);
   check(synchronous(2, Push(size1)) > 0);
   synchronous(2, Push2());
-  proceed(0, attach4);
+  proceed(0, attach3);
   check(result(0) == Zi::OK);
   check(synchronous(0, Shift()) == size1);
   synchronous(0, Shift2());

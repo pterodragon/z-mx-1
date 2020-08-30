@@ -638,6 +638,35 @@ class ZDash :
     public ZCmdHost,
     public ZGtk::App {
 public:
+  struct TelRing : public ZiRing {
+    TelRing(const ZiRingParams &params) :
+	ZiRing{[](const void *ptr) -> unsigned {
+	  return *static_cast<const uint16_t *>(ptr) + 2;
+	}, params} { }
+    bool push(ZuArray<const uint8_t> msg) {
+      unsigned n = msg.length();
+      if (void *ptr = push(n + 2)) {
+	*static_cast<uint16_t *>(ptr) = n;
+	memcpy(static_cast<uint8_t *>(ptr) + 2, msg.data(), n);
+	push2();
+	return true;
+      }
+      return false;
+    }
+    template <typename L>
+    bool shift(L l) {
+      if (const void *ptr = shift()) {
+	l(ZuArray<const uint8_t>{
+	  static_cast<const uint8_t *>(ptr) + 2,
+	  *static_cast<const uint16_t *>(ptr)
+	});
+	shift2();
+	return true;
+      }
+      return false;
+    }
+  };
+
   using Client = ZvCmdClient<ZDash_>;
 
   class Link : public ZvCmdCliLink<ZDash_, Link> {
@@ -788,9 +817,40 @@ private:
     // FIXME
   }
 
-  int processApp(Link *, ZuArray<const uint8_t> data) {
+  int processApp(Link *, ZuArray<const uint8_t> msg) {
     if (ZuUnlikely(!m_plugin)) return -1;
     return m_plugin->processApp(data);
+  }
+
+  int processTel(Link *link, ZuArray<const uint8_t> msg) {
+    if (m_telRing.push(data)) {
+      // FIXME - run processTel2 on gtk thread
+    }
+    return 0;
+  }
+
+  void processTel2(Link *link) {
+    m_telRing.shift([link](ZuArray<const uint8_t> msg) {
+      processTel3(link, msg);
+    });
+  }
+
+  void processTel3(Link *link, const ZuArray<const uint8_t> &msg_) {
+    using namespace ZvTelemetry;
+    {
+      flatbuffers::Verifier verifier(msg_.data(), msg_.length());
+      if (!fbs::VerifyTelemetryBuffer(verifier)) return;
+    }
+    auto msg = fbs::GetTelemetry(msg_);
+    int i = msg->data_type();
+    if (ZuUnlikely(i < TelData::First)) return;
+    if (ZuUnlikely(i > TelData::MAX)) return;
+    ZuSwitch::dispatch<TelData::N - TelData::First>(i - TelData::First,
+	[this, link, data](auto i) {
+      using FBS = TelData::Type<i + TelData::First>;
+      auto fbs = static_cast<const FBS *>(msg->data());
+      processTel4(link, fbs);
+    });
   }
 
   // FIXME
@@ -801,7 +861,7 @@ private:
   // - DB -> ensure DBEnv
   template <typename FBS>
   typename ZuNot<ZvTelemetry::fbs::Alert, FBS, bool>::T
-  processTel_(Link *link, FBS *fbs) {
+  processTel4(Link *link, FBS *fbs) {
     ZuConstant<ZuTypeIndex<FBS, FBSTypeList>::I> i;
     using T = typename ZuType<i, TypeList>::T;
     TelGuard guard(m_telLock);
@@ -815,56 +875,22 @@ private:
       container.add(node);
       return true;
     }
+    // FIXME in refresh rate batch, with sort column
+    // save/unset/restore, signal freeze/thaw
+    // update tree, watches, etc.
   }
   template <typename FBS>
   typename ZuIs<ZvTelemetry::fbs::Alert, FBS, bool>::T
-  processTel_(Link *link, FBS *fbs) {
+  processTel4(Link *link, FBS *fbs) {
     ZuConstant<ZuTypeIndex<FBS, FBSTypeList>::I> i;
     using T = typename ZuType<i, TypeList>::T;
     TelGuard guard(m_telLock);
     auto &container = link->telemetry.p<i>();
     app->alert(new (constainer.data.push()) ZvTelemetry::load<T>{fbs});
     return true;
-  }
-
-  int processTel(Link *link, ZuArray<const uint8_t> data) {
-    using namespace ZvTelemetry;
-    {
-      flatbuffers::Verifier verifier(data.data(), data.length());
-      if (!fbs::VerifyTelemetryBuffer(verifier)) return -1;
-    }
-    auto msg = fbs::GetTelemetry(data);
-    int i = msg->data_type();
-    if (ZuUnlikely(i < TelData::First)) return 0;
-    if (ZuUnlikely(i > TelData::MAX)) return 0;
-    ZuSwitch::dispatch<TelData::N - TelData::First>(i - TelData::First,
-	[this, link, data](auto i) {
-      using FBS = TelData::Type<i + TelData::First>;
-      auto fbs = static_cast<const FBS *>(msg->data());
-      if (processTel_(link, fbs))
-
-      // FIXME - need to process fbs in this thread, i.e. load/loadDelta
-      // then switch over to Gtk thread to update UI; means process(app, link, fbs) must run within this thread (locking link's telemetry containers), then call back to this app to update gtk; even more complex if load results in blank parent loading, since lock must be held for mkdirhier then released before multiple GTK updates are enqueued
-
-    // in refresh rate batch, with sort column
+    // FIXME in refresh rate batch, with sort column
     // save/unset/restore, signal freeze/thaw
-
-    if (appInfo.row() < 0)
-      m_model->add(&appInfo, m_model->root());
-      // App updates link's appInfo, triggers #GtkTreeModel::row-changed
-      // FIXME - need to enqueue this, and dequeue on GTK thread
-      m_model->updated(&appInfo);
-
-      // FIXME - dispatch i to FBS type
-      // data->data() is const void *fbs_;
-      // auto fbs = 
-      // FBS is e.g. fbs::Socket
-      // then e.g. new Socket_load{fbs}, or node->loadDelta(fbs)
-      // need to update time series
-      process;
-    });
-    m_telcap[i](data->data());
-    return 0;
+    // update alerts
   }
 
   void disconnected() {
@@ -1965,7 +1991,7 @@ private:
   GtkStyleContext	*m_styleContext = nullptr;
   GtkWindow		*m_mainWindow = nullptr;
 
-  ZiRing<ZiRingMsg>	
+  Ring			m_telRing;
 };
 
 class ZDash :

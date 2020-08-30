@@ -41,6 +41,7 @@
 // normal	- use  100x average message size
 // low-latency	- use 1000x average message size
 
+
 #ifndef ZiRing_HPP
 #define ZiRing_HPP
 
@@ -266,6 +267,9 @@ public:
   }
 
   ZuInline unsigned full() const { return m_full; }
+
+  // size can be unspecified (default 0) to open a pre-existing ring by name;
+  // if size is specified, both size and low-latency flag must match
 
   int open(unsigned flags, ZeError *e = nullptr);
   int shadow(const ZiRing &ring, ZeError *e = nullptr);

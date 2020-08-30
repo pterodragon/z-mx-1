@@ -42,17 +42,17 @@
 
 class MxMDCore;
 
-template <> struct ZiRingTraits<MxMDStream::Hdr> {
-  static unsigned size(const MxMDStream::Hdr &hdr) {
-    return sizeof(MxMDStream::Hdr) + hdr.len;
-  }
-};
-
 class MxMDAPI MxMDBroadcast {
 public:
   typedef MxMDStream::Hdr Hdr;
 
-  struct Ring : public ZmObject, public ZiRing<Hdr> { };
+  struct Ring : public ZmObject, public ZiRing {
+    Ring(const ZiRingParams &params) :
+	ZiRing{[](const void *ptr) -> unsigned {
+	  using Hdr = MxMDStream::Hdr;
+	  return sizeof(Hdr) + static_cast<const Hdr *>(ptr)->len;
+	}, params} { }
+  };
 
   MxMDBroadcast();
   ~MxMDBroadcast();

@@ -156,7 +156,9 @@ private:
     const auto &series = m_series[fileID.seriesID()];
     return ZiFile::append(series.path,
 	ZiFile::Path{} << series.name << '_' <<
-	ZuBox<unsigned>(fileID.index()).hex(ZuFmt::Right<8>()) << ".sdb");
+	(ZuStringN<12>{} <<
+	  ZuBox<unsigned>{fileID.index()}.hex(ZuFmt::Right<8>())) <<
+	".sdb");
   }
   FilePos pos(unsigned seriesID, unsigned blkIndex) {
     auto fileBlks = m_series[seriesID].fileBlks;

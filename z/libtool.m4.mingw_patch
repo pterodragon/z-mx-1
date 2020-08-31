@@ -1,5 +1,16 @@
---- /usr/share/aclocal/libtool.m4	2020-03-19 17:43:02.000000000 +0000
+--- m4/libtool.m4	2020-03-19 17:43:02.000000000 +0000
 +++ m4/libtool.m4	2020-06-02 15:33:13.299345100 +0100
+@@ -3263,9 +3263,9 @@
+   AC_MSG_CHECKING([for ld used by $CC])
+   case $host in
+   *-*-mingw*)
+     # gcc leaves a trailing carriage return, which upsets mingw
+-    ac_prog=`($CC -print-prog-name=ld) 2>&5 | tr -d '\015'` ;;
++    ac_prog=`($CC -print-prog-name=ld) 2>&5 | tr -d '\015' | xargs cygpath -u` ;;
+   *)
+     ac_prog=`($CC -print-prog-name=ld) 2>&5` ;;
+   esac
+   case $ac_prog in
 @@ -6428,6 +6428,15 @@
        # what "hidden" libraries, object files and flags are used when
        # linking a shared library.

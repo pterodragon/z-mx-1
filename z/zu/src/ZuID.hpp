@@ -104,10 +104,10 @@ public:
   }
   ZuInline unsigned length() const {
     if (!m_val) return 0U;
-#ifdef Zu_BIGENDIAN
-    return (71U - __builtin_clzl(m_val))>>3U;
+#if Zu_BIGENDIAN
+    return (71U - __builtin_ctzll(m_val))>>3U;
 #else
-    return (71U - __builtin_ctzl(m_val))>>3U;
+    return (71U - __builtin_clzll(m_val))>>3U;
 #endif
   }
 

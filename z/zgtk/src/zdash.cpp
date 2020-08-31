@@ -638,14 +638,21 @@ class ZDash :
     public ZCmdHost,
     public ZGtk::App {
 public:
-  struct TelRing : public ZiRing {
+  class TelRing : public ZuObject, public ZiRing {
+    TelRing() = delete;
+    TelRing(const TelRing &) = delete;
+    TelRing &operator =(const TelRing &) = delete;
+    TelRing(TelRing &&) = delete;
+    TelRing &operator =(TelRing &&) = delete;
+  public:
+    ~TelRing() = default;
     TelRing(const ZiRingParams &params) :
 	ZiRing{[](const void *ptr) -> unsigned {
 	  return *static_cast<const uint16_t *>(ptr) + 2;
 	}, params} { }
     bool push(ZuArray<const uint8_t> msg) {
       unsigned n = msg.length();
-      if (void *ptr = push(n + 2)) {
+      if (void *ptr = ZiRing::push(n + 2)) {
 	*static_cast<uint16_t *>(ptr) = n;
 	memcpy(static_cast<uint8_t *>(ptr) + 2, msg.data(), n);
 	push2();
@@ -655,7 +662,7 @@ public:
     }
     template <typename L>
     bool shift(L l) {
-      if (const void *ptr = shift()) {
+      if (const void *ptr = ZiRing::shift()) {
 	l(ZuArray<const uint8_t>{
 	  static_cast<const uint8_t *>(ptr) + 2,
 	  *static_cast<const uint16_t *>(ptr)
@@ -823,15 +830,16 @@ private:
   }
 
   int processTel(Link *link, ZuArray<const uint8_t> msg) {
-    if (m_telRing.push(data)) {
-      // FIXME - run processTel2 on gtk thread
-    }
+    if (m_telRing->push(data))
+      this->run(ZmFn<>{ZmMkRef(link), [](Link *link) {
+	link->app()->processTel2(link);
+      }});
     return 0;
   }
 
   void processTel2(Link *link) {
-    m_telRing.shift([link](ZuArray<const uint8_t> msg) {
-      processTel3(link, msg);
+    m_telRing->shift([link](const ZuArray<const uint8_t> &msg) {
+      link->app()->processTel3(link, msg);
     });
   }
 
@@ -1991,7 +1999,7 @@ private:
   GtkStyleContext	*m_styleContext = nullptr;
   GtkWindow		*m_mainWindow = nullptr;
 
-  Ring			m_telRing;
+  ZuRef<TelRing>	m_telRing;
 };
 
 class ZDash :
@@ -2049,13 +2057,33 @@ public:
     initCmds();
 
     attach(mx, tid);
+    {
+      if (auto ringCf = cf->subset("telRing", false))
+	m_telRing = new TelRing(ZvRingParams{ringCf});
+      else
+	m_telRing = new TelRing(ZiRingParams{"zdash"}.size(16384));
+    }
+    auto flags = ZiRing::Read | ZiRing::Write | ZiRing::Create;
+    {
+      ZeError e;
+      if (m_telRing->open(flags, &e) != Zi::OK) {
+	detach();
+	throw ZtString() << '"' << m_telRing->params().name() << "\": " << e;
+      }
+      m_telRing->reset();
+    }
     mx->run(tid, [this]() { gtkInit(); });
   }
 
   void final() {
-    // m_link = nullptr;
-
     detach([this]() {
+      if (m_telRing) {
+	if (*m_telRing) {
+	  m_telRing->detach();
+	  m_telRing->close();
+	}
+	m_telRing = nullptr;
+      }
       ZvCmdHost::final();
       Base::final();
     });
@@ -2106,6 +2134,8 @@ public:
     gtk_widget_show_all(GTK_WIDGET(m_mainWindow));
 
     gtk_window_present(m_mainWindow);
+
+    m_telRing->attach();
   }
 
   void gtkFinal() {

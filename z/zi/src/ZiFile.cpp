@@ -326,7 +326,7 @@ int ZiFile::open_(
   if (flags & Shm) {
     if (length <= 0) goto einval;
     Path name_(name.length() + 8);
-    name_ << "Global\\" << name;
+    name_ << "Local\\" << name; // was Global
     DWORD protectFlags = (flags & ReadOnly) ? PAGE_READONLY : PAGE_READWRITE;
     if (flags & ShmDbl)
       blkSize = 64<<10; // Windows - 64k, not the system page size

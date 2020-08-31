@@ -19,11 +19,11 @@
 
 // FIFO ring buffer with broadcast fan-out to multiple readers (up to 64)
 
-// Note: this is broadcast, not SPMC - every consumer processes every message,
-// i.e. every message is processed as many times as there are consumers;
-// with conventional SPMC, each message is processed once by a single
-// consumer selected from amongst the pool of all consumers, typically
-// selected non-deterministically by availability/readiness/priority
+// Note: this is broadcast, not conventional SPMC - every consumer processes
+// every message i.e. every message is processed as many times as there are
+// consumers; with normal SPMC, each message is processed once by a single
+// consumer selected from the pool of consumers, typically according to
+// consumer availability/readiness/priority
 
 #ifndef ZmBxRing_HPP
 #define ZmBxRing_HPP

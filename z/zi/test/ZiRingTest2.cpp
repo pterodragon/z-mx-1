@@ -239,7 +239,6 @@ void App::reader()
 
 void App::writer()
 {
-  unsigned full = 0;
   std::cerr << (ZuStringN<80>{} << "writer " << ZmPlatform::getTID() << " started\n") << std::flush;
   start.now();
   for (int j = 0; j < count; j++) {
@@ -249,7 +248,7 @@ void App::writer()
       // { ZuStringN<32> s; s << "GC: " << ZuBoxed(i) << "\n"; std::cerr << s; }
       continue;
     }
-    if (void *ptr = ring->tryPush(msgsize)) {
+    if (void *ptr = ring->push(msgsize)) {
       // std::cerr << (ZuStringN<80>{} << "push: " << ZuBoxPtr(ptr).hex() << " len: " << ZuBoxed(msgsize) << '\n') << std::flush;
       Msg *msg = new (ptr) Msg(0, msgsize - sizeof(Msg));
       // for (unsigned i = 0, n = msg->length(); i < n; i++) ((char *)(msg->ptr()))[i] = (char)(i & 0xff);
@@ -265,10 +264,8 @@ void App::writer()
 	s << "I/O Error\n";
       else if (i == Zi::NotReady)
 	s << "Not Ready - no readers\n";
-      else {
+      else
 	s << "Ring Full\n";
-	++full;
-      }
       std::cerr << s << std::flush;
       ZmPlatform::sleep(.1);
       --j;
@@ -279,5 +276,5 @@ void App::writer()
   std::cerr << (ZuStringN<80>{} << "writer count " << count << " completed\n") << std::flush;
   if (!(flags & Ring::Read)) end.now();
   ring->eof();
-  std::cerr << (ZuStringN<80>{} << "ring full " << ZuBoxed(full) << " times\n") << std::flush;
+  std::cerr << (ZuStringN<80>{} << "ring full " << ZuBoxed(ring->full()) << " times\n") << std::flush;
 }

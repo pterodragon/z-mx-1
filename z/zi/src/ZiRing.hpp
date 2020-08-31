@@ -20,11 +20,11 @@
 // shared memory ring buffer IPC with broadcast fan-out to multiple readers
 // (up to 64)
 
-// Note: this is broadcast, not SPMC - every consumer processes every message,
-// i.e. every message is processed as many times as there are consumers;
-// with conventional SPMC, each message is processed once by a single
-// consumer selected from amongst the pool of all consumers, typically
-// selected non-deterministically by availability/readiness/priority
+// Note: this is broadcast, not conventional SPMC - every consumer processes
+// every message i.e. every message is processed as many times as there are
+// consumers; with normal SPMC, each message is processed once by a single
+// consumer selected from the pool of consumers, typically according to
+// consumer availability/readiness/priority
 
 // supports fixed- and variable length messages
 // messages are C/C++ POD types
@@ -40,7 +40,6 @@
 // ring buffer size heuristics
 // normal	- use  100x average message size
 // low-latency	- use 1000x average message size
-
 
 #ifndef ZiRing_HPP
 #define ZiRing_HPP
@@ -267,9 +266,6 @@ public:
   }
 
   ZuInline unsigned full() const { return m_full; }
-
-  // size can be unspecified (default 0) to open a pre-existing ring by name;
-  // if size is specified, both size and low-latency flag must match
 
   int open(unsigned flags, ZeError *e = nullptr);
   int shadow(const ZiRing &ring, ZeError *e = nullptr);

@@ -56,9 +56,11 @@ void App::detach(ZmFn<> fn)
 
 void App::detach_(ZmFn<> fn)
 {
-  g_source_destroy(m_source);
-  g_source_unref(m_source);
-  m_source = nullptr;
+  if (m_source) {
+    g_source_destroy(m_source);
+    g_source_unref(m_source);
+    m_source = nullptr;
+  }
   fn();
 }
 

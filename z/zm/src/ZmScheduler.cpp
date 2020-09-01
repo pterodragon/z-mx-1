@@ -223,7 +223,7 @@ void ZmScheduler::stop()
       m_threads[i].ring.eof(true);
     for (unsigned i = 0; i < n; i++) {
       ZmThread &thread = m_threads[i].thread;
-      if (!!thread) {
+      if (thread) {
 	wake(&m_threads[i]);
 	thread.join();
 	thread = ZmThread();
@@ -237,8 +237,8 @@ void ZmScheduler::stop()
 
   m_stopped.reset();
 
-  m_thread.join();
-  m_thread = 0;
+  if (m_thread) m_thread.join();
+  m_thread = nullptr;
 
   {
     ZmGuard<ZmLock> stateGuard(m_stateLock);

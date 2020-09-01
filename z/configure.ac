@@ -96,12 +96,20 @@ AX_PATH_LIB_READLINE(, [AC_MSG_ERROR([libreadline required])])
 CPPFLAGS="$READLINE_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$READLINE_LDFLAGS $LDFLAGS"
 
+AC_CHECK_PROG(PERL, "perl", "yes", "no")
+if test ".$PERL" = ".no"; then
+  AC_MSG_ERROR([perl required])
+fi
+
 PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.24.0], [dnl
   gtk="yes"
 ], [dnl
   AC_MSG_NOTICE([Gtk unavailable])
   gtk="no"
 ])
+GTK_CFLAGS=`echo $GTK_CFLAGS | perl -pe 's/-pthread\s+//g; s/-mms-bitfields//g; s|/@<:@^/@:>@+/\.\./|/|g; s/-I(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$I{$1}++ ? "" : "-I${1}${2}"/ge'`
+GTK_LDFLAGS=`echo $GTK_LDFLAGS | perl -pe 's/-pthread\s+//g; s|/[^/]+/\.\./|/|g; s/-L(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$L{$1}++ ? "" : "-L${1}${2}"/ge; s/(-Wl,)?-R,(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$R{$2}++ ? "" : "${1}-R,${2}${3}"/ge'`
+GTK_LIBS=`echo $GTK_LIBS | perl -pe 's/-pthread\s+//g; s|/@<:@^/@:>@+/\.\./|/|g; s/-l(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$l{$1}++ ? "" : "-l${1}${2}"/ge'`
 AC_SUBST(GTK_CFLAGS)
 AC_SUBST(GTK_LDFLAGS)
 AC_SUBST(GTK_LIBS)
@@ -123,13 +131,8 @@ if test ".$MX_CLANG" = ".yes"; then
   Z_CXXFLAGS="$Z_CXXFLAGS -Wno-unused-local-typedef -Wno-empty-body -Wno-c++11-extensions"
 fi
 
-AC_CHECK_PROG(PERL, "perl", "yes", "no")
-if test ".$PERL" = ".no"; then
-  AC_MSG_ERROR([perl required])
-fi
-
 CPPFLAGS=`echo $CPPFLAGS | perl -pe 's/-I(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$I{$1}++ ? "" : "-I${1}${2}"/ge;'`
-LDFLAGS=`echo $LDFLAGS | perl -pe 's/-L(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$L{$1}++ ? "" : "-L${1}${2}"/ge; s/(-Wl,)?-R,(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$R{$2}++ ? "" : "${1}-R,${2}${3}"/ge'`
+LDFLAGS=`echo $LDFLAGS | perl -pe 's|/[^/]+/\.\./|/|g; s/-L(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$L{$1}++ ? "" : "-L${1}${2}"/ge; s/(-Wl,)?-R,(@<:@^ \n@:>@+)(@<:@ \n@:>@)/$R{$2}++ ? "" : "${1}-R,${2}${3}"/ge'`
 
 AC_SUBST(Z_CPPFLAGS)
 AC_SUBST(Z_CXXFLAGS)

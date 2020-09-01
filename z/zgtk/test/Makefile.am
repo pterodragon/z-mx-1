@@ -15,5 +15,7 @@ LDADD = $(top_builddir)/zgtk/src/libZGtk.la \
 	$(top_builddir)/zu/src/libZu.la \
 	@GTK_LIBS@ @FLATBUFFERS_LIBS@ @MBEDTLS_LIBS@ \
 	@Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
-noinst_PROGRAMS = zgtkdemo
+#noinst_PROGRAMS = zgtkdemo
+bin_PROGRAMS = zgtkdemo
+#zgtkdemo_LDFLAGS = -Wl,--subsystem,windows
 zgtkdemo_SOURCES = zgtkdemo.cpp

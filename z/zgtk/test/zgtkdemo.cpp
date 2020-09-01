@@ -2,6 +2,7 @@
 
 #include <zlib/ZmSemaphore.hpp>
 #include <zlib/ZmScheduler.hpp>
+#include <zlib/ZmTrap.hpp>
 
 #include <zlib/ZeLog.hpp>
 
@@ -16,6 +17,14 @@ void start();
 
 int main(int argc, char **argv)
 {
+  ZeLog::init("zgtkdemo");
+  ZeLog::level(0);
+  ZeLog::sink(ZeLog::fileSink("zgtkdemo.log"));
+  ZeLog::start();
+
+  ZmTrap::sigintFn([]() { done.post(); });
+  ZmTrap::trap();
+
   ZmScheduler s{ZmSchedParams().id("sched").nThreads(2)};
   s.start();
 
@@ -39,6 +48,11 @@ int main(int argc, char **argv)
   s.stop();
 
   app.detach([]() { });
+
+  ZmTrap::sigintFn(ZmFn<>());
+
+  ZeLog::stop();
+  return 0;
 }
 
 struct TreeModel : public ZGtk::TreeSortable<TreeModel, 1> {

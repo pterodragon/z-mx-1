@@ -108,21 +108,12 @@ public:
   template <typename T>
   using Index = ZuTypeIndex<T, T0>;
 
-  ZuInline Tuple() { }
-
-  ZuInline Tuple(const Tuple &p) : m_p0(p.m_p0) { }
-
-  ZuInline Tuple(Tuple &&p) : m_p0(static_cast<T0 &&>(p.m_p0)) { }
-
-  ZuInline Tuple &operator =(const Tuple &p) {
-    if (this != &p) m_p0 = p.m_p0;
-    return *this;
-  }
-
-  ZuInline Tuple &operator =(Tuple &&p) noexcept {
-    m_p0 = static_cast<T0 &&>(p.m_p0);
-    return *this;
-  }
+  Tuple() = default;
+  Tuple(const Tuple &) = default;
+  Tuple &operator =(const Tuple &) = default;
+  Tuple(Tuple &&) = default;
+  Tuple &operator =(Tuple &&) = default;
+  ~Tuple() = default;
 
   template <typename T>
   ZuInline explicit Tuple(T p,
@@ -246,11 +237,15 @@ public:
   template <typename T>
   using Index = ZuTypeIndex<T, T0, T1>;
 
+  Tuple() = default;
+  Tuple(const Tuple &) = default;
+  Tuple &operator =(const Tuple &) = default;
+  Tuple(Tuple &&) = default;
+  Tuple &operator =(Tuple &&) = default;
+  ~Tuple() = default;
+
   using Base::Base;
   using Base::operator =;
-
-  ZuInline Tuple(const Base &v) : Base(v) { };
-  ZuInline Tuple(Base &&v) : Base(ZuMv(v)) { };
 
   template <unsigned I>
   ZuInline const typename Type_<I>::T &p() const {
@@ -321,11 +316,15 @@ public:
   template <typename T>
   using Index = ZuTypeIndex<T, T0, T1, Args...>;
 
+  Tuple() = default;
+  Tuple(const Tuple &) = default;
+  Tuple &operator =(const Tuple &) = default;
+  Tuple(Tuple &&) = default;
+  Tuple &operator =(Tuple &&) = default;
+  ~Tuple() = default;
+
   using Base::Base;
   using Base::operator =;
-
-  ZuInline Tuple(const Base &v) : Base(v) { };
-  ZuInline Tuple(Base &&v) : Base(ZuMv(v)) { };
 
   template <typename P0, typename P1, typename ...Args_>
   ZuInline Tuple(P0 &&p0, P1 &&p1, Args_ &&... args) :
@@ -490,10 +489,14 @@ using Type##_ = \
 class Type : public Type##_ { \
   using Tuple = Type##_; \
 public: \
+  Type() = default; \
+  Type(const Type &) = default; \
+  Type &operator =(const Type &) = default; \
+  Type(Type &&) = default; \
+  Type &operator =(Type &&) = default; \
+  ~Type() = default; \
   using Tuple::Tuple; \
   using Tuple::operator =; \
-  ZuInline Type(const Tuple &v) : Tuple(v) { }; \
-  ZuInline Type(Tuple &&v) : Tuple(ZuMv(v)) { }; \
   ZuPP_Eval(ZuPP_MapIndex(ZuTuple_FieldFn, 0, __VA_ARGS__)) \
   struct Traits : public ZuTraits<Type##_> { using T = Type; }; \
   friend Traits ZuTraitsType(const Type *); \

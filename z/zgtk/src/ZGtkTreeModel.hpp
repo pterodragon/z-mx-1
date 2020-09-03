@@ -251,8 +251,8 @@ public:
     return gtype_;
   }
 
-  static TreeModel *ctor() {
-    return reinterpret_cast<TreeModel *>(g_object_new(gtype(), nullptr));
+  static Impl *ctor() {
+    return reinterpret_cast<Impl *>(g_object_new(gtype(), nullptr));
   }
 
   // click (popup menu, etc.)
@@ -673,7 +673,7 @@ namespace TreeNode {
     void row(gint v) { m_row = v; }
 
   private:
-    gint			m_row = -1;
+    gint	m_row = -1;
   };
 
   template <unsigned> class Root { };
@@ -702,13 +702,19 @@ namespace TreeNode {
     void parent(Parent *p) { m_parent = p; }
 
   private:
-    Child<Depth - 1>	*m_parent = nullptr;
+    Parent	*m_parent = nullptr;
   };
 
   // individual leaf item
   template <unsigned Depth>
   class Item : public Child<Depth> {
+    Item(const Item &) = delete;
+    Item &operator =(const Item &) = delete;
+    Item(Item &&) = delete;
+    Item &operator =(Item &&) = delete;
   public:
+    Item() = default;
+    ~Item() = default;
     constexpr static bool hasChild() { return false; }
     constexpr static unsigned nChildren() { return 0; }
     template <typename L>
@@ -721,7 +727,13 @@ namespace TreeNode {
   template <
     unsigned Depth, typename Child_, template <unsigned> class Type = Child>
   class Parent : public Type<Depth> {
+    Parent(const Parent &) = delete;
+    Parent &operator =(const Parent &) = delete;
+    Parent(Parent &&) = delete;
+    Parent &operator =(Parent &&) = delete;
   public:
+    Parent() = default;
+    ~Parent() = default;
     constexpr bool hasChild() const { return true; }
     constexpr unsigned nChildren() const { return m_index.length(); }
     template <typename L>
@@ -762,7 +774,13 @@ namespace TreeNode {
   template <
     unsigned Depth, typename Tuple, template <unsigned> class Type = Child>
   class Branch : public Type<Depth>, public Tuple {
+    Branch(const Branch &) = delete;
+    Branch &operator =(const Branch &) = delete;
+    Branch(Branch &&) = delete;
+    Branch &operator =(Branch &&) = delete;
   public:
+    Branch() = default;
+    ~Branch() = default;
     constexpr bool hasChild() const { return true; }
     constexpr unsigned nChildren() const { return Tuple::N; }
     template <typename L>
@@ -786,9 +804,10 @@ namespace TreeNode {
 
 // CRTP - implementation must conform to the following interface:
 #if 0
-struct Impl : public TreeHierarchy<Impl, Iter> {
+// Iter must be ZuUnion<T0 *, T1 *, ...>
+struct Impl : public TreeHierarchy<Impl, Iter, Depth> {
   auto root();	// must return a TelParent|TelBranch pointer
-  template <typename Ptr> auto print(Ptr *ptr);	// used for column 0 values
+  template <typename T> auto value(const T *ptr, gint i, ZGtk::Value *value);
 };
 #endif
 template <typename Impl, typename Iter, unsigned Depth>
@@ -826,8 +845,8 @@ public:
   }
   void get_value(GtkTreeIter *iter_, gint i, ZGtk::Value *value) {
     auto iter = reinterpret_cast<Iter *>(iter_);
-    iter->cdispatch([i, value](const auto ptr) {
-      Impl::value(ptr, i, value);
+    iter->cdispatch([this, i, value](const auto ptr) {
+      impl()->value(ptr, i, value);
     });
   }
   gboolean iter_next(GtkTreeIter *iter_) {

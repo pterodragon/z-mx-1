@@ -253,7 +253,14 @@ private:
 };
 
 class ZdfAPI DataFrame {
+  DataFrame() = delete;
+  DataFrame(const DataFrame &) = delete;
+  DataFrame &operator =(const DataFrame &) = delete;
+  DataFrame(DataFrame &&) = delete;
+  DataFrame &operator =(DataFrame &&) = delete;
 public:
+  ~DataFrame() = default;
+
   DataFrame(ZvFields fields, ZuString name, bool timeIndex = false);
 
   const ZtString &name() const { return m_name; }

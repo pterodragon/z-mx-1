@@ -118,8 +118,6 @@ Z_CPPFLAGS="-D_REENTRANT -D_GNU_SOURCE"
 
 AM_CONDITIONAL([GXX], [test ".$GXX" = ".yes"])
 AM_CONDITIONAL([MINGW], [test ".$mingw" = ".yes"])
-AM_CONDITIONAL([MINGW32], [test ".$mingw32" = ".yes"])
-AM_CONDITIONAL([MINGW64], [test ".$mingw64" = ".yes"])
 AM_CONDITIONAL([JNI], [test ".$jni" = ".yes"])
 AM_CONDITIONAL([GTK], [test ".$gtk" = ".yes"])
 

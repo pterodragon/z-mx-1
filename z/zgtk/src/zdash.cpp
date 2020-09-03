@@ -20,6 +20,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef _WIN32
+#include <io.h>		// for _isatty
+#ifndef isatty
+#define isatty _isatty
+#endif
+#ifndef fileno
+#define fileno _fileno
+#endif
+#else
+#include <termios.h>
+#include <unistd.h>	// for isatty
+#include <fcntl.h>
+#endif
+
 #include <zlib/ZuArrayN.hpp>
 #include <zlib/ZuPolymorph.hpp>
 #include <zlib/ZuByteSwap.hpp>
@@ -33,6 +47,7 @@
 
 #include <zlib/ZiMultiplex.hpp>
 #include <zlib/ZiModule.hpp>
+#include <zlib/ZiRing.hpp>
 
 #include <zlib/ZvCf.hpp>
 #include <zlib/ZvCSV.hpp>
@@ -60,12 +75,6 @@
 // @define-color rag_red_bg #ff1515;
 
 // FIXME
-// each node needs to include:
-// index row (in left-hand tree)
-// watch window and row (in watchlist)
-// dataframe (so that history is available)
-
-// FIXME - need to design app
 // - right-click row selection in tree -> watch
 // - drag/drop rowset in watchlist -> graph
 // - field select in graph
@@ -138,8 +147,8 @@ namespace Telemetry {
       return static_cast<T *>(ptr_);
     }
   };
-  struct Watch_Accessor : public ZuAccessor<Watch_, void *> {
-    ZuInline static auto key(const Watch_ &v) { return v.ptr_; }
+  struct Watch_Accessor : public ZuAccessor<Watch, void *> {
+    ZuInline static auto key(const Watch &v) { return v.ptr_; }
   };
   struct Watch_HeapID {
     static constexpr const char *id() { return "zdash.Telemetry.Watch"; }
@@ -157,24 +166,28 @@ namespace Telemetry {
     unsigned		row = 0;
   };
   using DispList = WatchList<Display_>;
-  using Display = typename DispList::Node;
+  using Display = DispList::Node;
 
   // graph - contains pointer to graph - graph contains field selection
   struct Graph_ : public Watch { };
   using GraphList = WatchList<Graph_>;
-  using Graph = typename GraphList::Node;
+  using Graph = GraphList::Node;
 
-  using TypeList = typename ZvTelemetry::TypeList;
+  using TypeList = ZvTelemetry::TypeList;
 
-  template <typename T_> struct FBSType { using T = typename T_::FBS; }
-  using FBSTypeList = typename ZuTypeMap<FBSType, TypeList>::T;
+  template <typename T_> struct FBSType { using T = typename T_::FBS; };
+  using FBSTypeList = ZuTypeMap<FBSType, TypeList>::T;
 
   template <typename Data_> class Item {
   public:
     using Data = ZvTelemetry::load<Data_>;
 
-    template <typename Link, typename FBS>
-    ZuInline Item(Link *link__, FBS *fbs) : link_{link__}, data{fbs} { }
+    template <typename FBS>
+    ZuInline Item(void *link__, FBS *fbs) :
+	link_{link__}, data{fbs},
+	dataFrame{Data::fields(), /* FIXME */, true},
+	dfWriter(&dataFrame) { }
+    // FIXME - need to pass DF a name, which is key, so need key for DBEnv and App even though they are singletons
 
   private:
     Item(const Item &) = delete;
@@ -191,8 +204,8 @@ namespace Telemetry {
     Data			data;
 
     ZGtk::TreeNode::Row		*treeRow = nullptr;
-    DispList			dispList = nullptr;
-    GraphList			graphList = nullptr;
+    DispList			dispList;
+    GraphList			graphList;
     Zdf::DataFrame		dataFrame;
     Zdf::DataFrame::Writer	dfWriter;
   };
@@ -202,10 +215,10 @@ namespace Telemetry {
   };
   template <typename T>
   struct KeyAccessor : public ZuAccessor<T, typename T::Data::Key> {
-    ZuInline static auto key(const T &v) { return v.data().key(); }
+    ZuInline static auto value(const T &v) { return v.data.key(); }
   };
   template <typename T>
-  using ItemTree =
+  using ItemTree_ =
     ZmRBTree<T,
       ZmRBTreeIndex<KeyAccessor<T>,
 	ZmRBTreeObject<ZuNull,
@@ -213,123 +226,113 @@ namespace Telemetry {
 	    ZmRBTreeUnique<true,
 	      ZmRBTreeLock<ZmNoLock,
 		ZmRBTreeHeapID<ItemTree_HeapID> > > > > > >;
-  template <typename T> class ItemWrapper {
-    ItemWrapper(const ItemWrapper &) = delete;
-    ItemWrapper &operator =(const ItemWrapper &) = delete;
-    ItemWrapper(ItemWrapper &&) = delete;
-    ItemWrapper &operator =(ItemWrapper &&) = delete;
+  template <typename T>
+  struct ItemTree : public ItemTree_<Item<T>> {
+    using Node = typename ItemTree_<Item<T>>::Node;
+    template <typename FBS>
+    Node *lookup(const FBS *fbs) const {
+      return this->find(T::key(fbs));
+    }
+  };
+  template <typename T> class ItemSingleton {
+    ItemSingleton(const ItemSingleton &) = delete;
+    ItemSingleton &operator =(const ItemSingleton &) = delete;
+    ItemSingleton(ItemSingleton &&) = delete;
+    ItemSingleton &operator =(ItemSingleton &&) = delete;
   public:
-    using Node = T;
-    using Key = typename T::Key;
-    ItemWrapper() = default;
-    ~ItemWrapper() { if (m_node) delete m_node; }
-    Node *find(const Key &) { return m_node; }
+    using Node = Item<T>;
+    ItemSingleton() = default;
+    ~ItemSingleton() { if (m_node) delete m_node; }
+    template <typename FBS>
+    Node *lookup(const FBS *) const { return m_node; }
     void add(Node *node) { m_node = node; }
   private:
     Node	*m_node = nullptr;
   };
-  template <typename T> class ItemArray {
-    ItemArray(const ItemArray &) = delete;
-    ItemArray &operator =(const ItemArray &) = delete;
-    ItemArray(ItemArray &&) = delete;
-    ItemArray &operator =(ItemArray &&) = delete;
+  template <typename T_> struct ItemContainer {
+    using T = ItemTree<T_>;
+  };
+  template <> struct ItemContainer<ZvTelemetry::App> {
+    using T = ItemSingleton<ZvTelemetry::App>;
+  };
+  template <> struct ItemContainer<ZvTelemetry::DBEnv> {
+    using T = ItemSingleton<ZvTelemetry::DBEnv>;
+  };
+  class AlertArray {
+    AlertArray(const AlertArray &) = delete;
+    AlertArray &operator =(const AlertArray &) = delete;
+    AlertArray(AlertArray &&) = delete;
+    AlertArray &operator =(AlertArray &&) = delete;
   public:
+    using T = ZvTelemetry::Alert;
     using Node = T;
-    ItemArray() = default;
-    ~ItemArray() = default;
+    AlertArray() = default;
+    ~AlertArray() = default;
     ZtArray<T>	data;
   };
-  template <typename T_> struct ItemContainer {
-    using T = ItemTree<Item<T_>>;
-  };
-  template <> class ItemContainer<Item<ZvTelemetry::App>> {
-    using T = ItemWrapper<Item<ZvTelemetry::App>>;
-  };
-  template <> class ItemContainer<Item<ZvTelemetry::DBEnv>> {
-    using T = ItemWrapper<Item<ZvTelemetry::DBEnv>>;
-  };
   template <> struct ItemContainer<ZvTelemetry::Alert> {
-    using T = ItemArray<ZvTelemetry::Alert>;
+    using T = AlertArray;
   };
 
-  using ItemContainerList = typename ZuTypeMap<ItemContainer, TypeList>::T;
+  using ItemContainerList = ZuTypeMap<ItemContainer, TypeList>::T;
 
   template <typename T_> struct ItemNode_ {
-    enum { I = ZuTypeIndex<T, TypeList>::I };
+    enum { I = ZuTypeIndex<T_, TypeList>::I };
     using Container = ZuType<I, ItemContainerList>::T;
     using T = typename Container::Node;
   };
   template <typename T> using ItemNode = typename ItemNode_<T>::T;
 
-  using Containers = typename ZuTypeApply<ZuTuple, ItemContainerList>::T;
+  using Containers = ZuTypeApply<ZuTuple, ItemContainerList>::T;
 }
 
 namespace Tree {
   template <unsigned Depth, typename Data>
-  struct Child : public ZGtk::TreeNode::Child<Depth> {
-    Child() = delete;
-    Child(const Child &) = delete;
-    Child &operator =(const Child &) = delete;
-    Child(Child &&) = delete;
-    Child &operator =(Child &&) = delete;
-  public:
-    ~Child() = default;
-    Child(Data *data_) : data{data_} { data->treeRow = this; }
+  struct Item : public ZGtk::TreeNode::Item<Depth> {
+    Item(Data *data_) : data{data_} { data->treeRow = this; }
     Data	*data;
     auto key() const { return data->key(); }
   };
 
-  template <unsigned Depth, typename Data, typename Child_>
-  struct Parent : public ZGtk::TreeNode::Parent<Depth, Child_> {
-    Parent() = delete;
-    Parent(const Parent &) = delete;
-    Parent &operator =(const Parent &) = delete;
-    Parent(Parent &&) = delete;
-    Parent &operator =(Parent &&) = delete;
-  public:
-    ~Parent() = default;
+  template <unsigned Depth, typename Data, typename Child>
+  struct Parent : public ZGtk::TreeNode::Parent<Depth, Child> {
     Parent(Data *data_) : data{data_} { data->treeRow = this; }
     Data	*data;
     auto key() const { return data->key(); }
 
-    void add(Child_ *child) {
-      ZGtk::TreeNode::Parent<Depth, Child_>::add(child);
+    void add(Child *child) {
+      ZGtk::TreeNode::Parent<Depth, Child>::add(child);
     }
-    void del(Child_ *child) {
-      ZGtk::TreeNode::Parent<Depth, Child_>::del(child);
+    void del(Child *child) {
+      ZGtk::TreeNode::Parent<Depth, Child>::del(child);
     }
   };
 
   template <unsigned Depth, typename Data, typename Tuple>
   class Branch : public ZGtk::TreeNode::Branch<Depth, Tuple> {
-    Branch() = delete;
-    Branch(const Branch &) = delete;
-    Branch &operator =(const Branch &) = delete;
-    Branch(Branch &&) = delete;
-    Branch &operator =(Branch &&) = delete;
-  public:
-    ~Branch() = default;
     Branch(Data *data_) : data{data_} { }
     Data	*data;
     auto key() const { return data->key(); }
   };
 
-  using Heap = Child<3, ItemNode<ZvTelemetry::Heap>>
-  using HashTbl = Child<3, ItemNode<ZvTelemetry::HashTbl>>;
-  using Thread = Child<3, ItemNode<ZvTelemetry::Thread>>;
-  using Socket = Child<4, ItemNode<ZvTelemetry::Socket>>;
+  template <typename T> using ItemNode = Telemetry::ItemNode<T>;
+
+  using Heap = Item<3, ItemNode<ZvTelemetry::Heap>>;
+  using HashTbl = Item<3, ItemNode<ZvTelemetry::HashTbl>>;
+  using Thread = Item<3, ItemNode<ZvTelemetry::Thread>>;
+  using Socket = Item<4, ItemNode<ZvTelemetry::Socket>>;
   using Mx = Parent<3, ItemNode<ZvTelemetry::Mx>, Socket>;
-  using Link = Child<4, ItemNode<ZvTelemetry::Link>>;
+  using Link = Item<4, ItemNode<ZvTelemetry::Link>>;
   using Engine = Parent<3, ItemNode<ZvTelemetry::Engine>, Link>;
-  using DBHost = Child<4, ItemNode<ZvTelemetry::DBHost>>;
-  using DB = Child<4, ItemNode<ZvTelemetry::DB>>;
+  using DBHost = Item<4, ItemNode<ZvTelemetry::DBHost>>;
+  using DB = Item<4, ItemNode<ZvTelemetry::DB>>;
 
   // DB hosts
   struct DBHosts { auto key() const { return ZuMkTuple("hosts"); } };
   using DBHostParent = Parent<3, DBHosts, DBHost>;
   // DBs
   struct DBs { auto key() const { return ZuMkTuple("dbs"); } };
-  using DBParent = Parent<3, DBs, DB, DBTree>;
+  using DBParent = Parent<3, DBs, DB>;
 
   // heaps
   struct Heaps { auto key() const { return ZuMkTuple("heaps"); } };
@@ -407,7 +410,7 @@ namespace Tree {
     // parent() - child->parent type map
     template <typename T>
     static typename ZuSame<T, App, Root>::T *parent(T *ptr) {
-      return ptr->parent<Root>();
+      return ptr->template parent<Root>();
     }
     template <typename T>
     static typename ZuIfT<
@@ -417,49 +420,49 @@ namespace Tree {
 	ZuConversion<T, MxParent>::Same ||
 	ZuConversion<T, EngineParent>::Same ||
 	ZuConversion<T, DBEnv>::Same, App *>::T *parent(T *ptr) {
-      return ptr->parent<App>();
+      return ptr->template parent<App>();
     }
-    template <static typename T>
+    template <typename T>
     static typename ZuSame<T, Heap, HeapParent>::T *parent(T *ptr) {
-      return ptr->parent<HeapParent>();
+      return ptr->template parent<HeapParent>();
     }
-    template <static typename T>
+    template <typename T>
     static typename ZuSame<T, HashTbl, HashTblParent>::T parent(T *ptr) {
-      return ptr->parent<HashTblParent>();
+      return ptr->template parent<HashTblParent>();
     }
-    template <static typename T>
+    template <typename T>
     static typename ZuSame<T, Thread, ThreadParent>::T parent(T *ptr) {
-      return ptr->parent<ThreadParent>();
+      return ptr->template parent<ThreadParent>();
     }
-    template <static typename T>
+    template <typename T>
     static typename ZuSame<T, Mx, MxParent>::T *parent(T *ptr) {
-      return ptr->parent<MxParent>();
+      return ptr->template parent<MxParent>();
     }
-    template <static typename T>
+    template <typename T>
     static typename ZuSame<T, Engine, EngineParent>::T parent(T *ptr) {
-      return ptr->parent<EngineParent>();
+      return ptr->template parent<EngineParent>();
     }
-    template <static typename T>
+    template <typename T>
     static typename ZuSame<T, Socket, Mx>::T *parent(T *ptr) {
-      return ptr->parent<Mx>();
+      return ptr->template parent<Mx>();
     }
-    template <static typename T>
+    template <typename T>
     static typename ZuSame<T, Link, Engine>::T *parent(T *ptr) {
-      return ptr->parent<Engine>();
+      return ptr->template parent<Engine>();
     }
-    template <static typename T>
+    template <typename T>
     static typename ZuIfT<
 	ZuConversion<T, DBHostParent>::Same ||
 	ZuConversion<T, DBParent>::Same, DBEnv>::T *parent(T *ptr) {
-      return ptr->parent<DBEnv>();
+      return ptr->template parent<DBEnv>();
     }
-    template <static typename T>
+    template <typename T>
     static typename ZuSame<T, DBHost, DBHostParent>::T parent(T *ptr) {
-      return ptr->parent<DBHostParent>();
+      return ptr->template parent<DBHostParent>();
     }
-    template <static typename T>
+    template <typename T>
     static typename ZuSame<T, DB, DBParent>::T *parent(T *ptr) {
-      return ptr->parent<DBParent>();
+      return ptr->template parent<DBParent>();
     }
 
     gint get_n_columns() { return NCols; }
@@ -472,7 +475,7 @@ namespace Tree {
       }
     }
     template <typename T>
-    static typename ZuIs<App, T>::T value(T *ptr, gint i, ZGtk::Value *value) {
+    typename ZuIs<App, T>::T value(T *ptr, gint i, ZGtk::Value *value) {
       switch (i) {
 	case 0: 
 	  value->init(G_TYPE_INT);
@@ -496,7 +499,7 @@ namespace Tree {
       }
     }
     template <typename T>
-    static typename ZuNot<App, T>::T value(T *ptr, gint i, ZGtk::Value *value) {
+    typename ZuIsNot<App, T>::T value(T *ptr, gint i, ZGtk::Value *value) {
       switch (i) {
 	case 0: 
 	  value->init(G_TYPE_INT);
@@ -524,60 +527,65 @@ namespace Tree {
   };
 
   class View {
-    auto viewCol(const char *id, unsigned ragCol, unsigned textCol) {
+    View(const View &) = delete;
+    View &operator =(const View &) = delete;
+    View(View &&) = delete;
+    View &operator =(View &&) = delete;
+  public:
+    View() = default;
+    ~View() = default;
+
+  private:
+    template <unsigned RagCol, unsigned TextCol>
+    auto viewCol(const char *id) {
       auto col = gtk_tree_view_column_new();
       gtk_tree_view_column_set_title(col, id);
 
       auto cell = gtk_cell_renderer_text_new();
       gtk_tree_view_column_pack_start(col, cell, true);
 
-      gtk_tree_view_column_set_cell_data_func(
-	  col, cell, [](
-	      GtkTreeViewColumn *col, GtkCellRenderer *cell,
-	      GtkTreeModel *model, GtkTreeIter *iter, gpointer) {
-	    static const gchar *props[] = {
-	      "text", "background-rgba", "foreground-rgba"
-	    };
-	    static ZGtk::Value values[3];
-	    static bool init = true;
-	    if (init) {
-	      init = false;
-	      values[0].init(G_TYPE_STRING);
-	      values[1].init(GDK_TYPE_RGBA);
-	      values[2].init(GDK_TYPE_RGBA);
-	    }
-
-	    gtk_tree_model_get_value(model, iter, textCol, &values[0]);
-
-	    gint rag;
-	    {
-	      ZGtk::Value rag_;
-	      gtk_tree_model_get_value(model, iter, ragCol, &rag_);
-	      rag = rag_.get_int();
-	    }
-	    switch (rag) {
-	      case ZvTelemetry::RAG::Red: {
-		values[1].set_static_boxed(&m_rag_red_bg);
-		values[2].set_static_boxed(&m_rag_red_fg);
-		g_object_setv(G_OBJECT(cell), 3, props, values);
-	      } break;
-	      case ZvTelemetry::RAG::Amber: {
-		values[1].set_static_boxed(&m_rag_amber_bg);
-		values[2].set_static_boxed(&m_rag_amber_fg);
-		g_object_setv(G_OBJECT(cell), 3, props, values);
-	      } break;
-	      case ZvTelemetry::RAG::Green: {
-		values[1].set_static_boxed(&m_rag_green_bg);
-		values[2].set_static_boxed(&m_rag_green_fg);
-		g_object_setv(G_OBJECT(cell), 3, props, values);
-	      } break;
-	      default:
-		g_object_setv(G_OBJECT(cell), 1, props, values);
-		break;
-	    }
-	  }, nullptr, nullptr);
+      gtk_tree_view_column_set_cell_data_func(col, cell, [](
+	    GtkTreeViewColumn *col, GtkCellRenderer *cell,
+	    GtkTreeModel *model, GtkTreeIter *iter, gpointer this_) {
+	reinterpret_cast<View *>(this_)->render<RagCol, TextCol>(
+	    col, cell, model, iter);
+      }, reinterpret_cast<gpointer>(this), nullptr);
 
       return col;
+    }
+
+    template <unsigned RagCol, unsigned TextCol>
+    void render(
+	GtkTreeViewColumn *col, GtkCellRenderer *cell,
+	GtkTreeModel *model, GtkTreeIter *iter) {
+      gtk_tree_model_get_value(model, iter, TextCol, &m_values[0]);
+
+      gint rag;
+      {
+	ZGtk::Value rag_;
+	gtk_tree_model_get_value(model, iter, RagCol, &rag_);
+	rag = rag_.get_int();
+      }
+      switch (rag) {
+	case ZvTelemetry::RAG::Red: {
+	  m_values[1].set_static_boxed(&m_rag_red_bg);
+	  m_values[2].set_static_boxed(&m_rag_red_fg);
+	  g_object_setv(G_OBJECT(cell), 3, m_props, m_values);
+	} break;
+	case ZvTelemetry::RAG::Amber: {
+	  m_values[1].set_static_boxed(&m_rag_amber_bg);
+	  m_values[2].set_static_boxed(&m_rag_amber_fg);
+	  g_object_setv(G_OBJECT(cell), 3, m_props, m_values);
+	} break;
+	case ZvTelemetry::RAG::Green: {
+	  m_values[1].set_static_boxed(&m_rag_green_bg);
+	  m_values[2].set_static_boxed(&m_rag_green_fg);
+	  g_object_setv(G_OBJECT(cell), 3, m_props, m_values);
+	} break;
+	default:
+	  g_object_setv(G_OBJECT(cell), 1, m_props, m_values);
+	  break;
+      }
     }
 
   public:
@@ -606,19 +614,25 @@ namespace Tree {
 	m_rag_green_bg = { 0.1835, 0.8789, 0.2304, 1.0 }; // #2fe13b
 
       gtk_tree_view_append_column(
-	  m_treeView, viewCol("link", Model::RAGCol, Model::LinkCol));
+	  m_treeView, viewCol<Model::RAGCol, Model::LinkCol>("link"));
       gtk_tree_view_append_column(
-	  m_treeView, viewCol("key", Model::RAGCol, Model::KeyCol));
+	  m_treeView, viewCol<Model::RAGCol, Model::KeyCol>("key"));
+
+      static const gchar *props[] = {
+	"text", "background-rgba", "foreground-rgba"
+      };
+      m_props = props;
+      m_values[0].init(G_TYPE_STRING);
+      m_values[1].init(GDK_TYPE_RGBA);
+      m_values[2].init(GDK_TYPE_RGBA);
     }
 
     void final() {
-      g_object_unref(G_OBJECT(m_treeView));
+      if (m_treeView) g_object_unref(G_OBJECT(m_treeView));
     }
 
     void bind(GtkTreeModel *model) {
-      gtk_tree_view_set_model(m_treeView, GTK_TREE_MODEL(model));
-
-      g_object_unref(G_OBJECT(model));
+      gtk_tree_view_set_model(m_treeView, model);
     }
 
   private:
@@ -629,15 +643,45 @@ namespace Tree {
     GdkRGBA	m_rag_amber_bg = { 0.0, 0.0, 0.0, 0.0 };
     GdkRGBA	m_rag_green_fg = { 0.0, 0.0, 0.0, 0.0 };
     GdkRGBA	m_rag_green_bg = { 0.0, 0.0, 0.0, 0.0 };
+    const gchar	**m_props;
+    ZGtk::Value	m_values[3];
   };
 }
 
 class ZDash :
     public ZmPolymorph,
-    public ZvCmdClient<ZDash_>,
+    public ZvCmdClient<ZDash>,
     public ZCmdHost,
     public ZGtk::App {
 public:
+  using Ztls::Engine<ZDash>::run;
+  using Ztls::Engine<ZDash>::invoke;
+
+  using Client = ZvCmdClient<ZDash>;
+
+  struct Link : public ZvCmdCliLink<ZDash, Link> {
+    using Base = ZvCmdCliLink<ZDash, Link>;
+    Link(ZDash *app) : Base(app) { }
+    void loggedIn() {
+      this->app()->loggedIn(this);
+    }
+    void disconnected() {
+      this->app()->disconnected(this);
+      Base::disconnected();
+    }
+    void connectFailed(bool transient) {
+      this->app()->connectFailed(this, transient);
+    }
+    int processApp(ZuArray<const uint8_t> data) {
+      return this->app()->processApp(this, data);
+    }
+    int processTel(ZuArray<const uint8_t> data) {
+      return this->app()->processTel(this, data);
+    }
+ 
+    Telemetry::Containers	telemetry;
+  };
+
   class TelRing : public ZuObject, public ZiRing {
     TelRing() = delete;
     TelRing(const TelRing &) = delete;
@@ -674,35 +718,10 @@ public:
     }
   };
 
-  using Client = ZvCmdClient<ZDash_>;
-
-  class Link : public ZvCmdCliLink<ZDash_, Link> {
-  public:
-    void loggedIn() {
-      this->app()->loggedIn(this);
-    }
-    void disconnected() {
-      this->app()->disconnected(this);
-      Client::disconnected();
-    }
-    void connectFailed(bool transient) {
-      this->app()->connectFailed(this);
-      // Client::connectFailed(transient);
-    }
-    int processApp(ZuArray<const uint8_t> data) {
-      return this->app()->processApp(this, data);
-    }
-    int processTel(ZuArray<const uint8_t> data) {
-      return this->app()->processTel(this, data);
-    }
- 
-    Telemetry::Containers	telemetry;
-  };
-
   void init(ZiMultiplex *mx, ZvCf *cf) {
     m_gladePath = cf->get("gtkGlade", true);
     m_stylePath = cf->get("gtkStyle");
-    unsigned tid = cf->getInt("gtkThread", 1, mx->nThreads(), true);
+    unsigned tid = cf->getInt("gtkThread", 1, mx->params().nThreads(), true);
 
     Client::init(mx, cf);
     ZvCmdHost::init();
@@ -730,7 +749,7 @@ public:
 	ZeLOG(Error, e->message);
 	g_error_free(e);
       }
-      gtkPost();
+      post();
       return;
     }
 
@@ -749,12 +768,14 @@ public:
       gtk_css_provider_load_from_file(provider, file, nullptr);
       g_object_unref(G_OBJECT(file));
       m_styleContext = gtk_style_context_new();
-      gtk_style_context_add_provider(m_styleContext, provider, G_MAXUINT);
+      gtk_style_context_add_provider(
+	  m_styleContext, GTK_STYLE_PROVIDER(provider), G_MAXUINT);
       g_object_unref(G_OBJECT(provider));
     }
 
+    m_model = Tree::Model::ctor();
     m_view.init(view_, m_styleContext);
-    m_view.bind(m_model = MainTree::Model::ctor());
+    m_view.bind(GTK_TREE_MODEL(m_model));
 
     g_signal_connect(G_OBJECT(m_mainWindow), "destroy",
 	ZGtk::callback([](GObject *o, gpointer this_) {
@@ -768,6 +789,7 @@ public:
 
   void gtkFinal() {
     m_view.final();
+    if (m_model) g_object_unref(G_OBJECT(m_model));
     if (m_mainWindow) g_object_unref(G_OBJECT(m_mainWindow));
     if (m_styleContext) g_object_unref(G_OBJECT(m_styleContext));
     post();
@@ -794,6 +816,8 @@ public:
 
   void disconnect() { m_link->disconnect(); }
 
+  int code() const { return m_code; }
+
   void exiting() { m_exiting = true; }
 
   void plugin(ZmRef<ZCmdPlugin> plugin) {
@@ -803,6 +827,15 @@ public:
   void sendApp(Zfb::IOBuilder &fbb) { return m_link->sendApp(fbb); }
 
 private:
+  template <typename ...Args>
+  ZuInline void gtkRun(Args &&... args) {
+    ZGtk::App::run(ZuFwd<Args>(args)...);
+  }
+  template <typename ...Args>
+  ZuInline void gtkInvoke(Args &&... args) {
+    ZGtk::App::invoke(ZuFwd<Args>(args)...);
+  }
+
   void loggedIn(Link *) {
     if (auto plugin = ::getenv("ZCMD_PLUGIN")) {
       ZmRef<ZvCf> args = new ZvCf();
@@ -812,26 +845,20 @@ private:
       loadModCmd(stdout, args, out);
       fwrite(out.data(), 1, out.length(), stdout);
     }
-    if (m_solo) {
-      send(ZuMv(m_soloMsg));
-    } else {
-      if (m_interactive)
-	std::cout <<
-	  "For a list of valid commands: help\n"
-	  "For help on a particular command: COMMAND --help\n" << std::flush;
-      prompt();
-    }
-    // FIXME
+    std::cout <<
+      "For a list of valid commands: help\n"
+      "For help on a particular command: COMMAND --help\n" << std::flush;
+    prompt();
   }
 
   int processApp(Link *, ZuArray<const uint8_t> msg) {
     if (ZuUnlikely(!m_plugin)) return -1;
-    return m_plugin->processApp(data);
+    return m_plugin->processApp(msg);
   }
 
   int processTel(Link *link, ZuArray<const uint8_t> msg) {
-    if (m_telRing->push(data))
-      this->run(ZmFn<>{ZmMkRef(link), [](Link *link) {
+    if (m_telRing->push(msg))
+      gtkRun(ZmFn<>{ZmMkRef(link), [](Link *link) {
 	link->app()->processTel2(link);
       }});
     return 0;
@@ -854,7 +881,7 @@ private:
     if (ZuUnlikely(i < TelData::First)) return;
     if (ZuUnlikely(i > TelData::MAX)) return;
     ZuSwitch::dispatch<TelData::N - TelData::First>(i - TelData::First,
-	[this, link, data](auto i) {
+	[this, link, msg](auto i) {
       using FBS = TelData::Type<i + TelData::First>;
       auto fbs = static_cast<const FBS *>(msg->data());
       processTel4(link, fbs);
@@ -868,15 +895,15 @@ private:
   // - DBHost -> ensure DBEnv
   // - DB -> ensure DBEnv
   template <typename FBS>
-  typename ZuNot<ZvTelemetry::fbs::Alert, FBS, bool>::T
-  processTel4(Link *link, FBS *fbs) {
-    ZuConstant<ZuTypeIndex<FBS, FBSTypeList>::I> i;
-    using T = typename ZuType<i, TypeList>::T;
-    TelGuard guard(m_telLock);
+  typename ZuIsNot<ZvTelemetry::fbs::Alert, FBS, bool>::T
+  processTel4(Link *link, const FBS *fbs) {
+    ZuConstant<ZuTypeIndex<FBS, Telemetry::FBSTypeList>::I> i;
+    using T = typename ZuType<i, Telemetry::TypeList>::T;
     auto &container = link->telemetry.p<i>();
+    using Node = Telemetry::ItemNode<T>;
     Node *node;
-    if (node = container.find(T::key(fbs))) {
-      node->data().loadDelta(fbs);
+    if (node = container.lookup(fbs)) {
+      node->data.loadDelta(fbs);
       return false;
     } else {
       node = new Node{link, fbs};
@@ -889,32 +916,33 @@ private:
   }
   template <typename FBS>
   typename ZuIs<ZvTelemetry::fbs::Alert, FBS, bool>::T
-  processTel4(Link *link, FBS *fbs) {
-    ZuConstant<ZuTypeIndex<FBS, FBSTypeList>::I> i;
-    using T = typename ZuType<i, TypeList>::T;
-    TelGuard guard(m_telLock);
+  processTel4(Link *link, const FBS *fbs) {
+    ZuConstant<ZuTypeIndex<FBS, Telemetry::FBSTypeList>::I> i;
+    using T = typename ZuType<i, Telemetry::TypeList>::T;
     auto &container = link->telemetry.p<i>();
-    app->alert(new (constainer.data.push()) ZvTelemetry::load<T>{fbs});
+    alert(new (container.data.push()) ZvTelemetry::load<T>{fbs});
     return true;
     // FIXME in refresh rate batch, with sort column
     // save/unset/restore, signal freeze/thaw
     // update alerts
   }
 
-  void disconnected() {
+  void alert(const ZvTelemetry::Alert *) { /* FIXME */ }
+
+  void disconnected(Link *) {
     if (m_exiting) return;
     Zrl::stop();
     std::cerr << "server disconnected\n" << std::flush;
     ZmPlatform::exit(1);
   }
-  void connectFailed() {
+  void connectFailed(Link *, bool transient) {
     Zrl::stop();
     std::cerr << "connect failed\n" << std::flush;
     ZmPlatform::exit(1);
   }
 
   void prompt() {
-    mx()->add(ZmFn<>{this, [](ZCmd *app) { app->prompt_(); }});
+    mx()->add(ZmFn<>{this, [](ZDash *app) { app->prompt_(); }});
   }
   void prompt_() {
     ZtString cmd;
@@ -1019,18 +1047,18 @@ private:
 
   void initCmds() {
     addCmd("passwd", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->passwdCmd(static_cast<FILE *>(file), args, out);
 	}},  "change passwd", "usage: passwd");
 
     addCmd("users", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->usersCmd(static_cast<FILE *>(file), args, out);
 	}},  "list users", "usage: users");
     addCmd("useradd",
 	"e enabled enabled { type flag } "
 	"i immutable immutable { type flag }",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->userAddCmd(static_cast<FILE *>(file), args, out);
 	}},  "add user",
 	"usage: useradd ID NAME ROLE[,ROLE,...] [OPTIONS...]\n\n"
@@ -1038,13 +1066,13 @@ private:
 	"  -e, --enabled\t\tset Enabled flag\n"
 	"  -i, --immutable\tset Immutable flag\n");
     addCmd("resetpass", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->resetPassCmd(static_cast<FILE *>(file), args, out);
 	}},  "reset password", "usage: resetpass USERID");
     addCmd("usermod",
 	"e enabled enabled { type flag } "
 	"i immutable immutable { type flag }",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->userModCmd(static_cast<FILE *>(file), args, out);
 	}},  "modify user",
 	"usage: usermod ID NAME ROLE[,ROLE,...] [OPTIONS...]\n\n"
@@ -1052,77 +1080,77 @@ private:
 	"  -e, --enabled\t\tset Enabled flag\n"
 	"  -i, --immutable\tset Immutable flag\n");
     addCmd("userdel", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->userDelCmd(static_cast<FILE *>(file), args, out);
 	}},  "delete user", "usage: userdel ID");
 
     addCmd("roles", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->rolesCmd(static_cast<FILE *>(file), args, out);
 	}},  "list roles", "usage: roles");
     addCmd("roleadd", "i immutable immutable { type flag }",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->roleAddCmd(static_cast<FILE *>(file), args, out);
 	}},  "add role",
 	"usage: roleadd NAME PERMS APIPERMS [OPTIONS...]\n\n"
 	"Options:\n"
 	"  -i, --immutable\tset Immutable flag\n");
     addCmd("rolemod", "i immutable immutable { type scalar }",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->roleModCmd(static_cast<FILE *>(file), args, out);
 	}},  "modify role",
 	"usage: rolemod NAME PERMS APIPERMS [OPTIONS...]\n\n"
 	"Options:\n"
 	"  -i, --immutable\tset Immutable flag\n");
     addCmd("roledel", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->roleDelCmd(static_cast<FILE *>(file), args, out);
 	}},  "delete role",
 	"usage: roledel NAME");
 
     addCmd("perms", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->permsCmd(static_cast<FILE *>(file), args, out);
 	}},  "list permissions", "usage: perms");
     addCmd("permadd", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->permAddCmd(static_cast<FILE *>(file), args, out);
 	}},  "add permission", "usage: permadd NAME");
     addCmd("permmod", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->permModCmd(static_cast<FILE *>(file), args, out);
 	}},  "modify permission", "usage: permmod ID NAME");
     addCmd("permdel", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->permDelCmd(static_cast<FILE *>(file), args, out);
 	}},  "delete permission", "usage: permdel ID");
 
     addCmd("keys", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->keysCmd(static_cast<FILE *>(file), args, out);
 	}},  "list keys", "usage: keys [USERID]");
     addCmd("keyadd", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->keyAddCmd(static_cast<FILE *>(file), args, out);
 	}},  "add key", "usage: keyadd [USERID]");
     addCmd("keydel", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->keyDelCmd(static_cast<FILE *>(file), args, out);
 	}},  "delete key", "usage: keydel ID");
     addCmd("keyclr", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->keyClrCmd(static_cast<FILE *>(file), args, out);
 	}},  "clear all keys", "usage: keyclr [USERID]");
 
     addCmd("loadmod", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->loadModCmd(static_cast<FILE *>(file), args, out);
 	}},  "load application-specific module", "usage: loadmod MODULE");
 
     addCmd("telcap",
 	"i interval interval { type scalar } "
 	"u unsubscribe unsubscribe { type flag }",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
+	ZvCmdFn{this, [](ZDash *app, void *file, ZvCf *args, ZtString &out) {
 	  return app->telcapCmd(static_cast<FILE *>(file), args, out);
 	}},  "telemetry capture",
 	"usage: telcap [OPTIONS...] PATH [TYPE[:FILTER]]...\n\n"
@@ -1827,24 +1855,19 @@ private:
     unsigned interval = args->getInt("interval", 100, 1000000, false, 0);
     bool subscribe = !args->getInt("unsubscribe", 0, 1, false, 0);
     if (!subscribe) {
-      for (unsigned i = 0; i < TelData::N; i++) m_telcap[i] = TelCap{};
       if (argc > 1) throw ZvCmdUsage{};
     } else {
       if (argc < 2) throw ZvCmdUsage{};
     }
-
-    // FIXME from here - add telemetry on-demand into m_model
-    // using TreeHierarchy::add(...)
-
     ZtArray<ZmAtomic<unsigned>> ok;
     ZtArray<ZuString> filters;
     ZtArray<int> types;
     auto reqNames = fbs::EnumNamesReqType();
     if (argc <= 1 + subscribe) {
-      ok.length(ReqTypeN);
+      ok.length(ReqType::N);
       filters.length(ok.length());
       types.length(ok.length());
-      for (unsigned i = 0; i < ReqTypeN; i++) {
+      for (unsigned i = 0; i < ReqType::N; i++) {
 	filters[i] = "*";
 	types[i] = ReqType::MIN + i;
       }
@@ -1869,83 +1892,6 @@ private:
 	for (unsigned k = ReqType::MIN; k <= ReqType::MAX; k++)
 	  if (type_ == reqNames[k]) { types[j] = k; break; }
 	if (types[j] < 0) throw ZvCmdUsage{};
-      }
-    }
-    if (subscribe) {
-      auto dir = args->get("1");
-      ZiFile::age(dir, 10);
-      {
-	ZeError e;
-	if (ZiFile::mkdir(dir, &e) != Zi::OK) {
-	  out << dir << ": " << e << '\n';
-	  return 1;
-	}
-      }
-      for (unsigned i = 0, n = ok.length(); i < n; i++) {
-	try {
-	  switch (types[i]) {
-	    case ReqType::Heap:
-	      m_telcap[TelData::Heap - TelData::MIN] =
-		TelCap::keyedFn<Heap_load, fbs::Heap>(
-		    ZiFile::append(dir, "heap.csv"));
-	      break;
-	    case ReqType::HashTbl:
-	      m_telcap[TelData::HashTbl - TelData::MIN] =
-		TelCap::keyedFn<HashTbl_load, fbs::HashTbl>(
-		    ZiFile::append(dir, "hash.csv"));
-	      break;
-	    case ReqType::Thread:
-	      m_telcap[TelData::Thread - TelData::MIN] =
-		TelCap::keyedFn<Thread_load, fbs::Thread>(
-		    ZiFile::append(dir, "thread.csv"));
-	      break;
-	    case ReqType::Mx:
-	      m_telcap[TelData::Mx - TelData::MIN] =
-		TelCap::keyedFn<Mx_load, fbs::Mx>(
-		    ZiFile::append(dir, "mx.csv"));
-	      m_telcap[TelData::Socket - TelData::MIN] =
-		TelCap::keyedFn<Socket_load, fbs::Socket>(
-		    ZiFile::append(dir, "socket.csv"));
-	      break;
-	    case ReqType::Queue:
-	      m_telcap[TelData::Queue - TelData::MIN] =
-		TelCap::keyedFn<Queue_load, fbs::Queue>(
-		    ZiFile::append(dir, "queue.csv"));
-	      break;
-	    case ReqType::Engine:
-	      m_telcap[TelData::Engine - TelData::MIN] =
-		TelCap::keyedFn<Engine_load, fbs::Engine>(
-		    ZiFile::append(dir, "engine.csv"));
-	      m_telcap[TelData::Link - TelData::MIN] =
-		TelCap::keyedFn<Link_load, fbs::Link>(
-		    ZiFile::append(dir, "link.csv"));
-	      break;
-	    case ReqType::DBEnv:
-	      m_telcap[TelData::DBEnv - TelData::MIN] =
-		TelCap::singletonFn<DBEnv_load, fbs::DBEnv>(
-		    ZiFile::append(dir, "dbenv.csv"));
-	      m_telcap[TelData::DBHost - TelData::MIN] =
-		TelCap::keyedFn<DBHost_load, fbs::DBHost>(
-		    ZiFile::append(dir, "dbhost.csv"));
-	      m_telcap[TelData::DB - TelData::MIN] =
-		TelCap::keyedFn<DB_load, fbs::DB>(
-		    ZiFile::append(dir, "db.csv"));
-	      break;
-	    case ReqType::App:
-	      m_telcap[TelData::App - TelData::MIN] =
-		TelCap::singletonFn<App_load, fbs::App>(
-		    ZiFile::append(dir, "app.csv"));
-	      break;
-	    case ReqType::Alert:
-	      m_telcap[TelData::Alert - TelData::MIN] =
-		TelCap::alertFn<Alert_load, fbs::Alert>(
-		    ZiFile::append(dir, "alert.csv"));
-	      break;
-	  }
-	} catch (const ZvError &e) {
-	  out << e << '\n';
-	  return 1;
-	}
       }
     }
     thread_local ZmSemaphore sem;
@@ -1986,7 +1932,9 @@ private:
 
   ZtString		m_prompt;
 
+  ZmRef<Link>		m_link;
   ZvSeqNo		m_seqNo = 0;
+
   Zfb::IOBuilder	m_fbb;
 
   int			m_code = 0;
@@ -1998,1342 +1946,10 @@ private:
   ZtString		m_stylePath;
   GtkStyleContext	*m_styleContext = nullptr;
   GtkWindow		*m_mainWindow = nullptr;
+  Tree::View		m_view;
+  Tree::Model		*m_model;
 
   ZuRef<TelRing>	m_telRing;
-};
-
-class ZDash :
-    public ZmPolymorph,
-    public ZvCmdClient<ZDash>,
-    public ZCmdHost,
-    public ZGtk::App {
-public:
-  using Base = ZvCmdClient<ZDash>;
-
-  // FIXME - use ZGtk::TreeArray<> to define all watchlists
-  // FIXME - figure out how to save/load tree view columns, sort, etc.
-  // - need View class that with a create column(col) with data func that
-  //   calls gtk_tree_model_get_value(model, iter, col, value)
-  // - load() loads sequcence of visible columns and calls
-  //   append_column for each (also persists column ordering/visibility)
-  //   - load() uses all columns in order as default
-  //   - may want to prevent loading an outdated column schema
-  // - save() persists column order (sequence of column IDs)
-
-  class Link : public ZvCmdCliLink<ZDash, Link> {
-  public:
-    void loggedIn() {
-      this->app()->loggedIn(this);
-    }
-    void disconnected() {
-      this->app()->disconnected(this);
-      Base::disconnected();
-    }
-    void connectFailed(bool transient) {
-      this->app()->connectFailed(this);
-      // Base::connectFailed(transient);
-    }
-    int processApp(ZuArray<const uint8_t> data) {
-      return this->app()->processApp(this, data);
-    }
-    int processTel(const ZvTelemetry::fbs::Telemetry *data) {
-      return this->app()->processTel(this, data);
-    }
-    
-    MainTree::App	appInfo;
-  };
-
-  using Links =
-    ZmRBTree<ZmRef<Link>,
-      ZmRBTreeIndex<Link::Accessor
-
-  void init(ZiMultiplex *mx, ZvCf *cf) {
-    m_gladePath = cf->get("gtkGlade", true);
-    m_stylePath = cf->get("gtkStyle");
-    unsigned tid = cf->getInt("gtkThread", 1, mx->nThreads(), true);
-
-    Base::init(mx, cf);
-    ZvCmdHost::init();
-    initCmds();
-
-    attach(mx, tid);
-    {
-      if (auto ringCf = cf->subset("telRing", false))
-	m_telRing = new TelRing(ZvRingParams{ringCf});
-      else
-	m_telRing = new TelRing(ZiRingParams{"zdash"}.size(16384));
-    }
-    auto flags = ZiRing::Read | ZiRing::Write | ZiRing::Create;
-    {
-      ZeError e;
-      if (m_telRing->open(flags, &e) != Zi::OK) {
-	detach();
-	throw ZtString() << '"' << m_telRing->params().name() << "\": " << e;
-      }
-      m_telRing->reset();
-    }
-    mx->run(tid, [this]() { gtkInit(); });
-  }
-
-  void final() {
-    detach([this]() {
-      if (m_telRing) {
-	if (*m_telRing) {
-	  m_telRing->detach();
-	  m_telRing->close();
-	}
-	m_telRing = nullptr;
-      }
-      ZvCmdHost::final();
-      Base::final();
-    });
-  }
-
-  void gtkInit() {
-    gtk_init(nullptr, nullptr);
-
-    auto builder = gtk_builder_new();
-    GError *e = nullptr;
-
-    if (!gtk_builder_add_from_file(builder, m_gladePath, &e)) {
-      if (e) {
-	ZeLOG(Error, e->message);
-	g_error_free(e);
-      }
-      gtkPost();
-      return;
-    }
-
-    m_mainWindow = GTK_WINDOW(gtk_builder_get_object(builder, "window"));
-    auto view_ = GTK_TREE_VIEW(gtk_builder_get_object(builder, "treeview"));
-    // m_watchlist = GTK_TREE_VIEW(gtk_builder_get_object(builder, "watchlist"));
-    g_object_unref(G_OBJECT(builder));
-
-    if (m_stylePath) {
-      auto file = g_file_new_for_path(m_stylePath);
-      auto provider = gtk_css_provider_new();
-      g_signal_connect(G_OBJECT(provider), "parsing-error",
-	  ZGtk::callback([](
-	      GtkCssProvider *, GtkCssSection *,
-	      GError *e, gpointer) { ZeLOG(Error, e->message); }), 0);
-      gtk_css_provider_load_from_file(provider, file, nullptr);
-      g_object_unref(G_OBJECT(file));
-      m_styleContext = gtk_style_context_new();
-      gtk_style_context_add_provider(m_styleContext, provider, G_MAXUINT);
-      g_object_unref(G_OBJECT(provider));
-    }
-
-    m_view.init(view_, m_styleContext);
-    m_view.bind(m_model = MainTree::Model::ctor());
-
-    g_signal_connect(G_OBJECT(m_mainWindow), "destroy",
-	ZGtk::callback([](GObject *o, gpointer this_) {
-	  reinterpret_cast<ZDash *>(this_)->gtkFinal();
-	}), reinterpret_cast<gpointer>(this));
-
-    gtk_widget_show_all(GTK_WIDGET(m_mainWindow));
-
-    gtk_window_present(m_mainWindow);
-
-    m_telRing->attach();
-  }
-
-  void gtkFinal() {
-    m_view.final();
-    if (m_mainWindow) g_object_unref(G_OBJECT(m_mainWindow));
-    if (m_styleContext) g_object_unref(G_OBJECT(m_styleContext));
-    post();
-  }
-
-  void post() { m_done.post(); }
-  void wait() { m_done.wait(); }
-  
-  void target(ZuString s) {
-    m_prompt.null();
-    m_prompt << s << "] ";
-  }
-
-  template <typename ...Args>
-  void login(Args &&... args) {
-    m_link = new Link(this);
-    m_link->login(ZuFwd<Args>(args)...);
-  }
-  template <typename ...Args>
-  void access(Args &&... args) {
-    m_link = new Link(this);
-    m_link->access(ZuFwd<Args>(args)...);
-  }
-
-  void disconnect() { m_link->disconnect(); }
-
-  void exiting() { m_exiting = true; }
-
-  void plugin(ZmRef<ZCmdPlugin> plugin) {
-    if (ZuUnlikely(m_plugin)) m_plugin->final();
-    m_plugin = ZuMv(plugin);
-  }
-  void sendApp(Zfb::IOBuilder &fbb) { return m_link->sendApp(fbb); }
-
-private:
-  void loggedIn(Link *) {
-    if (auto plugin = ::getenv("ZCMD_PLUGIN")) {
-      ZmRef<ZvCf> args = new ZvCf();
-      args->set("1", plugin);
-      args->set("#", "2");
-      ZtString out;
-      loadModCmd(stdout, args, out);
-      fwrite(out.data(), 1, out.length(), stdout);
-    }
-    if (m_solo) {
-      send(ZuMv(m_soloMsg));
-    } else {
-      if (m_interactive)
-	std::cout <<
-	  "For a list of valid commands: help\n"
-	  "For help on a particular command: COMMAND --help\n" << std::flush;
-      prompt();
-    }
-    this->run([link
-  }
-
-  int processApp(Link *, ZuArray<const uint8_t> data) {
-    if (ZuUnlikely(!m_plugin)) return -1;
-    return m_plugin->processApp(data);
-  }
-
-  // FIXME - this is not the GTK thread
-  int processTel(Link *link, const ZvTelemetry::fbs::Telemetry *data) {
-    using namespace ZvTelemetry;
-    int i = data->data_type();
-    if (ZuUnlikely(i < TelData::First)) return 0;
-    if (ZuUnlikely(i > TelData::MAX)) return 0;
-    auto &appInfo = link->appInfo;
-    // FIXME - remove appInfo from model on link disconnect?
-    // FIXME - need to enqueue this, and dequeue on GTK thread
-    // in refresh rate batch, with sort column
-    // save/unset/restore, signal freeze/thaw
-
-    if (appInfo.row() < 0)
-      m_model->add(&appInfo, m_model->root());
-    ZuSwitch::dispatch<TelData::N>(i, [this, data](auto i) {
-      using FBS = TelData::Type<i>;
-      auto fbs = static_cast<const FBS *>(data->data());
-
-      // App updates link's appInfo, triggers #GtkTreeModel::row-changed
-      // FIXME - need to enqueue this, and dequeue on GTK thread
-      m_model->updated(&appInfo);
-
-      // FIXME - dispatch i to FBS type
-      // data->data() is const void *fbs_;
-      // auto fbs = 
-      // FBS is e.g. fbs::Socket
-      // then e.g. new Socket_load{fbs}, or node->loadDelta(fbs)
-      // need to update time series
-      process;
-    });
-    m_telcap[i](data->data());
-    return 0;
-  }
-
-  void disconnected() {
-    if (m_exiting) return;
-    Zrl::stop();
-    std::cerr << "server disconnected\n" << std::flush;
-    ZmPlatform::exit(1);
-  }
-  void connectFailed() {
-    Zrl::stop();
-    std::cerr << "connect failed\n" << std::flush;
-    ZmPlatform::exit(1);
-  }
-
-  void prompt() {
-    mx()->add(ZmFn<>{this, [](ZCmd *app) { app->prompt_(); }});
-  }
-  void prompt_() {
-    ZtString cmd;
-next:
-    try {
-      cmd = Zrl::readline_(m_prompt);
-    } catch (const Zrl::EndOfFile &) {
-      post(); // FIXME
-      return;
-    }
-    if (!cmd) goto next;
-    send(ZuMv(cmd));
-  }
-
-  void send(ZtString cmd) {
-    FILE *file = stdout;
-    ZtString cmd_ = ZuMv(cmd);
-    {
-      ZtRegex::Captures c;
-      const auto &append = ZtStaticRegex("\\s*>>\\s*");
-      const auto &output = ZtStaticRegex("\\s*>\\s*");
-      unsigned pos = 0, n = 0;
-      if (n = append.m(cmd, c, pos)) {
-	if (!(file = fopen(c[2], "a"))) {
-	  logError(ZtString{c[2]}, ": ", ZeLastError);
-	  return;
-	}
-	cmd = c[0];
-      } else if (n = output.m(cmd, c, pos)) {
-	if (!(file = fopen(c[2], "w"))) {
-	  logError(ZtString{c[2]}, ": ", ZeLastError);
-	  return;
-	}
-	cmd = c[0];
-      } else {
-	cmd = ZuMv(cmd_);
-      }
-    }
-    ZtArray<ZtString> args;
-    ZvCf::parseCLI(cmd, args);
-    if (args[0] == "help") {
-      if (args.length() == 1) {
-	ZtString out;
-	out << "Local ";
-	processCmd(file, args, out);
-	out << "\nRemote ";
-	fwrite(out.data(), 1, out.length(), file);
-      } else if (args.length() == 2 && hasCmd(args[1])) {
-	ZtString out;
-	int code = processCmd(file, args, out);
-	if (code || out) executed(code, file, out);
-	return;
-      }
-    } else if (hasCmd(args[0])) {
-      ZtString out;
-      int code = processCmd(file, args, out);
-      if (code || out) executed(code, file, out);
-      return;
-    }
-    auto seqNo = m_seqNo++;
-    m_fbb.Clear();
-    m_fbb.Finish(ZvCmd::fbs::CreateRequest(m_fbb, seqNo,
-	  Zfb::Save::strVecIter(m_fbb, args.length(),
-	    [&args](unsigned i) { return args[i]; })));
-    m_link->sendCmd(m_fbb, seqNo, [this, file](const ZvCmd::fbs::ReqAck *ack) {
-      using namespace Zfb::Load;
-      executed(ack->code(), file, str(ack->out()));
-    });
-  }
-
-  int executed(int code, FILE *file, ZuString out) {
-    m_code = code;
-    if (out) fwrite(out.data(), 1, out.length(), file);
-    if (file != stdout) fclose(file);
-    prompt();
-    return code;
-  }
-
-private:
-  // built-in commands
-
-  int filterAck(
-      FILE *file, const ZvUserDB::fbs::ReqAck *ack,
-      int ackType1, int ackType2,
-      const char *op, ZtString &out) {
-    using namespace ZvUserDB;
-    if (ack->rejCode()) {
-      out << '[' << ZuBox<unsigned>(ack->rejCode()) << "] "
-	<< Zfb::Load::str(ack->rejText()) << '\n';
-      return 1;
-    }
-    auto ackType = ack->data_type();
-    if ((int)ackType != ackType1 &&
-	ackType2 >= fbs::ReqAckData_MIN && (int)ackType != ackType2) {
-      logError("mismatched ack from server: ",
-	  fbs::EnumNameReqAckData(ackType));
-      out << op << " failed\n";
-      return 1;
-    }
-    return 0;
-  }
-
-  void initCmds() {
-    addCmd("passwd", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->passwdCmd(static_cast<FILE *>(file), args, out);
-	}},  "change passwd", "usage: passwd");
-
-    addCmd("users", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->usersCmd(static_cast<FILE *>(file), args, out);
-	}},  "list users", "usage: users");
-    addCmd("useradd",
-	"e enabled enabled { type flag } "
-	"i immutable immutable { type flag }",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->userAddCmd(static_cast<FILE *>(file), args, out);
-	}},  "add user",
-	"usage: useradd ID NAME ROLE[,ROLE,...] [OPTIONS...]\n\n"
-	"Options:\n"
-	"  -e, --enabled\t\tset Enabled flag\n"
-	"  -i, --immutable\tset Immutable flag\n");
-    addCmd("resetpass", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->resetPassCmd(static_cast<FILE *>(file), args, out);
-	}},  "reset password", "usage: resetpass USERID");
-    addCmd("usermod",
-	"e enabled enabled { type flag } "
-	"i immutable immutable { type flag }",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->userModCmd(static_cast<FILE *>(file), args, out);
-	}},  "modify user",
-	"usage: usermod ID NAME ROLE[,ROLE,...] [OPTIONS...]\n\n"
-	"Options:\n"
-	"  -e, --enabled\t\tset Enabled flag\n"
-	"  -i, --immutable\tset Immutable flag\n");
-    addCmd("userdel", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->userDelCmd(static_cast<FILE *>(file), args, out);
-	}},  "delete user", "usage: userdel ID");
-
-    addCmd("roles", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->rolesCmd(static_cast<FILE *>(file), args, out);
-	}},  "list roles", "usage: roles");
-    addCmd("roleadd", "i immutable immutable { type flag }",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->roleAddCmd(static_cast<FILE *>(file), args, out);
-	}},  "add role",
-	"usage: roleadd NAME PERMS APIPERMS [OPTIONS...]\n\n"
-	"Options:\n"
-	"  -i, --immutable\tset Immutable flag\n");
-    addCmd("rolemod", "i immutable immutable { type scalar }",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->roleModCmd(static_cast<FILE *>(file), args, out);
-	}},  "modify role",
-	"usage: rolemod NAME PERMS APIPERMS [OPTIONS...]\n\n"
-	"Options:\n"
-	"  -i, --immutable\tset Immutable flag\n");
-    addCmd("roledel", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->roleDelCmd(static_cast<FILE *>(file), args, out);
-	}},  "delete role",
-	"usage: roledel NAME");
-
-    addCmd("perms", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->permsCmd(static_cast<FILE *>(file), args, out);
-	}},  "list permissions", "usage: perms");
-    addCmd("permadd", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->permAddCmd(static_cast<FILE *>(file), args, out);
-	}},  "add permission", "usage: permadd NAME");
-    addCmd("permmod", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->permModCmd(static_cast<FILE *>(file), args, out);
-	}},  "modify permission", "usage: permmod ID NAME");
-    addCmd("permdel", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->permDelCmd(static_cast<FILE *>(file), args, out);
-	}},  "delete permission", "usage: permdel ID");
-
-    addCmd("keys", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->keysCmd(static_cast<FILE *>(file), args, out);
-	}},  "list keys", "usage: keys [USERID]");
-    addCmd("keyadd", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->keyAddCmd(static_cast<FILE *>(file), args, out);
-	}},  "add key", "usage: keyadd [USERID]");
-    addCmd("keydel", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->keyDelCmd(static_cast<FILE *>(file), args, out);
-	}},  "delete key", "usage: keydel ID");
-    addCmd("keyclr", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->keyClrCmd(static_cast<FILE *>(file), args, out);
-	}},  "clear all keys", "usage: keyclr [USERID]");
-
-    addCmd("loadmod", "",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->loadModCmd(static_cast<FILE *>(file), args, out);
-	}},  "load application-specific module", "usage: loadmod MODULE");
-
-    addCmd("telcap",
-	"i interval interval { type scalar } "
-	"u unsubscribe unsubscribe { type flag }",
-	ZvCmdFn{this, [](ZCmd *app, void *file, ZvCf *args, ZtString &out) {
-	  return app->telcapCmd(static_cast<FILE *>(file), args, out);
-	}},  "telemetry capture",
-	"usage: telcap [OPTIONS...] PATH [TYPE[:FILTER]]...\n\n"
-	"  PATH\tdirectory for capture CSV files\n"
-	"  TYPE\t[Heap|HashTbl|Thread|Mx|Queue|Engine|DbEnv|App|Alert]\n"
-	"  FILTER\tfilter specification in type-specific format\n\n"
-	"Options:\n"
-	"  -i, --interval=N\tset scan interval in milliseconds "
-	  "(100 <= N <= 1M)\n"
-	"  -u, --unsubscribe\tunsubscribe (i.e. end capture)\n");
-  }
-
-  int passwdCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc != 1) throw ZvCmdUsage{};
-    ZtString oldpw = getpass_("Current password: ", 100);
-    ZtString newpw = getpass_("New password: ", 100);
-    ZtString checkpw = getpass_("Retype new password: ", 100);
-    if (checkpw != newpw) {
-      out << "passwords do not match\npassword unchanged!\n";
-      return 1;
-    }
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_ChPass,
-	    fbs::CreateUserChPass(m_fbb,
-	      str(m_fbb, oldpw),
-	      str(m_fbb, newpw)).Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_ChPass, -1, "password change", out))
-	return executed(code, file, out);
-      auto userAck = static_cast<const fbs::UserAck *>(ack->data());
-      if (!userAck->ok()) {
-	out << "password change rejected\n";
-	return executed(1, file, out);
-      }
-      out << "password changed\n";
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-
-  static void printUser(ZtString &out, const ZvUserDB::fbs::User *user_) {
-    using namespace ZvUserDB;
-    using namespace Zfb::Load;
-    auto hmac_ = bytes(user_->hmac());
-    ZtString hmac;
-    hmac.length(Ztls::Base64::enclen(hmac_.length()));
-    Ztls::Base64::encode(
-	hmac.data(), hmac.length(), hmac_.data(), hmac_.length());
-    auto secret_ = bytes(user_->secret());
-    ZtString secret;
-    secret.length(Ztls::Base32::enclen(secret_.length()));
-    Ztls::Base32::encode(
-	secret.data(), secret.length(), secret_.data(), secret_.length());
-    out << user_->id() << ' ' << str(user_->name()) << " roles=[";
-    all(user_->roles(), [&out](unsigned i, auto role_) {
-      if (i) out << ',';
-      out << str(role_);
-    });
-    out << "] hmac=" << hmac << " secret=" << secret << " flags=";
-    bool pipe = false;
-    if (user_->flags() & User::Enabled) {
-      out << "Enabled";
-      pipe = true;
-    }
-    if (user_->flags() & User::Immutable) {
-      if (pipe) out << '|';
-      out << "Immutable";
-      pipe = true;
-    }
-    if (user_->flags() & User::ChPass) {
-      if (pipe) out << '|';
-      out << "ChPass";
-      pipe = true;
-    }
-  }
-
-  int usersCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc < 1 || argc > 2) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      fbs::UserIDBuilder fbb_(m_fbb);
-      if (argc == 2) fbb_.add_id(args->getInt64("1", 0, LLONG_MAX, true));
-      auto userID = fbb_.Finish();
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_UserGet, userID.Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_UserGet, -1,
-	    "user get", out))
-	return executed(code, file, out);
-      auto userList = static_cast<const fbs::UserList *>(ack->data());
-      using namespace Zfb::Load;
-      all(userList->list(), [&out](unsigned, auto user_) {
-	printUser(out, user_); out << '\n';
-      });
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-  int userAddCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc != 4) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      uint8_t flags = 0;
-      if (args->get("enabled")) flags |= User::Enabled;
-      if (args->get("immutable")) flags |= User::Immutable;
-      const auto &comma = ZtStaticRegex(",");
-      ZtRegex::Captures roles;
-      comma.split(args->get("3"), roles);
-      m_fbb.Clear();
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_UserAdd,
-	    fbs::CreateUser(m_fbb,
-	      args->getInt64("1", 0, LLONG_MAX, true),
-	      str(m_fbb, args->get("2")), 0, 0,
-	      strVecIter(m_fbb, roles.length(),
-		[&roles](unsigned i) { return roles[i]; }),
-	      flags).Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_UserAdd, -1,
-	    "user add", out))
-	return executed(code, file, out);
-      auto userPass = static_cast<const fbs::UserPass *>(ack->data());
-      if (!userPass->ok()) {
-	out << "user add rejected\n";
-	return executed(1, file, out);
-      }
-      printUser(out, userPass->user()); out << '\n';
-      using namespace Zfb::Load;
-      out << "passwd=" << str(userPass->passwd()) << '\n';
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-  int resetPassCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_ResetPass,
-	    fbs::CreateUserID(m_fbb,
-	      args->getInt64("1", 0, LLONG_MAX, true)).Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_ResetPass, -1,
-	    "reset password", out))
-	return executed(code, file, out);
-      auto userPass = static_cast<const fbs::UserPass *>(ack->data());
-      if (!userPass->ok()) {
-	out << "reset password rejected\n";
-	return executed(1, file, out);
-      }
-      printUser(out, userPass->user()); out << '\n';
-      using namespace Zfb::Load;
-      out << "passwd=" << str(userPass->passwd()) << '\n';
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-  int userModCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc != 4) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      uint8_t flags = 0;
-      if (args->get("enabled")) flags |= User::Enabled;
-      if (args->get("immutable")) flags |= User::Immutable;
-      const auto &comma = ZtStaticRegex(",");
-      ZtRegex::Captures roles;
-      comma.split(args->get("3"), roles);
-      m_fbb.Clear();
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_UserMod,
-	    fbs::CreateUser(m_fbb,
-	      args->getInt64("1", 0, LLONG_MAX, true),
-	      str(m_fbb, args->get("2")), 0, 0,
-	      strVecIter(m_fbb, roles.length(),
-		[&roles](unsigned i) { return roles[i]; }),
-	      flags).Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_UserMod, -1,
-	    "user modify", out))
-	return executed(code, file, out);
-      auto userUpdAck = static_cast<const fbs::UserUpdAck *>(ack->data());
-      if (!userUpdAck->ok()) {
-	out << "user modify rejected\n";
-	return executed(1, file, out);
-      }
-      printUser(out, userUpdAck->user()); out << '\n';
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-  int userDelCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_UserDel,
-	    fbs::CreateUserID(m_fbb,
-	      args->getInt64("1", 0, LLONG_MAX, true)).Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_UserDel, -1,
-	    "user delete", out))
-	return executed(code, file, out);
-      auto userUpdAck = static_cast<const fbs::UserUpdAck *>(ack->data());
-      if (!userUpdAck->ok()) {
-	out << "user delete rejected\n";
-	return executed(1, file, out);
-      }
-      printUser(out, userUpdAck->user()); out << '\n';
-      out << "user deleted\n";
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-
-  static void printRole(ZtString &out, const ZvUserDB::fbs::Role *role_) {
-    using namespace ZvUserDB;
-    using namespace Zfb::Load;
-    Bitmap perms, apiperms;
-    all(role_->perms(), [&perms](unsigned i, uint64_t w) {
-      if (ZuLikely(i < Bitmap::Words)) perms.data[i] = w;
-    });
-    all(role_->apiperms(), [&apiperms](unsigned i, uint64_t w) {
-      if (ZuLikely(i < Bitmap::Words)) apiperms.data[i] = w;
-    });
-    out << str(role_->name())
-      << " perms=[" << perms
-      << "] apiperms=[" << apiperms
-      << "] flags=";
-    if (role_->flags() & Role::Immutable) out << "Immutable";
-  }
-
-  int rolesCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc < 1 || argc > 2) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      Zfb::Offset<Zfb::String> name_;
-      if (argc == 2) name_ = str(m_fbb, args->get("1"));
-      fbs::RoleIDBuilder fbb_(m_fbb);
-      if (argc == 2) fbb_.add_name(name_);
-      auto roleID = fbb_.Finish();
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_RoleGet, roleID.Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_RoleGet, -1,
-	    "role get", out))
-	return executed(code, file, out);
-      auto roleList = static_cast<const fbs::RoleList *>(ack->data());
-      using namespace Zfb::Load;
-      all(roleList->list(), [&out](unsigned, auto role_) {
-	printRole(out, role_); out << '\n';
-      });
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-  int roleAddCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc != 4) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      Bitmap perms{args->get("2")};
-      Bitmap apiperms{args->get("3")};
-      uint8_t flags = 0;
-      if (args->get("immutable")) flags |= Role::Immutable;
-      m_fbb.Clear();
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_RoleAdd,
-	    fbs::CreateRole(m_fbb,
-	      str(m_fbb, args->get("1")),
-	      m_fbb.CreateVector(perms.data, Bitmap::Words),
-	      m_fbb.CreateVector(apiperms.data, Bitmap::Words),
-	      flags).Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_RoleAdd, -1,
-	    "role add", out))
-	return executed(code, file, out);
-      auto roleUpdAck = static_cast<const fbs::RoleUpdAck *>(ack->data());
-      if (!roleUpdAck->ok()) {
-	out << "role add rejected\n";
-	return executed(1, file, out);
-      }
-      printRole(out, roleUpdAck->role()); out << '\n';
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-  int roleModCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc != 4) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      Bitmap perms{args->get("2")};
-      Bitmap apiperms{args->get("3")};
-      uint8_t flags = 0;
-      if (args->get("immutable")) flags |= Role::Immutable;
-      m_fbb.Clear();
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_RoleMod,
-	    fbs::CreateRole(m_fbb,
-	      str(m_fbb, args->get("1")),
-	      m_fbb.CreateVector(perms.data, Bitmap::Words),
-	      m_fbb.CreateVector(apiperms.data, Bitmap::Words),
-	      flags).Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_RoleMod, -1,
-	    "role modify", out))
-	return executed(code, file, out);
-      auto roleUpdAck = static_cast<const fbs::RoleUpdAck *>(ack->data());
-      if (!roleUpdAck->ok()) {
-	out << "role modify rejected\n";
-	return executed(1, file, out);
-      }
-      printRole(out, roleUpdAck->role()); out << '\n';
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-  int roleDelCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_RoleDel,
-	    fbs::CreateRoleID(m_fbb, str(m_fbb, args->get("1"))).Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_RoleMod, -1,
-	    "role delete", out))
-	return executed(code, file, out);
-      auto roleUpdAck = static_cast<const fbs::RoleUpdAck *>(ack->data());
-      if (!roleUpdAck->ok()) {
-	out << "role delete rejected\n";
-	return executed(1, file, out);
-      }
-      printRole(out, roleUpdAck->role()); out << '\n';
-      out << "role deleted\n";
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-
-  int permsCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc < 1 || argc > 2) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      fbs::PermIDBuilder fbb_(m_fbb);
-      if (argc == 2) fbb_.add_id(args->getInt("1", 0, Bitmap::Bits, true));
-      auto permID = fbb_.Finish();
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_PermGet, permID.Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_PermGet, -1,
-	    "perm get", out))
-	return executed(code, file, out);
-      auto permList = static_cast<const fbs::PermList *>(ack->data());
-      using namespace Zfb::Load;
-      all(permList->list(), [&out](unsigned, auto perm_) {
-	out << ZuBoxed(perm_->id()).fmt(ZuFmt::Right<3, ' '>()) << ' '
-	  << str(perm_->name()) << '\n';
-      });
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-  int permAddCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      auto name = args->get("1");
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_PermAdd,
-	    fbs::CreatePermAdd(m_fbb, str(m_fbb, name)).Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_PermAdd, -1,
-	    "permission add", out))
-	return executed(code, file, out);
-      using namespace Zfb::Load;
-      auto permUpdAck = static_cast<const fbs::PermUpdAck *>(ack->data());
-      if (!permUpdAck->ok()) {
-	out << "permission add rejected\n";
-	return executed(1, file, out);
-      }
-      auto perm = permUpdAck->perm();
-      out << "added " << perm->id() << ' ' << str(perm->name()) << '\n';
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-  int permModCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc != 3) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      auto permID = args->getInt("1", 0, Bitmap::Bits, true);
-      auto permName = args->get("2");
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_PermMod,
-	    fbs::CreatePerm(m_fbb, permID, str(m_fbb, permName)).Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_PermMod, -1,
-	    "permission modify", out))
-	return executed(code, file, out);
-      using namespace Zfb::Load;
-      auto permUpdAck = static_cast<const fbs::PermUpdAck *>(ack->data());
-      if (!permUpdAck->ok()) {
-	out << "permission modify rejected\n";
-	return executed(1, file, out);
-      }
-      auto perm = permUpdAck->perm();
-      out << "modified " << perm->id() << ' ' << str(perm->name()) << '\n';
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-  int permDelCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      auto permID = args->getInt("1", 0, Bitmap::Bits, true);
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_PermDel,
-	    fbs::CreatePermID(m_fbb, permID).Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_PermDel, -1,
-	    "permission delete", out))
-	return executed(code, file, out);
-      using namespace Zfb::Load;
-      auto permUpdAck = static_cast<const fbs::PermUpdAck *>(ack->data());
-      if (!permUpdAck->ok()) {
-	out << "permission delete rejected\n";
-	return executed(1, file, out);
-      }
-      auto perm = permUpdAck->perm();
-      out << "deleted " << perm->id() << ' ' << str(perm->name()) << '\n';
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-
-  int keysCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc < 1 || argc > 2) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      if (argc == 1)
-	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	      fbs::ReqData_OwnKeyGet,
-	      fbs::CreateUserID(m_fbb, m_link->userID()).Union()));
-      else {
-	auto userID = ZuBox<uint64_t>(args->get("1"));
-	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	      fbs::ReqData_KeyGet,
-	      fbs::CreateUserID(m_fbb, userID).Union()));
-      }
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_OwnKeyGet, fbs::ReqAckData_KeyGet,
-	    "key get", out))
-	return executed(code, file, out);
-      auto keyIDList = static_cast<const fbs::KeyIDList *>(ack->data());
-      using namespace Zfb::Load;
-      all(keyIDList->list(), [&out](unsigned, auto key_) {
-	out << str(key_) << '\n';
-      });
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-
-  int keyAddCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc < 1 || argc > 2) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      if (argc == 1)
-	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	      fbs::ReqData_OwnKeyAdd,
-	      fbs::CreateUserID(m_fbb, m_link->userID()).Union()));
-      else {
-	auto userID = ZuBox<uint64_t>(args->get("1"));
-	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	      fbs::ReqData_KeyAdd,
-	      fbs::CreateUserID(m_fbb, userID).Union()));
-      }
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_OwnKeyAdd, fbs::ReqAckData_KeyAdd,
-	    "key add", out))
-	return executed(code, file, out);
-      using namespace Zfb::Load;
-      auto keyUpdAck = static_cast<const fbs::KeyUpdAck *>(ack->data());
-      if (!keyUpdAck->ok()) {
-	out << "key add rejected\n";
-	return executed(1, file, out);
-      }
-      auto secret_ = bytes(keyUpdAck->key()->secret());
-      ZtString secret;
-      secret.length(Ztls::Base64::enclen(secret_.length()));
-      Ztls::Base64::encode(
-	  secret.data(), secret.length(), secret_.data(), secret_.length());
-      out << "id: " << str(keyUpdAck->key()->id())
-	<< "\nsecret: " << secret << '\n';
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-
-  int keyDelCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      auto keyID = args->get("1");
-      m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	    fbs::ReqData_KeyDel,
-	    fbs::CreateKeyID(m_fbb, str(m_fbb, keyID)).Union()));
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_OwnKeyDel, fbs::ReqAckData_KeyDel,
-	    "key delete", out))
-	return executed(code, file, out);
-      using namespace Zfb::Load;
-      auto userAck = static_cast<const fbs::UserAck *>(ack->data());
-      if (!userAck->ok()) {
-	out << "key delete rejected\n";
-	return executed(1, file, out);
-      }
-      out << "key deleted\n";
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-
-  int keyClrCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc < 1 || argc > 2) throw ZvCmdUsage{};
-    auto seqNo = m_seqNo++;
-    using namespace ZvUserDB;
-    {
-      using namespace Zfb::Save;
-      m_fbb.Clear();
-      if (argc == 1)
-	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	      fbs::ReqData_OwnKeyClr,
-	      fbs::CreateUserID(m_fbb, m_link->userID()).Union()));
-      else {
-	auto userID = ZuBox<uint64_t>(args->get("1"));
-	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
-	      fbs::ReqData_KeyClr,
-	      fbs::CreateUserID(m_fbb, userID).Union()));
-      }
-    }
-    m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
-      ZtString out;
-      if (int code = filterAck(
-	    file, ack, fbs::ReqAckData_OwnKeyClr, fbs::ReqAckData_KeyClr,
-	    "key clear", out))
-	return executed(code, file, out);
-      auto userAck = static_cast<const fbs::UserAck *>(ack->data());
-      if (!userAck->ok()) {
-	out << "key clear rejected\n";
-	return executed(1, file, out);
-      }
-      out << "keys cleared\n";
-      return executed(0, file, out);
-    });
-    return 0;
-  }
-
-  int loadModCmd(FILE *, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    if (argc != 2) throw ZvCmdUsage{};
-    ZiModule module;
-    ZiModule::Path name = args->get("1", true);
-    ZtString e;
-    if (module.load(name, false, &e) < 0) {
-      out << "failed to load \"" << name << "\": " << ZuMv(e) << '\n';
-      return 1;
-    }
-    ZCmdInitFn initFn = (ZCmdInitFn)module.resolve("ZCmd_plugin", &e);
-    if (!initFn) {
-      module.unload();
-      out << "failed to resolve \"ZCmd_plugin\" in \"" <<
-	name << "\": " << ZuMv(e) << '\n';
-      return 1;
-    }
-    (*initFn)(static_cast<ZCmdHost *>(this));
-    out << "module \"" << name << "\" loaded\n";
-    return 0;
-  }
-
-  int telcapCmd(FILE *file, ZvCf *args, ZtString &out) {
-    ZuBox<int> argc = args->get("#");
-    using namespace ZvTelemetry;
-    unsigned interval = args->getInt("interval", 100, 1000000, false, 0);
-    bool subscribe = !args->getInt("unsubscribe", 0, 1, false, 0);
-    if (!subscribe) {
-      for (unsigned i = 0; i < TelData::N; i++) m_telcap[i] = TelCap{};
-      if (argc > 1) throw ZvCmdUsage{};
-    } else {
-      if (argc < 2) throw ZvCmdUsage{};
-    }
-
-    // FIXME from here - add telemetry on-demand into m_model
-    // using TreeHierarchy::add(...)
-
-    ZtArray<ZmAtomic<unsigned>> ok;
-    ZtArray<ZuString> filters;
-    ZtArray<int> types;
-    auto reqNames = fbs::EnumNamesReqType();
-    if (argc <= 1 + subscribe) {
-      ok.length(ReqTypeN);
-      filters.length(ok.length());
-      types.length(ok.length());
-      for (unsigned i = 0; i < ReqTypeN; i++) {
-	filters[i] = "*";
-	types[i] = ReqType::MIN + i;
-      }
-    } else {
-      ok.length(argc - (1 + subscribe));
-      filters.length(ok.length());
-      types.length(ok.length());
-      const auto &colon = ZtStaticRegex(":");
-      for (unsigned i = 2; i < (unsigned)argc; i++) {
-	auto j = i - 2;
-	auto arg = args->get(ZuStringN<24>{} << i);
-	ZuString type_;
-	ZtRegex::Captures c;
-	if (colon.m(arg, c)) {
-	  type_ = c[0];
-	  filters[j] = c[2];
-	} else {
-	  type_ = arg;
-	  filters[j] = "*";
-	}
-	types[j] = -1;
-	for (unsigned k = ReqType::MIN; k <= ReqType::MAX; k++)
-	  if (type_ == reqNames[k]) { types[j] = k; break; }
-	if (types[j] < 0) throw ZvCmdUsage{};
-      }
-    }
-    if (subscribe) {
-      auto dir = args->get("1");
-      ZiFile::age(dir, 10);
-      {
-	ZeError e;
-	if (ZiFile::mkdir(dir, &e) != Zi::OK) {
-	  out << dir << ": " << e << '\n';
-	  return 1;
-	}
-      }
-      for (unsigned i = 0, n = ok.length(); i < n; i++) {
-	try {
-	  switch (types[i]) {
-	    case ReqType::Heap:
-	      m_telcap[TelData::Heap - TelData::MIN] =
-		TelCap::keyedFn<Heap_load, fbs::Heap>(
-		    ZiFile::append(dir, "heap.csv"));
-	      break;
-	    case ReqType::HashTbl:
-	      m_telcap[TelData::HashTbl - TelData::MIN] =
-		TelCap::keyedFn<HashTbl_load, fbs::HashTbl>(
-		    ZiFile::append(dir, "hash.csv"));
-	      break;
-	    case ReqType::Thread:
-	      m_telcap[TelData::Thread - TelData::MIN] =
-		TelCap::keyedFn<Thread_load, fbs::Thread>(
-		    ZiFile::append(dir, "thread.csv"));
-	      break;
-	    case ReqType::Mx:
-	      m_telcap[TelData::Mx - TelData::MIN] =
-		TelCap::keyedFn<Mx_load, fbs::Mx>(
-		    ZiFile::append(dir, "mx.csv"));
-	      m_telcap[TelData::Socket - TelData::MIN] =
-		TelCap::keyedFn<Socket_load, fbs::Socket>(
-		    ZiFile::append(dir, "socket.csv"));
-	      break;
-	    case ReqType::Queue:
-	      m_telcap[TelData::Queue - TelData::MIN] =
-		TelCap::keyedFn<Queue_load, fbs::Queue>(
-		    ZiFile::append(dir, "queue.csv"));
-	      break;
-	    case ReqType::Engine:
-	      m_telcap[TelData::Engine - TelData::MIN] =
-		TelCap::keyedFn<Engine_load, fbs::Engine>(
-		    ZiFile::append(dir, "engine.csv"));
-	      m_telcap[TelData::Link - TelData::MIN] =
-		TelCap::keyedFn<Link_load, fbs::Link>(
-		    ZiFile::append(dir, "link.csv"));
-	      break;
-	    case ReqType::DBEnv:
-	      m_telcap[TelData::DBEnv - TelData::MIN] =
-		TelCap::singletonFn<DBEnv_load, fbs::DBEnv>(
-		    ZiFile::append(dir, "dbenv.csv"));
-	      m_telcap[TelData::DBHost - TelData::MIN] =
-		TelCap::keyedFn<DBHost_load, fbs::DBHost>(
-		    ZiFile::append(dir, "dbhost.csv"));
-	      m_telcap[TelData::DB - TelData::MIN] =
-		TelCap::keyedFn<DB_load, fbs::DB>(
-		    ZiFile::append(dir, "db.csv"));
-	      break;
-	    case ReqType::App:
-	      m_telcap[TelData::App - TelData::MIN] =
-		TelCap::singletonFn<App_load, fbs::App>(
-		    ZiFile::append(dir, "app.csv"));
-	      break;
-	    case ReqType::Alert:
-	      m_telcap[TelData::Alert - TelData::MIN] =
-		TelCap::alertFn<Alert_load, fbs::Alert>(
-		    ZiFile::append(dir, "alert.csv"));
-	      break;
-	  }
-	} catch (const ZvError &e) {
-	  out << e << '\n';
-	  return 1;
-	}
-      }
-    }
-    thread_local ZmSemaphore sem;
-    for (unsigned i = 0, n = ok.length(); i < n; i++) {
-      using namespace Zfb::Save;
-      auto seqNo = m_seqNo++;
-      m_fbb.Clear();
-      m_fbb.Finish(fbs::CreateRequest(m_fbb,
-	    seqNo, str(m_fbb, filters[i]), interval,
-	    static_cast<fbs::ReqType>(types[i]), subscribe));
-      m_link->sendTelReq(m_fbb, seqNo,
-	  [ok = &ok[i], sem = &sem](const fbs::ReqAck *ack) {
-	    ok->store_(ack->ok());
-	    sem->post();
-	  });
-    }
-    for (unsigned i = 0, n = ok.length(); i < n; i++) sem.wait();
-    bool allOK = true;
-    for (unsigned i = 0, n = ok.length(); i < n; i++)
-      if (!ok[i].load_()) {
-	out << "telemetry request "
-	  << reqNames[types[i]] << ':' << filters[i] << " rejected\n";
-	allOK = false;
-      }
-    if (!allOK) return 1;
-    if (subscribe) {
-      if (!interval)
-	out << "telemetry queried\n";
-      else
-	out << "telemetry subscribed\n";
-    } else
-      out << "telemetry unsubscribed\n";
-    return 0;
-  }
-
-private:
-  ZmSemaphore		m_done;
-
-  ZtString		m_prompt;
-
-  ZvSeqNo		m_seqNo = 0;
-  Zfb::IOBuilder	m_fbb;
-
-  int			m_code = 0;
-  bool			m_exiting = false;
-
-  ZmRef<ZCmdPlugin>	m_plugin;
-
-  ZtString		m_gladePath;
-  ZtString		m_stylePath;
-  GtkStyleContext	*m_styleContext = nullptr;
-  GtkWindow		*m_mainWindow = nullptr;
-  MainTree::Model	*m_model;
-  MainTree::View	m_view;
 };
 
 int main(int argc, char **argv)
@@ -3421,9 +2037,9 @@ int main(int argc, char **argv)
 
   mx->start();
 
-  ZmRef<ZDash> client = new ZDash();
+  ZmRef<ZDash> app = new ZDash();
 
-  ZmTrap::sigintFn(ZmFn<>{client, [](ZDash *client) { client->post(); }});
+  ZmTrap::sigintFn(ZmFn<>{app, [](ZDash *app) { app->post(); }});
   ZmTrap::trap();
 
   {
@@ -3437,7 +2053,7 @@ int main(int argc, char **argv)
     else
       cf->set("caPath", "/etc/ssl/certs");
     try {
-      client->init(mx, cf);
+      app->init(mx, cf);
     } catch (const ZvError &e) {
       std::cerr << e << '\n' << std::flush;
       ::exit(1);
@@ -3450,30 +2066,30 @@ int main(int argc, char **argv)
     }
   }
 
-  client->target(argv[1]);
+  app->target(argv[1]);
 
   if (keyID)
-    client->access(server, port, keyID, secret);
+    app->access(server, port, keyID, secret);
   else
-    client->login(server, port, user, passwd, totp);
+    app->login(server, port, user, passwd, totp);
 
-  client->wait();
+  app->wait();
 
   Zrl::stop();
   std::cout << std::flush;
 
-  client->exiting();
-  client->disconnect();
+  app->exiting();
+  app->disconnect();
 
   mx->stop(true);
 
   ZeLog::stop();
 
-  client->final();
+  app->final();
 
   delete mx;
 
   ZmTrap::sigintFn(ZmFn<>{});
 
-  return client->code();
+  return app->code();
 }

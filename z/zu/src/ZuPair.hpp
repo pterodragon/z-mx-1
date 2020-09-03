@@ -146,22 +146,12 @@ public:
   template <unsigned I> using Type = ZuPair_Type<I, T0, T1>;
   template <unsigned I> using Type_ = ZuPair_Type_<I, U0, U1>;
 
-  ZuInline Pair() { }
-
-  ZuInline Pair(const Pair &p) : m_p0(p.m_p0), m_p1(p.m_p1) { }
-
-  ZuInline Pair(Pair &&p) :
-    m_p0(static_cast<T0 &&>(p.m_p0)), m_p1(static_cast<T1 &&>(p.m_p1)) { }
-
-  ZuInline Pair &operator =(const Pair &p) {
-    if (this != &p) m_p0 = p.m_p0, m_p1 = p.m_p1;
-    return *this;
-  }
-
-  ZuInline Pair &operator =(Pair &&p) noexcept {
-    m_p0 = static_cast<T0 &&>(p.m_p0), m_p1 = static_cast<T1 &&>(p.m_p1);
-    return *this;
-  }
+  Pair() = default;
+  Pair(const Pair &) = default;
+  Pair &operator =(const Pair &) = default;
+  Pair(Pair &&) = default;
+  Pair &operator =(Pair &&) = default;
+  ~Pair() = default;
 
   template <typename T> ZuInline Pair(T p,
       typename ZuIfT<ZuPair_Cvt<T, Pair>::OK>::T *_ = 0) :

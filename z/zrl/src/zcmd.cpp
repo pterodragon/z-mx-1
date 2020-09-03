@@ -222,7 +222,6 @@ public:
     }
     void connectFailed(bool transient) {
       this->app()->connectFailed();
-      // Base::connectFailed(transient);
     }
     int processApp(ZuArray<const uint8_t> data) {
       return this->app()->processApp(data);
@@ -1426,16 +1425,22 @@ private:
   }
 
 private:
-  ZmSemaphore		m_done;
-  ZtString		m_prompt;
-  ZtString		m_soloMsg;
-  ZmRef<Link>		m_link;
-  ZvSeqNo		m_seqNo = 0;
-  Zfb::IOBuilder	m_fbb;
-  int			m_code = 0;
   bool			m_interactive = true;
   bool			m_solo = false;
+  ZtString		m_soloMsg;
+
+  ZmSemaphore		m_done;
+
+  ZtString		m_prompt;
+
+  ZmRef<Link>		m_link;
+  ZvSeqNo		m_seqNo = 0;
+
+  Zfb::IOBuilder	m_fbb;
+
+  int			m_code = 0;
   bool			m_exiting = false;
+
   ZmRef<ZCmdPlugin>	m_plugin;
   TelCap		m_telcap[TelDataN];
 };

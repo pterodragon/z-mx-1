@@ -100,8 +100,10 @@ public:
     m_killWait(p.m_killWait),
     m_coredump(p.m_coredump) { }
 
-  ZiRingParams(const ZiRingParams &p) = default;
-  ZiRingParams &operator =(const ZiRingParams &p) = default;
+  ZiRingParams(const ZiRingParams &) = default;
+  ZiRingParams &operator =(const ZiRingParams &) = default;
+  ZiRingParams(ZiRingParams &&) = default;
+  ZiRingParams &operator =(ZiRingParams &&) = default;
 
   template <typename Name>
   ZiRingParams &name(const Name &s) { m_name = s; return *this; }

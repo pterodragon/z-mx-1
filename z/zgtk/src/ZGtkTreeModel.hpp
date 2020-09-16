@@ -733,7 +733,8 @@ namespace TreeNode {
     Parent &operator =(Parent &&) = delete;
   public:
     Parent() = default;
-    ~Parent() = default;
+    ~Parent() { for (auto &&child: m_index) delete child; }
+
     constexpr bool hasChild() const { return true; }
     constexpr unsigned nChildren() const { return m_index.length(); }
     template <typename L>
@@ -764,6 +765,7 @@ namespace TreeNode {
     void del(Child_ *child) {
       gint row = child->row();
       m_index.splice(row, 1);
+      delete child;
     }
 
   private:

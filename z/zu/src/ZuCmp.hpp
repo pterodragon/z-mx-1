@@ -249,7 +249,7 @@ template <typename T, bool Fwd> struct ZuCmp_NonPrimitive<T, true, Fwd> {
   template <typename P1, typename P2>
   ZuInline static bool equals(const P1 &p1, const P2 &p2) { return p1 == p2; }
   template <typename P> ZuInline static bool null(const P &p) { return !p; }
-  ZuInline static const T &null() { static const T t; return t; }
+  ZuInline static const T &null() { static T t; return t; }
 };
 
 // comparison of pointers (including smart pointers)

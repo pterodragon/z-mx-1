@@ -184,10 +184,7 @@ namespace Telemetry {
 
     template <typename FBS>
     ZuInline Item(void *link__, FBS *fbs) :
-	link_{link__}, data{fbs},
-	dataFrame{Data::fields(), /* FIXME */, true},
-	dfWriter(&dataFrame) { }
-    // FIXME - need to pass DF a name, which is key, so need key for DBEnv and App even though they are singletons
+	link_{link__}, data{fbs} { }
 
   private:
     Item(const Item &) = delete;
@@ -195,10 +192,23 @@ namespace Telemetry {
     Item(Item &&) = delete;
     Item &operator =(Item &&) = delete;
   public:
-    ~Item() = default;
+    ~Item() {
+      if (dataFrame) {
+	dfWriter.final();
+	dataFrame->close();
+	dataFrame = nullptr;
+      }
+    }
 
     template <typename Link>
     ZuInline Link *link() const { return static_cast<Link *>(link_); }
+
+    bool record(ZuString name, ZeError *e = nullptr) {
+      dataFrame = new Zdf::DataFrame{Data::fields(), name, true};
+      if (!dataFrame->open(e)) return false;
+      dfWriter = dataFrame->writer();
+      return true;
+    }
 
     void			*link_;
     Data			data;
@@ -206,7 +216,8 @@ namespace Telemetry {
     ZGtk::TreeNode::Row		*treeRow = nullptr;
     DispList			dispList;
     GraphList			graphList;
-    Zdf::DataFrame		dataFrame;
+
+    ZuPtr<Zdf::DataFrame>	dataFrame;
     Zdf::DataFrame::Writer	dfWriter;
   };
 
@@ -289,15 +300,19 @@ namespace Telemetry {
 namespace Tree {
   template <unsigned Depth, typename Data>
   struct Item : public ZGtk::TreeNode::Item<Depth> {
-    Item(Data *data_) : data{data_} { data->treeRow = this; }
     Data	*data;
+
+    Item(Data *data_) : data{data_} { data->treeRow = this; }
+
     auto key() const { return data->key(); }
   };
 
   template <unsigned Depth, typename Data, typename Child>
   struct Parent : public ZGtk::TreeNode::Parent<Depth, Child> {
-    Parent(Data *data_) : data{data_} { data->treeRow = this; }
     Data	*data;
+
+    Parent(Data *data_) : data{data_} { data->treeRow = this; }
+
     auto key() const { return data->key(); }
 
     void add(Child *child) {
@@ -310,8 +325,10 @@ namespace Tree {
 
   template <unsigned Depth, typename Data, typename Tuple>
   class Branch : public ZGtk::TreeNode::Branch<Depth, Tuple> {
-    Branch(Data *data_) : data{data_} { }
     Data	*data;
+
+    Branch(Data *data_) : data{data_} { }
+
     auto key() const { return data->key(); }
   };
 
@@ -682,7 +699,7 @@ public:
     Telemetry::Containers	telemetry;
   };
 
-  class TelRing : public ZuObject, public ZiRing {
+  class TelRing : public ZiRing {
     TelRing() = delete;
     TelRing(const TelRing &) = delete;
     TelRing &operator =(const TelRing &) = delete;
@@ -719,8 +736,24 @@ public:
   };
 
   void init(ZiMultiplex *mx, ZvCf *cf) {
+    if (ZmRef<ZvCf> cf = cf->subset("telRing", false))
+      m_telRingParams.init(cf);
+    else
+      m_telRingParams.name("zdash").size(131072);
+      // 131072 is ~100mics at 1Gbit/s // FIXME
+    m_telRing = new TelRing{m_telRingParams}
+    {
+      ZeError e;
+      if (m_telRing->open(
+	    ZiRing::Read | ZiRing::Write | ZiRing::Create, &e) != Zi::OK)
+	throw ZtString{} << m_telRingParams.name() << ": " << e;
+    }
+
     m_gladePath = cf->get("gtkGlade", true);
     m_stylePath = cf->get("gtkStyle");
+
+    m_refreshRate =
+      cf->getInt64("gtkRefresh", 1, 60000, false, 1) * (int64_t)1000000;
     unsigned tid = cf->getInt("gtkThread", 1, mx->params().nThreads(), true);
 
     Client::init(mx, cf);
@@ -732,10 +765,20 @@ public:
   }
 
   void final() {
-    detach([this]() {
-      ZvCmdHost::final();
-      Client::final();
-    });
+    detach(ZmFn<>{this, [](ZDash *this_) {
+      this_->gtkFinal();
+      this_->post();
+    }});
+
+    wait();
+
+    exiting();
+    disconnect();
+
+    m_telRing->close();
+
+    ZvCmdHost::final();
+    Client::final();
   }
 
   void gtkInit() {
@@ -779,20 +822,51 @@ public:
 
     g_signal_connect(G_OBJECT(m_mainWindow), "destroy",
 	ZGtk::callback([](GObject *o, gpointer this_) {
-	  reinterpret_cast<ZDash *>(this_)->gtkFinal();
+	  reinterpret_cast<ZDash *>(this_)->post();
 	}), reinterpret_cast<gpointer>(this));
 
     gtk_widget_show_all(GTK_WIDGET(m_mainWindow));
 
     gtk_window_present(m_mainWindow);
+
+    m_telRing->attach();
+
+    gtkNextRefresh();
+  }
+
+  void gtkRefresh() {
+    switch (m_telRing->readStatus()) {
+      case Zi::OK:
+	gtkNextRefresh();
+      case Zi::EndOfFile:
+	return;
+    }
+
+    // FIXME - freeze, save sort col, unset sort col
+
+    while (m_telRing->shift([link](const ZuArray<const uint8_t> &msg) {
+      link->app()->processTel2(link, msg);
+    }));
+
+    // FIXME - restore sort col, thaw
+  }
+
+  void gtkNextRefresh() {
+    m_lastRefresh.now();
+    gtkRun(ZmFn<>{this, [](ZDash *this_) { this_->gtkRefresh(); }},
+	m_lastRefresh + ZmTime{ZmTime::Nano, m_refreshRate}, &m_refreshTimer);
   }
 
   void gtkFinal() {
+    m_telRing->detach();
+
+    ZGtk::App::sched()->del(&m_refreshTimer);
+
     m_view.final();
+
     if (m_model) g_object_unref(G_OBJECT(m_model));
     if (m_mainWindow) g_object_unref(G_OBJECT(m_mainWindow));
     if (m_styleContext) g_object_unref(G_OBJECT(m_styleContext));
-    post();
   }
 
   void post() { m_done.post(); }
@@ -857,20 +931,11 @@ private:
   }
 
   int processTel(Link *link, ZuArray<const uint8_t> msg) {
-    if (m_telRing->push(msg))
-      gtkRun(ZmFn<>{ZmMkRef(link), [](Link *link) {
-	link->app()->processTel2(link);
-      }});
+    m_telRing->push(msg);
     return 0;
   }
 
-  void processTel2(Link *link) {
-    m_telRing->shift([link](const ZuArray<const uint8_t> &msg) {
-      link->app()->processTel3(link, msg);
-    });
-  }
-
-  void processTel3(Link *link, const ZuArray<const uint8_t> &msg_) {
+  void processTel2(Link *link, const ZuArray<const uint8_t> &msg_) {
     using namespace ZvTelemetry;
     {
       flatbuffers::Verifier verifier(msg_.data(), msg_.length());
@@ -884,7 +949,7 @@ private:
 	[this, link, msg](auto i) {
       using FBS = TelData::Type<i + TelData::First>;
       auto fbs = static_cast<const FBS *>(msg->data());
-      processTel4(link, fbs);
+      processTel3(link, fbs);
     });
   }
 
@@ -896,7 +961,7 @@ private:
   // - DB -> ensure DBEnv
   template <typename FBS>
   typename ZuIsNot<ZvTelemetry::fbs::Alert, FBS, bool>::T
-  processTel4(Link *link, const FBS *fbs) {
+  processTel3(Link *link, const FBS *fbs) {
     ZuConstant<ZuTypeIndex<FBS, Telemetry::FBSTypeList>::I> i;
     using T = typename ZuType<i, Telemetry::TypeList>::T;
     auto &container = link->telemetry.p<i>();
@@ -910,24 +975,38 @@ private:
       container.add(node);
       return true;
     }
-    // FIXME in refresh rate batch, with sort column
-    // save/unset/restore, signal freeze/thaw
-    // update tree, watches, etc.
+    // FIXME - update tree, watches, etc.
   }
+
+  template <typename Node>
+  typename ZuIs<ItemNode<ZvTelemetry::App>, Node>::T
+  addNode(Node *node) {
+    Tree::App *treeRow = new Tree::App{node};
+    m_model->add(treeRow, m_model->root());
+  }
+  template <typename Node>
+  typename ZuIs<ItemNode<ZvTelemetry::HashTbl>, Node>::T
+  addNode(Node *node) {
+    Tree::HashTbl *treeRow = new Tree::HashTbl{node};
+    // FIXME - find app in container, use app->treeRow
+    // FIXME add placeholder app if not already added
+    m_model->add(app->treeRow, m_model->root());
+    m_model->add(treeRow, &app->hashTbls());
+  }
+
   template <typename FBS>
   typename ZuIs<ZvTelemetry::fbs::Alert, FBS, bool>::T
-  processTel4(Link *link, const FBS *fbs) {
+  processTel3(Link *link, const FBS *fbs) {
     ZuConstant<ZuTypeIndex<FBS, Telemetry::FBSTypeList>::I> i;
     using T = typename ZuType<i, Telemetry::TypeList>::T;
     auto &container = link->telemetry.p<i>();
     alert(new (container.data.push()) ZvTelemetry::load<T>{fbs});
     return true;
-    // FIXME in refresh rate batch, with sort column
-    // save/unset/restore, signal freeze/thaw
-    // update alerts
   }
 
-  void alert(const ZvTelemetry::Alert *) { /* FIXME */ }
+  void alert(const ZvTelemetry::Alert *) {
+    // FIXME - update alerts
+  }
 
   void disconnected(Link *) {
     if (m_exiting) return;
@@ -950,7 +1029,7 @@ next:
     try {
       cmd = Zrl::readline_(m_prompt);
     } catch (const Zrl::EndOfFile &) {
-      post(); // FIXME
+      post();
       return;
     }
     if (!cmd) goto next;
@@ -1942,14 +2021,23 @@ private:
 
   ZmRef<ZCmdPlugin>	m_plugin;
 
+  ZvRingParams		m_telRingParams;
+  ZuPtr<TelRing>	m_telRing;
+
+  // FIXME - need Zdf in-memory manager (later, file manager)
+
   ZtString		m_gladePath;
   ZtString		m_stylePath;
   GtkStyleContext	*m_styleContext = nullptr;
   GtkWindow		*m_mainWindow = nullptr;
+
+  int64_t		m_refreshRate;	// in nanoseconds
+  ZmTime		m_lastRefresh;
+  ZmScheduler::Timer	m_refreshTimer;
+
   Tree::View		m_view;
   Tree::Model		*m_model;
 
-  ZuRef<TelRing>	m_telRing;
 };
 
 int main(int argc, char **argv)
@@ -2078,14 +2166,11 @@ int main(int argc, char **argv)
   Zrl::stop();
   std::cout << std::flush;
 
-  app->exiting();
-  app->disconnect();
+  app->final();
 
   mx->stop(true);
 
   ZeLog::stop();
-
-  app->final();
 
   delete mx;
 

@@ -272,6 +272,14 @@ public:
   bool close(ZeError *e = nullptr);
 
   class ZdfAPI Writer {
+    Writer(const Writer &) = delete;
+    Writer &operator =(const Writer &) = delete;
+  public:
+    Writer() = default;
+    Writer(Writer &&) = default;
+    Writer &operator =(Writer &&) = default;
+    ~Writer() = default;
+
   friend DataFrame;
     Writer(DataFrame *df) : m_df(df) {
       unsigned n = df->nSeries();
@@ -303,8 +311,13 @@ public:
 	m_writers[i].sync();
     }
 
+    void final() {
+      m_df = nullptr;
+      m_writers.null();
+    }
+
   private:
-    DataFrame		*m_df;
+    DataFrame		*m_df = nullptr;
     ZtArray<AnyWriter>	m_writers;
   };
   Writer writer() { return Writer{this}; }

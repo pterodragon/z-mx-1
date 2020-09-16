@@ -52,8 +52,8 @@ template <typename T, typename P> struct ZuPair_Cvt_<T, P, 1> {
   };
 };
 template <typename T, typename P> struct ZuPair_Cvt :
-  public ZuPair_Cvt_<typename ZuDeref<T>::T, P,
-    ZuConversion<ZuPair_, typename ZuDeref<T>::T>::Base> { };
+  public ZuPair_Cvt_<typename ZuDecay<T>::T, P,
+    ZuConversion<ZuPair_, typename ZuDecay<T>::T>::Base> { };
 
 // fwd-declare the traits
 namespace Zu_ {
@@ -153,30 +153,73 @@ public:
   Pair &operator =(Pair &&) = default;
   ~Pair() = default;
 
-  template <typename T> ZuInline Pair(T p,
-      typename ZuIfT<ZuPair_Cvt<T, Pair>::OK>::T *_ = 0) :
-    m_p0(ZuMv(p.m_p0)), m_p1(ZuMv(p.m_p1)) { }
-
-  template <typename T> ZuInline Pair(T &&v,
-      typename ZuIfT<
-	!ZuPair_Cvt<T, Pair>::OK &&
-	  (!ZuTraits<T0>::IsReference ||
-	    ZuConversion<typename ZuDecay<U0>::T,
-			 typename ZuDecay<T>::T>::Is)>::T *_ = 0) :
-    m_p0(ZuFwd<T>(v)), m_p1(ZuCmp<U1>::null()) { }
-
 private:
-  template <typename T> ZuInline
-      typename ZuIfT<ZuPair_Cvt<T, Pair>::OK>::T assign(T p)
-    { m_p0 = ZuMv(p.m_p0), m_p1 = ZuMv(p.m_p1); }
+  template <typename T, typename> struct Bind_P0 {
+    using U0 = typename T::U0;
+    ZuInline static const U0 &p0(const T &v) { return v.m_p0; }
+    ZuInline static U0 &&p0(T &&v) { return static_cast<U0 &&>(v.m_p0); }
+  };
+  template <typename T, typename P0> struct Bind_P0<T, P0 &> {
+    using U0 = typename T::U0;
+    ZuInline static U0 &p0(T &v) { return v.m_p0; }
+  };
+  template <typename T, typename P0> struct Bind_P0<T, const P0 &> {
+    using U0 = typename T::U0;
+    ZuInline static const U0 &p0(const T &v) { return v.m_p0; }
+  };
+  template <typename T, typename P0> struct Bind_P0<T, volatile P0 &> {
+    using U0 = typename T::U0;
+    ZuInline static volatile U0 &p0(volatile T &v) { return v.m_p0; }
+  };
+  template <typename T, typename P0> struct Bind_P0<T, const volatile P0 &> {
+    using U0 = typename T::U0;
+    ZuInline static const volatile U0 &p0(const volatile T &v) {
+      return v.m_p0;
+    }
+  };
+  template <typename T, typename> struct Bind_P1 {
+    using U1 = typename T::U1;
+    ZuInline static const U1 &p1(const T &v) { return v.m_p1; }
+    ZuInline static U1 &&p1(T &&v) { return static_cast<U1 &&>(v.m_p1); }
+  };
+  template <typename T, typename P1> struct Bind_P1<T, P1 &> {
+    using U1 = typename T::U1;
+    ZuInline static U1 &p1(T &v) { return v.m_p1; }
+  };
+  template <typename T, typename P1> struct Bind_P1<T, const P1 &> {
+    using U1 = typename T::U1;
+    ZuInline static const U1 &p1(const T &v) { return v.m_p1; }
+  };
+  template <typename T, typename P1> struct Bind_P1<T, volatile P1 &> {
+    using U1 = typename T::U1;
+    ZuInline static volatile U1 &p1(volatile T &v) { return v.m_p1; }
+  };
+  template <typename T, typename P1> struct Bind_P1<T, const volatile P1 &> {
+    using U1 = typename T::U1;
+    ZuInline static const volatile U1 &p1(const volatile T &v) {
+      return v.m_p1;
+    }
+  };
+  template <typename T>
+  struct Bind : public Bind_P0<T, T0>, public Bind_P1<T, T1> { };
 
-  template <typename T> ZuInline
-      typename ZuIfT<
-	!ZuPair_Cvt<T, Pair>::OK &&
-	  (!ZuTraits<T0>::IsReference ||
-	    ZuConversion<typename ZuDecay<U0>::T,
-			 typename ZuDecay<T>::T>::Is)
-      >::T assign(T &&v) { m_p0 = ZuFwd<T>(v), m_p1 = ZuCmp<U1>::null(); }
+public:
+  template <typename T>
+  ZuInline Pair(T &&v, typename ZuIfT<
+	ZuPair_Cvt<typename ZuDecay<T>::T, Pair>::OK
+      >::T *_ = 0) :
+    m_p0(Bind<typename ZuDecay<T>::T>::p0(ZuFwd<T>(v))),
+    m_p1(Bind<typename ZuDecay<T>::T>::p1(ZuFwd<T>(v))) { }
+
+protected:
+  template <typename T>
+  ZuInline
+  typename ZuIfT<
+    ZuPair_Cvt<typename ZuDecay<T>::T, Pair>::OK
+  >::T assign(T &&v) {
+    m_p0 = Bind<typename ZuDecay<T>::T>::p0(ZuFwd<T>(v));
+    m_p1 = Bind<typename ZuDecay<T>::T>::p1(ZuFwd<T>(v));
+  }
 
 public:
   template <typename T> ZuInline Pair &operator =(T &&v) noexcept {

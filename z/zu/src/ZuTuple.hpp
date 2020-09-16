@@ -96,9 +96,10 @@ struct ZuTuple1_Print<U0, true> :
 };
 
 namespace Zu_ {
-template <typename T0>
-class Tuple<T0> : public ZuTuple1_ {
+template <typename T0_>
+class Tuple<T0_> : public ZuTuple1_ {
 public:
+  using T0 = T0_;
   using U0 = typename ZuDeref<T0>::T;
   template <unsigned I> using Type = ZuTuple_Type0<I, T0>;
   template <unsigned I> using Type_ = ZuTuple_Type0_<I, U0>;
@@ -115,33 +116,63 @@ public:
   Tuple &operator =(Tuple &&) = default;
   ~Tuple() = default;
 
+private:
+  template <typename T, typename> struct Bind_P0 {
+    using U0 = typename T::U0;
+    ZuInline static const U0 &p0(const T &v) { return v.m_p0; }
+    ZuInline static U0 &&p0(T &&v) { return static_cast<U0 &&>(v.m_p0); }
+  };
+  template <typename T, typename P0> struct Bind_P0<T, P0 &> {
+    using U0 = typename T::U0;
+    ZuInline static U0 &p0(T &v) { return v.m_p0; }
+  };
+  template <typename T, typename P0> struct Bind_P0<T, const P0 &> {
+    using U0 = typename T::U0;
+    ZuInline static const U0 &p0(const T &v) { return v.m_p0; }
+  };
+  template <typename T, typename P0> struct Bind_P0<T, volatile P0 &> {
+    using U0 = typename T::U0;
+    ZuInline static volatile U0 &p0(volatile T &v) { return v.m_p0; }
+  };
+  template <typename T, typename P0> struct Bind_P0<T, const volatile P0 &> {
+    using U0 = typename T::U0;
+    ZuInline static const volatile U0 &p0(const volatile T &v) {
+      return v.m_p0;
+    }
+  };
   template <typename T>
-  ZuInline explicit Tuple(T p,
-      typename ZuIfT<ZuTuple1_Cvt<T, Tuple>::OK>::T *_ = 0) :
-    m_p0(ZuMv(p.m_p0)) { }
+  struct Bind : public Bind_P0<T, T0> { };
 
-  template <typename T> ZuInline Tuple(T &&v,
-      typename ZuIfT<
-	!ZuTuple1_Cvt<typename ZuDecay<T>::T, Tuple>::OK &&
-	  (!ZuTraits<T0>::IsReference ||
-	    ZuConversion<typename ZuDecay<U0>::T,
-			 typename ZuDecay<T>::T>::Is)>::T *_ = 0) :
+public:
+  template <typename T>
+  ZuInline Tuple(T &&v, typename ZuIfT<
+	ZuTuple1_Cvt<typename ZuDecay<T>::T, Tuple>::OK
+      >::T *_ = 0) :
+    m_p0(Bind<typename ZuDecay<T>::T>::p0(ZuFwd<T>(v))) { }
+
+  template <typename T>
+  ZuInline Tuple(T &&v, typename ZuIfT<
+      !ZuTuple1_Cvt<typename ZuDecay<T>::T, Tuple>::OK &&
+	(!ZuTraits<T0>::IsReference ||
+	  ZuConversion<typename ZuDecay<U0>::T, typename ZuDecay<T>::T>::Is)
+      >::T *_ = 0) :
     m_p0(ZuFwd<T>(v)) { }
 
   template <typename T> ZuInline
-  typename ZuIfT<ZuTuple1_Cvt<T, Tuple>::OK, Tuple &>::T
-  operator =(T p) {
-    m_p0 = ZuMv(p.m_p0);
+  typename ZuIfT<ZuTuple1_Cvt<typename ZuDecay<T>::T, Tuple>::OK, Tuple &>::T
+  operator =(T &&v) {
+    m_p0 = Bind<typename ZuDecay<T>::T>::p0(ZuFwd<T>(v));
     return *this;
   }
 
-  template <typename T> ZuInline
-      typename ZuIfT<
-	!ZuTuple1_Cvt<typename ZuDecay<T>::T, Tuple>::OK &&
-	  (!ZuTraits<T0>::IsReference ||
-	    ZuConversion<typename ZuDecay<U0>::T,
-			 typename ZuDecay<T>::T>::Is), Tuple &>::T
-  operator =(T &&v) {
+  template <typename T>
+  ZuInline
+  typename ZuIfT<
+    !ZuTuple1_Cvt<typename ZuDecay<T>::T, Tuple>::OK &&
+    (!ZuTraits<T0>::IsReference ||
+      ZuConversion<typename ZuDecay<U0>::T, typename ZuDecay<T>::T>::Is),
+    Tuple &
+  >::T operator =(T &&v) {
     m_p0 = ZuFwd<T>(v);
     return *this;
   }
@@ -244,8 +275,15 @@ public:
   Tuple &operator =(Tuple &&) = default;
   ~Tuple() = default;
 
-  using Base::Base;
-  using Base::operator =;
+  template <typename T> ZuInline Tuple(T &&v) : Base{ZuFwd<T>(v)} { }
+
+  template <typename T> ZuInline Tuple &operator =(T &&v) noexcept {
+    Base::assign(ZuFwd<T>(v));
+    return *this;
+  }
+
+  template <typename P0, typename P1>
+  ZuInline Tuple(P0 &&p0, P1 &&p1) : Base{ZuFwd<P0>(p0), ZuFwd<P1>(p1)} { }
 
   template <unsigned I>
   ZuInline const typename Type_<I>::T &p() const {
@@ -323,8 +361,12 @@ public:
   Tuple &operator =(Tuple &&) = default;
   ~Tuple() = default;
 
-  using Base::Base;
-  using Base::operator =;
+  template <typename T> ZuInline Tuple(T &&v) : Base{ZuFwd<T>(v)} { }
+
+  template <typename T> ZuInline Tuple &operator =(T &&v) noexcept {
+    Base::assign(ZuFwd<T>(v));
+    return *this;
+  }
 
   template <typename P0, typename P1, typename ...Args_>
   ZuInline Tuple(P0 &&p0, P1 &&p1, Args_ &&... args) :
@@ -495,8 +537,13 @@ public: \
   Type(Type &&) = default; \
   Type &operator =(Type &&) = default; \
   ~Type() = default; \
-  using Tuple::Tuple; \
-  using Tuple::operator =; \
+  template <typename ...Args> \
+  Type(Args &&... args) : Tuple{ZuFwd<Args>(args)...} { } \
+  template <typename ...Args> \
+  Type &operator =(ZuTuple<Args...> &&v) { \
+    Tuple::operator =(ZuFwd<ZuTuple<Args...>>(v)); \
+    return *this; \
+  } \
   ZuPP_Eval(ZuPP_MapIndex(ZuTuple_FieldFn, 0, __VA_ARGS__)) \
   struct Traits : public ZuTraits<Type##_> { using T = Type; }; \
   friend Traits ZuTraitsType(const Type *); \

@@ -20,7 +20,7 @@
 // generic three-way and two-way comparison 
 // (including distinguished null values)
 
-// UDTs must implement the <, >, == and ! operators
+// UDTs must implement the <, == and ! operators
 //
 // For more efficiency, specialize ZuTraits and implement cmp()
 // (operators <, == and ! must always be implemented)
@@ -89,6 +89,7 @@
 
 #include <zlib/ZuTraits.hpp>
 #include <zlib/ZuInt.hpp>
+#include <zlib/ZuCan.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -187,7 +188,7 @@ template <typename T> struct ZuCmp_Floating {
   ZuInline static bool equals(T f1, T f2) { return f1 == f2; }
   ZuInline static T null() { return ZuTraits<T>::nan(); }
   ZuInline static bool null(T f) { return ZuTraits<T>::nan(f); }
-  ZuInline static T inf() { return ZuTraits<T>::inf(); }
+  ZuInline static constexpr T inf() { return ZuTraits<T>::inf(); }
   ZuInline static bool inf(T f) { return ZuTraits<T>::inf(f); }
   ZuInline static T epsilon(T f) { return ZuTraits<T>::epsilon(f); }
 };
@@ -209,10 +210,18 @@ template <typename T> struct ZuCmp_Primitive<T, true, false> :
 
 // default comparison of non-primitive types - uses operators >, <, ==, !
 
+ZuCan(cmp, ZuCmpCan);
 template <typename T, bool IsComparable, bool Fwd> struct ZuCmp_NonPrimitive {
-  template <typename P1, typename P2>
-  ZuInline static int cmp(const P1 &p1, const P2 &p2) {
-    // FIXME - replace with p1 <=> p2 when available
+  template <typename P1, typename P2, typename T_ = T>
+  ZuInline static typename ZuIfT<
+    ZuCmpCan<T_, int (T_::*)(const T_ &) const>::OK, int>::T
+  cmp(const P1 &p1, const P2 &p2) {
+    return p1.cmp(p2);
+  }
+  template <typename P1, typename P2, typename T_ = T>
+  ZuInline static typename ZuIfT<
+    !ZuCmpCan<T_, int (T_::*)(const T_ &) const>::OK, int>::T
+  cmp(const P1 &p1, const P2 &p2) {
     return (p1 > p2) - (p1 < p2);
   }
   template <typename P1, typename P2>

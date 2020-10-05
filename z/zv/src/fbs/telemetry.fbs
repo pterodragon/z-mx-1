@@ -137,6 +137,7 @@ enum LinkState:int8 {
 }
 table Link {
   id:string;
+  engineID:string;
   rxSeqNo:uint64;
   txSeqNo:uint64;
   reconnects:uint32;

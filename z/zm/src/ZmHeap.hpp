@@ -79,15 +79,15 @@ struct ZmHeapStats {
 //   allocated = (heapAllocs + cacheAllocs) - frees
 struct ZmHeapTelemetry {
   ZmIDString	id;		// primary key
-  uint64_t	cacheSize;
+  uint64_t	cacheSize = 0;
   ZmBitmap	cpuset;
-  uint64_t	cacheAllocs;	// graphable (*)
-  uint64_t	heapAllocs;	// graphable (*)
-  uint64_t	frees;		// graphable
-  uint32_t	size;
-  uint16_t	partition;
-  uint8_t	sharded;
-  uint8_t	alignment;
+  uint64_t	cacheAllocs = 0;// graphable (*)
+  uint64_t	heapAllocs = 0;	// graphable (*)
+  uint64_t	frees = 0;	// graphable
+  uint32_t	size = 0;
+  uint16_t	partition = 0;
+  uint8_t	sharded = 0;
+  uint8_t	alignment = 0;
 };
 
 // cache (LIFO free list) of fixed-size blocks; one per CPU set / NUMA node

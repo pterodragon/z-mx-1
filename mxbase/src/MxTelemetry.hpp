@@ -93,15 +93,15 @@ namespace MxTelemetry {
   // RAG for queues - count > 50% size - amber; 75% - red
   struct Queue {
     MxIDString	id;		// primary key - is same as Link id for Rx/Tx
-    uint64_t	seqNo;		// 0 for Thread, IPC
-    uint64_t	count;	// graphable - due to overlaps, may not equal in - out
-    uint64_t	inCount;	// graphable (*)
-    uint64_t	inBytes;	// graphable
-    uint64_t	outCount;	// graphable (*)
-    uint64_t	outBytes;	// graphable
-    uint32_t	full;		// how many times queue overflowed
-    uint32_t	size;		// 0 for Rx, Tx
-    uint8_t	type;		// primary key - QueueType
+    uint64_t	seqNo = 0;	// 0 for Thread, IPC
+    uint64_t	count = 0;	// graphable - can overlap, may not be in - out
+    uint64_t	inCount = 0;	// graphable (*)
+    uint64_t	inBytes = 0;	// graphable
+    uint64_t	outCount = 0;	// graphable (*)
+    uint64_t	outBytes = 0;	// graphable
+    uint32_t	full = 0;	// how many times queue overflowed
+    uint32_t	size = 0;	// 0 for Rx, Tx
+    uint8_t	type = 0;	// primary key - QueueType
   };
 
   // followed by

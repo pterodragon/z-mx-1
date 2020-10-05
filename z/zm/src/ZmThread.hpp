@@ -71,16 +71,16 @@ using ZmThreadName = ZuStringN<28>;
 //   stackSize, partition, main, detached
 struct ZmThreadTelemetry {
   ZmThreadName	name;
-  uint64_t	tid;		// primary key
-  uint64_t	stackSize;
+  uint64_t	tid = 0;	// primary key
+  uint64_t	stackSize = 0;
   ZmBitmap	cpuset;
-  double	cpuUsage;	// graphable (*)
-  int32_t	sysPriority;
-  int16_t	index;		// index within thread pool (ZmScheduler, ...)
-  uint16_t	partition;
-  int8_t	priority;
-  uint8_t	main;
-  uint8_t	detached;
+  double	cpuUsage = 0.0;	// graphable (*)
+  int32_t	sysPriority = 0;
+  int16_t	index = 0;	// index within thread pool (ZmScheduler, ...)
+  uint16_t	partition = 0;
+  int8_t	priority = -1;
+  uint8_t	main = 0;
+  uint8_t	detached = 0;
 };
 
 class ZmThreadContext;

@@ -514,21 +514,21 @@ template <> struct ZuPrint<ZiCxnInfo> : public ZuPrintFn { };
 //   rxBufSize, rxBufLen, txBufSize, txBufLen
 struct ZiCxnTelemetry {
   ZuID		mxID;		// multiplexer ID
-  uint64_t	socket;		// Unix file descriptor / Winsock SOCKET
-  uint32_t	rxBufSize;	// graphable - getsockopt(..., SO_RCVBUF, ...)
-  uint32_t	rxBufLen;	// graphable (*) - ioctl(..., SIOCINQ, ...)
-  uint32_t	txBufSize;	// graphable - getsockopt(..., SO_SNDBUF, ...)
-  uint32_t	txBufLen;	// graphable (*) - ioctl(..., SIOCOUTQ, ...)
+  uint64_t	socket = 0;	// Unix file descriptor / Winsock SOCKET
+  uint32_t	rxBufSize = 0;	// graphable - getsockopt(..., SO_RCVBUF, ...)
+  uint32_t	rxBufLen = 0;	// graphable (*) - ioctl(..., SIOCINQ, ...)
+  uint32_t	txBufSize = 0;	// graphable - getsockopt(..., SO_SNDBUF, ...)
+  uint32_t	txBufLen = 0;	// graphable (*) - ioctl(..., SIOCOUTQ, ...)
   ZiIP		mreqAddr;	// mreqs[0]
   ZiIP		mreqIf;		// mreqs[0]
   ZiIP		mif;
-  uint32_t	ttl;
+  uint32_t	ttl = 0;
   ZiIP		localIP;	// primary key
   ZiIP		remoteIP;	// primary key
-  uint16_t	localPort;	// primary key
-  uint16_t	remotePort;	// primary key
-  uint8_t	flags;		// ZiCxnFlags
-  uint8_t	type;		// ZiCxnType
+  uint16_t	localPort = 0;	// primary key
+  uint16_t	remotePort = 0;	// primary key
+  uint8_t	flags = 0;	// ZiCxnFlags
+  int8_t	type = -1;	// ZiCxnType
 };
 
 using ZiListenFn = ZmFn<const ZiListenInfo &>;
@@ -762,19 +762,19 @@ private:
 //   queueSize, ll, spin, timeout
 struct ZiMxTelemetry { // not graphable
   ZuID		id;		// primary key
-  uint32_t	stackSize;
-  uint32_t	queueSize;
-  uint32_t	spin;
-  uint32_t	timeout;
-  uint32_t	rxBufSize;
-  uint32_t	txBufSize;
-  uint16_t	rxThread;
-  uint16_t	txThread;
-  uint16_t	partition;
-  int8_t	state;	// RAG: Running - Green; Stopped - Red; * - Amber
-  uint8_t	ll;
-  uint8_t	priority;
-  uint8_t	nThreads;
+  uint32_t	stackSize = 0;
+  uint32_t	queueSize = 0;
+  uint32_t	spin = 0;
+  uint32_t	timeout = 0;
+  uint32_t	rxBufSize = 0;
+  uint32_t	txBufSize = 0;
+  uint16_t	rxThread = 0;
+  uint16_t	txThread = 0;
+  uint16_t	partition = 0;
+  int8_t	state = -1; // RAG: Running - Green; Stopped - Red; * - Amber
+  uint8_t	ll = 0;
+  uint8_t	priority = 0;
+  uint8_t	nThreads = 0;
 };
 
 class ZiAPI ZiMultiplex : public ZmScheduler {

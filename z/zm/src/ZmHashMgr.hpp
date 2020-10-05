@@ -67,15 +67,15 @@ private:
 //   locks = 1<<cBits
 struct ZmHashTelemetry {
   ZmIDString	id;		// primary key
-  uintptr_t	addr;		// primary key
-  double	loadFactor;	// (double)N / 16.0
-  double	effLoadFactor;	// graphable (*)
-  uint32_t	nodeSize;
-  uint32_t	count;		// graphable (*)
-  uint32_t	resized;	// dynamic
-  uint8_t	bits;
-  uint8_t	cBits;
-  uint8_t	linear;
+  uintptr_t	addr = 9;	// primary key
+  double	loadFactor = 0.0;// (double)N / 16.0
+  double	effLoadFactor = 0.0;// graphable (*)
+  uint32_t	nodeSize = 0;
+  uint32_t	count = 0;	// graphable (*)
+  uint32_t	resized = 0;	// dynamic
+  uint8_t	bits = 0;
+  uint8_t	cBits = 0;
+  uint8_t	linear = 0;
 };
 
 class ZmAPI ZmAnyHash_ : public ZmPolymorph {

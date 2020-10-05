@@ -178,21 +178,39 @@ namespace Telemetry {
   template <typename T_> struct FBSType { using T = typename T_::FBS; };
   using FBSTypeList = ZuTypeMap<FBSType, TypeList>::T;
 
-  template <typename Data_> class Item {
+  template <typename Data> struct ItemKey {
+    using Key = typename Data::Key;
+    static Key key(const Data &data) { return data.key(); }
+  };
+  template <> struct ItemKey<ZvTelemetry::App> {
+    using Key = ZuTuple<const ZtString &>;
+    void initKey(const ZtString &server, uint16_t port) {
+      key_ << server << ':' << port;
+    }
+    Key key(const ZvTelemetry::App &) const { return Key{key_}; }
+    ZtString	key_;
+  };
+  template <> struct ItemKey<ZvTelemetry::DBEnv> {
+    using Key = ZuTuple<const char *>;
+    static Key key(const ZvTelemetry::DBEnv &) { return Key{"dbenv"}; }
+  };
+  template <typename Data_> class Item_ : public ItemKey<Data_> {
   public:
-    using Data = ZvTelemetry::load<Data_>;
+    using Data = Data_;
+    using Load = ZvTelemetry::load<Data>;
+    using Key = ItemKey<Data_>::Key;
 
+    ZuInline Item_(void *link__) : link_{link__} { }
     template <typename FBS>
-    ZuInline Item(void *link__, FBS *fbs) :
-	link_{link__}, data{fbs} { }
+    ZuInline Item_(void *link__, FBS *fbs) : link_{link__}, data{fbs} { }
 
   private:
-    Item(const Item &) = delete;
-    Item &operator =(const Item &) = delete;
-    Item(Item &&) = delete;
-    Item &operator =(Item &&) = delete;
+    Item_(const Item_ &) = delete;
+    Item_ &operator =(const Item_ &) = delete;
+    Item_(Item_ &&) = delete;
+    Item_ &operator =(Item_ &&) = delete;
   public:
-    ~Item() {
+    ~Item_() {
       if (dataFrame) {
 	dfWriter.final();
 	dataFrame->close();
@@ -203,6 +221,11 @@ namespace Telemetry {
     template <typename Link>
     ZuInline Link *link() const { return static_cast<Link *>(link_); }
 
+    template <typename Node>
+    ZuInline Node *treeNode() const { return static_cast<Node *>(treeNode_); }
+
+    ZuInline auto key() const { return ItemKey<Data_>::key(data); }
+
     bool record(ZuString name, ZeError *e = nullptr) {
       dataFrame = new Zdf::DataFrame{Data::fields(), name, true};
       if (!dataFrame->open(e)) return false;
@@ -211,9 +234,9 @@ namespace Telemetry {
     }
 
     void			*link_;
-    Data			data;
+    Load			data;
 
-    ZGtk::TreeNode::Row		*treeRow = nullptr;
+    void			*treeNode_ = nullptr;
     DispList			dispList;
     GraphList			graphList;
 
@@ -225,21 +248,22 @@ namespace Telemetry {
     static constexpr const char *id() { return "zdash.Telemetry.Tree"; }
   };
   template <typename T>
-  struct KeyAccessor : public ZuAccessor<T, typename T::Data::Key> {
-    ZuInline static auto value(const T &v) { return v.data.key(); }
+  struct KeyAccessor : public ZuAccessor<T, typename T::Key> {
+    ZuInline static auto value(const T &v) { return v.key(); }
   };
   template <typename T>
   using ItemTree_ =
-    ZmRBTree<T,
-      ZmRBTreeIndex<KeyAccessor<T>,
+    ZmRBTree<Item<T>,
+      ZmRBTreeIndex<KeyAccessor<Item<T>>,
 	ZmRBTreeObject<ZuNull,
 	  ZmRBTreeNodeIsKey<true,
 	    ZmRBTreeUnique<true,
 	      ZmRBTreeLock<ZmNoLock,
 		ZmRBTreeHeapID<ItemTree_HeapID> > > > > > >;
   template <typename T>
-  struct ItemTree : public ItemTree_<Item<T>> {
-    using Node = typename ItemTree_<Item<T>>::Node;
+  class ItemTree : public ItemTree_<T> {
+  public:
+    using Node = typename ItemTree_<T>::Node;
     template <typename FBS>
     Node *lookup(const FBS *fbs) const {
       return this->find(T::key(fbs));
@@ -256,18 +280,9 @@ namespace Telemetry {
     ~ItemSingleton() { if (m_node) delete m_node; }
     template <typename FBS>
     Node *lookup(const FBS *) const { return m_node; }
-    void add(Node *node) { m_node = node; }
+    void add(Node *node) { if (m_node) delete m_node; m_node = node; }
   private:
     Node	*m_node = nullptr;
-  };
-  template <typename T_> struct ItemContainer {
-    using T = ItemTree<T_>;
-  };
-  template <> struct ItemContainer<ZvTelemetry::App> {
-    using T = ItemSingleton<ZvTelemetry::App>;
-  };
-  template <> struct ItemContainer<ZvTelemetry::DBEnv> {
-    using T = ItemSingleton<ZvTelemetry::DBEnv>;
   };
   class AlertArray {
     AlertArray(const AlertArray &) = delete;
@@ -281,108 +296,180 @@ namespace Telemetry {
     ~AlertArray() = default;
     ZtArray<T>	data;
   };
-  template <> struct ItemContainer<ZvTelemetry::Alert> {
+
+  template <typename T_> struct Container { // default
+    using T = ItemTree<T_>;
+  };
+  template <> struct Container<ZvTelemetry::App> {
+    using T = ItemSingleton<ZvTelemetry::App>;
+  };
+  template <> struct Container<ZvTelemetry::DBEnv> {
+    using T = ItemSingleton<ZvTelemetry::DBEnv>;
+  };
+  template <> struct Container<ZvTelemetry::Alert> {
     using T = AlertArray;
   };
 
-  using ItemContainerList = ZuTypeMap<ItemContainer, TypeList>::T;
+  using ContainerList = ZuTypeMap<Container, TypeList>::T;
+  using Containers = ZuTypeApply<ZuTuple, ContainerList>::T;
 
-  template <typename T_> struct ItemNode_ {
-    enum { I = ZuTypeIndex<T_, TypeList>::I };
-    using Container = ZuType<I, ItemContainerList>::T;
-    using T = typename Container::Node;
-  };
-  template <typename T> using ItemNode = typename ItemNode_<T>::T;
-
-  using Containers = ZuTypeApply<ZuTuple, ItemContainerList>::T;
+  template <typename T> using Item = typename Container<T>::T::Node;
 }
 
 namespace Tree {
-  template <unsigned Depth, typename Data>
-  struct Item : public ZGtk::TreeNode::Item<Depth> {
-    Data	*data;
+  template <typename Item>
+  struct Node {
+    Item	*item = nullptr;
 
-    Item(Data *data_) : data{data_} { data->treeRow = this; }
+    Node() = default;
+    Node(Item *item_) : item{item_} { item->treeNode = this; }
+    void init(Item *item_) { item = item_; item->treeNode = this; }
 
-    auto key() const { return data->key(); }
+    auto key() const { return item->key(); }
+    auto rag() const { return item->rag(); }
+
+    int cmp(const Node &v) { return key().cmp(v.key()); }
   };
 
-  template <unsigned Depth, typename Data, typename Child>
-  struct Parent : public ZGtk::TreeNode::Parent<Depth, Child> {
-    Data	*data;
-
-    Parent(Data *data_) : data{data_} { data->treeRow = this; }
-
-    auto key() const { return data->key(); }
-
-    void add(Child *child) {
-      ZGtk::TreeNode::Parent<Depth, Child>::add(child);
-    }
-    void del(Child *child) {
-      ZGtk::TreeNode::Parent<Depth, Child>::del(child);
-    }
+  template <unsigned Depth, typename Item>
+  struct Leaf : public Node<Item>, public ZGtk::TreeNode::Leaf<Depth> {
+    Leaf() = default;
+    Leaf(Item *item) : Node{item}
+    using Node<Item>::cmp;
   };
 
-  template <unsigned Depth, typename Data, typename Tuple>
-  class Branch : public ZGtk::TreeNode::Branch<Depth, Tuple> {
-    Data	*data;
+  template <unsigned Depth, typename Item, typename Child>
+  struct Parent :
+      public Node<Item>,
+      public ZGtk::TreeNode::Parent<Depth, Child> {
+    Parent() = default;
+    Parent(Item *item) : Node{item} { }
+    using Node<Item>::cmp;
 
-    Branch(Data *data_) : data{data_} { }
-
-    auto key() const { return data->key(); }
+    using Base = ZGtk::TreeNode::Parent<Depth, Child>;
+    using Base::add;
+    using Base::del;
   };
 
-  template <typename T> using ItemNode = Telemetry::ItemNode<T>;
+  template <unsigned Depth, typename Item, typename Tuple>
+  class Branch :
+      public Node<Item>,
+      public ZGtk::TreeNode::Branch<Depth, Tuple> {
+    Branch() = default; 
+    Branch(Item *item) : Node{item_} { }
+    using Node<Item>::cmp;
+  };
 
-  using Heap = Item<3, ItemNode<ZvTelemetry::Heap>>;
-  using HashTbl = Item<3, ItemNode<ZvTelemetry::HashTbl>>;
-  using Thread = Item<3, ItemNode<ZvTelemetry::Thread>>;
-  using Socket = Item<4, ItemNode<ZvTelemetry::Socket>>;
-  using Mx = Parent<3, ItemNode<ZvTelemetry::Mx>, Socket>;
-  using Link = Item<4, ItemNode<ZvTelemetry::Link>>;
-  using Engine = Parent<3, ItemNode<ZvTelemetry::Engine>, Link>;
-  using DBHost = Item<4, ItemNode<ZvTelemetry::DBHost>>;
-  using DB = Item<4, ItemNode<ZvTelemetry::DB>>;
+  template <typename T> using TelItem = Telemetry::Item<T>;
+
+  using Heap = Leaf<3, TelItem<ZvTelemetry::Heap>>;
+  using HashTbl = Leaf<3, TelItem<ZvTelemetry::HashTbl>>;
+  using Thread = Leaf<3, TelItem<ZvTelemetry::Thread>>;
+  using Socket = Leaf<4, TelItem<ZvTelemetry::Socket>>;
+  using Mx = Parent<3, TelItem<ZvTelemetry::Mx>, Socket>;
+  using Link = Leaf<4, TelItem<ZvTelemetry::Link>>;
+  using Engine = Parent<3, TelItem<ZvTelemetry::Engine>, Link>;
+  using DBHost = Leaf<4, TelItem<ZvTelemetry::DBHost>>;
+  using DB = Leaf<4, TelItem<ZvTelemetry::DB>>;
 
   // DB hosts
-  struct DBHosts { auto key() const { return ZuMkTuple("hosts"); } };
+  struct DBHosts {
+    auto key() const { return ZuMkTuple("hosts"); }
+    auto rag() const { return ZvTelemetry::RAG::Off; }
+  };
   using DBHostParent = Parent<3, DBHosts, DBHost>;
   // DBs
-  struct DBs { auto key() const { return ZuMkTuple("dbs"); } };
+  struct DBs {
+    auto key() const { return ZuMkTuple("dbs"); }
+    auto rag() const { return ZvTelemetry::RAG::Off; }
+  };
   using DBParent = Parent<3, DBs, DB>;
 
   // heaps
-  struct Heaps { auto key() const { return ZuMkTuple("heaps"); } };
+  struct Heaps {
+    auto key() const { return ZuMkTuple("heaps"); }
+    auto rag() const { return ZvTelemetry::RAG::Off; }
+  };
   using HeapParent = Parent<2, Heaps, Heap>;
   // hashTbls
-  struct HashTbls { auto key() const { return ZuMkTuple("hashTbls"); } };
+  struct HashTbls {
+    auto key() const { return ZuMkTuple("hashTbls"); }
+    auto rag() const { return ZvTelemetry::RAG::Off; }
+  };
   using HashTblParent = Parent<2, HashTbls, HashTbl>;
   // threads
-  struct Threads { auto key() const { return ZuMkTuple("threads"); } };
+  struct Threads {
+    auto key() const { return ZuMkTuple("threads"); }
+    auto rag() const { return ZvTelemetry::RAG::Off; }
+  };
   using ThreadParent = Parent<2, Threads, Thread>;
   // multiplexers
-  struct Mxs { auto key() const { return ZuMkTuple("multiplexers"); } };
+  struct Mxs {
+    auto key() const { return ZuMkTuple("multiplexers"); }
+    auto rag() const { return ZvTelemetry::RAG::Off; }
+  };
   using MxParent = Parent<2, Mxs, Mx>;
   // engines
-  struct Engines { auto key() const { return ZuMkTuple("engines"); } };
+  struct Engines {
+    auto key() const { return ZuMkTuple("engines"); }
+    auto rag() const { return ZvTelemetry::RAG::Off; }
+  };
   using EngineParent = Parent<2, Engines, Engine>;
 
   // dbEnv
   ZuDeclTuple(DBEnvTuple,
       (DBHostParent, hosts),
       (DBParent, dbs));
-  using DBEnv = Branch<2, ItemNode<ZvTelemetry::DBEnv>, DBEnvTuple>;
+  using DBEnv = Branch<2, TelItem<ZvTelemetry::DBEnv>, DBEnvTuple>;
   // applications
   ZuDeclTuple(AppTuple,
       (HeapParent, heaps),
       (HashTblParent, hashTbls),
       (ThreadParent, threads),
-      (MxParent, multiplexers),
+      (MxParent, mxs),
       (EngineParent, engines),
       (DBEnv, dbEnv));
-  using App = Branch<1, ItemNode<ZvTelemetry::App>, AppTuple>;
+  using App = Branch<1, TelItem<ZvTelemetry::App>, AppTuple>;
 
   using Root = ZGtk::TreeNode::Parent<0, App>;
+
+  // map telemetry items to corresponding tree nodes
+  inline Heap *node(TelItem<ZvTelemetry::Heap> *item) {
+    return item->template treeNode<Heap>();
+  }
+  inline HashTbl *node(TelItem<ZvTelemetry::HashTbl> *item) {
+    return item->template treeNode<HashTbl>();
+  }
+  inline Thread *node(TelItem<ZvTelemetry::Thread> *item) {
+    return item->template treeNode<Thread>();
+  }
+  inline Mx *node(TelItem<ZvTelemetry::Mx> *item) {
+    return item->template treeNode<Mx>();
+  }
+  inline Socket *node(TelItem<ZvTelemetry::Socket> *item) {
+    return item->template treeNode<Socket>();
+  }
+  inline Queue *node(TelItem<ZvTelemetry::Queue> *item) {
+    return item->template treeNode<Queue>();
+  }
+  inline Engine *node(TelItem<ZvTelemetry::Engine> *item) {
+    return item->template treeNode<Engine>();
+  }
+  inline Link *node(TelItem<ZvTelemetry::Link> *item) {
+    return item->template treeNode<Link>();
+  }
+  inline DB *node(TelItem<ZvTelemetry::DB> *item) {
+    return item->template treeNode<DB>();
+  }
+  inline DBHost *node(TelItem<ZvTelemetry::DBHost> *item) {
+    return item->template treeNode<DBHost>();
+  }
+  inline DBEnv *node(TelItem<ZvTelemetry::DBEnv> *item) {
+    return item->template treeNode<DBEnv>();
+  }
+  inline App *node(TelItem<ZvTelemetry::App> *item) {
+    return item->template treeNode<App>();
+  }
 
   enum { Depth = 5 };
 
@@ -394,7 +481,7 @@ namespace Tree {
     HeapParent *,	// app->heaps (*)
     HashTblParent *,	// app->hashTbls (*)
     ThreadParent *,	// app->threads (*)
-    MxParent *,		// app->mxTbl (*)
+    MxParent *,		// app->mxs (*)
     EngineParent *,	// app->engines (*)
     DBEnv *,		// app->dbEnv (*)
 
@@ -402,11 +489,11 @@ namespace Tree {
     Heap *,		// app->heaps->[heap]
     HashTbl *,		// app->hashTbls->[hashTbl]
     Thread *,		// app->threads->[thread]
-    Mx *,		// app->mxTbl->[mx]
+    Mx *,		// app->mxs->[mx]
     Engine *,		// app->engines->[engine]
 
     // app great-grandchildren
-    Socket *,		// app->mxTbl->mx->[socket]
+    Socket *,		// app->mxs->mx->[socket]
     Link *,		// app->engines->engine->[link]
 
     // DBEnv children
@@ -419,7 +506,7 @@ namespace Tree {
 
   class Model : public ZGtk::TreeHierarchy<Model, Iter, Depth> {
   public:
-    enum { RAGCol = 0, LinkCol, KeyCol, NCols };
+    enum { RAGCol = 0, KeyCol, NCols };
 
     // root()
     Root *root() { return &m_root; }
@@ -486,61 +573,32 @@ namespace Tree {
     GType get_column_type(gint i) {
       switch (i) {
 	case RAGCol: return G_TYPE_INT;
-	case LinkCol: return G_TYPE_STRING;
 	case KeyCol: return G_TYPE_STRING;
 	default: return G_TYPE_NONE;
       }
     }
     template <typename T>
-    typename ZuIs<App, T>::T value(T *ptr, gint i, ZGtk::Value *value) {
+    void value(const T *ptr, gint i, ZGtk::Value *v) {
       switch (i) {
-	case 0: 
-	  value->init(G_TYPE_INT);
-	  value->set_int(ptr->rag());
+	case RAGCol: 
+	  v->init(G_TYPE_INT);
+	  v->set_int(ptr->rag());
 	  break;
-	case 1:
-	  value->init(G_TYPE_STRING);
-	  value->set_static_string(ptr->id);
-	  break;
-	case 2:
+	case KeyCol:
 	  m_value.length(0);
-	  value->init(G_TYPE_STRING);
-	  if (const auto *info = ptr->info)
-	    value->set_static_string(info->id);
-	  else 
-	    value->set_static_string("");
-	  break;
-	default:
-	  value->init(G_TYPE_NONE);
-	  break;
-      }
-    }
-    template <typename T>
-    typename ZuIsNot<App, T>::T value(T *ptr, gint i, ZGtk::Value *value) {
-      switch (i) {
-	case 0: 
-	  value->init(G_TYPE_INT);
-	  value->set_int(ptr->rag());
-	  break;
-	case 1:
-	  value->init(G_TYPE_STRING);
-	  value->set_static_string("");
-	  break;
-	case 2:
-	  m_value.length(0);
-	  value->init(G_TYPE_STRING);
+	  v->init(G_TYPE_STRING);
 	  m_value << ptr->key().print("|");
-	  value->set_static_string(m_value);
+	  v->set_static_string(m_value);
 	  break;
 	default:
-	  value->init(G_TYPE_NONE);
+	  v->init(G_TYPE_NONE);
 	  break;
       }
     }
 
   private:
     Root	m_root;	// root of tree
-    ZtString	m_value;
+    ZtString	m_value;// re-used string buffer
   };
 
   class View {
@@ -735,12 +793,16 @@ public:
     }
   };
 
+  template <typename T> using TelItem = Telemetry::Item<T>;
+  using AppItem = TelItem<ZvTelemetry::App>;
+  using AppNode = Tree::App;
+
   void init(ZiMultiplex *mx, ZvCf *cf) {
     if (ZmRef<ZvCf> cf = cf->subset("telRing", false))
       m_telRingParams.init(cf);
     else
       m_telRingParams.name("zdash").size(131072);
-      // 131072 is ~100mics at 1Gbit/s // FIXME
+    // 131072 is ~100mics at 1Gbit/s
     m_telRing = new TelRing{m_telRingParams}
     {
       ZeError e;
@@ -838,17 +900,22 @@ public:
     switch (m_telRing->readStatus()) {
       case Zi::OK:
 	gtkNextRefresh();
-      case Zi::EndOfFile:
+      case Zi::EndOfFile: // fallthrough
 	return;
     }
 
     // FIXME - freeze, save sort col, unset sort col
 
+    ZmTime deadline = ZmTimeNow() + ZmTime{ZmTime::Nano, m_refreshRate>>1};
+    unsigned i = 0;
     while (m_telRing->shift([link](const ZuArray<const uint8_t> &msg) {
       link->app()->processTel2(link, msg);
-    }));
+    }))
+      if (!(++i & 0xf) && ZmTimeNow() >= deadline) break;
 
     // FIXME - restore sort col, thaw
+
+    gtkNextRefresh();
   }
 
   void gtkNextRefresh() {
@@ -910,7 +977,7 @@ private:
     ZGtk::App::invoke(ZuFwd<Args>(args)...);
   }
 
-  void loggedIn(Link *) {
+  void loggedIn(Link *link) {
     if (auto plugin = ::getenv("ZCMD_PLUGIN")) {
       ZmRef<ZvCf> args = new ZvCf();
       args->set("1", plugin);
@@ -922,7 +989,24 @@ private:
     std::cout <<
       "For a list of valid commands: help\n"
       "For help on a particular command: COMMAND --help\n" << std::flush;
+    gtkRun(ZmFn<>{link, [](Link *link) { link->app()->loggedIn2(link); }});
     prompt();
+  }
+
+  void loggedIn2(Link *link) {
+    ZuConstant<ZuTypeIndex<ZvTelemetry::App, ZvTelemetry::TypeList>::I> i;
+    auto &container = link->telemetry.p<i>();
+    auto appItem = new AppItem{link};
+    appItem->initKey(link->server(), link->port());
+    container.add(appItem);
+    auto appNode = new Tree::App{appItem};
+    m_model->add(appNode, m_model->root());
+  }
+
+  AppItem *appItem(const Link *link) {
+    ZuConstant<ZuTypeIndex<ZvTelemetry::App, ZvTelemetry::TypeList>::I> i;
+    const auto &container = link->telemetry.p<i>();
+    return container.lookup(nullptr);
   }
 
   int processApp(Link *, ZuArray<const uint8_t> msg) {
@@ -953,46 +1037,106 @@ private:
     });
   }
 
-  // FIXME
-  // - * -> ensure App
-  // - Socket -> ensure Mx
-  // - Link -> ensure Engine
-  // - DBHost -> ensure DBEnv
-  // - DB -> ensure DBEnv
   template <typename FBS>
-  typename ZuIsNot<ZvTelemetry::fbs::Alert, FBS, bool>::T
+  typename ZuIsNot<ZvTelemetry::fbs::Alert, FBS>::T
   processTel3(Link *link, const FBS *fbs) {
     ZuConstant<ZuTypeIndex<FBS, Telemetry::FBSTypeList>::I> i;
     using T = typename ZuType<i, Telemetry::TypeList>::T;
     auto &container = link->telemetry.p<i>();
-    using Node = Telemetry::ItemNode<T>;
-    Node *node;
-    if (node = container.lookup(fbs)) {
-      node->data.loadDelta(fbs);
-      return false;
+    using Item = TelItem<T>;
+    Item *item;
+    if (item = container.lookup(fbs)) {
+      item->data.loadDelta(fbs);
+      m_model->updated(Tree::node(item));
     } else {
-      node = new Node{link, fbs};
-      container.add(node);
-      return true;
+      item = new Item{link, fbs};
+      container.add(item);
+      addNode(link, item);
     }
-    // FIXME - update tree, watches, etc.
   }
 
-  template <typename Node>
-  typename ZuIs<ItemNode<ZvTelemetry::App>, Node>::T
-  addNode(Node *node) {
-    Tree::App *treeRow = new Tree::App{node};
-    m_model->add(treeRow, m_model->root());
+  template <typename Item, typename ParentFn>
+  void addNode_(AppItem *appItem, Item *item, ParentFn parentFn) {
+    auto appNode = Tree::node(appItem);
+    auto &parent = parentFn(appNode);
+    if (parent.row() < 0) m_model->add(&parent, appNode);
+    using Node = decltype(*Tree::node(item));
+    m_model->add(new Node{item}, &parent);
   }
-  template <typename Node>
-  typename ZuIs<ItemNode<ZvTelemetry::HashTbl>, Node>::T
-  addNode(Node *node) {
-    Tree::HashTbl *treeRow = new Tree::HashTbl{node};
-    // FIXME - find app in container, use app->treeRow
-    // FIXME add placeholder app if not already added
-    m_model->add(app->treeRow, m_model->root());
-    m_model->add(treeRow, &app->hashTbls());
+  void addNode(Link *, AppItem *) { } // unused
+  void addNode(Link *link, TelItem<ZvTelemetry::Heap> *item) {
+    appNode_(appItem(link), item, [](AppNode *_) { return _->heaps(); });
   }
+  void addNode(Link *link, TelItem<ZvTelemetry::HashTbl> *item) {
+    appNode_(appItem(link), item, [](AppNode *_) { return _->hashTbls(); });
+  }
+  void addNode(Link *link, TelItem<ZvTelemetry::Thread> *item) {
+    appNode_(appItem(link), item, [](AppNode *_) { return _->threads(); });
+  }
+  void addNode(Link *link, TelItem<ZvTelemetry::Mx> *item) {
+    appNode_(appItem(link), item, [](AppNode *_) { return _->mxs(); });
+  }
+  void addNode(Link *link, TelItem<ZvTelemetry::Socket> *item) {
+    ZuConstant<ZuTypeIndex<ZvTelemetry::Mx, ZvTelemetry::TypeList>::I> i;
+    auto &mxContainer = link->telemetry.p<i>();
+    auto mxItem = mxContainer.find(ZvTelemetry::Mx::Key{item->data.mxID});
+    if (!mxItem) {
+      auto mxItem = new TelItem<ZvTelemetry::Mx>{}
+      mxItem->data.id = item->data.mxID;
+      mxContainer.add(mxItem);
+      addNode(link, mxItem);
+      // FIXME - loadDelta does not update configuration of placeholder parent
+    }
+    m_model->add(new Tree::Socket{item}, Tree::node(mxItem));
+  }
+  void addNode(Link *link, TelItem<ZvTelemetry::Queue> *item) {
+    appNode_(appItem(link), item, [](AppNode *_) { return _->queues(); });
+  }
+  void addNode(Link *link, TelItem<ZvTelemetry::Engine> *item) {
+    appNode_(appItem(link), item, [](AppNode *_) { return _->engines(); });
+  }
+  void addNode(Link *link, TelItem<ZvTelemetry::Link> *item) {
+    ZuConstant<ZuTypeIndex<ZvTelemetry::Engine, ZvTelemetry::TypeList>::I> i;
+    auto &engContainer = link->telemetry.p<i>();
+    auto engItem =
+      engContainer.find(ZvTelemetry::Engine::Key{item->data.engineID});
+    if (!engItem) {
+      auto engItem = new TelItem<ZvTelemetry::Mx>{}
+      engItem->data.id = item->data.engineID;
+      engContainer.add(engItem);
+      addNode(link, engItem);
+      // FIXME - loadDelta does not update configuration of placeholder parent
+    }
+    m_model->add(new Tree::Link{item}, Tree::node(engItem));
+  }
+
+  // FIXME from here
+  void addNode(AppItem *appItem, TelItem<ZvTelemetry::Thread> *item) {
+    auto appNode = Tree::node(appItem);
+    auto &threads = appNode->threads();
+    if (threads.row() < 0) m_model->add(&threads, appNode);
+    m_model->add(new Tree::Thread{item}, &threads);
+  }
+  // FIXME - hashTbls, etc.
+
+  void addNode(AppItem *appItem, TelItem<ZvTelemetry::DBEnv> *item) {
+    auto appNode = Tree::node(appItem);
+    auto &dbEnv = appNode->dbEnv();
+    dbEnv.init(item);
+    if (dbEnv->row() < 0)
+      m_model->add(dbEnv, appNode);
+    else
+      m_model->updated(dbEnv);
+  }
+
+  // FIXME
+  void addNode(AppItem *appItem, TelItem<ZvTelemetry::Socket> *item) {
+  }
+
+  // FIXME
+  void addNode(AppItem *appItem, TelItem<ZvTelemetry::Link> *item) { }
+  void addNode(AppItem *appItem, TelItem<ZvTelemetry::DBHost> *item) { }
+  void addNode(AppItem *appItem, TelItem<ZvTelemetry::DB> *item) { }
 
   template <typename FBS>
   typename ZuIs<ZvTelemetry::fbs::Alert, FBS, bool>::T

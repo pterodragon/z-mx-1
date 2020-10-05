@@ -437,4 +437,32 @@ int main()
     ZuConstant<i> j;
     CHECK(K<j>::k == 1);
   }
+
+  {
+    struct A {
+      A() : i{0} { }
+      A(int i_) : i{i_} { }
+      A(const A &) = default;
+      A &operator =(const A &) = default;
+      A(A &&) = default;
+      A &operator =(A &&) = default;
+      ~A() = default;
+      bool operator !() const { return !i; }
+      bool operator <(const A &a) const { return i < a.i; }
+      int cmp(const A &a) const { return i - a.i; }
+      int i;
+    };
+    struct B : public A {
+      using A::A;
+      using A::operator =;
+      using A::cmp;
+    };
+    B a, b{1}, c{42};
+    CHECK(!a);
+    CHECK(!ZuCmp<A>::cmp(a, a));
+    CHECK(!ZuCmp<A>::cmp(c, c));
+    CHECK(a < b);
+    CHECK(ZuCmp<A>::cmp(a, b) < 0);
+    CHECK(ZuCmp<A>::cmp(c, b) > 0);
+  }
 }

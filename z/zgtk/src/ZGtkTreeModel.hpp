@@ -705,16 +705,16 @@ namespace TreeNode {
     Parent	*m_parent = nullptr;
   };
 
-  // individual leaf item
+  // individual leaf
   template <unsigned Depth>
-  class Item : public Child<Depth> {
-    Item(const Item &) = delete;
-    Item &operator =(const Item &) = delete;
-    Item(Item &&) = delete;
-    Item &operator =(Item &&) = delete;
+  class Leaf : public Child<Depth> {
+    Leaf(const Leaf &) = delete;
+    Leaf &operator =(const Leaf &) = delete;
+    Leaf(Leaf &&) = delete;
+    Leaf &operator =(Leaf &&) = delete;
   public:
-    Item() = default;
-    ~Item() = default;
+    Leaf() = default;
+    ~Leaf() = default;
     constexpr static bool hasChild() { return false; }
     constexpr static unsigned nChildren() { return 0; }
     template <typename L>
@@ -813,7 +813,7 @@ struct Impl : public TreeHierarchy<Impl, Iter, Depth> {
 };
 #endif
 template <typename Impl, typename Iter, unsigned Depth>
-class TreeHierarchy : public ZGtk::TreeModel<Impl> {
+class TreeHierarchy : public TreeModel<Impl> {
   ZuAssert(sizeof(Iter) <= sizeof(GtkTreeIter));
   ZuAssert(ZuTraits<Iter>::IsPOD);
 

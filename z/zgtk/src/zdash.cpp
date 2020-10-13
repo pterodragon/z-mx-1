@@ -794,8 +794,12 @@ public:
   };
 
   template <typename T> using TelItem = Telemetry::Item<T>;
+
   using AppItem = TelItem<ZvTelemetry::App>;
+  using DBEnvItem = TelItem<ZvTelemetry::DBEnv>;
+
   using AppNode = Tree::App;
+  using DBEnvNode = Tree::DBEnv;
 
   void init(ZiMultiplex *mx, ZvCf *cf) {
     if (ZmRef<ZvCf> cf = cf->subset("telRing", false))
@@ -989,24 +993,7 @@ private:
     std::cout <<
       "For a list of valid commands: help\n"
       "For help on a particular command: COMMAND --help\n" << std::flush;
-    gtkRun(ZmFn<>{link, [](Link *link) { link->app()->loggedIn2(link); }});
     prompt();
-  }
-
-  void loggedIn2(Link *link) {
-    ZuConstant<ZuTypeIndex<ZvTelemetry::App, ZvTelemetry::TypeList>::I> i;
-    auto &container = link->telemetry.p<i>();
-    auto appItem = new AppItem{link};
-    appItem->initKey(link->server(), link->port());
-    container.add(appItem);
-    auto appNode = new Tree::App{appItem};
-    m_model->add(appNode, m_model->root());
-  }
-
-  AppItem *appItem(const Link *link) {
-    ZuConstant<ZuTypeIndex<ZvTelemetry::App, ZvTelemetry::TypeList>::I> i;
-    const auto &container = link->telemetry.p<i>();
-    return container.lookup(nullptr);
   }
 
   int processApp(Link *, ZuArray<const uint8_t> msg) {
@@ -1054,7 +1041,30 @@ private:
       addNode(link, item);
     }
   }
-
+  AppItem *appItem(const Link *link) {
+    ZuConstant<ZuTypeIndex<ZvTelemetry::App, ZvTelemetry::TypeList>::I> i;
+    const auto &container = link->telemetry.p<i>();
+    auto item = container.lookup(nullptr);
+    if (!item) {
+      item->initKey(link->server(), link->port());
+      container.add(item);
+      auto node = new Tree::App{item};
+      m_model->add(node, m_model->root());
+    }
+    return item;
+  }
+  DBEnvItem *dbEnvItem(const Link *link) {
+    ZuConstant<ZuTypeIndex<ZvTelemetry::DBEnv, ZvTelemetry::TypeList>::I> i;
+    const auto &container = link->telemetry.p<i>();
+    auto item = container.lookup(nullptr);
+    if (!item) {
+      item = new TelItem<ZvTelemetry::DBEnv>{}
+      container.add(item);
+      auto node = new Tree::DBEnv{item};
+      m_model->add(node, Tree::node(appItem(link)));
+    }
+    return item;
+  }
   template <typename Item, typename ParentFn>
   void addNode_(AppItem *appItem, Item *item, ParentFn parentFn) {
     auto appNode = Tree::node(appItem);
@@ -1063,20 +1073,20 @@ private:
     using Node = decltype(*Tree::node(item));
     m_model->add(new Node{item}, &parent);
   }
-  void addNode(Link *, AppItem *) { } // unused
-  void addNode(Link *link, TelItem<ZvTelemetry::Heap> *item) {
+  void addNode(const Link *, AppItem *) { } // unused
+  void addNode(const Link *link, TelItem<ZvTelemetry::Heap> *item) {
     appNode_(appItem(link), item, [](AppNode *_) { return _->heaps(); });
   }
-  void addNode(Link *link, TelItem<ZvTelemetry::HashTbl> *item) {
+  void addNode(const Link *link, TelItem<ZvTelemetry::HashTbl> *item) {
     appNode_(appItem(link), item, [](AppNode *_) { return _->hashTbls(); });
   }
-  void addNode(Link *link, TelItem<ZvTelemetry::Thread> *item) {
+  void addNode(const Link *link, TelItem<ZvTelemetry::Thread> *item) {
     appNode_(appItem(link), item, [](AppNode *_) { return _->threads(); });
   }
-  void addNode(Link *link, TelItem<ZvTelemetry::Mx> *item) {
+  void addNode(const Link *link, TelItem<ZvTelemetry::Mx> *item) {
     appNode_(appItem(link), item, [](AppNode *_) { return _->mxs(); });
   }
-  void addNode(Link *link, TelItem<ZvTelemetry::Socket> *item) {
+  void addNode(const Link *link, TelItem<ZvTelemetry::Socket> *item) {
     ZuConstant<ZuTypeIndex<ZvTelemetry::Mx, ZvTelemetry::TypeList>::I> i;
     auto &mxContainer = link->telemetry.p<i>();
     auto mxItem = mxContainer.find(ZvTelemetry::Mx::Key{item->data.mxID});
@@ -1085,17 +1095,16 @@ private:
       mxItem->data.id = item->data.mxID;
       mxContainer.add(mxItem);
       addNode(link, mxItem);
-      // FIXME - loadDelta does not update configuration of placeholder parent
     }
     m_model->add(new Tree::Socket{item}, Tree::node(mxItem));
   }
-  void addNode(Link *link, TelItem<ZvTelemetry::Queue> *item) {
+  void addNode(const Link *link, TelItem<ZvTelemetry::Queue> *item) {
     appNode_(appItem(link), item, [](AppNode *_) { return _->queues(); });
   }
-  void addNode(Link *link, TelItem<ZvTelemetry::Engine> *item) {
+  void addNode(const Link *link, TelItem<ZvTelemetry::Engine> *item) {
     appNode_(appItem(link), item, [](AppNode *_) { return _->engines(); });
   }
-  void addNode(Link *link, TelItem<ZvTelemetry::Link> *item) {
+  void addNode(const Link *link, TelItem<ZvTelemetry::Link> *item) {
     ZuConstant<ZuTypeIndex<ZvTelemetry::Engine, ZvTelemetry::TypeList>::I> i;
     auto &engContainer = link->telemetry.p<i>();
     auto engItem =
@@ -1105,39 +1114,29 @@ private:
       engItem->data.id = item->data.engineID;
       engContainer.add(engItem);
       addNode(link, engItem);
-      // FIXME - loadDelta does not update configuration of placeholder parent
     }
     m_model->add(new Tree::Link{item}, Tree::node(engItem));
   }
-
-  // FIXME from here
-  void addNode(AppItem *appItem, TelItem<ZvTelemetry::Thread> *item) {
-    auto appNode = Tree::node(appItem);
-    auto &threads = appNode->threads();
-    if (threads.row() < 0) m_model->add(&threads, appNode);
-    m_model->add(new Tree::Thread{item}, &threads);
-  }
-  // FIXME - hashTbls, etc.
-
-  void addNode(AppItem *appItem, TelItem<ZvTelemetry::DBEnv> *item) {
-    auto appNode = Tree::node(appItem);
+  void addNode(const Link *link, TelItem<ZvTelemetry::DBEnv> *item) {
+    auto appNode = Tree::node(appItem(link));
     auto &dbEnv = appNode->dbEnv();
     dbEnv.init(item);
-    if (dbEnv->row() < 0)
-      m_model->add(dbEnv, appNode);
-    else
-      m_model->updated(dbEnv);
+    m_model->add(dbEnv, appNode);
   }
-
-  // FIXME
-  void addNode(AppItem *appItem, TelItem<ZvTelemetry::Socket> *item) {
+  template <typename Item, typename ParentFn>
+  void addNode_(DBEnvItem *dbEnvItem, Item *item, ParentFn parentFn) {
+    auto dbEnvNode = Tree::node(dbEnvItem);
+    auto &parent = parentFn(dbEnvNode);
+    if (parent.row() < 0) m_model->add(&parent, dbEnvNode);
+    using Node = decltype(*Tree::node(item));
+    m_model->add(new Node{item}, &parent);
   }
-
-  // FIXME
-  void addNode(AppItem *appItem, TelItem<ZvTelemetry::Link> *item) { }
-  void addNode(AppItem *appItem, TelItem<ZvTelemetry::DBHost> *item) { }
-  void addNode(AppItem *appItem, TelItem<ZvTelemetry::DB> *item) { }
-
+  void addNode(const Link *link, TelItem<ZvTelemetry::DBHost> *item) {
+    addNode_(dbEnvItem(link), item, [](DBEnvNode *_) { return _->hosts(); });
+  }
+  void addNode(const Link *link, TelItem<ZvTelemetry::DB> *item) {
+    addNode_(dbEnvItem(link), item, [](DBEnvNode *_) { return _->dbs(); });
+  }
   template <typename FBS>
   typename ZuIs<ZvTelemetry::fbs::Alert, FBS, bool>::T
   processTel3(Link *link, const FBS *fbs) {

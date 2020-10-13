@@ -204,11 +204,7 @@ struct Heap : public Heap_, public ZvFieldTuple<Heap> {
     b.add_frees(frees);
     return b.Finish();
   }
-  void loadDelta(const fbs::Heap *heap_) {
-    cacheAllocs = heap_->cacheAllocs();
-    heapAllocs = heap_->heapAllocs();
-    frees = heap_->frees();
-  }
+  void loadDelta(const fbs::Heap *);
 
   struct KeyPrint : public ZuPrintDelegate {
     template <typename S>
@@ -249,6 +245,16 @@ template <> struct load<Heap> : public Heap {
     .alignment = heap_->alignment()
   } } { }
 };
+inline void Heap::loadDelta(const fbs::Heap *heap_) {
+  if (Zfb::IsFieldPresent(heap_, fbs::Heap::VT_CACHESIZE)) {
+    this->~Heap();
+    new (this) load<Heap>{heap_};
+    return;
+  }
+  cacheAllocs = heap_->cacheAllocs();
+  heapAllocs = heap_->heapAllocs();
+  frees = heap_->frees();
+}
 
 using HashTbl_ = ZmHashTelemetry;
 struct HashTbl : public HashTbl_, public ZvFieldTuple<HashTbl> {
@@ -282,10 +288,7 @@ struct HashTbl : public HashTbl_, public ZvFieldTuple<HashTbl> {
     b.add_effLoadFactor(effLoadFactor);
     return b.Finish();
   }
-  void loadDelta(const fbs::HashTbl *hash_) {
-    count = hash_->count();
-    effLoadFactor = hash_->effLoadFactor();
-  }
+  void loadDelta(const fbs::HashTbl *);
 
   struct KeyPrint : public ZuPrintDelegate {
     template <typename S>
@@ -325,6 +328,15 @@ template <> struct load<HashTbl> : public HashTbl {
     .linear = hash_->linear()
   } } { }
 };
+inline void HashTbl::loadDelta(const fbs::HashTbl *hash_) {
+  if (Zfb::IsFieldPresent(hash_, fbs::HashTbl::VT_NODESIZE)) {
+    this->~HashTbl();
+    new (this) load<HashTbl>{hash_};
+    return;
+  }
+  count = hash_->count();
+  effLoadFactor = hash_->effLoadFactor();
+}
 
 using Thread_ = ZmThreadTelemetry;
 struct Thread : public Thread_, public ZvFieldTuple<Thread> {
@@ -355,9 +367,7 @@ struct Thread : public Thread_, public ZvFieldTuple<Thread> {
     b.add_cpuUsage(cpuUsage);
     return b.Finish();
   }
-  void loadDelta(const fbs::Thread *thread_) {
-    cpuUsage = thread_->cpuUsage();
-  }
+  void loadDelta(const fbs::Thread *);
 };
 inline const ZvFields Thread::fields() noexcept {
   ZvMkFields(Thread,
@@ -390,6 +400,14 @@ template <> struct load<Thread> : public Thread {
     .detached = thread_->detached()
   } } { }
 };
+inline void Thread::loadDelta(const fbs::Thread *thread_) {
+  if (Zfb::IsFieldPresent(thread_, fbs::Thread::VT_STACKSIZE)) {
+    this->~Thread();
+    new (this) load<Thread>{thread_};
+    return;
+  }
+  cpuUsage = thread_->cpuUsage();
+}
 
 using Mx_ = ZiMxTelemetry;
 struct Mx : public Mx_, public ZvFieldTuple<Mx> {
@@ -419,9 +437,7 @@ struct Mx : public Mx_, public ZvFieldTuple<Mx> {
     b.add_state(static_cast<fbs::MxState>(state));
     return b.Finish();
   }
-  void loadDelta(const fbs::Mx *mx_) {
-    state = mx_->state();
-  }
+  void loadDelta(const fbs::Mx *);
 };
 inline const ZvFields Mx::fields() noexcept {
   ZvMkFields(Mx,
@@ -461,6 +477,14 @@ template <> struct load<Mx> : public Mx {
     .nThreads = mx_->nThreads()
   } } { }
 };
+inline void Mx::loadDelta(const fbs::Mx *mx_) {
+  if (Zfb::IsFieldPresent(mx_, fbs::Mx::VT_STACKSIZE)) {
+    this->~Mx();
+    new (this) load<Mx>{mx_};
+    return;
+  }
+  state = mx_->state();
+}
 
 using Socket_ = ZiCxnTelemetry;
 struct Socket : public Socket_, public ZvFieldTuple<Socket> {
@@ -496,10 +520,7 @@ struct Socket : public Socket_, public ZvFieldTuple<Socket> {
     b.add_txBufLen(txBufLen);
     return b.Finish();
   }
-  void loadDelta(const fbs::Socket *socket_) {
-    rxBufLen = socket_->rxBufLen();
-    txBufLen = socket_->txBufLen();
-  }
+  void loadDelta(const fbs::Socket *);
 };
 inline const ZvFields Socket::fields() noexcept {
   ZvMkFields(Socket,
@@ -543,6 +564,15 @@ template <> struct load<Socket> : public Socket {
     .type = static_cast<int8_t>(socket_->type())
   } } { }
 };
+inline void Socket::loadDelta(const fbs::Socket *socket_) {
+  if (Zfb::IsFieldPresent(socket_, fbs::Heap::VT_RXBUFSIZE)) {
+    this->~Socket();
+    new (this) load<Socket>{socket_};
+    return;
+  }
+  rxBufLen = socket_->rxBufLen();
+  txBufLen = socket_->txBufLen();
+}
 
 // display sequence:
 //   id, type, size, full, count, seqNo,
@@ -596,14 +626,7 @@ struct Queue : public ZvFieldTuple<Queue> {
     b.add_full(full);
     return b.Finish();
   }
-  void loadDelta(const fbs::Queue *queue_) {
-    count = queue_->count();
-    inCount = queue_->inCount();
-    inBytes = queue_->inBytes();
-    outCount = queue_->outCount();
-    outBytes = queue_->outBytes();
-    full = queue_->full();
-  }
+  void loadDelta(const fbs::Queue *);
 
   struct KeyPrint : public ZuPrintDelegate {
     template <typename S>
@@ -643,6 +666,19 @@ template <> struct load<Queue> : public Queue {
     .type = static_cast<int8_t>(queue_->type())
   } { }
 };
+inline void Queue::loadDelta(const fbs::Queue *queue_) {
+  if (Zfb::IsFieldPresent(queue_, fbs::Queue::VT_SIZE)) {
+    this->~Queue();
+    new (this) load<Queue>{queue_};
+    return;
+  }
+  count = queue_->count();
+  inCount = queue_->inCount();
+  inBytes = queue_->inBytes();
+  outCount = queue_->outCount();
+  outBytes = queue_->outBytes();
+  full = queue_->full();
+}
 
 // display sequence:
 //   id, state, reconnects, rxSeqNo, txSeqNo
@@ -684,12 +720,7 @@ struct Link : public ZvFieldTuple<Link> {
     b.add_state(static_cast<fbs::LinkState>(state));
     return b.Finish();
   }
-  void loadDelta(const fbs::Link *link_) {
-    rxSeqNo = link_->rxSeqNo();
-    txSeqNo = link_->txSeqNo();
-    reconnects = link_->reconnects();
-    state = link_->state();
-  }
+  void loadDelta(const fbs::Link *);
 };
 inline const ZvFields Link::fields() noexcept {
   ZvMkFields(Link,
@@ -713,6 +744,17 @@ template <> struct load<Link> : public Link {
     .state = (int8_t)link_->state()
   } { }
 };
+inline void Link::loadDelta(const fbs::Link *link_) {
+  if (Zfb::IsFieldPresent(link_, fbs::Link::VT_ENGINEID)) {
+    this->~Link();
+    new (this) load<Link>{link_};
+    return;
+  }
+  rxSeqNo = link_->rxSeqNo();
+  txSeqNo = link_->txSeqNo();
+  reconnects = link_->reconnects();
+  state = link_->state();
+}
 
 struct Engine : public ZvFieldTuple<Engine> {
   ZuID		id;		// primary key
@@ -761,15 +803,7 @@ struct Engine : public ZvFieldTuple<Engine> {
     b.add_state(static_cast<fbs::EngineState>(state));
     return b.Finish();
   }
-  void loadDelta(const fbs::Engine *engine_) {
-    down = engine_->down();
-    disabled = engine_->disabled();
-    transient = engine_->transient();
-    up = engine_->up();
-    reconn = engine_->reconn();
-    failed = engine_->failed();
-    state = engine_->state();
-  }
+  void loadDelta(const fbs::Engine *);
 };
 inline const ZvFields Engine::fields() noexcept {
   ZvMkFields(Engine,
@@ -806,6 +840,20 @@ template <> struct load<Engine> : public Engine {
     .txThread = engine_->txThread(),
     .state = (int8_t)engine_->state() } { }
 };
+inline void Engine::loadDelta(const fbs::Engine *engine_) {
+  if (Zfb::IsFieldPresent(engine_, fbs::Engine::VT_TYPE)) {
+    this->~Engine();
+    new (this) load<Engine>{engine_};
+    return;
+  }
+  down = engine_->down();
+  disabled = engine_->disabled();
+  transient = engine_->transient();
+  up = engine_->up();
+  reconn = engine_->reconn();
+  failed = engine_->failed();
+  state = engine_->state();
+}
 
 // display sequence: 
 //   name, id, recSize, compress, cacheMode, cacheSize,
@@ -872,15 +920,7 @@ struct DB : public ZvFieldTuple<DB> {
     b.add_fileMisses(fileMisses);
     return b.Finish();
   }
-  void loadDelta(const fbs::DB *db_) {
-    minRN = db_->minRN();
-    nextRN = db_->nextRN();
-    fileRN = db_->fileRN();
-    cacheLoads = db_->cacheLoads();
-    cacheMisses = db_->cacheMisses();
-    fileLoads = db_->fileLoads();
-    fileMisses = db_->fileMisses();
-  }
+  void loadDelta(const fbs::DB *);
 };
 inline const ZvFields DB::fields() noexcept {
   ZvMkFields(DB,
@@ -928,6 +968,20 @@ template <> struct load<DB> : public DB {
     .cacheMode = static_cast<int8_t>(db_->cacheMode())
   } { }
 };
+inline void DB::loadDelta(const fbs::DB *db_) {
+  if (Zfb::IsFieldPresent(db_, fbs::DB::VT_PATH)) {
+    this->~DB();
+    new (this) load<DB>{db_};
+    return;
+  }
+  minRN = db_->minRN();
+  nextRN = db_->nextRN();
+  fileRN = db_->fileRN();
+  cacheLoads = db_->cacheLoads();
+  cacheMisses = db_->cacheMisses();
+  fileLoads = db_->fileLoads();
+  fileMisses = db_->fileMisses();
+}
 
 // display sequence:
 //   id, priority, state, voted, ip, port
@@ -962,10 +1016,7 @@ struct DBHost : public ZvFieldTuple<DBHost> {
     b.add_voted(voted);
     return b.Finish();
   }
-  void loadDelta(const fbs::DBHost *host_) {
-    state = host_->state();
-    voted = host_->voted();
-  }
+  void loadDelta(const fbs::DBHost *);
 };
 inline const ZvFields DBHost::fields() noexcept {
   ZvMkFields(DBHost,
@@ -989,6 +1040,15 @@ template <> struct load<DBHost> : public DBHost {
     .voted = host_->voted()
   } { }
 };
+inline void DBHost::loadDelta(const fbs::DBHost *host_) {
+  if (Zfb::IsFieldPresent(host_, fbs::DBHost::VT_CACHESIZE)) {
+    this->~DBHost();
+    new (this) load<DBHost>{host_};
+    return;
+  }
+  state = host_->state();
+  voted = host_->voted();
+}
 
 // display sequence: 
 //   self, master, prev, next, state, active, recovering, replicating,
@@ -1035,13 +1095,16 @@ struct DBEnv : public ZvFieldTuple<DBEnv> {
     using namespace Zfb::Save;
     fbs::DBEnvBuilder b(fbb);
     b.add_nCxns(nCxns);
+    b.add_master(master);
+    b.add_prev(prev);
+    b.add_next(next);
     b.add_state(state);
+    b.add_active(active);
+    b.add_recovering(recovering);
+    b.add_replicating(replicating);
     return b.Finish();
   }
-  void loadDelta(const fbs::DBEnv *env_) {
-    nCxns = env_->nCxns();
-    state = env_->state();
-  }
+  void loadDelta(const fbs::DBEnv *);
 };
 inline const ZvFields DBEnv::fields() noexcept {
   ZvMkFields(DBEnv,
@@ -1087,6 +1150,21 @@ template <> struct load<DBEnv> : public DBEnv {
     .replicating = env_->replicating()
   } { }
 };
+inline void DBEnv::loadDelta(const fbs::DBEnv *env_) {
+  if (Zfb::IsFieldPresent(env_, fbs::DBEnv::VT_NHOSTS)) {
+    this->~DBEnv();
+    new (this) load<DBEnv>{env_};
+    return;
+  }
+  nCxns = env_->nCxns();
+  master = env_->master();
+  prev = env_->prev();
+  next = env_->next();
+  state = env_->state();
+  active = env_->active();
+  recovering = env_->recovering();
+  replicating = env_->replicating();
+}
 
 // display sequence:
 //   id, role, RAG, uptime, version
@@ -1113,14 +1191,14 @@ struct App : public ZvFieldTuple<App> {
   Zfb::Offset<fbs::App> saveDelta(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
     auto id_ = str(fbb, id);
+    auto uptime_ = dateTime(fbb, uptime);
     fbs::AppBuilder b(fbb);
     b.add_id(id_);
+    b.add_uptime(uptime_);
     b.add_rag(static_cast<fbs::RAG>(rag_));
     return b.Finish();
   }
-  void loadDelta(const fbs::App *app_) {
-    rag(app_->rag());
-  }
+  void loadDelta(const fbs::App *);
 };
 inline const ZvFields App::fields() noexcept {
   ZvMkFields(App,
@@ -1142,6 +1220,15 @@ template <> struct load<App> : public App {
     .rag_ = static_cast<int8_t>(app_->rag())
   } { }
 };
+inline void loadDelta(const fbs::App *app_) {
+  if (Zfb::IsFieldPresent(app_, fbs::App::VT_VERSION)) {
+    this->~App();
+    new (this) load<App>{app_};
+    return;
+  }
+  uptime = Zfb::Load::dateTime(app_->uptime());
+  rag_ = app_->rag();
+}
 
 // display sequence:
 //   time, severity, tid, message

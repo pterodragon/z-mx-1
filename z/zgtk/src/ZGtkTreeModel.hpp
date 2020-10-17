@@ -703,7 +703,7 @@ namespace TreeNode {
     Parent	*m_parent = nullptr;
   };
 
-  // individual leaf
+  // individual leaf (CRTP)
   template <typename Impl, unsigned Depth>
   class Leaf : public Child<Depth> {
     Leaf(const Leaf &) = delete;
@@ -728,7 +728,7 @@ namespace TreeNode {
     }
   };
 
-  // parent of array of homogenous Children
+  // parent of array of homogenous Children (CRTP)
   template <
     typename Impl,
     unsigned Depth, typename Child_, template <unsigned> class Type = Child>
@@ -766,7 +766,7 @@ namespace TreeNode {
       gint row = ZuSearchPos(ZuInterSearch<false>(
 	    const_cast<const Child_ **>(&m_index[0]), m_index.length(),
 	    [c1 = const_cast<const Child_ *>(child)](const Child_ *c2) {
-	      return ZuCmp<Child_>::cmp(*c1, *c2);
+	      return c1->cmp(*c2);
 	    }));
       child->row(row);
       m_index.splice(row, 0, child);
@@ -782,7 +782,7 @@ namespace TreeNode {
     ZtArray<Child_ *>		m_index;
   };
 
-  // parent of tuple of heterogeneous Children
+  // parent of tuple of heterogeneous Children (CRTP)
   template <
     typename Impl,
     unsigned Depth, typename Tuple, template <unsigned> class Type = Child>
@@ -826,6 +826,7 @@ namespace TreeNode {
 // Iter must be ZuUnion<T0 *, T1 *, ...>
 struct Impl : public TreeHierarchy<Impl, Iter, Depth> {
   auto root();	// must return a Parent|Branch pointer
+  template <typename T> static auto parent(const T *ptr); // ascend
   template <typename T> auto value(const T *ptr, gint i, ZGtk::Value *value);
 };
 #endif
@@ -841,8 +842,6 @@ public:
   GtkTreeModelFlags get_flags() {
     return static_cast<GtkTreeModelFlags>(GTK_TREE_MODEL_ITERS_PERSIST);
   }
-  // gint get_n_columns() { return 1; }
-  // GType get_column_type(gint i) { return G_TYPE_STRING; }
   gboolean get_iter(GtkTreeIter *iter_, GtkTreePath *path) {
     gint depth = gtk_tree_path_get_depth(path);
     if (!depth) return false;

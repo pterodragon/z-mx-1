@@ -233,10 +233,10 @@ namespace Telemetry {
     template <typename Link>
     ZuInline Link *link() const { return static_cast<Link *>(link_); }
 
-    template <typename Node>
-    ZuInline Node *treeNode() const { return static_cast<Node *>(treeNode_); }
-    template <typename Node>
-    ZuInline void treeNode(Node *node) { treeNode_ = node; }
+    template <typename T>
+    ZuInline T *gtkNode() const { return static_cast<T *>(gtkNode_); }
+    template <typename T>
+    ZuInline void gtkNode(T *node) { gtkNode_ = node; }
 
     ZuInline TelKey telKey() const { return Item__<Data_>::telKey(data); }
     ZuInline int rag() const { return Item__<Data_>::rag(data); }
@@ -251,7 +251,7 @@ namespace Telemetry {
     void			*link_;
     Load			data;
 
-    void			*treeNode_ = nullptr;
+    void			*gtkNode_ = nullptr;
     DispList			dispList;
     GraphList			graphList;
 
@@ -331,7 +331,7 @@ namespace Telemetry {
   template <typename T> using Item = typename Container<T>::T::Node;
 }
 
-namespace Tree {
+namespace GtkTree {
   template <typename Impl, typename Item>
   class Node {
     Impl *impl() { return static_cast<Impl *>(this); }
@@ -343,10 +343,13 @@ namespace Tree {
     Node() = default;
     Node(Item *item_) : item{item_} { init_(); }
     void init(Item *item_) { item = item_; init_(); }
-    void init_() { item->treeNode(impl()); }
+    void init_() { item->gtkNode(impl()); }
 
     ZuInline typename Item::TelKey telKey() const { return item->telKey(); }
     ZuInline int rag() const { return item->rag(); }
+    ZuInline int cmp(const Impl &v) const {
+      return item->telKey().cmp(v.telKey());
+    }
   };
 
   template <unsigned Depth, typename Item>
@@ -355,9 +358,7 @@ namespace Tree {
       public ZGtk::TreeNode::Leaf<Leaf<Depth, Item>, Depth> {
     Leaf() = default;
     Leaf(Item *item) : Node<Leaf, Item>{item} { }
-    ZuInline int cmp(const Leaf &v) const {
-      return this->item->telKey().cmp(v.telKey());
-    }
+    using Node<Leaf, Item>::cmp;
   };
 
   template <unsigned Depth, typename Item, typename Child>
@@ -366,9 +367,7 @@ namespace Tree {
       public ZGtk::TreeNode::Parent<Parent<Depth, Item, Child>, Depth, Child> {
     Parent() = default;
     Parent(Item *item) : Node<Parent, Item>{item} { }
-    ZuInline int cmp(const Parent &v) const {
-      return this->item->telKey().cmp(v.telKey());
-    }
+    using Node<Parent, Item>::cmp;
     using Base = ZGtk::TreeNode::Parent<Parent, Depth, Child>;
     using Base::add;
     using Base::del;
@@ -380,9 +379,7 @@ namespace Tree {
       public ZGtk::TreeNode::Branch<Branch<Depth, Item, Tuple>, Depth, Tuple> {
     Branch() = default; 
     Branch(Item *item) : Node<Branch, Item>{item} { }
-    ZuInline int cmp(const Branch &v) const {
-      return this->item->telKey().cmp(v.telKey());
-    }
+    using Node<Branch, Item>::cmp;
     using Base = ZGtk::TreeNode::Branch<Branch, Depth, Tuple>;
     using Base::add;
     using Base::del;
@@ -485,40 +482,40 @@ namespace Tree {
 
   // map telemetry items to corresponding tree nodes
   inline Heap *node(TelItem<ZvTelemetry::Heap> *item) {
-    return item->template treeNode<Heap>();
+    return item->template gtkNode<Heap>();
   }
   inline HashTbl *node(TelItem<ZvTelemetry::HashTbl> *item) {
-    return item->template treeNode<HashTbl>();
+    return item->template gtkNode<HashTbl>();
   }
   inline Thread *node(TelItem<ZvTelemetry::Thread> *item) {
-    return item->template treeNode<Thread>();
+    return item->template gtkNode<Thread>();
   }
   inline Mx *node(TelItem<ZvTelemetry::Mx> *item) {
-    return item->template treeNode<Mx>();
+    return item->template gtkNode<Mx>();
   }
   inline Socket *node(TelItem<ZvTelemetry::Socket> *item) {
-    return item->template treeNode<Socket>();
+    return item->template gtkNode<Socket>();
   }
   inline Queue *node(TelItem<ZvTelemetry::Queue> *item) {
-    return item->template treeNode<Queue>();
+    return item->template gtkNode<Queue>();
   }
   inline Engine *node(TelItem<ZvTelemetry::Engine> *item) {
-    return item->template treeNode<Engine>();
+    return item->template gtkNode<Engine>();
   }
   inline Link *node(TelItem<ZvTelemetry::Link> *item) {
-    return item->template treeNode<Link>();
+    return item->template gtkNode<Link>();
   }
   inline DB *node(TelItem<ZvTelemetry::DB> *item) {
-    return item->template treeNode<DB>();
+    return item->template gtkNode<DB>();
   }
   inline DBHost *node(TelItem<ZvTelemetry::DBHost> *item) {
-    return item->template treeNode<DBHost>();
+    return item->template gtkNode<DBHost>();
   }
   inline DBEnv *node(TelItem<ZvTelemetry::DBEnv> *item) {
-    return item->template treeNode<DBEnv>();
+    return item->template gtkNode<DBEnv>();
   }
   inline App *node(TelItem<ZvTelemetry::App> *item) {
-    return item->template treeNode<App>();
+    return item->template gtkNode<App>();
   }
 
   enum { Depth = 5 };
@@ -863,9 +860,6 @@ public:
   using AppItem = TelItem<ZvTelemetry::App>;
   using DBEnvItem = TelItem<ZvTelemetry::DBEnv>;
 
-  using AppNode = Tree::App;
-  using DBEnvNode = Tree::DBEnv;
-
   void init(ZiMultiplex *mx, ZvCf *cf) {
     if (ZmRef<ZvCf> telRingCf = cf->subset("telRing", false))
       m_telRingParams.init(telRingCf);
@@ -951,7 +945,7 @@ public:
       g_object_unref(G_OBJECT(provider));
     }
 
-    m_model = Tree::Model::ctor();
+    m_model = GtkTree::Model::ctor();
     m_view.init(view_, m_styleContext);
     m_view.bind(GTK_TREE_MODEL(m_model));
 
@@ -1106,7 +1100,7 @@ private:
     Item *item;
     if (item = container.lookup(fbs)) {
       item->data.loadDelta(fbs);
-      m_model->updated(Tree::node(item));
+      m_model->updated(GtkTree::node(item));
     } else {
       item = new Item{link, fbs};
       container.add(item);
@@ -1122,7 +1116,7 @@ private:
       item = new TelItem<ZvTelemetry::App>{link};
       item->initTelKey(link->server(), link->port());
       container.add(item);
-      auto node = new Tree::App{item};
+      auto node = new GtkTree::App{item};
       m_model->add(node, m_model->root());
     }
     return item;
@@ -1135,7 +1129,7 @@ private:
     if (!item) {
       item = new TelItem<ZvTelemetry::DBEnv>{link};
       container.add(item);
-      auto appNode = Tree::node(appItem(link));
+      auto appNode = GtkTree::node(appItem(link));
       auto &dbEnv = appNode->dbEnv();
       dbEnv.init(item);
       m_model->add(&dbEnv, appNode);
@@ -1144,28 +1138,34 @@ private:
   }
   template <typename Item, typename ParentFn>
   void addNode_(AppItem *appItem, Item *item, ParentFn parentFn) {
-    auto appNode = Tree::node(appItem);
+    auto appNode = GtkTree::node(appItem);
     auto &parent = parentFn(appNode);
     if (parent.row() < 0) m_model->add(&parent, appNode);
-    using Node = typename ZuDecay<decltype(*Tree::node(item))>::T;
+    using Node = typename ZuDecay<decltype(*GtkTree::node(item))>::T;
     m_model->add(new Node{item}, &parent);
   }
   void addNode(Link *, AppItem *) { } // unused
   void addNode(Link *link, TelItem<ZvTelemetry::Heap> *item) {
     addNode_(appItem(link), item,
-	[](AppNode *_) -> Tree::HeapParent & { return _->heaps(); });
+	[](GtkTree::App *_) -> GtkTree::HeapParent & {
+	  return _->heaps();
+	});
   }
   void addNode(Link *link, TelItem<ZvTelemetry::HashTbl> *item) {
     addNode_(appItem(link), item,
-	[](AppNode *_) -> Tree::HashTblParent & { return _->hashTbls(); });
+	[](GtkTree::App *_) -> GtkTree::HashTblParent & {
+	  return _->hashTbls();
+	});
   }
   void addNode(Link *link, TelItem<ZvTelemetry::Thread> *item) {
     addNode_(appItem(link), item,
-	[](AppNode *_) -> Tree::ThreadParent & { return _->threads(); });
+	[](GtkTree::App *_) -> GtkTree::ThreadParent & {
+	  return _->threads();
+	});
   }
   void addNode(Link *link, TelItem<ZvTelemetry::Mx> *item) {
     addNode_(appItem(link), item,
-	[](AppNode *_) -> Tree::MxParent & { return _->mxs(); });
+	[](GtkTree::App *_) -> GtkTree::MxParent & { return _->mxs(); });
   }
   void addNode(Link *link, TelItem<ZvTelemetry::Socket> *item) {
     ZuConstant<ZuTypeIndex<ZvTelemetry::Mx, ZvTelemetry::TypeList>::I> i;
@@ -1177,15 +1177,19 @@ private:
       mxContainer.add(mxItem);
       addNode(link, mxItem);
     }
-    m_model->add(new Tree::Socket{item}, Tree::node(mxItem));
+    m_model->add(new GtkTree::Socket{item}, GtkTree::node(mxItem));
   }
   void addNode(Link *link, TelItem<ZvTelemetry::Queue> *item) {
     addNode_(appItem(link), item,
-	[](AppNode *_) -> Tree::QueueParent & { return _->queues(); });
+	[](GtkTree::App *_) -> GtkTree::QueueParent & {
+	  return _->queues();
+	});
   }
   void addNode(Link *link, TelItem<ZvTelemetry::Engine> *item) {
     addNode_(appItem(link), item,
-	[](AppNode *_) -> Tree::EngineParent & { return _->engines(); });
+	[](GtkTree::App *_) -> GtkTree::EngineParent & {
+	  return _->engines();
+	});
   }
   void addNode(Link *link, TelItem<ZvTelemetry::Link> *item) {
     ZuConstant<ZuTypeIndex<ZvTelemetry::Engine, ZvTelemetry::TypeList>::I> i;
@@ -1198,29 +1202,33 @@ private:
       engContainer.add(engItem);
       addNode(link, engItem);
     }
-    m_model->add(new Tree::Link{item}, Tree::node(engItem));
+    m_model->add(new GtkTree::Link{item}, GtkTree::node(engItem));
   }
   void addNode(Link *link, TelItem<ZvTelemetry::DBEnv> *item) {
-    auto appNode = Tree::node(appItem(link));
+    auto appNode = GtkTree::node(appItem(link));
     auto &dbEnv = appNode->dbEnv();
     dbEnv.init(item);
     m_model->add(&dbEnv, appNode);
   }
   template <typename Item, typename ParentFn>
   void addNode_(DBEnvItem *dbEnvItem, Item *item, ParentFn parentFn) {
-    auto dbEnvNode = Tree::node(dbEnvItem);
+    auto dbEnvNode = GtkTree::node(dbEnvItem);
     auto &parent = parentFn(dbEnvNode);
     if (parent.row() < 0) m_model->add(&parent, dbEnvNode);
-    using Node = typename ZuDecay<decltype(*Tree::node(item))>::T;
+    using Node = typename ZuDecay<decltype(*GtkTree::node(item))>::T;
     m_model->add(new Node{item}, &parent);
   }
   void addNode(Link *link, TelItem<ZvTelemetry::DBHost> *item) {
     addNode_(dbEnvItem(link), item,
-	[](DBEnvNode *_) -> Tree::DBHostParent & { return _->hosts(); });
+	[](GtkTree::DBEnv *_) -> GtkTree::DBHostParent & {
+	  return _->hosts();
+	});
   }
   void addNode(Link *link, TelItem<ZvTelemetry::DB> *item) {
     addNode_(dbEnvItem(link), item,
-	[](DBEnvNode *_) -> Tree::DBParent & { return _->dbs(); });
+	[](GtkTree::DBEnv *_) -> GtkTree::DBParent & {
+	  return _->dbs();
+	});
   }
   template <typename FBS>
   typename ZuIs<ZvTelemetry::fbs::Alert, FBS, bool>::T
@@ -2267,8 +2275,8 @@ private:
   ZmTime		m_lastRefresh;
   ZmScheduler::Timer	m_refreshTimer;
 
-  Tree::View		m_view;
-  Tree::Model		*m_model;
+  GtkTree::View		m_view;
+  GtkTree::Model	*m_model;
 };
 
 int main(int argc, char **argv)

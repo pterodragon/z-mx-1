@@ -565,7 +565,7 @@ template <> struct load<Socket> : public Socket {
   } } { }
 };
 inline void Socket::loadDelta(const fbs::Socket *socket_) {
-  if (Zfb::IsFieldPresent(socket_, fbs::Heap::VT_RXBUFSIZE)) {
+  if (Zfb::IsFieldPresent(socket_, fbs::Socket::VT_RXBUFSIZE)) {
     this->~Socket();
     new (this) load<Socket>{socket_};
     return;
@@ -1041,7 +1041,7 @@ template <> struct load<DBHost> : public DBHost {
   } { }
 };
 inline void DBHost::loadDelta(const fbs::DBHost *host_) {
-  if (Zfb::IsFieldPresent(host_, fbs::DBHost::VT_CACHESIZE)) {
+  if (Zfb::IsFieldPresent(host_, fbs::DBHost::VT_PRIORITY)) {
     this->~DBHost();
     new (this) load<DBHost>{host_};
     return;
@@ -1220,7 +1220,7 @@ template <> struct load<App> : public App {
     .rag_ = static_cast<int8_t>(app_->rag())
   } { }
 };
-inline void loadDelta(const fbs::App *app_) {
+inline void App::loadDelta(const fbs::App *app_) {
   if (Zfb::IsFieldPresent(app_, fbs::App::VT_VERSION)) {
     this->~App();
     new (this) load<App>{app_};

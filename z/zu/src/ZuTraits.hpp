@@ -322,7 +322,9 @@ struct ZuTraits<const volatile char (&)[N]> :
 template <class Base> struct ZuTraits_WString : public Base {
   enum { IsCString = 1, IsString = 1, IsWString = 1 };
   ZuInline static const wchar_t *data(const wchar_t *s) { return s; }
-  ZuInline static unsigned length(const wchar_t *s) { return s ? wcslen(s) : 0; }
+  ZuInline static unsigned length(const wchar_t *s) {
+    return s ? wcslen(s) : 0;
+  }
 };
 
 template <> struct ZuTraits<wchar_t *> :

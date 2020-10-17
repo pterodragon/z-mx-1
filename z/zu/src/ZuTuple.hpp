@@ -316,14 +316,14 @@ public:
   auto dispatch(unsigned i, L l) {
     return ZuSwitch::dispatch<N>(
 	i, [this, &l](auto i) mutable {
-	  return l(p<i>());
+	  return l(this->p<i>());
 	});
   }
   template <typename L>
   auto cdispatch(unsigned i, L l) const {
     return ZuSwitch::dispatch<N>(
 	i, [this, &l](auto i) mutable {
-	  return l(p<i>());
+	  return l(this->p<i>());
 	});
   }
 };
@@ -418,14 +418,14 @@ public:
   auto dispatch(unsigned i, L l) {
     return ZuSwitch::dispatch<N>(
 	i, [this, &l](auto i) mutable {
-	  return l(p<i>());
+	  return l(this->p<i>());
 	});
   }
   template <typename L>
   auto cdispatch(unsigned i, L l) const {
     return ZuSwitch::dispatch<N>(
 	i, [this, &l](auto i) mutable {
-	  return l(p<i>());
+	  return l(this->p<i>());
 	});
   }
 };

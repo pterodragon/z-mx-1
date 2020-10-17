@@ -41,6 +41,11 @@ Mgr::Mgr(Ztls::Random *rng, unsigned passLen, unsigned totpRange,
   m_permNames = new PermNames();
 }
 
+Mgr::~Mgr()
+{
+  m_users->clean();
+}
+
 bool Mgr::bootstrap(
     ZtString name, ZtString role, ZtString &passwd, ZtString &secret)
 {

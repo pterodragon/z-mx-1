@@ -123,13 +123,14 @@ public:
 };
 
 class App : public ZmPolymorph {
-  typedef ZmHash<ZmRef<Connection>,
-	    ZmHashObject<ZuNull,
-	      ZmHashIndex<Connection::GroupIDAccessor> > > Cxns;
+  using Cxns =
+    ZmHash<ZmRef<Connection>,
+      ZmHashObject<ZuNull,
+	ZmHashIndex<Connection::GroupIDAccessor> > >;
 
 public:
   App(ZvCf *cf);
-  ~App() { }
+  ~App();
 
   int start();
   void stop();
@@ -359,6 +360,11 @@ App::App(ZvCf *cf) :
 {
   m_mx = new Mx(cf->subset("mx", false));
   m_cxns = new Cxns();
+}
+
+App::~App()
+{
+  m_cxns->clean();
 }
 
 int App::start()

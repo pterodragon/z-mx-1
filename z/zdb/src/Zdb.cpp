@@ -1430,6 +1430,8 @@ ZdbAny::ZdbAny(ZdbEnv *env, ZuString name, uint32_t version, int cacheMode,
 ZdbAny::~ZdbAny()
 {
   close();
+  m_lru.clean();
+  m_filesLRU.clean();
 }
 
 void ZdbAny::init(ZdbConfig *config, ZdbID id)

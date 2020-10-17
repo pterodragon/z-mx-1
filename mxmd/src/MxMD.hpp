@@ -108,10 +108,11 @@ template <class T> struct MxMDFlags {
 
   template <typename Fn>
   class FnMap {
-    typedef ZmRBTree<MxID,
-	      ZmRBTreeVal<Fn,
-		ZmRBTreeObject<ZuNull,
-		  ZmRBTreeLock<ZmNoLock> > > > Map;
+    using Map =
+      ZmRBTree<MxID,
+	ZmRBTreeVal<Fn,
+	  ZmRBTreeObject<ZuNull,
+	    ZmRBTreeLock<ZmNoLock> > > >;
 
   public:
     FnMap() {
@@ -224,11 +225,12 @@ friend MxMDVenue;
   struct TickSizes_HeapID {
     static constexpr const char *id() { return "MxMDTickSizeTbl.TickSizes"; }
   };
-  typedef ZmRBTree<MxMDTickSize,
-	    ZmRBTreeIndex<MxMDTickSize_MinPxAccessor,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeLock<ZmRWLock,
-		  ZmRBTreeHeapID<TickSizes_HeapID> > > > > TickSizes;
+  using TickSizes =
+    ZmRBTree<MxMDTickSize,
+      ZmRBTreeIndex<MxMDTickSize_MinPxAccessor,
+	ZmRBTreeObject<ZuNull,
+	  ZmRBTreeLock<ZmRWLock,
+	    ZmRBTreeHeapID<TickSizes_HeapID> > > > >;
 
   struct IDAccessor : public ZuAccessor<MxMDTickSizeTbl *, MxIDString> {
     ZuInline static const MxIDString &value(const MxMDTickSizeTbl *tbl) {
@@ -1250,19 +1252,21 @@ friend MxMDInstrument;
   struct Futures_HeapID {
     static constexpr const char *id() { return "MxMDLib.Futures"; }
   };
-  typedef ZmRBTree<MxFutKey,			// mat
-	    ZmRBTreeVal<MxMDInstrument *,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeHeapID<Futures_HeapID,
-		  ZmRBTreeLock<ZmPLock> > > > > Futures;
+  using Futures =
+    ZmRBTree<MxFutKey,			// mat
+      ZmRBTreeVal<MxMDInstrument *,
+	ZmRBTreeObject<ZuNull,
+	  ZmRBTreeHeapID<Futures_HeapID,
+	    ZmRBTreeLock<ZmPLock> > > > >;
   struct Options_HeapID {
     static constexpr const char *id() { return "MxMDLib.Options"; }
   };
-  typedef ZmRBTree<MxOptKey,			// mat, putCall, strike
-	    ZmRBTreeVal<MxMDInstrument *,
-	      ZmRBTreeObject<ZuNull,
-		ZmRBTreeHeapID<Options_HeapID,
-		  ZmRBTreeLock<ZmPLock> > > > > Options;
+  using MxOptKey =
+    ZmRBTree<MxOptKey,			// mat, putCall, strike
+      ZmRBTreeVal<MxMDInstrument *,
+	ZmRBTreeObject<ZuNull,
+	  ZmRBTreeHeapID<Options_HeapID,
+	    ZmRBTreeLock<ZmPLock> > > > >;
 
   ZuInline MxMDDerivatives() { }
 

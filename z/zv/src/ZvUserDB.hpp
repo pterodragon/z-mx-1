@@ -32,7 +32,7 @@
 
 #include <zlib/ZuBitmap.hpp>
 #include <zlib/ZuObject.hpp>
-#include <zlib/ZuPolymorph.hpp>
+// #include <zlib/ZuPolymorph.hpp>
 #include <zlib/ZuRef.hpp>
 #include <zlib/ZuArrayN.hpp>
 
@@ -90,7 +90,7 @@ struct RoleNameAccessor : public ZuAccessor<Role_, ZtString> {
 };
 using RoleTree =
   ZmRBTree<Role_,
-    ZmRBTreeObject<ZuNull,
+    ZmRBTreeObject<ZuObject,
       ZmRBTreeIndex<RoleNameAccessor,
 	ZmRBTreeUnique<true,
 	  ZmRBTreeNodeIsKey<true,
@@ -111,7 +111,7 @@ ZmRef<Role> loadRole(const fbs::Role *role_) {
 using KeyData = ZuArrayN<uint8_t, 32>;	// 256 bit key
 
 struct Key_;
-struct User__ : public ZuPolymorph {
+struct User__ : public ZuObject {
   using Flags = uint8_t;
   enum {
     Immutable =	0x01,
@@ -154,7 +154,7 @@ struct UserIDAccessor : public ZuAccessor<User__, uint64_t> {
 };
 using UserIDHash =
   ZmHash<User__,
-    ZmHashObject<ZuNull,
+    ZmHashObject<ZuShadow,
       ZmHashIndex<UserIDAccessor,
 	ZmHashNodeIsKey<true,
 	  ZmHashHeapID<ZuNull,
@@ -169,7 +169,7 @@ struct UserNameAccessor : public ZuAccessor<User_, ZtString> {
 };
 using UserNameHash =
   ZmHash<User_,
-    ZmHashObject<ZuPolymorph,
+    ZmHashObject<ZuObject,
       ZmHashIndex<UserNameAccessor,
 	ZmHashNodeIsKey<true,
 	  ZmHashHeapID<UserNameHashID,
@@ -250,9 +250,7 @@ public:
 
   Mgr(Ztls::Random *rng, unsigned passLen, unsigned totpRange,
       unsigned maxSize);
-
-  void init();
-  void final();
+  ~Mgr();
 
   // one-time initialization (idempotent)
   bool bootstrap(

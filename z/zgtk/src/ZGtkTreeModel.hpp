@@ -796,7 +796,10 @@ namespace TreeNode {
     const Impl *impl() const { return static_cast<const Impl *>(this); }
 
   public:
-    Branch() = default;
+    Branch() {
+      for (unsigned i = 0; i < Tuple::N; i++)
+	Tuple::dispatch(i, [i](auto &child) { child.row(i); });
+    }
     ~Branch() = default;
     constexpr bool hasChild() const { return true; }
     constexpr unsigned nChildren() const { return Tuple::N; }
@@ -816,8 +819,8 @@ namespace TreeNode {
 	return child.descend(indices, n, l);
       });
     }
-    template <typename Child_> void add(Child_ *) { }
-    template <typename Child_> void del(Child_ *) { }
+    template <typename Child_> void add(Child_ *) { } // unused
+    template <typename Child_> void del(Child_ *) { } // unused
   };
 }
 
@@ -933,7 +936,7 @@ public:
   template <typename Ptr, typename Parent>
   void add(Ptr *ptr, Parent *parent) {
     ptr->parent(parent);
-    parent->add(ptr);
+    parent->add(ptr); // sets ptr->row()
     gint indices[Depth];
     gint depth = ptr->depth();
     ptr->ascend(indices);

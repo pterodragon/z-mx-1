@@ -25,7 +25,7 @@
 // u.p<0>(42);
 // u.p<0>() = 42;
 // v = u;
-// if (v.type() == 0) { printf("%d\n", v.p<1>()); }
+// if (v.type() == 0) { printf("%d\n", v.p<0>()); }
 // v.p<1>(42.0);
 // if (v.contains<double>()) { printf("%g\n", v.v<double>()); }
 // u.~U();
@@ -225,10 +225,10 @@ public:
     return reinterpret_cast<Union *>(ptr)->new_<T>();
   }
 
-  template <typename T> void *init() {
+  template <typename T> T *init() {
     this->~Union();
     this->type_(Index<T>::I);
-    return m_u;
+    return reinterpret_cast<T *>(&m_u[0]);
   }
 
 private:
@@ -258,7 +258,7 @@ public:
   }
 
 private:
-  template <typename V, bool = ZuConversion<Union, V>::Is> struct Fwd_Assign_ {
+  template <typename V, bool = ZuTraits<V>::IsPrimitive> struct Fwd_Assign__ {
     using T = typename Type<Index_<V>::I>::T;
     static void assign(Union *this_, V &&v) {
       new (this_->init<T>()) T{ZuMv(v)};
@@ -267,6 +267,14 @@ private:
       new (this_->init<T>()) T{v};
     }
   };
+  template <typename V> struct Fwd_Assign__<V, true> {
+    using T = typename Type<Index_<V>::I>::T;
+    static void assign(Union *this_, V v) {
+      *(this_->init<T>()) = v;
+    }
+  };
+  template <typename V, bool = ZuConversion<Union, V>::Is>
+  struct Fwd_Assign_ : public Fwd_Assign__<V> { };
   template <typename V> struct Fwd_Assign_<V, true> {
     static void assign(Union *this_, V &&v) {
       this_->operator =(static_cast<Union &&>(v));

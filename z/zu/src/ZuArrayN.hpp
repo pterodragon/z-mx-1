@@ -221,10 +221,10 @@ public:
 
 // set length
 
-  void length(
-      unsigned length, bool initItems = !ZuTraits<T>::IsPrimitive) {
+  template <bool InitItems = !ZuTraits<T>::IsPrimitive>
+  void length(unsigned length) {
     if (length > Base::m_size) length = Base::m_size;
-    if (initItems) {
+    if constexpr (InitItems) {
       if (length > Base::m_length) {
 	this->initItems(data() + Base::m_length, length - Base::m_length);
       } else if (length < Base::m_length) {

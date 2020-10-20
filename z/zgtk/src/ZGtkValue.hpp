@@ -47,6 +47,11 @@ public:
 
   ZuInline void init(GType type) { g_value_init(this, type); }
   
+  ZuInline void unset() {
+    if (G_VALUE_TYPE(this)) g_value_unset(this);
+    // new (this) Value{};
+  }
+
   ZuInline void set_schar(gint8 v_char) {
     g_value_set_schar(this, v_char);
   }
@@ -159,10 +164,10 @@ public:
   void take_boxed(gconstpointer v_boxed) {
     g_value_take_boxed(this, v_boxed);
   }
-  gpointer get_boxed () const {
+  gpointer get_boxed() const {
     return g_value_get_boxed(this);
   }
-  gpointer dup_boxed () const {
+  gpointer dup_boxed() const {
     return g_value_dup_boxed(this);
   }
 };

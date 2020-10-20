@@ -587,7 +587,7 @@ private:
     if (argc != 1) throw ZvCmdUsage{};
     ZtString oldpw = getpass_("Current password: ", 100);
     ZtString newpw = getpass_("New password: ", 100);
-    ZtString checkpw = getpass_("Retype new password: ", 100);
+    ZtString checkpw = getpass_("Re-type new password: ", 100);
     if (checkpw != newpw) {
       out << "passwords do not match\npassword unchanged!\n";
       return 1;

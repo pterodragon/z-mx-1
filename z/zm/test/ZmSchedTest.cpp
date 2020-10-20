@@ -177,23 +177,21 @@ int main(int argc, char **argv)
     ZmTime out = t + ZmTime(((double)j) / 10.0);
     s.add(ZmFn<>::Member<&Job::operator()>::fn(ZmMkRef(new Job(buf, out))),
 	out, &timers[j - 1]);
-    printf("%u refCount: %u\n", (unsigned)j, (unsigned)timers[j - 1]->refCount());
+    printf("%u\n", (unsigned)j);
     printf("Hello World %d\n", j);
   }
 
   for (i = 5; i < 10; i++) {
     int j = (i & 1) ? ((i>>1) + 6) : (5 - (i>>1));
-    if (timers[j - 1])
-      printf("%u refCount: %u\n", (unsigned)j, (unsigned)timers[j - 1]->refCount());
-    timers[j - 1] = 0;
+    if (timers[j - 1]) printf("%u\n", (unsigned)j);
+    timers[j - 1].fn = ZmFn<>{};
     // fns[j - 1] = ZmFn<>();
     // jobs[j - 1] = 0;
   }
 
   for (i = 0; i < 5; i++) {
     int j = (i & 1) ? ((i>>1) + 6) : (5 - (i>>1));
-    if (timers[j - 1])
-      printf("%u refCount: %u\n", (unsigned)j, (unsigned)timers[j - 1]->refCount());
+    if (timers[j - 1]) printf("%u\n", (unsigned)j);
     printf("Delete World %d\n", j);
     s.del(&timers[j - 1]);
     // timers[j - 1] = 0;
@@ -227,7 +225,7 @@ int main(int argc, char **argv)
 
   for (i = 0; i < 5; i++) {
     int j = (i & 1) ? ((i>>1) + 6) : (5 - (i>>1));
-    timers[j - 1] = 0;
+    timers[j - 1].fn = ZmFn<>{};
     // fns[j - 1] = ZmFn<>();
     // jobs[j - 1] = 0;
   }

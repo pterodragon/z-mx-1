@@ -140,7 +140,7 @@ private:
   unsigned	m_stackSize = 0;
   int		m_priority = -1;
   unsigned	m_partition = 0;
-  ZmTime	m_quantum = .01;
+  ZmTime	m_quantum{ZmTime::Nano, 1000}; // 1us
 
   unsigned	m_queueSize = 131072;
   unsigned	m_spin = 1000;
@@ -165,24 +165,44 @@ class ZmAPI ZmScheduler {
   ZmScheduler(const ZmScheduler &) = delete;
   ZmScheduler &operator =(const ZmScheduler &) = delete;
 
+  struct Timer_ {
+    ZmFn<>	fn;
+    unsigned	tid = 0;
+    ZmTime	timeout;
+    bool	transient = false;
+
+    Timer_() { }
+    Timer_(const Timer_ &) = delete;
+    Timer_ &operator =(const Timer_ &) = delete;
+    Timer_(Timer_ &&) = delete;
+    Timer_ &operator =(Timer_ &&) = delete;
+    ~Timer_() = default;
+
+    Timer_(bool transient_) : transient{transient_} { }
+
+    ZuInline bool operator !() const { return !timeout; }
+    ZuOpBool
+  };
+  struct Timer_TimeoutAccessor : public ZuAccessor<Timer_, ZmTime> {
+    ZuInline static const ZmTime &value(const Timer_ &t) {
+      return t.timeout;
+    }
+  };
   struct ScheduleTree_HeapID {
     static constexpr const char *id() { return "ZmScheduler.ScheduleTree"; }
   };
-
-  struct Timer_ {
-    unsigned	tid;
-    ZmFn<>	fn;
-    void	*ptr;
-  };
-
   using ScheduleTree =
-    ZmRBTree<ZmTime,
-      ZmRBTreeVal<Timer_,
-	ZmRBTreeLock<ZmNoLock,
-	  ZmRBTreeHeapID<ScheduleTree_HeapID>>>>;
-
+    ZmRBTree<Timer_,
+      ZmRBTreeIndex<Timer_TimeoutAccessor,
+	ZmRBTreeNodeIsKey<true,
+	  ZmRBTreeObject<ZuShadow,
+	    ZmRBTreeLock<ZmNoLock,
+	      ZmRBTreeHeapID<ScheduleTree_HeapID> > > > > >;
 public:
   using ID = ZmSchedParams::ID;
+  using Timer = ScheduleTree::Node;
+
+private:
   using Ring = ZmRing<ZmFn<>>;
   using OverRing_ =  ZmDRing<ZmFn<>, ZmDRingLock<ZmNoLock>>;
   struct OverRing : public OverRing_ {
@@ -217,8 +237,8 @@ public:
     unsigned	  m_outCount = 0;
   };
   enum { OverRing_Increment = 128 };
-  using Timer = ZmRef<ScheduleTree::Node>;
 
+public:
   // might throw ZmRingError
   ZmScheduler(ZmSchedParams params = ZmSchedParams());
   virtual ~ZmScheduler();
@@ -248,7 +268,7 @@ public:
   //   unlike run(), invoke() will execute synchronously if the caller is
   //   already running on the specified thread; returns true if synchronous
 
-  // run(tid, fn, timeout, mode, &timer) - deferred execution
+  // run(tid, fn, timeout, mode, timer) - deferred execution
   //   tid == 0 - run on any worker thread
   //   mode:
   //     Update - (re)schedule regardless
@@ -256,25 +276,27 @@ public:
   //     Defer - reschedule unless outstanding timeout is later
 
   // add(fn, timeout) -
-  //   shorthand for run(0, fn, timeout, Update, 0)
-  // add(fn, timeout, &timer) -
-  //   shorthand for run(0, fn, timeout, Update, &timer)
-  // add(fn, timeout, mode, &timer) -
-  //   shorthand for run(0, fn, timeout, mode, &timer)
+  //   shorthand for run(0, fn, timeout, Update, nullptr)
+  // add(fn, timeout, timer) -
+  //   shorthand for run(0, fn, timeout, Update, timer)
+  // add(fn, timeout, mode, timer) -
+  //   shorthand for run(0, fn, timeout, mode, timer)
+  // add(fn, timeout, mode, timer) -
+  //   shorthand for run(0, fn, timeout, mode, timer)
 
-  // del(&timer) - cancel timer
+  // del(timer) - cancel timer
 
   void add(ZmFn<> fn);
 
   ZuInline void add(ZmFn<> fn, ZmTime timeout)
-    { run(0, ZuMv(fn), timeout, Update, 0); }
+    { run(0, ZuMv(fn), timeout, Update, nullptr); }
   ZuInline void add(ZmFn<> fn, ZmTime timeout, Timer *ptr)
     { run(0, ZuMv(fn), timeout, Update, ptr); }
   ZuInline void add(ZmFn<> fn, ZmTime timeout, int mode, Timer *ptr)
     { run(0, ZuMv(fn), timeout, mode, ptr); }
 
   ZuInline void run(unsigned tid, ZmFn<> fn, ZmTime timeout)
-    { run(tid, ZuMv(fn), timeout, Update, 0); }
+    { run(tid, ZuMv(fn), timeout, Update, nullptr); }
   ZuInline void run(unsigned tid, ZmFn<> fn, ZmTime timeout, Timer *ptr)
     { run(tid, ZuMv(fn), timeout, Update, ptr); }
   void run(unsigned tid, ZmFn<> fn, ZmTime timeout, int mode, Timer *ptr);

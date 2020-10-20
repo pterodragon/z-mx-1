@@ -473,11 +473,13 @@ namespace GtkTree {
   using App = Branch<1, TelItem<ZvTelemetry::App>, AppTuple>;
 
   struct Root : public ZGtk::TreeNode::Parent<Root, 0, App> {
+#if 0
     using TelKey = ZuTuple<const char *>;
     ZuInline static TelKey telKey() {
       return static_cast<const char *>(nullptr);
     }
     ZuInline static int rag() { return ZvTelemetry::RAG::Off; }
+#endif
   };
 
   // map telemetry items to corresponding tree nodes
@@ -522,7 +524,7 @@ namespace GtkTree {
 
   // (*) - branch
   using Iter = ZuUnion<
-    Root *,
+    // Root *,
     App *,		// [app]
 
     // app children
@@ -563,12 +565,8 @@ namespace GtkTree {
 
     // parent() - child->parent type map
     template <typename T>
-    static typename ZuSame<T, Root, Root>::T *parent(T *) {
-      return nullptr;
-    }
-    template <typename T>
-    static typename ZuSame<T, App, Root>::T *parent(T *ptr) {
-      return ptr->template parent<Root>();
+    static typename ZuSame<T, App, Root>::T *parent(void *ptr) {
+      return static_cast<Root *>(ptr);
     }
     template <typename T>
     static typename ZuIfT<
@@ -578,54 +576,54 @@ namespace GtkTree {
 	ZuConversion<T, MxParent>::Same ||
 	ZuConversion<T, QueueParent>::Same ||
 	ZuConversion<T, EngineParent>::Same ||
-	ZuConversion<T, DBEnv>::Same, App>::T *parent(T *ptr) {
-      return ptr->template parent<App>();
+	ZuConversion<T, DBEnv>::Same, App>::T *parent(void *ptr) {
+      return static_cast<App *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Heap, HeapParent>::T *parent(T *ptr) {
-      return ptr->template parent<HeapParent>();
+    static typename ZuSame<T, Heap, HeapParent>::T *parent(void *ptr) {
+      return static_cast<HeapParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, HashTbl, HashTblParent>::T *parent(T *ptr) {
-      return ptr->template parent<HashTblParent>();
+    static typename ZuSame<T, HashTbl, HashTblParent>::T *parent(void *ptr) {
+      return static_cast<HashTblParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Thread, ThreadParent>::T *parent(T *ptr) {
-      return ptr->template parent<ThreadParent>();
+    static typename ZuSame<T, Thread, ThreadParent>::T *parent(void *ptr) {
+      return static_cast<ThreadParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Mx, MxParent>::T *parent(T *ptr) {
-      return ptr->template parent<MxParent>();
+    static typename ZuSame<T, Mx, MxParent>::T *parent(void *ptr) {
+      return static_cast<MxParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Queue, QueueParent>::T *parent(T *ptr) {
-      return ptr->template parent<QueueParent>();
+    static typename ZuSame<T, Queue, QueueParent>::T *parent(void *ptr) {
+      return static_cast<QueueParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Engine, EngineParent>::T *parent(T *ptr) {
-      return ptr->template parent<EngineParent>();
+    static typename ZuSame<T, Engine, EngineParent>::T *parent(void *ptr) {
+      return static_cast<EngineParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Socket, Mx>::T *parent(T *ptr) {
-      return ptr->template parent<Mx>();
+    static typename ZuSame<T, Socket, Mx>::T *parent(void *ptr) {
+      return static_cast<Mx *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Link, Engine>::T *parent(T *ptr) {
-      return ptr->template parent<Engine>();
+    static typename ZuSame<T, Link, Engine>::T *parent(void *ptr) {
+      return static_cast<Engine *>(ptr);
     }
     template <typename T>
     static typename ZuIfT<
 	ZuConversion<T, DBHostParent>::Same ||
-	ZuConversion<T, DBParent>::Same, DBEnv>::T *parent(T *ptr) {
-      return ptr->template parent<DBEnv>();
+	ZuConversion<T, DBParent>::Same, DBEnv>::T *parent(void *ptr) {
+      return static_cast<DBEnv *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, DBHost, DBHostParent>::T *parent(T *ptr) {
-      return ptr->template parent<DBHostParent>();
+    static typename ZuSame<T, DBHost, DBHostParent>::T *parent(void *ptr) {
+      return static_cast<DBHostParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, DB, DBParent>::T *parent(T *ptr) {
-      return ptr->template parent<DBParent>();
+    static typename ZuSame<T, DB, DBParent>::T *parent(void *ptr) {
+      return static_cast<DBParent *>(ptr);
     }
 
     gint get_n_columns() { return NCols; }
@@ -656,8 +654,8 @@ namespace GtkTree {
     }
 
   private:
-    Root	m_root;	// root of tree
-    ZtString	m_value;// re-used string buffer
+    Root	m_root;		// root of tree
+    ZtString	m_value;	// re-used string buffer
   };
 
   class View {
@@ -692,6 +690,7 @@ namespace GtkTree {
     void render(
 	GtkTreeViewColumn *col, GtkCellRenderer *cell,
 	GtkTreeModel *model, GtkTreeIter *iter) {
+      m_values[0].unset();
       gtk_tree_model_get_value(model, iter, TextCol, &m_values[0]);
 
       gint rag;
@@ -701,23 +700,25 @@ namespace GtkTree {
 	rag = rag_.get_int();
       }
       switch (rag) {
-	case ZvTelemetry::RAG::Red: {
+	case ZvTelemetry::RAG::Red:
 	  m_values[1].set_static_boxed(&m_rag_red_bg);
 	  m_values[2].set_static_boxed(&m_rag_red_fg);
 	  g_object_setv(G_OBJECT(cell), 3, m_props, m_values);
-	} break;
-	case ZvTelemetry::RAG::Amber: {
+	  break;
+	case ZvTelemetry::RAG::Amber:
 	  m_values[1].set_static_boxed(&m_rag_amber_bg);
 	  m_values[2].set_static_boxed(&m_rag_amber_fg);
 	  g_object_setv(G_OBJECT(cell), 3, m_props, m_values);
-	} break;
-	case ZvTelemetry::RAG::Green: {
+	  break;
+	case ZvTelemetry::RAG::Green:
 	  m_values[1].set_static_boxed(&m_rag_green_bg);
 	  m_values[2].set_static_boxed(&m_rag_green_fg);
 	  g_object_setv(G_OBJECT(cell), 3, m_props, m_values);
-	} break;
+	  break;
 	default:
-	  g_object_setv(G_OBJECT(cell), 1, m_props, m_values);
+	  m_values[1].set_static_boxed(&m_rag_off_bg);
+	  m_values[2].set_static_boxed(&m_rag_off_fg);
+	  g_object_setv(G_OBJECT(cell), 3, m_props, m_values);
 	  break;
       }
     }
@@ -753,10 +754,20 @@ namespace GtkTree {
       static const gchar *props[] = {
 	"text", "background-rgba", "foreground-rgba"
       };
+
       m_props = props;
-      m_values[0].init(G_TYPE_STRING);
       m_values[1].init(GDK_TYPE_RGBA);
       m_values[2].init(GDK_TYPE_RGBA);
+
+      {
+	auto cell = gtk_cell_renderer_text_new();
+	g_object_getv(G_OBJECT(cell), 2, &m_props[1], &m_values[1]);
+	m_rag_off_bg =
+	  *reinterpret_cast<const GdkRGBA *>(m_values[1].get_boxed());
+	m_rag_off_fg =
+	  *reinterpret_cast<const GdkRGBA *>(m_values[2].get_boxed());
+	g_object_unref(G_OBJECT(cell));
+      }
     }
 
     void final() {
@@ -775,6 +786,8 @@ namespace GtkTree {
     GdkRGBA	m_rag_amber_bg = { 0.0, 0.0, 0.0, 0.0 };
     GdkRGBA	m_rag_green_fg = { 0.0, 0.0, 0.0, 0.0 };
     GdkRGBA	m_rag_green_bg = { 0.0, 0.0, 0.0, 0.0 };
+    GdkRGBA	m_rag_off_fg = { 0.0, 0.0, 0.0, 0.0 };
+    GdkRGBA	m_rag_off_bg = { 0.0, 0.0, 0.0, 0.0 };
     const gchar	**m_props;
     ZGtk::Value	m_values[3];
   };
@@ -837,6 +850,13 @@ public:
 	push2();
 	return true;
       }
+      auto i = writeStatus();
+      if (i < 0)
+	ZeLOG(Error, ZtString{} <<
+	    "ZiRing::push() failed - " << Zi::resultName(i));
+      else
+	ZeLOG(Error, ZtString{} <<
+	    "ZiRing::push() failed - writeStatus=" << i);
       return false;
     }
     template <typename L>
@@ -881,8 +901,16 @@ public:
     m_gladePath = cf->get("gtkGlade", true);
     m_stylePath = cf->get("gtkStyle");
 
-    m_refreshRate =
-      cf->getInt64("gtkRefresh", 1, 60000, false, 1) * (int64_t)1000000;
+    {
+      int64_t refreshRate =
+	cf->getInt64("gtkRefresh", 1, 60000, false, 1) * (int64_t)1000000;
+      m_refreshQuantum = ZmTime{ZmTime::Nano, refreshRate>>1};
+      if (m_refreshQuantum < mx->params().quantum()) {
+	m_refreshQuantum = mx->params().quantum();
+	m_refreshRate = m_refreshQuantum + m_refreshQuantum;
+      } else
+	m_refreshRate = ZmTime{ZmTime::Nano, refreshRate};
+    }
     unsigned tid = cf->getInt("gtkThread", 1, mx->params().nThreads(), true);
 
     Client::init(mx, cf);
@@ -959,36 +987,6 @@ public:
     gtk_window_present(m_mainWindow);
 
     m_telRing->attach();
-
-    gtkNextRefresh();
-  }
-
-  void gtkRefresh() {
-    switch (m_telRing->readStatus()) {
-      case Zi::OK:
-	gtkNextRefresh();
-      case Zi::EndOfFile: // fallthrough
-	return;
-    }
-
-    // FIXME - freeze, save sort col, unset sort col
-
-    ZmTime deadline = ZmTimeNow() + ZmTime{ZmTime::Nano, m_refreshRate>>1};
-    unsigned i = 0;
-    while (m_telRing->shift([](Link *link, const ZuArray<const uint8_t> &msg) {
-      link->app()->processTel2(link, msg);
-    }))
-      if (!(++i & 0xf) && ZmTimeNow() >= deadline) break;
-
-    // FIXME - restore sort col, thaw
-
-    gtkNextRefresh();
-  }
-
-  void gtkNextRefresh() {
-    m_lastRefresh.now();
-    gtkRun(ZmFn<>{this, [](ZDash *this_) { this_->gtkRefresh(); }},
-	m_lastRefresh + ZmTime{ZmTime::Nano, m_refreshRate}, &m_refreshTimer);
   }
 
   void gtkFinal() {
@@ -1065,8 +1063,39 @@ private:
   }
 
   int processTel(Link *link, ZuArray<const uint8_t> msg) {
-    m_telRing->push(link, msg);
+    using namespace ZvTelemetry;
+    {
+      flatbuffers::Verifier verifier(msg.data(), msg.length());
+      if (!fbs::VerifyTelemetryBuffer(verifier)) return -1;
+    }
+    if (m_telRing->push(link, msg))
+      if (!m_telCount++)
+	gtkRun(ZmFn<>{this, [](ZDash *this_) { this_->gtkRefresh(); }},
+	    ZmTimeNow() + m_refreshRate, ZmScheduler::Advance, &m_refreshTimer);
     return 0;
+  }
+  void gtkRefresh() {
+    // FIXME - freeze, save sort col, unset sort col
+
+    bool busy = false;
+    ZmTime deadline = ZmTimeNow() + m_refreshQuantum;
+    unsigned i = 0, n;
+    while (m_telRing->shift([](Link *link, const ZuArray<const uint8_t> &msg) {
+      link->app()->processTel2(link, msg);
+    })) {
+      n = --m_telCount;
+      if (ZuUnlikely(n == ~0U)) n = m_telCount = 0;
+      if (!(++i & 0xf) && ZmTimeNow() >= deadline) {
+	busy = true;
+	break;
+      }
+    }
+
+    // FIXME - restore sort col, thaw
+
+    if (busy && n)
+      gtkRun(ZmFn<>{this, [](ZDash *this_) { this_->gtkRefresh(); }},
+	  ZmTimeNow() + m_refreshRate, ZmScheduler::Defer, &m_refreshTimer);
   }
   void processTel2(Link *link, const ZuArray<const uint8_t> &msg_) {
     if (ZuUnlikely(!msg_)) {
@@ -1074,10 +1103,6 @@ private:
       return;
     }
     using namespace ZvTelemetry;
-    {
-      flatbuffers::Verifier verifier(msg_.data(), msg_.length());
-      if (!fbs::VerifyTelemetryBuffer(verifier)) return;
-    }
     auto msg = fbs::GetTelemetry(msg_);
     int i = msg->data_type();
     if (ZuUnlikely(i < TelData::First)) return;
@@ -1089,7 +1114,6 @@ private:
       processTel3(link, fbs);
     });
   }
-
   template <typename FBS>
   typename ZuIsNot<ZvTelemetry::fbs::Alert, FBS>::T
   processTel3(Link *link, const FBS *fbs) {
@@ -1107,6 +1131,10 @@ private:
       addGtkNode(link, item);
     }
   }
+  void addGtkNode(Link *link, AppItem *item) {
+    item->initTelKey(link->server(), link->port());
+    m_gtkModel->add(new GtkTree::App{item}, m_gtkModel->root());
+  }
   AppItem *appItem(Link *link) {
     ZuConstant<ZuTypeIndex<ZvTelemetry::App, ZvTelemetry::TypeList>::I> i;
     auto &container = link->telemetry.p<i>();
@@ -1114,10 +1142,8 @@ private:
 	static_cast<const ZvTelemetry::fbs::App *>(nullptr));
     if (!item) {
       item = new TelItem<ZvTelemetry::App>{link};
-      item->initTelKey(link->server(), link->port());
       container.add(item);
-      auto node = new GtkTree::App{item};
-      m_gtkModel->add(node, m_gtkModel->root());
+      addGtkNode(link, item);
     }
     return item;
   }
@@ -1129,10 +1155,7 @@ private:
     if (!item) {
       item = new TelItem<ZvTelemetry::DBEnv>{link};
       container.add(item);
-      auto appGtkNode = GtkTree::node(appItem(link));
-      auto &dbEnv = appGtkNode->dbEnv();
-      dbEnv.init(item);
-      m_gtkModel->add(&dbEnv, appGtkNode);
+      addGtkNode(link, item);
     }
     return item;
   }
@@ -1140,11 +1163,10 @@ private:
   void addGtkNode_(AppItem *appItem, Item *item, ParentFn parentFn) {
     auto appGtkNode = GtkTree::node(appItem);
     auto &parent = parentFn(appGtkNode);
-    // if (parent.row() < 0) m_gtkModel->add(&parent, appGtkNode);
+    if (parent.row() < 0) m_gtkModel->add(&parent, appGtkNode);
     using GtkNode = typename ZuDecay<decltype(*GtkTree::node(item))>::T;
     m_gtkModel->add(new GtkNode{item}, &parent);
   }
-  void addGtkNode(Link *, AppItem *) { } // unused
   void addGtkNode(Link *link, TelItem<ZvTelemetry::Heap> *item) {
     addGtkNode_(appItem(link), item,
 	[](GtkTree::App *_) -> GtkTree::HeapParent & {
@@ -1204,7 +1226,7 @@ private:
     }
     m_gtkModel->add(new GtkTree::Link{item}, GtkTree::node(engItem));
   }
-  void addGtkNode(Link *link, TelItem<ZvTelemetry::DBEnv> *item) {
+  void addGtkNode(Link *link, DBEnvItem *item) {
     auto appGtkNode = GtkTree::node(appItem(link));
     auto &dbEnv = appGtkNode->dbEnv();
     dbEnv.init(item);
@@ -1214,7 +1236,7 @@ private:
   void addGtkNode_(DBEnvItem *dbEnvItem, Item *item, ParentFn parentFn) {
     auto dbEnvGtkNode = GtkTree::node(dbEnvItem);
     auto &parent = parentFn(dbEnvGtkNode);
-    // if (parent.row() < 0) m_gtkModel->add(&parent, dbEnvGtkNode);
+    if (parent.row() < 0) m_gtkModel->add(&parent, dbEnvGtkNode);
     using GtkNode = typename ZuDecay<decltype(*GtkTree::node(item))>::T;
     m_gtkModel->add(new GtkNode{item}, &parent);
   }
@@ -2263,6 +2285,7 @@ private:
 
   ZvRingParams		m_telRingParams;
   ZuPtr<TelRing>	m_telRing;
+  ZmAtomic<unsigned>	m_telCount = 0;
 
   // FIXME - need Zdf in-memory manager (later, file manager)
 
@@ -2271,8 +2294,8 @@ private:
   GtkStyleContext	*m_styleContext = nullptr;
   GtkWindow		*m_mainWindow = nullptr;
 
-  int64_t		m_refreshRate;	// in nanoseconds
-  ZmTime		m_lastRefresh;
+  ZmTime		m_refreshQuantum;
+  ZmTime		m_refreshRate;
   ZmScheduler::Timer	m_refreshTimer;
 
   GtkTree::View		m_gtkView;

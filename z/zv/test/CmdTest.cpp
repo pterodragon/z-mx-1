@@ -80,7 +80,7 @@ void usage()
     "    --caPath=CAPATH\t\tset CA path (default: /etc/ssl/certs)\n"
     "    --userDB:passLen=N\t\tset default password length (default: 12)\n"
     "    --userDB:totpRange=N\tset TOTP accepted range (default: 6)\n"
-    "    --userDB::maxAge=N\t\tset user DB file backups (default: 8)\n"
+    "    --userDB:maxAge=N\t\tset user DB file backups (default: 8)\n"
     << std::flush;
   ::exit(1);
 }
@@ -91,7 +91,7 @@ int main(int argc, char **argv)
     { "caPath", "C", ZvOptScalar },
     { "userDB:passLen", nullptr, ZvOptScalar },
     { "userDB:totpRange", nullptr, ZvOptScalar },
-    { "userDB::maxAge", nullptr, ZvOptScalar },
+    { "userDB:maxAge", nullptr, ZvOptScalar },
     { nullptr }
   };
 

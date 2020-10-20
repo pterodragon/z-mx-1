@@ -1311,51 +1311,10 @@ inline ZtWString ZtWSprintf(const wchar_t *format, ...)
 
 // join
 
-template <
-  typename DChar, typename EChar, typename VChar, bool =
-    ZuConversion<VChar, DChar>::Same &&
-    ZuConversion<VChar, EChar>::Same>
-struct ZtJoinable_3 { enum { OK = 0 }; };
-template <
-  typename DChar, typename EChar, typename VChar>
-struct ZtJoinable_3<DChar, EChar, VChar, true> { enum { OK = 1 }; };
-
-template <
-  typename DChar, typename E, typename VChar, bool =
-    ZuTraits<E>::IsString> struct ZtJoinable_2 { enum { OK = 0 }; };
-template <typename DChar, typename E, typename VChar>
-struct ZtJoinable_2<DChar, E, VChar, true> :
-  public ZtJoinable_3<
-    typename ZuDecay<DChar>::T,
-    typename ZuDecay<typename ZuTraits<E>::Elem>::T,
-    typename ZuDecay<VChar>::T> { };
-
-template <
-  typename D, typename A, typename V, bool =
-    ZuTraits<D>::IsString &&
-    ZuTraits<A>::IsArray &&
-    ZuConversion<ZtString___, V>::Base> struct ZtJoinable_ { enum { OK = 0 }; };
-template <typename D, typename A, typename V>
-struct ZtJoinable_<D, A, V, true> :
-  public ZtJoinable_2<
-    typename ZuTraits<D>::Elem,
-    typename ZuTraits<A>::Elem,
-    typename V::Char> { };
-
 template <typename D, typename A, typename O>
-inline typename ZuIfT<ZtJoinable_<D, A, O>::OK>::T
-ZtJoin(D &&d_, A &&a_, O &o) {
-  ZuArrayT<D> d(ZuFwd<D>(d_));
-  ZuArrayT<A> a(ZuFwd<A>(a_));
+inline void ZtJoin(const D &d, const A &a_, O &o) {
+  ZuArrayT<A> a{a_};
   unsigned n = a.length();
-  unsigned l = 0;
-
-  for (unsigned i = 0; i < n; i++) {
-    if (i) l += d.length();
-    l += ZuTraits<typename ZuTraits<A>::Elem>::length(a[i]);
-  }
-
-  o.size(l + 1);
 
   for (unsigned i = 0; i < n; i++) {
     if (ZuLikely(i)) o << d;
@@ -1363,31 +1322,27 @@ ZtJoin(D &&d_, A &&a_, O &o) {
   }
 }
 template <typename D, typename A>
-inline typename ZuIfT<ZtJoinable_<D, A, ZtString>::OK, ZtString>::T
-ZtJoin(D &&d, A &&a) {
+ZtString ZtJoin(const D &d, const A &a) {
   ZtString o;
-  ZtJoin(ZuFwd<D>(d), ZuFwd<A>(a), o);
+  ZtJoin(d, a, o);
   return o;
 }
 template <typename D, typename E>
-inline typename ZuIfT<ZtJoinable_<D, ZuArray<E>, ZtString>::OK, ZtString>::T
-ZtJoin(D &&d, std::initializer_list<E> &&a) {
+ZtString ZtJoin(const D &d, const std::initializer_list<E> &a) {
   ZtString o;
-  ZtJoin(ZuFwd<D>(d), ZuArray<E>(ZuFwd<std::initializer_list<E> >(a)), o);
+  ZtJoin(d, ZuArray<E>(a), o);
   return o;
 }
 template <typename D, typename A>
-inline typename ZuIfT<ZtJoinable_<D, A, ZtWString>::OK, ZtWString>::T
-ZtJoin(D &&d, A &&a) {
+ZtWString ZtWJoin(const D &d, const A &a) {
   ZtWString o;
-  ZtJoin(ZuFwd<D>(d), ZuFwd<A>(a), o);
+  ZtJoin(d, a, o);
   return o;
 }
 template <typename D, typename E>
-inline typename ZuIfT<ZtJoinable_<D, ZuArray<E>, ZtWString>::OK, ZtWString>::T
-ZtJoin(D &&d, std::initializer_list<E> &&a) {
+ZtWString ZtWJoin(const D &d, const std::initializer_list<E> &a) {
   ZtWString o;
-  ZtJoin(ZuFwd<D>(d), ZuArray<E>(ZuFwd<std::initializer_list<E> >(a)), o);
+  ZtJoin(d, ZuArray<E>(a), o);
   return o;
 }
 

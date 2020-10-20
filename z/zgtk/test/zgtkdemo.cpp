@@ -32,11 +32,11 @@ int main(int argc, char **argv)
 
   app.attach(&s, 1);
 
-  s.run(app.tid(), []() { start(); });
+  app.run([]() { start(); });
 
 #if 0
   for (int i = 0; i < 5; i++) {
-    s.run(app.tid(), []() {
+    app.run([]() {
       std::cout << ZmThreadContext::self() << '\n' << std::flush;
     }, ZmTimeNow(i));
   }

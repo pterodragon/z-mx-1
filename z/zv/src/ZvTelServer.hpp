@@ -61,9 +61,9 @@ private:
   void error(bool index, const Message &message) {
     struct Fmt : public ZtDate::CSVFmt { Fmt() { offset(timezone); } };
     thread_local Fmt dateFmt;
-    std::cerr << ZtDateNow().csv(dateFmt)
-      << " FATAL " << m_path << (index ? ".idx" : "")
-      << ": " << message << '\n' << std::flush;
+    std::cerr << ZtDateNow().csv(dateFmt) <<
+      " FATAL " << m_path << (index ? ".idx" : "") <<
+      ": " << message << '\n' << std::flush;
   }
 
   void open(ZuString prefix, unsigned date, unsigned flags) {

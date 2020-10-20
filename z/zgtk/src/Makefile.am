@@ -21,6 +21,6 @@ libZGtk_la_LIBADD = $(top_builddir)/zv/src/libZv.la \
 	@Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
 bin_PROGRAMS = zdash
 zdash_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/zrl/src -I$(top_srcdir)/zdf/src
-zdash_CXXFLAGS = ${AM_CXXFLAGS} -ftemplate-backtrace-limit=0
+zdash_CXXFLAGS = ${AM_CXXFLAGS} -ftemplate-backtrace-limit=0 #-fprofile-instr-generate -fcoverage-mapping
 zdash_LDADD = libZGtk.la $(top_builddir)/zdf/src/libZdf.la $(top_builddir)/zrl/src/libZrl.la $(libZGtk_la_LIBADD)
 zdash_SOURCES = zdash.cpp

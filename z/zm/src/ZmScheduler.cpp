@@ -280,9 +280,7 @@ void ZmScheduler::timer()
 
       {
 	ZmGuard<ZmPLock> scheduleGuard(m_scheduleLock);
-	Timer timer(m_schedule.minimum());
-
-	if (timer) minimum = timer->key();
+	if (Timer *first = m_schedule.minimum()) minimum = first->timeout;
       }
 
       if (minimum)
@@ -302,27 +300,26 @@ void ZmScheduler::timer()
 	ZmTime now(ZmTime::Now);
 	now += m_params.quantum();
 	ZmGuard<ZmPLock> scheduleGuard(m_scheduleLock);
-	auto i = m_schedule.iterator<ZmRBTreeLessEqual>(now);
-	Timer timer;
 
-	while (timer = i.iterate()) {
-	  i.del(timer);
-	  {
-	    Timer *ptr = (Timer *)timer->val().ptr;
-	    if (ZuLikely(ptr)) *ptr = nullptr;
-	  }
-	  bool ok;
-	  unsigned tid = timer->val().tid;
-	  ZmFn<> fn = timer->val().fn;
-	  if (ZuLikely(tid))
-	    ok = tryRunWake_(&m_threads[tid - 1], fn);
-	  else
-	    ok = timerAdd(fn);
-	  if (ZuUnlikely(!ok)) {
-	    scheduleGuard.unlock();
-	    m_schedule.add(timer);
-	    ZmPlatform::sleep(m_params.quantum());
-	    break;
+	{
+	  auto i = m_schedule.iterator<ZmRBTreeLessEqual>(now);
+	  while (Timer *timer = i.iterate()) {
+	    i.del(timer);
+	    timer->timeout = ZmTime{};
+	    bool ok;
+	    unsigned tid = timer->tid;
+	    ZmFn<> fn = timer->fn;
+	    if (ZuLikely(tid))
+	      ok = tryRunWake_(&m_threads[tid - 1], fn);
+	    else
+	      ok = timerAdd(fn);
+	    if (ZuUnlikely(!ok)) {
+	      scheduleGuard.unlock();
+	      m_schedule.add(timer);
+	      ZmPlatform::sleep(m_params.quantum());
+	      return;
+	    }
+	    if (timer->transient) delete timer;
 	  }
 	}
       }
@@ -342,7 +339,7 @@ bool ZmScheduler::timerAdd(ZmFn<> &fn)
 }
 
 void ZmScheduler::run(
-    unsigned tid, ZmFn<> fn, ZmTime timeout, int mode, Timer *ptr)
+    unsigned tid, ZmFn<> fn, ZmTime timeout, int mode, Timer *timer)
 {
   ZmAssert(tid <= m_params.nThreads());
 
@@ -350,26 +347,22 @@ void ZmScheduler::run(
 
   bool kick = true;
 
+  if (!timer) timer = new Timer{true};
+
   {
     ZmGuard<ZmPLock> scheduleGuard(m_scheduleLock);
 
-    Timer timer;
-
-    if (ZuLikely(ptr)) {
-      if (timer = ZuMv(*ptr)) {
-	switch (mode) {
-	  case Advance:
-	    if (ZuUnlikely(timer->key() <= timeout))
-	      { *ptr = ZuMv(timer); return; }
-	    break;
-	  case Defer:
-	    if (ZuUnlikely(timer->key() >= timeout))
-	      { *ptr = ZuMv(timer); return; }
-	    break;
-	}
-	m_schedule.del(timer);
-	timer = nullptr;
+    if (ZuLikely(timer->timeout)) {
+      switch (mode) {
+	case Advance:
+	  if (ZuUnlikely(timer->timeout <= timeout)) return;
+	  break;
+	case Defer:
+	  if (ZuUnlikely(timer->timeout >= timeout)) return;
+	  break;
       }
+      m_schedule.del(timer);
+      timer->timeout = ZmTime{};
     }
 
     if (ZuUnlikely(timeout <= ZmTimeNow())) {
@@ -380,20 +373,25 @@ void ZmScheduler::run(
       }
     }
 
-    if (ZuLikely(timer = m_schedule.minimum())) kick = timeout < timer->key();
+    if (Timer *first = m_schedule.minimum())
+      kick = timeout < first->timeout;
 
-    timer = m_schedule.add(timeout, Timer_{tid, ZuMv(fn), (void *)ptr});
-
-    if (ZuLikely(ptr)) *ptr = ZuMv(timer);
+    timer->timeout = timeout;
+    timer->tid = tid;
+    timer->fn = ZuMv(fn);
+    m_schedule.add(timer);
   }
+
   if (kick) m_pending.post();
 }
 
-void ZmScheduler::del(Timer *ptr)
+void ZmScheduler::del(Timer *timer)
 {
-  if (ZuUnlikely(!ptr)) return;
   ZmGuard<ZmPLock> scheduleGuard(m_scheduleLock);
-  if (ZuLikely(*ptr)) { m_schedule.del(*ptr); *ptr = nullptr; }
+  if (!timer->timeout) return;
+  m_schedule.del(timer);
+  timer->timeout = ZmTime{};
+  if (timer->transient) delete timer;
 }
 
 void ZmScheduler::add(ZmFn<> fn)

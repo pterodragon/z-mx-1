@@ -362,6 +362,8 @@ void *ZiRing::push(unsigned size, bool wait_)
 
   size = align(size);
 
+  ZmAssert(size < this->size());
+
 retry:
   uint64_t rdrMask = this->rdrMask().load_();
   if (!rdrMask) return 0; // no readers
@@ -371,17 +373,19 @@ retry:
   uint32_t tail = this->tail(); // acquire
   uint32_t head_ = head & ~(Wrapped | Mask);
   uint32_t tail_ = tail & ~(Wrapped | Mask);
-  if (ZuUnlikely((head_ < tail_ ?
-      (head_ + size >= tail_) :
-      (head_ + size >= tail_ + this->size())))) {
-    int j = gc();
-    if (ZuUnlikely(j < 0)) return 0;
-    if (ZuUnlikely(j > 0)) goto retry;
-    ++m_full;
-    if (!wait_) return 0;
-    if (ZuUnlikely(!m_params.ll()))
-      if (ZiRing_wait(Tail, this->tail(), tail) != Zi::OK) return 0;
-    goto retry;
+  if (ZuLikely(head_ != tail_)) {
+    if (ZuUnlikely((head_ < tail_ ?
+	(head_ + size >= tail_) :
+	(head_ + size >= tail_ + this->size())))) {
+      int j = gc();
+      if (ZuUnlikely(j < 0)) return 0;
+      if (ZuUnlikely(j > 0)) goto retry;
+      ++m_full;
+      if (!wait_) return 0;
+      if (ZuUnlikely(!m_params.ll()))
+	if (ZiRing_wait(Tail, this->tail(), tail) != Zi::OK) return 0;
+      goto retry;
+    }
   }
 
   uint8_t *ptr = &(data())[head_];

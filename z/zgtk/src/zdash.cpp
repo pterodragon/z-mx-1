@@ -181,11 +181,13 @@ namespace Telemetry {
 
   template <typename Data> struct Item__ {
     using TelKey = typename Data::Key;
+    using TelKeyPrint = typename Data::KeyPrint;
     ZuInline static TelKey telKey(const Data &data) { return data.key(); }
     ZuInline static int rag(const Data &data) { return data.rag(); }
   };
   template <> struct Item__<ZvTelemetry::App> {
     using TelKey = ZuTuple<const ZtString &>;
+    using TelKeyPrint = ZvTelemetry::KeyPrintDef<TelKey>;
     void initTelKey(const ZtString &server, uint16_t port) {
       telKey_ << server << ':' << port;
     }
@@ -199,6 +201,7 @@ namespace Telemetry {
   };
   template <> struct Item__<ZvTelemetry::DBEnv> {
     using TelKey = ZuTuple<const char *>;
+    using TelKeyPrint = ZvTelemetry::KeyPrintDef<TelKey>;
     ZuInline static TelKey telKey(const ZvTelemetry::DBEnv &) {
       return TelKey{"dbenv"};
     }
@@ -211,6 +214,7 @@ namespace Telemetry {
     using Data = Data_;
     using Load = ZvTelemetry::load<Data>;
     using TelKey = typename Item__<Data_>::TelKey;
+    using TelKeyPrint = typename Item__<Data_>::TelKeyPrint;
 
     ZuInline Item_(void *link__) : link_{link__} { }
     template <typename FBS>
@@ -241,8 +245,9 @@ namespace Telemetry {
     ZuInline TelKey telKey() const { return Item__<Data_>::telKey(data); }
     ZuInline int rag() const { return Item__<Data_>::rag(data); }
 
-    bool record(ZuString name, ZeError *e = nullptr) {
+    bool record(ZuString name, Zdf::Mgr *mgr, ZeError *e = nullptr) {
       dataFrame = new Zdf::DataFrame{Data::fields(), name, true};
+      dataFrame->init(mgr);
       if (!dataFrame->open(e)) return false;
       dfWriter = dataFrame->writer();
       return true;
@@ -335,7 +340,7 @@ namespace GtkTree {
   template <typename Impl, typename Item>
   class Node {
     Impl *impl() { return static_cast<Impl *>(this); }
-    const Impl *impl() const { return static_cast<Impl *>(this); }
+    const Impl *impl() const { return static_cast<const Impl *>(this); }
 
   public:
     Item	*item = nullptr;
@@ -345,7 +350,9 @@ namespace GtkTree {
     void init(Item *item_) { item = item_; init_(); }
     void init_() { item->gtkNode(impl()); }
 
-    ZuInline typename Item::TelKey telKey() const { return item->telKey(); }
+    using TelKey = typename Item::TelKey;
+    using TelKeyPrint = typename Item::TelKeyPrint;
+    ZuInline TelKey telKey() const { return item->telKey(); }
     ZuInline int rag() const { return item->rag(); }
     ZuInline int cmp(const Impl &v) const {
       return item->telKey().cmp(v.telKey());
@@ -384,6 +391,12 @@ namespace GtkTree {
     using Base::add;
     using Base::del;
   };
+  template <typename TelKey_>
+  struct BranchNode {
+    using TelKey = TelKey_;
+    using TelKeyPrint = ZvTelemetry::KeyPrintDef<TelKey>;
+    static int rag() { return ZvTelemetry::RAG::Off; }
+  };
 
   template <typename T> using TelItem = Telemetry::Item<T>;
 
@@ -399,60 +412,45 @@ namespace GtkTree {
   using DB = Leaf<4, TelItem<ZvTelemetry::DB>>;
 
   // DB hosts
-  struct DBHosts {
-    using TelKey = ZuTuple<const char *>;
-    ZuInline static TelKey telKey() { return TelKey{"hosts"}; }
-    ZuInline static int rag() { return ZvTelemetry::RAG::Off; }
+  struct DBHosts : public BranchNode<ZuTuple<const char *>> {
+    static auto telKey() { return TelKey{"hosts"}; }
   };
   using DBHostParent = Parent<3, DBHosts, DBHost>;
   // DBs
-  struct DBs {
-    using TelKey = ZuTuple<const char *>;
-    ZuInline static TelKey telKey() { return TelKey{"dbs"}; }
-    ZuInline static int rag() { return ZvTelemetry::RAG::Off; }
+  struct DBs : public BranchNode<ZuTuple<const char *>> {
+    static auto telKey() { return TelKey{"dbs"}; }
   };
   using DBParent = Parent<3, DBs, DB>;
 
   // heaps
-  struct Heaps {
-    using TelKey = ZuTuple<const char *>;
-    ZuInline static TelKey telKey() { return TelKey{"heaps"}; }
-    ZuInline static int rag() { return ZvTelemetry::RAG::Off; }
+  struct Heaps :
+      public BranchNode<ZuTuple<const char *, const char *, const char *>> {
+    static auto telKey() { return TelKey{"heaps", "partition", "size"}; }
   };
   using HeapParent = Parent<2, Heaps, Heap>;
   // hashTbls
-  struct HashTbls {
-    using TelKey = ZuTuple<const char *>;
-    ZuInline static TelKey telKey() { return TelKey{"hashTbls"}; }
-    ZuInline static int rag() { return ZvTelemetry::RAG::Off; }
+  struct HashTbls : public BranchNode<ZuTuple<const char *, const char *>> {
+    static auto telKey() { return TelKey{"hashTbls", "addr"}; }
   };
   using HashTblParent = Parent<2, HashTbls, HashTbl>;
   // threads
-  struct Threads {
-    using TelKey = ZuTuple<const char *>;
-    ZuInline static TelKey telKey() { return TelKey{"threads"}; }
-    ZuInline static int rag() { return ZvTelemetry::RAG::Off; }
+  struct Threads : public BranchNode<ZuTuple<const char *>> {
+    static auto telKey() { return TelKey{"threads"}; }
   };
   using ThreadParent = Parent<2, Threads, Thread>;
   // multiplexers
-  struct Mxs {
-    using TelKey = ZuTuple<const char *>;
-    ZuInline static TelKey telKey() { return TelKey{"multiplexers"}; }
-    ZuInline static int rag() { return ZvTelemetry::RAG::Off; }
+  struct Mxs : public BranchNode<ZuTuple<const char *>> {
+    static auto telKey() { return TelKey{"multiplexers"}; }
   };
   using MxParent = Parent<2, Mxs, Mx>;
   // queues
-  struct Queues {
-    using TelKey = ZuTuple<const char *>;
-    ZuInline static TelKey telKey() { return TelKey{"queues"}; }
-    ZuInline static int rag() { return ZvTelemetry::RAG::Off; }
+  struct Queues : public BranchNode<ZuTuple<const char *, const char *>> {
+    static auto telKey() { return TelKey{"queues", "type"}; }
   };
   using QueueParent = Parent<2, Queues, Queue>;
   // engines
-  struct Engines {
-    using TelKey = ZuTuple<const char *>;
-    ZuInline static TelKey telKey() { return TelKey{"engines"}; }
-    ZuInline static int rag() { return ZvTelemetry::RAG::Off; }
+  struct Engines : public BranchNode<ZuTuple<const char *>> {
+    static auto telKey() { return TelKey{"engines"}; }
   };
   using EngineParent = Parent<2, Engines, Engine>;
 
@@ -472,15 +470,7 @@ namespace GtkTree {
       (DBEnv, dbEnv));
   using App = Branch<1, TelItem<ZvTelemetry::App>, AppTuple>;
 
-  struct Root : public ZGtk::TreeNode::Parent<Root, 0, App> {
-#if 0
-    using TelKey = ZuTuple<const char *>;
-    ZuInline static TelKey telKey() {
-      return static_cast<const char *>(nullptr);
-    }
-    ZuInline static int rag() { return ZvTelemetry::RAG::Off; }
-#endif
-  };
+  struct Root : public ZGtk::TreeNode::Parent<Root, 0, App> { };
 
   // map telemetry items to corresponding tree nodes
   inline Heap *node(TelItem<ZvTelemetry::Heap> *item) {
@@ -558,7 +548,7 @@ namespace GtkTree {
 
   class Model : public ZGtk::TreeHierarchy<Model, Iter, Depth> {
   public:
-    enum { RAGCol = 0, KeyCol, NCols };
+    enum { RAGCol = 0, IDCol0, IDCol1, IDCol2, NCols };
 
     // root()
     Root *root() { return &m_root; }
@@ -630,21 +620,36 @@ namespace GtkTree {
     GType get_column_type(gint i) {
       switch (i) {
 	case RAGCol: return G_TYPE_INT;
-	case KeyCol: return G_TYPE_STRING;
+	case IDCol0: return G_TYPE_STRING;
+	case IDCol1: return G_TYPE_STRING;
+	case IDCol2: return G_TYPE_STRING;
 	default: return G_TYPE_NONE;
       }
     }
     template <typename T>
     void value(const T *ptr, gint i, ZGtk::Value *v) {
+      typename T::TelKeyPrint print{ptr->telKey()};
       switch (i) {
 	case RAGCol: 
 	  v->init(G_TYPE_INT);
 	  v->set_int(ptr->rag());
 	  break;
-	case KeyCol:
+	case IDCol0:
 	  m_value.length(0);
 	  v->init(G_TYPE_STRING);
-	  m_value << ptr->telKey().print("|");
+	  m_value << print.p0();
+	  v->set_static_string(m_value);
+	  break;
+	case IDCol1:
+	  m_value.length(0);
+	  v->init(G_TYPE_STRING);
+	  m_value << print.p1();
+	  v->set_static_string(m_value);
+	  break;
+	case IDCol2:
+	  m_value.length(0);
+	  v->init(G_TYPE_STRING);
+	  m_value << print.p2();
 	  v->set_static_string(m_value);
 	  break;
 	default:
@@ -749,7 +754,11 @@ namespace GtkTree {
 	m_rag_green_bg = { 0.1835, 0.8789, 0.2304, 1.0 }; // #2fe13b
 
       gtk_tree_view_append_column(
-	  m_treeView, viewCol<Model::RAGCol, Model::KeyCol>("key"));
+	  m_treeView, viewCol<Model::RAGCol, Model::IDCol0>("ID"));
+      gtk_tree_view_append_column(
+	  m_treeView, viewCol<Model::RAGCol, Model::IDCol1>(""));
+      gtk_tree_view_append_column(
+	  m_treeView, viewCol<Model::RAGCol, Model::IDCol2>(""));
 
       static const gchar *props[] = {
 	"text", "background-rgba", "foreground-rgba"
@@ -768,6 +777,10 @@ namespace GtkTree {
 	  *reinterpret_cast<const GdkRGBA *>(m_values[2].get_boxed());
 	g_object_unref(G_OBJECT(cell));
       }
+    }
+
+    void destroyed() {
+      m_treeView = nullptr;
     }
 
     void final() {
@@ -911,14 +924,19 @@ public:
       } else
 	m_refreshRate = ZmTime{ZmTime::Nano, refreshRate};
     }
-    unsigned tid = cf->getInt("gtkThread", 1, mx->params().nThreads(), true);
+    unsigned gtkTID;
+    {
+      unsigned nThreads = mx->params().nThreads();
+      m_tid = cf->getInt("thread", 1, nThreads, true);
+      gtkTID = cf->getInt("gtkThread", 1, nThreads, true);
+    }
 
     Client::init(mx, cf);
     ZvCmdHost::init();
     initCmds();
 
-    attach(mx, tid);
-    mx->run(tid, [this]() { gtkInit(); });
+    attach(mx, gtkTID);
+    mx->run(gtkTID, [this]() { gtkInit(); });
   }
 
   void final() {
@@ -979,7 +997,7 @@ public:
 
     g_signal_connect(G_OBJECT(m_mainWindow), "destroy",
 	ZGtk::callback([](GObject *o, gpointer this_) {
-	  reinterpret_cast<ZDash *>(this_)->post();
+	  reinterpret_cast<ZDash *>(this_)->gtkDestroyed();
 	}), reinterpret_cast<gpointer>(this));
 
     gtk_widget_show_all(GTK_WIDGET(m_mainWindow));
@@ -989,13 +1007,18 @@ public:
     m_telRing->attach();
   }
 
+  void gtkDestroyed() {
+    m_gtkView.destroyed();
+    m_mainWindow = nullptr;
+    post();
+  }
+
   void gtkFinal() {
     m_telRing->detach();
 
     ZGtk::App::sched()->del(&m_refreshTimer);
 
     m_gtkView.final();
-
     if (m_gtkModel) g_object_unref(G_OBJECT(m_gtkModel));
     if (m_mainWindow) g_object_unref(G_OBJECT(m_mainWindow));
     if (m_styleContext) g_object_unref(G_OBJECT(m_styleContext));
@@ -1267,13 +1290,11 @@ private:
   }
 
   void disconnected(Link *link) {
+    if (m_exiting) return;
     m_telRing->push(link, ZuArray<const uint8_t>{});
   }
   void disconnected2(Link *link) {
-    if (m_exiting) return;
-    Zrl::stop();
-    std::cerr << "server disconnected\n" << std::flush;
-    ZmPlatform::exit(1);
+    // FIXME - update App RAG to red (in caller)
   }
 
   void connectFailed(Link *, bool transient) {
@@ -2283,6 +2304,8 @@ private:
 
   ZmRef<ZCmdPlugin>	m_plugin;
 
+  unsigned		m_tid = 0;
+
   ZvRingParams		m_telRingParams;
   ZuPtr<TelRing>	m_telRing;
   ZmAtomic<unsigned>	m_telCount = 0;
@@ -2389,7 +2412,10 @@ int main(int argc, char **argv)
 
   ZmRef<ZDash> app = new ZDash();
 
-  ZmTrap::sigintFn(ZmFn<>{app, [](ZDash *app) { app->post(); }});
+  ZmTrap::sigintFn(ZmFn<>{app, [](ZDash *app) {
+    std::cerr << "GOT HERE 1\n" << std::flush;
+    app->post();
+  }});
   ZmTrap::trap();
 
   {

@@ -1522,21 +1522,21 @@ private:
   void addOrder2(MxMDOrder *order) { m_orders2->add(order); }
   template <typename OrderID> ZuInline ZmRef<MxMDOrder> findOrder2(
       const MxInstrKey &obKey, OrderID &&orderID) {
-    return m_orders2->findKey(ZuMkTuple(obKey, ZuFwd<OrderID>(orderID)));
+    return m_orders2->findKey(ZuFwdTuple(obKey, ZuFwd<OrderID>(orderID)));
   }
   template <typename OrderID> ZuInline ZmRef<MxMDOrder> delOrder2(
       const MxInstrKey &obKey, OrderID &&orderID) {
-    return m_orders2->delKey(ZuMkTuple(obKey, ZuFwd<OrderID>(orderID)));
+    return m_orders2->delKey(ZuFwdTuple(obKey, ZuFwd<OrderID>(orderID)));
   }
 
   void addOrder3(MxMDOrder *order) { m_orders3->add(order); }
   template <typename OrderID> ZuInline ZmRef<MxMDOrder> findOrder3(
       const MxInstrKey &obKey, MxEnum side, OrderID &&orderID) {
-    return m_orders3->findKey(ZuMkTuple(obKey, side, ZuFwd<OrderID>(orderID)));
+    return m_orders3->findKey(ZuFwdTuple(obKey, side, ZuFwd<OrderID>(orderID)));
   }
   template <typename OrderID> ZuInline ZmRef<MxMDOrder> delOrder3(
       const MxInstrKey &obKey, MxEnum side, OrderID &&orderID) {
-    return m_orders3->delKey(ZuMkTuple(obKey, side, ZuFwd<OrderID>(orderID)));
+    return m_orders3->delKey(ZuFwdTuple(obKey, side, ZuFwd<OrderID>(orderID)));
   }
 
   MxMDVenue		*m_venue;

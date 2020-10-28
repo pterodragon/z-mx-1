@@ -52,6 +52,7 @@ void App::detach(ZmFn<> fn)
 {
   m_sched->wakeFn(m_tid, ZmFn{});
   m_sched->run_(m_tid, [this, fn = ZuMv(fn)]() mutable { detach_(ZuMv(fn)); });
+  wake_();
 }
 
 void App::detach_(ZmFn<> fn)

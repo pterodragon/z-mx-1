@@ -43,12 +43,6 @@
 
 #ifndef _WIN32
 #include <alloca.h>
-
-#define ZiENOMEM ENOMEM
-#define ZiENOENT ENOENT
-#else
-#define ZiENOMEM ERROR_NOT_ENOUGH_MEMORY
-#define ZiENOENT ERROR_FILE_NOT_FOUND
 #endif
 
 class ZiAPI ZiFile {

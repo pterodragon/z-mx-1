@@ -531,12 +531,14 @@ public:
     Base::m_size = N;
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
       [this](auto &&a_) {
-	using Elem = typename ZuTraits<decltype(a_)>::Elem;
+	using Array = typename ZuDecay<decltype(a_)>::T;
+	using Elem = typename ZuTraits<Array>::Elem;
 	ZuArray<Elem> a(a_);
 	this->init_mv(const_cast<Elem *>(a.data()), a.length());
       },
       [this](const auto &a_) {
-	using Elem = typename ZuTraits<decltype(a_)>::Elem;
+	using Array = typename ZuDecay<decltype(a_)>::T;
+	using Elem = typename ZuTraits<Array>::Elem;
 	ZuArray<Elem> a(a_);
 	this->init(a.data(), a.length());
       });
@@ -546,12 +548,14 @@ public:
     this->dtor();
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
       [this](auto &&a_) {
-	using Elem = typename ZuTraits<decltype(a_)>::Elem;
+	using Array = typename ZuDecay<decltype(a_)>::T;
+	using Elem = typename ZuTraits<Array>::Elem;
 	ZuArray<Elem> a(a_);
 	this->init_mv(const_cast<Elem *>(a.data()), a.length());
       },
       [this](const auto &a_) {
-	using Elem = typename ZuTraits<decltype(a_)>::Elem;
+	using Array = typename ZuDecay<decltype(a_)>::T;
+	using Elem = typename ZuTraits<Array>::Elem;
 	ZuArray<Elem> a(a_);
 	this->init(a.data(), a.length());
       });
@@ -565,12 +569,14 @@ public:
   typename MatchArray<A, ArrayN &>::T operator <<(A &&a) {
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
       [this](auto &&a_) {
-	using Elem = typename ZuTraits<decltype(a_)>::Elem;
+	using Array = typename ZuDecay<decltype(a_)>::T;
+	using Elem = typename ZuTraits<Array>::Elem;
 	ZuArray<Elem> a(a_);
 	this->append_mv_(const_cast<Elem *>(a.data()), a.length());
       },
       [this](const auto &a_) {
-	using Elem = typename ZuTraits<decltype(a_)>::Elem;
+	using Array = typename ZuDecay<decltype(a_)>::T;
+	using Elem = typename ZuTraits<Array>::Elem;
 	ZuArray<Elem> a(a_);
 	this->append_(a.data(), a.length());
       });

@@ -68,6 +68,7 @@ void DataFrame::init(Mgr *mgr)
 
 bool DataFrame::open(ZeError *e_)
 {
+  if (ZuUnlikely(!m_mgr)) { if (e_) *e_ = ZiENOENT; return false; }
   ZeError e;
   if (load(&e)) goto open;
   if (e.errNo() == ZiENOENT) {

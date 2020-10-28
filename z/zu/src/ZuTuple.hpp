@@ -31,6 +31,7 @@
 #endif
 
 #include <zlib/ZuTraits.hpp>
+#include <zlib/ZuPrint.hpp>
 #include <zlib/ZuPair.hpp>
 #include <zlib/ZuNull.hpp>
 #include <zlib/ZuSwitch.hpp>
@@ -437,8 +438,13 @@ struct ZuTraits<ZuTuple<Args...>> : public ZuTuple<Args...>::Traits {
 };
 
 template <typename ...Args>
-auto ZuInline ZuMkTuple(Args &&... args) {
+auto ZuInline ZuFwdTuple(Args &&... args) {
   return ZuTuple<Args...>{ZuFwd<Args>(args)...};
+}
+
+template <typename ...Args>
+auto ZuInline ZuMvTuple(Args... args) {
+  return ZuTuple<Args...>{ZuMv(args)...};
 }
 
 namespace Zu_ {

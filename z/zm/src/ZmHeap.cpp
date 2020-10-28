@@ -158,9 +158,9 @@ private:
     unsigned partition = ZmThreadContext::self()->partition();
     ZmHeapCache *c = 0;
     Guard guard(m_lock);
-    if (c = m_caches3.findKey(ZuMkTuple(id, partition, size)))
+    if (c = m_caches3.findKey(ZuFwdTuple(id, partition, size)))
       return c;
-    ZmHeapCache *n = m_caches2.delKey(ZuMkTuple(id, size));
+    ZmHeapCache *n = m_caches2.delKey(ZuFwdTuple(id, size));
     if (IDPart2Config::NodeRef node = 
 	  m_configs.find(ZuMkPair(id, partition)))
       c = new ZmHeapCache(id, size, partition, sharded,
@@ -177,7 +177,7 @@ private:
 
   ZmHeapCache *head(const char *id, unsigned size) {
     ZmReadGuard<ZmPLock> guard(m_lock);
-    return m_caches2.findKey(ZuMkTuple(id, size));
+    return m_caches2.findKey(ZuFwdTuple(id, size));
   }
 
   ZmPLock		m_lock;

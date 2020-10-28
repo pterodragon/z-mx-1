@@ -277,11 +277,11 @@ int main()
     q = r = 2;
     CHECK(ZuCmp<V>::cmp(i, T(p, q, r)) > 0);
     q = 2, r = 3;
-    CHECK(ZuCmp<V>::cmp(i, ZuMkTuple(p, q, r)) == 0);
+    CHECK(ZuCmp<V>::cmp(i, ZuFwdTuple(p, q, r)) == 0);
     q = 3;
-    CHECK(ZuCmp<V>::cmp(i, ZuMkTuple(p, q, r)) < 0);
+    CHECK(ZuCmp<V>::cmp(i, ZuFwdTuple(p, q, r)) < 0);
     q = r = 2;
-    CHECK(ZuCmp<V>::cmp(i, ZuMkTuple(p, q, r)) > 0);
+    CHECK(ZuCmp<V>::cmp(i, ZuFwdTuple(p, q, r)) > 0);
   }
 
   {
@@ -335,14 +335,14 @@ int main()
     CHECK((ZuCmp<ZuTuple<int, const S &, const S &> >::cmp(t1, t2) < 0));
     CHECK((ZuCmp<ZuTuple<int, const S &, const S &> >::cmp(t1, t1) == 0));
     CHECK((ZuCmp<ZuTuple<int, const S &, const S &> >::cmp(t2, t1) > 0));
-    ZuTuple<int, const S &, const S &> t3 = ZuMkTuple(42, s3, s3);
+    ZuTuple<int, const S &, const S &> t3 = ZuFwdTuple(42, s3, s3);
     CHECK((ZuCmp<ZuTuple<int, const S &, const S &> >::cmp(t1, t3) < 0));
     S s4{"hello"};
     S s5{"world"};
     std::cout << "t1=" << t1.print() << '\n' << std::flush;
-    std::cout << "t2=" << ZuMkTuple(42, s4, s5).print() << '\n' << std::flush;
+    std::cout << "t2=" << ZuFwdTuple(42, s4, s5).print() << '\n' << std::flush;
     CHECK((ZuCmp<ZuTuple<int, const S &, const S &> >::cmp(t1,
-	    ZuMkTuple(42, s4, s5)) > 0));
+	    ZuFwdTuple(42, s4, s5)) > 0));
     // ZuTuple<int, const S &, const S &> t4(42, "string1", "string2");
     // CHECK((ZuCmp<ZuTuple<int, const S &, const S &> >::cmp(t4, t2) < 0));
   }
@@ -351,9 +351,9 @@ int main()
     using namespace T3;
     T t, s;
     t.p<0>().length(1);
-    t.p<0>()[0] = ZuMkTuple(1, 2, 3);
-    t.p<0>() += ZuMkTuple(1, 2, 3);
-    t.p<0>() << ZuMkTuple(1, 2, 3);
+    t.p<0>()[0] = ZuFwdTuple(1, 2, 3);
+    t.p<0>() += ZuFwdTuple(1, 2, 3);
+    t.p<0>() << ZuFwdTuple(1, 2, 3);
     t.p<1>().length(3);
     t.p<1>()[0] = 42;
     t.p<1>()[2] = 42;

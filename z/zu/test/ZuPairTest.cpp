@@ -58,7 +58,7 @@ template <> struct ZuTraits<A> : public ZuGenericTraits<A> {
 ZuPair<A, A> mkapair() { return ZuMkPair(A(42), A(42)); }
 ZuPair<A, A> passapair(ZuPair<A, A> a) { return a; }
 
-ZuTuple<A, A, A> mkatuple() { return ZuMkTuple(A(42), A(42), A(42)); }
+ZuTuple<A, A, A> mkatuple() { return ZuFwdTuple(A(42), A(42), A(42)); }
 ZuTuple<A, A, A> passatuple(ZuTuple<A, A, A> a) { return a; }
 
 ZuDeclTuple(B, (A, foo), (A, foo2), (A, foo3));
@@ -125,7 +125,7 @@ int main()
     s << a.print(":");
     CHECK(s == "1:2:3");
     s.null();
-    auto c = ZuMkTuple(a);
+    auto c = ZuFwdTuple(a);
     s << c.print(";");
     CHECK(s == "1;2;3");
   }

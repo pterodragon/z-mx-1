@@ -355,8 +355,8 @@ public:
 
   ZuInline uint32_t hash() const { return ZuHash<T>::hash(m_val); }
 
-  ZuInline operator const T &() const { return m_val; }
-  ZuInline operator T &() { return m_val; }
+  ZuInline operator T() const { return m_val; }
+  ZuInline operator T &() & { return m_val; }
 
   // compile-time formatting
   template <class Fmt>

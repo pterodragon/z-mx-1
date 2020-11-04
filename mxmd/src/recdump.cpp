@@ -506,7 +506,7 @@ void App::read()
 
   try {
     FileHdr hdr(m_file, &e);
-    v = ZuMkPair(hdr.vmajor, hdr.vminor);
+    v = ZuFwdPair(hdr.vmajor, hdr.vminor);
     std::cout << "version: " <<
       ZuBoxed(v.p1()) << '.' << ZuBoxed(v.p2()) << '\n';
   } catch (const FileHdr::IOError &) {

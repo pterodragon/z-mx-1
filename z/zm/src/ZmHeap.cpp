@@ -103,8 +103,8 @@ private:
 
   void init(const char *id, unsigned partition, const ZmHeapConfig &config) {
     Guard guard(m_lock);
-    m_configs.del(ZuMkPair(id, partition));
-    m_configs.add(ZuMkPair(id, partition), config);
+    m_configs.del(ZuFwdPair(id, partition));
+    m_configs.add(ZuFwdPair(id, partition), config);
     {
       auto i = m_caches.readIterator<ZmRBTreeEqual>(id);
       while (ZmHeapCache *c = i.iterateKey())
@@ -162,7 +162,7 @@ private:
       return c;
     ZmHeapCache *n = m_caches2.delKey(ZuFwdTuple(id, size));
     if (IDPart2Config::NodeRef node = 
-	  m_configs.find(ZuMkPair(id, partition)))
+	  m_configs.find(ZuFwdPair(id, partition)))
       c = new ZmHeapCache(id, size, partition, sharded,
 	  node->val(), n, allStatsFn);
     else

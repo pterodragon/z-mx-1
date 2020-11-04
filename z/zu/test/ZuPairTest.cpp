@@ -55,7 +55,7 @@ template <> struct ZuTraits<A> : public ZuGenericTraits<A> {
   enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
 };
 
-ZuPair<A, A> mkapair() { return ZuMkPair(A(42), A(42)); }
+ZuPair<A, A> mkapair() { return ZuFwdPair(A(42), A(42)); }
 ZuPair<A, A> passapair(ZuPair<A, A> a) { return a; }
 
 ZuTuple<A, A, A> mkatuple() { return ZuFwdTuple(A(42), A(42), A(42)); }

@@ -208,16 +208,16 @@ public:
     if (ZuUnlikely(!m_count)) { ZmSpecific_unlock(); return; }
 
     Object **objects = 0;
-#ifdef __GNUC__
-    objects = (Object **)alloca(sizeof(Object *) * m_count);
-#endif
 #ifdef _MSC_VER
     __try {
-      objects = (Object **)_alloca(sizeof(Object *) * m_count);
+      objects =
+	reinterpret_cast<Object **>(_alloca(sizeof(Object *) * m_count));
     } __except(GetExceptionCode() == STATUS_STACK_OVERFLOW) {
       _resetstkoflw();
       objects = 0;
     }
+#else
+    objects = reinterpret_cast<Object **>(alloca(sizeof(Object *) * m_count));
 #endif
 
     if (ZuUnlikely(!objects)) { ZmSpecific_unlock(); return; }

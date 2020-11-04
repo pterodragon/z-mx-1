@@ -105,16 +105,15 @@ template <typename S> struct ZuStdStream__ {
       print(S &s, const P &p) {
     unsigned len = ZuPrint<P>::length(p);
     char *buf;
-#ifdef __GNUC__
-    buf = (char *)alloca(len);
-#endif
 #ifdef _MSC_VER
     __try {
-      buf = (char *)_alloca(len);
+      buf = reinterpret_cast<char *>(_alloca(len));
     } __except(GetExceptionCode() == STATUS_STACK_OVERFLOW) {
       _resetstkoflw();
       buf = 0;
     }
+#else
+    buf = reinterpret_cast<char *>(alloca(len));
 #endif
     if (ZuLikely(buf))
       ZuStdStream<S>::append(s, buf, ZuPrint<P>::print(buf, len, p));

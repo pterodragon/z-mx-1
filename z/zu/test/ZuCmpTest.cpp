@@ -245,11 +245,11 @@ int main()
     q = 1;
     CHECK(ZuCmp<V>::cmp(i, T(p, q)) > 0);
     p = 1, q = 2;
-    CHECK(ZuCmp<V>::cmp(i, ZuMkPair(p, q)) == 0);
+    CHECK(ZuCmp<V>::cmp(i, ZuFwdPair(p, q)) == 0);
     q = 3;
-    CHECK(ZuCmp<V>::cmp(i, ZuMkPair(p, q)) < 0);
+    CHECK(ZuCmp<V>::cmp(i, ZuFwdPair(p, q)) < 0);
     q = 1;
-    CHECK(ZuCmp<V>::cmp(i, ZuMkPair(p, q)) > 0);
+    CHECK(ZuCmp<V>::cmp(i, ZuFwdPair(p, q)) > 0);
   }
 
   {
@@ -302,14 +302,14 @@ int main()
       CHECK(ZuCmp<V>::cmp(i, j) < 0);
       j.id(42);
       CHECK(ZuCmp<V>::cmp(i, j) > 0);
-      i.dependents(ZuMkPair(1, 2));
+      i.dependents(ZuFwdPair(1, 2));
       j = i;
       CHECK(i == j);
       CHECK(ZuCmp<V>::cmp(i, j) == 0);
       CHECK(i.dependents() == j.dependents());
-      j.dependents(ZuMkPair(1, 3));
+      j.dependents(ZuFwdPair(1, 3));
       CHECK(ZuCmp<V>::cmp(i, j) < 0);
-      i.dependents(ZuMkPair(1, 4));
+      i.dependents(ZuFwdPair(1, 4));
       CHECK(ZuCmp<V>::cmp(i, j) > 0);
       i.foo(&c);
       CHECK(*(i.foo()) == 42);

@@ -71,7 +71,7 @@ public:
   // send a new message into the receiver
   void send(uint32_t key, unsigned length) {
     unsigned precount = m_queue.count();
-    this->received(new Msg(ZuMkPair(key, length)));
+    this->received(new Msg(ZuFwdPair(key, length)));
     printf("send %u, %u (pre-count = %u, post-count = %u)\n",
 	(unsigned)key, length, precount, (unsigned)m_queue.count());
   }
@@ -202,11 +202,11 @@ int main()
   send(a, 4, 3); // should be head- and tail-clipped
 
   send(a, 15, 0);
-  assert(a.rxQueue()->gap().equals(ZuMkPair(14, 1)));
+  assert(a.rxQueue()->gap().equals(ZuFwdPair(14, 1)));
   send(a, 15, 0);
-  assert(a.rxQueue()->gap().equals(ZuMkPair(14, 1)));
+  assert(a.rxQueue()->gap().equals(ZuFwdPair(14, 1)));
   send(a, 15, 1);
-  assert(a.rxQueue()->gap().equals(ZuMkPair(14, 1)));
+  assert(a.rxQueue()->gap().equals(ZuFwdPair(14, 1)));
   send(a, 17, 1);
   send(a, 17, 0);
   send(a, 18, 0);
@@ -240,21 +240,21 @@ int main()
   a.stopQueuing(12);
 
   send(a, 15, 1);
-  assert(a.rxQueue()->gap().equals(ZuMkPair(14, 1)));
+  assert(a.rxQueue()->gap().equals(ZuFwdPair(14, 1)));
 
-  assert(a.rxQueue()->gap().equals(ZuMkPair(14, 1)));
+  assert(a.rxQueue()->gap().equals(ZuFwdPair(14, 1)));
   send(a, 14, 1);
 
   a.reset(1);
   a.startQueuing();
   send(a, 4, 1);
   a.respond(0, 0);
-  assert(a.rxQueue()->gap().equals(ZuMkPair(1, 3)));
+  assert(a.rxQueue()->gap().equals(ZuFwdPair(1, 3)));
   a.stopQueuing(2);
   while (a.runDequeue());
-  assert(a.rxQueue()->gap().equals(ZuMkPair(2, 2)));
+  assert(a.rxQueue()->gap().equals(ZuFwdPair(2, 2)));
   a.respond(0, 0);
   while (a.runDequeue());
-  assert(a.rxQueue()->gap().equals(ZuMkPair(0, 0)));
+  assert(a.rxQueue()->gap().equals(ZuFwdPair(0, 0)));
   assert(a.rxQueue()->head() == 5 && a.rxQueue()->tail() == 5);
 }

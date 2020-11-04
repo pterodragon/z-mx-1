@@ -165,14 +165,14 @@ void MxMDTelemetry::addEngine(MxEngine *engine)
 
 void MxMDTelemetry::addQueue(MxID id, bool tx, MxQueue *queue)
 {
-  auto key = ZuMkPair(id, tx);
+  auto key = ZuFwdPair(id, tx);
   Guard guard(m_lock);
   if (!m_queues.find(key)) m_queues.add(key, queue);
 }
 
 void MxMDTelemetry::delQueue(MxID id, bool tx)
 {
-  auto key = ZuMkPair(id, tx);
+  auto key = ZuFwdPair(id, tx);
   Guard guard(m_lock);
   delete m_queues.del(key);
 }

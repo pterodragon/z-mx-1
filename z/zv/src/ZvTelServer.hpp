@@ -333,14 +333,14 @@ public:
   void addQueue(unsigned type, ZuID id, QueueFn queueFn) {
     m_mx->invoke(m_thread, this,
 	[type, id, queueFn = ZuMv(queueFn)](Server *server) mutable {
-	  auto key = ZuMkPair(type, id);
+	  auto key = ZuFwdPair(type, id);
 	  if (!server->m_queues.find(key))
 	    server->m_queues.add(key, ZuMv(queueFn));
 	});
   }
   void delQueue(unsigned type, ZuID id) {
     m_mx->invoke(m_thread, this, [type, id](Server *server) {
-      auto key = ZuMkPair(type, id);
+      auto key = ZuFwdPair(type, id);
       delete server->m_queues.del(key);
     });
   }

@@ -150,7 +150,7 @@ public:
 
   // Note: unbuffered!
   template <typename V> ZiFile &operator <<(V &&v) {
-    append(ZuFwd<V>(v));
+    append_(ZuFwd<V>(v));
     return *this;
   }
 
@@ -190,28 +190,28 @@ private:
   template <typename U, typename R>
   struct MatchPBuffer<U, R, 1> { using T = R; };
 
-  template <typename S> typename ZuIsString<S>::T append(S &&s_) {
+  template <typename S> typename ZuIsString<S>::T append_(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     if (ZuUnlikely(!s)) return;
     ZeError e;
     if (ZuUnlikely(write(s.data(), s.length(), &e) != Zi::OK))
       throw e;
   }
-  template <typename P> typename MatchPDelegate<P>::T append(P &&p) {
+  template <typename P> typename MatchPDelegate<P>::T append_(P &&p) {
     ZuPrint<P>::print(*this, ZuFwd<P>(p));
   }
-  template <typename P> typename MatchPBuffer<P>::T append(const P &p) {
+  template <typename P> typename MatchPBuffer<P>::T append_(const P &p) {
     unsigned len = ZuPrint<P>::length(p);
     char *buf;
 #ifdef _MSC_VER
     __try {
-      buf = (char *)_alloca(len);
+      buf = reinterpret_cast<char *>(_alloca(len));
     } __except(GetExceptionCode() == STATUS_STACK_OVERFLOW) {
       _resetstkoflw();
       buf = 0;
     }
 #else
-    buf = (char *)alloca(len);
+    buf = reinterpret_cast<char *>(alloca(len));
 #endif
     if (ZuUnlikely(!buf)) throw ZeError(ZiENOMEM);
     ZeError e;

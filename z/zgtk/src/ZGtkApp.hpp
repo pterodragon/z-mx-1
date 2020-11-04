@@ -34,13 +34,20 @@
 
 #include <gtk/gtk.h>
 
+#include <zlib/ZuString.hpp>
+
 #include <zlib/ZmScheduler.hpp>
 #include <zlib/ZmLock.hpp>
+
+#include <zlib/ZtString.hpp>
 
 namespace ZGtk {
 
 class ZGtkAPI App {
 public:
+  // e.g. "gimp20", "/usr/share" - initialize locale, libintl (gettext)
+  void i18n(ZtString domain, ZtString dataDir);
+
   void attach(ZmScheduler *sched, unsigned tid);
   ZuInline void detach() { detach(ZmFn<>{}); }
   void detach(ZmFn<>);
@@ -67,6 +74,8 @@ private:
   GSource		*m_source = nullptr;
   ZmScheduler		*m_sched = nullptr;
   unsigned		m_tid = 0;
+  ZtString		m_domain;	// libintl domain
+  ZtString		m_dataDir;	// libintl data directory
 };
 
 } // ZGtk

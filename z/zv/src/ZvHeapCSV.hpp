@@ -49,7 +49,7 @@ struct ZvAPI ZvHeapCSV {
   };
   const ZvFields Data::fields() noexcept {
     ZvMkFields(Data,
-	(String, id, Primary),
+	(String, id, 0),
 	(Int, partition, 0),
 	(Int, alignment, 0),
 	(Int, cacheSize, 0),

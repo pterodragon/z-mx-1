@@ -72,7 +72,7 @@ void dequeue(PQueue &q)
 void enqueue(PQueue &q, uint32_t seqNo, unsigned length)
 {
   printf("send %u, %u\n", (unsigned)seqNo, length);
-  ZmRef<QMsg> msg = q.rotate(ZmRef<QMsg>(new QMsg(ZuMkPair(seqNo, length))));
+  ZmRef<QMsg> msg = q.rotate(ZmRef<QMsg>(new QMsg(ZuFwdPair(seqNo, length))));
   printf("send - head %u gap %u, %u\n", (unsigned)q.head(), (unsigned)q.gap().key(), (unsigned)q.gap().length());
   while (msg) {
     printf("send - process %u, %u\n", (unsigned)msg->Msg::key(), msg->length());
@@ -100,7 +100,7 @@ int main()
   enqueue(q, 4, 3); // should be head- and tail-clipped, trigger dequeue
 
   enqueue(q, 15, 1);
-  assert(q.gap().equals(ZuMkPair(14, 1)));
+  assert(q.gap().equals(ZuFwdPair(14, 1)));
   enqueue(q, 17, 1);
   enqueue(q, 19, 1);
   enqueue(q, 21, 3);
@@ -122,8 +122,8 @@ int main()
 
   head(q, 12); // should leave 12+2 in place
   enqueue(q, 15, 1);
-  assert(q.gap().equals(ZuMkPair(14, 1)));
+  assert(q.gap().equals(ZuFwdPair(14, 1)));
   dequeue(q);
-  assert(q.gap().equals(ZuMkPair(14, 1)));
+  assert(q.gap().equals(ZuFwdPair(14, 1)));
   enqueue(q, 14, 1);
 }

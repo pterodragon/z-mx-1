@@ -49,7 +49,7 @@ struct ZvHashCSV {
   };
   const ZvFields Data::fields() noexcept {
     ZvMkFields(Data,
-	(String, id, Primary),
+	(String, id, 0),
 	(Int, bits, 0),
 	(Int, loadFactor, 0),
 	(Int, cBits, 0));

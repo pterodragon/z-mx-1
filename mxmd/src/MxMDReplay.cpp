@@ -158,7 +158,7 @@ void MxMDReplayLink::connect()
   }
   try {
     FileHdr hdr(m_file, &e);
-    m_version = ZuMkPair(hdr.vmajor, hdr.vminor);
+    m_version = ZuFwdPair(hdr.vmajor, hdr.vminor);
   } catch (const FileHdr::IOError &) {
     fileERROR(m_path, e);
     disconnected();

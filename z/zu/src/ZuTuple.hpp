@@ -439,7 +439,7 @@ struct ZuTraits<ZuTuple<Args...>> : public ZuTuple<Args...>::Traits {
 
 template <typename ...Args>
 auto ZuInline ZuFwdTuple(Args &&... args) {
-  return ZuTuple<Args...>{ZuFwd<Args>(args)...};
+  return ZuTuple<Args &&...>{ZuFwd<Args>(args)...};
 }
 
 template <typename ...Args>

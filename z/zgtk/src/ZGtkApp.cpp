@@ -1,5 +1,10 @@
 #include <zlib/ZGtkApp.hpp>
 
+#include <zlib/ZtString.hpp>
+
+#include <locale.h>
+#include <libintl.h>
+
 extern "C" {
   gboolean dispatch(GSource *, GSourceFunc, gpointer);
 }
@@ -12,6 +17,20 @@ gboolean dispatch(GSource *source, GSourceFunc, gpointer)
 }
 
 namespace ZGtk {
+
+void App::i18n(ZtString domain, ZtString dataDir)
+{
+  dataDir <<
+      // libintl uses UTF-8 directory paths on Windows
+#ifndef _WIN32
+    "/locale"
+#else
+    "\\locale"
+#endif
+    ;
+  m_domain = ZuMv(domain);
+  m_dataDir = ZuMv(dataDir);
+}
 
 void App::attach(ZmScheduler *sched, unsigned tid)
 {
@@ -31,6 +50,12 @@ void App::attach_()
     putenv("GTK_THEME=win32");
 #endif
     gtk_init(nullptr, nullptr);
+    if (m_domain) {
+      // setlocale(LC_ALL, ""); // gtk_init() calls setlocale()
+      bindtextdomain(m_domain, m_dataDir);
+      bind_textdomain_codeset(m_domain, "UTF-8");
+      textdomain(m_domain);
+    }
     initialized = true;
   }
 

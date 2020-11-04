@@ -349,8 +349,13 @@ private:
 } // namespace Zu_
 
 template <typename T0, typename T1>
-auto ZuInline ZuMkPair(T0 t1, T1 t2) {
-  return ZuPair<T0, T1>(ZuMv(t1), ZuMv(t2));
+auto ZuInline ZuFwdPair(T0 &&v1, T1 &&v2) {
+  return ZuPair<T0 &&, T1 &&>(ZuFwd<T0>(v1), ZuFwd<T1>(v2));
+}
+
+template <typename T0, typename T1>
+auto ZuInline ZuMvPair(T0 v1, T1 v2) {
+  return ZuPair<T0, T1>(ZuMv(v1), ZuMv(v2));
 }
 
 template <typename T0, typename T1>

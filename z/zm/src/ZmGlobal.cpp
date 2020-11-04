@@ -56,16 +56,15 @@ ZmExtern void ZmGlobal_atexit()
     for (ZmGlobal *g = ZmGlobal_list[i]; g; g = g->m_next) ++n;
   if (ZuUnlikely(!n)) { unlock(); return; }
   ZmGlobal **globals;
-#ifdef __GNUC__
-  globals = (ZmGlobal **)alloca(sizeof(ZmGlobal *) * n);
-#endif
 #ifdef _MSC_VER
   __try {
-    globals = (ZmGlobal **)_alloca(sizeof(ZmGlobal *) * n);
+    globals = reinterpret_cast<ZmGlobal **>(_alloca(sizeof(ZmGlobal *) * n));
   } __except(GetExceptionCode() == STATUS_STACK_OVERFLOW) {
     _resetstkoflw();
     globals = 0;
   }
+#else
+  globals = reinterpret_cast<ZmGlobal **>(alloca(sizeof(ZmGlobal *) * n));
 #endif
   if (ZuUnlikely(!globals)) { unlock(); return; }
   unsigned o = 0;

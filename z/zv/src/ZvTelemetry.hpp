@@ -166,58 +166,12 @@ namespace Severity {
 
 template <typename> struct load;
 
-template <typename Impl, typename Key>
-class KeyPrintGen : public ZuPrintDelegate {
-  Impl *impl() { return static_cast<Impl *>(this); }
-  const Impl *impl() const { return static_cast<const Impl *>(this); }
-
-public:
-  const Key &key;
-
-  KeyPrintGen(const Key &key_) : key(key_) { }
-
-  auto p0() const { return key.template p<0>(); }
-  template <unsigned N = Key::N>
-  auto p1(typename ZuIfT<(N <= 1)>::T *_ = 0) const { return ""; }
-  template <unsigned N = Key::N>
-  auto p1(typename ZuIfT<(N > 1)>::T *_ = 0) const {
-    return key.template p<1>();
-  }
-  template <unsigned N = Key::N>
-  auto p2(typename ZuIfT<(N <= 2)>::T *_ = 0) const { return ""; }
-  template <unsigned N = Key::N>
-  auto p2(typename ZuIfT<(N > 2)>::T *_ = 0) const {
-    return key.template p<2>();
-  }
-
-  template <typename S, unsigned N = Key::N>
-  typename ZuIfT<(N == 1)>::T print(S &s) const {
-    s << impl()->p0();
-  }
-  template <typename S, unsigned N = Key::N>
-  typename ZuIfT<(N == 2)>::T print(S &s) const {
-    s << impl()->p0() << '_' << impl()->p1();
-  }
-  template <typename S, unsigned N = Key::N>
-  typename ZuIfT<(N == 3)>::T print(S &s) const {
-    s << impl()->p0() << '_' << impl()->p1() << '_' << impl()->p2();
-  }
-  template <typename S>
-  static void print(S &s, const Key &k) { Impl{k}.print(s); }
-};
-template <typename Key>
-struct KeyPrintDef : public KeyPrintGen<KeyPrintDef<Key>, Key> {
-  using KeyPrintGen<KeyPrintDef, Key>::KeyPrintGen;
-};
-
 using Heap_ = ZmHeapTelemetry;
 struct Heap : public Heap_, public ZvFieldTuple<Heap> {
   using FBS = fbs::Heap;
   static const ZvFields fields() noexcept;
   using Key = ZuTuple<decltype(id), decltype(partition), decltype(size)>;
   Key key() const { return Key{id, partition, size}; }
-  using KeyPrint = KeyPrintDef<Key>;
-  friend KeyPrint ZuPrintType(const Key *);
   static Key key(const fbs::Heap *heap_) {
     return Key{Zfb::Load::str(heap_->id()), heap_->partition(), heap_->size()};
   }
@@ -245,6 +199,8 @@ struct Heap : public Heap_, public ZvFieldTuple<Heap> {
     auto id_ = str(fbb, id);
     fbs::HeapBuilder b(fbb);
     b.add_id(id_);
+    b.add_partition(partition);
+    b.add_size(size);
     b.add_cacheAllocs(cacheAllocs);
     b.add_heapAllocs(heapAllocs);
     b.add_frees(frees);
@@ -300,11 +256,6 @@ struct HashTbl : public HashTbl_, public ZvFieldTuple<HashTbl> {
   static const ZvFields fields() noexcept;
   using Key = ZuTuple<decltype(id), decltype(addr)>;
   Key key() const { return Key{id, addr}; }
-  struct KeyPrint : public KeyPrintGen<KeyPrint, Key> {
-    using KeyPrintGen<KeyPrint, Key>::KeyPrintGen;
-    auto p1() { return ZuBoxed(this->key.p<1>()).hex(); }
-  };
-  friend KeyPrint ZuPrintType(const Key *);
   static Key key(const fbs::HashTbl *hash_) {
     return Key{Zfb::Load::str(hash_->id()), hash_->addr()};
   }
@@ -379,8 +330,6 @@ struct Thread : public Thread_, public ZvFieldTuple<Thread> {
   static const ZvFields fields() noexcept;
   using Key = ZuTuple<decltype(tid)>;
   Key key() const { return Key{tid}; }
-  using KeyPrint = KeyPrintDef<Key>;
-  friend KeyPrint ZuPrintType(const Key *);
   static Key key(const fbs::Thread *thread_) {
     return Key{thread_->tid()};
   }
@@ -454,8 +403,6 @@ struct Mx : public Mx_, public ZvFieldTuple<Mx> {
   static const ZvFields fields() noexcept;
   using Key = ZuTuple<decltype(id)>;
   Key key() const { return Key{id}; }
-  using KeyPrint = KeyPrintDef<Key>;
-  friend KeyPrint ZuPrintType(const Key *);
   static Key key(const fbs::Mx *mx_) {
     return Key{Zfb::Load::str(mx_->id())};
   }
@@ -533,8 +480,6 @@ struct Socket : public Socket_, public ZvFieldTuple<Socket> {
   static const ZvFields fields() noexcept;
   using Key = ZuTuple<decltype(socket)>;
   Key key() const { return Key{socket}; }
-  using KeyPrint = KeyPrintDef<Key>;
-  friend KeyPrint ZuPrintType(const Key *);
   static Key key(const fbs::Socket *socket_) {
     return Key{socket_->socket()};
   }
@@ -638,11 +583,6 @@ struct Queue : public ZvFieldTuple<Queue> {
   static const ZvFields fields() noexcept;
   using Key = ZuTuple<decltype(id), decltype(type)>;
   Key key() const { return Key{id, type}; }
-  struct KeyPrint : public KeyPrintGen<KeyPrint, Key> {
-    using KeyPrintGen<KeyPrint, Key>::KeyPrintGen;
-    auto p1() { return QueueType::name(this->key.p<1>()); }
-  };
-  friend KeyPrint ZuPrintType(const Key *);
   static Key key(const fbs::Queue *queue_) {
     return Key{Zfb::Load::str(queue_->id()), queue_->type()}; 
   }
@@ -736,8 +676,6 @@ struct Link : public ZvFieldTuple<Link> {
   static const ZvFields fields() noexcept;
   using Key = ZuTuple<decltype(id)>;
   Key key() const { return Key{id}; }
-  using KeyPrint = KeyPrintDef<Key>;
-  friend KeyPrint ZuPrintType(const Key *);
   static Key key(const fbs::Link *link_) {
     return Key{Zfb::Load::str(link_->id())};
   }
@@ -819,8 +757,6 @@ struct Engine : public ZvFieldTuple<Engine> {
   static const ZvFields fields() noexcept;
   using Key = ZuTuple<decltype(id)>;
   Key key() const { return Key{id}; }
-  using KeyPrint = KeyPrintDef<Key>;
-  friend KeyPrint ZuPrintType(const Key *);
   static Key key(const fbs::Engine *engine_) {
     return Key{Zfb::Load::str(engine_->id())};
   }
@@ -933,8 +869,6 @@ struct DB : public ZvFieldTuple<DB> {
   static const ZvFields fields() noexcept;
   using Key = ZuTuple<decltype(id)>;
   Key key() const { return Key{id}; }
-  using KeyPrint = KeyPrintDef<Key>;
-  friend KeyPrint ZuPrintType(const Key *);
   static Key key(const fbs::DB *db_) { return Key{db_->id()}; }
 
   int rag() const {
@@ -1045,8 +979,6 @@ struct DBHost : public ZvFieldTuple<DBHost> {
   static const ZvFields fields() noexcept;
   using Key = ZuTuple<decltype(id)>;
   Key key() const { return Key{id}; }
-  using KeyPrint = KeyPrintDef<Key>;
-  friend KeyPrint ZuPrintType(const Key *);
   static Key key(const fbs::DBHost *host_) { return Key{host_->id()}; }
 
   int rag() const { return DBHostState::rag(state); }

@@ -198,13 +198,13 @@ namespace ZJNI {
     jchar *buf;
 #ifdef _MSC_VER
     __try {
-      buf = (jchar *)_alloca(n * sizeof(jchar));
+      buf = reinterpret_cast<jchar *>(_alloca(n * sizeof(jchar)));
     } __except(GetExceptionCode() == STATUS_STACK_OVERFLOW) {
       _resetstkoflw();
       buf = 0;
     }
 #else
-    buf = (jchar *)alloca(n * sizeof(jchar));
+    buf = reinterpret_cast<jchar *>(alloca(n * sizeof(jchar)));
 #endif
     if (!buf) return 0;
     n = ZuUTF<jchar, char>::cvt(ZuArray<jchar>(buf, n), s);

@@ -1187,9 +1187,9 @@ ZiFile::Path ZiFile::append(const Path &dir, const Path &name)
 
   ret << dir;
 #ifndef _WIN32
-  ret << "/";
+  ret << '/';
 #else
-  ret << L"\\";
+  ret << L"\\"; // not single wchar_t due to type ambiguity
 #endif
   ret << name;
   return ret;

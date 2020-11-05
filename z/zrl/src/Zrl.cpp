@@ -50,7 +50,7 @@ struct Zrl_ {
   Zrl_() { }
   ~Zrl_() { }
 
-  using Lock = ZmLock;
+  using Lock = ZmPLock;
   using Guard = ZmGuard<Lock>;
 
   static Zrl_ *instance();
@@ -58,13 +58,15 @@ struct Zrl_ {
   void init(const char *program) {
     Guard guard(m_lock);
     rl_readline_name = program;
+    rl_catch_signals = 0;
   }
 
   void stop() {
 #ifdef linux
-    rl_deprep_terminal();
     ::close(0);
 #endif
+    rl_reset_after_signal();
+    rl_deprep_terminal();
   }
 
   void syntax(ZvCf *cf) {
@@ -102,8 +104,7 @@ struct Zrl_ {
 
   ZmRef<ZvCf> cf() { return m_cf; }
 
-  ZtString readline_(const char *prompt) {
-    Guard guard(m_lock);
+  ZtString readline__(const char *prompt) {
     char *line = ::readline(prompt);
     if (!line) throw Zrl::EndOfFile();
     if (!line[0]) { free(line); return ZtString(); }
@@ -111,17 +112,20 @@ struct Zrl_ {
     int length = strlen(line);
     return ZtString(line, length, length + 1);	// takes ownership
   }
-
+  ZtString readline_(const char *prompt) {
+    Guard guard(m_lock);
+    return readline__(prompt);
+  }
   ZmRef<ZvCf> readline(const char *prompt) {
     Guard guard(m_lock);
-    ZtString line = readline_(prompt);
+    ZtString line = readline__(prompt);
     if (!line) return 0;
     ZmRef<ZvCf> cf = new ZvCf();
     cf->fromCLI(m_cf, line);
     return cf;
   }
 
-  ZmLock		m_lock;
+  Lock			m_lock;
   ZmRef<ZvCf>		m_cf;
   ZtArray<ZuString>	m_completions;
 };

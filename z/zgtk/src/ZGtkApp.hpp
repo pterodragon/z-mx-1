@@ -48,7 +48,7 @@ public:
   // e.g. "gimp20", "/usr/share" - initialize locale, libintl (gettext)
   void i18n(ZtString domain, ZtString dataDir);
 
-  void attach(ZmScheduler *sched, unsigned tid);
+  void attach(ZmScheduler *sched, unsigned tid); // calls ZmTrap::trap()
   ZuInline void detach() { detach(ZmFn<>{}); }
   void detach(ZmFn<>);
 

@@ -49,7 +49,9 @@ void App::attach_()
     putenv("GTK_CSD=0");
     putenv("GTK_THEME=win32");
 #endif
+
     gtk_init(nullptr, nullptr);
+
     if (m_domain) {
       // setlocale(LC_ALL, ""); // gtk_init() calls setlocale()
       bindtextdomain(m_domain, m_dataDir);

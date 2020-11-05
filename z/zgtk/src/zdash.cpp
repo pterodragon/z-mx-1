@@ -1001,6 +1001,9 @@ public:
     ZvCmdHost::init();
     initCmds();
 
+    ZmTrap::sigintFn(ZmFn<>{this, [](ZDash *this_) { this_->post(); }});
+    ZmTrap::trap();
+
     i18n(
 	cf->get("i18n_domain", false, "zdash"),
 	cf->get("dataDir", false, DATADIR));
@@ -1013,7 +1016,6 @@ public:
       this_->gtkFinal();
       this_->post();
     }});
-
     wait();
 
     exiting();
@@ -1090,6 +1092,7 @@ public:
     if (m_mainWindow) {
       if (m_mainDestroy)
 	g_signal_handler_disconnect(G_OBJECT(m_mainWindow), m_mainDestroy);
+      gtk_window_close(m_mainWindow);
       gtk_widget_destroy(GTK_WIDGET(m_mainWindow));
       m_mainWindow = nullptr;
     }
@@ -2487,12 +2490,6 @@ int main(int argc, char **argv)
 
   ZmRef<ZDash> app = new ZDash();
 
-  ZmTrap::sigintFn(ZmFn<>{app, [](ZDash *app) {
-    std::cerr << "GOT HERE 1\n" << std::flush;
-    app->post();
-  }});
-  ZmTrap::trap();
-
   {
     ZmRef<ZvCf> cf = new ZvCf();
     cf->set("timeout", "1");
@@ -2526,10 +2523,10 @@ int main(int argc, char **argv)
 
   app->wait();
 
+  app->final();
+
   Zrl::stop();
   std::cout << std::flush;
-
-  app->final();
 
   mx->stop(true);
 

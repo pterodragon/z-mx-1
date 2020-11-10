@@ -9,17 +9,19 @@ AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
 pkginclude_HEADERS = ZrlLib.hpp Zrl.hpp ZCmd.hpp
 lib_LTLIBRARIES = libZrl.la
-bin_PROGRAMS = zcmd zproxy
+bin_PROGRAMS = nc1 zproxy zcmd
 libZrl_la_SOURCES = ZrlLib.cpp Zrl.cpp
 libZrl_la_LIBADD = \
 	$(top_builddir)/ztls/src/libZtls.la $(top_builddir)/zfb/src/libZfb.la \
 	$(top_builddir)/zv/src/libZv.la $(top_builddir)/zi/src/libZi.la \
 	$(top_builddir)/ze/src/libZe.la $(top_builddir)/zt/src/libZt.la \
 	$(top_builddir)/zm/src/libZm.la $(top_builddir)/zu/src/libZu.la \
-	@READLINE_LIBS@ @MBEDTLS_LIBS@ @Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
+	@MBEDTLS_LIBS@ @Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
 zcmd_AM_CPPFLAGS = @Z_CPPFLAGS@
 zcmd_LDADD = libZrl.la $(libZrl_la_LIBADD)
 zcmd_SOURCES = zcmd.cpp
 zproxy_AM_CPPFLAGS = @Z_CPPFLAGS@
 zproxy_LDADD = libZrl.la $(libZrl_la_LIBADD)
 zproxy_SOURCES = zproxy.cpp
+nc1_LDADD = libZrl.la $(libZrl_la_LIBADD) -lncurses
+nc1_SOURCES = nc1.cpp

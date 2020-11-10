@@ -14,4 +14,4 @@ pkginclude_HEADERS = \
 	ZuVersion.hpp Zu_aton.hpp Zu_ntoa.hpp ZuDecimalFn.hpp ZuUTF.hpp \
 	ZuDecimal.hpp ZuSwitch.hpp ZuSort.hpp ZuPtr.hpp ZuDemangle.hpp
 lib_LTLIBRARIES = libZu.la
-libZu_la_SOURCES = ZuLib.cpp ZuVersion.cpp
+libZu_la_SOURCES = ZuLib.cpp ZuVersion.cpp ZuUTF.cpp

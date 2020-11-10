@@ -92,10 +92,6 @@ if test ".$mingw" != ".yes"; then
 fi
 AM_CONDITIONAL([NETLINK], [test x$netlink = xtrue])
 
-AX_PATH_LIB_READLINE(, [AC_MSG_ERROR([libreadline required])])
-CPPFLAGS="$READLINE_CPPFLAGS $CPPFLAGS"
-LDFLAGS="$READLINE_LDFLAGS $LDFLAGS"
-
 AC_CHECK_PROG(PERL, "perl", "yes", "no")
 if test ".$PERL" = ".no"; then
   AC_MSG_ERROR([perl required])
@@ -144,7 +140,6 @@ AC_SUBST(JNI_CPPFLAGS)
 AC_SUBST(LZ4_LIBS)
 AC_SUBST(MBEDTLS_LIBS)
 AC_SUBST(FLATBUFFERS_LIBS)
-AC_SUBST(READLINE_LIBS)
 
 for i in zu zm zjni zt ze zi ztls zfb zv zdb zdf zrl zgtk; do (
   cd $i/src

@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// command line interface using a readline-compatible library
+// command line interface
 
 #ifndef Zrl_HPP
 #define Zrl_HPP
@@ -30,24 +30,17 @@
 #include <zlib/ZrlLib.hpp>
 #endif
 
-// FIXME - replace with replxx
-
 #include <zlib/ZvCf.hpp>
-
-extern "C" {
-  ZrlExtern char *Zrl_complete(char *prefix, int state);
-  ZrlExtern char **Zrl_completions(char *text, int start, int end);
-};
 
 struct ZrlAPI Zrl {
   struct EndOfFile { };	// thrown by readline and readline_ on EOF
 
-  static void init(const char *program);
-  static void syntax(ZvCf *cf);
-  static void stop();
+  static void init() { }
+  static void syntax(ZvCf *cf) { }
+  static void stop() { }
 
-  static ZmRef<ZvCf> readline(const char *prompt);
-  static ZtString readline_(const char *prompt);
+  static ZmRef<ZvCf> readline(const char *prompt) { return new ZvCf{}; }
+  static ZtString readline_(const char *prompt) { return ZtString{}; }
 };
 
 #endif /* Zrl_HPP */

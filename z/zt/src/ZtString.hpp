@@ -703,6 +703,12 @@ public:
     null_();
   }
 
+// reset without freeing
+
+  void clear() {
+    if (!null__()) length(0);
+  }
+
 // set length
 
   void length(unsigned n) {

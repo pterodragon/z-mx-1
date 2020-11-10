@@ -36,6 +36,19 @@
 struct ZuUTF8 {
   using Elem = uint8_t;
 
+  static unsigned in(const uint8_t *s, unsigned n) {
+    if (ZuUnlikely(n < 1)) return 0;
+    uint8_t c = *s;
+    if (ZuLikely(c < 0x80)) return 1;
+    if (ZuUnlikely(n < 2)) return 0;
+    if (ZuLikely((c>>5) == 0x6)) return 2;
+    if (ZuUnlikely(n < 3)) return 0;
+    if (ZuLikely((c>>4) == 0xe)) return 3;
+    if (ZuUnlikely(n < 4)) return 0;
+    if (ZuLikely((c>>3U) == 0x1e)) return 4;
+    return 0;
+  }
+
   static unsigned in(const uint8_t *s, unsigned n, uint32_t &u_) {
     if (ZuUnlikely(n < 1)) return 0;
     uint8_t c = *s;
@@ -142,7 +155,7 @@ struct ZuUTF16 {
   }
 };
 
-struct ZuUTF32 {
+struct ZuAPI ZuUTF32 {
   using Elem = uint32_t;
 
   static unsigned in(const uint32_t *s, unsigned n, uint32_t &u) {
@@ -158,6 +171,10 @@ struct ZuUTF32 {
     *s = u;
     return 1;
   }
+
+  // http://www.unicode.org/reports/tr11/tr11-36.html
+  // http://www.unicode.org/Public/12.0.0/ucd/EastAsianWidth.txt
+  static unsigned width(uint32_t); // 1 for normal, 2 for full-width
 };
 
 template <unsigned> struct ZuUTF_;

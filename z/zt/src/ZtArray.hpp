@@ -783,6 +783,12 @@ public:
     null_();
   }
 
+// reset without freeing
+
+  void clear() {
+    if (length()) length(0);
+  }
+
 // set length
 
   ZuInline void length(unsigned length) {

@@ -217,6 +217,7 @@ public:
 
 // reset to null
 
+  ZuInline void clear() { null(); }
   ZuInline void null() { Base::m_length = 0; }
 
 // set length

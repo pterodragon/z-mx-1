@@ -128,8 +128,7 @@ struct ZmListHeapID : public NTP {
 };
 
 template <typename Item, class NTP = ZmList_Defaults>
-class ZmList :
-    public ZmNodePolicy<typename NTP::Object> {
+class ZmList : public ZmNodePolicy<typename NTP::Object> {
   using NodePolicy = ZmNodePolicy<typename NTP::Object>;
 
 public:

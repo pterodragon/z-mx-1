@@ -301,7 +301,7 @@ void ZiMultiplex::udp_(ZiConnectFn fn, ZiFailFn failFn,
     int b = 1;
     if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
 	  (const char *)&b, sizeof(int)) < 0) {
-      ZeError e(errno);
+      ZeError e{errno};
       ::close(s);
       Error("setsockopt(SO_REUSEADDR)", Zi::IOError, e);
       failFn(false);
@@ -312,7 +312,7 @@ void ZiMultiplex::udp_(ZiConnectFn fn, ZiFailFn failFn,
   if (!!localIP || localPort) {
     ZiSockAddr local(localIP, localPort);
     if (bind(s, local.sa(), local.len()) < 0) {
-      ZeError e(errno);
+      ZeError e{errno};
       ::close(s);
       Warning("bind", Zi::IOError, e);
       failFn(true);
@@ -323,7 +323,7 @@ void ZiMultiplex::udp_(ZiConnectFn fn, ZiFailFn failFn,
   if (!!remoteIP) {
     ZiSockAddr remote(remoteIP, remotePort);
     if (::connect(s, remote.sa(), remote.len()) < 0) {
-      ZeError e(errno);
+      ZeError e{errno};
       ::close(s);
       // Warning("connect", Zi::IOError, e);
       failFn(true);
@@ -335,7 +335,7 @@ void ZiMultiplex::udp_(ZiConnectFn fn, ZiFailFn failFn,
     if (!!options.mif()) {
       if (setsockopt(s, IPPROTO_IP, IP_MULTICAST_IF,
 	    (const char *)&options.mif(), sizeof(struct in_addr)) < 0) {
-	ZeError e(errno);
+	ZeError e{errno};
 	::close(s);
 	Error("setsockopt(IP_MULTICAST_IF)", Zi::IOError, e);
 	failFn(false);
@@ -345,7 +345,7 @@ void ZiMultiplex::udp_(ZiConnectFn fn, ZiFailFn failFn,
     if (options.ttl() > 0) {
       if (setsockopt(s, IPPROTO_IP, IP_MULTICAST_TTL,
 	    (const char *)&options.ttl(), sizeof(int)) < 0) {
-	ZeError e(errno);
+	ZeError e{errno};
 	::close(s);
 	Error("setsockopt(IP_MULTICAST_TTL)", Zi::IOError, e);
 	failFn(false);
@@ -356,7 +356,7 @@ void ZiMultiplex::udp_(ZiConnectFn fn, ZiFailFn failFn,
       int b = options.loopBack();
       if (setsockopt(s, IPPROTO_IP, IP_MULTICAST_LOOP,
 	    (const char *)&b, sizeof(int)) < 0) {
-	ZeError e(errno);
+	ZeError e{errno};
 	::close(s);
 	Error("setsockopt(IP_MULTICAST_LOOP)", Zi::IOError, e);
 	failFn(false);
@@ -368,7 +368,7 @@ void ZiMultiplex::udp_(ZiConnectFn fn, ZiFailFn failFn,
 	if (setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP,
 	      (const char *)&(options.mreqs())[i],
 	      sizeof(struct ip_mreq)) < 0) {
-	  ZeError e(errno);
+	  ZeError e{errno};
 	  ::close(s);
 	  Error("setsockopt(IP_ADD_MEMBERSHIP)", Zi::IOError, e);
 	  failFn(false);
@@ -380,7 +380,7 @@ void ZiMultiplex::udp_(ZiConnectFn fn, ZiFailFn failFn,
 
 #ifdef ZiMultiplex_EPoll
   if (fcntl(s, F_SETFL, O_NONBLOCK) < 0) {
-    ZeError e(errno);
+    ZeError e{errno};
     ::close(s);
     Error("fcntl(F_SETFL, O_NONBLOCK)", Zi::IOError, e);
     failFn(false);
@@ -573,7 +573,7 @@ void ZiMultiplex::connect_(ZiConnectFn fn, ZiFailFn failFn,
     if (options.netlink()) {
       ZiNetlinkSockAddr local;
       if (bind(s, local.sa(), local.len()) < 0) {
-	ZeError e(errno);
+	ZeError e{errno};
 	::close(s);
 	Warning("bind", Zi::IOError, e);
 	failFn(true);
@@ -584,7 +584,7 @@ void ZiMultiplex::connect_(ZiConnectFn fn, ZiFailFn failFn,
     {
       ZiSockAddr local(localIP, localPort);
       if (bind(s, local.sa(), local.len()) < 0) {
-	ZeError e(errno);
+	ZeError e{errno};
 	::close(s);
 	Warning("bind", Zi::IOError, e);
 	failFn(true);
@@ -699,7 +699,7 @@ retry:
   {
     ZiSockAddr remote(ci.remoteIP, ci.remotePort);
     if (::connect(s, remote.sa(), remote.len()) < 0) {
-      ZeError e(errno);
+      ZeError e{errno};
       if (e.errNo() == EAGAIN || e.errNo() == EINPROGRESS) return;
       if (e.errNo() == EINTR) goto retry;
       connectDel(s);
@@ -717,7 +717,7 @@ retry:
     ZiSockAddr local;
     socklen_t len = local.len();
     if (getsockname(s, local.sa(), &len) < 0) {
-      ZeError e(errno);
+      ZeError e{errno};
       connectDel(s);
       ::close(s);
       Error("getsockname", Zi::IOError, e);
@@ -857,7 +857,7 @@ void ZiMultiplex::listen_(
     int b = 1;
     if (setsockopt(lsocket,
 	  SOL_SOCKET, SO_REUSEADDR, (const char *)&b, sizeof(int)) < 0) {
-      ZeError e(errno);
+      ZeError e{errno};
       ::close(lsocket);
       Error("setsockopt(SO_REUSEADDR)", Zi::IOError, e);
       failFn(false);
@@ -868,7 +868,7 @@ void ZiMultiplex::listen_(
   {
     ZiSockAddr local(localIP, localPort);
     if (bind(lsocket, local.sa(), local.len()) < 0) {
-      ZeError e(errno);
+      ZeError e{errno};
       ::close(lsocket);
       Warning("bind", Zi::IOError, e);
       failFn(true);
@@ -878,7 +878,7 @@ void ZiMultiplex::listen_(
 
 #ifdef ZiMultiplex_EPoll
   if (fcntl(lsocket, F_SETFL, O_NONBLOCK) < 0) {
-    ZeError e(errno);
+    ZeError e{errno};
     ::close(lsocket);
     Error("fcntl(F_SETFL, O_NONBLOCK)", Zi::IOError, e);
     failFn(false);
@@ -925,7 +925,7 @@ void ZiMultiplex::listen_(
 
 #ifdef ZiMultiplex_EPoll
   if (::listen(lsocket, nAccepts) < 0) {
-    ZeError e(errno);
+    ZeError e{errno};
     ::close(lsocket);
     Error("listen", Zi::IOError, e);
     failFn(false);
@@ -1660,7 +1660,7 @@ bool ZiMultiplex::cxnAdd(ZiConnection *cxn, Socket s)
     ev.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET;
     ev.data.u64 = (uintptr_t)cxn;
     if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, s, &ev) < 0) {
-      ZeError e(errno);
+      ZeError e{errno};
       delete m_cxns->del(s);
       ZiPlatform::closeSocket(s);
       Error("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e);
@@ -1692,7 +1692,7 @@ bool ZiMultiplex::listenerAdd(Listener *listener, Socket s)
     ev.events = EPOLLIN | EPOLLET;
     ev.data.u64 = ((uintptr_t)listener) | 1;
     if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, s, &ev) < 0) {
-      ZeError e(errno);
+      ZeError e{errno};
       m_listeners->del(s);
       Error("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e);
       return false;
@@ -1724,7 +1724,7 @@ bool ZiMultiplex::connectAdd(Connect *request, Socket s)
     ev.events = EPOLLOUT;
     ev.data.u64 = ((uintptr_t)request) | 2;
     if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, s, &ev) < 0) {
-      ZeError e(errno);
+      ZeError e{errno};
       m_connects->del(s);
       Error("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e);
       return false;
@@ -1883,17 +1883,13 @@ void ZiConnection::close_2()
 
 ZiMultiplex::ZiMultiplex(ZiMxParams mxParams) :
   ZmScheduler(ZuMv(mxParams.scheduler())),
-  m_stopping(0), m_drain(false),
   m_rxThread(mxParams.rxThread()),
-  m_nAccepts(0),
   m_txThread(mxParams.txThread()),
   m_rxBufSize(mxParams.rxBufSize()),
   m_txBufSize(mxParams.txBufSize())
 #ifdef ZiMultiplex_EPoll
-  , m_epollFD(-1),
-  m_epollMaxFDs(mxParams.epollMaxFDs()),
-  m_epollQuantum(mxParams.epollQuantum()),
-  m_wakeFD(-1), m_wakeFD2(-1)
+  , m_epollMaxFDs(mxParams.epollMaxFDs()),
+  m_epollQuantum(mxParams.epollQuantum())
 #endif
 #ifdef ZiMultiplex_DEBUG
   , m_trace(mxParams.trace()),
@@ -1973,13 +1969,13 @@ int ZiMultiplex::start()
     return Zi::IOError;
   }
   if (pipe(&m_wakeFD) < 0) {
-    ZeError e(errno);
+    ZeError e{errno};
     ::close(m_epollFD); m_epollFD = -1;
     Error("pipe", Zi::IOError, e);
     return Zi::IOError;
   }
   if (fcntl(m_wakeFD, F_SETFL, O_NONBLOCK) < 0) {
-    ZeError e(errno);
+    ZeError e{errno};
     ::close(m_epollFD); m_epollFD = -1;
     ::close(m_wakeFD); m_wakeFD = -1;
     ::close(m_wakeFD2); m_wakeFD2 = -1;
@@ -1992,7 +1988,7 @@ int ZiMultiplex::start()
     ev.events = EPOLLIN;
     ev.data.u64 = 3;
     if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, m_wakeFD, &ev) < 0) {
-      ZeError e(errno);
+      ZeError e{errno};
       ::close(m_epollFD); m_epollFD = -1;
       ::close(m_wakeFD); m_wakeFD = -1;
       ::close(m_wakeFD2); m_wakeFD2 = -1;
@@ -2286,7 +2282,7 @@ void ZiMultiplex::writeWake()
 
   char c = 0;
   while (::write(m_wakeFD2, &c, 1) < 0) {
-    ZeError e(errno);
+    ZeError e{errno};
     if (e.errNo() != EINTR && e.errNo() != EAGAIN) {
       Error("write", Zi::IOError, e);
       break;

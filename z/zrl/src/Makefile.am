@@ -10,7 +10,7 @@ AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
 pkginclude_HEADERS = ZrlLib.hpp Zrl.hpp ZCmd.hpp
 lib_LTLIBRARIES = libZrl.la
 bin_PROGRAMS = nc1 zproxy zcmd
-libZrl_la_SOURCES = ZrlLib.cpp Zrl.cpp
+libZrl_la_SOURCES = ZrlLib.cpp Zrl.cpp ZrlTerminal.cpp ZrlLine.cpp
 libZrl_la_LIBADD = \
 	$(top_builddir)/ztls/src/libZtls.la $(top_builddir)/zfb/src/libZfb.la \
 	$(top_builddir)/zv/src/libZv.la $(top_builddir)/zi/src/libZi.la \

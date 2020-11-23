@@ -105,7 +105,7 @@ void ZeLog::work_()
     ZmRef<ZeEvent> event;
     {
       Guard guard(m_lock);
-      event = m_queue.shift();
+      event = m_queue.shiftNode();
     }
     if (!event) return;
     log__(event);

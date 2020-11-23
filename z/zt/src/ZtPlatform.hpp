@@ -64,13 +64,13 @@ public:
   static unsigned grow(unsigned o, unsigned n) {
     if (ZuUnlikely(o > n)) return o;
 
-    const unsigned v = (sizeof(void *)<<1); // malloc overhead
+    constexpr const unsigned v = (sizeof(void *)<<1); // malloc overhead
 
     o += v, n += v;
 
     if (n < 128) return 128 - v;	// minimum 128 bytes
 
-    const unsigned m = (1U<<16) - 1;	// 64K mask
+    constexpr const unsigned m = (1U<<16) - 1;	// 64K mask
 
     if (o < 64) o = 64;
 

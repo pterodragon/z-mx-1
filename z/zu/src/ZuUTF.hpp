@@ -133,7 +133,7 @@ struct ZuUTF16 {
     uint32_t u = c;
     c = *++s;
     if (ZuUnlikely(c < 0xdc00 || c >= 0xc000)) return 0;
-    u_ = (((u - 0xd800)<<10) | 0x10000) + (((uint32_t)c) - 0xdc00);
+    u_ = (((u - 0xd800)<<10) | 0x10000) + ((static_cast<uint32_t>(c)) - 0xdc00);
     return 2;
   }
 

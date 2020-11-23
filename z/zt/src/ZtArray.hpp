@@ -818,7 +818,7 @@ public:
 
 // set size
 
-  Char *ensure(unsigned z) {
+  T *ensure(unsigned z) {
     if (ZuLikely(z <= size())) return m_data;
     return size(z);
   }
@@ -1265,7 +1265,7 @@ private:
     if (length < 0) { if ((length += (n - offset)) < 0) length = 0; }
 
     if (offset > (int)n) {
-      if (removed) removed->null();
+      if (removed) removed->clear();
       if (!owned() || offset > (int)z) {
 	z = grow(z, offset);
 	size(z);
@@ -1321,7 +1321,7 @@ private:
     if (length < 0) { if ((length += (n - offset)) < 0) length = 0; }
 
     if (offset > (int)n) {
-      if (removed) removed->null();
+      if (removed) removed->clear();
       if (!owned() || offset + (int)rlength > (int)z) {
 	z = grow(z, offset + rlength);
 	size(z);
@@ -1380,7 +1380,7 @@ private:
     if (length < 0) { if ((length += (n - offset)) < 0) length = 0; }
 
     if (offset > (int)n) {
-      if (removed) removed->null();
+      if (removed) removed->clear();
       if (!owned() || offset + (int)rlength > (int)z) {
 	z = grow(z, offset + rlength);
 	size(z);
@@ -1448,6 +1448,10 @@ public:
 
 // growth algorithm
 
+  void grow(unsigned n) {
+    unsigned o = size();
+    if (ZuUnlikely(n > o)) size(grow(o, n));
+  }
   ZuInline static unsigned grow(unsigned o, unsigned n) {
     return ZtPlatform::grow(o * sizeof(T), n * sizeof(T)) / sizeof(T);
   }

@@ -1115,39 +1115,39 @@ private:
 #endif
 
   StateLock		m_stateLock;	// guards ZmScheduler state
-    ZmSemaphore		  *m_stopping;
-    bool		  m_drain;
+    ZmSemaphore		  *m_stopping = nullptr;
+    bool		  m_drain = false;
 
-  unsigned		m_rxThread;
+  unsigned		m_rxThread = 0;
     // Rx exclusive
     ZmRef<ListenerHash>	  m_listeners;
-    unsigned		  m_nAccepts;	// total #accepts for all listeners
+    unsigned		  m_nAccepts = 0; // total #accepts for all listeners
 #if ZiMultiplex__ConnectHash
     ZmRef<ConnectHash>	  m_connects;
 #endif
-    ZmRef<CxnHash>	  m_cxns;		// connections
+    ZmRef<CxnHash>	  m_cxns;	// connections
 
-  unsigned		m_txThread;
+  unsigned		m_txThread = 0;
 
-  unsigned		m_rxBufSize;	// setsockopt SO_RCVBUF option
-  unsigned		m_txBufSize;	// setsockopt SO_SNDBUF option
+  unsigned		m_rxBufSize = 0; // setsockopt SO_RCVBUF option
+  unsigned		m_txBufSize = 0; // setsockopt SO_SNDBUF option
 
 #ifdef ZiMultiplex_IOCP
-  HANDLE		m_completionPort;
+  HANDLE		m_completionPort = INVALID_HANDLE_VALUE;
 #endif
 
 #ifdef ZiMultiplex_EPoll
-  int			m_epollFD;
-  unsigned		m_epollMaxFDs;
-  unsigned		m_epollQuantum;
-  int			m_wakeFD, m_wakeFD2;	// wake pipe
+  unsigned		m_epollMaxFDs = 0;
+  unsigned		m_epollQuantum = 0;
+  int			m_epollFD = -1;
+  int			m_wakeFD = -1, m_wakeFD2 = -1;	// wake pipe
 #endif
 
 #ifdef ZiMultiplex_DEBUG
-  bool			m_trace;
-  bool			m_debug;
-  bool			m_frag;
-  bool			m_yield;
+  bool			m_trace = false;
+  bool			m_debug = false;
+  bool			m_frag = false;
+  bool			m_yield = false;
 
   void traceCapture() { m_tracer.capture(1); }
 public:

@@ -246,6 +246,7 @@ private:
 public:
 // reset to null string
 
+  ZuInline void clear() { null(); }
   ZuInline void null() { data()[m_length = 0] = 0; }
 
 // set length

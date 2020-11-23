@@ -662,6 +662,7 @@ void MxMDPublisher::recv()
       break;
     default:
       mx()->wakeFn(rxThread(), ZmFn<>());
+      wake();
       return;
   }
   const Hdr *hdr;

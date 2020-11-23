@@ -200,7 +200,7 @@ public:
     Fn(ZuFwd<P1>(p1), ZuFwd<P2>(p2), ZuFwd<Args>(args)...) { }
 };
 
-template <typename Heap> class ZeEvent_ : public ZmObject, public Heap {
+class ZeEvent_ {
   ZeEvent_(const ZeEvent_ &) = delete;
   ZeEvent_ &operator =(const ZeEvent_ &) = delete;
 
@@ -248,8 +248,13 @@ private:
 struct ZeEvent_HeapID {
   static constexpr const char *id() { return "ZeEvent"; }
 };
-using ZeEvent_Heap = ZmHeap<ZeEvent_HeapID, sizeof(ZeEvent_<ZuNull>)>;
-using ZeEvent = ZeEvent_<ZeEvent_Heap>;
+using ZeEvent_Queue =
+  ZmList<ZeEvent,
+    ZmListNodeIsItem<true,
+      ZmListObject<ZmObject,
+	ZmListLock<ZmNoLock,
+	  ZmListHeapID<ZeEvent_QueueID> > > > >;
+using ZeEvent = ZeEvent_Queue::Node;
 using ZeMessageFn = ZeEvent::MessageFn;
 template <> struct ZuPrint<ZeEvent::Message> : public ZuPrintFn { };
 template <> struct ZuPrint<ZeEvent> : public ZuPrintDelegate {

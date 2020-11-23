@@ -732,7 +732,7 @@ public:
     return size(z);
   }
   Char *size(unsigned z) {
-    if (ZuUnlikely(!z)) { null(); return 0; }
+    if (ZuUnlikely(!z)) { null(); return nullptr; }
     if (owned() && z == size_()) return data_();
     Char *oldData = data_();
     Char *newData;
@@ -1074,7 +1074,7 @@ private:
     if (length < 0) { if ((length += (n - offset)) < 0) length = 0; }
 
     if (offset > (int)n) {
-      if (removed) removed->null();
+      if (removed) removed->clear();
       Char *data;
       if (!owned() || offset + (int)rlength >= (int)z) {
 	z = grow(z, offset + rlength + 1);
@@ -1207,6 +1207,12 @@ public:
     return *this;
   }
 
+// growth algorithm
+
+  void grow(unsigned n) {
+    unsigned o = owned() ? size_() : 0U;
+    if (ZuLikely(n > o)) size(grow(o, n));
+  }
   static unsigned grow(unsigned o, unsigned n) {
     if (n <= (unsigned)BuiltinSize) return BuiltinSize;
     return

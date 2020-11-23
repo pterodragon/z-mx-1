@@ -157,18 +157,10 @@ class ZeAPI ZeLog {
 friend ZmSingletonCtor<ZeLog>;
 friend ZmCleanup<ZeLog>;
 
-  struct EventQueueID {
-    static constexpr const char *id() { return "ZeLog.EventQueue"; }
-  };
-
-  using EventQueue =
-    ZmList<ZmRef<ZeEvent>,
-      ZmListObject<ZuNull,
-	ZmListLock<ZmNoLock,
-	  ZmListHeapID<EventQueueID> > > >;
-
   using Lock = ZmPLock;
   using Guard = ZmGuard<Lock>;
+
+  using EventQueue = ZeEvent_Queue;
 
   ZeLog();
 

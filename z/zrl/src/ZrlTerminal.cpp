@@ -708,6 +708,8 @@ void Terminal::tputs(const char *cap)
 // half/full-width characters drawn - e.g. to back up over a
 // full-width character, use 2x cub1 or cub(2)
 
+// Note: cub/cuf after rightmost character is undefined - need to use hpa/cr
+
 void Terminal::move(unsigned pos)
 {
   if (pos < m_pos) {
@@ -804,97 +806,40 @@ right:
   m_pos = pos;
 }
 
+#if 0
 
-// design terminal output interface:
-//
-// move to horizontal position X
-// insert string (leaving cursor to the right of inserted string, or at right margin)
-// delete characters (leaving cursor in place)
-// clear to end of line (leaving cursor in place)
-// newline (append newline, move to left position)
-// move up/down (retaining horizontal position)
-
-// need following caps
-//
-// os/hc - reject terminal if either set
-//
-// am - output wraparound at far right (not due to insert mid-line)
-// bw - cub1 wraparound at far left
-//
-// cr - carriage return (default to "\r")
-// ind - line feed (default to "\n") (scroll up from bottom) (needed if no am)
-// nel - new line (includes cr) (default to cr + ind)
-//
-// reject if no am and no ind
-//
-// hpa - horizontal position #1 (use tparm) - fallback to cr + overwrite
-//
-// Note: cub/cuf after rightmost character is undefined - need to use hpa/cr
-//
-// cub1 - cursor left (default to "\b")
-// cuf1 - cursor right (default to reprint character under cursor)
-// cuu1 - cursor up (default to "\033[A")
-// cud1 - cursor down (default to "\n")
-//
-// prefer cub/cuf/cuu/cud for N > 1, or repeat if unavailable
-//
-// el - clear to end of line, fallback to ech, then to over-printing spaces through end-of-line if unavailable
-//
 // smir/rmir falling back to ich then to ich1 then to over-print through EOL - insert characters
 //
 // smdc/rmdc with dch/dch1 - delete characters, fallback to over-print if unavailable
 
-  // FIXME - need word left/right and home/end
+void up(unsigned n) {
+  // process as left(n*w screen positions)
+}
 
-  unsigned left(unsigned n) { // in characters
-    // convert n in characters to n in screen positions (may require
-    // traversing multiple lines)
-  }
-  unsigned right(unsigned n) {
-    // as per left
-  }
-  unsigned wLeft(unsigned n) {
-  }
-  unsigned wRight(unsigned n) {
-  }
+void down(unsigned n) {
+  // process as right(n*w screen positions)
+}
 
-  // FIXME - need w W e E b B ge gE ^ $
-  // vi-Mode
-  // Shift-Left - w
-  // Ctrl-Left - W
+void overwrite(ZuString s) {
+  // need to calculate widths, expand ctrl-chars, wraparound lines
+  // need to re-calc overwritten lines and this may result in re-wrapping
+  // need to repaint subsequent lines if re-wrapped
+  m_out << s;
+  if (m_nel) tputs(m_nel);
+  else { tputs(m_cr); tputs(m_ind); }
+  out();
+}
 
-  void up(unsigned n) {
-    // process as left(n*w screen positions)
-  }
+void insert(ZuString s) {
+  // need to calculate widths, expand ctrl-chars, wraparound lines
+  // repaint subsequent lines
+}
 
-  void down(unsigned n) {
-    // process as right(n*w screen positions)
-  }
+void erase(unsigned n) {
+}
 
-  void overwrite(ZuString s) {
-    // need to calculate widths, expand ctrl-chars, wraparound lines
-    // need to re-calc overwritten lines and this may result in re-wrapping
-    // need to repaint subsequent lines if re-wrapped
-    m_out << s;
-    if (m_nel) tputs(m_nel);
-    else { tputs(m_cr); tputs(m_ind); }
-    out();
-  }
-
-  void insert(ZuString s) {
-    // need to calculate widths, expand ctrl-chars, wraparound lines
-    // repaint subsequent lines
-  }
-
-  void erase(unsigned n) {
-  }
-
-  void clear() {
-  }
-
-  void up_(unsigned n) {
-  }
-  void down_(unsigned n) {
-  }
+void clear() {
+}
+#endif
 
 } // namespace Zrl

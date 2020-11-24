@@ -26,53 +26,76 @@ namespace Zrl {
 void Line::init(unsigned x)
 {
   m_data.clear();
-  m_byte2pos.clear();
-  m_pos2byte.clear();
+  m_bytes.clear();
+  m_positions.clear();
 }
 
 // offset -> position
-Line::Index Line::byte2pos(unsigned off) const
+Line::Index Line::byte(unsigned off) const
 {
-  unsigned n = m_byte2pos.length();
+  unsigned n = m_bytes.length();
   if (!n--) return Index{};
   if (off > n) off = n;
-  return m_byte2pos[off];
+  return m_bytes[off];
 }
 
 // position -> offset
-Line::Index Line::pos2byte(unsigned pos) const
+Line::Index Line::position(unsigned pos) const
 {
-  unsigned n = m_pos2byte.length();
+  unsigned n = m_positions.length();
   if (!n--) return Index{};
   if (pos > n) pos = n;
-  return m_pos2byte[pos];
+  return m_positions[pos];
 }
 
 // left-align position to character
 unsigned Line::align(unsigned pos) const
 {
-  unsigned n = m_pos2byte.length();
+  unsigned n = m_positions.length();
   if (ZuUnlikely(!pos || !n--)) return 0;
   if (ZuUnlikely(pos > n)) pos = n;
-  auto index = m_pos2byte[pos];
+  auto index = m_positions[pos];
   unsigned n;
   if (ZuUnlikely(index.padding())) {
     n = index.off() + 1;
     if (ZuUnlikely(pos <= n)) return 0;
     pos -= n;
-    index = m_pos2byte[pos];
+    index = m_positions[pos];
   }
   n = index.off();
   if (ZuUnlikely(pos <= n)) return 0;
   return pos - n;
 }
 
-// forward one whitespace-delimited word, distinguishing alphanumeric + '_'
-unsigned Line::w(unsigned off) {
+// forward character
+unsigned Line::fwdChar(unsigned off) const
+{
   unsigned n = m_data.length();
   if (ZuUnlikely(!n--)) return 0;
   if (ZuUnlikely(off >= n)) return n;
-  off -= m_byte2pos[off].off();
+  auto index = m_bytes[off];
+  return off + index.len() - index.off();
+}
+
+// backup character
+unsigned Line::revChar(unsigned off) const
+{
+  unsigned n = m_data.length();
+  if (ZuUnlikely(!off || !n--)) return 0;
+  if (ZuUnlikely(off > n)) off = n;
+  off -= m_bytes[off].off();
+  if (ZuUnlikely(!off)) return 0;
+  off -= m_bytes[--off].off();
+  return off;
+}
+
+// forward whitespace-delimited word, distinguishing alphanumeric + '_'
+unsigned Line::fwdWord(unsigned off) const
+{
+  unsigned n = m_data.length();
+  if (ZuUnlikely(!n--)) return 0;
+  if (ZuUnlikely(off >= n)) return n;
+  off -= m_bytes[off].off();
   char c = m_data[off];
   if (isspace(c)) {
     if (!fwd([](char c) { return !isspace(c); })) return n;
@@ -96,15 +119,16 @@ unsigned Line::w(unsigned off) {
       if (!fwd([](char c) { return !isalnum(c); })) return n;
     }
   }
-  return off - m_byte2pos[--off].off();
+  return off - m_bytes[--off].off();
 }
 
-// backup one whitespace-delimited word, distinguishing alphanumeric + '_'
-unsigned Line::b(unsigned off) {
+// backup whitespace-delimited word, distinguishing alphanumeric + '_'
+unsigned Line::revWord(unsigned off) const
+{
   unsigned n = m_data.length();
   if (ZuUnlikely(!off || !n--)) return 0;
   if (ZuUnlikely(off > n)) off = n;
-  off -= m_byte2pos[off].off();
+  off -= m_bytes[off].off();
   if (ZuUnlikely(!off)) return 0;
   char c = m_data[off];
   if (isspace(c)) {
@@ -129,16 +153,17 @@ unsigned Line::b(unsigned off) {
       if (!rev([](char c) { return !isalnum(c); })) return 0;
     }
   }
-  return off + m_byte2pos[off].len();
+  return off + m_bytes[off].len();
 }
 
-// forward to end of one whitespace-delimited word,
+// forward to end of whitespace-delimited word,
 // distinguishing alphanumeric + '_'
-unsigned Line::e(unsigned off) {
+unsigned Line::fwdWordEnd(unsigned off) const
+{
   unsigned n = m_data.length();
   if (ZuUnlikely(!n--)) return 0;
   if (ZuUnlikely(off >= n)) return n;
-  off -= m_byte2pos[off].off();
+  off -= m_bytes[off].off();
   char c = m_data[off];
   if (isspace(c)) {
     if (!fwd([](char c) { return !isspace(c); })) return n;
@@ -148,16 +173,17 @@ unsigned Line::e(unsigned off) {
   } else {
     if (!fwd([](char c) { return isspace(c) || isalnum(c); })) return n;
   }
-  return off - m_byte2pos[--off].off();
+  return off - m_bytes[--off].off();
 }
 
-// backup to end of one whitespace-delimited word,
+// backup to end of whitespace-delimited word,
 // distinguishing alphanumeric + '_'
-unsigned Line::ge(unsigned off) {
+unsigned Line::revWordEnd(unsigned off) const
+{
   unsigned n = m_data.length();
   if (ZuUnlikely(!off || !n--)) return 0;
   if (ZuUnlikely(off > n)) off = n;
-  off -= m_byte2pos[off].off();
+  off -= m_bytes[off].off();
   if (ZuUnlikely(!off)) return 0;
   char c = m_data[off];
   if (isalnum(c)) {
@@ -171,12 +197,13 @@ unsigned Line::ge(unsigned off) {
   return off;
 }
 
-// forward one whitespace-delimited word
-unsigned Line::W(unsigned off) {
+// forward whitespace-delimited word
+unsigned Line::fwdWSWord(unsigned off) const
+{
   unsigned n = m_data.length();
   if (ZuUnlikely(!n--)) return 0;
   if (ZuUnlikely(off >= n)) return n;
-  off -= m_byte2pos[off].off();
+  off -= m_bytes[off].off();
   char c = m_data[off];
   if (isspace(c)) {
     if (!fwd([](char c) { return !isspace(c); })) return n;
@@ -185,15 +212,16 @@ unsigned Line::W(unsigned off) {
     if (!fwd([](char c) { return isspace(c); })) return n;
     if (!fwd([](char c) { return !isspace(c); })) return n;
   }
-  return off - m_byte2pos[--off].off();
+  return off - m_bytes[--off].off();
 }
 
-// backup one whitespace-delimited word
-unsigned Line::B(unsigned off) {
+// backup whitespace-delimited word
+unsigned Line::revWSWord(unsigned off) const
+{
   unsigned n = m_data.length();
   if (ZuUnlikely(!off || !n--)) return 0;
   if (ZuUnlikely(off > n)) off = n;
-  off -= m_byte2pos[off].off();
+  off -= m_bytes[off].off();
   if (ZuUnlikely(!off)) return 0;
   char c = m_data[off];
   if (isspace(c)) {
@@ -203,29 +231,31 @@ unsigned Line::B(unsigned off) {
     if (!rev([](char c) { return isspace(c); })) return 0;
     if (!rev([](char c) { return !isspace(c); })) return 0;
   }
-  return off + m_byte2pos[off].len();
+  return off + m_bytes[off].len();
 }
 
-// forward to end of one whitespace-delimited word
-unsigned Line::E(unsigned off) {
+// forward to end of whitespace-delimited word
+unsigned Line::fwdWSWordEnd(unsigned off) const
+{
   unsigned n = m_data.length();
   if (ZuUnlikely(!n--)) return 0;
   if (ZuUnlikely(off >= n)) return n;
-  off -= m_byte2pos[off].off();
+  off -= m_bytes[off].off();
   char c = m_data[off];
   if (isspace(c)) {
     if (!fwd([](char c) { return !isspace(c); })) return n;
   }
   if (!fwd([](char c) { return isspace(c); })) return n;
-  return off - m_byte2pos[--off].off();
+  return off - m_bytes[--off].off();
 }
 
-// backup to end of one whitespace-delimited word
-unsigned Line::gE(unsigned off) {
+// backup to end of whitespace-delimited word
+unsigned Line::revWSWordEnd(unsigned off) const
+{
   unsigned n = m_data.length();
   if (ZuUnlikely(!off || !n--)) return 0;
   if (ZuUnlikely(off > n)) off = n;
-  off -= m_byte2pos[off].off();
+  off -= m_bytes[off].off();
   if (ZuUnlikely(!off)) return 0;
   char c = m_data[off];
   if (!rev([](char c) { return isspace(c); })) return 0;
@@ -238,8 +268,8 @@ unsigned Line::gE(unsigned off) {
 // reflow, given offset and display width
 void Line::reflow(unsigned off, unsigned dwidth)
 {
-  m_byte2pos.grow(m_data.length());
-  m_pos2byte.grow(m_data.length());
+  m_bytes.grow(m_data.length());
+  m_positions.grow(m_data.length());
 
   unsigned len = m_data.length();
   unsigned pwidth, pos;
@@ -248,9 +278,9 @@ void Line::reflow(unsigned off, unsigned dwidth)
     pwidth = 0;
     pos = 0;
   } else {
-    if (auto byte = this->byte2pos(off - 1)) {
+    if (auto byte = this->byte(off - 1)) {
       pos = byte.index();
-      pwidth = pos2byte(pos).len();
+      pwidth = position(pos).len();
       pos += pwidth;
     }
   }
@@ -259,18 +289,18 @@ void Line::reflow(unsigned off, unsigned dwidth)
     auto cprops = this->cprops(off);
     unsigned clen = cprops.len();
     unsigned cwidth = cprops.width();
-    m_byte2pos.grow(off + clen);
+    m_bytes.grow(off + clen);
     {
       unsigned x = pos % dwidth;
       unsigned padding = (x + width > dwidth) ? (dwidth - x) : 0U;
-      m_pos2byte.grow(pos + padding + cwidth);
+      m_positions.grow(pos + padding + cwidth);
       for (unsigned i = 0; i < padding; i++)
-	m_pos2byte[pos++] = Index{off, padding, i, true};
+	m_positions[pos++] = Index{off, padding, i, true};
     }
     for (unsigned i = 0; i < clen; i++)
-      m_byte2pos[off + i] = Index{pos, clen, i};
+      m_bytes[off + i] = Index{pos, clen, i};
     for (unsigned i = 0; i < cwidth; i++)
-      m_pos2byte[pos + i] = Index{off, cwidth, i};
+      m_positions[pos + i] = Index{off, cwidth, i};
     off += clen;
     pos += cwidth;
     pwidth = cwidth;

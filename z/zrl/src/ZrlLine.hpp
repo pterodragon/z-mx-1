@@ -87,8 +87,8 @@ private:
 public:
   void init(unsigned x) {
     m_data.clear();
-    m_byte2pos.clear();
-    m_pos2byte.clear();
+    m_bytes.clear();
+    m_positions.clear();
   }
 
   const ZtArray<uint8_t> &data() const { return m_data; }
@@ -100,13 +100,25 @@ public:
   }
 
   // byte offset -> display position
-  Index byte2pos(unsigned off) const;
+  Index byte(unsigned off) const;
 
   // display position -> byte offset
-  Index pos2byte(unsigned pos) const;
+  Index position(unsigned pos) const;
 
   // left-align display position of overlapping character
   unsigned align(unsigned pos) const;
+
+  // character motions
+  unsigned fwdChar(unsigned off) const; // forward character
+  unsigned revChar(unsigned off) const; // backup character
+  unsigned fwdWord(unsigned off) const; // forward word
+  unsigned revWord(unsigned off) const; // backup word
+  unsigned fwdWordEnd(unsigned off) const; // forward to end of word
+  unsigned revWordEnd(unsigned off) const; // backup to end of previous word
+  unsigned fwdWSWord(unsigned off) const; // forward white-space delimited word
+  unsigned revWSWord(unsigned off) const; // backup ''
+  unsigned fwdWSWordEnd(unsigned off) const; // forward to end of ''
+  unsigned revWSWordEnd(unsigned off) const; // backup to end of ''
 
   // reflow, given offset and display width
   void reflow(unsigned off, unsigned dwidth);
@@ -131,7 +143,7 @@ private:
     uint32_t v;
     do {
       if (l(m_data[off])) return true;
-      off += m_byte2pos[off].len();
+      off += m_bytes[off].len();
     } while (off < len);
     return false;
   }
@@ -140,15 +152,15 @@ private:
   {
     do {
       if (ZuUnlikely(!off)) return false;
-      off -= m_byte2pos[--off].off();
+      off -= m_bytes[--off].off();
     } while (!l(m_data[off]));
     return true;
   }
 
 
   ZtArray<uint8_t>	m_data;		// UTF-8 data
-  ZtArray<Index>	m_byte2pos;	// byte offset -> display position
-  ZtArray<Index>	m_pos2byte;	// display position -> byte offset
+  ZtArray<Index>	m_bytes;	// byte offset -> display position
+  ZtArray<Index>	m_positions;	// display position -> byte offset
 };
 
 } // Zrl

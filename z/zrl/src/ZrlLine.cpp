@@ -99,24 +99,24 @@ unsigned Line::fwdWord(unsigned off) const
   char c = m_data[off];
   if (isspace(c)) {
     if (!fwd([](char c) { return !isspace(c); })) return n;
-    if (isalnum(m_data[off])) {
-      if (!fwd([](char c) { return !isalnum(c); })) return n;
+    if (isword(m_data[off])) {
+      if (!fwd([](char c) { return !isword(c); })) return n;
     } else {
-      if (!fwd([](char c) { return isspace(c) || isalnum(c); })) return n;
+      if (!fwd([](char c) { return isspace(c) || isword(c); })) return n;
     }
-  } else if (isalnum(c)) {
-    if (!fwd([](char c) { return !isalnum(c); })) return n;
+  } else if (isword(c)) {
+    if (!fwd([](char c) { return !isword(c); })) return n;
     if (isspace(m_data[off])) {
       if (!fwd([](char c) { return !isspace(c); })) return n;
     } else {
-      if (!fwd([](char c) { return isspace(c) || isalnum(c); })) return n;
+      if (!fwd([](char c) { return isspace(c) || isword(c); })) return n;
     }
   } else {
-    if (!fwd([](char c) { return isspace(c) || isalnum(c); })) return n;
+    if (!fwd([](char c) { return isspace(c) || isword(c); })) return n;
     if (isspace(m_data[off])) {
       if (!fwd([](char c) { return !isspace(c); })) return n;
     } else {
-      if (!fwd([](char c) { return !isalnum(c); })) return n;
+      if (!fwd([](char c) { return !isword(c); })) return n;
     }
   }
   return off - m_bytes[--off].off();
@@ -133,24 +133,24 @@ unsigned Line::revWord(unsigned off) const
   char c = m_data[off];
   if (isspace(c)) {
     if (!rev([](char c) { return !isspace(c); })) return 0;
-    if (isalnum(m_data[off])) {
-      if (!rev([](char c) { return !isalnum(c); })) return 0;
+    if (isword(m_data[off])) {
+      if (!rev([](char c) { return !isword(c); })) return 0;
     } else {
-      if (!rev([](char c) { return isspace(c) || isalnum(c); })) return 0;
+      if (!rev([](char c) { return isspace(c) || isword(c); })) return 0;
     }
-  } else if (isalnum(c)) {
-    if (!rev([](char c) { return !isalnum(c); })) return 0;
+  } else if (isword(c)) {
+    if (!rev([](char c) { return !isword(c); })) return 0;
     if (isspace(m_data[off])) {
       if (!rev([](char c) { return !isspace(c); })) return 0;
     } else {
-      if (!rev([](char c) { return isspace(c) || isalnum(c); })) return 0;
+      if (!rev([](char c) { return isspace(c) || isword(c); })) return 0;
     }
   } else {
-    if (!rev([](char c) { return isspace(c) || isalnum(c); })) return 0;
+    if (!rev([](char c) { return isspace(c) || isword(c); })) return 0;
     if (isspace(m_data[off])) {
       if (!rev([](char c) { return !isspace(c); })) return 0;
     } else {
-      if (!rev([](char c) { return !isalnum(c); })) return 0;
+      if (!rev([](char c) { return !isword(c); })) return 0;
     }
   }
   return off + m_bytes[off].len();
@@ -168,10 +168,10 @@ unsigned Line::fwdWordEnd(unsigned off) const
   if (isspace(c)) {
     if (!fwd([](char c) { return !isspace(c); })) return n;
   }
-  if (isalnum(c)) {
-    if (!fwd([](char c) { return !isalnum(c); })) return n;
+  if (isword(c)) {
+    if (!fwd([](char c) { return !isword(c); })) return n;
   } else {
-    if (!fwd([](char c) { return isspace(c) || isalnum(c); })) return n;
+    if (!fwd([](char c) { return isspace(c) || isword(c); })) return n;
   }
   return off - m_bytes[--off].off();
 }
@@ -186,10 +186,10 @@ unsigned Line::revWordEnd(unsigned off) const
   off -= m_bytes[off].off();
   if (ZuUnlikely(!off)) return 0;
   char c = m_data[off];
-  if (isalnum(c)) {
-    if (!rev([](char c) { return !isalnum(c); })) return 0;
+  if (isword(c)) {
+    if (!rev([](char c) { return !isword(c); })) return 0;
   } else {
-    if (!rev([](char c) { return isspace(c) || isalnum(c); })) return 0;
+    if (!rev([](char c) { return isspace(c) || isword(c); })) return 0;
   }
   if (isspace(c)) {
     if (!rev([](char c) { return !isspace(c); })) return 0;
@@ -286,9 +286,11 @@ void Line::reflow(unsigned off, unsigned dwidth)
   }
 
   while (off < len) {
-    auto cprops = this->cprops(off);
-    unsigned clen = cprops.len();
-    unsigned cwidth = cprops.width();
+    auto span = ZuUTF<uint32_t, uint8_t>::cspan(
+	ZuArray<uint8_t>{&m_data[off], len - off});
+    if (ZuUnlikely(!span)) break;
+    unsigned clen = span.len();
+    unsigned cwidth = span.width();
     m_bytes.grow(off + clen);
     {
       unsigned x = pos % dwidth;
@@ -305,22 +307,6 @@ void Line::reflow(unsigned off, unsigned dwidth)
     pos += cwidth;
     pwidth = cwidth;
   }
-}
-
-// character properties, given offset
-Line::CProps Line::cprops(unsigned off)
-{
-  uint8_t c = m_data[off];
-  uint32_t len, width;
-  if (c < 0x20 || c == 0x7f) {
-    len = 1;
-    width = 2;
-  } else {
-    uint32_t u;
-    len = ZuUTF::in(&m_data[off], m_data.length() - off, u);
-    width = ZuUTF::width(u);
-  }
-  return CProps{len, width};
 }
 
 } // Zrl

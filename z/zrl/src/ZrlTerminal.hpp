@@ -57,13 +57,12 @@ public:
   Terminal(const ZmTime &interval) : m_interval{interval.millisecs()} { }
 
   void open(ZmScheduler *sched, unsigned thread);
+  void close();
 
   bool isOpen() const; // blocking
 
-  void close();
-
-  void start(KeyFn keyFn); // async
-  void stop(); // async
+  void start(KeyFn keyFn);
+  void stop();
 
   template <typename ...Args>
   ZuInline void invoke(Args &&... args) {
@@ -72,7 +71,10 @@ public:
 
   // output routines
 
-  void move(unsigned pos);
+  void mv(unsigned pos);// move to position
+  void out(ZuString s);	// overwrite string
+  void ins(ZuString s);	// insert string
+  void del(unsigned n); // delete n characters
 
 private:
   void open_();
@@ -92,9 +94,13 @@ private:
 
   void read();
 
+  void addVKey(const char *cap, const char *deflt, int vkey);
+
   // low-level output
 
   int write();
+
+  void clr();		// clear to end of line
 
   void tputs(const char *cap);
   
@@ -137,65 +143,17 @@ private:
 
   int			m_w = 0, m_h = 0;	// width, height of screen
   int			m_pos = 0;		// cursor position
+  int			m_vpos = 0;		// vertical motion position
   Zrl::Line		m_line;			// current line
   ZtArray<char>		m_out;			// output buffer
-
-  // input capabilities
-
-  const char		*m_kent = nullptr;	// enter
-
-  const char		*m_kcuu1 = nullptr;	// up
-  const char		*m_kUP = nullptr;	// shift-up
-  const char		*m_kUP3 = nullptr;	// alt-up
-  const char		*m_kUP5 = nullptr;	// ctrl-up
-  const char		*m_kUP6 = nullptr;	// ctrl-shift-up
-
-  const char		*m_kcud1 = nullptr;	// down
-  const char		*m_kDN = nullptr;	// shift-down
-  const char		*m_kDN3 = nullptr;	// alt-down
-  const char		*m_kDN5 = nullptr;	// ctrl-down
-  const char		*m_kDN6 = nullptr;	// ctrl-shift-down
-
-  const char		*m_kcub1 = nullptr;	// left
-  const char		*m_kLFT = nullptr;	// shift-left
-  const char		*m_kLFT3 = nullptr;	// alt-left
-  const char		*m_kLFT5 = nullptr;	// ctrl-left
-  const char		*m_kLFT6 = nullptr;	// ctrl-shift-left
-
-  const char		*m_kcuf1 = nullptr;	// right
-  const char		*m_kRIT = nullptr;	// shift-right
-  const char		*m_kRIT3 = nullptr;	// alt-right
-  const char		*m_kRIT5 = nullptr;	// ctrl-right
-  const char		*m_kRIT6 = nullptr;	// ctrl-shift-right
-
-  const char		*m_khome = nullptr;	// home
-  const char		*m_kHOM = nullptr;	// shift-home
-  const char		*m_kHOM3 = nullptr;	// alt-home
-  const char		*m_kHOM5 = nullptr;	// ctrl-home
-  const char		*m_kHOM6 = nullptr;	// ctrl-shift-home
-
-  const char		*m_kend = nullptr;	// end
-  const char		*m_kEND = nullptr;	// shift-end
-  const char		*m_kEND3 = nullptr;	// alt-end
-  const char		*m_kEND5 = nullptr;	// ctrl-end
-  const char		*m_kEND6 = nullptr;	// ctrl-shift-end
-
-  const char		*m_kich1 = nullptr;	// insert
-  const char		*m_kIC = nullptr;	// shift-insert
-  const char		*m_kIC3 = nullptr;	// alt-insert
-  const char		*m_kIC5 = nullptr;	// ctrl-insert
-  const char		*m_kIC6 = nullptr;	// ctrl-shift-insert
-
-  const char		*m_kdch1 = nullptr;	// delete
-  const char		*m_kDC = nullptr;	// shift-delete
-  const char		*m_kDC3 = nullptr;	// alt-delete
-  const char		*m_kDC5 = nullptr;	// ctrl-delete
-  const char		*m_kDC6 = nullptr;	// ctrl-shift-delete
 
   // output capabilities
 
   bool			m_am = false;
+  bool			m_sam = false;
   bool			m_bw = false;
+  bool			m_xenl = false;
+  bool			m_mir = false;
 
   const char		*m_cr = nullptr;	// carriage return
   const char		*m_ind = nullptr;	// "index" - line feed

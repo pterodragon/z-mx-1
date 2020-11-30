@@ -63,28 +63,6 @@ public:
     uint32_t	m_value = 4U; // sentinel null value
   };
 
-private:
-  // encodes a byte length and a display width into 3 bits
-  class CProps {
-  public:
-    CProps() = default;
-    CProps(const CProps &) = default;
-    CProps &operator =(const CProps &) = default;
-    CProps(CProps &&) = default;
-    CProps &operator =(CProps &&) = default;
-    ~CProps() = default;
-
-    CProps(unsigned len, unsigned width) :
-	m_value{((len - 1)<<1U) | (width - 1)} { }
-
-    unsigned len() const { return (m_value>>1U) + 1; }
-    unsigned width() const { return (m_value & 0x1U) + 1; }
-
-  private:
-    uint8_t	m_value = 0;
-  };
-
-public:
   void init(unsigned x) {
     m_data.clear();
     m_bytes.clear();
@@ -93,6 +71,9 @@ public:
 
   const ZtArray<uint8_t> &data() const { return m_data; }
   ZtArray<uint8_t> &data() { return m_data; }
+
+  unsigned length() const { return m_bytes.length(); }
+  unsigned width() const { return m_positions.length(); }
 
   // substring
   ZuString substr(unsigned off, unsigned len) const {
@@ -124,14 +105,11 @@ public:
   void reflow(unsigned off, unsigned dwidth);
 
 private:
-  // character properties, given offset
-  CProps cprops(unsigned off);
-
-  bool isalnum(char c) {
+  bool isword(char c) {
     return
-      c >= '0' && c <= '9' ||
-      c >= 'a' && c <= 'z' ||
-      c >= 'A' && c <= 'Z' ||
+      (c >= '0' && c <= '9') ||
+      (c >= 'a' && c <= 'z') ||
+      (c >= 'A' && c <= 'Z') ||
       c == '_';
   }
   bool isspace(char c) {
@@ -157,10 +135,10 @@ private:
     return true;
   }
 
-
+private:
   ZtArray<uint8_t>	m_data;		// UTF-8 data
-  ZtArray<Index>	m_bytes;	// byte offset -> display position
-  ZtArray<Index>	m_positions;	// display position -> byte offset
+  ZtArray<Index>	m_bytes;	// index offset -> display position
+  ZtArray<Index>	m_positions;	// index display position -> offset
 };
 
 } // Zrl

@@ -221,8 +221,11 @@ public:
   ZuInline bool operator !() const { return !length(); }
 
   ZuInline void offset(unsigned n) {
-    if (!n) return;
-    if (n <= length()) m_data += n, m_length -= n;
+    if (ZuUnlikely(!n)) return;
+    if (ZuLikely(n < length()))
+      m_data += n, m_length -= n;
+    else
+      m_data = nullptr, m_length = 0;
   }
 
 protected:

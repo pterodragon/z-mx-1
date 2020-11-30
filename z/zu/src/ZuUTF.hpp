@@ -182,20 +182,94 @@ template <> struct ZuUTF_<1> { using T = ZuUTF8; };
 template <> struct ZuUTF_<2> { using T = ZuUTF16; };
 template <> struct ZuUTF_<4> { using T = ZuUTF32; };
 
+// encodes an input length, an output length and a display width into 64bits
+class ZuUTFSpan {
+  constexpr static unsigned shift() { return 21; }
+  constexpr static unsigned mask() { return ((1<<21) - 1); }
+
+public:
+  ZuUTFSpan() = default;
+  ZuUTFSpan(const ZuUTFSpan &) = default;
+  ZuUTFSpan &operator =(const ZuUTFSpan &) = default;
+  ZuUTFSpan(ZuUTFSpan &&) = default;
+  ZuUTFSpan &operator =(ZuUTFSpan &&) = default;
+  ~ZuUTFSpan() = default;
+
+  ZuUTFSpan(unsigned inLen, unsigned outLen, unsigned width) :
+      m_value{inLen | (outLen<<shift()) | (width<<(shift()<<1))} { }
+
+private:
+  public:
+  unsigned inLen() const { return m_value & mask(); }
+  unsigned outLen() const { return (m_value>>shift()) & mask(); }
+  unsigned width() const { return m_value>>(shift()<<1); }
+
+  operator !() const { return !m_value; }
+  ZuOpBool
+
+private:
+  uint64_t	m_value = 0;
+};
+
 template <typename OutChar, typename InChar> struct ZuUTF {
   using OutUTF = typename ZuUTF_<sizeof(OutChar)>::T;
   using OutElem = typename OutUTF::Elem;
   using InUTF = typename ZuUTF_<sizeof(InChar)>::T;
   using InElem = typename InUTF::Elem;
 
+  using Span = ZuUTFSpan;
+
+  Span span(ZuArray<const InChar> s_) {
+    auto s = reinterpret_cast<const InElem *>(s_.data());
+    unsigned n = s_.length();
+    uint32_t u;
+    unsigned l = 0;
+    unsigned w = 0;
+    for (unsigned i = n; i; ) {
+      unsigned j = InUTF::in(s, i, u);
+      if (ZuUnlikely(!j || j > i)) return Span{n - i, l, w};
+      s += j, i -= j;
+      l += OutUTF::out(u);
+      w += ZuUTF32::width(u);
+    }
+    return Span{n, l, w};
+  }
+
+  Span nspan(ZuArray<const InChar> s_, unsigned m) { // max. output characters
+    auto s = reinterpret_cast<const InElem *>(s_.data());
+    unsigned n = s_.length();
+    uint32_t u;
+    unsigned l = 0;
+    unsigned w = 0;
+    for (unsigned i = n; i && m; ) {
+      unsigned j = InUTF::in(s, i, u);
+      if (ZuUnlikely(!j || j > i)) return Span{n - i, l, w};
+      s += j, i -= j;
+      l += OutUTF::out(u);
+      w += ZuUTF32::width(u);
+      --m;
+    }
+    return Span{n, l, w};
+  }
+
+  Span cspan(ZuArray<const InChar> s_) { // single output character
+    auto s = reinterpret_cast<const InElem *>(s_.data());
+    unsigned n = s_.length();
+    uint32_t u;
+    if (ZuUnlikely(!n)) return Span{};
+    unsigned j = InUTF::in(s, n, u);
+    if (ZuUnlikely(!j || j > n)) return Span{};
+    return Span{j, OutUTF::out(u), ZuUTF32::width(u)};
+  }
+
   static unsigned len(ZuArray<const InChar> s_) {
-    const InElem *s = (const InElem *)s_.data();
+    auto s = reinterpret_cast<const InElem *>(s_.data());
     unsigned n = s_.length();
     uint32_t u;
     unsigned l = 0;
     for (unsigned i = n; i; ) {
       unsigned j = InUTF::in(s, i, u);
-      if (ZuUnlikely(!j)) break;
+      if (ZuUnlikely(!j || j > i)) break;
       s += j, i -= j;
       l += OutUTF::out(u);
     }
@@ -205,12 +279,12 @@ template <typename OutChar, typename InChar> struct ZuUTF {
   static unsigned cvt(ZuArray<OutChar> o_, ZuArray<const InChar> s_) {
     OutElem *o = (OutElem *)o_.data();
     unsigned l = o_.length();
-    const InElem *s = (const InElem *)s_.data();
+    auto s = reinterpret_cast<const InElem *>(s_.data());
     unsigned n = s_.length();
     uint32_t u;
     for (unsigned i = n; i; ) {
       unsigned j = InUTF::in(s, i, u);
-      if (ZuUnlikely(!j)) break;
+      if (ZuUnlikely(!j || j > i)) break;
       s += j, i -= j;
       j = OutUTF::out(o, l, u);
       if (!j) break;

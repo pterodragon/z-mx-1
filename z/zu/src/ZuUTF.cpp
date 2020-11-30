@@ -50,7 +50,10 @@
 
 unsigned ZuUTF32::width(uint32_t u)
 {
-  if (ZuLikely(u <  0x1100)) return 1;
+  if (ZuLikely(u <  0x1100)) {
+    if (ZuUnlikely(u < 0x20 || u == 0x7f)) return 2; // control characters
+    return 1;
+  }
   if (ZuLikely(u <= 0x115f)) return 2;
   if (ZuLikely(u <  0x231a)) return 1;
   if (ZuLikely(u <= 0x231b)) return 2;

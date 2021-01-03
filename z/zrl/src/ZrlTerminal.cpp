@@ -143,10 +143,10 @@ void Terminal::stop() // async
 // Win32
 // - AllocConsole(); // idempotent
 // - CreateFile("CONIN$"); PeekConsoleInput() // check for failure
+// - SetConsoleCP(65001)
 //   GetConsoleMode() // save pre-existing mode for use in close_()
-//   SetConsoleMode(..., CONSOLE_MODE)
-//   SetConsoleMode(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
-// - SetConsoleCP()
+//   SetConsoleMode(..., (mode & ~
+//     (ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT))
 // - SetConsoleCtrlHandler()
 // - CreateFile("CONOUT$")
 // - SetConsoleOututCP()
@@ -433,13 +433,17 @@ void Terminal::start_()
   termios ntermios;
   memcpy(&ntermios, &m_termios, sizeof(termios));
 
-  ntermios.c_iflag &= ~(INPCK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
-  ntermios.c_lflag &= ~(ICANON | ECHO | IEXTEN | ISIG);
-  ntermios.c_oflag &= ~(OPOST | ONLCR | OCRNL | ONOCR | ONLRET);
+  // Note: do not interfere with old dial-up modem settings here
   // ntermios.c_cflag &= ~CSIZE;
   // ntermios.c_cflag |= CS8;
+  // ~(BRKINT | INPCK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+  ntermios.c_iflag &= ~(ISTRIP | INLCR | IGNCR | ICRNL);
+  ntermios.c_lflag &= ~(ICANON | ECHO | IEXTEN | ISIG);
+  ntermios.c_oflag &= ~(OPOST | ONLCR | OCRNL | ONOCR | ONLRET);
+  ntermios.c_cc[VMIN] = 1;
+  ntermios.c_cc[VTIME] = 0;
 
-  tcsetattr(m_fd, TCSANOW, &ntermios);
+  tcsetattr(m_fd, TCSADRAIN, &ntermios);
 
   if (fcntl(m_fd, F_SETFL, O_NONBLOCK) < 0) {
     ZeError e{errno};
@@ -481,7 +485,7 @@ void Terminal::stop_()
   epoll_ctl(m_epollFD, EPOLL_CTL_DEL, m_fd, 0);
   fcntl(m_fd, F_SETFL, 0);
 
-  tcsetattr(m_fd, TCSANOW, &m_termios);
+  tcsetattr(m_fd, TCSADRAIN, &m_termios);
 }
 
 // I/O multiplexing
@@ -707,7 +711,7 @@ void Terminal::crnl()
 }
 
 // Note: MS Console SetConsoleMode(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
-// is am + xenl
+// is am + xenl, but this is too recent to be relied on
 
 // out row from cursor, leaving cursor at start of next row
 void Terminal::outScroll(unsigned endPos)

@@ -473,8 +473,6 @@ void Terminal::stop_()
   clear();
 
   m_nextInterval = -1;
-  m_utf.clear();
-  m_utfn = 0;
   m_nextVKMatch = m_vkeyMatch.ptr();
   m_pending.clear();
 
@@ -536,6 +534,8 @@ void Terminal::read()
 {
   struct epoll_event ev;
   int32_t key;
+  ZuArrayN<uint8_t, 4> utf;
+  int utfn = 0;
   for (;;) {
     int r = epoll_wait(m_epollFD, &ev, 1, m_nextInterval);
     if (r < 0) {
@@ -548,16 +548,16 @@ void Terminal::read()
     }
     if (!r) { // timeout
       for (key : m_pending) if (m_keyFn(key)) goto stop;
-      if (m_utfn && m_utf) {
+      if (utfn && utf) {
 	uint32_t u = 0;
-	if (ZuUTF8::in(m_utf, m_utf.length(), u)) {
+	if (ZuUTF8::in(utf, utf.length(), u)) {
 	  key = u;
 	  if (m_keyFn(key)) goto stop;
 	}
       }
       m_nextInterval = -1;
-      m_utf.clear();
-      m_utfn = 0;
+      utf.clear();
+      utfn = 0;
       m_nextVKMatch = m_vkeyMatch.ptr();
       m_pending.clear();
       continue;
@@ -588,7 +588,7 @@ void Terminal::read()
       }
     }
     key = c;
-    if (!m_utfn) {
+    if (!utfn) {
       if (auto action = m_nextVKMatch->match(key)) {
 	if (action->next) {
 	  m_nextInterval = m_interval;
@@ -601,20 +601,20 @@ void Terminal::read()
 	  continue;
 	}
 	key = -(action->vkey);
-	m_utfn = 1;
+	utfn = 1;
       } else {
-	if (!utf8_in() || !(m_utfn = ZuUTF8::in(&c, 4))) m_utfn = 1;
+	if (!utf8_in() || !(utfn = ZuUTF8::in(&c, 4))) utfn = 1;
       }
     }
-    if (--m_utfn > 0) {
-      m_utf << c;
+    if (--utfn > 0) {
+      utf << c;
       continue;
     }
-    if (m_utf) {
-      m_utf << c;
+    if (utf) {
+      utf << c;
       uint32_t u = 0;
-      ZuUTF8::in(m_utf, m_utf.length(), u);
-      m_utf.clear();
+      ZuUTF8::in(utf, utf.length(), u);
+      utf.clear();
       key = u;
     }
     if (m_keyFn(key)) goto stop;
@@ -632,13 +632,14 @@ void Terminal::addVKey(const char *cap, const char *deflt, int vkey)
 
 // low-level output
 
-int Terminal::write()
+int Terminal::write(ZeError *e_)
 {
   unsigned n = m_out.length();
   while (::write(m_fd, m_out.data(), n) < n) {
     ZeError e{errno};
     if (e.errNo() != EINTR && e.errNo() != EAGAIN) {
       ZrlError("write", Zi::IOError, e);
+      if (e_) *e_ = e;
       return Zi::IOError;
     }
   }

@@ -39,8 +39,8 @@ struct ZrlAPI Zrl {
   static void syntax(ZvCf *cf) { }
   static void stop() { }
 
-  static ZmRef<ZvCf> readline(const char *prompt) { return new ZvCf{}; }
-  static ZtString readline_(const char *prompt) { return ZtString{}; }
+  static ZmRef<ZvCf> readline(const char *prompt) { return {}; }
+  static ZtString readline_(const char *prompt) { return {}; }
 };
 
 #endif /* Zrl_HPP */

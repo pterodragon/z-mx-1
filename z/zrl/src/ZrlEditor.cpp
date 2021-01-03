@@ -25,7 +25,7 @@ namespace Zrl {
 
 Editor::Editor()
 {
-  // manual initialization of opcode indexed jump table
+  // manual initialization of opcode-indexed jump table
  
   m_cmdFn[Op::Nop] = cmdNop;
   m_cmdFn[Op::Mode] = cmdMode;
@@ -198,7 +198,11 @@ bool Editor::process_(const CmdSeq &cmds, int32_t vkey)
       if (stop) return true;
     }
   }
-  if (m_tty.write() != Zi::OK) return true;
+  ZeError e;
+  if (m_tty.write(&e) != Zi::OK) {
+    m_app.error(e);
+    return true;
+  }
   return false;
 }
 

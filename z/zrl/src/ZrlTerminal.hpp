@@ -152,7 +152,7 @@ private:
 
   // low-level output
 
-  int write();
+  int write(ZeError *e = nullptr);
 
 private:
   void tputs(const char *cap);
@@ -254,12 +254,8 @@ private:
   // input state
 
   ZuRef<VKeyMatch>	m_vkeyMatch;			
-
   KeyFn			m_keyFn;
-
   int			m_nextInterval = -1;
-  ZuArrayN<uint8_t, 4>	m_utf;
-  int			m_utfn = 0;
   const VKeyMatch	*m_nextVKMatch = nullptr;
   ZtArray<int32_t>	m_pending;
 

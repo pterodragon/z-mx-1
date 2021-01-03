@@ -19,8 +19,8 @@
 
 // directory scanning
 
-#ifndef ZiDir_HPP
-#define ZiDir_HPP
+#ifndef ZiGlob_HPP
+#define ZiGlob_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -30,59 +30,47 @@
 #include <zlib/ZiLib.hpp>
 #endif
 
-#include <zlib/ZmLock.hpp>
-#include <zlib/ZmGuard.hpp>
+#include <zlib/ZuPtr.hpp>
+#include <zlib/ZuString.hpp>
+#include <zlib/ZuNull.hpp>
 
-#include <zlib/ZePlatform.hpp>
+#include <zlib/ZtString.hpp>
 
-#include <zlib/ZiPlatform.hpp>
+#include <zlib/ZmNoLock.hpp>
+#include <zlib/ZmRBTree.hpp>
 
-#ifndef _WIN32
-#include <sys/types.h>
-#include <dirent.h>
-#endif
+#include <zlib/ZiFile.hpp>
+#include <zlib/ZiDir.hpp>
 
-class ZiAPI ZiDir {
-  ZiDir(const ZiDir &);
-  ZiDir &operator =(const ZiDir &);	// prevent mis-use
+class ZiAPI ZiGlob {
+  ZiGlob(ZiGlob &) = delete;
+  ZiGlob &operator =(ZiGlob &) = delete;
+  ZiGlob(ZiGlob &&) = delete;
+  ZiGlob &operator =(ZiGlob &&) = delete;
+
+  using Entries =
+    ZmRBTree<ZtString, ZmRBTreeObject<ZuNull, ZmRBTreeLock<ZmNoLock>>>;
+  using Iterator = typename Entries::ReadIterator<>;
 
 public:
-  using Path = ZiPlatform::Path;
+  ZiGlob() = default;
+  ~ZiGlob() = default;
 
-  using Guard = ZmGuard<ZmLock>;
+  bool init(ZuString prefix, ZeError *e = nullptr);
 
-  ZiDir() :
-#ifdef _WIN32
-      m_handle(INVALID_HANDLE_VALUE)
-#else
-      m_dir(0)
-#endif
-  { }
+  const ZtString &dirName() const { return m_dirName; }
+  const ZtString &leafName() const { return m_leafName; }
 
-  ~ZiDir() { close(); }
-
-  bool operator !() const {
-    return
-#ifdef _WIN32
-      m_handle == INVALID_HANDLE_VALUE;
-#else
-      !m_dir;
-#endif
-  }
-  ZuOpBool
-
-  int open(const Path &name, ZeError *e = nullptr);
-  int read(Path &name, ZeError *e = nullptr);
-  void close();
+  ZuString next() const;
 
 private:
-  ZmLock	m_lock;
-#ifdef _WIN32
-    Path	  m_match;
-    HANDLE	  m_handle;
-#else
-    DIR		  *m_dir;
-#endif
+  void reset() const;
+
+  ZtString			m_dirName;
+  ZtString			m_leafName;
+  ZuPtr<ZiDir>			m_dir;
+  ZuPtr<Entries>		m_entries;
+  mutable ZuPtr<Iterator>	m_iterator;
 };
 
-#endif /* ZiDir_HPP */
+#endif /* ZiGlob_HPP */

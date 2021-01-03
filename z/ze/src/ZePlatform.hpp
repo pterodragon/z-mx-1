@@ -50,6 +50,7 @@
 #include <zlib/ZmSingleton.hpp>
 #include <zlib/ZmHeap.hpp>
 #include <zlib/ZmStream.hpp>
+#include <zlib/ZmList.hpp>
 
 #include <zlib/ZtDate.hpp>
 #include <zlib/ZtString.hpp>
@@ -104,7 +105,7 @@ public:
 
   ZuInline ZeError(const ZeError &e) : m_errNo(e.m_errNo) { }
   ZuInline ZeError &operator =(const ZeError &e) {
-    if (this != &e) m_errNo = e.m_errNo;
+    if (ZuLikely(this != &e)) m_errNo = e.m_errNo;
     return *this;
   }
 
@@ -200,18 +201,28 @@ public:
     Fn(ZuFwd<P1>(p1), ZuFwd<P2>(p2), ZuFwd<Args>(args)...) { }
 };
 
-class ZeEvent_ {
-  ZeEvent_(const ZeEvent_ &) = delete;
-  ZeEvent_ &operator =(const ZeEvent_ &) = delete;
+struct ZeEvent_ : public ZmObject { };
+struct ZeEvent_HeapID {
+  static constexpr const char *id() { return "ZeEvent"; }
+};
+using ZeEvent_Queue =
+  ZmList<ZeEvent_,
+    ZmListNodeIsItem<true,
+      ZmListObject<ZmObject,
+	ZmListLock<ZmNoLock,
+	  ZmListHeapID<ZeEvent_HeapID> > > > >;
+class ZeEvent : public ZeEvent_Queue::Node {
+  ZeEvent(const ZeEvent &) = delete;
+  ZeEvent &operator =(const ZeEvent &) = delete;
 
   using ThreadID = ZmPlatform::ThreadID;
 
 public:
-  using MessageFn = ZeMessageFn_<ZeEvent_>;
+  using MessageFn = ZeMessageFn_<ZeEvent>;
 
   // from anything else
   template <typename Msg>
-  ZeEvent_(int severity, const char *filename, int lineNumber,
+  ZeEvent(int severity, const char *filename, int lineNumber,
       const char *function, Msg &&msg) :
     m_time(ZmTime::Now), m_tid(ZmPlatform::getTID()),
     m_severity(severity), m_filename(filename),
@@ -232,7 +243,7 @@ public:
       ZmStream s(s_);
       e.messageFn()(e, s);
     }
-    const ZeEvent_	&e;
+    const ZeEvent	&e;
   };
   ZuInline Message message() const { return Message{*this}; }
 
@@ -245,16 +256,6 @@ private:
   const char	*m_function;
   MessageFn	m_messageFn;
 };
-struct ZeEvent_HeapID {
-  static constexpr const char *id() { return "ZeEvent"; }
-};
-using ZeEvent_Queue =
-  ZmList<ZeEvent,
-    ZmListNodeIsItem<true,
-      ZmListObject<ZmObject,
-	ZmListLock<ZmNoLock,
-	  ZmListHeapID<ZeEvent_QueueID> > > > >;
-using ZeEvent = ZeEvent_Queue::Node;
 using ZeMessageFn = ZeEvent::MessageFn;
 template <> struct ZuPrint<ZeEvent::Message> : public ZuPrintFn { };
 template <> struct ZuPrint<ZeEvent> : public ZuPrintDelegate {

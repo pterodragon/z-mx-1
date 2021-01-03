@@ -233,17 +233,17 @@ template <typename T_> struct ZuMvCp {
   using T = typename ZuDecay<T_>::T;
 
   template <typename Mv, typename Cp>
-  static auto mvcp(const T &v, Mv, Cp cp) { return cp(v); }
+  static auto mvcp(const T &v, Mv, Cp cp_) { return cp_(v); }
   template <typename Mv, typename Cp>
-  static auto mvcp(T &&v, Mv mv, Cp) { return mv(ZuMv(v)); }
+  static auto mvcp(T &&v, Mv mv_, Cp) { return mv_(ZuMv(v)); }
 
   template <typename Mv>
   static void mv(const T &v, Mv); // undefined
   template <typename Mv>
-  static auto mv(T &&v, Mv mv) { return mv(ZuMv(v)); }
+  static auto mv(T &&v, Mv mv_) { return mv_(ZuMv(v)); }
 
   template <typename Cp>
-  static auto cp(const T &v, Cp cp) { return cp(v); }
+  static auto cp(const T &v, Cp cp_) { return cp_(v); }
   template <typename Cp>
   static void cp(T &&v, Cp); // undefined
 };

@@ -49,7 +49,7 @@ int ZiDir::open(const Path &name, ZeError *e)
   return Zi::OK;
 }
 
-int ZiDir::read(Path &file, ZeError *e)
+int ZiDir::read(Path &name, ZeError *e)
 {
   Guard guard(m_lock);
 
@@ -63,12 +63,13 @@ int ZiDir::read(Path &file, ZeError *e)
       return Zi::IOError;
     }
     m_handle = FindFirstFileEx(
-	m_match, FindExInfoStandard, &wfd, FindExSearchNameMatch, 0, 0);
+	m_match, FindExInfoBasic, &wfd,
+	FindExSearchNameMatch, 0, FIND_FIRST_EX_LARGE_FETCH);
     if (m_handle == INVALID_HANDLE_VALUE) goto error;
   } else {
     if (!FindNextFile(m_handle, &wfd)) goto error;
   }
-  file = Path(Path::Copy, static_cast<const TCHAR *>(wfd.cFileName));
+  name = Path(Path::Copy, static_cast<const TCHAR *>(wfd.cFileName));
   return Zi::OK;
 
 error:
@@ -97,7 +98,7 @@ error:
 
   if (i = readdir_r(m_dir, &d, &r)) goto error;
   if (!r) return Zi::EndOfFile;
-  file = Path(Path::Copy, &d.d_name[0]);
+  name = Path(Path::Copy, &d.d_name[0]);
   return Zi::OK;
 
 error:

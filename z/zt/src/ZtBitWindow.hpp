@@ -78,11 +78,13 @@ public:
     q.null();
   }
   ZtBitWindow &operator =(ZtBitWindow &&q) {
-    if (m_data) ::free(m_data);
-    m_data = q.m_data;
-    m_size = q.m_size;
-    m_head = q.m_head;
-    q.null();
+    if (ZuLikely(this != &q)) {
+      if (m_data) ::free(m_data);
+      m_data = q.m_data;
+      m_size = q.m_size;
+      m_head = q.m_head;
+      q.null();
+    }
     return *this;
   }
 
@@ -304,11 +306,13 @@ public:
     q.null();
   }
   ZtBitWindow &operator =(ZtBitWindow &&q) {
-    if (m_data) ::free(m_data);
-    m_data = q.m_data;
-    m_size = q.m_size;
-    m_head = q.m_head;
-    q.null();
+    if (ZuLikely(this != &q)) {
+      if (m_data) ::free(m_data);
+      m_data = q.m_data;
+      m_size = q.m_size;
+      m_head = q.m_head;
+      q.null();
+    }
     return *this;
   }
 
@@ -526,11 +530,13 @@ public:
     q.null();
   }
   ZtBitWindow &operator =(ZtBitWindow &&q) {
-    if (m_data) ::free(m_data);
-    m_data = q.m_data;
-    m_size = q.m_size;
-    m_head = q.m_head;
-    q.null();
+    if (ZuLikely(this != &q)) {
+      if (m_data) ::free(m_data);
+      m_data = q.m_data;
+      m_size = q.m_size;
+      m_head = q.m_head;
+      q.null();
+    }
     return *this;
   }
 

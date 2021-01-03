@@ -18,7 +18,7 @@
  */
 
 // simple fast dynamic ring buffer (supports FIFO and LIFO) for types with
-// a distinguished null value (defaults to ZuCmp<T>::null())
+// a sentinel null value (defaults to ZuCmp<T>::null())
 
 #ifndef ZmDRing_HPP
 #define ZmDRing_HPP
@@ -156,8 +156,7 @@ public:
   using Guard = ZmGuard<Lock>;
   using ReadGuard = ZmReadGuard<Lock>;
 
-  template <typename ...Args>
-  ZmDRing(ZmDRingParams params = ZmDRingParams(), Args &&... args) :
+  ZmDRing(ZmDRingParams params = ZmDRingParams()) :
       m_data(0), m_offset(0), m_size(0), m_length(0), m_count(0),
       m_initial(params.initial()), m_increment(params.increment()),
       m_defrag(1.0 - (double)params.maxFrag() / 100.0) { }

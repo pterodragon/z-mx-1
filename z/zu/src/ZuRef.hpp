@@ -188,6 +188,6 @@ template <typename T> struct ZuHash;
 template <typename T>
 struct ZuHash<ZuRef<T> > : public ZuHash<T *> { };
 
-template <typename T> ZuRef<T> ZuMkRef(T *p) { return ZuRef<T>(p); }
+template <typename T> ZuRef<T> ZuMkRef(T *p) { return ZuRef<T>{p}; }
 
 #endif /* ZuRef_HPP */

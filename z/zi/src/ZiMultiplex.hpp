@@ -109,7 +109,8 @@ struct ZiCxnInfo;
 #endif
 
 struct ZiIOContext {
-  ZuInline ZiIOContext() : ptr(0), size(0), offset(0), length(0) { }
+  ZuInline ZiIOContext() :
+      cxn{nullptr}, ptr{0}, size{0}, offset{0}, length{0} { }
 
 friend ZiConnection;
 private:
@@ -153,13 +154,13 @@ public:
 
   uintptr_t operator()();
 
-  ZmAnyFn	fn;	// callback to app - set by app (null to complete I/O)
-  void		*ptr;	// pointer to buffer - set by app (0 to disconnect)
-  unsigned	size;	// size of buffer - set by app
-  unsigned	offset;	// offset within buffer - set by app
-  unsigned	length;	// length - set by ZiMultiplex
-  ZiSockAddr	addr;	// address - set by app (send) / ZiMultiplex (recv)
-  ZiConnection	*cxn;	// connection - set by ZiMultiplex
+  ZiConnection	*cxn = nullptr;	// connection - set by ZiMultiplex
+  ZmAnyFn	fn;		// callback - set by app (null to complete I/O)
+  void		*ptr = nullptr;	// buffer - set by app (null to disconnect)
+  unsigned	size = 0;	// size of buffer - set by app
+  unsigned	offset = 0;	// offset within buffer - set by app
+  unsigned	length = 0;	// length - set by ZiMultiplex
+  ZiSockAddr	addr;		// set by app (send) / ZiMultiplex (recv)
 };
 using ZiIOFn = ZmFn<ZiIOContext &>;
 ZuInline uintptr_t ZiIOContext::operator ()() { return fn.as<ZiIOFn>()(*this); }
@@ -183,7 +184,7 @@ public:
     addr() = m.addr(), mif() = m.mif();
   }
   ZuInline ZiMReq &operator =(const ZiMReq &m) {
-    if (this != &m) 
+    if (ZuLikely(this != &m))
       addr() = m.addr(), mif() = m.mif();
     return *this;
   }
@@ -286,25 +287,28 @@ public:
       { }
 
   ZuInline ZiCxnOptions &operator =(const ZiCxnOptions &o) {
-    if (this == &o) return *this;
-    m_flags = o.m_flags;
-    m_mreqs = o.m_mreqs;
-    m_mif = o.m_mif;
-    m_ttl = o.m_ttl;
+    if (ZuLikely(this != &o)) {
+      m_flags = o.m_flags;
+      m_mreqs = o.m_mreqs;
+      m_mif = o.m_mif;
+      m_ttl = o.m_ttl;
 #ifdef ZiMultiplex_Netlink
-    m_familyName = o.m_familyName;
+      m_familyName = o.m_familyName;
 #endif
+    }
     return *this;
   }
 
   ZuInline ZiCxnOptions &operator =(ZiCxnOptions &&o) {
-    m_flags = ZuMv(o.m_flags);
-    m_mreqs = ZuMv(o.m_mreqs);
-    m_mif = ZuMv(o.m_mif);
-    m_ttl = ZuMv(o.m_ttl);
+    if (ZuLikely(this != &o)) {
+      m_flags = ZuMv(o.m_flags);
+      m_mreqs = ZuMv(o.m_mreqs);
+      m_mif = ZuMv(o.m_mif);
+      m_ttl = ZuMv(o.m_ttl);
 #ifdef ZiMultiplex_Netlink
-    m_familyName = ZuMv(o.m_familyName);
+      m_familyName = ZuMv(o.m_familyName);
 #endif
+    }
     return *this;
   }
 
@@ -469,9 +473,9 @@ struct ZiListenInfo {
   }
 
   ZiPlatform::Socket	socket;
-  ZuBox0(unsigned)	nAccepts;
+  unsigned		nAccepts = 0;
   ZiIP			ip;
-  ZuBox0(uint16_t)	port;
+  uint16_t		port = 0;
   ZiCxnOptions		options;
 };
 template <> struct ZuPrint<ZiListenInfo> : public ZuPrintFn { };
@@ -643,28 +647,28 @@ private:
   void errorDisconnect(int status, ZeError e);
   void executedDisconnect();
 
-  ZiMultiplex			*m_mx;
-  ZiCxnInfo			m_info;
+  ZiMultiplex		*m_mx;
+  ZiCxnInfo		m_info;
 
 #ifdef ZiMultiplex_IOCP
-  Zi_Overlapped		 	 m_discOverlapped;
+  Zi_Overlapped	 	 m_discOverlapped;
 #endif
 
   // Rx thread exclusive
-  unsigned			m_rxUp;
-  uint64_t			m_rxRequests;
-  uint64_t			m_rxBytes;
-  ZiIOContext			m_rxContext;
+  unsigned		m_rxUp;
+  uint64_t		m_rxRequests;
+  uint64_t		m_rxBytes;
+  ZiIOContext		m_rxContext;
 #ifdef ZiMultiplex_IOCP
-  Zi_Overlapped			m_rxOverlapped;
-  DWORD				m_rxFlags;		// flags for WSARecv()
+  Zi_Overlapped		m_rxOverlapped;
+  DWORD			m_rxFlags;		// flags for WSARecv()
 #endif
 
   // Tx thread exclusive
-  unsigned			m_txUp;
-  uint64_t			m_txRequests;
-  uint64_t			m_txBytes;
-  ZiIOContext			m_txContext;
+  unsigned		m_txUp;
+  uint64_t		m_txRequests;
+  uint64_t		m_txBytes;
+  ZiIOContext		m_txContext;
 };
 
 // named parameter list for configuring ZiMultiplex

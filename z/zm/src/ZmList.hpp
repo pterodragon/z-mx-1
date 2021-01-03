@@ -196,10 +196,16 @@ private:
 
 protected:
   class Iterator_ {			// iterator
+    Iterator_(const Iterator_ &) = delete;
+    Iterator_ &operator =(const Iterator_ &) = delete;
+
     using List = ZmList<Item, NTP>;
-  friend ZmList<Item, NTP>;
+  friend List;
 
   protected:
+    Iterator_(Iterator_ &&) = default;
+    Iterator_ &operator =(Iterator_ &&) = default;
+
     Iterator_(List &list) : m_list(list) {
       list.startIterate(*this);
     }
@@ -226,12 +232,15 @@ public:
   class Iterator;
 friend Iterator;
   class Iterator : private Guard, public Iterator_ {
-    Iterator(const Iterator &);
-    Iterator &operator =(const Iterator &);	// prevent mis-use
+    Iterator(const Iterator &) = delete;
+    Iterator &operator =(const Iterator &) = delete;
 
     using List = ZmList<Item, NTP>;
 
   public:
+    Iterator(Iterator &&) = default;
+    Iterator &operator =(Iterator &&) = default;
+
     Iterator(List &list) : Guard(list.m_lock), Iterator_(list) { }
 
     template <typename Item_> void push(Item_ &&item)
@@ -244,12 +253,15 @@ friend Iterator;
   class ReadIterator;
 friend ReadIterator;
   class ReadIterator : private ReadGuard, public Iterator_ {
-    ReadIterator(const ReadIterator &);
-    ReadIterator &operator =(const ReadIterator &);	// prevent mis-use
+    ReadIterator(const ReadIterator &) = delete;
+    ReadIterator &operator =(const ReadIterator &) = delete;
 
     using List = ZmList<Item, NTP>;
 
   public:
+    ReadIterator(ReadIterator &&) = default;
+    ReadIterator &operator =(ReadIterator &&) = default;
+
     ReadIterator(const List &list) :
       ReadGuard(list.m_lock), Iterator_(const_cast<List &>(list)) { }
   };

@@ -86,25 +86,28 @@ public:
   }
 
   ZmAnyFn &operator =(const ZmAnyFn &fn) {
-    if (this == &fn) return *this;
-    if (ZuUnlikely(owned(fn.m_object))) ZmREF(ptr(fn.m_object));
-    if (ZuUnlikely(owned(m_object))) ZmDEREF(ptr(m_object));
-    m_invoker = fn.m_invoker;
-    m_object = fn.m_object;
+    if (ZuLikely(this != &fn)) {
+      if (ZuUnlikely(owned(fn.m_object))) ZmREF(ptr(fn.m_object));
+      if (ZuUnlikely(owned(m_object))) ZmDEREF(ptr(m_object));
+      m_invoker = fn.m_invoker;
+      m_object = fn.m_object;
+    }
     return *this;
   }
 
   ZmAnyFn &operator =(ZmAnyFn &&fn) noexcept {
+    if (ZuLikely(this != &fn)) {
 #ifdef ZmObject_DEBUG
-    if (ZuUnlikely(owned(m_object))) ZmDEREF(ptr(m_object));
+      if (ZuUnlikely(owned(m_object))) ZmDEREF(ptr(m_object));
 #endif
-    m_invoker = fn.m_invoker;
-    m_object = fn.m_object;
-    // deref(fn.m_object);
-    fn.m_invoker = fn.m_object = 0;
+      m_invoker = fn.m_invoker;
+      m_object = fn.m_object;
+      // deref(fn.m_object);
+      fn.m_invoker = fn.m_object = 0;
 #ifdef ZmObject_DEBUG
-    if (ZuUnlikely(owned(m_object))) ZmMVREF(ptr(m_object), &fn, this);
+      if (ZuUnlikely(owned(m_object))) ZmMVREF(ptr(m_object), &fn, this);
 #endif
+    }
     return *this;
   }
 

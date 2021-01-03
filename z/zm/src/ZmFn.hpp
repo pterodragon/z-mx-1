@@ -17,7 +17,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// function delegates for multithreading and deferred execution (callbacks)
+// function delegate optimized for performance and avoiding heap allocation
+
+// most uses of function delegates involve capturing "this", and almost all
+// uses can be reduced to capturing a single pointer parameter; ZmFn<> provides
+// single pointer capture without heap allocation overhead, falling back to
+// heap allocation when capturing larger parameter packs
 
 // return types must either be void or be statically convertible to uintptr_t
 
@@ -25,7 +30,7 @@
 // ZmRef<T> where T is ZmPolymorph-derived (i.e. is both reference-counted
 // and has a virtual destructor)
 
-// use like this:
+// usage:
 //
 // ZmThread t([]() { puts("Hello World"); });	// lambda
 //

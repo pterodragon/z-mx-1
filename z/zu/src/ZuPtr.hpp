@@ -47,40 +47,40 @@ public:
 
 private:
   // matches ZuPtr<U> where U is not T, but is in the same type hierarchy as T
-  template <typename U> struct IsOtherRef2 {
+  template <typename U> struct IsOtherPtr2 {
     enum { OK =
       (ZuConversion<T, typename U::T>::Base ||
        ZuConversion<typename U::T, T>::Base) };
   };
-  template <typename U, typename = void, bool = IsOtherRef2<U>::OK>
-  struct MatchOtherRef2 { };
+  template <typename U, typename = void, bool = IsOtherPtr2<U>::OK>
+  struct MatchOtherPtr2 { };
   template <typename U, typename R>
-  struct MatchOtherRef2<U, R, true> { using T = R; };
-  template <typename U> struct IsOtherRef1 {
+  struct MatchOtherPtr2<U, R, true> { using T = R; };
+  template <typename U> struct IsOtherPtr1 {
     enum { OK = ZuConversion<ZuPtr_, U>::Base };
   };
-  template <typename U, typename = void, bool = IsOtherRef1<U>::OK>
-  struct MatchOtherRef;
+  template <typename U, typename = void, bool = IsOtherPtr1<U>::OK>
+  struct MatchOtherPtr;
   template <typename U, typename R>
-  struct MatchOtherRef<U, R, true> : public MatchOtherRef2<U, R> { };
+  struct MatchOtherPtr<U, R, true> : public MatchOtherPtr2<U, R> { };
 
   // matches ZuPtr<U> where U is either T or in the same type hierarchy as T
-  template <typename U> struct IsRef2 {
+  template <typename U> struct IsZuPtr2 {
     enum { OK =
       (ZuConversion<T, typename U::T>::Is ||
        ZuConversion<typename U::T, T>::Is) };
   };
-  template <typename U, typename = void, bool = IsRef2<U>::OK>
-  struct MatchRef2 { };
+  template <typename U, typename = void, bool = IsZuPtr2<U>::OK>
+  struct MatchZuPtr2 { };
   template <typename U, typename R>
-  struct MatchRef2<U, R, true> { using T = R; };
-  template <typename U> struct IsRef1 {
+  struct MatchZuPtr2<U, R, true> { using T = R; };
+  template <typename U> struct IsZuPtr {
     enum { OK = ZuConversion<ZuPtr_, U>::Base };
   };
-  template <typename U, typename = void, bool = IsRef1<U>::OK>
-  struct MatchRef;
+  template <typename U, typename = void, bool = IsZuPtr<U>::OK>
+  struct MatchZuPtr;
   template <typename U, typename R>
-  struct MatchRef<U, R, true> : public MatchRef2<U, R> { };
+  struct MatchZuPtr<U, R, true> : public MatchZuPtr2<U, R> { };
 
   // matches U * where U is either T or in the same type hierarchy as T
   template <typename U> struct IsPtr {
@@ -97,7 +97,7 @@ public:
     r.m_object = nullptr;
   }
   template <typename R>
-  ZuPtr(R &&r, typename MatchOtherRef<typename ZuDeref<R>::T>::T *_ = 0)
+  ZuPtr(R &&r, typename MatchOtherPtr<typename ZuDeref<R>::T>::T *_ = 0)
   noexcept : m_object(
       static_cast<T *>(const_cast<typename ZuDeref<R>::T::T *>(r.m_object))) {
     ZuMvCp<R>::mv(ZuFwd<R>(r), [](auto &&r) { r.m_object = nullptr; });
@@ -110,14 +110,14 @@ public:
     if (T *o = m_object) delete o;
   }
 
-  template <typename R> typename MatchRef<R>::T swap(R &r) noexcept {
+  template <typename R> typename MatchZuPtr<R>::T swap(R &r) noexcept {
     T *o = m_object;
     m_object = static_cast<T *>(r.m_object);
     r.m_object = static_cast<typename R::T *>(o);
   }
 
   template <typename R>
-  friend typename MatchRef<R>::T swap(ZuPtr &r1, R &r2) noexcept {
+  friend typename MatchZuPtr<R>::T swap(ZuPtr &r1, R &r2) noexcept {
     r1.swap(r2);
   }
 
@@ -126,7 +126,7 @@ public:
     return *this;
   }
   template <typename R>
-  typename MatchOtherRef<R, ZuPtr &>::T operator =(R r) {
+  typename MatchOtherPtr<R, ZuPtr &>::T operator =(R r) {
     swap(r);
     return *this;
   }
@@ -143,7 +143,7 @@ public:
   ZuInline T *operator ->() const { return m_object; }
 
   template <typename O = T>
-  ZuInline typename MatchRef<ZuPtr<O>, O *>::T ptr() const {
+  ZuInline typename MatchZuPtr<ZuPtr<O>, O *>::T ptr() const {
     return static_cast<O *>(m_object);
   }
   T *ptr_() const { return m_object; }
@@ -174,6 +174,6 @@ template <typename T> struct ZuHash;
 template <typename T>
 struct ZuHash<ZuPtr<T> > : public ZuHash<T *> { };
 
-template <typename T> ZuPtr<T> ZuMkRef(T *p) { return ZuPtr<T>(p); }
+template <typename T> ZuPtr<T> ZuMkPtr(T *p) { return ZuPtr<T>{p}; }
 
 #endif /* ZuPtr_HPP */

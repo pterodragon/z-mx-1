@@ -52,8 +52,10 @@ public:
   ZuInline ZmStreamBuf(ZmStreamBuf &&s) :
     m_lengthFn(ZuMv(s.m_lengthFn)), m_printFn(ZuMv(s.m_printFn)) { }
   ZmStreamBuf &operator =(ZmStreamBuf &&s) {
-    m_lengthFn = ZuMv(s.m_lengthFn);
-    m_printFn = ZuMv(s.m_printFn);
+    if (ZuLikely(this != &s)) {
+      m_lengthFn = ZuMv(s.m_lengthFn);
+      m_printFn = ZuMv(s.m_printFn);
+    }
     return *this;
   }
 
@@ -89,8 +91,10 @@ public:
   ZuInline ZmStream(ZmStream &&s) noexcept :
     m_strFn(ZuMv(s.m_strFn)), m_bufFn(ZuMv(s.m_bufFn)) { }
   ZmStream &operator =(ZmStream &&s) noexcept {
-    m_strFn = ZuMv(s.m_strFn);
-    m_bufFn = ZuMv(s.m_bufFn);
+    if (ZuLikely(this != &s)) {
+      m_strFn = ZuMv(s.m_strFn);
+      m_bufFn = ZuMv(s.m_bufFn);
+    }
     return *this;
   }
 

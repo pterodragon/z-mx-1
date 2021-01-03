@@ -738,8 +738,16 @@ public:
 
 // accessors
 
+  using iterator = T *;
+  using const_iterator = const T *;
   ZuInline const T *begin() const { return m_data; }
   ZuInline const T *end() const { return &m_data[length()]; }
+  T *begin() {
+    return const_cast<T *>(static_cast<const ZtArray &>(*this).begin());
+  }
+  T *end() {
+    return const_cast<T *>(static_cast<const ZtArray &>(*this).end());
+  }
 
   ZuInline T *data() { return m_data; }
   ZuInline const T *data() const { return m_data; }
@@ -1448,9 +1456,15 @@ public:
 
 // growth algorithm
 
-  void grow(unsigned n) {
+  void grow(unsigned length) {
     unsigned o = size();
-    if (ZuUnlikely(n > o)) size(grow(o, n));
+    if (ZuUnlikely(length > o)) size(grow(o, length));
+    this->length(length);
+  }
+  void grow(unsigned length, bool initItems) {
+    unsigned o = size();
+    if (ZuUnlikely(length > o)) size(grow(o, length));
+    this->length(length, initItems);
   }
   ZuInline static unsigned grow(unsigned o, unsigned n) {
     return ZtPlatform::grow(o * sizeof(T), n * sizeof(T)) / sizeof(T);

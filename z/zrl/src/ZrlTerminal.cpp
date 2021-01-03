@@ -23,43 +23,6 @@
 
 namespace Zrl {
 
-namespace VKey {
-  enum {
-    // control events
-    Continue = 0,	// continue reading
-    Wake,		// woken from input, mid-line
-    Error,		// I/O error
-
-    Enter,		// line entered
-
-    EndOfFile,		// ^D EOF
-
-    Erase,		// backspace
-    WErase,		// ^W word erase
-    Kill,		// ^U
-
-    SigInt,		// ^C
-    SigQuit,		// quit (ctrl-backslash)
-    SigSusp,		// ^Z
-
-    // motion / Fn keys
-    Up,
-    Down,
-    Left,
-    Right,
-    Home,
-    End,
-    Insert,
-    Delete
-  };
-
-  enum {
-    Shift	= 0x0100,
-    Ctrl	= 0x0200,	// implies word with left/right
-    Alt		= 0x0400	// ''
-  };
-}
-
 struct VKeyMatch : public ZuObject {
   struct Action {
     ZuRef<ZuObject>	next;			// next VKeyMatch
@@ -70,7 +33,7 @@ struct VKeyMatch : public ZuObject {
     if (!s) return false;
     return add_(this, static_cast<const uint8_t *>(s), vkey);
   }
-  static bool add_(VKeyMatch *this_, const char *s, int vkey);
+  static bool add_(VKeyMatch *this_, const uint8_t *s, int vkey);
   bool add(uint8_t c, int vkey);
 
   Action *match(uint8_t c);
@@ -79,7 +42,7 @@ struct VKeyMatch : public ZuObject {
   ZtArray<Action>	actions;
 };
 
-static bool VKeyMatch::add_(VKeyMatch *this_, const char *s, int vkey)
+static bool VKeyMatch::add_(VKeyMatch *this_, const uint8_t *s, int vkey)
 {
   uint8_t c = *s;
   if (!c) return false;
@@ -144,16 +107,29 @@ void Terminal::close() // async
       ZmFn<>{this, [](Terminal *this_) { this_->close_(); }});
 }
 
-void Terminal::start(KeyFn keyFn) // async
+void Terminal::start(StartFn startFn, KeyFn keyFn) // async
 {
   m_sched->wakeFn(m_thread,
       ZmFn<>{this, [](Terminal *this_) { this_->wake(); }});
   m_sched->run_(m_thread,
-      [this, keyFn = ZuMv(keyFn)]() mutable {
+      [this, startFn = ZuMv(startFn), keyFn = ZuMv(keyFn)]() mutable {
 	start_();
+	StartFn{ZuMv(startFn)}();
 	m_keyFn = ZuMv(keyFn);
 	read();
       });
+}
+
+bool Terminal::running() const // synchronous
+{
+  bool ok = false;
+  thread_local ZmSemaphore sem;
+  m_sched->invoke(m_thread, [this, sem = &sem, ok = &ok]() {
+    ok = m_running;
+    sem->post();
+  });
+  sem.wait();
+  return ok;
 }
 
 void Terminal::stop() // async
@@ -164,20 +140,23 @@ void Terminal::stop() // async
   wake_();
 }
 
-void Terminal::addVKey(const char *cap, const char *deflt, int vkey)
-{
-  const char *ent;
-  if (!(ent = tigetstr(cap))) ent = deflt;
-  m_vkeyMatch->add(ent, vkey);
-}
-
+// Win32
+// - AllocConsole(); // idempotent
+// - CreateFile("CONIN$"); PeekConsoleInput() // check for failure
+//   GetConsoleMode() // save pre-existing mode for use in close_()
+//   SetConsoleMode(..., CONSOLE_MODE)
+//   SetConsoleMode(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+// - SetConsoleCP()
+// - SetConsoleCtrlHandler()
+// - CreateFile("CONOUT$")
+// - SetConsoleOututCP()
 void Terminal::open_()
 {
   // open tty device
   m_fd = ::open("/dev/tty", O_RDWR, 0);
   if (m_fd < 0) {
     ZeError e{errno};
-    Error("open(\"/dev/tty\")", Zi::IOError, e);
+    ZrlError("open(\"/dev/tty\")", Zi::IOError, e);
   }
 
   // save terminal control flags
@@ -193,12 +172,14 @@ void Terminal::open_()
   m_bw = tigetflag("bw");
   m_xenl = tigetflag("xenl");
   m_mir = tigetflag("mir");
+  m_hz = tigetflag("hz");
+  m_ul = tigetflag("ul");
 
-  // xenl can manifest two different ways. The vt100 way is that, when
+  // xenl can manifest in two different ways. The vt100 way is that, when
   // you'd expect the cursor to wrap, it stays hung at the right margin
   // (on top of the character just emitted) and doesn't wrap until the
-  // *next* graphic char is emitted. The c100 way is to ignore LF
-  // received just after an am wrap.
+  // *next* glyph is emitted. The c100 way is to ignore LF received
+  // just after an am wrap.
 
   // This is handled by emitting CR/LF after the char and assuming the
   // wrap is done, you're on the first position of the next line, and the
@@ -207,6 +188,8 @@ void Terminal::open_()
   if (!(m_cr = tigetstr("cr"))) m_cr = "\r";
   if (!(m_ind = tigetstr("ind"))) m_ind = "\n";
   m_nel = tigetstr("nel");
+
+  m_clear = tigetstr("clear");
 
   m_hpa = tigetstr("hpa");
 
@@ -231,6 +214,16 @@ void Terminal::open_()
   m_rmdc = tigetstr("rmdc");
   m_dch = tigetstr("dch");
   m_dch1 = tigetstr("dch1");
+
+  if (m_ul) {
+    thread_local Terminal *this_;
+    m_underline << ' ';
+    ::tputs(m_cub1, 1, [](int c) -> int {
+      this_->m_underline << static_cast<uint8_t>(c);
+      return 0;
+    });
+    m_underline << '_';
+  }
 
   // initialize keystroke matcher
   m_vkeyMatch = new VKeyMatch{};
@@ -261,6 +254,9 @@ void Terminal::open_()
   m_vkeyMatch->add(m_termios.c_cc[VINTR], VKey::SigInt);
   m_vkeyMatch->add(m_termios.c_cc[VQUIT], VKey::SigQuit);
   m_vkeyMatch->add(m_termios.c_cc[VSUSP], VKey::SigSusp);
+
+  // literal next
+  m_vkeyMatch->add(m_termios.c_cc[VLNEXT], VKey::LNext);
 
   // motion keys
   addVKey("kcuu1", nullptr, VKey::Up);
@@ -313,19 +309,19 @@ void Terminal::open_()
 
   // set up I/O multiplexer (epoll)
   if ((m_epollFD = epoll_create(2)) < 0) {
-    Error("epoll_create", Zi::IOError, ZeLastError);
+    ZrlError("epoll_create", Zi::IOError, ZeLastError);
     return;
   }
   if (pipe(&m_wakeFD) < 0) {
     ZeError e{errno};
     close_fds();
-    Error("pipe", Zi::IOError, e);
+    ZrlError("pipe", Zi::IOError, e);
     return;
   }
   if (fcntl(m_wakeFD, F_SETFL, O_NONBLOCK) < 0) {
     ZeError e{errno};
     close_fds();
-    Error("fcntl(F_SETFL, O_NONBLOCK)", Zi::IOError, e);
+    ZrlError("fcntl(F_SETFL, O_NONBLOCK)", Zi::IOError, e);
     return;
   }
   {
@@ -336,7 +332,7 @@ void Terminal::open_()
     if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, m_wakeFD, &ev) < 0) {
       ZeError e{errno};
       close_fds();
-      Error("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e);
+      ZrlError("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e);
       return;
     }
   }
@@ -357,6 +353,10 @@ void Terminal::open_()
   resized();
 }
 
+// Win32
+// - SetConsoleMode()
+// - SetConsoleCtrlHandler()
+// - 2x CloseHandle()
 void Terminal::close_()
 {
   stop_(); // idempotent
@@ -373,10 +373,14 @@ void Terminal::close_()
   m_bw = false;
   m_xenl = false;
   m_mir = false;
+  m_hz = false;
+  m_ul = false;
 
   m_cr = nullptr;
   m_ind = nullptr;
   m_nel = nullptr;
+
+  m_clear = nullptr;
 
   m_hpa = nullptr;
 
@@ -402,6 +406,8 @@ void Terminal::close_()
   m_dch = nullptr;
   m_dch1 = nullptr;
 
+  m_underline = {};
+
   del_curterm(cur_term);
 
   // close file descriptors
@@ -419,6 +425,69 @@ void Terminal::close_fds()
   if (m_fd >= 0) { ::close(m_fd); m_fd = -1; }
 }
 
+void Terminal::start_()
+{
+  if (m_running) return;
+  m_running = true;
+
+  termios ntermios;
+  memcpy(&ntermios, &m_termios, sizeof(termios));
+
+  ntermios.c_iflag &= ~(INPCK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+  ntermios.c_lflag &= ~(ICANON | ECHO | IEXTEN | ISIG);
+  ntermios.c_oflag &= ~(OPOST | ONLCR | OCRNL | ONOCR | ONLRET);
+  // ntermios.c_cflag &= ~CSIZE;
+  // ntermios.c_cflag |= CS8;
+
+  tcsetattr(m_fd, TCSANOW, &ntermios);
+
+  if (fcntl(m_fd, F_SETFL, O_NONBLOCK) < 0) {
+    ZeError e{errno};
+    close_fds();
+    ZrlError("fcntl(F_SETFL, O_NONBLOCK)", Zi::IOError, e);
+    return;
+  }
+  {
+    struct epoll_event ev;
+    memset(&ev, 0, sizeof(struct epoll_event));
+    ev.events = EPOLLIN;
+    ev.data.u64 = 0;
+    if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, m_fd, &ev) < 0) {
+      ZeError e{errno};
+      close_fds();
+      ZrlError("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e);
+      return;
+    }
+  }
+
+  tputs(m_cr);
+  write();
+  m_pos = 0;
+}
+
+void Terminal::stop_()
+{
+  if (!m_running) return;
+  m_running = false;
+
+  clear();
+
+  m_nextInterval = -1;
+  m_utf.clear();
+  m_utfn = 0;
+  m_nextVKMatch = m_vkeyMatch.ptr();
+  m_pending.clear();
+
+  if (m_fd < 0) return;
+
+  epoll_ctl(m_epollFD, EPOLL_CTL_DEL, m_fd, 0);
+  fcntl(m_fd, F_SETFL, 0);
+
+  tcsetattr(m_fd, TCSANOW, &m_termios);
+}
+
+// I/O multiplexing
+
 void Terminal::wake()
 {
   m_sched->run_(m_thread,
@@ -432,11 +501,13 @@ void Terminal::wake_()
   while (::write(m_wakeFD2, &c, 1) < 0) {
     ZeError e{errno};
     if (e.errNo() != EINTR && e.errNo() != EAGAIN) {
-      Error("write", Zi::IOError, e);
+      ZrlError("write", Zi::IOError, e);
       break;
     }
   }
 }
+
+// display resizing
 
 void Terminal::sigwinch()
 {
@@ -444,71 +515,19 @@ void Terminal::sigwinch()
       ZmFn<>{this, [](Terminal *this_) { this_->resized(); }});
 }
 
+// Win32 - GetConsoleScreenBufferInfo()
 void Terminal::resized()
 {
   struct winsize ws;
   if (ioctl(m_fd, TIOCGWINSZ, &ws) < 0) {
-    m_w = tigetnum("columns");
-    m_h = tigetnum("lines");
+    m_width = tigetnum("columns");
+    m_height = tigetnum("lines");
   } else {
-    m_w = ws.ws_col;
-    m_h = ws.ws_row;
+    m_width = ws.ws_col;
+    m_height = ws.ws_row;
   }
-}
-
-void Terminal::start_()
-{
-  termios ntermios;
-  memcpy(&ntermios, &m_termios, sizeof(termios));
-
-  ntermios.c_iflag &= ~(INPCK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
-  ntermios.c_lflag &= ~(ICANON | ECHO | IEXTEN | ISIG);
-  ntermios.c_oflag &= ~(OPOST | ONLCR | OCRNL | ONOCR | ONLRET);
-  ntermios.c_cflag &= ~(CSIZE | PARENB);
-  ntermios.c_cflag |= CS8;
-
-  tcsetattr(m_fd, TCSANOW, &ntermios);
-
-  if (fcntl(m_fd, F_SETFL, O_NONBLOCK) < 0) {
-    ZeError e{errno};
-    close_fds();
-    Error("fcntl(F_SETFL, O_NONBLOCK)", Zi::IOError, e);
-    return;
-  }
-  {
-    struct epoll_event ev;
-    memset(&ev, 0, sizeof(struct epoll_event));
-    ev.events = EPOLLIN;
-    ev.data.u64 = 0;
-    if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, m_fd, &ev) < 0) {
-      ZeError e{errno};
-      close_fds();
-      Error("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e);
-      return;
-    }
-  }
-
-  tputs(m_cr);
-  write();
-  m_pos = 0;
-}
-
-void Terminal::stop_()
-{
-  m_nextInterval = -1;
-  m_utf.clear();
-  m_utfn = 0;
-  m_nextVKMatch = m_vkeyMatch.ptr();
-  m_pending.clear();
-
-  if (m_fd < 0) return;
-
-  write();
-
-  epoll_ctl(m_epollFD, EPOLL_CTL_DEL, m_fd, 0);
-  fcntl(m_fd, F_SETFL, 0);
-
-  tcsetattr(m_fd, TCSANOW, &m_termios);
+  if (!m_width) m_width = 80;
+  if (!m_height) m_height = 24;
 }
 
 // low-level input
@@ -523,16 +542,18 @@ void Terminal::read()
       ZeError e{errno};
       if (e.errNo() == EINTR || e.errNo() == EAGAIN)
 	continue;
-      Error("epoll_wait", Zi::IOError, e);
-      return VKey::Error;
+      ZrlError("epoll_wait", Zi::IOError, e);
+      m_keyFn(VKey::Error);
+      goto stop;
     }
     if (!r) { // timeout
       for (key : m_pending) if (m_keyFn(key)) goto stop;
       if (m_utfn && m_utf) {
-	uint32_t u;
-	ZuUTF::in(m_utf, m_utf.length(), u);
-	key = u;
-	if (m_keyFn(key)) goto stop;
+	uint32_t u = 0;
+	if (ZuUTF8::in(m_utf, m_utf.length(), u)) {
+	  key = u;
+	  if (m_keyFn(key)) goto stop;
+	}
       }
       m_nextInterval = -1;
       m_utf.clear();
@@ -556,15 +577,19 @@ void Terminal::read()
     uint8_t c;
     {
       int r = ::read(fd, &c, 1)
-      if (!r) return VKey::EndOfFile;
       if (r < 0) {
 	if (e.errNo() == EINTR || e.errNo() == EAGAIN) continue;
-	return VKey::EndOfFile;
+	m_keyFn(VKey::Error);
+	goto stop;
+      }
+      if (!r) {
+	m_keyFn(VKey::EndOfFile);
+	goto stop;
       }
     }
     key = c;
     if (!m_utfn) {
-      if (auto action = m_nextVKMatch->match(u)) {
+      if (auto action = m_nextVKMatch->match(key)) {
 	if (action->next) {
 	  m_nextInterval = m_interval;
 	  m_nextVKMatch = action->next;
@@ -578,7 +603,7 @@ void Terminal::read()
 	key = -(action->vkey);
 	m_utfn = 1;
       } else {
-	if (ZuUnlikely(!(m_utfn = ZuUTF8::in(&c, 4)))) m_utfn = 1;
+	if (!utf8_in() || !(m_utfn = ZuUTF8::in(&c, 4))) m_utfn = 1;
       }
     }
     if (--m_utfn > 0) {
@@ -587,8 +612,8 @@ void Terminal::read()
     }
     if (m_utf) {
       m_utf << c;
-      uint32_t u;
-      ZuUTF::in(m_utf, m_utf.length(), u);
+      uint32_t u = 0;
+      ZuUTF8::in(m_utf, m_utf.length(), u);
       m_utf.clear();
       key = u;
     }
@@ -596,6 +621,13 @@ void Terminal::read()
   }
 stop:
   stop_();
+}
+
+void Terminal::addVKey(const char *cap, const char *deflt, int vkey)
+{
+  const char *ent;
+  if (!(ent = tigetstr(cap))) ent = deflt;
+  m_vkeyMatch->add(ent, vkey);
 }
 
 // low-level output
@@ -606,7 +638,7 @@ int Terminal::write()
   while (::write(m_fd, m_out.data(), n) < n) {
     ZeError e{errno};
     if (e.errNo() != EINTR && e.errNo() != EAGAIN) {
-      Error("write", Zi::IOError, e);
+      ZrlError("write", Zi::IOError, e);
       return Zi::IOError;
     }
   }
@@ -632,21 +664,24 @@ void Terminal::tputs(const char *cap)
 
 // Note: cub/cuf after right-most character is undefined - need to use hpa/cr
 
+// carriage-return
 void Terminal::cr()
 {
-  unsigned n = m_pos % m_w;
+  unsigned n = m_pos % m_width;
   if (n) {
     tputs(m_cr);
     m_pos -= n;
   }
 }
 
+// new-line / index
 void Terminal::nl()
 {
   tputs(m_ind);
-  m_pos += m_w;
+  m_pos += m_width;
 }
 
+// CR + NL, without updating m_pos
 void Terminal::crnl_()
 {
   if (ZuLikely(m_nel)) {
@@ -657,12 +692,13 @@ void Terminal::crnl_()
   }
 }
 
+// CR + NL
 void Terminal::crnl()
 {
   if (ZuLikely(m_nel)) {
     tputs(m_nel);
-    m_pos -= m_pos % m_w;
-    m_pos += m_w;
+    m_pos -= m_pos % m_width;
+    m_pos += m_width;
   } else {
     cr();
     nl();
@@ -672,32 +708,32 @@ void Terminal::crnl()
 // Note: MS Console SetConsoleMode(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
 // is am + xenl
 
-// redraw line from cursor, leaving cursor at start of next line
-void Terminal::redrawScroll(unsigned endPos)
+// out row from cursor, leaving cursor at start of next row
+void Terminal::outScroll(unsigned endPos)
 {
-  ZmAssert(!(endPos % m_w));		// endPos is EOL
-  ZmAssert(m_pos >= endPos - m_w);	// cursor is >=BOL
+  ZmAssert(!(endPos % m_width));	// endPos is EOL
+  ZmAssert(m_pos >= endPos - m_width);	// cursor is >=BOL
   ZmAssert(m_pos < endPos);		// cursor is <EOL
 
-  redraw_(endPos);
+  out(endPos);
   clrScroll(endPos);
 }
 
-// clear line from cursor, leaving cursor at start of next line
-void Terminal::clrScroll(unsigned endPos)
+// clear row from cursor, leaving cursor at start of next row
+void Terminal::clrScroll_(unsigned n)
 {
-  if (m_pos < endPos) {
+  if (n) {
     if (ZuLikely(m_el)) {
       tputs(m_el);
-      crnl();
+      crnl_();
       return;
     }
     if (ZuLikely(m_ech)) {
-      tputs(tiparm(m_ech, endPos - m_pos));
-      crnl();
+      tputs(tiparm(m_ech, n));
+      crnl_();
       return;
     }
-    clr_(endPos);
+    clrOver_(n);
   }
   if (m_sam)
     tputs(m_ind);
@@ -705,20 +741,68 @@ void Terminal::clrScroll(unsigned endPos)
     crnl_();
 }
 
-// redraw line from cursor, leaving cursor on same line at pos
-void Terminal::redrawNoScroll(unsigned endPos, unsigned pos)
+void Terminal::out_(ZuArray<const uint8_t> data)
 {
-  ZmAssert(!(endPos % m_w));		// endPos is EOL
-  ZmAssert(m_pos >= endPos - m_w);	// cursor is >=BOL
+  unsigned begin = m_out.length();
+  m_out << data;
+  unsigned end = m_out.length();
+  if (ZuLikely(utf8_out() && !m_hz && !m_ul)) return;
+  for (unsigned off = begin; off < end; ) {
+    unsigned n;
+    uint32_t u;
+    if ((n = ZuUTF8::in(&m_out[off], end - off, u)) > 1) {
+      if (!utf8_out()) {
+	unsigned w = ZuUTF32::width(u);
+	if (ZuUnlikely(m_ul)) {
+	  m_out.splice(off, n, m_underline);
+	  if (w == 1)
+	    w = m_underline.length();
+	  else {
+	    m_out.splice(off, 0, m_underline);
+	    w = m_underline.length();
+	    w <<= 1;
+	  }
+	} else
+	  m_out.splice(off, n,
+	      ZuArray<const uint8_t>{
+		reinterpret_cast<const uint8_t *>("__"), w});
+	off += w; end += w; end -= n;
+      } else
+	off += n;
+    } else {
+      if (!n) n = 1;
+      if ((m_hz && u == '~') || (m_ul && u == '_')) {
+	m_out.splice(off, n, m_underline);
+	unsigned w = m_underline.length();
+	off += w; end += w; end -= n;
+      } else
+	off += n;
+    }
+  }
+}
+
+// clear remainder of row from cursor, leaving cursor at start of next row
+void Terminal::clrScroll(unsigned endPos)
+{
+  clrScroll_(endPos - m_pos);
+  m_pos -= m_pos % m_width;
+  m_pos += m_width;
+}
+
+// out row from cursor, leaving cursor on same row at pos
+void Terminal::outNoScroll(unsigned endPos, unsigned pos)
+{
+  ZmAssert(!(endPos % m_width));	// endPos is EOL
+  ZmAssert(m_pos >= endPos - m_width);	// cursor is >=BOL
   ZmAssert(m_pos < endPos);		// cursor is <EOL
-  ZmAssert(pos >= endPos - m_w);	// pos is >=BOL
+  ZmAssert(pos >= endPos - m_width);	// pos is >=BOL
   ZmAssert(pos < endPos);		// pos is <EOL
 
   if (ZuLikely(!m_am || m_xenl)) {
     // normal case - terminal is am + xenl, or no am, i.e. doesn't scroll
     // immediately following overwrite of right-most character, just output
-    // entire line then move cursor within line as needed
-    redraw_(endPos);
+    // entire row then move cursor within row as needed
+    out(endPos);
     if (m_pos < endPos) {
       if (ZuLikely(m_el)) {	// clear to EOL
 	tputs(m_el);
@@ -730,56 +814,57 @@ void Terminal::redrawNoScroll(unsigned endPos, unsigned pos)
 	if (m_pos != pos) mvhoriz(pos);
 	return;
       }
-      clr_(endPos);		// clear to EOL with spaces
+      clrOver(endPos);		// clear to EOL with spaces
     }
-    // right-most character on line was output, MUST move cursor, NO cub
+    // right-most character on row was output, MUST move cursor, NO cub
     if (m_sam) {
-      m_pos = endPos - m_w;
+      m_pos = endPos - m_width;
       if (pos > m_pos) mvright(pos);
       return;
     }
     if (m_hpa) {
-      tputs(tiparm(m_hpa, pos - (pos % m_w)));
+      tputs(tiparm(m_hpa, pos - (pos % m_width)));
       m_pos = pos;
       return;
     }
     tputs(m_cr);
-    m_pos = endPos - m_w;
+    m_pos = endPos - m_width;
     if (pos > m_pos) mvright(pos);
     return;
   }
 
   if (m_ich || m_ich1 || (m_smir && m_rmir)) {
-    // insert right-most character to leave cursor on same line
-    redraw(endPos - 2);
+    // insert right-most character to leave cursor on same row
+    outClr(endPos - 2);
     ++m_pos; // skip a position
-    redraw(endPos);
+    outClr(endPos);
     --m_pos;
     mvleft(endPos - 2);
     if (m_ich1) {
       tputs(m_ich1);
-      redraw(endPos - 1);
+      outClr(endPos - 1);
     } else if (m_ich) {
       tputs(tiparm(m_ich, 1));
-      redraw(endPos - 1);
+      outClr(endPos - 1);
     } else if (m_smir) {
       tputs(m_smir);
-      redraw(endPos - 1);
+      outClr(endPos - 1);
       tputs(m_rmir);
     }
     if (pos < m_pos) mvleft(pos);
     return;
   }
 
-  // dumb terminal, cannot output right-most character leaving cursor on line
-  redraw(endPos - 1);
+  // dumb terminal, cannot output right-most character leaving cursor on row
+  outClr(endPos - 1);
   if (pos < m_pos) mvleft(pos);
 }
 
-void Terminal::redraw(unsigned endPos)
+// output from m_pos to endPos within row, clearing any trailing space
+void Terminal::outClr(unsigned endPos)
 {
-  redraw_(endPos);
-  if (m_pos < endPos) clr_(endPos);
+  out(endPos);
+  if (m_pos < endPos) clrOver(endPos);
 }
 
 #if defined(ZDEBUG) && !defined(Zrl_DEBUG)
@@ -788,75 +873,100 @@ void Terminal::redraw(unsigned endPos)
 
 #ifdef Zrl_DEBUG
 #define validatePos(pos) \
-  ZmAssert(m_pos >= pos - (pos % m_w)); \
-  ZmAssert(m_pos < pos - (pos % m_w) + m_w); \
+  ZmAssert(m_pos >= pos - (pos % m_width)); \
+  ZmAssert(m_pos < pos - (pos % m_width) + m_width); \
   ZmAssert(m_pos < pos)
 #else
 #define validatePos(pos)
 #endif
 
-void Terminal::redraw_(unsigned endPos)
+void Terminal::out(unsigned endPos) // endPos may be start of next row
 {
+  if (endPos > 0) endPos = m_line.align(endPos - 1);
+  unsigned end = m_line.position(endPos).mapping();
+  end += m_line.byte(end).len();
   validatePos(endPos);
-
-  unsigned off = m_line.position(m_pos).index();
-  unsigned lastPos = m_line.align(endPos - 1);
-  auto position = m_line.position(lastPos);
-  lastPos += position.len();
-  unsigned lastOff = position.index();
-  lastOff += m_line.byte(lastOff).len();
-  if (lastOff > off)
-    m_out << m_line.substr(off, lastOff - off);
-  m_pos = lastPos;
-}
-
-// clear with ech, falling back to spaces
-void Terminal::clr(unsigned endPos)
-{
-  if (ZuLikely(m_ech)) {
-    validatePos(pos);
-
-    tputs(tiparm(m_ech, endPos - m_pos));
-  } else
-    clr_(endPos);
-}
-
-// clear by overwriting spaces
-void Terminal::clr_(unsigned endPos)
-{
-  validatePos(endPos);
-
-  for (unsigned i = 0, n = endPos - m_pos; i < n; i++) m_out << ' ';
+  endPos += m_line.position(endPos).len(); // may wrap to start of next row
+  unsigned off = m_line.position(m_pos).mapping();
+  if (end > off) out_(m_line.substr(off, end - off));
   m_pos = endPos;
 }
 
+// clear with ech, falling back to spaces - endPos is not past end of row
+void Terminal::clrErase_(unsigned n)
+{
+  tputs(tiparm(m_ech, n));
+}
+
+// clear with ech, falling back to spaces - endPos is not past end of row
+void Terminal::clr_(unsigned n)
+{
+  if (ZuLikely(m_ech))
+    clrErase_(n);
+  else
+    clrOver_(n);
+}
+
+// clear with ech, falling back to spaces - endPos is not past end of row
+void Terminal::clr(unsigned endPos)
+{
+  if (ZuLikely(m_ech)) {
+    validatePos(endPos);
+
+    clrErase_(endPos - m_pos);
+  } else
+    clrOver(endPos);
+}
+
+// clear by overwriting spaces
+// Win32 - FillConsoleOutputCharacter()
+void Terminal::clrOver_(unsigned n)
+{
+  for (unsigned i = 0; i < n; i++) m_out << ' ';
+}
+
+// clear by overwriting spaces
+void Terminal::clrOver(unsigned endPos)
+{
+  validatePos(endPos);
+
+  clrOver_(endPos - m_pos);
+  m_pos = endPos;
+}
+
+// Note: there are only 34 out of 1550 non-hardcopy terminals in the
+// terminfo database without cuu/cuu1; all of them are ancient, dumb or
+// in "line mode"; prominent are Matrix Orbital LCDs, the
+// Lear-Siegler ADM3, the Plan 9 terminal, obsolete DEC gt40/42,
+// Hazeltine 1000/2000, ansi-mini (ansi-mr would be a good substitute),
+// Tektronix 40xx and 41xx, GE Terminet, TI 7xx, Xerox 17xx, and
+// IBM 3270s in line mode
+
 // move cursor to position
+// Win32 - SetConsoleCursorPosition()
 void Terminal::mv(unsigned pos)
 {
   if (pos < m_pos) {
-    if (unsigned up = m_pos / m_w - pos / m_w) {
+    if (unsigned up = m_pos / m_width - pos / m_width) {
       if (ZuLikely(m_cuu))
 	tputs(tiparm(m_cuu, up));
       else if (ZuLikely(m_cuu1)) {
-	do { tputs(m_cuu1); m_pos -= m_w; } while (--up);
-      } else if (m_bw) {
-	cr();
-	do { tputs(m_cub1); tputs(m_cr); m_pos -= m_w; } while (--up);
-      } else { // no way to go up, just reprint destination line
+	do { tputs(m_cuu1); m_pos -= m_width; } while (--up);
+      } else { // no way to go up, just reprint destination row
 	tputs(m_cr);
-	m_pos = pos - (pos % m_w);
-	redrawNoScroll(m_pos + m_w, pos);
+	m_pos = pos - (pos % m_width);
+	outNoScroll(m_pos + m_width, pos);
 	return;
       }
       if (ZuUnlikely(m_pos == pos)) return;
     } else
       mvleft(pos);
   } else if (pos > m_pos) {
-    if (unsigned down = pos / m_w - m_pos / m_w) {
+    if (unsigned down = pos / m_width - m_pos / m_width) {
       if (ZuLikely(m_cud))
 	tputs(tiparm(m_cud, down));
       else if (ZuLikely(m_cud1)) {
-	do { tputs(m_cud1); m_pos += m_w; } while (--down);
+	do { tputs(m_cud1); m_pos += m_width; } while (--down);
       } else {
 	do { nl(); } while (--down);
 	cr();
@@ -880,14 +990,14 @@ void Terminal::mvhoriz(unsigned pos)
 
 void Terminal::mvleft(unsigned pos)
 {
-  ZmAssert(m_pos >= pos - (pos % m_w));		// cursor is >=BOL
-  ZmAssert(m_pos < pos - (pos % m_w) + m_w);	// cursor is <EOL
+  ZmAssert(m_pos >= pos - (pos % m_width));		// cursor is >=BOL
+  ZmAssert(m_pos < pos - (pos % m_width) + m_width);	// cursor is <EOL
   ZmAssert(m_pos > pos);			// cursor is right of pos
 
   if (ZuLikely(m_cub)) {
     tputs(tiparm(m_cub, m_pos - pos));
   } else if (ZuLikely(m_hpa)) {
-    tputs(tiparm(m_hpa, pos - (pos % m_w)));
+    tputs(tiparm(m_hpa, pos - (pos % m_width)));
   } else {
     for (unsigned i = 0, n = m_pos - pos; i < n; i++) tputs(m_cub1);
   }
@@ -901,13 +1011,13 @@ void Terminal::mvright(unsigned pos)
   if (ZuLikely(m_cuf)) {
     tputs(tiparm(m_cuf, pos - m_pos));
   } else if (ZuLikely(m_hpa)) {
-    tputs(tiparm(m_hpa, pos - (pos % m_w)));
+    tputs(tiparm(m_hpa, pos - (pos % m_width)));
 #if 0
   } else if (m_cuf1) {
     for (unsigned i = 0, n = pos - m_pos; i < n; i++) tputs(m_cuf1);
 #endif
   } else {
-    redraw(pos);
+    outClr(pos);
     return;
   }
   m_pos = pos;
@@ -955,59 +1065,53 @@ void Terminal::del_(unsigned n)
 }
 
 void Terminal::splice(
-    unsigned off, ZuUTFSpan span, ZuUTFSpan rspan, ZuString replace)
+    unsigned off, ZuUTFSpan span,
+    ZuArray<const uint8_t> replace, ZuUTFSpan rspan)
 {
-  unsigned endPos = m_pos + span.width();
+  unsigned endPos = m_pos + rspan.width();
   unsigned endBOLPos = endPos - (endPos % m_w);
   bool shiftLeft = false, shiftRight = false;
-  ZtArray<ZuUTFSpan> shiftLines;
+  ZtArray<ZuUTFSpan> shiftRows;
 
+  // it's worth optimizing the common case where a long line of input
+  // is being interactively edited at its beginning; when shifting the
+  // trailing data, if the shift distance is less than half the width of
+  // the display, and the width of the trailing data is greater than the
+  // the shift distance, it's worth leaving the previously displayed data
+  // in place on the terminal and using insertions/deletions on each
+  // trailing row, rather than completely redrawing all trailing rows
   if (off + span.inLen() < m_line.length()) {
     unsigned trailWidth = m_line.width() - endPos; // width of trailing data
-    unsigned trailLines = (trailWidth + m_w - 1) / m_w; // #lines of ''
 
     ZmAssert(trailWidth);
 
-    // it's worth optimizing the common case where a long line of input
-    // is being interactively edited at the beginning; if shifting the
-    // trailing data, and the shift is less than half the width of the
-    // display, and the width of the trailing data is greater than the
-    // shift, it's worth leaving the displayed data in place and using
-    // insertions/deletions on each trailing line
     if (rspan.width() < span.width()) {
       unsigned shiftWidth = span.width() - rspan.width();
-      if (shiftWidth < (m_w>>1) && trailWidth > shiftWidth &&
-	  (m_dch || m_dch1 || (m_smdc && m_rmdc))) {
-	// shift left using deletions on each line
-	shiftLeft = true;
-	// a display left shift can result in both +ve and -ve byte offsets
-	int shiftOff =
-	  static_cast<int>(rspan.inLen()) - static_cast<int>(span.inLen());
-	shiftLines.size(trailLines);
-	unsigned bolPos = endBOLPos;
-	while (bolPos < m_line.width()) {
-	  unsigned eolPos = m_line.align(bolPos + m_w - 1);
-	  shiftLines.push(ZuUTFSpan{
-	    m_line.position(eolPos).index() + shiftOff, 0, eolPos});
-	  bolPos += m_w;
-	}
-      }
+      if (shiftWidth < (m_width>>1) && trailWidth > shiftWidth &&
+	  (m_dch || m_dch1 || (m_smdc && m_rmdc)))
+	shiftLeft = true; // shift left using deletions on each line
     } else if (rspan.width() > span.width()) {
       unsigned shiftWidth = rspan.width() - span.width();
-      if (shiftWidth < (m_w>>1) && trailWidth > shiftWidth &&
-	  (m_ich || m_ich1 || (m_smir && m_rmir))) {
-	// shift right using insertions on each line
-	shiftRight = true;
-	// a right shift can result in both +ve and -ve byte offsets
-	int shiftOff =
-	  static_cast<int>(rspan.inLen()) - static_cast<int>(span.inLen());
-	shiftLines.size(trailLines);
-	unsigned bolPos = endBOLPos;
-	while (bolPos < m_line.width()) {
-	  shiftLines.push(ZuUTFSpan{
-	    m_line.position(bolPos).index() + shiftOff, 0, bolPos});
-	  bolPos += m_w;
+      if (shiftWidth < (m_width>>1) && trailWidth > shiftWidth &&
+	  (m_ich || m_ich1 || (m_smir && m_rmir)))
+	shiftRight = true; // shift right using insertions on each line
+    }
+    if (shiftLeft || shiftRight) {
+      unsigned trailRows = (trailWidth + m_width - 1) / m_width; // #rows
+      shiftRows.size(trailRows);
+      int shiftOff =
+	static_cast<int>(rspan.inLen()) - static_cast<int>(span.inLen());
+      unsigned bolPos = endBOLPos;
+      while (bolPos < m_line.width()) {
+	if (shiftLeft) {
+	  unsigned eolPos = m_line.align(bolPos + m_width - 1);
+	  shiftRows.push(ZuUTFSpan{
+	    m_line.position(eolPos).mapping() + shiftOff, 0, eolPos});
+	} else {
+	  shiftRows.push(ZuUTFSpan{
+	    m_line.position(bolPos).mapping() + shiftOff, 0, bolPos});
 	}
+	bolPos += m_width;
       }
     }
   }
@@ -1020,97 +1124,133 @@ void Terminal::splice(
 
   // recalculate endPos
   endPos = m_pos + rspan.width();
-  endBOLPos = endPos - (endPos % m_w);
+  endBOLPos = endPos - (endPos % m_width);
 
-  // redraw/scroll all but last line of replacement data
+  // out/scroll all but last row of replacement data
   {
-    unsigned bolPos = m_pos - (m_pos % m_w);
-    while (bolPos < endBOLPos) redrawScroll(bolPos += m_w);
+    unsigned bolPos = m_pos - (m_pos % m_width);
+    while (bolPos < endBOLPos) outScroll(bolPos += m_width);
   }
 
-  // redraw/scroll all but last line of trailing data
+  // out/scroll all but last row of trailing data
   unsigned lastBOLPos = m_line.width();
-  lastBOLPos -= (lastBOLPos % m_w);
-
+  lastBOLPos -= (lastBOLPos % m_width);
   unsigned bolPos = endBOLPos;
   if (shiftLeft) {
     unsigned line = 0;
     while (bolPos < lastBOLPos) {
-      auto shiftLine = shiftLines[line++];
-      unsigned rightPos = m_line.byte(shiftLine.inLen()).index();
-      del_(shiftLine.width() - (rightPos - m_pos));
+      auto shiftRow = shiftRows[line++];
+      unsigned rightPos = m_line.byte(shiftRow.inLen()).mapping();
+      del_(shiftRow.width() - (rightPos - m_pos));
       rightPos += m_line.position(rightPos).len();
       mvright(rightPos);
-      redrawScroll(bolPos += m_w);
+      outScroll(bolPos += m_width);
     }
     if (bolPos < m_line.width()) {
-      auto shiftLine = shiftLines[line];
-      unsigned rightPos = m_line.byte(shiftLine.inLen()).index();
-      del_(shiftLine.width() - (rightPos - m_pos));
+      auto shiftRow = shiftRows[line];
+      unsigned rightPos = m_line.byte(shiftRow.inLen()).mapping();
+      del_(shiftRow.width() - (rightPos - m_pos));
       rightPos += m_line.position(rightPos).len();
       mvright(rightPos);
-      redraw(m_line.width());
+      outClr(m_line.width());
     }
   } else if (shiftRight) {
     unsigned line = 0;
     bool smir = false;
     while (bolPos < lastBOLPos) {
-      auto shiftLine = shiftLines[line++];
-      unsigned leftPos = m_line.byte(shiftLine.inLen()).index();
+      auto shiftRow = shiftRows[line++];
+      unsigned leftPos = m_line.byte(shiftRow.inLen()).mapping();
       smir = ins_(leftPos - m_pos, smir);
-      redraw(leftPos);
+      outClr(leftPos);
       if (smir && !m_mir) { tputs(m_rmir); smir = false; }
       crnl();
-      bolPos += m_w;
+      bolPos += m_width;
     }
     if (bolPos < m_line.width()) {
-      auto shiftLine = shiftLines[line];
-      unsigned leftPos = m_line.byte(shiftLine.inLen()).index();
+      auto shiftRow = shiftRows[line];
+      unsigned leftPos = m_line.byte(shiftRow.inLen()).mapping();
       smir = ins_(leftPos - m_pos, smir);
-      redraw(leftPos);
-      if (smir) tputs(m_rmir);
+      outClr(leftPos);
     }
+    if (smir) tputs(m_rmir);
   } else {
-    while (bolPos < lastBOLPos) redrawScroll(bolPos += m_w);
-    if (bolPos < m_line.width()) redraw(m_line.width());
+    while (bolPos < lastBOLPos) outScroll(bolPos += m_width);
+    if (bolPos < m_line.width()) outClr(m_line.width());
   }
 
-  // if the size of the line was reduced, clear to the end of the previous data
+  // if the length of the line was reduced, clear to the end of the old line
   if (rspan.width() < span.width()) {
     unsigned clrPos = m_line.width() + (span.width() - rspan.width());
-    unsigned clrBOLPos = clrPos - (clrPos % m_w);
-    while (bolPos < clrBOLPos) clrScroll(bolPos += m_w);
+    unsigned clrBOLPos = clrPos - (clrPos % m_width);
+    while (bolPos < clrBOLPos) clrScroll(bolPos += m_width);
     if (bolPos < clrPos) clr(clrPos);
   }
 
-  // move cursor to final position
+  // move cursor to final position (i.e. just after rspan)
   mv(endPos);
 }
 
-void Terminal::out(ZuString s)
+void Terminal::clear()
 {
-  unsigned off = position(m_pos).index();
+  m_line.clear();
+  m_pos = 0;
+}
+
+void Terminal::cls()
+{
+  unsigned endPos = m_pos;
+  tputs(m_clear);
+  m_pos = 0;
+  redraw_();
+  mv(endPos);
+}
+
+void Terminal::redraw()
+{
+  unsigned pos = m_pos;
+  mv(0);
+  redraw_();
+  mv(pos);
+}
+
+void Terminal::redraw_()
+{
+  unsigned lastBOLPos = m_line.width();
+  lastBOLPos -= (lastBOLPos % m_width);
+  unsigned bolPos = 0;
+  // out/scroll all but last row
+  while (bolPos < lastBOLPos) outScroll(bolPos += m_width);
+  // output last row
+  if (bolPos < m_line.width()) outClr(m_line.width());
+}
+
+// overwrite string
+void Terminal::over(ZuArray<const uint8_t> s)
+{
+  unsigned off = m_line.position(m_pos).mapping();
   auto rspan = ZuUTF<uint32_t, uint8_t>::span(s);
-  ZuArray<uint8_t> removed{m_line};
+  ZuArray<const uint8_t> removed{m_line};
   removed.offset(off);
   auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, rspan.outLen());
-  splice(off, span, rspan, s);
+  splice(off, span, s, rspan);
 }
 
-void Terminal::ins(ZuString s)
+// insert string
+void Terminal::ins(ZuArray<const uint8_t> s)
 {
-  unsigned off = position(m_pos).index();
+  unsigned off = m_line.position(m_pos).mapping();
   auto rspan = ZuUTF<uint32_t, uint8_t>::span(s);
-  splice(off, ZuUTFSpan{}, rspan, s);
+  splice(off, ZuUTFSpan{}, s, rspan);
 }
 
-void Terminal::del(unsigned n)
+// delete a number of glyphs (NOT a number of bytes, or display positions)
+void Terminal::del(unsigned nglyphs)
 {
-  unsigned off = position(m_pos).index();
-  ZuArray<uint8_t> removed{m_line};
+  unsigned off = m_line.position(m_pos).mapping();
+  ZuArray<const uint8_t> removed{m_line};
   removed.offset(off);
-  auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, n);
-  splice(off, span, ZuUTFSpan{}, s);
+  auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, nglyphs);
+  splice(off, span, ZuArray<const uint8_t>{}, ZuUTFSpan{});
 }
 
 } // namespace Zrl

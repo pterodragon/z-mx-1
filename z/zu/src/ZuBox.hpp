@@ -495,7 +495,7 @@ public:
 
   ZuInline static ZuBox inf() { return ZuBox{Cmp::inf()}; }
   ZuInline ZuBox epsilon() const { return ZuBox{Cmp::epsilon(m_val)}; }
-  ZuInline bool feq(const T &r) const {
+  ZuInline bool feq(T r) const {
     if (Cmp::null(m_val)) return Cmp::null(r);
     if (Cmp::null(r)) return false;
     return feq_(r);

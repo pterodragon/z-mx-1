@@ -39,9 +39,6 @@
 #pragma once
 #endif
 
-// #include <utility>
-// #include <type_traits>
-
 #include <zlib/ZuIfT.hpp>
 
 #ifdef _MSC_VER

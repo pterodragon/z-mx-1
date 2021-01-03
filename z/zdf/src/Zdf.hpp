@@ -99,13 +99,17 @@ public:
     initFn();
   }
   AnyReader &operator =(const AnyReader &r) {
-    AnyReader_::operator =(r);
-    initFn();
+    if (ZuLikely(this != &r)) {
+      AnyReader_::operator =(r);
+      initFn();
+    }
     return *this;
   }
   AnyReader &operator =(AnyReader &&r) {
-    AnyReader_::operator =(static_cast<AnyReader_ &&>(r));
-    initFn();
+    if (ZuLikely(this != &r)) {
+      AnyReader_::operator =(static_cast<AnyReader_ &&>(r));
+      initFn();
+    }
     return *this;
   }
   ~AnyReader() = default;
@@ -204,9 +208,11 @@ public:
   AnyWriter(AnyWriter &&r) : AnyWriter_{static_cast<AnyWriter_ &&>(r)} {
     initFn();
   }
-  AnyWriter &operator =(AnyWriter &&r) {
-    AnyWriter_::operator =(static_cast<AnyWriter_ &&>(r));
-    initFn();
+  AnyWriter &operator =(AnyWriter &&w) {
+    if (ZuLikely(this != &w)) {
+      AnyWriter_::operator =(static_cast<AnyWriter_ &&>(w));
+      initFn();
+    }
     return *this;
   }
   ~AnyWriter() = default;

@@ -58,9 +58,11 @@ public:
     guard.m_lock = 0;
   }
   ZuInline ZmGuard &operator =(ZmGuard &&guard) noexcept {
-    if (m_lock) Traits::unlock(*m_lock);
-    m_lock = guard.m_lock;
-    guard.m_lock = 0;
+    if (ZuLikely(this != &guard)) {
+      if (m_lock) Traits::unlock(*m_lock);
+      m_lock = guard.m_lock;
+      guard.m_lock = 0;
+    }
     return *this;
   }
 
@@ -110,9 +112,11 @@ public:
   }
 
   ZuInline ZmReadGuard &operator =(ZmReadGuard &&guard) noexcept {
-    if (m_lock) Traits::readunlock(*m_lock);
-    m_lock = guard.m_lock;
-    guard.m_lock = 0;
+    if (ZuLikely(this != &guard)) {
+      if (m_lock) Traits::readunlock(*m_lock);
+      m_lock = guard.m_lock;
+      guard.m_lock = 0;
+    }
     return *this;
   }
 

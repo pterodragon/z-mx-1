@@ -418,10 +418,16 @@ protected:
   };
 
   template <typename I> class Iterator_ : public Iterator__<I> {
+    Iterator_(const Iterator_ &) = delete;
+    Iterator_ &operator =(const Iterator_ &) = delete;
+
     using Hash = ZmHash<Key, NTP>;
   friend Hash;
 
   protected:
+    Iterator_(Iterator_ &&) = default;
+    Iterator_ &operator =(Iterator_ &&) = default;
+
     ZuInline Iterator_(Hash &hash) : m_hash(hash) { }
 
   public:
@@ -447,7 +453,13 @@ protected:
 
     using Iterator_<I>::m_hash;
 
+    IndexIterator_(const IndexIterator_ &) = delete;
+    IndexIterator_ &operator =(const IndexIterator_ &) = delete;
+
   protected:
+    IndexIterator_(IndexIterator_ &&) = default;
+    IndexIterator_ &operator =(IndexIterator_ &&) = default;
+
     template <typename Index_>
     ZuInline IndexIterator_(Hash &hash, Index_ &&index) :
 	Iterator_<I>(hash), m_index(ZuFwd<Index_>(index)) { }
@@ -479,6 +491,9 @@ public:
     void unlock(Lock &l) { LockTraits::unlock(l); }
 
   public:
+    Iterator(Iterator &&) = default;
+    Iterator &operator =(Iterator &&) = default;
+
     Iterator(Hash &hash) : Base(hash) { hash.startIterate(*this); }
     virtual ~Iterator() { m_hash.endIterate(*this); }
     void del() { m_hash.delIterate(*this); }
@@ -498,6 +513,9 @@ public:
     ZuInline void unlock(Lock &l) { LockTraits::readunlock(l); }
 
   public:
+    ReadIterator(ReadIterator &&) = default;
+    ReadIterator &operator =(ReadIterator &&) = default;
+
     ZuInline ReadIterator(const Hash &hash) : Base(const_cast<Hash &>(hash)) {
       const_cast<Hash &>(hash).startIterate(*this);
     }
@@ -518,6 +536,9 @@ public:
     ZuInline void unlock(Lock &l) { LockTraits::unlock(l); }
 
   public:
+    IndexIterator(IndexIterator &&) = default;
+    IndexIterator &operator =(IndexIterator &&) = default;
+
     template <typename Index_>
     ZuInline IndexIterator(Hash &hash, Index_ &&index) :
 	Base(hash, ZuFwd<Index_>(index)) {
@@ -541,6 +562,9 @@ public:
     ZuInline void unlock(Lock &l) { LockTraits::readunlock(l); }
 
   public:
+    ReadIndexIterator(ReadIndexIterator &&) = default;
+    ReadIndexIterator &operator =(ReadIndexIterator &&) = default;
+
     template <typename Index_>
     ZuInline ReadIndexIterator(const Hash &hash, Index_ &&index) :
 	Base(const_cast<Hash &>(hash), ZuFwd<Index_>(index)) {

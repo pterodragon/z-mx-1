@@ -36,6 +36,18 @@
 struct ZuUTF8 {
   using Elem = uint8_t;
 
+  static bool initial(uint8_t c) {
+    return c < 0x80 || c >= 0xc0;
+  }
+
+  static unsigned in(uint8_t c) {
+    if (ZuLikely(c < 0x80)) return 1;
+    if (ZuLikely((c>>5) == 0x6)) return 2;
+    if (ZuLikely((c>>4) == 0xe)) return 3;
+    if (ZuLikely((c>>3U) == 0x1e)) return 4;
+    return 0;
+  }
+
   static unsigned in(const uint8_t *s, unsigned n) {
     if (ZuUnlikely(n < 1)) return 0;
     uint8_t c = *s;
@@ -122,6 +134,26 @@ struct ZuUTF8 {
 struct ZuUTF16 {
   using Elem = uint16_t;
 
+  static bool initial(uint16_t c) {
+    return c < 0xdc00 || c >= 0xc000;
+  }
+
+  static unsigned in(uint16_t c) {
+    if (ZuLikely(c < 0xd800 || c >= 0xc000)) return 1;
+    if (ZuUnlikely(c >= 0xdc00)) return 0;
+    return 2;
+  }
+
+  static unsigned in(const uint16_t *s, unsigned n) {
+    uint16_t c = *s;
+    if (ZuUnlikely(n < 1)) return 0;
+    if (ZuLikely(c < 0xd800 || c >= 0xc000)) return 1;
+    if (ZuUnlikely(n < 2 || c >= 0xdc00)) return 0;
+    c = *++s;
+    if (ZuUnlikely(c < 0xdc00 || c >= 0xc000)) return 0;
+    return 2;
+  }
+
   static unsigned in(const uint16_t *s, unsigned n, uint32_t &u_) {
     uint16_t c = *s;
     if (ZuUnlikely(n < 1)) return 0;
@@ -195,17 +227,34 @@ public:
   ZuUTFSpan &operator =(ZuUTFSpan &&) = default;
   ~ZuUTFSpan() = default;
 
-  ZuUTFSpan(unsigned inLen, unsigned outLen, unsigned width) :
+  ZuUTFSpan(uint64_t inLen, uint64_t outLen, uint64_t width) :
       m_value{inLen | (outLen<<shift()) | (width<<(shift()<<1))} { }
 
 private:
-  public:
+  ZuUTFSpan(uint64_t value) : m_value{value} { }
+
+public:
   unsigned inLen() const { return m_value & mask(); }
   unsigned outLen() const { return (m_value>>shift()) & mask(); }
   unsigned width() const { return m_value>>(shift()<<1); }
 
-  operator !() const { return !m_value; }
+  bool operator !() const { return !m_value; }
   ZuOpBool
+
+  ZuUTFSpan operator +(const ZuUTFSpan &o) {
+    return ZuUTFSpan{m_value + o.m_value};
+  }
+  ZuUTFSpan &operator +=(const ZuUTFSpan &o) {
+    m_value += o.m_value;
+    return *this;
+  }
+  ZuUTFSpan operator -(const ZuUTFSpan &o) {
+    return ZuUTFSpan{m_value - o.m_value};
+  }
+  ZuUTFSpan &operator -=(const ZuUTFSpan &o) {
+    m_value -= o.m_value;
+    return *this;
+  }
 
 private:
   uint64_t	m_value = 0;
@@ -235,24 +284,24 @@ template <typename OutChar, typename InChar> struct ZuUTF {
     return Span{n, l, w};
   }
 
-  Span nspan(ZuArray<const InChar> s_, unsigned m) { // max. output characters
+  Span nspan(ZuArray<const InChar> s_, unsigned nglyphs) {
     auto s = reinterpret_cast<const InElem *>(s_.data());
     unsigned n = s_.length();
     uint32_t u;
     unsigned l = 0;
     unsigned w = 0;
-    for (unsigned i = n; i && m; ) {
+    for (unsigned i = n; i && nglyphs; ) {
       unsigned j = InUTF::in(s, i, u);
       if (ZuUnlikely(!j || j > i)) return Span{n - i, l, w};
       s += j, i -= j;
       l += OutUTF::out(u);
       w += ZuUTF32::width(u);
-      --m;
+      --nglyphs;
     }
     return Span{n, l, w};
   }
 
-  Span cspan(ZuArray<const InChar> s_) { // single output character
+  Span gspan(ZuArray<const InChar> s_) { // single glyph
     auto s = reinterpret_cast<const InElem *>(s_.data());
     unsigned n = s_.length();
     uint32_t u;

@@ -165,6 +165,9 @@ enum {
 
 template <typename Tree_, int Direction_>
 class ZmRBTreeIterator_ { // red/black tree iterator
+  ZmRBTreeIterator_(const ZmRBTreeIterator_ &) = delete;
+  ZmRBTreeIterator_ &operator =(const ZmRBTreeIterator_ &) = delete;
+
 friend Tree_;
 
 public:
@@ -178,6 +181,9 @@ public:
   using NodeRef = typename Tree::NodeRef;
 
 protected:
+  ZmRBTreeIterator_(ZmRBTreeIterator_ &&) = default;
+  ZmRBTreeIterator_ &operator =(ZmRBTreeIterator_ &&) = default;
+
   ZmRBTreeIterator_(Tree &tree) : m_tree(tree) {
     tree.startIterate(*this);
   }
@@ -222,6 +228,9 @@ template <typename Tree_, int Direction_ = ZmRBTreeGreaterEqual>
 class ZmRBTreeIterator :
     public Tree_::Guard,
     public ZmRBTreeIterator_<Tree_, Direction_> {
+  ZmRBTreeIterator(const ZmRBTreeIterator &) = delete;
+  ZmRBTreeIterator &operator =(const ZmRBTreeIterator &) = delete;
+
   using Tree = Tree_;
   enum { Direction = Direction_ };
   using Guard = typename Tree::Guard;
@@ -229,14 +238,17 @@ class ZmRBTreeIterator :
   using NodeRef = typename Tree::NodeRef;
 
 public:
+  ZmRBTreeIterator(ZmRBTreeIterator &&) = default;
+  ZmRBTreeIterator &operator =(ZmRBTreeIterator &&) = default;
+
   ZmRBTreeIterator(Tree &tree) :
-    Guard(tree.lock()),
-    ZmRBTreeIterator_<Tree, Direction>(tree) { }
+      Guard{tree.lock()},
+      ZmRBTreeIterator_<Tree, Direction>{tree} { }
   template <typename Index_>
   ZmRBTreeIterator(Tree &tree, const Index_ &index,
       int compare = Direction) :
-    Guard(tree.lock()),
-    ZmRBTreeIterator_<Tree, Direction>(tree, index, compare) { }
+    Guard{tree.lock()},
+    ZmRBTreeIterator_<Tree, Direction>{tree, index, compare} { }
 
   NodeRef del(Node *node) { return this->m_tree.delIterate(node); }
 };
@@ -245,11 +257,17 @@ template <typename Tree_, int Direction_ = ZmRBTreeGreaterEqual>
 class ZmRBTreeReadIterator :
     public Tree_::ReadGuard,
     public ZmRBTreeIterator_<Tree_, Direction_> {
+  ZmRBTreeReadIterator(const ZmRBTreeReadIterator &) = delete;
+  ZmRBTreeReadIterator &operator =(const ZmRBTreeReadIterator &) = delete;
+
   using Tree = Tree_;
   enum { Direction = Direction_ };
   using ReadGuard = typename Tree::ReadGuard;
 
 public:
+  ZmRBTreeReadIterator(ZmRBTreeReadIterator &&) = default;
+  ZmRBTreeReadIterator &operator =(ZmRBTreeReadIterator &&) = default;
+
   ZmRBTreeReadIterator(const Tree &tree) :
     ReadGuard(tree.lock()),
     ZmRBTreeIterator_<Tree, Direction>(
@@ -688,7 +706,7 @@ public:
   auto iterator() {
     return Iterator<Direction>(*this);
   }
-  template <int Direction, typename Index_>
+  template <int Direction = ZmRBTreeGreaterEqual, typename Index_>
   auto iterator(Index_ &&index) {
     return Iterator<Direction>(*this, ZuFwd<Index_>(index));
   }
@@ -696,7 +714,7 @@ public:
   auto readIterator() const {
     return ReadIterator<Direction>(*this);
   }
-  template <int Direction, typename Index_>
+  template <int Direction = ZmRBTreeGreaterEqual, typename Index_>
   auto readIterator(Index_ &&index) const {
     return ReadIterator<Direction>(*this, ZuFwd<Index_>(index));
   }

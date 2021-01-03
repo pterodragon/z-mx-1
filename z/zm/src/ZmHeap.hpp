@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// block allocator with affinitized cache (free list) and statistics
+// recycling block allocator with affinitized cache (free list) and statistics
 
 #ifndef ZmHeap_HPP
 #define ZmHeap_HPP

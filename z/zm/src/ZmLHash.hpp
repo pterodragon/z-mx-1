@@ -197,16 +197,19 @@ template <class, typename, class, unsigned> friend class ZmLHash_;
 
     ZuInline Data(const Data &d) : m_key(d.m_key), m_value(d.m_value) { }
     ZuInline Data &operator =(const Data &d) {
-      if (this == &d) return *this;
-      m_key = d.m_key;
-      m_value = d.m_value;
+      if (ZuLikely(this != &d)) {
+	m_key = d.m_key;
+	m_value = d.m_value;
+      }
       return *this;
     }
     ZuInline Data(Data &&d) :
       m_key(ZuMv(d.m_key)), m_value(ZuMv(d.m_value)) { }
     ZuInline Data &operator =(Data &&d) {
-      m_key = ZuMv(d.m_key);
-      m_value = ZuMv(d.m_value);
+      if (ZuLikely(this != &d)) {
+	m_key = ZuMv(d.m_key);
+	m_value = ZuMv(d.m_value);
+      }
       return *this;
     }
 
@@ -250,9 +253,10 @@ public:
     if (m_u = n.m_u) new (m_data) Data(n.data());
   }
   ZuInline ZmLHash_Node &operator =(const ZmLHash_Node &n) {
-    if (this == &n) return *this;
-    if (m_u) data().~Data();
-    if (m_u = n.m_u) new (m_data) Data(n.data());
+    if (ZuLikely(this != &n)) {
+      if (m_u) data().~Data();
+      if (m_u = n.m_u) new (m_data) Data(n.data());
+    }
     return *this;
   }
 
@@ -260,15 +264,17 @@ public:
     if (m_u = n.m_u) new (m_data) Data(ZuMv(n.data()));
   }
   ZuInline ZmLHash_Node &operator =(ZmLHash_Node &&n) {
-    if (m_u) data().~Data();
-    if (m_u = n.m_u) new (m_data) Data(ZuMv(n.data()));
+    if (ZuLikely(this != &n)) {
+      if (m_u) data().~Data();
+      if (m_u = n.m_u) new (m_data) Data(ZuMv(n.data()));
+    }
     return *this;
   }
 
 private:
   template <typename Key_, typename Val_>
   void init(
-      bool head, bool tail, unsigned next, Key_ &&key, Val_ &&value) {
+      unsigned head, unsigned tail, unsigned next, Key_ &&key, Val_ &&value) {
     if (!m_u)
       new (m_data) Data(ZuFwd<Key_>(key), ZuFwd<Val_>(value));
     else
@@ -513,10 +519,17 @@ protected:
   class Iterator_;
 friend Iterator_;
   class Iterator_ {			// hash iterator
+    Iterator_(const Iterator_ &) = delete;
+    Iterator_ &operator =(const Iterator_ &) = delete;
+
     using Hash = ZmLHash<Key, NTP>;
-  friend ZmLHash<Key, NTP>;
+
+  friend Hash;
 
   protected:
+    Iterator_(Iterator_ &&) = default;
+    Iterator_ &operator =(Iterator_ &&) = default;
+
     Iterator_(Hash &hash) : m_hash(hash), m_slot(-1), m_next(-1) { }
 
     virtual void lock(Lock &l) = 0;
@@ -542,12 +555,18 @@ friend Iterator_;
   class IndexIterator_;
 friend IndexIterator_;
   class IndexIterator_ : protected Iterator_ {
+    IndexIterator_(const IndexIterator_ &) = delete;
+    IndexIterator_ &operator =(const IndexIterator_ &) = delete;
+
     using Hash = ZmLHash<Key, NTP>;
-  friend ZmLHash<Key, NTP>;
+  friend Hash;
 
     using Iterator_::m_hash;
 
   protected:
+    IndexIterator_(IndexIterator_ &&) = default;
+    IndexIterator_ &operator =(IndexIterator_ &&) = default;
+
     template <typename Index_>
     IndexIterator_(Hash &hash, const Index_ &index) :
 	Iterator_(hash), m_index(index), m_prev(-1) { }
@@ -565,8 +584,8 @@ friend IndexIterator_;
 
 public:
   class Iterator : public Iterator_ {
-    Iterator(const Iterator &);
-    Iterator &operator =(const Iterator &);	// prevent mis-use
+    Iterator(const Iterator &) = delete;
+    Iterator &operator =(const Iterator &) = delete;
 
     using Hash = ZmLHash<Key, NTP>;
     void lock(Lock &l) { LockTraits::lock(l); }
@@ -575,14 +594,17 @@ public:
     using Iterator_::m_hash;
 
   public:
+    Iterator(Iterator &&) = default;
+    Iterator &operator =(Iterator &&) = default;
+
     Iterator(Hash &hash) : Iterator_(hash) { hash.startIterate(*this); }
     ~Iterator() { m_hash.endIterate(*this); }
     void del() { m_hash.delIterate(*this); }
   };
 
   class ReadIterator : public Iterator_ {
-    ReadIterator(const ReadIterator &);
-    ReadIterator &operator =(const ReadIterator &);	// prevent mis-use
+    ReadIterator(const ReadIterator &) = delete;
+    ReadIterator &operator =(const ReadIterator &) = delete;
 
     using Hash = ZmLHash<Key, NTP>;
     void lock(Lock &l) { LockTraits::readlock(l); }
@@ -591,14 +613,17 @@ public:
     using Iterator_::m_hash;
 
   public:
+    ReadIterator(ReadIterator &&) = default;
+    ReadIterator &operator =(ReadIterator &&) = default;
+
     ReadIterator(const Hash &hash) : Iterator_(const_cast<Hash &>(hash))
       { const_cast<Hash &>(hash).startIterate(*this); }
     ~ReadIterator() { m_hash.endIterate(*this); }
   };
 
   class IndexIterator : public IndexIterator_ {
-    IndexIterator(const IndexIterator &);
-    IndexIterator &operator =(const IndexIterator &);	// prevent mis-use
+    IndexIterator(const IndexIterator &) = delete;
+    IndexIterator &operator =(const IndexIterator &) = delete;
 
     using Hash = ZmLHash<Key, NTP>;
     void lock(Lock &l) { LockTraits::lock(l); }
@@ -607,6 +632,9 @@ public:
     using IndexIterator_::m_hash;
 
   public:
+    IndexIterator(IndexIterator &&) = default;
+    IndexIterator &operator =(IndexIterator &&) = default;
+
     template <typename Index_>
     IndexIterator(Hash &hash, Index_ &&index) :
 	IndexIterator_(hash, ZuFwd<Index_>(index)) { hash.startIterate(*this); }
@@ -615,8 +643,8 @@ public:
   };
 
   class ReadIndexIterator : public IndexIterator_ {
-    ReadIndexIterator(const ReadIndexIterator &);
-    ReadIndexIterator &operator =(const ReadIndexIterator &); // prevent mis-use
+    ReadIndexIterator(const ReadIndexIterator &) = delete;
+    ReadIndexIterator &operator =(const ReadIndexIterator &) = delete;
 
     using Hash = ZmLHash<Key, NTP>;
     void lock(Lock &l) { LockTraits::readlock(l); }
@@ -625,6 +653,9 @@ public:
     using IndexIterator_::m_hash;
 
   public:
+    ReadIndexIterator(ReadIndexIterator &&) = default;
+    ReadIndexIterator &operator =(ReadIndexIterator &&) = default;
+
     template <typename Index_>
     ReadIndexIterator(Hash &hash, Index_ &&index) :
 	IndexIterator_(const_cast<Hash &>(hash), ZuFwd<Index_>(index))

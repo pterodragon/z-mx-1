@@ -68,9 +68,10 @@ public:
   ZuArray(const ZuArray &a) :
       m_data(a.m_data), m_length(a.m_length) { }
   ZuArray &operator =(const ZuArray &a) {
-    if (this == &a) return *this;
-    m_data = a.m_data;
-    m_length = a.m_length;
+    if (ZuLikely(this != &a)) {
+      m_data = a.m_data;
+      m_length = a.m_length;
+    }
     return *this;
   }
 
@@ -228,6 +229,15 @@ public:
       m_data = nullptr, m_length = 0;
   }
 
+  ZuInline void trunc(unsigned n) {
+    if (ZuLikely(n < length())) {
+      if (ZuLikely(n))
+	m_length = n;
+      else
+	m_data = nullptr, m_length = 0;
+    }
+  }
+
 protected:
   ZuInline bool same(const ZuArray &v) const { return this == &v; }
   template <typename V> ZuInline bool same(const V &v) const { return false; }
@@ -304,7 +314,7 @@ public:
 
   ZuInline ZuArray() { }
   ZuInline ZuArray(const ZuArray &a) { }
-  ZuInline ZuArray &operator =(const ZuArray &a) { }
+  ZuInline ZuArray &operator =(const ZuArray &a) { return *this; }
 
   template <typename A> ZuInline ZuArray(const A &a, typename ZuIfT<
     ZuTraits<A>::IsArray && ZuConversion<
@@ -324,7 +334,7 @@ public:
 
   ZuInline ZuArray() { }
   ZuInline ZuArray(const ZuArray &a) { }
-  ZuInline ZuArray &operator =(const ZuArray &a) { }
+  ZuInline ZuArray &operator =(const ZuArray &a) { return *this; }
 
   template <typename A> ZuInline ZuArray(const A &a, typename ZuIfT<
     ZuTraits<A>::IsArray && ZuConversion<

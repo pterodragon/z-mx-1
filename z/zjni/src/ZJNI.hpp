@@ -113,10 +113,12 @@ namespace ZJNI {
       r.m_obj = 0;
     }
     ZuInline LocalRef &operator =(LocalRef &&r) {
-      if (m_obj) m_env->DeleteLocalRef((jobject)m_obj);
-      m_env = r.m_env;
-      m_obj = r.m_obj;
-      r.m_obj = 0;
+      if (ZuLikely(this != &r)) {
+	if (m_obj) m_env->DeleteLocalRef((jobject)m_obj);
+	m_env = r.m_env;
+	m_obj = r.m_obj;
+	r.m_obj = 0;
+      }
       return *this;
     }
     ZuInline void null() {
@@ -152,11 +154,13 @@ namespace ZJNI {
       r.m_obj = 0;
     }
     ZuInline GlobalRef &operator =(GlobalRef &&r) {
-      if (m_obj)
-	if (auto env = ZJNI::env())
-	  env->DeleteGlobalRef((jobject)m_obj);
-      m_obj = r.m_obj;
-      r.m_obj = 0;
+      if (ZuLikely(this != &r)) {
+	if (m_obj)
+	  if (auto env = ZJNI::env())
+	    env->DeleteGlobalRef((jobject)m_obj);
+	m_obj = r.m_obj;
+	r.m_obj = 0;
+      }
       return *this;
     }
     ZuInline void null() {

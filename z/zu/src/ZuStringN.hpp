@@ -387,7 +387,7 @@ public:
     this->init(s.data(), s.length());
   }
   ZuInline ZuStringN &operator =(const ZuStringN &s) {
-    if (this != &s) this->init(s.data(), s.length());
+    if (ZuLikely(this != &s)) this->init(s.data(), s.length());
     return *this;
   }
 
@@ -555,7 +555,7 @@ public:
     this->init(s.data(), s.length());
   }
   ZuInline ZuWStringN &operator =(const ZuWStringN &s) {
-    if (this != &s) init(s.data(), s.length());
+    if (ZuLikely(this != &s)) init(s.data(), s.length());
     return *this;
   }
 

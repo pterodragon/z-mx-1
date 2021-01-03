@@ -133,7 +133,7 @@ public:
 
   ZuInline ZdbRange(const ZdbRange &r) : m_val(r.m_val) { }
   ZuInline ZdbRange &operator =(const ZdbRange &r)
-    { if (this != &r) m_val = r.m_val; return *this; }
+    { if (ZuLikely(this != &r)) m_val = r.m_val; return *this; }
 
   template <typename V> ZuInline ZdbRange(const V &v) : m_val(v) { }
   template <typename V> ZuInline ZdbRange &operator =(const V &v)

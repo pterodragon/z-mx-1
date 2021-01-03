@@ -48,16 +48,20 @@ public:
       m_pos(r.m_pos), m_end(r.m_end),
       m_prev(r.m_prev), m_rle(r.m_rle), m_count(r.m_count) { }
   Decoder &operator =(const Decoder &r) {
-    this->~Decoder(); // nop
-    new (this) Decoder{r};
+    if (ZuLikely(this != &r)) {
+      this->~Decoder(); // nop
+      new (this) Decoder{r};
+    }
     return *this;
   }
   Decoder(Decoder &&r) noexcept :
       m_pos(r.m_pos), m_end(r.m_end),
       m_prev(r.m_prev), m_rle(r.m_rle), m_count(r.m_count) { }
   Decoder &operator =(Decoder &&r) noexcept {
-    this->~Decoder(); // nop
-    new (this) Decoder{ZuMv(r)};
+    if (ZuLikely(this != &r)) {
+      this->~Decoder(); // nop
+      new (this) Decoder{ZuMv(r)};
+    }
     return *this;
   }
   ~Decoder() = default;
@@ -249,8 +253,10 @@ public:
     w.m_count = 0;
   }
   Encoder &operator =(Encoder &&w) noexcept {
-    this->~Encoder(); // nop
-    new (this) Encoder{ZuMv(w)};
+    if (ZuLikely(this != &w)) {
+      this->~Encoder(); // nop
+      new (this) Encoder{ZuMv(w)};
+    }
     return *this;
   }
   ~Encoder() = default;
@@ -345,15 +351,19 @@ public:
   DeltaDecoder() : Base() { }
   DeltaDecoder(const DeltaDecoder &r) : Base(r), m_base(r.m_base) { }
   DeltaDecoder &operator =(const DeltaDecoder &r) {
-    this->~DeltaDecoder(); // nop
-    new (this) DeltaDecoder{r};
+    if (ZuLikely(this != &r)) {
+      this->~DeltaDecoder(); // nop
+      new (this) DeltaDecoder{r};
+    }
     return *this;
   }
   DeltaDecoder(DeltaDecoder &&r) :
       Base(static_cast<Base &&>(r)), m_base(r.m_base) { }
   DeltaDecoder &operator =(DeltaDecoder &&r) {
-    this->~DeltaDecoder(); // nop
-    new (this) DeltaDecoder{ZuMv(r)};
+    if (ZuLikely(this != &r)) {
+      this->~DeltaDecoder(); // nop
+      new (this) DeltaDecoder{ZuMv(r)};
+    }
     return *this;
   }
 
@@ -415,8 +425,10 @@ public:
     w.m_base = 0;
   }
   DeltaEncoder &operator =(DeltaEncoder &&w) noexcept {
-    this->~DeltaEncoder(); // nop
-    new (this) DeltaEncoder{ZuMv(w)};
+    if (ZuLikely(this != &w)) {
+      this->~DeltaEncoder(); // nop
+      new (this) DeltaEncoder{ZuMv(w)};
+    }
     return *this;
   }
   ~DeltaEncoder() = default;

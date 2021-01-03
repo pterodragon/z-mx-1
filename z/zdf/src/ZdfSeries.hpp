@@ -58,16 +58,20 @@ public:
       m_series(r.m_series), m_buf(r.m_buf), m_exponent(r.m_exponent),
       m_decoder(r.m_decoder) { }
   Reader &operator =(const Reader &r) {
-    this->~Reader(); // nop
-    new (this) Reader{r};
+    if (ZuLikely(this != &r)) {
+      this->~Reader(); // nop
+      new (this) Reader{r};
+    }
     return *this;
   }
   Reader(Reader &&r) noexcept :
       m_series(r.m_series), m_buf(ZuMv(r.m_buf)), m_exponent(r.m_exponent),
       m_decoder(ZuMv(r.m_decoder)) { }
   Reader &operator =(Reader &&r) noexcept {
-    this->~Reader(); // nop
-    new (this) Reader{ZuMv(r)};
+    if (ZuLikely(this != &r)) {
+      this->~Reader(); // nop
+      new (this) Reader{ZuMv(r)};
+    }
     return *this;
   }
   ~Reader() { }
@@ -178,8 +182,10 @@ public:
     // w.m_exponent = 0;
   }
   Writer &operator =(Writer &&w) noexcept {
-    this->~Writer(); // nop
-    new (this) Writer{ZuMv(w)};
+    if (ZuLikely(this != &w)) {
+      this->~Writer(); // nop
+      new (this) Writer{ZuMv(w)};
+    }
     return *this;
   }
   ~Writer() {

@@ -17,13 +17,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// heap-allocated dynamic string class
+// heap-allocated dynamic contiguous string class
 //
 // * fast, lightweight
 // * short-circuits heap allocation for small strings below a built-in size
 // * supports both zero-copy and deep-copy
 // * thin layer on ANSI C string functions
-// * no locale or character set overhead except where explicitly requested
+// * no locale or character set overhead except when explicitly requested
 
 #ifndef ZtString_HPP
 #define ZtString_HPP
@@ -322,15 +322,18 @@ private:
 
 public:
   ZuInline ZtString_ &operator =(const ZtString_ &s) {
-    if (this == &s) return *this;
-    Char *oldData = free_1();
-    copy_(s.data_(), s.length());
-    free_2(oldData);
+    if (ZuLikely(this != &s)) {
+      Char *oldData = free_1();
+      copy_(s.data_(), s.length());
+      free_2(oldData);
+    }
     return *this;
   }
   ZuInline ZtString_ &operator =(ZtString_ &&s) noexcept {
-    free_();
-    new (this) ZtString_(ZuMv(s));
+    if (ZuLikely(this != &s)) {
+      free_();
+      new (this) ZtString_(ZuMv(s));
+    }
     return *this;
   }
 
@@ -623,11 +626,34 @@ public:
 
 // accessors
 
-  ZuInline Char *data() { if (null__()) return 0; return data_(); }
+  using iterator = Char *;
+  using const_iterator = const Char *;
+  const Char *begin() const {
+    if (null__()) return nullptr;
+    return data_();
+  }
+  const Char *end() const {
+    if (null__()) return nullptr;
+    return data_() + length();
+  }
+  Char *begin() {
+    return const_cast<Char *>(static_cast<const ZtString_ &>(*this).begin());
+  }
+  Char *end() {
+    return const_cast<Char *>(static_cast<const ZtString_ &>(*this).end());
+  }
+
+  ZuInline Char *data() {
+    if (null__()) return nullptr;
+    return data_();
+  }
   ZuInline Char *data_() {
     return builtin() ? (Char *)m_data : (Char *)m_data[0];
   }
-  ZuInline const Char *data() const { if (null__()) return 0; return data_(); }
+  ZuInline const Char *data() const {
+    if (null__()) return nullptr;
+    return data_();
+  }
   ZuInline const Char *data_() const {
     return builtin() ? (const Char *)m_data : (const Char *)m_data[0];
   }
@@ -1209,9 +1235,10 @@ public:
 
 // growth algorithm
 
-  void grow(unsigned n) {
+  void grow(unsigned length) {
     unsigned o = owned() ? size_() : 0U;
-    if (ZuLikely(n > o)) size(grow(o, n));
+    if (ZuLikely(length + 1 > o)) size(grow(o, length + 1));
+    length_(length);
   }
   static unsigned grow(unsigned o, unsigned n) {
     if (n <= (unsigned)BuiltinSize) return BuiltinSize;
@@ -1379,10 +1406,12 @@ struct ZtAPI ZtHexDump {
     d.data = 0;
   }
   ZuInline ZtHexDump &operator =(ZtHexDump &&d) {
-    prefix = ZuMv(d.prefix);
-    data = d.data;
-    length = d.length;
-    d.data = 0;
+    if (ZuLikely(this != &d)) {
+      prefix = ZuMv(d.prefix);
+      data = d.data;
+      length = d.length;
+      d.data = 0;
+    }
     return *this;
   }
   ZtHexDump(const ZtHexDump &) = delete;

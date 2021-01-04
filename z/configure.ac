@@ -33,7 +33,7 @@ case $build_os in
     Z_MT_LIBS="$CK_LIBS $HWLOC_LIBS -lpthread -lrt"
     Z_ZT_LIBS="$PCRE_LIBS"
     Z_IO_LIBS="-ldl"
-    Z_TERM_LIBS="-lterminfo"
+    Z_TERM_LIBS="-lncurses"
     ;;
   mingw*)
     mingw=yes
@@ -138,6 +138,7 @@ AC_SUBST(Z_SO_LDFLAGS)
 AC_SUBST(Z_MT_LIBS)
 AC_SUBST(Z_ZT_LIBS)
 AC_SUBST(Z_IO_LIBS)
+AC_SUBST(Z_TERM_LIBS)
 
 AC_SUBST(JNI_CPPFLAGS)
 AC_SUBST(LZ4_LIBS)

@@ -301,7 +301,7 @@ struct ZvField {
   }; \
   return ZvFields{&fields_[0], sizeof(fields_) / sizeof(fields_[0])}
 
-using ZvFields = ZuArray<ZvField>;
+using ZvFields = ZuArray<const ZvField>;
 
 template <typename Impl> struct ZvFieldTuple : public ZuPrintable {
   ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }

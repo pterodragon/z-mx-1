@@ -196,9 +196,9 @@ namespace Save {
   ZuInline auto bytes(B &b, const void *data, unsigned len) {
     return b.CreateVector(static_cast<const uint8_t *>(data), len);
   }
-  // inline creation of a vector of bytes from raw data as a ZuArray<uint8_t>
+  // inline creation of a vector of bytes from raw data
   template <typename B>
-  ZuInline auto bytes(B &b, ZuArray<uint8_t> a) {
+  ZuInline auto bytes(B &b, ZuArray<const uint8_t> a) {
     return b.CreateVector(a.data(), a.length());
   }
 
@@ -246,7 +246,7 @@ namespace Load {
     return ZuString{reinterpret_cast<const char *>(s->Data()), s->size()};
   }
 
-  // inline zero-copy conversion of a [uint8] to a ZuArray<uint8_t>
+  // inline zero-copy conversion of a [uint8] to a ZuArray<const uint8_t>
   ZuInline ZuArray<const uint8_t> bytes(const Vector<uint8_t> *v) {
     if (!v) return ZuArray<const uint8_t>{};
     return ZuArray<const uint8_t>(v->data(), v->size());

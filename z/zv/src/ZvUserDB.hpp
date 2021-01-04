@@ -304,7 +304,9 @@ private:
       ZuString user, ZuString passwd, unsigned totp);
   // API access
   ZmRef<User> access(int &failures,
-      ZuString keyID, ZuArray<uint8_t> token, ZuArray<uint8_t> hmac);
+      ZuString keyID,
+      ZuArray<const uint8_t> token,
+      ZuArray<const uint8_t> hmac);
 
 public:
   // ok(user, interactive, perm)

@@ -49,6 +49,7 @@
 #include <zlib/ZuConversion.hpp>
 #include <zlib/ZuPrint.hpp>
 #include <zlib/ZuArrayFn.hpp>
+#include <zlib/ZuNormChar.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -85,34 +86,44 @@ public:
 
 private:
   template <typename U> struct IsPrimitiveArray_ {
-    using Elem = typename ZuTraits<U>::Elem;
-    enum { OK = ZuConversion<Elem, T>::Same &&
+    using V = typename ZuTraits<U>::Elem;
+    enum { OK = ZuConversion<V, T>::Same &&
       ZuTraits<U>::IsArray && ZuTraits<U>::IsPrimitive };
   };
+  template <typename U> struct IsChar_ {
+    enum { OK =
+      ZuConversion<char, U>::Same ||
+      ZuConversion<wchar_t, U>::Same
+    };
+  };
   template <typename U> struct IsCharElem_ {
-    using Elem = typename ZuTraits<U>::Elem;
-    enum { OK = 
-      (ZuConversion<char, Elem>::Same || ZuConversion<wchar_t, Elem>::Same) };
+    using V = typename ZuTraits<U>::Elem;
+    enum { OK = IsChar_<V>::OK };
   };
   template <typename U> struct IsStrLiteral {
-    using Elem = typename ZuTraits<U>::Elem;
     enum { OK = IsPrimitiveArray_<U>::OK && IsCharElem_<U>::OK };
   };
   template <typename U> struct IsPrimitiveArray {
-    using Elem = typename ZuTraits<U>::Elem;
     enum { OK = IsPrimitiveArray_<U>::OK && !IsCharElem_<U>::OK };
   };
   template <typename U> struct IsCString {
-    using Elem = typename ZuTraits<U>::Elem;
     enum { OK = !IsPrimitiveArray_<U>::OK && ZuTraits<U>::IsPointer &&
       IsCharElem_<U>::OK };
   };
-  template <typename U> struct IsOtherArray {
-    using Elem = typename ZuTraits<U>::Elem;
+  template <typename T> using NormChar = ZuNormChar<T>;
+  template <typename U, typename V = T> struct IsOtherArray {
+    using W = typename NormChar<typename ZuTraits<U>::Elem>::T;
+    using X = typename NormChar<V>::T;
     enum { OK =
       !IsPrimitiveArray_<U>::OK && !IsCString<U>::OK &&
       (ZuTraits<U>::IsArray || ZuTraits<U>::IsString) &&
-      ZuConversion<Elem, T>::Exists };
+      ZuConversion<W, X>::Same
+    };
+  };
+  template <typename U, typename V = T> struct IsPtr {
+    using W = typename NormChar<U>::T;
+    using X = typename NormChar<V>::T;
+    enum { OK = ZuConversion<W *, X *>::Exists };
   };
 
   template <typename U, typename R = void, bool OK = IsStrLiteral<U>::OK>
@@ -131,6 +142,10 @@ private:
   struct MatchOtherArray;
   template <typename U, typename R>
   struct MatchOtherArray<U, R, 1> { using T = R; };
+  template <typename U, typename R = void, bool OK = IsPtr<U>::OK>
+  struct MatchPtr;
+  template <typename U, typename R>
+  struct MatchPtr<U, R, 1> { using T = R; };
 
 public:
   // compile-time length from string literal (null-terminated)
@@ -172,20 +187,31 @@ public:
 
   // length from passed type
   template <typename A>
-  ZuInline ZuArray(const A &a, typename MatchOtherArray<A>::T *_ = 0) :
-	m_data(ZuTraits<A>::data(a)),
-	m_length(!m_data ? 0 : (int)ZuTraits<A>::length(a)) { }
+  ZuInline ZuArray(A &&a, typename MatchOtherArray<A>::T *_ = 0) :
+      m_data{reinterpret_cast<T *>(ZuTraits<A>::data(a))},
+      m_length{!m_data ? 0 : (int)ZuTraits<A>::length(a)} { }
   template <typename A>
   ZuInline typename MatchOtherArray<A, ZuArray &>::T operator =(A &&a) {
-    m_data = ZuTraits<A>::data(a);
+    m_data = reinterpret_cast<T *>(ZuTraits<A>::data(a));
     m_length = !m_data ? 0 : (int)ZuTraits<A>::length(a);
     return *this;
   }
 
-  ZuInline ZuArray(const T *data, unsigned length) :
-      m_data(data), m_length(length) { }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnarrowing"
+#endif
+  template <typename V>
+  ZuInline ZuArray(V *data, unsigned length, typename MatchPtr<V>::T *_ = 0) :
+      m_data{reinterpret_cast<T *>(data)}, m_length{length} { }
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
   ZuInline const T *data() const { return m_data; }
+  ZuInline T *data() { return m_data; }
+
   ZuInline unsigned length() const { return length_<T>(); }
 
 private:
@@ -207,15 +233,20 @@ private:
 
 public:
   ZuInline const T &operator [](int i) const { return m_data[i]; }
+  ZuInline T &operator [](int i) { return m_data[i]; }
 
   ZuInline const T *begin() const { return m_data; }
   ZuInline const T *end() const { return m_data + length(); }
+  ZuInline const T *cbegin() const { return m_data; } // sigh
+  ZuInline const T *cend() const { return m_data + length(); }
+  ZuInline T *begin() { return m_data; }
+  ZuInline T *end() { return m_data + length(); }
 
   // operator T *() must return nullptr if the string is empty, oherwise
   // these usages stop working:
   // if (ZuString s = "") { } else { puts("ok"); }
   // if (ZuString s = 0) { } else { puts("ok"); }
-  ZuInline operator const T *() const {
+  ZuInline operator T *() const {
     return !length() ? (const T *)nullptr : m_data;
   }
 
@@ -292,8 +323,8 @@ public:
   ZuInline uint32_t hash() const { return ZuHash<ZuArray>::hash(*this); }
 
 private:
-  const T	*m_data;
-  int		m_length;	// -ve used to defer calculation 
+  T	*m_data;
+  int	m_length;	// -ve used to defer calculation 
 };
 
 template <typename T> class ZuArray_Null {
@@ -375,11 +406,12 @@ template <> struct ZuPrint<ZuArray<volatile char> > : public ZuPrintString { };
 template <>
 struct ZuPrint<ZuArray<const volatile char> > : public ZuPrintString { };
 
-template <typename T> using ZuArrayT = ZuArray<typename ZuTraits<T>::Elem>;
+template <typename T>
+using ZuArrayT = ZuArray<typename ZuConst<typename ZuTraits<T>::Elem>::T>;
 
 template <typename T>
 ZuArrayT<T> ZuMkArray(T &&t) {
-  return ZuArrayT<T>(ZuFwd<T>(t));
+  return ZuArrayT<T>{ZuFwd<T>(t)};
 }
 template <typename T>
 ZuArray<T> ZuMkArray(std::initializer_list<T> &&t) {

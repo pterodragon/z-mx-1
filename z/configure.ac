@@ -33,6 +33,7 @@ case $build_os in
     Z_MT_LIBS="$CK_LIBS $HWLOC_LIBS -lpthread -lrt"
     Z_ZT_LIBS="$PCRE_LIBS"
     Z_IO_LIBS="-ldl"
+    Z_TERM_LIBS="-lterminfo"
     ;;
   mingw*)
     mingw=yes
@@ -47,6 +48,7 @@ case $build_os in
     Z_MT_LIBS="$CK_LIBS $HWLOC_LIBS"
     Z_ZT_LIBS="$PCRE_LIBS -liconv"
     Z_IO_LIBS="-lws2_32 -lwsock32"
+    Z_TERM_LIBS=""
     ;;
   *)
     Z_CXXFLAGS=""
@@ -55,6 +57,7 @@ case $build_os in
     Z_MT_LIBS="$CK_LIBS $HWLOC_LIBS -lpthread"
     Z_ZT_LIBS="$PCRE_LIBS"
     Z_IO_LIBS="-ldl"
+    Z_TERM_LIBS="-lterminfo"
     ;;
 esac
 AC_MSG_RESULT([${Z_MT_LIBS}])

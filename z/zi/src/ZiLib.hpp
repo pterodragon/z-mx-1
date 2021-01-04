@@ -47,10 +47,10 @@
 
 #endif
 
-struct ZiAPI Zi {
+namespace Zi {
   enum Result { OK = 0, EndOfFile = -1, IOError = -2, NotReady = -3 };
 
-  static const char *resultName(int r);
+  ZiExtern const char *resultName(int r);
 };
 
 #ifndef _WIN32

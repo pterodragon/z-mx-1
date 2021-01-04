@@ -369,4 +369,17 @@ template <unsigned I_> struct ZuConstant {
   constexpr unsigned operator()() const noexcept { return I; }
 };
 
+// add const
+template <typename U> struct ZuConst { using T = const U; };
+template <typename U> struct ZuConst<const U> { using T = const U; };
+
+// add volatile
+template <typename U> struct ZuVolatile { using T = volatile U; };
+template <typename U> struct ZuVolatile<volatile U> { using T = volatile U; };
+
+// add both const and volatile
+template <typename U> struct ZuCV {
+  using T = typename ZuVolatile<typename ZuConst<U>::T>::T;
+};
+
 #endif /* ZuLib_HPP */

@@ -38,10 +38,13 @@
 
 #include <sys/ioctl.h>
 
+#include <zlib/ZuString.hpp>
 #include <zlib/ZuUTF.hpp>
 #include <zlib/ZuArrayN.hpp>
 
 #include <zlib/ZtString.hpp>
+
+#include <zlib/ZmScheduler.hpp>
 
 #include <zlib/ZePlatform.hpp>
 
@@ -93,18 +96,43 @@ namespace VKey {
   };
 }
 
+class ZrlAPI VKeyMatch : public ZuObject {
+public:
+  struct Action {
+    ZuRef<ZuObject>	next;			// next VKeyMatch
+    int32_t		vkey = -1;		// virtual key
+  };
+
+  bool add(const char *s, int vkey) {
+    if (!s) return false;
+    return add_(this, reinterpret_cast<const uint8_t *>(s), vkey);
+  }
+  static bool add_(VKeyMatch *this_, const uint8_t *s, int vkey);
+  bool add(uint8_t c, int vkey);
+
+  const Action *match(uint8_t c) const;
+
+private:
+  ZtArray<uint8_t>	m_bytes;
+  ZtArray<Action>	m_actions;
+};
+
 class ZrlAPI Terminal {
 public:
-  using KeyFn = ZmFn<int32_t>; // returns true to stop reading 
+  using StartFn = ZmFn<>;
+  using KeyFn = ZmFn<int32_t>; // return true to stop reading 
 
-  Terminal(const ZmTime &interval) : m_interval{interval.millisecs()} { }
+  void init(unsigned vkeyInterval) {
+    m_vkeyInterval = vkeyInterval; // milliseconds
+  }
+  void final() { }
 
   void open(ZmScheduler *sched, unsigned thread);
   void close();
 
   bool isOpen() const; // blocking
 
-  void start(KeyFn keyFn);
+  void start(StartFn startFn, KeyFn keyFn);
   void stop();
 
   bool running() const; // blocking
@@ -123,8 +151,8 @@ public:
   unsigned pos() const { return m_pos; }
 
   void mv(unsigned pos);		// move to position
-  void over(ZuArray<const uint8_t>);	// overwrite string
-  void ins(ZuArray<const uint8_t>);	// insert string
+  void over(ZuString);	// overwrite string
+  void ins(ZuString);	// insert string
   void del(unsigned n);			// delete n characters
 
 private:
@@ -150,41 +178,22 @@ private:
 
   void addVKey(const char *cap, const char *deflt, int vkey);
 
-  // low-level output
-
-  int write(ZeError *e = nullptr);
-
-private:
-  void tputs(const char *cap);
-  
-  static char *tigetstr(const char *cap) {
-    char *s = ::tigetstr(cap);
-    if (s == reinterpret_cast<char *>(static_cast<uintptr_t>(-1)))
-      s = nullptr;
-    return s;
-  }
-  static bool tigetflag(const char *cap) {
-    int i = ::tigetflag(cap);
-    if (i < 0) i = 0;
-    return i;
-  }
-  static unsigned tigetnum(const char *cap) {
-    int i = ::tigetnum(cap);
-    if (i < 0) i = 0;
-    return i;
-  }
-  template <typename ...Args>
-  static char *tiparm(const char *cap, Args &&... args) {
-    return ::tiparm(cap, static_cast<int>(ZuFwd<Args>(args))...);
-  }
-
 public:
   // output routines
+  int write(ZeError *e = nullptr);	// write any pending output
+
+  // all updates to line data go through splice()
+  void splice(
+      unsigned off, ZuUTFSpan span,
+      ZuArray<const uint8_t> replace, ZuUTFSpan rspan);
 
   void clear();		// clear line data/state
   void cls();		// clear screen, redraw line
   void redraw();	// CR, redraw line
+private:
+  void redraw_();	// redraw line from cursor onwards
 
+public:
   // low-level output routines that do not read/update line state
   // - these must be followed by redraw() or cls()
   void crnl_();
@@ -193,7 +202,7 @@ public:
   // clear remaining n positions on row, leaving cursor at start of next row
   void clrScroll_(unsigned n);
   // low-level direct output to display
-  void out_(ZuArray<const uint8_t> data);
+  void out_(ZuString data);
 
 private:
   void cr();
@@ -220,22 +229,40 @@ private:
   void mvleft(unsigned pos);
   void mvright(unsigned pos);
 
-  // all updates to line data go through splice()
-  void splice(
-      unsigned off, ZuUTFSpan span,
-      ZuArray<const uint8_t> replace, ZuUTFSpan rspan);
-
   // low-level output routines that do not read/update line state
   void clrErase_(unsigned n);
   void clrOver_(unsigned n);
 
-  void ins_(unsigned n, bool mir);
+  bool ins_(unsigned n, bool mir);
   void del_(unsigned n);
+
+  void tputs(const char *cap);
+  
+  static char *tigetstr(const char *cap) {
+    char *s = ::tigetstr(cap);
+    if (s == reinterpret_cast<char *>(static_cast<uintptr_t>(-1)))
+      s = nullptr;
+    return s;
+  }
+  static bool tigetflag(const char *cap) {
+    int i = ::tigetflag(cap);
+    if (i < 0) i = 0;
+    return i;
+  }
+  static unsigned tigetnum(const char *cap) {
+    int i = ::tigetnum(cap);
+    if (i < 0) i = 0;
+    return i;
+  }
+  template <typename ...Args>
+  static char *tiparm(const char *cap, Args &&... args) {
+    return ::tiparm(cap, static_cast<int>(ZuFwd<Args>(args))...);
+  }
 
 private:
   // configuration (multi-byte keystroke interval timeout)
 
-  int			m_interval;			// milliseconds
+  unsigned		m_vkeyInterval = 100;		// milliseconds
 
   // scheduler / thread
 
@@ -255,7 +282,7 @@ private:
 
   ZuRef<VKeyMatch>	m_vkeyMatch;			
   KeyFn			m_keyFn;
-  int			m_nextInterval = -1;
+  int			m_nextVKInterval = -1;
   const VKeyMatch	*m_nextVKMatch = nullptr;
   ZtArray<int32_t>	m_pending;
 
@@ -273,6 +300,7 @@ private:
   bool			m_bw = false;		// back-wrap (reverse am/sam)
   bool			m_xenl = false;		// auto-margin shenanigans
   bool			m_mir = false;		// insert mode motion ok
+  bool			m_hz = false;		// cannot display tilde
   bool			m_ul = false;		// transparent underline
 
   const char		*m_cr = nullptr;	// carriage return

@@ -23,7 +23,7 @@
 
 namespace Zrl {
 
-void Line::init(unsigned x)
+void Line::clear()
 {
   m_data.clear();
   m_bytes.clear();
@@ -50,7 +50,6 @@ unsigned Line::align(unsigned pos) const
   unsigned n = m_positions.length();
   if (ZuUnlikely(pos >= n)) return n;
   auto index = m_positions[pos];
-  unsigned n;
   if (ZuUnlikely(index.padding())) {
     n = index.off() + 1;
     if (ZuUnlikely(pos < n)) return 0;
@@ -114,7 +113,8 @@ unsigned Line::fwdWord(unsigned off) const
       if (!fwd(off, n, [](char c) { return !isword__(c); })) return n;
     }
   }
-  return off - m_bytes[--off].off();
+  n = m_bytes[--off].off();
+  return off - n;
 }
 
 // backup whitespace-delimited word, distinguishing alphanumeric + '_'
@@ -126,28 +126,28 @@ unsigned Line::revWord(unsigned off) const
   off -= m_bytes[off].off();
   if (ZuUnlikely(!off)) return 0;
   if (isspace__(m_data[off])) {
-    if (!rev(off, n, [](char c) { return !isspace__(c); })) return 0;
+    if (!rev(off, [](char c) { return !isspace__(c); })) return 0;
     if (isword__(m_data[off])) {
-      if (!rev(off, n, [](char c) { return !isword__(c); })) return 0;
+      if (!rev(off, [](char c) { return !isword__(c); })) return 0;
     } else {
-      if (!rev(off, n, [](char c) { return isspace__(c) || isword__(c); }))
+      if (!rev(off, [](char c) { return isspace__(c) || isword__(c); }))
 	return 0;
     }
   } else if (isword__(m_data[off])) {
-    if (!rev(off, n, [](char c) { return !isword__(c); })) return 0;
+    if (!rev(off, [](char c) { return !isword__(c); })) return 0;
     if (isspace__(m_data[off])) {
-      if (!rev(off, n, [](char c) { return !isspace__(c); })) return 0;
+      if (!rev(off, [](char c) { return !isspace__(c); })) return 0;
     } else {
-      if (!rev(off, n, [](char c) { return isspace__(c) || isword__(c); }))
+      if (!rev(off, [](char c) { return isspace__(c) || isword__(c); }))
 	return 0;
     }
   } else {
-    if (!rev(off, n, [](char c) { return isspace__(c) || isword__(c); }))
+    if (!rev(off, [](char c) { return isspace__(c) || isword__(c); }))
       return 0;
     if (isspace__(m_data[off])) {
-      if (!rev(off, n, [](char c) { return !isspace__(c); })) return 0;
+      if (!rev(off, [](char c) { return !isspace__(c); })) return 0;
     } else {
-      if (!rev(off, n, [](char c) { return !isword__(c); })) return 0;
+      if (!rev(off, [](char c) { return !isword__(c); })) return 0;
     }
   }
   return off + m_bytes[off].len();
@@ -169,7 +169,8 @@ unsigned Line::fwdWordEnd(unsigned off) const
     if (!fwd(off, n, [](char c) { return isspace__(c) || isword__(c); }))
       return n;
   }
-  return off - m_bytes[--off].off();
+  n = m_bytes[--off].off();
+  return off - n;
 }
 
 // backup to end of whitespace-delimited word,
@@ -182,13 +183,13 @@ unsigned Line::revWordEnd(unsigned off) const
   off -= m_bytes[off].off();
   if (ZuUnlikely(!off)) return 0;
   if (isword__(m_data[off])) {
-    if (!rev(off, n, [](char c) { return !isword__(c); })) return 0;
+    if (!rev(off, [](char c) { return !isword__(c); })) return 0;
   } else {
-    if (!rev(off, n, [](char c) { return isspace__(c) || isword__(c); }))
+    if (!rev(off, [](char c) { return isspace__(c) || isword__(c); }))
       return 0;
   }
   if (isspace__(m_data[off])) {
-    if (!rev(off, n, [](char c) { return !isspace__(c); })) return 0;
+    if (!rev(off, [](char c) { return !isspace__(c); })) return 0;
   }
   return off;
 }
@@ -206,7 +207,8 @@ unsigned Line::fwdUnixWord(unsigned off) const
     if (!fwd(off, n, [](char c) { return isspace__(c); })) return n;
     if (!fwd(off, n, [](char c) { return !isspace__(c); })) return n;
   }
-  return off - m_bytes[--off].off();
+  n = m_bytes[--off].off();
+  return off - n;
 }
 
 // backup whitespace-delimited word
@@ -218,11 +220,11 @@ unsigned Line::revUnixWord(unsigned off) const
   off -= m_bytes[off].off();
   if (ZuUnlikely(!off)) return 0;
   if (isspace__(m_data[off])) {
-    if (!rev(off, n, [](char c) { return !isspace__(c); })) return 0;
-    if (!rev(off, n, [](char c) { return isspace__(c); })) return 0;
+    if (!rev(off, [](char c) { return !isspace__(c); })) return 0;
+    if (!rev(off, [](char c) { return isspace__(c); })) return 0;
   } else {
-    if (!rev(off, n, [](char c) { return isspace__(c); })) return 0;
-    if (!rev(off, n, [](char c) { return !isspace__(c); })) return 0;
+    if (!rev(off, [](char c) { return isspace__(c); })) return 0;
+    if (!rev(off, [](char c) { return !isspace__(c); })) return 0;
   }
   return off + m_bytes[off].len();
 }
@@ -237,7 +239,8 @@ unsigned Line::fwdUnixWordEnd(unsigned off) const
     if (!fwd(off, n, [](char c) { return !isspace__(c); })) return n;
   }
   if (!fwd(off, n, [](char c) { return isspace__(c); })) return n;
-  return off - m_bytes[--off].off();
+  n = m_bytes[--off].off();
+  return off - n;
 }
 
 // backup to end of whitespace-delimited word
@@ -248,9 +251,9 @@ unsigned Line::revUnixWordEnd(unsigned off) const
   if (ZuUnlikely(off >= n)) off = n - 1;
   off -= m_bytes[off].off();
   if (ZuUnlikely(!off)) return 0;
-  if (!rev(off, n, [](char c) { return isspace__(c); })) return 0;
+  if (!rev(off, [](char c) { return isspace__(c); })) return 0;
   if (isspace__(m_data[off])) {
-    if (!rev(off, n, [](char c) { return !isspace__(c); })) return 0;
+    if (!rev(off, [](char c) { return !isspace__(c); })) return 0;
   }
   return off;
 }
@@ -261,9 +264,10 @@ unsigned Line::fwdSearch(unsigned off, uint32_t glyph) const
   unsigned n = m_data.length();
   if (ZuUnlikely(off >= n)) return n;
   unsigned orig = off;
+  unsigned l;
   do {
     uint32_t u;
-    unsigned l = ZuUTF8::in(&m_data[off], n - off, u);
+    l = ZuUTF8::in(&m_data[off], n - off, u);
     if (ZuUnlikely(!l)) break;
     if (u == glyph) return off;
   } while ((off += l) < n);
@@ -291,7 +295,6 @@ unsigned Line::revSearch(unsigned off, uint32_t glyph) const
 // reflow, given offset and display width
 void Line::reflow(unsigned off, unsigned dwidth)
 {
-  // FIXME - grow() does not extend length, only size
   m_bytes.grow(m_data.length());
   m_positions.grow(m_data.length());
 
@@ -313,12 +316,12 @@ void Line::reflow(unsigned off, unsigned dwidth)
     auto span = ZuUTF<uint32_t, uint8_t>::gspan(
 	ZuArray<uint8_t>{&m_data[off], len - off});
     if (ZuUnlikely(!span)) break;
-    unsigned glen = span.len();
+    unsigned glen = span.inLen();
     unsigned gwidth = span.width();
     m_bytes.grow(off + glen);
     {
       unsigned x = pos % dwidth;
-      unsigned padding = (x + width > dwidth) ? (dwidth - x) : 0U;
+      unsigned padding = (x + gwidth > dwidth) ? (dwidth - x) : 0U;
       m_positions.grow(pos + padding + gwidth);
       for (unsigned i = 0; i < padding; i++)
 	m_positions[pos++] = Index{off, padding, i, true};

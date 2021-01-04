@@ -25,7 +25,7 @@
 
 ZiExtern const char ZiLib[] = "@(#) Zero Copy I/O Library v" Z_VERNAME;
 
-const char *Zi::resultName(int r)
+ZiExtern const char *Zi::resultName(int r)
 {
   static const char *names[] = {
     "OK", "EndOfFile", "IOError", "NotReady"

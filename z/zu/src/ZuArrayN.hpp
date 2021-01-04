@@ -329,6 +329,7 @@ private:
 
 // comparison
 
+public:
   ZuInline bool operator !() const { return !Base::m_length; }
   ZuOpBool
 
@@ -337,7 +338,7 @@ protected:
   template <typename A> ZuInline bool same(const A &a) const { return false; }
 
 private:
-  ZuInline auto array_() const { return ZuArray{data(), length()}; }
+  ZuInline auto array_() const { return ZuArray<const T>{data(), length()}; }
 public:
   template <typename A>
   ZuInline int cmp(const A &a) const {

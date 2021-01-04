@@ -30,7 +30,13 @@
 #include <zlib/ZrlLib.hpp>
 #endif
 
+#include <zlib/ZuPtr.hpp>
+
 #include <zlib/ZtArray.hpp>
+
+#include <zlib/ZmHash.hpp>
+
+#include <zlib/ZvCf.hpp>
 
 #include <zlib/ZrlLine.hpp>
 #include <zlib/ZrlTerminal.hpp>
@@ -140,7 +146,7 @@ namespace Op { // line editor operation codes
 
   // modifiers
   enum {
-    Mask	= 0x00ff;
+    Mask	= 0x00ff,
 
     // Left/Right/Home/End/{Fwd,Rev}*{Word,WordEnd,GlyphSrch}/MvMark
     Mv	 	= 0x0100,	// move cursor
@@ -189,18 +195,19 @@ struct CmdMapping_ { // maps a mode + virtual key to a sequence of commands
   CmdSeq	cmds;
 
   using Key = ZuPair<unsigned, int>;
-  struct KeyAccessor : public ZuAccessor<CmdMapping *, Key> {
-    ZuInline static Key value(const CmdMapping *m) {
-      return {mode, vkey};
-    }
-  };
+};
+struct CmdMapping_KeyAccessor :
+    public ZuAccessor<CmdMapping_, CmdMapping_::Key> {
+  ZuInline static CmdMapping_::Key value(const CmdMapping_ &m) {
+    return {m.mode, m.vkey};
+  }
 };
 
 using CmdMap =
   ZmHash<CmdMapping_,
     ZmHashObject<ZuNull,
       ZmHashNodeIsKey<true,
-	ZmHashIndex<CmdMapping_::KeyAccessor,
+	ZmHashIndex<CmdMapping_KeyAccessor,
 	  ZmHashLock<ZmNoLock>>>>>;
 
 using CmdMapping = CmdMap::Node;
@@ -228,28 +235,36 @@ public:
 
   const RegData &get(unsigned i) {
     static const RegData null;
-    if (RegData *ptr = array[i]) return *ptr;
+    if (RegData *ptr = m_array[i]) return *ptr;
     return null;
   }
   RegData &set(unsigned i) {
-    new (&array[i]) Register{new RegData{}};
-    return *(array[i]);
+    if (!m_array[i]) m_array[i] = new RegData{};
+    return *(m_array[i]);
   }
 
   // Vi yank / put
   RegData &vi_yank() {
-    offset = 0;
-    if (count < 10) ++count;
-    array[9].~Register();
-    memmove(&array[1], &array[0], 9 * sizeof(Register));
-    return set(0);
+    m_offset = 0;
+    if (m_count < 10) ++m_count;
+    m_array[9].~Register();
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+    memmove(&m_array[1], &m_array[0], 9 * sizeof(Register));
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+    new (&m_array[0]) Register{new RegData{}};
+    return *(m_array[0]);
   }
   const RegData &vi_put() { return get(0); }
 
   // Emacs yank / yank-pop
-  const RegData &emacs_yank() { return get(offset); }
+  const RegData &emacs_yank() { return get(m_offset); }
   void emacs_rotate() {
-    if (ZuUnlikely(++offset >= count)) offset = 0;
+    if (ZuUnlikely(++m_offset >= m_count)) m_offset = 0;
   }
 
 private:
@@ -265,6 +280,7 @@ struct CmdContext {
   ZtArray<uint8_t>	prompt;		// current prompt
   unsigned		startPos = 0;	// start position (following prompt)
   unsigned		mode = 0;	// current mode
+  ZtArray<unsigned>	stack;		// mode stack
   Cmd			prevCmd;	// previous command
   unsigned		horizPos = 0;	// vertical motion position
   int			markPos = -1;	// glyph mark position
@@ -294,7 +310,6 @@ struct CmdContext {
   // history search context
   ZtArray<uint8_t>	srchTerm;	// search term
   ZuUTFSpan		srchPrmptSpan;	// search prompt span
-  unsigned		srchMode = 0;	// mode prior to search prompt
 
   // insert/overwrite mode
   bool			overwrite = false;
@@ -319,26 +334,38 @@ struct CmdContext {
 
 // line editor configuration
 struct Config {
+  unsigned	vkeyInterval = 100;	// vkey seq. interval (milliseconds)
   unsigned	maxLineLen = 32768;	// maximum line length
   unsigned	maxCompPages = 5;	// max # pages of possible completions
   unsigned	histOffset = 0;		// initial history offset
+  unsigned	maxStackDepth = 10;	// maximum mode stack depth
 
   Config(ZvCf *cf) {
-    maxLineSize = cf->getInt("maxLineSize", 0, (1<<20), false, 32768);
+    vkeyInterval = cf->getInt("vkeyInterval", 1, 1000, false, 100);
+    maxLineLen = cf->getInt("maxLineLen", 0, (1<<20), false, 32768);
     maxCompPages = cf->getInt("maxCompPages", 0, 100, false, 5);
     histOffset = cf->getInt("histOffset", 0, UINT_MAX, false, 0);
+    maxStackDepth = cf->getInt("maxStackDepth", 1, 100, false, 10);
   }
+
+  Config() = default;
+  // Config(const Config &) = default;
+  // Config &operator =(const Config &) = default;
+  // Config(Config &&) = default;
+  // Config &operator =(Config &&) = default;
+  // ~Config() = default;
 };
 
-// the line editor is a virtual machine that executes commands
-// composed of an opcode, an argument and a virtual key (UTF32 if positive)
+// the line editor is a virtual machine that executes sequences of commands
+// each command sequence is bound to a virtual key; individual commands
+// consist of an opcode, an argument and a virtual key (UTF32 if positive)
 class ZrlAPI Editor {
   Editor(const Editor &) = delete;
   Editor &operator =(const Editor &) = delete;
   Editor(Editor &&) = delete;
   Editor &operator =(Editor &&) = delete;
 
-  typedef (Editor::*CmdFn)(Cmd, int32_t);
+  using CmdFn = bool (Editor::*)(Cmd, int32_t);
 
 public:
   Editor();
@@ -351,28 +378,30 @@ public:
   // terminal open/close
   void open(ZmScheduler *sched, unsigned thread);
   void close();
-  void isOpen() const;
+  bool isOpen() const;
 
   // start/stop
-  void start(ZtString prompt);
+  void start(ZtArray<uint8_t> prompt);
   void stop();
   bool running() const;
 
   // all public functions below must be called in the terminal thread
-  void prompt(ZtString prompt);
+  void prompt(ZtArray<uint8_t> prompt);
 
-  bool addMapping(unsigned mode, int vkey, CmdSeq cmds);
-  bool addMode(unsigned mode, CmdSeq cmds, bool edit);
+  void addMapping(unsigned mode, int vkey, CmdSeq cmds);
+  void addMode(unsigned mode, CmdSeq cmds, bool edit);
 
   void reset();
 
 private:
-  bool process(int32_t vkey).
+  bool process(int32_t vkey);
   bool process_(const CmdSeq &cmds, int32_t vkey);
 
   bool cmdNop(Cmd, int32_t);
 
   bool cmdMode(Cmd, int32_t);
+  bool cmdPush(Cmd, int32_t);
+  bool cmdPop(Cmd, int32_t);
 
   bool cmdError(Cmd, int32_t);
   bool cmdEndOfFile(Cmd, int32_t);
@@ -429,8 +458,14 @@ private:
   bool cmdTransWord(Cmd, int32_t);
   bool cmdTransUnixWord(Cmd, int32_t);
 
+public:
   typedef void (*TransformWordFn)(void *, ZuArray<uint8_t>);
-  void transformWord(TransformWordFn fn);
+private:
+  void transformWord(TransformWordFn fn, void *fnContext);
+
+  bool cmdLowerWord(Cmd, int32_t);
+  bool cmdUpperWord(Cmd, int32_t);
+  bool cmdCapWord(Cmd, int32_t);
 
   bool cmdSetMark(Cmd, int32_t);
   bool cmdXchMark(Cmd, int32_t);
@@ -460,7 +495,7 @@ private:
   bool addIncSrch(int32_t vkey);
 
   // simple/fast substring matcher - returns true if search term is in data
-  bool match(ZuArray<uint8_t> data);
+  bool match(ZuArray<const uint8_t> data);
   // searches forward skipping N-1 matches - returns true if found
   bool searchFwd(int arg);
   // searches backward skipping N-1 matches - returns true if found
@@ -474,7 +509,7 @@ private:
 
   // perform non-incremental search operation (abort, forward or reverse)
   struct SearchOp { enum { Abort = 0, Fwd, Rev }; };
-  void searchOp(int op);
+  void srchEndPrompt(int op);
 
   bool cmdEnterSrchFwd(Cmd, int32_t);
   bool cmdEnterSrchRev(Cmd, int32_t);
@@ -484,7 +519,7 @@ private:
   bool cmdRevSearch(Cmd, int32_t);
 
 private:
-  CmdFn		m_cmdFns[Op::N] = { nullptr };	// opcode jump table
+  CmdFn		m_cmdFn[Op::N] = { nullptr };	// opcode jump table
 
   Config	m_config;		// configuration
 

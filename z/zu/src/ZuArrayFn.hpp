@@ -114,8 +114,8 @@ public:
   template <typename S>
   static void moveItems(T *dst, S *src, unsigned length) {
     ptrdiff_t diff = 
-      reinterpret_cast<char *>(dst) -
-      reinterpret_cast<char *>(src);
+      reinterpret_cast<const char *>(dst) -
+      reinterpret_cast<const char *>(src);
     if (ZuUnlikely(!length || !diff)) return;
     if (diff < 0 || diff > static_cast<ptrdiff_t>(length * sizeof(T))) {
       do {

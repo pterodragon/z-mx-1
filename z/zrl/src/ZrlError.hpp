@@ -33,6 +33,9 @@
 #include <zlib/ZuStringN.hpp>
 
 #include <zlib/ZePlatform.hpp>
+#include <zlib/ZeLog.hpp>
+
+#include <zlib/ZiLib.hpp>
 
 namespace Zrl {
 

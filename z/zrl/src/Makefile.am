@@ -11,7 +11,7 @@ pkginclude_HEADERS = ZrlLib.hpp Zrl.hpp ZCmd.hpp \
 	ZrlLine.hpp ZrlTerminal.hpp ZrlApp.hpp ZrlEditor.hpp \
 	ZrlGlobber.hpp ZrlHistory.hpp
 lib_LTLIBRARIES = libZrl.la
-bin_PROGRAMS = nc1 zproxy zcmd
+bin_PROGRAMS = zproxy zcmd
 libZrl_la_SOURCES = ZrlLib.cpp Zrl.cpp \
 	ZrlLine.cpp ZrlTerminal.cpp ZrlEditor.cpp \
 	ZrlHistory.cpp
@@ -20,12 +20,10 @@ libZrl_la_LIBADD = \
 	$(top_builddir)/zv/src/libZv.la $(top_builddir)/zi/src/libZi.la \
 	$(top_builddir)/ze/src/libZe.la $(top_builddir)/zt/src/libZt.la \
 	$(top_builddir)/zm/src/libZm.la $(top_builddir)/zu/src/libZu.la \
-	@MBEDTLS_LIBS@ @Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
+	@Z_TERM_LIBS@ @Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
 zcmd_AM_CPPFLAGS = @Z_CPPFLAGS@
 zcmd_LDADD = libZrl.la $(libZrl_la_LIBADD)
 zcmd_SOURCES = zcmd.cpp
 zproxy_AM_CPPFLAGS = @Z_CPPFLAGS@
 zproxy_LDADD = libZrl.la $(libZrl_la_LIBADD)
 zproxy_SOURCES = zproxy.cpp
-nc1_LDADD = libZrl.la $(libZrl_la_LIBADD) -lncurses
-nc1_SOURCES = nc1.cpp

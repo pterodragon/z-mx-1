@@ -121,7 +121,7 @@ private:
   template <typename U, typename V = Char> struct IsStrLiteral {
     enum { OK = ZuTraits<U>::IsCString &&
       ZuTraits<U>::IsArray && ZuTraits<U>::IsPrimitive &&
-      ZuConversion<typename ZuTraits<U>::Elem, const V>::Same };
+      ZuConversion<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename R = void>
   struct MatchStrLiteral : public ZuIfT<IsStrLiteral<U>::OK, R> { };
@@ -130,7 +130,7 @@ private:
   template <typename U, typename V = Char> struct IsString_ {
     enum { OK = !ZuConversion<ZtArray_<V>, U>::Base &&
       !IsStrLiteral<U>::OK && ZuTraits<U>::IsString &&
-      ZuConversion<typename ZuTraits<U>::Elem, const V>::Same };
+      ZuConversion<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename R = void>
   struct MatchString : public ZuIfT<IsString_<U>::OK, R> { };
@@ -139,7 +139,7 @@ private:
   template <typename U, typename V = Char> struct IsAnyString {
     enum { OK = !ZuConversion<ZtArray_<V>, U>::Base &&
       ZuTraits<U>::IsString &&
-      ZuConversion<typename ZuTraits<U>::Elem, const V>::Same };
+      ZuConversion<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename R = void>
   struct MatchAnyString : public ZuIfT<IsAnyString<U>::OK, R> { };
@@ -147,7 +147,7 @@ private:
   // from char2 string (requires conversion)
   template <typename U, typename R = void, typename V = Char2,
     bool A = !ZuConversion<ZuNull, V>::Same && ZuTraits<U>::IsString &&
-      ZuConversion<typename ZuTraits<U>::Elem, const V>::Same
+      ZuConversion<typename ZuTraits<U>::Elem, V>::Same
     > struct MatchChar2String;
   template <typename U, typename R>
     struct MatchChar2String<U, R, Char2, true> { using T = R; };
@@ -398,7 +398,7 @@ private:
   }
 
   template <typename R> ZuInline typename CtorElem<R>::T ctor(R &&r) {
-    unsigned z = grow(0, 1);
+    unsigned z = grow_(0, 1);
     m_data = (T *)::malloc(z * sizeof(T));
     size_owned(z, 1);
     length_mallocd(1, 1);
@@ -470,14 +470,14 @@ private:
   }
 
   template <typename S> typename MatchChar2String<S>::T assign(S &&s_) {
-    ZuArray<Char2> s(ZuFwd<S>(s_));
+    ZuArray<const Char2> s(ZuFwd<S>(s_));
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null(); return; }
     if (!owned() || size() < o) size(o);
     length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(m_data, o), s));
   }
   template <typename C> typename MatchChar2<C>::T assign(C c) {
-    ZuArray<Char2> s{&c, 1};
+    ZuArray<const Char2> s{&c, 1};
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null(); return; }
     if (!owned() || size() < o) size(o);
@@ -528,11 +528,11 @@ public:
     convert_(s, iconv);
   }
   ZtArray(const Char *data, unsigned length, ZtIconv *iconv) {
-    ZuArray<Char> s(data, length);
+    ZuArray<const Char> s(data, length);
     convert_(s, iconv);
   }
   ZtArray(const Char2 *data, unsigned length, ZtIconv *iconv) {
-    ZuArray<Char2> s(data, length);
+    ZuArray<const Char2> s(data, length);
     convert_(s, iconv);
   }
 
@@ -1014,7 +1014,7 @@ private:
   template <typename R>
   ZuInline typename MatchElem<R, ZtArray<T, Cmp> >::T add(R &&r) const {
     unsigned n = length();
-    unsigned z = grow(n, n + 1);
+    unsigned z = grow_(n, n + 1);
     T *newData = (T *)::malloc(z * sizeof(T));
     if (n) this->copyItems(newData, m_data, n);
     this->initItem(newData + n, ZuFwd<R>(r));
@@ -1187,7 +1187,7 @@ public:
     unsigned n = length();
     unsigned z = size();
     if (!owned() || n + 1 > z) {
-      z = grow(z, n + 1);
+      z = grow_(z, n + 1);
       T *newData = (T *)::malloc(z * sizeof(T));
       this->moveItems(newData, m_data, n);
       free_();
@@ -1245,7 +1245,7 @@ public:
     unsigned n = length();
     unsigned z = size();
     if (!owned() || n + 1 > z) {
-      z = grow(z, n + 1);
+      z = grow_(z, n + 1);
       T *newData = (T *)::malloc(z * sizeof(T));
       this->moveItems(newData + 1, m_data, n);
       free_();
@@ -1275,7 +1275,7 @@ private:
     if (offset > (int)n) {
       if (removed) removed->clear();
       if (!owned() || offset > (int)z) {
-	z = grow(z, offset);
+	z = grow_(z, offset);
 	size(z);
       }
       this->initItems(m_data + n, offset - n);
@@ -1288,7 +1288,7 @@ private:
     int l = n - length;
 
     if (l > 0 && (!owned() || l > (int)z)) {
-      z = grow(z, l);
+      z = grow_(z, l);
       if (removed) removed->init(Move, m_data + offset, length);
       T *newData = (T *)::malloc(z * sizeof(T));
       this->moveItems(newData, m_data, offset);
@@ -1331,7 +1331,7 @@ private:
     if (offset > (int)n) {
       if (removed) removed->clear();
       if (!owned() || offset + (int)rlength > (int)z) {
-	z = grow(z, offset + rlength);
+	z = grow_(z, offset + rlength);
 	size(z);
       }
       this->initItems(m_data + n, offset - n);
@@ -1345,7 +1345,7 @@ private:
     int l = n + rlength - length;
 
     if (l > 0 && (!owned() || l > (int)z)) {
-      z = grow(z, l);
+      z = grow_(z, l);
       if (removed) removed->init(Move, m_data + offset, length);
       T *newData = (T *)::malloc(z * sizeof(T));
       this->moveItems(newData, m_data, offset);
@@ -1390,7 +1390,7 @@ private:
     if (offset > (int)n) {
       if (removed) removed->clear();
       if (!owned() || offset + (int)rlength > (int)z) {
-	z = grow(z, offset + rlength);
+	z = grow_(z, offset + rlength);
 	size(z);
       }
       this->initItems(m_data + n, offset - n);
@@ -1404,7 +1404,7 @@ private:
     int l = n + rlength - length;
 
     if (l > 0 && (!owned() || l > (int)z)) {
-      z = grow(z, l);
+      z = grow_(z, l);
       if (removed) removed->init(Move, m_data + offset, length);
       T *newData = (T *)::malloc(z * sizeof(T));
       this->moveItems(newData, m_data, offset);
@@ -1458,15 +1458,16 @@ public:
 
   void grow(unsigned length) {
     unsigned o = size();
-    if (ZuUnlikely(length > o)) size(grow(o, length));
+    if (ZuUnlikely(length > o)) size(grow_(o, length));
     this->length(length);
   }
   void grow(unsigned length, bool initItems) {
     unsigned o = size();
-    if (ZuUnlikely(length > o)) size(grow(o, length));
+    if (ZuUnlikely(length > o)) size(grow_(o, length));
     this->length(length, initItems);
   }
-  ZuInline static unsigned grow(unsigned o, unsigned n) {
+private:
+  ZuInline static unsigned grow_(unsigned o, unsigned n) {
     return ZtPlatform::grow(o * sizeof(T), n * sizeof(T)) / sizeof(T);
   }
 
@@ -1512,6 +1513,7 @@ struct ZuTraits<ZtArray<Elem_, Cmp> > :
     IsComparable = 1,
     IsHashable = 1
   };
+  static Elem *data(T &a) { return a.data(); }
   static const Elem *data(const T &a) { return a.data(); }
   static unsigned length(const T &a) { return a.length(); }
 };

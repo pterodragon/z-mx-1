@@ -19,47 +19,35 @@
 
 // command line interface
 
+#include <termios.h>
+#include <unistd.h>
+
+#include <sys/epoll.h>
+#include <sys/ioctl.h>
+#include <linux/unistd.h>
+
 #include <zlib/ZrlTerminal.hpp>
 
 namespace Zrl {
 
-struct VKeyMatch : public ZuObject {
-  struct Action {
-    ZuRef<ZuObject>	next;			// next VKeyMatch
-    int32_t		vkey = -1;		// virtual key
-  };
-
-  bool add(const char *s, int vkey) {
-    if (!s) return false;
-    return add_(this, static_cast<const uint8_t *>(s), vkey);
-  }
-  static bool add_(VKeyMatch *this_, const uint8_t *s, int vkey);
-  bool add(uint8_t c, int vkey);
-
-  Action *match(uint8_t c);
-
-  ZtArray<uint8_t>	bytes;
-  ZtArray<Action>	actions;
-};
-
-static bool VKeyMatch::add_(VKeyMatch *this_, const uint8_t *s, int vkey)
+bool VKeyMatch::add_(VKeyMatch *this_, const uint8_t *s, int vkey)
 {
   uint8_t c = *s;
   if (!c) return false;
 loop:
-  unsigned i, n = this_->bytes.length();
-  for (i = 0; i < n; i++) if (this_->bytes[i] == c) goto matched;
-  this_->bytes.push(c);
-  new (this_->actions.push()) Action{};
+  unsigned i, n = this_->m_bytes.length();
+  for (i = 0; i < n; i++) if (this_->m_bytes[i] == c) goto matched;
+  this_->m_bytes.push(c);
+  new (this_->m_actions.push()) Action{};
 matched:
   if (!(c = *++s)) {
-    if (this_->actions[i].vkey >= 0) return false;
-    this_->actions[i].vkey = vkey;
+    if (this_->m_actions[i].vkey >= 0) return false;
+    this_->m_actions[i].vkey = vkey;
     return true;
   }
-  Action *ptr;
-  if (!(ptr = this_->actions[i].next.ptr()))
-    this_->actions[i].next = ptr = new Action{};
+  VKeyMatch *ptr;
+  if (!(ptr = this_->m_actions[i].next.ptr<VKeyMatch>()))
+    this_->m_actions[i].next = ptr = new VKeyMatch{};
   this_ = ptr;
   goto loop;
 }
@@ -73,11 +61,10 @@ bool VKeyMatch::add(uint8_t c, int vkey)
   return add(s, vkey);
 }
 
-VKeyMatch::Action *VKeyMatch::match(uint8_t c)
+const VKeyMatch::Action *VKeyMatch::match(uint8_t c) const
 {
-  unsigned i, n = this_->bytes.length();
-  for (i = 0; i < n; i++)
-    if (bytes[i] == c) return &actions[i];
+  for (unsigned i = 0, n = m_bytes.length(); i < n; i++)
+    if (m_bytes[i] == c) return &m_actions[i];
   return nullptr;
 }
 
@@ -94,7 +81,7 @@ bool Terminal::isOpen() const // synchronous
   bool ok = false;
   thread_local ZmSemaphore sem;
   m_sched->invoke(m_thread, [this, sem = &sem, ok = &ok]() {
-    ok = m_fd >= 0;
+    *ok = m_fd >= 0;
     sem->post();
   });
   sem.wait();
@@ -125,7 +112,7 @@ bool Terminal::running() const // synchronous
   bool ok = false;
   thread_local ZmSemaphore sem;
   m_sched->invoke(m_thread, [this, sem = &sem, ok = &ok]() {
-    ok = m_running;
+    *ok = m_running;
     sem->post();
   });
   sem.wait();
@@ -476,7 +463,7 @@ void Terminal::stop_()
 
   clear();
 
-  m_nextInterval = -1;
+  m_nextVKInterval = -1;
   m_nextVKMatch = m_vkeyMatch.ptr();
   m_pending.clear();
 
@@ -541,7 +528,7 @@ void Terminal::read()
   ZuArrayN<uint8_t, 4> utf;
   int utfn = 0;
   for (;;) {
-    int r = epoll_wait(m_epollFD, &ev, 1, m_nextInterval);
+    int r = epoll_wait(m_epollFD, &ev, 1, m_nextVKInterval);
     if (r < 0) {
       ZeError e{errno};
       if (e.errNo() == EINTR || e.errNo() == EAGAIN)
@@ -551,15 +538,15 @@ void Terminal::read()
       goto stop;
     }
     if (!r) { // timeout
-      for (key : m_pending) if (m_keyFn(key)) goto stop;
+      for (auto key : m_pending) if (m_keyFn(key)) goto stop;
       if (utfn && utf) {
 	uint32_t u = 0;
-	if (ZuUTF8::in(utf, utf.length(), u)) {
+	if (ZuUTF8::in(utf.data(), utf.length(), u)) {
 	  key = u;
 	  if (m_keyFn(key)) goto stop;
 	}
       }
-      m_nextInterval = -1;
+      m_nextVKInterval = -1;
       utf.clear();
       utfn = 0;
       m_nextVKMatch = m_vkeyMatch.ptr();
@@ -568,7 +555,7 @@ void Terminal::read()
     }
     if (ZuLikely(ev.data.u64 == 3)) {
       char c;
-      int r = ::read(m_wakeFD, &c, 1)
+      int r = ::read(m_wakeFD, &c, 1);
       if (r >= 1) return;
       if (r < 0) {
 	ZeError e{errno};
@@ -580,8 +567,9 @@ void Terminal::read()
       continue;
     uint8_t c;
     {
-      int r = ::read(fd, &c, 1)
+      int r = ::read(m_fd, &c, 1);
       if (r < 0) {
+	ZeError e{errno};
 	if (e.errNo() == EINTR || e.errNo() == EAGAIN) continue;
 	m_keyFn(VKey::Error);
 	goto stop;
@@ -595,8 +583,8 @@ void Terminal::read()
     if (!utfn) {
       if (auto action = m_nextVKMatch->match(key)) {
 	if (action->next) {
-	  m_nextInterval = m_interval;
-	  m_nextVKMatch = action->next;
+	  m_nextVKInterval = m_vkeyInterval;
+	  m_nextVKMatch = action->next.ptr<VKeyMatch>();
 	  if (action->vkey >= 0) {
 	    m_pending.length(1);
 	    m_pending[0] = -(action->vkey);
@@ -617,7 +605,7 @@ void Terminal::read()
     if (utf) {
       utf << c;
       uint32_t u = 0;
-      ZuUTF8::in(utf, utf.length(), u);
+      ZuUTF8::in(utf.data(), utf.length(), u);
       utf.clear();
       key = u;
     }
@@ -746,10 +734,10 @@ void Terminal::clrScroll_(unsigned n)
     crnl_();
 }
 
-void Terminal::out_(ZuArray<const uint8_t> data)
+void Terminal::out_(ZuString data)
 {
   unsigned begin = m_out.length();
-  m_out << data;
+  m_out << ZuArray<const uint8_t>{data};
   unsigned end = m_out.length();
   if (ZuLikely(utf8_out() && !m_hz && !m_ul)) return;
   for (unsigned off = begin; off < end; ) {
@@ -768,9 +756,7 @@ void Terminal::out_(ZuArray<const uint8_t> data)
 	    w <<= 1;
 	  }
 	} else
-	  m_out.splice(off, n,
-	      ZuArray<const uint8_t>{
-		reinterpret_cast<const uint8_t *>("__"), w});
+	  m_out.splice(off, n, ZuArray<const uint8_t>{"__", w});
 	off += w; end += w; end -= n;
       } else
 	off += n;
@@ -1074,7 +1060,7 @@ void Terminal::splice(
     ZuArray<const uint8_t> replace, ZuUTFSpan rspan)
 {
   unsigned endPos = m_pos + rspan.width();
-  unsigned endBOLPos = endPos - (endPos % m_w);
+  unsigned endBOLPos = endPos - (endPos % m_width);
   bool shiftLeft = false, shiftRight = false;
   ZtArray<ZuUTFSpan> shiftRows;
 
@@ -1125,7 +1111,7 @@ void Terminal::splice(
   m_line.data().splice(off, span.inLen(), replace);
 
   // reflow the line, from offset onwards
-  m_line.reflow(off);
+  m_line.reflow(off, m_width);
 
   // recalculate endPos
   endPos = m_pos + rspan.width();
@@ -1230,18 +1216,18 @@ void Terminal::redraw_()
 }
 
 // overwrite string
-void Terminal::over(ZuArray<const uint8_t> s)
+void Terminal::over(ZuString s)
 {
   unsigned off = m_line.position(m_pos).mapping();
   auto rspan = ZuUTF<uint32_t, uint8_t>::span(s);
-  ZuArray<const uint8_t> removed{m_line};
+  ZuString removed{m_line.data()};
   removed.offset(off);
   auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, rspan.outLen());
   splice(off, span, s, rspan);
 }
 
 // insert string
-void Terminal::ins(ZuArray<const uint8_t> s)
+void Terminal::ins(ZuString s)
 {
   unsigned off = m_line.position(m_pos).mapping();
   auto rspan = ZuUTF<uint32_t, uint8_t>::span(s);
@@ -1252,10 +1238,10 @@ void Terminal::ins(ZuArray<const uint8_t> s)
 void Terminal::del(unsigned nglyphs)
 {
   unsigned off = m_line.position(m_pos).mapping();
-  ZuArray<const uint8_t> removed{m_line};
+  ZuString removed{m_line.data()};
   removed.offset(off);
   auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, nglyphs);
-  splice(off, span, ZuArray<const uint8_t>{}, ZuUTFSpan{});
+  splice(off, span, ZuString{}, ZuUTFSpan{});
 }
 
 } // namespace Zrl

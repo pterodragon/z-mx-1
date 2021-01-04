@@ -231,7 +231,7 @@ public:
       m_value{inLen | (outLen<<shift()) | (width<<(shift()<<1))} { }
 
 private:
-  ZuUTFSpan(uint64_t value) : m_value{value} { }
+  explicit ZuUTFSpan(uint64_t value) : m_value{value} { }
 
 public:
   unsigned inLen() const { return m_value & mask(); }
@@ -268,7 +268,7 @@ template <typename OutChar, typename InChar> struct ZuUTF {
 
   using Span = ZuUTFSpan;
 
-  Span span(ZuArray<const InChar> s_) {
+  static Span span(ZuArray<const InChar> s_) {
     auto s = reinterpret_cast<const InElem *>(s_.data());
     unsigned n = s_.length();
     uint32_t u;
@@ -284,7 +284,7 @@ template <typename OutChar, typename InChar> struct ZuUTF {
     return Span{n, l, w};
   }
 
-  Span nspan(ZuArray<const InChar> s_, unsigned nglyphs) {
+  static Span nspan(ZuArray<const InChar> s_, unsigned nglyphs) {
     auto s = reinterpret_cast<const InElem *>(s_.data());
     unsigned n = s_.length();
     uint32_t u;
@@ -301,7 +301,7 @@ template <typename OutChar, typename InChar> struct ZuUTF {
     return Span{n, l, w};
   }
 
-  Span gspan(ZuArray<const InChar> s_) { // single glyph
+  static Span gspan(ZuArray<const InChar> s_) { // single glyph
     auto s = reinterpret_cast<const InElem *>(s_.data());
     unsigned n = s_.length();
     uint32_t u;

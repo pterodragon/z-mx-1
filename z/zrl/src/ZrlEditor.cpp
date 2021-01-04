@@ -27,82 +27,82 @@ Editor::Editor()
 {
   // manual initialization of opcode-indexed jump table
  
-  m_cmdFn[Op::Nop] = cmdNop;
-  m_cmdFn[Op::Mode] = cmdMode;
-  m_cmdFn[Op::Push] = cmdPush;
-  m_cmdFn[Op::Pop] = cmdPop;
+  m_cmdFn[Op::Nop] = &Editor::cmdNop;
+  m_cmdFn[Op::Mode] = &Editor::cmdMode;
+  m_cmdFn[Op::Push] = &Editor::cmdPush;
+  m_cmdFn[Op::Pop] = &Editor::cmdPop;
 
-  m_cmdFn[Op::Error] = cmdError;
-  m_cmdFn[Op::EndOfFile] = cmdEndOfFile;
+  m_cmdFn[Op::Error] = &Editor::cmdError;
+  m_cmdFn[Op::EndOfFile] = &Editor::cmdEndOfFile;
 
-  m_cmdFn[Op::SigInt] = cmdSigInt;
-  m_cmdFn[Op::SigQuit] = cmdSigQuit;
-  m_cmdFn[Op::SigSusp] = cmdSigSusp;
+  m_cmdFn[Op::SigInt] = &Editor::cmdSigInt;
+  m_cmdFn[Op::SigQuit] = &Editor::cmdSigQuit;
+  m_cmdFn[Op::SigSusp] = &Editor::cmdSigSusp;
 
-  m_cmdFn[Op::Enter] = cmdEnter;
+  m_cmdFn[Op::Enter] = &Editor::cmdEnter;
 
-  m_cmdFn[Op::Up] = cmdUp;
-  m_cmdFn[Op::Down] = cmdDown;
-  m_cmdFn[Op::Left] = cmdLeft;
-  m_cmdFn[Op::Right] = cmdRight;
-  m_cmdFn[Op::Home] = cmdHome;
-  m_cmdFn[Op::End] = cmdEnd;
+  m_cmdFn[Op::Up] = &Editor::cmdUp;
+  m_cmdFn[Op::Down] = &Editor::cmdDown;
+  m_cmdFn[Op::Left] = &Editor::cmdLeft;
+  m_cmdFn[Op::Right] = &Editor::cmdRight;
+  m_cmdFn[Op::Home] = &Editor::cmdHome;
+  m_cmdFn[Op::End] = &Editor::cmdEnd;
 
-  m_cmdFn[Op::FwdWord] = cmdFwdWord;
-  m_cmdFn[Op::RevWord] = cmdRevWord;
-  m_cmdFn[Op::FwdWordEnd] = cmdFwdWordEnd;
-  m_cmdFn[Op::RevWordEnd] = cmdRevWordEnd;
+  m_cmdFn[Op::FwdWord] = &Editor::cmdFwdWord;
+  m_cmdFn[Op::RevWord] = &Editor::cmdRevWord;
+  m_cmdFn[Op::FwdWordEnd] = &Editor::cmdFwdWordEnd;
+  m_cmdFn[Op::RevWordEnd] = &Editor::cmdRevWordEnd;
 
-  m_cmdFn[Op::MvMark] = cmdMvMark;
+  m_cmdFn[Op::MvMark] = &Editor::cmdMvMark;
 
-  m_cmdFn[Op::Insert] = cmdInsert;
+  m_cmdFn[Op::Insert] = &Editor::cmdInsert;
 
-  m_cmdFn[Op::Clear] = cmdClear;
-  m_cmdFn[Op::Redraw] = cmdRedraw;
+  m_cmdFn[Op::Clear] = &Editor::cmdClear;
+  m_cmdFn[Op::Redraw] = &Editor::cmdRedraw;
 
-  m_cmdFn[Op::Paste] = cmdPaste;
-  m_cmdFn[Op::Yank] = cmdYank;
-  m_cmdFn[Op::Rotate] = cmdRotate;
+  m_cmdFn[Op::Paste] = &Editor::cmdPaste;
+  m_cmdFn[Op::Yank] = &Editor::cmdYank;
+  m_cmdFn[Op::Rotate] = &Editor::cmdRotate;
 
-  m_cmdFn[Op::Glyph] = cmdGlyph;
-  m_cmdFn[Op::InsGlyph] = cmdInsGlyph;
-  m_cmdFn[Op::OverGlyph] = cmdOverGlyph;
+  m_cmdFn[Op::Glyph] = &Editor::cmdGlyph;
+  m_cmdFn[Op::InsGlyph] = &Editor::cmdInsGlyph;
+  m_cmdFn[Op::OverGlyph] = &Editor::cmdOverGlyph;
 
-  m_cmdFn[Op::TransGlyph] = cmdTransGlyph;
-  m_cmdFn[Op::TransWord] = cmdTransWord;
-  m_cmdFn[Op::TransUnixWord] = cmdTransUnixWord;
+  m_cmdFn[Op::TransGlyph] = &Editor::cmdTransGlyph;
+  m_cmdFn[Op::TransWord] = &Editor::cmdTransWord;
+  m_cmdFn[Op::TransUnixWord] = &Editor::cmdTransUnixWord;
 
-  m_cmdFn[Op::LowerWord] = cmdLowerWord;
-  m_cmdFn[Op::UpperWord] = cmdUpperWord;
-  m_cmdFn[Op::CapWord] = cmdCapWord;
+  m_cmdFn[Op::LowerWord] = &Editor::cmdLowerWord;
+  m_cmdFn[Op::UpperWord] = &Editor::cmdUpperWord;
+  m_cmdFn[Op::CapWord] = &Editor::cmdCapWord;
 
-  m_cmdFn[Op::SetMark] = cmdSetMark;
-  m_cmdFn[Op::XchMark] = cmdXchMark;
+  m_cmdFn[Op::SetMark] = &Editor::cmdSetMark;
+  m_cmdFn[Op::XchMark] = &Editor::cmdXchMark;
 
-  m_cmdFn[Op::DigitArg] = cmdDigitArg;
+  m_cmdFn[Op::DigitArg] = &Editor::cmdDigitArg;
 
-  m_cmdFn[Op::Register] = cmdRegister;
+  m_cmdFn[Op::Register] = &Editor::cmdRegister;
 
-  m_cmdFn[Op::FwdGlyphSrch] = cmdFwdGlyphSrch;
-  m_cmdFn[Op::RevGlyphSrch] = cmdRevGlyphSrch;
+  m_cmdFn[Op::FwdGlyphSrch] = &Editor::cmdFwdGlyphSrch;
+  m_cmdFn[Op::RevGlyphSrch] = &Editor::cmdRevGlyphSrch;
 
-  m_cmdFn[Op::Complete] = cmdComplete;
-  m_cmdFn[Op::ListComplete] = cmdListComplete;
+  m_cmdFn[Op::Complete] = &Editor::cmdComplete;
+  m_cmdFn[Op::ListComplete] = &Editor::cmdListComplete;
 
-  m_cmdFn[Op::Next] = cmdNext;
-  m_cmdFn[Op::Prev] = cmdPrev;
+  m_cmdFn[Op::Next] = &Editor::cmdNext;
+  m_cmdFn[Op::Prev] = &Editor::cmdPrev;
 
-  m_cmdFn[Op::ClrIncSrch] = cmdClrIncSrch;
-  m_cmdFn[Op::FwdIncSrch] = cmdFwdIncSrch;
-  m_cmdFn[Op::RevIncSrch] = cmdRevIncSrch;
+  m_cmdFn[Op::ClrIncSrch] = &Editor::cmdClrIncSrch;
+  m_cmdFn[Op::FwdIncSrch] = &Editor::cmdFwdIncSrch;
+  m_cmdFn[Op::RevIncSrch] = &Editor::cmdRevIncSrch;
 
-  m_cmdFn[Op::PromptSrch] = cmdPromptSrch;
-  m_cmdFn[Op::EnterSrchFwd] = cmdEnterSrchFwd;
-  m_cmdFn[Op::EnterSrchRev] = cmdEnterSrchRev;
-  m_cmdFn[Op::AbortSrch] = cmdAbortSrch;
+  m_cmdFn[Op::PromptSrch] = &Editor::cmdPromptSrch;
+  m_cmdFn[Op::EnterSrchFwd] = &Editor::cmdEnterSrchFwd;
+  m_cmdFn[Op::EnterSrchRev] = &Editor::cmdEnterSrchRev;
+  m_cmdFn[Op::AbortSrch] = &Editor::cmdAbortSrch;
 
-  m_cmdFn[Op::FwdSearch] = cmdFwdSearch;
-  m_cmdFn[Op::RevSearch] = cmdRevSearch;
+  m_cmdFn[Op::FwdSearch] = &Editor::cmdFwdSearch;
+  m_cmdFn[Op::RevSearch] = &Editor::cmdRevSearch;
 }
 
 void Editor::init(Config config, App app)
@@ -123,16 +123,16 @@ void Editor::close()
 {
   m_tty.close();
 }
-void Editor::isOpen() const
+bool Editor::isOpen() const
 {
   return m_tty.isOpen();
 }
 
 // start/stop
-void Editor::start(ZtString prompt)
+void Editor::start(ZtArray<uint8_t> prompt)
 {
   m_tty.start(
-      [this, prompt = ZuMv(prompt), app = ZuMv(app)]() mutable {
+      [this, prompt = ZuMv(prompt)]() mutable {
 	m_context = {
 	  .prompt = ZuMv(prompt),
 	  .histSaveOff = m_config.histOffset
@@ -153,16 +153,16 @@ bool Editor::running() const
   return m_tty.running();
 }
 
-void Editor::prompt(ZtString prompt)
+void Editor::prompt(ZtArray<uint8_t> prompt)
 {
   m_context.prompt = ZuMv(prompt);
 }
-bool Editor::addMapping(unsigned mode, int vkey, CmdSeq cmds)
+void Editor::addMapping(unsigned mode, int vkey, CmdSeq cmds)
 {
   if (ZuUnlikely(m_modes.length() <= mode)) m_modes.grow(mode + 1);
   m_cmds.add(new CmdMapping{mode, vkey, ZuMv(cmds)});
 }
-bool Editor::addMode(unsigned mode, CmdSeq cmds, bool edit)
+void Editor::addMode(unsigned mode, CmdSeq cmds, bool edit)
 {
   if (ZuUnlikely(m_modes.length() <= mode)) m_modes.grow(mode + 1);
   m_modes[mode] = Mode{ZuMv(cmds), edit};
@@ -171,12 +171,11 @@ bool Editor::addMode(unsigned mode, CmdSeq cmds, bool edit)
 void Editor::reset()
 {
   m_cmds.clean();
-  m_modes.clean();
+  m_modes.clear();
 }
 
 bool Editor::process(int32_t vkey)
 {
-  if (vkey == VKey::Wake) return true;
   if (CmdMapping *mapping =
       m_cmds.find(CmdMapping::Key{m_context.mode, vkey}))
     return process_(mapping->cmds, vkey);
@@ -192,8 +191,8 @@ bool Editor::process_(const CmdSeq &cmds, int32_t vkey)
     if (!(cmd.op() & Op::KeepArg)) m_context.clrArg();
     int32_t vkey_ = cmd.vkey();
     if (!vkey_) vkey_ = vkey;
-    if (auto fn = m_cmdFns[cmd.op & Op::Mask]) {
-      bool stop = (this->*fn)(cmd, vkey_)
+    if (auto fn = m_cmdFn[cmd.op() & Op::Mask]) {
+      bool stop = (this->*fn)(cmd, vkey_);
       m_context.prevCmd = cmd;
       if (stop) return true;
     }
@@ -208,7 +207,24 @@ bool Editor::process_(const CmdSeq &cmds, int32_t vkey)
 
 bool Editor::cmdNop(Cmd, int32_t) { return false; } // unused
 
-bool Editor::cmdMode(Cmd, int32_t) { m_context.mode = cmd.arg(); return false; }
+bool Editor::cmdMode(Cmd cmd, int32_t)
+{
+  m_context.mode = cmd.arg();
+  return false;
+}
+bool Editor::cmdPush(Cmd cmd, int32_t)
+{
+  if (ZuLikely(m_context.stack.length() < m_config.maxStackDepth)) {
+    m_context.stack.push(m_context.mode);
+    m_context.mode = cmd.arg();
+  }
+  return false;
+}
+bool Editor::cmdPop(Cmd cmd, int32_t)
+{
+  m_context.mode = m_context.stack.pop();
+  return false;
+}
 
 bool Editor::cmdError(Cmd, int32_t) { m_app.end(); return true; }
 bool Editor::cmdEndOfFile(Cmd, int32_t) { m_app.end(); return true; }
@@ -236,7 +252,8 @@ bool Editor::cmdEnter(Cmd, int32_t)
 
 ZuArray<const uint8_t> Editor::substr(unsigned begin, unsigned end)
 {
-  return {line.data().data() + begin, end - begin};
+  const auto &data = m_tty.line().data();
+  return {&data[begin], end - begin};
 }
 
 // align cursor within line if not in an edit mode - returns true if moved
@@ -267,10 +284,11 @@ void Editor::motion(unsigned op, unsigned pos, unsigned begin, unsigned end)
   ZuArray<const uint8_t> s;
   if (op & (Op::Copy | Op::Del)) s = substr(begin, end);
   if (op & Op::Copy) {
-    if (m_context.register_ >= 0)
-      m_context.registers.set(m_context.register_) = s;
+    int index = m_context.register_;
+    if (index >= 0)
+      m_context.registers.set(index) = s;
     else
-      m_context.registers.push() = s;
+      m_context.registers.vi_yank() = s;
   }
   if (op & Op::Del) {
     auto span = ZuUTF<uint32_t, uint8_t>::span(s);
@@ -299,7 +317,7 @@ bool Editor::cmdUp(Cmd cmd, int32_t vkey)
   unsigned width = m_tty.width();
   if (arg <= 1 && (cmd.op() & (Op::Mv | Op::Del | Op::Copy)) == Op::Mv &&
       pos < m_context.startPos + width)
-    return this->cmd<Op::Prev>(cmd, vkey);
+    return cmdPrev(cmd, vkey);
   if (!arg) arg = 1;
   const auto &line = m_tty.line();
   auto posIndex = line.position(pos);
@@ -325,7 +343,7 @@ bool Editor::cmdDown(Cmd cmd, int32_t vkey)
   unsigned finPos = line.width();
   if (arg <= 1 && (cmd.op() & (Op::Mv | Op::Del | Op::Copy)) == Op::Mv &&
       pos + width > finPos)
-    return this->cmd<Op::Next>(cmd, vkey);
+    return cmdNext(cmd, vkey);
   if (!arg) arg = 1;
   auto posIndex = line.position(pos);
   unsigned begin = posIndex.mapping();
@@ -408,7 +426,7 @@ bool Editor::cmdFwdWord(Cmd cmd, int32_t)
     unsigned final_ = line.length();
     int arg = cmd.arg();
     do {
-      if (cmd.op & Op::Unix)
+      if (cmd.op() & Op::Unix)
 	end = line.fwdUnixWord(end);
       else
 	end = line.fwdWord(end);
@@ -429,7 +447,7 @@ bool Editor::cmdRevWord(Cmd cmd, int32_t)
     unsigned start = line.position(m_context.startPos).mapping();
     int arg = cmd.arg();
     do {
-      if (cmd.op & Op::Unix)
+      if (cmd.op() & Op::Unix)
 	begin = line.revUnixWord(begin);
       else
 	begin = line.revWord(begin);
@@ -450,7 +468,7 @@ bool Editor::cmdFwdWordEnd(Cmd cmd, int32_t)
     unsigned final_ = line.length();
     int arg = cmd.arg();
     do {
-      if (cmd.op & Op::Unix)
+      if (cmd.op() & Op::Unix)
 	end = line.fwdUnixWordEnd(end);
       else
 	end = line.fwdWordEnd(end);
@@ -471,7 +489,7 @@ bool Editor::cmdRevWordEnd(Cmd cmd, int32_t)
     unsigned start = line.position(m_context.startPos).mapping();
     int arg = cmd.arg();
     do {
-      if (cmd.op & Op::Unix)
+      if (cmd.op() & Op::Unix)
 	begin = line.revUnixWordEnd(begin);
       else
 	begin = line.revWordEnd(begin);
@@ -488,21 +506,22 @@ bool Editor::cmdMvMark(Cmd cmd, int32_t vkey)
   unsigned pos = m_tty.pos();
   const auto &line = m_tty.line();
   auto posIndex = line.position(pos);
-  if (pos == m_context.markPos) return;
-  unsigned begin, end;
-  if (pos > m_context.markPos) {
-    end = posIndex.mapping();
-    pos = m_context.markPos;
-    posIndex = line.position(pos);
-    begin = posIndex.mapping();
-  } else {
-    begin = posIndex.mapping();
-    pos = m_context.markPos;
-    posIndex = line.position(pos);
-    pos -= posIndex.off();
-    end = posIndex.mapping();
+  if (ZuLikely(pos != m_context.markPos)) {
+    unsigned begin, end;
+    if (pos > m_context.markPos) {
+      end = posIndex.mapping();
+      pos = m_context.markPos;
+      posIndex = line.position(pos);
+      begin = posIndex.mapping();
+    } else {
+      begin = posIndex.mapping();
+      pos = m_context.markPos;
+      posIndex = line.position(pos);
+      pos -= posIndex.off();
+      end = posIndex.mapping();
+    }
+    if (begin < end) motion(cmd.op(), pos, begin, end);
   }
-  if (begin < end) motion(cmd.op(), pos, begin, end);
   return false;
 }
 
@@ -535,8 +554,8 @@ bool Editor::cmdYank(Cmd cmd, int32_t)
 {
   int arg = cmd.arg();
   // if (arg < 1) arg = 1; // redundant
-  for (int i = 1; i < arg; i++) m_context.registers.rotate(); // Emacs
-  if (const auto &data = m_context.registers.yank()) {
+  for (int i = 1; i < arg; i++) m_context.registers.emacs_rotate();
+  if (const auto &data = m_context.registers.emacs_yank()) {
     if (ZuUnlikely(m_context.overwrite))
       m_tty.over(data);
     else {
@@ -551,18 +570,18 @@ bool Editor::cmdYank(Cmd cmd, int32_t)
 bool Editor::cmdRotate(Cmd cmd, int32_t)
 {
   if (m_context.prevCmd.op() != Op::Yank) return false;
-  const auto &data = m_context.registers.yank();
+  const auto &data = m_context.registers.emacs_yank();
   int arg = cmd.arg();
   if (arg < 1) arg = 1;
-  for (int i = 0; i < arg; i++) m_context.registers.rotate(); // Emacs
-  const auto &replace = m_context.registers.yank();
+  for (int i = 0; i < arg; i++) m_context.registers.emacs_rotate();
+  const auto &replace = m_context.registers.emacs_yank();
   if (&data == &replace) return false;
   auto span = ZuUTF<uint32_t, uint8_t>::span(data);
   unsigned pos = m_tty.pos();
   const auto &line = m_tty.line();
   auto rspan = ZuUTF<uint32_t, uint8_t>::span(replace);
-  if (rspan.outLen() > span.outLen() &&
-      line.length() + (rspan.outLen() - span.outLen()) >= m_config.maxLineLen)
+  if (rspan.inLen() > span.inLen() &&
+      line.length() + (rspan.inLen() - span.inLen()) >= m_config.maxLineLen)
     return false;
   unsigned width = span.width();
   if (pos < m_context.startPos + width)
@@ -610,9 +629,9 @@ bool Editor::cmdOverGlyph(Cmd cmd, int32_t vkey)
 bool Editor::cmdTransGlyph(Cmd, int32_t)
 {
   unsigned pos = m_tty.pos();
+  const auto &line = m_tty.line();
   if (pos == line.width()) pos = line.align(pos - 1);
   if (pos <= m_context.startPos) return false;
-  const auto &line = m_tty.line();
   unsigned rbegin = line.position(pos).mapping();
   unsigned rend = rbegin + line.byte(rbegin).len();
   unsigned lbegin = line.revGlyph(rbegin);
@@ -623,13 +642,14 @@ bool Editor::cmdTransGlyph(Cmd, int32_t)
   memcpy(&replace[rend - rbegin], &data[lbegin], rbegin - lbegin);
   auto span = ZuUTF<uint32_t, uint8_t>::span(this->substr(lbegin, rend));
   splice(lbegin, span, replace, span);
+  return false;
 }
 bool Editor::cmdTransWord(Cmd, int32_t)
 {
   unsigned pos = m_tty.pos();
+  const auto &line = m_tty.line();
   if (pos == line.width()) pos = line.align(pos - 1);
   if (pos <= m_context.startPos) return false;
-  const auto &line = m_tty.line();
   unsigned start = line.position(m_context.startPos).mapping();
   unsigned rend = line.position(pos).mapping();
   rend = line.fwdWordEnd(rend);
@@ -651,13 +671,14 @@ bool Editor::cmdTransWord(Cmd, int32_t)
   memcpy(&replace[rend - mbegin], &data[lbegin], mbegin - lbegin);
   auto span = ZuUTF<uint32_t, uint8_t>::span(this->substr(lbegin, rend));
   splice(lbegin, span, replace, span);
+  return false;
 }
 bool Editor::cmdTransUnixWord(Cmd, int32_t)
 {
   unsigned pos = m_tty.pos();
+  const auto &line = m_tty.line();
   if (pos == line.width()) pos = line.align(pos - 1);
   if (pos <= m_context.startPos) return false;
-  const auto &line = m_tty.line();
   unsigned start = line.position(m_context.startPos).mapping();
   unsigned rend = line.position(pos).mapping();
   rend = line.fwdUnixWordEnd(rend);
@@ -677,14 +698,15 @@ bool Editor::cmdTransUnixWord(Cmd, int32_t)
   memcpy(&replace[rend - mbegin], &data[lbegin], mbegin - lbegin);
   auto span = ZuUTF<uint32_t, uint8_t>::span(this->substr(lbegin, rend));
   splice(lbegin, span, replace, span);
+  return false;
 }
 
 void Editor::transformWord(TransformWordFn fn, void *fnContext)
 {
   unsigned pos = m_tty.pos();
+  const auto &line = m_tty.line();
   if (pos == line.width()) pos = line.align(pos - 1);
   if (pos <= m_context.startPos) return;
-  const auto &line = m_tty.line();
   unsigned start = line.position(m_context.startPos).mapping();
   unsigned end = line.position(pos).mapping();
   if (!line.isword_(end)) return;
@@ -698,7 +720,7 @@ void Editor::transformWord(TransformWordFn fn, void *fnContext)
   memcpy(&replace[0], &data[begin], end - begin);
   fn(fnContext, replace);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
-  splice(lbegin, span, replace, span);
+  splice(begin, span, replace, span);
 }
 
 static bool isupper__(char c) { return c >= 'A' && c <= 'Z'; }
@@ -714,9 +736,9 @@ static char tolower__(char c)
 
 typedef void (*TransformCharFn)(uint8_t, uint8_t &);
 
-static TransformWordFn transformChar(TransformCharFn fn)
+static Editor::TransformWordFn transformChar(TransformCharFn fn)
 {
-  return [](ZuArray<uint8_t> replace, void *fn_) {
+  return [](void *fn_, ZuArray<uint8_t> replace) {
     auto fn = reinterpret_cast<TransformCharFn>(fn_);
     for (unsigned i = 0, n = replace.length(); i < n; ) {
       uint8_t c = replace[i];
@@ -733,21 +755,22 @@ bool Editor::cmdLowerWord(Cmd, int32_t)
   TransformCharFn fn = [](uint8_t c, uint8_t &replace) {
     if (isupper__(c)) replace = tolower__(c);
   };
-  transformWord(transformChar(fn), fn);
+  transformWord(transformChar(fn), reinterpret_cast<void *>(fn));
   return false;
 }
 bool Editor::cmdUpperWord(Cmd, int32_t)
 {
   TransformCharFn fn = [](uint8_t c, uint8_t &replace) {
     if (islower__(c)) replace = toupper__(c);
-  }
-  transformWord(transformChar(fn), fn);
+  };
+  transformWord(transformChar(fn), reinterpret_cast<void *>(fn));
   return false;
 }
 bool Editor::cmdCapWord(Cmd, int32_t)
 {
-  transformWord([](ZuArray<uint8_t> replace, void *) {
+  transformWord([](void *, ZuArray<uint8_t> replace) {
     if (unsigned n = replace.length()) {
+      unsigned i = 0;
       uint8_t c = replace[0];
       if (isupper__(c)) {
 	if (n < 2 || isupper__(replace[1])) { // lc
@@ -803,9 +826,6 @@ bool Editor::cmdXchMark(Cmd, int32_t)
   return false;
 }
 
-static bool isdigit__(char c) { return c >= '0' && c <= '9'; }
-static unsigned digit__(char c) { return c - '0'; }
-
 bool Editor::cmdDigitArg(Cmd, int32_t vkey)
 {
   if (vkey >= static_cast<int>('0') && vkey <= static_cast<int>('9'))
@@ -822,7 +842,7 @@ bool Editor::cmdRegister(Cmd, int32_t vkey)
   return false;
 }
 
-bool Editor::cmdFwdGlyphSrch(Cmd, int32_t vkey)
+bool Editor::cmdFwdGlyphSrch(Cmd cmd, int32_t vkey)
 {
   if (ZuUnlikely(vkey <= 0)) return false;
   unsigned pos = m_tty.pos();
@@ -840,7 +860,7 @@ bool Editor::cmdFwdGlyphSrch(Cmd, int32_t vkey)
   }
   return false;
 }
-bool Editor::cmdRevGlyphSrch(Cmd, int32_t vkey)
+bool Editor::cmdRevGlyphSrch(Cmd cmd, int32_t vkey)
 {
   if (ZuUnlikely(vkey <= 0)) return false;
   unsigned pos = m_tty.pos();
@@ -885,9 +905,9 @@ void Editor::completed(ZuArray<const uint8_t> data)
   auto span = m_context.compSpan;
   auto rspan = ZuUTF<uint32_t, uint8_t>::span(data);
   const auto &line = m_tty.line();
-  m_tty.mv(line.position(m_context.compPrefixEnd));
-  if (rspan.outLen() > span.outLen() &&
-      line.length() + (rspan.outLen() - span.outLen()) >= m_config.maxLineLen)
+  m_tty.mv(line.byte(m_context.compPrefixEnd).mapping());
+  if (rspan.inLen() > span.inLen() &&
+      line.length() + (rspan.inLen() - span.inLen()) >= m_config.maxLineLen)
     return;
   splice(m_context.compPrefixEnd, span, data, rspan);
   m_context.compEnd = m_context.compPrefixEnd + data.length();
@@ -901,7 +921,7 @@ bool Editor::cmdComplete(Cmd, int32_t)
     startComplete();
   }
   ZuString suffix;
-  if (m_app.compNext(&suffix) || m_app.compNext(&suffix))
+  if (m_app.compNext(suffix) || m_app.compNext(suffix))
     completed(suffix);
   return false;
 }
@@ -918,26 +938,29 @@ bool Editor::cmdListComplete(Cmd, int32_t)
   unsigned colWidth, colHeight, nCols;
   auto prefix = substr(m_context.compPrefixOff, m_context.compPrefixEnd);
   auto prefixSpan = ZuUTF<uint32_t, uint8_t>::span(prefix);
-  ZuString suffix;
-  ZtArray<ZtArray<char>> matches;
-  while (m_app.compNext(suffix)) {
-    matches.push(ZtString{suffix});
-    auto suffixSpan = ZuUTF<uint32_t, uint8_t>::span(suffix);
-    auto width = (prefixSpan + suffixSpan).width() + 1;
-    if (width > colWidth) colWidth = width;
-    // abort if more than maxCompPages of output
-    nCols = colWidth > (ttyWidth>>1) ? 1 : ttyWidth / colWidth;
-    colHeight = (matches.length() + nCols - 1) / nCols;
-    if (colHeight > maxHeight) break;
+  ZtArray<ZtArray<uint8_t>> matches;
+  {
+    ZuString suffix;
+    while (m_app.compNext(suffix)) {
+      matches.push(ZuArray<const uint8_t>{suffix});
+      auto suffixSpan = ZuUTF<uint32_t, uint8_t>::span(suffix);
+      auto width = (prefixSpan + suffixSpan).width() + 1;
+      if (width > colWidth) colWidth = width;
+      // abort if more than maxCompPages of output
+      nCols = colWidth > (ttyWidth>>1) ? 1 : ttyWidth / colWidth;
+      colHeight = (matches.length() + nCols - 1) / nCols;
+      if (colHeight > maxHeight) break;
+    }
   }
   if (!matches) return false;
   m_context.compWidth = colWidth = ttyWidth / nCols;
   if (m_tty.write() != Zi::OK) return false;
   m_tty.crnl_();
-  for (row = 0; row < colHeight; row++) {
+  for (unsigned row = 0; row < colHeight; row++) {
     unsigned i = row;
+    unsigned col;
     for (col = 0; col < nCols; col++) {
-      ZuString suffix = matches[i];
+      ZuArray<uint8_t> suffix = matches[i];
       m_tty.out_(prefix);
       m_tty.out_(suffix);
       auto suffixSpan = ZuUTF<uint32_t, uint8_t>::span(suffix);
@@ -952,6 +975,7 @@ bool Editor::cmdListComplete(Cmd, int32_t)
     if (m_tty.write() != Zi::OK) return false;
   }
   m_tty.redraw();
+  return false;
 }
 
 void Editor::histLoad(int offset, ZuArray<const uint8_t> data, bool save)
@@ -1004,7 +1028,7 @@ bool Editor::cmdClrIncSrch(Cmd, int32_t)
     ZuString data;
     int offset = m_context.histSaveOff;
     if (!m_app.histLoad(offset, data)) {
-      data = ZuString{};
+      data = ZuArray<const uint8_t>{};
       offset = -1;
     }
     histLoad(offset, data, false);
@@ -1015,16 +1039,16 @@ bool Editor::cmdClrIncSrch(Cmd, int32_t)
 bool Editor::addIncSrch(int32_t vkey)
 {
   if (vkey <= 0) return false;
-  ZuStringN<4> utf;
-  utf.length(ZuUTF8::out(utf, 4, vkey));
-  if (m_context.srchTerm.length + utf.length() >= m_config.maxLineLen)
+  ZuArrayN<uint8_t, 4> utf;
+  utf.length(ZuUTF8::out(utf.data(), 4, vkey));
+  if (m_context.srchTerm.length() + utf.length() >= m_config.maxLineLen)
     return false;
   m_context.srchTerm << utf;
   return true;
 }
 
 // simple/fast raw substring matcher
-bool Editor::match(ZuArray<uint8_t> data)
+bool Editor::match(ZuArray<const uint8_t> data)
 {
   const auto &term = m_context.srchTerm;
   if (ZuUnlikely(data.length() < term.length())) return false;
@@ -1071,7 +1095,7 @@ bool Editor::searchRev(int arg)
   return false;
 }
 
-bool Editor::cmdFwdIncSrch(Cmd, int32_t vkey)
+bool Editor::cmdFwdIncSrch(Cmd cmd, int32_t vkey)
 {
   if (addIncSrch(vkey)) {
     int arg = cmd.arg();
@@ -1080,7 +1104,7 @@ bool Editor::cmdFwdIncSrch(Cmd, int32_t vkey)
   }
   return false;
 }
-bool Editor::cmdRevIncSrch(Cmd, int32_t vkey)
+bool Editor::cmdRevIncSrch(Cmd cmd, int32_t vkey)
 {
   if (addIncSrch(vkey)) {
     int arg = cmd.arg();
@@ -1093,7 +1117,7 @@ bool Editor::cmdRevIncSrch(Cmd, int32_t vkey)
 bool Editor::cmdPromptSrch(Cmd cmd, int32_t vkey)
 {
   if (ZuUnlikely(vkey <= 0)) return false;
-  m_context.srchMode = mode;
+  m_context.stack.push(m_context.mode);
   m_context.mode = cmd.arg();
   unsigned pos = m_context.startPos;
   m_tty.mv(pos);
@@ -1105,18 +1129,19 @@ bool Editor::cmdPromptSrch(Cmd cmd, int32_t vkey)
     m_context.histLoadOff = m_context.histSaveOff;
   if (m_context.histLoadOff == m_context.histSaveOff)
     m_app.histSave(m_context.histSaveOff, orig);
-  ZuStringN<4> prompt;
-  prompt.length(ZuUTF8::out(prompt, 4, vkey));
+  ZuArrayN<uint8_t, 4> prompt;
+  prompt.length(ZuUTF8::out(prompt.data(), 4, vkey));
   m_context.srchPrmptSpan = ZuUTF<uint32_t, uint8_t>::span(prompt);
   m_context.startPos += m_context.srchPrmptSpan.width();
   m_tty.splice(
       begin, ZuUTF<uint32_t, uint8_t>::span(orig),
       prompt, m_context.srchPrmptSpan);
+  return false;
 }
 
 // perform non-incremental search operation (abort, forward or reverse)
 struct SearchOp { enum { Abort = 0, Fwd, Rev }; };
-void Editor::searchOp(constexpr int op)
+void Editor::srchEndPrompt(int op)
 {
   unsigned pos = m_context.startPos;
   const auto &line = m_tty.line();
@@ -1144,21 +1169,23 @@ void Editor::searchOp(constexpr int op)
     m_tty.splice(
 	begin, ZuUTF<uint32_t, uint8_t>::span(orig),
 	data, ZuUTF<uint32_t, uint8_t>::span(data));
-  m_context.mode = m_context.srchMode;
+  m_context.mode = m_context.stack.pop();
   m_context.srchPrmptSpan = {};
-  m_context.srchMode = 0;
 }
 bool Editor::cmdEnterSrchFwd(Cmd, int32_t)
 {
-  searchOp(SearchOp::Fwd);
+  srchEndPrompt(SearchOp::Fwd);
+  return false;
 }
 bool Editor::cmdEnterSrchRev(Cmd, int32_t)
 {
-  searchOp(SearchOp::Rev);
+  srchEndPrompt(SearchOp::Rev);
+  return false;
 }
 bool Editor::cmdAbortSrch(Cmd, int32_t)
 {
-  searchOp(SearchOp::Abort);
+  srchEndPrompt(SearchOp::Abort);
+  return false;
 }
 
 bool Editor::cmdFwdSearch(Cmd cmd, int32_t)

@@ -82,11 +82,7 @@ public:
     uint32_t	m_value = 4U; // sentinel null value
   };
 
-  void clear() {
-    m_data.clear();
-    m_bytes.clear();
-    m_positions.clear();
-  }
+  void clear();
 
   const ZtArray<uint8_t> &data() const { return m_data; }
   ZtArray<uint8_t> &data() { return m_data; }
@@ -98,7 +94,7 @@ public:
 
   // substring
   ZuString substr(unsigned off, unsigned len) const {
-    return ZuString{reinterpret_cast<const char *>(&m_data[off]), len};
+    return {reinterpret_cast<const char *>(&m_data[off]), len};
   }
 
   // byte offset -> display position

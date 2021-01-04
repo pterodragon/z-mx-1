@@ -51,11 +51,11 @@ public:
   void save(unsigned i, ZuString s);
   bool load(unsigned i, ZuString &s) const;
 
-  auto saveFn() { return HistSaveFn::Member<&save>::fn(this); }
-  auto loadFn() { return HistLoadFn::Member<&load>::fn(this); }
+  auto saveFn() { return HistSaveFn::Member<&History::save>::fn(this); }
+  auto loadFn() { return HistLoadFn::Member<&History::load>::fn(this); }
 
 private:
-  ZtArray<ZtArray<uint8_t>>	m_data;
+  ZtArray<ZtArray<char>>	m_data;
   unsigned			m_offset = 0;
   unsigned			m_max = 100;
 };

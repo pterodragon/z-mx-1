@@ -857,6 +857,15 @@ public:
 
   ZuInline uint32_t hash() const { return Ops::hash(m_data, length()); }
 
+// buffer access
+
+  ZuInline auto buf() {
+    return ZuArray<T>{data(), size()};
+  }
+  ZuInline auto cbuf() const {
+    return ZuArray<typename ZuConst<T>::T>{data(), length()};
+  }
+
 // comparison
 
   ZuInline bool operator !() const { return !length(); }

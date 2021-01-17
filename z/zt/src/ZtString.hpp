@@ -828,7 +828,18 @@ public:
   }
 
 public:
+// hash()
+
   ZuInline uint32_t hash() const { return ZuHash<ZtString_>::hash(*this); }
+
+// buffer access
+
+  ZuInline auto buf() {
+    return ZuArray<Char>{data(), size() - 1};
+  }
+  ZuInline auto cbuf() const {
+    return ZuArray<typename ZuConst<Char>::T>{data(), length()};
+  }
 
 // comparison
 

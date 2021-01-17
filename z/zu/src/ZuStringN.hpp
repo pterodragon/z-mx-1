@@ -365,6 +365,15 @@ public:
     m_length = Zu::strlen_(data());
   }
 
+// buffer access
+
+  ZuInline auto buf() {
+    return ZuArray<Char>{data(), M};
+  }
+  ZuInline auto cbuf() const {
+    return ZuArray<typename ZuConst<Char>::T>{data(), m_length};
+  }
+
 // comparison
 
   ZuInline bool operator !() const { return !m_length; }

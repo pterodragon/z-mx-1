@@ -357,8 +357,10 @@ public:
 	s.offset(1);
 	if (ZuUnlikely(!s)) goto null;
       }
-      while (s[0] == '0') s.offset(1);
-      if (!s) { value = 0; return; }
+      while (s[0] == '0') {
+	s.offset(1);
+	if (!s) { value = 0; return; }
+      }
       uint64_t iv = 0, fv = 0;
       unsigned n = s.length();
       if (ZuUnlikely(s[0] == '.')) {

@@ -463,9 +463,18 @@ private:
     for (unsigned i = 0; i < length; i++) *removed << data[i];
   }
 
+public:
+// buffer access
+
+  ZuInline auto buf() {
+    return ZuArray<T>{data(), N};
+  }
+  ZuInline auto cbuf() const {
+    return ZuArray<typename ZuConst<T>::T>{data(), m_length};
+  }
+
 // comparison
 
-public:
   ZuInline bool operator !() const { return !m_length; }
   ZuOpBool
 
@@ -473,27 +482,23 @@ protected:
   ZuInline bool same(const ZuArrayN_ &a) const { return this == &a; }
   template <typename A> ZuInline bool same(const A &a) const { return false; }
 
-private:
-  ZuInline auto array_() const {
-    return ZuArray<typename ZuConst<T>::T>{data(), length()};
-  }
 public:
   template <typename A>
   ZuInline int cmp(const A &a) const {
     if (same(a)) return 0;
-    return array_().cmp(a);
+    return cbuf().cmp(a);
   }
   template <typename A>
   ZuInline bool less(const A &a) const {
-    return !same(a) && array_().less(a);
+    return !same(a) && cbuf().less(a);
   }
   template <typename A>
   ZuInline bool greater(const A &a) const {
-    return !same(a) && array_().greater(a);
+    return !same(a) && cbuf().greater(a);
   }
   template <typename A>
   ZuInline bool equals(const A &a) const {
-    return same(a) || array_().equals(a);
+    return same(a) || cbuf().equals(a);
   }
 
 // hash

@@ -65,14 +65,21 @@ struct ZuTraits_Composite<T, decltype((int T::*){}, void())> {
 };
 
 template <typename T> struct ZuTraits_Enum {
-  enum { Is = __is_enum(T) }; // supported by VC++, gcc and clang
-};
+  enum { Is = __is_enum(T) };
+}; 
+template <typename T> struct ZuTraits_POD {
+#ifdef _MSC_VER
+  enum { Is = __is_pod(T) };
+#else
+  enum { Is = __is_standard_layout(T) && __is_trivial(T) };
+#endif
+}; 
 
-template <typename T, bool Enum> struct ZuGenericTraits_ {
+template <typename T, bool Enum, bool POD> struct ZuGenericTraits_ {
   enum {
     IsReference		= 0,	IsRvalueRef	= 0,	IsPointer	= 0,
     IsPrimitive		= Enum,	IsReal		= Enum,	IsSigned	= Enum,
-    IsIntegral		= Enum,	IsFloatingPoint	= 0,	IsPOD		= Enum,
+    IsIntegral		= Enum,	IsFloatingPoint	= 0,	IsPOD		= POD,
     IsString		= 0,	IsCString	= 0,	IsWString	= 0,
     IsVoid		= 0,	IsBool		= 0,	IsArray		= 0,
     IsHashable		= 0,	IsComparable	= 0,
@@ -85,7 +92,8 @@ template <typename T, bool Enum> struct ZuGenericTraits_ {
   using Elem = void;
 };
 template <typename T>
-struct ZuGenericTraits : public ZuGenericTraits_<T, ZuTraits_Enum<T>::Is> { };
+struct ZuGenericTraits :
+    public ZuGenericTraits_<T, ZuTraits_Enum<T>::Is, ZuTraits_POD<T>::Is> { };
 
 template <typename T> ZuGenericTraits<T> ZuTraitsType(const T *);
 template <typename T> const T *ZuTraitsType_();

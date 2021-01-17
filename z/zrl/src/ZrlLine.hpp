@@ -18,10 +18,10 @@
  */
 
 // Zrl::Line encapsulates a wrapped left-to-right UTF8 mono-spaced line
-// of text displayed ona terminal, comprised of variable-width glyphs.
-// Each glyph is each regular width, i.e. 1 display position, or full-width,
+// of text displayed on a terminal, comprised of variable-width glyphs.
+// Each glyph is either regular width, i.e. 1 display position, or full-width,
 // i.e. 2 display positions. The line wraps around the display width and
-// is re-flowed such that full-width glyphs are always kept intact on the
+// is re-flowed such that full-width glyphs are always intact on the
 // same line.
 
 #ifndef ZrlLine_HPP
@@ -41,13 +41,6 @@ namespace Zrl {
 
 class ZrlAPI Line {
 public:
-  Line() = default;
-  Line(const Line &) = default;
-  Line &operator =(const Line &) = default;
-  Line(Line &&) = default;
-  Line &operator =(Line &&) = default;
-  ~Line() = default;
-
   // encodes a 28bit index, padding, an offset and a length into 32bits
   class Index {
   public:

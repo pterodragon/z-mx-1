@@ -54,7 +54,6 @@ class ZiAPI ZiGlob {
 
 public:
   ZiGlob() = default;
-  ~ZiGlob() = default;
 
   bool init(ZuString prefix, ZeError *e = nullptr);
 

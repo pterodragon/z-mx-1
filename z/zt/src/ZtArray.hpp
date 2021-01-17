@@ -46,6 +46,7 @@
 #include <zlib/ZuUTF.hpp>
 #include <zlib/ZuPrint.hpp>
 #include <zlib/ZuBox.hpp>
+#include <zlib/ZuNormChar.hpp>
 
 #include <zlib/ZmAssert.hpp>
 
@@ -84,38 +85,11 @@ private:
   using Char2 = typename ZtArray_Char2<T>::T;
 
   // from same type ZtArray
-  template <typename U, typename R = void, typename V = T,
-    bool A = ZuConversion<ZtArray_<V>, U>::Base> struct MatchZtArray;
-  template <typename U, typename R>
-    struct MatchZtArray<U, R, T, true> { using T = R; };
-
-  // from another array type with convertible element type (not a string)
-  template <typename U, typename R = void, typename V = T,
-    bool A = !ZuConversion<ZtArray_<V>, U>::Base &&
-      !ZuTraits<U>::IsString && ZuTraits<U>::IsArray &&
-      ZuConversion<typename ZuTraits<U>::Elem, V>::Exists
-    > struct MatchArray;
-  template <typename U, typename R>
-    struct MatchArray<U, R, T, true> { using T = R; };
-
-  // from another array type with same element type (not a string)
-  template <typename U, typename R = void, typename V = T,
-    bool A = !ZuConversion<ZtArray_<V>, U>::Base &&
-      !ZuTraits<U>::IsString && ZuTraits<U>::IsArray &&
-      ZuConversion<typename ZuTraits<U>::Elem, V>::Same
-    > struct MatchSameArray;
-  template <typename U, typename R>
-    struct MatchSameArray<U, R, T, true> { using T = R; };
-
-  // from another array type with convertible element type (not a string)
-  template <typename U, typename R = void, typename V = T,
-    bool A = !ZuConversion<ZtArray_<V>, U>::Base &&
-      !ZuTraits<U>::IsString && ZuTraits<U>::IsArray &&
-      !ZuConversion<typename ZuTraits<U>::Elem, V>::Same &&
-      ZuConversion<typename ZuTraits<U>::Elem, V>::Exists
-    > struct MatchDiffArray;
-  template <typename U, typename R>
-    struct MatchDiffArray<U, R, T, true> { using T = R; };
+  template <typename U, typename V = T> struct IsZtArray {
+    enum { OK = ZuConversion<ZtArray_<V>, U>::Base };
+  };
+  template <typename U, typename R = void>
+  struct MatchZtArray : public ZuIfT<IsZtArray<U>::OK, R> { };
 
   // from string literal with same char
   template <typename U, typename V = Char> struct IsStrLiteral {
@@ -126,121 +100,159 @@ private:
   template <typename U, typename R = void>
   struct MatchStrLiteral : public ZuIfT<IsStrLiteral<U>::OK, R> { };
 
-  // from some other string with same char (other than a string literal)
-  template <typename U, typename V = Char> struct IsString_ {
-    enum { OK = !ZuConversion<ZtArray_<V>, U>::Base &&
-      !IsStrLiteral<U>::OK && ZuTraits<U>::IsString &&
-      ZuConversion<typename ZuTraits<U>::Elem, V>::Same };
-  };
-  template <typename U, typename R = void>
-  struct MatchString : public ZuIfT<IsString_<U>::OK, R> { };
+  template <typename T> using NormChar = ZuNormChar<T>;
 
   // from some other string with same char (including string literals)
   template <typename U, typename V = Char> struct IsAnyString {
-    enum { OK = !ZuConversion<ZtArray_<V>, U>::Base &&
-      ZuTraits<U>::IsString &&
-      ZuConversion<typename ZuTraits<U>::Elem, V>::Same };
+    using W = typename NormChar<typename ZuTraits<U>::Elem>::T;
+    using X = typename NormChar<V>::T;
+    enum { OK =
+      !IsZtArray<U>::OK &&
+      (ZuTraits<U>::IsArray || ZuTraits<U>::IsString) &&
+      ZuConversion<W, X>::Same };
   };
   template <typename U, typename R = void>
   struct MatchAnyString : public ZuIfT<IsAnyString<U>::OK, R> { };
 
+  // from some other string with same char (other than a string literal)
+  template <typename U, typename V = Char> struct IsString_ {
+    enum { OK =
+      !IsStrLiteral<U>::OK &&
+      IsAnyString<U>::OK };
+  };
+  template <typename U, typename R = void>
+  struct MatchString : public ZuIfT<IsString_<U>::OK, R> { };
+
+  // from another array type with convertible element type (not a string)
+  template <typename U, typename V = T> struct IsArray {
+    enum { OK =
+      !IsZtArray<U>::OK &&
+      !IsAnyString<U>::OK &&
+      !ZuConversion<U, V>::Same &&
+      ZuTraits<U>::IsArray &&
+      ZuConversion<typename ZuTraits<U>::Elem, V>::Exists };
+  };
+  template <typename U, typename R = void>
+  struct MatchArray : public ZuIfT<IsArray<U>::OK, R> { };
+
+  // from another array type with same element type (not a string)
+  template <typename U, typename V = T> struct IsSameArray {
+    enum { OK =
+      !IsZtArray<U>::OK &&
+      !ZuConversion<U, V>::Same &&
+      !ZuTraits<U>::IsString && ZuTraits<U>::IsArray &&
+      ZuConversion<typename ZuTraits<U>::Elem, V>::Same };
+  };
+  template <typename U, typename R = void>
+  struct MatchSameArray : public ZuIfT<IsSameArray<U>::OK, R> { };
+
+  // from another array type with convertible element type (not a string)
+  template <typename U, typename V = T> struct IsDiffArray {
+    enum { OK =
+      !IsZtArray<U>::OK &&
+      !ZuConversion<U, V>::Same &&
+      !ZuTraits<U>::IsString && ZuTraits<U>::IsArray &&
+      !ZuConversion<typename ZuTraits<U>::Elem, V>::Same &&
+      ZuConversion<typename ZuTraits<U>::Elem, V>::Exists };
+  };
+  template <typename U, typename R = void>
+  struct MatchDiffArray : public ZuIfT<IsDiffArray<U>::OK, R> { };
+
   // from char2 string (requires conversion)
-  template <typename U, typename R = void, typename V = Char2,
-    bool A = !ZuConversion<ZuNull, V>::Same && ZuTraits<U>::IsString &&
-      ZuConversion<typename ZuTraits<U>::Elem, V>::Same
-    > struct MatchChar2String;
-  template <typename U, typename R>
-    struct MatchChar2String<U, R, Char2, true> { using T = R; };
+  template <typename U, typename V = Char2> struct IsChar2String {
+    enum { OK = !ZuConversion<ZuNull, V>::Same && ZuTraits<U>::IsString &&
+      ZuConversion<typename ZuTraits<U>::Elem, V>::Same };
+  };
+  template <typename U, typename R = void>
+  struct MatchChar2String : public ZuIfT<IsChar2String<U>::OK, R> { };
 
   // from individual char2 (requires conversion)
-  template <typename U, typename R = void, typename V = Char2,
-    bool B = !ZuConversion<ZuNull, V>::Same &&
+  template <typename U, typename V = Char2> struct IsChar2 {
+    enum { OK = !ZuConversion<ZuNull, V>::Same &&
       ZuConversion<U, V>::Same &&
-      !ZuConversion<U, wchar_t>::Same> struct MatchChar2;
-  template <typename U, typename R>
-  struct MatchChar2<U, R, Char2, true> { using T = R; };
+      !ZuConversion<U, wchar_t>::Same };
+  };
+  template <typename U, typename R = void>
+  struct MatchChar2 : public ZuIfT<IsChar2<U>::OK, R> { };
 
   // from printable type (if this is a char array)
-  template <typename U, typename R = void, typename V = Char,
-    bool B = ZuConversion<char, V>::Same &&
-      ZuPrint<U>::OK && !ZuPrint<U>::String> struct MatchPrint;
-  template <typename U, typename R>
-  struct MatchPrint<U, R, char, true> { using T = R; };
-  template <typename U, typename R = void, typename V = Char,
-    bool B = ZuConversion<char, V>::Same &&
-      ZuPrint<U>::Delegate> struct MatchPDelegate { };
-  template <typename U, typename R>
-  struct MatchPDelegate<U, R, char, true> { using T = R; };
-  template <typename U, typename R = void, typename V = Char,
-    bool B = ZuConversion<char, V>::Same &&
-      ZuPrint<U>::Buffer> struct MatchPBuffer { };
-  template <typename U, typename R>
-  struct MatchPBuffer<U, R, char, true> { using T = R; };
+  template <typename U, typename V = Char> struct IsPrint {
+    enum { OK = ZuConversion<char, V>::Same &&
+      ZuPrint<U>::OK && !ZuPrint<U>::String };
+  };
+  template <typename U, typename R = void>
+  struct MatchPrint : public ZuIfT<IsPrint<U>::OK, R> { };
+  template <typename U, typename V = Char> struct IsPDelegate {
+    enum { OK = ZuConversion<char, V>::Same &&
+      ZuPrint<U>::Delegate };
+  };
+  template <typename U, typename R = void>
+  struct MatchPDelegate : public ZuIfT<IsPDelegate<U>::OK, R> { };
+  template <typename U, typename V = Char> struct IsPBuffer {
+    enum { OK = ZuConversion<char, V>::Same &&
+      ZuPrint<U>::Buffer };
+  };
+  template <typename U, typename R = void>
+  struct MatchPBuffer : public ZuIfT<IsPBuffer<U>::OK, R> { };
 
   // from real primitive types other than chars (if this is a char array)
-  template <typename U, typename R = void, typename V = Char,
-    bool B = ZuConversion<char, V>::Same &&
+  template <typename U, typename V = T> struct IsReal {
+    enum { OK = ZuConversion<char, V>::Same &&
+      !ZuConversion<U, V>::Same &&
       ZuTraits<U>::IsReal && ZuTraits<U>::IsPrimitive &&
-      !ZuConversion<U, char>::Same &&
-      !ZuTraits<U>::IsArray
-    > struct MatchReal { };
-  template <typename U, typename R>
-  struct MatchReal<U, R, char, true> { using T = R; };
+      !ZuTraits<U>::IsArray };
+  };
+  template <typename U, typename R = void>
+  struct MatchReal : public ZuIfT<IsReal<U>::OK, R> { };
 
   // from individual element
-  template <typename U, typename R = void, typename V = T, typename W = Char2,
-    bool B = ZuConversion<U, V>::Same ||
-      ((!(ZuConversion<char, V>::Same || ZuConversion<wchar_t, V>::Same) ||
-	(!ZuTraits<U>::IsString && // avoid MatchString ambiguity
-	 !ZuConversion<U, W>::Same)) && // avoid MatchChar2 ambiguity
-       (!ZuConversion<char, V>::Same ||
-	((!ZuTraits<U>::IsReal ||
-	  !ZuTraits<U>::IsPrimitive) && // avoid MatchReal ambiguity
-	 !ZuPrint<U>::OK)) && // avoid MatchPrint ambiguity
-       !ZuTraits<U>::IsArray && // avoid MatchArray ambiguity
-       ZuConversion<U, V>::Exists)
-    > struct MatchElem;
-  template <typename U, typename R>
-  struct MatchElem<U, R, T, Char2, true> { using T = R; };
+  template <typename U, typename V = T> struct IsElem {
+    enum { OK = ZuConversion<U, V>::Same ||
+      (!IsZtArray<U>::OK &&
+       !IsString_<U>::OK &&
+       !IsArray<U>::OK &&
+       !IsChar2<U>::OK &&
+       !IsPrint<U>::OK &&
+       !IsReal<U>::OK &&
+       ZuConversion<U, V>::Exists) };
+  };
+  template <typename U, typename R = void>
+  struct MatchElem : public ZuIfT<IsElem<U>::OK, R> { };
+
+  // from individual element, for push()
+  template <typename U, typename V = T> struct IsPushElem {
+    enum { OK = ZuConversion<U, V>::Same ||
+      (!IsZtArray<U>::OK &&
+       !IsArray<U>::OK &&
+       ZuConversion<U, V>::Exists) };
+  };
+  template <typename U, typename R = void>
+  struct MatchPushElem : public ZuIfT<IsPushElem<U>::OK, R> { };
 
   // an unsigned|int|size_t parameter to the constructor is a buffer size
-  template <typename U, typename R = void, typename V = Char,
-    bool B =
+  template <typename U, typename V = T> struct IsCtorSize {
+    enum { OK =
       ZuConversion<U, unsigned>::Same ||
       ZuConversion<U, int>::Same ||
-      ZuConversion<U, size_t>::Same
-    > struct CtorSize;
-  template <typename U, typename R>
-  struct CtorSize<U, R, Char, true> { using T = R; };
+      ZuConversion<U, size_t>::Same };
+  };
+  template <typename U, typename R = void>
+  struct MatchCtorSize : public ZuIfT<IsCtorSize<U>::OK, R> { };
 
   // construction from individual element
-  template <typename U, typename R = void, typename V = T, typename W = Char2,
-    bool B =
-      !(ZuConversion<U, unsigned>::Same || // avoid CtorSize ambiguity
-	ZuConversion<U, int>::Same ||
-	ZuConversion<U, size_t>::Same) &&
-      (ZuConversion<U, V>::Same ||
-       ((!(ZuConversion<char, V>::Same || ZuConversion<wchar_t, V>::Same) ||
-	 (!ZuTraits<U>::IsString && // avoid MatchString ambiguity
-	  !ZuConversion<U, W>::Same)) && // avoid MatchChar2 ambiguity
-       (!ZuConversion<char, V>::Same ||
-	((!ZuTraits<U>::IsReal ||
-	  !ZuTraits<U>::IsPrimitive) && // avoid MatchReal ambiguity
-	  !ZuPrint<U>::OK)) && // avoid MatchPrint ambiguity
-       !ZuTraits<U>::IsArray && // avoid MatchArray ambiguity
-       ZuConversion<U, V>::Exists))
-    > struct CtorElem;
-  template <typename U, typename R>
-  struct CtorElem<U, R, T, Char2, true> { using T = R; };
-
-  template <typename U, typename R = void,
-    typename V = Char,
-    bool S = ZuTraits<U>::IsString,
-    bool W = ZuTraits<U>::IsWString> struct ToString { };
-  template <typename U, typename R>
-  struct ToString<U, R, char, true, false> { using T = R; };
-  template <typename U, typename R>
-  struct ToString<U, R, wchar_t, true, true> { using T = R; };
+  template <typename U, typename V = T, typename W = Char2> struct IsCtorElem {
+    enum { OK =
+      !IsZtArray<U>::OK &&
+      !IsString_<U>::OK &&
+      !IsArray<U>::OK &&
+      !IsChar2<U>::OK &&
+      !IsPrint<U>::OK &&
+      !IsReal<U>::OK &&
+      !IsCtorSize<U>::OK &&
+      ZuConversion<U, V>::Exists };
+  };
+  template <typename U, typename R = void>
+  struct MatchCtorElem : public ZuIfT<IsCtorElem<U>::OK, R> { };
 
 public:
   ZuInline ZtArray() { null_(); }
@@ -312,49 +324,47 @@ private:
     using Elem = typename ZuArrayT<A>::Elem;
 
     static void ctor_(ZtArray *this_, const A &a_) {
-      ZuArrayT<A> a(a_);
+      ZuArray<typename ZuConst<Elem>::T> a(a_);
       this_->copy_(a.data(), a.length());
     }
     static void ctor_(ZtArray *this_, A &&a_) {
-      ZuArrayT<A> a(a_);
-      this_->move_(const_cast<Elem *>(a.data()), a.length());
+      ZuArray<Elem> a(a_);
+      this_->move_(a.data(), a.length());
     }
 
     static void assign_(ZtArray *this_, const A &a_) {
-      ZuArrayT<A> a(a_);
+      ZuArray<typename ZuConst<Elem>::T> a(a_);
       uint32_t oldLength = 0;
       T *oldData = this_->free_1(oldLength);
       this_->copy_(a.data(), a.length());
       this_->free_2(oldData, oldLength);
     }
     static void assign_(ZtArray *this_, A &&a_) {
-      ZuArrayT<A> a(a_);
+      ZuArray<Elem> a(a_);
       uint32_t oldLength = 0;
       T *oldData = this_->free_1(oldLength);
-      this_->move_(const_cast<Elem *>(a.data()), a.length());
+      this_->move_(a.data(), a.length());
       this_->free_2(oldData, oldLength);
     }
 
     static ZtArray add_(const ZtArray *this_, const A &a_) {
-      ZuArrayT<A> a(a_);
+      ZuArray<typename ZuConst<Elem>::T> a(a_);
       return this_->add(a.data(), a.length());
     }
     static ZtArray add_(const ZtArray *this_, A &&a_) {
-      ZuArrayT<A> a(a_);
-      return this_->add_mv(const_cast<Elem *>(a.data()), a.length());
+      ZuArray<Elem> a(a_);
+      return this_->add_mv(a.data(), a.length());
     }
 
     static void splice_(ZtArray *this_,
 	ZtArray *removed, int offset, int length, const A &a_) {
-      ZuArrayT<A> a(a_);
+      ZuArray<typename ZuConst<Elem>::T> a(a_);
       this_->splice_cp_(removed, offset, length, a.data(), a.length());
     }
     static void splice_(ZtArray *this_,
 	ZtArray *removed, int offset, int length, A &&a_) {
-      ZuArrayT<A> a(a_);
-      this_->splice_mv_(
-	  removed, offset, length,
-	  const_cast<Elem *>(a.data()), a.length());
+      ZuArray<Elem> a(a_);
+      this_->splice_mv_(removed, offset, length, a.data(), a.length());
     }
   };
 
@@ -364,12 +374,12 @@ private:
     { Fwd_Array<A>::ctor_(this, ZuFwd<A>(a)); }
 
   template <typename S> ZuInline typename MatchStrLiteral<S>::T ctor(S &&s_)
-    { ZuArrayT<S> s(ZuFwd<S>(s_)); shadow_(s.data(), s.length()); }
+    { ZuArray<typename ZuConst<T>::T> s(s_); shadow_(s.data(), s.length()); }
   template <typename S> ZuInline typename MatchString<S>::T ctor(S &&s_)
-    { ZuArrayT<S> s(ZuFwd<S>(s_)); copy_(s.data(), s.length()); }
+    { ZuArray<typename ZuConst<T>::T> s(s_); copy_(s.data(), s.length()); }
 
   template <typename S> ZuInline typename MatchChar2String<S>::T ctor(S &&s_) {
-    ZuArray<const Char2> s(ZuFwd<S>(s_));
+    ZuArray<const Char2> s(s_);
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null_(); return; }
     alloc_(o, 0);
@@ -392,12 +402,12 @@ private:
     length_(ZuPrint<P>::print(m_data, o, p));
   }
 
-  template <typename V> ZuInline typename CtorSize<V>::T ctor(V size) {
+  template <typename V> ZuInline typename MatchCtorSize<V>::T ctor(V size) {
     if (!size) { null_(); return; }
     alloc_(size, 0);
   }
 
-  template <typename R> ZuInline typename CtorElem<R>::T ctor(R &&r) {
+  template <typename R> ZuInline typename MatchCtorElem<R>::T ctor(R &&r) {
     unsigned z = grow_(0, 1);
     m_data = (T *)::malloc(z * sizeof(T));
     size_owned(z, 1);
@@ -405,17 +415,12 @@ private:
     this->initItem(m_data, ZuFwd<R>(r));
   }
 
-public:
-  template <typename A> ZtArray(Copy_ _, A &&a) { copy(ZuFwd<A>(a)); }
-
-  template <typename A> ZtArray(Move_ _, A &&a) { move(ZuFwd<A>(a)); }
-
 private:
   template <typename A> typename MatchZtArray<A>::T copy(const A &a) {
     copy_(a.m_data, a.length());
   }
   template <typename A> typename MatchArray<A>::T copy(A &&a_) {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
+    ZuArrayT<A> a(a_);
     copy_(a.data(), a.length());
   }
 
@@ -457,12 +462,12 @@ private:
   }
 
   template <typename S> typename MatchStrLiteral<S>::T assign(S &&s_) {
-    ZuArrayT<S> s(ZuFwd<S>(s_));
+    ZuArray<typename ZuConst<T>::T> s(s_);
     free_();
     shadow_(s.data(), s.length());
   }
   template <typename S> typename MatchString<S>::T assign(S &&s_) {
-    ZuArrayT<S> s(ZuFwd<S>(s_));
+    ZuArray<typename ZuConst<T>::T> s(s_);
     uint32_t oldLength = 0;
     T *oldData = free_1(oldLength);
     copy_(s.data(), s.length());
@@ -470,7 +475,7 @@ private:
   }
 
   template <typename S> typename MatchChar2String<S>::T assign(S &&s_) {
-    ZuArray<const Char2> s(ZuFwd<S>(s_));
+    ZuArray<const Char2> s(s_);
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null(); return; }
     if (!owned() || size() < o) size(o);
@@ -496,12 +501,13 @@ private:
     length_(ZuPrint<P>::print(m_data, o, p));
   }
 
-  template <typename R> ZuInline typename MatchReal<R>::T assign(R r)
-    { assign(ZuBoxed(r)); }
+  template <typename V> ZuInline typename MatchReal<V>::T assign(V v) {
+    assign(ZuBoxed(v));
+  }
 
-  template <typename R> ZuInline typename MatchElem<R>::T assign(R &&r) {
+  template <typename I> ZuInline typename MatchElem<I>::T assign(I &&i) {
     free_();
-    ctor(ZuFwd<R>(r));
+    ctor(ZuFwd<I>(i));
   }
 
 public:
@@ -516,7 +522,7 @@ private:
   }
   template <typename A>
   typename MatchSameArray<A>::T shadow(A &&a_) {
-    ZuArrayT<A> a(ZuFwd<A>(a_));
+    ZuArrayT<A> a(a_);
     free_();
     shadow_(a.data(), a.length());
   }
@@ -524,7 +530,7 @@ private:
 public:
   template <typename S>
   ZtArray(S &&s_, ZtIconv *iconv, typename ZuIsString<S>::T *_ = 0) {
-    ZuArrayT<S> s(ZuFwd<S>(s_));
+    ZuArrayT<S> s(s_);
     convert_(s, iconv);
   }
   ZtArray(const Char *data, unsigned length, ZtIconv *iconv) {
@@ -1080,11 +1086,13 @@ private:
     length(n + ZuPrint<P>::print(m_data + n, o, p));
   }
 
-  template <typename R> ZuInline typename MatchReal<R>::T append_(R &&r)
-    { append_(ZuBoxed(ZuFwd<R>(r))); }
+  template <typename V> ZuInline typename MatchReal<V>::T append_(V v) {
+    append_(ZuBoxed(v));
+  }
 
-  template <typename R> ZuInline typename MatchElem<R>::T append_(R &&r)
-    { push(ZuFwd<R>(r)); }
+  template <typename I> ZuInline typename MatchElem<I>::T append_(I &&i) {
+    this->initItem(push(), ZuFwd<I>(i));
+  }
 
 public:
   ZuInline void append(const T *data, unsigned length) {
@@ -1199,12 +1207,10 @@ public:
     return (void *)(m_data + n);
   }
   template <typename I>
-  ZuInline typename ZuIfT<
-    !(ZuConversion<ZtArray_<T>, I>::Base ||
-	(!ZuTraits<I>::IsString && ZuTraits<I>::IsArray &&
-	  ZuConversion<typename ZuTraits<I>::Elem, T>::Exists))>::T
-  push(I &&i) {
-    this->initItem(push(), ZuFwd<I>(i));
+  ZuInline typename MatchPushElem<I, T *>::T push(I &&i) {
+    auto ptr = push();
+    if (ZuLikely(ptr)) this->initItem(ptr, ZuFwd<I>(i));
+    return static_cast<T *>(ptr);
   }
   T pop() {
     unsigned n = length();
@@ -1470,15 +1476,6 @@ private:
   ZuInline static unsigned grow_(unsigned o, unsigned n) {
     return ZtPlatform::grow(o * sizeof(T), n * sizeof(T)) / sizeof(T);
   }
-
-#if 0
-// conversions
- 
-  template <typename S>
-  ZuInline typename ToString<S, S>::T as() const {
-    return ZuTraits<S>::make(m_data, length());
-  }
-#endif
 
 private:
   uint32_t		m_size_owned;	// allocated size and owned flag

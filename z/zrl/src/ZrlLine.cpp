@@ -295,10 +295,14 @@ unsigned Line::revSearch(unsigned off, uint32_t glyph) const
 // reflow, given offset and display width
 void Line::reflow(unsigned off, unsigned dwidth)
 {
-  m_bytes.grow(m_data.length());
-  m_positions.grow(m_data.length());
-
   unsigned len = m_data.length();
+
+  ZmAssert(off < len);
+  ZmAssert(dwidth >= 2);
+
+  m_bytes.grow(len);
+  m_positions.grow(len);
+
   unsigned pwidth, pos;
 
   if (!off) {

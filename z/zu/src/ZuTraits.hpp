@@ -29,7 +29,7 @@
 //   ...
 // };
 //
-// The following are roughly equivalent:
+// The following are equivalent:
 //
 // ZuDeref<T>::T	std::remove_reference<T>::type
 // ZuStrip<T>::T	std::remove_cv<T>::type

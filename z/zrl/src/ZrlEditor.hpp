@@ -169,7 +169,6 @@ public:
   Cmd &operator =(const Cmd &) = default;
   Cmd(Cmd &&) = default;
   Cmd &operator =(Cmd &&) = default;
-  ~Cmd() = default;
 
   Cmd(uint32_t op) : m_value{op} { }
   Cmd(uint64_t op, uint64_t arg) : m_value{op | (arg<<16U)} { }
@@ -340,6 +339,12 @@ struct Config {
   unsigned	histOffset = 0;		// initial history offset
   unsigned	maxStackDepth = 10;	// maximum mode stack depth
 
+  Config() = default;
+  Config(const Config &) = default;
+  Config &operator =(const Config &) = default;
+  Config(Config &&) = default;
+  Config &operator =(Config &&) = default;
+
   Config(ZvCf *cf) {
     vkeyInterval = cf->getInt("vkeyInterval", 1, 1000, false, 100);
     maxLineLen = cf->getInt("maxLineLen", 0, (1<<20), false, 32768);
@@ -347,13 +352,6 @@ struct Config {
     histOffset = cf->getInt("histOffset", 0, UINT_MAX, false, 0);
     maxStackDepth = cf->getInt("maxStackDepth", 1, 100, false, 10);
   }
-
-  Config() = default;
-  // Config(const Config &) = default;
-  // Config &operator =(const Config &) = default;
-  // Config(Config &&) = default;
-  // Config &operator =(Config &&) = default;
-  // ~Config() = default;
 };
 
 // the line editor is a virtual machine that executes sequences of commands
@@ -369,7 +367,6 @@ class ZrlAPI Editor {
 
 public:
   Editor();
-  ~Editor() = default;
 
   // initialization/finalization
   void init(Config config, App app);

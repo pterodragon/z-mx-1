@@ -378,6 +378,9 @@ public:
   ZuInline ZuArray(const void *data, unsigned length) { }
 };
 
+template <typename T, typename N>
+ZuArray(T *data, N length) -> ZuArray<T *>;
+
 template <typename Elem_>
 struct ZuTraits<ZuArray<Elem_> > : public ZuGenericTraits<ZuArray<Elem_> > {
   using Elem =  Elem_;

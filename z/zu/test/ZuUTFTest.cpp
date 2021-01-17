@@ -27,10 +27,14 @@ int main()
 	  ZuArray<char>(s.data(), s.size() - 1),
 	  ZuWString(L"Hello World", 11)));
     CHECK(s == "Hello World");
+    s = L"Hello World";
+    CHECK(s == "Hello World");
     {
       ZuWStringN<64> w;
       w.length(ZuUTF<wchar_t, char>::cvt(
 	    ZuArray<wchar_t>(w.data(), w.size() - 1), s));
+      CHECK(w == L"Hello World");
+      w = "Hello World";
       CHECK(w == L"Hello World");
     }
   }
@@ -43,6 +47,8 @@ int main()
 	    ZuArray<const uint32_t>(&u[0], 3)));
       CHECK(j.length() == 4);
       CHECK(j[0] == 0xd83d && j[1] == 0xdc04 && j[2] == 'x' && j[3] == 'y');
+      CHECK(ZuUTF32::width(u[0]) == 2);
+      CHECK(ZuUTF32::width(u[1]) == 1);
     }
     {
       ZuArrayN<char, 16> j;

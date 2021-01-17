@@ -41,6 +41,7 @@ namespace Zrl {
 // filename glob completion
 struct Globber {
   ZiGlob globber;
+
   void init(ZuString prefix) { globber.init(prefix); }
   bool next(ZuString &suffix) {
     if (suffix = globber.next()) {

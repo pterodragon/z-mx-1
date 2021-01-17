@@ -919,7 +919,7 @@ namespace TreeHierarchy {
     GtkTreePath *get_path(GtkTreeIter *iter_) {
       auto iter = reinterpret_cast<Iter *>(iter_);
       gint depth;
-      gint indices[Depth];
+      gint indices[Depth] = { 0 };
       iter->cdispatch([&depth, indices](auto ptr) mutable {
 	using T = typename ZuDecay<decltype(*ptr)>::T;
 	depth = T::Depth;

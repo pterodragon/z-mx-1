@@ -138,9 +138,9 @@ public:
   template <typename S>
   static typename ZuNotSame<T, S>::T copyItems(
       T *dst, const S *src, unsigned length) {
-    if (ZuUnlikely(!length || dst == static_cast<T *>(src))) return;
+    if (ZuUnlikely(!length || dst == static_cast<const T *>(src))) return;
     if (static_cast<T *>(src) > dst ||
-	length < static_cast<unsigned>(dst - static_cast<T *>(src))) {
+	length < static_cast<unsigned>(dst - static_cast<const T *>(src))) {
       do {
 	new (dst++) T{*src++};
       } while (--length > 0);
@@ -160,9 +160,9 @@ public:
   template <typename S>
   static typename ZuNotSame<T, S>::T moveItems(
       T *dst, const S *src, unsigned length) {
-    if (ZuUnlikely(!length || dst == static_cast<T *>(src))) return;
+    if (ZuUnlikely(!length || dst == static_cast<const T *>(src))) return;
     if (static_cast<T *>(src) > dst ||
-	length < static_cast<unsigned>(dst - static_cast<T *>(src))) {
+	length < static_cast<unsigned>(dst - static_cast<const T *>(src))) {
       do {
 	new (dst++) T{ZuMv(*src++)};
       } while (--length > 0);

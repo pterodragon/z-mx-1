@@ -57,7 +57,7 @@ struct Y : public X {
 
 struct Z : public ZmObject { int m_z; };
 
-template <> struct ZuTraits<Z> : public ZuGenericTraits<Z> {
+template <> struct ZuTraits<Z> : public ZuBaseTraits<Z> {
   enum { IsReal = 0, IsPrimitive = 0 };
 };
 

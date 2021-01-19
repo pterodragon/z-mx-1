@@ -127,7 +127,7 @@ public:
   Hostname name(ZeError *e = 0);
 };
 
-template <> struct ZuTraits<ZiIP> : public ZuGenericTraits<ZiIP> {
+template <> struct ZuTraits<ZiIP> : public ZuBaseTraits<ZiIP> {
   enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
 };
 

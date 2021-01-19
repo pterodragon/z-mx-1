@@ -50,7 +50,6 @@
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuLambdaFn.hpp>
 #include <zlib/ZuArrayFn.hpp>
-#include <zlib/ZuCan.hpp>
 
 template <typename T, typename Cmp, unsigned N>
 struct ZuSort_Fn {
@@ -176,12 +175,12 @@ inline unsigned ZuSearchPos(unsigned i) { return i>>1; }
 
 // binary search in sorted data (i.e. following ZuSort)
 // - returns insertion position if not found
+template <typename, typename> struct ZuSearch_OK;
+template <typename R> struct ZuSearch_OK<R, int> { using T = R; }; 
 template <bool Match = true, typename T, typename Cmp>
-inline typename ZuIfT<
-  ZuCanOpFn<Cmp, int (Cmp::*)(const T &) const>::OK ||
-  ZuCanOpFn<Cmp, int (Cmp::*)(const T &)>::OK,
-  unsigned>::T
-ZuSearch(T *data, unsigned n, Cmp cmp) {
+inline auto ZuSearch(T *data, unsigned n, Cmp cmp) ->
+typename ZuSearch_OK<unsigned,
+	 decltype(ZuDeclVal<Cmp>()(ZuDeclVal<const T &>()))>::T {
   if (!n) return 0;
   unsigned o = 0;
   int m = n>>1;
@@ -215,13 +214,9 @@ inline unsigned ZuSearch(T *data, unsigned n, const T &item) {
 // interpolation search in sorted data (i.e. following ZuSort)
 // - returns insertion position if not found
 template <bool Match = true, typename T, typename Cmp>
-inline typename ZuIfT<
-  ZuCanOpFn<Cmp, int (Cmp::*)(const T &) const>::OK ||
-  ZuCanOpFn<Cmp, int (Cmp::*)(const T &)>::OK ||
-  ZuCanOpFn<Cmp, int (Cmp::*)(T) const>::OK ||
-  ZuCanOpFn<Cmp, int (Cmp::*)(T)>::OK,
-  unsigned>::T
-ZuInterSearch(T *data, unsigned n, Cmp cmp) {
+auto ZuInterSearch(T *data, unsigned n, Cmp cmp) ->
+typename ZuSearch_OK<unsigned,
+	 decltype(ZuDeclVal<Cmp>()(ZuDeclVal<const T &>()))>::T {
   if (!n) return 0;
   if (n <= 2) { // special case for small arrays
     int v1 = cmp(data[0]);

@@ -25,7 +25,7 @@
 // For more efficiency, specialize ZuTraits and implement cmp()
 // (operators <, == and ! must always be implemented)
 //
-// template <> ZuTraits<UDT> : public ZuGenericTraits<UDT> {
+// template <> ZuTraits<UDT> : public ZuBaseTraits<UDT> {
 //   enum { IsComparable = 1 };
 // };
 // class UDT {
@@ -89,7 +89,6 @@
 
 #include <zlib/ZuTraits.hpp>
 #include <zlib/ZuInt.hpp>
-#include <zlib/ZuCan.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -210,17 +209,23 @@ template <typename T> struct ZuCmp_Primitive<T, true, false> :
 
 // default comparison of non-primitive types - uses operators >, <, ==, !
 
-ZuCan(cmp, ZuCmpCan);
+template <typename> struct ZuCmp_Can_;
+template <> struct ZuCmp_Can_<int> { using T = void; }; 
+template <typename, typename, typename = void>
+struct ZuCmp_Can { enum { OK = 0 }; };
+template <typename P1, typename P2>
+struct ZuCmp_Can<P1, P2, typename ZuCmp_Can_<
+    decltype(ZuDeclVal<const P1 &>().cmp(ZuDeclVal<const P2 &>()))>::T> {
+  enum { OK = 1 };
+};
 template <typename T, bool IsComparable, bool Fwd> struct ZuCmp_NonPrimitive {
   template <typename P1, typename P2, typename T_ = T>
-  ZuInline static typename ZuIfT<
-    ZuCmpCan<T_, int (T_::*)(const T_ &) const>::OK, int>::T
+  ZuInline static typename ZuIfT<ZuCmp_Can<P1, P2>::OK, int>::T
   cmp(const P1 &p1, const P2 &p2) {
     return p1.cmp(p2);
   }
-  template <typename P1, typename P2, typename T_ = T>
-  ZuInline static typename ZuIfT<
-    !ZuCmpCan<T_, int (T_::*)(const T_ &) const>::OK, int>::T
+  template <typename P1, typename P2>
+  ZuInline static typename ZuIfT<!ZuCmp_Can<P1, P2>::OK, int>::T
   cmp(const P1 &p1, const P2 &p2) {
     return (p1 > p2) - (p1 < p2);
   }

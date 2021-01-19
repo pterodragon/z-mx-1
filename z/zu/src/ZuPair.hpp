@@ -62,7 +62,7 @@ namespace Zu_ {
 template <typename T0, typename T1>
 using ZuPair = Zu_::Pair<T0, T1>;
 template <typename T0, typename T1>
-struct ZuTraits<ZuPair<T0, T1> > : public ZuGenericTraits<ZuPair<T0, T1> > {
+struct ZuTraits<ZuPair<T0, T1> > : public ZuBaseTraits<ZuPair<T0, T1> > {
   enum {
     IsPOD = ZuTraits<T0>::IsPOD && ZuTraits<T1>::IsPOD,
     IsComparable = 1,

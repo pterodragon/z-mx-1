@@ -31,7 +31,7 @@ struct Object : public ZmObject {
   int m_val;
 };
 
-template <> struct ZuTraits<Object> : public ZuGenericTraits<Object> {
+template <> struct ZuTraits<Object> : public ZuBaseTraits<Object> {
   enum _ { IsComparable = 1, IsHashable = 1 };
 };
 

@@ -20,7 +20,7 @@
 // generic hashing
 
 // UDTs must specialize ZuTraits:
-// template <> ZuTraits<UDT> : public ZuGenericTraits<UDT> {
+// template <> ZuTraits<UDT> : public ZuBaseTraits<UDT> {
 //   enum { IsHashable = 1 };
 // };
 // ... and implement a "uint32_t hash() const" public member function

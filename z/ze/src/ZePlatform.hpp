@@ -138,7 +138,7 @@ inline ZeError Ze_LastError() { return ZeError(ZePlatform_::errNo()); }
 inline ZeError Ze_LastSockError() { return ZeError(ZePlatform_::sockErrNo()); }
 #define ZeLastSockError Ze_LastSockError()
 
-template <> struct ZuTraits<ZeError> : public ZuGenericTraits<ZeError> {
+template <> struct ZuTraits<ZeError> : public ZuBaseTraits<ZeError> {
   enum { IsPOD = 1 };
 };
 

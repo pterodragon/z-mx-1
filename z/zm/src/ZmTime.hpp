@@ -304,7 +304,7 @@ ZuInline typename ZmTime::MatchInt<T, ZmTime>::T ZmTimeNow(T i) {
 ZuInline ZmTime ZmTimeNow(double d) { return ZmTime(ZmTime::Now, d); }
 ZuInline ZmTime ZmTimeNow(const ZmTime &d) { return ZmTime(ZmTime::Now, d); }
 
-template <> struct ZuTraits<ZmTime> : public ZuGenericTraits<ZmTime> {
+template <> struct ZuTraits<ZmTime> : public ZuBaseTraits<ZmTime> {
   enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
 };
 

@@ -86,7 +86,7 @@ template <int N> struct String {
   char	m_data[N];
 };
 template <int N>
-struct ZuTraits<String<N> > : public ZuGenericTraits<String<N> > {
+struct ZuTraits<String<N> > : public ZuBaseTraits<String<N> > {
   enum {
     IsPOD = 1, IsCString = 1, IsString = 1,
     IsComparable = 1, IsHashable = 1

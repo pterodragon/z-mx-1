@@ -415,7 +415,7 @@ private:
   ZmRef<Context>	m_context;
 };
 
-template <> struct ZuTraits<ZmThread> : public ZuGenericTraits<ZmThread> {
+template <> struct ZuTraits<ZmThread> : public ZuBaseTraits<ZmThread> {
   enum { IsComparable = 1, IsHashable = 1 };
 };
 

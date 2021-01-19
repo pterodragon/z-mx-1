@@ -41,7 +41,6 @@
 #include <zlib/ZuArrayFn.hpp>
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuPrint.hpp>
-#include <zlib/ZuCan.hpp>
 #include <zlib/ZuNormChar.hpp>
 #include <zlib/ZuUTF.hpp>
 
@@ -50,19 +49,16 @@
 #pragma warning(disable:4800 4996 4348)
 #endif
 
-ZuCan(append, ZuArrayN_CanAppend_);
-template <typename R, typename T> struct ZuArrayN_CanAppend {
-  enum _ { OK =
-    ZuArrayN_CanAppend_<R, void (R::*)(const T *, int)>::OK ||
-    ZuArrayN_CanAppend_<R, void (R::*)(const T *, unsigned)>::OK ||
-    ZuArrayN_CanAppend_<R, void (R::*)(const T *, size_t)>::OK ||
-    ZuArrayN_CanAppend_<R, R &(R::*)(const T *, int)>::OK ||
-    ZuArrayN_CanAppend_<R, R &(R::*)(const T *, unsigned)>::OK ||
-    ZuArrayN_CanAppend_<R, R &(R::*)(const T *, size_t)>::OK
-  };
-};
-template <typename T> struct ZuArrayN_CanAppend<void, T> {
-  enum _ { OK = 0 };
+template <typename U, typename> struct ZuArrayN_CanAppend_;
+template <typename U> struct ZuArrayN_CanAppend_<U, void> { using T = void; };
+template <typename U> struct ZuArrayN_CanAppend_<U, U &> { using T = void; };
+template <typename U, typename T, typename = void>
+struct ZuArrayN_CanAppend { enum { OK = 0 }; };
+template <typename U, typename T>
+struct ZuArrayN_CanAppend<U, T,
+  typename ZuArrayN_CanAppend_<U,
+    decltype(ZuDeclVal<U>().append(ZuDeclVal<const T *>(), 1))>::T> {
+  enum { OK = 1 };
 };
 
 struct ZuArrayN___ { };
@@ -231,7 +227,7 @@ protected:
       [this](const auto &a_) {
 	using Array = typename ZuDecay<decltype(a_)>::T;
 	using Elem = typename ZuTraits<Array>::Elem;
-	ZuArray<typename ZuConst<Elem>::T> a(a_);
+	ZuArray<const Elem> a(a_);
 	this->init(a.data(), a.length());
       });
   }
@@ -280,7 +276,7 @@ protected:
   }
 
   template <typename S> typename MatchString<S>::T append_(S &&s_) {
-    ZuArray<typename ZuConst<T>::T> s(s_);
+    ZuArray<const T> s(s_);
     this->append_(s.data(), s.length());
   }
 
@@ -295,7 +291,7 @@ protected:
       [this](const auto &a_) {
 	using Array = typename ZuDecay<decltype(a_)>::T;
 	using Elem = typename ZuTraits<Array>::Elem;
-	ZuArray<typename ZuConst<Elem>::T> a(a_);
+	ZuArray<const Elem> a(a_);
 	this->append_(a.data(), a.length());
       });
   }
@@ -470,7 +466,7 @@ public:
     return ZuArray<T>{data(), N};
   }
   ZuInline auto cbuf() const {
-    return ZuArray<typename ZuConst<T>::T>{data(), m_length};
+    return ZuArray<const T>{data(), m_length};
   }
 
 // comparison
@@ -649,22 +645,24 @@ private:
 template <typename T, unsigned N, typename Cmp = ZuCmp<T>>
 using ZuArrayN = Zu_::ArrayN<T, N, Cmp>;
 
-template <typename T_, unsigned N, typename Cmp>
-struct ZuTraits<ZuArrayN<T_, N, Cmp> > :
-    public ZuGenericTraits<ZuArrayN<T_, N, Cmp> > {
-  using T = ZuArrayN<T_, N, Cmp>;
-  using Elem = T_;
+template <typename Elem_, unsigned N, typename Cmp>
+struct ZuTraits<ZuArrayN<Elem_, N, Cmp> > :
+    public ZuBaseTraits<ZuArrayN<Elem_, N, Cmp> > {
+  using Elem = Elem_;
+  using T = ZuArrayN<Elem, N, Cmp>;
   enum {
     IsArray = 1, IsPrimitive = 0,
-    IsPOD = ZuTraits<T>::IsPOD,
+    IsPOD = ZuTraits<Elem>::IsPOD,
     IsString =
       ZuConversion<char, Elem>::Same ||
       ZuConversion<wchar_t, Elem>::Same,
     IsWString = ZuConversion<wchar_t, Elem>::Same,
     IsComparable = 1, IsHashable = 1
   };
-  ZuInline static const Elem *data(const T &a) { return a.data(); }
-  ZuInline static unsigned length(const T &a) { return a.length(); }
+  template <typename U = T>
+  static typename ZuNotConst<U, Elem *>::T data(U &a) { return a.data(); }
+  static const Elem *data(const T &a) { return a.data(); }
+  static unsigned length(const T &a) { return a.length(); }
 };
 
 // generic printing
@@ -681,9 +679,7 @@ namespace std {
 
   template <size_t, typename> struct tuple_element;
   template <size_t I, typename T, unsigned N, typename Cmp>
-  struct tuple_element<I, ZuArrayN<T, N, Cmp>> {
-    using type = T;
-  };
+  struct tuple_element<I, ZuArrayN<T, N, Cmp>> { using type = T; };
 }
 namespace Zu_ {
   using size_t = std::size_t;
@@ -705,8 +701,7 @@ namespace Zu_ {
   template <size_t I, typename T, unsigned N, typename Cmp>
   constexpr const tuple_element_t<I, ArrayN<T, N, Cmp>> &&
   get(const ArrayN<T, N, Cmp> &&a) noexcept {
-    return static_cast<const tuple_element_t<I, ArrayN<T, N, Cmp>> &&>(
-	a[I]);
+    return static_cast<const tuple_element_t<I, ArrayN<T, N, Cmp>> &&>(a[I]);
   }
 }
 

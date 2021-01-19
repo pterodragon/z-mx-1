@@ -324,7 +324,7 @@ private:
     using Elem = typename ZuArrayT<A>::Elem;
 
     static void ctor_(ZtArray *this_, const A &a_) {
-      ZuArray<typename ZuConst<Elem>::T> a(a_);
+      ZuArray<const Elem> a(a_);
       this_->copy_(a.data(), a.length());
     }
     static void ctor_(ZtArray *this_, A &&a_) {
@@ -333,7 +333,7 @@ private:
     }
 
     static void assign_(ZtArray *this_, const A &a_) {
-      ZuArray<typename ZuConst<Elem>::T> a(a_);
+      ZuArray<const Elem> a(a_);
       uint32_t oldLength = 0;
       T *oldData = this_->free_1(oldLength);
       this_->copy_(a.data(), a.length());
@@ -348,7 +348,7 @@ private:
     }
 
     static ZtArray add_(const ZtArray *this_, const A &a_) {
-      ZuArray<typename ZuConst<Elem>::T> a(a_);
+      ZuArray<const Elem> a(a_);
       return this_->add(a.data(), a.length());
     }
     static ZtArray add_(const ZtArray *this_, A &&a_) {
@@ -358,7 +358,7 @@ private:
 
     static void splice_(ZtArray *this_,
 	ZtArray *removed, int offset, int length, const A &a_) {
-      ZuArray<typename ZuConst<Elem>::T> a(a_);
+      ZuArray<const Elem> a(a_);
       this_->splice_cp_(removed, offset, length, a.data(), a.length());
     }
     static void splice_(ZtArray *this_,
@@ -374,9 +374,9 @@ private:
     { Fwd_Array<A>::ctor_(this, ZuFwd<A>(a)); }
 
   template <typename S> ZuInline typename MatchStrLiteral<S>::T ctor(S &&s_)
-    { ZuArray<typename ZuConst<T>::T> s(s_); shadow_(s.data(), s.length()); }
+    { ZuArray<const T> s(s_); shadow_(s.data(), s.length()); }
   template <typename S> ZuInline typename MatchString<S>::T ctor(S &&s_)
-    { ZuArray<typename ZuConst<T>::T> s(s_); copy_(s.data(), s.length()); }
+    { ZuArray<const T> s(s_); copy_(s.data(), s.length()); }
 
   template <typename S> ZuInline typename MatchChar2String<S>::T ctor(S &&s_) {
     ZuArray<const Char2> s(s_);
@@ -462,12 +462,12 @@ private:
   }
 
   template <typename S> typename MatchStrLiteral<S>::T assign(S &&s_) {
-    ZuArray<typename ZuConst<T>::T> s(s_);
+    ZuArray<const T> s(s_);
     free_();
     shadow_(s.data(), s.length());
   }
   template <typename S> typename MatchString<S>::T assign(S &&s_) {
-    ZuArray<typename ZuConst<T>::T> s(s_);
+    ZuArray<const T> s(s_);
     uint32_t oldLength = 0;
     T *oldData = free_1(oldLength);
     copy_(s.data(), s.length());
@@ -863,7 +863,7 @@ public:
     return ZuArray<T>{data(), size()};
   }
   ZuInline auto cbuf() const {
-    return ZuArray<typename ZuConst<T>::T>{data(), length()};
+    return ZuArray<const T>{data(), length()};
   }
 
 // comparison
@@ -1507,9 +1507,9 @@ ZuInline void ZtArray<T, Cmp>::convert_(const S &s, ZtIconv *iconv) {
 
 template <typename Elem_, class Cmp>
 struct ZuTraits<ZtArray<Elem_, Cmp> > :
-    public ZuGenericTraits<ZtArray<Elem_, Cmp> > {
-  using T = ZtArray<Elem_, Cmp>;
+    public ZuBaseTraits<ZtArray<Elem_, Cmp> > {
   using Elem = Elem_;
+  using T = ZtArray<Elem, Cmp>;
   enum {
     IsArray = 1, IsPrimitive = 0,
     IsString =
@@ -1519,7 +1519,8 @@ struct ZuTraits<ZtArray<Elem_, Cmp> > :
     IsComparable = 1,
     IsHashable = 1
   };
-  static Elem *data(T &a) { return a.data(); }
+  template <typename U = T>
+  static typename ZuNotConst<U, Elem *>::T data(U &a) { return a.data(); }
   static const Elem *data(const T &a) { return a.data(); }
   static unsigned length(const T &a) { return a.length(); }
 };

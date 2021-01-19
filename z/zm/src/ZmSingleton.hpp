@@ -47,7 +47,6 @@
 #endif
 
 #include <zlib/ZuCmp.hpp>
-#include <zlib/ZuCan.hpp>
 #include <zlib/ZuConversion.hpp>
 #include <zlib/ZuIfT.hpp>
 #include <zlib/ZuLambdaFn.hpp>
@@ -86,13 +85,11 @@ public:
   using T = T_;
 
 private:
-  ZuCan(final, CanFinal);
-  template <typename U> ZuInline static typename
-    ZuIfT<CanFinal<ZmCleanup<U>, void (*)(U *)>::OK>::T
-      final(U *u) { ZmCleanup<U>::final(u); }
-  template <typename U> ZuInline static typename
-    ZuIfT<!CanFinal<ZmCleanup<U>, void (*)(U *)>::OK>::T
-      final(U *u) { }
+  ZuInline static void final(...) { }
+  template <typename U>
+  ZuInline static auto final(U *u) -> decltype(u->final()) {
+    return u->final();
+  }
 
   template <bool Construct = Construct_>
   typename ZuIfT<Construct>::T ctor() {

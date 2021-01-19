@@ -43,7 +43,7 @@ template <typename ...Args> class ZmFn;
 
 // ZmFn traits
 template <typename ...Args>
-struct ZuTraits<ZmFn<Args...> > : public ZuGenericTraits<ZmFn<Args...> > {
+struct ZuTraits<ZmFn<Args...> > : public ZuBaseTraits<ZmFn<Args...> > {
   enum { IsComparable = 1, IsHashable = 1 };
 };
 

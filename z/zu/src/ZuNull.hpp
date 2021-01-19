@@ -34,7 +34,7 @@
 
 class ZuNull { };
 
-template <> struct ZuTraits<ZuNull> : public ZuGenericTraits<ZuNull> {
+template <> struct ZuTraits<ZuNull> : public ZuBaseTraits<ZuNull> {
   enum { IsPOD = 1 };
 };
 

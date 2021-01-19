@@ -369,17 +369,28 @@ template <unsigned I_> struct ZuConstant {
   constexpr unsigned operator()() const noexcept { return I; }
 };
 
-// add const
-template <typename U> struct ZuConst { using T = const U; };
-template <typename U> struct ZuConst<const U> { using T = const U; };
+// shorthand for std::declval
+template <typename U> struct ZuDeclVal__ { using T = U; };
+template <typename T> auto ZuDeclVal_(int) -> typename ZuDeclVal__<T&&>::T;
+template <typename T> auto ZuDeclVal_(...) -> typename ZuDeclVal__<T>::T;
+template <typename U> decltype(ZuDeclVal_<U>(0)) ZuDeclVal();
+ 
+// shorthand for std::void_t
+template <typename ...> struct ZuVoid { using T = void; };
 
-// add volatile
-template <typename U> struct ZuVolatile { using T = volatile U; };
-template <typename U> struct ZuVolatile<volatile U> { using T = volatile U; };
+// cv checking
+template <typename U, typename R = void> struct ZuIsConst;
+template <typename U, typename R>
+struct ZuIsConst<const U, R> { using T = R; };
+template <typename U, typename R = void>
+struct ZuNotConst { using T = R; };
+template <typename U, typename R> struct ZuNotConst<const U, R> { };
 
-// add both const and volatile
-template <typename U> struct ZuCV {
-  using T = typename ZuVolatile<typename ZuConst<U>::T>::T;
-};
+template <typename U, typename R = void> struct ZuIsVolatile;
+template <typename U, typename R>
+struct ZuIsVolatile<volatile U, R> { using T = R; };
+template <typename U, typename R = void>
+struct ZuNotVolatile { using T = R; };
+template <typename U, typename R> struct ZuNotVolatile<volatile U, R> { };
 
 #endif /* ZuLib_HPP */

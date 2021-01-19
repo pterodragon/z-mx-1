@@ -264,7 +264,7 @@ namespace ZtDateFmt {
   };
 };
 
-template <> struct ZuTraits<ZtDate> : public ZuGenericTraits<ZtDate> {
+template <> struct ZuTraits<ZtDate> : public ZuBaseTraits<ZtDate> {
   enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
 };
 

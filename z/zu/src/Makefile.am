@@ -4,7 +4,7 @@ AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
 pkginclude_HEADERS = \
 	ZuArrayFn.hpp ZuArray.hpp ZuArrayN.hpp ZuAssert.hpp ZuBox.hpp \
-	ZuBitmap.hpp ZuByteSwap.hpp ZuCan.hpp ZuCmp.hpp ZuConversion.hpp \
+	ZuBitmap.hpp ZuByteSwap.hpp ZuCmp.hpp ZuConversion.hpp \
 	ZuFnName.hpp ZuFmt.hpp ZuFP.hpp ZuHash.hpp ZuID.hpp ZuIf.hpp \
 	ZuIfT.hpp ZuIndex.hpp ZuInt.hpp ZuLambdaFn.hpp ZuLargest.hpp \
 	ZuLib.hpp ZuMixin.hpp ZuMvArray.hpp ZuNull.hpp \

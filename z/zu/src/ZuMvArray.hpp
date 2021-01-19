@@ -83,7 +83,9 @@ public:
   ZuInline const T *end() const { return &m_data[m_length]; }
 
   ZuInline unsigned length() const { return m_length; } 
-  ZuInline T *data() const { return m_data; }
+
+  ZuInline T *data() { return m_data; }
+  ZuInline const T *data() const { return m_data; }
 
 // reset to null
 
@@ -112,25 +114,25 @@ protected:
   ZuInline bool same(const ZuMvArray &a) const { return this == &a; }
   template <typename A> ZuInline bool same(const A &a) const { return false; }
 
-private:
-  ZuInline auto array_() const { return ZuArray{data(), length()}; }
-public:
+  ZuInline auto buf() { return ZuArray{data(), length()}; }
+  ZuInline auto cbuf() const { return ZuArray{data(), length()}; }
+
   template <typename A>
   ZuInline int cmp(const A &a) const {
     if (same(a)) return 0;
-    return array_().cmp(a);
+    return cbuf().cmp(a);
   }
   template <typename A>
   ZuInline bool less(const A &a) const {
-    return !same(a) && array_().less(a);
+    return !same(a) && cbuf().less(a);
   }
   template <typename A>
   ZuInline bool greater(const A &a) const {
-    return !same(a) && array_().greater(a);
+    return !same(a) && cbuf().greater(a);
   }
   template <typename A>
   ZuInline bool equals(const A &a) const {
-    return same(a) || array_().equals(a);
+    return same(a) || cbuf().equals(a);
   }
 
   template <typename A>
@@ -156,11 +158,11 @@ private:
   uint32_t	m_length = 0;
   T		*m_data = nullptr;
 };
-template <typename T_>
-struct ZuTraits<ZuMvArray<T_> > :
-    public ZuGenericTraits<ZuMvArray<T_> > {
-  using T = ZuMvArray<T_>;
-  using Elem = T_;
+template <typename Elem_>
+struct ZuTraits<ZuMvArray<Elem_> > :
+    public ZuBaseTraits<ZuMvArray<Elem_> > {
+  using Elem = Elem_;
+  using T = ZuMvArray<Elem>;
   enum {
     IsArray = 1, IsPrimitive = 0, IsPOD = 0,
     IsString =
@@ -169,8 +171,10 @@ struct ZuTraits<ZuMvArray<T_> > :
     IsWString = ZuConversion<wchar_t, Elem>::Same,
     IsComparable = 1, IsHashable = 1
   };
-  ZuInline static const Elem *data(const T &a) { return a.data(); }
-  ZuInline static unsigned length(const T &a) { return a.length(); }
+  template <typename U = T>
+  static typename ZuNotConst<U, Elem *>::T data(U &a) { return a.data(); }
+  static const Elem *data(const T &a) { return a.data(); }
+  static unsigned length(const T &a) { return a.length(); }
 };
 
 // generic printing

@@ -345,7 +345,7 @@ private:
 
 template <typename Key, typename Cmp, typename Val, typename ValCmp>
 struct ZuTraits<ZmLHash_Node<Key, Cmp, Val, ValCmp> > :
-    public ZuGenericTraits<ZmLHash_Node<Key, Cmp, Val, ValCmp> > {
+    public ZuBaseTraits<ZmLHash_Node<Key, Cmp, Val, ValCmp> > {
   enum {
     IsPOD =
       ZuTraits<Key>::IsPOD &&

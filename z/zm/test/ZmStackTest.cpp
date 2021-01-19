@@ -26,7 +26,7 @@ struct C {
   static ZmAtomic<uint32_t>	m_count;
 };
 
-template <> struct ZuTraits<C> : public ZuGenericTraits<C> {
+template <> struct ZuTraits<C> : public ZuBaseTraits<C> {
   enum { IsComparable = 1 };
 };
 

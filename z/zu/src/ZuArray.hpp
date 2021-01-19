@@ -379,10 +379,10 @@ public:
 };
 
 template <typename T, typename N>
-ZuArray(T *data, N length) -> ZuArray<T *>;
+ZuArray(T *data, N length) -> ZuArray<T>;
 
 template <typename Elem_>
-struct ZuTraits<ZuArray<Elem_> > : public ZuGenericTraits<ZuArray<Elem_> > {
+struct ZuTraits<ZuArray<Elem_> > : public ZuBaseTraits<ZuArray<Elem_> > {
   using Elem =  Elem_;
   using T = ZuArray<Elem>;
   enum {
@@ -393,12 +393,8 @@ struct ZuTraits<ZuArray<Elem_> > : public ZuGenericTraits<ZuArray<Elem_> > {
     IsWString = ZuConversion<wchar_t, Elem>::Same,
     IsComparable = 1, IsHashable = 1
   };
-#if 0
-  static T make(const Elem *data, unsigned length) {
-    if (!data) return T();
-    return T(data, length);
-  }
-#endif
+  template <typename U = T>
+  static typename ZuNotConst<U, Elem *>::T data(U &a) { return a.data(); }
   static const Elem *data(const T &a) { return a.data(); }
   static unsigned length(const T &a) { return a.length(); }
 };
@@ -410,7 +406,7 @@ template <>
 struct ZuPrint<ZuArray<const volatile char> > : public ZuPrintString { };
 
 template <typename T>
-using ZuArrayT = ZuArray<typename ZuConst<typename ZuTraits<T>::Elem>::T>;
+using ZuArrayT = ZuArray<const typename ZuTraits<T>::Elem>;
 
 template <typename T>
 ZuArrayT<T> ZuMkArray(T &&t) {

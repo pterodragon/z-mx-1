@@ -6,7 +6,7 @@ AM_LDFLAGS = @Z_LDFLAGS@
 LDADD = $(top_builddir)/zu/src/libZu.la
 noinst_PROGRAMS = \
 	ZuConversionTest ZuHashTest ZuCmpTest ZuBoxTest \
-	ZuCanTest ZuArrayTest ZuPairTest ZuIDTest ZuUTFTest ZuBitmapTest \
+	ZuArrayTest ZuPairTest ZuIDTest ZuUTFTest ZuBitmapTest \
 	ZuDecimalTest ZuSearchTest
 ZuConversionTest_SOURCES = ZuConversionTest.cpp
 ZuHashTest_SOURCES = ZuHashTest.cpp Analyze.hpp
@@ -14,7 +14,6 @@ ZuCmpTest_SOURCES = ZuCmpTest.cpp
 #ZuCmpTest_CXXFLAGS = $(AM_CXXFLAGS) -fprofile-instr-generate -fcoverage-mapping
 ZuSearchTest_SOURCES = ZuSearchTest.cpp
 ZuBoxTest_SOURCES = ZuBoxTest.cpp
-ZuCanTest_SOURCES = ZuCanTest.cpp
 ZuArrayTest_SOURCES = ZuArrayTest.cpp
 ZuPairTest_SOURCES = ZuPairTest.cpp
 ZuIDTest_SOURCES = ZuIDTest.cpp

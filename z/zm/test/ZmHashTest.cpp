@@ -49,7 +49,7 @@ struct Y : public X {
 
 struct Z : public ZmObject { int m_z; };
 
-template <> struct ZuTraits<Z> : public ZuGenericTraits<Z> {
+template <> struct ZuTraits<Z> : public ZuBaseTraits<Z> {
   enum {  IsPrimitive = 0, IsReal = 0 };
 };
 
@@ -141,7 +141,7 @@ struct I {
   int	m_i;
 };
 
-template <> struct ZuTraits<I> : public ZuGenericTraits<I> {
+template <> struct ZuTraits<I> : public ZuBaseTraits<I> {
   enum _ { IsComparable = 1, IsHashable = 1 };
 };
 

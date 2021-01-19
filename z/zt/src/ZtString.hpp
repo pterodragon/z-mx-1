@@ -835,10 +835,10 @@ public:
 // buffer access
 
   ZuInline auto buf() {
-    return ZuArray<Char>{data(), size() - 1};
+    return ZuArray{data(), size() - 1};
   }
   ZuInline auto cbuf() const {
-    return ZuArray<typename ZuConst<Char>::T>{data(), length()};
+    return ZuArray{data(), length()};
   }
 
 // comparison
@@ -1347,14 +1347,15 @@ using ZtWString = ZtString_<wchar_t, char>;
 
 // traits
 
-template <typename T> struct ZtStringTraits : public ZuGenericTraits<T> {
+template <typename T> struct ZtStringTraits : public ZuBaseTraits<T> {
   using Elem = typename T::Char;
   enum {
     IsCString = 1, IsString = 1,
     IsWString = ZuConversion<Elem, wchar_t>::Same,
     IsComparable = 1, IsHashable = 1
   };
-  static Elem *data(T &s) { return s.data(); }
+  template <typename U = T>
+  static typename ZuNotConst<U, Elem *>::T data(U &s) { return s.data(); }
   static const Elem *data(const T &s) { return s.data(); }
   static unsigned length(const T &s) { return s.length(); }
 };

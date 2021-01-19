@@ -200,7 +200,7 @@ public:
     return *this;
   }
 
-  struct Traits : public ZuGenericTraits<ZiIOBuf_> {
+  struct Traits : public ZuBaseTraits<ZiIOBuf_> {
     using Elem = char;
     enum {
       IsCString = 0, IsString = 1, IsWString = 0, IsHashable = 1

@@ -51,7 +51,7 @@ struct A {
   bool operator ==(const A &a) const { return i == a.i; }
   int i;
 };
-template <> struct ZuTraits<A> : public ZuGenericTraits<A> {
+template <> struct ZuTraits<A> : public ZuBaseTraits<A> {
   enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
 };
 

@@ -163,7 +163,7 @@ protected:
   }
 
   template <typename S> ZuInline typename MatchString<S>::T init(S &&s_) {
-    ZuArray<typename ZuConst<Char>::T> s(s_);
+    ZuArray<const Char> s(s_);
     init(s.data(), s.length());
   }
 
@@ -203,7 +203,7 @@ protected:
   }
 
   template <typename S> ZuInline typename MatchString<S>::T append_(S &&s_) {
-    ZuArray<const Char> s(s_);
+    ZuArray<const Char> s{s_};
     append(s.data(), s.length());
   }
 
@@ -367,12 +367,8 @@ public:
 
 // buffer access
 
-  ZuInline auto buf() {
-    return ZuArray<Char>{data(), M};
-  }
-  ZuInline auto cbuf() const {
-    return ZuArray<typename ZuConst<Char>::T>{data(), m_length};
-  }
+  ZuInline auto buf() { return ZuArray{data(), M}; }
+  ZuInline auto cbuf() const { return ZuArray{data(), m_length}; }
 
 // comparison
 
@@ -427,17 +423,18 @@ protected:
   uint16_t	m_length;
 };
 
-template <typename T_>
-struct ZuStringN_Traits : public ZuGenericTraits<T_> {
-  using T = T_;
+template <typename T>
+struct ZuStringN_Traits : public ZuBaseTraits<T> {
   using Elem = typename T::Char;
   enum {
     IsPOD = 1, IsCString = 1, IsString = 1, IsStream = 1,
     IsWString = ZuConversion<Elem, wchar_t>::Same,
     IsComparable = 1, IsHashable = 1
   };
-  ZuInline static const Elem *data(const T &s) { return s.data(); }
-  ZuInline static unsigned length(const T &s) { return s.length(); }
+  template <typename U = T>
+  static typename ZuNotConst<U, Elem *>::T data(U &s) { return s.data(); }
+  static const Elem *data(const T &s) { return s.data(); }
+  static unsigned length(const T &s) { return s.length(); }
 };
 
 template <unsigned N_>

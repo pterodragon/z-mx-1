@@ -292,7 +292,7 @@ public:
     }
   }
 
-  struct Traits : public ZuGenericTraits<ZmBitmap> {
+  struct Traits : public ZuBaseTraits<ZmBitmap> {
     enum { IsComparable = 1 };
   };
   friend Traits ZuTraitsType(const ZmBitmap *);

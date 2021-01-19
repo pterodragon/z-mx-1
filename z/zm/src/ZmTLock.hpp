@@ -108,7 +108,7 @@ struct ZmTLock_Held {
   int		m_lockCount;
 };
 template <>
-struct ZuTraits<ZmTLock_Held> : public ZuGenericTraits<ZmTLock_Held> {
+struct ZuTraits<ZmTLock_Held> : public ZuBaseTraits<ZmTLock_Held> {
   enum { IsPOD = 1 };
 };
 

@@ -19,7 +19,7 @@
 
 // type traits
 
-// template <> struct ZuTraits<UDT> : public ZuGenericTraits<UDT> {
+// template <> struct ZuTraits<UDT> : public ZuBaseTraits<UDT> {
 //   enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 }; // traits overrides
 // };
 // class UDT {
@@ -55,7 +55,7 @@
 
 // generic traits (overridden by specializations)
 
-template <typename T, typename _ = void>
+template <typename T, typename = void>
 struct ZuTraits_Composite {
   enum { Is = 0 };
 };
@@ -67,7 +67,11 @@ struct ZuTraits_Composite<T, decltype((int T::*){}, void())> {
 template <typename T> struct ZuTraits_Enum {
   enum { Is = __is_enum(T) };
 }; 
-template <typename T> struct ZuTraits_POD {
+template <typename T, typename = void> struct ZuTraits_POD {
+  enum { Is = !ZuTraits_Composite<T>::Is };
+};
+template <typename T>
+struct ZuTraits_POD<T, decltype(sizeof(T), void())> {
 #ifdef _MSC_VER
   enum { Is = __is_pod(T) };
 #else
@@ -75,27 +79,28 @@ template <typename T> struct ZuTraits_POD {
 #endif
 }; 
 
-template <typename T, bool Enum, bool POD> struct ZuGenericTraits_ {
+// default generic traits
+template <typename T> struct ZuBaseTraits {
+  enum { IsEnum = ZuTraits_Enum<T>::Is };
+  enum { IsComposite = ZuTraits_Composite<T>::Is }; // class/struct/union
+  enum { IsPOD = ZuTraits_POD<T>::Is };
   enum {
-    IsReference		= 0,	IsRvalueRef	= 0,	IsPointer	= 0,
-    IsPrimitive		= Enum,	IsReal		= Enum,	IsSigned	= Enum,
-    IsIntegral		= Enum,	IsFloatingPoint	= 0,	IsPOD		= POD,
-    IsString		= 0,	IsCString	= 0,	IsWString	= 0,
-    IsVoid		= 0,	IsBool		= 0,	IsArray		= 0,
-    IsHashable		= 0,	IsComparable	= 0,
-    IsBoxed		= 0,	IsFixedPoint	= 0,
-    IsComposite	= ZuTraits_Composite<T>::Is,	// class/struct/union
-    IsEnum = Enum
+    IsReference	= 0,		IsRvalueRef	= 0,
+    IsPointer	= 0,
+    IsPrimitive	= IsEnum,
+    IsReal	= IsEnum,
+    IsSigned	= IsEnum,
+    IsIntegral	= IsEnum,	IsFloatingPoint	= 0,
+    IsString	= 0,		IsCString	= 0,	IsWString	= 0,
+    IsVoid	= 0,		IsBool		= 0,	IsArray		= 0,
+    IsHashable	= 0,		IsComparable	= 0,
+    IsBoxed	= 0,		IsFixedPoint	= 0
   };
 
-  // using T = T_;
   using Elem = void;
 };
-template <typename T>
-struct ZuGenericTraits :
-    public ZuGenericTraits_<T, ZuTraits_Enum<T>::Is, ZuTraits_POD<T>::Is> { };
 
-template <typename T> ZuGenericTraits<T> ZuTraitsType(const T *);
+template <typename T> ZuBaseTraits<T> ZuTraitsType(const T *);
 template <typename T> const T *ZuTraitsType_();
 template <typename T>
 using ZuDefaultTraits = decltype(ZuTraitsType(ZuTraitsType_<T>()));
@@ -109,7 +114,7 @@ struct ZuTraits<const volatile T> : public ZuTraits<T> { };
 
 // real numbers
 
-template <typename T> struct ZuTraits_Real : public ZuGenericTraits<T> {
+template <typename T> struct ZuTraits_Real : public ZuBaseTraits<T> {
   enum {
     IsPrimitive = 1, IsReal = 1, IsPOD = 1
   };
@@ -198,7 +203,7 @@ template <typename T> struct ZuTraits<T &&> : public ZuTraits<T> {
 // pointers
 
 template <typename T, typename Elem_>
-struct ZuTraits_Pointer : public ZuGenericTraits<T> {
+struct ZuTraits_Pointer : public ZuBaseTraits<T> {
   enum {
     IsPrimitive = 1, IsPOD = 1, IsPointer = 1
   };
@@ -220,16 +225,17 @@ struct ZuTraits<const volatile T *> :
 // primitive arrays
 
 template <typename T, typename Elem_>
-struct ZuTraits_Array : public ZuGenericTraits<T> {
+struct ZuTraits_Array : public ZuBaseTraits<T> {
   using Elem = Elem_;
-  using ElemTraits = ZuTraits<Elem>;
   enum {
     IsPrimitive = 1, // the array is primitive, the element might not be
-    IsPOD = ElemTraits::IsPOD,
+    IsPOD = ZuTraits<Elem>::IsPOD,
     IsArray = 1
   };
-  ZuInline static const Elem *data(const T &a) { return &a[0]; }
-  ZuInline static unsigned length(const T &a) { return sizeof(a) / sizeof(a[0]); }
+  template <typename U = T>
+  static typename ZuNotConst<U, Elem *>::T data(U &a) { return &a[0]; }
+  static const Elem *data(const T &a) { return &a[0]; }
+  static unsigned length(const T &a) { return sizeof(a) / sizeof(a[0]); }
 };
 
 template <typename T>
@@ -396,7 +402,7 @@ struct ZuTraits<const volatile wchar_t (&)[N]> :
 
 // void
 
-template <> struct ZuTraits<void> : public ZuGenericTraits<void> {
+template <> struct ZuTraits<void> : public ZuBaseTraits<void> {
   enum { IsPrimitive = 1, IsPOD = 1, IsVoid = 1 };
 };
 
@@ -436,7 +442,7 @@ template <typename S, typename T = void> struct ZuIsCharString :
 
 // STL / Boost interoperability
 template <typename T, typename Char>
-struct ZuStdStringTraits_ : public ZuGenericTraits<T> {
+struct ZuStdStringTraits_ : public ZuBaseTraits<T> {
   enum { IsString = 1 };
   // using T = T_;
   using Elem = Char;
@@ -450,12 +456,11 @@ struct ZuStdWStringTraits : public ZuStdStringTraits_<T_, wchar_t>
   { enum { IsWString = 1 }; };
 
 template <typename T, typename Elem_>
-struct ZuStdArrayTraits_ : public ZuGenericTraits<T> {
-  enum { IsArray = 1 };
-  // using T = T_;
+struct ZuStdArrayTraits_ : public ZuBaseTraits<T> {
   using Elem = Elem_;
-  ZuInline static const Elem *data(const T &a) { return a.data(); }
-  ZuInline static unsigned length(const T &a) { return a.size(); }
+  enum { IsArray = 1 };
+  static const Elem *data(const T &a) { return a.data(); }
+  static unsigned length(const T &a) { return a.size(); }
 };
 template <typename T, typename Elem>
 struct ZuStdVectorTraits : public ZuStdArrayTraits_<T, Elem> { };
@@ -501,12 +506,12 @@ namespace std {
 
 template <typename Elem_>
 struct ZuTraits<std::initializer_list<Elem_> > :
-    public ZuGenericTraits<std::initializer_list<Elem_> > {
+    public ZuBaseTraits<std::initializer_list<Elem_> > {
   enum { IsArray = 1 };
   using T = std::initializer_list<Elem_>;
   using Elem = Elem_;
-  ZuInline static const Elem *data(const T &a) { return a.begin(); }
-  ZuInline static unsigned length(const T &a) { return a.size(); }
+  static const Elem *data(const T &a) { return a.begin(); }
+  static unsigned length(const T &a) { return a.size(); }
 };
 
 template <typename L> struct ZuLambdaTraits :

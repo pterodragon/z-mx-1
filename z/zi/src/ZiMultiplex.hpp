@@ -233,7 +233,7 @@ public:
   ZuInline ZiIP &mif() { return *(ZiIP *)&imr_interface; }
 };
 template <> struct ZuPrint<ZiMReq> : public ZuPrintFn { };
-template <> struct ZuTraits<ZiMReq> : public ZuGenericTraits<ZiMReq> {
+template <> struct ZuTraits<ZiMReq> : public ZuBaseTraits<ZiMReq> {
   enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
 };
 

@@ -52,7 +52,6 @@
 #endif
 
 #include <zlib/ZuIfT.hpp>
-#include <zlib/ZuCan.hpp>
 #include <zlib/ZuTraits.hpp>
 #include <zlib/ZuLargest.hpp>
 #include <zlib/ZuNull.hpp>
@@ -62,34 +61,34 @@
 #include <zlib/ZuSwitch.hpp>
 #include <zlib/ZuPP.hpp>
 
-template <typename T, bool CanStar> class ZuUnion_OpStar;
-template <typename T> class ZuUnion_OpStar<T, 1> {
-  ZuInline static bool star(const void *p) {
-    return *(*static_cast<const T *>(p));
-  }
-};
-template <typename T> class ZuUnion_OpStar<T, 0> {
+template <typename> struct ZuUnion_OpBool;
+template <> struct ZuUnion_OpBool<bool> { using T = void; };
+template <typename T, typename = void> struct ZuUnion_OpStar {
   ZuInline static bool star(const void *p) {
     return !ZuCmp<T>::null(*static_cast<const T *>(p));
   }
 };
-template <typename T, bool CanBang> class ZuUnion_OpBang;
-template <typename T> class ZuUnion_OpBang<T, 1> {
+template <typename T> struct ZuUnion_OpStar<T,
+	 typename ZuUnion_OpBool<decltype(*(ZuDeclVal<const T &>()))>::T> {
+  ZuInline static bool star(const void *p) {
+    return *(*static_cast<const T *>(p));
+  }
+};
+template <typename T, typename = void> struct ZuUnion_OpBang {
   ZuInline static bool bang(const void *p) {
     return !(*static_cast<const T *>(p));
   }
 };
-template <typename T> class ZuUnion_OpBang<T, 0> {
+template <typename T> struct ZuUnion_OpBang<T,
+	 typename ZuUnion_OpBool<decltype(!(ZuDeclVal<const T &>()))>::T> {
   ZuInline static bool bang(const void *p) {
     return ZuCmp<T>::null(*static_cast<const T *>(p));
   }
 };
+
 template <typename T, bool IsPrimitive, bool IsPointer> class ZuUnion_Ops_;
-ZuCan(operator *, ZuUnion_CanStar);
-ZuCan(operator !, ZuUnion_CanBang);
 template <typename T> class ZuUnion_Ops_<T, 0, 0> :
-  public ZuUnion_OpStar<T, ZuUnion_CanStar<T, bool (T::*)() const>::OK>,
-  public ZuUnion_OpBang<T, ZuUnion_CanBang<T, bool (T::*)() const>::OK> {
+  public ZuUnion_OpStar<T>, public ZuUnion_OpBang<T> {
 public:
   ZuInline static void ctor(void *p) { new (p) T(); }
   template <typename V>
@@ -480,9 +479,9 @@ template <typename ...Args> using ZuUnion = Zu_::Union<Args...>;
 
 template <typename Union, typename ...Args> struct ZuUnion_Traits;
 template <typename Union>
-struct ZuUnion_Traits<Union> : public ZuGenericTraits<Union> { };
+struct ZuUnion_Traits<Union> : public ZuBaseTraits<Union> { };
 template <typename Union, typename Arg0>
-struct ZuUnion_Traits<Union, Arg0> : public ZuGenericTraits<Union> {
+struct ZuUnion_Traits<Union, Arg0> : public ZuBaseTraits<Union> {
   enum {
     IsPOD = ZuTraits<Arg0>::IsPOD,
     IsComparable = 1,
@@ -490,7 +489,7 @@ struct ZuUnion_Traits<Union, Arg0> : public ZuGenericTraits<Union> {
   };
 };
 template <typename Union, typename Arg0, typename ...Args>
-struct ZuUnion_Traits<Union, Arg0, Args...> : public ZuGenericTraits<Union> {
+struct ZuUnion_Traits<Union, Arg0, Args...> : public ZuBaseTraits<Union> {
 private:
   using Left = ZuTraits<Arg0>;
   using Right = ZuUnion_Traits<Union, Args...>;

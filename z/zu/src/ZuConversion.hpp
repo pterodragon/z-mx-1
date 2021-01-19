@@ -143,22 +143,22 @@ public:
 };
 
 // SFINAE techniques...
-template <typename T1, typename T2, typename T = void>
-struct ZuSame : public ZuIfT<ZuConversion<T1, T2>::Same, T> { };
-template <typename T1, typename T2, typename T = void>
-struct ZuNotSame : public ZuIfT<!ZuConversion<T1, T2>::Same, T> { };
-template <typename T1, typename T2, typename T = void> struct ZuConvertible :
-    public ZuIfT<ZuConversion<T1, T2>::Exists, T> { };
-template <typename T1, typename T2, typename T = void> struct ZuNotConvertible :
-    public ZuIfT<!ZuConversion<T1, T2>::Exists, T> { };
-template <typename T1, typename T2, typename T = void>
-struct ZuIsBase : public ZuIfT<ZuConversion<T1, T2>::Base, T> { };
-template <typename T1, typename T2, typename T = void>
-struct ZuNotBase : public ZuIfT<!ZuConversion<T1, T2>::Base, T> { };
-template <typename T1, typename T2, typename T = void>
-struct ZuIs : public ZuIfT<ZuConversion<T1, T2>::Is, T> { };
-template <typename T1, typename T2, typename T = void>
-struct ZuIsNot : public ZuIfT<!ZuConversion<T1, T2>::Is, T> { };
+template <typename T1, typename T2, typename R = void>
+struct ZuSame : public ZuIfT<ZuConversion<T1, T2>::Same, R> { };
+template <typename T1, typename T2, typename R = void>
+struct ZuNotSame : public ZuIfT<!ZuConversion<T1, T2>::Same, R> { };
+template <typename T1, typename T2, typename R = void>
+struct ZuConvertible : public ZuIfT<ZuConversion<T1, T2>::Exists, R> { };
+template <typename T1, typename T2, typename R = void>
+struct ZuNotConvertible : public ZuIfT<!ZuConversion<T1, T2>::Exists, R> { };
+template <typename T1, typename T2, typename R = void>
+struct ZuIsBase : public ZuIfT<ZuConversion<T1, T2>::Base, R> { };
+template <typename T1, typename T2, typename R = void>
+struct ZuNotBase : public ZuIfT<!ZuConversion<T1, T2>::Base, R> { };
+template <typename T1, typename T2, typename R = void>
+struct ZuIs : public ZuIfT<ZuConversion<T1, T2>::Is, R> { };
+template <typename T1, typename T2, typename R = void>
+struct ZuIsNot : public ZuIfT<!ZuConversion<T1, T2>::Is, R> { };
 
 #ifdef _MSC_VER
 #pragma warning(pop)

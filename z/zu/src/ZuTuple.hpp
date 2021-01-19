@@ -457,7 +457,7 @@ namespace std {
   template <class> struct tuple_size;
   template <typename ...Args>
   struct tuple_size<ZuTuple<Args...>> :
-  public integral_constant<std::size_t, sizeof...(Args)> { };
+  public integral_constant<size_t, sizeof...(Args)> { };
 
   template <size_t, typename> struct tuple_element;
   template <size_t I, typename ...Args>

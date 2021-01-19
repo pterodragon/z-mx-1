@@ -26,8 +26,8 @@
 //
 // 16bit types are left unchanged if wchar_t is not 16bit
 
-#ifndef ZuNormChar_HPP
-#define ZuNormChar_HPP
+#ifndef ZuEquivChar_HPP
+#define ZuEquivChar_HPP
 
 #ifndef ZuLib_HPP
 #include <zlib/ZuLib.hpp>
@@ -74,4 +74,8 @@ struct ZuNormChar<volatile U, W, 0, 1> { using T = volatile W; };
 template <typename U, typename W>
 struct ZuNormChar<const volatile U, W, 0, 1> { using T = const volatile W; };
 
-#endif /* ZuNormChar_HPP */
+template <typename U1, typename U2>
+struct ZuEquivChar : public ZuConversion<
+  typename ZuNormChar<U1>::T, typename ZuNormChar<U2>::T> { };
+
+#endif /* ZuEquivChar_HPP */

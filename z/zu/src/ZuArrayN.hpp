@@ -41,7 +41,6 @@
 #include <zlib/ZuArrayFn.hpp>
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuPrint.hpp>
-#include <zlib/ZuNormChar.hpp>
 #include <zlib/ZuUTF.hpp>
 
 #ifdef _MSC_VER
@@ -99,15 +98,11 @@ public:
   enum Nop_ { Nop };
 
 protected:
-  template <typename T> using NormChar = ZuNormChar<T>;
-
   // from some string with same char (including string literals)
   template <typename U, typename V = T> struct IsString {
-    using W = typename NormChar<typename ZuTraits<U>::Elem>::T;
-    using X = typename NormChar<V>::T;
     enum { OK =
       (ZuTraits<U>::IsArray || ZuTraits<U>::IsString) &&
-      ZuConversion<W, X>::Same };
+      ZuEquivChar<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename R = void>
   struct MatchString : public ZuIfT<IsString<U>::OK, R> { };
@@ -675,7 +670,7 @@ namespace std {
   template <class> struct tuple_size;
   template <typename T, unsigned N, typename Cmp>
   struct tuple_size<ZuArrayN<T, N, Cmp>> :
-  public integral_constant<std::size_t, N> { };
+  public integral_constant<size_t, N> { };
 
   template <size_t, typename> struct tuple_element;
   template <size_t I, typename T, unsigned N, typename Cmp>

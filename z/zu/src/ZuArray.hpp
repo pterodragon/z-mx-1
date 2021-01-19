@@ -49,7 +49,7 @@
 #include <zlib/ZuConversion.hpp>
 #include <zlib/ZuPrint.hpp>
 #include <zlib/ZuArrayFn.hpp>
-#include <zlib/ZuNormChar.hpp>
+#include <zlib/ZuEquivChar.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -110,19 +110,15 @@ private:
     enum { OK = !IsPrimitiveArray_<U>::OK && ZuTraits<U>::IsPointer &&
       IsCharElem_<U>::OK };
   };
-  template <typename T> using NormChar = ZuNormChar<T>;
   template <typename U, typename V = T> struct IsOtherArray {
-    using W = typename NormChar<typename ZuTraits<U>::Elem>::T;
-    using X = typename NormChar<V>::T;
     enum { OK =
       !IsPrimitiveArray_<U>::OK && !IsCString<U>::OK &&
       (ZuTraits<U>::IsArray || ZuTraits<U>::IsString) &&
-      ZuConversion<W, X>::Same
-    };
+      ZuEquivChar<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename V = T> struct IsPtr {
-    using W = typename NormChar<U>::T;
-    using X = typename NormChar<V>::T;
+    using W = typename ZuNormChar<U>::T;
+    using X = typename ZuNormChar<V>::T;
     enum { OK = ZuConversion<W *, X *>::Exists };
   };
 

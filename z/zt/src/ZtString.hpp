@@ -53,7 +53,7 @@
 #include <zlib/ZuUTF.hpp>
 #include <zlib/ZuPrint.hpp>
 #include <zlib/ZuBox.hpp>
-#include <zlib/ZuNormChar.hpp>
+#include <zlib/ZuEquivChar.hpp>
 
 #include <zlib/ZmAssert.hpp>
 #include <zlib/ZmStream.hpp>
@@ -111,16 +111,12 @@ private:
   template <typename U, typename R = void>
   struct MatchStrLiteral : public ZuIfT<IsStrLiteral<U>::OK, R> { };
 
-  template <typename T> using NormChar = ZuNormChar<T>;
-
   // from some other C string with same char (including string literals)
   template <typename U, typename V = Char> struct IsAnyCString {
-    using W = typename NormChar<typename ZuTraits<U>::Elem>::T;
-    using X = typename NormChar<V>::T;
     enum { OK =
       !IsZtString<U>::OK &&
       ZuTraits<U>::IsCString &&
-      ZuConversion<W, X>::Same };
+      ZuEquivChar<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename R = void>
   struct MatchAnyCString : public ZuIfT<IsAnyCString<U>::OK, R> { };

@@ -1,5 +1,5 @@
 m4_define([Z_VERSION_], m4_esyscmd([grep Z_VERNAME version.h | sed 's/[^0-9\.]//g;1q' | tr -d '\n']))
-AC_INIT(zlib, Z_VERSION_)
+AC_INIT([zlib],[Z_VERSION_])
 Z_VERSION=Z_VERSION_
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -7,7 +7,7 @@ AC_CONFIG_HEADERS(config.h)
 
 AM_INIT_AUTOMAKE
 
-AC_LANG_CPLUSPLUS
+AC_LANG([C++])
 AC_PROG_CXX
 LT_INIT([win32-dll shared disable-static])
 LT_LANG([C++])
@@ -156,7 +156,7 @@ for i in zu zm zjni zt ze zi ztls zfb zv zdb zdf zrl zgtk; do (
   fi
 ); done
 
-AC_OUTPUT(Makefile \
+AC_CONFIG_FILES([Makefile \
 	zu/Makefile zu/src/Makefile zu/test/Makefile \
 	zm/Makefile zm/src/Makefile zm/test/Makefile \
 	zjni/Makefile zjni/src/Makefile \
@@ -169,4 +169,5 @@ AC_OUTPUT(Makefile \
 	zdb/Makefile zdb/src/Makefile zdb/test/Makefile \
 	zdf/Makefile zdf/src/Makefile zdf/test/Makefile \
 	zrl/Makefile zrl/src/Makefile zrl/test/Makefile \
-	zgtk/Makefile zgtk/src/Makefile zgtk/test/Makefile)
+	zgtk/Makefile zgtk/src/Makefile zgtk/test/Makefile])
+AC_OUTPUT

@@ -374,7 +374,7 @@ namespace std {
   template <class> struct tuple_size;
   template <typename T0, typename T1>
   struct tuple_size<ZuPair<T0, T1>> :
-  public integral_constant<std::size_t, 2> { };
+  public integral_constant<size_t, 2> { };
 
   template <size_t, class> struct tuple_element;
   template <typename T0, typename T1>

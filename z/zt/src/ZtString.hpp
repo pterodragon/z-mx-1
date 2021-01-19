@@ -123,8 +123,6 @@ private:
 
   // from some other C string with same char (other than a string literal)
   template <typename U, typename V = Char> struct IsCString {
-    using W = typename NormChar<typename ZuTraits<U>::Elem>::T;
-    using X = typename NormChar<V>::T;
     enum { OK =
       !IsStrLiteral<U>::OK &&
       IsAnyCString<U>::OK };
@@ -134,12 +132,10 @@ private:
 
   // from some other non-C string with same char (non-null-terminated)
   template <typename U, typename V = Char> struct IsOtherString {
-    using W = typename NormChar<typename ZuTraits<U>::Elem>::T;
-    using X = typename NormChar<V>::T;
     enum { OK =
       !IsZtString<U>::OK &&
       ZuTraits<U>::IsString && !ZuTraits<U>::IsCString &&
-      ZuConversion<W, X>::Same };
+      ZuEquivChar<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename R = void>
   struct MatchOtherString : public ZuIfT<IsOtherString<U>::OK, R> { };

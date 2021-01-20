@@ -47,10 +47,13 @@ struct Y : public X {
   virtual void helloWorld();
 };
 
-struct Z : public ZmObject { int m_z; };
+struct Z : public ZmObject {
+  int m_z;
 
-template <> struct ZuTraits<Z> : public ZuBaseTraits<Z> {
-  enum {  IsPrimitive = 0, IsReal = 0 };
+  struct Traits : public ZuBaseTraits<Z> {
+    enum {  IsPrimitive = 0, IsReal = 0 };
+  };
+  friend Traits ZuTraitsType(Z *);
 };
 
 struct ZCmp {
@@ -138,11 +141,13 @@ struct I {
   int cmp(const I &i) const { return ZuCmp<int>::cmp(m_i, i.m_i); }
   bool operator ==(const I &i) const { return m_i == i.m_i; }
   bool operator !() const { return !m_i; }
-  int	m_i;
-};
 
-template <> struct ZuTraits<I> : public ZuBaseTraits<I> {
-  enum _ { IsComparable = 1, IsHashable = 1 };
+  struct Traits : public ZuBaseTraits<I> {
+    enum { IsComparable = 1, IsHashable = 1 };
+  };
+  friend Traits ZuTraitsType(I *);
+
+  int	m_i;
 };
 
 struct J : public ZmObject {
@@ -155,6 +160,7 @@ struct J : public ZmObject {
     if (this != &j) m_i.m_i = j.m_i.m_i;
     return *this;
   }
+
   I	m_i;
 };
 

@@ -146,6 +146,28 @@ struct ZuUnion_Ops :
     { return ZuHash<T>::hash(*static_cast<const T *>(p)); }
 };
 
+template <typename Base, typename ...Args> struct ZuUnion_Traits;
+template <typename Base, typename Arg0>
+struct ZuUnion_Traits<Base, Arg0> : public Base {
+  enum {
+    IsPOD = ZuTraits<Arg0>::IsPOD,
+    IsComparable = 1,
+    IsHashable = ZuTraits<Arg0>::IsHashable
+  };
+};
+template <typename Base, typename Arg0, typename ...Args>
+struct ZuUnion_Traits<Base, Arg0, Args...> : public Base {
+private:
+  using Left = ZuTraits<Arg0>;
+  using Right = ZuUnion_Traits<Base, Args...>;
+public:
+  enum {
+    IsPOD = Left::IsPOD && Right::IsPOD,
+    IsComparable = 1,
+    IsHashable = Left::IsHashable && Right::IsHashable
+  };
+};
+
 namespace Zu_ {
 template <typename ...Args> class Union {
 public:
@@ -471,38 +493,15 @@ public:
 	});
   }
 
+  // traits
+  using Traits = ZuUnion_Traits<ZuBaseTraits<Union>, Args...>;
+  friend Traits ZuTraitsType(Union *);
+
 private:
   uint8_t	m_u[Size + 1];
 };
 } // namespace Zu_
 template <typename ...Args> using ZuUnion = Zu_::Union<Args...>;
-
-template <typename Union, typename ...Args> struct ZuUnion_Traits;
-template <typename Union>
-struct ZuUnion_Traits<Union> : public ZuBaseTraits<Union> { };
-template <typename Union, typename Arg0>
-struct ZuUnion_Traits<Union, Arg0> : public ZuBaseTraits<Union> {
-  enum {
-    IsPOD = ZuTraits<Arg0>::IsPOD,
-    IsComparable = 1,
-    IsHashable = ZuTraits<Arg0>::IsHashable
-  };
-};
-template <typename Union, typename Arg0, typename ...Args>
-struct ZuUnion_Traits<Union, Arg0, Args...> : public ZuBaseTraits<Union> {
-private:
-  using Left = ZuTraits<Arg0>;
-  using Right = ZuUnion_Traits<Union, Args...>;
-public:
-  enum {
-    IsPOD = Left::IsPOD && Right::IsPOD,
-    IsComparable = 1,
-    IsHashable = Left::IsHashable && Right::IsHashable
-  };
-};
-template <typename ...Args>
-struct ZuTraits<ZuUnion<Args...>> :
-    public ZuUnion_Traits<ZuUnion<Args...>, Args...> { };
 
 // STL variant cruft
 #include <type_traits>
@@ -607,7 +606,7 @@ public: \
   ZuInline Type(Union &&v) : Union(ZuMv(v)) { }; \
   ZuPP_Eval(ZuPP_MapIndex(ZuUnion_FieldFn, 0, __VA_ARGS__)) \
   struct Traits : public ZuTraits<Type##_> { using T = Type; }; \
-  friend Traits ZuTraitsType(const Type *); \
+  friend Traits ZuTraitsType(Type *); \
 }
 
 #endif /* ZuUnion_HPP */

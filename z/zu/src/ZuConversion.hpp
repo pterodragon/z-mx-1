@@ -79,7 +79,7 @@ template <typename T1, typename T2> struct ZuConversion__ {
 #endif
 
 #define ZuConversionFriend \
-  template <typename, typename> friend class ZuConversion__
+  template <typename, typename> friend struct ZuConversion__
 
 template <typename T> struct ZuConversion__<T, T>
   { enum { Exists = 1, Same = 1, Base = 0, Is = 1 }; };

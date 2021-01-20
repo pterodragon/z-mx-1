@@ -114,6 +114,11 @@ public:
      return i >= 224 && i < 240;
   }
 
+  struct Traits : public ZuBaseTraits<ZiIP> {
+    enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
+  };
+  friend Traits ZuTraitsType(ZiIP *);
+
 private:
   int resolve_(ZuString, ZeError *e = 0);
 #ifdef _WIN32
@@ -125,10 +130,6 @@ public:
     return resolve_(ZuString{ZuFwd<S>(s)}, e);
   }
   Hostname name(ZeError *e = 0);
-};
-
-template <> struct ZuTraits<ZiIP> : public ZuBaseTraits<ZiIP> {
-  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
 };
 
 // generic printing

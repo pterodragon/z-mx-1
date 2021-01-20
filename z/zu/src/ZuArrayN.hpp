@@ -633,32 +633,32 @@ public:
   template <typename A>
   ZuInline bool operator <=(const A &a) const { return !this->greater(a); }
 
+  // traits
+
+  struct Traits : public ZuBaseTraits<ArrayN> {
+    using Elem = T;
+    enum {
+      IsArray = 1, IsPrimitive = 0,
+      IsPOD = ZuTraits<T>::IsPOD,
+      IsString =
+	ZuConversion<char, T>::Same ||
+	ZuConversion<wchar_t, T>::Same,
+      IsWString = ZuConversion<wchar_t, T>::Same,
+      IsComparable = 1, IsHashable = 1
+    };
+    template <typename U = ArrayN>
+    static typename ZuNotConst<U, T *>::T data(U &a) { return a.data(); }
+    static const Elem *data(const ArrayN &a) { return a.data(); }
+    static unsigned length(const ArrayN &a) { return a.length(); }
+  };
+  friend Traits ZuTraitsType(ArrayN *);
+
 private:
   char	*m_data[N * sizeof(T)];
 };
 } // namespace Zu_
 template <typename T, unsigned N, typename Cmp = ZuCmp<T>>
 using ZuArrayN = Zu_::ArrayN<T, N, Cmp>;
-
-template <typename Elem_, unsigned N, typename Cmp>
-struct ZuTraits<ZuArrayN<Elem_, N, Cmp> > :
-    public ZuBaseTraits<ZuArrayN<Elem_, N, Cmp> > {
-  using Elem = Elem_;
-  using T = ZuArrayN<Elem, N, Cmp>;
-  enum {
-    IsArray = 1, IsPrimitive = 0,
-    IsPOD = ZuTraits<Elem>::IsPOD,
-    IsString =
-      ZuConversion<char, Elem>::Same ||
-      ZuConversion<wchar_t, Elem>::Same,
-    IsWString = ZuConversion<wchar_t, Elem>::Same,
-    IsComparable = 1, IsHashable = 1
-  };
-  template <typename U = T>
-  static typename ZuNotConst<U, Elem *>::T data(U &a) { return a.data(); }
-  static const Elem *data(const T &a) { return a.data(); }
-  static unsigned length(const T &a) { return a.length(); }
-};
 
 // generic printing
 template <unsigned N>

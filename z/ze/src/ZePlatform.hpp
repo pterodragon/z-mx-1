@@ -101,13 +101,12 @@ public:
   using ErrNo = ZePlatform_::ErrNo;
   static const ErrNo OK = ZePlatform_::OK;
 
-  ZuInline ZeError() : m_errNo(OK) { }
+  ZeError() : m_errNo(OK) { }
 
-  ZuInline ZeError(const ZeError &e) : m_errNo(e.m_errNo) { }
-  ZuInline ZeError &operator =(const ZeError &e) {
-    if (ZuLikely(this != &e)) m_errNo = e.m_errNo;
-    return *this;
-  }
+  ZeError(const ZeError &) = default;
+  ZeError &operator =(const ZeError &) = default;
+  ZeError(ZeError &&) = default;
+  ZeError &operator =(ZeError &&) = default;
 
   ZuInline ZeError(ErrNo e) : m_errNo(e) { }
   ZuInline ZeError &operator =(ErrNo e) {
@@ -125,6 +124,9 @@ public:
 
   template <typename S> ZuInline void print(S &s) const { s << message(); }
 
+  struct Traits : public ZuBaseTraits<ZeError> { enum { IsPOD = 1 }; };
+  friend Traits ZuTraitsType(ZeError *);
+
 private:
   ErrNo		m_errNo;
 };
@@ -137,10 +139,6 @@ inline ZeError Ze_LastError() { return ZeError(ZePlatform_::errNo()); }
 
 inline ZeError Ze_LastSockError() { return ZeError(ZePlatform_::sockErrNo()); }
 #define ZeLastSockError Ze_LastSockError()
-
-template <> struct ZuTraits<ZeError> : public ZuBaseTraits<ZeError> {
-  enum { IsPOD = 1 };
-};
 
 template <> struct ZuPrint<ZeError> : public ZuPrintFn { };
 

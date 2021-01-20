@@ -385,10 +385,9 @@ struct ZuStringHash<wchar_t> : public ZuWStringHash<sizeof(wchar_t)> { };
 
 template <typename T, bool IsString> struct ZuHash_;
 
-template <typename T> struct ZuHash_<T, false> :
-  public ZuHash_NonString<T,
-			  ZuTraits<T>::IsPrimitive,
-			  ZuTraits<T>::IsPointer> { };
+template <typename T>
+struct ZuHash_<T, false> : public ZuHash_NonString<
+  T, ZuTraits<T>::IsPrimitive, ZuTraits<T>::IsPointer> { };
 
 template <typename T> struct ZuHash_<T, true> {
   template <typename S>

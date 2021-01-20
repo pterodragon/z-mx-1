@@ -213,13 +213,14 @@ private:
     return *i_;
   }
 
-  I	m_i;
-};
+  // traits
+  struct Traits : public ZuTraits<I> {
+    enum { IsBoxed = 0, IsPrimitive = 0 };
+  };
+  friend Traits ZuTraitsType(ZuByteSwap *);
 
-template <typename I>
-struct ZuTraits<ZuByteSwap<I> > : public ZuTraits<I> {
-  using T = ZuByteSwap<I>;
-  enum { IsBoxed = 0, IsPrimitive = 0 };
+private:
+  I	m_i;
 };
 
 #pragma pack(pop)

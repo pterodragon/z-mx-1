@@ -57,10 +57,6 @@ struct Y : public X {
 
 struct Z : public ZmObject { int m_z; };
 
-template <> struct ZuTraits<Z> : public ZuBaseTraits<Z> {
-  enum { IsReal = 0, IsPrimitive = 0 };
-};
-
 struct ZCmp {
   static int cmp(const Z *z1, const Z *z2) { return z1->m_z - z2->m_z; }
   static bool less(const Z *z1, const Z *z2) { return z1->m_z < z2->m_z; }

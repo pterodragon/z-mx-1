@@ -339,20 +339,19 @@ private:
   const Val &value() const { return data().value(); }
   Val &value() { return data().value(); }
 
+public:
+  struct Traits : public ZuBaseTraits<ZmLHash_Node> {
+    enum {
+      IsPOD = ZuTraits<Key>::IsPOD && ZuTraits<Val>::IsPOD,
+      IsComparable = 1,
+      IsHashable = 0
+    };
+  };
+  friend Traits ZuTraitsType(ZmLHash_Node *);
+
+private:
   uint32_t	m_u = 0;
   char		m_data[sizeof(Data)];
-};
-
-template <typename Key, typename Cmp, typename Val, typename ValCmp>
-struct ZuTraits<ZmLHash_Node<Key, Cmp, Val, ValCmp> > :
-    public ZuBaseTraits<ZmLHash_Node<Key, Cmp, Val, ValCmp> > {
-  enum {
-    IsPOD =
-      ZuTraits<Key>::IsPOD &&
-      ZuTraits<Val>::IsPOD,
-    IsComparable = 1,
-    IsHashable = 0
-  };
 };
 
 // common base class for both static and dynamic tables

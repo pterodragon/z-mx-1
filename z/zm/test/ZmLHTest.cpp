@@ -83,22 +83,21 @@ template <int N> struct String {
   bool operator <=(const String &s) const { return !s.less(*this); }
 
   uint32_t hash() const { return ZuHash<String>::hash(*this); }
-  char	m_data[N];
-};
-template <int N>
-struct ZuTraits<String<N> > : public ZuBaseTraits<String<N> > {
-  enum {
-    IsPOD = 1, IsCString = 1, IsString = 1,
-    IsComparable = 1, IsHashable = 1
+
+  struct Traits : public ZuBaseTraits<String> {
+    using Elem = char;
+    enum {
+      IsPOD = 1, IsCString = 1, IsString = 1,
+      IsComparable = 1, IsHashable = 1
+    };
+    template <typename U = String>
+    static typename ZuNotConst<U, char *>::T data(U &s) { return s.data(); }
+    static const char *data(const String<N> &s) { return s.data(); }
+    static unsigned length(const String<N> &s) { return s.length(); }
   };
-  using Elem = char;
-#if 0
-  String<N> make(const char *data, unsigned length) {
-    return String<N>(data);
-  }
-#endif
-  static const char *data(const String<N> &s) { return s.data(); }
-  static unsigned length(const String<N> &s) { return s.length(); }
+  friend Traits ZuTraitsType(String *);
+
+  char	m_data[N];
 };
 using S = String<16>;
 

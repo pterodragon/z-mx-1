@@ -104,12 +104,13 @@ struct ZmTLock_Held {
   ZuInline bool operator !() const { return !m_thread; }
   ZuOpBool
 
+  struct Traits : public ZuBaseTraits<ZmTLock_Held> {
+    enum { IsPOD = 1 };
+  };
+  friend Traits ZuTraitsType(ZmTLock_Held *);
+
   void		*m_thread;
   int		m_lockCount;
-};
-template <>
-struct ZuTraits<ZmTLock_Held> : public ZuBaseTraits<ZmTLock_Held> {
-  enum { IsPOD = 1 };
 };
 
 struct ZmTLock_Held_ThreadAccessor : public ZuAccessor<ZmTLock_Held, void *> {

@@ -49,10 +49,13 @@ struct A {
   int hash() const { return ZuHash<int>::hash(i); }
   bool operator !() const { return !i; }
   bool operator ==(const A &a) const { return i == a.i; }
+
+  struct Traits : public ZuBaseTraits<A> {
+    enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
+  };
+  friend Traits ZuTraitsType(A *);
+
   int i;
-};
-template <> struct ZuTraits<A> : public ZuBaseTraits<A> {
-  enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
 };
 
 ZuPair<A, A> mkapair() { return ZuFwdPair(A(42), A(42)); }

@@ -231,11 +231,13 @@ public:
   ZuInline ZiIP &addr() { return *(ZiIP *)&imr_multiaddr; }
   ZuInline const ZiIP &mif() const { return *(const ZiIP *)&imr_interface; }
   ZuInline ZiIP &mif() { return *(ZiIP *)&imr_interface; }
+
+  struct Traits : public ZuBaseTraits<ZiMReq> {
+    enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
+  };
+  friend Traits ZuTraitsType(ZiMReq *);
 };
 template <> struct ZuPrint<ZiMReq> : public ZuPrintFn { };
-template <> struct ZuTraits<ZiMReq> : public ZuBaseTraits<ZiMReq> {
-  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
-};
 
 #ifndef ZiCxnOptions_NMReq
 #define ZiCxnOptions_NMReq 1

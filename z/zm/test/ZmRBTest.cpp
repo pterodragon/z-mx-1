@@ -32,9 +32,15 @@
 #include <zlib/ZmRBTree.hpp>
 #include <zlib/ZmNoLock.hpp>
 
-class Z : public ZmObject {
-public:
-  Z(int z) : m_z(z) { } int m_z;
+struct Z : public ZmObject {
+  Z(int z) : m_z(z) { }
+
+  struct Traits : public ZuBaseTraits<Z> {
+    enum { IsReal = 0, IsBase = 0 };
+  };
+  friend Traits ZuTraitsType(Z *);
+
+  int m_z;
 };
 
 struct ZCmp {
@@ -44,10 +50,6 @@ struct ZCmp {
   static ZmRef<Z> null() { 
     static ZmRef<Z> tmp = new Z(0); return tmp; 
   }
-};
-
-template <> struct ZuTraits<Z> {
-  enum { IsReal = 0, IsBase = 0 };
 };
 
 using Tree = ZmRBTree<ZmRef<Z>, ZmRBTreeCmp<ZCmp> >;

@@ -19,21 +19,16 @@
 
 // type traits
 
-// template <> struct ZuTraits<UDT> : public ZuBaseTraits<UDT> {
-//   enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 }; // traits overrides
-// };
 // class UDT {
 //   ...
 //   int cmp(const UDT &t) { ... }
 //   // returns -ve if *this < t, 0 if *this == t, +ve if *this > t
 //   ...
+//   struct Traits : public ZuBaseTraits<UDT> {
+//     enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 }; // overrides
+//   };
+//   friend Traits ZuTraitsType(UDT *);
 // };
-//
-// The following are equivalent:
-//
-// ZuDeref<T>::T	std::remove_reference<T>::type
-// ZuStrip<T>::T	std::remove_cv<T>::type
-// ZuDecay<T>::T	std::decay<T>::type
 
 #ifndef ZuTraits_HPP
 #define ZuTraits_HPP
@@ -100,10 +95,9 @@ template <typename T> struct ZuBaseTraits {
   using Elem = void;
 };
 
-template <typename T> ZuBaseTraits<T> ZuTraitsType(const T *);
-template <typename T> const T *ZuTraitsType_();
+template <typename T> ZuBaseTraits<T> ZuTraitsType(T *);
 template <typename T>
-using ZuDefaultTraits = decltype(ZuTraitsType(ZuTraitsType_<T>()));
+using ZuDefaultTraits = decltype(ZuTraitsType(ZuDeclVal<T *>()));
 
 template <typename T> struct ZuTraits : public ZuDefaultTraits<T> { };
 
@@ -444,7 +438,6 @@ template <typename S, typename T = void> struct ZuIsCharString :
 template <typename T, typename Char>
 struct ZuStdStringTraits_ : public ZuBaseTraits<T> {
   enum { IsString = 1 };
-  // using T = T_;
   using Elem = Char;
   ZuInline static const Char *data(const T &s) { return s.data(); }
   ZuInline static unsigned length(const T &s) { return s.length(); }

@@ -228,14 +228,13 @@ public:
 
   ZuInline bool operator !() const { return !m_object; }
 
+  struct Traits : public ZuTraits<T *> {
+    enum { IsPrimitive = 0, IsPOD = 0 };
+  };
+  friend Traits ZuTraitsType(ZmRef *);
+
 protected:
   T		*m_object;
-};
-
-template <typename T_>
-struct ZuTraits<ZmRef<T_> > : public ZuTraits<T_ *> {
-  enum { IsPrimitive = 0, IsPOD = 0 };
-  using T = ZmRef<T_>;
 };
 
 template <typename T> struct ZuCmp;

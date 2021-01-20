@@ -32,10 +32,8 @@
 
 #include <zlib/ZuTraits.hpp>
 
-class ZuNull { };
-
-template <> struct ZuTraits<ZuNull> : public ZuBaseTraits<ZuNull> {
-  enum { IsPOD = 1 };
+class ZuNull {
+  struct Traits : public ZuBaseTraits<ZuNull> { enum { IsPOD = 1 }; };
 };
 
 template <typename T> struct ZuCmp;

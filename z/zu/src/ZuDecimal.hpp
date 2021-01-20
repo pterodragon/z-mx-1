@@ -484,6 +484,13 @@ public:
     if (fv) s << '.' << ZuBoxed(fv).fmt(ZuFmt::Frac<18>());
   }
 
+  // traits
+  struct Traits : public ZuTraits<int128_t> {
+    using T = ZuDecimal;
+    enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
+  };
+  friend Traits ZuTraitsType(ZuDecimal *);
+
 private:
   const ZuDecimal	&m_decimal;
 };
@@ -495,11 +502,6 @@ inline ZuDecimalVFmt ZuDecimal::vfmt(VFmt &&fmt) const {
   return ZuDecimalVFmt{*this, ZuFwd<VFmt>(fmt)};
 }
 template <> struct ZuPrint<ZuDecimalVFmt> : public ZuPrintFn { };
-
-template <> struct ZuTraits<ZuDecimal> : public ZuTraits<int128_t> {
-  using T = ZuDecimal;
-  enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
-};
 
 // ZuCmp has to be specialized since null() is otherwise !t (instead of !*t)
 template <> struct ZuCmp<ZuDecimal> {

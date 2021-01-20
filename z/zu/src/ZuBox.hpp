@@ -172,10 +172,6 @@ template <typename U, typename T, typename R = void> struct ZuBox_IsReal :
 		 (ZuTraits<U>::IsReal ||
 		  ZuConversion<U, T>::Exists ||
 		  ZuConversion<U, int>::Exists), R> { };
-#if 0
-template <typename S> struct ZuBox_IsString :
-    public ZuIfT<ZuTraits<S>::IsString && !ZuTraits<S>::IsWString> { };
-#endif
 template <typename Traits, typename T, bool IsPointer, bool IsArray>
 struct ZuBox_IsCharPtr_ { };
 template <typename Traits, typename T>
@@ -534,6 +530,12 @@ public:
     return m_val > r ? 1 : -1;
   }
 
+  // traits
+  struct Traits : public ZuTraits<T> {
+    enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1, IsBoxed = 1 };
+  };
+  friend Traits ZuTraitsType(ZuBox *);
+
 private:
   T	m_val;
 };
@@ -541,12 +543,6 @@ private:
 #define ZuBox0(T) ZuBox<T, ZuCmp0<T> >
 #define ZuBox_1(T) ZuBox<T, ZuCmp_1<T> >
 #define ZuBoxN(T, N) ZuBox<T, ZuCmpN<T, N> >
-
-template <typename T_, class Cmp>
-struct ZuTraits<ZuBox<T_, Cmp> > : public ZuTraits<T_> {
-  using T = ZuBox<T_, Cmp>;
-  enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1, IsBoxed = 1 };
-};
 
 // ZuCmp has to be specialized since null() is otherwise !t (instead of !*t)
 template <typename T_, class Cmp>

@@ -144,12 +144,13 @@ public:
 
   ZuInline uint32_t hash() const { return ZuHash<uint64_t>::hash(m_val); }
 
+  struct Traits : public ZuTraits<uint64_t> {
+    enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
+  };
+  friend Traits ZuTraitsType(ZuID *);
+
 private:
   uint64_t	m_val;
-};
-template <> struct ZuTraits<ZuID> : public ZuTraits<uint64_t> {
-  using T = ZuID;
-  enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
 };
 template <> struct ZuCmp<ZuID> : public ZuCmp0<uint64_t> {
   ZuInline static const ZuID &null() { static const ZuID v; return v; }

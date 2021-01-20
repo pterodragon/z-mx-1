@@ -295,7 +295,7 @@ public:
   struct Traits : public ZuBaseTraits<ZmBitmap> {
     enum { IsComparable = 1 };
   };
-  friend Traits ZuTraitsType(const ZmBitmap *);
+  friend Traits ZuTraitsType(ZmBitmap *);
 
 private:
   hwloc_bitmap_t	m_map;

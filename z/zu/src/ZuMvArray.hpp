@@ -34,11 +34,11 @@
 #include <zlib/ZuArrayFn.hpp>
 
 template <typename T_> class ZuMvArray : public ZuArrayFn<T_> {
-public:
-  using T = T_;
-
   ZuMvArray(const ZuMvArray &) = delete;
   ZuMvArray &operator =(const ZuMvArray &) = delete;
+
+public:
+  using T = T_;
 
   ZuMvArray() = default;
 
@@ -112,7 +112,7 @@ public:
 
 protected:
   ZuInline bool same(const ZuMvArray &a) const { return this == &a; }
-  template <typename A> ZuInline bool same(const A &a) const { return false; }
+  template <typename A> constexpr bool same(const A &) const { return false; }
 
   ZuInline auto buf() { return ZuArray{data(), length()}; }
   ZuInline auto cbuf() const { return ZuArray{data(), length()}; }
@@ -150,31 +150,31 @@ protected:
 
 // hash
 
-  ZuInline uint32_t hash() const {
-    return ZuHash<ZuMvArray>::hash(*static_cast<const ZuMvArray *>(this));
+  uint32_t hash() const {
+    return ZuHash<ZuMvArray>::hash(*this);
   }
+
+// traits
+  struct Traits : public ZuBaseTraits<ZuMvArray> {
+    using Elem = T;
+    enum {
+      IsArray = 1, IsPrimitive = 0, IsPOD = 0,
+      IsString =
+	ZuConversion<char, T>::Same ||
+	ZuConversion<wchar_t, T>::Same,
+      IsWString = ZuConversion<wchar_t, T>::Same,
+      IsComparable = 1, IsHashable = 1
+    };
+    template <typename U = ZuMvArray>
+    static typename ZuNotConst<U, T *>::T data(U &a) { return a.data(); }
+    static const T *data(const ZuMvArray &a) { return a.data(); }
+    static unsigned length(const ZuMvArray &a) { return a.length(); }
+  };
+  friend Traits ZuTraitsType(ZuMvArray *);
 
 private:
   uint32_t	m_length = 0;
   T		*m_data = nullptr;
-};
-template <typename Elem_>
-struct ZuTraits<ZuMvArray<Elem_> > :
-    public ZuBaseTraits<ZuMvArray<Elem_> > {
-  using Elem = Elem_;
-  using T = ZuMvArray<Elem>;
-  enum {
-    IsArray = 1, IsPrimitive = 0, IsPOD = 0,
-    IsString =
-      ZuConversion<char, Elem>::Same ||
-      ZuConversion<wchar_t, Elem>::Same,
-    IsWString = ZuConversion<wchar_t, Elem>::Same,
-    IsComparable = 1, IsHashable = 1
-  };
-  template <typename U = T>
-  static typename ZuNotConst<U, Elem *>::T data(U &a) { return a.data(); }
-  static const Elem *data(const T &a) { return a.data(); }
-  static unsigned length(const T &a) { return a.length(); }
 };
 
 // generic printing

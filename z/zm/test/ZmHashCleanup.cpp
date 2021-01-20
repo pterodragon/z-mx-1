@@ -28,11 +28,12 @@ struct Object : public ZmObject {
   bool operator ==(const Object &i) const { return m_val == i.m_val; }
   bool operator !() const { return !m_val; }
 
-  int m_val;
-};
+  struct Traits : public ZuBaseTraits<Object> {
+    enum { IsComparable = 1, IsHashable = 1 };
+  };
+  friend Traits ZuTraitsType(Object *);
 
-template <> struct ZuTraits<Object> : public ZuBaseTraits<Object> {
-  enum _ { IsComparable = 1, IsHashable = 1 };
+  int m_val;
 };
 
 using ObjectHash = ZmHash<ZmRef<Object> >;

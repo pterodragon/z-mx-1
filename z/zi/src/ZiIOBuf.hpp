@@ -212,7 +212,7 @@ public:
       return buf.length;
     }
   };
-  friend Traits ZuTraitsType(const ZiIOBuf_ *);
+  friend Traits ZuTraitsType(ZiIOBuf_ *);
 
   void		*owner = nullptr;
   uint8_t	*jumbo = nullptr;

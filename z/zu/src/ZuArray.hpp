@@ -379,7 +379,7 @@ ZuArray(T *data, N length) -> ZuArray<T>;
 
 template <typename Elem_>
 struct ZuTraits<ZuArray<Elem_> > : public ZuBaseTraits<ZuArray<Elem_> > {
-  using Elem =  Elem_;
+  using Elem = Elem_;
   using T = ZuArray<Elem>;
   enum {
     IsArray = 1, IsPrimitive = 0,

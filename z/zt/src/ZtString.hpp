@@ -1316,6 +1316,24 @@ truncate:
     length_(z - 1);
   }
 
+public:
+  // traits
+
+  struct Traits : public ZuBaseTraits<ZtString_> {
+    using Elem = Char;
+    enum {
+      IsCString = 1, IsString = 1,
+      IsWString = ZuConversion<Char, wchar_t>::Same,
+      IsComparable = 1, IsHashable = 1
+    };
+    template <typename U = ZtString_>
+    static typename ZuNotConst<U, Char *>::T data(U &s) { return s.data(); }
+    static const Char *data(const ZtString_ &s) { return s.data(); }
+    static unsigned length(const ZtString_ &s) { return s.length(); }
+  };
+  friend Traits ZuTraitsType(ZtString_ *);
+
+private:
   uint32_t		m_size_owned_null;
   uint32_t		m_length_mallocd_builtin;
   uintptr_t		m_data[ZtString_BuiltinSize / sizeof(uintptr_t)];
@@ -1336,23 +1354,6 @@ ZtExplicit template class ZtAPI ZtString_<wchar_t, char>;
 
 using ZtString = ZtString_<char, wchar_t>;
 using ZtWString = ZtString_<wchar_t, char>;
-
-// traits
-
-template <typename T> struct ZtStringTraits : public ZuBaseTraits<T> {
-  using Elem = typename T::Char;
-  enum {
-    IsCString = 1, IsString = 1,
-    IsWString = ZuConversion<Elem, wchar_t>::Same,
-    IsComparable = 1, IsHashable = 1
-  };
-  template <typename U = T>
-  static typename ZuNotConst<U, Elem *>::T data(U &s) { return s.data(); }
-  static const Elem *data(const T &s) { return s.data(); }
-  static unsigned length(const T &s) { return s.length(); }
-};
-template <> struct ZuTraits<ZtString> : public ZtStringTraits<ZtString> { };
-template <> struct ZuTraits<ZtWString> : public ZtStringTraits<ZtWString> { };
 
 // RVO shortcuts
 

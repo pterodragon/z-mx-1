@@ -1482,6 +1482,27 @@ private:
     return ZtPlatform::grow(o * sizeof(T), n * sizeof(T)) / sizeof(T);
   }
 
+public:
+  // traits
+
+  struct Traits : public ZuBaseTraits<ZtArray> {
+    using Elem = T;
+    enum {
+      IsArray = 1, IsPrimitive = 0,
+      IsString =
+	ZuConversion<char, T>::Same ||
+	ZuConversion<wchar_t, T>::Same,
+      IsWString = ZuConversion<wchar_t, T>::Same,
+      IsComparable = 1,
+      IsHashable = 1
+    };
+    template <typename U = ZtArray>
+    static typename ZuNotConst<U, T *>::T data(U &a) { return a.data(); }
+    static const T *data(const ZtArray &a) { return a.data(); }
+    static unsigned length(const ZtArray &a) { return a.length(); }
+  };
+  friend Traits ZuTraitsType(ZtArray *);
+
 private:
   uint32_t		m_size_owned;	// allocated size and owned flag
   uint32_t		m_length_mallocd;// initialized length and malloc'd flag
@@ -1498,28 +1519,6 @@ ZuInline void ZtArray<T, Cmp>::convert_(const S &s, ZtIconv *iconv) {
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-
-// traits
-
-template <typename Elem_, class Cmp>
-struct ZuTraits<ZtArray<Elem_, Cmp> > :
-    public ZuBaseTraits<ZtArray<Elem_, Cmp> > {
-  using Elem = Elem_;
-  using T = ZtArray<Elem, Cmp>;
-  enum {
-    IsArray = 1, IsPrimitive = 0,
-    IsString =
-      ZuConversion<char, Elem>::Same ||
-      ZuConversion<wchar_t, Elem>::Same,
-    IsWString = ZuConversion<wchar_t, Elem>::Same,
-    IsComparable = 1,
-    IsHashable = 1
-  };
-  template <typename U = T>
-  static typename ZuNotConst<U, Elem *>::T data(U &a) { return a.data(); }
-  static const Elem *data(const T &a) { return a.data(); }
-  static unsigned length(const T &a) { return a.length(); }
-};
 
 // generic printing
 template <class Cmp>

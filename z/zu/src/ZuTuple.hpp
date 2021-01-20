@@ -104,7 +104,6 @@ public:
   using U0 = typename ZuDeref<T0>::T;
   template <unsigned I> using Type = ZuTuple_Type0<I, T0>;
   template <unsigned I> using Type_ = ZuTuple_Type0_<I, U0>;
-  using Traits = ZuTraits<T0>;
   enum { N = 1 };
 
   template <typename T>
@@ -252,6 +251,9 @@ public:
     return l(m_p0);
   }
 
+  // traits
+  friend ZuTraits<T0> ZuTraitsType(Tuple *);
+
 private:
   T0		m_p0;
 };
@@ -263,7 +265,6 @@ class Tuple<T0, T1> : public Pair<T0, T1> {
 public:
   template <unsigned I> struct Type : public Base::template Type<I> { };
   template <unsigned I> struct Type_ : public Base::template Type_<I> { };
-  using Traits = ZuTraits<Base>;
   enum { N = 2 };
 
   template <typename T>
@@ -327,6 +328,9 @@ public:
 	  return l(this->p<i>());
 	});
   }
+
+  // traits
+  friend ZuTraits<Base> ZuTraitsType(Tuple *);
 };
 } // namespace Zu_
 
@@ -349,7 +353,6 @@ class Tuple<T0, T1, Args...> : public Pair<T0, Tuple<T1, Args...>> {
 public:
   template <unsigned I> using Type = ZuTuple_Type<I, Left, Right>;
   template <unsigned I> using Type_ = ZuTuple_Type_<I, Left, Right>;
-  using Traits = ZuTraits<Base>;
   enum { N = Right::N + 1 };
 
   template <typename T>
@@ -429,13 +432,11 @@ public:
 	  return l(this->p<i>());
 	});
   }
+
+  // traits
+  friend ZuTraits<Base> ZuTraitsType(Tuple *);
 };
 } // namespace Zu_
-
-template <typename ...Args>
-struct ZuTraits<ZuTuple<Args...>> : public ZuTuple<Args...>::Traits {
-  using T = ZuTuple<Args...>;
-};
 
 template <typename ...Args>
 auto ZuInline ZuFwdTuple(Args &&... args) {
@@ -551,8 +552,7 @@ public: \
     return *this; \
   } \
   ZuPP_Eval(ZuPP_MapIndex(ZuTuple_FieldFn, 0, __VA_ARGS__)) \
-  struct Traits : public ZuTraits<Type##_> { using T = Type; }; \
-  friend Traits ZuTraitsType(const Type *); \
+  friend ZuTraits<Tuple> ZuTraitsType(Type *); \
 }
 
 #endif /* ZuTuple_HPP */

@@ -264,10 +264,6 @@ namespace ZtDateFmt {
   };
 };
 
-template <> struct ZuTraits<ZtDate> : public ZuBaseTraits<ZtDate> {
-  enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
-};
-
 class ZtAPI ZtDate {
   using Native = ZtDate_time_t<sizeof(time_t)>;
 
@@ -1149,6 +1145,13 @@ public:
     m_nsec = 0;
   }
 
+  // traits
+  struct Traits : public ZuBaseTraits<ZtDate> {
+    enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
+  };
+  friend Traits ZuTraitsType(ZtDate *);
+
+private:
   int32_t	m_julian;	// julian day
   int32_t	m_sec;		// time within day, in seconds, from midnight
   int32_t	m_nsec;		// nanoseconds

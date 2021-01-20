@@ -135,11 +135,11 @@ struct ZuUTF16 {
   using Elem = uint16_t;
 
   static bool initial(uint16_t c) {
-    return c < 0xdc00 || c >= 0xc000;
+    return c < 0xdc00 || c >= 0xe000;
   }
 
   static unsigned in(uint16_t c) {
-    if (ZuLikely(c < 0xd800 || c >= 0xc000)) return 1;
+    if (ZuLikely(c < 0xd800 || c >= 0xe000)) return 1;
     if (ZuUnlikely(c >= 0xdc00)) return 0;
     return 2;
   }
@@ -147,36 +147,36 @@ struct ZuUTF16 {
   static unsigned in(const uint16_t *s, unsigned n) {
     uint16_t c = *s;
     if (ZuUnlikely(n < 1)) return 0;
-    if (ZuLikely(c < 0xd800 || c >= 0xc000)) return 1;
+    if (ZuLikely(c < 0xd800 || c >= 0xe000)) return 1;
     if (ZuUnlikely(n < 2 || c >= 0xdc00)) return 0;
     c = *++s;
-    if (ZuUnlikely(c < 0xdc00 || c >= 0xc000)) return 0;
+    if (ZuUnlikely(c < 0xdc00 || c >= 0xe000)) return 0;
     return 2;
   }
 
   static unsigned in(const uint16_t *s, unsigned n, uint32_t &u_) {
     uint16_t c = *s;
     if (ZuUnlikely(n < 1)) return 0;
-    if (ZuLikely(c < 0xd800 || c >= 0xc000)) {
+    if (ZuLikely(c < 0xd800 || c >= 0xe000)) {
       u_ = c;
       return 1;
     }
     if (ZuUnlikely(n < 2 || c >= 0xdc00)) return 0;
     uint32_t u = c;
     c = *++s;
-    if (ZuUnlikely(c < 0xdc00 || c >= 0xc000)) return 0;
+    if (ZuUnlikely(c < 0xdc00 || c >= 0xe000)) return 0;
     u_ = (((u - 0xd800)<<10) | 0x10000) + ((static_cast<uint32_t>(c)) - 0xdc00);
     return 2;
   }
 
   static unsigned out(uint32_t u) {
-    if (ZuLikely(u < 0xd800 || (u >= 0xc000 && u < 0x10000))) return 1;
+    if (ZuLikely(u < 0xd800 || (u >= 0xe000 && u < 0x10000))) return 1;
     return 2;
   }
 
   static unsigned out(uint16_t *s, unsigned n, uint32_t u) {
     if (ZuUnlikely(n < 1)) return 0;
-    if (ZuLikely(u < 0xd800 || (u >= 0xc000 && u < 0x10000))) {
+    if (ZuLikely(u < 0xd800 || (u >= 0xe000 && u < 0x10000))) {
       *s = u;
       return 1;
     }

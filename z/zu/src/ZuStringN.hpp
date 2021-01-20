@@ -415,22 +415,24 @@ public:
     return ZuHash<StringN>::hash(*static_cast<const StringN *>(this));
   }
 
+  // traits
+
+  struct Traits : public ZuBaseTraits<ZuStringN_> {
+    using Elem = Char;
+    enum {
+      IsPOD = 1, IsCString = 1, IsString = 1, IsStream = 1,
+      IsWString = ZuConversion<Char, wchar_t>::Same,
+      IsComparable = 1, IsHashable = 1
+    };
+    template <typename U = ZuStringN_>
+    static typename ZuNotConst<U, Char *>::T data(U &s) { return s.data(); }
+    static const Elem *data(const ZuStringN_ &s) { return s.data(); }
+    static unsigned length(const ZuStringN_ &s) { return s.length(); }
+  };
+  friend Traits ZuTraitsType(ZuStringN_ *);
+
 protected:
   uint16_t	m_length;
-};
-
-template <typename T>
-struct ZuStringN_Traits : public ZuBaseTraits<T> {
-  using Elem = typename T::Char;
-  enum {
-    IsPOD = 1, IsCString = 1, IsString = 1, IsStream = 1,
-    IsWString = ZuConversion<Elem, wchar_t>::Same,
-    IsComparable = 1, IsHashable = 1
-  };
-  template <typename U = T>
-  static typename ZuNotConst<U, Elem *>::T data(U &s) { return s.data(); }
-  static const Elem *data(const T &s) { return s.data(); }
-  static unsigned length(const T &s) { return s.length(); }
 };
 
 template <unsigned N_>
@@ -535,12 +537,12 @@ public:
   template <typename L>
   ZuInline ZuStringN(L l, typename MatchCtorLength<L>::T *_ = 0) : Base(l) { }
 
+  // traits
+  friend typename Base::Traits ZuTraitsType(ZuStringN *);
+
 private:
   char		m_data[N];
 };
-
-template <unsigned N>
-struct ZuTraits<ZuStringN<N> > : public ZuStringN_Traits<ZuStringN<N> > { };
 
 // generic printing
 template <unsigned N>
@@ -647,12 +649,12 @@ public:
   template <typename L>
   ZuInline ZuWStringN(L l, typename MatchCtorLength<L>::T *_ = 0) : Base(l) { }
 
+  // traits
+  friend typename Base::Traits ZuTraitsType(ZuWStringN *);
+
 private:
   wchar_t	m_data[N];
 };
-
-template <unsigned N>
-struct ZuTraits<ZuWStringN<N> > : public ZuStringN_Traits<ZuWStringN<N> > { };
 
 #pragma pack(pop)
 

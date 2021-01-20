@@ -110,10 +110,8 @@ public:
 };
 
 template <typename T> struct ZuTraits;
-template <class T_, template <class> class M_>
-struct ZuTraits<ZuMixin<T_, M_> > : public ZuTraits<T_> {
-  using T = ZuMixin<T_, M_>;
-};
+template <class T, template <class> class M>
+struct ZuTraits<ZuMixin<T, M> > : public ZuTraits<T> { };
 
 template <typename T> struct ZuCmp;
 template <class T_, template <class> class M_>

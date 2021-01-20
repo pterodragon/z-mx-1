@@ -463,7 +463,6 @@ private:
 };
 
 template <typename T_> struct ZuTraits<ZmAtomic<T_> > : public ZuTraits<T_> {
-  using T = ZmAtomic<T_>;
   enum { IsPrimitive = 0 };
 };
 

@@ -71,6 +71,27 @@ const VKeyMatch::Action *VKeyMatch::match(uint8_t c) const
   return nullptr;
 }
 
+static void dumpbyte(char c) {
+  if (c < 0x20 || c >= 0x7f)
+    printf("\\x%02u", (unsigned)c);
+  else
+    putchar(c);
+}
+void VKeyMatch::dump(unsigned level = 0) const
+{
+  for (unsigned i = 0, n = m_bytes.length(); i < n; i++) {
+    for (unsigned j = 0; j < level; j++) putchar(' ');
+    m_actions[i].dump(level, m_bytes[i]);
+  }
+}
+void VKeyMatch::Action::dump(unsigned level, char c) const
+{
+  dumpbyte(c);
+  if (vkey >= 0) printf(" -> vkey: %d", (int)vkey);
+  fputs("\r\n", stdout);
+  if (auto ptr = next.ptr<VKeyMatch>()) ptr->dump(level + 1);
+}
+
 void Terminal::open(ZmScheduler *sched, unsigned thread) // async
 {
   m_sched = sched;
@@ -156,6 +177,10 @@ void Terminal::open_()
   // initialize terminfo
   setupterm(nullptr, m_fd, nullptr);
 
+  // obtain input capabilities
+  m_smkx = tigetstr("smkx");
+  m_rmkx = tigetstr("rmkx");
+ 
   // obtain output capabilities
   m_am = tigetflag("am");
   m_xenl = tigetflag("xenl");
@@ -295,6 +320,10 @@ void Terminal::open_()
   addVKey("kDC5", nullptr, VKey::Delete | VKey::Ctrl);
   addVKey("kDC6", nullptr, VKey::Delete | VKey::Shift | VKey::Ctrl);
 
+  // m_vkeyMatch->dump();
+
+  m_nextVKMatch = m_vkeyMatch.ptr();
+
   // set up I/O multiplexer (epoll)
   if ((m_epollFD = epoll_create(2)) < 0) {
     ZrlError("epoll_create", Zi::IOError, ZeLastError);
@@ -356,6 +385,9 @@ void Terminal::close_()
   m_vkeyMatch = nullptr;
 
   // finalize terminfo
+  m_smkx = nullptr;
+  m_rmkx = nullptr;
+
   m_am = false;
   m_xenl = false;
   m_mir = false;
@@ -451,6 +483,7 @@ void Terminal::start_()
   }
 
   tputs(m_cr);
+  if (m_smkx) tputs(m_smkx);
   write();
   m_pos = 0;
 }
@@ -460,11 +493,13 @@ void Terminal::stop_()
   if (!m_running) return;
   m_running = false;
 
+  if (m_rmkx) tputs(m_rmkx);
+  write();
+
   clear();
 
   m_nextVKInterval = -1;
   m_nextVKMatch = m_vkeyMatch.ptr();
-  m_pending.clear();
 
   if (m_fd < 0) return;
 
@@ -526,6 +561,7 @@ void Terminal::read()
   int32_t key;
   ZuArrayN<uint8_t, 4> utf;
   int utfn = 0;
+  ZtArray<int32_t> pending;
   for (;;) {
     int r = epoll_wait(m_epollFD, &ev, 1, m_nextVKInterval);
     if (r < 0) {
@@ -537,7 +573,7 @@ void Terminal::read()
       goto stop;
     }
     if (!r) { // timeout
-      for (auto key : m_pending) if (m_keyFn(key)) goto stop;
+      for (auto key : pending) if (m_keyFn(key)) goto stop;
       if (utfn && utf) {
 	uint32_t u = 0;
 	if (ZuUTF8::in(utf.data(), utf.length(), u)) {
@@ -549,7 +585,7 @@ void Terminal::read()
       utf.clear();
       utfn = 0;
       m_nextVKMatch = m_vkeyMatch.ptr();
-      m_pending.clear();
+      pending.clear();
       continue;
     }
     if (ZuLikely(ev.data.u64 == 3)) {
@@ -581,16 +617,18 @@ void Terminal::read()
     key = c;
     if (!utfn) {
       if (auto action = m_nextVKMatch->match(key)) {
+	// action->dump(0, c);
 	if (action->next) {
 	  m_nextVKInterval = m_vkeyInterval;
 	  m_nextVKMatch = action->next.ptr<VKeyMatch>();
 	  if (action->vkey >= 0) {
-	    m_pending.length(1);
-	    m_pending[0] = -(action->vkey);
+	    pending.length(1);
+	    pending[0] = -(action->vkey);
 	  } else
-	    m_pending << c;
+	    pending << c;
 	  continue;
 	}
+	pending.clear();
 	key = -(action->vkey);
 	utfn = 1;
       } else {
@@ -619,6 +657,7 @@ void Terminal::addVKey(const char *cap, const char *deflt, int vkey)
   const char *ent;
   if (!(ent = tigetstr(cap))) ent = deflt;
   m_vkeyMatch->add(ent, vkey);
+  if (ent) std::cerr << ZtHexDump(cap, ent, strlen(ent)) << '\n' << std::flush;
 }
 
 // low-level output
@@ -773,8 +812,7 @@ void Terminal::out_(ZuString data)
 void Terminal::clrScroll(unsigned endPos)
 {
   clrScroll_(endPos - m_pos);
-  m_pos -= m_pos % m_width;
-  m_pos += m_width;
+  m_pos = endPos;
 }
 
 // out row from cursor, leaving cursor on same row at pos
@@ -846,7 +884,7 @@ void Terminal::outNoScroll(unsigned endPos, unsigned pos)
 // output from m_pos to endPos within row, clearing any trailing space
 void Terminal::outClr(unsigned endPos)
 {
-  out(endPos);
+  if (m_pos < endPos) out(endPos);
   if (m_pos < endPos) clrOver(endPos);
 }
 
@@ -854,34 +892,24 @@ void Terminal::outClr(unsigned endPos)
 #define Zrl_DEBUG
 #endif
 
-#ifdef Zrl_DEBUG
-#define validatePos(pos) \
-  ZmAssert(m_pos >= pos - (pos % m_width)); \
-  ZmAssert(m_pos < pos - (pos % m_width) + m_width); \
-  ZmAssert(m_pos < pos)
-#else
-#define validatePos(pos)
-#endif
-
 void Terminal::out(unsigned endPos) // endPos may be start of next row
 {
   if (endPos > 0) endPos = m_line.align(endPos - 1);
   unsigned end = m_line.position(endPos).mapping();
   end += m_line.byte(end).len();
-  validatePos(endPos);
   endPos += m_line.position(endPos).len(); // may wrap to start of next row
   unsigned off = m_line.position(m_pos).mapping();
   if (end > off) out_(m_line.substr(off, end - off));
   m_pos = endPos;
 }
 
-// clear with ech, falling back to spaces - endPos is not past end of row
+// clear with ech
 void Terminal::clrErase_(unsigned n)
 {
   tputs(tiparm(m_ech, n));
 }
 
-// clear with ech, falling back to spaces - endPos is not past end of row
+// clear with ech, falling back to spaces
 void Terminal::clr_(unsigned n)
 {
   if (ZuLikely(m_ech))
@@ -893,11 +921,9 @@ void Terminal::clr_(unsigned n)
 // clear with ech, falling back to spaces - endPos is not past end of row
 void Terminal::clr(unsigned endPos)
 {
-  if (ZuLikely(m_ech)) {
-    validatePos(endPos);
-
+  if (ZuLikely(m_ech))
     clrErase_(endPos - m_pos);
-  } else
+  else
     clrOver(endPos);
 }
 
@@ -911,8 +937,6 @@ void Terminal::clrOver_(unsigned n)
 // clear by overwriting spaces
 void Terminal::clrOver(unsigned endPos)
 {
-  validatePos(endPos);
-
   clrOver_(endPos - m_pos);
   m_pos = endPos;
 }
@@ -989,8 +1013,6 @@ void Terminal::mvleft(unsigned pos)
 
 void Terminal::mvright(unsigned pos)
 {
-  validatePos(pos);
-
   if (ZuLikely(m_cuf)) {
     tputs(tiparm(m_cuf, pos - m_pos));
   } else if (ZuLikely(m_hpa)) {
@@ -1005,22 +1027,6 @@ void Terminal::mvright(unsigned pos)
   }
   m_pos = pos;
 }
-
-// 0___ 012_ 0123 0123 0123  I0__ I012 I012 I012  012I 012I 012I
-// ____ ____ ____ 4___ 4567  ____ ____ 34__ 3456  3___ 34__ 3456
-// ____ ____ ____ ____ 8___  ____ ____ ____ 78__  ____ ____ 78__
-
-// <>__ 0<>_ 01<> 01<> 01<>  I<>_ I0<> I01_ I01_  0<>I 01I_ 01I_
-// ____ ____ ____ 3___ 3<>_  ____ ____ <>__ <>3_  ____ <>3_ <>3_
-// ____ ____ ____ ____ 5___  ____ ____ ____ <>5_  ____ ____ <>5_
-
-// 0___ 012_ 0123 0123 0123  []0_ []01 []01 []01  012_ 012_ 012_
-// ____ ____ ____ 4___ 4567  ____ 2___ 234_ 2345  []__ []3_ []34
-// ____ ____ ____ ____ 8___  ____ ____ ____ 678_  ____ ____ 5678
-
-// <>__ 0<>_ 01<> 01<> 01<>  []<> []0_ []01 []01  0<>_ 01[] 01[]
-// ____ ____ ____ 3___ 3<>_  ____ <>__ <>__ <>3_  []__ <>__ <>3_
-// ____ ____ ____ ____ 5___  ____ ____ ____ <>5_  ____ ____ <>5_
 
 bool Terminal::ins_(unsigned n, bool mir)
 {

@@ -33,14 +33,14 @@ void Line::clear()
 // byte offset -> display position
 Line::Index Line::byte(unsigned off) const
 {
-  if (off >= m_bytes.length()) return Index{m_positions.length(), 0, 0};
+  if (off >= m_bytes.length()) return Index{m_positions.length(), 1, 0};
   return m_bytes[off];
 }
 
 // display position -> byte offset
 Line::Index Line::position(unsigned pos) const
 {
-  if (pos >= m_positions.length()) return Index{m_bytes.length(), 0, 0};
+  if (pos >= m_positions.length()) return Index{m_bytes.length(), 1, 0};
   return m_positions[pos];
 }
 

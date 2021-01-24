@@ -323,7 +323,7 @@ bool Editor::cmdUp(Cmd cmd, int32_t vkey)
   auto posIndex = line.position(pos);
   unsigned end = posIndex.mapping();
   if (pos < m_context.startPos + width * arg) {
-    pos = (pos % width);
+    pos = (m_context.startPos - (m_context.startPos % width)) + (pos % width);
     if (pos < m_context.startPos) pos += width;
   } else
     pos -= width * arg;
@@ -349,7 +349,12 @@ bool Editor::cmdDown(Cmd cmd, int32_t vkey)
   unsigned begin = posIndex.mapping();
   if (pos + width * arg > finPos) {
     pos = (finPos - (finPos % width)) + (pos % width);
-    if (pos > finPos) pos -= width;
+    if (pos > finPos) {
+      if (pos > width)
+	pos -= width;
+      else
+	pos = finPos;
+    }
   } else
     pos += width * arg;
   m_context.horizPos = pos;

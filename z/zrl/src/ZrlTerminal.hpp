@@ -90,6 +90,7 @@ namespace VKey {
   };
 
   enum {
+    Mask	= 0x00ff,
     Shift	= 0x0100,
     Ctrl	= 0x0200,	// implies word with left/right
     Alt		= 0x0400	// ''
@@ -101,6 +102,8 @@ public:
   struct Action {
     ZuRef<ZuObject>	next;			// next VKeyMatch
     int32_t		vkey = -1;		// virtual key
+
+    void dump(unsigned, char) const;
   };
 
   bool add(const char *s, int vkey) {
@@ -111,6 +114,8 @@ public:
   bool add(uint8_t c, int vkey);
 
   const Action *match(uint8_t c) const;
+
+  void dump(unsigned) const;
 
 private:
   ZtArray<uint8_t>	m_bytes;
@@ -150,10 +155,10 @@ public:
   unsigned height() const { return m_height; } 
   unsigned pos() const { return m_pos; }
 
-  void mv(unsigned pos);		// move to position
-  void over(ZuString);	// overwrite string
-  void ins(ZuString);	// insert string
-  void del(unsigned n);			// delete n characters
+  void mv(unsigned pos);	// move to position
+  void over(ZuString);		// overwrite string
+  void ins(ZuString);		// insert string
+  void del(unsigned n);		// delete n characters
 
 private:
   void open_();
@@ -292,6 +297,11 @@ private:
   Line			m_line;			// current line
   unsigned		m_pos = 0;		// cursor position (*)
   ZtArray<uint8_t>	m_out;			// output buffer
+
+  // input capabilities
+
+  const char		*m_smkx = nullptr;	// enter keyboard app mode
+  const char		*m_rmkx = nullptr;	// leave keyboard app mode
 
   // output capabilities
 

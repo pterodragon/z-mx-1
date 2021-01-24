@@ -71,11 +71,12 @@ const VKeyMatch::Action *VKeyMatch::match(uint8_t c) const
   return nullptr;
 }
 
-static void dumpbyte(char c) {
+#if 0
+static void dumpbyte(uint8_t c) {
   if (c < 0x20 || c >= 0x7f)
     printf("\\x%02u", (unsigned)c);
   else
-    putchar(c);
+    putchar((char)c);
 }
 void VKeyMatch::dump(unsigned level = 0) const
 {
@@ -84,13 +85,14 @@ void VKeyMatch::dump(unsigned level = 0) const
     m_actions[i].dump(level, m_bytes[i]);
   }
 }
-void VKeyMatch::Action::dump(unsigned level, char c) const
+void VKeyMatch::Action::dump(unsigned level, uint8_t c) const
 {
   dumpbyte(c);
   if (vkey >= 0) printf(" -> vkey: %d", (int)vkey);
   fputs("\r\n", stdout);
   if (auto ptr = next.ptr<VKeyMatch>()) ptr->dump(level + 1);
 }
+#endif
 
 void Terminal::open(ZmScheduler *sched, unsigned thread) // async
 {
@@ -241,16 +243,25 @@ void Terminal::open_()
   // initialize keystroke matcher
   m_vkeyMatch = new VKeyMatch{};
 
-  //		| Normal | Shift |  Alt  | Ctrl  | Ctrl + Shift
-  // -----------+--------+-------+-------+-------+-------------
-  //  Up	| kcuu1  | kUP   | kUP3  | kUP5  | kUP6
-  //  Down	| kcud1  | kDN   | kDN3  | kDN5  | kDN6
-  //  Left	| kcub1  | kLFT  | kLFT3 | kLFT5 | kLFT6
-  //  Right	| kcuf1  | kRIT  | kRIT3 | kRIT5 | kRIT6
-  //  Home	| khome  | kHOM  | kHOM3 | kHOM5 | kHOM6
-  //  End	| kend   | kEND  | kEND3 | kEND5 | kEND6
-  //  Insert	| kich1  | kIC   | kIC3  | kIC5  | kIC6
-  //  Delete	| kdch1  | KDC   | kDC3  | kDC5  | kDC6
+  //		| Normal | Shift | Ctrl/Alt/combinations (*)
+  // -----------+--------+-------+--------------------------
+  //  Up	| kcuu1  | kUP   | kUP3-8
+  //  Down	| kcud1  | kDN   | kDN3-8
+  //  Left	| kcub1  | kLFT  | kLFT3-8
+  //  Right	| kcuf1  | kRIT  | kRIT3-8
+  //  Home	| khome  | kHOM  | kHOM3-8
+  //  End	| kend   | kEND  | kEND3-8
+  //  Insert	| kich1  | kIC   | kIC3-8
+  //  Delete	| kdch1  | KDC   | kDC3-8
+  //
+  //  (*) modifiers
+  //  -------------
+  //  3 - Alt
+  //  4 - Shift + Alt
+  //  5 - Ctrl
+  //  6 - Shift + Ctrl
+  //  7 - Ctrl + Alt
+  //  8 - Shift + Ctrl + Alt
 
   // enter key
   addVKey("kent", "\r", VKey::Enter);
@@ -275,50 +286,74 @@ void Terminal::open_()
   addVKey("kcuu1", nullptr, VKey::Up);
   addVKey("kUP", nullptr, VKey::Up | VKey::Shift);
   addVKey("kUP3", nullptr, VKey::Up | VKey::Alt);
+  addVKey("kUP4", nullptr, VKey::Up | VKey::Shift | VKey::Alt);
   addVKey("kUP5", nullptr, VKey::Up | VKey::Ctrl);
   addVKey("kUP6", nullptr, VKey::Up | VKey::Shift | VKey::Ctrl);
+  addVKey("kUP7", nullptr, VKey::Up | VKey::Ctrl | VKey::Alt);
+  addVKey("kUP8", nullptr, VKey::Up | VKey::Shift | VKey::Ctrl | VKey::Alt);
 
   addVKey("kcud1", nullptr, VKey::Down);
   addVKey("kDN", nullptr, VKey::Down | VKey::Shift);
   addVKey("kDN3", nullptr, VKey::Down | VKey::Alt);
+  addVKey("kDN4", nullptr, VKey::Down | VKey::Shift | VKey::Alt);
   addVKey("kDN5", nullptr, VKey::Down | VKey::Ctrl);
   addVKey("kDN6", nullptr, VKey::Down | VKey::Shift | VKey::Ctrl);
+  addVKey("kDN7", nullptr, VKey::Down | VKey::Ctrl | VKey::Alt);
+  addVKey("kDN8", nullptr, VKey::Down | VKey::Shift | VKey::Ctrl | VKey::Alt);
 
   addVKey("kcub1", nullptr, VKey::Left);
   addVKey("kLFT", nullptr, VKey::Left | VKey::Shift);
   addVKey("kLFT3", nullptr, VKey::Left | VKey::Alt);
+  addVKey("kLFT4", nullptr, VKey::Left | VKey::Shift | VKey::Alt);
   addVKey("kLFT5", nullptr, VKey::Left | VKey::Ctrl);
   addVKey("kLFT6", nullptr, VKey::Left | VKey::Shift | VKey::Ctrl);
+  addVKey("kLFT7", nullptr, VKey::Left | VKey::Ctrl | VKey::Alt);
+  addVKey("kLFT8", nullptr, VKey::Left | VKey::Shift | VKey::Ctrl | VKey::Alt);
 
   addVKey("kcuf1", nullptr, VKey::Right);
   addVKey("kRIT", nullptr, VKey::Right | VKey::Shift);
   addVKey("kRIT3", nullptr, VKey::Right | VKey::Alt);
+  addVKey("kRIT4", nullptr, VKey::Right | VKey::Shift | VKey::Alt);
   addVKey("kRIT5", nullptr, VKey::Right | VKey::Ctrl);
   addVKey("kRIT6", nullptr, VKey::Right | VKey::Shift | VKey::Ctrl);
+  addVKey("kRIT7", nullptr, VKey::Right | VKey::Ctrl | VKey::Alt);
+  addVKey("kRIT8", nullptr, VKey::Right | VKey::Shift | VKey::Ctrl | VKey::Alt);
 
   addVKey("khome", nullptr, VKey::Home);
   addVKey("kHOM", nullptr, VKey::Home | VKey::Shift);
   addVKey("kHOM3", nullptr, VKey::Home | VKey::Alt);
+  addVKey("kHOM4", nullptr, VKey::Home | VKey::Shift | VKey::Alt);
   addVKey("kHOM5", nullptr, VKey::Home | VKey::Ctrl);
   addVKey("kHOM6", nullptr, VKey::Home | VKey::Shift | VKey::Ctrl);
+  addVKey("kHOM7", nullptr, VKey::Home | VKey::Ctrl | VKey::Alt);
+  addVKey("kHOM8", nullptr, VKey::Home | VKey::Shift | VKey::Ctrl | VKey::Alt);
 
   addVKey("kend", nullptr, VKey::End);
   addVKey("kEND", nullptr, VKey::End | VKey::Shift);
   addVKey("kEND3", nullptr, VKey::End | VKey::Alt);
+  addVKey("kEND4", nullptr, VKey::End | VKey::Shift | VKey::Alt);
   addVKey("kEND5", nullptr, VKey::End | VKey::Ctrl);
   addVKey("kEND6", nullptr, VKey::End | VKey::Shift | VKey::Ctrl);
+  addVKey("kEND7", nullptr, VKey::End | VKey::Ctrl | VKey::Alt);
+  addVKey("kEND8", nullptr, VKey::End | VKey::Shift | VKey::Ctrl | VKey::Alt);
 
   addVKey("kich1", nullptr, VKey::Insert);
   addVKey("kIC", nullptr, VKey::Insert | VKey::Shift);
   addVKey("kIC3", nullptr, VKey::Insert | VKey::Alt);
+  addVKey("kIC4", nullptr, VKey::Insert | VKey::Shift | VKey::Alt);
   addVKey("kIC5", nullptr, VKey::Insert | VKey::Ctrl);
   addVKey("kIC6", nullptr, VKey::Insert | VKey::Shift | VKey::Ctrl);
+  addVKey("kIC7", nullptr, VKey::Insert | VKey::Ctrl | VKey::Alt);
+  addVKey("kIC8", nullptr, VKey::Insert | VKey::Shift | VKey::Ctrl | VKey::Alt);
 
   addVKey("kdch1", nullptr, VKey::Delete);
   addVKey("kDC", nullptr, VKey::Delete | VKey::Shift);
   addVKey("kDC3", nullptr, VKey::Delete | VKey::Alt);
+  addVKey("kDC4", nullptr, VKey::Delete | VKey::Shift | VKey::Alt);
   addVKey("kDC5", nullptr, VKey::Delete | VKey::Ctrl);
   addVKey("kDC6", nullptr, VKey::Delete | VKey::Shift | VKey::Ctrl);
+  addVKey("kDC7", nullptr, VKey::Delete | VKey::Ctrl | VKey::Alt);
+  addVKey("kDC8", nullptr, VKey::Delete | VKey::Shift | VKey::Ctrl | VKey::Alt);
 
   // m_vkeyMatch->dump();
 
@@ -657,7 +692,7 @@ void Terminal::addVKey(const char *cap, const char *deflt, int vkey)
   const char *ent;
   if (!(ent = tigetstr(cap))) ent = deflt;
   m_vkeyMatch->add(ent, vkey);
-  if (ent) std::cerr << ZtHexDump(cap, ent, strlen(ent)) << '\n' << std::flush;
+  // if (ent) std::cerr << ZtHexDump(cap, ent, strlen(ent)) << '\n' << std::flush;
 }
 
 // low-level output

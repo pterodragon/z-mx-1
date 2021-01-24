@@ -103,7 +103,7 @@ public:
     ZuRef<ZuObject>	next;			// next VKeyMatch
     int32_t		vkey = -1;		// virtual key
 
-    void dump(unsigned, char) const;
+    // void dump(unsigned level, uint8_t byte) const;
   };
 
   bool add(const char *s, int vkey) {
@@ -115,7 +115,7 @@ public:
 
   const Action *match(uint8_t c) const;
 
-  void dump(unsigned) const;
+  // void dump(unsigned level) const;
 
 private:
   ZtArray<uint8_t>	m_bytes;
@@ -289,7 +289,6 @@ private:
   KeyFn			m_keyFn;
   int			m_nextVKInterval = -1;
   const VKeyMatch	*m_nextVKMatch = nullptr;
-  ZtArray<int32_t>	m_pending;
 
   // output state (cursor position is relative to beginning of current line)
 

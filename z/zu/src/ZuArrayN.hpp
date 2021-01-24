@@ -137,20 +137,19 @@ protected:
 
   // from printable type (if this is a char array)
   template <typename U, typename V = T> struct IsPDelegate {
-    enum { OK = ZuConversion<char, V>::Same && ZuPrint<U>::Delegate };
+    enum { OK = ZuEquivChar<char, V>::Same && ZuPrint<U>::Delegate };
   };
   template <typename U, typename R = void>
   struct MatchPDelegate : public ZuIfT<IsPDelegate<U>::OK, R> { };
   template <typename U, typename V = T> struct IsPBuffer {
-    enum { OK = ZuConversion<char, V>::Same && ZuPrint<U>::Buffer };
+    enum { OK = ZuEquivChar<char, V>::Same && ZuPrint<U>::Buffer };
   };
   template <typename U, typename R = void>
   struct MatchPBuffer : public ZuIfT<IsPBuffer<U>::OK, R> { };
 
   // from real primitive types other than chars (if this is a char string)
   template <typename U, typename V = T> struct IsReal {
-    enum { OK = ZuConversion<char, V>::Same &&
-      !ZuConversion<U, V>::Same &&
+    enum { OK = ZuEquivChar<char, V>::Same && !ZuEquivChar<U, V>::Same &&
       ZuTraits<U>::IsReal && ZuTraits<U>::IsPrimitive &&
       !ZuTraits<U>::IsArray };
   };
@@ -242,7 +241,7 @@ protected:
     if (length > N)
       m_length = 0;
     else
-      m_length = ZuPrint<P>::print(data(), length, p);
+      m_length = ZuPrint<P>::print(reinterpret_cast<char *>(data()), length, p);
   }
 
   template <typename V> ZuInline typename MatchReal<V>::T init(V v) {
@@ -312,7 +311,8 @@ protected:
   typename MatchPBuffer<P>::T append_(const P &p) {
     unsigned length = ZuPrint<P>::length(p);
     if (m_length + length > N) return;
-    m_length += ZuPrint<P>::print(data() + m_length, length, p);
+    m_length += ZuPrint<P>::print(
+	reinterpret_cast<char *>(data()) + m_length, length, p);
   }
 
   template <typename V> ZuInline typename MatchReal<V>::T append_(V v) {

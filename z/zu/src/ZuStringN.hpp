@@ -88,7 +88,7 @@ private:
 
   // from individual char
   template <typename U, typename V = Char> struct IsChar {
-    enum { OK = ZuConversion<U, V>::Same };
+    enum { OK = ZuEquivChar<U, V>::Same };
   };
   template <typename U, typename R = void>
   struct MatchChar : public ZuIfT<IsChar<U>::OK, R> { };
@@ -111,20 +111,19 @@ private:
 
   // from printable type (if this is a char array)
   template <typename U, typename V = Char> struct IsPDelegate {
-    enum { OK = ZuConversion<char, V>::Same && ZuPrint<U>::Delegate };
+    enum { OK = ZuEquivChar<char, V>::Same && ZuPrint<U>::Delegate };
   };
   template <typename U, typename R = void>
   struct MatchPDelegate : public ZuIfT<IsPDelegate<U>::OK, R> { };
   template <typename U, typename V = Char> struct IsPBuffer {
-    enum { OK = ZuConversion<char, V>::Same && ZuPrint<U>::Buffer };
+    enum { OK = ZuEquivChar<char, V>::Same && ZuPrint<U>::Buffer };
   };
   template <typename U, typename R = void>
   struct MatchPBuffer : public ZuIfT<IsPBuffer<U>::OK, R> { };
 
   // from real primitive types other than chars (if this is a char string)
   template <typename U, typename V = Char> struct IsReal {
-    enum { OK = ZuConversion<char, V>::Same &&
-      !ZuConversion<U, V>::Same &&
+    enum { OK = ZuEquivChar<char, V>::Same && !ZuEquivChar<U, V>::Same &&
       ZuTraits<U>::IsReal && ZuTraits<U>::IsPrimitive &&
       !ZuTraits<U>::IsArray };
   };

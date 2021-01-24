@@ -2052,7 +2052,8 @@ private:
 	return executed(1, file, out);
       }
       auto perm = permUpdAck->perm();
-      out << "added " << perm->id() << ' ' << str(perm->name()) << '\n';
+      out << "added " << ZuBoxed(perm->id()) << ' ' <<
+	str(perm->name()) << '\n';
       return executed(0, file, out);
     });
     return 0;

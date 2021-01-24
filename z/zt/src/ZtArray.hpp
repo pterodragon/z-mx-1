@@ -72,10 +72,6 @@ public:
   using T = T_;
   using Cmp = Cmp_;
   using Ops = ZuArrayFn<T, Cmp>;
-  enum {
-    IsString = ZuConversion<T, char>::Same || ZuConversion<T, wchar_t>::Same,
-    IsWString = ZuConversion<T, wchar_t>::Same
-  };
 
   enum Copy_ { Copy };
   enum Move_ { Move };
@@ -111,13 +107,13 @@ private:
   struct MatchAnyString : public ZuIfT<IsAnyString<U>::OK, R> { };
 
   // from some other string with same char (other than a string literal)
-  template <typename U, typename V = Char> struct IsString_ {
+  template <typename U, typename V = Char> struct IsString {
     enum { OK =
       !IsStrLiteral<U>::OK &&
       IsAnyString<U>::OK };
   };
   template <typename U, typename R = void>
-  struct MatchString : public ZuIfT<IsString_<U>::OK, R> { };
+  struct MatchString : public ZuIfT<IsString<U>::OK, R> { };
 
   // from another array type with convertible element type (not a string)
   template <typename U, typename V = T> struct IsArray {
@@ -173,28 +169,25 @@ private:
 
   // from printable type (if this is a char array)
   template <typename U, typename V = Char> struct IsPrint {
-    enum { OK = ZuConversion<char, V>::Same &&
+    enum { OK = ZuEquivChar<char, V>::Same &&
       ZuPrint<U>::OK && !ZuPrint<U>::String };
   };
   template <typename U, typename R = void>
   struct MatchPrint : public ZuIfT<IsPrint<U>::OK, R> { };
   template <typename U, typename V = Char> struct IsPDelegate {
-    enum { OK = ZuConversion<char, V>::Same &&
-      ZuPrint<U>::Delegate };
+    enum { OK = ZuEquivChar<char, V>::Same && ZuPrint<U>::Delegate };
   };
   template <typename U, typename R = void>
   struct MatchPDelegate : public ZuIfT<IsPDelegate<U>::OK, R> { };
   template <typename U, typename V = Char> struct IsPBuffer {
-    enum { OK = ZuConversion<char, V>::Same &&
-      ZuPrint<U>::Buffer };
+    enum { OK = ZuEquivChar<char, V>::Same && ZuPrint<U>::Buffer };
   };
   template <typename U, typename R = void>
   struct MatchPBuffer : public ZuIfT<IsPBuffer<U>::OK, R> { };
 
   // from real primitive types other than chars (if this is a char array)
   template <typename U, typename V = T> struct IsReal {
-    enum { OK = ZuConversion<char, V>::Same &&
-      !ZuConversion<U, V>::Same &&
+    enum { OK = ZuEquivChar<char, V>::Same && !ZuEquivChar<U, V>::Same &&
       ZuTraits<U>::IsReal && ZuTraits<U>::IsPrimitive &&
       !ZuTraits<U>::IsArray };
   };
@@ -205,7 +198,7 @@ private:
   template <typename U, typename V = T> struct IsElem {
     enum { OK = ZuConversion<U, V>::Same ||
       (!IsZtArray<U>::OK &&
-       !IsString_<U>::OK &&
+       !IsString<U>::OK &&
        !IsArray<U>::OK &&
        !IsChar2<U>::OK &&
        !IsPrint<U>::OK &&
@@ -239,7 +232,7 @@ private:
   template <typename U, typename V = T, typename W = Char2> struct IsCtorElem {
     enum { OK =
       !IsZtArray<U>::OK &&
-      !IsString_<U>::OK &&
+      !IsString<U>::OK &&
       !IsArray<U>::OK &&
       !IsChar2<U>::OK &&
       !IsPrint<U>::OK &&
@@ -395,7 +388,7 @@ private:
     unsigned o = ZuPrint<P>::length(p);
     if (!o) { null_(); return; }
     alloc_(o, 0);
-    length_(ZuPrint<P>::print(m_data, o, p));
+    length_(ZuPrint<P>::print(reinterpret_cast<char *>(m_data), o, p));
   }
 
   template <typename V> ZuInline typename MatchCtorSize<V>::T ctor(V size) {
@@ -494,7 +487,7 @@ private:
     unsigned o = ZuPrint<P>::length(p);
     if (!o) { null(); return; }
     if (!owned() || size() < o) size(o);
-    length_(ZuPrint<P>::print(m_data, o, p));
+    length_(ZuPrint<P>::print(reinterpret_cast<char *>(m_data), o, p));
   }
 
   template <typename V> ZuInline typename MatchReal<V>::T assign(V v) {
@@ -1088,7 +1081,7 @@ private:
     unsigned n = length();
     unsigned o = ZuPrint<P>::length(p);
     if (!owned() || size() < n + o) size(n + o);
-    length(n + ZuPrint<P>::print(m_data + n, o, p));
+    length(n + ZuPrint<P>::print(reinterpret_cast<char *>(m_data) + n, o, p));
   }
 
   template <typename V> ZuInline typename MatchReal<V>::T append_(V v) {

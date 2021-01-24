@@ -33,8 +33,8 @@
 #ifndef _WIN32
 
 // including ncurses.h corrupts the preprocessor and compiler namespace,
-// so just import what's needed (and hope that none of the below is
-// a macro, which isn't the case as of 10/11/2020, and likely to never change)
+// so here we just import what's needed and hope that none of it is
+// a macro (that isn't the case as of 10/11/2020, and likely won't ever be)
 
 extern "C" {
   struct term;

@@ -77,8 +77,8 @@ public:
 
   void clear();
 
-  const ZtArray<uint8_t> &data() const { return m_data; }
   ZtArray<uint8_t> &data() { return m_data; }
+  const ZtArray<uint8_t> &data() const { return m_data; }
 
   // length in bytes
   unsigned length() const { return m_bytes.length(); }
@@ -143,7 +143,8 @@ private:
   bool rev(unsigned &off, L l) const {
     do {
       if (ZuUnlikely(!off)) return false;
-      off -= m_bytes[--off].off();
+      --off;
+      off -= m_bytes[off].off();
     } while (!l(m_data[off]));
     return true;
   }

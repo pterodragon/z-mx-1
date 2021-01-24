@@ -10,6 +10,7 @@ LDADD = $(top_builddir)/zrl/src/libZrl.la \
 	$(top_builddir)/ze/src/libZe.la $(top_builddir)/zt/src/libZt.la \
 	$(top_builddir)/zm/src/libZm.la $(top_builddir)/zu/src/libZu.la \
 	@Z_TERM_LIBS@ @Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
-noinst_PROGRAMS = RlTest ZrlLineTest
+noinst_PROGRAMS = RlTest ZrlLineTest ZrlTerminfoTest
 RlTest_SOURCES = RlTest.cpp
 ZrlLineTest_SOURCES = ZrlLineTest.cpp
+ZrlTerminfoTest_SOURCES = ZrlTerminfoTest.cpp

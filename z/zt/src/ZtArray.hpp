@@ -856,10 +856,10 @@ public:
 // buffer access
 
   ZuInline auto buf() {
-    return ZuArray<T>{data(), size()};
+    return ZuArray{data(), size()};
   }
   ZuInline auto cbuf() const {
-    return ZuArray<const T>{data(), length()};
+    return ZuArray{data(), length()};
   }
 
 // comparison

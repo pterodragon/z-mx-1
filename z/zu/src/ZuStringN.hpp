@@ -58,14 +58,12 @@
 
 #pragma pack(push, 1)
 
-struct ZuStringN__ { }; // type tag
-
-template <typename T_> struct ZuStringN_Char2 { using T = ZuNull; };
+template <typename T_> struct ZuStringN_Char2;
 template <> struct ZuStringN_Char2<char> { using T = wchar_t; };
 template <> struct ZuStringN_Char2<wchar_t> { using T = char; };
 
 template <typename Char_, unsigned N, typename StringN>
-class ZuStringN_ : public ZuStringN__ {
+class ZuStringN_ {
   ZuConversionFriend;
 
   ZuStringN_(const ZuStringN_ &);

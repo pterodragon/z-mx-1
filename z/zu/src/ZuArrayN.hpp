@@ -458,10 +458,10 @@ public:
 // buffer access
 
   ZuInline auto buf() {
-    return ZuArray<T>{data(), N};
+    return ZuArray{data(), N};
   }
   ZuInline auto cbuf() const {
-    return ZuArray<const T>{data(), m_length};
+    return ZuArray{data(), m_length};
   }
 
 // comparison

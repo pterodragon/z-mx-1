@@ -19,11 +19,14 @@
 
 // command line interface
 
+#include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
+#include <fcntl.h>
 
-#include <sys/epoll.h>
+#include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/epoll.h>
 #include <linux/unistd.h>
 
 #include <zlib/ZrlTerminal.hpp>
@@ -155,8 +158,6 @@ void Terminal::open_()
 
   // obtain output capabilities
   m_am = tigetflag("am");
-  m_sam = tigetflag("sam");
-  m_bw = tigetflag("bw");
   m_xenl = tigetflag("xenl");
   m_mir = tigetflag("mir");
   m_hz = tigetflag("hz");
@@ -356,8 +357,6 @@ void Terminal::close_()
 
   // finalize terminfo
   m_am = false;
-  m_sam = false;
-  m_bw = false;
   m_xenl = false;
   m_mir = false;
   m_hz = false;
@@ -728,9 +727,7 @@ void Terminal::clrScroll_(unsigned n)
     }
     clrOver_(n);
   }
-  if (m_sam)
-    tputs(m_ind);
-  else if (!m_am || m_xenl)
+  if (!m_am || m_xenl)
     crnl_();
 }
 
@@ -808,11 +805,6 @@ void Terminal::outNoScroll(unsigned endPos, unsigned pos)
       clrOver(endPos);		// clear to EOL with spaces
     }
     // right-most character on row was output, MUST move cursor, NO cub
-    if (m_sam) {
-      m_pos = endPos - m_width;
-      if (pos > m_pos) mvright(pos);
-      return;
-    }
     if (m_hpa) {
       tputs(tiparm(m_hpa, pos - (pos % m_width)));
       m_pos = pos;

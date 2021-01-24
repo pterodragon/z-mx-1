@@ -81,16 +81,16 @@ template <> ZuInline const wchar_t *ZtString_Null() {
 #pragma warning(disable:4800 4348)
 #endif
 
-struct ZtString___ { };
-template <typename Char> struct ZtString__ : public ZtString___ { };
+template <typename T_> struct ZtString_Char2;
+template <> struct ZtString_Char2<char> { using T = wchar_t; };
+template <> struct ZtString_Char2<wchar_t> { using T = char; };
 
-template <typename Char, typename Char2> class ZtString_;
-
-template <typename Char_, typename Char2_>
+template <typename> struct ZtString__ { };
+template <typename Char_>
 class ZtString_ : public ZtString__<Char_> {
 public:
   using Char = Char_;
-  using Char2 = Char2_;
+  using Char2 = typename ZtString_Char2<Char>::T;
   enum { IsWString = ZuConversion<Char, wchar_t>::Same };
   enum { BuiltinSize = (int)ZtString_BuiltinSize / sizeof(Char) };
 
@@ -885,54 +885,54 @@ public:
 
 // +, += operators
   template <typename S>
-  ZtString_<Char, Char2> operator +(const S &s) const { return add(s); }
+  ZtString_<Char> operator +(const S &s) const { return add(s); }
 
 private:
   template <typename S>
-  ZuInline typename MatchZtString<S, ZtString_<Char, Char2> >::T
+  ZuInline typename MatchZtString<S, ZtString_<Char> >::T
     add(const S &s) const { return add(s.data_(), s.length()); }
   template <typename S>
-  ZuInline typename MatchAnyCString<S, ZtString_<Char, Char2> >::T
+  ZuInline typename MatchAnyCString<S, ZtString_<Char> >::T
   add(S &&s_) const {
     ZuArray<const Char> s(ZuFwd<S>(s_));
     return add(s.data(), s.length());
   }
   template <typename S>
-  ZuInline typename MatchOtherString<S, ZtString_<Char, Char2> >::T
+  ZuInline typename MatchOtherString<S, ZtString_<Char> >::T
   add(S &&s_) const {
     ZuArray<const Char> s(ZuFwd<S>(s_));
     return add(s.data(), s.length());
   }
   template <typename C>
-  ZuInline typename MatchChar<C, ZtString_<Char, Char2> >::T
+  ZuInline typename MatchChar<C, ZtString_<Char> >::T
   add(C c) const {
     return add(&c, 1);
   }
 
   template <typename S>
-  ZuInline typename MatchChar2String<S, ZtString_<Char, Char2> >::T
+  ZuInline typename MatchChar2String<S, ZtString_<Char> >::T
     add(const S &s) const { return add(ZtString_(s)); }
   template <typename C>
-  ZuInline typename MatchChar2<C, ZtString_<Char, Char2> >::T
+  ZuInline typename MatchChar2<C, ZtString_<Char> >::T
     add(C c) const { return add(ZtString_(c)); }
 
   template <typename P>
-  ZuInline typename MatchPDelegate<P, ZtString_<Char, Char2> >::T
+  ZuInline typename MatchPDelegate<P, ZtString_<Char> >::T
       add(const P &p) const { return add(ZtString_(p)); }
   template <typename P>
-  ZuInline typename MatchPBuffer<P, ZtString_<Char, Char2> >::T
+  ZuInline typename MatchPBuffer<P, ZtString_<Char> >::T
       add(const P &p) const { return add(ZtString_(p)); }
 
-  ZtString_<Char, Char2> add(
+  ZtString_<Char> add(
       const Char *data, unsigned length) const {
     unsigned n = this->length();
     unsigned o = n + length;
-    if (ZuUnlikely(!o)) return ZtString_<Char, Char2>();
+    if (ZuUnlikely(!o)) return ZtString_<Char>();
     Char *newData = (Char *)::malloc((o + 1) * sizeof(Char));
     if (n) memcpy(newData, data_(), n * sizeof(Char));
     if (length) memcpy(newData + n, data, length * sizeof(Char));
     newData[o] = 0;
-    return ZtString_<Char, Char2>(newData, o, o + 1);
+    return ZtString_<Char>(newData, o, o + 1);
   }
 
 public:
@@ -1339,21 +1339,21 @@ private:
   uintptr_t		m_data[ZtString_BuiltinSize / sizeof(uintptr_t)];
 };
 
-template <typename Char, typename Char2>
+template <typename Char>
 template <typename S>
-ZuInline void ZtString_<Char, Char2>::convert_(const S &s, ZtIconv *iconv)
+ZuInline void ZtString_<Char>::convert_(const S &s, ZtIconv *iconv)
 {
   null_();
   iconv->convert(*this, s);
 }
 
 #ifdef _MSC_VER
-ZtExplicit template class ZtAPI ZtString_<char, wchar_t>;
-ZtExplicit template class ZtAPI ZtString_<wchar_t, char>;
+ZtExplicit template class ZtAPI ZtString_<char>;
+ZtExplicit template class ZtAPI ZtString_<wchar_t>;
 #endif
 
-using ZtString = ZtString_<char, wchar_t>;
-using ZtWString = ZtString_<wchar_t, char>;
+using ZtString = ZtString_<char>;
+using ZtWString = ZtString_<wchar_t>;
 
 // RVO shortcuts
 

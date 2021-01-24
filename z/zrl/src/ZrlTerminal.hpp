@@ -296,8 +296,6 @@ private:
   // output capabilities
 
   bool			m_am = false;		// auto-margin (crnl at right)
-  bool			m_sam = false;		// semi-auto-margin (cr '')
-  bool			m_bw = false;		// back-wrap (reverse am/sam)
   bool			m_xenl = false;		// auto-margin shenanigans
   bool			m_mir = false;		// insert mode motion ok
   bool			m_hz = false;		// cannot display tilde

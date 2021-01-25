@@ -103,7 +103,7 @@ protected:
       *addr = ptr = (uintptr_t)ZmGlobal::add(
 	  typeid(T), ZmCleanup<typename T::T>::Level, &Ctor<T>::_);
     }
-    return (T *)(ZmGlobal *)ptr;
+    return static_cast<T *>(reinterpret_cast<ZmGlobal *>(ptr));
   }
 };
 

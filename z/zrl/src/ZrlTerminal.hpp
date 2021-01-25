@@ -58,7 +58,7 @@ namespace Zrl {
 namespace VKey {
   ZtEnumerate(
     // terminal driver events and control keys (from termios)
-    Continue,		// continue reading
+    Default,		// default key (for use with key mappings)
 
     Error,		// I/O error - causes stop
     EndOfFile,		// ^D EOF - causes stop

@@ -60,16 +60,15 @@ struct ZtAPI ZtRegexError {
 };
 template <> struct ZuPrint<ZtRegexError> : public ZuPrintFn { };
 
-// ZtRegex is used by ZeLog
-class ZtRegex;
-template <> struct ZmCleanup<ZtRegex> {
+class ZtRegex_;
+template <> struct ZmCleanup<ZtRegex_> {
   enum { Level = ZmCleanupLevel::Platform };
 };
-class ZtAPI ZtRegex {
-  ZtRegex(const ZtRegex &) = delete;
-  ZtRegex &operator =(const ZtRegex &) = delete;
+class ZtAPI ZtRegex_ {
+  ZtRegex_(const ZtRegex_ &) = delete;
+  ZtRegex_ &operator =(const ZtRegex_ &) = delete;
 
-  ZtRegex();
+  ZtRegex_();
 
 public:
   using Capture = ZuString;

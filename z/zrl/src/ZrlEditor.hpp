@@ -175,8 +175,10 @@ public:
   Cmd(uint64_t op, uint64_t arg, int32_t vkey) :
       m_value{op | (arg<<16) | (static_cast<uint64_t>(vkey)<<32)} { }
 
+  Cmd(ZuString s) {
+    // FIXME - parse Cmd[(Flag|Flag|...[, Arg[, Key]])]
 #if 0
-  Cmd(const ZvCf *cf) {
+    ZtRegex::Captures c;
     new (this) Cmd{
       cf->getEnum<Op::Map>("op", true),
       cf->getInt("arg", )
@@ -190,8 +192,8 @@ public:
     Reg		= 0x2000,	// variable register
 
     KeepArg	= 0x8000	// preserve argument
-  }
 #endif
+  }
 
   auto op() const { return m_value & 0xffffU; }
   auto arg() const { return m_value>>16; }
@@ -205,6 +207,8 @@ private:
 };
 
 using CmdSeq = ZtArray<Cmd>;
+
+// FIXME - parse { Cmd; Cmd; ... } as CmdSeq
 
 struct CmdMapping_ { // maps a mode + virtual key to a sequence of commands
   unsigned	mode;
@@ -228,6 +232,12 @@ using CmdMap =
 	  ZmHashLock<ZmNoLock>>>>>;
 
 using CmdMapping = CmdMap::Node;
+
+// FIXME - parse Key CmdSeq; as CmdMapping, given mode
+//
+// FIXME - parse mode N [edit] { CmdMapping; CmdMapping; ... } as mode
+//
+// FIXME - Default key defines default cmd seq for mode
 
 // line editor mode
 struct Mode {

@@ -47,12 +47,9 @@
 
 namespace MxTelemetry {
   namespace Type {
-    MxEnumValues(Heap, HashTbl, Thread, Multiplexer, Socket, Queue,
+    MxEnumerate(Heap, HashTbl, Thread, Multiplexer, Socket, Queue,
 	Engine, Link,
 	DBEnv, DBHost, DB);
-    MxEnumNames("Heap", "HashTbl", "Thread", "Multiplexer", "Socket", "Queue",
-	"Engine", "Link",
-	"DBEnv", "DBHost", "DB");
   }
 
   struct HdrData {
@@ -79,13 +76,12 @@ namespace MxTelemetry {
   using Socket = ZiCxnTelemetry;
 
   namespace QueueType {
-    MxEnumValues(
+    MxEnumerate(
 	Thread,		// ZmRing (in ZmScheduler)
 	IPC,		// ZiRing (e.g. MxMD broadcast)
 	Rx,		// MxQueue (Rx)
 	Tx		// MxQueue (Tx)
 	);
-    MxEnumNames("Thread", "IPC", "Rx", "Tx");
   }
   // display sequence:
   //   id, type, full, size, count, seqNo,
@@ -263,7 +259,7 @@ namespace MxTelemetry {
     typedef ZmReadGuard<Lock> ReadGuard;
 
   public:
-    void init(MxMultiplex *mx, ZvCf *cf);
+    void init(MxMultiplex *mx, const ZvCf *cf);
     void final();
 
     ZiMultiplex *mx() const { return m_mx; }
@@ -325,7 +321,7 @@ namespace MxTelemetry {
     typedef ZmReadGuard<Lock> ReadGuard;
 
   public:
-    void init(MxMultiplex *mx, ZvCf *cf);
+    void init(MxMultiplex *mx, const ZvCf *cf);
     void final();
 
     ZiMultiplex *mx() const { return m_mx; }

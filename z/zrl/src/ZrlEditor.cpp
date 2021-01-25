@@ -109,9 +109,11 @@ void Editor::init(Config config, App app)
 {
   m_config = config;
   m_app = app;
+  m_tty.init(m_config.vkeyInterval);
 }
 void Editor::final()
 {
+  m_tty.final();
   m_app = {};
 }
 
@@ -157,15 +159,15 @@ void Editor::prompt(ZtArray<uint8_t> prompt)
 {
   m_context.prompt = ZuMv(prompt);
 }
-void Editor::addMapping(unsigned mode, int vkey, CmdSeq cmds)
-{
-  if (ZuUnlikely(m_modes.length() <= mode)) m_modes.grow(mode + 1);
-  m_cmds.add(new CmdMapping{mode, vkey, ZuMv(cmds)});
-}
 void Editor::addMode(unsigned mode, CmdSeq cmds, bool edit)
 {
   if (ZuUnlikely(m_modes.length() <= mode)) m_modes.grow(mode + 1);
   m_modes[mode] = Mode{ZuMv(cmds), edit};
+}
+void Editor::addMapping(unsigned mode, int vkey, CmdSeq cmds)
+{
+  if (ZuUnlikely(m_modes.length() <= mode)) m_modes.grow(mode + 1);
+  m_cmds.add(new CmdMapping{mode, vkey, ZuMv(cmds)});
 }
 
 void Editor::reset()
@@ -279,7 +281,10 @@ void Editor::splice(
 }
 
 // perform copy/del/move in conjunction with a cursor motion
-void Editor::motion(unsigned op, unsigned pos, unsigned begin, unsigned end)
+void Editor::motion(
+    unsigned op, unsigned pos,
+    unsigned begin, unsigned end,
+    unsigned begPos, unsigned endPos)
 {
   ZuArray<const uint8_t> s;
   if (op & (Op::Copy | Op::Del)) s = substr(begin, end);
@@ -292,13 +297,17 @@ void Editor::motion(unsigned op, unsigned pos, unsigned begin, unsigned end)
   }
   if (op & Op::Del) {
     auto span = ZuUTF<uint32_t, uint8_t>::span(s);
-    if (pos < m_tty.pos()) m_tty.mv(pos);
     m_context.histLoadOff = -1;
+    if (pos > begPos) {
+      if (pos > endPos)
+	pos -= (endPos - begPos);
+      else
+	pos = begPos;
+    }
+    m_tty.mv(begPos);
     splice(begin, span, ZuArray<const uint8_t>{}, ZuUTFSpan{});
-    align(pos);
-    return;
   }
-  if (op & Op::Mv) if (!align(pos)) m_tty.mv(pos);
+  if (op & (Op::Del | Op::Mv)) if (!align(pos)) m_tty.mv(pos);
 }
 
 // maintains consistent horizontal position during vertical movement
@@ -320,8 +329,8 @@ bool Editor::cmdUp(Cmd cmd, int32_t vkey)
     return cmdPrev(cmd, vkey);
   if (!arg) arg = 1;
   const auto &line = m_tty.line();
-  auto posIndex = line.position(pos);
-  unsigned end = posIndex.mapping();
+  unsigned end = line.position(pos).mapping();
+  unsigned endPos = pos;
   if (pos < m_context.startPos + width * arg) {
     pos = (m_context.startPos - (m_context.startPos % width)) + (pos % width);
     if (pos < m_context.startPos) pos += width;
@@ -330,7 +339,7 @@ bool Editor::cmdUp(Cmd cmd, int32_t vkey)
   m_context.horizPos = pos;
   pos = line.align(pos);
   unsigned begin = line.position(pos).mapping();
-  if (begin < end) motion(cmd.op(), pos, begin, end);
+  if (begin < end) motion(cmd.op(), pos, begin, end, pos, endPos);
   return false;
 }
 
@@ -345,8 +354,8 @@ bool Editor::cmdDown(Cmd cmd, int32_t vkey)
       pos + width > finPos)
     return cmdNext(cmd, vkey);
   if (!arg) arg = 1;
-  auto posIndex = line.position(pos);
-  unsigned begin = posIndex.mapping();
+  unsigned begin = line.position(pos).mapping();
+  unsigned begPos = pos;
   if (pos + width * arg > finPos) {
     pos = (finPos - (finPos % width)) + (pos % width);
     if (pos > finPos) {
@@ -360,7 +369,7 @@ bool Editor::cmdDown(Cmd cmd, int32_t vkey)
   m_context.horizPos = pos;
   pos = line.align(pos);
   unsigned end = line.position(pos).mapping();
-  if (begin < end) motion(cmd.op(), pos, begin, end);
+  if (begin < end) motion(cmd.op(), pos, begin, end, begPos, pos);
   return false;
 }
 
@@ -370,6 +379,7 @@ bool Editor::cmdLeft(Cmd cmd, int32_t)
   if (pos > m_context.startPos) {
     const auto &line = m_tty.line();
     unsigned end = line.position(pos).mapping(), begin = end;
+    unsigned endPos = pos;
     unsigned start = line.position(m_context.startPos).mapping();
     int arg = cmd.arg();
     do {
@@ -377,7 +387,7 @@ bool Editor::cmdLeft(Cmd cmd, int32_t)
       if (begin < start) begin = start;
     } while (begin > start && --arg > 0);
     pos = line.byte(begin).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end);
+    if (begin < end) motion(cmd.op(), pos, begin, end, pos, endPos);
   }
   return false;
 }
@@ -388,6 +398,7 @@ bool Editor::cmdRight(Cmd cmd, int32_t)
   const auto &line = m_tty.line();
   if (pos < line.width()) {
     unsigned begin = line.position(pos).mapping(), end = begin;
+    unsigned begPos = pos;
     unsigned final_ = line.length();
     int arg = cmd.arg();
     do {
@@ -395,7 +406,7 @@ bool Editor::cmdRight(Cmd cmd, int32_t)
       if (end > final_) end = final_;
     } while (end < final_ && --arg > 0);
     pos = line.byte(end).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end);
+    if (begin < end) motion(cmd.op(), pos, begin, end, begPos, pos);
   }
   return false;
 }
@@ -405,9 +416,10 @@ bool Editor::cmdHome(Cmd cmd, int32_t vkey)
   unsigned pos = m_tty.pos();
   const auto &line = m_tty.line();
   unsigned end = line.position(pos).mapping();
+  unsigned endPos = pos;
   pos = m_context.startPos;
   unsigned begin = line.position(pos).mapping();
-  if (begin < end) motion(cmd.op(), pos, begin, end);
+  if (begin < end) motion(cmd.op(), pos, begin, end, pos, endPos);
   return false;
 }
 
@@ -416,9 +428,10 @@ bool Editor::cmdEnd(Cmd cmd, int32_t vkey)
   unsigned pos = m_tty.pos();
   const auto &line = m_tty.line();
   unsigned begin = line.position(pos).mapping();
+  unsigned begPos = pos;
   pos = line.width();
   unsigned end = line.length();
-  if (begin < end) motion(cmd.op(), pos, begin, end);
+  if (begin < end) motion(cmd.op(), pos, begin, end, begPos, pos);
   return false;
 }
 
@@ -428,6 +441,7 @@ bool Editor::cmdFwdWord(Cmd cmd, int32_t)
   const auto &line = m_tty.line();
   if (pos < line.width()) {
     unsigned begin = line.position(pos).mapping(), end = begin;
+    unsigned begPos = pos;
     unsigned final_ = line.length();
     int arg = cmd.arg();
     do {
@@ -438,7 +452,7 @@ bool Editor::cmdFwdWord(Cmd cmd, int32_t)
       if (end > final_) end = final_;
     } while (end < final_ && --arg > 0);
     pos = line.byte(end).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end);
+    if (begin < end) motion(cmd.op(), pos, begin, end, begPos, pos);
   }
   return false;
 }
@@ -449,6 +463,7 @@ bool Editor::cmdRevWord(Cmd cmd, int32_t)
   if (pos > m_context.startPos) {
     const auto &line = m_tty.line();
     unsigned end = line.position(pos).mapping(), begin = end;
+    unsigned endPos = pos;
     unsigned start = line.position(m_context.startPos).mapping();
     int arg = cmd.arg();
     do {
@@ -459,7 +474,7 @@ bool Editor::cmdRevWord(Cmd cmd, int32_t)
       if (begin < start) begin = start;
     } while (begin > start && --arg > 0);
     pos = line.byte(begin).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end);
+    if (begin < end) motion(cmd.op(), pos, begin, end, pos, endPos);
   }
   return false;
 }
@@ -470,6 +485,7 @@ bool Editor::cmdFwdWordEnd(Cmd cmd, int32_t)
   const auto &line = m_tty.line();
   if (pos < line.width()) {
     unsigned begin = line.position(pos).mapping(), end = begin;
+    unsigned begPos = pos;
     unsigned final_ = line.length();
     int arg = cmd.arg();
     do {
@@ -480,7 +496,7 @@ bool Editor::cmdFwdWordEnd(Cmd cmd, int32_t)
       if (end > final_) end = final_;
     } while (end < final_ && --arg > 0);
     pos = line.byte(end).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end);
+    if (begin < end) motion(cmd.op(), pos, begin, end, begPos, pos);
   }
   return false;
 }
@@ -491,6 +507,7 @@ bool Editor::cmdRevWordEnd(Cmd cmd, int32_t)
   if (pos > m_context.startPos) {
     const auto &line = m_tty.line();
     unsigned end = line.position(pos).mapping(), begin = end;
+    unsigned endPos = pos;
     unsigned start = line.position(m_context.startPos).mapping();
     int arg = cmd.arg();
     do {
@@ -501,7 +518,7 @@ bool Editor::cmdRevWordEnd(Cmd cmd, int32_t)
       if (begin < start) begin = start;
     } while (begin > start && --arg > 0);
     pos = line.byte(begin).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end);
+    if (begin < end) motion(cmd.op(), pos, begin, end, pos, endPos);
   }
   return false;
 }
@@ -512,20 +529,24 @@ bool Editor::cmdMvMark(Cmd cmd, int32_t vkey)
   const auto &line = m_tty.line();
   auto posIndex = line.position(pos);
   if (ZuLikely(pos != m_context.markPos)) {
-    unsigned begin, end;
+    unsigned begin, end, begPos, endPos;
     if (pos > m_context.markPos) {
       end = posIndex.mapping();
+      endPos = pos;
       pos = m_context.markPos;
+      begPos = pos;
       posIndex = line.position(pos);
       begin = posIndex.mapping();
     } else {
       begin = posIndex.mapping();
+      begPos = pos;
       pos = m_context.markPos;
+      endPos = pos;
       posIndex = line.position(pos);
       pos -= posIndex.off();
       end = posIndex.mapping();
     }
-    if (begin < end) motion(cmd.op(), pos, begin, end);
+    if (begin < end) motion(cmd.op(), pos, begin, end, begPos, endPos);
   }
   return false;
 }
@@ -854,6 +875,7 @@ bool Editor::cmdFwdGlyphSrch(Cmd cmd, int32_t vkey)
   const auto &line = m_tty.line();
   if (pos < line.width()) {
     unsigned begin = line.position(pos).mapping(), end = begin;
+    unsigned begPos = pos;
     unsigned final_ = line.length();
     int arg = cmd.arg();
     do {
@@ -861,7 +883,7 @@ bool Editor::cmdFwdGlyphSrch(Cmd cmd, int32_t vkey)
       if (end > final_) end = final_;
     } while (end < final_ && --arg > 0);
     pos = line.byte(end).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end);
+    if (begin < end) motion(cmd.op(), pos, begin, end, begPos, pos);
   }
   return false;
 }
@@ -872,6 +894,7 @@ bool Editor::cmdRevGlyphSrch(Cmd cmd, int32_t vkey)
   if (pos > m_context.startPos) {
     const auto &line = m_tty.line();
     unsigned end = line.position(pos).mapping(), begin = end;
+    unsigned endPos = pos;
     unsigned start = line.position(m_context.startPos).mapping();
     int arg = cmd.arg();
     do {
@@ -879,7 +902,7 @@ bool Editor::cmdRevGlyphSrch(Cmd cmd, int32_t vkey)
       if (begin < start) begin = start;
     } while (begin > start && --arg > 0);
     pos = line.byte(begin).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end);
+    if (begin < end) motion(cmd.op(), pos, begin, end, pos, endPos);
   }
   return false;
 }

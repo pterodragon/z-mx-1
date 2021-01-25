@@ -52,7 +52,7 @@
 #endif
 
 namespace MxTEventType {
-  MxEnumValues(
+  MxEnumerate(
       NewOrder,			// new order accepted, queued to market
       Ordered,			// order acknowledged
       Reject,			// order rejected
@@ -67,12 +67,6 @@ namespace MxTEventType {
       Fill,			// order filled (partially or fully)
       Closed			// order closed (expired)
   );
-  MxEnumNames(
-      "NewOrder", "Ordered", "Reject",
-      "Modify", "ModSimulated",
-      "Modified", "ModReject", "ModRejectCxl",
-      "Cancel", "Canceled", "CxlReject",
-      "Fill", "Closed");
 }
 
 // Note: Pending causes Pending New/Modify instead of Ordered/Modified

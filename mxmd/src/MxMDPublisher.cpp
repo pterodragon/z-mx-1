@@ -23,7 +23,7 @@
 
 #include <mxmd/MxMDPublisher.hpp>
 
-void MxMDPublisher::init(MxMDCore *core, ZvCf *cf)
+void MxMDPublisher::init(MxMDCore *core, const ZvCf *cf)
 {
   if (!cf->get("id")) cf->set("id", "publish");
 
@@ -792,7 +792,7 @@ void MxMDPubLink::ack()
 
 // commands
 
-void MxMDPublisher::statusCmd(void *, ZvCf *args, ZtString &out)
+void MxMDPublisher::statusCmd(void *, const ZvCf *args, ZtString &out)
 {
   int argc = ZuBox<int>(args->get("#"));
   if (argc != 1) throw ZvCmdUsage();

@@ -44,11 +44,11 @@ struct ZvStackParams : public ZmStackParams {
     return *this;
   }
 
-  ZvStackParams(ZvCf *cf) : ZmStackParams() { init(cf); }
-  ZvStackParams(ZvCf *cf, const ZmStackParams &deflt) :
+  ZvStackParams(const ZvCf *cf) : ZmStackParams() { init(cf); }
+  ZvStackParams(const ZvCf *cf, const ZmStackParams &deflt) :
       ZmStackParams(deflt) { init(cf); }
 
-  void init(ZvCf *cf) {
+  void init(const ZvCf *cf) {
     ZmStackParams::operator =(ZmStackParams());
 
     if (!cf) return;

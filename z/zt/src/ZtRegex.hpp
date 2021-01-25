@@ -232,6 +232,14 @@ private:
   unsigned	m_captureCount;
 };
 
-#define ZtStaticRegex(...) ZmStatic([]() { return new ZtRegex(__VA_ARGS__); })
+// we quote the pattern using the pre-processor to avoid having to double
+// backslash the RE, then strip the leading/trailing double-quotes
+
+#define ZtREGEX(pattern_, ...) ZmStatic([]() { \
+  static char pattern[] = #pattern_; \
+  ZuAssert(sizeof(pattern) >= 2); \
+  pattern[sizeof(pattern) - 2] = 0; \
+  return new ZtRegex(&pattern[1] __VA_OPT__(, __VA_ARGS__)); \
+})
 
 #endif /* ZtRegex_HPP */

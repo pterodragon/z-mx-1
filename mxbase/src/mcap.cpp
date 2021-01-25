@@ -116,13 +116,13 @@ private:
 
 class Mx : public ZmObject, public ZiMultiplex {
 public:
-  Mx(ZvCf *cf) : ZiMultiplex(ZvMxParams(cf)) { }
+  Mx(const ZvCf *cf) : ZiMultiplex(ZvMxParams(cf)) { }
   ~Mx() { }
 };
 
 class App : public ZmPolymorph {
 public:
-  App(ZvCf *cf);
+  App(const ZvCf *cf);
 
   int start();
   void stop();
@@ -286,15 +286,15 @@ error:
   ZeLOG(Error, ZtString{} << '"' << m_path << "\": " << e);
 }
 
-App::App(ZvCf *cf) :
+App::App(const ZvCf *cf) :
   m_path(cf->get("path", true)),
   m_groups(cf->get("groups", true)),
   m_raw(cf->getInt("raw", 0, 1, false, 0)),
   m_interface(cf->get("interface", false, "0.0.0.0")),
   m_reconnectFreq(cf->getInt("reconnect", 0, 3600, false, 0))
 {
-  m_mx = new Mx(cf->subset("mx", false));
-  m_mx2 = new Mx(cf->subset("mx2", false));
+  m_mx = new Mx(cf->subset("mx"));
+  m_mx2 = new Mx(cf->subset("mx2"));
 }
 
 int App::start()

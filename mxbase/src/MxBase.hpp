@@ -222,6 +222,7 @@ template <typename U> struct MxType :
 using MxIDString = MxString<MxIDStrSize>;
 using MxTxtString = MxString<MxTxtSize>;
 
+#define MxEnumerate ZtEnumerate
 #define MxEnumValues ZtEnumValues
 #define MxEnumNames ZtEnumNames
 #define MxEnumMap ZtEnumMap
@@ -231,11 +232,8 @@ using MxTxtString = MxString<MxTxtSize>;
 // application types
 
 namespace MxInstrIDSrc {
-  MxEnumValues(CUSIP, SEDOL, QUIK, ISIN, RIC, EXCH, CTA, BSYM, BBGID,
-      FX, CRYPTO);
-  MxEnumNames(
-      "CUSIP", "SEDOL", "QUIK", "ISIN", "RIC", "EXCH", "CTA", "BSYM", "BBGID",
-      "FX", "CRYPTO");
+  MxEnumerate(
+      CUSIP, SEDOL, QUIK, ISIN, RIC, EXCH, CTA, BSYM, BBGID, FX, CRYPTO);
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "1", CUSIP, "2", SEDOL, "3", QUIK, "4", ISIN, "5", RIC, "8", EXCH,
@@ -243,8 +241,7 @@ namespace MxInstrIDSrc {
 }
 
 namespace MxPutCall {
-  MxEnumValues(PUT, CALL);
-  MxEnumNames("PUT", "CALL");
+  MxEnumerate(PUT, CALL);
   MxEnumMap(CSVMap,
       "P", PUT, "PUT", PUT, "Put", PUT, "0", PUT,
       "C", CALL, "CALL", CALL, "Call", CALL, "1", CALL);
@@ -252,8 +249,7 @@ namespace MxPutCall {
 }
 
 namespace MxTickDir {
-  MxEnumValues(Up, LevelUp, Down, LevelDown, NoTick);
-  MxEnumNames("Up", "LevelUp", "Down", "LevelDown", "NoTick");
+  MxEnumerate(Up, LevelUp, Down, LevelDown, NoTick);
   MxEnumMap(CSVMap,
       "U", Up, "0", Up,
       "UL", LevelUp, "1", LevelUp,
@@ -263,12 +259,9 @@ namespace MxTickDir {
 }
 
 namespace MxTradingStatus {
-  MxEnumValues(
+  MxEnumerate(
       Open, Closed, PreOpen, Auction,
       Halted, Resumed, NotTraded, Unwinding, Unknown);
-  MxEnumNames(
-      "Open", "Closed", "PreOpen", "Auction",
-      "Halted", "Resumed", "NotTraded", "Unwinding", "Unknown");
   MxEnumMap(CSVMap,
       "Open", Open, "17", Open,
       "Closed", Closed, "18", Closed,
@@ -285,12 +278,9 @@ namespace MxTradingStatus {
 }
 
 namespace MxTradingSession {
-  MxEnumValues(
+  MxEnumerate(
       PreTrading, Opening, Continuous, Closing, PostTrading,
       IntradayAuction, Quiescent);
-  MxEnumNames(
-      "PreTrading", "Opening", "Continuous", "Closing", "PostTrading",
-      "IntradayAuction", "Quiescent");
   MxEnumMap(CSVMap,
       "PreTrading", PreTrading, "1", PreTrading,
       "Opening", Opening, "2", Opening,
@@ -310,8 +300,7 @@ namespace MxTradingSession {
 }
 
 namespace MxSide {
-  MxEnumValues(Buy, Sell, SellShort, SellShortExempt, Cross);
-  MxEnumNames("Buy", "Sell", "SellShort", "SellShortExempt", "Cross");
+  MxEnumerate(Buy, Sell, SellShort, SellShortExempt, Cross);
   MxEnumMap(CSVMap,
       "Buy", Buy, "1", Buy,
       "Sell", Sell, "2", Sell,

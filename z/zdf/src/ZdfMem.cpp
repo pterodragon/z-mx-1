@@ -29,7 +29,7 @@ void MemMgr::use(BufLRUNode *) { }
 void MemMgr::del(BufLRUNode *) { }
 void MemMgr::purge(unsigned, unsigned) { }
 
-void MemMgr::init(ZmScheduler *, ZvCf *) { BufMgr::init(UINT_MAX); }
+void MemMgr::init(ZmScheduler *, const ZvCf *) { BufMgr::init(UINT_MAX); }
 
 void MemMgr::final() { Mgr::final(); }
 

@@ -55,11 +55,11 @@ struct ZvThreadParams : public ZmThreadParams {
     return *this;
   }
 
-  ZvThreadParams(ZvCf *cf) { init(cf); }
-  ZvThreadParams(ZvCf *cf, const ZmThreadParams &deflt) :
+  ZvThreadParams(const ZvCf *cf) { init(cf); }
+  ZvThreadParams(const ZvCf *cf, const ZmThreadParams &deflt) :
       ZmThreadParams(deflt) { init(cf); }
 
-  void init(ZvCf *cf) {
+  void init(const ZvCf *cf) {
     ZmThreadParams::operator =(ZmThreadParams());
 
     if (!cf) return;

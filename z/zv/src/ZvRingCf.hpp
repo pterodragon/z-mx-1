@@ -43,11 +43,11 @@ struct ZvRingParams : public ZiRingParams {
     return *this;
   }
 
-  ZvRingParams(ZvCf *cf) { init(cf); }
-  inline ZvRingParams(ZvCf *cf, const ZiRingParams &deflt) :
+  ZvRingParams(const ZvCf *cf) { init(cf); }
+  inline ZvRingParams(const ZvCf *cf, const ZiRingParams &deflt) :
       ZiRingParams(deflt) { init(cf); }
 
-  void init(ZvCf *cf) {
+  void init(const ZvCf *cf) {
     if (!cf) return;
     name(cf->get("name", true));
     size(cf->getInt("size", 8192, (1U<<30U), false, 131072));

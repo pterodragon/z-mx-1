@@ -409,7 +409,7 @@ friend Base;
   ZuInline const App *app() const { return static_cast<const App *>(this); }
   ZuInline App *app() { return static_cast<App *>(this); }
 
-  void init(ZiMultiplex *mx, ZvCf *cf) {
+  void init(ZiMultiplex *mx, const ZvCf *cf) {
     static const char *alpn[] = { "zcmd", 0 };
     Base::init(mx, cf->get("thread", true), cf->get("caPath", true), alpn);
 

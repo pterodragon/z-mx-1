@@ -11,27 +11,7 @@ bool process(Zrl::Terminal &tty, ZmSemaphore &done, int32_t key)
   if (key < 0) {
     key = -key;
     using namespace Zrl::VKey;
-    switch (static_cast<int>(key & Mask)) {
-      case Continue: tty.ins("Continue"); break;
-      case Error: tty.ins("Error"); break;
-      case EndOfFile: tty.ins("EndOfFile"); break;
-      case SigInt: tty.ins("SigInt"); break;
-      case SigQuit: tty.ins("SigQuit"); break;
-      case SigSusp: tty.ins("SigSusp"); break;
-      case Enter: tty.ins("Enter"); break;
-      case Erase: tty.ins("Erase"); break;
-      case WErase: tty.ins("WErase"); break;
-      case Kill: tty.ins("Kill"); break;
-      case LNext: tty.ins("LNext"); break;
-      case Up: tty.ins("Up"); break;
-      case Down: tty.ins("Down"); break;
-      case Left: tty.ins("Left"); break;
-      case Right: tty.ins("Right"); break;
-      case Home: tty.ins("Home"); break;
-      case End: tty.ins("End"); break;
-      case Insert: tty.ins("Insert"); break;
-      case Delete: tty.ins("Delete"); break;
-    }
+    tty.ins(name(key & Mask));
     tty.ins("[");
     if (key & Shift) tty.ins("Shift");
     if (key & Ctrl) { if (key & Shift) tty.ins("|"); tty.ins("Ctrl"); }
@@ -40,7 +20,7 @@ bool process(Zrl::Terminal &tty, ZmSemaphore &done, int32_t key)
   } else {
     ZuArrayN<uint8_t, 4> utf;
     if (key < 0x20) {
-      utf << '^' << ('A' + (key - 1));
+      utf << '^' << static_cast<char>('A' + (key - 1));
     } else if (key >= 0x7f && key < 0x100) {
       utf << "\\x" << ZuBoxed(key).hex(ZuFmt::Right<2, '0'>{});
     } else {

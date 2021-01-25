@@ -36,6 +36,8 @@
 
 #include <zlib/ZmHash.hpp>
 
+#include <zlib/ZtEnum.hpp>
+
 #include <zlib/ZvCf.hpp>
 
 #include <zlib/ZrlLine.hpp>
@@ -45,8 +47,8 @@
 namespace Zrl {
 
 namespace Op { // line editor operation codes
-  enum {
-    Nop = 0,		// sentinel
+  ZtEnumerate(
+    Nop,		// sentinel
 
     Mode,		// switch mode
     Push,		// push mode (and switch)
@@ -139,10 +141,8 @@ namespace Op { // line editor operation codes
 
     // repeat search
     FwdSearch,		// fwd search
-    RevSearch,		// rev ''
-
-    N
-  };
+    RevSearch		// rev ''
+  );
 
   // modifiers
   enum {
@@ -171,13 +171,31 @@ public:
   Cmd &operator =(Cmd &&) = default;
 
   Cmd(uint32_t op) : m_value{op} { }
-  Cmd(uint64_t op, uint64_t arg) : m_value{op | (arg<<16U)} { }
-  Cmd(uint64_t op, uint64_t arg, uint64_t vkey) :
-      m_value{op | (arg<<16U) | (vkey<<32U)} { }
+  Cmd(uint64_t op, uint64_t arg) : m_value{op | (arg<<16)} { }
+  Cmd(uint64_t op, uint64_t arg, int32_t vkey) :
+      m_value{op | (arg<<16) | (static_cast<uint64_t>(vkey)<<32)} { }
+
+#if 0
+  Cmd(const ZvCf *cf) {
+    new (this) Cmd{
+      cf->getEnum<Op::Map>("op", true),
+      cf->getInt("arg", )
+
+    Mv	 	= 0x0100,	// move cursor
+    Del	 	= 0x0200,	// delete span (implies move)
+    Copy	= 0x0400,	// copy span (cut is Del + Copy)
+
+    Unix	= 0x0800,	// a "Unix" word is white-space delimited
+    Arg		= 0x1000,	// variable argument
+    Reg		= 0x2000,	// variable register
+
+    KeepArg	= 0x8000	// preserve argument
+  }
+#endif
 
   auto op() const { return m_value & 0xffffU; }
-  auto arg() const { return m_value>>16U; }
-  int32_t vkey() const { return m_value>>32U; }
+  auto arg() const { return m_value>>16; }
+  int32_t vkey() const { return m_value>>32; }
 
   bool operator !() const { return !m_value; }
   ZuOpBool
@@ -345,7 +363,7 @@ struct Config {
   Config(Config &&) = default;
   Config &operator =(Config &&) = default;
 
-  Config(ZvCf *cf) {
+  Config(const ZvCf *cf) {
     vkeyInterval = cf->getInt("vkeyInterval", 1, 1000, false, 100);
     maxLineLen = cf->getInt("maxLineLen", 0, (1<<20), false, 32768);
     maxCompPages = cf->getInt("maxCompPages", 0, 100, false, 5);
@@ -354,7 +372,7 @@ struct Config {
   }
 };
 
-// the line editor is a virtual machine that executes sequences of commands
+// the line editor is a virtual machine that executes sequences of commands;
 // each command sequence is bound to a virtual key; individual commands
 // consist of an opcode, an argument and a virtual key (UTF32 if positive)
 class ZrlAPI Editor {
@@ -385,10 +403,9 @@ public:
   // all public functions below must be called in the terminal thread
   void prompt(ZtArray<uint8_t> prompt);
 
-  void addMapping(unsigned mode, int vkey, CmdSeq cmds);
   void addMode(unsigned mode, CmdSeq cmds, bool edit);
-
-  void reset();
+  void addMapping(unsigned mode, int vkey, CmdSeq cmds);
+  void reset(); // reset all key bindings - i.e. mappings, modes
 
 private:
   bool process(int32_t vkey);
@@ -418,7 +435,9 @@ private:
       unsigned off, ZuUTFSpan span,
       ZuArray<const uint8_t> replace, ZuUTFSpan rspan);
   // perform copy/del/move in conjunction with a cursor motion
-  void motion(unsigned op, unsigned pos, unsigned begin, unsigned end);
+  void motion(unsigned op, unsigned pos,
+      unsigned begin, unsigned end,
+      unsigned begPos, unsigned endPos);
   // maintains consistent horizontal position during vertical movement
   unsigned horizPos();
 

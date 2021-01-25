@@ -37,8 +37,7 @@ static const char *testdata =
 "key7 { foo bar{ bah 1 } } key8 C${FAT}n\n";
 
 namespace Values {
-  ZtEnumValues(High, Low, Normal);
-  ZtEnumNames("High", "Low", "Normal");
+  ZtEnumerate(High, Low, Normal);
 }
 
 int main()

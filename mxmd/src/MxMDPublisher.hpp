@@ -53,7 +53,7 @@ class MxMDAPI MxMDPublisher : public MxEngine, public MxEngineApp {
 public:
   MxMDCore *core() const;
 
-  void init(MxMDCore *core, ZvCf *cf);
+  void init(MxMDCore *core, const ZvCf *cf);
   void final();
 
   ZuInline ZiIP interface_() const { return m_interface; }
@@ -100,7 +100,7 @@ public:
   ZuInline unsigned snapThread() const { return m_snapThread; }
 
   // commands
-  void statusCmd(void *, ZvCf *args, ZtString &out);
+  void statusCmd(void *, const ZvCf *args, ZtString &out);
 
 private:
   unsigned		m_snapThread = 0;

@@ -42,7 +42,7 @@ public:
   void del(BufLRUNode *);
   void purge(unsigned, unsigned);
 
-  void init(ZmScheduler *, ZvCf *);
+  void init(ZmScheduler *, const ZvCf *);
   void final();
 
   bool open(unsigned, ZuString, ZuString, OpenFn openFn);

@@ -112,7 +112,7 @@ public:
   void up() { up_(true); }
   void down() { down_(true); }
 
-  virtual void update(ZvCf *cf) = 0;
+  virtual void update(const ZvCf *cf) = 0;
   virtual void reset(ZvSeqNo rxSeqNo, ZvSeqNo txSeqNo) = 0;
 
   ZvSeqNo rxSeqNo() const {
@@ -231,7 +231,7 @@ public:
 
   ZvEngine() : m_state(ZvEngineState::Stopped) { }
 
-  void init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf) {
+  void init(Mgr *mgr, App *app, Mx *mx, const ZvCf *cf) {
     m_mgr = mgr,
     m_app = app;
     m_id = cf->get("id", true);
@@ -323,7 +323,7 @@ public:
     return m_txPools.findKey(id);
   }
   template <typename TxPool>
-  ZmRef<ZvAnyTxPool> updateTxPool(ZuID id, ZvCf *cf) {
+  ZmRef<ZvAnyTxPool> updateTxPool(ZuID id, const ZvCf *cf) {
     Guard guard(m_lock);
     ZmRef<TxPool> pool;
     if (pool = m_txPools.findKey(id)) {
@@ -360,7 +360,7 @@ public:
     ReadGuard guard(m_lock);
     return m_links.findKey(id);
   }
-  ZmRef<ZvAnyLink> updateLink(ZuID id, ZvCf *cf) {
+  ZmRef<ZvAnyLink> updateLink(ZuID id, const ZvCf *cf) {
     Guard guard(m_lock);
     ZmRef<ZvAnyLink> link;
     if (link = m_links.findKey(id)) {

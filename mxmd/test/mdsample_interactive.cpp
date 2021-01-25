@@ -129,7 +129,7 @@ void addInstrument(MxMDInstrument *instr, MxDateTime)
   if (matched) instr->subscribe(instrHandler);
 }
 
-void subscribe(void *, ZvCf *args, ZtString &out)
+void subscribe(void *, const ZvCf *args, ZtString &out)
 {
   MxMDLib *md = MxMDLib::instance();
   if (!md) throw ZtString("MxMDLib::instance() failed");

@@ -1306,7 +1306,7 @@ void MxMDLib::init_(void *cf_)
   ZvCf *cf = (ZvCf *)cf_;
   ZiMultiplex *mx = static_cast<ZiMultiplex *>(m_scheduler);
   unsigned tid = 0;
-  if (ZmRef<ZvCf> shardsCf = cf->subset("shards", false)) {
+  if (ZmRef<ZvCf> shardsCf = cf->subset("shards")) {
     ZeLOG(Info, "MxMDLib - configuring shards...");
     m_shards.length(shardsCf->count());
     ZvCf::Iterator i(shardsCf);
@@ -1940,8 +1940,7 @@ MxUniKey MxMDLib::parseInstrument(ZvCf *args, unsigned index) const
     key.segment = args->get("segment");
   }
   if (ZtString mat = args->get("mat")) {
-    const auto &r = ZtStaticRegex("^\\d{8}$");
-    if (!r.m(mat))
+    if (!ZtREGEX("^\d{8}$").m(mat))
       throw ZtString() << "maturity \"" << mat << "\" invalid - "
 	"must be YYYYMMDD (DD is usually 00)";
     key.mat = mat;

@@ -59,11 +59,11 @@ struct ZvSchedParams : public ZmSchedParams {
   }
 #endif
 
-  ZvSchedParams(ZvCf *cf) { init(cf); }
-  inline ZvSchedParams(ZvCf *cf, ZmSchedParams &&deflt) :
+  ZvSchedParams(const ZvCf *cf) { init(cf); }
+  inline ZvSchedParams(const ZvCf *cf, ZmSchedParams &&deflt) :
     ZmSchedParams(ZuMv(deflt)) { init(cf); }
 
-  void init(ZvCf *cf) {
+  void init(const ZvCf *cf) {
     if (!cf) return;
 
     static unsigned ncpu = ZmPlatform::getncpu();
@@ -79,7 +79,7 @@ struct ZvSchedParams : public ZmSchedParams {
     ll(cf->getInt("ll", 0, 1, false, ll()));
     spin(cf->getInt("spin", 0, INT_MAX, false, spin()));
     timeout(cf->getInt("timeout", 0, 3600, false, timeout()));
-    if (ZmRef<ZvCf> threadsCf = cf->subset("threads", false)) {
+    if (ZmRef<ZvCf> threadsCf = cf->subset("threads")) {
       ZvCf::Iterator i(threadsCf);
       ZuString id;
       while (ZmRef<ZvCf> threadCf = i.subset(id)) {
@@ -115,7 +115,7 @@ public:
   ZvScheduler(const ID &id) :
     ZmScheduler(ZmSchedParams().nThreads(1).id(id)) { }
   template <typename ID>
-  ZvScheduler(const ID &id, ZvCf *cf) :
+  ZvScheduler(const ID &id, const ZvCf *cf) :
     ZmScheduler(ZvSchedParams(cf,
 	  ZmSchedParams().nThreads(1).id(id))) { }
 };

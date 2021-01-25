@@ -80,7 +80,7 @@ public:
   using TxDB = Zdb<TxData>;
   using TxPOD = ZdbPOD<TxData>;
 
-  void init(ZdbEnv *dbEnv, ZvCf *cf) {
+  void init(ZdbEnv *dbEnv, const ZvCf *cf) {
     m_txDB = new TxDB(
 	dbEnv, "txDB", DBVersion, ZdbCacheMode::Normal,
 	ZdbHandler{

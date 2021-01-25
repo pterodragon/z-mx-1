@@ -1354,7 +1354,7 @@ private:
       T *newData = (T *)::malloc(z * sizeof(T));
       this->moveItems(newData, m_data, offset);
       this->copyItems(newData + offset, replace, rlength);
-      if ((int)rlength != length && offset + length < (int)n)
+      if (offset + length < (int)n)
 	this->moveItems(
 	    newData + offset + rlength,
 	    m_data + offset + length,

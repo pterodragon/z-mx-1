@@ -157,15 +157,15 @@ int main(int argc, char **argv)
   ZeError e;
 
   try {
-    ZiMultiplex mx(ZvMxParams(cf->subset("mx", false)));
+    ZiMultiplex mx(ZvMxParams(cf->subset("mx")));
 
     if (mx.start(&e) != Zi::OK) throw e;
 
     try {
-      ZdbEnv env(ZdbEnvParams(cf->subset("db", false, true)));
+      ZdbEnv env(ZdbEnvParams(cf->subset("db", true)));
       ZdbRep rep;
 
-      rep.init(ZdbRepParams(cf->subset("db", false, true)), &mx, &env,
+      rep.init(ZdbRepParams(cf->subset("db", true)), &mx, &env,
 	       ZmFn<>::Member<&App::active>::fn(app), 
 	       ZmFn<>::Member<&App::passive>::fn(app));
 

@@ -23,7 +23,7 @@
 
 #include <mxmd/MxMDCore.hpp>
 
-void MxMDTelemetry::init(MxMDCore *core, ZvCf *cf)
+void MxMDTelemetry::init(MxMDCore *core, const ZvCf *cf)
 {
   using namespace MxTelemetry;
 

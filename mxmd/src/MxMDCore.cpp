@@ -293,14 +293,14 @@ MxMDCore::MxMDCore(ZmRef<MxTbl> mxTbl, Mx *mx) :
 {
 }
 
-void MxMDCore::init_(ZvCf *cf)
+void MxMDCore::init_(const ZvCf *cf)
 {
   m_cf = cf;
 
   MxMDLib::init_(cf);
 
   // initialize telemetry first
-  if (ZmRef<ZvCf> telCf = cf->subset("telemetry", false)) {
+  if (ZmRef<ZvCf> telCf = cf->subset("telemetry")) {
     m_telemetry = new MxMDTelemetry();
     m_telemetry->init(this, telCf);
   }
@@ -308,7 +308,7 @@ void MxMDCore::init_(ZvCf *cf)
   m_localFeed = new MxMDFeed(this, "_LOCAL", 3);
   addFeed(m_localFeed);
 
-  if (ZmRef<ZvCf> feedsCf = cf->subset("feeds", false)) {
+  if (ZmRef<ZvCf> feedsCf = cf->subset("feeds")) {
     ZeLOG(Info, "MxMDLib - configuring feeds...");
     ZvCf::Iterator i(feedsCf);
     ZuString key;
@@ -374,7 +374,7 @@ void MxMDCore::init_(ZvCf *cf)
 
   m_broadcast.init(this);
 
-  if (ZmRef<ZvCf> cmdCf = cf->subset("cmd", false)) {
+  if (ZmRef<ZvCf> cmdCf = cf->subset("cmd")) {
     m_cmdServer = new MxMDCmdServer();
     Mx *mx = this->mx(cmdCf->get("mx", false, "cmd"));
     if (!mx) throw ZvCf::Required(cf, "cmd:mx");
@@ -383,15 +383,15 @@ void MxMDCore::init_(ZvCf *cf)
   }
 
   m_record = new MxMDRecord();
-  m_record->init(this, cf->subset("record", false, true));
+  m_record->init(this, cf->subset("record", true));
   m_replay = new MxMDReplay();
-  m_replay->init(this, cf->subset("replay", false));
+  m_replay->init(this, cf->subset("replay"));
 
-  if (ZmRef<ZvCf> publisherCf = cf->subset("publisher", false)) {
+  if (ZmRef<ZvCf> publisherCf = cf->subset("publisher")) {
     m_publisher = new MxMDPublisher();
     m_publisher->init(this, publisherCf);
   }
-  if (ZmRef<ZvCf> subscriberCf = cf->subset("subscriber", false)) {
+  if (ZmRef<ZvCf> subscriberCf = cf->subset("subscriber")) {
     m_subscriber = new MxMDSubscriber();
     m_subscriber->init(this, subscriberCf);
   }
@@ -460,7 +460,7 @@ void MxMDCore::initCmds()
 
   m_cmdServer->addCmd(
       "logAge", "",
-      ZvCmdFn{this, [](MxMDCore *, void *, ZvCf *args, ZtString &out) {
+      ZvCmdFn{this, [](MxMDCore *, void *, const ZvCf *args, ZtString &out) {
 	ZuBox<int> argc = args->get("#");
 	if (argc != 1) throw ZvCmdUsage();
 	out << "ageing log files...\n";
@@ -470,7 +470,7 @@ void MxMDCore::initCmds()
       "usage: logAge\n");
   m_cmdServer->addCmd(
       "log", "",
-      ZvCmdFn{this, [](MxMDCore *md, void *, ZvCf *args, ZtString &out) {
+      ZvCmdFn{this, [](MxMDCore *md, void *, const ZvCf *args, ZtString &out) {
 	ZuBox<int> argc = args->get("#");
 	if (argc < 2) throw ZvCmdUsage();
 	ZtString message;
@@ -582,7 +582,7 @@ void MxMDCore::final()
   unsubscribe();
 }
 
-void MxMDCore::l1(void *, ZvCf *args, ZtString &out)
+void MxMDCore::l1(void *, const ZvCf *args, ZtString &out)
 {
   unsigned argc = ZuBox<unsigned>(args->get("#"));
   if (argc != 2) throw ZvCmdUsage();
@@ -642,7 +642,7 @@ void MxMDCore::l1(void *, ZvCf *args, ZtString &out)
   }
 }
 
-void MxMDCore::l2(void *, ZvCf *args, ZtString &out)
+void MxMDCore::l2(void *, const ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc != 2) throw ZvCmdUsage();
@@ -678,7 +678,7 @@ void MxMDCore::l2_side(MxMDOBSide *side, ZtString &out)
   });
 }
 
-void MxMDCore::instrument_(void *, ZvCf *args, ZtString &out)
+void MxMDCore::instrument_(void *, const ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc != 2) throw ZvCmdUsage();
@@ -761,7 +761,7 @@ void MxMDCore::dumpTickSizes(ZuString path, MxID venueID)
   writeTickSizes(this, csv, csv.writeFile(path), venueID);
 }
 
-void MxMDCore::ticksizes(void *, ZvCf *args, ZtString &out)
+void MxMDCore::ticksizes(void *, const ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc < 1 || argc > 3) throw ZvCmdUsage();
@@ -796,7 +796,7 @@ void MxMDCore::dumpInstruments(ZuString path, MxID venueID, MxID segment)
   writeInstruments(this, csv, csv.writeFile(path), venueID, segment);
 }
 
-void MxMDCore::instruments(void *, ZvCf *args, ZtString &out)
+void MxMDCore::instruments(void *, const ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc < 1 || argc > 3) throw ZvCmdUsage();
@@ -843,7 +843,7 @@ void MxMDCore::dumpOrderBooks(ZuString path, MxID venueID, MxID segment)
   writeOrderBooks(this, csv, csv.writeFile(path), venueID, segment);
 }
 
-void MxMDCore::orderbooks(void *, ZvCf *args, ZtString &out)
+void MxMDCore::orderbooks(void *, const ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc < 1 || argc > 3) throw ZvCmdUsage();

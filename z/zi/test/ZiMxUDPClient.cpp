@@ -203,8 +203,7 @@ int main(int argc, const char *argv[])
 	{
 	  ZtRegex::Captures c;
 	  try {
-	    const auto &r = ZtStaticRegex(":");
-	    int n = r.split(argv[++i], c);
+	    int n = ZtREGEX(":").split(argv[++i], c);
 	    if (n != 2) usage();
 	    localIP = c[0].length() ? ZiIP(c[0]) : ZiIP();
 	    localPort = atoi(c[1]);
@@ -215,8 +214,7 @@ int main(int argc, const char *argv[])
 	{
 	  ZtRegex::Captures c;
 	  try {
-	    const auto &r = ZtStaticRegex(":");
-	    int n = r.split(argv[++i], c);
+	    int n = ZtREGEX(":").split(argv[++i], c);
 	    if (n != 2) usage();
 	    remoteIP = c[0];
 	    remotePort = atoi(c[1]);
@@ -250,8 +248,7 @@ int main(int argc, const char *argv[])
 	{
 	  ZtRegex::Captures c;
 	  try {
-	    const auto &r = ZtStaticRegex("/");
-	    int n = r.split(argv[++i], c);
+	    int n = ZtREGEX("/").split(argv[++i], c);
 	    if (n < 1 || n > 2) usage();
 	    ZiIP addr(c[0]);
 	    if (!addr.multicast()) usage();

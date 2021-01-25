@@ -56,9 +56,9 @@ namespace Zrl {
 
 // a virtual key is UTF32 if positive, otherwise -ve VKey value
 namespace VKey {
-  enum {
+  ZtEnumerate(
     // terminal driver events and control keys (from termios)
-    Continue = 0,	// continue reading
+    Continue,		// continue reading
 
     Error,		// I/O error - causes stop
     EndOfFile,		// ^D EOF - causes stop
@@ -84,10 +84,8 @@ namespace VKey {
     End,
 
     Insert,
-    Delete,
-
-    N
-  };
+    Delete
+  );
 
   enum {
     Mask	= 0x00ff,

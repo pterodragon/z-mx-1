@@ -65,7 +65,7 @@ protected:
   ZmRef<MxAnyLink> createLink(MxID id);
 
   // commands
-  void replayCmd(void *, ZvCf *args, ZtString &out);
+  void replayCmd(void *, const ZvCf *args, ZtString &out);
 
 private:
   MxMDReplayLink	*m_link = 0;

@@ -27,7 +27,7 @@
 
 using namespace Zdf;
 
-void FileMgr::init(ZmScheduler *sched, ZvCf *cf)
+void FileMgr::init(ZmScheduler *sched, const ZvCf *cf)
 {
   FileMgr::Config config{cf};
   BufMgr::init(config.maxBufs);
@@ -71,8 +71,9 @@ bool FileMgr::open(
   ZiDir::Path fileName;
   unsigned minIndex = UINT_MAX;
   ZtString regex_{name};
-  { const auto &quote = ZtStaticRegex("\\\\E"); quote.sg(regex_, "\\\\E"); }
-  regex_ = ZtString{} << "^\\Q" << regex_ << '_' << "\\E[0-9a-f]{8}\\.sdb$";
+  ZtREGEX("\\E").sg(regex_, ZuPP_Q("\\E"));
+  regex_ = ZtString{} <<
+    ZuPP_Q("^\Q") << regex_ << '_' << ZuPP_Q("\E[0-9a-f]{8}\.sdb$");
   ZtRegex regex{regex_};
   while (dir.read(fileName) == Zi::OK) {
 #ifdef _WIN32

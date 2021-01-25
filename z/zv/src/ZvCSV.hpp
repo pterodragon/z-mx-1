@@ -53,7 +53,6 @@
 #include <zlib/ZePlatform.hpp>
 
 #include <zlib/ZvError.hpp>
-#include <zlib/ZvEnum.hpp>
 #include <zlib/ZvField.hpp>
 #include <zlib/ZvCSV.hpp>
 
@@ -252,9 +251,8 @@ public:
     ColIndex colIndex;
     const auto &fmt = this->fmt();
 
-    const auto &newLine = ZtStaticRegex("\\n");
     ZtArray<ZtArray<char>> rows;
-    if (!newLine.split(data, rows)) return;
+    if (!ZtREGEX("\n").split(data, rows)) return;
     ZtString row{ZvCSV_MaxLineSize};
     row.init(rows[0].data(), rows[0].length());
     row.chomp();

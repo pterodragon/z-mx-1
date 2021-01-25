@@ -35,18 +35,14 @@
 #include <mxbase/MxBase.hpp>
 
 namespace MxTMktNoticeType {
-  MxEnumValues(
+  MxEnumerate(
     DFD,
     MktSuspend,
     MktRelease);
-  MxEnumNames(
-    "DFD",
-    "MktSuspend",
-    "MktRelease");
 }
 
 namespace MxOrdType {
-  MxEnumValues(
+  MxEnumerate(
       Market,
       Limit,
       Stop,
@@ -59,10 +55,6 @@ namespace MxOrdType {
       StopBL,		// stop best limit
       LIT,		// limit if touched
       BLIT);		// best limit if touched
-  MxEnumNames(
-      "Market", "Limit", "Stop", "StopLimit",
-      "Funari", "MIT", "Mkt2Limit", "Pegged", "BestLimit",
-      "StopBL", "LIT", "BLIT");
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "1", Market,
@@ -88,9 +80,7 @@ namespace MxOrdType {
 }
 
 namespace MxTimeInForce {
-  MxEnumValues(Normal, IOC, FOK, AtOpen, AtClose, GTC, GTD);
-  MxEnumNames(
-      "Normal", "IOC", "FOK", "AtOpen", "AtClose", "GTC", "GTD");
+  MxEnumerate(Normal, IOC, FOK, AtOpen, AtClose, GTC, GTD);
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "0", Normal,
@@ -103,11 +93,8 @@ namespace MxTimeInForce {
 }
 
 namespace MxPegType { // peg type
-  MxEnumValues(
+  MxEnumerate(
       Last, Mid, Open, Mkt, Primary, VWAP, TrailingStop, AltMid, Short);
-  MxEnumNames(
-      "Last", "Mid", "Open", "Mkt", "Primary", "VWAP",
-      "TrailingStop", "AltMid", "Short");
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "1", Last,
@@ -122,8 +109,7 @@ namespace MxPegType { // peg type
 }
 
 namespace MxTQtyType {
-  MxEnumValues(Unit, Lot);
-  MxEnumNames("Unit", "Lot");
+  MxEnumerate(Unit, Lot);
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "0", Unit,
@@ -131,8 +117,7 @@ namespace MxTQtyType {
 }
 
 namespace MxOrderCapacity {
-  MxEnumValues(Agency, Principal, Mixed);
-  MxEnumNames("Agency", "Principal", "Mixed");
+  MxEnumerate(Agency, Principal, Mixed);
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "A", Agency,
@@ -141,8 +126,7 @@ namespace MxOrderCapacity {
 }
 
 namespace MxCashMargin {
-  MxEnumValues(Cash, MarginOpen, MarginClose);
-  MxEnumNames("Cash", "MarginOpen", "MarginClose");
+  MxEnumerate(Cash, MarginOpen, MarginClose);
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "1", Cash,
@@ -151,8 +135,7 @@ namespace MxCashMargin {
 }
 
 namespace MxTFillLiquidity {
-  MxEnumValues(Added, Removed, RoutedOut, Auction);
-  MxEnumNames("Added", "Removed", "RoutedOut", "Auction");
+  MxEnumerate(Added, Removed, RoutedOut, Auction);
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "1", Added,
@@ -162,8 +145,7 @@ namespace MxTFillLiquidity {
 }
 
 namespace MxTFillCapacity {
-  MxEnumValues(Agent, CrossAsAgent, CrossAsPrincipal, Principal);
-  MxEnumNames("Agent", "CrossAsAgent", "CrossAsPrincipal", "Principal");
+  MxEnumerate(Agent, CrossAsAgent, CrossAsPrincipal, Principal);
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "1", Agent,
@@ -173,14 +155,13 @@ namespace MxTFillCapacity {
 }
 
 namespace MxTPosImpact {
-  MxEnumValues(
+  MxEnumerate(
       Open,	// order opens or extends a position
       Close);	// order closes or reduces a position
-  MxEnumNames("Open", "Close");
 }
 
 namespace MxTRejReason {
-  MxEnumValues(
+  MxEnumerate(
     UnknownOrder,		// unknown order
     DuplicateOrder,		// duplicate order
     BadList,			// bad list order information
@@ -230,71 +211,20 @@ namespace MxTRejReason {
     NoMktPx			// no market price
     );
   enum { OK = Invalid };	// OK == Invalid == -1
-  MxEnumNames(
-    "UnknownOrder",
-    "DuplicateOrder",
-    "BadList",
-    "ModifyPending",
-    "CancelPending",
-    "OrderClosed",
-    "PxNotRoundTick",
-    "PxOutOfRange",
-    "QtyNotRoundLot",
-    "QtyOutOfRange",
-    "BadSide",
-    "BadOrderType",
-    "BadTimeInForce",
-    "BadPrice",
-    "BadLocate",
-    "BadOrderCapacity",
-    "BadCashMargin",
-    "BadExpireTime",
-    "BadInstrument",
-    "BadMarket",
-    "BadQtyType",
-    "BadNumberOfLegs",
-    "BadMinimumQty",
-    "BadMaximumFloor",
-    "BadPegType",
-    "BadPegOffset",
-    "BadPegPx",
-    "BadTriggerPx",
-    "TriggerPxNotRoundTick",
-    "TriggerPxOutOfRange",
-    "TooManyTriggers",
-    "BadCrossType",
-    "BadBookingType",
-    "BadContraBroker",
-    "BadClient",
-    "BadAccount",
-    "BadInvestorID",
-    "BrokerReject",
-    "MarketReject",
-    "OSM",
-    "InstrRestricted",
-    "AcctDisabled",
-    "NoAssets",
-    "NoCollateral",
-    "RiskBreach",
-    "BadComAsset",
-    "NoMktPx"
-  );
 }
 
 namespace MxTCrossType {
-  MxEnumValues(
+  MxEnumerate(
       OnBook,	// crossed on a listed book (on-exchange)
       SI,	// by a systematic internalizer (dark pool / crossing engine)
       Broker,	// by the broker's trading desk (not using an SI)
       MTF,	// by a multilateral trading facility
       OTC,	// buying broker crossed with selling broker "over the counter"
       Direct);	// buyer directly crossed with seller
-  MxEnumNames("OnBook", "SI", "Broker", "MTF", "OTC", "Direct");
 }
 
 namespace MxBookingType {
-  MxEnumValues(Normal, CFD, Swap);
-  MxEnumNames("Normal", "CFD", "Swap");
+  MxEnumerate(Normal, CFD, Swap);
   MxEnumMapAlias(Map, CSVMap);
   MxEnumMap(FixMap,
       "0", Normal,

@@ -120,7 +120,7 @@ ZtString MxMDReplayLink::stopReplaying()
   return path;
 }
 
-void MxMDReplayLink::update(ZvCf *cf)
+void MxMDReplayLink::update(const ZvCf *cf)
 {
   if (ZtString path = cf->get("path"))
     replay(ZuMv(path),
@@ -252,7 +252,7 @@ eof:
 
 // commands
 
-void MxMDReplay::replayCmd(void *, ZvCf *args, ZtString &out)
+void MxMDReplay::replayCmd(void *, const ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc < 1 || argc > 2) throw ZvCmdUsage();

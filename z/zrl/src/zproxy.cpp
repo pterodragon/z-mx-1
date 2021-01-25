@@ -445,16 +445,14 @@ bool validateTag(ZuString s) {
 
 template <typename S>
 void parseAddr(const S &s, ZiIP &ip, uint16_t &port) {
-  const auto &colon = ZtStaticRegex(":");
-  const auto &nonDigit = ZtStaticRegex("\\D");
   ZtRegex::Captures c;
   if (!s) {
     ip = ZiIP();
     port = 0;
-  } else if (colon.m(s, c)) {
+  } else if (ZtREGEX(":").m(s, c)) {
     ip = c[0];
     port = ZuBox<unsigned>(c[2]);
-  } else if (nonDigit.m(s)) {
+  } else if (ZtREGEX("\D").m(s)) {
     ip = s;
     port = 0;
   } else {
@@ -468,13 +466,11 @@ void parseAddr(const S &s, ZiIP &ip, uint16_t &port) {
 #endif
 
 namespace Side {
-  ZtEnumValues(In, Out, Both);
-  ZtEnumNames("in", "out", "*");
+  ZtEnumerate(In, Out, Both);
 }
 
 namespace IOOp {
-  ZtEnumValues(Send, Recv, Both);
-  ZtEnumNames("send", "recv", "*");
+  ZtEnumerate(Send, Recv, Both);
 }
 
 class App : public ZmPolymorph, public ZvCmdHost {
@@ -482,7 +478,7 @@ class App : public ZmPolymorph, public ZvCmdHost {
   class Mx : public ZuObject, public ZiMultiplex {
   public:
     Mx() : ZiMultiplex(ZvMxParams()) { }
-    Mx(ZvCf *cf) : ZiMultiplex(ZvMxParams(cf)) { }
+    Mx(const ZvCf *cf) : ZiMultiplex(ZvMxParams(cf)) { }
   };
 
   using ListenerHash =
@@ -501,10 +497,10 @@ public:
     m_proxies = new ProxyHash(ZmHashParams().bits(8).loadFactor(1.0));
   }
 
-  void init(ZvCf *cf) {
+  void init(const ZvCf *cf) {
     // cf->set("mx:debug", "1");
     ZvCmdHost::init();
-    m_mx = new Mx(cf->subset("mx", true));
+    m_mx = new Mx(cf->subset("mx"));
     m_verbose = cf->getInt("verbose", 0, 1, false, 0);
     addCmd("proxy",
 	"tag { type scalar } "
@@ -616,7 +612,7 @@ public:
     delete m_proxies->del(Proxy::SrcPortAccessor::value(proxy));
   }
 
-  int proxy(void *, ZvCf *args, ZtString &out) {
+  int proxy(void *, const ZvCf *args, ZtString &out) {
     ZmRef<Listener> listener;
     ZiIP localIP, remoteIP, srcIP;
     ZuString tag;
@@ -672,7 +668,7 @@ public:
     return code;
   }
 
-  int stopListening(void *, ZvCf *args, ZtString &out) {
+  int stopListening(void *, const ZvCf *args, ZtString &out) {
     ZuString tag;
     ZmRef<Listener> listener;
     unsigned localPort;
@@ -708,7 +704,7 @@ public:
     return 0;
   }
 
-  int hold(void *, ZvCf *args, ZtString &out) {
+  int hold(void *, const ZvCf *args, ZtString &out) {
     unsigned srcPort;
     int side;
     bool allProxies = false, isTag = false;
@@ -757,7 +753,7 @@ public:
     return 0;
   }
 
-  int release(void *, ZvCf *args, ZtString &out) {
+  int release(void *, const ZvCf *args, ZtString &out) {
     ZuString tag;
     unsigned srcPort;
     int side;
@@ -806,7 +802,7 @@ public:
     return 0;
   }
 
-  int disc(void *, ZvCf *args, ZtString &out) {
+  int disc(void *, const ZvCf *args, ZtString &out) {
     ZuString tag;
     unsigned srcPort;
     bool isTag = false, allProxies = false;
@@ -845,7 +841,7 @@ public:
     return 0;
   }
 
-  int suspend(void *, ZvCf *args, ZtString &out) {
+  int suspend(void *, const ZvCf *args, ZtString &out) {
     ZuString tag;
     unsigned srcPort;
     int side, op;
@@ -907,7 +903,7 @@ public:
     return 0;
   }
 
-  int resume(void *, ZvCf *args, ZtString &out) {
+  int resume(void *, const ZvCf *args, ZtString &out) {
     ZuString tag;
     unsigned srcPort;
     int side, op;
@@ -965,7 +961,7 @@ public:
     return 0;
   }
 
-  int trace(void *, ZvCf *args, ZtString &out) {
+  int trace(void *, const ZvCf *args, ZtString &out) {
     ZuString tag;
     unsigned srcPort;
     int side;
@@ -1016,7 +1012,7 @@ public:
     return 0;
   }
 
-  int drop(void *, ZvCf *args, ZtString &out) {
+  int drop(void *, const ZvCf *args, ZtString &out) {
     ZuString tag;
     unsigned srcPort;
     int side;
@@ -1067,7 +1063,7 @@ public:
     return 0;
   }
 
-  int verboseCmd(void *, ZvCf *args, ZtString &out) {
+  int verboseCmd(void *, const ZvCf *args, ZtString &out) {
     bool on;
     try {
       on = args->getInt("1", 0, 1, false, 1);
@@ -1079,7 +1075,7 @@ public:
     return 0;
   }
 
-  int status(void *, ZvCf *args, ZtString &out) {
+  int status(void *, const ZvCf *args, ZtString &out) {
     ZuString tag;
     bool isTag = false;
     try {
@@ -1107,7 +1103,7 @@ public:
     return 0;
   }
 
-  int quit(void *, ZvCf *args, ZtString &out) {
+  int quit(void *, const ZvCf *args, ZtString &out) {
     post();
     out << "shutting down\n";
     return 0;

@@ -75,8 +75,7 @@ public:
 
       m_header.length(m_headerLen, false);
       try {
-	const auto &r = ZtStaticRegex("\\bContent-Length:\\s+(\\d+)");
-	i = r.m(m_header, c);
+	i = ZtREGEX("\bContent-Length:\s+(\d+)").m(m_header, c);
       } catch (...) { i = 0; }
       if (i < 2) {
 	ZeLOG(Error, "could not parse Content-Length");

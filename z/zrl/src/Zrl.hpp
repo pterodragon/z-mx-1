@@ -36,7 +36,7 @@ struct ZrlAPI Zrl {
   struct EndOfFile { };	// thrown by readline and readline_ on EOF
 
   static void init() { }
-  static void syntax(ZvCf *cf) { }
+  static void syntax(const ZvCf *cf) { }
   static void stop() { }
 
   static ZmRef<ZvCf> readline(const char *prompt) { return {}; }

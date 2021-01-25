@@ -50,7 +50,7 @@ public:
   Mgr() = default;
   ~Mgr();
 
-  virtual void init(ZmScheduler *, ZvCf *) = 0;
+  virtual void init(ZmScheduler *, const ZvCf *) = 0;
   virtual void final();
 
   virtual bool open(

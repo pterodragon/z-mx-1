@@ -198,7 +198,7 @@ public:
       m_watchLists[i].server = this;
   }
 
-  void init(ZiMultiplex *mx, ZvCf *cf) {
+  void init(ZiMultiplex *mx, const ZvCf *cf) {
     m_mx = mx;
 
     if (!cf) {
@@ -214,7 +214,7 @@ public:
     else
       m_thread = mx->txThread();
 
-    if (ZmRef<ZvCf> mxCf = cf->subset("mx", false, true)) {
+    if (ZmRef<ZvCf> mxCf = cf->subset("mx")) {
       ZvCf::Iterator i(mxCf);
       ZuString key;
       while (ZmRef<ZvCf> mxCf_ = i.subset(key))
@@ -1160,10 +1160,9 @@ private:
   }
   void alertQuery_(Watch *watch) {
     // parse filter - yyyymmdd:seqNo
-    const auto &alertFilter = ZtStaticRegex("^(\\d{8}):(\\d+)$");
     ZtRegex::Captures c;
     ZuBox<unsigned> date = 0, seqNo = 0;
-    if (alertFilter.m(watch->filter, c) == 3) {
+    if (ZtREGEX("^(\d{8}):(\d+)$").m(watch->filter, c) == 3) {
       date = c[2];
       seqNo = c[3];
     }

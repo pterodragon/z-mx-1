@@ -245,16 +245,14 @@ template <> struct ZuPrint<ZiMReq> : public ZuPrintFn { };
 
 // protocol/socket options
 namespace ZiCxnFlags {
-  ZtEnumValues(
-    UDP = 0,		// U - create UDP socket (default TCP)
+  ZtEnumerate(
+    UDP,		// U - create UDP socket (default TCP)
     Multicast,          // M - combine with U for multicast server socket
     LoopBack,		// L - combine with M and U for multicast loopback
     KeepAlive,		// K - set SO_KEEPALIVE socket option
     NetLink,		// N - NetLink socket
     Nagle		// D - enable Nagle algorithm (no TCP_NODELAY)
   );
-  ZtEnumNames(
-    "UDP", "Multicast", "LoopBack", "KeepAlive", "NetLink", "Nagle");
   ZtEnumFlags(Flags,
       "U", UDP, "M", Multicast, "L", LoopBack, "L", KeepAlive, "N", NetLink,
       "D", Nagle);
@@ -484,8 +482,7 @@ template <> struct ZuPrint<ZiListenInfo> : public ZuPrintFn { };
 
 // cxn information (direction, socket, local & remote IP/port, options)
 namespace ZiCxnType {
-  ZtEnumValues(TCPIn, TCPOut, UDP);
-  ZtEnumNames("TCPIn", "TCPOut", "UDP");
+  ZtEnumerate(TCPIn, TCPOut, UDP);
 }
 
 struct ZiCxnInfo { // pure aggregate, no ctor

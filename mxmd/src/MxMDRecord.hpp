@@ -54,7 +54,7 @@ class MxMDRecord : public MxEngine, public MxEngineApp {
 public:
   MxMDCore *core() const;
 
-  void init(MxMDCore *core, ZvCf *cf);
+  void init(MxMDCore *core, const ZvCf *cf);
   void final();
 
   ZuInline unsigned snapThread() const { return m_snapThread; }
@@ -66,7 +66,7 @@ protected:
   ZmRef<MxAnyLink> createLink(MxID id);
 
   // commands
-  int recordCmd(void *, ZvCf *args, ZtString &out);
+  int recordCmd(void *, const ZvCf *args, ZtString &out);
 
 private:
   unsigned	m_snapThread = 0;

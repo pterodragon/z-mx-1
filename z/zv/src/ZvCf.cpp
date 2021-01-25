@@ -52,7 +52,7 @@ int ZvCf::fromCLI(ZvCf *syntax, ZuString line)
   ZtArray<ZtString> args;
   parseCLI(line, args);
   if (!args.length()) return 0;
-  return fromArgs(syntax->subset(args[0], false), args);
+  return fromArgs(syntax->subset(args[0]), args);
 }
 
 int ZvCf::fromCLI(const ZvOpt *opts, ZuString line)
@@ -67,15 +67,15 @@ void ZvCf::parseCLI(ZuString line, ZtArray<ZtString> &args)
 {
   args.length(0);
   ZtString val;
-  const auto &cliValue = ZtStaticRegex("\\G[^\"'`#;\\s]+");// \G[^"'`#;\s]+
-  const auto &cliSglQuote = ZtStaticRegex("\\G'");		// \G'
-  const auto &cliSglQuotedValue = ZtStaticRegex("\\G[^'`]+");	// \G[^'`]+
-  const auto &cliDblQuote = ZtStaticRegex("\\G\"");		// \G"
-  const auto &cliDblQuotedValue = ZtStaticRegex("\\G[^\"`]+");	// \G[^"`]+
-  const auto &cliQuoted = ZtStaticRegex("\\G`.");		// \G`.
-  const auto &cliWhiteSpace = ZtStaticRegex("\\G\\s+");		// \G\s+
-  const auto &cliComment = ZtStaticRegex("\\G#");		// \G#
-  const auto &cliSemicolon = ZtStaticRegex("\\G;");		// \G;
+  const auto &cliValue = ZtREGEX("\G[^\"'`#;\s]+");
+  const auto &cliSglQuote = ZtREGEX("\G'");
+  const auto &cliSglQuotedValue = ZtREGEX("\G[^'`]+");
+  const auto &cliDblQuote = ZtREGEX("\G\"");
+  const auto &cliDblQuotedValue = ZtREGEX("\G[^\"`]+");
+  const auto &cliQuoted = ZtREGEX("\G`.");	
+  const auto &cliWhiteSpace = ZtREGEX("\G\s+");
+  const auto &cliComment = ZtREGEX("\G#");
+  const auto &cliSemicolon = ZtREGEX("\G;");
   ZtRegex::Captures c;
   unsigned pos = 0;
 
@@ -164,9 +164,9 @@ int ZvCf::fromArgs(const ZvOpt *opts, int argc, char **argv)
 int ZvCf::fromArgs(ZvCf *options, const ZtArray<ZtString> &args)
 {
   int i, j, n, l, p;
-  const auto &argShort = ZtStaticRegex("^-(\\w+)$");	// -a
-  const auto &argLongFlag = ZtStaticRegex("^--([\\w:]+)$"); // --arg
-  const auto &argLongValue = ZtStaticRegex("^--([\\w:]+)="); // --arg=val
+  const auto &argShort = ZtREGEX("^-(\w+)$");		// -a
+  const auto &argLongFlag = ZtREGEX("^--([\w:]+)$");	// --arg
+  const auto &argLongValue = ZtREGEX("^--([\w:]+)=");	// --arg=val
   ZtRegex::Captures c;
   ZmRef<ZvCf> option;
 
@@ -181,7 +181,7 @@ int ZvCf::fromArgs(ZvCf *options, const ZtArray<ZtString> &args)
 	ZuString longOpt;
 	if (!options ||
 	    !(longOpt = options->get(shortOpt)) ||
-	    !(option = options->subset(longOpt, false)))
+	    !(option = options->subset(longOpt)))
 	  throw Usage(args[0], shortOpt);
 	int type = option->getEnum<ZvOptTypes::Map>("type", true);
 	if (type == ZvOptFlag) {
@@ -209,7 +209,7 @@ int ZvCf::fromArgs(ZvCf *options, const ZtArray<ZtString> &args)
     } else if (argLongFlag.m(args[i], c)) {
       ZtString longOpt = c[2];
       if (!options ||
-	  !(option = options->subset(longOpt, false)))
+	  !(option = options->subset(longOpt)))
 	throw Usage(args[0], longOpt);
       int type = option->getEnum<ZvOptTypes::Map>("type", true);
       if (type == ZvOptFlag) {
@@ -221,8 +221,7 @@ int ZvCf::fromArgs(ZvCf *options, const ZtArray<ZtString> &args)
       }
     } else if (argLongValue.m(args[i], c)) {
       ZtString longOpt = c[2];
-      if (!options ||
-	  !(option = options->subset(longOpt, false)))
+      if (!options || !(option = options->subset(longOpt)))
 	throw Usage(args[0], longOpt);
       fromArg(longOpt,
 	  option->getEnum<ZvOptTypes::Map>("type", false, ZvOptScalar), c[3]);
@@ -312,10 +311,10 @@ void ZvCf::fromArg(ZuString fullKey, int type, ZuString argVal)
 
   // type == ZvOptScalar || ZvOptMulti
 
-  const auto &argValue = ZtStaticRegex("\\G[^`]+");		// \G[^`]+
-  const auto &argValueMulti = ZtStaticRegex("\\G[^`,]+");	// \G[^`,]+
-  const auto &argValueQuoted = ZtStaticRegex("\\G`(.)");	// \G`(.)
-  const auto &argValueComma = ZtStaticRegex("\\G,");		// \G,
+  const auto &argValue = ZtREGEX("\G[^`]+");
+  const auto &argValueMulti = ZtREGEX("\G[^`,]+");
+  const auto &argValueQuoted = ZtREGEX("\G`(.)");
+  const auto &argValueComma = ZtREGEX("\G,");
   ZtRegex::Captures c;
   unsigned pos = 0;
 
@@ -353,24 +352,18 @@ void ZvCf::fromString(ZuString in,
 
   ZmRef<ZvCf> self = this;
 
-  const auto &fileSkip = ZtStaticRegex(
-      "\\G(?:#[^\\n]*\\n|\\s+)"); // \G(?:#[^\n]*\n|\s+)
-  const auto &fileEndScope = ZtStaticRegex("\\G\\}"); // \G\}
-  const auto &fileKey = ZtStaticRegex(
-      "\\G(?:[^$#%`\"{},:=\\s]+|[%=]\\w+)"); // \G(?:[^$#%`"{},:=\s]+|[%=]\w+)
-  const auto &fileLine = ZtStaticRegex("\\G[^\\n]*\\n"); // \G[^\n]*\n1
-  const auto &fileValue = ZtStaticRegex(
-      "\\G[^$#`\"{},\\s]+"); // \G[^#`"{},\s]+
-  const auto &fileValueQuoted = ZtStaticRegex("\\G`(.)"); // \G`(.)
-  const auto &fileDblQuote = ZtStaticRegex("\\G\""); // \G"
-  const auto &fileValueDblQuoted = ZtStaticRegex(
-      "\\G[^`\"]+"); // \G[^`"]+
-  const auto &fileBeginScope = ZtStaticRegex("\\G\\{");	// \G\{
-  const auto &fileComma = ZtStaticRegex("\\G,"); // \G,
-  const auto &fileDefine = ZtStaticRegex(
-      "([^$#%`\"{},:=\\s]+)=(.+)"); // ([^$#%`"{},:=\s]+)=(.+)
-  const auto &fileValueVar = ZtStaticRegex(
-      "\\G\\${([^$#%`\"{},:=\\s]+)}"); // \G\${([^$#%`"{},:=\s]+)}
+  const auto &fileSkip = ZtREGEX("\G(?:#[^\n]*\n|\s+)");
+  const auto &fileEndScope = ZtREGEX("\G\}");
+  const auto &fileKey = ZtREGEX("\G(?:[^$#%`\"{},:=\s]+|[%=]\w+)");
+  const auto &fileLine = ZtREGEX("\G[^\n]*\n");
+  const auto &fileValue = ZtREGEX("\G[^$#`\"{},\s]+");
+  const auto &fileValueQuoted = ZtREGEX("\G`(.)");
+  const auto &fileDblQuote = ZtREGEX("\G\"");
+  const auto &fileValueDblQuoted = ZtREGEX("\G[^`\"]+");
+  const auto &fileBeginScope = ZtREGEX("\G\{");
+  const auto &fileComma = ZtREGEX("\G,");
+  const auto &fileDefine = ZtREGEX("([^$#%`\"{},:=\s]+)=(.+)");
+  const auto &fileValueVar = ZtREGEX("\G\${([^$#%`\"{},:=\s]+)}");
   ZtRegex::Captures c;
   unsigned pos = 0;
 
@@ -513,20 +506,16 @@ void ZvCf::fromEnv(const char *name, bool validate)
   bool first = true;
 
   unsigned pos = 0;
-  const auto &envEndScope = ZtStaticRegex("\\G\\}"); // \G\}
-  const auto &envColon = ZtStaticRegex("\\G:");	// \G:
-  const auto &envKey = ZtStaticRegex(
-      "\\G[^#`\"{},:=\\s]+"); // \G[^#`"{},:=\s]+
-  const auto &envEquals = ZtStaticRegex("\\G="); // \G=
-  const auto &envValue = ZtStaticRegex(
-      "\\G[^`\"{},:]+"); // \G[^`"{},:]+
-  const auto &envValueQuoted = ZtStaticRegex(
-      "\\G`([`\"{},:\\s])"); // \G\\([`"{},:\s])
-  const auto &envDblQuote = ZtStaticRegex("\\G\""); // \G"
-  const auto &envValueDblQuoted = ZtStaticRegex(
-      "\\G[^`\"]+");	// \G[^`"]+
-  const auto &envBeginScope = ZtStaticRegex("\\G\\{"); // \G\{
-  const auto &envComma = ZtStaticRegex("\\G,"); // \G,
+  const auto &envEndScope = ZtREGEX("\G\}");
+  const auto &envColon = ZtREGEX("\G:");
+  const auto &envKey = ZtREGEX("\G[^#`\"{},:=\s]+");
+  const auto &envEquals = ZtREGEX("\G=");
+  const auto &envValue = ZtREGEX("\G[^`\"{},:]+");
+  const auto &envValueQuoted = ZtREGEX("\G`([`\"{},:\s])");
+  const auto &envDblQuote = ZtREGEX("\G\"");
+  const auto &envValueDblQuoted = ZtREGEX("\G[^`\"]+");
+  const auto &envBeginScope = ZtREGEX("\G\{");
+  const auto &envComma = ZtREGEX("\G,");
   ZtRegex::Captures c;
 
 key:
@@ -630,7 +619,7 @@ quoted:
 #pragma warning(pop)
 #endif
 
-void ZvCf::toArgs(int &argc, char **&argv)
+void ZvCf::toArgs(int &argc, char **&argv) const
 {
   ZtArray<ZtString> args;
 
@@ -648,7 +637,7 @@ void ZvCf::freeArgs(int argc, char **argv)
   free(argv);
 }
 
-void ZvCf::toArgs(ZtArray<ZtString> &args, ZuString prefix)
+void ZvCf::toArgs(ZtArray<ZtString> &args, ZuString prefix) const
 {
   auto i = m_tree.readIterator();
   Tree::NodeRef node_;
@@ -680,7 +669,7 @@ ZtString ZvCf::quoteArgValue(ZuString in)
 
   ZtString out = in;
 
-  const auto &argQuote = ZtStaticRegex("[`,]");	// [`,]
+  const auto &argQuote = ZtREGEX("[`,]");
   ZtRegex::Captures c;
   unsigned pos = 0;
 
@@ -729,10 +718,10 @@ ZtString ZvCf::quoteValue(ZuString in)
 
   ZtString out = in;
 
-  const auto &quote1 = ZtStaticRegex("[#`\"{},\\s]"); // [#`"{},\s]
-  const auto &quote2 = ZtStaticRegex("[#`\",\\s]"); // [#`",\s]
-  const auto &quoteValueDbl = ZtStaticRegex("[`\"]"); // [`"]
-  const auto &quoteValue = ZtStaticRegex("[#`\"{},\\s]"); // [#`"{},\s]
+  const auto &quote1 = ZtREGEX("[#`\"{},\s]");
+  const auto &quote2 = ZtREGEX("[#`\",\s]");
+  const auto &quoteValueDbl = ZtREGEX("[`\"]");
+  const auto &quoteValue = ZtREGEX("[#`\"{},\s]");
   ZtRegex::Captures c;
   bool doubleQuote = false;
   unsigned pos = 0;
@@ -771,10 +760,10 @@ void ZvCf::toFile_(ZiFile &file)
   if (file.write(out.data(), out.length(), &e) != Zi::OK) throw e;
 }
 
-ZuString ZvCf::get(ZuString fullKey, bool required, ZuString def)
+ZuString ZvCf::get(ZuString fullKey, bool required, ZuString def) const
 {
   ZuString key;
-  ZmRef<ZvCf> self = scope(fullKey, key, 1);
+  ZmRef<ZvCf> self = const_cast<ZvCf *>(this)->scope(fullKey, key, 0);
   if (!self) {
     if (required) throw Required(this, fullKey);
     return def;
@@ -788,10 +777,10 @@ ZuString ZvCf::get(ZuString fullKey, bool required, ZuString def)
 }
 
 const ZtArray<ZtString> *ZvCf::getMultiple(ZuString fullKey,
-    unsigned minimum, unsigned maximum, bool required)
+    unsigned minimum, unsigned maximum, bool required) const
 {
   ZuString key;
-  ZmRef<ZvCf> self = scope(fullKey, key, 1);
+  ZmRef<ZvCf> self = const_cast<ZvCf *>(this)->scope(fullKey, key, 0);
   if (!self) {
     if (required) throw Required(this, fullKey);
     return 0;
@@ -833,7 +822,7 @@ void ZvCf::unset(ZuString fullKey)
   self->m_tree.del(key);
 }
 
-ZmRef<ZvCf> ZvCf::subset(ZuString key, bool create, bool required)
+ZmRef<ZvCf> ZvCf::subset(ZuString key, bool required, bool create)
 {
   ZmRef<ZvCf> self = this;
   while (ZuString scope = scope_(key)) {
@@ -875,7 +864,7 @@ void ZvCf::subset(ZuString key, ZvCf *cf)
   }
 }
 
-void ZvCf::merge(ZvCf *cf)
+void ZvCf::merge(const ZvCf *cf)
 {
   auto i = cf->m_tree.readIterator();
   Tree::NodeRef srcNode_;

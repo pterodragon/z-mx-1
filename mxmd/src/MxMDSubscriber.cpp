@@ -23,7 +23,7 @@
 
 #include <mxmd/MxMDSubscriber.hpp>
 
-void MxMDSubscriber::init(MxMDCore *core, ZvCf *cf)
+void MxMDSubscriber::init(MxMDCore *core, const ZvCf *cf)
 {
   if (!cf->get("id")) cf->set("id", "subscrib");
 
@@ -624,7 +624,7 @@ void MxMDSubLink::heartbeat()
 
 // commands
 
-void MxMDSubscriber::statusCmd(void *, ZvCf *args, ZtString &out)
+void MxMDSubscriber::statusCmd(void *, const ZvCf *args, ZtString &out)
 {
   int argc = ZuBox<int>(args->get("#"));
   if (argc != 1) throw ZvCmdUsage();
@@ -697,7 +697,7 @@ void MxMDSubLink::status(ZtString &out)
   out << '\n';
 }
 
-void MxMDSubscriber::resendCmd(void *, ZvCf *args, ZtString &out)
+void MxMDSubscriber::resendCmd(void *, const ZvCf *args, ZtString &out)
 {
   using namespace MxMDStream;
   ZuBox<int> argc(args->get("#"));

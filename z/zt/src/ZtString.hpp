@@ -1156,13 +1156,12 @@ private:
 	memcpy(newData, oldData, offset * sizeof(Char));
       if (rlength)
 	memcpy(newData + offset, replace, rlength * sizeof(Char));
-      if (oldData != newData) {
-	if ((int)rlength != length && offset + length < (int)n)
-	  memmove(newData + offset + rlength,
-		  oldData + offset + length,
-		  (n - (offset + length)) * sizeof(Char));
-	if (mallocd()) ::free(oldData);
-      }
+      if (offset + length < (int)n &&
+	  (oldData != newData || (int)rlength != length))
+	memmove(newData + offset + rlength,
+		oldData + offset + length,
+		(n - (offset + length)) * sizeof(Char));
+      if (oldData != newData && mallocd()) ::free(oldData);
       newData[l] = 0;
       if (z <= (unsigned)BuiltinSize) {
 	size_owned_null(z, 1, 0);

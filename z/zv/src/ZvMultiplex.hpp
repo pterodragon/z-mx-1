@@ -59,12 +59,12 @@ struct ZvCxnOptions : public ZiCxnOptions {
     return *this;
   }
 
-  ZvCxnOptions(ZvCf *cf) : ZiCxnOptions() { init(cf); }
+  ZvCxnOptions(const ZvCf *cf) : ZiCxnOptions() { init(cf); }
 
-  ZvCxnOptions(ZvCf *cf, const ZiCxnOptions &deflt) :
+  ZvCxnOptions(const ZvCf *cf, const ZiCxnOptions &deflt) :
       ZiCxnOptions(deflt) { init(cf); }
 
-  void init(ZvCf *cf) {
+  void init(const ZvCf *cf) {
     if (!cf) return;
 
     flags(cf->getFlags<ZiCxnFlags::Flags>("options", false, 0));
@@ -80,7 +80,7 @@ struct ZvCxnOptions : public ZiCxnOptions {
     if (multicast()) {
       if (ZuString s = cf->get("multicastInterface", false)) mif(s);
       ttl(cf->getInt("multicastTTL", 0, INT_MAX, false, ttl()));
-      if (ZmRef<ZvCf> groups = cf->subset("multicastGroups", false)) {
+      if (ZmRef<ZvCf> groups = cf->subset("multicastGroups")) {
 	ZvCf::Iterator i(groups);
 	ZuString addr_, mif_;
 	while (mif_ = i.get(addr_)) {
@@ -100,16 +100,16 @@ struct ZvMxParams : public ZiMxParams {
 
   using ZiMxParams::ZiMxParams;
 
-  ZvMxParams(ZvCf *cf) { init(cf); }
+  ZvMxParams(const ZvCf *cf) { init(cf); }
 
-  ZvMxParams(ZvCf *cf, ZiMxParams &&deflt) :
+  ZvMxParams(const ZvCf *cf, ZiMxParams &&deflt) :
     ZiMxParams(ZuMv(deflt)) { init(cf); }
 
   ZvSchedParams &scheduler() {
     return static_cast<ZvSchedParams &>(ZiMxParams::scheduler());
   }
 
-  void init(ZvCf *cf) {
+  void init(const ZvCf *cf) {
     if (!cf) return;
 
     scheduler().init(cf);
@@ -144,7 +144,7 @@ public:
   ZvMultiplex(const ID_ &id) :
       ZiMultiplex(ZiMxParams().scheduler([&](auto &s) { s.id(id); })) { }
   template <typename ID_>
-  ZvMultiplex(const ID_ &id, ZvCf *cf) :
+  ZvMultiplex(const ID_ &id, const ZvCf *cf) :
       ZiMultiplex(ZvMxParams(cf,
 	    ZiMxParams().scheduler([&](auto &s) { s.id(id); }))) { }
 };

@@ -34,6 +34,7 @@
 #include <zlib/ZuPair.hpp>
 #include <zlib/ZuAssert.hpp>
 #include <zlib/ZuObject.hpp>
+#include <zlib/ZuPP.hpp>
 
 #include <zlib/ZmObject.hpp>
 #include <zlib/ZmRef.hpp>
@@ -109,6 +110,9 @@ using ZtEnum = ZuBox_1(int8_t);
   template <typename S> inline ZtEnum lookup(const S &s) { \
     return Map::instance()->s2v(s); \
   }
+#define ZtEnumerate(...) \
+  ZtEnumValues(__VA_ARGS__); \
+  ZtEnumNames(ZuPP_Eval(ZuPP_MapComma(ZuPP_Q, __VA_ARGS__)))
 #define ZtEnumMap(Map, ...) \
   struct Map : public Map_<Map> { \
     Map() { this->init(__VA_ARGS__, (const char *)0); } \

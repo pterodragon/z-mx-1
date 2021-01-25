@@ -301,7 +301,7 @@ friend TLS;
   ZuInline const App *app() const { return static_cast<const App *>(this); }
   ZuInline App *app() { return static_cast<App *>(this); }
 
-  void init(ZiMultiplex *mx, ZvCf *cf) {
+  void init(ZiMultiplex *mx, const ZvCf *cf) {
     static const char *alpn[] = { "zcmd", 0 };
     ZvCmdHost::init();
     TLS::init(mx,
@@ -313,7 +313,7 @@ friend TLS;
     m_rebindFreq = cf->getInt("rebindFreq", 0, 3600, false, 0);
     m_timeout = cf->getInt("timeout", 0, 3600, false, 0);
     unsigned passLen = 12, totpRange = 6, maxSize = (10<<20);
-    if (ZmRef<ZvCf> mgrCf = cf->subset("userDB", false, true)) {
+    if (ZmRef<ZvCf> mgrCf = cf->subset("userDB")) {
       passLen = mgrCf->getInt("passLen", 6, 60, false, 12);
       totpRange = mgrCf->getInt("totpRange", 0, 100, false, 6);
       maxSize = mgrCf->getInt("maxSize", 0, (10<<24), false, (10<<20));
@@ -323,7 +323,7 @@ friend TLS;
     m_userDB = new UserDB(this, passLen, totpRange, maxSize);
     if (!loadUserDB())
       throw ZtString() << "failed to load \"" << m_userDBPath << '"';
-    TelServer::init(mx, cf->subset("telemetry", false));
+    TelServer::init(mx, cf->subset("telemetry"));
   }
 
   void final() {

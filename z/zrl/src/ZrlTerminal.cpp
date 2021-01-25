@@ -1001,6 +1001,7 @@ void Terminal::mv(unsigned pos)
 	return;
       }
       if (ZuUnlikely(m_pos == pos)) return;
+      mvhoriz(pos);
     } else
       mvleft(pos);
   } else if (pos > m_pos) {
@@ -1014,11 +1015,10 @@ void Terminal::mv(unsigned pos)
 	cr();
       }
       if (ZuUnlikely(m_pos == pos)) return;
+      mvhoriz(pos);
     } else
       mvright(pos);
-  } else // m_pos == pos
-    return;
-  mvhoriz(pos);
+  }
 }
 
 // move cursor horizontally
@@ -1092,6 +1092,8 @@ void Terminal::splice(
     unsigned off, ZuUTFSpan span,
     ZuArray<const uint8_t> replace, ZuUTFSpan rspan)
 {
+  ZmAssert(off == m_line.position(m_pos).mapping());
+
   unsigned endPos = m_pos + rspan.width();
   unsigned endBOLPos = endPos - (endPos % m_width);
   bool shiftLeft = false, shiftRight = false;

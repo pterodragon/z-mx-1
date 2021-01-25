@@ -62,7 +62,7 @@
 class MxMDCore;
 
 extern "C" {
-  typedef void (*MxMDFeedPluginFn)(MxMDCore *md, ZvCf *cf);
+  typedef void (*MxMDFeedPluginFn)(MxMDCore *md, const ZvCf *cf);
 };
 
 class MxMDAPI MxMDCmdServer :
@@ -101,7 +101,7 @@ public:
 private:
   MxMDCore(Mx *mx);
 
-  void init_(ZvCf *cf);
+  void init_(const ZvCf *cf);
 
 public:
   ~MxMDCore() { }
@@ -150,21 +150,21 @@ public:
 private:
   void initCmds();
 
-  void l1(void *, ZvCf *, ZtString &);
-  void l2(void *, ZvCf *, ZtString &);
+  void l1(void *, const ZvCf *, ZtString &);
+  void l2(void *, const ZvCf *, ZtString &);
   void l2_side(MxMDOBSide *, ZtString &);
-  void instrument_(void *, ZvCf *, ZtString &);
+  void instrument_(void *, const ZvCf *, ZtString &);
 
-  void ticksizes(void *, ZvCf *, ZtString &);
-  void instruments(void *, ZvCf *, ZtString &);
-  void orderbooks(void *, ZvCf *, ZtString &);
+  void ticksizes(void *, const ZvCf *, ZtString &);
+  void instruments(void *, const ZvCf *, ZtString &);
+  void orderbooks(void *, const ZvCf *, ZtString &);
 
 #if 0
-  void tick(void *, ZvCf *, ZtString &);
-  void update(void *, ZvCf *, ZtString &);
+  void tick(void *, const ZvCf *, ZtString &);
+  void update(void *, const ZvCf *, ZtString &);
 
-  void feeds(void *, ZvCf *, ZtString &);
-  void venues(void *, ZvCf *, ZtString &);
+  void feeds(void *, const ZvCf *, ZtString &);
+  void venues(void *, const ZvCf *, ZtString &);
 #endif
 
   void addVenueMapping_(ZuAnyPOD *);

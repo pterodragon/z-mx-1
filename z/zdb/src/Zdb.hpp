@@ -498,7 +498,7 @@ using ZdbPOD = ZdbPOD_<T, ZmHeap<HeapID, sizeof(ZdbPOD_<T, ZuNull>)> >;
 
 struct ZdbConfig {
   ZdbConfig() { }
-  ZdbConfig(ZuString name_, ZvCf *cf) {
+  ZdbConfig(ZuString name_, const ZvCf *cf) {
     name = name_;
     path = cf->get("path", true);
 #if 0
@@ -731,7 +731,7 @@ template <> struct ZuPrint<Zdb_DBState> : public ZuPrintDelegate {
 };
 
 struct ZdbHostConfig {
-  ZdbHostConfig(const ZtString &key, ZvCf *cf) {
+  ZdbHostConfig(const ZtString &key, const ZvCf *cf) {
     id = ZvCf::toInt(cf, "ID", key, 0, 1<<30);
     priority = cf->getInt("priority", 0, 1<<30, true);
     ip = cf->get("IP", true);
@@ -934,18 +934,18 @@ struct ZdbEnvConfig {
   ZdbEnvConfig(ZdbEnvConfig &&) = default;
   ZdbEnvConfig &operator =(ZdbEnvConfig &&) = default;
 
-  ZdbEnvConfig(ZvCf *cf) {
+  ZdbEnvConfig(const ZvCf *cf) {
     writeThread = cf->get("writeThread", true);
     const ZtArray<ZtString> *names = cf->getMultiple("dbs", 0, 100, true);
     dbCfs.size(names->length());
     for (unsigned i = 0; i < names->length(); i++) {
-      ZmRef<ZvCf> dbCf = cf->subset((*names)[i], false, true);
+      ZmRef<ZvCf> dbCf = cf->subset((*names)[i], true);
       ZdbConfig db((*names)[i], dbCf); // might throw, do not push() here
       new (dbCfs.push()) ZdbConfig(db);
     }
     hostID = cf->getInt("hostID", 0, 1<<30, true);
     {
-      ZvCf::Iterator i(cf->subset("hosts", false, true));
+      ZvCf::Iterator i(cf->subset("hosts", true));
       ZuString key;
       while (ZmRef<ZvCf> hostCf = i.subset(key)) {
 	ZdbHostConfig host(key, hostCf); // might throw, do not push() here

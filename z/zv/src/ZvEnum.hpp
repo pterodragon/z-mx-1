@@ -75,18 +75,18 @@ public:
   }
 
   ZtEnum s2v(ZuString key, ZuString s,
-      int def = ZtEnum(), bool noThrow = false) const {
+      int def = ZtEnum{}, bool noThrow = false) const {
     if (ZuUnlikely(!s)) return def;
     ZtEnum v = T::s2v(s);
     if (ZuLikely(*v)) return v;
     if (noThrow) return def;
-    throw ZvInvalidEnumT<T>(key, s, this);
+    throw ZvInvalidEnumT<T>{key, s, this};
   }
 
   const char *v2s(ZuString key, ZtEnum v) const {
     const char *s = T::v2s(v);
     if (ZuLikely(s)) return s;
-    throw ZvInvalidEnumT<T>(key, v, this);
+    throw ZvInvalidEnumT<T>{key, v, this};
   }
 
 private:
@@ -126,8 +126,8 @@ public:
   Flags scan(ZuString key, ZuString s, char delim = '|') const {
     if (!s) return 0;
     if (Flags v = T::template scan<Flags>(s, delim)) return v;
-    throw ZvInvalidEnumT<T>(
-	key, s, static_cast<const ZvEnum<T> *>(this));
+    throw ZvInvalidEnumT<T>{
+	key, s, static_cast<const ZvEnum<T> *>(this)};
     // not reached
   }
 };

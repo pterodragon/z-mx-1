@@ -38,7 +38,7 @@
 #include <zlib/ZvCf.hpp>
 
 // command handler (context, command, output)
-using ZvCmdFn = ZmFn<void *, ZvCf *, ZtString &>;
+using ZvCmdFn = ZmFn<void *, const ZvCf *, ZtString &>;
 // can be thrown by command function
 struct ZvCmdUsage { };
 
@@ -58,7 +58,7 @@ public:
   void addCmd(ZuString name,
       ZuString syntax, ZvCmdFn fn, ZtString brief, ZtString usage) {
     {
-      ZmRef<ZvCf> cf = m_syntax->subset(name, true);
+      ZmRef<ZvCf> cf = m_syntax->subset(name, false, true);
       cf->fromString(syntax, false);
       cf->set("help:type", "flag");
     }
@@ -103,7 +103,7 @@ public:
   }
 
 private:
-  int help(void *, ZvCf *args, ZtString &out) {
+  int help(void *, const ZvCf *args, ZtString &out) {
     int argc = ZuBox<int>(args->get("#"));
     if (argc > 2) throw ZvCmdUsage();
     if (ZuUnlikely(argc == 2)) {

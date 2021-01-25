@@ -23,7 +23,7 @@
 
 using namespace MxTelemetry;
 
-void Client::init(MxMultiplex *mx, ZvCf *cf)
+void Client::init(MxMultiplex *mx, const ZvCf *cf)
 {
   m_mx = mx;
 
@@ -92,7 +92,7 @@ void Client::disconnected(Cxn *cxn)
 }
 
 
-void Server::init(MxMultiplex *mx, ZvCf *cf)
+void Server::init(MxMultiplex *mx, const ZvCf *cf)
 {
   m_mx = mx;
 

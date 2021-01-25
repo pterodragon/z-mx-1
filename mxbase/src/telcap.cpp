@@ -8,7 +8,7 @@ static ZmSemaphore sem;
 
 class App : public MxTelemetry::Client {
 public:
-  void init(MxMultiplex *mx, ZtString dir, ZvCf *cf) {
+  void init(MxMultiplex *mx, ZtString dir, const ZvCf *cf) {
     m_dir = ZuMv(dir);
     MxTelemetry::Client::init(mx, cf);
   }
@@ -313,12 +313,12 @@ int main(int argc, char **argv)
       false);
   if (port) cf->set("telemetry:port", port);
 
-  ZmRef<MxMultiplex> mx = new MxMultiplex("mx", cf->subset("mx", true));
+  ZmRef<MxMultiplex> mx = new MxMultiplex("mx", cf->subset("mx"));
 
   App app;
 
   try {
-    app.init(mx, ZuMv(dir), cf->subset("telemetry", false));
+    app.init(mx, ZuMv(dir), cf->subset("telemetry", true));
   } catch (const ZvError &e) {
     std::cerr << e << '\n' << std::flush;
     usage();

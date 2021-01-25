@@ -96,7 +96,7 @@ private:
     Config(Config &&) = default;
     Config &operator =(Config &&) = default;
 
-    Config(ZvCf *cf) {
+    Config(const ZvCf *cf) {
       dir = cf->get("dir", true);
       coldDir = cf->get("coldDir", true);
       writeThread = cf->get("writeThread", true);
@@ -112,7 +112,7 @@ private:
   };
 
 public:
-  void init(ZmScheduler *sched, ZvCf *cf);
+  void init(ZmScheduler *sched, const ZvCf *cf);
   void final();
 
   const ZiFile::Path &dir() const { return m_dir; }

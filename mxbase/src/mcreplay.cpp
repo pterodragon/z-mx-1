@@ -118,7 +118,7 @@ private:
 
 class Mx : public ZmObject, public ZiMultiplex {
 public:
-  Mx(ZvCf *cf) : ZiMultiplex(ZvMxParams(cf)) { }
+  Mx(const ZvCf *cf) : ZiMultiplex(ZvMxParams(cf)) { }
   ~Mx() { }
 };
 
@@ -129,7 +129,7 @@ class App : public ZmPolymorph {
 	ZmHashIndex<Connection::GroupIDAccessor> > >;
 
 public:
-  App(ZvCf *cf);
+  App(const ZvCf *cf);
   ~App();
 
   int start();
@@ -349,7 +349,7 @@ void Msg_<Heap>::sent_(ZiIOContext &io)
   io.complete();
 }
 
-App::App(ZvCf *cf) :
+App::App(const ZvCf *cf) :
   m_replay(cf->get("replay", true)),
   m_groups(cf->get("groups", true)),
   m_speed(cf->getDbl("speed", 0, ZuBox<double>::inf(), false, 1)),
@@ -358,7 +358,7 @@ App::App(ZvCf *cf) :
   m_ttl(cf->getInt("ttl", 0, INT_MAX, false, 1)),
   m_loopBack(cf->getInt("loopBack", 0, 1, false, 0))
 {
-  m_mx = new Mx(cf->subset("mx", false));
+  m_mx = new Mx(cf->subset("mx"));
   m_cxns = new Cxns();
 }
 

@@ -53,7 +53,7 @@ class MxMDAPI MxMDSubscriber : public MxEngine, public MxEngineApp {
 public:
   MxMDCore *core() const;
 
-  void init(MxMDCore *core, ZvCf *cf);
+  void init(MxMDCore *core, const ZvCf *cf);
   void final();
 
   ZuInline ZiIP interface_() const { return m_interface; }
@@ -93,8 +93,8 @@ public:
   void process(MxQMsg *);
 
   // commands
-  void statusCmd(void *, ZvCf *args, ZtString &out);
-  void resendCmd(void *, ZvCf *args, ZtString &out);
+  void statusCmd(void *, const ZvCf *args, ZtString &out);
+  void resendCmd(void *, const ZvCf *args, ZtString &out);
 
 private:
   ZiIP			m_interface;

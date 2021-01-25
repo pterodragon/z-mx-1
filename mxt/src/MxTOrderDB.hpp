@@ -69,7 +69,7 @@ public:
   using ClosedDB = Zdb<ClosedData>;
   using ClosedPOD = ZdbPOD<ClosedData>;
 
-  void init(ZdbEnv *dbEnv, ZvCf *cf) {
+  void init(ZdbEnv *dbEnv, const ZvCf *cf) {
     m_orderDB = new OrderDB(
 	dbEnv, "orderDB", Types::DBVersion, ZdbCacheMode::FullCache,
 	ZdbHandler{

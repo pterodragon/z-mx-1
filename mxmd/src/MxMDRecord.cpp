@@ -23,7 +23,7 @@
 
 #include <mxmd/MxMDRecord.hpp>
 
-void MxMDRecord::init(MxMDCore *core, ZvCf *cf)
+void MxMDRecord::init(MxMDCore *core, const ZvCf *cf)
 {
   if (!cf->get("id")) cf->set("id", "record");
 
@@ -118,7 +118,7 @@ ZtString MxMDRecLink::stopRecording()
   return path;
 }
 
-void MxMDRecLink::update(ZvCf *cf)
+void MxMDRecLink::update(const ZvCf *cf)
 {
   if (ZtString path = cf->get("path"))
     record(ZuMv(path));
@@ -372,7 +372,7 @@ void MxMDRecLink::process(MxQMsg *qmsg)
 
 // commands
 
-int MxMDRecord::recordCmd(void *context, ZvCf *args, ZtString &out)
+int MxMDRecord::recordCmd(void *context, const ZvCf *args, ZtString &out)
 {
   ZuBox<int> argc = args->get("#");
   if (argc < 1 || argc > 2) throw ZvCmdUsage();

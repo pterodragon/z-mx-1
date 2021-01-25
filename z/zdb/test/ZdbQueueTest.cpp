@@ -93,7 +93,7 @@ int main(int argc, char **argv)
   ZmTrap::trap();
 
   try {
-    ZdbEnv env(ZdbEnvParams(cf->subset("db", false, true)));
+    ZdbEnv env(ZdbEnvParams(cf->subset("db", true)));
 
     env.open();
 

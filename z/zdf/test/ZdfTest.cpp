@@ -51,8 +51,10 @@ int main(int argc, char **argv)
     mode = Load;
   else if (!strcmp(argv[1], "save"))
     mode = Save;
-  else
+  else {
     usage();
+    return 1; // suppress compiler warning
+  }
   using namespace Zdf;
   using namespace ZdfCompress;
   MemMgr memMgr;

@@ -68,7 +68,7 @@ public:
   using RxDB = Zdb<RxData>;
   using RxPOD = ZdbPOD<RxData>;
 
-  void init(ZdbEnv *dbEnv, ZvCf *cf) {
+  void init(ZdbEnv *dbEnv, const ZvCf *cf) {
     m_rxDB = new RxDB(
 	dbEnv, "rxDB", DBVersion, ZdbCacheMode::Normal,
 	ZdbHandler{

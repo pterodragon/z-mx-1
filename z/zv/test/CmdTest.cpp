@@ -27,27 +27,30 @@
 class ZvCmdTest :
     public ZmPolymorph, public ZvCmdServer<ZvCmdTest> {
 public:
-  void init(ZiMultiplex *mx, ZvCf *cf) {
+  void init(ZiMultiplex *mx, const ZvCf *cf) {
     m_uptime.now();
     ZvCmdServer::init(mx, cf);
-    addCmd("ackme", "", ZvCmdFn{[](void *context_, ZvCf *args, ZtString &out) {
-      auto context = static_cast<Context *>(context_);
-      if (auto cxn = context->link->tcp())
-	std::cout << cxn->info().remoteIP << ':'
-	  << ZuBoxed(cxn->info().remotePort) << ' ';
-      std::cout << "user: "
-	<< context->user->id << ' ' << context->user->name << '\n'
-	<< "cmd: " << args->get("0") << '\n';
-      out << "this is an ack\n";
-    }}, "test ack", "");
-    addCmd("nakme", "", ZvCmdFn{[](void *context_, ZvCf *args, ZtString &out) {
-      out << "this is a nak\n";
-    }}, "test nak", "");
-    addCmd("quit", "", ZvCmdFn{[](void *context_, ZvCf *args, ZtString &out) {
-      auto context = static_cast<Context *>(context_);
-      context->app->post();
-      out << "quitting...\n";
-    }}, "quit", "");
+    addCmd("ackme", "", ZvCmdFn{
+      [](void *context_, const ZvCf *args, ZtString &out) {
+	auto context = static_cast<Context *>(context_);
+	if (auto cxn = context->link->tcp())
+	  std::cout << cxn->info().remoteIP << ':'
+	    << ZuBoxed(cxn->info().remotePort) << ' ';
+	std::cout << "user: "
+	  << context->user->id << ' ' << context->user->name << '\n'
+	  << "cmd: " << args->get("0") << '\n';
+	out << "this is an ack\n";
+      }}, "test ack", "");
+    addCmd("nakme", "", ZvCmdFn{
+      [](void *context_, const ZvCf *args, ZtString &out) {
+	out << "this is a nak\n";
+      }}, "test nak", "");
+    addCmd("quit", "", ZvCmdFn{
+      [](void *context_, const ZvCf *args, ZtString &out) {
+	auto context = static_cast<Context *>(context_);
+	context->app->post();
+	out << "quitting...\n";
+      }}, "quit", "");
   }
 
   void wait() { m_done.wait(); }

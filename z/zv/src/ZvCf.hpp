@@ -96,8 +96,8 @@ public:
   using Flags64 = ZuBox<uint64_t>;
 
 private:
-  static ZtString fullKey(ZvCf *cf, ZtString key) {
-    while (ZvCf *parent = cf->parent()) {
+  static ZtString fullKey(const ZvCf *cf, ZtString key) {
+    while (const ZvCf *parent = cf->parent()) {
       ZvCf::Iterator i(parent);
       ZuString key_;
       while (ZmRef<ZvCf> cf_ = i.subset(key_)) {
@@ -136,7 +136,7 @@ public:
   // thrown by fromString() and fromFile() for an invalid key
   class ZvAPI Invalid : public ZvError {
   public:
-    Invalid(ZvCf *cf, ZuString key, ZuString fileName) :
+    Invalid(const ZvCf *cf, ZuString key, ZuString fileName) :
 	m_key(fullKey(cf, key)), m_fileName(fileName) { }
     void print_(ZmStream &s) const {
       if (m_fileName) s << '"' << m_fileName << "\": ";
@@ -272,7 +272,7 @@ public:
   void fromEnv(const char *name, bool validate);
 
   // caller must call freeArgs() after toArgs()
-  void toArgs(int &argc, char **&argv);
+  void toArgs(int &argc, char **&argv) const;
   static void freeArgs(int argc, char **argv);
 
   void print(ZmStream &s, ZtString prefix) const;
@@ -316,7 +316,7 @@ public:
   // thrown by all get methods for missing values when required is true
   class ZvAPI Required : public ZvError {
   public:
-    Required(ZvCf *cf, ZuString key) :
+    Required(const ZvCf *cf, ZuString key) :
 	m_key(fullKey(cf, key)), m_bt(1) { }
     const ZtString &key() const { return m_key; }
     void print_(ZmStream &s) const {
@@ -349,7 +349,7 @@ public:
   class ZvAPI NValues : public Range_<Int> {
   public:
     NValues(
-	ZvCf *cf, ZuString key, Int minimum, Int maximum, Int value) :
+	const ZvCf *cf, ZuString key, Int minimum, Int maximum, Int value) :
 	Range_<Int>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
       s << '"' << m_key << "\" invalid number of values "
@@ -361,7 +361,8 @@ public:
   class ZvAPI RangeInt : public Range_<Int> {
   public:
     RangeInt(
-	ZvCf *cf, ZuString key, Int minimum, Int maximum, Int value) :
+	const ZvCf *cf, ZuString key,
+	Int minimum, Int maximum, Int value) :
 	Range_<Int>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
       s << '"' << m_key << "\" out of range "
@@ -373,7 +374,8 @@ public:
   class ZvAPI RangeInt64 : public Range_<Int64> {
   public:
     RangeInt64(
-	ZvCf *cf, ZuString key, Int64 minimum, Int64 maximum, Int64 value) :
+	const ZvCf *cf, ZuString key,
+	Int64 minimum, Int64 maximum, Int64 value) :
 	Range_<Int64>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
       s << '"' << m_key << "\" out of range "
@@ -385,7 +387,8 @@ public:
   class ZvAPI RangeDbl : public Range_<Double> {
   public:
     RangeDbl(
-	ZvCf *cf, ZuString key, Double minimum, Double maximum, Double value) :
+	const ZvCf *cf, ZuString key,
+	Double minimum, Double maximum, Double value) :
       Range_<Double>(fullKey(cf, key), minimum, maximum, value) { }
     void print_(ZmStream &s) const {
       s << '"' << m_key << "\" out of range "
@@ -396,7 +399,7 @@ public:
 
   class ZvAPI BadFmt : public ZvError {
   public:
-    BadFmt(ZvCf *cf, ZuString key, ZuString value, ZuString fmt) :
+    BadFmt(const ZvCf *cf, ZuString key, ZuString value, ZuString fmt) :
 	m_key(fullKey(cf, key)), m_value(value), m_fmt(fmt) { }
     void print_(ZmStream &s) const {
       s << '"' << m_key << "\" invalid value \""
@@ -409,20 +412,31 @@ public:
     ZtString		m_fmt;
   };
 
-  ZuString get(ZuString key, bool required, ZuString def);
-  ZuString get(ZuString key, bool required = false)
-    { return get(key, required, ZuString()); }
+  ZuString get(ZuString key, bool required, ZuString def) const;
+  ZuString get(ZuString key, bool required = false) const {
+    return get(key, required, ZuString{});
+  }
+
   const ZtArray<ZtString> *getMultiple(ZuString key,
-      unsigned minimum, unsigned maximum, bool required = false);
+      unsigned minimum, unsigned maximum, bool required = false) const;
+
   void set(ZuString key, ZuString val);
   ZtArray<ZtString> *setMultiple(ZuString key);
+
   void unset(ZuString key);
-  ZmRef<ZvCf> subset(ZuString key, bool create, bool required = false);
+
+  ZmRef<ZvCf> subset(ZuString key) const {
+    return const_cast<ZvCf *>(this)->subset(key, false, false);
+  }
+  ZmRef<ZvCf> subset(ZuString key, bool required) const {
+    return const_cast<ZvCf *>(this)->subset(key, required, false);
+  }
+  ZmRef<ZvCf> subset(ZuString key,  bool required, bool create);
   void subset(ZuString key, ZvCf *cf);
 
-  void merge(ZvCf *cf);
+  void merge(const ZvCf *cf);
 
-  static Int toInt(ZvCf *cf, ZuString key, ZuString value,
+  static Int toInt(const ZvCf *cf, ZuString key, ZuString value,
       Int minimum, Int maximum, Int def = Int()) {
     if (!value) return def;
     Int i(value);
@@ -431,7 +445,7 @@ public:
     return i;
   }
 
-  static Int64 toInt64(ZvCf *cf, ZuString key, ZuString value,
+  static Int64 toInt64(const ZvCf *cf, ZuString key, ZuString value,
       Int64 minimum, Int64 maximum, Int64 def = Int64()) {
     if (!value) return def;
     Int64 i(value);
@@ -440,7 +454,7 @@ public:
     return i;
   }
 
-  static Double toDbl(ZvCf *cf, ZuString key, ZuString value,
+  static Double toDbl(const ZvCf *cf, ZuString key, ZuString value,
       Double minimum, Double maximum, Double def = Double()) {
     if (!value) return def;
     ZuBox<Double> d(value);
@@ -451,19 +465,19 @@ public:
 
   template <typename Key>
   Int getInt(const Key &key, Int minimum, Int maximum, bool required,
-      Int def = Int()) {
+      Int def = Int()) const {
     return toInt(this, key, get(key, required), minimum, maximum, def);
   }
 
   template <typename Key>
   Int64 getInt64(const Key &key, Int64 minimum, Int64 maximum,
-      bool required, Int64 def = Int64()) {
+      bool required, Int64 def = Int64()) const {
     return toInt64(this, key, get(key, required), minimum, maximum, def);
   }
 
   template <typename Key>
   Double getDbl(const Key &key, Double minimum, Double maximum,
-      bool required, Double def = Double()) {
+      bool required, Double def = Double()) const {
     return toDbl(this, key, get(key, required), minimum, maximum, def);
   }
 
@@ -474,7 +488,7 @@ public:
   }
 
   template <typename Map, typename Key>
-  Enum getEnum(const Key &key, bool required, Enum def = Enum()) {
+  Enum getEnum(const Key &key, bool required, Enum def = Enum()) const {
     return toEnum<Map>(key, get(key, required), def);
   }
 
@@ -494,13 +508,13 @@ public:
 
   template <typename Map, typename Key>
   Flags getFlags(
-      const Key &key, bool required = false, Flags def = 0) {
+      const Key &key, bool required = false, Flags def = 0) const {
     return toFlags<Map>(key, get(key, required), def);
   }
 
   template <typename Map, typename Key>
   Flags64 getFlags64(
-      const Key &key, bool required = false, Flags64 def = 0) {
+      const Key &key, bool required = false, Flags64 def = 0) const {
     return toFlags64<Map>(key, get(key, required), def);
   }
 
@@ -528,8 +542,8 @@ public:
 friend Iterator;
   class ZvAPI Iterator {
   public:
-    Iterator(ZvCf *cf) : m_cf(cf), m_iterator(cf->m_tree) { }
-    Iterator(ZvCf *cf, ZuString prefix) :
+    Iterator(const ZvCf *cf) : m_cf(cf), m_iterator(cf->m_tree) { }
+    Iterator(const ZvCf *cf, ZuString prefix) :
 	m_iterator(cf->m_tree, prefix) { }
     ~Iterator();
 
@@ -537,8 +551,7 @@ friend Iterator;
     const ZtArray<ZtString> *getMultiple(ZuString &key,
 	unsigned minimum, unsigned maximum);
     ZmRef<ZvCf> subset(ZuString &key);
-    Int getInt(ZuString &key, Int minimum, Int maximum,
-	Int def = Int()) {
+    Int getInt(ZuString &key, Int minimum, Int maximum, Int def = Int()) {
       return toInt(m_cf, key, get(key), minimum, maximum, def);
     }
     Int64 getInt64(ZuString &key, Int64 minimum, Int64 maximum,
@@ -555,7 +568,7 @@ friend Iterator;
     }
 
   private:
-    ZvCf			*m_cf;
+    const ZvCf			*m_cf;
     Tree::ReadIterator<>	m_iterator;
   };
 
@@ -566,7 +579,7 @@ private:
   void fromString(ZuString in, bool validate,
       ZuString fileName, ZmRef<Defines> defines);
 
-  void toArgs(ZtArray<ZtString> &args, ZuString prefix);
+  void toArgs(ZtArray<ZtString> &args, ZuString prefix) const;
 
   static ZtString quoteArgValue(ZuString value);
   static ZtString quoteValue(ZuString value);

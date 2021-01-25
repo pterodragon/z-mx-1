@@ -57,7 +57,7 @@ class Engine : public MxEngine {
 public:
   // Engine() { }
 
-  void init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf);
+  void init(Mgr *mgr, App *app, Mx *mx, const ZvCf *cf);
 
   void up() { ZeLOG(Info, "UP"); }
   void down() { ZeLOG(Info, "DOWN"); }
@@ -102,7 +102,7 @@ public:
   ZmTime reconnInterval(unsigned) { return engine()->reconnInterval(); }
 
   // MxAnyLink virtual
-  void update(ZvCf *cf) { }
+  void update(const ZvCf *cf) { }
   void reset(MxSeqNo rxSeqNo, MxSeqNo txSeqNo) { }
 
   void connect() {
@@ -151,12 +151,12 @@ public:
 
 ZmRef<MxAnyLink> App::createLink(MxID id) { return new Link(id); }
 
-void Engine::init(Mgr *mgr, App *app, Mx *mx, ZvCf *cf)
+void Engine::init(Mgr *mgr, App *app, Mx *mx, const ZvCf *cf)
 {
   MxEngine::init(mgr, app, mx, cf);
   m_reconnInterval = cf->getDbl("reconnInterval", 0, 3600, false, 1);
   m_reReqInterval = cf->getDbl("reReqInterval", 0, 3600, false, 1);
-  if (ZmRef<ZvCf> linksCf = cf->subset("links", false)) {
+  if (ZmRef<ZvCf> linksCf = cf->subset("links")) {
     ZvCf::Iterator i(linksCf);
     ZuString id;
     while (ZmRef<ZvCf> linkCf = i.subset(id))
@@ -189,7 +189,7 @@ int main()
   Mgr* mgr = new Mgr();
   ZmRef<Engine> engine = new Engine();
 
-  ZmRef<MxMultiplex> mx = new MxMultiplex("mx", cf->subset("mx", true));
+  ZmRef<MxMultiplex> mx = new MxMultiplex("mx", cf->subset("mx"));
 
   engine->init(mgr, app, mx, cf);
 

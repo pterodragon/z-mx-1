@@ -72,7 +72,7 @@ struct App {
 namespace MxMDStream {
 
   namespace Type {
-    MxEnumValues(
+    MxEnumerate(
 	AddVenue,
 	AddTickSizeTbl, ResetTickSizeTbl, AddTickSize,
 	TradingSession,
@@ -92,26 +92,6 @@ namespace MxMDStream {
 	EndOfSnapshot,		// end of snapshot
 	Login,			// TCP login
 	ResendReq);		// UDP resend request
-
-    MxEnumNames(
-	"AddVenue",
-	"AddTickSizeTbl", "ResetTickSizeTbl", "AddTickSize",
-	"TradingSession",
-	"AddInstrument", "UpdateInstrument",
-	"AddOrderBook", "DelOrderBook",
-	"AddCombination", "DelCombination",
-	"UpdateOrderBook",
-	"L1", "PxLevel", "L2",
-	"AddOrder", "ModifyOrder", "CancelOrder",
-	"ResetOB",
-	"AddTrade", "CorrectTrade", "CancelTrade",
-	"RefDataLoaded",
-
-	"HeartBeat",
-	"Wake",
-	"EndOfSnapshot",
-	"Login",
-	"ResendReq");
 
     MxEnumMapAlias(Map, CSVMap);
   }

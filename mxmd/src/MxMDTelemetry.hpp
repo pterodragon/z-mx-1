@@ -48,7 +48,7 @@ class MxMDAPI MxMDTelemetry : public ZmPolymorph, public MxTelemetry::Server {
 public:
   MxMDTelemetry() : m_time{ZmTime::Now} { }
 
-  void init(MxMDCore *core, ZvCf *cf);
+  void init(MxMDCore *core, const ZvCf *cf);
   void final();
 
   void run(MxTelemetry::Server::Cxn *);

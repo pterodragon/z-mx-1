@@ -2,7 +2,7 @@ METASOURCES = AUTO
 AM_CPPFLAGS = -I$(top_srcdir)/zu/src -I$(top_srcdir)/zm/src \
 	-I$(top_srcdir)/zt/src -I$(top_srcdir)/ze/src -I$(top_srcdir)/zi/src \
 	-I$(top_srcdir)/ztls/src -I$(top_srcdir)/zfb/src \
-	-DZV_EXPORTS @Z_CPPFLAGS@
+	@Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@
 FBS = \
@@ -41,6 +41,7 @@ pkginclude_HEADERS = ZvLib.hpp \
 #dist_fbs_DATA = fbs/telemetry.fbs
 lib_LTLIBRARIES = libZv.la
 bin_PROGRAMS = zuserdb
+libZv_la_CPPFLAGS = $(AM_CPPFLAGS) -DZV_EXPORTS 
 libZv_la_LDFLAGS = @Z_SO_LDFLAGS@
 libZv_la_SOURCES = ZvLib.cpp \
 	ZvCf.cpp ZvCSV.cpp ZvDaemon.cpp ZvUserDB.cpp ZvEngine.cpp
@@ -50,6 +51,5 @@ libZv_la_LIBADD = $(top_builddir)/zfb/src/libZfb.la \
 	$(top_builddir)/zt/src/libZt.la $(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la \
 	@FLATBUFFERS_LIBS@ @MBEDTLS_LIBS@ @Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
-zuserdb_AM_CPPFLAGS = @Z_CPPFLAGS@
-zuserdb_LDADD = libZv.la $(libZv_la_LIBADD)
+zuserdb_LDADD = libZv.la $(libZv_la_LDADD)
 zuserdb_SOURCES = zuserdb.cpp

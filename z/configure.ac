@@ -145,7 +145,7 @@ AC_SUBST(LZ4_LIBS)
 AC_SUBST(MBEDTLS_LIBS)
 AC_SUBST(FLATBUFFERS_LIBS)
 
-for i in zu zm zjni zt ze zi ztls zfb zv zdb zdf zrl zgtk; do (
+for i in zu zm zjni zt ze zi ztls zfb zv zdb zdf zrl zcmd zproxy zgtk; do (
   cd $i/src
   if test ! -e AC_PACKAGE_NAME; then
     if test ".$mingw" != ".yes"; then
@@ -169,5 +169,7 @@ AC_CONFIG_FILES([Makefile \
 	zdb/Makefile zdb/src/Makefile zdb/test/Makefile \
 	zdf/Makefile zdf/src/Makefile zdf/test/Makefile \
 	zrl/Makefile zrl/src/Makefile zrl/test/Makefile \
+	zcmd/Makefile zcmd/src/Makefile \
+	zproxy/Makefile zproxy/src/Makefile \
 	zgtk/Makefile zgtk/src/Makefile zgtk/test/Makefile])
 AC_OUTPUT

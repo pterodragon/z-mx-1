@@ -4,7 +4,7 @@ SUBDIRS = zu zm zt ze zi ztls zfb zv zdf
 if JNI
 SUBDIRS += zjni
 endif
-SUBDIRS += zrl zdb
+SUBDIRS += zrl zcmd zproxy zdb
 if GTK
 SUBDIRS += zgtk
 endif

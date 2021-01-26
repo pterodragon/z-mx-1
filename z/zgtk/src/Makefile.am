@@ -22,7 +22,7 @@ libZGtk_la_LIBADD = $(top_builddir)/zv/src/libZv.la \
 	@GTK_LIBS@ @FLATBUFFERS_LIBS@ @MBEDTLS_LIBS@ \
 	@Z_IO_LIBS@ @Z_ZT_LIBS@ @Z_MT_LIBS@
 bin_PROGRAMS = zdash
-zdash_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/zrl/src -I$(top_srcdir)/zdf/src -DDATADIR='"$(datadir)"'
+zdash_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/zrl/src -I$(top_srcdir)/zcmd/src -I$(top_srcdir)/zdf/src -DDATADIR='"$(datadir)"'
 zdash_CXXFLAGS = ${AM_CXXFLAGS} -ftemplate-backtrace-limit=0 #-fprofile-instr-generate -fcoverage-mapping
 zdash_LDADD = libZGtk.la $(top_builddir)/zdf/src/libZdf.la $(top_builddir)/zrl/src/libZrl.la $(libZGtk_la_LDADD)
 zdash_SOURCES = zdash.cpp

@@ -230,8 +230,8 @@ struct ZrlAPI Map_ {
   int parse(ZuString s, int off);
 
   void addMode(unsigned mode, bool edit);
-  void addMapping(unsigned mode, int vkey, CmdSeq cmds);
-  void reset(); // reset all key bindings - i.e. mappings, modes
+  void bind(unsigned mode, int vkey, CmdSeq cmds);
+  void reset(); // reset all modes and key bindings
 
   const CmdSeq &binding(unsigned mode, int32_t vkey);
 

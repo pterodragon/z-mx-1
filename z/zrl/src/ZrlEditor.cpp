@@ -23,6 +23,127 @@
 
 namespace Zrl {
 
+Editor::Editor()
+{
+  // manual initialization of opcode-indexed jump table
+ 
+  m_cmdFn[Op::Nop] = &Editor::cmdNop;
+  m_cmdFn[Op::Mode] = &Editor::cmdMode;
+  m_cmdFn[Op::Push] = &Editor::cmdPush;
+  m_cmdFn[Op::Pop] = &Editor::cmdPop;
+
+  m_cmdFn[Op::Error] = &Editor::cmdError;
+  m_cmdFn[Op::EndOfFile] = &Editor::cmdEndOfFile;
+
+  m_cmdFn[Op::SigInt] = &Editor::cmdSigInt;
+  m_cmdFn[Op::SigQuit] = &Editor::cmdSigQuit;
+  m_cmdFn[Op::SigSusp] = &Editor::cmdSigSusp;
+
+  m_cmdFn[Op::Enter] = &Editor::cmdEnter;
+
+  m_cmdFn[Op::Up] = &Editor::cmdUp;
+  m_cmdFn[Op::Down] = &Editor::cmdDown;
+  m_cmdFn[Op::Left] = &Editor::cmdLeft;
+  m_cmdFn[Op::Right] = &Editor::cmdRight;
+  m_cmdFn[Op::Home] = &Editor::cmdHome;
+  m_cmdFn[Op::End] = &Editor::cmdEnd;
+
+  m_cmdFn[Op::FwdWord] = &Editor::cmdFwdWord;
+  m_cmdFn[Op::RevWord] = &Editor::cmdRevWord;
+  m_cmdFn[Op::FwdWordEnd] = &Editor::cmdFwdWordEnd;
+  m_cmdFn[Op::RevWordEnd] = &Editor::cmdRevWordEnd;
+
+  m_cmdFn[Op::MvMark] = &Editor::cmdMvMark;
+
+  m_cmdFn[Op::Insert] = &Editor::cmdInsert;
+
+  m_cmdFn[Op::Clear] = &Editor::cmdClear;
+  m_cmdFn[Op::Redraw] = &Editor::cmdRedraw;
+
+  m_cmdFn[Op::Paste] = &Editor::cmdPaste;
+  m_cmdFn[Op::Yank] = &Editor::cmdYank;
+  m_cmdFn[Op::Rotate] = &Editor::cmdRotate;
+
+  m_cmdFn[Op::Glyph] = &Editor::cmdGlyph;
+  m_cmdFn[Op::InsGlyph] = &Editor::cmdInsGlyph;
+  m_cmdFn[Op::OverGlyph] = &Editor::cmdOverGlyph;
+
+  m_cmdFn[Op::TransGlyph] = &Editor::cmdTransGlyph;
+  m_cmdFn[Op::TransWord] = &Editor::cmdTransWord;
+  m_cmdFn[Op::TransUnixWord] = &Editor::cmdTransUnixWord;
+
+  m_cmdFn[Op::LowerWord] = &Editor::cmdLowerWord;
+  m_cmdFn[Op::UpperWord] = &Editor::cmdUpperWord;
+  m_cmdFn[Op::CapWord] = &Editor::cmdCapWord;
+
+  m_cmdFn[Op::SetMark] = &Editor::cmdSetMark;
+  m_cmdFn[Op::XchMark] = &Editor::cmdXchMark;
+
+  m_cmdFn[Op::DigitArg] = &Editor::cmdDigitArg;
+
+  m_cmdFn[Op::Register] = &Editor::cmdRegister;
+
+  m_cmdFn[Op::FwdGlyphSrch] = &Editor::cmdFwdGlyphSrch;
+  m_cmdFn[Op::RevGlyphSrch] = &Editor::cmdRevGlyphSrch;
+
+  m_cmdFn[Op::Complete] = &Editor::cmdComplete;
+  m_cmdFn[Op::ListComplete] = &Editor::cmdListComplete;
+
+  m_cmdFn[Op::Next] = &Editor::cmdNext;
+  m_cmdFn[Op::Prev] = &Editor::cmdPrev;
+
+  m_cmdFn[Op::ClrIncSrch] = &Editor::cmdClrIncSrch;
+  m_cmdFn[Op::FwdIncSrch] = &Editor::cmdFwdIncSrch;
+  m_cmdFn[Op::RevIncSrch] = &Editor::cmdRevIncSrch;
+
+  m_cmdFn[Op::PromptSrch] = &Editor::cmdPromptSrch;
+  m_cmdFn[Op::EnterSrchFwd] = &Editor::cmdEnterSrchFwd;
+  m_cmdFn[Op::EnterSrchRev] = &Editor::cmdEnterSrchRev;
+  m_cmdFn[Op::AbortSrch] = &Editor::cmdAbortSrch;
+
+  m_cmdFn[Op::FwdSearch] = &Editor::cmdFwdSearch;
+  m_cmdFn[Op::RevSearch] = &Editor::cmdRevSearch;
+
+  m_defltMap = new Map{};
+
+  m_defltMap->addMode(0, true);
+  m_defltMap->addMode(1, true);
+
+  m_defltMap->bind(0, VKey::Default, { { Op::Glyph } });
+
+  m_defltMap->bind(0, VKey::Error, { { Op::Error } });
+  m_defltMap->bind(0, VKey::EndOfFile, { { Op::EndOfFile} });
+
+  m_defltMap->bind(0, VKey::SigInt, { { Op::SigInt} });
+  m_defltMap->bind(0, VKey::SigQuit, { { Op::SigQuit} });
+  m_defltMap->bind(0, VKey::SigSusp, { { Op::SigSusp} });
+
+  m_defltMap->bind(0, VKey::Enter, { { Op::Enter} });
+
+  m_defltMap->bind(0, VKey::Erase, { { Op::Left | Op::Del} });
+  m_defltMap->bind(0, VKey::WErase,
+      { { Op::RevWord | Op::Del | Op::Unix } });
+  m_defltMap->bind(0, VKey::Kill, { { Op::Home | Op::Del } });
+
+  m_defltMap->bind(0, VKey::LNext, {
+    { Op::Glyph, 0, '^' },
+    { Op::Left | Op::Mv },
+    { Op::Push, 1 }
+  });
+  m_defltMap->bind(1, VKey::Default, { { Op::OverGlyph }, { Op::Pop } });
+
+  m_defltMap->bind(0, VKey::Up, { { Op::Up | Op::Mv } });
+  m_defltMap->bind(0, VKey::Down, { { Op::Down | Op::Mv } });
+  m_defltMap->bind(0, VKey::Left, { { Op::Left | Op::Mv } });
+  m_defltMap->bind(0, VKey::Right, { { Op::Right | Op::Mv } });
+
+  m_defltMap->bind(0, VKey::Home, { { Op::Home | Op::Mv } });
+  m_defltMap->bind(0, VKey::End, { { Op::End | Op::Mv } });
+
+  m_defltMap->bind(0, VKey::Insert, { { Op::Insert } });
+  m_defltMap->bind(0, VKey::Delete, { { Op::Right | Op::Del } });
+}
+
 // all parse() functions return v such that
 // v <= 0 - parse failure at -v
 // v  > 0 - parse success ending at v
@@ -171,7 +292,7 @@ int Map_::parseMode(ZuString s, int off)
     if (off <= 0) return off;
     if (!ZtREGEX("\G\s*;").m(s, c, off)) return -off;
     off += c[1].length();
-    addMapping(mode, vkey, ZuMv(cmds));
+    bind(mode, vkey, ZuMv(cmds));
     cmds.clear();
   }
   off += c[1].length();
@@ -201,7 +322,7 @@ void Map_::addMode(unsigned mode, bool edit)
   if (ZuUnlikely(modes.length() <= mode)) modes.grow(mode + 1);
   modes[mode] = Mode{{}, edit};
 }
-void Map_::addMapping(unsigned mode, int vkey, CmdSeq cmds)
+void Map_::bind(unsigned mode, int vkey, CmdSeq cmds)
 {
   if (ZuUnlikely(modes.length() <= mode)) modes.grow(mode + 1);
   if (vkey == VKey::Default)
@@ -219,127 +340,6 @@ const CmdSeq &Map_::binding(unsigned mode, int32_t vkey)
   if (Binding *binding = bindings.find(Binding::Key{mode, vkey}))
     return binding->cmds;
   return modes[mode].cmds;
-}
-
-Editor::Editor()
-{
-  // manual initialization of opcode-indexed jump table
- 
-  m_cmdFn[Op::Nop] = &Editor::cmdNop;
-  m_cmdFn[Op::Mode] = &Editor::cmdMode;
-  m_cmdFn[Op::Push] = &Editor::cmdPush;
-  m_cmdFn[Op::Pop] = &Editor::cmdPop;
-
-  m_cmdFn[Op::Error] = &Editor::cmdError;
-  m_cmdFn[Op::EndOfFile] = &Editor::cmdEndOfFile;
-
-  m_cmdFn[Op::SigInt] = &Editor::cmdSigInt;
-  m_cmdFn[Op::SigQuit] = &Editor::cmdSigQuit;
-  m_cmdFn[Op::SigSusp] = &Editor::cmdSigSusp;
-
-  m_cmdFn[Op::Enter] = &Editor::cmdEnter;
-
-  m_cmdFn[Op::Up] = &Editor::cmdUp;
-  m_cmdFn[Op::Down] = &Editor::cmdDown;
-  m_cmdFn[Op::Left] = &Editor::cmdLeft;
-  m_cmdFn[Op::Right] = &Editor::cmdRight;
-  m_cmdFn[Op::Home] = &Editor::cmdHome;
-  m_cmdFn[Op::End] = &Editor::cmdEnd;
-
-  m_cmdFn[Op::FwdWord] = &Editor::cmdFwdWord;
-  m_cmdFn[Op::RevWord] = &Editor::cmdRevWord;
-  m_cmdFn[Op::FwdWordEnd] = &Editor::cmdFwdWordEnd;
-  m_cmdFn[Op::RevWordEnd] = &Editor::cmdRevWordEnd;
-
-  m_cmdFn[Op::MvMark] = &Editor::cmdMvMark;
-
-  m_cmdFn[Op::Insert] = &Editor::cmdInsert;
-
-  m_cmdFn[Op::Clear] = &Editor::cmdClear;
-  m_cmdFn[Op::Redraw] = &Editor::cmdRedraw;
-
-  m_cmdFn[Op::Paste] = &Editor::cmdPaste;
-  m_cmdFn[Op::Yank] = &Editor::cmdYank;
-  m_cmdFn[Op::Rotate] = &Editor::cmdRotate;
-
-  m_cmdFn[Op::Glyph] = &Editor::cmdGlyph;
-  m_cmdFn[Op::InsGlyph] = &Editor::cmdInsGlyph;
-  m_cmdFn[Op::OverGlyph] = &Editor::cmdOverGlyph;
-
-  m_cmdFn[Op::TransGlyph] = &Editor::cmdTransGlyph;
-  m_cmdFn[Op::TransWord] = &Editor::cmdTransWord;
-  m_cmdFn[Op::TransUnixWord] = &Editor::cmdTransUnixWord;
-
-  m_cmdFn[Op::LowerWord] = &Editor::cmdLowerWord;
-  m_cmdFn[Op::UpperWord] = &Editor::cmdUpperWord;
-  m_cmdFn[Op::CapWord] = &Editor::cmdCapWord;
-
-  m_cmdFn[Op::SetMark] = &Editor::cmdSetMark;
-  m_cmdFn[Op::XchMark] = &Editor::cmdXchMark;
-
-  m_cmdFn[Op::DigitArg] = &Editor::cmdDigitArg;
-
-  m_cmdFn[Op::Register] = &Editor::cmdRegister;
-
-  m_cmdFn[Op::FwdGlyphSrch] = &Editor::cmdFwdGlyphSrch;
-  m_cmdFn[Op::RevGlyphSrch] = &Editor::cmdRevGlyphSrch;
-
-  m_cmdFn[Op::Complete] = &Editor::cmdComplete;
-  m_cmdFn[Op::ListComplete] = &Editor::cmdListComplete;
-
-  m_cmdFn[Op::Next] = &Editor::cmdNext;
-  m_cmdFn[Op::Prev] = &Editor::cmdPrev;
-
-  m_cmdFn[Op::ClrIncSrch] = &Editor::cmdClrIncSrch;
-  m_cmdFn[Op::FwdIncSrch] = &Editor::cmdFwdIncSrch;
-  m_cmdFn[Op::RevIncSrch] = &Editor::cmdRevIncSrch;
-
-  m_cmdFn[Op::PromptSrch] = &Editor::cmdPromptSrch;
-  m_cmdFn[Op::EnterSrchFwd] = &Editor::cmdEnterSrchFwd;
-  m_cmdFn[Op::EnterSrchRev] = &Editor::cmdEnterSrchRev;
-  m_cmdFn[Op::AbortSrch] = &Editor::cmdAbortSrch;
-
-  m_cmdFn[Op::FwdSearch] = &Editor::cmdFwdSearch;
-  m_cmdFn[Op::RevSearch] = &Editor::cmdRevSearch;
-
-  m_defltMap = new Map{};
-
-  m_defltMap->addMode(0, true);
-  m_defltMap->addMode(1, true);
-
-  m_defltMap->addMapping(0, VKey::Default, { { Op::Glyph } });
-
-  m_defltMap->addMapping(0, VKey::Error, { { Op::Error } });
-  m_defltMap->addMapping(0, VKey::EndOfFile, { { Op::EndOfFile} });
-
-  m_defltMap->addMapping(0, VKey::SigInt, { { Op::SigInt} });
-  m_defltMap->addMapping(0, VKey::SigQuit, { { Op::SigQuit} });
-  m_defltMap->addMapping(0, VKey::SigSusp, { { Op::SigSusp} });
-
-  m_defltMap->addMapping(0, VKey::Enter, { { Op::Enter} });
-
-  m_defltMap->addMapping(0, VKey::Erase, { { Op::Left | Op::Del} });
-  m_defltMap->addMapping(0, VKey::WErase,
-      { { Op::RevWord | Op::Del | Op::Unix } });
-  m_defltMap->addMapping(0, VKey::Kill, { { Op::Home | Op::Del } });
-
-  m_defltMap->addMapping(0, VKey::LNext, {
-    { Op::Glyph, 0, '^' },
-    { Op::Left | Op::Mv },
-    { Op::Push, 1 },
-  });
-  m_defltMap->addMapping(1, VKey::Default, { { Op::OverGlyph }, { Op::Pop } });
-
-  m_defltMap->addMapping(0, VKey::Up, { { Op::Up | Op::Mv } });
-  m_defltMap->addMapping(0, VKey::Down, { { Op::Down | Op::Mv } });
-  m_defltMap->addMapping(0, VKey::Left, { { Op::Left | Op::Mv } });
-  m_defltMap->addMapping(0, VKey::Right, { { Op::Right | Op::Mv } });
-
-  m_defltMap->addMapping(0, VKey::Home, { { Op::Home | Op::Mv } });
-  m_defltMap->addMapping(0, VKey::End, { { Op::End | Op::Mv } });
-
-  m_defltMap->addMapping(0, VKey::Insert, { { Op::Insert } });
-  m_defltMap->addMapping(0, VKey::Delete, { { Op::Right | Op::Del } });
 }
 
 bool Editor::loadMap(ZuString file)

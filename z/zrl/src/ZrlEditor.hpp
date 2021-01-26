@@ -68,7 +68,7 @@ namespace Op { // line editor operation codes
     // WErase,		// ^W word erase	// RevWord|Del|Unix
     // Kill,		// ^U			// Home|Del
 
-    // LNext,		// ^V		// Glyph(0, '^'),Left|Mv,Push(0)
+    // LNext,		// ^V		// Glyph(0, '^'),Left|Mv,Push(1)
 
     // single glyph/row motions
     Up,
@@ -157,12 +157,12 @@ namespace Op { // line editor operation codes
     Arg		= 0x1000,	// variable argument
     Reg		= 0x2000,	// variable register
 
-    KeepArg	= 0x8000	// preserve argument
+    KeepArg	= 0x4000	// preserve argument
   };
 };
 
 // line editor command - combination of op code, argument and virtual key
-class Cmd {
+class ZrlAPI Cmd {
 public:
   Cmd() = default;
   Cmd(const Cmd &) = default;
@@ -175,26 +175,6 @@ public:
   Cmd(uint64_t op, uint64_t arg, int32_t vkey) :
       m_value{op | (arg<<16) | (static_cast<uint64_t>(vkey)<<32)} { }
 
-  Cmd(ZuString s) {
-    // FIXME - parse Cmd[(Flag|Flag|...[, Arg[, Key]])]
-#if 0
-    ZtRegex::Captures c;
-    new (this) Cmd{
-      cf->getEnum<Op::Map>("op", true),
-      cf->getInt("arg", )
-
-    Mv	 	= 0x0100,	// move cursor
-    Del	 	= 0x0200,	// delete span (implies move)
-    Copy	= 0x0400,	// copy span (cut is Del + Copy)
-
-    Unix	= 0x0800,	// a "Unix" word is white-space delimited
-    Arg		= 0x1000,	// variable argument
-    Reg		= 0x2000,	// variable register
-
-    KeepArg	= 0x8000	// preserve argument
-#endif
-  }
-
   auto op() const { return m_value & 0xffffU; }
   auto arg() const { return m_value>>16; }
   int32_t vkey() const { return m_value>>32; }
@@ -202,48 +182,74 @@ public:
   bool operator !() const { return !m_value; }
   ZuOpBool
 
+  int parse(ZuString, int off);
+
 private:
   uint64_t	m_value = 0;
 };
 
 using CmdSeq = ZtArray<Cmd>;
 
-// FIXME - parse { Cmd; Cmd; ... } as CmdSeq
-
-struct CmdMapping_ { // maps a mode + virtual key to a sequence of commands
+struct ZrlAPI Binding_ { // maps a mode + vkey to a sequence of commands
   unsigned	mode;
-  int		vkey;
+  int32_t	vkey;
   CmdSeq	cmds;
 
   using Key = ZuPair<unsigned, int>;
 };
-struct CmdMapping_KeyAccessor :
-    public ZuAccessor<CmdMapping_, CmdMapping_::Key> {
-  ZuInline static CmdMapping_::Key value(const CmdMapping_ &m) {
+struct Binding_KeyAccessor :
+    public ZuAccessor<Binding_, Binding_::Key> {
+  ZuInline static Binding_::Key value(const Binding_ &m) {
     return {m.mode, m.vkey};
   }
 };
 
-using CmdMap =
-  ZmHash<CmdMapping_,
+using Bindings =
+  ZmHash<Binding_,
     ZmHashObject<ZuNull,
       ZmHashNodeIsKey<true,
-	ZmHashIndex<CmdMapping_KeyAccessor,
+	ZmHashIndex<Binding_KeyAccessor,
 	  ZmHashLock<ZmNoLock>>>>>;
 
-using CmdMapping = CmdMap::Node;
-
-// FIXME - parse Key CmdSeq; as CmdMapping, given mode
-//
-// FIXME - parse mode N [edit] { CmdMapping; CmdMapping; ... } as mode
-//
-// FIXME - Default key defines default cmd seq for mode
+using Binding = Bindings::Node;
 
 // line editor mode
 struct Mode {
   CmdSeq	cmds;		// default command sequence
   bool		edit = false;	// edit mode flag
 };
+
+// key map
+struct ZrlAPI Map_ {
+  using ID = ZtString;
+
+  ID		id;		// identifier for map
+  Bindings	bindings;	// vkey -> command sequence bindings
+  ZtArray<Mode>	modes;		// modes
+
+  int parse(ZuString s, int off);
+
+  void addMode(unsigned mode, bool edit);
+  void addMapping(unsigned mode, int vkey, CmdSeq cmds);
+  void reset(); // reset all key bindings - i.e. mappings, modes
+
+  const CmdSeq &binding(unsigned mode, int32_t vkey);
+
+private:
+  int parseMode(ZuString s, int off);
+};
+struct Map_IDAccessor : public ZuAccessor<Map_, Map_::ID> {
+  ZuInline static const Map_::ID &value(const Map_ &m) { return m.id; }
+};
+
+using Maps =
+  ZmRBTree<Map_,
+    ZmRBTreeObject<ZuNull,
+      ZmRBTreeNodeIsKey<true,
+	ZmRBTreeIndex<Map_IDAccessor,
+	  ZmRBTreeLock<ZmNoLock>>>>>;
+
+using Map = Maps::Node;
 
 using RegData = ZtArray<uint8_t>;
 using Register = ZuPtr<RegData>;
@@ -366,6 +372,7 @@ struct Config {
   unsigned	maxCompPages = 5;	// max # pages of possible completions
   unsigned	histOffset = 0;		// initial history offset
   unsigned	maxStackDepth = 10;	// maximum mode stack depth
+  unsigned	maxFileSize = 1<<20;	// maximum key map file size
 
   Config() = default;
   Config(const Config &) = default;
@@ -379,6 +386,7 @@ struct Config {
     maxCompPages = cf->getInt("maxCompPages", 0, 100, false, 5);
     histOffset = cf->getInt("histOffset", 0, UINT_MAX, false, 0);
     maxStackDepth = cf->getInt("maxStackDepth", 1, 100, false, 10);
+    maxFileSize = cf->getInt("maxFileSize", 64<<10, 10<<20, false, 1<<20);
   }
 };
 
@@ -397,6 +405,9 @@ public:
   Editor();
 
   // initialization/finalization
+  bool loadMap(ZuString file);
+  const ZtString loadError() const { return m_loadError; }
+
   void init(Config config, App app);
   void final();
 
@@ -411,13 +422,11 @@ public:
   bool running() const;
 
   // all public functions below must be called in the terminal thread
+  bool map(ZuString id);
   void prompt(ZtArray<uint8_t> prompt);
 
-  void addMode(unsigned mode, CmdSeq cmds, bool edit);
-  void addMapping(unsigned mode, int vkey, CmdSeq cmds);
-  void reset(); // reset all key bindings - i.e. mappings, modes
-
 private:
+
   bool process(int32_t vkey);
   bool process_(const CmdSeq &cmds, int32_t vkey);
 
@@ -439,13 +448,13 @@ private:
   ZuArray<const uint8_t> substr(unsigned begin, unsigned end);
 
   // align cursor within line if not in an edit mode - returns true if moved
-  bool align(unsigned pos);
+  bool align(unsigned off);
   // splice data in line - clears histLoadOff since line is being modified
   void splice(
       unsigned off, ZuUTFSpan span,
       ZuArray<const uint8_t> replace, ZuUTFSpan rspan);
   // perform copy/del/move in conjunction with a cursor motion
-  void motion(unsigned op, unsigned pos,
+  void motion(unsigned op, unsigned off,
       unsigned begin, unsigned end,
       unsigned begPos, unsigned endPos);
   // maintains consistent horizontal position during vertical movement
@@ -549,8 +558,10 @@ private:
 
   Config	m_config;		// configuration
 
-  CmdMap	m_cmds;			// vkey -> command mapping
-  ZtArray<Mode>	m_modes;		// modes
+  ZtString	m_loadError;		// key map file load error
+  Maps		m_maps;			// key maps
+  Map		*m_defltMap = nullptr;	// default map
+  Map		*m_map = nullptr;	// current map
 
   App		m_app;			// application callbacks
 

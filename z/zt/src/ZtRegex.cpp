@@ -60,6 +60,76 @@ void ZtRegex::study()
   }
 }
 
+unsigned ZtRegex::split(ZuString s, Captures &a, int options) const
+{
+  unsigned offset = 0, last = 0;
+  ZtArray<unsigned> ovector;
+  unsigned slength = s.length();
+
+  while (offset < slength && exec(s, offset, options, ovector)) {
+    if (offset || ovector[1] > ovector[0])
+      new (a.push()) Capture(s.data() + last, ovector[0] - last);
+    last = offset = ovector[1];
+    if (ovector[1] == ovector[0]) offset++;
+    options |= PCRE_NO_UTF8_CHECK;
+  }
+  if (last < slength)
+    new (a.push()) Capture(s.data() + last, slength - last);
+
+  return a.length();
+}
+
+int ZtRegex::index(const char *name) const
+{
+  int i = pcre_get_stringnumber(m_regex, name);
+  if (i < 0) return -1;
+  return i + 1;
+}
+
+unsigned ZtRegex::exec(
+    ZuString s, unsigned offset,
+    int options, ZtArray<unsigned> &ovector) const
+{
+  unsigned slength = s.length();
+
+  if (slength <= offset) return 0;
+
+  ovector.length(m_captureCount * 3, false);
+
+  int c = pcre_exec(
+      m_regex, m_extra, s.data(), slength,
+      offset, options,
+      reinterpret_cast<int *>(ovector.data()), ovector.length());
+
+  if (c >= 0) return c;
+
+  if (c == PCRE_ERROR_NOMATCH) return 0;
+
+  throw ZtRegexError{nullptr, c, -1};
+}
+
+void ZtRegex::capture(
+    ZuString s, const ZtArray<unsigned> &ovector, Captures &captures) const
+{
+  unsigned offset, length;
+  unsigned slength = s.length();
+
+  captures.length(0, false);
+  captures.size(m_captureCount + 2);
+  new (captures.push()) Capture(s.data(), ovector[0]); // $`
+  unsigned n = m_captureCount;
+  for (unsigned i = 0; i < n; i++) {
+    offset = ovector[i<<1];
+    if (offset < 0) {
+      new (captures.push()) Capture();
+    } else {
+      length = ovector[(i<<1) + 1] - offset;
+      new (captures.push()) Capture(s.data() + offset, length);
+    }
+  }
+  new (captures.push())
+    Capture(s.data() + ovector[1], slength - ovector[1]); // $'
+}
 static const char *exec_errors[] = {
   "NOMATCH",
   "NULL",

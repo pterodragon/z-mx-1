@@ -20,7 +20,7 @@ bool process(Zrl::Terminal &tty, ZmSemaphore &done, int32_t key)
   } else {
     ZuArrayN<uint8_t, 4> utf;
     if (key < 0x20) {
-      utf << '^' << static_cast<char>('A' + (key - 1));
+      utf << '^' << static_cast<char>('@' + key);
     } else if (key >= 0x7f && key < 0x100) {
       utf << "\\x" << ZuBoxed(key).hex(ZuFmt::Right<2, '0'>{});
     } else {

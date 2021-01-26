@@ -89,8 +89,7 @@ bool FileMgr::open(
     } catch (...) {
       continue;
     }
-    ZuBox<unsigned> index;
-    index.scan(ZuFmt::Hex<>(), fileName_);
+    ZuBox<unsigned> index{ZuFmt::Hex<>{}, fileName_};
     if (index < minIndex) minIndex = index;
   }
   if (minIndex == UINT_MAX) minIndex = 0;

@@ -89,6 +89,7 @@ namespace VKey {
 
   enum {
     Mask	= 0x00ff,
+
     Shift	= 0x0100,
     Ctrl	= 0x0200,	// implies word with left/right
     Alt		= 0x0400	// ''

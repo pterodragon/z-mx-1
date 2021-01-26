@@ -148,6 +148,13 @@ public:
   }
   T *ptr_() const { return m_object; }
 
+  template <typename O = T>
+  ZuInline typename MatchZuPtr<ZuPtr<O>, O *>::T mvptr() {
+    auto ptr = static_cast<O *>(m_object);
+    m_object = nullptr;
+    return ptr;
+  }
+
   ZuInline bool operator !() const { return !m_object; }
 
   struct Traits : public ZuTraits<T *> {

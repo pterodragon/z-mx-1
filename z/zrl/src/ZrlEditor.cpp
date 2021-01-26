@@ -23,6 +23,204 @@
 
 namespace Zrl {
 
+// all parse() functions return v such that
+// v <= 0 - parse failure at -v
+// v  > 0 - parse success ending at v
+
+int VKey_parse(int32_t &key_, ZuString s, int off)
+{
+  int32_t key;
+  ZtRegex::Captures c;
+  if (ZtREGEX("\G\s*'([^\\])'").m(s, c, off)) { // regular
+    off += c[1].length();
+    key = c[2][0];
+  } else if (ZtREGEX("\G\s*'^([@A-Z\[\\\]\^_])'").m(s, c, off)) { // ctrl
+    off += c[1].length();
+    key = c[2][0] - '@';
+  } else if (ZtREGEX("\G\s*'\\([^0123x])'").m(s, c, off)) {
+    off += c[1].length();
+    switch (static_cast<int>(c[2][0])) {
+      case 'b': key = '\b';   break; // BS
+      case 'e': key = '\x1b'; break; // Esc
+      case 'n': key = '\n';   break; // LF
+      case 'r': key = '\r';   break; // CR
+      case 't': key = '\t';   break; // Tab
+      default: key = c[2][0]; break;
+    }
+  } else if (ZtREGEX("\G\s*'\\x([0-9a-fA-F]{2})'").m(s, c, off)) { // hex
+    off += c[1].length();
+    key = ZuBox<unsigned>{ZuFmt::Hex<>{}, c[2]};
+  } else if (ZtREGEX("\G\s*'\\([0-3][0-7]{2})'").m(s, c, off)) { // octal
+    off += c[1].length();
+    key =
+      (static_cast<unsigned>(c[2][0] - '0')<<6) |
+      (static_cast<unsigned>(c[2][1] - '0')<<3) |
+       static_cast<unsigned>(c[2][2] - '0');
+  } else if (ZtREGEX("\G\s*\w+").m(s, c, off)) {
+    key = VKey::lookup(c[1]);
+    if (key < 0) return -off;
+    off += c[1].length();
+    if (ZtREGEX("\G\s*\[").m(s, c, off)) {
+      off += c[1].length();
+      while (ZtREGEX("\G\s*\w+").m(s, c, off)) {
+	if (c[1] == "Shift") key |= VKey::Shift;
+	else if (c[1] == "Ctrl") key |= VKey::Ctrl;
+	else if (c[1] == "Alt") key |= VKey::Alt;
+	else return -off;
+	off += c[1].length();
+	if (!ZtREGEX("\G\s*|").m(s, c, off)) break;
+	off += c[1].length();
+      }
+      if (!ZtREGEX("\G\s*\]").m(s, c, off)) return -off;
+      off += c[1].length();
+    }
+    key = -key;
+  } else
+    return -off;
+  key_ = key;
+  return off;
+}
+
+int Cmd::parse(ZuString s, int off)
+{
+  ZtRegex::Captures c;
+  if (!ZtREGEX("\G\s*(\w+)").m(s, c, off)) return -off;
+  off += c[1].length();
+  {
+    auto op = Op::lookup(c[2]);
+    if (op < 0) return -off;
+    m_value = op;
+  }
+  if (!ZtREGEX("\G\s*\(").m(s, c, off)) {
+    if (!ZtREGEX("\G\s+").m(s, c, off)) return -off;
+    off += c[1].length();
+    return off;
+  }
+  off += c[1].length();
+  while (ZtREGEX("\G\s*(\w+)").m(s, c, off)) {
+    if (c[1] = "Mv") m_value |= Op::Mv;
+    else if (c[1] == "Del") m_value |= Op::Del;
+    else if (c[1] == "Copy") m_value |= Op::Copy;
+    else if (c[1] == "Unix") m_value |= Op::Unix;
+    else if (c[1] == "Arg") m_value |= Op::Arg;
+    else if (c[1] == "Reg") m_value |= Op::Reg;
+    else if (c[1] == "KeepArg") m_value |= Op::KeepArg;
+    else return -off;
+    off += c[1].length();
+    if (!ZtREGEX("\G\s*|").m(s, c, off)) break;
+    off += c[1].length();
+  }
+  if (ZtREGEX("\G\s*,").m(s, c, off)) {
+    off += c[1].length();
+    if (ZtREGEX("\G\s*\d+").m(s, c, off)) {
+      off += c[1].length();
+      uint64_t arg = ZuBox<unsigned>{c[2]};
+      m_value |= (arg<<16);
+    }
+    if (ZtREGEX("\G\s*,").m(s, c, off)) {
+      off += c[1].length();
+      int32_t key;
+      off = VKey_parse(key, s, off);
+      if (off <= 0) return off;
+      m_value |= static_cast<uint64_t>(key)<<32;
+    }
+  }
+  if (!ZtREGEX("\G\s*\)").m(s, c, off)) return -off;
+  off += c[1].length();
+  return off;
+}
+
+int CmdSeq_parse(CmdSeq &cmds, ZuString s, int off)
+{
+  ZtRegex::Captures c;
+  if (!ZtREGEX("\G\s*{").m(s, c, off)) return -off;
+  off += c[1].length();
+  Cmd cmd;
+  while (!ZtREGEX("\G\s*}").m(s, c, off)) {
+    off = cmd.parse(s, off);
+    if (off <= 0) return off;
+    if (!ZtREGEX("\G\s*;").m(s, c, off)) return -off;
+    off += c[1].length();
+    cmds.push(ZuMv(cmd));
+  }
+  off += c[1].length();
+  return off;
+}
+
+int Map_::parseMode(ZuString s, int off)
+{
+  ZtRegex::Captures c;
+  if (!ZtREGEX("\G\s*mode\s+(\d+)").m(s, c, off)) return -off;
+  off += c[1].length();
+  unsigned mode = ZuBox<unsigned>{c[2]};
+  bool edit;
+  if (ZtREGEX("\G\s*edit").m(s, c, off)) {
+    off += c[1].length();
+    edit = true;
+  } else
+    edit = false;
+  if (!ZtREGEX("\G\s*{").m(s, c, off)) return -off;
+  off += c[1].length();
+  addMode(mode, edit);
+  int32_t vkey;
+  CmdSeq cmds;
+  while (!ZtREGEX("\G\s*}").m(s, c, off)) {
+    off = VKey_parse(vkey, s, off);
+    if (off <= 0) return off;
+    off = CmdSeq_parse(cmds, s, off);
+    if (off <= 0) return off;
+    if (!ZtREGEX("\G\s*;").m(s, c, off)) return -off;
+    off += c[1].length();
+    addMapping(mode, vkey, ZuMv(cmds));
+    cmds.clear();
+  }
+  off += c[1].length();
+  return off;
+}
+
+int Map_::parse(ZuString s, int off)
+{
+  ZtRegex::Captures c;
+  if (!ZtREGEX("\G\s*map\s+(\w+)").m(s, c, off)) return -off;
+  off += c[1].length();
+  id = c[2];
+  if (!ZtREGEX("\G\s*{").m(s, c, off)) return -off;
+  off += c[1].length();
+  while (!ZtREGEX("\G\s*}").m(s, c, off)) {
+    off = parseMode(s, off);
+    if (off <= 0) return off;
+    if (!ZtREGEX("\G\s*;").m(s, c, off)) return -off;
+    off += c[1].length();
+  }
+  off += c[1].length();
+  return off;
+}
+
+void Map_::addMode(unsigned mode, bool edit)
+{
+  if (ZuUnlikely(modes.length() <= mode)) modes.grow(mode + 1);
+  modes[mode] = Mode{{}, edit};
+}
+void Map_::addMapping(unsigned mode, int vkey, CmdSeq cmds)
+{
+  if (ZuUnlikely(modes.length() <= mode)) modes.grow(mode + 1);
+  if (vkey == VKey::Default)
+    modes[mode].cmds = ZuMv(cmds);
+  else
+    bindings.add(new Binding{mode, vkey, ZuMv(cmds)});
+}
+void Map_::reset()
+{
+  bindings.clean();
+  modes.clear();
+}
+const CmdSeq &Map_::binding(unsigned mode, int32_t vkey)
+{
+  if (Binding *binding = bindings.find(Binding::Key{mode, vkey}))
+    return binding->cmds;
+  return modes[mode].cmds;
+}
+
 Editor::Editor()
 {
   // manual initialization of opcode-indexed jump table
@@ -103,11 +301,96 @@ Editor::Editor()
 
   m_cmdFn[Op::FwdSearch] = &Editor::cmdFwdSearch;
   m_cmdFn[Op::RevSearch] = &Editor::cmdRevSearch;
+
+  m_defltMap = new Map{};
+
+  m_defltMap->addMode(0, true);
+  m_defltMap->addMode(1, true);
+
+  m_defltMap->addMapping(0, VKey::Default, { { Op::Glyph } });
+
+  m_defltMap->addMapping(0, VKey::Error, { { Op::Error } });
+  m_defltMap->addMapping(0, VKey::EndOfFile, { { Op::EndOfFile} });
+
+  m_defltMap->addMapping(0, VKey::SigInt, { { Op::SigInt} });
+  m_defltMap->addMapping(0, VKey::SigQuit, { { Op::SigQuit} });
+  m_defltMap->addMapping(0, VKey::SigSusp, { { Op::SigSusp} });
+
+  m_defltMap->addMapping(0, VKey::Enter, { { Op::Enter} });
+
+  m_defltMap->addMapping(0, VKey::Erase, { { Op::Left | Op::Del} });
+  m_defltMap->addMapping(0, VKey::WErase,
+      { { Op::RevWord | Op::Del | Op::Unix } });
+  m_defltMap->addMapping(0, VKey::Kill, { { Op::Home | Op::Del } });
+
+  m_defltMap->addMapping(0, VKey::LNext, {
+    { Op::Glyph, 0, '^' },
+    { Op::Left | Op::Mv },
+    { Op::Push, 1 },
+  });
+  m_defltMap->addMapping(1, VKey::Default, { { Op::OverGlyph }, { Op::Pop } });
+
+  m_defltMap->addMapping(0, VKey::Up, { { Op::Up | Op::Mv } });
+  m_defltMap->addMapping(0, VKey::Down, { { Op::Down | Op::Mv } });
+  m_defltMap->addMapping(0, VKey::Left, { { Op::Left | Op::Mv } });
+  m_defltMap->addMapping(0, VKey::Right, { { Op::Right | Op::Mv } });
+
+  m_defltMap->addMapping(0, VKey::Home, { { Op::Home | Op::Mv } });
+  m_defltMap->addMapping(0, VKey::End, { { Op::End | Op::Mv } });
+
+  m_defltMap->addMapping(0, VKey::Insert, { { Op::Insert } });
+  m_defltMap->addMapping(0, VKey::Delete, { { Op::Right | Op::Del } });
+}
+
+bool Editor::loadMap(ZuString file)
+{
+  ZtArray<char> s;
+  {
+    ZiFile f;
+    ZeError e;
+    int r;
+    if ((r = f.open(file,
+	    ZiFile::ReadOnly | ZiFile::GC, 0666, 0, &e)) != Zi::OK) {
+      m_loadError.null();
+      m_loadError << "open(" << file << "): " << Zi::resultName(r);
+      if (r == Zi::IOError) m_loadError << ' ' << e;
+      return false;
+    }
+    unsigned len = f.size();
+    if (len >= m_config.maxFileSize) {
+      m_loadError.null();
+      m_loadError << "open(" << file << "): file too large";
+      return false;
+    }
+    s.length(len);
+    if ((r = f.read(s.data(), len, &e)) != Zi::OK) {
+      m_loadError.null();
+      m_loadError << "read(" << file << "): " << Zi::resultName(r);
+      if (r == Zi::IOError) m_loadError << ' ' << e;
+      return false;
+    }
+  }
+  ZuPtr<Map> map = new Map{};
+  int off = map->parse(s, 0);
+  if (off <= 0) {
+    off = -off;
+    m_loadError.null();
+    m_loadError << "read(" << file << "): parsing failed at offset " << off;
+    return false;
+  }
+  if (!map->modes[0].cmds) {
+    m_loadError.null();
+    m_loadError << "read(" << file << "): mode 0 not defined";
+    return false;
+  }
+  m_maps.add(map.mvptr());
+  return true;
 }
 
 void Editor::init(Config config, App app)
 {
   m_config = config;
+  m_map = m_defltMap;
   m_app = app;
   m_tty.init(m_config.vkeyInterval);
 }
@@ -155,33 +438,24 @@ bool Editor::running() const
   return m_tty.running();
 }
 
+bool Editor::map(ZuString id)
+{
+  if (auto map = m_maps.find(id)) {
+    m_map = map;
+    return true;
+  }
+  return false;
+}
+
 void Editor::prompt(ZtArray<uint8_t> prompt)
 {
   m_context.prompt = ZuMv(prompt);
 }
-void Editor::addMode(unsigned mode, CmdSeq cmds, bool edit)
-{
-  if (ZuUnlikely(m_modes.length() <= mode)) m_modes.grow(mode + 1);
-  m_modes[mode] = Mode{ZuMv(cmds), edit};
-}
-void Editor::addMapping(unsigned mode, int vkey, CmdSeq cmds)
-{
-  if (ZuUnlikely(m_modes.length() <= mode)) m_modes.grow(mode + 1);
-  m_cmds.add(new CmdMapping{mode, vkey, ZuMv(cmds)});
-}
-
-void Editor::reset()
-{
-  m_cmds.clean();
-  m_modes.clear();
-}
 
 bool Editor::process(int32_t vkey)
 {
-  if (CmdMapping *mapping =
-      m_cmds.find(CmdMapping::Key{m_context.mode, vkey}))
-    return process_(mapping->cmds, vkey);
-  return process_(m_modes[m_context.mode].cmds, vkey);
+  if (!m_map) return false;
+  return process_(m_map->binding(m_context.mode, vkey), vkey);
 }
 
 bool Editor::process_(const CmdSeq &cmds, int32_t vkey)
@@ -262,7 +536,7 @@ ZuArray<const uint8_t> Editor::substr(unsigned begin, unsigned end)
 bool Editor::align(unsigned pos)
 {
   const auto &line = m_tty.line();
-  if (ZuUnlikely(!m_modes[m_context.mode].edit &&
+  if (ZuUnlikely(!m_map->modes[m_context.mode].edit &&
       pos > m_context.startPos &&
       pos >= line.width())) {
     m_tty.mv(line.align(pos - 1));

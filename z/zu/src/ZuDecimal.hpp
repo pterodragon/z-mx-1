@@ -485,10 +485,7 @@ public:
   }
 
   // traits
-  struct Traits : public ZuTraits<int128_t> {
-    using T = ZuDecimal;
-    enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
-  };
+  struct Traits : public ZuTraits<int128_t> { enum { IsPrimitive = 0 }; };
   friend Traits ZuTraitsType(ZuDecimal *);
 
 private:

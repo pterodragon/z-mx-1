@@ -19,11 +19,7 @@
 
 // generic hashing
 
-// UDTs must specialize ZuTraits:
-// template <> ZuTraits<UDT> : public ZuBaseTraits<UDT> {
-//   enum { IsHashable = 1 };
-// };
-// ... and implement a "uint32_t hash() const" public member function
+// UDTs can implement a "uint32_t hash() const" public member function
 
 // WARNING - all these functions must return consistent hash codes for the
 // same values regardless of the enclosing type
@@ -178,13 +174,23 @@ template <typename T> struct ZuHash_Primitive<T, true, false> :
 
 // hashing of non-primitive types
 
-template <typename T, bool IsHashable, bool Fwd>
+template <typename> struct ZuHash_Can_;
+template <> struct ZuHash_Can_<uint32_t> { using T = void; }; 
+template <typename, typename = void>
+struct ZuHash_Can { enum { OK = 0 }; };
+template <typename U>
+struct ZuHash_Can<U, typename ZuHash_Can_<
+    decltype(ZuDeclVal<const U &>().hash())>::T> {
+  enum { OK = 1 };
+};
+template <typename T, bool Fwd, bool = ZuHash_Can<T>::OK>
 struct ZuHash_NonPrimitive : public ZuHash_Cannot<T> { };
 
 template <typename P, bool IsPrimitive> struct ZuHash_NonPrimitive___ :
-    public ZuHash_NonPrimitive<P, ZuTraits<P>::IsHashable, false> { };
+    public ZuHash_NonPrimitive<P, false> { };
 template <typename P>
 struct ZuHash_NonPrimitive___<P, true> : public ZuHash<P> { };
+
 template <typename T, typename P> struct ZuHash_NonPrimitive__ :
     public ZuHash_NonPrimitive___<P, ZuTraits<P>::IsPrimitive> { };
 template <typename T> struct ZuHash_NonPrimitive__<T, T> {
@@ -195,7 +201,7 @@ struct ZuHash_NonPrimitive_ : public ZuHash_NonPrimitive__<T, P> { };
 template <typename T, typename P> struct ZuHash_NonPrimitive_<T, P, false> {
   ZuInline static uint32_t hash(const T &v) { return v.hash(); }
 };
-template <typename T, bool Fwd> struct ZuHash_NonPrimitive<T, true, Fwd> {
+template <typename T, bool Fwd> struct ZuHash_NonPrimitive<T, Fwd, true> {
   template <typename P>
   ZuInline static uint32_t hash(const P &p) {
     return ZuHash_NonPrimitive_<T, P, Fwd>::hash(p);
@@ -238,7 +244,7 @@ template <typename T> struct ZuHash_PrimitivePointer<T *> :
 template <typename T, bool IsPrimitive, bool IsPointer> struct ZuHash_NonString;
 
 template <typename T> struct ZuHash_NonString<T, false, false> :
-  public ZuHash_NonPrimitive<T, ZuTraits<T>::IsHashable, true> { };
+  public ZuHash_NonPrimitive<T, ZuHash_Can<T>::OK, true> { };
 
 template <typename T> struct ZuHash_NonString<T, false, true> :
   public ZuHash_Pointer<T, sizeof(T)> { };

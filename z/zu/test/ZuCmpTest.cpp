@@ -78,8 +78,8 @@ namespace T1 {
   using T = _::T;
 }
 
-ZuAssert(ZuTraits<T1::V>::IsHashable);
-ZuAssert(ZuTraits<T1::T>::IsHashable);
+ZuAssert(ZuHash_Can<T1::V>::OK);
+ZuAssert(ZuHash_Can<T1::T>::OK);
 
 namespace T2 {
   using I = int;

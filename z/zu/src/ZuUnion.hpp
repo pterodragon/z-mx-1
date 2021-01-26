@@ -149,11 +149,7 @@ struct ZuUnion_Ops :
 template <typename Base, typename ...Args> struct ZuUnion_Traits;
 template <typename Base, typename Arg0>
 struct ZuUnion_Traits<Base, Arg0> : public Base {
-  enum {
-    IsPOD = ZuTraits<Arg0>::IsPOD,
-    IsComparable = 1,
-    IsHashable = ZuTraits<Arg0>::IsHashable
-  };
+  enum { IsPOD = ZuTraits<Arg0>::IsPOD };
 };
 template <typename Base, typename Arg0, typename ...Args>
 struct ZuUnion_Traits<Base, Arg0, Args...> : public Base {
@@ -161,11 +157,7 @@ private:
   using Left = ZuTraits<Arg0>;
   using Right = ZuUnion_Traits<Base, Args...>;
 public:
-  enum {
-    IsPOD = Left::IsPOD && Right::IsPOD,
-    IsComparable = 1,
-    IsHashable = Left::IsHashable && Right::IsHashable
-  };
+  enum { IsPOD = Left::IsPOD && Right::IsPOD };
 };
 
 namespace Zu_ {

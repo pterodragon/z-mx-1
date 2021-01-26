@@ -295,9 +295,7 @@ public:
     return ZuCmp<long>::cmp(tv_nsec, t.tv_nsec);
   }
 
-  struct Traits : public ZuBaseTraits<ZmTime> {
-    enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
-  };
+  struct Traits : public ZuBaseTraits<ZmTime> { enum { IsPOD = 1 }; };
   friend Traits ZuTraitsType(ZmTime *);
 };
 

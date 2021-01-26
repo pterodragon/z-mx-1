@@ -50,9 +50,7 @@ struct A {
   bool operator !() const { return !i; }
   bool operator ==(const A &a) const { return i == a.i; }
 
-  struct Traits : public ZuBaseTraits<A> {
-    enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
-  };
+  struct Traits : public ZuBaseTraits<A> { enum { IsPrimitive = 0 }; };
   friend Traits ZuTraitsType(A *);
 
   int i;

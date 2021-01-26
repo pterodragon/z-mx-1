@@ -55,6 +55,16 @@
 #pragma warning(disable:4312 4800)
 #endif
 
+template <typename T, class Cmp> class ZuBox;
+template <typename> struct ZuIsBoxed_ { enum { OK = 0 }; };
+template <typename T, typename Cmp>
+struct ZuIsBoxed_<ZuBox<T, Cmp>> { enum { OK = 1 }; };
+
+template <typename U, typename R = void>
+struct ZuIsBoxed : public ZuIfT<ZuIsBoxed_<U>::OK, R> { };
+template <typename U, typename R = void>
+struct ZuNotBoxed : public ZuIfT<!ZuIsBoxed_<U>::OK, R> { };
+
 // compile-time formatting
 template <typename T, class Fmt,
   bool Signed = ZuTraits<T>::IsSigned,
@@ -123,8 +133,6 @@ template <typename T_, class Fmt> struct ZuBox_Scan<T_, Fmt, 1, 1> {
     { return Zu_nscan<Fmt>::atof(v, buf, n); }
 };
 
-template <typename T, class Cmp> class ZuBox;
-
 // compile-time formatting
 template <class Boxed, class Fmt> class ZuBoxFmt {
 template <typename, class> friend class ZuBox;
@@ -168,7 +176,7 @@ private:
 
 // SFINAE...
 template <typename U, typename T, typename R = void> struct ZuBox_IsReal :
-    public ZuIfT<!ZuTraits<U>::IsBoxed && !ZuTraits<U>::IsString &&
+    public ZuIfT<!ZuIsBoxed_<U>::OK && !ZuTraits<U>::IsString &&
 		 (ZuTraits<U>::IsReal ||
 		  ZuConversion<U, T>::Exists ||
 		  ZuConversion<U, int>::Exists), R> { };
@@ -531,9 +539,7 @@ public:
   }
 
   // traits
-  struct Traits : public ZuTraits<T> {
-    enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1, IsBoxed = 1 };
-  };
+  struct Traits : public ZuTraits<T> { enum { IsPrimitive = 0 }; };
   friend Traits ZuTraitsType(ZuBox *);
 
 private:

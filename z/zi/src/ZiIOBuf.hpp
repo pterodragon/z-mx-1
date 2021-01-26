@@ -202,9 +202,7 @@ public:
 
   struct Traits : public ZuBaseTraits<ZiIOBuf_> {
     using Elem = char;
-    enum {
-      IsCString = 0, IsString = 1, IsWString = 0, IsHashable = 1
-    };
+    enum { IsCString = 0, IsString = 1, IsWString = 0 };
     static const char *data(const ZiIOBuf_ &buf) {
       return reinterpret_cast<const char *>(buf.data());
     }

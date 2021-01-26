@@ -214,9 +214,7 @@ private:
   }
 
   // traits
-  struct Traits : public ZuTraits<I> {
-    enum { IsBoxed = 0, IsPrimitive = 0 };
-  };
+  struct Traits : public ZuTraits<I> { enum { IsPrimitive = 0 }; };
   friend Traits ZuTraitsType(ZuByteSwap *);
 
 private:

@@ -142,11 +142,6 @@ struct I {
   bool operator ==(const I &i) const { return m_i == i.m_i; }
   bool operator !() const { return !m_i; }
 
-  struct Traits : public ZuBaseTraits<I> {
-    enum { IsComparable = 1, IsHashable = 1 };
-  };
-  friend Traits ZuTraitsType(I *);
-
   int	m_i;
 };
 

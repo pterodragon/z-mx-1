@@ -22,12 +22,9 @@
 
 // UDTs must implement the <, == and ! operators
 //
-// For more efficiency, specialize ZuTraits and implement cmp()
+// For more efficiency, implement cmp()
 // (operators <, == and ! must always be implemented)
 //
-// template <> ZuTraits<UDT> : public ZuBaseTraits<UDT> {
-//   enum { IsComparable = 1 };
-// };
 // class UDT {
 //   ...
 //   int cmp(const UDT &t) { ... }
@@ -218,7 +215,8 @@ struct ZuCmp_Can<P1, P2, typename ZuCmp_Can_<
     decltype(ZuDeclVal<const P1 &>().cmp(ZuDeclVal<const P2 &>()))>::T> {
   enum { OK = 1 };
 };
-template <typename T, bool IsComparable, bool Fwd> struct ZuCmp_NonPrimitive {
+template <typename T, bool Fwd, bool = ZuCmp_Can<T, T>::OK>
+struct ZuCmp_NonPrimitive {
   template <typename P1, typename P2, typename T_ = T>
   ZuInline static typename ZuIfT<ZuCmp_Can<P1, P2>::OK, int>::T
   cmp(const P1 &p1, const P2 &p2) {
@@ -238,7 +236,7 @@ template <typename T, bool IsComparable, bool Fwd> struct ZuCmp_NonPrimitive {
 };
 
 template <typename P1, bool IsPrimitive> struct ZuCmp_NonPrimitive___ :
-    public ZuCmp_NonPrimitive<P1, ZuTraits<P1>::IsComparable, false> { };
+    public ZuCmp_NonPrimitive<P1, false> { };
 template <typename P1>
 struct ZuCmp_NonPrimitive___<P1, true> : public ZuCmp<P1> { };
 template <typename T, typename P1> struct ZuCmp_NonPrimitive__ :
@@ -253,7 +251,7 @@ template <typename T, typename P1> struct ZuCmp_NonPrimitive_<T, P1, false> {
   template <typename P2>
   ZuInline static int cmp(const T &t, const P2 &p2) { return t.cmp(p2); }
 };
-template <typename T, bool Fwd> struct ZuCmp_NonPrimitive<T, true, Fwd> {
+template <typename T, bool Fwd> struct ZuCmp_NonPrimitive<T, Fwd, true> {
   template <typename P1, typename P2>
   ZuInline static int cmp(const P1 &p1, const P2 &p2) {
     return ZuCmp_NonPrimitive_<T, typename ZuDecay<P1>::T, Fwd>::cmp(p1, p2);
@@ -290,7 +288,7 @@ template <typename T> struct ZuCmp_PrimitivePointer<T, false> :
 template <typename T, bool IsPrimitive, bool IsPointer> struct ZuCmp_NonString;
 
 template <typename T> struct ZuCmp_NonString<T, false, false> :
-  public ZuCmp_NonPrimitive<T, ZuTraits<T>::IsComparable, true> { };
+  public ZuCmp_NonPrimitive<T, true> { };
 
 template <typename T> struct ZuCmp_NonString<T, false, true> :
   public ZuCmp_Pointer<T> { };

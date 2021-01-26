@@ -341,11 +341,7 @@ private:
 
 public:
   struct Traits : public ZuBaseTraits<ZmLHash_Node> {
-    enum {
-      IsPOD = ZuTraits<Key>::IsPOD && ZuTraits<Val>::IsPOD,
-      IsComparable = 1,
-      IsHashable = 0
-    };
+    enum { IsPOD = ZuTraits<Key>::IsPOD && ZuTraits<Val>::IsPOD };
   };
   friend Traits ZuTraitsType(ZmLHash_Node *);
 

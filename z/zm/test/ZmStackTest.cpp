@@ -23,11 +23,6 @@ struct C {
   bool operator ==(const C &c) const { return m_i == c.m_i; }
   bool operator !() const { return !m_i; }
 
-  struct Traits : public ZuBaseTraits<C> {
-    enum { IsComparable = 1 };
-  };
-  friend Traits ZuTraitsType(C *);
-
   int				m_i;
   static ZmAtomic<uint32_t>	m_count;
 };

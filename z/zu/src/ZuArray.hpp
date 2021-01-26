@@ -17,14 +17,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// ZuArray<T> is a const rvalue wrapper around a pointer+length pair
-// T is the element type and the data elements are const; it performs no
-// memory allocation
+// ZuArray<T> is a wrapper around a pointer+length pair
 //
-// ZuArrayT<T> is a syntactic short cut for ZuArray<typename ZuTraits<T>::Elem>
-//
-// ZuMkArray(x) returns a ZuArray<> for x, where x can be any Zu traited type
-// or an initializer list
+// ZuArrayT<T> is a short cut for ZuArray<const typename ZuTraits<T>::Elem>
 
 #ifndef ZuArray_HPP
 #define ZuArray_HPP
@@ -239,7 +234,7 @@ public:
   ZuInline T *end() { return m_data + length(); }
 
   // operator T *() must return nullptr if the string is empty, oherwise
-  // these usages stop working:
+  // these use cases stop working:
   // if (ZuString s = "") { } else { puts("ok"); }
   // if (ZuString s = 0) { } else { puts("ok"); }
   ZuInline operator T *() const {
@@ -386,8 +381,7 @@ struct ZuTraits<ZuArray<Elem_> > : public ZuBaseTraits<ZuArray<Elem_> > {
     IsString =
       ZuConversion<char, Elem>::Same ||
       ZuConversion<wchar_t, Elem>::Same,
-    IsWString = ZuConversion<wchar_t, Elem>::Same,
-    IsComparable = 1, IsHashable = 1
+    IsWString = ZuConversion<wchar_t, Elem>::Same
   };
   template <typename U = T>
   static typename ZuNotConst<U, Elem *>::T data(U &a) { return a.data(); }
@@ -403,15 +397,6 @@ struct ZuPrint<ZuArray<const volatile char> > : public ZuPrintString { };
 
 template <typename T>
 using ZuArrayT = ZuArray<const typename ZuTraits<T>::Elem>;
-
-template <typename T>
-ZuArrayT<T> ZuMkArray(T &&t) {
-  return ZuArrayT<T>{ZuFwd<T>(t)};
-}
-template <typename T>
-ZuArray<T> ZuMkArray(std::initializer_list<T> &&t) {
-  return ZuArray<T>(ZuFwd<std::initializer_list<T> >(t));
-}
 
 #ifdef _MSC_VER
 #pragma warning(pop)

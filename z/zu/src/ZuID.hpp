@@ -145,7 +145,7 @@ public:
   ZuInline uint32_t hash() const { return ZuHash<uint64_t>::hash(m_val); }
 
   struct Traits : public ZuTraits<uint64_t> {
-    enum { IsPrimitive = 0, IsComparable = 1, IsHashable = 1 };
+    enum { IsPrimitive = 0 };
   };
   friend Traits ZuTraitsType(ZuID *);
 

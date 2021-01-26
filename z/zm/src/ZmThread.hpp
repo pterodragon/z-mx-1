@@ -411,11 +411,6 @@ public:
   };
   ZuInline static CSV csv() { return CSV(); }
 
-  struct Traits : public ZuBaseTraits<ZmThread> {
-    enum { IsComparable = 1, IsHashable = 1 };
-  };
-  friend Traits ZuTraitsType(ZmThread *);
-
 private:
   ZmRef<Context>	m_context;
 };

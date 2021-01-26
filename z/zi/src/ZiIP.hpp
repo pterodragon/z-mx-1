@@ -114,9 +114,7 @@ public:
      return i >= 224 && i < 240;
   }
 
-  struct Traits : public ZuBaseTraits<ZiIP> {
-    enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 };
-  };
+  struct Traits : public ZuBaseTraits<ZiIP> { enum { IsPOD = 1 }; };
   friend Traits ZuTraitsType(ZiIP *);
 
 private:

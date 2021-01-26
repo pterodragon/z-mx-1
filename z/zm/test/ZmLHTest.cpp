@@ -86,10 +86,7 @@ template <int N> struct String {
 
   struct Traits : public ZuBaseTraits<String> {
     using Elem = char;
-    enum {
-      IsPOD = 1, IsCString = 1, IsString = 1,
-      IsComparable = 1, IsHashable = 1
-    };
+    enum { IsPOD = 1, IsCString = 1, IsString = 1 };
     template <typename U = String>
     static typename ZuNotConst<U, char *>::T data(U &s) { return s.data(); }
     static const char *data(const String<N> &s) { return s.data(); }

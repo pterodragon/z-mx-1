@@ -1319,8 +1319,7 @@ public:
     using Elem = Char;
     enum {
       IsCString = 1, IsString = 1,
-      IsWString = ZuConversion<Char, wchar_t>::Same,
-      IsComparable = 1, IsHashable = 1
+      IsWString = ZuConversion<Char, wchar_t>::Same
     };
     template <typename U = ZtString_>
     static typename ZuNotConst<U, Char *>::T data(U &s) { return s.data(); }

@@ -25,7 +25,7 @@
 //   // returns -ve if *this < t, 0 if *this == t, +ve if *this > t
 //   ...
 //   struct Traits : public ZuBaseTraits<UDT> {
-//     enum { IsPOD = 1, IsComparable = 1, IsHashable = 1 }; // overrides
+//     enum { IsPOD = 1 }; // overrides
 //   };
 //   friend Traits ZuTraitsType(UDT *);
 // };
@@ -87,9 +87,7 @@ template <typename T> struct ZuBaseTraits {
     IsSigned	= IsEnum,
     IsIntegral	= IsEnum,	IsFloatingPoint	= 0,
     IsString	= 0,		IsCString	= 0,	IsWString	= 0,
-    IsVoid	= 0,		IsBool		= 0,	IsArray		= 0,
-    IsHashable	= 0,		IsComparable	= 0,
-    IsBoxed	= 0,		IsFixedPoint	= 0
+    IsVoid	= 0,		IsBool		= 0,	IsArray		= 0
   };
 
   using Elem = void;
@@ -181,7 +179,6 @@ struct ZuTraits<long double> : public ZuTraits_Floating<long double> { };
 
 template <typename T> struct ZuTraits<T &> : public ZuTraits<T> {
   enum { IsReference = 1 };
-  // using T = T_;
 };
 
 template <typename T> struct ZuTraits<const T &> : public ZuTraits<T &> { };
@@ -191,7 +188,6 @@ struct ZuTraits<const volatile T &> : public ZuTraits<T &> { };
 
 template <typename T> struct ZuTraits<T &&> : public ZuTraits<T> {
   enum { IsRvalueRef = 1 };
-  // using T = T_;
 };
 
 // pointers
@@ -403,11 +399,11 @@ template <> struct ZuTraits<void> : public ZuBaseTraits<void> {
 #include <zlib/ZuIfT.hpp>
 
 // SFINAE techniques...
-#define ZuTraits_SFINAE(R) \
-template <typename S, typename T = void> \
-struct ZuIs##R : public ZuIfT<ZuTraits<S>::Is##R, T> { }; \
-template <typename S, typename T = void> \
-struct ZuNot##R : public ZuIfT<!ZuTraits<S>::Is##R, T> { };
+#define ZuTraits_SFINAE(Trait) \
+template <typename U, typename R = void> \
+struct ZuIs##Trait : public ZuIfT<ZuTraits<U>::Is##Trait, R> { }; \
+template <typename U, typename R = void> \
+struct ZuNot##Trait : public ZuIfT<!ZuTraits<U>::Is##Trait, R> { };
 
 ZuTraits_SFINAE(Primitive)
 ZuTraits_SFINAE(Real)
@@ -425,14 +421,12 @@ ZuTraits_SFINAE(Hashable)
 ZuTraits_SFINAE(Comparable)
 ZuTraits_SFINAE(Bool)
 ZuTraits_SFINAE(String)
-ZuTraits_SFINAE(Boxed)
 ZuTraits_SFINAE(FloatingPoint)
-ZuTraits_SFINAE(FixedPoint)
 
 #undef ZuTraits_SFINAE
 
-template <typename S, typename T = void> struct ZuIsCharString :
-  public ZuIfT<ZuTraits<S>::IsString && !ZuTraits<S>::IsWString, T> { };
+template <typename U, typename R = void> struct ZuIsCharString :
+  public ZuIfT<ZuTraits<U>::IsString && !ZuTraits<U>::IsWString, R> { };
 
 // STL / Boost interoperability
 template <typename T, typename Char>

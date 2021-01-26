@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// fixed-size POD strings/buffers for use in POD structs and passing by value
+// fixed-size POD string/buffer for use in POD structs and passing by value
 //
 // * cached length
 // * always null-terminated
@@ -243,7 +243,7 @@ public:
   ZuInline const Char &operator [](int i) const { return data()[i]; }
 
   // operator Char *() must return 0 if the string is empty, oherwise
-  // these usages stop working:
+  // these use cases stop working:
   // if (ZuStringN<2> s = "") { } else { puts("ok"); }
   // if (ZuStringN<2> s = 0) { } else { puts("ok"); }
   ZuInline operator Char *() {
@@ -418,8 +418,7 @@ public:
     using Elem = Char;
     enum {
       IsPOD = 1, IsCString = 1, IsString = 1, IsStream = 1,
-      IsWString = ZuConversion<Char, wchar_t>::Same,
-      IsComparable = 1, IsHashable = 1
+      IsWString = ZuConversion<Char, wchar_t>::Same
     };
     template <typename U = ZuStringN_>
     static typename ZuNotConst<U, Char *>::T data(U &s) { return s.data(); }

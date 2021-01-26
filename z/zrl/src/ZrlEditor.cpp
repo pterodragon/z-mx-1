@@ -104,6 +104,8 @@ Editor::Editor()
   m_cmdFn[Op::FwdSearch] = &Editor::cmdFwdSearch;
   m_cmdFn[Op::RevSearch] = &Editor::cmdRevSearch;
 
+  // default key bindings
+
   m_defltMap = new Map{};
 
   m_defltMap->addMode(0, true);

@@ -162,8 +162,7 @@ protected:
       IsString =
 	ZuConversion<char, T>::Same ||
 	ZuConversion<wchar_t, T>::Same,
-      IsWString = ZuConversion<wchar_t, T>::Same,
-      IsComparable = 1, IsHashable = 1
+      IsWString = ZuConversion<wchar_t, T>::Same
     };
     template <typename U = ZuMvArray>
     static typename ZuNotConst<U, T *>::T data(U &a) { return a.data(); }

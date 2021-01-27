@@ -94,17 +94,7 @@ int main(int argc, char **argv)
   if (argc == 5) verbose = atoi(argv[4]);
   if (!count || !nthr) usage();
   ZmHeapMgr::init("S", 0, ZmHeapConfig{0, (unsigned)size});
-  ZmThread *threads;
-#ifdef _MSC_VER
-  __try {
-    threads = reinterpret_cast<ZmThread *>(_alloca(sizeof(ZmThread) * nthr));
-  } __except(GetExceptionCode() == STATUS_STACK_OVERFLOW) {
-    _resetstkoflw();
-    threads = 0;
-  }
-#else
-  threads = reinterpret_cast<ZmThread *>(alloca(sizeof(ZmThread) * nthr));
-#endif
+  ZmThread *threads = ZuAlloca(threads, ZmThread, nthr);
   if (!threads) {
     fputs("alloca() failed\n", stderr);
     ZmPlatform::exit(1);

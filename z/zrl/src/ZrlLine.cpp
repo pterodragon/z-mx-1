@@ -277,7 +277,7 @@ void Line::reflow(unsigned off, unsigned dwidth)
 {
   unsigned len = m_data.length();
 
-  ZmAssert(off < len);
+  ZmAssert(off <= len);
   ZmAssert(dwidth >= 2);
 
   m_bytes.grow(len);

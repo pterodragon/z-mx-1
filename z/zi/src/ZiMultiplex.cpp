@@ -2154,8 +2154,7 @@ void ZiMultiplex::rx()
 
   int r;
   ZeError e;
-  struct epoll_event *ev =
-    (struct epoll_event *)alloca(m_epollQuantum * sizeof(struct epoll_event));
+  struct epoll_event *ev = ZuAlloca(ev, struct epoll_event, m_epollQuantum);
 
   for (;;) {
     ZiDEBUG(this, ZtSprintf(

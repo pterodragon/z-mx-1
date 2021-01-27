@@ -202,17 +202,7 @@ private:
   }
   template <typename P> typename MatchPBuffer<P>::T append_(const P &p) {
     unsigned len = ZuPrint<P>::length(p);
-    char *buf;
-#ifdef _MSC_VER
-    __try {
-      buf = reinterpret_cast<char *>(_alloca(len));
-    } __except(GetExceptionCode() == STATUS_STACK_OVERFLOW) {
-      _resetstkoflw();
-      buf = 0;
-    }
-#else
-    buf = reinterpret_cast<char *>(alloca(len));
-#endif
+    char *buf = ZuAlloca(buf, char, len);
     if (ZuUnlikely(!buf)) throw ZeError(ZiENOMEM);
     ZeError e;
     if (ZuUnlikely(write(buf, ZuPrint<P>::print(buf, len, p), e) != Zi::OK))

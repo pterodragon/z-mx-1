@@ -199,17 +199,7 @@ namespace ZJNI {
     if (ZuUnlikely(!s)) { jchar c = 0; return env->NewString(&c, 0); }
     unsigned n = ZuUTF<jchar, char>::len(s);
     if (ZuUnlikely(!n)) { jchar c = 0; return env->NewString(&c, 0); }
-    jchar *buf;
-#ifdef _MSC_VER
-    __try {
-      buf = reinterpret_cast<jchar *>(_alloca(n * sizeof(jchar)));
-    } __except(GetExceptionCode() == STATUS_STACK_OVERFLOW) {
-      _resetstkoflw();
-      buf = 0;
-    }
-#else
-    buf = reinterpret_cast<jchar *>(alloca(n * sizeof(jchar)));
-#endif
+    jchar *buf = ZuAlloca(buf, jchar, n);
     if (!buf) return 0;
     n = ZuUTF<jchar, char>::cvt(ZuArray<jchar>(buf, n), s);
     return env->NewString(buf, n);

@@ -30,10 +30,6 @@
 #pragma once
 #endif
 
-#ifndef _WIN32
-#include <alloca.h>
-#endif
-
 #include <zlib/ZuTraits.hpp>
 #include <zlib/ZuConversion.hpp>
 
@@ -106,17 +102,7 @@ template <typename S> struct ZuStdStream__ {
   template <typename P> static typename ZuIfT<ZuPrint<P>::Buffer>::T
       print(S &s, const P &p) {
     unsigned len = ZuPrint<P>::length(p);
-    char *buf;
-#ifdef _MSC_VER
-    __try {
-      buf = reinterpret_cast<char *>(_alloca(len));
-    } __except(GetExceptionCode() == STATUS_STACK_OVERFLOW) {
-      _resetstkoflw();
-      buf = 0;
-    }
-#else
-    buf = reinterpret_cast<char *>(alloca(len));
-#endif
+    char *buf = ZuAlloca(buf, char, len);
     if (ZuLikely(buf))
       ZuStdStream<S>::append(s, buf, ZuPrint<P>::print(buf, len, p));
   }

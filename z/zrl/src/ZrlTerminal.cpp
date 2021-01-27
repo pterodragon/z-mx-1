@@ -1163,6 +1163,31 @@ void Terminal::del_(unsigned n)
   if (m_rmdc) tputs(m_rmdc);
 }
 
+// encodes a shift mark as byte offset and display position into 64bits
+class ShiftMark {
+  constexpr static unsigned shift() { return 16; }
+  constexpr static unsigned mask() { return ((1<<shift()) - 1); }
+
+public:
+  ShiftMark() = default;
+  ShiftMark(const ShiftMark &) = default;
+  ShiftMark &operator =(const ShiftMark &) = default;
+  ShiftMark(ShiftMark &&) = default;
+  ShiftMark &operator =(ShiftMark &&) = default;
+  ~ShiftMark() = default;
+
+  ShiftMark(uint32_t byte, uint32_t pos) : m_value{byte | (pos<<shift())} { }
+
+  unsigned byte() const { return m_value & mask(); }
+  unsigned pos() const { return m_value>>shift(); }
+
+  bool operator !() const { return !m_value; }
+  ZuOpBool
+
+private:
+  uint32_t	m_value = 0;
+};
+
 void Terminal::splice(
     unsigned off, ZuUTFSpan span,
     ZuArray<const uint8_t> replace, ZuUTFSpan rspan)
@@ -1172,7 +1197,8 @@ void Terminal::splice(
   unsigned endPos = m_pos + rspan.width();
   unsigned endBOLPos = endPos - (endPos % m_width);
   bool shiftLeft = false, shiftRight = false;
-  ZtArray<ZuUTFSpan> shiftRows;
+  ShiftMark *shiftMarks = nullptr;
+  unsigned trailRows = 0;
 
   // it's worth optimizing the common case where a long line of input
   // is being interactively edited at its beginning; when shifting the
@@ -1197,25 +1223,30 @@ void Terminal::splice(
 	  (m_ich || m_ich1 || (m_smir && m_rmir)))
 	shiftRight = true; // shift right using insertions on each line
     }
-    if (shiftLeft || shiftRight) {
-      unsigned trailRows = (trailWidth + m_width - 1) / m_width; // #rows
-      shiftRows.size(trailRows);
-      int shiftOff =
-	static_cast<int>(rspan.inLen()) - static_cast<int>(span.inLen());
-      unsigned bolPos = endBOLPos;
-      while (bolPos < m_line.width()) {
-	if (shiftLeft) {
-	  unsigned eolPos = m_line.align(bolPos + m_width - 1);
-	  shiftRows.push(ZuUTFSpan{
-	    m_line.position(eolPos).mapping() + shiftOff, 0, eolPos});
-	} else {
-	  shiftRows.push(ZuUTFSpan{
-	    m_line.position(bolPos).mapping() + shiftOff, 0, bolPos});
-	}
-	bolPos += m_width;
-      }
-    }
+    if (shiftLeft || shiftRight)
+      trailRows = (trailWidth + m_width - 1) / m_width; // #rows
   }
+  if (trailRows) shiftMarks = ZuAlloca(shiftMarks, ShiftMark, trailRows);
+  if (shiftMarks) {
+    int shiftOff =
+      static_cast<int>(rspan.inLen()) - static_cast<int>(span.inLen());
+    unsigned bolPos = endBOLPos;
+    unsigned line = 0;
+    if (bolPos < m_pos) bolPos = m_pos;
+    while (bolPos < m_line.width() && line < trailRows) {
+      if (shiftLeft) {
+	unsigned eolPos = m_line.align(bolPos + m_width - 1);
+	shiftMarks[line++] = ShiftMark{
+	  m_line.position(eolPos).mapping() + shiftOff, eolPos};
+      } else {
+	unsigned pos = (bolPos < m_pos) ? m_pos : bolPos;
+	shiftMarks[line++] = ShiftMark{
+	  m_line.position(pos).mapping() + shiftOff, pos};
+      }
+      bolPos += m_width;
+    }
+  } else
+    shiftLeft = shiftRight = 0;
 
   // splice in the new data
   m_line.data().splice(off, span.inLen(), replace);
@@ -1239,18 +1270,18 @@ void Terminal::splice(
   unsigned bolPos = endBOLPos;
   if (shiftLeft) {
     unsigned line = 0;
-    while (bolPos < lastBOLPos) {
-      auto shiftRow = shiftRows[line++];
-      unsigned rightPos = m_line.byte(shiftRow.inLen()).mapping();
-      del_(shiftRow.width() - (rightPos - m_pos));
+    while (bolPos < lastBOLPos && line < trailRows) {
+      auto shiftMark = shiftMarks[line++];
+      unsigned rightPos = m_line.byte(shiftMark.byte()).mapping();
+      del_(shiftMark.pos() - rightPos);
       rightPos += m_line.position(rightPos).len();
       mvright(rightPos);
       outScroll(bolPos += m_width);
     }
-    if (bolPos < m_line.width()) {
-      auto shiftRow = shiftRows[line];
-      unsigned rightPos = m_line.byte(shiftRow.inLen()).mapping();
-      del_(shiftRow.width() - (rightPos - m_pos));
+    if (bolPos < m_line.width() && line < trailRows) {
+      auto shiftMark = shiftMarks[line];
+      unsigned rightPos = m_line.byte(shiftMark.byte()).mapping();
+      del_(shiftMark.pos() - rightPos);
       rightPos += m_line.position(rightPos).len();
       mvright(rightPos);
       outClr(m_line.width());
@@ -1258,19 +1289,19 @@ void Terminal::splice(
   } else if (shiftRight) {
     unsigned line = 0;
     bool smir = false;
-    while (bolPos < lastBOLPos) {
-      auto shiftRow = shiftRows[line++];
-      unsigned leftPos = m_line.byte(shiftRow.inLen()).mapping();
-      smir = ins_(leftPos - m_pos, smir);
+    while (bolPos < lastBOLPos && line < trailRows) {
+      auto shiftMark = shiftMarks[line++];
+      unsigned leftPos = m_line.byte(shiftMark.byte()).mapping();
+      smir = ins_(leftPos - shiftMark.pos(), smir);
       outClr(leftPos);
       if (smir && !m_mir) { tputs(m_rmir); smir = false; }
       crnl();
       bolPos += m_width;
     }
-    if (bolPos < m_line.width()) {
-      auto shiftRow = shiftRows[line];
-      unsigned leftPos = m_line.byte(shiftRow.inLen()).mapping();
-      smir = ins_(leftPos - m_pos, smir);
+    if (bolPos < m_line.width() && line < trailRows) {
+      auto shiftMark = shiftMarks[line];
+      unsigned leftPos = m_line.byte(shiftMark.byte()).mapping();
+      smir = ins_(leftPos - shiftMark.pos(), smir);
       outClr(leftPos);
     }
     if (smir) tputs(m_rmir);

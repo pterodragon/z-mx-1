@@ -217,7 +217,7 @@ template <> struct ZuUTF_<4> { using T = ZuUTF32; };
 // encodes an input length, an output length and a display width into 64bits
 class ZuUTFSpan {
   constexpr static unsigned shift() { return 21; }
-  constexpr static unsigned mask() { return ((1<<21) - 1); }
+  constexpr static unsigned mask() { return ((1<<shift()) - 1); }
 
 public:
   ZuUTFSpan() = default;
@@ -274,14 +274,15 @@ template <typename OutChar, typename InChar> struct ZuUTF {
     uint32_t u;
     unsigned l = 0;
     unsigned w = 0;
-    for (unsigned i = n; i; ) {
+    unsigned i = n;
+    while (i) {
       unsigned j = InUTF::in(s, i, u);
-      if (ZuUnlikely(!j || j > i)) return Span{n - i, l, w};
+      if (ZuUnlikely(!j || j > i)) break;
       s += j, i -= j;
       l += OutUTF::out(u);
       w += ZuUTF32::width(u);
     }
-    return Span{n, l, w};
+    return Span{n - i, l, w};
   }
 
   static Span nspan(ZuArray<const InChar> s_, unsigned nglyphs) {
@@ -290,15 +291,16 @@ template <typename OutChar, typename InChar> struct ZuUTF {
     uint32_t u;
     unsigned l = 0;
     unsigned w = 0;
-    for (unsigned i = n; i && nglyphs; ) {
+    unsigned i = n;
+    while (i && nglyphs) {
       unsigned j = InUTF::in(s, i, u);
-      if (ZuUnlikely(!j || j > i)) return Span{n - i, l, w};
+      if (ZuUnlikely(!j || j > i)) break;
       s += j, i -= j;
       l += OutUTF::out(u);
       w += ZuUTF32::width(u);
       --nglyphs;
     }
-    return Span{n, l, w};
+    return Span{n - i, l, w};
   }
 
   static Span gspan(ZuArray<const InChar> s_) { // single glyph

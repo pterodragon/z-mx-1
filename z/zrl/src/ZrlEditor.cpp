@@ -634,6 +634,7 @@ bool Editor::cmdEnter(Cmd, int32_t)
   const auto &data = m_tty.line().data();
   ZuArray<const uint8_t> s{data.data(), data.length()};
   s.offset(m_context.startPos);
+  m_context.histLoadOff = -1;
   m_app.histSave(m_context.histSaveOff++, s);
   m_tty.opost_on();
   bool stop = m_app.enter(s);

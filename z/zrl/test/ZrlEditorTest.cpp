@@ -36,11 +36,10 @@ int main()
     if (history.length() <= i) history.grow(i + 1);
     history[i] = s;
   };
-  app.histLoad = [&history](unsigned i, ZuString &s) {
-    if (i >= history.length())
-      s = {};
-    else
-      s = history[i];
+  app.histLoad = [&history](unsigned i, ZuString &s) -> bool {
+    if (i >= history.length()) return false;
+    s = history[i];
+    return true;
   };
   editor.init(config, app);
   editor.open(&s, 1);

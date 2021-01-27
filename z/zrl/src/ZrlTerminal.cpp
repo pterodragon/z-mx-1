@@ -764,7 +764,7 @@ void Terminal::addVKey(const char *cap, const char *deflt, int vkey)
   if (!(ent = tigetstr(cap))) ent = deflt;
   if (ent) {
     m_vkeyMatch->add(ent, vkey);
-    std::cout << ZtHexDump(cap, ent, strlen(ent)) << '\n';
+    // std::cout << ZtHexDump(cap, ent, strlen(ent)) << '\n';
   }
 }
 

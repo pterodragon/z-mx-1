@@ -35,7 +35,7 @@ int main()
   editor.init(config, app);
   std::cout << editor.dumpMaps();
   editor.open(&s, 1);
-  editor.start("] ");
+  editor.start("-->] ");
   done.wait();
   editor.stop();
   editor.close();

@@ -156,6 +156,7 @@ void Terminal::close() // async
 
 void Terminal::start(StartFn startFn, KeyFn keyFn) // async
 {
+  Guard guard(m_lock);
   m_sched->wakeFn(m_thread,
       ZmFn<>{this, [](Terminal *this_) { this_->wake(); }});
   m_sched->run_(m_thread,
@@ -181,6 +182,7 @@ bool Terminal::running() const // synchronous
 
 void Terminal::stop() // async
 {
+  Guard guard(m_lock);
   m_sched->wakeFn(m_thread, ZmFn<>());
   m_sched->run_(m_thread, 
       ZmFn<>{this, [](Terminal *this_) { this_->stop_(); }});

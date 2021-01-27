@@ -289,6 +289,9 @@ private:
   }
 
 private:
+  using Lock = ZmPLock;
+  using Guard = ZmGuard<Lock>;
+
   // configuration (multi-byte keystroke interval timeout)
 
   unsigned		m_vkeyInterval = 100;		// milliseconds
@@ -297,6 +300,7 @@ private:
 
   ZmScheduler		*m_sched = nullptr;
   unsigned		m_thread = 0;
+  Lock			m_lock;	// serializes start/stop
 
   // device state
 

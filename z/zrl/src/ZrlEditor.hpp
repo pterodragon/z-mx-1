@@ -232,7 +232,7 @@ struct Bindings : public Bindings_ {
 // line editor mode
 struct Mode {
   CmdSeq		cmds;		// default command sequence
-  ZuPtr<Bindings>	bindings;	// vkey -> command sequence bindings
+  ZmRef<Bindings>	bindings;	// vkey -> command sequence bindings
   bool			edit = false;	// edit mode flag
 };
 

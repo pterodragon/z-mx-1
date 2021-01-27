@@ -14,9 +14,13 @@ int main()
   Zrl::Config config;
   Zrl::Editor editor;
   ZmSemaphore done;
-  app.enter = [&done](ZuString s) {
+  app.enter = [&done](ZuString s) -> bool {
     std::cout << s << '\n';
-    if (s == "quit") done.post();
+    if (s == "quit") {
+      done.post();
+      return true;
+    }
+    return false;
   };
   app.end = [&done]() { done.post(); };
   app.sig = [&done](int sig) {

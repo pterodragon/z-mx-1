@@ -75,8 +75,10 @@ unsigned Line::revGlyph(unsigned off) const
 {
   unsigned n = m_bytes.length();
   if (ZuUnlikely(!n)) return 0;
-  if (ZuUnlikely(off >= n)) off = n - 1;
-  off -= m_bytes[off].off();
+  if (ZuUnlikely(off >= n))
+    off = n;
+  else
+    off -= m_bytes[off].off();
   if (ZuUnlikely(!off)) return 0;
   off -= m_bytes[--off].off();
   return off;

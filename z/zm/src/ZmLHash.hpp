@@ -186,87 +186,73 @@ class ZmLHash_Node {
 template <typename, class> friend class ZmLHash;
 template <class, typename, class, unsigned> friend class ZmLHash_;
 
-  class Data {
-  public:
-    ZuInline Data() : m_key(Cmp::null()), m_value(ValCmp::null()) { }
-    ZuInline ~Data() { }
-
-    template <typename Key_, typename Val_>
-    ZuInline Data(Key_ &&key, Val_ &&value) :
-      m_key(ZuFwd<Key_>(key)), m_value(ZuFwd<Val_>(value)) { }
-
-    ZuInline Data(const Data &d) : m_key(d.m_key), m_value(d.m_value) { }
-    ZuInline Data &operator =(const Data &d) {
-      if (ZuLikely(this != &d)) {
-	m_key = d.m_key;
-	m_value = d.m_value;
-      }
-      return *this;
-    }
-    ZuInline Data(Data &&d) :
-      m_key(ZuMv(d.m_key)), m_value(ZuMv(d.m_value)) { }
-    ZuInline Data &operator =(Data &&d) {
-      if (ZuLikely(this != &d)) {
-	m_key = ZuMv(d.m_key);
-	m_value = ZuMv(d.m_value);
-      }
+public:
+  struct KV : public ZuPair<Key, Val> {
+    using Pair = ZuPair<Key, Val>;
+    friend ZuTraits<Pair> ZuTraitsType(KV *);
+    KV() = default;
+    KV(const KV &) = default;
+    KV &operator =(const KV &) = default;
+    KV(KV &&) = default;
+    KV &operator =(KV &&) = default;
+    ~KV() = default;
+    template <typename ...Args>
+    KV(Args &&... args) : Pair{ZuFwd<Args>(args)...} { }
+    template <typename V>
+    KV &operator =(V &&v) {
+      Pair::operator =(ZuFwd<V>(v));
       return *this;
     }
 
-    ZuInline int cmp(const Data &d) const {
+    ZuInline int cmp(const KV &d) const {
       int i;
-      if (i = Cmp::cmp(m_key, d.m_key)) return i;
-      return ValCmp::cmp(m_value, d.m_value);
+      if (i = Cmp::cmp(key(), d.key())) return i;
+      return ValCmp::cmp(value(), d.value());
     }
-    ZuInline bool less(const Data &d) const {
+    ZuInline bool less(const KV &d) const {
       return
-	!Cmp::less(d.m_key, m_key) &&
-	ValCmp::less(m_value, d.m_value);
+	!Cmp::less(d.key(), key()) &&
+	ValCmp::less(value(), d.value());
     }
-    ZuInline bool equals(const Data &d) const {
+    ZuInline bool equals(const KV &d) const {
       return
-	Cmp::equals(m_key, d.m_key) &&
-	ValCmp::equals(m_value, d.m_value);
+	Cmp::equals(key(), d.key()) &&
+	ValCmp::equals(value(), d.value());
     }
-    ZuInline bool operator ==(const Data &d) const { return equals(d); }
-    ZuInline bool operator !=(const Data &d) const { return !equals(d); }
-    ZuInline bool operator >(const Data &d) const { return d.less(*this); }
-    ZuInline bool operator >=(const Data &d) const { return !less(d); }
-    ZuInline bool operator <(const Data &d) const { return less(d); }
-    ZuInline bool operator <=(const Data &d) const { return !d.less(*this); }
+    ZuInline bool operator ==(const KV &d) const { return equals(d); }
+    ZuInline bool operator !=(const KV &d) const { return !equals(d); }
+    ZuInline bool operator >(const KV &d) const { return d.less(*this); }
+    ZuInline bool operator >=(const KV &d) const { return !less(d); }
+    ZuInline bool operator <(const KV &d) const { return less(d); }
+    ZuInline bool operator <=(const KV &d) const { return !d.less(*this); }
 
-    ZuInline const Key &key() const { return m_key; }
-    ZuInline Key &key() { return m_key; }
-    ZuInline const Val &value() const { return m_value; }
-    ZuInline Val &value() { return m_value; }
-
-  private:
-    Key	m_key;
-    Val	m_value;
+    ZuInline const auto &key() const { return this->template p<0>(); }
+    ZuInline auto &key() { return this->template p<0>(); }
+    ZuInline const auto &value() const { return this->template p<1>(); }
+    ZuInline auto &value() { return this->template p<1>(); }
   };
 
-public:
   ZuInline ZmLHash_Node() { }
-  ZuInline ~ZmLHash_Node() { if (m_u) data().~Data(); }
+  ZuInline ~ZmLHash_Node() { if (m_u) kv().~KV(); }
 
   ZuInline ZmLHash_Node(const ZmLHash_Node &n) {
-    if (m_u = n.m_u) new (m_data) Data(n.data());
+    if (m_u = n.m_u) new (m_kv) KV{n.kv()};
   }
   ZuInline ZmLHash_Node &operator =(const ZmLHash_Node &n) {
     if (ZuLikely(this != &n)) {
-      if (m_u) data().~Data();
-      if (m_u = n.m_u) new (m_data) Data(n.data());
+      if (m_u) kv().~KV();
+      if (m_u = n.m_u) new (m_kv) KV{n.kv()};
     }
     return *this;
   }
 
   ZuInline ZmLHash_Node(ZmLHash_Node &&n) {
-    if (m_u = n.m_u) new (m_data) Data(ZuMv(n.data()));
+    if (m_u = n.m_u) new (m_kv) KV{ZuMv(n.kv())};
   }
   ZuInline ZmLHash_Node &operator =(ZmLHash_Node &&n) {
     if (ZuLikely(this != &n)) {
-      if (m_u) data().~Data();
-      if (m_u = n.m_u) new (m_data) Data(ZuMv(n.data()));
+      if (m_u) kv().~KV();
+      if (m_u = n.m_u) new (m_kv) KV{ZuMv(n.kv())};
     }
     return *this;
   }
@@ -276,14 +262,14 @@ private:
   void init(
       unsigned head, unsigned tail, unsigned next, Key_ &&key, Val_ &&value) {
     if (!m_u)
-      new (m_data) Data(ZuFwd<Key_>(key), ZuFwd<Val_>(value));
+      new (m_kv) KV{ZuFwd<Key_>(key), ZuFwd<Val_>(value)};
     else
-      data().key() = ZuFwd<Key_>(key), data().value() = ZuFwd<Val_>(value);
+      kv().key() = ZuFwd<Key_>(key), kv().value() = ZuFwd<Val_>(value);
     m_u = (next<<3U) | (head<<2U) | (tail<<1U) | 1U;
   }
   void null() {
     if (m_u) {
-      data().~Data();
+      kv().~KV();
       m_u = 0;
     }
   }
@@ -294,17 +280,17 @@ public:
   int cmp(const ZmLHash_Node &n) const {
     if (!n.m_u) return !m_u ? 0 : 1;
     if (!m_u) return -1;
-    return data().cmp(n.data());
+    return kv().cmp(n.kv());
   }
   bool less(const ZmLHash_Node &n) const {
     if (!n.m_u) return false;
     if (!m_u) return true;
-    return data().less(n.data());
+    return kv().less(n.kv());
   }
   bool equals(const ZmLHash_Node &n) const {
     if (!n.m_u) return !m_u;
     if (!m_u) return false;
-    return data().equals(n.data());
+    return kv().equals(n.kv());
   }
   bool operator ==(const ZmLHash_Node &n) const { return equals(n); }
   bool operator !=(const ZmLHash_Node &n) const { return !equals(n); }
@@ -323,21 +309,21 @@ private:
   ZuInline unsigned next() const { return m_u>>3U; }
   ZuInline void next(unsigned n) { m_u = (n<<3U) | (m_u & 7U); }
 
-  const Data &data() const {
+  const KV &kv() const {
     ZmAssert(m_u);
-    const Data *ZuMayAlias(data_) = reinterpret_cast<const Data *>(m_data);
-    return *data_;
+    const KV *ZuMayAlias(kv_) = reinterpret_cast<const KV *>(m_kv);
+    return *kv_;
   }
-  Data &data() {
+  KV &kv() {
     ZmAssert(m_u);
-    Data *ZuMayAlias(data_) = reinterpret_cast<Data *>(m_data);
-    return *data_;
+    KV *ZuMayAlias(kv_) = reinterpret_cast<KV *>(m_kv);
+    return *kv_;
   }
 
-  const Key &key() const { return data().key(); }
-  Key &key() { return data().key(); }
-  const Val &value() const { return data().value(); }
-  Val &value() { return data().value(); }
+  const Key &key() const { return kv().key(); }
+  Key &key() { return kv().key(); }
+  const Val &value() const { return kv().value(); }
+  Val &value() { return kv().value(); }
 
 public:
   struct Traits : public ZuBaseTraits<ZmLHash_Node> {
@@ -347,7 +333,7 @@ public:
 
 private:
   uint32_t	m_u = 0;
-  char		m_data[sizeof(Data)];
+  char		m_kv[sizeof(KV)];
 };
 
 // common base class for both static and dynamic tables
@@ -438,7 +424,7 @@ protected:
     for (unsigned i = 0; i < (size>>1U); i++)
       if (!!oldTable[i])
 	static_cast<Hash *>(this)->add__(
-	    oldTable[i].key(), oldTable[i].value(),
+	    ZuMv(oldTable[i].key()), ZuMv(oldTable[i].value()),
 	    HashFn::hash(oldTable[i].key()));
     Ops::destroyItems(oldTable, (size>>1U));
     Ops::free(oldTable);
@@ -474,9 +460,8 @@ public:
   using LockTraits = ZmLockTraits<Lock>;
   using Guard = ZmGuard<Lock>;
   using ReadGuard = ZmReadGuard<Lock>;
-  using KeyVal = ZuPair<Key, Val>;
-  using KeyValRef = ZuPair<const Key &, const Val &>;
   using Node = ZmLHash_Node<Key, Cmp, Val, ValCmp>;
+  using KV = typename Node::KV;
   using Ops = ZmLHash_Ops<Node>;
   enum { Static = NTP::Static };
  
@@ -532,7 +517,7 @@ friend Iterator_;
 
   public:
     void reset() { m_hash.startIterate(*this); }
-    KeyValRef iterate() { return m_hash.iterate(*this); }
+    const KV *iterate() { return m_hash.iterate(*this); }
     const Key &iterateKey() { return m_hash.iterateKey(*this); }
     const Val &iterateVal() { return m_hash.iterateVal(*this); }
 
@@ -568,7 +553,7 @@ friend IndexIterator_;
 
   public:
     void reset() { m_hash.startIterate(*this); }
-    KeyValRef iterate() { return m_hash.iterate(*this); }
+    const KV *iterate() { return m_hash.iterate(*this); }
     const Key &iterateKey() { return m_hash.iterateKey(*this); }
     const Val &iterateVal() { return m_hash.iterateVal(*this); }
 
@@ -736,7 +721,7 @@ private:
     if (move < 0) return -1;
 
     if (m_table[slot].head()) {
-      (m_table[move] = m_table[slot]).clrHead();
+      (m_table[move] = ZuMv(m_table[slot])).clrHead();
       m_table[slot].init(1, 0, move, ZuFwd<Key__>(key), ZuFwd<Val_>(val));
       return slot;
     }
@@ -744,7 +729,7 @@ private:
     int prev = this->prev(slot);
     if (prev < 0) return -1;
 
-    m_table[move] = m_table[slot];
+    m_table[move] = ZuMv(m_table[slot]);
     m_table[prev].next(move);
     m_table[slot].init(1, 1, 0, ZuFwd<Key__>(key), ZuFwd<Val_>(val));
     return slot;
@@ -763,15 +748,15 @@ public:
     return find__(index, IHashFn::hash(index)) >= 0;
   }
   template <typename Index_>
-  KeyVal find(const Index_ &index) const {
+  const KV *find(const Index_ &index) const {
     uint32_t code = IHashFn::hash(index);
     ReadGuard guard(const_cast<Lock &>(m_lock));
 
-    return keyVal__(find__(index, code));
+    return kv__(find__(index, code));
   }
   template <typename Index_>
-  KeyVal find_(const Index_ &index) const {
-    return keyVal__(find__(index, IHashFn::hash(index)));
+  const KV *find_(const Index_ &index) const {
+    return kv__(find__(index, IHashFn::hash(index)));
   }
   template <typename Index_>
   Key findKey(const Index_ &index) const {
@@ -813,15 +798,9 @@ private:
     }
   }
 
-  KeyVal keyVal__(int slot) const {
-    if (ZuUnlikely(slot < 0))
-      return KeyVal(Cmp::null(), ValCmp::null());
-    return KeyVal(m_table[slot].key(), m_table[slot].value());
-  }
-  KeyValRef keyValRef__(int slot) const {
-    if (ZuUnlikely(slot < 0))
-      return KeyValRef(Cmp::null(), ValCmp::null());
-    return KeyValRef(m_table[slot].key(), m_table[slot].value());
+  const KV *kv__(int slot) const {
+    if (ZuUnlikely(slot < 0)) return nullptr;
+    return &m_table[slot].kv();
   }
   const Key &key__(int slot) const {
     if (ZuUnlikely(slot < 0)) return Cmp::null();
@@ -834,17 +813,17 @@ private:
 
 public:
   template <typename Index_, typename Val_>
-  KeyVal find(
+  const KV *find(
       const Index_ &index, const Val_ &val) const {
     uint32_t code = IHashFn::hash(index);
     ReadGuard guard(m_lock);
 
-    return keyVal__(find__(index, val, code));
+    return kv__(find__(index, val, code));
   }
   template <typename Index_, typename Val_>
-  KeyVal find_(
+  const KV *find_(
       const Index_ &index, const Val_ &val) const {
-    return keyVal__(find__(index, val, IHashFn::hash(index)));
+    return kv__(find__(index, val, IHashFn::hash(index)));
   }
   template <typename Index_, typename Val_>
   Key findKey(const Index_ &index, const Val_ &val) const {
@@ -892,29 +871,29 @@ private:
 
 public:
   template <typename Key__>
-  KeyVal findAdd(Key__ &&key) {
+  const KV *findAdd(Key__ &&key) {
     uint32_t code = HashFn::hash(key);
     Guard guard(m_lock);
 
-    return keyVal__(findAdd__(ZuFwd<Key__>(key), Val(), code));
+    return kv__(findAdd__(ZuFwd<Key__>(key), Val(), code));
   }
   template <typename Key__, typename Val_>
-  KeyVal findAdd(Key__ &&key, Val_ &&val) {
+  const KV *findAdd(Key__ &&key, Val_ &&val) {
     uint32_t code = HashFn::hash(key);
     Guard guard(m_lock);
 
-    return keyVal__(findAdd__(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code));
+    return kv__(findAdd__(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code));
   }
   template <typename Key__>
-  KeyVal findAdd_(Key__ &&key) {
+  const KV *findAdd_(Key__ &&key) {
     uint32_t code = HashFn::hash(key);
-    return keyVal__(findAdd__(ZuFwd<Key__>(key), Val(), code));
+    return kv__(findAdd__(ZuFwd<Key__>(key), Val(), code));
   }
   template <typename Key__, typename Val_>
-  KeyVal findAdd_(
+  const KV *findAdd_(
       Key__ &&key, Val_ &&val) {
     uint32_t code = HashFn::hash(key);
-    return keyVal__(findAdd__(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code));
+    return kv__(findAdd__(ZuFwd<Key__>(key), ZuFwd<Val_>(val), code));
   }
   template <typename Key__>
   Key findAddKey(Key__ &&key) {
@@ -979,7 +958,7 @@ public:
   }
 
 private:
-  void del__(int prev) {
+  void del___(int prev) {
     int slot;
 
     if (prev < 0)
@@ -1016,39 +995,36 @@ private:
     m_table[next].null();
   }
 
-  KeyVal delKeyVal__(int prev) {
-    if (prev == -1) return KeyVal(Cmp::null(), ValCmp::null());
-    int slot = prev < 0 ? (-prev - 2) : m_table[prev].next();
-    KeyVal keyVal(ZuMv(m_table[slot].key()), ZuMv(m_table[slot].value()));
-    del__(prev);
-    return keyVal;
+  void del__(int prev) {
+    if (prev == -1) return;
+    del___(prev);
   }
   Key delKey__(int prev) {
     if (prev == -1) return Cmp::null();
     int slot = prev < 0 ? (-prev - 2) : m_table[prev].next();
     Key key(ZuMv(m_table[slot].key()));
-    del__(prev);
+    del___(prev);
     return key;
   }
   Key delVal__(int prev) {
     if (prev == -1) return Cmp::null();
     int slot = prev < 0 ? (-prev - 2) : m_table[prev].next();
     Val val(ZuMv(m_table[slot].value()));
-    del__(prev);
+    del___(prev);
     return val;
   }
 
 public:
   template <typename Index_, typename Val_>
-  KeyVal del(const Index_ &index, const Val_ &val) {
+  void del(const Index_ &index, const Val_ &val) {
     uint32_t code = IHashFn::hash(index);
     Guard guard(m_lock);
 
-    return delKeyVal__(findPrev__(index, val, code));
+    del__(findPrev__(index, val, code));
   }
   template <typename Index_, typename Val_>
-  KeyVal del_(const Index_ &index, const Val_ &val) {
-    return delKeyVal__(findPrev__(index, val, IHashFn::hash(index)));
+  void del_(const Index_ &index, const Val_ &val) {
+    del__(findPrev__(index, val, IHashFn::hash(index)));
   }
   template <typename Index_, typename Val_>
   Key delKey(const Index_ &index, const Val_ &val) {
@@ -1160,9 +1136,9 @@ private:
     iterator.m_next = -1;
   }
   template <typename I>
-  KeyValRef iterate(I &iterator) {
+  const KV *iterate(I &iterator) {
     iterate_(iterator);
-    return keyValRef__(iterator.m_slot);
+    return kv__(iterator.m_slot);
   }
   template <typename I>
   const Key &iterateKey(I &iterator) {
@@ -1183,14 +1159,14 @@ private:
     if (slot < 0) return;
     bool advanceRegardless =
       !m_table[slot].tail() && (int)m_table[slot].next() < slot;
-    del__(m_table[slot].head() ? (-slot - 2) : prev(slot));
+    del___(m_table[slot].head() ? (-slot - 2) : prev(slot));
     if (!advanceRegardless && !!m_table[slot]) iterator.m_next = slot;
     iterator.m_slot = -1;
   }
   void delIterate(IndexIterator_ &iterator) {
     int slot = iterator.m_slot;
     if (slot < 0) return;
-    del__(iterator.m_prev < 0 ? (-slot - 2) : iterator.m_prev);
+    del___(iterator.m_prev < 0 ? (-slot - 2) : iterator.m_prev);
     iterator.m_slot = -1;
     if (!m_table[slot]) return;
     for (;;) {

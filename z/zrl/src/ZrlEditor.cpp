@@ -23,6 +23,24 @@
 
 namespace Zrl {
 
+namespace Op {
+ZrlExtern void print_(uint32_t op, ZmStream &s)
+{
+  s << name(op & Mask) << '[';
+  if (op & Mv) s << "Mv";
+  if (op & Del) { if (op & Mv) s << '|'; s << "Del"; }
+  if (op & Copy) { if (op & (Mv|Del)) s << '|'; s << "Copy"; }
+  if (op & Unix) { if (op & (Mv|Del|Copy)) s << '|'; s << "Unix"; }
+  if (op & Arg) { if (op & (Mv|Del|Copy|Unix)) s << '|'; s << "Arg"; }
+  if (op & Reg) { if (op & (Mv|Del|Copy|Unix|Arg)) s << '|'; s << "Reg"; }
+  if (op & KeepArg) {
+    if (op & (Mv|Del|Copy|Unix|Arg|Reg)) s << '|';
+    s << "KeepArg";
+  }
+  s << ']';
+}
+}
+
 Editor::Editor()
 {
   // manual initialization of opcode-indexed jump table
@@ -106,89 +124,89 @@ Editor::Editor()
 
   // default key bindings
 
-  m_defltMap = new Map{};
+  m_defltMap = new Map{ "default" };
 
   m_defltMap->addMode(0, true);
   m_defltMap->addMode(1, true);
 
-  m_defltMap->bind(0, VKey::Default, { { Op::Glyph } });
+  m_defltMap->bind(0, -VKey::Default, { { Op::Glyph } });
 
-  m_defltMap->bind(0, VKey::Error, { { Op::Error } });
-  m_defltMap->bind(0, VKey::EndOfFile, { { Op::EndOfFile} });
+  m_defltMap->bind(0, -VKey::Error, { { Op::Error } });
+  m_defltMap->bind(0, -VKey::EndOfFile, { { Op::EndOfFile} });
 
-  m_defltMap->bind(0, VKey::SigInt, { { Op::SigInt} });
-  m_defltMap->bind(0, VKey::SigQuit, { { Op::SigQuit} });
-  m_defltMap->bind(0, VKey::SigSusp, { { Op::SigSusp} });
+  m_defltMap->bind(0, -VKey::SigInt, { { Op::SigInt} });
+  m_defltMap->bind(0, -VKey::SigQuit, { { Op::SigQuit} });
+  m_defltMap->bind(0, -VKey::SigSusp, { { Op::SigSusp} });
 
-  m_defltMap->bind(0, VKey::Enter, { { Op::Enter} });
+  m_defltMap->bind(0, -VKey::Enter, { { Op::Enter} });
 
-  m_defltMap->bind(0, VKey::Erase, { { Op::Left | Op::Del} });
-  m_defltMap->bind(0, VKey::WErase,
+  m_defltMap->bind(0, -VKey::Erase, { { Op::Left | Op::Del} });
+  m_defltMap->bind(0, -VKey::WErase,
       { { Op::RevWord | Op::Del | Op::Unix } });
-  m_defltMap->bind(0, VKey::Kill, { { Op::Home | Op::Del } });
+  m_defltMap->bind(0, -VKey::Kill, { { Op::Home | Op::Del } });
 
-  m_defltMap->bind(0, VKey::LNext, {
+  m_defltMap->bind(0, -VKey::LNext, {
     { Op::Glyph, 0, '^' },
     { Op::Left | Op::Mv },
     { Op::Push, 1 }
   });
-  m_defltMap->bind(1, VKey::Default, { { Op::OverGlyph }, { Op::Pop } });
+  m_defltMap->bind(1, -VKey::Default, { { Op::OverGlyph }, { Op::Pop } });
 
-  m_defltMap->bind(0, VKey::Up, { { Op::Up | Op::Mv } });
-  m_defltMap->bind(0, VKey::Down, { { Op::Down | Op::Mv } });
-  m_defltMap->bind(0, VKey::Left, { { Op::Left | Op::Mv } });
-  m_defltMap->bind(0, VKey::Right, { { Op::Right | Op::Mv } });
+  m_defltMap->bind(0, -VKey::Up, { { Op::Up | Op::Mv } });
+  m_defltMap->bind(0, -VKey::Down, { { Op::Down | Op::Mv } });
+  m_defltMap->bind(0, -VKey::Left, { { Op::Left | Op::Mv } });
+  m_defltMap->bind(0, -VKey::Right, { { Op::Right | Op::Mv } });
 
-  m_defltMap->bind(0, VKey::Home, { { Op::Home | Op::Mv } });
-  m_defltMap->bind(0, VKey::End, { { Op::End | Op::Mv } });
+  m_defltMap->bind(0, -VKey::Home, { { Op::Home | Op::Mv } });
+  m_defltMap->bind(0, -VKey::End, { { Op::End | Op::Mv } });
 
-  m_defltMap->bind(0, VKey::Insert, { { Op::Insert } });
-  m_defltMap->bind(0, VKey::Delete, { { Op::Right | Op::Del } });
+  m_defltMap->bind(0, -VKey::Insert, { { Op::Insert } });
+  m_defltMap->bind(0, -VKey::Delete, { { Op::Right | Op::Del } });
 }
 
 // all parse() functions return v such that
 // v <= 0 - parse failure at -v
 // v  > 0 - parse success ending at v
 
-int VKey_parse(int32_t &key_, ZuString s, int off)
+int VKey_parse(int32_t &vkey_, ZuString s, int off)
 {
-  int32_t key;
+  int32_t vkey;
   ZtRegex::Captures c;
   if (ZtREGEX("\G\s*'([^\\])'").m(s, c, off)) { // regular
     off += c[1].length();
-    key = c[2][0];
+    vkey = c[2][0];
   } else if (ZtREGEX("\G\s*'^([@A-Z\[\\\]\^_])'").m(s, c, off)) { // ctrl
     off += c[1].length();
-    key = c[2][0] - '@';
+    vkey = c[2][0] - '@';
   } else if (ZtREGEX("\G\s*'\\([^0123x])'").m(s, c, off)) {
     off += c[1].length();
     switch (static_cast<int>(c[2][0])) {
-      case 'b': key = '\b';   break; // BS
-      case 'e': key = '\x1b'; break; // Esc
-      case 'n': key = '\n';   break; // LF
-      case 'r': key = '\r';   break; // CR
-      case 't': key = '\t';   break; // Tab
-      default: key = c[2][0]; break;
+      case 'b': vkey = '\b';   break; // BS
+      case 'e': vkey = '\x1b'; break; // Esc
+      case 'n': vkey = '\n';   break; // LF
+      case 'r': vkey = '\r';   break; // CR
+      case 't': vkey = '\t';   break; // Tab
+      default: vkey = c[2][0]; break;
     }
   } else if (ZtREGEX("\G\s*'\\x([0-9a-fA-F]{2})'").m(s, c, off)) { // hex
     off += c[1].length();
-    key = ZuBox<unsigned>{ZuFmt::Hex<>{}, c[2]};
+    vkey = ZuBox<unsigned>{ZuFmt::Hex<>{}, c[2]};
   } else if (ZtREGEX("\G\s*'\\([0-3][0-7]{2})'").m(s, c, off)) { // octal
     off += c[1].length();
-    key =
+    vkey =
       (static_cast<unsigned>(c[2][0] - '0')<<6) |
       (static_cast<unsigned>(c[2][1] - '0')<<3) |
        static_cast<unsigned>(c[2][2] - '0');
   } else if (ZtREGEX("\G\s*\w+").m(s, c, off)) {
-    key = VKey::lookup(c[1]);
-    if (key < 0) return -off;
+    vkey = VKey::lookup(c[1]);
+    if (vkey < 0) return -off;
     off += c[1].length();
     if (ZtREGEX("\G\s*\[").m(s, c, off)) {
       off += c[1].length();
       while (ZtREGEX("\G\s*\w+").m(s, c, off)) {
-	if (c[1] == "Shift") key |= VKey::Shift;
-	else if (c[1] == "Ctrl") key |= VKey::Ctrl;
-	else if (c[1] == "Alt") key |= VKey::Alt;
+	if (c[1] == "Shift") vkey |= VKey::Shift;
+	else if (c[1] == "Ctrl") vkey |= VKey::Ctrl;
+	else if (c[1] == "Alt") vkey |= VKey::Alt;
 	else return -off;
 	off += c[1].length();
 	if (!ZtREGEX("\G\s*|").m(s, c, off)) break;
@@ -197,11 +215,23 @@ int VKey_parse(int32_t &key_, ZuString s, int off)
       if (!ZtREGEX("\G\s*\]").m(s, c, off)) return -off;
       off += c[1].length();
     }
-    key = -key;
+    vkey = -vkey;
   } else
     return -off;
-  key_ = key;
+  vkey_ = vkey;
   return off;
+}
+
+void Cmd::print_(ZmStream &s) const
+{
+  s << Op::print(op());
+  if (m_value>>16) {
+    s << '(';
+    if (auto v = arg()) s << ZuBoxed(v);
+    s << ", ";
+    if (auto v = vkey()) s << VKey::print(v);
+    s << ')';
+  }
 }
 
 int Cmd::parse(ZuString s, int off)
@@ -214,26 +244,25 @@ int Cmd::parse(ZuString s, int off)
     if (op < 0) return -off;
     m_value = op;
   }
-  if (!ZtREGEX("\G\s*\(").m(s, c, off)) {
-    if (!ZtREGEX("\G\s+").m(s, c, off)) return -off;
+  if (ZtREGEX("\G\s*\[").m(s, c, off)) {
     off += c[1].length();
-    return off;
+    while (ZtREGEX("\G\s*(\w+)").m(s, c, off)) {
+      if (c[1] = "Mv") m_value |= Op::Mv;
+      else if (c[1] == "Del") m_value |= Op::Del;
+      else if (c[1] == "Copy") m_value |= Op::Copy;
+      else if (c[1] == "Unix") m_value |= Op::Unix;
+      else if (c[1] == "Arg") m_value |= Op::Arg;
+      else if (c[1] == "Reg") m_value |= Op::Reg;
+      else if (c[1] == "KeepArg") m_value |= Op::KeepArg;
+      else return -off;
+      off += c[1].length();
+      if (!ZtREGEX("\G\s*|").m(s, c, off)) break;
+      off += c[1].length();
+    }
+    if (!ZtREGEX("\G\s*\]").m(s, c, off)) return -off;
+    off += c[1].length();
   }
-  off += c[1].length();
-  while (ZtREGEX("\G\s*(\w+)").m(s, c, off)) {
-    if (c[1] = "Mv") m_value |= Op::Mv;
-    else if (c[1] == "Del") m_value |= Op::Del;
-    else if (c[1] == "Copy") m_value |= Op::Copy;
-    else if (c[1] == "Unix") m_value |= Op::Unix;
-    else if (c[1] == "Arg") m_value |= Op::Arg;
-    else if (c[1] == "Reg") m_value |= Op::Reg;
-    else if (c[1] == "KeepArg") m_value |= Op::KeepArg;
-    else return -off;
-    off += c[1].length();
-    if (!ZtREGEX("\G\s*|").m(s, c, off)) break;
-    off += c[1].length();
-  }
-  if (ZtREGEX("\G\s*,").m(s, c, off)) {
+  if (ZtREGEX("\G\s*\(").m(s, c, off)) {
     off += c[1].length();
     if (ZtREGEX("\G\s*\d+").m(s, c, off)) {
       off += c[1].length();
@@ -242,14 +271,14 @@ int Cmd::parse(ZuString s, int off)
     }
     if (ZtREGEX("\G\s*,").m(s, c, off)) {
       off += c[1].length();
-      int32_t key;
-      off = VKey_parse(key, s, off);
+      int32_t vkey;
+      off = VKey_parse(vkey, s, off);
       if (off <= 0) return off;
-      m_value |= static_cast<uint64_t>(key)<<32;
+      m_value |= static_cast<uint64_t>(vkey)<<32;
     }
+    if (!ZtREGEX("\G\s*\)").m(s, c, off)) return -off;
+    off += c[1].length();
   }
-  if (!ZtREGEX("\G\s*\)").m(s, c, off)) return -off;
-  off += c[1].length();
   return off;
 }
 
@@ -277,7 +306,7 @@ int Map_::parseMode(ZuString s, int off)
   off += c[1].length();
   unsigned mode = ZuBox<unsigned>{c[2]};
   bool edit;
-  if (ZtREGEX("\G\s*edit").m(s, c, off)) {
+  if (ZtREGEX("\G\s+edit").m(s, c, off)) {
     off += c[1].length();
     edit = true;
   } else
@@ -319,29 +348,94 @@ int Map_::parse(ZuString s, int off)
   return off;
 }
 
-void Map_::addMode(unsigned mode, bool edit)
+void Map_printCmdSeq(const CmdSeq &cmds, ZmStream &s)
 {
-  if (ZuUnlikely(modes.length() <= mode)) modes.grow(mode + 1);
-  modes[mode] = Mode{{}, edit};
+  if (!cmds)
+    s << "{}";
+  else {
+    s << "{ ";
+    for (const auto &cmd : cmds) s << cmd << "; ";
+    s << "}";
+  }
 }
-void Map_::bind(unsigned mode, int vkey, CmdSeq cmds)
+
+void Binding::print_(ZmStream &s) const
 {
-  if (ZuUnlikely(modes.length() <= mode)) modes.grow(mode + 1);
+  s << VKey::print(vkey) << ' ';
+  Map_printCmdSeq(cmds, s);
+}
+
+thread_local unsigned Map_printIndentLevel = 0;
+
+void Map_printIndent(ZmStream &s)
+{
+  unsigned level = Map_printIndentLevel;
+  for (unsigned i = 0; i < level; i++) s << "  ";
+}
+
+void Map_printMode(unsigned i, const Mode &mode, ZmStream &s)
+{
+  Map_printIndent(s); s << "mode " << ZuBoxed(i) << ' ';
+  if (mode.edit) s << "edit ";
+  s << " {\r\n";
+  ++Map_printIndentLevel;
+  if (mode.cmds) {
+    Map_printIndent(s); s << "Default ";
+    Map_printCmdSeq(mode.cmds, s);
+    s << "\r\n";
+  }
+  if (mode.bindings)
+    for (auto i = mode.bindings->readIterator();
+	auto binding = i.iterateKey().ptr(); ) {
+      Map_printIndent(s); s << *binding << "\r\n";
+    }
+  --Map_printIndentLevel;
+  Map_printIndent(s); s << "}\r\n";
+}
+
+void Map_::print_(ZmStream &s) const
+{
+  Map_printIndent(s); s << "map " << id << " {\r\n";
+  ++Map_printIndentLevel;
+  for (unsigned i = 0, n = modes.length(); i < n; i++)
+    Map_printMode(i, modes[i], s);
+  --Map_printIndentLevel;
+  Map_printIndent(s); s << "}\r\n";
+}
+
+void Editor::dumpMaps_(ZmStream &s) const
+{
+  auto i = m_maps.readIterator();
+  while (auto map = i.iterate()) s << *map;
+  s << *m_defltMap;
+}
+
+void Map_::addMode(unsigned id, bool edit)
+{
+  if (ZuUnlikely(modes.length() <= id)) modes.grow(id + 1);
+  modes[id] = Mode{{}, {}, edit};
+}
+void Map_::bind(unsigned id, int vkey, CmdSeq cmds)
+{
+  if (ZuUnlikely(modes.length() <= id)) modes.grow(id + 1);
+  auto &mode = modes[id];
   if (vkey == VKey::Default)
-    modes[mode].cmds = ZuMv(cmds);
-  else
-    bindings.add(new Binding{mode, vkey, ZuMv(cmds)});
+    mode.cmds = ZuMv(cmds);
+  else {
+    if (!mode.bindings) mode.bindings = new Bindings{};
+    mode.bindings->add(new Binding{vkey, ZuMv(cmds)});
+  }
 }
 void Map_::reset()
 {
-  bindings.clean();
   modes.clear();
 }
-const CmdSeq &Map_::binding(unsigned mode, int32_t vkey)
+const CmdSeq &Map_::binding(unsigned modeID, int32_t vkey)
 {
-  if (Binding *binding = bindings.find(Binding::Key{mode, vkey}))
-    return binding->cmds;
-  return modes[mode].cmds;
+  const auto &mode = modes[modeID];
+  if (mode.bindings)
+    if (auto kv = mode.bindings->find(vkey)) return kv->key()->cmds;
+  return mode.cmds;
 }
 
 bool Editor::loadMap(ZuString file)
@@ -425,6 +519,7 @@ void Editor::start(ZtArray<uint8_t> prompt)
 	  .histSaveOff = m_config.histOffset
 	};
 	m_tty.ins(m_context.prompt);
+	m_tty.write();
 	m_context.startPos = m_tty.pos();
       },
       Terminal::KeyFn{this, [](Editor *this_, int32_t vkey) {
@@ -504,12 +599,37 @@ bool Editor::cmdPop(Cmd cmd, int32_t)
   return false;
 }
 
-bool Editor::cmdError(Cmd, int32_t) { m_app.end(); return true; }
-bool Editor::cmdEndOfFile(Cmd, int32_t) { m_app.end(); return true; }
+bool Editor::cmdError(Cmd, int32_t) {
+  m_tty.opost_on();
+  m_app.end();
+  m_tty.opost_off();
+  return true;
+}
+bool Editor::cmdEndOfFile(Cmd, int32_t) {
+  m_tty.opost_on();
+  m_app.end();
+  m_tty.opost_off();
+  return true;
+}
 
-bool Editor::cmdSigInt(Cmd, int32_t) { return m_app.sig(SIGINT); }
-bool Editor::cmdSigQuit(Cmd, int32_t) { return m_app.sig(SIGQUIT); }
-bool Editor::cmdSigSusp(Cmd, int32_t) { return m_app.sig(SIGTSTP); }
+bool Editor::cmdSigInt(Cmd, int32_t) {
+  m_tty.opost_on();
+  bool stop = m_app.sig(SIGINT);
+  m_tty.opost_off();
+  return stop;
+}
+bool Editor::cmdSigQuit(Cmd, int32_t) {
+  m_tty.opost_on();
+  bool stop = m_app.sig(SIGQUIT);
+  m_tty.opost_off();
+  return stop;
+}
+bool Editor::cmdSigSusp(Cmd, int32_t) {
+  m_tty.opost_on();
+  bool stop = m_app.sig(SIGTSTP);
+  m_tty.opost_off();
+  return stop;
+}
 
 bool Editor::cmdEnter(Cmd, int32_t)
 {
@@ -520,12 +640,14 @@ bool Editor::cmdEnter(Cmd, int32_t)
   ZuArray<const uint8_t> s{data.data(), data.length()};
   s.offset(m_context.startPos);
   m_app.histSave(m_context.histSaveOff++, s);
+  m_tty.opost_on();
   bool stop = m_app.enter(s);
+  m_tty.opost_off();
   m_tty.clear();
   if (stop) return true;
   m_tty.ins(m_context.prompt);
   m_context.startPos = m_tty.pos();
-  return true;
+  return false;
 }
 
 ZuArray<const uint8_t> Editor::substr(unsigned begin, unsigned end)

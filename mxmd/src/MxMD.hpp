@@ -38,7 +38,6 @@
 #include <zlib/ZmObject.hpp>
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmHash.hpp>
-#include <zlib/ZmLHash.hpp>
 #include <zlib/ZmRBTree.hpp>
 #include <zlib/ZmRWLock.hpp>
 #include <zlib/ZmHeap.hpp>

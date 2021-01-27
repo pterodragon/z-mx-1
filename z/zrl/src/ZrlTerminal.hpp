@@ -41,6 +41,7 @@
 #include <zlib/ZuString.hpp>
 #include <zlib/ZuUTF.hpp>
 #include <zlib/ZuArrayN.hpp>
+#include <zlib/ZuPrint.hpp>
 
 #include <zlib/ZtString.hpp>
 
@@ -82,6 +83,8 @@ namespace VKey {
     Right,
     Home,
     End,
+    PgUp,
+    PgDn,
 
     Insert,
     Delete
@@ -94,27 +97,43 @@ namespace VKey {
     Ctrl	= 0x0200,	// implies word with left/right
     Alt		= 0x0400	// ''
   };
+
+  ZrlExtern void print_(int32_t, ZmStream &);
+  struct Print {
+    int32_t key;
+    template <typename S>
+    void print(S &s_) const { ZmStream s{s_}; print_(key, s); }
+    void print(ZmStream &s) const { print_(key, s); }
+    friend ZuPrintFn ZuPrintType(Print *);
+  };
+  inline Print print(int32_t key) { return {key}; }
 }
 
 class ZrlAPI VKeyMatch : public ZuObject {
 public:
-  struct Action {
+  struct ZrlAPI Action {
     ZuRef<ZuObject>	next;			// next VKeyMatch
-    int32_t		vkey = -1;		// virtual key
+    int32_t		vkey = 0;		// virtual key
 
-    // void dump(unsigned level, uint8_t byte) const;
+    void print_(ZmStream &) const;
+    template <typename S> void print(S &s_) const { ZmStream s{s_}; print_(s); }
+    void print(ZmStream &s) const { print_(s); }
+    friend ZuPrintFn ZuPrintType(Action *);
   };
 
-  bool add(const char *s, int vkey) {
+  bool add(const char *s, int32_t vkey) {
     if (!s) return false;
     return add_(this, reinterpret_cast<const uint8_t *>(s), vkey);
   }
-  static bool add_(VKeyMatch *this_, const uint8_t *s, int vkey);
-  bool add(uint8_t c, int vkey);
+  static bool add_(VKeyMatch *this_, const uint8_t *s, int32_t vkey);
+  bool add(uint8_t c, int32_t vkey);
 
   const Action *match(uint8_t c) const;
 
-  // void dump(unsigned level) const;
+  void print_(ZmStream &) const;
+  template <typename S> void print(S &s_) const { ZmStream s{s_}; print_(s); }
+  void print(ZmStream &s) const { print_(s); }
+  friend ZuPrintFn ZuPrintType(VKeyMatch *);
 
 private:
   ZtArray<uint8_t>	m_bytes;
@@ -173,13 +192,14 @@ private:
   void sigwinch();
   void resized();
 
-  bool utf8_in() const { return (m_termios.c_iflag & IUTF8); }
-  bool utf8_out() const { return (m_termios.c_cflag & CSIZE) == CS8; }
+  bool utf8_in() const { return (m_otermios.c_iflag & IUTF8); }
+  bool utf8_out() const { return (m_otermios.c_cflag & CSIZE) == CS8; }
 
   // low-level input
 
   void read();
 
+  void addCtrlKey(char c, int32_t vkey);
   void addVKey(const char *cap, const char *deflt, int vkey);
 
 public:
@@ -207,6 +227,11 @@ public:
   void clrScroll_(unsigned n);
   // low-level direct output to display
   void out_(ZuString data);
+
+  // turn on output post-processing (i.e. normal CR/NL)
+  void opost_on();
+  // turn off output post-processing (i.e. raw CR/NL)
+  void opost_off();
 
 private:
   void cr();
@@ -276,7 +301,8 @@ private:
   // device state
 
   int			m_fd = -1;
-  struct termios	m_termios;
+  struct termios	m_otermios;
+  struct termios	m_ntermios;
   struct sigaction	m_winch;
   int			m_epollFD = -1;
   int			m_wakeFD = -1, m_wakeFD2 = -1;	// wake pipe

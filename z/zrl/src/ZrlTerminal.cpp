@@ -33,7 +33,64 @@
 
 namespace Zrl {
 
-bool VKeyMatch::add_(VKeyMatch *this_, const uint8_t *s, int vkey)
+namespace VKey {
+ZrlExtern void print_(int32_t vkey, ZmStream &s)
+{
+  if (vkey < 0) {
+    vkey = -vkey;
+    s << name(vkey & Mask) << '[';
+    if (vkey & Shift) s << "Shift";
+    if (vkey & Ctrl) { if (vkey & Shift) s << '|'; s << "Ctrl"; }
+    if (vkey & Alt) { if (vkey & (Shift|Ctrl)) s << '|'; s << "Alt"; }
+    s << ']';
+  } else {
+    ZuArrayN<uint8_t, 4> utf;
+    if (vkey < 0x20) {
+      utf << '^' << static_cast<char>('@' + vkey);
+    } else if (vkey >= 0x7f && vkey < 0x100) {
+      utf << "\\x" << ZuBoxed(vkey).hex(ZuFmt::Right<2, '0'>{});
+    } else {
+      utf.length(ZuUTF8::out(utf.data(), 4, vkey));
+    }
+    s << ZuString{utf};
+  }
+}
+}
+
+thread_local unsigned VKeyMatch_printIndentLevel = 0;
+
+void VKeyMatch::Action::print_(ZmStream &s) const
+{
+  if (vkey) s << VKey::print(vkey);
+  s << "\r\n";
+  if (auto ptr = next.ptr<VKeyMatch>()) {
+    ++VKeyMatch_printIndentLevel;
+    s << *ptr;
+    --VKeyMatch_printIndentLevel;
+  }
+}
+
+void VKeyMatch_print_byte(ZmStream &s, uint8_t byte)
+{
+  if (byte < 0x20)
+    s << '^' << static_cast<char>('@' + byte);
+  else if (byte >= 0x7f)
+    s << "\\x" << ZuBoxed(byte).hex(ZuFmt::Right<2, '0'>{});
+  else
+    s << static_cast<char>(byte);
+}
+
+void VKeyMatch::print_(ZmStream &s) const
+{
+  unsigned level = VKeyMatch_printIndentLevel;
+  for (unsigned i = 0, n = m_bytes.length(); i < n; i++) {
+    for (unsigned j = 0; j < level; j++) s << ' ';
+    VKeyMatch_print_byte(s, m_bytes[i]);
+    s << " -> " << m_actions[i];
+  }
+}
+
+bool VKeyMatch::add_(VKeyMatch *this_, const uint8_t *s, int32_t vkey)
 {
   uint8_t c = *s;
   if (!c) return false;
@@ -44,8 +101,8 @@ loop:
   new (this_->m_actions.push()) Action{};
 matched:
   if (!(c = *++s)) {
-    if (this_->m_actions[i].vkey >= 0) return false;
-    this_->m_actions[i].vkey = vkey;
+    if (this_->m_actions[i].vkey) return false;
+    this_->m_actions[i].vkey = -vkey;
     return true;
   }
   VKeyMatch *ptr;
@@ -55,7 +112,7 @@ matched:
   goto loop;
 }
 
-bool VKeyMatch::add(uint8_t c, int vkey)
+bool VKeyMatch::add(uint8_t c, int32_t vkey)
 {
   if (!c) return false;
   char s[2];
@@ -70,29 +127,6 @@ const VKeyMatch::Action *VKeyMatch::match(uint8_t c) const
     if (m_bytes[i] == c) return &m_actions[i];
   return nullptr;
 }
-
-#if 0
-static void dumpbyte(uint8_t c) {
-  if (c < 0x20 || c >= 0x7f)
-    printf("\\x%02u", (unsigned)c);
-  else
-    putchar((char)c);
-}
-void VKeyMatch::dump(unsigned level = 0) const
-{
-  for (unsigned i = 0, n = m_bytes.length(); i < n; i++) {
-    for (unsigned j = 0; j < level; j++) putchar(' ');
-    m_actions[i].dump(level, m_bytes[i]);
-  }
-}
-void VKeyMatch::Action::dump(unsigned level, uint8_t c) const
-{
-  dumpbyte(c);
-  if (vkey >= 0) printf(" -> vkey: %d", (int)vkey);
-  fputs("\r\n", stdout);
-  if (auto ptr = next.ptr<VKeyMatch>()) ptr->dump(level + 1);
-}
-#endif
 
 void Terminal::open(ZmScheduler *sched, unsigned thread) // async
 {
@@ -173,8 +207,8 @@ void Terminal::open_()
   }
 
   // save terminal control flags
-  memset(&m_termios, 0, sizeof(termios));
-  tcgetattr(m_fd, &m_termios);
+  memset(&m_otermios, 0, sizeof(termios));
+  tcgetattr(m_fd, &m_otermios);
 
   // initialize terminfo
   setupterm(nullptr, m_fd, nullptr);
@@ -263,24 +297,27 @@ void Terminal::open_()
   //  7 - Ctrl + Alt
   //  8 - Shift + Ctrl + Alt
 
-  // enter key
-  addVKey("kent", "\r", VKey::Enter);
+  // Enter
+  addCtrlKey('\r', VKey::Enter);
+  addCtrlKey(m_otermios.c_cc[VEOL], VKey::Enter);
+  addCtrlKey(m_otermios.c_cc[VEOL2], VKey::Enter);
+  addVKey("kent", nullptr, VKey::Enter);
 
   // EOF
-  m_vkeyMatch->add(m_termios.c_cc[VEOF], VKey::EndOfFile);
+  addCtrlKey(m_otermios.c_cc[VEOF], VKey::EndOfFile);
 
   // erase keys
-  m_vkeyMatch->add(m_termios.c_cc[VERASE], VKey::Erase);
-  m_vkeyMatch->add(m_termios.c_cc[VWERASE], VKey::WErase);
-  m_vkeyMatch->add(m_termios.c_cc[VKILL], VKey::Kill);
+  addCtrlKey(m_otermios.c_cc[VERASE], VKey::Erase);
+  addCtrlKey(m_otermios.c_cc[VWERASE], VKey::WErase);
+  addCtrlKey(m_otermios.c_cc[VKILL], VKey::Kill);
 
   // signals
-  m_vkeyMatch->add(m_termios.c_cc[VINTR], VKey::SigInt);
-  m_vkeyMatch->add(m_termios.c_cc[VQUIT], VKey::SigQuit);
-  m_vkeyMatch->add(m_termios.c_cc[VSUSP], VKey::SigSusp);
+  addCtrlKey(m_otermios.c_cc[VINTR], VKey::SigInt);
+  addCtrlKey(m_otermios.c_cc[VQUIT], VKey::SigQuit);
+  addCtrlKey(m_otermios.c_cc[VSUSP], VKey::SigSusp);
 
   // literal next
-  m_vkeyMatch->add(m_termios.c_cc[VLNEXT], VKey::LNext);
+  addCtrlKey(m_otermios.c_cc[VLNEXT], VKey::LNext);
 
   // motion keys
   addVKey("kcuu1", nullptr, VKey::Up);
@@ -337,6 +374,24 @@ void Terminal::open_()
   addVKey("kEND7", nullptr, VKey::End | VKey::Ctrl | VKey::Alt);
   addVKey("kEND8", nullptr, VKey::End | VKey::Shift | VKey::Ctrl | VKey::Alt);
 
+  addVKey("kpp", nullptr, VKey::PgUp);
+  addVKey("kPRV", nullptr, VKey::PgUp | VKey::Shift);
+  addVKey("kPRV3", nullptr, VKey::PgUp | VKey::Alt);
+  addVKey("kPRV4", nullptr, VKey::PgUp | VKey::Shift | VKey::Alt);
+  addVKey("kPRV5", nullptr, VKey::PgUp | VKey::Ctrl);
+  addVKey("kPRV6", nullptr, VKey::PgUp | VKey::Shift | VKey::Ctrl);
+  addVKey("kPRV7", nullptr, VKey::PgUp | VKey::Ctrl | VKey::Alt);
+  addVKey("kPRV8", nullptr, VKey::PgUp | VKey::Shift | VKey::Ctrl | VKey::Alt);
+
+  addVKey("knp", nullptr, VKey::PgDn);
+  addVKey("kNXT", nullptr, VKey::PgDn | VKey::Shift);
+  addVKey("kNXT3", nullptr, VKey::PgDn | VKey::Alt);
+  addVKey("kNXT4", nullptr, VKey::PgDn | VKey::Shift | VKey::Alt);
+  addVKey("kNXT5", nullptr, VKey::PgDn | VKey::Ctrl);
+  addVKey("kNXT6", nullptr, VKey::PgDn | VKey::Shift | VKey::Ctrl);
+  addVKey("kNXT7", nullptr, VKey::PgDn | VKey::Ctrl | VKey::Alt);
+  addVKey("kNXT8", nullptr, VKey::PgDn | VKey::Shift | VKey::Ctrl | VKey::Alt);
+
   addVKey("kich1", nullptr, VKey::Insert);
   addVKey("kIC", nullptr, VKey::Insert | VKey::Shift);
   addVKey("kIC3", nullptr, VKey::Insert | VKey::Alt);
@@ -355,7 +410,7 @@ void Terminal::open_()
   addVKey("kDC7", nullptr, VKey::Delete | VKey::Ctrl | VKey::Alt);
   addVKey("kDC8", nullptr, VKey::Delete | VKey::Shift | VKey::Ctrl | VKey::Alt);
 
-  // m_vkeyMatch->dump();
+  std::cout << *m_vkeyMatch;
 
   m_nextVKMatch = m_vkeyMatch.ptr();
 
@@ -483,20 +538,19 @@ void Terminal::start_()
   if (m_running) return;
   m_running = true;
 
-  termios ntermios;
-  memcpy(&ntermios, &m_termios, sizeof(termios));
+  memcpy(&m_ntermios, &m_otermios, sizeof(termios));
 
   // Note: do not interfere with old dial-up modem settings here
   // ntermios.c_cflag &= ~CSIZE;
   // ntermios.c_cflag |= CS8;
   // ~(BRKINT | INPCK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
-  ntermios.c_iflag &= ~(ISTRIP | INLCR | IGNCR | ICRNL);
-  ntermios.c_lflag &= ~(ICANON | ECHO | IEXTEN | ISIG);
-  ntermios.c_oflag &= ~(OPOST | ONLCR | OCRNL | ONOCR | ONLRET);
-  ntermios.c_cc[VMIN] = 1;
-  ntermios.c_cc[VTIME] = 0;
+  m_ntermios.c_iflag &= ~(ISTRIP | INLCR | IGNCR | ICRNL);
+  m_ntermios.c_lflag &= ~(ICANON | ECHO | IEXTEN | ISIG);
+  m_ntermios.c_oflag &= ~(OPOST | ONLCR | OCRNL | ONOCR | ONLRET);
+  m_ntermios.c_cc[VMIN] = 1;
+  m_ntermios.c_cc[VTIME] = 0;
 
-  tcsetattr(m_fd, TCSADRAIN, &ntermios);
+  tcsetattr(m_fd, TCSADRAIN, &m_ntermios);
 
   if (fcntl(m_fd, F_SETFL, O_NONBLOCK) < 0) {
     ZeError e{errno};
@@ -541,7 +595,19 @@ void Terminal::stop_()
   epoll_ctl(m_epollFD, EPOLL_CTL_DEL, m_fd, 0);
   fcntl(m_fd, F_SETFL, 0);
 
-  tcsetattr(m_fd, TCSADRAIN, &m_termios);
+  tcsetattr(m_fd, TCSADRAIN, &m_otermios);
+}
+
+void Terminal::opost_on()
+{
+  m_ntermios.c_oflag = m_otermios.c_oflag;
+  tcsetattr(m_fd, TCSADRAIN, &m_ntermios);
+}
+
+void Terminal::opost_off()
+{
+  m_ntermios.c_oflag &= ~(OPOST | ONLCR | OCRNL | ONOCR | ONLRET);
+  tcsetattr(m_fd, TCSADRAIN, &m_ntermios);
 }
 
 // I/O multiplexing
@@ -656,15 +722,15 @@ void Terminal::read()
 	if (action->next) {
 	  m_nextVKInterval = m_vkeyInterval;
 	  m_nextVKMatch = action->next.ptr<VKeyMatch>();
-	  if (action->vkey >= 0) {
+	  if (action->vkey) {
 	    pending.length(1);
-	    pending[0] = -(action->vkey);
+	    pending[0] = action->vkey;
 	  } else
 	    pending << c;
 	  continue;
 	}
 	pending.clear();
-	key = -(action->vkey);
+	key = action->vkey;
 	utfn = 1;
       } else {
 	if (!utf8_in() || !(utfn = ZuUTF8::in(&c, 4))) utfn = 1;
@@ -687,12 +753,19 @@ stop:
   stop_();
 }
 
+void Terminal::addCtrlKey(char c, int32_t vkey)
+{
+  if (c) m_vkeyMatch->add(c, vkey);
+}
+
 void Terminal::addVKey(const char *cap, const char *deflt, int vkey)
 {
   const char *ent;
   if (!(ent = tigetstr(cap))) ent = deflt;
-  m_vkeyMatch->add(ent, vkey);
-  // if (ent) std::cerr << ZtHexDump(cap, ent, strlen(ent)) << '\n' << std::flush;
+  if (ent) {
+    m_vkeyMatch->add(ent, vkey);
+    std::cout << ZtHexDump(cap, ent, strlen(ent)) << '\n';
+  }
 }
 
 // low-level output

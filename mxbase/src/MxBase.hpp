@@ -41,7 +41,6 @@
 #include <zlib/ZuFixed.hpp>
 
 #include <zlib/ZmRef.hpp>
-#include <zlib/ZmLHash.hpp>
 #include <zlib/ZmStream.hpp>
 
 #include <zlib/ZtDate.hpp>

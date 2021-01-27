@@ -39,25 +39,27 @@
 
 struct ZuPrintable { };
 
+struct ZuPrintCannot {
+  enum { OK = 0, String = 0, Delegate = 0, Buffer = 0 };
+};
+
 struct ZuPrintFn {
   enum { OK = 1, String = 0, Delegate = 1, Buffer = 0 };
   template <typename S, typename T>
   ZuInline static void print(S &s, const T &v) { v.print(s); }
 };
-template <bool> struct ZuBasePrint_ {
-  enum { OK = 0, String = 0, Delegate = 0, Buffer = 0 };
+
+ZuPrintCannot ZuPrintType(...);
+
+template <typename U, bool = ZuConversion<ZuPrintable, U>::Base>
+struct ZuDefaultPrint {
+  using T = decltype(ZuPrintType(ZuDeclVal<U *>()));
 };
-template <> struct ZuBasePrint_<true> : public ZuPrintFn { };
-template <typename T>
-struct ZuBasePrint :
-    public ZuBasePrint_<ZuConversion<ZuPrintable, T>::Base> { };
+template <typename U>
+struct ZuDefaultPrint<U, true> { using T = ZuPrintFn; };
 
-template <typename T> ZuBasePrint<T> ZuPrintType(const T *);
-template <typename T> const T *ZuPrintType_();
 template <typename T>
-using ZuDefaultPrint = decltype(ZuPrintType(ZuPrintType_<T>()));
-
-template <typename T> struct ZuPrint : public ZuDefaultPrint<T> { };
+struct ZuPrint : public ZuDefaultPrint<T>::T { };
 
 struct ZuPrintString {
   enum { OK = 1, String = 1, Delegate = 0, Buffer = 0 };

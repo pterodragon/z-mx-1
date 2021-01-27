@@ -31,10 +31,12 @@
 #endif
 
 #include <zlib/ZuPtr.hpp>
+#include <zlib/ZuPrint.hpp>
 
 #include <zlib/ZtArray.hpp>
 
-#include <zlib/ZmHash.hpp>
+#include <zlib/ZmLHash.hpp>
+#include <zlib/ZmRBTree.hpp>
 
 #include <zlib/ZtEnum.hpp>
 
@@ -159,6 +161,16 @@ namespace Op { // line editor operation codes
 
     KeepArg	= 0x4000	// preserve argument
   };
+
+  ZrlExtern void print_(uint32_t, ZmStream &);
+  struct Print {
+    uint32_t op;
+    template <typename S>
+    void print(S &s_) const { ZmStream s{s_}; print_(op, s); }
+    void print(ZmStream &s) const { print_(op, s); }
+    friend ZuPrintFn ZuPrintType(Print *);
+  };
+  inline Print print(uint32_t op) { return {op}; }
 };
 
 // line editor command - combination of op code, argument and virtual key
@@ -176,7 +188,7 @@ public:
       m_value{op | (arg<<16) | (static_cast<uint64_t>(vkey)<<32)} { }
 
   auto op() const { return m_value & 0xffffU; }
-  auto arg() const { return m_value>>16; }
+  auto arg() const { return (m_value>>16) & 0xffffU; }
   int32_t vkey() const { return m_value>>32; }
 
   bool operator !() const { return !m_value; }
@@ -184,39 +196,44 @@ public:
 
   int parse(ZuString, int off);
 
+  void print_(ZmStream &) const;
+  template <typename S> void print(S &s_) const { ZmStream s{s_}; print_(s); }
+  void print(ZmStream &s) const { print_(s); }
+  friend ZuPrintFn ZuPrintType(Cmd *);
+
 private:
   uint64_t	m_value = 0;
 };
 
 using CmdSeq = ZtArray<Cmd>;
 
-struct ZrlAPI Binding_ { // maps a mode + vkey to a sequence of commands
-  unsigned	mode;
-  int32_t	vkey;
+struct ZrlAPI Binding { // maps a vkey to a sequence of commands
+  int32_t	vkey = 0;
   CmdSeq	cmds;
 
-  using Key = ZuPair<unsigned, int>;
+  void print_(ZmStream &) const;
+  template <typename S> void print(S &s_) const { ZmStream s{s_}; print_(s); }
+  void print(ZmStream &s) const { print_(s); }
+  friend ZuPrintFn ZuPrintType(Binding *);
 };
-struct Binding_KeyAccessor :
-    public ZuAccessor<Binding_, Binding_::Key> {
-  ZuInline static Binding_::Key value(const Binding_ &m) {
-    return {m.mode, m.vkey};
-  }
+struct Binding_KeyAccessor : public ZuAccessor<Binding *, int32_t> {
+  ZuInline static int32_t value(const Binding *b) { return b->vkey; }
 };
 
-using Bindings =
-  ZmHash<Binding_,
-    ZmHashObject<ZuNull,
-      ZmHashNodeIsKey<true,
-	ZmHashIndex<Binding_KeyAccessor,
-	  ZmHashLock<ZmNoLock>>>>>;
+using Bindings_ =
+  ZmLHash<ZuPtr<Binding>,
+    ZmLHashIndex<Binding_KeyAccessor,
+      ZmLHashLock<ZmNoLock>>>;
 
-using Binding = Bindings::Node;
+struct Bindings : public Bindings_ {
+  Bindings() : Bindings_{ZmHashParams{}.bits(8).loadFactor(1.0)} { }
+};
 
 // line editor mode
 struct Mode {
-  CmdSeq	cmds;		// default command sequence
-  bool		edit = false;	// edit mode flag
+  CmdSeq		cmds;		// default command sequence
+  ZuPtr<Bindings>	bindings;	// vkey -> command sequence bindings
+  bool			edit = false;	// edit mode flag
 };
 
 // key map
@@ -224,16 +241,20 @@ struct ZrlAPI Map_ {
   using ID = ZtString;
 
   ID		id;		// identifier for map
-  Bindings	bindings;	// vkey -> command sequence bindings
   ZtArray<Mode>	modes;		// modes
 
   int parse(ZuString s, int off);
 
   void addMode(unsigned mode, bool edit);
-  void bind(unsigned mode, int vkey, CmdSeq cmds);
+  void bind(unsigned mode, int32_t vkey, CmdSeq cmds);
   void reset(); // reset all modes and key bindings
 
   const CmdSeq &binding(unsigned mode, int32_t vkey);
+
+  void print_(ZmStream &) const;
+  template <typename S> void print(S &s_) const { ZmStream s{s_}; print_(s); }
+  void print(ZmStream &s) const { print_(s); }
+  friend ZuPrintFn ZuPrintType(Map_ *);
 
 private:
   int parseMode(ZuString s, int off);
@@ -392,7 +413,8 @@ struct Config {
 
 // the line editor is a virtual machine that executes sequences of commands;
 // each command sequence is bound to a virtual key; individual commands
-// consist of an opcode, an argument and a virtual key (UTF32 if positive)
+// consist of an opcode, an optionally overridden argument and an
+// optional overridden/re-mapped virtual key (UTF32 if positive)
 class ZrlAPI Editor {
   Editor(const Editor &) = delete;
   Editor &operator =(const Editor &) = delete;
@@ -421,9 +443,19 @@ public:
   void stop();
   bool running() const;
 
-  // all public functions below must be called in the terminal thread
-  bool map(ZuString id);
-  void prompt(ZtArray<uint8_t> prompt);
+  bool map(ZuString id);		// terminal thread
+  void prompt(ZtArray<uint8_t> prompt);	// ''
+
+  // dump key bindings
+  void dumpMaps_(ZmStream &) const;
+  struct DumpMaps {
+    const Editor &editor;
+    template <typename S>
+    void print(S &s_) const { ZmStream s{s_}; editor.dumpMaps_(s); }
+    void print(ZmStream &s) const { editor.dumpMaps_(s); }
+    friend ZuPrintFn ZuPrintType(DumpMaps *);
+  };
+  DumpMaps dumpMaps() const { return {*this}; }
 
 private:
 

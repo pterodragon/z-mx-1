@@ -249,8 +249,6 @@ struct ZrlAPI Map_ {
   void bind(unsigned mode, int32_t vkey, CmdSeq cmds);
   void reset(); // reset all modes and key bindings
 
-  const CmdSeq &binding(unsigned mode, int32_t vkey);
-
   void print_(ZmStream &) const;
   template <typename S> void print(S &s_) const { ZmStream s{s_}; print_(s); }
   void print(ZmStream &s) const { print_(s); }
@@ -439,7 +437,8 @@ public:
   bool isOpen() const;
 
   // start/stop
-  void start(ZtArray<uint8_t> prompt);
+  using StartFn = ZmFn<Editor &>;
+  void start(StartFn);
   void stop();
   bool running() const;
 
@@ -447,6 +446,7 @@ public:
   void prompt(ZtArray<uint8_t> prompt);	// ''
 
   // dump key bindings
+  Terminal::DumpVKeys dumpVKeys() const { return {m_tty}; }
   void dumpMaps_(ZmStream &) const;
   struct DumpMaps {
     const Editor &editor;
@@ -458,7 +458,6 @@ public:
   DumpMaps dumpMaps() const { return {*this}; }
 
 private:
-
   bool process(int32_t vkey);
   bool process_(const CmdSeq &cmds, int32_t vkey);
 

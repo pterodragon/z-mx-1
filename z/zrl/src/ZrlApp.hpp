@@ -41,7 +41,6 @@ namespace Zrl {
 using EnterFn = ZmFn<ZuString>;
 using EndFn = ZmFn<>;
 using SigFn = ZmFn<int>;
-using ErrorFn = ZmFn<ZeError>;
 
 using CompInitFn = ZmFn<ZuString>;	// (prefix)
 using CompNextFn = ZmFn<ZuString &>;	// (suffix)
@@ -53,7 +52,6 @@ struct App {
   EnterFn	enter;		// line entered
   EndFn		end;		// end of input (EOF)
   SigFn		sig;		// signal (^C ^\ ^Z)
-  ErrorFn	error;		// I/O error
 
   CompInitFn	compInit;	// initialize possible completions of prefix
   CompNextFn	compNext;	// enumerate next completion in sequence

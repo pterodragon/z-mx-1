@@ -61,7 +61,6 @@ namespace VKey {
     // terminal driver events and control keys (from termios)
     Default,		// default key (for use with key mappings)
 
-    Error,		// I/O error - causes stop
     EndOfFile,		// ^D EOF - causes stop
 
     SigInt,		// ^C interrupt
@@ -177,6 +176,19 @@ public:
   void over(ZuString);		// overwrite string
   void ins(ZuString);		// insert string
   void del(unsigned n);		// delete n characters
+
+  // virtual keys
+  int32_t literal(int32_t vkey) const; // reverse lookup vkey -> character
+
+  void dumpVKeys_(ZmStream &) const;
+  struct DumpVKeys {
+    const Terminal &terminal;
+    template <typename S>
+    void print(S &s_) const { ZmStream s{s_}; terminal.dumpVKeys_(s); }
+    void print(ZmStream &s) const { terminal.dumpVKeys_(s); }
+    friend ZuPrintFn ZuPrintType(DumpVKeys *);
+  };
+  DumpVKeys dumpVKeys() const { return {*this}; }
 
 private:
   void open_();

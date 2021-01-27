@@ -131,7 +131,6 @@ Editor::Editor()
 
   m_defltMap->bind(0, -VKey::Default, { { Op::Glyph } });
 
-  m_defltMap->bind(0, -VKey::Error, { { Op::Error } });
   m_defltMap->bind(0, -VKey::EndOfFile, { { Op::EndOfFile} });
 
   m_defltMap->bind(0, -VKey::SigInt, { { Op::SigInt} });
@@ -430,13 +429,6 @@ void Map_::reset()
 {
   modes.clear();
 }
-const CmdSeq &Map_::binding(unsigned modeID, int32_t vkey)
-{
-  const auto &mode = modes[modeID];
-  if (mode.bindings)
-    if (auto kv = mode.bindings->find(vkey)) return kv->key()->cmds;
-  return mode.cmds;
-}
 
 bool Editor::loadMap(ZuString file)
 {
@@ -510,14 +502,14 @@ bool Editor::isOpen() const
 }
 
 // start/stop
-void Editor::start(ZtArray<uint8_t> prompt)
+void Editor::start(StartFn fn)
 {
   m_tty.start(
-      [this, prompt = ZuMv(prompt)]() mutable {
-	m_context = {
-	  .prompt = ZuMv(prompt),
-	  .histSaveOff = m_config.histOffset
-	};
+      [this, fn = ZuMv(fn)]() mutable {
+	m_context = { .histSaveOff = m_config.histOffset };
+	m_tty.opost_on();
+	fn(*this);
+	m_tty.opost_off();
 	m_tty.ins(m_context.prompt);
 	m_tty.write();
 	m_context.startPos = m_tty.pos();
@@ -552,7 +544,11 @@ void Editor::prompt(ZtArray<uint8_t> prompt)
 bool Editor::process(int32_t vkey)
 {
   if (!m_map) return false;
-  return process_(m_map->binding(m_context.mode, vkey), vkey);
+  const auto &mode = m_map->modes[m_context.mode];
+  if (mode.bindings)
+    if (auto kv = mode.bindings->find(vkey))
+      return process_(kv->key()->cmds, vkey);
+  return process_(mode.cmds, m_tty.literal(vkey));
 }
 
 bool Editor::process_(const CmdSeq &cmds, int32_t vkey)
@@ -570,9 +566,8 @@ bool Editor::process_(const CmdSeq &cmds, int32_t vkey)
       if (stop) return true;
     }
   }
-  ZeError e;
-  if (m_tty.write(&e) != Zi::OK) {
-    m_app.error(e);
+  if (m_tty.write() != Zi::OK) {
+    m_app.end();
     return true;
   }
   return false;

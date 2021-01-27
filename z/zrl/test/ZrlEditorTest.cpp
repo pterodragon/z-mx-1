@@ -31,15 +31,24 @@ int main()
     }
     done.post();
   };
-  app.error = [&done](ZeError e) {
-    // FIXME - this is a little odd
-    std::cout << e << '\n' << std::flush;
-    done.post();
+  ZtArray<ZtString> history;
+  app.histSave = [&history](unsigned i, ZuString s) {
+    if (history.length() <= i) history.grow(i + 1);
+    history[i] = s;
+  };
+  app.histLoad = [&history](unsigned i, ZuString &s) {
+    if (i >= history.length())
+      s = {};
+    else
+      s = history[i];
   };
   editor.init(config, app);
-  std::cout << editor.dumpMaps();
   editor.open(&s, 1);
-  editor.start("-->] ");
+  editor.start([](Zrl::Editor &editor) {
+    std::cout << editor.dumpVKeys();
+    std::cout << editor.dumpMaps();
+    editor.prompt("-->] ");
+  });
   done.wait();
   editor.stop();
   editor.close();

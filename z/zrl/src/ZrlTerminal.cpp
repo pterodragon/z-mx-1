@@ -412,8 +412,6 @@ void Terminal::open_()
   addVKey("kDC7", nullptr, VKey::Delete | VKey::Ctrl | VKey::Alt);
   addVKey("kDC8", nullptr, VKey::Delete | VKey::Shift | VKey::Ctrl | VKey::Alt);
 
-  std::cout << *m_vkeyMatch;
-
   m_nextVKMatch = m_vkeyMatch.ptr();
 
   // set up I/O multiplexer (epoll)
@@ -672,7 +670,7 @@ void Terminal::read()
       if (e.errNo() == EINTR || e.errNo() == EAGAIN)
 	continue;
       ZrlError("epoll_wait", Zi::IOError, e);
-      m_keyFn(VKey::Error);
+      m_keyFn(VKey::EndOfFile);
       goto stop;
     }
     if (!r) { // timeout
@@ -709,7 +707,7 @@ void Terminal::read()
       if (r < 0) {
 	ZeError e{errno};
 	if (e.errNo() == EINTR || e.errNo() == EAGAIN) continue;
-	m_keyFn(VKey::Error);
+	m_keyFn(VKey::EndOfFile);
 	goto stop;
       }
       if (!r) {
@@ -720,7 +718,6 @@ void Terminal::read()
     key = c;
     if (!utfn) {
       if (auto action = m_nextVKMatch->match(key)) {
-	// action->dump(0, c);
 	if (action->next) {
 	  m_nextVKInterval = m_vkeyInterval;
 	  m_nextVKMatch = action->next.ptr<VKeyMatch>();
@@ -885,12 +882,11 @@ void Terminal::out_(ZuString data)
   unsigned begin = m_out.length();
   m_out << ZuArray<const uint8_t>{data};
   unsigned end = m_out.length();
-  if (ZuLikely(utf8_out() && !m_hz && !m_ul)) return;
   for (unsigned off = begin; off < end; ) {
     unsigned n;
-    uint32_t u;
+    uint32_t u = 0;
     if ((n = ZuUTF8::in(&m_out[off], end - off, u)) > 1) {
-      if (!utf8_out()) {
+      if (ZuUnlikely(!utf8_out())) {
 	unsigned w = ZuUTF32::width(u);
 	if (ZuUnlikely(m_ul)) {
 	  m_out.splice(off, n, m_underline);
@@ -907,13 +903,17 @@ void Terminal::out_(ZuString data)
       } else
 	off += n;
     } else {
-      if (!n) n = 1;
-      if ((m_hz && u == '~') || (m_ul && u == '_')) {
-	m_out.splice(off, n, m_underline);
+      if (u < 0x20 || u == 0x7f) {
+	ZuArrayN<char, 2> s;
+	s << '^' << (u == 0x7f ? '?' : static_cast<char>('@' + u));
+	m_out.splice(off, 1, s);
+	off += 2; end += 1;
+      } else if ((m_hz && u == '~') || (m_ul && u == '_')) {
+	m_out.splice(off, 1, m_underline);
 	unsigned w = m_underline.length();
-	off += w; end += w; end -= n;
+	off += w; end += w - 1;
       } else
-	off += n;
+	off += 1;
     }
   }
 }
@@ -1383,6 +1383,27 @@ void Terminal::del(unsigned nglyphs)
   removed.offset(off);
   auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, nglyphs);
   splice(off, span, ZuString{}, ZuUTFSpan{});
+}
+
+int32_t Terminal::literal(int32_t vkey) const
+{
+  switch (static_cast<int>(-vkey)) {
+    case VKey::EndOfFile:	return m_otermios.c_cc[VEOF];
+    case VKey::SigInt:		return m_otermios.c_cc[VINTR];
+    case VKey::SigQuit:		return m_otermios.c_cc[VQUIT];
+    case VKey::SigSusp:		return m_otermios.c_cc[VSUSP];
+    case VKey::Enter:		return '\r';
+    case VKey::Erase:		return m_otermios.c_cc[VERASE];
+    case VKey::WErase:		return m_otermios.c_cc[VWERASE];
+    case VKey::Kill:		return m_otermios.c_cc[VKILL];
+    case VKey::LNext:		return m_otermios.c_cc[VLNEXT];
+  }
+  return vkey;
+}
+
+void Terminal::dumpVKeys_(ZmStream &s) const
+{
+  if (m_vkeyMatch) s << *m_vkeyMatch;
 }
 
 } // namespace Zrl

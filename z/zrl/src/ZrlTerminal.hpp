@@ -146,8 +146,10 @@ public:
   using StartFn = ZmFn<>;
   using KeyFn = ZmFn<int32_t>; // return true to stop reading 
 
-  void init(unsigned vkeyInterval) {
+  void init(unsigned vkeyInterval, unsigned highColor, unsigned whiteColor) {
     m_vkeyInterval = vkeyInterval; // milliseconds
+    m_highColor = highColor;
+    m_whiteColor = whiteColor;
   }
   void final() { }
 
@@ -309,7 +311,9 @@ private:
 
   // configuration (multi-byte keystroke interval timeout)
 
-  unsigned		m_vkeyInterval = 100;		// milliseconds
+  unsigned		m_vkeyInterval = 100;	// milliseconds
+  unsigned		m_highColor = 14;	// ANSI color
+  unsigned		m_whiteColor = 15;	// ANSI color
 
   // scheduler / thread
 
@@ -384,8 +388,12 @@ private:
   const char		*m_dch = nullptr;	// delete characters
   const char		*m_dch1 = nullptr;	// delete character
 
-  const char		*m_smso = nullptr;	// start standout mode
+  const char		*m_bold = nullptr;	// bold
+  const char		*m_sgr = nullptr;	// set graphics rendition
+  const char		*m_sgr0 = nullptr;	// clear ''
+  const char		*m_smso = nullptr;	// end standout mode
   const char		*m_rmso = nullptr;	// end standout mode
+  const char		*m_setaf = nullptr;	// set ANSI foreground color
 
   ZtArray<uint8_t>	m_underline;
 };

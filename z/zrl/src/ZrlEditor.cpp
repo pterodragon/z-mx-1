@@ -503,7 +503,7 @@ void Editor::init(Config config, App app)
   m_config = config;
   m_map = m_defltMap;
   m_app = app;
-  m_tty.init(m_config.vkeyInterval);
+  m_tty.init(m_config.vkeyInterval, m_config.highColor, m_config.whiteColor);
 }
 void Editor::final()
 {

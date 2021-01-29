@@ -266,8 +266,12 @@ void Terminal::open_()
   m_dch = tigetstr("dch");
   m_dch1 = tigetstr("dch1");
 
+  m_bold = tigetstr("bold");
+  m_sgr = tigetstr("sgr");
+  m_sgr0 = tigetstr("sgr0");
   m_smso = tigetstr("smso");
   m_rmso = tigetstr("rmso");
+  m_setaf = tigetstr("setaf");
 
   if (m_ul) {
     thread_local Terminal *this_;
@@ -517,8 +521,12 @@ void Terminal::close_()
   m_dch = nullptr;
   m_dch1 = nullptr;
 
+  m_bold = nullptr;
+  m_sgr = nullptr;
+  m_sgr0 = nullptr;
   m_smso = nullptr;
   m_rmso = nullptr;
+  m_setaf = nullptr;
 
   m_underline = {};
 
@@ -1362,10 +1370,37 @@ void Terminal::redraw()
 void Terminal::redraw(unsigned endPos, bool high)
 {
   if (ZuUnlikely(m_pos >= endPos)) return;
-  if (high && m_smso) tputs(m_smso);
+  enum { None, Bold, Standout };
+  int highType = None;
+  if (high) {
+    if (m_setaf) tputs(tiparm(m_setaf, m_highColor));
+    if (m_bold && (m_sgr || m_sgr0)) {
+      highType = Bold;
+      tputs(m_bold);
+    } else if (m_sgr) {
+      highType = Bold;
+      tputs(tiparm(m_sgr, 0, 0, 0, 0, 0, 1, 0, 0, 0));
+    } else if (m_smso && m_rmso) {
+      highType = Standout;
+      tputs(m_smso);
+    }
+  }
   redraw_(m_pos, endPos);
   m_pos = endPos;
-  if (high && m_rmso) tputs(m_rmso);
+  if (high) {
+    switch (highType) {
+      case Bold:
+	if (m_sgr0)
+	  tputs(m_sgr0);
+	else
+	  tputs(tiparm(m_sgr, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+	break;
+      case Standout:
+	tputs(m_rmso);
+	break;
+    }
+    if (m_setaf) tputs(tiparm(m_setaf, m_whiteColor));
+  }
 }
 
 void Terminal::redraw_(unsigned pos, unsigned endPos)

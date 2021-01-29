@@ -558,7 +558,7 @@ struct ZuCmp<ZuBox<T_, Cmp> > {
   ZuInline static bool less(const T &t1, const T &t2) { return t1 < t2; }
   ZuInline static bool equals(const T &t1, const T &t2) { return t1 == t2; }
   ZuInline static bool null(const T &t) { return !*t; }
-  ZuInline static const T &null() { static const T t; return t; }
+  ZuInline static const T &null() { static const T v; return v; }
 };
 
 // generic printing

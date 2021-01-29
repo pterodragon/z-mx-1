@@ -240,13 +240,8 @@ protected:
 template <typename T> struct ZuCmp;
 template <typename T>
 struct ZuCmp<ZmRef<T> > : public ZuCmp<T *> {
-  ZuInline static bool null(const ZmRef<T> &r) {
-    return !r;
-  }
-  ZuInline static const ZmRef<T> &null() {
-    static const ZmRef<T> r;
-    return r;
-  }
+  ZuInline static bool null(const ZmRef<T> &r) { return !r; }
+  ZuInline static const ZmRef<T> &null() { static const ZmRef<T> v; return v; }
 };
 
 template <typename T> struct ZuHash;

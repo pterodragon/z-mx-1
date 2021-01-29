@@ -47,26 +47,23 @@
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuHash.hpp>
 
-template <typename T_, typename I_, bool Is> struct ZuAccessor_ {
-  enum { Same = 0 };
+template <typename T_, typename I_> struct ZuAccessor__ {
   using T = T_;
   using I = I_;
   using TCmp = ZuCmp<T>;
   using Cmp = ZuCmp<I>;
   using Hash = ZuHash<I>;
+};
 
+template <typename T, typename I, bool Is>
+struct ZuAccessor_ : public ZuAccessor__<T, I> {
+  enum { Same = 0 };
   template <typename P>
   ZuInline static I value(const P &p) { return p; }
 };
-
-template <typename T_, typename I_> struct ZuAccessor_<T_, I_, true> {
+template <typename T, typename I>
+struct ZuAccessor_<T, I, true> : public ZuAccessor__<T, I> {
   enum { Same = 1 };
-  using T = T_;
-  using I = I_;
-  using TCmp = ZuCmp<T>;
-  using Cmp = ZuCmp<I>;
-  using Hash = ZuHash<I>;
-
   template <typename P>
   ZuInline static const I &value(const P &p) { return p; }
 };
@@ -100,7 +97,7 @@ template <typename Accessor_, bool Same> struct ZuIndex_ {
 
   using IHash = typename Accessor::Hash;
 
-  template <typename T> struct CmpT {
+  template <typename T> struct CmpT : public ZuCmp<T> {
     template <typename T1, typename T2>
     ZuInline static int cmp(T1 &&t1, T2 &&t2) {
       return Accessor::Cmp::cmp(Accessor::value(
@@ -115,15 +112,6 @@ template <typename Accessor_, bool Same> struct ZuIndex_ {
     ZuInline static bool equals(T1 &&t1, T2 &&t2) {
       return Accessor::Cmp::equals(
 	  Accessor::value(ZuFwd<T1>(t1)), Accessor::value(ZuFwd<T2>(t2)));
-    }
-
-    template <typename T_>
-    ZuInline static bool null(T_ &&t) {
-      return Accessor::Cmp::null(Accessor::value(ZuFwd<T_>(t)));
-    }
-
-    ZuInline static const T &null() {
-      return ZuCmp<T>::null();
     }
   };
 

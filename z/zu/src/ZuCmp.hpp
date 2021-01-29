@@ -215,8 +215,14 @@ struct ZuCmp_Can<P1, P2, typename ZuCmp_Can_<
     decltype(ZuDeclVal<const P1 &>().cmp(ZuDeclVal<const P2 &>()))>::T> {
   enum { OK = 1 };
 };
+
+template <typename T>
+struct ZuCmp_NullFn {
+  template <typename P> ZuInline static bool null(const P &p) { return !p; }
+  ZuInline static const T &null() { static T v; return v; }
+};
 template <typename T, bool Fwd, bool = ZuCmp_Can<T, T>::OK>
-struct ZuCmp_NonPrimitive {
+struct ZuCmp_NonPrimitive : public ZuCmp_NullFn<T> {
   template <typename P1, typename P2, typename T_ = T>
   ZuInline static typename ZuIfT<ZuCmp_Can<P1, P2>::OK, int>::T
   cmp(const P1 &p1, const P2 &p2) {
@@ -231,10 +237,7 @@ struct ZuCmp_NonPrimitive {
   ZuInline static bool less(const P1 &p1, const P2 &p2) { return p1 < p2; }
   template <typename P1, typename P2>
   ZuInline static bool equals(const P1 &p1, const P2 &p2) { return p1 == p2; }
-  template <typename P> ZuInline static bool null(const P &p) { return !p; }
-  ZuInline static const T &null() { static const T t; return t; }
 };
-
 template <typename P1, bool IsPrimitive> struct ZuCmp_NonPrimitive___ :
     public ZuCmp_NonPrimitive<P1, false> { };
 template <typename P1>
@@ -251,7 +254,8 @@ template <typename T, typename P1> struct ZuCmp_NonPrimitive_<T, P1, false> {
   template <typename P2>
   ZuInline static int cmp(const T &t, const P2 &p2) { return t.cmp(p2); }
 };
-template <typename T, bool Fwd> struct ZuCmp_NonPrimitive<T, Fwd, true> {
+template <typename T, bool Fwd>
+struct ZuCmp_NonPrimitive<T, Fwd, true> : public ZuCmp_NullFn<T> {
   template <typename P1, typename P2>
   ZuInline static int cmp(const P1 &p1, const P2 &p2) {
     return ZuCmp_NonPrimitive_<T, typename ZuDecay<P1>::T, Fwd>::cmp(p1, p2);
@@ -260,8 +264,6 @@ template <typename T, bool Fwd> struct ZuCmp_NonPrimitive<T, Fwd, true> {
   ZuInline static bool less(const P1 &p1, const P2 &p2) { return p1 < p2; }
   template <typename P1, typename P2>
   ZuInline static bool equals(const P1 &p1, const P2 &p2) { return p1 == p2; }
-  template <typename P> ZuInline static bool null(const P &p) { return !p; }
-  ZuInline static const T &null() { static T t; return t; }
 };
 
 // comparison of pointers (including smart pointers)
@@ -274,7 +276,7 @@ template <typename T> struct ZuCmp_Pointer {
   ZuInline static bool less(const P *p1, const P *p2) { return p1 < p2; }
   ZuInline static bool equals(const P *p1, const P *p2) { return p1 == p2; }
   ZuInline static bool null(const P *p) { return !p; }
-  ZuInline static const T &null() { static const T t = 0; return t; }
+  ZuInline static const T &null() { static const T v = nullptr; return v; }
 };
 
 template <typename T, bool IsCString>
@@ -488,7 +490,7 @@ struct ZuCmp_String<T, 0, 1, 0> {
     return ZuCmp_StrCmp<S1, S2, 0, 1, 0>::equals(s1, s2);
   }
   ZuInline static bool null(const T &s) { return !s; }
-  ZuInline static const T &null() { static const T t; return t; }
+  ZuInline static const T &null() { static const T v; return v; }
 };
 template <typename T, bool IsString>
 struct ZuCmp_String<T, 1, IsString, 1> {
@@ -549,7 +551,7 @@ struct ZuCmp_String<T, 0, 1, 1> {
     return ZuCmp_StrCmp<S1, S2, 0, 1, 1>::equals(s1, s2);
   }
   ZuInline static bool null(const T &s) { return !s; }
-  ZuInline static const T &null() { static const T t; return t; }
+  ZuInline static const T &null() { static const T v; return v; }
 };
 
 // generic comparison function
@@ -598,14 +600,14 @@ template <> struct ZuCmp<void> { ZuInline static void null() { } };
 
 template <typename T> struct ZuCmp0 : public ZuCmp<T> {
   ZuInline static bool null(T t) { return !t; }
-  ZuInline static const T &null() { static const T v = (T)0; return v; }
+  ZuInline static const T &null() { static const T v = 0; return v; }
 };
 
 // same as ZuCmp<T> but with -1 (or any negative value) as the null value
 
 template <typename T> struct ZuCmp_1 : public ZuCmp<T> {
   ZuInline static bool null(T v) { return v < 0; }
-  ZuInline static const T &null() { static const T v = (T)-1; return v; }
+  ZuInline static const T &null() { static const T v = -1; return v; }
 };
 
 // same as ZuCmp<T> but with N as the null value

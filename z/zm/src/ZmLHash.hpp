@@ -932,15 +932,15 @@ private:
 
 public:
   template <typename Index_>
-  Key del(const Index_ &index) {
+  void del(const Index_ &index) {
     uint32_t code = IHashFn::hash(index);
     Guard guard(m_lock);
 
-    return delKey__(findPrev__(index, code));
+    del__(findPrev__(index, code));
   }
   template <typename Index_>
-  Key del_(const Index_ &index) {
-    return delKey__(findPrev__(index, IHashFn::hash(index)));
+  void del_(const Index_ &index) {
+    del__(findPrev__(index, IHashFn::hash(index)));
   }
   template <typename Index_>
   Key delKey(const Index_ &index) {
@@ -978,7 +978,7 @@ private:
 	return;
       }
       unsigned next = m_table[slot].next();
-      (m_table[slot] = m_table[next]).setHead();
+      (m_table[slot] = ZuMv(m_table[next])).setHead();
       m_table[next].null();
       return;
     }
@@ -991,7 +991,7 @@ private:
     }
 
     unsigned next = m_table[slot].next();
-    m_table[slot] = m_table[next];
+    m_table[slot] = ZuMv(m_table[next]);
     m_table[next].null();
   }
 
@@ -1004,14 +1004,14 @@ private:
     int slot = prev < 0 ? (-prev - 2) : m_table[prev].next();
     Key key(ZuMv(m_table[slot].key()));
     del___(prev);
-    return key;
+    return ZuMv(key);
   }
   Key delVal__(int prev) {
     if (prev == -1) return Cmp::null();
     int slot = prev < 0 ? (-prev - 2) : m_table[prev].next();
     Val val(ZuMv(m_table[slot].value()));
     del___(prev);
-    return val;
+    return ZuMv(val);
   }
 
 public:

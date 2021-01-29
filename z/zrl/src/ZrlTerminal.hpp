@@ -59,7 +59,9 @@ namespace Zrl {
 namespace VKey {
   ZtEnumerate(
     // terminal driver events and control keys (from termios)
-    Default,		// default key (for use with key mappings)
+    _,			// unused - overlaps with ^@ when negated
+    Null,		// sentinel
+    Default,		// default key (wildcard for key bindings)
 
     EndOfFile,		// ^D EOF - causes stop
 
@@ -226,8 +228,9 @@ public:
   void clear();		// clear line data/state
   void cls();		// clear screen, redraw line
   void redraw();	// CR, redraw line
+  void redraw(unsigned endPos, bool high);	// redraw cursor -> endPos
 private:
-  void redraw_();	// redraw line from cursor onwards
+  void redraw_(unsigned begPos, unsigned endPos); // redraw line
 
 public:
   // low-level output routines that do not read/update line state
@@ -380,6 +383,9 @@ private:
   const char		*m_rmdc = nullptr;	// end delete mode
   const char		*m_dch = nullptr;	// delete characters
   const char		*m_dch1 = nullptr;	// delete character
+
+  const char		*m_smso = nullptr;	// start standout mode
+  const char		*m_rmso = nullptr;	// end standout mode
 
   ZtArray<uint8_t>	m_underline;
 };

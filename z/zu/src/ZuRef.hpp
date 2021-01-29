@@ -178,10 +178,7 @@ template <typename T> struct ZuCmp;
 template <typename T>
 struct ZuCmp<ZuRef<T> > : public ZuCmp<T *> {
   ZuInline static bool null(const ZuRef<T> &r) { return !r; }
-  ZuInline static const ZuRef<T> &null() {
-    static const ZuRef<T> r;
-    return r;
-  }
+  ZuInline static const ZuRef<T> &null() { static const ZuRef<T> v; return v; }
 };
 
 template <typename T> struct ZuHash;

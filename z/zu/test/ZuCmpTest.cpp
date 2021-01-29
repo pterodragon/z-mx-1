@@ -194,6 +194,19 @@ template <unsigned N> struct SortTest {
 
 template <unsigned k_> struct K { enum { k = k_ }; };
 
+struct M {
+  M() = default;
+  M(const M &) = delete;
+  M &operator =(const M &) = delete;
+  M(M &&) = default;
+  M &operator =(M &&) = default;
+  ~M() = default;
+  int cmp(const M &) const { return 0; }
+  bool equals(const M &) const { return true; }
+  bool operator ==(const M &) const { return true; }
+  bool operator !() const { return true; }
+};
+
 int main()
 {
   {
@@ -464,5 +477,9 @@ int main()
     CHECK(a < b);
     CHECK(ZuCmp<A>::cmp(a, b) < 0);
     CHECK(ZuCmp<A>::cmp(c, b) > 0);
+  }
+
+  {
+    CHECK(M{} == ZuCmp<M>::null());
   }
 }

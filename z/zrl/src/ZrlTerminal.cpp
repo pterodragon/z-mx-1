@@ -266,6 +266,9 @@ void Terminal::open_()
   m_dch = tigetstr("dch");
   m_dch1 = tigetstr("dch1");
 
+  m_smso = tigetstr("smso");
+  m_rmso = tigetstr("rmso");
+
   if (m_ul) {
     thread_local Terminal *this_;
     m_underline << ' ';
@@ -514,6 +517,9 @@ void Terminal::close_()
   m_dch = nullptr;
   m_dch1 = nullptr;
 
+  m_smso = nullptr;
+  m_rmso = nullptr;
+
   m_underline = {};
 
   del_curterm(cur_term);
@@ -728,6 +734,7 @@ void Terminal::read()
 	    pending << c;
 	  continue;
 	}
+	m_nextVKMatch = m_vkeyMatch.ptr();
 	pending.clear();
 	key = action->vkey;
 	utfn = 1;
@@ -1065,10 +1072,12 @@ void Terminal::mv(unsigned pos)
 {
   if (pos < m_pos) {
     if (unsigned up = m_pos / m_width - pos / m_width) {
-      if (ZuLikely(m_cuu))
+      if (ZuLikely(m_cuu)) {
+	m_pos -= up * m_width;
 	tputs(tiparm(m_cuu, up));
-      else if (ZuLikely(m_cuu1)) {
-	do { tputs(m_cuu1); m_pos -= m_width; } while (--up);
+      } else if (ZuLikely(m_cuu1)) {
+	m_pos -= up * m_width;
+	do { tputs(m_cuu1); } while (--up);
       } else { // no way to go up, just reprint destination row
 	tputs(m_cr);
 	m_pos = pos - (pos % m_width);
@@ -1081,10 +1090,12 @@ void Terminal::mv(unsigned pos)
       mvleft(pos);
   } else if (pos > m_pos) {
     if (unsigned down = pos / m_width - m_pos / m_width) {
-      if (ZuLikely(m_cud))
+      if (ZuLikely(m_cud)) {
+	m_pos += down * m_width;
 	tputs(tiparm(m_cud, down));
-      else if (ZuLikely(m_cud1)) {
-	do { tputs(m_cud1); m_pos += m_width; } while (--down);
+      } else if (ZuLikely(m_cud1)) {
+	m_pos += down * m_width;
+	do { tputs(m_cud1); } while (--down);
       } else {
 	do { nl(); } while (--down);
 	cr();
@@ -1208,23 +1219,25 @@ void Terminal::splice(
   // in place on the terminal and using insertions/deletions on each
   // trailing row, rather than completely redrawing all trailing rows
   if (off + span.inLen() < m_line.length()) {
-    unsigned trailWidth = m_line.width() - endPos; // width of trailing data
+    int trailWidth = m_line.width() - endPos; // width of trailing data
 
-    ZmAssert(trailWidth);
-
-    if (rspan.width() < span.width()) {
-      unsigned shiftWidth = span.width() - rspan.width();
-      if (shiftWidth < (m_width>>1) && trailWidth > shiftWidth &&
-	  (m_dch || m_dch1 || (m_smdc && m_rmdc)))
-	shiftLeft = true; // shift left using deletions on each line
-    } else if (rspan.width() > span.width()) {
-      unsigned shiftWidth = rspan.width() - span.width();
-      if (shiftWidth < (m_width>>1) && trailWidth > shiftWidth &&
-	  (m_ich || m_ich1 || (m_smir && m_rmir)))
-	shiftRight = true; // shift right using insertions on each line
+    if (trailWidth > 0) {
+      if (rspan.width() < span.width()) {
+	unsigned shiftWidth = span.width() - rspan.width();
+	if (shiftWidth < (m_width>>1) && trailWidth > shiftWidth &&
+	    (m_dch || m_dch1 || (m_smdc && m_rmdc)))
+	  shiftLeft = true; // shift left using deletions on each line
+      } else if (rspan.width() > span.width()) {
+	unsigned shiftWidth = rspan.width() - span.width();
+	if (shiftWidth < (m_width>>1) && trailWidth > shiftWidth &&
+	    (m_ich || m_ich1 || (m_smir && m_rmir)))
+	  shiftRight = true; // shift right using insertions on each line
+      }
+      // FIXME - issue with editing long wrapped line at beginning
+      if (shiftLeft || shiftRight)
+	trailRows =
+	  ((endPos % m_width) + trailWidth + m_width - 1) / m_width; // #rows
     }
-    if (shiftLeft || shiftRight)
-      trailRows = (trailWidth + m_width - 1) / m_width; // #rows
   }
   if (trailRows) shiftMarks = ZuAlloca(shiftMarks, ShiftMark, trailRows);
   if (shiftMarks) {
@@ -1330,30 +1343,37 @@ void Terminal::clear()
 
 void Terminal::cls()
 {
-  unsigned endPos = m_pos;
   tputs(m_clear);
-  m_pos = 0;
-  redraw_();
-  mv(endPos);
+  redraw();
 }
 
 void Terminal::redraw()
 {
   unsigned pos = m_pos;
   mv(0);
-  redraw_();
+  redraw_(0, m_line.width());
   mv(pos);
 }
 
-void Terminal::redraw_()
+void Terminal::redraw(unsigned endPos, bool high)
 {
-  unsigned lastBOLPos = m_line.width();
-  lastBOLPos -= (lastBOLPos % m_width);
-  unsigned bolPos = 0;
+  if (ZuUnlikely(m_pos >= endPos)) return;
+  if (high && m_smso) tputs(m_smso);
+  redraw_(m_pos, endPos);
+  m_pos = endPos;
+  if (high && m_rmso) tputs(m_rmso);
+}
+
+void Terminal::redraw_(unsigned pos, unsigned endPos)
+{
+  unsigned endBOLPos = endPos - (endPos % m_width);
   // out/scroll all but last row
-  while (bolPos < lastBOLPos) outScroll(bolPos += m_width);
+  if (pos < endBOLPos) {
+    pos -= (pos % m_width);
+    do { outScroll(pos += m_width); } while (pos < endBOLPos);
+  }
   // output last row
-  if (bolPos < m_line.width()) outClr(m_line.width());
+  if (pos < endPos) outClr(endPos);
 }
 
 // overwrite string

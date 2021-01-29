@@ -50,8 +50,9 @@ namespace Zrl {
 
 namespace Op { // line editor operation codes
   ZtEnumerate(
-    Nop,		// sentinel
+    Null,		// unused
 
+    Nop,		// sentinel, often used with keystroke redirection
     Mode,		// switch mode
     Push,		// push mode (and switch)
     Pop,		// pop mode
@@ -86,11 +87,13 @@ namespace Op { // line editor operation codes
     FwdWordEnd,
     RevWordEnd,
 
+    SetMark,		// set glyph mark
     MvMark,		// move to glyph mark
 
     Insert,		// insert/overwrite toggle
     // Delete,		// delete forward	// Right|Del
 
+    ClrHigh,		// clear highlight
     Clear,		// clear screen and redraw line
     Redraw,		// redraw line
 
@@ -110,7 +113,6 @@ namespace Op { // line editor operation codes
     UpperWord,		// upper-case word
     CapWord,		// capitalize word (rotates through ucfirst, uc, lc)
 
-    SetMark,		// set glyph mark
     XchMark,		// swap cursor with glyph mark
 
     DigitArg,		// add digit to accumulating argument (needs KeepArg)
@@ -154,12 +156,12 @@ namespace Op { // line editor operation codes
     Mv	 	= 0x0100,	// move cursor
     Del	 	= 0x0200,	// delete span (implies move)
     Copy	= 0x0400,	// copy span (cut is Del + Copy)
+    High	= 0x0800,	// highlight (standout)
 
-    Unix	= 0x0800,	// a "Unix" word is white-space delimited
-    Arg		= 0x1000,	// variable argument
-    Reg		= 0x2000,	// variable register
+    // {Fwd,Rev}*{Word,WordEnd}
+    Unix	= 0x1000,	// a "Unix" word is white-space delimited
 
-    KeepArg	= 0x4000	// preserve argument
+    Redir	= 0x2000	// redirect keystroke
   };
 
   ZrlExtern void print_(uint32_t, ZmStream &);
@@ -182,16 +184,14 @@ public:
   Cmd(Cmd &&) = default;
   Cmd &operator =(Cmd &&) = default;
 
-  Cmd(uint32_t op) : m_value{op} { }
-  Cmd(uint64_t op, uint64_t arg) : m_value{op | (arg<<16)} { }
-  Cmd(uint64_t op, uint64_t arg, int32_t vkey) :
+  Cmd(uint64_t op, uint64_t arg = 0, int32_t vkey = -VKey::Null) :
       m_value{op | (arg<<16) | (static_cast<uint64_t>(vkey)<<32)} { }
 
   auto op() const { return m_value & 0xffffU; }
   auto arg() const { return (m_value>>16) & 0xffffU; }
   int32_t vkey() const { return m_value>>32; }
 
-  bool operator !() const { return !m_value; }
+  bool operator !() const { return !op(); }
   ZuOpBool
 
   int parse(ZuString, int off);
@@ -208,7 +208,7 @@ private:
 using CmdSeq = ZtArray<Cmd>;
 
 struct ZrlAPI Binding { // maps a vkey to a sequence of commands
-  int32_t	vkey = 0;
+  int32_t	vkey = -VKey::Null;
   CmdSeq	cmds;
 
   void print_(ZmStream &) const;
@@ -216,7 +216,7 @@ struct ZrlAPI Binding { // maps a vkey to a sequence of commands
   void print(ZmStream &s) const { print_(s); }
   friend ZuPrintFn ZuPrintType(Binding *);
 };
-struct Binding_KeyAccessor : public ZuAccessor<Binding *, int32_t> {
+struct Binding_KeyAccessor : public ZuAccessor<ZuPtr<Binding>, int32_t> {
   ZuInline static int32_t value(const Binding *b) { return b->vkey; }
 };
 
@@ -333,9 +333,12 @@ struct CmdContext {
   unsigned		startPos = 0;	// start position (following prompt)
   unsigned		mode = 0;	// current mode
   ZtArray<unsigned>	stack;		// mode stack
+  int32_t		redirVKey = -VKey::Null; // redirected keystroke
   Cmd			prevCmd;	// previous command
   unsigned		horizPos = 0;	// vertical motion position
   int			markPos = -1;	// glyph mark position
+  int			hiBegPos = -1;	// highlight begin position
+  int			hiEndPos = -1;	// highlight end position
 
   // numerical argument context
   unsigned		arg = 0;	// extant arg (survives mode changes)
@@ -392,6 +395,7 @@ struct Config {
   unsigned	histOffset = 0;		// initial history offset
   unsigned	maxStackDepth = 10;	// maximum mode stack depth
   unsigned	maxFileSize = 1<<20;	// maximum key map file size
+  unsigned	maxVKeyRedirs = 10;	// maximum keystroke redirects
 
   Config() = default;
   Config(const Config &) = default;
@@ -406,6 +410,7 @@ struct Config {
     histOffset = cf->getInt("histOffset", 0, UINT_MAX, false, 0);
     maxStackDepth = cf->getInt("maxStackDepth", 1, 100, false, 10);
     maxFileSize = cf->getInt("maxFileSize", 64<<10, 10<<20, false, 1<<20);
+    maxVKeyRedirs = cf->getInt("maxVKeyRedirs", 1, 100, false, 10);
   }
 };
 
@@ -459,8 +464,10 @@ public:
 
 private:
   bool process(int32_t vkey);
-  bool process_(const CmdSeq &cmds, int32_t vkey);
+  bool process_(int32_t vkey);
+  bool process__(const CmdSeq &cmds, int32_t vkey);
 
+  bool cmdNull(Cmd, int32_t);
   bool cmdNop(Cmd, int32_t);
 
   bool cmdMode(Cmd, int32_t);
@@ -505,6 +512,7 @@ private:
 
   bool cmdInsert(Cmd, int32_t);
 
+  bool cmdClrHigh(Cmd, int32_t);
   bool cmdClear(Cmd, int32_t);
   bool cmdRedraw(Cmd, int32_t);
 

@@ -31,12 +31,6 @@ ZrlExtern void print_(uint32_t op, ZmStream &s)
   if (op & Del) { if (op & Mv) s << '|'; s << "Del"; }
   if (op & Copy) { if (op & (Mv|Del)) s << '|'; s << "Copy"; }
   if (op & Unix) { if (op & (Mv|Del|Copy)) s << '|'; s << "Unix"; }
-  if (op & Arg) { if (op & (Mv|Del|Copy|Unix)) s << '|'; s << "Arg"; }
-  if (op & Reg) { if (op & (Mv|Del|Copy|Unix|Arg)) s << '|'; s << "Reg"; }
-  if (op & KeepArg) {
-    if (op & (Mv|Del|Copy|Unix|Arg|Reg)) s << '|';
-    s << "KeepArg";
-  }
   s << ']';
 }
 }
@@ -71,10 +65,12 @@ Editor::Editor()
   m_cmdFn[Op::FwdWordEnd] = &Editor::cmdFwdWordEnd;
   m_cmdFn[Op::RevWordEnd] = &Editor::cmdRevWordEnd;
 
+  m_cmdFn[Op::SetMark] = &Editor::cmdSetMark;
   m_cmdFn[Op::MvMark] = &Editor::cmdMvMark;
 
   m_cmdFn[Op::Insert] = &Editor::cmdInsert;
 
+  m_cmdFn[Op::ClrHigh] = &Editor::cmdClrHigh;
   m_cmdFn[Op::Clear] = &Editor::cmdClear;
   m_cmdFn[Op::Redraw] = &Editor::cmdRedraw;
 
@@ -94,7 +90,6 @@ Editor::Editor()
   m_cmdFn[Op::UpperWord] = &Editor::cmdUpperWord;
   m_cmdFn[Op::CapWord] = &Editor::cmdCapWord;
 
-  m_cmdFn[Op::SetMark] = &Editor::cmdSetMark;
   m_cmdFn[Op::XchMark] = &Editor::cmdXchMark;
 
   m_cmdFn[Op::DigitArg] = &Editor::cmdDigitArg;
@@ -126,8 +121,9 @@ Editor::Editor()
 
   m_defltMap = new Map{ "default" };
 
-  m_defltMap->addMode(0, true);
-  m_defltMap->addMode(1, true);
+  m_defltMap->addMode(0, true);	// normal
+  m_defltMap->addMode(1, true);	// literal
+  m_defltMap->addMode(2, true);	// highlit span
 
   m_defltMap->bind(0, -VKey::Default, { { Op::Glyph } });
 
@@ -155,6 +151,32 @@ Editor::Editor()
   m_defltMap->bind(0, -VKey::Down, { { Op::Down | Op::Mv } });
   m_defltMap->bind(0, -VKey::Left, { { Op::Left | Op::Mv } });
   m_defltMap->bind(0, -VKey::Right, { { Op::Right | Op::Mv } });
+
+  m_defltMap->bind(0, -(VKey::Left | VKey::Shift), {
+    { Op::RevWord | Op::High },
+    { Op::Push, 2 }
+  });
+  m_defltMap->bind(0, -(VKey::Right | VKey::Shift), {
+    { Op::FwdWord | Op::High },
+    { Op::Push, 2 }
+  });
+  m_defltMap->bind(2, -VKey::Default, {
+    { Op::ClrHigh },
+    { Op::Pop | Op::Redir }
+  });
+
+  m_defltMap->bind(0, -(VKey::Left | VKey::Ctrl), {
+    { Op::RevWord | Op::Mv }
+  });
+  m_defltMap->bind(0, -(VKey::Right | VKey::Ctrl), {
+    { Op::FwdWord | Op::Mv }
+  });
+  m_defltMap->bind(0, -(VKey::Left | VKey::Alt), {
+    { Op::RevWord | Op::Unix | Op::Mv }
+  });
+  m_defltMap->bind(0, -(VKey::Right | VKey::Alt), {
+    { Op::FwdWord | Op::Unix | Op::Mv }
+  });
 
   m_defltMap->bind(0, -VKey::Home, { { Op::Home | Op::Mv } });
   m_defltMap->bind(0, -VKey::End, { { Op::End | Op::Mv } });
@@ -224,11 +246,14 @@ int VKey_parse(int32_t &vkey_, ZuString s, int off)
 void Cmd::print_(ZmStream &s) const
 {
   s << Op::print(op());
-  if (m_value>>16) {
+  if (arg() || vkey() != -VKey::Null) {
     s << '(';
     if (auto v = arg()) s << ZuBoxed(v);
-    s << ", ";
-    if (auto v = vkey()) s << VKey::print(v);
+    {
+      auto v = vkey();
+      if (v != -VKey::Null)
+      s << ", " << VKey::print(v);
+    }
     s << ')';
   }
 }
@@ -250,9 +275,6 @@ int Cmd::parse(ZuString s, int off)
       else if (c[1] == "Del") m_value |= Op::Del;
       else if (c[1] == "Copy") m_value |= Op::Copy;
       else if (c[1] == "Unix") m_value |= Op::Unix;
-      else if (c[1] == "Arg") m_value |= Op::Arg;
-      else if (c[1] == "Reg") m_value |= Op::Reg;
-      else if (c[1] == "KeepArg") m_value |= Op::KeepArg;
       else return -off;
       off += c[1].length();
       if (!ZtREGEX("\G\s*|").m(s, c, off)) break;
@@ -418,10 +440,11 @@ void Map_::bind(unsigned id, int vkey, CmdSeq cmds)
 {
   if (ZuUnlikely(modes.length() <= id)) modes.grow(id + 1);
   auto &mode = modes[id];
-  if (vkey == VKey::Default)
+  if (vkey == -VKey::Default)
     mode.cmds = ZuMv(cmds);
   else {
     if (!mode.bindings) mode.bindings = new Bindings{};
+    mode.bindings->del(vkey);
     mode.bindings->add(new Binding{vkey, ZuMv(cmds)});
   }
 }
@@ -544,27 +567,39 @@ void Editor::prompt(ZtArray<uint8_t> prompt)
 bool Editor::process(int32_t vkey)
 {
   if (!m_map) return false;
+  bool stop = false;
+  for (unsigned i = 0, n = m_config.maxVKeyRedirs; i < n; i++) {
+    m_context.redirVKey = -VKey::Null;
+    if (process_(vkey)) { stop = true; break; }
+    if ((vkey = m_context.redirVKey) == -VKey::Null) break;
+  }
+  m_context.clrArg();
+  return stop;
+}
+
+bool Editor::process_(int32_t vkey)
+{
   const auto &mode = m_map->modes[m_context.mode];
   if (mode.bindings)
     if (auto kv = mode.bindings->find(vkey))
-      return process_(kv->key()->cmds, vkey);
-  return process_(mode.cmds, m_tty.literal(vkey));
+      return process__(kv->key()->cmds, vkey);
+  return process__(mode.cmds, m_tty.literal(vkey));
 }
 
-bool Editor::process_(const CmdSeq &cmds, int32_t vkey)
+bool Editor::process__(const CmdSeq &cmds, int32_t vkey)
 {
   for (auto cmd : cmds) {
-    if (cmd.op() & Op::Arg)
+    if (!cmd.arg())
       if (auto arg = m_context.evalArg())
 	cmd = Cmd{cmd.op(), arg};
-    if (!(cmd.op() & Op::KeepArg)) m_context.clrArg();
     int32_t vkey_ = cmd.vkey();
-    if (!vkey_) vkey_ = vkey;
+    if (vkey_ == -VKey::Null) vkey_ = vkey;
     if (auto fn = m_cmdFn[cmd.op() & Op::Mask]) {
       bool stop = (this->*fn)(cmd, vkey_);
       m_context.prevCmd = cmd;
       if (stop) return true;
     }
+    if (cmd.op() & Op::Redir) m_context.redirVKey = vkey_;
   }
   if (m_tty.write() != Zi::OK) {
     m_app.end();
@@ -573,7 +608,8 @@ bool Editor::process_(const CmdSeq &cmds, int32_t vkey)
   return false;
 }
 
-bool Editor::cmdNop(Cmd, int32_t) { return false; } // unused
+bool Editor::cmdNull(Cmd, int32_t) { return false; } // unused
+bool Editor::cmdNop(Cmd, int32_t) { return false; }
 
 bool Editor::cmdMode(Cmd cmd, int32_t)
 {
@@ -681,7 +717,7 @@ void Editor::motion(
     unsigned begPos, unsigned endPos)
 {
   ZuArray<const uint8_t> s;
-  if (op & (Op::Copy | Op::Del)) s = substr(begin, end);
+  if (op & (Op::Copy | Op::Del | Op::High)) s = substr(begin, end);
   if (op & Op::Copy) {
     int index = m_context.register_;
     if (index >= 0)
@@ -700,8 +736,13 @@ void Editor::motion(
     }
     m_tty.mv(begPos);
     splice(begin, span, ZuArray<const uint8_t>{}, ZuUTFSpan{});
+  } else if (op & Op::High) {
+    m_tty.mv(begPos);
+    m_tty.redraw(endPos, true);
+    m_context.hiBegPos = begPos;
+    m_context.hiEndPos = endPos;
   }
-  if (op & (Op::Del | Op::Mv)) if (!align(pos)) m_tty.mv(pos);
+  if (!align(pos)) m_tty.mv(pos);
 }
 
 // maintains consistent horizontal position during vertical movement
@@ -733,7 +774,11 @@ bool Editor::cmdUp(Cmd cmd, int32_t vkey)
   m_context.horizPos = pos;
   pos = line.align(pos);
   unsigned begin = line.position(pos).mapping();
-  if (begin < end) motion(cmd.op(), pos, begin, end, pos, endPos);
+  if (begin < end) {
+    unsigned begPos = pos;
+    if (!(cmd.op() & Op::Mv)) pos = m_tty.pos();
+    motion(cmd.op(), pos, begin, end, begPos, endPos);
+  }
   return false;
 }
 
@@ -763,7 +808,11 @@ bool Editor::cmdDown(Cmd cmd, int32_t vkey)
   m_context.horizPos = pos;
   pos = line.align(pos);
   unsigned end = line.position(pos).mapping();
-  if (begin < end) motion(cmd.op(), pos, begin, end, begPos, pos);
+  if (begin < end) {
+    unsigned endPos = pos;
+    if (!(cmd.op() & Op::Mv)) pos = m_tty.pos();
+    motion(cmd.op(), pos, begin, end, begPos, endPos);
+  }
   return false;
 }
 
@@ -781,7 +830,11 @@ bool Editor::cmdLeft(Cmd cmd, int32_t)
       if (begin < start) begin = start;
     } while (begin > start && --arg > 0);
     pos = line.byte(begin).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end, pos, endPos);
+    if (begin < end) {
+      unsigned begPos = pos;
+      if (!(cmd.op() & Op::Mv)) pos = m_tty.pos();
+      motion(cmd.op(), pos, begin, end, begPos, endPos);
+    }
   }
   return false;
 }
@@ -800,7 +853,11 @@ bool Editor::cmdRight(Cmd cmd, int32_t)
       if (end > final_) end = final_;
     } while (end < final_ && --arg > 0);
     pos = line.byte(end).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end, begPos, pos);
+    if (begin < end) {
+      unsigned endPos = pos;
+      if (!(cmd.op() & Op::Mv)) pos = m_tty.pos();
+      motion(cmd.op(), pos, begin, end, begPos, endPos);
+    }
   }
   return false;
 }
@@ -813,7 +870,11 @@ bool Editor::cmdHome(Cmd cmd, int32_t vkey)
   unsigned endPos = pos;
   pos = m_context.startPos;
   unsigned begin = line.position(pos).mapping();
-  if (begin < end) motion(cmd.op(), pos, begin, end, pos, endPos);
+  if (begin < end) {
+    unsigned begPos = pos;
+    if (!(cmd.op() & Op::Mv)) pos = m_tty.pos();
+    motion(cmd.op(), pos, begin, end, begPos, endPos);
+  }
   return false;
 }
 
@@ -825,7 +886,11 @@ bool Editor::cmdEnd(Cmd cmd, int32_t vkey)
   unsigned begPos = pos;
   pos = line.width();
   unsigned end = line.length();
-  if (begin < end) motion(cmd.op(), pos, begin, end, begPos, pos);
+  if (begin < end) {
+    unsigned endPos = pos;
+    if (!(cmd.op() & Op::Mv)) pos = m_tty.pos();
+    motion(cmd.op(), pos, begin, end, begPos, endPos);
+  }
   return false;
 }
 
@@ -845,8 +910,11 @@ bool Editor::cmdFwdWord(Cmd cmd, int32_t)
 	end = line.fwdWord(end);
       if (end > final_) end = final_;
     } while (end < final_ && --arg > 0);
-    pos = line.byte(end).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end, begPos, pos);
+    if (begin < end) {
+      unsigned endPos = line.byte(end).mapping();
+      if (cmd.op() & Op::Mv) pos = endPos;
+      motion(cmd.op(), pos, begin, end, begPos, endPos);
+    }
   }
   return false;
 }
@@ -867,8 +935,11 @@ bool Editor::cmdRevWord(Cmd cmd, int32_t)
 	begin = line.revWord(begin);
       if (begin < start) begin = start;
     } while (begin > start && --arg > 0);
-    pos = line.byte(begin).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end, pos, endPos);
+    if (begin < end) {
+      unsigned begPos = line.byte(begin).mapping();
+      if (cmd.op() & Op::Mv) pos = begPos;
+      motion(cmd.op(), pos, begin, end, begPos, endPos);
+    }
   }
   return false;
 }
@@ -889,8 +960,11 @@ bool Editor::cmdFwdWordEnd(Cmd cmd, int32_t)
 	end = line.fwdWordEnd(end);
       if (end > final_) end = final_;
     } while (end < final_ && --arg > 0);
-    pos = line.byte(end).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end, begPos, pos);
+    if (begin < end) {
+      unsigned endPos = line.byte(end).mapping();
+      if (cmd.op() & Op::Mv) pos = endPos;
+      motion(cmd.op(), pos, begin, end, begPos, endPos);
+    }
   }
   return false;
 }
@@ -911,12 +985,20 @@ bool Editor::cmdRevWordEnd(Cmd cmd, int32_t)
 	begin = line.revWordEnd(begin);
       if (begin < start) begin = start;
     } while (begin > start && --arg > 0);
-    pos = line.byte(begin).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end, pos, endPos);
+    if (begin < end) {
+      unsigned begPos = line.byte(begin).mapping();
+      if (cmd.op() & Op::Mv) pos = begPos;
+      motion(cmd.op(), pos, begin, end, begPos, endPos);
+    }
   }
   return false;
 }
 
+bool Editor::cmdSetMark(Cmd, int32_t)
+{
+  m_context.markPos = m_tty.pos();
+  return false;
+}
 bool Editor::cmdMvMark(Cmd cmd, int32_t vkey)
 {
   unsigned pos = m_tty.pos();
@@ -940,7 +1022,10 @@ bool Editor::cmdMvMark(Cmd cmd, int32_t vkey)
       pos -= posIndex.off();
       end = posIndex.mapping();
     }
-    if (begin < end) motion(cmd.op(), pos, begin, end, begPos, endPos);
+    if (begin < end) {
+      if (!(cmd.op() & Op::Mv)) pos = m_tty.pos();
+      motion(cmd.op(), pos, begin, end, begPos, endPos);
+    }
   }
   return false;
 }
@@ -951,8 +1036,26 @@ bool Editor::cmdInsert(Cmd, int32_t)
   return false;
 }
 
-bool Editor::cmdClear(Cmd, int32_t) { m_tty.cls(); return false; }
-bool Editor::cmdRedraw(Cmd, int32_t) { m_tty.redraw(); return false; }
+bool Editor::cmdClrHigh(Cmd, int32_t)
+{
+  unsigned pos = m_tty.pos();
+  m_tty.mv(m_context.hiBegPos);
+  m_tty.redraw(m_context.hiEndPos, false);
+  m_context.hiBegPos = m_context.hiEndPos = -1;
+  m_tty.mv(pos);
+  return false;
+}
+
+bool Editor::cmdClear(Cmd, int32_t)
+{
+  m_tty.cls();
+  return false;
+}
+bool Editor::cmdRedraw(Cmd, int32_t)
+{
+  m_tty.redraw();
+  return false;
+}
 
 bool Editor::cmdPaste(Cmd, int32_t)
 {
@@ -1229,11 +1332,6 @@ bool Editor::cmdCapWord(Cmd, int32_t)
   return false;
 }
 
-bool Editor::cmdSetMark(Cmd, int32_t)
-{
-  m_context.markPos = m_tty.pos();
-  return false;
-}
 bool Editor::cmdXchMark(Cmd, int32_t)
 {
   int pos = m_context.markPos;
@@ -1276,8 +1374,11 @@ bool Editor::cmdFwdGlyphSrch(Cmd cmd, int32_t vkey)
       end = line.fwdSearch(end, vkey);
       if (end > final_) end = final_;
     } while (end < final_ && --arg > 0);
-    pos = line.byte(end).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end, begPos, pos);
+    if (begin < end) {
+      unsigned endPos = line.byte(end).mapping();
+      if (cmd.op() & Op::Mv) pos = endPos;
+      motion(cmd.op(), pos, begin, end, begPos, endPos);
+    }
   }
   return false;
 }
@@ -1295,8 +1396,11 @@ bool Editor::cmdRevGlyphSrch(Cmd cmd, int32_t vkey)
       begin = line.revSearch(begin, vkey);
       if (begin < start) begin = start;
     } while (begin > start && --arg > 0);
-    pos = line.byte(begin).mapping();
-    if (begin < end) motion(cmd.op(), pos, begin, end, pos, endPos);
+    if (begin < end) {
+      unsigned begPos = line.byte(begin).mapping();
+      if (cmd.op() & Op::Mv) pos = begPos;
+      motion(cmd.op(), pos, begin, end, begPos, endPos);
+    }
   }
   return false;
 }

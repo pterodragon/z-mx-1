@@ -89,11 +89,11 @@ namespace Op { // line editor operation codes
 
     SetMark,		// set glyph mark
     MvMark,		// move to glyph mark
+    ClrHigh,		// clear highlight (can use Del and Copy flags)
 
     Insert,		// insert/overwrite toggle
     // Delete,		// delete forward	// Right|Del
 
-    ClrHigh,		// clear highlight
     Clear,		// clear screen and redraw line
     Redraw,		// redraw line
 
@@ -160,8 +160,10 @@ namespace Op { // line editor operation codes
 
     // {Fwd,Rev}*{Word,WordEnd}
     Unix	= 0x1000,	// a "Unix" word is white-space delimited
+    // {Fwd,Rev}*{WordEnd}
+    Past	= 0x2000,	// move past end
 
-    Redir	= 0x2000	// redirect keystroke
+    Redir	= 0x4000	// redirect keystroke
   };
 
   ZrlExtern void print_(uint32_t, ZmStream &);
@@ -336,9 +338,8 @@ struct CmdContext {
   int32_t		redirVKey = -VKey::Null; // redirected keystroke
   Cmd			prevCmd;	// previous command
   unsigned		horizPos = 0;	// vertical motion position
-  int			markPos = -1;	// glyph mark position
-  int			hiBegPos = -1;	// highlight begin position
-  int			hiEndPos = -1;	// highlight end position
+  int			markPos = -1;	// glyph mark / highlight begin pos.
+  int			highPos = -1;	// highlight end position
 
   // numerical argument context
   unsigned		arg = 0;	// extant arg (survives mode changes)

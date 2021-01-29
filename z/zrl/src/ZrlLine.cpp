@@ -127,14 +127,16 @@ unsigned Line::revWord(unsigned off) const
 }
 
 // forward to end of word, distinguishing alphanumeric + '_'
-unsigned Line::fwdWordEnd(unsigned off) const
+unsigned Line::fwdWordEnd(unsigned off, bool past) const
 {
   unsigned n = m_data.length();
   if (ZuUnlikely(!n)) return 0;
   if (ZuUnlikely(off >= n)) { off = n; goto eol; }
   off -= m_bytes[off].off();
-  off += m_bytes[off].len();
-  if (ZuUnlikely(off >= n)) { off = n; goto eol; }
+  if (!past) {
+    off += m_bytes[off].len();
+    if (ZuUnlikely(off >= n)) { off = n; goto eol; }
+  }
   if (isspace__(m_data[off])) {
     if (!fwd(off, n, [](char c) { return !isspace__(c); })) off = n;
   }
@@ -145,13 +147,15 @@ unsigned Line::fwdWordEnd(unsigned off) const
       off = n;
   }
 eol:
-  --off;
-  off -= m_bytes[off].off();
+  if (!past) {
+    --off;
+    off -= m_bytes[off].off();
+  }
   return off;
 }
 
 // backup to end of word, distinguishing alphanumeric + '_'
-unsigned Line::revWordEnd(unsigned off) const
+unsigned Line::revWordEnd(unsigned off, bool past) const
 {
   unsigned n = m_data.length();
   if (ZuUnlikely(!n)) return 0;
@@ -167,6 +171,10 @@ unsigned Line::revWordEnd(unsigned off) const
   if (isspace__(m_data[off])) {
 eol:
     if (!rev(off, [](char c) { return !isspace__(c); })) return 0;
+  }
+  if (past) {
+    off -= m_bytes[off].off();
+    off += m_bytes[off].len();
   }
   return off;
 }
@@ -204,7 +212,7 @@ unsigned Line::revUnixWord(unsigned off) const
 }
 
 // forward to end of whitespace-delimited word
-unsigned Line::fwdUnixWordEnd(unsigned off) const
+unsigned Line::fwdUnixWordEnd(unsigned off, bool past) const
 {
   unsigned n = m_data.length();
   if (ZuUnlikely(!n)) return 0;
@@ -217,13 +225,15 @@ unsigned Line::fwdUnixWordEnd(unsigned off) const
   }
   if (!fwd(off, n, [](char c) { return isspace__(c); })) off = n;
 eol:
-  --off;
-  off -= m_bytes[off].off();
+  if (!past) {
+    --off;
+    off -= m_bytes[off].off();
+  }
   return off;
 }
 
 // backup to end of whitespace-delimited word
-unsigned Line::revUnixWordEnd(unsigned off) const
+unsigned Line::revUnixWordEnd(unsigned off, bool past) const
 {
   unsigned n = m_data.length();
   if (ZuUnlikely(!n)) return 0;
@@ -235,6 +245,10 @@ unsigned Line::revUnixWordEnd(unsigned off) const
   }
 eol:
   if (!rev(off, [](char c) { return !isspace__(c); })) return 0;
+  if (past && off > 0) {
+    --off;
+    off -= m_bytes[off].off();
+  }
   return off;
 }
 

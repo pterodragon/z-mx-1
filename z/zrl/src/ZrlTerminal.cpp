@@ -1233,10 +1233,8 @@ void Terminal::splice(
 	    (m_ich || m_ich1 || (m_smir && m_rmir)))
 	  shiftRight = true; // shift right using insertions on each line
       }
-      // FIXME - issue with editing long wrapped line at beginning
       if (shiftLeft || shiftRight)
-	trailRows =
-	  ((endPos % m_width) + trailWidth + m_width - 1) / m_width; // #rows
+	trailRows = (trailWidth + m_width - 1) / m_width; // #rows
     }
   }
   if (trailRows) shiftMarks = ZuAlloca(shiftMarks, ShiftMark, trailRows);
@@ -1291,12 +1289,14 @@ void Terminal::splice(
       mvright(rightPos);
       outScroll(bolPos += m_width);
     }
-    if (bolPos < m_line.width() && line < trailRows) {
-      auto shiftMark = shiftMarks[line];
-      unsigned rightPos = m_line.byte(shiftMark.byte()).mapping();
-      del_(shiftMark.pos() - rightPos);
-      rightPos += m_line.position(rightPos).len();
-      mvright(rightPos);
+    if (bolPos < m_line.width()) {
+      if (line < trailRows) {
+	auto shiftMark = shiftMarks[line];
+	unsigned rightPos = m_line.byte(shiftMark.byte()).mapping();
+	del_(shiftMark.pos() - rightPos);
+	rightPos += m_line.position(rightPos).len();
+	mvright(rightPos);
+      }
       outClr(m_line.width());
     }
   } else if (shiftRight) {
@@ -1311,11 +1311,15 @@ void Terminal::splice(
       crnl();
       bolPos += m_width;
     }
-    if (bolPos < m_line.width() && line < trailRows) {
-      auto shiftMark = shiftMarks[line];
-      unsigned leftPos = m_line.byte(shiftMark.byte()).mapping();
-      smir = ins_(leftPos - shiftMark.pos(), smir);
-      outClr(leftPos);
+    if (bolPos < m_line.width()) {
+      if (line < trailRows) {
+	auto shiftMark = shiftMarks[line];
+	unsigned leftPos = m_line.byte(shiftMark.byte()).mapping();
+	smir = ins_(leftPos - shiftMark.pos(), smir);
+	outClr(leftPos);
+      } else {
+	outClr(m_line.width());
+      }
     }
     if (smir) tputs(m_rmir);
   } else {

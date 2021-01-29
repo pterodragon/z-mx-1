@@ -157,11 +157,11 @@ Editor::Editor()
     { Op::Push, 2 }
   });
   m_defltMap->bind(0, -(VKey::Right | VKey::Shift), {
-    { Op::FwdWord | Op::High },
+    { Op::FwdWordEnd | Op::Past | Op::High },
     { Op::Push, 2 }
   });
   m_defltMap->bind(2, -VKey::Default, {
-    { Op::ClrHigh },
+    { Op::ClrHigh | Op::Del },
     { Op::Pop | Op::Redir }
   });
 
@@ -664,6 +664,7 @@ bool Editor::cmdSigSusp(Cmd, int32_t) {
 
 bool Editor::cmdEnter(Cmd, int32_t)
 {
+  m_tty.mv(m_tty.line().width());
   m_tty.crnl_();
   m_tty.write();
   m_context.markPos = -1;
@@ -739,8 +740,8 @@ void Editor::motion(
   } else if (op & Op::High) {
     m_tty.mv(begPos);
     m_tty.redraw(endPos, true);
-    m_context.hiBegPos = begPos;
-    m_context.hiEndPos = endPos;
+    if (begPos != m_context.highPos) m_context.markPos = begPos;
+    if (endPos != m_context.markPos) m_context.highPos = endPos;
   }
   if (!align(pos)) m_tty.mv(pos);
 }
@@ -955,9 +956,9 @@ bool Editor::cmdFwdWordEnd(Cmd cmd, int32_t)
     int arg = cmd.arg();
     do {
       if (cmd.op() & Op::Unix)
-	end = line.fwdUnixWordEnd(end);
+	end = line.fwdUnixWordEnd(end, cmd.op() & Op::Past);
       else
-	end = line.fwdWordEnd(end);
+	end = line.fwdWordEnd(end, cmd.op() & Op::Past);
       if (end > final_) end = final_;
     } while (end < final_ && --arg > 0);
     if (begin < end) {
@@ -980,9 +981,9 @@ bool Editor::cmdRevWordEnd(Cmd cmd, int32_t)
     int arg = cmd.arg();
     do {
       if (cmd.op() & Op::Unix)
-	begin = line.revUnixWordEnd(begin);
+	begin = line.revUnixWordEnd(begin, cmd.op() & Op::Past);
       else
-	begin = line.revWordEnd(begin);
+	begin = line.revWordEnd(begin, cmd.op() & Op::Past);
       if (begin < start) begin = start;
     } while (begin > start && --arg > 0);
     if (begin < end) {
@@ -1036,13 +1037,15 @@ bool Editor::cmdInsert(Cmd, int32_t)
   return false;
 }
 
-bool Editor::cmdClrHigh(Cmd, int32_t)
+bool Editor::cmdClrHigh(Cmd cmd, int32_t)
 {
-  unsigned pos = m_tty.pos();
-  m_tty.mv(m_context.hiBegPos);
-  m_tty.redraw(m_context.hiEndPos, false);
-  m_context.hiBegPos = m_context.hiEndPos = -1;
-  m_tty.mv(pos);
+  const auto &line = m_tty.line();
+  motion(cmd.op() | Op::Mv,
+      m_tty.pos(),
+      line.position(m_context.markPos).mapping(),
+      line.position(m_context.highPos).mapping(),
+      m_context.markPos, m_context.highPos);
+  m_context.highPos = -1;
   return false;
 }
 
@@ -1175,17 +1178,15 @@ bool Editor::cmdTransWord(Cmd, int32_t)
   if (pos <= m_context.startPos) return false;
   unsigned start = line.position(m_context.startPos).mapping();
   unsigned rend = line.position(pos).mapping();
-  rend = line.fwdWordEnd(rend);
+  rend = line.fwdWordEnd(rend, true);
   unsigned rbegin = line.revWord(rend);
   unsigned mbegin = rbegin;
   do {
     if (mbegin <= start) return false;
-    mbegin = line.revWordEnd(mbegin);
+    mbegin = line.revWordEnd(mbegin, true);
   } while (!line.isword_(mbegin));
   unsigned lbegin = line.revWord(mbegin);
   if (lbegin <= start) return false;
-  mbegin = line.fwdGlyph(mbegin);
-  rend = line.fwdGlyph(rend);
   ZtArray<uint8_t> replace;
   replace.length(rend - lbegin);
   const auto &data = line.data();
@@ -1204,15 +1205,13 @@ bool Editor::cmdTransUnixWord(Cmd, int32_t)
   if (pos <= m_context.startPos) return false;
   unsigned start = line.position(m_context.startPos).mapping();
   unsigned rend = line.position(pos).mapping();
-  rend = line.fwdUnixWordEnd(rend);
+  rend = line.fwdUnixWordEnd(rend, true);
   unsigned rbegin = line.revUnixWord(rend);
   if (rbegin <= start) return false;
-  unsigned mbegin = line.revUnixWordEnd(rbegin);
+  unsigned mbegin = line.revUnixWordEnd(rbegin, true);
   if (mbegin <= start) return false;
   unsigned lbegin = line.revUnixWord(mbegin);
   if (lbegin <= start) return false;
-  mbegin = line.fwdGlyph(mbegin);
-  rend = line.fwdGlyph(rend);
   ZtArray<uint8_t> replace;
   replace.length(rend - lbegin);
   const auto &data = line.data();
@@ -1233,10 +1232,9 @@ void Editor::transformWord(TransformWordFn fn, void *fnContext)
   unsigned start = line.position(m_context.startPos).mapping();
   unsigned end = line.position(pos).mapping();
   if (!line.isword_(end)) return;
-  end = line.fwdWordEnd(end);
+  end = line.fwdWordEnd(end, true);
   unsigned begin = line.revWord(end);
   if (begin <= start) return;
-  end = line.fwdGlyph(end);
   ZtArray<uint8_t> replace;
   replace.length(end - begin);
   const auto &data = line.data();
@@ -1413,10 +1411,9 @@ void Editor::initComplete()
   if (pos == line.width()) pos = line.align(pos - 1);
   unsigned start = line.position(m_context.startPos).mapping();
   unsigned end = line.position(pos).mapping();
-  end = line.fwdUnixWordEnd(end);
+  end = line.fwdUnixWordEnd(end, true);
   unsigned begin = line.revUnixWord(end);
   if (begin < start) begin = start;
-  end = line.fwdGlyph(end);
   if (end < begin) end = begin;
   m_context.compPrefixOff = begin;
   m_context.compPrefixEnd = m_context.compEnd = end;

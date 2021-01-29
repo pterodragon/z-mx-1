@@ -104,12 +104,12 @@ public:
   unsigned revGlyph(unsigned off) const; // backup glyph
   unsigned fwdWord(unsigned off) const; // forward word
   unsigned revWord(unsigned off) const; // backup word
-  unsigned fwdWordEnd(unsigned off) const; // forward to end of word
-  unsigned revWordEnd(unsigned off) const; // backup to end of previous word
+  unsigned fwdWordEnd(unsigned off, bool past) const; // forward to end ''
+  unsigned revWordEnd(unsigned off, bool past) const; // backup to end ''
   unsigned fwdUnixWord(unsigned off) const; // forward "Unix" word
   unsigned revUnixWord(unsigned off) const; // backup ''
-  unsigned fwdUnixWordEnd(unsigned off) const; // forward to end of ''
-  unsigned revUnixWordEnd(unsigned off) const; // backup to end of ''
+  unsigned fwdUnixWordEnd(unsigned off, bool past) const; // forward to end ''
+  unsigned revUnixWordEnd(unsigned off, bool past) const; // backup to end ''
 
   // glyph search within line - returns (adjusted) origin if not found
   unsigned fwdSearch(unsigned off, uint32_t glyph) const; // forward search

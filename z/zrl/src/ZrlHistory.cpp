@@ -38,7 +38,7 @@ void History::save(unsigned i, ZuString s)
       }
   }
   unsigned j = i % m_max;
-  if (j >= m_data.length()) m_data.grow(j + 1);
+  m_data.grow(j + 1);
   m_data[j] = s;
 }
 

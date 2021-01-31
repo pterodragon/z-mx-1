@@ -297,16 +297,14 @@ void Line::reflow(unsigned off, unsigned dwidth)
   m_bytes.grow(len);
   m_positions.grow(len);
 
-  unsigned pwidth, pos;
+  unsigned pos;
 
   if (!off) {
-    pwidth = 0;
     pos = 0;
   } else {
     if (auto byte = this->byte(off - 1)) {
       pos = byte.mapping();
-      pwidth = position(pos).len();
-      pos += pwidth;
+      pos += position(pos).len();
     }
   }
 
@@ -330,8 +328,9 @@ void Line::reflow(unsigned off, unsigned dwidth)
       m_positions[pos + i] = Index{off, gwidth, i};
     off += glen;
     pos += gwidth;
-    pwidth = gwidth;
   }
+  m_bytes.length(off);
+  m_positions.length(pos);
 }
 
 } // namespace Zrl

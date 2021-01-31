@@ -149,7 +149,7 @@ public:
   T *ptr_() const { return m_object; }
 
   template <typename O = T>
-  ZuInline typename MatchZuPtr<ZuPtr<O>, O *>::T mvptr() {
+  ZuInline typename MatchZuPtr<ZuPtr<O>, O *>::T release() {
     auto ptr = static_cast<O *>(m_object);
     m_object = nullptr;
     return ptr;

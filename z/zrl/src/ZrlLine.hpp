@@ -52,27 +52,27 @@ public:
     ~Index() = default;
 
     Index(unsigned index, unsigned len, unsigned off) :
-	m_value{(index<<5U) | ((len - 1)<<3U) | (off<<1U)} { }
+	m_value{(index<<5) | ((len - 1)<<3) | (off<<1)} { }
     Index(unsigned index, unsigned len, unsigned off, bool padding) :
-	m_value{(index<<5U) | ((len - 1)<<3U) | (off<<1U) | padding} { }
+	m_value{(index<<5) | ((len - 1)<<3) | (off<<1) | padding} { }
 
-    bool operator !() const { return (m_value & 0x1fU) == 4U; }
+    bool operator !() const { return (m_value & 0x1f) == 4; }
     ZuOpBool
 
     // mapping() maps display positions <-> byte offsets
-    unsigned mapping() const { return m_value>>5U; }
+    unsigned mapping() const { return m_value>>5; }
     // len() returns the number of elements (bytes, positions) within the glyph
-    unsigned len() const { return ((m_value>>3U) & 0x3U) + 1; }
+    unsigned len() const { return ((m_value>>3) & 0x3) + 1; }
     // off() returns the offset of this element within the glyph
-    unsigned off() const { return (m_value>>1U) & 0x3U; }
+    unsigned off() const { return (m_value>>1) & 0x3; }
     // padding is only used when indexing display positions, to indicate
     // empty display positions at the right edge due to wrapping
     // full-width glyphs around to the next row; padding is unused
     // when indexing UTF8 byte data
-    bool padding() const { return m_value & 0x1U; }
+    bool padding() const { return m_value & 0x1; }
 
   private:
-    uint32_t	m_value = 4U; // sentinel null value
+    uint32_t	m_value = 4; // sentinel null value
   };
 
   void clear();

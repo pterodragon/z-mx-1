@@ -101,7 +101,7 @@ loop:
   new (this_->m_actions.push()) Action{};
 matched:
   if (!(c = *++s)) {
-    if (this_->m_actions[i].vkey) return false;
+    if (this_->m_actions[i].vkey != -VKey::Null) return false;
     this_->m_actions[i].vkey = -vkey;
     return true;
   }
@@ -419,8 +419,6 @@ void Terminal::open_()
   addVKey("kDC7", nullptr, VKey::Delete | VKey::Ctrl | VKey::Alt);
   addVKey("kDC8", nullptr, VKey::Delete | VKey::Shift | VKey::Ctrl | VKey::Alt);
 
-  m_nextVKMatch = m_vkeyMatch.ptr();
-
   // set up I/O multiplexer (epoll)
   if ((m_epollFD = epoll_create(2)) < 0) {
     ZrlError("epoll_create", Zi::IOError, ZeLastError);
@@ -558,7 +556,7 @@ void Terminal::start_()
   // ntermios.c_cflag &= ~CSIZE;
   // ntermios.c_cflag |= CS8;
   // ~(BRKINT | INPCK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
-  m_ntermios.c_iflag &= ~(ISTRIP | INLCR | IGNCR | ICRNL);
+  m_ntermios.c_iflag &= ~(ISTRIP | INLCR | IGNCR | ICRNL | IXON);
   m_ntermios.c_lflag &= ~(ICANON | ECHO | IEXTEN | ISIG);
   m_ntermios.c_oflag &= ~(OPOST | ONLCR | OCRNL | ONOCR | ONLRET);
   m_ntermios.c_cc[VMIN] = 1;
@@ -600,9 +598,6 @@ void Terminal::stop_()
   write();
 
   clear();
-
-  m_nextVKInterval = -1;
-  m_nextVKMatch = m_vkeyMatch.ptr();
 
   if (m_fd < 0) return;
 
@@ -672,13 +667,14 @@ void Terminal::resized()
 
 void Terminal::read()
 {
+  int timeout = -1;
   struct epoll_event ev;
-  int32_t key;
+  const VKeyMatch *nextVKMatch = m_vkeyMatch.ptr();
   ZuArrayN<uint8_t, 4> utf;
   int utfn = 0;
   ZtArray<int32_t> pending;
   for (;;) {
-    int r = epoll_wait(m_epollFD, &ev, 1, m_nextVKInterval);
+    int r = epoll_wait(m_epollFD, &ev, 1, timeout);
     if (r < 0) {
       ZeError e{errno};
       if (e.errNo() == EINTR || e.errNo() == EAGAIN)
@@ -688,19 +684,17 @@ void Terminal::read()
       goto stop;
     }
     if (!r) { // timeout
+      timeout = -1;
+      nextVKMatch = m_vkeyMatch.ptr();
       for (auto key : pending) if (m_keyFn(key)) goto stop;
+      pending.clear();
       if (utfn && utf) {
 	uint32_t u = 0;
-	if (ZuUTF8::in(utf.data(), utf.length(), u)) {
-	  key = u;
-	  if (m_keyFn(key)) goto stop;
-	}
+	if (ZuUTF8::in(utf.data(), utf.length(), u))
+	  if (m_keyFn(u)) goto stop;
+	utf.clear();
+	utfn = 0;
       }
-      m_nextVKInterval = -1;
-      utf.clear();
-      utfn = 0;
-      m_nextVKMatch = m_vkeyMatch.ptr();
-      pending.clear();
       continue;
     }
     if (ZuLikely(ev.data.u64 == 3)) {
@@ -729,39 +723,35 @@ void Terminal::read()
 	goto stop;
       }
     }
-    key = c;
     if (!utfn) {
-      if (auto action = m_nextVKMatch->match(key)) {
+      if (auto action = nextVKMatch->match(c)) {
 	if (action->next) {
-	  m_nextVKInterval = m_vkeyInterval;
-	  m_nextVKMatch = action->next.ptr<VKeyMatch>();
-	  if (action->vkey) {
-	    pending.length(1);
-	    pending[0] = action->vkey;
-	  } else
+	  timeout = m_vkeyInterval;
+	  nextVKMatch = action->next.ptr<VKeyMatch>();
+	  if (action->vkey != -VKey::Null)
+	    pending = { action->vkey };
+	  else
 	    pending << c;
 	  continue;
 	}
-	m_nextVKMatch = m_vkeyMatch.ptr();
+	timeout = -1;
+	nextVKMatch = m_vkeyMatch.ptr();
 	pending.clear();
-	key = action->vkey;
-	utfn = 1;
-      } else {
-	if (!utf8_in() || !(utfn = ZuUTF8::in(&c, 4))) utfn = 1;
+	m_keyFn(action->vkey);
+	continue;
       }
+      timeout = -1;
+      nextVKMatch = m_vkeyMatch.ptr();
+      for (auto vkey : pending) if (m_keyFn(vkey)) goto stop;
+      pending.clear();
+      if (!utf8_in() || !(utfn = ZuUTF8::in(&c, 4))) utfn = 1;
     }
-    if (--utfn > 0) {
-      utf << c;
-      continue;
-    }
-    if (utf) {
-      utf << c;
-      uint32_t u = 0;
-      ZuUTF8::in(utf.data(), utf.length(), u);
-      utf.clear();
-      key = u;
-    }
-    if (m_keyFn(key)) goto stop;
+    utf << c;
+    if (--utfn > 0) continue;
+    uint32_t u = 0;
+    if (ZuUTF8::in(utf.data(), utf.length(), u))
+      if (m_keyFn(u)) goto stop;
+    utf.clear();
   }
 stop:
   stop_();
@@ -772,7 +762,7 @@ void Terminal::addCtrlKey(char c, int32_t vkey)
   if (c) m_vkeyMatch->add(c, vkey);
 }
 
-void Terminal::addVKey(const char *cap, const char *deflt, int vkey)
+void Terminal::addVKey(const char *cap, const char *deflt, int32_t vkey)
 {
   const char *ent;
   if (!(ent = tigetstr(cap))) ent = deflt;
@@ -1213,7 +1203,7 @@ void Terminal::splice(
 {
   ZmAssert(off == m_line.position(m_pos).mapping());
 
-  unsigned endPos = m_pos + rspan.width();
+  unsigned endPos = m_pos + span.width();
   unsigned endBOLPos = endPos - (endPos % m_width);
   bool shiftLeft = false, shiftRight = false;
   ShiftMark *shiftMarks = nullptr;
@@ -1251,14 +1241,13 @@ void Terminal::splice(
       static_cast<int>(rspan.inLen()) - static_cast<int>(span.inLen());
     unsigned bolPos = endBOLPos;
     unsigned line = 0;
-    if (bolPos < m_pos) bolPos = m_pos;
     while (bolPos < m_line.width() && line < trailRows) {
       if (shiftLeft) {
 	unsigned eolPos = m_line.align(bolPos + m_width - 1);
 	shiftMarks[line++] = ShiftMark{
 	  m_line.position(eolPos).mapping() + shiftOff, eolPos};
       } else {
-	unsigned pos = (bolPos < m_pos) ? m_pos : bolPos;
+	unsigned pos = bolPos < endPos ? endPos : bolPos;
 	shiftMarks[line++] = ShiftMark{
 	  m_line.position(pos).mapping() + shiftOff, pos};
       }

@@ -156,14 +156,15 @@ namespace Op { // line editor operation codes
     Mv	 	= 0x0100,	// move cursor
     Del	 	= 0x0200,	// delete span (implies move)
     Copy	= 0x0400,	// copy span (cut is Del + Copy)
-    High	= 0x0800,	// highlight (standout)
+    Draw	= 0x0800,	// (re)draw span
+    High	= 0x1000,	// highlight (standout) (implies Draw)
 
     // {Fwd,Rev}*{Word,WordEnd}
-    Unix	= 0x1000,	// a "Unix" word is white-space delimited
+    Unix	= 0x2000,	// a "Unix" word is white-space delimited
     // {Fwd,Rev}*{WordEnd}
-    Past	= 0x2000,	// move past end
+    Past	= 0x4000,	// move past end
 
-    Redir	= 0x4000	// redirect keystroke
+    Redir	= 0x8000	// redirect keystroke
   };
 
   ZrlExtern void print_(uint32_t, ZmStream &);
@@ -233,7 +234,6 @@ struct Bindings : public Bindings_ {
 
 // line editor mode
 struct Mode {
-  CmdSeq		cmds;		// default command sequence
   ZmRef<Bindings>	bindings;	// vkey -> command sequence bindings
   bool			edit = false;	// edit mode flag
 };
@@ -322,9 +322,9 @@ public:
   }
 
 private:
-  ZuArrayN<Register, 39>	m_array;
-  unsigned			m_offset = 0;	// mod10 offset
-  unsigned			m_count = 0;
+  Register	m_array[39];
+  unsigned	m_offset = 0;	// mod10 offset
+  unsigned	m_count = 0;
 };
 
 // command execution context

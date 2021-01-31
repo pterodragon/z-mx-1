@@ -61,7 +61,8 @@ namespace VKey {
     // terminal driver events and control keys (from termios)
     _,			// unused - overlaps with ^@ when negated
     Null,		// sentinel
-    Default,		// default key (wildcard for key bindings)
+    Any,		// any non-Fn key (wildcard for bindings)
+    AnyFn,		// any Fn key
 
     EndOfFile,		// ^D EOF - causes stop
 
@@ -99,6 +100,8 @@ namespace VKey {
     Alt		= 0x0400	// ''
   };
 
+  inline bool isFn(int32_t vkey) { return vkey < 0 && ((-vkey) & Mask) >= Up; }
+
   ZrlExtern void print_(int32_t, ZmStream &);
   struct Print {
     int32_t key;
@@ -114,7 +117,7 @@ class ZrlAPI VKeyMatch : public ZuObject {
 public:
   struct ZrlAPI Action {
     ZuRef<ZuObject>	next;			// next VKeyMatch
-    int32_t		vkey = 0;		// virtual key
+    int32_t		vkey = -VKey::Null;	// virtual key
 
     void print_(ZmStream &) const;
     template <typename S> void print(S &s_) const { ZmStream s{s_}; print_(s); }
@@ -181,8 +184,7 @@ public:
   void ins(ZuString);		// insert string
   void del(unsigned n);		// delete n characters
 
-  // virtual keys
-  int32_t literal(int32_t vkey) const; // reverse lookup vkey -> character
+  int32_t literal(int32_t vkey) const;	// reverse lookup vkey -> character
 
   void dumpVKeys_(ZmStream &) const;
   struct DumpVKeys {
@@ -335,8 +337,6 @@ private:
 
   ZuRef<VKeyMatch>	m_vkeyMatch;			
   KeyFn			m_keyFn;
-  int			m_nextVKInterval = -1;
-  const VKeyMatch	*m_nextVKMatch = nullptr;
 
   // output state (cursor position is relative to beginning of current line)
 

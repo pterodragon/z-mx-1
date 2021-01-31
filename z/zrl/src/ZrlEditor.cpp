@@ -122,10 +122,12 @@ Editor::Editor()
   m_defltMap = new Map{ "default" };
 
   m_defltMap->addMode(0, true);	// normal
-  m_defltMap->addMode(1, true);	// literal
-  m_defltMap->addMode(2, true);	// highlit span
+  m_defltMap->addMode(1, true);	// literal next
+  m_defltMap->addMode(2, true);	// meta next
+  m_defltMap->addMode(3, true);	// highlit span
+  m_defltMap->addMode(4, true);	// highlit span - meta next
 
-  m_defltMap->bind(0, -VKey::Default, { { Op::Glyph } });
+  m_defltMap->bind(0, -VKey::Any, { { Op::Glyph } });
 
   m_defltMap->bind(0, -VKey::EndOfFile, { { Op::EndOfFile} });
 
@@ -145,25 +147,16 @@ Editor::Editor()
     { Op::Left | Op::Mv },
     { Op::Push, 1 }
   });
-  m_defltMap->bind(1, -VKey::Default, { { Op::OverGlyph }, { Op::Pop } });
+  m_defltMap->bind(1, -VKey::Any, { { Op::OverGlyph }, { Op::Pop } });
+  m_defltMap->bind(1, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
 
   m_defltMap->bind(0, -VKey::Up, { { Op::Up | Op::Mv } });
   m_defltMap->bind(0, -VKey::Down, { { Op::Down | Op::Mv } });
   m_defltMap->bind(0, -VKey::Left, { { Op::Left | Op::Mv } });
   m_defltMap->bind(0, -VKey::Right, { { Op::Right | Op::Mv } });
 
-  m_defltMap->bind(0, -(VKey::Left | VKey::Shift), {
-    { Op::RevWord | Op::High },
-    { Op::Push, 2 }
-  });
-  m_defltMap->bind(0, -(VKey::Right | VKey::Shift), {
-    { Op::FwdWordEnd | Op::Past | Op::High },
-    { Op::Push, 2 }
-  });
-  m_defltMap->bind(2, -VKey::Default, {
-    { Op::ClrHigh | Op::Del },
-    { Op::Pop | Op::Redir }
-  });
+  m_defltMap->bind(0, -VKey::Home, { { Op::Home | Op::Mv } });
+  m_defltMap->bind(0, -VKey::End, { { Op::End | Op::Mv } });
 
   m_defltMap->bind(0, -(VKey::Left | VKey::Ctrl), {
     { Op::RevWord | Op::Mv }
@@ -178,11 +171,113 @@ Editor::Editor()
     { Op::FwdWord | Op::Unix | Op::Mv }
   });
 
-  m_defltMap->bind(0, -VKey::Home, { { Op::Home | Op::Mv } });
-  m_defltMap->bind(0, -VKey::End, { { Op::End | Op::Mv } });
+  m_defltMap->bind(0, -(VKey::Up | VKey::Shift), {
+    { Op::Up | Op::Mv | Op::High },
+    { Op::Push, 3 }
+  });
+  m_defltMap->bind(0, -(VKey::Down | VKey::Shift), {
+    { Op::Down | Op::Mv | Op::High },
+    { Op::Push, 3 }
+  });
+  m_defltMap->bind(0, -(VKey::Left | VKey::Shift), {
+    { Op::Left | Op::Mv | Op::High },
+    { Op::Push, 3 }
+  });
+  m_defltMap->bind(0, -(VKey::Right | VKey::Shift), {
+    { Op::Right | Op::Mv | Op::High },
+    { Op::Push, 3 }
+  });
+  m_defltMap->bind(0, -(VKey::Left | VKey::Shift | VKey::Ctrl), {
+    { Op::RevWord | Op::Mv | Op::High },
+    { Op::Push, 3 }
+  });
+  m_defltMap->bind(0, -(VKey::Right | VKey::Shift | VKey::Ctrl), {
+    { Op::FwdWordEnd | Op::Past | Op::Mv | Op::High },
+    { Op::Push, 3 }
+  });
+  m_defltMap->bind(0, -(VKey::Left | VKey::Shift | VKey::Alt), {
+    { Op::RevWord | Op::Unix | Op::Mv | Op::High },
+    { Op::Push, 3 }
+  });
+  m_defltMap->bind(0, -(VKey::Right | VKey::Shift | VKey::Alt), {
+    { Op::FwdWordEnd | Op::Unix | Op::Past | Op::Mv | Op::High },
+    { Op::Push, 3 }
+  });
+  m_defltMap->bind(0, -(VKey::Home | VKey::Shift), {
+    { Op::Home | Op::Mv | Op::High },
+    { Op::Push, 3 }
+  });
+  m_defltMap->bind(0, -(VKey::End | VKey::Shift), {
+    { Op::End | Op::Mv | Op::High },
+    { Op::Push, 3 }
+  });
 
   m_defltMap->bind(0, -VKey::Insert, { { Op::Insert } });
   m_defltMap->bind(0, -VKey::Delete, { { Op::Right | Op::Del } });
+
+  m_defltMap->bind(0, 'W' - '@', { { Op::Copy | Op::Del } });
+  m_defltMap->bind(0, 'Y' - '@', { { Op::Paste } });
+
+  m_defltMap->bind(0, '\x1b', { { Op::Push, 2 } });
+  m_defltMap->bind(2, -VKey::Any, { { Op::Pop } });
+  m_defltMap->bind(2, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
+  m_defltMap->bind(2, '\x1b', { { Op::Glyph }, { Op::Pop } });
+  m_defltMap->bind(2, 'W' - '@', { { Op::Copy }, { Op::Pop } });
+
+  m_defltMap->bind(3, -VKey::Any, {
+    { Op::ClrHigh | Op::Del },
+    { Op::Pop | Op::Redir }
+  });
+  m_defltMap->bind(3, -VKey::AnyFn, {
+    { Op::ClrHigh },
+    { Op::Pop | Op::Redir }
+  });
+  m_defltMap->bind(3, -(VKey::Up | VKey::Shift), {
+    { Op::Up | Op::Mv | Op::High }
+  });
+  m_defltMap->bind(3, -(VKey::Down | VKey::Shift), {
+    { Op::Down | Op::Mv | Op::High }
+  });
+  m_defltMap->bind(3, -(VKey::Left | VKey::Shift), {
+    { Op::Left | Op::Mv | Op::High }
+  });
+  m_defltMap->bind(3, -(VKey::Right | VKey::Shift), {
+    { Op::Right | Op::Mv | Op::High }
+  });
+  m_defltMap->bind(3, -(VKey::Left | VKey::Shift | VKey::Ctrl), {
+    { Op::RevWord | Op::Mv | Op::High }
+  });
+  m_defltMap->bind(3, -(VKey::Right | VKey::Shift | VKey::Ctrl), {
+    { Op::FwdWordEnd | Op::Past | Op::Mv | Op::High }
+  });
+  m_defltMap->bind(3, -(VKey::Left | VKey::Shift | VKey::Alt), {
+    { Op::RevWord | Op::Unix | Op::Mv | Op::High }
+  });
+  m_defltMap->bind(3, -(VKey::Right | VKey::Shift | VKey::Alt), {
+    { Op::FwdWordEnd | Op::Unix | Op::Past | Op::Mv | Op::High }
+  });
+  m_defltMap->bind(3, -(VKey::Home | VKey::Shift), {
+    { Op::Home | Op::Mv | Op::High }
+  });
+  m_defltMap->bind(3, -(VKey::End | VKey::Shift), {
+    { Op::End | Op::Mv | Op::High }
+  });
+  m_defltMap->bind(3, 'W' - '@', {
+    { Op::ClrHigh | Op::Copy | Op::Del },
+    { Op::Pop }
+  });
+  m_defltMap->bind(3, '\x1b', { { Op::Push, 4 } });
+  m_defltMap->bind(4, -VKey::Any, { { Op::Pop } });
+  m_defltMap->bind(4, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
+  m_defltMap->bind(4, '\x1b', {
+    { Op::ClrHigh | Op::Del },
+    { Op::Glyph },
+    { Op::Pop, 2 }
+  });
+  m_defltMap->bind(4, 'W' - '@', {
+    { Op::ClrHigh | Op::Copy },
+    { Op::Pop, 2 }
+  });
 }
 
 // all parse() functions return v such that
@@ -196,17 +291,21 @@ int VKey_parse(int32_t &vkey_, ZuString s, int off)
   if (ZtREGEX("\G\s*'([^\\])'").m(s, c, off)) { // regular
     off += c[1].length();
     vkey = c[2][0];
-  } else if (ZtREGEX("\G\s*'^([@A-Z\[\\\]\^_])'").m(s, c, off)) { // ctrl
+  } else if (ZtREGEX("\G\s*'(?:\^|\\C-)([@A-Z\[\\\]\^_])'").m(s, c, off)) {
+    // ctrl
     off += c[1].length();
     vkey = c[2][0] - '@';
   } else if (ZtREGEX("\G\s*'\\([^0123x])'").m(s, c, off)) {
     off += c[1].length();
     switch (static_cast<int>(c[2][0])) {
+      case 'a': vkey = '\x07'; break; // BEL
       case 'b': vkey = '\b';   break; // BS
+      case 'd': vkey = '\x7f'; break; // Del
       case 'e': vkey = '\x1b'; break; // Esc
       case 'n': vkey = '\n';   break; // LF
       case 'r': vkey = '\r';   break; // CR
       case 't': vkey = '\t';   break; // Tab
+      case 'v': vkey = '\x0b'; break; // VTab
       default: vkey = c[2][0]; break;
     }
   } else if (ZtREGEX("\G\s*'\\x([0-9a-fA-F]{2})'").m(s, c, off)) { // hex
@@ -400,11 +499,6 @@ void Map_printMode(unsigned i, const Mode &mode, ZmStream &s)
   if (mode.edit) s << "edit ";
   s << " {\r\n";
   ++Map_printIndentLevel;
-  if (mode.cmds) {
-    Map_printIndent(s); s << "Default ";
-    Map_printCmdSeq(mode.cmds, s);
-    s << "\r\n";
-  }
   if (mode.bindings)
     for (auto i = mode.bindings->readIterator();
 	auto binding = i.iterateKey().ptr(); ) {
@@ -433,20 +527,16 @@ void Editor::dumpMaps_(ZmStream &s) const
 
 void Map_::addMode(unsigned id, bool edit)
 {
-  if (ZuUnlikely(modes.length() <= id)) modes.grow(id + 1);
-  modes[id] = Mode{{}, {}, edit};
+  modes.grow(id + 1);
+  modes[id] = Mode{{}, edit};
 }
 void Map_::bind(unsigned id, int vkey, CmdSeq cmds)
 {
-  if (ZuUnlikely(modes.length() <= id)) modes.grow(id + 1);
+  modes.grow(id + 1);
   auto &mode = modes[id];
-  if (vkey == -VKey::Default)
-    mode.cmds = ZuMv(cmds);
-  else {
-    if (!mode.bindings) mode.bindings = new Bindings{};
-    mode.bindings->del(vkey);
-    mode.bindings->add(new Binding{vkey, ZuMv(cmds)});
-  }
+  if (!mode.bindings) mode.bindings = new Bindings{};
+  mode.bindings->del(vkey);
+  mode.bindings->add(new Binding{vkey, ZuMv(cmds)});
 }
 void Map_::reset()
 {
@@ -489,12 +579,12 @@ bool Editor::loadMap(ZuString file)
     m_loadError << "read(" << file << "): parsing failed at offset " << off;
     return false;
   }
-  if (!map->modes[0].cmds) {
+  if (!map->modes[0].bindings) {
     m_loadError.null();
     m_loadError << "read(" << file << "): mode 0 not defined";
     return false;
   }
-  m_maps.add(map.mvptr());
+  m_maps.add(map.release());
   return true;
 }
 
@@ -573,6 +663,7 @@ bool Editor::process(int32_t vkey)
     if (process_(vkey)) { stop = true; break; }
     if ((vkey = m_context.redirVKey) == -VKey::Null) break;
   }
+  m_context.redirVKey = -VKey::Null;
   m_context.clrArg();
   return stop;
 }
@@ -580,10 +671,21 @@ bool Editor::process(int32_t vkey)
 bool Editor::process_(int32_t vkey)
 {
   const auto &mode = m_map->modes[m_context.mode];
-  if (mode.bindings)
+  if (mode.bindings) {
     if (auto kv = mode.bindings->find(vkey))
       return process__(kv->key()->cmds, vkey);
-  return process__(mode.cmds, m_tty.literal(vkey));
+    {
+      int32_t lkey = m_tty.literal(vkey);
+      if (lkey != vkey) {
+	if (auto kv = mode.bindings->find(lkey))
+	  return process__(kv->key()->cmds, lkey);
+      }
+    }
+    if (auto kv = mode.bindings->find(
+	  VKey::isFn(vkey) ? -VKey::AnyFn : -VKey::Any))
+      return process__(kv->key()->cmds, vkey);
+  }
+  return false;
 }
 
 bool Editor::process__(const CmdSeq &cmds, int32_t vkey)
@@ -626,7 +728,13 @@ bool Editor::cmdPush(Cmd cmd, int32_t)
 }
 bool Editor::cmdPop(Cmd cmd, int32_t)
 {
-  m_context.mode = m_context.stack.pop();
+  unsigned arg = cmd.arg();
+  if (!arg) arg = 1;
+  if (arg > m_context.stack.length()) arg = m_context.stack.length();
+  if (arg) {
+    while (arg-- > 1) m_context.stack.pop();
+    m_context.mode = m_context.stack.pop();
+  }
   return false;
 }
 
@@ -718,7 +826,8 @@ void Editor::motion(
     unsigned begPos, unsigned endPos)
 {
   ZuArray<const uint8_t> s;
-  if (op & (Op::Copy | Op::Del | Op::High)) s = substr(begin, end);
+  if (op & (Op::Copy | Op::Del | Op::Draw | Op::High))
+    s = substr(begin, end);
   if (op & Op::Copy) {
     int index = m_context.register_;
     if (index >= 0)
@@ -737,9 +846,9 @@ void Editor::motion(
     }
     m_tty.mv(begPos);
     splice(begin, span, ZuArray<const uint8_t>{}, ZuUTFSpan{});
-  } else if (op & Op::High) {
+  } else if (op & (Op::Draw | Op::High)) {
     m_tty.mv(begPos);
-    m_tty.redraw(endPos, true);
+    m_tty.redraw(endPos, op & Op::High);
     if (begPos != m_context.highPos) m_context.markPos = begPos;
     if (endPos != m_context.markPos) m_context.highPos = endPos;
   }
@@ -1040,7 +1149,7 @@ bool Editor::cmdInsert(Cmd, int32_t)
 bool Editor::cmdClrHigh(Cmd cmd, int32_t)
 {
   const auto &line = m_tty.line();
-  motion(cmd.op() | Op::Mv,
+  motion(cmd.op() | Op::Draw | Op::Mv,
       m_tty.pos(),
       line.position(m_context.markPos).mapping(),
       line.position(m_context.highPos).mapping(),
@@ -1122,7 +1231,8 @@ bool Editor::cmdRotate(Cmd cmd, int32_t)
 
 bool Editor::glyph(Cmd cmd, int32_t vkey, bool overwrite)
 {
-  if (ZuUnlikely(vkey <= 0)) return false;
+  vkey = m_tty.literal(vkey);
+  if (ZuUnlikely(vkey < 0)) return false;
   ZuArrayN<uint8_t, 4> data;
   data.length(ZuUTF8::out(data.data(), 4, vkey));
   int arg = cmd.arg();

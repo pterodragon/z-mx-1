@@ -1262,7 +1262,8 @@ public:
   void grow(unsigned length) {
     unsigned o = owned() ? size_() : 0U;
     if (ZuLikely(length + 1 > o)) size(grow_(o, length + 1));
-    length_(length);
+    o = this->length();
+    if (ZuUnlikely(length > o)) length_(length);
   }
 
 private:

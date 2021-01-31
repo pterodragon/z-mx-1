@@ -215,14 +215,14 @@ Editor::Editor()
   m_defltMap->bind(0, -VKey::Insert, { { Op::Insert } });
   m_defltMap->bind(0, -VKey::Delete, { { Op::Right | Op::Del } });
 
-  m_defltMap->bind(0, 'W' - '@', { { Op::Copy | Op::Del } });
+  m_defltMap->bind(0, 'W' - '@', { { Op::Null } });
   m_defltMap->bind(0, 'Y' - '@', { { Op::Paste } });
 
   m_defltMap->bind(0, '\x1b', { { Op::Push, 2 } });
   m_defltMap->bind(2, -VKey::Any, { { Op::Pop } });
   m_defltMap->bind(2, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
   m_defltMap->bind(2, '\x1b', { { Op::Glyph }, { Op::Pop } });
-  m_defltMap->bind(2, 'W' - '@', { { Op::Copy }, { Op::Pop } });
+  m_defltMap->bind(2, 'w', { { Op::Null }, { Op::Pop } });
 
   m_defltMap->bind(3, -VKey::Any, {
     { Op::ClrHigh | Op::Del },
@@ -274,7 +274,7 @@ Editor::Editor()
     { Op::Glyph },
     { Op::Pop, 2 }
   });
-  m_defltMap->bind(4, 'W' - '@', {
+  m_defltMap->bind(4, 'w', {
     { Op::ClrHigh | Op::Copy },
     { Op::Pop, 2 }
   });

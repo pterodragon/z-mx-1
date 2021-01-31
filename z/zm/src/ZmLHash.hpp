@@ -276,6 +276,7 @@ private:
 
 public:
   ZuInline bool operator !() const { return !m_u; }
+  ZuOpBool
 
   int cmp(const ZmLHash_Node &n) const {
     if (!n.m_u) return !m_u ? 0 : 1;
@@ -686,7 +687,10 @@ private:
     unsigned size = 1U<<bits();
     for (unsigned i = 1; i < size; i++) {
       unsigned prev = (slot + size - i) & (size - 1);
-      if (m_table[prev].next() == slot) return prev;
+      if (m_table[prev] &&
+	  !m_table[prev].tail() &&
+	  m_table[prev].next() == slot)
+	return prev;
     }
     return -1;
   }

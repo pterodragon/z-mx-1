@@ -397,8 +397,6 @@ struct Config {
   unsigned	maxStackDepth = 10;	// maximum mode stack depth
   unsigned	maxFileSize = 1<<20;	// maximum key map file size
   unsigned	maxVKeyRedirs = 10;	// maximum keystroke redirects
-  unsigned	highColor = 14;		// highlight color (ANSI)
-  unsigned	whiteColor = 15;	// white color (ANSI)
 
   Config() = default;
   Config(const Config &) = default;
@@ -414,8 +412,6 @@ struct Config {
     maxStackDepth = cf->getInt("maxStackDepth", 1, 100, false, 10);
     maxFileSize = cf->getInt("maxFileSize", 64<<10, 10<<20, false, 1<<20);
     maxVKeyRedirs = cf->getInt("maxVKeyRedirs", 1, 100, false, 10);
-    highColor = cf->getInt("highColor", 0, 255, false, 14);
-    whiteColor = cf->getInt("whiteColor", 0, 255, false, 15);
   }
 };
 
@@ -436,7 +432,7 @@ public:
 
   // initialization/finalization
   bool loadMap(ZuString file);
-  const ZtString loadError() const { return m_loadError; }
+  const ZtString &loadError() const { return m_loadError; }
 
   void init(Config config, App app);
   void final();

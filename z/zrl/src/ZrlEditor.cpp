@@ -296,53 +296,82 @@ Editor::Editor()
 // all parse() functions return v such that
 // v <= 0 - parse failure at -v
 // v  > 0 - parse success ending at v
+int VKey_parse_char(uint8_t &byte, ZuString s, int off)
+{
+  ZtRegex::Captures c;
+  if (s[off] != '\\') {
+    byte = s[off++];
+  } else if (ZtREGEX("\G\\([^0123x])").m(s, c, off)) { // 
+    off += c[1].length();
+    switch (static_cast<int>(c[2][0])) {
+      case 'a': byte = '\x07'; break; // BEL
+      case 'b': byte = '\b';   break; // BS
+      case 'd': byte = '\x7f'; break; // Del
+      case 'e': byte = '\x1b'; break; // Esc
+      case 'n': byte = '\n';   break; // LF
+      case 'r': byte = '\r';   break; // CR
+      case 't': byte = '\t';   break; // Tab
+      case 'v': byte = '\x0b'; break; // VTab
+      default: byte = c[2][0]; break;
+    }
+  } else if (ZtREGEX("\G\\x([0-9a-fA-F]{2})'").m(s, c, off)) { // hex
+    off += c[1].length();
+    byte = ZuBox<unsigned>{ZuFmt::Hex<>{}, c[2]};
+  } else if (ZtREGEX("\G\\([0-3][0-7]{2})").m(s, c, off)) { // octal
+    off += c[1].length();
+    byte =
+      (static_cast<unsigned>(c[2][0] - '0')<<6) |
+      (static_cast<unsigned>(c[2][1] - '0')<<3) |
+       static_cast<unsigned>(c[2][2] - '0');
+  } else
+    return -off;
+  return off;
+}
 
 int VKey_parse(int32_t &vkey_, ZuString s, int off)
 {
   int32_t vkey;
   ZtRegex::Captures c;
-  if (ZtREGEX("\G\s*'([^\\])'").m(s, c, off)) { // regular
+  if (ZtREGEX("\G\s*'").m(s, c, off)) { // regular single character
     off += c[1].length();
-    vkey = c[2][0];
-  } else if (ZtREGEX("\G\s*'(?:\^|\\C-)([@A-Z\[\\\]\^_])'").m(s, c, off)) {
-    // ctrl
+    if (s[off] == '\'') return -off;
+    uint8_t byte;
+    off = VKey_parse_char(byte, s, off);
+    if (off < 0) return off;
+    if (off >= s.length() || s[off] != '\'') return -off;
+    ++off;
+    vkey = byte;
+  } else if (ZtREGEX("\G\s*\"").m(s, c, off)) { // UTF8 multibyte character
+    off += c[1].length();
+    if (s[off] == '"') return -off;
+    ZuArrayN<uint8_t, 4> utf;
+    uint32_t u;
+    do {
+      uint8_t byte;
+      off = VKey_parse_char(byte, s, off);
+      if (off < 0) return off;
+      utf << byte;
+    } while (off < s.length() && s[off] != '"');
+    if (off >= s.length()) return -off;
+    if (!ZuUTF8::in(utf.data(), utf.length(), u)) return -off;
+    ++off;
+    vkey = u;
+  } else if (ZtREGEX("\G\s*(?:\^|\\C-)([@A-Z\[\\\]\^_])").m(s, c, off)) {
     off += c[1].length();
     vkey = c[2][0] - '@';
-  } else if (ZtREGEX("\G\s*'\\([^0123x])'").m(s, c, off)) {
-    off += c[1].length();
-    switch (static_cast<int>(c[2][0])) {
-      case 'a': vkey = '\x07'; break; // BEL
-      case 'b': vkey = '\b';   break; // BS
-      case 'd': vkey = '\x7f'; break; // Del
-      case 'e': vkey = '\x1b'; break; // Esc
-      case 'n': vkey = '\n';   break; // LF
-      case 'r': vkey = '\r';   break; // CR
-      case 't': vkey = '\t';   break; // Tab
-      case 'v': vkey = '\x0b'; break; // VTab
-      default: vkey = c[2][0]; break;
-    }
-  } else if (ZtREGEX("\G\s*'\\x([0-9a-fA-F]{2})'").m(s, c, off)) { // hex
-    off += c[1].length();
-    vkey = ZuBox<unsigned>{ZuFmt::Hex<>{}, c[2]};
-  } else if (ZtREGEX("\G\s*'\\([0-3][0-7]{2})'").m(s, c, off)) { // octal
-    off += c[1].length();
-    vkey =
-      (static_cast<unsigned>(c[2][0] - '0')<<6) |
-      (static_cast<unsigned>(c[2][1] - '0')<<3) |
-       static_cast<unsigned>(c[2][2] - '0');
-  } else if (ZtREGEX("\G\s*\w+").m(s, c, off)) {
-    vkey = VKey::lookup(c[1]);
+  } else if (ZtREGEX("\G\s*(\w+)").m(s, c, off)) {
+    vkey = VKey::lookup(c[2]);
     if (vkey < 0) return -off;
     off += c[1].length();
     if (ZtREGEX("\G\s*\[").m(s, c, off)) {
       off += c[1].length();
-      while (ZtREGEX("\G\s*\w+").m(s, c, off)) {
-	if (c[1] == "Shift") vkey |= VKey::Shift;
-	else if (c[1] == "Ctrl") vkey |= VKey::Ctrl;
-	else if (c[1] == "Alt") vkey |= VKey::Alt;
+      while (ZtREGEX("\G\s*(\w+)").m(s, c, off)) {
+	if (c[2] == "Shift") vkey |= VKey::Shift;
+	else if (c[2] == "Ctrl") vkey |= VKey::Ctrl;
+	else if (c[2] == "Alt") vkey |= VKey::Alt;
 	else return -off;
-	off += c[1].length();
-	if (!ZtREGEX("\G\s*|").m(s, c, off)) break;
+	off += c[2].length();
+	if (!ZtREGEX("\G\s*\|").m(s, c, off)) break;
 	off += c[1].length();
       }
       if (!ZtREGEX("\G\s*\]").m(s, c, off)) return -off;
@@ -383,7 +412,7 @@ int Cmd::parse(ZuString s, int off)
   if (ZtREGEX("\G\s*\[").m(s, c, off)) {
     off += c[1].length();
     while (ZtREGEX("\G\s*(\w+)").m(s, c, off)) {
-      if (c[1] = "Mv") m_value |= Op::Mv;
+      if (c[1] == "Mv") m_value |= Op::Mv;
       else if (c[1] == "Del") m_value |= Op::Del;
       else if (c[1] == "Copy") m_value |= Op::Copy;
       else if (c[1] == "Draw") m_value |= Op::Draw;
@@ -393,7 +422,7 @@ int Cmd::parse(ZuString s, int off)
       else if (c[1] == "Redir") m_value |= Op::Redir;
       else return -off;
       off += c[1].length();
-      if (!ZtREGEX("\G\s*|").m(s, c, off)) break;
+      if (!ZtREGEX("\G\s*\|").m(s, c, off)) break;
       off += c[1].length();
     }
     if (!ZtREGEX("\G\s*\]").m(s, c, off)) return -off;
@@ -401,7 +430,7 @@ int Cmd::parse(ZuString s, int off)
   }
   if (ZtREGEX("\G\s*\(").m(s, c, off)) {
     off += c[1].length();
-    if (ZtREGEX("\G\s*\d+").m(s, c, off)) {
+    if (ZtREGEX("\G\s*(\d+)").m(s, c, off)) {
       off += c[1].length();
       uint64_t arg = ZuBox<unsigned>{c[2]};
       m_value |= (arg<<16);
@@ -412,10 +441,12 @@ int Cmd::parse(ZuString s, int off)
       off = VKey_parse(vkey, s, off);
       if (off <= 0) return off;
       m_value |= static_cast<uint64_t>(vkey)<<32;
-    }
+    } else
+      m_value |= static_cast<uint64_t>(-VKey::Null)<<32;
     if (!ZtREGEX("\G\s*\)").m(s, c, off)) return -off;
     off += c[1].length();
-  }
+  } else
+    m_value |= static_cast<uint64_t>(-VKey::Null)<<32;
   return off;
 }
 
@@ -458,8 +489,6 @@ int Map_::parseMode(ZuString s, int off)
     if (off <= 0) return off;
     off = CmdSeq_parse(cmds, s, off);
     if (off <= 0) return off;
-    if (!ZtREGEX("\G\s*;").m(s, c, off)) return -off;
-    off += c[1].length();
     bind(mode, vkey, ZuMv(cmds));
     cmds.clear();
   }
@@ -478,8 +507,6 @@ int Map_::parse(ZuString s, int off)
   while (!ZtREGEX("\G\s*}").m(s, c, off)) {
     off = parseMode(s, off);
     if (off <= 0) return off;
-    if (!ZtREGEX("\G\s*;").m(s, c, off)) return -off;
-    off += c[1].length();
   }
   off += c[1].length();
   return off;
@@ -513,7 +540,7 @@ void Map_printIndent(ZmStream &s)
 void Map_printMode(unsigned i, const Mode &mode, ZmStream &s)
 {
   Map_printIndent(s); s << "mode " << ZuBoxed(i) << ' ';
-  if (mode.edit) s << "edit ";
+  if (mode.edit) s << "edit";
   s << " {\r\n";
   ++Map_printIndentLevel;
   if (mode.bindings)
@@ -569,22 +596,25 @@ bool Editor::loadMap(ZuString file)
     int r;
     if ((r = f.open(file,
 	    ZiFile::ReadOnly | ZiFile::GC, 0666, 0, &e)) != Zi::OK) {
-      m_loadError.null();
-      m_loadError << "open(" << file << "): " << Zi::resultName(r);
-      if (r == Zi::IOError) m_loadError << ' ' << e;
+      m_loadError = ZtString{} <<
+	"open(\"" << file << "\"): " << Zi::resultName(r);
+      if (r == Zi::IOError) m_loadError << " - " << e;
       return false;
     }
     unsigned len = f.size();
     if (len >= m_config.maxFileSize) {
-      m_loadError.null();
-      m_loadError << "open(" << file << "): file too large";
+      m_loadError = ZtString{} << "open(\"" << file << "\"): file too large";
       return false;
     }
     s.length(len);
-    if ((r = f.read(s.data(), len, &e)) != Zi::OK) {
-      m_loadError.null();
-      m_loadError << "read(" << file << "): " << Zi::resultName(r);
-      if (r == Zi::IOError) m_loadError << ' ' << e;
+    if ((r = f.read(s.data(), len, &e)) < 0) {
+      m_loadError = ZtString{} <<
+	"read(\"" << file << "\"): " << Zi::resultName(r);
+      if (r == Zi::IOError) m_loadError << " - " << e;
+      return false;
+    }
+    if (r < len) {
+      m_loadError = ZtString{} << "read(\"" << file << "\"): truncated read";
       return false;
     }
   }
@@ -592,13 +622,20 @@ bool Editor::loadMap(ZuString file)
   int off = map->parse(s, 0);
   if (off <= 0) {
     off = -off;
-    m_loadError.null();
-    m_loadError << "read(" << file << "): parsing failed at offset " << off;
+    unsigned lpos = 0, line = 0;
+    ZtRegex::Captures c;
+    while (lpos < off && ZtREGEX("\G[^\n]*\n").m(s, c, lpos)) {
+      lpos += c[1].length();
+      line++;
+    }
+    if (!line) line = 1;
+    off -= lpos;
+    m_loadError = ZtString{} << "\"" << file << "\":" << line <<
+      ": parsing failed near offset " << off;
     return false;
   }
-  if (!map->modes[0].bindings) {
-    m_loadError.null();
-    m_loadError << "read(" << file << "): mode 0 not defined";
+  if (!map->modes.length()) {
+    m_loadError = ZtString{} << "\"" << file << "\": mode 0 not defined";
     return false;
   }
   m_maps.add(map.release());
@@ -610,7 +647,7 @@ void Editor::init(Config config, App app)
   m_config = config;
   m_map = m_defltMap;
   m_app = app;
-  m_tty.init(m_config.vkeyInterval, m_config.highColor, m_config.whiteColor);
+  m_tty.init(m_config.vkeyInterval);
 }
 void Editor::final()
 {
@@ -863,11 +900,70 @@ void Editor::motion(
     }
     m_tty.mv(begPos);
     splice(begin, span, ZuArray<const uint8_t>{}, ZuUTFSpan{});
+    if (m_context.highPos >= 0) {
+      m_tty.cursor_on();
+      m_context.markPos = m_context.highPos = -1;
+    }
   } else if (op & (Op::Draw | Op::High)) {
-    m_tty.mv(begPos);
-    m_tty.redraw(endPos, op & Op::High);
-    if (begPos != m_context.highPos) m_context.markPos = begPos;
-    if (endPos != m_context.markPos) m_context.highPos = endPos;
+    if (!(op & Op::High)) {
+      m_tty.mv(begPos);
+      m_tty.redraw(endPos, false);
+      m_tty.cursor_on();
+      m_context.markPos = m_context.highPos = -1;
+    } else if (m_context.highPos < 0) {
+      m_tty.mv(begPos);
+      m_tty.redraw(endPos, true);
+      m_tty.cursor_off();
+      m_context.markPos = begPos;
+      m_context.highPos = endPos;
+    } else {
+      if (pos == endPos && begPos == m_context.highPos) { // extend fwd
+	m_tty.mv(begPos);
+	m_tty.redraw(endPos, true);
+	m_context.highPos = endPos;
+      } else if (pos == begPos && endPos == m_context.markPos) { // extend rev
+	m_tty.mv(begPos);
+	m_tty.redraw(endPos, true);
+	m_context.markPos = begPos;
+      } else if (pos == begPos && endPos == m_context.highPos) { // contract fwd
+	m_tty.mv(begPos);
+	if (begPos == m_context.markPos) {
+	  m_tty.redraw(m_context.highPos, false);
+	  m_tty.cursor_on();
+	  m_context.markPos = m_context.highPos = -1;
+	} else if (begPos < m_context.markPos) {
+	  m_tty.redraw(m_context.markPos, true);
+	  m_tty.redraw(m_context.highPos, false);
+	  m_context.highPos = m_context.markPos;
+	  m_context.markPos = begPos;
+	} else {
+	  m_tty.redraw(m_context.highPos, false);
+	  m_context.highPos = begPos;
+	}
+      } else if (pos == endPos && begPos == m_context.markPos) { // contract rev
+	m_tty.mv(begPos);
+	if (endPos == m_context.highPos) {
+	  m_tty.redraw(endPos, false);
+	  m_tty.cursor_on();
+	  m_context.markPos = m_context.highPos = -1;
+	} else if (endPos > m_context.highPos) {
+	  m_tty.redraw(m_context.highPos, false);
+	  m_tty.redraw(endPos, true);
+	  m_context.markPos = m_context.highPos;
+	  m_context.highPos = endPos;
+	} else {
+	  m_tty.redraw(endPos, false);
+	  m_context.markPos = endPos;
+	}
+      } else {
+	m_tty.mv(m_context.markPos);
+	m_tty.redraw(m_context.highPos, false);
+	m_tty.mv(begPos);
+	m_tty.redraw(endPos, true);
+	m_context.markPos = begPos;
+	m_context.highPos = endPos;
+      }
+    }
   }
   if (!align(pos)) m_tty.mv(pos);
 }
@@ -1166,12 +1262,13 @@ bool Editor::cmdInsert(Cmd, int32_t)
 bool Editor::cmdClrHigh(Cmd cmd, int32_t)
 {
   const auto &line = m_tty.line();
-  motion(cmd.op() | Op::Draw | Op::Mv,
-      m_tty.pos(),
-      line.position(m_context.markPos).mapping(),
-      line.position(m_context.highPos).mapping(),
-      m_context.markPos, m_context.highPos);
-  m_context.highPos = -1;
+  if (m_context.highPos >= 0) {
+    motion(cmd.op() | Op::Draw | Op::Mv,
+	m_tty.pos(),
+	line.position(m_context.markPos).mapping(),
+	line.position(m_context.highPos).mapping(),
+	m_context.markPos, m_context.highPos);
+  }
   return false;
 }
 

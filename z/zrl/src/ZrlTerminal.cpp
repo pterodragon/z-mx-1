@@ -36,26 +36,31 @@ namespace Zrl {
 namespace VKey {
 ZrlExtern void print_(int32_t vkey, ZmStream &s)
 {
+  ZuStringN<60> out;
   if (vkey < 0) {
     vkey = -vkey;
-    s << name(vkey & Mask) << '[';
+    out << name(vkey & Mask) << '[';
     bool pipe = false;
-    auto sep = [&pipe, &s]() { if (!pipe) pipe = true; else s << '|'; };
-    if (vkey & Shift) { sep(); s << "Shift"; }
-    if (vkey & Ctrl) { sep(); s << "Ctrl"; }
-    if (vkey & Alt) { sep(); s << "Alt"; }
-    s << ']';
+    auto sep = [&pipe, &out]() { if (!pipe) pipe = true; else out << '|'; };
+    if (vkey & Shift) { sep(); out << "Shift"; }
+    if (vkey & Ctrl) { sep(); out << "Ctrl"; }
+    if (vkey & Alt) { sep(); out << "Alt"; }
+    out << ']';
   } else {
-    ZuArrayN<uint8_t, 4> utf;
     if (vkey < 0x20) {
-      utf << '^' << static_cast<char>('@' + vkey);
+      out << '^' << static_cast<char>('@' + vkey);
     } else if (vkey >= 0x7f && vkey < 0x100) {
-      utf << "\\x" << ZuBoxed(vkey).hex(ZuFmt::Right<2, '0'>{});
+      out << "'\\x" << ZuBoxed(vkey).hex(ZuFmt::Right<2, '0'>{}) << '\'';
     } else {
+      ZuArrayN<uint8_t, 4> utf;
       utf.length(ZuUTF8::out(utf.data(), 4, vkey));
+      if (utf.length() == 1)
+	out << '\'' << static_cast<char>(utf[0]) << '\'';
+      else
+	out << '"' << ZuString{utf} << '"';
     }
-    s << ZuString{utf};
   }
+  s << out;
 }
 }
 
@@ -273,7 +278,8 @@ void Terminal::open_()
   m_sgr0 = tigetstr("sgr0");
   m_smso = tigetstr("smso");
   m_rmso = tigetstr("rmso");
-  m_setaf = tigetstr("setaf");
+  m_civis = tigetstr("civis");
+  m_cnorm = tigetstr("cnorm");
 
   if (m_ul) {
     thread_local Terminal *this_;
@@ -526,7 +532,8 @@ void Terminal::close_()
   m_sgr0 = nullptr;
   m_smso = nullptr;
   m_rmso = nullptr;
-  m_setaf = nullptr;
+  m_civis = nullptr;
+  m_cnorm = nullptr;
 
   m_underline = {};
 
@@ -619,6 +626,16 @@ void Terminal::opost_off()
 {
   m_ntermios.c_oflag &= ~(OPOST | ONLCR | OCRNL | ONOCR | ONLRET);
   tcsetattr(m_fd, TCSADRAIN, &m_ntermios);
+}
+
+void Terminal::cursor_on()
+{
+  if (m_cnorm) tputs(m_cnorm);
+}
+
+void Terminal::cursor_off()
+{
+  if (m_civis) tputs(m_civis);
 }
 
 // I/O multiplexing
@@ -779,6 +796,21 @@ void Terminal::addVKey(const char *cap, const char *deflt, int32_t vkey)
 int Terminal::write(ZeError *e_)
 {
   unsigned n = m_out.length();
+#if 0
+  {
+    static FILE *log = nullptr;
+    if (!log) log = fopen("tty.log", "a");
+    if (log) {
+      static ZtString dump;
+      static ZtDateFmt::FIX<-9> fix;
+      dump.clear();
+      dump << ZtDateNow().fix(fix);
+      dump << ZtHexDump("", m_out.data(), m_out.length());
+      fwrite(dump.data(), 1, dump.length(), log);
+      fflush(log);
+    }
+  }
+#endif
   while (::write(m_fd, m_out.data(), n) < n) {
     ZeError e{errno};
     if (e.errNo() != EINTR && e.errNo() != EAGAIN) {
@@ -1364,16 +1396,15 @@ void Terminal::redraw(unsigned endPos, bool high)
   enum { None, Bold, Standout };
   int highType = None;
   if (high) {
-    if (m_setaf) tputs(tiparm(m_setaf, m_highColor));
-    if (m_bold && (m_sgr || m_sgr0)) {
+    if (m_smso && m_rmso) {
+      highType = Standout;
+      tputs(m_smso);
+    } else if (m_bold && (m_sgr || m_sgr0)) {
       highType = Bold;
       tputs(m_bold);
     } else if (m_sgr) {
       highType = Bold;
       tputs(tiparm(m_sgr, 0, 0, 0, 0, 0, 1, 0, 0, 0));
-    } else if (m_smso && m_rmso) {
-      highType = Standout;
-      tputs(m_smso);
     }
   }
   redraw_(m_pos, endPos);
@@ -1390,7 +1421,6 @@ void Terminal::redraw(unsigned endPos, bool high)
 	tputs(m_rmso);
 	break;
     }
-    if (m_setaf) tputs(tiparm(m_setaf, m_whiteColor));
   }
 }
 

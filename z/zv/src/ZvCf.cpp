@@ -377,13 +377,12 @@ key:
   }
   if (!fileKey.m(in, c, off)) {
     if (off < n - 1) {
-      unsigned lpos = 0, line = 1;
-      while (lpos < off &&
-	     fileLine.m(in, c, lpos)) {
+      unsigned lpos = 0, line = 0;
+      while (lpos < off && fileLine.m(in, c, lpos)) {
 	lpos += c[1].length();
 	line++;
       }
-      if (line > 1) --line;
+      if (!line) line = 1;
       throw Syntax(line, in[off], fileName);
     }
     return;

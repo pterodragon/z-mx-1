@@ -70,8 +70,6 @@ namespace VKey {
     SigQuit,		// ^\ quit (ctrl-backslash)
     SigSusp,		// ^Z suspend (SIGTSTP)
 
-    Enter,		// line entered
-
     Erase,		// ^H backspace
     WErase,		// ^W word erase
     Kill,		// ^U
@@ -79,6 +77,8 @@ namespace VKey {
     LNext,		// ^V
 
     // motion / Fn keys
+    Enter,		// line entered
+
     Up,
     Down,
     Left,
@@ -100,7 +100,9 @@ namespace VKey {
     Alt		= 0x0400	// ''
   };
 
-  inline bool isFn(int32_t vkey) { return vkey < 0 && ((-vkey) & Mask) >= Up; }
+  inline bool isFn(int32_t vkey) {
+    return vkey < 0 && ((-vkey) & Mask) >= Enter;
+  }
 
   ZrlExtern void print_(int32_t, ZmStream &);
   struct Print {
@@ -149,10 +151,8 @@ public:
   using StartFn = ZmFn<>;
   using KeyFn = ZmFn<int32_t>; // return true to stop reading 
 
-  void init(unsigned vkeyInterval, unsigned highColor, unsigned whiteColor) {
+  void init(unsigned vkeyInterval) {
     m_vkeyInterval = vkeyInterval; // milliseconds
-    m_highColor = highColor;
-    m_whiteColor = whiteColor;
   }
   void final() { }
 
@@ -252,6 +252,11 @@ public:
   // turn off output post-processing (i.e. raw CR/NL)
   void opost_off();
 
+  // turn on cursor
+  void cursor_on();
+  // turn off cursor (e.g. while highlighting)
+  void cursor_off();
+
 private:
   void cr();
   void nl();
@@ -314,8 +319,6 @@ private:
   // configuration (multi-byte keystroke interval timeout)
 
   unsigned		m_vkeyInterval = 100;	// milliseconds
-  unsigned		m_highColor = 14;	// ANSI color
-  unsigned		m_whiteColor = 15;	// ANSI color
 
   // scheduler / thread
 
@@ -393,7 +396,8 @@ private:
   const char		*m_sgr0 = nullptr;	// clear ''
   const char		*m_smso = nullptr;	// end standout mode
   const char		*m_rmso = nullptr;	// end standout mode
-  const char		*m_setaf = nullptr;	// set ANSI foreground color
+  const char		*m_civis = nullptr;	// invisible cursor
+  const char		*m_cnorm = nullptr;	// normal cursor
 
   ZtArray<uint8_t>	m_underline;
 };

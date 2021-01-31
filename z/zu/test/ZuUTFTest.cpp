@@ -49,6 +49,7 @@ int main()
       j.length(ZuUTF<char, uint32_t>::cvt(j.buf(), u));
       CHECK(j.length() == 6);
       CHECK(j.equals("\xf0\x9f\x90\x84xy"));
+      std::cout << j << '\n';
       ZuArrayN<uint32_t, 4> k;
       k.length(ZuUTF<uint32_t, char>::cvt(k.buf(), j));
       CHECK(k.equals(u));

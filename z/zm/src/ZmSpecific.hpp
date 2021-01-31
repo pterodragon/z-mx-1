@@ -206,7 +206,7 @@ public:
 
     if (ZuUnlikely(!m_count)) { ZmSpecific_unlock(); return; }
 
-    Object **objects = ZuAlloca(objects, Object *, m_count);
+    Object **objects = ZuAlloca(objects, m_count);
 
     if (ZuUnlikely(!objects)) { ZmSpecific_unlock(); return; }
 

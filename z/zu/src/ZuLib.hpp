@@ -393,11 +393,12 @@ template <typename U, typename R = void>
 struct ZuNotVolatile { using T = R; };
 template <typename U, typename R> struct ZuNotVolatile<volatile U, R> { };
 
-// T *var = ZuAlloca(var, T, n);
+// T *var = ZuAlloca(var, n);
 #ifdef _MSC_VER
-#define ZuAlloca(var, T, n) \
+#define ZuAlloca(var, n) \
   nullptr; __try { \
-    var = reinterpret_cast<T *>(_alloca(n * sizeof(T))); \
+    var = reinterpret_cast<decltype(var)>( \
+	_alloca(n * sizeof(decltype(*var)))); \
   } __except(GetExceptionCode() == STATUS_STACK_OVERFLOW) { \
     _resetstkoflw(); \
     var = nullptr; \
@@ -407,8 +408,8 @@ template <typename U, typename R> struct ZuNotVolatile<volatile U, R> { };
 #include <alloca.h>
 #endif
 
-#define ZuAlloca(var, T, n) \
-  reinterpret_cast<T *>(alloca(n * sizeof(T)))
+#define ZuAlloca(var, n) \
+  reinterpret_cast<decltype(var)>(alloca(n * sizeof(decltype(*var))))
 #endif
 
 #endif /* ZuLib_HPP */

@@ -102,7 +102,7 @@ template <typename S> struct ZuStdStream__ {
   template <typename P> static typename ZuIfT<ZuPrint<P>::Buffer>::T
       print(S &s, const P &p) {
     unsigned len = ZuPrint<P>::length(p);
-    char *buf = ZuAlloca(buf, char, len);
+    char *buf = ZuAlloca(buf, len);
     if (ZuLikely(buf))
       ZuStdStream<S>::append(s, buf, ZuPrint<P>::print(buf, len, p));
   }

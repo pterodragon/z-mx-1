@@ -50,9 +50,9 @@ namespace Zrl {
 
 namespace Op { // line editor operation codes
   ZtEnumerate(
-    Null,		// unused
+    Null,		// sentinel
 
-    Nop,		// sentinel, often used with keystroke redirection
+    Nop,		// no-operation, often used with keystroke redirection
     Mode,		// switch mode
     Push,		// push mode (and switch)
     Pop,		// pop mode

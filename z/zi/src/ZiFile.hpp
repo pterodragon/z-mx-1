@@ -202,7 +202,7 @@ private:
   }
   template <typename P> typename MatchPBuffer<P>::T append_(const P &p) {
     unsigned len = ZuPrint<P>::length(p);
-    char *buf = ZuAlloca(buf, char, len);
+    char *buf = ZuAlloca(buf, len);
     if (ZuUnlikely(!buf)) throw ZeError(ZiENOMEM);
     ZeError e;
     if (ZuUnlikely(write(buf, ZuPrint<P>::print(buf, len, p), e) != Zi::OK))

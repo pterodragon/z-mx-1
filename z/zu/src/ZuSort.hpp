@@ -27,13 +27,16 @@
 // - minimized stack usage during recursion
 // - bundled with binary and interpolation search of sorted data
 
-// template <typename T, typename Cmp = ZuCmp<T>, unsigned N = ZuSort_::isort_N>
+// template <unsigned N = 8, typename T>
 // ZuSort(T *data, unsigned n)
+//
+// template <unsigned N = 8, typename T, typename Cmp>
+// ZuSort(T *data, unsigned n, Cmp cmp)
 //
 // data - pointer to T * data to be sorted
 // n - number of contiguous elements of type T
 //
-// Cmp - three-way comparison - defaults to ZuCmp<T>
+// Cmp - three-way comparison - defaults to ZuCmp<T>::cmp
 // N - insertion sort is used below this partition size threshold
 
 #ifndef ZuSort_HPP

@@ -1269,7 +1269,7 @@ void Terminal::splice(
 	trailRows = (trailWidth + m_width - 1) / m_width; // #rows
     }
   }
-  if (trailRows) shiftMarks = ZuAlloca(shiftMarks, ShiftMark, trailRows);
+  if (trailRows) shiftMarks = ZuAlloca(shiftMarks, trailRows);
   if (shiftMarks) {
     int shiftOff =
       static_cast<int>(rspan.inLen()) - static_cast<int>(span.inLen());

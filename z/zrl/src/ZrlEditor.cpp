@@ -19,6 +19,8 @@
 
 // command line interface - line editor
 
+#include <zlib/ZuSort.hpp>
+
 #include <zlib/ZrlEditor.hpp>
 
 namespace Zrl {
@@ -140,6 +142,7 @@ Editor::Editor()
   m_defltMap->addMode(3, true);	// highlit span
   m_defltMap->addMode(4, true);	// highlit span - meta next
 
+  // normal mode
   m_defltMap->bind(0, -VKey::Any, { { Op::Glyph } });
 
   m_defltMap->bind(0, -VKey::EndOfFile, { { Op::EndOfFile} });
@@ -154,14 +157,6 @@ Editor::Editor()
   m_defltMap->bind(0, -VKey::WErase,
       { { Op::RevWord | Op::Del | Op::Unix } });
   m_defltMap->bind(0, -VKey::Kill, { { Op::Home | Op::Del } });
-
-  m_defltMap->bind(0, -VKey::LNext, {
-    { Op::Glyph, 0, '^' },
-    { Op::Left | Op::Mv },
-    { Op::Push, 1 }
-  });
-  m_defltMap->bind(1, -VKey::Any, { { Op::OverGlyph }, { Op::Pop } });
-  m_defltMap->bind(1, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
 
   m_defltMap->bind(0, -VKey::Up, { { Op::Up | Op::Mv } });
   m_defltMap->bind(0, -VKey::Down, { { Op::Down | Op::Mv } });
@@ -184,59 +179,62 @@ Editor::Editor()
     { Op::FwdWord | Op::Unix | Op::Mv }
   });
 
+  m_defltMap->bind(0, -VKey::Insert, { { Op::Insert } });
+  m_defltMap->bind(0, -VKey::Delete, { { Op::Right | Op::Del } });
+
+  m_defltMap->bind(0, 'W' - '@', { { Op::Nop } });
+  m_defltMap->bind(0, 'Y' - '@', { { Op::Paste } });
+
+  // initiate highlight "visual" mode
   m_defltMap->bind(0, -(VKey::Up | VKey::Shift), {
-    { Op::Up | Op::Mv | Op::High },
-    { Op::Push, 3 }
+    { Op::Up | Op::Mv | Op::High }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Down | VKey::Shift), {
-    { Op::Down | Op::Mv | Op::High },
-    { Op::Push, 3 }
+    { Op::Down | Op::Mv | Op::High }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Left | VKey::Shift), {
-    { Op::Left | Op::Mv | Op::High },
-    { Op::Push, 3 }
+    { Op::Left | Op::Mv | Op::High }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Right | VKey::Shift), {
-    { Op::Right | Op::Mv | Op::High },
-    { Op::Push, 3 }
+    { Op::Right | Op::Mv | Op::High }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Left | VKey::Shift | VKey::Ctrl), {
-    { Op::RevWord | Op::Mv | Op::High },
-    { Op::Push, 3 }
+    { Op::RevWord | Op::Mv | Op::High }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Right | VKey::Shift | VKey::Ctrl), {
-    { Op::FwdWordEnd | Op::Past | Op::Mv | Op::High },
-    { Op::Push, 3 }
+    { Op::FwdWordEnd | Op::Past | Op::Mv | Op::High }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Left | VKey::Shift | VKey::Alt), {
-    { Op::RevWord | Op::Unix | Op::Mv | Op::High },
-    { Op::Push, 3 }
+    { Op::RevWord | Op::Unix | Op::Mv | Op::High }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Right | VKey::Shift | VKey::Alt), {
     { Op::FwdWordEnd | Op::Unix | Op::Past | Op::Mv | Op::High },
     { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Home | VKey::Shift), {
-    { Op::Home | Op::Mv | Op::High },
-    { Op::Push, 3 }
+    { Op::Home | Op::Mv | Op::High }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::End | VKey::Shift), {
-    { Op::End | Op::Mv | Op::High },
-    { Op::Push, 3 }
+    { Op::End | Op::Mv | Op::High }, { Op::Push, 3 }
   });
 
-  m_defltMap->bind(0, -VKey::Insert, { { Op::Insert } });
-  m_defltMap->bind(0, -VKey::Delete, { { Op::Right | Op::Del } });
+  // literal mode
+  m_defltMap->bind(0, -VKey::LNext, {
+    { Op::Glyph, 0, '^' },
+    { Op::Left | Op::Mv },
+    { Op::Push, 1 }
+  });
+  m_defltMap->bind(1, -VKey::Any, { { Op::OverGlyph }, { Op::Pop } });
+  m_defltMap->bind(1, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
 
-  m_defltMap->bind(0, 'W' - '@', { { Op::Null } });
-  m_defltMap->bind(0, 'Y' - '@', { { Op::Paste } });
-
+  // ESC-prefixed "meta" mode (handles non-Fn Alt-keystrokes)
   m_defltMap->bind(0, '\x1b', { { Op::Push, 2 } });
   m_defltMap->bind(2, -VKey::Any, { { Op::Pop } });
   m_defltMap->bind(2, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
   m_defltMap->bind(2, '\x1b', { { Op::Glyph }, { Op::Pop } });
-  m_defltMap->bind(2, 'w', { { Op::Null }, { Op::Pop } });
+  m_defltMap->bind(2, 'w', { { Op::Nop }, { Op::Pop } });
 
+  // highlight "visual" mode
   m_defltMap->bind(3, -VKey::Any, {
     { Op::ClrHigh | Op::Del },
     { Op::Pop | Op::Redir }
@@ -244,6 +242,13 @@ Editor::Editor()
   m_defltMap->bind(3, -VKey::AnyFn, {
     { Op::ClrHigh },
     { Op::Pop | Op::Redir }
+  });
+  m_defltMap->bind(3, -VKey::Delete, {
+    { Op::ClrHigh | Op::Del },
+    { Op::Pop }
+  });
+  m_defltMap->bind(3, -VKey::Erase, {
+    { Op::Nop | Op::Redir, { }, -VKey::Delete }
   });
   m_defltMap->bind(3, -(VKey::Up | VKey::Shift), {
     { Op::Up | Op::Mv | Op::High }
@@ -279,6 +284,8 @@ Editor::Editor()
     { Op::ClrHigh | Op::Copy | Op::Del },
     { Op::Pop }
   });
+
+  // ESC-prefixed "meta" mode, from within highlight "visual" mode
   m_defltMap->bind(3, '\x1b', { { Op::Push, 4 } });
   m_defltMap->bind(4, -VKey::Any, { { Op::Pop } });
   m_defltMap->bind(4, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
@@ -561,11 +568,28 @@ void Map_printMode(unsigned i, const Mode &mode, ZmStream &s)
   if (mode.edit) s << "edit";
   s << " {\r\n";
   ++Map_printIndentLevel;
-  if (mode.bindings)
-    for (auto i = mode.bindings->readIterator();
-	auto binding = i.iterateKey().ptr(); ) {
-      Map_printIndent(s); s << *binding << "\r\n";
+  if (mode.bindings) {
+    unsigned n = 0;
+    for (auto i = mode.bindings->readIterator(); i.iterateKey().ptr(); ) ++n;
+    const Binding **bindings = ZuAlloca(bindings, n);
+    if (bindings) {
+      unsigned j = 0;
+      for (auto i = mode.bindings->readIterator();
+	  auto binding = i.iterateKey().ptr(); )
+	bindings[j++] = binding;
+      n = j;
+      ZuSort(bindings, n,
+	  [](const Binding *b1, const Binding *b2) -> int {
+	    auto order = [](int32_t vkey) -> int32_t {
+	      return vkey < 0 ? ((-vkey) - INT_MAX) : vkey;
+	    };
+	    return ZuCmp<int32_t>::cmp(order(b1->vkey), order(b2->vkey));
+	  });
+      for (j = 0; j < n; j++) {
+	Map_printIndent(s); s << *(bindings[j]) << "\r\n";
+      }
     }
+  }
   --Map_printIndentLevel;
   Map_printIndent(s); s << "}\r\n";
 }

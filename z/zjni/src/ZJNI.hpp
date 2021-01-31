@@ -199,7 +199,7 @@ namespace ZJNI {
     if (ZuUnlikely(!s)) { jchar c = 0; return env->NewString(&c, 0); }
     unsigned n = ZuUTF<jchar, char>::len(s);
     if (ZuUnlikely(!n)) { jchar c = 0; return env->NewString(&c, 0); }
-    jchar *buf = ZuAlloca(buf, jchar, n);
+    jchar *buf = ZuAlloca(buf, n);
     if (!buf) return 0;
     n = ZuUTF<jchar, char>::cvt(ZuArray<jchar>(buf, n), s);
     return env->NewString(buf, n);

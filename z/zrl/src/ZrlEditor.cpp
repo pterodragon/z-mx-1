@@ -24,13 +24,26 @@
 namespace Zrl {
 
 namespace Op {
+void print__(bool &pipe, ZmStream &s)
+{
+  if (!pipe) pipe = true; else s << '|';
+}
 ZrlExtern void print_(uint32_t op, ZmStream &s)
 {
   s << name(op & Mask) << '[';
-  if (op & Mv) s << "Mv";
-  if (op & Del) { if (op & Mv) s << '|'; s << "Del"; }
-  if (op & Copy) { if (op & (Mv|Del)) s << '|'; s << "Copy"; }
-  if (op & Unix) { if (op & (Mv|Del|Copy)) s << '|'; s << "Unix"; }
+  bool pipe = false;
+  auto sep = [&pipe, &s]() { if (!pipe) pipe = true; else s << '|'; };
+  if (op & Mv) { sep(); s << "Mv"; }
+  if (op & Del) { sep(); s << "Del"; }
+  if (op & Copy) { sep(); s << "Copy"; }
+
+  if (op & Draw) { sep(); s << "Draw"; }
+  if (op & High) { sep(); s << "High"; }
+
+  if (op & Unix) { sep(); s << "Unix"; }
+  if (op & Past) { sep(); s << "Past"; }
+
+  if (op & Redir) { sep(); s << "Redir"; }
   s << ']';
 }
 }
@@ -373,7 +386,11 @@ int Cmd::parse(ZuString s, int off)
       if (c[1] = "Mv") m_value |= Op::Mv;
       else if (c[1] == "Del") m_value |= Op::Del;
       else if (c[1] == "Copy") m_value |= Op::Copy;
+      else if (c[1] == "Draw") m_value |= Op::Draw;
+      else if (c[1] == "High") m_value |= Op::High;
       else if (c[1] == "Unix") m_value |= Op::Unix;
+      else if (c[1] == "Past") m_value |= Op::Past;
+      else if (c[1] == "Redir") m_value |= Op::Redir;
       else return -off;
       off += c[1].length();
       if (!ZtREGEX("\G\s*|").m(s, c, off)) break;

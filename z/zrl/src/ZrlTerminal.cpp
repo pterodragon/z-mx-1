@@ -39,9 +39,11 @@ ZrlExtern void print_(int32_t vkey, ZmStream &s)
   if (vkey < 0) {
     vkey = -vkey;
     s << name(vkey & Mask) << '[';
-    if (vkey & Shift) s << "Shift";
-    if (vkey & Ctrl) { if (vkey & Shift) s << '|'; s << "Ctrl"; }
-    if (vkey & Alt) { if (vkey & (Shift|Ctrl)) s << '|'; s << "Alt"; }
+    bool pipe = false;
+    auto sep = [&pipe, &s]() { if (!pipe) pipe = true; else s << '|'; };
+    if (vkey & Shift) { sep(); s << "Shift"; }
+    if (vkey & Ctrl) { sep(); s << "Ctrl"; }
+    if (vkey & Alt) { sep(); s << "Alt"; }
     s << ']';
   } else {
     ZuArrayN<uint8_t, 4> utf;

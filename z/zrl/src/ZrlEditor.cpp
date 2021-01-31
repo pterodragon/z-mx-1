@@ -296,6 +296,8 @@ Editor::Editor()
 // all parse() functions return v such that
 // v <= 0 - parse failure at -v
 // v  > 0 - parse success ending at v
+namespace {
+
 int VKey_parse_char(uint8_t &byte, ZuString s, int off)
 {
   ZtRegex::Captures c;
@@ -383,6 +385,7 @@ int VKey_parse(int32_t &vkey_, ZuString s, int off)
   vkey_ = vkey;
   return off;
 }
+} // anon namespace
 
 void Cmd::print_(ZmStream &s) const
 {
@@ -450,26 +453,35 @@ int Cmd::parse(ZuString s, int off)
   return off;
 }
 
+namespace {
+
+const auto &comment() { return ZtREGEX("\G\s*#[^\n]*\n"); }
+
 int CmdSeq_parse(CmdSeq &cmds, ZuString s, int off)
 {
   ZtRegex::Captures c;
+  while (comment().m(s, c, off)) off += c[1].length();
   if (!ZtREGEX("\G\s*{").m(s, c, off)) return -off;
   off += c[1].length();
   Cmd cmd;
+  while (comment().m(s, c, off)) off += c[1].length();
   while (!ZtREGEX("\G\s*}").m(s, c, off)) {
     off = cmd.parse(s, off);
     if (off <= 0) return off;
     if (!ZtREGEX("\G\s*;").m(s, c, off)) return -off;
     off += c[1].length();
     cmds.push(ZuMv(cmd));
+    while (comment().m(s, c, off)) off += c[1].length();
   }
   off += c[1].length();
   return off;
 }
+} // anon namespace
 
 int Map_::parseMode(ZuString s, int off)
 {
   ZtRegex::Captures c;
+  while (comment().m(s, c, off)) off += c[1].length();
   if (!ZtREGEX("\G\s*mode\s+(\d+)").m(s, c, off)) return -off;
   off += c[1].length();
   unsigned mode = ZuBox<unsigned>{c[2]};
@@ -479,11 +491,13 @@ int Map_::parseMode(ZuString s, int off)
     edit = true;
   } else
     edit = false;
+  while (comment().m(s, c, off)) off += c[1].length();
   if (!ZtREGEX("\G\s*{").m(s, c, off)) return -off;
   off += c[1].length();
   addMode(mode, edit);
   int32_t vkey;
   CmdSeq cmds;
+  while (comment().m(s, c, off)) off += c[1].length();
   while (!ZtREGEX("\G\s*}").m(s, c, off)) {
     off = VKey_parse(vkey, s, off);
     if (off <= 0) return off;
@@ -491,6 +505,7 @@ int Map_::parseMode(ZuString s, int off)
     if (off <= 0) return off;
     bind(mode, vkey, ZuMv(cmds));
     cmds.clear();
+    while (comment().m(s, c, off)) off += c[1].length();
   }
   off += c[1].length();
   return off;
@@ -499,14 +514,17 @@ int Map_::parseMode(ZuString s, int off)
 int Map_::parse(ZuString s, int off)
 {
   ZtRegex::Captures c;
+  while (comment().m(s, c, off)) off += c[1].length();
   if (!ZtREGEX("\G\s*map\s+(\w+)").m(s, c, off)) return -off;
   off += c[1].length();
   id = c[2];
+  while (comment().m(s, c, off)) off += c[1].length();
   if (!ZtREGEX("\G\s*{").m(s, c, off)) return -off;
   off += c[1].length();
   while (!ZtREGEX("\G\s*}").m(s, c, off)) {
     off = parseMode(s, off);
     if (off <= 0) return off;
+    while (comment().m(s, c, off)) off += c[1].length();
   }
   off += c[1].length();
   return off;
@@ -622,13 +640,13 @@ bool Editor::loadMap(ZuString file)
   int off = map->parse(s, 0);
   if (off <= 0) {
     off = -off;
-    unsigned lpos = 0, line = 0;
+    unsigned lpos = 0, line = 1;
     ZtRegex::Captures c;
-    while (lpos < off && ZtREGEX("\G[^\n]*\n").m(s, c, lpos)) {
-      lpos += c[1].length();
-      line++;
+    while (ZtREGEX("\G[^\n]*\n").m(s, c, lpos)) {
+      unsigned npos = lpos + c[1].length();
+      if (npos > off) break;
+      lpos = npos; line++;
     }
-    if (!line) line = 1;
     off -= lpos;
     m_loadError = ZtString{} << "\"" << file << "\":" << line <<
       ": parsing failed near offset " << off;

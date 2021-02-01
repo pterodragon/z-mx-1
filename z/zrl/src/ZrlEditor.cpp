@@ -172,6 +172,12 @@ void Editor::init(Config config, App app)
   m_defltMap->bind(0, -VKey::Home, { { Op::Home | Op::Mv } });
   m_defltMap->bind(0, -VKey::End, { { Op::End | Op::Mv } });
 
+  m_defltMap->bind(0, -VKey::PgUp, { { Op::Prev } });
+  m_defltMap->bind(0, -VKey::PgDn, { { Op::Next } });
+
+  m_defltMap->bind(0, '\t', { { Op::Complete } });
+  m_defltMap->bind(0, '\x04', { { Op::ListComplete } });
+
   m_defltMap->bind(0, -(VKey::Left | VKey::Ctrl), {
     { Op::RevWord | Op::Mv }
   });
@@ -702,11 +708,13 @@ bool Editor::loadMap(ZuString file, bool select)
 
 void Editor::open(ZmScheduler *sched, unsigned thread)
 {
-  m_tty.open(sched, thread);
+  m_tty.open(sched, thread,
+      [this](bool ok) { m_app.open(ok); },
+      [this](ZuString s) { m_app.error(s); });
 }
 void Editor::close()
 {
-  m_tty.close();
+  m_tty.close([this]() { m_app.close(); });
 }
 bool Editor::isOpen() const
 {
@@ -760,6 +768,8 @@ bool Editor::process(int32_t vkey)
 {
   if (!m_map) return false;
   bool stop = false;
+  if (vkey == -VKey::EndOfFile && m_tty.pos() > m_context.startPos)
+    vkey = m_tty.literal(vkey);
   for (unsigned i = 0, n = m_config.maxVKeyRedirs; i < n; i++) {
     m_context.redirVKey = -VKey::Null;
     if (process_(vkey)) { stop = true; break; }

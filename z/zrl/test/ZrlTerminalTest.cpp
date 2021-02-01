@@ -25,12 +25,12 @@ int main()
   s.start();
   Zrl::Terminal tty;
   ZmSemaphore done;
-  tty.open(&s, 1);
+  tty.open(&s, 1, [](bool) { }, [](ZuString s) { std::cerr << s << '\n'; });
   tty.start(
       []() { },
       [&tty, &done](int32_t key) -> bool { return process(tty, done, key); });
   done.wait();
   tty.stop();
-  tty.close();
+  tty.close([]() { });
   s.stop();
 }

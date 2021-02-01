@@ -23,12 +23,16 @@
 
 using namespace Zrl;
 
-namespace { static ZmSemaphore done; }
+namespace {
+  static ZmSemaphore done;
+  static bool openOK = false;
+}
 
 void CLI::init(App app)
 {
   app.end = [end = ZuMv(app.end)]() { done.post(); end(); };
   app.sig = [sig = ZuMv(app.sig)](int i) { done.post(); sig(i); };
+  app.open = [open = ZuMv(app.open)](bool ok) { openOK = ok; done.post(); };
   Editor::init(ZuMv(app));
   m_sched = new ZmScheduler{ZmSchedParams{}.id("ZrlCLI").nThreads(1)};
   if (auto map = ::getenv("ZRL_MAP"))
@@ -43,14 +47,22 @@ void CLI::final()
   m_sched = nullptr;
 }
 
-void CLI::open()
+bool CLI::open()
 {
-  Editor::open(m_sched, 0);
+  m_sched->start();
+  Editor::open(m_sched, 1);
+  done.wait();
+  return openOK;
+}
+
+void CLI::close()
+{
+  Editor::close();
+  m_sched->stop();
 }
 
 void CLI::start(ZuString prompt)
 {
-  m_sched->start();
   Editor::start([prompt = ZtArray<uint8_t>{prompt}](Editor &editor) mutable {
     editor.prompt(ZuMv(prompt));
   });
@@ -59,7 +71,6 @@ void CLI::start(ZuString prompt)
 void CLI::stop()
 {
   Editor::stop();
-  m_sched->stop();
 }
 
 void CLI::join()

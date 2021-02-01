@@ -17,7 +17,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+// use ZuArrayN<> for fixed-size arrays without heap overhead
+//
 // heap-allocated dynamic array class
+//
+// * fast, lightweight
+// * explicitly contiguous
+// * provides direct read/write access to the buffer
+// * supports both zero-copy and deep-copy
+// * ZtArray<T> where T is a byte is heavily overloaded as a string
 
 #ifndef ZtArray_HPP
 #define ZtArray_HPP

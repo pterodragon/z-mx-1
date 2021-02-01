@@ -19,7 +19,10 @@
 
 // fixed-size arrays for use in structs and passing by value
 //
-// * cached length
+// * cached length (and constexpr size)
+// * explicitly contiguous
+// * provides direct read/write access to the buffer
+// * max 64k (by design)
 
 #ifndef ZuArrayN_HPP
 #define ZuArrayN_HPP

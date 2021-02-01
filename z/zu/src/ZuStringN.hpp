@@ -19,10 +19,12 @@
 
 // fixed-size POD string/buffer for use in POD structs and passing by value
 //
-// * cached length
+// * cached length (and constexpr size)
 // * always null-terminated
+// * explicitly contiguous
+// * provides direct read/write access to the buffer
 // * optimized for smaller sizes
-// * max 64k
+// * max 64k (by design)
 
 #ifndef ZuStringN_HPP
 #define ZuStringN_HPP

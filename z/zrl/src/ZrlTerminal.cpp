@@ -29,9 +29,16 @@
 #include <sys/epoll.h>
 #include <linux/unistd.h>
 
+#include <zlib/ZiLib.hpp>
+
 #include <zlib/ZrlTerminal.hpp>
 
 namespace Zrl {
+
+using ErrorStr = ZuStringN<120>;
+
+#define ZrlError(op, result, error) \
+  Zrl::ErrorStr() << op << ' ' << Zi::resultName(result) << ' ' << error
 
 namespace VKey {
 ZrlExtern void print_(int32_t vkey, ZmStream &s)
@@ -135,12 +142,16 @@ const VKeyMatch::Action *VKeyMatch::match(uint8_t c) const
   return nullptr;
 }
 
-void Terminal::open(ZmScheduler *sched, unsigned thread) // async
+void Terminal::open(ZmScheduler *sched, unsigned thread,
+    OpenFn openFn, ErrorFn errorFn) // async
 {
   m_sched = sched;
   m_thread = thread;
   m_sched->invoke(m_thread,
-      ZmFn<>{this, [](Terminal *this_) { this_->open_(); }});
+      [this, openFn = ZuMv(openFn), errorFn = ZuMv(errorFn)]() mutable {
+	m_errorFn = ZuMv(errorFn);
+	openFn(this->open_());
+      });
 }
 
 bool Terminal::isOpen() const // synchronous
@@ -155,10 +166,9 @@ bool Terminal::isOpen() const // synchronous
   return ok;
 }
 
-void Terminal::close() // async
+void Terminal::close(CloseFn fn) // async
 {
-  m_sched->invoke(m_thread,
-      ZmFn<>{this, [](Terminal *this_) { this_->close_(); }});
+  m_sched->invoke(m_thread, [this, fn = ZuMv(fn)]() { this->close_(); fn(); });
 }
 
 void Terminal::start(StartFn startFn, KeyFn keyFn) // async
@@ -206,21 +216,55 @@ void Terminal::stop() // async
 // - SetConsoleCtrlHandler()
 // - CreateFile("CONOUT$")
 // - SetConsoleOututCP()
-void Terminal::open_()
+bool Terminal::open_()
 {
   // open tty device
   m_fd = ::open("/dev/tty", O_RDWR, 0);
   if (m_fd < 0) {
     ZeError e{errno};
-    ZrlError("open(\"/dev/tty\")", Zi::IOError, e);
+    m_errorFn(ZrlError("open(\"/dev/tty\")", Zi::IOError, e));
+    return false;
   }
 
   // save terminal control flags
   memset(&m_otermios, 0, sizeof(termios));
   tcgetattr(m_fd, &m_otermios);
 
+  // set up I/O multiplexer (epoll)
+  if ((m_epollFD = epoll_create(2)) < 0) {
+    m_errorFn(ZrlError("epoll_create", Zi::IOError, ZeLastError));
+    return false;
+  }
+  if (pipe(&m_wakeFD) < 0) {
+    ZeError e{errno};
+    close_fds();
+    m_errorFn(ZrlError("pipe", Zi::IOError, e));
+    return false;
+  }
+  if (fcntl(m_wakeFD, F_SETFL, O_NONBLOCK) < 0) {
+    ZeError e{errno};
+    close_fds();
+    m_errorFn(ZrlError("fcntl(F_SETFL, O_NONBLOCK)", Zi::IOError, e));
+    return false;
+  }
+  {
+    struct epoll_event ev;
+    memset(&ev, 0, sizeof(struct epoll_event));
+    ev.events = EPOLLIN;
+    ev.data.u64 = 3;
+    if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, m_wakeFD, &ev) < 0) {
+      ZeError e{errno};
+      close_fds();
+      m_errorFn(ZrlError("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e));
+      return false;
+    }
+  }
+
   // initialize terminfo
-  setupterm(nullptr, m_fd, nullptr);
+  if (setupterm(nullptr, m_fd, nullptr) < 0) {
+    m_errorFn("terminfo initialization failed");
+    return false;
+  }
 
   // obtain input capabilities
   m_smkx = tigetstr("smkx");
@@ -427,36 +471,6 @@ void Terminal::open_()
   addVKey("kDC7", nullptr, VKey::Delete | VKey::Ctrl | VKey::Alt);
   addVKey("kDC8", nullptr, VKey::Delete | VKey::Shift | VKey::Ctrl | VKey::Alt);
 
-  // set up I/O multiplexer (epoll)
-  if ((m_epollFD = epoll_create(2)) < 0) {
-    ZrlError("epoll_create", Zi::IOError, ZeLastError);
-    return;
-  }
-  if (pipe(&m_wakeFD) < 0) {
-    ZeError e{errno};
-    close_fds();
-    ZrlError("pipe", Zi::IOError, e);
-    return;
-  }
-  if (fcntl(m_wakeFD, F_SETFL, O_NONBLOCK) < 0) {
-    ZeError e{errno};
-    close_fds();
-    ZrlError("fcntl(F_SETFL, O_NONBLOCK)", Zi::IOError, e);
-    return;
-  }
-  {
-    struct epoll_event ev;
-    memset(&ev, 0, sizeof(struct epoll_event));
-    ev.events = EPOLLIN;
-    ev.data.u64 = 3;
-    if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, m_wakeFD, &ev) < 0) {
-      ZeError e{errno};
-      close_fds();
-      ZrlError("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e);
-      return;
-    }
-  }
-
   // handle SIGWINCH
   {
     struct sigaction nwinch;
@@ -471,6 +485,8 @@ void Terminal::open_()
 
   // get terminal width/height
   resized();
+
+  return true;
 }
 
 // Win32
@@ -576,7 +592,7 @@ void Terminal::start_()
   if (fcntl(m_fd, F_SETFL, O_NONBLOCK) < 0) {
     ZeError e{errno};
     close_fds();
-    ZrlError("fcntl(F_SETFL, O_NONBLOCK)", Zi::IOError, e);
+    m_errorFn(ZrlError("fcntl(F_SETFL, O_NONBLOCK)", Zi::IOError, e));
     return;
   }
   {
@@ -587,7 +603,7 @@ void Terminal::start_()
     if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, m_fd, &ev) < 0) {
       ZeError e{errno};
       close_fds();
-      ZrlError("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e);
+      m_errorFn(ZrlError("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e));
       return;
     }
   }
@@ -653,7 +669,7 @@ void Terminal::wake_()
   while (::write(m_wakeFD2, &c, 1) < 0) {
     ZeError e{errno};
     if (e.errNo() != EINTR && e.errNo() != EAGAIN) {
-      ZrlError("write", Zi::IOError, e);
+      m_errorFn(ZrlError("write", Zi::IOError, e));
       break;
     }
   }
@@ -698,7 +714,7 @@ void Terminal::read()
       ZeError e{errno};
       if (e.errNo() == EINTR || e.errNo() == EAGAIN)
 	continue;
-      ZrlError("epoll_wait", Zi::IOError, e);
+      m_errorFn(ZrlError("epoll_wait", Zi::IOError, e));
       m_keyFn(VKey::EndOfFile);
       goto stop;
     }
@@ -814,7 +830,7 @@ int Terminal::write(ZeError *e_)
   while (::write(m_fd, m_out.data(), n) < n) {
     ZeError e{errno};
     if (e.errNo() != EINTR && e.errNo() != EAGAIN) {
-      ZrlError("write", Zi::IOError, e);
+      m_errorFn(ZrlError("write", Zi::IOError, e));
       if (e_) *e_ = e;
       return Zi::IOError;
     }

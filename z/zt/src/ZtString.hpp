@@ -17,13 +17,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// heap-allocated dynamic contiguous string class
+// use ZuStringN<> for fixed-size strings without heap overhead
+//
+// ZtString is a dynamic heap-allocated string class
 //
 // * fast, lightweight
+// * explicitly contiguous
+// * provides direct read/write access to the buffer
 // * short-circuits heap allocation for small strings below a built-in size
 // * supports both zero-copy and deep-copy
-// * thin layer on ANSI C string functions
-// * no locale or character set overhead except when explicitly requested
+// * very thin layer on ANSI C string functions
+// * no C library locale or character set overhead (except when requested)
+// * no STL cruft
 
 #ifndef ZtString_HPP
 #define ZtString_HPP

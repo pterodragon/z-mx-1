@@ -51,7 +51,6 @@
 
 #include <zlib/ZrlTerminfo.hpp>
 #include <zlib/ZrlLine.hpp>
-#include <zlib/ZrlError.hpp>
 
 namespace Zrl {
 
@@ -148,16 +147,23 @@ private:
 
 class ZrlAPI Terminal {
 public:
+  using ErrorFn = ZmFn<ZuString>;
+
+  using OpenFn = ZmFn<bool>;	// (ok)
+  using CloseFn = ZmFn<>;
+
   using StartFn = ZmFn<>;
-  using KeyFn = ZmFn<int32_t>; // return true to stop reading 
+  using KeyFn = ZmFn<int32_t>;	// return true to stop reading 
 
   void init(unsigned vkeyInterval) {
     m_vkeyInterval = vkeyInterval; // milliseconds
   }
-  void final() { }
+  void final() {
+    m_errorFn = ErrorFn{};
+  }
 
-  void open(ZmScheduler *sched, unsigned thread);
-  void close();
+  void open(ZmScheduler *sched, unsigned thread, OpenFn, ErrorFn);
+  void close(CloseFn);
 
   bool isOpen() const; // blocking
 
@@ -197,7 +203,7 @@ public:
   DumpVKeys dumpVKeys() const { return {*this}; }
 
 private:
-  void open_();
+  bool open_();
   void close_();
   void close_fds();
 
@@ -325,6 +331,10 @@ private:
   ZmScheduler		*m_sched = nullptr;
   unsigned		m_thread = 0;
   Lock			m_lock;	// serializes start/stop
+
+  // error handler
+
+  ErrorFn		m_errorFn;
 
   // device state
 

@@ -38,6 +38,11 @@
 
 namespace Zrl {
 
+using ErrorFn = ZmFn<ZuString>;		// (message)
+
+using OpenFn = ZmFn<bool>;		// (ok)
+using CloseFn = ZmFn<>;
+
 using EnterFn = ZmFn<ZuString>;
 using EndFn = ZmFn<>;
 using SigFn = ZmFn<int>;
@@ -49,6 +54,11 @@ using HistSaveFn = ZmFn<unsigned, ZuString>;
 using HistLoadFn = ZmFn<unsigned, ZuString &>;
 
 struct App {
+  ErrorFn	error;		// I/O error
+
+  OpenFn	open;		// terminal opened
+  CloseFn	close;		// terminal closed
+
   EnterFn	enter;		// line entered
   EndFn		end;		// end of input (EOF)
   SigFn		sig;		// signal (^C ^\ ^Z)

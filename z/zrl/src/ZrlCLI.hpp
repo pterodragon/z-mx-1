@@ -64,8 +64,8 @@ public:
   void init(App app);		// set up callbacks
   void final();			// optional teardown
 
-  void open();			// open terminal
-  using Editor::close;		// void close() - close terminal
+  bool open();			// open terminal - returns true on success
+  void close();			// void close() - close terminal
 
   void start(ZuString prompt);	// start running
   void stop();			// stop running

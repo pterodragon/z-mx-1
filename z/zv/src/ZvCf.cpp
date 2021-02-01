@@ -418,7 +418,7 @@ append:
   if (fileValueVar.m(in, c, off)) {
     off += c[1].length();
     ZuString d = defines->findVal(c[2]);
-    if (!d) d = getenv(c[2]);
+    if (!d) d = ::getenv(c[2]);
     if (!!d) val += d;
     goto append;
   }
@@ -496,7 +496,7 @@ quoted:
 
 void ZvCf::fromEnv(const char *name, bool validate)
 {
-  ZuString data = getenv(name);
+  ZuString data = ::getenv(name);
   unsigned n = data.length();
 
   if (!data) return;

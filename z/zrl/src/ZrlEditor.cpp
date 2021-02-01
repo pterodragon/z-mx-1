@@ -131,6 +131,12 @@ Editor::Editor()
 
   m_cmdFn[Op::FwdSearch] = &Editor::cmdFwdSearch;
   m_cmdFn[Op::RevSearch] = &Editor::cmdRevSearch;
+}
+
+void Editor::init(Config config, App app)
+{
+  m_config = config;
+  m_app = app;
 
   // default key bindings
 
@@ -298,6 +304,15 @@ Editor::Editor()
     { Op::ClrHigh | Op::Copy },
     { Op::Pop, 2 }
   });
+
+  m_map = m_defltMap;
+
+  m_tty.init(m_config.vkeyInterval);
+}
+void Editor::final()
+{
+  m_tty.final();
+  m_app = {};
 }
 
 // all parse() functions return v such that
@@ -629,7 +644,7 @@ void Map_::reset()
   modes.clear();
 }
 
-bool Editor::loadMap(ZuString file)
+bool Editor::loadMap(ZuString file, bool select)
 {
   ZtArray<char> s;
   {
@@ -680,21 +695,9 @@ bool Editor::loadMap(ZuString file)
     m_loadError = ZtString{} << "\"" << file << "\": mode 0 not defined";
     return false;
   }
+  if (select) m_map = map.ptr();
   m_maps.add(map.release());
   return true;
-}
-
-void Editor::init(Config config, App app)
-{
-  m_config = config;
-  m_map = m_defltMap;
-  m_app = app;
-  m_tty.init(m_config.vkeyInterval);
-}
-void Editor::final()
-{
-  m_tty.final();
-  m_app = {};
 }
 
 void Editor::open(ZmScheduler *sched, unsigned thread)
@@ -739,6 +742,9 @@ bool Editor::running() const
 bool Editor::map(ZuString id)
 {
   if (auto map = m_maps.find(id)) {
+    cmdClrHigh({ Op::ClrHigh }, 0);
+    m_context.mode = 0;
+    m_context.stack.clear();
     m_map = map;
     return true;
   }

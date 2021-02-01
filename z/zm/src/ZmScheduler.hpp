@@ -82,27 +82,20 @@ public:
 
   using ID = ZuID;
 
-  template <typename S> ZmSchedParams &&id(const S &s)
-    { m_id = s; return ZuMv(*this); }
+  ZmSchedParams &&id(ZuID id) { m_id = id; return ZuMv(*this); }
   ZmSchedParams &&nThreads(unsigned v)
     { m_threads.length((m_nThreads = v) + 1); return ZuMv(*this); }
-  ZmSchedParams &&stackSize(unsigned v)
-    { m_stackSize = v; return ZuMv(*this); }
-  ZmSchedParams &&priority(unsigned v)
-    { m_priority = v; return ZuMv(*this); }
-  ZmSchedParams &&partition(unsigned v)
-    { m_partition = v; return ZuMv(*this); }
-  template <typename T> ZmSchedParams &&quantum(T &&v)
-    { m_quantum = ZuFwd<T>(v); return ZuMv(*this); }
+  ZmSchedParams &&stackSize(unsigned v) { m_stackSize = v; return ZuMv(*this); }
+  ZmSchedParams &&priority(unsigned v) { m_priority = v; return ZuMv(*this); }
+  ZmSchedParams &&partition(unsigned v) { m_partition = v; return ZuMv(*this); }
+  ZmSchedParams &&quantum(ZmTime v) { m_quantum = v; return ZuMv(*this); }
 
-  ZmSchedParams &&queueSize(unsigned v)
-    { m_queueSize = v; return ZuMv(*this); }
-  ZmSchedParams &&ll(bool v)
-    { m_ll = v; return ZuMv(*this); }
-  ZmSchedParams &&spin(unsigned v)
-    { m_spin = v; return ZuMv(*this); }
-  ZmSchedParams &&timeout(unsigned v)
-    { m_timeout = v; return ZuMv(*this); }
+  ZmSchedParams &&queueSize(unsigned v) { m_queueSize = v; return ZuMv(*this); }
+  ZmSchedParams &&ll(bool v) { m_ll = v; return ZuMv(*this); }
+  ZmSchedParams &&spin(unsigned v) { m_spin = v; return ZuMv(*this); }
+  ZmSchedParams &&timeout(unsigned v) { m_timeout = v; return ZuMv(*this); }
+
+  ZmSchedParams &&startTimer(bool b) { m_startTimer = b; return ZuMv(*this); }
 
   template <typename L>
   ZmSchedParams &&thread(unsigned tid, L l) {
@@ -122,6 +115,8 @@ public:
   bool ll() const { return m_ll; }
   unsigned spin() const { return m_spin; }
   unsigned timeout() const { return m_timeout; }
+
+  bool startTimer() const { return m_startTimer; }
 
   const Thread &thread(unsigned tid) const { return m_threads[tid]; }
 
@@ -147,6 +142,8 @@ private:
   unsigned	m_timeout = 1;
 
   Threads	m_threads = Threads{m_nThreads + 1};
+
+  bool		m_startTimer = false;
 
   bool		m_ll = false;
 };

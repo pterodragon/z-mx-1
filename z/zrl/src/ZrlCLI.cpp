@@ -19,28 +19,50 @@
 
 // command line interface
 
-#ifndef Zrl_HPP
-#define Zrl_HPP
+#include <zlib/ZrlCLI.hpp>
 
-#ifdef _MSC_VER
-#pragma once
-#endif
+using namespace Zrl;
 
-#ifndef ZrlLib_HPP
-#include <zlib/ZrlLib.hpp>
-#endif
+namespace { static ZmSemaphore done; }
 
-#include <zlib/ZvCf.hpp>
+void CLI::init(App app)
+{
+  app.end = [end = ZuMv(app.end)]() { done.post(); end(); };
+  app.sig = [sig = ZuMv(app.sig)](int i) { done.post(); sig(i); };
+  Editor::init(ZuMv(app));
+  m_sched = new ZmScheduler{ZmSchedParams{}.id("ZrlCLI").nThreads(1)};
+  if (auto map = ::getenv("ZRL_MAP"))
+    if (!loadMap(map, true)) std::cerr << loadError() << '\n' << std::flush;
+  if (auto mapID = ::getenv("ZRL_MAPID"))
+    map(mapID);
+}
 
-struct ZrlAPI Zrl {
-  struct EndOfFile { };	// thrown by readline and readline_ on EOF
+void CLI::final()
+{
+  Editor::final();
+  m_sched = nullptr;
+}
 
-  static void init() { }
-  static void syntax(const ZvCf *cf) { }
-  static void stop() { }
+void CLI::open()
+{
+  Editor::open(m_sched, 0);
+}
 
-  static ZmRef<ZvCf> readline(const char *prompt) { return {}; }
-  static ZtString readline_(const char *prompt) { return {}; }
-};
+void CLI::start(ZuString prompt)
+{
+  m_sched->start();
+  Editor::start([prompt = ZtArray<uint8_t>{prompt}](Editor &editor) mutable {
+    editor.prompt(ZuMv(prompt));
+  });
+}
 
-#endif /* Zrl_HPP */
+void CLI::stop()
+{
+  Editor::stop();
+  m_sched->stop();
+}
+
+void CLI::join()
+{
+  done.wait();
+}

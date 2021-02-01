@@ -105,6 +105,14 @@ void ZmScheduler::runThreads()
   }
 }
 
+void ZmScheduler::startTimer()
+{
+  if (ZuUnlikely(!m_thread))
+    m_thread = ZmThread(0,
+	ZmFn<>::Member<&ZmScheduler::timer>::fn(this),
+	m_params.thread(0));
+}
+
 void ZmScheduler::start()
 {
   {
@@ -131,9 +139,11 @@ void ZmScheduler::start()
     m_stateCond.broadcast();
   }
 
-  m_thread = ZmThread(0,
-      ZmFn<>::Member<&ZmScheduler::timer>::fn(this),
-      m_params.thread(0));
+  {
+    ZmGuard<ZmPLock> scheduleGuard(m_scheduleLock);
+
+    if (m_params.startTimer()) startTimer();
+  }
 
   runThreads();
 
@@ -233,12 +243,14 @@ void ZmScheduler::stop()
       m_threads[i].ring.eof(false);
   }
 
-  m_pending.post();
+  if (m_thread) m_pending.post();
 
   m_stopped.reset();
 
-  if (m_thread) m_thread.join();
-  m_thread = nullptr;
+  if (m_thread) {
+    m_thread.join();
+    m_thread = {};
+  }
 
   {
     ZmGuard<ZmLock> stateGuard(m_stateLock);
@@ -380,6 +392,8 @@ void ZmScheduler::run(
     timer->tid = tid;
     timer->fn = ZuMv(fn);
     m_schedule.add(timer);
+
+    if (kick) startTimer();
   }
 
   if (kick) m_pending.post();

@@ -17,6 +17,34 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// command line interface
+// command line interface - application callbacks
 
-#include <zlib/Zrl.hpp>
+#ifndef ZrlConfig_HPP
+#define ZrlConfig_HPP
+
+#ifdef _MSC_VER
+#pragma once
+#endif
+
+#ifndef ZrlLib_HPP
+#include <zlib/ZrlLib.hpp>
+#endif
+
+#include <zlib/ZvCf.hpp>
+
+namespace Zrl {
+
+// line editor configuration
+struct Config {
+  unsigned	vkeyInterval = 100;	// vkey seq. interval (milliseconds)
+  unsigned	maxLineLen = 32768;	// maximum line length
+  unsigned	maxCompPages = 5;	// max # pages of possible completions
+  unsigned	histOffset = 0;		// initial history offset
+  unsigned	maxStackDepth = 10;	// maximum mode stack depth
+  unsigned	maxFileSize = 1<<20;	// maximum keymap file size
+  unsigned	maxVKeyRedirs = 10;	// maximum # keystroke redirects
+};
+
+} // Zrl
+
+#endif /* ZrlConfig_HPP */

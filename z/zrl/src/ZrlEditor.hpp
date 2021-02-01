@@ -45,6 +45,7 @@
 #include <zlib/ZrlLine.hpp>
 #include <zlib/ZrlTerminal.hpp>
 #include <zlib/ZrlApp.hpp>
+#include <zlib/ZrlConfig.hpp>
 
 namespace Zrl {
 
@@ -388,33 +389,6 @@ struct CmdContext {
   void clrArg() { arg = accumArg = 0; }
 };
 
-// line editor configuration
-struct Config {
-  unsigned	vkeyInterval = 100;	// vkey seq. interval (milliseconds)
-  unsigned	maxLineLen = 32768;	// maximum line length
-  unsigned	maxCompPages = 5;	// max # pages of possible completions
-  unsigned	histOffset = 0;		// initial history offset
-  unsigned	maxStackDepth = 10;	// maximum mode stack depth
-  unsigned	maxFileSize = 1<<20;	// maximum key map file size
-  unsigned	maxVKeyRedirs = 10;	// maximum keystroke redirects
-
-  Config() = default;
-  Config(const Config &) = default;
-  Config &operator =(const Config &) = default;
-  Config(Config &&) = default;
-  Config &operator =(Config &&) = default;
-
-  Config(const ZvCf *cf) {
-    vkeyInterval = cf->getInt("vkeyInterval", 1, 1000, false, 100);
-    maxLineLen = cf->getInt("maxLineLen", 0, (1<<20), false, 32768);
-    maxCompPages = cf->getInt("maxCompPages", 0, 100, false, 5);
-    histOffset = cf->getInt("histOffset", 0, UINT_MAX, false, 0);
-    maxStackDepth = cf->getInt("maxStackDepth", 1, 100, false, 10);
-    maxFileSize = cf->getInt("maxFileSize", 64<<10, 10<<20, false, 1<<20);
-    maxVKeyRedirs = cf->getInt("maxVKeyRedirs", 1, 100, false, 10);
-  }
-};
-
 // the line editor is a virtual machine that executes sequences of commands;
 // each command sequence is bound to a virtual key; individual commands
 // consist of an opcode, an optionally overridden argument and an
@@ -431,11 +405,12 @@ public:
   Editor();
 
   // initialization/finalization
-  bool loadMap(ZuString file);
-  const ZtString &loadError() const { return m_loadError; }
-
+  void init(App app) { init(Config{}, ZuMv(app)); }
   void init(Config config, App app);
   void final();
+
+  bool loadMap(ZuString file, bool select = false); // must call init() first
+  const ZtString &loadError() const { return m_loadError; }
 
   // terminal open/close
   void open(ZmScheduler *sched, unsigned thread);

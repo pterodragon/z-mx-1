@@ -206,7 +206,7 @@ ZtDate_TzGuard::ZtDate_TzGuard(const char *tz) :
   m_oldTz(0)
 {
   if (tz) {
-    if (m_oldTz = getenv("TZ")) m_oldTz -= 3; // potentially non-portable
+    if (m_oldTz = ::getenv("TZ")) m_oldTz -= 3; // potentially non-portable
 
     m_tz = (char *)malloc(strlen(tz) + 4);
     ZmAssert(m_tz);
@@ -642,6 +642,268 @@ void ZtDate::ctorCSV(ZuString s, const char *tz, int tzOffset)
 
 invalid:
   m_julian = ZtDate_NullJulian, m_sec = 0, m_nsec = 0;
+}
+
+void ZtDate_strftime::print_(ZmStream &s, const ZtDateFmt::Strftime &v)
+{
+  const char *format = v.format;
+
+  if (!format || !*format) return;
+
+  ZtDate date = v.date + v.offset;
+
+  ZuBox<int> year, month, day, hour, minute, second;
+  ZuBox<int> days, week, wkDay, hour12;
+  ZuBox<int> wkYearISO, weekISO, weekSun;
+  ZuBox<time_t> seconds;
+
+  // Conforming to, variously:
+  // (C90) - ANSI C '90
+  // (C99) - ANSI C '99
+  // (SU) - Single Unix Specification
+  // (MS) - Microsoft CRT
+  // (GNU) - glibc (not all glibc-specific extensions are supported)
+  // (TZ) - Arthur Olson's timezone library
+ 
+  ZuVFmt fmt;
+
+  while (char c = *format++) {
+    if (c != '%') { s << c; continue; }
+    bool alt = false;
+    ZuBox<unsigned> width;
+fmtchar:
+    c = *format++;
+    switch (c) {
+      case '#': // (MS) alt. format
+      case 'E': // (SU) ''
+	alt = true;
+      case 'O': // (SU) alt. digits
+	goto fmtchar;
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9': // (GNU) field width specifier
+	format += width.scan(format);
+	goto fmtchar;
+      case 'a': // (C90) day of week - short name
+	if (!*wkDay) wkDay = date.julian() % 7 + 1;
+	s << ZtDate::dayShortName(wkDay);
+	break;
+      case 'A': // (C90) day of week - long name
+	if (!*wkDay) wkDay = date.julian() % 7 + 1;
+	s << ZtDate::dayLongName(wkDay);
+	break;
+      case 'b': // (C90) month - short name
+      case 'h': // (SU) '' 
+	if (!*month) date.ymd(year, month, day);
+	s << ZtDate::monthShortName(month);
+	break;
+      case 'B': // (C90) month - long name
+	if (!*month) date.ymd(year, month, day);
+	s << ZtDate::monthLongName(month);
+	break;
+      case 'c': // (C90) Unix asctime() / ctime() (%a %b %e %T %Y)
+	if (!*year) date.ymd(year, month, day);
+	if (!*hour) date.hms(hour, minute, second);
+	if (!*wkDay) wkDay = date.julian() % 7 + 1;
+	s << ZtDate::dayShortName(wkDay) << ' ' <<
+	  ZtDate::monthShortName(month) << ' ' <<
+	  vfmt(fmt, day, 2, alt) << ' ' <<
+	  vfmt(fmt, hour, 2, alt) << ':' <<
+	  vfmt(fmt, minute, 2, alt) << ':' <<
+	  vfmt(fmt, second, 2, alt) << ' ' <<
+	  vfmt(fmt, year, 4, alt);
+	break;
+      case 'C': // (SU) century
+	if (!*year) date.ymd(year, month, day);
+	{
+	  ZuBox<int> century = year / 100;
+	  s << vfmt(fmt, century, width, 2, alt);
+	}
+	break;
+      case 'd': // (C90) day of month
+	if (!*day) date.ymd(year, month, day);
+	s << vfmt(fmt, day, width, 2, alt);
+	break;
+      case 'x': // (C90) %m/%d/%y
+      case 'D': // (SU) ''
+	if (!*year) date.ymd(year, month, day);
+	{
+	  ZuBox<int> year_ = year % 100;
+	  s << vfmt(fmt, month, 2, alt) << '/' <<
+	    vfmt(fmt, day, 2, alt) << '/' <<
+	    vfmt(fmt, year_, 2, alt);
+	}
+	break;
+      case 'e': // (SU) day of month - space padded
+	if (!*year) date.ymd(year, month, day);
+	s << vfmt(fmt, day, width, 2, alt, ' ');
+	break;
+      case 'F': // (C99) %Y-%m-%d per ISO 8601
+	if (!*year) date.ymd(year, month, day);
+	s << vfmt(fmt, year, 4, alt) << '-' <<
+	  vfmt(fmt, month, 2, alt) << '-' <<
+	  vfmt(fmt, day, 2, alt);
+	break;
+      case 'g': // (TZ) ISO week date year (2 digits)
+      case 'G': // (TZ) '' (4 digits)
+	if (!*wkYearISO) {
+	  if (!*year) date.ymd(year, month, day);
+	  if (!*days) days = date.days(year, 1, 1);
+	  date.ywdISO(year, days, wkYearISO, weekISO, wkDay);
+	}
+	{
+	  ZuBox<int> wkYearISO_ = wkYearISO;
+	  if (c == 'g') wkYearISO_ %= 100;
+	  s << vfmt(fmt, wkYearISO_, width, (c == 'g' ? 2 : 4), alt);
+	}
+	break;
+      case 'H': // (C90) hour (24hr)
+	if (!*hour) date.hms(hour, minute, second);
+	s << vfmt(fmt, hour, width, 2, alt);
+	break;
+      case 'I': // (C90) hour (12hr)
+	if (!*hour12) {
+	  if (!*hour) date.hms(hour, minute, second);
+	  hour12 = hour % 12;
+	  if (!hour12) hour12 += 12;
+	}
+	s << vfmt(fmt, hour12, width, 2, alt);
+	break;
+      case 'j': // (C90) day of year
+	if (!*year) date.ymd(year, month, day);
+	if (!*days) days = date.days(year, 1, 1);
+	{
+	  ZuBox<int> days_ = days + 1;
+	  s << vfmt(fmt, days_, width, 3, alt);
+	}
+	break;
+      case 'm': // (C90) month
+	if (!*month) date.ymd(year, month, day);
+	s << vfmt(fmt, month, width, 2, alt);
+	break;
+      case 'M': // (C90) minute
+	if (!*minute) date.hms(hour, minute, second);
+	s << vfmt(fmt, minute, width, 2, alt);
+	break;
+      case 'n': // (SU) newline
+	s << '\n';
+	break;
+      case 'p': // (C90) AM/PM
+	if (!*hour) date.hms(hour, minute, second);
+	s << (hour >= 12 ? "PM" : "AM");
+	break;
+      case 'P': // (GNU) am/pm
+	if (!*hour) date.hms(hour, minute, second);
+	s << (hour >= 12 ? "pm" : "am");
+	break;
+      case 'r': // (SU) %I:%M:%S %p
+	if (!*hour) date.hms(hour, minute, second);
+	if (!*hour12) {
+	  hour12 = hour % 12;
+	  if (!hour12) hour12 += 12;
+	}
+	s << vfmt(fmt, hour12, 2, alt) << ':' <<
+	  vfmt(fmt, minute, 2, alt) << ':' <<
+	  vfmt(fmt, second, 2, alt) << ' ' <<
+	  (hour >= 12 ? "PM" : "AM");
+	break;
+      case 'R': // (SU) %H:%M
+	if (!*hour) date.hms(hour, minute, second);
+	s << vfmt(fmt, hour, 2, alt) << ':' <<
+	  vfmt(fmt, minute, 2, alt);
+	break;
+      case 's': // (TZ) number of seconds since the Epoch
+	if (!*seconds) seconds = date.time();
+	if (!alt && *width)
+	  s << seconds.vfmt(ZuVFmt{}.right(width));
+	else
+	  s << seconds;
+	break;
+      case 'S': // (C90) second
+	if (!*second) date.hms(hour, minute, second);
+	s << vfmt(fmt, second, width, 2, alt);
+	break;
+      case 't': // (SU) TAB
+	s << '\t';
+	break;
+      case 'X': // (C90) %H:%M:%S
+      case 'T': // (SU) ''
+	if (!*hour) date.hms(hour, minute, second);
+	s << vfmt(fmt, hour, 2, alt) << ':' <<
+	  vfmt(fmt, minute, 2, alt) << ':' <<
+	  vfmt(fmt, second, 2, alt);
+	break;
+      case 'u': // (SU) week day as decimal (1-7), 1 is Monday (7 is Sunday)
+	if (!*wkDay) wkDay = date.julian() % 7 + 1;
+	s << vfmt(fmt, wkDay, width, 1, alt);
+	break;
+      case 'U': // (C90) week (00-53), 1st Sunday in year is 1st day of week 1
+	if (!*weekSun) {
+	  if (!*year) date.ymd(year, month, day);
+	  if (!*days) days = date.days(year, 1, 1);
+	  {
+	    int wkDay_;
+	    date.ywdSun(year, days, weekSun, wkDay_);
+	  }
+	}
+	s << vfmt(fmt, weekSun, width, 2, alt);
+	break;
+      case 'V': // (SU) week (01-53), per ISO week date
+	if (!*weekISO) {
+	  if (!*year) date.ymd(year, month, day);
+	  if (!*days) days = date.days(year, 1, 1);
+	  date.ywdISO(year, days, wkYearISO, weekISO, wkDay);
+	}
+	s << vfmt(fmt, weekISO, width, 2, alt);
+	break;
+      case 'w': // (C90) week day as decimal, 0 is Sunday
+	if (!*wkDay) wkDay = date.julian() % 7 + 1;
+	{
+	  ZuBox<int> wkDay_ = wkDay;
+	  if (wkDay_ == 7) wkDay_ = 0;
+	  s << vfmt(fmt, wkDay_, width, 1, alt);
+	}
+	break;
+      case 'W': // (C90) week (00-53), 1st Monday in year is 1st day of week 1
+	if (!*week) {
+	  if (!*year) date.ymd(year, month, day);
+	  if (!*days) days = date.days(year, 1, 1);
+	  date.ywd(year, days, week, wkDay);
+	}
+	s << vfmt(fmt, week, width, 2, alt);
+	break;
+      case 'y': // (C90) year (2 digits)
+	if (!*year) date.ymd(year, month, day);
+	{
+	  ZuBox<int> year_ = year % 100;
+	  s << vfmt(fmt, year_, width, 2, alt);
+	}
+	break;
+      case 'Y': // (C90) year (4 digits)
+	if (!*year) date.ymd(year, month, day);
+	s << vfmt(fmt, year, width, 4, alt);
+	break;
+      case 'z': // (GNU) RFC 822 timezone offset
+      case 'Z': // (C90) timezone
+	{
+	  ZuBox<int> offset_ = v.offset;
+	  if (offset_ < 0) { s << '-'; offset_ = -offset_; }
+	  offset_ = (offset_ / 3600) * 100 + (offset_ % 3600) / 60;
+	  s << offset_;
+	}
+	break;
+      case '%':
+	s << '%';
+	break;
+    }
+  }
 }
 
 #ifdef _MSC_VER

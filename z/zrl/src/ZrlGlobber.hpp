@@ -50,6 +50,7 @@ struct Globber {
     }
     return false;
   }
+
   auto initFn() { return CompInitFn::Member<&Globber::init>::fn(this); }
   auto nextFn() { return CompNextFn::Member<&Globber::next>::fn(this); }
 };

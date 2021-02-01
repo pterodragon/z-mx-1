@@ -44,7 +44,6 @@ public:
   History &operator =(const History &) = default;
   History(History &&) = default;
   History &operator =(History &&) = default;
-  ~History() = default;
 
   History(unsigned max) : m_max{max} { }
 

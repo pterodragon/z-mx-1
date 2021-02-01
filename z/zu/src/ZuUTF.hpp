@@ -249,10 +249,14 @@ public:
     return *this;
   }
   ZuUTFSpan operator -(const ZuUTFSpan &o) {
+    if (m_value <= o.m_value) return ZuUTFSpan{};
     return ZuUTFSpan{m_value - o.m_value};
   }
   ZuUTFSpan &operator -=(const ZuUTFSpan &o) {
-    m_value -= o.m_value;
+    if (m_value <= o.m_value)
+      m_value = 0;
+    else
+      m_value -= o.m_value;
     return *this;
   }
 

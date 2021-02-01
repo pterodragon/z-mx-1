@@ -216,16 +216,6 @@ private:
   template <typename U, typename R = void>
   struct MatchElem : public ZuIfT<IsElem<U>::OK, R> { };
 
-  // from individual element, for push()
-  template <typename U, typename V = T> struct IsPushElem {
-    enum { OK = ZuConversion<U, V>::Same ||
-      (!IsZtArray<U>::OK &&
-       !IsArray<U>::OK &&
-       ZuConversion<U, V>::Exists) };
-  };
-  template <typename U, typename R = void>
-  struct MatchPushElem : public ZuIfT<IsPushElem<U>::OK, R> { };
-
   // an unsigned|int|size_t parameter to the constructor is a buffer size
   template <typename U, typename V = T> struct IsCtorSize {
     enum { OK =
@@ -1192,11 +1182,6 @@ public:
     splice_mv_(nullptr, offset, length, replace, rlength);
   }
 
-  template <typename A> ZuInline typename MatchZtArray<A>::T push(A &&a)
-    { Fwd_ZtArray<A>::splice_(this, nullptr, length(), 0, ZuFwd<A>(a)); }
-  template <typename A> ZuInline typename MatchArray<A>::T push(A &&a)
-    { Fwd_Array<A>::splice_(this, nullptr, length(), 0, ZuFwd<A>(a)); }
-
   void *push() {
     unsigned n = length();
     unsigned z = size();
@@ -1212,8 +1197,7 @@ public:
       length_(n + 1);
     return (void *)(m_data + n);
   }
-  template <typename I>
-  ZuInline typename MatchPushElem<I, T *>::T push(I &&i) {
+  template <typename I> T * push(I &&i) {
     auto ptr = push();
     if (ZuLikely(ptr)) this->initItem(ptr, ZuFwd<I>(i));
     return static_cast<T *>(ptr);

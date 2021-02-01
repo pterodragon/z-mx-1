@@ -248,6 +248,8 @@ public:
   void crnl_();
   // clear n positions on row, leaving cursor on same row
   void clr_(unsigned n);
+  // clear n positions by overwriting spaces, leaving cursor on same row
+  void clrOver_(unsigned n);
   // clear remaining n positions on row, leaving cursor at start of next row
   void clrScroll_(unsigned n);
   // low-level direct output to display
@@ -290,7 +292,6 @@ private:
 
   // low-level output routines that do not read/update line state
   void clrErase_(unsigned n);
-  void clrOver_(unsigned n);
 
   bool ins_(unsigned n, bool mir);
   void del_(unsigned n);

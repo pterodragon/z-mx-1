@@ -1733,14 +1733,12 @@ bool Editor::cmdComplete(Cmd, int32_t)
 bool Editor::cmdListComplete(Cmd, int32_t)
 {
   unsigned prevOp = m_context.prevCmd.op();
-  if (prevOp != Op::ListComplete) {
-    if (prevOp != Op::Complete) initComplete();
-    startComplete();
-  }
+  if (prevOp != Op::ListComplete && prevOp != Op::Complete) initComplete();
+  startComplete();
   m_context.compWidth = 0;
   unsigned ttyWidth = m_tty.width();
   unsigned maxHeight = m_config.maxCompPages * m_tty.height();
-  unsigned colWidth, colHeight, nCols;
+  unsigned colWidth = 0, colHeight, nCols;
   auto prefix = substr(m_context.compPrefixOff, m_context.compPrefixEnd);
   auto prefixSpan = ZuUTF<uint32_t, uint8_t>::span(prefix);
   ZtArray<ZtArray<uint8_t>> matches;
@@ -1771,7 +1769,7 @@ bool Editor::cmdListComplete(Cmd, int32_t)
       auto suffixSpan = ZuUTF<uint32_t, uint8_t>::span(suffix);
       auto width = (prefixSpan + suffixSpan).width();
       if (width < m_context.compWidth)
-	m_tty.clr_(m_context.compWidth - width);
+	m_tty.clrOver_(m_context.compWidth - width);
       if ((i += colHeight) >= matches.length()) break;
     }
     auto width = col * colWidth;
@@ -1805,7 +1803,8 @@ bool Editor::cmdNext(Cmd cmd, int32_t)
       m_context.histLoadOff <= m_context.histSaveOff - arg) {
     int offset = m_context.histLoadOff + arg;
     ZuString data;
-    if (m_app.histLoad(offset, data)) histLoad(offset, data, false);
+    m_app.histLoad(offset, data);
+    histLoad(offset, data, false); // regardless of app.histLoad success
   }
   return false;
 }

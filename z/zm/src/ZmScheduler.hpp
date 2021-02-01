@@ -394,6 +394,7 @@ private:
 
   ZuInline void wake(Thread *thread) { (thread->wakeFn)(); }
 
+  void startTimer();
   void timer();
   bool timerAdd(ZmFn<> &fn);
 

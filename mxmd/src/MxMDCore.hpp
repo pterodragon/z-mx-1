@@ -33,7 +33,6 @@
 #include <zlib/ZuPOD.hpp>
 
 #include <zlib/ZmObject.hpp>
-#include <zlib/ZmDRing.hpp>
 #include <zlib/ZmRBTree.hpp>
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmThread.hpp>

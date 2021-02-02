@@ -186,9 +186,6 @@ public:
   unsigned pos() const { return m_pos; }
 
   void mv(unsigned pos);	// move to position
-  void over(ZuString);		// overwrite string
-  void ins(ZuString);		// insert string
-  void del(unsigned n);		// delete n characters
 
   int32_t literal(int32_t vkey) const;	// reverse lookup vkey -> character
 

@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// command line interface - application callbacks
+// command line interface - application configuration
 
 #ifndef ZrlConfig_HPP
 #define ZrlConfig_HPP
@@ -43,6 +43,7 @@ struct Config {
   unsigned	maxStackDepth = 10;	// maximum mode stack depth
   unsigned	maxFileSize = 1<<20;	// maximum keymap file size
   unsigned	maxVKeyRedirs = 10;	// maximum # keystroke redirects
+  unsigned	maxUndo = 100;		// maximum undo/redo
 };
 
 } // Zrl

@@ -43,7 +43,6 @@
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmScheduler.hpp>
 #include <zlib/ZmHash.hpp>
-#include <zlib/ZmDRing.hpp>
 #include <zlib/ZmFn.hpp>
 #include <zlib/ZmLock.hpp>
 #include <zlib/ZmPolymorph.hpp>

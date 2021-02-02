@@ -461,7 +461,7 @@ friend Iterator;
       return this->m_ring.m_data[o];
     }
   };
-  auto iterator() { return Iterator(*this); }
+  auto iterator() { return Iterator{*this}; }
   class RevIterator;
 friend RevIterator;
   class RevIterator : private Iterator_ {
@@ -485,7 +485,7 @@ friend RevIterator;
       return this->m_ring.m_data[o];
     }
   };
-  auto revIterator() { return RevIterator(*this); }
+  auto revIterator() { return RevIterator{*this}; }
 
 private:
   Lock		m_lock;

@@ -1006,16 +1006,16 @@ private:
   Key delKey__(int prev) {
     if (prev == -1) return Cmp::null();
     int slot = prev < 0 ? (-prev - 2) : m_table[prev].next();
-    Key key(ZuMv(m_table[slot].key()));
+    Key key{ZuMv(m_table[slot].key())};
     del___(prev);
-    return ZuMv(key);
+    return key;
   }
   Key delVal__(int prev) {
     if (prev == -1) return Cmp::null();
     int slot = prev < 0 ? (-prev - 2) : m_table[prev].next();
-    Val val(ZuMv(m_table[slot].value()));
+    Val val{ZuMv(m_table[slot].value())};
     del___(prev);
-    return ZuMv(val);
+    return val;
   }
 
 public:

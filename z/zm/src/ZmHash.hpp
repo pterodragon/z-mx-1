@@ -822,7 +822,7 @@ public:
     if (ZuUnlikely(!node)) return Cmp::null();
     Key key = ZuMv(node->Node::key());
     nodeDelete(node);
-    return ZuMv(key);
+    return key;
   }
   template <typename Index_>
   Val delVal(const Index_ &index) {
@@ -830,7 +830,7 @@ public:
     if (ZuUnlikely(!node)) return ValCmp::null();
     Val val = ZuMv(node->Node::val());
     nodeDelete(node);
-    return ZuMv(val);
+    return val;
   }
 private:
   template <typename Index_>

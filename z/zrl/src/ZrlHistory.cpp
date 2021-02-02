@@ -25,30 +25,16 @@ namespace Zrl {
 
 void History::save(unsigned i, ZuString s)
 {
-  if (i < m_offset) return;
-  if (i >= m_offset + m_max) {
-    unsigned newOffset = (i + 1) - m_max;
-    if (newOffset >= m_offset + m_max)
-      m_data = {};
-    else
-      while (m_offset < newOffset) {
-	unsigned j = m_offset % m_max;
-	if (j < m_data.length()) m_data[j] = {};
-	++m_offset;
-      }
-  }
-  unsigned j = i % m_max;
-  m_data.grow(j + 1);
-  m_data[j] = s;
+  set(i, s);
 }
 
 bool History::load(unsigned i, ZuString &s) const
 {
-  if (i < m_offset || i >= m_offset + m_max) return false;
-  i %= m_max;
-  if (i >= m_data.length() || !m_data[i]) return false;
-  s = m_data[i];
-  return true;
+  if (auto s_ = val(i)) {
+    s = *s_;
+    return true;
+  }
+  return false;
 }
 
 } // namespace Zrl

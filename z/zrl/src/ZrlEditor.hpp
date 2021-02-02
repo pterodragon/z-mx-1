@@ -39,6 +39,7 @@
 #include <zlib/ZmRBTree.hpp>
 
 #include <zlib/ZtEnum.hpp>
+#include <zlib/ZtWindow.hpp>
 
 #include <zlib/ZvCf.hpp>
 
@@ -82,6 +83,8 @@ namespace Op { // line editor operation codes
     Home,
     End,
 
+    // Delete,		// delete forward	// Right|Del
+
     // word motions - Unix flag implies "Unix" white-space delimited word
     FwdWord,
     RevWord,
@@ -90,10 +93,11 @@ namespace Op { // line editor operation codes
 
     SetMark,		// set glyph mark
     MvMark,		// move to glyph mark
-    ClrHigh,		// clear highlight (can use Del and Copy flags)
+    ClrVis,		// clear highlight (can use Del and Copy flags)
 
-    Insert,		// insert/overwrite toggle
-    // Delete,		// delete forward	// Right|Del
+    InsToggle,		// insert/overwrite toggle
+    Insert,		// insert
+    Over,		// overwrite
 
     Clear,		// clear screen and redraw line
     Redraw,		// redraw line
@@ -114,11 +118,18 @@ namespace Op { // line editor operation codes
     UpperWord,		// upper-case word
     CapWord,		// capitalize word (rotates through ucfirst, uc, lc)
 
+    LowerVis,		// lower-case highlight
+    UpperVis,		// upper-case highlight
+    CapVis,		// capitalize highlight
+
     XchMark,		// swap cursor with glyph mark
 
     DigitArg,		// add digit to accumulating argument (needs KeepArg)
 
     Register,		// specify register (0-9 a-z + *) for next cmd
+
+    Undo,		// undo
+    Redo,		// redo
 
     // glyph search
     FwdGlyphSrch,	// fwd glyph search
@@ -158,7 +169,7 @@ namespace Op { // line editor operation codes
     Del	 	= 0x0200,	// delete span (implies move)
     Copy	= 0x0400,	// copy span (cut is Del + Copy)
     Draw	= 0x0800,	// (re)draw span
-    High	= 0x1000,	// highlight (standout) (implies Draw)
+    Vis		= 0x1000,	// highlight (standout) (implies Draw)
 
     // {Fwd,Rev}*{Word,WordEnd}
     Unix	= 0x2000,	// a "Unix" word is white-space delimited
@@ -328,6 +339,17 @@ private:
   unsigned	m_count = 0;
 };
 
+struct UndoOp {
+  int			off = -1;
+  ZtArray<uint8_t>	oldData;
+  ZtArray<uint8_t>	newData;
+
+  bool operator !() const { return off < 0; }
+  ZuOpBool
+};
+
+using Undo = ZtWindow<UndoOp>;
+
 // command execution context
 struct CmdContext {
   // cursor position and line UTF data are maintained by ZrlTerminal
@@ -352,6 +374,11 @@ struct CmdContext {
   // register context
   int			register_ = -1;	// register index
   Registers		registers;	// registers
+
+  // undo buffer
+  Undo			undo;		// undo buffer
+  unsigned		undoNext = 0;	// undo index of next op
+  int			undoIndex = -1;	// undo index of undo/redo
 
   // completion context
   unsigned		compPrefixOff = 0;	// completion prefix offset
@@ -467,6 +494,9 @@ private:
   void splice(
       unsigned off, ZuUTFSpan span,
       ZuArray<const uint8_t> replace, ZuUTFSpan rspan);
+  void splice_(
+      unsigned off, ZuUTFSpan span,
+      ZuArray<const uint8_t> replace, ZuUTFSpan rspan);
   // perform copy/del/move in conjunction with a cursor motion
   void motion(unsigned op, unsigned off,
       unsigned begin, unsigned end,
@@ -486,9 +516,11 @@ private:
   bool cmdRevWordEnd(Cmd, int32_t);
   bool cmdMvMark(Cmd, int32_t);
 
+  bool cmdInsToggle(Cmd, int32_t);
   bool cmdInsert(Cmd, int32_t);
+  bool cmdOver(Cmd, int32_t);
 
-  bool cmdClrHigh(Cmd, int32_t);
+  bool cmdClrVis(Cmd, int32_t);
   bool cmdClear(Cmd, int32_t);
   bool cmdRedraw(Cmd, int32_t);
 
@@ -509,19 +541,27 @@ private:
   bool cmdTransUnixWord(Cmd, int32_t);
 
 public:
-  typedef void (*TransformWordFn)(void *, ZuArray<uint8_t>);
+  typedef void (*TransformSpanFn)(void *, ZuArray<uint8_t>);
 private:
-  void transformWord(TransformWordFn fn, void *fnContext);
+  void transformWord(TransformSpanFn fn, void *fnContext);
+  void transformVis(TransformSpanFn fn, void *fnContext);
 
   bool cmdLowerWord(Cmd, int32_t);
   bool cmdUpperWord(Cmd, int32_t);
   bool cmdCapWord(Cmd, int32_t);
+
+  bool cmdLowerVis(Cmd, int32_t);
+  bool cmdUpperVis(Cmd, int32_t);
+  bool cmdCapVis(Cmd, int32_t);
 
   bool cmdSetMark(Cmd, int32_t);
   bool cmdXchMark(Cmd, int32_t);
 
   bool cmdDigitArg(Cmd, int32_t);
   bool cmdRegister(Cmd, int32_t);
+
+  bool cmdUndo(Cmd, int32_t);
+  bool cmdRedo(Cmd, int32_t);
 
   bool cmdFwdGlyphSrch(Cmd, int32_t);
   bool cmdRevGlyphSrch(Cmd, int32_t);

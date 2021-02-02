@@ -1452,35 +1452,6 @@ void Terminal::redraw_(unsigned pos, unsigned endPos)
   if (pos < endPos) outClr(endPos);
 }
 
-// overwrite string
-void Terminal::over(ZuString s)
-{
-  unsigned off = m_line.position(m_pos).mapping();
-  auto rspan = ZuUTF<uint32_t, uint8_t>::span(s);
-  ZuString removed{m_line.data()};
-  removed.offset(off);
-  auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, rspan.outLen());
-  splice(off, span, s, rspan);
-}
-
-// insert string
-void Terminal::ins(ZuString s)
-{
-  unsigned off = m_line.position(m_pos).mapping();
-  auto rspan = ZuUTF<uint32_t, uint8_t>::span(s);
-  splice(off, ZuUTFSpan{}, s, rspan);
-}
-
-// delete a number of glyphs (NOT a number of bytes, or display positions)
-void Terminal::del(unsigned nglyphs)
-{
-  unsigned off = m_line.position(m_pos).mapping();
-  ZuString removed{m_line.data()};
-  removed.offset(off);
-  auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, nglyphs);
-  splice(off, span, ZuString{}, ZuUTFSpan{});
-}
-
 int32_t Terminal::literal(int32_t vkey) const
 {
   switch (static_cast<int>(-vkey)) {

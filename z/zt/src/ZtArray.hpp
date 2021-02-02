@@ -1462,7 +1462,7 @@ public:
     unsigned o = size();
     if (ZuUnlikely(length > o)) size(grow_(o, length));
     o = this->length();
-    if (ZuUnlikely(length > o)) this->length(length);
+    if (ZuUnlikely(length > o)) this->length(length, initItems);
   }
 private:
   ZuInline static unsigned grow_(unsigned o, unsigned n) {

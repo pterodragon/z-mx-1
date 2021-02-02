@@ -32,21 +32,24 @@ void print__(bool &pipe, ZmStream &s)
 }
 ZrlExtern void print_(uint32_t op, ZmStream &s)
 {
-  s << name(op & Mask) << '[';
-  bool pipe = false;
-  auto sep = [&pipe, &s]() { if (!pipe) pipe = true; else s << '|'; };
-  if (op & Mv) { sep(); s << "Mv"; }
-  if (op & Del) { sep(); s << "Del"; }
-  if (op & Copy) { sep(); s << "Copy"; }
+  s << name(op & Mask);
+  if (op & ~Mask) {
+    s << '[';
+    bool pipe = false;
+    auto sep = [&pipe, &s]() { if (!pipe) pipe = true; else s << '|'; };
+    if (op & Mv) { sep(); s << "Mv"; }
+    if (op & Del) { sep(); s << "Del"; }
+    if (op & Copy) { sep(); s << "Copy"; }
 
-  if (op & Draw) { sep(); s << "Draw"; }
-  if (op & High) { sep(); s << "High"; }
+    if (op & Draw) { sep(); s << "Draw"; }
+    if (op & Vis) { sep(); s << "Vis"; }
 
-  if (op & Unix) { sep(); s << "Unix"; }
-  if (op & Past) { sep(); s << "Past"; }
+    if (op & Unix) { sep(); s << "Unix"; }
+    if (op & Past) { sep(); s << "Past"; }
 
-  if (op & Redir) { sep(); s << "Redir"; }
-  s << ']';
+    if (op & Redir) { sep(); s << "Redir"; }
+    s << ']';
+  }
 }
 }
 
@@ -83,9 +86,11 @@ Editor::Editor()
   m_cmdFn[Op::SetMark] = &Editor::cmdSetMark;
   m_cmdFn[Op::MvMark] = &Editor::cmdMvMark;
 
+  m_cmdFn[Op::InsToggle] = &Editor::cmdInsToggle;
   m_cmdFn[Op::Insert] = &Editor::cmdInsert;
+  m_cmdFn[Op::Over] = &Editor::cmdOver;
 
-  m_cmdFn[Op::ClrHigh] = &Editor::cmdClrHigh;
+  m_cmdFn[Op::ClrVis] = &Editor::cmdClrVis;
   m_cmdFn[Op::Clear] = &Editor::cmdClear;
   m_cmdFn[Op::Redraw] = &Editor::cmdRedraw;
 
@@ -105,11 +110,18 @@ Editor::Editor()
   m_cmdFn[Op::UpperWord] = &Editor::cmdUpperWord;
   m_cmdFn[Op::CapWord] = &Editor::cmdCapWord;
 
+  m_cmdFn[Op::LowerVis] = &Editor::cmdLowerVis;
+  m_cmdFn[Op::UpperVis] = &Editor::cmdUpperVis;
+  m_cmdFn[Op::CapVis] = &Editor::cmdCapVis;
+
   m_cmdFn[Op::XchMark] = &Editor::cmdXchMark;
 
   m_cmdFn[Op::DigitArg] = &Editor::cmdDigitArg;
 
   m_cmdFn[Op::Register] = &Editor::cmdRegister;
+
+  m_cmdFn[Op::Undo] = &Editor::cmdUndo;
+  m_cmdFn[Op::Redo] = &Editor::cmdRedo;
 
   m_cmdFn[Op::FwdGlyphSrch] = &Editor::cmdFwdGlyphSrch;
   m_cmdFn[Op::RevGlyphSrch] = &Editor::cmdRevGlyphSrch;
@@ -191,7 +203,7 @@ void Editor::init(Config config, App app)
     { Op::FwdWord | Op::Unix | Op::Mv }
   });
 
-  m_defltMap->bind(0, -VKey::Insert, { { Op::Insert } });
+  m_defltMap->bind(0, -VKey::Insert, { { Op::InsToggle } });
   m_defltMap->bind(0, -VKey::Delete, { { Op::Right | Op::Del } });
 
   m_defltMap->bind(0, 'W' - '@', { { Op::Nop } });
@@ -199,35 +211,35 @@ void Editor::init(Config config, App app)
 
   // initiate highlight "visual" mode
   m_defltMap->bind(0, -(VKey::Up | VKey::Shift), {
-    { Op::Up | Op::Mv | Op::High }, { Op::Push, 3 }
+    { Op::Up | Op::Mv | Op::Vis }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Down | VKey::Shift), {
-    { Op::Down | Op::Mv | Op::High }, { Op::Push, 3 }
+    { Op::Down | Op::Mv | Op::Vis }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Left | VKey::Shift), {
-    { Op::Left | Op::Mv | Op::High }, { Op::Push, 3 }
+    { Op::Left | Op::Mv | Op::Vis }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Right | VKey::Shift), {
-    { Op::Right | Op::Mv | Op::High }, { Op::Push, 3 }
+    { Op::Right | Op::Mv | Op::Vis }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Left | VKey::Shift | VKey::Ctrl), {
-    { Op::RevWord | Op::Mv | Op::High }, { Op::Push, 3 }
+    { Op::RevWord | Op::Mv | Op::Vis }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Right | VKey::Shift | VKey::Ctrl), {
-    { Op::FwdWordEnd | Op::Past | Op::Mv | Op::High }, { Op::Push, 3 }
+    { Op::FwdWordEnd | Op::Past | Op::Mv | Op::Vis }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Left | VKey::Shift | VKey::Alt), {
-    { Op::RevWord | Op::Unix | Op::Mv | Op::High }, { Op::Push, 3 }
+    { Op::RevWord | Op::Unix | Op::Mv | Op::Vis }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Right | VKey::Shift | VKey::Alt), {
-    { Op::FwdWordEnd | Op::Unix | Op::Past | Op::Mv | Op::High },
+    { Op::FwdWordEnd | Op::Unix | Op::Past | Op::Mv | Op::Vis },
     { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::Home | VKey::Shift), {
-    { Op::Home | Op::Mv | Op::High }, { Op::Push, 3 }
+    { Op::Home | Op::Mv | Op::Vis }, { Op::Push, 3 }
   });
   m_defltMap->bind(0, -(VKey::End | VKey::Shift), {
-    { Op::End | Op::Mv | Op::High }, { Op::Push, 3 }
+    { Op::End | Op::Mv | Op::Vis }, { Op::Push, 3 }
   });
 
   // literal mode
@@ -248,52 +260,52 @@ void Editor::init(Config config, App app)
 
   // highlight "visual" mode
   m_defltMap->bind(3, -VKey::Any, {
-    { Op::ClrHigh | Op::Del },
+    { Op::ClrVis | Op::Del },
     { Op::Pop | Op::Redir }
   });
   m_defltMap->bind(3, -VKey::AnyFn, {
-    { Op::ClrHigh },
+    { Op::ClrVis },
     { Op::Pop | Op::Redir }
   });
   m_defltMap->bind(3, -VKey::Delete, {
-    { Op::ClrHigh | Op::Del },
+    { Op::ClrVis | Op::Del },
     { Op::Pop }
   });
   m_defltMap->bind(3, -VKey::Erase, {
     { Op::Nop | Op::Redir, { }, -VKey::Delete }
   });
   m_defltMap->bind(3, -(VKey::Up | VKey::Shift), {
-    { Op::Up | Op::Mv | Op::High }
+    { Op::Up | Op::Mv | Op::Vis }
   });
   m_defltMap->bind(3, -(VKey::Down | VKey::Shift), {
-    { Op::Down | Op::Mv | Op::High }
+    { Op::Down | Op::Mv | Op::Vis }
   });
   m_defltMap->bind(3, -(VKey::Left | VKey::Shift), {
-    { Op::Left | Op::Mv | Op::High }
+    { Op::Left | Op::Mv | Op::Vis }
   });
   m_defltMap->bind(3, -(VKey::Right | VKey::Shift), {
-    { Op::Right | Op::Mv | Op::High }
+    { Op::Right | Op::Mv | Op::Vis }
   });
   m_defltMap->bind(3, -(VKey::Left | VKey::Shift | VKey::Ctrl), {
-    { Op::RevWord | Op::Mv | Op::High }
+    { Op::RevWord | Op::Mv | Op::Vis }
   });
   m_defltMap->bind(3, -(VKey::Right | VKey::Shift | VKey::Ctrl), {
-    { Op::FwdWordEnd | Op::Past | Op::Mv | Op::High }
+    { Op::FwdWordEnd | Op::Past | Op::Mv | Op::Vis }
   });
   m_defltMap->bind(3, -(VKey::Left | VKey::Shift | VKey::Alt), {
-    { Op::RevWord | Op::Unix | Op::Mv | Op::High }
+    { Op::RevWord | Op::Unix | Op::Mv | Op::Vis }
   });
   m_defltMap->bind(3, -(VKey::Right | VKey::Shift | VKey::Alt), {
-    { Op::FwdWordEnd | Op::Unix | Op::Past | Op::Mv | Op::High }
+    { Op::FwdWordEnd | Op::Unix | Op::Past | Op::Mv | Op::Vis }
   });
   m_defltMap->bind(3, -(VKey::Home | VKey::Shift), {
-    { Op::Home | Op::Mv | Op::High }
+    { Op::Home | Op::Mv | Op::Vis }
   });
   m_defltMap->bind(3, -(VKey::End | VKey::Shift), {
-    { Op::End | Op::Mv | Op::High }
+    { Op::End | Op::Mv | Op::Vis }
   });
   m_defltMap->bind(3, 'W' - '@', {
-    { Op::ClrHigh | Op::Copy | Op::Del },
+    { Op::ClrVis | Op::Copy | Op::Del },
     { Op::Pop }
   });
 
@@ -302,12 +314,12 @@ void Editor::init(Config config, App app)
   m_defltMap->bind(4, -VKey::Any, { { Op::Pop } });
   m_defltMap->bind(4, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
   m_defltMap->bind(4, '\x1b', {
-    { Op::ClrHigh | Op::Del },
+    { Op::ClrVis | Op::Del },
     { Op::Glyph },
     { Op::Pop, 2 }
   });
   m_defltMap->bind(4, 'w', {
-    { Op::ClrHigh | Op::Copy },
+    { Op::ClrVis | Op::Copy },
     { Op::Pop, 2 }
   });
 
@@ -331,7 +343,7 @@ int VKey_parse_char(uint8_t &byte, ZuString s, int off)
   ZtRegex::Captures c;
   if (s[off] != '\\') {
     byte = s[off++];
-  } else if (ZtREGEX("\G\\([^0123x])").m(s, c, off)) { // 
+  } else if (ZtREGEX("\G\\([^0123x])").m(s, c, off)) {
     off += c[1].length();
     switch (static_cast<int>(c[2][0])) {
       case 'a': byte = '\x07'; break; // BEL
@@ -447,7 +459,7 @@ int Cmd::parse(ZuString s, int off)
       else if (c[1] == "Del") m_value |= Op::Del;
       else if (c[1] == "Copy") m_value |= Op::Copy;
       else if (c[1] == "Draw") m_value |= Op::Draw;
-      else if (c[1] == "High") m_value |= Op::High;
+      else if (c[1] == "Vis") m_value |= Op::Vis;
       else if (c[1] == "Unix") m_value |= Op::Unix;
       else if (c[1] == "Past") m_value |= Op::Past;
       else if (c[1] == "Redir") m_value |= Op::Redir;
@@ -730,7 +742,8 @@ void Editor::start(StartFn fn)
 	m_tty.opost_on();
 	fn(*this);
 	m_tty.opost_off();
-	m_tty.ins(m_context.prompt);
+	m_tty.splice(0, ZuUTFSpan{}, m_context.prompt,
+	    ZuUTF<uint32_t, uint8_t>::span(m_context.prompt));
 	m_tty.write();
 	m_context.startPos = m_tty.pos();
       },
@@ -750,7 +763,7 @@ bool Editor::running() const
 bool Editor::map(ZuString id)
 {
   if (auto map = m_maps.find(id)) {
-    cmdClrHigh({ Op::ClrHigh }, 0);
+    cmdClrVis({ Op::ClrVis }, 0);
     m_context.mode = 0;
     m_context.stack.clear();
     m_map = map;
@@ -898,7 +911,8 @@ bool Editor::cmdEnter(Cmd, int32_t)
   m_tty.opost_off();
   m_tty.clear();
   if (stop) return true;
-  m_tty.ins(m_context.prompt);
+  m_tty.splice(0, ZuUTFSpan{}, m_context.prompt,
+      ZuUTF<uint32_t, uint8_t>::span(m_context.prompt));
   m_context.startPos = m_tty.pos();
   return false;
 }
@@ -927,8 +941,20 @@ void Editor::splice(
     unsigned off, ZuUTFSpan span,
     ZuArray<const uint8_t> replace, ZuUTFSpan rspan)
 {
+  m_context.undoIndex = -1;
+  m_context.undo.set(m_context.undoNext++,
+      UndoOp{static_cast<int>(off), substr(off, off + span.outLen()), replace});
+  splice_(off, span, replace, rspan);
+}
+void Editor::splice_(
+    unsigned off, ZuUTFSpan span,
+    ZuArray<const uint8_t> replace, ZuUTFSpan rspan)
+{
   m_context.histLoadOff = -1;
-  m_tty.splice(off, span, replace, rspan);
+  if (rspan.outLen() <= span.outLen() ||
+      m_tty.line().length() + (rspan.outLen() - span.outLen()) <
+	m_config.maxLineLen)
+    m_tty.splice(off, span, replace, rspan);
 }
 
 // perform copy/del/move in conjunction with a cursor motion
@@ -938,7 +964,7 @@ void Editor::motion(
     unsigned begPos, unsigned endPos)
 {
   ZuArray<const uint8_t> s;
-  if (op & (Op::Copy | Op::Del | Op::Draw | Op::High))
+  if (op & (Op::Copy | Op::Del | Op::Draw | Op::Vis))
     s = substr(begin, end);
   if (op & Op::Copy) {
     int index = m_context.register_;
@@ -962,8 +988,8 @@ void Editor::motion(
       m_tty.cursor_on();
       m_context.markPos = m_context.highPos = -1;
     }
-  } else if (op & (Op::Draw | Op::High)) {
-    if (!(op & Op::High)) {
+  } else if (op & (Op::Draw | Op::Vis)) {
+    if (!(op & Op::Vis)) {
       m_tty.mv(begPos);
       m_tty.redraw(endPos, false);
       m_tty.cursor_on();
@@ -1311,13 +1337,23 @@ bool Editor::cmdMvMark(Cmd cmd, int32_t vkey)
   return false;
 }
 
-bool Editor::cmdInsert(Cmd, int32_t)
+bool Editor::cmdInsToggle(Cmd, int32_t)
 {
   m_context.overwrite = !m_context.overwrite;
   return false;
 }
+bool Editor::cmdInsert(Cmd, int32_t)
+{
+  m_context.overwrite = false;
+  return false;
+}
+bool Editor::cmdOver(Cmd, int32_t)
+{
+  m_context.overwrite = true;
+  return false;
+}
 
-bool Editor::cmdClrHigh(Cmd cmd, int32_t)
+bool Editor::cmdClrVis(Cmd cmd, int32_t)
 {
   const auto &line = m_tty.line();
   if (m_context.highPos >= 0) {
@@ -1346,12 +1382,16 @@ bool Editor::cmdPaste(Cmd, int32_t)
   int index = m_context.register_;
   if (index < 0) index = 0;
   if (const auto &data = m_context.registers.get(index)) {
-    if (ZuUnlikely(m_context.overwrite))
-      m_tty.over(data);
-    else {
-      const auto &line = m_tty.line();
-      if (line.length() + data.length() < m_config.maxLineLen)
-	m_tty.ins(data);
+    const auto &line = m_tty.line();
+    unsigned off = line.position(m_tty.pos()).mapping();
+    auto rspan = ZuUTF<uint32_t, uint8_t>::span(data);
+    if (ZuUnlikely(m_context.overwrite)) {
+      ZuString removed{line.data()};
+      removed.offset(off);
+      auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, rspan.outLen());
+      splice(off, span, data, rspan);
+    } else {
+      splice(off, ZuUTFSpan{}, data, rspan);
     }
   }
   return false;
@@ -1363,12 +1403,16 @@ bool Editor::cmdYank(Cmd cmd, int32_t)
   // if (arg < 1) arg = 1; // redundant
   for (int i = 1; i < arg; i++) m_context.registers.emacs_rotate();
   if (const auto &data = m_context.registers.emacs_yank()) {
-    if (ZuUnlikely(m_context.overwrite))
-      m_tty.over(data);
-    else {
-      const auto &line = m_tty.line();
-      if (line.length() + data.length() < m_config.maxLineLen)
-	m_tty.ins(data);
+    const auto &line = m_tty.line();
+    unsigned off = line.position(m_tty.pos()).mapping();
+    auto rspan = ZuUTF<uint32_t, uint8_t>::span(data);
+    if (m_context.overwrite) {
+      ZuString removed{line.data()};
+      removed.offset(off);
+      auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, rspan.outLen());
+      splice(off, span, data, rspan);
+    } else {
+      splice(off, ZuUTFSpan{}, data, rspan);
     }
     align(m_tty.pos());
   }
@@ -1411,11 +1455,15 @@ bool Editor::glyph(Cmd cmd, int32_t vkey, bool overwrite)
   if (arg < 1) arg = 1;
   const auto &line = m_tty.line();
   for (int i = 0; i < arg; i++) {
-    if (overwrite)
-      m_tty.over(data);
-    else {
-      if (line.length() + data.length() >= m_config.maxLineLen) break;
-      m_tty.ins(data);
+    unsigned off = line.position(m_tty.pos()).mapping();
+    auto rspan = ZuUTF<uint32_t, uint8_t>::span(data);
+    if (overwrite) {
+      ZuString removed{line.data()};
+      removed.offset(off);
+      auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, rspan.outLen());
+      splice(off, span, data, rspan);
+    } else {
+      splice(off, ZuUTFSpan{}, data, rspan);
     }
   }
   align(m_tty.pos());
@@ -1505,42 +1553,31 @@ bool Editor::cmdTransUnixWord(Cmd, int32_t)
   return false;
 }
 
-void Editor::transformWord(TransformWordFn fn, void *fnContext)
-{
-  unsigned pos = m_tty.pos();
-  const auto &line = m_tty.line();
-  if (pos == line.width()) pos = line.align(pos - 1);
-  if (pos <= m_context.startPos) return;
-  unsigned start = line.position(m_context.startPos).mapping();
-  unsigned end = line.position(pos).mapping();
-  if (!line.isword_(end)) return;
-  end = line.fwdWordEnd(end, true);
-  unsigned begin = line.revWord(end);
-  if (begin <= start) return;
-  ZtArray<uint8_t> replace;
-  replace.length(end - begin);
-  const auto &data = line.data();
-  memcpy(&replace[0], &data[begin], end - begin);
-  fn(fnContext, replace);
-  auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
-  splice(begin, span, replace, span);
-}
+typedef void (*TransformCharFn)(uint8_t, uint8_t &);
+typedef void (*TransformSpanFn)(void *, ZuArray<uint8_t>);
 
-static bool isupper__(char c) { return c >= 'A' && c <= 'Z'; }
-static char toupper__(char c)
+namespace {
+bool isupper__(char c) { return c >= 'A' && c <= 'Z'; }
+char toupper__(char c)
 {
   return c + (static_cast<int>('A') - static_cast<int>('a'));
 }
-static bool islower__(char c) { return c >= 'a' && c <= 'z'; }
-static char tolower__(char c)
+bool islower__(char c) { return c >= 'a' && c <= 'z'; }
+char tolower__(char c)
 {
   return c + (static_cast<int>('a') - static_cast<int>('A'));
 }
-
-typedef void (*TransformCharFn)(uint8_t, uint8_t &);
-
-static Editor::TransformWordFn transformChar(TransformCharFn fn)
-{
+TransformCharFn lowerFn() {
+  return [](uint8_t c, uint8_t &replace) {
+    if (isupper__(c)) replace = tolower__(c);
+  };
+}
+TransformCharFn upperFn() {
+  return [](uint8_t c, uint8_t &replace) {
+    if (islower__(c)) replace = toupper__(c);
+  };
+}
+TransformSpanFn spanFn(TransformCharFn fn) {
   return [](void *fn_, ZuArray<uint8_t> replace) {
     auto fn = reinterpret_cast<TransformCharFn>(fn_);
     for (unsigned i = 0, n = replace.length(); i < n; ) {
@@ -1552,26 +1589,8 @@ static Editor::TransformWordFn transformChar(TransformCharFn fn)
     }
   };
 }
-
-bool Editor::cmdLowerWord(Cmd, int32_t)
-{
-  TransformCharFn fn = [](uint8_t c, uint8_t &replace) {
-    if (isupper__(c)) replace = tolower__(c);
-  };
-  transformWord(transformChar(fn), reinterpret_cast<void *>(fn));
-  return false;
-}
-bool Editor::cmdUpperWord(Cmd, int32_t)
-{
-  TransformCharFn fn = [](uint8_t c, uint8_t &replace) {
-    if (islower__(c)) replace = toupper__(c);
-  };
-  transformWord(transformChar(fn), reinterpret_cast<void *>(fn));
-  return false;
-}
-bool Editor::cmdCapWord(Cmd, int32_t)
-{
-  transformWord([](void *, ZuArray<uint8_t> replace) {
+TransformSpanFn capFn() {
+  return [](void *, ZuArray<uint8_t> replace) {
     if (unsigned n = replace.length()) {
       unsigned i = 0;
       uint8_t c = replace[0];
@@ -1608,7 +1627,81 @@ bool Editor::cmdCapWord(Cmd, int32_t)
 	}
       }
     }
-  }, nullptr);
+  };
+}
+} // namespace
+
+
+void Editor::transformWord(TransformSpanFn fn, void *fnContext)
+{
+  unsigned pos = m_tty.pos();
+  const auto &line = m_tty.line();
+  if (pos == line.width()) pos = line.align(pos - 1);
+  if (pos <= m_context.startPos) return;
+  unsigned start = line.position(m_context.startPos).mapping();
+  unsigned end = line.position(pos).mapping();
+  if (!line.isword_(end)) return;
+  end = line.fwdWordEnd(end, true);
+  unsigned begin = line.revWord(end);
+  if (begin <= start || begin >= end) return;
+  ZtArray<uint8_t> replace;
+  replace.length(end - begin);
+  const auto &data = line.data();
+  memcpy(&replace[0], &data[begin], end - begin);
+  fn(fnContext, replace);
+  auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
+  splice(begin, span, replace, span);
+}
+
+void Editor::transformVis(TransformSpanFn fn, void *fnContext)
+{
+  const auto &line = m_tty.line();
+  if (m_context.markPos < 0 || m_context.highPos < 0) return;
+  unsigned begin = line.position(m_context.markPos).mapping();
+  unsigned end = line.position(m_context.highPos).mapping();
+  if (begin >= end) return;
+  ZtArray<uint8_t> replace;
+  replace.length(end - begin);
+  const auto &data = line.data();
+  memcpy(&replace[0], &data[begin], end - begin);
+  fn(fnContext, replace);
+  auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
+  splice(begin, span, replace, span);
+}
+
+bool Editor::cmdLowerWord(Cmd, int32_t)
+{
+  auto fn = lowerFn();
+  transformWord(spanFn(fn), reinterpret_cast<void *>(fn));
+  return false;
+}
+bool Editor::cmdUpperWord(Cmd, int32_t)
+{
+  auto fn = upperFn();
+  transformWord(spanFn(fn), reinterpret_cast<void *>(fn));
+  return false;
+}
+bool Editor::cmdCapWord(Cmd, int32_t)
+{
+  transformWord(capFn(), nullptr);
+  return false;
+}
+
+bool Editor::cmdLowerVis(Cmd, int32_t)
+{
+  auto fn = lowerFn();
+  transformVis(spanFn(fn), reinterpret_cast<void *>(fn));
+  return false;
+}
+bool Editor::cmdUpperVis(Cmd, int32_t)
+{
+  auto fn = upperFn();
+  transformVis(spanFn(fn), reinterpret_cast<void *>(fn));
+  return false;
+}
+bool Editor::cmdCapVis(Cmd, int32_t)
+{
+  transformVis(capFn(), nullptr);
   return false;
 }
 
@@ -1637,6 +1730,45 @@ bool Editor::cmdRegister(Cmd, int32_t vkey)
     m_context.register_ = m_context.registers.index(vkey);
   else
     m_context.register_ = -1;
+  return false;
+}
+
+bool Editor::cmdUndo(Cmd, int32_t vkey)
+{
+  if (m_context.undoIndex < 0) {
+    if (!m_context.undoNext) return false;
+    m_context.undoIndex = m_context.undoNext - 1;
+  } else {
+    if (!m_context.undoIndex) return false;
+    --m_context.undoIndex;
+  }
+  auto undoOp = m_context.undo.val(m_context.undoIndex);
+  if (!undoOp) {
+    if (++m_context.undoIndex >= m_context.undoNext)
+      m_context.undoIndex = -1;
+    return false;
+  }
+  m_tty.mv(m_tty.line().position(undoOp->off).mapping());
+  splice_(undoOp->off,
+      ZuUTF<uint32_t, uint8_t>::span(undoOp->newData),
+      undoOp->oldData, ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData));
+  return false;
+}
+
+bool Editor::cmdRedo(Cmd, int32_t vkey)
+{
+  if (m_context.undoIndex < 0) return false;
+  auto undoOp = m_context.undo.val(m_context.undoIndex);
+  if (!undoOp) {
+    m_context.undoIndex = -1;
+    return false;
+  }
+  m_tty.mv(m_tty.line().position(undoOp->off).mapping());
+  splice_(undoOp->off,
+      ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
+      undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData));
+  if (++m_context.undoIndex == m_context.undoNext)
+    m_context.undoIndex = -1;
   return false;
 }
 
@@ -1791,6 +1923,9 @@ void Editor::histLoad(int offset, ZuArray<const uint8_t> data, bool save)
   unsigned end = line.length();
   auto orig = substr(begin, end);
   if (save) m_app.histSave(m_context.histSaveOff, orig);
+  m_context.undoIndex = -1;
+  m_context.undoNext = 0;
+  m_context.undo.clear();
   m_tty.splice(
       begin, ZuUTF<uint32_t, uint8_t>::span(orig),
       data, ZuUTF<uint32_t, uint8_t>::span(data));

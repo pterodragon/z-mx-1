@@ -32,12 +32,16 @@
 
 #include <zlib/ZuString.hpp>
 
+#include <zlib/ZtWindow.hpp>
+
 #include <zlib/ZrlApp.hpp>
 
 namespace Zrl {
 
 // in-memory history with maximum number of entries
-struct ZrlAPI History {
+struct ZrlAPI History : public ZtWindow<ZtArray<char>> {
+  using Base = ZtWindow<ZtArray<char>>;
+
 public:
   History() = default;
   History(const History &) = default;
@@ -45,18 +49,13 @@ public:
   History(History &&) = default;
   History &operator =(History &&) = default;
 
-  History(unsigned max) : m_max{max} { }
+  History(unsigned max) : Base{max} { }
 
   void save(unsigned i, ZuString s);
   bool load(unsigned i, ZuString &s) const;
 
   auto saveFn() { return HistSaveFn::Member<&History::save>::fn(this); }
   auto loadFn() { return HistLoadFn::Member<&History::load>::fn(this); }
-
-private:
-  ZtArray<ZtArray<char>>	m_data;
-  unsigned			m_offset = 0;
-  unsigned			m_max = 100;
 };
 
 } // Zrl

@@ -20,10 +20,10 @@ map foo
     # test
     Left[Alt] { RevWord[Mv|Unix]; }
     Right[Alt] { FwdWord[Mv|Unix]; }
-    Left[Shift] { Left[Mv|High]; Push[](3); }
-    Right[Shift] { Right[Mv|High]; Push[](3); }
-    Left[Shift|Ctrl] { RevWord[Mv|High]; Push[](3); }
-    Right[Shift|Ctrl] { FwdWordEnd[Mv|High|Past];
+    Left[Shift] { Left[Mv|Vis]; Push[](3); }
+    Right[Shift] { Right[Mv|Vis]; Push[](3); }
+    Left[Shift|Ctrl] { RevWord[Mv|Vis]; Push[](3); }
+    Right[Shift|Ctrl] { FwdWordEnd[Mv|Vis|Past];
     # test
     Push[](3); }
     Home[] { Home[Mv]; }
@@ -33,12 +33,12 @@ map foo
     ^[ { Push[](2); }
     Delete[] { Right[Del]; }
     Insert[] { Insert[]; }
-    End[Shift] { End[Mv|High]; Push[](3); }
-    Home[Shift] { Home[Mv|High]; Push[](3); }
-    Right[Shift|Alt] { FwdWordEnd[Mv|High|Unix|Past]; Push[](3); }
-    Left[Shift|Alt] { RevWord[Mv|High|Unix]; Push[](3); }
-    Down[Shift] { Down[Mv|High]; Push[](3); }
-    Up[Shift] { Up[Mv|High]; Push[](3); }
+    End[Shift] { End[Mv|Vis]; Push[](3); }
+    Home[Shift] { Home[Mv|Vis]; Push[](3); }
+    Right[Shift|Alt] { FwdWordEnd[Mv|Vis|Unix|Past]; Push[](3); }
+    Left[Shift|Alt] { RevWord[Mv|Vis|Unix]; Push[](3); }
+    Down[Shift] { Down[Mv|Vis]; Push[](3); }
+    Up[Shift] { Up[Mv|Vis]; Push[](3); }
     LNext[] { Glyph[](, '^'); Left[Mv]; Push[](1); }
     Kill[] { Home[Del]; }
     WErase[] { RevWord[Del|Unix]; }
@@ -63,25 +63,25 @@ map foo
     Any[] { Pop[]; }
   }
   mode 3 edit {
-    ^W { ClrHigh[Del|Copy]; Pop[]; }
+    ^W { ClrVis[Del|Copy]; Pop[]; }
     ^[ { Push[](4); }
-    End[Shift] { End[Mv|High]; }
-    Home[Shift] { Home[Mv|High]; }
-    Right[Shift|Alt] { FwdWordEnd[Mv|High|Unix|Past]; }
-    Left[Shift|Alt] { RevWord[Mv|High|Unix]; }
-    Down[Shift] { Down[Mv|High]; }
-    Up[Shift] { Up[Mv|High]; }
-    Left[Shift] { Left[Mv|High]; }
-    Right[Shift] { Right[Mv|High]; }
-    Left[Shift|Ctrl] { RevWord[Mv|High]; }
-    Right[Shift|Ctrl] { FwdWordEnd[Mv|High|Past]; }
-    AnyFn[] { ClrHigh[]; Pop[Redir]; }
-    Any[] { ClrHigh[Del]; Pop[Redir]; }
+    End[Shift] { End[Mv|Vis]; }
+    Home[Shift] { Home[Mv|Vis]; }
+    Right[Shift|Alt] { FwdWordEnd[Mv|Vis|Unix|Past]; }
+    Left[Shift|Alt] { RevWord[Mv|Vis|Unix]; }
+    Down[Shift] { Down[Mv|Vis]; }
+    Up[Shift] { Up[Mv|Vis]; }
+    Left[Shift] { Left[Mv|Vis]; }
+    Right[Shift] { Right[Mv|Vis]; }
+    Left[Shift|Ctrl] { RevWord[Mv|Vis]; }
+    Right[Shift|Ctrl] { FwdWordEnd[Mv|Vis|Past]; }
+    AnyFn[] { ClrVis[]; Pop[Redir]; }
+    Any[] { ClrVis[Del]; Pop[Redir]; }
     "🐄" { Glyph(,'#'); }
   }
   mode 4 edit {
-    ^[ { ClrHigh[Del]; Glyph[]; Pop[](2); }
-    'w' { ClrHigh[Copy]; Pop[](2); }
+    ^[ { ClrVis[Del]; Glyph[]; Pop[](2); }
+    'w' { ClrVis[Copy]; Pop[](2); }
     AnyFn[] { Pop[Redir]; }
     Any[] { Pop[]; }
   }

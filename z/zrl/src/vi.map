@@ -148,6 +148,7 @@ map vi {
     '?' { PromptSrch(9); }
     '^' { Home[Mv]; }
     '$' { End[Mv]; }
+    '"' { Register; }
   }
   # 'r' single-character replace mode
   mode 4 edit {
@@ -185,6 +186,16 @@ map vi {
     Right[Alt] { FwdWord[Del|Unix]; Mode(3); }
     Left[Shift|Alt] { RevWord[Del|Unix]; Mode(3); }
     Right[Shift|Alt] { FwdWordEnd[Del|Unix|Past]; Mode(3); }
+    '0' { DigitArg; }
+    '1' { DigitArg; }
+    '2' { DigitArg; }
+    '3' { DigitArg; }
+    '4' { DigitArg; }
+    '5' { DigitArg; }
+    '6' { DigitArg; }
+    '7' { DigitArg; }
+    '8' { DigitArg; }
+    '9' { DigitArg; }
     'w' { FwdWord[Del]; Mode(3); }
     'W' { FwdWord[Del|Unix]; Mode(3); }
     'e' { FwdWordEnd[Del]; Mode(3); }
@@ -251,6 +262,16 @@ map vi {
     Right[Alt] { FwdWord[Del|Unix]; Mode(0); }
     Left[Shift|Alt] { RevWord[Del|Unix]; Mode(0); }
     Right[Shift|Alt] { FwdWordEnd[Del|Unix|Past]; Mode(0); }
+    '0' { DigitArg; }
+    '1' { DigitArg; }
+    '2' { DigitArg; }
+    '3' { DigitArg; }
+    '4' { DigitArg; }
+    '5' { DigitArg; }
+    '6' { DigitArg; }
+    '7' { DigitArg; }
+    '8' { DigitArg; }
+    '9' { DigitArg; }
     'w' { FwdWord[Del]; Mode(0); }
     'W' { FwdWord[Del|Unix]; Mode(0); }
     'e' { FwdWordEnd[Del]; Mode(0); }

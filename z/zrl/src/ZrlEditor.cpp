@@ -337,7 +337,6 @@ void Editor::final()
 // v <= 0 - parse failure at -v
 // v  > 0 - parse success ending at v
 namespace {
-
 int VKey_parse_char(uint8_t &byte, ZuString s, int off)
 {
   ZtRegex::Captures c;
@@ -494,7 +493,6 @@ int Cmd::parse(ZuString s, int off)
 }
 
 namespace {
-
 const auto &comment() { return ZtREGEX("\G\s*#[^\n]*\n"); }
 
 int CmdSeq_parse(CmdSeq &cmds, ZuString s, int off)
@@ -1629,8 +1627,7 @@ TransformSpanFn capFn() {
     }
   };
 }
-} // namespace
-
+} // anon namespace
 
 void Editor::transformWord(TransformSpanFn fn, void *fnContext)
 {

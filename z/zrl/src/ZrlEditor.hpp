@@ -110,7 +110,7 @@ namespace Op { // line editor operation codes
     InsGlyph,		// insert glyph
     OverGlyph,		// overwrite glyph
     BackSpace,		// back-space, falling back to Left[Del]
-    EditArg,		// set repeat count for pending edit
+    Edit,		// upcoming edit - set repeat count from arg
     EditRep,		// repeat last edit if required
 
     TransGlyph,		// transpose glyphs
@@ -431,7 +431,6 @@ struct CmdContext {
 
   unsigned evalArg(int cmdArg, unsigned defArg) {
     if (cmdArg >= 0) return cmdArg; // do not consume
-    accumArg();
     if (arg < 0) return defArg;
     auto arg_ = arg;
     clrArg();
@@ -565,7 +564,7 @@ private:
   bool cmdInsGlyph(Cmd cmd, int32_t);
   bool cmdOverGlyph(Cmd cmd, int32_t);
   bool cmdBackSpace(Cmd cmd, int32_t);
-  bool cmdEditArg(Cmd cmd, int32_t);
+  bool cmdEdit(Cmd cmd, int32_t);
   bool cmdEditRep(Cmd cmd, int32_t);
 
   bool cmdTransGlyph(Cmd, int32_t);

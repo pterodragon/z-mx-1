@@ -24,6 +24,9 @@
 // - Emacs undo/redo in default keymap
 // - Emacs keybindings
 //   - Emacs has negative arguments (!) with M--
+//   - use SHORT_MIN as sentinel for arg (ZuBox?)
+//   - check evalArg() uses for -ve returns
+//   - apply negatives to reverse movements
 
 #include <zlib/ZuSort.hpp>
 
@@ -110,7 +113,7 @@ Editor::Editor()
   m_cmdFn[Op::InsGlyph] = &Editor::cmdInsGlyph;
   m_cmdFn[Op::OverGlyph] = &Editor::cmdOverGlyph;
   m_cmdFn[Op::BackSpace] = &Editor::cmdBackSpace;
-  m_cmdFn[Op::EditArg] = &Editor::cmdEditArg;
+  m_cmdFn[Op::Edit] = &Editor::cmdEdit;
   m_cmdFn[Op::EditRep] = &Editor::cmdEditRep;
 
   m_cmdFn[Op::TransGlyph] = &Editor::cmdTransGlyph;
@@ -841,8 +844,8 @@ bool Editor::process_(int32_t vkey)
 bool Editor::process__(const CmdSeq &cmds, int32_t vkey)
 {
   for (auto cmd : cmds) {
-    if (cmd.arg() < 0) m_context.accumArg();
     int op = cmd.op() & Op::Mask;
+    if (op != Op::ArgDigit) m_context.accumArg();
     switch (op) {
       case Op::Nop:
       case Op::InsToggle:
@@ -1583,7 +1586,7 @@ bool Editor::cmdBackSpace(Cmd, int32_t vkey)
   return cmdLeft(Cmd{Op::Left | Op::Del}, vkey);
 }
 
-bool Editor::cmdEditArg(Cmd cmd, int32_t)
+bool Editor::cmdEdit(Cmd cmd, int32_t)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
   if (arg < 1) arg = 1;

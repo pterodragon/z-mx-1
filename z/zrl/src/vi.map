@@ -117,19 +117,19 @@ map vi {
     'W' { FwdWord[Mv|Unix]; }
     'e' { FwdWordEnd[Mv]; }
     'E' { FwdWordEnd[Mv|Unix]; }
-    'r' { EditArg; Mode(5); }
-    'R' { EditArg; Mode(0); Over; }
+    'r' { Edit; Mode(5); }
+    'R' { Edit; Over; Mode(0); }
     'y' { Mode(6); }
     'u' { Undo; }
     ^R { Redo; }
-    'i' { EditArg; Insert; Mode(0); }
-    'I' { EditArg; Insert; Mode(0); Home[Mv]; }
+    'i' { Edit; Insert; Mode(0); }
+    'I' { Edit; Insert; Mode(0); Home[Mv]; }
     'o' { Mode(0); End[Mv]; Home[Del]; }
     'O' { Nop[Redir](, 'o'); }
     'p' { Mode(0); Right[Mv|KeepReg](1); Paste; Left[Mv]; Mode(3); }
     'P' { Mode(0); Paste; Left[Mv]; Mode(3); }
-    'a' { EditArg; Mode(0); Right[Mv]; }
-    'A' { EditArg; Mode(0); End[Mv]; }
+    'a' { Edit; Mode(0); Right[Mv]; }
+    'A' { Edit; Mode(0); End[Mv]; }
     's' { Mode(0); Right[Del]; }
     'S' { Nop[Redir](, 'o'); }
     'd' { Mode(7); }
@@ -141,7 +141,7 @@ map vi {
     'l' { Right[Mv]; }
     'x' { Right[Del|Copy]; }
     'c' { Mode(11); }
-    'C' { End[Del|Copy]; Mode(0); }
+    'C' { Mode(0); End[Del|Copy]; }
     'b' { RevWord[Mv]; }
     'B' { RevWord[Mv|Unix]; }
     'n' { FwdSearch; }

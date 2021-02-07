@@ -20,7 +20,9 @@
 // command line interface - line editor
 
 // FIXME
-// - mode inheritance
+// - test clear/redraw
+// - implement mode inheritance
+// - clean up vi.map
 // - Emacs undo/redo in default keymap
 // - Emacs keybindings
 //   - Emacs has negative arguments (!) with M--
@@ -265,11 +267,13 @@ void Editor::init(Config config, App app)
     { Op::Push, 1 }
   });
   m_defltMap->bind(1, -VKey::Any, { { Op::OverGlyph }, { Op::Pop } });
+  m_defltMap->bind(1, -VKey::AnySys, { { Op::OverGlyph }, { Op::Pop } });
   m_defltMap->bind(1, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
 
   // ESC-prefixed "meta" mode (handles non-Fn Alt-keystrokes)
   m_defltMap->bind(0, '\x1b', { { Op::Push, 2 } });
   m_defltMap->bind(2, -VKey::Any, { { Op::Pop } });
+  m_defltMap->bind(2, -VKey::AnySys, { { Op::Pop | Op::Redir } });
   m_defltMap->bind(2, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
   m_defltMap->bind(2, '\x1b', { { Op::Glyph }, { Op::Pop } });
   m_defltMap->bind(2, 'w', { { Op::Nop }, { Op::Pop } });
@@ -277,6 +281,10 @@ void Editor::init(Config config, App app)
   // highlight "visual" mode
   m_defltMap->bind(3, -VKey::Any, {
     { Op::ClrVis | Op::Del },
+    { Op::Pop | Op::Redir }
+  });
+  m_defltMap->bind(3, -VKey::AnySys, {
+    { Op::ClrVis },
     { Op::Pop | Op::Redir }
   });
   m_defltMap->bind(3, -VKey::AnyFn, {
@@ -328,6 +336,7 @@ void Editor::init(Config config, App app)
   // ESC-prefixed "meta" mode, from within highlight "visual" mode
   m_defltMap->bind(3, '\x1b', { { Op::Push, 4 } });
   m_defltMap->bind(4, -VKey::Any, { { Op::Pop } });
+  m_defltMap->bind(4, -VKey::AnySys, { { Op::Pop | Op::Redir } });
   m_defltMap->bind(4, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
   m_defltMap->bind(4, '\x1b', {
     { Op::ClrVis | Op::Del },
@@ -834,8 +843,7 @@ bool Editor::process_(int32_t vkey)
 	  return process__(kv->key()->cmds, lkey);
       }
     }
-    if (auto kv = mode.bindings->find(
-	  VKey::isFn(vkey) ? -VKey::AnyFn : -VKey::Any))
+    if (auto kv = mode.bindings->find(VKey::wildcard(vkey)))
       return process__(kv->key()->cmds, vkey);
   }
   return false;

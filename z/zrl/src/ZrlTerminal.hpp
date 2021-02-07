@@ -54,28 +54,34 @@
 
 namespace Zrl {
 
-// a virtual key is UTF32 if positive, otherwise -ve VKey value
+// a virtual key is UTF32 if positive, otherwise -ve the VKey enum value
 namespace VKey {
   ZtEnumerate(
     // terminal driver events and control keys (from termios)
     _,			// unused - overlaps with ^@ when negated
-    Null,		// sentinel
-    Any,		// any non-Fn key (wildcard for bindings)
-    AnyFn,		// any Fn key
 
+    Null,		// sentinel
+
+    // wildcards for key bindings
+    Any,		// any key other than motion/Fn and system events
+    AnyFn,		// any motion/Fn key
+    AnySys,		// any system event
+
+    // system event keys
     EndOfFile,		// ^D EOF - causes stop
 
     SigInt,		// ^C interrupt
     SigQuit,		// ^\ quit (ctrl-backslash)
     SigSusp,		// ^Z suspend (SIGTSTP)
 
+    // input control keys
     Erase,		// ^H backspace
     WErase,		// ^W word erase
     Kill,		// ^U
 
     LNext,		// ^V
 
-    // motion / Fn keys
+    // motion/Fn keys
     Enter,		// line entered
 
     Up,
@@ -99,8 +105,12 @@ namespace VKey {
     Alt		= 0x0400	// ''
   };
 
-  inline bool isFn(int32_t vkey) {
-    return vkey < 0 && ((-vkey) & Mask) >= Enter;
+  inline int32_t wildcard(int32_t vkey) {
+    if (vkey >= 0) return -Any;
+    int i = (-vkey) & Mask;
+    if (i >= Enter) return -AnyFn;
+    if (i >= EndOfFile && i <= SigSusp) return -AnySys;
+    return Any;
   }
 
   ZrlExtern void print_(int32_t, ZmStream &);

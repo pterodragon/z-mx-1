@@ -42,8 +42,6 @@ int main()
     return true;
   };
   editor.init(config, app);
-  if (!editor.loadMap("vi.map"))
-    std::cerr << editor.loadError() << '\n' << std::flush;
   editor.open(&s, 1);
   editor.start([](Zrl::Editor &editor) {
     std::cout << editor.dumpVKeys();

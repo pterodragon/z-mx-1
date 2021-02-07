@@ -29,6 +29,8 @@ int main()
     std::cerr << "failed to open terminal\n";
     ::exit(1);
   }
+  std::cout << cli.dumpVKeys();
+  std::cout << cli.dumpMaps();
   cli.start("-->] ");
   cli.join();
   cli.stop();

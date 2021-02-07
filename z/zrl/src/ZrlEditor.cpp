@@ -494,7 +494,9 @@ int Cmd::parse(ZuString s, int off)
     if (!ZtREGEX("\G\s*\)").m(s, c, off)) return -off;
     off += c[1].length();
   } else
-    m_value |= static_cast<uint64_t>(-VKey::Null)<<32;
+    m_value |=
+      static_cast<uint64_t>(-1)<<16 |
+      static_cast<uint64_t>(-VKey::Null)<<32;
   return off;
 }
 
@@ -824,13 +826,14 @@ bool Editor::process__(const CmdSeq &cmds, int32_t vkey)
     if (cmd.arg() < 0) m_context.accumArg();
     int op = cmd.op() & Op::Mask;
     switch (op) {
-      case Op::Glyph;
-      case Op::InsGlyph;
-      case Op::OverGlyph;
-      case Op::BackSpace;
+      case Op::Glyph:
+      case Op::InsGlyph:
+      case Op::OverGlyph:
+      case Op::BackSpace:
+      case Op::EditRep:
 	break;
       default:
-	if (m_context.editOp) {
+	if (m_context.editOp.newData) {
 	  m_context.editArg = -1;
 	  m_context.undo.set(m_context.undoNext++, ZuMv(m_context.editOp));
 	  m_context.editOp = {};
@@ -965,7 +968,7 @@ void Editor::splice(
   m_context.undoIndex = -1;
   m_context.undo.set(m_context.undoNext++,
       UndoOp{
-	m_tty.pos(),
+	static_cast<int>(m_tty.pos()),
 	static_cast<int>(off),
 	substr(off, off + span.outLen()), replace});
   splice_(off, span, replace, rspan);
@@ -1411,7 +1414,7 @@ bool Editor::cmdPaste(Cmd cmd, int32_t)
     auto rspan = ZuUTF<uint32_t, uint8_t>::span(data);
     for (int i = 0; i < arg; i++) {
       if (ZuUnlikely(m_context.overwrite)) {
-	ZuString removed{line.data()};
+	ZuArray<const uint8_t> removed{line.data()};
 	removed.offset(off);
 	auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, rspan.outLen());
 	splice(off, span, data, rspan);
@@ -1433,7 +1436,7 @@ bool Editor::cmdYank(Cmd cmd, int32_t)
     unsigned off = line.position(m_tty.pos()).mapping();
     auto rspan = ZuUTF<uint32_t, uint8_t>::span(data);
     if (m_context.overwrite) {
-      ZuString removed{line.data()};
+      ZuArray<const uint8_t> removed{line.data()};
       removed.offset(off);
       auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, rspan.outLen());
       splice(off, span, data, rspan);
@@ -1470,28 +1473,35 @@ bool Editor::cmdRotate(Cmd cmd, int32_t)
   return false;
 }
 
+void Editor::edit(
+    ZuArray<const uint8_t> replace, ZuUTFSpan rspan, bool overwrite)
+{
+  const auto &line = m_tty.line();
+  unsigned pos = m_tty.pos();
+  unsigned off = line.position(pos).mapping();
+  if (!m_context.editOp)
+    m_context.editOp = { static_cast<int>(pos), static_cast<int>(off) };
+  if (overwrite) {
+    ZuArray<const uint8_t> removed{line.data()};
+    removed.offset(off);
+    auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, rspan.outLen());
+    removed.trunc(span.outLen());
+    m_context.editOp.oldData << removed;
+    m_context.editOp.newData << replace;
+    splice_(off, span, replace, rspan);
+  } else {
+    m_context.editOp.newData << replace;
+    splice_(off, ZuUTFSpan{}, replace, rspan);
+  }
+}
+
 bool Editor::glyph(Cmd cmd, int32_t vkey, bool overwrite)
 {
   vkey = m_tty.literal(vkey);
   if (ZuUnlikely(vkey < 0)) return false;
-  ZuArrayN<uint8_t, 4> data;
-  data.length(ZuUTF8::out(data.data(), 4, vkey));
-  const auto &line = m_tty.line();
-  unsigned off = line.position(m_tty.pos()).mapping();
-  if (!m_context.editOp) m_context.editOp = {m_tty.pos(), off};
-  auto rspan = ZuUTF<uint32_t, uint8_t>::span(data);
-  if (overwrite) {
-    ZuString removed{line.data()};
-    removed.offset(off);
-    auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, rspan.outLen());
-    removed.length(span.outLen());
-    editOp.oldData << removed;
-    editOp.newData << data;
-    splice_(off, span, data, rspan);
-  } else {
-    editOp.newData << data;
-    splice_(off, ZuUTFSpan{}, data, rspan);
-  }
+  ZuArrayN<uint8_t, 4> replace;
+  replace.length(ZuUTF8::out(replace.data(), 4, vkey));
+  edit(replace, ZuUTF<uint32_t, uint8_t>::span(replace), overwrite);
   return false;
 }
 bool Editor::cmdGlyph(Cmd cmd, int32_t vkey)
@@ -1511,35 +1521,43 @@ bool Editor::cmdBackSpace(Cmd, int32_t vkey)
 {
   unsigned pos = m_tty.pos();
   if (pos <= m_context.startPos) return false;
-  if (!m_context.editOp) goto fallback;
-  const auto &line = m_tty.line();
-  unsigned end = line.position(pos).mapping(), begin = end;
-  unsigned endPos = pos;
-  unsigned start = line.position(m_context.startPos).mapping();
-  begin = line.revGlyph(begin);
-  if (begin < start) begin = start;
-  if (begin >= end) goto clear;
-  auto &newData = m_context.editOp.newData;
-  unsigned n = newData.length();
-  if (n <= end - begin) goto clear;
-  unsigned newLength = n - (end - begin);
-  auto span = ZuUTF<uint32_t, uint8_t>::nspan(&newData[newLength], end - begin);
-  newData.length(newLength);
-  if (auto &oldData = m_context.editOp.newData) {
-    n = oldData.length();
-    unsigned off = n;
-    while (--off > 0 && !ZuUTF8::initial(&oldData[off]));
-    ZuArray<const uint8_t> restore{&oldData[off], n - off};
-    splice_(begin, span, restore, ZuUTF<uint32_t, uint8_t>::span(restore));
-    oldData.splice(off, n - off);
-  } else {
-    splice_(begin, span, ZuArray<const uint8_t>{}, ZuUTFSpan{});
+  if (m_context.editOp) {
+    const auto &line = m_tty.line();
+    unsigned end = line.position(pos).mapping(), begin = end;
+    unsigned start = line.position(m_context.startPos).mapping();
+    begin = line.revGlyph(begin);
+    if (begin < start) begin = start;
+    if (begin < end) {
+      unsigned begPos = line.byte(begin).mapping();
+      if (begPos >= m_context.editOp.oldPos) {
+	auto &newData = m_context.editOp.newData;
+	unsigned n = newData.length();
+	if (n > end - begin) {
+	  m_tty.mv(begPos);
+	  unsigned newLength = n - (end - begin);
+	  ZuArray<const uint8_t> removed{newData};
+	  removed.offset(newLength);
+	  auto span = ZuUTF<uint32_t, uint8_t>::span(removed);
+	  newData.length(newLength);
+	  if (auto &oldData = m_context.editOp.oldData) {
+	    n = oldData.length();
+	    unsigned off = n;
+	    while (--off > 0 && !ZuUTF8::initial(oldData[off]));
+	    ZuArray<const uint8_t> restore{oldData};
+	    restore.offset(off);
+	    splice_(begin, span,
+		restore, ZuUTF<uint32_t, uint8_t>::span(restore));
+	    oldData.splice(off, n - off);
+	  } else {
+	    splice_(begin, span, ZuArray<const uint8_t>{}, ZuUTFSpan{});
+	  }
+	  return false;
+	}
+      }
+    }
+    m_context.editOp = {};
+    m_context.editArg = -1;
   }
-  return false;
-clear:
-  m_context.editOp = {};
-  m_context.editArg = -1;
-fallback:
   return cmdLeft(Cmd{Op::Left | Op::Del}, vkey);
 }
 
@@ -1553,14 +1571,14 @@ bool Editor::cmdEditArg(Cmd cmd, int32_t)
 
 bool Editor::cmdEditRep(Cmd, int32_t vkey)
 {
-  if (!m_context.editOp) return false;
-  if (m_context.editArg > 1) {
+  if (m_context.editOp && m_context.editArg > 1) {
     unsigned n = m_context.editArg - 1;
-    // FIXME - multiply editOp by n
+    ZuArray<const uint8_t> replace = m_context.editOp.newData;
+    auto rspan = ZuUTF<uint32_t, uint8_t>::span(replace);
+    bool overwrite = m_context.editOp.oldData;
+    for (unsigned i = 0; i < n; i++) edit(replace, rspan, overwrite);
   }
-  m_context.editArg = -1;
-  m_context.undo.set(m_context.undoNext++, ZuMv(m_context.editOp));
-  m_context.editOp = {};
+  return false;
 }
 
 bool Editor::cmdTransGlyph(Cmd, int32_t)
@@ -1577,7 +1595,7 @@ bool Editor::cmdTransGlyph(Cmd, int32_t)
   replace.length(rend - lbegin);
   memcpy(&replace[0], &data[rbegin], rend - rbegin);
   memcpy(&replace[rend - rbegin], &data[lbegin], rbegin - lbegin);
-  auto span = ZuUTF<uint32_t, uint8_t>::span(this->substr(lbegin, rend));
+  auto span = ZuUTF<uint32_t, uint8_t>::span(substr(lbegin, rend));
   splice(lbegin, span, replace, span);
   return false;
 }
@@ -1604,7 +1622,7 @@ bool Editor::cmdTransWord(Cmd, int32_t)
   memcpy(&replace[0], &data[rbegin], rend - rbegin);
   memcpy(&replace[rend - rbegin], &data[mbegin], rbegin - mbegin);
   memcpy(&replace[rend - mbegin], &data[lbegin], mbegin - lbegin);
-  auto span = ZuUTF<uint32_t, uint8_t>::span(this->substr(lbegin, rend));
+  auto span = ZuUTF<uint32_t, uint8_t>::span(substr(lbegin, rend));
   splice(lbegin, span, replace, span);
   return false;
 }
@@ -1629,7 +1647,7 @@ bool Editor::cmdTransUnixWord(Cmd, int32_t)
   memcpy(&replace[0], &data[rbegin], rend - rbegin);
   memcpy(&replace[rend - rbegin], &data[mbegin], rbegin - mbegin);
   memcpy(&replace[rend - mbegin], &data[lbegin], mbegin - lbegin);
-  auto span = ZuUTF<uint32_t, uint8_t>::span(this->substr(lbegin, rend));
+  auto span = ZuUTF<uint32_t, uint8_t>::span(substr(lbegin, rend));
   splice(lbegin, span, replace, span);
   return false;
 }
@@ -1828,11 +1846,11 @@ bool Editor::cmdUndo(Cmd, int32_t vkey)
       m_context.undoIndex = -1;
     return false;
   }
-  m_tty.mv(m_tty.line().position(undoOp->off).mapping());
-  splice_(undoOp->off,
+  m_tty.mv(m_tty.line().byte(undoOp->spliceOff).mapping());
+  splice_(undoOp->spliceOff,
       ZuUTF<uint32_t, uint8_t>::span(undoOp->newData),
       undoOp->oldData, ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData));
-  m_tty.mv(undoOp->pos);
+  m_tty.mv(undoOp->oldPos);
   return false;
 }
 
@@ -1844,8 +1862,8 @@ bool Editor::cmdRedo(Cmd, int32_t vkey)
     m_context.undoIndex = -1;
     return false;
   }
-  m_tty.mv(m_tty.line().position(undoOp->off).mapping());
-  splice_(undoOp->off,
+  m_tty.mv(m_tty.line().byte(undoOp->spliceOff).mapping());
+  splice_(undoOp->spliceOff,
       ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
       undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData));
   if (++m_context.undoIndex == m_context.undoNext)
@@ -1853,10 +1871,18 @@ bool Editor::cmdRedo(Cmd, int32_t vkey)
   return false;
 }
 
-// FIXME - use undo
-bool Editor::cmdRepeat(Cmd, int32_t vkey)
+bool Editor::cmdRepeat(Cmd cmd, int32_t vkey)
 {
-  // FIXME
+  if (m_context.undoNext <= 0) return false;
+  int arg = m_context.evalArg(cmd.arg(), 1);
+  auto undoOp = m_context.undo.val(m_context.undoNext - 1);
+  if (!undoOp) return false;
+  do {
+    splice(m_tty.line().position(m_tty.pos()).mapping(),
+	ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
+	undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData));
+  } while (--arg > 0);
+  return false;
 }
 
 bool Editor::cmdFwdGlyphSrch(Cmd cmd, int32_t vkey)

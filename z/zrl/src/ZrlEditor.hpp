@@ -441,7 +441,7 @@ struct CmdContext {
 
   void clrArg() {
     arg = -1;
-    accumArg = 0;
+    accumArg_ = 0;
   }
 };
 
@@ -558,7 +558,8 @@ private:
   bool cmdYank(Cmd, int32_t);
   bool cmdRotate(Cmd, int32_t);
 
-  // insert/overwrite glyph
+  // insert/overwrite glyphs
+  void edit(ZuArray<const uint8_t> replace, ZuUTFSpan rspan, bool overwrite);
   bool glyph(Cmd, int32_t vkey, bool overwrite);
 
   bool cmdGlyph(Cmd cmd, int32_t);

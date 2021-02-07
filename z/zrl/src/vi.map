@@ -41,8 +41,8 @@ map vi {
   }
   # literal next
   mode 1 {
-    Any { OverGlyph(1); Pop(1); }
-    AnyFn { Pop(1)[Redir]; }
+    Any { OverGlyph; Pop; }
+    AnyFn { Pop[Redir]; }
   }
   # highlight "visual" mode
   mode 2 {
@@ -103,16 +103,16 @@ map vi {
     Right[Alt] { FwdWord[Mv|Unix]; }
     Left[Shift|Alt] { RevWord[Mv|Vis|Unix]; Push(2); }
     Right[Shift|Alt] { FwdWordEnd[Mv|Vis|Unix|Past]; Push(2); }
-    '0' { DigitArg; }
-    '1' { DigitArg; }
-    '2' { DigitArg; }
-    '3' { DigitArg; }
-    '4' { DigitArg; }
-    '5' { DigitArg; }
-    '6' { DigitArg; }
-    '7' { DigitArg; }
-    '8' { DigitArg; }
-    '9' { DigitArg; }
+    '0' { DigitArg(0); }
+    '1' { DigitArg(1); }
+    '2' { DigitArg(2); }
+    '3' { DigitArg(3); }
+    '4' { DigitArg(4); }
+    '5' { DigitArg(5); }
+    '6' { DigitArg(6); }
+    '7' { DigitArg(7); }
+    '8' { DigitArg(8); }
+    '9' { DigitArg(9); }
     'w' { FwdWord[Mv]; }
     'W' { FwdWord[Mv|Unix]; }
     'e' { FwdWordEnd[Mv]; }
@@ -122,14 +122,14 @@ map vi {
     'y' { Mode(6); }
     'u' { Undo; }
     ^R { Redo; }
-    'i' { EditArg; Insert; Push(0); }
-    'I' { EditArg; Insert; Push(0); Home[Mv]; }
+    'i' { EditArg; Insert; Mode(0); }
+    'I' { EditArg; Insert; Mode(0); Home[Mv]; }
     'o' { Mode(0); End[Mv]; Home[Del]; }
     'O' { Nop[Redir](, 'o'); }
     'p' { Right[Mv]; Paste; Left[Mv]; }
     'P' { Paste; Left[Mv]; }
-    'a' { EditArg; Push(0); Right[Mv]; }
-    'A' { EditArg; Push(0); End[Mv]; }
+    'a' { EditArg; Mode(0); Right[Mv]; }
+    'A' { EditArg; Mode(0); End[Mv]; }
     's' { Mode(0); Right[Del]; }
     'S' { Nop[Redir](, 'o'); }
     'd' { Mode(7); }
@@ -189,16 +189,17 @@ map vi {
     Right[Alt] { FwdWord[Copy|Unix]; Mode(3); }
     Left[Shift|Alt] { RevWord[Copy|Unix]; Mode(3); }
     Right[Shift|Alt] { FwdWordEnd[Copy|Unix|Past]; Mode(3); }
-    '0' { DigitArg; }
-    '1' { DigitArg; }
-    '2' { DigitArg; }
-    '3' { DigitArg; }
-    '4' { DigitArg; }
-    '5' { DigitArg; }
-    '6' { DigitArg; }
-    '7' { DigitArg; }
-    '8' { DigitArg; }
-    '9' { DigitArg; }
+    '0' { DigitArg(0); }
+    '1' { DigitArg(1); }
+    '2' { DigitArg(2); }
+    '3' { DigitArg(3); }
+    '4' { DigitArg(4); }
+    '5' { DigitArg(5); }
+    '6' { DigitArg(6); }
+    '7' { DigitArg(7); }
+    '8' { DigitArg(8); }
+    '9' { DigitArg(9); }
+    '0' { DigitArg(0); }
     'w' { FwdWord[Copy]; Mode(3); }
     'W' { FwdWord[Copy|Unix]; Mode(3); }
     'e' { FwdWordEnd[Copy]; Mode(3); }
@@ -243,16 +244,16 @@ map vi {
     Right[Alt] { FwdWord[Del|Copy|Unix]; Mode(3); }
     Left[Shift|Alt] { RevWord[Del|Copy|Unix]; Mode(3); }
     Right[Shift|Alt] { FwdWordEnd[Del|Copy|Unix|Past]; Mode(3); }
-    '0' { DigitArg; }
-    '1' { DigitArg; }
-    '2' { DigitArg; }
-    '3' { DigitArg; }
-    '4' { DigitArg; }
-    '5' { DigitArg; }
-    '6' { DigitArg; }
-    '7' { DigitArg; }
-    '8' { DigitArg; }
-    '9' { DigitArg; }
+    '0' { DigitArg(0); }
+    '1' { DigitArg(1); }
+    '2' { DigitArg(2); }
+    '3' { DigitArg(3); }
+    '4' { DigitArg(4); }
+    '5' { DigitArg(5); }
+    '6' { DigitArg(6); }
+    '7' { DigitArg(7); }
+    '8' { DigitArg(8); }
+    '9' { DigitArg(9); }
     'w' { FwdWord[Del|Copy]; Mode(3); }
     'W' { FwdWord[Del|Copy|Unix]; Mode(3); }
     'e' { FwdWordEnd[Del|Copy]; Mode(3); }
@@ -319,16 +320,16 @@ map vi {
     Right[Alt] { FwdWord[Del|Copy|Unix]; Mode(0); }
     Left[Shift|Alt] { RevWord[Del|Copy|Unix]; Mode(0); }
     Right[Shift|Alt] { FwdWordEnd[Del|Copy|Unix|Past]; Mode(0); }
-    '0' { DigitArg; }
-    '1' { DigitArg; }
-    '2' { DigitArg; }
-    '3' { DigitArg; }
-    '4' { DigitArg; }
-    '5' { DigitArg; }
-    '6' { DigitArg; }
-    '7' { DigitArg; }
-    '8' { DigitArg; }
-    '9' { DigitArg; }
+    '0' { DigitArg(0); }
+    '1' { DigitArg(1); }
+    '2' { DigitArg(2); }
+    '3' { DigitArg(3); }
+    '4' { DigitArg(4); }
+    '5' { DigitArg(5); }
+    '6' { DigitArg(6); }
+    '7' { DigitArg(7); }
+    '8' { DigitArg(8); }
+    '9' { DigitArg(9); }
     'w' { FwdWord[Del|Copy]; Mode(0); }
     'W' { FwdWord[Del|Copy|Unix]; Mode(0); }
     'e' { FwdWordEnd[Del|Copy]; Mode(0); }

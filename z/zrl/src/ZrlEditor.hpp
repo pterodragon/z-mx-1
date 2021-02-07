@@ -127,7 +127,7 @@ namespace Op { // line editor operation codes
 
     XchMark,		// swap cursor with glyph mark
 
-    DigitArg,		// append digit to argument
+    ArgDigit,		// append digit to argument
 
     Register,		// specify register (0-9 a-z + *) for next cmd
 
@@ -166,14 +166,16 @@ namespace Op { // line editor operation codes
 
   // modifiers
   enum {
-    Mask	= 0x00ff,
+    Mask	= 0x007f,
+
+    KeepReg	= 0x0080,	// retain register selection
 
     // Left/Right/Home/End/{Fwd,Rev}*{Word,WordEnd,GlyphSrch}/MvMark
     Mv	 	= 0x0100,	// move cursor
     Del	 	= 0x0200,	// delete span (implies move)
     Copy	= 0x0400,	// copy span (cut is Del + Copy)
-    Draw	= 0x0800,	// (re)draw span
-    Vis		= 0x1000,	// highlight (standout) (implies Draw)
+    Draw	= 0x0800,	// (re)draw span (normally, unless Vis set)
+    Vis		= 0x1000,	// highlight (standout) (implies Draw set)
 
     // {Fwd,Rev}*{Word,WordEnd}
     Unix	= 0x2000,	// a "Unix" word is white-space delimited
@@ -301,8 +303,6 @@ using Register = ZuPtr<RegData>;
 
 class Registers { // maintains a unified Vi/Emacs register store
 public:
-  enum { Repeat = 39 };
-
   static int index(char c) {
     if (ZuLikely(c >= '0' && c <= '9')) return c - '0';	
     if (ZuLikely(c >= 'a' && c <= 'z')) return c - 'a' + 10;
@@ -310,7 +310,6 @@ public:
     if (ZuLikely(c == '/')) return 36;		// search string
     if (ZuLikely(c == '+')) return 37;		// clipboard
     if (ZuLikely(c == '*')) return 38;		// alt. clipboard
-    if (ZuLikely(c == '.')) return 39;		// repeat
     return -1;
   }
 
@@ -349,7 +348,7 @@ public:
   }
 
 private:
-  Register	m_array[40];
+  Register	m_array[39];
   unsigned	m_offset = 0;	// mod10 offset
   unsigned	m_count = 0;
 };
@@ -590,7 +589,7 @@ private:
   bool cmdSetMark(Cmd, int32_t);
   bool cmdXchMark(Cmd, int32_t);
 
-  bool cmdDigitArg(Cmd, int32_t);
+  bool cmdArgDigit(Cmd, int32_t);
 
   bool cmdRegister(Cmd, int32_t);
 

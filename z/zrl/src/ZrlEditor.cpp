@@ -19,6 +19,12 @@
 
 // command line interface - line editor
 
+// FIXME
+// - mode inheritance
+// - Emacs undo/redo in default keymap
+// - Emacs keybindings
+//   - Emacs has negative arguments (!) with M--
+
 #include <zlib/ZuSort.hpp>
 
 #include <zlib/ZrlEditor.hpp>
@@ -48,6 +54,8 @@ ZrlExtern void print_(uint32_t op, ZmStream &s)
     if (op & Past) { sep(); s << "Past"; }
 
     if (op & Redir) { sep(); s << "Redir"; }
+
+    if (op & KeepReg) { sep(); s << "KeepReg"; }
     s << ']';
   }
 }
@@ -119,7 +127,7 @@ Editor::Editor()
 
   m_cmdFn[Op::XchMark] = &Editor::cmdXchMark;
 
-  m_cmdFn[Op::DigitArg] = &Editor::cmdDigitArg;
+  m_cmdFn[Op::ArgDigit] = &Editor::cmdArgDigit;
 
   m_cmdFn[Op::Register] = &Editor::cmdRegister;
 
@@ -456,6 +464,15 @@ int Cmd::parse(ZuString s, int off)
     auto op = Op::lookup(c[2]);
     if (op < 0) return -off;
     m_value = op;
+    switch (static_cast<int>(op)) {
+      case Op::Nop:
+      case Op::Mode:
+      case Op::Push:
+      case Op::Pop:
+      case Op::Register:
+	m_value |= Op::KeepReg; // implied
+	break;
+    }
   }
   if (ZtREGEX("\G\s*\[").m(s, c, off)) {
     off += c[1].length();
@@ -468,6 +485,7 @@ int Cmd::parse(ZuString s, int off)
       else if (c[1] == "Unix") m_value |= Op::Unix;
       else if (c[1] == "Past") m_value |= Op::Past;
       else if (c[1] == "Redir") m_value |= Op::Redir;
+      else if (c[1] == "KeepReg") m_value |= Op::KeepReg;
       else return -off;
       off += c[1].length();
       if (!ZtREGEX("\G\s*\|").m(s, c, off)) break;
@@ -826,6 +844,10 @@ bool Editor::process__(const CmdSeq &cmds, int32_t vkey)
     if (cmd.arg() < 0) m_context.accumArg();
     int op = cmd.op() & Op::Mask;
     switch (op) {
+      case Op::Nop:
+      case Op::InsToggle:
+      case Op::Insert:
+      case Op::Over:
       case Op::Glyph:
       case Op::InsGlyph:
       case Op::OverGlyph:
@@ -848,8 +870,8 @@ bool Editor::process__(const CmdSeq &cmds, int32_t vkey)
       if (stop) return true;
     }
     if (cmd.op() & Op::Redir) m_context.redirVKey = vkey_;
+    if (!(cmd.op() & Op::KeepReg)) m_context.register_ = -1;
   }
-  m_context.register_ = -1;
   if (m_tty.write() != Zi::OK) {
     m_app.end();
     return true;
@@ -970,7 +992,7 @@ void Editor::splice(
       UndoOp{
 	static_cast<int>(m_tty.pos()),
 	static_cast<int>(off),
-	substr(off, off + span.outLen()), replace});
+	substr(off, off + span.inLen()), replace});
   splice_(off, span, replace, rspan);
 }
 void Editor::splice_(
@@ -978,8 +1000,8 @@ void Editor::splice_(
     ZuArray<const uint8_t> replace, ZuUTFSpan rspan)
 {
   m_context.histLoadOff = -1;
-  if (rspan.outLen() <= span.outLen() ||
-      m_tty.line().length() + (rspan.outLen() - span.outLen()) <
+  if (rspan.inLen() <= span.inLen() ||
+      m_tty.line().length() + (rspan.inLen() - span.inLen()) <
 	m_config.maxLineLen)
     m_tty.splice(off, span, replace, rspan);
 }
@@ -1421,7 +1443,7 @@ bool Editor::cmdPaste(Cmd cmd, int32_t)
       } else {
 	splice(off, ZuUTFSpan{}, data, rspan);
       }
-      off += rspan.outLen();
+      off += rspan.inLen();
     }
   }
   return false;
@@ -1459,17 +1481,17 @@ bool Editor::cmdRotate(Cmd cmd, int32_t)
   unsigned pos = m_tty.pos();
   const auto &line = m_tty.line();
   auto rspan = ZuUTF<uint32_t, uint8_t>::span(replace);
-  if (rspan.inLen() > span.inLen() &&
-      line.length() + (rspan.inLen() - span.inLen()) >= m_config.maxLineLen)
-    return false;
-  unsigned width = span.width();
-  if (pos < m_context.startPos + width)
-    pos = m_context.startPos;
-  else
-    pos -= width;
-  m_tty.mv(pos);
-  splice(line.position(pos).mapping(), span, replace, rspan);
-  align(m_tty.pos());
+  if (rspan.inLen() <= span.inLen() ||
+      line.length() + (rspan.inLen() - span.inLen()) < m_config.maxLineLen) {
+    unsigned width = span.width();
+    if (pos < m_context.startPos + width)
+      pos = m_context.startPos;
+    else
+      pos -= width;
+    m_tty.mv(pos);
+    splice(line.position(pos).mapping(), span, replace, rspan);
+    align(m_tty.pos());
+  }
   return false;
 }
 
@@ -1485,7 +1507,7 @@ void Editor::edit(
     ZuArray<const uint8_t> removed{line.data()};
     removed.offset(off);
     auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, rspan.outLen());
-    removed.trunc(span.outLen());
+    removed.trunc(span.inLen());
     m_context.editOp.oldData << removed;
     m_context.editOp.newData << replace;
     splice_(off, span, replace, rspan);
@@ -1815,7 +1837,7 @@ bool Editor::cmdXchMark(Cmd, int32_t)
   return false;
 }
 
-bool Editor::cmdDigitArg(Cmd cmd, int32_t vkey)
+bool Editor::cmdArgDigit(Cmd cmd, int32_t vkey)
 {
   auto arg = cmd.arg();
   if (arg >= 0) m_context.accumDigit(arg);
@@ -1850,7 +1872,7 @@ bool Editor::cmdUndo(Cmd, int32_t vkey)
   splice_(undoOp->spliceOff,
       ZuUTF<uint32_t, uint8_t>::span(undoOp->newData),
       undoOp->oldData, ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData));
-  m_tty.mv(undoOp->oldPos);
+  if (!align(undoOp->oldPos)) m_tty.mv(undoOp->oldPos);
   return false;
 }
 
@@ -1956,12 +1978,12 @@ void Editor::completed(ZuArray<const uint8_t> data)
   auto rspan = ZuUTF<uint32_t, uint8_t>::span(data);
   const auto &line = m_tty.line();
   m_tty.mv(line.byte(m_context.compPrefixEnd).mapping());
-  if (rspan.inLen() > span.inLen() &&
-      line.length() + (rspan.inLen() - span.inLen()) >= m_config.maxLineLen)
-    return;
-  splice(m_context.compPrefixEnd, span, data, rspan);
-  m_context.compEnd = m_context.compPrefixEnd + data.length();
-  m_context.compSpan = rspan;
+  if (rspan.inLen() <= span.inLen() ||
+      line.length() + (rspan.inLen() - span.inLen()) < m_config.maxLineLen) {
+    splice(m_context.compPrefixEnd, span, data, rspan);
+    m_context.compEnd = m_context.compPrefixEnd + data.length();
+    m_context.compSpan = rspan;
+  }
 }
 bool Editor::cmdComplete(Cmd, int32_t)
 {

@@ -24,12 +24,12 @@
 
 #define ZuPP_Q(s) #s
 
-#define ZuPP_Eval(...) ZuPP_Eval64(__VA_ARGS__)
+#define ZuPP_Eval(...) ZuPP_Eval128(__VA_ARGS__)
 // #define ZuPP_Eval(...) ZuPP_Eval1024(__VA_ARGS__)
 // #define ZuPP_Eval1024(...) ZuPP_Eval512(ZuPP_Eval512(__VA_ARGS__))
 // #define ZuPP_Eval512(...) ZuPP_Eval256(ZuPP_Eval256(__VA_ARGS__))
 // #define ZuPP_Eval256(...) ZuPP_Eval128(ZuPP_Eval128(__VA_ARGS__))
-// #define ZuPP_Eval128(...) ZuPP_Eval64(ZuPP_Eval64(__VA_ARGS__))
+#define ZuPP_Eval128(...) ZuPP_Eval64(ZuPP_Eval64(__VA_ARGS__))
 #define ZuPP_Eval64(...) ZuPP_Eval32(ZuPP_Eval32(__VA_ARGS__))
 #define ZuPP_Eval32(...) ZuPP_Eval16(ZuPP_Eval16(__VA_ARGS__))
 #define ZuPP_Eval16(...) ZuPP_Eval8(ZuPP_Eval8(__VA_ARGS__))

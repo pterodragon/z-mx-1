@@ -109,6 +109,9 @@ namespace Op { // line editor operation codes
     Glyph,		// insert/overwrite glyph (depending on toggle)
     InsGlyph,		// insert glyph
     OverGlyph,		// overwrite glyph
+    BackSpace,		// back-space, falling back to Left[Del]
+    EditArg,		// set repeat count for pending edit
+    EditRep,		// repeat last edit if required
 
     TransGlyph,		// transpose glyphs
     TransWord,		// transpose words
@@ -118,18 +121,19 @@ namespace Op { // line editor operation codes
     UpperWord,		// upper-case word
     CapWord,		// capitalize word (rotates through ucfirst, uc, lc)
 
-    LowerVis,		// lower-case highlight
-    UpperVis,		// upper-case highlight
-    CapVis,		// capitalize highlight
+    LowerVis,		// lower-case visual highlight
+    UpperVis,		// upper-case ''
+    CapVis,		// capitalize ''
 
     XchMark,		// swap cursor with glyph mark
 
-    DigitArg,		// add digit to accumulating argument (needs KeepArg)
+    DigitArg,		// append digit to argument
 
     Register,		// specify register (0-9 a-z + *) for next cmd
 
     Undo,		// undo
     Redo,		// redo
+    Repeat,		// repeat
 
     // glyph search
     FwdGlyphSrch,	// fwd glyph search
@@ -176,6 +180,7 @@ namespace Op { // line editor operation codes
     // {Fwd,Rev}*{WordEnd}
     Past	= 0x4000,	// move past end
 
+    // {Nop,Mode,Push,Pop}
     Redir	= 0x8000	// redirect keystroke
   };
 
@@ -199,11 +204,13 @@ public:
   Cmd(Cmd &&) = default;
   Cmd &operator =(Cmd &&) = default;
 
-  Cmd(uint64_t op, uint64_t arg = 0, int32_t vkey = -VKey::Null) :
-      m_value{op | (arg<<16) | (static_cast<uint64_t>(vkey)<<32)} { }
+  Cmd(uint64_t op, int16_t arg = -1, int32_t vkey = -VKey::Null) :
+      m_value{op |
+	(static_cast<uint64_t>(arg)<<16) |
+	(static_cast<uint64_t>(vkey)<<32)} { }
 
   auto op() const { return m_value & 0xffffU; }
-  auto arg() const { return (m_value>>16) & 0xffffU; }
+  int16_t arg() const { return (m_value>>16) & 0xffffU; }
   int32_t vkey() const { return m_value>>32; }
 
   bool operator !() const { return !op(); }
@@ -244,10 +251,15 @@ struct Bindings : public Bindings_ {
   Bindings() : Bindings_{ZmHashParams{}.bits(8).loadFactor(1.0)} { }
 };
 
+namespace ModeType {
+  ZtEnumValues(Edit, Command);
+  ZtEnumNames("edit", "command");
+}
+
 // line editor mode
 struct Mode {
   ZmRef<Bindings>	bindings;	// vkey -> command sequence bindings
-  bool			edit = false;	// edit mode flag
+  int			type = 0;	// ModeType
 };
 
 // key map
@@ -259,7 +271,7 @@ struct ZrlAPI Map_ {
 
   int parse(ZuString s, int off);
 
-  void addMode(unsigned mode, bool edit);
+  void addMode(unsigned mode, int type);
   void bind(unsigned mode, int32_t vkey, CmdSeq cmds);
   void reset(); // reset all modes and key bindings
 
@@ -289,6 +301,8 @@ using Register = ZuPtr<RegData>;
 
 class Registers { // maintains a unified Vi/Emacs register store
 public:
+  enum { Repeat = 39 };
+
   static int index(char c) {
     if (ZuLikely(c >= '0' && c <= '9')) return c - '0';	
     if (ZuLikely(c >= 'a' && c <= 'z')) return c - 'a' + 10;
@@ -296,6 +310,7 @@ public:
     if (ZuLikely(c == '/')) return 36;		// search string
     if (ZuLikely(c == '+')) return 37;		// clipboard
     if (ZuLikely(c == '*')) return 38;		// alt. clipboard
+    if (ZuLikely(c == '.')) return 39;		// repeat
     return -1;
   }
 
@@ -334,17 +349,18 @@ public:
   }
 
 private:
-  Register	m_array[39];
+  Register	m_array[40];
   unsigned	m_offset = 0;	// mod10 offset
   unsigned	m_count = 0;
 };
 
 struct UndoOp {
-  int			off = -1;
+  int			oldPos = -1;	// position prior to splice
+  int			spliceOff = -1;	// offset of splice
   ZtArray<uint8_t>	oldData;
   ZtArray<uint8_t>	newData;
 
-  bool operator !() const { return off < 0; }
+  bool operator !() const { return oldPos < 0; }
   ZuOpBool
 };
 
@@ -365,8 +381,8 @@ struct CmdContext {
   int			highPos = -1;	// highlight end position
 
   // numerical argument context
-  unsigned		arg = 0;	// extant arg (survives mode changes)
-  unsigned		accumArg = 0;	// accumulating argument
+  int			arg = -1;	// extant arg (survives mode changes)
+  unsigned		accumArg_ = 0;	// accumulating argument
 
   // glyph search context (search within line)
   uint32_t		search = 0;	// glyph to search for
@@ -377,6 +393,8 @@ struct CmdContext {
 
   // undo buffer
   Undo			undo;		// undo buffer
+  UndoOp		editOp;		// pending edit
+  int			editArg = -1;	// repeat count for ''
   unsigned		undoNext = 0;	// undo index of next op
   int			undoIndex = -1;	// undo index of undo/redo
 
@@ -399,21 +417,32 @@ struct CmdContext {
   bool			overwrite = false;
 
   void accumDigit(unsigned i) {
-    accumArg = accumArg * 10 + i;
+    accumArg_ = accumArg_ * 10 + i;
   }
 
-  unsigned evalArg() {
-    if (accumArg) {
-      if (!arg)
-	arg = accumArg;
+  void accumArg() {
+    if (accumArg_) {
+      if (arg <= 0)
+	arg = accumArg_;
       else
-	arg *= accumArg;
-      accumArg = 0;
+	arg *= accumArg_;
+      accumArg_ = 0;
     }
-    return arg;
   }
 
-  void clrArg() { arg = accumArg = 0; }
+  unsigned evalArg(int cmdArg, unsigned defArg) {
+    if (cmdArg >= 0) return cmdArg; // do not consume
+    accumArg();
+    if (arg < 0) return defArg;
+    auto arg_ = arg;
+    clrArg();
+    return arg_;
+  }
+
+  void clrArg() {
+    arg = -1;
+    accumArg = 0;
+  }
 };
 
 // the line editor is a virtual machine that executes sequences of commands;
@@ -535,6 +564,9 @@ private:
   bool cmdGlyph(Cmd cmd, int32_t);
   bool cmdInsGlyph(Cmd cmd, int32_t);
   bool cmdOverGlyph(Cmd cmd, int32_t);
+  bool cmdBackSpace(Cmd cmd, int32_t);
+  bool cmdEditArg(Cmd cmd, int32_t);
+  bool cmdEditRep(Cmd cmd, int32_t);
 
   bool cmdTransGlyph(Cmd, int32_t);
   bool cmdTransWord(Cmd, int32_t);
@@ -558,10 +590,12 @@ private:
   bool cmdXchMark(Cmd, int32_t);
 
   bool cmdDigitArg(Cmd, int32_t);
+
   bool cmdRegister(Cmd, int32_t);
 
   bool cmdUndo(Cmd, int32_t);
   bool cmdRedo(Cmd, int32_t);
+  bool cmdRepeat(Cmd, int32_t);
 
   bool cmdFwdGlyphSrch(Cmd, int32_t);
   bool cmdRevGlyphSrch(Cmd, int32_t);

@@ -1,12 +1,12 @@
 map vi {
   # default insert/edit mode
-  mode 0 edit {
+  mode 0 {
     EndOfFile { EndOfFile; }
     SigInt { SigInt; }
     SigQuit { SigQuit; }
     SigSusp { SigSusp; }
     Any { Glyph; }
-    Erase { Left[Del]; }
+    Erase { BackSpace; }
     WErase { RevWord[Del|Unix]; }
     Kill { Home[Del]; }
     LNext { Glyph(, '^'); Left[Mv]; Push(1); }
@@ -20,7 +20,7 @@ map vi {
     PgUp { Prev; }
     PgDn { Next; }
     Insert { InsToggle; }
-    Delete { Right[Del]; }
+    Delete { Right[Del|Copy]; }
     Up[Shift] { Up[Mv|Vis]; Push(2); }
     Down[Shift] { Down[Mv|Vis]; Push(2); }
     Left[Shift] { Left[Mv|Vis]; Push(2); }
@@ -37,15 +37,15 @@ map vi {
     Right[Shift|Alt] { FwdWordEnd[Mv|Vis|Unix|Past]; Push(2); }
     ^D { ListComplete; }
     ^I { Complete; }
-    ^[ { Mode(3); }
+    ^[ { EditRep; Left[Mv]; Mode(3); }
   }
   # literal next
-  mode 1 edit {
-    Any { OverGlyph; Pop; }
-    AnyFn { Pop[Redir]; }
+  mode 1 {
+    Any { OverGlyph(1); Pop(1); }
+    AnyFn { Pop(1)[Redir]; }
   }
   # highlight "visual" mode
-  mode 2 edit {
+  mode 2 {
     Any { ClrVis[Del]; Pop[Redir]; }
     AnyFn { ClrVis; Pop[Redir]; }
     Erase { Nop[Redir](, Delete); }
@@ -72,11 +72,12 @@ map vi {
     'u' { LowerVis; }
   }
   # command mode
-  mode 3 {
+  mode 3 command {
     EndOfFile { Mode[Redir](0); }
     SigInt { Mode[Redir](0); }
     SigQuit { Mode[Redir](0); }
     SigSusp { Mode[Redir](0); }
+    Erase { Left[Mv]; }
     Enter { Mode(0); Enter; }
     Up { Up[Mv]; }
     Down { Down[Mv]; }
@@ -87,7 +88,7 @@ map vi {
     PgUp { Prev; }
     PgDn { Next; }
     Insert { InsToggle; }
-    Delete { Right[Del]; }
+    Delete { Right[Del|Copy]; }
     Up[Shift] { Up[Mv|Vis]; Push(2); }
     Down[Shift] { Down[Mv|Vis]; Push(2); }
     Left[Shift] { Left[Mv|Vis]; Push(2); }
@@ -116,42 +117,44 @@ map vi {
     'W' { FwdWord[Mv|Unix]; }
     'e' { FwdWordEnd[Mv]; }
     'E' { FwdWordEnd[Mv|Unix]; }
-    'r' { Mode(4); }
-    'R' { Mode(0); Over; }
+    'r' { EditArg; Mode(5); }
+    'R' { EditArg; Mode(0); Over; }
+    'y' { Mode(6); }
     'u' { Undo; }
     ^R { Redo; }
-    'i' { Mode(0); Insert; }
-    'I' { Mode(0); Insert; Home[Mv]; }
+    'i' { EditArg; Insert; Push(0); }
+    'I' { EditArg; Insert; Push(0); Home[Mv]; }
     'o' { Mode(0); End[Mv]; Home[Del]; }
     'O' { Nop[Redir](, 'o'); }
-    'p' { Right[Mv]; Paste; }
-    'P' { Paste; }
-    'a' { Mode(0); Right[Mv]; }
-    'A' { Mode(0); End[Mv]; }
+    'p' { Right[Mv]; Paste; Left[Mv]; }
+    'P' { Paste; Left[Mv]; }
+    'a' { EditArg; Push(0); Right[Mv]; }
+    'A' { EditArg; Push(0); End[Mv]; }
     's' { Mode(0); Right[Del]; }
     'S' { Nop[Redir](, 'o'); }
-    'd' { Mode(5); }
-    'D' { End[Del]; }
-    'g' { Mode(6); }
+    'd' { Mode(7); }
+    'D' { End[Del|Copy]; }
+    'g' { Mode(8); }
     'h' { Left[Mv]; }
     'j' { Down[Mv]; }
     'k' { Up[Mv]; }
     'l' { Right[Mv]; }
-    'x' { Right[Del]; }
-    'c' { Mode(8); }
-    'C' { End[Del]; Mode(0); }
+    'x' { Right[Del|Copy]; }
+    'c' { Mode(10); }
+    'C' { End[Del|Copy]; Mode(0); }
     'b' { RevWord[Mv]; }
     'B' { RevWord[Mv|Unix]; }
     'n' { FwdSearch; }
     'N' { RevSearch; }
-    '/' { PromptSrch(8); }
-    '?' { PromptSrch(9); }
+    '/' { PromptSrch(11); }
+    '?' { PromptSrch(12); }
     '^' { Home[Mv]; }
     '$' { End[Mv]; }
     '"' { Register; }
+    '.' { Repeat; }
   }
   # 'r' single-character replace mode
-  mode 4 edit {
+  mode 5 {
     EndOfFile { Mode[Redir](0); }
     SigInt { Mode[Redir](0); }
     SigQuit { Mode[Redir](0); }
@@ -159,33 +162,33 @@ map vi {
     Any { OverGlyph; Mode(3); }
     AnyFn { Mode[Redir](3); }
   }
-  # 'd' delete mode
-  mode 5 {
+  # 'y' yank mode
+  mode 6 command {
     EndOfFile { Mode[Redir](0); }
     SigInt { Mode[Redir](0); }
     SigQuit { Mode[Redir](0); }
     SigSusp { Mode[Redir](0); }
-    Up { Up[Del]; Mode(3); }
-    Down { Down[Del]; Mode(3); }
-    Left { Left[Del]; Mode(3); }
-    Right { Right[Del]; Mode(3); }
-    Home { Home[Del]; Mode(3); }
-    End { End[Del]; Mode(3); }
-    Delete { Right[Del]; Mode(3); }
-    Up[Shift] { Up[Del]; Mode(3); }
-    Down[Shift] { Down[Del]; Mode(3); }
-    Left[Shift] { Left[Del]; Mode(3); }
-    Right[Shift] { Right[Del]; Mode(3); }
-    Home[Shift] { Home[Del]; Mode(3); }
-    End[Shift] { End[Del]; Mode(3); }
-    Left[Ctrl] { RevWord[Del]; Mode(3); }
-    Right[Ctrl] { FwdWord[Del]; Mode(3); }
-    Left[Shift|Ctrl] { RevWord[Del]; Mode(3); }
-    Right[Shift|Ctrl] { FwdWordEnd[Del|Past]; Mode(3); }
-    Left[Alt] { RevWord[Del|Unix]; Mode(3); }
-    Right[Alt] { FwdWord[Del|Unix]; Mode(3); }
-    Left[Shift|Alt] { RevWord[Del|Unix]; Mode(3); }
-    Right[Shift|Alt] { FwdWordEnd[Del|Unix|Past]; Mode(3); }
+    Up { Up[Copy]; Mode(3); }
+    Down { Down[Copy]; Mode(3); }
+    Left { Left[Copy]; Mode(3); }
+    Right { Right[Copy]; Mode(3); }
+    Home { Home[Copy]; Mode(3); }
+    End { End[Copy]; Mode(3); }
+    Delete { Right[Copy]; Mode(3); }
+    Up[Shift] { Up[Copy]; Mode(3); }
+    Down[Shift] { Down[Copy]; Mode(3); }
+    Left[Shift] { Left[Copy]; Mode(3); }
+    Right[Shift] { Right[Copy]; Mode(3); }
+    Home[Shift] { Home[Copy]; Mode(3); }
+    End[Shift] { End[Copy]; Mode(3); }
+    Left[Ctrl] { RevWord[Copy]; Mode(3); }
+    Right[Ctrl] { FwdWord[Copy]; Mode(3); }
+    Left[Shift|Ctrl] { RevWord[Copy]; Mode(3); }
+    Right[Shift|Ctrl] { FwdWordEnd[Copy|Past]; Mode(3); }
+    Left[Alt] { RevWord[Copy|Unix]; Mode(3); }
+    Right[Alt] { FwdWord[Copy|Unix]; Mode(3); }
+    Left[Shift|Alt] { RevWord[Copy|Unix]; Mode(3); }
+    Right[Shift|Alt] { FwdWordEnd[Copy|Unix|Past]; Mode(3); }
     '0' { DigitArg; }
     '1' { DigitArg; }
     '2' { DigitArg; }
@@ -196,25 +199,79 @@ map vi {
     '7' { DigitArg; }
     '8' { DigitArg; }
     '9' { DigitArg; }
-    'w' { FwdWord[Del]; Mode(3); }
-    'W' { FwdWord[Del|Unix]; Mode(3); }
-    'e' { FwdWordEnd[Del]; Mode(3); }
-    'E' { FwdWordEnd[Del|Unix]; Mode(3); }
-    'g' { Mode(7); Mode(3); }
-    'h' { Left[Del]; Mode(3); }
-    'j' { Down[Del]; Mode(3); }
-    'k' { Up[Del]; Mode(3); }
-    'l' { Right[Del]; Mode(3); }
-    'x' { Right[Del]; Mode(3); }
-    'b' { RevWord[Del]; Mode(3); }
-    'B' { RevWord[Del|Unix]; Mode(3); }
-    '^' { Home[Del]; Mode(3); }
-    '$' { End[Del]; Mode(3); }
+    'w' { FwdWord[Copy]; Mode(3); }
+    'W' { FwdWord[Copy|Unix]; Mode(3); }
+    'e' { FwdWordEnd[Copy]; Mode(3); }
+    'E' { FwdWordEnd[Copy|Unix]; Mode(3); }
+    'g' { Mode(9); Mode(3); }
+    'h' { Left[Copy]; Mode(3); }
+    'j' { Down[Copy]; Mode(3); }
+    'k' { Up[Copy]; Mode(3); }
+    'l' { Right[Copy]; Mode(3); }
+    'x' { Right[Copy]; Mode(3); }
+    'b' { RevWord[Copy]; Mode(3); }
+    'B' { RevWord[Copy|Unix]; Mode(3); }
+    '^' { Home[Copy]; Mode(3); }
+    '$' { End[Copy]; Mode(3); }
+    Any { Mode(3); }
+    AnyFn { Mode(3); }
+  }
+  # 'd' delete mode
+  mode 7 command {
+    EndOfFile { Mode[Redir](0); }
+    SigInt { Mode[Redir](0); }
+    SigQuit { Mode[Redir](0); }
+    SigSusp { Mode[Redir](0); }
+    Up { Up[Del|Copy]; Mode(3); }
+    Down { Down[Del|Copy]; Mode(3); }
+    Left { Left[Del|Copy]; Mode(3); }
+    Right { Right[Del|Copy]; Mode(3); }
+    Home { Home[Del|Copy]; Mode(3); }
+    End { End[Del|Copy]; Mode(3); }
+    Delete { Right[Del|Copy]; Mode(3); }
+    Up[Shift] { Up[Del|Copy]; Mode(3); }
+    Down[Shift] { Down[Del|Copy]; Mode(3); }
+    Left[Shift] { Left[Del|Copy]; Mode(3); }
+    Right[Shift] { Right[Del|Copy]; Mode(3); }
+    Home[Shift] { Home[Del|Copy]; Mode(3); }
+    End[Shift] { End[Del|Copy]; Mode(3); }
+    Left[Ctrl] { RevWord[Del|Copy]; Mode(3); }
+    Right[Ctrl] { FwdWord[Del|Copy]; Mode(3); }
+    Left[Shift|Ctrl] { RevWord[Del|Copy]; Mode(3); }
+    Right[Shift|Ctrl] { FwdWordEnd[Del|Copy|Past]; Mode(3); }
+    Left[Alt] { RevWord[Del|Copy|Unix]; Mode(3); }
+    Right[Alt] { FwdWord[Del|Copy|Unix]; Mode(3); }
+    Left[Shift|Alt] { RevWord[Del|Copy|Unix]; Mode(3); }
+    Right[Shift|Alt] { FwdWordEnd[Del|Copy|Unix|Past]; Mode(3); }
+    '0' { DigitArg; }
+    '1' { DigitArg; }
+    '2' { DigitArg; }
+    '3' { DigitArg; }
+    '4' { DigitArg; }
+    '5' { DigitArg; }
+    '6' { DigitArg; }
+    '7' { DigitArg; }
+    '8' { DigitArg; }
+    '9' { DigitArg; }
+    'w' { FwdWord[Del|Copy]; Mode(3); }
+    'W' { FwdWord[Del|Copy|Unix]; Mode(3); }
+    'e' { FwdWordEnd[Del|Copy]; Mode(3); }
+    'E' { FwdWordEnd[Del|Copy|Unix]; Mode(3); }
+    'g' { Mode(9); Mode(3); }
+    'h' { Left[Del|Copy]; Mode(3); }
+    'j' { Down[Del|Copy]; Mode(3); }
+    'k' { Up[Del|Copy]; Mode(3); }
+    'l' { Right[Del|Copy]; Mode(3); }
+    'x' { Right[Del|Copy]; Mode(3); }
+    'b' { RevWord[Del|Copy]; Mode(3); }
+    'B' { RevWord[Del|Copy|Unix]; Mode(3); }
+    '^' { Home[Del|Copy]; Mode(3); }
+    '$' { End[Del|Copy]; Mode(3); }
     Any { Mode(3); }
     AnyFn { Mode(3); }
   }
   # 'g' go mode
-  mode 6 {
+  mode 8 command {
     EndOfFile { Mode[Redir](0); }
     SigInt { Mode[Redir](0); }
     SigQuit { Mode[Redir](0); }
@@ -225,7 +282,7 @@ map vi {
     AnyFn { Mode[Redir](3); }
   }
   # 'd' 'g' delete-go mode
-  mode 7 {
+  mode 9 command {
     EndOfFile { Mode[Redir](0); }
     SigInt { Mode[Redir](0); }
     SigQuit { Mode[Redir](0); }
@@ -236,32 +293,32 @@ map vi {
     AnyFn { Mode(3); }
   }
   # 'c' change mode
-  mode 8 {
+  mode 10 command {
     EndOfFile { Mode[Redir](0); }
     SigInt { Mode[Redir](0); }
     SigQuit { Mode[Redir](0); }
     SigSusp { Mode[Redir](0); }
-    Up { Up[Del]; Mode(0); }
-    Down { Down[Del]; Mode(0); }
-    Left { Left[Del]; Mode(0); }
-    Right { Right[Del]; Mode(0); }
-    Home { Home[Del]; Mode(0); }
-    End { End[Del]; Mode(0); }
+    Up { Up[Del|Copy]; Mode(0); }
+    Down { Down[Del|Copy]; Mode(0); }
+    Left { Left[Del|Copy]; Mode(0); }
+    Right { Right[Del|Copy]; Mode(0); }
+    Home { Home[Del|Copy]; Mode(0); }
+    End { End[Del|Copy]; Mode(0); }
     Delete { Right[Del]; Mode(0); }
-    Up[Shift] { Up[Del]; Mode(0); }
-    Down[Shift] { Down[Del]; Mode(0); }
-    Left[Shift] { Left[Del]; Mode(0); }
-    Right[Shift] { Right[Del]; Mode(0); }
-    Home[Shift] { Home[Del]; Mode(0); }
-    End[Shift] { End[Del]; Mode(0); }
-    Left[Ctrl] { RevWord[Del]; Mode(0); }
-    Right[Ctrl] { FwdWord[Del]; Mode(0); }
-    Left[Shift|Ctrl] { RevWord[Del]; Mode(0); }
-    Right[Shift|Ctrl] { FwdWordEnd[Del|Past]; Mode(0); }
-    Left[Alt] { RevWord[Del|Unix]; Mode(0); }
-    Right[Alt] { FwdWord[Del|Unix]; Mode(0); }
-    Left[Shift|Alt] { RevWord[Del|Unix]; Mode(0); }
-    Right[Shift|Alt] { FwdWordEnd[Del|Unix|Past]; Mode(0); }
+    Up[Shift] { Up[Del|Copy]; Mode(0); }
+    Down[Shift] { Down[Del|Copy]; Mode(0); }
+    Left[Shift] { Left[Del|Copy]; Mode(0); }
+    Right[Shift] { Right[Del|Copy]; Mode(0); }
+    Home[Shift] { Home[Del|Copy]; Mode(0); }
+    End[Shift] { End[Del|Copy]; Mode(0); }
+    Left[Ctrl] { RevWord[Del|Copy]; Mode(0); }
+    Right[Ctrl] { FwdWord[Del|Copy]; Mode(0); }
+    Left[Shift|Ctrl] { RevWord[Del|Copy]; Mode(0); }
+    Right[Shift|Ctrl] { FwdWordEnd[Del|Copy|Past]; Mode(0); }
+    Left[Alt] { RevWord[Del|Copy|Unix]; Mode(0); }
+    Right[Alt] { FwdWord[Del|Copy|Unix]; Mode(0); }
+    Left[Shift|Alt] { RevWord[Del|Copy|Unix]; Mode(0); }
+    Right[Shift|Alt] { FwdWordEnd[Del|Copy|Unix|Past]; Mode(0); }
     '0' { DigitArg; }
     '1' { DigitArg; }
     '2' { DigitArg; }
@@ -272,25 +329,25 @@ map vi {
     '7' { DigitArg; }
     '8' { DigitArg; }
     '9' { DigitArg; }
-    'w' { FwdWord[Del]; Mode(0); }
-    'W' { FwdWord[Del|Unix]; Mode(0); }
-    'e' { FwdWordEnd[Del]; Mode(0); }
-    'E' { FwdWordEnd[Del|Unix]; Mode(0); }
-    'g' { Mode(7); Mode(0); }
-    'h' { Left[Del]; Mode(0); }
-    'j' { Down[Del]; Mode(0); }
-    'k' { Up[Del]; Mode(0); }
-    'l' { Right[Del]; Mode(0); }
-    'x' { Right[Del]; Mode(0); }
-    'b' { RevWord[Del]; Mode(0); }
-    'B' { RevWord[Del|Unix]; Mode(0); }
-    '^' { Home[Del]; Mode(0); }
-    '$' { End[Del]; Mode(0); }
+    'w' { FwdWord[Del|Copy]; Mode(0); }
+    'W' { FwdWord[Del|Copy|Unix]; Mode(0); }
+    'e' { FwdWordEnd[Del|Copy]; Mode(0); }
+    'E' { FwdWordEnd[Del|Copy|Unix]; Mode(0); }
+    'g' { Mode(8); Mode(0); }
+    'h' { Left[Del|Copy]; Mode(0); }
+    'j' { Down[Del|Copy]; Mode(0); }
+    'k' { Up[Del|Copy]; Mode(0); }
+    'l' { Right[Del|Copy]; Mode(0); }
+    'x' { Right[Del|Copy]; Mode(0); }
+    'b' { RevWord[Del|Copy]; Mode(0); }
+    'B' { RevWord[Del|Copy|Unix]; Mode(0); }
+    '^' { Home[Del|Copy]; Mode(0); }
+    '$' { End[Del|Copy]; Mode(0); }
     Any { Mode(3); }
     AnyFn { Mode(3); }
   }
   # '/' search fwd mode
-  mode 9 {
+  mode 11 {
     EndOfFile { AbortSrch[Redir]; }
     SigInt { AbortSrch[Redir]; }
     SigQuit { AbortSrch[Redir]; }
@@ -315,7 +372,7 @@ map vi {
     ^[ { AbortSrch; }
   }
   # '?' search rev mode
-  mode 10 {
+  mode 12 {
     EndOfFile { AbortSrch[Redir]; }
     SigInt { AbortSrch[Redir]; }
     SigQuit { AbortSrch[Redir]; }

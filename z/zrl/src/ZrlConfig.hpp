@@ -42,7 +42,7 @@ struct Config {
   unsigned	histOffset = 0;		// initial history offset
   unsigned	maxStackDepth = 10;	// maximum mode stack depth
   unsigned	maxFileSize = 1<<20;	// maximum keymap file size
-  unsigned	maxVKeyRedirs = 10;	// maximum # keystroke redirects
+  unsigned	maxSynVKey = 10;	// maximum # synthetic keystrokes
   unsigned	maxUndo = 100;		// maximum undo/redo
 };
 

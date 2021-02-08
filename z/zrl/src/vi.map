@@ -42,15 +42,15 @@ map vi {
   # literal next
   mode 1 {
     Any { OverGlyph; Pop; }
-    AnyFn { Pop[Redir]; }
+    AnyFn { Pop; Syn; }
     AnySys { OverGlyph; Pop; }
   }
   # highlight "visual" mode
   mode 2 {
-    Any { ClrVis[Del]; Pop[Redir]; }
-    AnyFn { ClrVis; Pop[Redir]; }
-    AnySys { ClrVis; Pop[Redir]; }
-    Erase { Nop[Redir](, Delete); }
+    Any { ClrVis[Del]; Pop; Syn; }
+    AnyFn { ClrVis; Pop; Syn; }
+    AnySys { ClrVis; Pop; Syn; }
+    Erase { Syn(, Delete); }
     Delete { ClrVis[Del]; Pop; }
     Up[Shift] { Up[Mv|Vis]; }
     Down[Shift] { Down[Mv|Vis]; }
@@ -63,19 +63,19 @@ map vi {
     Left[Shift|Alt] { RevWord[Mv|Vis|Unix]; }
     Right[Shift|Alt] { FwdWordEnd[Mv|Vis|Unix|Past]; }
     'd' { ClrVis[Del|Copy]; Pop; }
-    'x' { Nop[Redir](, 'd'); }
-    'c' { Nop[Redir](, 'd'); }
-    's' { Nop[Redir](, 'd'); }
+    'x' { Syn(, 'd'); }
+    'c' { Syn(, 'd'); }
+    's' { Syn(, 'd'); }
     'y' { ClrVis[Copy]; Pop; }
     'p' { ClrVis[Del]; Paste; Pop; }
-    'P' { Nop[Redir](, 'p'); }
+    'P' { Syn(, 'p'); }
     '~' { CapVis; }
     'U' { UpperVis; }
     'u' { LowerVis; }
   }
   # command mode
   mode 3 command {
-    AnySys { Mode[Redir](0); }
+    AnySys { Mode(0); Syn; }
     Erase { Left[Mv]; }
     Enter { Mode(0); Enter; }
     Up { Up[Mv]; }
@@ -124,13 +124,13 @@ map vi {
     'i' { Edit; Insert; Mode(0); }
     'I' { Edit; Insert; Mode(0); Home[Mv]; }
     'o' { Mode(0); End[Mv]; Home[Del]; }
-    'O' { Nop[Redir](, 'o'); }
+    'O' { Syn(, 'o'); }
     'p' { Mode(0); Right[Mv|KeepReg](1); Paste; Left[Mv]; Mode(3); }
     'P' { Mode(0); Paste; Left[Mv]; Mode(3); }
     'a' { Edit; Mode(0); Right[Mv]; }
     'A' { Edit; Mode(0); End[Mv]; }
     's' { Mode(0); Right[Del]; }
-    'S' { Nop[Redir](, 'o'); }
+    'S' { Syn(, 'o'); }
     'd' { Mode(7); }
     'D' { End[Del|Copy]; }
     'g' { Mode(8); }
@@ -155,14 +155,14 @@ map vi {
   # '"' register mode
   mode 4 {
     Any { Register; Pop; }
-    AnyFn { Pop[Redir]; }
-    AnySys { Pop[Redir]; }
+    AnyFn { Pop; Syn; }
+    AnySys { Pop; Syn; }
   }
   # 'r' single-character replace mode
   mode 5 {
     Any { OverGlyph; Mode(3); }
-    AnyFn { Mode[Redir](3); }
-    AnySys { Mode[Redir](0); }
+    AnyFn { Mode(3); Syn; }
+    AnySys { Mode(0); Syn; }
   }
   # 'y' yank mode
   mode 6 command {
@@ -214,7 +214,7 @@ map vi {
     '$' { End[Copy]; Mode(3); }
     Any { Mode(3); }
     AnyFn { Mode(3); }
-    AnySys { Mode[Redir](0); }
+    AnySys { Mode(0); Syn; }
   }
   # 'd' delete mode
   mode 7 command {
@@ -265,15 +265,15 @@ map vi {
     '$' { End[Del|Copy]; Mode(3); }
     Any { Mode(3); }
     AnyFn { Mode(3); }
-    AnySys { Mode[Redir](0); }
+    AnySys { Mode(0); Syn; }
   }
   # 'g' go mode
   mode 8 command {
     'e' { Mode(3); RevWordEnd[Mv]; }
     'E' { Mode(3); RevWordEnd[Mv|Unix]; }
     Any { Mode(3); }
-    AnyFn { Mode[Redir](3); }
-    AnySys { Mode[Redir](0); }
+    AnyFn { Mode(3); Syn; }
+    AnySys { Mode(0); Syn; }
   }
   # 'y' 'g' yank-go mode
   mode 9 command {
@@ -281,7 +281,7 @@ map vi {
     'E' { Mode(3); RevWordEnd[Copy|Unix]; }
     Any { Mode(3); }
     AnyFn { Mode(3); }
-    AnySys { Mode[Redir](0); }
+    AnySys { Mode(0); Syn; }
   }
   # 'd' 'g' delete-go mode
   mode 10 command {
@@ -289,7 +289,7 @@ map vi {
     'E' { Mode(3); RevWordEnd[Del|Copy|Unix]; }
     Any { Mode(3); }
     AnyFn { Mode(3); }
-    AnySys { Mode[Redir](0); }
+    AnySys { Mode(0); Syn; }
   }
   # 'c' change mode
   mode 11 command {
@@ -340,13 +340,13 @@ map vi {
     '$' { End[Del|Copy]; Mode(0); }
     Any { Mode(3); }
     AnyFn { Mode(3); }
-    AnySys { Mode[Redir](0); }
+    AnySys { Mode(0); Syn; }
   }
   # '/' search fwd mode
   mode 12 {
     Any { Glyph; }
     AnyFn { Nop; }
-    AnySys { AbortSrch[Redir]; }
+    AnySys { AbortSrch; Syn; }
     Erase { Left[Del]; }
     WErase { RevWord[Del|Unix]; }
     Kill { Home[Del]; }
@@ -368,7 +368,7 @@ map vi {
   mode 13 {
     Any { Glyph; }
     AnyFn { Nop; }
-    AnySys { AbortSrch[Redir]; }
+    AnySys { AbortSrch; Syn; }
     Erase { Left[Del]; }
     WErase { RevWord[Del|Unix]; }
     Kill { Home[Del]; }

@@ -20,9 +20,9 @@
 // command line interface - line editor
 
 // FIXME
-// - test clear/redraw
 // - implement mode inheritance
-// - clean up vi.map
+//   - clean up vi.map
+// - test clear/redraw
 // - Emacs undo/redo in default keymap
 // - Emacs keybindings
 //   - Emacs has negative arguments (!) with M--
@@ -58,8 +58,7 @@ ZrlExtern void print_(uint32_t op, ZmStream &s)
     if (op & Unix) { sep(); s << "Unix"; }
     if (op & Past) { sep(); s << "Past"; }
 
-    if (op & Redir) { sep(); s << "Redir"; }
-
+    if (op & KeepArg) { sep(); s << "KeepArg"; }
     if (op & KeepReg) { sep(); s << "KeepReg"; }
     s << ']';
   }
@@ -71,6 +70,8 @@ Editor::Editor()
   // manual initialization of opcode-indexed jump table
  
   m_cmdFn[Op::Nop] = &Editor::cmdNop;
+  m_cmdFn[Op::Syn] = &Editor::cmdSyn;
+
   m_cmdFn[Op::Mode] = &Editor::cmdMode;
   m_cmdFn[Op::Push] = &Editor::cmdPush;
   m_cmdFn[Op::Pop] = &Editor::cmdPop;
@@ -268,35 +269,35 @@ void Editor::init(Config config, App app)
   });
   m_defltMap->bind(1, -VKey::Any, { { Op::OverGlyph }, { Op::Pop } });
   m_defltMap->bind(1, -VKey::AnySys, { { Op::OverGlyph }, { Op::Pop } });
-  m_defltMap->bind(1, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
+  m_defltMap->bind(1, -VKey::AnyFn, { { Op::Pop }, { Op::Syn } });
 
   // ESC-prefixed "meta" mode (handles non-Fn Alt-keystrokes)
   m_defltMap->bind(0, '\x1b', { { Op::Push, 2 } });
   m_defltMap->bind(2, -VKey::Any, { { Op::Pop } });
-  m_defltMap->bind(2, -VKey::AnySys, { { Op::Pop | Op::Redir } });
-  m_defltMap->bind(2, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
+  m_defltMap->bind(2, -VKey::AnySys, { { Op::Pop }, { Op::Syn } });
+  m_defltMap->bind(2, -VKey::AnyFn, { { Op::Pop }, { Op::Syn } });
   m_defltMap->bind(2, '\x1b', { { Op::Glyph }, { Op::Pop } });
   m_defltMap->bind(2, 'w', { { Op::Nop }, { Op::Pop } });
 
   // highlight "visual" mode
   m_defltMap->bind(3, -VKey::Any, {
     { Op::ClrVis | Op::Del },
-    { Op::Pop | Op::Redir }
+    { Op::Pop }, { Op::Syn }
   });
   m_defltMap->bind(3, -VKey::AnySys, {
     { Op::ClrVis },
-    { Op::Pop | Op::Redir }
+    { Op::Pop }, { Op::Syn }
   });
   m_defltMap->bind(3, -VKey::AnyFn, {
     { Op::ClrVis },
-    { Op::Pop | Op::Redir }
+    { Op::Pop }, { Op::Syn }
   });
   m_defltMap->bind(3, -VKey::Delete, {
     { Op::ClrVis | Op::Del },
     { Op::Pop }
   });
   m_defltMap->bind(3, -VKey::Erase, {
-    { Op::Nop | Op::Redir, { }, -VKey::Delete }
+    { Op::Syn, { }, -VKey::Delete }
   });
   m_defltMap->bind(3, -(VKey::Up | VKey::Shift), {
     { Op::Up | Op::Mv | Op::Vis }
@@ -336,8 +337,8 @@ void Editor::init(Config config, App app)
   // ESC-prefixed "meta" mode, from within highlight "visual" mode
   m_defltMap->bind(3, '\x1b', { { Op::Push, 4 } });
   m_defltMap->bind(4, -VKey::Any, { { Op::Pop } });
-  m_defltMap->bind(4, -VKey::AnySys, { { Op::Pop | Op::Redir } });
-  m_defltMap->bind(4, -VKey::AnyFn, { { Op::Pop | Op::Redir } });
+  m_defltMap->bind(4, -VKey::AnySys, { { Op::Pop }, { Op::Syn } });
+  m_defltMap->bind(4, -VKey::AnyFn, { { Op::Pop }, { Op::Syn } });
   m_defltMap->bind(4, '\x1b', {
     { Op::ClrVis | Op::Del },
     { Op::Glyph },
@@ -478,6 +479,12 @@ int Cmd::parse(ZuString s, int off)
     m_value = op;
     switch (static_cast<int>(op)) {
       case Op::Nop:
+      case Op::ArgDigit:
+	m_value |= Op::KeepArg; // implied
+	break;
+    }
+    switch (static_cast<int>(op)) {
+      case Op::Nop:
       case Op::Mode:
       case Op::Push:
       case Op::Pop:
@@ -496,7 +503,7 @@ int Cmd::parse(ZuString s, int off)
       else if (c[1] == "Vis") m_value |= Op::Vis;
       else if (c[1] == "Unix") m_value |= Op::Unix;
       else if (c[1] == "Past") m_value |= Op::Past;
-      else if (c[1] == "Redir") m_value |= Op::Redir;
+      else if (c[1] == "KeepArg") m_value |= Op::KeepArg;
       else if (c[1] == "KeepReg") m_value |= Op::KeepReg;
       else return -off;
       off += c[1].length();
@@ -818,16 +825,18 @@ void Editor::prompt(ZtArray<uint8_t> prompt)
 bool Editor::process(int32_t vkey)
 {
   if (!m_map) return false;
-  bool stop = false;
   if (vkey == -VKey::EndOfFile && m_tty.pos() > m_context.startPos)
     vkey = m_tty.literal(vkey);
-  for (unsigned i = 0, n = m_config.maxVKeyRedirs; i < n; i++) {
-    m_context.redirVKey = -VKey::Null;
-    if (process_(vkey)) { stop = true; break; }
-    if ((vkey = m_context.redirVKey) == -VKey::Null) break;
+  for (unsigned i = 0, n = m_config.maxSynVKey; i < n; i++) {
+    m_context.synVKey = -VKey::Null;
+    if (process_(vkey)) {
+      m_context.synVKey = -VKey::Null;
+      return true;
+    }
+    if ((vkey = m_context.synVKey) == -VKey::Null) return false;
   }
-  m_context.redirVKey = -VKey::Null;
-  return stop;
+  m_context.synVKey = -VKey::Null;
+  return false;
 }
 
 bool Editor::process_(int32_t vkey)
@@ -875,13 +884,14 @@ bool Editor::process__(const CmdSeq &cmds, int32_t vkey)
     }
     int32_t vkey_ = cmd.vkey();
     if (vkey_ == -VKey::Null) vkey_ = vkey;
+    bool stop = false;
     if (auto fn = m_cmdFn[op]) {
-      bool stop = (this->*fn)(cmd, vkey_);
+      stop = (this->*fn)(cmd, vkey_);
       m_context.prevCmd = cmd;
-      if (stop) return true;
     }
-    if (cmd.op() & Op::Redir) m_context.redirVKey = vkey_;
     if (!(cmd.op() & Op::KeepReg)) m_context.register_ = -1;
+    if (cmd.arg() < 0 && !(cmd.op() & Op::KeepArg)) m_context.clrArg();
+    if (stop) return true;
   }
   if (m_tty.write() != Zi::OK) {
     m_app.end();
@@ -890,8 +900,16 @@ bool Editor::process__(const CmdSeq &cmds, int32_t vkey)
   return false;
 }
 
-bool Editor::cmdNull(Cmd, int32_t) { return false; } // unused
-bool Editor::cmdNop(Cmd, int32_t) { return false; }
+bool Editor::cmdSyn(Cmd, int32_t vkey)
+{
+  m_context.synVKey = vkey;
+  return false;
+}
+
+bool Editor::cmdNop(Cmd, int32_t)
+{
+  return false;
+}
 
 bool Editor::cmdMode(Cmd cmd, int32_t)
 {
@@ -1614,6 +1632,76 @@ bool Editor::cmdEditRep(Cmd, int32_t vkey)
   return false;
 }
 
+bool Editor::cmdArgDigit(Cmd cmd, int32_t vkey)
+{
+  auto arg = cmd.arg();
+  if (arg >= 0) m_context.accumDigit(arg);
+  return false;
+}
+
+bool Editor::cmdRegister(Cmd, int32_t vkey)
+{
+  if (vkey > 0 && vkey <= static_cast<int>(CHAR_MAX))
+    m_context.register_ = m_context.registers.index(vkey);
+  else
+    m_context.register_ = -1;
+  return false;
+}
+
+bool Editor::cmdUndo(Cmd, int32_t vkey)
+{
+  if (m_context.undoIndex < 0) {
+    if (!m_context.undoNext) return false;
+    m_context.undoIndex = m_context.undoNext - 1;
+  } else {
+    if (!m_context.undoIndex) return false;
+    --m_context.undoIndex;
+  }
+  auto undoOp = m_context.undo.val(m_context.undoIndex);
+  if (!undoOp) {
+    if (++m_context.undoIndex >= m_context.undoNext)
+      m_context.undoIndex = -1;
+    return false;
+  }
+  m_tty.mv(m_tty.line().byte(undoOp->spliceOff).mapping());
+  splice_(undoOp->spliceOff,
+      ZuUTF<uint32_t, uint8_t>::span(undoOp->newData),
+      undoOp->oldData, ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData));
+  if (!align(undoOp->oldPos)) m_tty.mv(undoOp->oldPos);
+  return false;
+}
+
+bool Editor::cmdRedo(Cmd, int32_t vkey)
+{
+  if (m_context.undoIndex < 0) return false;
+  auto undoOp = m_context.undo.val(m_context.undoIndex);
+  if (!undoOp) {
+    m_context.undoIndex = -1;
+    return false;
+  }
+  m_tty.mv(m_tty.line().byte(undoOp->spliceOff).mapping());
+  splice_(undoOp->spliceOff,
+      ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
+      undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData));
+  if (++m_context.undoIndex == m_context.undoNext)
+    m_context.undoIndex = -1;
+  return false;
+}
+
+bool Editor::cmdRepeat(Cmd cmd, int32_t vkey)
+{
+  if (m_context.undoNext <= 0) return false;
+  int arg = m_context.evalArg(cmd.arg(), 1);
+  auto undoOp = m_context.undo.val(m_context.undoNext - 1);
+  if (!undoOp) return false;
+  do {
+    splice(m_tty.line().position(m_tty.pos()).mapping(),
+	ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
+	undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData));
+  } while (--arg > 0);
+  return false;
+}
+
 bool Editor::cmdTransGlyph(Cmd, int32_t)
 {
   unsigned pos = m_tty.pos();
@@ -1845,76 +1933,6 @@ bool Editor::cmdXchMark(Cmd, int32_t)
     m_context.markPos = m_tty.pos();
     if (!align(pos)) m_tty.mv(pos);
   }
-  return false;
-}
-
-bool Editor::cmdArgDigit(Cmd cmd, int32_t vkey)
-{
-  auto arg = cmd.arg();
-  if (arg >= 0) m_context.accumDigit(arg);
-  return false;
-}
-
-bool Editor::cmdRegister(Cmd, int32_t vkey)
-{
-  if (vkey > 0 && vkey <= static_cast<int>(CHAR_MAX))
-    m_context.register_ = m_context.registers.index(vkey);
-  else
-    m_context.register_ = -1;
-  return false;
-}
-
-bool Editor::cmdUndo(Cmd, int32_t vkey)
-{
-  if (m_context.undoIndex < 0) {
-    if (!m_context.undoNext) return false;
-    m_context.undoIndex = m_context.undoNext - 1;
-  } else {
-    if (!m_context.undoIndex) return false;
-    --m_context.undoIndex;
-  }
-  auto undoOp = m_context.undo.val(m_context.undoIndex);
-  if (!undoOp) {
-    if (++m_context.undoIndex >= m_context.undoNext)
-      m_context.undoIndex = -1;
-    return false;
-  }
-  m_tty.mv(m_tty.line().byte(undoOp->spliceOff).mapping());
-  splice_(undoOp->spliceOff,
-      ZuUTF<uint32_t, uint8_t>::span(undoOp->newData),
-      undoOp->oldData, ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData));
-  if (!align(undoOp->oldPos)) m_tty.mv(undoOp->oldPos);
-  return false;
-}
-
-bool Editor::cmdRedo(Cmd, int32_t vkey)
-{
-  if (m_context.undoIndex < 0) return false;
-  auto undoOp = m_context.undo.val(m_context.undoIndex);
-  if (!undoOp) {
-    m_context.undoIndex = -1;
-    return false;
-  }
-  m_tty.mv(m_tty.line().byte(undoOp->spliceOff).mapping());
-  splice_(undoOp->spliceOff,
-      ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
-      undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData));
-  if (++m_context.undoIndex == m_context.undoNext)
-    m_context.undoIndex = -1;
-  return false;
-}
-
-bool Editor::cmdRepeat(Cmd cmd, int32_t vkey)
-{
-  if (m_context.undoNext <= 0) return false;
-  int arg = m_context.evalArg(cmd.arg(), 1);
-  auto undoOp = m_context.undo.val(m_context.undoNext - 1);
-  if (!undoOp) return false;
-  do {
-    splice(m_tty.line().position(m_tty.pos()).mapping(),
-	ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
-	undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData));
-  } while (--arg > 0);
   return false;
 }
 

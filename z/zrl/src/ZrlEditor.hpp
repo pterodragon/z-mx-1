@@ -54,7 +54,9 @@ namespace Op { // line editor operation codes
   ZtEnumerate(
     Null,		// sentinel
 
-    Nop,		// no-operation, often used with keystroke redirection
+    Nop,		// no-operation
+    Syn,		// synthetic keystroke
+
     Mode,		// switch mode
     Push,		// push mode (and switch)
     Pop,		// pop mode
@@ -113,6 +115,14 @@ namespace Op { // line editor operation codes
     Edit,		// upcoming edit - set repeat count from arg
     EditRep,		// repeat last edit if required
 
+    ArgDigit,		// append digit to argument
+
+    Register,		// specify register (0-9 a-z + *) for next cmd
+
+    Undo,		// undo
+    Redo,		// redo
+    Repeat,		// repeat
+
     TransGlyph,		// transpose glyphs
     TransWord,		// transpose words
     TransUnixWord,	// transpose white-space delimited words
@@ -126,14 +136,6 @@ namespace Op { // line editor operation codes
     CapVis,		// capitalize ''
 
     XchMark,		// swap cursor with glyph mark
-
-    ArgDigit,		// append digit to argument
-
-    Register,		// specify register (0-9 a-z + *) for next cmd
-
-    Undo,		// undo
-    Redo,		// redo
-    Repeat,		// repeat
 
     // glyph search
     FwdGlyphSrch,	// fwd glyph search
@@ -168,22 +170,20 @@ namespace Op { // line editor operation codes
   enum {
     Mask	= 0x007f,
 
-    KeepReg	= 0x0080,	// retain register selection
+    KeepArg	= 0x0080,	// retain register selection
+    KeepReg	= 0x0100,	// retain argument
 
     // Left/Right/Home/End/{Fwd,Rev}*{Word,WordEnd,GlyphSrch}/MvMark
-    Mv	 	= 0x0100,	// move cursor
-    Del	 	= 0x0200,	// delete span (implies move)
-    Copy	= 0x0400,	// copy span (cut is Del + Copy)
-    Draw	= 0x0800,	// (re)draw span (normally, unless Vis set)
-    Vis		= 0x1000,	// highlight (standout) (implies Draw set)
+    Mv	 	= 0x0200,	// move cursor
+    Del	 	= 0x0400,	// delete span (implies move)
+    Copy	= 0x0800,	// copy span (cut is Del + Copy)
+    Draw	= 0x1000,	// (re)draw span (normally, unless Vis set)
+    Vis		= 0x2000,	// highlight (standout) (implies Draw set)
 
     // {Fwd,Rev}*{Word,WordEnd}
-    Unix	= 0x2000,	// a "Unix" word is white-space delimited
+    Unix	= 0x4000,	// a "Unix" word is white-space delimited
     // {Fwd,Rev}*{WordEnd}
-    Past	= 0x4000,	// move past end
-
-    // {Nop,Mode,Push,Pop}
-    Redir	= 0x8000	// redirect keystroke
+    Past	= 0x8000	// move past end
   };
 
   ZrlExtern void print_(uint32_t, ZmStream &);
@@ -373,7 +373,7 @@ struct CmdContext {
   unsigned		startPos = 0;	// start position (following prompt)
   unsigned		mode = 0;	// current mode
   ZtArray<unsigned>	stack;		// mode stack
-  int32_t		redirVKey = -VKey::Null; // redirected keystroke
+  int32_t		synVKey = -VKey::Null; // synthetic keystroke
   Cmd			prevCmd;	// previous command
   unsigned		horizPos = 0;	// vertical motion position
   int			markPos = -1;	// glyph mark / highlight begin pos.
@@ -432,9 +432,7 @@ struct CmdContext {
   unsigned evalArg(int cmdArg, unsigned defArg) {
     if (cmdArg >= 0) return cmdArg; // do not consume
     if (arg < 0) return defArg;
-    auto arg_ = arg;
-    clrArg();
-    return arg_;
+    return arg;
   }
 
   void clrArg() {
@@ -497,7 +495,7 @@ private:
   bool process_(int32_t vkey);
   bool process__(const CmdSeq &cmds, int32_t vkey);
 
-  bool cmdNull(Cmd, int32_t);
+  bool cmdSyn(Cmd, int32_t);
   bool cmdNop(Cmd, int32_t);
 
   bool cmdMode(Cmd, int32_t);

@@ -775,9 +775,11 @@ bool Editor::loadMap(ZuString file, bool select)
       if (npos > off) break;
       lpos = npos; line++;
     }
-    off -= lpos;
-    m_loadError = ZtString{} << "\"" << file << "\":" << line <<
-      ": parsing failed near offset " << off;
+    ZuString region{s};
+    region.offset(off - 8);
+    region.trunc(16);
+    m_loadError = ZtString{} << '"' << file << "\":" << line <<
+      ": parsing failed near \"" << region << '"';
     return false;
   }
   if (!map->modes.length()) {

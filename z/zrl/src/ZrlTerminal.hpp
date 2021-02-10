@@ -81,6 +81,8 @@ namespace VKey {
 
     LNext,		// ^V
 
+    Redraw,		// ^R
+
     // motion/Fn keys
     Enter,		// line entered
 

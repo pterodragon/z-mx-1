@@ -19,17 +19,6 @@
 
 // command line interface - line editor
 
-// FIXME
-// - implement mode inheritance
-//   - clean up vi.map
-// - test clear/redraw
-// - Emacs undo/redo in default keymap
-// - Emacs keybindings
-//   - Emacs has negative arguments (!) with M--
-//   - use SHORT_MIN as sentinel for arg (ZuBox?)
-//   - check evalArg() uses for -ve returns
-//   - apply negatives to reverse movements
-
 #include <zlib/ZuSort.hpp>
 
 #include <zlib/ZrlEditor.hpp>
@@ -43,7 +32,23 @@ void print__(bool &pipe, ZmStream &s)
 }
 ZrlExtern void print_(uint32_t op, ZmStream &s)
 {
-  s << name(op & Mask);
+  int op_ = op & Mask;
+  switch (op_) {
+    case Op::Nop:
+    case Op::ArgDigit:
+      op &= ~Op::KeepArg; // implied
+      break;
+  }
+  switch (op_) {
+    case Op::Nop:
+    case Op::Mode:
+    case Op::Push:
+    case Op::Pop:
+    case Op::Register:
+      op &= ~Op::KeepReg; // implied
+      break;
+  }
+  s << name(op_);
   if (op & ~Mask) {
     s << '[';
     bool pipe = false;
@@ -63,7 +68,7 @@ ZrlExtern void print_(uint32_t op, ZmStream &s)
     s << ']';
   }
 }
-}
+} // Op
 
 Editor::Editor()
 {
@@ -100,11 +105,12 @@ Editor::Editor()
   m_cmdFn[Op::SetMark] = &Editor::cmdSetMark;
   m_cmdFn[Op::MvMark] = &Editor::cmdMvMark;
 
+  m_cmdFn[Op::ClrVis] = &Editor::cmdClrVis;
+
   m_cmdFn[Op::InsToggle] = &Editor::cmdInsToggle;
   m_cmdFn[Op::Insert] = &Editor::cmdInsert;
   m_cmdFn[Op::Over] = &Editor::cmdOver;
 
-  m_cmdFn[Op::ClrVis] = &Editor::cmdClrVis;
   m_cmdFn[Op::Clear] = &Editor::cmdClear;
   m_cmdFn[Op::Redraw] = &Editor::cmdRedraw;
 
@@ -139,6 +145,8 @@ Editor::Editor()
 
   m_cmdFn[Op::Undo] = &Editor::cmdUndo;
   m_cmdFn[Op::Redo] = &Editor::cmdRedo;
+  m_cmdFn[Op::EmacsUndo] = &Editor::cmdEmacsUndo;
+  m_cmdFn[Op::EmacsAbort] = &Editor::cmdEmacsAbort;
   m_cmdFn[Op::Repeat] = &Editor::cmdRepeat;
 
   m_cmdFn[Op::FwdGlyphSrch] = &Editor::cmdFwdGlyphSrch;
@@ -170,7 +178,6 @@ void Editor::init(Config config, App app)
 
   // default key bindings
 
-  // FIXME - Emacs undo/redo
   m_defltMap = new Map{ "default" };
 
   m_defltMap->addMode(0, ModeType::Edit);	// normal
@@ -209,6 +216,9 @@ void Editor::init(Config config, App app)
   m_defltMap->bind(0, '\t', { { Op::Complete } });
   m_defltMap->bind(0, '\x04', { { Op::ListComplete } });
 
+  m_defltMap->bind(0, '\x0c', { { Op::Clear } });
+  m_defltMap->bind(0, -VKey::Redraw, { { Op::Redraw } });
+
   m_defltMap->bind(0, -(VKey::Left | VKey::Ctrl), {
     { Op::RevWord | Op::Mv }
   });
@@ -227,6 +237,9 @@ void Editor::init(Config config, App app)
 
   m_defltMap->bind(0, 'W' - '@', { { Op::Nop } });
   m_defltMap->bind(0, 'Y' - '@', { { Op::Paste } });
+
+  m_defltMap->bind(0, '_' - '@', { { Op::EmacsUndo } });
+  m_defltMap->bind(0, 'G' - '@', { { Op::EmacsAbort } });
 
   // initiate highlight "visual" mode
   m_defltMap->bind(0, -(VKey::Up | VKey::Shift), {
@@ -263,7 +276,7 @@ void Editor::init(Config config, App app)
 
   // literal mode
   m_defltMap->bind(0, -VKey::LNext, {
-    { Op::Glyph, 0, '^' },
+    { Op::Glyph, Cmd::nullArg(), '^' },
     { Op::Left | Op::Mv },
     { Op::Push, 1 }
   });
@@ -281,7 +294,7 @@ void Editor::init(Config config, App app)
 
   // highlight "visual" mode
   m_defltMap->bind(3, -VKey::Any, {
-    { Op::ClrVis | Op::Del },
+    { Op::ClrVis | Op::Del | Op::Vis }, // Del|Vis implies interim splice
     { Op::Pop }, { Op::Syn }
   });
   m_defltMap->bind(3, -VKey::AnySys, {
@@ -456,9 +469,9 @@ void Cmd::print_(ZmStream &s) const
 {
   s << Op::print(op());
   auto arg = this->arg();
-  if (arg >= 0 || vkey() != -VKey::Null) {
+  if (!Cmd::nullArg(arg) || vkey() != -VKey::Null) {
     s << '(';
-    if (arg >= 0) s << ZuBoxed(arg);
+    if (!Cmd::nullArg(arg)) s << ZuBoxed(arg);
     {
       auto v = vkey();
       if (v != -VKey::Null)
@@ -532,7 +545,7 @@ int Cmd::parse(ZuString s, int off)
     off += c[1].length();
   } else
     m_value |=
-      static_cast<uint64_t>(-1)<<16 |
+      static_cast<uint64_t>(nullArg())<<16 |
       static_cast<uint64_t>(-VKey::Null)<<32;
   return off;
 }
@@ -576,10 +589,23 @@ int Map_::parseMode(ZuString s, int off)
     off += c[1].length();
   } else
     type = ModeType::Edit;
+  ZtArray<unsigned> baseModes;
+  if (ZtREGEX("\G\s+:\s+(\d+)").m(s, c, off)) {
+    do {
+      baseModes.push(ZuBox<unsigned>{c[2]}.val());
+      off += c[1].length();
+    } while (ZtREGEX("\G\s*,\s*(\d+)").m(s, c, off));
+  }
   while (comment().m(s, c, off)) off += c[1].length();
   if (!ZtREGEX("\G\s*{").m(s, c, off)) return -off;
   off += c[1].length();
   addMode(mode, type);
+  for (auto baseMode : baseModes)
+    if (baseMode < modes.length()) {
+      auto i = modes[baseMode].bindings->readIterator();
+      while (auto binding = i.iterateKey().ptr())
+	bind(mode, binding->vkey, binding->cmds);
+    }
   int32_t vkey;
   CmdSeq cmds;
   while (comment().m(s, c, off)) off += c[1].length();
@@ -875,11 +901,7 @@ bool Editor::process__(const CmdSeq &cmds, int32_t vkey)
       case Op::EditRep:
 	break;
       default:
-	if (m_context.editOp.newData) {
-	  m_context.editArg = -1;
-	  m_context.undo.set(m_context.undoNext++, ZuMv(m_context.editOp));
-	  m_context.editOp = {};
-	}
+	m_context.applyEdit();
 	break;
     }
     int32_t vkey_ = cmd.vkey();
@@ -890,7 +912,8 @@ bool Editor::process__(const CmdSeq &cmds, int32_t vkey)
       m_context.prevCmd = cmd;
     }
     if (!(cmd.op() & Op::KeepReg)) m_context.register_ = -1;
-    if (cmd.arg() < 0 && !(cmd.op() & Op::KeepArg)) m_context.clrArg();
+    if (Cmd::nullArg(cmd.arg()) &&
+	!(cmd.op() & Op::KeepArg)) m_context.clrArg();
     if (stop) return true;
   }
   if (m_tty.write() != Zi::OK) {
@@ -900,21 +923,21 @@ bool Editor::process__(const CmdSeq &cmds, int32_t vkey)
   return false;
 }
 
+bool Editor::cmdNop(Cmd, int32_t)
+{
+  return false;
+}
+
 bool Editor::cmdSyn(Cmd, int32_t vkey)
 {
   m_context.synVKey = vkey;
   return false;
 }
 
-bool Editor::cmdNop(Cmd, int32_t)
-{
-  return false;
-}
-
 bool Editor::cmdMode(Cmd cmd, int32_t)
 {
   int arg = cmd.arg();
-  if (arg >= 0) m_context.mode = arg;
+  if (!Cmd::nullArg(arg) && arg >= 0) m_context.mode = arg;
   return false;
 }
 bool Editor::cmdPush(Cmd cmd, int32_t)
@@ -922,14 +945,14 @@ bool Editor::cmdPush(Cmd cmd, int32_t)
   int arg = cmd.arg();
   if (ZuLikely(m_context.stack.length() < m_config.maxStackDepth)) {
     m_context.stack.push(m_context.mode);
-    if (arg >= 0) m_context.mode = arg;
+    if (!Cmd::nullArg(arg) && arg >= 0) m_context.mode = arg;
   }
   return false;
 }
 bool Editor::cmdPop(Cmd cmd, int32_t)
 {
   int arg = cmd.arg();
-  if (arg < 0) arg = 1;
+  if (Cmd::nullArg(arg) || arg < 0) arg = 1;
   if (arg > m_context.stack.length()) arg = m_context.stack.length();
   if (arg > 0) {
     while (arg-- > 1) m_context.stack.pop();
@@ -975,12 +998,13 @@ bool Editor::cmdEnter(Cmd, int32_t)
   m_tty.mv(m_tty.line().width());
   m_tty.crnl_();
   m_tty.write();
-  m_context.markPos = -1;
   const auto &data = m_tty.line().data();
   ZuArray<const uint8_t> s{data.data(), data.length()};
   s.offset(m_context.startPos);
-  m_context.histLoadOff = -1;
   m_app.histSave(m_context.histSaveOff++, s);
+
+  m_context.reset();
+
   m_tty.opost_on();
   bool stop = m_app.enter(s);
   m_tty.opost_off();
@@ -1011,24 +1035,25 @@ bool Editor::align(unsigned pos)
   return false;
 }
 
-// splice data in line - clears histLoadOff since line is being modified
+// splice data in line
 void Editor::splice(
     unsigned off, ZuUTFSpan span,
-    ZuArray<const uint8_t> replace, ZuUTFSpan rspan)
+    ZuArray<const uint8_t> replace, ZuUTFSpan rspan,
+    bool last)
 {
-  m_context.undoIndex = -1;
+  m_context.appendEdit();
   m_context.undo.set(m_context.undoNext++,
       UndoOp{
 	static_cast<int>(m_tty.pos()),
 	static_cast<int>(off),
-	substr(off, off + span.inLen()), replace});
+	substr(off, off + span.inLen()), replace, last});
   splice_(off, span, replace, rspan);
 }
 void Editor::splice_(
     unsigned off, ZuUTFSpan span,
     ZuArray<const uint8_t> replace, ZuUTFSpan rspan)
 {
-  m_context.histLoadOff = -1;
+  m_context.histLoadOff = -1; //  clear histLoadOff since line is being modified
   if (rspan.inLen() <= span.inLen() ||
       m_tty.line().length() + (rspan.inLen() - span.inLen()) <
 	m_config.maxLineLen)
@@ -1060,7 +1085,9 @@ void Editor::motion(
 	pos = begPos;
     }
     m_tty.mv(begPos);
-    splice(begin, span, ZuArray<const uint8_t>{}, ZuUTFSpan{});
+    splice(begin, span,
+	ZuArray<const uint8_t>{}, ZuUTFSpan{},
+	(op & (Op::Del | Op::Vis)) != (Op::Del | Op::Vis));
     if (m_context.highPos >= 0) {
       m_tty.cursor_on();
       m_context.markPos = m_context.highPos = -1;
@@ -1133,7 +1160,7 @@ void Editor::motion(
 unsigned Editor::horizPos()
 {
   unsigned prevOp = m_context.prevCmd.op();
-  if (prevOp != Op::Up && prevOp != Op::Down)
+  if (m_context.horizPos < 0 || (prevOp != Op::Up && prevOp != Op::Down))
     m_context.horizPos = m_tty.pos();
   return m_context.horizPos;
 }
@@ -1141,6 +1168,7 @@ unsigned Editor::horizPos()
 bool Editor::cmdUp(Cmd cmd, int32_t vkey)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
+  if (arg < 0) return cmdDown(cmd.negArg(), vkey);
   unsigned pos = horizPos();
   unsigned width = m_tty.width();
   if (arg <= 1 && (cmd.op() & (Op::Mv | Op::Del | Op::Copy)) == Op::Mv &&
@@ -1169,6 +1197,7 @@ bool Editor::cmdUp(Cmd cmd, int32_t vkey)
 bool Editor::cmdDown(Cmd cmd, int32_t vkey)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
+  if (arg < 0) return cmdUp(cmd.negArg(), vkey);
   unsigned pos = horizPos();
   unsigned width = m_tty.width();
   const auto &line = m_tty.line();
@@ -1200,15 +1229,16 @@ bool Editor::cmdDown(Cmd cmd, int32_t vkey)
   return false;
 }
 
-bool Editor::cmdLeft(Cmd cmd, int32_t)
+bool Editor::cmdLeft(Cmd cmd, int32_t vkey)
 {
+  int arg = m_context.evalArg(cmd.arg(), 1);
+  if (arg < 0) return cmdRight(cmd.negArg(), vkey);
   unsigned pos = m_tty.pos();
   if (pos > m_context.startPos) {
     const auto &line = m_tty.line();
     unsigned end = line.position(pos).mapping(), begin = end;
     unsigned endPos = pos;
     unsigned start = line.position(m_context.startPos).mapping();
-    int arg = m_context.evalArg(cmd.arg(), 1);
     do {
       begin = line.revGlyph(begin);
       if (begin < start) begin = start;
@@ -1223,15 +1253,16 @@ bool Editor::cmdLeft(Cmd cmd, int32_t)
   return false;
 }
 
-bool Editor::cmdRight(Cmd cmd, int32_t)
+bool Editor::cmdRight(Cmd cmd, int32_t vkey)
 {
+  int arg = m_context.evalArg(cmd.arg(), 1);
+  if (arg < 0) return cmdLeft(cmd.negArg(), vkey);
   unsigned pos = m_tty.pos();
   const auto &line = m_tty.line();
   if (pos < line.width()) {
     unsigned begin = line.position(pos).mapping(), end = begin;
     unsigned begPos = pos;
     unsigned final_ = line.length();
-    int arg = m_context.evalArg(cmd.arg(), 1);
     do {
       end = line.fwdGlyph(end);
       if (end > final_) end = final_;
@@ -1278,15 +1309,16 @@ bool Editor::cmdEnd(Cmd cmd, int32_t vkey)
   return false;
 }
 
-bool Editor::cmdFwdWord(Cmd cmd, int32_t)
+bool Editor::cmdFwdWord(Cmd cmd, int32_t vkey)
 {
+  int arg = m_context.evalArg(cmd.arg(), 1);
+  if (arg < 0) return cmdRevWord(cmd.negArg(), vkey);
   unsigned pos = m_tty.pos();
   const auto &line = m_tty.line();
   if (pos < line.width()) {
     unsigned begin = line.position(pos).mapping(), end = begin;
     unsigned begPos = pos;
     unsigned final_ = line.length();
-    int arg = m_context.evalArg(cmd.arg(), 1);
     do {
       if (cmd.op() & Op::Unix)
 	end = line.fwdUnixWord(end);
@@ -1303,15 +1335,16 @@ bool Editor::cmdFwdWord(Cmd cmd, int32_t)
   return false;
 }
 
-bool Editor::cmdRevWord(Cmd cmd, int32_t)
+bool Editor::cmdRevWord(Cmd cmd, int32_t vkey)
 {
+  int arg = m_context.evalArg(cmd.arg(), 1);
+  if (arg < 0) return cmdFwdWord(cmd.negArg(), vkey);
   unsigned pos = m_tty.pos();
   if (pos > m_context.startPos) {
     const auto &line = m_tty.line();
     unsigned end = line.position(pos).mapping(), begin = end;
     unsigned endPos = pos;
     unsigned start = line.position(m_context.startPos).mapping();
-    int arg = m_context.evalArg(cmd.arg(), 1);
     do {
       if (cmd.op() & Op::Unix)
 	begin = line.revUnixWord(begin);
@@ -1328,15 +1361,16 @@ bool Editor::cmdRevWord(Cmd cmd, int32_t)
   return false;
 }
 
-bool Editor::cmdFwdWordEnd(Cmd cmd, int32_t)
+bool Editor::cmdFwdWordEnd(Cmd cmd, int32_t vkey)
 {
+  int arg = m_context.evalArg(cmd.arg(), 1);
+  if (arg < 0) return cmdRevWordEnd(cmd.negArg(), vkey);
   unsigned pos = m_tty.pos();
   const auto &line = m_tty.line();
   if (pos < line.width()) {
     unsigned begin = line.position(pos).mapping(), end = begin;
     unsigned begPos = pos;
     unsigned final_ = line.length();
-    int arg = m_context.evalArg(cmd.arg(), 1);
     do {
       if (cmd.op() & Op::Unix)
 	end = line.fwdUnixWordEnd(end, cmd.op() & Op::Past);
@@ -1353,15 +1387,16 @@ bool Editor::cmdFwdWordEnd(Cmd cmd, int32_t)
   return false;
 }
 
-bool Editor::cmdRevWordEnd(Cmd cmd, int32_t)
+bool Editor::cmdRevWordEnd(Cmd cmd, int32_t vkey)
 {
+  int arg = m_context.evalArg(cmd.arg(), 1);
+  if (arg < 0) return cmdFwdWordEnd(cmd.negArg(), vkey);
   unsigned pos = m_tty.pos();
   if (pos > m_context.startPos) {
     const auto &line = m_tty.line();
     unsigned end = line.position(pos).mapping(), begin = end;
     unsigned endPos = pos;
     unsigned start = line.position(m_context.startPos).mapping();
-    int arg = m_context.evalArg(cmd.arg(), 1);
     do {
       if (cmd.op() & Op::Unix)
 	begin = line.revUnixWordEnd(begin, cmd.op() & Op::Past);
@@ -1457,6 +1492,7 @@ bool Editor::cmdRedraw(Cmd, int32_t)
 bool Editor::cmdPaste(Cmd cmd, int32_t)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
+  if (arg <= 0) return false;
   int index = m_context.register_;
   if (index < 0) index = 0;
   if (const auto &data = m_context.registers.get(index)) {
@@ -1481,7 +1517,8 @@ bool Editor::cmdPaste(Cmd cmd, int32_t)
 bool Editor::cmdYank(Cmd cmd, int32_t)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
-  for (int i = 1; i < arg; i++) m_context.registers.emacs_rotate();
+  if (arg <= 0) return false;
+  for (int i = 1; i < arg; i++) m_context.registers.emacs_rotateFwd();
   if (const auto &data = m_context.registers.emacs_yank()) {
     const auto &line = m_tty.line();
     unsigned off = line.position(m_tty.pos()).mapping();
@@ -1503,7 +1540,12 @@ bool Editor::cmdRotate(Cmd cmd, int32_t)
   if (m_context.prevCmd.op() != Op::Yank) return false;
   const auto &data = m_context.registers.emacs_yank();
   int arg = m_context.evalArg(cmd.arg(), 1);
-  for (int i = 0; i < arg; i++) m_context.registers.emacs_rotate();
+  if (arg < 0) {
+    arg = -arg;
+    for (int i = 0; i < arg; i++) m_context.registers.emacs_rotateRev();
+  } else {
+    for (int i = 0; i < arg; i++) m_context.registers.emacs_rotateFwd();
+  }
   const auto &replace = m_context.registers.emacs_yank();
   if (&data == &replace) return false;
   auto span = ZuUTF<uint32_t, uint8_t>::span(data);
@@ -1530,8 +1572,7 @@ void Editor::edit(
   const auto &line = m_tty.line();
   unsigned pos = m_tty.pos();
   unsigned off = line.position(pos).mapping();
-  if (!m_context.editOp)
-    m_context.editOp = { static_cast<int>(pos), static_cast<int>(off) };
+  m_context.edit(pos, off);
   if (overwrite) {
     ZuArray<const uint8_t> removed{line.data()};
     removed.offset(off);
@@ -1606,8 +1647,7 @@ bool Editor::cmdBackSpace(Cmd, int32_t vkey)
 	}
       }
     }
-    m_context.editOp = {};
-    m_context.editArg = -1;
+    m_context.clrEdit();
   }
   return cmdLeft(Cmd{Op::Left | Op::Del}, vkey);
 }
@@ -1615,7 +1655,8 @@ bool Editor::cmdBackSpace(Cmd, int32_t vkey)
 bool Editor::cmdEdit(Cmd cmd, int32_t)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
-  if (arg < 1) arg = 1;
+  if (arg < 0) arg = -arg;
+  if (!arg) arg = 1;
   m_context.editArg = arg;
   return false;
 }
@@ -1635,7 +1676,7 @@ bool Editor::cmdEditRep(Cmd, int32_t vkey)
 bool Editor::cmdArgDigit(Cmd cmd, int32_t vkey)
 {
   auto arg = cmd.arg();
-  if (arg >= 0) m_context.accumDigit(arg);
+  if (!Cmd::nullArg(arg)) m_context.accumDigit(arg);
   return false;
 }
 
@@ -1652,53 +1693,88 @@ bool Editor::cmdUndo(Cmd, int32_t vkey)
 {
   if (m_context.undoIndex < 0) {
     if (!m_context.undoNext) return false;
-    m_context.undoIndex = m_context.undoNext - 1;
+    m_context.undoIndex = m_context.undoNext;
   } else {
     if (!m_context.undoIndex) return false;
-    --m_context.undoIndex;
   }
-  auto undoOp = m_context.undo.val(m_context.undoIndex);
-  if (!undoOp) {
-    if (++m_context.undoIndex >= m_context.undoNext)
-      m_context.undoIndex = -1;
-    return false;
-  }
-  m_tty.mv(m_tty.line().byte(undoOp->spliceOff).mapping());
-  splice_(undoOp->spliceOff,
-      ZuUTF<uint32_t, uint8_t>::span(undoOp->newData),
-      undoOp->oldData, ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData));
-  if (!align(undoOp->oldPos)) m_tty.mv(undoOp->oldPos);
+  int pos = -1;
+  bool first = true;
+  do {
+    if (auto undoOp = m_context.undo.val(--m_context.undoIndex)) {
+      if (!first && undoOp->last) {
+	++m_context.undoIndex;
+	break;
+      }
+      m_tty.mv(m_tty.line().byte(undoOp->spliceOff).mapping());
+      splice_(undoOp->spliceOff,
+	  ZuUTF<uint32_t, uint8_t>::span(undoOp->newData),
+	  undoOp->oldData, ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData));
+      pos = undoOp->oldPos;
+    } else {
+      ++m_context.undoIndex;
+      break;
+    }
+    first = false;
+  } while (m_context.undoIndex > 0);
+  if (pos >= 0) if (!align(pos)) m_tty.mv(pos);
   return false;
 }
 
 bool Editor::cmdRedo(Cmd, int32_t vkey)
 {
   if (m_context.undoIndex < 0) return false;
-  auto undoOp = m_context.undo.val(m_context.undoIndex);
-  if (!undoOp) {
+  do {
+    if (auto undoOp = m_context.undo.val(m_context.undoIndex++)) {
+      m_tty.mv(m_tty.line().byte(undoOp->spliceOff).mapping());
+      splice_(undoOp->spliceOff,
+	  ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
+	  undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData));
+      if (undoOp->last) break;
+    } else
+      break;
+  } while (m_context.undoIndex < m_context.undoNext);
+  if (m_context.undoIndex >= m_context.undoNext)
     m_context.undoIndex = -1;
-    return false;
-  }
-  m_tty.mv(m_tty.line().byte(undoOp->spliceOff).mapping());
-  splice_(undoOp->spliceOff,
-      ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
-      undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData));
-  if (++m_context.undoIndex == m_context.undoNext)
-    m_context.undoIndex = -1;
+  align(m_tty.pos());
+  return false;
+}
+
+bool Editor::cmdEmacsUndo(Cmd cmd, int32_t vkey)
+{
+  if (!m_context.emacsRedo) return cmdUndo(cmd, vkey);
+  bool stop = cmdRedo(cmd, vkey);
+  if (m_context.undoIndex < 0) m_context.emacsRedo = false;
+  return stop;
+}
+
+bool Editor::cmdEmacsAbort(Cmd, int32_t vkey)
+{
+  if (m_context.undoIndex >= 0)
+    m_context.emacsRedo = !m_context.emacsRedo;
   return false;
 }
 
 bool Editor::cmdRepeat(Cmd cmd, int32_t vkey)
 {
-  if (m_context.undoNext <= 0) return false;
-  int arg = m_context.evalArg(cmd.arg(), 1);
-  auto undoOp = m_context.undo.val(m_context.undoNext - 1);
-  if (!undoOp) return false;
+  if (!m_context.undoNext) return false;
+  unsigned i = m_context.undoNext;
+  bool last = false;
   do {
-    splice(m_tty.line().position(m_tty.pos()).mapping(),
-	ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
-	undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData));
-  } while (--arg > 0);
+    if (auto undoOp = m_context.undo.val(--i))
+      last = undoOp->last;
+    else
+      last = true;
+  } while (!last && i > 0);
+  last = false;
+  do {
+    if (auto undoOp = m_context.undo.val(i)) {
+      last = undoOp->last;
+      splice(m_tty.line().position(m_tty.pos()).mapping(),
+	  ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
+	  undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData));
+    } else
+      last = true;
+  } while (++i < m_context.undoNext && !last);
   return false;
 }
 
@@ -1939,13 +2015,14 @@ bool Editor::cmdXchMark(Cmd, int32_t)
 bool Editor::cmdFwdGlyphSrch(Cmd cmd, int32_t vkey)
 {
   if (ZuUnlikely(vkey <= 0)) return false;
+  int arg = m_context.evalArg(cmd.arg(), 1);
+  if (arg < 0) return cmdRevGlyphSrch(cmd.negArg(), vkey);
   unsigned pos = m_tty.pos();
   const auto &line = m_tty.line();
   if (pos < line.width()) {
     unsigned begin = line.position(pos).mapping(), end = begin;
     unsigned begPos = pos;
     unsigned final_ = line.length();
-    int arg = m_context.evalArg(cmd.arg(), 1);
     do {
       end = line.fwdSearch(end, vkey);
       if (end > final_) end = final_;
@@ -1961,13 +2038,14 @@ bool Editor::cmdFwdGlyphSrch(Cmd cmd, int32_t vkey)
 bool Editor::cmdRevGlyphSrch(Cmd cmd, int32_t vkey)
 {
   if (ZuUnlikely(vkey <= 0)) return false;
+  int arg = m_context.evalArg(cmd.arg(), 1);
+  if (arg < 0) return cmdFwdGlyphSrch(cmd.negArg(), vkey);
   unsigned pos = m_tty.pos();
   if (pos > m_context.startPos) {
     const auto &line = m_tty.line();
     unsigned end = line.position(pos).mapping(), begin = end;
     unsigned endPos = pos;
     unsigned start = line.position(m_context.startPos).mapping();
-    int arg = m_context.evalArg(cmd.arg(), 1);
     do {
       begin = line.revSearch(begin, vkey);
       if (begin < start) begin = start;
@@ -2087,16 +2165,15 @@ void Editor::histLoad(int offset, ZuArray<const uint8_t> data, bool save)
   unsigned end = line.length();
   auto orig = substr(begin, end);
   if (save) m_app.histSave(m_context.histSaveOff, orig);
-  m_context.undoIndex = -1;
-  m_context.undoNext = 0;
-  m_context.undo.clear();
+  m_context.clrUndo();
   m_tty.splice(
       begin, ZuUTF<uint32_t, uint8_t>::span(orig),
       data, ZuUTF<uint32_t, uint8_t>::span(data));
 }
-bool Editor::cmdNext(Cmd cmd, int32_t)
+bool Editor::cmdNext(Cmd cmd, int32_t vkey)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
+  if (arg < 0) return cmdPrev(cmd.negArg(), vkey);
   if (m_context.histLoadOff >= 0 &&
       m_context.histLoadOff <= m_context.histSaveOff - arg) {
     int offset = m_context.histLoadOff + arg;
@@ -2106,9 +2183,10 @@ bool Editor::cmdNext(Cmd cmd, int32_t)
   }
   return false;
 }
-bool Editor::cmdPrev(Cmd cmd, int32_t)
+bool Editor::cmdPrev(Cmd cmd, int32_t vkey)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
+  if (arg < 0) return cmdNext(cmd.negArg(), vkey);
   if (m_context.histLoadOff < 0)
     m_context.histLoadOff = m_context.histSaveOff;
   if (m_context.histLoadOff >= arg) {
@@ -2200,7 +2278,10 @@ bool Editor::cmdFwdIncSrch(Cmd cmd, int32_t vkey)
 {
   if (addIncSrch(vkey)) {
     int arg = m_context.evalArg(cmd.arg(), 1);
-    searchFwd(arg);
+    if (arg < 0)
+      searchRev(-arg);
+    else
+      searchFwd(arg);
   }
   return false;
 }
@@ -2208,7 +2289,10 @@ bool Editor::cmdRevIncSrch(Cmd cmd, int32_t vkey)
 {
   if (addIncSrch(vkey)) {
     int arg = m_context.evalArg(cmd.arg(), 1);
-    searchRev(arg);
+    if (arg < 0)
+      searchFwd(-arg);
+    else
+      searchRev(arg);
   }
   return false;
 }
@@ -2218,7 +2302,7 @@ bool Editor::cmdPromptSrch(Cmd cmd, int32_t vkey)
   if (ZuUnlikely(vkey <= 0)) return false;
   m_context.stack.push(m_context.mode);
   int arg = cmd.arg();
-  if (ZuUnlikely(arg < 0)) return false;
+  if (ZuUnlikely(Cmd::nullArg(arg) || arg < 0)) return false;
   m_context.mode = arg;
   unsigned pos = m_context.startPos;
   m_tty.mv(pos);
@@ -2292,13 +2376,19 @@ bool Editor::cmdAbortSrch(Cmd, int32_t)
 bool Editor::cmdFwdSearch(Cmd cmd, int32_t)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
-  searchFwd(arg);
+  if (arg < 0)
+    searchRev(-arg);
+  else
+    searchFwd(arg);
   return false;
 }
 bool Editor::cmdRevSearch(Cmd cmd, int32_t)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
-  searchRev(arg);
+  if (arg < 0)
+    searchFwd(-arg);
+  else
+    searchRev(arg);
   return false;
 }
 

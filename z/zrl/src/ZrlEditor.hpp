@@ -71,7 +71,7 @@ namespace Op { // line editor operation codes
 
     Enter,		// line entered
 
-    // Erase,		// ^H backspace		// Left|Del
+    // Erase,		// ^H backspace		// BackSpace
     // WErase,		// ^W word erase	// RevWord|Del|Unix
     // Kill,		// ^U			// Home|Del
 
@@ -111,9 +111,9 @@ namespace Op { // line editor operation codes
     Glyph,		// insert/overwrite glyph (depending on toggle)
     InsGlyph,		// insert glyph
     OverGlyph,		// overwrite glyph
-    BackSpace,		// back-space, falling back to Left[Del]
-    Edit,		// upcoming edit - set repeat count from arg
-    EditRep,		// repeat last edit if required
+    BackSpace,		// back space, falling back to Left[Del]
+    Edit,		// upcoming repeatable edit - set repeat count
+    EditRep,		// repeat last edit as required
 
     ArgDigit,		// append digit to argument
 
@@ -121,7 +121,9 @@ namespace Op { // line editor operation codes
 
     Undo,		// undo
     Redo,		// redo
-    Repeat,		// repeat
+    EmacsUndo,		// undo/redo, Emacs style
+    EmacsAbort,		// abort undo, ''
+    Repeat,		// repeat last edit
 
     TransGlyph,		// transpose glyphs
     TransWord,		// transpose words
@@ -195,18 +197,23 @@ namespace Op { // line editor operation codes
     friend ZuPrintFn ZuPrintType(Print *);
   };
   inline Print print(uint32_t op) { return {op}; }
-};
+}
 
 // line editor command - combination of op code, argument and virtual key
 class ZrlAPI Cmd {
+  enum Internal_ { Internal }; // disambiguator
+
 public:
+  static constexpr int16_t nullArg() { return -0x8000; }
+  static bool nullArg(int16_t arg) { return arg == nullArg(); }
+
   Cmd() = default;
   Cmd(const Cmd &) = default;
   Cmd &operator =(const Cmd &) = default;
   Cmd(Cmd &&) = default;
   Cmd &operator =(Cmd &&) = default;
 
-  Cmd(uint64_t op, int16_t arg = -1, int32_t vkey = -VKey::Null) :
+  Cmd(uint64_t op, int16_t arg = nullArg(), int32_t vkey = -VKey::Null) :
       m_value{op |
 	(static_cast<uint64_t>(arg)<<16) |
 	(static_cast<uint64_t>(vkey)<<32)} { }
@@ -218,6 +225,13 @@ public:
   bool operator !() const { return !op(); }
   ZuOpBool
 
+  Cmd negArg() const {
+    auto arg = this->arg();
+    arg = -arg;
+    return Cmd{Internal,
+      (m_value & (~0xffffU<<16)) | (static_cast<uint64_t>(arg)<<16)};
+  }
+
   int parse(ZuString, int off);
 
   void print_(ZmStream &) const;
@@ -226,6 +240,8 @@ public:
   friend ZuPrintFn ZuPrintType(Cmd *);
 
 private:
+  Cmd(Internal_, uint64_t value) : m_value{value} { }
+
   uint64_t	m_value = 0;
 };
 
@@ -254,8 +270,8 @@ struct Bindings : public Bindings_ {
 };
 
 namespace ModeType {
-  ZtEnumValues(Edit, Command);
-  ZtEnumNames("edit", "command");
+  ZtEnumValues(Edit, Command, Base);
+  ZtEnumNames("edit", "command", "base");
 }
 
 // line editor mode
@@ -343,8 +359,11 @@ public:
 
   // Emacs yank / yank-pop
   const RegData &emacs_yank() { return get(m_offset); }
-  void emacs_rotate() {
+  void emacs_rotateFwd() {
     if (ZuUnlikely(++m_offset >= m_count)) m_offset = 0;
+  }
+  void emacs_rotateRev() {
+    if (ZuUnlikely(!m_offset--)) m_offset = m_count - 1;
   }
 
 private:
@@ -358,6 +377,7 @@ struct UndoOp {
   int			spliceOff = -1;	// offset of splice
   ZtArray<uint8_t>	oldData;
   ZtArray<uint8_t>	newData;
+  bool			last = true;	// whether last in a sequence
 
   bool operator !() const { return oldPos < 0; }
   ZuOpBool
@@ -373,18 +393,15 @@ struct CmdContext {
   unsigned		startPos = 0;	// start position (following prompt)
   unsigned		mode = 0;	// current mode
   ZtArray<unsigned>	stack;		// mode stack
-  int32_t		synVKey = -VKey::Null; // synthetic keystroke
+  int32_t		synVKey = -VKey::Null; // pending synthetic keystroke
   Cmd			prevCmd;	// previous command
-  unsigned		horizPos = 0;	// vertical motion position
+  int			horizPos = -1;	// vertical motion position
   int			markPos = -1;	// glyph mark / highlight begin pos.
   int			highPos = -1;	// highlight end position
 
   // numerical argument context
-  int			arg = -1;	// extant arg (survives mode changes)
+  int			arg = Cmd::nullArg(); // extant arg
   unsigned		accumArg_ = 0;	// accumulating argument
-
-  // glyph search context (search within line)
-  uint32_t		search = 0;	// glyph to search for
 
   // register context
   int			register_ = -1;	// register index
@@ -409,11 +426,14 @@ struct CmdContext {
   unsigned		histSaveOff = 0;	// history save offset
 
   // history search context
-  ZtArray<uint8_t>	srchTerm;	// search term
-  ZuUTFSpan		srchPrmptSpan;	// search prompt span
+  ZtArray<uint8_t>	srchTerm;		// search term
+  ZuUTFSpan		srchPrmptSpan;		// search prompt span
 
   // insert/overwrite mode
   bool			overwrite = false;
+
+  // Emacs' bizarre undo/redo navigation
+  bool			emacsRedo = false;	// Emacs undo is redo
 
   void accumDigit(unsigned i) {
     accumArg_ = accumArg_ * 10 + i;
@@ -430,14 +450,80 @@ struct CmdContext {
   }
 
   unsigned evalArg(int cmdArg, unsigned defArg) {
-    if (cmdArg >= 0) return cmdArg; // do not consume
+    if (!Cmd::nullArg(cmdArg)) return cmdArg; // do not consume
     if (arg < 0) return defArg;
     return arg;
   }
 
   void clrArg() {
-    arg = -1;
+    arg = Cmd::nullArg();
     accumArg_ = 0;
+  }
+
+  void edit(int pos, int off) {
+    // editArg should be preserved
+    if (!editOp) editOp = { pos, off };
+  }
+
+  void appendEdit() {
+    if (undoIndex >= 0) { // edit following undo, abandoning history
+      undoNext = undoIndex;
+      undoIndex = -1;
+    }
+  }
+
+  void applyEdit() {
+    if (editOp.newData) {
+      appendEdit();
+      undo.set(undoNext++, ZuMv(editOp));
+      clrEdit();
+    }
+  }
+
+  void clrEdit() {
+    editOp = {};
+    editArg = -1;
+  }
+
+  void clrUndo() {
+    clrEdit();
+    undoIndex = -1;
+    undoNext = 0;
+    undo.clear();
+  }
+  
+  void clrComp() {
+    compPrefixOff = 0;
+    compPrefixEnd = 0;
+    compEnd = 0;
+    compSpan = {};
+    compWidth = 0;
+  }
+
+  void reset() {
+    startPos = 0;
+
+    mode = 0;
+    stack.clear();
+
+    synVKey = -VKey::Null;
+    prevCmd = {};
+
+    horizPos = -1;
+    markPos = -1;
+    highPos = -1;
+
+    clrArg();
+    register_ = -1;
+
+    clrUndo();
+
+    clrComp();
+
+    histLoadOff = -1;
+
+    srchTerm = {};
+    srchPrmptSpan = {};
   }
 };
 
@@ -518,7 +604,7 @@ private:
   // splice data in line - clears histLoadOff since line is being modified
   void splice(
       unsigned off, ZuUTFSpan span,
-      ZuArray<const uint8_t> replace, ZuUTFSpan rspan);
+      ZuArray<const uint8_t> replace, ZuUTFSpan rspan, bool last = true);
   void splice_(
       unsigned off, ZuUTFSpan span,
       ZuArray<const uint8_t> replace, ZuUTFSpan rspan);
@@ -541,11 +627,12 @@ private:
   bool cmdRevWordEnd(Cmd, int32_t);
   bool cmdMvMark(Cmd, int32_t);
 
+  bool cmdClrVis(Cmd, int32_t);
+
   bool cmdInsToggle(Cmd, int32_t);
   bool cmdInsert(Cmd, int32_t);
   bool cmdOver(Cmd, int32_t);
 
-  bool cmdClrVis(Cmd, int32_t);
   bool cmdClear(Cmd, int32_t);
   bool cmdRedraw(Cmd, int32_t);
 
@@ -592,6 +679,8 @@ private:
 
   bool cmdUndo(Cmd, int32_t);
   bool cmdRedo(Cmd, int32_t);
+  bool cmdEmacsUndo(Cmd, int32_t);
+  bool cmdEmacsAbort(Cmd, int32_t);
   bool cmdRepeat(Cmd, int32_t);
 
   bool cmdFwdGlyphSrch(Cmd, int32_t);

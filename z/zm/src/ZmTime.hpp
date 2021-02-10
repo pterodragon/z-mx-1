@@ -57,10 +57,10 @@ public:
   enum Now_ { Now };		// disambiguator
   enum Nano_ { Nano };		// ''
 
-  ZuInline ZmTime() : timespec{0, 0} { }
+  ZmTime() : timespec{0, 0} { }
 
-  ZuInline ZmTime(const ZmTime &t) : timespec{t.tv_sec, t.tv_nsec} { }
-  ZuInline ZmTime &operator =(const ZmTime &t) {
+  ZmTime(const ZmTime &t) : timespec{t.tv_sec, t.tv_nsec} { }
+  ZmTime &operator =(const ZmTime &t) {
     if (this == &t) return *this;
     tv_sec = t.tv_sec, tv_nsec = t.tv_nsec;
     return *this;
@@ -80,52 +80,52 @@ public:
   };
 
 public:
-  ZuInline ZmTime(Now_) { now(); }
+  ZmTime(Now_) { now(); }
   template <typename T>
-  ZuInline ZmTime(Now_, T i, typename MatchInt<T>::T *_ = 0) {
+  ZmTime(Now_, T i, typename MatchInt<T>::T *_ = 0) {
     now(i);
   }
-  ZuInline ZmTime(Now_, double d) { now(d); }
-  ZuInline ZmTime(Now_, const ZmTime &d) { now(d); }
+  ZmTime(Now_, double d) { now(d); }
+  ZmTime(Now_, const ZmTime &d) { now(d); }
 
   template <typename T>
-  ZuInline ZmTime(T v, typename MatchInt<T>::T *_ = 0) :
+  ZmTime(T v, typename MatchInt<T>::T *_ = 0) :
     timespec{v, 0} { }
-  ZuInline ZmTime(time_t t, long n) : timespec{t, n} { }
+  ZmTime(time_t t, long n) : timespec{t, n} { }
 
-  ZuInline ZmTime(double d) :
+  ZmTime(double d) :
     timespec{(time_t)d, (long)((d - (double)(time_t)d) * 1000000000)} { }
 
-  ZuInline ZmTime(Nano_, int64_t nano) : 
+  ZmTime(Nano_, int64_t nano) : 
     timespec{(time_t)(nano / 1000000000), (long)(nano % 1000000000)} { }
 
 #ifndef _WIN32
-  ZuInline ZmTime(const timespec &t) : timespec{t.tv_sec, t.tv_nsec} { }
-  ZuInline ZmTime &operator =(const timespec &t) {
-    new (this) ZmTime(t);
+  ZmTime(const timespec &t) : timespec{t.tv_sec, t.tv_nsec} { }
+  ZmTime &operator =(const timespec &t) {
+    new (this) ZmTime{t};
     return *this;
   }
-  ZuInline ZmTime(const timeval &t) : timespec{t.tv_sec, t.tv_usec * 1000} { }
-  ZuInline ZmTime &operator =(const timeval &t) {
-    new (this) ZmTime(t);
+  ZmTime(const timeval &t) : timespec{t.tv_sec, t.tv_usec * 1000} { }
+  ZmTime &operator =(const timeval &t) {
+    new (this) ZmTime{t};
     return *this;
   }
 #else
-  ZuInline ZmTime(FILETIME f) {
+  ZmTime(FILETIME f) {
     int64_t *ZuMayAlias(f_) = reinterpret_cast<int64_t *>(&f);
     int64_t t = *f_;
     t -= ZmTime_FT_Epoch;
     tv_sec = t / 10000000;
     tv_nsec = (int32_t)((t % 10000000) * 100);
   }
-  ZuInline ZmTime &operator =(FILETIME t) {
-    new (this) ZmTime(t);
+  ZmTime &operator =(FILETIME t) {
+    new (this) ZmTime{t};
     return *this;
   }
 #endif
 
 #ifndef _WIN32
-  ZuInline ZmTime &now() {
+  ZmTime &now() {
     clock_gettime(CLOCK_REALTIME, this);
     return *this;
   }
@@ -136,31 +136,31 @@ public:
 #endif /* !_WIN32 */
 
   template <typename T>
-  ZuInline typename MatchInt<T, ZmTime &>::T now(T i) { return now() += i; }
-  ZuInline ZmTime &now(double d) { return now() += d; }
-  ZuInline ZmTime &now(const ZmTime &d) { return now() += d; }
+  typename MatchInt<T, ZmTime &>::T now(T i) { return now() += i; }
+  ZmTime &now(double d) { return now() += d; }
+  ZmTime &now(const ZmTime &d) { return now() += d; }
 
-  ZuInline time_t time() const { return(tv_sec); }
-  ZuInline operator time_t() const { return(tv_sec); }
-  ZuInline double dtime() const {
+  time_t time() const { return(tv_sec); }
+  operator time_t() const { return(tv_sec); }
+  double dtime() const {
     return (double)tv_sec + (double)tv_nsec / (double)1000000000;
   }
-  ZuInline int32_t millisecs() const {
+  int32_t millisecs() const {
     return (int32_t)(tv_sec * 1000 + tv_nsec / 1000000);
   }
-  ZuInline int32_t microsecs() const {
+  int32_t microsecs() const {
     return (int32_t)(tv_sec * 1000000 + tv_nsec / 1000);
   }
-  ZuInline int64_t nanosecs() const {
+  int64_t nanosecs() const {
     return (int64_t)tv_sec * 1000000000 + (int64_t)tv_nsec;
   }
 
 #ifndef _WIN32
-  ZuInline operator timeval() const {
+  operator timeval() const {
     return timeval{tv_sec, tv_nsec / 1000};
   }
 #else
-  ZuInline operator FILETIME() const {
+  operator FILETIME() const {
     FILETIME f;
     int64_t *ZuMayAlias(f_) = reinterpret_cast<int64_t *>(&f);
     *f_ = (int64_t)tv_sec * 10000000 + tv_nsec / 100 + ZmTime_FT_Epoch;
@@ -179,7 +179,7 @@ public:
     return *this;
   }
 
-  ZuInline void normalize() {
+  void normalize() {
     if (tv_nsec >= 1000000000) tv_nsec -= 1000000000, ++tv_sec;
     else {
       if (tv_nsec < 0) {
@@ -189,108 +189,108 @@ public:
     }
   }
 
-  ZuInline ZmTime operator -() const {
+  ZmTime operator -() const {
     return ZmTime{-tv_sec - 1, 1000000000L - tv_nsec};
   }
 
   template <typename T>
-  ZuInline typename MatchInt<T, ZmTime>::T operator +(T v) const {
-    return ZmTime(tv_sec + v, tv_nsec);
+  typename MatchInt<T, ZmTime>::T operator +(T v) const {
+    return ZmTime{tv_sec + v, tv_nsec};
   }
-  ZuInline ZmTime operator +(double d) const {
-    return ZmTime::operator +(ZmTime(d));
+  ZmTime operator +(double d) const {
+    return ZmTime::operator +(ZmTime{d});
   }
-  ZuInline ZmTime operator +(const ZmTime &t_) const {
+  ZmTime operator +(const ZmTime &t_) const {
     ZmTime t{tv_sec + t_.tv_sec, tv_nsec + t_.tv_nsec};
     t.normalize();
     return t;
   }
   template <typename T>
-  ZuInline typename MatchInt<T, ZmTime &>::T operator +=(T v) {
+  typename MatchInt<T, ZmTime &>::T operator +=(T v) {
     tv_sec += v;
     return *this;
   }
-  ZuInline ZmTime &operator +=(double d) {
-    return ZmTime::operator +=(ZmTime(d));
+  ZmTime &operator +=(double d) {
+    return ZmTime::operator +=(ZmTime{d});
   }
-  ZuInline ZmTime &operator +=(const ZmTime &t_) {
+  ZmTime &operator +=(const ZmTime &t_) {
     tv_sec += t_.tv_sec, tv_nsec += t_.tv_nsec;
     normalize();
     return *this;
   }
   template <typename T>
-  ZuInline typename MatchInt<T, ZmTime>::T operator -(T v) const {
-    return ZmTime(tv_sec - v, tv_nsec);
+  typename MatchInt<T, ZmTime>::T operator -(T v) const {
+    return ZmTime{tv_sec - v, tv_nsec};
   }
-  ZuInline ZmTime operator -(double d) const {
-    return ZmTime::operator -(ZmTime(d));
+  ZmTime operator -(double d) const {
+    return ZmTime::operator -(ZmTime{d});
   }
-  ZuInline ZmTime operator -(const ZmTime &t_) const {
+  ZmTime operator -(const ZmTime &t_) const {
     ZmTime t{tv_sec - t_.tv_sec, tv_nsec - t_.tv_nsec};
     t.normalize();
     return t;
   }
   template <typename T>
-  ZuInline typename MatchInt<T, ZmTime &>::T operator -=(T v) {
+  typename MatchInt<T, ZmTime &>::T operator -=(T v) {
     tv_sec -= v;
     return *this;
   }
-  ZuInline ZmTime &operator -=(double d) {
-    return ZmTime::operator -=(ZmTime(d));
+  ZmTime &operator -=(double d) {
+    return ZmTime::operator -=(ZmTime{d});
   }
-  ZuInline ZmTime &operator -=(const ZmTime &t_) {
+  ZmTime &operator -=(const ZmTime &t_) {
     tv_sec -= t_.tv_sec, tv_nsec -= t_.tv_nsec;
     normalize();
     return *this;
   }
 
-  ZuInline ZmTime operator *(double d) {
-    return ZmTime(dtime() * d);
+  ZmTime operator *(double d) {
+    return ZmTime{dtime() * d};
   }
-  ZuInline ZmTime &operator *=(double d) {
+  ZmTime &operator *=(double d) {
     return operator =(dtime() * d);
   }
-  ZuInline ZmTime operator /(double d) {
-    return ZmTime(dtime() / d);
+  ZmTime operator /(double d) {
+    return ZmTime{dtime() / d};
   }
-  ZuInline ZmTime &operator /=(double d) {
+  ZmTime &operator /=(double d) {
     return operator =(dtime() / d);
   }
 
-  ZuInline int operator ==(const ZmTime &t) const {
+  int operator ==(const ZmTime &t) const {
     return tv_sec == t.tv_sec && tv_nsec == t.tv_nsec;
   }
-  ZuInline int operator !=(const ZmTime &t) const {
+  int operator !=(const ZmTime &t) const {
     return tv_sec != t.tv_sec || tv_nsec != t.tv_nsec;
   }
-  ZuInline int operator >(const ZmTime &t) const {
+  int operator >(const ZmTime &t) const {
     return tv_sec > t.tv_sec || (tv_sec == t.tv_sec && tv_nsec > t.tv_nsec);
   }
-  ZuInline int operator >=(const ZmTime &t) const {
+  int operator >=(const ZmTime &t) const {
     return tv_sec > t.tv_sec || (tv_sec == t.tv_sec && tv_nsec >= t.tv_nsec);
   }
-  ZuInline int operator <(const ZmTime &t) const {
+  int operator <(const ZmTime &t) const {
     return tv_sec < t.tv_sec || (tv_sec == t.tv_sec && tv_nsec < t.tv_nsec);
   }
-  ZuInline int operator <=(const ZmTime &t) const {
+  int operator <=(const ZmTime &t) const {
     return tv_sec < t.tv_sec || (tv_sec == t.tv_sec && tv_nsec <= t.tv_nsec);
   }
 
-  ZuInline int operator !() const {
+  int operator !() const {
     return !(tv_sec || tv_nsec);
   }
   ZuOpBool
 
-  ZuInline time_t sec() const { return tv_sec; }
-  ZuInline time_t &sec() { return tv_sec; }
-  ZuInline long nsec() const { return tv_nsec; }
-  ZuInline long &nsec() { return tv_nsec; }
+  time_t sec() const { return tv_sec; }
+  time_t &sec() { return tv_sec; }
+  long nsec() const { return tv_nsec; }
+  long &nsec() { return tv_nsec; }
 
-  ZuInline uint32_t hash() const {
+  uint32_t hash() const {
     return ZuHash<time_t>::hash(tv_sec) ^ ZuHash<long>::hash(tv_nsec);
   }
 
-  ZuInline int cmp(const ZmTime &t) const {
+  int cmp(const ZmTime &t) const {
     if (int i = ZuCmp<time_t>::cmp(tv_sec, t.tv_sec)) return i;
     return ZuCmp<long>::cmp(tv_nsec, t.tv_nsec);
   }
@@ -299,12 +299,12 @@ public:
   friend Traits ZuTraitsType(ZmTime *);
 };
 
-ZuInline ZmTime ZmTimeNow() { return ZmTime(ZmTime::Now); }
+inline ZmTime ZmTimeNow() { return ZmTime{ZmTime::Now}; }
 template <typename T>
-ZuInline typename ZmTime::MatchInt<T, ZmTime>::T ZmTimeNow(T i) {
-  return ZmTime(ZmTime::Now, i);
+inline typename ZmTime::MatchInt<T, ZmTime>::T ZmTimeNow(T i) {
+  return ZmTime{ZmTime::Now, i};
 }
-ZuInline ZmTime ZmTimeNow(double d) { return ZmTime(ZmTime::Now, d); }
-ZuInline ZmTime ZmTimeNow(const ZmTime &d) { return ZmTime(ZmTime::Now, d); }
+inline ZmTime ZmTimeNow(double d) { return ZmTime{ZmTime::Now, d}; }
+inline ZmTime ZmTimeNow(const ZmTime &d) { return ZmTime{ZmTime::Now, d}; }
 
 #endif /* ZmTime_HPP */

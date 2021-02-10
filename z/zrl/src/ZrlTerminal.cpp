@@ -46,6 +46,7 @@ ZrlExtern void print_(int32_t vkey, ZmStream &s)
   ZuStringN<60> out;
   if (vkey < 0) {
     vkey = -vkey;
+    if (vkey == VKey::Null) return;
     out << name(vkey & Mask) << '[';
     bool pipe = false;
     auto sep = [&pipe, &out]() { if (!pipe) pipe = true; else out << '|'; };
@@ -75,7 +76,7 @@ thread_local unsigned VKeyMatch_printIndentLevel = 0;
 
 void VKeyMatch::Action::print_(ZmStream &s) const
 {
-  if (vkey) s << VKey::print(vkey);
+  if (vkey != -VKey::Null) s << VKey::print(vkey);
   s << "\r\n";
   if (auto ptr = next.ptr<VKeyMatch>()) {
     ++VKeyMatch_printIndentLevel;
@@ -100,7 +101,8 @@ void VKeyMatch::print_(ZmStream &s) const
   for (unsigned i = 0, n = m_bytes.length(); i < n; i++) {
     for (unsigned j = 0; j < level; j++) s << ' ';
     VKeyMatch_print_byte(s, m_bytes[i]);
-    s << " -> " << m_actions[i];
+    if (m_actions[i].vkey != -VKey::Null) s << " -> ";
+    s << m_actions[i];
   }
 }
 
@@ -379,6 +381,11 @@ bool Terminal::open_()
 
   // literal next
   addCtrlKey(m_otermios.c_cc[VLNEXT], VKey::LNext);
+
+  // redraw/reprint
+#ifdef VREPRINT
+  addCtrlKey(m_otermios.c_cc[VREPRINT], VKey::Redraw);
+#endif
 
   // motion keys
   addVKey("kcuu1", nullptr, VKey::Up);
@@ -1464,6 +1471,9 @@ int32_t Terminal::literal(int32_t vkey) const
     case VKey::WErase:		return m_otermios.c_cc[VWERASE];
     case VKey::Kill:		return m_otermios.c_cc[VKILL];
     case VKey::LNext:		return m_otermios.c_cc[VLNEXT];
+#ifdef VREPRINT
+    case VKey::Redraw:		return m_otermios.c_cc[VREPRINT];
+#endif
   }
   return vkey;
 }

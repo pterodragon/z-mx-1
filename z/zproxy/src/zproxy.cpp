@@ -42,7 +42,9 @@
 #include <zlib/ZvCmdHost.hpp>
 #include <zlib/ZvMultiplex.hpp>
 
-#include <zlib/Zrl.hpp>
+#include <zlib/ZrlCLI.hpp>
+#include <zlib/ZrlGlobber.hpp>
+#include <zlib/ZrlHistory.hpp>
 
 #ifdef _WIN32
 #include <io.h>		// for _isatty
@@ -595,14 +597,15 @@ public:
   void wait() { m_done.wait(); }
   void post() { m_done.post(); }
 
-  void processCmd(ZuString cmd) {
-    if (!cmd) return;
+  bool processCmd(ZuString cmd) {
+    if (!cmd) return false;
     ZtArray<ZtString> args;
     ZvCf::parseCLI(cmd, args);
     ZtString out;
-    ZvCmdHost::processCmd(nullptr, args, out);
+    int r = ZvCmdHost::processCmd(nullptr, args, out);
     fwrite(out.data(), 1, out.length(), stdout);
     fflush(stdout);
+    return r;
   }
 
   void add(Proxy *proxy) {
@@ -1536,20 +1539,35 @@ int main(int argc, char **argv)
   app->start();
 
   if (isatty(fileno(stdin))) {
-    for (;;) {
-      try {
-	auto cmd = Zrl::readline_("zproxy] ");
-	app->processCmd(cmd);
-      } catch (const Zrl::EndOfFile &) {
-	break;
-      }
-    }
+    Zrl::Globber globber;
+    Zrl::History history{100};
+    Zrl::CLI cli;
+    cli.init({
+      .error = [](ZuString s) { std::cerr << s << '\n'; },
+      .enter = [app = app.ptr()](ZuString s) -> bool {
+	return app->processCmd(s);
+      },
+      .sig = [](int sig) -> bool {
+	if (sig != SIGINT) ::raise(sig);
+	return sig != SIGTSTP;
+      },
+      .compInit = globber.initFn(),
+      .compNext = globber.nextFn(),
+      .histSave = history.saveFn(),
+      .histLoad = history.loadFn()
+    });
+    cli.open();
+    cli.start("zproxy] ");
+    cli.join();
+    cli.stop();
+    cli.close();
+    cli.final();
   } else {
     ZtString cmd(1024);
     while (fgets(cmd.data(), cmd.size() - 1, stdin)) {
       cmd.calcLength();
       cmd.chomp();
-      app->processCmd(cmd);
+      if (app->processCmd(cmd)) break;
     }
     app->wait();
   }

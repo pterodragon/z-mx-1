@@ -17,25 +17,44 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// sequenced cleanup for ZmSingleton/ZmSpecific
+// command line interface
+//
+// readline compatible blocking interface to Zrl::CLI
+//
+// synopsis:
+//
+// using namespace Zrl;
+// char *readline(const char *prompt);
 
-#ifndef ZmCleanup_HPP
-#define ZmCleanup_HPP
+#ifndef Zrl_HPP
+#define Zrl_HPP
 
 #ifdef _MSC_VER
 #pragma once
 #endif
 
-#ifndef ZmLib_HPP
-#include <zlib/ZmLib.hpp>
+#ifndef ZrlLib_HPP
+#include <zlib/ZrlLib.hpp>
 #endif
 
-struct ZmCleanupLevel {
-  enum { Application = 0, Library, Platform, Heap, HeapMgr, Thread, Final, N };
-};
+#include <zlib/ZrlCLI.hpp>
 
-template <class T> struct ZmCleanup {
-  enum { Level = ZmCleanupLevel::Application };
-};
+extern "C" {
+  ZrlExtern char *Zrl_readline(const char *prompt);
 
-#endif /* ZmCleanup_HPP */
+  // optional
+  ZrlExtern void Zrl_start(const char *prompt);
+  ZrlExtern void Zrl_stop();
+  ZrlExtern bool Zrl_running();
+}
+
+namespace Zrl {
+  inline char *readline(const char *prompt) { return Zrl_readline(prompt); }
+
+  // optional
+  inline void start(const char *prompt) { return Zrl_start(prompt); }
+  inline void stop() { return Zrl_stop(); }
+  inline bool running() { return Zrl_running(); }
+}
+
+#endif /* Zrl_HPP */

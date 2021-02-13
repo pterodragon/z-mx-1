@@ -6,11 +6,11 @@ AM_CPPFLAGS = \
 	-DZRL_EXPORTS @Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
-pkginclude_HEADERS = ZrlLib.hpp ZrlCLI.hpp \
+pkginclude_HEADERS = ZrlLib.hpp Zrl.hpp ZrlCLI.hpp \
 	ZrlLine.hpp ZrlTerminal.hpp ZrlApp.hpp ZrlEditor.hpp \
 	ZrlGlobber.hpp ZrlHistory.hpp
 lib_LTLIBRARIES = libZrl.la
-libZrl_la_SOURCES = ZrlLib.cpp ZrlCLI.cpp \
+libZrl_la_SOURCES = ZrlLib.cpp Zrl.cpp ZrlCLI.cpp \
 	ZrlLine.cpp ZrlTerminal.cpp ZrlEditor.cpp \
 	ZrlHistory.cpp
 libZrl_la_LIBADD = \

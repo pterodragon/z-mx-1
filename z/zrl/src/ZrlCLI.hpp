@@ -19,7 +19,7 @@
 
 // command line interface
 //
-// high-level wrapper for Zrl::Editor
+// high-level idempotent wrapper for Zrl::Editor
 //
 // synopsis:
 //
@@ -30,7 +30,7 @@
 // });
 // if (cli.open()) {
 //   cli.start("prompt> ");
-//   cli.join();
+//   cli.join(); // wait until complete
 //   cli.stop();
 //   cli.close();
 // }
@@ -52,6 +52,8 @@
 
 #include <zlib/ZmFn.hpp>
 #include <zlib/ZmScheduler.hpp>
+#include <zlib/ZmLock.hpp>
+#include <zlib/ZmGuard.hpp>
 
 #include <zlib/ZtArray.hpp>
 
@@ -60,25 +62,38 @@
 namespace Zrl {
 
 class ZrlAPI CLI : public Editor {
+  using Lock = ZmLock;
+  using Guard = ZmGuard<Lock>;
+
+  enum { Created = 0, Initialized, Opened, Running }; // state
+
 public:
+  ~CLI() { final(); }
+
   void init(App app);		// set up callbacks
   void final();			// optional teardown
 
-  bool open();			// open terminal - returns true on success
+  bool open();			// open terminal - returns true if ok
   void close();			// void close() - close terminal
 
-  void start(ZuString prompt);	// start running
+  bool start(ZtArray<uint8_t> prompt);	// start running - returns true if ok
   void stop();			// stop running
   void join();			// block until EOF, signal or other end event
   using Editor::running;	// bool running() - check if running
 
   void invoke(ZmFn<> fn);	// invoke fn in terminal thread
 
-  // prompt() must be called within terminal thread
-  void prompt(ZtArray<uint8_t> prompt);	// set prompt
-
 private:
+  void final_();
+
+  bool open_();
+  void close_();
+
+  void stop_();
+
   ZuPtr<ZmScheduler>	m_sched; // internal thread
+    ZmLock		  m_lock;
+    int			  m_state = Created;
 };
 
 } // Zrl

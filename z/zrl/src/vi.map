@@ -148,6 +148,7 @@ map vi {
     '.' { Repeat; }
     '+' { Down[Mv]; }
     '-' { Up[Mv]; }
+    '~' { CapGlyph; }
     ^L { Clear; }
     #Redraw { Redraw; } # deconflict with ^R
   }

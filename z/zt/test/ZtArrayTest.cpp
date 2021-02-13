@@ -13,6 +13,8 @@
 #pragma warning(disable:4355)
 #endif
 
+#define CHECK(x) ((x) ? puts("OK  " #x) : puts("NOK " #x))
+
 struct E {
   E() : m_ptr(this), m_copied(0), m_moved(0) { }
   ~E() {
@@ -131,6 +133,15 @@ int main()
     puts(a[0]);
     puts(a[1]);
     for (auto &&s: a) puts(s);
+  }
+
+  {
+    ZtArray<char> a = "hello world";
+    auto ptr = a.data();
+    ZtArray<unsigned char> b = ZuMv(a);
+    ZtArray<signed char> c = ZuMv(b);
+    a = ZuMv(c);
+    CHECK(ptr == a.data());
   }
 
   return 0;

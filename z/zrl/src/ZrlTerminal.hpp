@@ -42,6 +42,7 @@
 #include <zlib/ZuUTF.hpp>
 #include <zlib/ZuArrayN.hpp>
 #include <zlib/ZuPrint.hpp>
+#include <zlib/ZuPolymorph.hpp>
 
 #include <zlib/ZtString.hpp>
 
@@ -126,10 +127,10 @@ namespace VKey {
   inline Print print(int32_t key) { return {key}; }
 }
 
-class ZrlAPI VKeyMatch : public ZuObject {
+class ZrlAPI VKeyMatch : public ZuPolymorph {
 public:
   struct ZrlAPI Action {
-    ZuRef<ZuObject>	next;			// next VKeyMatch
+    ZuRef<ZuPolymorph>	next;			// next VKeyMatch
     int32_t		vkey = -VKey::Null;	// virtual key
 
     void print_(ZmStream &) const;

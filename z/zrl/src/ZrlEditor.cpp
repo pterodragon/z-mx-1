@@ -129,6 +129,7 @@ Editor::Editor()
   m_cmdFn[Op::TransWord] = &Editor::cmdTransWord;
   m_cmdFn[Op::TransUnixWord] = &Editor::cmdTransUnixWord;
 
+  m_cmdFn[Op::CapGlyph] = &Editor::cmdCapGlyph;
   m_cmdFn[Op::LowerWord] = &Editor::cmdLowerWord;
   m_cmdFn[Op::UpperWord] = &Editor::cmdUpperWord;
   m_cmdFn[Op::CapWord] = &Editor::cmdCapWord;
@@ -369,6 +370,8 @@ void Editor::init(Config config, App app)
 void Editor::final()
 {
   m_tty.final();
+  m_map = nullptr;
+  m_defltMap = nullptr;
   m_app = {};
 }
 
@@ -847,6 +850,21 @@ bool Editor::map(ZuString id)
 
 void Editor::prompt(ZtArray<uint8_t> prompt)
 {
+  int pos = m_tty.pos();
+  auto oldSpan = ZuUTF<uint32_t, uint8_t>::span(m_context.prompt);
+  int oldWidth = oldSpan.width();
+  auto newSpan = ZuUTF<uint32_t, uint8_t>::span(prompt);
+  int newWidth = newSpan.width();
+  m_tty.splice(0, oldSpan, prompt, newSpan);
+  m_tty.write();
+  m_tty.mv(pos + (newWidth - oldWidth));
+  m_context.prompt = ZuMv(prompt);
+  m_context.startPos = newWidth;
+}
+
+void Editor::prompt_(ZtArray<uint8_t> prompt)
+{
+  m_context.startPos = ZuUTF<uint32_t, uint8_t>::span(prompt).width();
   m_context.prompt = ZuMv(prompt);
 }
 
@@ -1875,7 +1893,15 @@ TransformCharFn upperFn() {
     if (islower__(c)) replace = toupper__(c);
   };
 }
-TransformSpanFn spanFn(TransformCharFn fn) {
+TransformCharFn toggleFn() {
+  return [](uint8_t c, uint8_t &replace) {
+    if (isupper__(c))
+      replace = tolower__(c);
+    else if (islower__(c))
+      replace = toupper__(c);
+  };
+}
+TransformSpanFn spanFn(TransformCharFn) {
   return [](void *fn_, ZuArray<uint8_t> replace) {
     auto fn = reinterpret_cast<TransformCharFn>(fn_);
     for (unsigned i = 0, n = replace.length(); i < n; ) {
@@ -1966,6 +1992,29 @@ void Editor::transformVis(TransformSpanFn fn, void *fnContext)
   splice(begin, span, replace, span);
 }
 
+bool Editor::cmdCapGlyph(Cmd cmd, int32_t)
+{
+  auto charFn = toggleFn();
+  auto fn = spanFn(charFn);
+  unsigned pos = m_tty.pos();
+  const auto &line = m_tty.line();
+  if (pos == line.width()) pos = line.align(pos - 1);
+  if (pos <= m_context.startPos) return false;
+  unsigned start = line.position(m_context.startPos).mapping();
+  unsigned end = line.position(pos).mapping(), begin = end;
+  int arg = m_context.evalArg(cmd.arg(), 1);
+  for (int i = 0; i < arg; i++) end = line.fwdGlyph(end);
+  if (begin <= start || begin >= end) return false; // redundant
+  ZtArray<uint8_t> replace;
+  replace.length(end - begin);
+  const auto &data = line.data();
+  memcpy(&replace[0], &data[begin], end - begin);
+  fn(reinterpret_cast<void *>(charFn), replace);
+  auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
+  splice(begin, span, replace, span);
+  align(m_tty.pos());
+  return false;
+}
 bool Editor::cmdLowerWord(Cmd, int32_t)
 {
   auto fn = lowerFn();

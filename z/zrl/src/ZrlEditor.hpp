@@ -129,6 +129,7 @@ namespace Op { // line editor operation codes
     TransWord,		// transpose words
     TransUnixWord,	// transpose white-space delimited words
 
+    CapGlyph,		// capitalize glyph (toggles capitalization)
     LowerWord,		// lower-case word
     UpperWord,		// upper-case word
     CapWord,		// capitalize word (rotates through ucfirst, uc, lc)
@@ -562,7 +563,8 @@ public:
   bool running() const;
 
   bool map(ZuString id);		// terminal thread
-  void prompt(ZtArray<uint8_t> prompt);	// ''
+  void prompt(ZtArray<uint8_t> prompt);	// '', asynchronously (forces redraw)
+  void prompt_(ZtArray<uint8_t> prompt);// '', from within enter() callback
 
   // dump key bindings
   Terminal::DumpVKeys dumpVKeys() const { return {m_tty}; }
@@ -662,6 +664,7 @@ private:
   void transformWord(TransformSpanFn fn, void *fnContext);
   void transformVis(TransformSpanFn fn, void *fnContext);
 
+  bool cmdCapGlyph(Cmd, int32_t);
   bool cmdLowerWord(Cmd, int32_t);
   bool cmdUpperWord(Cmd, int32_t);
   bool cmdCapWord(Cmd, int32_t);
@@ -735,7 +738,7 @@ private:
 
   ZtString	m_loadError;		// key map file load error
   Maps		m_maps;			// key maps
-  Map		*m_defltMap = nullptr;	// default map
+  ZuPtr<Map>	m_defltMap;		// default map
   Map		*m_map = nullptr;	// current map
 
   App		m_app;			// application callbacks

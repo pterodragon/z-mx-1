@@ -39,8 +39,11 @@
 #include <zlib/ZtlsBase32.hpp>
 #include <zlib/ZtlsBase64.hpp>
 
-#include <zlib/Zrl.hpp>
 #include <zlib/ZCmd.hpp>
+
+#include <zlib/ZrlCLI.hpp>
+#include <zlib/ZrlGlobber.hpp>
+#include <zlib/ZrlHistory.hpp>
 
 #ifdef _WIN32
 #include <io.h>		// for _isatty
@@ -236,8 +239,30 @@ public:
     m_interactive = interactive;
     ZvCmdHost::init();
     initCmds();
+    if (interactive)
+      m_cli.init(Zrl::App{
+	.error = [this](ZuString s) { std::cerr << s << '\n'; post(); },
+	.enter = [this](ZuString s) -> bool {
+	  send(ZtString{s});
+	  m_executed.wait();
+	  return code();
+	},
+	.end = [this]() { post(); },
+	.sig = [this](int sig) {
+	  switch (sig) {
+	    case SIGINT: post(); break;
+	    case SIGQUIT: ::raise(SIGQUIT); break;
+	    case SIGTSTP: ::raise(SIGTSTP); break;
+	  }
+	},
+	.compInit = m_globber.initFn(),
+	.compNext = m_globber.nextFn(),
+	.histSave = m_history.saveFn(),
+	.histLoad = m_history.loadFn()
+      });
   }
   void final() {
+    m_cli.final();
     for (unsigned i = 0; i < TelDataN; i++) m_telcap[i] = TelCap{};
     m_link = nullptr;
     if (m_plugin) {
@@ -255,7 +280,7 @@ public:
     m_soloMsg = ZuMv(s);
   }
   void target(ZuString s) {
-    m_prompt.null();
+    m_prompt.clear();
     m_prompt << s << "] ";
   }
 
@@ -295,14 +320,33 @@ private:
       loadModCmd(stdout, args, out);
       fwrite(out.data(), 1, out.length(), stdout);
     }
+    start();
+  }
+
+  void start() {
     if (m_solo) {
       send(ZuMv(m_soloMsg));
+      m_executed.wait();
+      post();
     } else {
-      if (m_interactive)
+      if (m_interactive) {
 	std::cout <<
 	  "For a list of valid commands: help\n"
 	  "For help on a particular command: COMMAND --help\n" << std::flush;
-      prompt();
+	m_cli.open();
+	m_cli.start(ZuMv(m_prompt));
+      } else {
+	ZtString cmd{4096};
+	while (fgets(cmd, cmd.size() - 1, stdin)) {
+	  cmd.calcLength();
+	  cmd.chomp();
+	  send(ZuMv(cmd));
+	  m_executed.wait();
+	  if (code()) break;
+	  cmd.size(4096);
+	}
+	post();
+      }
     }
   }
 
@@ -332,45 +376,22 @@ private:
   }
 
   void disconnected() {
-    if (m_exiting) return;
     if (m_interactive) {
-      Zrl::stop();
-      std::cerr << "server disconnected\n" << std::flush;
+      m_cli.stop();
+      m_cli.close();
     }
+    if (m_exiting) return;
+    if (m_interactive)
+      std::cerr << "server disconnected\n" << std::flush;
     ZmPlatform::exit(1);
   }
   void connectFailed() {
     if (m_interactive) {
-      Zrl::stop();
+      m_cli.stop();
+      m_cli.close();
       std::cerr << "connect failed\n" << std::flush;
     }
     ZmPlatform::exit(1);
-  }
-
-  void prompt() {
-    mx()->add(ZmFn<>{this, [](ZCmd *app) { app->prompt_(); }});
-  }
-  void prompt_() {
-    ZtString cmd;
-next:
-    if (m_interactive) {
-      try {
-	cmd = Zrl::readline_(m_prompt);
-      } catch (const Zrl::EndOfFile &) {
-	post();
-	return;
-      }
-    } else {
-      cmd.size(4096);
-      if (!fgets(cmd, cmd.size() - 1, stdin)) {
-	post();
-	return;
-      }
-      cmd.calcLength();
-      cmd.chomp();
-    }
-    if (!cmd) goto next;
-    send(ZuMv(cmd));
   }
 
   void send(ZtString cmd) {
@@ -431,10 +452,7 @@ next:
     m_code = code;
     if (out) fwrite(out.data(), 1, out.length(), file);
     if (file != stdout) fclose(file);
-    if (m_solo)
-      post();
-    else
-      prompt();
+    m_executed.post();
     return code;
   }
 
@@ -1445,8 +1463,12 @@ private:
   ZtString		m_soloMsg;
 
   ZmSemaphore		m_done;
+  ZmSemaphore		m_executed;
 
-  ZtString		m_prompt;
+  Zrl::Globber		m_globber;
+  Zrl::History		m_history{100};
+  ZtArray<uint8_t>	m_prompt;
+  Zrl::CLI		m_cli;
 
   ZmRef<Link>		m_link;
   ZvSeqNo		m_seqNo = 0;
@@ -1590,10 +1612,7 @@ int main(int argc, char **argv)
 
   client->wait();
 
-  if (client->interactive()) {
-    Zrl::stop();
-    std::cout << std::flush;
-  }
+  if (client->interactive()) std::cout << std::flush;
 
   client->exiting();
   client->disconnect();

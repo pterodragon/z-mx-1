@@ -75,9 +75,9 @@
 #define ZtString_vsnprintf_Growth	256
 #define ZtString_vsnprintf_MaxSize	(1U<<20) // 1Mb
 
-template <typename Char> const Char *ZtString_Null();
-template <> ZuInline const char *ZtString_Null() { return ""; }
-template <> ZuInline const wchar_t *ZtString_Null() {
+template <typename Char> inline const Char *ZtString_Null();
+template <> inline const char *ZtString_Null() { return ""; }
+template <> inline const wchar_t *ZtString_Null() {
   return Zu::nullWString();
 }
 
@@ -215,12 +215,12 @@ private:
 public:
 // constructors, assignment operators and destructor
 
-  ZuInline ZtString_() { null_(); }
+  ZtString_() { null_(); }
 private:
   enum NoInit_ { NoInit };
-  ZuInline ZtString_(NoInit_ _) { }
+  ZtString_(NoInit_ _) { }
 public:
-  ZuInline ZtString_(const ZtString_ &s) {
+  ZtString_(const ZtString_ &s) {
     copy_(s.data_(), s.length());
   }
   ZtString_(ZtString_ &&s) noexcept {
@@ -232,72 +232,71 @@ public:
     s.mallocd(0);
   }
 
-  template <typename S> ZuInline ZtString_(S &&s) { ctor(ZuFwd<S>(s)); }
+  template <typename S> ZtString_(S &&s) { ctor(ZuFwd<S>(s)); }
 
 private:
-  template <typename S> ZuInline typename MatchZtString<S>::T ctor(const S &s)
+  template <typename S> typename MatchZtString<S>::T ctor(const S &s)
     { copy_(s.data_(), s.length()); }
-  template <typename S> ZuInline typename MatchStrLiteral<S>::T ctor(S &&s_)
+  template <typename S> typename MatchStrLiteral<S>::T ctor(S &&s_)
     { ZuArray<const Char> s(ZuFwd<S>(s_)); shadow_(s.data(), s.length()); }
-  template <typename S> ZuInline typename MatchCString<S>::T ctor(S &&s_)
+  template <typename S> typename MatchCString<S>::T ctor(S &&s_)
     { ZuArray<const Char> s(ZuFwd<S>(s_)); copy_(s.data(), s.length()); }
-  template <typename S> ZuInline typename MatchOtherString<S>::T ctor(S &&s_)
+  template <typename S> typename MatchOtherString<S>::T ctor(S &&s_)
     { ZuArray<const Char> s(ZuFwd<S>(s_)); copy_(s.data(), s.length()); }
-  template <typename C> ZuInline typename MatchChar<C>::T ctor(C c)
+  template <typename C> typename MatchChar<C>::T ctor(C c)
     { copy_(&c, 1); }
 
-  template <typename S> ZuInline typename MatchChar2String<S>::T ctor(S &&s_) {
+  template <typename S> typename MatchChar2String<S>::T ctor(S &&s_) {
     ZuArray<const Char2> s(s_);
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null_(); return; }
     length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>{alloc_(o + 1, 0), o}, s));
   }
 
-  template <typename C> ZuInline typename MatchChar2<C>::T ctor(C c) {
+  template <typename C> typename MatchChar2<C>::T ctor(C c) {
     ZuArray<const Char2> s{&c, 1};
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null_(); return; }
     length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(alloc_(o + 1, 0), o), s));
   }
 
-  template <typename P> ZuInline typename MatchPDelegate<P>::T ctor(const P &p)
+  template <typename P> typename MatchPDelegate<P>::T ctor(const P &p)
     { null_(); ZuPrint<P>::print(*this, p); }
-  template <typename P> ZuInline typename MatchPBuffer<P>::T ctor(const P &p) {
+  template <typename P> typename MatchPBuffer<P>::T ctor(const P &p) {
     unsigned o = ZuPrint<P>::length(p);
     if (!o) { null_(); return; }
     length_(ZuPrint<P>::print(alloc_(o + 1, 0), o, p));
   }
 
-  template <typename V> ZuInline typename MatchCtorSize<V>::T ctor(V size) {
+  template <typename V> typename MatchCtorSize<V>::T ctor(V size) {
     if (!size) { null_(); return; }
     alloc_(size, 0)[0] = 0;
   }
 
-  template <typename R> ZuInline typename MatchCtorReal<R>::T ctor(R r) {
+  template <typename R> typename MatchCtorReal<R>::T ctor(R r) {
     ctor(ZuBoxed(r));
   }
 
 public:
   enum Copy_ { Copy };
-  template <typename S> ZuInline ZtString_(Copy_ _, const S &s) { copy(s); }
+  template <typename S> ZtString_(Copy_ _, const S &s) { copy(s); }
 
-private:
-  ZuInline void copy(const ZtString_ &s) {
+  void copy(const ZtString_ &s) {
     copy_(s.data_(), s.length());
   }
-  template <typename S> ZuInline typename MatchAnyCString<S>::T copy(S &&s_) {
+  template <typename S> typename MatchAnyCString<S>::T copy(S &&s_) {
     ZuArray<const Char> s(ZuFwd<S>(s_));
     copy_(s.data(), s.length());
   }
-  template <typename S> ZuInline typename MatchOtherString<S>::T copy(S &&s_) {
+  template <typename S> typename MatchOtherString<S>::T copy(S &&s_) {
     ZuArray<const Char> s(ZuFwd<S>(s_));
     copy_(s.data(), s.length());
   }
-  template <typename C> ZuInline typename MatchChar<C>::T copy(C c) {
+  template <typename C> typename MatchChar<C>::T copy(C c) {
     copy_(&c, 1);
   }
 
-  template <typename S> ZuInline typename MatchChar2String<S>::T copy(S &&s_) {
+  template <typename S> typename MatchChar2String<S>::T copy(S &&s_) {
     ZuArray<const Char2> s(ZuFwd<S>(s_));
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (ZuUnlikely(!o)) { length_(0); return; }
@@ -310,7 +309,7 @@ private:
     length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(data, o), s));
   }
 	  
-  template <typename C> ZuInline typename MatchChar2<C>::T copy(C c) {
+  template <typename C> typename MatchChar2<C>::T copy(C c) {
     ZuArray<const Char2> s{&c, 1};
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (ZuUnlikely(!o)) { length_(0); return; }
@@ -324,7 +323,7 @@ private:
   }
 
 public:
-  ZuInline ZtString_ &operator =(const ZtString_ &s) {
+  ZtString_ &operator =(const ZtString_ &s) {
     if (ZuLikely(this != &s)) {
       Char *oldData = free_1();
       copy_(s.data_(), s.length());
@@ -332,7 +331,7 @@ public:
     }
     return *this;
   }
-  ZuInline ZtString_ &operator =(ZtString_ &&s) noexcept {
+  ZtString_ &operator =(ZtString_ &&s) noexcept {
     if (ZuLikely(this != &s)) {
       free_();
       new (this) ZtString_(ZuMv(s));
@@ -341,7 +340,7 @@ public:
   }
 
   template <typename S>
-  ZuInline ZtString_ &operator =(S &&s) { assign(ZuFwd<S>(s)); return *this; }
+  ZtString_ &operator =(S &&s) { assign(ZuFwd<S>(s)); return *this; }
 
 private:
   template <typename S> typename MatchZtString<S>::T assign(const S &s) { 
@@ -544,13 +543,13 @@ public:
 // internal initializers / finalizer
 
 private:
-  ZuInline void length_(unsigned n) {
+  void length_(unsigned n) {
     null__(0);
     length__(n);
     data_()[n] = 0;
   }
 
-  ZuInline void null_() {
+  void null_() {
     m_data[0] = 0;
     size_owned_null(BuiltinSize, 1, 1);
     length_mallocd_builtin(0, 0, 1);
@@ -623,15 +622,15 @@ private:
 public:
 // truncation (to minimum size)
 
-  ZuInline void truncate() { size(length() + 1); }
+  void truncate() { size(length() + 1); }
 
 // array / ptr operators
 
-  ZuInline Char &operator [](int i) { return data_()[i]; }
-  ZuInline Char operator [](int i) const { return data_()[i]; }
+  Char &operator [](int i) { return data_()[i]; }
+  Char operator [](int i) const { return data_()[i]; }
 
-  ZuInline operator Char *() { return null__() ? 0 : data_(); }
-  ZuInline operator const Char *() const { return null__() ? 0 : data_(); }
+  operator Char *() { return null__() ? 0 : data_(); }
+  operator const Char *() const { return null__() ? 0 : data_(); }
 
 // accessors
 
@@ -652,67 +651,67 @@ public:
     return const_cast<Char *>(static_cast<const ZtString_ &>(*this).end());
   }
 
-  ZuInline Char *data() {
+  Char *data() {
     if (null__()) return nullptr;
     return data_();
   }
-  ZuInline Char *data_() {
+  Char *data_() {
     return builtin() ? (Char *)m_data : (Char *)m_data[0];
   }
-  ZuInline const Char *data() const {
+  const Char *data() const {
     if (null__()) return nullptr;
     return data_();
   }
-  ZuInline const Char *data_() const {
+  const Char *data_() const {
     return builtin() ? (const Char *)m_data : (const Char *)m_data[0];
   }
-  ZuInline const Char *ndata() const {
+  const Char *ndata() const {
     if (null__()) return ZtString_Null<Char>();
     return data_();
   }
 
-  ZuInline unsigned length() const {
+  unsigned length() const {
     return m_length_mallocd_builtin & ~(3U<<30U);
   }
-  ZuInline unsigned size() const {
+  unsigned size() const {
     uint32_t u = m_size_owned_null;
     return u & ~(uint32_t)(((int32_t)u)>>31) & ~(3U<<30U);
   }
-  ZuInline bool mallocd() const { return (m_length_mallocd_builtin>>30U) & 1U; }
-  ZuInline bool builtin() const { return m_length_mallocd_builtin>>31U; }
-  ZuInline bool owned() const { return (m_size_owned_null>>30U) & 1U; }
+  bool mallocd() const { return (m_length_mallocd_builtin>>30U) & 1U; }
+  bool builtin() const { return m_length_mallocd_builtin>>31U; }
+  bool owned() const { return (m_size_owned_null>>30U) & 1U; }
 
 private:
-  ZuInline void length__(unsigned v) {
+  void length__(unsigned v) {
     m_length_mallocd_builtin = (m_length_mallocd_builtin & (3U<<30U)) | v;
   }
-  ZuInline void mallocd(bool v) {
+  void mallocd(bool v) {
     m_length_mallocd_builtin =
       (m_length_mallocd_builtin & ~(1U<<30U)) | (((uint32_t)v)<<30U);
   }
-  ZuInline void builtin(bool v) {
+  void builtin(bool v) {
     m_length_mallocd_builtin =
       (m_length_mallocd_builtin & ~(1U<<31U)) | (((uint32_t)v)<<31U);
   }
-  ZuInline void length_mallocd_builtin(unsigned l, bool m, bool b) {
+  void length_mallocd_builtin(unsigned l, bool m, bool b) {
     m_length_mallocd_builtin = l | (((uint32_t)m)<<30U) | (((uint32_t)b)<<31U);
   }
-  ZuInline unsigned size_() const {
+  unsigned size_() const {
     return m_size_owned_null & ~(3U<<30U);
   }
-  ZuInline void size_(unsigned v) {
+  void size_(unsigned v) {
     m_size_owned_null = (m_size_owned_null & (3U<<30U)) | v;
   }
-  ZuInline void owned(bool v) {
+  void owned(bool v) {
     m_size_owned_null =
       (m_size_owned_null & ~(1U<<30U)) | (((uint32_t)v)<<30U);
   }
-  ZuInline bool null__() const { return m_size_owned_null>>31U; }
-  ZuInline void null__(bool v) {
+  bool null__() const { return m_size_owned_null>>31U; }
+  void null__(bool v) {
     m_size_owned_null =
       (m_size_owned_null & ~(1U<<31U)) | (((uint32_t)v)<<31U);
   }
-  ZuInline void size_owned_null(unsigned z, bool o, bool n) {
+  void size_owned_null(unsigned z, bool o, bool n) {
     m_size_owned_null = z | (((uint32_t)o)<<30U) | (((uint32_t)n)<<31U);
   }
 
@@ -733,7 +732,7 @@ public:
 
 // reset to null string
 
-  ZuInline void null() {
+  void null() {
     free_();
     null_();
   }
@@ -824,50 +823,50 @@ public:
 public:
 // hash()
 
-  ZuInline uint32_t hash() const { return ZuHash<ZtString_>::hash(*this); }
+  uint32_t hash() const { return ZuHash<ZtString_>::hash(*this); }
 
 // buffer access
 
-  ZuInline auto buf() {
+  auto buf() {
     return ZuArray{data(), size() - 1};
   }
-  ZuInline auto cbuf() const {
+  auto cbuf() const {
     return ZuArray{data(), length()};
   }
 
 // comparison
 
-  ZuInline bool operator !() const { return !length(); }
+  bool operator !() const { return !length(); }
 
   template <typename S>
-  ZuInline int cmp(const S &s) const {
+  int cmp(const S &s) const {
     return ZuCmp<ZtString_>::cmp(*this, s);
   }
   template <typename S>
-  ZuInline bool less(const S &s) const {
+  bool less(const S &s) const {
     return ZuCmp<ZtString_>::less(*this, s);
   }
   template <typename S>
-  ZuInline bool greater(const S &s) const {
+  bool greater(const S &s) const {
     return ZuCmp<ZtString_>::less(s, *this);
   }
   template <typename S>
-  ZuInline bool equals(const S &s) const {
+  bool equals(const S &s) const {
     return ZuCmp<ZtString_>::equals(*this, s);
   }
 
   template <typename S>
-  ZuInline bool operator ==(const S &s) const { return equals(s); }
+  bool operator ==(const S &s) const { return equals(s); }
   template <typename S>
-  ZuInline bool operator !=(const S &s) const { return !equals(s); }
+  bool operator !=(const S &s) const { return !equals(s); }
   template <typename S>
-  ZuInline bool operator >(const S &s) const { return greater(s); }
+  bool operator >(const S &s) const { return greater(s); }
   template <typename S>
-  ZuInline bool operator >=(const S &s) const { return !less(s); }
+  bool operator >=(const S &s) const { return !less(s); }
   template <typename S>
-  ZuInline bool operator <(const S &s) const { return less(s); }
+  bool operator <(const S &s) const { return less(s); }
   template <typename S>
-  ZuInline bool operator <=(const S &s) const { return !greater(s); }
+  bool operator <=(const S &s) const { return !greater(s); }
 
   int cmp(const Char *s, unsigned n) const {
     if (null__()) return s ? -1 : 0;
@@ -891,38 +890,38 @@ public:
 
 private:
   template <typename S>
-  ZuInline typename MatchZtString<S, ZtString_<Char> >::T
+  typename MatchZtString<S, ZtString_<Char> >::T
     add(const S &s) const { return add(s.data_(), s.length()); }
   template <typename S>
-  ZuInline typename MatchAnyCString<S, ZtString_<Char> >::T
+  typename MatchAnyCString<S, ZtString_<Char> >::T
   add(S &&s_) const {
     ZuArray<const Char> s(ZuFwd<S>(s_));
     return add(s.data(), s.length());
   }
   template <typename S>
-  ZuInline typename MatchOtherString<S, ZtString_<Char> >::T
+  typename MatchOtherString<S, ZtString_<Char> >::T
   add(S &&s_) const {
     ZuArray<const Char> s(ZuFwd<S>(s_));
     return add(s.data(), s.length());
   }
   template <typename C>
-  ZuInline typename MatchChar<C, ZtString_<Char> >::T
+  typename MatchChar<C, ZtString_<Char> >::T
   add(C c) const {
     return add(&c, 1);
   }
 
   template <typename S>
-  ZuInline typename MatchChar2String<S, ZtString_<Char> >::T
+  typename MatchChar2String<S, ZtString_<Char> >::T
     add(const S &s) const { return add(ZtString_(s)); }
   template <typename C>
-  ZuInline typename MatchChar2<C, ZtString_<Char> >::T
+  typename MatchChar2<C, ZtString_<Char> >::T
     add(C c) const { return add(ZtString_(c)); }
 
   template <typename P>
-  ZuInline typename MatchPDelegate<P, ZtString_<Char> >::T
+  typename MatchPDelegate<P, ZtString_<Char> >::T
       add(const P &p) const { return add(ZtString_(p)); }
   template <typename P>
-  ZuInline typename MatchPBuffer<P, ZtString_<Char> >::T
+  typename MatchPBuffer<P, ZtString_<Char> >::T
       add(const P &p) const { return add(ZtString_(p)); }
 
   ZtString_<Char> add(
@@ -953,12 +952,12 @@ private:
       splice__(0, length(), 0, s.data_(), s.length());
   }
   template <typename S>
-  ZuInline typename MatchAnyCString<S>::T append_(S &&s_) {
+  typename MatchAnyCString<S>::T append_(S &&s_) {
     ZuArray<const Char> s(ZuFwd<S>(s_));
     splice__(0, length(), 0, s.data(), s.length());
   }
   template <typename S>
-  ZuInline typename MatchOtherString<S>::T append_(S &&s_) {
+  typename MatchOtherString<S>::T append_(S &&s_) {
     ZuArray<const Char> s(ZuFwd<S>(s_));
     splice__(0, length(), 0, s.data(), s.length());
   }
@@ -976,10 +975,10 @@ private:
   }
 
   template <typename S>
-  ZuInline typename MatchChar2String<S>::T append_(const S &s)
+  typename MatchChar2String<S>::T append_(const S &s)
     { append_(ZtString_(s)); }
   template <typename C>
-  ZuInline typename MatchChar2<C>::T append_(C c)
+  typename MatchChar2<C>::T append_(C c)
     { append_(ZtString_(c)); }
 
   template <typename P>
@@ -998,45 +997,45 @@ private:
     length_(n + ZuPrint<P>::print(data + n, o, p));
   }
 
-  template <typename V> ZuInline typename MatchReal<V>::T append_(V v)
+  template <typename V> typename MatchReal<V>::T append_(V v)
     { append_(ZuBoxed(v)); }
 
 public:
-  ZuInline void append(const Char *data, unsigned length) {
+  void append(const Char *data, unsigned length) {
     if (data) splice__(0, this->length(), 0, data, length);
   }
 
 // splice()
 
-  ZuInline void splice(
+  void splice(
       ZtString_ &removed, int offset, int length, const ZtString_ &replace) {
     splice_(&removed, offset, length, replace);
   }
 
-  ZuInline void splice(int offset, int length, const ZtString_ &replace) {
+  void splice(int offset, int length, const ZtString_ &replace) {
     splice_(0, offset, length, replace);
   }
 
-  ZuInline void splice(ZtString_ &removed, int offset, int length) {
+  void splice(ZtString_ &removed, int offset, int length) {
     splice__(&removed, offset, length, 0, 0);
   }
 
-  ZuInline void splice(int offset) {
+  void splice(int offset) {
     splice__(0, offset, INT_MAX, 0, 0);
   }
 
-  ZuInline void splice(int offset, int length) {
+  void splice(int offset, int length) {
     splice__(0, offset, length, 0, 0);
   }
 
   template <typename S>
-  ZuInline void splice(
+  void splice(
       ZtString_ &removed, int offset, int length, const S &replace) {
     splice_(&removed, offset, length, replace);
   }
 
   template <typename S>
-  ZuInline void splice(int offset, int length, const S &replace) {
+  void splice(int offset, int length, const S &replace) {
     splice_(0, offset, length, replace);
   }
 
@@ -1051,41 +1050,41 @@ private:
       splice__(removed, offset, length, s.data_(), s.length());
   }
   template <typename S>
-  ZuInline typename MatchAnyCString<S>::T splice_(
+  typename MatchAnyCString<S>::T splice_(
       ZtString_ *removed, int offset, int length, S &&s_) {
     ZuArray<const Char> s(ZuFwd<S>(s_));
     splice__(removed, offset, length, s.data(), s.length());
   }
   template <typename S>
-  ZuInline typename MatchOtherString<S>::T splice_(
+  typename MatchOtherString<S>::T splice_(
       ZtString_ *removed, int offset, int length, S &&s_) {
     ZuArray<const Char> s(ZuFwd<S>(s_));
     splice__(removed, offset, length, s.data(), s.length());
   }
   template <typename C>
-  ZuInline typename MatchChar<C>::T splice_(
+  typename MatchChar<C>::T splice_(
       ZtString_ *removed, int offset, int length, C c) {
     splice__(removed, offset, length, &c, 1);
   }
   template <typename S>
-  ZuInline typename MatchChar2String<S>::T splice_(
+  typename MatchChar2String<S>::T splice_(
       ZtString_ *removed, int offset, int length, const S &s) {
     splice_(removed, offset, length, ZtString_(s));
   }
   template <typename C>
-  ZuInline typename MatchChar2<C>::T splice_(
+  typename MatchChar2<C>::T splice_(
       ZtString_ *removed, int offset, int length, C c) {
     splice_(removed, offset, length, ZtString_(c));
   }
 
 public:
-  ZuInline void splice(
+  void splice(
       ZtString_ &removed, int offset, int length,
       const Char *replace, unsigned rlength) {
     splice__(&removed, offset, length, replace, rlength);
   }
 
-  ZuInline void splice(
+  void splice(
       int offset, int length, const Char *replace, unsigned rlength) {
     splice__(0, offset, length, replace, rlength);
   }
@@ -1195,7 +1194,7 @@ private:
 
 private:
   // match whitespace
-  ZuInline auto matchS() noexcept {
+  auto matchS() noexcept {
     return [](int c) {
       return c == ' ' || c == '\t' || c == '\n' || c == '\r';
     };
@@ -1211,7 +1210,7 @@ public:
     while (--o >= 0 && match(data[o]));
     length_(o + 1);
   }
-  ZuInline void chomp() noexcept { return chomp(matchS()); }
+  void chomp() noexcept { return chomp(matchS()); }
 
   // remove leading characters
   template <typename Match>
@@ -1226,7 +1225,7 @@ public:
     memmove(data, data + o, n * sizeof(Char));
     length_(n);
   }
-  ZuInline void trim() noexcept { return trim(matchS()); }
+  void trim() noexcept { return trim(matchS()); }
 
   // remove leading & trailing characters
   template <typename Match>
@@ -1245,7 +1244,7 @@ public:
     memmove(data, data + o, n * sizeof(Char));
     length_(n);
   }
-  ZuInline void strip() noexcept { return strip(matchS()); }
+  void strip() noexcept { return strip(matchS()); }
  
 // sprintf(), vsprintf()
 
@@ -1342,7 +1341,7 @@ private:
 
 template <typename Char>
 template <typename S>
-ZuInline void ZtString_<Char>::convert_(const S &s, ZtIconv *iconv)
+inline void ZtString_<Char>::convert_(const S &s, ZtIconv *iconv)
 {
   null_();
   iconv->convert(*this, s);
@@ -1395,25 +1394,25 @@ inline void ZtJoin(const D &d, const A &a_, O &o) {
   }
 }
 template <typename D, typename A>
-ZtString ZtJoin(const D &d, const A &a) {
+inline ZtString ZtJoin(const D &d, const A &a) {
   ZtString o;
   ZtJoin(d, a, o);
   return o;
 }
 template <typename D, typename E>
-ZtString ZtJoin(const D &d, const std::initializer_list<E> &a) {
+inline ZtString ZtJoin(const D &d, const std::initializer_list<E> &a) {
   ZtString o;
   ZtJoin(d, ZuArray<const E>(a), o);
   return o;
 }
 template <typename D, typename A>
-ZtWString ZtWJoin(const D &d, const A &a) {
+inline ZtWString ZtWJoin(const D &d, const A &a) {
   ZtWString o;
   ZtJoin(d, a, o);
   return o;
 }
 template <typename D, typename E>
-ZtWString ZtWJoin(const D &d, const std::initializer_list<E> &a) {
+inline ZtWString ZtWJoin(const D &d, const std::initializer_list<E> &a) {
   ZtWString o;
   ZtJoin(d, ZuArray<E>(a), o);
   return o;
@@ -1427,19 +1426,19 @@ ZtWString ZtWJoin(const D &d, const std::initializer_list<E> &a) {
 // prefix and the data are possibly/probably transient and subsequently
 // overwritten/freed by the caller in the interim
 struct ZtAPI ZtHexDump {
-  ZuInline ZtHexDump(ZuString prefix_, const void *data_, unsigned length_) :
+  ZtHexDump(ZuString prefix_, const void *data_, unsigned length_) :
       prefix(prefix_), data(0), length(length_) {
     if (ZuLikely(data = (uint8_t *)::malloc(length)))
       memcpy(data, data_, length);
   }
-  ZuInline ~ZtHexDump() {
+  ~ZtHexDump() {
     if (ZuLikely(data)) ::free(data);
   }
-  ZuInline ZtHexDump(ZtHexDump &&d) :
+  ZtHexDump(ZtHexDump &&d) :
     prefix(ZuMv(d.prefix)), data(d.data), length(d.length) {
     d.data = 0;
   }
-  ZuInline ZtHexDump &operator =(ZtHexDump &&d) {
+  ZtHexDump &operator =(ZtHexDump &&d) {
     if (ZuLikely(this != &d)) {
       prefix = ZuMv(d.prefix);
       data = d.data;
@@ -1459,11 +1458,11 @@ private:
   unsigned	length;
 };
 template <> struct ZuPrint<ZtHexDump> : public ZuPrintDelegate {
-  ZuInline static void print(ZmStream &s, const ZtHexDump &d) {
+  static void print(ZmStream &s, const ZtHexDump &d) {
     d.print(s);
   }
   template <typename S>
-  ZuInline static void print(S &s_, const ZtHexDump &d) {
+  static void print(S &s_, const ZtHexDump &d) {
     ZmStream s(s_);
     d.print(s);
   }

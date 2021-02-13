@@ -69,7 +69,7 @@ int ZiDir::read(Path &name, ZeError *e)
   } else {
     if (!FindNextFile(m_handle, &wfd)) goto error;
   }
-  name = Path(Path::Copy, static_cast<const TCHAR *>(wfd.cFileName));
+  name = Path{Path::Copy, static_cast<const TCHAR *>(wfd.cFileName)};
   return Zi::OK;
 
 error:
@@ -98,7 +98,7 @@ error:
 
   if (i = readdir_r(m_dir, &d, &r)) goto error;
   if (!r) return Zi::EndOfFile;
-  name = Path(Path::Copy, &d.d_name[0]);
+  name = Path{Path::Copy, &d.d_name[0]};
   return Zi::OK;
 
 error:

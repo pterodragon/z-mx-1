@@ -1384,16 +1384,10 @@ private:
     mx()->add(ZmFn<>{this, [](ZDash *app) { app->prompt_(); }});
   }
   void prompt_() {
-    ZtString cmd;
-next:
-    try {
-      cmd = Zrl::readline_(m_prompt);
-    } catch (const Zrl::EndOfFile &) {
-      post();
-      return;
-    }
-    if (!cmd) goto next;
-    send(ZuMv(cmd));
+    for (;;)
+      if (ZtString cmd = Zrl::readline(m_prompt))
+	send(ZuMv(cmd));
+      else if (!Zrl::running()) { post(); return; }
   }
 
   void send(ZtString cmd) {

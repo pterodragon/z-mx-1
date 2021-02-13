@@ -198,51 +198,52 @@ public:
     Fn(ZuFwd<P1>(p1), ZuFwd<P2>(p2), ZuFwd<Args>(args)...) { }
 };
 
-struct ZeEvent_ : public ZmObject { };
-struct ZeEvent_HeapID {
-  static constexpr const char *id() { return "ZeEvent"; }
-};
 using ZeEvent_Queue =
-  ZmList<ZeEvent_,
+  ZmList<ZmObject,
     ZmListNodeIsItem<true,
       ZmListObject<ZmObject,
 	ZmListLock<ZmNoLock,
-	  ZmListHeapID<ZeEvent_HeapID> > > > >;
-class ZeEvent : public ZeEvent_Queue::Node {
-  ZeEvent(const ZeEvent &) = delete;
-  ZeEvent &operator =(const ZeEvent &) = delete;
+	  ZmListHeapID<ZuNull> > > > >;
+template <typename Heap>
+class ZeEvent_ : public Heap, public ZeEvent_Queue::Node {
+  ZeEvent_(const ZeEvent_ &) = delete;
+  ZeEvent_ &operator =(const ZeEvent_ &) = delete;
 
   using ThreadID = ZmPlatform::ThreadID;
 
 public:
-  using MessageFn = ZeMessageFn_<ZeEvent>;
+  using MessageFn = ZeMessageFn_<ZeEvent_>;
 
   // from anything else
   template <typename Msg>
-  ZeEvent(int severity, const char *filename, int lineNumber,
+  ZeEvent_(int severity, const char *filename, int lineNumber,
       const char *function, Msg &&msg) :
-    m_time(ZmTime::Now), m_tid(ZmPlatform::getTID()),
-    m_severity(severity), m_filename(filename),
-    m_lineNumber(lineNumber), m_function(function),
-    m_messageFn(ZuFwd<Msg>(msg)) { }
+    m_time{ZmTime::Now}, m_tid{ZmPlatform::getTID()},
+    m_severity{severity}, m_filename{filename},
+    m_lineNumber{lineNumber}, m_function{function},
+    m_messageFn{ZuFwd<Msg>(msg)} { }
 
-  ZuInline ZmTime time() const { return m_time; }
-  ZuInline ZmPlatform::ThreadID tid() const { return m_tid; }
-  ZuInline int severity() const { return m_severity; }
-  ZuInline const char *filename() const { return m_filename; }
-  ZuInline int lineNumber() const { return m_lineNumber; }
-  ZuInline const char *function() const { return m_function; }
-  ZuInline MessageFn messageFn() const { return m_messageFn; }
+  ZmTime time() const { return m_time; }
+  ZmPlatform::ThreadID tid() const { return m_tid; }
+  int severity() const { return m_severity; }
+  const char *filename() const { return m_filename; }
+  int lineNumber() const { return m_lineNumber; }
+  const char *function() const { return m_function; }
+  MessageFn messageFn() const { return m_messageFn; }
 
   struct Message {
-    ZuInline void print(ZmStream &s) const { e.messageFn()(e, s); }
-    template <typename S> ZuInline void print(S &s_) const {
+    void print(ZmStream &s) const { e.messageFn()(e, s); }
+    template <typename S> void print(S &s_) const {
       ZmStream s(s_);
       e.messageFn()(e, s);
     }
-    const ZeEvent	&e;
+    const ZeEvent_	&e;
+    friend ZuPrintFn ZuPrintType(Message *);
   };
-  ZuInline Message message() const { return Message{*this}; }
+
+  Message message() const { return Message{*this}; }
+  template <typename S> void print(S &s) const { message().print(s); }
+  friend ZuPrintFn ZuPrintType(ZeEvent_ *);
 
 private:
   ZmTime	m_time;
@@ -253,12 +254,12 @@ private:
   const char	*m_function;
   MessageFn	m_messageFn;
 };
-using ZeMessageFn = ZeEvent::MessageFn;
-template <> struct ZuPrint<ZeEvent::Message> : public ZuPrintFn { };
-template <> struct ZuPrint<ZeEvent> : public ZuPrintDelegate {
-  template <typename S>
-  ZuInline static void print(S &s, const ZeEvent &e) { s << e.message(); }
+struct ZeEvent_HeapID {
+  static constexpr const char *id() { return "ZeEvent"; }
 };
+using ZeEvent_Heap = ZmHeap<ZeEvent_HeapID, sizeof(ZeEvent_<ZuNull>)>;
+using ZeEvent = ZeEvent_<ZeEvent_Heap>;
+using ZeMessageFn = ZeEvent::MessageFn;
 
 class ZeAPI ZePlatform : public ZePlatform_ {
 public:

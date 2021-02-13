@@ -34,7 +34,7 @@
 
 template <>
 struct ZmCleanup<ZmHeapMgr_> {
-  enum { Level = ZmCleanupLevel::Heap };
+  enum { Level = ZmCleanupLevel::HeapMgr };
 };
 
 class ZmHeapMgr;

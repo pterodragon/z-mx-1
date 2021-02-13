@@ -168,7 +168,7 @@ public:
   // length from deferred strlen
   template <typename A>
   ZuInline ZuArray(const A &a, typename MatchCString<A>::T *_ = 0) :
-	m_data(a), m_length(!a ? 0 : -1) { }
+	m_data(reinterpret_cast<T *>(a)), m_length(!a ? 0 : -1) { }
   template <typename A>
   ZuInline typename MatchCString<A, ZuArray &>::T operator =(A &&a) {
     m_data = a;
@@ -203,22 +203,24 @@ public:
   ZuInline const T *data() const { return m_data; }
   ZuInline T *data() { return m_data; }
 
-  ZuInline unsigned length() const { return length_<T>(); }
+  ZuInline unsigned length() const { return length_(); }
 
 private:
-  template <typename Char>
+  template <typename V = T>
   ZuInline typename ZuIfT<
-    ZuConversion<Char, char>::Same ||
-    ZuConversion<Char, wchar_t>::Same, unsigned>::T length_() const {
+      ZuEquivChar<V, char>::Same ||
+      ZuEquivChar<V, wchar_t>::Same, unsigned>::T length_() const {
+    using Char = typename ZuNormChar<V>::T;
     if (ZuUnlikely(m_length < 0))
       return const_cast<ZuArray *>(this)->m_length =
-	ZuTraits<const T *>::length(m_data);
+	ZuTraits<const Char *>::length(
+	    reinterpret_cast<const Char *>(m_data));
     return m_length;
   }
-  template <typename Char>
+  template <typename V = T>
   ZuInline typename ZuIfT<
-    !ZuConversion<Char, char>::Same &&
-    !ZuConversion<Char, wchar_t>::Same, unsigned>::T length_() const {
+    !ZuEquivChar<V, char>::Same &&
+    !ZuEquivChar<V, wchar_t>::Same, unsigned>::T length_() const {
     return m_length;
   }
 

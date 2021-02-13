@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// container node (used by ZmHash, ZmRBTree, ...)
+// intrusive container node (used by ZmHash, ZmRBTree, ...)
 
 // ZmNode - node containing single item (no key/value)
 // ZmKVNode - node containing key with (optional) value
@@ -83,7 +83,7 @@ public:
 template <class Heap, bool NodeIsKey, bool NodeIsVal,
 	 template <typename, typename, bool, bool> class Fn,
 	 typename Key, typename Val> class ZmKVNode;
-// node contains key, value (default)
+// node contains both key, value (default)
 template <class Heap, template <typename, typename, bool, bool> class Fn_,
 	 typename Key, typename Val>
 	   class ZmKVNode<Heap, 0, 0, Fn_, Key, Val> :
@@ -132,7 +132,7 @@ public:
 private:
   Key			m_key;
 };
-// node derives from key
+// node derives from key, contains value
 template <class Heap,
   template <typename, typename, bool, bool> class Fn_,
   typename Key, typename Val> class ZmKVNode<Heap, 1, 0, Fn_, Key, Val> :
@@ -179,7 +179,7 @@ public:
   ZuInline Key &key() { return *this; }
   ZuInline ZuNull &val() const { static ZuNull val; return val; }
 };
-// node derives from value
+// node contains key, derives from value
 template <class Heap,
   template <typename, typename, bool, bool> class Fn_,
   typename Key, typename Val> class ZmKVNode<Heap, 0, 1, Fn_, Key, Val> :
@@ -242,7 +242,7 @@ template <typename O> struct ZmNodePolicy_<O, true> {
   template <typename T> ZuInline void nodeDeref(T &&o) { ZmDEREF(ZuFwd<T>(o)); }
   template <typename T> ZuInline void nodeDelete(T &&) { }
 };
-// own nodes (with caller-specified base), delete if not returned to caller
+// own nodes (with app-specified base), delete if not returned to caller
 template <typename O> struct ZmNodePolicy_<O, false> {
   using Object = O;
   template <typename T_> struct Ref { using T = T_ *; };

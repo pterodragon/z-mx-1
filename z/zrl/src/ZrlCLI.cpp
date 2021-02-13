@@ -30,11 +30,34 @@ namespace {
 
 void CLI::init(App app)
 {
+  Guard guard(m_lock);
+  switch (m_state) {
+    case Running:
+    case Opened:
+    case Initialized:
+      return;
+    case Created:
+      break;
+  }
+  m_state = Initialized;
   app.end = [end = ZuMv(app.end)]() { done.post(); end(); };
-  app.sig = [sig = ZuMv(app.sig)](int i) { done.post(); sig(i); };
+  app.sig = [sig = ZuMv(app.sig)](int i) {
+    switch (i) {
+      case SIGINT:
+      case SIGQUIT:
+	done.post();
+	sig(i);
+	return true;
+      default:
+	sig(i);
+	return false;
+    }
+  };
   app.open = [open = ZuMv(app.open)](bool ok) { openOK = ok; done.post(); };
   Editor::init(ZuMv(app));
   m_sched = new ZmScheduler{ZmSchedParams{}.id("ZrlCLI").nThreads(1)};
+  // FIXME - permit loading multiple maps
+  // FIXME - check loading map with conflicting ID replaces old with new
   if (auto map = ::getenv("ZRL_MAP"))
     if (!loadMap(map, true)) std::cerr << loadError() << '\n' << std::flush;
   if (auto mapID = ::getenv("ZRL_MAPID"))
@@ -43,11 +66,45 @@ void CLI::init(App app)
 
 void CLI::final()
 {
+  Guard guard(m_lock);
+  switch (m_state) {
+    case Running:
+      stop_();
+    case Opened:
+      close_();
+    case Initialized:
+      break;
+    case Created:
+      return;
+  }
+  final_();
+  m_state = Created;
+}
+
+void CLI::final_()
+{
   Editor::final();
   m_sched = nullptr;
 }
 
 bool CLI::open()
+{
+  Guard guard(m_lock);
+  switch (m_state) {
+    case Running:
+    case Opened:
+      return true;
+    case Initialized:
+      break;
+    case Created:
+      return false;
+  }
+  bool ok = open_();
+  m_state = Opened;
+  return ok;
+}
+
+bool CLI::open_()
 {
   m_sched->start();
   Editor::open(m_sched, 1);
@@ -57,18 +114,61 @@ bool CLI::open()
 
 void CLI::close()
 {
+  Guard guard(m_lock);
+  switch (m_state) {
+    case Running:
+      stop_();
+    case Opened:
+      break;
+    case Initialized:
+    case Created:
+      return;
+  }
+  close_();
+  m_state = Initialized;
+}
+
+void CLI::close_()
+{
   Editor::close();
   m_sched->stop();
 }
 
-void CLI::start(ZuString prompt)
+bool CLI::start(ZtArray<uint8_t> prompt)
 {
-  Editor::start([prompt = ZtArray<uint8_t>{prompt}](Editor &editor) mutable {
-    editor.prompt(ZuMv(prompt));
+  Guard guard(m_lock);
+  switch (m_state) {
+    case Running:
+      return true;
+    case Opened:
+      break;
+    case Initialized:
+    case Created:
+      return false;
+  }
+  Editor::start([prompt = ZuMv(prompt)](Editor &editor) mutable {
+    editor.prompt_(ZuMv(prompt));
   });
+  m_state = Running;
+  return true;
 }
 
 void CLI::stop()
+{
+  Guard guard(m_lock);
+  switch (m_state) {
+    case Running:
+      break;
+    case Opened:
+    case Initialized:
+    case Created:
+      return;
+  }
+  stop_();
+  m_state = Opened;
+}
+
+void CLI::stop_()
 {
   Editor::stop();
 }

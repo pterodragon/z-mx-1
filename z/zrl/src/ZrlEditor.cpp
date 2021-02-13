@@ -1869,10 +1869,10 @@ bool Editor::cmdTransUnixWord(Cmd, int32_t)
   return false;
 }
 
-typedef void (*TransformCharFn)(uint8_t, uint8_t &);
-typedef void (*TransformSpanFn)(void *, ZuArray<uint8_t>);
-
 namespace {
+using TransformCharFn = Editor::TransformCharFn;
+using TransformSpanFn = Editor::TransformSpanFn;
+
 bool isupper__(char c) { return c >= 'A' && c <= 'Z'; }
 char toupper__(char c)
 {
@@ -1901,9 +1901,8 @@ TransformCharFn toggleFn() {
       replace = toupper__(c);
   };
 }
-TransformSpanFn spanFn(TransformCharFn) {
-  return [](void *fn_, ZuArray<uint8_t> replace) {
-    auto fn = reinterpret_cast<TransformCharFn>(fn_);
+TransformSpanFn spanFn() {
+  return [](TransformCharFn fn, ZuArray<uint8_t> replace) {
     for (unsigned i = 0, n = replace.length(); i < n; ) {
       uint8_t c = replace[i];
       unsigned j = ZuUTF8::in(c);
@@ -1914,7 +1913,7 @@ TransformSpanFn spanFn(TransformCharFn) {
   };
 }
 TransformSpanFn capFn() {
-  return [](void *, ZuArray<uint8_t> replace) {
+  return [](TransformCharFn, ZuArray<uint8_t> replace) {
     if (unsigned n = replace.length()) {
       unsigned i = 0;
       uint8_t c = replace[0];
@@ -1955,7 +1954,7 @@ TransformSpanFn capFn() {
 }
 } // anon namespace
 
-void Editor::transformWord(TransformSpanFn fn, void *fnContext)
+void Editor::transformWord(TransformSpanFn fn, TransformCharFn charFn)
 {
   unsigned pos = m_tty.pos();
   const auto &line = m_tty.line();
@@ -1971,12 +1970,12 @@ void Editor::transformWord(TransformSpanFn fn, void *fnContext)
   replace.length(end - begin);
   const auto &data = line.data();
   memcpy(&replace[0], &data[begin], end - begin);
-  fn(fnContext, replace);
+  fn(charFn, replace);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
   splice(begin, span, replace, span);
 }
 
-void Editor::transformVis(TransformSpanFn fn, void *fnContext)
+void Editor::transformVis(TransformSpanFn fn, TransformCharFn charFn)
 {
   const auto &line = m_tty.line();
   if (m_context.markPos < 0 || m_context.highPos < 0) return;
@@ -1987,7 +1986,7 @@ void Editor::transformVis(TransformSpanFn fn, void *fnContext)
   replace.length(end - begin);
   const auto &data = line.data();
   memcpy(&replace[0], &data[begin], end - begin);
-  fn(fnContext, replace);
+  fn(charFn, replace);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
   splice(begin, span, replace, span);
 }
@@ -1995,7 +1994,7 @@ void Editor::transformVis(TransformSpanFn fn, void *fnContext)
 bool Editor::cmdCapGlyph(Cmd cmd, int32_t)
 {
   auto charFn = toggleFn();
-  auto fn = spanFn(charFn);
+  auto fn = spanFn();
   unsigned pos = m_tty.pos();
   const auto &line = m_tty.line();
   if (pos == line.width()) pos = line.align(pos - 1);
@@ -2009,7 +2008,7 @@ bool Editor::cmdCapGlyph(Cmd cmd, int32_t)
   replace.length(end - begin);
   const auto &data = line.data();
   memcpy(&replace[0], &data[begin], end - begin);
-  fn(reinterpret_cast<void *>(charFn), replace);
+  fn(charFn, replace);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
   splice(begin, span, replace, span);
   align(m_tty.pos());
@@ -2017,14 +2016,12 @@ bool Editor::cmdCapGlyph(Cmd cmd, int32_t)
 }
 bool Editor::cmdLowerWord(Cmd, int32_t)
 {
-  auto fn = lowerFn();
-  transformWord(spanFn(fn), reinterpret_cast<void *>(fn));
+  transformWord(spanFn(), lowerFn());
   return false;
 }
 bool Editor::cmdUpperWord(Cmd, int32_t)
 {
-  auto fn = upperFn();
-  transformWord(spanFn(fn), reinterpret_cast<void *>(fn));
+  transformWord(spanFn(), upperFn());
   return false;
 }
 bool Editor::cmdCapWord(Cmd, int32_t)
@@ -2035,14 +2032,12 @@ bool Editor::cmdCapWord(Cmd, int32_t)
 
 bool Editor::cmdLowerVis(Cmd, int32_t)
 {
-  auto fn = lowerFn();
-  transformVis(spanFn(fn), reinterpret_cast<void *>(fn));
+  transformVis(spanFn(), lowerFn());
   return false;
 }
 bool Editor::cmdUpperVis(Cmd, int32_t)
 {
-  auto fn = upperFn();
-  transformVis(spanFn(fn), reinterpret_cast<void *>(fn));
+  transformVis(spanFn(), upperFn());
   return false;
 }
 bool Editor::cmdCapVis(Cmd, int32_t)

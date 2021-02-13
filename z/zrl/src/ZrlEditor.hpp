@@ -659,10 +659,11 @@ private:
   bool cmdTransUnixWord(Cmd, int32_t);
 
 public:
-  typedef void (*TransformSpanFn)(void *, ZuArray<uint8_t>);
+  typedef void (*TransformCharFn)(uint8_t, uint8_t &);
+  typedef void (*TransformSpanFn)(TransformCharFn, ZuArray<uint8_t>);
 private:
-  void transformWord(TransformSpanFn fn, void *fnContext);
-  void transformVis(TransformSpanFn fn, void *fnContext);
+  void transformWord(TransformSpanFn, TransformCharFn);
+  void transformVis(TransformSpanFn, TransformCharFn);
 
   bool cmdCapGlyph(Cmd, int32_t);
   bool cmdLowerWord(Cmd, int32_t);

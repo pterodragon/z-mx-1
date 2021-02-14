@@ -30,6 +30,14 @@
 #include <zlib/ZrlLib.hpp>
 #endif
 
+#include <signal.h>
+#ifndef SIGQUIT
+#define SIGQUIT 3
+#endif
+#ifndef SIGTSTP
+#define SIGTSTP 20
+#endif
+
 #include <zlib/ZuPtr.hpp>
 #include <zlib/ZuPrint.hpp>
 
@@ -414,6 +422,7 @@ struct CmdContext {
   int			editArg = -1;	// repeat count for ''
   unsigned		undoNext = 0;	// undo index of next op
   int			undoIndex = -1;	// undo index of undo/redo
+  int			undoPos = -1;	// position prior to first undo
 
   // completion context
   unsigned		compPrefixOff = 0;	// completion prefix offset

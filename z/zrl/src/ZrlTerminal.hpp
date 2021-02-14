@@ -180,6 +180,7 @@ public:
   void close(CloseFn);
 
   bool isOpen() const; // blocking
+  bool isOpen_() const; // terminal thread
 
   void start(StartFn startFn, KeyFn keyFn);
   void stop();

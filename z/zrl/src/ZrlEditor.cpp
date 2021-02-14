@@ -19,6 +19,11 @@
 
 // command line interface - line editor
 
+#include <signal.h>
+#ifndef SIGQUIT
+#define SIGQUIT 3
+#endif
+
 #include <zlib/ZuSort.hpp>
 
 #include <zlib/ZrlEditor.hpp>
@@ -1715,6 +1720,7 @@ bool Editor::cmdUndo(Cmd, int32_t vkey)
   if (m_context.undoIndex < 0) {
     if (!m_context.undoNext) return false;
     m_context.undoIndex = m_context.undoNext;
+    m_context.undoPos = m_tty.pos();
   } else {
     if (!m_context.undoIndex) return false;
   }
@@ -1754,9 +1760,18 @@ bool Editor::cmdRedo(Cmd cmd, int32_t vkey)
     } else
       break;
   } while (m_context.undoIndex < m_context.undoNext);
-  if (m_context.undoIndex >= m_context.undoNext)
+  if (m_context.undoIndex >= m_context.undoNext) {
+    if (!align(m_context.undoPos)) m_tty.mv(m_context.undoPos);
     m_context.undoIndex = -1;
-  align(m_tty.pos());
+    m_context.undoPos = -1;
+  } else {
+    if (auto undoOp = m_context.undo.val(m_context.undoIndex)) {
+      auto pos = undoOp->oldPos;
+      if (!align(pos)) m_tty.mv(pos);
+    } else {
+      align(m_tty.pos());
+    }
+  }
   return false;
 }
 
@@ -2221,8 +2236,10 @@ bool Editor::cmdNext(Cmd cmd, int32_t vkey)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
   if (arg < 0) return cmdPrev(cmd.negArg(), vkey);
+  if (!arg) return false;
+  if (arg > m_context.histSaveOff + 1) arg = m_context.histSaveOff + 1;
   if (m_context.histLoadOff >= 0 &&
-      m_context.histLoadOff <= m_context.histSaveOff - arg) {
+      m_context.histLoadOff <= m_context.histSaveOff - (arg - 1)) {
     int offset = m_context.histLoadOff + arg;
     ZuString data;
     m_app.histLoad(offset, data);
@@ -2234,9 +2251,11 @@ bool Editor::cmdPrev(Cmd cmd, int32_t vkey)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
   if (arg < 0) return cmdNext(cmd.negArg(), vkey);
+  if (!arg) return false;
   if (m_context.histLoadOff < 0)
     m_context.histLoadOff = m_context.histSaveOff;
-  if (m_context.histLoadOff >= arg) {
+  if (arg > m_context.histLoadOff) arg = m_context.histLoadOff;
+  {
     bool save = m_context.histLoadOff == m_context.histSaveOff;
     int offset = (m_context.histLoadOff -= arg);
     ZuString data;

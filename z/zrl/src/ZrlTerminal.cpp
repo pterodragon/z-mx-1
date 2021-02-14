@@ -162,15 +162,20 @@ bool Terminal::isOpen() const // synchronous
   bool ok = false;
   thread_local ZmSemaphore sem;
   m_sched->invoke(m_thread, [this, sem = &sem, ok = &ok]() {
-#ifndef _WIN32
-    *ok = m_fd >= 0;
-#else
-    *ok = m_conout != INVALID_HANDLE_VALUE;
-#endif
+    *ok = isOpen_();
     sem->post();
   });
   sem.wait();
   return ok;
+}
+
+bool Terminal::isOpen_() const
+{
+#ifndef _WIN32
+  return m_fd >= 0;
+#else
+  return m_conout != INVALID_HANDLE_VALUE;
+#endif
 }
 
 void Terminal::close(CloseFn fn) // async
@@ -206,6 +211,7 @@ bool Terminal::running() const // synchronous
 
 void Terminal::stop() // async
 {
+  if (!isOpen_()) return;
   Guard guard(m_lock);
   m_sched->wakeFn(m_thread, ZmFn<>());
   m_sched->run_(m_thread, 
@@ -336,21 +342,16 @@ bool Terminal::open_()
 
 #else /* !_Win32 */
 
-  m_wake = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+  m_wake = CreateEvent(nullptr, TRUE, FALSE, L"Local\\ZrlTerminal");
   if (m_wake == NULL || m_wake == INVALID_HANDLE_VALUE) {
     m_wake = INVALID_HANDLE_VALUE;
     m_errorFn(ZrlError("CreateEvent", Zi::IOError, ZeLastError));
     return false;
   }
 
-  if (!AllocConsole()) { // idempotent
-    ZeError e{ZeLastError};
-    close_fds();
-    m_errorFn(ZrlError("CreateEvent", Zi::IOError, e));
-    return false;
-  }
+  AllocConsole(); // idempotent - ignore errors
 
-  m_conin = CreateFile("CONIN$",
+  m_conin = CreateFile(L"CONIN$",
       GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, nullptr,
       OPEN_EXISTING, 0, NULL);
   if (m_conin == INVALID_HANDLE_VALUE) {
@@ -360,7 +361,7 @@ bool Terminal::open_()
     return false;
   }
   {
-    INPUT_REC rec;
+    INPUT_RECORD rec;
     DWORD count;
     if (!PeekConsoleInput(m_conin, &rec, 1, &count)) {
       ZeError e{ZeLastError};
@@ -370,7 +371,7 @@ bool Terminal::open_()
     }
   }
 
-  m_conout = CreateFile("CONOUT$",
+  m_conout = CreateFile(L"CONOUT$",
       GENERIC_WRITE | GENERIC_READ, FILE_SHARE_WRITE, nullptr,
       OPEN_EXISTING, 0, NULL);
   if (m_conout == INVALID_HANDLE_VALUE) {
@@ -380,7 +381,7 @@ bool Terminal::open_()
     return false;
   }
 
-  m_coninCP = GetConsoleInputCP();
+  m_coninCP = GetConsoleCP();
   GetConsoleMode(m_conin, &m_coninMode);
 
   m_conoutCP = GetConsoleOutputCP();
@@ -388,6 +389,7 @@ bool Terminal::open_()
 
   SetConsoleMode(m_conin, m_coninMode &
       ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT));
+  if (m_coninCP != 65001) SetConsoleCP(65001);
 
 #endif /* !_WIN32 */
 
@@ -644,7 +646,7 @@ void Terminal::close_()
 
   // restore console
   SetConsoleMode(m_conin, m_coninMode);
-  SetConsoleInputCP(m_coninCP);
+  if (m_coninCP != 65001) SetConsoleCP(m_coninCP);
 
 #endif /* !_WIN32 */
 
@@ -682,6 +684,12 @@ void Terminal::close_fds()
 void Terminal::start_()
 {
   if (m_running) return;
+
+  if (!isOpen_()) {
+    m_errorFn("Terminal::start_() terminal not successfully opened");
+    return;
+  }
+
   m_running = true;
 
 #ifndef _WIN32
@@ -788,7 +796,7 @@ void Terminal::cursor_on()
 #ifndef _WIN32
   if (m_cnorm) tputs(m_cnorm);
 #else
-  m_out << "\x1b[?12l\x1b[?25h";
+  m_out << "\x1b[?25h";
 #endif
 }
 
@@ -876,7 +884,7 @@ void Terminal::read()
 #ifndef _WIN32
   struct epoll_event ev;
 #else
-  DWORD handles[2] = { m_wake, m_conin };
+  HANDLE handles[2] = { m_wake, m_conin };
 #endif
   const VKeyMatch *nextVKMatch = m_vkeyMatch.ptr();
 #ifndef _WIN32
@@ -902,7 +910,7 @@ void Terminal::read()
       goto stop;
     }
 #else
-    DWORD event = WaitForMultipleObjects(2, &m_handles, false, timeout);
+    DWORD event = WaitForMultipleObjects(2, handles, false, timeout);
     if (event == WAIT_FAILED) {
       m_errorFn(ZrlError("WaitForMultipleObjects", Zi::IOError, ZeLastError));
       m_keyFn(VKey::EndOfFile);
@@ -985,15 +993,18 @@ void Terminal::read()
 	continue;
       }
       if (rec.EventType != KEY_EVENT || !rec.Event.KeyEvent.bKeyDown) continue;
+      auto state = rec.Event.KeyEvent.dwControlKeyState;
+      auto code = rec.Event.KeyEvent.wVirtualKeyCode;
+      c = rec.Event.KeyEvent.uChar.UnicodeChar;
       int32_t vkey = VKey::Null;
-      switch (rec.Event.KeyEvent.wVirtualKeyCode) {
+      switch (static_cast<int>(code)) {
 	case VK_SPACE: c = ' '; break;
 	case VK_TAB: c = '\t'; break;
 	case VK_ESCAPE: c = '\x1b'; break;
 	case VK_BACK: vkey = VKey::Erase; break;
 	case VK_RETURN: vkey = VKey::Enter; break;
 	case VK_PRIOR: vkey = VKey::PgUp; break;
-	case VK_NEXT: vkey = VKey::PgDown; break;
+	case VK_NEXT: vkey = VKey::PgDn; break;
 	case VK_END: vkey = VKey::End; break;
 	case VK_HOME: vkey = VKey::Home; break;
 	case VK_LEFT: vkey = VKey::Left; break;
@@ -1003,11 +1014,21 @@ void Terminal::read()
 	case VK_INSERT: vkey = VKey::Insert; break;
 	case VK_DELETE: vkey = VKey::Delete; break;
 	case VK_PACKET: vkey = -rec.Event.KeyEvent.wVirtualScanCode; break;
-	default: c = rec.Event.KeyEvent.uChar.UnicodeChar; break;
+	case 0x32: // '@'
+	  if (state & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED))
+	    c = 0;
+	  break;
+	case 0xbf: // '/'
+	case 0xbd: // '_'
+	  if (state & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED))
+	    c = '_' - '@';
+	  break;
+	default:
+	  if (!c) continue;
+	  break;
       }
       if (vkey != VKey::Null) {
 	if (vkey > 0) {
-	  auto state = rec.Event.keyEvent.dwControlKeyState;
 	  if (state & SHIFT_PRESSED)
 	    vkey |= VKey::Shift;
 	  if (state & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED))
@@ -1015,7 +1036,6 @@ void Terminal::read()
 	  if (state & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED))
 	    vkey |= VKey::Alt;
 	}
-
 	timeout = -1;
 	nextVKMatch = m_vkeyMatch.ptr();
 	for (auto key : pending) if (m_keyFn(key)) goto stop;
@@ -1031,6 +1051,8 @@ void Terminal::read()
 	m_keyFn(-vkey);
 	continue;
       }
+      if (state & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED))
+	pending << '\x1b';
     }
 #endif
 

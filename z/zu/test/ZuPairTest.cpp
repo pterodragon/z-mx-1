@@ -88,30 +88,30 @@ int main()
   {
     copied = moved = 0;
     ZuTuple<A, A, A> p = mkatuple();
-    CHECK(!copied && moved == 5 && p.p<0>().i == 42);
+    CHECK(!copied && moved == 3 && p.p<0>().i == 42);
   }
   {
     copied = moved = 0;
     ZuTuple<A, A, A> p(mkatuple());
-    CHECK(!copied && moved == 5 && p.p<0>().i == 42);
+    CHECK(!copied && moved == 3 && p.p<0>().i == 42);
   }
   {
     copied = moved = 0;
     ZuTuple<A, A, A> p(passatuple(mkatuple()));
-    CHECK(!copied && moved == 8 && p.p<0>().i == 42);
+    CHECK(!copied && moved == 6 && p.p<0>().i == 42);
   }
   {
     copied = moved = 0;
     ZuTuple<A, A, A> p(passatuple(mkatuple()));
     A a = ZuMv(p.p<0>()), b = ZuMv(p.p<1>()), c = ZuMv(p.p<2>());
-    CHECK(!copied && moved == 11);
+    CHECK(!copied && moved == 9);
     CHECK(a.i == 42 && b.i == 42 && c.i == 42);
   }
   {
     copied = moved = 0;
     B p(passatuple(mkatuple()));
     A a = ZuMv(p.foo()), b = ZuMv(p.p<1>()), c = ZuMv(p.p<2>());
-    CHECK(!copied && moved == 14);
+    CHECK(!copied && moved == 11);
     CHECK(a.i == 42 && b.i == 42 && c.i == 42);
     B q = B().foo(42), r{p};
     p = q;

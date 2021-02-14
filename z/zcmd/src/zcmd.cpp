@@ -19,6 +19,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+#ifndef SIGQUIT
+#define SIGQUIT 3
+#endif
 
 #include <zlib/ZuPolymorph.hpp>
 #include <zlib/ZuByteSwap.hpp>
@@ -248,12 +252,23 @@ public:
 	  return code();
 	},
 	.end = [this]() { post(); },
-	.sig = [this](int sig) {
+	.sig = [this](int sig) -> bool {
 	  switch (sig) {
-	    case SIGINT: post(); break;
-	    case SIGQUIT: ::raise(SIGQUIT); break;
-	    case SIGTSTP: ::raise(SIGTSTP); break;
+	    case SIGINT:
+	      break;
+#ifdef _WIN32
+	    case SIGQUIT:
+	      GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, 0);
+	      return true;
+#endif
+	    case SIGTSTP:
+	      raise(sig);
+	      return false;
+	    default:
+	      break;
 	  }
+	  raise(sig);
+	  return sig != SIGTSTP;
 	},
 	.compInit = m_globber.initFn(),
 	.compNext = m_globber.nextFn(),

@@ -67,14 +67,23 @@ public:
       .error = [this](ZuString s) { std::cerr << s << '\n'; stop(); },
       .enter = [this](ZuString s) -> bool { return process(s); },
       .end = [this]() { stop(); },
-      .sig = [this](int sig) {
+      .sig = [this](int sig) -> bool {
 	switch (sig) {
 	  case SIGINT:
 	    stop();
-	  default: // fallthrough
-	    ::raise(sig);
+	    return true;
+#ifdef _WIN32
+	  case SIGQUIT:
+	    GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, 0);
+	    return true;
+#endif
+	  default:
 	    break;
 	}
+	raise(sig);
+	if (sig == SIGTSTP) return false;
+	stop();
+	return true;
       },
       .compInit = globber.initFn(),
       .compNext = globber.nextFn(),

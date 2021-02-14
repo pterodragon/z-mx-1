@@ -27,9 +27,15 @@ int main()
   s.start();
   Zrl::Terminal tty;
   ZmSemaphore done;
-  tty.open(&s, 1, [](bool) { }, [](ZuString s) { std::cerr << s << '\n'; });
+  tty.open(&s, 1,
+      [&done](bool) { done.post(); },
+      [&done](ZuString s) {
+	std::cerr << s << "\r\n" << std::flush;
+	done.post();
+      });
+  done.wait();
   tty.start(
-      []() { },
+      []() { std::cerr << "started\r\n" << std::flush; },
       [&tty, &done](int32_t key) -> bool { return process(tty, done, key); });
   done.wait();
   tty.stop();

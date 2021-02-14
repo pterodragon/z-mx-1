@@ -64,6 +64,9 @@
 
 #ifdef ZiRing_FUNCTEST
 #define ZiRing ZiRingTest
+#define ZiRingAPI
+#else
+#define ZiRingAPI ZiAPI
 #endif
 
 #ifdef ZiRing_FUNCTEST
@@ -77,7 +80,7 @@
 #endif
 
 // ring buffer parameters
-class ZiAPI ZiRingParams {
+class ZiRingParams {
 public:
   using Path = ZiPlatform::Path;
 
@@ -137,7 +140,7 @@ private:
 
 typedef unsigned (*ZiRingSizeFn)(const void *);
 
-class ZiAPI ZiRing {
+class ZiRingAPI ZiRing {
   ZiRing(const ZiRing &) = delete;
   ZiRing &operator =(const ZiRing &) = delete;
   ZiRing(ZiRing &&) = delete;

@@ -1548,7 +1548,18 @@ int main(int argc, char **argv)
 	return app->processCmd(s);
       },
       .sig = [](int sig) -> bool {
-	if (sig != SIGINT) ::raise(sig);
+	switch (sig) {
+	  case SIGINT:
+	    return true;
+#ifdef _WIN32
+	  case SIGQUIT:
+	    GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, 0);
+	    return true;
+#endif
+	  default:
+	    break;
+	}
+	raise(sig);
 	return sig != SIGTSTP;
       },
       .compInit = globber.initFn(),

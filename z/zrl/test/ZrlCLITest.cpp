@@ -13,12 +13,13 @@ int main()
       std::cout << s << '\n';
       return s == "quit";
     },
-    .sig = [](int sig) {
+    .sig = [](int sig) -> bool {
       switch (sig) {
 	case SIGINT: std::cout << "SIGINT\n"; break;
 	case SIGQUIT: std::cout << "SIGQUIT\n"; break;
 	case SIGTSTP: std::cout << "SIGTSTP\n"; break;
       }
+      return false;
     },
     .compInit = globber.initFn(),
     .compNext = globber.nextFn(),

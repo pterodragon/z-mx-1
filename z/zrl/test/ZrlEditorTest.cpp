@@ -23,13 +23,14 @@ int main()
     return false;
   };
   app.end = [&done]() { done.post(); };
-  app.sig = [&done](int sig) {
+  app.sig = [&done](int sig) -> bool {
     switch (sig) {
       case SIGINT: std::cout << "SIGINT\n" << std::flush; break;
       case SIGQUIT: std::cout << "SIGQUIT\n" << std::flush; break;
       case SIGTSTP: std::cout << "SIGTSTP\n" << std::flush; break;
     }
     done.post();
+    return true;
   };
   ZtArray<ZtString> history;
   app.histSave = [&history](unsigned i, ZuString s) {

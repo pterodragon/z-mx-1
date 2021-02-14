@@ -161,7 +161,11 @@ bool Terminal::isOpen() const // synchronous
   bool ok = false;
   thread_local ZmSemaphore sem;
   m_sched->invoke(m_thread, [this, sem = &sem, ok = &ok]() {
+#ifndef _WIN32
     *ok = m_fd >= 0;
+#else
+    *ok = m_conout != INVALID_HANDLE_VALUE;
+#endif
     sem->post();
   });
   sem.wait();
@@ -208,18 +212,10 @@ void Terminal::stop() // async
   wake_();
 }
 
-// Win32
-// - AllocConsole(); // idempotent
-// - CreateFile("CONIN$"); PeekConsoleInput() // check for failure
-// - SetConsoleCP(65001)
-//   GetConsoleMode() // save pre-existing mode for use in close_()
-//   SetConsoleMode(..., (mode & ~
-//     (ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT))
-// - SetConsoleCtrlHandler()
-// - CreateFile("CONOUT$")
-// - SetConsoleOututCP()
 bool Terminal::open_()
 {
+#ifndef _WIN32
+
   // open tty device
   m_fd = ::open("/dev/tty", O_RDWR, 0);
   if (m_fd < 0) {
@@ -337,8 +333,67 @@ bool Terminal::open_()
     m_underline << '_';
   }
 
+#else /* !_Win32 */
+
+  m_wake = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+  if (m_wake == NULL || m_wake == INVALID_HANDLE_VALUE) {
+    m_wake = INVALID_HANDLE_VALUE;
+    m_errorFn(ZrlError("CreateEvent", Zi::IOError, ZeLastError));
+    return false;
+  }
+
+  if (!AllocConsole()) { // idempotent
+    ZeError e{ZeLastError};
+    close_fds();
+    m_errorFn(ZrlError("CreateEvent", Zi::IOError, e));
+    return false;
+  }
+
+  m_conin = CreateFile("CONIN$",
+      GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, nullptr,
+      OPEN_EXISTING, 0, NULL);
+  if (m_conin == INVALID_HANDLE_VALUE) {
+    ZeError e{ZeLastError};
+    close_fds();
+    m_errorFn(ZrlError("CreateFile(\"CONIN$\")", Zi::IOError, e));
+    return false;
+  }
+  {
+    INPUT_REC rec;
+    DWORD count;
+    if (!PeekConsoleInput(m_conin, &rec, 1, &count)) {
+      ZeError e{ZeLastError};
+      close_fds();
+      m_errorFn(ZrlError("PeekConsoleInput()", Zi::IOError, e));
+      return false;
+    }
+  }
+
+  m_conout = CreateFile("CONOUT$",
+      GENERIC_WRITE | GENERIC_READ, FILE_SHARE_WRITE, nullptr,
+      OPEN_EXISTING, 0, NULL);
+  if (m_conout == INVALID_HANDLE_VALUE) {
+    ZeError e{ZeLastError};
+    close_fds();
+    m_errorFn(ZrlError("CreateFile(\"CONOUT$\")", Zi::IOError, e));
+    return false;
+  }
+
+  m_coninCP = GetConsoleInputCP();
+  GetConsoleMode(m_conin, &m_coninMode);
+
+  m_conoutCP = GetConsoleOutputCP();
+  GetConsoleMode(m_conout, &m_conoutMode);
+
+  SetConsoleMode(m_conin, m_coninMode &
+      ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT));
+
+#endif /* !_WIN32 */
+
   // initialize keystroke matcher
   m_vkeyMatch = new VKeyMatch{};
+
+#ifndef _WIN32
 
   //		| Normal | Shift | Ctrl/Alt/combinations (*)
   // -----------+--------+-------+--------------------------
@@ -490,6 +545,32 @@ bool Terminal::open_()
     sigaction(SIGWINCH, &nwinch, &m_winch);
   }
 
+#else /* !_WIN32 */
+
+  // Enter
+  addCtrlKey('\r', VKey::Enter);	// ^M
+
+  // EOF
+  addCtrlKey('\x04', VKey::EndOfFile);	// ^D
+
+  // erase keys
+  addCtrlKey('\x08', VKey::Erase);	// ^H
+  addCtrlKey('\x17', VKey::WErase);	// ^W
+  addCtrlKey('\x15', VKey::Kill);	// ^U
+
+  // signals
+  addCtrlKey('\x03', VKey::SigInt);	// ^C
+  addCtrlKey('\x1c', VKey::SigQuit);	// C-Backslash
+  addCtrlKey('\x1a', VKey::SigSusp);	// ^Z
+
+  // literal next
+  addCtrlKey('\x16', VKey::LNext);	// ^V
+
+  // redraw/reprint
+  addCtrlKey('\x12', VKey::Redraw);	// ^R
+
+#endif
+
   // get terminal width/height
   resized();
 
@@ -497,18 +578,14 @@ bool Terminal::open_()
 }
 
 // Win32
-// - SetConsoleMode()
-// - SetConsoleCtrlHandler()
-// - 2x CloseHandle()
 void Terminal::close_()
 {
   stop_(); // idempotent
 
+#ifndef _WIN32
+
   // reset SIGWINCH handler
   sigaction(SIGWINCH, &m_winch, nullptr);
-
-  // finalize keystroke matcher
-  m_vkeyMatch = nullptr;
 
   // finalize terminfo
   m_smkx = nullptr;
@@ -562,12 +639,25 @@ void Terminal::close_()
 
   del_curterm(cur_term);
 
-  // close file descriptors
+#else /* !_WIN32 */
+
+  // restore console
+  SetConsoleMode(m_conin, m_coninMode);
+  SetConsoleInputCP(m_coninCP);
+
+#endif /* !_WIN32 */
+
+  // close file descriptors / handles
   close_fds();
+
+  // finalize keystroke matcher
+  m_vkeyMatch = nullptr;
 }
 
 void Terminal::close_fds()
 {
+#ifndef _WIN32
+
   // close I/O multiplexer
   if (m_epollFD >= 0) { ::close(m_epollFD); m_epollFD = -1; }
   if (m_wakeFD >= 0) { ::close(m_wakeFD); m_wakeFD = -1; }
@@ -575,6 +665,17 @@ void Terminal::close_fds()
 
   // close tty device
   if (m_fd >= 0) { ::close(m_fd); m_fd = -1; }
+
+#else /* !_WIN32 */
+
+  // close wakeup event
+  if (m_wake != INVALID_HANDLE_VALUE) CloseHandle(m_wake);
+
+  // close console
+  if (m_conin != INVALID_HANDLE_VALUE) CloseHandle(m_conin);
+  if (m_conout != INVALID_HANDLE_VALUE) CloseHandle(m_conout);
+
+#endif /* !_WIN32 */
 }
 
 void Terminal::start_()
@@ -582,6 +683,7 @@ void Terminal::start_()
   if (m_running) return;
   m_running = true;
 
+#ifndef _WIN32
   memcpy(&m_ntermios, &m_otermios, sizeof(termios));
 
   // Note: do not interfere with old dial-up modem settings here
@@ -617,6 +719,14 @@ void Terminal::start_()
 
   tputs(m_cr);
   if (m_smkx) tputs(m_smkx);
+
+#else /* !_WIN32 */
+
+  m_out << '\r';
+  opost_off();
+
+#endif /* !_WIN32 */
+
   write();
   m_pos = 0;
 }
@@ -626,10 +736,15 @@ void Terminal::stop_()
   if (!m_running) return;
   m_running = false;
 
+#ifndef _WIN32
   if (m_rmkx) tputs(m_rmkx);
+#endif
+
   write();
 
   clear();
+
+#ifndef _WIN32
 
   if (m_fd < 0) return;
 
@@ -637,28 +752,52 @@ void Terminal::stop_()
   fcntl(m_fd, F_SETFL, 0);
 
   tcsetattr(m_fd, TCSADRAIN, &m_otermios);
+
+#else /* !_WIN32 */
+
+  opost_on();
+
+#endif /* !_WIN32 */
 }
 
 void Terminal::opost_on()
 {
+#ifndef _WIN32
   m_ntermios.c_oflag = m_otermios.c_oflag;
   tcsetattr(m_fd, TCSADRAIN, &m_ntermios);
+#else
+  SetConsoleMode(m_conout, m_conoutMode);
+  if (m_conoutCP != 65001) SetConsoleOutputCP(m_conoutCP);
+#endif
 }
 
 void Terminal::opost_off()
 {
+#ifndef _WIN32
   m_ntermios.c_oflag &= ~(OPOST | ONLCR | OCRNL | ONOCR | ONLRET);
   tcsetattr(m_fd, TCSADRAIN, &m_ntermios);
+#else
+  if (m_conoutCP != 65001) SetConsoleOutputCP(65001);
+  SetConsoleMode(m_conout, m_conoutMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+#endif
 }
 
 void Terminal::cursor_on()
 {
+#ifndef _WIN32
   if (m_cnorm) tputs(m_cnorm);
+#else
+  m_out << "\x1b[?12l\x1b[?25h";
+#endif
 }
 
 void Terminal::cursor_off()
 {
+#ifndef _WIN32
   if (m_civis) tputs(m_civis);
+#else
+  m_out << "\x1b[?25l";
+#endif
 }
 
 // I/O multiplexing
@@ -672,6 +811,7 @@ void Terminal::wake()
 
 void Terminal::wake_()
 {
+#ifndef _WIN32
   char c = 0;
   while (::write(m_wakeFD2, &c, 1) < 0) {
     ZeError e{errno};
@@ -680,19 +820,26 @@ void Terminal::wake_()
       break;
     }
   }
+#else /* !_WIN32 */
+  if (!SetEvent(m_wake))
+    m_errorFn(ZrlError("SetEvent", Zi::IOError, ZeLastError));
+#endif /* !_WIN32 */
 }
 
 // display resizing
 
+#ifndef _WIN32
 void Terminal::sigwinch()
 {
   m_sched->run(m_thread, 
       ZmFn<>{this, [](Terminal *this_) { this_->resized(); }});
 }
+#endif
 
-// Win32 - GetConsoleScreenBufferInfo()
 void Terminal::resized()
 {
+#ifndef _WIN32
+
   struct winsize ws;
   if (ioctl(m_fd, TIOCGWINSZ, &ws) < 0) {
     m_width = tigetnum("columns");
@@ -703,6 +850,21 @@ void Terminal::resized()
   }
   if (!m_width) m_width = 80;
   if (!m_height) m_height = 24;
+
+#else /* _WIN32 */
+
+  CONSOLE_SCREEN_BUFFER_INFO info;
+  if (!GetConsoleScreenBufferInfo(m_conout, &info)) {
+    m_errorFn(ZrlError("GetConsoleScreenBufferInfo", Zi::IOError, ZeLastError));
+    m_width = 80;
+    m_height = 24;
+    return;
+  }
+  const auto &size = info.dwSize;
+  m_width = size.X;
+  m_height = size.Y;
+
+#endif /* _WIN32 */
 }
 
 // low-level input
@@ -710,12 +872,25 @@ void Terminal::resized()
 void Terminal::read()
 {
   int timeout = -1;
+#ifndef _WIN32
   struct epoll_event ev;
+#else
+  DWORD handles[2] = { m_wake, m_conin };
+#endif
   const VKeyMatch *nextVKMatch = m_vkeyMatch.ptr();
+#ifndef _WIN32
+  using UTF = ZuUTF8;
   ZuArrayN<uint8_t, 4> utf;
-  int utfn = 0;
+#else
+  using UTF = ZuUTF16;
+  ZuArrayN<uint16_t, 2> utf;
+#endif
+  unsigned utfn = 0;
   ZtArray<int32_t> pending;
   for (;;) {
+
+    // wait
+#ifndef _WIN32
     int r = epoll_wait(m_epollFD, &ev, 1, timeout);
     if (r < 0) {
       ZeError e{errno};
@@ -725,20 +900,38 @@ void Terminal::read()
       m_keyFn(VKey::EndOfFile);
       goto stop;
     }
-    if (!r) { // timeout
+#else
+    DWORD event = WaitForMultipleObjects(2, &m_handles, false, timeout);
+    if (event == WAIT_FAILED) {
+      m_errorFn(ZrlError("WaitForMultipleObjects", Zi::IOError, ZeLastError));
+      m_keyFn(VKey::EndOfFile);
+      goto stop;
+    }
+#endif
+
+    // check timeout
+#ifndef _WIN32
+    if (!r)
+#else
+    if (event == WAIT_TIMEOUT)
+#endif
+    {
       timeout = -1;
       nextVKMatch = m_vkeyMatch.ptr();
       for (auto key : pending) if (m_keyFn(key)) goto stop;
       pending.clear();
       if (utfn && utf) {
 	uint32_t u = 0;
-	if (ZuUTF8::in(utf.data(), utf.length(), u))
+	if (UTF::in(utf.data(), utf.length(), u))
 	  if (m_keyFn(u)) goto stop;
 	utf.clear();
 	utfn = 0;
       }
       continue;
     }
+
+    // check wake up
+#ifndef _WIN32
     if (ZuLikely(ev.data.u64 == 3)) {
       char c;
       int r = ::read(m_wakeFD, &c, 1);
@@ -751,6 +944,15 @@ void Terminal::read()
     }
     if (!(ev.events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR)))
       continue;
+#else
+    if (event == WAIT_OBJECT_0) {
+      ResetEvent(m_wake);
+      return;
+    }
+#endif
+
+    // read input
+#ifndef _WIN32
     uint8_t c;
     {
       int r = ::read(m_fd, &c, 1);
@@ -765,7 +967,79 @@ void Terminal::read()
 	goto stop;
       }
     }
-    if (!utfn) {
+#else
+    uint16_t c;
+    {
+      INPUT_RECORD rec;
+      DWORD count = 0;
+      if (!ReadConsoleInput(m_conin, &rec, 1, &count)) {
+	m_keyFn(VKey::EndOfFile);
+	goto stop;
+      }
+      if (!count) continue;
+      if (rec.EventType == WINDOW_BUFFER_SIZE_EVENT) {
+	const auto &size = rec.Event.WindowBufferSizeEvent.dwSize;
+	m_width = size.X;
+	m_height = size.Y;
+	continue;
+      }
+      if (rec.EventType != KEY_EVENT || !rec.Event.KeyEvent.bKeyDown) continue;
+      int32_t vkey = VKey::Null;
+      switch (rec.Event.KeyEvent.wVirtualKeyCode) {
+	case VK_SPACE: c = ' '; break;
+	case VK_TAB: c = '\t'; break;
+	case VK_ESCAPE: c = '\x1b'; break;
+	case VK_BACK: vkey = VKey::Erase; break;
+	case VK_RETURN: vkey = VKey::Enter; break;
+	case VK_PRIOR: vkey = VKey::PgUp; break;
+	case VK_NEXT: vkey = VKey::PgDown; break;
+	case VK_END: vkey = VKey::End; break;
+	case VK_HOME: vkey = VKey::Home; break;
+	case VK_LEFT: vkey = VKey::Left; break;
+	case VK_UP: vkey = VKey::Up; break;
+	case VK_RIGHT: vkey = VKey::Right; break;
+	case VK_DOWN: vkey = VKey::Down; break;
+	case VK_INSERT: vkey = VKey::Insert; break;
+	case VK_DELETE: vkey = VKey::Delete; break;
+	case VK_PACKET: vkey = -rec.Event.KeyEvent.wVirtualScanCode; break;
+	default: c = rec.Event.KeyEvent.uChar.UnicodeChar; break;
+      }
+      if (vkey != VKey::Null) {
+	if (vkey > 0) {
+	  auto state = rec.Event.keyEvent.dwControlKeyState;
+	  if (state & SHIFT_PRESSED)
+	    vkey |= VKey::Shift;
+	  if (state & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED))
+	    vkey |= VKey::Ctrl;
+	  if (state & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED))
+	    vkey |= VKey::Alt;
+	}
+
+	timeout = -1;
+	nextVKMatch = m_vkeyMatch.ptr();
+	for (auto key : pending) if (m_keyFn(key)) goto stop;
+	pending.clear();
+	if (utfn && utf) {
+	  uint32_t u = 0;
+	  if (UTF::in(utf.data(), utf.length(), u))
+	    if (m_keyFn(u)) goto stop;
+	  utf.clear();
+	  utfn = 0;
+	}
+
+	m_keyFn(-vkey);
+	continue;
+      }
+    }
+#endif
+
+    // vkey matching
+#ifndef _WIN32
+    if (!utfn)
+#else
+    if (!utfn && c < 0x100)
+#endif
+    {
       if (auto action = nextVKMatch->match(c)) {
 	if (action->next) {
 	  timeout = m_vkeyInterval;
@@ -786,15 +1060,18 @@ void Terminal::read()
       nextVKMatch = m_vkeyMatch.ptr();
       for (auto vkey : pending) if (m_keyFn(vkey)) goto stop;
       pending.clear();
-      if (!utf8_in() || !(utfn = ZuUTF8::in(&c, 4))) utfn = 1;
+      if (!utf8_in() || !(utfn = UTF::in(c))) utfn = 1;
     }
+
+    // UTF input
     utf << c;
     if (--utfn > 0) continue;
     uint32_t u = 0;
-    if (ZuUTF8::in(utf.data(), utf.length(), u))
+    if (UTF::in(utf.data(), utf.length(), u))
       if (m_keyFn(u)) goto stop;
     utf.clear();
   }
+
 stop:
   stop_();
 }
@@ -804,6 +1081,7 @@ void Terminal::addCtrlKey(char c, int32_t vkey)
   if (c) m_vkeyMatch->add(c, vkey);
 }
 
+#ifndef _WIN32
 void Terminal::addVKey(const char *cap, const char *deflt, int32_t vkey)
 {
   const char *ent;
@@ -813,12 +1091,12 @@ void Terminal::addVKey(const char *cap, const char *deflt, int32_t vkey)
     // std::cout << ZtHexDump(cap, ent, strlen(ent)) << '\n';
   }
 }
+#endif
 
 // low-level output
 
 int Terminal::write(ZeError *e_)
 {
-  unsigned n = m_out.length();
 #if 0
   {
     static FILE *log = nullptr;
@@ -834,6 +1112,8 @@ int Terminal::write(ZeError *e_)
     }
   }
 #endif
+#ifndef _WIN32
+  unsigned n = m_out.length();
   while (::write(m_fd, m_out.data(), n) < n) {
     ZeError e{errno};
     if (e.errNo() != EINTR && e.errNo() != EAGAIN) {
@@ -842,10 +1122,26 @@ int Terminal::write(ZeError *e_)
       return Zi::IOError;
     }
   }
+#else
+  DWORD n;
+loop:
+  // WriteConsoleA with CP 65001 is UTF-8
+  if (!WriteConsoleA(m_conout, m_out.data(), m_out.length(), &n, NULL)) {
+    ZeError e = ZeLastError;
+    m_errorFn(ZrlError("WriteConsole", Zi::IOError, e));
+    if (e_) *e_ = e;
+    return Zi::IOError;
+  }
+  if (n < m_out.length()) {
+    m_out.splice(0, n);
+    goto loop;
+  }
+#endif
   m_out.clear();
   return Zi::OK;
 }
 
+#ifndef _WIN32
 void Terminal::tputs(const char *cap)
 {
   thread_local Terminal *this_;
@@ -855,6 +1151,7 @@ void Terminal::tputs(const char *cap)
     return 0;
   });
 }
+#endif
 
 // output routines
 
@@ -869,7 +1166,11 @@ void Terminal::cr()
 {
   unsigned n = m_pos % m_width;
   if (n) {
+#ifndef _WIN32
     tputs(m_cr);
+#else
+    m_out << '\r';
+#endif
     m_pos -= n;
   }
 }
@@ -877,36 +1178,45 @@ void Terminal::cr()
 // new-line / index
 void Terminal::nl()
 {
+#ifndef _WIN32
   tputs(m_ind);
+#else
+  m_out << '\n';
+#endif
   m_pos += m_width;
 }
 
 // CR + NL, without updating m_pos
 void Terminal::crnl_()
 {
+#ifndef _WIN32
   if (ZuLikely(m_nel)) {
     tputs(m_nel);
   } else {
     tputs(m_cr);
     tputs(m_ind);
   }
+#else
+  m_out << "\r\n";
+#endif
 }
 
 // CR + NL
 void Terminal::crnl()
 {
-  if (ZuLikely(m_nel)) {
-    tputs(m_nel);
-    m_pos -= m_pos % m_width;
-    m_pos += m_width;
-  } else {
+#ifndef _WIN32
+  if (ZuUnlikely(!m_nel)) {
     cr();
     nl();
+    return;
   }
+  tputs(m_nel);
+#else
+  crnl_();
+#endif
+  m_pos -= m_pos % m_width;
+  m_pos += m_width;
 }
-
-// Note: MS Console SetConsoleMode(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
-// is am + xenl, but this is too recent to be relied on
 
 // out row from cursor, leaving cursor at start of next row
 void Terminal::outScroll(unsigned endPos)
@@ -923,6 +1233,7 @@ void Terminal::outScroll(unsigned endPos)
 void Terminal::clrScroll_(unsigned n)
 {
   if (n) {
+#ifndef _WIN32
     if (ZuLikely(m_el)) {
       tputs(m_el);
       crnl_();
@@ -934,8 +1245,14 @@ void Terminal::clrScroll_(unsigned n)
       return;
     }
     clrOver_(n);
+#else
+    m_out << "\x1b[K\r\n";
+    return;
+#endif
   }
+#ifndef _WIN32
   if (!m_am || m_xenl)
+#endif
     crnl_();
 }
 
@@ -948,6 +1265,7 @@ void Terminal::out_(ZuString data)
     unsigned n;
     uint32_t u = 0;
     if ((n = ZuUTF8::in(&m_out[off], end - off, u)) > 1) {
+#ifndef _WIN32
       if (ZuUnlikely(!utf8_out())) {
 	unsigned w = ZuUTF32::width(u);
 	if (ZuUnlikely(m_ul)) {
@@ -963,6 +1281,7 @@ void Terminal::out_(ZuString data)
 	  m_out.splice(off, n, ZuArray<const uint8_t>{"__", w});
 	off += w; end += w; end -= n;
       } else
+#endif
 	off += n;
     } else {
       if (u < 0x20 || u == 0x7f) {
@@ -970,11 +1289,15 @@ void Terminal::out_(ZuString data)
 	s << '^' << (u == 0x7f ? '?' : static_cast<char>('@' + u));
 	m_out.splice(off, 1, s);
 	off += 2; end += 1;
-      } else if ((m_hz && u == '~') || (m_ul && u == '_')) {
+      }
+#ifndef _WIN32
+      else if ((m_hz && u == '~') || (m_ul && u == '_')) {
 	m_out.splice(off, 1, m_underline);
 	unsigned w = m_underline.length();
 	off += w; end += w - 1;
-      } else
+      }
+#endif
+      else
 	off += 1;
     }
   }
@@ -996,12 +1319,16 @@ void Terminal::outNoScroll(unsigned endPos, unsigned pos)
   ZmAssert(pos >= endPos - m_width);	// pos is >=BOL
   ZmAssert(pos < endPos);		// pos is <EOL
 
-  if (ZuLikely(!m_am || m_xenl)) {
+#ifndef _WIN32
+  if (ZuLikely(!m_am || m_xenl))
+#endif
+  {
     // normal case - terminal is am + xenl, or no am, i.e. doesn't scroll
     // immediately following overwrite of right-most character, just output
     // entire row then move cursor within row as needed
     out(endPos);
     if (m_pos < endPos) {
+#ifndef _WIN32
       if (ZuLikely(m_el)) {	// clear to EOL
 	tputs(m_el);
 	if (m_pos != pos) mvhoriz(pos);
@@ -1013,8 +1340,14 @@ void Terminal::outNoScroll(unsigned endPos, unsigned pos)
 	return;
       }
       clrOver(endPos);		// clear to EOL with spaces
+#else
+      m_out << "\x1b[K";
+      if (m_pos != pos) mvhoriz(pos);
+      return;
+#endif
     }
     // right-most character on row was output, MUST move cursor, NO cub
+#ifndef _WIN32
     if (m_hpa) {
       tputs(tiparm(m_hpa, pos - (pos % m_width)));
       m_pos = pos;
@@ -1024,8 +1357,14 @@ void Terminal::outNoScroll(unsigned endPos, unsigned pos)
     m_pos = endPos - m_width;
     if (pos > m_pos) mvright(pos);
     return;
+#else
+    m_out << "\x1b[" << ZuBoxed(pos - (pos % m_width) + 1) << 'G';
+    m_pos = pos;
+    return;
+#endif
   }
 
+#ifndef _WIN32
   if (m_ich || m_ich1 || (m_smir && m_rmir)) {
     // insert right-most character to leave cursor on same row
     outClr(endPos - 2);
@@ -1051,6 +1390,7 @@ void Terminal::outNoScroll(unsigned endPos, unsigned pos)
   // dumb terminal, cannot output right-most character leaving cursor on row
   outClr(endPos - 1);
   if (pos < m_pos) mvleft(pos);
+#endif
 }
 
 // output from m_pos to endPos within row, clearing any trailing space
@@ -1078,29 +1418,40 @@ void Terminal::out(unsigned endPos) // endPos may be start of next row
 // clear with ech
 void Terminal::clrErase_(unsigned n)
 {
+#ifndef _WIN32
   tputs(tiparm(m_ech, n));
+#else
+  m_out << "\x1b[" << ZuBoxed(n) << 'X';
+#endif
 }
 
 // clear with ech, falling back to spaces
 void Terminal::clr_(unsigned n)
 {
+#ifndef _WIN32
   if (ZuLikely(m_ech))
+#endif
     clrErase_(n);
+#ifndef _WIN32
   else
     clrOver_(n);
+#endif
 }
 
 // clear with ech, falling back to spaces - endPos is not past end of row
 void Terminal::clr(unsigned endPos)
 {
+#ifndef _WIN32
   if (ZuLikely(m_ech))
+#endif
     clrErase_(endPos - m_pos);
+#ifndef _WIN32
   else
     clrOver(endPos);
+#endif
 }
 
 // clear by overwriting spaces
-// Win32 - FillConsoleOutputCharacter()
 void Terminal::clrOver_(unsigned n)
 {
   for (unsigned i = 0; i < n; i++) m_out << ' ';
@@ -1122,11 +1473,11 @@ void Terminal::clrOver(unsigned endPos)
 // IBM 3270s in line mode
 
 // move cursor to position
-// Win32 - SetConsoleCursorPosition()
 void Terminal::mv(unsigned pos)
 {
   if (pos < m_pos) {
     if (unsigned up = m_pos / m_width - pos / m_width) {
+#ifndef _WIN32
       if (ZuLikely(m_cuu)) {
 	m_pos -= up * m_width;
 	tputs(tiparm(m_cuu, up));
@@ -1139,12 +1490,17 @@ void Terminal::mv(unsigned pos)
 	outNoScroll(m_pos + m_width, pos);
 	return;
       }
+#else
+      m_pos -= up * m_width;
+      m_out << "\x1b[" << ZuBoxed(up) << 'A';
+#endif
       if (ZuUnlikely(m_pos == pos)) return;
       mvhoriz(pos);
     } else
       mvleft(pos);
   } else if (pos > m_pos) {
     if (unsigned down = pos / m_width - m_pos / m_width) {
+#ifndef _WIN32
       if (ZuLikely(m_cud)) {
 	m_pos += down * m_width;
 	tputs(tiparm(m_cud, down));
@@ -1155,6 +1511,10 @@ void Terminal::mv(unsigned pos)
 	do { nl(); } while (--down);
 	cr();
       }
+#else
+      m_pos += down * m_width;
+      m_out << "\x1b[" << ZuBoxed(down) << 'B';
+#endif
       if (ZuUnlikely(m_pos == pos)) return;
       mvhoriz(pos);
     } else
@@ -1177,6 +1537,7 @@ void Terminal::mvleft(unsigned pos)
   ZmAssert(m_pos < pos - (pos % m_width) + m_width);	// cursor is <EOL
   ZmAssert(m_pos > pos);			// cursor is right of pos
 
+#ifndef _WIN32
   if (ZuLikely(m_cub)) {
     tputs(tiparm(m_cub, m_pos - pos));
   } else if (ZuLikely(m_hpa)) {
@@ -1184,11 +1545,15 @@ void Terminal::mvleft(unsigned pos)
   } else {
     for (unsigned i = 0, n = m_pos - pos; i < n; i++) tputs(m_cub1);
   }
+#else
+  m_out << "\x1b[" << ZuBoxed(m_pos - pos) << 'D';
+#endif
   m_pos = pos;
 }
 
 void Terminal::mvright(unsigned pos)
 {
+#ifndef _WIN32
   if (ZuLikely(m_cuf)) {
     tputs(tiparm(m_cuf, pos - m_pos));
   } else if (ZuLikely(m_hpa)) {
@@ -1201,12 +1566,16 @@ void Terminal::mvright(unsigned pos)
     outClr(pos);
     return;
   }
+#else
+  m_out << "\x1b[" << ZuBoxed(pos - m_pos) << 'C';
+#endif
   m_pos = pos;
 }
 
 bool Terminal::ins_(unsigned n, bool mir)
 {
   if (mir) return true;
+#ifndef _WIN32
   if (m_ich) {
     tputs(tiparm(m_ich, n));
     return false;
@@ -1216,17 +1585,24 @@ bool Terminal::ins_(unsigned n, bool mir)
     return true;
   }
   for (unsigned i = 0; i < n; i++) tputs(m_ich1);
+#else
+  m_out << "\x1b[" << ZuBoxed(n) << '@';
+#endif
   return false;
 }
 
 void Terminal::del_(unsigned n)
 {
+#ifndef _WIN32
   if (m_smdc) tputs(m_smdc);
   if (m_dch)
     tputs(tiparm(m_dch, n));
   else
     for (unsigned i = 0; i < n; i++) tputs(m_dch1);
   if (m_rmdc) tputs(m_rmdc);
+#else
+  m_out << "\x1b[" << ZuBoxed(n) << 'P';
+#endif
 }
 
 // encodes a shift mark as byte offset and display position into 64bits
@@ -1279,13 +1655,19 @@ void Terminal::splice(
     if (trailWidth > 0) {
       if (rspan.width() < span.width()) {
 	unsigned shiftWidth = span.width() - rspan.width();
-	if (shiftWidth < (m_width>>1) && trailWidth > shiftWidth &&
-	    (m_dch || m_dch1 || (m_smdc && m_rmdc)))
+	if (shiftWidth < (m_width>>1) && trailWidth > shiftWidth
+#ifndef _WIN32
+	    && (m_dch || m_dch1 || (m_smdc && m_rmdc))
+#endif
+	    )
 	  shiftLeft = true; // shift left using deletions on each line
       } else if (rspan.width() > span.width()) {
 	unsigned shiftWidth = rspan.width() - span.width();
-	if (shiftWidth < (m_width>>1) && trailWidth > shiftWidth &&
-	    (m_ich || m_ich1 || (m_smir && m_rmir)))
+	if (shiftWidth < (m_width>>1) && trailWidth > shiftWidth
+#ifndef _WIN32
+	    && (m_ich || m_ich1 || (m_smir && m_rmir))
+#endif
+	    )
 	  shiftRight = true; // shift right using insertions on each line
       }
       if (shiftLeft || shiftRight)
@@ -1361,7 +1743,9 @@ void Terminal::splice(
       unsigned leftPos = m_line.byte(shiftMark.byte()).mapping();
       smir = ins_(leftPos - shiftMark.pos(), smir);
       outClr(leftPos);
+#ifndef _WIN32
       if (smir && !m_mir) { tputs(m_rmir); smir = false; }
+#endif
       crnl();
       bolPos += m_width;
     }
@@ -1375,7 +1759,9 @@ void Terminal::splice(
 	outClr(m_line.width());
       }
     }
+#ifndef _WIN32
     if (smir) tputs(m_rmir);
+#endif
   } else {
     while (bolPos < lastBOLPos) outScroll(bolPos += m_width);
     if (bolPos < m_line.width()) outClr(m_line.width());
@@ -1401,7 +1787,11 @@ void Terminal::clear()
 
 void Terminal::cls()
 {
+#ifndef _WIN32
   tputs(m_clear);
+#else
+  m_out << "\x1b[H\x1b[J";
+#endif
   redraw();
 }
 
@@ -1416,9 +1806,12 @@ void Terminal::redraw()
 void Terminal::redraw(unsigned endPos, bool high)
 {
   if (ZuUnlikely(m_pos >= endPos)) return;
+#ifndef _WIN32
   enum { None, Bold, Standout };
   int highType = None;
+#endif
   if (high) {
+#ifndef _WIN32
     if (m_smso && m_rmso) {
       highType = Standout;
       tputs(m_smso);
@@ -1429,10 +1822,14 @@ void Terminal::redraw(unsigned endPos, bool high)
       highType = Bold;
       tputs(tiparm(m_sgr, 0, 0, 0, 0, 0, 1, 0, 0, 0));
     }
+#else
+    m_out << "\x1b[7m";
+#endif
   }
   redraw_(m_pos, endPos);
   m_pos = endPos;
   if (high) {
+#ifndef _WIN32
     switch (highType) {
       case Bold:
 	if (m_sgr0)
@@ -1444,6 +1841,9 @@ void Terminal::redraw(unsigned endPos, bool high)
 	tputs(m_rmso);
 	break;
     }
+#else
+    m_out << "\x1b[m";
+#endif
   }
 }
 
@@ -1461,6 +1861,7 @@ void Terminal::redraw_(unsigned pos, unsigned endPos)
 
 int32_t Terminal::literal(int32_t vkey) const
 {
+#ifndef _WIN32
   switch (static_cast<int>(-vkey)) {
     case VKey::EndOfFile:	return m_otermios.c_cc[VEOF];
     case VKey::SigInt:		return m_otermios.c_cc[VINTR];
@@ -1475,6 +1876,20 @@ int32_t Terminal::literal(int32_t vkey) const
     case VKey::Redraw:		return m_otermios.c_cc[VREPRINT];
 #endif
   }
+#else /* !_WIN32 */
+  switch (static_cast<int>(-vkey)) {
+    case VKey::EndOfFile:	return '\x04';	// ^D
+    case VKey::SigInt:		return '\x03';	// ^C
+    case VKey::SigQuit:		return '\x1c';	// ^ backslash
+    case VKey::SigSusp:		return '\x1a';	// ^Z
+    case VKey::Enter:		return '\r';	// ^M
+    case VKey::Erase:		return '\x08';	// ^H
+    case VKey::WErase:		return '\x17';	// ^W
+    case VKey::Kill:		return '\x15';	// ^U
+    case VKey::LNext:		return '\x16';	// ^V
+    case VKey::Redraw:		return '\x12';	// ^R
+  }
+#endif /* !_WIN32 */
   return vkey;
 }
 

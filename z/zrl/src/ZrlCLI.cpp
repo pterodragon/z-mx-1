@@ -56,10 +56,16 @@ void CLI::init(App app)
   app.open = [open = ZuMv(app.open)](bool ok) { openOK = ok; done.post(); };
   Editor::init(ZuMv(app));
   m_sched = new ZmScheduler{ZmSchedParams{}.id("ZrlCLI").nThreads(1)};
-  // FIXME - permit loading multiple maps
-  // FIXME - check loading map with conflicting ID replaces old with new
+  if (auto maps = ::getenv("ZRL_MAPS")) {
+    ZtRegex::Captures c;
+    if (ZtREGEX(":").split(maps, c) > 0)
+      for (const auto &map : c)
+	if (!loadMap(map, false))
+	  std::cerr << loadError() << '\n' << std::flush;
+  }
   if (auto map = ::getenv("ZRL_MAP"))
-    if (!loadMap(map, true)) std::cerr << loadError() << '\n' << std::flush;
+    if (!loadMap(map, true))
+      std::cerr << loadError() << '\n' << std::flush;
   if (auto mapID = ::getenv("ZRL_MAPID"))
     map(mapID);
 }

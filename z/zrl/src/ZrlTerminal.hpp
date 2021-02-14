@@ -223,18 +223,27 @@ private:
   void wake();
   void wake_();
 
+#ifndef _WIN32
   void sigwinch();
+#endif
   void resized();
 
+#ifndef _WIN32
   bool utf8_in() const { return (m_otermios.c_iflag & IUTF8); }
   bool utf8_out() const { return (m_otermios.c_cflag & CSIZE) == CS8; }
+#else
+  static constexpr bool utf8_in() { return true; }
+  static constexpr bool utf8_out() { return true; }
+#endif
 
   // low-level input
 
   void read();
 
   void addCtrlKey(char c, int32_t vkey);
+#ifndef _WIN32
   void addVKey(const char *cap, const char *deflt, int vkey);
+#endif
 
 public:
   // output routines
@@ -306,6 +315,7 @@ private:
   bool ins_(unsigned n, bool mir);
   void del_(unsigned n);
 
+#ifndef _WIN32
   void tputs(const char *cap);
   
   static char *tigetstr(const char *cap) {
@@ -328,6 +338,7 @@ private:
   static char *tiparm(const char *cap, Args &&... args) {
     return ::tiparm(cap, static_cast<int>(ZuFwd<Args>(args))...);
   }
+#endif
 
 private:
   using Lock = ZmPLock;
@@ -349,12 +360,23 @@ private:
 
   // device state
 
+#ifndef _WIN32
   int			m_fd = -1;
   struct termios	m_otermios;
   struct termios	m_ntermios;
   struct sigaction	m_winch;
   int			m_epollFD = -1;
   int			m_wakeFD = -1, m_wakeFD2 = -1;	// wake pipe
+#else /* !_WIN32 */
+  HANDLE		m_wake = INVALID_HANDLE_VALUE;
+  HANDLE		m_conin = INVALID_HANDLE_VALUE; // must be after m_event
+  HANDLE		m_conout = INVALID_HANDLE_VALUE;
+  DWORD			m_coninMode;
+  UINT			m_coninCP;
+  DWORD			m_conoutMode;
+  UINT			m_conoutCP;
+#endif /* !_WIN32 */
+
   bool			m_running = false;
 
   // input state
@@ -369,6 +391,7 @@ private:
   unsigned		m_pos = 0;		// cursor position (*)
   ZtArray<uint8_t>	m_out;			// output buffer
 
+#ifndef _WIN32
   // input capabilities
 
   const char		*m_smkx = nullptr;	// enter keyboard app mode
@@ -421,6 +444,7 @@ private:
   const char		*m_cnorm = nullptr;	// normal cursor
 
   ZtArray<uint8_t>	m_underline;
+#endif /* !_WIN32 */
 };
 
 } // Zrl

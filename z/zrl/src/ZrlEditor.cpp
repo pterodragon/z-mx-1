@@ -790,6 +790,7 @@ bool Editor::loadMap(ZuString file, bool select)
     return false;
   }
   if (select) m_map = map.ptr();
+  m_maps.del(map->id);
   m_maps.add(map.release());
   return true;
 }
@@ -1740,9 +1741,9 @@ bool Editor::cmdUndo(Cmd, int32_t vkey)
   return false;
 }
 
-bool Editor::cmdRedo(Cmd, int32_t vkey)
+bool Editor::cmdRedo(Cmd cmd, int32_t vkey)
 {
-  if (m_context.undoIndex < 0) return false;
+  if (m_context.undoIndex < 0) return cmdRedraw(cmd, vkey);
   do {
     if (auto undoOp = m_context.undo.val(m_context.undoIndex++)) {
       m_tty.mv(m_tty.line().byte(undoOp->spliceOff).mapping());

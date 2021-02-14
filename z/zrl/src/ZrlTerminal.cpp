@@ -992,12 +992,19 @@ void Terminal::read()
 	m_height = size.Y;
 	continue;
       }
-      if (rec.EventType != KEY_EVENT || !rec.Event.KeyEvent.bKeyDown) continue;
+      if (rec.EventType != KEY_EVENT) continue;
+      int code = rec.Event.KeyEvent.wVirtualKeyCode;
       auto state = rec.Event.KeyEvent.dwControlKeyState;
-      auto code = rec.Event.KeyEvent.wVirtualKeyCode;
+      int32_t vkey;
+      if (code == VK_PACKET) {
+	vkey = rec.Event.KeyEvent.wVirtualScanCode;
+	goto process_vkey;
+      }
       c = rec.Event.KeyEvent.uChar.UnicodeChar;
-      int32_t vkey = VKey::Null;
-      switch (static_cast<int>(code)) {
+      if (code == VK_MENU) goto process_char;
+      if (!rec.Event.KeyEvent.bKeyDown) continue;
+      vkey = VKey::Null;
+      switch (code) {
 	case VK_SPACE: c = ' '; break;
 	case VK_TAB: c = '\t'; break;
 	case VK_ESCAPE: c = '\x1b'; break;
@@ -1013,7 +1020,6 @@ void Terminal::read()
 	case VK_DOWN: vkey = VKey::Down; break;
 	case VK_INSERT: vkey = VKey::Insert; break;
 	case VK_DELETE: vkey = VKey::Delete; break;
-	case VK_PACKET: vkey = -rec.Event.KeyEvent.wVirtualScanCode; break;
 	case 0x32: // '@'
 	  if (state & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED))
 	    c = 0;
@@ -1028,14 +1034,14 @@ void Terminal::read()
 	  break;
       }
       if (vkey != VKey::Null) {
-	if (vkey > 0) {
-	  if (state & SHIFT_PRESSED)
-	    vkey |= VKey::Shift;
-	  if (state & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED))
-	    vkey |= VKey::Ctrl;
-	  if (state & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED))
-	    vkey |= VKey::Alt;
-	}
+	if (state & SHIFT_PRESSED)
+	  vkey |= VKey::Shift;
+	if (state & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED))
+	  vkey |= VKey::Ctrl;
+	if (state & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED))
+	  vkey |= VKey::Alt;
+	vkey = -vkey;
+process_vkey:
 	timeout = -1;
 	nextVKMatch = m_vkeyMatch.ptr();
 	for (auto key : pending) if (m_keyFn(key)) goto stop;
@@ -1047,38 +1053,34 @@ void Terminal::read()
 	  utf.clear();
 	  utfn = 0;
 	}
-
-	m_keyFn(-vkey);
+	m_keyFn(vkey);
 	continue;
       }
+process_char:
       if (state & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED))
 	pending << '\x1b';
     }
 #endif
 
     // vkey matching
-#ifndef _WIN32
-    if (!utfn)
-#else
-    if (!utfn && c < 0x100)
-#endif
-    {
-      if (auto action = nextVKMatch->match(c)) {
-	if (action->next) {
-	  timeout = m_vkeyInterval;
-	  nextVKMatch = action->next.ptr<VKeyMatch>();
-	  if (action->vkey != -VKey::Null)
-	    pending = { action->vkey };
-	  else
-	    pending << c;
+    if (!utfn) {
+      if (c < 0x100)
+	if (auto action = nextVKMatch->match(c)) {
+	  if (action->next) {
+	    timeout = m_vkeyInterval;
+	    nextVKMatch = action->next.ptr<VKeyMatch>();
+	    if (action->vkey != -VKey::Null)
+	      pending = { action->vkey };
+	    else
+	      pending << c;
+	    continue;
+	  }
+	  timeout = -1;
+	  nextVKMatch = m_vkeyMatch.ptr();
+	  pending.clear();
+	  m_keyFn(action->vkey);
 	  continue;
 	}
-	timeout = -1;
-	nextVKMatch = m_vkeyMatch.ptr();
-	pending.clear();
-	m_keyFn(action->vkey);
-	continue;
-      }
       timeout = -1;
       nextVKMatch = m_vkeyMatch.ptr();
       for (auto vkey : pending) if (m_keyFn(vkey)) goto stop;
@@ -1148,7 +1150,6 @@ int Terminal::write(ZeError *e_)
 #else
   DWORD n;
 loop:
-  // WriteConsoleA with CP 65001 is UTF-8
   if (!WriteConsoleA(m_conout, m_out.data(), m_out.length(), &n, NULL)) {
     ZeError e = ZeLastError;
     m_errorFn(ZrlError("WriteConsole", Zi::IOError, e));

@@ -97,16 +97,16 @@ private:
 
   // from char2 string (requires conversion)
   template <typename U, typename V = Char2> struct IsChar2String {
-    enum { OK = ZuTraits<U>::IsString &&
-      ZuConversion<typename ZuTraits<U>::Elem, V>::Same };
+    enum { OK = (ZuTraits<U>::IsArray || ZuTraits<U>::IsString) &&
+      ZuEquivChar<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename R = void>
   struct MatchChar2String : public ZuIfT<IsChar2String<U>::OK, R> { };
 
   // from individual char2 (requires conversion, char->wchar_t only)
   template <typename U, typename V = Char2> struct IsChar2 {
-    enum { OK = ZuConversion<U, V>::Same &&
-      !ZuConversion<U, wchar_t>::Same };
+    enum { OK = ZuEquivChar<U, V>::Same &&
+      !ZuEquivChar<U, wchar_t>::Same };
   };
   template <typename U, typename R = void>
   struct MatchChar2 : public ZuIfT<IsChar2<U>::OK, R> { };

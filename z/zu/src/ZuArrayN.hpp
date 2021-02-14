@@ -110,24 +110,26 @@ protected:
   template <typename U, typename R = void>
   struct MatchString : public ZuIfT<IsString<U>::OK, R> { };
 
+  // from char2 string (requires conversion)
+  template <typename U, typename V = Char2> struct IsChar2String {
+    enum { OK = !ZuConversion<ZuNull, V>::Same &&
+      (ZuTraits<U>::IsArray || ZuTraits<U>::IsString) &&
+      ZuEquivChar<typename ZuTraits<U>::Elem, V>::Same };
+  };
+  template <typename U, typename R = void>
+  struct MatchChar2String : public ZuIfT<IsChar2String<U>::OK, R> { };
+
   // from any array type with convertible element type (not a string)
   template <typename U, typename V = T> struct IsArray {
     enum { OK =
       !IsString<U>::OK &&
+      !IsChar2String<U>::OK &&
       !ZuConversion<U, V>::Same &&
       ZuTraits<U>::IsArray &&
       ZuConversion<typename ZuTraits<U>::Elem, V>::Exists };
   };
   template <typename U, typename R = void>
   struct MatchArray : public ZuIfT<IsArray<U>::OK, R> { };
-
-  // from char2 string (requires conversion)
-  template <typename U, typename V = Char2> struct IsChar2String {
-    enum { OK = !ZuConversion<ZuNull, V>::Same && ZuTraits<U>::IsString &&
-      ZuConversion<typename ZuTraits<U>::Elem, V>::Same };
-  };
-  template <typename U, typename R = void>
-  struct MatchChar2String : public ZuIfT<IsChar2String<U>::OK, R> { };
 
   // from individual char2 (requires conversion, char->wchar_t only)
   template <typename U, typename V = Char2> struct IsChar2 {

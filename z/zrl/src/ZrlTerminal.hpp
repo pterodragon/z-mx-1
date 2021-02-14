@@ -31,12 +31,13 @@
 #endif
 
 #include <string.h>
-#include <locale.h>
-#include <unistd.h>	// for isatty
+
+#ifndef _WIN32
 #include <fcntl.h>
 #include <termios.h>
 
 #include <sys/ioctl.h>
+#endif
 
 #include <zlib/ZuString.hpp>
 #include <zlib/ZuUTF.hpp>

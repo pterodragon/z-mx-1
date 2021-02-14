@@ -20,14 +20,15 @@
 // command line interface
 
 #include <stdlib.h>
-#include <termios.h>
+
+#ifndef _WIN32
 #include <unistd.h>
-#include <fcntl.h>
 
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/epoll.h>
 #include <linux/unistd.h>
+#endif
 
 #include <zlib/ZiLib.hpp>
 

@@ -1001,7 +1001,10 @@ void Terminal::read()
 	goto process_vkey;
       }
       c = rec.Event.KeyEvent.uChar.UnicodeChar;
-      if (code == VK_MENU) goto process_char;
+      if (code == VK_MENU) {
+	if (c) goto process_char;
+	continue;
+      }
       if (!rec.Event.KeyEvent.bKeyDown) continue;
       vkey = VKey::Null;
       switch (code) {

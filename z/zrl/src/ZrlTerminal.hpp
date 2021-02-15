@@ -286,6 +286,9 @@ public:
   // turn off cursor (e.g. while highlighting)
   void cursor_off();
 
+  unsigned bol(unsigned pos) { return pos - (pos % m_width); }
+  unsigned eol(unsigned pos) { return m_line.align(pos + m_width - 1); }
+
 private:
   void cr();
   void nl();

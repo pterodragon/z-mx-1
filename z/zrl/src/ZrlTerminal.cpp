@@ -30,6 +30,8 @@
 #include <linux/unistd.h>
 #endif
 
+#include <fstream>
+
 #include <zlib/ZiLib.hpp>
 
 #include <zlib/ZrlTerminal.hpp>
@@ -1241,8 +1243,7 @@ void Terminal::crnl()
 #else
   crnl_();
 #endif
-  m_pos -= m_pos % m_width;
-  m_pos += m_width;
+  m_pos = bol(m_pos) + m_width;
 }
 
 // out row from cursor, leaving cursor at start of next row
@@ -1259,28 +1260,23 @@ void Terminal::outScroll(unsigned endPos)
 // clear row from cursor, leaving cursor at start of next row
 void Terminal::clrScroll_(unsigned n)
 {
-  if (n) {
+  if (!n) { crnl_(); return; }
 #ifndef _WIN32
-    if (ZuLikely(m_el)) {
-      tputs(m_el);
-      crnl_();
-      return;
-    }
-    if (ZuLikely(m_ech)) {
-      tputs(tiparm(m_ech, n));
-      crnl_();
-      return;
-    }
-    clrOver_(n);
-#else
-    m_out << "\x1b[K\r\n";
-    return;
-#endif
-  }
-#ifndef _WIN32
-  if (!m_am || m_xenl)
-#endif
+  if (ZuLikely(m_el)) {
+    tputs(m_el);
     crnl_();
+    return;
+  }
+  if (ZuLikely(m_ech)) {
+    tputs(tiparm(m_ech, n));
+    crnl_();
+    return;
+  }
+  clrOver_(n);
+  if (!m_am || m_xenl) crnl_();
+#else
+  m_out << "\x1b[K\r\n";
+#endif
 }
 
 void Terminal::out_(ZuString data)
@@ -1376,7 +1372,7 @@ void Terminal::outNoScroll(unsigned endPos, unsigned pos)
     // right-most character on row was output, MUST move cursor, NO cub
 #ifndef _WIN32
     if (m_hpa) {
-      tputs(tiparm(m_hpa, pos - (pos % m_width)));
+      tputs(tiparm(m_hpa, pos % m_width));
       m_pos = pos;
       return;
     }
@@ -1385,7 +1381,7 @@ void Terminal::outNoScroll(unsigned endPos, unsigned pos)
     if (pos > m_pos) mvright(pos);
     return;
 #else
-    m_out << "\x1b[" << ZuBoxed(pos - (pos % m_width) + 1) << 'G';
+    m_out << "\x1b[" << ZuBoxed((pos % m_width) + 1) << 'G';
     m_pos = pos;
     return;
 #endif
@@ -1513,7 +1509,7 @@ void Terminal::mv(unsigned pos)
 	do { tputs(m_cuu1); } while (--up);
       } else { // no way to go up, just reprint destination row
 	tputs(m_cr);
-	m_pos = pos - (pos % m_width);
+	m_pos = bol(pos);
 	outNoScroll(m_pos + m_width, pos);
 	return;
       }
@@ -1560,15 +1556,15 @@ void Terminal::mvhoriz(unsigned pos)
 
 void Terminal::mvleft(unsigned pos)
 {
-  ZmAssert(m_pos >= pos - (pos % m_width));		// cursor is >=BOL
-  ZmAssert(m_pos < pos - (pos % m_width) + m_width);	// cursor is <EOL
+  ZmAssert(m_pos >= bol(pos));			// cursor is >=BOL
+  ZmAssert(m_pos < bol(pos) + m_width);		// cursor is <EOL
   ZmAssert(m_pos > pos);			// cursor is right of pos
 
 #ifndef _WIN32
   if (ZuLikely(m_cub)) {
     tputs(tiparm(m_cub, m_pos - pos));
   } else if (ZuLikely(m_hpa)) {
-    tputs(tiparm(m_hpa, pos - (pos % m_width)));
+    tputs(tiparm(m_hpa, pos % m_width));
   } else {
     for (unsigned i = 0, n = m_pos - pos; i < n; i++) tputs(m_cub1);
   }
@@ -1584,7 +1580,7 @@ void Terminal::mvright(unsigned pos)
   if (ZuLikely(m_cuf)) {
     tputs(tiparm(m_cuf, pos - m_pos));
   } else if (ZuLikely(m_hpa)) {
-    tputs(tiparm(m_hpa, pos - (pos % m_width)));
+    tputs(tiparm(m_hpa, pos % m_width));
 #if 0
   } else if (m_cuf1) {
     for (unsigned i = 0, n = pos - m_pos; i < n; i++) tputs(m_cuf1);
@@ -1633,19 +1629,19 @@ void Terminal::del_(unsigned n)
 }
 
 // encodes a shift mark as byte offset and display position into 64bits
-class ShiftMark {
+class TrailMark {
   constexpr static unsigned shift() { return 16; }
   constexpr static unsigned mask() { return ((1<<shift()) - 1); }
 
 public:
-  ShiftMark() = default;
-  ShiftMark(const ShiftMark &) = default;
-  ShiftMark &operator =(const ShiftMark &) = default;
-  ShiftMark(ShiftMark &&) = default;
-  ShiftMark &operator =(ShiftMark &&) = default;
-  ~ShiftMark() = default;
+  TrailMark() = default;
+  TrailMark(const TrailMark &) = default;
+  TrailMark &operator =(const TrailMark &) = default;
+  TrailMark(TrailMark &&) = default;
+  TrailMark &operator =(TrailMark &&) = default;
+  ~TrailMark() = default;
 
-  ShiftMark(uint32_t byte, uint32_t pos) : m_value{byte | (pos<<shift())} { }
+  TrailMark(uint32_t byte, uint32_t pos) : m_value{byte | (pos<<shift())} { }
 
   unsigned byte() const { return m_value & mask(); }
   unsigned pos() const { return m_value>>shift(); }
@@ -1663,11 +1659,11 @@ void Terminal::splice(
 {
   ZmAssert(off == m_line.position(m_pos).mapping());
 
-  unsigned endPos = m_pos + span.width();
-  unsigned endBOLPos = endPos - (endPos % m_width);
   bool shiftLeft = false, shiftRight = false;
-  ShiftMark *shiftMarks = nullptr;
+  TrailMark *trailMarks = nullptr;
   unsigned trailRows = 0;
+  unsigned bolPos = bol(m_pos);
+  unsigned oldWidth = m_line.width();
 
   // it's worth optimizing the common case where a long line of input
   // is being interactively edited at its beginning; when shifting the
@@ -1677,7 +1673,7 @@ void Terminal::splice(
   // in place on the terminal and using insertions/deletions on each
   // trailing row, rather than completely redrawing all trailing rows
   if (off + span.inLen() < m_line.length()) {
-    int trailWidth = m_line.width() - endPos; // width of trailing data
+    int trailWidth = oldWidth - m_pos; // width of trailing data
 
     if (trailWidth > 0) {
       if (rspan.width() < span.width()) {
@@ -1698,24 +1694,28 @@ void Terminal::splice(
 	  shiftRight = true; // shift right using insertions on each line
       }
       if (shiftLeft || shiftRight)
-	trailRows = (trailWidth + m_width - 1) / m_width; // #rows
+	trailRows = (bol(oldWidth) - bolPos) / m_width + 1;
     }
-  }
-  if (trailRows) shiftMarks = ZuAlloca(shiftMarks, trailRows);
-  if (shiftMarks) {
+  } else
+  if (trailRows) trailMarks = ZuAlloca(trailMarks, trailRows);
+  if (trailMarks) {
+    unsigned endPos = m_pos + span.inLen();
     int shiftOff =
       static_cast<int>(rspan.inLen()) - static_cast<int>(span.inLen());
-    unsigned bolPos = endBOLPos;
     unsigned line = 0;
-    while (bolPos < m_line.width() && line < trailRows) {
+    while (bolPos < oldWidth && line < trailRows) {
       if (shiftLeft) {
-	unsigned eolPos = m_line.align(bolPos + m_width - 1);
-	shiftMarks[line++] = ShiftMark{
-	  m_line.position(eolPos).mapping() + shiftOff, eolPos};
+	// shift left - trailMarks saves the old position of each trailing EOL
+	unsigned pos = eol(bolPos);
+	if (pos >= endPos) {
+	  trailMarks[line++] =
+	    TrailMark{m_line.position(pos).mapping() + shiftOff, pos};
+	}
       } else {
+	// shift right - trailMarks saves the old position of each trailing BOL
 	unsigned pos = bolPos < endPos ? endPos : bolPos;
-	shiftMarks[line++] = ShiftMark{
-	  m_line.position(pos).mapping() + shiftOff, pos};
+	trailMarks[line++] =
+	  TrailMark{m_line.position(pos).mapping() + shiftOff, pos};
       }
       bolPos += m_width;
     }
@@ -1727,64 +1727,79 @@ void Terminal::splice(
 
   // reflow the line, from offset onwards
   m_line.reflow(off, m_width);
+  mv(m_line.byte(off).mapping());
 
-  // recalculate endPos
-  endPos = m_pos + rspan.width();
-  endBOLPos = endPos - (endPos % m_width);
+  // calculate reflowed endPos
+  unsigned endPos = m_line.byte(off + rspan.inLen()).mapping();
+  unsigned endBOLPos = bol(endPos);
 
   // out/scroll all but last row of replacement data
   {
-    unsigned bolPos = m_pos - (m_pos % m_width);
-    while (bolPos < endBOLPos) outScroll(bolPos += m_width);
+    bolPos = bol(m_pos);
+    while (bolPos < endBOLPos) {
+      outScroll(bolPos += m_width);
+    }
   }
 
   // out/scroll all but last row of trailing data
-  unsigned lastBOLPos = m_line.width();
-  lastBOLPos -= (lastBOLPos % m_width);
-  unsigned bolPos = endBOLPos;
+  // - the shift left/right code carefully avoids a number of obscure pitfalls
+  unsigned lastBOLPos = bol(m_line.width());
+  bolPos = endBOLPos;
   if (shiftLeft) {
-    unsigned line = 0;
-    while (bolPos < lastBOLPos && line < trailRows) {
-      auto shiftMark = shiftMarks[line++];
-      unsigned rightPos = m_line.byte(shiftMark.byte()).mapping();
-      del_(shiftMark.pos() - rightPos);
-      rightPos += m_line.position(rightPos).len();
-      mvright(rightPos);
-      outScroll(bolPos += m_width);
-    }
-    if (bolPos < m_line.width()) {
-      if (line < trailRows) {
-	auto shiftMark = shiftMarks[line];
-	unsigned rightPos = m_line.byte(shiftMark.byte()).mapping();
-	del_(shiftMark.pos() - rightPos);
-	rightPos += m_line.position(rightPos).len();
-	mvright(rightPos);
+    unsigned row = 0;
+    while (bolPos < m_line.width()) {
+      if (row < trailRows) {
+	TrailMark trailMark;
+	unsigned rightPos;
+	// find the trailMark for the current line, and use it to shift the line
+	do {
+	  trailMark = trailMarks[row++];
+	  rightPos = m_line.byte(trailMark.byte()).mapping();
+	} while (row < trailRows && rightPos <= bolPos);
+	if (rightPos > bolPos && rightPos < bolPos + m_width) {
+	  if (rightPos < trailMark.pos()) del_(trailMark.pos() - rightPos);
+	  rightPos += m_line.position(rightPos).len();
+	  mvright(rightPos);
+	} else if (rightPos > bolPos)
+	  --row;
       }
-      outClr(m_line.width());
+      if (bolPos < lastBOLPos)
+	outScroll(bolPos += m_width);
+      else
+	outClr(m_line.width());
     }
   } else if (shiftRight) {
-    unsigned line = 0;
+    unsigned row = 0;
     bool smir = false;
-    while (bolPos < lastBOLPos && line < trailRows) {
-      auto shiftMark = shiftMarks[line++];
-      unsigned leftPos = m_line.byte(shiftMark.byte()).mapping();
-      smir = ins_(leftPos - shiftMark.pos(), smir);
-      outClr(leftPos);
+    while (bolPos < m_line.width()) {
+      if (row < trailRows) {
+	TrailMark trailMark;
+	unsigned leftPos;
+	// find the trailMark for the current line, and use it to shift the line
+	do {
+	  trailMark = trailMarks[row++];
+	  leftPos = m_line.byte(trailMark.byte()).mapping();
+	} while (row < trailRows && leftPos <= bolPos);
+	if (leftPos > bolPos && leftPos < bolPos + m_width) {
+	  if (leftPos > trailMark.pos())
+	    smir = ins_(leftPos - trailMark.pos(), smir);
+	  outClr(leftPos);
 #ifndef _WIN32
-      if (smir && !m_mir) { tputs(m_rmir); smir = false; }
+	  if (smir && !m_mir) { tputs(m_rmir); smir = false; }
 #endif
-      crnl();
-      bolPos += m_width;
-    }
-    if (bolPos < m_line.width()) {
-      if (line < trailRows) {
-	auto shiftMark = shiftMarks[line];
-	unsigned leftPos = m_line.byte(shiftMark.byte()).mapping();
-	smir = ins_(leftPos - shiftMark.pos(), smir);
-	outClr(leftPos);
-      } else {
-	outClr(m_line.width());
+	  crnl();
+	  bolPos += m_width;
+	  continue;
+	}
+	if (leftPos > bolPos) --row;
+#ifndef _WIN32
+	if (smir && !m_mir) { tputs(m_rmir); smir = false; }
+#endif
       }
+      if (bolPos < lastBOLPos)
+	outScroll(bolPos += m_width);
+      else
+	outClr(m_line.width());
     }
 #ifndef _WIN32
     if (smir) tputs(m_rmir);
@@ -1795,11 +1810,10 @@ void Terminal::splice(
   }
 
   // if the length of the line was reduced, clear to the end of the old line
-  if (rspan.width() < span.width()) {
-    unsigned clrPos = m_line.width() + (span.width() - rspan.width());
-    unsigned clrBOLPos = clrPos - (clrPos % m_width);
-    while (bolPos < clrBOLPos) clrScroll(bolPos += m_width);
-    if (bolPos < clrPos) clr(clrPos);
+  if (m_line.width() < oldWidth) {
+    unsigned clrPos = bol(oldWidth);
+    while (bolPos < clrPos) clrScroll(bolPos += m_width);
+    if (bolPos < oldWidth) clr(oldWidth);
   }
 
   // move cursor to final position (i.e. just after rspan)
@@ -1876,10 +1890,10 @@ void Terminal::redraw(unsigned endPos, bool high)
 
 void Terminal::redraw_(unsigned pos, unsigned endPos)
 {
-  unsigned endBOLPos = endPos - (endPos % m_width);
+  unsigned endBOLPos = bol(endPos);
   // out/scroll all but last row
   if (pos < endBOLPos) {
-    pos -= (pos % m_width);
+    pos = bol(pos);
     do { outScroll(pos += m_width); } while (pos < endBOLPos);
   }
   // output last row

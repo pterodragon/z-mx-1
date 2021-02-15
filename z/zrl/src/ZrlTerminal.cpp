@@ -1702,19 +1702,19 @@ void Terminal::splice(
     unsigned endPos = m_pos + span.inLen();
     int shiftOff =
       static_cast<int>(rspan.inLen()) - static_cast<int>(span.inLen());
-    unsigned line = 0;
-    while (bolPos < oldWidth && line < trailRows) {
+    unsigned row = 0;
+    while (bolPos < oldWidth && row < trailRows) {
       if (shiftLeft) {
 	// shift left - trailMarks saves the old position of each trailing EOL
 	unsigned pos = eol(bolPos);
 	if (pos >= endPos) {
-	  trailMarks[line++] =
+	  trailMarks[row++] =
 	    TrailMark{m_line.position(pos).mapping() + shiftOff, pos};
 	}
       } else {
 	// shift right - trailMarks saves the old position of each trailing BOL
 	unsigned pos = bolPos < endPos ? endPos : bolPos;
-	trailMarks[line++] =
+	trailMarks[row++] =
 	  TrailMark{m_line.position(pos).mapping() + shiftOff, pos};
       }
       bolPos += m_width;
@@ -1739,18 +1739,17 @@ void Terminal::splice(
   // out/scroll all but last row of replacement data
   {
     bolPos = bol(m_pos);
-    while (bolPos < endBOLPos) {
-      outScroll(bolPos += m_width);
-    }
+    while (bolPos < endBOLPos) outScroll(bolPos += m_width);
   }
 
   // out/scroll trailing data
   // - the shift left/right code carefully avoids a number of obscure pitfalls
-  unsigned lastBOLPos = bol(m_line.width());
+  unsigned lineWidth = m_line.width();
+  unsigned lastBOLPos = !lineWidth ? 0 : bol(lineWidth - 1);
   bolPos = endBOLPos;
   if (shiftLeft) {
     unsigned row = 0;
-    while (bolPos < m_line.width()) {
+    while (bolPos < lineWidth) {
       if (row < trailRows) {
 	TrailMark trailMark;
 	unsigned rightPos;
@@ -1769,13 +1768,15 @@ void Terminal::splice(
       }
       if (bolPos < lastBOLPos)
 	outScroll(bolPos += m_width);
-      else
-	outClr(m_line.width());
+      else {
+	outClr(lineWidth);
+	break;
+      }
     }
   } else if (shiftRight) {
     unsigned row = 0;
     bool smir = false;
-    while (bolPos < m_line.width()) {
+    while (bolPos < lineWidth) {
       if (row < trailRows) {
 	TrailMark trailMark;
 	unsigned leftPos;
@@ -1792,7 +1793,7 @@ void Terminal::splice(
 #ifndef _WIN32
 	  if (smir && !m_mir) { tputs(m_rmir); smir = false; }
 #endif
-	  crnl();
+	  if (bolPos < lastBOLPos) crnl();
 	  bolPos += m_width;
 	  continue;
 	}
@@ -1803,20 +1804,22 @@ void Terminal::splice(
       }
       if (bolPos < lastBOLPos)
 	outScroll(bolPos += m_width);
-      else
-	outClr(m_line.width());
+      else {
+	outClr(lineWidth);
+	break;
+      }
     }
 #ifndef _WIN32
     if (smir) tputs(m_rmir);
 #endif
   } else {
     while (bolPos < lastBOLPos) outScroll(bolPos += m_width);
-    if (bolPos < m_line.width()) outClr(m_line.width());
+    if (bolPos < lineWidth) outClr(lineWidth);
   }
 
   // if the length of the line was reduced, clear to the end of the old line
-  if (m_line.width() < oldWidth) {
-    unsigned clrPos = bol(oldWidth);
+  if (lineWidth < oldWidth) {
+    unsigned clrPos = bol(oldWidth - 1);
     while (bolPos < clrPos) clrScroll(bolPos += m_width);
     if (bolPos < oldWidth) clr(oldWidth);
   }

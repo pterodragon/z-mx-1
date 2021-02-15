@@ -233,8 +233,7 @@ namespace MxBookingType {
 }
 
 struct MxTTimeFmt {
-  struct Null { template <typename S> void print(S &) const { } };
-  static ZtDateFmt::FIX<-9, Null> &fix() {
+  static ZtDateFmt::FIX<-9> &fix() {
     thread_local ZtDateFmt::FIX<-9, Null> fix_;
     return fix_;
   }

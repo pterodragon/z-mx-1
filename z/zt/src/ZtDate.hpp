@@ -176,7 +176,7 @@ namespace ZtDateFmt {
   template <char Trim> struct FIX_<0, Trim> {
     template <typename S> ZuInline static void fracPrint(S &, unsigned) { }
   };
-  template <int Prec_, class Null_>
+  template <int Prec_, class Null_ = ZuPrintNull>
   class FIX :
       public FIX_<(Prec_ < 0 ? -Prec_ : Prec_), (Prec_ < 0 ? '\0' : '0')> {
   friend ::ZtDate;

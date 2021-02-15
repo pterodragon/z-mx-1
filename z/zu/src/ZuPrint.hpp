@@ -67,10 +67,8 @@ struct ZuPrintBuffer {
   enum { OK = 1, String = 0, Delegate = 0, Buffer = 1 };
 };
 
-struct ZuPrintNull {
-  enum { OK = 1, String = 0, Delegate = 1, Buffer = 0 };
-  template <typename S, typename T>
-  ZuInline static void print(S &, const T &) { }
+struct ZuPrintNull : public ZuPrintable {
+  template <typename S> void print(S &) const { }
 };
 
 template <typename T> struct ZuPrint<const T> : public ZuPrint<T> { };

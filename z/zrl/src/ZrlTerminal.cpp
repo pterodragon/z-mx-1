@@ -1696,7 +1696,7 @@ void Terminal::splice(
       if (shiftLeft || shiftRight)
 	trailRows = (bol(oldWidth) - bolPos) / m_width + 1;
     }
-  } else
+  }
   if (trailRows) trailMarks = ZuAlloca(trailMarks, trailRows);
   if (trailMarks) {
     unsigned endPos = m_pos + span.inLen();

@@ -856,16 +856,23 @@ bool Editor::map(ZuString id)
 
 void Editor::prompt(ZtArray<uint8_t> prompt)
 {
-  int pos = m_tty.pos();
+  const auto &line = m_tty.line();
+  unsigned off = line.position(m_tty.pos()).mapping();
+  int oldLen = m_context.prompt.length();
+  int newLen = prompt.length();
+  if (off > oldLen)
+    off += (newLen - oldLen);
+  else
+    off = newLen;
   auto oldSpan = ZuUTF<uint32_t, uint8_t>::span(m_context.prompt);
   int oldWidth = oldSpan.width();
   auto newSpan = ZuUTF<uint32_t, uint8_t>::span(prompt);
   int newWidth = newSpan.width();
   m_tty.splice(0, oldSpan, prompt, newSpan);
   m_tty.write();
-  m_tty.mv(pos + (newWidth - oldWidth));
+  m_tty.mv(line.byte(off).mapping());
   m_context.prompt = ZuMv(prompt);
-  m_context.startPos = newWidth;
+  m_context.startPos = line.byte(newLen).mapping();
 }
 
 void Editor::prompt_(ZtArray<uint8_t> prompt)
@@ -1079,7 +1086,10 @@ void Editor::splice_(
     unsigned off, ZuUTFSpan span,
     ZuArray<const uint8_t> replace, ZuUTFSpan rspan)
 {
-  m_context.histLoadOff = -1; //  clear histLoadOff since line is being modified
+  // line is being modified
+  m_context.horizPos = -1;
+  m_context.histLoadOff = -1;
+
   if (rspan.inLen() <= span.inLen() ||
       m_tty.line().length() + (rspan.inLen() - span.inLen()) <
 	m_config.maxLineLen)
@@ -1105,6 +1115,7 @@ void Editor::motion(
     auto span = ZuUTF<uint32_t, uint8_t>::span(s);
     m_context.histLoadOff = -1;
     const auto &line = m_tty.line();
+    // map pos to off, adjust off for the splice, then map off back to new pos
     unsigned off = line.position(pos).mapping();
     if (off > begin) {
       if (off > end)
@@ -1833,6 +1844,7 @@ bool Editor::cmdTransGlyph(Cmd, int32_t)
   memcpy(&replace[rend - rbegin], &data[lbegin], rbegin - lbegin);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(lbegin, rend));
   splice(lbegin, span, replace, span);
+  align(m_tty.pos());
   return false;
 }
 bool Editor::cmdTransWord(Cmd, int32_t)
@@ -1860,6 +1872,7 @@ bool Editor::cmdTransWord(Cmd, int32_t)
   memcpy(&replace[rend - mbegin], &data[lbegin], mbegin - lbegin);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(lbegin, rend));
   splice(lbegin, span, replace, span);
+  align(m_tty.pos());
   return false;
 }
 bool Editor::cmdTransUnixWord(Cmd, int32_t)
@@ -1885,6 +1898,7 @@ bool Editor::cmdTransUnixWord(Cmd, int32_t)
   memcpy(&replace[rend - mbegin], &data[lbegin], mbegin - lbegin);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(lbegin, rend));
   splice(lbegin, span, replace, span);
+  align(m_tty.pos());
   return false;
 }
 
@@ -1992,6 +2006,7 @@ void Editor::transformWord(TransformSpanFn fn, TransformCharFn charFn)
   fn(charFn, replace);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
   splice(begin, span, replace, span);
+  align(m_tty.pos());
 }
 
 void Editor::transformVis(TransformSpanFn fn, TransformCharFn charFn)
@@ -2008,6 +2023,7 @@ void Editor::transformVis(TransformSpanFn fn, TransformCharFn charFn)
   fn(charFn, replace);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
   splice(begin, span, replace, span);
+  align(m_tty.pos());
 }
 
 bool Editor::cmdCapGlyph(Cmd cmd, int32_t)
@@ -2153,6 +2169,7 @@ void Editor::completed(ZuArray<const uint8_t> data)
   if (rspan.inLen() <= span.inLen() ||
       line.length() + (rspan.inLen() - span.inLen()) < m_config.maxLineLen) {
     splice(m_context.compPrefixEnd, span, data, rspan);
+    align(m_tty.pos());
     m_context.compEnd = m_context.compPrefixEnd + data.length();
     m_context.compSpan = rspan;
   }
@@ -2234,6 +2251,7 @@ void Editor::histLoad(int offset, ZuArray<const uint8_t> data, bool save)
   m_tty.splice(
       begin, ZuUTF<uint32_t, uint8_t>::span(orig),
       data, ZuUTF<uint32_t, uint8_t>::span(data));
+  align(m_tty.pos());
 }
 bool Editor::cmdNext(Cmd cmd, int32_t vkey)
 {

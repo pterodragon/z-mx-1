@@ -422,7 +422,7 @@ struct CmdContext {
   int			editArg = -1;	// repeat count for ''
   unsigned		undoNext = 0;	// undo index of next op
   int			undoIndex = -1;	// undo index of undo/redo
-  int			undoPos = -1;	// position prior to first undo
+  int			undoPos = -1;	// saved position prior to first undo
 
   // completion context
   unsigned		compPrefixOff = 0;	// completion prefix offset

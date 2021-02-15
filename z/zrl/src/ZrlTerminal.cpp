@@ -402,14 +402,14 @@ bool Terminal::open_()
 
   //		| Normal | Shift | Ctrl/Alt/combinations (*)
   // -----------+--------+-------+--------------------------
-  //  Up	| kcuu1  | kUP   | kUP3-8
-  //  Down	| kcud1  | kDN   | kDN3-8
-  //  Left	| kcub1  | kLFT  | kLFT3-8
-  //  Right	| kcuf1  | kRIT  | kRIT3-8
-  //  Home	| khome  | kHOM  | kHOM3-8
-  //  End	| kend   | kEND  | kEND3-8
-  //  Insert	| kich1  | kIC   | kIC3-8
-  //  Delete	| kdch1  | KDC   | kDC3-8
+  //  Up	| kcuu1  | kUP   | kUP[3-8]
+  //  Down	| kcud1  | kDN   | kDN[3-8]
+  //  Left	| kcub1  | kLFT  | kLFT[3-8]
+  //  Right	| kcuf1  | kRIT  | kRIT[3-8]
+  //  Home	| khome  | kHOM  | kHOM[3-8]
+  //  End	| kend   | kEND  | kEND[3-8]
+  //  Insert	| kich1  | kIC   | kIC[3-8]
+  //  Delete	| kdch1  | KDC   | kDC[3-8]
   //
   //  (*) modifiers
   //  -------------
@@ -1058,7 +1058,7 @@ process_vkey:
 	  utf.clear();
 	  utfn = 0;
 	}
-	m_keyFn(vkey);
+	if (m_keyFn(vkey)) goto stop;
 	continue;
       }
 process_char:

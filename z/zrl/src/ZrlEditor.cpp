@@ -864,11 +864,9 @@ void Editor::prompt(ZtArray<uint8_t> prompt)
     off += (newLen - oldLen);
   else
     off = newLen;
-  auto oldSpan = ZuUTF<uint32_t, uint8_t>::span(m_context.prompt);
-  int oldWidth = oldSpan.width();
-  auto newSpan = ZuUTF<uint32_t, uint8_t>::span(prompt);
-  int newWidth = newSpan.width();
-  m_tty.splice(0, oldSpan, prompt, newSpan);
+  m_tty.splice(
+      0, ZuUTF<uint32_t, uint8_t>::span(m_context.prompt),
+      prompt, ZuUTF<uint32_t, uint8_t>::span(prompt));
   m_tty.write();
   m_tty.mv(line.byte(off).mapping());
   m_context.prompt = ZuMv(prompt);

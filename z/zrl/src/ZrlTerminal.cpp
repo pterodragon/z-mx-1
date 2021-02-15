@@ -1727,7 +1727,10 @@ void Terminal::splice(
 
   // reflow the line, from offset onwards
   m_line.reflow(off, m_width);
-  mv(m_line.byte(off).mapping());
+  {
+    unsigned pos = m_line.byte(off).mapping();
+    if (m_pos > pos) mv(pos);
+  }
 
   // calculate reflowed endPos
   unsigned endPos = m_line.byte(off + rspan.inLen()).mapping();
@@ -1741,7 +1744,7 @@ void Terminal::splice(
     }
   }
 
-  // out/scroll all but last row of trailing data
+  // out/scroll trailing data
   // - the shift left/right code carefully avoids a number of obscure pitfalls
   unsigned lastBOLPos = bol(m_line.width());
   bolPos = endBOLPos;
@@ -1756,7 +1759,8 @@ void Terminal::splice(
 	  trailMark = trailMarks[row++];
 	  rightPos = m_line.byte(trailMark.byte()).mapping();
 	} while (row < trailRows && rightPos <= bolPos);
-	if (rightPos > bolPos && rightPos < bolPos + m_width) {
+	if (rightPos <= trailMark.pos() &&
+	    rightPos > bolPos && rightPos < bolPos + m_width) {
 	  if (rightPos < trailMark.pos()) del_(trailMark.pos() - rightPos);
 	  rightPos += m_line.position(rightPos).len();
 	  mvright(rightPos);
@@ -1780,7 +1784,8 @@ void Terminal::splice(
 	  trailMark = trailMarks[row++];
 	  leftPos = m_line.byte(trailMark.byte()).mapping();
 	} while (row < trailRows && leftPos <= bolPos);
-	if (leftPos > bolPos && leftPos < bolPos + m_width) {
+	if (leftPos >= trailMark.pos() &&
+	    leftPos > bolPos && leftPos < bolPos + m_width) {
 	  if (leftPos > trailMark.pos())
 	    smir = ins_(leftPos - trailMark.pos(), smir);
 	  outClr(leftPos);

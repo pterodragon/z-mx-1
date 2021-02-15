@@ -1104,11 +1104,13 @@ void Editor::motion(
   if (op & Op::Del) {
     auto span = ZuUTF<uint32_t, uint8_t>::span(s);
     m_context.histLoadOff = -1;
-    if (pos > begPos) {
-      if (pos > endPos)
-	pos -= (endPos - begPos);
+    const auto &line = m_tty.line();
+    unsigned off = line.position(pos).mapping();
+    if (off > begin) {
+      if (off > end)
+	off -= (end - begin);
       else
-	pos = begPos;
+	off = begin;
     }
     m_tty.mv(begPos);
     splice(begin, span,
@@ -1118,6 +1120,7 @@ void Editor::motion(
       m_tty.cursor_on();
       m_context.markPos = m_context.highPos = -1;
     }
+    pos = line.byte(off).mapping();
   } else if (op & (Op::Draw | Op::Vis)) {
     if (!(op & Op::Vis)) {
       m_tty.mv(begPos);

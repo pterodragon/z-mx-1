@@ -1247,7 +1247,7 @@ void Terminal::crnl()
 }
 
 // out row from cursor, leaving cursor at start of next row
-void Terminal::outScroll(unsigned endPos)
+void Terminal::outWrap(unsigned endPos)
 {
   ZmAssert(!(endPos % m_width));	// endPos is EOL
   ZmAssert(m_pos >= endPos - m_width);	// cursor is >=BOL
@@ -1255,12 +1255,12 @@ void Terminal::outScroll(unsigned endPos)
 
   if (m_pos < endPos) {
     out(endPos);
-    clrScroll(endPos);
+    clrWrap(endPos);
   }
 }
 
-// clear row from cursor, leaving cursor at start of next row
-void Terminal::clrScroll_(unsigned n)
+// clear row from cursor, breaking to start of next row
+void Terminal::clrBreak_(unsigned n)
 {
   if (!n) { crnl_(); return; }
 #ifndef _WIN32
@@ -1328,15 +1328,38 @@ void Terminal::out_(ZuString data)
   }
 }
 
-// clear remainder of row from cursor, leaving cursor at start of next row
-void Terminal::clrScroll(unsigned endPos)
+void Terminal::clrWrap_(unsigned n)
 {
-  clrScroll_(endPos - m_pos);
+  clrOver_(n);
+#ifndef _WIN32
+  if (!m_am || m_xenl) crnl_();
+#endif
+}
+
+// clear remainder of row from cursor, leaving cursor at start of next row
+void Terminal::clrWrap(unsigned endPos)
+{
+  if (m_pos < endPos) {
+    unsigned n = endPos - m_pos;
+    unsigned w = endPos < m_line.width() ? m_line.position(endPos).len() : 0;
+    if (n >= w
+#ifndef _WIN32
+	|| !m_am
+#endif
+	) clrWrap_(n);
+    m_pos = endPos;
+  }
+}
+
+// clear remainder of row from cursor, leaving cursor at start of next row
+void Terminal::clrBreak(unsigned endPos)
+{
+  clrBreak_(endPos - m_pos);
   m_pos = endPos;
 }
 
 // out row from cursor, leaving cursor on same row at pos
-void Terminal::outNoScroll(unsigned endPos, unsigned pos)
+void Terminal::outNoWrap(unsigned endPos, unsigned pos)
 {
   ZmAssert(!(endPos % m_width));	// endPos is EOL
   ZmAssert(m_pos >= endPos - m_width);	// cursor is >=BOL
@@ -1452,19 +1475,6 @@ void Terminal::clrErase_(unsigned n)
 #endif
 }
 
-// clear with ech, falling back to spaces
-void Terminal::clr_(unsigned n)
-{
-#ifndef _WIN32
-  if (ZuLikely(m_ech))
-#endif
-    clrErase_(n);
-#ifndef _WIN32
-  else
-    clrOver_(n);
-#endif
-}
-
 // clear with ech, falling back to spaces - endPos is not past end of row
 void Terminal::clr(unsigned endPos)
 {
@@ -1514,7 +1524,7 @@ void Terminal::mv(unsigned pos)
       } else { // no way to go up, just reprint destination row
 	tputs(m_cr);
 	m_pos = bol(pos);
-	outNoScroll(m_pos + m_width, pos);
+	outNoWrap(m_pos + m_width, pos);
 	return;
       }
 #else
@@ -1748,7 +1758,7 @@ void Terminal::splice(
   // out/scroll all but last row of replacement data
   {
     bolPos = bol(m_pos);
-    while (bolPos < endBOLPos) outScroll(bolPos += m_width);
+    while (bolPos < endBOLPos) outWrap(bolPos += m_width);
   }
 
   // out/scroll trailing data
@@ -1805,15 +1815,15 @@ void Terminal::splice(
       }
       bolPos += m_width;
       if (bolPos >= lastBOLPos) break;
-      outScroll(bolPos);
+      outWrap(bolPos);
     }
     if (bolPos > lineWidth) bolPos -= m_width;
-    if (bolPos < lineWidth)
+    if (bolPos < lineWidth || lineWidth < oldWidth)
       outClr(lineWidth);
-    else if (lineWidth < oldWidth || endPos == lineWidth)
-      outScroll(lineWidth);
+    else if (endPos == lineWidth)
+      outWrap(lineWidth);
     else
-      outNoScroll(lineWidth, lineWidth - 1); // park cursor in right-most col
+      outNoWrap(lineWidth, lineWidth - 1); // park cursor in right-most col
 #ifndef _WIN32
     if (smir) tputs(m_rmir);
 #endif
@@ -1822,7 +1832,7 @@ void Terminal::splice(
   // if the length of the line was reduced, clear to the end of the old line
   if (lineWidth < oldWidth) {
     unsigned clrPos = bol(oldWidth - 1);
-    while (bolPos < clrPos) clrScroll(bolPos += m_width);
+    while (bolPos < clrPos) clrBreak(bolPos += m_width);
     if (bolPos < oldWidth) clr(oldWidth);
   }
 
@@ -1905,9 +1915,9 @@ void Terminal::redraw_(unsigned pos, unsigned endPos)
   while (pos < endBOLPos) {
     pos += m_width;
     if (ZuLikely(pos < endPos))
-      outScroll(pos);
+      outWrap(pos);
     else
-      outNoScroll(pos, pos - 1);
+      outNoWrap(pos, pos - 1);
   }
   if (pos < endPos) outClr(endPos);
 }

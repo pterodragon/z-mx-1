@@ -267,12 +267,12 @@ public:
   // low-level output routines that do not read/update line state
   // - these must be followed by redraw() or cls()
   void crnl_();
-  // clear n positions on row, leaving cursor on same row
-  void clr_(unsigned n);
-  // clear n positions by overwriting spaces, leaving cursor on same row
+  // clear n positions by overwriting spaces
   void clrOver_(unsigned n);
+  // clear remaining n positions on row, wrapping around to next row
+  void clrWrap_(unsigned n);
   // clear remaining n positions on row, leaving cursor at start of next row
-  void clrScroll_(unsigned n);
+  void clrBreak_(unsigned n);
   // low-level direct output to display
   void out_(ZuString data);
 
@@ -295,11 +295,13 @@ private:
   void crnl();
 
   // out row from cursor, leaving cursor at start of next row
-  void outScroll(unsigned endPos);
-  // clear row from cursor, leaving cursor at start of next row
-  void clrScroll(unsigned endPos);
+  void outWrap(unsigned endPos);
+  // clear row from cursor, wrapping to start of next row
+  void clrWrap(unsigned endPos);
+  // clear row from cursor, breaking to start of next row
+  void clrBreak(unsigned endPos);
   // out row from cursor, leaving cursor on same row at pos
-  void outNoScroll(unsigned endPos, unsigned pos);
+  void outNoWrap(unsigned endPos, unsigned pos);
   // out row from cursor, clearing any trailing space to endPos
   void outClr(unsigned endPos);
   // out row from cursor to endPos

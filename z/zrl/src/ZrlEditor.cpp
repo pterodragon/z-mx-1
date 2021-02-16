@@ -2228,7 +2228,7 @@ bool Editor::cmdListComplete(Cmd, int32_t)
     }
     auto width = col * colWidth;
     if (width < ttyWidth)
-      m_tty.clrScroll_(ttyWidth - width);
+      m_tty.clrBreak_(ttyWidth - width);
     if (m_tty.write() != Zi::OK) return false;
   }
   m_tty.redraw();

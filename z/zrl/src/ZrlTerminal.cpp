@@ -1670,12 +1670,12 @@ void Terminal::splice(
   unsigned oldWidth = m_line.width();
 
   // it's worth optimizing the common case where a long line of input
-  // is being interactively edited at its beginning; when shifting the
-  // trailing data, if the shift distance is less than half the width of
-  // the display, and the width of the trailing data is greater than the
-  // the shift distance, it's worth leaving the previously displayed data
-  // in place on the terminal and using insertions/deletions on each
-  // trailing row, rather than completely redrawing all trailing rows
+  // is being interactively edited at its beginning: When shifting the
+  // trailing data, if the shift distance is less than half the width
+  // of the display, and the overall width of the trailing data is greater
+  // than the the shift distance, it's worth leaving the old data in
+  // place on the terminal and using insertions/deletions on each
+  // trailing row, rather than completely redrawing all the trailing rows
   if (off + span.inLen() < m_line.length()) {
     int trailWidth = oldWidth - m_pos; // width of trailing data
 

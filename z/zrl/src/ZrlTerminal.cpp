@@ -1656,20 +1656,20 @@ void Terminal::del_(unsigned n)
 #endif
 }
 
-// encodes a shift mark as byte offset and display position into 64bits
-class TrailMark {
+// encodes a glyph mark as a byte offset and display position into 64bits
+class GlyphMark {
   constexpr static unsigned shift() { return 16; }
   constexpr static unsigned mask() { return ((1<<shift()) - 1); }
 
 public:
-  TrailMark() = default;
-  TrailMark(const TrailMark &) = default;
-  TrailMark &operator =(const TrailMark &) = default;
-  TrailMark(TrailMark &&) = default;
-  TrailMark &operator =(TrailMark &&) = default;
-  ~TrailMark() = default;
+  GlyphMark() = default;
+  GlyphMark(const GlyphMark &) = default;
+  GlyphMark &operator =(const GlyphMark &) = default;
+  GlyphMark(GlyphMark &&) = default;
+  GlyphMark &operator =(GlyphMark &&) = default;
+  ~GlyphMark() = default;
 
-  TrailMark(uint32_t byte, uint32_t pos) : m_value{byte | (pos<<shift())} { }
+  GlyphMark(uint32_t byte, uint32_t pos) : m_value{byte | (pos<<shift())} { }
 
   unsigned byte() const { return m_value & mask(); }
   unsigned pos() const { return m_value>>shift(); }
@@ -1689,7 +1689,7 @@ void Terminal::splice(
   ZmAssert(off == m_line.position(m_pos).mapping());
 
   bool shiftLeft = false, shiftRight = false;
-  TrailMark *trailMarks = nullptr;
+  GlyphMark *glyphMarks = nullptr;
   unsigned trailRows = 0;
   unsigned bolPos = bol(m_pos);
   unsigned oldWidth = m_line.width();
@@ -1726,8 +1726,8 @@ void Terminal::splice(
 	trailRows = (bol(oldWidth) - bolPos) / m_width + 1;
     }
   }
-  if (trailRows) trailMarks = ZuAlloca(trailMarks, trailRows);
-  if (trailMarks) {
+  if (trailRows) glyphMarks = ZuAlloca(glyphMarks, trailRows);
+  if (glyphMarks) {
     unsigned endPos = m_pos + span.inLen();
     unsigned shiftOff;
     if (shiftLeft)
@@ -1737,16 +1737,16 @@ void Terminal::splice(
     unsigned row = 0;
     while (bolPos < oldWidth && row < trailRows) {
       if (shiftLeft) {
-	// shift left - trailMarks saves the old position of each trailing EOL
+	// shift left - glyphMarks saves the old position of each trailing EOL
 	unsigned pos = eol(bolPos);
 	if (pos >= endPos)
-	  trailMarks[row++] =
-	    TrailMark{m_line.position(pos).mapping() - shiftOff, pos};
+	  glyphMarks[row++] =
+	    GlyphMark{m_line.position(pos).mapping() - shiftOff, pos};
       } else {
-	// shift right - trailMarks saves the old position of each trailing BOL
+	// shift right - glyphMarks saves the old position of each trailing BOL
 	unsigned pos = bolPos < endPos ? endPos : bolPos;
-	trailMarks[row++] =
-	  TrailMark{m_line.position(pos).mapping() + shiftOff, pos};
+	glyphMarks[row++] =
+	  GlyphMark{m_line.position(pos).mapping() + shiftOff, pos};
       }
       bolPos += m_width;
     }
@@ -1784,33 +1784,32 @@ void Terminal::splice(
     bool smir = false;
     for (;;) {
       if (row < trailRows) {
+	// find the glyphMark in each row, and use it to shift the row
 	if (shiftLeft) {
-	  TrailMark trailMark;
+	  GlyphMark glyphMark;
 	  unsigned rightPos;
-	  // find trailMark for the current line, and use it to shift the line
 	  do {
-	    trailMark = trailMarks[row++];
-	    rightPos = m_line.byte(trailMark.byte()).mapping();
+	    glyphMark = glyphMarks[row++];
+	    rightPos = m_line.byte(glyphMark.byte()).mapping();
 	  } while (row < trailRows && rightPos <= bolPos);
-	  if (rightPos <= trailMark.pos() &&
+	  if (rightPos <= glyphMark.pos() &&
 	      rightPos > bolPos && rightPos < bolPos + m_width) {
-	    if (rightPos < trailMark.pos()) del_(trailMark.pos() - rightPos);
+	    if (rightPos < glyphMark.pos()) del_(glyphMark.pos() - rightPos);
 	    rightPos += m_line.position(rightPos).len();
 	    mvright(rightPos);
 	  } else if (rightPos > bolPos)
 	    --row;
 	} else if (shiftRight) {
-	  TrailMark trailMark;
+	  GlyphMark glyphMark;
 	  unsigned leftPos;
-	  // find trailMark for the current line, and use it to shift the line
 	  do {
-	    trailMark = trailMarks[row++];
-	    leftPos = m_line.byte(trailMark.byte()).mapping();
+	    glyphMark = glyphMarks[row++];
+	    leftPos = m_line.byte(glyphMark.byte()).mapping();
 	  } while (row < trailRows && leftPos <= bolPos);
-	  if (leftPos >= trailMark.pos() &&
+	  if (leftPos >= glyphMark.pos() &&
 	      leftPos > bolPos && leftPos < bolPos + m_width) {
-	    if (leftPos > trailMark.pos())
-	      smir = ins_(leftPos - trailMark.pos(), smir);
+	    if (leftPos > glyphMark.pos())
+	      smir = ins_(leftPos - glyphMark.pos(), smir);
 	    outClr(leftPos);
 #ifndef _WIN32
 	    if (smir && !m_mir) { tputs(m_rmir); smir = false; }
@@ -1830,6 +1829,7 @@ void Terminal::splice(
       if (bolPos >= lastBOLPos) break;
       outWrap(bolPos);
     }
+    // print the last row, taking great care not to scroll unnecessarily
     if (bolPos > lineWidth) bolPos -= m_width;
     if (m_pos < lineWidth) {
       if (bolPos < lineWidth)

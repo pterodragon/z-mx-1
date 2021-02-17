@@ -1247,8 +1247,10 @@ void Terminal::crnl()
 // out row from cursor, breaking cursor to start of next row
 void Terminal::outBreak(unsigned endPos)
 {
-  outWrap(endPos);
-  if (!m_am || m_xenl) crnl_();
+  if (m_pos < endPos) {
+    outWrap(endPos);
+    if (!m_am || m_xenl) crnl_();
+  }
 }
 
 // out row from cursor, wrapping cursor to start of next row
@@ -1539,21 +1541,28 @@ void Terminal::mv(unsigned pos)
       mvleft(pos);
   } else if (pos > m_pos) {
     if (unsigned down = pos / m_width - m_pos / m_width) {
-#ifndef _WIN32
-      if (ZuLikely(m_cud)) {
-	m_pos += down * m_width;
-	tputs(tiparm(m_cud, down));
-      } else if (ZuLikely(m_cud1)) {
-	m_pos += down * m_width;
-	do { tputs(m_cud1); } while (--down);
-      } else {
-	do { nl(); } while (--down);
+      if (pos >= m_line.width()) {
 	cr();
+	nl();
+	--down;
       }
+      if (down) {
+#ifndef _WIN32
+	if (ZuLikely(m_cud)) {
+	  m_pos += down * m_width;
+	  tputs(tiparm(m_cud, down));
+	} else if (ZuLikely(m_cud1)) {
+	  m_pos += down * m_width;
+	  do { tputs(m_cud1); } while (--down);
+	} else {
+	  cr();
+	  do { nl(); } while (--down);
+	}
 #else
-      m_pos += down * m_width;
-      m_out << "\x1b[" << ZuBoxed(down) << 'B';
+	m_pos += down * m_width;
+	m_out << "\x1b[" << ZuBoxed(down) << 'B';
 #endif
+      }
       if (ZuUnlikely(m_pos == pos)) return;
       mvhoriz(pos);
     } else
@@ -1671,7 +1680,8 @@ private:
 
 void Terminal::splice(
     unsigned off, ZuUTFSpan span,
-    ZuArray<const uint8_t> replace, ZuUTFSpan rspan)
+    ZuArray<const uint8_t> replace, ZuUTFSpan rspan,
+    bool append)
 {
   ZmAssert(off == m_line.position(m_pos).mapping());
 
@@ -1748,19 +1758,20 @@ void Terminal::splice(
 
   // reflow the line, from offset onwards
   m_line.reflow(off, m_width);
-  {
-    unsigned pos = m_line.byte(off).mapping();
-    if (m_pos > pos) mv(pos);
-  }
+  mv(m_line.byte(off).mapping());
 
   // calculate reflowed endPos
   unsigned endPos = m_line.byte(off + rspan.inLen()).mapping();
   unsigned endBOLPos = bol(!endPos ? 0 : endPos - 1);
 
   // out/scroll all but last row of replacement data
-  {
-    bolPos = bol(m_pos);
-    while (bolPos < endBOLPos) outWrap(bolPos += m_width);
+  bolPos = bol(m_pos);
+  while (bolPos < endBOLPos) outWrap(bolPos += m_width);
+
+  // adjust endPos to final cursor position
+  if (!append && endPos) {
+    --endPos;
+    endPos -= m_line.position(endPos).off();
   }
 
   // out/scroll trailing data
@@ -1820,12 +1831,14 @@ void Terminal::splice(
       outWrap(bolPos);
     }
     if (bolPos > lineWidth) bolPos -= m_width;
-    if (bolPos < lineWidth)
-      outClr(lineWidth);
-    else if (endPos == lineWidth || lineWidth < oldWidth)
-      outBreak(lineWidth);
-    else
-      outNoWrap(lineWidth, lineWidth - 1); // park cursor in right-most col
+    if (m_pos < lineWidth) {
+      if (bolPos < lineWidth)
+	outClr(lineWidth);
+      else if (endPos == lineWidth || lineWidth < oldWidth)
+	outBreak(lineWidth);
+      else
+	outNoWrap(lineWidth, lineWidth - 2); // park cursor left of right-most
+    }
 #ifndef _WIN32
     if (smir) tputs(m_rmir);
 #endif
@@ -1838,7 +1851,7 @@ void Terminal::splice(
     if (bolPos < oldWidth) clr(oldWidth);
   }
 
-  // move cursor to final position (i.e. just after rspan)
+  // move cursor to final position
   mv(endPos);
 }
 

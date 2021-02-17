@@ -610,15 +610,19 @@ private:
 
   ZuArray<const uint8_t> substr(unsigned begin, unsigned end);
 
-  // align cursor within line if not in an edit mode - returns true if moved
-  bool align(unsigned off);
+  // is current mode type Command
+  bool commandMode();
+  // align cursor within line if not in an edit mode
+  unsigned align(unsigned pos);
   // splice data in line - clears histLoadOff since line is being modified
   void splice(
       unsigned off, ZuUTFSpan span,
-      ZuArray<const uint8_t> replace, ZuUTFSpan rspan, bool last = true);
+      ZuArray<const uint8_t> replace, ZuUTFSpan rspan,
+      bool append, bool last = true);
   void splice_(
       unsigned off, ZuUTFSpan span,
-      ZuArray<const uint8_t> replace, ZuUTFSpan rspan);
+      ZuArray<const uint8_t> replace, ZuUTFSpan rspan,
+      bool append);
   // perform copy/del/move in conjunction with a cursor motion
   void motion(unsigned op, unsigned off,
       unsigned begin, unsigned end,

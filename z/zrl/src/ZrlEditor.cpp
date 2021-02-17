@@ -825,7 +825,7 @@ void Editor::start(StartFn fn)
 	fn(*this);
 	m_tty.opost_off();
 	m_tty.splice(0, ZuUTFSpan{}, m_context.prompt,
-	    ZuUTF<uint32_t, uint8_t>::span(m_context.prompt));
+	    ZuUTF<uint32_t, uint8_t>::span(m_context.prompt), true);
 	m_tty.write();
 	m_context.startPos = m_tty.pos();
       },
@@ -864,9 +864,8 @@ void Editor::prompt(ZtArray<uint8_t> prompt)
     off += (newLen - oldLen);
   else
     off = newLen;
-  m_tty.splice(
-      0, ZuUTF<uint32_t, uint8_t>::span(m_context.prompt),
-      prompt, ZuUTF<uint32_t, uint8_t>::span(prompt));
+  m_tty.splice(0, ZuUTF<uint32_t, uint8_t>::span(m_context.prompt),
+      prompt, ZuUTF<uint32_t, uint8_t>::span(prompt), true);
   m_tty.write();
   m_tty.mv(line.byte(off).mapping());
   m_context.prompt = ZuMv(prompt);
@@ -1042,7 +1041,7 @@ bool Editor::cmdEnter(Cmd, int32_t)
   m_tty.clear();
   if (stop) return true;
   m_tty.splice(0, ZuUTFSpan{}, m_context.prompt,
-      ZuUTF<uint32_t, uint8_t>::span(m_context.prompt));
+      ZuUTF<uint32_t, uint8_t>::span(m_context.prompt), true);
   m_context.startPos = m_tty.pos();
   return false;
 }
@@ -1053,24 +1052,28 @@ ZuArray<const uint8_t> Editor::substr(unsigned begin, unsigned end)
   return {&data[begin], end - begin};
 }
 
-// align cursor within line if not in an edit mode - returns true if moved
-bool Editor::align(unsigned pos)
+bool Editor::commandMode()
+{
+  return m_map->modes[m_context.mode].type == ModeType::Command;
+}
+
+// align cursor within line if not in an edit mode
+unsigned Editor::align(unsigned pos)
 {
   const auto &line = m_tty.line();
-  if (ZuUnlikely(m_map->modes[m_context.mode].type == ModeType::Command &&
+  if (ZuUnlikely(commandMode() &&
       pos > m_context.startPos &&
       pos >= line.width())) {
-    m_tty.mv(line.align(pos - 1));
-    return true;
+    return line.align(pos - 1);
   }
-  return false;
+  return pos;
 }
 
 // splice data in line
 void Editor::splice(
     unsigned off, ZuUTFSpan span,
     ZuArray<const uint8_t> replace, ZuUTFSpan rspan,
-    bool last)
+    bool append, bool last)
 {
   m_context.appendEdit();
   m_context.undo.set(m_context.undoNext++,
@@ -1078,11 +1081,12 @@ void Editor::splice(
 	static_cast<int>(m_tty.pos()),
 	static_cast<int>(off),
 	substr(off, off + span.inLen()), replace, last});
-  splice_(off, span, replace, rspan);
+  splice_(off, span, replace, rspan, append);
 }
 void Editor::splice_(
     unsigned off, ZuUTFSpan span,
-    ZuArray<const uint8_t> replace, ZuUTFSpan rspan)
+    ZuArray<const uint8_t> replace, ZuUTFSpan rspan,
+    bool append)
 {
   // line is being modified
   m_context.horizPos = -1;
@@ -1091,7 +1095,7 @@ void Editor::splice_(
   if (rspan.inLen() <= span.inLen() ||
       m_tty.line().length() + (rspan.inLen() - span.inLen()) <
 	m_config.maxLineLen)
-    m_tty.splice(off, span, replace, rspan);
+    m_tty.splice(off, span, replace, rspan, append);
 }
 
 void Editor::motion(
@@ -1124,7 +1128,7 @@ void Editor::motion(
     m_tty.mv(begPos);
     splice(begin, span,
 	ZuArray<const uint8_t>{}, ZuUTFSpan{},
-	(op & (Op::Del | Op::Vis)) != (Op::Del | Op::Vis));
+	true, (op & (Op::Del | Op::Vis)) != (Op::Del | Op::Vis));
     if (m_context.highPos >= 0) {
       m_tty.cursor_on();
       m_context.markPos = m_context.highPos = -1;
@@ -1191,7 +1195,7 @@ void Editor::motion(
       }
     }
   }
-  if (!align(pos)) m_tty.mv(pos);
+  m_tty.mv(align(pos));
 }
 
 // maintains consistent horizontal position during vertical movement
@@ -1537,14 +1541,16 @@ bool Editor::cmdPaste(Cmd cmd, int32_t)
     const auto &line = m_tty.line();
     unsigned off = line.position(m_tty.pos()).mapping();
     auto rspan = ZuUTF<uint32_t, uint8_t>::span(data);
+    bool append = !commandMode();
     for (int i = 0; i < arg; i++) {
+      bool last = i == arg - 1;
       if (ZuUnlikely(m_context.overwrite)) {
 	ZuArray<const uint8_t> removed{line.data()};
 	removed.offset(off);
 	auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, rspan.outLen());
-	splice(off, span, data, rspan);
+	splice(off, span, data, rspan, append || !last, last);
       } else {
-	splice(off, ZuUTFSpan{}, data, rspan);
+	splice(off, ZuUTFSpan{}, data, rspan, append || !last, last);
       }
       off += rspan.inLen();
     }
@@ -1565,11 +1571,10 @@ bool Editor::cmdYank(Cmd cmd, int32_t)
       ZuArray<const uint8_t> removed{line.data()};
       removed.offset(off);
       auto span = ZuUTF<uint32_t, uint8_t>::nspan(removed, rspan.outLen());
-      splice(off, span, data, rspan);
+      splice(off, span, data, rspan, true);
     } else {
-      splice(off, ZuUTFSpan{}, data, rspan);
+      splice(off, ZuUTFSpan{}, data, rspan, true);
     }
-    align(m_tty.pos());
   }
   return false;
 }
@@ -1598,8 +1603,7 @@ bool Editor::cmdRotate(Cmd cmd, int32_t)
     else
       pos -= width;
     m_tty.mv(pos);
-    splice(line.position(pos).mapping(), span, replace, rspan);
-    align(m_tty.pos());
+    splice(line.position(pos).mapping(), span, replace, rspan, true);
   }
   return false;
 }
@@ -1618,10 +1622,10 @@ void Editor::edit(
     removed.trunc(span.inLen());
     m_context.editOp.oldData << removed;
     m_context.editOp.newData << replace;
-    splice_(off, span, replace, rspan);
+    splice_(off, span, replace, rspan, true);
   } else {
     m_context.editOp.newData << replace;
-    splice_(off, ZuUTFSpan{}, replace, rspan);
+    splice_(off, ZuUTFSpan{}, replace, rspan, true);
   }
 }
 
@@ -1676,10 +1680,10 @@ bool Editor::cmdBackSpace(Cmd, int32_t vkey)
 	    ZuArray<const uint8_t> restore{oldData};
 	    restore.offset(off);
 	    splice_(begin, span,
-		restore, ZuUTF<uint32_t, uint8_t>::span(restore));
+		restore, ZuUTF<uint32_t, uint8_t>::span(restore), true);
 	    oldData.splice(off, n - off);
 	  } else {
-	    splice_(begin, span, ZuArray<const uint8_t>{}, ZuUTFSpan{});
+	    splice_(begin, span, ZuArray<const uint8_t>{}, ZuUTFSpan{}, true);
 	  }
 	  return false;
 	}
@@ -1738,6 +1742,7 @@ bool Editor::cmdUndo(Cmd, int32_t vkey)
   }
   int pos = -1;
   bool first = true;
+  bool append = !commandMode();
   do {
     if (auto undoOp = m_context.undo.val(--m_context.undoIndex)) {
       if (!first && undoOp->last) {
@@ -1747,7 +1752,8 @@ bool Editor::cmdUndo(Cmd, int32_t vkey)
       m_tty.mv(m_tty.line().byte(undoOp->spliceOff).mapping());
       splice_(undoOp->spliceOff,
 	  ZuUTF<uint32_t, uint8_t>::span(undoOp->newData),
-	  undoOp->oldData, ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData));
+	  undoOp->oldData, ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
+	  append);
       pos = undoOp->oldPos;
     } else {
       ++m_context.undoIndex;
@@ -1755,34 +1761,36 @@ bool Editor::cmdUndo(Cmd, int32_t vkey)
     }
     first = false;
   } while (m_context.undoIndex > 0);
-  if (pos >= 0) if (!align(pos)) m_tty.mv(pos);
+  if (pos >= 0) m_tty.mv(align(pos));
   return false;
 }
 
 bool Editor::cmdRedo(Cmd cmd, int32_t vkey)
 {
   if (m_context.undoIndex < 0) return cmdRedraw(cmd, vkey);
+  bool append = !commandMode();
   do {
     if (auto undoOp = m_context.undo.val(m_context.undoIndex++)) {
       m_tty.mv(m_tty.line().byte(undoOp->spliceOff).mapping());
       splice_(undoOp->spliceOff,
 	  ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
-	  undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData));
+	  undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData),
+	  append);
       if (undoOp->last) break;
     } else
       break;
   } while (m_context.undoIndex < m_context.undoNext);
   if (m_context.undoIndex >= m_context.undoNext) {
-    if (!align(m_context.undoPos)) m_tty.mv(m_context.undoPos);
+    m_tty.mv(align(m_context.undoPos));
     m_context.undoIndex = -1;
     m_context.undoPos = -1;
   } else {
-    if (auto undoOp = m_context.undo.val(m_context.undoIndex)) {
-      auto pos = undoOp->oldPos;
-      if (!align(pos)) m_tty.mv(pos);
-    } else {
-      align(m_tty.pos());
-    }
+    unsigned pos;
+    if (auto undoOp = m_context.undo.val(m_context.undoIndex))
+      pos = undoOp->oldPos;
+    else
+      pos = m_tty.pos();
+    m_tty.mv(align(pos));
   }
   return false;
 }
@@ -1819,7 +1827,8 @@ bool Editor::cmdRepeat(Cmd cmd, int32_t vkey)
       last = undoOp->last;
       splice(m_tty.line().position(m_tty.pos()).mapping(),
 	  ZuUTF<uint32_t, uint8_t>::span(undoOp->oldData),
-	  undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData));
+	  undoOp->newData, ZuUTF<uint32_t, uint8_t>::span(undoOp->newData),
+	  true, last);
     } else
       last = true;
   } while (++i < m_context.undoNext && !last);
@@ -1841,8 +1850,7 @@ bool Editor::cmdTransGlyph(Cmd, int32_t)
   memcpy(&replace[0], &data[rbegin], rend - rbegin);
   memcpy(&replace[rend - rbegin], &data[lbegin], rbegin - lbegin);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(lbegin, rend));
-  splice(lbegin, span, replace, span);
-  align(m_tty.pos());
+  splice(lbegin, span, replace, span, true);
   return false;
 }
 bool Editor::cmdTransWord(Cmd, int32_t)
@@ -1869,8 +1877,7 @@ bool Editor::cmdTransWord(Cmd, int32_t)
   memcpy(&replace[rend - rbegin], &data[mbegin], rbegin - mbegin);
   memcpy(&replace[rend - mbegin], &data[lbegin], mbegin - lbegin);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(lbegin, rend));
-  splice(lbegin, span, replace, span);
-  align(m_tty.pos());
+  splice(lbegin, span, replace, span, true);
   return false;
 }
 bool Editor::cmdTransUnixWord(Cmd, int32_t)
@@ -1895,8 +1902,7 @@ bool Editor::cmdTransUnixWord(Cmd, int32_t)
   memcpy(&replace[rend - rbegin], &data[mbegin], rbegin - mbegin);
   memcpy(&replace[rend - mbegin], &data[lbegin], mbegin - lbegin);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(lbegin, rend));
-  splice(lbegin, span, replace, span);
-  align(m_tty.pos());
+  splice(lbegin, span, replace, span, true);
   return false;
 }
 
@@ -2003,8 +2009,7 @@ void Editor::transformWord(TransformSpanFn fn, TransformCharFn charFn)
   memcpy(&replace[0], &data[begin], end - begin);
   fn(charFn, replace);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
-  splice(begin, span, replace, span);
-  align(m_tty.pos());
+  splice(begin, span, replace, span, true);
 }
 
 void Editor::transformVis(TransformSpanFn fn, TransformCharFn charFn)
@@ -2020,8 +2025,7 @@ void Editor::transformVis(TransformSpanFn fn, TransformCharFn charFn)
   memcpy(&replace[0], &data[begin], end - begin);
   fn(charFn, replace);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
-  splice(begin, span, replace, span);
-  align(m_tty.pos());
+  splice(begin, span, replace, span, true);
 }
 
 bool Editor::cmdCapGlyph(Cmd cmd, int32_t)
@@ -2043,8 +2047,7 @@ bool Editor::cmdCapGlyph(Cmd cmd, int32_t)
   memcpy(&replace[0], &data[begin], end - begin);
   fn(charFn, replace);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
-  splice(begin, span, replace, span);
-  align(m_tty.pos());
+  splice(begin, span, replace, span, !commandMode());
   return false;
 }
 bool Editor::cmdLowerWord(Cmd, int32_t)
@@ -2086,7 +2089,7 @@ bool Editor::cmdXchMark(Cmd, int32_t)
     int finPos = m_tty.line().width();
     if (pos > finPos) pos = finPos;
     m_context.markPos = m_tty.pos();
-    if (!align(pos)) m_tty.mv(pos);
+    m_tty.mv(align(pos));
   }
   return false;
 }
@@ -2166,8 +2169,7 @@ void Editor::completed(ZuArray<const uint8_t> data)
   m_tty.mv(line.byte(m_context.compPrefixEnd).mapping());
   if (rspan.inLen() <= span.inLen() ||
       line.length() + (rspan.inLen() - span.inLen()) < m_config.maxLineLen) {
-    splice(m_context.compPrefixEnd, span, data, rspan);
-    align(m_tty.pos());
+    splice(m_context.compPrefixEnd, span, data, rspan, true);
     m_context.compEnd = m_context.compPrefixEnd + data.length();
     m_context.compSpan = rspan;
   }
@@ -2237,6 +2239,7 @@ bool Editor::cmdListComplete(Cmd, int32_t)
 
 void Editor::histLoad(int offset, ZuArray<const uint8_t> data, bool save)
 {
+  m_context.horizPos = -1;
   m_context.histLoadOff = offset;
   unsigned pos = m_context.startPos;
   m_tty.mv(pos);
@@ -2248,8 +2251,8 @@ void Editor::histLoad(int offset, ZuArray<const uint8_t> data, bool save)
   m_context.clrUndo();
   m_tty.splice(
       begin, ZuUTF<uint32_t, uint8_t>::span(orig),
-      data, ZuUTF<uint32_t, uint8_t>::span(data));
-  align(m_tty.pos());
+      data, ZuUTF<uint32_t, uint8_t>::span(data),
+      !data || !commandMode());
 }
 bool Editor::cmdNext(Cmd cmd, int32_t vkey)
 {
@@ -2405,7 +2408,7 @@ bool Editor::cmdPromptSrch(Cmd cmd, int32_t vkey)
   m_context.startPos += m_context.srchPrmptSpan.width();
   m_tty.splice(
       begin, ZuUTF<uint32_t, uint8_t>::span(orig),
-      prompt, m_context.srchPrmptSpan);
+      prompt, m_context.srchPrmptSpan, true);
   return false;
 }
 
@@ -2438,7 +2441,7 @@ void Editor::srchEndPrompt(int op)
   if (!found)
     m_tty.splice(
 	begin, ZuUTF<uint32_t, uint8_t>::span(orig),
-	data, ZuUTF<uint32_t, uint8_t>::span(data));
+	data, ZuUTF<uint32_t, uint8_t>::span(data), true);
   m_context.mode = m_context.stack.pop();
   m_context.srchPrmptSpan = {};
 }

@@ -120,8 +120,8 @@ map vi {
     'I' { Edit; Insert; Mode(0); Home[Mv]; }
     'o' { Mode(0); End[Mv]; Home[Del]; }
     'O' { Syn(, 'o'); }
-    'p' { Mode(0); Right[Mv|KeepReg](1); Paste; Left[Mv]; Mode(3); }
-    'P' { Mode(0); Paste; Left[Mv]; Mode(3); }
+    'p' { Mode(0); Right[Mv|KeepReg](1); Mode(3); Paste; }
+    'P' { Paste; }
     'a' { Edit; Mode(0); Right[Mv]; }
     'A' { Edit; Mode(0); End[Mv]; }
     's' { Mode(0); Right[Del|Vis]; }

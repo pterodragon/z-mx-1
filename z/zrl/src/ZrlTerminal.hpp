@@ -254,7 +254,8 @@ public:
   // all updates to line data go through splice()
   void splice(
       unsigned off, ZuUTFSpan span,
-      ZuArray<const uint8_t> replace, ZuUTFSpan rspan);
+      ZuArray<const uint8_t> replace, ZuUTFSpan rspan,
+      bool append);
 
   void clear();		// clear line data/state
   void cls();		// clear screen, redraw line

@@ -11,7 +11,7 @@ bool process(Zrl::Terminal &tty, ZmSemaphore &done, int32_t key)
   using namespace Zrl;
   auto s = ZtString{} << VKey::print(key);
   tty.splice(tty.line().position(tty.pos()).mapping(), ZuUTFSpan{},
-      s, ZuUTF<uint32_t, uint8_t>::span(s));
+      s, ZuUTF<uint32_t, uint8_t>::span(s), true);
   tty.write();
   if (key == 'q') {
     tty.crnl_();

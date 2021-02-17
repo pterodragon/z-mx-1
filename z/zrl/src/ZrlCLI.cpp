@@ -53,7 +53,11 @@ void CLI::init(App app)
 	return false;
     }
   };
-  app.open = [open = ZuMv(app.open)](bool ok) { openOK = ok; done.post(); };
+  app.open = [open = ZuMv(app.open)](bool ok) {
+    open(ok);
+    openOK = ok;
+    done.post();
+  };
   Editor::init(ZuMv(app));
   m_sched = new ZmScheduler{ZmSchedParams{}.id("ZrlCLI").nThreads(1)};
   if (auto maps = ::getenv("ZRL_MAPS")) {
@@ -106,7 +110,7 @@ bool CLI::open()
       return false;
   }
   bool ok = open_();
-  m_state = Opened;
+  if (ok) m_state = Opened;
   return ok;
 }
 

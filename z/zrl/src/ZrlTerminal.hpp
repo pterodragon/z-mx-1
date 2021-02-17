@@ -262,7 +262,7 @@ public:
   void redraw();	// CR, redraw line
   void redraw(unsigned endPos, bool high);	// redraw cursor -> endPos
 private:
-  void redraw_(unsigned begPos, unsigned endPos); // redraw line
+  void redraw_(unsigned endPos); // redraw line
 
 public:
   // low-level output routines that do not read/update line state

@@ -1125,7 +1125,7 @@ void Terminal::addVKey(const char *cap, const char *deflt, int32_t vkey)
 
 int Terminal::write(ZeError *e_)
 {
-// #if 0
+#if 0
   {
     static FILE *log = nullptr;
     if (!log) log = fopen("tty.log", "a");
@@ -1139,7 +1139,7 @@ int Terminal::write(ZeError *e_)
       fflush(log);
     }
   }
-// #endif
+#endif
 #ifndef _WIN32
   unsigned n = m_out.length();
   while (::write(m_fd, m_out.data(), n) < n) {
@@ -1249,7 +1249,10 @@ void Terminal::outBreak(unsigned endPos)
 {
   if (m_pos < endPos) {
     outWrap(endPos);
-    if (!m_am || m_xenl) crnl_();
+#ifndef _WIN32
+    if (!m_am || m_xenl)
+#endif
+      crnl_();
   }
 }
 
@@ -1769,10 +1772,7 @@ void Terminal::splice(
   while (bolPos < endBOLPos) outWrap(bolPos += m_width);
 
   // adjust endPos to final cursor position
-  if (!append && endPos) {
-    --endPos;
-    endPos -= m_line.position(endPos).off();
-  }
+  if (!append && endPos) endPos = m_line.align(endPos - 1);
 
   // out/scroll trailing data
   unsigned lineWidth = m_line.width();
@@ -1837,7 +1837,8 @@ void Terminal::splice(
       else if (endPos == lineWidth || lineWidth < oldWidth)
 	outBreak(lineWidth);
       else
-	outNoWrap(lineWidth, lineWidth - 2); // park cursor left of right-most
+	// park cursor next to right-most
+	outNoWrap(lineWidth, m_line.align(lineWidth - 2));
     }
 #ifndef _WIN32
     if (smir) tputs(m_rmir);
@@ -1875,7 +1876,7 @@ void Terminal::redraw()
 {
   unsigned pos = m_pos;
   mv(0);
-  redraw_(0, m_line.width());
+  redraw_(m_line.width());
   mv(pos);
 }
 
@@ -1902,8 +1903,7 @@ void Terminal::redraw(unsigned endPos, bool high)
     m_out << "\x1b[7m";
 #endif
   }
-  redraw_(m_pos, endPos);
-  m_pos = endPos;
+  redraw_(endPos);
   if (high) {
 #ifndef _WIN32
     switch (highType) {
@@ -1923,18 +1923,22 @@ void Terminal::redraw(unsigned endPos, bool high)
   }
 }
 
-void Terminal::redraw_(unsigned pos, unsigned endPos)
+void Terminal::redraw_(unsigned endPos)
 {
-  pos = bol(pos);
-  unsigned endBOLPos = bol(endPos);
-  while (pos < endBOLPos) {
-    pos += m_width;
-    if (ZuLikely(pos < endPos))
-      outWrap(pos);
-    else
-      outNoWrap(pos, pos - 1);
+  unsigned bolPos = bol(m_pos);
+  unsigned endBOLPos = bol(!endPos ? 0 : endPos - 1);
+  for (;;) {
+    bolPos += m_width;
+    if (bolPos >= endBOLPos) break;
+    outWrap(bolPos);
   }
-  if (pos < endPos) outClr(endPos);
+  if (bolPos > endPos) bolPos -= m_width;
+  if (m_pos < endPos) {
+    if (bolPos < endPos)
+      outClr(endPos);
+    else
+      outNoWrap(endPos, m_line.align(endPos - 2));
+  }
 }
 
 int32_t Terminal::literal(int32_t vkey) const

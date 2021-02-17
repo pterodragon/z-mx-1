@@ -112,7 +112,11 @@ public:
 private:
   void start_(const char *prompt_) {
     prompt.copy(prompt_);
-    cli.open();
+    if (!cli.open()) {
+      state = Stopped;
+      cond.broadcast();
+      return;
+    }
     cli.start(prompt);
     state = Editing;
     cond.broadcast();
@@ -164,6 +168,7 @@ public:
     switch (state) {
       case Stopped:
 	start_(prompt_);
+	if (state == Stopped) return nullptr;
 	break;
       case Processing:
 	edit_(prompt_);

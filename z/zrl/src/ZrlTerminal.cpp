@@ -1329,9 +1329,6 @@ void Terminal::out_(ZuString data)
 void Terminal::clrWrap_(unsigned n)
 {
   clrOver_(n);
-#ifndef _WIN32
-  if (!m_am || m_xenl) crnl_();
-#endif
 }
 
 // clear remainder of row from cursor, leaving cursor at start of next row
@@ -1366,7 +1363,7 @@ void Terminal::outNoWrap(unsigned endPos, unsigned pos)
   ZmAssert(pos < endPos);		// pos is <EOL
 
 #ifndef _WIN32
-  if (ZuLikely(!m_am || m_xenl))
+  if (!m_am || m_xenl)
 #endif
   {
     // normal case - terminal is am + xenl, or no am, i.e. doesn't scroll
@@ -1816,11 +1813,12 @@ void Terminal::splice(
       outWrap(bolPos);
     }
     if (bolPos > lineWidth) bolPos -= m_width;
-    if (bolPos < lineWidth || lineWidth < oldWidth)
+    if (bolPos < lineWidth)
       outClr(lineWidth);
-    else if (endPos == lineWidth)
+    else if (endPos == lineWidth || lineWidth < oldWidth) {
       outWrap(lineWidth);
-    else
+      if (!m_am || m_xenl) crnl_();
+    } else
       outNoWrap(lineWidth, lineWidth - 1); // park cursor in right-most col
 #ifndef _WIN32
     if (smir) tputs(m_rmir);

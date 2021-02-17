@@ -294,7 +294,9 @@ private:
   void nl();
   void crnl();
 
-  // out row from cursor, leaving cursor at start of next row
+  // out row from cursor, breaking cursor to start of next row
+  void outBreak(unsigned endPos);
+  // out row from cursor, wrapping cursor to start of next row
   void outWrap(unsigned endPos);
   // clear row from cursor, wrapping to start of next row
   void clrWrap(unsigned endPos);

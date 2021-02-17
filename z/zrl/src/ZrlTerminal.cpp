@@ -1244,7 +1244,14 @@ void Terminal::crnl()
   m_pos = bol(m_pos) + m_width;
 }
 
-// out row from cursor, leaving cursor at start of next row
+// out row from cursor, breaking cursor to start of next row
+void Terminal::outBreak(unsigned endPos)
+{
+  outWrap(endPos);
+  if (!m_am || m_xenl) crnl_();
+}
+
+// out row from cursor, wrapping cursor to start of next row
 void Terminal::outWrap(unsigned endPos)
 {
   ZmAssert(!(endPos % m_width));	// endPos is EOL
@@ -1815,10 +1822,9 @@ void Terminal::splice(
     if (bolPos > lineWidth) bolPos -= m_width;
     if (bolPos < lineWidth)
       outClr(lineWidth);
-    else if (endPos == lineWidth || lineWidth < oldWidth) {
-      outWrap(lineWidth);
-      if (!m_am || m_xenl) crnl_();
-    } else
+    else if (endPos == lineWidth || lineWidth < oldWidth)
+      outBreak(lineWidth);
+    else
       outNoWrap(lineWidth, lineWidth - 1); // park cursor in right-most col
 #ifndef _WIN32
     if (smir) tputs(m_rmir);

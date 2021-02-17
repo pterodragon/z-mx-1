@@ -582,7 +582,6 @@ bool Terminal::open_()
   return true;
 }
 
-// Win32
 void Terminal::close_()
 {
   stop_(); // idempotent
@@ -733,8 +732,12 @@ void Terminal::start_()
 
 #else /* !_WIN32 */
 
+  if (m_conoutCP != 65001) SetConsoleOutputCP(65001);
+  SetConsoleMode(m_conout, m_conoutMode |
+      ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT |
+      ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN);
+
   m_out << '\r';
-  opost_off();
 
 #endif /* !_WIN32 */
 
@@ -766,7 +769,8 @@ void Terminal::stop_()
 
 #else /* !_WIN32 */
 
-  opost_on();
+  SetConsoleMode(m_conout, m_conoutMode);
+  if (m_conoutCP != 65001) SetConsoleOutputCP(m_conoutCP);
 
 #endif /* !_WIN32 */
 }
@@ -776,9 +780,6 @@ void Terminal::opost_on()
 #ifndef _WIN32
   m_ntermios.c_oflag = m_otermios.c_oflag;
   tcsetattr(m_fd, TCSADRAIN, &m_ntermios);
-#else
-  SetConsoleMode(m_conout, m_conoutMode);
-  if (m_conoutCP != 65001) SetConsoleOutputCP(m_conoutCP);
 #endif
 }
 
@@ -787,9 +788,6 @@ void Terminal::opost_off()
 #ifndef _WIN32
   m_ntermios.c_oflag &= ~(OPOST | ONLCR | OCRNL | ONOCR | ONLRET);
   tcsetattr(m_fd, TCSADRAIN, &m_ntermios);
-#else
-  if (m_conoutCP != 65001) SetConsoleOutputCP(65001);
-  SetConsoleMode(m_conout, m_conoutMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 #endif
 }
 

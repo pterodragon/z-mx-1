@@ -119,11 +119,14 @@ private:
     while (state == Editing) cond.wait();
   }
 
+  void stop_() {
+    cli.stop();
+    cli.close();
+  }
+
 public:
   void stop() {
     Guard guard(lock);
-    if (state == Stopped) return;
-    cli.stop();
     state = Stopped;
     cond.broadcast();
   }
@@ -168,7 +171,10 @@ public:
       default:
 	return nullptr;	// multiple overlapping readline() calls
     }
-    if (state == Stopped) return nullptr;
+    if (state == Stopped) {
+      stop_();
+      return nullptr;
+    }
     return data; // caller frees
   }
 };

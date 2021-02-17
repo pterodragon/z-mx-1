@@ -6,4 +6,5 @@ int main()
     puts(s);
     ::free(s);
   }
+  return 0;
 }

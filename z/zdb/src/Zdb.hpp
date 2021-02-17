@@ -39,7 +39,6 @@
 #include <zlib/ZuPOD.hpp>
 
 #include <zlib/ZmAssert.hpp>
-#include <zlib/ZmBackTrace.hpp>
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmGuard.hpp>
 #include <zlib/ZmSpecific.hpp>

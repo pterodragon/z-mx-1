@@ -199,18 +199,48 @@ friend BFD;
       if (handle) bfd_close(handle);
     }
 
-    int load(ZmBackTrace_Mgr *mgr, const char *name_, uintptr_t base_) {
+    bool load(ZmBackTrace_Mgr *mgr, const char *name_, uintptr_t base_) {
+#ifdef _WIN32
+      // get file size, base directly by navigating DOS/PECOFF headers
+      {
+	HANDLE h = CreateFileA(name_,
+	    GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, NULL);
+	if (h == INVALID_HANDLE_VALUE) return false;
+	char buf[0x40];
+	DWORD r;
+	OVERLAPPED o{0};
+	if (!ReadFile(h, buf, 0x40, &r, &o)) { CloseHandle(h); return false; }
+	{
+	  uint32_t off = 0;
+	  if (buf[0] == 'M' && buf[1] == 'Z') memcpy(&off, &buf[0x3c], 4);
+	  o.Offset = off;
+	}
+	if (!ReadFile(h, buf, 0x38, &r, &o)) { CloseHandle(h); return false; }
+	CloseHandle(h);
+	if (memcmp(buf, "PE\0", 4)) return false;
+	{
+	  auto magic = *reinterpret_cast<const uint16_t *>(&buf[0x18]);
+	  if (magic == 0x10b) { // PE32
+	    fileBase = *reinterpret_cast<const uint32_t *>(&buf[0x34]);
+	  } else if (magic == 0x20b) { // PE32+, i.e. 64-bit
+	    fileBase = *reinterpret_cast<const uint64_t *>(&buf[0x30]);
+	  } else
+	    return false;
+	}
+      }
+#endif /* _WIN32 */
       name = strdup(name_);
       base = base_;
-      if (!(handle = bfd_openr(name, 0))) {
-	free((void *)name);
-	return -1;
+      handle = bfd_openr(name, nullptr);
+      if (!handle) {
+	free(const_cast<char *>(name));
+	return false;
       }
       if (!(bfd_check_format(handle, bfd_object) &&
 	    bfd_check_format_matches(handle, bfd_object, 0) &&
 	    (bfd_get_file_flags(handle) & HAS_SYMS))) {
 	bfd_close(handle);
-	handle = 0;
+	handle = nullptr;
 	goto ret;
       }
       {
@@ -224,7 +254,7 @@ friend BFD;
       }
     ret:
       next = mgr->m_bfd, mgr->m_bfd = this;
-      return 0;
+      return true;
     }
 
   public:
@@ -241,6 +271,9 @@ friend BFD;
     const char		*name = nullptr;
     bfd			*handle = nullptr;
     uintptr_t		base = 0;
+#ifdef _WIN32
+    uintptr_t		fileBase = 0;
+#endif
     asymbol		**symbols = nullptr;
   };
 
@@ -273,7 +306,7 @@ friend BFD;
       if (!m_bfd) {
 #ifdef linux
 	m_bfd = new BFD();
-	if (m_bfd->load(m_mgr, info.dli_fname, base) < 0) {
+	if (!m_bfd->load(m_mgr, info.dli_fname, base)) {
 	  delete m_bfd;
 	  m_bfd = nullptr;
 	  goto notfound;
@@ -287,7 +320,7 @@ friend BFD;
 	else
 	  goto notfound;
 	m_bfd = new BFD();
-	if (m_bfd->load(m_mgr, nameBuf.data(), base) < 0) {
+	if (!m_bfd->load(m_mgr, nameBuf.data(), base)) {
 	  delete m_bfd;
 	  m_bfd = nullptr;
 	  goto notfound;
@@ -318,28 +351,36 @@ notfound:
       auto flags = bfd_section_flags(sec);
       if ((flags & (SEC_ALLOC | SEC_CODE)) != (SEC_ALLOC | SEC_CODE)) return;
       auto vma = bfd_section_vma(sec);
-      if (vma >= m_bfd->base && vma < m_bfd->base + m_bfd->handle->size)
+      auto size = m_bfd->handle->size;
+      if (vma >= m_bfd->base && vma < m_bfd->base + size)
 	vma -= m_bfd->base;
       else
 #ifdef _WIN32
       {
+	// Microsoft 32/64-bit default base addresses
 #ifdef _WIN64
-	bfd_vma defltBase = 0x140000000; // Microsoft 64-bit default base
+	bfd_vma defltExeBase = 0x140000000;
+	bfd_vma defltDLLBase = 0x180000000;
 #else
-	bfd_vma defltBase = 0x400000; // Microsoft 32-bit default base
+	bfd_vma defltExeBase = 0x400000;
+	bfd_vma defltDLLBase = 0x10000000;
 #endif
-	if (vma >= defltBase && vma < defltBase + m_bfd->handle->size)
-	  vma -= defltBase;
+	if (vma >= m_bfd->fileBase && vma < m_bfd->fileBase + size)
+	  vma -= m_bfd->fileBase;
+	else if (vma >= defltDLLBase && vma < defltDLLBase + size)
+	  vma -= defltDLLBase;
+	else if (vma >= defltExeBase && vma < defltExeBase + size)
+	  vma -= defltExeBase;
 	else
 	  return;
       }
 #else /* !_WIN32 */
-        return;
+	return;
 #endif
-      auto size = bfd_section_size(sec);
+      auto secSize = bfd_section_size(sec);
 #if 0
       std::cerr << "section rel_vma=0x" << ZuBoxed(vma).hex() << 
-	  " size=0x" << ZuBoxed(size).hex() <<
+	  " secSize=0x" << ZuBoxed(secSize).hex() <<
 	  " filepos=0x" << ZuBoxed(sec->filepos).hex() <<
 	  " ALLOC=0x" << ZuBoxed(flags & SEC_ALLOC).hex() <<
 	  " CODE=0x" << ZuBoxed(flags & SEC_CODE).hex() <<
@@ -350,7 +391,7 @@ notfound:
       std::cerr << "abs_addr=0x" << ZuBoxed(m_info.addr).hex() <<
 	" off=0x" << ZuBoxed(off).hex() << "\r\n" << std::flush;
 #endif
-      if (off < vma || off >= vma + size) return;
+      if (off < vma || off >= vma + secSize) return;
       off -= vma;
       bool found = false;
       if (m_bfd->symbols)

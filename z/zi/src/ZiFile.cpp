@@ -582,7 +582,7 @@ ZiFile::Offset ZiFile::size()
   DWORD l, h;
 
   l = GetFileSize(m_handle, &h);
-  return ((Offset)h<<32) | l;
+  return (static_cast<Offset>(h)<<32) | l;
 #endif
 }
 

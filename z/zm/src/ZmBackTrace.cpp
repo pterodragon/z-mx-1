@@ -37,7 +37,7 @@
 
 #if defined(__GNUC__) || defined(linux)
 #ifdef linux
-#define ZmBackTrace_DL
+#define ZmBackTrace_BFD
 #endif
 #ifdef _WIN32
 #define ZmBackTrace_BFD
@@ -201,7 +201,10 @@ friend BFD;
 
     bool load(ZmBackTrace_Mgr *mgr, const char *name_, uintptr_t base_) {
 #ifdef _WIN32
-      // get file size, base directly by navigating DOS/PECOFF headers
+      // due to address randomization (ASLR), BFD doesn't obtain the same
+      // base address as used in-memory; neither does BFD reliably report
+      // the PE-COFF base after loading, necessitating obtaining it
+      // directly from the file by navigating the DOS/PE-COFF headers
       {
 	HANDLE h = CreateFileA(name_,
 	    GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, NULL);
@@ -294,7 +297,7 @@ friend BFD;
       uintptr_t base;
 #ifdef linux
       Dl_info dl_info{0};
-      dladdr((void *)m_addr, &dl_info);
+      dladdr((void *)m_info.addr, &dl_info);
       base = (uintptr_t)dl_info.dli_fbase;
 #endif
 #ifdef _WIN32
@@ -304,13 +307,9 @@ friend BFD;
       m_bfd = m_mgr->m_bfd;
       while (m_bfd && m_bfd->base != base) m_bfd = m_bfd->next;
       if (!m_bfd) {
+	const char *name = nullptr;
 #ifdef linux
-	m_bfd = new BFD();
-	if (!m_bfd->load(m_mgr, info.dli_fname, base)) {
-	  delete m_bfd;
-	  m_bfd = nullptr;
-	  goto notfound;
-	}
+	name = dl_info.dli_fname;
 #endif
 #ifdef _WIN32
 	auto nameBuf = m_mgr->nameBuf();
@@ -319,13 +318,15 @@ friend BFD;
 	  nameBuf.trunc(n);
 	else
 	  goto notfound;
+	name = nameBuf.data();
+#endif
+	if (!name) goto notfound;
 	m_bfd = new BFD();
-	if (!m_bfd->load(m_mgr, nameBuf.data(), base)) {
+	if (!m_bfd->load(m_mgr, name, base)) {
 	  delete m_bfd;
 	  m_bfd = nullptr;
 	  goto notfound;
 	}
-#endif
       }
       if (!m_bfd->handle) goto notfound;
       bfd_map_over_sections(
@@ -343,20 +344,29 @@ notfound:
   private:
     void lookup(asection *sec) {
       if (m_info.func) return;
+      auto size = m_bfd->handle->size;
 #if 0
-      std::cerr << m_mgr->nameBuf() <<
+      std::cerr << m_bfd->name <<
 	" base=0x" << ZuBoxed(m_bfd->base).hex() <<
+	" size=0x" << ZuBoxed(size).hex() <<
 	"\r\n" << std::flush;
 #endif
       auto flags = bfd_section_flags(sec);
-      if ((flags & (SEC_ALLOC | SEC_CODE)) != (SEC_ALLOC | SEC_CODE)) return;
       auto vma = bfd_section_vma(sec);
-      auto size = m_bfd->handle->size;
+      auto secSize = bfd_section_size(sec);
+#if 0
+      std::cerr << "section vma=0x" << ZuBoxed(vma).hex() << 
+	  " secSize=0x" << ZuBoxed(secSize).hex() <<
+	  " filepos=0x" << ZuBoxed(sec->filepos).hex() <<
+	  " ALLOC=0x" << ZuBoxed(flags & SEC_ALLOC).hex() <<
+	  " CODE=0x" << ZuBoxed(flags & SEC_CODE).hex() <<
+	  "\r\n" << std::flush;
+#endif
+      if ((flags & (SEC_ALLOC | SEC_CODE)) != (SEC_ALLOC | SEC_CODE)) return;
       if (vma >= m_bfd->base && vma < m_bfd->base + size)
 	vma -= m_bfd->base;
-      else
 #ifdef _WIN32
-      {
+      else {
 	// Microsoft 32/64-bit default base addresses
 #ifdef _WIN64
 	bfd_vma defltExeBase = 0x140000000;
@@ -374,22 +384,13 @@ notfound:
 	else
 	  return;
       }
-#else /* !_WIN32 */
-	return;
-#endif
-      auto secSize = bfd_section_size(sec);
-#if 0
-      std::cerr << "section rel_vma=0x" << ZuBoxed(vma).hex() << 
-	  " secSize=0x" << ZuBoxed(secSize).hex() <<
-	  " filepos=0x" << ZuBoxed(sec->filepos).hex() <<
-	  " ALLOC=0x" << ZuBoxed(flags & SEC_ALLOC).hex() <<
-	  " CODE=0x" << ZuBoxed(flags & SEC_CODE).hex() <<
-	  "\r\n" << std::flush;
-#endif
+#endif /* _WIN32 */
       auto off = static_cast<bfd_vma>(m_info.addr - m_bfd->base);
 #if 0
       std::cerr << "abs_addr=0x" << ZuBoxed(m_info.addr).hex() <<
-	" off=0x" << ZuBoxed(off).hex() << "\r\n" << std::flush;
+	" off=0x" << ZuBoxed(off).hex() <<
+	" rel_vma=0x" << ZuBoxed(vma).hex() <<
+	"\r\n" << std::flush;
 #endif
       if (off < vma || off >= vma + secSize) return;
       off -= vma;
@@ -409,7 +410,7 @@ notfound:
   };
 
   bool printFrame_bfd(ZmStream &s, void *addr) {
-    BFD_Find::Info info = BFD_Find(this, (uintptr_t)addr)();
+    BFD_Find::Info info = BFD_Find{this, (uintptr_t)addr}();
     if (!info.addr) return false;
     printFrame_info(s, info.addr, info.name, info.func, info.file, info.line);
     return true;
@@ -470,7 +471,6 @@ ZmBackTrace_Mgr *ZmBackTrace_Mgr::instance()
 
 struct ZmBackTrace_MgrInit {
   ZmBackTrace_MgrInit() {
-    //printf("ZmBackTrace_Mgr::instance() = %p\n", ZmBackTrace_Mgr::instance()); fflush(stdout);
     ZmBackTrace_Mgr::instance()->init();
   }
 };

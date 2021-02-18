@@ -25,5 +25,5 @@ libZm_la_SOURCES = \
 	ZmTime.cpp ZmThread.cpp ZmTrap.cpp
 libZm_la_LIBADD = $(top_builddir)/zu/src/libZu.la @Z_MT_LIBS@
 if MINGW
-libZm_la_LIBADD += -lbfd
+libZm_la_LIBADD += -L/mingw64/lib/binutils -lbfd
 endif

@@ -150,17 +150,25 @@ private:
   void printFrame_info(ZmStream &s,
       uintptr_t addr, ZuString module, ZuString symbol,
       ZuString file, unsigned line) {
-    if (module.length() > 24)
-      s << "..." << ZuString(module.data() + module.length() - 21, 21);
-    else
-      s << module;
+    if (module.length() > 24) {
+      module.offset(module.length() - 21);
+      s << "...";
+    }
+    s << module;
 #if defined(__GNUC__) || defined(linux)
     m_demangle = symbol;
     s << '(' << m_demangle << ")";
 #else
     s << '(' << symbol << ")";
 #endif
-    if (file && line) s << ' ' << file << ':' << ZuBoxed(line);
+    if (file && line) {
+      s << ' ';
+      if (file.length() > 24) {
+	file.offset(file.length() - 21);
+	s << "...";
+      }
+      s << file << ':' << ZuBoxed(line);
+    }
     s << " [+" << ZuBoxed(addr).hex() << "]\n";
   }
 
@@ -184,38 +192,38 @@ friend BFD;
   class BFD {
   friend BFD_Find;
   private:
-    BFD() : m_next(0), m_name(0), m_handle(0), m_symbols(0) { }
+    BFD() = default;
     ~BFD() {
-      if (m_name) free((void *)m_name);
-      if (m_symbols) free(m_symbols);
-      if (m_handle) bfd_close(m_handle);
+      if (name) ::free(const_cast<char *>(name));
+      if (symbols) ::free(symbols);
+      if (handle) bfd_close(handle);
     }
 
-    int load(ZmBackTrace_Mgr *mgr, const char *name, uintptr_t base) {
-      m_name = strdup(name);
-      m_base = base;
-      if (!(m_handle = bfd_openr(m_name, 0))) {
-	free((void *)m_name);
+    int load(ZmBackTrace_Mgr *mgr, const char *name_, uintptr_t base_) {
+      name = strdup(name_);
+      base = base_;
+      if (!(handle = bfd_openr(name, 0))) {
+	free((void *)name);
 	return -1;
       }
-      if (!(bfd_check_format(m_handle, bfd_object) &&
-	    bfd_check_format_matches(m_handle, bfd_object, 0) &&
-	    (bfd_get_file_flags(m_handle) & HAS_SYMS))) {
-	bfd_close(m_handle);
-	m_handle = 0;
+      if (!(bfd_check_format(handle, bfd_object) &&
+	    bfd_check_format_matches(handle, bfd_object, 0) &&
+	    (bfd_get_file_flags(handle) & HAS_SYMS))) {
+	bfd_close(handle);
+	handle = 0;
 	goto ret;
       }
       {
 	unsigned int i;
-	if (bfd_read_minisymbols(m_handle, 0, (void **)&m_symbols, &i) <= 0 &&
-	    bfd_read_minisymbols(m_handle, 1, (void **)&m_symbols, &i) < 0) {
-	  if (m_symbols) { free(m_symbols); m_symbols = 0; }
-	  bfd_close(m_handle);
-	  m_handle = 0;
+	if (bfd_read_minisymbols(handle, 0, (void **)&symbols, &i) <= 0 &&
+	    bfd_read_minisymbols(handle, 1, (void **)&symbols, &i) < 0) {
+	  if (symbols) { free(symbols); symbols = nullptr; }
+	  bfd_close(handle);
+	  handle = 0;
 	}
       }
     ret:
-      m_next = mgr->m_bfd, mgr->m_bfd = this;
+      next = mgr->m_bfd, mgr->m_bfd = this;
       return 0;
     }
 
@@ -224,107 +232,139 @@ friend BFD;
 
   private:
     void final_(BFD *&prev) {
-      if (m_next) m_next->final_(m_next);
+      if (next) next->final_(next);
       prev = 0;
       delete this;
     }
 
-    BFD			*m_next;
-    const char		*m_name;
-    bfd			*m_handle;
-    uintptr_t		m_base;
-    asymbol		**m_symbols;
+    BFD			*next = nullptr;
+    const char		*name = nullptr;
+    bfd			*handle = nullptr;
+    uintptr_t		base = 0;
+    asymbol		**symbols = nullptr;
   };
 
   class BFD_Find {
   public:
     struct Info {
-      uintptr_t		addr;
-      const char	*name;
-      const char	*func;
-      const char	*file;
-      unsigned		line;
+      uintptr_t		addr = 0;
+      const char	*name = nullptr;
+      const char	*func = nullptr;
+      const char	*file = nullptr;
+      unsigned		line = 0;
     };
 
     BFD_Find(ZmBackTrace_Mgr *mgr, uintptr_t addr) :
-	m_mgr(mgr), m_addr(addr), m_bfd(0), m_func(0) { }
+	m_mgr{mgr}, m_info{.addr = addr} { }
 
     Info operator ()() {
       uintptr_t base;
 #ifdef linux
-      Dl_info info{0};
-      dladdr((void *)m_addr, &info);
-      base = (uintptr_t)info.dli_fbase;
+      Dl_info dl_info{0};
+      dladdr((void *)m_addr, &dl_info);
+      base = (uintptr_t)dl_info.dli_fbase;
 #endif
 #ifdef _WIN32
-      base = (*m_mgr->m_symGetModuleBase64)(GetCurrentProcess(), m_addr);
+      base = (*m_mgr->m_symGetModuleBase64)(GetCurrentProcess(), m_info.addr);
 #endif
       if (!base) goto notfound;
       m_bfd = m_mgr->m_bfd;
-      while (m_bfd && m_bfd->m_base != base) m_bfd = m_bfd->m_next;
+      while (m_bfd && m_bfd->base != base) m_bfd = m_bfd->next;
       if (!m_bfd) {
 #ifdef linux
 	m_bfd = new BFD();
 	if (m_bfd->load(m_mgr, info.dli_fname, base) < 0) {
 	  delete m_bfd;
-	  m_bfd = 0;
+	  m_bfd = nullptr;
 	  goto notfound;
 	}
 #endif
 #ifdef _WIN32
-	if (!GetModuleFileNameA(
-	      (HINSTANCE)base, m_mgr->m_nameBuf, sizeof(m_mgr->m_nameBuf) - 1))
+	auto nameBuf = m_mgr->nameBuf();
+	if (auto n = GetModuleFileNameA((HINSTANCE)base,
+	      nameBuf.data(), nameBuf.length() - 1))
+	  nameBuf.trunc(n);
+	else
 	  goto notfound;
-	m_mgr->m_nameBuf[sizeof(m_mgr->m_nameBuf) - 1] = 0;
 	m_bfd = new BFD();
-	if (m_bfd->load(m_mgr, m_mgr->m_nameBuf, base) < 0) {
+	if (m_bfd->load(m_mgr, nameBuf.data(), base) < 0) {
 	  delete m_bfd;
-	  m_bfd = 0;
+	  m_bfd = nullptr;
 	  goto notfound;
 	}
 #endif
       }
-      if (!m_bfd->m_handle) goto notfound;
-      bfd_map_over_sections(m_bfd->m_handle, &BFD_Find::lookup_, this);
-      if (!m_func) goto notfound;
-      return Info{m_addr, m_bfd->m_name, m_func, m_file, m_line};
+      if (!m_bfd->handle) goto notfound;
+      bfd_map_over_sections(
+	  m_bfd->handle,
+	  [](bfd *, asection *sec, void *context) {
+	    static_cast<BFD_Find *>(context)->lookup(sec);
+	  },
+	  this);
+      if (!m_info.func) goto notfound;
+      return ZuMv(m_info);
 notfound:
-      return Info{0};
+      return {};
     }
 
   private:
-    static void lookup_(bfd *handle, asection *sec, void *context) {
-      ((BFD_Find *)context)->lookup(sec);
-    }
     void lookup(asection *sec) {
-      if (m_func) return;
-      if ((bfd_get_section_flags(m_bfd->m_handle, sec) &
-	    (SEC_ALLOC | SEC_CODE)) != (SEC_ALLOC | SEC_CODE)) return;
-      bfd_vma vma = bfd_get_section_vma(m_bfd->m_handle, sec);
-      bfd_size_type size = bfd_get_section_size(sec);
-      uintptr_t addr = m_addr;
-      if ((bfd_vma)addr < vma || (bfd_vma)addr >= vma + size) {
-	addr -= m_bfd->m_base;
-	if ((bfd_vma)addr < vma || (bfd_vma)addr >= vma + size) return;
-      }
-      bool found = false;
-      if (m_bfd->m_symbols)
-	found = bfd_find_nearest_line(m_bfd->m_handle, sec, m_bfd->m_symbols,
-	  (bfd_vma)addr - vma, &m_file, &m_func, &m_line);
+      if (m_info.func) return;
 #if 0
-      if (!found && m_bfd->m_dsymbols)
-	found = bfd_find_nearest_line(m_bfd->m_handle, sec, m_bfd->m_dsymbols,
-	    (bfd_vma)addr - vma, &file, &m_func, &line);
+      std::cerr << m_mgr->nameBuf() <<
+	" base=0x" << ZuBoxed(m_bfd->base).hex() <<
+	"\r\n" << std::flush;
 #endif
-      if (!found) m_func = 0;
+      auto flags = bfd_section_flags(sec);
+      if ((flags & (SEC_ALLOC | SEC_CODE)) != (SEC_ALLOC | SEC_CODE)) return;
+      auto vma = bfd_section_vma(sec);
+      if (vma >= m_bfd->base && vma < m_bfd->base + m_bfd->handle->size)
+	vma -= m_bfd->base;
+      else
+#ifdef _WIN32
+      {
+#ifdef _WIN64
+	bfd_vma defltBase = 0x140000000; // Microsoft 64-bit default base
+#else
+	bfd_vma defltBase = 0x400000; // Microsoft 32-bit default base
+#endif
+	if (vma >= defltBase && vma < defltBase + m_bfd->handle->size)
+	  vma -= defltBase;
+	else
+	  return;
+      }
+#else /* !_WIN32 */
+        return;
+#endif
+      auto size = bfd_section_size(sec);
+#if 0
+      std::cerr << "section rel_vma=0x" << ZuBoxed(vma).hex() << 
+	  " size=0x" << ZuBoxed(size).hex() <<
+	  " filepos=0x" << ZuBoxed(sec->filepos).hex() <<
+	  " ALLOC=0x" << ZuBoxed(flags & SEC_ALLOC).hex() <<
+	  " CODE=0x" << ZuBoxed(flags & SEC_CODE).hex() <<
+	  "\r\n" << std::flush;
+#endif
+      auto off = static_cast<bfd_vma>(m_info.addr - m_bfd->base);
+#if 0
+      std::cerr << "abs_addr=0x" << ZuBoxed(m_info.addr).hex() <<
+	" off=0x" << ZuBoxed(off).hex() << "\r\n" << std::flush;
+#endif
+      if (off < vma || off >= vma + size) return;
+      off -= vma;
+      bool found = false;
+      if (m_bfd->symbols)
+	found = bfd_find_nearest_line(m_bfd->handle, sec, m_bfd->symbols,
+	  off, &m_info.file, &m_info.func, &m_info.line);
+      if (found)
+	m_info.name = m_bfd->name;
+      else
+	m_info.func = nullptr;
     }
 
-    ZmBackTrace_Mgr	*m_mgr;
-    uintptr_t		m_addr;
-    BFD			*m_bfd;
-    const char		*m_func;
-    const char		*m_file;
-    unsigned		m_line;
+    ZmBackTrace_Mgr	*m_mgr = nullptr;
+    BFD			*m_bfd = nullptr;
+    Info		m_info;
   };
 
   bool printFrame_bfd(ZmStream &s, void *addr) {
@@ -341,6 +381,12 @@ notfound:
 
   using Lock = ZmPLock;
   using Guard = ZmGuard<Lock>;
+
+#ifdef _WIN32
+  ZuArray<char> nameBuf() {
+    return {m_nameBuf, sizeof(m_nameBuf) / sizeof(m_nameBuf[0])};
+  }
+#endif
 
   void capture(unsigned skip, void **frames);
 #ifdef _WIN32
@@ -372,7 +418,7 @@ notfound:
 #endif
 
 #ifdef ZmBackTrace_BFD
-  BFD				*m_bfd;
+  BFD				*m_bfd = nullptr;
 #endif
 };
 
@@ -536,7 +582,7 @@ void ZmBackTrace_Mgr::capture(
     memset(&stackFrame, 0, sizeof(STACKFRAME64));
     memcpy(&context, exInfo->ContextRecord, sizeof(CONTEXT));
 
-#if defined(_WIN64)
+#ifdef _WIN64
     machineType = IMAGE_FILE_MACHINE_AMD64;
     stackFrame.AddrPC.Offset = context.Rip;
     stackFrame.AddrFrame.Offset = context.Rbp;
@@ -551,12 +597,17 @@ void ZmBackTrace_Mgr::capture(
     stackFrame.AddrFrame.Mode = AddrModeFlat;
     stackFrame.AddrStack.Mode = AddrModeFlat;
 
+    decltype(stackFrame.AddrStack.Offset) prevAddrStack = 0;
     while (
 	(*m_stackWalk64)(machineType, GetCurrentProcess(), GetCurrentThread(),
 	  &stackFrame, &context, 0, m_symFunctionTableAccess64,
 	  m_symGetModuleBase64, 0) &&
 	n < ZmBackTrace_DEPTH + skip) {
-      if (n >= skip) frames[n - skip] = (void *)(stackFrame.AddrPC.Offset);
+      if (prevAddrStack &&
+	  prevAddrStack < stackFrame.AddrStack.Offset) break;
+      if (n >= skip) {
+	frames[n - skip] = reinterpret_cast<void *>(stackFrame.AddrPC.Offset);
+      }
       n++;
     }
   }
@@ -606,18 +657,17 @@ bool ZmBackTrace_Mgr::printFrame_(ZmStream &s, void *addr)
 #endif
   }
 
-  const char *module;
-  int moduleLen;
-  if ((moduleLen = GetModuleFileNameA(
-	  (HINSTANCE)si->ModBase, m_nameBuf, sizeof(m_nameBuf) - 1))) {
-    module = m_nameBuf;
-    m_nameBuf[moduleLen] = 0;
+  auto nameBuf = this->nameBuf();
+  ZuString module;
+  if (auto n = GetModuleFileNameA(
+	  (HINSTANCE)si->ModBase, nameBuf.data(), nameBuf.length() - 1)) {
+    nameBuf.trunc(n);
+    module = nameBuf;
   } else {
     module = "?";
-    moduleLen = 1;
   }
   printFrame_info(s, (uintptr_t)addr - (uintptr_t)si->ModBase,
-      ZuString(module, moduleLen), ZuString(si->Name, si->NameLen), "", 0);
+      module, ZuString(si->Name, si->NameLen), "", 0);
   return true;
 #endif /* _WIN32 */
 }

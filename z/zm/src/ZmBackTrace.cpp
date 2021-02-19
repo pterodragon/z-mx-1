@@ -199,12 +199,17 @@ friend BFD;
       Handle(const Handle &) = delete;
       Handle &operator =(const Handle &) = delete;
       Handle(Handle &&h) { v = h.v; h.v = INVALID_HANDLE_VALUE; }
-      Handle &operator =(Handle &&h) { v = h.v; h.v = INVALID_HANDLE_VALUE; }
+      Handle &operator =(Handle &&h) {
+	v = h.v;
+	h.v = INVALID_HANDLE_VALUE;
+	return *this;
+      }
       ~Handle() { if (v != INVALID_HANDLE_VALUE) CloseHandle(v); }
       Handle(HANDLE v_) : v{v_} { }
       Handle &operator =(HANDLE v_) {
 	this->~Handle();
 	new (this) Handle{v_};
+	return *this;
       }
       bool operator !() const { return v == INVALID_HANDLE_VALUE; }
       ZuOpBool
@@ -226,33 +231,36 @@ friend BFD;
       // base address as used in-memory; neither does BFD reliably report
       // the PE-COFF base after loading, necessitating obtaining it
       // directly from the file by navigating the DOS/PE-COFF headers
-      handle = CreateFileA(name_,
-	  GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, NULL);
-      if (!handle) return false;
       {
-	char buf[0x40];
-	DWORD r;
-	OVERLAPPED o{0};
-	if (!ReadFile(handle.v, buf, 0x40, &r, &o)) return false;
+	Handle handle = CreateFileA(name_,
+	    GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, NULL);
+	if (!handle) return false;
 	{
-	  uint32_t off = 0;
-	  if (buf[0] == 'M' && buf[1] == 'Z') memcpy(&off, &buf[0x3c], 4);
-	  o.Offset = off;
-	}
-	if (!ReadFile(handle.v, buf, 0x38, &r, &o)) return false;
-	if (memcmp(buf, "PE\0", 4)) return false;
-	{
-	  auto magic = *reinterpret_cast<const uint16_t *>(&buf[0x18]);
-	  if (magic == 0x10b) { // PE32
-	    fileBase = *reinterpret_cast<const uint32_t *>(&buf[0x34]);
-	  } else if (magic == 0x20b) { // PE32+, i.e. 64-bit
-	    fileBase = *reinterpret_cast<const uint64_t *>(&buf[0x30]);
-	  } else
-	    return false;
+	  char buf[0x40];
+	  DWORD r;
+	  OVERLAPPED o{0};
+	  if (!ReadFile(handle.v, buf, 0x40, &r, &o)) return false;
+	  {
+	    uint32_t off = 0;
+	    if (buf[0] == 'M' && buf[1] == 'Z') memcpy(&off, &buf[0x3c], 4);
+	    o.Offset = off;
+	  }
+	  if (!ReadFile(handle.v, buf, 0x38, &r, &o)) return false;
+	  if (memcmp(buf, "PE\0", 4)) return false;
+	  {
+	    auto magic = *reinterpret_cast<const uint16_t *>(&buf[0x18]);
+	    if (magic == 0x10b) { // PE32
+	      fileBase = *reinterpret_cast<const uint32_t *>(&buf[0x34]);
+	    } else if (magic == 0x20b) { // PE32+, i.e. 64-bit
+	      fileBase = *reinterpret_cast<const uint64_t *>(&buf[0x30]);
+	    } else
+	      return false;
+	  }
 	}
       }
+#if 0
       abfd = bfd_openr_iovec(name, nullptr,
-	  [](bfd *, void *this_) -> { return this_; }, this,
+	  [](bfd *, void *this_) { return this_; }, this,
 	  [](bfd *, void *this__,
 	      void *buf, file_ptr n, file_ptr o_) -> file_ptr {
 	    auto this_ = reinterpret_cast<BFD *>(this__);
@@ -261,7 +269,7 @@ friend BFD;
 	    o.Offset = static_cast<DWORD>(o_);
 	    o.OffsetHigh = static_cast<DWORD>(o_>>32);
 	    if (!ReadFile(this_->handle.v, buf, n, &r, &o)) return -1;
-	    return n;
+	    return r;
 	  },
 	  [](bfd *, void *this__) -> int {
 	    auto this_ = reinterpret_cast<BFD *>(this__);
@@ -276,9 +284,9 @@ friend BFD;
 	    s->st_size = (static_cast<uint64_t>(h)<<32) | l;
 	    return 0;
 	  });
-#else /* _WIN32 */
-      abfd = bfd_openr(name, nullptr);
 #endif
+#endif
+      abfd = bfd_openr(name, nullptr);
       if (!abfd) {
 	free(const_cast<char *>(name));
 	return false;
@@ -319,7 +327,6 @@ friend BFD;
     bfd			*abfd = nullptr;
     uintptr_t		base = 0;
 #ifdef _WIN32
-    Handle		handle;
     uintptr_t		fileBase = 0;
 #endif
     asymbol		**symbols = nullptr;
@@ -373,9 +380,9 @@ friend BFD;
 	  goto notfound;
 	}
       }
-      if (!m_bfd->handle) goto notfound;
+      if (!m_bfd->abfd) goto notfound;
       bfd_map_over_sections(
-	  m_bfd->handle,
+	  m_bfd->abfd,
 	  [](bfd *, asection *sec, void *context) {
 	    static_cast<BFD_Find *>(context)->lookup(sec);
 	  },
@@ -389,7 +396,7 @@ notfound:
   private:
     void lookup(asection *sec) {
       if (m_info.func) return;
-      auto size = m_bfd->handle->size;
+      auto size = m_bfd->abfd->size;
 #if 0
       std::cerr << m_bfd->name <<
 	" base=0x" << ZuBoxed(m_bfd->base).hex() <<
@@ -441,7 +448,7 @@ notfound:
       off -= vma;
       bool found = false;
       if (m_bfd->symbols)
-	found = bfd_find_nearest_line(m_bfd->handle, sec, m_bfd->symbols,
+	found = bfd_find_nearest_line(m_bfd->abfd, sec, m_bfd->symbols,
 	  off, &m_info.file, &m_info.func, &m_info.line);
       if (found)
 	m_info.name = m_bfd->name;

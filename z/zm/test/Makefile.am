@@ -5,17 +5,12 @@ AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@
 LDADD = $(top_builddir)/zm/src/libZm.la $(top_builddir)/zu/src/libZu.la \
 	@Z_MT_LIBS@
-TESTLIBS = libZmBTTest.la libZmBTTest2.la
-if MINGW
-lib_LTLIBRARIES = ${TESTLIBS}
-else
-noinst_LTLIBRARIES = ${TESTLIBS}
-endif
+lib_LTLIBRARIES = libZmBTTest.la libZmBTTest2.la
 libZmBTTest_la_SOURCES = libZmBTTest.cpp
-libZmBTTest_la_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@ -shared
+libZmBTTest_la_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
 libZmBTTest_la_LIBADD = libZmBTTest2.la
 libZmBTTest2_la_SOURCES = libZmBTTest2.cpp
-libZmBTTest2_la_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@ -shared
+libZmBTTest2_la_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
 TESTPROGS = ZmFnTest ZmHeapTest ZmQueueTest ZmRBTest ZmRWTest \
 	ZmSchedTest ZmStackTest ZmTest ZmHashTest ZmHashTest2 ZmTLockTest \
 	ZmTTest ZmLHTest ZmHashCleanup ZmHashThread ZmPQueueTest \

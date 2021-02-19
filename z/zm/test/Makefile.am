@@ -5,15 +5,28 @@ AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@
 LDADD = $(top_builddir)/zm/src/libZm.la $(top_builddir)/zu/src/libZu.la \
 	@Z_MT_LIBS@
-noinst_LTLIBRARIES = libZmBTTest.la
+TESTLIBS = libZmBTTest.la libZmBTTest2.la
+if MINGW
+lib_LTLIBRARIES = ${TESTLIBS}
+else
+noinst_LTLIBRARIES = ${TESTLIBS}
+endif
 libZmBTTest_la_SOURCES = libZmBTTest.cpp
 libZmBTTest_la_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@ -shared
-noinst_PROGRAMS = \
-	ZmBTTest ZmFnTest ZmHeapTest ZmQueueTest ZmRBTest ZmRWTest \
+libZmBTTest_la_LIBADD = libZmBTTest2.la
+libZmBTTest2_la_SOURCES = libZmBTTest2.cpp
+libZmBTTest2_la_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@ -shared
+TESTPROGS = ZmFnTest ZmHeapTest ZmQueueTest ZmRBTest ZmRWTest \
 	ZmSchedTest ZmStackTest ZmTest ZmHashTest ZmHashTest2 ZmTLockTest \
 	ZmTTest ZmLHTest ZmHashCleanup ZmHashThread ZmPQueueTest \
 	ZmPQueueTest2 ZmPQueueTest3 ZmRingTest ZmBxRingTest ZmLockTest \
 	ZmTLSTest
+if MINGW
+bin_PROGRAMS = ZmBTTest
+noinst_PROGRAMS = ${TESTPROGS}
+else
+noinst_PROGRAMS = ZmBTTest ${TESTPROGS}
+endif
 ZmBTTest_SOURCES = ZmBTTest.cpp
 ZmBTTest_LDADD = libZmBTTest.la ${LDADD}
 ZmFnTest_SOURCES = ZmFnTest.cpp

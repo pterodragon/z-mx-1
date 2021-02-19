@@ -193,27 +193,69 @@ friend BFD;
   friend BFD_Find;
   private:
 #ifdef _WIN32
-    struct Handle {
-      HANDLE	v = INVALID_HANDLE_VALUE;
-      Handle() = default;
-      Handle(const Handle &) = delete;
-      Handle &operator =(const Handle &) = delete;
-      Handle(Handle &&h) { v = h.v; h.v = INVALID_HANDLE_VALUE; }
-      Handle &operator =(Handle &&h) {
-	v = h.v;
-	h.v = INVALID_HANDLE_VALUE;
+    // Windows - overlapped file handle wrapper for use with bfd_openr_iovec
+    struct File {
+      HANDLE	handle = INVALID_HANDLE_VALUE;
+      File() = default;
+      File(const File &) = delete;
+      File &operator =(const File &) = delete;
+      File(File &&h) { handle = h.handle; h.handle = INVALID_HANDLE_VALUE; }
+      File &operator =(File &&h) {
+	handle = h.handle;
+	h.handle = INVALID_HANDLE_VALUE;
 	return *this;
       }
-      ~Handle() { if (v != INVALID_HANDLE_VALUE) CloseHandle(v); }
-      Handle(HANDLE v_) : v{v_} { }
-      Handle &operator =(HANDLE v_) {
-	this->~Handle();
-	new (this) Handle{v_};
+      ~File() { if (handle != INVALID_HANDLE_VALUE) CloseHandle(handle); }
+      File(HANDLE handle_) : handle{handle_} { }
+      File &operator =(HANDLE handle_) {
+	this->~File();
+	new (this) File{handle_};
 	return *this;
       }
-      bool operator !() const { return v == INVALID_HANDLE_VALUE; }
+      bool operator !() const { return handle == INVALID_HANDLE_VALUE; }
       ZuOpBool
-      void close() { CloseHandle(v); v = INVALID_HANDLE_VALUE; }
+      int open(const char *name) {
+	handle = CreateFileA(name,
+	    GENERIC_READ, FILE_SHARE_READ, nullptr,
+	    OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+	if (!handle || handle == INVALID_HANDLE_VALUE) {
+	  handle = INVALID_HANDLE_VALUE;
+	  return false;
+	}
+	return true;
+      }
+      void close() { CloseHandle(handle); handle = INVALID_HANDLE_VALUE; }
+      file_ptr read(file_ptr off, void *ptr, unsigned len) {
+	DWORD r;
+	OVERLAPPED o{0};
+	o.Offset = static_cast<DWORD>(off);
+	o.OffsetHigh = static_cast<DWORD>(off>>32);
+	file_ptr total = 0;
+retry:
+	if (!ReadFile(handle, ptr, len, &r, &o)) {
+	  auto errNo = GetLastError();
+	  if (errNo == ERROR_HANDLE_EOF) return total;
+	  if (errNo != ERROR_IO_PENDING) return -1;
+	  if (!GetOverlappedResult(handle, &o, &r, TRUE)) {
+	    errNo = GetLastError();
+	    if (errNo == ERROR_HANDLE_EOF) return total;
+	    return -1;
+	  }
+	}
+	if (!r) return total;
+	total += r, off += r;
+	if (static_cast<unsigned>(r) < len) {
+	  ptr = static_cast<void *>(reinterpret_cast<uint8_t *>(ptr) + r);
+	  len -= r;
+	  goto retry;
+	}
+	return total;
+      }
+      file_ptr size() {
+	DWORD l, h = 0;
+	l = GetFileSize(handle, &h);
+	return (static_cast<uint64_t>(h)<<32) | l;
+      }
     };
 #endif
     BFD() = default;
@@ -229,65 +271,53 @@ friend BFD;
 #ifdef _WIN32
       // due to address randomization (ASLR), BFD doesn't obtain the same
       // base address as used in-memory; neither does BFD reliably report
-      // the PE-COFF base after loading, necessitating obtaining it
-      // directly from the file by navigating the DOS/PE-COFF headers
+      // the PE-COFF base after loading; obtain it directly from the
+      // file by navigating the DOS/PE-COFF headers, then hand off the
+      // file handle to BFD via openr_iovec
       {
-	Handle handle = CreateFileA(name_,
-	    GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, NULL);
-	if (!handle) return false;
+	if (file.open(name_) < 0) return false;
+	char buf[0x40];
+	if (file.read(0, buf, 0x40) < 0x40) return false;
+	uint32_t off = 0;
+	if (buf[0] == 'M' && buf[1] == 'Z') memcpy(&off, &buf[0x3c], 4);
+	if (file.read(off, buf, 0x38) < 0x38) return false;
+	if (memcmp(buf, "PE\0", 4)) return false;
 	{
-	  char buf[0x40];
-	  DWORD r;
-	  OVERLAPPED o{0};
-	  if (!ReadFile(handle.v, buf, 0x40, &r, &o)) return false;
-	  {
-	    uint32_t off = 0;
-	    if (buf[0] == 'M' && buf[1] == 'Z') memcpy(&off, &buf[0x3c], 4);
-	    o.Offset = off;
-	  }
-	  if (!ReadFile(handle.v, buf, 0x38, &r, &o)) return false;
-	  if (memcmp(buf, "PE\0", 4)) return false;
-	  {
-	    auto magic = *reinterpret_cast<const uint16_t *>(&buf[0x18]);
-	    if (magic == 0x10b) { // PE32
-	      fileBase = *reinterpret_cast<const uint32_t *>(&buf[0x34]);
-	    } else if (magic == 0x20b) { // PE32+, i.e. 64-bit
-	      fileBase = *reinterpret_cast<const uint64_t *>(&buf[0x30]);
-	    } else
-	      return false;
-	  }
+	  auto magic = *reinterpret_cast<const uint16_t *>(&buf[0x18]);
+	  if (magic == 0x10b) { // PE32
+	    fileBase = *reinterpret_cast<const uint32_t *>(&buf[0x34]);
+	  } else if (magic == 0x20b) { // PE32+, i.e. 64-bit
+	    fileBase = *reinterpret_cast<const uint64_t *>(&buf[0x30]);
+	  } else
+	    return false;
 	}
       }
-#if 0
       abfd = bfd_openr_iovec(name, nullptr,
-	  [](bfd *, void *this_) { return this_; }, this,
+	  [](bfd *abfd, void *this__) { // open
+	    auto this_ = reinterpret_cast<BFD *>(this__);
+	    abfd->size = this_->file.size(); // need to set this
+	    return this__;
+	  }, this,
 	  [](bfd *, void *this__,
-	      void *buf, file_ptr n, file_ptr o_) -> file_ptr {
+	      void *buf, file_ptr n, file_ptr o) -> file_ptr { // read
 	    auto this_ = reinterpret_cast<BFD *>(this__);
-	    DWORD r;
-	    OVERLAPPED o{0};
-	    o.Offset = static_cast<DWORD>(o_);
-	    o.OffsetHigh = static_cast<DWORD>(o_>>32);
-	    if (!ReadFile(this_->handle.v, buf, n, &r, &o)) return -1;
-	    return r;
+	    return this_->file.read(o, buf, n);
 	  },
-	  [](bfd *, void *this__) -> int {
+	  [](bfd *, void *this__) -> int { // close
 	    auto this_ = reinterpret_cast<BFD *>(this__);
-	    this_->handle.close();
+	    this_->file.close();
 	    return 0;
 	  },
-	  [](bfd *, void *this__, struct stat *s) {
+	  [](bfd *abfd, void *this__, struct stat *s) -> int { // stat
 	    memset(s, 0, sizeof(struct stat));
 	    auto this_ = reinterpret_cast<BFD *>(this__);
-	    DWORD l, h;
-	    l = GetFileSize(this_->handle.v, &h);
 	    s->st_mode = S_IFREG | S_IRWXU;
-	    s->st_size = this_->fileSize = (static_cast<uint64_t>(h)<<32) | l;
+	    s->st_size = abfd->size;
 	    return 0;
 	  });
-#endif
-#endif
+#else
       abfd = bfd_openr(name, nullptr);
+#endif
       if (!abfd) {
 	free(const_cast<char *>(name));
 	return false;
@@ -328,9 +358,8 @@ friend BFD;
     bfd			*abfd = nullptr;
     uintptr_t		base = 0;
 #ifdef _WIN32
-    // Handle		handle;
+    File		file;
     uintptr_t		fileBase = 0;
-    // uint64_t		fileSize = 0;
 #endif
     asymbol		**symbols = nullptr;
   };
@@ -410,7 +439,7 @@ notfound:
       auto vma = bfd_section_vma(sec);
       auto secSize = bfd_section_size(sec);
 #if 0
-      std::cerr << "section vma=0x" << ZuBoxed(vma).hex() << 
+      std::cerr << "section vma=0x" << ZuBoxed(vma).hex() <<
 	  " secSize=0x" << ZuBoxed(secSize).hex() <<
 	  " filepos=0x" << ZuBoxed(sec->filepos).hex() <<
 	  " ALLOC=0x" << ZuBoxed(flags & SEC_ALLOC).hex() <<

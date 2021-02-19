@@ -274,7 +274,7 @@ friend BFD;
 	    this_->handle.close();
 	    return 0;
 	  },
-	  [](bfd *, void *this__, struct stat *s) {
+	  [](bfd *, void *this__, struct stat *s) -> int {
 	    memset(s, 0, sizeof(struct stat));
 	    auto this_ = reinterpret_cast<BFD *>(this__);
 	    DWORD l, h;

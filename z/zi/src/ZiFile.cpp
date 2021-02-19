@@ -346,7 +346,8 @@ int ZiFile::open_(
     DWORD fileFlags = FILE_FLAG_OVERLAPPED;
     if (flags & Direct) fileFlags |= FILE_FLAG_NO_BUFFERING;
     if (flags & Sync) fileFlags |= FILE_FLAG_WRITE_THROUGH;
-    h = CreateFile(name, accessFlags, shareFlags, 0, createFlags, fileFlags, 0);
+    h = CreateFile(
+	name, accessFlags, shareFlags, nullptr, createFlags, fileFlags, NULL);
     if (h == INVALID_HANDLE_VALUE) goto error;
     if ((length > 0 && size() < length) || (flags & Truncate)) {
       LONG high = length>>32;

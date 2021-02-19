@@ -231,34 +231,32 @@ friend BFD;
       // base address as used in-memory; neither does BFD reliably report
       // the PE-COFF base after loading, necessitating obtaining it
       // directly from the file by navigating the DOS/PE-COFF headers
+      handle = CreateFileA(name_,
+	  GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+	  FILE_FLAG_OVERLAPPED, NULL);
+      if (!handle) return false;
       {
-	Handle handle = CreateFileA(name_,
-	    GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, NULL);
-	if (!handle) return false;
+	char buf[0x40];
+	DWORD r;
+	OVERLAPPED o{0};
+	if (!ReadFile(handle.v, buf, 0x40, &r, &o)) return false;
 	{
-	  char buf[0x40];
-	  DWORD r;
-	  OVERLAPPED o{0};
-	  if (!ReadFile(handle.v, buf, 0x40, &r, &o)) return false;
-	  {
-	    uint32_t off = 0;
-	    if (buf[0] == 'M' && buf[1] == 'Z') memcpy(&off, &buf[0x3c], 4);
-	    o.Offset = off;
-	  }
-	  if (!ReadFile(handle.v, buf, 0x38, &r, &o)) return false;
-	  if (memcmp(buf, "PE\0", 4)) return false;
-	  {
-	    auto magic = *reinterpret_cast<const uint16_t *>(&buf[0x18]);
-	    if (magic == 0x10b) { // PE32
-	      fileBase = *reinterpret_cast<const uint32_t *>(&buf[0x34]);
-	    } else if (magic == 0x20b) { // PE32+, i.e. 64-bit
-	      fileBase = *reinterpret_cast<const uint64_t *>(&buf[0x30]);
-	    } else
-	      return false;
-	  }
+	  uint32_t off = 0;
+	  if (buf[0] == 'M' && buf[1] == 'Z') memcpy(&off, &buf[0x3c], 4);
+	  o.Offset = off;
+	}
+	if (!ReadFile(handle.v, buf, 0x38, &r, &o)) return false;
+	if (memcmp(buf, "PE\0", 4)) return false;
+	{
+	  auto magic = *reinterpret_cast<const uint16_t *>(&buf[0x18]);
+	  if (magic == 0x10b) { // PE32
+	    fileBase = *reinterpret_cast<const uint32_t *>(&buf[0x34]);
+	  } else if (magic == 0x20b) { // PE32+, i.e. 64-bit
+	    fileBase = *reinterpret_cast<const uint64_t *>(&buf[0x30]);
+	  } else
+	    return false;
 	}
       }
-#if 0
       abfd = bfd_openr_iovec(name, nullptr,
 	  [](bfd *, void *this_) { return this_; }, this,
 	  [](bfd *, void *this__,
@@ -284,9 +282,9 @@ friend BFD;
 	    s->st_size = (static_cast<uint64_t>(h)<<32) | l;
 	    return 0;
 	  });
-#endif
-#endif
+#else /* _WIN32 */
       abfd = bfd_openr(name, nullptr);
+#endif
       if (!abfd) {
 	free(const_cast<char *>(name));
 	return false;
@@ -327,6 +325,7 @@ friend BFD;
     bfd			*abfd = nullptr;
     uintptr_t		base = 0;
 #ifdef _WIN32
+    Handle		handle;
     uintptr_t		fileBase = 0;
 #endif
     asymbol		**symbols = nullptr;

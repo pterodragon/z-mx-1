@@ -731,14 +731,10 @@ retry:
     }
   }
 #else
-  OVERLAPPED o;
+  OVERLAPPED o{0};
 
-  o.Internal = 0;
-  o.InternalHigh = 0;
-  o.Offset = (DWORD)offset;
-  o.OffsetHigh = (DWORD)(offset>>32);
-  o.hEvent = 0;
-
+  o.Offset = static_cast<DWORD>(offset);
+  o.OffsetHigh = static_cast<DWORD>(offset>>32);
   if (!ReadFile(m_handle, ptr, len, &r, &o)) {
     errNo = GetLastError();
     if (errNo == ERROR_HANDLE_EOF) return total ? total : Zi::EndOfFile;

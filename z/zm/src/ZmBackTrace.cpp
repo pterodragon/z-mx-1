@@ -192,34 +192,54 @@ friend BFD;
   class BFD {
   friend BFD_Find;
   private:
+#ifdef _WIN32
+    struct Handle {
+      HANDLE	v = INVALID_HANDLE_VALUE;
+      Handle() = default;
+      Handle(const Handle &) = delete;
+      Handle &operator =(const Handle &) = delete;
+      Handle(Handle &&h) { v = h.v; h.v = INVALID_HANDLE_VALUE; }
+      Handle &operator =(Handle &&h) { v = h.v; h.v = INVALID_HANDLE_VALUE; }
+      ~Handle() { if (v != INVALID_HANDLE_VALUE) CloseHandle(v); }
+      Handle(HANDLE v_) : v{v_} { }
+      Handle &operator =(HANDLE v_) {
+	this->~Handle();
+	new (this) Handle{v_};
+      }
+      bool operator !() const { return v == INVALID_HANDLE_VALUE; }
+      ZuOpBool
+      void close() { CloseHandle(v); v = INVALID_HANDLE_VALUE; }
+    };
+#endif
     BFD() = default;
     ~BFD() {
+      if (abfd) bfd_close(abfd);
       if (name) ::free(const_cast<char *>(name));
       if (symbols) ::free(symbols);
-      if (handle) bfd_close(handle);
     }
 
     bool load(ZmBackTrace_Mgr *mgr, const char *name_, uintptr_t base_) {
+      name = strdup(name_);
+      base = base_;
 #ifdef _WIN32
       // due to address randomization (ASLR), BFD doesn't obtain the same
       // base address as used in-memory; neither does BFD reliably report
       // the PE-COFF base after loading, necessitating obtaining it
       // directly from the file by navigating the DOS/PE-COFF headers
+      handle = CreateFileA(name_,
+	  GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, NULL);
+      if (!handle) return false;
       {
-	HANDLE h = CreateFileA(name_,
-	    GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, NULL);
-	if (h == INVALID_HANDLE_VALUE) return false;
 	char buf[0x40];
 	DWORD r;
 	OVERLAPPED o{0};
-	if (!ReadFile(h, buf, 0x40, &r, &o)) { CloseHandle(h); return false; }
+	if (!ReadFile(handle.v, buf, 0x40, &r, &o)) return false;
 	{
 	  uint32_t off = 0;
 	  if (buf[0] == 'M' && buf[1] == 'Z') memcpy(&off, &buf[0x3c], 4);
 	  o.Offset = off;
 	}
-	if (!ReadFile(h, buf, 0x38, &r, &o)) { CloseHandle(h); return false; }
-	CloseHandle(h);
+	if (!ReadFile(handle.v, buf, 0x38, &r, &o)) return false;
 	if (memcmp(buf, "PE\0", 4)) return false;
 	{
 	  auto magic = *reinterpret_cast<const uint16_t *>(&buf[0x18]);
@@ -231,28 +251,52 @@ friend BFD;
 	    return false;
 	}
       }
-#endif /* _WIN32 */
-      name = strdup(name_);
-      base = base_;
-      handle = bfd_openr(name, nullptr);
-      if (!handle) {
+      abfd = bfd_openr_iovec(name, nullptr,
+	  [](bfd *, void *this_) -> { return this_; }, this,
+	  [](bfd *, void *this__,
+	      void *buf, file_ptr n, file_ptr o_) -> file_ptr {
+	    auto this_ = reinterpret_cast<BFD *>(this__);
+	    DWORD r;
+	    OVERLAPPED o{0};
+	    o.Offset = static_cast<DWORD>(o_);
+	    o.OffsetHigh = static_cast<DWORD>(o_>>32);
+	    if (!ReadFile(this_->handle.v, buf, n, &r, &o)) return -1;
+	    return n;
+	  },
+	  [](bfd *, void *this__) -> int {
+	    auto this_ = reinterpret_cast<BFD *>(this__);
+	    this_->handle.close();
+	    return 0;
+	  },
+	  [](bfd *, void *this__, struct stat *s) {
+	    memset(s, 0, sizeof(struct stat));
+	    auto this_ = reinterpret_cast<BFD *>(this__);
+	    DWORD l, h;
+	    l = GetFileSize(this_->handle.v, &h);
+	    s->st_size = (static_cast<uint64_t>(h)<<32) | l;
+	    return 0;
+	  });
+#else /* _WIN32 */
+      abfd = bfd_openr(name, nullptr);
+#endif
+      if (!abfd) {
 	free(const_cast<char *>(name));
 	return false;
       }
-      if (!(bfd_check_format(handle, bfd_object) &&
-	    bfd_check_format_matches(handle, bfd_object, 0) &&
-	    (bfd_get_file_flags(handle) & HAS_SYMS))) {
-	bfd_close(handle);
-	handle = nullptr;
+      if (!(bfd_check_format(abfd, bfd_object) &&
+	    bfd_check_format_matches(abfd, bfd_object, 0) &&
+	    (bfd_get_file_flags(abfd) & HAS_SYMS))) {
+	bfd_close(abfd);
+	abfd = nullptr;
 	goto ret;
       }
       {
 	unsigned int i;
-	if (bfd_read_minisymbols(handle, 0, (void **)&symbols, &i) <= 0 &&
-	    bfd_read_minisymbols(handle, 1, (void **)&symbols, &i) < 0) {
+	if (bfd_read_minisymbols(abfd, 0, (void **)&symbols, &i) <= 0 &&
+	    bfd_read_minisymbols(abfd, 1, (void **)&symbols, &i) < 0) {
 	  if (symbols) { free(symbols); symbols = nullptr; }
-	  bfd_close(handle);
-	  handle = 0;
+	  bfd_close(abfd);
+	  abfd = nullptr;
 	}
       }
     ret:
@@ -272,9 +316,10 @@ friend BFD;
 
     BFD			*next = nullptr;
     const char		*name = nullptr;
-    bfd			*handle = nullptr;
+    bfd			*abfd = nullptr;
     uintptr_t		base = 0;
 #ifdef _WIN32
+    Handle		handle;
     uintptr_t		fileBase = 0;
 #endif
     asymbol		**symbols = nullptr;

@@ -31,6 +31,12 @@
 #include <zlib/ZmTrap.hpp>
 #endif
 
+extern
+#ifdef _WIN32
+ZuImport_API
+#endif
+ZmBackTrace xfoo(ZmBackTrace (*fn)());
+
 template <bool X> struct Foo;
 template <> struct Foo<1> {
   static ZmBackTrace d() {
@@ -46,7 +52,7 @@ ZmBackTrace c() {
 }
 
 ZmBackTrace b() {
-  return c();
+  return xfoo(c);
 }
 
 void a(ZmBackTrace &t) {

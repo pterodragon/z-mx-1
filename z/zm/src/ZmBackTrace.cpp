@@ -281,7 +281,8 @@ friend BFD;
 	    auto this_ = reinterpret_cast<BFD *>(this__);
 	    DWORD l, h;
 	    l = GetFileSize(this_->handle.v, &h);
-	    s->st_size = (static_cast<uint64_t>(h)<<32) | l;
+	    s->st_mode = S_IFREG | S_IRWXU;
+	    s->st_size = this_->fileSize = (static_cast<uint64_t>(h)<<32) | l;
 	    return 0;
 	  });
 #endif
@@ -327,7 +328,9 @@ friend BFD;
     bfd			*abfd = nullptr;
     uintptr_t		base = 0;
 #ifdef _WIN32
+    // Handle		handle;
     uintptr_t		fileBase = 0;
+    // uint64_t		fileSize = 0;
 #endif
     asymbol		**symbols = nullptr;
   };

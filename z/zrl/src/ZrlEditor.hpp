@@ -437,6 +437,7 @@ struct CmdContext {
   // history search context
   ZtArray<uint8_t>	srchTerm;		// search term
   ZuUTFSpan		srchPrmptSpan;		// search prompt span
+  bool			srchFwd = true;		// search direction
 
   // insert/overwrite mode
   bool			overwrite = false;

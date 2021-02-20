@@ -825,10 +825,10 @@ void Editor::start(StartFn fn)
 	m_tty.opost_on();
 	fn(*this);
 	m_tty.opost_off();
-	m_tty.splice(0, ZuUTFSpan{}, m_context.prompt,
-	    ZuUTF<uint32_t, uint8_t>::span(m_context.prompt), true);
+	auto span = ZuUTF<uint32_t, uint8_t>::span(m_context.prompt);
+	m_tty.splice(0, ZuUTFSpan{}, m_context.prompt, span, true);
 	m_tty.write();
-	m_context.startPos = m_tty.pos();
+	m_context.startPos = span.width();
       },
       Terminal::KeyFn{this, [](Editor *this_, int32_t vkey) {
 	return this_->process(vkey);
@@ -2392,7 +2392,6 @@ bool Editor::cmdPromptSrch(Cmd cmd, int32_t vkey)
   if (ZuUnlikely(Cmd::nullArg(arg) || arg < 0)) return false;
   m_context.mode = arg;
   unsigned pos = m_context.startPos;
-  m_tty.mv(pos);
   const auto &line = m_tty.line();
   unsigned begin = line.position(pos).mapping();
   unsigned end = line.length();
@@ -2404,9 +2403,10 @@ bool Editor::cmdPromptSrch(Cmd cmd, int32_t vkey)
   ZuArrayN<uint8_t, 4> prompt;
   prompt.length(ZuUTF8::out(prompt.data(), 4, vkey));
   m_context.srchPrmptSpan = ZuUTF<uint32_t, uint8_t>::span(prompt);
-  m_context.startPos += m_context.srchPrmptSpan.width();
+  m_context.startPos = m_context.srchPrmptSpan.width();
+  m_tty.mv(0);
   m_tty.splice(
-      begin, ZuUTF<uint32_t, uint8_t>::span(orig),
+      0, ZuUTF<uint32_t, uint8_t>::span(substr(0, end)),
       prompt, m_context.srchPrmptSpan, true);
   return false;
 }
@@ -2421,41 +2421,52 @@ void Editor::srchEndPrompt(int op)
   unsigned end = line.length();
   if (op != SearchOp::Abort && end > begin)
     m_context.srchTerm = substr(begin, end);
-  m_context.startPos = (pos -= m_context.srchPrmptSpan.width());
-  m_tty.mv(pos);
+  {
+    auto prmptSpan = ZuUTF<uint32_t, uint8_t>::span(m_context.prompt);
+    m_tty.mv(0);
+    m_tty.splice(0,
+	ZuUTF<uint32_t, uint8_t>::span(substr(0, end)),
+	m_context.prompt,
+	prmptSpan, true);
+    m_context.startPos = prmptSpan.width();
+  }
+  pos = m_context.startPos;
   begin = line.position(pos).mapping();
   auto orig = substr(begin, end);
-  ZuString data;
-  if (m_app.histLoad(m_context.histSaveOff, data))
-    m_context.histLoadOff = m_context.histSaveOff;
-  else {
-    data = {};
-    m_context.histLoadOff = -1;
-  }
   bool found = false;
   if (op == SearchOp::Fwd)
     found = searchFwd(1);
   else if (op == SearchOp::Rev)
     found = searchRev(1);
-  if (!found)
-    m_tty.splice(
-	begin, ZuUTF<uint32_t, uint8_t>::span(orig),
-	data, ZuUTF<uint32_t, uint8_t>::span(data), true);
+  if (!found) {
+    if (m_context.histLoadOff < 0)
+      m_context.histLoadOff = m_context.histSaveOff;
+    if (m_context.histLoadOff >= 0) {
+      ZuString data;
+      if (m_app.histLoad(m_context.histLoadOff, data))
+	m_tty.splice(
+	    begin, ZuUTF<uint32_t, uint8_t>::span(orig),
+	    data, ZuUTF<uint32_t, uint8_t>::span(data), true);
+    }
+  }
   m_context.mode = m_context.stack.pop();
   m_context.srchPrmptSpan = {};
 }
 bool Editor::cmdEnterSrchFwd(Cmd, int32_t)
 {
+  m_context.srchFwd = true;
   srchEndPrompt(SearchOp::Fwd);
   return false;
 }
 bool Editor::cmdEnterSrchRev(Cmd, int32_t)
 {
+  m_context.srchFwd = false;
   srchEndPrompt(SearchOp::Rev);
   return false;
 }
 bool Editor::cmdAbortSrch(Cmd, int32_t)
 {
+  m_context.srchFwd = true;
   srchEndPrompt(SearchOp::Abort);
   return false;
 }
@@ -2463,6 +2474,7 @@ bool Editor::cmdAbortSrch(Cmd, int32_t)
 bool Editor::cmdFwdSearch(Cmd cmd, int32_t)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
+  if (!m_context.srchFwd) arg = -arg;
   if (arg < 0)
     searchRev(-arg);
   else
@@ -2472,6 +2484,7 @@ bool Editor::cmdFwdSearch(Cmd cmd, int32_t)
 bool Editor::cmdRevSearch(Cmd cmd, int32_t)
 {
   int arg = m_context.evalArg(cmd.arg(), 1);
+  if (!m_context.srchFwd) arg = -arg;
   if (arg < 0)
     searchFwd(-arg);
   else

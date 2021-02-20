@@ -242,7 +242,7 @@ void Editor::init(Config config, App app)
   m_defltMap->bind(0, -VKey::Delete, { { Op::Right | Op::Del } });
 
   m_defltMap->bind(0, 'W' - '@', { { Op::Nop } });
-  m_defltMap->bind(0, 'Y' - '@', { { Op::Paste } });
+  m_defltMap->bind(0, 'Y' - '@', { { Op::Yank } });
 
   m_defltMap->bind(0, '_' - '@', { { Op::EmacsUndo } });
   m_defltMap->bind(0, 'G' - '@', { { Op::EmacsAbort } });
@@ -359,7 +359,7 @@ void Editor::init(Config config, App app)
   m_defltMap->bind(4, -VKey::AnySys, { { Op::Pop }, { Op::Syn } });
   m_defltMap->bind(4, -VKey::AnyFn, { { Op::Pop }, { Op::Syn } });
   m_defltMap->bind(4, '\x1b', {
-    { Op::ClrVis | Op::Del },
+    { Op::ClrVis | Op::Del | Op::Vis },
     { Op::Glyph },
     { Op::Pop, 2 }
   });
@@ -1995,13 +1995,12 @@ void Editor::transformWord(TransformSpanFn fn, TransformCharFn charFn)
 {
   unsigned pos = m_tty.pos();
   const auto &line = m_tty.line();
-  if (pos == line.width()) pos = line.align(pos - 1);
+  if (pos == line.width()) return;
   if (pos <= m_context.startPos) return;
   unsigned start = line.position(m_context.startPos).mapping();
-  unsigned end = line.position(pos).mapping();
-  if (!line.isword_(end)) return;
-  end = line.fwdWordEnd(end, true);
-  unsigned begin = line.revWord(end);
+  unsigned begin = line.position(pos).mapping();
+  if (!line.isword_(begin)) return;
+  unsigned end = line.fwdWordEnd(begin, true);
   if (begin <= start || begin >= end) return;
   ZtArray<uint8_t> replace;
   replace.length(end - begin);
@@ -2025,6 +2024,7 @@ void Editor::transformVis(TransformSpanFn fn, TransformCharFn charFn)
   memcpy(&replace[0], &data[begin], end - begin);
   fn(charFn, replace);
   auto span = ZuUTF<uint32_t, uint8_t>::span(substr(begin, end));
+  m_tty.mv(m_context.markPos);
   splice(begin, span, replace, span, true);
 }
 

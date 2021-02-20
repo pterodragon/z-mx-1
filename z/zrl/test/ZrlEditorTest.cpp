@@ -47,7 +47,7 @@ int main()
   editor.start([](Zrl::Editor &editor) {
     std::cout << editor.dumpVKeys();
     std::cout << editor.dumpMaps();
-    editor.prompt("-->] ");
+    editor.prompt_("-->] ");
   });
   done.wait();
   editor.stop();

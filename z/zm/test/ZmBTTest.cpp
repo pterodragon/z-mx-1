@@ -19,6 +19,10 @@
 
 /* backtrace test program */
 
+// this call stacks program -> shared libary -> shared library -> program
+// (Windows: exe -> dll -> dll -> exe),  to test all 4 combinations of
+// calling across executable modules
+
 #include <zlib/ZuLib.hpp>
 
 #include <stdio.h>

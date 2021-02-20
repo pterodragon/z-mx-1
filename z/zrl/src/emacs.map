@@ -171,16 +171,20 @@ map emacs {
     Any { FwdIncSrch; }
     AnyFn { Pop; ClrIncSrch; Syn; }
     AnySys { Pop; ClrIncSrch; Syn; }
+    ^R { Mode(9); Syn; }
+    ^S { FwdIncSrch(, Unset); }
     ^G { Pop; ClrIncSrch; }
-    Enter { Syn(, ^G); }
+    Enter { Pop; }
   }
   # incremental search rev
   mode 9 {
     Any { RevIncSrch; }
     AnyFn { Pop; ClrIncSrch; Syn; }
     AnySys { Pop; ClrIncSrch; Syn; }
+    ^R { RevIncSrch(, Unset); }
+    ^S { Mode(8); Syn; }
     ^G { Pop; ClrIncSrch; }
-    Enter { Syn(, ^G); }
+    Enter { Pop; }
   }
   # M-0
   mode 10 {

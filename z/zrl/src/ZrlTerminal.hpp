@@ -63,6 +63,7 @@ namespace VKey {
     _,			// unused - overlaps with ^@ when negated
 
     Null,		// sentinel
+    Unset,		// set to Null - for suppressing keys
 
     // wildcards for key bindings
     Any,		// any key other than motion/Fn and system events

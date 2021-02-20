@@ -482,7 +482,7 @@ void Cmd::print_(ZmStream &s) const
     {
       auto v = vkey();
       if (v != -VKey::Null)
-      s << ", " << VKey::print(v);
+	s << ", " << VKey::print(v);
     }
     s << ')';
   }
@@ -535,11 +535,13 @@ int Cmd::parse(ZuString s, int off)
   }
   if (ZtREGEX("\G\s*\(").m(s, c, off)) {
     off += c[1].length();
-    if (ZtREGEX("\G\s*(\d+)").m(s, c, off)) {
+    if (ZtREGEX("\G\s*(-?\d+)").m(s, c, off)) {
       off += c[1].length();
-      uint64_t arg = ZuBox<unsigned>{c[2]};
-      m_value |= (arg<<16);
-    }
+      uint16_t arg = ZuBox<int16_t>{c[2]};
+      m_value |= (static_cast<uint64_t>(arg)<<16);
+    } else
+      m_value |=
+	(static_cast<uint64_t>(static_cast<uint16_t>(Cmd::nullArg()))<<16);
     if (ZtREGEX("\G\s*,").m(s, c, off)) {
       off += c[1].length();
       int32_t vkey;
@@ -934,7 +936,10 @@ bool Editor::process__(const CmdSeq &cmds, int32_t vkey)
 	break;
     }
     int32_t vkey_ = cmd.vkey();
-    if (vkey_ == -VKey::Null) vkey_ = vkey;
+    if (vkey_ == -VKey::Null)
+      vkey_ = vkey;
+    else if (vkey_ == -VKey::Unset)
+      vkey_ = -VKey::Null;
     bool stop = false;
     if (auto fn = m_cmdFn[op]) {
       stop = (this->*fn)(cmd, vkey_);
@@ -1030,7 +1035,7 @@ bool Editor::cmdEnter(Cmd, int32_t)
   const auto &data = m_tty.line().data();
   ZuArray<const uint8_t> s{data.data(), data.length()};
   s.offset(m_context.startPos);
-  m_app.histSave(m_context.histSaveOff++, s);
+  if (s) m_app.histSave(m_context.histSaveOff++, s);
 
   m_context.reset();
 
@@ -2241,7 +2246,7 @@ void Editor::histLoad(int offset, ZuArray<const uint8_t> data, bool save)
   unsigned begin = line.position(pos).mapping();
   unsigned end = line.length();
   auto orig = substr(begin, end);
-  if (save) m_app.histSave(m_context.histSaveOff, orig);
+  if (save && orig) m_app.histSave(m_context.histSaveOff, orig);
   m_context.clrUndo();
   m_tty.splice(
       begin, ZuUTF<uint32_t, uint8_t>::span(orig),
@@ -2358,7 +2363,7 @@ bool Editor::searchRev(int arg)
 
 bool Editor::cmdFwdIncSrch(Cmd cmd, int32_t vkey)
 {
-  if (addIncSrch(vkey)) {
+  if (vkey == -VKey::Null || addIncSrch(vkey)) {
     int arg = m_context.evalArg(cmd.arg(), 1);
     if (arg < 0)
       searchRev(-arg);
@@ -2369,7 +2374,7 @@ bool Editor::cmdFwdIncSrch(Cmd cmd, int32_t vkey)
 }
 bool Editor::cmdRevIncSrch(Cmd cmd, int32_t vkey)
 {
-  if (addIncSrch(vkey)) {
+  if (vkey == -VKey::Null || addIncSrch(vkey)) {
     int arg = m_context.evalArg(cmd.arg(), 1);
     if (arg < 0)
       searchFwd(-arg);
@@ -2394,7 +2399,7 @@ bool Editor::cmdPromptSrch(Cmd cmd, int32_t vkey)
   auto orig = substr(begin, end);
   if (m_context.histLoadOff < 0)
     m_context.histLoadOff = m_context.histSaveOff;
-  if (m_context.histLoadOff == m_context.histSaveOff)
+  if (m_context.histLoadOff == m_context.histSaveOff && orig)
     m_app.histSave(m_context.histSaveOff, orig);
   ZuArrayN<uint8_t, 4> prompt;
   prompt.length(ZuUTF8::out(prompt.data(), 4, vkey));

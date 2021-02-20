@@ -223,7 +223,7 @@ public:
 
   Cmd(uint64_t op, int16_t arg = nullArg(), int32_t vkey = -VKey::Null) :
       m_value{op |
-	(static_cast<uint64_t>(arg)<<16) |
+	(static_cast<uint64_t>(static_cast<uint16_t>(arg))<<16) |
 	(static_cast<uint64_t>(vkey)<<32)} { }
 
   auto op() const { return m_value & 0xffffU; }

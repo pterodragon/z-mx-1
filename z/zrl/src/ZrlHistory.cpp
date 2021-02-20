@@ -25,7 +25,7 @@ namespace Zrl {
 
 void History::save(unsigned i, ZuString s)
 {
-  set(i, s);
+  if (s) set(i, s);
 }
 
 bool History::load(unsigned i, ZuString &s) const

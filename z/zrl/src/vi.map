@@ -35,10 +35,10 @@ map vi {
     Right[Alt] { FwdWord[Mv|Unix]; }
     Left[Shift|Alt] { RevWord[Mv|Vis|Unix]; Push(2); }
     Right[Shift|Alt] { FwdWordEnd[Mv|Vis|Unix|Past]; Push(2); }
+    Redraw { Redraw; }
     ^D { ListComplete; }
     ^I { Complete; }
     ^L { Clear; }
-    Redraw { Redraw; }
     ^[ { EditRep; Left[Mv]; Mode(3); }
   }
   # literal next

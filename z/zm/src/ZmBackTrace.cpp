@@ -271,7 +271,7 @@ retry:
 #ifdef _WIN32
       // due to address randomization (ASLR), BFD doesn't obtain the same
       // base address as used in-memory; neither does BFD reliably report
-      // the PE-COFF base after loading; obtain it directly from the
+      // the PE-COFF base after loading; so obtain it directly from the
       // file by navigating the DOS/PE-COFF headers, then hand off the
       // file handle to BFD via openr_iovec
       {
@@ -295,7 +295,7 @@ retry:
       abfd = bfd_openr_iovec(name, nullptr,
 	  [](bfd *abfd, void *this__) { // open
 	    auto this_ = reinterpret_cast<BFD *>(this__);
-	    abfd->size = this_->file.size(); // need to set this
+	    abfd->size = this_->file.size(); // need to set this (undocumented)
 	    return this__;
 	  }, this,
 	  [](bfd *, void *this__,
@@ -451,7 +451,7 @@ notfound:
 	vma -= m_bfd->base;
 #ifdef _WIN32
       else {
-	// Microsoft 32/64-bit default base addresses
+	// Microsoft 32/64-bit default base addresses (fallback)
 #ifdef _WIN64
 	bfd_vma defltExeBase = 0x140000000;
 	bfd_vma defltDLLBase = 0x180000000;

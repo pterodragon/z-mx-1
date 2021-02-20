@@ -31,10 +31,6 @@
 namespace Zrl {
 
 namespace Op {
-void print__(bool &pipe, ZmStream &s)
-{
-  if (!pipe) pipe = true; else s << '|';
-}
 ZrlExtern void print_(uint32_t op, ZmStream &s)
 {
   int op_ = op & Mask;

@@ -47,12 +47,12 @@ map emacs {
     ^I { Complete; }
     ^L { Clear; }
     #Redraw { Redraw; } # deconflict with ^R
-    ^[ { Push(3); } # Meta
+    ^[ { Push(4); } # Meta
     ^Y { Yank; }
-    ^@ { SetMark; }
-    ^X { Push(5); }
-    ^S { Push(7); }
-    ^R { Push(8); }
+    ^@ { Push(3); }
+    ^X { Push(6); }
+    ^S { Push(8); }
+    ^R { Push(9); }
     ^T { TransGlyph; }
     ^G { EmacsAbort; }
     ^_ { EmacsUndo; }
@@ -68,8 +68,8 @@ map emacs {
     Any { Pop; ClrVis[Del|Vis]; Syn; }
     AnyFn { Pop; ClrVis; Syn; }
     AnySys { Pop; ClrVis; Syn; }
-    Erase { Syn(, Delete); }
-    Delete { ClrVis[Del]; Pop; }
+    Erase { Pop; Syn(, Delete); }
+    Delete { Pop; ClrVis[Del]; }
     Up[Shift] { Up[Mv|Vis]; }
     Down[Shift] { Down[Mv|Vis]; }
     Left[Shift] { Left[Mv|Vis]; }
@@ -80,16 +80,50 @@ map emacs {
     Right[Shift|Ctrl] { FwdWordEnd[Mv|Vis|Past]; }
     Left[Shift|Alt] { RevWord[Mv|Vis|Unix]; }
     Right[Shift|Alt] { FwdWordEnd[Mv|Vis|Unix|Past]; }
+    ^G { Pop; ClrVis; }
     ^W { Pop; ClrVis[Copy|Del]; }
-    ^[ { Push(4); }
-    ^X { Push(6); }
+    ^[ { Push(5); }
+    ^X { Push(7); }
+  }
+  # mark highlight mode
+  mode 3 {
+    Any { Pop; ClrVis[Del|Vis]; Syn; }
+    AnyFn { Pop; ClrVis; Syn; }
+    AnySys { Pop; ClrVis; Syn; }
+    Erase { Pop; Syn(, Delete); }
+    Delete { Pop; ClrVis[Del]; }
+    Up { Up[Mv|Vis]; }
+    Down { Down[Mv|Vis]; }
+    Left { Left[Mv|Vis]; }
+    Right { Right[Mv|Vis]; }
+    Home { Home[Mv|Vis]; }
+    End { End[Mv|Vis]; }
+    Up[Shift] { Up[Mv|Vis]; }
+    Down[Shift] { Down[Mv|Vis]; }
+    Left[Shift] { Left[Mv|Vis]; }
+    Right[Shift] { Right[Mv|Vis]; }
+    Home[Shift] { Home[Mv|Vis]; }
+    End[Shift] { End[Mv|Vis]; }
+    Left[Ctrl] { RevWord[Mv|Vis]; }
+    Right[Ctrl] { FwdWordEnd[Mv|Vis|Past]; }
+    Left[Alt] { RevWord[Mv|Vis|Unix]; }
+    Right[Alt] { FwdWordEnd[Mv|Vis|Unix|Past]; }
+    Left[Shift|Ctrl] { RevWord[Mv|Vis]; }
+    Right[Shift|Ctrl] { FwdWordEnd[Mv|Vis|Past]; }
+    Left[Shift|Alt] { RevWord[Mv|Vis|Unix]; }
+    Right[Shift|Alt] { FwdWordEnd[Mv|Vis|Unix|Past]; }
+    ^G { Pop; ClrVis; }
+    ^W { Pop; ClrVis[Copy|Del]; }
+    ^[ { Push(5); }
+    ^X { Push(7); }
   }
   # Meta
-  mode 3 {
+  mode 4 {
     Any { Pop; }
     AnySys { Pop; Syn; }
     AnyFn { Pop; Syn; }
     Erase { Pop; RevWord[Copy|Del]; }
+    ^G { Pop; }
     'p' { Pop; Prev; }
     'n' { Pop; Next; }
     'b' { Pop; RevWord[Mv]; }
@@ -101,64 +135,75 @@ map emacs {
     'c' { Pop; CapWord; }
     'u' { Pop; UpperWord; }
     'l' { Pop; LowerWord; }
-    '0' { Push(9); }
+    '0' { Push(10); }
   }
   # highlight Meta
-  mode 4 {
+  mode 5 {
     Any { Pop; }
     AnySys { Pop; Syn; }
     AnyFn { Pop; Syn; }
+    ^G { Pop; }
     ^[ { Pop(2); ClrVis[Del|Vis]; Glyph; }
     'w' { Pop; ClrVis[Copy]; }
   }
   # C-X
-  mode 5 {
+  mode 6 {
+    Any { Register; Mode(11); }
+    AnySys { Pop; Syn; }
+    AnyFn { Pop; Syn; }
+    ^G { Pop; }
     Erase { Pop; Home[Del|Copy]; }
     ^X { Pop; XchMark; }
-    Any { Register; Mode(10); }
   }
   # highlight C-X
-  mode 6 {
+  mode 7 {
+    Any { Register; Mode(12); }
     AnyFn { Pop; }
     AnySys { Pop; }
+    ^G { Pop; }
     ^U { Pop; UpperVis; }
     ^L { Pop; LowerVis; }
     ^C { Pop; CapVis; }
-    Any { Register; Mode(11); }
+    ^X { Pop; XchMark; }
   }
   # incremental search fwd
-  mode 7 {
+  mode 8 {
     Any { FwdIncSrch; }
     AnyFn { Pop; ClrIncSrch; Syn; }
     AnySys { Pop; ClrIncSrch; Syn; }
-    Enter { Pop; ClrIncSrch; }
+    ^G { Pop; ClrIncSrch; }
+    Enter { Syn(, ^G); }
   }
   # incremental search rev
-  mode 8 {
+  mode 9 {
     Any { RevIncSrch; }
     AnyFn { Pop; ClrIncSrch; Syn; }
     AnySys { Pop; ClrIncSrch; Syn; }
-    Enter { Pop; ClrIncSrch; }
+    ^G { Pop; ClrIncSrch; }
+    Enter { Syn(, ^G); }
   }
   # M-0
-  mode 9 {
+  mode 10 {
     Any { Pop(2); }
     AnyFn { Pop(2); Syn; }
     AnySys { Pop(2); Syn; }
+    ^G { Pop(2); }
     ^K { Pop(2); Home[Del|Copy]; }
   }
   # C-X register
-  mode 10 {
-    Any { Pop; }
-    AnyFn { Pop; Syn; }
-    AnySys { Pop; Syn; }
-    'i' { Pop; Paste; }
-  }
-  # highlight C-X register
   mode 11 {
     Any { Pop; }
     AnyFn { Pop; Syn; }
     AnySys { Pop; Syn; }
+    ^G { Pop; }
+    'i' { Pop; Paste; }
+  }
+  # highlight C-X register
+  mode 12 {
+    Any { Pop; }
+    AnyFn { Pop; Syn; }
+    AnySys { Pop; Syn; }
+    ^G { Pop; }
     'i' { Pop; ClrVis[Del|KeepReg]; Paste; }
     's' { Pop; ClrVis[Copy]; }
   }

@@ -101,7 +101,6 @@ namespace Op { // line editor operation codes
     FwdWordEnd,
     RevWordEnd,
 
-    SetMark,		// set glyph mark
     MvMark,		// move to glyph mark
     ClrVis,		// clear highlight (can use Del and Copy flags)
 

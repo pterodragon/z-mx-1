@@ -107,7 +107,6 @@ Editor::Editor()
   m_cmdFn[Op::FwdWordEnd] = &Editor::cmdFwdWordEnd;
   m_cmdFn[Op::RevWordEnd] = &Editor::cmdRevWordEnd;
 
-  m_cmdFn[Op::SetMark] = &Editor::cmdSetMark;
   m_cmdFn[Op::MvMark] = &Editor::cmdMvMark;
 
   m_cmdFn[Op::ClrVis] = &Editor::cmdClrVis;
@@ -1455,11 +1454,6 @@ bool Editor::cmdRevWordEnd(Cmd cmd, int32_t vkey)
   return false;
 }
 
-bool Editor::cmdSetMark(Cmd, int32_t)
-{
-  m_context.markPos = m_tty.pos();
-  return false;
-}
 bool Editor::cmdMvMark(Cmd cmd, int32_t vkey)
 {
   unsigned pos = m_tty.pos();
@@ -2084,11 +2078,11 @@ bool Editor::cmdCapVis(Cmd, int32_t)
 
 bool Editor::cmdXchMark(Cmd, int32_t)
 {
-  int pos = m_context.markPos;
+  int pos = m_tty.pos() == m_context.markPos ?
+    m_context.highPos : m_context.markPos;
   if (pos >= static_cast<int>(m_context.startPos)) {
     int finPos = m_tty.line().width();
     if (pos > finPos) pos = finPos;
-    m_context.markPos = m_tty.pos();
     m_tty.mv(align(pos));
   }
   return false;

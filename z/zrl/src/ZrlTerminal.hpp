@@ -226,6 +226,11 @@ private:
   void start_();// idempotent
   void stop_();	// ''
 
+#ifndef _WIN32
+  bool start__();// set tty fd to non-blocking, add it to epoll multiplexer
+  void stop__(); // reverse start__()
+#endif
+
   void wake();
   void wake_();
 

@@ -708,23 +708,9 @@ void Terminal::start_()
 
   tcsetattr(m_fd, TCSADRAIN, &m_ntermios);
 
-  if (fcntl(m_fd, F_SETFL, O_NONBLOCK) < 0) {
-    ZeError e{errno};
-    close_fds();
-    m_errorFn(ZrlError("fcntl(F_SETFL, O_NONBLOCK)", Zi::IOError, e));
+  if (!start__()) {
+    tcsetattr(m_fd, TCSANOW, &m_otermios);
     return;
-  }
-  {
-    struct epoll_event ev;
-    memset(&ev, 0, sizeof(struct epoll_event));
-    ev.events = EPOLLIN;
-    ev.data.u64 = 0;
-    if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, m_fd, &ev) < 0) {
-      ZeError e{errno};
-      close_fds();
-      m_errorFn(ZrlError("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e));
-      return;
-    }
   }
 
   tputs(m_cr);
@@ -762,8 +748,7 @@ void Terminal::stop_()
 
   if (m_fd < 0) return;
 
-  epoll_ctl(m_epollFD, EPOLL_CTL_DEL, m_fd, 0);
-  fcntl(m_fd, F_SETFL, 0);
+  stop__();
 
   tcsetattr(m_fd, TCSADRAIN, &m_otermios);
 
@@ -775,25 +760,54 @@ void Terminal::stop_()
 #endif /* !_WIN32 */
 }
 
+#ifndef _WIN32
+bool Terminal::start__()
+{
+  if (fcntl(m_fd, F_SETFL, O_NONBLOCK) < 0) {
+    ZeError e{errno};
+    close_fds();
+    m_errorFn(ZrlError("fcntl(F_SETFL, O_NONBLOCK)", Zi::IOError, e));
+    return false;
+  }
+  {
+    struct epoll_event ev;
+    memset(&ev, 0, sizeof(struct epoll_event));
+    ev.events = EPOLLIN;
+    ev.data.u64 = 0;
+    if (epoll_ctl(m_epollFD, EPOLL_CTL_ADD, m_fd, &ev) < 0) {
+      ZeError e{errno};
+      close_fds();
+      m_errorFn(ZrlError("epoll_ctl(EPOLL_CTL_ADD)", Zi::IOError, e));
+      return false;
+    }
+  }
+  return true;
+}
+
+void Terminal::stop__()
+{
+  epoll_ctl(m_epollFD, EPOLL_CTL_DEL, m_fd, 0);
+  fcntl(m_fd, F_SETFL, 0);
+}
+#endif /* !_WIN32 */
+
 ZtString Terminal::getpass(ZuString prompt, unsigned passLen)
 {
   ZtString passwd;
   passwd.size(passLen + 4); // allow for \r\n and null terminator
 #ifndef _WIN32
   struct termios ntermios;
-  if (m_running)
-    memcpy(&ntermios, &m_ntermios, sizeof(termios));
-  else
-    memcpy(&ntermios, &m_otermios, sizeof(termios));
-  ntermios.c_lflag = (ntermios.c_lflag | ICANON | IEXTEN | ISIG) & ~ECHO;
+  memcpy(&ntermios, &m_otermios, sizeof(termios));
+  ntermios.c_lflag &= ~ECHO;
   if (tcsetattr(m_fd, TCSADRAIN, &ntermios)) return {};
+  if (m_running) stop__();
   ::write(m_fd, prompt.data(), prompt.length());
   int n = ::read(m_fd, passwd.data(), passwd.size() - 1);
   if (n > 0 && n < passwd.size()) passwd.length(n);
   ::write(m_fd, "\r\n", 2);
-  if (m_running)
-    tcsetattr(m_fd, TCSANOW, &m_ntermios);
-  else
+  if (m_running) {
+    if (start__()) tcsetattr(m_fd, TCSANOW, &m_ntermios);
+  } else
     tcsetattr(m_fd, TCSANOW, &m_otermios);
 #else
   SetConsoleMode(m_conin,

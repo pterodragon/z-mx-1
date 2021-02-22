@@ -1395,6 +1395,7 @@ private:
   }
 
   void send(ZtString cmd) {
+    if (!cmd) return;
     FILE *file = stdout;
     ZtString cmd_ = ZuMv(cmd);
     {
@@ -1417,6 +1418,7 @@ private:
       }
     }
     ZtArray<ZtString> args;
+    if (!args) return;
     ZvCf::parseCLI(cmd, args);
     if (args[0] == "help") {
       if (args.length() == 1) {

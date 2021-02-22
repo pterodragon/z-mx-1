@@ -1547,20 +1547,22 @@ int main(int argc, char **argv)
       .enter = [app = app.ptr()](ZuString s) -> bool {
 	return app->processCmd(s);
       },
-      .sig = [](int sig) -> bool {
+      .sig = [app = app.ptr()](int sig) -> bool {
 	switch (sig) {
 	  case SIGINT:
+	    app->post();
 	    return true;
 #ifdef _WIN32
 	  case SIGQUIT:
 	    GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, 0);
 	    return true;
 #endif
+	  case SIGTSTP:
+	    raise(sig);
+	    return false;
 	  default:
-	    break;
+	    return false;
 	}
-	raise(sig);
-	return sig != SIGTSTP;
       },
       .compInit = globber.initFn(),
       .compNext = globber.nextFn(),

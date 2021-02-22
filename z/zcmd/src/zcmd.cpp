@@ -20,9 +20,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#ifndef SIGQUIT
-#define SIGQUIT 3
-#endif
 
 #include <zlib/ZuPolymorph.hpp>
 #include <zlib/ZuByteSwap.hpp>
@@ -86,50 +83,6 @@ static void usage()
   ZmPlatform::exit(1);
 }
 
-static ZtString getpass_(const ZtString &prompt, unsigned passLen)
-{
-  ZtString passwd;
-  passwd.size(passLen + 4); // allow for \r\n and null terminator
-#ifdef _WIN32
-  HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
-  DWORD omode, nmode;
-  GetConsoleMode(h, &omode);
-  nmode = (omode | ENABLE_LINE_INPUT) & ~ENABLE_ECHO_INPUT;
-  SetConsoleMode(h, nmode);
-  DWORD n = 0;
-  WriteConsole(h, prompt.data(), prompt.length(), &n, nullptr);
-  n = 0;
-  ReadConsole(h, passwd.data(), passwd.size() - 1, &n, nullptr);
-  if (n < passwd.size()) passwd.length(n);
-  WriteConsole(h, "\r\n", 2, &n, nullptr);
-  SetConsoleMode(h, omode);
-#else
-  int fd = ::open("/dev/tty", O_RDWR, 0);
-  if (fd < 0) return passwd;
-  struct termios oflags, nflags;
-  memset(&oflags, 0, sizeof(termios));
-  tcgetattr(fd, &oflags);
-  memcpy(&nflags, &oflags, sizeof(termios));
-  nflags.c_lflag = (nflags.c_lflag & ~ECHO) | ECHONL;
-  if (tcsetattr(fd, TCSANOW, &nflags)) return passwd;
-  ::write(fd, prompt.data(), prompt.length());
-  FILE *in = fdopen(fd, "r");
-  if (!fgets(passwd, passwd.size() - 1, in)) return passwd;
-  passwd.calcLength();
-  tcsetattr(fd, TCSANOW, &oflags);
-  fclose(in);
-  ::close(fd);
-#endif
-  passwd.chomp();
-  return passwd;
-}
-
-template <typename Data>
-struct DeduceKey {
-  static const Data &data_();
-  using T = decltype(data_().key());
-};
-
 class TelCap {
 public:
   using Fn = ZmFn<const void *>;
@@ -146,7 +99,7 @@ public:
 
   template <typename Data, typename FBS>
   static TelCap keyedFn(ZtString path) {
-    using Key = typename DeduceKey<Data>::T;
+    using Key = decltype(ZuDeclVal<const Data &>().key());
     struct Accessor : public ZuAccessor<Data, typename ZuDecay<Key>::T> {
       static Key value(const Data &data) { return data.key(); }
     };
@@ -243,7 +196,7 @@ public:
     m_interactive = interactive;
     ZvCmdHost::init();
     initCmds();
-    if (interactive)
+    if (m_interactive)
       m_cli.init(Zrl::App{
 	.error = [this](ZuString s) { std::cerr << s << '\n'; post(); },
 	.enter = [this](ZuString s) -> bool {
@@ -255,7 +208,8 @@ public:
 	.sig = [this](int sig) -> bool {
 	  switch (sig) {
 	    case SIGINT:
-	      break;
+	      raise(sig);
+	      return true;
 #ifdef _WIN32
 	    case SIGQUIT:
 	      GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, 0);
@@ -265,10 +219,8 @@ public:
 	      raise(sig);
 	      return false;
 	    default:
-	      break;
+	      return false;
 	  }
-	  raise(sig);
-	  return sig != SIGTSTP;
 	},
 	.compInit = m_globber.initFn(),
 	.compNext = m_globber.nextFn(),
@@ -301,8 +253,11 @@ public:
 
   template <typename ...Args>
   void login(Args &&... args) {
+    m_cli.open();
+    ZtString passwd = m_cli.getpass("password: ", 100);
+    ZuBox<unsigned> totp = m_cli.getpass("totp: ", 6);
     m_link = new Link(this);
-    m_link->login(ZuFwd<Args>(args)...);
+    m_link->login(ZuFwd<Args>(args)..., passwd, totp);
   }
   template <typename ...Args>
   void access(Args &&... args) {
@@ -348,7 +303,6 @@ private:
 	std::cout <<
 	  "For a list of valid commands: help\n"
 	  "For help on a particular command: COMMAND --help\n" << std::flush;
-	m_cli.open();
 	m_cli.start(ZuMv(m_prompt));
       } else {
 	ZtString cmd{4096};
@@ -396,14 +350,17 @@ private:
       m_cli.close();
     }
     if (m_exiting) return;
-    if (m_interactive)
+    if (m_interactive) {
+      m_cli.final();
       std::cerr << "server disconnected\n" << std::flush;
+    }
     ZmPlatform::exit(1);
   }
   void connectFailed() {
     if (m_interactive) {
       m_cli.stop();
       m_cli.close();
+      m_cli.final();
       std::cerr << "connect failed\n" << std::flush;
     }
     ZmPlatform::exit(1);
@@ -636,9 +593,9 @@ private:
   int passwdCmd(FILE *file, const ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
     if (argc != 1) throw ZvCmdUsage{};
-    ZtString oldpw = getpass_("Current password: ", 100);
-    ZtString newpw = getpass_("New password: ", 100);
-    ZtString checkpw = getpass_("Re-type new password: ", 100);
+    ZtString oldpw = m_cli.getpass("Current password: ", 100);
+    ZtString newpw = m_cli.getpass("New password: ", 100);
+    ZtString checkpw = m_cli.getpass("Re-type new password: ", 100);
     if (checkpw != newpw) {
       out << "passwords do not match\npassword unchanged!\n";
       return 1;
@@ -1510,8 +1467,7 @@ int main(int argc, char **argv)
   bool interactive = isatty(fileno(stdin));
   auto keyID = ::getenv("ZCMD_KEY_ID");
   auto secret = ::getenv("ZCMD_KEY_SECRET");
-  ZtString user, passwd, server;
-  ZuBox<unsigned> totp;
+  ZtString user, server;
   ZuBox<unsigned> port;
 
   try {
@@ -1568,8 +1524,6 @@ int main(int argc, char **argv)
 	"to use non-interactively\n" << std::flush;
       ::exit(1);
     }
-    passwd = getpass_("password: ", 100);
-    totp = getpass_("totp: ", 6);
   }
 
   ZiMultiplex *mx = new ZiMultiplex(
@@ -1623,7 +1577,7 @@ int main(int argc, char **argv)
   if (keyID)
     client->access(server, port, keyID, secret);
   else
-    client->login(server, port, user, passwd, totp);
+    client->login(server, port, user);
 
   client->wait();
 

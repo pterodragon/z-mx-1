@@ -1237,8 +1237,8 @@ struct App : public ZmPQTx<App, Queue> {
   //   optionally shift() all messages to re-process them
 
   // send message (low level)
-  bool send_(MxQMsg *msg, bool more); // true on success
-  bool resend_(MxQMsg *msg, bool more); // true on success
+  bool send_(Msg *msg, bool more); // true on success
+  bool resend_(Msg *msg, bool more); // true on success
 
   // send gap (can do nothing if not required)
   bool sendGap_(const MxQueue::Gap &gap, bool more); // true on success

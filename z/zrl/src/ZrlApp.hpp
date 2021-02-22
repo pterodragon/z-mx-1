@@ -30,6 +30,14 @@
 #include <zlib/ZrlLib.hpp>
 #endif
 
+#include <signal.h>
+#ifndef SIGQUIT
+#define SIGQUIT 3
+#endif
+#ifndef SIGTSTP
+#define SIGTSTP 20
+#endif
+
 #include <zlib/ZuString.hpp>
 
 #include <zlib/ZePlatform.hpp>

@@ -29,8 +29,11 @@ int main()
       case SIGQUIT: std::cout << "SIGQUIT\n" << std::flush; break;
       case SIGTSTP: std::cout << "SIGTSTP\n" << std::flush; break;
     }
-    done.post();
-    return true;
+    if (sig == SIGINT || sig == SIGQUIT) {
+      done.post();
+      return true;
+    }
+    return false;
   };
   ZtArray<ZtString> history;
   app.histSave = [&history](unsigned i, ZuString s) {

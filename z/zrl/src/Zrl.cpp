@@ -77,13 +77,12 @@ public:
 	    GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, 0);
 	    return true;
 #endif
+	  case SIGTSTP:
+	    raise(sig);
+	    return false;
 	  default:
-	    break;
+	    return false;
 	}
-	raise(sig);
-	if (sig == SIGTSTP) return false;
-	stop();
-	return true;
       },
       .compInit = globber.initFn(),
       .compNext = globber.nextFn(),

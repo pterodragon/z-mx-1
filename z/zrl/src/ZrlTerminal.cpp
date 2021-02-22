@@ -775,6 +775,43 @@ void Terminal::stop_()
 #endif /* !_WIN32 */
 }
 
+ZtString Terminal::getpass(ZuString prompt, unsigned passLen)
+{
+  ZtString passwd;
+  passwd.size(passLen + 4); // allow for \r\n and null terminator
+#ifndef _WIN32
+  struct termios ntermios;
+  if (m_running)
+    memcpy(&ntermios, &m_ntermios, sizeof(termios));
+  else
+    memcpy(&ntermios, &m_otermios, sizeof(termios));
+  ntermios.c_lflag = (ntermios.c_lflag | ICANON | IEXTEN | ISIG) & ~ECHO;
+  if (tcsetattr(m_fd, TCSADRAIN, &ntermios)) return {};
+  ::write(m_fd, prompt.data(), prompt.length());
+  int n = ::read(m_fd, passwd.data(), passwd.size() - 1);
+  if (n > 0 && n < passwd.size()) passwd.length(n);
+  ::write(m_fd, "\r\n", 2);
+  if (m_running)
+    tcsetattr(m_fd, TCSANOW, &m_ntermios);
+  else
+    tcsetattr(m_fd, TCSANOW, &m_otermios);
+#else
+  SetConsoleMode(m_conin,
+      (m_coninMode | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT) &
+      ~ENABLE_ECHO_INPUT);
+  DWORD n = 0;
+  WriteConsoleA(m_conin, prompt.data(), prompt.length(), &n, nullptr);
+  n = 0;
+  ReadConsoleA(m_conin, passwd.data(), passwd.size() - 1, &n, nullptr);
+  if (n > 0 && n < passwd.size()) passwd.length(n);
+  WriteConsoleA(m_conin, "\r\n", 2, &n, nullptr);
+  SetConsoleMode(m_conin, m_coninMode &
+      ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT));
+#endif
+  passwd.chomp();
+  return passwd;
+}
+
 void Terminal::opost_on()
 {
 #ifndef _WIN32

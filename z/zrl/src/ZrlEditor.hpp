@@ -30,14 +30,6 @@
 #include <zlib/ZrlLib.hpp>
 #endif
 
-#include <signal.h>
-#ifndef SIGQUIT
-#define SIGQUIT 3
-#endif
-#ifndef SIGTSTP
-#define SIGTSTP 20
-#endif
-
 #include <zlib/ZuPtr.hpp>
 #include <zlib/ZuPrint.hpp>
 
@@ -564,6 +556,11 @@ public:
   void open(ZmScheduler *sched, unsigned thread);
   void close();
   bool isOpen() const;
+
+  // can be called before start(), or from within terminal thread once running
+  ZtString getpass(ZuString prompt, unsigned passLen) {
+    return m_tty.getpass(prompt, passLen);
+  }
 
   // start/stop
   using StartFn = ZmFn<Editor &>;

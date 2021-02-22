@@ -183,7 +183,7 @@ public:
   bool isOpen() const; // blocking
   bool isOpen_() const; // terminal thread
 
-  void start(StartFn startFn, KeyFn keyFn);
+  void start(StartFn startFn, KeyFn keyFn); // start editor
   void stop();
 
   bool running() const; // blocking
@@ -194,6 +194,9 @@ public:
   }
 
   const Line &line() const { return m_line; } // terminal I/O thread
+
+  // can be called before start(), or from within terminal thread once running
+  ZtString getpass(ZuString prompt, unsigned passLen); // prompt for passwd
 
   // output routines - terminal I/O thread
 

@@ -20,9 +20,6 @@
 // command line interface - line editor
 
 #include <signal.h>
-#ifndef SIGQUIT
-#define SIGQUIT 3
-#endif
 
 #include <zlib/ZuSort.hpp>
 

@@ -26,10 +26,6 @@
 #pragma once
 #endif
 
-#ifndef ZrlLib_HPP
-#include <zlib/ZrlLib.hpp>
-#endif
-
 #include <stdio.h>
 
 #include <zlib/ZuInt.hpp>

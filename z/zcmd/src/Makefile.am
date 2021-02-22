@@ -6,7 +6,8 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/zv/src -I$(top_srcdir)/zrl/src \
 	@Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
-AM_LDFLAGS = @Z_LDFLAGS@ @Z_SO_LDFLAGS@
+AM_LDFLAGS = @Z_LDFLAGS@
+pkginclude_HEADERS = ZCmd.hpp
 bin_PROGRAMS = zcmd
 zcmd_LDADD = \
 	$(top_builddir)/zrl/src/libZrl.la \

@@ -62,7 +62,9 @@
 #include <zlib/ZtlsBase32.hpp>
 #include <zlib/ZtlsBase64.hpp>
 
-#include <zlib/Zrl.hpp>
+#include <zlib/ZrlCLI.hpp>
+#include <zlib/ZrlGlobber.hpp>
+#include <zlib/ZrlHistory.hpp>
 
 #include <zlib/ZCmd.hpp>
 
@@ -98,45 +100,6 @@ static void usage()
   std::cerr << usage << std::flush;
   ZeLog::stop();
   ZmPlatform::exit(1);
-}
-
-static ZtString getpass_(const ZtString &prompt, unsigned passLen)
-{
-  ZtString passwd;
-  passwd.size(passLen + 4); // allow for \r\n and null terminator
-#ifdef _WIN32
-  HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
-  DWORD omode, nmode;
-  GetConsoleMode(h, &omode);
-  nmode = (omode | ENABLE_LINE_INPUT) & ~ENABLE_ECHO_INPUT;
-  SetConsoleMode(h, nmode);
-  DWORD n = 0;
-  WriteConsole(h, prompt.data(), prompt.length(), &n, nullptr);
-  n = 0;
-  ReadConsole(h, passwd.data(), passwd.size() - 1, &n, nullptr);
-  if (n < passwd.size()) passwd.length(n);
-  WriteConsole(h, "\r\n", 2, &n, nullptr);
-  mode |= ENABLE_ECHO_INPUT;
-  SetConsoleMode(h, omode);
-#else
-  int fd = ::open("/dev/tty", O_RDWR, 0);
-  if (fd < 0) return passwd;
-  struct termios oflags, nflags;
-  memset(&oflags, 0, sizeof(termios));
-  tcgetattr(fd, &oflags);
-  memcpy(&nflags, &oflags, sizeof(termios));
-  nflags.c_lflag = (nflags.c_lflag & ~ECHO) | ECHONL;
-  if (tcsetattr(fd, TCSANOW, &nflags)) return passwd;
-  ::write(fd, prompt.data(), prompt.length());
-  FILE *in = fdopen(fd, "r");
-  if (!fgets(passwd, passwd.size() - 1, in)) return passwd;
-  passwd.calcLength();
-  tcsetattr(fd, TCSANOW, &oflags);
-  fclose(in);
-  ::close(fd);
-#endif
-  passwd.chomp();
-  return passwd;
 }
 
 namespace Telemetry {
@@ -998,15 +961,47 @@ public:
     }
 
     Client::init(mx, cf);
-    ZvCmdHost::init();
-    initCmds();
 
     ZmTrap::sigintFn(ZmFn<>{this, [](ZDash *this_) { this_->post(); }});
     ZmTrap::trap();
 
+    ZvCmdHost::init();
+    initCmds();
+    m_cli.init(Zrl::App{
+      .error = [this](ZuString s) { std::cerr << s << '\n'; post(); },
+      .enter = [this](ZuString s) -> bool {
+	send(ZtString{s});
+	m_executed.wait();
+	return code();
+      },
+      .end = [this]() { post(); },
+      .sig = [this](int sig) -> bool {
+	switch (sig) {
+	  case SIGINT:
+	    raise(sig);
+	    return true;
+#ifdef _WIN32
+	  case SIGQUIT:
+	    GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, 0);
+	    return true;
+#endif
+	  case SIGTSTP:
+	    raise(sig);
+	    return false;
+	  default:
+	    return false;
+	}
+      },
+      .compInit = m_globber.initFn(),
+      .compNext = m_globber.nextFn(),
+      .histSave = m_history.saveFn(),
+      .histLoad = m_history.loadFn()
+    });
+
     i18n(
 	cf->get("i18n_domain", false, "zdash"),
 	cf->get("dataDir", false, DATADIR));
+
     attach(mx, gtkTID);
     mx->run(gtkTID, [this]() { gtkInit(); });
   }
@@ -1014,15 +1009,25 @@ public:
   void final() {
     detach(ZmFn<>{this, [](ZDash *this_) {
       this_->gtkFinal();
-      this_->post();
+      this_->m_executed.post();
     }});
-    wait();
+    m_executed.wait();
 
     exiting();
     disconnect();
+    m_executed.wait();
 
     m_telRing->close();
 
+    m_cli.stop();
+    m_cli.close();
+    m_cli.final();
+
+    m_link = nullptr;
+    if (m_plugin) {
+      m_plugin->final();
+      m_plugin = nullptr;
+    }
     ZvCmdHost::final();
     Client::final();
   }
@@ -1111,8 +1116,11 @@ public:
 
   template <typename ...Args>
   void login(Args &&... args) {
+    m_cli.open();
+    ZtString passwd = m_cli.getpass("password: ", 100);
+    ZuBox<unsigned> totp = m_cli.getpass("totp: ", 6);
     m_link = new Link(this);
-    m_link->login(ZuFwd<Args>(args)...);
+    m_link->login(ZuFwd<Args>(args)..., passwd, totp);
   }
   template <typename ...Args>
   void access(Args &&... args) {
@@ -1154,7 +1162,7 @@ private:
     std::cout <<
       "For a list of valid commands: help\n"
       "For help on a particular command: COMMAND --help\n" << std::flush;
-    prompt();
+    m_cli.start(ZuMv(m_prompt));
   }
 
   int processApp(Link *, ZuArray<const uint8_t> msg) {
@@ -1367,27 +1375,23 @@ private:
   }
 
   void disconnected(Link *link) {
+    m_cli.stop();
+    m_cli.close();
     if (m_exiting) return;
+    std::cerr << "server disconnected\n" << std::flush;
     m_telRing->push(link, ZuArray<const uint8_t>{});
   }
   void disconnected2(Link *link) {
+    m_executed.post();
     // FIXME - update App RAG to red (in caller)
   }
 
   void connectFailed(Link *, bool transient) {
-    Zrl::stop();
+    m_cli.stop();
+    m_cli.close();
+    m_cli.final();
     std::cerr << "connect failed\n" << std::flush;
     ZmPlatform::exit(1);
-  }
-
-  void prompt() {
-    mx()->add(ZmFn<>{this, [](ZDash *app) { app->prompt_(); }});
-  }
-  void prompt_() {
-    for (;;)
-      if (ZtString cmd = Zrl::readline(m_prompt))
-	send(ZuMv(cmd));
-      else if (!Zrl::running()) { post(); return; }
   }
 
   void send(ZtString cmd) {
@@ -1448,7 +1452,7 @@ private:
     m_code = code;
     if (out) fwrite(out.data(), 1, out.length(), file);
     if (file != stdout) fclose(file);
-    prompt();
+    m_executed.post();
     return code;
   }
 
@@ -1617,9 +1621,9 @@ private:
   int passwdCmd(FILE *file, const ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
     if (argc != 1) throw ZvCmdUsage{};
-    ZtString oldpw = getpass_("Current password: ", 100);
-    ZtString newpw = getpass_("New password: ", 100);
-    ZtString checkpw = getpass_("Retype new password: ", 100);
+    ZtString oldpw = m_cli.getpass("Current password: ", 100);
+    ZtString newpw = m_cli.getpass("New password: ", 100);
+    ZtString checkpw = m_cli.getpass("Retype new password: ", 100);
     if (checkpw != newpw) {
       out << "passwords do not match\npassword unchanged!\n";
       return 1;
@@ -2378,8 +2382,12 @@ private:
 
 private:
   ZmSemaphore		m_done;
+  ZmSemaphore		m_executed;
 
-  ZtString		m_prompt;
+  Zrl::Globber		m_globber;
+  Zrl::History		m_history{100};
+  ZtArray<uint8_t>	m_prompt;
+  Zrl::CLI		m_cli;
 
   ZmRef<Link>		m_link;
   ZvSeqNo		m_seqNo = 0;
@@ -2425,8 +2433,7 @@ int main(int argc, char **argv)
 
   auto keyID = ::getenv("ZCMD_KEY_ID");
   auto secret = ::getenv("ZCMD_KEY_SECRET");
-  ZtString user, passwd, server;
-  ZuBox<unsigned> totp;
+  ZtString user, server;
   ZuBox<unsigned> port;
 
   try {
@@ -2477,9 +2484,6 @@ int main(int argc, char **argv)
 	"to use with ZCMD_KEY_ID\n" << std::flush;
       ::exit(1);
     }
-  } else {
-    passwd = getpass_("password: ", 100);
-    totp = getpass_("totp: ", 6);
   }
 
   ZiMultiplex *mx = new ZiMultiplex(
@@ -2525,14 +2529,11 @@ int main(int argc, char **argv)
   if (keyID)
     app->access(server, port, keyID, secret);
   else
-    app->login(server, port, user, passwd, totp);
+    app->login(server, port, user);
 
   app->wait();
 
   app->final();
-
-  Zrl::stop();
-  std::cout << std::flush;
 
   mx->stop(true);
 

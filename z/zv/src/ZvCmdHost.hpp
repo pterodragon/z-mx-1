@@ -17,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+// ZvCmd locally hosted commands
+
 #ifndef ZvCmdHost_HPP
 #define ZvCmdHost_HPP
 
@@ -35,6 +37,8 @@
 #include <zlib/ZmRBTree.hpp>
 #include <zlib/ZmPLock.hpp>
 
+#include <zlib/Zfb.hpp>
+
 #include <zlib/ZvCf.hpp>
 
 // command handler (context, command, output)
@@ -42,88 +46,33 @@ using ZvCmdFn = ZmFn<void *, const ZvCf *, ZtString &>;
 // can be thrown by command function
 struct ZvCmdUsage { };
 
-class ZvCmdHost {
-public:
-  void init() {
-    m_syntax = new ZvCf();
-    addCmd("help", "", ZvCmdFn::Member<&ZvCmdHost::help>::fn(this),
-	"list commands", "usage: help [COMMAND]");
-  }
+struct ZvCmdPlugin : public ZmPolymorph {
+  virtual void final() = 0;
+  virtual int processApp(ZuArray<const uint8_t> data) = 0;
+};
 
-  void final() {
-    m_syntax = nullptr;
-    m_cmds.clean();
-  }
+class ZvAPI ZvCmdHost {
+public:
+  void init();
+  void final();
 
   void addCmd(ZuString name,
-      ZuString syntax, ZvCmdFn fn, ZtString brief, ZtString usage) {
-    {
-      ZmRef<ZvCf> cf = m_syntax->subset(name, false, true);
-      cf->fromString(syntax, false);
-      cf->set("help:type", "flag");
-    }
-    if (auto cmd = m_cmds.find(name))
-      cmd->val() = CmdData{ZuMv(fn), ZuMv(brief), ZuMv(usage)};
-    else
-      m_cmds.add(name, CmdData{ZuMv(fn), ZuMv(brief), ZuMv(usage)});
-  }
+      ZuString syntax, ZvCmdFn fn, ZtString brief, ZtString usage);
 
-  bool hasCmd(ZuString name) { return m_cmds.find(name); }
+  bool hasCmd(ZuString name);
 
-  int processCmd(void *context, const ZtArray<ZtString> &args, ZtString &out) {
-    if (!args) return 0;
-    const ZtString &name = args[0];
-    typename Cmds::NodeRef cmd;
-    try {
-      ZmRef<ZvCf> cf = new ZvCf();
-      cmd = m_cmds.find(name);
-      if (!cmd) throw ZtString("unknown command");
-      cf->fromArgs(m_syntax->subset(name, false), args);
-      if (cf->getInt("help", 0, 1, false, 0)) {
-	out << cmd->val().usage << '\n';
-	return 0;
-      }
-      uint32_t r = (cmd->val().fn)(context, cf, out);
-      r &= ~(((uint32_t)1)<<31); // ensure +ve
-      return r;
-    } catch (const ZvCmdUsage &) {
-      out << cmd->val().usage << '\n';
-    } catch (const ZvError &e) {
-      out << e << '\n';
-    } catch (const ZeError &e) {
-      out << '"' << name << "\": " << e << '\n';
-    } catch (const ZtString &s) {
-      out << '"' << name << "\": " << s << '\n';
-    } catch (const ZtArray<char> &s) {
-      out << '"' << name << "\": " << s << '\n';
-    } catch (...) {
-      out << '"' << name << "\": unknown exception\n";
-    }
-    return -1;
-  }
+  int processCmd(void *context, ZuArray<const ZtString> args, ZtString &out);
+
+  using AppFn = ZmFn<ZuArray<const uint8_t> >;
+
+  int loadMod(ZuString name, ZtString &out);
+
+  virtual void plugin(ZmRef<ZvCmdPlugin>) { }
+  virtual void sendApp(Zfb::IOBuilder &) { }
+  virtual int executed(int code, FILE *file, ZuString out) { return 0; }
 
 private:
-  int help(void *, const ZvCf *args, ZtString &out) {
-    int argc = ZuBox<int>(args->get("#"));
-    if (argc > 2) throw ZvCmdUsage();
-    if (ZuUnlikely(argc == 2)) {
-      auto cmd = m_cmds.find(args->get("1"));
-      if (!cmd) {
-	out << args->get("1") << ": unknown command\n";
-	return 1;
-      }
-      out << cmd->val().usage << '\n';
-      return 0;
-    }
-    out.size(m_cmds.count() * 80 + 40);
-    out << "commands:\n\n";
-    {
-      auto i = m_cmds.readIterator();
-      while (auto cmd = i.iterate())
-	out << cmd->key() << " -- " << cmd->val().brief << '\n';
-    }
-    return 0;
-  }
+  int help(void *, const ZvCf *args, ZtString &out);
 
 private:
   struct CmdData {
@@ -140,5 +89,10 @@ private:
   ZmRef<ZvCf>		m_syntax;
   Cmds			m_cmds;
 };
+
+// loadable module must export void ZCmd_plugin(ZCmdHost *)
+extern "C" {
+  typedef void (*ZvCmdInitFn)(ZvCmdHost *host);
+}
 
 #endif /* ZvCmdHost_HPP */

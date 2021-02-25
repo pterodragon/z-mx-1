@@ -19,9 +19,9 @@
 
 // type convertibility & inheritance
 //
-// all types are de-referenced before comparison
+// all types are de-referenced before comparison, as if ZuDeref was applied
 //
-// Same, Is and Base ignore cv qualifiers
+// Same, Is and Base ignore cv qualifiers, as if ZuStrip was applied
 //
 // ZuConversion<T1, T2>::Exists	- T1 can be converted into T2
 // ZuConversion<T1, T2>::Same	- T1 is same type as T2

@@ -271,9 +271,9 @@ retry:
 #ifdef _WIN32
       // due to address randomization (ASLR), BFD doesn't obtain the same
       // base address as used in-memory; neither does BFD reliably report
-      // the PE-COFF base after loading; so obtain it directly from the
-      // file by navigating the DOS/PE-COFF headers, then hand off the
-      // file handle to BFD via openr_iovec
+      // the PE-COFF base after loading; so here it is obtained directly
+      // from the file by navigating the DOS/PE-COFF headers, then the
+      // open file is handed off to BFD via openr_iovec
       {
 	if (file.open(name_) < 0) return false;
 	char buf[0x40];

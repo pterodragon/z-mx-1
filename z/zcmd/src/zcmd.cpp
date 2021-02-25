@@ -40,8 +40,6 @@
 #include <zlib/ZtlsBase32.hpp>
 #include <zlib/ZtlsBase64.hpp>
 
-#include <zlib/ZCmd.hpp>
-
 #include <zlib/ZrlCLI.hpp>
 #include <zlib/ZrlGlobber.hpp>
 #include <zlib/ZrlHistory.hpp>
@@ -166,7 +164,7 @@ private:
   Fn		m_fn;
 };
 
-class ZCmd : public ZmPolymorph, public ZvCmdClient<ZCmd>, public ZCmdHost {
+class ZCmd : public ZmPolymorph, public ZvCmdClient<ZCmd>, public ZvCmdHost {
 public:
   using Base = ZvCmdClient<ZCmd>;
 
@@ -200,7 +198,7 @@ public:
       m_cli.init(Zrl::App{
 	.error = [this](ZuString s) { std::cerr << s << '\n'; post(); },
 	.enter = [this](ZuString s) -> bool {
-	  send(ZtString{s});
+	  exec(ZtString{s});
 	  m_executed.wait();
 	  return code();
 	},
@@ -274,7 +272,7 @@ public:
 
   void exiting() { m_exiting = true; }
 
-  void plugin(ZmRef<ZCmdPlugin> plugin) {
+  void plugin(ZmRef<ZvCmdPlugin> plugin) {
     if (ZuUnlikely(m_plugin)) m_plugin->final();
     m_plugin = ZuMv(plugin);
   }
@@ -295,7 +293,7 @@ private:
 
   void start() {
     if (m_solo) {
-      send(ZuMv(m_soloMsg));
+      exec(ZuMv(m_soloMsg));
       m_executed.wait();
       post();
     } else {
@@ -309,7 +307,7 @@ private:
 	while (fgets(cmd, cmd.size() - 1, stdin)) {
 	  cmd.calcLength();
 	  cmd.chomp();
-	  send(ZuMv(cmd));
+	  exec(ZuMv(cmd));
 	  m_executed.wait();
 	  if (code()) break;
 	  cmd.size(4096);
@@ -366,7 +364,7 @@ private:
     ZmPlatform::exit(1);
   }
 
-  void send(ZtString cmd) {
+  void exec(ZtString cmd) {
     if (!cmd) return;
     FILE *file = stdout;
     ZtString cmd_ = ZuMv(cmd);
@@ -405,12 +403,18 @@ private:
 	if (code || out) executed(code, file, out);
 	return;
       }
+    } else if (args[0] == "remote") {
+      args.shift();
     } else if (hasCmd(args[0])) {
       ZtString out;
       int code = processCmd(file, args, out);
       if (code || out) executed(code, file, out);
       return;
     }
+    send(file, args);
+  }
+
+  void send(FILE *file, ZuArray<ZtString> args) {
     auto seqNo = m_seqNo++;
     m_fbb.Clear();
     m_fbb.Finish(ZvCmd::fbs::CreateRequest(m_fbb, seqNo,
@@ -568,6 +572,12 @@ private:
 	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
 	    return app->keyClrCmd(static_cast<FILE *>(file), args, out);
 	  }},  "clear all keys", "usage: keyclr [USERID]");
+
+    addCmd("remote", "",
+	ZvCmdFn{this,
+	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
+	    return app->remoteCmd(static_cast<FILE *>(file), args, out);
+	  }},  "run command remotely", "usage: remote COMMAND...");
 
     addCmd("loadmod", "",
 	ZvCmdFn{this,
@@ -1254,26 +1264,12 @@ private:
     return 0;
   }
 
+  int remoteCmd(FILE *, const ZvCf *, ZtString &) { return 0; } // unused
+
   int loadModCmd(FILE *, const ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
     if (argc != 2) throw ZvCmdUsage{};
-    ZiModule module;
-    ZiModule::Path name = args->get("1", true);
-    ZtString e;
-    if (module.load(name, false, &e) < 0) {
-      out << "failed to load \"" << name << "\": " << ZuMv(e) << '\n';
-      return 1;
-    }
-    ZCmdInitFn initFn = (ZCmdInitFn)module.resolve("ZCmd_plugin", &e);
-    if (!initFn) {
-      module.unload();
-      out << "failed to resolve \"ZCmd_plugin\" in \"" <<
-	name << "\": " << ZuMv(e) << '\n';
-      return 1;
-    }
-    (*initFn)(static_cast<ZCmdHost *>(this));
-    out << "module \"" << name << "\" loaded\n";
-    return 0;
+    return loadMod(args->get("1", true), out);
   }
 
   int telcapCmd(FILE *file, const ZvCf *args, ZtString &out) {
@@ -1452,7 +1448,7 @@ private:
   int			m_code = 0;
   bool			m_exiting = false;
 
-  ZmRef<ZCmdPlugin>	m_plugin;
+  ZmRef<ZvCmdPlugin>	m_plugin;
   TelCap		m_telcap[TelDataN];
 };
 

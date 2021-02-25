@@ -20,20 +20,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef _WIN32
-#include <io.h>		// for _isatty
-#ifndef isatty
-#define isatty _isatty
-#endif
-#ifndef fileno
-#define fileno _fileno
-#endif
-#else
-#include <termios.h>
-#include <unistd.h>	// for isatty
-#include <fcntl.h>
-#endif
-
 #include <libintl.h>
 
 #include <zlib/ZuArrayN.hpp>
@@ -61,12 +47,6 @@
 
 #include <zlib/ZtlsBase32.hpp>
 #include <zlib/ZtlsBase64.hpp>
-
-#include <zlib/ZrlCLI.hpp>
-#include <zlib/ZrlGlobber.hpp>
-#include <zlib/ZrlHistory.hpp>
-
-#include <zlib/ZCmd.hpp>
 
 #include <zlib/Zdf.hpp>
 
@@ -835,6 +815,13 @@ namespace GtkTree {
   };
 }
 
+// FIXME - needs to be ZvCmdServer
+// - need container of multiple client links
+// - need "select " command handled locally to select among links out
+// - need "connect " command to add a link and connect out
+// - need "loadmod " command 
+// - need "remote " command to force remote execution (i.e. bypass
+// hasCmd() check in zcmd.cpp:408
 class ZDash :
     public ZmPolymorph,
     public ZvCmdClient<ZDash>,
@@ -966,37 +953,6 @@ public:
     ZmTrap::trap();
 
     ZvCmdHost::init();
-    initCmds();
-    m_cli.init(Zrl::App{
-      .error = [this](ZuString s) { std::cerr << s << '\n'; post(); },
-      .enter = [this](ZuString s) -> bool {
-	send(ZtString{s});
-	m_executed.wait();
-	return code();
-      },
-      .end = [this]() { post(); },
-      .sig = [this](int sig) -> bool {
-	switch (sig) {
-	  case SIGINT:
-	    raise(sig);
-	    return true;
-#ifdef _WIN32
-	  case SIGQUIT:
-	    GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, 0);
-	    return true;
-#endif
-	  case SIGTSTP:
-	    raise(sig);
-	    return false;
-	  default:
-	    return false;
-	}
-      },
-      .compInit = m_globber.initFn(),
-      .compNext = m_globber.nextFn(),
-      .histSave = m_history.saveFn(),
-      .histLoad = m_history.loadFn()
-    });
 
     i18n(
 	cf->get("i18n_domain", false, "zdash"),
@@ -2386,13 +2342,8 @@ private:
   ZmSemaphore		m_done;
   ZmSemaphore		m_executed;
 
-  Zrl::Globber		m_globber;
-  Zrl::History		m_history{100};
-  ZtArray<uint8_t>	m_prompt;
-  Zrl::CLI		m_cli;
-
-  ZmRef<Link>		m_link;
-  ZvSeqNo		m_seqNo = 0;
+  ZmRef<Link>		m_link; // FIXME
+  ZvSeqNo		m_seqNo = 0; // FIXME
 
   Zfb::IOBuilder	m_fbb;
 

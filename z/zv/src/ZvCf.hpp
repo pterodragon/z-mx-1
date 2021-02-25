@@ -579,7 +579,7 @@ private:
   void fromString(ZuString in, bool validate,
       ZuString fileName, ZmRef<Defines> defines);
 
-  void toArgs(ZtArray<ZtString> &args, ZuString prefix) const;
+  void toArgs(ZtArray<ZtString> &args, ZuString prefix = {}) const;
 
   static ZtString quoteArgValue(ZuString value);
   static ZtString quoteValue(ZuString value);

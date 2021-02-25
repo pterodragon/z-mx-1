@@ -97,95 +97,94 @@ private:
 
 namespace Save {
   // compile-time-recursive vector push
-  template <typename Vector>
-  void push_(Vector &) { }
-  template <typename Vector, typename Arg0, typename ...Args>
-  void push_(Vector &v, Arg0 &&arg0, Args &&... args) {
-    v.push_back(ZuFwd<Arg0>(arg0));
-    push_(v, ZuFwd<Args>(args)...);
+  template <typename T, typename I>
+  inline void push_(T *, I) { }
+  template <typename T, typename I, typename Arg0, typename ...Args>
+  inline void push_(T *buf, I i, Arg0 &&arg0, Args &&... args) {
+    buf[i] = ZuFwd<Arg0>(arg0);
+    push_(buf, ZuConstant<i + 1>{}, ZuFwd<Args>(args)...);
   }
 
-  // compile-time-recursive vector push, with a lambda element transformation
-  template <typename Vector, typename L>
-  void lpush_(Vector &, L &) { }
-  template <typename Vector, typename L, typename Arg0, typename ...Args>
-  void lpush_(Vector &v, L &l, Arg0 &&arg0, Args &&... args) {
-    v.push_back(l(ZuFwd<Arg0>(arg0)));
-    lpush_(v, l, ZuFwd<Args>(args)...);
+  // compile-time-recursive vector push, with a lambda map function
+  template <typename T, typename I, typename L>
+  inline void lpush_(T *, I, L &) { }
+  template <typename T, typename I, typename L, typename Arg0, typename ...Args>
+  inline void lpush_(T *buf, I i, L &l, Arg0 &&arg0, Args &&... args) {
+    buf[i] = l(ZuFwd<Arg0>(arg0));
+    lpush_(buf, ZuConstant<i + 1>{}, l, ZuFwd<Args>(args)...);
   }
 
   // inline creation of a vector of primitive scalars
   template <typename T, typename B, typename ...Args>
-  auto pvector(B &b, Args &&... args) {
-    thread_local std::vector<T> v;
-    v.clear();
-    v.reserve(sizeof...(args));
-    push_(v, ZuFwd<Args>(args)...);
-    return b.CreateVector(v);
+  inline Offset<Vector<T>> pvector(B &b, Args &&... args) {
+    auto n = ZuConstant<sizeof...(args)>{};
+    T *buf = ZuAlloca(buf, n);
+    if (ZuUnlikely(!buf)) return {};
+    push_(buf, ZuConstant<0>{}, ZuFwd<Args>(args)...);
+    return b.CreateVector(buf, n);
   }
 
-  // inline creation of a vector of lambda-transformed non-primitive types
+  // inline creation of a vector of lambda-transformed non-primitive values
   template <typename T, typename B, typename L, typename ...Args>
-  auto lvector(B &b, L l, Args &&... args) {
-    thread_local std::vector<Offset<T> > v;
-    v.clear();
-    v.reserve(sizeof...(args));
-    lpush_(v, l, ZuFwd<Args>(args)...);
-    return b.CreateVector(v);
+  inline Offset<Vector<Offset<T>>> lvector(B &b, L l, Args &&... args) {
+    auto n = ZuConstant<sizeof...(args)>{};
+    Offset<T> *buf = ZuAlloca(buf, n);
+    if (ZuUnlikely(!buf)) return {};
+    lpush_(buf, ZuConstant<0>{}, l, ZuFwd<Args>(args)...);
+    return b.CreateVector(buf, n);
   }
-  // inline creation of a vector of non-primitive types
+  // inline creation of a vector of non-primitive values
   template <typename T, typename B, typename ...Args>
-  auto vector(B &b, Args &&... args) {
-    thread_local std::vector<Offset<T> > v;
-    v.clear();
-    v.reserve(sizeof...(args));
-    push_(v, ZuFwd<Args>(args)...);
-    return b.CreateVector(v);
+  inline Offset<Vector<Offset<T>>> vector(B &b, Args &&... args) {
+    auto n = ZuConstant<sizeof...(args)>{};
+    Offset<T> *buf = ZuAlloca(buf, n);
+    if (ZuUnlikely(!buf)) return {};
+    push_(buf, ZuConstant<0>{}, ZuFwd<Args>(args)...);
+    return b.CreateVector(buf, n);
   }
-  // iterated creation of a vector of non-primitive types
+  // iterated creation of a vector of non-primitive values
   template <typename T, typename B, typename L>
-  auto vectorIter(B &b, unsigned n, L l) {
-    thread_local std::vector<Offset<T> > v;
-    v.clear();
-    v.reserve(n);
-    for (unsigned i = 0; i < n; i++) v.push_back(l(b, i));
-    return b.CreateVector(v);
+  inline Offset<Vector<Offset<T>>> vectorIter(B &b, unsigned n, L l) {
+    Offset<T> *buf = ZuAlloca(buf, n);
+    if (ZuUnlikely(!buf)) return {};
+    for (unsigned i = 0; i < n; i++) buf[i] = l(b, i);
+    return b.CreateVector(buf, n);
   }
 
   // inline creation of a vector of keyed items
   template <typename T, typename B, typename ...Args>
-  auto keyVec(B &b, Args &&... args) {
-    thread_local std::vector<Offset<T> > v;
-    v.reserve(sizeof...(args));
-    push_(v, ZuFwd<Args>(args)...);
-    return b.CreateVectorOfSortedTables(&v);
+  inline Offset<Vector<Offset<T>>> keyVec(B &b, Args &&... args) {
+    auto n = ZuConstant<sizeof...(args)>{};
+    Offset<T> *buf = ZuAlloca(buf, n);
+    if (ZuUnlikely(!buf)) return {};
+    push_(buf, ZuConstant<0>{}, ZuFwd<Args>(args)...);
+    return b.CreateVectorOfSortedTables(buf, n);
   }
-  // iterated creation of a vector of keyed items
+  // iterated creation of a vector of lambda-transformed keyed items
   template <typename T, typename B, typename L>
-  auto keyVecIter(B &b, unsigned n, L l) {
-    thread_local std::vector<Offset<T> > v;
-    v.clear();
-    v.reserve(n);
-    for (unsigned i = 0; i < n; i++) v.push_back(l(b, i));
-    return b.CreateVectorOfSortedTables(&v);
+  inline Offset<Vector<Offset<T>>> keyVecIter(B &b, unsigned n, L l) {
+    Offset<T> *buf = ZuAlloca(buf, n);
+    if (ZuUnlikely(!buf)) return {};
+    for (unsigned i = 0; i < n; i++) buf[i] = l(b, i);
+    return b.CreateVectorOfSortedTables(buf, n);
   }
 
   // inline creation of a string (shorthand alias for CreateString)
   template <typename B>
-  ZuInline auto str(B &b, ZuString s) {
+  inline auto str(B &b, ZuString s) {
     return b.CreateString(s.data(), s.length());
   }
 
   // inline creation of a vector of strings
   template <typename B, typename ...Args>
-  auto strVec(B &b, Args &&... args) {
+  inline auto strVec(B &b, Args &&... args) {
     return lvector<String>(b, [&b](const auto &s) {
       return str(b, s);
     }, ZuFwd<Args>(args)...);
   }
   // iterated creation of a vector of strings
   template <typename B, typename L>
-  auto strVecIter(B &b, unsigned n, L l) {
+  inline auto strVecIter(B &b, unsigned n, L l) {
     return vectorIter<String>(b, n, [l = ZuMv(l)](B &b, unsigned i) mutable {
       return str(b, l(i));
     });
@@ -193,23 +192,23 @@ namespace Save {
 
   // inline creation of a vector of bytes from raw data
   template <typename B>
-  ZuInline auto bytes(B &b, const void *data, unsigned len) {
+  inline auto bytes(B &b, const void *data, unsigned len) {
     return b.CreateVector(static_cast<const uint8_t *>(data), len);
   }
   // inline creation of a vector of bytes from raw data
   template <typename B>
-  ZuInline auto bytes(B &b, ZuArray<const uint8_t> a) {
+  inline auto bytes(B &b, ZuArray<const uint8_t> a) {
     return b.CreateVector(a.data(), a.length());
   }
 
   // decimal
-  ZuInline auto decimal(const ZuDecimal &v) {
+  inline auto decimal(const ZuDecimal &v) {
     return Decimal{(uint64_t)(v.value>>64), (uint64_t)v.value};
   }
 
   // bitmap
   template <typename B>
-  ZuInline auto bitmap(B &b, const ZmBitmap &m) {
+  inline auto bitmap(B &b, const ZmBitmap &m) {
     thread_local std::vector<uint64_t> v;
     v.clear();
     int n = m.last();
@@ -224,7 +223,7 @@ namespace Save {
 
   // date/time
   template <typename B>
-  ZuInline auto dateTime(B &b, const ZtDate &v) {
+  inline auto dateTime(B &b, const ZtDate &v) {
     return CreateDateTime(b, v.julian(), v.sec(), v.nsec());
   }
 
@@ -236,29 +235,29 @@ namespace Save {
 namespace Load {
   // shorthand iteration over fastbuffer [T] vectors
   template <typename T, typename L>
-  ZuInline void all(T *v, L l) {
+  inline void all(T *v, L l) {
     for (unsigned i = 0, n = v->size(); i < n; i++) l(i, v->Get(i));
   }
 
   // inline zero-copy conversion of a FB string to a ZuString
-  ZuInline ZuString str(const flatbuffers::String *s) {
+  inline ZuString str(const flatbuffers::String *s) {
     if (!s) return ZuString{};
     return ZuString{reinterpret_cast<const char *>(s->Data()), s->size()};
   }
 
   // inline zero-copy conversion of a [uint8] to a ZuArray<const uint8_t>
-  ZuInline ZuArray<const uint8_t> bytes(const Vector<uint8_t> *v) {
+  inline ZuArray<const uint8_t> bytes(const Vector<uint8_t> *v) {
     if (!v) return ZuArray<const uint8_t>{};
-    return ZuArray<const uint8_t>(v->data(), v->size());
+    return ZuArray<const uint8_t>{v->data(), v->size()};
   }
 
   // decimal
-  ZuInline ZuDecimal decimal(const Decimal *v) {
+  inline ZuDecimal decimal(const Decimal *v) {
     return ZuDecimal{ZuDecimal::Unscaled, (((int128_t)(v->h()))<<64) | v->l()};
   }
 
   // bitmap
-  ZuInline ZmBitmap bitmap(const Vector<uint64_t> *v) {
+  inline ZmBitmap bitmap(const Vector<uint64_t> *v) {
     if (!v) return ZmBitmap{};
     ZmBitmap m;
     if (unsigned n = v->size()) {
@@ -273,7 +272,7 @@ namespace Load {
   }
 
   // date/time
-  ZuInline ZtDate dateTime(const DateTime *v) {
+  inline ZtDate dateTime(const DateTime *v) {
     return ZtDate{ZtDate::Julian, v->julian(), v->sec(), v->nsec()};
   }
 

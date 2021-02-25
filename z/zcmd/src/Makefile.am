@@ -7,7 +7,6 @@ AM_CPPFLAGS = \
 	@Z_CPPFLAGS@
 AM_CXXFLAGS = @Z_CXXFLAGS@
 AM_LDFLAGS = @Z_LDFLAGS@
-pkginclude_HEADERS = ZCmd.hpp
 bin_PROGRAMS = zcmd
 zcmd_LDADD = \
 	$(top_builddir)/zrl/src/libZrl.la \

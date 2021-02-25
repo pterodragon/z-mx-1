@@ -658,7 +658,7 @@ void ZvCf::toArgs(ZtArray<ZtString> &args, ZuString prefix) const
       }
     }
     if (node->m_cf)
-      node->m_cf->toArgs(args, ZtString() << prefix << node_->key() << ':');
+      node->m_cf->toArgs(args, ZtString{} << prefix << node_->key() << ':');
   }
 }
 

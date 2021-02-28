@@ -291,13 +291,6 @@ friend TLS;
 	ZvUserDB::Mgr(ZuFwd<Args>(args)...) { }
   };
 
-  struct Context {
-    App		*app;
-    Link	*link;
-    User	*user;
-    bool	interactive;
-  };
-
   ZuInline const App *app() const { return static_cast<const App *>(this); }
   ZuInline App *app() { return static_cast<App *>(this); }
 
@@ -424,17 +417,18 @@ public:
 	    Zfb::Save::str(fbb, "permission denied\n")));
       return fbb.GetSize();
     }
-    thread_local ZtString out(OutBufSize);
-    out.length(0);
-    Context context{app(), link, user, interactive};
     auto cmd_ = in->cmd();
     ZtArray<ZtString> args;
     args.length(cmd_->size());
     Zfb::Load::all(cmd_,
 	[&args](unsigned i, auto arg_) { args[i] = Zfb::Load::str(arg_); });
-    int code = ZvCmdHost::processCmd(&context, args, out);
+    ZvCmdContext ctx{
+      .app_ = app(), .link_ = link, .user_ = user,
+      .interactive = interactive
+    };
+    ZvCmdHost::processCmd(&ctx, args);
     fbb.Finish(ZvCmd::fbs::CreateReqAck(
-	  fbb, in->seqNo(), code, Zfb::Save::str(fbb, out)));
+	  fbb, in->seqNo(), ctx.code, Zfb::Save::str(fbb, ctx.out)));
     return fbb.GetSize();
   }
 

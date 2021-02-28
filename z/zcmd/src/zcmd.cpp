@@ -253,7 +253,9 @@ public:
   void login(Args &&... args) {
     m_cli.open();
     ZtString passwd = m_cli.getpass("password: ", 100);
+    if (!passwd) return;
     ZuBox<unsigned> totp = m_cli.getpass("totp: ", 6);
+    if (!*totp) return;
     m_link = new Link(this);
     m_link->login(ZuFwd<Args>(args)..., passwd, totp);
   }
@@ -263,7 +265,7 @@ public:
     m_link->access(ZuFwd<Args>(args)...);
   }
 
-  void disconnect() { m_link->disconnect(); }
+  void disconnect() { if (m_link) m_link->disconnect(); }
 
   void wait() { m_done.wait(); }
   void post() { m_done.post(); }
@@ -366,72 +368,85 @@ private:
 
   void exec(ZtString cmd) {
     if (!cmd) return;
-    FILE *file = stdout;
     ZtString cmd_ = ZuMv(cmd);
+    ZvCmdContext ctx{.app_ = this, .link_ = m_link};
     {
       ZtRegex::Captures c;
       unsigned pos = 0, n = 0;
       if (n = ZtREGEX("\s*>>\s*").m(cmd, c, pos)) {
-	if (!(file = fopen(c[2], "a"))) {
+	if (!(ctx.file = fopen(c[2], "a"))) {
 	  logError(ZtString{c[2]}, ": ", ZeLastError);
 	  return;
 	}
 	cmd = c[0];
       } else if (n = ZtREGEX("\s*>\s*").m(cmd, c, pos)) {
-	if (!(file = fopen(c[2], "w"))) {
+	if (!(ctx.file = fopen(c[2], "w"))) {
 	  logError(ZtString{c[2]}, ": ", ZeLastError);
 	  return;
 	}
 	cmd = c[0];
       } else {
+	ctx.file = stdout;
 	cmd = ZuMv(cmd_);
       }
     }
     ZtArray<ZtString> args;
     ZvCf::parseCLI(cmd, args);
     if (!args) return;
+    auto &out = ctx.out;
     if (args[0] == "help") {
       if (args.length() == 1) {
-	ZtString out;
 	out << "Local ";
-	processCmd(file, args, out);
+	processCmd(&ctx, args);
 	out << "\nRemote ";
-	fwrite(out.data(), 1, out.length(), file);
+	fwrite(out.data(), 1, out.length(), ctx.file);
       } else if (args.length() == 2 && hasCmd(args[1])) {
-	ZtString out;
-	int code = processCmd(file, args, out);
-	if (code || out) executed(code, file, out);
+	int code = processCmd(&ctx, args);
+	if (code || ctx.out) executed(&ctx);
 	return;
       }
     } else if (args[0] == "remote") {
       args.shift();
     } else if (hasCmd(args[0])) {
-      ZtString out;
-      int code = processCmd(file, args, out);
-      if (code || out) executed(code, file, out);
+      int code = processCmd(&ctx, args);
+      if (code || ctx.out) executed(&ctx);
       return;
     }
-    send(file, args);
+    send(&ctx, args);
   }
 
-  void send(FILE *file, ZuArray<ZtString> args) {
+  // async invoke
+  void send(ZvCmdContext *ctx, ZuArray<const ZtString> args) {
     auto seqNo = m_seqNo++;
     m_fbb.Clear();
     m_fbb.Finish(ZvCmd::fbs::CreateRequest(m_fbb, seqNo,
 	  Zfb::Save::strVecIter(m_fbb, args.length(),
 	    [&args](unsigned i) { return args[i]; })));
-    m_link->sendCmd(m_fbb, seqNo, [this, file](const ZvCmd::fbs::ReqAck *ack) {
+    m_link->sendCmd(m_fbb, seqNo, [this, file = ctx->file](
+	  const ZvCmd::fbs::ReqAck *ack) {
       using namespace Zfb::Load;
       executed(ack->code(), file, str(ack->out()));
     });
   }
 
-  int executed(int code, FILE *file, ZuString out) {
-    m_code = code;
-    if (out) fwrite(out.data(), 1, out.length(), file);
-    if (file != stdout) fclose(file);
+  // async executed
+  void executed(int code, FILE *file, ZtString out) {
+    ZvCmdContext ctx{
+      .app_ = this, .link_ = m_link,
+      .file = file,
+      .out = ZuMv(out), .code = code
+    };
+    executed(&ctx);
+  }
+
+  // sync executed
+  int executed(ZvCmdContext *ctx) {
+    m_code = ctx->code;
+    if (const auto &out = ctx->out)
+      fwrite(out.data(), 1, out.length(), ctx->file);
+    if (ctx->file != stdout) { fclose(ctx->file); ctx->file = stdout; }
     m_executed.post();
-    return code;
+    return m_code;
   }
 
 private:
@@ -461,21 +476,21 @@ private:
   void initCmds() {
     addCmd("passwd", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->passwdCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->passwdCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "change passwd", "usage: passwd");
 
     addCmd("users", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->usersCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->usersCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "list users", "usage: users");
     addCmd("useradd",
 	"e enabled enabled { type flag } "
 	"i immutable immutable { type flag }",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->userAddCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->userAddCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "add user",
 	"usage: useradd ID NAME ROLE[,ROLE,...] [OPTIONS...]\n\n"
 	"Options:\n"
@@ -483,15 +498,15 @@ private:
 	"  -i, --immutable\tset Immutable flag\n");
     addCmd("resetpass", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->resetPassCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->resetPassCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "reset password", "usage: resetpass USERID");
     addCmd("usermod",
 	"e enabled enabled { type flag } "
 	"i immutable immutable { type flag }",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->userModCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->userModCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "modify user",
 	"usage: usermod ID NAME ROLE[,ROLE,...] [OPTIONS...]\n\n"
 	"Options:\n"
@@ -499,98 +514,98 @@ private:
 	"  -i, --immutable\tset Immutable flag\n");
     addCmd("userdel", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->userDelCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->userDelCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "delete user", "usage: userdel ID");
 
     addCmd("roles", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->rolesCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->rolesCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "list roles", "usage: roles");
     addCmd("roleadd", "i immutable immutable { type flag }",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->roleAddCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->roleAddCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "add role",
 	"usage: roleadd NAME PERMS APIPERMS [OPTIONS...]\n\n"
 	"Options:\n"
 	"  -i, --immutable\tset Immutable flag\n");
     addCmd("rolemod", "i immutable immutable { type scalar }",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->roleModCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->roleModCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "modify role",
 	"usage: rolemod NAME PERMS APIPERMS [OPTIONS...]\n\n"
 	"Options:\n"
 	"  -i, --immutable\tset Immutable flag\n");
     addCmd("roledel", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->roleDelCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->roleDelCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "delete role",
 	"usage: roledel NAME");
 
     addCmd("perms", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->permsCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->permsCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "list permissions", "usage: perms");
     addCmd("permadd", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->permAddCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->permAddCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "add permission", "usage: permadd NAME");
     addCmd("permmod", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->permModCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->permModCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "modify permission", "usage: permmod ID NAME");
     addCmd("permdel", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->permDelCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->permDelCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "delete permission", "usage: permdel ID");
 
     addCmd("keys", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->keysCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->keysCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "list keys", "usage: keys [USERID]");
     addCmd("keyadd", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->keyAddCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->keyAddCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "add key", "usage: keyadd [USERID]");
     addCmd("keydel", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->keyDelCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->keyDelCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "delete key", "usage: keydel ID");
     addCmd("keyclr", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->keyClrCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->keyClrCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "clear all keys", "usage: keyclr [USERID]");
 
     addCmd("remote", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->remoteCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->remoteCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "run command remotely", "usage: remote COMMAND...");
 
     addCmd("loadmod", "",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->loadModCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->loadModCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "load application-specific module", "usage: loadmod MODULE");
 
     addCmd("telcap",
 	"i interval interval { type scalar } "
 	"u unsubscribe unsubscribe { type flag }",
 	ZvCmdFn{this,
-	  [](ZCmd *app, void *file, const ZvCf *args, ZtString &out) {
-	    return app->telcapCmd(static_cast<FILE *>(file), args, out);
+	  [](ZCmd *app, ZvCmdContext *ctx) {
+	    return app->telcapCmd(ctx->file, ctx->args, ctx->out);
 	  }},  "telemetry capture",
 	"usage: telcap [OPTIONS...] PATH [TYPE[:FILTER]]...\n\n"
 	"  PATH\tdirectory for capture CSV files\n"
@@ -726,6 +741,7 @@ private:
 		[&roles](unsigned i) { return roles[i]; }),
 	      flags).Union()));
     }
+    // FIXME - capture cmd context, not this, file
     m_link->sendUserDB(m_fbb, seqNo, [this, file](const fbs::ReqAck *ack) {
       ZtString out;
       if (int code = filterAck(

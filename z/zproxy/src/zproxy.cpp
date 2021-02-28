@@ -601,8 +601,10 @@ public:
     if (!cmd) return false;
     ZtArray<ZtString> args;
     ZvCf::parseCLI(cmd, args);
-    ZtString out;
-    int r = ZvCmdHost::processCmd(nullptr, args, out);
+    if (!args) return false;
+    ZvCmdContext ctx{.app_ = this};
+    int r = ZvCmdHost::processCmd(&ctx, args);
+    const auto &out = ctx.out;
     fwrite(out.data(), 1, out.length(), stdout);
     fflush(stdout);
     return r;
@@ -615,7 +617,9 @@ public:
     delete m_proxies->del(Proxy::SrcPortAccessor::value(proxy));
   }
 
-  int proxy(void *, const ZvCf *args, ZtString &out) {
+  int proxy(ZvCmdContext *ctx) {
+    const auto &args = ctx->args;
+    auto &out = ctx->out;
     ZmRef<Listener> listener;
     ZiIP localIP, remoteIP, srcIP;
     ZuString tag;
@@ -671,7 +675,9 @@ public:
     return code;
   }
 
-  int stopListening(void *, const ZvCf *args, ZtString &out) {
+  int stopListening(ZvCmdContext *ctx) {
+    const auto &args = ctx->args;
+    auto &out = ctx->out;
     ZuString tag;
     ZmRef<Listener> listener;
     unsigned localPort;
@@ -692,7 +698,7 @@ public:
         listener->stop();
         delete m_listeners->del(listener->localPort());
         out << listener->status() << '\n';
-        status(nullptr, args, out);
+        status(ctx);
       }
     } else {
       ZmRef<Listener> listener = m_listeners->findKey(localPort);
@@ -707,7 +713,9 @@ public:
     return 0;
   }
 
-  int hold(void *, const ZvCf *args, ZtString &out) {
+  int hold(ZvCmdContext *ctx) {
+    const auto &args = ctx->args;
+    auto &out = ctx->out;
     unsigned srcPort;
     int side;
     bool allProxies = false, isTag = false;
@@ -737,7 +745,7 @@ public:
 	    (connection = proxy->out()))
 	  connection->hold();
       }
-      return status(nullptr, args, out);
+      return status(ctx);
     } else {
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
@@ -756,7 +764,9 @@ public:
     return 0;
   }
 
-  int release(void *, const ZvCf *args, ZtString &out) {
+  int release(ZvCmdContext *ctx) {
+    const auto &args = ctx->args;
+    auto &out = ctx->out;
     ZuString tag;
     unsigned srcPort;
     int side;
@@ -786,7 +796,7 @@ public:
 	    (connection = proxy->out()))
 	  connection->release();
       }
-      return status(nullptr, args, out);
+      return status(ctx);
     } else {
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
@@ -805,7 +815,9 @@ public:
     return 0;
   }
 
-  int disc(void *, const ZvCf *args, ZtString &out) {
+  int disc(ZvCmdContext *ctx) {
+    const auto &args = ctx->args;
+    auto &out = ctx->out;
     ZuString tag;
     unsigned srcPort;
     bool isTag = false, allProxies = false;
@@ -829,7 +841,7 @@ public:
 	if (connection = proxy->in()) connection->disconnect();
 	if (connection = proxy->out()) connection->disconnect();
       }
-      return status(nullptr, args, out);
+      return status(ctx);
     } else {
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
@@ -844,7 +856,9 @@ public:
     return 0;
   }
 
-  int suspend(void *, const ZvCf *args, ZtString &out) {
+  int suspend(ZvCmdContext *ctx) {
+    const auto &args = ctx->args;
+    auto &out = ctx->out;
     ZuString tag;
     unsigned srcPort;
     int side, op;
@@ -883,7 +897,7 @@ public:
 	    connection->suspRecv();
 	}
       }
-      return status(nullptr, args, out);
+      return status(ctx);
     } else {
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
@@ -906,7 +920,9 @@ public:
     return 0;
   }
 
-  int resume(void *, const ZvCf *args, ZtString &out) {
+  int resume(ZvCmdContext *ctx) {
+    const auto &args = ctx->args;
+    auto &out = ctx->out;
     ZuString tag;
     unsigned srcPort;
     int side, op;
@@ -941,7 +957,7 @@ public:
 	  if (op == IOOp::Recv || op == IOOp::Both) connection->resRecv();
 	}
       }
-      return status(nullptr, args, out);
+      return status(ctx);
     } else {
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
@@ -964,7 +980,9 @@ public:
     return 0;
   }
 
-  int trace(void *, const ZvCf *args, ZtString &out) {
+  int trace(ZvCmdContext *ctx) {
+    const auto &args = ctx->args;
+    auto &out = ctx->out;
     ZuString tag;
     unsigned srcPort;
     int side;
@@ -996,7 +1014,7 @@ public:
 	    (connection = proxy->out()))
 	  connection->trace(on);
       }
-      return status(nullptr, args, out);
+      return status(ctx);
     } else {
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
@@ -1015,7 +1033,9 @@ public:
     return 0;
   }
 
-  int drop(void *, const ZvCf *args, ZtString &out) {
+  int drop(ZvCmdContext *ctx) {
+    const auto &args = ctx->args;
+    auto &out = ctx->out;
     ZuString tag;
     unsigned srcPort;
     int side;
@@ -1047,7 +1067,7 @@ public:
 	    (connection = proxy->out()))
 	  connection->drop(on);
       }
-      return status(nullptr, args, out);
+      return status(ctx);
     } else {
       ZmRef<Proxy> proxy = m_proxies->findKey(srcPort);
       if (!proxy) {
@@ -1066,7 +1086,9 @@ public:
     return 0;
   }
 
-  int verboseCmd(void *, const ZvCf *args, ZtString &out) {
+  int verboseCmd(ZvCmdContext *ctx) {
+    const auto &args = ctx->args;
+    auto &out = ctx->out;
     bool on;
     try {
       on = args->getInt("1", 0, 1, false, 1);
@@ -1078,7 +1100,9 @@ public:
     return 0;
   }
 
-  int status(void *, const ZvCf *args, ZtString &out) {
+  int status(ZvCmdContext *ctx) {
+    const auto &args = ctx->args;
+    auto &out = ctx->out;
     ZuString tag;
     bool isTag = false;
     try {
@@ -1106,7 +1130,8 @@ public:
     return 0;
   }
 
-  int quit(void *, const ZvCf *args, ZtString &out) {
+  int quit(ZvCmdContext *ctx) {
+    auto &out = ctx->out;
     post();
     out << "shutting down\n";
     return 0;
@@ -1544,8 +1569,8 @@ int main(int argc, char **argv)
     Zrl::CLI cli;
     cli.init({
       .error = [](ZuString s) { std::cerr << s << '\n'; },
-      .enter = [app = app.ptr()](ZuString s) -> bool {
-	return app->processCmd(s);
+      .enter = [app = app.ptr()](ZuString cmd) -> bool {
+	return app->processCmd(cmd);
       },
       .sig = [app = app.ptr()](int sig) -> bool {
 	switch (sig) {

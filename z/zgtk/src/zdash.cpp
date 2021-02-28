@@ -41,9 +41,10 @@
 #include <zlib/ZvCSV.hpp>
 #include <zlib/ZvRingCf.hpp>
 #include <zlib/ZvMultiplex.hpp>
-#include <zlib/ZvCmdClient.hpp>
-#include <zlib/ZvCmdHost.hpp>
 #include <zlib/ZvUserDB.hpp>
+#include <zlib/ZvCmdHost.hpp>
+#include <zlib/ZvCmdClient.hpp>
+#include <zlib/ZvCmdServer.hpp>
 
 #include <zlib/ZtlsBase32.hpp>
 #include <zlib/ZtlsBase64.hpp>
@@ -817,15 +818,14 @@ namespace GtkTree {
 
 // FIXME - needs to be ZvCmdServer
 // - need container of multiple client links
-// - need "select " command handled locally to select among links out
 // - need "connect " command to add a link and connect out
-// - need "loadmod " command 
-// - need "remote " command to force remote execution (i.e. bypass
-// hasCmd() check in zcmd.cpp:408
+// - need "disconnect " command to disconnect link and delete it
+// - need "links " command to list links
+// - need "select " command handled locally to select among links out
 class ZDash :
     public ZmPolymorph,
     public ZvCmdClient<ZDash>,
-    public ZCmdHost,
+    public ZvCmdServer<ZDash>,
     public ZGtk::App {
 public:
   using Ztls::Engine<ZDash>::run;
@@ -833,9 +833,10 @@ public:
 
   using Client = ZvCmdClient<ZDash>;
 
-  struct Link : public ZvCmdCliLink<ZDash, Link> {
-    using Base = ZvCmdCliLink<ZDash, Link>;
-    Link(ZDash *app) : Base(app) { }
+  // FIXME - need key for client links, per UI display
+  struct CliLink : public ZvCmdCliLink<ZDash, CliLink> {
+    using Base = ZvCmdCliLink<ZDash, CliLink>;
+    CliLink(ZDash *app) : Base(app) { }
     void loggedIn() {
       this->app()->loggedIn(this);
     }
@@ -1086,11 +1087,9 @@ public:
 
   void disconnect() { m_link->disconnect(); }
 
-  int code() const { return m_code; }
-
   void exiting() { m_exiting = true; }
 
-  void plugin(ZmRef<ZCmdPlugin> plugin) {
+  void plugin(ZmRef<ZvCmdPlugin> plugin) {
     if (ZuUnlikely(m_plugin)) m_plugin->final();
     m_plugin = ZuMv(plugin);
   }
@@ -1386,13 +1385,13 @@ private:
       } else if (args.length() == 2 && hasCmd(args[1])) {
 	ZtString out;
 	int code = processCmd(file, args, out);
-	if (code || out) executed(code, file, out);
+	if (code || out) executed(ctx);
 	return;
       }
     } else if (hasCmd(args[0])) {
       ZtString out;
       int code = processCmd(file, args, out);
-      if (code || out) executed(code, file, out);
+      if (code || out) executed(ctx);
       return;
     }
     auto seqNo = m_seqNo++;
@@ -1406,8 +1405,7 @@ private:
     });
   }
 
-  int executed(int code, FILE *file, ZuString out) {
-    m_code = code;
+  int executed(ZvCmdContext *) {
     if (out) fwrite(out.data(), 1, out.length(), file);
     if (file != stdout) fclose(file);
     m_executed.post();
@@ -2242,23 +2240,7 @@ private:
   int loadModCmd(FILE *, const ZvCf *args, ZtString &out) {
     ZuBox<int> argc = args->get("#");
     if (argc != 2) throw ZvCmdUsage{};
-    ZiModule module;
-    ZiModule::Path name = args->get("1", true);
-    ZtString e;
-    if (module.load(name, false, &e) < 0) {
-      out << "failed to load \"" << name << "\": " << ZuMv(e) << '\n';
-      return 1;
-    }
-    ZCmdInitFn initFn = (ZCmdInitFn)module.resolve("ZCmd_plugin", &e);
-    if (!initFn) {
-      module.unload();
-      out << "failed to resolve \"ZCmd_plugin\" in \"" <<
-	name << "\": " << ZuMv(e) << '\n';
-      return 1;
-    }
-    (*initFn)(static_cast<ZCmdHost *>(this));
-    out << "module \"" << name << "\" loaded\n";
-    return 0;
+    return loadMod(args->get("1", true), out);
   }
 
   int telcapCmd(FILE *file, const ZvCf *args, ZtString &out) {
@@ -2347,10 +2329,9 @@ private:
 
   Zfb::IOBuilder	m_fbb;
 
-  int			m_code = 0;
   bool			m_exiting = false;
 
-  ZmRef<ZCmdPlugin>	m_plugin;
+  ZmRef<ZvCmdPlugin>	m_plugin;
 
   unsigned		m_tid = 0;
 

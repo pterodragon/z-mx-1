@@ -52,22 +52,23 @@ void ZvCmdHost::addCmd(
 
 bool ZvCmdHost::hasCmd(ZuString name) { return m_cmds.find(name); }
 
-int ZvCmdHost::processCmd(
-    void *context, ZuArray<const ZtString> args, ZtString &out)
+int ZvCmdHost::processCmd(ZvCmdContext *ctx, ZuArray<const ZtString> args_)
 {
-  if (!args) return 0;
-  const ZtString &name = args[0];
+  if (!args_) return 0;
+  auto &out = ctx->out;
+  const ZtString &name = args_[0];
   typename Cmds::NodeRef cmd;
   try {
-    ZmRef<ZvCf> cf = new ZvCf();
     cmd = m_cmds.find(name);
     if (!cmd) throw ZtString("unknown command");
-    cf->fromArgs(m_syntax->subset(name, false), args);
-    if (cf->getInt("help", 0, 1, false, 0)) {
+    auto &args = ctx->args;
+    args = new ZvCf();
+    args->fromArgs(m_syntax->subset(name, false), args_);
+    if (args->getInt("help", 0, 1, false, 0)) {
       out << cmd->val().usage << '\n';
       return 0;
     }
-    uint32_t r = (cmd->val().fn)(context, cf, out);
+    uint32_t r = (cmd->val().fn)(ctx);
     r &= ~(static_cast<uint32_t>(1)<<31); // ensure +ve
     return r;
   } catch (const ZvCmdUsage &) {
@@ -86,8 +87,10 @@ int ZvCmdHost::processCmd(
   return -1;
 }
 
-int ZvCmdHost::help(void *, const ZvCf *args, ZtString &out)
+int ZvCmdHost::help(ZvCmdContext *ctx)
 {
+  auto &out = ctx->out;
+  const auto &args = ctx->args;
   int argc = ZuBox<int>(args->get("#"));
   if (argc > 2) throw ZvCmdUsage();
   if (ZuUnlikely(argc == 2)) {

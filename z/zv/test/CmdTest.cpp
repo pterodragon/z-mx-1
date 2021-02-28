@@ -31,25 +31,23 @@ public:
     m_uptime.now();
     ZvCmdServer::init(mx, cf);
     addCmd("ackme", "", ZvCmdFn{
-      [](void *context_, const ZvCf *args, ZtString &out) {
-	auto context = static_cast<Context *>(context_);
-	if (auto cxn = context->link->tcp())
+      [](ZvCmdContext *ctx) {
+	if (auto cxn = ctx->link<Link>()->tcp())
 	  std::cout << cxn->info().remoteIP << ':'
 	    << ZuBoxed(cxn->info().remotePort) << ' ';
 	std::cout << "user: "
-	  << context->user->id << ' ' << context->user->name << '\n'
-	  << "cmd: " << args->get("0") << '\n';
-	out << "this is an ack\n";
+	  << ctx->user<User>()->id << ' ' << ctx->user<User>()->name << '\n'
+	  << "cmd: " << ctx->args->get("0") << '\n';
+	ctx->out << "this is an ack\n";
       }}, "test ack", "");
     addCmd("nakme", "", ZvCmdFn{
-      [](void *context_, const ZvCf *args, ZtString &out) {
-	out << "this is a nak\n";
+      [](ZvCmdContext *ctx) {
+	ctx->out << "this is a nak\n";
       }}, "test nak", "");
     addCmd("quit", "", ZvCmdFn{
-      [](void *context_, const ZvCf *args, ZtString &out) {
-	auto context = static_cast<Context *>(context_);
-	context->app->post();
-	out << "quitting...\n";
+      [](ZvCmdContext *ctx) {
+	ctx->app<ZvCmdTest>()->post();
+	ctx->out << "quitting...\n";
       }}, "quit", "");
   }
 

@@ -30,8 +30,6 @@
 #include <linux/unistd.h>
 #endif
 
-#include <fstream>
-
 #include <zlib/ZiLib.hpp>
 
 #include <zlib/ZrlTerminal.hpp>

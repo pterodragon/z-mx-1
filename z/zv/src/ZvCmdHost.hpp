@@ -32,17 +32,34 @@
 
 #include <zlib/ZuString.hpp>
 
-#include <zlib/ZmObject.hpp>
+#include <zlib/ZmPolymorph.hpp>
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmRBTree.hpp>
-#include <zlib/ZmPLock.hpp>
 
 #include <zlib/Zfb.hpp>
 
 #include <zlib/ZvCf.hpp>
 
-// command handler (context, command, output)
-using ZvCmdFn = ZmFn<void *, const ZvCf *, ZtString &>;
+class ZvCmdHost;
+
+struct ZvCmdContext {
+  ZvCmdHost		*app_ = nullptr;	
+  void			*link_ = nullptr;	// opaque to plugin
+  void			*user_ = nullptr;	// ''
+  ZmRef<ZvCf>		args;
+  FILE			*file = nullptr;	// file output
+  ZtString		out;			// string output
+  int			code = 0;		// result code
+  bool			interactive = false;	// true unless scripted
+
+  template <typename T = ZvCmdHost>
+  auto app() { return static_cast<T *>(app_); }
+  template <typename T> auto link() { return static_cast<T *>(link_); }
+  template <typename T> auto user() { return static_cast<T *>(user_); }
+};
+
+// command handler (context)
+using ZvCmdFn = ZmFn<ZvCmdContext *>;
 // can be thrown by command function
 struct ZvCmdUsage { };
 
@@ -61,18 +78,19 @@ public:
 
   bool hasCmd(ZuString name);
 
-  int processCmd(void *context, ZuArray<const ZtString> args, ZtString &out);
+  int processCmd(ZvCmdContext *, ZuArray<const ZtString> args);
 
   using AppFn = ZmFn<ZuArray<const uint8_t> >;
 
   int loadMod(ZuString name, ZtString &out);
 
-  virtual void plugin(ZmRef<ZvCmdPlugin>) { }
-  virtual void sendApp(Zfb::IOBuilder &) { }
-  virtual int executed(int code, FILE *file, ZuString out) { return 0; }
+  virtual void plugin(ZmRef<ZvCmdPlugin>) { } // register plugin
+
+  virtual int executed(ZvCmdContext *ctx) { return 0; }
+  virtual void sendApp(void *link, Zfb::IOBuilder &) { }
 
 private:
-  int help(void *, const ZvCf *args, ZtString &out);
+  int help(ZvCmdContext *);
 
 private:
   struct CmdData {

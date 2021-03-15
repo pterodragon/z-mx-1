@@ -15,7 +15,6 @@ FBS = \
 	loginreq.fbs \
 	userdbreq.fbs \
 	userdback.fbs \
-	zcmd.fbs \
 	zcmdreq.fbs \
 	zcmdack.fbs \
 	telreq.fbs \
@@ -32,7 +31,8 @@ pkginclude_HEADERS = ZvLib.hpp \
 	ZvCf.hpp ZvField.hpp ZvCSV.hpp ZvError.hpp ZvEnum.hpp ZvHashCSV.hpp \
 	ZvHeapCSV.hpp ZvDaemon.hpp \
 	ZvRingCf.hpp ZvThreadCf.hpp ZvUserDB.hpp \
-	ZvCmdNet.hpp ZvCmdHost.hpp ZvCmdClient.hpp ZvCmdServer.hpp \
+	ZvCmdNet.hpp ZvCmdHost.hpp ZvCmdMsgFn.hpp \
+	ZvCmdClient.hpp ZvCmdServer.hpp \
 	ZvScheduler.hpp ZvMultiplex.hpp \
 	ZvSeqNo.hpp ZvMsgID.hpp ZvIOQueue.hpp ZvEngine.hpp \
 	ZvTelemetry.hpp ZvTelServer.hpp \
@@ -45,7 +45,7 @@ libZv_la_CPPFLAGS = $(AM_CPPFLAGS) -DZV_EXPORTS
 libZv_la_LDFLAGS = @Z_SO_LDFLAGS@
 libZv_la_SOURCES = ZvLib.cpp \
 	ZvCf.cpp ZvCSV.cpp ZvDaemon.cpp ZvUserDB.cpp ZvEngine.cpp \
-	ZvCmdHost.cpp
+	ZvCmdHost.cpp ZvCmdMsgFn.cpp
 libZv_la_LIBADD = $(top_builddir)/zfb/src/libZfb.la \
 	$(top_builddir)/ztls/src/libZtls.la \
 	$(top_builddir)/zi/src/libZi.la $(top_builddir)/ze/src/libZe.la \

@@ -32,6 +32,7 @@ void ZvCmdHost::init()
 
 void ZvCmdHost::final()
 {
+  while (auto fn = m_finalFn.pop()) fn();
   m_syntax = nullptr;
   m_cmds.clean();
 }
@@ -39,6 +40,7 @@ void ZvCmdHost::final()
 void ZvCmdHost::addCmd(
     ZuString name, ZuString syntax, ZvCmdFn fn, ZtString brief, ZtString usage)
 {
+  Guard guard(m_lock);
   {
     ZmRef<ZvCf> cf = m_syntax->subset(name, false, true);
     cf->fromString(syntax, false);
@@ -134,3 +136,7 @@ int ZvCmdHost::loadMod(ZuString name_, ZtString &out)
   return 0;
 }
 
+void ZvCmdHost::finalFn(ZmFn<> fn)
+{
+  m_finalFn << ZuMv(fn);
+}

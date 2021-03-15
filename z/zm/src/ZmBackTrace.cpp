@@ -308,9 +308,9 @@ retry:
 	    this_->file.close();
 	    return 0;
 	  },
-	  [](bfd *abfd, void *this__, struct stat *s) -> int { // stat
+	  [](bfd *abfd, void * /* this__ */, struct stat *s) -> int { // stat
+	    // auto this_ = reinterpret_cast<BFD *>(this__);
 	    memset(s, 0, sizeof(struct stat));
-	    auto this_ = reinterpret_cast<BFD *>(this__);
 	    s->st_mode = S_IFREG | S_IRWXU;
 	    s->st_size = abfd->size;
 	    return 0;

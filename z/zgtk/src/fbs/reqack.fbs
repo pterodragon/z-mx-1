@@ -1,0 +1,16 @@
+include "link.fbs";
+namespace ZDash.fbs;
+table ConnectAck {
+union ReqAckData {
+  ConnectAck	: Link,
+  DisconnectAck	: Link,
+  LinksAck	: LinkList,
+  SelectAck	: Link
+}
+table ReqAck {
+  seqNo		:uint64;	// request ID (restarts at 0 with each session)
+  data		:ReqAckData;
+  rejCode	:uint32 = 0;
+  rejText	:string;
+}
+root_type ReqAck;

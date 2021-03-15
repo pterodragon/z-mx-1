@@ -17,7 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// ZuArray<T> is a wrapper around a pointer+length pair
+// ZuArray<T> is a wrapper around a pointer+length pair; unlike std::array
+// focuses on run-time optimization, rather than compile-time
 //
 // ZuArrayT<T> is a short cut for ZuArray<const typename ZuTraits<T>::Elem>
 

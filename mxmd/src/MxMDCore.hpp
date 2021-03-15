@@ -71,16 +71,16 @@ public:
   using Link = typename Base::Link;
   using User = typename Base::User;
 
-  using AppFn =
-    ZmFn<MxMDCmdServer *, Link *, User *, bool, ZuArray<const uint8_t>>;
+  using AppFn = ZmFn<
+    MxMDCmdServer *, Link *, User *, bool, unsigned, ZuArray<const uint8_t>>;
 
-  void final() { m_appFn = AppFn(); Base::final(); }
+  void final() { m_appFn = {}; Base::final(); }
 
-  void appFn(AppFn fn) { m_appFn = fn; }
+  void appFn(AppFn fn) { m_appFn = ZuMv(fn); }
 
-  ZuInline int processApp(Link *link, User *user, bool interactive,
-      ZuArray<const uint8_t> data) {
-    return m_appFn(this, link, user, interactive, data);
+  int processApp(Link *link, User *user, bool interactive,
+      ZuID id, ZuArray<const uint8_t> data) {
+    return m_appFn(this, link, user, interactive, id, data);
   }
 
 private:

@@ -322,7 +322,7 @@ namespace Load {
     ZtEnum s2v(ZuString s) const { return m_s2v->findVal(s); } \
     template <typename L> void all(L l) const { \
       auto i = m_s2v->readIterator(); \
-      while (auto kv = i.iterate()) { l(kv->key(), kv->value()); } \
+      while (auto kv = i.iterate()) { l(kv->key(), kv->val()); } \
     } \
   private: \
     ZmRef<S2V>	m_s2v; \

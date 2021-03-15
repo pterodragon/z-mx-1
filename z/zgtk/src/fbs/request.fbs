@@ -1,0 +1,17 @@
+include "link.fbs";
+namespace ZDash.fbs;
+table Connect {
+  server	: string;
+  port		: uint16;
+}
+union ReqData {
+  Connect	: Connect,
+  Disconnect	: LinkID,
+  Links		: Links,
+  Select	: LinkID
+}
+table Request {
+  seqNo		: uint64;	// request ID (restarts at 0 with each session)
+  data		: ReqData;
+}
+root_type Request;

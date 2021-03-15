@@ -36,11 +36,14 @@
 #include <zlib/ZmRef.hpp>
 #include <zlib/ZmRBTree.hpp>
 
+#include <zlib/ZiIOBuf.hpp>
+
 #include <zlib/Zfb.hpp>
 
 #include <zlib/ZvCf.hpp>
 
 class ZvCmdHost;
+class ZvCmdMsgFn;
 
 struct ZvCmdContext {
   ZvCmdHost		*app_ = nullptr;	
@@ -63,11 +66,6 @@ using ZvCmdFn = ZmFn<ZvCmdContext *>;
 // can be thrown by command function
 struct ZvCmdUsage { };
 
-struct ZvCmdPlugin : public ZmPolymorph {
-  virtual void final() = 0;
-  virtual int processApp(ZuArray<const uint8_t> data) = 0;
-};
-
 class ZvAPI ZvCmdHost {
 public:
   void init();
@@ -80,19 +78,22 @@ public:
 
   int processCmd(ZvCmdContext *, ZuArray<const ZtString> args);
 
-  using AppFn = ZmFn<ZuArray<const uint8_t> >;
-
   int loadMod(ZuString name, ZtString &out);
 
-  virtual void plugin(ZmRef<ZvCmdPlugin>) { } // register plugin
+  void finalFn(ZmFn<>);
 
   virtual int executed(ZvCmdContext *ctx) { return 0; }
-  virtual void sendApp(void *link, Zfb::IOBuilder &) { }
+
+  virtual ZvCmdMsgFn *msgFn() { return nullptr; }
+  virtual void send(void *link, ZmRef<ZiIOBuf<>>) { }
 
 private:
   int help(ZvCmdContext *);
 
 private:
+  using Lock = ZmPLock;
+  using Guard = ZmGuard<Lock>;
+
   struct CmdData {
     ZvCmdFn	fn;
     ZtString	brief;
@@ -104,8 +105,10 @@ private:
 	ZmRBTreeUnique<true,
 	  ZmRBTreeLock<ZmNoLock> > > >;
 
-  ZmRef<ZvCf>		m_syntax;
-  Cmds			m_cmds;
+  Lock			m_lock;
+    ZmRef<ZvCf>		  m_syntax;
+    Cmds		  m_cmds;
+    ZtArray<ZmFn<>>	  m_finalFn;
 };
 
 // loadable module must export void ZCmd_plugin(ZCmdHost *)

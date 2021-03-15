@@ -355,6 +355,11 @@ int main()
     fn();
   }
   {
+    ZmFn<> fn{[]() { return -42; }};
+    short x = fn();
+    CHECK(x == -42);
+  }
+  {
     ZmAtomic<uint64_t> i;
     double baseline;
     {

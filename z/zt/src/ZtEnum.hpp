@@ -82,7 +82,7 @@ using ZtEnum = ZuBox_1(int8_t);
     ZuString v2s(ZtEnum v) const { return m_v2s->findVal(v); } \
     template <typename L> void all(L l) const { \
       auto i = m_s2v->readIterator(); \
-      while (auto kv = i.iterate()) { l(kv->key(), kv->value()); } \
+      while (auto kv = i.iterate()) { l(kv->key(), kv->val()); } \
     } \
   private: \
     ZmRef<S2V>	m_s2v; \

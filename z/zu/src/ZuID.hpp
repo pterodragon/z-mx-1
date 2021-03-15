@@ -39,48 +39,48 @@
 #include <zlib/ZuPrint.hpp>
 #include <zlib/ZuString.hpp>
 
-// An ZuID is a union of a 64bit unsigned integer with an 8-byte
+// A ZuID is a union of a 64bit unsigned integer with an 8-byte
 // zero-padded string; this permits short human-readable string identifiers
 // to be compared and hashed very rapidly using integer 64bit operations
 // without needing a map between names and numbers
 
 // Note: the string will not be null-terminated if all 8 bytes are in use
 
-// the implementation assumes the architecture supports misaligned 64bit loads
+// the implementation uses misaligned 64bit loads where available
+// (i.e. any recent x86 64bit)
 
 class ZuID {
 public:
-  ZuInline ZuID() : m_val(0) { }
+  ZuID() : m_val(0) { }
 
-  ZuInline ZuID(const ZuID &b) : m_val(b.m_val) { }
-  ZuInline ZuID &operator =(const ZuID &b) { m_val = b.m_val; return *this; }
+  ZuID(const ZuID &b) : m_val(b.m_val) { }
+  ZuID &operator =(const ZuID &b) { m_val = b.m_val; return *this; }
 
   template <typename S>
-  ZuInline ZuID(S &&s, typename ZuIsString<S>::T *_ = 0) {
+  ZuID(S &&s, typename ZuIsString<S>::T *_ = 0) {
     init(ZuFwd<S>(s));
   }
   template <typename S>
-  ZuInline typename ZuIsString<S, ZuID &>::T operator =(S &&s) {
+  typename ZuIsString<S, ZuID &>::T operator =(S &&s) {
     init(ZuFwd<S>(s));
     return *this;
   }
 
   template <typename V> struct IsUInt64 {
-    enum { OK = !ZuTraits<V>::IsString &&
-      ZuConversion<V, uint64_t>::Exists };
+    enum { OK = !ZuTraits<V>::IsString && ZuConversion<V, uint64_t>::Exists };
   };
   template <typename V, typename R = void>
   struct MatchUInt64 : public ZuIfT<IsUInt64<V>::OK, R> { };
 
   template <typename V>
-  ZuInline ZuID(V v, typename MatchUInt64<V>::T *_ = 0) : m_val(v) { }
+  ZuID(V v, typename MatchUInt64<V>::T *_ = 0) : m_val(v) { }
   template <typename V>
-  ZuInline typename MatchUInt64<V, ZuID &>::T operator =(V v) {
+  typename MatchUInt64<V, ZuID &>::T operator =(V v) {
     m_val = v;
     return *this;
   }
 
-  ZuInline void init(ZuString s) {
+  void init(ZuString s) {
     if (ZuLikely(s.length() == 8)) {
       const uint64_t *ZuMayAlias(ptr) =
 	reinterpret_cast<const uint64_t *>(s.data());
@@ -94,15 +94,15 @@ public:
     memcpy(&m_val, s.data(), n);
   }
 
-  ZuInline char *data() {
+  char *data() {
     char *ZuMayAlias(ptr) = reinterpret_cast<char *>(&m_val);
     return ptr;
   }
-  ZuInline const char *data() const {
+  const char *data() const {
     const char *ZuMayAlias(ptr) = reinterpret_cast<const char *>(&m_val);
     return ptr;
   }
-  ZuInline unsigned length() const {
+  unsigned length() const {
     if (!m_val) return 0U;
 #if Zu_BIGENDIAN
     return (71U - __builtin_ctzll(m_val))>>3U;
@@ -111,38 +111,38 @@ public:
 #endif
   }
 
-  ZuInline operator ZuString() const { return ZuString(data(), length()); }
-  ZuInline ZuString string() const { return ZuString(data(), length()); }
+  operator ZuString() const { return ZuString{data(), length()}; }
+  ZuString string() const { return ZuString{data(), length()}; }
 
-  template <typename S> ZuInline void print(S &s) const { s << string(); }
+  template <typename S> void print(S &s) const { s << string(); }
 
-  ZuInline operator uint64_t() const { return m_val; }
+  operator uint64_t() const { return m_val; }
 
-  ZuInline int cmp(uint64_t v) const {
+  int cmp(uint64_t v) const {
     return (m_val > v) - (m_val < v);
   }
-  ZuInline bool less(uint64_t v) const { return m_val < v; }
-  ZuInline bool equals(uint64_t v) const { return m_val == v; }
+  bool less(uint64_t v) const { return m_val < v; }
+  bool equals(uint64_t v) const { return m_val == v; }
 
-  ZuInline bool operator ==(uint64_t v) const { return m_val == v; }
-  ZuInline bool operator !=(uint64_t v) const { return m_val != v; }
-  ZuInline bool operator >(uint64_t v) const { return m_val > v; }
-  ZuInline bool operator >=(uint64_t v) const { return m_val >= v; }
-  ZuInline bool operator <(uint64_t v) const { return m_val < v; }
-  ZuInline bool operator <=(uint64_t v) const { return m_val <= v; }
+  bool operator ==(uint64_t v) const { return m_val == v; }
+  bool operator !=(uint64_t v) const { return m_val != v; }
+  bool operator >(uint64_t v) const { return m_val > v; }
+  bool operator >=(uint64_t v) const { return m_val >= v; }
+  bool operator <(uint64_t v) const { return m_val < v; }
+  bool operator <=(uint64_t v) const { return m_val <= v; }
 
-  ZuInline bool operator !() const { return !m_val; }
+  bool operator !() const { return !m_val; }
 
-  ZuInline bool operator *() const { return m_val; }
+  bool operator *() const { return m_val; }
 
-  ZuInline void null() { m_val = 0; }
+  void null() { m_val = 0; }
 
-  ZuInline ZuID &update(const ZuID &id) {
+  ZuID &update(const ZuID &id) {
     if (*id) m_val = id.m_val;
     return *this;
   }
 
-  ZuInline uint32_t hash() const { return ZuHash<uint64_t>::hash(m_val); }
+  uint32_t hash() const { return ZuHash<uint64_t>::hash(m_val); }
 
   struct Traits : public ZuTraits<uint64_t> {
     enum { IsPrimitive = 0 };
@@ -153,8 +153,8 @@ private:
   uint64_t	m_val;
 };
 template <> struct ZuCmp<ZuID> : public ZuCmp0<uint64_t> {
-  ZuInline static const ZuID &null() { static const ZuID v; return v; }
-  ZuInline static bool null(uint64_t id) { return !id; }
+  static const ZuID &null() { static const ZuID v; return v; }
+  static bool null(uint64_t id) { return !id; }
 };
 template <> struct ZuPrint<ZuID> : public ZuPrintFn { };
 

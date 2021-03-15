@@ -34,25 +34,34 @@
 
 #include <zlib/ZmAssert.hpp>
 
-// get hdr from buffer
-uint32_t ZvCmd_getHdr(const uint8_t *data) {
-  return *reinterpret_cast<const ZuLittleEndian<uint32_t> *>(data);
+#include <zlib/Zfb.hpp>
+
+namespace ZvCmd {
+  namespace ID {
+    inline ZuID login()		{ static ZuID id{"login"}; return id; }
+    inline ZuID userDB()	{ static ZuID id{"userDB"}; return id; }
+    inline ZuID cmd()		{ static ZuID id{"cmd"}; return id; }
+    inline ZuID telReq()	{ static ZuID id{"telReq"}; return id; }
+    inline ZuID telemetry()	{ static ZuID id{"telemtry"}; return id; }
+  }
 }
-// return hdr length
-constexpr unsigned ZvCmd_hdrLen() { return sizeof(uint32_t); }
-// construct hdr from body size, type
-uint32_t ZvCmd_mkHdr(uint32_t size, uint32_t type) {
-  ZmAssert(size < (1U<<28));
-  ZmAssert(type < (1U<<3));
-  return size | (type<<28);
-}
-// return body length
-uint32_t ZvCmd_bodyLen(uint32_t hdr) {
-  return hdr &~ (((uint32_t)0xf)<<28);
-}
-// return body type
-uint32_t ZvCmd_bodyType(uint32_t hdr) {
-  return hdr>>28;
-}
+
+#pragma pack(push, 4)
+struct ZvCmdHdr {
+  ZuLittleEndian<uint32_t>	len = 0; // excluding hdr
+  ZuID				id;
+
+  ZvCmdHdr() = default;
+  ZvCmdHdr(const ZvCmdHdr &) = default;
+  ZvCmdHdr &operator =(const ZvCmdHdr &) = default;
+  ZvCmdHdr(ZvCmdHdr &&) = default;
+  ZvCmdHdr &operator =(ZvCmdHdr &&) = default;
+
+  // push hdr onto buffer
+  ZvCmdHdr(Zfb::Builder &fbb, ZuID id_) : len{fbb.GetSize()}, id{id_} {
+    fbb.PushBytes(reinterpret_cast<uint8_t *>(this), sizeof(ZvCmdHdr));
+  }
+};
+#pragma pack(pop)
 
 #endif /* ZvCmdNet_HPP */

@@ -51,13 +51,12 @@
 #include <zlib/ZvUserDB.hpp>
 #include <zlib/ZvSeqNo.hpp>
 #include <zlib/ZvTelemetry.hpp>
-#include <zlib/ZvCmdHost.hpp>
+#include <zlib/ZvCmdMsgFn.hpp>
 
 #include <zlib/loginreq_fbs.h>
 #include <zlib/loginack_fbs.h>
 #include <zlib/userdbreq_fbs.h>
 #include <zlib/userdback_fbs.h>
-#include <zlib/zcmd_fbs.h>
 #include <zlib/zcmdreq_fbs.h>
 #include <zlib/zcmdack_fbs.h>
 #include <zlib/telemetry_fbs.h>
@@ -85,6 +84,8 @@ struct ZvCmd_Access {
 };
 using ZvCmd_Credentials = ZuUnion<ZvCmd_Login, ZvCmd_Access>;
 
+template <typename App, typename Link> class ZvCmdClient;
+
 template <typename App_, typename Impl_>
 class ZvCmdCliLink :
     public Ztls::CliLink<App_, Impl_>,
@@ -94,6 +95,7 @@ public:
   using Impl = Impl_;
   using Base = Ztls::CliLink<App, Impl>;
 friend Base;
+template <typename, typename> friend class ZvCmdClient;
 
 private:
   using IORx = ZiIORx<Ztls::IOBuf>;
@@ -136,7 +138,7 @@ public:
 
   ZvCmdCliLink(App *app) : Base(app) { }
 
-  // Note: the calling app must ensure that calls to login()/access()
+  // Note: the caller must ensure that calls to login()/access()
   // are not overlapped - until loggedIn()/connectFailed()/disconnected()
   // no further calls must be made
   void login(
@@ -182,41 +184,26 @@ public:
   // send userDB request
   void sendUserDB(Zfb::IOBuilder &fbb, ZvSeqNo seqNo, ZvCmdUserDBAckFn fn) {
     using namespace ZvCmd;
-    fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), fbs::MsgType_UserDB));
+    ZvCmdHdr{fbb, ID::userDB()};
     m_userDBReqs.add(seqNo, ZuMv(fn));
     this->send(fbb.buf());
   }
   // send command
   void sendCmd(Zfb::IOBuilder &fbb, ZvSeqNo seqNo, ZvCmdAckFn fn) {
     using namespace ZvCmd;
-    fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), fbs::MsgType_Cmd));
+    ZvCmdHdr{fbb, ID::cmd()};
     m_cmdReqs.add(seqNo, ZuMv(fn));
     this->send(fbb.buf());
   }
-  // send app message
-  void sendApp(Zfb::IOBuilder &fbb) {
-    using namespace ZvCmd;
-    fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), fbs::MsgType_App));
-    this->send(fbb.buf());
-  }
+  // send telemetry request
   void sendTelReq(Zfb::IOBuilder &fbb, ZvSeqNo seqNo, ZvCmdTelAckFn fn) {
     using namespace ZvCmd;
-    fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), fbs::MsgType_TelReq));
+    ZvCmdHdr{fbb, ID::telReq()};
     m_telReqs.add(seqNo, ZuMv(fn));
     this->send(fbb.buf());
   }
 
   void loggedIn() { } // default
-
-  // default app handler simply disconnects
-  // >=0 - messaged consumed, continue
-  //  <0 - disconnect
-  int processApp(ZuArray<const uint8_t>) { return -1; } // default
-
-  // default telemetry handler does nothing
-  // >=0 - messaged consumed, continue
-  //  <0 - disconnect
-  int processTel(const ZvTelemetry::fbs::Telemetry *) { return 0; } // default
 
   void connected(const char *, const char *alpn) {
     if (!alpn || strcmp(alpn, "zcmd")) {
@@ -253,7 +240,7 @@ public:
 	      bytes(fbb, data.token),
 	      bytes(fbb, data.hmac)).Union()));
     }
-    fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), ZvCmd::fbs::MsgType_Login));
+    ZvCmdHdr{fbb, ZvCmd::ID::login()};
     this->send_(fbb.buf());
   }
 
@@ -269,17 +256,46 @@ public:
     ZiIORx::disconnected();
   }
 
+public:
+  int process(const uint8_t *data, unsigned len) {
+    if (ZuUnlikely(m_state.load_() == State::Down))
+      return -1; // disconnect
+
+    ZuID id;
+    int i = ZiIORx::process(data, len,
+	[&id](const uint8_t *data, unsigned len) -> int {
+	  if (ZuUnlikely(len < sizeof(ZvCmdHdr))) return INT_MAX;
+	  auto hdr = reinterpret_cast<const ZvCmdHdr *>(data);
+	  id = hdr->id;
+	  return sizeof(ZvCmdHdr) + hdr->len;
+	},
+	[this, &id](const uint8_t *data, unsigned len) -> int {
+	  data += sizeof(ZvCmdHdr), len -= sizeof(ZvCmdHdr);
+	  int i;
+	  if (ZuUnlikely(m_state.load_() == State::Login)) {
+	    cancelTimeout();
+	    if (id != ZvCmd::ID::login()) return -1;
+	    i = processLoginAck(data, len);
+	  } else
+	    i = this->app()->dispatch(id, this, data, len);
+	  if (ZuUnlikely(i <= 0)) return i;
+	  return sizeof(ZvCmdHdr) + i;
+	});
+    if (ZuUnlikely(i < 0)) m_state = State::Down;
+    return i;
+  }
+
 private:
   int processLoginAck(const uint8_t *data, unsigned len) {
     using namespace Zfb;
     using namespace Load;
     using namespace ZvUserDB;
     {
-      Verifier verifier(data, len);
+      Verifier verifier{data, len};
       if (!fbs::VerifyLoginAckBuffer(verifier)) return -1;
     }
     auto loginAck = fbs::GetLoginAck(data);
-    if (!loginAck->ok()) return -1;
+    if (!loginAck->ok()) return false;
     m_userID = loginAck->id();
     m_userName = str(loginAck->name());
     all(loginAck->roles(), [this](unsigned i, auto role_) {
@@ -293,88 +309,48 @@ private:
     impl()->loggedIn();
     return len;
   }
-
-  int processMsg(int type, const uint8_t *data, unsigned len) {
+  int processUserDB(const uint8_t *data, unsigned len) {
     using namespace Zfb;
     using namespace Load;
-    switch (type) {
-      default:
-	return -1;
-      case ZvCmd::fbs::MsgType_UserDB: {
-	using namespace ZvUserDB;
-	{
-	  Verifier verifier(data, len);
-	  if (!fbs::VerifyReqAckBuffer(verifier)) return -1;
-	}
-	auto reqAck = fbs::GetReqAck(data);
-	if (ZvCmdUserDBAckFn fn = m_userDBReqs.delVal(reqAck->seqNo()))
-	  fn(reqAck);
-      } break;
-      case ZvCmd::fbs::MsgType_Cmd: {
-	using namespace ZvCmd;
-	{
-	  Verifier verifier(data, len);
-	  if (!fbs::VerifyReqAckBuffer(verifier)) return -1;
-	}
-	auto cmdAck = fbs::GetReqAck(data);
-	if (ZvCmdAckFn fn = m_cmdReqs.delVal(cmdAck->seqNo()))
-	  fn(cmdAck);
-      } break;
-      case ZvCmd::fbs::MsgType_TelAck: {
-	using namespace ZvTelemetry;
-	{
-	  Verifier verifier(data, len);
-	  if (!fbs::VerifyReqAckBuffer(verifier)) return -1;
-	}
-	auto reqAck = fbs::GetReqAck(data);
-	if (ZvCmdTelAckFn fn = m_telReqs.delVal(reqAck->seqNo()))
-	  fn(reqAck);
-      } break;
-      case ZvCmd::fbs::MsgType_Telemetry: {
-	int i = impl()->processTel(ZuArray<const uint8_t>(data, len));
-	if (ZuUnlikely(i < 0)) return -1;
-      } break;
-      case ZvCmd::fbs::MsgType_App: {
-	int i = impl()->processApp(ZuArray<const uint8_t>(data, len));
-	if (ZuUnlikely(i < 0)) return -1;
-      } break;
+    using namespace ZvUserDB;
+    {
+      Verifier verifier{data, len};
+      if (!fbs::VerifyReqAckBuffer(verifier)) return -1;
     }
+    auto reqAck = fbs::GetReqAck(data);
+    if (ZvCmdUserDBAckFn fn = m_userDBReqs.delVal(reqAck->seqNo()))
+      fn(reqAck);
     return len;
   }
-
-public:
-  int process(const uint8_t *data, unsigned len) {
-    if (ZuUnlikely(m_state.load_() == State::Down))
-      return -1; // disconnect
-
-    int type = -1;
-    int i = ZiIORx::process(data, len,
-	[&type](const uint8_t *data, unsigned len) -> int {
-	  if (ZuUnlikely(len < ZvCmd_hdrLen())) return INT_MAX;
-	  uint32_t hdr_ = ZvCmd_getHdr(data);
-	  type = ZvCmd_bodyType(hdr_);
-	  return ZvCmd_hdrLen() + ZvCmd_bodyLen(hdr_);
-	},
-	[this, &type](const uint8_t *data, unsigned len) -> int {
-	  data += ZvCmd_hdrLen(), len -= ZvCmd_hdrLen();
-	  int i;
-	  if (ZuUnlikely(m_state.load_() == State::Login)) {
-	    cancelTimeout();
-	    if (type != ZvCmd::fbs::MsgType_Login) return -1;
-	    i = processLoginAck(data, len);
-	  } else if (ZuUnlikely(type < 0))
-	    return -1;
-	  else
-	    i = processMsg(type, data, len);
-	  if (ZuUnlikely(i < 0)) return i;
-	  if (ZuUnlikely(!i)) return i;
-	  return ZvCmd_hdrLen() + i;
-	});
-    if (ZuUnlikely(i < 0)) m_state = State::Down;
-    return i;
+  int processCmd(const uint8_t *data, unsigned len) {
+    using namespace Zfb;
+    using namespace Load;
+    using namespace ZvCmd;
+    {
+      Verifier verifier{data, len};
+      if (!fbs::VerifyReqAckBuffer(verifier)) return -1;
+    }
+    auto reqAck = fbs::GetReqAck(data);
+    if (ZvCmdAckFn fn = m_cmdReqs.delVal(reqAck->seqNo()))
+      fn(reqAck);
+    return len;
   }
+  int processTelReq(const uint8_t *data, unsigned len) {
+    using namespace Zfb;
+    using namespace Load;
+    using namespace ZvTelemetry;
+    {
+      Verifier verifier{data, len};
+      if (!fbs::VerifyReqAckBuffer(verifier)) return -1;
+    }
+    auto reqAck = fbs::GetReqAck(data);
+    if (ZvCmdTelAckFn fn = m_telReqs.delVal(reqAck->seqNo()))
+      fn(reqAck);
+    return len;
+  }
+  // default telemetry handler does nothing
+  int processTelemetry(const uint8_t *data, unsigned len) { return len; }
 
-private:
   void scheduleTimeout() {
     if (this->app()->timeout())
       this->app()->mx()->add(
@@ -400,25 +376,49 @@ private:
   uint8_t		m_userFlags = 0;
 };
 
-template <typename App_>
-class ZvCmdClient : public Ztls::Client<App_> {
+template <typename App_, typename Link_>
+class ZvCmdClient : public ZvCmdMsgFn, public Ztls::Client<App_> {
 public:
   using App = App_;
-  using Base = Ztls::Client<App>;
-friend Base;
+  using Link = Link_;
+  using MsgFn = ZvCmdMsgFn;
+  using TLS = Ztls::Client<App>;
+friend TLS;
 
   ZuInline const App *app() const { return static_cast<const App *>(this); }
   ZuInline App *app() { return static_cast<App *>(this); }
 
   void init(ZiMultiplex *mx, const ZvCf *cf) {
     static const char *alpn[] = { "zcmd", 0 };
-    Base::init(mx, cf->get("thread", true), cf->get("caPath", true), alpn);
+
+    MsgFn::init(); // dispatch linear hash table size
+
+    MsgFn::map(ZvCmd::ID::userDB(),
+	[](void *link, const uint8_t *data, unsigned len) {
+	  return static_cast<Link *>(link)->processUserDB(data, len);
+	});
+    MsgFn::map(ZvCmd::ID::cmd(),
+	[](void *link, const uint8_t *data, unsigned len) {
+	  return static_cast<Link *>(link)->processCmd(data, len);
+	});
+    MsgFn::map(ZvCmd::ID::telReq(),
+	[](void *link, const uint8_t *data, unsigned len) {
+	  return static_cast<Link *>(link)->processTelReq(data, len);
+	});
+    MsgFn::map(ZvCmd::ID::telemetry(),
+	[](void *link, const uint8_t *data, unsigned len) {
+	  return static_cast<Link *>(link)->processTelemetry(data, len);
+	});
+
+    TLS::init(mx, cf->get("thread", true), cf->get("caPath", true), alpn);
 
     m_reconnFreq = cf->getInt("reconnFreq", 0, 3600, false, 0);
     m_timeout = cf->getInt("timeout", 0, 3600, false, 0);
   }
   void final() {
-    Base::final();
+    TLS::final();
+
+    MsgFn::final();
   }
 
   unsigned reconnFreq() const { return m_reconnFreq; }

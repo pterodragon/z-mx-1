@@ -56,12 +56,14 @@
 #include <zlib/loginack_fbs.h>
 #include <zlib/userdbreq_fbs.h>
 #include <zlib/userdback_fbs.h>
-#include <zlib/zcmd_fbs.h>
 #include <zlib/zcmdreq_fbs.h>
 #include <zlib/zcmdack_fbs.h>
 
 #include <zlib/ZvCmdHost.hpp>
+#include <zlib/ZvCmdMsgFn.hpp>
 #include <zlib/ZvCmdNet.hpp>
+
+template <typename App> class ZvCmdServer;
 
 template <typename App_>
 class ZvCmdSrvLink :
@@ -71,6 +73,7 @@ public:
   using App = App_;
   using Base = Ztls::SrvLink<App, ZvCmdSrvLink<App_> >;
 friend Base;
+template <typename> friend class ZvCmdServer;
 
 private:
   using IORx = ZiIORx<Ztls::IOBuf>;
@@ -112,13 +115,6 @@ public:
     this->app()->disconnected(this);
   }
 
-  // send app message
-  void sendApp(Zfb::IOBuilder &fbb) {
-    using namespace ZvCmd;
-    fbb.PushElement(ZvCmd_mkHdr(fbb.GetSize(), fbs::MsgType_App));
-    this->send(fbb.buf());
-  }
-
 private:
   int processLogin(const uint8_t *data, unsigned len) {
     using namespace ZvUserDB;
@@ -126,7 +122,7 @@ private:
     {
       using namespace Load;
       {
-	Verifier verifier(data, len);
+	Verifier verifier{data, len};
 	if (!fbs::VerifyLoginReqBuffer(verifier)) {
 	  m_state = State::LoginFailed;
 	  return 0;
@@ -152,68 +148,54 @@ private:
 	    m_fbb.CreateVector(m_user->perms.data, Bitmap::Words),
 	    m_user->flags, 1));
     }
-    m_fbb.PushElement(ZvCmd_mkHdr(m_fbb.GetSize(), ZvCmd::fbs::MsgType_Login));
+    ZvCmdHdr{m_fbb, ZvCmd::ID::login()};
     this->send_(m_fbb.buf());
     m_state = State::Up;
     return len;
   }
-
-  // userDB, zcmd and telemetry requests are synchronously
-  // responded within the TLS thread
-  int processMsg(int type, const uint8_t *data, unsigned len) {
+  int processUserDB(const uint8_t *data, unsigned len) {
     using namespace Zfb;
     using namespace Load;
-    switch (type) {
-      default:
-	return -1;
-      case ZvCmd::fbs::MsgType_UserDB: {
-	using namespace ZvUserDB;
-	{
-	  Verifier verifier(data, len);
-	  if (!fbs::VerifyRequestBuffer(verifier)) return -1;
-	}
-	m_fbb.Clear();
-	int i = this->app()->processUserDB(
-	    m_user, m_interactive, fbs::GetRequest(data), m_fbb);
-	if (ZuUnlikely(i < 0)) return -1;
-	if (!i) return len;
-	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_UserDB));
-	this->send_(m_fbb.buf());
-      } break;
-      case ZvCmd::fbs::MsgType_Cmd: {
-	using namespace ZvCmd;
-	{
-	  Verifier verifier(data, len);
-	  if (!fbs::VerifyRequestBuffer(verifier)) return -1;
-	}
-	m_fbb.Clear();
-	int i = this->app()->processCmd(this, m_user, m_interactive,
-	    fbs::GetRequest(data), m_fbb);
-	if (ZuUnlikely(i < 0)) return -1;
-	if (!i) return len;
-	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_Cmd));
-	this->send_(m_fbb.buf());
-      } break;
-      case ZvCmd::fbs::MsgType_TelReq: {
-	using namespace ZvTelemetry;
-	{
-	  Verifier verifier(data, len);
-	  if (!fbs::VerifyRequestBuffer(verifier)) return -1;
-	}
-	m_fbb.Clear();
-	int i = this->app()->processTel(
-	    this, m_user, m_interactive, fbs::GetRequest(data), m_fbb);
-	if (ZuUnlikely(i < 0)) return -1;
-	if (!i) return len;
-	m_fbb.PushElement(ZvCmd_mkHdr(i, ZvCmd::fbs::MsgType_TelAck));
-	this->send_(m_fbb.buf());
-      } break;
-      case ZvCmd::fbs::MsgType_App: {
-	int i = this->app()->processApp(this, m_user, m_interactive,
-	    ZuArray<const uint8_t>(data, len));
-	if (ZuUnlikely(i < 0)) return -1;
-      } break;
+    using namespace ZvUserDB;
+    {
+      Verifier verifier{data, len};
+      if (!fbs::VerifyRequestBuffer(verifier)) return -1;
     }
+    m_fbb.Clear();
+    this->app()->processUserDB(
+	m_user, m_interactive, fbs::GetRequest(data), m_fbb);
+    ZvCmdHdr{m_fbb, ZvCmd::ID::userDB()};
+    this->send_(m_fbb.buf());
+    return len;
+  }
+  int processCmd(const uint8_t *data, unsigned len) {
+    using namespace Zfb;
+    using namespace Load;
+    using namespace ZvCmd;
+    {
+      Verifier verifier{data, len};
+      if (!fbs::VerifyRequestBuffer(verifier)) return -1;
+    }
+    m_fbb.Clear();
+    this->app()->processCmd(this, m_user, m_interactive,
+	fbs::GetRequest(data), m_fbb);
+    ZvCmdHdr{m_fbb, ZvCmd::ID::cmd()};
+    this->send_(m_fbb.buf());
+    return len;
+  }
+  int processTelReq(const uint8_t *data, unsigned len) {
+    using namespace Zfb;
+    using namespace Load;
+    using namespace ZvTelemetry;
+    {
+      Verifier verifier{data, len};
+      if (!fbs::VerifyRequestBuffer(verifier)) return -1;
+    }
+    m_fbb.Clear();
+    this->app()->processTelReq(
+	this, m_user, m_interactive, fbs::GetRequest(data), m_fbb);
+    ZvCmdHdr{m_fbb, ZvCmd::ID::telReq()};
+    this->send_(m_fbb.buf());
     return len;
   }
 
@@ -227,27 +209,24 @@ public:
 
     scheduleTimeout();
 
-    int type = -1;
+    ZuID id;
     int i = IORx::process(data, len,
-	[&type](const uint8_t *data, unsigned len) -> int {
-	  if (ZuUnlikely(len < ZvCmd_hdrLen())) return INT_MAX;
-	  uint32_t hdr_ = ZvCmd_getHdr(data);
-	  type = ZvCmd_bodyType(hdr_);
-	  return ZvCmd_hdrLen() + ZvCmd_bodyLen(hdr_);
+	[&id](const uint8_t *data, unsigned len) -> int {
+	  if (ZuUnlikely(len < sizeof(ZvCmdHdr))) return INT_MAX;
+	  auto hdr = reinterpret_cast<const ZvCmdHdr *>(data);
+	  id = hdr->id;
+	  return sizeof(ZvCmdHdr) + hdr->len;
 	},
-	[this, &type](const uint8_t *data, unsigned len) -> int {
-	  data += ZvCmd_hdrLen(), len -= ZvCmd_hdrLen();
+	[this, &id](const uint8_t *data, unsigned len) -> int {
+	  data += sizeof(ZvCmdHdr), len -= sizeof(ZvCmdHdr);
 	  int i;
 	  if (ZuUnlikely(m_state == State::Login)) {
-	    if (type != ZvCmd::fbs::MsgType_Login) return -1;
+	    if (id != ZvCmd::ID::login()) return -1;
 	    i = processLogin(data, len);
-	  } else if (ZuUnlikely(type < 0))
-	    return -1;
-	  else
-	    i = processMsg(type, data, len);
-	  if (ZuUnlikely(i < 0)) return i;
-	  if (ZuUnlikely(!i)) return i;
-	  return ZvCmd_hdrLen() + i;
+	  } else
+	    i = this->app()->dispatch(id, this, data, len);
+	  if (ZuUnlikely(i <= 0)) return i;
+	  return sizeof(ZvCmdHdr) + i;
 	});
     if (ZuUnlikely(i < 0)) m_state = State::Down;
     return i;
@@ -272,14 +251,16 @@ private:
 
 template <typename App_>
 class ZvCmdServer :
-    public ZvCmdHost,
+    public ZvCmdMsgFn, public ZvCmdHost,
     public Ztls::Server<App_>,
     public ZvTelemetry::Server<App_, ZvCmdSrvLink<App_> > {
 public:
   using App = App_;
+  using Link = ZvCmdSrvLink<App>;
+  using Host = ZvCmdHost;
+  using MsgFn = ZvCmdMsgFn;
   using TLS = Ztls::Server<App>;
 friend TLS;
-  using Link = ZvCmdSrvLink<App>;
   using User = ZvUserDB::User;
   using TelServer = ZvTelemetry::Server<App, Link>;
 
@@ -296,10 +277,27 @@ friend TLS;
 
   void init(ZiMultiplex *mx, const ZvCf *cf) {
     static const char *alpn[] = { "zcmd", 0 };
-    ZvCmdHost::init();
+
+    Host::init();
+    MsgFn::init(); // FIXME - dispatch linear hash table size
+
+    map(ZvCmd::ID::userDB(),
+	[](void *link, const uint8_t *data, unsigned len) {
+	  return static_cast<Link *>(link)->processUserDB(data, len);
+	});
+    map(ZvCmd::ID::cmd(),
+	[](void *link, const uint8_t *data, unsigned len) {
+	  return static_cast<Link *>(link)->processCmd(data, len);
+	});
+    map(ZvCmd::ID::telReq(),
+	[](void *link, const uint8_t *data, unsigned len) {
+	  return static_cast<Link *>(link)->processTelReq(data, len);
+	});
+
     TLS::init(mx,
 	cf->get("thread", true), cf->get("caPath", true), alpn,
 	cf->get("certPath", true), cf->get("keyPath", true));
+
     m_ip = cf->get("localIP", false, "127.0.0.1");
     m_port = cf->getInt("localPort", 1, (1<<16) - 1, false, 19400);
     m_nAccepts = cf->getInt("nAccepts", 1, 1024, false, 8);
@@ -314,16 +312,22 @@ friend TLS;
       m_userDBMaxAge = mgrCf->getInt("maxAge", 0, INT_MAX, false, 8);
     }
     m_userDB = new UserDB(this, passLen, totpRange, maxSize);
+
     if (!loadUserDB())
       throw ZtString() << "failed to load \"" << m_userDBPath << '"';
+
     TelServer::init(mx, cf->subset("telemetry"));
   }
 
   void final() {
     TelServer::final();
+
     m_userDB = nullptr;
+
     TLS::final();
-    ZvCmdHost::final();
+
+    MsgFn::final();
+    Host::final();
   }
 
   bool start() {
@@ -398,24 +402,21 @@ public:
       ZmRef<User> &user, bool &interactive) {
     return m_userDB->loginReq(login, user, interactive);
   }
-
-  int processUserDB(User *user, bool interactive,
+  void processUserDB(User *user, bool interactive,
       const ZvUserDB::fbs::Request *in, Zfb::Builder &fbb) {
     fbb.Finish(m_userDB->request(user, interactive, in, fbb));
     if (m_userDB->modified())
       this->run(
 	  ZmFn<>{this, [](ZvCmdServer *server) { server->saveUserDB(); }},
 	  ZmTimeNow(m_userDBFreq), ZmScheduler::Advance, &m_userDBTimer);
-    return fbb.GetSize();
   }
-
-  int processCmd(Link *link, User *user, bool interactive,
+  void processCmd(Link *link, User *user, bool interactive,
       const ZvCmd::fbs::Request *in, Zfb::Builder &fbb) {
     if (m_cmdPerm < 0 || !m_userDB->ok(user, interactive, m_cmdPerm)) {
       fbb.Finish(ZvCmd::fbs::CreateReqAck(fbb,
 	    in->seqNo(), __LINE__,
 	    Zfb::Save::str(fbb, "permission denied\n")));
-      return fbb.GetSize();
+      return;
     }
     auto cmd_ = in->cmd();
     ZtArray<ZtString> args;
@@ -426,34 +427,33 @@ public:
       .app_ = app(), .link_ = link, .user_ = user,
       .interactive = interactive
     };
-    ZvCmdHost::processCmd(&ctx, args);
+    Host::processCmd(&ctx, args);
     fbb.Finish(ZvCmd::fbs::CreateReqAck(
 	  fbb, in->seqNo(), ctx.code, Zfb::Save::str(fbb, ctx.out)));
-    return fbb.GetSize();
   }
-
-  int processTel(Link *link, User *user, bool interactive,
+  void processTelReq(Link *link, User *user, bool interactive,
       const ZvTelemetry::fbs::Request *in, Zfb::Builder &fbb) {
     using namespace ZvTelemetry;
     if (m_telPerm < 0 || !m_userDB->ok(user, interactive, m_telPerm)) {
       using namespace Zfb::Save;
       fbb.Finish(fbs::CreateReqAck(fbb, in->seqNo(), false));
-      return fbb.GetSize();
+      return;
     }
     TelServer::process(link, in);
     using namespace Zfb::Save;
     fbb.Finish(fbs::CreateReqAck(fbb, in->seqNo(), true));
-    return fbb.GetSize();
   }
-
-  // default app msg handler simply disconnects
-  // >=0 - message processed
-  //  <0 - disconnect
-  int processApp(Link *, User *, bool interactive,
-      ZuArray<const uint8_t> data) { return -1; }
 
   void disconnected(Link *link) {
     TelServer::disconnected(link);
+  }
+
+  // ZvCmdHost virtual functions
+  MsgFn *msgFn() {
+    return static_cast<MsgFn *>(this);
+  }
+  void send(void *link, ZmRef<ZiIOBuf<>> buf) {
+    return static_cast<Link *>(link)->send(ZuMv(buf));
   }
 
 private:

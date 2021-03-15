@@ -204,32 +204,32 @@ public:
       return *this;
     }
 
-    ZuInline int cmp(const KV &d) const {
+    int cmp(const KV &d) const {
       int i;
       if (i = Cmp::cmp(key(), d.key())) return i;
-      return ValCmp::cmp(value(), d.value());
+      return ValCmp::cmp(val(), d.val());
     }
-    ZuInline bool less(const KV &d) const {
+    bool less(const KV &d) const {
       return
 	!Cmp::less(d.key(), key()) &&
-	ValCmp::less(value(), d.value());
+	ValCmp::less(val(), d.val());
     }
-    ZuInline bool equals(const KV &d) const {
+    bool equals(const KV &d) const {
       return
 	Cmp::equals(key(), d.key()) &&
-	ValCmp::equals(value(), d.value());
+	ValCmp::equals(val(), d.val());
     }
-    ZuInline bool operator ==(const KV &d) const { return equals(d); }
-    ZuInline bool operator !=(const KV &d) const { return !equals(d); }
-    ZuInline bool operator >(const KV &d) const { return d.less(*this); }
-    ZuInline bool operator >=(const KV &d) const { return !less(d); }
-    ZuInline bool operator <(const KV &d) const { return less(d); }
-    ZuInline bool operator <=(const KV &d) const { return !d.less(*this); }
+    bool operator ==(const KV &d) const { return equals(d); }
+    bool operator !=(const KV &d) const { return !equals(d); }
+    bool operator >(const KV &d) const { return d.less(*this); }
+    bool operator >=(const KV &d) const { return !less(d); }
+    bool operator <(const KV &d) const { return less(d); }
+    bool operator <=(const KV &d) const { return !d.less(*this); }
 
-    ZuInline const auto &key() const { return this->template p<0>(); }
-    ZuInline auto &key() { return this->template p<0>(); }
-    ZuInline const auto &value() const { return this->template p<1>(); }
-    ZuInline auto &value() { return this->template p<1>(); }
+    const auto &key() const { return this->template p<0>(); }
+    auto &key() { return this->template p<0>(); }
+    const auto &val() const { return this->template p<1>(); }
+    auto &val() { return this->template p<1>(); }
   };
 
   ZuInline ZmLHash_Node() { }
@@ -264,7 +264,7 @@ private:
     if (!m_u)
       new (m_kv) KV{ZuFwd<Key_>(key), ZuFwd<Val_>(value)};
     else
-      kv().key() = ZuFwd<Key_>(key), kv().value() = ZuFwd<Val_>(value);
+      kv().key() = ZuFwd<Key_>(key), kv().val() = ZuFwd<Val_>(value);
     m_u = (next<<3U) | (head<<2U) | (tail<<1U) | 1U;
   }
   void null() {
@@ -323,8 +323,8 @@ private:
 
   const Key &key() const { return kv().key(); }
   Key &key() { return kv().key(); }
-  const Val &value() const { return kv().value(); }
-  Val &value() { return kv().value(); }
+  const Val &val() const { return kv().val(); }
+  Val &val() { return kv().val(); }
 
 public:
   struct Traits : public ZuBaseTraits<ZmLHash_Node> {
@@ -425,7 +425,7 @@ protected:
     for (unsigned i = 0; i < (size>>1U); i++)
       if (!!oldTable[i])
 	static_cast<Hash *>(this)->add__(
-	    ZuMv(oldTable[i].key()), ZuMv(oldTable[i].value()),
+	    ZuMv(oldTable[i].key()), ZuMv(oldTable[i].val()),
 	    HashFn::hash(oldTable[i].key()));
     Ops::destroyItems(oldTable, (size>>1U));
     Ops::free(oldTable);
@@ -812,7 +812,7 @@ private:
   }
   const Val &val__(int slot) const {
     if (ZuUnlikely(slot < 0)) return ValCmp::null();
-    return m_table[slot].value();
+    return m_table[slot].val();
   }
 
 public:
@@ -852,7 +852,7 @@ private:
     if (!m_table[slot] || !m_table[slot].head()) return -1;
     for (;;) {
       if (ICmp::equals(m_table[slot].key(), index) &&
-	  ValCmp::equals(m_table[slot].value(), val)) return slot;
+	  ValCmp::equals(m_table[slot].val(), val)) return slot;
       if (m_table[slot].tail()) return -1;
       slot = m_table[slot].next();
     }
@@ -866,7 +866,7 @@ private:
     int prev = -1;
     for (;;) {
       if (ICmp::equals(m_table[slot].key(), index) &&
-	  ValCmp::equals(m_table[slot].value(), val))
+	  ValCmp::equals(m_table[slot].val(), val))
 	return prev < 0 ? (-slot - 2) : prev;
       if (m_table[slot].tail()) return -1;
       prev = slot, slot = m_table[slot].next();
@@ -1013,7 +1013,7 @@ private:
   Key delVal__(int prev) {
     if (prev == -1) return Cmp::null();
     int slot = prev < 0 ? (-prev - 2) : m_table[prev].next();
-    Val val{ZuMv(m_table[slot].value())};
+    Val val{ZuMv(m_table[slot].val())};
     del___(prev);
     return val;
   }

@@ -29,6 +29,11 @@ void ZvCmdMsgFn::final()
   m_fnMap = {};
 }
 
+void ZvCmdMsgFn::deflt(DefltFn fn)
+{
+  m_defltFn = fn;
+}
+
 void ZvCmdMsgFn::map(ZuID id, Fn fn)
 {
   Guard guard(m_lock);
@@ -43,5 +48,6 @@ int ZvCmdMsgFn::dispatch(
 {
   if (auto node = m_fnMap->find(id))
     return (node->val())(link, data, len);
+  if (m_defltFn) return (m_defltFn)(link, id, data, len);
   return -1;
 }

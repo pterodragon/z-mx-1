@@ -42,11 +42,13 @@
 class ZvAPI ZvCmdMsgFn {
 public:
   typedef int (*Fn)(void *, const uint8_t *, unsigned);
+  typedef int (*DefltFn)(void *, ZuID, const uint8_t *, unsigned);
 
   void init();
   void final();
 
   void map(ZuID id, Fn fn);
+  void deflt(DefltFn fn);
 
   int dispatch(ZuID id, void *link, const uint8_t *data, unsigned len);
 
@@ -61,6 +63,7 @@ private:
 
   Lock			m_lock;
     ZmRef<FnMap>	  m_fnMap;
+    DefltFn		  m_defltFn = nullptr;
 };
 
 #endif /* ZvCmdMsgFn_HPP */

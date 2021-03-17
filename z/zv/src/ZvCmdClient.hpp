@@ -101,8 +101,8 @@ private:
   using IORx = ZiIORx<Ztls::IOBuf>;
 
 public:
-  ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
-  ZuInline Impl *impl() { return static_cast<Impl *>(this); }
+  const Impl *impl() const { return static_cast<const Impl *>(this); }
+  Impl *impl() { return static_cast<Impl *>(this); }
 
 private:
   using Credentials = ZvCmd_Credentials;
@@ -136,7 +136,7 @@ public:
     };
   };
 
-  ZvCmdCliLink(App *app) : Base(app) { }
+  ZvCmdCliLink(App *app) : Base{app} { }
 
   // Note: the caller must ensure that calls to login()/access()
   // are not overlapped - until loggedIn()/connectFailed()/disconnected()
@@ -171,14 +171,14 @@ public:
     this->connect(ZuMv(server), port);
   }
 
-  ZuInline int state() const { return m_state; }
+  int state() const { return m_state; }
 
   // available once logged in
-  ZuInline uint64_t userID() const { return m_userID; }
-  ZuInline const ZtString &userName() const { return m_userName; }
-  ZuInline const ZtArray<ZtString> &roles() const { return m_roles; }
-  ZuInline const Bitmap &perms() const { return m_perms; }
-  ZuInline uint8_t flags() const { return m_userFlags; }
+  uint64_t userID() const { return m_userID; }
+  const ZtString &userName() const { return m_userName; }
+  const ZtArray<ZtString> &roles() const { return m_roles; }
+  const Bitmap &perms() const { return m_perms; }
+  uint8_t flags() const { return m_userFlags; }
 
 public:
   // send userDB request
@@ -391,7 +391,7 @@ friend TLS;
   void init(ZiMultiplex *mx, const ZvCf *cf) {
     static const char *alpn[] = { "zcmd", 0 };
 
-    MsgFn::init(); // dispatch linear hash table size
+    MsgFn::init(); // FIXME - dispatch hash table size
 
     MsgFn::map(ZvCmd::ID::userDB(),
 	[](void *link, const uint8_t *data, unsigned len) {

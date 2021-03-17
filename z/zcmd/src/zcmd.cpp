@@ -237,10 +237,6 @@ friend Link;
     m_solo = true;
     m_soloMsg = ZuMv(s);
   }
-  void target(ZuString s) {
-    m_prompt.clear();
-    m_prompt << s << "] ";
-  }
 
   template <typename ...Args>
   void login(Args &&... args) {
@@ -273,6 +269,10 @@ friend Link;
   }
   void send(void *link, ZmRef<ZiIOBuf<>> buf) {
     return static_cast<Link *>(link)->send(ZuMv(buf));
+  }
+
+  void target(ZuString s) {
+    m_cli.prompt(ZtArray<uint8_t>{} << s << "] ");
   }
 
 private:
@@ -1594,7 +1594,7 @@ int main(int argc, char **argv)
     }
     client->solo(ZuMv(solo));
   } else
-    client->target(argv[1]);
+    m_prompt = ZtArray<uint8_t>{} << argv[1] << "] ";
 
   if (keyID)
     client->access(server, port, keyID, secret);

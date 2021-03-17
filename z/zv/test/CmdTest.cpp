@@ -24,8 +24,15 @@
 
 #include <zlib/ZvCmdServer.hpp>
 
-class ZvCmdTest :
-    public ZmPolymorph, public ZvCmdServer<ZvCmdTest> {
+class CmdTest;
+
+struct Link : public ZvCmdSrvLink<CmdTest, Link> {
+  using Base = ZvCmdSrvLink<CmdTest, Link>;
+  Link(CmdTest *app) : Base{app} { }
+};
+
+class CmdTest :
+    public ZmPolymorph, public ZvCmdServer<CmdTest, Link> {
 public:
   void init(ZiMultiplex *mx, const ZvCf *cf) {
     m_uptime.now();
@@ -46,7 +53,7 @@ public:
       }}, "test nak", "");
     addCmd("quit", "", ZvCmdFn{
       [](ZvCmdContext *ctx) {
-	ctx->app<ZvCmdTest>()->post();
+	ctx->app<CmdTest>()->post();
 	ctx->out << "quitting...\n";
       }}, "quit", "");
   }
@@ -111,9 +118,9 @@ int main(int argc, char **argv)
 	  .thread(3, [](auto &t) { t.isolated(1); }); })
 	.rxThread(1).txThread(2));
 
-  ZmRef<ZvCmdTest> server = new ZvCmdTest();
+  ZmRef<CmdTest> server = new CmdTest();
 
-  ZmTrap::sigintFn(ZmFn<>{server, [](ZvCmdTest *server) { server->post(); }});
+  ZmTrap::sigintFn(ZmFn<>{server, [](CmdTest *server) { server->post(); }});
   ZmTrap::trap();
 
   mx->start();

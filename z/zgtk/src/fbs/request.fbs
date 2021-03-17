@@ -1,3 +1,4 @@
+include "version.fbs";
 include "link.fbs";
 namespace ZDash.fbs;
 table Connect {
@@ -5,9 +6,10 @@ table Connect {
   port		: uint16;
 }
 union ReqData {
+  Version	: VerReq,
   Connect	: Connect,
   Disconnect	: LinkID,
-  Links		: Links,
+  Links		: LinkList,
   Select	: LinkID
 }
 table Request {

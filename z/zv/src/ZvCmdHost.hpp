@@ -87,6 +87,8 @@ public:
   virtual ZvCmdMsgFn *msgFn() { return nullptr; }
   virtual void send(void *link, ZmRef<ZiIOBuf<>>) { }
 
+  virtual void target(ZuString) { }
+
 private:
   int help(ZvCmdContext *);
 

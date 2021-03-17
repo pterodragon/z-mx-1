@@ -63,17 +63,18 @@
 #include <zlib/ZvCmdMsgFn.hpp>
 #include <zlib/ZvCmdNet.hpp>
 
-template <typename App> class ZvCmdServer;
+template <typename App, typename Link> class ZvCmdServer;
 
-template <typename App_>
+template <typename App_, typename Impl_>
 class ZvCmdSrvLink :
-    public Ztls::SrvLink<App_, ZvCmdSrvLink<App_> >,
+    public Ztls::SrvLink<App_, Impl_>,
     public ZiIORx<Ztls::IOBuf> {
 public:
   using App = App_;
-  using Base = Ztls::SrvLink<App, ZvCmdSrvLink<App_> >;
+  using Impl = Impl_;
+  using Base = Ztls::SrvLink<App, Impl>;
 friend Base;
-template <typename> friend class ZvCmdServer;
+template <typename, typename> friend class ZvCmdServer;
 
 private:
   using IORx = ZiIORx<Ztls::IOBuf>;
@@ -81,6 +82,9 @@ private:
   using Bitmap = ZvUserDB::Bitmap;
 
 public:
+  const Impl *impl() const { return static_cast<const Impl *>(this); }
+  Impl *impl() { return static_cast<Impl *>(this); }
+
   struct State {
     enum {
       Down = 0,
@@ -90,7 +94,7 @@ public:
     };
   };
 
-  ZvCmdSrvLink(App *app) : Base(app) { }
+  ZvCmdSrvLink(App *app) : Base{app} { }
 
   void connected(const char *, const char *alpn) {
     scheduleTimeout();
@@ -112,7 +116,7 @@ public:
 
     IORx::disconnected();
 
-    this->app()->disconnected(this);
+    this->app()->disconnected(impl());
   }
 
 private:
@@ -177,7 +181,7 @@ private:
       if (!fbs::VerifyRequestBuffer(verifier)) return -1;
     }
     m_fbb.Clear();
-    this->app()->processCmd(this, m_user, m_interactive,
+    this->app()->processCmd(impl(), m_user, m_interactive,
 	fbs::GetRequest(data), m_fbb);
     ZvCmdHdr{m_fbb, ZvCmd::ID::cmd()};
     this->send_(m_fbb.buf());
@@ -193,7 +197,7 @@ private:
     }
     m_fbb.Clear();
     this->app()->processTelReq(
-	this, m_user, m_interactive, fbs::GetRequest(data), m_fbb);
+	impl(), m_user, m_interactive, fbs::GetRequest(data), m_fbb);
     ZvCmdHdr{m_fbb, ZvCmd::ID::telReq()};
     this->send_(m_fbb.buf());
     return len;
@@ -224,7 +228,7 @@ public:
 	    if (id != ZvCmd::ID::login()) return -1;
 	    i = processLogin(data, len);
 	  } else
-	    i = this->app()->dispatch(id, this, data, len);
+	    i = this->app()->dispatch(id, impl(), data, len);
 	  if (ZuUnlikely(i <= 0)) return i;
 	  return sizeof(ZvCmdHdr) + i;
 	});
@@ -249,14 +253,14 @@ private:
   bool			m_interactive = false;
 };
 
-template <typename App_>
+template <typename App_, typename Link_>
 class ZvCmdServer :
     public ZvCmdMsgFn, public ZvCmdHost,
     public Ztls::Server<App_>,
-    public ZvTelemetry::Server<App_, ZvCmdSrvLink<App_> > {
+    public ZvTelemetry::Server<App_, Link_> {
 public:
   using App = App_;
-  using Link = ZvCmdSrvLink<App>;
+  using Link = Link_;
   using Host = ZvCmdHost;
   using MsgFn = ZvCmdMsgFn;
   using TLS = Ztls::Server<App>;
@@ -279,7 +283,7 @@ friend TLS;
     static const char *alpn[] = { "zcmd", 0 };
 
     Host::init();
-    MsgFn::init(); // FIXME - dispatch linear hash table size
+    MsgFn::init(); // FIXME - dispatch hash table size
 
     map(ZvCmd::ID::userDB(),
 	[](void *link, const uint8_t *data, unsigned len) {
@@ -346,7 +350,7 @@ private:
 
   using TCP = typename Link::TCP;
   TCP *accepted(const ZiCxnInfo &ci) {
-    return new TCP(new Link(app()), ci);
+    return new TCP(new Link{app()}, ci);
   }
 public:
   ZuInline ZiIP localIP() const { return m_ip; }

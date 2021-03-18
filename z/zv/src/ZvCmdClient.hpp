@@ -93,7 +93,7 @@ class ZvCmdCliLink :
 public:
   using App = App_;
   using Impl = Impl_;
-  using Base = Ztls::CliLink<App, Impl>;
+  using Base = Ztls::CliLink<App_, Impl_>;
 friend Base;
 template <typename, typename> friend class ZvCmdClient;
 
@@ -377,7 +377,9 @@ private:
 };
 
 template <typename App_, typename Link_>
-class ZvCmdClient : public ZvCmdMsgFn, public Ztls::Client<App_> {
+class ZvCmdClient :
+    public ZvCmdMsgFn,
+    public Ztls::Client<App_> {
 public:
   using App = App_;
   using Link = Link_;

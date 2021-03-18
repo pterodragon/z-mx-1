@@ -272,7 +272,7 @@ friend Link;
   }
 
   void target(ZuString s) {
-    m_cli.prompt(ZtArray<uint8_t>{} << s << "] ");
+    m_prompt = ZtArray<uint8_t>{} << s << "] ";
   }
 
 private:
@@ -1561,7 +1561,7 @@ int main(int argc, char **argv)
 
   ZmRef<ZCmd> client = new ZCmd();
 
-  ZmTrap::sigintFn(ZmFn<>{client, [](ZCmd *client) { client->post(); }});
+  ZmTrap::sigintFn({client, [](ZCmd *client) { client->post(); }});
   ZmTrap::trap();
 
   {
@@ -1594,7 +1594,7 @@ int main(int argc, char **argv)
     }
     client->solo(ZuMv(solo));
   } else
-    m_prompt = ZtArray<uint8_t>{} << argv[1] << "] ";
+    client->target(argv[1]);
 
   if (keyID)
     client->access(server, port, keyID, secret);

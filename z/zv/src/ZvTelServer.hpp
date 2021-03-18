@@ -185,10 +185,10 @@ private:
 	    ZmRBTreeLock<ZmRWLock> > > > >;
 
 public:
-  ZuInline const App *app() const { return static_cast<const App *>(this); }
-  ZuInline App *app() { return static_cast<App *>(this); }
+  const App *app() const { return static_cast<const App *>(this); }
+  App *app() { return static_cast<App *>(this); }
 
-  ZuInline static App *app(const Link *link) {
+  static App *app(const Link *link) {
     return static_cast<const App *>(link->app());
   }
 

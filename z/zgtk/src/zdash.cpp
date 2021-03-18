@@ -25,6 +25,7 @@
 #include <zlib/ZuArrayN.hpp>
 #include <zlib/ZuPolymorph.hpp>
 #include <zlib/ZuByteSwap.hpp>
+#include <zlib/ZuVersion.hpp>
 
 #include <zlib/ZmPlatform.hpp>
 #include <zlib/ZmTrap.hpp>
@@ -815,15 +816,16 @@ namespace GtkTree {
   };
 }
 
-class ZDash;
+class ZDash_Cli;
+class ZDash_Srv;
 
-class CliLink_ : public ZvCmdCliLink<ZDash, CliLink_> {
+class CliLink_ : public ZvCmdCliLink<ZDash_Cli, CliLink_> {
 public:
-  using Base = ZvCmdCliLink<ZDash, CliLink_>;
+  using Base = ZvCmdCliLink<ZDash_Cli, CliLink_>;
   using Key = ZuPair<ZuString, uint16_t>;
   Key key() const { return {this->server(), this->port()}; }
 
-  CliLink_(ZDash *);
+  CliLink_(ZDash_Cli *);
 
   void loggedIn();
   void disconnected();
@@ -851,10 +853,10 @@ using CliLinks =
 	      ZmRBTreeHeapID<CliLink_HeapID>>>>>>>;
 using CliLink = CliLinks::Node;
 
-class SrvLink : public ZvCmdSrvLink<ZDash, SrvLink> {
+class SrvLink : public ZvCmdSrvLink<ZDash_Srv, SrvLink> {
 public:
-  using Base = ZvCmdSrvLink<ZDash, SrvLink>;
-  SrvLink(ZDash *app);
+  using Base = ZvCmdSrvLink<ZDash_Srv, SrvLink>;
+  SrvLink(ZDash_Srv *app);
 
   int processApp(const uint8_t *data, unsigned len);
   int processDeflt(ZuID id, const uint8_t *data, unsigned len);
@@ -862,17 +864,22 @@ public:
   // FIXME - selected CliLink
 };
 
+class ZDash;
+
+class ZDash_Cli : public ZvCmdClient<ZDash_Cli, CliLink_> { };
+class ZDash_Srv : public ZvCmdServer<ZDash_Srv, SrvLink> {
+public:
+  void telemetry(ZvTelemetry::App &data);
+};
+
 class ZDash :
     public ZmPolymorph,
-    public ZvCmdClient<ZDash, CliLink_>,
-    public ZvCmdServer<ZDash, SrvLink>,
+    public ZDash_Cli,
+    public ZDash_Srv,
     public ZGtk::App {
 public:
-  using Ztls::Engine<ZDash>::run;
-  using Ztls::Engine<ZDash>::invoke;
-
-  using Client = ZvCmdClient<ZDash, CliLink_>;
-  using Server = ZvCmdServer<ZDash, SrvLink>;
+  using Client = ZvCmdClient<ZDash_Cli, CliLink_>;
+  using Server = ZvCmdServer<ZDash_Srv, SrvLink>;
   using User = Server::User;
 
   class TelRing : public ZiRing {
@@ -946,6 +953,9 @@ public:
 	  ": reset failed - " << Zi::resultName(r);
     }
 
+    m_role = cf->getEnum<ZvTelemetry::AppRole::Map>(
+	"appRole", false, ZvTelemetry::AppRole::Dev);
+
     m_gladePath = cf->get("gtkGlade", true);
     m_stylePath = cf->get("gtkStyle");
 
@@ -984,6 +994,8 @@ public:
 
     ZmTrap::sigintFn(ZmFn<>{this, [](ZDash *this_) { this_->post(); }});
     ZmTrap::trap();
+
+    m_uptime.now();
 
     i18n(
 	cf->get("i18n_domain", false, "zdash"),
@@ -1082,7 +1094,17 @@ public:
 
   void post() { m_done.post(); }
   void wait() { m_done.wait(); }
-  
+
+  void telemetry(ZvTelemetry::App &data) {
+    using namespace ZvTelemetry;
+    data.id = "ZDash";
+    data.version = ZuVerName();
+    data.uptime = m_uptime;
+    data.role = m_role;
+    data.rag(RAG::Green);
+  }
+
+private:
   template <typename ...Args>
   ZuInline void gtkRun(Args &&... args) {
     ZGtk::App::run(ZuFwd<Args>(args)...);
@@ -1132,7 +1154,7 @@ public:
     unsigned i = 0, n;
     while (m_telRing->shift([](
 	    CliLink_ *link, const ZuArray<const uint8_t> &msg) {
-      link->app()->processTel2(link, msg);
+      static_cast<ZDash *>(link->app())->processTel2(link, msg);
     })) {
       n = --m_telCount;
       if (ZuUnlikely(n == ~0U)) n = m_telCount = 0;
@@ -1341,6 +1363,8 @@ private:
 
   Zfb::IOBuilder	m_fbb;
 
+  int			m_role;	// ZvTelemetry::AppRole
+  ZtDate		m_uptime;
   unsigned		m_tid = 0;
 
   ZvRingParams		m_telRingParams;
@@ -1363,40 +1387,45 @@ private:
   GtkTree::Model	*m_gtkModel;
 };
 
-inline CliLink_::CliLink_(ZDash *app) : Base{app} { }
+inline void ZDash_Srv::telemetry(ZvTelemetry::App &data)
+{
+  static_cast<ZDash *>(this)->telemetry(data);
+}
+
+inline CliLink_::CliLink_(ZDash_Cli *app) : Base{app} { }
 
 inline void CliLink_::loggedIn()
 {
-  this->app()->loggedIn(this);
+  static_cast<ZDash *>(this->app())->loggedIn(this);
 }
 inline void CliLink_::disconnected()
 {
-  this->app()->disconnected(this);
+  static_cast<ZDash *>(this->app())->disconnected(this);
   Base::disconnected();
 }
 inline void CliLink_::connectFailed(bool transient)
 {
-  this->app()->connectFailed(this, transient);
+  static_cast<ZDash *>(this->app())->connectFailed(this, transient);
 }
 
 inline int CliLink_::processTelemetry(const uint8_t *data, unsigned len)
 {
-  return this->app()->processTelemetry(this, data, len);
+  return static_cast<ZDash *>(this->app())->processTelemetry(this, data, len);
 }
 inline int CliLink_::processDeflt(ZuID id, const uint8_t *data, unsigned len)
 {
-  return this->app()->processDeflt(this, id, data, len);
+  return static_cast<ZDash *>(this->app())->processDeflt(this, id, data, len);
 }
 
-inline SrvLink::SrvLink(ZDash *app) : Base{app} { }
+inline SrvLink::SrvLink(ZDash_Srv *app) : Base{app} { }
 
 inline int SrvLink::processApp(const uint8_t *data, unsigned len)
 {
-  return this->app()->processApp(this, data, len);
+  return static_cast<ZDash *>(this->app())->processApp(this, data, len);
 }
 inline int SrvLink::processDeflt(ZuID id, const uint8_t *data, unsigned len)
 {
-  return this->app()->processDeflt(this, id, data, len);
+  return static_cast<ZDash *>(this->app())->processDeflt(this, id, data, len);
 }
 
 int main(int argc, char **argv)

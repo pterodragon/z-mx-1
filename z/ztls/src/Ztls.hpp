@@ -99,8 +99,8 @@ public:
   using ImplRef = typename TCP::LinkRef;
 friend TCP;
 
-  ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
-  ZuInline Impl *impl() { return static_cast<Impl *>(this); }
+  const Impl *impl() const { return static_cast<const Impl *>(this); }
+  Impl *impl() { return static_cast<Impl *>(this); }
 
   Link(App *app) : m_app(app) {
     mbedtls_ssl_init(&m_ssl);
@@ -111,11 +111,11 @@ friend TCP;
     mbedtls_ssl_free(&m_ssl);
   }
 
-  ZuInline App *app() const { return m_app; }
-  ZuInline TCP *tcp() const { return m_tcp; }
+  App *app() const { return m_app; }
+  TCP *tcp() const { return m_tcp; }
 
 protected:
-  ZuInline mbedtls_ssl_context *ssl() { return &m_ssl; }
+  mbedtls_ssl_context *ssl() { return &m_ssl; }
 
 private:
   void connected_(TCP *tcp, ZiIOContext &io) {
@@ -468,8 +468,8 @@ public:
   using TCP = CliLinkTCP<Impl>;
   using Base = CliLink_<App, Impl, TCP>;
 friend Base;
-  ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
-  ZuInline Impl *impl() { return static_cast<Impl *>(this); }
+  const Impl *impl() const { return static_cast<const Impl *>(this); }
+  Impl *impl() { return static_cast<Impl *>(this); }
 
   CliLink(App *app) : Base(app) {
     mbedtls_ssl_session_init(&m_session);
@@ -610,8 +610,8 @@ public:
   using Base = SrvLink_<App, Impl, TCP>;
 friend Base;
 
-  ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
-  ZuInline Impl *impl() { return static_cast<Impl *>(this); }
+  const Impl *impl() const { return static_cast<const Impl *>(this); }
+  Impl *impl() { return static_cast<Impl *>(this); }
 
   SrvLink(App *app) : Base(app) { }
 
@@ -629,8 +629,8 @@ template <typename, typename, typename, typename> friend class Link;
 template <typename, typename> friend class CliLink;
 template <typename, typename> friend class SrvLink;
 
-  ZuInline const App *app() const { return static_cast<const App *>(this); }
-  ZuInline App *app() { return static_cast<App *>(this); }
+  const App *app() const { return static_cast<const App *>(this); }
+  App *app() { return static_cast<App *>(this); }
 
   Engine() {
     mbedtls_x509_crt_init(&m_cacert);
@@ -686,16 +686,16 @@ private:
 public:
   void final() { }
 
-  ZuInline ZiMultiplex *mx() const { return m_mx; }
+  ZiMultiplex *mx() const { return m_mx; }
 
-  template <typename ...Args> ZuInline void run(Args &&... args)
+  template <typename ...Args> void run(Args &&... args)
     { m_mx->run(m_thread, ZuFwd<Args>(args)...); }
-  template <typename ...Args> ZuInline void invoke(Args &&... args)
+  template <typename ...Args> void invoke(Args &&... args)
     { m_mx->invoke(m_thread, ZuFwd<Args>(args)...); }
 
 protected:
   // TLS thread
-  ZuInline mbedtls_ssl_config *conf() { return &m_conf; }
+  mbedtls_ssl_config *conf() { return &m_conf; }
 
   void exception(ZmRef<ZeEvent> e) const { ZeLog::log(ZuMv(e)); } // default
 
@@ -783,8 +783,8 @@ public:
   using Base = Engine<App>;
 friend Base;
 
-  ZuInline const App *app() const { return static_cast<const App *>(this); }
-  ZuInline App *app() { return static_cast<App *>(this); }
+  const App *app() const { return static_cast<const App *>(this); }
+  App *app() { return static_cast<App *>(this); }
 
   bool init(ZiMultiplex *mx, ZuString thread,
       ZuString caPath, const char **alpn) {
@@ -850,8 +850,8 @@ public:
   using Base = Engine<App>;
 friend Base;
 
-  ZuInline const App *app() const { return static_cast<const App *>(this); }
-  ZuInline App *app() { return static_cast<App *>(this); }
+  const App *app() const { return static_cast<const App *>(this); }
+  App *app() { return static_cast<App *>(this); }
 
   Server() {
     mbedtls_x509_crt_init(&m_cert);

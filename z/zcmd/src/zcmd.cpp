@@ -194,6 +194,10 @@ friend Link;
     if (m_interactive)
       m_cli.init(Zrl::App{
 	.error = [this](ZuString s) { std::cerr << s << '\n'; post(); },
+	.prompt = [this](ZtArray<uint8_t> &s) {
+	  ZmGuard guard(m_promptLock);
+	  if (m_prompt) s = ZuMv(m_prompt);
+	},
 	.enter = [this](ZuString s) -> bool {
 	  exec(ZtString{s});
 	  m_executed.wait();
@@ -264,15 +268,19 @@ friend Link;
   int code() const { return m_code; }
 
   // ZvCmdHost virtual functions
-  ZvCmdMsgFn *msgFn() {
-    return static_cast<ZvCmdMsgFn *>(this);
+  ZvCmdDispatcher *dispatcher() {
+    return static_cast<ZvCmdDispatcher *>(this);
   }
   void send(void *link, ZmRef<ZiIOBuf<>> buf) {
     return static_cast<Link *>(link)->send(ZuMv(buf));
   }
 
   void target(ZuString s) {
+    ZmGuard guard(m_promptLock);
     m_prompt = ZtArray<uint8_t>{} << s << "] ";
+  }
+  ZtString getpass(ZuString prompt, unsigned passLen) {
+    return m_cli.getpass(prompt, passLen);
   }
 
 private:
@@ -295,7 +303,7 @@ private:
 	std::cout <<
 	  "For a list of valid commands: help\n"
 	  "For help on a particular command: COMMAND --help\n" << std::flush;
-	m_cli.start(ZuMv(m_prompt));
+	m_cli.start();
       } else {
 	ZtString cmd{4096};
 	while (fgets(cmd, cmd.size() - 1, stdin)) {
@@ -1441,8 +1449,10 @@ private:
 
   Zrl::Globber		m_globber;
   Zrl::History		m_history{100};
-  ZtArray<uint8_t>	m_prompt;
   Zrl::CLI		m_cli;
+
+  ZmPLock		m_promptLock;
+    ZtArray<uint8_t>	  m_prompt;
 
   ZmRef<Link>		m_link;
   ZvSeqNo		m_seqNo = 0;
@@ -1487,8 +1497,8 @@ int main(int argc, char **argv)
   ZeLog::start();
 
   bool interactive = isatty(fileno(stdin));
-  auto keyID = ::getenv("ZCMD_KEY_ID");
-  auto secret = ::getenv("ZCMD_KEY_SECRET");
+  ZuString keyID = ::getenv("ZCMD_KEY_ID");
+  ZuString secret = ::getenv("ZCMD_KEY_SECRET");
   ZtString user, server;
   ZuBox<unsigned> port;
 
@@ -1528,7 +1538,7 @@ int main(int argc, char **argv)
   }
   if (!server || !*port || !port) usage();
   if (user)
-    keyID = secret = nullptr;
+    keyID = secret = {};
   else if (!keyID) {
     std::cerr << "set ZCMD_KEY_ID and ZCMD_KEY_SECRET "
       "to use without username\n" << std::flush;

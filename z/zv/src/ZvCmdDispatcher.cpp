@@ -17,24 +17,24 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include <zlib/ZvCmdMsgFn.hpp>
+#include <zlib/ZvCmdDispatcher.hpp>
 
-void ZvCmdMsgFn::init()
+void ZvCmdDispatcher::init()
 {
   m_fnMap = new FnMap{};
 }
-void ZvCmdMsgFn::final()
+void ZvCmdDispatcher::final()
 {
   m_fnMap->clean();
   m_fnMap = {};
 }
 
-void ZvCmdMsgFn::deflt(DefltFn fn)
+void ZvCmdDispatcher::deflt(DefltFn fn)
 {
   m_defltFn = fn;
 }
 
-void ZvCmdMsgFn::map(ZuID id, Fn fn)
+void ZvCmdDispatcher::map(ZuID id, Fn fn)
 {
   Guard guard(m_lock);
   if (auto kv = m_fnMap->find(id))
@@ -43,11 +43,11 @@ void ZvCmdMsgFn::map(ZuID id, Fn fn)
     m_fnMap->add(id, ZuMv(fn));
 }
 
-int ZvCmdMsgFn::dispatch(
+int ZvCmdDispatcher::dispatch(
     ZuID id, void *link, const uint8_t *data, unsigned len)
 {
   if (auto node = m_fnMap->find(id))
     return (node->val())(link, data, len);
-  if (m_defltFn) return (m_defltFn)(link, id, data, len);
+  if (m_defltFn) return m_defltFn(link, id, data, len);
   return -1;
 }

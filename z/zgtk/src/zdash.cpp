@@ -46,9 +46,6 @@
 #include <zlib/ZvCmdClient.hpp>
 #include <zlib/ZvCmdServer.hpp>
 
-#include <zlib/ZtlsBase32.hpp>
-#include <zlib/ZtlsBase64.hpp>
-
 #include <zlib/Zdf.hpp>
 
 #include <zlib/ZGtkApp.hpp>
@@ -70,14 +67,7 @@
 static void usage()
 {
   static const char *usage =
-    "usage: zdash USER@[HOST:]PORT\n"
-    "\tUSER\t- user\n"
-    "\tHOST\t- target host (default localhost)\n"
-    "\tPORT\t- target port\n\n"
-    "Environment Variables:\n"
-    "\tZCMD_KEY_ID\tAPI key ID\n"
-    "\tZCMD_KEY_SECRET\tAPI key secret\n"
-    "\tZCMD_PLUGIN\tzcmd plugin module\n";
+    "usage: zdash\n";
   std::cerr << usage << std::flush;
   ZeLog::stop();
   ZmPlatform::exit(1);
@@ -977,17 +967,17 @@ public:
     }
 
     Server::init(mx, cf);
-    static_cast<Server *>(this)->MsgFn::map("zdash",
+    static_cast<Server *>(this)->Dispatcher::map("zdash",
 	[](void *link, const uint8_t *data, unsigned len) {
 	  return static_cast<SrvLink *>(link)->processApp(data, len);
 	});
-    static_cast<Server *>(this)->MsgFn::deflt(
+    static_cast<Server *>(this)->Dispatcher::deflt(
 	[](void *link, ZuID id, const uint8_t *data, unsigned len) {
 	  return static_cast<SrvLink *>(link)->processDeflt(id, data, len);
 	});
 
     Client::init(mx, cf);
-    static_cast<Client *>(this)->MsgFn::deflt(
+    static_cast<Client *>(this)->Dispatcher::deflt(
 	[](void *link, ZuID id, const uint8_t *data, unsigned len) {
 	  return static_cast<CliLink_ *>(link)->processDeflt(id, data, len);
 	});
@@ -1104,7 +1094,6 @@ public:
     data.rag(RAG::Green);
   }
 
-private:
   template <typename ...Args>
   ZuInline void gtkRun(Args &&... args) {
     ZGtk::App::run(ZuFwd<Args>(args)...);
@@ -1146,6 +1135,25 @@ private:
     return len;
   }
 
+  int processApp(SrvLink *link, const uint8_t *data, unsigned len) {
+    // FIXME - process version, connect, disconnect, links, select, etc.
+    // - connect auto-selects
+    // - disconnect de-selects
+    return 0;
+  }
+
+  // fwd unknown app messages client <-> server using client-selected
+  // server-side link (from zdash perspective, SrvLink selects CliLink)
+  int processDeflt(CliLink_ *link, ZuID id, const uint8_t *data, unsigned len) {
+    // FIXME - fwd to server links selecting this client-side link
+    return 0;
+  }
+  int processDeflt(SrvLink *link, ZuID id, const uint8_t *data, unsigned len) {
+    // FIXME - fwd to selected client link
+    return 0;
+  }
+
+private:
   void gtkRefresh() {
     // FIXME - freeze, save sort col, unset sort col
 
@@ -1339,22 +1347,6 @@ private:
     // FIXME - update alerts in UX
   }
 
-  int processApp(SrvLink *link, const uint8_t *data, unsigned len) {
-    // FIXME - process version, connect, select, links, disconnect, etc.
-    return 0;
-  }
-
-  // fwd unknown app messages client <-> server using client-selected
-  // server-side link (from zdash perspective, SrvLink selects CliLink)
-  int processDeflt(CliLink_ *link, ZuID id, const uint8_t *data, unsigned len) {
-    // FIXME - fwd to server links selecting this client-side link
-    return 0;
-  }
-  int processDeflt(SrvLink *link, ZuID id, const uint8_t *data, unsigned len) {
-    // FIXME - fwd to selected client link
-    return 0;
-  }
-
 private:
   ZmSemaphore		m_done;
   ZmSemaphore		m_executed;
@@ -1430,7 +1422,7 @@ inline int SrvLink::processDeflt(ZuID id, const uint8_t *data, unsigned len)
 
 int main(int argc, char **argv)
 {
-  if (argc < 2) usage();
+  if (argc != 1) usage();
 
   ZeLog::init("zcmd");
   ZeLog::level(0);

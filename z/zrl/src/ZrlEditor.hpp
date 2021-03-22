@@ -564,13 +564,11 @@ public:
 
   // start/stop
   using StartFn = ZmFn<Editor &>;
-  void start(StartFn);
+  void start(StartFn = {});
   void stop();
   bool running() const;
 
   bool map(ZuString id);		// terminal thread
-  void prompt(ZtArray<uint8_t> prompt);	// '', asynchronously (forces redraw)
-  void prompt_(ZtArray<uint8_t> prompt);// '', from within enter() callback
 
   // dump key bindings
   Terminal::DumpVKeys dumpVKeys() const { return {m_tty}; }
@@ -585,6 +583,8 @@ public:
   DumpMaps dumpMaps() const { return {*this}; }
 
 private:
+  void prompt_();
+
   bool process(int32_t vkey);
   bool process_(int32_t vkey);
   bool process__(const CmdSeq &cmds, int32_t vkey);

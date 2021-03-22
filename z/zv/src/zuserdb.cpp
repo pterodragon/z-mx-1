@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 
   rng.init();
 
-  Mgr mgr(&rng, passlen, 6, 1<<20 /* 1Mb */);
+  Mgr mgr(&rng, passlen, 6, 30, 1<<20 /* 1Mb */);
 
   ZtString passwd, secret;
 

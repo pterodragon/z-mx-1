@@ -51,6 +51,8 @@ using ErrorFn = ZmFn<ZuString>;		// (message)
 using OpenFn = ZmFn<bool>;		// (ok)
 using CloseFn = ZmFn<>;
 
+using PromptFn = ZmFn<ZtArray<uint8_t> &>;
+
 using EnterFn = ZmFn<ZuString>;
 using EndFn = ZmFn<>;
 using SigFn = ZmFn<int>;
@@ -66,6 +68,8 @@ struct App {
 
   OpenFn	open;		// terminal opened
   CloseFn	close;		// terminal closed
+
+  PromptFn	prompt;
 
   EnterFn	enter;		// line entered
   EndFn		end;		// end of input (EOF)

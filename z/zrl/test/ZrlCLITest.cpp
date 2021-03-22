@@ -9,6 +9,7 @@ int main()
   Zrl::CLI cli;
   cli.init(Zrl::App{
     .error = [](ZuString s) { std::cerr << s << '\n'; },
+    .prompt = [](ZtArray<uint8_t> &s) { if (!s) s = "-->] "; },
     .enter = [](ZuString s) -> bool {
       std::cout << s << '\n';
       return s == "quit";
@@ -32,7 +33,6 @@ int main()
   }
   std::cout << cli.dumpVKeys();
   std::cout << cli.dumpMaps();
-  cli.start("-->] ");
   cli.join();
   cli.stop();
   cli.close();

@@ -28,11 +28,12 @@
 
 namespace ZvUserDB {
 
-Mgr::Mgr(Ztls::Random *rng, unsigned passLen, unsigned totpRange,
-    unsigned maxSize) :
+Mgr::Mgr(Ztls::Random *rng, unsigned passLen,
+    unsigned totpRange, unsigned keyInterval, unsigned maxSize) :
   m_rng(rng),
   m_passLen(passLen),
   m_totpRange(totpRange),
+  m_keyInterval(keyInterval),
   m_maxSize(maxSize)
 {
   m_users = new UserIDHash();
@@ -225,7 +226,10 @@ int Mgr::loginReq(
     case fbs::LoginReqData_Access: {
       auto access = static_cast<const fbs::Access *>(loginReq_->data());
       user = this->access(failures,
-	  str(access->keyID()), bytes(access->token()), bytes(access->hmac()));
+	  str(access->keyID()),
+	  bytes(access->token()),
+	  access->stamp(),
+	  bytes(access->hmac()));
       interactive = false;
     } break;
     case fbs::LoginReqData_Login: {
@@ -465,7 +469,10 @@ ZmRef<User> Mgr::login(int &failures,
 }
 
 ZmRef<User> Mgr::access(int &failures,
-    ZuString keyID, ZuArray<const uint8_t> token, ZuArray<const uint8_t> hmac)
+    ZuString keyID,
+    ZuArray<const uint8_t> token,
+    int64_t stamp,
+    ZuArray<const uint8_t> hmac)
 {
   ReadGuard guard(m_lock);
   Key *key = m_keys->findPtr(keyID);
@@ -496,16 +503,25 @@ ZmRef<User> Mgr::access(int &failures,
     return nullptr;
   }
   {
+    int64_t delta = ZmTimeNow().sec() - stamp;
+    if (delta < 0) delta = -delta;
+    if (delta >= m_keyInterval) {
+      failures = user->failures;
+      return nullptr;
+    }
+  }
+  {
     Ztls::HMAC hmac_(Key::keyType());
     KeyData verify;
     hmac_.start(key->secret.data(), key->secret.length());
     hmac_.update(token.data(), token.length());
+    hmac_.update(&stamp, sizeof(int64_t));
     verify.length(verify.size());
     hmac_.finish(verify.data());
     if (verify != hmac) {
       if (++user->failures < 3) {
 	ZeLOG(Warning, ZtString() << "authentication failure: "
-	    "user \"" << user->name << "\" provided invalid API key secret");
+	    "user \"" << user->name << "\" provided invalid API key HMAC");
       }
       failures = user->failures;
       return nullptr;

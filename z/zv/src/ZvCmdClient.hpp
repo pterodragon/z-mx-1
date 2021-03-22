@@ -51,7 +51,7 @@
 #include <zlib/ZvUserDB.hpp>
 #include <zlib/ZvSeqNo.hpp>
 #include <zlib/ZvTelemetry.hpp>
-#include <zlib/ZvCmdMsgFn.hpp>
+#include <zlib/ZvCmdDispatcher.hpp>
 
 #include <zlib/loginreq_fbs.h>
 #include <zlib/loginack_fbs.h>
@@ -80,6 +80,7 @@ struct ZvCmd_Login {
 struct ZvCmd_Access {
   ZtString		keyID;
   ZvUserDB::KeyData	token;
+  int64_t		stamp;
   ZvUserDB::KeyData	hmac;
 };
 using ZvCmd_Credentials = ZuUnion<ZvCmd_Login, ZvCmd_Access>;
@@ -160,14 +161,16 @@ public:
     token.length(token.size());
     hmac.length(hmac.size());
     this->app()->random(token.data(), token.length());
+    int64_t stamp = ZmTimeNow().sec();
     {
       Ztls::HMAC hmac_(ZvUserDB::Key::keyType());
       hmac_.start(secret.data(), secret.length());
       hmac_.update(token.data(), token.length());
+      hmac_.update(&stamp, sizeof(uint64_t));
       hmac_.finish(hmac.data());
     }
     new (m_credentials.init<ZvCmd_Access>())
-      ZvCmd_Access{ZuMv(keyID), token, hmac};
+      ZvCmd_Access{ZuMv(keyID), token, stamp, hmac};
     this->connect(ZuMv(server), port);
   }
 
@@ -238,6 +241,7 @@ public:
 	    fbs::CreateAccess(fbb,
 	      str(fbb, data.keyID),
 	      bytes(fbb, data.token),
+	      data.stamp,
 	      bytes(fbb, data.hmac)).Union()));
     }
     ZvCmdHdr{fbb, ZvCmd::ID::login()};
@@ -378,12 +382,12 @@ private:
 
 template <typename App_, typename Link_>
 class ZvCmdClient :
-    public ZvCmdMsgFn,
+    public ZvCmdDispatcher,
     public Ztls::Client<App_> {
 public:
   using App = App_;
   using Link = Link_;
-  using MsgFn = ZvCmdMsgFn;
+  using Dispatcher = ZvCmdDispatcher;
   using TLS = Ztls::Client<App>;
 friend TLS;
 
@@ -393,21 +397,21 @@ friend TLS;
   void init(ZiMultiplex *mx, const ZvCf *cf) {
     static const char *alpn[] = { "zcmd", 0 };
 
-    MsgFn::init(); // FIXME - dispatch hash table size
+    Dispatcher::init(); // FIXME - dispatch hash table size
 
-    MsgFn::map(ZvCmd::ID::userDB(),
+    Dispatcher::map(ZvCmd::ID::userDB(),
 	[](void *link, const uint8_t *data, unsigned len) {
 	  return static_cast<Link *>(link)->processUserDB(data, len);
 	});
-    MsgFn::map(ZvCmd::ID::cmd(),
+    Dispatcher::map(ZvCmd::ID::cmd(),
 	[](void *link, const uint8_t *data, unsigned len) {
 	  return static_cast<Link *>(link)->processCmd(data, len);
 	});
-    MsgFn::map(ZvCmd::ID::telReq(),
+    Dispatcher::map(ZvCmd::ID::telReq(),
 	[](void *link, const uint8_t *data, unsigned len) {
 	  return static_cast<Link *>(link)->processTelReq(data, len);
 	});
-    MsgFn::map(ZvCmd::ID::telemetry(),
+    Dispatcher::map(ZvCmd::ID::telemetry(),
 	[](void *link, const uint8_t *data, unsigned len) {
 	  return static_cast<Link *>(link)->processTelemetry(data, len);
 	});
@@ -420,7 +424,7 @@ friend TLS;
   void final() {
     TLS::final();
 
-    MsgFn::final();
+    Dispatcher::final();
   }
 
   unsigned reconnFreq() const { return m_reconnFreq; }

@@ -26,10 +26,11 @@
 // using namespace Zrl;
 // CLI cli;
 // cli.init(App{
+//   .prompt = [](ZtArray<uint8_t> &s) { if (!s) s = "prompt> "; },
 //   .enter = [](ZuString s) { std::cout << s << '\n'; }
 // });
 // if (cli.open()) {
-//   cli.start("prompt> ");
+//   cli.start();
 //   cli.join(); // wait until complete
 //   cli.stop();
 //   cli.close();
@@ -76,7 +77,7 @@ public:
   bool open();			// open terminal - returns true if ok
   void close();			// void close() - close terminal
 
-  bool start(ZtArray<uint8_t> prompt);	// start running - returns true if ok
+  bool start();			// start running - returns true if ok
   void stop();			// stop running
   void join();			// block until EOF, signal or other end event
   using Editor::running;	// bool running() - check if running

@@ -818,10 +818,7 @@ void Editor::start(StartFn fn)
 	m_tty.opost_on();
 	fn(*this);
 	m_tty.opost_off();
-	auto span = ZuUTF<uint32_t, uint8_t>::span(m_context.prompt);
-	m_tty.splice(0, ZuUTFSpan{}, m_context.prompt, span, true);
-	m_tty.write();
-	m_context.startPos = span.width();
+	prompt_();
       },
       Terminal::KeyFn{this, [](Editor *this_, int32_t vkey) {
 	return this_->process(vkey);
@@ -836,6 +833,15 @@ bool Editor::running() const
   return m_tty.running();
 }
 
+void Editor::prompt_()
+{
+  m_app.prompt(m_context.prompt);
+  auto span = ZuUTF<uint32_t, uint8_t>::span(m_context.prompt);
+  m_tty.splice(0, ZuUTFSpan{}, m_context.prompt, span, true);
+  m_tty.write();
+  m_context.startPos = span.width();
+}
+
 bool Editor::map(ZuString id)
 {
   if (auto map = m_maps.find(id)) {
@@ -846,30 +852,6 @@ bool Editor::map(ZuString id)
     return true;
   }
   return false;
-}
-
-void Editor::prompt(ZtArray<uint8_t> prompt)
-{
-  const auto &line = m_tty.line();
-  unsigned off = line.position(m_tty.pos()).mapping();
-  int oldLen = m_context.prompt.length();
-  int newLen = prompt.length();
-  if (off > oldLen)
-    off += (newLen - oldLen);
-  else
-    off = newLen;
-  m_tty.splice(0, ZuUTF<uint32_t, uint8_t>::span(m_context.prompt),
-      prompt, ZuUTF<uint32_t, uint8_t>::span(prompt), true);
-  m_tty.write();
-  m_tty.mv(line.byte(off).mapping());
-  m_context.prompt = ZuMv(prompt);
-  m_context.startPos = line.byte(newLen).mapping();
-}
-
-void Editor::prompt_(ZtArray<uint8_t> prompt)
-{
-  m_context.startPos = ZuUTF<uint32_t, uint8_t>::span(prompt).width();
-  m_context.prompt = ZuMv(prompt);
 }
 
 bool Editor::process(int32_t vkey)
@@ -1037,9 +1019,7 @@ bool Editor::cmdEnter(Cmd, int32_t)
   m_tty.opost_off();
   m_tty.clear();
   if (stop) return true;
-  m_tty.splice(0, ZuUTFSpan{}, m_context.prompt,
-      ZuUTF<uint32_t, uint8_t>::span(m_context.prompt), true);
-  m_context.startPos = m_tty.pos();
+  prompt_();
   return false;
 }
 

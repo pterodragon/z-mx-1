@@ -19,8 +19,8 @@
 
 // ZvCmd message dispatcher
 
-#ifndef ZvCmdMsgFn_HPP
-#define ZvCmdMsgFn_HPP
+#ifndef ZvCmdDispatcher_HPP
+#define ZvCmdDispatcher_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -39,10 +39,10 @@
 #include <zlib/ZmNoLock.hpp>
 #include <zlib/ZmLHash.hpp>
 
-class ZvAPI ZvCmdMsgFn {
+class ZvAPI ZvCmdDispatcher {
 public:
-  typedef int (*Fn)(void *, const uint8_t *, unsigned);
-  typedef int (*DefltFn)(void *, ZuID, const uint8_t *, unsigned);
+  using Fn = ZmFn<void *, const uint8_t *, unsigned>;
+  using DefltFn = ZmFn<void *, ZuID, const uint8_t *, unsigned>;
 
   void init();
   void final();
@@ -63,7 +63,7 @@ private:
 
   Lock			m_lock;
     ZmRef<FnMap>	  m_fnMap;
-    DefltFn		  m_defltFn = nullptr;
+    DefltFn		  m_defltFn;
 };
 
-#endif /* ZvCmdMsgFn_HPP */
+#endif /* ZvCmdDispatcher_HPP */

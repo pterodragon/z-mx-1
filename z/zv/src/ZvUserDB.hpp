@@ -108,7 +108,8 @@ ZmRef<Role> loadRole(const fbs::Role *role_) {
   return role;
 }
 
-using KeyData = ZuArrayN<uint8_t, 32>;	// 256 bit key
+enum { KeySize = Ztls::HMAC::Size<MBEDTLS_MD_SHA256>::N }; // 256 bit key
+using KeyData = ZuArrayN<uint8_t, KeySize>;
 
 struct Key_;
 struct User__ : public ZuObject {
@@ -122,7 +123,7 @@ struct User__ : public ZuObject {
   User__(uint64_t id_, ZuString name_, Flags flags_) :
       id(id_), name(name_), flags(flags_) { }
 
-  static constexpr const mbedtls_md_type_t keyType() {
+  static constexpr mbedtls_md_type_t keyType() {
     return MBEDTLS_MD_SHA256;
   }
 
@@ -249,7 +250,7 @@ public:
   };
 
   Mgr(Ztls::Random *rng, unsigned passLen, unsigned totpRange,
-      unsigned maxSize);
+      unsigned keyInterval, unsigned maxSize);
   ~Mgr();
 
   // one-time initialization (idempotent)
@@ -306,6 +307,7 @@ private:
   ZmRef<User> access(int &failures,
       ZuString keyID,
       ZuArray<const uint8_t> token,
+      int64_t stamp,
       ZuArray<const uint8_t> hmac);
 
 public:
@@ -436,6 +438,7 @@ private:
   Ztls::Random		*m_rng;
   unsigned		m_passLen;
   unsigned		m_totpRange;
+  unsigned		m_keyInterval;
   unsigned		m_maxSize;
 
   mutable Lock		m_lock;

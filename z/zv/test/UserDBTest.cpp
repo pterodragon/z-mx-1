@@ -15,7 +15,7 @@ int main()
   ZmRef<IOBuf> iobuf;
 
   {
-    Mgr mgr(&rng, 12, 6, 1<<20 /* 1Mb */ );
+    Mgr mgr(&rng, 12, 6, 30, 1<<20 /* 1Mb */ );
 
     ZtString passwd, secret;
 
@@ -60,7 +60,7 @@ int main()
       return 1;
     }
 
-    Mgr mgr(&rng, 12, 6, 1<<20 /* 1Mb */);
+    Mgr mgr(&rng, 12, 6, 30, 1<<20 /* 1Mb */);
 
     if (!mgr.load_(iobuf->data(), iobuf->length)) {
       std::cerr << "LOAD FAILED - failed to verify\n" << std::flush;

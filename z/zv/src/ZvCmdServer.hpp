@@ -60,7 +60,7 @@
 #include <zlib/zcmdack_fbs.h>
 
 #include <zlib/ZvCmdHost.hpp>
-#include <zlib/ZvCmdMsgFn.hpp>
+#include <zlib/ZvCmdDispatcher.hpp>
 #include <zlib/ZvCmdNet.hpp>
 
 template <typename App, typename Link> class ZvCmdServer;
@@ -255,14 +255,15 @@ private:
 
 template <typename App_, typename Link_>
 class ZvCmdServer :
-    public ZvCmdMsgFn, public ZvCmdHost,
+    public ZvCmdDispatcher,
+    public ZvCmdHost,
     public Ztls::Server<App_>,
     public ZvTelemetry::Server<App_, Link_> {
 public:
   using App = App_;
   using Link = Link_;
   using Host = ZvCmdHost;
-  using MsgFn = ZvCmdMsgFn;
+  using Dispatcher = ZvCmdDispatcher;
   using TLS = Ztls::Server<App>;
 friend TLS;
   using User = ZvUserDB::User;
@@ -283,7 +284,7 @@ friend TLS;
     static const char *alpn[] = { "zcmd", 0 };
 
     Host::init();
-    MsgFn::init(); // FIXME - dispatch hash table size
+    Dispatcher::init(); // FIXME - dispatch hash table size
 
     map(ZvCmd::ID::userDB(),
 	[](void *link, const uint8_t *data, unsigned len) {
@@ -307,15 +308,16 @@ friend TLS;
     m_nAccepts = cf->getInt("nAccepts", 1, 1024, false, 8);
     m_rebindFreq = cf->getInt("rebindFreq", 0, 3600, false, 0);
     m_timeout = cf->getInt("timeout", 0, 3600, false, 0);
-    unsigned passLen = 12, totpRange = 6, maxSize = (10<<20);
+    unsigned passLen = 12, totpRange = 6, keyInterval = 30, maxSize = (10<<20);
     if (ZmRef<ZvCf> mgrCf = cf->subset("userDB")) {
       passLen = mgrCf->getInt("passLen", 6, 60, false, 12);
       totpRange = mgrCf->getInt("totpRange", 0, 100, false, 6);
+      keyInterval = mgrCf->getInt("keyInterval", 0, 36000, false, 30);
       maxSize = mgrCf->getInt("maxSize", 0, (10<<24), false, (10<<20));
       m_userDBPath = mgrCf->get("path", true);
       m_userDBMaxAge = mgrCf->getInt("maxAge", 0, INT_MAX, false, 8);
     }
-    m_userDB = new UserDB(this, passLen, totpRange, maxSize);
+    m_userDB = new UserDB(this, passLen, totpRange, keyInterval, maxSize);
 
     if (!loadUserDB())
       throw ZtString() << "failed to load \"" << m_userDBPath << '"';
@@ -330,7 +332,7 @@ friend TLS;
 
     TLS::final();
 
-    MsgFn::final();
+    Dispatcher::final();
     Host::final();
   }
 
@@ -453,8 +455,8 @@ public:
   }
 
   // ZvCmdHost virtual functions
-  MsgFn *msgFn() {
-    return static_cast<MsgFn *>(this);
+  Dispatcher *dispatcher() {
+    return static_cast<Dispatcher *>(this);
   }
   void send(void *link, ZmRef<ZiIOBuf<>> buf) {
     return static_cast<Link *>(link)->send(ZuMv(buf));

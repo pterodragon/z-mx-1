@@ -2,6 +2,7 @@ namespace ZvUserDB.fbs;
 table Access {
   keyID:string;
   token:[ubyte];
+  stamp:int64;
   hmac:[ubyte];
 }
 table Login {

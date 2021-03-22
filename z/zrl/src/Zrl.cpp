@@ -65,6 +65,10 @@ public:
   Context() {
     cli.init(Zrl::App{
       .error = [this](ZuString s) { std::cerr << s << '\n'; stop(); },
+      .prompt = [this](ZtArray<uint8_t> &s) {
+	Guard guard(lock);
+	if (prompt) s = ZuMv(prompt);
+      },
       .enter = [this](ZuString s) -> bool { return process(s); },
       .end = [this]() { stop(); },
       .sig = [this](int sig) -> bool {
@@ -96,27 +100,17 @@ public:
 
   void start(const char *prompt_) {
     Guard guard(lock);
-    if (state != Stopped) {
-      if (prompt != prompt_) {
-	prompt.copy(prompt_);
-	if (state == Editing)
-	  cli.prompt(prompt); // force line redraw
-	else
-	  cli.prompt_(prompt);
-      }
-      return;
-    }
-    start_(prompt_);
+    if (prompt_) prompt.copy(prompt_);
+    if (state == Stopped) start_();
   }
 private:
-  void start_(const char *prompt_) {
-    prompt.copy(prompt_);
+  void start_() {
     if (!cli.open()) {
       state = Stopped;
       cond.broadcast();
       return;
     }
-    cli.start(prompt);
+    cli.start();
     state = Editing;
     cond.broadcast();
     while (state == Editing) cond.wait();
@@ -140,8 +134,7 @@ public:
   }
 
 private:
-  void edit_(const char *prompt_) {
-    if (prompt != prompt_) cli.prompt_(prompt = prompt_);
+  void edit_() {
     state = Editing;
     cond.broadcast();
     while (state == Editing) cond.wait();
@@ -164,13 +157,14 @@ private:
 public:
   char *readline(const char *prompt_) {
     Guard guard(lock);
+    if (prompt_) prompt.copy(prompt_);
     switch (state) {
       case Stopped:
-	start_(prompt_);
+	start_();
 	if (state == Stopped) return nullptr;
 	break;
       case Processing:
-	edit_(prompt_);
+	edit_();
 	break;
       default:
 	return nullptr;	// multiple overlapping readline() calls

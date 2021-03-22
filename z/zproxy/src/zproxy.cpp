@@ -1569,6 +1569,7 @@ int main(int argc, char **argv)
     Zrl::CLI cli;
     cli.init({
       .error = [](ZuString s) { std::cerr << s << '\n'; },
+      .prompt = [](ZtArray<uint8_t> &s) { if (!s) s = "zproxy] "; },
       .enter = [app = app.ptr()](ZuString cmd) -> bool {
 	return app->processCmd(cmd);
       },
@@ -1595,7 +1596,7 @@ int main(int argc, char **argv)
       .histLoad = history.loadFn()
     });
     cli.open();
-    cli.start("zproxy] ");
+    cli.start();
     cli.join();
     cli.stop();
     cli.close();

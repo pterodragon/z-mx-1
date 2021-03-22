@@ -32,8 +32,14 @@
 
 namespace Ztls {
 
+template <int> struct HMAC_Size { enum { N = 32 }; };
+template <> struct HMAC_Size<MBEDTLS_MD_SHA384> { enum { N = 48 }; };
+template <> struct HMAC_Size<MBEDTLS_MD_SHA512> { enum { N = 64 }; };
+
 class HMAC {
 public:
+  template <int I> using Size = HMAC_Size<I>;
+
   // mbedtls_md_type_t, e.g. MBEDTLS_MD_SHA256
   HMAC(mbedtls_md_type_t type) {
     mbedtls_md_init(&m_ctx);

@@ -14,6 +14,7 @@ int main()
   Zrl::Config config;
   Zrl::Editor editor;
   ZmSemaphore done;
+  app.prompt = [](ZtArray<uint8_t> &s) { if (!s) s = "-->] "; };
   app.enter = [&done](ZuString s) -> bool {
     std::cout << s << '\n';
     if (s == "quit") {
@@ -50,7 +51,6 @@ int main()
   editor.start([](Zrl::Editor &editor) {
     std::cout << editor.dumpVKeys();
     std::cout << editor.dumpMaps();
-    editor.prompt_("-->] ");
   });
   done.wait();
   editor.stop();

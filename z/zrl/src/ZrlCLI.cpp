@@ -144,7 +144,7 @@ void CLI::close_()
   m_sched->stop();
 }
 
-bool CLI::start(ZtArray<uint8_t> prompt)
+bool CLI::start()
 {
   Guard guard(m_lock);
   switch (m_state) {
@@ -156,9 +156,7 @@ bool CLI::start(ZtArray<uint8_t> prompt)
     case Created:
       return false;
   }
-  Editor::start([prompt = ZuMv(prompt)](Editor &editor) mutable {
-    editor.prompt_(ZuMv(prompt));
-  });
+  Editor::start();
   m_state = Running;
   return true;
 }

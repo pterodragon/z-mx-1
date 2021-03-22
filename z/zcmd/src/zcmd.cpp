@@ -196,7 +196,7 @@ friend Link;
 	.error = [this](ZuString s) { std::cerr << s << '\n'; post(); },
 	.prompt = [this](ZtArray<uint8_t> &s) {
 	  ZmGuard guard(m_promptLock);
-	  if (m_prompt) s = ZuMv(m_prompt);
+	  if (m_prompt.owned()) s = ZuMv(m_prompt);
 	},
 	.enter = [this](ZuString s) -> bool {
 	  exec(ZtString{s});
@@ -268,13 +268,10 @@ friend Link;
   int code() const { return m_code; }
 
   // ZvCmdHost virtual functions
-  ZvCmdDispatcher *dispatcher() {
-    return static_cast<ZvCmdDispatcher *>(this);
-  }
+  ZvCmdDispatcher *dispatcher() { return this; }
   void send(void *link, ZmRef<ZiIOBuf<>> buf) {
     return static_cast<Link *>(link)->send(ZuMv(buf));
   }
-
   void target(ZuString s) {
     ZmGuard guard(m_promptLock);
     m_prompt = ZtArray<uint8_t>{} << s << "] ";
@@ -282,6 +279,7 @@ friend Link;
   ZtString getpass(ZuString prompt, unsigned passLen) {
     return m_cli.getpass(prompt, passLen);
   }
+  Ztls::Random *rng() { return this; }
 
 private:
   void loggedIn() {

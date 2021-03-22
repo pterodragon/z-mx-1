@@ -455,12 +455,11 @@ public:
   }
 
   // ZvCmdHost virtual functions
-  Dispatcher *dispatcher() {
-    return static_cast<Dispatcher *>(this);
-  }
+  Dispatcher *dispatcher() { return this; }
   void send(void *link, ZmRef<ZiIOBuf<>> buf) {
     return static_cast<Link *>(link)->send(ZuMv(buf));
   }
+  Ztls::Random *rng() { return this; }
 
 private:
   ZiIP			m_ip;

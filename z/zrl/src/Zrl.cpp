@@ -67,7 +67,7 @@ public:
       .error = [this](ZuString s) { std::cerr << s << '\n'; stop(); },
       .prompt = [this](ZtArray<uint8_t> &s) {
 	Guard guard(lock);
-	if (prompt) s = ZuMv(prompt);
+	if (prompt.owned()) s = ZuMv(prompt);
       },
       .enter = [this](ZuString s) -> bool { return process(s); },
       .end = [this]() { stop(); },

@@ -5,7 +5,7 @@ namespace ZDash.fbs;
 table Connect {
   server	: string;
   port		: uint16;
-  loginReq	: ZvUserDB.fbs.LoginReqData;
+  loginReq	: ZvUserDB.fbs.LoginReq;
 }
 union ReqData {
   Version	: VerReq,

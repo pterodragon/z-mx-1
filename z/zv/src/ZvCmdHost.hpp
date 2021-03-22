@@ -44,6 +44,7 @@
 
 class ZvCmdHost;
 class ZvCmdDispatcher;
+namespace Ztls { class Random; }
 
 struct ZvCmdContext {
   ZvCmdHost		*app_ = nullptr;	
@@ -89,6 +90,8 @@ public:
 
   virtual void target(ZuString) { }
   virtual ZtString getpass(ZuString prompt, unsigned passLen) { return {}; }
+
+  virtual Ztls::Random *rng() { return nullptr; }
 
 private:
   int help(ZvCmdContext *);

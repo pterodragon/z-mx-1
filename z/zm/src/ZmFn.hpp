@@ -47,7 +47,7 @@
 // G g;
 // ZmThread t(ZmFn<>::Member<&G::bar>::fn(&g)); // Note: pointer to G
 //
-// class G2 : public ZmObject, public G { };	// call G::bar via G2
+// class G2 : public ZmPolymorph, public G { };	// call G::bar via G2
 // G2 g2;
 // ZmThread t(ZmFn<>::Member<&G::bar>::fn(ZmMkRef(&g2)));
 // 						// capture ZmRef to g2

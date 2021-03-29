@@ -471,13 +471,20 @@ friend Base;
   const Impl *impl() const { return static_cast<const Impl *>(this); }
   Impl *impl() { return static_cast<Impl *>(this); }
 
-  CliLink(App *app) : Base(app) {
+  CliLink(App *app) : Base{app} {
+    mbedtls_ssl_session_init(&m_session);
+  }
+  CliLink(App *app, ZtString server, unsigned port) :
+      Base{app}, m_server{ZuMv(server)}, m_port{port} {
     mbedtls_ssl_session_init(&m_session);
   }
   ~CliLink() {
     mbedtls_ssl_session_free(&m_session);
   }
 
+  void connect() { // App thread(s)
+    this->app()->invoke([this]() mutable { connect_(); });
+  }
   void connect(ZtString server, uint16_t port) { // App thread(s)
     m_server = ZuMv(server);
     m_port = port;

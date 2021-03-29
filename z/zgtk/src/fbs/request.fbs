@@ -3,15 +3,16 @@ include "link.fbs";
 include "loginreq.fbs";
 namespace ZDash.fbs;
 table Connect {
-  server	: string;
-  port		: uint16;
+  linkID	: LinkID;
   loginReq	: ZvUserDB.fbs.LoginReq;
 }
 union ReqData {
   Version	: VerReq,
+  MkLink	: LinkData,
+  RmLink	: LinkID,
   Connect	: Connect,
   Disconnect	: LinkID,
-  Links		: LinkList,
+  Links		: LinkQuery,
   Select	: LinkID
 }
 table Request {

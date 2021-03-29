@@ -425,7 +425,6 @@ private:
     unsigned yyyymmdd = date.yyyymmdd();
     unsigned seqNo = m_alertFile.alloc(m_alertPrefix, yyyymmdd);
     using namespace Zfb::Save;
-    m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Alert,
 	  fbs::CreateAlert(m_fbb,
@@ -593,7 +592,6 @@ private:
     Heap data;
     heap->telemetry(data);
     if (!match(watch->filter, data.id)) return;
-    m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Heap, data.save(m_fbb).Union()));
     ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -613,7 +611,6 @@ private:
     auto i = m_watchLists[ReqType::Heap].list.readIterator();
     while (auto watch = i.iterateNode()) {
       if (!match(watch->filter, data.id)) continue;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Heap, data.saveDelta(m_fbb).Union()));
       ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -643,7 +640,6 @@ private:
     HashTbl data;
     tbl->telemetry(data);
     if (!match(watch->filter, data.id)) return;
-    m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_HashTbl, data.save(m_fbb).Union()));
     ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -663,7 +659,6 @@ private:
     auto i = m_watchLists[ReqType::HashTbl].list.readIterator();
     while (auto watch = i.iterateNode()) {
       if (!match(watch->filter, data.id)) continue;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_HashTbl, data.saveDelta(m_fbb).Union()));
       ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -693,7 +688,6 @@ private:
     Thread data;
     tc->telemetry(data);
     if (!matchThread(watch->filter, data.name, data.tid)) return;
-    m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Thread, data.save(m_fbb).Union()));
     ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -713,7 +707,6 @@ private:
     auto i = m_watchLists[ReqType::Thread].list.readIterator();
     while (auto watch = i.iterateNode()) {
       if (!matchThread(watch->filter, data.name, data.tid)) continue;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Thread, data.saveDelta(m_fbb).Union()));
       ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -742,7 +735,6 @@ private:
     Mx data;
     mx->telemetry(data);
     if (!match(watch->filter, data.id)) return;
-    m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Mx, data.save(m_fbb).Union()));
     ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -757,7 +749,6 @@ private:
 	{
 	  const auto &ring = mx->ring(tid);
 	  ring.stats(inCount, inBytes, outCount, outBytes);
-	  m_fbb.Clear();
 	  m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 		fbs::TelData_Queue,
 		fbs::CreateQueue(m_fbb,
@@ -775,7 +766,6 @@ private:
 	{
 	  const auto &overRing = mx->overRing(tid);
 	  overRing.stats(inCount, outCount);
-	  m_fbb.Clear();
 	  m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 		fbs::TelData_Queue,
 		fbs::CreateQueue(m_fbb,
@@ -792,7 +782,6 @@ private:
     mx->allCxns([this, watch](ZiConnection *cxn) {
       Socket data;
       cxn->telemetry(data);
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Socket, data.save(m_fbb).Union()));
       ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -812,7 +801,6 @@ private:
     auto i = m_watchLists[ReqType::Mx].list.readIterator();
     while (auto watch = i.iterateNode()) {
       if (!match(watch->filter, data.id)) continue;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Mx, data.saveDelta(m_fbb).Union()));
       ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -826,7 +814,6 @@ private:
 	  {
 	    const auto &ring = mx->ring(tid);
 	    ring.stats(inCount, inBytes, outCount, outBytes);
-	    m_fbb.Clear();
 	    auto id_ = Zfb::Save::str(m_fbb, queueID);
 	    fbs::QueueBuilder b(m_fbb);
 	    b.add_id(id_);
@@ -848,7 +835,6 @@ private:
 	  {
 	    const auto &overRing = mx->overRing(tid);
 	    overRing.stats(inCount, outCount);
-	    m_fbb.Clear();
 	    auto id_ = Zfb::Save::str(m_fbb, queueID);
 	    fbs::QueueBuilder b(m_fbb);
 	    b.add_id(id_);
@@ -868,7 +854,6 @@ private:
       mx->allCxns([this, watch](ZiConnection *cxn) {
 	Socket data;
 	cxn->telemetry(data);
-	m_fbb.Clear();
 	m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	      fbs::TelData_Socket, data.saveDelta(m_fbb).Union()));
 	ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -911,7 +896,6 @@ private:
     Queue data;
     fn(data);
     if (!matchQueue(watch->filter, data.type, data.id)) return;
-    m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Queue, data.save(m_fbb).Union()));
     ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -928,7 +912,6 @@ private:
     auto i = m_watchLists[ReqType::Queue].list.readIterator();
     while (auto watch = i.iterateNode()) {
       if (!matchQueue(watch->filter, data.type, data.id)) continue;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Queue, data.saveDelta(m_fbb).Union()));
       ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -958,7 +941,6 @@ private:
     Engine data;
     engine->telemetry(data);
     if (!match(watch->filter, data.id)) return;
-    m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Engine, data.save(m_fbb).Union()));
     ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -966,7 +948,6 @@ private:
     engine->allLinks<ZvAnyLink>([this, watch](ZvAnyLink *link) -> uintptr_t {
       ZvTelemetry::Link data;
       link->telemetry(data);
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Link, data.save(m_fbb).Union()));
       ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -985,7 +966,6 @@ private:
     auto i = m_watchLists[ReqType::Engine].list.readIterator();
     while (auto watch = i.iterateNode()) {
       if (!match(watch->filter, data.id)) continue;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_Engine, data.saveDelta(m_fbb).Union()));
       ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -1003,7 +983,6 @@ private:
   void linkScan(const ZvAnyLink *link, Watch *watch) {
     ZvTelemetry::Link data;
     link->telemetry(data);
-    m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Link, data.saveDelta(m_fbb).Union()));
     ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -1028,19 +1007,16 @@ private:
   void dbEnvQuery_(Watch *watch) {
     if (!m_dbEnvFn) return;
     m_dbEnvFn([this, watch](const DBEnv &data) {
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_DBEnv, data.save(m_fbb).Union()));
       ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
       watch->link->send(m_fbb.buf());
     }, [this, watch](const DBHost &data) {
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_DBHost, data.save(m_fbb).Union()));
       ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
       watch->link->send(m_fbb.buf());
     }, [this, watch](const DB &data) {
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_DB, data.save(m_fbb).Union()));
       ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -1053,19 +1029,16 @@ private:
     auto i = m_watchLists[ReqType::DBEnv].list.readIterator();
     while (auto watch = i.iterateNode()) {
       m_dbEnvFn([this, watch](const DBEnv &data) {
-	m_fbb.Clear();
 	m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	      fbs::TelData_DBEnv, data.saveDelta(m_fbb).Union()));
 	ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
 	watch->link->send(m_fbb.buf());
       }, [this, watch](const DBHost &data) {
-	m_fbb.Clear();
 	m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	      fbs::TelData_DBHost, data.saveDelta(m_fbb).Union()));
 	ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
 	watch->link->send(m_fbb.buf());
       }, [this, watch](const DB &data) {
-	m_fbb.Clear();
 	m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	      fbs::TelData_DB, data.saveDelta(m_fbb).Union()));
 	ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -1092,7 +1065,6 @@ private:
   void appQuery_(Watch *watch) {
     ZvTelemetry::App data;
     app()->telemetry(data);
-    m_fbb.Clear();
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_App, data.save(m_fbb).Union()));
     ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
@@ -1106,7 +1078,6 @@ private:
     app()->telemetry(data);
     auto i = m_watchLists[ReqType::App].list.readIterator();
     while (auto watch = i.iterateNode()) {
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	    fbs::TelData_App, data.saveDelta(m_fbb).Union()));
       ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};

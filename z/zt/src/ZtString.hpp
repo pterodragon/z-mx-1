@@ -581,7 +581,7 @@ private:
       return (Char *)m_data;
     }
     Char *newData = (Char *)::malloc(size * sizeof(Char));
-    if (ZuUnlikely(!newData)) { null_(); return 0; }
+    if (!newData) throw std::bad_alloc{};
     m_data[0] = (uintptr_t)newData;
     size_owned_null(size, 1, 0);
     length_mallocd_builtin(length, 1, 0);
@@ -598,7 +598,7 @@ private:
       return;
     }
     Char *newData = (Char *)::malloc((length + 1) * sizeof(Char));
-    if (ZuUnlikely(!newData)) { null_(); return; }
+    if (!newData) throw std::bad_alloc{};
     memcpy(newData, copyData, length * sizeof(Char));
     newData[length] = 0;
     m_data[0] = (uintptr_t)newData;
@@ -721,6 +721,7 @@ public:
     if (null__()) return 0;
     if (builtin()) {
       Char *newData = (Char *)::malloc(BuiltinSize * sizeof(Char));
+      if (!newData) throw std::bad_alloc{};
       memcpy(newData, m_data, (length() + 1) * sizeof(Char));
       return newData;
     } else {
@@ -772,8 +773,10 @@ public:
     Char *newData;
     if (z <= (unsigned)BuiltinSize)
       newData = (Char *)m_data;
-    else
+    else {
       newData = (Char *)::malloc(z * sizeof(Char));
+      if (!newData) throw std::bad_alloc{};
+    }
     unsigned n = z - 1U;
     if (n > length()) n = length();
     if (oldData != newData) {
@@ -930,6 +933,7 @@ private:
     unsigned o = n + length;
     if (ZuUnlikely(!o)) return ZtString_<Char>();
     Char *newData = (Char *)::malloc((o + 1) * sizeof(Char));
+    if (!newData) throw std::bad_alloc{};
     if (n) memcpy(newData, data_(), n * sizeof(Char));
     if (length) memcpy(newData + n, data, length * sizeof(Char));
     newData[o] = 0;
@@ -1154,8 +1158,10 @@ private:
       Char *newData;
       if (z <= (unsigned)BuiltinSize)
 	newData = (Char *)m_data;
-      else
+      else {
 	newData = (Char *)::malloc(z * sizeof(Char));
+      if (!newData) throw std::bad_alloc{};
+      }
       if (oldData != newData && offset)
 	memcpy(newData, oldData, offset * sizeof(Char));
       if (rlength)

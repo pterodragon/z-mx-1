@@ -72,6 +72,7 @@ public:
     ReleaseRaw(size, skip);
     buf->skip = skip;
     buf->length = size - skip;
+    Clear();
     return buf;
   }
 

@@ -65,8 +65,8 @@
 static void usage()
 {
   static const char *usage =
-    "usage: zcmd USER@[HOST:]PORT [CMD [ARGS]]\n"
-    "\tUSER\t- user\n"
+    "usage: zcmd [USER@][HOST:]PORT [CMD [ARGS]]\n"
+    "\tUSER\t- user (not needed if API key used)\n"
     "\tHOST\t- target host (default localhost)\n"
     "\tPORT\t- target port\n"
     "\tCMD\t- command to send to target\n"
@@ -243,18 +243,18 @@ friend Link;
   }
 
   template <typename ...Args>
-  void login(Args &&... args) {
-    m_cli.open();
+  void login(ZtString &&server, unsigned port, Args &&... args) {
+    m_cli.open(); // idempotent
     ZtString passwd = m_cli.getpass("password: ", 100);
     if (!passwd) return;
     ZuBox<unsigned> totp = m_cli.getpass("totp: ", 6);
     if (!*totp) return;
-    m_link = new Link(this);
+    m_link = new Link(this, ZuMv(server), port);
     m_link->login(ZuFwd<Args>(args)..., passwd, totp);
   }
   template <typename ...Args>
-  void access(Args &&... args) {
-    m_link = new Link(this);
+  void access(ZtString &&server, unsigned port, Args &&... args) {
+    m_link = new Link(this, ZuMv(server), port);
     m_link->access(ZuFwd<Args>(args)...);
   }
 
@@ -411,7 +411,6 @@ private:
   // async invoke
   void send(ZvCmdContext *ctx, ZuArray<const ZtString> args) {
     auto seqNo = m_seqNo++;
-    m_fbb.Clear();
     m_fbb.Finish(ZvCmd::fbs::CreateRequest(m_fbb, seqNo,
 	  Zfb::Save::strVecIter(m_fbb, args.length(),
 	    [&args](unsigned i) { return args[i]; })));
@@ -620,7 +619,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	    fbs::ReqData_ChPass,
 	    fbs::CreateUserChPass(m_fbb,
@@ -687,7 +685,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       fbs::UserIDBuilder fbb_(m_fbb);
       if (argc == 2) fbb_.add_id(ctx->args->getInt64("1", 0, LLONG_MAX, true));
       auto userID = fbb_.Finish();
@@ -721,7 +718,6 @@ private:
       if (ctx->args->get("immutable")) flags |= User::Immutable;
       ZtRegex::Captures roles;
       ZtREGEX(",").split(ctx->args->get("3"), roles);
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	    fbs::ReqData_UserAdd,
 	    fbs::CreateUser(m_fbb,
@@ -756,7 +752,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	    fbs::ReqData_ResetPass,
 	    fbs::CreateUserID(m_fbb,
@@ -792,7 +787,6 @@ private:
       if (ctx->args->get("immutable")) flags |= User::Immutable;
       ZtRegex::Captures roles;
       ZtREGEX(",").split(ctx->args->get("3"), roles);
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	    fbs::ReqData_UserMod,
 	    fbs::CreateUser(m_fbb,
@@ -825,7 +819,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	    fbs::ReqData_UserDel,
 	    fbs::CreateUserID(m_fbb,
@@ -873,7 +866,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       Zfb::Offset<Zfb::String> name_;
       if (argc == 2) name_ = str(m_fbb, ctx->args->get("1"));
       fbs::RoleIDBuilder fbb_(m_fbb);
@@ -908,7 +900,6 @@ private:
       Bitmap apiperms{ctx->args->get("3")};
       uint8_t flags = 0;
       if (ctx->args->get("immutable")) flags |= Role::Immutable;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	    fbs::ReqData_RoleAdd,
 	    fbs::CreateRole(m_fbb,
@@ -944,7 +935,6 @@ private:
       Bitmap apiperms{ctx->args->get("3")};
       uint8_t flags = 0;
       if (ctx->args->get("immutable")) flags |= Role::Immutable;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	    fbs::ReqData_RoleMod,
 	    fbs::CreateRole(m_fbb,
@@ -976,7 +966,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	    fbs::ReqData_RoleDel,
 	    fbs::CreateRoleID(m_fbb, str(m_fbb, ctx->args->get("1"))).Union()));
@@ -1006,7 +995,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       fbs::PermIDBuilder fbb_(m_fbb);
       if (argc == 2) fbb_.add_id(ctx->args->getInt("1", 0, Bitmap::Bits, true));
       auto permID = fbb_.Finish();
@@ -1036,7 +1024,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       auto name = ctx->args->get("1");
       m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	    fbs::ReqData_PermAdd,
@@ -1067,7 +1054,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       auto permID = ctx->args->getInt("1", 0, Bitmap::Bits, true);
       auto permName = ctx->args->get("2");
       m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
@@ -1099,7 +1085,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       auto permID = ctx->args->getInt("1", 0, Bitmap::Bits, true);
       m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	    fbs::ReqData_PermDel,
@@ -1131,7 +1116,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       if (argc == 1)
 	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	      fbs::ReqData_OwnKeyGet,
@@ -1167,7 +1151,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       if (argc == 1)
 	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	      fbs::ReqData_OwnKeyAdd,
@@ -1211,7 +1194,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       auto keyID = ctx->args->get("1");
       m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	    fbs::ReqData_KeyDel,
@@ -1243,7 +1225,6 @@ private:
     using namespace ZvUserDB;
     {
       using namespace Zfb::Save;
-      m_fbb.Clear();
       if (argc == 1)
 	m_fbb.Finish(fbs::CreateRequest(m_fbb, seqNo,
 	      fbs::ReqData_OwnKeyClr,
@@ -1408,7 +1389,6 @@ private:
     for (unsigned i = 0, n = ok.length(); i < n; i++) {
       using namespace Zfb::Save;
       auto seqNo = m_seqNo++;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateRequest(m_fbb,
 	    seqNo, str(m_fbb, filters[i]), interval,
 	    static_cast<fbs::ReqType>(types[i]), subscribe));
@@ -1605,9 +1585,9 @@ int main(int argc, char **argv)
     client->target(argv[1]);
 
   if (keyID)
-    client->access(server, port, keyID, secret);
+    client->access(ZuMv(server), port, ZuMv(keyID), ZuMv(secret));
   else
-    client->login(server, port, user);
+    client->login(ZuMv(server), port, ZuMv(user));
 
   client->wait();
 

@@ -3,6 +3,8 @@ include "link.fbs";
 namespace ZDash.fbs;
 union ReqAckData {
   VersionAck	: Version,
+  MkLinkAck	: Link,
+  RmLinkAck	: Link,
   ConnectAck	: Link,
   DisconnectAck	: Link,
   LinksAck	: LinkList,

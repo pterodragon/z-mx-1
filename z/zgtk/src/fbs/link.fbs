@@ -5,10 +5,13 @@ table LinkID {
 table LinkQuery {
 				// intentionally empty
 }
-table Link {
-  id		: uint32;
+table LinkData {
   server	: string;
   port		: uint16;
+}
+table Link {
+  id		: uint32;
+  data		: LinkData;
 }
 table LinkList {
   list		: [Link];

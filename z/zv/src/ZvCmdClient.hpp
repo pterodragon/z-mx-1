@@ -137,21 +137,18 @@ public:
     };
   };
 
-  ZvCmdCliLink(App *app) : Base{app} { }
+  ZvCmdCliLink(App *app, ZtString server, unsigned port) :
+      Base{app, ZuMv(server), port} { }
 
   // Note: the caller must ensure that calls to login()/access()
   // are not overlapped - until loggedIn()/connectFailed()/disconnected()
   // no further calls must be made
-  void login(
-      ZtString server, unsigned port,
-      ZtString user, ZtString passwd, unsigned totp) {
+  void login(ZtString &&user, ZtString &&passwd, unsigned totp) {
     new (m_credentials.init<ZvCmd_Login>())
       ZvCmd_Login{ZuMv(user), ZuMv(passwd), totp};
-    this->connect(ZuMv(server), port);
+    this->connect();
   }
-  void access(
-      ZtString server, unsigned port,
-      ZtString keyID, ZtString secret_) {
+  void access(ZtString &&keyID, ZuString secret_) {
     ZtArray<uint8_t> secret;
     secret.length(Ztls::Base64::declen(secret_.length()));
     Ztls::Base64::decode(
@@ -170,8 +167,15 @@ public:
       hmac_.finish(hmac.data());
     }
     new (m_credentials.init<ZvCmd_Access>())
-      ZvCmd_Access{ZuMv(keyID), token, stamp, hmac};
-    this->connect(ZuMv(server), port);
+      ZvCmd_Access{ZuMv(keyID), ZuMv(token), stamp, ZuMv(hmac)};
+    this->connect();
+  }
+  void access_(
+      ZtString &&keyID, ZvUserDB::KeyData &&token,
+      int64_t stamp, ZvUserDB::KeyData &&hmac) {
+    new (m_credentials.init<ZvCmd_Access>())
+      ZvCmd_Access{ZuMv(keyID), ZuMv(token), stamp, ZuMv(hmac)};
+    this->connect();
   }
 
   int state() const { return m_state; }
@@ -218,7 +222,7 @@ public:
     m_state = State::Login;
 
     // initialize Rx processing
-    ZiIORx::connected();
+    IORx::connected();
 
     // send login
     Zfb::IOBuilder fbb;
@@ -257,7 +261,7 @@ public:
 
     cancelTimeout();
 
-    ZiIORx::disconnected();
+    IORx::disconnected();
   }
 
 public:
@@ -266,7 +270,7 @@ public:
       return -1; // disconnect
 
     ZuID id;
-    int i = ZiIORx::process(data, len,
+    int i = IORx::process(data, len,
 	[&id](const uint8_t *data, unsigned len) -> int {
 	  if (ZuUnlikely(len < sizeof(ZvCmdHdr))) return INT_MAX;
 	  auto hdr = reinterpret_cast<const ZvCmdHdr *>(data);
@@ -397,7 +401,7 @@ friend TLS;
   void init(ZiMultiplex *mx, const ZvCf *cf) {
     static const char *alpn[] = { "zcmd", 0 };
 
-    Dispatcher::init(); // FIXME - dispatch hash table size
+    Dispatcher::init();
 
     Dispatcher::map(ZvCmd::ID::userDB(),
 	[](void *link, const uint8_t *data, unsigned len) {

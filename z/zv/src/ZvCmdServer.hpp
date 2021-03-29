@@ -96,6 +96,9 @@ public:
 
   ZvCmdSrvLink(App *app) : Base{app} { }
 
+  const ZmRef<User> &user() const { return m_user; }
+  bool interactive() const { return m_interactive; }
+
   void connected(const char *, const char *alpn) {
     scheduleTimeout();
 
@@ -142,7 +145,6 @@ private:
     }
     {
       using namespace Save;
-      m_fbb.Clear();
       m_fbb.Finish(fbs::CreateLoginAck(m_fbb,
 	    m_user->id, str(m_fbb, m_user->name),
 	    strVecIter(m_fbb, m_user->roles.length(),
@@ -165,7 +167,6 @@ private:
       Verifier verifier{data, len};
       if (!fbs::VerifyRequestBuffer(verifier)) return -1;
     }
-    m_fbb.Clear();
     this->app()->processUserDB(
 	m_user, m_interactive, fbs::GetRequest(data), m_fbb);
     ZvCmdHdr{m_fbb, ZvCmd::ID::userDB()};
@@ -180,7 +181,6 @@ private:
       Verifier verifier{data, len};
       if (!fbs::VerifyRequestBuffer(verifier)) return -1;
     }
-    m_fbb.Clear();
     this->app()->processCmd(impl(), m_user, m_interactive,
 	fbs::GetRequest(data), m_fbb);
     ZvCmdHdr{m_fbb, ZvCmd::ID::cmd()};
@@ -195,7 +195,6 @@ private:
       Verifier verifier{data, len};
       if (!fbs::VerifyRequestBuffer(verifier)) return -1;
     }
-    m_fbb.Clear();
     this->app()->processTelReq(
 	impl(), m_user, m_interactive, fbs::GetRequest(data), m_fbb);
     ZvCmdHdr{m_fbb, ZvCmd::ID::telReq()};
@@ -284,7 +283,7 @@ friend TLS;
     static const char *alpn[] = { "zcmd", 0 };
 
     Host::init();
-    Dispatcher::init(); // FIXME - dispatch hash table size
+    Dispatcher::init();
 
     map(ZvCmd::ID::userDB(),
 	[](void *link, const uint8_t *data, unsigned len) {

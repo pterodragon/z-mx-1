@@ -77,7 +77,7 @@ inline T *ZmAllocator<T, ID>::allocate(std::size_t n) {
   using Cache = ZmHeapCacheT<ID, ZmHeap_Size<sizeof(T)>::Size>;
   if (ZuLikely(n == 1)) return static_cast<T *>(Cache::alloc());
   if (auto ptr = static_cast<T *>(::malloc(n * sizeof(T)))) return ptr;
-  throw std::bad_alloc();
+  throw std::bad_alloc{};
 }
 template <typename T, typename ID>
 inline void ZmAllocator<T, ID>::deallocate(T *p, std::size_t n) noexcept {

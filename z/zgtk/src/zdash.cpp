@@ -808,6 +808,7 @@ namespace GtkTree {
 
 class ZDash_Cli;
 class ZDash_Srv;
+class SrvLink;
 
 class CliLink_ : public ZvCmdCliLink<ZDash_Cli, CliLink_> {
 public:
@@ -815,7 +816,7 @@ public:
   using Key = ZuPair<ZuString, uint16_t>;
   Key key() const { return {this->server(), this->port()}; }
 
-  CliLink_(ZDash_Cli *);
+  CliLink_(ZDash_Cli *, ZtString &&server, unsigned port, SrvLink *);
 
   void loggedIn();
   void disconnected();
@@ -826,6 +827,7 @@ public:
 
   ZvSeqNo		seqNo = 0;
   Telemetry::Containers	telemetry;
+  SrvLink		*srvLink = nullptr;
 };
 struct CliLink_KeyAccessor : public ZuAccessor<CliLink_ *, CliLink_::Key> {
   static CliLink_::Key value(const CliLink_ *link) { return link->key(); }
@@ -848,10 +850,10 @@ public:
   using Base = ZvCmdSrvLink<ZDash_Srv, SrvLink>;
   SrvLink(ZDash_Srv *app);
 
-  int processApp(const uint8_t *data, unsigned len);
+  int processCmd(const uint8_t *data, unsigned len);
   int processDeflt(ZuID id, const uint8_t *data, unsigned len);
 
-  // FIXME - selected CliLink
+  CliLink		*srvLink = nullptr;
 };
 
 class ZDash;
@@ -969,12 +971,17 @@ public:
     Server::init(mx, cf);
     static_cast<Server *>(this)->Dispatcher::map("zdash",
 	[](void *link, const uint8_t *data, unsigned len) {
-	  return static_cast<SrvLink *>(link)->processApp(data, len);
+	  return static_cast<SrvLink *>(link)->processCmd(data, len);
 	});
     static_cast<Server *>(this)->Dispatcher::deflt(
 	[](void *link, ZuID id, const uint8_t *data, unsigned len) {
 	  return static_cast<SrvLink *>(link)->processDeflt(id, data, len);
 	});
+
+    for (unsigned i = 0; i < CmdPerm::N; i++)
+      m_cmdPerms[i] = findPerm(
+	  ZtString{} << "ZDash." <<
+	  fbs::EnumNamesReqData()[i - CmdPerm::Offset]);
 
     Client::init(mx, cf);
     static_cast<Client *>(this)->Dispatcher::deflt(
@@ -1104,7 +1111,7 @@ public:
   }
 
   void loggedIn(CliLink_ *link) {
-    // FIXME
+    // FIXME - respond to connectCmd
   }
 
   void disconnected(CliLink_ *link) {
@@ -1113,13 +1120,17 @@ public:
   }
   void disconnected2(CliLink_ *link) {
     // FIXME - update App RAG to red (in caller)
-    // FIXME - delete link ?
-    m_executed.post();
+    // FIXME - respond to connectCmd / disconnectCmd ?
+    // FIXME - need async disconnected notification back to client
   }
 
   void connectFailed(CliLink_ *, bool transient) {
     // FIXME - delete link ?
-    // FIXME
+    // FIXME - respond to connectCmd
+  }
+
+  void disconnected(SrvLink *link) {
+    // FIXME - detach all client-side links connected to this
   }
 
   int processTelemetry(CliLink_ *link, const uint8_t *data, unsigned len) {
@@ -1135,10 +1146,160 @@ public:
     return len;
   }
 
-  int processApp(SrvLink *link, const uint8_t *data, unsigned len) {
-    // FIXME - process version, connect, disconnect, links, select, etc.
-    // - connect auto-selects
-    // - disconnect de-selects
+  int rejectCmd(SrvLink *link, uint64_t seqNo,
+      unsigned code, ZtString text) {
+    auto text_ = Zfb::Save::str(m_fbb, text);
+    fbs::ReqAckBuilder fbb_(m_fbb);
+    fbb_.add_seqNo(seqNo);
+    fbb_.add_rejCode(code);
+    fbb_.add_rejText(text_);
+    m_fbb.Finish(fbb_.Finish());
+    link->sendApp(m_fbb);
+    return 1;
+  }
+
+  int processCmd(SrvLink *link, const uint8_t *data, unsigned len) {
+    using namespace Zfb;
+    using namespace Load;
+
+    {
+      Verifier verifier(msg.data(), msg.length());
+      if (!fbs::VerifyRequestBuffer(verifier)) return -1;
+    }
+
+    auto request_ = fbs::GetRequest(msg.data());
+    uint64_t seqNo = request_->seqNo();
+    int reqType = request_->data_type();
+
+    {
+      auto perm = m_cmdPerms[CmdPerm::Offset + reqType];
+      if (ZuUnlikely(perm < 0)) {
+	ZtString permName;
+	permName << "ZDash." << fbs::EnumNamesReqData()[reqType];
+	perm = m_cmdPerms[CmdPerm::Offset + reqType] =
+	  server->findPerm(permName);
+	if (ZuUnlikely(perm < 0)) {
+	  return rejectCmd(link, seqNo, __LINE__, ZtString{} <<
+	      "permission denied (\"" << permName << "\" missing)");
+	}
+      }
+      if (ZuUnlikely(!server->ok(user, interactive, perm))) {
+	ZtString text = "permission denied";
+	if (user->flags & ZvUserDB::User::ChPass)
+	  text << " (user must change password)";
+	return rejectCmd(link, seqNo, __LINE__, ZuMv(text));
+      }
+    }
+
+    const void *reqData_ = request_->data();
+    fbs::ReqAckData ackType = fbs::ReqAckData_NONE;
+    Offset<void> ackData = 0;
+
+    switch (reqType) {
+      case fbs::ReqData_Version:
+	ackType = fbs::ReqAckData_Version;
+	ackData = fbs::CreateVersion(m_fbb,
+	    Save::str(m_fbb, ZuVerName())).Union();
+	break;
+      case fbs::ReqData_MkLink: {
+	auto reqData = static_cast<const fbs::LinkData *>(reqData_);
+	auto cliLink =
+	  new CliLink{this, str(reqData->server()), reqData->port(), link};
+	m_cliLinks.add(cliLink);
+	ackType = fbs::ReqAckData_MkLinkAck;
+	ackData = fbs::CreateLink(m_fbb, cliLink->id(),
+	    fbs::CreateLinkData(m_fbb,
+	      Save::str(cliLink->server()), cliLink->port())).Union();
+      } break;
+      case fbs::ReqData_RmLink: {
+	auto reqData = static_cast<const fbs::LinkID *>(reqData_);
+	auto cliLink = m_cliLinks.del(reqData->id());
+	if (!cliLink)
+	  return rejectCmd(link, seqNo, __LINE__, ZtString{} <<
+	      "unknown link " << reqData->id());
+	ackType = fbs::ReqAckData_RmLinkAck;
+	ackData = fbs::CreateLink(m_fbb, cliLink->id(),
+	    fbs::CreateLinkData(m_fbb,
+	      Save::str(cliLink->server()), cliLink->port())).Union();
+      } break;
+      case fbs::ReqData_Connect: {
+	auto reqData = static_cast<const fbs::Connect *>(reqData_);
+	auto cliLink = m_cliLinks.findPtr(reqData->id());
+	if (!cliLink)
+	  return rejectCmd(link, seqNo, __LINE__, ZtString{} <<
+	      "unknown link " << reqData->id());
+	auto loginReq = reqData->loginReq();
+	switch ((int)loginReq->reqData_type()) {
+	  case fbs::LoginReqData_Login: {
+	    auto login =
+	      static_cast<const ZvUserDB::fbs::Login *>(loginReq->reqData());
+	    cliLink->login(
+		str(login->user()), str(login->passwd()), login->totp());
+	  } break;
+	  case fbs::LoginReqData_Access: {
+	    auto access =
+	      static_cast<const ZvUserDB::fbs::Access *>(loginReq->reqData());
+	    cliLink->access_(
+		str(access->keyID()),
+		bytes(access->token()),
+		access->stamp(),
+		bytes(access->hmac()));
+	  } break;
+	  default:
+	    return rejectCmd(link, seqNo, __LINE__, ZtString{} <<
+		"unknown credentials type " << loginReq->data_type());
+	}
+	ackType = fbs::ReqAckData_ConnectAck;
+	ackData = fbs::CreateLink(m_fbb, cliLink->id(),
+	    fbs::CreateLinkData(m_fbb,
+	      Save::str(cliLink->server()), cliLink->port())).Union();
+      } break;
+      case fbs::ReqData_Disconnect: {
+	auto reqData = static_cast<const fbs::LinkID *>(reqData_);
+	auto cliLink = m_cliLinks.findPtr(reqData->id());
+	if (!cliLink)
+	  return rejectCmd(link, seqNo, __LINE__, ZtString{} <<
+	      "unknown link " << data->id());
+	cliLink->disconnect();
+	ackType = fbs::ReqAckData_ConnectAck;
+	ackData = fbs::CreateLink(m_fbb, cliLink->id(),
+	    fbs::CreateLinkData(m_fbb,
+	      Save::str(cliLink->server()), cliLink->port())).Union();
+      } break;
+      case fbs::ReqData_Links: {
+	ZtArray<Zfb::Offset<fbs::Link>> v;
+	auto i = m_cliLinks.readIterate();
+	while (auto cliLink = i.iterate())
+	  v.push(fbs::CreateLink(m_fbb, cliLink->id(),
+		fbs::CreateLinkData(m_fbb,
+		  Save::str(cliLink->server()), cliLink->port())));
+	auto list_ = m_fbb.CreateVector(v.data(), v.length());
+	ackType = fbs::ReqAckData_LinksAck;
+	ackData = fbs::CreateLinkList(m_fbb, list_).Union();
+      } break;
+      case fbs::ReqData_Select: {
+	auto reqData = static_cast<const fbs::LinkID *>(reqData_);
+	auto cliLink = m_cliLinks.findPtr(reqData->id());
+	if (!cliLink)
+	  return rejectCmd(link, seqNo, __LINE__, ZtString{} <<
+	      "unknown link " << data->id());
+	link->cliLink = cliLink;
+	ackType = fbs::ReqAckData_SelectAck;
+	ackData = fbs::CreateLink(m_fbb, cliLink->id(),
+	    fbs::CreateLinkData(m_fbb,
+	      Save::str(cliLink->server()), cliLink->port())).Union();
+      } break;
+    }
+
+    {
+      fbs::ReqAckBuilder fbb_(m_fbb);
+      fbb_.add_seqNo(seqNo);
+      fbb_.add_data_type(ackType);
+      fbb_.add_data(ackData);
+      m_fbb.Finish(fbb_.Finish());
+    }
+    ZvCmdHdr{m_fbb, m_id};
+    link->send_(m_fbb.buf()); // synchronous
     return 0;
   }
 
@@ -1351,8 +1512,16 @@ private:
   ZmSemaphore		m_done;
   ZmSemaphore		m_executed;
 
-  CliLinks		m_links;
+  CliLinks		m_cliLinks;
 
+  struct CmdPerm {
+    enum {
+      Offset = -(fbs::ReqData_NONE + 1),
+      N = fbs::ReqData_MAX - fbs::ReqData_NONE
+    };
+  };
+  int			m_cmdPerms[CmdPerm::N];
+  ZuID			m_id = "zdash";
   Zfb::IOBuilder	m_fbb;
 
   int			m_role;	// ZvTelemetry::AppRole
@@ -1384,7 +1553,9 @@ inline void ZDash_Srv::telemetry(ZvTelemetry::App &data)
   static_cast<ZDash *>(this)->telemetry(data);
 }
 
-inline CliLink_::CliLink_(ZDash_Cli *app) : Base{app} { }
+inline CliLink_::CliLink_(
+    ZDash_Cli *app, ZtString &&server, unsigned port, SrvLink *srvLink_) :
+    Base{app, ZuMv(server), port}, srvLink{srvLink_} { }
 
 inline void CliLink_::loggedIn()
 {
@@ -1411,9 +1582,9 @@ inline int CliLink_::processDeflt(ZuID id, const uint8_t *data, unsigned len)
 
 inline SrvLink::SrvLink(ZDash_Srv *app) : Base{app} { }
 
-inline int SrvLink::processApp(const uint8_t *data, unsigned len)
+inline int SrvLink::processCmd(const uint8_t *data, unsigned len)
 {
-  return static_cast<ZDash *>(this->app())->processApp(this, data, len);
+  return static_cast<ZDash *>(this->app())->processCmd(this, data, len);
 }
 inline int SrvLink::processDeflt(ZuID id, const uint8_t *data, unsigned len)
 {

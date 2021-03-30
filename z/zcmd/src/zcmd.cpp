@@ -169,7 +169,8 @@ class ZCmd;
 class Link : public ZvCmdCliLink<ZCmd, Link> {
 public:
   using Base = ZvCmdCliLink<ZCmd, Link>;
-  Link(ZCmd *app);
+  template <typename Server>
+  Link(ZCmd *app, Server &&server, uint16_t port);
 
   void loggedIn();
   void disconnected();
@@ -242,19 +243,19 @@ friend Link;
     m_soloMsg = ZuMv(s);
   }
 
-  template <typename ...Args>
-  void login(ZtString &&server, unsigned port, Args &&... args) {
+  template <typename Server, typename ...Args>
+  void login(Server &&server, uint16_t port, Args &&... args) {
     m_cli.open(); // idempotent
     ZtString passwd = m_cli.getpass("password: ", 100);
     if (!passwd) return;
     ZuBox<unsigned> totp = m_cli.getpass("totp: ", 6);
     if (!*totp) return;
-    m_link = new Link(this, ZuMv(server), port);
-    m_link->login(ZuFwd<Args>(args)..., passwd, totp);
+    m_link = new Link{this, ZuFwd<Server>(server), port};
+    m_link->login(ZuFwd<Args>(args)..., ZuMv(passwd), totp);
   }
-  template <typename ...Args>
-  void access(ZtString &&server, unsigned port, Args &&... args) {
-    m_link = new Link(this, ZuMv(server), port);
+  template <typename Server, typename ...Args>
+  void access(Server &&server, uint16_t port, Args &&... args) {
+    m_link = new Link(this, ZuFwd<Server>(server), port);
     m_link->access(ZuFwd<Args>(args)...);
   }
 
@@ -323,9 +324,10 @@ private:
   };
 
   int processTelemetry(const uint8_t *data, unsigned len) {
+    using namespace Zfb;
     using namespace ZvTelemetry;
     {
-      flatbuffers::Verifier verifier{data, len};
+      Verifier verifier{data, len};
       if (!fbs::VerifyTelemetryBuffer(verifier)) return -1;
     }
     auto msg = fbs::GetTelemetry(data);
@@ -1443,7 +1445,9 @@ private:
   TelCap		m_telcap[TelDataN];
 };
 
-inline Link::Link(ZCmd *app) : Base{app} { }
+template <typename Server>
+inline Link::Link(ZCmd *app, Server &&server, uint16_t port) :
+    Base{app, ZuFwd<Server>(server), port} { }
 
 inline void Link::loggedIn()
 {

@@ -204,7 +204,7 @@ public:
     m_tree.startIterate(*this, index, compare);
   }
 
-  ZuInline Node *iterate() { return m_tree.iterate(*this); }
+  Node *iterate() { return m_tree.iterate(*this); }
 
   const Key &iterateKey() {
     Node *node = m_tree.iterate(*this);
@@ -217,7 +217,7 @@ public:
     return ValCmp::null();
   }
 
-  ZuInline unsigned count() const { return m_tree.count_(); }
+  unsigned count() const { return m_tree.count_(); }
 
 protected:
   Tree	&m_tree;
@@ -317,18 +317,18 @@ private:
   template <typename Node>
   class NodeFn_Dup {
   public:
-    ZuInline void init() { m_dup = nullptr; }
-    ZuInline Node *dup() const { return m_dup; }
-    ZuInline void dup(Node *n) { m_dup = n; }
+    void init() { m_dup = nullptr; }
+    Node *dup() const { return m_dup; }
+    void dup(Node *n) { m_dup = n; }
   private:
     Node		*m_dup;
   };
   template <typename Node>
   class NodeFn_Unique {
   public:
-    ZuInline void init() { }
-    ZuInline constexpr Node * const dup() const { return nullptr; }
-    ZuInline void dup(Node *) { }
+    void init() { }
+    constexpr Node * const dup() const { return nullptr; }
+    void dup(Node *) { }
   };
   template <
     typename Node, typename Heap, bool NodeIsKey, bool NodeIsVal, bool Unique>
@@ -343,30 +343,28 @@ private:
       typename ZuIf<NodeFn_Unique<Node>, NodeFn_Dup<Node>, Unique>::T;
 
   public:
-    ZuInline NodeFn_() { }
+    NodeFn_() { }
 
-    ZuInline void init() {
+    void init() {
       Base::init();
       m_right = m_left = nullptr;
       m_parent = 0;
     }
 
-    ZuInline bool black() {
-      return m_parent & (uintptr_t)1;
-    }
-    ZuInline void black(bool black) {
+    bool black() { return m_parent & (uintptr_t)1; }
+    void black(bool black) {
       black ? (m_parent |= (uintptr_t)1) : (m_parent &= ~(uintptr_t)1);
     }
 
     // access to these methods is always guarded, so no need to protect
     // the returned object against concurrent deletion; these are private
-    ZuInline Node *right() const { return m_right; }
-    ZuInline Node *left() const { return m_left; }
-    ZuInline Node *parent() const { return (Node *)(m_parent & ~(uintptr_t)1); }
+    Node *right() const { return m_right; }
+    Node *left() const { return m_left; }
+    Node *parent() const { return (Node *)(m_parent & ~(uintptr_t)1); }
 
-    ZuInline void right(Node *n) { m_right = n; }
-    ZuInline void left(Node *n) { m_left = n; }
-    ZuInline void parent(Node *n) {
+    void right(Node *n) { m_right = n; }
+    void left(Node *n) { m_left = n; }
+    void parent(Node *n) {
       m_parent = (uintptr_t)n | (m_parent & (uintptr_t)1);
     }
 
@@ -403,10 +401,10 @@ public:
 
   ~ZmRBTree() { clean(); }
 
-  ZuInline Lock &lock() const { return m_lock; }
+  Lock &lock() const { return m_lock; }
 
   unsigned count() const { ReadGuard guard(m_lock); return m_count; }
-  ZuInline unsigned count_() const { return m_count; }
+  unsigned count_() const { return m_count; }
 
   void add(Node *newNode) {
     newNode->init();

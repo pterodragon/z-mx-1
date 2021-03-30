@@ -10,6 +10,7 @@ table LinkData {
   port		: uint16;
 }
 table Link {
+  selected	: bool;
   id		: uint32;
   data		: LinkData;
 }

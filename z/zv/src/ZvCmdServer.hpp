@@ -96,7 +96,7 @@ public:
 
   ZvCmdSrvLink(App *app) : Base{app} { }
 
-  const ZmRef<User> &user() const { return m_user; }
+  User *user() const { return m_user.ptr(); }
   bool interactive() const { return m_interactive; }
 
   void connected(const char *, const char *alpn) {

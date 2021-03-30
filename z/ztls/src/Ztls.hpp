@@ -52,7 +52,7 @@ namespace Ztls {
 // Function Category | I/O Threads |        TLS thread          | App threads
 // ------------------|-------------|----------------------------|------------
 // Server            | accepted()  | connected() disconnected() | listen()
-// Client            |             | connected() disconnected() | connect()
+// Client            |             | connect_() connectFailed() | connect()
 // Disconnect        |             | disconnect_()              | disconnect()
 // Transmission (Tx) |             | send_()                    | send()
 // Reception    (Rx) |             | process()                  |
@@ -474,7 +474,7 @@ friend Base;
   CliLink(App *app) : Base{app} {
     mbedtls_ssl_session_init(&m_session);
   }
-  CliLink(App *app, ZtString server, unsigned port) :
+  CliLink(App *app, ZtString server, uint16_t port) :
       Base{app}, m_server{ZuMv(server)}, m_port{port} {
     mbedtls_ssl_session_init(&m_session);
   }

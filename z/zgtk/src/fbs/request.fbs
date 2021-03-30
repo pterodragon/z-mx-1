@@ -3,7 +3,7 @@ include "link.fbs";
 include "loginreq.fbs";
 namespace ZDash.fbs;
 table Connect {
-  linkID	: LinkID;
+  link		: LinkID;
   loginReq	: ZvUserDB.fbs.LoginReq;
 }
 union ReqData {

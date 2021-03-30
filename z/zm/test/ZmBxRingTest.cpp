@@ -27,9 +27,9 @@ void usage()
 }
 
 struct Msg {
-  ZuInline Msg() : m_p((uintptr_t)(void *)this) { }
-  ZuInline ~Msg() { m_p = 0; }
-  ZuInline bool ok() const { return m_p == (uintptr_t)(void *)this; }
+  Msg() : m_p((uintptr_t)(void *)this) { }
+  ~Msg() { m_p = 0; }
+  bool ok() const { return m_p == (uintptr_t)(void *)this; }
   uintptr_t m_p;
 };
 

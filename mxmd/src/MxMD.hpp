@@ -208,7 +208,7 @@ struct MxMDVenueMapping {
   MxID		segment;
   unsigned	rank = 0;
 
-  ZuInline bool operator !() const { return !venue; }
+  bool operator !() const { return !venue; }
   ZuOpBool
 };
 
@@ -232,7 +232,7 @@ friend MxMDVenue;
 	    ZmRBTreeHeapID<TickSizes_HeapID> > > > >;
 
   struct IDAccessor : public ZuAccessor<MxMDTickSizeTbl *, MxIDString> {
-    ZuInline static const MxIDString &value(const MxMDTickSizeTbl *tbl) {
+    static const MxIDString &value(const MxMDTickSizeTbl *tbl) {
       return tbl->id();
     }
   };
@@ -244,9 +244,9 @@ friend MxMDVenue;
 public:
   ~MxMDTickSizeTbl() { }
 
-  ZuInline MxMDVenue *venue() const { return m_venue; }
-  ZuInline const MxIDString &id() const { return m_id; }
-  ZuInline MxNDP pxNDP() const { return m_pxNDP; }
+  MxMDVenue *venue() const { return m_venue; }
+  const MxIDString &id() const { return m_id; }
+  MxNDP pxNDP() const { return m_pxNDP; }
 
   void reset();
   void addTickSize(MxValue minPrice, MxValue maxPrice, MxValue tickSize);
@@ -303,10 +303,10 @@ friend MxMDLib;
 public:
   ~MxMDTrade_() { }
 
-  ZuInline MxMDInstrument *instrument() const { return m_instrument; }
-  ZuInline MxMDOrderBook *orderBook() const { return m_orderBook; }
+  MxMDInstrument *instrument() const { return m_instrument; }
+  MxMDOrderBook *orderBook() const { return m_orderBook; }
 
-  ZuInline const MxMDTradeData &data() const { return m_data; }
+  const MxMDTradeData &data() const { return m_data; }
 
 private:
   MxMDInstrument	*m_instrument;
@@ -402,25 +402,23 @@ friend OrderID2Accessor;
   struct OrderID1Accessor;
 friend OrderID1Accessor;
   struct OrderID1Accessor : public ZuAccessor<MxMDOrder_ *, MxIDString> {
-    ZuInline static const MxIDString &value(const MxMDOrder_ *o) {
-      return o->m_id;
-    }
+    static const MxIDString &value(const MxMDOrder_ *o) { return o->m_id; }
   };
 
-  ZuInline MxMDOrderBook *orderBook() const { return m_orderBook; }
+  MxMDOrderBook *orderBook() const { return m_orderBook; }
   MxMDOBSide *obSide() const;
-  ZuInline MxMDPxLevel_ *pxLevel() const { return m_pxLevel; }
+  MxMDPxLevel_ *pxLevel() const { return m_pxLevel; }
 
-  ZuInline const MxIDString &id() const { return m_id; }
-  ZuInline const MxMDOrderData &data() const { return m_data; }
+  const MxIDString &id() const { return m_id; }
+  const MxMDOrderData &data() const { return m_data; }
 
   template <typename T = uintptr_t>
-  ZuInline T appData() const { return (T)m_appData.load_(); }
+  T appData() const { return (T)m_appData.load_(); }
   template <typename T>
-  ZuInline void appData(T v) { m_appData.store_((uintptr_t)v); }
+  void appData(T v) { m_appData.store_((uintptr_t)v); }
 
 private:
-  ZuInline MxMDOrderData &data_() { return m_data; }
+  MxMDOrderData &data_() { return m_data; }
 
   void update_(MxUInt rank, MxValue price, MxValue qty, MxFlags flags) {
     m_data.rank = rank;
@@ -439,7 +437,7 @@ private:
       m_data.qty = MxValNDP{m_data.qty, oldQtyNDP}.adjust(qtyNDP);
   }
 
-  ZuInline void pxLevel(MxMDPxLevel_ *l) { m_pxLevel = l; }
+  void pxLevel(MxMDPxLevel_ *l) { m_pxLevel = l; }
 
   MxMDOrderBook		*m_orderBook;
   MxMDPxLevel_		*m_pxLevel = 0;
@@ -451,7 +449,7 @@ private:
 };
 
 struct MxMDOrder_RankAccessor : public ZuAccessor<MxMDOrder_, MxUInt> {
-  ZuInline static MxUInt value(const MxMDOrder_ &o) {
+  static MxUInt value(const MxMDOrder_ &o) {
     return o.data().rank;
   }
 };
@@ -607,12 +605,12 @@ protected:
 public:
   ~MxMDPxLevel_() { }
 
-  ZuInline MxMDOBSide *obSide() const { return m_obSide; }
+  MxMDOBSide *obSide() const { return m_obSide; }
   MxEnum side() const;
-  ZuInline MxNDP pxNDP() const { return m_pxNDP; }
-  ZuInline MxNDP qtyNDP() const { return m_qtyNDP; }
-  ZuInline MxValue price() const { return m_price; }
-  ZuInline const MxMDPxLvlData &data() const { return m_data; }
+  MxNDP pxNDP() const { return m_pxNDP; }
+  MxNDP qtyNDP() const { return m_qtyNDP; }
+  MxValue price() const { return m_price; }
+  const MxMDPxLvlData &data() const { return m_data; }
 
   template <typename L> // (MxMDOrder *) -> uintptr_t
   uintptr_t allOrders(L l) const {
@@ -666,7 +664,7 @@ struct MxMDPxLevels_HeapID : public ZmHeapSharded {
 };
 
 struct MxMDPxLevel_PxAccessor : public ZuAccessor<MxMDPxLevel_, MxValue> {
-  ZuInline static MxValue value(const MxMDPxLevel_ &p) { return p.price(); }
+  static MxValue value(const MxMDPxLevel_ &p) { return p.price(); }
 };
 
 typedef ZmRBTree<MxMDPxLevel_,
@@ -776,17 +774,17 @@ private:
     m_orderBook(ob), m_side(side), m_data{0, 0} { }
 
 public:
-  ZuInline MxMDOrderBook *orderBook() const { return m_orderBook; }
-  ZuInline MxEnum side() const { return m_side; }
+  MxMDOrderBook *orderBook() const { return m_orderBook; }
+  MxEnum side() const { return m_side; }
 
-  ZuInline const MxMDOBSideData &data() const { return m_data; }
+  const MxMDOBSideData &data() const { return m_data; }
   MxValue vwap() const {
     return !m_data.qty ? MxValue() :
       (MxValNDP{m_data.nv, pxNDP()} /
        MxValNDP{m_data.qty, qtyNDP()}).value;
   }
 
-  ZuInline MxMDPxLevel *mktLevel() { return m_mktLevel; }
+  MxMDPxLevel *mktLevel() { return m_mktLevel; }
 
   // iterate over all price levels, best -> worst
   template <typename L> // (MxMDPxLevel *) -> uintptr_t
@@ -825,8 +823,8 @@ public:
   MxNDP pxNDP() const;
   MxNDP qtyNDP() const;
 
-  ZuInline MxMDPxLevel *minimum() { return m_pxLevels.minimumPtr(); }
-  ZuInline MxMDPxLevel *maximum() { return m_pxLevels.maximumPtr(); }
+  MxMDPxLevel *minimum() { return m_pxLevels.minimumPtr(); }
+  MxMDPxLevel *maximum() { return m_pxLevels.maximumPtr(); }
 
   // returns effective limit Px for matching up to qty (market orders)
   MxValue matchPx(MxValue qty) {
@@ -926,7 +924,7 @@ private:
   MxMDPxLevels		m_pxLevels;
 };
 
-ZuInline MxEnum MxMDPxLevel_::side() const
+MxEnum MxMDPxLevel_::side() const
 {
   return m_obSide->side();
 }
@@ -949,13 +947,13 @@ friend MxMDOBSide;
 friend MxMDPxLevel_;
 
   struct KeyAccessor : public ZuAccessor<MxMDOrderBook *, MxInstrKey> {
-    ZuInline static const MxInstrKey &value(const MxMDOrderBook *ob) {
+    static const MxInstrKey &value(const MxMDOrderBook *ob) {
       return ob->key();
     }
   };
 
   struct VenueSegmentAccessor : public ZuAccessor<MxMDOrderBook *, uint128_t> {
-    ZuInline static uint128_t value(const MxMDOrderBook *ob) {
+    static uint128_t value(const MxMDOrderBook *ob) {
       return venueSegment(ob->venueID(), ob->segment());
     }
   };
@@ -981,37 +979,37 @@ friend MxMDPxLevel_;
 public:
   MxMDLib *md() const;
 
-  ZuInline MxMDVenue *venue() const { return m_venue; };
-  ZuInline MxMDVenueShard *venueShard() const { return m_venueShard; };
+  MxMDVenue *venue() const { return m_venue; };
+  MxMDVenueShard *venueShard() const { return m_venueShard; };
 
-  ZuInline MxMDInstrument *instrument() const { return m_instruments[0]; }
-  ZuInline MxMDInstrument *instrument(MxUInt leg) const {
+  MxMDInstrument *instrument() const { return m_instruments[0]; }
+  MxMDInstrument *instrument(MxUInt leg) const {
     if (ZuUnlikely(!*leg)) leg = 0;
     return m_instruments[leg];
   }
 
-  ZuInline MxMDOrderBook *out() const { return m_out; };
+  MxMDOrderBook *out() const { return m_out; };
 
-  ZuInline MxID venueID() const { return m_key.venue; }
-  ZuInline MxID segment() const { return m_key.segment; }
-  ZuInline const MxIDString &id() const { return m_key.id; };
-  ZuInline const MxInstrKey &key() const { return m_key; }
+  MxID venueID() const { return m_key.venue; }
+  MxID segment() const { return m_key.segment; }
+  const MxIDString &id() const { return m_key.id; };
+  const MxInstrKey &key() const { return m_key; }
 
-  ZuInline MxUInt legs() const { return m_legs; };
-  ZuInline MxEnum side(unsigned leg) const { return m_sides[leg]; }
-  ZuInline MxRatio ratio(unsigned leg) const { return m_ratios[leg]; }
+  MxUInt legs() const { return m_legs; };
+  MxEnum side(unsigned leg) const { return m_sides[leg]; }
+  MxRatio ratio(unsigned leg) const { return m_ratios[leg]; }
 
-  ZuInline unsigned pxNDP() const { return m_l1Data.pxNDP; }
-  ZuInline unsigned qtyNDP() const { return m_l1Data.qtyNDP; }
+  unsigned pxNDP() const { return m_l1Data.pxNDP; }
+  unsigned qtyNDP() const { return m_l1Data.qtyNDP; }
 
-  ZuInline MxMDTickSizeTbl *tickSizeTbl() const { return m_tickSizeTbl; }
+  MxMDTickSizeTbl *tickSizeTbl() const { return m_tickSizeTbl; }
 
-  ZuInline const MxMDLotSizes &lotSizes() const { return m_lotSizes; }
+  const MxMDLotSizes &lotSizes() const { return m_lotSizes; }
 
-  ZuInline const MxMDL1Data &l1Data() const { return m_l1Data; }
+  const MxMDL1Data &l1Data() const { return m_l1Data; }
 
-  ZuInline MxMDOBSide *bids() const { return m_bids.ptr(); };
-  ZuInline MxMDOBSide *asks() const { return m_asks.ptr(); };
+  MxMDOBSide *bids() const { return m_bids.ptr(); };
+  MxMDOBSide *asks() const { return m_asks.ptr(); };
 
   void l1(MxMDL1Data &data);
   void pxLevel(MxEnum side, MxDateTime transactTime,
@@ -1047,20 +1045,20 @@ public:
   void subscribe(MxMDInstrHandler *);
   void unsubscribe();
 
-  ZuInline const ZmRef<MxMDInstrHandler> &handler() const { return m_handler; }
+  const ZmRef<MxMDInstrHandler> &handler() const { return m_handler; }
 
   template <typename T = uintptr_t>
-  ZuInline T libData() const { return (T)m_libData.load_(); }
+  T libData() const { return (T)m_libData.load_(); }
   template <typename T>
-  ZuInline void libData(T v) { m_libData.store_((uintptr_t)v); }
+  void libData(T v) { m_libData.store_((uintptr_t)v); }
 
   template <typename T = uintptr_t>
-  ZuInline T appData() const { return (T)m_appData.load_(); }
+  T appData() const { return (T)m_appData.load_(); }
   template <typename T>
-  ZuInline void appData(T v) { m_appData.store_((uintptr_t)v); }
+  void appData(T v) { m_appData.store_((uintptr_t)v); }
 
   template <typename T = MxMDFeedOB>
-  ZuInline typename ZuIs<MxMDFeedOB, T, ZmRef<T> &>::T feedOB() {
+  typename ZuIs<MxMDFeedOB, T, ZmRef<T> &>::T feedOB() {
     ZmRef<T> *ZuMayAlias(ptr) = (ZmRef<T> *)&m_feedOB;
     return *ptr;
   }
@@ -1129,7 +1127,7 @@ public:
       MxValue lastPx, MxValue lastQty, MxValue nv, MxValue openQty);
 
 private:
-  ZuInline static uint128_t venueSegment(MxID venue, MxID segment) {
+  static uint128_t venueSegment(MxID venue, MxID segment) {
     return (((uint128_t)venue)<<64U) | (uint128_t)segment;
   }
 
@@ -1197,44 +1195,44 @@ private:
   ZmAtomic<uintptr_t>		m_appData = 0;
 };
 
-ZuInline MxMDOBSide *MxMDOrder_::bids_(const MxMDOrderBook *ob)
+MxMDOBSide *MxMDOrder_::bids_(const MxMDOrderBook *ob)
 {
   if (ZuLikely(ob)) return ob->bids();
   return 0;
 }
-ZuInline MxMDOBSide *MxMDOrder_::asks_(const MxMDOrderBook *ob)
+MxMDOBSide *MxMDOrder_::asks_(const MxMDOrderBook *ob)
 {
   if (ZuLikely(ob)) return ob->asks();
   return 0;
 }
 
-ZuInline MxMDOBSide *MxMDOrder_::obSide() const
+MxMDOBSide *MxMDOrder_::obSide() const
 {
   return m_data.side == MxSide::Buy ?
     m_orderBook->bids() : m_orderBook->asks();
 }
 
-ZuInline MxMDOrderID2Ref MxMDOrder_::OrderID2Accessor::value(
+MxMDOrderID2Ref MxMDOrder_::OrderID2Accessor::value(
   const MxMDOrder_ *o)
 {
   return MxMDOrderID2Ref(o->orderBook()->key(), o->m_id);
 }
-ZuInline MxMDOrderID3Ref MxMDOrder_::OrderID3Accessor::value(
+MxMDOrderID3Ref MxMDOrder_::OrderID3Accessor::value(
   const MxMDOrder_ *o)
 {
   return MxMDOrderID3Ref(o->orderBook()->key(), o->m_data.side, o->m_id);
 }
 
-ZuInline MxNDP MxMDOBSide::pxNDP() const { return m_orderBook->pxNDP(); }
-ZuInline MxNDP MxMDOBSide::qtyNDP() const { return m_orderBook->qtyNDP(); }
+MxNDP MxMDOBSide::pxNDP() const { return m_orderBook->pxNDP(); }
+MxNDP MxMDOBSide::qtyNDP() const { return m_orderBook->qtyNDP(); }
 
-ZuInline void MxMDPxLevel_::updateLast(
+void MxMDPxLevel_::updateLast(
     MxDateTime stamp, MxValue lastQty, MxValue nv, MxValue openQty)
 {
   m_obSide->updateLast(stamp, m_price, lastQty, nv, openQty);
 }
 
-ZuInline void MxMDOBSide::updateLast(MxDateTime stamp,
+void MxMDOBSide::updateLast(MxDateTime stamp,
     MxValue lastPx, MxValue lastQty, MxValue nv, MxValue openQty)
 {
   m_orderBook->updateLast(stamp, m_side, lastPx, lastQty, nv, openQty);
@@ -1267,14 +1265,14 @@ friend MxMDInstrument;
 	  ZmRBTreeHeapID<Options_HeapID,
 	    ZmRBTreeLock<ZmPLock> > > > >;
 
-  ZuInline MxMDDerivatives() { }
+  MxMDDerivatives() { }
 
 public:
-  ZuInline MxMDInstrument *future(const MxFutKey &key) const
+  MxMDInstrument *future(const MxFutKey &key) const
     { return m_futures.findVal(key); }
   uintptr_t allFutures(ZmFn<MxMDInstrument *>) const;
 
-  ZuInline MxMDInstrument *option(const MxOptKey &key) const
+  MxMDInstrument *option(const MxOptKey &key) const
     { return m_options.findVal(key); }
   uintptr_t allOptions(ZmFn<MxMDInstrument *>) const;
 
@@ -1294,7 +1292,7 @@ friend MxMDLib;
 friend MxMDShard;
 
   struct KeyAccessor : public ZuAccessor<MxMDInstrument *, MxInstrKey> {
-    ZuInline static const MxInstrKey &value(const MxMDInstrument *instrument) {
+    static const MxInstrKey &value(const MxMDInstrument *instrument) {
       return instrument->key();
     }
   };
@@ -1315,15 +1313,15 @@ friend MxMDShard;
 public:
   MxMDLib *md() const;
 
-  ZuInline MxID primaryVenue() const { return m_key.venue; }
-  ZuInline MxID primarySegment() const { return m_key.segment; }
-  ZuInline const MxIDString &id() const { return m_key.id; }
-  ZuInline const MxInstrKey &key() const { return m_key; }
+  MxID primaryVenue() const { return m_key.venue; }
+  MxID primarySegment() const { return m_key.segment; }
+  const MxIDString &id() const { return m_key.id; }
+  const MxInstrKey &key() const { return m_key; }
 
-  ZuInline const MxMDInstrRefData &refData() const { return m_refData; }
+  const MxMDInstrRefData &refData() const { return m_refData; }
 
-  ZuInline MxMDInstrument *underlying() const { return m_underlying; }
-  ZuInline MxMDDerivatives *derivatives() const { return m_derivatives; }
+  MxMDInstrument *underlying() const { return m_underlying; }
+  MxMDDerivatives *derivatives() const { return m_derivatives; }
 
   void update(
       const MxMDInstrRefData &refData, MxDateTime transactTime,
@@ -1332,16 +1330,16 @@ public:
   void subscribe(MxMDInstrHandler *);
   void unsubscribe();
 
-  ZuInline const ZmRef<MxMDInstrHandler> &handler() const { return m_handler; }
+  const ZmRef<MxMDInstrHandler> &handler() const { return m_handler; }
 
-  ZuInline ZmRef<MxMDOrderBook> orderBook(MxID venue) const {
+  ZmRef<MxMDOrderBook> orderBook(MxID venue) const {
     if (ZmRef<MxMDOrderBook> ob =
 	m_orderBooks.readIterator<ZmRBTreeGreaterEqual>(
 	  MxMDOrderBook::venueSegment(venue, MxID())).iterateKey())
       if (ob && ob->venueID() == venue) return ob;
     return (MxMDOrderBook *)nullptr;
   }
-  ZuInline ZmRef<MxMDOrderBook> orderBook(MxID venue, MxID segment) const {
+  ZmRef<MxMDOrderBook> orderBook(MxID venue, MxID segment) const {
     if (ZmRef<MxMDOrderBook> ob = m_orderBooks.findKey(
 	  MxMDOrderBook::venueSegment(venue, segment)))
       return ob;
@@ -1393,26 +1391,26 @@ public:
   }
 
   template <typename T = uintptr_t>
-  ZuInline T libData() const { return (T)m_libData.load_(); }
+  T libData() const { return (T)m_libData.load_(); }
   template <typename T>
-  ZuInline void libData(T v) { m_libData.store_((uintptr_t)v); }
+  void libData(T v) { m_libData.store_((uintptr_t)v); }
 
   template <typename T = uintptr_t>
-  ZuInline T appData() const { return (T)m_appData.load_(); }
+  T appData() const { return (T)m_appData.load_(); }
   template <typename T>
-  ZuInline void appData(T v) { m_appData.store_((uintptr_t)v); }
+  void appData(T v) { m_appData.store_((uintptr_t)v); }
 
 private:
   void addOrderBook_(MxMDOrderBook *);
   ZmRef<MxMDOrderBook> findOrderBook_(MxID venue, MxID segment);
   ZmRef<MxMDOrderBook> delOrderBook_(MxID venue, MxID segment);
 
-  ZuInline void underlying(MxMDInstrument *u) { m_underlying = u; }
-  ZuInline void addDerivative(MxMDInstrument *d) {
+  void underlying(MxMDInstrument *u) { m_underlying = u; }
+  void addDerivative(MxMDInstrument *d) {
     if (!m_derivatives) m_derivatives = new MxMDDerivatives();
     m_derivatives->add(d);
   }
-  ZuInline void delDerivative(MxMDInstrument *d) {
+  void delDerivative(MxMDInstrument *d) {
     if (!m_derivatives) return;
     m_derivatives->del(d);
   }
@@ -1447,12 +1445,12 @@ public:
   MxMDFeed(MxMDLib *md, MxID id, unsigned level);
 
   struct IDAccessor : public ZuAccessor<MxMDFeed *, MxID> {
-    ZuInline static MxID value(const MxMDFeed *f) { return f->id(); }
+    static MxID value(const MxMDFeed *f) { return f->id(); }
   };
 
-  ZuInline MxMDLib *md() const { return m_md; }
-  ZuInline MxID id() const { return m_id; }
-  ZuInline unsigned level() const { return m_level; }
+  MxMDLib *md() const { return m_md; }
+  MxID id() const { return m_id; }
+  unsigned level() const { return m_level; }
 
   void connected();
   void disconnected();
@@ -1493,11 +1491,11 @@ friend MxMDPxLevel_;
   MxMDVenueShard(MxMDVenue *venue, MxMDShard *shard);
 
 public:
-  ZuInline MxMDLib *md() const;
-  ZuInline MxMDVenue *venue() const { return m_venue; }
-  ZuInline MxMDShard *shard() const { return m_shard; }
+  MxMDLib *md() const;
+  MxMDVenue *venue() const { return m_venue; }
+  MxMDShard *shard() const { return m_shard; }
   unsigned id() const;
-  ZuInline MxEnum orderIDScope() const { return m_orderIDScope; }
+  MxEnum orderIDScope() const { return m_orderIDScope; }
 
   ZmRef<MxMDOrderBook> addCombination(
       MxID segment, ZuString orderBookID,
@@ -1519,21 +1517,21 @@ private:
       const MxInstrKey &obKey, MxEnum side, OrderID &&orderID);
 
   void addOrder2(MxMDOrder *order) { m_orders2->add(order); }
-  template <typename OrderID> ZuInline ZmRef<MxMDOrder> findOrder2(
+  template <typename OrderID> ZmRef<MxMDOrder> findOrder2(
       const MxInstrKey &obKey, OrderID &&orderID) {
     return m_orders2->findKey(ZuFwdTuple(obKey, ZuFwd<OrderID>(orderID)));
   }
-  template <typename OrderID> ZuInline ZmRef<MxMDOrder> delOrder2(
+  template <typename OrderID> ZmRef<MxMDOrder> delOrder2(
       const MxInstrKey &obKey, OrderID &&orderID) {
     return m_orders2->delKey(ZuFwdTuple(obKey, ZuFwd<OrderID>(orderID)));
   }
 
   void addOrder3(MxMDOrder *order) { m_orders3->add(order); }
-  template <typename OrderID> ZuInline ZmRef<MxMDOrder> findOrder3(
+  template <typename OrderID> ZmRef<MxMDOrder> findOrder3(
       const MxInstrKey &obKey, MxEnum side, OrderID &&orderID) {
     return m_orders3->findKey(ZuFwdTuple(obKey, side, ZuFwd<OrderID>(orderID)));
   }
-  template <typename OrderID> ZuInline ZmRef<MxMDOrder> delOrder3(
+  template <typename OrderID> ZmRef<MxMDOrder> delOrder3(
       const MxInstrKey &obKey, MxEnum side, OrderID &&orderID) {
     return m_orders3->delKey(ZuFwdTuple(obKey, side, ZuFwd<OrderID>(orderID)));
   }
@@ -1565,7 +1563,7 @@ friend MxMDOrderBook;
 		  ZmRBTreeLock<ZmPRWLock,
 		    ZmRBTreeHeapID<TickSizeTbls_HeapID> > > > > > TickSizeTbls;
   struct Segment_IDAccessor : public ZuAccessor<MxMDSegment, MxID> {
-    ZuInline static MxID value(const MxMDSegment &s) { return s.id; }
+    static MxID value(const MxMDSegment &s) { return s.id; }
   };
   struct Segments_ID {
     static constexpr const char *id() { return "MxMDVenue.Segments"; }
@@ -1591,24 +1589,24 @@ public:
       MxFlags flags = 0);
 
   struct IDAccessor : public ZuAccessor<MxMDVenue *, MxID> {
-    ZuInline static MxID value(const MxMDVenue *v) { return v->id(); }
+    static MxID value(const MxMDVenue *v) { return v->id(); }
   };
 
-  ZuInline MxMDLib *md() const { return m_md; }
-  ZuInline MxMDFeed *feed() const { return m_feed; }
-  ZuInline MxID id() const { return m_id; }
-  ZuInline MxEnum orderIDScope() const { return m_orderIDScope; }
-  ZuInline MxFlags flags() const { return m_flags; }
+  MxMDLib *md() const { return m_md; }
+  MxMDFeed *feed() const { return m_feed; }
+  MxID id() const { return m_id; }
+  MxEnum orderIDScope() const { return m_orderIDScope; }
+  MxFlags flags() const { return m_flags; }
 
   MxMDVenueShard *shard(const MxMDShard *shard) const;
 
 private:
-  ZuInline void loaded_(bool b) { m_loaded = b; }
+  void loaded_(bool b) { m_loaded = b; }
 public:
-  ZuInline bool loaded() const { return m_loaded; }
+  bool loaded() const { return m_loaded; }
 
   ZmRef<MxMDTickSizeTbl> addTickSizeTbl(ZuString id, MxNDP pxNDP);
-  ZuInline ZmRef<MxMDTickSizeTbl> tickSizeTbl(ZuString id) const {
+  ZmRef<MxMDTickSizeTbl> tickSizeTbl(ZuString id) const {
     return m_tickSizeTbls.findKey(id);
   }
   uintptr_t allTickSizeTbls(ZmFn<MxMDTickSizeTbl *>) const;
@@ -1645,17 +1643,17 @@ private:
     node->key() = segment;
   }
 
-  ZuInline void addOrder(MxMDOrder *order) { m_orders1->add(order); }
+  void addOrder(MxMDOrder *order) { m_orders1->add(order); }
   template <typename OrderID>
-  ZuInline ZmRef<MxMDOrder> findOrder(OrderID &&orderID) {
+  ZmRef<MxMDOrder> findOrder(OrderID &&orderID) {
     return m_orders1->findKey(ZuFwd<OrderID>(orderID));
   }
   template <typename OrderID>
-  ZuInline ZmRef<MxMDOrder> delOrder(OrderID &&orderID) {
+  ZmRef<MxMDOrder> delOrder(OrderID &&orderID) {
     return m_orders1->delKey(ZuFwd<OrderID>(orderID));
   }
 
-  ZuInline MxMDVenueShard *shard_(unsigned i) const { return m_shards[i]; }
+  MxMDVenueShard *shard_(unsigned i) const { return m_shards[i]; }
 
   MxMDLib		*m_md;
   MxMDFeed		*m_feed;
@@ -1739,10 +1737,10 @@ friend MxMDLib;
   }
 
 public:
-  ZuInline MxMDLib *md() const { return m_md; }
-  ZuInline unsigned id() const { return m_id; }
+  MxMDLib *md() const { return m_md; }
+  unsigned id() const { return m_id; }
 
-  ZuInline ZmRef<MxMDInstrument> instrument(const MxInstrKey &key) const {
+  ZmRef<MxMDInstrument> instrument(const MxInstrKey &key) const {
     return m_instruments->findKey(key);
   }
   uintptr_t allInstruments(ZmFn<MxMDInstrument *>) const;
@@ -1750,22 +1748,22 @@ public:
       const MxInstrKey &key, const MxMDInstrRefData &refData,
       MxDateTime transactTime);
 
-  ZuInline ZmRef<MxMDOrderBook> orderBook(const MxInstrKey &key) const {
+  ZmRef<MxMDOrderBook> orderBook(const MxInstrKey &key) const {
     return m_orderBooks->findKey(key);
   }
   uintptr_t allOrderBooks(ZmFn<MxMDOrderBook *>) const;
 
 private:
-  ZuInline void addInstrument(MxMDInstrument *instrument) {
+  void addInstrument(MxMDInstrument *instrument) {
     m_instruments->add(instrument);
   }
-  ZuInline void delInstrument(MxMDInstrument *instrument) {
+  void delInstrument(MxMDInstrument *instrument) {
     m_instruments->del(instrument->key());
   }
-  ZuInline void addOrderBook(MxMDOrderBook *ob) {
+  void addOrderBook(MxMDOrderBook *ob) {
     m_orderBooks->add(ob);
   }
-  ZuInline void delOrderBook(MxMDOrderBook *ob) {
+  void delOrderBook(MxMDOrderBook *ob) {
     m_orderBooks->del(ob->key());
   }
 
@@ -1775,11 +1773,11 @@ private:
   ZmRef<OrderBooks>	m_orderBooks;
 };
 
-ZuInline MxMDLib *MxMDOrderBook::md() const { return shard()->md(); }
+MxMDLib *MxMDOrderBook::md() const { return shard()->md(); }
 
-ZuInline MxMDLib *MxMDInstrument::md() const { return shard()->md(); }
+MxMDLib *MxMDInstrument::md() const { return shard()->md(); }
 
-ZuInline unsigned MxMDVenueShard::id() const { return m_shard->id(); }
+unsigned MxMDVenueShard::id() const { return m_shard->id(); }
 
 typedef ZmHandle<MxMDInstrument> MxMDInstrHandle;
 typedef ZmHandle<MxMDOrderBook> MxMDOBHandle;
@@ -1837,15 +1835,15 @@ public:
   virtual void dumpOrderBooks(
       ZuString path, MxID venue = MxID(), MxID segment = MxID()) = 0;
 
-  ZuInline unsigned nShards() const { return m_shards.length(); }
-  ZuInline MxMDShard *shard(unsigned i) const { return m_shards[i]; }
+  unsigned nShards() const { return m_shards.length(); }
+  MxMDShard *shard(unsigned i) const { return m_shards[i]; }
   template <typename L>
-  ZuInline typename ZuNotMutable<L>::T shard(unsigned i, L l) const {
+  typename ZuNotMutable<L>::T shard(unsigned i, L l) const {
     MxMDShard *shard = m_shards[i];
     m_scheduler->invoke(shard->tid(), [l = ZuMv(l), shard]() { l(shard); });
   }
   template <typename L>
-  ZuInline typename ZuIsMutable<L>::T shard(unsigned i, L l) const {
+  typename ZuIsMutable<L>::T shard(unsigned i, L l) const {
     MxMDShard *shard = m_shards[i];
     m_scheduler->invoke(shard->tid(),
 	[l = ZuMv(l), shard]() mutable { l(shard); });
@@ -1853,10 +1851,10 @@ public:
 
   // shardRun(), shardInvoke() do not inject the initial MxMDShard * parameter
   template <typename ...Args>
-  ZuInline void shardRun(unsigned i, Args &&... args)
+  void shardRun(unsigned i, Args &&... args)
     { m_shards[i]->run(ZuFwd<Args>(args)...); }
   template <typename ...Args>
-  ZuInline void shardInvoke(unsigned i, Args &&... args)
+  void shardInvoke(unsigned i, Args &&... args)
     { m_shards[i]->invoke(ZuFwd<Args>(args)...); }
 
   void sync(); // synchronize with all shards
@@ -1874,7 +1872,7 @@ public:
   void subscribe(MxMDLibHandler *);
   void unsubscribe();
 
-  ZuInline ZmRef<MxMDLibHandler> handler() const {
+  ZmRef<MxMDLibHandler> handler() const {
     SubReadGuard guard(m_subLock);
     return m_handler;
   }
@@ -1914,15 +1912,15 @@ private:
 
 friend ZmShard;
   template <typename ...Args>
-  ZuInline void run(unsigned tid, Args &&... args)
+  void run(unsigned tid, Args &&... args)
     { m_scheduler->run(tid, ZuFwd<Args>(args)...); }
   template <typename ...Args>
-  ZuInline void invoke(unsigned tid, Args &&... args)
+  void invoke(unsigned tid, Args &&... args)
     { m_scheduler->invoke(tid, ZuFwd<Args>(args)...); }
 
   typedef ZtArray<ZuRef<MxMDShard> > Shards;
 
-  ZuInline MxMDShard *shard_(unsigned i) const { return m_shards[i]; }
+  MxMDShard *shard_(unsigned i) const { return m_shards[i]; }
 
   ZmRef<MxMDInstrument> addInstrument(
       MxMDShard *shard, ZmRef<MxMDInstrument> instr,
@@ -2056,23 +2054,23 @@ friend ZmShard;
 		    ZmRBTreeHeapID<VenueMap_HeapID> > > > > > VenueMap;
 
 public:
-  ZuInline MxMDInstrHandle instrument(const MxInstrKey &key) const {
+  MxMDInstrHandle instrument(const MxInstrKey &key) const {
     if (ZmRef<MxMDInstrument> instr = m_allInstruments->findKey(key))
       return MxMDInstrHandle{ZuMv(instr)};
     return MxMDInstrHandle{};
   }
 private:
-  ZuInline ZmRef<MxMDInstrument> instrument_(const MxInstrKey &key) const {
+  ZmRef<MxMDInstrument> instrument_(const MxInstrKey &key) const {
     return m_allInstruments->findKey(key);
   }
 public:
-  ZuInline MxMDInstrHandle instrument(const MxSymKey &key) const {
+  MxMDInstrHandle instrument(const MxSymKey &key) const {
     if (ZmRef<MxMDInstrument> instr = m_instruments->findVal(key))
       return MxMDInstrHandle{ZuMv(instr)};
     return MxMDInstrHandle{};
   }
 private:
-  ZuInline ZmRef<MxMDInstrument> instrument_(const MxUniKey &key) const {
+  ZmRef<MxMDInstrument> instrument_(const MxUniKey &key) const {
     ZmRef<MxMDInstrument> instr;
     if (*key.src)
       instr = m_instruments->findVal(MxSymKey{key.id, key.src});
@@ -2089,18 +2087,18 @@ private:
     return ZuMv(instr);
   }
 public:
-  ZuInline MxMDInstrHandle instrument(const MxUniKey &key) const {
+  MxMDInstrHandle instrument(const MxUniKey &key) const {
     ZmRef<MxMDInstrument> instr = instrument_(key);
     if (instr) return MxMDInstrHandle{ZuMv(instr)};
     return MxMDInstrHandle{};
   }
-  ZuInline MxMDInstrHandle instrument(
+  MxMDInstrHandle instrument(
       const MxInstrKey &key, unsigned shardID) const {
     if (ZmRef<MxMDInstrument> instr = m_allInstruments->findKey(key))
       return MxMDInstrHandle{ZuMv(instr)};
     return MxMDInstrHandle{m_shards[shardID % m_shards.length()]};
   }
-  template <typename L> ZuInline void instrInvoke(
+  template <typename L> void instrInvoke(
       const MxInstrKey &key, L l) const {
     if (ZmRef<MxMDInstrument> instr = m_allInstruments->findKey(key))
       instr->shard()->invoke(
@@ -2108,7 +2106,7 @@ public:
     else
       l((MxMDInstrument *)nullptr);
   }
-  template <typename L> ZuInline void instrInvoke(
+  template <typename L> void instrInvoke(
       const MxSymKey &key, L l) const {
     if (ZmRef<MxMDInstrument> instr = m_instruments->findVal(key))
       instr->shard()->invoke(
@@ -2117,7 +2115,7 @@ public:
       l((MxMDInstrument *)nullptr);
   }
   template <typename L>
-  ZuInline void instrInvoke(const MxUniKey &key, L l) const {
+  void instrInvoke(const MxUniKey &key, L l) const {
     if (*key.mat) {
       auto l_ = [key = key, l = ZuMv(l)](MxMDInstrument *instr) mutable {
 	if (ZuLikely(instr && instr->derivatives())) {
@@ -2141,40 +2139,40 @@ public:
     }
   }
   uintptr_t allInstruments(ZmFn<MxMDInstrument *>) const;
-  ZuInline unsigned instrCount() const { return m_allInstruments->count_(); }
+  unsigned instrCount() const { return m_allInstruments->count_(); }
 
-  ZuInline MxMDOBHandle orderBook(const MxInstrKey &key) const {
+  MxMDOBHandle orderBook(const MxInstrKey &key) const {
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks->findKey(key))
       return MxMDOBHandle{ob};
     return MxMDOBHandle{};
   }
 private:
-  ZuInline ZmRef<MxMDOrderBook> orderBook_(const MxInstrKey &key) const {
+  ZmRef<MxMDOrderBook> orderBook_(const MxInstrKey &key) const {
     return m_allOrderBooks->findKey(key);
   }
 public:
-  ZuInline MxMDOBHandle orderBook(const MxUniKey &key) const {
+  MxMDOBHandle orderBook(const MxUniKey &key) const {
     ZmRef<MxMDInstrument> instr = instrument_(key);
     if (!instr) return MxMDOBHandle{};
     if (ZmRef<MxMDOrderBook> ob = instr->orderBook(key.venue, key.segment))
       return MxMDOBHandle{ob};
     return MxMDOBHandle{};
   }
-  ZuInline MxMDOBHandle orderBook(
+  MxMDOBHandle orderBook(
       const MxInstrKey &key, unsigned shardID) const {
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks->findKey(key))
       return MxMDOBHandle{ob};
     return MxMDOBHandle{m_shards[shardID % m_shards.length()]};
   }
   template <typename L>
-  ZuInline void obInvoke(const MxInstrKey &key, L l) const {
+  void obInvoke(const MxInstrKey &key, L l) const {
     if (ZmRef<MxMDOrderBook> ob = m_allOrderBooks->findKey(key))
       ob->shard()->invoke([l = ZuMv(l), ob = ZuMv(ob)]() mutable { l(ob); });
     else
       l((MxMDOrderBook *)nullptr);
   }
   template <typename L>
-  ZuInline void obInvoke(const MxUniKey &key, L l) const {
+  void obInvoke(const MxUniKey &key, L l) const {
     instrInvoke(key, [key = key, l = ZuMv(l)](MxMDInstrument *instr) mutable {
 	if (!instr)
 	  l((MxMDOrderBook *)nullptr);
@@ -2184,25 +2182,25 @@ public:
   }
   uintptr_t allOrderBooks(ZmFn<MxMDOrderBook *>) const;
 
-  ZuInline ZmRef<MxMDFeed> feed(MxID id) const {
+  ZmRef<MxMDFeed> feed(MxID id) const {
     return m_feeds.findKey(id);
   }
   uintptr_t allFeeds(ZmFn<MxMDFeed *>) const;
 
-  ZuInline ZmRef<MxMDVenue> venue(MxID id) const {
+  ZmRef<MxMDVenue> venue(MxID id) const {
     return m_venues.findKey(id);
   }
   uintptr_t allVenues(ZmFn<MxMDVenue *>) const;
 
   template <typename T = uintptr_t>
-  ZuInline T libData() const { return (T)m_libData.load_(); }
+  T libData() const { return (T)m_libData.load_(); }
   template <typename T>
-  ZuInline void libData(T v) { m_libData.store_((uintptr_t)v); }
+  void libData(T v) { m_libData.store_((uintptr_t)v); }
 
   template <typename T = uintptr_t>
-  ZuInline T appData() const { return (T)m_appData.load_(); }
+  T appData() const { return (T)m_appData.load_(); }
   template <typename T>
-  ZuInline void appData(T v) { m_appData.store_((uintptr_t)v); }
+  void appData(T v) { m_appData.store_((uintptr_t)v); }
 
 private:
   ZmScheduler		*m_scheduler = 0;
@@ -2233,11 +2231,11 @@ inline void MxMDFeed::disconnected() {
   if (m_md) m_md->handler()->disconnected(this);
 }
 
-ZuInline MxMDVenueShard *MxMDVenue::shard(const MxMDShard *shard) const {
+inline MxMDVenueShard *MxMDVenue::shard(const MxMDShard *shard) const {
   return m_shards[shard->id()];
 }
 
-ZuInline MxMDLib *MxMDVenueShard::md() const {
+inline MxMDLib *MxMDVenueShard::md() const {
   return m_venue->md();
 }
 

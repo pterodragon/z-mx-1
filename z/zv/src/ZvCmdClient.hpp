@@ -137,18 +137,20 @@ public:
     };
   };
 
-  ZvCmdCliLink(App *app, ZtString server, unsigned port) :
+  ZvCmdCliLink(App *app, ZtString server, uint16_t port) :
       Base{app, ZuMv(server), port} { }
 
   // Note: the caller must ensure that calls to login()/access()
   // are not overlapped - until loggedIn()/connectFailed()/disconnected()
   // no further calls must be made
-  void login(ZtString &&user, ZtString &&passwd, unsigned totp) {
+  template <typename User, typename Passwd>
+  void login(User &&user, Passwd &&passwd, unsigned totp) {
     new (m_credentials.init<ZvCmd_Login>())
-      ZvCmd_Login{ZuMv(user), ZuMv(passwd), totp};
+      ZvCmd_Login{ZuFwd<User>(user), ZuFwd<Passwd>(passwd), totp};
     this->connect();
   }
-  void access(ZtString &&keyID, ZuString secret_) {
+  template <typename KeyID>
+  void access(KeyID &&keyID, ZuString secret_) {
     ZtArray<uint8_t> secret;
     secret.length(Ztls::Base64::declen(secret_.length()));
     Ztls::Base64::decode(
@@ -167,14 +169,15 @@ public:
       hmac_.finish(hmac.data());
     }
     new (m_credentials.init<ZvCmd_Access>())
-      ZvCmd_Access{ZuMv(keyID), ZuMv(token), stamp, ZuMv(hmac)};
+      ZvCmd_Access{ZuFwd<KeyID>(keyID), ZuMv(token), stamp, ZuMv(hmac)};
     this->connect();
   }
+  template <typename KeyID>
   void access_(
-      ZtString &&keyID, ZvUserDB::KeyData &&token,
+      KeyID &&keyID, ZvUserDB::KeyData &&token,
       int64_t stamp, ZvUserDB::KeyData &&hmac) {
     new (m_credentials.init<ZvCmd_Access>())
-      ZvCmd_Access{ZuMv(keyID), ZuMv(token), stamp, ZuMv(hmac)};
+      ZvCmd_Access{ZuFwd<KeyID>(keyID), ZuMv(token), stamp, ZuMv(hmac)};
     this->connect();
   }
 

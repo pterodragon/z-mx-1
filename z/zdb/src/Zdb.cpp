@@ -1127,6 +1127,7 @@ void ZdbAnyPOD::sent(ZiIOContext &io)
   else if (range)
     io.init(ZiIOFn::Member<&ZdbAnyPOD::sent2>::fn(
 	  io.fn.mvObject<ZdbAnyPOD>()),
+	// FIXME - C++ casting
 	(void *)((const char *)this->ptr() + range.off()), range.len(), 0);
   else
     sent3(io);

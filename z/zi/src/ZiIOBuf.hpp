@@ -191,28 +191,28 @@ private:
 
 public:
   template <typename C>
-  ZuInline typename MatchChar<C, ZiIOBuf_ &>::T operator <<(C c) {
+  typename MatchChar<C, ZiIOBuf_ &>::T operator <<(C c) {
     this->append(&c, 1);
     return *this;
   }
   template <typename S>
-  ZuInline typename MatchString<S, ZiIOBuf_ &>::T operator <<(S &&s_) {
+  typename MatchString<S, ZiIOBuf_ &>::T operator <<(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     append(s.data(), s.length());
     return *this;
   }
-  ZuInline ZiIOBuf_ &operator <<(const char *s_) {
+  ZiIOBuf_ &operator <<(const char *s_) {
     ZuString s(s_);
     append(s.data(), s.length());
     return *this;
   }
   template <typename R>
-  ZuInline typename MatchReal<R, ZiIOBuf_ &>::T operator <<(const R &r) {
+  typename MatchReal<R, ZiIOBuf_ &>::T operator <<(const R &r) {
     append(ZuBoxed(r));
     return *this;
   }
   template <typename P>
-  ZuInline typename MatchPrint<P, ZiIOBuf_ &>::T operator <<(const P &p) {
+  typename MatchPrint<P, ZiIOBuf_ &>::T operator <<(const P &p) {
     append(p);
     return *this;
   }

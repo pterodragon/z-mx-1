@@ -25,7 +25,7 @@
 //
 // ...
 // struct PointYAccessor : public ZuAccessor<Point, int> {
-//   ZuInline static int value(const Point &p) { return p.y; }
+//   static int value(const Point &p) { return p.y; }
 // }
 // ...
 //

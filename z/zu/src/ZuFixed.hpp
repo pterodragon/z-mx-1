@@ -48,11 +48,11 @@ typedef ZuBox<uint8_t> ZuFixedExp; // exponent, i.e. number of decimal places
 
 #define ZuFixedMin (ZuDecVal{static_cast<int64_t>(-999999999999999999LL)})
 #define ZuFixedMax (ZuDecVal{static_cast<int64_t>(999999999999999999LL)})
-// ZuFixedValReset is the distinct sentinel value used to reset values to null
+// ZuFixedReset is the distinct sentinel value used to reset values to null
 #define ZuFixedReset (ZuDecVal{static_cast<int64_t>(-1000000000000000000LL)})
 
-// combination of value and exponent, used as a temporary for conversions & I/O
-// constructors / scanning:
+// combination of value and exponent, used in transit for conversions, I/O,
+// constructors, scanning:
 //   ZuFixed(<integer>, exponent)		// {1042, 2} -> 10.42
 //   ZuFixed(<floating point>, exponent)	// {10.42, 2} -> 10.42
 //   ZuFixed(<string>, exponent)		// {"10.42", 2} -> 10.42
@@ -73,24 +73,24 @@ struct ZuFixed {
   ZuFixedVal	value;	// mantissa
   unsigned	exponent = 0;
 
-  ZuInline ZuFixed() { }
+  ZuFixed() = default;
 
   template <typename V>
-  ZuInline ZuFixed(V value_, unsigned exponent_,
+  ZuFixed(V value_, unsigned exponent_,
       typename ZuIsIntegral<V>::T *_ = 0) :
-    value(value_), exponent(exponent_) { }
+    value{value_}, exponent{exponent_} { }
 
   template <typename V>
-  ZuInline ZuFixed(V value_, unsigned exponent_,
+  ZuFixed(V value_, unsigned exponent_,
       typename ZuIsFloatingPoint<V>::T *_ = 0) :
-    value((double)value_ * ZuDecimalFn::pow10_64(exponent_)),
-    exponent(exponent_) { }
+    value{static_cast<double>(value_) * ZuDecimalFn::pow10_64(exponent_)},
+    exponent{exponent_} { }
 
   // multiply: exponent of result is taken from the LHS
   // a 128bit integer intermediary is used to avoid overflow
   ZuFixed operator *(const ZuFixed &v) const {
-    int128_t i = (typename ZuFixedVal::T)value;
-    i *= (typename ZuFixedVal::T)v.value;
+    int128_t i = static_cast<typename ZuFixedVal::T>(value);
+    i *= static_cast<typename ZuFixedVal::T>(v.value);
     i /= ZuDecimalFn::pow10_64(v.exponent);
     if (ZuUnlikely(i >= 1000000000000000000ULL))
       return ZuFixed{ZuFixedVal{}, exponent};
@@ -100,9 +100,9 @@ struct ZuFixed {
   // divide: exponent of result is taken from the LHS
   // a 128bit integer intermediary is used to avoid overflow
   ZuFixed operator /(const ZuFixed &v) const {
-    int128_t i = (typename ZuFixedVal::T)value;
+    int128_t i = static_cast<typename ZuFixedVal::T>(value;
     i *= ZuDecimalFn::pow10_64(v.exponent);
-    i /= (typename ZuFixedVal::T)v.value;
+    i /= static_cast<typename ZuFixedVal::T>(v.value;
     if (ZuUnlikely(i >= 1000000000000000000ULL))
       return ZuFixed{ZuFixedVal(), exponent};
     return ZuFixed{static_cast<int64_t>(i), exponent};
@@ -154,13 +154,13 @@ struct ZuFixed {
 
   // convert to floating point
   template <typename Float = ZuBox<double>>
-  ZuInline Float fp() const {
+  Float fp() const {
     if (ZuUnlikely(!*value)) return Float{};
     return Float{value} / Float{ZuDecimalFn::pow10_64(exponent)};
   }
 
   // adjust to another exponent
-  ZuInline ZuFixedVal adjust(unsigned exponent) const {
+  ZuFixedVal adjust(unsigned exponent) const {
     if (ZuLikely(exponent == this->exponent)) return value;
     if (!*value) return ZuFixedVal{};
     if (exponent > this->exponent)
@@ -169,51 +169,51 @@ struct ZuFixed {
   }
 
   // comparisons
-  ZuInline int cmp(const ZuFixed &v) const {
+  int cmp(const ZuFixed &v) const {
     if (ZuLikely(exponent == v.exponent || !*value || !*v.value))
       return value.cmp(v.value);
-    int128_t i = (typename ZuFixedVal::T)value;
-    int128_t j = (typename ZuFixedVal::T)v.value;
+    int128_t i = static_cast<typename ZuFixedVal::T>(value);
+    int128_t j = static_cast<typename ZuFixedVal::T>(v.value);
     if (exponent < v.exponent)
       i *= ZuDecimalFn::pow10_64(v.exponent - exponent);
     else
       j *= ZuDecimalFn::pow10_64(exponent - v.exponent);
     return (i > j) - (i < j);
   }
-  ZuInline bool less(const ZuFixed &v) const {
+  bool less(const ZuFixed &v) const {
     if (ZuLikely(exponent == v.exponent || !*value || !*v.value))
       return value < v.value;
-    int128_t i = (typename ZuFixedVal::T)value;
-    int128_t j = (typename ZuFixedVal::T)v.value;
+    int128_t i = static_cast<typename ZuFixedVal::T>(value);
+    int128_t j = static_cast<typename ZuFixedVal::T>(v.value);
     if (exponent < v.exponent)
       i *= ZuDecimalFn::pow10_64(v.exponent - exponent);
     else
       j *= ZuDecimalFn::pow10_64(exponent - v.exponent);
     return i < j;
   }
-  ZuInline bool equals(const ZuFixed &v) const {
+  bool equals(const ZuFixed &v) const {
     if (ZuLikely(exponent == v.exponent || !*value || !*v.value))
       return value == v.value;
-    int128_t i = (typename ZuFixedVal::T)value;
-    int128_t j = (typename ZuFixedVal::T)v.value;
+    int128_t i = static_cast<typename ZuFixedVal::T>(value);
+    int128_t j = static_cast<typename ZuFixedVal::T>(v.value);
     if (exponent < v.exponent)
       i *= ZuDecimalFn::pow10_64(v.exponent - exponent);
     else
       j *= ZuDecimalFn::pow10_64(exponent - v.exponent);
     return i == j;
   }
-  ZuInline bool operator ==(const ZuFixed &v) const { return equals(v); }
-  ZuInline bool operator !=(const ZuFixed &v) const { return !equals(v); }
-  ZuInline bool operator >(const ZuFixed &v) const { return v.less(*this); }
-  ZuInline bool operator >=(const ZuFixed &v) const { return !less(v); }
-  ZuInline bool operator <(const ZuFixed &v) const { return less(v); }
-  ZuInline bool operator <=(const ZuFixed &v) const { return !v.less(*this); }
+  bool operator ==(const ZuFixed &v) const { return equals(v); }
+  bool operator !=(const ZuFixed &v) const { return !equals(v); }
+  bool operator >(const ZuFixed &v) const { return v.less(*this); }
+  bool operator >=(const ZuFixed &v) const { return !less(v); }
+  bool operator <(const ZuFixed &v) const { return less(v); }
+  bool operator <=(const ZuFixed &v) const { return !v.less(*this); }
 
   // ! is zero, unary * is !null
-  ZuInline bool operator !() const { return !value; }
+  bool operator !() const { return !value; }
   ZuOpBool
 
-  ZuInline bool operator *() const { return *value; }
+  bool operator *() const { return *value; }
 
   template <typename S> void print(S &s) const;
 
@@ -239,7 +239,7 @@ template <typename Fmt> struct ZuFixed_Fmt {
 template <typename Fmt>
 struct ZuPrint<ZuFixed_Fmt<Fmt> > : public ZuPrintFn { };
 template <class Fmt>
-ZuInline ZuFixed_Fmt<Fmt> ZuFixed::fmt(Fmt) const
+ZuFixed_Fmt<Fmt> ZuFixed::fmt(Fmt) const
 {
   return ZuFixed_Fmt<Fmt>{*this};
 }
@@ -250,9 +250,9 @@ template <typename S> inline void ZuFixed::print(S &s) const
 template <> struct ZuPrint<ZuFixed> : public ZuPrintFn { };
 class ZuFixed_VFmt : public ZuVFmtWrapper<ZuFixed_VFmt> {
 public:
-  ZuInline ZuFixed_VFmt(const ZuFixed &fixed) : m_fixed{fixed} { }
+  ZuFixed_VFmt(const ZuFixed &fixed) : m_fixed{fixed} { }
   template <typename VFmt>
-  ZuInline ZuFixed_VFmt(const ZuFixed &fixed, VFmt &&fmt) :
+  ZuFixed_VFmt(const ZuFixed &fixed, VFmt &&fmt) :
     ZuVFmtWrapper<ZuFixed_VFmt>{ZuFwd<VFmt>(fmt)}, m_fixed{fixed} { }
 
   template <typename S> void print(S &s) const {

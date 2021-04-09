@@ -176,18 +176,18 @@ protected:
   template <typename U, typename R = void>
   struct MatchElem : public ZuIfT<IsElem<U>::OK, R> { };
 
-  ZuInline ~ZuArrayN_() { dtor(); }
+  ~ZuArrayN_() { dtor(); }
 
-  ZuInline ZuArrayN_() { }
+  ZuArrayN_() { }
 
-  ZuInline ZuArrayN_(Nop_ _) : Base(Base::Nop) { }
+  ZuArrayN_(Nop_ _) : Base(Base::Nop) { }
 
-  ZuInline ZuArrayN_(unsigned length, bool initItems) : Base(length) {
+  ZuArrayN_(unsigned length, bool initItems) : Base(length) {
     if (m_length > N) m_length = N;
     if (initItems) this->initItems(data(), m_length);
   }
 
-  ZuInline void dtor() {
+  void dtor() {
     this->destroyItems(data(), m_length);
   }
 
@@ -210,12 +210,12 @@ protected:
     m_length = length;
   }
 
-  template <typename S> ZuInline typename MatchString<S>::T init(S &&s_) {
+  template <typename S> typename MatchString<S>::T init(S &&s_) {
     ZuArray<const T> s(s_);
     init(s.data(), s.length());
   }
 
-  template <typename A> ZuInline typename MatchArray<A>::T init(A &&a) {
+  template <typename A> typename MatchArray<A>::T init(A &&a) {
     ZuMvCp<A>::mvcp(ZuFwd<A>(a),
       [this](auto &&a_) {
 	using Array = typename ZuDecay<decltype(a_)>::T;
@@ -231,10 +231,10 @@ protected:
       });
   }
 
-  template <typename S> ZuInline typename MatchChar2String<S>::T init(S &&s) {
+  template <typename S> typename MatchChar2String<S>::T init(S &&s) {
     data()[m_length = ZuUTF<T, Char2>::cvt({data(), N}, s)] = 0;
   }
-  template <typename C> ZuInline typename MatchChar2<C>::T init(C c) {
+  template <typename C> typename MatchChar2<C>::T init(C c) {
     data()[m_length = ZuUTF<T, Char2>::cvt({data(), N}, {&c, 1})] = 0;
   }
 
@@ -249,12 +249,12 @@ protected:
       m_length = ZuPrint<P>::print(reinterpret_cast<char *>(data()), length, p);
   }
 
-  template <typename V> ZuInline typename MatchReal<V>::T init(V v) {
+  template <typename V> typename MatchReal<V>::T init(V v) {
     init(ZuBoxed(v));
   }
 
   template <typename E>
-  ZuInline typename MatchElem<E>::T init(E &&e) {
+  typename MatchElem<E>::T init(E &&e) {
     this->initItem(data(), ZuFwd<E>(e));
     m_length = 1;
   }
@@ -296,13 +296,13 @@ protected:
   }
 
   template <typename S>
-  ZuInline typename MatchChar2String<S>::T append_(S &&s) {
+  typename MatchChar2String<S>::T append_(S &&s) {
     if (m_length < N)
       data()[m_length = ZuUTF<T, Char2>::cvt(
 	  {data() + m_length, N - m_length}, s)] = 0;
   }
 
-  template <typename C> ZuInline typename MatchChar2<C>::T append_(C c) {
+  template <typename C> typename MatchChar2<C>::T append_(C c) {
     if (m_length < N)
       data()[m_length += ZuUTF<T, Char2>::cvt(
 	  {data() + m_length, N - m_length}, {&c, 1})] = 0;
@@ -320,7 +320,7 @@ protected:
 	reinterpret_cast<char *>(data()) + m_length, length, p);
   }
 
-  template <typename V> ZuInline typename MatchReal<V>::T append_(V v) {
+  template <typename V> typename MatchReal<V>::T append_(V v) {
     append_(ZuBoxed(v));
   }
 
@@ -333,21 +333,21 @@ protected:
 public:
 // array/ptr operators
 
-  ZuInline T &operator [](int i) { return data()[i]; }
-  ZuInline const T &operator [](int i) const { return data()[i]; }
+  T &operator [](int i) { return data()[i]; }
+  const T &operator [](int i) const { return data()[i]; }
 
 // accessors
 
-  ZuInline const T *begin() const { return data(); }
-  ZuInline const T *end() const { return data() + m_length; }
+  const T *begin() const { return data(); }
+  const T *end() const { return data() + m_length; }
 
-  ZuInline static constexpr unsigned size() { return N; }
-  ZuInline unsigned length() const { return m_length; }
+  static constexpr unsigned size() { return N; }
+  unsigned length() const { return m_length; }
 
 // reset to null
 
-  ZuInline void clear() { null(); }
-  ZuInline void null() { m_length = 0; }
+  void clear() { null(); }
+  void null() { m_length = 0; }
 
 // set length
 
@@ -462,44 +462,44 @@ private:
 public:
 // buffer access
 
-  ZuInline auto buf() {
+  auto buf() {
     return ZuArray{data(), N};
   }
-  ZuInline auto cbuf() const {
+  auto cbuf() const {
     return ZuArray{data(), m_length};
   }
 
 // comparison
 
-  ZuInline bool operator !() const { return !m_length; }
+  bool operator !() const { return !m_length; }
   ZuOpBool
 
 protected:
-  ZuInline bool same(const ZuArrayN_ &a) const { return this == &a; }
-  template <typename A> ZuInline bool same(const A &a) const { return false; }
+  bool same(const ZuArrayN_ &a) const { return this == &a; }
+  template <typename A> bool same(const A &a) const { return false; }
 
 public:
   template <typename A>
-  ZuInline int cmp(const A &a) const {
+  int cmp(const A &a) const {
     if (same(a)) return 0;
     return cbuf().cmp(a);
   }
   template <typename A>
-  ZuInline bool less(const A &a) const {
+  bool less(const A &a) const {
     return !same(a) && cbuf().less(a);
   }
   template <typename A>
-  ZuInline bool greater(const A &a) const {
+  bool greater(const A &a) const {
     return !same(a) && cbuf().greater(a);
   }
   template <typename A>
-  ZuInline bool equals(const A &a) const {
+  bool equals(const A &a) const {
     return same(a) || cbuf().equals(a);
   }
 
 // hash
 
-  ZuInline uint32_t hash() const {
+  uint32_t hash() const {
     return ZuHash<ArrayN>::hash(*static_cast<const ArrayN *>(this));
   }
 
@@ -507,10 +507,10 @@ private:
   struct Align : public Base { T m_data[1]; };
 
 public:
-  ZuInline T *data() {
+  T *data() {
     return reinterpret_cast<Align *>(this)->m_data;
   }
-  ZuInline const T *data() const {
+  const T *data() const {
     return reinterpret_cast<const Align *>(this)->m_data;
   }
 };
@@ -549,12 +549,12 @@ private:
   struct MatchCtorArg : public ZuIfT<IsCtorArg<U>::OK, R> { };
 
 public:
-  ZuInline ArrayN() { }
+  ArrayN() { }
 
-  ZuInline ArrayN(const ArrayN &a) : Base(Base::Nop) {
+  ArrayN(const ArrayN &a) : Base(Base::Nop) {
     this->init(a.data(), a.length());
   }
-  ZuInline ArrayN &operator =(const ArrayN &a) {
+  ArrayN &operator =(const ArrayN &a) {
     if (this != &a) {
       this->dtor();
       this->init(a.data(), a.length());
@@ -562,10 +562,10 @@ public:
     return *this;
   }
 
-  ZuInline ArrayN(ArrayN &&a) : Base(Base::Nop) {
+  ArrayN(ArrayN &&a) : Base(Base::Nop) {
     this->init_mv(a.data(), a.length());
   }
-  ZuInline ArrayN &operator =(ArrayN &&a) {
+  ArrayN &operator =(ArrayN &&a) {
     if (this != &a) {
       this->dtor();
       this->init_mv(a.data(), a.length());
@@ -573,70 +573,70 @@ public:
     return *this;
   }
 
-  ZuInline ArrayN(std::initializer_list<T> a) : Base(Base::Nop) {
+  ArrayN(std::initializer_list<T> a) : Base(Base::Nop) {
     this->init(a.begin(), a.size());
   }
 
   // miscellaneous types handled by base class
   template <typename A>
-  ZuInline ArrayN(A &&a,
+  ArrayN(A &&a,
       typename MatchCtorArg<A>::T *_ = 0) : Base(Base::Nop) {
     this->init(ZuFwd<A>(a));
   }
   template <typename A>
-  ZuInline ArrayN &operator =(A &&a) {
+  ArrayN &operator =(A &&a) {
     this->dtor();
     this->init(ZuFwd<A>(a));
     return *this;
   }
   template <typename A>
-  ZuInline ArrayN &operator +=(A &&a) {
+  ArrayN &operator +=(A &&a) {
     this->append_(ZuFwd<A>(a));
     return *this;
   }
   template <typename A>
-  ZuInline ArrayN &operator <<(A &&a) {
+  ArrayN &operator <<(A &&a) {
     this->append_(ZuFwd<A>(a));
     return *this;
   }
 
   // length
   template <typename L>
-  ZuInline ArrayN(L l, bool initItems = !ZuTraits<T>::IsPrimitive,
+  ArrayN(L l, bool initItems = !ZuTraits<T>::IsPrimitive,
       typename MatchCtorLength<L>::T *_ = 0) : Base(l, initItems) { }
 
   // arrays as ptr, length
   template <typename A>
-  ZuInline ArrayN(const A *a, unsigned length,
+  ArrayN(const A *a, unsigned length,
     typename ZuConvertible<A, T>::T *_ = 0) : Base(Base::Nop) {
     this->init(a, length);
   }
-  ZuInline ArrayN(Move_ _, T *a, unsigned length) : Base(Base::Nop) {
+  ArrayN(Move_ _, T *a, unsigned length) : Base(Base::Nop) {
     this->init_mv(a, length);
   }
 
   // append()
   template <typename A>
-  ZuInline typename ZuConvertible<A, T>::T append(const A *a, unsigned length) {
+  typename ZuConvertible<A, T>::T append(const A *a, unsigned length) {
     this->append_(a, length);
   }
   template <typename A>
-  ZuInline typename ZuConvertible<A, T>::T append_mv(A *a, unsigned length) {
+  typename ZuConvertible<A, T>::T append_mv(A *a, unsigned length) {
     this->append_mv_(a, length);
   }
 
   template <typename A>
-  ZuInline bool operator ==(const A &a) const { return this->equals(a); }
+  bool operator ==(const A &a) const { return this->equals(a); }
   template <typename A>
-  ZuInline bool operator !=(const A &a) const { return !this->equals(a); }
+  bool operator !=(const A &a) const { return !this->equals(a); }
   template <typename A>
-  ZuInline bool operator >(const A &a) const { return this->greater(a); }
+  bool operator >(const A &a) const { return this->greater(a); }
   template <typename A>
-  ZuInline bool operator >=(const A &a) const { return !this->less(a); }
+  bool operator >=(const A &a) const { return !this->less(a); }
   template <typename A>
-  ZuInline bool operator <(const A &a) const { return this->less(a); }
+  bool operator <(const A &a) const { return this->less(a); }
   template <typename A>
-  ZuInline bool operator <=(const A &a) const { return !this->greater(a); }
+  bool operator <=(const A &a) const { return !this->greater(a); }
 
   // traits
 

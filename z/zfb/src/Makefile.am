@@ -25,4 +25,4 @@ libZfb_la_LIBADD = \
 	$(top_builddir)/zt/src/libZt.la \
 	$(top_builddir)/zm/src/libZm.la \
 	$(top_builddir)/zu/src/libZu.la \
-	@FLATBUFFERS_LIBS@ @Z_MT_LIBS@
+	@FBS_LIBS@ @Z_MT_LIBS@

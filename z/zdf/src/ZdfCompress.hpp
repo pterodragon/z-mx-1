@@ -72,9 +72,9 @@ public:
   bool operator !() const { return !m_pos; }
   ZuOpBool
 
-  ZuInline const uint8_t *pos() const { return m_pos; }
-  ZuInline const uint8_t *end() const { return m_end; }
-  ZuInline unsigned count() const { return m_count; }
+  const uint8_t *pos() const { return m_pos; }
+  const uint8_t *end() const { return m_end; }
+  unsigned count() const { return m_count; }
 
   // seek to a position
   bool seek(unsigned count) {
@@ -261,9 +261,9 @@ public:
   }
   ~Encoder() = default;
 
-  ZuInline uint8_t *pos() const { return m_pos; }
-  ZuInline uint8_t *end() const { return m_end; }
-  ZuInline unsigned count() const { return m_count; }
+  uint8_t *pos() const { return m_pos; }
+  uint8_t *end() const { return m_end; }
+  unsigned count() const { return m_count; }
 
   bool operator !() const { return !m_pos; }
   ZuOpBool
@@ -336,7 +336,7 @@ public:
     return true;
   }
 
-  ZuInline int64_t last() const { return m_prev; }
+  int64_t last() const { return m_prev; }
 
 private:
   uint8_t	*m_pos, *m_end;
@@ -440,7 +440,7 @@ public:
     return true;
   }
 
-  ZuInline int64_t last() const { return m_base + Base::last(); }
+  int64_t last() const { return m_base + Base::last(); }
 
 private:
   int64_t	m_base = 0;

@@ -17,10 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// generic Zv error exception
-
-#ifndef ZvError_HPP
-#define ZvError_HPP
+#ifndef ZvSQLite_HPP
+#define ZvSQLite_HPP
 
 #ifdef _MSC_VER
 #pragma once
@@ -30,17 +28,20 @@
 #include <zlib/ZvLib.hpp>
 #endif
 
-#include <zlib/ZuPrint.hpp>
+// #include <sqlite3.h>
+#include <sqlite3ext.h> // includes sqlite3.h
 
-#include <zlib/ZtString.hpp>
+// FIXME - use WAL (write ahead logging)
+//
+// FIXME - update ZvField usages to new interface (update all
+// macro declare definitions in ZvField.hpp first, then update ZvCSV, Zdf etc.)
 
-class ZvAPI ZvError {
-public:
-  virtual ~ZvError() { }
-  virtual void print_(ZmStream &) const = 0;
-  template <typename S>
-  void print(S &s_) const { ZmStream s(s_); print_(s); }
-};
-template <> struct ZuPrint<ZvError> : public ZuPrintFn { };
+// FIXME - use custom functions to print/scan enums, flags, decimals
+// (convert fixed -> decimal to store)
 
-#endif /* ZvError_HPP */
+// FIXME - use ZvField run-time metadata to create tables + indices, bind, etc.
+//
+// FIXME - update uses of ZvFields to provide Primary, Secondary, etc.
+// run-time metadata (in addition to Key, key() at compile time)
+
+#endif /* ZvSQLite_HPP */

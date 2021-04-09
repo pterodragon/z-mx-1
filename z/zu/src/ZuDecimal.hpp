@@ -55,7 +55,7 @@ struct ZuDecimal {
     return -Pow10<36U>::pow10();
   }
   static constexpr const int128_t null() {
-    return ((int128_t)1)<<127;
+    return static_cast<int128_t>(1)<<127;
   }
   static constexpr const uint64_t scale() { // 10^18
     return Pow10<18U>::pow10();
@@ -66,56 +66,56 @@ struct ZuDecimal {
 
   int128_t	value;
 
-  ZuInline ZuDecimal() : value{null()} { }
-  ZuInline ZuDecimal(const ZuDecimal &v) : value(v.value) { }
-  ZuInline ZuDecimal &operator =(const ZuDecimal &v) {
+  ZuDecimal() : value{null()} { }
+  ZuDecimal(const ZuDecimal &v) : value{v.value} { }
+  ZuDecimal &operator =(const ZuDecimal &v) {
     value = v.value;
     return *this;
   }
-  ZuInline ZuDecimal(ZuDecimal &&v) : value(v.value) { }
-  ZuInline ZuDecimal &operator =(ZuDecimal &&v) {
+  ZuDecimal(ZuDecimal &&v) : value{v.value} { }
+  ZuDecimal &operator =(ZuDecimal &&v) {
     value = v.value;
     return *this;
   }
-  ZuInline ~ZuDecimal() { }
+  ~ZuDecimal() { }
 
   enum NoInit_ { NoInit };
-  ZuInline ZuDecimal(NoInit_ _) { }
+  ZuDecimal(NoInit_ _) { }
 
   enum Unscaled_ { Unscaled };
-  ZuInline ZuDecimal(Unscaled_ _, int128_t v) : value{v} { }
+  ZuDecimal(Unscaled_ _, int128_t v) : value{v} { }
 
   template <typename V>
-  ZuInline ZuDecimal(V v, typename ZuIsIntegral<V>::T *_ = 0) :
-      value(((int128_t)v) * scale()) { }
+  ZuDecimal(V v, typename ZuIsIntegral<V>::T *_ = 0) :
+      value(static_cast<int128_t>(v) * scale()) { }
 
   template <typename V>
-  ZuInline ZuDecimal(V v, typename ZuIsFloatingPoint<V>::T *_ = 0) :
+  ZuDecimal(V v, typename ZuIsFloatingPoint<V>::T *_ = 0) :
       value((long double)v * scale_fp()) { }
 
   template <typename V>
-  ZuInline ZuDecimal(V v, unsigned ndp, typename ZuIsIntegral<V>::T *_ = 0) :
-      value(((int128_t)v) * ZuDecimalFn::pow10_64(18 - ndp)) { }
+  ZuDecimal(V v, unsigned exponent, typename ZuIsIntegral<V>::T *_ = 0) :
+      value(static_cast<int128_t>(v) * ZuDecimalFn::pow10_64(18 - exponent)) { }
 
-  ZuInline int128_t adjust(unsigned ndp) const {
-    if (ZuUnlikely(ndp == 18)) return value;
-    return value / ZuDecimalFn::pow10_64(18 - ndp);
+  int128_t adjust(unsigned exponent) const {
+    if (ZuUnlikely(exponent == 18)) return value;
+    return value / ZuDecimalFn::pow10_64(18 - exponent);
   }
 
-  ZuInline ZuDecimal operator -() { return ZuDecimal{Unscaled, -value}; }
+  ZuDecimal operator -() { return ZuDecimal{Unscaled, -value}; }
 
-  ZuInline ZuDecimal operator +(const ZuDecimal &v) const {
+  ZuDecimal operator +(const ZuDecimal &v) const {
     return ZuDecimal{Unscaled, value + v.value};
   }
-  ZuInline ZuDecimal &operator +=(const ZuDecimal &v) {
+  ZuDecimal &operator +=(const ZuDecimal &v) {
     value += v.value;
     return *this;
   }
 
-  ZuInline ZuDecimal operator -(const ZuDecimal &v) const {
+  ZuDecimal operator -(const ZuDecimal &v) const {
     return ZuDecimal{Unscaled, value - v.value};
   }
-  ZuInline ZuDecimal &operator -=(const ZuDecimal &v) {
+  ZuDecimal &operator -=(const ZuDecimal &v) {
     value -= v.value;
     return *this;
   }
@@ -307,7 +307,7 @@ struct ZuDecimal {
 
     u = div256scale(h, l);
 
-    if (negative) return -((int128_t)u);
+    if (negative) return -static_cast<int128_t>(u);
     return u;
   }
 
@@ -324,24 +324,24 @@ struct ZuDecimal {
 
     div256by128(h, l, v, u);
 
-    if (negative) return -((int128_t)u);
+    if (negative) return -static_cast<int128_t>(u);
     return u;
   }
 
 public:
-  ZuInline ZuDecimal operator *(const ZuDecimal &v) const {
+  ZuDecimal operator *(const ZuDecimal &v) const {
     return ZuDecimal{Unscaled, mul(value, v.value)};
   }
 
-  ZuInline ZuDecimal &operator *=(const ZuDecimal &v) {
+  ZuDecimal &operator *=(const ZuDecimal &v) {
     value = mul(value, v.value);
     return *this;
   }
 
-  ZuInline ZuDecimal operator /(const ZuDecimal &v) const {
+  ZuDecimal operator /(const ZuDecimal &v) const {
     return ZuDecimal{Unscaled, div(value, v.value)};
   }
-  ZuInline ZuDecimal &operator /=(const ZuDecimal &v) {
+  ZuDecimal &operator /=(const ZuDecimal &v) {
     value = div(value, v.value);
     return *this;
   }
@@ -388,44 +388,45 @@ public:
   }
 
   // convert to floating point
-  ZuInline long double fp() {
+  long double fp() {
     if (ZuUnlikely(value == null())) return ZuFP<long double>::nan();
-    return (long double)value / scale_fp();
+    return static_cast<long double>(value) / scale_fp();
   }
 
   // comparisons
-  ZuInline int cmp(const ZuDecimal &v) const {
+  int cmp(const ZuDecimal &v) const {
     return (value > v.value) - (value < v.value);
   }
-  ZuInline bool less(const ZuDecimal &v) const { return value < v.value; }
-  ZuInline bool equals(const ZuDecimal &v) const { return value == v.value; }
-  ZuInline bool operator ==(const ZuDecimal &v) const {
+  bool less(const ZuDecimal &v) const { return value < v.value; }
+  bool equals(const ZuDecimal &v) const { return value == v.value; }
+  bool operator ==(const ZuDecimal &v) const {
     return value == v.value;
   }
-  ZuInline bool operator !=(const ZuDecimal &v) const {
+  bool operator !=(const ZuDecimal &v) const {
     return value != v.value;
   }
-  ZuInline bool operator >(const ZuDecimal &v) const {
+  bool operator >(const ZuDecimal &v) const {
     return value > v.value;
   }
-  ZuInline bool operator >=(const ZuDecimal &v) const {
+  bool operator >=(const ZuDecimal &v) const {
     return value >= v.value;
   }
-  ZuInline bool operator <(const ZuDecimal &v) const {
+  bool operator <(const ZuDecimal &v) const {
     return value < v.value;
   }
-  ZuInline bool operator <=(const ZuDecimal &v) const {
+  bool operator <=(const ZuDecimal &v) const {
     return value <= v.value;
   }
 
   // ! is zero, unary * is !null
-  ZuInline bool operator !() const { return !value; }
+  bool operator !() const { return !value; }
   ZuOpBool
 
-  ZuInline bool operator *() const {
+  bool operator *() const {
     // return value != null(); // disabled due to compiler bug
     int128_t v = value - null();
-    return (bool)((uint64_t)(v>>64) | (uint64_t)(v));
+    return static_cast<bool>(
+	static_cast<uint64_t>(v>>64) | static_cast<uint64_t>(v));
   }
 
   template <typename S> void print(S &s) const;
@@ -465,9 +466,9 @@ template <typename S> inline void ZuDecimal::print(S &s) const
 template <> struct ZuPrint<ZuDecimal> : public ZuPrintFn { };
 class ZuDecimalVFmt : public ZuVFmtWrapper<ZuDecimalVFmt> {
 public:
-  ZuInline ZuDecimalVFmt(const ZuDecimal &decimal) : m_decimal{decimal} { }
+  ZuDecimalVFmt(const ZuDecimal &decimal) : m_decimal{decimal} { }
   template <typename VFmt>
-  ZuInline ZuDecimalVFmt(const ZuDecimal &decimal, VFmt &&fmt) :
+  ZuDecimalVFmt(const ZuDecimal &decimal, VFmt &&fmt) :
     ZuVFmtWrapper<ZuDecimalVFmt>{ZuFwd<VFmt>(fmt)}, m_decimal{decimal} { }
 
   template <typename S> void print(S &s) const {
@@ -503,11 +504,11 @@ template <> struct ZuPrint<ZuDecimalVFmt> : public ZuPrintFn { };
 // ZuCmp has to be specialized since null() is otherwise !t (instead of !*t)
 template <> struct ZuCmp<ZuDecimal> {
   using T = ZuDecimal;
-  ZuInline static int cmp(const T &t1, const T &t2) { return t1.cmp(t2); }
-  ZuInline static bool less(const T &t1, const T &t2) { return t1 < t2; }
-  ZuInline static bool equals(const T &t1, const T &t2) { return t1 == t2; }
-  ZuInline static bool null(const T &t) { return !*t; }
-  ZuInline static const T &null() { static const T t; return t; }
+  static int cmp(const T &t1, const T &t2) { return t1.cmp(t2); }
+  static bool less(const T &t1, const T &t2) { return t1 < t2; }
+  static bool equals(const T &t1, const T &t2) { return t1 == t2; }
+  static bool null(const T &t) { return !*t; }
+  static const T &null() { static const T t; return t; }
 };
 
 #endif /* ZuDecimal_HPP */

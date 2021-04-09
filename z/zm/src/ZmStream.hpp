@@ -18,8 +18,7 @@
  */
 
 // proxy stream using ZmFn to encapsulate arbitrary stream types into
-// a single concrete type (ZmStream) that can be used from cpp code;
-// ZmStreamFn can be used to defer printing, e.g. for logging
+// a single concrete type (ZmStream) that can be used from compiled code
 
 #ifndef ZmStream_HPP
 #define ZmStream_HPP
@@ -40,7 +39,7 @@
 
 class ZmStreamBuf {
 public:
-  template <typename T> ZuInline ZmStreamBuf(const T &v) :
+  template <typename T> ZmStreamBuf(const T &v) :
     m_lengthFn(&v, [](const T *v) -> unsigned {
 	return ZuPrint<T>::length(*v); }),
     m_printFn(&v, [](const T *v, char *buf, unsigned n) -> unsigned {
@@ -49,7 +48,7 @@ public:
   ZmStreamBuf(const ZmStreamBuf &) = delete;
   ZmStreamBuf &operator =(const ZmStreamBuf &) = delete;
 
-  ZuInline ZmStreamBuf(ZmStreamBuf &&s) :
+  ZmStreamBuf(ZmStreamBuf &&s) :
     m_lengthFn(ZuMv(s.m_lengthFn)), m_printFn(ZuMv(s.m_printFn)) { }
   ZmStreamBuf &operator =(ZmStreamBuf &&s) {
     if (ZuLikely(this != &s)) {
@@ -59,10 +58,10 @@ public:
     return *this;
   }
 
-  ZuInline unsigned length() const {
+  unsigned length() const {
     return m_lengthFn();
   }
-  ZuInline unsigned print(char *buf, unsigned n) const {
+  unsigned print(char *buf, unsigned n) const {
     return m_printFn(buf, n);
   }
 
@@ -71,24 +70,25 @@ private:
   ZmFn<char *, unsigned>	m_printFn;
 };
 template <> struct ZuPrint<ZmStreamBuf> : public ZuPrintBuffer {
-  ZuInline static unsigned length(const ZmStreamBuf &b) {
+  static unsigned length(const ZmStreamBuf &b) {
     return b.length();
   }
-  ZuInline static unsigned print(char *buf, unsigned n, const ZmStreamBuf &b) {
+  static unsigned print(char *buf, unsigned n, const ZmStreamBuf &b) {
     return b.print(buf, n);
   }
 };
 
 class ZmStream {
 public:
-  template <typename S> ZuInline ZmStream(S &s) :
-    m_strFn(&s, [](S *s, const ZuString &v) { *s << v; }),
-    m_bufFn(&s, [](S *s, const ZmStreamBuf &v) { *s << v; }) { }
+  template <typename S>
+  ZmStream(S &s) :
+    m_strFn{&s, [](S *s, const ZuString &v) { *s << v; }},
+    m_bufFn{&s, [](S *s, const ZmStreamBuf &v) { *s << v; }} { }
 
   ZmStream(const ZmStream &) = delete;
   ZmStream &operator =(const ZmStream &) = delete;
 
-  ZuInline ZmStream(ZmStream &&s) noexcept :
+  ZmStream(ZmStream &&s) noexcept :
     m_strFn(ZuMv(s.m_strFn)), m_bufFn(ZuMv(s.m_bufFn)) { }
   ZmStream &operator =(ZmStream &&s) noexcept {
     if (ZuLikely(this != &s)) {
@@ -131,31 +131,31 @@ private:
 
 public:
   template <typename C>
-  ZuInline typename MatchChar<C, ZmStream &>::T operator <<(C c) {
+  typename MatchChar<C, ZmStream &>::T operator <<(C c) {
     m_strFn(ZuString(&c, 1));
     return *this;
   }
   template <typename R>
-  ZuInline typename MatchReal<R, ZmStream &>::T operator <<(const R &r) {
+  typename MatchReal<R, ZmStream &>::T operator <<(const R &r) {
     m_bufFn(ZmStreamBuf(ZuBoxed(r)));
     return *this;
   }
-  ZuInline ZmStream &operator <<(ZuString s) {
+  ZmStream &operator <<(ZuString s) {
     m_strFn(s);
     return *this;
   }
   template <typename S>
-  ZuInline typename MatchString<S, ZmStream &>::T operator <<(S &&s_) {
+  typename MatchString<S, ZmStream &>::T operator <<(S &&s_) {
     m_strFn(ZuString(ZuFwd<S>(s_)));
     return *this;
   }
   template <typename P>
-  ZuInline typename MatchPDelegate<P, ZmStream &>::T operator <<(const P &p) {
+  typename MatchPDelegate<P, ZmStream &>::T operator <<(const P &p) {
     ZuPrint<P>::print(*this, p);
     return *this;
   }
   template <typename P>
-  ZuInline typename MatchPBuffer<P, ZmStream &>::T operator <<(const P &p) {
+  typename MatchPBuffer<P, ZmStream &>::T operator <<(const P &p) {
     m_bufFn(ZmStreamBuf(p));
     return *this;
   }

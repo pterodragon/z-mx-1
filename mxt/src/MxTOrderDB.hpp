@@ -39,8 +39,9 @@
 
 // CRTP - implementation must conform to the following interface:
 #if 0
-struct App : public MxTOrderDB<App> {
-  struct Types : public MxTAppTypes<Types> { ... };
+struct AppTypes : public MxTAppTypes<AppTypes> { ... };
+
+struct App : public MxTOrderDB<App, AppTypes> {
 
   using OrderPOD = MxTOrderDB<App>::OrderPOD;
   using ClosedPOD = MxTOrderDB<App>::ClosedPOD;
@@ -56,8 +57,8 @@ public:
   using App = App_;
   using Types = Types_;
 
-  ZuInline const App *app() const { return static_cast<const App *>(this); }
-  ZuInline App *app() { return static_cast<App *>(this); }
+  const App *app() const { return static_cast<const App *>(this); }
+  App *app() { return static_cast<App *>(this); }
 
   MxTImport(Types);
 
@@ -90,8 +91,8 @@ public:
     m_closedDB = nullptr;
   }
 
-  ZuInline OrderDB *orderDB() const { return m_orderDB; }
-  ZuInline ClosedDB *closedDB() const { return m_closedDB; }
+  OrderDB *orderDB() const { return m_orderDB; }
+  ClosedDB *closedDB() const { return m_closedDB; }
 
   ZmRef<ClosedPOD> closeOrder(OrderPOD *pod) {
     auto order = pod->ptr();

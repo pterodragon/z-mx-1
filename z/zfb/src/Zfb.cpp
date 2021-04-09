@@ -33,7 +33,7 @@ ZfbExtern int Zfb::Save::save(
 	  ZiFile::Create | ZiFile::WriteOnly, mode, e)) != Zi::OK)
     return i;
 
-  uint8_t *buf = fbb.GetBufferPointer();
+  const uint8_t *buf = fbb.GetBufferPointer();
   int len = fbb.GetSize();
 
   if (!buf || len <= 0) {

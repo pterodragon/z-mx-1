@@ -1037,11 +1037,11 @@ public:
 
   void telemetry(ZmHashTelemetry &data) const {
     data.id = ID::id();
-    data.addr = (uintptr_t)this;
+    data.addr = reinterpret_cast<uintptr_t>(this);
     data.loadFactor = loadFactor();
     unsigned count = m_count.load_();
     unsigned bits = m_bits;
-    data.effLoadFactor = ((double)count) / ((double)(1<<bits));
+    data.effLoadFactor = static_cast<double>(count) / (1<<bits);
     data.nodeSize = sizeof(Node);
     data.count = count;
     data.resized = m_resized.load_();

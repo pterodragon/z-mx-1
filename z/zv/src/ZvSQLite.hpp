@@ -41,7 +41,7 @@
 
 // FIXME - use ZvField run-time metadata to create tables + indices, bind, etc.
 //
-// FIXME - update uses of ZvFields to provide Primary, Secondary, etc.
+// FIXME - update uses of ZvFieldArray to provide Primary, Secondary, etc.
 // run-time metadata (in addition to Key, key() at compile time)
 
 #endif /* ZvSQLite_HPP */

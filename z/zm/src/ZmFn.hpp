@@ -100,7 +100,7 @@
 #include <zlib/ZmLib.hpp>
 #endif
 
-// implementation moved to ZmFn_.hpp to avoid circular dependency w/ ZmHeap
+// implementation moved to ZmFn_.hpp to resolve circular dependency w/ ZmHeap
 
 #include <zlib/ZmFn_.hpp>
 #include <zlib/ZmFn_Lambda.hpp>

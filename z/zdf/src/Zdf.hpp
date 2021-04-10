@@ -267,7 +267,7 @@ class ZdfAPI DataFrame {
 public:
   ~DataFrame() = default;
 
-  DataFrame(ZvFields fields, ZuString name, bool timeIndex = false);
+  DataFrame(ZvFieldArray fields, ZuString name, bool timeIndex = false);
 
   const ZtString &name() const { return m_name; }
   const ZmTime &epoch() const { return m_epoch; }
@@ -301,10 +301,24 @@ public:
       for (unsigned i = 0; i < n; i++) {
 	auto field = m_df->field(i);
 	if (i || field) {
-	  if (field->type == ZvFieldType::Time)
-	    v = m_df->nsecs(field->u.time(ptr));
-	  else
-	    v = field->u.scalar(ptr);
+	  // FIXME - switch on field->type, handle Fixed, Float, Decimal
+	  switch (field->type) {
+	    case ZvFieldType::Time:
+	      v = m_df->nsecs(field->u.time(ptr));
+	      break;
+	    case ZvFieldType::Int:
+	      v = field->get.int_(ptr);
+	      break;
+	    case ZvFieldType::Float:
+	      v = field->get.float_(ptr);
+	      break;
+	    case ZvFieldType::Fixed:
+	      v = field->get.fixed(ptr);
+	      break;
+	    case ZvFieldType::Decimal:
+	      v = field->get.decimal(ptr);
+	      break;
+	  }
 	} else
 	  v = m_df->nsecs(ZmTimeNow());
 	m_writers[i].write(v);

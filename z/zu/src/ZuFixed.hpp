@@ -100,9 +100,9 @@ struct ZuFixed {
   // divide: exponent of result is taken from the LHS
   // a 128bit integer intermediary is used to avoid overflow
   ZuFixed operator /(const ZuFixed &v) const {
-    int128_t i = static_cast<typename ZuFixedVal::T>(value;
+    int128_t i = static_cast<typename ZuFixedVal::T>(value);
     i *= ZuDecimalFn::pow10_64(v.exponent);
-    i /= static_cast<typename ZuFixedVal::T>(v.value;
+    i /= static_cast<typename ZuFixedVal::T>(v.value);
     if (ZuUnlikely(i >= 1000000000000000000ULL))
       return ZuFixed{ZuFixedVal(), exponent};
     return ZuFixed{static_cast<int64_t>(i), exponent};

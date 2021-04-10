@@ -279,9 +279,9 @@ public:
   using T = T_;
 
 private:
-  ZuInline static void final(...) { }
+  static void final(...) { }
   template <typename U>
-  ZuInline static auto final(U *u) -> decltype(u->final()) {
+  static auto final(U *u) -> decltype(u->final()) {
     return u->final();
   }
 
@@ -382,14 +382,14 @@ private:
 
 public:
   template <bool Construct = Construct_>
-  ZuInline static typename ZuIfT<Construct, T *>::T create() {
+  static typename ZuIfT<Construct, T *>::T create() {
     return global()->create_();
   }
   template <bool Construct = Construct_>
-  ZuInline static typename ZuIfT<!Construct, T *>::T create() {
+  static typename ZuIfT<!Construct, T *>::T create() {
     return nullptr;
   }
-  ZuInline static T *instance() {
+  static T *instance() {
     ZmObject *ptr;
     if (ZuLikely(ptr = local_()->ptr)) return static_cast<T *>(ptr);
     return create();
@@ -402,7 +402,7 @@ public:
 };
 
 template <typename L>
-ZuInline auto ZmTLS(L l, typename ZuIsLambdaFn<L>::T *_ = 0) {
+auto ZmTLS(L l, typename ZuIsLambdaFn<L>::T *_ = 0) {
   using T = typename ZuDecay<decltype(*ZuLambdaFn<L>::invoke())>::T;
   return ZmSpecific<T, true, ZuLambdaFn<L>::fn(l)>::instance();
 }

@@ -165,4 +165,6 @@ private:
   ZmFn<const ZmStreamBuf &>	m_bufFn;
 };
 
+using ZmStreamFn = ZmFn<ZmStream &>;
+
 #endif /* ZmStream_HPP */

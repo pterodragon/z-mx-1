@@ -23,7 +23,7 @@
 
 using namespace Zdf;
 
-DataFrame::DataFrame(ZvFields fields, ZuString name, bool timeIndex) :
+DataFrame::DataFrame(ZvFieldArray fields, ZuString name, bool timeIndex) :
     m_name(name)
 {
   bool indexed = timeIndex;

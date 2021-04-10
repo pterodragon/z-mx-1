@@ -40,15 +40,15 @@
 
 struct ZvHashCSV {
   struct Data : public ZvFieldTuple<Data> {
-    static const ZvFields fields() noexcept;
+    static const ZvFieldArray fields() noexcept;
 
     ZmIDString		id;
     ZuBox<unsigned>	bits;
     ZuBox<double>	loadFactor;
     ZuBox<unsigned>	cBits;
   };
-  const ZvFields Data::fields() noexcept {
-    ZvMkFields(Data,
+  const ZvFieldArray Data::fields() noexcept {
+    ZvFields(Data,
 	(String, id, 0),
 	(Int, bits, 0),
 	(Int, loadFactor, 0),

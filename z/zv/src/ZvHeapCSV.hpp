@@ -39,7 +39,7 @@
 
 struct ZvAPI ZvHeapCSV {
   struct Data : public ZvFieldTuple<Data> {
-    static const ZvFields fields() noexcept;
+    static const ZvFieldArray fields() noexcept;
 
     ZmIDString		id;
     ZuBox<unsigned>	partition;
@@ -47,8 +47,8 @@ struct ZvAPI ZvHeapCSV {
     ZuBox<uint64_t>	cacheSize;
     ZmBitmap		cpuset;
   };
-  const ZvFields Data::fields() noexcept {
-    ZvMkFields(Data,
+  const ZvFieldArray Data::fields() noexcept {
+    ZvFields(Data,
 	(String, id, 0),
 	(Int, partition, 0),
 	(Int, alignment, 0),

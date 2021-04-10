@@ -169,7 +169,7 @@ template <typename> struct load;
 using Heap_ = ZmHeapTelemetry;
 struct Heap : public Heap_, public ZvFieldTuple<Heap> {
   using FBS = fbs::Heap;
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(id), decltype(partition), decltype(size)>;
   Key key() const { return Key{id, partition, size}; }
   static Key key(const fbs::Heap *heap_) {
@@ -208,15 +208,15 @@ struct Heap : public Heap_, public ZvFieldTuple<Heap> {
   }
   void loadDelta(const fbs::Heap *);
 };
-inline const ZvFields Heap::fields() noexcept {
-  ZvMkFields(Heap,
+inline const ZvFieldArray Heap::fields() noexcept {
+  ZvFields(Heap,
       (String, id, 0),
       (Int, size, 0),
       (Int, alignment, 0),
       (Int, partition, 0),
       (Bool, sharded, 0),
       (Int, cacheSize, 0),
-      (String, cpuset, 0),
+      (Stream, cpuset, 0),
       (Int, cacheAllocs, Series | Delta),
       (Int, heapAllocs, Series | Delta),
       (Int, frees, Series | Delta),
@@ -253,7 +253,7 @@ inline void Heap::loadDelta(const fbs::Heap *heap_) {
 using HashTbl_ = ZmHashTelemetry;
 struct HashTbl : public HashTbl_, public ZvFieldTuple<HashTbl> {
   using FBS = fbs::HashTbl;
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(id), decltype(addr)>;
   Key key() const { return Key{id, addr}; }
   static Key key(const fbs::HashTbl *hash_) {
@@ -284,8 +284,8 @@ struct HashTbl : public HashTbl_, public ZvFieldTuple<HashTbl> {
   }
   void loadDelta(const fbs::HashTbl *);
 };
-inline const ZvFields HashTbl::fields() noexcept {
-  ZvMkFields(HashTbl,
+inline const ZvFieldArray HashTbl::fields() noexcept {
+  ZvFields(HashTbl,
       (String, id, 0),
       (Hex, addr, 0),
       (Bool, linear, 0),
@@ -327,7 +327,7 @@ inline void HashTbl::loadDelta(const fbs::HashTbl *hash_) {
 using Thread_ = ZmThreadTelemetry;
 struct Thread : public Thread_, public ZvFieldTuple<Thread> {
   using FBS = fbs::Thread;
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(tid)>;
   Key key() const { return Key{tid}; }
   static Key key(const fbs::Thread *thread_) {
@@ -357,12 +357,12 @@ struct Thread : public Thread_, public ZvFieldTuple<Thread> {
   }
   void loadDelta(const fbs::Thread *);
 };
-inline const ZvFields Thread::fields() noexcept {
-  ZvMkFields(Thread,
+inline const ZvFieldArray Thread::fields() noexcept {
+  ZvFields(Thread,
       (String, name, 0),
       (Int, tid, 0),
       (Float, cpuUsage, Series, 2),
-      (String, cpuset, 0),
+      (Stream, cpuset, 0),
       (Enum, priority, 0, ThreadPriority::Map),
       (Int, sysPriority, 0),
       (Int, stackSize, 0),
@@ -400,7 +400,7 @@ inline void Thread::loadDelta(const fbs::Thread *thread_) {
 using Mx_ = ZiMxTelemetry;
 struct Mx : public Mx_, public ZvFieldTuple<Mx> {
   using FBS = fbs::Mx;
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(id)>;
   Key key() const { return Key{id}; }
   static Key key(const fbs::Mx *mx_) {
@@ -427,8 +427,8 @@ struct Mx : public Mx_, public ZvFieldTuple<Mx> {
   }
   void loadDelta(const fbs::Mx *);
 };
-inline const ZvFields Mx::fields() noexcept {
-  ZvMkFields(Mx,
+inline const ZvFieldArray Mx::fields() noexcept {
+  ZvFields(Mx,
       (String, id, 0),
       (Enum, state, Series, MxState::Map),
       (Int, nThreads, 0),
@@ -477,7 +477,7 @@ inline void Mx::loadDelta(const fbs::Mx *mx_) {
 using Socket_ = ZiCxnTelemetry;
 struct Socket : public Socket_, public ZvFieldTuple<Socket> {
   using FBS = fbs::Socket;
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(socket)>;
   Key key() const { return Key{socket}; }
   static Key key(const fbs::Socket *socket_) {
@@ -512,19 +512,19 @@ struct Socket : public Socket_, public ZvFieldTuple<Socket> {
   }
   void loadDelta(const fbs::Socket *);
 };
-inline const ZvFields Socket::fields() noexcept {
-  ZvMkFields(Socket,
+inline const ZvFieldArray Socket::fields() noexcept {
+  ZvFields(Socket,
       (String, mxID, 0),
       (Enum, type, 0, SocketType::Map),
-      (String, remoteIP, 0),
+      (Stream, remoteIP, 0),
       (Int, remotePort, 0),
-      (String, localIP, 0),
+      (Stream, localIP, 0),
       (Int, localPort, 0),
       (Int, socket, 0),
       (Int, flags, 0),
-      (String, mreqAddr, 0),
-      (String, mreqIf, 0),
-      (String, mif, 0),
+      (Stream, mreqAddr, 0),
+      (Stream, mreqIf, 0),
+      (Stream, mif, 0),
       (Int, ttl, 0),
       (Int, rxBufSize, 0),
       (Int, rxBufLen, Series),
@@ -580,7 +580,7 @@ struct Queue : public ZvFieldTuple<Queue> {
   int8_t	type = -1;	// primary key - QueueType
 
   using FBS = fbs::Queue;
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(id), decltype(type)>;
   Key key() const { return Key{id, type}; }
   static Key key(const fbs::Queue *queue_) {
@@ -618,8 +618,8 @@ struct Queue : public ZvFieldTuple<Queue> {
   }
   void loadDelta(const fbs::Queue *);
 };
-inline const ZvFields Queue::fields() noexcept {
-  ZvMkFields(Queue,
+inline const ZvFieldArray Queue::fields() noexcept {
+  ZvFields(Queue,
       (String, id, 0),
       (Enum, type, 0, QueueType::Map),
       (Int, size, 0),
@@ -673,7 +673,7 @@ struct Link : public ZvFieldTuple<Link> {
   int8_t	state = 0;
 
   using FBS = fbs::Link;
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(id)>;
   Key key() const { return Key{id}; }
   static Key key(const fbs::Link *link_) {
@@ -704,8 +704,8 @@ struct Link : public ZvFieldTuple<Link> {
   }
   void loadDelta(const fbs::Link *);
 };
-inline const ZvFields Link::fields() noexcept {
-  ZvMkFields(Link,
+inline const ZvFieldArray Link::fields() noexcept {
+  ZvFields(Link,
       (String, id, 0),
       (String, engineID, 0),
       (Enum, state, Series, LinkState::Map),
@@ -754,7 +754,7 @@ struct Engine : public ZvFieldTuple<Engine> {
   int8_t	state = -1;
 
   using FBS = fbs::Engine;
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(id)>;
   Key key() const { return Key{id}; }
   static Key key(const fbs::Engine *engine_) {
@@ -787,8 +787,8 @@ struct Engine : public ZvFieldTuple<Engine> {
   }
   void loadDelta(const fbs::Engine *);
 };
-inline const ZvFields Engine::fields() noexcept {
-  ZvMkFields(Engine,
+inline const ZvFieldArray Engine::fields() noexcept {
+  ZvFields(Engine,
       (String, id, 0),
       (String, type, 0),
       (Enum, state, Series, EngineState::Map),
@@ -866,7 +866,7 @@ struct DB : public ZvFieldTuple<DB> {
   int8_t	cacheMode = -1;	// ZdbCacheMode
 
   using FBS = fbs::DB;
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(id)>;
   Key key() const { return Key{id}; }
   static Key key(const fbs::DB *db_) { return Key{db_->id()}; }
@@ -904,8 +904,8 @@ struct DB : public ZvFieldTuple<DB> {
   }
   void loadDelta(const fbs::DB *);
 };
-inline const ZvFields DB::fields() noexcept {
-  ZvMkFields(DB,
+inline const ZvFieldArray DB::fields() noexcept {
+  ZvFields(DB,
       (String, name, 0),
       (Int, id, 0),
       (Int, recSize, 0),
@@ -976,7 +976,7 @@ struct DBHost : public ZvFieldTuple<DBHost> {
   uint8_t	voted = 0;
 
   using FBS = fbs::DBHost;
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(id)>;
   Key key() const { return Key{id}; }
   static Key key(const fbs::DBHost *host_) { return Key{host_->id()}; }
@@ -1000,13 +1000,13 @@ struct DBHost : public ZvFieldTuple<DBHost> {
   }
   void loadDelta(const fbs::DBHost *);
 };
-inline const ZvFields DBHost::fields() noexcept {
-  ZvMkFields(DBHost,
+inline const ZvFieldArray DBHost::fields() noexcept {
+  ZvFields(DBHost,
       (Int, id, 0),
       (Int, priority, 0),
       (Enum, state, Series, DBHostState::Map),
       (Bool, voted, Series),
-      (String, ip, 0),
+      (Stream, ip, 0),
       (Int, port, 0));
 }
 template <> struct load<DBHost> : public DBHost {
@@ -1057,7 +1057,7 @@ struct DBEnv : public ZvFieldTuple<DBEnv> {
   uint8_t	replicating = 0;
 
   using FBS = fbs::DBEnv;
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
 
   int rag() const { return DBHostState::rag(state); }
   void rag(int) { } // unused
@@ -1088,8 +1088,8 @@ struct DBEnv : public ZvFieldTuple<DBEnv> {
   }
   void loadDelta(const fbs::DBEnv *);
 };
-inline const ZvFields DBEnv::fields() noexcept {
-  ZvMkFields(DBEnv,
+inline const ZvFieldArray DBEnv::fields() noexcept {
+  ZvFields(DBEnv,
       (Int, self, 0),
       (Int, master, 0),
       (Int, prev, 0),
@@ -1158,7 +1158,7 @@ struct App : public ZvFieldTuple<App> {
   int8_t	rag_ = -1;
 
   using FBS = fbs::App;
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
 
   int rag() const { return rag_; }
   void rag(int v) { rag_ = v; }
@@ -1182,8 +1182,8 @@ struct App : public ZvFieldTuple<App> {
   }
   void loadDelta(const fbs::App *);
 };
-inline const ZvFields App::fields() noexcept {
-  ZvMkFields(App,
+inline const ZvFieldArray App::fields() noexcept {
+  ZvFields(App,
       (String, id, 0),
       (String, version, 0),
       (Time, uptime, 0),
@@ -1222,7 +1222,7 @@ struct Alert : public ZvFieldTuple<Alert> {
   ZtString	message;
 
   using FBS = fbs::Alert;
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
 
   Zfb::Offset<fbs::Alert> save(Zfb::Builder &fbb) const {
     using namespace Zfb::Save;
@@ -1236,8 +1236,8 @@ struct Alert : public ZvFieldTuple<Alert> {
   }
   void loadDelta(const fbs::Alert *);
 };
-inline const ZvFields Alert::fields() noexcept {
-  ZvMkFields(Alert,
+inline const ZvFieldArray Alert::fields() noexcept {
+  ZvFields(Alert,
       (Time, time, 0),
       (Int, seqNo, 0),
       (Int, tid, 0),

@@ -25,12 +25,12 @@ void fail(const char *s, int64_t i) { print(s, i); }
 #define CHECK2(x, y) ((x == y) ? ok("OK  " #x, x) : fail("NOK " #x, x))
 
 struct Frame {
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
   uint64_t	v1;
   ZuFixedVal	v2;
 };
-inline const ZvFields Frame::fields() noexcept {
-  ZvMkFields(Frame,
+inline const ZvFieldArray Frame::fields() noexcept {
+  ZvFields(Frame,
       // (Int, v1, Series | Index | Delta2),
       (Int, v1, Series | Index | Delta),
       // (Int, v1, Series | Index),

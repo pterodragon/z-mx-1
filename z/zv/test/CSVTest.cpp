@@ -34,7 +34,7 @@ namespace DaFlags {
 }
 
 struct Row {
-  static const ZvFields fields() noexcept;
+  static const ZvFieldArray fields() noexcept;
 
   ZuStringN<24>	m_string;
   int		m_int;
@@ -44,8 +44,8 @@ struct Row {
   ZtDate	m_time;
   int		m_flags;
 };
-inline const ZvFields Row::fields() noexcept {
-  ZvMkFields(Row,
+inline const ZvFieldArray Row::fields() noexcept {
+  ZvFields(Row,
       (StringAlias, string, m_string, 0),
       (IntAlias, int, m_int, 0),
       (BoolAlias, bool, m_bool, 0),

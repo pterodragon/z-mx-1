@@ -61,12 +61,12 @@ extern "C" {
 }
 
 template <typename T, bool IsObject = ZuIsObject_<T>::OK> struct ZmSingleton_ {
-  ZuInline void ref(T *p) { ZmREF(p); }
-  ZuInline void deref(T *p) { ZmDEREF(p); }
+  void ref(T *p) { ZmREF(p); }
+  void deref(T *p) { ZmDEREF(p); }
 };
 template <typename T> struct ZmSingleton_<T, false> {
-  ZuInline static void ref(T *) { }
-  ZuInline static void deref(T *p) { delete p; }
+  static void ref(T *) { }
+  static void deref(T *p) { delete p; }
 };
 
 template <typename T, bool Construct = true> struct ZmSingletonCtor {
@@ -85,9 +85,9 @@ public:
   using T = T_;
 
 private:
-  ZuInline static void final(...) { }
+  static void final(...) { }
   template <typename U>
-  ZuInline static auto final(U *u) -> decltype(u->final()) {
+  static auto final(U *u) -> decltype(u->final()) {
     return u->final();
   }
 
@@ -144,7 +144,7 @@ public:
 };
 
 template <typename L>
-ZuInline auto &ZmStatic(L l, typename ZuIsLambdaFn<L>::T *_ = 0) {
+inline auto &ZmStatic(L l, typename ZuIsLambdaFn<L>::T *_ = 0) {
   using T = typename ZuDecay<decltype(*ZuLambdaFn<L>::invoke())>::T;
   return *(ZmSingleton<T, true, ZuLambdaFn<L>::fn()>::instance());
 }

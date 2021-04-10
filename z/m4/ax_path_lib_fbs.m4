@@ -1,7 +1,7 @@
-dnl @synopsis AX_PATH_LIB_FLATBUFFERS [(A/NA)]
+dnl @synopsis AX_PATH_LIB_FBS [(A/NA)]
 dnl
 dnl check for flatbuffers and set
-dnl FLATBUFFERS_LIBS, FLATBUFFERS_LDFLAGS, FLATBUFFERS_CPPFLAGS
+dnl FBS_LIBS, FBS_LDFLAGS, FBS_CPPFLAGS
 dnl
 dnl also provide --with-flatbuffers option that may point to the $prefix of
 dnl the flatbuffers installation - the macro will check $flatbuffers/include
@@ -10,7 +10,7 @@ dnl
 dnl the usual two ACTION-IF-FOUND / ACTION-IF-NOT-FOUND are supported
 dnl and they can take advantage of the LDFLAGS/CPPFLAGS additions.
 
-AC_DEFUN([AX_PATH_LIB_FLATBUFFERS], [
+AC_DEFUN([AX_PATH_LIB_FBS], [
   AC_MSG_CHECKING([flatbuffers])
   AC_ARG_WITH(flatbuffers, [AS_HELP_STRING([--with-flatbuffers=prefix],
     [override location of flatbuffers library])],,
@@ -45,19 +45,19 @@ int main() {
     LDFLAGS="$OLDLDFLAGS"
     LIBS="$OLDLIBS"
     if test ".$ax_cv_lib_flatbuffers_ok" = ".yes"; then
-      FLATBUFFERS_LIBS="-lflatbuffers"
-      FLATBUFFERS_LDFLAGS=""
-      FLATBUFFERS_CPPFLAGS=""
+      FBS_LIBS="-lflatbuffers"
+      FBS_LDFLAGS=""
+      FBS_CPPFLAGS=""
       if test ".$with_flatbuffers" != "." -a ".$with_flatbuffers" != ".yes"; then
-	AC_MSG_NOTICE([FLATBUFFERS_LDFLAGS=-L$with_flatbuffers/lib -L$with_flatbuffers/lib64])
-	FLATBUFFERS_LDFLAGS="-L$with_flatbuffers/lib -L$with_flatbuffers/lib64 -Wl,-R,$with_flatbuffers/lib -Wl,-R,$with_flatbuffers/lib64"
+	AC_MSG_NOTICE([FBS_LDFLAGS=-L$with_flatbuffers/lib -L$with_flatbuffers/lib64])
+	FBS_LDFLAGS="-L$with_flatbuffers/lib -L$with_flatbuffers/lib64 -Wl,-R,$with_flatbuffers/lib -Wl,-R,$with_flatbuffers/lib64"
 	if test -d "$with_flatbuffers/include"; then
-	  AC_MSG_NOTICE([FLATBUFFERS_CPPFLAGS=-I$with_flatbuffers/include])
-	  FLATBUFFERS_CPPFLAGS="-I$with_flatbuffers/include"
+	  AC_MSG_NOTICE([FBS_CPPFLAGS=-I$with_flatbuffers/include])
+	  FBS_CPPFLAGS="-I$with_flatbuffers/include"
 	fi
       fi
       AC_MSG_CHECKING([lib flatbuffers])
-      AC_MSG_RESULT([$FLATBUFFERS_LIBS])
+      AC_MSG_RESULT([$FBS_LIBS])
       m4_ifval($1,$1)
     else
       AC_MSG_CHECKING([lib flatbuffers])
